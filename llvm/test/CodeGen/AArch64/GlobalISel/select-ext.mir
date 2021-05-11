@@ -19,10 +19,12 @@ body:             |
     ; CHECK: %v1:fpr64 = COPY $d0
     ; CHECK: %v2:fpr64 = COPY $d1
     ; CHECK: %shuf:fpr64 = EXTv8i8 %v1, %v2, 3
+    ; CHECK: $d0 = COPY %shuf
     %v1:fpr(<8 x s8>) = COPY $d0
     %v2:fpr(<8 x s8>) = COPY $d1
     %3:gpr(s32) = G_CONSTANT i32 3
     %shuf:fpr(<8 x s8>) = G_EXT %v1, %v2, %3(s32)
+    $d0 = COPY %shuf
 
 ...
 ---
@@ -40,10 +42,12 @@ body:             |
     ; CHECK: %v1:fpr128 = COPY $q0
     ; CHECK: %v2:fpr128 = COPY $q1
     ; CHECK: %shuf:fpr128 = EXTv16i8 %v1, %v2, 3
+    ; CHECK: $q0 = COPY %shuf
     %v1:fpr(<16 x s8>) = COPY $q0
     %v2:fpr(<16 x s8>) = COPY $q1
     %3:gpr(s32) = G_CONSTANT i32 3
     %shuf:fpr(<16 x s8>) = G_EXT %v1, %v2, %3(s32)
+    $q0 = COPY %shuf
 
 ...
 ---
@@ -61,10 +65,12 @@ body:             |
     ; CHECK: %v1:fpr64 = COPY $d0
     ; CHECK: %v2:fpr64 = COPY $d1
     ; CHECK: %shuf:fpr64 = EXTv8i8 %v1, %v2, 6
+    ; CHECK: $d0 = COPY %shuf
     %v1:fpr(<4 x s16>) = COPY $d0
     %v2:fpr(<4 x s16>) = COPY $d1
     %3:gpr(s32) = G_CONSTANT i32 6
     %shuf:fpr(<4 x s16>) = G_EXT %v1, %v2, %3(s32)
+    $d0 = COPY %shuf
 
 ...
 ---
@@ -82,10 +88,12 @@ body:             |
     ; CHECK: %v1:fpr128 = COPY $q0
     ; CHECK: %v2:fpr128 = COPY $q1
     ; CHECK: %shuf:fpr128 = EXTv16i8 %v2, %v1, 10
+    ; CHECK: $q0 = COPY %shuf
     %v1:fpr(<8 x s16>) = COPY $q0
     %v2:fpr(<8 x s16>) = COPY $q1
     %3:gpr(s32) = G_CONSTANT i32 10
     %shuf:fpr(<8 x s16>) = G_EXT %v2, %v1, %3(s32)
+    $q0 = COPY %shuf
 ...
 
 ...
@@ -104,10 +112,12 @@ body:             |
     ; CHECK: %v1:fpr128 = COPY $q0
     ; CHECK: %v2:fpr128 = COPY $q1
     ; CHECK: %shuf:fpr128 = EXTv16i8 %v1, %v2, 12
+    ; CHECK: $q0 = COPY %shuf
     %v1:fpr(<4 x s32>) = COPY $q0
     %v2:fpr(<4 x s32>) = COPY $q1
     %3:gpr(s32) = G_CONSTANT i32 12
     %shuf:fpr(<4 x s32>) = G_EXT %v1, %v2, %3(s32)
+    $q0 = COPY %shuf
 
 ...
 ---
@@ -125,10 +135,12 @@ body:             |
     ; CHECK: %v1:fpr64 = COPY $d0
     ; CHECK: %v2:fpr64 = COPY $d1
     ; CHECK: %shuf:fpr64 = EXTv8i8 %v1, %v2, 2
+    ; CHECK: $d0 = COPY %shuf
     %v1:fpr(<2 x s32>) = COPY $d0
     %v2:fpr(<2 x s32>) = COPY $d1
     %3:gpr(s32) = G_CONSTANT i32 2
     %shuf:fpr(<2 x s32>) = G_EXT %v1, %v2, %3(s32)
+    $d0 = COPY %shuf
 
 ...
 ---
@@ -146,8 +158,10 @@ body:             |
     ; CHECK: %v1:fpr128 = COPY $q0
     ; CHECK: %v2:fpr128 = COPY $q1
     ; CHECK: %shuf:fpr128 = EXTv16i8 %v1, %v2, 2
+    ; CHECK: $q0 = COPY %shuf
     %v1:fpr(<2 x s64>) = COPY $q0
     %v2:fpr(<2 x s64>) = COPY $q1
     %3:gpr(s32) = G_CONSTANT i32 2
     %shuf:fpr(<2 x s64>) = G_EXT %v1, %v2, %3(s32)
+    $q0 = COPY %shuf
 ...

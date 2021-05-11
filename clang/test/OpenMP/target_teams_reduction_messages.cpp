@@ -256,7 +256,7 @@ int main(int argc, char **argv) {
   foo();
 #pragma omp target teams reduction(&& : S2::S2sc) // expected-error {{const-qualified variable cannot be reduction}}
   foo();
-#pragma omp target teams reduction(& : e, g) // expected-error {{calling a private constructor of class 'S4'}} expected-error {{invalid operands to binary expression ('S4' and 'S4')}} expected-error {{calling a private constructor of class 'S5'}} expected-error {{invalid operands to binary expression ('S5' and 'S5')}}
+#pragma omp target teams reduction(& : e, g) // expected-error {{calling a private constructor of class 'S4'}} expected-error {{calling a private constructor of class 'S5'}} expected-error {{invalid operands to binary expression ('S5' and 'S5')}}
   foo();
 #pragma omp target teams reduction(+ : h, k, B::x) // expected-error 2 {{threadprivate or thread local variable cannot be reduction}}
   foo();

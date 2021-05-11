@@ -888,22 +888,18 @@ define void @atomc_store(i32* %p) #0 {
 define void @atomic_store_relaxed_8(i8* %p, i32 %off32, i8 %val) #0 {
 ; CHECK-NOLSE-O1-LABEL: atomic_store_relaxed_8:
 ; CHECK-NOLSE-O1:       ; %bb.0:
-; CHECK-NOLSE-O1-NEXT:    add x8, x0, w1, sxtw
-; CHECK-NOLSE-O1-NEXT:    sub x9, x0, #256 ; =256
-; CHECK-NOLSE-O1-NEXT:    add x10, x0, #291, lsl #12 ; =1191936
+; CHECK-NOLSE-O1-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
 ; CHECK-NOLSE-O1-NEXT:    strb w2, [x0, #4095]
+; CHECK-NOLSE-O1-NEXT:    strb w2, [x0, w1, sxtw]
+; CHECK-NOLSE-O1-NEXT:    sturb w2, [x0, #-256]
 ; CHECK-NOLSE-O1-NEXT:    strb w2, [x8]
-; CHECK-NOLSE-O1-NEXT:    strb w2, [x9]
-; CHECK-NOLSE-O1-NEXT:    strb w2, [x10]
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
 ; CHECK-NOLSE-O0-LABEL: atomic_store_relaxed_8:
 ; CHECK-NOLSE-O0:       ; %bb.0:
 ; CHECK-NOLSE-O0-NEXT:    strb w2, [x0, #4095]
-; CHECK-NOLSE-O0-NEXT:    add x8, x0, w1, sxtw
-; CHECK-NOLSE-O0-NEXT:    strb w2, [x8]
-; CHECK-NOLSE-O0-NEXT:    subs x8, x0, #256 ; =256
-; CHECK-NOLSE-O0-NEXT:    strb w2, [x8]
+; CHECK-NOLSE-O0-NEXT:    strb w2, [x0, w1, sxtw]
+; CHECK-NOLSE-O0-NEXT:    sturb w2, [x0, #-256]
 ; CHECK-NOLSE-O0-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
 ; CHECK-NOLSE-O0-NEXT:    strb w2, [x8]
 ; CHECK-NOLSE-O0-NEXT:    ret
@@ -911,10 +907,8 @@ define void @atomic_store_relaxed_8(i8* %p, i32 %off32, i8 %val) #0 {
 ; CHECK-LSE-O1-LABEL: atomic_store_relaxed_8:
 ; CHECK-LSE-O1:       ; %bb.0:
 ; CHECK-LSE-O1-NEXT:    strb w2, [x0, #4095]
-; CHECK-LSE-O1-NEXT:    add x8, x0, w1, sxtw
-; CHECK-LSE-O1-NEXT:    strb w2, [x8]
-; CHECK-LSE-O1-NEXT:    sub x8, x0, #256 ; =256
-; CHECK-LSE-O1-NEXT:    strb w2, [x8]
+; CHECK-LSE-O1-NEXT:    strb w2, [x0, w1, sxtw]
+; CHECK-LSE-O1-NEXT:    sturb w2, [x0, #-256]
 ; CHECK-LSE-O1-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
 ; CHECK-LSE-O1-NEXT:    strb w2, [x8]
 ; CHECK-LSE-O1-NEXT:    ret
@@ -922,10 +916,8 @@ define void @atomic_store_relaxed_8(i8* %p, i32 %off32, i8 %val) #0 {
 ; CHECK-LSE-O0-LABEL: atomic_store_relaxed_8:
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    strb w2, [x0, #4095]
-; CHECK-LSE-O0-NEXT:    add x8, x0, w1, sxtw
-; CHECK-LSE-O0-NEXT:    strb w2, [x8]
-; CHECK-LSE-O0-NEXT:    subs x8, x0, #256 ; =256
-; CHECK-LSE-O0-NEXT:    strb w2, [x8]
+; CHECK-LSE-O0-NEXT:    strb w2, [x0, w1, sxtw]
+; CHECK-LSE-O0-NEXT:    sturb w2, [x0, #-256]
 ; CHECK-LSE-O0-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
 ; CHECK-LSE-O0-NEXT:    strb w2, [x8]
 ; CHECK-LSE-O0-NEXT:    ret
@@ -947,22 +939,18 @@ define void @atomic_store_relaxed_8(i8* %p, i32 %off32, i8 %val) #0 {
 define void @atomic_store_relaxed_16(i16* %p, i32 %off32, i16 %val) #0 {
 ; CHECK-NOLSE-O1-LABEL: atomic_store_relaxed_16:
 ; CHECK-NOLSE-O1:       ; %bb.0:
-; CHECK-NOLSE-O1-NEXT:    add x8, x0, w1, sxtw #1
-; CHECK-NOLSE-O1-NEXT:    sub x9, x0, #256 ; =256
-; CHECK-NOLSE-O1-NEXT:    add x10, x0, #291, lsl #12 ; =1191936
+; CHECK-NOLSE-O1-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
 ; CHECK-NOLSE-O1-NEXT:    strh w2, [x0, #8190]
+; CHECK-NOLSE-O1-NEXT:    strh w2, [x0, w1, sxtw #1]
+; CHECK-NOLSE-O1-NEXT:    sturh w2, [x0, #-256]
 ; CHECK-NOLSE-O1-NEXT:    strh w2, [x8]
-; CHECK-NOLSE-O1-NEXT:    strh w2, [x9]
-; CHECK-NOLSE-O1-NEXT:    strh w2, [x10]
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
 ; CHECK-NOLSE-O0-LABEL: atomic_store_relaxed_16:
 ; CHECK-NOLSE-O0:       ; %bb.0:
 ; CHECK-NOLSE-O0-NEXT:    strh w2, [x0, #8190]
-; CHECK-NOLSE-O0-NEXT:    add x8, x0, w1, sxtw #1
-; CHECK-NOLSE-O0-NEXT:    strh w2, [x8]
-; CHECK-NOLSE-O0-NEXT:    subs x8, x0, #256 ; =256
-; CHECK-NOLSE-O0-NEXT:    strh w2, [x8]
+; CHECK-NOLSE-O0-NEXT:    strh w2, [x0, w1, sxtw #1]
+; CHECK-NOLSE-O0-NEXT:    sturh w2, [x0, #-256]
 ; CHECK-NOLSE-O0-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
 ; CHECK-NOLSE-O0-NEXT:    strh w2, [x8]
 ; CHECK-NOLSE-O0-NEXT:    ret
@@ -970,10 +958,8 @@ define void @atomic_store_relaxed_16(i16* %p, i32 %off32, i16 %val) #0 {
 ; CHECK-LSE-O1-LABEL: atomic_store_relaxed_16:
 ; CHECK-LSE-O1:       ; %bb.0:
 ; CHECK-LSE-O1-NEXT:    strh w2, [x0, #8190]
-; CHECK-LSE-O1-NEXT:    add x8, x0, w1, sxtw #1
-; CHECK-LSE-O1-NEXT:    strh w2, [x8]
-; CHECK-LSE-O1-NEXT:    sub x8, x0, #256 ; =256
-; CHECK-LSE-O1-NEXT:    strh w2, [x8]
+; CHECK-LSE-O1-NEXT:    strh w2, [x0, w1, sxtw #1]
+; CHECK-LSE-O1-NEXT:    sturh w2, [x0, #-256]
 ; CHECK-LSE-O1-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
 ; CHECK-LSE-O1-NEXT:    strh w2, [x8]
 ; CHECK-LSE-O1-NEXT:    ret
@@ -981,10 +967,8 @@ define void @atomic_store_relaxed_16(i16* %p, i32 %off32, i16 %val) #0 {
 ; CHECK-LSE-O0-LABEL: atomic_store_relaxed_16:
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    strh w2, [x0, #8190]
-; CHECK-LSE-O0-NEXT:    add x8, x0, w1, sxtw #1
-; CHECK-LSE-O0-NEXT:    strh w2, [x8]
-; CHECK-LSE-O0-NEXT:    subs x8, x0, #256 ; =256
-; CHECK-LSE-O0-NEXT:    strh w2, [x8]
+; CHECK-LSE-O0-NEXT:    strh w2, [x0, w1, sxtw #1]
+; CHECK-LSE-O0-NEXT:    sturh w2, [x0, #-256]
 ; CHECK-LSE-O0-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
 ; CHECK-LSE-O0-NEXT:    strh w2, [x8]
 ; CHECK-LSE-O0-NEXT:    ret

@@ -951,6 +951,27 @@ static bool lowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
   return false;
 }
 
+static bool matchFormTruncstore(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                Register &SrcReg) {
+  assert(MI.getOpcode() == TargetOpcode::G_STORE);
+  Register DstReg = MI.getOperand(0).getReg();
+  if (MRI.getType(DstReg).isVector())
+    return false;
+  // Match a store of a truncate.
+  return mi_match(DstReg, MRI, m_GTrunc(m_Reg(SrcReg)));
+}
+
+static bool applyFormTruncstore(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                MachineIRBuilder &B,
+                                GISelChangeObserver &Observer,
+                                Register &SrcReg) {
+  assert(MI.getOpcode() == TargetOpcode::G_STORE);
+  Observer.changingInstr(MI);
+  MI.getOperand(0).setReg(SrcReg);
+  Observer.changedInstr(MI);
+  return true;
+}
+
 #define AARCH64POSTLEGALIZERLOWERINGHELPER_GENCOMBINERHELPER_DEPS
 #include "AArch64GenPostLegalizeGILowering.inc"
 #undef AARCH64POSTLEGALIZERLOWERINGHELPER_GENCOMBINERHELPER_DEPS

@@ -94,6 +94,7 @@ public:
   bool GetWarningsUnsupportedLanguage() const;
   bool GetStopOnExec() const;
   std::chrono::seconds GetUtilityExpressionTimeout() const;
+  std::chrono::seconds GetInterruptTimeout() const;
   bool GetOSPluginReportsAllThreads() const;
   void SetOSPluginReportsAllThreads(bool does_report);
   bool GetSteppingRunsAllThreads() const;
