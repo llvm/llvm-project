@@ -65,7 +65,7 @@ private:
   std::vector<Symbol *> symVector;
 };
 
-void treatUndefinedSymbol(const Undefined &);
+void treatUndefinedSymbol(const Undefined &, StringRef source = "");
 
 extern SymbolTable *symtab;
 
