@@ -900,7 +900,7 @@ INSTANTIATE_TEST_CASE_P(ParameterizedCovMapTest, CoverageMappingTest,
                                           std::pair<bool, bool>({true, true})),);
 
 TEST(CoverageMappingTest, filename_roundtrip) {
-  std::vector<std::string> Paths({"", "a", "b", "c", "d", "e"});
+  std::vector<std::string> Paths({"dir", "a", "b", "c", "d", "e"});
 
   for (bool Compress : {false, true}) {
     std::string EncodedFilenames;
@@ -915,8 +915,37 @@ TEST(CoverageMappingTest, filename_roundtrip) {
     EXPECT_THAT_ERROR(Reader.read(CovMapVersion::CurrentVersion), Succeeded());
 
     ASSERT_EQ(ReadFilenames.size(), Paths.size());
-    for (unsigned I = 1; I < Paths.size(); ++I)
-      ASSERT_TRUE(ReadFilenames[I] == Paths[I]);
+    for (unsigned I = 1; I < Paths.size(); ++I) {
+      SmallString<256> P(Paths[0]);
+      llvm::sys::path::append(P, Paths[I]);
+      ASSERT_TRUE(ReadFilenames[I] == P);
+    }
+  }
+}
+
+TEST(CoverageMappingTest, filename_compilation_dir) {
+  std::vector<std::string> Paths({"dir", "a", "b", "c", "d", "e"});
+
+  for (bool Compress : {false, true}) {
+    std::string EncodedFilenames;
+    {
+      raw_string_ostream OS(EncodedFilenames);
+      CoverageFilenamesSectionWriter Writer(Paths);
+      Writer.write(OS, Compress);
+    }
+
+    StringRef CompilationDir = "out";
+    std::vector<std::string> ReadFilenames;
+    RawCoverageFilenamesReader Reader(EncodedFilenames, ReadFilenames,
+                                      CompilationDir);
+    EXPECT_THAT_ERROR(Reader.read(CovMapVersion::CurrentVersion), Succeeded());
+
+    ASSERT_EQ(ReadFilenames.size(), Paths.size());
+    for (unsigned I = 1; I < Paths.size(); ++I) {
+      SmallString<256> P(CompilationDir);
+      llvm::sys::path::append(P, Paths[I]);
+      ASSERT_TRUE(ReadFilenames[I] == P);
+    }
   }
 }
 
