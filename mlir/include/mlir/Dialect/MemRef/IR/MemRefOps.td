@@ -342,8 +342,8 @@ def CloneOp : MemRef_Op<"clone", [
     undefined behavior.
   }];
 
-  let arguments = (ins Arg<AnyMemRef, "", []>:$input);
-  let results = (outs Arg<AnyMemRef, "", []>:$output);
+  let arguments = (ins Arg<AnyRankedOrUnrankedMemRef, "", []>:$input);
+  let results = (outs Arg<AnyRankedOrUnrankedMemRef, "", []>:$output);
 
   let extraClassDeclaration = [{
     Value getSource() { return input();}
@@ -353,6 +353,7 @@ def CloneOp : MemRef_Op<"clone", [
   let assemblyFormat = "$input attr-dict `:` type($input) `to` type($output)";
 
   let hasFolder = 1;
+  let verifier = ?;
   let hasCanonicalizer = 1;
 }
 
@@ -376,9 +377,10 @@ def MemRef_DeallocOp : MemRef_Op<"dealloc", [MemRefsNormalizable]> {
     ```
   }];
 
-  let arguments = (ins Arg<AnyMemRef, "", [MemFree]>:$memref);
+  let arguments = (ins Arg<AnyRankedOrUnrankedMemRef, "", [MemFree]>:$memref);
 
   let hasFolder = 1;
+  let verifier = ?;
   let assemblyFormat = "$memref attr-dict `:` type($memref)";
 }
 

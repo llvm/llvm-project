@@ -96,7 +96,7 @@ ParseResult Parser::parseToken(Token::Kind expectedToken,
 }
 
 /// Parse an optional integer value from the stream.
-OptionalParseResult Parser::parseOptionalInteger(uint64_t &result) {
+OptionalParseResult Parser::parseOptionalInteger(APInt &result) {
   Token curToken = getToken();
   if (curToken.isNot(Token::integer, Token::minus))
     return llvm::None;
@@ -106,10 +106,19 @@ OptionalParseResult Parser::parseOptionalInteger(uint64_t &result) {
   if (parseToken(Token::integer, "expected integer value"))
     return failure();
 
-  auto val = curTok.getUInt64IntegerValue();
-  if (!val)
+  StringRef spelling = curTok.getSpelling();
+  bool isHex = spelling.size() > 1 && spelling[1] == 'x';
+  if (spelling.getAsInteger(isHex ? 0 : 10, result))
     return emitError(curTok.getLoc(), "integer value too large");
-  result = negative ? -*val : *val;
+
+  // Make sure we have a zero at the top so we return the right signedness.
+  if (result.isNegative())
+    result = result.zext(result.getBitWidth() + 1);
+
+  // Process the negative sign if present.
+  if (negative)
+    result.negate();
+
   return success();
 }
 
@@ -1217,7 +1226,7 @@ public:
   }
 
   /// Parse an optional integer value from the stream.
-  OptionalParseResult parseOptionalInteger(uint64_t &result) override {
+  OptionalParseResult parseOptionalInteger(APInt &result) override {
     return parser.parseOptionalInteger(result);
   }
 

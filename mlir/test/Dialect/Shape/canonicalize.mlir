@@ -1344,7 +1344,8 @@ func @cast_extent_tensor_operands(%arg0 : tensor<?xindex>,
     %arg1 : tensor<3xindex>) -> (!shape.witness, tensor<?xindex>) {
   // CHECK: %[[CAST_ARG0:.*]] = tensor.cast %[[ARG0]] : tensor<?xindex> to tensor<3xindex>
   // CHECK: %[[WIT:.*]] = shape.cstr_broadcastable %[[CAST_ARG0]], %[[ARG1]] : tensor<3xindex>, tensor<3xindex>
-  // CHECK: %[[RES:.*]] = shape.broadcast %[[CAST_ARG0]], %[[ARG1]] : tensor<3xindex>, tensor<3xindex>
+  // CHECK: %[[UNCAST_RES:.*]] = shape.broadcast %[[CAST_ARG0]], %[[ARG1]] : tensor<3xindex>, tensor<3xindex> -> tensor<3xindex>
+  // CHECK: %[[RES:.*]] = tensor.cast %[[UNCAST_RES]] : tensor<3xindex> to tensor<?xindex>
   // CHECK: return %[[WIT]], %[[RES]]
   %0 = tensor.cast %arg0 : tensor<?xindex> to tensor<3xindex>
   %1 = tensor.cast %arg1 : tensor<3xindex> to tensor<?xindex>
@@ -1352,4 +1353,18 @@ func @cast_extent_tensor_operands(%arg0 : tensor<?xindex>,
   %3 = shape.broadcast %0, %1 :tensor<3xindex>, tensor<?xindex>
       -> tensor<?xindex>
   return %2, %3 : !shape.witness, tensor<?xindex>
+}
+
+// -----
+
+// CHECK-LABEL: @concretize_broadcast_result_type
+// CHECK-SAME:  (%[[ARG0:.*]]: tensor<2xindex>, %[[ARG1:.*]]: tensor<3xindex>)
+func @concretize_broadcast_result_type(%arg0 : tensor<2xindex>,
+    %arg1 : tensor<3xindex>) -> tensor<?xindex> {
+  // CHECK: %[[CONCR:.*]] = shape.broadcast %[[ARG0]], %[[ARG1]] : tensor<2xindex>, tensor<3xindex> -> tensor<3xindex>
+  // CHECK: %[[RES:.*]] = tensor.cast %[[CONCR]] : tensor<3xindex> to tensor<?xindex>
+  // CHECK: return %[[RES]]
+  %0 = shape.broadcast %arg0, %arg1 : tensor<2xindex>, tensor<3xindex>
+      -> tensor<?xindex>
+  return %0 : tensor<?xindex>
 }

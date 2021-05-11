@@ -10,9 +10,11 @@
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
+#include "mlir/Dialect/StandardOps/Transforms/FuncConversions.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
+using namespace mlir::sparse_tensor;
 
 namespace {
 
@@ -42,14 +44,6 @@ struct SparsificationPass : public SparsificationBase<SparsificationPass> {
 
   Option<int32_t> vectorLength{
       *this, "vl", llvm::cl::desc("Set the vector length"), llvm::cl::init(1)};
-
-  Option<int32_t> ptrType{*this, "ptr-type",
-                          llvm::cl::desc("Set the pointer type"),
-                          llvm::cl::init(0)};
-
-  Option<int32_t> indType{*this, "ind-type",
-                          llvm::cl::desc("Set the index type"),
-                          llvm::cl::init(0)};
 
   Option<bool> fastOutput{*this, "fast-output",
                           llvm::cl::desc("Allows fast output buffers"),
@@ -83,29 +77,12 @@ struct SparsificationPass : public SparsificationBase<SparsificationPass> {
     }
   }
 
-  /// Returns the requested integer type.
-  SparseIntType typeOption(int32_t option) {
-    switch (option) {
-    default:
-      return SparseIntType::kNative;
-    case 1:
-      return SparseIntType::kI64;
-    case 2:
-      return SparseIntType::kI32;
-    case 3:
-      return SparseIntType::kI16;
-    case 4:
-      return SparseIntType::kI8;
-    }
-  }
-
   void runOnOperation() override {
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
     // Translate strategy flags to strategy options.
     SparsificationOptions options(parallelOption(), vectorOption(),
-                                  vectorLength, typeOption(ptrType),
-                                  typeOption(indType), fastOutput);
+                                  vectorLength, fastOutput);
     // Apply rewriting.
     populateSparsificationPatterns(patterns, options);
     vector::populateVectorToVectorCanonicalizationPatterns(patterns);
@@ -113,19 +90,41 @@ struct SparsificationPass : public SparsificationBase<SparsificationPass> {
   }
 };
 
+class SparseTensorTypeConverter : public TypeConverter {
+public:
+  SparseTensorTypeConverter() {
+    addConversion([](Type type) { return type; });
+    addConversion(convertSparseTensorTypes);
+  }
+  // Maps each sparse tensor type to an opaque pointer.
+  static Optional<Type> convertSparseTensorTypes(Type type) {
+    if (getSparseTensorEncoding(type) != nullptr)
+      return LLVM::LLVMPointerType::get(IntegerType::get(type.getContext(), 8));
+    return llvm::None;
+  }
+};
+
 struct SparseTensorConversionPass
     : public SparseTensorConversionBase<SparseTensorConversionPass> {
   void runOnOperation() override {
     auto *ctx = &getContext();
-    RewritePatternSet conversionPatterns(ctx);
+    RewritePatternSet patterns(ctx);
+    SparseTensorTypeConverter converter;
     ConversionTarget target(*ctx);
-    target
-        .addIllegalOp<sparse_tensor::FromPointerOp, sparse_tensor::ToPointersOp,
-                      sparse_tensor::ToIndicesOp, sparse_tensor::ToValuesOp>();
-    target.addLegalOp<CallOp>();
-    populateSparseTensorConversionPatterns(conversionPatterns);
+    target.addIllegalOp<NewOp, ToPointersOp, ToIndicesOp, ToValuesOp>();
+    target.addDynamicallyLegalOp<FuncOp>(
+        [&](FuncOp op) { return converter.isSignatureLegal(op.getType()); });
+    target.addDynamicallyLegalOp<CallOp>([&](CallOp op) {
+      return converter.isSignatureLegal(op.getCalleeType());
+    });
+    target.addDynamicallyLegalOp<ReturnOp>(
+        [&](ReturnOp op) { return converter.isLegal(op.getOperandTypes()); });
+    target.addLegalOp<ConstantOp>();
+    populateFuncOpTypeConversionPattern(patterns, converter);
+    populateCallOpTypeConversionPattern(patterns, converter);
+    populateSparseTensorConversionPatterns(converter, patterns);
     if (failed(applyPartialConversion(getOperation(), target,
-                                      std::move(conversionPatterns))))
+                                      std::move(patterns))))
       signalPassFailure();
   }
 };

@@ -112,14 +112,12 @@ private:
                  std::move(ISMBuilder)) {
     MainJD.addGenerator(std::move(ProcessSymbolsGenerator));
     this->CODLayer.setImplMap(&Imps);
-    this->ES->setDispatchMaterialization(
-        [this](std::unique_ptr<MaterializationUnit> MU,
-               std::unique_ptr<MaterializationResponsibility> MR) {
+    this->ES->setDispatchTask(
+        [this](std::unique_ptr<Task> T) {
           CompileThreads.async(
-              [UnownedMU = MU.release(), UnownedMR = MR.release()]() {
-                std::unique_ptr<MaterializationUnit> MU(UnownedMU);
-                std::unique_ptr<MaterializationResponsibility> MR(UnownedMR);
-                MU->materialize(std::move(MR));
+              [UnownedT = T.release()]() {
+                std::unique_ptr<Task> T(UnownedT);
+                T->run();
               });
         });
     ExitOnErr(S.addSpeculationRuntime(MainJD, Mangle));

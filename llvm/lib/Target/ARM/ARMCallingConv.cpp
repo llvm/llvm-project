@@ -256,22 +256,26 @@ static bool CC_ARM_AAPCS_Custom_Aggregate(unsigned ValNo, MVT ValVT,
     }
     PendingMembers.clear();
     return true;
-  } else if (LocVT != MVT::i32)
+  }
+
+  if (LocVT != MVT::i32)
     RegList = SRegList;
 
   // Mark all regs as unavailable (AAPCS rule C.2.vfp for VFP, C.6 for core)
   for (auto Reg : RegList)
     State.AllocateReg(Reg);
 
+  // Clamp the alignment between 4 and 8.
+  if (State.getMachineFunction().getSubtarget<ARMSubtarget>().isTargetAEABI())
+    Alignment = ArgFlags.getNonZeroMemAlign() <= 4 ? Align(4) : Align(8);
+
   // After the first item has been allocated, the rest are packed as tightly as
   // possible. (E.g. an incoming i64 would have starting Align of 8, but we'll
   // be allocating a bunch of i32 slots).
-  const Align RestAlign = std::min(Alignment, Align(Size));
-
   for (auto &It : PendingMembers) {
     It.convertToMem(State.AllocateStack(Size, Alignment));
     State.addLoc(It);
-    Alignment = RestAlign;
+    Alignment = Align(1);
   }
 
   // All pending members have now been allocated

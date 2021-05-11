@@ -61,6 +61,7 @@ set(MLIR_TEST_DEPENDS
   mlir-capi-execution-engine-test
   mlir-capi-ir-test
   mlir-capi-pass-test
+  mlir-capi-sparse-tensor-test
   mlir-cpu-runner
   mlir-edsc-builder-api-test
   mlir-linalg-ods-gen

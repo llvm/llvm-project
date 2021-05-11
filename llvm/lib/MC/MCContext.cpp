@@ -672,7 +672,8 @@ MCSectionCOFF *MCContext::getAssociativeCOFFSection(MCSectionCOFF *Sec,
 }
 
 MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind K,
-                                         const Twine &Group, unsigned UniqueID,
+                                         unsigned Flags, const Twine &Group,
+                                         unsigned UniqueID,
                                          const char *BeginSymName) {
   MCSymbolWasm *GroupSym = nullptr;
   if (!Group.isTriviallyEmpty() && !Group.str().empty()) {
@@ -680,10 +681,11 @@ MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind K,
     GroupSym->setComdat(true);
   }
 
-  return getWasmSection(Section, K, GroupSym, UniqueID, BeginSymName);
+  return getWasmSection(Section, K, Flags, GroupSym, UniqueID, BeginSymName);
 }
 
 MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind Kind,
+                                         unsigned Flags,
                                          const MCSymbolWasm *GroupSym,
                                          unsigned UniqueID,
                                          const char *BeginSymName) {
@@ -704,7 +706,7 @@ MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind Kind,
   cast<MCSymbolWasm>(Begin)->setType(wasm::WASM_SYMBOL_TYPE_SECTION);
 
   MCSectionWasm *Result = new (WasmAllocator.Allocate())
-      MCSectionWasm(CachedName, Kind, GroupSym, UniqueID, Begin);
+      MCSectionWasm(CachedName, Kind, Flags, GroupSym, UniqueID, Begin);
   Entry.second = Result;
 
   auto *F = new MCDataFragment();

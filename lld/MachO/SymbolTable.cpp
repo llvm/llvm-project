@@ -186,20 +186,21 @@ Defined *SymbolTable::addSynthetic(StringRef name, InputSection *isec,
   return s;
 }
 
-void lld::macho::treatUndefinedSymbol(const Undefined &sym) {
-  auto message = [](const Undefined &sym) {
+void lld::macho::treatUndefinedSymbol(const Undefined &sym, StringRef source) {
+  auto message = [source, &sym]() {
     std::string message = "undefined symbol: " + toString(sym);
-    std::string fileName = toString(sym.getFile());
-    if (!fileName.empty())
-      message += "\n>>> referenced by " + fileName;
+    if (!source.empty())
+      message += "\n>>> referenced by " + source.str();
+    else
+      message += "\n>>> referenced by " + toString(sym.getFile());
     return message;
   };
   switch (config->undefinedSymbolTreatment) {
   case UndefinedSymbolTreatment::error:
-    error(message(sym));
+    error(message());
     break;
   case UndefinedSymbolTreatment::warning:
-    warn(message(sym));
+    warn(message());
     LLVM_FALLTHROUGH;
   case UndefinedSymbolTreatment::dynamic_lookup:
   case UndefinedSymbolTreatment::suppress:

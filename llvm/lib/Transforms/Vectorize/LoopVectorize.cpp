@@ -9067,7 +9067,12 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
               Instr, Operands, Range, Plan)) {
         // If Instr can be simplified to an existing VPValue, use it.
         if (RecipeOrValue.is<VPValue *>()) {
-          Plan->addVPValue(Instr, RecipeOrValue.get<VPValue *>());
+          auto *VPV = RecipeOrValue.get<VPValue *>();
+          Plan->addVPValue(Instr, VPV);
+          // If the re-used value is a recipe, register the recipe for the
+          // instruction, in case the recipe for Instr needs to be recorded.
+          if (auto *R = dyn_cast_or_null<VPRecipeBase>(VPV->getDef()))
+            RecipeBuilder.setRecipe(Instr, R);
           continue;
         }
         // Otherwise, add the new recipe.

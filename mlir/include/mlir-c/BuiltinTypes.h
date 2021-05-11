@@ -203,6 +203,10 @@ MLIR_CAPI_EXPORTED MlirType mlirRankedTensorTypeGetChecked(
     MlirLocation loc, intptr_t rank, const int64_t *shape, MlirType elementType,
     MlirAttribute encoding);
 
+/// Gets the 'encoding' attribute from the ranked tensor type, returning a null
+/// attribute if none.
+MLIR_CAPI_EXPORTED MlirAttribute mlirRankedTensorTypeGetEncoding(MlirType type);
+
 /// Creates an unranked tensor type with the given element type in the same
 /// context as the element type. The type is owned by the context.
 MLIR_CAPI_EXPORTED MlirType mlirUnrankedTensorTypeGet(MlirType elementType);

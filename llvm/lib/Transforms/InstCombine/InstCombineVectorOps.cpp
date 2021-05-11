@@ -2080,13 +2080,22 @@ static Instruction *narrowVectorSelect(ShuffleVectorInst &Shuf,
   return SelectInst::Create(NarrowCond, NarrowX, NarrowY);
 }
 
-/// Try to combine 2 shuffles into 1 shuffle by concatenating a shuffle mask.
+/// Try to fold an extract subvector operation.
 static Instruction *foldIdentityExtractShuffle(ShuffleVectorInst &Shuf) {
   Value *Op0 = Shuf.getOperand(0), *Op1 = Shuf.getOperand(1);
   if (!Shuf.isIdentityWithExtract() || !match(Op1, m_Undef()))
     return nullptr;
 
-  Value *X, *Y;
+  // Check if we are extracting all bits of an inserted scalar:
+  // extract-subvec (bitcast (inselt ?, X, 0) --> bitcast X to subvec type
+  Value *X;
+  if (match(Op0, m_BitCast(m_InsertElt(m_Value(), m_Value(X), m_Zero()))) &&
+      X->getType()->getPrimitiveSizeInBits() ==
+          Shuf.getType()->getPrimitiveSizeInBits())
+    return new BitCastInst(X, Shuf.getType());
+
+  // Try to combine 2 shuffles into 1 shuffle by concatenating a shuffle mask.
+  Value *Y;
   ArrayRef<int> Mask;
   if (!match(Op0, m_Shuffle(m_Value(X), m_Value(Y), m_Mask(Mask))))
     return nullptr;

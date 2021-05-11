@@ -2483,8 +2483,8 @@ _LIBCPP_CONSTEXPR_AFTER_CXX11 _ForwardIterator
 __rotate(_ForwardIterator __first, _ForwardIterator __middle, _ForwardIterator __last,
          _VSTD::forward_iterator_tag)
 {
-    typedef typename _VSTD::iterator_traits<_ForwardIterator>::value_type value_type;
-    if (_VSTD::is_trivially_move_assignable<value_type>::value)
+    typedef typename iterator_traits<_ForwardIterator>::value_type value_type;
+    if (is_trivially_move_assignable<value_type>::value)
     {
         if (_VSTD::next(__first) == __middle)
             return _VSTD::__rotate_left(__first, __last);
@@ -2496,10 +2496,10 @@ template <class _BidirectionalIterator>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR_AFTER_CXX11 _BidirectionalIterator
 __rotate(_BidirectionalIterator __first, _BidirectionalIterator __middle, _BidirectionalIterator __last,
-         _VSTD::bidirectional_iterator_tag)
+         bidirectional_iterator_tag)
 {
-    typedef typename _VSTD::iterator_traits<_BidirectionalIterator>::value_type value_type;
-    if (_VSTD::is_trivially_move_assignable<value_type>::value)
+    typedef typename iterator_traits<_BidirectionalIterator>::value_type value_type;
+    if (is_trivially_move_assignable<value_type>::value)
     {
         if (_VSTD::next(__first) == __middle)
             return _VSTD::__rotate_left(__first, __last);
@@ -2513,10 +2513,10 @@ template <class _RandomAccessIterator>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR_AFTER_CXX11 _RandomAccessIterator
 __rotate(_RandomAccessIterator __first, _RandomAccessIterator __middle, _RandomAccessIterator __last,
-         _VSTD::random_access_iterator_tag)
+         random_access_iterator_tag)
 {
-    typedef typename _VSTD::iterator_traits<_RandomAccessIterator>::value_type value_type;
-    if (_VSTD::is_trivially_move_assignable<value_type>::value)
+    typedef typename iterator_traits<_RandomAccessIterator>::value_type value_type;
+    if (is_trivially_move_assignable<value_type>::value)
     {
         if (_VSTD::next(__first) == __middle)
             return _VSTD::__rotate_left(__first, __last);
@@ -2537,7 +2537,7 @@ rotate(_ForwardIterator __first, _ForwardIterator __middle, _ForwardIterator __l
     if (__middle == __last)
         return __first;
     return _VSTD::__rotate(__first, __middle, __last,
-                           typename _VSTD::iterator_traits<_ForwardIterator>::iterator_category());
+                           typename iterator_traits<_ForwardIterator>::iterator_category());
 }
 
 // rotate_copy

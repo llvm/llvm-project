@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: apple-clang-9, apple-clang-10, apple-clang-11, apple-clang-12.0.0
 
 // <compare>
 
@@ -52,44 +53,6 @@ void test_signatures() {
 }
 
 constexpr bool test_conversion() {
-  static_assert(std::is_convertible<const std::strong_ordering&,
-      std::weak_equality>::value, "");
-  { // value == 0
-    auto V = std::strong_ordering::equivalent;
-    std::weak_equality WV = V;
-    assert(WV == 0);
-  }
-  std::strong_ordering WeakTestCases[] = {
-      std::strong_ordering::less,
-      std::strong_ordering::greater,
-  };
-  for (auto V : WeakTestCases)
-  { // value != 0
-    std::weak_equality WV = V;
-    assert(WV != 0);
-  }
-  static_assert(std::is_convertible<const std::strong_ordering&,
-      std::strong_equality>::value, "");
-  { // value == 0
-    auto V = std::strong_ordering::equivalent;
-    std::strong_equality WV = V;
-    assert(WV == 0);
-  }
-  { // value == 0
-    auto V = std::strong_ordering::equal;
-    std::strong_equality WV = V;
-    assert(WV == 0);
-  }
-  std::strong_ordering StrongTestCases[] = {
-      std::strong_ordering::less,
-      std::strong_ordering::greater,
-  };
-  for (auto V : StrongTestCases)
-  { // value != 0
-    std::strong_equality WV = V;
-    assert(WV != 0);
-  }
-
   static_assert(std::is_convertible<const std::strong_ordering&,
       std::partial_ordering>::value, "");
   { // value == 0

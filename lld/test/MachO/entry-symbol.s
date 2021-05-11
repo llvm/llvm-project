@@ -22,7 +22,11 @@
 # CHECK-NEXT: entryoff [[#ENTRYOFF]]
 
 # RUN: %lld -lSystem -o %t/dysym-main %t/not-main.o %t/libfoo.dylib -e _dysym_main
-# RUN: llvm-objdump --macho --all-headers --indirect-symbols --lazy-bind %t/dysym-main | FileCheck %s --check-prefix=DYSYM
+# RUN: llvm-objdump --macho --all-headers --indirect-symbols --lazy-bind %t/dysym-main | FileCheck %s --check-prefix=DYSYM -DDYLIB=libfoo
+
+# RUN: %lld -lSystem -o %t/dyn-lookup %t/not-main.o -e _dysym_main -undefined dynamic_lookup
+# RUN: llvm-objdump --macho --all-headers --indirect-symbols --lazy-bind %t/dyn-lookup | FileCheck %s --check-prefix=DYSYM -DDYLIB=flat-namespace
+
 # DYSYM-LABEL: Indirect symbols for (__TEXT,__stubs) 1 entries
 # DYSYM-NEXT:  address                      index  name
 # DYSYM-NEXT:  0x[[#%x,DYSYM_ENTRY_ADDR:]]  [[#]]  _dysym_main
@@ -30,8 +34,8 @@
 # DYSYM-NEXT:  cmdsize  24
 # DYSYM-NEXT:  entryoff [[#%u, DYSYM_ENTRY_ADDR - 0x100000000]]
 # DYSYM-LABEL: Lazy bind table:
-# DYSYM-NEXT:  segment  section            address     dylib            symbol
-# DYSYM-NEXT:  __DATA   __la_symbol_ptr    {{.*}}      libfoo       _dysym_main
+# DYSYM-NEXT:  segment  section            address     dylib        symbol
+# DYSYM-NEXT:  __DATA   __la_symbol_ptr    {{.*}}      [[DYLIB]]    _dysym_main
 
 # RUN: %lld -lSystem -o %t/weak-dysym-main %t/not-main.o %t/libfoo.dylib -e _weak_dysym_main
 # RUN: llvm-objdump --macho --all-headers --indirect-symbols --bind --weak-bind %t/weak-dysym-main | FileCheck %s --check-prefix=WEAK-DYSYM
@@ -42,8 +46,8 @@
 # WEAK-DYSYM-NEXT:  cmdsize  24
 # WEAK-DYSYM-NEXT:  entryoff [[#%u, DYSYM_ENTRY_ADDR - 0x100000000]]
 # WEAK-DYSYM-LABEL: Bind table:
-# WEAK-DYSYM-NEXT:  segment  section          address  type     addend  dylib      symbol
-# WEAK-DYSYM:       __DATA   __la_symbol_ptr  {{.*}}   pointer       0  libfoo _weak_dysym_main
+# WEAK-DYSYM-NEXT:  segment  section          address  type     addend  dylib   symbol
+# WEAK-DYSYM:       __DATA   __la_symbol_ptr  {{.*}}   pointer       0  libfoo  _weak_dysym_main
 # WEAK-DYSYM-LABEL: Weak bind table:
 # WEAK-DYSYM-NEXT:  segment  section          address  type     addend  symbol
 # WEAK-DYSYM-NEXT:  __DATA   __la_symbol_ptr  {{.*}}   pointer       0  _weak_dysym_main
@@ -55,7 +59,8 @@
 # RUN: not %lld -o /dev/null %t/not-main.o -e _missing 2>&1 | FileCheck %s --check-prefix=UNDEFINED
 # UNDEFINED: error: undefined symbol: _missing
 # RUN: not %lld -o /dev/null %t/not-main.o 2>&1 | FileCheck %s --check-prefix=DEFAULT-ENTRY
-# DEFAULT-ENTRY: error: undefined symbol: _main
+# DEFAULT-ENTRY:      error: undefined symbol: _main
+# DEFAULT-ENTRY-NEXT: >>> referenced by the entry point
 
 #--- libfoo.s
 .text

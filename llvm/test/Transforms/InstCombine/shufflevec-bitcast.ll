@@ -167,3 +167,72 @@ define <16 x i8> @shuf_bitcast_operand_cannot_widen_undef(<4 x i32> %x) {
   %s2 = shufflevector <16 x i8> %bc, <16 x i8> undef, <16 x i32> <i32 12, i32 undef, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
   ret <16 x i8> %s2
 }
+
+define <2 x i4> @shuf_bitcast_insert(<2 x i8> %v, i8 %x) {
+; CHECK-LABEL: @shuf_bitcast_insert(
+; CHECK-NEXT:    [[R:%.*]] = bitcast i8 [[X:%.*]] to <2 x i4>
+; CHECK-NEXT:    ret <2 x i4> [[R]]
+;
+  %i = insertelement <2 x i8> %v, i8 %x, i32 0
+  %b = bitcast <2 x i8> %i to <4 x i4>
+  %r = shufflevector <4 x i4> %b, <4 x i4> undef, <2 x i32> <i32 0, i32 1>
+  ret <2 x i4> %r
+}
+
+define <2 x i4> @shuf_bitcast_inserti_use1(<2 x i8> %v, i8 %x, <2 x i8>* %p) {
+; CHECK-LABEL: @shuf_bitcast_inserti_use1(
+; CHECK-NEXT:    [[I:%.*]] = insertelement <2 x i8> [[V:%.*]], i8 [[X:%.*]], i32 0
+; CHECK-NEXT:    store <2 x i8> [[I]], <2 x i8>* [[P:%.*]], align 2
+; CHECK-NEXT:    [[R:%.*]] = bitcast i8 [[X]] to <2 x i4>
+; CHECK-NEXT:    ret <2 x i4> [[R]]
+;
+  %i = insertelement <2 x i8> %v, i8 %x, i32 0
+  store <2 x i8> %i, <2 x i8>* %p
+  %b = bitcast <2 x i8> %i to <4 x i4>
+  %r = shufflevector <4 x i4> %b, <4 x i4> undef, <2 x i32> <i32 0, i32 1>
+  ret <2 x i4> %r
+}
+
+define <2 x i4> @shuf_bitcast_insert_use2(<2 x i8> %v, i8 %x, <4 x i4>* %p) {
+; CHECK-LABEL: @shuf_bitcast_insert_use2(
+; CHECK-NEXT:    [[I:%.*]] = insertelement <2 x i8> [[V:%.*]], i8 [[X:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i4>* [[P:%.*]] to <2 x i8>*
+; CHECK-NEXT:    store <2 x i8> [[I]], <2 x i8>* [[TMP1]], align 4
+; CHECK-NEXT:    [[R:%.*]] = bitcast i8 [[X]] to <2 x i4>
+; CHECK-NEXT:    ret <2 x i4> [[R]]
+;
+  %i = insertelement <2 x i8> %v, i8 %x, i32 0
+  %b = bitcast <2 x i8> %i to <4 x i4>
+  store <4 x i4> %b, <4 x i4>* %p
+  %r = shufflevector <4 x i4> %b, <4 x i4> undef, <2 x i32> <i32 0, i32 1>
+  ret <2 x i4> %r
+}
+
+; negative test - but demanded elements reduces this.
+
+define <2 x i4> @shuf_bitcast_insert_wrong_index(<2 x i8> %v, i8 %x) {
+; CHECK-LABEL: @shuf_bitcast_insert_wrong_index(
+; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i8> [[V:%.*]] to <4 x i4>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i4> [[B]], <4 x i4> undef, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    ret <2 x i4> [[R]]
+;
+  %i = insertelement <2 x i8> %v, i8 %x, i32 1
+  %b = bitcast <2 x i8> %i to <4 x i4>
+  %r = shufflevector <4 x i4> %b, <4 x i4> undef, <2 x i32> <i32 0, i32 1>
+  ret <2 x i4> %r
+}
+
+; negative test
+
+define <3 x i4> @shuf_bitcast_wrong_size(<2 x i8> %v, i8 %x) {
+; CHECK-LABEL: @shuf_bitcast_wrong_size(
+; CHECK-NEXT:    [[I:%.*]] = insertelement <2 x i8> [[V:%.*]], i8 [[X:%.*]], i32 0
+; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i8> [[I]] to <4 x i4>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i4> [[B]], <4 x i4> undef, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT:    ret <3 x i4> [[R]]
+;
+  %i = insertelement <2 x i8> %v, i8 %x, i32 0
+  %b = bitcast <2 x i8> %i to <4 x i4>
+  %r = shufflevector <4 x i4> %b, <4 x i4> undef, <3 x i32> <i32 0, i32 1, i32 2>
+  ret <3 x i4> %r
+}

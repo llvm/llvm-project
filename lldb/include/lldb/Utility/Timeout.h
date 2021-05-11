@@ -37,7 +37,6 @@ private:
 
 public:
   Timeout(llvm::NoneType none) : Base(none) {}
-  Timeout(const Timeout &other) = default;
 
   template <typename Ratio2,
             typename = typename EnableIf<int64_t, Ratio2>::type>

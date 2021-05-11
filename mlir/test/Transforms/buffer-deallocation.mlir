@@ -90,6 +90,43 @@ func @condBranchDynamicType(
 
 // -----
 
+// Test case: See above.
+
+// CHECK-LABEL: func @condBranchUnrankedType
+func @condBranchUnrankedType(
+  %arg0: i1,
+  %arg1: memref<*xf32>,
+  %arg2: memref<*xf32>,
+  %arg3: index) {
+  cond_br %arg0, ^bb1, ^bb2(%arg3: index)
+^bb1:
+  br ^bb3(%arg1 : memref<*xf32>)
+^bb2(%0: index):
+  %1 = memref.alloc(%0) : memref<?xf32>
+  %2 = memref.cast %1 : memref<?xf32> to memref<*xf32>
+  test.buffer_based in(%arg1: memref<*xf32>) out(%2: memref<*xf32>)
+  br ^bb3(%2 : memref<*xf32>)
+^bb3(%3: memref<*xf32>):
+  test.copy(%3, %arg2) : (memref<*xf32>, memref<*xf32>)
+  return
+}
+
+// CHECK-NEXT: cond_br
+//      CHECK: %[[ALLOC0:.*]] = memref.clone
+// CHECK-NEXT: br ^bb3(%[[ALLOC0]]
+//      CHECK: ^bb2(%[[IDX:.*]]:{{.*}})
+// CHECK-NEXT: %[[ALLOC1:.*]] = memref.alloc(%[[IDX]])
+//      CHECK: test.buffer_based
+// CHECK-NEXT: %[[ALLOC2:.*]] = memref.clone
+// CHECK-NEXT: memref.dealloc %[[ALLOC1]]
+// CHECK-NEXT: br ^bb3
+// CHECK-NEXT: ^bb3(%[[ALLOC3:.*]]:{{.*}})
+//      CHECK: test.copy(%[[ALLOC3]],
+// CHECK-NEXT: memref.dealloc %[[ALLOC3]]
+// CHECK-NEXT: return
+
+// -----
+
 // Test Case:
 //      bb0
 //     /    \

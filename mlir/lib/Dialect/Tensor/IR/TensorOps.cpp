@@ -238,6 +238,12 @@ void FromElementsOp::build(OpBuilder &builder, OperationState &result,
   build(builder, result, elements.front().getType(), elements);
 }
 
+OpFoldResult FromElementsOp::fold(ArrayRef<Attribute> operands) {
+  if (!llvm::is_contained(operands, nullptr))
+    return DenseElementsAttr::get(getType(), operands);
+  return {};
+}
+
 namespace {
 
 // Canonicalizes the pattern of the form

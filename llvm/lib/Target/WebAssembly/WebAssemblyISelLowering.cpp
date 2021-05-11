@@ -17,13 +17,13 @@
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyTargetMachine.h"
-#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
@@ -68,6 +68,20 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   }
   // Compute derived properties from the register classes.
   computeRegisterProperties(Subtarget->getRegisterInfo());
+
+  // Transform loads and stores to pointers in address space 1 to loads and
+  // stores to WebAssembly global variables, outside linear memory.
+  for (auto T : {MVT::i32, MVT::i64, MVT::f32, MVT::f64}) {
+    setOperationAction(ISD::LOAD, T, Custom);
+    setOperationAction(ISD::STORE, T, Custom);
+  }
+  if (Subtarget->hasSIMD128()) {
+    for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
+                   MVT::v2f64}) {
+      setOperationAction(ISD::LOAD, T, Custom);
+      setOperationAction(ISD::STORE, T, Custom);
+    }
+  }
 
   setOperationAction(ISD::GlobalAddress, MVTPtr, Custom);
   setOperationAction(ISD::GlobalTLSAddress, MVTPtr, Custom);
@@ -1248,7 +1262,61 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
     return LowerFP_TO_INT_SAT(Op, DAG);
+  case ISD::LOAD:
+    return LowerLoad(Op, DAG);
+  case ISD::STORE:
+    return LowerStore(Op, DAG);
   }
+}
+
+static bool IsWebAssemblyGlobal(SDValue Op) {
+  if (const GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Op))
+    return WebAssembly::isWasmVarAddressSpace(GA->getAddressSpace());
+
+  return false;
+}
+
+SDValue WebAssemblyTargetLowering::LowerStore(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  StoreSDNode *SN = cast<StoreSDNode>(Op.getNode());
+  const SDValue &Value = SN->getValue();
+  const SDValue &Base = SN->getBasePtr();
+  const SDValue &Offset = SN->getOffset();
+
+  if (IsWebAssemblyGlobal(Base)) {
+    if (!Offset->isUndef())
+      report_fatal_error("unexpected offset when storing to webassembly global",
+                         false);
+
+    SDVTList Tys = DAG.getVTList(MVT::Other);
+    SDValue Ops[] = {SN->getChain(), Value, Base};
+    return DAG.getMemIntrinsicNode(WebAssemblyISD::GLOBAL_SET, DL, Tys, Ops,
+                                   SN->getMemoryVT(), SN->getMemOperand());
+  }
+
+  return Op;
+}
+
+SDValue WebAssemblyTargetLowering::LowerLoad(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  LoadSDNode *LN = cast<LoadSDNode>(Op.getNode());
+  const SDValue &Base = LN->getBasePtr();
+  const SDValue &Offset = LN->getOffset();
+
+  if (IsWebAssemblyGlobal(Base)) {
+    if (!Offset->isUndef())
+      report_fatal_error(
+          "unexpected offset when loading from webassembly global", false);
+
+    SDVTList Tys = DAG.getVTList(LN->getValueType(0), MVT::Other);
+    SDValue Ops[] = {LN->getChain(), Base};
+    return DAG.getMemIntrinsicNode(WebAssemblyISD::GLOBAL_GET, DL, Tys, Ops,
+                                   LN->getMemoryVT(), LN->getMemOperand());
+  }
+
+  return Op;
 }
 
 SDValue WebAssemblyTargetLowering::LowerCopyToReg(SDValue Op,
@@ -1369,8 +1437,8 @@ SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,
   EVT VT = Op.getValueType();
   assert(GA->getTargetFlags() == 0 &&
          "Unexpected target flags on generic GlobalAddressSDNode");
-  if (GA->getAddressSpace() != 0)
-    fail(DL, DAG, "WebAssembly only expects the 0 address space");
+  if (!WebAssembly::isValidAddressSpace(GA->getAddressSpace()))
+    fail(DL, DAG, "Invalid address space for WebAssembly target");
 
   unsigned OperandFlags = 0;
   if (isPositionIndependent()) {
