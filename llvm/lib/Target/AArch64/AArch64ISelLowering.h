@@ -1003,6 +1003,8 @@ private:
   SDValue LowerFixedLengthBitcastToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthConcatVectorsToSVE(SDValue Op,
                                              SelectionDAG &DAG) const;
+  SDValue LowerFixedLengthFPExtendToSVE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFixedLengthFPRoundToSVE(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
                         SmallVectorImpl<SDNode *> &Created) const override;

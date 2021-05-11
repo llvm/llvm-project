@@ -1279,7 +1279,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       for (auto VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
         setOperationAction(ISD::TRUNCATE, VT, Custom);
       for (auto VT : {MVT::v8f16, MVT::v4f32})
-        setOperationAction(ISD::FP_ROUND, VT, Expand);
+        setOperationAction(ISD::FP_ROUND, VT, Custom);
 
       // These operations are not supported on NEON but SVE can do them.
       setOperationAction(ISD::BITREVERSE, MVT::v1i64, Custom);
@@ -1480,6 +1480,8 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::FMUL, VT, Custom);
   setOperationAction(ISD::FNEARBYINT, VT, Custom);
   setOperationAction(ISD::FNEG, VT, Custom);
+  setOperationAction(ISD::FP_EXTEND, VT, Custom);
+  setOperationAction(ISD::FP_ROUND, VT, Custom);
   setOperationAction(ISD::FRINT, VT, Custom);
   setOperationAction(ISD::FROUND, VT, Custom);
   setOperationAction(ISD::FROUNDEVEN, VT, Custom);
@@ -3208,8 +3210,12 @@ static SDValue LowerPREFETCH(SDValue Op, SelectionDAG &DAG) {
 
 SDValue AArch64TargetLowering::LowerFP_EXTEND(SDValue Op,
                                               SelectionDAG &DAG) const {
-  if (Op.getValueType().isScalableVector())
+  EVT VT = Op.getValueType();
+  if (VT.isScalableVector())
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FP_EXTEND_MERGE_PASSTHRU);
+
+  if (useSVEForFixedLengthVectorVT(VT))
+    return LowerFixedLengthFPExtendToSVE(Op, DAG);
 
   assert(Op.getValueType() == MVT::f128 && "Unexpected lowering");
   return SDValue();
@@ -3223,6 +3229,9 @@ SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
   bool IsStrict = Op->isStrictFPOpcode();
   SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
   EVT SrcVT = SrcVal.getValueType();
+
+  if (useSVEForFixedLengthVectorVT(SrcVT))
+    return LowerFixedLengthFPRoundToSVE(Op, DAG);
 
   if (SrcVT != MVT::f128) {
     // Expand cases where the input is a vector bigger than NEON.
@@ -17934,6 +17943,55 @@ SDValue AArch64TargetLowering::LowerFixedLengthConcatVectorsToSVE(
   Op = DAG.getNode(AArch64ISD::SPLICE, DL, ContainerVT, Pg, SrcOp1, SrcOp2);
 
   return convertFromScalableVector(DAG, VT, Op);
+}
+
+SDValue
+AArch64TargetLowering::LowerFixedLengthFPExtendToSVE(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  assert(VT.isFixedLengthVector() && "Expected fixed length vector type!");
+
+  SDLoc DL(Op);
+  SDValue Val = Op.getOperand(0);
+  SDValue Pg = getPredicateForVector(DAG, DL, VT);
+  EVT SrcVT = Val.getValueType();
+  EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+  EVT ExtendVT = ContainerVT.changeVectorElementType(
+      SrcVT.getVectorElementType());
+
+  Val = DAG.getNode(ISD::BITCAST, DL, SrcVT.changeTypeToInteger(), Val);
+  Val = DAG.getNode(ISD::ANY_EXTEND, DL, VT.changeTypeToInteger(), Val);
+
+  Val = convertToScalableVector(DAG, ContainerVT.changeTypeToInteger(), Val);
+  Val = getSVESafeBitCast(ExtendVT, Val, DAG);
+  Val = DAG.getNode(AArch64ISD::FP_EXTEND_MERGE_PASSTHRU, DL, ContainerVT,
+                    Pg, Val, DAG.getUNDEF(ContainerVT));
+
+  return convertFromScalableVector(DAG, VT, Val);
+}
+
+SDValue
+AArch64TargetLowering::LowerFixedLengthFPRoundToSVE(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  assert(VT.isFixedLengthVector() && "Expected fixed length vector type!");
+
+  SDLoc DL(Op);
+  SDValue Val = Op.getOperand(0);
+  EVT SrcVT = Val.getValueType();
+  EVT ContainerSrcVT = getContainerForFixedLengthVector(DAG, SrcVT);
+  EVT RoundVT = ContainerSrcVT.changeVectorElementType(
+      VT.getVectorElementType());
+  SDValue Pg = getPredicateForVector(DAG, DL, RoundVT);
+
+  Val = convertToScalableVector(DAG, ContainerSrcVT, Val);
+  Val = DAG.getNode(AArch64ISD::FP_ROUND_MERGE_PASSTHRU, DL, RoundVT, Pg, Val,
+                    Op.getOperand(1), DAG.getUNDEF(RoundVT));
+  Val = getSVESafeBitCast(ContainerSrcVT.changeTypeToInteger(), Val, DAG);
+  Val = convertFromScalableVector(DAG, SrcVT.changeTypeToInteger(), Val);
+
+  Val = DAG.getNode(ISD::TRUNCATE, DL, VT.changeTypeToInteger(), Val);
+  return DAG.getNode(ISD::BITCAST, DL, VT, Val);
 }
 
 SDValue AArch64TargetLowering::getSVESafeBitCast(EVT VT, SDValue Op,
