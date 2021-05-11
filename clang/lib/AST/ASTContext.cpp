@@ -11635,7 +11635,7 @@ bool ASTContext::mayExternalizeStaticVar(const Decl *D) const {
 bool ASTContext::shouldExternalizeStaticVar(const Decl *D) const {
   return mayExternalizeStaticVar(D) &&
          (D->hasAttr<HIPManagedAttr>() ||
-          CUDAStaticDeviceVarReferencedByHost.count(cast<VarDecl>(D)));
+          CUDADeviceVarODRUsedByHost.count(cast<VarDecl>(D)));
 }
 
 StringRef ASTContext::getCUIDHash() const {
