@@ -1182,6 +1182,8 @@ bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
   const auto *Load = cast<LoadInst>(I);
   if (Load->isAtomic())
     return false;
+  if (!WebAssembly::isDefaultAddressSpace(Load->getPointerAddressSpace()))
+    return false;
   if (!Subtarget->hasSIMD128() && Load->getType()->isVectorTy())
     return false;
 
@@ -1239,6 +1241,8 @@ bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
 bool WebAssemblyFastISel::selectStore(const Instruction *I) {
   const auto *Store = cast<StoreInst>(I);
   if (Store->isAtomic())
+    return false;
+  if (!WebAssembly::isDefaultAddressSpace(Store->getPointerAddressSpace()))
     return false;
   if (!Subtarget->hasSIMD128() &&
       Store->getValueOperand()->getType()->isVectorTy())
