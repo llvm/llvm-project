@@ -1712,7 +1712,7 @@ struct __is_convertible_test : public false_type {};
 
 template <class _From, class _To>
 struct __is_convertible_test<_From, _To,
-    decltype(_VSTD::__is_convertible_imp::__test_convert<_To>(_VSTD::declval<_From>()))> : public true_type
+    decltype(_VSTD::__is_convertible_imp::__test_convert<_To>(declval<_From>()))> : public true_type
 {};
 
 template <class _Tp, bool _IsArray =    is_array<_Tp>::value,
@@ -2323,7 +2323,7 @@ template <class...> using void_t = void;
 #if _LIBCPP_STD_VER > 17
 // Let COND_RES(X, Y) be:
 template <class _Tp, class _Up>
-using __cond_type = decltype(false ? _VSTD::declval<_Tp>() : _VSTD::declval<_Up>());
+using __cond_type = decltype(false ? declval<_Tp>() : declval<_Up>());
 
 template <class _Tp, class _Up, class = void>
 struct __common_type3 {};
@@ -2346,11 +2346,11 @@ struct __common_type2_imp {};
 template <class _Tp, class _Up>
 struct __common_type2_imp<_Tp, _Up,
                           typename __void_t<decltype(
-                                            true ? _VSTD::declval<_Tp>() : _VSTD::declval<_Up>()
+                                            true ? declval<_Tp>() : declval<_Up>()
                                             )>::type>
 {
   typedef _LIBCPP_NODEBUG_TYPE typename decay<decltype(
-                         true ? _VSTD::declval<_Tp>() : _VSTD::declval<_Up>()
+                         true ? declval<_Tp>() : declval<_Up>()
                          )>::type type;
 };
 
@@ -2488,7 +2488,7 @@ using __copy_cvref_t = typename __copy_cvref<_From, _To>::type;
 // Let COND_RES(X, Y) be:
 template <class _Xp, class _Yp>
 using __cond_res =
-    decltype(false ? _VSTD::declval<_Xp(&)()>()() : _VSTD::declval<_Yp(&)()>()());
+    decltype(false ? declval<_Xp(&)()>()() : declval<_Yp(&)()>()());
 
 // Let `XREF(A)` denote a unary alias template `T` such that `T<U>` denotes the same type as `U`
 // with the addition of `A`'s cv and reference qualifiers, for a non-reference cv-unqualified type
@@ -2657,7 +2657,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_assignable_v = __is_assignable(_Tp,
 #else // __has_keyword(__is_assignable)
 
 template <class _Tp, class _Arg>
-typename __select_2nd<decltype((_VSTD::declval<_Tp>() = _VSTD::declval<_Arg>())), true_type>::type
+typename __select_2nd<decltype((declval<_Tp>() = declval<_Arg>())), true_type>::type
 __is_assignable_test(int);
 
 template <class, class>
@@ -2738,7 +2738,7 @@ template <typename _Tp>
 struct __is_destructor_wellformed {
     template <typename _Tp1>
     static char  __test (
-        typename __is_destructible_apply<decltype(_VSTD::declval<_Tp1&>().~_Tp1())>::type
+        typename __is_destructible_apply<decltype(declval<_Tp1&>().~_Tp1())>::type
     );
 
     template <typename _Tp1>
@@ -3108,11 +3108,11 @@ struct __is_constructible_helper
     // NOTE: The static_cast implementation below is required to support
     //  classes with explicit conversion operators.
     template <class _To, class _From,
-              class = decltype(__eat<_To>(_VSTD::declval<_From>()))>
+              class = decltype(__eat<_To>(declval<_From>()))>
     static true_type __test_cast(int);
 
     template <class _To, class _From,
-              class = decltype(static_cast<_To>(_VSTD::declval<_From>()))>
+              class = decltype(static_cast<_To>(declval<_From>()))>
     static integral_constant<bool,
         !__is_invalid_base_to_derived_cast<_To, _From>::value &&
         !__is_invalid_lvalue_to_rvalue_cast<_To, _From>::value
@@ -3122,12 +3122,12 @@ struct __is_constructible_helper
     static false_type __test_cast(...);
 
     template <class _Tp, class ..._Args,
-        class = decltype(_Tp(_VSTD::declval<_Args>()...))>
+        class = decltype(_Tp(declval<_Args>()...))>
     static true_type __test_nary(int);
     template <class _Tp, class...>
     static false_type __test_nary(...);
 
-    template <class _Tp, class _A0, class = decltype(::new _Tp(_VSTD::declval<_A0>()))>
+    template <class _Tp, class _A0, class = decltype(::new _Tp(declval<_A0>()))>
     static is_destructible<_Tp> __test_unary(int);
     template <class, class>
     static false_type __test_unary(...);
@@ -3556,7 +3556,7 @@ struct __libcpp_is_nothrow_assignable<false, _Tp, _Arg>
 
 template <class _Tp, class _Arg>
 struct __libcpp_is_nothrow_assignable<true, _Tp, _Arg>
-    : public integral_constant<bool, noexcept(_VSTD::declval<_Tp>() = _VSTD::declval<_Arg>()) >
+    : public integral_constant<bool, noexcept(declval<_Tp>() = declval<_Arg>()) >
 {
 };
 
@@ -3613,7 +3613,7 @@ struct __libcpp_is_nothrow_destructible<false, _Tp>
 
 template <class _Tp>
 struct __libcpp_is_nothrow_destructible<true, _Tp>
-    : public integral_constant<bool, noexcept(_VSTD::declval<_Tp>().~_Tp()) >
+    : public integral_constant<bool, noexcept(declval<_Tp>().~_Tp()) >
 {
 };
 
@@ -3939,7 +3939,7 @@ struct __invokable_r
 {
   template <class _XFp, class ..._XArgs>
   static auto __try_call(int) -> decltype(
-    _VSTD::__invoke(_VSTD::declval<_XFp>(), _VSTD::declval<_XArgs>()...));
+    _VSTD::__invoke(declval<_XFp>(), declval<_XArgs>()...));
   template <class _XFp, class ..._XArgs>
   static __nat __try_call(...);
 
@@ -3976,14 +3976,14 @@ struct __nothrow_invokable_r_imp<true, false, _Ret, _Fp, _Args...>
     static void __test_noexcept(_Tp) noexcept;
 
     static const bool value = noexcept(_ThisT::__test_noexcept<_Ret>(
-        _VSTD::__invoke(_VSTD::declval<_Fp>(), _VSTD::declval<_Args>()...)));
+        _VSTD::__invoke(declval<_Fp>(), declval<_Args>()...)));
 };
 
 template <class _Ret, class _Fp, class ..._Args>
 struct __nothrow_invokable_r_imp<true, true, _Ret, _Fp, _Args...>
 {
     static const bool value = noexcept(
-        _VSTD::__invoke(_VSTD::declval<_Fp>(), _VSTD::declval<_Args>()...));
+        _VSTD::__invoke(declval<_Fp>(), declval<_Args>()...));
 };
 
 template <class _Ret, class _Fp, class ..._Args>
@@ -4056,7 +4056,7 @@ struct __result_of_mdp;
 template <class _Rp, class _Class, class _Tp>
 struct __result_of_mdp<_Rp _Class::*, _Tp, false>
 {
-    using type = typename __apply_cv<decltype(*_VSTD::declval<_Tp>()), _Rp>::type&;
+    using type = typename __apply_cv<decltype(*declval<_Tp>()), _Rp>::type&;
 };
 
 template <class _Rp, class _Class, class _Tp>
@@ -4212,8 +4212,8 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
 iter_swap(_ForwardIterator1 __a, _ForwardIterator2 __b)
     //                                  _NOEXCEPT_(_NOEXCEPT_(swap(*__a, *__b)))
-               _NOEXCEPT_(_NOEXCEPT_(swap(*_VSTD::declval<_ForwardIterator1>(),
-                                          *_VSTD::declval<_ForwardIterator2>())))
+               _NOEXCEPT_(_NOEXCEPT_(swap(*declval<_ForwardIterator1>(),
+                                          *declval<_ForwardIterator2>())))
 {
     swap(*__a, *__b);
 }
@@ -4229,7 +4229,7 @@ template <class _Tp, class _Up = _Tp,
 struct __swappable_with
 {
     template <class _LHS, class _RHS>
-    static decltype(swap(_VSTD::declval<_LHS>(), _VSTD::declval<_RHS>()))
+    static decltype(swap(declval<_LHS>(), declval<_RHS>()))
     __test_swap(int);
     template <class, class>
     static __nat __test_swap(long);
@@ -4249,8 +4249,8 @@ template <class _Tp, class _Up = _Tp, bool _Swappable = __swappable_with<_Tp, _U
 struct __nothrow_swappable_with {
   static const bool value =
 #ifndef _LIBCPP_HAS_NO_NOEXCEPT
-      noexcept(swap(_VSTD::declval<_Tp>(), _VSTD::declval<_Up>()))
-  &&  noexcept(swap(_VSTD::declval<_Up>(), _VSTD::declval<_Tp>()));
+      noexcept(swap(declval<_Tp>(), declval<_Up>()))
+  &&  noexcept(swap(declval<_Up>(), declval<_Tp>()));
 #else
       false;
 #endif
@@ -4400,7 +4400,7 @@ struct __has_operator_addressof_member_imp
 {
     template <class _Up>
         static auto __test(int)
-            -> typename __select_2nd<decltype(_VSTD::declval<_Up>().operator&()), true_type>::type;
+            -> typename __select_2nd<decltype(declval<_Up>().operator&()), true_type>::type;
     template <class>
         static auto __test(long) -> false_type;
 
@@ -4412,7 +4412,7 @@ struct __has_operator_addressof_free_imp
 {
     template <class _Up>
         static auto __test(int)
-            -> typename __select_2nd<decltype(operator&(_VSTD::declval<_Up>())), true_type>::type;
+            -> typename __select_2nd<decltype(operator&(declval<_Up>())), true_type>::type;
     template <class>
         static auto __test(long) -> false_type;
 

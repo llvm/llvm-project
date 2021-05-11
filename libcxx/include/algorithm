@@ -817,8 +817,8 @@ struct __debug_less
     template <class _LHS, class _RHS>
     _LIBCPP_CONSTEXPR_AFTER_CXX17
     inline _LIBCPP_INLINE_VISIBILITY
-    decltype((void)_VSTD::declval<_Compare&>()(
-        _VSTD::declval<_LHS &>(), _VSTD::declval<_RHS &>()))
+    decltype((void)declval<_Compare&>()(
+        declval<_LHS &>(), declval<_RHS &>()))
     __do_compare_assert(int, _LHS & __l, _RHS & __r) {
         _LIBCPP_ASSERT(!__comp_(__l, __r),
             "Comparator does not induce a strict weak ordering");
@@ -1678,7 +1678,7 @@ struct __unwrap_iter_impl<_Iter, true> {
 
 template<class _Iter, class _Impl = __unwrap_iter_impl<_Iter> >
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-decltype(_Impl::__apply(_VSTD::declval<_Iter>()))
+decltype(_Impl::__apply(declval<_Iter>()))
 __unwrap_iter(_Iter __i) _NOEXCEPT
 {
     return _Impl::__apply(__i);
