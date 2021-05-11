@@ -1262,7 +1262,7 @@ public:
   using ErrorReporter = std::function<void(Error)>;
 
   /// For dispatching ORC tasks (typically materialization tasks).
-  using DispatchTaskFunction = std::function<void(std::unique_ptr<Task> T)>;
+  using DispatchTaskFunction = unique_function<void(std::unique_ptr<Task> T)>;
 
   /// Construct an ExecutionSession.
   ///
