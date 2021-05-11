@@ -1041,6 +1041,7 @@ bool GCNPassConfig::addPreISel() {
   // FIXME: We need to run a pass to propagate the attributes when calls are
   // supported.
 
+  addPass(createSinkingPass());
   // Merge divergent exit nodes. StructurizeCFG won't recognize the multi-exit
   // regions formed by them.
   addPass(&AMDGPUUnifyDivergentExitNodesID);
@@ -1051,7 +1052,6 @@ bool GCNPassConfig::addPreISel() {
     }
     addPass(createStructurizeCFGPass(false)); // true -> SkipUniformRegions
   }
-  addPass(createSinkingPass());
   addPass(createAMDGPUAnnotateUniformValues());
   if (!LateCFGStructurize) {
     addPass(createSIAnnotateControlFlowPass());
