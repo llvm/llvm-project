@@ -1147,6 +1147,7 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureDot7Insts,
    FeatureNSAEncoding,
    FeatureWavefrontSize32,
+   FeatureShaderCyclesRegister,
    FeatureArchitectedFlatScratch,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
