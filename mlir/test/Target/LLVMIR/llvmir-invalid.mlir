@@ -8,7 +8,7 @@ func @foo() {
 // -----
 
 // expected-error @+1 {{llvm.noalias attribute attached to LLVM non-pointer argument}}
-llvm.func @invalid_noalias(%arg0 : f32 {llvm.noalias = true}) -> f32 {
+llvm.func @invalid_noalias(%arg0 : f32 {llvm.noalias}) -> f32 {
   llvm.return %arg0 : f32
 }
 
