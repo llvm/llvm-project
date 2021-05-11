@@ -84,19 +84,17 @@ func @floordivi(%arg0: i32, %arg1: i32) -> (i32) {
 
 // CHECK-LABEL: func @memref_reshape(
 func @memref_reshape(%input: memref<*xf32>,
-                     %shape: memref<3xi32>) -> memref<?x?x?xf32> {
+                     %shape: memref<3xi32>) -> memref<?x?x8xf32> {
   %result = memref.reshape %input(%shape)
-               : (memref<*xf32>, memref<3xi32>) -> memref<?x?x?xf32>
-  return %result : memref<?x?x?xf32>
+               : (memref<*xf32>, memref<3xi32>) -> memref<?x?x8xf32>
+  return %result : memref<?x?x8xf32>
 }
 // CHECK-SAME: [[SRC:%.*]]: memref<*xf32>,
-// CHECK-SAME: [[SHAPE:%.*]]: memref<3xi32>) -> memref<?x?x?xf32> {
+// CHECK-SAME: [[SHAPE:%.*]]: memref<3xi32>) -> memref<?x?x8xf32> {
 
 // CHECK: [[C1:%.*]] = constant 1 : index
-// CHECK: [[C2:%.*]] = constant 2 : index
-// CHECK: [[DIM_2:%.*]] = memref.load [[SHAPE]]{{\[}}[[C2]]] : memref<3xi32>
-// CHECK: [[SIZE_2:%.*]] = index_cast [[DIM_2]] : i32 to index
-// CHECK: [[STRIDE_1:%.*]] = muli [[C1]], [[SIZE_2]] : index
+// CHECK: [[C8:%.*]] = constant 8 : index
+// CHECK: [[STRIDE_1:%.*]] = muli [[C1]], [[C8]] : index
 
 // CHECK: [[C1_:%.*]] = constant 1 : index
 // CHECK: [[DIM_1:%.*]] = memref.load [[SHAPE]]{{\[}}[[C1_]]] : memref<3xi32>
@@ -108,6 +106,6 @@ func @memref_reshape(%input: memref<*xf32>,
 // CHECK: [[SIZE_0:%.*]] = index_cast [[DIM_0]] : i32 to index
 
 // CHECK: [[RESULT:%.*]] = memref.reinterpret_cast [[SRC]]
-// CHECK-SAME: to offset: [0], sizes: {{\[}}[[SIZE_0]], [[SIZE_1]], [[SIZE_2]]],
+// CHECK-SAME: to offset: [0], sizes: {{\[}}[[SIZE_0]], [[SIZE_1]], 8],
 // CHECK-SAME: strides: {{\[}}[[STRIDE_0]], [[STRIDE_1]], [[C1]]]
-// CHECK-SAME: : memref<*xf32> to memref<?x?x?xf32>
+// CHECK-SAME: : memref<*xf32> to memref<?x?x8xf32>
