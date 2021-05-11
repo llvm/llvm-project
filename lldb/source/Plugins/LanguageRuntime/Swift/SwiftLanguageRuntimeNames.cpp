@@ -60,12 +60,12 @@ enum class ThunkAction {
 static swift::Demangle::NodePointer
 childAtPath(swift::Demangle::NodePointer node,
             llvm::ArrayRef<swift::Demangle::Node::Kind> path) {
-  if (path.empty())
+  if (!node || path.empty())
     return node;
 
   auto current_step = path.front();
   for (auto *child : *node)
-    if (child->getKind() == current_step)
+    if (child && child->getKind() == current_step)
       return childAtPath(child, path.drop_front());
   return nullptr;
 }
