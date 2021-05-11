@@ -5564,8 +5564,8 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
     }
   }
 
-  // "Upgrade" older incorrect branch weights by dropping them.
   for (auto &I : instructions(F)) {
+    // "Upgrade" older incorrect branch weights by dropping them.
     if (auto *MD = I.getMetadata(LLVMContext::MD_prof)) {
       if (MD->getOperand(0) != nullptr && isa<MDString>(MD->getOperand(0))) {
         MDString *MDS = cast<MDString>(MD->getOperand(0));
@@ -5591,6 +5591,12 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
         if (MD->getNumOperands() != 1 + ExpectedNumOperands)
           I.setMetadata(LLVMContext::MD_prof, nullptr);
       }
+    }
+
+    // Remove align from return attribute on CallInst.
+    if (auto *CI = dyn_cast<CallInst>(&I)) {
+      if (CI->getFunctionType()->getReturnType()->isVoidTy())
+        CI->removeAttribute(0, Attribute::Alignment);
     }
   }
 
