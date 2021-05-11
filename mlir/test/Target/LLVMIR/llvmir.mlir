@@ -952,7 +952,7 @@ llvm.func @cond_br_arguments(%arg0: i1, %arg1: i1) {
 }
 
 // CHECK-LABEL: define void @llvm_noalias(float* noalias {{%*.}})
-llvm.func @llvm_noalias(%arg0: !llvm.ptr<f32> {llvm.noalias = true}) {
+llvm.func @llvm_noalias(%arg0: !llvm.ptr<f32> {llvm.noalias}) {
   llvm.return
 }
 
