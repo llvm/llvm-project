@@ -155,8 +155,7 @@ transformIndexOps(OpBuilder &b, LinalgOp op, SmallVectorImpl<Value> &ivs,
     AffineApplyOp applyOp = b.create<AffineApplyOp>(
         indexOp.getLoc(), index + iv,
         ValueRange{indexOp.getResult(), ivs[rangeIndex->second]});
-    indexOp.getResult().replaceAllUsesExcept(
-        applyOp.getResult(), SmallPtrSet<Operation *, 1>{applyOp});
+    indexOp.getResult().replaceAllUsesExcept(applyOp, applyOp);
   }
 }
 
