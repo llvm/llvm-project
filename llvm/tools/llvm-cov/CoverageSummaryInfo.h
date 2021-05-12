@@ -123,11 +123,6 @@ public:
     return *this;
   }
 
-  void merge(const BranchCoverageInfo &RHS) {
-    Covered = std::max(Covered, RHS.Covered);
-    NumBranches = std::max(NumBranches, RHS.NumBranches);
-  }
-
   size_t getCovered() const { return Covered; }
 
   size_t getNumBranches() const { return NumBranches; }
