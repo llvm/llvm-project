@@ -10964,10 +10964,10 @@ static bool isRepeatedTargetShuffleMask(unsigned LaneSizeInBits,
       // This entry crosses lanes, so there is no way to model this shuffle.
       return false;
 
-    // Ok, handle the in-lane shuffles by detecting if and when they repeat.
-    // Adjust second vector indices to start at LaneSize instead of Size.
-    int LocalM =
-        Mask[i] < Size ? Mask[i] % LaneSize : Mask[i] % LaneSize + LaneSize;
+    // Handle the in-lane shuffles by detecting if and when they repeat. Adjust
+    // later vector indices to start at multiples of LaneSize instead of Size.
+    int LaneM = Mask[i] / Size;
+    int LocalM = (Mask[i] % LaneSize) + (LaneM * LaneSize);
     if (RepeatedMask[i % LaneSize] == SM_SentinelUndef)
       // This is the first non-undef entry in this slot of a 128-bit lane.
       RepeatedMask[i % LaneSize] = LocalM;
@@ -36225,24 +36225,25 @@ static SDValue canonicalizeShuffleMaskWithHorizOp(
   int NumEltsPerLane = NumElts / NumLanes;
   int NumHalfEltsPerLane = NumEltsPerLane / 2;
   MVT SrcVT = BC0.getOperand(0).getSimpleValueType();
+  unsigned EltSizeInBits = RootSizeInBits / Mask.size();
 
-  // TODO: Add support for 256/512-bit vectors.
-  if (RootSizeInBits == 128 && NumEltsPerLane >= 4 &&
+  if (NumEltsPerLane >= 4 &&
       (isPack || shouldUseHorizontalOp(Ops.size() == 1, DAG, Subtarget))) {
-    SmallVector<int> ScaledMask;
-    if (scaleShuffleElements(Mask, 4, ScaledMask)) {
+    SmallVector<int> LaneMask, ScaledMask;
+    if (isRepeatedTargetShuffleMask(128, EltSizeInBits, Mask, LaneMask) &&
+        scaleShuffleElements(LaneMask, 4, ScaledMask)) {
       // See if we can remove the shuffle by resorting the HOP chain so that
       // the HOP args are pre-shuffled.
       // TODO: Generalize to any sized/depth chain.
       // TODO: Add support for PACKSS/PACKUS.
-      if (isHoriz && NumEltsPerLane == 4) {
+      if (isHoriz) {
         // Attempt to find a HOP(HOP(X,Y),HOP(Z,W)) source operand.
         auto GetHOpSrc = [&](int M) {
           if (M == SM_SentinelUndef)
             return DAG.getUNDEF(VT0);
           if (M == SM_SentinelZero)
             return getZeroVector(VT0.getSimpleVT(), Subtarget, DAG, DL);
-          SDValue Src0 = BC[M / NumElts];
+          SDValue Src0 = BC[M / 4];
           SDValue Src1 = Src0.getOperand((M % 4) >= 2);
           if (Src1.getOpcode() == Opcode0 && Src0->isOnlyUserOf(Src1.getNode()))
             return Src1.getOperand(M % 2);
@@ -36253,8 +36254,8 @@ static SDValue canonicalizeShuffleMaskWithHorizOp(
         SDValue M2 = GetHOpSrc(ScaledMask[2]);
         SDValue M3 = GetHOpSrc(ScaledMask[3]);
         if (M0 && M1 && M2 && M3) {
-          SDValue LHS = DAG.getNode(Opcode0, DL, VT0, M0, M1);
-          SDValue RHS = DAG.getNode(Opcode0, DL, VT0, M2, M3);
+          SDValue LHS = DAG.getNode(Opcode0, DL, SrcVT, M0, M1);
+          SDValue RHS = DAG.getNode(Opcode0, DL, SrcVT, M2, M3);
           return DAG.getNode(Opcode0, DL, VT0, LHS, RHS);
         }
       }
@@ -36348,7 +36349,6 @@ static SDValue canonicalizeShuffleMaskWithHorizOp(
   // Combine binary shuffle of 2 similar 'Horizontal' instructions into a
   // single instruction. Attempt to match a v2X64 repeating shuffle pattern that
   // represents the LHS/RHS inputs for the lower/upper halves.
-  unsigned EltSizeInBits = RootSizeInBits / Mask.size();
   SmallVector<int, 16> TargetMask128, WideMask128;
   if (isRepeatedTargetShuffleMask(128, EltSizeInBits, Mask, TargetMask128) &&
       scaleShuffleElements(TargetMask128, 2, WideMask128)) {
@@ -37561,29 +37561,6 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
                             N1.getOperand(0),
                             DAG.getTargetConstant(BlendMask, DL, MVT::i8)));
       }
-    }
-    return SDValue();
-  }
-  case X86ISD::UNPCKL:
-  case X86ISD::UNPCKH: {
-    // unpcklo(hop(x,y),hop(z,w)) -> permute(hop(x,z)).
-    // unpckhi(hop(x,y),hop(z,w)) -> permute(hop(y,w)).
-    // Don't fold if hop(x,y) == hop(z,w).
-    // TODO: Merge this into canonicalizeShuffleMaskWithHorizOp?
-    SDValue N0 = N.getOperand(0);
-    SDValue N1 = N.getOperand(1);
-    if (VT.getScalarSizeInBits() == 32 && N0 != N1 &&
-        N0.getOpcode() == N1.getOpcode() && isHorizOp(N0.getOpcode())) {
-      unsigned LoHi = Opcode == X86ISD::UNPCKL ? 0 : 1;
-      SDValue Res = DAG.getNode(N0.getOpcode(), DL, VT, N0.getOperand(LoHi),
-                                N1.getOperand(LoHi));
-      // Use SHUFPS for the permute so this will work on SSE3 targets, shuffle
-      // combining and domain handling will simplify this later on.
-      EVT ShuffleVT = VT.changeVectorElementType(MVT::f32);
-      Res = DAG.getBitcast(ShuffleVT, Res);
-      Res = DAG.getNode(X86ISD::SHUFP, DL, ShuffleVT, Res, Res,
-                        getV4X86ShuffleImm8ForMask({0, 2, 1, 3}, DL, DAG));
-      return DAG.getBitcast(VT, Res);
     }
     return SDValue();
   }
