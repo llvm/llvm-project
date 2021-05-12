@@ -165,7 +165,7 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
   PointerType *Int32PtrTy = Type::getInt32PtrTy(LI.getContext(), AS);
   PointerType *Int8PtrTy = Type::getInt8PtrTy(LI.getContext(), AS);
   auto *NewPtr = IRB.CreateBitCast(
-      IRB.CreateConstGEP1_64(IRB.CreateBitCast(Base, Int8PtrTy),
+      IRB.CreateConstGEP1_64(IRB.CreatePointerBitCastOrAddrSpaceCast(Base, Int8PtrTy),
                              Offset - Adjust),
       Int32PtrTy);
   LoadInst *NewLd = IRB.CreateAlignedLoad(IRB.getInt32Ty(), NewPtr, Align(4));
