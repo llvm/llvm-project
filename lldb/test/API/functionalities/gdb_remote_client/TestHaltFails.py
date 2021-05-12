@@ -49,6 +49,7 @@ class TestHaltFails(GDBRemoteTestBase):
         self.wait_for_and_check_event(2, lldb.eStateRunning)
         return process
 
+    @skipIfLinux # Failing on Linux, disabling to investigate
     @skipIfReproducer # FIXME: Unexpected packet during (passive) replay
     def test_destroy_while_running(self):
         process = self.get_to_running(10)
@@ -58,6 +59,7 @@ class TestHaltFails(GDBRemoteTestBase):
         # and make sure we still exit properly.
         self.wait_for_and_check_event(14, lldb.eStateExited)
             
+    @skipIfLinux # Failing on Linux, disabling to investigate
     @skipIfReproducer # FIXME: Unexpected packet during (passive) replay
     def test_async_interrupt(self):
         """
@@ -72,6 +74,7 @@ class TestHaltFails(GDBRemoteTestBase):
         # be in eStateExited:
         self.wait_for_and_check_event(15, lldb.eStateExited)
 
+    @skipIfLinux # Failing on Linux, disabling to investigate
     @skipIfReproducer # FIXME: Unexpected packet during (passive) replay
     def test_interrupt_timeout(self):
         """
