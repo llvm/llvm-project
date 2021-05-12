@@ -287,6 +287,11 @@ public:
   /// Return the location of the original name token.
   virtual llvm::SMLoc getNameLoc() const = 0;
 
+  /// Re-encode the given source location as an MLIR location and return it.
+  /// Note: This method should only be used when a `Location` is necessary, as
+  /// the encoding process is not efficient.
+  virtual Location getEncodedSourceLoc(llvm::SMLoc loc) = 0;
+
   // These methods emit an error and return failure or success. This allows
   // these to be chained together into a linear sequence of || expressions in
   // many cases.
