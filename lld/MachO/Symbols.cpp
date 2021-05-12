@@ -27,9 +27,25 @@ std::string lld::toMachOString(const object::Archive::Symbol &b) {
   return demangle(b.getName());
 }
 
+uint64_t Symbol::getStubVA() const { return in.stubs->getVA(stubsIndex); }
+uint64_t Symbol::getGotVA() const { return in.got->getVA(gotIndex); }
+uint64_t Symbol::getTlvVA() const { return in.tlvPointers->getVA(gotIndex); }
+
 uint64_t Defined::getVA() const {
   if (isAbsolute())
     return value;
+
+  if (!isec->isFinal) {
+    // A target arch that does not use thunks ought never ask for
+    // the address of a function that has not yet been finalized.
+    assert(target->usesThunks());
+
+    // MergedOutputSection::finalize() can seek the address of a
+    // function before its address is assigned. The thunking algorithm
+    // knows that unfinalized functions will be out of range, so it is
+    // expedient to return a contrived out-of-range address.
+    return TargetInfo::outOfRangeVA;
+  }
   return isec->getVA() + value;
 }
 
@@ -40,6 +56,10 @@ uint64_t Defined::getFileOffset() const {
     return 0;
   }
   return isec->getFileOffset() + value;
+}
+
+uint64_t DylibSymbol::getVA() const {
+  return isInStubs() ? getStubVA() : Symbol::getVA();
 }
 
 void LazySymbol::fetchArchiveMember() { getFile()->fetch(sym); }
