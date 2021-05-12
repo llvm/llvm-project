@@ -21,7 +21,7 @@ define i32 @test2(float %f) {
 define void @get_image() nounwind {
 ; CHECK-LABEL: @get_image(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @fgetc(i8* null) [[ATTR0:#.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @fgetc(i8* null) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    br i1 false, label [[BB2:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB3]]
@@ -502,13 +502,13 @@ define <3 x float> @shuf_frem_const_op1(<3 x float> %x) {
 ;; TODO: getelementptr tests below show missing simplifications for
 ;; vector demanded elements on vector geps.
 
-define i32* @gep_vbase_w_s_idx(<2 x i32*> %base) {
+define i32* @gep_vbase_w_s_idx(<2 x i32*> %base, i64 %index) {
 ; CHECK-LABEL: @gep_vbase_w_s_idx(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, <2 x i32*> [[BASE:%.*]], i64 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, <2 x i32*> [[BASE:%.*]], i64 [[INDEX:%.*]]
 ; CHECK-NEXT:    [[EE:%.*]] = extractelement <2 x i32*> [[GEP]], i32 1
 ; CHECK-NEXT:    ret i32* [[EE]]
 ;
-  %gep = getelementptr i32, <2 x i32*> %base, i64 1
+  %gep = getelementptr i32, <2 x i32*> %base, i64 %index
   %ee = extractelement <2 x i32*> %gep, i32 1
   ret i32* %ee
 }
