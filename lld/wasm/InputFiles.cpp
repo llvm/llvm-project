@@ -360,6 +360,17 @@ void ObjFile::addLegacyIndirectFunctionTableIfNeeded(
   config->legacyFunctionTable = true;
 }
 
+static bool shouldMerge(const WasmSection &sec) {
+  if (config->optimize == 0)
+    return false;
+  // Sadly we don't have section attributes yet for custom sections, so we
+  // currently go by the name alone.
+  // TODO(sbc): Add ability for wasm sections to carry flags so we don't
+  // need to use names here.
+  return sec.Name.startswith(".debug_str") ||
+         sec.Name.startswith(".debug_line_str");
+}
+
 static bool shouldMerge(const WasmSegment &seg) {
   // As of now we only support merging strings, and only with single byte
   // alignment (2^0).
@@ -445,7 +456,11 @@ void ObjFile::parse(bool ignoreComdats) {
       assert(!dataSection);
       dataSection = &section;
     } else if (section.Type == WASM_SEC_CUSTOM) {
-      auto *customSec = make<InputSection>(section, this);
+      InputChunk *customSec;
+      if (shouldMerge(section))
+        customSec = make<MergeInputChunk>(section, this);
+      else
+        customSec = make<InputSection>(section, this);
       customSec->discarded = isExcludedByComdat(customSec);
       customSections.emplace_back(customSec);
       customSections.back()->setRelocations(section.Relocations);
@@ -466,9 +481,9 @@ void ObjFile::parse(bool ignoreComdats) {
   for (const WasmSegment &s : wasmObj->dataSegments()) {
     InputChunk *seg;
     if (shouldMerge(s)) {
-      seg = make<MergeInputChunk>(&s, this);
+      seg = make<MergeInputChunk>(s, this);
     } else
-      seg = make<InputSegment>(&s, this);
+      seg = make<InputSegment>(s, this);
     seg->discarded = isExcludedByComdat(seg);
 
     segments.emplace_back(seg);
@@ -585,7 +600,7 @@ Symbol *ObjFile::createDefined(const WasmSymbol &sym) {
     return symtab->addDefinedGlobal(name, flags, this, global);
   }
   case WASM_SYMBOL_TYPE_SECTION: {
-    InputSection *section = customSectionsByIndex[sym.Info.ElementIndex];
+    InputChunk *section = customSectionsByIndex[sym.Info.ElementIndex];
     assert(sym.isBindingLocal());
     // Need to return null if discarded here? data and func only do that when
     // binding is not local.
