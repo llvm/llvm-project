@@ -236,6 +236,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(fieldDecl);
   REGISTER_MATCHER(fixedPointLiteral);
   REGISTER_MATCHER(floatLiteral);
+  REGISTER_MATCHER(forCallable);
   REGISTER_MATCHER(forDecomposition);
   REGISTER_MATCHER(forEach);
   REGISTER_MATCHER(forEachArgumentWithParam);
