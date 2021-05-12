@@ -12,6 +12,7 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Support/Timing.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
@@ -313,38 +314,36 @@ public:
   //===--------------------------------------------------------------------===//
   // Pass Timing
 
-  /// A configuration struct provided to the pass timing feature.
-  class PassTimingConfig {
-  public:
-    using PrintCallbackFn = function_ref<void(raw_ostream &)>;
-
-    /// Initialize the configuration.
-    /// * 'displayMode' switch between list or pipeline display (see the
-    /// `PassDisplayMode` enum documentation).
-    explicit PassTimingConfig(
-        PassDisplayMode displayMode = PassDisplayMode::Pipeline)
-        : displayMode(displayMode) {}
-
-    virtual ~PassTimingConfig();
-
-    /// A hook that may be overridden by a derived config to control the
-    /// printing. The callback is supplied by the framework and the config is
-    /// responsible to call it back with a stream for the output.
-    virtual void printTiming(PrintCallbackFn printCallback);
-
-    /// Return the `PassDisplayMode` this config was created with.
-    PassDisplayMode getDisplayMode() { return displayMode; }
-
-  private:
-    PassDisplayMode displayMode;
-  };
-
   /// Add an instrumentation to time the execution of passes and the computation
-  /// of analyses.
+  /// of analyses. Timing will be reported by nesting timers into the provided
+  /// `timingScope`.
+  ///
   /// Note: Timing should be enabled after all other instrumentations to avoid
   /// any potential "ghost" timing from other instrumentations being
   /// unintentionally included in the timing results.
-  void enableTiming(std::unique_ptr<PassTimingConfig> config = nullptr);
+  void enableTiming(TimingScope &timingScope);
+
+  /// Add an instrumentation to time the execution of passes and the computation
+  /// of analyses. The pass manager will take ownership of the timing manager
+  /// passed to the function and timing will be reported by nesting timers into
+  /// the timing manager's root scope.
+  ///
+  /// Note: Timing should be enabled after all other instrumentations to avoid
+  /// any potential "ghost" timing from other instrumentations being
+  /// unintentionally included in the timing results.
+  void enableTiming(std::unique_ptr<TimingManager> tm);
+
+  /// Add an instrumentation to time the execution of passes and the computation
+  /// of analyses. Creates a temporary TimingManager owned by this PassManager
+  /// which will be used to report timing.
+  ///
+  /// Note: Timing should be enabled after all other instrumentations to avoid
+  /// any potential "ghost" timing from other instrumentations being
+  /// unintentionally included in the timing results.
+  void enableTiming();
+
+  //===--------------------------------------------------------------------===//
+  // Pass Statistics
 
   /// Prompts the pass manager to print the statistics collected for each of the
   /// held passes after each call to 'run'.
@@ -395,6 +394,13 @@ void registerPassManagerCLOptions();
 /// Apply any values provided to the pass manager options that were registered
 /// with 'registerPassManagerOptions'.
 void applyPassManagerCLOptions(PassManager &pm);
+
+/// Apply any values provided to the timing manager options that were registered
+/// with `registerDefaultTimingManagerOptions`. This is a handy helper function
+/// if you do not want to bother creating your own timing manager and passing it
+/// to the pass manager.
+void applyDefaultTimingPassManagerCLOptions(PassManager &pm);
+
 } // end namespace mlir
 
 #endif // MLIR_PASS_PASSMANAGER_H
