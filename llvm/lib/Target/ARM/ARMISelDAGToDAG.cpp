@@ -3299,9 +3299,9 @@ void ARMDAGToDAGISel::SelectCMP_SWAP(SDNode *N) {
   unsigned Opcode;
   EVT MemTy = cast<MemSDNode>(N)->getMemoryVT();
   if (MemTy == MVT::i8)
-    Opcode = ARM::CMP_SWAP_8;
+    Opcode = Subtarget->isThumb() ? ARM::tCMP_SWAP_8 : ARM::CMP_SWAP_8;
   else if (MemTy == MVT::i16)
-    Opcode = ARM::CMP_SWAP_16;
+    Opcode = Subtarget->isThumb() ? ARM::tCMP_SWAP_16 : ARM::CMP_SWAP_16;
   else if (MemTy == MVT::i32)
     Opcode = ARM::CMP_SWAP_32;
   else

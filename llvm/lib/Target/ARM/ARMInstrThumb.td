@@ -1766,3 +1766,21 @@ def : tInstAlias<"asr${s}${p} $Rdm, $imm",
 def tLDRConstPool
   : tAsmPseudo<"ldr${p} $Rt, $immediate",
                (ins tGPR:$Rt, const_pool_asm_imm:$immediate, pred:$p)>;
+
+//===----------------------------------
+// Atomic cmpxchg for -O0
+//===----------------------------------
+
+// See ARMInstrInfo.td. These two thumb specific pseudos are required to
+// restrict the register class for the UXTB/UXTH ops used in the expansion.
+
+let Constraints = "@earlyclobber $Rd,@earlyclobber $temp",
+    mayLoad = 1, mayStore = 1 in {
+def tCMP_SWAP_8 : PseudoInst<(outs GPR:$Rd, GPR:$temp),
+                             (ins GPR:$addr, tGPR:$desired, GPR:$new),
+                             NoItinerary, []>, Sched<[]>;
+
+def tCMP_SWAP_16 : PseudoInst<(outs GPR:$Rd, GPR:$temp),
+                              (ins GPR:$addr, tGPR:$desired, GPR:$new),
+                              NoItinerary, []>, Sched<[]>;
+}
