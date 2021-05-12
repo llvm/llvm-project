@@ -8,7 +8,7 @@
 
 // <string>
 
-// Call erase(const_iterator first, const_iterator last); with both iterators from another container
+// Call erase(const_iterator first, const_iterator last); with second iterator from another container
 
 // UNSUPPORTED: libcxx-no-debug-mode
 
@@ -17,17 +17,16 @@
 
 #include <string>
 #include <cassert>
-#include <exception>
-#include <cstdlib>
 
 #include "test_macros.h"
+#include "min_allocator.h"
 
-int main(int, char**)
-{
-    std::string l1("123");
-    std::string l2("123");
-    std::string::iterator i = l1.erase(l2.cbegin(), l2.cbegin()+1);
-    assert(false);
+int main(int, char**) {
+  typedef std::basic_string<char, std::char_traits<char>, min_allocator<char> > S;
+  S l1("123");
+  S l2("123");
+  S::iterator i = l1.erase(l1.cbegin(), l2.cbegin() + 1);
+  assert(false);
 
-    return 0;
+  return 0;
 }
