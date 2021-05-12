@@ -514,11 +514,8 @@ bool Vectorizer::lookThroughComplexAddresses(Value *PtrA, Value *PtrB,
   // are known to be zero in ValA, we can add Diff to it while guaranteeing no
   // overflow of any sort.
   if (!Safe) {
-    OpA = dyn_cast<Instruction>(ValA);
-    if (!OpA)
-      return false;
     KnownBits Known(BitWidth);
-    computeKnownBits(OpA, Known, DL, 0, &AC, OpA, &DT);
+    computeKnownBits(ValA, Known, DL, 0, &AC, OpB, &DT);
     APInt BitsAllowedToBeSet = Known.Zero.zext(IdxDiff.getBitWidth());
     if (Signed)
       BitsAllowedToBeSet.clearBit(BitWidth - 1);
@@ -678,6 +675,9 @@ Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
                cast<IntrinsicInst>(&I)->getIntrinsicID() ==
                    Intrinsic::pseudoprobe) {
       // Ignore llvm.pseudoprobe calls.
+    } else if (isa<IntrinsicInst>(&I) &&
+               cast<IntrinsicInst>(&I)->getIntrinsicID() == Intrinsic::assume) {
+      // Ignore llvm.assume calls.
     } else if (IsLoadChain && (I.mayWriteToMemory() || I.mayThrow())) {
       LLVM_DEBUG(dbgs() << "LSV: Found may-write/throw operation: " << I
                         << '\n');
