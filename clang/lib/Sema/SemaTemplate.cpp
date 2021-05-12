@@ -3570,7 +3570,9 @@ public:
       OS << VD->getName();
       if (const auto *IV = dyn_cast<VarTemplateSpecializationDecl>(VD)) {
         // This is a template variable, print the expanded template arguments.
-        printTemplateArgumentList(OS, IV->getTemplateArgs().asArray(), Policy);
+        printTemplateArgumentList(
+            OS, IV->getTemplateArgs().asArray(), Policy,
+            IV->getSpecializedTemplate()->getTemplateParameters());
       }
       return true;
     }
@@ -10908,7 +10910,9 @@ Sema::getTemplateArgumentBindingsText(const TemplateParameterList *Params,
     }
 
     Out << " = ";
-    Args[I].print(getPrintingPolicy(), Out);
+    Args[I].print(
+        getPrintingPolicy(), Out,
+        TemplateParameterList::shouldIncludeTypeForArgument(Params, I));
   }
 
   Out << ']';
