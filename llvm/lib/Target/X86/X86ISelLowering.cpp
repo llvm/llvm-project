@@ -2101,7 +2101,7 @@ X86TargetLowering::getPreferredVectorAction(MVT VT) const {
       !Subtarget.hasBWI())
     return TypeSplitVector;
 
-  if (VT.getVectorNumElements() != 1 &&
+  if (!VT.isScalableVector() && VT.getVectorNumElements() != 1 &&
       VT.getVectorElementType() != MVT::i1)
     return TypeWidenVector;
 
