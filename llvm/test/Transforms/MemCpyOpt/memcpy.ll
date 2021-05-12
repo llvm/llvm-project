@@ -381,8 +381,8 @@ declare void @llvm.memcpy.p1i8.p0i8.i64(i8 addrspace(1)* nocapture, i8* nocaptur
 declare void @f1(%struct.big* nocapture sret(%struct.big))
 declare void @f2(%struct.big*)
 
-; CHECK: attributes #1 = { argmemonly nofree nosync nounwind willreturn }
+; CHECK: attributes #1 = { argmemonly nofree nounwind willreturn }
 ; CHECK: attributes #2 = { nounwind ssp }
 ; CHECK: attributes #3 = { willreturn }
 ; CHECK: attributes #4 = { nounwind ssp uwtable }
-; CHECK: attributes #5 = { argmemonly nofree nosync nounwind willreturn writeonly }
+; CHECK: attributes #5 = { argmemonly nofree nounwind willreturn writeonly }
