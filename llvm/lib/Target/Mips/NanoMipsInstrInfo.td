@@ -116,15 +116,24 @@ def SW_NM : StoreNM<"sw", GPR32NMOpnd, store>, ISA_NANOMIPS;
 
 def JRC_NM : IndirectBranchNM<"jrc", GPR32NMOpnd>;
 
-let hasDelaySlot = 0 in
-  def PseudoReturnNM : PseudoReturnBase<GPR32NMOpnd>, ISA_NANOMIPS;
-
 def BALC_NM : CallNM<"balc", MipsJmpLink, tglobaladdr>, InstSize32;
 
 def Li_NM : RegImmNM<"li", simm32_relaxed, GPR32NMOpnd>, InstSize48;
 
 def ADJCALLSTACKDOWN_NM : AdjustStack<callseq_start>;
 def ADJCALLSTACKUP_NM   : AdjustStack<callseq_end>;
+
+// Return instruction is matched as RetRA, then expanded into PseudoReturnNM
+// after register allocation. Finally, MipsAsmPrinter expands this into JRC_NM.
+def PseudoReturnNM : PseudoInstNM<(outs), (ins GPR32NMOpnd:$rs), []> {
+  let isTerminator = 1;
+  let isBarrier = 1;
+  let isReturn = 1;
+  let isCodeGenOnly = 1;
+  let hasCtrlDep = 1;
+  let hasExtraSrcRegAllocReq = 1;
+  bit isCTI = 1;
+}
 
 }
 
