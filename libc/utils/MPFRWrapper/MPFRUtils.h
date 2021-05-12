@@ -32,6 +32,7 @@ enum class Operation : int {
   Round,
   Sin,
   Sqrt,
+  Tan,
   Trunc,
   EndUnaryOperationsSingleOutput,
 
