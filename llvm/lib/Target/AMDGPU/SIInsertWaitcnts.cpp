@@ -1521,8 +1521,13 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
     if (TII->isSMRD(Inst)) {
       for (const MachineMemOperand *Memop : Inst.memoperands()) {
-        const Value *Ptr = Memop->getValue();
-        SLoadAddresses.insert(std::make_pair(Ptr, Inst.getParent()));
+        // No need to handle invariant loads when avoiding WAR conflicts, as
+        // there cannot be a vector store to the same memory location.
+        if (!Memop->isInvariant()) {
+          const Value *Ptr = Memop->getValue();
+          assert(Ptr);
+          SLoadAddresses.insert(std::make_pair(Ptr, Inst.getParent()));
+        }
       }
       if (ST->hasReadVCCZBug()) {
         // This smem read could complete and clobber vccz at any time.
