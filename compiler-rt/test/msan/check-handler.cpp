@@ -10,7 +10,7 @@ int main(void) {
   void *p = malloc(8 << 20);
   free(reinterpret_cast<char*>(p) + 1);
   // CHECK: MemorySanitizer: bad pointer
-  // CHECK: MemorySanitizer CHECK failed
+  // CHECK: MemorySanitizer: CHECK failed
   // CHECK: #0
   return 0;
 }
