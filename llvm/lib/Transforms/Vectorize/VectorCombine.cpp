@@ -781,24 +781,29 @@ static bool isMemModifiedBetween(BasicBlock::iterator Begin,
 //   store i32 %b, i32* %1
 bool VectorCombine::foldSingleElementStore(Instruction &I) {
   StoreInst *SI = dyn_cast<StoreInst>(&I);
-  if (!SI || !SI->isSimple() || !SI->getValueOperand()->getType()->isVectorTy())
+  if (!SI || !SI->isSimple() ||
+      !isa<FixedVectorType>(SI->getValueOperand()->getType()))
     return false;
 
   // TODO: Combine more complicated patterns (multiple insert) by referencing
   // TargetTransformInfo.
   Instruction *Source;
-  Value *NewElement, *Idx;
+  Value *NewElement;
+  ConstantInt *Idx;
   if (!match(SI->getValueOperand(),
              m_InsertElt(m_Instruction(Source), m_Value(NewElement),
-                         m_Value(Idx))))
+                         m_ConstantInt(Idx))))
     return false;
 
   if (auto *Load = dyn_cast<LoadInst>(Source)) {
+    auto VecTy = cast<FixedVectorType>(SI->getValueOperand()->getType());
     const DataLayout &DL = I.getModule()->getDataLayout();
     Value *SrcAddr = Load->getPointerOperand()->stripPointerCasts();
-    // Don't optimize for atomic/volatile load or stores.
+    // Don't optimize for atomic/volatile load or store. Ensure memory is not
+    // modified between, vector type matches store size, and index is inbounds.
     if (!Load->isSimple() || Load->getParent() != SI->getParent() ||
         !DL.typeSizeEqualsStoreSize(Load->getType()) ||
+        Idx->uge(VecTy->getNumElements()) ||
         SrcAddr != SI->getPointerOperand()->stripPointerCasts() ||
         isMemModifiedBetween(Load->getIterator(), SI->getIterator(),
                              MemoryLocation::get(SI), AA))
