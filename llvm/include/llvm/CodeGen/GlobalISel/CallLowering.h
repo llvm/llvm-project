@@ -197,7 +197,7 @@ public:
     }
 
   private:
-    bool IsIncomingArgumentHandler;
+    const bool IsIncomingArgumentHandler;
     virtual void anchor();
   };
 
@@ -216,7 +216,7 @@ public:
   struct ValueHandler {
     MachineIRBuilder &MIRBuilder;
     MachineRegisterInfo &MRI;
-    bool IsIncomingArgumentHandler;
+    const bool IsIncomingArgumentHandler;
 
     ValueHandler(bool IsIncoming, MachineIRBuilder &MIRBuilder,
                  MachineRegisterInfo &MRI)
