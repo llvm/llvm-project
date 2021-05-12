@@ -225,10 +225,9 @@ define <2 x half> @v_mad_mix_v2f32_clamp_postcvt_hi(<2 x half> %src0, <2 x half>
 ; GCN-LABEL: {{^}}v_mad_mix_v2f32_clamp_precvt:
 ; GFX9: v_mad_mix_f32 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
 ; GFX9-NEXT: v_mad_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,1] clamp
-; GFX9: v_cvt_f16_f32_e32 v0, v0
 ; GFX9: v_cvt_f16_f32_e32 v1, v3
-; GFX9: v_and_b32_e32 v0, 0xffff, v0
-; GFX9: v_lshl_or_b32 v0, v1, 16, v0
+; GFX9: v_cvt_f16_f32_e32 v0, v0
+; GFX9: v_pack_b32_f16 v0, v0, v1
 ; GFX9: s_setpc_b64
 define <2 x half> @v_mad_mix_v2f32_clamp_precvt(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) #0 {
   %src0.ext = fpext <2 x half> %src0 to <2 x float>
@@ -247,11 +246,10 @@ define <2 x half> @v_mad_mix_v2f32_clamp_precvt(<2 x half> %src0, <2 x half> %sr
 ; GFX9-NEXT: v_mad_mix_f32 v1, v1, v3, v5 op_sel_hi:[1,1,1] clamp
 ; GFX9-NEXT: v_mad_mix_f32 v3, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
 ; GFX9-NEXT: v_mad_mix_f32 v0, v0, v2, v4 op_sel_hi:[1,1,1] clamp
-; GFX9-NEXT: v_cvt_f16_f32_e32 v0, v0
 ; GFX9-NEXT: v_cvt_f16_f32_e32 v2, v3
+; GFX9-NEXT: v_cvt_f16_f32_e32 v0, v0
 ; GFX9-NEXT: v_cvt_f16_f32_e32 v1, v1
-; GFX9-NEXT: v_and_b32_e32 v0, 0xffff, v0
-; GFX9-NEXT: v_lshl_or_b32 v0, v2, 16, v0
+; GFX9-NEXT: v_pack_b32_f16 v0, v0, v2
 ; GFX9-NEXT: s_setpc_b64
 define <3 x half> @v_mad_mix_v3f32_clamp_precvt(<3 x half> %src0, <3 x half> %src1, <3 x half> %src2) #0 {
   %src0.ext = fpext <3 x half> %src0 to <3 x float>

@@ -48,19 +48,9 @@ static void MemprofDie() {
   }
 }
 
-static void MemprofCheckFailed(const char *file, int line, const char *cond,
-                               u64 v1, u64 v2) {
-  Report("MemProfiler CHECK failed: %s:%d \"%s\" (0x%zx, 0x%zx)\n", file, line,
-         cond, (uptr)v1, (uptr)v2);
-
-  // Print a stack trace the first time we come here. Otherwise, we probably
-  // failed a CHECK during symbolization.
-  static atomic_uint32_t num_calls;
-  if (atomic_fetch_add(&num_calls, 1, memory_order_relaxed) == 0) {
-    PRINT_CURRENT_STACK_CHECK();
-  }
-
-  Die();
+static void CheckUnwind() {
+  GET_STACK_TRACE(kStackTraceMax, common_flags()->fast_unwind_on_check);
+  stack.Print();
 }
 
 // -------------------------- Globals --------------------- {{{1
@@ -174,7 +164,7 @@ static void MemprofInitInternal() {
 
   // Install tool-specific callbacks in sanitizer_common.
   AddDieCallback(MemprofDie);
-  SetCheckFailedCallback(MemprofCheckFailed);
+  SetCheckUnwindCallback(CheckUnwind);
 
   // Use profile name specified via the binary itself if it exists, and hasn't
   // been overrriden by a flag at runtime.

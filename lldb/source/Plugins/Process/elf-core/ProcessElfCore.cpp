@@ -404,12 +404,8 @@ lldb::addr_t ProcessElfCore::GetImageInfoAddress() {
 // Parse a FreeBSD NT_PRSTATUS note - see FreeBSD sys/procfs.h for details.
 static void ParseFreeBSDPrStatus(ThreadData &thread_data,
                                  const DataExtractor &data,
-                                 const ArchSpec &arch) {
+                                 bool lp64) {
   lldb::offset_t offset = 0;
-  bool lp64 = (arch.GetMachine() == llvm::Triple::aarch64 ||
-               arch.GetMachine() == llvm::Triple::mips64 ||
-               arch.GetMachine() == llvm::Triple::ppc64 ||
-               arch.GetMachine() == llvm::Triple::x86_64);
   int pr_version = data.GetU32(&offset);
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
@@ -431,6 +427,27 @@ static void ParseFreeBSDPrStatus(ThreadData &thread_data,
 
   size_t len = data.GetByteSize() - offset;
   thread_data.gpregset = DataExtractor(data, offset, len);
+}
+
+// Parse a FreeBSD NT_PRPSINFO note - see FreeBSD sys/procfs.h for details.
+static void ParseFreeBSDPrPsInfo(ProcessElfCore &process,
+                                 const DataExtractor &data,
+                                 bool lp64) {
+  lldb::offset_t offset = 0;
+  int pr_version = data.GetU32(&offset);
+
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+  if (log) {
+    if (pr_version > 1)
+      LLDB_LOGF(log, "FreeBSD PRPSINFO unexpected version %d", pr_version);
+  }
+
+  // Skip pr_psinfosz, pr_fname, pr_psargs
+  offset += 108;
+  if (lp64)
+    offset += 4;
+
+  process.SetID(data.GetU32(&offset)); // pr_pid
 }
 
 static llvm::Error ParseNetBSDProcInfo(const DataExtractor &data,
@@ -512,6 +529,11 @@ ProcessElfCore::parseSegment(const DataExtractor &segment) {
 }
 
 llvm::Error ProcessElfCore::parseFreeBSDNotes(llvm::ArrayRef<CoreNote> notes) {
+  ArchSpec arch = GetArchitecture();
+  bool lp64 = (arch.GetMachine() == llvm::Triple::aarch64 ||
+               arch.GetMachine() == llvm::Triple::mips64 ||
+               arch.GetMachine() == llvm::Triple::ppc64 ||
+               arch.GetMachine() == llvm::Triple::x86_64);
   bool have_prstatus = false;
   bool have_prpsinfo = false;
   ThreadData thread_data;
@@ -532,10 +554,11 @@ llvm::Error ProcessElfCore::parseFreeBSDNotes(llvm::ArrayRef<CoreNote> notes) {
     switch (note.info.n_type) {
     case ELF::NT_PRSTATUS:
       have_prstatus = true;
-      ParseFreeBSDPrStatus(thread_data, note.data, GetArchitecture());
+      ParseFreeBSDPrStatus(thread_data, note.data, lp64);
       break;
     case ELF::NT_PRPSINFO:
       have_prpsinfo = true;
+      ParseFreeBSDPrPsInfo(*this, note.data, lp64);
       break;
     case ELF::NT_FREEBSD_THRMISC: {
       lldb::offset_t offset = 0;

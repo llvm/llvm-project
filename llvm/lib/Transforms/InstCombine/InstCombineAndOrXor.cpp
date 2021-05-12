@@ -3352,11 +3352,6 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
       }
     }
 
-    // ~(X - Y) --> ~X + Y
-    if (match(NotVal, m_Sub(m_Value(X), m_Value(Y))))
-      if (isa<Constant>(X) || NotVal->hasOneUse())
-        return BinaryOperator::CreateAdd(Builder.CreateNot(X), Y);
-
     // ~((-X) | Y) --> (X - 1) & (~Y)
     if (match(NotVal,
               m_OneUse(m_c_Or(m_OneUse(m_Neg(m_Value(X))), m_Value(Y))))) {
@@ -3395,9 +3390,15 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
       return BinaryOperator::CreateAShr(ConstantExpr::getNot(C), Y);
     }
 
-    // ~(X + C) --> -(C + 1) - X
-    if (match(Op0, m_Add(m_Value(X), m_Constant(C))))
-      return BinaryOperator::CreateSub(ConstantExpr::getNeg(AddOne(C)), X);
+    // ~(X + C) --> ~C - X
+    if (match(NotVal, m_c_Add(m_Value(X), m_ImmConstant(C))))
+      return BinaryOperator::CreateSub(ConstantExpr::getNot(C), X);
+
+    // ~(X - Y) --> ~X + Y
+    // FIXME: is it really beneficial to sink the `not` here?
+    if (match(NotVal, m_Sub(m_Value(X), m_Value(Y))))
+      if (isa<Constant>(X) || NotVal->hasOneUse())
+        return BinaryOperator::CreateAdd(Builder.CreateNot(X), Y);
 
     // ~(~X + Y) --> X - Y
     if (match(NotVal, m_c_Add(m_Not(m_Value(X)), m_Value(Y))))

@@ -288,8 +288,7 @@ define amdgpu_kernel void @test_fold_canonicalize_fpround_value_f16_f32_flushf16
 ; VI-DAG: v_cvt_f16_f32_sdwa [[V1:v[0-9]+]], v{{[0-9]+}}
 ; VI: v_or_b32_e32 [[V:v[0-9]+]], [[V0]], [[V1]]
 ; GFX9: v_cvt_f16_f32_e32 [[V1:v[0-9]+]], v{{[0-9]+}}
-; GFX9: v_and_b32_e32 [[V0_16:v[0-9]+]], 0xffff, [[V0]]
-; GFX9: v_lshl_or_b32 [[V:v[0-9]+]], [[V1]], 16, [[V0_16]]
+; GFX9: v_pack_b32_f16 [[V:v[0-9]+]], [[V1]], [[V0]]
 ; GCN-NOT: v_mul
 ; GCN-NOT: v_max
 ; GCN: {{flat|global}}_store_dword v{{.+}}, [[V]]

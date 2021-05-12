@@ -31,23 +31,6 @@ using namespace __sanitizer;
 
 static ReportStack *SymbolizeStack(StackTrace trace);
 
-void TsanCheckFailed(const char *file, int line, const char *cond,
-                     u64 v1, u64 v2) {
-  // There is high probability that interceptors will check-fail as well,
-  // on the other hand there is no sense in processing interceptors
-  // since we are going to die soon.
-  ScopedIgnoreInterceptors ignore;
-#if !SANITIZER_GO
-  cur_thread()->ignore_sync++;
-  cur_thread()->ignore_reads_and_writes++;
-#endif
-  Printf("FATAL: ThreadSanitizer CHECK failed: "
-         "%s:%d \"%s\" (0x%zx, 0x%zx)\n",
-         file, line, cond, (uptr)v1, (uptr)v2);
-  PrintCurrentStackSlow(StackTrace::GetCurrentPc());
-  Die();
-}
-
 // Can be overriden by an application/test to intercept reports.
 #ifdef TSAN_EXTERNAL_HOOKS
 bool OnReport(const ReportDesc *rep, bool suppressed);
@@ -752,8 +735,7 @@ void PrintCurrentStack(ThreadState *thr, uptr pc) {
 // However, this solution is not reliable enough, please see dvyukov's comment
 // http://reviews.llvm.org/D19148#406208
 // Also see PR27280 comment 2 and 3 for breaking examples and analysis.
-ALWAYS_INLINE
-void PrintCurrentStackSlow(uptr pc) {
+ALWAYS_INLINE USED void PrintCurrentStackSlow(uptr pc) {
 #if !SANITIZER_GO
   uptr bp = GET_CURRENT_FRAME();
   BufferedStackTrace *ptrace =
