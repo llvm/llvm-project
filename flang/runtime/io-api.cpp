@@ -589,7 +589,8 @@ bool IONAME(SetAccess)(Cookie cookie, const char *keyword, std::size_t length) {
     io.GetIoErrorHandler().Crash(
         "SetAccess() called when not in an OPEN statement");
   }
-  static const char *keywords[]{"SEQUENTIAL", "DIRECT", "STREAM", nullptr};
+  static const char *keywords[]{
+      "SEQUENTIAL", "DIRECT", "STREAM", "APPEND", nullptr};
   switch (IdentifyValue(keyword, length, keywords)) {
   case 0:
     open->set_access(Access::Sequential);
@@ -599,6 +600,9 @@ bool IONAME(SetAccess)(Cookie cookie, const char *keyword, std::size_t length) {
     break;
   case 2:
     open->set_access(Access::Stream);
+    break;
+  case 3: // Sun Fortran extension ACCESS=APPEND: treat as if POSITION=APPEND
+    open->set_position(Position::Append);
     break;
   default:
     open->SignalError(IostatErrorInKeyword, "Invalid ACCESS='%.*s'",

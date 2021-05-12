@@ -134,6 +134,8 @@ accepted if enabled by command-line options.
   bound, in a scope with IMPLICIT NONE(TYPE) if the name
   of the dummy argument would have caused it to be implicitly typed
   as default INTEGER if IMPLICIT NONE(TYPE) were absent.
+* OPEN(ACCESS='APPEND') is interpreted as OPEN(POSITION='APPEND')
+  to ease porting from Sun Fortran.
 
 ### Extensions supported when enabled by options
 
