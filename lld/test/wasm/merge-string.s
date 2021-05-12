@@ -1,6 +1,12 @@
 // RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %s -o %t.o
-// RUN: wasm-ld -O2 %t.o -o %t.wasm --no-gc-sections --no-entry
+// RUN: wasm-ld -O1 %t.o -o %t.wasm --no-gc-sections --no-entry
 // RUN: obj2yaml %t.wasm | FileCheck %s --check-prefixes=COMMON,MERGE
+
+// Check that the default is the same as -O1 (since we default to -O1)
+// RUN: wasm-ld %t.o -o %t.wasm --no-gc-sections --no-entry
+// RUN: obj2yaml %t.wasm | FileCheck %s --check-prefixes=COMMON,MERGE
+
+// Check that -O0 disables merging
 // RUN: wasm-ld -O0 %t.o -o %t2.wasm --no-gc-sections --no-entry
 // RUN: obj2yaml %t2.wasm | FileCheck --check-prefixes=COMMON,NOMERGE %s
 
@@ -13,6 +19,11 @@ bar:
         .asciz "bc"
         .asciz "bc"
         .size bar, 4
+
+        .section .rodata_relocs,"",@
+negative_addend:
+        .int32 foo-10
+        .size negative_addend, 4
 
 .globl foo
 .globl bar
