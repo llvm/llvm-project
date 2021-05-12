@@ -48,7 +48,11 @@ atmi_status_t Runtime::Malloc(void **ptr, size_t size, atmi_mem_place_t place) {
   atmi_status_t ret = ATMI_STATUS_SUCCESS;
   hsa_amd_memory_pool_t pool = get_memory_pool_by_mem_place(place);
   hsa_status_t err = hsa_amd_memory_pool_allocate(pool, size, 0, ptr);
-  ErrorCheck("atmi_malloc", err);
+  if (err != HSA_STATUS_SUCCESS) {
+    printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, "atmi_malloc",
+           get_error_string(err));
+    exit(1);
+  }
   DEBUG_PRINT("Malloced [%s %d] %p\n",
               place.dev_type == ATMI_DEVTYPE_CPU ? "CPU" : "GPU", place.dev_id,
               *ptr);
@@ -64,7 +68,11 @@ atmi_status_t Runtime::Memfree(void *ptr) {
   atmi_status_t ret = ATMI_STATUS_SUCCESS;
   hsa_status_t err;
   err = hsa_amd_memory_pool_free(ptr);
-  ErrorCheck("atmi_free", err);
+  if (err != HSA_STATUS_SUCCESS) {
+    printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, "atmi_free",
+           get_error_string(err));
+    exit(1);
+  }
   DEBUG_PRINT("Freed %p\n", ptr);
 
   if (err != HSA_STATUS_SUCCESS)

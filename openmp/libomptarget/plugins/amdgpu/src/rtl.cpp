@@ -76,12 +76,8 @@ int print_kernel_trace;
 #ifdef OMPTARGET_DEBUG
 #define check(msg, status)                                                     \
   if (status != ATMI_STATUS_SUCCESS) {                                         \
-    /* fprintf(stderr, "[%s:%d] %s failed.\n", __FILE__, __LINE__, #msg);*/    \
     DP(#msg " failed\n");                                                      \
-    /*assert(0);*/                                                             \
   } else {                                                                     \
-    /* fprintf(stderr, "[%s:%d] %s succeeded.\n", __FILE__, __LINE__, #msg);   \
-     */                                                                        \
     DP(#msg " succeeded\n");                                                   \
   }
 #else
@@ -121,7 +117,11 @@ public:
     if (kernarg_region) {
       auto r = hsa_amd_memory_pool_free(kernarg_region);
       assert(r == HSA_STATUS_SUCCESS);
-      ErrorCheck("Memory pool free", r);
+      if (r != HSA_STATUS_SUCCESS) {
+        printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
+               "Memory pool free", get_error_string(r));
+        exit(1);
+      }
     }
   }
 
@@ -140,7 +140,12 @@ public:
           atl_gpu_kernarg_pools[0],
           kernarg_size_including_implicit() * MAX_NUM_KERNELS, 0,
           &kernarg_region);
-      ErrorCheck("Allocating memory for the executable-kernel", err);
+      if (err != HSA_STATUS_SUCCESS) {
+        printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
+               "Allocating memory for the executable-kernel",
+               get_error_string(err));
+        exit(1);
+      }
       core::allow_access_to_all_gpu_agents(kernarg_region);
 
       for (int i = 0; i < MAX_NUM_KERNELS; i++) {
@@ -473,7 +478,12 @@ public:
         hsa_status_t err;
         err = hsa_agent_get_info(HSAAgents[i], HSA_AGENT_INFO_QUEUE_MAX_SIZE,
                                  &queue_size);
-        ErrorCheck("Querying the agent maximum queue size", err);
+        if (err != HSA_STATUS_SUCCESS) {
+          printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
+                 "Querying the agent maximum queue size",
+                 get_error_string(err));
+          exit(1);
+        }
         if (queue_size > core::Runtime::getInstance().getMaxQueueSize()) {
           queue_size = core::Runtime::getInstance().getMaxQueueSize();
         }
