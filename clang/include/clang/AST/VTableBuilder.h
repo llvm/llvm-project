@@ -18,6 +18,7 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/ABI.h"
+#include "clang/Basic/Thunk.h"
 #include "llvm/ADT/DenseMap.h"
 #include <memory>
 #include <utility>
