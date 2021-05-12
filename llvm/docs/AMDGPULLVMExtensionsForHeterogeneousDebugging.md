@@ -60,6 +60,7 @@
   - [Induction Variable](#induction-variable)
   - [Proven Constant](#proven-constant)
   - [Common Subexpression Elimination (CSE)](#common-subexpression-elimination-cse)
+  - [Divergent Lane PC](#divergent-lane-pc)
 - [References](#references)
 - [Other Ideas](#other-ideas)
   - [Translating To DWARF](#translating-to-dwarf)
@@ -67,7 +68,6 @@
   - [Comparison With GCC](#comparison-with-gcc)
   - [Example Ideas](#example-ideas)
     - [Spilling](#spilling)
-    - [Divergent Lane PC](#divergent-lane-pc)
     - [Simultaneous Lifetimes In Multiple Places](#simultaneous-lifetimes-in-multiple-places)
     - [File Scope Globals](#file-scope-globals)
     - [Lds Variables](#lds-variables)
@@ -1854,6 +1854,426 @@ entry:
 Which accurately describes that both `redundant` and `loaded` are read-only
 after the common load.
 
+## Divergent Lane PC
+
+For AMDGPU, the `DW_AT_LLVM_lane_pc` attribute is used to specify the program
+location of the separate lanes of a SIMT thread.
+
+If the lane is an active lane then this will be the same as the current program
+location.
+
+If the lane is inactive, but was active on entry to the subprogram, then this is
+the program location in the subprogram at which execution of the lane is
+conceptual positioned.
+
+If the lane was not active on entry to the subprogram, then this will be the
+undefined location. A client debugger can check if the lane is part of a valid
+work-group by checking that the lane is in the range of the associated
+work-group within the grid, accounting for partial work-groups. If it is not,
+then the debugger can omit any information for the lane. Otherwise, the debugger
+may repeatedly unwind the stack and inspect the `DW_AT_LLVM_lane_pc` of the
+calling subprogram until it finds a non-undefined location. Conceptually the
+lane only has the call frames that it has a non-undefined
+`DW_AT_LLVM_lane_pc`.
+
+The following example illustrates how the AMDGPU backend can generate a DWARF
+location list expression for the nested `IF/THEN/ELSE` structures of the
+following subprogram pseudo code for a target with 64 lanes per wavefront.
+
+```llvm
+  SUBPROGRAM X
+  BEGIN
+    a;
+    IF (c1) THEN
+      b;
+      IF (c2) THEN
+        c;
+      ELSE
+        d;
+      ENDIF
+      e;
+    ELSE
+      f;
+    ENDIF
+    g;
+  END
+```
+
+The AMDGPU backend may generate the following pseudo LLVM MIR to manipulate the
+execution mask (`EXEC`) to linearize the control flow. The condition is
+evaluated to make a mask of the lanes for which the condition evaluates to true.
+First the `THEN` region is executed by setting the `EXEC` mask to the
+logical `AND` of the current `EXEC` mask with the condition mask. Then the
+`ELSE` region is executed by negating the `EXEC` mask and logical `AND` of
+the saved `EXEC` mask at the start of the region. After the `IF/THEN/ELSE`
+region the `EXEC` mask is restored to the value it had at the beginning of the
+region. This is shown below. Other approaches are possible, but the basic
+concept is the same.
+
+```llvm
+  %lex_start:
+    a;
+    %1 = EXEC
+    %2 = c1
+  %lex_1_start:
+    EXEC = %1 & %2
+  $if_1_then:
+      b;
+      %3 = EXEC
+      %4 = c2
+  %lex_1_1_start:
+      EXEC = %3 & %4
+  %lex_1_1_then:
+        c;
+      EXEC = ~EXEC & %3
+  %lex_1_1_else:
+        d;
+      EXEC = %3
+  %lex_1_1_end:
+      e;
+    EXEC = ~EXEC & %1
+  %lex_1_else:
+      f;
+    EXEC = %1
+  %lex_1_end:
+    g;
+  %lex_end:
+```
+
+To create the DWARF location list expression that defines the location
+description of a vector of lane program locations, the LLVM MIR `DBG_DEF`
+pseudo instruction can be used to annotate the linearized control flow. This
+can be done by defining a `DIFragment` for the lane PC, and using it as the
+`activeLanePC` parameter of the corresponding `DISubprogram` of the function
+being described. The DWARF location list expression created for it is used as
+the value of the `DW_AT_LLVM_lane_pc` attribute on the subprogram's debugger
+information entry.
+
+A `DIFragment` is defined for each well nested structured control flow region
+which provides the conceptual lane program location for a lane if it is not
+active (namely it is divergent). The `DIFragment` for each region has a single
+computed `DILifetime` whose location expression conceptually inherits the value
+of the immediately enclosing region and modifies it according to the semantics
+of the region.
+
+By having a separate `DIFragment` for each region, they can be reused to define
+the value for any nested region. This reduces the total size of the DWARF
+operation expressions.
+
+A "bounded divergent lane PC" `DIFragment` is defined which computes the
+program location for each lane assuming they are divergent at every instruction
+in the function. This fragment has one bounded lifetime for each region. Each
+bounded lifetime specifies a single `DIFragment` for a region and is active
+over a disjoint range of the function instructions corresponding to that
+region. Together the lifetimes cover all instructions of the function, such
+that at every PC in the function exactly one lifetime is active.
+
+For an `IF/THEN/ELSE` region the divergent program location is at the start of
+the region for the `THEN` region since it is executed first. For the `ELSE`
+region the divergent program location is at the end of the `IF/THEN/ELSE`
+region since the `THEN` region has completed.
+
+The lane PC fragment is then defined with an expression that takes the
+bounded divergent lane PC and modifies it by inserting the current program
+location for each lane that the `EXEC` maks indicates is active.
+
+The following provides an example using pseudo LLVM MIR.
+
+```llvm
+; NOTE: This listing is written in a pseudo LLVM MIR, as this debug information
+; will be inserted as part of inserting EXEC manipulation into LLVM MIR.
+;
+; This pseudo-MIR uses named metadata identifiers (e.g. !foo) to identify
+; unnamed metadata (e.g. !0). To translate to MIR assign each unique named
+; metadata identifier a monotonically increasing unnamed metadata identifier,
+; then replace all references to each named metadata identifier with its
+; corresponding unnamed metadata identifier.
+;
+; The identifiers are named as a dot (`.`) separated list of elements,
+; ending with a tag corresponding to the type of metadata they identify.
+;
+; In MIR a `!DIExpr` is always printed inline at its use, even though it is
+; internally uniqued and shared by all uses of the same expression. In this
+; pseudo-MIR we break this convention and write the expressions out-of-line
+; in some cases to emphasize where sharing occurs and to shorten the listing.
+
+  lex_start:
+    ; NOTE: These lifetimes for the PC/EXEC registers define the typical,
+    ; default case of referring directly to the physical register. For cases
+    ; like WQM where the physical EXEC and "logical" EXEC are not the same,
+    ; this will be overriden by defining a bounded lifetime for
+    ; !pc.fragment/!exec.fragment.
+    DBG_DEF !pc.physical.lifetime, $PC
+    DBG_DEF !exec.physical.lifetime, $EXEC
+    DBG_DEF !bounded_divergent_lane_pc.lex.a.lifetime, $noreg
+    a;
+    %1 = EXEC;
+    DBG_DEF !save_exec.lex_1.lifetime, u64 %1
+    %2 = c1;
+    DBG_KILL !bounded_divergent_lane_pc.lex.a.lifetime
+  lex_1_start:
+    DBG_LABEL !lex_1_start.label
+    EXEC = %1 & %2;
+  lex_1_then:
+      DBG_DEF !bounded_divergent_lane_pc.lex_1_then.a.lifetime, $noreg
+      b;
+      %3 = EXEC;
+      DBG_DEF !save_exec.lex_1_1.lifetime, u64 %3
+      %4 = c2;
+      DBG_KILL !bounded_divergent_lane_pc.lex_1_then.a.lifetime
+  lex_1_1_start:
+      DBG_LABEL !lex_1_1_start.label
+      EXEC = %3 & %4;
+  lex_1_1_then:
+        DBG_DEF !bounded_divergent_lane_pc.lex_1_1_then.a.lifetime, $noreg
+        c;
+        DBG_KILL !bounded_divergent_lane_pc.lex_1_1_then.a.lifetime
+      EXEC = ~EXEC & %3;
+  lex_1_1_else:
+        DBG_DEF !bounded_divergent_lane_pc.lex_1_1_else.a.lifetime, $noreg
+        d;
+        DBG_KILL !bounded_divergent_lane_pc.lex_1_1_else.a.lifetime
+      EXEC = %3;
+      DBG_KILL !save_exec.lex_1_1.lifetime
+  lex_1_1_end:
+      DBG_LABEL !lex_1_1_end.label
+      DBG_DEF !bounded_divergent_lane_pc.lex_1_then.b.lifetime, $noreg
+      e;
+      DBG_KILL !bounded_divergent_lane_pc.lex_1_then.b.lifetime
+    EXEC = ~EXEC & %1;
+  lex_1_else:
+      DBG_DEF !bounded_divergent_lane_pc.lex_1_else.a.lifetime, $noreg
+      f;
+      DBG_KILL !bounded_divergent_lane_pc.lex_1_else.a.lifetime
+    EXEC = %1;
+    DBG_KILL !save_exec.lex_1.lifetime
+  lex_1_end:
+    DBG_LABEL !lex_1_end.label
+    DBG_DEF !bounded_divergent_lane_pc.lex.b.lifetime, $noreg
+    g;
+  lex_end:
+
+;; Labels
+; TODO: Allow DILabel to be artificial (add flags)
+; TODO: If these coincide with actual source labels do we need the artifical copy?
+!lex_1_start.label = distinct !DILabel(..., flags: DIFlagArtificial)
+!lex_1_1_start.label = distinct !DILabel(..., flags: DIFlagArtificial)
+!lex_1_1_end.label = distinct !DILabel(..., flags: DIFlagArtificial)
+!lex_1_end.label = distinct !DILabel(..., flags: DIFlagArtificial)
+
+;; Saved EXEC Mask Fragments
+; These track the value of the EXEC mask saved on entry to each `IF/THEN/ELSE`
+; region. The saved mask identifies the lanes to be updated when defining the
+; computed divergent_lane_pc for a given lexical block (or, put another way,
+; the negation of the saved mask identifies the lanes which are not updated).
+!save_exec.lex_1.fragment = distinct !DIFragment()
+!save_exec.lex_1.lifetime = distinct !DILifetime(
+  object: !save_exec.lex_1.fragment,
+  location: !DIExpr(DIOpReferrer(u64))
+)
+!save_exec.lex_1_1.fragment = distinct !DIFragment()
+!save_exec.lex_1_1.lifetime = distinct !DILifetime(
+  object: !save_exec.lex_1_1.fragment,
+  location: !DIExpr(DIOpReferrer(u64))
+)
+
+;; Logical and Physical Register Fragments
+; NOTE: We refer to the "logical" EXEC, `!exec.fragment`, in other expressions.
+; This may be computed in cases where the physical EXEC was updated to
+; implement e.g. whole-quad-mode. Referring to this fragment makes the uses
+; transparently support this. The same approach is applied for the PC.
+!pc.fragment = distinct !DIFragment()
+!pc.default.lifetime = distinct !DILifetime(
+  object: !pc.fragment,
+  location: !DIExpr(DIOpArg(u64)),
+  argObjects: {!pc.physical.fragment}
+)
+!pc.physical.fragment = distinct !DIFragment()
+!pc.physical.lifetime = distinct !DILifetime(
+  object: !pc.physical.fragment,
+  location: !DIExpr(DIOpReferrer(u64))
+)
+!exec.fragment = distinct !DIFragment()
+!exec.default.lifetime = distinct !DILifetime(
+  object: !exec.fragment,
+  location: !DIExpr(DIOpArg(u64)),
+  argObjects: {!exec.physical.fragment}
+)
+!exec.physical.fragment = distinct !DIFragment()
+!exec.physical.lifetime = distinct !DILifetime(
+  object: !exec.physical.fragment,
+  location: !DIExpr(DIOpReferrer(u64))
+)
+
+;; Bounded Divergent Lane PC
+; This fragment has disjoint lifetimes which cover the entire PC range of the
+; function. It contains the divergent_lane_pc for all lanes which are
+; divergent, with unspecified values present in active lanes (as an artifact of
+; the current implementation, the active lanes are assigned the same value as
+; the divergent lanes which were active on entry to the current `IF/THEN/ELSE`
+; region, but this is neither guaranteed nor required).
+!bounded_divergent_lane_pc.fragment = distinct !DIFragment()
+; The argObjects to !bounded_divergent_lane_pc.expr are:
+; {<64 x u64> lane_pc_vec}
+!bounded_divergent_lane_pc.expr = !DIExpr(DIOpArg(<64 x u64>))
+!bounded_divergent_lane_pc.lex.a.lifetime = distinct !DILifetime(
+  object: !bounded_divergent_lane_pc.fragment,
+  location: !bounded_divergent_lane_pc.expr,
+  argObjects: {!divergent_lane_pc.lex.fragment}
+)
+!bounded_divergent_lane_pc.lex_1_then.a.lifetime = distinct !DILifetime(
+  object: !bounded_divergent_lane_pc.fragment,
+  location: !bounded_divergent_lane_pc.expr,
+  argObjects: {!divergent_lane_pc.lex_1_then.fragment}
+)
+!bounded_divergent_lane_pc.lex_1_1_then.a.lifetime = distinct !DILifetime(
+  object: !bounded_divergent_lane_pc.fragment,
+  location: !bounded_divergent_lane_pc.expr,
+  argObjects: {!divergent_lane_pc.lex_1_1_then.fragment}
+)
+!bounded_divergent_lane_pc.lex_1_1_else.a.lifetime = distinct !DILifetime(
+  object: !bounded_divergent_lane_pc.fragment,
+  location: !bounded_divergent_lane_pc.expr,
+  argObjects: {!divergent_lane_pc.lex_1_1_else.fragment}
+)
+!bounded_divergent_lane_pc.lex_1_then.b.lifetime = distinct !DILifetime(
+  object: !bounded_divergent_lane_pc.fragment,
+  location: !bounded_divergent_lane_pc.expr,
+  argObjects: {!divergent_lane_pc.lex_1_then.fragment}
+)
+!bounded_divergent_lane_pc.lex_1_else.a.lifetime = distinct !DILifetime(
+  object: !bounded_divergent_lane_pc.fragment,
+  location: !bounded_divergent_lane_pc.expr,
+  argObjects: {!divergent_lane_pc.lex_1_else.fragment}
+)
+!bounded_divergent_lane_pc.lex.b.lifetime = distinct !DILifetime(
+  object: !bounded_divergent_lane_pc.fragment,
+  location: !bounded_divergent_lane_pc.expr,
+  argObjects: {!divergent_lane_pc.lex.fragment}
+)
+
+; TODO: Maybe add a property of DIFragment that asserts it should never have
+; more than a single location description for any PC
+
+; TODO: To easily translate Extend, Select, Read, etc.
+; into DWARF, they will needs a type parameter. Should we add a type to just the
+; operations which correspond to a DWARF operation that needs the type/size? Or
+; should we just add types to all operations?
+
+; TODO: Allow argObjects to include DILabels
+
+;; Computed Divergent Lane PC Fragments
+!divergent_lane_pc.lex.fragment = distinct !DIFragment()
+!divergent_lane_pc.lex.lifetime = distinct !DILifetime(
+  object: !divergent_lane_pc_outer.fragment,
+  location: !DIExpr(DIOpConstant(u64 undef), DIOpExtend(64))
+)
+; The argObjects to `!select_lanes.expr` are:
+; {<64 x u64> starting_lane_pc_vec, u64 pc_value, u64 mask}
+!select_lanes.expr = !DIExpr(
+  DIOpArg(0, <64 x u64>),
+  DIOpArg(1, u64), DIOpExtend(64, u64),
+  DIOpArg(2, u64),
+  DIOpSelect(64, u64)
+)
+; TODO: We have the issue of: how do we ensure we have a value when we need
+; it for DWARF, for example DIOpSelect will need to ensure the top element of
+; the stack is a value when evaluating the final DWARF, but this violates the
+; "context insensitive" property we want for the operations.
+; We can work around this by emitting "unoptimized" DWARF where e.g. every
+; implicit location description in the LLVM representation actually maps to an
+; implicit location description being pushed on the DWARF stack (e.g. we lower
+; `... DIOpConstant(u64 42) DIOpSelect()` to `... DW_OP_uconst 42,
+; DW_OP_stack_value, DW_OP_deref, DW_OP_select_bit_piece` instead of just `...
+; DW_OP_uconst 42, DW_OP_select_bit_piece`)
+!divergent_lane_pc.lex_1_then.fragment = distinct !DIFragment()
+!divergent_lane_pc.lex_1_then.lifetime = distinct !DILifetime(
+  object: !divergent_lane_pc.lex_1_then.fragment,
+  location: !select_lanes.expr,
+  argObjects: {
+    !divergent_lane_pc.lex.fragment,
+    !lex_1_start.label,
+    !save_exec.lex_1.fragment
+  }
+)
+!divergent_lane_pc.lex_1_1_then.fragment = distinct !DIFragment()
+!divergent_lane_pc.lex_1_1_then.lifetime = distinct !DILifetime(
+  object: !divergent_lane_pc.lex_1_1_then.fragment,
+  location: !select_lanes.expr,
+  argObjects: {
+    !divergent_lane_pc.lex.fragment,
+    !lex_1_1_start.label,
+    !save_exec.lex_1_1.fragment
+  }
+)
+!divergent_lane_pc.lex_1_1_else.fragment = distinct !DIFragment()
+!divergent_lane_pc.lex_1_1_else.lifetime = distinct !DILifetime(
+  object: !divergent_lane_pc.lex_1_1_else.fragment,
+  location: !select_lanes.expr,
+  argObjects: {
+    !divergent_lane_pc.lex.fragment,
+    !lex_1_1_end.label,
+    !save_exec.lex_1_1.fragment
+  }
+)
+!divergent_lane_pc.lex_1_else.fragment = distinct !DIFragment()
+!divergent_lane_pc.lex_1_else.lifetime = distinct !DILifetime(
+  object: !divergent_lane_pc.lex_1_else.fragment,
+  location: !select_lanes.expr,
+  argObjects: {
+    !divergent_lane_pc.lex.fragment,
+    !lex_1_end.label,
+    !save_exec.lex_1.fragment
+  }
+)
+
+;; Active Lane PC
+!active_lane_pc.fragment = distinct !DIFragment()
+!active_lane_pc.lifetime = distinct !DILifetime(
+  object: !active_lane_pc.fragment,
+  location: !select_lanes.expr,
+  argObjects: {
+    !bounded_divergent_lane_pc.fragment,
+    !pc.fragment,
+    !exec.fragment
+  }
+)
+
+;; Subprogram
+!subprogram = !DISubprogram(...,
+  activeLanePC: !active_lane_pc.fragment,
+  retainedNodes: !{
+    !pc.default.lifetime,
+    !exec.default.lifetime,
+    !divergent_lane_pc.lex_1_then.lifetime,
+    !divergent_lane_pc.lex_1_1_then.lifetime,
+    !divergent_lane_pc.lex_1_1_else.lifetime,
+    !divergent_lane_pc.lex_1_else.lifetime,
+    !active_lane_pc.lifetime
+  }
+)
+```
+
+Fragments `!save_exec.lex_1.fragment` and `!save_exec.lex_1_1.fragment` are
+created for the execution masks saved on entry to a region. Using the `DBG_DEF`
+pseudo instruction, location list entries will be created that describe where
+the artificial variables are allocated at any given program location. The
+compiler may allocate them to registers or spill them to memory.
+
+The fragments for each region use the values of the saved execution mask
+artificial variables to only update the lanes that are active on entry to the
+region. All other lanes retain the value of the enclosing region where they were
+last active. If they were not active on entry to the subprogram, then will have
+the undefined location description.
+
+Other structured control flow regions can be handled similarly. For example,
+loops would set the divergent program location for the region at the end of the
+loop. Any lanes active will be in the loop, and any lanes not active must have
+exited the loop.
+
+An `IF/THEN/ELSEIF/ELSEIF/...` region can be treated as a nest of
+`IF/THEN/ELSE` regions.
+
 # References
 
 1. [[LLVMdev] [RFC] Separating Metadata from the Value hierarchy (David Blaikie)][01]
@@ -1973,11 +2393,6 @@ call void @llvm.dbg.kill(metadata !1)
 > TODO: stack slot -> register
 
 > TODO: register -> stack slot
-
-### Divergent Lane PC
-
-> TODO: Re-do example given in [LLVM User Guide for AMDGPU Backend -
-> DW_AT_LLVM_lane_pc][24] using these extesions.
 
 ### Simultaneous Lifetimes In Multiple Places
 
