@@ -144,9 +144,17 @@ public:
   /// class abstracts the differences.
   struct ValueHandler {
     ValueHandler(bool IsIncoming, MachineIRBuilder &MIRBuilder,
-                 MachineRegisterInfo &MRI, CCAssignFn *AssignFn)
-        : MIRBuilder(MIRBuilder), MRI(MRI), AssignFn(AssignFn),
-          IsIncomingArgumentHandler(IsIncoming) {}
+                 MachineRegisterInfo &MRI, CCAssignFn *AssignFn_,
+                 CCAssignFn *AssignFnVarArg_ = nullptr)
+        : MIRBuilder(MIRBuilder), MRI(MRI), AssignFn(AssignFn_),
+          AssignFnVarArg(AssignFnVarArg_),
+          IsIncomingArgumentHandler(IsIncoming) {
+
+      // Some targets change the handler depending on whether the call is
+      // varargs or not. If
+      if (!AssignFnVarArg)
+        AssignFnVarArg = AssignFn;
+    }
 
     virtual ~ValueHandler() = default;
 
@@ -226,12 +234,25 @@ public:
     virtual bool assignArg(unsigned ValNo, EVT OrigVT, MVT ValVT, MVT LocVT,
                            CCValAssign::LocInfo LocInfo, const ArgInfo &Info,
                            ISD::ArgFlagsTy Flags, CCState &State) {
-      return AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State);
+      return getAssignFn(State.isVarArg())(ValNo, ValVT, LocVT, LocInfo, Flags,
+                                           State);
     }
 
     MachineIRBuilder &MIRBuilder;
     MachineRegisterInfo &MRI;
+
+    /// Assignment function to use for a general call.
     CCAssignFn *AssignFn;
+
+    /// Assignment function to use for a variadic call. This is usually the same
+    /// as AssignFn.
+    CCAssignFn *AssignFnVarArg;
+
+    /// Select the appropriate assignment function depending on whether this is
+    /// a variadic call.
+    CCAssignFn *getAssignFn(bool IsVarArg) const {
+      return IsVarArg ? AssignFnVarArg : AssignFn;
+    }
 
   private:
     bool IsIncomingArgumentHandler;
@@ -240,8 +261,9 @@ public:
 
   struct IncomingValueHandler : public ValueHandler {
     IncomingValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
-                         CCAssignFn *AssignFn)
-        : ValueHandler(true, MIRBuilder, MRI, AssignFn) {}
+                         CCAssignFn *AssignFn_,
+                         CCAssignFn *AssignFnVarArg_ = nullptr)
+        : ValueHandler(true, MIRBuilder, MRI, AssignFn_, AssignFnVarArg_) {}
 
     /// Insert G_ASSERT_ZEXT/G_ASSERT_SEXT or other hint instruction based on \p
     /// VA, returning the new register if a hint was inserted.
@@ -254,8 +276,9 @@ public:
 
   struct OutgoingValueHandler : public ValueHandler {
     OutgoingValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
-                         CCAssignFn *AssignFn)
-        : ValueHandler(false, MIRBuilder, MRI, AssignFn) {}
+                         CCAssignFn *AssignFn,
+                         CCAssignFn *AssignFnVarArg = nullptr)
+        : ValueHandler(false, MIRBuilder, MRI, AssignFn, AssignFnVarArg) {}
   };
 
 protected:
