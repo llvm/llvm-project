@@ -28,3 +28,10 @@ class InstSize48 {
   field bits<48> Inst;
   int Size = 6;
 }
+
+// nanoMIPS Pseudo Instructions Format
+class PseudoInstNM<dag outs, dag ins, list<dag> pattern> :
+    InstNM<outs, ins, "", pattern> {
+  let isCodeGenOnly = 1;
+  let isPseudo = 1;
+}

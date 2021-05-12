@@ -88,6 +88,15 @@ class IndirectBranchNM<string opstr, RegisterOperand RO,
   let isIndirectBranch = 1;
 }
 
+class AdjustStack<SDPatternOperator operator> :
+    PseudoInstNM<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+                 [(operator timm:$amt1, timm:$amt2)]> {
+  let Defs = [SP_NM];
+  let Uses = [SP_NM];
+  let hasSideEffects = 1;
+  let hasNoSchedulingInfo = 1;
+}
+
 //===----------------------------------------------------------------------===//
 //
 // Instruction Definitions
@@ -114,12 +123,9 @@ def BALC_NM : CallNM<"balc", MipsJmpLink, tglobaladdr>, ISA_NANOMIPS, InstSize32
 
 def Li_NM : RegImmNM<"li", simm32_relaxed, GPR32NMOpnd>, ISA_NANOMIPS, InstSize48;
 
-let Defs = [SP_NM], Uses = [SP_NM], hasSideEffects = 1, hasNoSchedulingInfo = 1 in {
-  def ADJCALLSTACKDOWN_NM : MipsPseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
-                                       [(callseq_start timm:$amt1, timm:$amt2)]>;
-  def ADJCALLSTACKUP_NM : MipsPseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
-                                     [(callseq_end timm:$amt1, timm:$amt2)]>;
-}
+def ADJCALLSTACKDOWN_NM : AdjustStack<callseq_start>, ISA_NANOMIPS;
+def ADJCALLSTACKUP_NM   : AdjustStack<callseq_end>, ISA_NANOMIPS;
+
 }
 
 def imm32_NM : IntImmLeaf<i32, [{
