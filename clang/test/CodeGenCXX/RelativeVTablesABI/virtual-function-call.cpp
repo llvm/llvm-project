@@ -1,6 +1,6 @@
 // Check that we call llvm.load.relative() on a vtable function call.
 
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O3 -S -o - -emit-llvm -fexperimental-relative-c++-abi-vtables | FileCheck %s
+// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O3 -S -o - -emit-llvm | FileCheck %s
 
 // CHECK:      define{{.*}} void @_Z5A_fooP1A(%class.A* %a) local_unnamed_addr
 // CHECK-NEXT: entry:
