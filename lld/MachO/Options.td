@@ -10,6 +10,8 @@ def help : Flag<["-", "--"], "help">,
 def help_hidden : Flag<["--"], "help-hidden">,
     HelpText<"Display help for hidden options">,
     Group<grp_lld>;
+def verbose : Flag<["--"], "verbose">,
+    Group<grp_lld>;
 def error_limit_eq : Joined<["--"], "error-limit=">,
     HelpText<"Maximum number of errors to print before exiting (default: 20)">,
     Group<grp_lld>;
