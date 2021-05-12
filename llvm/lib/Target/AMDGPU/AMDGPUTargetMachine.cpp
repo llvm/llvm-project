@@ -1167,7 +1167,11 @@ void GCNPassConfig::addOptimizedRegAlloc() {
 
   if (OptExecMaskPreRA)
     insertPass(&MachineSchedulerID, &SIOptimizeExecMaskingPreRAID);
-  insertPass(&MachineSchedulerID, &SIFormMemoryClausesID);
+
+  // This is not an essential optimization and it has a noticeable impact on
+  // compilation time, so we only enable it from O2.
+  if (TM->getOptLevel() > CodeGenOpt::Less)
+    insertPass(&MachineSchedulerID, &SIFormMemoryClausesID);
 
   // This must be run immediately after phi elimination and before
   // TwoAddressInstructions, otherwise the processing of the tied operand of
