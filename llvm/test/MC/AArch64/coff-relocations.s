@@ -109,4 +109,4 @@ tbz x0, #0, target
 // DISASM: 4c:       20 1a 09 30     adr     x0, #74565
 
 // DATA: Contents of section .rdata:
-// DATA-NEXT:  0000 2c000000 04000000
+// DATA-NEXT:  0000 30000000 08000000
