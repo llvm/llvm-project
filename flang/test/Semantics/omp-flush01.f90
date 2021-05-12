@@ -23,14 +23,11 @@ use omp_lib
     !$omp flush acquire
 
     !ERROR: expected end of line
-    !ERROR: expected end of line
     !$omp flush private(array)
-    !ERROR: expected end of line
     !ERROR: expected end of line
     !$omp flush num_threads(4)
 
     ! Mix allowed and not allowed clauses.
-    !ERROR: expected end of line
     !ERROR: expected end of line
     !$omp flush num_threads(4) acquire
   end if

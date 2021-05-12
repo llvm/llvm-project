@@ -36,8 +36,8 @@ struct Request {
 
 class DIPrinter {
 public:
-  DIPrinter(){};
-  virtual ~DIPrinter(){};
+  DIPrinter() {}
+  virtual ~DIPrinter() {}
 
   virtual void print(const Request &Request, const DILineInfo &Info) = 0;
   virtual void print(const Request &Request, const DIInliningInfo &Info) = 0;
@@ -96,8 +96,8 @@ public:
   bool printError(const Request &Request, const ErrorInfoBase &ErrorInfo,
                   StringRef ErrorBanner) override;
 
-  void listBegin() override{};
-  void listEnd() override{};
+  void listBegin() override {}
+  void listEnd() override {}
 };
 
 class LLVMPrinter : public PlainPrinterBase {

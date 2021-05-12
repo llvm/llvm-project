@@ -3,15 +3,21 @@
 %struct.t = type {}
 %struct.s = type { %struct.t, i64 }
 
-; CHECK: llvm.mlir.global external @g1() : !llvm.struct<"struct.s", (struct<"struct.t", ()>, i64)>
+; CHECK: llvm.mlir.global external @g1() {alignment = 8 : i64} : !llvm.struct<"struct.s", (struct<"struct.t", ()>, i64)>
 @g1 = external global %struct.s, align 8
-; CHECK: llvm.mlir.global external @g2() : f64
+; CHECK: llvm.mlir.global external @g2() {alignment = 8 : i64} : f64
 @g2 = external global double, align 8
 ; CHECK: llvm.mlir.global internal @g3("string")
 @g3 = internal global [6 x i8] c"string"
 
 ; CHECK: llvm.mlir.global external @g5() : vector<8xi32>
 @g5 = external global <8 x i32>
+
+; CHECK: llvm.mlir.global private @alig32(42 : i64) {alignment = 32 : i64} : i64
+@alig32 = private global i64 42, align 32
+
+; CHECK: llvm.mlir.global private @alig64(42 : i64) {alignment = 64 : i64} : i64
+@alig64 = private global i64 42, align 64
 
 @g4 = external global i32, align 8
 ; CHECK: llvm.mlir.global internal constant @int_gep() : !llvm.ptr<i32> {

@@ -286,10 +286,10 @@ DefinedFunction::DefinedFunction(StringRef name, uint32_t flags, InputFile *f,
                      function ? &function->signature : nullptr),
       function(function) {}
 
-uint64_t DefinedData::getVA(uint64_t addend) const {
+uint64_t DefinedData::getVA() const {
   LLVM_DEBUG(dbgs() << "getVA: " << getName() << "\n");
   if (segment)
-    return segment->getVA(value + addend);
+    return segment->getVA(value);
   return value;
 }
 
@@ -301,7 +301,7 @@ void DefinedData::setVA(uint64_t value_) {
 
 uint64_t DefinedData::getOutputSegmentOffset() const {
   LLVM_DEBUG(dbgs() << "getOutputSegmentOffset: " << getName() << "\n");
-  return segment->outputSegmentOffset + value;
+  return segment->getOffset(value);
 }
 
 uint64_t DefinedData::getOutputSegmentIndex() const {

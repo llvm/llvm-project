@@ -402,6 +402,8 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
   // Gather all fields (direct and indirect) that need to be initialized.
   SmallPtrSet<const FieldDecl *, 16> FieldsToInit;
   forEachField(ClassDecl, ClassDecl.fields(), [&](const FieldDecl *F) {
+    if (IgnoreArrays && F->getType()->isArrayType())
+      return;
     if (!F->hasInClassInitializer() &&
         utils::type_traits::isTriviallyDefaultConstructible(F->getType(),
                                                             Context) &&

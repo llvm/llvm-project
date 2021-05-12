@@ -99,26 +99,26 @@ void validate(const Triple &TT, const FeatureBitset &FeatureBits) {
 } // namespace RISCVFeatures
 
 void RISCVVType::printVType(unsigned VType, raw_ostream &OS) {
-  RISCVVSEW VSEW = getVSEW(VType);
-  RISCVVLMUL VLMUL = getVLMUL(VType);
+  RISCVII::VSEW VSEW = getVSEW(VType);
+  RISCVII::VLMUL VLMUL = getVLMUL(VType);
 
   unsigned Sew = 1 << (static_cast<unsigned>(VSEW) + 3);
   OS << "e" << Sew;
 
   switch (VLMUL) {
-  case RISCVVLMUL::LMUL_RESERVED:
+  case RISCVII::VLMUL::LMUL_RESERVED:
     llvm_unreachable("Unexpected LMUL value!");
-  case RISCVVLMUL::LMUL_1:
-  case RISCVVLMUL::LMUL_2:
-  case RISCVVLMUL::LMUL_4:
-  case RISCVVLMUL::LMUL_8: {
+  case RISCVII::VLMUL::LMUL_1:
+  case RISCVII::VLMUL::LMUL_2:
+  case RISCVII::VLMUL::LMUL_4:
+  case RISCVII::VLMUL::LMUL_8: {
     unsigned LMul = 1 << static_cast<unsigned>(VLMUL);
     OS << ",m" << LMul;
     break;
   }
-  case RISCVVLMUL::LMUL_F2:
-  case RISCVVLMUL::LMUL_F4:
-  case RISCVVLMUL::LMUL_F8: {
+  case RISCVII::VLMUL::LMUL_F2:
+  case RISCVII::VLMUL::LMUL_F4:
+  case RISCVII::VLMUL::LMUL_F8: {
     unsigned LMul = 1 << (8 - static_cast<unsigned>(VLMUL));
     OS << ",mf" << LMul;
     break;

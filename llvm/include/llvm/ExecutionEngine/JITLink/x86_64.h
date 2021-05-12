@@ -336,8 +336,11 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   return Error::success();
 }
 
+/// x86_64 pointer size.
+constexpr uint64_t PointerSize = 8;
+
 /// x86-64 null pointer content.
-extern const char NullPointerContent[8];
+extern const char NullPointerContent[PointerSize];
 
 /// x86-64 pointer jump stub content.
 ///

@@ -9610,19 +9610,18 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
     // Could be anything.
     return false;
 
-  case ISD::BITCAST: {
+  case ISD::BITCAST:
+    return isCanonicalized(DAG, Op.getOperand(0), MaxDepth - 1);
+  case ISD::TRUNCATE: {
     // Hack round the mess we make when legalizing extract_vector_elt
-    SDValue Src = Op.getOperand(0);
-    if (Src.getValueType() == MVT::i16 &&
-        Src.getOpcode() == ISD::TRUNCATE) {
-      SDValue TruncSrc = Src.getOperand(0);
+    if (Op.getValueType() == MVT::i16) {
+      SDValue TruncSrc = Op.getOperand(0);
       if (TruncSrc.getValueType() == MVT::i32 &&
           TruncSrc.getOpcode() == ISD::BITCAST &&
           TruncSrc.getOperand(0).getValueType() == MVT::v2f16) {
         return isCanonicalized(DAG, TruncSrc.getOperand(0), MaxDepth - 1);
       }
     }
-
     return false;
   }
   case ISD::INTRINSIC_WO_CHAIN: {

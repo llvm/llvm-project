@@ -87,8 +87,7 @@ define amdgpu_kernel void @round_f16(half addrspace(1)* %out, i32 %x.arg) #0 {
 ; GFX89: v_bfi_b32 [[COPYSIGN0:v[0-9]+]], [[K]], [[BFI_K]],
 ; GFX89: v_bfi_b32 [[COPYSIGN1:v[0-9]+]], [[K]], [[BFI_K]],
 
-; GFX9: v_and_b32_e32
-; GFX9: v_lshl_or_b32
+; GFX9: v_pack_b32_f16
 define amdgpu_kernel void @round_v2f16(<2 x half> addrspace(1)* %out, i32 %in.arg) #0 {
   %in = bitcast i32 %in.arg to <2 x half>
   %result = call <2 x half> @llvm.round.v2f16(<2 x half> %in)

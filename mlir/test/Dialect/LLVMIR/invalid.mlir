@@ -1,5 +1,10 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -verify-diagnostics
 
+// expected-error@+1{{alignment attribute is not a power of 2}}
+llvm.mlir.global private @invalid_global_alignment(42 : i64) {alignment = 63} : i64
+
+// -----
+
 // expected-error@+1{{expected llvm.noalias argument attribute to be a unit attribute}}
 func @invalid_noalias(%arg0: i32 {llvm.noalias = 3}) {
   "llvm.return"() : () -> ()

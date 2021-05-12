@@ -823,12 +823,27 @@ public:
 
   /// updateDbgUsersToReg - Update a collection of DBG_VALUE instructions
   /// to refer to the designated register.
-  void updateDbgUsersToReg(Register Reg,
-                           ArrayRef<MachineInstr*> Users) const {
+  void updateDbgUsersToReg(MCRegister OldReg, MCRegister NewReg,
+                           ArrayRef<MachineInstr *> Users) const {
+    SmallSet<MCRegister, 4> OldRegUnits;
+    for (MCRegUnitIterator RUI(OldReg, getTargetRegisterInfo()); RUI.isValid();
+         ++RUI)
+      OldRegUnits.insert(*RUI);
     for (MachineInstr *MI : Users) {
-      assert(MI->isDebugInstr());
-      assert(MI->getOperand(0).isReg());
-      MI->getOperand(0).setReg(Reg);
+      assert(MI->isDebugValue());
+      for (auto &Op : MI->debug_operands()) {
+        if (Op.isReg()) {
+          for (MCRegUnitIterator RUI(OldReg, getTargetRegisterInfo());
+               RUI.isValid(); ++RUI) {
+            if (OldRegUnits.contains(*RUI)) {
+              Op.setReg(NewReg);
+              break;
+            }
+          }
+        }
+      }
+      assert(MI->hasDebugOperandForReg(NewReg) &&
+             "Expected debug value to have some overlap with OldReg");
     }
   }
 

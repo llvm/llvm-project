@@ -5,7 +5,7 @@
 define void @masked_load_v1i8(<1 x i8>* %a, <1 x i8>* %m_ptr, <1 x i8>* %res_ptr) nounwind {
 ; CHECK-LABEL: masked_load_v1i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a3, 1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a3, 1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a1)
 ; CHECK-NEXT:    vmseq.vi v0, v25, 0
 ; CHECK-NEXT:    vle8.v v25, (a0), v0.t
@@ -22,7 +22,7 @@ declare <1 x i8> @llvm.masked.load.v1i8(<1 x i8>*, i32, <1 x i1>, <1 x i8>)
 define void @masked_load_v1i16(<1 x i16>* %a, <1 x i16>* %m_ptr, <1 x i16>* %res_ptr) nounwind {
 ; CHECK-LABEL: masked_load_v1i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a3, 1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a3, 1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a1)
 ; CHECK-NEXT:    vmseq.vi v0, v25, 0
 ; CHECK-NEXT:    vle16.v v25, (a0), v0.t
@@ -39,7 +39,7 @@ declare <1 x i16> @llvm.masked.load.v1i16(<1 x i16>*, i32, <1 x i1>, <1 x i16>)
 define void @masked_load_v1i32(<1 x i32>* %a, <1 x i32>* %m_ptr, <1 x i32>* %res_ptr) nounwind {
 ; CHECK-LABEL: masked_load_v1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a3, 1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a3, 1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a1)
 ; CHECK-NEXT:    vmseq.vi v0, v25, 0
 ; CHECK-NEXT:    vle32.v v25, (a0), v0.t
@@ -73,7 +73,7 @@ declare <1 x i64> @llvm.masked.load.v1i64(<1 x i64>*, i32, <1 x i1>, <1 x i64>)
 define void @masked_load_v2i8(<2 x i8>* %a, <2 x i8>* %m_ptr, <2 x i8>* %res_ptr) nounwind {
 ; CHECK-LABEL: masked_load_v2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a3, 2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a3, 2, e8,mf8,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a1)
 ; CHECK-NEXT:    vmseq.vi v0, v25, 0
 ; CHECK-NEXT:    vle8.v v25, (a0), v0.t
@@ -90,7 +90,7 @@ declare <2 x i8> @llvm.masked.load.v2i8(<2 x i8>*, i32, <2 x i1>, <2 x i8>)
 define void @masked_load_v2i16(<2 x i16>* %a, <2 x i16>* %m_ptr, <2 x i16>* %res_ptr) nounwind {
 ; CHECK-LABEL: masked_load_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a3, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a3, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a1)
 ; CHECK-NEXT:    vmseq.vi v0, v25, 0
 ; CHECK-NEXT:    vle16.v v25, (a0), v0.t
@@ -107,7 +107,7 @@ declare <2 x i16> @llvm.masked.load.v2i16(<2 x i16>*, i32, <2 x i1>, <2 x i16>)
 define void @masked_load_v2i32(<2 x i32>* %a, <2 x i32>* %m_ptr, <2 x i32>* %res_ptr) nounwind {
 ; CHECK-LABEL: masked_load_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a3, 2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a3, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a1)
 ; CHECK-NEXT:    vmseq.vi v0, v25, 0
 ; CHECK-NEXT:    vle32.v v25, (a0), v0.t
@@ -141,7 +141,7 @@ declare <2 x i64> @llvm.masked.load.v2i64(<2 x i64>*, i32, <2 x i1>, <2 x i64>)
 define void @masked_load_v4i8(<4 x i8>* %a, <4 x i8>* %m_ptr, <4 x i8>* %res_ptr) nounwind {
 ; CHECK-LABEL: masked_load_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a3, 4, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a3, 4, e8,mf4,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a1)
 ; CHECK-NEXT:    vmseq.vi v0, v25, 0
 ; CHECK-NEXT:    vle8.v v25, (a0), v0.t
@@ -158,7 +158,7 @@ declare <4 x i8> @llvm.masked.load.v4i8(<4 x i8>*, i32, <4 x i1>, <4 x i8>)
 define void @masked_load_v4i16(<4 x i16>* %a, <4 x i16>* %m_ptr, <4 x i16>* %res_ptr) nounwind {
 ; CHECK-LABEL: masked_load_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a3, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a3, 4, e16,mf2,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a1)
 ; CHECK-NEXT:    vmseq.vi v0, v25, 0
 ; CHECK-NEXT:    vle16.v v25, (a0), v0.t
@@ -209,7 +209,7 @@ declare <4 x i64> @llvm.masked.load.v4i64(<4 x i64>*, i32, <4 x i1>, <4 x i64>)
 define void @masked_load_v8i8(<8 x i8>* %a, <8 x i8>* %m_ptr, <8 x i8>* %res_ptr) nounwind {
 ; CHECK-LABEL: masked_load_v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a3, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a3, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a1)
 ; CHECK-NEXT:    vmseq.vi v0, v25, 0
 ; CHECK-NEXT:    vle8.v v25, (a0), v0.t

@@ -1032,7 +1032,7 @@ struct __is_ostreamable : false_type { };
 
 template <class _Stream, class _Tp>
 struct __is_ostreamable<_Stream, _Tp, decltype(
-    _VSTD::declval<_Stream>() << _VSTD::declval<_Tp>(), void()
+    declval<_Stream>() << declval<_Tp>(), void()
 )> : true_type { };
 
 template <class _Stream, class _Tp, class = typename enable_if<

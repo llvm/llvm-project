@@ -1092,7 +1092,7 @@ public:
                 (__no_overflow<_Period2, period>::type::den == 1 &&
                  !treat_as_floating_point<_Rep2>::value))
             >::type* = nullptr)
-                : __rep_(_VSTD::chrono::duration_cast<duration>(__d).count()) {}
+                : __rep_(chrono::duration_cast<duration>(__d).count()) {}
 
     // observer
 
@@ -1411,7 +1411,7 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
 time_point<_Clock, _ToDuration>
 time_point_cast(const time_point<_Clock, _Duration>& __t)
 {
-    return time_point<_Clock, _ToDuration>(_VSTD::chrono::duration_cast<_ToDuration>(__t.time_since_epoch()));
+    return time_point<_Clock, _ToDuration>(chrono::duration_cast<_ToDuration>(__t.time_since_epoch()));
 }
 
 #if _LIBCPP_STD_VER > 14
@@ -1927,13 +1927,13 @@ inline constexpr weekday& weekday::operator-=(const days& __dd) noexcept
 
 class weekday_indexed {
 private:
-    _VSTD::chrono::weekday __wd;
+    chrono::weekday __wd;
     unsigned char          __idx;
 public:
     weekday_indexed() = default;
-    inline constexpr weekday_indexed(const _VSTD::chrono::weekday& __wdval, unsigned __idxval) noexcept
+    inline constexpr weekday_indexed(const chrono::weekday& __wdval, unsigned __idxval) noexcept
         : __wd{__wdval}, __idx(__idxval) {}
-    inline constexpr _VSTD::chrono::weekday weekday() const noexcept { return __wd; }
+    inline constexpr chrono::weekday weekday() const noexcept { return __wd; }
     inline constexpr unsigned                 index() const noexcept { return __idx; }
     inline constexpr bool ok() const noexcept { return __wd.ok() && __idx >= 1 && __idx <= 5; }
 };
@@ -1949,11 +1949,11 @@ bool operator!=(const weekday_indexed& __lhs, const weekday_indexed& __rhs) noex
 
 class weekday_last {
 private:
-    _VSTD::chrono::weekday __wd;
+    chrono::weekday __wd;
 public:
-    explicit constexpr weekday_last(const _VSTD::chrono::weekday& __val) noexcept
+    explicit constexpr weekday_last(const chrono::weekday& __val) noexcept
         : __wd{__val} {}
-    constexpr _VSTD::chrono::weekday weekday() const noexcept { return __wd; }
+    constexpr chrono::weekday weekday() const noexcept { return __wd; }
     constexpr bool ok() const noexcept { return __wd.ok(); }
 };
 

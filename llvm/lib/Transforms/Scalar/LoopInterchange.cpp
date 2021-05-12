@@ -656,6 +656,65 @@ bool LoopInterchangeLegality::isLoopStructureUnderstood(
       return false;
     }
   }
+
+  // TODO: Handle triangular loops of another form.
+  // e.g. for(int i=0;i<N;i++)
+  //        for(int j=0;j<i;j++)
+  // or,
+  //      for(int i=0;i<N;i++)
+  //        for(int j=0;j*i<N;j++)
+  BasicBlock *InnerLoopLatch = InnerLoop->getLoopLatch();
+  BranchInst *InnerLoopLatchBI =
+      dyn_cast<BranchInst>(InnerLoopLatch->getTerminator());
+  if (!InnerLoopLatchBI->isConditional())
+    return false;
+  if (CmpInst *InnerLoopCmp =
+          dyn_cast<CmpInst>(InnerLoopLatchBI->getCondition())) {
+    Value *Op0 = InnerLoopCmp->getOperand(0);
+    Value *Op1 = InnerLoopCmp->getOperand(1);
+
+    // LHS and RHS of the inner loop exit condition, e.g.,
+    // in "for(int j=0;j<i;j++)", LHS is j and RHS is i.
+    Value *Left = nullptr;
+    Value *Right = nullptr;
+
+    // Check if V only involves inner loop induction variable.
+    // Return true if V is InnerInduction, or a cast from
+    // InnerInduction, or a binary operator that involves
+    // InnerInduction and a constant.
+    std::function<bool(Value *)> IsPathToIndVar;
+    IsPathToIndVar = [&InnerInduction, &IsPathToIndVar](Value *V) -> bool {
+      if (V == InnerInduction)
+        return true;
+      if (isa<Constant>(V))
+        return true;
+      Instruction *I = dyn_cast<Instruction>(V);
+      if (!I)
+        return false;
+      if (isa<CastInst>(I))
+        return IsPathToIndVar(I->getOperand(0));
+      if (isa<BinaryOperator>(I))
+        return IsPathToIndVar(I->getOperand(0)) &&
+               IsPathToIndVar(I->getOperand(1));
+      return false;
+    };
+
+    if (IsPathToIndVar(Op0) && !isa<Constant>(Op0)) {
+      Left = Op0;
+      Right = Op1;
+    } else if (IsPathToIndVar(Op1) && !isa<Constant>(Op1)) {
+      Left = Op1;
+      Right = Op0;
+    }
+
+    if (Left == nullptr)
+      return false;
+
+    const SCEV *S = SE->getSCEV(Right);
+    if (!SE->isLoopInvariant(S, OuterLoop))
+      return false;
+  }
+
   return true;
 }
 
@@ -1470,6 +1529,13 @@ static void moveLCSSAPhis(BasicBlock *InnerExit, BasicBlock *InnerHeader,
       PHINode *NewPhi = dyn_cast<PHINode>(P.clone());
       NewPhi->setIncomingValue(0, P.getIncomingValue(0));
       NewPhi->setIncomingBlock(0, OuterLatch);
+      // We might have incoming edges from other BBs, i.e., the original outer
+      // header.
+      for (auto *Pred : predecessors(InnerLatch)) {
+        if (Pred == OuterLatch)
+          continue;
+        NewPhi->addIncoming(P.getIncomingValue(0), Pred);
+      }
       NewPhi->insertBefore(InnerLatch->getFirstNonPHI());
       P.setIncomingValue(0, NewPhi);
     }

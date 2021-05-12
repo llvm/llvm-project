@@ -270,7 +270,7 @@ unsigned RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
   const MCOperand &MO = MI.getOperand(OpNo);
 
   MCInstrDesc const &Desc = MCII.get(MI.getOpcode());
-  unsigned MIFrm = Desc.TSFlags & RISCVII::InstFormatMask;
+  unsigned MIFrm = RISCVII::getFormat(Desc.TSFlags);
 
   // If the destination is an immediate, there is nothing to do.
   if (MO.isImm())
