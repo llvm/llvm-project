@@ -1,4 +1,6 @@
+#include <fcntl.h>
 #include <sanitizer/linux_syscall_hooks.h>
+#include <signal.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -16,7 +18,7 @@ int myfork() {
 
 int mypipe(int pipefd[2]) {
   __sanitizer_syscall_pre_pipe(pipefd);
-  int res = syscall(SYS_pipe, pipefd);
+  int res = syscall(SYS_pipe2, pipefd, 0);
   __sanitizer_syscall_post_pipe(res, pipefd);
   return res;
 }
