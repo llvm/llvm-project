@@ -1586,28 +1586,6 @@ def Tosa_IdentityOp: Tosa_Op<"identity", [NoSideEffect]> {
 }
 
 //===----------------------------------------------------------------------===//
-// Operator: identityn
-//===----------------------------------------------------------------------===//
-//===----------------------------------------------------------------------===//
-// Further described in docs/Rationale/RationaleTOSADialect.md .
-//===----------------------------------------------------------------------===//
-def Tosa_IdentityNOp: Tosa_Op<"identityn", [NoSideEffect]> {
-  let summary = "IdentityN operator";
-  let description = [{
-    Returns a list of tensors with the same shape, type, and contents as the
-    input list of tensors.
-  }];
-
-  let arguments = (ins
-    Variadic<Tosa_TensorUpto6D>:$input1
-  );
-
-  let results = (outs
-     Variadic<Tosa_TensorUpto6D>:$output
-  );
-}
-
-//===----------------------------------------------------------------------===//
 // TOSA Spec Section 2.14
 // Operator Class: Custom Operators.
 //===----------------------------------------------------------------------===//
