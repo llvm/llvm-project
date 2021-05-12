@@ -52,11 +52,39 @@ X86CallLowering::X86CallLowering(const X86TargetLowering &TLI)
 
 namespace {
 
+struct X86OutgoingValueAssigner : public CallLowering::OutgoingValueAssigner {
+private:
+  uint64_t StackSize = 0;
+  unsigned NumXMMRegs = 0;
+
+public:
+  uint64_t getStackSize() { return StackSize; }
+  unsigned getNumXmmRegs() { return NumXMMRegs; }
+
+  X86OutgoingValueAssigner(CCAssignFn *AssignFn_)
+      : CallLowering::OutgoingValueAssigner(AssignFn_) {}
+
+  bool assignArg(unsigned ValNo, EVT OrigVT, MVT ValVT, MVT LocVT,
+                 CCValAssign::LocInfo LocInfo,
+                 const CallLowering::ArgInfo &Info, ISD::ArgFlagsTy Flags,
+                 CCState &State) override {
+    bool Res = AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State);
+    StackSize = State.getNextStackOffset();
+
+    static const MCPhysReg XMMArgRegs[] = {X86::XMM0, X86::XMM1, X86::XMM2,
+                                           X86::XMM3, X86::XMM4, X86::XMM5,
+                                           X86::XMM6, X86::XMM7};
+    if (!Info.IsFixed)
+      NumXMMRegs = State.getFirstUnallocated(XMMArgRegs);
+
+    return Res;
+  }
+};
+
 struct X86OutgoingValueHandler : public CallLowering::OutgoingValueHandler {
   X86OutgoingValueHandler(MachineIRBuilder &MIRBuilder,
-                          MachineRegisterInfo &MRI, MachineInstrBuilder &MIB,
-                          CCAssignFn *AssignFn)
-      : OutgoingValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB),
+                          MachineRegisterInfo &MRI, MachineInstrBuilder &MIB)
+      : OutgoingValueHandler(MIRBuilder, MRI), MIB(MIB),
         DL(MIRBuilder.getMF().getDataLayout()),
         STI(MIRBuilder.getMF().getSubtarget<X86Subtarget>()) {}
 
@@ -94,31 +122,10 @@ struct X86OutgoingValueHandler : public CallLowering::OutgoingValueHandler {
     MIRBuilder.buildStore(ExtReg, Addr, *MMO);
   }
 
-  bool assignArg(unsigned ValNo, EVT OrigVT, MVT ValVT, MVT LocVT,
-                 CCValAssign::LocInfo LocInfo,
-                 const CallLowering::ArgInfo &Info, ISD::ArgFlagsTy Flags,
-                 CCState &State) override {
-    bool Res = AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State);
-    StackSize = State.getNextStackOffset();
-
-    static const MCPhysReg XMMArgRegs[] = {X86::XMM0, X86::XMM1, X86::XMM2,
-                                           X86::XMM3, X86::XMM4, X86::XMM5,
-                                           X86::XMM6, X86::XMM7};
-    if (!Info.IsFixed)
-      NumXMMRegs = State.getFirstUnallocated(XMMArgRegs);
-
-    return Res;
-  }
-
-  uint64_t getStackSize() { return StackSize; }
-  uint64_t getNumXmmRegs() { return NumXMMRegs; }
-
 protected:
   MachineInstrBuilder &MIB;
-  uint64_t StackSize = 0;
   const DataLayout &DL;
   const X86Subtarget &STI;
-  unsigned NumXMMRegs = 0;
 };
 
 } // end anonymous namespace
@@ -142,9 +149,11 @@ bool X86CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     SmallVector<ArgInfo, 4> SplitRetInfos;
     splitToValueTypes(OrigRetInfo, SplitRetInfos, DL, F.getCallingConv());
 
-    X86OutgoingValueHandler Handler(MIRBuilder, MRI, MIB, RetCC_X86);
-    if (!handleAssignments(MIRBuilder, SplitRetInfos, Handler, F.getCallingConv(),
-                           F.isVarArg()))
+    X86OutgoingValueAssigner Assigner(RetCC_X86);
+    X86OutgoingValueHandler Handler(MIRBuilder, MRI, MIB);
+    if (!determineAndHandleAssignments(Handler, Assigner, SplitRetInfos,
+                                       MIRBuilder, F.getCallingConv(),
+                                       F.isVarArg()))
       return false;
   }
 
@@ -156,8 +165,8 @@ namespace {
 
 struct X86IncomingValueHandler : public CallLowering::IncomingValueHandler {
   X86IncomingValueHandler(MachineIRBuilder &MIRBuilder,
-                          MachineRegisterInfo &MRI, CCAssignFn *AssignFn)
-      : IncomingValueHandler(MIRBuilder, MRI, AssignFn),
+                          MachineRegisterInfo &MRI)
+      : IncomingValueHandler(MIRBuilder, MRI),
         DL(MIRBuilder.getMF().getDataLayout()) {}
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
@@ -202,9 +211,8 @@ protected:
 };
 
 struct FormalArgHandler : public X86IncomingValueHandler {
-  FormalArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
-                   CCAssignFn *AssignFn)
-      : X86IncomingValueHandler(MIRBuilder, MRI, AssignFn) {}
+  FormalArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
+      : X86IncomingValueHandler(MIRBuilder, MRI) {}
 
   void markPhysRegUsed(unsigned PhysReg) override {
     MIRBuilder.getMRI()->addLiveIn(PhysReg);
@@ -214,8 +222,8 @@ struct FormalArgHandler : public X86IncomingValueHandler {
 
 struct CallReturnHandler : public X86IncomingValueHandler {
   CallReturnHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
-                    CCAssignFn *AssignFn, MachineInstrBuilder &MIB)
-      : X86IncomingValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB) {}
+                    MachineInstrBuilder &MIB)
+      : X86IncomingValueHandler(MIRBuilder, MRI), MIB(MIB) {}
 
   void markPhysRegUsed(unsigned PhysReg) override {
     MIB.addDef(PhysReg, RegState::Implicit);
@@ -264,9 +272,10 @@ bool X86CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   if (!MBB.empty())
     MIRBuilder.setInstr(*MBB.begin());
 
-  FormalArgHandler Handler(MIRBuilder, MRI, CC_X86);
-  if (!handleAssignments(MIRBuilder, SplitArgs, Handler, F.getCallingConv(),
-                         F.isVarArg()))
+  X86OutgoingValueAssigner Assigner(CC_X86);
+  FormalArgHandler Handler(MIRBuilder, MRI);
+  if (!determineAndHandleAssignments(Handler, Assigner, SplitArgs, MIRBuilder,
+                                     F.getCallingConv(), F.isVarArg()))
     return false;
 
   // Move back to the end of the basic block.
@@ -317,9 +326,10 @@ bool X86CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     splitToValueTypes(OrigArg, SplitArgs, DL, Info.CallConv);
   }
   // Do the actual argument marshalling.
-  X86OutgoingValueHandler Handler(MIRBuilder, MRI, MIB, CC_X86);
-  if (!handleAssignments(MIRBuilder, SplitArgs, Handler, Info.CallConv,
-                         Info.IsVarArg))
+  X86OutgoingValueAssigner Assigner(CC_X86);
+  X86OutgoingValueHandler Handler(MIRBuilder, MRI, MIB);
+  if (!determineAndHandleAssignments(Handler, Assigner, SplitArgs, MIRBuilder,
+                                     Info.CallConv, Info.IsVarArg))
     return false;
 
   bool IsFixed = Info.OrigArgs.empty() ? true : Info.OrigArgs.back().IsFixed;
@@ -334,7 +344,7 @@ bool X86CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
     MIRBuilder.buildInstr(X86::MOV8ri)
         .addDef(X86::AL)
-        .addImm(Handler.getNumXmmRegs());
+        .addImm(Assigner.getNumXmmRegs());
     MIB.addUse(X86::AL, RegState::Implicit);
   }
 
@@ -363,22 +373,23 @@ bool X86CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
     splitToValueTypes(Info.OrigRet, SplitArgs, DL, Info.CallConv);
 
-    CallReturnHandler Handler(MIRBuilder, MRI, RetCC_X86, MIB);
-    if (!handleAssignments(MIRBuilder, SplitArgs, Handler, Info.CallConv,
-                           Info.IsVarArg))
+    X86OutgoingValueAssigner Assigner(RetCC_X86);
+    CallReturnHandler Handler(MIRBuilder, MRI, MIB);
+    if (!determineAndHandleAssignments(Handler, Assigner, SplitArgs, MIRBuilder,
+                                       Info.CallConv, Info.IsVarArg))
       return false;
 
     if (!NewRegs.empty())
       MIRBuilder.buildMerge(Info.OrigRet.Regs[0], NewRegs);
   }
 
-  CallSeqStart.addImm(Handler.getStackSize())
+  CallSeqStart.addImm(Assigner.getStackSize())
       .addImm(0 /* see getFrameTotalSize */)
       .addImm(0 /* see getFrameAdjustment */);
 
   unsigned AdjStackUp = TII.getCallFrameDestroyOpcode();
   MIRBuilder.buildInstr(AdjStackUp)
-      .addImm(Handler.getStackSize())
+      .addImm(Assigner.getStackSize())
       .addImm(0 /* NumBytesForCalleeToPop */);
 
   return true;
