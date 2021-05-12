@@ -67,9 +67,6 @@ class CallNM<string opstr,
              SDPatternOperator imm_type = null_frag> :
   InstNM<(outs), (ins calltarget:$addr), !strconcat(opstr, "\t$addr"),
          [(OpNode imm_type:$addr)]> {
-  let Namespace = "Mips";
-  let DecoderNamespace = "NanoMips";
-  let EncodingPredicates = [HasNanoMips];
   let DecoderMethod = "DecodeJumpTarget";
   let isCall = 1;
   let isCTI = 1;
