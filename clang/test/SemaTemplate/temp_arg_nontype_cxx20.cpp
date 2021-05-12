@@ -292,3 +292,16 @@ namespace Predefined {
     Y<B{__func__[0]}>(); // expected-error {{reference to subobject of predefined '__func__' variable}}
   }
 }
+
+namespace DependentCTAD {
+  template<auto> struct A {};
+  template<template<typename> typename T, T V> void f(A<V>); // expected-note {{couldn't infer template argument 'T'}}
+  template<typename T> struct B { constexpr B(T) {} };
+
+  void g() {
+    // PR50039: Note that we could in principle deduce T here, but the language
+    // deduction rules don't support that.
+    f(A<B(0)>()); // expected-error {{no matching function}}
+    f<B>(A<B(0)>()); // OK
+  }
+}
