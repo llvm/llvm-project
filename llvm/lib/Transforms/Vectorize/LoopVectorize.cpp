@@ -3335,8 +3335,8 @@ Value *InnerLoopVectorizer::emitTransformedIndex(
   SCEVExpander Exp(*SE, DL, "induction");
   auto Step = ID.getStep();
   auto StartValue = ID.getStartValue();
-  assert(Index->getType() == Step->getType() &&
-         "Index type does not match StepValue type");
+  assert(Index->getType()->getScalarType() == Step->getType() &&
+         "Index scalar type does not match StepValue type");
 
   // Note: the IR at this point is broken. We cannot use SE to create any new
   // SCEV and then expand it, hoping that SCEV's simplification will give us
@@ -3355,14 +3355,20 @@ Value *InnerLoopVectorizer::emitTransformedIndex(
     return B.CreateAdd(X, Y);
   };
 
+  // We allow X to be a vector type, in which case Y will potentially be
+  // splatted into a vector with the same element count.
   auto CreateMul = [&B](Value *X, Value *Y) {
-    assert(X->getType() == Y->getType() && "Types don't match!");
+    assert(X->getType()->getScalarType() == Y->getType() &&
+           "Types don't match!");
     if (auto *CX = dyn_cast<ConstantInt>(X))
       if (CX->isOne())
         return Y;
     if (auto *CY = dyn_cast<ConstantInt>(Y))
       if (CY->isOne())
         return X;
+    VectorType *XVTy = dyn_cast<VectorType>(X->getType());
+    if (XVTy && !isa<VectorType>(Y->getType()))
+      Y = B.CreateVectorSplat(XVTy->getElementCount(), Y);
     return B.CreateMul(X, Y);
   };
 
@@ -3381,6 +3387,8 @@ Value *InnerLoopVectorizer::emitTransformedIndex(
 
   switch (ID.getKind()) {
   case InductionDescriptor::IK_IntInduction: {
+    assert(!isa<VectorType>(Index->getType()) &&
+           "Vector indices not supported for integer inductions yet");
     assert(Index->getType() == StartValue->getType() &&
            "Index type does not match StartValue type");
     if (ID.getConstIntStepValue() && ID.getConstIntStepValue()->isMinusOne())
@@ -3395,9 +3403,12 @@ Value *InnerLoopVectorizer::emitTransformedIndex(
     return B.CreateGEP(
         StartValue->getType()->getPointerElementType(), StartValue,
         CreateMul(Index,
-                  Exp.expandCodeFor(Step, Index->getType(), GetInsertPoint())));
+                  Exp.expandCodeFor(Step, Index->getType()->getScalarType(),
+                                    GetInsertPoint())));
   }
   case InductionDescriptor::IK_FpInduction: {
+    assert(!isa<VectorType>(Index->getType()) &&
+           "Vector indices not supported for FP inductions yet");
     assert(Step->getType()->isFloatingPointTy() && "Expected FP Step value");
     auto InductionBinOp = ID.getInductionBinOp();
     assert(InductionBinOp &&
@@ -4816,13 +4827,33 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
       // iteration. If the instruction is uniform, we only need to generate the
       // first lane. Otherwise, we generate all VF values.
       bool IsUniform = Cost->isUniformAfterVectorization(P, State.VF);
-      assert((IsUniform || !VF.isScalable()) &&
-             "Currently unsupported for scalable vectors");
-      unsigned Lanes = IsUniform ? 1 : State.VF.getFixedValue();
+      unsigned Lanes = IsUniform ? 1 : State.VF.getKnownMinValue();
+
+      bool NeedsVectorIndex = !IsUniform && VF.isScalable();
+      Value *UnitStepVec = nullptr, *PtrIndSplat = nullptr;
+      if (NeedsVectorIndex) {
+        Type *VecIVTy = VectorType::get(PtrInd->getType(), VF);
+        UnitStepVec = Builder.CreateStepVector(VecIVTy);
+        PtrIndSplat = Builder.CreateVectorSplat(VF, PtrInd);
+      }
 
       for (unsigned Part = 0; Part < UF; ++Part) {
         Value *PartStart = createStepForVF(
             Builder, ConstantInt::get(PtrInd->getType(), Part), VF);
+
+        if (NeedsVectorIndex) {
+          Value *PartStartSplat = Builder.CreateVectorSplat(VF, PartStart);
+          Value *Indices = Builder.CreateAdd(PartStartSplat, UnitStepVec);
+          Value *GlobalIndices = Builder.CreateAdd(PtrIndSplat, Indices);
+          Value *SclrGep =
+              emitTransformedIndex(Builder, GlobalIndices, PSE.getSE(), DL, II);
+          SclrGep->setName("next.gep");
+          State.set(PhiR, SclrGep, Part);
+          // We've cached the whole vector, which means we can support the
+          // extraction of any lane.
+          continue;
+        }
+
         for (unsigned Lane = 0; Lane < Lanes; ++Lane) {
           Value *Idx = Builder.CreateAdd(
               PartStart, ConstantInt::get(PtrInd->getType(), Lane));
