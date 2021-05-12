@@ -57,8 +57,8 @@ define <4 x i64> @ne_zero(<4 x i16>* %p, <4 x i64> %x, <4 x i64> %y) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpmovzxwq {{.*#+}} ymm2 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
 ; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vpcmpeqq %ymm3, %ymm2, %ymm2
-; AVX2-NEXT:    vblendvpd %ymm2, %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpgtq %ymm3, %ymm2, %ymm2
+; AVX2-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: ne_zero:
@@ -189,8 +189,8 @@ define <8 x float> @ne_zero_fp_select(<8 x i8>* %p, <8 x float> %x, <8 x float> 
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm2 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
 ; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm2, %ymm2
-; AVX2-NEXT:    vblendvps %ymm2, %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpgtd %ymm3, %ymm2, %ymm2
+; AVX2-NEXT:    vblendvps %ymm2, %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: ne_zero_fp_select:
