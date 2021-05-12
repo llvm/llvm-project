@@ -1217,9 +1217,8 @@ struct SymbolDependenceDepth {
     // add all aggregate stores to the front of the work list
     adjustSize(1);
     // The copy in the loop matters, 'stores' will still be used.
-    for (auto st : stores) {
+    for (auto st : stores)
       vars[0].emplace_back(std::move(st));
-    }
   }
 
   // Compute the offset of the last byte that resides in the symbol.
@@ -1235,9 +1234,11 @@ struct SymbolDependenceDepth {
   void analyzeAliases(const semantics::Scope &scope, bool isDeclaration) {
     if (scope.equivalenceSets().empty())
       return;
-    if (scopeAnlyzedForAliases.find(&scope) != scopeAnlyzedForAliases.end())
+    // Don't analyze a scope if it has already been analyzed.
+    if (analyzedScopes.find(&scope) != analyzedScopes.end())
       return;
-    scopeAnlyzedForAliases.insert(&scope);
+
+    analyzedScopes.insert(&scope);
     Fortran::lower::IntervalSet intervals;
     llvm::DenseMap<std::size_t, llvm::SmallVector<const semantics::Symbol *>>
         aliasSets;
@@ -1438,7 +1439,8 @@ private:
   llvm::SmallSet<const semantics::Symbol *, 32> seen;
   std::vector<std::vector<lower::pft::Variable>> &vars;
   llvm::SmallSet<const semantics::Symbol *, 32> aliasSyms;
-  llvm::SmallSet<const semantics::Scope *, 4> scopeAnlyzedForAliases;
+  /// Set of Scope that have been analyzed for aliases.
+  llvm::SmallSet<const semantics::Scope *, 4> analyzedScopes;
   std::vector<Fortran::lower::pft::Variable::AggregateStore> stores;
   bool reentrant;
 };
