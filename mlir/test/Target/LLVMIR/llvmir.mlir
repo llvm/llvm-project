@@ -1,5 +1,14 @@
 // RUN: mlir-translate -mlir-to-llvmir -split-input-file %s | FileCheck %s
 
+// CHECK: @global_aligned32 = private global i64 42, align 32
+"llvm.mlir.global"() ({}) {sym_name = "global_aligned32", type = i64, value = 42 : i64, linkage = 0, alignment = 32} : () -> ()
+
+// CHECK: @global_aligned64 = private global i64 42, align 64
+llvm.mlir.global private @global_aligned64(42 : i64) {alignment = 64 : i64} : i64
+
+// CHECK: @global_aligned64_native = private global i64 42, align 64
+llvm.mlir.global private @global_aligned64_native(42 : i64) { alignment = 64 } : i64
+
 // CHECK: @i32_global = internal global i32 42
 llvm.mlir.global internal @i32_global(42: i32) : i32
 
@@ -1548,3 +1557,4 @@ module {
 // CHECK: ![[PIPELINE_DISABLE_NODE]] = !{!"llvm.loop.pipeline.disable", i1 true}
 // CHECK: ![[II_NODE]] = !{!"llvm.loop.pipeline.initiationinterval", i32 2}
 // CHECK: ![[ACCESS_GROUPS_NODE]] = !{![[GROUP_NODE1]], ![[GROUP_NODE2]]}
+

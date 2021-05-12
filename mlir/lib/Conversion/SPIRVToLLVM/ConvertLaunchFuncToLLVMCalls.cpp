@@ -236,7 +236,8 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
         rewriter.setInsertionPointToStart(module.getBody());
         dstGlobal = rewriter.create<LLVM::GlobalOp>(
             loc, dstGlobalType,
-            /*isConstant=*/false, LLVM::Linkage::Linkonce, name, Attribute());
+            /*isConstant=*/false, LLVM::Linkage::Linkonce, name, Attribute(),
+            /*alignment=*/0);
         rewriter.setInsertionPoint(launchOp);
       }
 

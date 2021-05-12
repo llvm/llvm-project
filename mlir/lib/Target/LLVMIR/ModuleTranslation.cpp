@@ -437,6 +437,10 @@ LogicalResult ModuleTranslation::convertGlobals() {
     if (op.section().hasValue())
       var->setSection(*op.section());
 
+    Optional<uint64_t> alignment = op.alignment();
+    if (alignment.hasValue())
+      var->setAlignment(llvm::MaybeAlign(alignment.getValue()));
+
     globalsMapping.try_emplace(op, var);
   }
 
