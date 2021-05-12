@@ -169,7 +169,7 @@ define void @func_call_align1024_bp_gets_vgpr_spill(<32 x i32> %a, i32 %b) #0 {
 ; GCN-NEXT: buffer_load_dword v{{[0-9]+}}, off, s[0:3], s34
 ; GCN-DAG: s_add_u32 s32, s32, 0x30000
 ; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s32
-; GCN-NEXT: s_swappc_b64 s[30:31], s[4:5]
+; GCN: s_swappc_b64 s[30:31], s[4:5]
 
 ; GCN: s_sub_u32 s32, s32, 0x30000
 ; GCN-NEXT: v_readlane_b32 s33, [[VGPR_REG]], 2
