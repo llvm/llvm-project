@@ -878,7 +878,7 @@ public:
     add_pointer_t<value_type const>
     operator->() const
     {
-        _LIBCPP_ASSERT(this->has_value(), "optional operator-> called for disengaged value");
+        _LIBCPP_ASSERT(this->has_value(), "optional operator-> called on a disengaged value");
 #ifndef _LIBCPP_HAS_NO_BUILTIN_ADDRESSOF
         return _VSTD::addressof(this->__get());
 #else
@@ -891,7 +891,7 @@ public:
     add_pointer_t<value_type>
     operator->()
     {
-        _LIBCPP_ASSERT(this->has_value(), "optional operator-> called for disengaged value");
+        _LIBCPP_ASSERT(this->has_value(), "optional operator-> called on a disengaged value");
 #ifndef _LIBCPP_HAS_NO_BUILTIN_ADDRESSOF
         return _VSTD::addressof(this->__get());
 #else
@@ -904,7 +904,7 @@ public:
     const value_type&
     operator*() const&
     {
-        _LIBCPP_ASSERT(this->has_value(), "optional operator* called for disengaged value");
+        _LIBCPP_ASSERT(this->has_value(), "optional operator* called on a disengaged value");
         return this->__get();
     }
 
@@ -913,7 +913,7 @@ public:
     value_type&
     operator*() &
     {
-        _LIBCPP_ASSERT(this->has_value(), "optional operator* called for disengaged value");
+        _LIBCPP_ASSERT(this->has_value(), "optional operator* called on a disengaged value");
         return this->__get();
     }
 
@@ -922,7 +922,7 @@ public:
     value_type&&
     operator*() &&
     {
-        _LIBCPP_ASSERT(this->has_value(), "optional operator* called for disengaged value");
+        _LIBCPP_ASSERT(this->has_value(), "optional operator* called on a disengaged value");
         return _VSTD::move(this->__get());
     }
 
@@ -931,7 +931,7 @@ public:
     const value_type&&
     operator*() const&&
     {
-        _LIBCPP_ASSERT(this->has_value(), "optional operator* called for disengaged value");
+        _LIBCPP_ASSERT(this->has_value(), "optional operator* called on a disengaged value");
         return _VSTD::move(this->__get());
     }
 
