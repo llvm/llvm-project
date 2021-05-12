@@ -552,7 +552,7 @@ define amdgpu_kernel void @s_test_canonicalize_undef_v2f16(<2 x half> addrspace(
 ; GCN-LABEL: {{^}}v_test_canonicalize_reg_undef_v2f16:
 ; GFX9: s_waitcnt
 ; GFX9-NEXT: v_max_f16_e32 v0, v0, v0
-; GFX9-NEXT: v_and_b32_e32 v0, 0xffff, v0
+; GFX9-NEXT: v_pack_b32_f16 v0, v0, 0
 ; GFX9-NEXT: s_setpc_b64
 
 ; High bits known zero
@@ -635,9 +635,7 @@ define <2 x half> @v_test_canonicalize_k_lo_undef_hi_v2f16() #1 {
 ; GCN-LABEL: {{^}}v_test_canonicalize_reg_k_v2f16:
 ; GFX9: s_waitcnt
 ; GFX9-DAG: v_max_f16_e32 v0, v0, v0
-; GFX9-DAG: s_movk_i32 [[K:s[0-9]+]], 0x4000
-; GFX9: v_and_b32_e32 v0, 0xffff, v0
-; GFX9: v_lshl_or_b32 v0, [[K]], 16, v0
+; GFX9: v_pack_b32_f16 v0, v0, 2.0
 ; GFX9: s_setpc_b64
 
 ; VI: s_waitcnt
@@ -653,8 +651,7 @@ define <2 x half> @v_test_canonicalize_reg_k_v2f16(half %val) #1 {
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_k_reg_v2f16:
 ; GFX9: v_max_f16_e32 v0, v0, v0
-; GFX9: v_mov_b32_e32 [[K:v[0-9]+]], 0x4000
-; GFX9: v_lshl_or_b32 v0, v0, 16, [[K]]
+; GFX9: v_pack_b32_f16 v0, 2.0, v0
 ; GFX9: s_setpc_b64
 
 ; VI: s_waitcnt
@@ -680,8 +677,8 @@ define amdgpu_kernel void @s_test_canonicalize_undef_v4f16(<4 x half> addrspace(
 ; GCN-LABEL: {{^}}v_test_canonicalize_reg_undef_undef_undef_v4f16:
 ; GFX9: s_waitcnt
 ; GFX9-NEXT: v_max_f16_e32 v0, v0, v0
-; GFX9-NEXT: v_and_b32_e32 v0, 0xffff, v0
-; GFX9-NEXT: v_mov_b32_e32 v1, 0
+; GFX9-NEXT: v_pack_b32_f16 v0, v0, 0
+; GFX9-NEXT: v_mov_b32_e32 v1, 0x7e007e00
 ; GFX9-NEXT: s_setpc_b64
 
 ; VI: s_waitcnt
@@ -721,7 +718,7 @@ define <4 x half> @v_test_canonicalize_reg_reg_undef_undef_v4f16(half %val0, hal
 ; GFX9-NEXT: v_and_b32_e32 v1, 0xffff, v1
 ; GFX9-NEXT: v_max_f16_e32 v0, v0, v0
 ; GFX9-NEXT: v_lshl_or_b32 v1, v2, 16, v1
-; GFX9-NEXT: v_and_b32_e32 v0, 0xffff, v0
+; GFX9-NEXT: v_pack_b32_f16 v0, v0, 0
 ; GFX9-NEXT: v_pk_max_f16 v1, v1, v1
 ; GFX9-NEXT: s_setpc_b64
 
