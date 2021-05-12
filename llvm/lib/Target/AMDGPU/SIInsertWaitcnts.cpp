@@ -1525,7 +1525,6 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
         // there cannot be a vector store to the same memory location.
         if (!Memop->isInvariant()) {
           const Value *Ptr = Memop->getValue();
-          assert(Ptr);
           SLoadAddresses.insert(std::make_pair(Ptr, Inst.getParent()));
         }
       }
