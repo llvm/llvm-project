@@ -318,7 +318,7 @@ void JSONPrinter::listBegin() {
 void JSONPrinter::listEnd() {
   assert(ObjectList);
   printJSON(std::move(*ObjectList));
-  ObjectList.release();
+  ObjectList.reset();
 }
 
 } // end namespace symbolize
