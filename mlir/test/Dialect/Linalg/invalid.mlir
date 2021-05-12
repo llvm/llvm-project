@@ -820,3 +820,22 @@ func @tiled_loop_incorrent_block_arg_type(%A: memref<192xf32>) {
     } : (index, index, index, memref<192xf32>) -> ()
   return
 }
+
+// -----
+
+#attrs = {
+	indexing_maps = [
+		affine_map<(i) -> (3 - i)>,
+		affine_map<(i) -> (i)>
+	],
+	iterator_types = ["parallel"]
+}
+
+func @invalid_reverse(%A: memref<5xf32>, %B: memref<5xf32>) {
+  // expected-error @+1 {{unexpected result less than 0 at expression #0 in}}
+  linalg.generic #attrs ins(%A: memref<5xf32>) outs(%B: memref<5xf32>) {
+		^bb0(%a: f32, %b: f32):
+		linalg.yield %a : f32
+	} 
+	return
+}
