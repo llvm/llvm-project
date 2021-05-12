@@ -674,7 +674,8 @@ public:
     // Create `llvm.mlir.global` with initializer region containing one block.
     auto global = rewriter.create<LLVM::GlobalOp>(
         UnknownLoc::get(context), structType, /*isConstant=*/true,
-        LLVM::Linkage::External, executionModeInfoName, Attribute());
+        LLVM::Linkage::External, executionModeInfoName, Attribute(),
+        /*alignment=*/0);
     Location loc = global.getLoc();
     Region &region = global.getInitializerRegion();
     Block *block = rewriter.createBlock(&region);
@@ -752,7 +753,8 @@ public:
                        ? LLVM::Linkage::Private
                        : LLVM::Linkage::External;
     rewriter.replaceOpWithNewOp<LLVM::GlobalOp>(
-        op, dstType, isConstant, linkage, op.sym_name(), Attribute());
+        op, dstType, isConstant, linkage, op.sym_name(), Attribute(),
+        /*alignment=*/0);
     return success();
   }
 };
