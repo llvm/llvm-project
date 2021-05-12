@@ -49703,8 +49703,26 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       }
       break;
     case X86ISD::VSHLI:
-    case X86ISD::VSRAI:
     case X86ISD::VSRLI:
+      // Special case: SHL/SRL AVX1 V4i64 by 32-bits can lower as a shuffle.
+      // TODO: Move this to LowerScalarImmediateShift?
+      if (VT == MVT::v4i64 && !Subtarget.hasInt256() &&
+          llvm::all_of(Ops, [Op0](SDValue Op) {
+            return Op.getConstantOperandAPInt(1) == 32;
+          })) {
+        SDValue Res = DAG.getBitcast(MVT::v8i32, ConcatSubOperand(VT, Ops, 0));
+        SDValue Zero = getZeroVector(MVT::v8i32, Subtarget, DAG, DL);
+        if (Op0.getOpcode() == X86ISD::VSHLI) {
+          Res = DAG.getVectorShuffle(MVT::v8i32, DL, Res, Zero,
+                                     {8, 0, 8, 2, 8, 4, 8, 6});
+        } else {
+          Res = DAG.getVectorShuffle(MVT::v8i32, DL, Res, Zero,
+                                     {1, 8, 3, 8, 5, 8, 7, 8});
+        }
+        return DAG.getBitcast(VT, Res);
+      }
+      LLVM_FALLTHROUGH;
+    case X86ISD::VSRAI:
       if (((VT.is256BitVector() && Subtarget.hasInt256()) ||
            (VT.is512BitVector() && Subtarget.useAVX512Regs() &&
             (EltSizeInBits >= 32 || Subtarget.useBWIRegs()))) &&
