@@ -898,7 +898,7 @@ static void describeTemplateParameter(raw_ostream &Out,
   if (TArg.getKind() == TemplateArgument::ArgKind::Pack) {
     describeTemplateParameters(Out, TArg.getPackAsArray(), LO);
   } else {
-    TArg.print(PrintingPolicy(LO), Out);
+    TArg.print(PrintingPolicy(LO), Out, /*IncludeType*/ true);
   }
 }
 

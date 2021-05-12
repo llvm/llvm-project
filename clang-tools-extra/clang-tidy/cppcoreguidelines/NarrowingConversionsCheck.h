@@ -94,6 +94,9 @@ private:
                             const BinaryOperator &Op);
 
   const bool WarnOnFloatingPointNarrowingConversion;
+  const bool WarnWithinTemplateInstantiation;
+  const bool WarnOnEquivalentBitWidth;
+  const std::string IgnoreConversionFromTypes;
   const bool PedanticMode;
 };
 

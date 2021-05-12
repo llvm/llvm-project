@@ -10779,17 +10779,7 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
                                                LHS.get(), RHS.get()))
         return QualType();
 
-      bool LHSIsNullPtr = LHS.get()->IgnoreParenCasts()->isNullPointerConstant(
-          Context, Expr::NPC_ValueDependentIsNotNull);
-      bool RHSIsNullPtr = RHS.get()->IgnoreParenCasts()->isNullPointerConstant(
-          Context, Expr::NPC_ValueDependentIsNotNull);
-
-      // Subtracting nullptr or from nullptr should produce
-      // a warning expect nullptr - nullptr is valid in C++ [expr.add]p7
-      if (LHSIsNullPtr && (!getLangOpts().CPlusPlus || !RHSIsNullPtr))
-        diagnoseArithmeticOnNullPointer(*this, Loc, LHS.get(), false);
-      if (RHSIsNullPtr && (!getLangOpts().CPlusPlus || !LHSIsNullPtr))
-        diagnoseArithmeticOnNullPointer(*this, Loc, RHS.get(), false);
+      // FIXME: Add warnings for nullptr - ptr.
 
       // The pointee type may have zero size.  As an extension, a structure or
       // union may have zero size or an array may have zero length.  In this
