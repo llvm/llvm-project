@@ -6,12 +6,11 @@
 ; The test's 'same' and 'diff' notation depicts whether the pointer value is the same
 ; or different.
 
-; FIXME: DAG combine incorrectly eliminates store if pointer is of same value.
-
 define i32 @copy_fs_same() {
 ; CHECK-LABEL: copy_fs_same:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl 1, %eax
+; CHECK-NEXT:    movl %eax, %fs:1
 ; CHECK-NEXT:    retl
 entry:
    %0 = load i32, i32* inttoptr (i64 1 to i32*), align 4
@@ -36,6 +35,7 @@ define void @output_fs_same(i32 %v) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl %eax, 1
+; CHECK-NEXT:    movl %eax, %fs:1
 ; CHECK-NEXT:    retl
 entry:
   store i32 %v, i32* inttoptr (i64 1 to i32*), align 4
@@ -62,6 +62,7 @@ define void @output_indexed_fs_same(i32 %v, i32* %b) {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl %eax, 168(%ecx)
+; CHECK-NEXT:    movl %eax, %fs:168(%ecx)
 ; CHECK-NEXT:    retl
   %p = getelementptr i32, i32* %b, i64 42
   %pa = addrspacecast i32* %p to i32 addrspace(257)*
