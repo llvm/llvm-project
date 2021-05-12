@@ -1568,8 +1568,8 @@ bool SITargetLowering::isMemOpUniform(const SDNode *N) const {
 
 TargetLoweringBase::LegalizeTypeAction
 SITargetLowering::getPreferredVectorAction(MVT VT) const {
-  int NumElts = VT.getVectorNumElements();
-  if (NumElts != 1 && VT.getScalarType().bitsLE(MVT::i16))
+  if (!VT.isScalableVector() && VT.getVectorNumElements() != 1 &&
+      VT.getScalarType().bitsLE(MVT::i16))
     return VT.isPow2VectorType() ? TypeSplitVector : TypeWidenVector;
   return TargetLoweringBase::getPreferredVectorAction(VT);
 }
