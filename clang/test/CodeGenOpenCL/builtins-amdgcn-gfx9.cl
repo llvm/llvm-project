@@ -3,6 +3,7 @@
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -S -emit-llvm -o - %s | FileCheck %s
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
+typedef unsigned int uint;
 typedef unsigned long ulong;
 
 // CHECK-LABEL: @test_fmed3_f16
@@ -17,4 +18,11 @@ void test_fmed3_f16(global half* out, half a, half b, half c)
 void test_s_memtime(global ulong* out)
 {
   *out = __builtin_amdgcn_s_memtime();
+}
+
+// CHECK-LABEL: @test_groupstaticsize
+// CHECK: call i32 @llvm.amdgcn.groupstaticsize()
+void test_groupstaticsize(global uint* out)
+{
+  *out = __builtin_amdgcn_groupstaticsize();
 }
