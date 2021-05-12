@@ -28,8 +28,8 @@ namespace linalg {
 // Create a new call to the type-canonicalized `LinalgOp::getLibraryCallName()`
 // function. The implementation of the function can be either in the same module
 // or in an externally linked library.
-// This is a generic entry point for all LinalgOp, except for CopyOp and
-// IndexedGenericOp, for which more specialized patterns are provided.
+// This is a generic entry point for all LinalgOp, except for CopyOp, for which
+// more specialized patterns are provided.
 class LinalgOpToLibraryCallRewrite
     : public OpInterfaceRewritePattern<LinalgOp> {
 public:
@@ -55,16 +55,6 @@ class CopyTransposeRewrite : public OpRewritePattern<CopyOp> {
 public:
   using OpRewritePattern<CopyOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(CopyOp op,
-                                PatternRewriter &rewriter) const override;
-};
-
-/// Conversion pattern specialization for IndexedGenericOp, has special handling
-/// for the extra index operands.
-class IndexedGenericOpToLibraryCallRewrite
-    : public OpRewritePattern<IndexedGenericOp> {
-public:
-  using OpRewritePattern<IndexedGenericOp>::OpRewritePattern;
-  LogicalResult matchAndRewrite(IndexedGenericOp op,
                                 PatternRewriter &rewriter) const override;
 };
 
