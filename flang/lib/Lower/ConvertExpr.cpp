@@ -3423,9 +3423,12 @@ public:
     return {asScalar(x), /*needCopy=*/true};
   }
 
-  // Target agnostic computation of the size of an element in the array.
-  mlir::Value computeElementSize(mlir::Type eleRefTy, mlir::Type resRefTy,
-                                 mlir::Value mem) {
+  // Target agnostic computation of the size of an element in the array. Returns
+  // the size in bytes with type `index`.
+  mlir::Value computeElementSize(mlir::Type eleTy, mlir::Type eleRefTy,
+                                 mlir::Type resRefTy) {
+    if (fir::hasDynamicSize(eleTy))
+      return {};
     auto loc = getLoc();
     auto idxTy = builder.getIndexType();
     auto nullPtr = builder.createNullConstant(loc, resRefTy);
@@ -3496,6 +3499,45 @@ public:
     auto idxTy = builder.getIndexType();
     auto one = builder.createIntegerConstant(loc, idxTy, 1);
 
+    if (!eleSz) {
+      // Compute the element size at runtime.
+      assert(fir::hasDynamicSize(eleTy));
+      if (auto charTy = eleTy.dyn_cast<fir::CharacterType>()) {
+        auto charBytes =
+            builder.getKindMap().getCharacterBitsize(charTy.getFKind()) / 8;
+        auto bytes = builder.createIntegerConstant(loc, idxTy, charBytes);
+        auto length = fir::getLen(exv);
+        if (!length)
+          fir::emitFatalError(loc, "result is not boxed character");
+        eleSz = builder.create<mlir::MulIOp>(loc, bytes, length);
+      } else {
+        TODO(loc, "PDT size");
+        // Will call the PDT's size function with the type parameters.
+      }
+    }
+
+    // Compute the coordinate using `fir.coordinate_of`, or, if the type has
+    // dynamic size, generating the pointer arithmetic.
+    auto computeCoordinate = [&](mlir::Value buff, mlir::Value off) {
+      auto refTy = eleRefTy;
+      if (fir::hasDynamicSize(eleTy)) {
+        if (auto charTy = eleTy.dyn_cast<fir::CharacterType>()) {
+          // Scale a simple pointer using dynamic length and offset values.
+          auto chTy = fir::CharacterType::getSingleton(charTy.getContext(),
+                                                       charTy.getFKind());
+          refTy = builder.getRefType(chTy);
+          auto toTy = builder.getRefType(builder.getVarLenSeqTy(chTy));
+          buff = builder.createConvert(loc, toTy, buff);
+          off = builder.create<mlir::MulIOp>(loc, off, eleSz);
+        } else {
+          TODO(loc, "PDT offset");
+        }
+      }
+      auto coor = builder.create<fir::CoordinateOp>(loc, refTy, buff,
+                                                    mlir::ValueRange{off});
+      return builder.createConvert(loc, eleRefTy, coor);
+    };
+
     // Lambda to lower an abstract array box value.
     auto doAbstractArray = [&](const auto &v) {
       // Compute the array size.
@@ -3510,8 +3552,7 @@ public:
       // Copy the elements to the buffer.
       mlir::Value byteSz = builder.create<mlir::MulIOp>(loc, arrSz, eleSz);
       auto buff = builder.createConvert(loc, fir::HeapType::get(resTy), mem);
-      auto buffi = builder.create<fir::CoordinateOp>(loc, eleRefTy, buff,
-                                                     mlir::ValueRange{off});
+      auto buffi = computeCoordinate(buff, off);
       auto args = Fortran::lower::createArguments(
           builder, loc, memcpyType(), buffi, v.getAddr(), byteSz,
           /*volatile=*/builder.createBool(loc, false));
@@ -3550,11 +3591,11 @@ public:
           // Store the element in the buffer.
           auto buff =
               builder.createConvert(loc, fir::HeapType::get(resTy), mem);
-          auto buffi = builder.create<fir::CoordinateOp>(loc, eleRefTy, buff,
-                                                         mlir::ValueRange{off});
-          auto castedStr = builder.createConvert(loc, eleRefTy, v.getAddr());
-          auto load = builder.create<fir::LoadOp>(loc, castedStr);
-          builder.create<fir::StoreOp>(loc, load, buffi);
+          auto buffi = computeCoordinate(buff, off);
+          auto args = Fortran::lower::createArguments(
+              builder, loc, memcpyType(), buffi, v.getAddr(), eleSz,
+              /*volatile=*/builder.createBool(loc, false));
+          createCallMemcpy(args);
 
           builder.create<fir::StoreOp>(loc, plusOne, buffPos);
         },
@@ -3591,9 +3632,11 @@ public:
     symMap.pushImpliedDoBinding(toStringRef(x.name()), loop.getInductionVar());
     auto insPt = builder.saveInsertionPoint();
     builder.setInsertionPointToStart(loop.getBody());
+    // Thread mem inside the loop via loop argument.
+    mem = loop.getRegionIterArgs()[0];
 
     auto eleRefTy = builder.getRefType(eleTy);
-    auto eleSz = computeElementSize(eleRefTy, builder.getRefType(resTy), mem);
+    auto eleSz = computeElementSize(eleTy, eleRefTy, builder.getRefType(resTy));
 
     // Cleanups for temps in loop body. Any temps created in the loop body need
     // to be freed before the end of the loop.
@@ -3605,9 +3648,9 @@ public:
                                            loopCtx);
           },
           acv.u);
-      if (copyNeeded)
-        mem = copyNextArrayCtorSection(exv, buffPos, buffSize, mem, eleSz,
-                                       eleTy, eleRefTy, resTy);
+      mem = copyNeeded ? copyNextArrayCtorSection(exv, buffPos, buffSize, mem,
+                                                  eleSz, eleTy, eleRefTy, resTy)
+                       : fir::getBase(exv);
     }
     loopCtx.finalize();
 
@@ -3649,11 +3692,18 @@ public:
     // Allocate space for the array to be constructed.
     mlir::Value mem;
     if (fir::hasDynamicSize(resTy)) {
-      auto initBuffSz =
-          builder.createIntegerConstant(loc, idxTy, clInitialBufferSize);
-      mem = builder.create<fir::AllocMemOp>(
-          loc, eleTy, /*typeparams=*/llvm::None, initBuffSz);
-      builder.create<fir::StoreOp>(loc, initBuffSz, buffSize);
+      if (fir::hasDynamicSize(eleTy)) {
+        // The size of each element may depend on a general expression. Defer
+        // creating the buffer until after the expression is evaluated.
+        mem = builder.createNullConstant(loc, builder.getRefType(eleTy));
+        builder.create<fir::StoreOp>(loc, zero, buffSize);
+      } else {
+        auto initBuffSz =
+            builder.createIntegerConstant(loc, idxTy, clInitialBufferSize);
+        mem = builder.create<fir::AllocMemOp>(
+            loc, eleTy, /*typeparams=*/llvm::None, initBuffSz);
+        builder.create<fir::StoreOp>(loc, initBuffSz, buffSize);
+      }
     } else {
       mem = builder.create<fir::AllocMemOp>(loc, resTy);
       int64_t buffSz = 1;
@@ -3664,7 +3714,7 @@ public:
     }
     // Compute size of element
     auto eleRefTy = builder.getRefType(eleTy);
-    auto eleSz = computeElementSize(eleRefTy, builder.getRefType(resTy), mem);
+    auto eleSz = computeElementSize(eleTy, eleRefTy, builder.getRefType(resTy));
 
     // Populate the buffer with the elements, growing as necessary.
     for (const auto &expr : x) {
@@ -3674,9 +3724,9 @@ public:
                                            stmtCtx);
           },
           expr.u);
-      if (copyNeeded)
-        mem = copyNextArrayCtorSection(exv, buffPos, buffSize, mem, eleSz,
-                                       eleTy, eleRefTy, resTy);
+      mem = copyNeeded ? copyNextArrayCtorSection(exv, buffPos, buffSize, mem,
+                                                  eleSz, eleTy, eleRefTy, resTy)
+                       : fir::getBase(exv);
     }
     mem = builder.createConvert(loc, fir::HeapType::get(resTy), mem);
     llvm::SmallVector<mlir::Value> extents = {

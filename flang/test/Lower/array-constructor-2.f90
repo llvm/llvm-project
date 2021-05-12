@@ -151,14 +151,14 @@ subroutine test6(c, d, e)
   character(5) :: c(3)
   character(5) :: d, e
   ! CHECK: = fir.allocmem !fir.array<2x!fir.char<1,5>>
-  ! CHECK: %[[a:.*]] = fir.coordinate_of %{{.*}}, %{{.*}} : (!fir.heap<!fir.array<2x!fir.char<1,5>>>, index) -> !fir.ref<!fir.char<1,5>>
-  ! CHECK: %[[b:.*]] = fir.convert %{{.*}}#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,5>>
-  ! CHECK: %[[v:.*]] = fir.load %[[b]] : !fir.ref<!fir.char<1,5>>
-  ! CHECK-NEXT: fir.store %[[v]] to %{{.*}} : !fir.ref<!fir.char<1,5>>
-  ! CHECK: %[[a:.*]] = fir.array_coor %{{.*}}(%{{.*}}) %{{.*}} : (!fir.heap<!fir.array<2x!fir.char<1,5>>>, !fir.shape<1>, index) -> !fir.ref<!fir.char<1,5>>
-  ! CHECK: %[[b:.*]] = fir.array_coor %{{.*}}(%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<3x!fir.char<1,5>>>, !fir.shape<1>, index) -> !fir.ref<!fir.char<1,5>>
-  ! CHECK: %[[v:.*]] = fir.load %[[a]] : !fir.ref<!fir.char<1,5>>
-  ! CHECK-NEXT: fir.store %[[v]] to %[[b]] : !fir.ref<!fir.char<1,5>>
+  ! CHECK: fir.call @realloc
+  ! CHECK: %[[t:.*]] = fir.coordinate_of %{{.*}}, %{{.*}} : (!fir.heap<!fir.array<2x!fir.char<1,5>>>, index) -> !fir.ref<!fir.char<1,5>>
+  ! CHECK: %[[to:.*]] = fir.convert %[[t]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
+  ! CHECK: fir.call @llvm.memcpy.p0i8.p0i8.i64(%[[to]], %{{.*}}, %{{.*}}, %false) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK: fir.call @realloc
+  ! CHECK: %[[t:.*]] = fir.coordinate_of %{{.*}}, %{{.*}} : (!fir.heap<!fir.array<2x!fir.char<1,5>>>, index) -> !fir.ref<!fir.char<1,5>>
+  ! CHECK: %[[to:.*]] = fir.convert %[[t]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
+  ! CHECK: fir.call @llvm.memcpy.p0i8.p0i8.i64(%[[to]], %{{.*}}, %{{.*}}, %false) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
   ! CHECK: fir.freemem %{{.*}} : !fir.heap<!fir.array<2x!fir.char<1,5>>>
   c = (/ d, e /)
 end subroutine test6
