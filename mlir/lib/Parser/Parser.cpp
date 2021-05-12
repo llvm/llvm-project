@@ -1066,6 +1066,11 @@ public:
 
   llvm::SMLoc getNameLoc() const override { return nameLoc; }
 
+  /// Re-encode the given source location as an MLIR location and return it.
+  Location getEncodedSourceLoc(llvm::SMLoc loc) override {
+    return parser.getEncodedSourceLocation(loc);
+  }
+
   //===--------------------------------------------------------------------===//
   // Token Parsing
   //===--------------------------------------------------------------------===//
