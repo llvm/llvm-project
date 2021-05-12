@@ -1015,10 +1015,14 @@ void CGNVCUDARuntime::handleVarRegistration(const VarDecl *D,
     // Don't register a C++17 inline variable. The local symbol can be
     // discarded and referencing a discarded local symbol from outside the
     // comdat (__cuda_register_globals) is disallowed by the ELF spec.
-    // TODO: Reject __device__ constexpr and __device__ inline in Sema.
+    //
     // HIP managed variables need to be always recorded in device and host
     // compilations for transformation.
+    //
+    // HIP managed variables and variables in CUDADeviceVarODRUsedByHost are
+    // added to llvm.compiler-used, therefore they are safe to be registered.
     if ((!D->hasExternalStorage() && !D->isInline()) ||
+        CGM.getContext().CUDADeviceVarODRUsedByHost.contains(D) ||
         D->hasAttr<HIPManagedAttr>()) {
       registerDeviceVar(D, GV, !D->hasDefinition(),
                         D->hasAttr<CUDAConstantAttr>());

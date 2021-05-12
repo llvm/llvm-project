@@ -976,9 +976,6 @@ TargetLoweringBase::getTypeConversion(LLVMContext &Context, EVT VT) const {
   if (NumElts.isScalar())
     return LegalizeKind(TypeScalarizeVector, EltVT);
 
-  if (VT.getVectorElementCount() == ElementCount::getScalable(1))
-    report_fatal_error("Cannot legalize this vector");
-
   // Try to widen vector elements until the element type is a power of two and
   // promote it to a legal type later on, for example:
   // <3 x i8> -> <4 x i8> -> <4 x i32>
@@ -996,9 +993,12 @@ TargetLoweringBase::getTypeConversion(LLVMContext &Context, EVT VT) const {
 
     // If type is to be expanded, split the vector.
     //  <4 x i140> -> <2 x i140>
-    if (LK.first == TypeExpandInteger)
+    if (LK.first == TypeExpandInteger) {
+      if (VT.getVectorElementCount() == ElementCount::getScalable(1))
+        report_fatal_error("Cannot legalize this scalable vector");
       return LegalizeKind(TypeSplitVector,
                           VT.getHalfNumVectorElementsVT(Context));
+    }
 
     // Promote the integer element types until a legal vector type is found
     // or until the element integer type is too big. If a legal type was not
@@ -1056,6 +1056,9 @@ TargetLoweringBase::getTypeConversion(LLVMContext &Context, EVT VT) const {
     EVT NVT = VT.getPow2VectorType(Context);
     return LegalizeKind(TypeWidenVector, NVT);
   }
+
+  if (VT.getVectorElementCount() == ElementCount::getScalable(1))
+    report_fatal_error("Cannot legalize this vector");
 
   // Vectors with illegal element types are expanded.
   EVT NVT = EVT::getVectorVT(Context, EltVT,
@@ -1497,10 +1500,10 @@ MVT::SimpleValueType TargetLoweringBase::getCmpLibcallReturnType() const {
 /// This method returns the number of registers needed, and the VT for each
 /// register.  It also returns the VT and quantity of the intermediate values
 /// before they are promoted/expanded.
-unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context, EVT VT,
-                                                EVT &IntermediateVT,
-                                                unsigned &NumIntermediates,
-                                                MVT &RegisterVT) const {
+unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context,
+                                                    EVT VT, EVT &IntermediateVT,
+                                                    unsigned &NumIntermediates,
+                                                    MVT &RegisterVT) const {
   ElementCount EltCnt = VT.getVectorElementCount();
 
   // If there is a wider vector type with the same element type as this one,
@@ -1509,7 +1512,7 @@ unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context, EVT VT
   // This handles things like <2 x float> -> <4 x float> and
   // <4 x i1> -> <4 x i32>.
   LegalizeTypeAction TA = getTypeAction(Context, VT);
-  if (EltCnt.getKnownMinValue() != 1 &&
+  if (!EltCnt.isScalar() &&
       (TA == TypeWidenVector || TA == TypePromoteInteger)) {
     EVT RegisterEVT = getTypeToTransformTo(Context, VT);
     if (isTypeLegal(RegisterEVT)) {

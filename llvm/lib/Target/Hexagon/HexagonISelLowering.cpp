@@ -2101,7 +2101,7 @@ bool HexagonTargetLowering::isShuffleMaskLegal(ArrayRef<int> Mask,
 
 TargetLoweringBase::LegalizeTypeAction
 HexagonTargetLowering::getPreferredVectorAction(MVT VT) const {
-  unsigned VecLen = VT.getVectorNumElements();
+  unsigned VecLen = VT.getVectorMinNumElements();
   MVT ElemTy = VT.getVectorElementType();
 
   if (VecLen == 1 || VT.isScalableVector())
