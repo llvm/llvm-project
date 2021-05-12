@@ -86,17 +86,6 @@ enum VConstraintType {
   VMConstraint = 0b100,
 };
 
-enum VSEW {
-  SEW_8 = 0,
-  SEW_16,
-  SEW_32,
-  SEW_64,
-  SEW_128,
-  SEW_256,
-  SEW_512,
-  SEW_1024,
-};
-
 enum VLMUL {
   LMUL_1 = 0,
   LMUL_2,
@@ -329,36 +318,22 @@ inline static bool isValidLMUL(unsigned LMUL, bool Fractional) {
   return isPowerOf2_32(LMUL) && LMUL <= 8 && (!Fractional || LMUL != 1);
 }
 
-// Encode VTYPE into the binary format used by the the VSETVLI instruction which
-// is used by our MC layer representation.
-//
-// Bits | Name       | Description
-// -----+------------+------------------------------------------------
-// 7    | vma        | Vector mask agnostic
-// 6    | vta        | Vector tail agnostic
-// 5:3  | vsew[2:0]  | Standard element width (SEW) setting
-// 2:0  | vlmul[2:0] | Vector register group multiplier (LMUL) setting
-inline static unsigned encodeVTYPE(RISCVII::VLMUL VLMUL, RISCVII::VSEW VSEW,
-                                   bool TailAgnostic, bool MaskAgnostic) {
-  unsigned VLMULBits = static_cast<unsigned>(VLMUL);
-  unsigned VSEWBits = static_cast<unsigned>(VSEW);
-  unsigned VTypeI = (VSEWBits << 3) | (VLMULBits & 0x7);
-  if (TailAgnostic)
-    VTypeI |= 0x40;
-  if (MaskAgnostic)
-    VTypeI |= 0x80;
-
-  return VTypeI;
-}
+unsigned encodeVTYPE(RISCVII::VLMUL VLMUL, unsigned SEW, bool TailAgnostic,
+                     bool MaskAgnostic);
 
 inline static RISCVII::VLMUL getVLMUL(unsigned VType) {
   unsigned VLMUL = VType & 0x7;
   return static_cast<RISCVII::VLMUL>(VLMUL);
 }
 
-inline static RISCVII::VSEW getVSEW(unsigned VType) {
+inline static unsigned decodeVSEW(unsigned VSEW) {
+  assert(VSEW < 8 && "Unexpected VSEW value");
+  return 1 << (VSEW + 3);
+}
+
+inline static unsigned getSEW(unsigned VType) {
   unsigned VSEW = (VType >> 3) & 0x7;
-  return static_cast<RISCVII::VSEW>(VSEW);
+  return decodeVSEW(VSEW);
 }
 
 inline static bool isTailAgnostic(unsigned VType) { return VType & 0x40; }
