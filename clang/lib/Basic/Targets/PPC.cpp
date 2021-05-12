@@ -328,6 +328,12 @@ bool PPCTargetInfo::initFeatureMap(
                         .Case("pwr9", true)
                         .Case("pwr8", true)
                         .Default(false);
+  Features["float128"] = llvm::StringSwitch<bool>(CPU)
+                             .Case("ppc64le", true)
+                             .Case("pwr9", true)
+                             .Case("pwr8", true)
+                             .Case("pwr7", true)
+                             .Default(false);
 
   // ROP Protect is off by default.
   Features["rop-protect"] = false;
@@ -356,9 +362,9 @@ bool PPCTargetInfo::initFeatureMap(
   if (!ppcUserFeaturesCheck(Diags, FeaturesVec))
     return false;
 
-  if (!(ArchDefs & ArchDefinePwr9) && (ArchDefs & ArchDefinePpcgr) &&
+  if (!(ArchDefs & ArchDefinePwr7) && (ArchDefs & ArchDefinePpcgr) &&
       llvm::find(FeaturesVec, "+float128") != FeaturesVec.end()) {
-    // We have __float128 on PPC but not power 9 and above.
+    // We have __float128 on PPC but not pre-VSX targets.
     Diags.Report(diag::err_opt_not_valid_with_opt) << "-mfloat128" << CPU;
     return false;
   }
