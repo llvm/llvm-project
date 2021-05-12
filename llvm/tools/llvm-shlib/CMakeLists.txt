@@ -50,6 +50,9 @@ if(LLVM_BUILD_LLVM_DYLIB)
       # Solaris ld does not accept global: *; so there is no way to version *all* global symbols
       set(LIB_NAMES -Wl,--version-script,${LLVM_LIBRARY_DIR}/tools/llvm-shlib/simple_version_script.map ${LIB_NAMES})
     endif()
+    # Optimize function calls and global variable access for default visibility
+    # definitions to avoid PLT and reduce dynamic relocations.
+    target_link_options(LLVM PRIVATE LINKER:-Bsymbolic-functions)
   elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
     set(LIB_NAMES -Wl,-all_load ${LIB_NAMES})
   endif()
