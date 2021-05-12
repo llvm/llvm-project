@@ -152,13 +152,13 @@ def : MipsPat<(MipsFullAddr tglobaladdr:$in),
 // branch instructions exist in multiple different sizes, and should
 // likely be distinct instructions later.
 
+// This class is missing instruction size, because these instructions can be
+// encoded in formats of different size (eg. BEQC16 and BEQC32).
 class CBranchNM<string opstr, DAGOperand opnd, PatFrag cond_op,
                 RegisterOperand RO>
-    : ISA_NANOMIPS,
-      InstSE<(outs), (ins RO:$rs, RO:$rt, opnd:$offset),
+    : InstNM<(outs), (ins RO:$rs, RO:$rt, opnd:$offset),
              !strconcat(opstr, "\t$rs, $rt, $offset"),
-             [(brcond (i32 (cond_op RO:$rs, RO:$rt)), bb:$offset)], II_BCC,
-             FrmI, opstr> {
+             [(brcond (i32 (cond_op RO:$rs, RO:$rt)), bb:$offset)]> {
   let isBranch = 1;
   let isTerminator = 1;
   let hasDelaySlot = 0;
@@ -169,11 +169,10 @@ class CBranchNM<string opstr, DAGOperand opnd, PatFrag cond_op,
 class CBranchImmNM<string opstr, DAGOperand opnd, PatFrag cond_op,
                    RegisterOperand RO,
                    Operand imm_type, SDPatternOperator ImmOp>
-    : ISA_NANOMIPS,
-      InstSE<(outs), (ins RO:$rt, imm_type:$u, opnd:$offset),
+    : InstSize32,
+      InstNM<(outs), (ins RO:$rt, imm_type:$u, opnd:$offset),
              !strconcat(opstr, "\t$rt, $u, $offset"),
-             [(brcond (i32 (cond_op RO:$rt, ImmOp:$u)), bb:$offset)], II_BCC,
-             FrmI, opstr> {
+             [(brcond (i32 (cond_op RO:$rt, ImmOp:$u)), bb:$offset)]> {
   let isBranch = 1;
   let isTerminator = 1;
   let hasDelaySlot = 0;
@@ -183,32 +182,35 @@ class CBranchImmNM<string opstr, DAGOperand opnd, PatFrag cond_op,
 
 class CBranchZeroNM<string opstr, DAGOperand opnd, PatFrag cond_op,
                     RegisterOperand RO>
-  : ISA_NANOMIPS,
-    CBranchZero<opstr, opnd, cond_op, RO> {
-  let hasDelaySlot = 0;
+    : InstSize16,
+      InstNM<(outs), (ins RO:$rs, opnd:$offset),
+             !strconcat(opstr, "\t$rs, $offset"),
+             [(brcond (i32 (cond_op RO:$rs, 0)), bb:$offset)]> {
+  let isBranch = 1;
+  let isTerminator = 1;
   let Defs = [AT_NM];
+  bit isCTI = 1;
 }
-
 
 let isCodeGenOnly = 1, hasNoSchedulingInfo = 1,
     hasDelaySlot = 0 in {
 
 // TODO: BBEQZ/BBNEZ bit-test conditional branch instructions
-def BEQC_NM  : CBranchNM<"beqc", brtarget, seteq, GPR32NMOpnd>;
+def BEQC_NM  : CBranchNM<"beqc", brtarget, seteq, GPR32NMOpnd>, InstSize32;
 def BEQIC_NM : CBranchImmNM<"beqic", brtarget, seteq, GPR32NMOpnd, uimm7, immZExt7>;
 def BEQZC_NM : CBranchZeroNM<"beqzc", brtarget, seteq, GPR32NMOpnd>;
 
-def BGEC_NM   : CBranchNM<"bgec", brtarget, setge, GPR32NMOpnd>;
+def BGEC_NM   : CBranchNM<"bgec", brtarget, setge, GPR32NMOpnd>, InstSize32;
 def BGEIC_NM  : CBranchImmNM<"bgeic", brtarget, setge, GPR32NMOpnd, uimm7, immZExt7>;
 def BGEIUC_NM : CBranchImmNM<"bgeiuc", brtarget, setuge, GPR32NMOpnd, uimm7, immZExt7>;
-def BGEUC_NM  : CBranchNM<"bgeuc", brtarget, setuge, GPR32NMOpnd>;
+def BGEUC_NM  : CBranchNM<"bgeuc", brtarget, setuge, GPR32NMOpnd>, InstSize32;
 
-def BLTC_NM   : CBranchNM<"bltc", brtarget, setlt, GPR32NMOpnd>;
+def BLTC_NM   : CBranchNM<"bltc", brtarget, setlt, GPR32NMOpnd>, InstSize32;
 def BLTIC_NM  : CBranchImmNM<"bltic", brtarget, setlt, GPR32NMOpnd, uimm7, immZExt7>;
 def BLTIUC_NM : CBranchImmNM<"bltiuc", brtarget, setult, GPR32NMOpnd, uimm7, immZExt7>;
-def BLTUC_NM  : CBranchNM<"bltuc", brtarget, setult, GPR32NMOpnd>;
+def BLTUC_NM  : CBranchNM<"bltuc", brtarget, setult, GPR32NMOpnd>, InstSize32;
 
-def BNEC_NM  : CBranchNM<"bnec", brtarget, setne, GPR32NMOpnd>;
+def BNEC_NM  : CBranchNM<"bnec", brtarget, setne, GPR32NMOpnd>, InstSize32;
 def BNEIC_NM : CBranchImmNM<"bnec", brtarget, setne, GPR32NMOpnd, uimm7, immZExt7>;
 def BNEZC_NM : CBranchZeroNM<"beqzc", brtarget, setne, GPR32NMOpnd>;
 
