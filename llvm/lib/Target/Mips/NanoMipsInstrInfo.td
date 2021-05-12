@@ -76,6 +76,18 @@ class CallNM<string opstr,
   let Defs = [RA_NM];
 }
 
+// Indirect branch instruction.
+class IndirectBranchNM<string opstr, RegisterOperand RO,
+                       SDPatternOperator operator = null_frag>:
+    InstNM<(outs), (ins RO:$rs), !strconcat(opstr, "\t$rs"),
+           [(operator RO:$rs)]>, InstSize16 {
+  let isTerminator = 1;
+  let isBarrier = 1;
+  let isCTI = 1;
+  let isBranch = 1;
+  let isIndirectBranch = 1;
+}
+
 //===----------------------------------------------------------------------===//
 //
 // Instruction Definitions
@@ -93,8 +105,7 @@ def OR_NM : ArithLogicRNM<"or", GPR32NMOpnd, or>, ISA_NANOMIPS;
 def SUBu_NM : ArithLogicRNM<"subu", GPR32NMOpnd, sub>, ISA_NANOMIPS;
 def SW_NM : StoreNM<"sw", GPR32NMOpnd, store>, ISA_NANOMIPS;
 
-let hasDelaySlot = 0 in
-  def JRC_NM : IndirectBranch<"jrc", GPR32NMOpnd>, ISA_NANOMIPS;
+def JRC_NM : IndirectBranchNM<"jrc", GPR32NMOpnd>, ISA_NANOMIPS;
 
 let hasDelaySlot = 0 in
   def PseudoReturnNM : PseudoReturnBase<GPR32NMOpnd>, ISA_NANOMIPS;
