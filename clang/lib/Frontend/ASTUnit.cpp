@@ -807,7 +807,8 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   if (ToLoad >= LoadASTOnly)
     AST->Ctx = new ASTContext(*AST->LangOpts, AST->getSourceManager(),
                               PP.getIdentifierTable(), PP.getSelectorTable(),
-                              PP.getBuiltinInfo());
+                              PP.getBuiltinInfo(),
+                              AST->getTranslationUnitKind());
 
   DisableValidationForModuleKind disableValid =
       DisableValidationForModuleKind::None;

@@ -7176,6 +7176,11 @@ void ASTReader::CompleteRedeclChain(const Decl *D) {
     return;
   }
 
+  if (!D->getDeclContext()) {
+    assert(isa<TranslationUnitDecl>(D) && "Not a TU?");
+    return;
+  }
+
   const DeclContext *DC = D->getDeclContext()->getRedeclContext();
 
   // If this is a named declaration, complete it by looking it up

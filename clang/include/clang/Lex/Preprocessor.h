@@ -264,9 +264,11 @@ class Preprocessor {
   /// avoid tearing the Lexer and etc. down).
   bool IncrementalProcessing = false;
 
+public:
   /// The kind of translation unit we are processing.
-  TranslationUnitKind TUKind;
+  const TranslationUnitKind TUKind;
 
+private:
   /// The code-completion handler.
   CodeCompletionHandler *CodeComplete = nullptr;
 
