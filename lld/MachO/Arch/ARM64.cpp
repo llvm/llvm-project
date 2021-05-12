@@ -19,6 +19,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MathExtras.h"
 
+using namespace llvm;
 using namespace llvm::MachO;
 using namespace llvm::support::endian;
 using namespace lld;
@@ -33,6 +34,7 @@ struct ARM64 : ARM64Common {
   void writeStubHelperEntry(uint8_t *buf, const DylibSymbol &,
                             uint64_t entryAddr) const override;
   const RelocAttrs &getRelocAttrs(uint8_t type) const override;
+  void populateThunk(InputSection *thunk, Symbol *funcSym) override;
 };
 
 } // namespace
@@ -103,11 +105,36 @@ void ARM64::writeStubHelperEntry(uint8_t *buf8, const DylibSymbol &sym,
   ::writeStubHelperEntry(buf8, stubHelperEntryCode, sym, entryVA);
 }
 
+// A thunk is the relaxed variation of stubCode. We don't need the
+// extra indirection through a lazy pointer because the target address
+// is known at link time.
+static constexpr uint32_t thunkCode[] = {
+    0x90000010, // 00: adrp  x16, <thunk.ptr>@page
+    0x91000210, // 04: add   x16, [x16,<thunk.ptr>@pageoff]
+    0xd61f0200, // 08: br    x16
+};
+
+void ARM64::populateThunk(InputSection *thunk, Symbol *funcSym) {
+  thunk->align = 4;
+  thunk->data = {reinterpret_cast<const uint8_t *>(thunkCode),
+                 sizeof(thunkCode)};
+  thunk->relocs.push_back({/*type=*/ARM64_RELOC_PAGEOFF12,
+                           /*pcrel=*/false, /*length=*/2,
+                           /*offset=*/4, /*addend=*/0,
+                           /*referent=*/funcSym});
+  thunk->relocs.push_back({/*type=*/ARM64_RELOC_PAGE21,
+                           /*pcrel=*/true, /*length=*/2,
+                           /*offset=*/0, /*addend=*/0,
+                           /*referent=*/funcSym});
+}
+
 ARM64::ARM64() : ARM64Common(LP64()) {
   cpuType = CPU_TYPE_ARM64;
   cpuSubtype = CPU_SUBTYPE_ARM64_ALL;
 
   stubSize = sizeof(stubCode);
+  thunkSize = sizeof(thunkCode);
+  branchRange = maxIntN(28) - thunkSize;
   stubHelperHeaderSize = sizeof(stubHelperHeaderCode);
   stubHelperEntrySize = sizeof(stubHelperEntryCode);
 }
