@@ -1933,7 +1933,8 @@ TEST_F(FileSystemTest, getUmask) {
   unsigned CurrentMask = fs::getUmask();
   EXPECT_EQ(CurrentMask, 0022U)
       << "getUmask() didn't return previously set umask()";
-  EXPECT_EQ(::umask(OldMask), 0022U) << "getUmask() may have changed umask()";
+  EXPECT_EQ(::umask(OldMask), mode_t(0022U))
+      << "getUmask() may have changed umask()";
 #endif
 }
 
