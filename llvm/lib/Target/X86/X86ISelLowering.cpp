@@ -49707,7 +49707,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       // Special case: SHL/SRL AVX1 V4i64 by 32-bits can lower as a shuffle.
       // TODO: Move this to LowerScalarImmediateShift?
       if (VT == MVT::v4i64 && !Subtarget.hasInt256() &&
-          llvm::all_of(Ops, [Op0](SDValue Op) {
+          llvm::all_of(Ops, [](SDValue Op) {
             return Op.getConstantOperandAPInt(1) == 32;
           })) {
         SDValue Res = DAG.getBitcast(MVT::v8i32, ConcatSubOperand(VT, Ops, 0));
