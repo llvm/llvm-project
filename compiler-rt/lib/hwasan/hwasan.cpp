@@ -128,12 +128,9 @@ static void InitializeFlags() {
   if (common_flags()->help) parser.PrintFlagDescriptions();
 }
 
-static void HWAsanCheckFailed(const char *file, int line, const char *cond,
-                              u64 v1, u64 v2) {
-  Report("HWAddressSanitizer CHECK failed: %s:%d \"%s\" (0x%zx, 0x%zx)\n", file,
-         line, cond, (uptr)v1, (uptr)v2);
-  PRINT_CURRENT_STACK_CHECK();
-  Die();
+static void CheckUnwind() {
+  GET_FATAL_STACK_TRACE_PC_BP(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME());
+  stack.Print();
 }
 
 static void HwasanFormatMemoryUsage(InternalScopedString &s) {
@@ -271,7 +268,7 @@ void __hwasan_init() {
   InitializeFlags();
 
   // Install tool-specific callbacks in sanitizer_common.
-  SetCheckFailedCallback(HWAsanCheckFailed);
+  SetCheckUnwindCallback(CheckUnwind);
 
   __sanitizer_set_report_path(common_flags()->log_path);
 
