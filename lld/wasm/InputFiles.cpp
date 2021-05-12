@@ -185,7 +185,7 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
     if (D->segment && D->segment->outputSeg->isTLS())
       return D->getOutputSegmentOffset() + reloc.Addend;
 
-    uint64_t value = D->getVA(reloc.Addend);
+    uint64_t value = D->getVA() + reloc.Addend;
     if (reloc.Type == R_WASM_MEMORY_ADDR_LOCREL_I32) {
       const auto *segment = cast<InputSegment>(chunk);
       uint64_t p = segment->outputSeg->startVA + segment->outputSegmentOffset +
