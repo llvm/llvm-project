@@ -105,26 +105,26 @@ class AdjustStack<SDPatternOperator operator> :
 
 let isCodeGenOnly = 1 in {
 
-def ADDu_NM : ArithLogicRNM<"addu", GPR32NMOpnd, add>, ISA_NANOMIPS;
+def ADDu_NM : ArithLogicRNM<"addu", GPR32NMOpnd, add>;
 def ADDiu_NM : ArithLogicINM<"addiu", simm16_relaxed, GPR32NMOpnd,
-                             imm32SExt16, add>, ISA_NANOMIPS;
-def AND_NM : ArithLogicRNM<"and", GPR32NMOpnd, and>, ISA_NANOMIPS;
+                             imm32SExt16, add>;
+def AND_NM : ArithLogicRNM<"and", GPR32NMOpnd, and>;
 def LW_NM : StdMMR6Rel, LoadNM<"lw", GPR32NMOpnd, load>, ISA_NANOMIPS;
-def OR_NM : ArithLogicRNM<"or", GPR32NMOpnd, or>, ISA_NANOMIPS;
-def SUBu_NM : ArithLogicRNM<"subu", GPR32NMOpnd, sub>, ISA_NANOMIPS;
+def OR_NM : ArithLogicRNM<"or", GPR32NMOpnd, or>;
+def SUBu_NM : ArithLogicRNM<"subu", GPR32NMOpnd, sub>;
 def SW_NM : StoreNM<"sw", GPR32NMOpnd, store>, ISA_NANOMIPS;
 
-def JRC_NM : IndirectBranchNM<"jrc", GPR32NMOpnd>, ISA_NANOMIPS;
+def JRC_NM : IndirectBranchNM<"jrc", GPR32NMOpnd>;
 
 let hasDelaySlot = 0 in
   def PseudoReturnNM : PseudoReturnBase<GPR32NMOpnd>, ISA_NANOMIPS;
 
-def BALC_NM : CallNM<"balc", MipsJmpLink, tglobaladdr>, ISA_NANOMIPS, InstSize32;
+def BALC_NM : CallNM<"balc", MipsJmpLink, tglobaladdr>, InstSize32;
 
-def Li_NM : RegImmNM<"li", simm32_relaxed, GPR32NMOpnd>, ISA_NANOMIPS, InstSize48;
+def Li_NM : RegImmNM<"li", simm32_relaxed, GPR32NMOpnd>, InstSize48;
 
-def ADJCALLSTACKDOWN_NM : AdjustStack<callseq_start>, ISA_NANOMIPS;
-def ADJCALLSTACKUP_NM   : AdjustStack<callseq_end>, ISA_NANOMIPS;
+def ADJCALLSTACKDOWN_NM : AdjustStack<callseq_start>;
+def ADJCALLSTACKUP_NM   : AdjustStack<callseq_end>;
 
 }
 

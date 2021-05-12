@@ -1,5 +1,5 @@
 class InstNM<dag outs, dag ins, string asmstr, list<dag> pattern>:
-  Instruction, PredicateControl
+  Instruction, PredicateControl, ISA_NANOMIPS
 {
   let Namespace = "Mips";
   let DecoderNamespace = "NanoMips";
