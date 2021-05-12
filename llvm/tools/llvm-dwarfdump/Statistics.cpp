@@ -220,9 +220,9 @@ static uint64_t calculateOverlap(DWARFAddressRange A, DWARFAddressRange B) {
 }
 
 /// Collect debug info quality metrics for one DIE.
-static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
-                               std::string VarPrefix, uint64_t BytesInScope,
-                               uint32_t InlineDepth,
+static void collectStatsForDie(DWARFDie Die, const std::string &FnPrefix,
+                               const std::string &VarPrefix,
+                               uint64_t BytesInScope, uint32_t InlineDepth,
                                StringMap<PerFunctionStats> &FnStatMap,
                                GlobalStats &GlobalStats,
                                LocationStats &LocStats,
