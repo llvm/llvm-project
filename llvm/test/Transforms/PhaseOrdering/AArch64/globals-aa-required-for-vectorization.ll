@@ -1,5 +1,5 @@
 ; RUN: opt -passes='lto<O3>' -S %s | FileCheck %s
-; RUN: opt -std-link-opts -enable-new-pm=false -S %s | FileCheck --check-prefix=LEGACY %s
+; RUN: opt -std-link-opts -enable-new-pm=false -S %s | FileCheck %s
 
 target triple = "arm64e-apple-darwin"
 
@@ -9,10 +9,7 @@ target triple = "arm64e-apple-darwin"
 @D = external unnamed_addr global i32, align 4
 
 ; CHECK-LABEL: @fn
-; CHECK-NOT: vector.body:
-;
-; LEGACY-LABEL: @fn
-; LEGACY: vector.body:
+; CHECK: vector.body:
 ;
 define void @fn() {
 entry:
