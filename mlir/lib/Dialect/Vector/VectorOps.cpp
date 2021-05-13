@@ -2306,6 +2306,7 @@ static LogicalResult verifyPermutationMap(AffineMap permutationMap,
 
 static LogicalResult verifyTransferOp(Operation *op, ShapedType shapedType,
                                       VectorType vectorType,
+                                      VectorType maskType,
                                       AffineMap permutationMap,
                                       ArrayAttr inBounds) {
   if (op->hasAttr("masked")) {
@@ -2341,6 +2342,9 @@ static LogicalResult verifyTransferOp(Operation *op, ShapedType shapedType,
     if (permutationMap.getNumResults() != rankOffset)
       return op->emitOpError("requires a permutation_map with result dims of "
                              "the same rank as the vector type");
+
+    if (maskType)
+      return op->emitOpError("does not support masks with vector element type");
   } else {
     // Memref or tensor has scalar element type.
     unsigned resultVecSize =
@@ -2355,6 +2359,13 @@ static LogicalResult verifyTransferOp(Operation *op, ShapedType shapedType,
     if (permutationMap.getNumResults() != vectorType.getRank())
       return op->emitOpError("requires a permutation_map with result dims of "
                              "the same rank as the vector type");
+
+    VectorType expectedMaskType =
+        vector::detail::transferMaskType(vectorType, permutationMap);
+    if (maskType && expectedMaskType != maskType)
+      return op->emitOpError("expects mask type consistent with permutation "
+                             "map: ")
+             << maskType;
   }
 
   if (permutationMap.getNumSymbols() != 0)
@@ -2491,10 +2502,11 @@ static ParseResult parseTransferReadOp(OpAsmParser &parser,
   if (!vectorType)
     return parser.emitError(typesLoc, "requires vector type");
   auto permutationAttrName = TransferReadOp::getPermutationMapAttrName();
-  auto attr = result.attributes.get(permutationAttrName);
-  if (!attr) {
+  Attribute mapAttr = result.attributes.get(permutationAttrName);
+  if (!mapAttr) {
     auto permMap = getTransferMinorIdentityMap(shapedType, vectorType);
-    result.attributes.set(permutationAttrName, AffineMapAttr::get(permMap));
+    mapAttr = AffineMapAttr::get(permMap);
+    result.attributes.set(permutationAttrName, mapAttr);
   }
   if (parser.resolveOperand(sourceInfo, shapedType, result.operands) ||
       parser.resolveOperands(indexInfo, indexType, result.operands) ||
@@ -2502,7 +2514,13 @@ static ParseResult parseTransferReadOp(OpAsmParser &parser,
                             result.operands))
     return failure();
   if (hasMask.succeeded()) {
-    auto maskType = VectorType::get(vectorType.getShape(), builder.getI1Type());
+    if (shapedType.getElementType().dyn_cast<VectorType>())
+      return parser.emitError(
+          maskInfo.location, "does not support masks with vector element type");
+    auto map = mapAttr.dyn_cast<AffineMapAttr>().getValue();
+    // Instead of adding the mask type as an op type, compute it based on the
+    // vector type and the permutation map (to keep the type signature small).
+    auto maskType = mlir::vector::detail::transferMaskType(vectorType, map);
     if (parser.resolveOperand(maskInfo, maskType, result.operands))
       return failure();
   }
@@ -2517,6 +2535,7 @@ static LogicalResult verify(TransferReadOp op) {
   // Consistency of elemental types in source and vector.
   ShapedType shapedType = op.getShapedType();
   VectorType vectorType = op.getVectorType();
+  VectorType maskType = op.getMaskType();
   auto paddingType = op.padding().getType();
   auto permutationMap = op.permutation_map();
   auto sourceElementType = shapedType.getElementType();
@@ -2525,7 +2544,7 @@ static LogicalResult verify(TransferReadOp op) {
     return op.emitOpError("requires ") << shapedType.getRank() << " indices";
 
   if (failed(verifyTransferOp(op.getOperation(), shapedType, vectorType,
-                              permutationMap,
+                              maskType, permutationMap,
                               op.in_bounds() ? *op.in_bounds() : ArrayAttr())))
     return failure();
 
@@ -2768,6 +2787,9 @@ static ParseResult parseTransferWriteOp(OpAsmParser &parser,
       parser.resolveOperands(indexInfo, indexType, result.operands))
     return failure();
   if (hasMask.succeeded()) {
+    if (shapedType.getElementType().dyn_cast<VectorType>())
+      return parser.emitError(
+          maskInfo.location, "does not support masks with vector element type");
     auto maskType = VectorType::get(vectorType.getShape(), builder.getI1Type());
     if (parser.resolveOperand(maskInfo, maskType, result.operands))
       return failure();
@@ -2793,6 +2815,7 @@ static LogicalResult verify(TransferWriteOp op) {
   // Consistency of elemental types in shape and vector.
   ShapedType shapedType = op.getShapedType();
   VectorType vectorType = op.getVectorType();
+  VectorType maskType = op.getMaskType();
   auto permutationMap = op.permutation_map();
 
   if (llvm::size(op.indices()) != shapedType.getRank())
@@ -2804,7 +2827,7 @@ static LogicalResult verify(TransferWriteOp op) {
     return op.emitOpError("should not have broadcast dimensions");
 
   if (failed(verifyTransferOp(op.getOperation(), shapedType, vectorType,
-                              permutationMap,
+                              maskType, permutationMap,
                               op.in_bounds() ? *op.in_bounds() : ArrayAttr())))
     return failure();
 
