@@ -1013,6 +1013,14 @@ struct Strategy1d<TransferWriteOp> {
   }
 };
 
+/// Return true if the last dimension of the MemRefType has unit stride.
+static bool isLastMemrefDimUnitStride(MemRefType type) {
+  int64_t offset;
+  SmallVector<int64_t, 4> strides;
+  auto successStrides = getStridesAndOffset(type, strides, offset);
+  return succeeded(successStrides) && strides.back() == 1;
+}
+
 /// Lower a 1D vector transfer op to SCF using scalar loads/stores. This is
 /// necessary in cases where a 1D vector transfer op cannot be lowered into
 /// vector load/stores due to non-unit strides or broadcasts:
@@ -1052,11 +1060,14 @@ struct TransferOp1dConversion : public OpRewritePattern<OpTy> {
                                 PatternRewriter &rewriter) const override {
     ScopedContext scope(rewriter, xferOp.getLoc());
     auto map = xferOp.permutation_map();
+    auto memRefType = xferOp.getShapedType().template dyn_cast<MemRefType>();
 
+    if (!memRefType)
+      return failure();
     if (xferOp.getVectorType().getRank() != 1)
-        return failure();
-    if (map.isMinorIdentity())  // Handled by ConvertVectorToLLVM
-        return failure();
+      return failure();
+    if (map.isMinorIdentity() && isLastMemrefDimUnitStride(memRefType))
+      return failure(); // Handled by ConvertVectorToLLVM
 
     // Loop bounds, step, state...
     auto vecType = xferOp.getVectorType();
