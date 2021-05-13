@@ -30,6 +30,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/OptimizedStructLayout.h"
 #include "llvm/Support/circular_raw_ostream.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
@@ -334,6 +335,28 @@ struct FrameDataInfo {
     FieldIndexMap[V] = Index;
   }
 
+  uint64_t getAlign(Value *V) const {
+    auto Iter = FieldAlignMap.find(V);
+    assert(Iter != FieldAlignMap.end());
+    return Iter->second;
+  }
+
+  void setAlign(Value *V, uint64_t Align) {
+    assert(FieldAlignMap.count(V) == 0);
+    FieldAlignMap.insert({V, Align});
+  }
+
+  uint64_t getOffset(Value *V) const {
+    auto Iter = FieldOffsetMap.find(V);
+    assert(Iter != FieldOffsetMap.end());
+    return Iter->second;
+  }
+
+  void setOffset(Value *V, uint64_t Offset) {
+    assert(FieldOffsetMap.count(V) == 0);
+    FieldOffsetMap.insert({V, Offset});
+  }
+
   // Remap the index of every field in the frame, using the final layout index.
   void updateLayoutIndex(FrameTypeBuilder &B);
 
@@ -345,6 +368,12 @@ private:
   // with their original insertion field index. After the frame is built, their
   // indexes will be updated into the final layout index.
   DenseMap<Value *, uint32_t> FieldIndexMap;
+  // Map from values to their alignment on the frame. They would be set after
+  // the frame is built.
+  DenseMap<Value *, uint64_t> FieldAlignMap;
+  // Map from values to their offset on the frame. They would be set after
+  // the frame is built.
+  DenseMap<Value *, uint64_t> FieldOffsetMap;
 };
 } // namespace
 
@@ -496,12 +525,20 @@ public:
     assert(IsFinished && "not yet finished!");
     return Fields[Id].LayoutFieldIndex;
   }
+
+  Field getLayoutField(FieldIDType Id) const {
+    assert(IsFinished && "not yet finished!");
+    return Fields[Id];
+  }
 };
 } // namespace
 
 void FrameDataInfo::updateLayoutIndex(FrameTypeBuilder &B) {
   auto Updater = [&](Value *I) {
-    setFieldIndex(I, B.getLayoutFieldIndex(getFieldIndex(I)));
+    auto Field = B.getLayoutField(getFieldIndex(I));
+    setFieldIndex(I, Field.LayoutFieldIndex);
+    setAlign(I, Field.Alignment.value());
+    setOffset(I, Field.Offset);
   };
   LayoutIndexUpdateStarted = true;
   for (auto &S : Spills)
@@ -716,6 +753,315 @@ void FrameTypeBuilder::finish(StructType *Ty) {
   IsFinished = true;
 }
 
+static void cacheDIVar(FrameDataInfo &FrameData,
+                       DenseMap<Value *, DILocalVariable *> &DIVarCache) {
+  for (auto *V : FrameData.getAllDefs()) {
+    if (DIVarCache.find(V) != DIVarCache.end())
+      continue;
+
+    auto DDIs = FindDbgDeclareUses(V);
+    auto *I = llvm::find_if(DDIs, [](DbgDeclareInst *DDI) {
+      return DDI->getExpression()->getNumElements() == 0;
+    });
+    if (I != DDIs.end())
+      DIVarCache.insert({V, (*I)->getVariable()});
+  }
+}
+
+/// Create name for Type. It uses MDString to store new created string to
+/// avoid memory leak.
+static StringRef solveTypeName(Type *Ty) {
+  if (Ty->isIntegerTy()) {
+    // The longest name in common may be '__int_128', which has 9 bits.
+    SmallString<16> Buffer;
+    raw_svector_ostream OS(Buffer);
+    OS << "__int_" << cast<IntegerType>(Ty)->getBitWidth();
+    auto *MDName = MDString::get(Ty->getContext(), OS.str());
+    return MDName->getString();
+  }
+
+  if (Ty->isFloatingPointTy()) {
+    if (Ty->isFloatTy())
+      return "__float_";
+    if (Ty->isDoubleTy())
+      return "__double_";
+    return "__floating_type_";
+  }
+
+  if (Ty->isPointerTy()) {
+    auto *PtrTy = cast<PointerType>(Ty);
+    Type *PointeeTy = PtrTy->getElementType();
+    auto Name = solveTypeName(PointeeTy);
+    if (Name == "UnknownType")
+      return "PointerType";
+    SmallString<16> Buffer;
+    Twine(Name + "_Ptr").toStringRef(Buffer);
+    auto *MDName = MDString::get(Ty->getContext(), Buffer.str());
+    return MDName->getString();
+  }
+
+  if (Ty->isStructTy()) {
+    if (!cast<StructType>(Ty)->hasName())
+      return "__LiteralStructType_";
+
+    auto Name = Ty->getStructName();
+
+    SmallString<16> Buffer(Name);
+    for_each(Buffer, [](auto &Iter) {
+      if (Iter == '.' || Iter == ':')
+        Iter = '_';
+    });
+    auto *MDName = MDString::get(Ty->getContext(), Buffer.str());
+    return MDName->getString();
+  }
+
+  return "UnknownType";
+}
+
+static DIType *solveDIType(DIBuilder &Builder, Type *Ty, DataLayout &Layout,
+                           DIScope *Scope, unsigned LineNum,
+                           DenseMap<Type *, DIType *> &DITypeCache) {
+  if (DIType *DT = DITypeCache.lookup(Ty))
+    return DT;
+
+  StringRef Name = solveTypeName(Ty);
+
+  DIType *RetType = nullptr;
+
+  if (Ty->isIntegerTy()) {
+    auto BitWidth = cast<IntegerType>(Ty)->getBitWidth();
+    RetType = Builder.createBasicType(Name, BitWidth, dwarf::DW_ATE_signed,
+                                      llvm::DINode::FlagArtificial);
+  } else if (Ty->isFloatingPointTy()) {
+    RetType = Builder.createBasicType(Name, Layout.getTypeSizeInBits(Ty),
+                                      dwarf::DW_ATE_float,
+                                      llvm::DINode::FlagArtificial);
+  } else if (Ty->isPointerTy()) {
+    // Construct BasicType instead of PointerType to avoid infinite
+    // search problem.
+    // For example, we would be in trouble if we traverse recursively:
+    //
+    //  struct Node {
+    //      Node* ptr;
+    //  };
+    RetType = Builder.createBasicType(Name, Layout.getTypeSizeInBits(Ty),
+                                      dwarf::DW_ATE_address,
+                                      llvm::DINode::FlagArtificial);
+  } else if (Ty->isStructTy()) {
+    auto *DIStruct = Builder.createStructType(
+        Scope, Name, Scope->getFile(), LineNum, Layout.getTypeSizeInBits(Ty),
+        Layout.getPrefTypeAlignment(Ty), llvm::DINode::FlagArtificial, nullptr,
+        llvm::DINodeArray());
+
+    auto *StructTy = cast<StructType>(Ty);
+    SmallVector<Metadata *, 16> Elements;
+    for (unsigned I = 0; I < StructTy->getNumElements(); I++) {
+      DIType *DITy = solveDIType(Builder, StructTy->getElementType(I), Layout,
+                                 Scope, LineNum, DITypeCache);
+      assert(DITy);
+      Elements.push_back(Builder.createMemberType(
+          Scope, DITy->getName(), Scope->getFile(), LineNum,
+          DITy->getSizeInBits(), DITy->getAlignInBits(),
+          Layout.getStructLayout(StructTy)->getElementOffsetInBits(I),
+          llvm::DINode::FlagArtificial, DITy));
+    }
+
+    Builder.replaceArrays(DIStruct, Builder.getOrCreateArray(Elements));
+
+    RetType = DIStruct;
+  } else {
+    LLVM_DEBUG(dbgs() << "Unresolved Type: " << *Ty << "\n";);
+    SmallString<32> Buffer;
+    raw_svector_ostream OS(Buffer);
+    OS << Name.str() << "_" << Layout.getTypeSizeInBits(Ty);
+    RetType = Builder.createBasicType(OS.str(), Layout.getTypeSizeInBits(Ty),
+                                      dwarf::DW_ATE_address,
+                                      llvm::DINode::FlagArtificial);
+  }
+
+  DITypeCache.insert({Ty, RetType});
+  return RetType;
+}
+
+/// Build artificial debug info for C++ coroutine frames to allow users to
+/// inspect the contents of the frame directly
+///
+/// Create Debug information for coroutine frame with debug name "__coro_frame".
+/// The debug information for the fields of coroutine frame is constructed from
+/// the following way:
+/// 1. For all the value in the Frame, we search the use of dbg.declare to find
+///    the corresponding debug variables for the value. If we can find the
+///    debug variable, we can get full and accurate debug information.
+/// 2. If we can't get debug information in step 1 and 2, we could only try to
+///    build the DIType by Type. We did this in solveDIType. We only handle
+///    integer, float, double, integer type and struct type for now.
+static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
+                                FrameDataInfo &FrameData) {
+  DISubprogram *DIS = F.getSubprogram();
+  // If there is no DISubprogram for F, it implies the Function are not compiled
+  // with debug info. So we also don't need to generate debug info for the frame
+  // neither.
+  if (!DIS || !DIS->getUnit() ||
+      !dwarf::isCPlusPlus(
+          (dwarf::SourceLanguage)DIS->getUnit()->getSourceLanguage()))
+    return;
+
+  assert(Shape.ABI == coro::ABI::Switch &&
+         "We could only build debug infomation for C++ coroutine now.\n");
+
+  DIBuilder DBuilder(*F.getParent(), /*AllowUnresolved*/ false);
+
+  AllocaInst *PromiseAlloca = Shape.getPromiseAlloca();
+  assert(PromiseAlloca &&
+         "Coroutine with switch ABI should own Promise alloca");
+
+  TinyPtrVector<DbgDeclareInst *> DIs = FindDbgDeclareUses(PromiseAlloca);
+  if (DIs.empty())
+    return;
+
+  DbgDeclareInst *PromiseDDI = DIs.front();
+  DILocalVariable *PromiseDIVariable = PromiseDDI->getVariable();
+  DILocalScope *PromiseDIScope = PromiseDIVariable->getScope();
+  DIFile *DFile = PromiseDIScope->getFile();
+  DILocation *DILoc = PromiseDDI->getDebugLoc().get();
+  unsigned LineNum = PromiseDIVariable->getLine();
+
+  DICompositeType *FrameDITy = DBuilder.createStructType(
+      PromiseDIScope, "__coro_frame_ty", DFile, LineNum, Shape.FrameSize * 8,
+      Shape.FrameAlign.value() * 8, llvm::DINode::FlagArtificial, nullptr,
+      llvm::DINodeArray());
+  StructType *FrameTy = Shape.FrameTy;
+  SmallVector<Metadata *, 16> Elements;
+  DataLayout Layout = F.getParent()->getDataLayout();
+
+  DenseMap<Value *, DILocalVariable *> DIVarCache;
+  cacheDIVar(FrameData, DIVarCache);
+
+  unsigned ResumeIndex = coro::Shape::SwitchFieldIndex::Resume;
+  unsigned DestroyIndex = coro::Shape::SwitchFieldIndex::Destroy;
+  unsigned IndexIndex = Shape.SwitchLowering.IndexField;
+
+  DenseMap<unsigned, StringRef> NameCache;
+  NameCache.insert({ResumeIndex, "__resume_fn"});
+  NameCache.insert({DestroyIndex, "__destroy_fn"});
+  NameCache.insert({IndexIndex, "__coro_index"});
+
+  Type *ResumeFnTy = FrameTy->getElementType(ResumeIndex),
+       *DestroyFnTy = FrameTy->getElementType(DestroyIndex),
+       *IndexTy = FrameTy->getElementType(IndexIndex);
+
+  DenseMap<unsigned, DIType *> TyCache;
+  TyCache.insert({ResumeIndex,
+                  DBuilder.createBasicType("__resume_fn",
+                                           Layout.getTypeSizeInBits(ResumeFnTy),
+                                           dwarf::DW_ATE_address)});
+  TyCache.insert(
+      {DestroyIndex, DBuilder.createBasicType(
+                         "__destroy_fn", Layout.getTypeSizeInBits(DestroyFnTy),
+                         dwarf::DW_ATE_address)});
+
+  /// FIXME: If we fill the field `SizeInBits` with the actual size of
+  /// __coro_index in bits, then __coro_index wouldn't show in the debugger.
+  TyCache.insert({IndexIndex, DBuilder.createBasicType(
+                                  "__coro_index",
+                                  (Layout.getTypeSizeInBits(IndexTy) < 8)
+                                      ? 8
+                                      : Layout.getTypeSizeInBits(IndexTy),
+                                  dwarf::DW_ATE_unsigned_char)});
+
+  for (auto *V : FrameData.getAllDefs()) {
+    if (DIVarCache.find(V) == DIVarCache.end())
+      continue;
+
+    auto Index = FrameData.getFieldIndex(V);
+
+    NameCache.insert({Index, DIVarCache[V]->getName()});
+    TyCache.insert({Index, DIVarCache[V]->getType()});
+  }
+
+  // Cache from index to (Align, Offset Pair)
+  DenseMap<unsigned, std::pair<unsigned, unsigned>> OffsetCache;
+  // The Align and Offset of Resume function and Destroy function are fixed.
+  OffsetCache.insert({ResumeIndex, {8, 0}});
+  OffsetCache.insert({DestroyIndex, {8, 8}});
+  OffsetCache.insert(
+      {IndexIndex,
+       {Shape.SwitchLowering.IndexAlign, Shape.SwitchLowering.IndexOffset}});
+
+  for (auto *V : FrameData.getAllDefs()) {
+    auto Index = FrameData.getFieldIndex(V);
+
+    OffsetCache.insert(
+        {Index, {FrameData.getAlign(V), FrameData.getOffset(V)}});
+  }
+
+  DenseMap<Type *, DIType *> DITypeCache;
+  // This counter is used to avoid same type names. e.g., there would be
+  // many i32 and i64 types in one coroutine. And we would use i32_0 and
+  // i32_1 to avoid the same type. Since it makes no sense the name of the
+  // fields confilicts with each other.
+  unsigned UnknownTypeNum = 0;
+  for (unsigned Index = 0; Index < FrameTy->getNumElements(); Index++) {
+    if (OffsetCache.find(Index) == OffsetCache.end())
+      continue;
+
+    std::string Name;
+    uint64_t SizeInBits;
+    uint32_t AlignInBits;
+    uint64_t OffsetInBits;
+    DIType *DITy = nullptr;
+
+    Type *Ty = FrameTy->getElementType(Index);
+    assert(Ty->isSized() && "We can't handle type which is not sized.\n");
+    SizeInBits = Layout.getTypeSizeInBits(Ty).getFixedSize();
+    AlignInBits = OffsetCache[Index].first * 8;
+    OffsetInBits = OffsetCache[Index].second * 8;
+
+    if (NameCache.find(Index) != NameCache.end()) {
+      Name = NameCache[Index].str();
+      DITy = TyCache[Index];
+    } else {
+      DITy = solveDIType(DBuilder, Ty, Layout, PromiseDIScope, LineNum,
+                         DITypeCache);
+      assert(DITy && "SolveDIType shouldn't return nullptr.\n");
+      Name = DITy->getName().str();
+      Name += "_" + std::to_string(UnknownTypeNum);
+      UnknownTypeNum++;
+    }
+
+    Elements.push_back(DBuilder.createMemberType(
+        PromiseDIScope, Name, DFile, LineNum, SizeInBits, AlignInBits,
+        OffsetInBits, llvm::DINode::FlagArtificial, DITy));
+  }
+
+  DBuilder.replaceArrays(FrameDITy, DBuilder.getOrCreateArray(Elements));
+
+  auto *FrameDIVar = DBuilder.createAutoVariable(PromiseDIScope, "__coro_frame",
+                                                 DFile, LineNum, FrameDITy,
+                                                 true, DINode::FlagArtificial);
+  assert(FrameDIVar->isValidLocationForIntrinsic(PromiseDDI->getDebugLoc()));
+
+  // Subprogram would have ContainedNodes field which records the debug
+  // variables it contained. So we need to add __coro_frame to the
+  // ContainedNodes of it.
+  //
+  // If we don't add __coro_frame to the RetainedNodes, user may get
+  // `no symbol __coro_frame in context` rather than `__coro_frame`
+  // is optimized out, which is more precise.
+  if (auto *SubProgram = dyn_cast<DISubprogram>(PromiseDIScope)) {
+    auto RetainedNodes = SubProgram->getRetainedNodes();
+    SmallVector<Metadata *, 32> RetainedNodesVec(RetainedNodes.begin(),
+                                                 RetainedNodes.end());
+    RetainedNodesVec.push_back(FrameDIVar);
+    SubProgram->replaceOperandWith(
+        7, (MDTuple::get(F.getContext(), RetainedNodesVec)));
+  }
+
+  DBuilder.insertDeclare(Shape.FramePtr, FrameDIVar,
+                         DBuilder.createExpression(), DILoc,
+                         Shape.FramePtr->getNextNode());
+}
+
 // Build a struct that will keep state for an active coroutine.
 //   struct f.frame {
 //     ResumeFnTy ResumeFnAddr;
@@ -791,15 +1137,18 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
   Shape.FrameSize = B.getStructSize();
 
   switch (Shape.ABI) {
-  case coro::ABI::Switch:
+  case coro::ABI::Switch: {
     // In the switch ABI, remember the switch-index field.
-    Shape.SwitchLowering.IndexField =
-        B.getLayoutFieldIndex(*SwitchIndexFieldId);
+    auto IndexField = B.getLayoutField(*SwitchIndexFieldId);
+    Shape.SwitchLowering.IndexField = IndexField.LayoutFieldIndex;
+    Shape.SwitchLowering.IndexAlign = IndexField.Alignment.value();
+    Shape.SwitchLowering.IndexOffset = IndexField.Offset;
 
     // Also round the frame size up to a multiple of its alignment, as is
     // generally expected in C/C++.
     Shape.FrameSize = alignTo(Shape.FrameSize, Shape.FrameAlign);
     break;
+  }
 
   // In the retcon ABI, remember whether the frame is inline in the storage.
   case coro::ABI::Retcon:
@@ -1100,6 +1449,15 @@ static Instruction *splitBeforeCatchSwitch(CatchSwitchInst *CatchSwitch) {
   return CleanupRet;
 }
 
+static void createFramePtr(coro::Shape &Shape) {
+  auto *CB = Shape.CoroBegin;
+  IRBuilder<> Builder(CB->getNextNode());
+  StructType *FrameTy = Shape.FrameTy;
+  PointerType *FramePtrTy = FrameTy->getPointerTo();
+  Shape.FramePtr =
+      cast<Instruction>(Builder.CreateBitCast(CB, FramePtrTy, "FramePtr"));
+}
+
 // Replace all alloca and SSA values that are accessed across suspend points
 // with GetElementPointer from coroutine frame + loads and stores. Create an
 // AllocaSpillBB that will become the new entry block for the resume parts of
@@ -1126,11 +1484,9 @@ static Instruction *insertSpills(const FrameDataInfo &FrameData,
                                  coro::Shape &Shape) {
   auto *CB = Shape.CoroBegin;
   LLVMContext &C = CB->getContext();
-  IRBuilder<> Builder(CB->getNextNode());
+  IRBuilder<> Builder(C);
   StructType *FrameTy = Shape.FrameTy;
-  PointerType *FramePtrTy = FrameTy->getPointerTo();
-  auto *FramePtr =
-      cast<Instruction>(Builder.CreateBitCast(CB, FramePtrTy, "FramePtr"));
+  Instruction *FramePtr = Shape.FramePtr;
   DominatorTree DT(*CB->getFunction());
   SmallDenseMap<llvm::Value *, llvm::AllocaInst *, 4> DbgPtrAllocaCache;
 
@@ -2293,7 +2649,10 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
       Shape.ABI == coro::ABI::Async)
     sinkSpillUsesAfterCoroBegin(F, FrameData, Shape.CoroBegin);
   Shape.FrameTy = buildFrameType(F, Shape, FrameData);
-  Shape.FramePtr = insertSpills(FrameData, Shape);
+  createFramePtr(Shape);
+  // For now, this works for C++ programs only.
+  buildFrameDebugInfo(F, Shape, FrameData);
+  insertSpills(FrameData, Shape);
   lowerLocalAllocas(LocalAllocas, DeadInstructions);
 
   for (auto I : DeadInstructions)
