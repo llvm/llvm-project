@@ -1,6 +1,6 @@
 // RUN: %libomptarget-compile-run-and-check-generic
-// XFAIL: nvptx64-nvidia-cuda
 
+// REQUIRES: unified_shared_memory
 // UNSUPPORTED: clang-6, clang-7, clang-8, clang-9
 
 // amdgcn does not have printf definition
