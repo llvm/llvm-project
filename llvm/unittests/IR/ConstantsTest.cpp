@@ -27,7 +27,7 @@ TEST(ConstantsTest, Integer_i1) {
   Constant *Zero = ConstantInt::get(Int1, 0);
   Constant *NegOne = ConstantInt::get(Int1, static_cast<uint64_t>(-1), true);
   EXPECT_EQ(NegOne, ConstantInt::getSigned(Int1, -1));
-  Constant *Undef = UndefValue::get(Int1);
+  Constant *Poison = PoisonValue::get(Int1);
 
   // Input:  @b = constant i1 add(i1 1 , i1 1)
   // Output: @b = constant i1 false
@@ -53,21 +53,21 @@ TEST(ConstantsTest, Integer_i1) {
   // @g = constant i1 false
   EXPECT_EQ(Zero, ConstantExpr::getSub(One, One));
 
-  // @h = constant i1 shl(i1 1 , i1 1)  ; undefined
-  // @h = constant i1 undef
-  EXPECT_EQ(Undef, ConstantExpr::getShl(One, One));
+  // @h = constant i1 shl(i1 1 , i1 1)  ; poison
+  // @h = constant i1 poison
+  EXPECT_EQ(Poison, ConstantExpr::getShl(One, One));
 
   // @i = constant i1 shl(i1 1 , i1 0)
   // @i = constant i1 true
   EXPECT_EQ(One, ConstantExpr::getShl(One, Zero));
 
-  // @j = constant i1 lshr(i1 1, i1 1)  ; undefined
-  // @j = constant i1 undef
-  EXPECT_EQ(Undef, ConstantExpr::getLShr(One, One));
+  // @j = constant i1 lshr(i1 1, i1 1)  ; poison
+  // @j = constant i1 poison
+  EXPECT_EQ(Poison, ConstantExpr::getLShr(One, One));
 
-  // @m = constant i1 ashr(i1 1, i1 1)  ; undefined
-  // @m = constant i1 undef
-  EXPECT_EQ(Undef, ConstantExpr::getAShr(One, One));
+  // @m = constant i1 ashr(i1 1, i1 1)  ; poison
+  // @m = constant i1 poison
+  EXPECT_EQ(Poison, ConstantExpr::getAShr(One, One));
 
   // @n = constant i1 mul(i1 -1, i1 1)
   // @n = constant i1 true
@@ -216,7 +216,6 @@ TEST(ConstantsTest, AsInstructionsTest) {
   Constant *Elt = ConstantInt::get(Int16Ty, 2015);
   Constant *Poison16 = PoisonValue::get(Int16Ty);
   Constant *Undef64 = UndefValue::get(Int64Ty);
-  Constant *UndefV16 = UndefValue::get(P6->getType());
   Constant *PoisonV16 = PoisonValue::get(P6->getType());
 
 #define P0STR "ptrtoint (i32** @dummy to i32)"
@@ -294,9 +293,9 @@ TEST(ConstantsTest, AsInstructionsTest) {
   EXPECT_EQ(Poison16, ConstantExpr::getExtractElement(P6, Undef64));
 
   EXPECT_EQ(Elt, ConstantExpr::getExtractElement(
-                     ConstantExpr::getInsertElement(P6, Elt, One), One));
-  EXPECT_EQ(UndefV16, ConstantExpr::getInsertElement(P6, Elt, Two));
-  EXPECT_EQ(UndefV16, ConstantExpr::getInsertElement(P6, Elt, Big));
+                 ConstantExpr::getInsertElement(P6, Elt, One), One));
+  EXPECT_EQ(PoisonV16, ConstantExpr::getInsertElement(P6, Elt, Two));
+  EXPECT_EQ(PoisonV16, ConstantExpr::getInsertElement(P6, Elt, Big));
   EXPECT_EQ(PoisonV16, ConstantExpr::getInsertElement(P6, Elt, Undef64));
 }
 
