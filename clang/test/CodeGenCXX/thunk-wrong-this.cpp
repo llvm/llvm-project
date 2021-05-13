@@ -17,9 +17,9 @@ class alignas(16) Obj : public Base1, public Base2 {
 void Obj::Foo1() {}
 void Obj::Foo2() {}
 
-// CHECK: define {{.*}}void @_ZN3Obj4Foo2Ev(%{{.*}}* nonnull align 16 dereferenceable(16) %this) unnamed_addr #0 align 2 {
+// CHECK: define {{.*}}void @_ZN3Obj4Foo2Ev(%{{[^*]+}}* nonnull align 16 dereferenceable(16) %this) unnamed_addr #0 align 2 {
 
 // FIXME: the argument should be  %class.Base2.2* nonnull dereferenceable(8) %this
-// CHECK: define dso_local void @_ZThn8_N3Obj4Foo2Ev(%{{.*}}* %this) unnamed_addr #1 align 2 {
+// CHECK: define dso_local void @_ZThn8_N3Obj4Foo2Ev(%{{[^*]+}}* %this) unnamed_addr #1 align 2 {
 
-// CHECK: tail call void @_ZN3Obj4Foo2Ev(%{{.*}}* nonnull align 16 dereferenceable(16) %2)
+// CHECK: tail call void @_ZN3Obj4Foo2Ev(%{{[^*]+}}* nonnull align 16 dereferenceable(16) %2)

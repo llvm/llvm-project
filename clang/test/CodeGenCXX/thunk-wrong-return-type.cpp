@@ -22,5 +22,5 @@ struct Y : U, X {
 
 Y y;
 
-// FIXME: The return type should be  align 1 dereferenceable(1) %struct.A.8*
-// CHECK: define linkonce_odr %struct.B.1* @_ZTchn8_v0_n24_N1Y1fEv(%struct.Y.5* %this) unnamed_addr #1 comdat align 2 {
+// FIXME: The return type should be  align 1 dereferenceable(1) %{{[^*]+}}*
+// CHECK: define linkonce_odr %{{[^*]+}}* @_ZTchn8_v0_n24_N1Y1fEv(%{{[^*]+}}* %this) unnamed_addr #1 comdat align 2 {
