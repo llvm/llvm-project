@@ -100,6 +100,9 @@ public:
       case 'G':
         Group = true;
         break;
+      case 'T':
+        flags |= wasm::WASM_SEG_FLAG_TLS;
+        break;
       case 'S':
         flags |= wasm::WASM_SEG_FLAG_STRINGS;
         break;
