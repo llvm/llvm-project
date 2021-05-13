@@ -47,12 +47,24 @@ class RewritePatternSet;
 /// When applying the pattern a second time, the existing alloca() operation
 /// is reused and only a second vector.type_cast is added.
 
+struct ProgressiveVectorTransferToSCFOptions {
+  bool unroll = false;
+  ProgressiveVectorTransferToSCFOptions &setUnroll(bool u) {
+    unroll = u;
+    return *this;
+  }
+};
+
 /// Collect a set of patterns to convert from the Vector dialect to SCF + std.
 void populateProgressiveVectorToSCFConversionPatterns(
-    RewritePatternSet &patterns);
+    RewritePatternSet &patterns,
+    const ProgressiveVectorTransferToSCFOptions &options =
+        ProgressiveVectorTransferToSCFOptions());
 
 /// Create a pass to convert a subset of vector ops to SCF.
-std::unique_ptr<Pass> createProgressiveConvertVectorToSCFPass();
+std::unique_ptr<Pass> createProgressiveConvertVectorToSCFPass(
+    const ProgressiveVectorTransferToSCFOptions &options =
+        ProgressiveVectorTransferToSCFOptions());
 
 } // namespace mlir
 

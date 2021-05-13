@@ -16,7 +16,7 @@ VectorType mlir::vector::detail::transferMaskType(VectorType vecType,
   SmallVector<int64_t, 8> shape;
   for (int64_t i = 0; i < vecType.getRank(); ++i) {
     // Only result dims have a corresponding dim in the mask.
-    if (auto expr = map.getResult(i).template isa<AffineDimExpr>()) {
+    if (map.getResult(i).template isa<AffineDimExpr>()) {
       shape.push_back(vecType.getDimSize(i));
     }
   }
