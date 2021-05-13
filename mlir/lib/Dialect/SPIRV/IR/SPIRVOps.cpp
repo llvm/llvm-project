@@ -3651,6 +3651,71 @@ static LogicalResult verify(spirv::ImageDrefGatherOp imageDrefGatherOp) {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// spv.ImageQuerySize
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(spirv::ImageQuerySizeOp imageQuerySizeOp) {
+  spirv::ImageType imageType =
+      imageQuerySizeOp.image().getType().cast<spirv::ImageType>();
+  Type resultType = imageQuerySizeOp.result().getType();
+
+  spirv::Dim dim = imageType.getDim();
+  spirv::ImageSamplingInfo samplingInfo = imageType.getSamplingInfo();
+  spirv::ImageSamplerUseInfo samplerInfo = imageType.getSamplerUseInfo();
+  switch (dim) {
+  case spirv::Dim::Dim1D:
+  case spirv::Dim::Dim2D:
+  case spirv::Dim::Dim3D:
+  case spirv::Dim::Cube:
+    if (!(samplingInfo == spirv::ImageSamplingInfo::MultiSampled ||
+          samplerInfo == spirv::ImageSamplerUseInfo::SamplerUnknown ||
+          samplerInfo == spirv::ImageSamplerUseInfo::NoSampler))
+      return imageQuerySizeOp.emitError(
+          "if Dim is 1D, 2D, 3D, or Cube, "
+          "it must also have either an MS of 1 or a Sampled of 0 or 2");
+    break;
+  case spirv::Dim::Buffer:
+  case spirv::Dim::Rect:
+    break;
+  default:
+    return imageQuerySizeOp.emitError("the Dim operand of the image type must "
+                                      "be 1D, 2D, 3D, Buffer, Cube, or Rect");
+  }
+
+  unsigned componentNumber = 0;
+  switch (dim) {
+  case spirv::Dim::Dim1D:
+  case spirv::Dim::Buffer:
+    componentNumber = 1;
+    break;
+  case spirv::Dim::Dim2D:
+  case spirv::Dim::Cube:
+  case spirv::Dim::Rect:
+    componentNumber = 2;
+    break;
+  case spirv::Dim::Dim3D:
+    componentNumber = 3;
+    break;
+  default:
+    break;
+  }
+
+  if (imageType.getArrayedInfo() == spirv::ImageArrayedInfo::Arrayed)
+    componentNumber += 1;
+
+  unsigned resultComponentNumber = 1;
+  if (auto resultVectorType = resultType.dyn_cast<VectorType>())
+    resultComponentNumber = resultVectorType.getNumElements();
+
+  if (componentNumber != resultComponentNumber)
+    return imageQuerySizeOp.emitError("expected the result to have ")
+           << componentNumber << " component(s), but found "
+           << resultComponentNumber << " component(s)";
+
+  return success();
+}
+
 namespace mlir {
 namespace spirv {
 
