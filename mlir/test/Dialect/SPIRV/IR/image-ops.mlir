@@ -54,3 +54,49 @@ func @image(%arg0 : !spv.sampled_image<!spv.image<f32, Dim2D, NoDepth, NonArraye
   %0 = spv.Image %arg0 : !spv.sampled_image<!spv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>>
   return
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.ImageQuerySize
+//===----------------------------------------------------------------------===//
+
+func @image_query_size(%arg0 : !spv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>) -> () {
+  // CHECK:  {{%.*}} = spv.ImageQuerySize %arg0 : !spv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown> -> i32
+  %0 = spv.ImageQuerySize %arg0 : !spv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown> -> i32
+  spv.Return
+}
+
+// -----
+
+func @image_query_size_error_dim(%arg0 : !spv.image<f32, SubpassData, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>) -> () {
+  //  expected-error @+1 {{the Dim operand of the image type must be 1D, 2D, 3D, Buffer, Cube, or Rect}}
+  %0 = spv.ImageQuerySize %arg0 : !spv.image<f32, SubpassData, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown> -> i32
+  spv.Return
+}
+
+// -----
+
+func @image_query_size_error_dim_sample(%arg0 : !spv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>) -> () {
+  //  expected-error @+1 {{if Dim is 1D, 2D, 3D, or Cube, it must also have either an MS of 1 or a Sampled of 0 or 2}}
+  %0 = spv.ImageQuerySize %arg0 : !spv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown> -> i32
+  spv.Return
+}
+
+// -----
+
+func @image_query_size_error_result1(%arg0 : !spv.image<f32, Dim3D, NoDepth, Arrayed, SingleSampled, NoSampler, Unknown>) -> () {
+  //  expected-error @+1 {{expected the result to have 4 component(s), but found 3 component(s)}}
+  %0 = spv.ImageQuerySize %arg0 : !spv.image<f32, Dim3D, NoDepth, Arrayed, SingleSampled, NoSampler, Unknown> -> vector<3xi32>
+  spv.Return
+}
+
+// -----
+
+func @image_query_size_error_result2(%arg0 : !spv.image<f32, Buffer, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>) -> () {
+  //  expected-error @+1 {{expected the result to have 1 component(s), but found 2 component(s)}}
+  %0 = spv.ImageQuerySize %arg0 : !spv.image<f32, Buffer, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown> -> vector<2xi32>
+  spv.Return
+}
+
+// -----
