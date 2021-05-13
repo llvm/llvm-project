@@ -25,7 +25,7 @@ define <4 x i64> @insertelement() {
 
 define <4 x i64> @insertelement_undef() {
 ; CHECK-LABEL: @insertelement_undef(
-; CHECK-NEXT:    ret <4 x i64> undef
+; CHECK-NEXT:    ret <4 x i64> poison
 ;
   %vec1 = insertelement <4 x i64> poison, i64 -1, i32 0
   %vec2 = insertelement <4 x i64> %vec1, i64 -2, i32 1

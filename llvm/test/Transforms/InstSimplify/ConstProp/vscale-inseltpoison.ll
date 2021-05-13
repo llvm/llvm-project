@@ -75,7 +75,7 @@ define <vscale x 4 x float> @fmul() {
 
 define <vscale x 4 x i32> @udiv() {
 ; CHECK-LABEL: @udiv(
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    ret <vscale x 4 x i32> poison
 ;
   %r = udiv <vscale x 4 x i32> undef, undef
   ret <vscale x 4 x i32> %r
@@ -83,7 +83,7 @@ define <vscale x 4 x i32> @udiv() {
 
 define <vscale x 4 x i32> @udiv_splat_zero() {
 ; CHECK-LABEL: @udiv_splat_zero(
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    ret <vscale x 4 x i32> poison
 ;
   %r = udiv <vscale x 4 x i32> zeroinitializer, zeroinitializer
   ret <vscale x 4 x i32> %r
@@ -91,7 +91,7 @@ define <vscale x 4 x i32> @udiv_splat_zero() {
 
 define <vscale x 4 x i32> @sdiv() {
 ; CHECK-LABEL: @sdiv(
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    ret <vscale x 4 x i32> poison
 ;
   %r = sdiv <vscale x 4 x i32> undef, undef
   ret <vscale x 4 x i32> %r
@@ -107,7 +107,7 @@ define <vscale x 4 x float> @fdiv() {
 
 define <vscale x 4 x i32> @urem() {
 ; CHECK-LABEL: @urem(
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    ret <vscale x 4 x i32> poison
 ;
   %r = urem <vscale x 4 x i32> undef, undef
   ret <vscale x 4 x i32> %r
@@ -115,7 +115,7 @@ define <vscale x 4 x i32> @urem() {
 
 define <vscale x 4 x i32> @srem() {
 ; CHECK-LABEL: @srem(
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    ret <vscale x 4 x i32> poison
 ;
   %r = srem <vscale x 4 x i32> undef, undef
   ret <vscale x 4 x i32> %r
@@ -135,7 +135,7 @@ define <vscale x 4 x float> @frem() {
 
 define <vscale x 4 x i32> @shl() {
 ; CHECK-LABEL: @shl(
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    ret <vscale x 4 x i32> poison
 ;
   %r = shl <vscale x 4 x i32> undef, undef
   ret <vscale x 4 x i32> %r
@@ -143,7 +143,7 @@ define <vscale x 4 x i32> @shl() {
 
 define <vscale x 4 x i32> @lshr() {
 ; CHECK-LABEL: @lshr(
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    ret <vscale x 4 x i32> poison
 ;
   %r = lshr <vscale x 4 x i32> undef, undef
   ret <vscale x 4 x i32> %r
@@ -151,7 +151,7 @@ define <vscale x 4 x i32> @lshr() {
 
 define <vscale x 4 x i32> @ashr() {
 ; CHECK-LABEL: @ashr(
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    ret <vscale x 4 x i32> poison
 ;
   %r = ashr <vscale x 4 x i32> undef, undef
   ret <vscale x 4 x i32> %r

@@ -62,3 +62,9 @@ int test_is_shared_global(const global int* ptr) {
 int test_is_private_global(const global int* ptr) {
   return __builtin_amdgcn_is_private(ptr);
 }
+
+// CHECK-LABEL: @test_groupstaticsize
+// CHECK: call i32 @llvm.amdgcn.groupstaticsize()
+void test_groupstaticsize(global uint* out) {
+  *out = __builtin_amdgcn_groupstaticsize();
+}

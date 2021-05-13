@@ -83,7 +83,7 @@ define i32 @test_sroa_select_gep_undef(i1 %cond) {
 ; CHECK-LABEL: @test_sroa_select_gep_undef(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[SELECT_SROA_SEL:%.*]] = select i1 [[COND:%.*]], i32* [[A_SROA_0]], i32* undef
+; CHECK-NEXT:    [[SELECT_SROA_SEL:%.*]] = select i1 [[COND:%.*]], i32* [[A_SROA_0]], i32* poison
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[SELECT_SROA_SEL]], align 4
 ; CHECK-NEXT:    ret i32 [[LOAD]]
 ;
