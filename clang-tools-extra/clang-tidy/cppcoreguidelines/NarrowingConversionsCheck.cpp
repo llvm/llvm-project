@@ -7,9 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "NarrowingConversionsCheck.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -21,18 +24,33 @@ using namespace clang::ast_matchers;
 namespace clang {
 namespace tidy {
 namespace cppcoreguidelines {
+namespace {
+auto hasAnyListedName(const std::string &Names) {
+  const std::vector<std::string> NameList =
+      utils::options::parseStringList(Names);
+  return hasAnyName(std::vector<StringRef>(NameList.begin(), NameList.end()));
+}
+} // namespace
 
 NarrowingConversionsCheck::NarrowingConversionsCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       WarnOnFloatingPointNarrowingConversion(
           Options.get("WarnOnFloatingPointNarrowingConversion", true)),
+      WarnWithinTemplateInstantiation(
+          Options.get("WarnWithinTemplateInstantiation", false)),
+      WarnOnEquivalentBitWidth(Options.get("WarnOnEquivalentBitWidth", true)),
+      IgnoreConversionFromTypes(Options.get("IgnoreConversionFromTypes", "")),
       PedanticMode(Options.get("PedanticMode", false)) {}
 
 void NarrowingConversionsCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "WarnOnFloatingPointNarrowingConversion",
                 WarnOnFloatingPointNarrowingConversion);
+  Options.store(Opts, "WarnWithinTemplateInstantiation",
+                WarnWithinTemplateInstantiation);
+  Options.store(Opts, "WarnOnEquivalentBitWidth", WarnOnEquivalentBitWidth);
+  Options.store(Opts, "IgnoreConversionFromTypes", IgnoreConversionFromTypes);
   Options.store(Opts, "PedanticMode", PedanticMode);
 }
 
@@ -41,6 +59,24 @@ void NarrowingConversionsCheck::registerMatchers(MatchFinder *Finder) {
   // is not integral.
   const auto IsCeilFloorCallExpr = expr(callExpr(callee(functionDecl(
       hasAnyName("::ceil", "::std::ceil", "::floor", "::std::floor")))));
+
+  // We may want to exclude other types from the checks, such as `size_type`
+  // and `difference_type`. These are often used to count elements, represented
+  // in 64 bits and assigned to `int`. Rarely are people counting >2B elements.
+  const auto IsConversionFromIgnoredType =
+      hasType(namedDecl(hasAnyListedName(IgnoreConversionFromTypes)));
+
+  // `IsConversionFromIgnoredType` will ignore narrowing calls from those types,
+  // but not expressions that are promoted to `int64` due to a binary expression
+  // with one of those types. For example, it will continue to reject:
+  // `int narrowed = int_value + container.size()`.
+  // We attempt to address common incidents of compound expressions with
+  // `IsIgnoredTypeTwoLevelsDeep`, allowing binary expressions that have one
+  // operand of the ignored types and the other operand of another integer type.
+  const auto IsIgnoredTypeTwoLevelsDeep =
+      anyOf(IsConversionFromIgnoredType,
+            binaryOperator(hasOperands(IsConversionFromIgnoredType,
+                                       hasType(isInteger()))));
 
   // Casts:
   //   i = 0.5;
@@ -53,7 +89,13 @@ void NarrowingConversionsCheck::registerMatchers(MatchFinder *Finder) {
                                 hasUnqualifiedDesugaredType(builtinType()))),
                             unless(hasSourceExpression(IsCeilFloorCallExpr)),
                             unless(hasParent(castExpr())),
-                            unless(isInTemplateInstantiation()))
+                            WarnWithinTemplateInstantiation
+                                ? stmt()
+                                : stmt(unless(isInTemplateInstantiation())),
+                            IgnoreConversionFromTypes.empty()
+                                ? castExpr()
+                                : castExpr(unless(hasSourceExpression(
+                                      IsIgnoredTypeTwoLevelsDeep))))
                             .bind("cast")),
       this);
 
@@ -65,7 +107,12 @@ void NarrowingConversionsCheck::registerMatchers(MatchFinder *Finder) {
           hasLHS(expr(hasType(hasUnqualifiedDesugaredType(builtinType())))),
           hasRHS(expr(hasType(hasUnqualifiedDesugaredType(builtinType())))),
           unless(hasRHS(IsCeilFloorCallExpr)),
-          unless(isInTemplateInstantiation()),
+          WarnWithinTemplateInstantiation
+              ? binaryOperator()
+              : binaryOperator(unless(isInTemplateInstantiation())),
+          IgnoreConversionFromTypes.empty()
+              ? binaryOperator()
+              : binaryOperator(unless(hasRHS(IsIgnoredTypeTwoLevelsDeep))),
           // The `=` case generates an implicit cast
           // which is covered by the previous matcher.
           unless(hasOperatorName("=")))
@@ -256,6 +303,16 @@ void NarrowingConversionsCheck::handleIntegralCast(const ASTContext &Context,
   if (ToType->isUnsignedInteger())
     return;
   const BuiltinType *FromType = getBuiltinType(Rhs);
+
+  // With this option, we don't warn on conversions that have equivalent width
+  // in bits. eg. uint32 <-> int32.
+  if (!WarnOnEquivalentBitWidth) {
+    uint64_t FromTypeSize = Context.getTypeSize(FromType);
+    uint64_t ToTypeSize = Context.getTypeSize(ToType);
+    if (FromTypeSize == ToTypeSize)
+      return;
+  }
+
   llvm::APSInt IntegerConstant;
   if (getIntegerConstantExprValue(Context, Rhs, IntegerConstant)) {
     if (!isWideEnoughToHold(Context, IntegerConstant, *ToType))
