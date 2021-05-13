@@ -56,7 +56,7 @@ static void pteam_mem_barrier(uint32_t num_threads, uint32_t * barrier_state)
 {
   __atomic_thread_fence(__ATOMIC_ACQUIRE);
 
-  uint32_t num_waves = num_threads / WARPSIZE;
+  uint32_t num_waves = (num_threads + WARPSIZE - 1) / WARPSIZE;
 
   // Partial barrier implementation for amdgcn.
   // Uses two 16 bit unsigned counters. One for the number of waves to have
