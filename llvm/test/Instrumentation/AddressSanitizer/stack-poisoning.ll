@@ -1,7 +1,10 @@
-; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-after-return -S | FileCheck --check-prefix=CHECK-UAR %s
-; RUN: opt < %s -passes='asan-pipeline' -asan-use-after-return -S | FileCheck --check-prefix=CHECK-UAR %s
-; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-after-return=0 -S | FileCheck --check-prefix=CHECK-PLAIN %s
-; RUN: opt < %s -passes='asan-pipeline' -asan-use-after-return=0 -S | FileCheck --check-prefix=CHECK-PLAIN %s
+; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-after-return=never -S | FileCheck --check-prefix=CHECK-PLAIN %s
+; RUN: opt < %s -passes='asan-pipeline' -asan-use-after-return=never -S | FileCheck --check-prefix=CHECK-PLAIN %s
+; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-after-return=runtime -S | FileCheck --check-prefixes=CHECK-UAR,CHECK-UAR-RUNTIME %s
+; RUN: opt < %s -passes='asan-pipeline' -asan-use-after-return=runtime -S | FileCheck --check-prefixes=CHECK-UAR,CHECK-UAR-RUNTIME %s
+; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-after-return=always -S \
+; RUN:        | FileCheck --check-prefixes=CHECK-UAR --implicit-check-not=__asan_option_detect_stack_use_after_return %s
+; RUN: opt < %s -passes='asan-pipeline' -asan-use-after-return=always -S | FileCheck --check-prefix=CHECK-UAR %s
 target datalayout = "e-i64:64-f80:128-s:64-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -14,10 +17,10 @@ entry:
 ; CHECK-PLAIN: ret void
 
 ; CHECK-UAR-LABEL: Bar
-; CHECK-UAR: load i32, i32* @__asan_option_detect_stack_use_after_return
-; CHECK-UAR: label
+; CHECK-UAR-RUNTIME: load i32, i32* @__asan_option_detect_stack_use_after_return
+; CHECK-UAR-RUNTIME: label
 ; CHECK-UAR: call i64 @__asan_stack_malloc_4
-; CHECK-UAR: label
+; CHECK-UAR-RUNTIME: label
 ; Poison red zones.
 ; CHECK-UAR: store i64 -1007680412564983311
 ; CHECK-UAR: store i64 72057598113936114
