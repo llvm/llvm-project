@@ -79,10 +79,15 @@
 ; CHECK-O23SZ-NEXT: Running pass: SROA on foo
 ; CHECK-O23SZ-NEXT: Running pass: TailCallElimPass on foo
 ; CHECK-O23SZ-NEXT: Running pass: PostOrderFunctionAttrsPass on (foo)
+; CHECK-O23SZ-NEXT: Running pass: RequireAnalysisPass<llvm::GlobalsAA, llvm::Module> on [module]
+; CHECK-O23SZ-NEXT: Running analysis: GlobalsAA on [module]
+; CHECK-O23SZ-NEXT: Running pass: InvalidateAnalysisPass<llvm::AAManager> on foo
+; CHECK-O23SZ-NEXT: Invalidating analysis: AAManager on foo
 ; CHECK-O23SZ-NEXT: Running pass: LoopSimplifyPass on foo
 ; CHECK-O23SZ-NEXT: Running analysis: LoopAnalysis on foo
 ; CHECK-O23SZ-NEXT: Running pass: LCSSAPass on foo
 ; CHECK-O23SZ-NEXT: Running analysis: MemorySSAAnalysis on foo
+; CHECK-O23SZ-NEXT: Running analysis: AAManager on foo
 ; CHECK-O23SZ-NEXT: Running analysis: ScalarEvolutionAnalysis on foo
 ; CHECK-O23SZ-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O23SZ-NEXT: Running pass: LICMPass on Loop
