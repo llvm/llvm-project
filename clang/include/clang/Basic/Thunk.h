@@ -15,9 +15,12 @@
 #ifndef LLVM_CLANG_BASIC_THUNK_H
 #define LLVM_CLANG_BASIC_THUNK_H
 
-#include "clang/AST/GlobalDecl.h"
+#include <cstdint>
+#include <cstring>
 
 namespace clang {
+
+class CXXMethodDecl;
 
 /// A return adjustment.
 struct ReturnAdjustment {

@@ -989,10 +989,18 @@ bool IfStmt::isObjCAvailabilityCheck() const {
   return isa<ObjCAvailabilityCheckExpr>(getCond());
 }
 
-Optional<const Stmt*> IfStmt::getNondiscardedCase(const ASTContext &Ctx) const {
+Optional<Stmt *> IfStmt::getNondiscardedCase(const ASTContext &Ctx) {
   if (!isConstexpr() || getCond()->isValueDependent())
     return None;
   return !getCond()->EvaluateKnownConstInt(Ctx) ? getElse() : getThen();
+}
+
+Optional<const Stmt *>
+IfStmt::getNondiscardedCase(const ASTContext &Ctx) const {
+  if (Optional<Stmt *> Result =
+          const_cast<IfStmt *>(this)->getNondiscardedCase(Ctx))
+    return *Result;
+  return None;
 }
 
 ForStmt::ForStmt(const ASTContext &C, Stmt *Init, Expr *Cond, VarDecl *condVar,

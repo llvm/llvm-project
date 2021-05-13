@@ -22,6 +22,13 @@ namespace non_template {
   L l; 
 }
 
+// It's important that this is not in a namespace; we're testing the mangling
+// of lambdas in top-level inline variables here.
+inline auto lambda_in_inline_variable = [] {};
+template<typename T> struct Wrap {};
+// CHECK-LABEL: define {{.*}} @_Z30test_lambda_in_inline_variable4WrapIN25lambda_in_inline_variableMUlvE_EE
+void test_lambda_in_inline_variable(Wrap<decltype(lambda_in_inline_variable)>) {}
+
 namespace lambdas_in_NSDMIs_template_class {
 template<class T>
 struct L {

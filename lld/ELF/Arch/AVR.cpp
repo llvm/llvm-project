@@ -56,11 +56,38 @@ AVR::AVR() { noneRel = R_AVR_NONE; }
 RelExpr AVR::getRelExpr(RelType type, const Symbol &s,
                         const uint8_t *loc) const {
   switch (type) {
+  case R_AVR_6:
+  case R_AVR_6_ADIW:
+  case R_AVR_8:
+  case R_AVR_16:
+  case R_AVR_16_PM:
+  case R_AVR_32:
+  case R_AVR_LDI:
+  case R_AVR_LO8_LDI:
+  case R_AVR_LO8_LDI_NEG:
+  case R_AVR_HI8_LDI:
+  case R_AVR_HI8_LDI_NEG:
+  case R_AVR_HH8_LDI_NEG:
+  case R_AVR_HH8_LDI:
+  case R_AVR_MS8_LDI_NEG:
+  case R_AVR_MS8_LDI:
+  case R_AVR_LO8_LDI_PM:
+  case R_AVR_LO8_LDI_PM_NEG:
+  case R_AVR_HI8_LDI_PM:
+  case R_AVR_HI8_LDI_PM_NEG:
+  case R_AVR_HH8_LDI_PM:
+  case R_AVR_HH8_LDI_PM_NEG:
+  case R_AVR_PORT5:
+  case R_AVR_PORT6:
+  case R_AVR_CALL:
+    return R_ABS;
   case R_AVR_7_PCREL:
   case R_AVR_13_PCREL:
     return R_PC;
   default:
-    return R_ABS;
+    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+          ") against symbol " + toString(s));
+    return R_NONE;
   }
 }
 
@@ -188,8 +215,7 @@ void AVR::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     break;
   }
   default:
-    error(getErrorLocation(loc) + "unrecognized relocation " +
-          toString(rel.type));
+    llvm_unreachable("unknown relocation");
   }
 }
 

@@ -160,9 +160,7 @@ public:
 
   /// Determine whether this template parameter list contains an
   /// unexpanded parameter pack.
-  bool containsUnexpandedParameterPack() const {
-    return ContainsUnexpandedParameterPack;
-  }
+  bool containsUnexpandedParameterPack() const;
 
   /// Determine whether this template parameter list contains a parameter pack.
   bool hasParameterPack() const {
@@ -204,6 +202,9 @@ public:
              bool OmitTemplateKW = false) const;
   void print(raw_ostream &Out, const ASTContext &Context,
              const PrintingPolicy &Policy, bool OmitTemplateKW = false) const;
+
+  static bool shouldIncludeTypeForArgument(const TemplateParameterList *TPL,
+                                           unsigned Idx);
 };
 
 /// Stores a list of template parameters and the associated

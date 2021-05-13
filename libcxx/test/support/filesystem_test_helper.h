@@ -578,7 +578,7 @@ inline bool ErrorIs(const std::error_code& ec, std::errc First, ErrcT... Rest) {
 
 // Provide our own Sleep routine since std::this_thread::sleep_for is not
 // available in single-threaded mode.
-void SleepFor(std::chrono::seconds dur) {
+template <class Dur> void SleepFor(Dur dur) {
     using namespace std::chrono;
 #if defined(_LIBCPP_HAS_NO_MONOTONIC_CLOCK)
     using Clock = system_clock;

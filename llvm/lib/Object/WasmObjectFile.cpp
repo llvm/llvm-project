@@ -637,9 +637,12 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
                                                 object_error::parse_failed);
         auto Offset = readVaruint64(Ctx);
         auto Size = readVaruint64(Ctx);
-        if (Offset + Size > DataSegments[Index].Data.Content.size())
-          return make_error<GenericBinaryError>("invalid data symbol offset",
-                                                object_error::parse_failed);
+        size_t SegmentSize = DataSegments[Index].Data.Content.size();
+        if (Offset > SegmentSize)
+          return make_error<GenericBinaryError>(
+              "invalid data symbol offset: `" + Info.Name + "` (offset: " +
+                  Twine(Offset) + " segment size: " + Twine(SegmentSize) + ")",
+              object_error::parse_failed);
         Info.DataRef = wasm::WasmDataReference{Index, Offset, Size};
       }
       break;

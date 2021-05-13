@@ -1134,10 +1134,12 @@ mlir::linalg::getReassociationIndicesForReshape(ShapedType sourceType,
       return llvm::None;
 
     currIndices.push_back(sourceDim++);
-    // If there are no dimensions in the target to match, then append the
-    // `currIndices` to the last element of the reassociationMap.
+    // If the reassociation is empty but the currIndices is not, this by
+    // definition is folding unit-dimensions with the result being scalar type.
+    // So only append the `currIndices` if reassociation map is not empty.
     if (targetDim == targetShape.size()) {
-      reassociationMap.back().append(currIndices.begin(), currIndices.end());
+      if (!reassociationMap.empty() && !currIndices.empty())
+        reassociationMap.back().append(currIndices.begin(), currIndices.end());
       // Break out of the loops. We should be done here.
       break;
     }

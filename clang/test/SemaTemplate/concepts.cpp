@@ -65,3 +65,64 @@ namespace P0857R0 {
   template<typename T> requires C<T> struct Y {};
   X<Y> xy; // expected-error {{no template named 'X'}}
 }
+
+namespace PR50306 {
+  template<typename T> concept NotInt = sizeof(T) != sizeof(int); // expected-note {{because}}
+  template<typename T> void f() {
+    [](NotInt auto) {}(T()); // expected-error {{no matching function}} expected-note {{constraints not satisfied}} expected-note {{because}}
+  }
+  template void f<char>(); // OK
+  template void f<int>(); // expected-note {{in instantiation of}}
+}
+
+namespace PackInTypeConstraint {
+  template<typename T, typename U> concept C = sizeof(T) == sizeof(int); // expected-note 3{{}}
+
+  template<typename ...T, C<T> U> void h1(); // expected-error {{type constraint contains unexpanded parameter pack 'T'}}
+  template<typename ...T, C<T> ...U> void h2();
+  template<typename ...T> void h3(C<T> auto); // expected-error {{type constraint contains unexpanded parameter pack 'T'}}
+  template<typename ...T> void h4(C<T> auto...);
+
+  template<typename ...T> void f1() {
+    []<C<T> U>(U u){}(T()); // expected-error {{unexpanded parameter pack 'T'}}
+  }
+  template<typename ...T> void f2() {
+    ([]<C<T> U>(U u){}(T()), ...); // expected-error {{no match}} expected-note 2{{}}
+  }
+  template void f2<int, int, int>(); // OK
+  template void f2<int, char, double>(); // expected-note {{in instantiation of}}
+  void f3() {
+    ([]<typename ...T, C<T> U>(U u){}(0), // expected-error {{type constraint contains unexpanded parameter pack 'T'}}
+     ...); // expected-error {{does not contain any unexpanded}}
+  }
+
+  template<typename ...T> void g1() {
+    [](C<T> auto){}(T()); // expected-error {{expression contains unexpanded parameter pack 'T'}}
+  }
+  template<typename ...T> void g2() {
+    ([](C<T> auto){}(T()), ...); // expected-error {{no matching function}} expected-note {{constraints not satisfied}} expected-note {{because}}
+  }
+  template void g2<int, int, int>(); // OK
+  template void g2<int, char, double>(); // expected-note {{in instantiation of}}
+  void g3() {
+    ([]<typename ...T>(C<T> auto){}(1), // expected-error {{type constraint contains unexpanded parameter pack 'T'}}
+     ...); // expected-error {{does not contain any unexpanded}}
+  }
+
+  template<typename ...T> void g4() {
+    []() -> C<T> auto{ return T(); }(); // expected-error {{expression contains unexpanded parameter pack 'T'}}
+  }
+  template<typename ...T> void g5() {
+    ([]() -> C<T> auto{ // expected-error-re {{deduced type {{.*}} does not satisfy}}
+     return T();
+     }(), ...);
+  }
+  template void g5<int, int, int>(); // OK
+  template void g5<int, char, double>(); // expected-note {{in instantiation of}}
+  void g6() {
+    ([]<typename ...T>() -> C<T> auto{ // expected-error {{declaration type contains unexpanded parameter pack 'T'}}
+     return T(); // expected-error {{expression contains unexpanded parameter pack 'T'}}
+     }(),
+     ...); // expected-error {{does not contain any unexpanded}}
+  }
+}
