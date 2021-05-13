@@ -544,6 +544,7 @@ void ScalarBitSetTraits<WasmYAML::SegmentFlags>::bitset(
     IO &IO, WasmYAML::SegmentFlags &Value) {
 #define BCase(X) IO.bitSetCase(Value, #X, wasm::WASM_SEG_FLAG_##X)
   BCase(STRINGS);
+  BCase(TLS);
 #undef BCase
 }
 

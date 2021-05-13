@@ -5,15 +5,26 @@
 tls_store:
   .functype tls_store (i32) -> ()
   # CHECK: global.get __tls_base
-  # CHECK-NEXT: i32.const tls@TLSREL
+  # CHECK-NEXT: i32.const tls1@TLSREL
   # CHECK-NEXT: i32.add
   # CHECK-NEXT: i32.store 0
   global.get __tls_base
-  i32.const tls@TLSREL
+  i32.const tls1@TLSREL
   i32.add
   i32.store 0
   end_function
 
+.section .tls.foo,"T",@
+# CHECK: .tls.foo,"T",@
+tls1:
+  .int32 42
+  .size tls1, 4
+
+.section custom_tls,"T",@
+# CHECK: custom_tls,"T",@
+tls2:
+  .int32 43
+  .size tls2, 4
 
 #      CHECK-OBJ:  - Type:            CODE
 # CHECK-OBJ-NEXT:    Relocations:
@@ -39,5 +50,22 @@ tls_store:
 # CHECK-OBJ-NEXT:        Flags:           [ UNDEFINED ]
 # CHECK-OBJ-NEXT:      - Index:           2
 # CHECK-OBJ-NEXT:        Kind:            DATA
-# CHECK-OBJ-NEXT:        Name:            tls
-# CHECK-OBJ-NEXT:        Flags:           [ UNDEFINED ]
+# CHECK-OBJ-NEXT:        Name:            tls1
+# CHECK-OBJ-NEXT:        Flags:           [ BINDING_LOCAL ]
+# CHECK-OBJ-NEXT:        Segment:         0
+# CHECK-OBJ-NEXT:        Size:            4
+# CHECK-OBJ-NEXT:      - Index:           3
+# CHECK-OBJ-NEXT:        Kind:            DATA
+# CHECK-OBJ-NEXT:        Name:            tls2
+# CHECK-OBJ-NEXT:        Flags:           [ BINDING_LOCAL ]
+# CHECK-OBJ-NEXT:        Segment:         1
+# CHECK-OBJ-NEXT:        Size:            4
+# CHECK-OBJ-NEXT:    SegmentInfo:
+# CHECK-OBJ-NEXT:      - Index:           0
+# CHECK-OBJ-NEXT:        Name:            .tls.foo
+# CHECK-OBJ-NEXT:        Alignment:       0
+# CHECK-OBJ-NEXT:        Flags:           [ TLS ]
+# CHECK-OBJ-NEXT:      - Index:           1
+# CHECK-OBJ-NEXT:        Name:            custom_tls
+# CHECK-OBJ-NEXT:        Alignment:       0
+# CHECK-OBJ-NEXT:        Flags:           [ TLS ]
