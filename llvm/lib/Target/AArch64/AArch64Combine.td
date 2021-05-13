@@ -176,13 +176,28 @@ def bitfield_extract_from_sext_inreg : GICombineRule<
 
 def form_bitfield_extract : GICombineGroup<[bitfield_extract_from_sext_inreg]>;
 
+def lower_vector_fcmp : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_FCMP):$root,
+    [{ return lowerVectorFCMP(*${root}, MRI, B); }]),
+  (apply [{}])>;
+
+def form_truncstore_matchdata : GIDefMatchData<"Register">;
+def form_truncstore : GICombineRule<
+  (defs root:$root, form_truncstore_matchdata:$matchinfo),
+  (match (wip_match_opcode G_STORE):$root,
+          [{ return matchFormTruncstore(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyFormTruncstore(*${root}, MRI, B, Observer, ${matchinfo}); }])
+>;
+
 // Post-legalization combines which should happen at all optimization levels.
 // (E.g. ones that facilitate matching for the selector) For example, matching
 // pseudos.
 def AArch64PostLegalizerLoweringHelper
     : GICombinerHelper<"AArch64GenPostLegalizerLoweringHelper",
                        [shuffle_vector_lowering, vashr_vlshr_imm,
-                        icmp_lowering, build_vector_lowering]> {
+                        icmp_lowering, build_vector_lowering,
+                        lower_vector_fcmp, form_truncstore]> {
   let DisableRuleOption = "aarch64postlegalizerlowering-disable-rule";
 }
 

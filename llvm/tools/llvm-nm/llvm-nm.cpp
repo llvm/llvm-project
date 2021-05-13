@@ -60,7 +60,7 @@ cl::opt<OutputFormatTy> OutputFormat(
                                    "just symbol names"}),
     cl::init(bsd), cl::cat(NMCat));
 cl::alias OutputFormat2("f", cl::desc("Alias for --format"),
-                        cl::aliasopt(OutputFormat));
+                        cl::aliasopt(OutputFormat), cl::NotHidden);
 
 cl::list<std::string> InputFilenames(cl::Positional, cl::desc("<input files>"),
                                      cl::ZeroOrMore);
@@ -69,31 +69,33 @@ cl::opt<bool> UndefinedOnly("undefined-only",
                             cl::desc("Show only undefined symbols"),
                             cl::cat(NMCat));
 cl::alias UndefinedOnly2("u", cl::desc("Alias for --undefined-only"),
-                         cl::aliasopt(UndefinedOnly), cl::Grouping);
+                         cl::aliasopt(UndefinedOnly), cl::Grouping,
+                         cl::NotHidden);
 
 cl::opt<bool> DynamicSyms("dynamic",
                           cl::desc("Display the dynamic symbols instead "
                                    "of normal symbols."),
                           cl::cat(NMCat));
 cl::alias DynamicSyms2("D", cl::desc("Alias for --dynamic"),
-                       cl::aliasopt(DynamicSyms), cl::Grouping);
+                       cl::aliasopt(DynamicSyms), cl::Grouping, cl::NotHidden);
 
 cl::opt<bool> DefinedOnly("defined-only", cl::desc("Show only defined symbols"),
                           cl::cat(NMCat));
 cl::alias DefinedOnly2("U", cl::desc("Alias for --defined-only"),
-                       cl::aliasopt(DefinedOnly), cl::Grouping);
+                       cl::aliasopt(DefinedOnly), cl::Grouping, cl::NotHidden);
 
 cl::opt<bool> ExternalOnly("extern-only",
                            cl::desc("Show only external symbols"),
                            cl::ZeroOrMore, cl::cat(NMCat));
 cl::alias ExternalOnly2("g", cl::desc("Alias for --extern-only"),
                         cl::aliasopt(ExternalOnly), cl::Grouping,
-                        cl::ZeroOrMore);
+                        cl::ZeroOrMore, cl::NotHidden);
 
 cl::opt<bool> NoWeakSymbols("no-weak", cl::desc("Show only non-weak symbols"),
                             cl::cat(NMCat));
 cl::alias NoWeakSymbols2("W", cl::desc("Alias for --no-weak"),
-                         cl::aliasopt(NoWeakSymbols), cl::Grouping);
+                         cl::aliasopt(NoWeakSymbols), cl::Grouping,
+                         cl::NotHidden);
 
 cl::opt<bool> BSDFormat("B", cl::desc("Alias for --format=bsd"), cl::Grouping,
                         cl::cat(NMCat));
@@ -102,7 +104,7 @@ cl::opt<bool> POSIXFormat("P", cl::desc("Alias for --format=posix"),
 cl::alias Portability("portability", cl::desc("Alias for --format=posix"),
                       cl::aliasopt(POSIXFormat), cl::NotHidden);
 cl::opt<bool> DarwinFormat("m", cl::desc("Alias for --format=darwin"),
-                           cl::Grouping, cl::cat(NMCat));
+                           cl::Grouping, cl::cat(NMCat), cl::NotHidden);
 
 static cl::list<std::string>
     ArchFlags("arch", cl::desc("architecture(s) from a Mach-O file to dump"),
@@ -115,9 +117,11 @@ cl::opt<bool> PrintFileName(
     cl::cat(NMCat));
 
 cl::alias PrintFileNameA("A", cl::desc("Alias for --print-file-name"),
-                         cl::aliasopt(PrintFileName), cl::Grouping);
+                         cl::aliasopt(PrintFileName), cl::Grouping,
+                         cl::NotHidden);
 cl::alias PrintFileNameo("o", cl::desc("Alias for --print-file-name"),
-                         cl::aliasopt(PrintFileName), cl::Grouping);
+                         cl::aliasopt(PrintFileName), cl::Grouping,
+                         cl::NotHidden);
 
 cl::opt<bool> Quiet("quiet", cl::desc("Suppress 'no symbols' diagnostic"),
                     cl::cat(NMCat));
@@ -126,24 +130,24 @@ cl::opt<bool> DebugSyms("debug-syms",
                         cl::desc("Show all symbols, even debugger only"),
                         cl::cat(NMCat));
 cl::alias DebugSymsa("a", cl::desc("Alias for --debug-syms"),
-                     cl::aliasopt(DebugSyms), cl::Grouping);
+                     cl::aliasopt(DebugSyms), cl::Grouping, cl::NotHidden);
 
 cl::opt<bool> NumericSort("numeric-sort", cl::desc("Sort symbols by address"),
                           cl::cat(NMCat));
 cl::alias NumericSortn("n", cl::desc("Alias for --numeric-sort"),
-                       cl::aliasopt(NumericSort), cl::Grouping);
+                       cl::aliasopt(NumericSort), cl::Grouping, cl::NotHidden);
 cl::alias NumericSortv("v", cl::desc("Alias for --numeric-sort"),
-                       cl::aliasopt(NumericSort), cl::Grouping);
+                       cl::aliasopt(NumericSort), cl::Grouping, cl::NotHidden);
 
 cl::opt<bool> NoSort("no-sort", cl::desc("Show symbols in order encountered"),
                      cl::cat(NMCat));
 cl::alias NoSortp("p", cl::desc("Alias for --no-sort"), cl::aliasopt(NoSort),
-                  cl::Grouping);
+                  cl::Grouping, cl::NotHidden);
 
 cl::opt<bool> Demangle("demangle", cl::ZeroOrMore,
                        cl::desc("Demangle C++ symbol names"), cl::cat(NMCat));
 cl::alias DemangleC("C", cl::desc("Alias for --demangle"),
-                    cl::aliasopt(Demangle), cl::Grouping);
+                    cl::aliasopt(Demangle), cl::Grouping, cl::NotHidden);
 cl::opt<bool> NoDemangle("no-demangle", cl::init(false), cl::ZeroOrMore,
                          cl::desc("Don't demangle symbol names"),
                          cl::cat(NMCat));
@@ -151,13 +155,13 @@ cl::opt<bool> NoDemangle("no-demangle", cl::init(false), cl::ZeroOrMore,
 cl::opt<bool> ReverseSort("reverse-sort", cl::desc("Sort in reverse order"),
                           cl::cat(NMCat));
 cl::alias ReverseSortr("r", cl::desc("Alias for --reverse-sort"),
-                       cl::aliasopt(ReverseSort), cl::Grouping);
+                       cl::aliasopt(ReverseSort), cl::Grouping, cl::NotHidden);
 
 cl::opt<bool> PrintSize("print-size",
                         cl::desc("Show symbol size as well as address"),
                         cl::cat(NMCat));
 cl::alias PrintSizeS("S", cl::desc("Alias for --print-size"),
-                     cl::aliasopt(PrintSize), cl::Grouping);
+                     cl::aliasopt(PrintSize), cl::Grouping, cl::NotHidden);
 bool MachOPrintSizeWarning = false;
 
 cl::opt<bool> SizeSort("size-sort", cl::desc("Sort symbols by size"),
@@ -165,12 +169,12 @@ cl::opt<bool> SizeSort("size-sort", cl::desc("Sort symbols by size"),
 
 cl::opt<bool> WithoutAliases("without-aliases", cl::Hidden,
                              cl::desc("Exclude aliases from output"),
-                             cl::cat(NMCat));
+                             cl::cat(NMCat), cl::NotHidden);
 
 cl::opt<bool> ArchiveMap("print-armap", cl::desc("Print the archive map"),
                          cl::cat(NMCat));
 cl::alias ArchiveMaps("M", cl::desc("Alias for --print-armap"),
-                      cl::aliasopt(ArchiveMap), cl::Grouping);
+                      cl::aliasopt(ArchiveMap), cl::Grouping, cl::NotHidden);
 
 enum Radix { d, o, x };
 cl::opt<Radix>
@@ -179,13 +183,14 @@ cl::opt<Radix>
                             clEnumVal(x, "hexadecimal")),
                  cl::init(x), cl::cat(NMCat));
 cl::alias RadixAlias("t", cl::desc("Alias for --radix"),
-                     cl::aliasopt(AddressRadix));
+                     cl::aliasopt(AddressRadix), cl::NotHidden);
 
 cl::opt<bool> JustSymbolName("just-symbol-name",
                              cl::desc("Alias for --format=just-symbols"),
-                             cl::cat(NMCat));
+                             cl::cat(NMCat), cl::NotHidden);
 cl::alias JustSymbolNames("j", cl::desc("Alias for --format-just-symbols"),
-                          cl::aliasopt(JustSymbolName), cl::Grouping);
+                          cl::aliasopt(JustSymbolName), cl::Grouping,
+                          cl::NotHidden);
 
 cl::opt<bool>
     SpecialSyms("special-syms",

@@ -127,7 +127,7 @@ x86_64:-[Foo doFoo:andBar:]
 _main
 
 #--- ord-arch-nomatch
-ppc:-[Foo doFoo:andBar:]
+arm64:-[Foo doFoo:andBar:]
 _main
 -[Foo doFoo:andBar:]
 

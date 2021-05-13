@@ -49,6 +49,12 @@ typedef enum CUctx_flags_enum {
   CU_CTX_SCHED_MASK = 0x07,
 } CUctx_flags;
 
+typedef enum CUmemAttach_flags_enum {
+  CU_MEM_ATTACH_GLOBAL = 0x1,
+  CU_MEM_ATTACH_HOST = 0x2,
+  CU_MEM_ATTACH_SINGLE = 0x4,
+} CUmemAttach_flags;
+
 CUresult cuCtxGetDevice(CUdevice *);
 CUresult cuDeviceGet(CUdevice *, int);
 CUresult cuDeviceGetAttribute(int *, CUdevice_attribute, CUdevice);
@@ -62,14 +68,18 @@ CUresult cuLaunchKernel(CUfunction, unsigned, unsigned, unsigned, unsigned,
                         void **);
 
 CUresult cuMemAlloc(CUdeviceptr *, size_t);
-CUresult cuMemcpyDtoDAsync(CUdeviceptr, CUdeviceptr, size_t, CUstream);
+CUresult cuMemAllocHost(void **, size_t);
+CUresult cuMemAllocManaged(CUdeviceptr *, size_t, unsigned int);
 
+CUresult cuMemcpyDtoDAsync(CUdeviceptr, CUdeviceptr, size_t, CUstream);
 CUresult cuMemcpyDtoH(void *, CUdeviceptr, size_t);
 CUresult cuMemcpyDtoHAsync(void *, CUdeviceptr, size_t, CUstream);
 CUresult cuMemcpyHtoD(CUdeviceptr, const void *, size_t);
 CUresult cuMemcpyHtoDAsync(CUdeviceptr, const void *, size_t, CUstream);
 
 CUresult cuMemFree(CUdeviceptr);
+CUresult cuMemFreeHost(void *);
+
 CUresult cuModuleGetFunction(CUfunction *, CUmodule, const char *);
 CUresult cuModuleGetGlobal(CUdeviceptr *, size_t *, CUmodule, const char *);
 

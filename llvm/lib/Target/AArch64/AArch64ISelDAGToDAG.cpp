@@ -337,6 +337,8 @@ private:
   bool SelectSVEArithImm(SDValue N, MVT VT, SDValue &Imm);
   bool SelectSVERegRegAddrMode(SDValue N, unsigned Scale, SDValue &Base,
                                SDValue &Offset);
+
+  bool SelectAllActivePredicate(SDValue N);
 };
 } // end anonymous namespace
 
@@ -5183,4 +5185,11 @@ bool AArch64DAGToDAGISel::SelectSVERegRegAddrMode(SDValue N, unsigned Scale,
     }
 
   return false;
+}
+
+bool AArch64DAGToDAGISel::SelectAllActivePredicate(SDValue N) {
+  const AArch64TargetLowering *TLI =
+      static_cast<const AArch64TargetLowering *>(getTargetLowering());
+
+  return TLI->isAllActivePredicate(N);
 }

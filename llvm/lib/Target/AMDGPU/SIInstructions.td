@@ -2280,8 +2280,12 @@ def : GCNPat <
   (S_PACK_LL_B32_B16 SReg_32:$src0, SReg_32:$src1)
 >;
 
+def : GCNPat <
+  (v2f16 (is_canonicalized<build_vector> (f16 (VOP3Mods (f16 VGPR_32:$src0), i32:$src0_mods)),
+                                         (f16 (VOP3Mods (f16 VGPR_32:$src1), i32:$src1_mods)))),
+  (V_PACK_B32_F16_e64 $src0_mods, VGPR_32:$src0, $src1_mods, VGPR_32:$src1)
+>;
 } // End SubtargetPredicate = HasVOP3PInsts
-
 
 def : GCNPat <
   (v2f16 (scalar_to_vector f16:$src0)),

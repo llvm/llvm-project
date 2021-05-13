@@ -611,26 +611,27 @@ namespace llvm {
                               unsigned UniqueID = GenericSectionID);
 
     MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K) {
-      return getWasmSection(Section, K, nullptr);
+      return getWasmSection(Section, K, 0, nullptr);
     }
 
     MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
-                                  const char *BeginSymName) {
-      return getWasmSection(Section, K, "", ~0, BeginSymName);
+                                  unsigned Flags, const char *BeginSymName) {
+      return getWasmSection(Section, K, Flags, "", ~0, BeginSymName);
     }
 
     MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
-                                  const Twine &Group, unsigned UniqueID) {
-      return getWasmSection(Section, K, Group, UniqueID, nullptr);
+                                  unsigned Flags, const Twine &Group,
+                                  unsigned UniqueID) {
+      return getWasmSection(Section, K, Flags, Group, UniqueID, nullptr);
     }
 
     MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
-                                  const Twine &Group, unsigned UniqueID,
-                                  const char *BeginSymName);
+                                  unsigned Flags, const Twine &Group,
+                                  unsigned UniqueID, const char *BeginSymName);
 
     MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
-                                  const MCSymbolWasm *Group, unsigned UniqueID,
-                                  const char *BeginSymName);
+                                  unsigned Flags, const MCSymbolWasm *Group,
+                                  unsigned UniqueID, const char *BeginSymName);
 
     MCSectionXCOFF *getXCOFFSection(
         StringRef Section, SectionKind K,

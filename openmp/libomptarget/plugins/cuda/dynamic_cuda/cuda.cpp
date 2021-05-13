@@ -32,14 +32,17 @@ DLWRAP(cuGetErrorString, 2);
 DLWRAP(cuLaunchKernel, 11);
 
 DLWRAP(cuMemAlloc, 2);
-DLWRAP(cuMemcpyDtoDAsync, 4);
+DLWRAP(cuMemAllocHost, 2);
+DLWRAP(cuMemAllocManaged, 3);
 
+DLWRAP(cuMemcpyDtoDAsync, 4);
 DLWRAP(cuMemcpyDtoH, 3);
 DLWRAP(cuMemcpyDtoHAsync, 4);
 DLWRAP(cuMemcpyHtoD, 3);
 DLWRAP(cuMemcpyHtoDAsync, 4);
 
 DLWRAP(cuMemFree, 1);
+DLWRAP(cuMemFreeHost, 1);
 DLWRAP(cuModuleGetFunction, 3);
 DLWRAP(cuModuleGetGlobal, 4);
 

@@ -10,6 +10,8 @@ def help : Flag<["-", "--"], "help">,
 def help_hidden : Flag<["--"], "help-hidden">,
     HelpText<"Display help for hidden options">,
     Group<grp_lld>;
+def verbose : Flag<["--"], "verbose">,
+    Group<grp_lld>;
 def error_limit_eq : Joined<["--"], "error-limit=">,
     HelpText<"Maximum number of errors to print before exiting (default: 20)">,
     Group<grp_lld>;
@@ -778,7 +780,6 @@ def segalign : Separate<["-"], "segalign">,
 def sectalign : MultiArg<["-"], "sectalign", 3>,
     MetaVarName<"<segment> <section> <boundary>">,
     HelpText<"Align <section> within <segment> to hex power-of-2 <boundary>">,
-    Flags<[HelpHidden]>,
     Group<grp_rare>;
 def stack_addr : Separate<["-"], "stack_addr">,
     MetaVarName<"<address>">,

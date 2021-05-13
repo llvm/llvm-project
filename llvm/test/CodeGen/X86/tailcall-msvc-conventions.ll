@@ -181,7 +181,7 @@ define x86_stdcallcc void @stdcall_thiscall_tail(i32 %a, i32 %b) {
 
 declare x86_fastcallcc void @fastcall2(i32 inreg %a, i32 inreg %b)
 define void @cdecl_fastcall_tail(i32 %a, i32 %b) {
-  tail call x86_fastcallcc void @fastcall2(i32 %a, i32 %b)
+  tail call x86_fastcallcc void @fastcall2(i32 inreg %a, i32 inreg %b)
   ret void
 }
 ; fastcall2 won't pop anything.

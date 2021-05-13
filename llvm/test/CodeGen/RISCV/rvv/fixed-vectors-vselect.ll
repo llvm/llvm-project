@@ -8,7 +8,7 @@ define void @vselect_vv_v8i32(<8 x i32>* %a, <8 x i32>* %b, <8 x i1>* %cc, <8 x 
 ; CHECK-NEXT:    vsetivli a4, 8, e32,m2,ta,mu
 ; CHECK-NEXT:    vle32.v v26, (a0)
 ; CHECK-NEXT:    vle32.v v28, (a1)
-; CHECK-NEXT:    vsetivli a0, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vle1.v v0, (a2)
 ; CHECK-NEXT:    vsetivli a0, 8, e32,m2,ta,mu
 ; CHECK-NEXT:    vmerge.vvm v26, v28, v26, v0
@@ -27,7 +27,7 @@ define void @vselect_vx_v8i32(i32 %a, <8 x i32>* %b, <8 x i1>* %cc, <8 x i32>* %
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli a4, 8, e32,m2,ta,mu
 ; CHECK-NEXT:    vle32.v v26, (a1)
-; CHECK-NEXT:    vsetivli a1, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vle1.v v0, (a2)
 ; CHECK-NEXT:    vsetivli a1, 8, e32,m2,ta,mu
 ; CHECK-NEXT:    vmerge.vxm v26, v26, a0, v0
@@ -47,7 +47,7 @@ define void @vselect_vi_v8i32(<8 x i32>* %b, <8 x i1>* %cc, <8 x i32>* %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli a3, 8, e32,m2,ta,mu
 ; CHECK-NEXT:    vle32.v v26, (a0)
-; CHECK-NEXT:    vsetivli a0, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vle1.v v0, (a1)
 ; CHECK-NEXT:    vsetivli a0, 8, e32,m2,ta,mu
 ; CHECK-NEXT:    vmerge.vim v26, v26, -1, v0
@@ -68,7 +68,7 @@ define void @vselect_vv_v8f32(<8 x float>* %a, <8 x float>* %b, <8 x i1>* %cc, <
 ; CHECK-NEXT:    vsetivli a4, 8, e32,m2,ta,mu
 ; CHECK-NEXT:    vle32.v v26, (a0)
 ; CHECK-NEXT:    vle32.v v28, (a1)
-; CHECK-NEXT:    vsetivli a0, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vle1.v v0, (a2)
 ; CHECK-NEXT:    vsetivli a0, 8, e32,m2,ta,mu
 ; CHECK-NEXT:    vmerge.vvm v26, v28, v26, v0
@@ -87,7 +87,7 @@ define void @vselect_vx_v8f32(float %a, <8 x float>* %b, <8 x i1>* %cc, <8 x flo
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli a3, 8, e32,m2,ta,mu
 ; CHECK-NEXT:    vle32.v v26, (a0)
-; CHECK-NEXT:    vsetivli a0, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vle1.v v0, (a1)
 ; CHECK-NEXT:    vsetivli a0, 8, e32,m2,ta,mu
 ; CHECK-NEXT:    vfmerge.vfm v26, v26, fa0, v0
@@ -107,7 +107,7 @@ define void @vselect_vfpzero_v8f32(<8 x float>* %b, <8 x i1>* %cc, <8 x float>* 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli a3, 8, e32,m2,ta,mu
 ; CHECK-NEXT:    vle32.v v26, (a0)
-; CHECK-NEXT:    vsetivli a0, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vle1.v v0, (a1)
 ; CHECK-NEXT:    vsetivli a0, 8, e32,m2,ta,mu
 ; CHECK-NEXT:    vmerge.vim v26, v26, 0, v0

@@ -143,7 +143,7 @@ void Abort() {
   if (GetHandleSignalMode(SIGABRT) != kHandleSignalNo) {
     struct sigaction sigact;
     internal_memset(&sigact, 0, sizeof(sigact));
-    sigact.sa_sigaction = (sa_sigaction_t)SIG_DFL;
+    sigact.sa_handler = SIG_DFL;
     internal_sigaction(SIGABRT, &sigact, nullptr);
   }
 #endif

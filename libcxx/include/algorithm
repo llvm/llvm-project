@@ -817,8 +817,8 @@ struct __debug_less
     template <class _LHS, class _RHS>
     _LIBCPP_CONSTEXPR_AFTER_CXX17
     inline _LIBCPP_INLINE_VISIBILITY
-    decltype((void)_VSTD::declval<_Compare&>()(
-        _VSTD::declval<_LHS &>(), _VSTD::declval<_RHS &>()))
+    decltype((void)declval<_Compare&>()(
+        declval<_LHS &>(), declval<_RHS &>()))
     __do_compare_assert(int, _LHS & __l, _RHS & __r) {
         _LIBCPP_ASSERT(!__comp_(__l, __r),
             "Comparator does not induce a strict weak ordering");
@@ -1678,7 +1678,7 @@ struct __unwrap_iter_impl<_Iter, true> {
 
 template<class _Iter, class _Impl = __unwrap_iter_impl<_Iter> >
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-decltype(_Impl::__apply(_VSTD::declval<_Iter>()))
+decltype(_Impl::__apply(declval<_Iter>()))
 __unwrap_iter(_Iter __i) _NOEXCEPT
 {
     return _Impl::__apply(__i);
@@ -2483,8 +2483,8 @@ _LIBCPP_CONSTEXPR_AFTER_CXX11 _ForwardIterator
 __rotate(_ForwardIterator __first, _ForwardIterator __middle, _ForwardIterator __last,
          _VSTD::forward_iterator_tag)
 {
-    typedef typename _VSTD::iterator_traits<_ForwardIterator>::value_type value_type;
-    if (_VSTD::is_trivially_move_assignable<value_type>::value)
+    typedef typename iterator_traits<_ForwardIterator>::value_type value_type;
+    if (is_trivially_move_assignable<value_type>::value)
     {
         if (_VSTD::next(__first) == __middle)
             return _VSTD::__rotate_left(__first, __last);
@@ -2496,10 +2496,10 @@ template <class _BidirectionalIterator>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR_AFTER_CXX11 _BidirectionalIterator
 __rotate(_BidirectionalIterator __first, _BidirectionalIterator __middle, _BidirectionalIterator __last,
-         _VSTD::bidirectional_iterator_tag)
+         bidirectional_iterator_tag)
 {
-    typedef typename _VSTD::iterator_traits<_BidirectionalIterator>::value_type value_type;
-    if (_VSTD::is_trivially_move_assignable<value_type>::value)
+    typedef typename iterator_traits<_BidirectionalIterator>::value_type value_type;
+    if (is_trivially_move_assignable<value_type>::value)
     {
         if (_VSTD::next(__first) == __middle)
             return _VSTD::__rotate_left(__first, __last);
@@ -2513,10 +2513,10 @@ template <class _RandomAccessIterator>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR_AFTER_CXX11 _RandomAccessIterator
 __rotate(_RandomAccessIterator __first, _RandomAccessIterator __middle, _RandomAccessIterator __last,
-         _VSTD::random_access_iterator_tag)
+         random_access_iterator_tag)
 {
-    typedef typename _VSTD::iterator_traits<_RandomAccessIterator>::value_type value_type;
-    if (_VSTD::is_trivially_move_assignable<value_type>::value)
+    typedef typename iterator_traits<_RandomAccessIterator>::value_type value_type;
+    if (is_trivially_move_assignable<value_type>::value)
     {
         if (_VSTD::next(__first) == __middle)
             return _VSTD::__rotate_left(__first, __last);
@@ -2537,7 +2537,7 @@ rotate(_ForwardIterator __first, _ForwardIterator __middle, _ForwardIterator __l
     if (__middle == __last)
         return __first;
     return _VSTD::__rotate(__first, __middle, __last,
-                           typename _VSTD::iterator_traits<_ForwardIterator>::iterator_category());
+                           typename iterator_traits<_ForwardIterator>::iterator_category());
 }
 
 // rotate_copy
@@ -3195,7 +3195,7 @@ _SampleIterator __sample(_PopulationIterator __first,
     __output_iter[__k] = *__first;
   _Distance __sz = __k;
   for (; __first != __last; ++__first, (void) ++__k) {
-    _Distance __r = _VSTD::uniform_int_distribution<_Distance>(0, __k)(__g);
+    _Distance __r = uniform_int_distribution<_Distance>(0, __k)(__g);
     if (__r < __sz)
       __output_iter[__r] = *__first;
   }
@@ -3212,8 +3212,7 @@ _SampleIterator __sample(_PopulationIterator __first,
                          forward_iterator_tag) {
   _Distance __unsampled_sz = _VSTD::distance(__first, __last);
   for (__n = _VSTD::min(__n, __unsampled_sz); __n != 0; ++__first) {
-    _Distance __r =
-        _VSTD::uniform_int_distribution<_Distance>(0, --__unsampled_sz)(__g);
+    _Distance __r = uniform_int_distribution<_Distance>(0, --__unsampled_sz)(__g);
     if (__r < __n) {
       *__output_iter++ = *__first;
       --__n;
@@ -4914,7 +4913,7 @@ template <class _RandomAccessIterator, class _Compare>
 _LIBCPP_NODISCARD_EXT _LIBCPP_CONSTEXPR_AFTER_CXX17 _RandomAccessIterator
 is_heap_until(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
 {
-    typedef typename _VSTD::iterator_traits<_RandomAccessIterator>::difference_type difference_type;
+    typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
     difference_type __len = __last - __first;
     difference_type __p = 0;
     difference_type __c = 1;

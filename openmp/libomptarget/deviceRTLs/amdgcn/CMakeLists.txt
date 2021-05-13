@@ -6,9 +6,17 @@
 #
 ##===----------------------------------------------------------------------===##
 #
-# Build the AMDGCN Device RTL if the ROCM tools are available
+# Build the AMDGCN Device RTL bitcode library using clang -ffreestanding
 #
 ##===----------------------------------------------------------------------===##
+
+set(LIBOMPTARGET_BUILD_AMDGCN_BCLIB TRUE CACHE BOOL
+  "Can be set to false to disable building this library.")
+
+if (NOT LIBOMPTARGET_BUILD_AMDGCN_BCLIB)
+  libomptarget_say("Not building AMDGCN device RTL: Disabled by LIBOMPTARGET_BUILD_AMDGCN_BCLIB")
+  return()
+endif()
 
 # Copied from nvptx CMakeLists
 if(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "x86_64")

@@ -13,6 +13,7 @@
 #define FORTRAN_EVALUATE_SHAPE_H_
 
 #include "expression.h"
+#include "fold.h"
 #include "traverse.h"
 #include "variable.h"
 #include "flang/Common/indirection.h"
@@ -180,6 +181,11 @@ private:
     for (const auto &value : values) {
       if (MaybeExtentExpr n{GetArrayConstructorValueExtent(value)}) {
         result = std::move(result) + std::move(*n);
+        if (context_) {
+          // Fold during expression creation to avoid creating an expression so
+          // large we can't evalute it without overflowing the stack.
+          result = Fold(*context_, std::move(result));
+        }
       } else {
         return std::nullopt;
       }

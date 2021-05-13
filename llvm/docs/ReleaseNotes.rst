@@ -61,12 +61,18 @@ Changes to the LLVM IR
 * The ``inalloca`` attribute now has a mandatory type field, similar
   to ``byval`` and ``sret``.
 
-
 Changes to building LLVM
 ------------------------
 
 Changes to TableGen
 -------------------
+
+Changes to Backend Code Generation
+----------------------------------
+
+* When lowering calls, only ABI attributes on the call itself are checked, not
+  the caller. Frontends need to make sure to properly set ABI attributes on
+  calls (and always should have).
 
 Changes to the ARM Backend
 --------------------------

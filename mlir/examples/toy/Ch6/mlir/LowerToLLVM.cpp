@@ -139,7 +139,8 @@ private:
           IntegerType::get(builder.getContext(), 8), value.size());
       global = builder.create<LLVM::GlobalOp>(loc, type, /*isConstant=*/true,
                                               LLVM::Linkage::Internal, name,
-                                              builder.getStringAttr(value));
+                                              builder.getStringAttr(value),
+                                              /*alignment=*/0);
     }
 
     // Get the pointer to the first character in the global string.

@@ -478,7 +478,7 @@ namespace llvm {
 
     /// Returns true if the given vector is a power of 2.
     bool isPow2VectorType() const {
-      unsigned NElts = getVectorNumElements();
+      unsigned NElts = getVectorMinNumElements();
       return !(NElts & (NElts - 1));
     }
 
@@ -488,9 +488,10 @@ namespace llvm {
       if (isPow2VectorType())
         return *this;
 
-      unsigned NElts = getVectorNumElements();
-      unsigned Pow2NElts = 1 << Log2_32_Ceil(NElts);
-      return MVT::getVectorVT(getVectorElementType(), Pow2NElts);
+      ElementCount NElts = getVectorElementCount();
+      unsigned NewMinCount = 1 << Log2_32_Ceil(NElts.getKnownMinValue());
+      NElts = ElementCount::get(NewMinCount, NElts.isScalable());
+      return MVT::getVectorVT(getVectorElementType(), NElts);
     }
 
     /// If this is a vector, return the element type, otherwise return this.
@@ -651,7 +652,8 @@ namespace llvm {
       }
     }
 
-    unsigned getVectorNumElements() const {
+    /// Given a vector type, return the minimum number of elements it contains.
+    unsigned getVectorMinNumElements() const {
       switch (SimpleTy) {
       default:
         llvm_unreachable("Not a vector MVT!");
@@ -805,12 +807,12 @@ namespace llvm {
     }
 
     ElementCount getVectorElementCount() const {
-      return ElementCount::get(getVectorNumElements(), isScalableVector());
+      return ElementCount::get(getVectorMinNumElements(), isScalableVector());
     }
 
-    /// Given a vector type, return the minimum number of elements it contains.
-    unsigned getVectorMinNumElements() const {
-      return getVectorElementCount().getKnownMinValue();
+    unsigned getVectorNumElements() const {
+      // TODO: Check that this isn't a scalable vector.
+      return getVectorMinNumElements();
     }
 
     /// Returns the size of the specified MVT in bits.

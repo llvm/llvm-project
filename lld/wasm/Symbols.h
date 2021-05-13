@@ -110,6 +110,7 @@ public:
 
   WasmSymbolType getWasmType() const;
   bool isExported() const;
+  bool isExportedExplicit() const;
 
   // Indicates that the symbol is used in an __attribute__((used)) directive
   // or similar.
@@ -289,7 +290,7 @@ public:
   static bool classof(const Symbol *s) { return s->kind() == DefinedDataKind; }
 
   // Returns the output virtual address of a defined data symbol.
-  uint64_t getVA(uint64_t addend = 0) const;
+  uint64_t getVA() const;
   void setVA(uint64_t va);
 
   // Returns the offset of a defined data symbol within its OutputSegment.

@@ -202,13 +202,15 @@ public:
 
   static Expected<std::vector<std::unique_ptr<BinaryCoverageReader>>>
   create(MemoryBufferRef ObjectBuffer, StringRef Arch,
-         SmallVectorImpl<std::unique_ptr<MemoryBuffer>> &ObjectFileBuffers);
+         SmallVectorImpl<std::unique_ptr<MemoryBuffer>> &ObjectFileBuffers,
+         StringRef CompilationDir = "");
 
   static Expected<std::unique_ptr<BinaryCoverageReader>>
   createCoverageReaderFromBuffer(StringRef Coverage, std::string &&FuncRecords,
                                  InstrProfSymtab &&ProfileNames,
                                  uint8_t BytesInAddress,
-                                 support::endianness Endian);
+                                 support::endianness Endian,
+                                 StringRef CompilationDir = "");
 
   Error readNextRecord(CoverageMappingRecord &Record) override;
 };
@@ -216,14 +218,17 @@ public:
 /// Reader for the raw coverage filenames.
 class RawCoverageFilenamesReader : public RawCoverageReader {
   std::vector<std::string> &Filenames;
+  StringRef CompilationDir;
 
   // Read an uncompressed sequence of filenames.
   Error readUncompressed(CovMapVersion Version, uint64_t NumFilenames);
 
 public:
   RawCoverageFilenamesReader(StringRef Data,
-                             std::vector<std::string> &Filenames)
-      : RawCoverageReader(Data), Filenames(Filenames) {}
+                             std::vector<std::string> &Filenames,
+                             StringRef CompilationDir = "")
+      : RawCoverageReader(Data), Filenames(Filenames),
+        CompilationDir(CompilationDir) {}
   RawCoverageFilenamesReader(const RawCoverageFilenamesReader &) = delete;
   RawCoverageFilenamesReader &
   operator=(const RawCoverageFilenamesReader &) = delete;

@@ -1962,11 +1962,11 @@ union __policy_storage
 // True if _Fun can safely be held in __policy_storage.__small.
 template <typename _Fun>
 struct __use_small_storage
-    : public _VSTD::integral_constant<
+    : public integral_constant<
           bool, sizeof(_Fun) <= sizeof(__policy_storage) &&
                     _LIBCPP_ALIGNOF(_Fun) <= _LIBCPP_ALIGNOF(__policy_storage) &&
-                    _VSTD::is_trivially_copy_constructible<_Fun>::value &&
-                    _VSTD::is_trivially_destructible<_Fun>::value> {};
+                    is_trivially_copy_constructible<_Fun>::value &&
+                    is_trivially_destructible<_Fun>::value> {};
 
 // Policy contains information about how to copy, destroy, and move the
 // underlying functor. You can think of it as a vtable of sorts.
@@ -2050,7 +2050,7 @@ struct __policy
 // faster for types that can be passed in registers.
 template <typename _Tp>
 using __fast_forward =
-    typename _VSTD::conditional<_VSTD::is_scalar<_Tp>::value, _Tp, _Tp&&>::type;
+    typename conditional<is_scalar<_Tp>::value, _Tp, _Tp&&>::type;
 
 // __policy_invoker calls an instance of __alloc_func held in __policy_storage.
 
@@ -3190,8 +3190,8 @@ public:
     operator () (_ForwardIterator2 __f, _ForwardIterator2 __l) const
     {
         return _VSTD::__search(__f, __l, __first_, __last_, __pred_,
-            typename _VSTD::iterator_traits<_ForwardIterator>::iterator_category(),
-            typename _VSTD::iterator_traits<_ForwardIterator2>::iterator_category());
+            typename iterator_traits<_ForwardIterator>::iterator_category(),
+            typename iterator_traits<_ForwardIterator2>::iterator_category());
     }
 
 private:

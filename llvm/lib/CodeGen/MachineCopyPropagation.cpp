@@ -294,7 +294,7 @@ private:
   SmallSetVector<MachineInstr *, 8> MaybeDeadCopies;
 
   /// Multimap tracking debug users in current BB
-  DenseMap<MachineInstr*, SmallVector<MachineInstr*, 2>> CopyDbgUsers;
+  DenseMap<MachineInstr *, SmallSet<MachineInstr *, 2>> CopyDbgUsers;
 
   CopyTracker Tracker;
 
@@ -321,7 +321,7 @@ void MachineCopyPropagation::ReadRegister(MCRegister Reg, MachineInstr &Reader,
         LLVM_DEBUG(dbgs() << "MCP: Copy is used - not dead: "; Copy->dump());
         MaybeDeadCopies.remove(Copy);
       } else {
-        CopyDbgUsers[Copy].push_back(&Reader);
+        CopyDbgUsers[Copy].insert(&Reader);
       }
     }
   }
@@ -734,7 +734,11 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
       // Update matching debug values, if any.
       assert(MaybeDead->isCopy());
       Register SrcReg = MaybeDead->getOperand(1).getReg();
-      MRI->updateDbgUsersToReg(SrcReg, CopyDbgUsers[MaybeDead]);
+      Register DestReg = MaybeDead->getOperand(0).getReg();
+      SmallVector<MachineInstr *> MaybeDeadDbgUsers(
+          CopyDbgUsers[MaybeDead].begin(), CopyDbgUsers[MaybeDead].end());
+      MRI->updateDbgUsersToReg(DestReg.asMCReg(), SrcReg.asMCReg(),
+                               MaybeDeadDbgUsers);
 
       MaybeDead->eraseFromParent();
       Changed = true;

@@ -16,7 +16,7 @@ class GCNPredicateControl : PredicateControl {
   Predicate VIAssemblerPredicate = isGFX8GFX9;
 }
 
-// Execpt for the NONE field, this must be kept in sync with the
+// Except for the NONE field, this must be kept in sync with the
 // SIEncodingFamily enum in AMDGPUInstrInfo.cpp
 def SIEncodingFamily {
   int NONE = -1;

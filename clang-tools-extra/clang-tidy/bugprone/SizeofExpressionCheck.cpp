@@ -90,11 +90,8 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
   const auto IntegerCallExpr = ignoringParenImpCasts(
       callExpr(anyOf(hasType(isInteger()), hasType(enumType())),
                unless(isInTemplateInstantiation())));
-  const auto SizeOfExpr = expr(anyOf(
-      sizeOfExpr(
-          has(hasUnqualifiedDesugaredType(type().bind("sizeof-arg-type")))),
-      sizeOfExpr(has(expr(hasType(
-          hasUnqualifiedDesugaredType(type().bind("sizeof-arg-type"))))))));
+  const auto SizeOfExpr = sizeOfExpr(hasArgumentOfType(
+      hasUnqualifiedDesugaredType(type().bind("sizeof-arg-type"))));
   const auto SizeOfZero =
       sizeOfExpr(has(ignoringParenImpCasts(integerLiteral(equals(0)))));
 
@@ -184,9 +181,8 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
     Finder->addMatcher(
         binaryOperator(matchers::isRelationalOperator(),
                        hasOperands(ignoringParenImpCasts(SizeOfExpr),
-                                   ignoringParenImpCasts(anyOf(
-                                       integerLiteral(equals(0)),
-                                       integerLiteral(isBiggerThan(0x80000))))))
+                                   ignoringParenImpCasts(integerLiteral(anyOf(
+                                       equals(0), isBiggerThan(0x80000))))))
             .bind("sizeof-compare-constant"),
         this);
   }
@@ -207,18 +203,15 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
   const auto ElemType =
       arrayType(hasElementType(recordType().bind("elem-type")));
   const auto ElemPtrType = pointerType(pointee(type().bind("elem-ptr-type")));
-  const auto NumType = hasCanonicalType(
-      type(anyOf(ElemType, ElemPtrType, type())).bind("num-type"));
-  const auto DenomType = hasCanonicalType(type().bind("denom-type"));
 
   Finder->addMatcher(
-      binaryOperator(hasOperatorName("/"),
-                     hasLHS(expr(ignoringParenImpCasts(
-                         anyOf(sizeOfExpr(has(NumType)),
-                               sizeOfExpr(has(expr(hasType(NumType)))))))),
-                     hasRHS(expr(ignoringParenImpCasts(
-                         anyOf(sizeOfExpr(has(DenomType)),
-                               sizeOfExpr(has(expr(hasType(DenomType)))))))))
+      binaryOperator(
+          hasOperatorName("/"),
+          hasLHS(ignoringParenImpCasts(sizeOfExpr(hasArgumentOfType(
+              hasCanonicalType(type(anyOf(ElemType, ElemPtrType, type()))
+                                   .bind("num-type")))))),
+          hasRHS(ignoringParenImpCasts(sizeOfExpr(
+              hasArgumentOfType(hasCanonicalType(type().bind("denom-type")))))))
           .bind("sizeof-divide-expr"),
       this);
 

@@ -30,6 +30,37 @@ entry:
   ret void
 }
 
+; To verify case when index is out of bounds
+define void @insert_store_outofbounds(<8 x i16>* %q, i16 zeroext %s) {
+; CHECK-LABEL: @insert_store_outofbounds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, <8 x i16>* [[Q:%.*]], align 16
+; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[S:%.*]], i32 9
+; CHECK-NEXT:    store <8 x i16> [[VECINS]], <8 x i16>* [[Q]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load <8 x i16>, <8 x i16>* %q
+  %vecins = insertelement <8 x i16> %0, i16 %s, i32 9
+  store <8 x i16> %vecins, <8 x i16>* %q
+  ret void
+}
+
+define void @insert_store_vscale(<vscale x 8 x i16>* %q, i16 zeroext %s) {
+; CHECK-LABEL: @insert_store_vscale(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 8 x i16>, <vscale x 8 x i16>* [[Q:%.*]], align 16
+; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <vscale x 8 x i16> [[TMP0]], i16 [[S:%.*]], i32 3
+; CHECK-NEXT:    store <vscale x 8 x i16> [[VECINS]], <vscale x 8 x i16>* [[Q]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load <vscale x 8 x i16>, <vscale x 8 x i16>* %q
+  %vecins = insertelement <vscale x 8 x i16> %0, i16 %s, i32 3
+  store <vscale x 8 x i16> %vecins, <vscale x 8 x i16>* %q
+  ret void
+}
+
 define void @insert_store_v9i4(<9 x i4>* %q, i4 zeroext %s) {
 ; CHECK-LABEL: @insert_store_v9i4(
 ; CHECK-NEXT:  entry:
@@ -82,8 +113,9 @@ cont:
 define void @insert_store_nonconst(<16 x i8>* %q, i8 zeroext %s, i32 %idx) {
 ; CHECK-LABEL: @insert_store_nonconst(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, <16 x i8>* [[Q:%.*]], i32 0, i32 [[IDX:%.*]]
-; CHECK-NEXT:    store i8 [[S:%.*]], i8* [[TMP0]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, <16 x i8>* [[Q:%.*]], align 16
+; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX:%.*]]
+; CHECK-NEXT:    store <16 x i8> [[VECINS]], <16 x i8>* [[Q]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -93,17 +125,17 @@ entry:
   ret void
 }
 
-define void @insert_store_ptr_strip(<16 x i8>* %q, i8 zeroext %s, i32 %idx) {
+define void @insert_store_ptr_strip(<16 x i8>* %q, i8 zeroext %s) {
 ; CHECK-LABEL: @insert_store_ptr_strip(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADDR0:%.*]] = bitcast <16 x i8>* [[Q:%.*]] to <2 x i64>*
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, <16 x i8>* [[Q]], i32 0, i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <16 x i8>, <16 x i8>* [[Q]], i32 0, i32 3
 ; CHECK-NEXT:    store i8 [[S:%.*]], i8* [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %0 = load <16 x i8>, <16 x i8>* %q
-  %vecins = insertelement <16 x i8> %0, i8 %s, i32 %idx
+  %vecins = insertelement <16 x i8> %0, i8 %s, i32 3
   %addr0 = bitcast <16 x i8>* %q to <2 x i64>*
   %addr1 = getelementptr <2 x i64>, <2 x i64>* %addr0, i64 0
   %addr2 = bitcast <2 x i64>* %addr1 to <16 x i8>*

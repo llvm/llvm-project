@@ -77,6 +77,10 @@
 ; GCN-O0-NEXT:       Natural Loop Information
 ; GCN-O0-NEXT:       Legacy Divergence Analysis
 ; GCN-O0-NEXT:       AMDGPU IR late optimizations
+; GCN-O0-NEXT:       Basic Alias Analysis (stateless AA impl)
+; GCN-O0-NEXT:       Function Alias Analysis Results
+; GCN-O0-NEXT:       Code sinking
+; GCN-O0-NEXT:       Legacy Divergence Analysis
 ; GCN-O0-NEXT:       Unify divergent function exit nodes
 ; GCN-O0-NEXT:       Lazy Value Information Analysis
 ; GCN-O0-NEXT:       Lower SwitchInst's to branches
@@ -89,12 +93,10 @@
 ; GCN-O0-NEXT:       Detect single entry single exit regions
 ; GCN-O0-NEXT:       Region Pass Manager
 ; GCN-O0-NEXT:         Structurize control flow
-; GCN-O0-NEXT:       Basic Alias Analysis (stateless AA impl)
-; GCN-O0-NEXT:       Function Alias Analysis Results
-; GCN-O0-NEXT:       Natural Loop Information
-; GCN-O0-NEXT:       Code sinking
 ; GCN-O0-NEXT:       Post-Dominator Tree Construction
+; GCN-O0-NEXT:       Natural Loop Information
 ; GCN-O0-NEXT:       Legacy Divergence Analysis
+; GCN-O0-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; GCN-O0-NEXT:       Function Alias Analysis Results
 ; GCN-O0-NEXT:       Memory SSA
 ; GCN-O0-NEXT:       AMDGPU Annotate Uniform Values
@@ -256,6 +258,10 @@
 ; GCN-O1-NEXT:       Natural Loop Information
 ; GCN-O1-NEXT:       Legacy Divergence Analysis
 ; GCN-O1-NEXT:       AMDGPU IR late optimizations
+; GCN-O1-NEXT:       Basic Alias Analysis (stateless AA impl)
+; GCN-O1-NEXT:       Function Alias Analysis Results
+; GCN-O1-NEXT:       Code sinking
+; GCN-O1-NEXT:       Legacy Divergence Analysis
 ; GCN-O1-NEXT:       Unify divergent function exit nodes
 ; GCN-O1-NEXT:       Lazy Value Information Analysis
 ; GCN-O1-NEXT:       Lower SwitchInst's to branches
@@ -268,12 +274,10 @@
 ; GCN-O1-NEXT:       Detect single entry single exit regions
 ; GCN-O1-NEXT:       Region Pass Manager
 ; GCN-O1-NEXT:         Structurize control flow
-; GCN-O1-NEXT:       Basic Alias Analysis (stateless AA impl)
-; GCN-O1-NEXT:       Function Alias Analysis Results
-; GCN-O1-NEXT:       Natural Loop Information
-; GCN-O1-NEXT:       Code sinking
 ; GCN-O1-NEXT:       Post-Dominator Tree Construction
+; GCN-O1-NEXT:       Natural Loop Information
 ; GCN-O1-NEXT:       Legacy Divergence Analysis
+; GCN-O1-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-NEXT:       Function Alias Analysis Results
 ; GCN-O1-NEXT:       Memory SSA
 ; GCN-O1-NEXT:       AMDGPU Annotate Uniform Values
@@ -347,7 +351,6 @@
 ; GCN-O1-NEXT:         Live Register Matrix
 ; GCN-O1-NEXT:         SI Pre-allocate WWM Registers
 ; GCN-O1-NEXT:         SI optimize exec mask operations pre-RA
-; GCN-O1-NEXT:         SI Form memory clauses
 ; GCN-O1-NEXT:         Machine Natural Loop Construction
 ; GCN-O1-NEXT:         Machine Block Frequency Analysis
 ; GCN-O1-NEXT:         Debug Variable Analysis
@@ -530,6 +533,10 @@
 ; GCN-O1-OPTS-NEXT:       Natural Loop Information
 ; GCN-O1-OPTS-NEXT:       Legacy Divergence Analysis
 ; GCN-O1-OPTS-NEXT:       AMDGPU IR late optimizations
+; GCN-O1-OPTS-NEXT:       Basic Alias Analysis (stateless AA impl)
+; GCN-O1-OPTS-NEXT:       Function Alias Analysis Results
+; GCN-O1-OPTS-NEXT:       Code sinking
+; GCN-O1-OPTS-NEXT:       Legacy Divergence Analysis
 ; GCN-O1-OPTS-NEXT:       Unify divergent function exit nodes
 ; GCN-O1-OPTS-NEXT:       Lazy Value Information Analysis
 ; GCN-O1-OPTS-NEXT:       Lower SwitchInst's to branches
@@ -542,12 +549,10 @@
 ; GCN-O1-OPTS-NEXT:       Detect single entry single exit regions
 ; GCN-O1-OPTS-NEXT:       Region Pass Manager
 ; GCN-O1-OPTS-NEXT:         Structurize control flow
-; GCN-O1-OPTS-NEXT:       Basic Alias Analysis (stateless AA impl)
-; GCN-O1-OPTS-NEXT:       Function Alias Analysis Results
-; GCN-O1-OPTS-NEXT:       Natural Loop Information
-; GCN-O1-OPTS-NEXT:       Code sinking
 ; GCN-O1-OPTS-NEXT:       Post-Dominator Tree Construction
+; GCN-O1-OPTS-NEXT:       Natural Loop Information
 ; GCN-O1-OPTS-NEXT:       Legacy Divergence Analysis
+; GCN-O1-OPTS-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-OPTS-NEXT:       Function Alias Analysis Results
 ; GCN-O1-OPTS-NEXT:       Memory SSA
 ; GCN-O1-OPTS-NEXT:       AMDGPU Annotate Uniform Values
@@ -629,7 +634,6 @@
 ; GCN-O1-OPTS-NEXT:         Live Register Matrix
 ; GCN-O1-OPTS-NEXT:         SI Pre-allocate WWM Registers
 ; GCN-O1-OPTS-NEXT:         SI optimize exec mask operations pre-RA
-; GCN-O1-OPTS-NEXT:         SI Form memory clauses
 ; GCN-O1-OPTS-NEXT:         Machine Natural Loop Construction
 ; GCN-O1-OPTS-NEXT:         Machine Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:         Debug Variable Analysis
@@ -812,6 +816,10 @@
 ; GCN-O2-NEXT:       Natural Loop Information
 ; GCN-O2-NEXT:       Legacy Divergence Analysis
 ; GCN-O2-NEXT:       AMDGPU IR late optimizations
+; GCN-O2-NEXT:       Basic Alias Analysis (stateless AA impl)
+; GCN-O2-NEXT:       Function Alias Analysis Results
+; GCN-O2-NEXT:       Code sinking
+; GCN-O2-NEXT:       Legacy Divergence Analysis
 ; GCN-O2-NEXT:       Unify divergent function exit nodes
 ; GCN-O2-NEXT:       Lazy Value Information Analysis
 ; GCN-O2-NEXT:       Lower SwitchInst's to branches
@@ -824,12 +832,10 @@
 ; GCN-O2-NEXT:       Detect single entry single exit regions
 ; GCN-O2-NEXT:       Region Pass Manager
 ; GCN-O2-NEXT:         Structurize control flow
-; GCN-O2-NEXT:       Basic Alias Analysis (stateless AA impl)
-; GCN-O2-NEXT:       Function Alias Analysis Results
-; GCN-O2-NEXT:       Natural Loop Information
-; GCN-O2-NEXT:       Code sinking
 ; GCN-O2-NEXT:       Post-Dominator Tree Construction
+; GCN-O2-NEXT:       Natural Loop Information
 ; GCN-O2-NEXT:       Legacy Divergence Analysis
+; GCN-O2-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; GCN-O2-NEXT:       Function Alias Analysis Results
 ; GCN-O2-NEXT:       Memory SSA
 ; GCN-O2-NEXT:       AMDGPU Annotate Uniform Values
@@ -1107,6 +1113,10 @@
 ; GCN-O3-NEXT:       Natural Loop Information
 ; GCN-O3-NEXT:       Legacy Divergence Analysis
 ; GCN-O3-NEXT:       AMDGPU IR late optimizations
+; GCN-O3-NEXT:       Basic Alias Analysis (stateless AA impl)
+; GCN-O3-NEXT:       Function Alias Analysis Results
+; GCN-O3-NEXT:       Code sinking
+; GCN-O3-NEXT:       Legacy Divergence Analysis
 ; GCN-O3-NEXT:       Unify divergent function exit nodes
 ; GCN-O3-NEXT:       Lazy Value Information Analysis
 ; GCN-O3-NEXT:       Lower SwitchInst's to branches
@@ -1119,12 +1129,10 @@
 ; GCN-O3-NEXT:       Detect single entry single exit regions
 ; GCN-O3-NEXT:       Region Pass Manager
 ; GCN-O3-NEXT:         Structurize control flow
-; GCN-O3-NEXT:       Basic Alias Analysis (stateless AA impl)
-; GCN-O3-NEXT:       Function Alias Analysis Results
-; GCN-O3-NEXT:       Natural Loop Information
-; GCN-O3-NEXT:       Code sinking
 ; GCN-O3-NEXT:       Post-Dominator Tree Construction
+; GCN-O3-NEXT:       Natural Loop Information
 ; GCN-O3-NEXT:       Legacy Divergence Analysis
+; GCN-O3-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:       Function Alias Analysis Results
 ; GCN-O3-NEXT:       Memory SSA
 ; GCN-O3-NEXT:       AMDGPU Annotate Uniform Values

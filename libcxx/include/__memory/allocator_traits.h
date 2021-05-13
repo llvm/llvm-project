@@ -362,7 +362,7 @@ template <class _Tp>
 struct __is_default_allocator : false_type { };
 
 template <class _Tp>
-struct __is_default_allocator<_VSTD::allocator<_Tp> > : true_type { };
+struct __is_default_allocator<allocator<_Tp> > : true_type { };
 
 // __is_cpp17_move_insertable
 template <class _Alloc, class = void>

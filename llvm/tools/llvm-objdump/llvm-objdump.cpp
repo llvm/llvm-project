@@ -1076,10 +1076,15 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
     if (Obj->isELF() && getElfSymbolType(Obj, Symbol) == ELF::STT_SECTION)
       continue;
 
-    // Don't ask a Mach-O STAB symbol for its section unless you know that
-    // STAB symbol's section field refers to a valid section index. Otherwise
-    // the symbol may error trying to load a section that does not exist.
     if (MachO) {
+      // __mh_(execute|dylib|dylinker|bundle|preload|object)_header are special
+      // symbols that support MachO header introspection. They do not bind to
+      // code locations and are irrelevant for disassembly.
+      if (NameOrErr->startswith("__mh_") && NameOrErr->endswith("_header"))
+        continue;
+      // Don't ask a Mach-O STAB symbol for its section unless you know that
+      // STAB symbol's section field refers to a valid section index. Otherwise
+      // the symbol may error trying to load a section that does not exist.
       DataRefImpl SymDRI = Symbol.getRawDataRefImpl();
       uint8_t NType = (MachO->is64Bit() ?
                        MachO->getSymbol64TableEntry(SymDRI).n_type:

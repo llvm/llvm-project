@@ -5,7 +5,7 @@
 define void @masked_store_v1f16(<1 x half>* %val_ptr, <1 x half>* %a, <1 x half>* %m_ptr) nounwind {
 ; CHECK-LABEL: masked_store_v1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a3, 1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a3, 1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a2)
 ; CHECK-NEXT:    vle16.v v26, (a0)
 ; CHECK-NEXT:    fmv.h.x ft0, zero
@@ -23,7 +23,7 @@ declare void @llvm.masked.store.v1f16.p0v1f16(<1 x half>, <1 x half>*, i32, <1 x
 define void @masked_store_v1f32(<1 x float>* %val_ptr, <1 x float>* %a, <1 x float>* %m_ptr) nounwind {
 ; CHECK-LABEL: masked_store_v1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a3, 1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a3, 1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a2)
 ; CHECK-NEXT:    vle32.v v26, (a0)
 ; CHECK-NEXT:    fmv.w.x ft0, zero
@@ -69,7 +69,7 @@ declare void @llvm.masked.store.v1f64.p0v1f64(<1 x double>, <1 x double>*, i32, 
 define void @masked_store_v2f16(<2 x half>* %val_ptr, <2 x half>* %a, <2 x half>* %m_ptr) nounwind {
 ; CHECK-LABEL: masked_store_v2f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a3, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a3, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a2)
 ; CHECK-NEXT:    vle16.v v26, (a0)
 ; CHECK-NEXT:    fmv.h.x ft0, zero
@@ -87,7 +87,7 @@ declare void @llvm.masked.store.v2f16.p0v2f16(<2 x half>, <2 x half>*, i32, <2 x
 define void @masked_store_v2f32(<2 x float>* %val_ptr, <2 x float>* %a, <2 x float>* %m_ptr) nounwind {
 ; CHECK-LABEL: masked_store_v2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a3, 2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a3, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a2)
 ; CHECK-NEXT:    vle32.v v26, (a0)
 ; CHECK-NEXT:    fmv.w.x ft0, zero
@@ -133,7 +133,7 @@ declare void @llvm.masked.store.v2f64.p0v2f64(<2 x double>, <2 x double>*, i32, 
 define void @masked_store_v4f16(<4 x half>* %val_ptr, <4 x half>* %a, <4 x half>* %m_ptr) nounwind {
 ; CHECK-LABEL: masked_store_v4f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a3, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a3, 4, e16,mf2,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a2)
 ; CHECK-NEXT:    vle16.v v26, (a0)
 ; CHECK-NEXT:    fmv.h.x ft0, zero

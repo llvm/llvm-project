@@ -137,8 +137,7 @@ define <2 x half> @v_exp_v2f16(<2 x half> %arg0) {
 ; GFX9-NEXT:    v_pk_mul_f16 v0, v0, [[SREG]] op_sel_hi:[1,0]
 ; GFX9-NEXT:    v_exp_f16_e32 v1, v0
 ; GFX9-NEXT:    v_exp_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX9-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX9-NEXT:    v_pack_b32_f16 v0, v1, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %result = call <2 x half> @llvm.exp.v2f16(<2 x half> %arg0)
   ret <2 x half> %result
@@ -198,14 +197,11 @@ define <4 x half> @v_exp_v4f16(<4 x half> %arg0) {
 ; GFX9-NEXT:    v_mul_f16_sdwa [[MUL3:v[0-9]+]], v1, [[SREG]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX9-NEXT:    v_mul_f16_sdwa [[MUL4:v[0-9]+]], v0, [[SREG]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX9-NEXT:    v_exp_f16_e32 [[EXP1:v[0-9]+]], [[MUL1]]
-; GFX9-NEXT:    v_exp_f16_e32 [[EXP2:v[0-9]+]], [[MUL2]]
-; GFX9-NEXT:    v_exp_f16_e32 [[EXP3:v[0-9]+]], [[MUL4]]
-; GFX9-NEXT:    v_exp_f16_e32 [[EXP4:v[0-9]+]], [[MUL3]]
-; GFX9-NEXT:    v_mov_b32_e32 [[VCONST:v[0-9]+]], 0xffff
-; GFX9-NEXT:    v_and_b32_e32 [[AND1:v[0-9]+]], [[VCONST]], [[EXP2]]
-; GFX9-NEXT:    v_and_b32_e32 [[AND2:v[0-9]+]], [[VCONST]], [[EXP1]]
-; GFX9-NEXT:    v_lshl_or_b32 v0, [[EXP3]], 16, [[AND1]]
-; GFX9-NEXT:    v_lshl_or_b32 v1, [[EXP4]], 16, [[AND2]]
+; GFX9-NEXT:    v_exp_f16_e32 [[EXP2:v[0-9]+]], [[MUL3]]
+; GFX9-NEXT:    v_exp_f16_e32 [[EXP3:v[0-9]+]], [[MUL2]]
+; GFX9-NEXT:    v_exp_f16_e32 [[EXP4:v[0-9]+]], [[MUL4]]
+; GFX9-NEXT:    v_pack_b32_f16 v1, [[EXP1]], [[EXP2]]
+; GFX9-NEXT:    v_pack_b32_f16 v0, [[EXP3]], [[EXP4]]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %result = call <4 x half> @llvm.exp.v4f16(<4 x half> %arg0)
   ret <4 x half> %result

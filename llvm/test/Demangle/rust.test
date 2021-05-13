@@ -33,6 +33,82 @@ CHECK: crate::{shim:reify#0}
 CHECK: crate::{Z:ident#10}
        _RNZC5crates8_5ident
 
+; Generic type arguments
+
+CHECK: generic::<_>
+       _RIC7genericpE
+
+CHECK: generic::<_, _>
+       _RIC7genericppE
+
+CHECK: generic::<_, _, _>
+       _RIC7genericpppE
+
+; Basic types
+
+CHECK: basic::<i8>
+       _RIC5basicaE
+
+CHECK: basic::<bool>
+       _RIC5basicbE
+
+CHECK: basic::<char>
+       _RIC5basiccE
+
+CHECK: basic::<f64>
+       _RIC5basicdE
+
+CHECK: basic::<str>
+       _RIC5basiceE
+
+CHECK: basic::<f32>
+       _RIC5basicfE
+
+CHECK: basic::<u8>
+       _RIC5basichE
+
+CHECK: basic::<isize>
+       _RIC5basiciE
+
+CHECK: basic::<usize>
+       _RIC5basicjE
+
+CHECK: basic::<i32>
+       _RIC5basiclE
+
+CHECK: basic::<u32>
+       _RIC5basicmE
+
+CHECK: basic::<i128>
+       _RIC5basicnE
+
+CHECK: basic::<u128>
+       _RIC5basicoE
+
+CHECK: basic::<_>
+       _RIC5basicpE
+
+CHECK: basic::<i16>
+       _RIC5basicsE
+
+CHECK: basic::<u16>
+       _RIC5basictE
+
+CHECK: basic::<()>
+       _RIC5basicuE
+
+CHECK: basic::<...>
+       _RIC5basicvE
+
+CHECK: basic::<i64>
+       _RIC5basicxE
+
+CHECK: basic::<u64>
+       _RIC5basicyE
+
+CHECK: basic::<!>
+       _RIC5basiczE
+
 ; Invalid mangled characters
 
 CHECK: _RNvC2a.1c

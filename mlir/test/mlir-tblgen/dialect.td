@@ -34,20 +34,37 @@ def D_Dialect : Dialect {
 
 def D_DSomeOp : Op<D_Dialect, "some_op", []>;
 
+// Check op with namespace override.
+def E_Dialect : Dialect {
+  let name = "e";
+  let cppNamespace = "ENS";
+}
+
+def E_SomeOp : Op<E_Dialect, "some_op", []>;
+def E_SpecialNSOp : Op<E_Dialect, "special_ns_op", []> {
+  let cppNamespace = "::E::SPECIAL_NS";
+}
+
 // DEF-LABEL: GET_OP_LIST
 // DEF:      a::SomeOp
 // DEF-NEXT: BNS::SomeOp
 // DEF-NEXT: ::C::CC::SomeOp
 // DEF-NEXT: DSomeOp
+// DEF-NEXT: ENS::SomeOp
+// DEF-NEXT: ::E::SPECIAL_NS::SpecialNSOp
 
 // DEF-LABEL: GET_OP_CLASSES
 // DEF: a::SomeOp definitions
 // DEF: BNS::SomeOp definitions
 // DEF: ::C::CC::SomeOp definitions
 // DEF: DSomeOp definitions
+// DEF: ENS::SomeOp definitions
+// DEF: ::E::SPECIAL_NS::SpecialNSOp definitions
 
 // DECL-LABEL: GET_OP_CLASSES
 // DECL: a::SomeOp declarations
 // DECL: BNS::SomeOp declarations
 // DECL: ::C::CC::SomeOp declarations
 // DECL: DSomeOp declarations
+// DECL: ENS::SomeOp declarations
+// DECL: ::E::SPECIAL_NS::SpecialNSOp declarations

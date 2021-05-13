@@ -64,7 +64,10 @@ class IndexClient : public clangd::SymbolIndex {
                  StreamingCall<RequestT, ReplyT> RPCCall,
                  CallbackT Callback) const {
     updateConnectionStatus();
-    bool FinalResult = false;
+    // We initialize to true because stream might be broken before we see the
+    // final message. In such a case there are actually more results on the
+    // stream, but we couldn't get to them.
+    bool HasMore = true;
     trace::Span Tracer(RequestT::descriptor()->name());
     const auto RPCRequest = ProtobufMarshaller->toProtobuf(Request);
     SPAN_ATTACH(Tracer, "Request", RPCRequest.DebugString());
@@ -82,7 +85,7 @@ class IndexClient : public clangd::SymbolIndex {
     unsigned FailedToParse = 0;
     while (Reader->Read(&Reply)) {
       if (!Reply.has_stream_result()) {
-        FinalResult = Reply.final_result().has_more();
+        HasMore = Reply.final_result().has_more();
         continue;
       }
       auto Response = ProtobufMarshaller->fromProtobuf(Reply.stream_result());
@@ -105,7 +108,7 @@ class IndexClient : public clangd::SymbolIndex {
     SPAN_ATTACH(Tracer, "Successful", Successful);
     SPAN_ATTACH(Tracer, "Failed to parse", FailedToParse);
     updateConnectionStatus();
-    return FinalResult;
+    return HasMore;
   }
 
 public:

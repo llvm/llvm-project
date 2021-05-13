@@ -10467,7 +10467,7 @@ static const char *get_dyld_bind_info_symbolname(uint64_t ReferenceValue,
 }
 
 void objdump::printLazyBindTable(ObjectFile *o) {
-  outs() << "Lazy bind table:\n";
+  outs() << "\nLazy bind table:\n";
   if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
     printMachOLazyBindTable(MachO);
   else
@@ -10477,7 +10477,7 @@ void objdump::printLazyBindTable(ObjectFile *o) {
 }
 
 void objdump::printWeakBindTable(ObjectFile *o) {
-  outs() << "Weak bind table:\n";
+  outs() << "\nWeak bind table:\n";
   if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
     printMachOWeakBindTable(MachO);
   else
@@ -10487,7 +10487,7 @@ void objdump::printWeakBindTable(ObjectFile *o) {
 }
 
 void objdump::printExportsTrie(const ObjectFile *o) {
-  outs() << "Exports trie:\n";
+  outs() << "\nExports trie:\n";
   if (const MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
     printMachOExportsTrie(MachO);
   else
@@ -10497,7 +10497,7 @@ void objdump::printExportsTrie(const ObjectFile *o) {
 }
 
 void objdump::printRebaseTable(ObjectFile *o) {
-  outs() << "Rebase table:\n";
+  outs() << "\nRebase table:\n";
   if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
     printMachORebaseTable(MachO);
   else
@@ -10507,7 +10507,7 @@ void objdump::printRebaseTable(ObjectFile *o) {
 }
 
 void objdump::printBindTable(ObjectFile *o) {
-  outs() << "Bind table:\n";
+  outs() << "\nBind table:\n";
   if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
     printMachOBindTable(MachO);
   else

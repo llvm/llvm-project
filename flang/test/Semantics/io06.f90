@@ -36,7 +36,6 @@
   rewind(iostat=stat2)
 
   !ERROR: Duplicate ERR specifier
-  !ERROR: Duplicate ERR specifier
   flush(err=9, unit=10, &
         err=9, &
         err=9)

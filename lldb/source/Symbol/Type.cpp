@@ -730,7 +730,8 @@ ModuleSP Type::GetModule() {
 ModuleSP Type::GetExeModule() {
   if (m_compiler_type) {
     SymbolFile *symbol_file = m_compiler_type.GetTypeSystem()->GetSymbolFile();
-    return symbol_file->GetObjectFile()->GetModule();
+    if (symbol_file)
+      return symbol_file->GetObjectFile()->GetModule();
   }
   return ModuleSP();
 }

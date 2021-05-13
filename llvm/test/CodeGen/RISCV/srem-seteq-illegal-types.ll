@@ -712,7 +712,7 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV32MV-NEXT:    sw a1, 12(sp)
 ; RV32MV-NEXT:    sw a0, 8(sp)
 ; RV32MV-NEXT:    addi a0, zero, 85
-; RV32MV-NEXT:    vsetivli a1, 1, e8,m1,ta,mu
+; RV32MV-NEXT:    vsetivli a1, 1, e8,mf8,ta,mu
 ; RV32MV-NEXT:    vmv.s.x v0, a0
 ; RV32MV-NEXT:    vsetivli a0, 8, e32,m2,ta,mu
 ; RV32MV-NEXT:    vmv.v.i v26, 1

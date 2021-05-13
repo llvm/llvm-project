@@ -733,6 +733,22 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   if (stackUpdateCanBeMoved(MF)) {
     const std::vector<CalleeSavedInfo> &Info = MFI.getCalleeSavedInfo();
     for (CalleeSavedInfo CSI : Info) {
+      // If the callee saved register is spilled to a register instead of the
+      // stack then the spill no longer uses the stack pointer.
+      // This can lead to two consequences:
+      // 1) We no longer need to update the stack because the function does not
+      //    spill any callee saved registers to stack.
+      // 2) We have a situation where we still have to update the stack pointer
+      //    even though some registers are spilled to other registers. In
+      //    this case the current code moves the stack update to an incorrect
+      //    position.
+      // In either case we should abort moving the stack update operation.
+      if (CSI.isSpilledToReg()) {
+        StackUpdateLoc = MBBI;
+        MovingStackUpdateDown = false;
+        break;
+      }
+
       int FrIdx = CSI.getFrameIdx();
       // If the frame index is not negative the callee saved info belongs to a
       // stack object that is not a fixed stack object. We ignore non-fixed
@@ -1621,6 +1637,12 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
   if (stackUpdateCanBeMoved(MF)) {
     const std::vector<CalleeSavedInfo> & Info = MFI.getCalleeSavedInfo();
     for (CalleeSavedInfo CSI : Info) {
+      // If the callee saved register is spilled to another register abort the
+      // stack update movement.
+      if (CSI.isSpilledToReg()) {
+        StackUpdateLoc = MBBI;
+        break;
+      }
       int FrIdx = CSI.getFrameIdx();
       // If the frame index is not negative the callee saved info belongs to a
       // stack object that is not a fixed stack object. We ignore non-fixed

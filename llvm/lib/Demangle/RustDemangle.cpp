@@ -177,10 +177,107 @@ void Demangler::demanglePath() {
     }
     break;
   }
+  case 'I': {
+    demanglePath();
+    print("::<");
+    for (size_t I = 0; !Error && !consumeIf('E'); ++I) {
+      if (I > 0)
+        print(", ");
+      demangleGenericArg();
+    }
+    print(">");
+    break;
+  }
   default:
     // FIXME parse remaining productions.
     Error = true;
     break;
+  }
+}
+
+// <generic-arg> = <lifetime>
+//               | <type>
+//               | "K" <const>
+// <lifetime> = "L" <base-62-number>
+void Demangler::demangleGenericArg() {
+  // FIXME parse remaining productions
+  demangleType();
+}
+
+static const char *const BasicTypes[] = {
+    "i8",    // a
+    "bool",  // b
+    "char",  // c
+    "f64",   // d
+    "str",   // e
+    "f32",   // f
+    nullptr, // g
+    "u8",    // h
+    "isize", // i
+    "usize", // j
+    nullptr, // k
+    "i32",   // l
+    "u32",   // m
+    "i128",  // n
+    "u128",  // o
+    "_",     // p
+    nullptr, // q
+    nullptr, // r
+    "i16",   // s
+    "u16",   // t
+    "()",    // u
+    "...",   // v
+    nullptr, // w
+    "i64",   // x
+    "u64",   // y
+    "!",     // z
+};
+
+// <basic-type> = "a"      // i8
+//              | "b"      // bool
+//              | "c"      // char
+//              | "d"      // f64
+//              | "e"      // str
+//              | "f"      // f32
+//              | "h"      // u8
+//              | "i"      // isize
+//              | "j"      // usize
+//              | "l"      // i32
+//              | "m"      // u32
+//              | "n"      // i128
+//              | "o"      // u128
+//              | "s"      // i16
+//              | "t"      // u16
+//              | "u"      // ()
+//              | "v"      // ...
+//              | "x"      // i64
+//              | "y"      // u64
+//              | "z"      // !
+//              | "p"      // placeholder (e.g. for generic params), shown as _
+static const char *parseBasicType(char C) {
+  if (isLower(C))
+    return BasicTypes[C - 'a'];
+  return nullptr;
+}
+
+// <type> = | <basic-type>
+//          | <path>                      // named type
+//          | "A" <type> <const>          // [T; N]
+//          | "S" <type>                  // [T]
+//          | "T" {<type>} "E"            // (T1, T2, T3, ...)
+//          | "R" [<lifetime>] <type>     // &T
+//          | "Q" [<lifetime>] <type>     // &mut T
+//          | "P" <type>                  // *const T
+//          | "O" <type>                  // *mut T
+//          | "F" <fn-sig>                // fn(...) -> ...
+//          | "D" <dyn-bounds> <lifetime> // dyn Trait<Assoc = X> + Send + 'a
+//          | <backref>                   // backref
+void Demangler::demangleType() {
+  if (const char *BasicType = parseBasicType(consume())) {
+    print(BasicType);
+  } else {
+    // FIXME parse remaining productions.
+    Error = true;
   }
 }
 
