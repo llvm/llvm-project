@@ -30,3 +30,10 @@ void test_s_memtime(global ulong* out)
 {
   *out = __builtin_amdgcn_s_memtime();
 }
+
+// CHECK-LABEL: @test_groupstaticsize
+// CHECK: call i32 @llvm.amdgcn.groupstaticsize()
+void test_groupstaticsize(global uint* out)
+{
+  *out = __builtin_amdgcn_groupstaticsize();
+}

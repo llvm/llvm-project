@@ -84,6 +84,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=3 -mcpu=gfx1031 < %s | FileCheck --check-prefixes=V3-GFX1031 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=3 -mcpu=gfx1032 < %s | FileCheck --check-prefixes=V3-GFX1032 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=3 -mcpu=gfx1033 < %s | FileCheck --check-prefixes=V3-GFX1033 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=3 -mcpu=gfx1034 < %s | FileCheck --check-prefixes=V3-GFX1034 %s
 
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx600 < %s | FileCheck --check-prefixes=GFX600 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tahiti < %s | FileCheck --check-prefixes=GFX600 %s
@@ -171,6 +172,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1031 < %s | FileCheck --check-prefixes=GFX1031 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1032 < %s | FileCheck --check-prefixes=GFX1032 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1033 < %s | FileCheck --check-prefixes=GFX1033 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1034 < %s | FileCheck --check-prefixes=GFX1034 %s
 
 ; V3-GFX600: .amdgcn_target "amdgcn-amd-amdhsa--gfx600"
 ; V3-GFX601: .amdgcn_target "amdgcn-amd-amdhsa--gfx601"
@@ -216,6 +218,7 @@
 ; V3-GFX1031: .amdgcn_target "amdgcn-amd-amdhsa--gfx1031"
 ; V3-GFX1032: .amdgcn_target "amdgcn-amd-amdhsa--gfx1032"
 ; V3-GFX1033: .amdgcn_target "amdgcn-amd-amdhsa--gfx1033"
+; V3-GFX1034: .amdgcn_target "amdgcn-amd-amdhsa--gfx1034"
 
 ; GFX600: .amdgcn_target "amdgcn-amd-amdhsa--gfx600"
 ; GFX601: .amdgcn_target "amdgcn-amd-amdhsa--gfx601"
@@ -281,6 +284,7 @@
 ; GFX1031: .amdgcn_target "amdgcn-amd-amdhsa--gfx1031"
 ; GFX1032: .amdgcn_target "amdgcn-amd-amdhsa--gfx1032"
 ; GFX1033: .amdgcn_target "amdgcn-amd-amdhsa--gfx1033"
+; GFX1034: .amdgcn_target "amdgcn-amd-amdhsa--gfx1034"
 
 define amdgpu_kernel void @directive_amdgcn_target() {
   ret void

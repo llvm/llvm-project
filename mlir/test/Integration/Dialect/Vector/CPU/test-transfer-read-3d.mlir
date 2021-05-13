@@ -1,9 +1,9 @@
-// RUN: mlir-opt %s -test-progressive-convert-vector-to-scf -lower-affine -convert-scf-to-std -convert-vector-to-llvm -convert-std-to-llvm | \
+// RUN: mlir-opt %s -convert-vector-to-scf -lower-affine -convert-scf-to-std -convert-vector-to-llvm -convert-std-to-llvm | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
-// RUN: mlir-opt %s -test-unrolled-progressive-convert-vector-to-scf -lower-affine -convert-scf-to-std -convert-vector-to-llvm -convert-std-to-llvm | \
+// RUN: mlir-opt %s -convert-vector-to-scf=full-unroll=true -lower-affine -convert-scf-to-std -convert-vector-to-llvm -convert-std-to-llvm | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
@@ -14,6 +14,17 @@ func @transfer_read_3d(%A : memref<?x?x?x?xf32>,
   %f = vector.transfer_read %A[%o, %a, %b, %c], %fm42
       : memref<?x?x?x?xf32>, vector<2x5x3xf32>
   vector.print %f: vector<2x5x3xf32>
+  return
+}
+
+func @transfer_read_3d_and_extract(%A : memref<?x?x?x?xf32>,
+                                   %o: index, %a: index, %b: index, %c: index) {
+  %fm42 = constant -42.0: f32
+  %f = vector.transfer_read %A[%o, %a, %b, %c], %fm42
+      {in_bounds = [true, true, true]}
+      : memref<?x?x?x?xf32>, vector<2x5x3xf32>
+  %sub = vector.extract %f[0] : vector<2x5x3xf32>
+  vector.print %sub: vector<5x3xf32>
   return
 }
 
@@ -94,26 +105,31 @@ func @entry() {
       : (memref<?x?x?x?xf32>, index, index, index, index) -> ()
   // CHECK: ( ( ( 0, 0, -42 ), ( 2, 3, -42 ), ( 4, 6, -42 ), ( 6, 9, -42 ), ( -42, -42, -42 ) ), ( ( 20, 30, -42 ), ( 22, 33, -42 ), ( 24, 36, -42 ), ( 26, 39, -42 ), ( -42, -42, -42 ) ) )
 
-  // 2. Write 3D vector to 4D memref.
+  // 2. Read 3D vector from 4D memref and extract subvector from result.
+  call @transfer_read_3d_and_extract(%A, %c0, %c0, %c0, %c0)
+      : (memref<?x?x?x?xf32>, index, index, index, index) -> ()
+  // CHECK: ( ( 0, 0, 2 ), ( 2, 3, 4 ), ( 4, 6, 6 ), ( 6, 9, 20 ), ( 20, 30, 22 ) )
+
+  // 3. Write 3D vector to 4D memref.
   call @transfer_write_3d(%A, %c0, %c0, %c1, %c1)
       : (memref<?x?x?x?xf32>, index, index, index, index) -> ()
 
-  // 3. Read memref to verify step 2.
+  // 4. Read memref to verify step 2.
   call @transfer_read_3d(%A, %c0, %c0, %c0, %c0)
       : (memref<?x?x?x?xf32>, index, index, index, index) -> ()
   // CHECK: ( ( ( 0, 0, -42 ), ( 2, -1, -42 ), ( 4, -1, -42 ), ( 6, -1, -42 ), ( -42, -42, -42 ) ), ( ( 20, 30, -42 ), ( 22, -1, -42 ), ( 24, -1, -42 ), ( 26, -1, -42 ), ( -42, -42, -42 ) ) )
 
-  // 4. Read 3D vector from 4D memref and transpose vector.
+  // 5. Read 3D vector from 4D memref and transpose vector.
   call @transfer_read_3d_transposed(%A, %c0, %c0, %c0, %c0)
       : (memref<?x?x?x?xf32>, index, index, index, index) -> ()
   // CHECK: ( ( ( 0, 20, 40 ), ( 0, 20, 40 ), ( 0, 20, 40 ), ( 0, 20, 40 ), ( 0, 20, 40 ) ), ( ( 0, 30, 60 ), ( 0, 30, 60 ), ( 0, 30, 60 ), ( 0, 30, 60 ), ( 0, 30, 60 ) ), ( ( -42, -42, -42 ), ( -42, -42, -42 ), ( -42, -42, -42 ), ( -42, -42, -42 ), ( -42, -42, -42 ) ) )
 
-  // 5. Read 1D vector from 4D memref and broadcast vector to 3D.
+  // 6. Read 1D vector from 4D memref and broadcast vector to 3D.
   call @transfer_read_3d_broadcast(%A, %c0, %c0, %c0, %c0)
       : (memref<?x?x?x?xf32>, index, index, index, index) -> ()
   // CHECK: ( ( ( 0, 0, -42 ), ( 0, 0, -42 ), ( 0, 0, -42 ), ( 0, 0, -42 ), ( 0, 0, -42 ) ), ( ( 20, 30, -42 ), ( 20, 30, -42 ), ( 20, 30, -42 ), ( 20, 30, -42 ), ( 20, 30, -42 ) ) )
 
-  // 6. Read 1D vector from 4D memref with mask and broadcast vector to 3D.
+  // 7. Read 1D vector from 4D memref with mask and broadcast vector to 3D.
   call @transfer_read_3d_mask_broadcast(%A, %c0, %c0, %c0, %c0)
       : (memref<?x?x?x?xf32>, index, index, index, index) -> ()
   // CHECK: ( ( ( -42, -42, -42 ), ( -42, -42, -42 ), ( -42, -42, -42 ), ( -42, -42, -42 ), ( -42, -42, -42 ) ), ( ( 20, 20, 20 ), ( 20, 20, 20 ), ( 20, 20, 20 ), ( 20, 20, 20 ), ( 20, 20, 20 ) ) )

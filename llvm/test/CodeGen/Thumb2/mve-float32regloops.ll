@@ -1566,13 +1566,11 @@ define arm_aapcs_vfpcc void @fms(float* nocapture readonly %pSrc1, float* nocapt
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    ldr.w lr, [sp, #16]
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    cmp.w r4, lr, lsr #2
+; CHECK-NEXT:    ldr r4, [sp, #16]
+; CHECK-NEXT:    lsrs r5, r4, #2
 ; CHECK-NEXT:    beq .LBB18_5
 ; CHECK-NEXT:  @ %bb.1: @ %do.body.preheader
 ; CHECK-NEXT:    ldr.w r12, [sp, #20]
-; CHECK-NEXT:    lsr.w r5, lr, #2
 ; CHECK-NEXT:  .LBB18_2: @ %do.body
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB18_3 Depth 2

@@ -49,6 +49,9 @@ private:
   /// Frame index where the old PIC base pointer is stored.
   int PICBasePointerSaveIndex = 0;
 
+  /// Frame index where the ROP Protection Hash is stored.
+  int ROPProtectionHashSaveIndex = 0;
+
   /// MustSaveLR - Indicates whether LR is defined (or clobbered) in the current
   /// function.  This is only valid after the initial scan of the function by
   /// PEI.
@@ -160,6 +163,13 @@ public:
 
   int getPICBasePointerSaveIndex() const { return PICBasePointerSaveIndex; }
   void setPICBasePointerSaveIndex(int Idx) { PICBasePointerSaveIndex = Idx; }
+
+  int getROPProtectionHashSaveIndex() const {
+    return ROPProtectionHashSaveIndex;
+  }
+  void setROPProtectionHashSaveIndex(int Idx) {
+    ROPProtectionHashSaveIndex = Idx;
+  }
 
   unsigned getMinReservedArea() const { return MinReservedArea; }
   void setMinReservedArea(unsigned size) { MinReservedArea = size; }

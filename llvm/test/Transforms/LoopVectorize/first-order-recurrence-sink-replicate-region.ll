@@ -202,3 +202,99 @@ exit:
   %res = phi i32 [ %and.red.next, %loop ]
   ret i32 %res
 }
+
+; To sink the replicate region containing %rem, we need to split the block
+; containing %conv at the end, because %conv is the last recipe in the block.
+define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, i8* %ptr) optsize {
+; CHECK-LABEL: sink_replicate_region_4_requires_split_at_end_of_block
+; CHECK: VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK-NEXT: loop:
+; CHECK-NEXT:   WIDEN-PHI %0 = phi 0, %conv
+; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
+; CHECK-NEXT:   EMIT vp<%3> = icmp ule ir<%iv> vp<%0>
+; CHECK-NEXT:   REPLICATE ir<%gep> = getelementptr ir<%ptr>, ir<%iv>
+; CHECK-NEXT: Successor(s): loop.0
+
+; CHECK:      loop.0:
+; CHECK-NEXT: Successor(s): pred.load
+
+; CHECK:      <xVFxUF> pred.load: {
+; CHECK-NEXT:   pred.load.entry:
+; CHECK-NEXT:     BRANCH-ON-MASK vp<%3>
+; CHECK-NEXT:   Successor(s): pred.load.if, pred.load.continue
+; CHECK-NEXT:   CondBit: vp<%3> (loop)
+
+; CHECK:        pred.load.if:
+; CHECK-NEXT:     REPLICATE ir<%lv> = load ir<%gep> (S->V)
+; CHECK-NEXT:   Successor(s): pred.load.continue
+
+; CHECK:        pred.load.continue:
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%6> = ir<%lv>
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+
+; CHECK:      loop.1:
+; CHECK-NEXT:   WIDEN ir<%conv> = sext vp<%6>
+; CHECK-NEXT: Successor(s): pred.srem
+
+; CHECK:      <xVFxUF> pred.srem: {
+; CHECK-NEXT:   pred.srem.entry:
+; CHECK-NEXT:     BRANCH-ON-MASK vp<%3>
+; CHECK-NEXT:   Successor(s): pred.srem.if, pred.srem.continue
+; CHECK-NEXT:   CondBit: vp<%3> (loop)
+
+; CHECK:        pred.srem.if:
+; CHECK-NEXT:     REPLICATE ir<%rem> = srem ir<%0>, ir<%x> (S->V)
+; CHECK-NEXT:   Successor(s): pred.srem.continue
+
+; CHECK:      pred.srem.continue:
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%9> = ir<%rem>
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+
+; CHECK:      loop.1.split:
+; CHECK-NEXT: Successor(s): pred.load
+
+; CHECK:       <xVFxUF> pred.load: {
+; CHECK-NEXT:   pred.load.entry:
+; CHECK-NEXT:     BRANCH-ON-MASK vp<%3>
+; CHECK-NEXT:   Successor(s): pred.load.if, pred.load.continue
+; CHECK-NEXT:   CondBit: vp<%3> (loop)
+
+; CHECK:        pred.load.if:
+; CHECK-NEXT:     REPLICATE ir<%lv.2> = load ir<%gep> (S->V)
+; CHECK-NEXT:   Successor(s): pred.load.continue
+
+; CHECK:       pred.load.continue:
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%11> = ir<%lv.2>
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+
+; CHECK:       loop.2:
+; CHECK-NEXT:   WIDEN ir<%add.1> = add ir<%conv>, vp<%9>
+; CHECK-NEXT:   WIDEN ir<%conv.lv.2> = sext vp<%11>
+; CHECK-NEXT:   WIDEN ir<%add> = add ir<%add.1>, ir<%conv.lv.2>
+; CHECK-NEXT: No successors
+; CHECK-NEXT: }
+;
+entry:
+  br label %loop
+
+loop:
+  %0 = phi i32 [ 0, %entry ], [ %conv, %loop ]
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr i8, i8* %ptr, i32 %iv
+  %rem = srem i32 %0, %x
+  %lv = load i8, i8* %gep
+  %conv = sext i8 %lv to i32
+  %lv.2 = load i8, i8* %gep
+  %add.1 = add i32 %conv, %rem
+  %conv.lv.2 = sext i8 %lv.2 to i32
+  %add = add i32 %add.1, %conv.lv.2
+  %iv.next = add nsw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, 20001
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}

@@ -81,7 +81,7 @@ test(const std::size_t bits)
             for (auto r : res)
             {
                 std::size_t i = r, isub = 0;
-                for (; i < n1 & isub < n2; ++i, ++isub)
+                for (; i < n1 && isub < n2; ++i, ++isub)
                     in[i] = sub[isub];
                 invoke_on_all_policies(test_one_policy(), in.begin(), in.begin() + n1, sub.begin(), sub.begin() + n2,
                                        std::equal_to<T>());

@@ -39,6 +39,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -2323,9 +2324,13 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
   }
 
   if (isa<InlineAsm>(Callee) && !Call.doesNotThrow()) {
-    // Inline asm calls cannot throw - mark them 'nounwind'.
-    Call.setDoesNotThrow();
-    Changed = true;
+    InlineAsm *IA = cast<InlineAsm>(Callee);
+    if (!IA->canThrow()) {
+      // Normal inline asm calls cannot throw - mark them
+      // 'nounwind'.
+      Call.setDoesNotThrow();
+      Changed = true;
+    }
   }
 
   // Try to optimize the call if possible, we require DataLayout for most of
