@@ -1536,6 +1536,9 @@ def : IsZeroIdiomFunction<[
                      XOR64rr, XOR64rr_REV,
                      SUB32rr, SUB32rr_REV,
                      SUB64rr, SUB64rr_REV ], ZeroIdiomPredicate>,
+
+  // SSE XMM Zero-idioms.
+  DepBreakingClass<[ XORPSrr ], ZeroIdiomPredicate>,
 ]>;
 
 def : IsDepBreakingFunction<[
