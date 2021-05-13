@@ -213,6 +213,18 @@ func @test_simple_f32(%arg0: tensor<1xf32>) -> () {
   %20 = "tosa.sigmoid"(%0) : (tensor<1xf32>) -> tensor<1xf32>
 
   // CHECK: linalg.generic
+  // CHECK: constant 0.000000e+00
+  // CHECK: constant 5.000000e-01
+  // CHECK: constant -2.14748365E+9
+  // CHECK: constant 2.14748365E+9
+  // CHECK: addf
+  // CHECK: subf
+  // CHECK: cmpf olt
+  // CHECK: select
+  // CHECK: cmpf olt
+  // CHECK: select
+  // CHECK: cmpf olt
+  // CHECK: select
   // CHECK: fptosi
   %21 = "tosa.cast"(%0) : (tensor<1xf32>) -> tensor<1xi32>
 
@@ -358,6 +370,12 @@ func @test_simple_i32(%arg0: tensor<1xi32>) -> () {
   %18 = "tosa.reluN"(%0) {max_int = 5 : i64, max_fp = 5.0 : f32} : (tensor<1xi32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
+  // CHECK: constant -32768
+  // CHECK: constant 32767
+  // CHECK: cmpi slt
+  // CHECK: select
+  // CHECK: cmpi slt
+  // CHECK: select
   // CHECK: trunci
   %19 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xi16>
 
