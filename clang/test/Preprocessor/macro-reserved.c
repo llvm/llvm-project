@@ -62,3 +62,6 @@
 #undef X__Y
 
 int x;
+
+#define _GNU_SOURCE          // no-warning
+#define __STDC_FORMAT_MACROS // no-warning
