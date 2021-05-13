@@ -13,11 +13,13 @@
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-linux-gnu -fenable-matrix -fclang-abi-compat=11 %s -emit-llvm -o - \
 // RUN:     | FileCheck --check-prefixes=CHECK,V39,V5,PRE12,PRE12-CXX17 %s
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-linux-gnu -fenable-matrix -fclang-abi-compat=11 %s -emit-llvm -o - \
-// RUN:     | FileCheck --check-prefixes=CHECK,V39,V5,PRE12,PRE12-CXX17,PRE12-CXX20 %s
+// RUN:     | FileCheck --check-prefixes=CHECK,V39,V5,PRE12,PRE12-CXX17,PRE12-CXX20,PRE13-CXX20 %s
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-linux-gnu -fenable-matrix -fclang-abi-compat=12 %s -emit-llvm -o - \
+// RUN:     | FileCheck --check-prefixes=CHECK,V39,V5,V12,V12-CXX17,V12-CXX20,PRE13-CXX20 %s
 // RUN: %clang_cc1 -std=c++98 -triple x86_64-linux-gnu -fenable-matrix -fclang-abi-compat=latest %s -emit-llvm -o - -Wno-c++11-extensions \
 // RUN:     | FileCheck --check-prefixes=CHECK,V39,V5,V12 %s
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-linux-gnu -fenable-matrix -fclang-abi-compat=latest %s -emit-llvm -o - \
-// RUN:     | FileCheck --check-prefixes=CHECK,V39,V5,V12,V12-CXX17,V12-CXX20 %s
+// RUN:     | FileCheck --check-prefixes=CHECK,V39,V5,V12,V12-CXX17,V12-CXX20,V13-CXX20 %s
 
 typedef __attribute__((vector_size(8))) long long v1xi64;
 void clang39(v1xi64) {}
@@ -136,3 +138,12 @@ template void test8<2>(matrix1xN<2> a);
 void test9(void) __attribute__((enable_if(1, ""))) {}
 
 }
+
+#if __cplusplus >= 202002L
+// PRE13-CXX20: @_Z15observe_lambdasI17inline_var_lambdaMUlvE_17inline_var_lambdaMUlvE0_PiS2_S0_S1_EiT_T0_T1_T2_
+// V13-CXX20: @_Z15observe_lambdasIN17inline_var_lambdaMUlvE_ENS0_UlvE0_EPiS3_S1_S2_EiT_T0_T1_T2_
+template <typename T, typename U, typename V, typename W, typename = T, typename = U>
+int observe_lambdas(T, U, V, W) { return 0; }
+inline auto inline_var_lambda = observe_lambdas([]{}, []{}, (int*)0, (int*)0);
+int use_inline_var_lambda() { return inline_var_lambda; }
+#endif
