@@ -2461,6 +2461,8 @@ static void WriteAsOperandInternal(raw_ostream &Out, const Value *V,
     // We don't emit the AD_ATT dialect as it's the assumed default.
     if (IA->getDialect() == InlineAsm::AD_Intel)
       Out << "inteldialect ";
+    if (IA->canThrow())
+      Out << "unwind ";
     Out << '"';
     printEscapedString(IA->getAsmString(), Out);
     Out << "\", \"";
