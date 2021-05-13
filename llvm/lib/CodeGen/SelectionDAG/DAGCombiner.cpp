@@ -9224,8 +9224,8 @@ static SDValue foldSelectOfConstantsUsingSra(SDNode *N, SelectionDAG &DAG) {
   SDValue Cond = N->getOperand(0);
   SDValue C1 = N->getOperand(1);
   SDValue C2 = N->getOperand(2);
-  assert(isConstantOrConstantVector(C1) && isConstantOrConstantVector(C2) &&
-         "Expected select-of-constants");
+  if (!isConstantOrConstantVector(C1) || !isConstantOrConstantVector(C2))
+    return SDValue();
 
   EVT VT = N->getValueType(0);
   if (Cond.getOpcode() != ISD::SETCC || !Cond.hasOneUse() ||
