@@ -145,3 +145,10 @@ void test_perm(global uint* out, uint a, uint b, uint s)
 {
   *out = __builtin_amdgcn_perm(a, b, s);
 }
+
+// CHECK-LABEL: @test_groupstaticsize
+// CHECK: call i32 @llvm.amdgcn.groupstaticsize()
+void test_groupstaticsize(global uint* out)
+{
+  *out = __builtin_amdgcn_groupstaticsize();
+}
