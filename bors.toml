@@ -1,0 +1,10 @@
+# The service providing the commit statuses to GitHub.
+status = ["buildbot/yk-buildbot-build-script-hw"]
+
+# Allow four hours for builds + tests.
+timeout_sec = 14400
+
+# Have bors delete auto-merged branches
+delete_merged_branches = true
+
+cut_body_after = ""
