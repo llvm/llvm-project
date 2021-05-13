@@ -123,6 +123,7 @@ def AND_NM : ArithLogicRNM<"and", GPR32NMOpnd, and>;
 def OR_NM  : ArithLogicRNM<"or", GPR32NMOpnd, or>;
 def XOR_NM : ArithLogicRNM<"xor", GPR32NMOpnd, xor>;
 def NOT_NM : ArithLogicR16<"not", GPR32NMOpnd, not>;
+def NOR_NM : ArithLogicRNM<"nor", GPR32NMOpnd>;
 
 def LW_NM : LoadMemoryNM<"lw", GPR32NMOpnd, mem, load>, InstSize32;
 def SW_NM : StoreMemoryNM<"sw", GPR32NMOpnd, mem, store>, InstSize32;
@@ -160,6 +161,9 @@ def : MipsPat<(MipsJmpLink (i32 texternalsym:$dst)),
 
 def : MipsPat<(MipsFullAddr tglobaladdr:$in),
               (Li_NM tglobaladdr:$in)>, ISA_NANOMIPS;
+
+def : MipsPat<(not (or GPR32NM:$rs, GPR32NM:$rt)),
+              (NOR_NM GPR32NM:$rs, GPR32NM:$rt)>, ISA_NANOMIPS;
 
 
 //===----------------------------------------------------------------------===//
