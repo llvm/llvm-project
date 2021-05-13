@@ -482,10 +482,8 @@ func @test_identity(%arg0: tensor<1xf32>, %arg1: tensor<1xi32>) -> (tensor<1xf32
   %0 = "tosa.identity"(%arg0) : (tensor<1xf32>) -> tensor<1xf32>
   %1 = "tosa.identity"(%arg1) : (tensor<1xi32>) -> tensor<1xi32>
 
-  %2:2 = "tosa.identityn"(%0, %1) : (tensor<1xf32>, tensor<1xi32>) -> (tensor<1xf32>, tensor<1xi32>)
-
   // CHECK: return %arg0, %arg1
-  return %2#0, %2#1 : tensor<1xf32>, tensor<1xi32>
+  return %0, %1 : tensor<1xf32>, tensor<1xi32>
 }
 
 // -----
