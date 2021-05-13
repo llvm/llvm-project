@@ -90,7 +90,7 @@ public:
   void lower(const Fortran::parser::Program &program,
              const Fortran::semantics::SemanticsContext &semanticsContext);
 
-   fir::KindMapping &getKindMap() { return kindMap; }
+  fir::KindMapping &getKindMap() { return kindMap; }
 
 private:
   explicit LoweringBridge(

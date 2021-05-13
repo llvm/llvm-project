@@ -1519,6 +1519,19 @@ Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
   processSymbolTable(*symbol->scope(), varList, isRecursive());
 }
 
+Fortran::lower::HostAssociations &
+Fortran::lower::pft::FunctionLikeUnit::parentHostAssoc() {
+  if (auto *par = parent.getIf<FunctionLikeUnit>())
+    return par->hostAssociations;
+  llvm::report_fatal_error("parent is not a function");
+}
+
+bool Fortran::lower::pft::FunctionLikeUnit::parentHasHostAssoc() {
+  if (auto *par = parent.getIf<FunctionLikeUnit>())
+    return !par->hostAssociations.empty();
+  return false;
+}
+
 Fortran::lower::pft::ModuleLikeUnit::ModuleLikeUnit(
     const parser::Module &m, const lower::pft::PftNode &parent)
     : ProgramUnit{m, parent}, beginStmt{getModuleStmt<parser::ModuleStmt>(m)},

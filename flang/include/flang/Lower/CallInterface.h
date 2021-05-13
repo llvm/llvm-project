@@ -55,6 +55,7 @@ struct Procedure;
 namespace Fortran::lower {
 class AbstractConverter;
 class SymMap;
+class HostAssociations;
 namespace pft {
 struct FunctionLikeUnit;
 }
@@ -75,7 +76,8 @@ struct PassedEntityTypes<CallerInterface> {
 };
 template <>
 struct PassedEntityTypes<CalleeInterface> {
-  using FortranEntity = common::Reference<const semantics::Symbol>;
+  using FortranEntity =
+      std::optional<common::Reference<const semantics::Symbol>>;
   using FirValue = mlir::Value;
 };
 
@@ -88,7 +90,7 @@ class CallInterfaceImpl;
 /// mapping to its user.
 /// The logic is shared between the callee and caller sides that it accepts as
 /// a curiously recursive template to handle the few things that cannot be
-/// shared between both side (getting characteristics, mangled name, location).
+/// shared between both sides (getting characteristics, mangled name, location).
 /// It maps FIR arguments to front-end Symbol (callee side) or ActualArgument
 /// (caller side) with the same code using the abstract FortranEntity type that
 /// can be either a Symbol or an ActualArgument.
@@ -133,6 +135,7 @@ public:
 
   using FortranEntity = typename PassedEntityTypes<T>::FortranEntity;
   using FirValue = typename PassedEntityTypes<T>::FirValue;
+
   /// FirPlaceHolder are place holders for the mlir inputs and outputs that are
   /// created during the first pass before the mlir::FuncOp is created.
   struct FirPlaceHolder {
@@ -186,14 +189,13 @@ public:
   /// nullopt if the result is not passed by the caller.
   std::optional<PassedEntity> getPassedResult() const { return passedResult; }
   /// Returns the mlir function type
-  mlir::FunctionType genFunctionType() const;
-  /// buildImplicitInterface and buildExplicitInterface are the entry point
-  /// of the first pass that define the interface and is required to get
-  /// the mlir::FuncOp.
+  mlir::FunctionType genFunctionType();
+
+  /// determineInterface is the entry point of the first pass that defines the
+  /// interface and is required to get the mlir::FuncOp.
   void
-  buildImplicitInterface(const Fortran::evaluate::characteristics::Procedure &);
-  void
-  buildExplicitInterface(const Fortran::evaluate::characteristics::Procedure &);
+  determineInterface(bool isImplicit,
+                     const Fortran::evaluate::characteristics::Procedure &);
 
   /// Does the caller need to allocate storage for the result ?
   bool callerAllocateResult() const {
@@ -255,9 +257,11 @@ public:
   std::string getMangledName() const;
   mlir::Location getCalleeLocation() const;
   Fortran::evaluate::characteristics::Procedure characterize() const;
+
   const Fortran::evaluate::ProcedureRef &getCallDescription() const {
     return procRef;
-  };
+  }
+
   bool isMainProgram() const { return false; }
 
   /// Returns true if this is a call to a procedure pointer of a dummy
@@ -311,6 +315,12 @@ public:
   /// returns the storage type.
   mlir::Type getResultStorageType() const;
 
+  // Copy of base implementation.
+  static constexpr bool hasHostAssociated() { return false; }
+  mlir::Type getHostAssociatedTy() const {
+    llvm_unreachable("getting host associated type in CallerInterface");
+  }
+
 private:
   /// Check that the input vector is complete.
   bool verifyActualInputs() const;
@@ -331,14 +341,17 @@ public:
       : CallInterface{c}, funit{f} {
     declare();
   }
+
   bool hasAlternateReturns() const;
   std::string getMangledName() const;
   mlir::Location getCalleeLocation() const;
   Fortran::evaluate::characteristics::Procedure characterize() const;
   bool isMainProgram() const;
+
   Fortran::lower::pft::FunctionLikeUnit &getCallDescription() const {
     return funit;
-  };
+  }
+
   /// On the callee side it does not matter whether the procedure is
   /// called through pointers or not.
   bool isIndirectCall() const { return false; }
@@ -350,6 +363,10 @@ public:
   /// Add mlir::FuncOp entry block and map fir block arguments to Fortran dummy
   /// argument symbols.
   mlir::FuncOp addEntryBlockAndMapArguments();
+
+  bool hasHostAssociated() const;
+  mlir::Type getHostAssociatedTy() const;
+  mlir::Value getHostAssociatedTuple() const;
 
 private:
   Fortran::lower::pft::FunctionLikeUnit &funit;

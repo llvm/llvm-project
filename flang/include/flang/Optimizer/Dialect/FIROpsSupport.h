@@ -60,13 +60,25 @@ fir::GlobalOp createGlobalOp(mlir::Location loc, mlir::ModuleOp module,
                              llvm::ArrayRef<mlir::NamedAttribute> attrs = {});
 
 /// Attribute to mark Fortran entities with the CONTIGUOUS attribute.
-constexpr llvm::StringRef getContiguousAttrName() { return "fir.contiguous"; }
+static constexpr llvm::StringRef getContiguousAttrName() {
+  return "fir.contiguous";
+}
+
 /// Attribute to mark Fortran entities with the OPTIONAL attribute.
-constexpr llvm::StringRef getOptionalAttrName() { return "fir.optional"; }
+static constexpr llvm::StringRef getOptionalAttrName() {
+  return "fir.optional";
+}
+
 /// Attribute to mark Fortran entities with the TARGET attribute.
-constexpr llvm::StringRef getTargetAttrName() { return "fir.target"; }
+static constexpr llvm::StringRef getTargetAttrName() { return "fir.target"; }
+
 /// Attribute to keep track of Fortran scoping information for a symbol.
-constexpr llvm::StringRef getSymbolAttrName() { return "fir.sym_name"; }
+static constexpr llvm::StringRef getSymbolAttrName() { return "fir.sym_name"; }
+
+/// Attribute to mark a function that takes a host associations argument.
+static constexpr llvm::StringRef getHostAssocAttrName() {
+  return "fir.host_assoc";
+}
 
 /// Tell if \p value is:
 ///   - a function argument that has attribute \p attributeName
@@ -77,6 +89,11 @@ constexpr llvm::StringRef getSymbolAttrName() { return "fir.sym_name"; }
 ///   - or, a fir.box loaded from a fir.ref<fir.box> that matches one of the
 ///     previous cases.
 bool valueHasFirAttribute(mlir::Value value, llvm::StringRef attributeName);
+
+/// Scan the arguments of a FuncOp to determine if any arguments have the
+/// attribute `attr` placed on them. This can be used to determine if the
+/// function has any host associations, for example.
+bool anyFuncArgsHaveAttr(mlir::FuncOp func, llvm::StringRef attr);
 
 } // namespace fir
 

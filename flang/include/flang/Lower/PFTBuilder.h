@@ -19,6 +19,7 @@
 
 #include "flang/Common/reference.h"
 #include "flang/Common/template.h"
+#include "flang/Lower/HostAssociations.h"
 #include "flang/Lower/PFTDefs.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/attr.h"
@@ -620,6 +621,27 @@ struct FunctionLikeUnit : public ProgramUnit {
     return stmt.visit(common::visitors{[](const auto &x) { return x.source; }});
   }
 
+  //===--------------------------------------------------------------------===//
+  // Host associations
+  //===--------------------------------------------------------------------===//
+
+  void setHostAssociatedSymbols(
+      const llvm::SetVector<const semantics::Symbol *> &symbols) {
+    hostAssociations.addSymbolsToBind(symbols);
+  }
+
+  /// Return the host associations, if any, from the parent (host) procedure.
+  /// Crashes if the parent is not a procedure.
+  HostAssociations &parentHostAssoc();
+
+  /// Return true iff the parent is a procedure and the parent has a non-empty
+  /// set of host associations.
+  bool parentHasHostAssoc();
+
+  /// Return the host associations for this function like unit. The lis of host
+  /// associations are kept in the host procedure.
+  HostAssociations &getHostAssoc() { return hostAssociations; }
+
   LLVM_DUMP_METHOD void dump() const;
 
   /// Anonymous programs do not have a begin statement
@@ -646,6 +668,7 @@ struct FunctionLikeUnit : public ProgramUnit {
   /// Terminal basic block (if any)
   mlir::Block *finalBlock{};
   std::vector<std::vector<Variable>> varList;
+  HostAssociations hostAssociations;
 };
 
 /// Module-like units contain a list of function-like units.

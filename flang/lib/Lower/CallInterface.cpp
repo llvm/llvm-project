@@ -310,6 +310,20 @@ mlir::FuncOp Fortran::lower::CalleeInterface::addEntryBlockAndMapArguments() {
   return func;
 }
 
+bool Fortran::lower::CalleeInterface::hasHostAssociated() const {
+  return funit.parentHasHostAssoc();
+}
+
+mlir::Type Fortran::lower::CalleeInterface::getHostAssociatedTy() const {
+  assert(hasHostAssociated());
+  return funit.parentHostAssoc().getArgumentType(converter);
+}
+
+mlir::Value Fortran::lower::CalleeInterface::getHostAssociatedTuple() const {
+  assert(hasHostAssociated() || !funit.getHostAssoc().empty());
+  return converter.hostAssocTupleValue();
+}
+
 //===----------------------------------------------------------------------===//
 // CallInterface implementation: this part is common to both caller and caller
 // sides.
@@ -336,10 +350,8 @@ void Fortran::lower::CallInterface<T>::declare() {
     characteristic =
         std::make_unique<Fortran::evaluate::characteristics::Procedure>(
             side().characterize());
-    if (characteristic->CanBeCalledViaImplicitInterface())
-      buildImplicitInterface(*characteristic);
-    else
-      buildExplicitInterface(*characteristic);
+    auto isImplicit = characteristic->CanBeCalledViaImplicitInterface();
+    determineInterface(isImplicit, *characteristic);
   }
   // No input/output for main program
 
@@ -464,7 +476,7 @@ class Fortran::lower::CallInterfaceImpl {
 
 public:
   CallInterfaceImpl(CallInterface &i)
-      : interface{i}, mlirContext{i.converter.getMLIRContext()} {}
+      : interface(i), mlirContext{i.converter.getMLIRContext()} {}
 
   void buildImplicitInterface(
       const Fortran::evaluate::characteristics::Procedure &procedure) {
@@ -531,6 +543,17 @@ public:
     }
   }
 
+  void appendExtraArgument(mlir::Type tupTy) {
+    auto *ctxt = tupTy.getContext();
+    addFirOperand(tupTy, nextPassedArgPosition(), Property::BaseAddress,
+                  {mlir::NamedAttribute{
+                      mlir::Identifier::get(fir::getHostAssocAttrName(), ctxt),
+                      mlir::UnitAttr::get(ctxt)}});
+    interface.passedArguments.emplace_back(
+        PassedEntity{PassEntityBy::BaseAddress, std::nullopt,
+                     interface.side().getHostAssociatedTuple(), emptyValue()});
+  }
+
 private:
   void handleImplicitResult(
       const Fortran::evaluate::characteristics::FunctionResult &result) {
@@ -585,7 +608,7 @@ private:
       addFirOperand(boxCharTy, nextPassedArgPosition(), Property::BoxChar);
       addPassedArg(PassEntityBy::BoxChar, entity);
     } else {
-      //  non PDT derived type allowed in implicit interface.
+      // non-PDT derived type allowed in implicit interface.
       auto type = translateDynamicType(dynamicType);
       fir::SequenceType::Shape bounds = getBounds(obj.type.shape());
       if (!bounds.empty())
@@ -828,21 +851,22 @@ private:
 };
 
 template <typename T>
-void Fortran::lower::CallInterface<T>::buildImplicitInterface(
+void Fortran::lower::CallInterface<T>::determineInterface(
+    bool isImplicit,
     const Fortran::evaluate::characteristics::Procedure &procedure) {
   CallInterfaceImpl<T> impl(*this);
-  impl.buildImplicitInterface(procedure);
+  if (isImplicit)
+    impl.buildImplicitInterface(procedure);
+  else
+    impl.buildExplicitInterface(procedure);
+  if constexpr (std::is_same_v<T, Fortran::lower::CalleeInterface>) {
+    if (side().hasHostAssociated())
+      impl.appendExtraArgument(side().getHostAssociatedTy());
+  }
 }
 
 template <typename T>
-void Fortran::lower::CallInterface<T>::buildExplicitInterface(
-    const Fortran::evaluate::characteristics::Procedure &procedure) {
-  CallInterfaceImpl<T> impl(*this);
-  impl.buildExplicitInterface(procedure);
-}
-
-template <typename T>
-mlir::FunctionType Fortran::lower::CallInterface<T>::genFunctionType() const {
+mlir::FunctionType Fortran::lower::CallInterface<T>::genFunctionType() {
   llvm::SmallVector<mlir::Type> returnTys;
   llvm::SmallVector<mlir::Type> inputTys;
   for (const auto &placeHolder : outputs)
@@ -890,10 +914,8 @@ public:
   SignatureBuilder(const Fortran::evaluate::characteristics::Procedure &p,
                    Fortran::lower::AbstractConverter &c, bool forceImplicit)
       : CallInterface{c}, proc{p} {
-    if (forceImplicit || proc.CanBeCalledViaImplicitInterface())
-      buildImplicitInterface(proc);
-    else
-      buildExplicitInterface(proc);
+    auto isImplicit = forceImplicit || proc.CanBeCalledViaImplicitInterface();
+    determineInterface(isImplicit, proc);
   }
   /// Does the procedure characteristics being translated have alternate
   /// returns ?
@@ -924,7 +946,7 @@ public:
     return proc;
   }
   /// SignatureBuilder cannot be used on main program.
-  bool isMainProgram() const { return false; }
+  static constexpr bool isMainProgram() { return false; }
 
   /// Return the characteristics::Procedure that is being translated to
   /// mlir::FunctionType.
@@ -934,10 +956,16 @@ public:
   }
 
   /// This is not the description of an indirect call.
-  bool isIndirectCall() const { return false; }
+  static constexpr bool isIndirectCall() { return false; }
 
   /// Return the translated signature.
-  mlir::FunctionType getFunctionType() const { return genFunctionType(); }
+  mlir::FunctionType getFunctionType() { return genFunctionType(); }
+
+  // Copy of base implementation.
+  static constexpr bool hasHostAssociated() { return false; }
+  mlir::Type getHostAssociatedTy() const {
+    llvm_unreachable("getting host associated type in SignatureBuilder");
+  }
 
 private:
   const Fortran::evaluate::characteristics::Procedure &proc;
@@ -976,7 +1004,7 @@ mlir::FuncOp Fortran::lower::getOrDeclareFunction(
       Fortran::evaluate::characteristics::Procedure::Characterize(
           proc, converter.getFoldingContext());
   auto ty = SignatureBuilder{characteristics.value(), converter,
-                             /* forceImplicit */ false}
+                             /*forceImplicit=*/false}
                 .getFunctionType();
   auto newFunc =
       Fortran::lower::FirOpBuilder::createFunction(loc, module, name, ty);

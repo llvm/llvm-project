@@ -23,6 +23,7 @@
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/FIRBuilder.h"
+#include "flang/Lower/HostAssociations.h"
 #include "flang/Lower/IO.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/OpenACC.h"
@@ -175,16 +176,12 @@ public:
   }
 
   /// Declare a function.
-  void declareFunction(
-      Fortran::lower::pft::FunctionLikeUnit &funit,
-      llvm::SetVector<const Fortran::semantics::Symbol *> hosted = {}) {
-    if (!hosted.empty())
-      TODO(toLocation(), "internal procedure has host associated variables");
+  void declareFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
     for (int entryIndex = 0, last = funit.entryPointList.size();
          entryIndex < last; ++entryIndex) {
       funit.setActiveEntry(entryIndex);
-      // Calling CalleeInterface ctor will build the mlir::FuncOp with no other
-      // side effects.
+      // Calling CalleeInterface ctor will build a declaration mlir::FuncOp with
+      // no other side effects.
       // TODO: when doing some compiler profiling on real apps, it may be worth
       // to check it's better to save the CalleeInterface instead of recomputing
       // it later when lowering the body. CalleeInterface ctor should be linear
@@ -195,11 +192,15 @@ public:
     }
     funit.setActiveEntry(0);
 
+    // Compute the set of host associated entities from the nested functions.
     llvm::SetVector<const Fortran::semantics::Symbol *> escapeHost;
     for (auto &f : funit.nestedFunctions)
       collectHostAssociatedVariables(f, escapeHost);
+    funit.setHostAssociatedSymbols(escapeHost);
+
+    // Declare internal procedures
     for (auto &f : funit.nestedFunctions)
-      declareFunction(f, escapeHost); // internal procedure
+      declareFunction(f);
   }
 
   /// Collects the canonical list of all host associated symbols. These bindings
@@ -208,7 +209,7 @@ public:
   void collectHostAssociatedVariables(
       Fortran::lower::pft::FunctionLikeUnit &funit,
       llvm::SetVector<const Fortran::semantics::Symbol *> &escapees) {
-    for (const auto &var : funit.varList[0]) {
+    for (const auto &var : funit.getOrderedSymbolTable()) {
       const auto &sym = var.getSymbol();
       if (const auto *details =
               sym.detailsIf<Fortran::semantics::HostAssocDetails>())
@@ -365,6 +366,14 @@ public:
   }
 
   fir::KindMapping &getKindMap() override final { return bridge.getKindMap(); }
+
+  mlir::Value hostAssocTupleValue() override final { return hostAssocTuple; }
+
+  /// Record a binding for the ssa-value of the tuple for this function.
+  void bindHostAssocTuple(mlir::Value val) override final {
+    assert(!hostAssocTuple && val);
+    hostAssocTuple = val;
+  }
 
 private:
   FirConverter() = delete;
@@ -2023,7 +2032,7 @@ private:
   /// Map mlir function block arguments to the corresponding Fortran dummy
   /// variables. When the result is passed as a hidden argument, the Fortran
   /// result is also mapped. The symbol map is used to hold this mapping.
-  void mapDummiesAndResults(const Fortran::lower::pft::FunctionLikeUnit &funit,
+  void mapDummiesAndResults(Fortran::lower::pft::FunctionLikeUnit &funit,
                             const Fortran::lower::CalleeInterface &callee) {
     assert(builder && "need a builder at this point");
     using PassBy = Fortran::lower::CalleeInterface::PassEntityBy;
@@ -2034,9 +2043,13 @@ private:
         auto loc = toLocation();
         Fortran::lower::CharacterExprHelper charHelp{*builder, loc};
         auto box = charHelp.createEmboxChar(arg.firArgument, arg.firLength);
-        addSymbol(arg.entity.get(), box);
+        addSymbol(arg.entity->get(), box);
       } else {
-        addSymbol(arg.entity.get(), arg.firArgument);
+        if (arg.entity.has_value())
+          addSymbol(arg.entity->get(), arg.firArgument);
+        else if (funit.parentHasHostAssoc())
+          funit.parentHostAssoc().internalProcedureBindings(
+              *this, localSymbols, funit.getHostAssoc());
       }
     };
     for (const auto &arg : callee.getPassedArguments())
@@ -2055,10 +2068,11 @@ private:
     }
     if (auto passedResult = callee.getPassedResult()) {
       mapPassedEntity(*passedResult);
-      // FIXME: need to make sure things are OK here. addSymbol is may not be OK
+      // FIXME: need to make sure things are OK here. addSymbol may not be OK
       if (funit.primaryResult &&
-          passedResult->entity.get() != *funit.primaryResult)
-        addSymbol(*funit.primaryResult, getSymbolAddress(passedResult->entity));
+          passedResult->entity->get() != *funit.primaryResult)
+        addSymbol(*funit.primaryResult,
+                  getSymbolAddress(passedResult->entity->get()));
     }
   }
 
@@ -2090,7 +2104,7 @@ private:
     // primary results symbol before mapSymbolAttributes is called.
     Fortran::lower::SymbolBox resultArg;
     if (auto passedResult = callee.getPassedResult())
-      resultArg = lookupSymbol(passedResult->entity.get());
+      resultArg = lookupSymbol(passedResult->entity->get());
 
     Fortran::lower::AggregateStoreMap storeMap;
     // The front-end is currently not adding module variables referenced
@@ -2104,11 +2118,21 @@ private:
 
     mlir::Value primaryFuncResultStorage;
     for (const auto &var : funit.getOrderedSymbolTable()) {
+      // Always instantiate aggregate storage blocks.
       if (var.isAggregateStore()) {
         instantiateVar(var, storeMap);
         continue;
       }
       const Fortran::semantics::Symbol &sym = var.getSymbol();
+      // Never instantitate host associated variables, as they are already
+      // instantiated from an argument tuple. Instead, just bind the symbol to
+      // the reference to the host variable, which must be in the map.
+      if (const auto *varDetails =
+              sym.detailsIf<Fortran::semantics::HostAssocDetails>()) {
+        auto hostBox = localSymbols.lookupSymbol(varDetails->symbol());
+        localSymbols.addSymbol(sym, hostBox.toExtendedValue());
+        continue;
+      }
       if (!sym.IsFuncResult() || !funit.primaryResult) {
         instantiateVar(var, storeMap);
       } else if (&sym == funit.primaryResult) {
@@ -2118,6 +2142,11 @@ private:
         deferredFuncResultList.push_back(var);
       }
     }
+
+    // If this is a host procedure with host associations, then create the tuple
+    // of pointers for passing to the internal procedures.
+    if (!funit.getHostAssoc().empty())
+      funit.getHostAssoc().hostProcedureBindings(*this, localSymbols);
 
     /// TODO: should use same mechanism as equivalence?
     /// One blocking point is character entry returns that need special handling
@@ -2225,6 +2254,7 @@ private:
                                 {builder->getRegion()}); // remove dead code
     delete builder;
     builder = nullptr;
+    hostAssocTuple = mlir::Value{};
     localSymbols.clear();
   }
 
@@ -2258,7 +2288,7 @@ private:
     for (int entryIndex = 0, last = funit.entryPointList.size();
          entryIndex < last; ++entryIndex) {
       funit.setActiveEntry(entryIndex);
-      startNewFunction(funit); // this entry point of this procedure
+      startNewFunction(funit); // the entry point for lowering this procedure
       for (auto &eval : funit.evaluationList)
         genFIR(eval);
       endNewFunction(funit);
@@ -2330,6 +2360,9 @@ private:
 
   /// WHERE statement/construct mask expression stack.
   Fortran::lower::MaskExpr masks;
+
+  /// Tuple of host assoicated variables.
+  mlir::Value hostAssocTuple;
 };
 
 } // namespace

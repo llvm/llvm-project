@@ -2237,11 +2237,9 @@ bool fir::valueHasFirAttribute(mlir::Value value,
           return true;
     return false;
   }
-
   if (auto definingOp = value.getDefiningOp()) {
     // If this is an allocated value, look at the allocation attributes.
-    if (mlir::isa<fir::AllocMemOp>(definingOp) ||
-        mlir::isa<AllocaOp>(definingOp))
+    if (mlir::isa<fir::AllocMemOp, fir::AllocaOp, mlir::FuncOp>(definingOp))
       return definingOp->hasAttr(attributeName);
     // If this is an imported global, look at AddrOfOp and GlobalOp attributes.
     // Both operations are looked at because use/host associated variable (the
@@ -2258,6 +2256,13 @@ bool fir::valueHasFirAttribute(mlir::Value value,
   }
   // TODO: Construct associated entities attributes. Decide where the fir
   // attributes must be placed/looked for in this case.
+  return false;
+}
+
+bool fir::anyFuncArgsHaveAttr(mlir::FuncOp func, llvm::StringRef attr) {
+  for (unsigned i = 0, end = func.getNumArguments(); i < end; ++i)
+    if (func.getArgAttr(i, attr))
+      return true;
   return false;
 }
 

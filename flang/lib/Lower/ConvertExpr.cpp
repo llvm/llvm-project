@@ -34,6 +34,7 @@
 #include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/symbol.h"
@@ -1635,7 +1636,7 @@ public:
     return result;
   }
 
-  /// Helper to package a value and its properties into an ExtendedValue.
+  /// Helper to package a Value and its properties into an ExtendedValue.
   ExtValue toExtendedValue(mlir::Value base,
                            llvm::ArrayRef<mlir::Value> extents,
                            llvm::ArrayRef<mlir::Value> lengths) {
@@ -1664,6 +1665,20 @@ public:
       return fir::CharBoxValue(base, lengths[0]);
     }
     return base;
+  }
+
+  // Find the argument that corresponds to the host associations.
+  // Verify some assumptions about how the signature was built here.
+  [[maybe_unused]] static unsigned findHostAssocTuplePos(mlir::FuncOp fn) {
+    // Scan the argument list from last to first as the host associations are
+    // appended for now.
+    for (unsigned i = fn.getNumArguments(); i > 0; --i)
+      if (fn.getArgAttr(i - 1, fir::getHostAssocAttrName())) {
+        // Host assoc tuple must be last argument (for now).
+        assert(i == fn.getNumArguments() && "tuple must be last");
+        return i - 1;
+      }
+    llvm_unreachable("anyFuncArgsHaveAttr failed");
   }
 
   ExtValue genProcedureRef(const Fortran::evaluate::ProcedureRef &procRef,
@@ -1779,6 +1794,7 @@ public:
       mustPopSymMap = true;
       Fortran::lower::mapCallInterfaceSymbols(converter, caller, symMap);
     }
+
     auto idxTy = builder.getIndexType();
     auto lowerSpecExpr = [&](const auto &expr) -> mlir::Value {
       return builder.createConvert(
@@ -1815,16 +1831,15 @@ public:
     mlir::Value arrayResultShape;
     if (allocatedResult) {
       if (auto resultArg = caller.getPassedResult()) {
-        if (resultArg->passBy == PassBy::AddressAndLength) {
+        if (resultArg->passBy == PassBy::AddressAndLength)
           caller.placeAddressAndLengthInput(*resultArg,
                                             fir::getBase(*allocatedResult),
                                             fir::getLen(*allocatedResult));
-        } else if (resultArg->passBy == PassBy::BaseAddress) {
+        else if (resultArg->passBy == PassBy::BaseAddress)
           caller.placeInput(*resultArg, fir::getBase(*allocatedResult));
-        } else {
+        else
           fir::emitFatalError(
               loc, "only expect character scalar result to be passed by ref");
-        }
       } else {
         assert(caller.mustSaveResult());
         arrayResultShape = allocatedResult->match(
@@ -1847,20 +1862,33 @@ public:
     // procedure argument earlier with no further type information.
     mlir::Value funcPointer;
     mlir::SymbolRefAttr funcSymbolAttr;
+    bool addHostAssociations = false;
     if (const auto *sym = caller.getIfIndirectCallSymbol()) {
       funcPointer = symMap.lookupSymbol(*sym).getAddr();
       assert(funcPointer &&
              "dummy procedure or procedure pointer not in symbol map");
     } else {
       auto funcOpType = caller.getFuncOp().getType();
-      // Deal with argument number mismatch by making a function pointer so that
-      // function type cast can be inserted.
       auto symbolAttr = builder.getSymbolRefAttr(caller.getMangledName());
-      if (callSiteType.getNumResults() != funcOpType.getNumResults() ||
-          callSiteType.getNumInputs() != funcOpType.getNumInputs()) {
-        // Do not emit a warning here because this can happen in legal program
-        // if the function is not defined here and it was first passed as an
-        // argument without any more information.
+      if (callSiteType.getNumResults() == funcOpType.getNumResults() &&
+          callSiteType.getNumInputs() + 1 == funcOpType.getNumInputs() &&
+          fir::anyFuncArgsHaveAttr(caller.getFuncOp(),
+                                   fir::getHostAssocAttrName())) {
+        // The number of arguments is off by one, and we're lowering a function
+        // with host associations. Modify call to include host associations
+        // argument by appending the value at the end of the operands.
+        assert(funcOpType.getInput(findHostAssocTuplePos(caller.getFuncOp())) ==
+               converter.hostAssocTupleValue().getType());
+        addHostAssociations = true;
+      }
+      if (!addHostAssociations &&
+          (callSiteType.getNumResults() != funcOpType.getNumResults() ||
+           callSiteType.getNumInputs() != funcOpType.getNumInputs())) {
+        // Deal with argument number mismatch by making a function pointer so
+        // that function type cast can be inserted. Do not emit a warning here
+        // because this can happen in legal program if the function is not
+        // defined here and it was first passed as an argument without any more
+        // information.
         funcPointer =
             builder.create<fir::AddrOfOp>(loc, funcOpType, symbolAttr);
       } else if (callSiteType.getResults() != funcOpType.getResults()) {
@@ -1879,6 +1907,7 @@ public:
         funcSymbolAttr = symbolAttr;
       }
     }
+
     auto funcType = funcPointer ? callSiteType : caller.getFuncOp().getType();
     llvm::SmallVector<mlir::Value> operands;
     // First operand of indirect call is the function pointer. Cast it to
@@ -1895,6 +1924,10 @@ public:
       auto cast = builder.convertWithSemantics(getLoc(), snd, fst);
       operands.push_back(cast);
     }
+
+    // Add host associations as necessary.
+    if (addHostAssociations)
+      operands.push_back(converter.hostAssocTupleValue());
 
     auto call = builder.create<fir::CallOp>(loc, funcType.getResults(),
                                             funcSymbolAttr, operands);
