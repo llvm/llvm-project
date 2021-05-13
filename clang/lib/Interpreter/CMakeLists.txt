@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
    core
    native
+   Option
    OrcJit
    Support
    Target
@@ -15,9 +16,13 @@ add_clang_library(clangInterpreter
   clangAST
   clangAnalysis
   clangBasic
+  clangDriver
   clangEdit
+  clangFrontend
   clangLex
+  clangParse
   clangSema
+  clangSerialization
   clangCodeGen
   clangFrontendTool
   )
