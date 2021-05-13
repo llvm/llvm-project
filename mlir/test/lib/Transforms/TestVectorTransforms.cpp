@@ -390,16 +390,20 @@ struct TestVectorMultiReductionLoweringPatterns
   }
 };
 
+template <bool Unroll>
 struct TestProgressiveVectorToSCFLoweringPatterns
-    : public PassWrapper<TestProgressiveVectorToSCFLoweringPatterns,
+    : public PassWrapper<TestProgressiveVectorToSCFLoweringPatterns<Unroll>,
                          FunctionPass> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect, scf::SCFDialect, AffineDialect>();
   }
   void runOnFunction() override {
-    RewritePatternSet patterns(&getContext());
-    populateProgressiveVectorToSCFConversionPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
+    RewritePatternSet patterns(&this->getContext());
+    ProgressiveVectorTransferToSCFOptions options;
+    options.unroll = Unroll;
+    populateProgressiveVectorToSCFConversionPatterns(patterns, options);
+    (void)applyPatternsAndFoldGreedily(this->getFunction(),
+                                       std::move(patterns));
   }
 };
 
@@ -450,9 +454,18 @@ void registerTestVectorConversions() {
       "test-vector-transfer-lowering-patterns",
       "Test conversion patterns to lower transfer ops to other vector ops");
 
-  PassRegistration<TestProgressiveVectorToSCFLoweringPatterns> transferOpToSCF(
-      "test-progressive-convert-vector-to-scf",
-      "Test conversion patterns to progressively lower transfer ops to SCF");
+  PassRegistration<TestProgressiveVectorToSCFLoweringPatterns<
+      /*Unroll=*/false>>
+      transferOpToSCF("test-progressive-convert-vector-to-scf",
+                      "Test conversion patterns to progressively lower "
+                      "transfer ops to SCF");
+
+  PassRegistration<TestProgressiveVectorToSCFLoweringPatterns<
+      /*Unroll=*/true>>
+      transferOpToSCFUnrolled(
+          "test-unrolled-progressive-convert-vector-to-scf",
+          "Test conversion patterns to progressively lower transfer ops to SCF"
+          "(unrolled variant)");
 
   PassRegistration<TestVectorMultiReductionLoweringPatterns>
       multiDimReductionOpLoweringPass(
