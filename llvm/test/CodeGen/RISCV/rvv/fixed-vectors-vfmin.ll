@@ -9,7 +9,7 @@ declare <2 x half> @llvm.minnum.v2f16(<2 x half>, <2 x half>)
 define <2 x half> @vfmin_v2f16_vv(<2 x half> %a, <2 x half> %b) {
 ; CHECK-LABEL: vfmin_v2f16_vv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vfmin.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %v = call <2 x half> @llvm.minnum.v2f16(<2 x half> %a, <2 x half> %b)
@@ -19,7 +19,7 @@ define <2 x half> @vfmin_v2f16_vv(<2 x half> %a, <2 x half> %b) {
 define <2 x half> @vfmin_v2f16_vf(<2 x half> %a, half %b) {
 ; CHECK-LABEL: vfmin_v2f16_vf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vfmin.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x half> undef, half %b, i32 0
@@ -33,7 +33,7 @@ declare <4 x half> @llvm.minnum.v4f16(<4 x half>, <4 x half>)
 define <4 x half> @vfmin_v4f16_vv(<4 x half> %a, <4 x half> %b) {
 ; CHECK-LABEL: vfmin_v4f16_vv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 4, e16,mf2,ta,mu
 ; CHECK-NEXT:    vfmin.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %v = call <4 x half> @llvm.minnum.v4f16(<4 x half> %a, <4 x half> %b)
@@ -43,7 +43,7 @@ define <4 x half> @vfmin_v4f16_vv(<4 x half> %a, <4 x half> %b) {
 define <4 x half> @vfmin_v4f16_vf(<4 x half> %a, half %b) {
 ; CHECK-LABEL: vfmin_v4f16_vf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 4, e16,mf2,ta,mu
 ; CHECK-NEXT:    vfmin.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x half> undef, half %b, i32 0
@@ -105,7 +105,7 @@ declare <2 x float> @llvm.minnum.v2f32(<2 x float>, <2 x float>)
 define <2 x float> @vfmin_v2f32_vv(<2 x float> %a, <2 x float> %b) {
 ; CHECK-LABEL: vfmin_v2f32_vv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfmin.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %v = call <2 x float> @llvm.minnum.v2f32(<2 x float> %a, <2 x float> %b)
@@ -115,7 +115,7 @@ define <2 x float> @vfmin_v2f32_vv(<2 x float> %a, <2 x float> %b) {
 define <2 x float> @vfmin_v2f32_vf(<2 x float> %a, float %b) {
 ; CHECK-LABEL: vfmin_v2f32_vf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfmin.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x float> undef, float %b, i32 0

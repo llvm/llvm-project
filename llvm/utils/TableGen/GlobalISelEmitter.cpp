@@ -3657,6 +3657,10 @@ private:
   Optional<const CodeGenRegisterClass *>
   inferRegClassFromPattern(TreePatternNode *N);
 
+  /// Return the size of the MemoryVT in this predicate, if possible.
+  Optional<unsigned>
+  getMemSizeBitsFromPredicate(const TreePredicateFn &Predicate);
+
   // Add builtin predicates.
   Expected<InstructionMatcher &>
   addBuiltinPredicates(const Record *SrcGIEquivOrNull,
@@ -3769,6 +3773,17 @@ Error GlobalISelEmitter::importRulePredicates(RuleMatcher &M,
   return Error::success();
 }
 
+Optional<unsigned> GlobalISelEmitter::getMemSizeBitsFromPredicate(const TreePredicateFn &Predicate) {
+  Optional<LLTCodeGen> MemTyOrNone =
+      MVTToLLT(getValueType(Predicate.getMemoryVT()));
+
+  if (!MemTyOrNone)
+    return None;
+
+  // Align so unusual types like i1 don't get rounded down.
+  return llvm::alignTo(MemTyOrNone->get().getSizeInBits(), 8);
+}
+
 Expected<InstructionMatcher &> GlobalISelEmitter::addBuiltinPredicates(
     const Record *SrcGIEquivOrNull, const TreePredicateFn &Predicate,
     InstructionMatcher &InsnMatcher, bool &HasAddedMatcher) {
@@ -3808,9 +3823,18 @@ Expected<InstructionMatcher &> GlobalISelEmitter::addBuiltinPredicates(
 
   if (Predicate.isStore()) {
     if (Predicate.isTruncStore()) {
-      // FIXME: If MemoryVT is set, we end up with 2 checks for the MMO size.
-      InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
-          0, MemoryVsLLTSizePredicateMatcher::LessThan, 0);
+      if (Predicate.getMemoryVT() != nullptr) {
+        // FIXME: If MemoryVT is set, we end up with 2 checks for the MMO size.
+        auto MemSizeInBits = getMemSizeBitsFromPredicate(Predicate);
+        if (!MemSizeInBits)
+          return failedImport("MemVT could not be converted to LLT");
+
+        InsnMatcher.addPredicate<MemorySizePredicateMatcher>(0, *MemSizeInBits /
+                                                                    8);
+      } else {
+        InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
+            0, MemoryVsLLTSizePredicateMatcher::LessThan, 0);
+      }
       return InsnMatcher;
     }
     if (Predicate.isNonTruncStore()) {
@@ -3837,19 +3861,12 @@ Expected<InstructionMatcher &> GlobalISelEmitter::addBuiltinPredicates(
 
   if (Predicate.isLoad() || Predicate.isStore() || Predicate.isAtomic()) {
     if (Predicate.getMemoryVT() != nullptr) {
-      Optional<LLTCodeGen> MemTyOrNone =
-          MVTToLLT(getValueType(Predicate.getMemoryVT()));
-
-      if (!MemTyOrNone)
+      auto MemSizeInBits = getMemSizeBitsFromPredicate(Predicate);
+      if (!MemSizeInBits)
         return failedImport("MemVT could not be converted to LLT");
 
-      // MMO's work in bytes so we must take care of unusual types like i1
-      // don't round down.
-      unsigned MemSizeInBits =
-          llvm::alignTo(MemTyOrNone->get().getSizeInBits(), 8);
-
       InsnMatcher.addPredicate<MemorySizePredicateMatcher>(0,
-                                                           MemSizeInBits / 8);
+                                                           *MemSizeInBits / 8);
       return InsnMatcher;
     }
   }

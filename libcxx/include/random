@@ -1919,7 +1919,7 @@ private:
 
     static_assert(__m == 0 || __a < __m, "linear_congruential_engine invalid parameters");
     static_assert(__m == 0 || __c < __m, "linear_congruential_engine invalid parameters");
-    static_assert(_VSTD::is_unsigned<_UIntType>::value, "_UIntType must be unsigned type");
+    static_assert(is_unsigned<_UIntType>::value, "_UIntType must be unsigned type");
 public:
     static _LIBCPP_CONSTEXPR const result_type _Min = __c == 0u ? 1u: 0u;
     static _LIBCPP_CONSTEXPR const result_type _Max = __m - 1u;
@@ -6292,8 +6292,7 @@ discrete_distribution<_IntType>::param_type::__init()
         if (__p_.size() > 1)
         {
             double __s = _VSTD::accumulate(__p_.begin(), __p_.end(), 0.0);
-            for (_VSTD::vector<double>::iterator __i = __p_.begin(), __e = __p_.end();
-                                                                       __i < __e; ++__i)
+            for (vector<double>::iterator __i = __p_.begin(), __e = __p_.end(); __i < __e; ++__i)
                 *__i /= __s;
             vector<double> __t(__p_.size() - 1);
             _VSTD::partial_sum(__p_.begin(), __p_.end() - 1, __t.begin());
@@ -6312,7 +6311,7 @@ vector<double>
 discrete_distribution<_IntType>::param_type::probabilities() const
 {
     size_t __n = __p_.size();
-    _VSTD::vector<double> __p(__n+1);
+    vector<double> __p(__n+1);
     _VSTD::adjacent_difference(__p_.begin(), __p_.end(), __p.begin());
     if (__n > 0)
         __p[__n] = 1 - __p_[__n-1];

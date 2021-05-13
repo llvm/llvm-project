@@ -5,7 +5,7 @@
 define void @masked_load_v1f16(<1 x half>* %a, <1 x half>* %m_ptr, <1 x half>* %res_ptr) nounwind {
 ; CHECK-LABEL: masked_load_v1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a3, 1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a3, 1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a1)
 ; CHECK-NEXT:    fmv.h.x ft0, zero
 ; CHECK-NEXT:    vmfeq.vf v0, v25, ft0
@@ -23,7 +23,7 @@ declare <1 x half> @llvm.masked.load.v1f16(<1 x half>*, i32, <1 x i1>, <1 x half
 define void @masked_load_v1f32(<1 x float>* %a, <1 x float>* %m_ptr, <1 x float>* %res_ptr) nounwind {
 ; CHECK-LABEL: masked_load_v1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a3, 1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a3, 1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a1)
 ; CHECK-NEXT:    fmv.w.x ft0, zero
 ; CHECK-NEXT:    vmfeq.vf v0, v25, ft0
@@ -69,7 +69,7 @@ declare <1 x double> @llvm.masked.load.v1f64(<1 x double>*, i32, <1 x i1>, <1 x 
 define void @masked_load_v2f16(<2 x half>* %a, <2 x half>* %m_ptr, <2 x half>* %res_ptr) nounwind {
 ; CHECK-LABEL: masked_load_v2f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a3, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a3, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a1)
 ; CHECK-NEXT:    fmv.h.x ft0, zero
 ; CHECK-NEXT:    vmfeq.vf v0, v25, ft0
@@ -87,7 +87,7 @@ declare <2 x half> @llvm.masked.load.v2f16(<2 x half>*, i32, <2 x i1>, <2 x half
 define void @masked_load_v2f32(<2 x float>* %a, <2 x float>* %m_ptr, <2 x float>* %res_ptr) nounwind {
 ; CHECK-LABEL: masked_load_v2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a3, 2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a3, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a1)
 ; CHECK-NEXT:    fmv.w.x ft0, zero
 ; CHECK-NEXT:    vmfeq.vf v0, v25, ft0
@@ -133,7 +133,7 @@ declare <2 x double> @llvm.masked.load.v2f64(<2 x double>*, i32, <2 x i1>, <2 x 
 define void @masked_load_v4f16(<4 x half>* %a, <4 x half>* %m_ptr, <4 x half>* %res_ptr) nounwind {
 ; CHECK-LABEL: masked_load_v4f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a3, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a3, 4, e16,mf2,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a1)
 ; CHECK-NEXT:    fmv.h.x ft0, zero
 ; CHECK-NEXT:    vmfeq.vf v0, v25, ft0

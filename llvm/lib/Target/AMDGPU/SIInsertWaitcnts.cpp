@@ -27,6 +27,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
@@ -953,8 +954,10 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   AMDGPU::Waitcnt Wait;
   bool Modified = false;
 
-  // See if this instruction has a forced S_WAITCNT VM.
-  // TODO: Handle other cases of NeedsWaitcntVmBefore()
+  // FIXME: This should have already been handled by the memory legalizer.
+  // Removing this currently doesn't affect any lit tests, but we need to
+  // verify that nothing was relying on this. The number of buffer invalidates
+  // being handled here should not be expanded.
   if (MI.getOpcode() == AMDGPU::BUFFER_WBINVL1 ||
       MI.getOpcode() == AMDGPU::BUFFER_WBINVL1_SC ||
       MI.getOpcode() == AMDGPU::BUFFER_WBINVL1_VOL ||
@@ -1339,12 +1342,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     if (FlatASCount > 1)
       ScoreBrackets->setPendingFlat();
   } else if (SIInstrInfo::isVMEM(Inst) &&
-             // TODO: get a better carve out.
-             Inst.getOpcode() != AMDGPU::BUFFER_WBINVL1 &&
-             Inst.getOpcode() != AMDGPU::BUFFER_WBINVL1_SC &&
-             Inst.getOpcode() != AMDGPU::BUFFER_WBINVL1_VOL &&
-             Inst.getOpcode() != AMDGPU::BUFFER_GL0_INV &&
-             Inst.getOpcode() != AMDGPU::BUFFER_GL1_INV) {
+             !llvm::AMDGPU::getMUBUFIsBufferInv(Inst.getOpcode())) {
     if (!ST->hasVscnt())
       ScoreBrackets->updateByEvent(TII, TRI, MRI, VMEM_ACCESS, Inst);
     else if ((Inst.mayLoad() && !SIInstrInfo::isAtomicNoRet(Inst)) ||
@@ -1552,8 +1550,12 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
     if (TII->isSMRD(Inst)) {
       for (const MachineMemOperand *Memop : Inst.memoperands()) {
-        const Value *Ptr = Memop->getValue();
-        SLoadAddresses.insert(std::make_pair(Ptr, Inst.getParent()));
+        // No need to handle invariant loads when avoiding WAR conflicts, as
+        // there cannot be a vector store to the same memory location.
+        if (!Memop->isInvariant()) {
+          const Value *Ptr = Memop->getValue();
+          SLoadAddresses.insert(std::make_pair(Ptr, Inst.getParent()));
+        }
       }
       if (ST->hasReadVCCZBug()) {
         // This smem read could complete and clobber vccz at any time.

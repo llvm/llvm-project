@@ -682,8 +682,20 @@ static LogicalResult verify(acc::ExitDataOp op) {
   return success();
 }
 
+unsigned ExitDataOp::getNumDataOperands() {
+  return copyoutOperands().size() + deleteOperands().size() +
+         detachOperands().size();
+}
+
+Value ExitDataOp::getDataOperand(unsigned i) {
+  unsigned numOptional = ifCond() ? 1 : 0;
+  numOptional += asyncOperand() ? 1 : 0;
+  numOptional += waitDevnum() ? 1 : 0;
+  return getOperand(waitOperands().size() + numOptional + i);
+}
+
 //===----------------------------------------------------------------------===//
-// DataEnterOp
+// EnterDataOp
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(acc::EnterDataOp op) {
@@ -710,6 +722,18 @@ static LogicalResult verify(acc::EnterDataOp op) {
     return op.emitError("wait_devnum cannot appear without waitOperands");
 
   return success();
+}
+
+unsigned EnterDataOp::getNumDataOperands() {
+  return copyinOperands().size() + createOperands().size() +
+         createZeroOperands().size() + attachOperands().size();
+}
+
+Value EnterDataOp::getDataOperand(unsigned i) {
+  unsigned numOptional = ifCond() ? 1 : 0;
+  numOptional += asyncOperand() ? 1 : 0;
+  numOptional += waitDevnum() ? 1 : 0;
+  return getOperand(waitOperands().size() + numOptional + i);
 }
 
 //===----------------------------------------------------------------------===//
@@ -764,6 +788,18 @@ static LogicalResult verify(acc::UpdateOp updateOp) {
     return updateOp.emitError("wait_devnum cannot appear without waitOperands");
 
   return success();
+}
+
+unsigned UpdateOp::getNumDataOperands() {
+  return hostOperands().size() + deviceOperands().size();
+}
+
+Value UpdateOp::getDataOperand(unsigned i) {
+  unsigned numOptional = asyncOperand() ? 1 : 0;
+  numOptional += waitDevnum() ? 1 : 0;
+  numOptional += ifCond() ? 1 : 0;
+  return getOperand(waitOperands().size() + deviceTypeOperands().size() +
+                    numOptional + i);
 }
 
 //===----------------------------------------------------------------------===//

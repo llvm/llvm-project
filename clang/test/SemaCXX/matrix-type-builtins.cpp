@@ -30,14 +30,14 @@ void test_transpose_template(unsigned *Ptr1, float *Ptr2) {
   MyMatrix<unsigned, 3, 3> Mat2;
   Mat1.value = *((decltype(Mat1)::matrix_t *)Ptr1);
   Mat1.value = transpose<unsigned, 2, 3, unsigned, 2, 3>(Mat1);
-  // expected-note@-1 {{in instantiation of function template specialization 'transpose<unsigned int, 2, 3, unsigned int, 2, 3>' requested here}}
+  // expected-note@-1 {{in instantiation of function template specialization 'transpose<unsigned int, 2U, 3U, unsigned int, 2U, 3U>' requested here}}
 
   Mat1.value = transpose<unsigned, 3, 3, unsigned, 2, 3>(Mat2);
-  // expected-note@-1 {{in instantiation of function template specialization 'transpose<unsigned int, 3, 3, unsigned int, 2, 3>' requested here}}
+  // expected-note@-1 {{in instantiation of function template specialization 'transpose<unsigned int, 3U, 3U, unsigned int, 2U, 3U>' requested here}}
 
   MyMatrix<float, 3, 3> Mat3;
   Mat3.value = transpose<unsigned, 3, 3, float, 3, 3>(Mat2);
-  // expected-note@-1 {{in instantiation of function template specialization 'transpose<unsigned int, 3, 3, float, 3, 3>' requested here}}
+  // expected-note@-1 {{in instantiation of function template specialization 'transpose<unsigned int, 3U, 3U, float, 3U, 3U>' requested here}}
 }
 
 template <typename EltTy0, unsigned R0, unsigned C0, typename EltTy1, unsigned R1, unsigned C1>
@@ -55,13 +55,13 @@ typename MyMatrix<EltTy1, R1, C1>::matrix_t column_major_load(MyMatrix<EltTy0, R
 void test_column_major_loads_template(unsigned *Ptr1, float *Ptr2) {
   MyMatrix<unsigned, 2, 3> Mat1;
   Mat1.value = column_major_load<unsigned, 2, 3, unsigned, 2, 3>(Mat1, Ptr1);
-  // expected-note@-1 {{in instantiation of function template specialization 'column_major_load<unsigned int, 2, 3, unsigned int, 2, 3>' requested here}}
+  // expected-note@-1 {{in instantiation of function template specialization 'column_major_load<unsigned int, 2U, 3U, unsigned int, 2U, 3U>' requested here}}
   column_major_load<unsigned, 2, 3, unsigned, 5, 5>(Mat1, Ptr1);
-  // expected-note@-1 {{in instantiation of function template specialization 'column_major_load<unsigned int, 2, 3, unsigned int, 5, 5>' requested here}}
+  // expected-note@-1 {{in instantiation of function template specialization 'column_major_load<unsigned int, 2U, 3U, unsigned int, 5U, 5U>' requested here}}
 
   MyMatrix<float, 2, 3> Mat2;
   Mat1.value = column_major_load<float, 2, 3, unsigned, 2, 3>(Mat2, Ptr2);
-  // expected-note@-1 {{in instantiation of function template specialization 'column_major_load<float, 2, 3, unsigned int, 2, 3>' requested here}}
+  // expected-note@-1 {{in instantiation of function template specialization 'column_major_load<float, 2U, 3U, unsigned int, 2U, 3U>' requested here}}
 }
 
 constexpr int constexpr1() { return 1; }
@@ -116,10 +116,10 @@ void column_major_store(MTy &A, PtrTy Ptr) {
 
 void test_column_major_stores_template(MyMatrix<unsigned, 2, 3> &M1, unsigned *Ptr1, MyMatrix<float, 3, 4> &M2, float *Ptr2) {
   column_major_store(M1, Ptr2, 10);
-  // expected-note@-1 {{in instantiation of function template specialization 'column_major_store<unsigned int, 2, 3, float *>' requested here}}
+  // expected-note@-1 {{in instantiation of function template specialization 'column_major_store<unsigned int, 2U, 3U, float *>' requested here}}
 
   column_major_store<decltype(M2), float *, 1>(M2, Ptr2);
-  // expected-note@-1 {{in instantiation of function template specialization 'column_major_store<MyMatrix<float, 3, 4> &, float *, 1>' requested here}}
+  // expected-note@-1 {{in instantiation of function template specialization 'column_major_store<MyMatrix<float, 3, 4> &, float *, 1U>' requested here}}
 }
 
 template <typename EltTy0, unsigned R0, unsigned C0, typename EltTy1>
@@ -139,13 +139,13 @@ void column_major_store(MyMatrix<EltTy0, R0, C0> &A, EltTy1 *Ptr) {
 void test_column_major_store_template(unsigned *Ptr1, float *Ptr2) {
   MyMatrix<unsigned, 2, 3> Mat1;
   column_major_store<unsigned, 2, 3, unsigned>(Mat1, Ptr1);
-  // expected-note@-1 {{in instantiation of function template specialization 'column_major_store<unsigned int, 2, 3, unsigned int>'}}
+  // expected-note@-1 {{in instantiation of function template specialization 'column_major_store<unsigned int, 2U, 3U, unsigned int>'}}
   column_major_store<unsigned, 2, 3, float>(Mat1, Ptr2);
-  // expected-note@-1 {{in instantiation of function template specialization 'column_major_store<unsigned int, 2, 3, float>'}}
+  // expected-note@-1 {{in instantiation of function template specialization 'column_major_store<unsigned int, 2U, 3U, float>'}}
 
   MyMatrix<float, 2, 3> Mat2;
   column_major_store<float, 2, 3, unsigned>(Mat2, Ptr1);
-  // expected-note@-1 {{in instantiation of function template specialization 'column_major_store<float, 2, 3, unsigned int>'}}
+  // expected-note@-1 {{in instantiation of function template specialization 'column_major_store<float, 2U, 3U, unsigned int>'}}
 }
 
 void test_column_major_store_constexpr(unsigned *Ptr, MyMatrix<unsigned, 3, 3> &M) {

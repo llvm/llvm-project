@@ -125,37 +125,6 @@ func @permute_generic(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // CHECK-SAME:     memref<?x?xf32, #[[$STRIDED_2D_u_1]]>
 // CHECK-SAME:     memref<?x?xf32, #[[$STRIDED_2D_u_1]]>
 
-#indexed_matmul_trait = {
-  args_in = 2,
-  args_out = 1,
-  indexing_maps = #matmul_accesses,
-  library_call = "linalg_matmul_indexed",
-  iterator_types = ["parallel", "parallel", "reduction"]
-}
-func @permute_generic_indexed(
-    %A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
-    %B: memref<?x?xf32, offset: ?, strides: [?, 1]>,
-    %C: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
-  linalg.indexed_generic #indexed_matmul_trait
-    ins(%A, %B : memref<?x?xf32, offset: ?, strides: [?, 1]>,
-                 memref<?x?xf32, offset: ?, strides: [?, 1]>)
-   outs(%C : memref<?x?xf32, offset: ?, strides: [?, 1]>) {
-    ^bb(%i: index, %j: index, %k: index, %a: f32, %b: f32, %c: f32):
-      %d = mulf %a, %b: f32
-      %e = addf %c, %d: f32
-      linalg.yield %e: f32
-  }
-  return
-}
-// CHECK-LABEL:  func @permute_generic_indexed
-// CHECK:        linalg.indexed_generic {
-// CHECK-SAME:     indexing_maps = [#[[$kn]], #[[$nm]], #[[$km]]],
-// CHECK-SAME:     iterator_types = ["parallel", "reduction", "parallel"],
-// CHECK-SAME:     library_call = "linalg_matmul_indexed"}
-// CHECK:            memref<?x?xf32, #[[$STRIDED_2D_u_1]]>,
-// CHECK-SAME:       memref<?x?xf32, #[[$STRIDED_2D_u_1]]>
-// CHECK-SAME:       memref<?x?xf32, #[[$STRIDED_2D_u_1]]>
-
 func @matvec_perm(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
              %x: memref<?xf32, offset: ?, strides: [1]>,
              %y: memref<?xf32, offset: ?, strides: [1]>) {

@@ -4394,13 +4394,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-emit-llvm");
     } else if (JA.getType() == types::TY_LLVM_BC ||
                JA.getType() == types::TY_LTO_BC) {
-      // Emit textual llvm IR for AMDGPU offloading for -emit-llvm -S
-      if (Triple.isAMDGCN() && IsOpenMPDevice) {
-        if (Args.hasArg(options::OPT_S) && Args.hasArg(options::OPT_emit_llvm))
-          CmdArgs.push_back("-emit-llvm");
-      } else {
-        CmdArgs.push_back("-emit-llvm-bc");
-      }
+      CmdArgs.push_back("-emit-llvm-bc");
     } else if (JA.getType() == types::TY_IFS ||
                JA.getType() == types::TY_IFS_CPP) {
       StringRef ArgStr =
@@ -4722,7 +4716,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                              options::OPT_fno_semantic_interposition);
     if (RelocationModel != llvm::Reloc::Static && !IsPIE) {
       // The supported targets need to call AsmPrinter::getSymbolPreferLocal.
-      bool SupportsLocalAlias = Triple.isAArch64() || Triple.isX86();
+      bool SupportsLocalAlias =
+          Triple.isAArch64() || Triple.isRISCV() || Triple.isX86();
       if (!A)
         CmdArgs.push_back("-fhalf-no-semantic-interposition");
       else if (A->getOption().matches(options::OPT_fsemantic_interposition))

@@ -1205,6 +1205,10 @@ static bool sectionWithinSegment(const SectionBase &Sec, const Segment &Seg) {
   // not the first.
   uint64_t SecSize = Sec.Size ? Sec.Size : 1;
 
+  // Ignore just added sections.
+  if (Sec.OriginalOffset == std::numeric_limits<uint64_t>::max())
+    return false;
+
   if (Sec.Type == SHT_NOBITS) {
     if (!(Sec.Flags & SHF_ALLOC))
       return false;

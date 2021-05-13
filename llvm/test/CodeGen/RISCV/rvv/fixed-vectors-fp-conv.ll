@@ -7,11 +7,10 @@
 define void @fpext_v2f16_v2f32(<2 x half>* %x, <2 x float>* %y) {
 ; CHECK-LABEL: fpext_v2f16_v2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a2, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
-; CHECK-NEXT:    vsetivli a0, 2, e16,mf2,ta,mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v26, v25
-; CHECK-NEXT:    vsetivli a0, 2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vse32.v v26, (a1)
 ; CHECK-NEXT:    ret
   %a = load <2 x half>, <2 x half>* %x
@@ -23,9 +22,8 @@ define void @fpext_v2f16_v2f32(<2 x half>* %x, <2 x float>* %y) {
 define void @fpext_v2f16_v2f64(<2 x half>* %x, <2 x double>* %y) {
 ; CHECK-LABEL: fpext_v2f16_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a2, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
-; CHECK-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v26, v25
 ; CHECK-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v25, v26
@@ -84,7 +82,7 @@ define void @fpext_v8f16_v8f64(<8 x half>* %x, <8 x double>* %y) {
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli a2, 8, e16,m1,ta,mu
 ; LMULMAX1-NEXT:    vle16.v v25, (a0)
-; LMULMAX1-NEXT:    vsetivli a0, 2, e16,m1,ta,mu
+; LMULMAX1-NEXT:    vsetivli a0, 2, e16,mf2,ta,mu
 ; LMULMAX1-NEXT:    vslidedown.vi v26, v25, 2
 ; LMULMAX1-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; LMULMAX1-NEXT:    vfwcvt.f.f.v v27, v26
@@ -92,26 +90,26 @@ define void @fpext_v8f16_v8f64(<8 x half>* %x, <8 x double>* %y) {
 ; LMULMAX1-NEXT:    vfwcvt.f.f.v v26, v27
 ; LMULMAX1-NEXT:    vsetivli a0, 4, e16,m1,ta,mu
 ; LMULMAX1-NEXT:    vslidedown.vi v27, v25, 4
+; LMULMAX1-NEXT:    vsetivli a0, 2, e16,mf2,ta,mu
+; LMULMAX1-NEXT:    vslidedown.vi v28, v27, 2
 ; LMULMAX1-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
-; LMULMAX1-NEXT:    vfwcvt.f.f.v v28, v27
-; LMULMAX1-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; LMULMAX1-NEXT:    vfwcvt.f.f.v v29, v28
-; LMULMAX1-NEXT:    vsetivli a0, 2, e16,m1,ta,mu
-; LMULMAX1-NEXT:    vslidedown.vi v27, v27, 2
-; LMULMAX1-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
-; LMULMAX1-NEXT:    vfwcvt.f.f.v v28, v27
 ; LMULMAX1-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
-; LMULMAX1-NEXT:    vfwcvt.f.f.v v27, v28
+; LMULMAX1-NEXT:    vfwcvt.f.f.v v28, v29
 ; LMULMAX1-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
-; LMULMAX1-NEXT:    vfwcvt.f.f.v v28, v25
+; LMULMAX1-NEXT:    vfwcvt.f.f.v v29, v27
 ; LMULMAX1-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
-; LMULMAX1-NEXT:    vfwcvt.f.f.v v25, v28
-; LMULMAX1-NEXT:    addi a0, a1, 48
+; LMULMAX1-NEXT:    vfwcvt.f.f.v v27, v29
+; LMULMAX1-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
+; LMULMAX1-NEXT:    vfwcvt.f.f.v v29, v25
+; LMULMAX1-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
+; LMULMAX1-NEXT:    vfwcvt.f.f.v v25, v29
+; LMULMAX1-NEXT:    addi a0, a1, 32
 ; LMULMAX1-NEXT:    vsetivli a2, 2, e64,m1,ta,mu
 ; LMULMAX1-NEXT:    vse64.v v27, (a0)
-; LMULMAX1-NEXT:    addi a0, a1, 32
-; LMULMAX1-NEXT:    vse64.v v29, (a0)
 ; LMULMAX1-NEXT:    vse64.v v25, (a1)
+; LMULMAX1-NEXT:    addi a0, a1, 48
+; LMULMAX1-NEXT:    vse64.v v28, (a0)
 ; LMULMAX1-NEXT:    addi a0, a1, 16
 ; LMULMAX1-NEXT:    vse64.v v26, (a0)
 ; LMULMAX1-NEXT:    ret
@@ -124,11 +122,10 @@ define void @fpext_v8f16_v8f64(<8 x half>* %x, <8 x double>* %y) {
 define void @fpround_v2f32_v2f16(<2 x float>* %x, <2 x half>* %y) {
 ; CHECK-LABEL: fpround_v2f32_v2f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a2, 2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
-; CHECK-NEXT:    vsetivli a0, 2, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vfncvt.f.f.w v26, v25
-; CHECK-NEXT:    vsetivli a0, 2, e16,m1,ta,mu
 ; CHECK-NEXT:    vse16.v v26, (a1)
 ; CHECK-NEXT:    ret
   %a = load <2 x float>, <2 x float>* %x
@@ -146,7 +143,6 @@ define void @fpround_v2f64_v2f16(<2 x double>* %x, <2 x half>* %y) {
 ; CHECK-NEXT:    vfncvt.rod.f.f.w v26, v25
 ; CHECK-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vfncvt.f.f.w v25, v26
-; CHECK-NEXT:    vsetivli a0, 2, e16,m1,ta,mu
 ; CHECK-NEXT:    vse16.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
@@ -176,11 +172,8 @@ define void @fpround_v8f32_v8f16(<8 x float>* %x, <8 x half>* %y) {
 ; LMULMAX1-NEXT:    vsetivli a0, 4, e16,mf2,ta,mu
 ; LMULMAX1-NEXT:    vfncvt.f.f.w v27, v25
 ; LMULMAX1-NEXT:    addi a0, sp, 8
-; LMULMAX1-NEXT:    vsetivli a2, 4, e16,m1,ta,mu
 ; LMULMAX1-NEXT:    vse16.v v27, (a0)
-; LMULMAX1-NEXT:    vsetivli a0, 4, e16,mf2,ta,mu
 ; LMULMAX1-NEXT:    vfncvt.f.f.w v25, v26
-; LMULMAX1-NEXT:    vsetivli a0, 4, e16,m1,ta,mu
 ; LMULMAX1-NEXT:    vse16.v v25, (sp)
 ; LMULMAX1-NEXT:    vsetivli a0, 8, e16,m1,ta,mu
 ; LMULMAX1-NEXT:    vle16.v v25, (sp)
@@ -222,23 +215,20 @@ define void @fpround_v8f64_v8f16(<8 x double>* %x, <8 x half>* %y) {
 ; LMULMAX1-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; LMULMAX1-NEXT:    vfncvt.f.f.w v27, v29
 ; LMULMAX1-NEXT:    addi a0, sp, 12
-; LMULMAX1-NEXT:    vsetivli a2, 2, e16,m1,ta,mu
 ; LMULMAX1-NEXT:    vse16.v v27, (a0)
 ; LMULMAX1-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; LMULMAX1-NEXT:    vfncvt.rod.f.f.w v27, v28
 ; LMULMAX1-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; LMULMAX1-NEXT:    vfncvt.f.f.w v28, v27
 ; LMULMAX1-NEXT:    addi a0, sp, 4
-; LMULMAX1-NEXT:    vsetivli a2, 2, e16,m1,ta,mu
 ; LMULMAX1-NEXT:    vse16.v v28, (a0)
 ; LMULMAX1-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; LMULMAX1-NEXT:    vfncvt.rod.f.f.w v27, v26
 ; LMULMAX1-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; LMULMAX1-NEXT:    vfncvt.f.f.w v26, v27
-; LMULMAX1-NEXT:    vsetivli a0, 2, e16,m1,ta,mu
 ; LMULMAX1-NEXT:    addi a0, sp, 8
 ; LMULMAX1-NEXT:    vse16.v v26, (a0)
-; LMULMAX1-NEXT:    vsetivli a0, 4, e16,m1,ta,mu
+; LMULMAX1-NEXT:    vsetivli a0, 4, e16,mf2,ta,mu
 ; LMULMAX1-NEXT:    addi a0, sp, 8
 ; LMULMAX1-NEXT:    vle16.v v26, (a0)
 ; LMULMAX1-NEXT:    addi a0, sp, 24
@@ -247,9 +237,8 @@ define void @fpround_v8f64_v8f16(<8 x double>* %x, <8 x half>* %y) {
 ; LMULMAX1-NEXT:    vfncvt.rod.f.f.w v26, v25
 ; LMULMAX1-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; LMULMAX1-NEXT:    vfncvt.f.f.w v25, v26
-; LMULMAX1-NEXT:    vsetivli a0, 2, e16,m1,ta,mu
 ; LMULMAX1-NEXT:    vse16.v v25, (sp)
-; LMULMAX1-NEXT:    vsetivli a0, 4, e16,m1,ta,mu
+; LMULMAX1-NEXT:    vsetivli a0, 4, e16,mf2,ta,mu
 ; LMULMAX1-NEXT:    vle16.v v25, (sp)
 ; LMULMAX1-NEXT:    addi a0, sp, 16
 ; LMULMAX1-NEXT:    vse16.v v25, (a0)

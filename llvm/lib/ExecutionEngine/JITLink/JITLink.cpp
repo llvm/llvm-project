@@ -92,8 +92,8 @@ const char *getScopeName(Scope S) {
 
 raw_ostream &operator<<(raw_ostream &OS, const Block &B) {
   return OS << formatv("{0:x16}", B.getAddress()) << " -- "
-            << formatv("{0:x16}", B.getAddress() + B.getSize()) << ": "
-            << "size = " << formatv("{0:x}", B.getSize()) << ", "
+            << formatv("{0:x8}", B.getAddress() + B.getSize()) << ": "
+            << "size = " << formatv("{0:x8}", B.getSize()) << ", "
             << (B.isZeroFill() ? "zero-fill" : "content")
             << ", align = " << B.getAlignment()
             << ", align-ofs = " << B.getAlignmentOffset()
@@ -101,39 +101,14 @@ raw_ostream &operator<<(raw_ostream &OS, const Block &B) {
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const Symbol &Sym) {
-  OS << "<";
-  if (Sym.getName().empty())
-    OS << "*anon*";
-  else
-    OS << Sym.getName();
-  OS << ": flags = ";
-  switch (Sym.getLinkage()) {
-  case Linkage::Strong:
-    OS << 'S';
-    break;
-  case Linkage::Weak:
-    OS << 'W';
-    break;
-  }
-  switch (Sym.getScope()) {
-  case Scope::Default:
-    OS << 'D';
-    break;
-  case Scope::Hidden:
-    OS << 'H';
-    break;
-  case Scope::Local:
-    OS << 'L';
-    break;
-  }
-  OS << (Sym.isLive() ? '+' : '-')
-     << ", size = " << formatv("{0:x}", Sym.getSize())
-     << ", addr = " << formatv("{0:x16}", Sym.getAddress()) << " ("
-     << formatv("{0:x16}", Sym.getAddressable().getAddress()) << " + "
-     << formatv("{0:x}", Sym.getOffset());
-  if (Sym.isDefined())
-    OS << " " << Sym.getBlock().getSection().getName();
-  OS << ")>";
+  OS << formatv("{0:x16}", Sym.getAddress()) << " ("
+     << (Sym.isDefined() ? "block" : "addressable") << " + "
+     << formatv("{0:x8}", Sym.getOffset())
+     << "): size: " << formatv("{0:x8}", Sym.getSize())
+     << ", linkage: " << formatv("{0:6}", getLinkageName(Sym.getLinkage()))
+     << ", scope: " << formatv("{0:8}", getScopeName(Sym.getScope())) << ", "
+     << (Sym.isLive() ? "live" : "dead") << "  -   "
+     << (Sym.hasName() ? Sym.getName() : "<anonymous symbol>");
   return OS;
 }
 
@@ -252,28 +227,99 @@ Block &LinkGraph::splitBlock(Block &B, size_t SplitIndex,
 }
 
 void LinkGraph::dump(raw_ostream &OS) {
-  OS << "Symbols:\n";
-  for (auto *Sym : defined_symbols()) {
-    OS << "  " << format("0x%016" PRIx64, Sym->getAddress()) << ": " << *Sym
-       << "\n";
-    if (Sym->isDefined()) {
-      for (auto &E : Sym->getBlock().edges()) {
-        OS << "    ";
-        printEdge(OS, Sym->getBlock(), E, getEdgeKindName(E.getKind()));
-        OS << "\n";
+  DenseMap<Block *, std::vector<Symbol *>> BlockSymbols;
+
+  // Map from blocks to the symbols pointing at them.
+  for (auto *Sym : defined_symbols())
+    BlockSymbols[&Sym->getBlock()].push_back(Sym);
+
+  // For each block, sort its symbols by something approximating
+  // relevance.
+  for (auto &KV : BlockSymbols)
+    llvm::sort(KV.second, [](const Symbol *LHS, const Symbol *RHS) {
+      if (LHS->getOffset() < RHS->getOffset())
+        return true;
+      if (LHS->getLinkage() < RHS->getLinkage())
+        return true;
+      if (LHS->getScope() < RHS->getScope())
+        return true;
+      if (LHS->hasName()) {
+        if (!RHS->hasName())
+          return true;
+        return LHS->getName() < RHS->getName();
       }
+      return false;
+    });
+
+  for (auto &Sec : sections()) {
+    OS << "section " << Sec.getName() << ":\n\n";
+
+    std::vector<Block *> SortedBlocks;
+    llvm::copy(Sec.blocks(), std::back_inserter(SortedBlocks));
+    llvm::sort(SortedBlocks, [](const Block *LHS, const Block *RHS) {
+      return LHS->getAddress() < RHS->getAddress();
+    });
+
+    for (auto *B : SortedBlocks) {
+      OS << "  block " << formatv("{0:x16}", B->getAddress())
+         << " size = " << formatv("{0:x8}", B->getSize())
+         << ", align = " << B->getAlignment()
+         << ", alignment-offset = " << B->getAlignmentOffset() << "\n";
+
+      auto BlockSymsI = BlockSymbols.find(B);
+      if (BlockSymsI != BlockSymbols.end()) {
+        OS << "    symbols:\n";
+        auto &Syms = BlockSymsI->second;
+        for (auto *Sym : Syms)
+          OS << "      " << *Sym << "\n";
+      } else
+        OS << "    no symbols\n";
+
+      if (!B->edges_empty()) {
+        OS << "    edges:\n";
+        std::vector<Edge> SortedEdges;
+        llvm::copy(B->edges(), std::back_inserter(SortedEdges));
+        llvm::sort(SortedEdges, [](const Edge &LHS, const Edge &RHS) {
+          return LHS.getOffset() < RHS.getOffset();
+        });
+        for (auto &E : SortedEdges) {
+          OS << "      " << formatv("{0:x16}", B->getFixupAddress(E))
+             << " (block + " << formatv("{0:x8}", E.getOffset())
+             << "), addend = ";
+          if (E.getAddend() >= 0)
+            OS << formatv("+{0:x8}", E.getAddend());
+          else
+            OS << formatv("-{0:x8}", -E.getAddend());
+          OS << ", kind = " << getEdgeKindName(E.getKind()) << ", target = ";
+          if (E.getTarget().hasName())
+            OS << E.getTarget().getName();
+          else
+            OS << "addressable@"
+               << formatv("{0:x16}", E.getTarget().getAddress()) << "+"
+               << formatv("{0:x8}", E.getTarget().getOffset());
+          OS << "\n";
+        }
+      } else
+        OS << "    no edges\n";
+      OS << "\n";
     }
   }
 
   OS << "Absolute symbols:\n";
-  for (auto *Sym : absolute_symbols())
-    OS << "  " << format("0x%016" PRIx64, Sym->getAddress()) << ": " << *Sym
-       << "\n";
+  if (!llvm::empty(absolute_symbols())) {
+    for (auto *Sym : absolute_symbols())
+      OS << "  " << format("0x%016" PRIx64, Sym->getAddress()) << ": " << *Sym
+         << "\n";
+  } else
+    OS << "  none\n";
 
-  OS << "External symbols:\n";
-  for (auto *Sym : external_symbols())
-    OS << "  " << format("0x%016" PRIx64, Sym->getAddress()) << ": " << *Sym
-       << "\n";
+  OS << "\nExternal symbols:\n";
+  if (!llvm::empty(external_symbols())) {
+    for (auto *Sym : external_symbols())
+      OS << "  " << format("0x%016" PRIx64, Sym->getAddress()) << ": " << *Sym
+         << "\n";
+  } else
+    OS << "  none\n";
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const SymbolLookupFlags &LF) {

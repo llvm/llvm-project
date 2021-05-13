@@ -474,13 +474,6 @@ func @test_identity(%arg0: tensor<13x21x3xi32>) -> tensor<13x21x3xi32> {
 }
 
 // -----
-// CHECK-LABEL: identityn
-func @test_identityn(%arg0: tensor<1xi32>, %arg1: tensor<1xi32>) -> tensor<1xi32> {
-  %0:2 = "tosa.identityn"(%arg0, %arg1) : (tensor<1xi32>, tensor<1xi32>) -> (tensor<1xi32>, tensor<1xi32>)
-  return %0#0 : tensor<1xi32>
-}
-
-// -----
 // CHECK-LABEL: cond_if
 func @test_cond_if(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<i1>) -> tensor<f32> {
   %0 = "tosa.cond_if"(%arg2, %arg0, %arg1) ( {

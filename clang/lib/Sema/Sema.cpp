@@ -366,7 +366,6 @@ void Sema::Initialize() {
             "cl_khr_int64_base_atomics cl_khr_int64_extended_atomics");
     }
 
-    setOpenCLExtensionForType(Context.DoubleTy, "cl_khr_fp64");
 
 #define EXT_OPAQUE_TYPE(ExtType, Id, Ext)                                      \
   if (getOpenCLOptions().isSupported(#Ext, getLangOpts())) {                   \
@@ -1569,6 +1568,8 @@ public:
 
   DeferredDiagnosticsEmitter(Sema &S)
       : Inherited(S), ShouldEmitRootNode(false), InOMPDeviceContext(0) {}
+
+  bool shouldVisitDiscardedStmt() const { return false; }
 
   void VisitOMPTargetDirective(OMPTargetDirective *Node) {
     ++InOMPDeviceContext;

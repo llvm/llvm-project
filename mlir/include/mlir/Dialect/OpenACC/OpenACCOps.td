@@ -249,6 +249,14 @@ def OpenACC_EnterDataOp : OpenACC_Op<"enter_data", [AttrSizedOperandSegments]> {
                        Variadic<AnyType>:$createZeroOperands,
                        Variadic<AnyType>:$attachOperands);
 
+  let extraClassDeclaration = [{
+    /// The number of data operands.
+    unsigned getNumDataOperands();
+
+    /// The i-th data operand passed.
+    Value getDataOperand(unsigned i);
+  }];
+
   let assemblyFormat = [{
     ( `if` `(` $ifCond^ `)` )?
     ( `async` `(` $asyncOperand^ `:` type($asyncOperand) `)` )?
@@ -290,6 +298,14 @@ def OpenACC_ExitDataOp : OpenACC_Op<"exit_data", [AttrSizedOperandSegments]> {
                        Variadic<AnyType>:$deleteOperands,
                        Variadic<AnyType>:$detachOperands,
                        UnitAttr:$finalize);
+
+  let extraClassDeclaration = [{
+    /// The number of data operands.
+    unsigned getNumDataOperands();
+
+    /// The i-th data operand passed.
+    Value getDataOperand(unsigned i);
+  }];
 
   let assemblyFormat = [{
     ( `if` `(` $ifCond^ `)` )?
@@ -479,6 +495,14 @@ def OpenACC_UpdateOp : OpenACC_Op<"update", [AttrSizedOperandSegments]> {
                        Variadic<AnyType>:$hostOperands,
                        Variadic<AnyType>:$deviceOperands,
                        UnitAttr:$ifPresent);
+
+  let extraClassDeclaration = [{
+    /// The number of data operands.
+    unsigned getNumDataOperands();
+
+    /// The i-th data operand passed.
+    Value getDataOperand(unsigned i);
+  }];
 
   let assemblyFormat = [{
     ( `if` `(` $ifCond^ `)` )?

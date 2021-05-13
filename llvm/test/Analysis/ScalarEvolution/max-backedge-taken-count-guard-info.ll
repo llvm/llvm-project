@@ -823,9 +823,9 @@ exit:
 ; Function Attrs: nounwind willreturn
 declare void @llvm.assume(i1 noundef)
 
-define void @guard_pessimizes_analysis(i1 %c, i32 %N) {
-; CHECK-LABEL: 'guard_pessimizes_analysis'
-; CHECK-NEXT:  Classifying expressions for: @guard_pessimizes_analysis
+define void @guard_pessimizes_analysis_step1(i1 %c, i32 %N) {
+; CHECK-LABEL: 'guard_pessimizes_analysis_step1'
+; CHECK-NEXT:  Classifying expressions for: @guard_pessimizes_analysis_step1
 ; CHECK-NEXT:    %init = phi i32 [ 2, %entry ], [ 3, %bb1 ]
 ; CHECK-NEXT:    --> %init U: [2,4) S: [2,4)
 ; CHECK-NEXT:    %iv = phi i32 [ %iv.next, %loop ], [ %init, %loop.ph ]
@@ -863,6 +863,43 @@ exit:
   ret void
 }
 
+define void @guard_pessimizes_analysis_step2(i1 %c, i32 %N) {
+; CHECK-LABEL: guard_pessimizes_analysis_step2
+; CHECK-NEXT: Classifying expressions for: @guard_pessimizes_analysis_step2
+; CHECK-NEXT:   %init = phi i32 [ 2, %entry ], [ 3, %bb1 ]
+; CHECK-NEXT:   -->  %init U: [2,4) S: [2,4)
+; CHECK-NEXT:   %iv = phi i32 [ %iv.next, %loop ], [ %init, %loop.ph ]
+; CHECK-NEXT:   -->  {%init,+,2}<nuw><nsw><%loop> U: [2,10) S: [2,10)		Exits: ((2 * ((8 + (-1 * %init)<nsw>)<nsw> /u 2))<nuw><nsw> + %init) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:   %iv.next = add nuw nsw i32 %iv, 2
+ ; CHECK-NEXT:  -->  {(2 + %init)<nuw><nsw>,+,2}<nuw><nsw><%loop> U: [4,12) S: [4,12)		Exits: (2 + (2 * ((8 + (-1 * %init)<nsw>)<nsw> /u 2))<nuw><nsw> + %init)		LoopDispositions: { %loop: Computable }
+; CHECK-NEXT: Determining loop execution counts for: @guard_pessimizes_analysis_step2
+; CHECK-NEXT: Loop %loop: backedge-taken count is ((8 + (-1 * %init)<nsw>)<nsw> /u 2)
+; CHECK-NEXT: Loop %loop: max backedge-taken count is 3
+; CHECK-NEXT: Loop %loop: Predicated backedge-taken count is ((8 + (-1 * %init)<nsw>)<nsw> /u 2)
+; CHECK:      Loop %loop: Trip multiple is 1
+entry:
+  br i1 %c, label %bb1, label %guard
+
+bb1:
+  br label %guard
+
+guard:
+  %init = phi i32 [ 2, %entry ], [ 3, %bb1 ]
+  %c.1 = icmp ult i32 %init, %N
+  br i1 %c.1, label %loop.ph, label %exit
+
+loop.ph:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %iv.next, %loop ], [ %init, %loop.ph ]
+  %iv.next = add nuw nsw i32 %iv, 2
+  %exitcond = icmp eq i32 %iv.next, 10
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
 define void @crash(i8* %ptr) {
 ; CHECK-LABEL: 'crash'
 ; CHECK-NEXT:  Classifying expressions for: @crash

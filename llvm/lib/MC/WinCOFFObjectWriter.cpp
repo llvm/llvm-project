@@ -789,12 +789,16 @@ void WinCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
   Reloc.Data.Type = TargetObjectWriter->getRelocType(
       Asm.getContext(), Target, Fixup, SymB, Asm.getBackend());
 
-  // FIXME: Can anyone explain what this does other than adjust for the size
-  // of the offset?
+  // The *_REL32 relocations are relative to the end of the relocation,
+  // not to the start.
   if ((Header.Machine == COFF::IMAGE_FILE_MACHINE_AMD64 &&
        Reloc.Data.Type == COFF::IMAGE_REL_AMD64_REL32) ||
       (Header.Machine == COFF::IMAGE_FILE_MACHINE_I386 &&
-       Reloc.Data.Type == COFF::IMAGE_REL_I386_REL32))
+       Reloc.Data.Type == COFF::IMAGE_REL_I386_REL32) ||
+      (Header.Machine == COFF::IMAGE_FILE_MACHINE_ARMNT &&
+       Reloc.Data.Type == COFF::IMAGE_REL_ARM_REL32) ||
+      (Header.Machine == COFF::IMAGE_FILE_MACHINE_ARM64 &&
+       Reloc.Data.Type == COFF::IMAGE_REL_ARM64_REL32))
     FixedValue += 4;
 
   if (Header.Machine == COFF::IMAGE_FILE_MACHINE_ARMNT) {

@@ -792,7 +792,9 @@ kmp_set_disp_num_buffers                    890
 
     %endif
 
+    # These are specific to x86 and x64
     %ifndef arch_64
+    %ifndef arch_aarch64
 
         # ATOMIC extensions for OpenMP 3.1 spec (x86 and x64 only)
 
@@ -1196,6 +1198,7 @@ kmp_set_disp_num_buffers                    890
             __kmpc_atomic_float10_div_cpt_rev_fp
             %endif
 
+    %endif   # arch_aarch64
     %endif   # arch_64
 
     %ifdef HAVE_QUAD

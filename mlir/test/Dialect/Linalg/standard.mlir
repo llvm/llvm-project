@@ -95,25 +95,3 @@ func @matmul_vec_impl(%A: !matrix_type_A, %B: !matrix_type_B, %C: !matrix_type_C
 }
 // CHECK-LABEL: func @matmul_vec_impl(
 // CHECK:  call @external_outerproduct_matmul(%{{.*}}) :
-
-#indexed_matmul_trait = {
-  iterator_types = ["parallel", "parallel", "reduction"],
-  indexing_maps = #matmul_accesses,
-  library_call = "external_indexed_outerproduct_matmul"
-}
-func @matmul_vec_indexed(%A: !matrix_type_A,
-                         %B: !matrix_type_B,
-                         %C: !matrix_type_C) {
-  linalg.indexed_generic #indexed_matmul_trait
-      ins(%A, %B : !matrix_type_A, !matrix_type_B)
-     outs(%C : !matrix_type_C) {
-    ^bb0(%i: index, %j: index, %k: index,
-         %a: !vector_type_A, %b: !vector_type_B, %c: !vector_type_C):
-      %d = vector.outerproduct %a, %b, %c: !vector_type_A, !vector_type_B
-      linalg.yield %d: !vector_type_C
-  }
-  return
-}
-// CHECK-LABEL: func @matmul_vec_indexed(
-//   CHECK: %[[ZERO:.*]] = constant 0 : index
-//   CHECK: call @external_indexed_outerproduct_matmul(%[[ZERO]], %[[ZERO]], %[[ZERO]], %{{.*}})

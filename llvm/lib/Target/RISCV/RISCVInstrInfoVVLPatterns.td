@@ -636,15 +636,47 @@ defm : VPatBinaryVL_VV_VX_VI<riscv_shl_vl, "PseudoVSLL", uimm5>;
 defm : VPatBinaryVL_VV_VX_VI<riscv_srl_vl, "PseudoVSRL", uimm5>;
 defm : VPatBinaryVL_VV_VX_VI<riscv_sra_vl, "PseudoVSRA", uimm5>;
 
+
+
 // 12.7. Vector Narrowing Integer Right Shift Instructions
-foreach vtiTofti = AllFractionableVF2IntVectors in {
-  defvar vti = vtiTofti.Vti;
-  defvar fti = vtiTofti.Fti;
-  def : Pat<(fti.Vector (riscv_trunc_vector_vl (vti.Vector vti.RegClass:$rs1),
+foreach vtiTowti = AllWidenableIntVectors in {
+  defvar vti = vtiTowti.Vti;
+  defvar wti = vtiTowti.Wti;
+  def : Pat<(vti.Vector (riscv_trunc_vector_vl (wti.Vector wti.RegClass:$rs1),
                                                (vti.Mask true_mask),
                                                VLOpFrag)),
-            (!cast<Instruction>("PseudoVNSRL_WI_"#fti.LMul.MX)
-                vti.RegClass:$rs1, 0, GPR:$vl, fti.Log2SEW)>;
+            (!cast<Instruction>("PseudoVNSRL_WI_"#vti.LMul.MX)
+                wti.RegClass:$rs1, 0, GPR:$vl, vti.Log2SEW)>;
+
+  def : Pat<(vti.Vector
+             (riscv_trunc_vector_vl
+              (wti.Vector
+               (riscv_sra_vl wti.RegClass:$rs1, (SplatPat XLenVT:$rs2),
+                             true_mask, VLOpFrag)), true_mask, VLOpFrag)),
+            (!cast<Instruction>("PseudoVNSRA_WX_"#vti.LMul.MX)
+                wti.RegClass:$rs1, GPR:$rs2, GPR:$vl, vti.Log2SEW)>;
+  def : Pat<(vti.Vector
+             (riscv_trunc_vector_vl
+              (wti.Vector
+               (riscv_sra_vl wti.RegClass:$rs1, (SplatPat_uimm5 uimm5:$rs2),
+                             true_mask, VLOpFrag)), true_mask, VLOpFrag)),
+            (!cast<Instruction>("PseudoVNSRA_WI_"#vti.LMul.MX)
+                wti.RegClass:$rs1, uimm5:$rs2, GPR:$vl, vti.Log2SEW)>;
+
+  def : Pat<(vti.Vector
+             (riscv_trunc_vector_vl
+              (wti.Vector
+               (riscv_srl_vl wti.RegClass:$rs1, (SplatPat XLenVT:$rs2),
+                             true_mask, VLOpFrag)), true_mask, VLOpFrag)),
+            (!cast<Instruction>("PseudoVNSRL_WX_"#vti.LMul.MX)
+                wti.RegClass:$rs1, GPR:$rs2, GPR:$vl, vti.Log2SEW)>;
+  def : Pat<(vti.Vector
+             (riscv_trunc_vector_vl
+              (wti.Vector
+               (riscv_srl_vl wti.RegClass:$rs1, (SplatPat_uimm5 uimm5:$rs2),
+                             true_mask, VLOpFrag)), true_mask, VLOpFrag)),
+            (!cast<Instruction>("PseudoVNSRL_WI_"#vti.LMul.MX)
+                wti.RegClass:$rs1, uimm5:$rs2, GPR:$vl, vti.Log2SEW)>;
 }
 
 // 12.8. Vector Integer Comparison Instructions

@@ -192,6 +192,7 @@ body:             |
     $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     S_WAITCNT 3952
     KILL $vgpr0
+...
 
 # Combine preexisting waitcnt with wait added to the start of a non-entry function.
 
@@ -204,5 +205,30 @@ body:             |
     ; GFX9-NOT: S_WAITCNT 0
     ; GFX9: S_ENDPGM 0
     S_WAITCNT 0
+    S_ENDPGM 0
+...
+
+# Verify that extra waitcnt are not added after buffer invalidate instructions.
+
+---
+name:            test_waitcnt_preexisting_buffer_inv
+body:             |
+  bb.0:
+    ; GFX9-LABEL: name: test_waitcnt_preexisting_buffer_inv
+    ; GFX9: S_WAITCNT 0
+    ; GFX9: $vgpr0_vgpr1 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GFX9: S_WAITCNT 3952
+    ; GFX9: BUFFER_INVL2 implicit $exec
+    ; GFX9: BUFFER_WBINVL1_VOL implicit $exec
+    ; GFX9: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX9: S_WAITCNT 112
+    ; GFX9: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX9: S_ENDPGM 0
+    $vgpr0_vgpr1 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 0, 0, implicit $exec
+    S_WAITCNT 3952
+    BUFFER_INVL2 implicit $exec
+    BUFFER_WBINVL1_VOL implicit $exec
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
 ...

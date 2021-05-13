@@ -1942,7 +1942,7 @@
 // AVR:#define __GXX_ABI_VERSION 1002
 // AVR:#define __INT16_C_SUFFIX__
 // AVR:#define __INT16_MAX__ 32767
-// AVR:#define __INT16_TYPE__ short
+// AVR:#define __INT16_TYPE__ int
 // AVR:#define __INT32_C_SUFFIX__ L
 // AVR:#define __INT32_MAX__ 2147483647L
 // AVR:#define __INT32_TYPE__ long int
@@ -2017,7 +2017,7 @@
 // AVR:#define __SIZE_TYPE__ unsigned int
 // AVR:#define __STDC__ 1
 // AVR:#define __UINT16_MAX__ 65535U
-// AVR:#define __UINT16_TYPE__ unsigned short
+// AVR:#define __UINT16_TYPE__ unsigned int
 // AVR:#define __UINT32_C_SUFFIX__ UL
 // AVR:#define __UINT32_MAX__ 4294967295UL
 // AVR:#define __UINT32_TYPE__ long unsigned int

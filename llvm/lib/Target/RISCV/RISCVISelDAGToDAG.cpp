@@ -108,18 +108,18 @@ static SDValue createM4Tuple(SelectionDAG &CurDAG, ArrayRef<SDValue> Regs,
 }
 
 static SDValue createTuple(SelectionDAG &CurDAG, ArrayRef<SDValue> Regs,
-                           unsigned NF, RISCVVLMUL LMUL) {
+                           unsigned NF, RISCVII::VLMUL LMUL) {
   switch (LMUL) {
   default:
     llvm_unreachable("Invalid LMUL.");
-  case RISCVVLMUL::LMUL_F8:
-  case RISCVVLMUL::LMUL_F4:
-  case RISCVVLMUL::LMUL_F2:
-  case RISCVVLMUL::LMUL_1:
+  case RISCVII::VLMUL::LMUL_F8:
+  case RISCVII::VLMUL::LMUL_F4:
+  case RISCVII::VLMUL::LMUL_F2:
+  case RISCVII::VLMUL::LMUL_1:
     return createM1Tuple(CurDAG, Regs, NF);
-  case RISCVVLMUL::LMUL_2:
+  case RISCVII::VLMUL::LMUL_2:
     return createM2Tuple(CurDAG, Regs, NF);
-  case RISCVVLMUL::LMUL_4:
+  case RISCVII::VLMUL::LMUL_4:
     return createM4Tuple(CurDAG, Regs, NF);
   }
 }
@@ -166,7 +166,7 @@ void RISCVDAGToDAGISel::selectVLSEG(SDNode *Node, bool IsMasked,
   unsigned NF = Node->getNumValues() - 1;
   MVT VT = Node->getSimpleValueType(0);
   unsigned ScalarSize = VT.getScalarSizeInBits();
-  RISCVVLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
+  RISCVII::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
 
   unsigned CurOp = 2;
   SmallVector<SDValue, 8> Operands;
@@ -207,7 +207,7 @@ void RISCVDAGToDAGISel::selectVLSEGFF(SDNode *Node, bool IsMasked) {
   MVT VT = Node->getSimpleValueType(0);
   MVT XLenVT = Subtarget->getXLenVT();
   unsigned ScalarSize = VT.getScalarSizeInBits();
-  RISCVVLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
+  RISCVII::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
 
   unsigned CurOp = 2;
   SmallVector<SDValue, 7> Operands;
@@ -251,7 +251,7 @@ void RISCVDAGToDAGISel::selectVLXSEG(SDNode *Node, bool IsMasked,
   unsigned NF = Node->getNumValues() - 1;
   MVT VT = Node->getSimpleValueType(0);
   unsigned ScalarSize = VT.getScalarSizeInBits();
-  RISCVVLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
+  RISCVII::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
 
   unsigned CurOp = 2;
   SmallVector<SDValue, 8> Operands;
@@ -270,7 +270,7 @@ void RISCVDAGToDAGISel::selectVLXSEG(SDNode *Node, bool IsMasked,
   assert(VT.getVectorElementCount() == IndexVT.getVectorElementCount() &&
          "Element count mismatch");
 
-  RISCVVLMUL IndexLMUL = RISCVTargetLowering::getLMUL(IndexVT);
+  RISCVII::VLMUL IndexLMUL = RISCVTargetLowering::getLMUL(IndexVT);
   unsigned IndexScalarSize = IndexVT.getScalarSizeInBits();
   const RISCV::VLXSEGPseudo *P = RISCV::getVLXSEGPseudo(
       NF, IsMasked, IsOrdered, IndexScalarSize, static_cast<unsigned>(LMUL),
@@ -302,7 +302,7 @@ void RISCVDAGToDAGISel::selectVSSEG(SDNode *Node, bool IsMasked,
     NF--;
   MVT VT = Node->getOperand(2)->getSimpleValueType(0);
   unsigned ScalarSize = VT.getScalarSizeInBits();
-  RISCVVLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
+  RISCVII::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
   SmallVector<SDValue, 8> Regs(Node->op_begin() + 2, Node->op_begin() + 2 + NF);
   SDValue StoreVal = createTuple(*CurDAG, Regs, NF, LMUL);
 
@@ -332,7 +332,7 @@ void RISCVDAGToDAGISel::selectVSXSEG(SDNode *Node, bool IsMasked,
     --NF;
   MVT VT = Node->getOperand(2)->getSimpleValueType(0);
   unsigned ScalarSize = VT.getScalarSizeInBits();
-  RISCVVLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
+  RISCVII::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
   SmallVector<SDValue, 8> Regs(Node->op_begin() + 2, Node->op_begin() + 2 + NF);
   SDValue StoreVal = createTuple(*CurDAG, Regs, NF, LMUL);
 
@@ -347,7 +347,7 @@ void RISCVDAGToDAGISel::selectVSXSEG(SDNode *Node, bool IsMasked,
   assert(VT.getVectorElementCount() == IndexVT.getVectorElementCount() &&
          "Element count mismatch");
 
-  RISCVVLMUL IndexLMUL = RISCVTargetLowering::getLMUL(IndexVT);
+  RISCVII::VLMUL IndexLMUL = RISCVTargetLowering::getLMUL(IndexVT);
   unsigned IndexScalarSize = IndexVT.getScalarSizeInBits();
   const RISCV::VSXSEGPseudo *P = RISCV::getVSXSEGPseudo(
       NF, IsMasked, IsOrdered, IndexScalarSize, static_cast<unsigned>(LMUL),
@@ -455,37 +455,37 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       switch (RISCVTargetLowering::getLMUL(Src1VT)) {
       default:
         llvm_unreachable("Unexpected LMUL!");
-      case RISCVVLMUL::LMUL_F8:
+      case RISCVII::VLMUL::LMUL_F8:
         VMSLTOpcode =
             IsUnsigned ? RISCV::PseudoVMSLTU_VX_MF8 : RISCV::PseudoVMSLT_VX_MF8;
         VMNANDOpcode = RISCV::PseudoVMNAND_MM_MF8;
         break;
-      case RISCVVLMUL::LMUL_F4:
+      case RISCVII::VLMUL::LMUL_F4:
         VMSLTOpcode =
             IsUnsigned ? RISCV::PseudoVMSLTU_VX_MF4 : RISCV::PseudoVMSLT_VX_MF4;
         VMNANDOpcode = RISCV::PseudoVMNAND_MM_MF4;
         break;
-      case RISCVVLMUL::LMUL_F2:
+      case RISCVII::VLMUL::LMUL_F2:
         VMSLTOpcode =
             IsUnsigned ? RISCV::PseudoVMSLTU_VX_MF2 : RISCV::PseudoVMSLT_VX_MF2;
         VMNANDOpcode = RISCV::PseudoVMNAND_MM_MF2;
         break;
-      case RISCVVLMUL::LMUL_1:
+      case RISCVII::VLMUL::LMUL_1:
         VMSLTOpcode =
             IsUnsigned ? RISCV::PseudoVMSLTU_VX_M1 : RISCV::PseudoVMSLT_VX_M1;
         VMNANDOpcode = RISCV::PseudoVMNAND_MM_M1;
         break;
-      case RISCVVLMUL::LMUL_2:
+      case RISCVII::VLMUL::LMUL_2:
         VMSLTOpcode =
             IsUnsigned ? RISCV::PseudoVMSLTU_VX_M2 : RISCV::PseudoVMSLT_VX_M2;
         VMNANDOpcode = RISCV::PseudoVMNAND_MM_M2;
         break;
-      case RISCVVLMUL::LMUL_4:
+      case RISCVII::VLMUL::LMUL_4:
         VMSLTOpcode =
             IsUnsigned ? RISCV::PseudoVMSLTU_VX_M4 : RISCV::PseudoVMSLT_VX_M4;
         VMNANDOpcode = RISCV::PseudoVMNAND_MM_M4;
         break;
-      case RISCVVLMUL::LMUL_8:
+      case RISCVII::VLMUL::LMUL_8:
         VMSLTOpcode =
             IsUnsigned ? RISCV::PseudoVMSLTU_VX_M8 : RISCV::PseudoVMSLT_VX_M8;
         VMNANDOpcode = RISCV::PseudoVMNAND_MM_M8;
@@ -524,7 +524,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       switch (RISCVTargetLowering::getLMUL(Src1VT)) {
       default:
         llvm_unreachable("Unexpected LMUL!");
-      case RISCVVLMUL::LMUL_F8:
+      case RISCVII::VLMUL::LMUL_F8:
         VMSLTOpcode =
             IsUnsigned ? RISCV::PseudoVMSLTU_VX_MF8 : RISCV::PseudoVMSLT_VX_MF8;
         VMSLTMaskOpcode = IsUnsigned ? RISCV::PseudoVMSLTU_VX_MF8_MASK
@@ -532,7 +532,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         VMXOROpcode = RISCV::PseudoVMXOR_MM_MF8;
         VMANDNOTOpcode = RISCV::PseudoVMANDNOT_MM_MF8;
         break;
-      case RISCVVLMUL::LMUL_F4:
+      case RISCVII::VLMUL::LMUL_F4:
         VMSLTOpcode =
             IsUnsigned ? RISCV::PseudoVMSLTU_VX_MF4 : RISCV::PseudoVMSLT_VX_MF4;
         VMSLTMaskOpcode = IsUnsigned ? RISCV::PseudoVMSLTU_VX_MF4_MASK
@@ -540,7 +540,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         VMXOROpcode = RISCV::PseudoVMXOR_MM_MF4;
         VMANDNOTOpcode = RISCV::PseudoVMANDNOT_MM_MF4;
         break;
-      case RISCVVLMUL::LMUL_F2:
+      case RISCVII::VLMUL::LMUL_F2:
         VMSLTOpcode =
             IsUnsigned ? RISCV::PseudoVMSLTU_VX_MF2 : RISCV::PseudoVMSLT_VX_MF2;
         VMSLTMaskOpcode = IsUnsigned ? RISCV::PseudoVMSLTU_VX_MF2_MASK
@@ -548,7 +548,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         VMXOROpcode = RISCV::PseudoVMXOR_MM_MF2;
         VMANDNOTOpcode = RISCV::PseudoVMANDNOT_MM_MF2;
         break;
-      case RISCVVLMUL::LMUL_1:
+      case RISCVII::VLMUL::LMUL_1:
         VMSLTOpcode =
             IsUnsigned ? RISCV::PseudoVMSLTU_VX_M1 : RISCV::PseudoVMSLT_VX_M1;
         VMSLTMaskOpcode = IsUnsigned ? RISCV::PseudoVMSLTU_VX_M1_MASK
@@ -556,7 +556,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         VMXOROpcode = RISCV::PseudoVMXOR_MM_M1;
         VMANDNOTOpcode = RISCV::PseudoVMANDNOT_MM_M1;
         break;
-      case RISCVVLMUL::LMUL_2:
+      case RISCVII::VLMUL::LMUL_2:
         VMSLTOpcode =
             IsUnsigned ? RISCV::PseudoVMSLTU_VX_M2 : RISCV::PseudoVMSLT_VX_M2;
         VMSLTMaskOpcode = IsUnsigned ? RISCV::PseudoVMSLTU_VX_M2_MASK
@@ -564,7 +564,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         VMXOROpcode = RISCV::PseudoVMXOR_MM_M2;
         VMANDNOTOpcode = RISCV::PseudoVMANDNOT_MM_M2;
         break;
-      case RISCVVLMUL::LMUL_4:
+      case RISCVII::VLMUL::LMUL_4:
         VMSLTOpcode =
             IsUnsigned ? RISCV::PseudoVMSLTU_VX_M4 : RISCV::PseudoVMSLT_VX_M4;
         VMSLTMaskOpcode = IsUnsigned ? RISCV::PseudoVMSLTU_VX_M4_MASK
@@ -572,7 +572,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         VMXOROpcode = RISCV::PseudoVMXOR_MM_M4;
         VMANDNOTOpcode = RISCV::PseudoVMANDNOT_MM_M4;
         break;
-      case RISCVVLMUL::LMUL_8:
+      case RISCVII::VLMUL::LMUL_8:
         VMSLTOpcode =
             IsUnsigned ? RISCV::PseudoVMSLTU_VX_M8 : RISCV::PseudoVMSLT_VX_M8;
         VMSLTMaskOpcode = IsUnsigned ? RISCV::PseudoVMSLTU_VX_M8_MASK
@@ -630,9 +630,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       assert(Node->getNumOperands() == Offset + 2 &&
              "Unexpected number of operands");
 
-      RISCVVSEW VSEW =
-          static_cast<RISCVVSEW>(Node->getConstantOperandVal(Offset) & 0x7);
-      RISCVVLMUL VLMul = static_cast<RISCVVLMUL>(
+      RISCVII::VSEW VSEW =
+          static_cast<RISCVII::VSEW>(Node->getConstantOperandVal(Offset) & 0x7);
+      RISCVII::VLMUL VLMul = static_cast<RISCVII::VLMUL>(
           Node->getConstantOperandVal(Offset + 1) & 0x7);
 
       unsigned VTypeI = RISCVVType::encodeVTYPE(
@@ -785,8 +785,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       assert(VT.getVectorElementCount() == IndexVT.getVectorElementCount() &&
              "Element count mismatch");
 
-      RISCVVLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
-      RISCVVLMUL IndexLMUL = RISCVTargetLowering::getLMUL(IndexVT);
+      RISCVII::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
+      RISCVII::VLMUL IndexLMUL = RISCVTargetLowering::getLMUL(IndexVT);
       unsigned IndexScalarSize = IndexVT.getScalarSizeInBits();
       const RISCV::VLX_VSXPseudo *P = RISCV::getVLXPseudo(
           IsMasked, IsOrdered, IndexScalarSize, static_cast<unsigned>(LMUL),
@@ -823,7 +823,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       addVectorLoadStoreOperands(Node, SEW, DL, CurOp, IsMasked, IsStrided,
                                  Operands);
 
-      RISCVVLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
+      RISCVII::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
       const RISCV::VLEPseudo *P =
           RISCV::getVLEPseudo(IsMasked, IsStrided, /*FF*/ false, ScalarSize,
                               static_cast<unsigned>(LMUL));
@@ -851,7 +851,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       addVectorLoadStoreOperands(Node, ScalarSize, DL, CurOp, IsMasked,
                                  /*IsStridedOrIndexed*/ false, Operands);
 
-      RISCVVLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
+      RISCVII::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
       const RISCV::VLEPseudo *P =
           RISCV::getVLEPseudo(IsMasked, /*Strided*/ false, /*FF*/ true,
                               ScalarSize, static_cast<unsigned>(LMUL));
@@ -976,8 +976,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       assert(VT.getVectorElementCount() == IndexVT.getVectorElementCount() &&
              "Element count mismatch");
 
-      RISCVVLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
-      RISCVVLMUL IndexLMUL = RISCVTargetLowering::getLMUL(IndexVT);
+      RISCVII::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
+      RISCVII::VLMUL IndexLMUL = RISCVTargetLowering::getLMUL(IndexVT);
       unsigned IndexScalarSize = IndexVT.getScalarSizeInBits();
       const RISCV::VLX_VSXPseudo *P = RISCV::getVSXPseudo(
           IsMasked, IsOrdered, IndexScalarSize, static_cast<unsigned>(LMUL),
@@ -1013,7 +1013,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       addVectorLoadStoreOperands(Node, SEW, DL, CurOp, IsMasked, IsStrided,
                                  Operands);
 
-      RISCVVLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
+      RISCVII::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
       const RISCV::VSEPseudo *P = RISCV::getVSEPseudo(
           IsMasked, IsStrided, ScalarSize, static_cast<unsigned>(LMUL));
       MachineSDNode *Store =
@@ -1066,10 +1066,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     if (Idx != 0)
       break;
 
-    RISCVVLMUL SubVecLMUL = RISCVTargetLowering::getLMUL(SubVecContainerVT);
-    bool IsSubVecPartReg = SubVecLMUL == RISCVVLMUL::LMUL_F2 ||
-                           SubVecLMUL == RISCVVLMUL::LMUL_F4 ||
-                           SubVecLMUL == RISCVVLMUL::LMUL_F8;
+    RISCVII::VLMUL SubVecLMUL = RISCVTargetLowering::getLMUL(SubVecContainerVT);
+    bool IsSubVecPartReg = SubVecLMUL == RISCVII::VLMUL::LMUL_F2 ||
+                           SubVecLMUL == RISCVII::VLMUL::LMUL_F4 ||
+                           SubVecLMUL == RISCVII::VLMUL::LMUL_F8;
     (void)IsSubVecPartReg; // Silence unused variable warning without asserts.
     assert((!IsSubVecPartReg || V.isUndef()) &&
            "Expecting lowering to have created legal INSERT_SUBVECTORs when "
@@ -1162,7 +1162,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
                           CurDAG->getRegister(RISCV::X0, XLenVT), VL, SEW,
                           Ld->getChain()};
 
-    RISCVVLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
+    RISCVII::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
     const RISCV::VLEPseudo *P = RISCV::getVLEPseudo(
         /*IsMasked*/ false, /*IsStrided*/ true, /*FF*/ false, ScalarSize,
         static_cast<unsigned>(LMUL));

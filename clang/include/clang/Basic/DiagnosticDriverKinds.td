@@ -545,6 +545,8 @@ def err_drv_invalid_object_mode : Error<"OBJECT_MODE setting %0 is not recognize
 def err_aix_default_altivec_abi : Error<
   "The default Altivec ABI on AIX is not yet supported, use '-mabi=vec-extabi' for the extended Altivec ABI">;
 
+def err_aix_unsupported_tls_model : Error<"TLS model '%0' is not yet supported on AIX">;
+
 def err_invalid_cxx_abi : Error<"Invalid C++ ABI name '%0'">;
 def err_unsupported_cxx_abi : Error<"C++ ABI '%0' is not supported on target triple '%1'">;
 

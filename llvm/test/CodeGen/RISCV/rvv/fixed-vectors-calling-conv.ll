@@ -7,7 +7,7 @@
 define <4 x i8> @ret_v4i8(<4 x i8>* %p) {
 ; CHECK-LABEL: ret_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 4, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e8,mf4,ta,mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %v = load <4 x i8>, <4 x i8>* %p
@@ -107,7 +107,7 @@ define <16 x i64> @ret_v16i64(<16 x i64>* %p) {
 define <8 x i1> @ret_mask_v8i1(<8 x i1>* %p) {
 ; CHECK-LABEL: ret_mask_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vle1.v v0, (a0)
 ; CHECK-NEXT:    ret
   %v = load <8 x i1>, <8 x i1>* %p
@@ -490,7 +490,7 @@ define <128 x i32> @ret_split_v128i32(<128 x i32>* %x) {
 define <4 x i8> @ret_v8i8_param_v4i8(<4 x i8> %v) {
 ; CHECK-LABEL: ret_v8i8_param_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 4, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 4, e8,mf4,ta,mu
 ; CHECK-NEXT:    vadd.vi v8, v8, 2
 ; CHECK-NEXT:    ret
   %r = add <4 x i8> %v, <i8 2, i8 2, i8 2, i8 2>
@@ -500,7 +500,7 @@ define <4 x i8> @ret_v8i8_param_v4i8(<4 x i8> %v) {
 define <4 x i8> @ret_v4i8_param_v4i8_v4i8(<4 x i8> %v, <4 x i8> %w) {
 ; CHECK-LABEL: ret_v4i8_param_v4i8_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 4, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 4, e8,mf4,ta,mu
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %r = add <4 x i8> %v, %w
@@ -539,7 +539,7 @@ define <4 x i64> @ret_v4i64_param_v4i64_v4i64(<4 x i64> %v, <4 x i64> %w) {
 define <8 x i1> @ret_v8i1_param_v8i1_v8i1(<8 x i1> %v, <8 x i1> %w) {
 ; CHECK-LABEL: ret_v8i1_param_v8i1_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vmxor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %r = xor <8 x i1> %v, %w
@@ -1022,7 +1022,7 @@ define <32 x i32> @call_split_vector_args(<2 x i32>* %pa, <32 x i32>* %pb) {
 ; LMULMAX8-NEXT:    addi s0, sp, 256
 ; LMULMAX8-NEXT:    .cfi_def_cfa s0, 0
 ; LMULMAX8-NEXT:    andi sp, sp, -128
-; LMULMAX8-NEXT:    vsetivli a2, 2, e32,m1,ta,mu
+; LMULMAX8-NEXT:    vsetivli a2, 2, e32,mf2,ta,mu
 ; LMULMAX8-NEXT:    vle32.v v8, (a0)
 ; LMULMAX8-NEXT:    addi a0, zero, 32
 ; LMULMAX8-NEXT:    vsetvli a0, a0, e32,m8,ta,mu
@@ -1051,7 +1051,7 @@ define <32 x i32> @call_split_vector_args(<2 x i32>* %pa, <32 x i32>* %pb) {
 ; LMULMAX4-NEXT:    addi s0, sp, 256
 ; LMULMAX4-NEXT:    .cfi_def_cfa s0, 0
 ; LMULMAX4-NEXT:    andi sp, sp, -128
-; LMULMAX4-NEXT:    vsetivli a2, 2, e32,m1,ta,mu
+; LMULMAX4-NEXT:    vsetivli a2, 2, e32,mf2,ta,mu
 ; LMULMAX4-NEXT:    vle32.v v8, (a0)
 ; LMULMAX4-NEXT:    vsetivli a0, 16, e32,m4,ta,mu
 ; LMULMAX4-NEXT:    vle32.v v16, (a1)
@@ -1083,7 +1083,7 @@ define <32 x i32> @call_split_vector_args(<2 x i32>* %pa, <32 x i32>* %pb) {
 ; LMULMAX2-NEXT:    addi s0, sp, 128
 ; LMULMAX2-NEXT:    .cfi_def_cfa s0, 0
 ; LMULMAX2-NEXT:    andi sp, sp, -128
-; LMULMAX2-NEXT:    vsetivli a2, 2, e32,m1,ta,mu
+; LMULMAX2-NEXT:    vsetivli a2, 2, e32,mf2,ta,mu
 ; LMULMAX2-NEXT:    vle32.v v8, (a0)
 ; LMULMAX2-NEXT:    vsetivli a0, 8, e32,m2,ta,mu
 ; LMULMAX2-NEXT:    vle32.v v14, (a1)
@@ -1122,7 +1122,7 @@ define <32 x i32> @call_split_vector_args(<2 x i32>* %pa, <32 x i32>* %pb) {
 ; LMULMAX1-NEXT:    addi s0, sp, 128
 ; LMULMAX1-NEXT:    .cfi_def_cfa s0, 0
 ; LMULMAX1-NEXT:    andi sp, sp, -128
-; LMULMAX1-NEXT:    vsetivli a2, 2, e32,m1,ta,mu
+; LMULMAX1-NEXT:    vsetivli a2, 2, e32,mf2,ta,mu
 ; LMULMAX1-NEXT:    vle32.v v8, (a0)
 ; LMULMAX1-NEXT:    vsetivli a0, 4, e32,m1,ta,mu
 ; LMULMAX1-NEXT:    vle32.v v13, (a1)

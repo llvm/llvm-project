@@ -511,7 +511,7 @@ public:
 
 } // namespace
 
-// Adds stubs and bindings where necessary (e.g. if the symbol is a
+// Add stubs and bindings where necessary (e.g. if the symbol is a
 // DylibSymbol.)
 static void prepareBranchTarget(Symbol *sym) {
   if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
@@ -535,7 +535,7 @@ static void prepareBranchTarget(Symbol *sym) {
       }
     }
   } else {
-    assert(false && "invalid symbol type for branch");
+    llvm_unreachable("invalid branch target symbol type");
   }
 }
 
@@ -958,8 +958,6 @@ void Writer::finalizeAddresses() {
     seg->vmSize = addr - seg->firstSection()->addr;
     seg->fileSize = fileOff - seg->fileOff;
   }
-
-  // FIXME(gkm): create branch-extension thunks here, then adjust addresses
 }
 
 void Writer::finalizeLinkEditSegment() {
@@ -1062,7 +1060,11 @@ template <class LP> void Writer::run() {
     in.stubHelper->setup();
   scanSymbols();
   createOutputSections<LP>();
-  // No more sections nor segments are created beyond this point.
+  // After this point, we create no new segments; HOWEVER, we might
+  // yet create branch-range extension thunks for architectures whose
+  // hardware call instructions have limited range, e.g., ARM(64).
+  // The thunks are created as InputSections interspersed among
+  // the ordinary __TEXT,_text InputSections.
   sortSegmentsAndSections();
   createLoadCommands<LP>();
   finalizeAddresses();

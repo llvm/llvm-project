@@ -120,6 +120,7 @@ struct SparseTensorConversionPass
     target.addDynamicallyLegalOp<ReturnOp>(
         [&](ReturnOp op) { return converter.isLegal(op.getOperandTypes()); });
     target.addLegalOp<ConstantOp>();
+    target.addLegalOp<tensor::CastOp>();
     populateFuncOpTypeConversionPattern(patterns, converter);
     populateCallOpTypeConversionPattern(patterns, converter);
     populateSparseTensorConversionPatterns(converter, patterns);
