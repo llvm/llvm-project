@@ -89,7 +89,7 @@ Changes to the MIPS Target
 During this release ...
 
 Changes to the Hexagon Target
---------------------------
+-----------------------------
 
 * The Hexagon target now supports V68/HVX ISA.
 
