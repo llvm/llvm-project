@@ -5741,7 +5741,7 @@ void Process::PrintWarningUnsupportedLanguage(const SymbolContext &sc) {
   if (!plugins[language]) {
     PrintWarning(Process::Warnings::eWarningsUnsupportedLanguage,
                  sc.module_sp.get(),
-                 "This version of LLDB has no plugin for the %s language. "
+                 "This version of LLDB has no plugin for the language \"%s\". "
                  "Inspection of frame variables will be limited.\n",
                  Language::GetNameForLanguageType(language));
   }
