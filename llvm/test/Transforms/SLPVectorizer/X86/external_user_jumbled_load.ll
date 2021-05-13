@@ -13,15 +13,7 @@ define void @hoge(i64 %idx, <4 x i32>* %sink) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP0]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x i32>, <4 x i32>* [[TMP4]], align 4
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[SHUFFLE]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> undef, i32 [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[SHUFFLE]], i32 1
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[TMP8]], i32 1
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[SHUFFLE]], i32 2
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP9]], i32 [[TMP10]], i32 2
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[SHUFFLE]], i32 3
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP12]], i32 3
-; CHECK-NEXT:    store <4 x i32> [[TMP13]], <4 x i32>* [[SINK:%.*]], align 16
+; CHECK-NEXT:    store <4 x i32> [[SHUFFLE]], <4 x i32>* [[SINK:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
 bb:
