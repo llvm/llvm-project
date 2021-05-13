@@ -89,7 +89,7 @@ namespace __size {
     template<__difference _Tp>
     [[nodiscard]] constexpr __integer_like auto operator()(_Tp&& __t) const
         noexcept(noexcept(ranges::end(__t) - ranges::begin(__t))) {
-      return __to_unsigned_like<range_difference_t<remove_cvref_t<_Tp>>>(
+      return _VSTD::__to_unsigned_like<range_difference_t<remove_cvref_t<_Tp>>>(
           ranges::end(__t) - ranges::begin(__t));
     }
   };
