@@ -1333,22 +1333,35 @@ private:
          --I) {
       auto *Entry = &RingBuffer->Entries[I % AllocationRingBuffer::NumEntries];
       uptr EntryPtr = atomic_load_relaxed(&Entry->Ptr);
-      uptr UntaggedEntryPtr = untagPointer(EntryPtr);
-      uptr EntrySize = atomic_load_relaxed(&Entry->AllocationSize);
-      if (!EntryPtr || FaultAddr < EntryPtr - getPageSizeCached() ||
-          FaultAddr >= EntryPtr + EntrySize + getPageSizeCached())
+      if (!EntryPtr)
         continue;
 
+      uptr UntaggedEntryPtr = untagPointer(EntryPtr);
+      uptr EntrySize = atomic_load_relaxed(&Entry->AllocationSize);
       u32 AllocationTrace = atomic_load_relaxed(&Entry->AllocationTrace);
       u32 AllocationTid = atomic_load_relaxed(&Entry->AllocationTid);
       u32 DeallocationTrace = atomic_load_relaxed(&Entry->DeallocationTrace);
       u32 DeallocationTid = atomic_load_relaxed(&Entry->DeallocationTid);
 
-      // For UAF the ring buffer will contain two entries, one for the
-      // allocation and another for the deallocation. Don't report buffer
-      // overflow/underflow using the allocation entry if we have already
-      // collected a report from the deallocation entry.
-      if (!DeallocationTrace) {
+      if (DeallocationTid) {
+        // For UAF we only consider in-bounds fault addresses because
+        // out-of-bounds UAF is rare and attempting to detect it is very likely
+        // to result in false positives.
+        if (FaultAddr < EntryPtr || FaultAddr >= EntryPtr + EntrySize)
+          continue;
+      } else {
+        // Ring buffer OOB is only possible with secondary allocations. In this
+        // case we are guaranteed a guard region of at least a page on either
+        // side of the allocation (guard page on the right, guard page + tagged
+        // region on the left), so ignore any faults outside of that range.
+        if (FaultAddr < EntryPtr - getPageSizeCached() ||
+            FaultAddr >= EntryPtr + EntrySize + getPageSizeCached())
+          continue;
+
+        // For UAF the ring buffer will contain two entries, one for the
+        // allocation and another for the deallocation. Don't report buffer
+        // overflow/underflow using the allocation entry if we have already
+        // collected a report from the deallocation entry.
         bool Found = false;
         for (uptr J = 0; J != NextErrorReport; ++J) {
           if (ErrorInfo->reports[J].allocation_address == UntaggedEntryPtr) {
