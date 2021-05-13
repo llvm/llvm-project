@@ -869,7 +869,9 @@ struct UnrollTransferWriteConversion
 
   /// If the input of the given TransferWriteOp is an ExtractOp, return it.
   vector::ExtractOp getExtractOp(TransferWriteOp xferOp) const {
-    return dyn_cast<vector::ExtractOp>(xferOp.vector().getDefiningOp());
+    if (auto *op = xferOp.vector().getDefiningOp())
+      return dyn_cast<vector::ExtractOp>(op);
+    return vector::ExtractOp();
   }
 
   /// If the input of the given TransferWriteOp is an ExtractOp, return its
