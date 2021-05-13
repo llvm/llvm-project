@@ -726,11 +726,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   // TODO: Custom legalization for s128
   // TODO: v2s64, v2s32, v4s32, v4s16, v8s16
   // TODO: Use generic lowering when custom lowering is not possible.
+  auto always = [=](const LegalityQuery &Q) { return true; };
   getActionDefinitionsBuilder(G_CTPOP)
       .legalFor({{v8s8, v8s8}, {v16s8, v16s8}})
       .clampScalar(0, s32, s128)
       .widenScalarToNextPow2(0)
-      .scalarSameSizeAs(1, 0)
+      .minScalarEltSameAsIf(always, 1, 0)
+      .maxScalarEltSameAsIf(always, 1, 0)
       .customFor({{s32, s32}, {s64, s64}});
 
   computeTables();
