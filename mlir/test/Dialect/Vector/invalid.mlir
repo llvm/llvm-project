@@ -80,13 +80,6 @@ func @extract_vector_type(%arg0: index) {
 
 // -----
 
-func @extract_position_empty(%arg0: vector<4x8x16xf32>) {
-  // expected-error@+1 {{expected non-empty position attribute}}
-  %1 = vector.extract %arg0[] : vector<4x8x16xf32>
-}
-
-// -----
-
 func @extract_position_rank_overflow(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute of rank smaller than vector}}
   %1 = vector.extract %arg0[0, 0, 0, 0] : vector<4x8x16xf32>
@@ -134,13 +127,6 @@ func @insert_element_wrong_type(%arg0: i32, %arg1: vector<4xf32>) {
   %c = constant 3 : i32
   // expected-error@+1 {{'vector.insertelement' op failed to verify that source operand type matches element type of result}}
   %0 = "vector.insertelement" (%arg0, %arg1, %c) : (i32, vector<4xf32>, i32) -> (vector<4xf32>)
-}
-
-// -----
-
-func @insert_vector_type(%a: f32, %b: vector<4x8x16xf32>) {
-  // expected-error@+1 {{expected non-empty position attribute}}
-  %1 = vector.insert %a, %b[] : f32 into vector<4x8x16xf32>
 }
 
 // -----
