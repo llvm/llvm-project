@@ -65,3 +65,12 @@ namespace P0857R0 {
   template<typename T> requires C<T> struct Y {};
   X<Y> xy; // expected-error {{no template named 'X'}}
 }
+
+namespace PR50306 {
+  template<typename T> concept NotInt = sizeof(T) != sizeof(int); // expected-note {{because}}
+  template<typename T> void f() {
+    [](NotInt auto) {}(T()); // expected-error {{no matching function}} expected-note {{constraints not satisfied}} expected-note {{because}}
+  }
+  template void f<char>(); // OK
+  template void f<int>(); // expected-note {{in instantiation of}}
+}
