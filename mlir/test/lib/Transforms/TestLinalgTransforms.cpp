@@ -194,14 +194,9 @@ static void applyPatterns(FuncOp funcOp) {
                .addOpFilter<MatmulOp, FillOp, CopyOp, GenericOp>());
 
   //===--------------------------------------------------------------------===//
-  // Linalg generic permutation patterns.
+  // Linalg generic interchange pattern.
   //===--------------------------------------------------------------------===//
-  patterns.add<LinalgInterchangePattern<GenericOp>>(
-      ctx,
-      /*interchangeVector=*/ArrayRef<unsigned>{1, 2, 0},
-      LinalgTransformationFilter(ArrayRef<Identifier>{},
-                                 Identifier::get("PERMUTED", ctx)));
-  patterns.add<LinalgInterchangePattern<IndexedGenericOp>>(
+  patterns.add<GenericOpInterchangePattern>(
       ctx,
       /*interchangeVector=*/ArrayRef<unsigned>{1, 2, 0},
       LinalgTransformationFilter(ArrayRef<Identifier>{},
@@ -333,12 +328,15 @@ static void fillPromotionCallBackPatterns(MLIRContext *ctx,
 template <typename IdOp, typename NProcsOp>
 static SmallVector<ProcInfo, 2>
 getGpuProcIds(OpBuilder &b, Location loc, ArrayRef<Range> parallelLoopRanges) {
+  size_t count = std::min<size_t>(3, parallelLoopRanges.size());
+  SmallVector<ProcInfo, 2> procInfo(count);
+  const char *xyz[] = {"x", "y", "z"};
   Type indexType = b.getIndexType();
-  SmallVector<ProcInfo, 2> procInfo(2);
-  procInfo[0] = {b.create<IdOp>(loc, indexType, b.getStringAttr("y")),
-                 b.create<NProcsOp>(loc, indexType, b.getStringAttr("y"))};
-  procInfo[1] = {b.create<IdOp>(loc, indexType, b.getStringAttr("x")),
-                 b.create<NProcsOp>(loc, indexType, b.getStringAttr("x"))};
+  for (unsigned i = 0; i < count; ++i) {
+    procInfo[count - 1 - i] = {
+        b.create<IdOp>(loc, indexType, b.getStringAttr(xyz[i])),
+        b.create<NProcsOp>(loc, indexType, b.getStringAttr(xyz[i]))};
+  }
   return procInfo;
 }
 
@@ -548,7 +546,7 @@ static void applyInterchangePattern(FuncOp funcOp,
                                     ArrayRef<unsigned> interchangeVector) {
   MLIRContext *context = funcOp.getContext();
   RewritePatternSet interchangePattern(context);
-  interchangePattern.add<LinalgInterchangePattern<GenericOp>>(
+  interchangePattern.add<GenericOpInterchangePattern>(
       context, interchangeVector,
       LinalgTransformationFilter(ArrayRef<Identifier>{},
                                  Identifier::get("interchange", context)));

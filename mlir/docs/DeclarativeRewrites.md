@@ -392,26 +392,31 @@ placeholder_.
 *   `$_builder` will be replaced by the current `mlir::PatternRewriter`.
 *   `$_loc` will be replaced by the fused location or custom location (as
     determined by location directive).
-*   `$_self` will be replaced with the entity `NativeCodeCall` is attached to.
+*   `$_self` will be replaced by the defining operation in a source pattern.
 
 We have seen how `$_builder` can be used in the above; it allows us to pass a
 `mlir::Builder` (`mlir::PatternRewriter` is a subclass of `mlir::OpBuilder`,
 which is a subclass of `mlir::Builder`) to the C++ helper function to use the
 handy methods on `mlir::Builder`.
 
-`$_self` is useful when we want to write something in the form of
-`NativeCodeCall<"...">:$symbol`. For example, if we want to reverse the previous
-example and decompose the array attribute into two attributes:
+Here's an example how we should use `$_self` in source pattern,
 
 ```tablegen
-class getNthAttr<int n> : NativeCodeCall<"$_self[" # n # "]">;
 
-def : Pat<(OneAttrOp $attr),
-          (TwoAttrOp (getNthAttr<0>:$attr), (getNthAttr<1>:$attr)>;
+def : Pat<(OneAttrOp (NativeCodeCall<"Foo($_self, &$0)"> I32Attr:$val)),
+          (TwoAttrOp $val, $val)>;
 ```
 
-In the above, `$_self` is substituted by the attribute bound by `$attr`, which
-is `OneAttrOp`'s array attribute.
+In the above, `$_self` is substituted by the defining operation of the first
+operand of OneAttrOp. Note that we don't support binding name to NativeCodeCall
+in the source pattern. To carry some return values from helper function, put the
+names (constraint is optional) in the parameter list and they will be bound to
+the variables with correspoding type. Then these named must be either passed by
+reference or a pointer to variable used as argument so that the matched value
+can be returned. In the same example, `$val` will be bound to a variable with
+`Attribute` type(as `I32Attr`) and the type of the second argument in Foo()
+could be `Attribute&` or `Attribute*`. Names with attribute constraints will be
+captured as Attributes while everything else will be treated as Value.
 
 Positional placeholders will be substituted by the `dag` object parameters at
 the `NativeCodeCall` use site. For example, if we define `SomeCall :

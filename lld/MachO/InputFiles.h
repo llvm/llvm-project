@@ -187,20 +187,42 @@ extern llvm::SetVector<InputFile *> inputFiles;
 
 llvm::Optional<MemoryBufferRef> readFile(StringRef path);
 
-// anyHdr should be a pointer to either mach_header or mach_header_64
-template <class CommandType = llvm::MachO::load_command, class... Types>
-const CommandType *findCommand(const void *anyHdr, Types... types) {
+namespace detail {
+
+template <class CommandType, class... Types>
+std::vector<const CommandType *>
+findCommands(const void *anyHdr, size_t maxCommands, Types... types) {
+  std::vector<const CommandType *> cmds;
   std::initializer_list<uint32_t> typesList{types...};
   const auto *hdr = reinterpret_cast<const llvm::MachO::mach_header *>(anyHdr);
   const uint8_t *p =
       reinterpret_cast<const uint8_t *>(hdr) + target->headerSize;
   for (uint32_t i = 0, n = hdr->ncmds; i < n; ++i) {
     auto *cmd = reinterpret_cast<const CommandType *>(p);
-    if (llvm::is_contained(typesList, cmd->cmd))
-      return cmd;
+    if (llvm::is_contained(typesList, cmd->cmd)) {
+      cmds.push_back(cmd);
+      if (cmds.size() == maxCommands)
+        return cmds;
+    }
     p += cmd->cmdsize;
   }
-  return nullptr;
+  return cmds;
+}
+
+} // namespace detail
+
+// anyHdr should be a pointer to either mach_header or mach_header_64
+template <class CommandType = llvm::MachO::load_command, class... Types>
+const CommandType *findCommand(const void *anyHdr, Types... types) {
+  std::vector<const CommandType *> cmds =
+      detail::findCommands<CommandType>(anyHdr, 1, types...);
+  return cmds.size() ? cmds[0] : nullptr;
+}
+
+template <class CommandType = llvm::MachO::load_command, class... Types>
+std::vector<const CommandType *> findCommands(const void *anyHdr,
+                                              Types... types) {
+  return detail::findCommands<CommandType>(anyHdr, 0, types...);
 }
 
 } // namespace macho

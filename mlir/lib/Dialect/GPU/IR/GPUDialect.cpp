@@ -29,8 +29,68 @@ using namespace mlir;
 using namespace mlir::gpu;
 
 //===----------------------------------------------------------------------===//
+// MMAMatrixType
+//===----------------------------------------------------------------------===//
+
+MMAMatrixType MMAMatrixType::get(ArrayRef<int64_t> shape, Type elementType,
+                                 StringRef operand) {
+  return Base::get(elementType.getContext(), shape, elementType, operand);
+}
+
+MMAMatrixType
+MMAMatrixType::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                          ArrayRef<int64_t> shape, Type elementType,
+                          StringRef operand) {
+  return Base::getChecked(emitError, elementType.getContext(), shape,
+                          elementType, operand);
+}
+
+unsigned MMAMatrixType::getNumDims() const { return getImpl()->numDims; }
+
+ArrayRef<int64_t> MMAMatrixType::getShape() const {
+  return getImpl()->getShape();
+}
+
+Type MMAMatrixType::getElementType() const { return getImpl()->elementType; }
+
+StringRef MMAMatrixType::getOperand() const { return getImpl()->getOperand(); }
+
+bool MMAMatrixType::isValidElementType(Type elementType) {
+  return elementType.isF16() || elementType.isF32();
+}
+
+LogicalResult
+MMAMatrixType::verify(function_ref<InFlightDiagnostic()> emitError,
+                      ArrayRef<int64_t> shape, Type elementType,
+                      StringRef operand) {
+  if (!operand.equals("AOp") && !operand.equals("BOp") &&
+      !operand.equals("COp") && !operand.equals("DOp"))
+    return emitError() << "operand expected to be one of AOp, BOp, COp or DOp";
+
+  if (shape.size() != 2)
+    return emitError() << "MMAMatrixType must have exactly two dimensions";
+
+  if (!MMAMatrixType::isValidElementType(elementType))
+    return emitError() << "MMAMatrixType elements must be F16 or F32";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // GPUDialect
 //===----------------------------------------------------------------------===//
+
+/// GPU memory space identifiers.
+enum GPUMemorySpace {
+  /// Generic memory space identifier.
+  kGenericMemorySpace = 0,
+
+  /// Global memory space identifier.
+  kGlobalMemorySpace = 1,
+
+  /// Shared memory space identifier.
+  kSharedMemorySpace = 3
+};
 
 bool GPUDialect::isKernel(Operation *op) {
   UnitAttr isKernelAttr = op->getAttrOfType<UnitAttr>(getKernelFuncAttrName());
@@ -39,6 +99,7 @@ bool GPUDialect::isKernel(Operation *op) {
 
 void GPUDialect::initialize() {
   addTypes<AsyncTokenType>();
+  addTypes<MMAMatrixType>();
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/GPU/GPUOps.cpp.inc"
@@ -56,6 +117,38 @@ Type GPUDialect::parseType(DialectAsmParser &parser) const {
   if (keyword == "async.token")
     return AsyncTokenType::get(context);
 
+  if (keyword == "mma_matrix") {
+    llvm::SMLoc beginLoc = parser.getNameLoc();
+
+    // Parse '<'.
+    if (parser.parseLess())
+      return nullptr;
+
+    // Parse the size and elementType.
+    SmallVector<int64_t> shape;
+    Type elementType;
+    if (parser.parseDimensionList(shape, /*allowDynamic=*/false) ||
+        parser.parseType(elementType))
+      return nullptr;
+
+    // Parse ','
+    if (parser.parseComma())
+      return nullptr;
+
+    // Parse operand.
+    StringRef operand;
+    if (failed(parser.parseOptionalString(&operand)))
+      return nullptr;
+
+    // Parse '>'.
+    if (parser.parseGreater())
+      return nullptr;
+
+    return MMAMatrixType::getChecked(mlir::detail::getDefaultDiagnosticEmitFn(
+                                         parser.getEncodedSourceLoc(beginLoc)),
+                                     shape, elementType, operand);
+  }
+
   parser.emitError(parser.getNameLoc(), "unknown gpu type: " + keyword);
   return Type();
 }
@@ -63,6 +156,14 @@ Type GPUDialect::parseType(DialectAsmParser &parser) const {
 void GPUDialect::printType(Type type, DialectAsmPrinter &os) const {
   TypeSwitch<Type>(type)
       .Case<AsyncTokenType>([&](Type) { os << "async.token"; })
+      .Case<MMAMatrixType>([&](MMAMatrixType fragTy) {
+        os << "mma_matrix<";
+        auto shape = fragTy.getShape();
+        for (auto dim = shape.begin(), e = shape.end() - 1; dim != e; ++dim)
+          os << *dim << 'x';
+        os << shape.back() << 'x' << fragTy.getElementType();
+        os << ", \"" << fragTy.getOperand() << "\"" << '>';
+      })
       .Default([](Type) { llvm_unreachable("unexpected 'gpu' type kind"); });
 }
 
@@ -138,7 +239,8 @@ LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
   return walkResult.wasInterrupted() ? failure() : success();
 }
 
-template <typename T> static LogicalResult verifyIndexOp(T op) {
+template <typename T>
+static LogicalResult verifyIndexOp(T op) {
   auto dimension = op.dimension();
   if (dimension != "x" && dimension != "y" && dimension != "z")
     return op.emitError("dimension \"") << dimension << "\" is invalid";
@@ -497,9 +599,9 @@ parseLaunchFuncOperands(OpAsmParser &parser,
     return success();
   SmallVector<NamedAttrList, 4> argAttrs;
   bool isVariadic = false;
-  return impl::parseFunctionArgumentList(parser, /*allowAttributes=*/false,
-                                         /*allowVariadic=*/false, argNames,
-                                         argTypes, argAttrs, isVariadic);
+  return function_like_impl::parseFunctionArgumentList(
+      parser, /*allowAttributes=*/false,
+      /*allowVariadic=*/false, argNames, argTypes, argAttrs, isVariadic);
 }
 
 static void printLaunchFuncOperands(OpAsmPrinter &printer, Operation *,
@@ -615,7 +717,7 @@ static ParseResult parseGPUFuncOp(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   auto signatureLocation = parser.getCurrentLocation();
-  if (failed(impl::parseFunctionSignature(
+  if (failed(function_like_impl::parseFunctionSignature(
           parser, /*allowVariadic=*/false, entryArgs, argTypes, argAttrs,
           isVariadic, resultTypes, resultAttrs)))
     return failure();
@@ -654,7 +756,8 @@ static ParseResult parseGPUFuncOp(OpAsmParser &parser, OperationState &result) {
   // Parse attributes.
   if (failed(parser.parseOptionalAttrDictWithKeyword(result.attributes)))
     return failure();
-  mlir::impl::addArgAndResultAttrs(builder, result, argAttrs, resultAttrs);
+  function_like_impl::addArgAndResultAttrs(builder, result, argAttrs,
+                                           resultAttrs);
 
   // Parse the region. If no argument names were provided, take all names
   // (including those of attributions) from the entry block.
@@ -679,31 +782,20 @@ static void printGPUFuncOp(OpAsmPrinter &p, GPUFuncOp op) {
   p.printSymbolName(op.getName());
 
   FunctionType type = op.getType();
-  impl::printFunctionSignature(p, op.getOperation(), type.getInputs(),
-                               /*isVariadic=*/false, type.getResults());
+  function_like_impl::printFunctionSignature(
+      p, op.getOperation(), type.getInputs(),
+      /*isVariadic=*/false, type.getResults());
 
   printAttributions(p, op.getWorkgroupKeyword(), op.getWorkgroupAttributions());
   printAttributions(p, op.getPrivateKeyword(), op.getPrivateAttributions());
   if (op.isKernel())
     p << ' ' << op.getKernelKeyword();
 
-  impl::printFunctionAttributes(p, op.getOperation(), type.getNumInputs(),
-                                type.getNumResults(),
-                                {op.getNumWorkgroupAttributionsAttrName(),
-                                 GPUDialect::getKernelFuncAttrName()});
+  function_like_impl::printFunctionAttributes(
+      p, op.getOperation(), type.getNumInputs(), type.getNumResults(),
+      {op.getNumWorkgroupAttributionsAttrName(),
+       GPUDialect::getKernelFuncAttrName()});
   p.printRegion(op.getBody(), /*printEntryBlockArgs=*/false);
-}
-
-void GPUFuncOp::setType(FunctionType newType) {
-  auto oldType = getType();
-  assert(newType.getNumResults() == oldType.getNumResults() &&
-         "unimplemented: changes to the number of results");
-
-  SmallVector<char, 16> nameBuf;
-  for (int i = newType.getNumInputs(), e = oldType.getNumInputs(); i < e; i++)
-    (*this)->removeAttr(getArgAttrName(i, nameBuf));
-
-  (*this)->setAttr(getTypeAttrName(), TypeAttr::get(newType));
 }
 
 /// Hook for FunctionLike verifier.
@@ -883,6 +975,95 @@ static void printAsyncDependencies(OpAsmPrinter &printer, Operation *op,
   printer << "[";
   llvm::interleaveComma(asyncDependencies, printer);
   printer << "]";
+}
+
+//===----------------------------------------------------------------------===//
+// GPU_SubgroupMmaLoadMatrixOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(SubgroupMmaLoadMatrixOp op) {
+  auto srcType = op.srcMemref().getType();
+  auto resType = op.res().getType();
+  auto resMatrixType = resType.cast<gpu::MMAMatrixType>();
+  auto operand = resMatrixType.getOperand();
+  auto srcMemrefType = srcType.cast<MemRefType>();
+  auto srcMemSpace = srcMemrefType.getMemorySpaceAsInt();
+
+  if (!srcMemrefType.getAffineMaps().empty() &&
+      !srcMemrefType.getAffineMaps().front().isIdentity())
+    return op.emitError("expected identity layout map for source memref");
+
+  if (srcMemSpace != kGenericMemorySpace && srcMemSpace != kSharedMemorySpace &&
+      srcMemSpace != kGlobalMemorySpace)
+    return op.emitError(
+        "source memorySpace kGenericMemorySpace, kSharedMemorySpace or "
+        "kGlobalMemorySpace only allowed");
+
+  if (!operand.equals("AOp") && !operand.equals("BOp") &&
+      !operand.equals("COp"))
+    return op.emitError("only AOp, BOp and COp can be loaded");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GPU_SubgroupMmaStoreMatrixOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(SubgroupMmaStoreMatrixOp op) {
+  auto srcType = op.src().getType();
+  auto dstType = op.dstMemref().getType();
+  auto srcMatrixType = srcType.cast<gpu::MMAMatrixType>();
+  auto dstMemrefType = dstType.cast<MemRefType>();
+  auto dstMemSpace = dstMemrefType.getMemorySpaceAsInt();
+
+  if (!dstMemrefType.getAffineMaps().empty() &&
+      !dstMemrefType.getAffineMaps().front().isIdentity())
+    return op.emitError("expected identity layout map for destination memref");
+
+  if (dstMemSpace != kGenericMemorySpace && dstMemSpace != kSharedMemorySpace &&
+      dstMemSpace != kGlobalMemorySpace)
+    return op.emitError(
+        "destination memorySpace of kGenericMemorySpace, "
+        "kGlobalMemorySpace or kSharedMemorySpace only allowed");
+
+  if (!srcMatrixType.getOperand().equals("DOp"))
+    return op.emitError(
+        "expected the operand matrix being stored to have 'DOp' operand type");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GPU_SubgroupMmaComputeOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(SubgroupMmaComputeOp op) {
+  enum OperandMap { A, B, C };
+  SmallVector<MMAMatrixType, 3> opTypes;
+
+  auto populateOpInfo = [&opTypes, &op]() {
+    opTypes.push_back(op.opA().getType().cast<MMAMatrixType>());
+    opTypes.push_back(op.opB().getType().cast<MMAMatrixType>());
+    opTypes.push_back(op.opC().getType().cast<MMAMatrixType>());
+  };
+  populateOpInfo();
+
+  if (!opTypes[A].getOperand().equals("AOp") ||
+      !opTypes[B].getOperand().equals("BOp") ||
+      !opTypes[C].getOperand().equals("COp"))
+    return op.emitError("operands must be in the order AOp, BOp, COp");
+
+  ArrayRef<int64_t> aShape, bShape, cShape;
+  aShape = opTypes[A].getShape();
+  bShape = opTypes[B].getShape();
+  cShape = opTypes[C].getShape();
+
+  if (aShape[1] != bShape[0] || aShape[0] != cShape[0] ||
+      bShape[1] != cShape[1])
+    return op.emitError("operand shapes do not satisfy matmul constraints");
+
+  return success();
 }
 
 #include "mlir/Dialect/GPU/GPUOpInterfaces.cpp.inc"

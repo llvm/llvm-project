@@ -31,6 +31,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
@@ -1228,60 +1229,6 @@ static AArch64CC::CondCode changeICMPPredToAArch64CC(CmpInst::Predicate P) {
     return AArch64CC::LO;
   case CmpInst::ICMP_ULE:
     return AArch64CC::LS;
-  }
-}
-
-static void changeFCMPPredToAArch64CC(CmpInst::Predicate P,
-                                      AArch64CC::CondCode &CondCode,
-                                      AArch64CC::CondCode &CondCode2) {
-  CondCode2 = AArch64CC::AL;
-  switch (P) {
-  default:
-    llvm_unreachable("Unknown FP condition!");
-  case CmpInst::FCMP_OEQ:
-    CondCode = AArch64CC::EQ;
-    break;
-  case CmpInst::FCMP_OGT:
-    CondCode = AArch64CC::GT;
-    break;
-  case CmpInst::FCMP_OGE:
-    CondCode = AArch64CC::GE;
-    break;
-  case CmpInst::FCMP_OLT:
-    CondCode = AArch64CC::MI;
-    break;
-  case CmpInst::FCMP_OLE:
-    CondCode = AArch64CC::LS;
-    break;
-  case CmpInst::FCMP_ONE:
-    CondCode = AArch64CC::MI;
-    CondCode2 = AArch64CC::GT;
-    break;
-  case CmpInst::FCMP_ORD:
-    CondCode = AArch64CC::VC;
-    break;
-  case CmpInst::FCMP_UNO:
-    CondCode = AArch64CC::VS;
-    break;
-  case CmpInst::FCMP_UEQ:
-    CondCode = AArch64CC::EQ;
-    CondCode2 = AArch64CC::VS;
-    break;
-  case CmpInst::FCMP_UGT:
-    CondCode = AArch64CC::HI;
-    break;
-  case CmpInst::FCMP_UGE:
-    CondCode = AArch64CC::PL;
-    break;
-  case CmpInst::FCMP_ULT:
-    CondCode = AArch64CC::LT;
-    break;
-  case CmpInst::FCMP_ULE:
-    CondCode = AArch64CC::LE;
-    break;
-  case CmpInst::FCMP_UNE:
-    CondCode = AArch64CC::NE;
-    break;
   }
 }
 
@@ -4045,14 +3992,17 @@ AArch64InstructionSelector::emitConstantPoolEntry(const Constant *CPVal,
 
 MachineInstr *AArch64InstructionSelector::emitLoadFromConstantPool(
     const Constant *CPVal, MachineIRBuilder &MIRBuilder) const {
-  unsigned CPIdx = emitConstantPoolEntry(CPVal, MIRBuilder.getMF());
+  auto &MF = MIRBuilder.getMF();
+  unsigned CPIdx = emitConstantPoolEntry(CPVal, MF);
 
   auto Adrp =
       MIRBuilder.buildInstr(AArch64::ADRP, {&AArch64::GPR64RegClass}, {})
           .addConstantPoolIndex(CPIdx, 0, AArch64II::MO_PAGE);
 
   MachineInstr *LoadMI = nullptr;
-  switch (MIRBuilder.getDataLayout().getTypeStoreSize(CPVal->getType())) {
+  MachinePointerInfo PtrInfo = MachinePointerInfo::getConstantPool(MF);
+  unsigned Size = MIRBuilder.getDataLayout().getTypeStoreSize(CPVal->getType());
+  switch (Size) {
   case 16:
     LoadMI =
         &*MIRBuilder
@@ -4079,6 +4029,9 @@ MachineInstr *AArch64InstructionSelector::emitLoadFromConstantPool(
                       << *CPVal->getType());
     return nullptr;
   }
+  LoadMI->addMemOperand(MF, MF.getMachineMemOperand(PtrInfo,
+                                                    MachineMemOperand::MOLoad,
+                                                    Size, Align(Size)));
   constrainSelectedInstRegOperands(*Adrp, TII, TRI, RBI);
   constrainSelectedInstRegOperands(*LoadMI, TII, TRI, RBI);
   return LoadMI;

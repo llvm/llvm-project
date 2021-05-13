@@ -493,6 +493,28 @@ def Tosa_BitwiseXorOp : Tosa_Op<"bitwise_xor", [ResultsBroadcastableShape,
 }
 
 //===----------------------------------------------------------------------===//
+// Operator: div
+//===----------------------------------------------------------------------===//
+def Tosa_DivOp : Tosa_Op<"div", [ResultsBroadcastableShape,
+                                 NoSideEffect]> {
+  let summary = "Integer divide operator";
+
+  let description = [{
+    Elementwise integer divide operator of input1 by input2. Axis of size 1
+    will be broadcast, as necessary. Rank of input tensors must match.
+  }];
+
+  let arguments = (ins
+    Tosa_Int32TensorUpto4D:$input1,
+    Tosa_Int32TensorUpto4D:$input2
+  );
+
+  let results = (outs
+    Tosa_Int32TensorUpto4D:$output
+  );
+}
+
+//===----------------------------------------------------------------------===//
 // Operator: logical_and
 //===----------------------------------------------------------------------===//
 def Tosa_LogicalAndOp : Tosa_Op<"logical_and", [ResultsBroadcastableShape,
@@ -1206,13 +1228,12 @@ def Tosa_ConcatOp : Tosa_Op<"concat", [NoSideEffect]> {
   let summary = "Concatenates tensors along one dimension.";
 
   let description = [{
-    Concatenate two tensors along a given axis. No data conversion happens
-    during a concat operation.
+    Concatenate a variadic amount of tensors along a given axis. No data 
+    conversion happens during a concat operation.
   }];
 
   let arguments = (ins
-    Tosa_Tensor1Dto4D:$input1,
-    Tosa_Tensor1Dto4D:$input2,
+    Variadic<Tosa_Tensor1Dto4D>:$input1,
     I64Attr:$axis
   );
 
@@ -1561,48 +1582,6 @@ def Tosa_IdentityOp: Tosa_Op<"identity", [NoSideEffect]> {
 
   let results = (outs
     Tosa_TensorUpto6D:$output
-  );
-}
-
-//===----------------------------------------------------------------------===//
-// Operator: identityn
-//===----------------------------------------------------------------------===//
-//===----------------------------------------------------------------------===//
-// Further described in docs/Rationale/RationaleTOSADialect.md .
-//===----------------------------------------------------------------------===//
-def Tosa_IdentityNOp: Tosa_Op<"identityn", [NoSideEffect]> {
-  let summary = "IdentityN operator";
-  let description = [{
-    Returns a list of tensors with the same shape, type, and contents as the
-    input list of tensors.
-  }];
-
-  let arguments = (ins
-    Variadic<Tosa_TensorUpto6D>:$input1
-  );
-
-  let results = (outs
-     Variadic<Tosa_TensorUpto6D>:$output
-  );
-}
-
-
-//===----------------------------------------------------------------------===//
-// Operator: placeholder
-//===----------------------------------------------------------------------===//
-def Tosa_PlaceholderOp : Tosa_Op<"placeholder", [NoSideEffect]> {
-  let summary = "Placeholder op";
-
-  let description = [{
-    A node where data will be inserted into the network at runtime. Generally
-    used for inputs to the network.
-  }];
-
-  let arguments = (ins
-  );
-
-  let results = (outs
-    Tosa_Tensor1Dto4D:$output
   );
 }
 

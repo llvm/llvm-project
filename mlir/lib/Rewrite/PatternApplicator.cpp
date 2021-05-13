@@ -195,7 +195,13 @@ LogicalResult PatternApplicator::matchAndRewrite(
       result = success(!onSuccess || succeeded(onSuccess(*bestPattern)));
     } else {
       const auto *pattern = static_cast<const RewritePattern *>(bestPattern);
+
+      LLVM_DEBUG(llvm::dbgs()
+                 << "Trying to match \"" << pattern->getDebugName() << "\"\n");
       result = pattern->matchAndRewrite(op, rewriter);
+      LLVM_DEBUG(llvm::dbgs() << "\"" << pattern->getDebugName() << "\" result "
+                              << succeeded(result) << "\n");
+
       if (succeeded(result) && onSuccess && failed(onSuccess(*pattern)))
         result = failure();
     }

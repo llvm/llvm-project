@@ -216,7 +216,8 @@ def warn_drv_yc_multiple_inputs_clang_cl : Warning<
 
 def err_drv_invalid_value : Error<"invalid value '%1' in '%0'">;
 def err_drv_invalid_int_value : Error<"invalid integral value '%1' in '%0'">;
-def err_drv_invalid_value_with_suggestion : Error<"invalid value '%1' in '%0','%2'">;
+def err_drv_invalid_value_with_suggestion : Error<
+    "invalid value '%1' in '%0', expected one of: %2">;
 def err_drv_invalid_remap_file : Error<
     "invalid option '%0' not of the form <from-file>;<to-file>">;
 def err_drv_invalid_gcc_output_type : Error<
@@ -275,6 +276,10 @@ def err_drv_unsupported_embed_bitcode
     : Error<"%0 is not supported with -fembed-bitcode">;
 def err_drv_bitcode_unsupported_on_toolchain : Error<
   "-fembed-bitcode is not supported on versions of iOS prior to 6.0">;
+def err_drv_negative_columns : Error<
+    "invalid value '%1' in '%0', value must be 'none' or a positive integer">;
+def err_drv_small_columns : Error<
+    "invalid value '%1' in '%0', value must be '%2' or greater">;
 
 def err_drv_invalid_malign_branch_EQ : Error<
   "invalid argument '%0' to -malign-branch=; each element must be one of: %1">;
@@ -539,6 +544,8 @@ def err_drv_invalid_object_mode : Error<"OBJECT_MODE setting %0 is not recognize
 
 def err_aix_default_altivec_abi : Error<
   "The default Altivec ABI on AIX is not yet supported, use '-mabi=vec-extabi' for the extended Altivec ABI">;
+
+def err_aix_unsupported_tls_model : Error<"TLS model '%0' is not yet supported on AIX">;
 
 def err_invalid_cxx_abi : Error<"Invalid C++ ABI name '%0'">;
 def err_unsupported_cxx_abi : Error<"C++ ABI '%0' is not supported on target triple '%1'">;

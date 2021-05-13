@@ -511,7 +511,7 @@ public:
 
 } // namespace
 
-// Adds stubs and bindings where necessary (e.g. if the symbol is a
+// Add stubs and bindings where necessary (e.g. if the symbol is a
 // DylibSymbol.)
 static void prepareBranchTarget(Symbol *sym) {
   if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
@@ -534,6 +534,8 @@ static void prepareBranchTarget(Symbol *sym) {
                                  sym->stubsIndex * target->wordSize);
       }
     }
+  } else {
+    llvm_unreachable("invalid branch target symbol type");
   }
 }
 
@@ -570,6 +572,9 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
 void Writer::scanRelocations() {
   TimeTraceScope timeScope("Scan relocations");
   for (InputSection *isec : inputSections) {
+    if (isec->shouldOmitFromOutput())
+      continue;
+
     if (isec->segname == segment_names::ld) {
       in.unwindInfo->prepareRelocations(isec);
       continue;
@@ -581,7 +586,7 @@ void Writer::scanRelocations() {
         // Skip over the following UNSIGNED relocation -- it's just there as the
         // minuend, and doesn't have the usual UNSIGNED semantics. We don't want
         // to emit rebase opcodes for it.
-        it = std::next(it);
+        it++;
         continue;
       }
       if (auto *sym = r.referent.dyn_cast<Symbol *>()) {
@@ -592,6 +597,7 @@ void Writer::scanRelocations() {
           prepareSymbolRelocation(sym, isec, r);
       } else {
         assert(r.referent.is<InputSection *>());
+        assert(!r.referent.get<InputSection *>()->shouldOmitFromOutput());
         if (!r.pcrel)
           in.rebase->addEntry(isec, r.offset);
       }
@@ -894,6 +900,8 @@ template <class LP> void Writer::createOutputSections() {
   // Then merge input sections into output sections.
   MapVector<NamePair, MergedOutputSection *> mergedOutputSections;
   for (InputSection *isec : inputSections) {
+    if (isec->shouldOmitFromOutput())
+      continue;
     NamePair names = maybeRenameSection({isec->segname, isec->name});
     MergedOutputSection *&osec = mergedOutputSections[names];
     if (osec == nullptr)
@@ -950,8 +958,6 @@ void Writer::finalizeAddresses() {
     seg->vmSize = addr - seg->firstSection()->addr;
     seg->fileSize = fileOff - seg->fileOff;
   }
-
-  // FIXME(gkm): create branch-extension thunks here, then adjust addresses
 }
 
 void Writer::finalizeLinkEditSegment() {
@@ -1047,13 +1053,18 @@ void Writer::writeOutputFile() {
 }
 
 template <class LP> void Writer::run() {
-  prepareBranchTarget(config->entry);
+  if (config->entry && !isa<Undefined>(config->entry))
+    prepareBranchTarget(config->entry);
   scanRelocations();
   if (in.stubHelper->isNeeded())
     in.stubHelper->setup();
   scanSymbols();
   createOutputSections<LP>();
-  // No more sections nor segments are created beyond this point.
+  // After this point, we create no new segments; HOWEVER, we might
+  // yet create branch-range extension thunks for architectures whose
+  // hardware call instructions have limited range, e.g., ARM(64).
+  // The thunks are created as InputSections interspersed among
+  // the ordinary __TEXT,_text InputSections.
   sortSegmentsAndSections();
   createLoadCommands<LP>();
   finalizeAddresses();

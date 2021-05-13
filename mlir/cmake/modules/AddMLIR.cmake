@@ -1,3 +1,5 @@
+include(LLVMDistributionSupport)
+
 function(mlir_tablegen ofn)
   tablegen(MLIR ${ARGV})
   set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
@@ -141,14 +143,7 @@ endfunction(add_mlir_library)
 # where non-standard library builds can be installed.
 function(add_mlir_library_install name)
   if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
-  set(export_to_mlirtargets)
-  if (${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
-      "mlir-libraries" IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
-      NOT LLVM_DISTRIBUTION_COMPONENTS)
-      set(export_to_mlirtargets EXPORT MLIRTargets)
-    set_property(GLOBAL PROPERTY MLIR_HAS_EXPORTS True)
-  endif()
-
+  get_target_export_arg(${name} MLIR export_to_mlirtargets UMBRELLA mlir-libraries)
   install(TARGETS ${name}
     COMPONENT ${name}
     ${export_to_mlirtargets}

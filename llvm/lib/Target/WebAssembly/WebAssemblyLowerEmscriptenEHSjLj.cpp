@@ -13,14 +13,7 @@
 ///
 /// To handle exceptions and setjmp/longjmps, this scheme relies on JavaScript's
 /// try and catch syntax and relevant exception-related libraries implemented
-/// in JavaScript glue code that will be produced by Emscripten. This is similar
-/// to the current Emscripten asm.js exception handling in fastcomp. For
-/// fastcomp's EH / SjLj scheme, see these files in fastcomp LLVM branch:
-/// (Location: https://github.com/kripken/emscripten-fastcomp)
-/// lib/Target/JSBackend/NaCl/LowerEmExceptionsPass.cpp
-/// lib/Target/JSBackend/NaCl/LowerEmSetjmp.cpp
-/// lib/Target/JSBackend/JSBackend.cpp
-/// lib/Target/JSBackend/CallHandlers.h
+/// in JavaScript glue code that will be produced by Emscripten.
 ///
 /// * Exception handling
 /// This pass lowers invokes and landingpads into library functions in JS glue
@@ -50,9 +43,8 @@
 /// In detail, this pass does following things:
 ///
 /// 1) Assumes the existence of global variables: __THREW__, __threwValue
-///    __THREW__ and __threwValue will be set in invoke wrappers
-///    in JS glue code. For what invoke wrappers are, refer to 3). These
-///    variables are used for both exceptions and setjmp/longjmps.
+///    __THREW__ and __threwValue are defined in compiler-rt in Emscripten.
+///    These variables are used for both exceptions and setjmp/longjmps.
 ///    __THREW__ indicates whether an exception or a longjmp occurred or not. 0
 ///    means nothing occurred, 1 means an exception occurred, and other numbers
 ///    mean a longjmp occurred. In the case of longjmp, __threwValue variable
@@ -61,14 +53,9 @@
 /// * Exception handling
 ///
 /// 2) We assume the existence of setThrew and setTempRet0/getTempRet0 functions
-///    at link time.
-///    The global variables in 1) will exist in wasm address space,
-///    but their values should be set in JS code, so these functions
-///    as interfaces to JS glue code. These functions are equivalent to the
-///    following JS functions, which actually exist in asm.js version of JS
-///    library.
+///    at link time. setThrew exists in Emscripten's compiler-rt:
 ///
-///    function setThrew(threw, value) {
+///    void setThrew(int threw, int value) {
 ///      if (__THREW__ == 0) {
 ///        __THREW__ = threw;
 ///        __threwValue = value;
@@ -76,7 +63,6 @@
 ///    }
 //
 ///    setTempRet0 is called from __cxa_find_matching_catch() in JS glue code.
-///
 ///    In exception handling, getTempRet0 indicates the type of an exception
 ///    caught, and in setjmp/longjmp, it means the second argument to longjmp
 ///    function.
@@ -105,7 +91,7 @@
 ///          Module["dynCall_vi"](index,a1); // This calls original callee
 ///        } catch(e) {
 ///          if (typeof e !== 'number' && e !== 'longjmp') throw e;
-///          asm["setThrew"](1, 0); // setThrew is called here
+///          _setThrew(1, 0); // setThrew is called here
 ///        }
 ///      }
 ///    If an exception is thrown, __THREW__ will be set to true in a wrapper,
@@ -149,8 +135,8 @@
 ///      setjmpTableSize = 4;
 ///      setjmpTable = (int *) malloc(40);
 ///      setjmpTable[0] = 0;
-///    setjmpTable and setjmpTableSize are used in saveSetjmp() function in JS
-///    code.
+///    setjmpTable and setjmpTableSize are used to call saveSetjmp() function in
+///    Emscripten compiler-rt.
 ///
 /// 3) Lower
 ///      setjmp(buf)
@@ -160,11 +146,11 @@
 ///    For each dynamic setjmp call, setjmpTable stores its ID (a number which
 ///    is incrementally assigned from 0) and its label (a unique number that
 ///    represents each callsite of setjmp). When we need more entries in
-///    setjmpTable, it is reallocated in saveSetjmp() in JS code and it will
-///    return the new table address, and assign the new table size in
-///    setTempRet0(). saveSetjmp also stores the setjmp's ID into the buffer
-///    buf. A BB with setjmp is split into two after setjmp call in order to
-///    make the post-setjmp BB the possible destination of longjmp BB.
+///    setjmpTable, it is reallocated in saveSetjmp() in Emscripten's
+///    compiler-rt and it will return the new table address, and assign the new
+///    table size in setTempRet0(). saveSetjmp also stores the setjmp's ID into
+///    the buffer buf. A BB with setjmp is split into two after setjmp call in
+///    order to make the post-setjmp BB the possible destination of longjmp BB.
 ///
 ///
 /// 4) Lower every call that might longjmp into
@@ -505,7 +491,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::canLongjmp(Module &M,
   if (CalleeName == "setjmp" || CalleeName == "malloc" || CalleeName == "free")
     return false;
 
-  // There are functions in JS glue code
+  // There are functions in Emscripten's JS glue code or compiler-rt
   if (CalleeName == "__resumeException" || CalleeName == "llvm_eh_typeid_for" ||
       CalleeName == "saveSetjmp" || CalleeName == "testSetjmp" ||
       CalleeName == "getTempRet0" || CalleeName == "setTempRet0")
@@ -691,8 +677,6 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
   if (EnableEH && TM.Options.ExceptionModel == ExceptionHandling::Wasm)
     report_fatal_error("-exception-model=wasm not allowed with "
                        "-enable-emscripten-cxx-exceptions");
-  if (DoSjLj && TM.Options.ExceptionModel == ExceptionHandling::Wasm)
-    report_fatal_error("Emscripten SjLj is not supported with Wasm EH yet");
 
   // Declare (or get) global variables __THREW__, __threwValue, and
   // getTempRet0/setTempRet0 function which are used in common for both

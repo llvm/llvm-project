@@ -406,6 +406,10 @@ protected:
     return false;
   }
 
+  /// addPostFastRegAllocRewrite - Add passes to the optimized register
+  /// allocation pipeline after fast register allocation is complete.
+  virtual bool addPostFastRegAllocRewrite() { return false; }
+
   /// Add passes to be run immediately after virtual registers are rewritten
   /// to physical registers.
   virtual void addPostRewrite() { }

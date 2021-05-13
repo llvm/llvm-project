@@ -478,6 +478,10 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   case TargetOpcode::ICALL_BRANCH_FUNNEL:
     ExpandICallBranchFunnel(&MBB, MBBI);
     return true;
+  case X86::PLDTILECFGV: {
+    MI.setDesc(TII->get(X86::LDTILECFG));
+    return true;
+  }
   case X86::PTILELOADDV: {
     for (unsigned i = 2; i > 0; --i)
       MI.RemoveOperand(i);

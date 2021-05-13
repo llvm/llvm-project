@@ -289,10 +289,12 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
 
   Optional<SIArgumentInfo> ArgInfo;
   SIMode Mode;
+  Optional<FrameIndex> ScavengeFI;
 
   SIMachineFunctionInfo() = default;
   SIMachineFunctionInfo(const llvm::SIMachineFunctionInfo &,
-                        const TargetRegisterInfo &TRI);
+                        const TargetRegisterInfo &TRI,
+                        const llvm::MachineFunction &MF);
 
   void mappingImpl(yaml::IO &YamlIO) override;
   ~SIMachineFunctionInfo() = default;
@@ -322,6 +324,7 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("highBitsOf32BitAddress",
                        MFI.HighBitsOf32BitAddress, 0u);
     YamlIO.mapOptional("occupancy", MFI.Occupancy, 0);
+    YamlIO.mapOptional("scavengeFI", MFI.ScavengeFI);
   }
 };
 
@@ -502,7 +505,10 @@ public: // FIXME
 public:
   SIMachineFunctionInfo(const MachineFunction &MF);
 
-  bool initializeBaseYamlFields(const yaml::SIMachineFunctionInfo &YamlMFI);
+  bool initializeBaseYamlFields(const yaml::SIMachineFunctionInfo &YamlMFI,
+                                const MachineFunction &MF,
+                                PerFunctionMIParsingState &PFS,
+                                SMDiagnostic &Error, SMRange &SourceRange);
 
   void reserveWWMRegister(Register Reg, Optional<int> FI) {
     WWMReservedRegs.insert(std::make_pair(Reg, FI));
@@ -546,6 +552,7 @@ public:
   void removeDeadFrameIndices(MachineFrameInfo &MFI);
 
   int getScavengeFI(MachineFrameInfo &MFI, const SIRegisterInfo &TRI);
+  Optional<int> getOptionalScavengeFI() const { return ScavengeFI; }
 
   bool hasCalculatedTID() const { return TIDReg != 0; };
   Register getTIDReg() const { return TIDReg; };

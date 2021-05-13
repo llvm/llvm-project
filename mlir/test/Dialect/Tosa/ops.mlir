@@ -101,7 +101,6 @@ func @test_arithmetic_right_shift(%arg0: tensor<13x21x1xf32>, %arg1: tensor<13x2
   return %0 : tensor<13x21x3xf32>
 }
 
-
 // -----
 // CHECK-LABEL: bitwise_and
 func @test_bitwise_and(%arg0: tensor<13x21x3xi32>, %arg1: tensor<13x21x1xi32>) -> tensor<13x21x3xi32> {
@@ -120,6 +119,13 @@ func @test_bitwise_or(%arg0: tensor<13x21x3xi32>, %arg1: tensor<13x1x3xi32>) -> 
 // CHECK-LABEL: bitwise_xor
 func @test_bitwise_xor(%arg0: tensor<13x21x1xi32>, %arg1: tensor<13x21x3xi32>) -> tensor<13x21x3xi32> {
   %0 = "tosa.bitwise_xor"(%arg0, %arg1) : (tensor<13x21x1xi32>, tensor<13x21x3xi32>) -> tensor<13x21x3xi32>
+  return %0 : tensor<13x21x3xi32>
+}
+
+// -----
+// CHECK-LABEL: div
+func @test_div(%arg0: tensor<13x21x1xi32>, %arg1: tensor<13x21x3xi32>) -> tensor<13x21x3xi32> {
+  %0 = "tosa.div"(%arg0, %arg1) : (tensor<13x21x1xi32>, tensor<13x21x3xi32>) -> tensor<13x21x3xi32>
   return %0 : tensor<13x21x3xi32>
 }
 
@@ -465,20 +471,6 @@ func @test_const(%arg0 : index) -> tensor<4xi32> {
 func @test_identity(%arg0: tensor<13x21x3xi32>) -> tensor<13x21x3xi32> {
   %0 = "tosa.identity"(%arg0) : (tensor<13x21x3xi32>) -> tensor<13x21x3xi32>
   return %0 : tensor<13x21x3xi32>
-}
-
-// -----
-// CHECK-LABEL: identityn
-func @test_identityn(%arg0: tensor<1xi32>, %arg1: tensor<1xi32>) -> tensor<1xi32> {
-  %0:2 = "tosa.identityn"(%arg0, %arg1) : (tensor<1xi32>, tensor<1xi32>) -> (tensor<1xi32>, tensor<1xi32>)
-  return %0#0 : tensor<1xi32>
-}
-
-// -----
-// CHECK-LABEL: placeholder
-func @test_placeholder() -> tensor<1xi32> {
-  %0 = "tosa.placeholder"() : () -> tensor<1xi32>
-  return %0 : tensor<1xi32>
 }
 
 // -----

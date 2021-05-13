@@ -588,8 +588,9 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
   }
 
   llvm::SourceMgr TempSrcMgr;
-  llvm::MCContext Ctx(MAI.get(), MRI.get(), MOFI.get(), &TempSrcMgr);
-  MOFI->InitMCObjectFileInfo(TheTriple, /*PIC*/ false, Ctx);
+  llvm::MCContext Ctx(TheTriple, MAI.get(), MRI.get(), MOFI.get(), STI.get(),
+                      &TempSrcMgr);
+  MOFI->initMCObjectFileInfo(Ctx, /*PIC=*/false);
   std::unique_ptr<llvm::MemoryBuffer> Buffer =
       llvm::MemoryBuffer::getMemBuffer(AsmString, "<MS inline asm>");
 

@@ -37,12 +37,12 @@
 !-----------------------------------------
 ! EXPECTED OUTPUT WITH A NEGATIVE LENGTH
 !-----------------------------------------
-! NEGATIVELENGTH: invalid value '-2' in 'ffixed-line-length=','value must be 'none' or a non-negative integer'
+! NEGATIVELENGTH: invalid value '-2' in 'ffixed-line-length=', value must be 'none' or a positive integer
 
 !-----------------------------------------
 ! EXPECTED OUTPUT WITH LENGTH LESS THAN 7
 !-----------------------------------------
-! INVALIDLENGTH: invalid value '3' in 'ffixed-line-length=','value must be at least seven'
+! INVALIDLENGTH: invalid value '3' in 'ffixed-line-length=', value must be '7' or greater
 
 !---------------------------------------
 ! EXPECTED OUTPUT WITH UNLIMITED LENGTH

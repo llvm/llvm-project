@@ -44,6 +44,5 @@ subroutine C943_C944(src, src2)
   !ERROR: At most one of source-expr and type-spec may appear in a ALLOCATE statement
   allocate(y3, source=src, stat=stat, errmsg=msg, mold=mld)
   !ERROR: At most one of source-expr and type-spec may appear in a ALLOCATE statement
-  !ERROR: At most one of source-expr and type-spec may appear in a ALLOCATE statement
   allocate(real:: y4, source=src, stat=stat, errmsg=msg, mold=mld)
 end subroutine

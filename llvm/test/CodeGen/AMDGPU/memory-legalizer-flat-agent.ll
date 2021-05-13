@@ -242,7 +242,6 @@ define amdgpu_kernel void @flat_agent_acquire_load(
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s3
-; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    flat_store_dword v[2:3], v0
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -258,7 +257,6 @@ define amdgpu_kernel void @flat_agent_acquire_load(
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v1, s3
-; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
@@ -274,7 +272,6 @@ define amdgpu_kernel void @flat_agent_acquire_load(
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, s3
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-CU-NEXT:    s_endpgm
 ;
@@ -302,7 +299,6 @@ define amdgpu_kernel void @flat_agent_acquire_load(
 ; GFX90A-NOTTGSPLIT-NEXT:    buffer_wbinvl1_vol
 ; GFX90A-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX90A-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v3, s3
-; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    flat_store_dword v[2:3], v0
 ; GFX90A-NOTTGSPLIT-NEXT:    s_endpgm
 ;
@@ -332,7 +328,6 @@ define amdgpu_kernel void @flat_agent_acquire_load(
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v1, s3
-; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
@@ -348,7 +343,6 @@ define amdgpu_kernel void @flat_agent_acquire_load(
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v1, s3
-; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-CU-NEXT:    s_endpgm
     i32* %in, i32* %out) {
@@ -371,7 +365,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_load(
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s3
-; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    flat_store_dword v[2:3], v0
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -389,7 +382,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_load(
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v1, s3
-; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
@@ -407,7 +399,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_load(
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, s3
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-CU-NEXT:    s_endpgm
 ;
@@ -437,7 +428,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_load(
 ; GFX90A-NOTTGSPLIT-NEXT:    buffer_wbinvl1_vol
 ; GFX90A-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX90A-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v3, s3
-; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    flat_store_dword v[2:3], v0
 ; GFX90A-NOTTGSPLIT-NEXT:    s_endpgm
 ;
@@ -470,7 +460,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_load(
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v1, s3
-; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
@@ -488,7 +477,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_load(
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v1, s3
-; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-CU-NEXT:    s_endpgm
     i32* %in, i32* %out) {
@@ -1503,7 +1491,6 @@ define amdgpu_kernel void @flat_agent_acquire_ret_atomicrmw(
 ; GFX7-NEXT:    flat_atomic_swap v2, v[0:1], v2 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
-; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    flat_store_dword v[0:1], v2
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -1520,7 +1507,6 @@ define amdgpu_kernel void @flat_agent_acquire_ret_atomicrmw(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
-; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
@@ -1537,7 +1523,6 @@ define amdgpu_kernel void @flat_agent_acquire_ret_atomicrmw(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-CU-NEXT:    s_endpgm
 ;
@@ -1564,7 +1549,6 @@ define amdgpu_kernel void @flat_agent_acquire_ret_atomicrmw(
 ; GFX90A-NOTTGSPLIT-NEXT:    flat_atomic_swap v2, v[0:1], v2 glc
 ; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    buffer_wbinvl1_vol
-; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
 ; GFX90A-NOTTGSPLIT-NEXT:    s_endpgm
 ;
@@ -1594,7 +1578,6 @@ define amdgpu_kernel void @flat_agent_acquire_ret_atomicrmw(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
-; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
@@ -1611,7 +1594,6 @@ define amdgpu_kernel void @flat_agent_acquire_ret_atomicrmw(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
-; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-CU-NEXT:    s_endpgm
     i32* %out, i32 %in) {
@@ -1634,7 +1616,6 @@ define amdgpu_kernel void @flat_agent_acq_rel_ret_atomicrmw(
 ; GFX7-NEXT:    flat_atomic_swap v2, v[0:1], v2 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
-; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    flat_store_dword v[0:1], v2
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -1653,7 +1634,6 @@ define amdgpu_kernel void @flat_agent_acq_rel_ret_atomicrmw(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
-; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
@@ -1672,7 +1652,6 @@ define amdgpu_kernel void @flat_agent_acq_rel_ret_atomicrmw(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-CU-NEXT:    s_endpgm
 ;
@@ -1701,7 +1680,6 @@ define amdgpu_kernel void @flat_agent_acq_rel_ret_atomicrmw(
 ; GFX90A-NOTTGSPLIT-NEXT:    flat_atomic_swap v2, v[0:1], v2 glc
 ; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    buffer_wbinvl1_vol
-; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
 ; GFX90A-NOTTGSPLIT-NEXT:    s_endpgm
 ;
@@ -1734,7 +1712,6 @@ define amdgpu_kernel void @flat_agent_acq_rel_ret_atomicrmw(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
-; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
@@ -1753,7 +1730,6 @@ define amdgpu_kernel void @flat_agent_acq_rel_ret_atomicrmw(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
-; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-CU-NEXT:    s_endpgm
     i32* %out, i32 %in) {
@@ -1776,7 +1752,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_ret_atomicrmw(
 ; GFX7-NEXT:    flat_atomic_swap v2, v[0:1], v2 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
-; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    flat_store_dword v[0:1], v2
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -1795,7 +1770,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_ret_atomicrmw(
 ; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
-; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
@@ -1814,7 +1788,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_ret_atomicrmw(
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    buffer_gl0_inv
 ; GFX10-CU-NEXT:    buffer_gl1_inv
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-CU-NEXT:    s_endpgm
 ;
@@ -1843,7 +1816,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_ret_atomicrmw(
 ; GFX90A-NOTTGSPLIT-NEXT:    flat_atomic_swap v2, v[0:1], v2 glc
 ; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    buffer_wbinvl1_vol
-; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
 ; GFX90A-NOTTGSPLIT-NEXT:    s_endpgm
 ;
@@ -1876,7 +1848,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_ret_atomicrmw(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
-; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
@@ -1895,7 +1866,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_ret_atomicrmw(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
-; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-CU-NEXT:    s_endpgm
     i32* %out, i32 %in) {
@@ -3300,7 +3270,6 @@ define amdgpu_kernel void @flat_agent_acquire_monotonic_ret_cmpxchg(
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
-; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    flat_store_dword v[0:1], v2
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -3322,7 +3291,6 @@ define amdgpu_kernel void @flat_agent_acquire_monotonic_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v1, s1
-; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
@@ -3344,7 +3312,6 @@ define amdgpu_kernel void @flat_agent_acquire_monotonic_ret_cmpxchg(
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, s1
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-CU-NEXT:    s_endpgm
 ;
@@ -3376,7 +3343,6 @@ define amdgpu_kernel void @flat_agent_acquire_monotonic_ret_cmpxchg(
 ; GFX90A-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 glc
 ; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    buffer_wbinvl1_vol
-; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
 ; GFX90A-NOTTGSPLIT-NEXT:    s_endpgm
 ;
@@ -3407,7 +3373,6 @@ define amdgpu_kernel void @flat_agent_acquire_monotonic_ret_cmpxchg(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
-; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
@@ -3425,7 +3390,6 @@ define amdgpu_kernel void @flat_agent_acquire_monotonic_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
-; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-CU-NEXT:    s_endpgm
     i32* %out, i32 %in, i32 %old) {
@@ -3455,7 +3419,6 @@ define amdgpu_kernel void @flat_agent_acq_rel_monotonic_ret_cmpxchg(
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
-; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    flat_store_dword v[0:1], v2
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -3479,7 +3442,6 @@ define amdgpu_kernel void @flat_agent_acq_rel_monotonic_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v1, s1
-; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
@@ -3503,7 +3465,6 @@ define amdgpu_kernel void @flat_agent_acq_rel_monotonic_ret_cmpxchg(
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, s1
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-CU-NEXT:    s_endpgm
 ;
@@ -3537,7 +3498,6 @@ define amdgpu_kernel void @flat_agent_acq_rel_monotonic_ret_cmpxchg(
 ; GFX90A-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 glc
 ; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    buffer_wbinvl1_vol
-; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
 ; GFX90A-NOTTGSPLIT-NEXT:    s_endpgm
 ;
@@ -3571,7 +3531,6 @@ define amdgpu_kernel void @flat_agent_acq_rel_monotonic_ret_cmpxchg(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
-; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
@@ -3591,7 +3550,6 @@ define amdgpu_kernel void @flat_agent_acq_rel_monotonic_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
-; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-CU-NEXT:    s_endpgm
     i32* %out, i32 %in, i32 %old) {
@@ -3621,7 +3579,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_monotonic_ret_cmpxchg(
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
-; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    flat_store_dword v[0:1], v2
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -3645,7 +3602,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_monotonic_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v1, s1
-; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
@@ -3669,7 +3625,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_monotonic_ret_cmpxchg(
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, s1
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-CU-NEXT:    s_endpgm
 ;
@@ -3703,7 +3658,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_monotonic_ret_cmpxchg(
 ; GFX90A-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 glc
 ; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    buffer_wbinvl1_vol
-; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
 ; GFX90A-NOTTGSPLIT-NEXT:    s_endpgm
 ;
@@ -3737,7 +3691,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_monotonic_ret_cmpxchg(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
-; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
@@ -3757,7 +3710,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_monotonic_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
-; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-CU-NEXT:    s_endpgm
     i32* %out, i32 %in, i32 %old) {
@@ -3786,7 +3738,6 @@ define amdgpu_kernel void @flat_agent_acquire_acquire_ret_cmpxchg(
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
-; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    flat_store_dword v[0:1], v2
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -3808,7 +3759,6 @@ define amdgpu_kernel void @flat_agent_acquire_acquire_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v1, s1
-; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
@@ -3830,7 +3780,6 @@ define amdgpu_kernel void @flat_agent_acquire_acquire_ret_cmpxchg(
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, s1
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-CU-NEXT:    s_endpgm
 ;
@@ -3862,7 +3811,6 @@ define amdgpu_kernel void @flat_agent_acquire_acquire_ret_cmpxchg(
 ; GFX90A-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 glc
 ; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    buffer_wbinvl1_vol
-; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
 ; GFX90A-NOTTGSPLIT-NEXT:    s_endpgm
 ;
@@ -3893,7 +3841,6 @@ define amdgpu_kernel void @flat_agent_acquire_acquire_ret_cmpxchg(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
-; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
@@ -3911,7 +3858,6 @@ define amdgpu_kernel void @flat_agent_acquire_acquire_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
-; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-CU-NEXT:    s_endpgm
     i32* %out, i32 %in, i32 %old) {
@@ -3941,7 +3887,6 @@ define amdgpu_kernel void @flat_agent_release_acquire_ret_cmpxchg(
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
-; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    flat_store_dword v[0:1], v2
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -3965,7 +3910,6 @@ define amdgpu_kernel void @flat_agent_release_acquire_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v1, s1
-; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
@@ -3989,7 +3933,6 @@ define amdgpu_kernel void @flat_agent_release_acquire_ret_cmpxchg(
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, s1
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-CU-NEXT:    s_endpgm
 ;
@@ -4023,7 +3966,6 @@ define amdgpu_kernel void @flat_agent_release_acquire_ret_cmpxchg(
 ; GFX90A-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 glc
 ; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    buffer_wbinvl1_vol
-; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
 ; GFX90A-NOTTGSPLIT-NEXT:    s_endpgm
 ;
@@ -4057,7 +3999,6 @@ define amdgpu_kernel void @flat_agent_release_acquire_ret_cmpxchg(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
-; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
@@ -4077,7 +4018,6 @@ define amdgpu_kernel void @flat_agent_release_acquire_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
-; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-CU-NEXT:    s_endpgm
     i32* %out, i32 %in, i32 %old) {
@@ -4107,7 +4047,6 @@ define amdgpu_kernel void @flat_agent_acq_rel_acquire_ret_cmpxchg(
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
-; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    flat_store_dword v[0:1], v2
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -4131,7 +4070,6 @@ define amdgpu_kernel void @flat_agent_acq_rel_acquire_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v1, s1
-; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
@@ -4155,7 +4093,6 @@ define amdgpu_kernel void @flat_agent_acq_rel_acquire_ret_cmpxchg(
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, s1
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-CU-NEXT:    s_endpgm
 ;
@@ -4189,7 +4126,6 @@ define amdgpu_kernel void @flat_agent_acq_rel_acquire_ret_cmpxchg(
 ; GFX90A-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 glc
 ; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    buffer_wbinvl1_vol
-; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
 ; GFX90A-NOTTGSPLIT-NEXT:    s_endpgm
 ;
@@ -4223,7 +4159,6 @@ define amdgpu_kernel void @flat_agent_acq_rel_acquire_ret_cmpxchg(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
-; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
@@ -4243,7 +4178,6 @@ define amdgpu_kernel void @flat_agent_acq_rel_acquire_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
-; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-CU-NEXT:    s_endpgm
     i32* %out, i32 %in, i32 %old) {
@@ -4273,7 +4207,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_acquire_ret_cmpxchg(
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
-; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    flat_store_dword v[0:1], v2
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -4297,7 +4230,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_acquire_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v1, s1
-; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
@@ -4321,7 +4253,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_acquire_ret_cmpxchg(
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, s1
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-CU-NEXT:    s_endpgm
 ;
@@ -4355,7 +4286,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_acquire_ret_cmpxchg(
 ; GFX90A-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 glc
 ; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    buffer_wbinvl1_vol
-; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
 ; GFX90A-NOTTGSPLIT-NEXT:    s_endpgm
 ;
@@ -4389,7 +4319,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_acquire_ret_cmpxchg(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
-; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
@@ -4409,7 +4338,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_acquire_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
-; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-CU-NEXT:    s_endpgm
     i32* %out, i32 %in, i32 %old) {
@@ -4439,7 +4367,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
-; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    flat_store_dword v[0:1], v2
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -4463,7 +4390,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX10-WGP-NEXT:    buffer_gl1_inv
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v1, s1
-; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
@@ -4487,7 +4413,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX10-CU-NEXT:    buffer_gl1_inv
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, s1
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-CU-NEXT:    s_endpgm
 ;
@@ -4521,7 +4446,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX90A-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 glc
 ; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    buffer_wbinvl1_vol
-; GFX90A-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
 ; GFX90A-NOTTGSPLIT-NEXT:    s_endpgm
 ;
@@ -4555,7 +4479,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
-; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
@@ -4575,7 +4498,6 @@ define amdgpu_kernel void @flat_agent_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
-; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-CU-NEXT:    s_endpgm
     i32* %out, i32 %in, i32 %old) {

@@ -59,7 +59,8 @@ ModulePass *createSVEIntrinsicOptsPass();
 InstructionSelector *
 createAArch64InstructionSelector(const AArch64TargetMachine &,
                                  AArch64Subtarget &, AArch64RegisterBankInfo &);
-FunctionPass *createAArch64PreLegalizerCombiner(bool IsOptNone);
+FunctionPass *createAArch64O0PreLegalizerCombiner();
+FunctionPass *createAArch64PreLegalizerCombiner();
 FunctionPass *createAArch64PostLegalizerCombiner(bool IsOptNone);
 FunctionPass *createAArch64PostLegalizerLowering();
 FunctionPass *createAArch64PostSelectOptimize();
@@ -82,6 +83,7 @@ void initializeAArch64SpeculationHardeningPass(PassRegistry&);
 void initializeAArch64LoadStoreOptPass(PassRegistry&);
 void initializeAArch64LowerHomogeneousPrologEpilogPass(PassRegistry &);
 void initializeAArch64SIMDInstrOptPass(PassRegistry&);
+void initializeAArch64O0PreLegalizerCombinerPass(PassRegistry &);
 void initializeAArch64PreLegalizerCombinerPass(PassRegistry&);
 void initializeAArch64PostLegalizerCombinerPass(PassRegistry &);
 void initializeAArch64PostLegalizerLoweringPass(PassRegistry &);

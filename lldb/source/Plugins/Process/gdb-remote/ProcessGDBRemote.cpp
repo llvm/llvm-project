@@ -465,7 +465,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
     assert(packet_len < (int)sizeof(packet));
     UNUSED_IF_ASSERT_DISABLED(packet_len);
     StringExtractorGDBRemote response;
-    if (m_gdb_comm.SendPacketAndWaitForResponse(packet, response, false) ==
+    if (m_gdb_comm.SendPacketAndWaitForResponse(packet, response) ==
         GDBRemoteCommunication::PacketResult::Success) {
       response_type = response.GetResponseType();
       if (response_type == StringExtractorGDBRemote::eResponse) {
@@ -1015,7 +1015,7 @@ Status ProcessGDBRemote::ConnectToDebugserver(llvm::StringRef connect_url) {
   for (size_t idx = 0; idx < num_cmds; idx++) {
     StringExtractorGDBRemote response;
     m_gdb_comm.SendPacketAndWaitForResponse(
-        GetExtraStartupCommands().GetArgumentAtIndex(idx), response, false);
+        GetExtraStartupCommands().GetArgumentAtIndex(idx), response);
   }
   return error;
 }
@@ -1210,25 +1210,25 @@ Status ProcessGDBRemote::DoAttachToProcessWithName(
 }
 
 llvm::Expected<TraceSupportedResponse> ProcessGDBRemote::TraceSupported() {
-  return m_gdb_comm.SendTraceSupported();
+  return m_gdb_comm.SendTraceSupported(GetInterruptTimeout());
 }
 
 llvm::Error ProcessGDBRemote::TraceStop(const TraceStopRequest &request) {
-  return m_gdb_comm.SendTraceStop(request);
+  return m_gdb_comm.SendTraceStop(request, GetInterruptTimeout());
 }
 
 llvm::Error ProcessGDBRemote::TraceStart(const llvm::json::Value &request) {
-  return m_gdb_comm.SendTraceStart(request);
+  return m_gdb_comm.SendTraceStart(request, GetInterruptTimeout());
 }
 
 llvm::Expected<std::string>
 ProcessGDBRemote::TraceGetState(llvm::StringRef type) {
-  return m_gdb_comm.SendTraceGetState(type);
+  return m_gdb_comm.SendTraceGetState(type, GetInterruptTimeout());
 }
 
 llvm::Expected<std::vector<uint8_t>>
 ProcessGDBRemote::TraceGetBinaryData(const TraceGetBinaryDataRequest &request) {
-  return m_gdb_comm.SendTraceGetBinaryData(request);
+  return m_gdb_comm.SendTraceGetBinaryData(request, GetInterruptTimeout());
 }
 
 void ProcessGDBRemote::DidExit() {
@@ -1473,7 +1473,7 @@ void ProcessGDBRemote::HandleStopReplySequence() {
   while (true) {
     // Send vStopped
     StringExtractorGDBRemote response;
-    m_gdb_comm.SendPacketAndWaitForResponse("vStopped", response, false);
+    m_gdb_comm.SendPacketAndWaitForResponse("vStopped", response);
 
     // OK represents end of signal list
     if (response.IsOKResponse())
@@ -2415,7 +2415,7 @@ Status ProcessGDBRemote::DoHalt(bool &caused_stop) {
     // file handle and debugserver will go away, and we can be done...
     m_gdb_comm.Disconnect();
   } else
-    caused_stop = m_gdb_comm.Interrupt();
+    caused_stop = m_gdb_comm.Interrupt(GetInterruptTimeout());
   return error;
 }
 
@@ -2564,11 +2564,11 @@ Status ProcessGDBRemote::DoDestroy() {
   if (m_gdb_comm.IsConnected()) {
     if (m_public_state.GetValue() != eStateAttaching) {
       StringExtractorGDBRemote response;
-      bool send_async = true;
       GDBRemoteCommunication::ScopedTimeout(m_gdb_comm,
                                             std::chrono::seconds(3));
 
-      if (m_gdb_comm.SendPacketAndWaitForResponse("k", response, send_async) ==
+      if (m_gdb_comm.SendPacketAndWaitForResponse("k", response,
+                                                  GetInterruptTimeout()) ==
           GDBRemoteCommunication::PacketResult::Success) {
         char packet_cmd = response.GetChar(0);
 
@@ -2732,7 +2732,8 @@ size_t ProcessGDBRemote::DoReadMemory(addr_t addr, void *buf, size_t size,
   assert(packet_len + 1 < (int)sizeof(packet));
   UNUSED_IF_ASSERT_DISABLED(packet_len);
   StringExtractorGDBRemote response;
-  if (m_gdb_comm.SendPacketAndWaitForResponse(packet, response, true) ==
+  if (m_gdb_comm.SendPacketAndWaitForResponse(packet, response,
+                                              GetInterruptTimeout()) ==
       GDBRemoteCommunication::PacketResult::Success) {
     if (response.IsNormalResponse()) {
       error.Clear();
@@ -2858,7 +2859,7 @@ Status ProcessGDBRemote::FlashErase(lldb::addr_t addr, size_t size) {
 
   StringExtractorGDBRemote response;
   if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString(), response,
-                                              true) ==
+                                              GetInterruptTimeout()) ==
       GDBRemoteCommunication::PacketResult::Success) {
     if (response.IsOKResponse()) {
       m_erased_flash_ranges.Insert(range, true);
@@ -2887,7 +2888,8 @@ Status ProcessGDBRemote::FlashDone() {
   if (m_erased_flash_ranges.IsEmpty())
     return status;
   StringExtractorGDBRemote response;
-  if (m_gdb_comm.SendPacketAndWaitForResponse("vFlashDone", response, true) ==
+  if (m_gdb_comm.SendPacketAndWaitForResponse("vFlashDone", response,
+                                              GetInterruptTimeout()) ==
       GDBRemoteCommunication::PacketResult::Success) {
     if (response.IsOKResponse()) {
       m_erased_flash_ranges.Clear();
@@ -2948,7 +2950,7 @@ size_t ProcessGDBRemote::DoWriteMemory(addr_t addr, const void *buf,
   }
   StringExtractorGDBRemote response;
   if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString(), response,
-                                              true) ==
+                                              GetInterruptTimeout()) ==
       GDBRemoteCommunication::PacketResult::Success) {
     if (response.IsOKResponse()) {
       error.Clear();
@@ -3124,7 +3126,7 @@ Status ProcessGDBRemote::EnableBreakpointSite(BreakpointSite *bp_site) {
       (!bp_site->HardwareRequired())) {
     // Try to send off a software breakpoint packet ($Z0)
     uint8_t error_no = m_gdb_comm.SendGDBStoppointTypePacket(
-        eBreakpointSoftware, true, addr, bp_op_size);
+        eBreakpointSoftware, true, addr, bp_op_size, GetInterruptTimeout());
     if (error_no == 0) {
       // The breakpoint was placed successfully
       bp_site->SetEnabled(true);
@@ -3164,7 +3166,7 @@ Status ProcessGDBRemote::EnableBreakpointSite(BreakpointSite *bp_site) {
   if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointHardware)) {
     // Try to send off a hardware breakpoint packet ($Z1)
     uint8_t error_no = m_gdb_comm.SendGDBStoppointTypePacket(
-        eBreakpointHardware, true, addr, bp_op_size);
+        eBreakpointHardware, true, addr, bp_op_size, GetInterruptTimeout());
     if (error_no == 0) {
       // The breakpoint was placed successfully
       bp_site->SetEnabled(true);
@@ -3228,13 +3230,15 @@ Status ProcessGDBRemote::DisableBreakpointSite(BreakpointSite *bp_site) {
 
     case BreakpointSite::eHardware:
       if (m_gdb_comm.SendGDBStoppointTypePacket(eBreakpointHardware, false,
-                                                addr, bp_op_size))
+                                                addr, bp_op_size,
+                                                GetInterruptTimeout()))
         error.SetErrorToGenericError();
       break;
 
     case BreakpointSite::eExternal: {
       if (m_gdb_comm.SendGDBStoppointTypePacket(eBreakpointSoftware, false,
-                                                addr, bp_op_size))
+                                                addr, bp_op_size,
+                                                GetInterruptTimeout()))
         error.SetErrorToGenericError();
     } break;
     }
@@ -3290,7 +3294,8 @@ Status ProcessGDBRemote::EnableWatchpoint(Watchpoint *wp, bool notify) {
     // Pass down an appropriate z/Z packet...
     if (m_gdb_comm.SupportsGDBStoppointPacket(type)) {
       if (m_gdb_comm.SendGDBStoppointTypePacket(type, true, addr,
-                                                wp->GetByteSize()) == 0) {
+                                                wp->GetByteSize(),
+                                                GetInterruptTimeout()) == 0) {
         wp->SetEnabled(true, notify);
         return error;
       } else
@@ -3336,7 +3341,8 @@ Status ProcessGDBRemote::DisableWatchpoint(Watchpoint *wp, bool notify) {
       GDBStoppointType type = GetGDBStoppointType(wp);
       // Pass down an appropriate z/Z packet...
       if (m_gdb_comm.SendGDBStoppointTypePacket(type, false, addr,
-                                                wp->GetByteSize()) == 0) {
+                                                wp->GetByteSize(),
+                                                GetInterruptTimeout()) == 0) {
         wp->SetEnabled(false, notify);
         return error;
       } else
@@ -3361,7 +3367,7 @@ Status ProcessGDBRemote::DoSignal(int signo) {
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
   LLDB_LOGF(log, "ProcessGDBRemote::DoSignal (signal = %d)", signo);
 
-  if (!m_gdb_comm.SendAsyncSignal(signo))
+  if (!m_gdb_comm.SendAsyncSignal(signo, GetInterruptTimeout()))
     error.SetErrorStringWithFormat("failed to send signal %i", signo);
   return error;
 }
@@ -3689,12 +3695,25 @@ thread_result_t ProcessGDBRemote::AsyncThread(void *arg) {
             __FUNCTION__, arg, process->GetID());
 
   EventSP event_sp;
+
+  // We need to ignore any packets that come in after we have
+  // have decided the process has exited.  There are some
+  // situations, for instance when we try to interrupt a running
+  // process and the interrupt fails, where another packet might
+  // get delivered after we've decided to give up on the process.
+  // But once we've decided we are done with the process we will
+  // not be in a state to do anything useful with new packets.
+  // So it is safer to simply ignore any remaining packets by
+  // explicitly checking for eStateExited before reentering the
+  // fetch loop.
+  
   bool done = false;
-  while (!done) {
+  while (!done && process->GetPrivateState() != eStateExited) {
     LLDB_LOGF(log,
               "ProcessGDBRemote::%s (arg = %p, pid = %" PRIu64
               ") listener.WaitForEvent (NULL, event_sp)...",
               __FUNCTION__, arg, process->GetID());
+
     if (process->m_async_listener_sp->GetEvent(event_sp, llvm::None)) {
       const uint32_t event_type = event_sp->GetType();
       if (event_sp->BroadcasterIs(&process->m_async_broadcaster)) {
@@ -3726,7 +3745,7 @@ thread_result_t ProcessGDBRemote::AsyncThread(void *arg) {
               // send the vCont packet
               if (!process->GetGDBRemote().SendvContPacket(
                       llvm::StringRef(continue_cstr, continue_cstr_len),
-                      response)) {
+                      process->GetInterruptTimeout(), response)) {
                 // Something went wrong
                 done = true;
                 break;
@@ -3738,6 +3757,7 @@ thread_result_t ProcessGDBRemote::AsyncThread(void *arg) {
                   process->GetGDBRemote().SendContinuePacketAndWaitForResponse(
                       *process, *process->GetUnixSignals(),
                       llvm::StringRef(continue_cstr, continue_cstr_len),
+                      process->GetInterruptTimeout(),
                       response);
 
               // We need to immediately clear the thread ID list so we are sure
@@ -3793,6 +3813,7 @@ thread_result_t ProcessGDBRemote::AsyncThread(void *arg) {
                 } else {
                   process->SetExitStatus(-1, "lost connection");
                 }
+                done = true;
                 break;
               }
 
@@ -4031,8 +4052,7 @@ ProcessGDBRemote::GetExtendedInfoForThread(lldb::tid_t tid) {
 
     StringExtractorGDBRemote response;
     response.SetResponseValidatorToJSON();
-    if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString(), response,
-                                                false) ==
+    if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString(), response) ==
         GDBRemoteCommunication::PacketResult::Success) {
       StringExtractorGDBRemote::ResponseType response_type =
           response.GetResponseType();
@@ -4104,8 +4124,7 @@ ProcessGDBRemote::GetLoadedDynamicLibrariesInfos_sender(
 
     StringExtractorGDBRemote response;
     response.SetResponseValidatorToJSON();
-    if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString(), response,
-                                                false) ==
+    if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString(), response) ==
         GDBRemoteCommunication::PacketResult::Success) {
       StringExtractorGDBRemote::ResponseType response_type =
           response.GetResponseType();
@@ -4138,8 +4157,7 @@ StructuredData::ObjectSP ProcessGDBRemote::GetSharedCacheInfo() {
 
     StringExtractorGDBRemote response;
     response.SetResponseValidatorToJSON();
-    if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString(), response,
-                                                false) ==
+    if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString(), response) ==
         GDBRemoteCommunication::PacketResult::Success) {
       StringExtractorGDBRemote::ResponseType response_type =
           response.GetResponseType();
@@ -4905,8 +4923,7 @@ Status ProcessGDBRemote::GetFileLoadAddress(const FileSpec &file,
   packet.PutStringAsRawHex8(file_path);
 
   StringExtractorGDBRemote response;
-  if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString(), response,
-                                              false) !=
+  if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString(), response) !=
       GDBRemoteCommunication::PacketResult::Success)
     return Status("Sending qFileLoadAddress packet failed");
 
@@ -5283,10 +5300,9 @@ public:
     if (process) {
       for (size_t i = 0; i < argc; ++i) {
         const char *packet_cstr = command.GetArgumentAtIndex(0);
-        bool send_async = true;
         StringExtractorGDBRemote response;
         process->GetGDBRemote().SendPacketAndWaitForResponse(
-            packet_cstr, response, send_async);
+            packet_cstr, response, process->GetInterruptTimeout());
         result.SetStatus(eReturnStatusSuccessFinishResult);
         Stream &output_strm = result.GetOutputStream();
         output_strm.Printf("  packet: %s\n", packet_cstr);
@@ -5335,11 +5351,10 @@ public:
       packet.PutCString("qRcmd,");
       packet.PutBytesAsRawHex8(command.data(), command.size());
 
-      bool send_async = true;
       StringExtractorGDBRemote response;
       Stream &output_strm = result.GetOutputStream();
       process->GetGDBRemote().SendPacketAndReceiveResponseWithOutputSupport(
-          packet.GetString(), response, send_async,
+          packet.GetString(), response, process->GetInterruptTimeout(),
           [&output_strm](llvm::StringRef output) { output_strm << output; });
       result.SetStatus(eReturnStatusSuccessFinishResult);
       output_strm.Printf("  packet: %s\n", packet.GetData());

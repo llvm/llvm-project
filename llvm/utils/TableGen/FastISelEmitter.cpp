@@ -616,10 +616,10 @@ void FastISelMap::printImmediatePredicates(raw_ostream &OS) {
     return;
 
   OS << "\n// FastEmit Immediate Predicate functions.\n";
-  for (ImmPredicateSet::iterator I = ImmediatePredicates.begin(),
-       E = ImmediatePredicates.end(); I != E; ++I) {
-    OS << "static bool " << I->getFnName() << "(int64_t Imm) {\n";
-    OS << I->getImmediatePredicateCode() << "\n}\n";
+  for (auto ImmediatePredicate : ImmediatePredicates) {
+    OS << "static bool " << ImmediatePredicate.getFnName()
+       << "(int64_t Imm) {\n";
+    OS << ImmediatePredicate.getImmediatePredicateCode() << "\n}\n";
   }
 
   OS << "\n\n";
@@ -691,29 +691,25 @@ void FastISelMap::emitInstructionCode(raw_ostream &OS,
 
 void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
   // Now emit code for all the patterns that we collected.
-  for (OperandsOpcodeTypeRetPredMap::const_iterator OI = SimplePatterns.begin(),
-       OE = SimplePatterns.end(); OI != OE; ++OI) {
-    const OperandsSignature &Operands = OI->first;
-    const OpcodeTypeRetPredMap &OTM = OI->second;
+  for (const auto &SimplePattern : SimplePatterns) {
+    const OperandsSignature &Operands = SimplePattern.first;
+    const OpcodeTypeRetPredMap &OTM = SimplePattern.second;
 
-    for (OpcodeTypeRetPredMap::const_iterator I = OTM.begin(), E = OTM.end();
-         I != E; ++I) {
-      const std::string &Opcode = I->first;
-      const TypeRetPredMap &TM = I->second;
+    for (const auto &I : OTM) {
+      const std::string &Opcode = I.first;
+      const TypeRetPredMap &TM = I.second;
 
       OS << "// FastEmit functions for " << Opcode << ".\n";
       OS << "\n";
 
       // Emit one function for each opcode,type pair.
-      for (TypeRetPredMap::const_iterator TI = TM.begin(), TE = TM.end();
-           TI != TE; ++TI) {
-        MVT::SimpleValueType VT = TI->first;
-        const RetPredMap &RM = TI->second;
+      for (const auto &TI : TM) {
+        MVT::SimpleValueType VT = TI.first;
+        const RetPredMap &RM = TI.second;
         if (RM.size() != 1) {
-          for (RetPredMap::const_iterator RI = RM.begin(), RE = RM.end();
-               RI != RE; ++RI) {
-            MVT::SimpleValueType RetVT = RI->first;
-            const PredMap &PM = RI->second;
+          for (const auto &RI : RM) {
+            MVT::SimpleValueType RetVT = RI.first;
+            const PredMap &PM = RI.second;
 
             OS << "unsigned fastEmit_" << getLegalCName(Opcode) << "_"
                << getLegalCName(std::string(getName(VT))) << "_"
@@ -735,9 +731,8 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
             OS << ", ";
           Operands.PrintParameters(OS);
           OS << ") {\nswitch (RetVT.SimpleTy) {\n";
-          for (RetPredMap::const_iterator RI = RM.begin(), RE = RM.end();
-               RI != RE; ++RI) {
-            MVT::SimpleValueType RetVT = RI->first;
+          for (const auto &RI : RM) {
+            MVT::SimpleValueType RetVT = RI.first;
             OS << "  case " << getName(RetVT) << ": return fastEmit_"
                << getLegalCName(Opcode) << "_"
                << getLegalCName(std::string(getName(VT))) << "_"
@@ -779,9 +774,8 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
       Operands.PrintParameters(OS);
       OS << ") {\n";
       OS << "  switch (VT.SimpleTy) {\n";
-      for (TypeRetPredMap::const_iterator TI = TM.begin(), TE = TM.end();
-           TI != TE; ++TI) {
-        MVT::SimpleValueType VT = TI->first;
+      for (const auto &TI : TM) {
+        MVT::SimpleValueType VT = TI.first;
         std::string TypeName = std::string(getName(VT));
         OS << "  case " << TypeName << ": return fastEmit_"
            << getLegalCName(Opcode) << "_" << getLegalCName(TypeName) << "_";
@@ -846,9 +840,8 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
     }
 
     OS << "  switch (Opcode) {\n";
-    for (OpcodeTypeRetPredMap::const_iterator I = OTM.begin(), E = OTM.end();
-         I != E; ++I) {
-      const std::string &Opcode = I->first;
+    for (const auto &I : OTM) {
+      const std::string &Opcode = I.first;
 
       OS << "  case " << Opcode << ": return fastEmit_"
          << getLegalCName(Opcode) << "_";

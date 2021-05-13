@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64GlobalISelUtils.h"
 #include "AArch64TargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
@@ -219,46 +220,6 @@ static bool applyFoldGlobalOffset(MachineInstr &MI, MachineRegisterInfo &MRI,
   return true;
 }
 
-/// Replace a G_MEMSET with a value of 0 with a G_BZERO instruction if it is
-/// supported and beneficial to do so.
-///
-/// \note This only applies on Darwin.
-///
-/// \returns true if \p MI was replaced with a G_BZERO.
-static bool tryEmitBZero(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
-                         bool MinSize) {
-  assert(MI.getOpcode() == TargetOpcode::G_MEMSET);
-  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
-  auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
-  if (!TLI.getLibcallName(RTLIB::BZERO))
-    return false;
-  auto Zero = getConstantVRegValWithLookThrough(MI.getOperand(1).getReg(), MRI);
-  if (!Zero || Zero->Value.getSExtValue() != 0)
-    return false;
-
-  // It's not faster to use bzero rather than memset for sizes <= 256.
-  // However, it *does* save us a mov from wzr, so if we're going for
-  // minsize, use bzero even if it's slower.
-  if (!MinSize) {
-    // If the size is known, check it. If it is not known, assume using bzero is
-    // better.
-    if (auto Size =
-            getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI)) {
-      if (Size->Value.getSExtValue() <= 256)
-        return false;
-    }
-  }
-
-  MIRBuilder.setInstrAndDebugLoc(MI);
-  MIRBuilder
-      .buildInstr(TargetOpcode::G_BZERO, {},
-                  {MI.getOperand(0), MI.getOperand(2)})
-      .addImm(MI.getOperand(3).getImm())
-      .addMemOperand(*MI.memoperands_begin());
-  MI.eraseFromParent();
-  return true;
-}
-
 class AArch64PreLegalizerCombinerHelperState {
 protected:
   CombinerHelper &Helper;
@@ -318,10 +279,10 @@ bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
     // heuristics decide.
     unsigned MaxLen = EnableOpt ? 0 : 32;
     // Try to inline memcpy type calls if optimizations are enabled.
-    if (!EnableMinSize && Helper.tryCombineMemCpyFamily(MI, MaxLen))
+    if (Helper.tryCombineMemCpyFamily(MI, MaxLen))
       return true;
     if (Opc == TargetOpcode::G_MEMSET)
-      return tryEmitBZero(MI, B, EnableMinSize);
+      return llvm::AArch64GISelUtils::tryEmitBZero(MI, B, EnableMinSize);
     return false;
   }
   }
@@ -340,15 +301,13 @@ class AArch64PreLegalizerCombiner : public MachineFunctionPass {
 public:
   static char ID;
 
-  AArch64PreLegalizerCombiner(bool IsOptNone = false);
+  AArch64PreLegalizerCombiner();
 
   StringRef getPassName() const override { return "AArch64PreLegalizerCombiner"; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
-private:
-  bool IsOptNone;
 };
 } // end anonymous namespace
 
@@ -358,17 +317,15 @@ void AArch64PreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   getSelectionDAGFallbackAnalysisUsage(AU);
   AU.addRequired<GISelKnownBitsAnalysis>();
   AU.addPreserved<GISelKnownBitsAnalysis>();
-  if (!IsOptNone) {
-    AU.addRequired<MachineDominatorTree>();
-    AU.addPreserved<MachineDominatorTree>();
-  }
+  AU.addRequired<MachineDominatorTree>();
+  AU.addPreserved<MachineDominatorTree>();
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
   AU.addPreserved<GISelCSEAnalysisWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-AArch64PreLegalizerCombiner::AArch64PreLegalizerCombiner(bool IsOptNone)
-    : MachineFunctionPass(ID), IsOptNone(IsOptNone) {
+AArch64PreLegalizerCombiner::AArch64PreLegalizerCombiner()
+    : MachineFunctionPass(ID) {
   initializeAArch64PreLegalizerCombinerPass(*PassRegistry::getPassRegistry());
 }
 
@@ -387,8 +344,7 @@ bool AArch64PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   bool EnableOpt =
       MF.getTarget().getOptLevel() != CodeGenOpt::None && !skipFunction(F);
   GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
-  MachineDominatorTree *MDT =
-      IsOptNone ? nullptr : &getAnalysis<MachineDominatorTree>();
+  MachineDominatorTree *MDT = &getAnalysis<MachineDominatorTree>();
   AArch64PreLegalizerCombinerInfo PCInfo(EnableOpt, F.hasOptSize(),
                                          F.hasMinSize(), KB, MDT);
   Combiner C(PCInfo, &TPC);
@@ -408,7 +364,7 @@ INITIALIZE_PASS_END(AArch64PreLegalizerCombiner, DEBUG_TYPE,
 
 
 namespace llvm {
-FunctionPass *createAArch64PreLegalizerCombiner(bool IsOptNone) {
-  return new AArch64PreLegalizerCombiner(IsOptNone);
+FunctionPass *createAArch64PreLegalizerCombiner() {
+  return new AArch64PreLegalizerCombiner();
 }
 } // end namespace llvm

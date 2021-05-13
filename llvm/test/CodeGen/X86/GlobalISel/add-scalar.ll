@@ -47,8 +47,10 @@ define i16 @test_add_i16(i16 %arg1, i16 %arg2) {
 ;
 ; X86-LABEL: test_add_i16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    addw {{[0-9]+}}(%esp), %ax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addw %cx, %ax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
   %ret = add i16 %arg1, %arg2
   ret i16 %ret
@@ -65,8 +67,10 @@ define i8 @test_add_i8(i8 %arg1, i8 %arg2) {
 ;
 ; X86-LABEL: test_add_i8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    addb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addb %cl, %al
+; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
   %ret = add i8 %arg1, %arg2
   ret i8 %ret

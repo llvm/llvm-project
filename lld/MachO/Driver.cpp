@@ -77,26 +77,6 @@ static HeaderFileType getOutputType(const InputArgList &args) {
   }
 }
 
-// Search for all possible combinations of `{root}/{name}.{extension}`.
-// If \p extensions are not specified, then just search for `{root}/{name}`.
-static Optional<StringRef>
-findPathCombination(const Twine &name, const std::vector<StringRef> &roots,
-                    ArrayRef<StringRef> extensions = {""}) {
-  SmallString<261> base;
-  for (StringRef dir : roots) {
-    base = dir;
-    path::append(base, name);
-    for (StringRef ext : extensions) {
-      Twine location = base + ext;
-      if (fs::exists(location))
-        return saver.save(location.str());
-      else
-        depTracker->logFileNotFound(location);
-    }
-  }
-  return {};
-}
-
 static Optional<StringRef> findLibrary(StringRef name) {
   if (config->searchDylibsFirst) {
     if (Optional<StringRef> path = findPathCombination(
@@ -107,19 +87,6 @@ static Optional<StringRef> findLibrary(StringRef name) {
   }
   return findPathCombination("lib" + name, config->librarySearchPaths,
                              {".tbd", ".dylib", ".a"});
-}
-
-// If -syslibroot is specified, absolute paths to non-object files may be
-// rerooted.
-static StringRef rerootPath(StringRef path) {
-  if (!path::is_absolute(path, path::Style::posix) || path.endswith(".o"))
-    return path;
-
-  if (Optional<StringRef> rerootedPath =
-          findPathCombination(path, config->systemLibraryRoots))
-    return *rerootedPath;
-
-  return path;
 }
 
 static Optional<std::string> findFramework(StringRef name) {
@@ -244,7 +211,7 @@ static std::vector<ArchiveMember> getArchiveMembers(MemoryBufferRef mb) {
   std::vector<ArchiveMember> v;
   Error err = Error::success();
 
-  // Thin archives refer to .o files, so --reproduces needs the .o files too.
+  // Thin archives refer to .o files, so --reproduce needs the .o files too.
   bool addToTar = archive->isThin() && tar;
 
   for (const Archive::Child &c : archive->children(err)) {
@@ -454,13 +421,13 @@ static void parseOrderFile(StringRef path) {
                           .StartsWith("ppc:", CPU_TYPE_POWERPC)
                           .StartsWith("ppc64:", CPU_TYPE_POWERPC64)
                           .Default(CPU_TYPE_ANY);
+
+    if (cpuType != CPU_TYPE_ANY && cpuType != target->cpuType)
+      continue;
+
     // Drop the CPU type as well as the colon
     if (cpuType != CPU_TYPE_ANY)
       line = line.drop_until([](char c) { return c == ':'; }).drop_front();
-    // TODO: Update when we extend support for other CPUs
-    if (cpuType != CPU_TYPE_ANY && cpuType != CPU_TYPE_X86_64 &&
-        cpuType != CPU_TYPE_ARM64)
-      continue;
 
     constexpr std::array<StringRef, 2> fileEnds = {".o:", ".o):"};
     for (StringRef fileEnd : fileEnds) {
@@ -784,6 +751,30 @@ static uint32_t parseProtection(StringRef protStr) {
   return prot;
 }
 
+static std::vector<SectionAlign> parseSectAlign(const opt::InputArgList &args) {
+  std::vector<SectionAlign> sectAligns;
+  for (const Arg *arg : args.filtered(OPT_sectalign)) {
+    StringRef segName = arg->getValue(0);
+    StringRef sectName = arg->getValue(1);
+    StringRef alignStr = arg->getValue(2);
+    if (alignStr.startswith("0x") || alignStr.startswith("0X"))
+      alignStr = alignStr.drop_front(2);
+    uint32_t align;
+    if (alignStr.getAsInteger(16, align)) {
+      error("-sectalign: failed to parse '" + StringRef(arg->getValue(2)) +
+            "' as number");
+      continue;
+    }
+    if (!isPowerOf2_32(align)) {
+      error("-sectalign: '" + StringRef(arg->getValue(2)) +
+            "' (in base 16) not a power of two");
+      continue;
+    }
+    sectAligns.push_back({segName, sectName, align});
+  }
+  return sectAligns;
+}
+
 static bool dataConstDefault(const InputArgList &args) {
   switch (config->outputType) {
   case MH_EXECUTE:
@@ -902,7 +893,6 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
   errorHandler().logName = args::getFilenameWithoutExe(argsArr[0]);
   stderrOS.enable_colors(stderrOS.has_colors());
-  // TODO: Set up error handler properly, e.g. the errorLimitExceededMsg
 
   MachOOptTable parser;
   InputArgList args = parser.parse(argsArr.slice(1));
@@ -911,6 +901,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
       "too many errors emitted, stopping now "
       "(use --error-limit=0 to see all errors)";
   errorHandler().errorLimit = args::getInteger(args, OPT_error_limit_eq, 20);
+  errorHandler().verbose = args.hasArg(OPT_verbose);
 
   if (args.hasArg(OPT_help_hidden)) {
     parser.printHelp(argsArr[0], /*showHidden=*/true);
@@ -925,6 +916,13 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     return true;
   }
 
+  config = make<Configuration>();
+  symtab = make<SymbolTable>();
+  target = createTargetInfo(args);
+  depTracker =
+      make<DependencyTracker>(args.getLastArgValue(OPT_dependency_info));
+
+  config->systemLibraryRoots = getSystemLibraryRoots(args);
   if (const char *path = getReproduceOption(args)) {
     // Note that --reproduce is a debug option so you can ignore it
     // if you are trying to understand the whole picture of the code.
@@ -938,13 +936,6 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
       error("--reproduce: " + toString(errOrWriter.takeError()));
     }
   }
-
-  config = make<Configuration>();
-  symtab = make<SymbolTable>();
-  target = createTargetInfo(args);
-
-  depTracker =
-      make<DependencyTracker>(args.getLastArgValue(OPT_dependency_info, ""));
 
   if (auto *arg = args.getLastArg(OPT_threads_eq)) {
     StringRef v(arg->getValue());
@@ -960,9 +951,6 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   if (!get_threadpool_strategy(config->thinLTOJobs))
     error("--thinlto-jobs: invalid job count: " + config->thinLTOJobs);
 
-  config->entry = symtab->addUndefined(args.getLastArgValue(OPT_e, "_main"),
-                                       /*file=*/nullptr,
-                                       /*isWeakRef=*/false);
   for (const Arg *arg : args.filtered(OPT_u)) {
     config->explicitUndefineds.push_back(symtab->addUndefined(
         arg->getValue(), /*file=*/nullptr, /*isWeakRef=*/false));
@@ -1035,7 +1023,11 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
   config->undefinedSymbolTreatment = getUndefinedSymbolTreatment(args);
 
-  config->systemLibraryRoots = getSystemLibraryRoots(args);
+  if (config->outputType == MH_EXECUTE)
+    config->entry = symtab->addUndefined(args.getLastArgValue(OPT_e, "_main"),
+                                         /*file=*/nullptr,
+                                         /*isWeakRef=*/false);
+
   config->librarySearchPaths =
       getLibrarySearchPaths(args, config->systemLibraryRoots);
   config->frameworkSearchPaths =
@@ -1072,6 +1064,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
         validName(arg->getValue(1));
   }
 
+  config->sectionAlignments = parseSectAlign(args);
+
   for (const Arg *arg : args.filtered(OPT_segprot)) {
     StringRef segName = arg->getValue(0);
     uint32_t maxProt = parseProtection(arg->getValue(1));
@@ -1093,6 +1087,12 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
           ">>> ignoring unexports");
     config->unexportedSymbols.clear();
   }
+  // Explicitly-exported literal symbols must be defined, but might
+  // languish in an archive if unreferenced elsewhere. Light a fire
+  // under those lazy symbols!
+  for (const CachedHashStringRef &cachedName : config->exportedSymbols.literals)
+    symtab->addUndefined(cachedName.val(), /*file=*/nullptr,
+                         /*isWeakRef=*/false);
 
   config->saveTemps = args.hasArg(OPT_save_temps);
 
@@ -1170,29 +1170,27 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     if (!orderFile.empty())
       parseOrderFile(orderFile);
 
-    if (config->outputType == MH_EXECUTE && isa<Undefined>(config->entry)) {
-      error("undefined symbol: " + toString(*config->entry));
-      return false;
-    }
+    if (config->entry)
+      if (auto *undefined = dyn_cast<Undefined>(config->entry))
+        treatUndefinedSymbol(*undefined, "the entry point");
+
     // FIXME: This prints symbols that are undefined both in input files and
     // via -u flag twice.
-    for (const Symbol *undefined : config->explicitUndefineds) {
-      if (isa<Undefined>(undefined)) {
-        error("undefined symbol: " + toString(*undefined) +
-              "\n>>> referenced by flag -u " + toString(*undefined));
-        return false;
-      }
+    for (const Symbol *sym : config->explicitUndefineds) {
+      if (const auto *undefined = dyn_cast<Undefined>(sym))
+        treatUndefinedSymbol(*undefined, "-u");
     }
     // Literal exported-symbol names must be defined, but glob
     // patterns need not match.
     for (const CachedHashStringRef &cachedName :
          config->exportedSymbols.literals) {
       if (const Symbol *sym = symtab->find(cachedName))
-        if (isa<Defined>(sym))
-          continue;
-      error("undefined symbol " + cachedName.val() +
-            "\n>>> referenced from option -exported_symbol(s_list)");
+        if (const auto *undefined = dyn_cast<Undefined>(sym))
+          treatUndefinedSymbol(*undefined, "-exported_symbol(s_list)");
     }
+
+    // FIXME: should terminate the link early based on errors encountered so
+    // far?
 
     createSyntheticSections();
     createSyntheticSymbols();

@@ -1252,16 +1252,16 @@ vzeroupper
 # CHECK-NEXT:  1      8     0.50    *                   vminsd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     0.50                        vminss	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vminss	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  1      0     0.25                        vmovapd	%xmm0, %xmm2
+# CHECK-NEXT:  1      0     0.17                        vmovapd	%xmm0, %xmm2
 # CHECK-NEXT:  1      1     1.00           *            vmovapd	%xmm0, (%rax)
 # CHECK-NEXT:  1      8     0.50    *                   vmovapd	(%rax), %xmm2
-# CHECK-NEXT:  1      0     0.25                        vmovapd	%ymm0, %ymm2
+# CHECK-NEXT:  1      0     0.17                        vmovapd	%ymm0, %ymm2
 # CHECK-NEXT:  1      1     1.00           *            vmovapd	%ymm0, (%rax)
 # CHECK-NEXT:  1      8     0.50    *                   vmovapd	(%rax), %ymm2
-# CHECK-NEXT:  1      0     0.25                        vmovaps	%xmm0, %xmm2
+# CHECK-NEXT:  1      0     0.17                        vmovaps	%xmm0, %xmm2
 # CHECK-NEXT:  1      1     1.00           *            vmovaps	%xmm0, (%rax)
 # CHECK-NEXT:  1      8     0.50    *                   vmovaps	(%rax), %xmm2
-# CHECK-NEXT:  1      0     0.25                        vmovaps	%ymm0, %ymm2
+# CHECK-NEXT:  1      0     0.17                        vmovaps	%ymm0, %ymm2
 # CHECK-NEXT:  1      1     1.00           *            vmovaps	%ymm0, (%rax)
 # CHECK-NEXT:  1      8     0.50    *                   vmovaps	(%rax), %ymm2
 # CHECK-NEXT:  1      1     1.00                        vmovd	%eax, %xmm2
@@ -1272,16 +1272,16 @@ vzeroupper
 # CHECK-NEXT:  1      8     0.50    *                   vmovddup	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        vmovddup	%ymm0, %ymm2
 # CHECK-NEXT:  1      8     0.50    *                   vmovddup	(%rax), %ymm2
-# CHECK-NEXT:  1      0     0.25                        vmovdqa	%xmm0, %xmm2
+# CHECK-NEXT:  1      0     0.17                        vmovdqa	%xmm0, %xmm2
 # CHECK-NEXT:  1      1     1.00           *            vmovdqa	%xmm0, (%rax)
 # CHECK-NEXT:  1      8     0.50    *                   vmovdqa	(%rax), %xmm2
-# CHECK-NEXT:  1      0     0.25                        vmovdqa	%ymm0, %ymm2
+# CHECK-NEXT:  1      0     0.17                        vmovdqa	%ymm0, %ymm2
 # CHECK-NEXT:  1      1     1.00           *            vmovdqa	%ymm0, (%rax)
 # CHECK-NEXT:  1      8     0.50    *                   vmovdqa	(%rax), %ymm2
-# CHECK-NEXT:  1      0     0.25                        vmovdqu	%xmm0, %xmm2
+# CHECK-NEXT:  1      0     0.17                        vmovdqu	%xmm0, %xmm2
 # CHECK-NEXT:  1      1     1.00           *            vmovdqu	%xmm0, (%rax)
 # CHECK-NEXT:  1      8     0.50    *                   vmovdqu	(%rax), %xmm2
-# CHECK-NEXT:  1      0     0.25                        vmovdqu	%ymm0, %ymm2
+# CHECK-NEXT:  1      0     0.17                        vmovdqu	%ymm0, %ymm2
 # CHECK-NEXT:  1      1     1.00           *            vmovdqu	%ymm0, (%rax)
 # CHECK-NEXT:  1      8     0.50    *                   vmovdqu	(%rax), %ymm2
 # CHECK-NEXT:  1      1     0.50                        vmovhlps	%xmm0, %xmm1, %xmm2
@@ -1325,16 +1325,16 @@ vzeroupper
 # CHECK-NEXT:  1      1     0.50                        vmovss	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      1     1.00           *            vmovss	%xmm0, (%rax)
 # CHECK-NEXT:  1      8     0.50    *                   vmovss	(%rax), %xmm2
-# CHECK-NEXT:  1      0     0.25                        vmovupd	%xmm0, %xmm2
+# CHECK-NEXT:  1      0     0.17                        vmovupd	%xmm0, %xmm2
 # CHECK-NEXT:  1      1     1.00           *            vmovupd	%xmm0, (%rax)
 # CHECK-NEXT:  1      8     0.50    *                   vmovupd	(%rax), %xmm2
-# CHECK-NEXT:  1      0     0.25                        vmovupd	%ymm0, %ymm2
+# CHECK-NEXT:  1      0     0.17                        vmovupd	%ymm0, %ymm2
 # CHECK-NEXT:  1      1     1.00           *            vmovupd	%ymm0, (%rax)
 # CHECK-NEXT:  1      8     0.50    *                   vmovupd	(%rax), %ymm2
-# CHECK-NEXT:  1      0     0.25                        vmovups	%xmm0, %xmm2
+# CHECK-NEXT:  1      0     0.17                        vmovups	%xmm0, %xmm2
 # CHECK-NEXT:  1      1     1.00           *            vmovups	%xmm0, (%rax)
 # CHECK-NEXT:  1      8     0.50    *                   vmovups	(%rax), %xmm2
-# CHECK-NEXT:  1      0     0.25                        vmovups	%ymm0, %ymm2
+# CHECK-NEXT:  1      0     0.17                        vmovups	%ymm0, %ymm2
 # CHECK-NEXT:  1      1     1.00           *            vmovups	%ymm0, (%rax)
 # CHECK-NEXT:  1      8     0.50    *                   vmovups	(%rax), %ymm2
 # CHECK-NEXT:  4      4     2.00                        vmpsadbw	$1, %xmm0, %xmm1, %xmm2
@@ -1749,7 +1749,7 @@ vzeroupper
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT: 1.33   1.33   1.33   16.50  16.50  16.50  16.50   -     184.25 373.25 253.75 141.75 208.50 208.50 65.00  119.67 119.67 119.67 107.00 107.00 107.00 19.00  19.00
+# CHECK-NEXT: 1.33   1.33   1.33   16.50  16.50  16.50  16.50   -     181.25 370.25 250.75 138.75 208.50 208.50 65.00  119.67 119.67 119.67 107.00 107.00 107.00 19.00  19.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
@@ -1975,16 +1975,16 @@ vzeroupper
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vminsd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -     vminss	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vminss	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     vmovapd	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovapd	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   1.00   0.33   0.33   0.33    -      -      -     0.50   0.50   vmovapd	%xmm0, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vmovapd	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     vmovapd	%ymm0, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovapd	%ymm0, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   1.00   0.33   0.33   0.33    -      -      -     0.50   0.50   vmovapd	%ymm0, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vmovapd	(%rax), %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     vmovaps	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovaps	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   1.00   0.33   0.33   0.33    -      -      -     0.50   0.50   vmovaps	%xmm0, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vmovaps	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     vmovaps	%ymm0, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovaps	%ymm0, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   1.00   0.33   0.33   0.33    -      -      -     0.50   0.50   vmovaps	%ymm0, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vmovaps	(%rax), %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     vmovd	%eax, %xmm2
@@ -1995,16 +1995,16 @@ vzeroupper
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vmovddup	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     vmovddup	%ymm0, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vmovddup	(%rax), %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     vmovdqa	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovdqa	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   1.00   0.33   0.33   0.33    -      -      -     0.50   0.50   vmovdqa	%xmm0, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vmovdqa	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     vmovdqa	%ymm0, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovdqa	%ymm0, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   1.00   0.33   0.33   0.33    -      -      -     0.50   0.50   vmovdqa	%ymm0, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vmovdqa	(%rax), %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     vmovdqu	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovdqu	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   1.00   0.33   0.33   0.33    -      -      -     0.50   0.50   vmovdqu	%xmm0, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vmovdqu	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     vmovdqu	%ymm0, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovdqu	%ymm0, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   1.00   0.33   0.33   0.33    -      -      -     0.50   0.50   vmovdqu	%ymm0, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vmovdqu	(%rax), %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     vmovhlps	%xmm0, %xmm1, %xmm2
@@ -2048,16 +2048,16 @@ vzeroupper
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     vmovss	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   1.00   0.33   0.33   0.33    -      -      -     0.50   0.50   vmovss	%xmm0, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vmovss	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     vmovupd	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovupd	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   1.00   0.33   0.33   0.33    -      -      -     0.50   0.50   vmovupd	%xmm0, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vmovupd	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     vmovupd	%ymm0, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovupd	%ymm0, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   1.00   0.33   0.33   0.33    -      -      -     0.50   0.50   vmovupd	%ymm0, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vmovupd	(%rax), %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     vmovups	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovups	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   1.00   0.33   0.33   0.33    -      -      -     0.50   0.50   vmovups	%xmm0, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vmovups	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     vmovups	%ymm0, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovups	%ymm0, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   1.00   0.33   0.33   0.33    -      -      -     0.50   0.50   vmovups	%ymm0, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vmovups	(%rax), %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00   2.00   2.00   2.00    -      -      -      -      -      -      -      -      -      -      -     vmpsadbw	$1, %xmm0, %xmm1, %xmm2

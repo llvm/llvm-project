@@ -549,15 +549,18 @@ void SIFrameLowering::emitEntryFunctionScratchRsrcRegSetup(
       .addReg(ScratchRsrcReg, RegState::ImplicitDefine)
       .addMemOperand(MMO);
 
-    // If we are in a wave32 shader we have to modify the const_index_stride to b10
-    // We can't rely on the driver setting this for us since there are often multiple
-    // shaders with different wave sizes
+    // The driver will always set the SRD for wave 64 (bits 118:117 of
+    // descriptor / bits 22:21 of third sub-reg will be 0b11)
+    // If the shader is actually wave32 we have to modify the const_index_stride
+    // field of the descriptor 3rd sub-reg (bits 22:21) to 0b10 (stride=32). The
+    // reason the driver does this is that there can be cases where it presents
+    // 2 shaders with different wave size (e.g. VsFs).
     // TODO: convert to using SCRATCH instructions or multiple SRD buffers
     if (ST.isWave32()) {
-      const MCInstrDesc &SAndB32 = TII->get(AMDGPU::S_AND_B32);
-      BuildMI(MBB, I, DL, SAndB32, Rsrc03)
-        .addReg(Rsrc03 )
-        .addImm(0xffdfffff);
+      const MCInstrDesc &SBitsetB32 = TII->get(AMDGPU::S_BITSET0_B32);
+      BuildMI(MBB, I, DL, SBitsetB32, Rsrc03)
+          .addImm(21)
+          .addReg(Rsrc03);
     }
   } else if (ST.isMesaGfxShader(Fn) || !PreloadedScratchRsrcReg) {
     assert(!ST.isAmdHsaOrMesa(Fn));

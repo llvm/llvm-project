@@ -3884,7 +3884,12 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
   }
 
   case Intrinsic::invariant_start:
-  case Intrinsic::invariant_end:
+  case Intrinsic::invariant_end: {
+    SmallVector<Value *, 4> Args(CI->arg_operands().begin(),
+                                 CI->arg_operands().end());
+    NewCall = Builder.CreateCall(NewFn, Args);
+    break;
+  }
   case Intrinsic::masked_load:
   case Intrinsic::masked_store:
   case Intrinsic::masked_gather:
@@ -3892,6 +3897,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
     SmallVector<Value *, 4> Args(CI->arg_operands().begin(),
                                  CI->arg_operands().end());
     NewCall = Builder.CreateCall(NewFn, Args);
+    NewCall->copyMetadata(*CI);
     break;
   }
 
@@ -4365,6 +4371,12 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
     Attribute NewAttr = Attribute::getWithByValType(F.getContext(), ByValTy);
     F.addParamAttr(0, NewAttr);
   }
+
+  // If function has void return type, check it has align attribute. It has no
+  // affect on the return type and no longer passes the verifier.
+  if (F.getReturnType()->isVoidTy() &&
+      F.hasAttribute(AttributeList::ReturnIndex, Attribute::Alignment))
+    F.removeAttribute(AttributeList::ReturnIndex, Attribute::Alignment);
 }
 
 static bool isOldLoopArgument(Metadata *MD) {

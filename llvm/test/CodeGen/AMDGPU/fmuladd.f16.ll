@@ -4,10 +4,15 @@
 ; RUN: llc -march=amdgcn -mcpu=fiji -denormal-fp-math=ieee -denormal-fp-math-f32=ieee -fp-contract=on -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM,GCN-DENORM-STRICT,VI-DENORM,VI %s
 ; RUN: llc -march=amdgcn -mcpu=fiji -denormal-fp-math=ieee -denormal-fp-math-f32=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM,GCN-DENORM-CONTRACT,VI-DENORM-CONTRACT,VI-DENORM,VI %s
 
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -denormal-fp-math=preserve-sign -denormal-fp-math-f32=ieee -fp-contract=on -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10-FLUSH,GFX10 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -denormal-fp-math=preserve-sign -denormal-fp-math-f32=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10-FLUSH,GFX10 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -denormal-fp-math=ieee -denormal-fp-math-f32=ieee -fp-contract=on -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM,GCN-DENORM-STRICT,GFX10-DENORM-STRICT,GFX10-DENORM,GFX10 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -denormal-fp-math=ieee -denormal-fp-math-f32=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM,GCN-DENORM-CONTRACT,GFX10-DENORM-CONTRACT,GFX10-DENORM,GFX10 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -denormal-fp-math=preserve-sign -denormal-fp-math-f32=ieee -fp-contract=on -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10PLUS-FLUSH,GFX10PLUS %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -denormal-fp-math=preserve-sign -denormal-fp-math-f32=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10PLUS-FLUSH,GFX10PLUS %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -denormal-fp-math=ieee -denormal-fp-math-f32=ieee -fp-contract=on -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM,GCN-DENORM-STRICT,GFX10PLUS-DENORM-STRICT,GFX10PLUS-DENORM,GFX10PLUS %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -denormal-fp-math=ieee -denormal-fp-math-f32=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM,GCN-DENORM-CONTRACT,GFX10PLUS-DENORM-CONTRACT,GFX10PLUS-DENORM,GFX10PLUS %s
+
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -denormal-fp-math=preserve-sign -denormal-fp-math-f32=ieee -fp-contract=on -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10PLUS-FLUSH,GFX10PLUS %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -denormal-fp-math=preserve-sign -denormal-fp-math-f32=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10PLUS-FLUSH,GFX10PLUS %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -denormal-fp-math=ieee -denormal-fp-math-f32=ieee -fp-contract=on -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM,GCN-DENORM-STRICT,GFX10PLUS-DENORM-STRICT,GFX10PLUS-DENORM,GFX10PLUS %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -denormal-fp-math=ieee -denormal-fp-math-f32=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM,GCN-DENORM-CONTRACT,GFX10PLUS-DENORM-CONTRACT,GFX10PLUS-DENORM,GFX10PLUS %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare half @llvm.fmuladd.f16(half, half, half) #1
@@ -18,9 +23,9 @@ declare half @llvm.fabs.f16(half) #1
 
 ; VI-DENORM: v_fma_f16 {{v[0-9]+, v[0-9]+, v[0-9]+}}
 
-; GFX10-FLUSH:  v_mul_f16_e32
-; GFX10-FLUSH:  v_add_f16_e32
-; GFX10-DENORM: v_fmac_f16_e32 {{v[0-9]+, v[0-9]+, v[0-9]+}}
+; GFX10PLUS-FLUSH:  v_mul_f16_e32
+; GFX10PLUS-FLUSH:  v_add_f16_e32
+; GFX10PLUS-DENORM: v_fmac_f16_e32 {{v[0-9]+, v[0-9]+, v[0-9]+}}
 
 define amdgpu_kernel void @fmuladd_f16(half addrspace(1)* %out, half addrspace(1)* %in1,
                          half addrspace(1)* %in2, half addrspace(1)* %in3) #0 {
@@ -37,9 +42,9 @@ define amdgpu_kernel void @fmuladd_f16(half addrspace(1)* %out, half addrspace(1
 
 ; VI-DENORM-CONTRACT: v_fma_f16 {{v[0-9]+, v[0-9]+, v[0-9]+}}
 
-; GFX10-FLUSH:  v_mul_f16_e32
-; GFX10-FLUSH:  v_add_f16_e32
-; GFX10-DENORM-CONTRACT: v_fmac_f16_e32 {{v[0-9]+, v[0-9]+, v[0-9]+}}
+; GFX10PLUS-FLUSH:  v_mul_f16_e32
+; GFX10PLUS-FLUSH:  v_add_f16_e32
+; GFX10PLUS-DENORM-CONTRACT: v_fmac_f16_e32 {{v[0-9]+, v[0-9]+, v[0-9]+}}
 
 define amdgpu_kernel void @fmul_fadd_f16(half addrspace(1)* %out, half addrspace(1)* %in1,
                          half addrspace(1)* %in2, half addrspace(1)* %in3) #0 {
@@ -57,9 +62,9 @@ define amdgpu_kernel void @fmul_fadd_f16(half addrspace(1)* %out, half addrspace
 
 ; VI-DENORM: v_fma_f16 {{v[0-9]+, v[0-9]+, v[0-9]+}}
 
-; GFX10-FLUSH:  v_mul_f16_e32
-; GFX10-FLUSH:  v_add_f16_e32
-; GFX10-DENORM: v_fmac_f16_e32 {{v[0-9]+, v[0-9]+, v[0-9]+}}
+; GFX10PLUS-FLUSH:  v_mul_f16_e32
+; GFX10PLUS-FLUSH:  v_add_f16_e32
+; GFX10PLUS-DENORM: v_fmac_f16_e32 {{v[0-9]+, v[0-9]+, v[0-9]+}}
 
 define amdgpu_kernel void @fmul_fadd_contract_f16(half addrspace(1)* %out, half addrspace(1)* %in1,
                          half addrspace(1)* %in2, half addrspace(1)* %in3) #0 {
@@ -73,20 +78,20 @@ define amdgpu_kernel void @fmul_fadd_contract_f16(half addrspace(1)* %out, half 
 }
 
 ; GCN-LABEL: {{^}}fmuladd_2.0_a_b_f16
-; GCN: {{buffer|flat|global}}_load_ushort [[R1:v[0-9]+]],
-; GCN: {{buffer|flat|global}}_load_ushort [[R2:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[R1:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[R2:v[0-9]+]],
 ; VI-FLUSH: v_mac_f16_e32 [[R2]], 2.0, [[R1]]
 ; VI-FLUSH: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[R2]]
 
 ; VI-DENORM:    v_fma_f16 [[RESULT:v[0-9]+]], [[R1]], 2.0, [[R2]]
-; GFX10-DENORM: v_fmac_f16_e32 [[R2:v[0-9]+]], 2.0, [[R1]]
+; GFX10PLUS-DENORM: v_fmac_f16_e32 [[R2:v[0-9]+]], 2.0, [[R1]]
 
-; GFX10-FLUSH:  v_add_f16_e32 [[MUL2:v[0-9]+]], [[R1]], [[R1]]
-; GFX10-FLUSH:  v_add_f16_e32 [[RESULT:v[0-9]+]], [[MUL2]], [[R2]]
+; GFX10PLUS-FLUSH:  v_add_f16_e32 [[MUL2:v[0-9]+]], [[R1]], [[R1]]
+; GFX10PLUS-FLUSH:  v_add_f16_e32 [[RESULT:v[0-9]+]], [[MUL2]], [[R2]]
 
 ; VI-DENORM:    flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
-; GFX10-DENORM: global_store_short v{{[0-9]+}}, [[R2]]
-; GFX10-FLUSH:  global_store_short v{{[0-9]+}}, [[RESULT]], s{{\[[0-9]+:[0-9]+\]}}
+; GFX10PLUS-DENORM: global_store_{{short|b16}} v{{[0-9]+}}, [[R2]]
+; GFX10PLUS-FLUSH:  global_store_{{short|b16}} v{{[0-9]+}}, [[RESULT]], s{{\[[0-9]+:[0-9]+\]}}
 
 define amdgpu_kernel void @fmuladd_2.0_a_b_f16(half addrspace(1)* %out, half addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -103,20 +108,20 @@ define amdgpu_kernel void @fmuladd_2.0_a_b_f16(half addrspace(1)* %out, half add
 }
 
 ; GCN-LABEL: {{^}}fmuladd_a_2.0_b_f16
-; GCN: {{buffer|flat|global}}_load_ushort [[R1:v[0-9]+]],
-; GCN: {{buffer|flat|global}}_load_ushort [[R2:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[R1:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[R2:v[0-9]+]],
 ; VI-FLUSH: v_mac_f16_e32 [[R2]], 2.0, [[R1]]
 ; VI-FLUSH: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[R2]]
 
 ; VI-DENORM:    v_fma_f16 [[RESULT:v[0-9]+]], [[R1]], 2.0, [[R2]]
-; GFX10-DENORM: v_fmac_f16_e32 [[R2]], 2.0, [[R1]]
+; GFX10PLUS-DENORM: v_fmac_f16_e32 [[R2]], 2.0, [[R1]]
 
-; GFX10-FLUSH:  v_add_f16_e32 [[MUL2:v[0-9]+]], [[R1]], [[R1]]
-; GFX10-FLUSH:  v_add_f16_e32 [[RESULT:v[0-9]+]], [[MUL2]], [[R2]]
+; GFX10PLUS-FLUSH:  v_add_f16_e32 [[MUL2:v[0-9]+]], [[R1]], [[R1]]
+; GFX10PLUS-FLUSH:  v_add_f16_e32 [[RESULT:v[0-9]+]], [[MUL2]], [[R2]]
 
 ; VI-DENORM: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
-; GFX10-DENORM: global_store_short v{{[0-9]+}}, [[R2]]
-; GFX10-FLUSH:  global_store_short v{{[0-9]+}}, [[RESULT]]
+; GFX10PLUS-DENORM: global_store_{{short|b16}} v{{[0-9]+}}, [[R2]]
+; GFX10PLUS-FLUSH:  global_store_{{short|b16}} v{{[0-9]+}}, [[RESULT]]
 
 define amdgpu_kernel void @fmuladd_a_2.0_b_f16(half addrspace(1)* %out, half addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -133,24 +138,24 @@ define amdgpu_kernel void @fmuladd_a_2.0_b_f16(half addrspace(1)* %out, half add
 }
 
 ; GCN-LABEL: {{^}}fadd_a_a_b_f16:
-; GCN: {{buffer|flat|global}}_load_ushort [[R1:v[0-9]+]],
-; GCN: {{buffer|flat|global}}_load_ushort [[R2:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[R1:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[R2:v[0-9]+]],
 ; VI-FLUSH: v_mac_f16_e32 [[R2]], 2.0, [[R1]]
 ; VI-FLUSH: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[R2]]
 
-; VI-DENORM-CONTRACT:    v_fma_f16 [[RESULT:v[0-9]+]], [[R1]], 2.0, [[R2]]
-; GFX10-DENORM-CONTRACT: v_fmac_f16_e32 [[R2]], 2.0, [[R1]]
+; VI-DENORM-CONTRACT:        v_fma_f16 [[RESULT:v[0-9]+]], [[R1]], 2.0, [[R2]]
+; GFX10PLUS-DENORM-CONTRACT: v_fmac_f16_e32 [[R2]], 2.0, [[R1]]
 
 ; GCN-DENORM-STRICT: v_add_f16_e32 [[TMP:v[0-9]+]], [[R1]], [[R1]]
 ; GCN-DENORM-STRICT: v_add_f16_e32 [[RESULT:v[0-9]+]], [[TMP]], [[R2]]
 
 ; VI-DENORM: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 
-; GFX10-FLUSH:           v_add_f16_e32 [[MUL2:v[0-9]+]], [[R1]], [[R1]]
-; GFX10-FLUSH:           v_add_f16_e32 [[RESULT:v[0-9]+]], [[MUL2]], [[R2]]
-; GFX10-FLUSH:           global_store_short v{{[0-9]+}}, [[RESULT]]
-; GFX10-DENORM-STRICT:   global_store_short v{{[0-9]+}}, [[RESULT]]
-; GFX10-DENORM-CONTRACT: global_store_short v{{[0-9]+}}, [[R2]]
+; GFX10PLUS-FLUSH:           v_add_f16_e32 [[MUL2:v[0-9]+]], [[R1]], [[R1]]
+; GFX10PLUS-FLUSH:           v_add_f16_e32 [[RESULT:v[0-9]+]], [[MUL2]], [[R2]]
+; GFX10PLUS-FLUSH:           global_store_{{short|b16}} v{{[0-9]+}}, [[RESULT]]
+; GFX10PLUS-DENORM-STRICT:   global_store_{{short|b16}} v{{[0-9]+}}, [[RESULT]]
+; GFX10PLUS-DENORM-CONTRACT: global_store_{{short|b16}} v{{[0-9]+}}, [[R2]]
 
 define amdgpu_kernel void @fadd_a_a_b_f16(half addrspace(1)* %out,
                             half addrspace(1)* %in1,
@@ -170,24 +175,24 @@ define amdgpu_kernel void @fadd_a_a_b_f16(half addrspace(1)* %out,
 }
 
 ; GCN-LABEL: {{^}}fadd_b_a_a_f16:
-; GCN: {{buffer|flat|global}}_load_ushort [[R1:v[0-9]+]],
-; GCN: {{buffer|flat|global}}_load_ushort [[R2:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[R1:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[R2:v[0-9]+]],
 ; VI-FLUSH: v_mac_f16_e32 [[R2]], 2.0, [[R1]]
 ; VI-FLUSH: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[R2]]
 
-; VI-DENORM-CONTRACT:    v_fma_f16 [[RESULT:v[0-9]+]], [[R1]], 2.0, [[R2]]
-; GFX10-DENORM-CONTRACT: v_fmac_f16_e32 [[R2]], 2.0, [[R1]]
+; VI-DENORM-CONTRACT:        v_fma_f16 [[RESULT:v[0-9]+]], [[R1]], 2.0, [[R2]]
+; GFX10PLUS-DENORM-CONTRACT: v_fmac_f16_e32 [[R2]], 2.0, [[R1]]
 
 ; GCN-DENORM-STRICT: v_add_f16_e32 [[TMP:v[0-9]+]], [[R1]], [[R1]]
 ; GCN-DENORM-STRICT: v_add_f16_e32 [[RESULT:v[0-9]+]],  [[R2]], [[TMP]]
 
 ; VI-DENORM: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 
-; GFX10-FLUSH: v_add_f16_e32 [[MUL2:v[0-9]+]], [[R1]], [[R1]]
-; GFX10-FLUSH: v_add_f16_e32 [[RESULT:v[0-9]+]], [[R2]], [[MUL2]]
-; GFX10-FLUSH: global_store_short v{{[0-9]+}}, [[RESULT]]
-; GFX10-DENORM-STRICT:   global_store_short v{{[0-9]+}}, [[RESULT]]
-; GFX10-DENORM-CONTRACT: global_store_short v{{[0-9]+}}, [[R2]]
+; GFX10PLUS-FLUSH: v_add_f16_e32 [[MUL2:v[0-9]+]], [[R1]], [[R1]]
+; GFX10PLUS-FLUSH: v_add_f16_e32 [[RESULT:v[0-9]+]], [[R2]], [[MUL2]]
+; GFX10PLUS-FLUSH: global_store_{{short|b16}} v{{[0-9]+}}, [[RESULT]]
+; GFX10PLUS-DENORM-STRICT:   global_store_{{short|b16}} v{{[0-9]+}}, [[RESULT]]
+; GFX10PLUS-DENORM-CONTRACT: global_store_{{short|b16}} v{{[0-9]+}}, [[R2]]
 
 define amdgpu_kernel void @fadd_b_a_a_f16(half addrspace(1)* %out,
                             half addrspace(1)* %in1,
@@ -207,17 +212,17 @@ define amdgpu_kernel void @fadd_b_a_a_f16(half addrspace(1)* %out,
 }
 
 ; GCN-LABEL: {{^}}fmuladd_neg_2.0_a_b_f16
-; GCN: {{buffer|flat|global}}_load_ushort [[R1:v[0-9]+]],
-; GCN: {{buffer|flat|global}}_load_ushort [[R2:v[0-9]+]],
-; VI-FLUSH:     v_mac_f16_e32 [[R2]], -2.0, [[R1]]
-; VI-DENORM:    v_fma_f16 [[RESULT:v[0-9]+]], [[R1]], -2.0, [[R2]]
-; GFX10-DENORM: v_fmac_f16_e32 [[R2]], -2.0, [[R1]]
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[R1:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[R2:v[0-9]+]],
+; VI-FLUSH:         v_mac_f16_e32 [[R2]], -2.0, [[R1]]
+; VI-DENORM:        v_fma_f16 [[RESULT:v[0-9]+]], [[R1]], -2.0, [[R2]]
+; GFX10PLUS-DENORM: v_fmac_f16_e32 [[R2]], -2.0, [[R1]]
 ; VI-FLUSH:  flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[R2]]
 ; VI-DENORM: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
-; GFX10-FLUSH: v_add_f16_e32 [[MUL2:v[0-9]+]], [[R1]], [[R1]]
-; GFX10-FLUSH: v_sub_f16_e32 [[RESULT:v[0-9]+]], [[R2]], [[MUL2]]
-; GFX10-FLUSH:  global_store_short v{{[0-9]+}}, [[RESULT]]
-; GFX10-DENORM: global_store_short v{{[0-9]+}}, [[R2]]
+; GFX10PLUS-FLUSH: v_add_f16_e32 [[MUL2:v[0-9]+]], [[R1]], [[R1]]
+; GFX10PLUS-FLUSH: v_sub_f16_e32 [[RESULT:v[0-9]+]], [[R2]], [[MUL2]]
+; GFX10PLUS-FLUSH:  global_store_{{short|b16}} v{{[0-9]+}}, [[RESULT]]
+; GFX10PLUS-DENORM: global_store_{{short|b16}} v{{[0-9]+}}, [[R2]]
 define amdgpu_kernel void @fmuladd_neg_2.0_a_b_f16(half addrspace(1)* %out, half addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.0 = getelementptr half, half addrspace(1)* %out, i32 %tid
@@ -233,20 +238,20 @@ define amdgpu_kernel void @fmuladd_neg_2.0_a_b_f16(half addrspace(1)* %out, half
 }
 
 ; GCN-LABEL: {{^}}fmuladd_neg_2.0_neg_a_b_f16
-; GCN: {{buffer|flat|global}}_load_ushort [[R1:v[0-9]+]],
-; GCN: {{buffer|flat|global}}_load_ushort [[R2:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[R1:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[R2:v[0-9]+]],
 ; VI-FLUSH: v_mac_f16_e32 [[R2]], 2.0, [[R1]]
 ; VI-FLUSH: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[R2]]
 
 ; VI-DENORM:    v_fma_f16 [[RESULT:v[0-9]+]], [[R1]], 2.0, [[R2]]
 ; VI-DENORM:  flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 
-; GFX10-FLUSH: v_add_f16_e32 [[MUL2:v[0-9]+]], [[R1]], [[R1]]
-; GFX10-FLUSH: v_add_f16_e32 [[RESULT:v[0-9]+]], [[R2]], [[MUL2]]
-; GFX10-FLUSH:  global_store_short v{{[0-9]+}}, [[RESULT]]
+; GFX10PLUS-FLUSH: v_add_f16_e32 [[MUL2:v[0-9]+]], [[R1]], [[R1]]
+; GFX10PLUS-FLUSH: v_add_f16_e32 [[RESULT:v[0-9]+]], [[R2]], [[MUL2]]
+; GFX10PLUS-FLUSH: global_store_{{short|b16}} v{{[0-9]+}}, [[RESULT]]
 
-; GFX10-DENORM: v_fmac_f16_e32 [[R2]], 2.0, [[R1]]
-; GFX10-DENORM: global_store_short v{{[0-9]+}}, [[R2]]
+; GFX10PLUS-DENORM: v_fmac_f16_e32 [[R2]], 2.0, [[R1]]
+; GFX10PLUS-DENORM: global_store_{{short|b16}} v{{[0-9]+}}, [[R2]]
 define amdgpu_kernel void @fmuladd_neg_2.0_neg_a_b_f16(half addrspace(1)* %out, half addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.0 = getelementptr half, half addrspace(1)* %out, i32 %tid
@@ -264,20 +269,20 @@ define amdgpu_kernel void @fmuladd_neg_2.0_neg_a_b_f16(half addrspace(1)* %out, 
 }
 
 ; GCN-LABEL: {{^}}fmuladd_2.0_neg_a_b_f16
-; GCN: {{buffer|flat|global}}_load_ushort [[R1:v[0-9]+]],
-; GCN: {{buffer|flat|global}}_load_ushort [[R2:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[R1:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[R2:v[0-9]+]],
 ; VI-FLUSH: v_mac_f16_e32 [[R2]], -2.0, [[R1]]
 ; VI-FLUSH: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[R2]]
 
 ; VI-DENORM: v_fma_f16 [[RESULT:v[0-9]+]], [[R1]], -2.0, [[R2]]
 ; VI-DENORM:  flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 
-; GFX10-FLUSH: v_add_f16_e32 [[MUL2:v[0-9]+]], [[R1]], [[R1]]
-; GFX10-FLUSH: v_sub_f16_e32 [[RESULT:v[0-9]+]], [[R2]], [[MUL2]]
-; GFX10-FLUSH: global_store_short v{{[0-9]+}}, [[RESULT]]
+; GFX10PLUS-FLUSH: v_add_f16_e32 [[MUL2:v[0-9]+]], [[R1]], [[R1]]
+; GFX10PLUS-FLUSH: v_sub_f16_e32 [[RESULT:v[0-9]+]], [[R2]], [[MUL2]]
+; GFX10PLUS-FLUSH: global_store_{{short|b16}} v{{[0-9]+}}, [[RESULT]]
 
-; GFX10-DENORM: v_fmac_f16_e32 [[R2]], -2.0, [[R1]]
-; GFX10-DENORM: global_store_short v{{[0-9]+}}, [[R2]]
+; GFX10PLUS-DENORM: v_fmac_f16_e32 [[R2]], -2.0, [[R1]]
+; GFX10PLUS-DENORM: global_store_{{short|b16}} v{{[0-9]+}}, [[R2]]
 define amdgpu_kernel void @fmuladd_2.0_neg_a_b_f16(half addrspace(1)* %out, half addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.0 = getelementptr half, half addrspace(1)* %out, i32 %tid
@@ -295,14 +300,14 @@ define amdgpu_kernel void @fmuladd_2.0_neg_a_b_f16(half addrspace(1)* %out, half
 }
 
 ; GCN-LABEL: {{^}}fmuladd_2.0_a_neg_b_f16
-; GCN: {{buffer|flat|global}}_load_ushort [[R1:v[0-9]+]],
-; GCN: {{buffer|flat|global}}_load_ushort [[R2:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[R1:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[R2:v[0-9]+]],
 ; VI-FLUSH:   v_mad_f16 [[RESULT:v[0-9]+]], [[R1]], 2.0, -[[R2]]
 ; GCN-DENORM: v_fma_f16 [[RESULT:v[0-9]+]], [[R1]], 2.0, -[[R2]]
 ; VI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
-; GFX10-FLUSH: v_add_f16_e32 [[MUL2:v[0-9]+]], [[R1]], [[R1]]
-; GFX10-FLUSH: v_sub_f16_e32 [[RESULT:v[0-9]+]], [[MUL2]], [[R2]]
-; GFX10:       global_store_short v{{[0-9]+}}, [[RESULT]]
+; GFX10PLUS-FLUSH: v_add_f16_e32 [[MUL2:v[0-9]+]], [[R1]], [[R1]]
+; GFX10PLUS-FLUSH: v_sub_f16_e32 [[RESULT:v[0-9]+]], [[MUL2]], [[R2]]
+; GFX10PLUS:       global_store_{{short|b16}} v{{[0-9]+}}, [[RESULT]]
 define amdgpu_kernel void @fmuladd_2.0_a_neg_b_f16(half addrspace(1)* %out, half addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.0 = getelementptr half, half addrspace(1)* %out, i32 %tid
@@ -320,9 +325,9 @@ define amdgpu_kernel void @fmuladd_2.0_a_neg_b_f16(half addrspace(1)* %out, half
 }
 
 ; GCN-LABEL: {{^}}mad_sub_f16:
-; GCN: {{buffer|flat|global}}_load_ushort [[REGA:v[0-9]+]]
-; GCN: {{buffer|flat|global}}_load_ushort [[REGB:v[0-9]+]]
-; GCN: {{buffer|flat|global}}_load_ushort [[REGC:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[REGA:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[REGB:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[REGC:v[0-9]+]]
 
 ; VI-FLUSH: v_mad_f16 [[RESULT:v[0-9]+]], [[REGA]], [[REGB]], -[[REGC]]
 
@@ -333,9 +338,9 @@ define amdgpu_kernel void @fmuladd_2.0_a_neg_b_f16(half addrspace(1)* %out, half
 
 ; VI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 
-; GFX10-FLUSH: v_mul_f16_e32 [[TMP:v[0-9]+]], [[REGA]], [[REGB]]
-; GFX10-FLUSH: v_sub_f16_e32 [[RESULT:v[0-9]+]], [[TMP]], [[REGC]]
-; GFX10:       global_store_short v{{[0-9]+}}, [[RESULT]]
+; GFX10PLUS-FLUSH: v_mul_f16_e32 [[TMP:v[0-9]+]], [[REGA]], [[REGB]]
+; GFX10PLUS-FLUSH: v_sub_f16_e32 [[RESULT:v[0-9]+]], [[TMP]], [[REGC]]
+; GFX10PLUS:       global_store_{{short|b16}} v{{[0-9]+}}, [[RESULT]]
 define amdgpu_kernel void @mad_sub_f16(half addrspace(1)* noalias nocapture %out, half addrspace(1)* noalias nocapture readonly %ptr) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tid.ext = sext i32 %tid to i64
@@ -355,24 +360,24 @@ define amdgpu_kernel void @mad_sub_f16(half addrspace(1)* noalias nocapture %out
 }
 
 ; GCN-LABEL: {{^}}mad_sub_inv_f16:
-; GCN: {{buffer|flat|global}}_load_ushort [[REGA:v[0-9]+]]
-; GCN: {{buffer|flat|global}}_load_ushort [[REGB:v[0-9]+]]
-; GCN: {{buffer|flat|global}}_load_ushort [[REGC:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[REGA:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[REGB:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[REGC:v[0-9]+]]
 ; VI-FLUSH: v_mad_f16 [[RESULT:v[0-9]+]], -[[REGA]], [[REGB]], [[REGC]]
 
-; VI-DENORM-CONTRACT:    v_fma_f16 [[RESULT:v[0-9]+]], -[[REGA]], [[REGB]], [[REGC]]
-; GFX10-DENORM-CONTRACT: v_fmac_f16_e64 [[REGC]], -[[REGA]], [[REGB]]
+; VI-DENORM-CONTRACT:        v_fma_f16 [[RESULT:v[0-9]+]], -[[REGA]], [[REGB]], [[REGC]]
+; GFX10PLUS-DENORM-CONTRACT: v_fmac_f16_e64 [[REGC]], -[[REGA]], [[REGB]]
 
 ; GCN-DENORM-STRICT: v_mul_f16_e32 [[TMP:v[0-9]+]], [[REGA]], [[REGB]]
 ; GCN-DENORM-STRICT: v_sub_f16_e32 [[RESULT:v[0-9]+]], [[REGC]], [[TMP]]
 
 ; VI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 
-; GFX10-FLUSH: v_mul_f16_e32 [[TMP:v[0-9]+]], [[REGA]], [[REGB]]
-; GFX10-FLUSH: v_sub_f16_e32 [[RESULT:v[0-9]+]], [[REGC]], [[TMP]]
-; GFX10-FLUSH:  global_store_short v{{[0-9]+}}, [[RESULT]]
-; GFX10-DENORM-STRICT: global_store_short v{{[0-9]+}}, [[RESULT]]
-; GFX10-DENORM-CONTRACT: global_store_short v{{[0-9]+}}, [[REGC]]
+; GFX10PLUS-FLUSH: v_mul_f16_e32 [[TMP:v[0-9]+]], [[REGA]], [[REGB]]
+; GFX10PLUS-FLUSH: v_sub_f16_e32 [[RESULT:v[0-9]+]], [[REGC]], [[TMP]]
+; GFX10PLUS-FLUSH: global_store_{{short|b16}} v{{[0-9]+}}, [[RESULT]]
+; GFX10PLUS-DENORM-STRICT: global_store_{{short|b16}} v{{[0-9]+}}, [[RESULT]]
+; GFX10PLUS-DENORM-CONTRACT: global_store_{{short|b16}} v{{[0-9]+}}, [[REGC]]
 define amdgpu_kernel void @mad_sub_inv_f16(half addrspace(1)* noalias nocapture %out, half addrspace(1)* noalias nocapture readonly %ptr) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tid.ext = sext i32 %tid to i64
@@ -392,9 +397,9 @@ define amdgpu_kernel void @mad_sub_inv_f16(half addrspace(1)* noalias nocapture 
 }
 
 ; GCN-LABEL: {{^}}mad_sub_fabs_f16:
-; GCN: {{buffer|flat|global}}_load_ushort [[REGA:v[0-9]+]]
-; GCN: {{buffer|flat|global}}_load_ushort [[REGB:v[0-9]+]]
-; GCN: {{buffer|flat|global}}_load_ushort [[REGC:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[REGA:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[REGB:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[REGC:v[0-9]+]]
 ; VI-FLUSH: v_mad_f16 [[RESULT:v[0-9]+]], [[REGA]], [[REGB]], -|[[REGC]]|
 
 ; GCN-DENORM-CONTRACT: v_fma_f16 [[RESULT:v[0-9]+]], [[REGA]], [[REGB]], -|[[REGC]]|
@@ -404,9 +409,9 @@ define amdgpu_kernel void @mad_sub_inv_f16(half addrspace(1)* noalias nocapture 
 
 ; VI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 
-; GFX10-FLUSH: v_mul_f16_e32 [[TMP:v[0-9]+]], [[REGA]], [[REGB]]
-; GFX10-FLUSH: v_sub_f16_e64 [[RESULT:v[0-9]+]], [[TMP]], |[[REGC]]|
-; GFX10:       global_store_short v{{[0-9]+}}, [[RESULT]]
+; GFX10PLUS-FLUSH: v_mul_f16_e32 [[TMP:v[0-9]+]], [[REGA]], [[REGB]]
+; GFX10PLUS-FLUSH: v_sub_f16_e64 [[RESULT:v[0-9]+]], [[TMP]], |[[REGC]]|
+; GFX10PLUS:       global_store_{{short|b16}} v{{[0-9]+}}, [[RESULT]]
 define amdgpu_kernel void @mad_sub_fabs_f16(half addrspace(1)* noalias nocapture %out, half addrspace(1)* noalias nocapture readonly %ptr) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tid.ext = sext i32 %tid to i64
@@ -427,9 +432,9 @@ define amdgpu_kernel void @mad_sub_fabs_f16(half addrspace(1)* noalias nocapture
 }
 
 ; GCN-LABEL: {{^}}mad_sub_fabs_inv_f16:
-; GCN: {{buffer|flat|global}}_load_ushort [[REGA:v[0-9]+]]
-; GCN: {{buffer|flat|global}}_load_ushort [[REGB:v[0-9]+]]
-; GCN: {{buffer|flat|global}}_load_ushort [[REGC:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[REGA:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[REGB:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[REGC:v[0-9]+]]
 
 ; VI-FLUSH: v_mad_f16 [[RESULT:v[0-9]+]], -[[REGA]], [[REGB]], |[[REGC]]|
 
@@ -440,9 +445,9 @@ define amdgpu_kernel void @mad_sub_fabs_f16(half addrspace(1)* noalias nocapture
 
 ; VI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 
-; GFX10-FLUSH: v_mul_f16_e32 [[TMP:v[0-9]+]], [[REGA]], [[REGB]]
-; GFX10-FLUSH: v_sub_f16_e64 [[RESULT:v[0-9]+]], |[[REGC]]|, [[TMP]]
-; GFX10:       global_store_short v{{[0-9]+}}, [[RESULT]]
+; GFX10PLUS-FLUSH: v_mul_f16_e32 [[TMP:v[0-9]+]], [[REGA]], [[REGB]]
+; GFX10PLUS-FLUSH: v_sub_f16_e64 [[RESULT:v[0-9]+]], |[[REGC]]|, [[TMP]]
+; GFX10PLUS:       global_store_{{short|b16}} v{{[0-9]+}}, [[RESULT]]
 define amdgpu_kernel void @mad_sub_fabs_inv_f16(half addrspace(1)* noalias nocapture %out, half addrspace(1)* noalias nocapture readonly %ptr) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tid.ext = sext i32 %tid to i64
@@ -463,25 +468,25 @@ define amdgpu_kernel void @mad_sub_fabs_inv_f16(half addrspace(1)* noalias nocap
 }
 
 ; GCN-LABEL: {{^}}neg_neg_mad_f16:
-; GCN: {{buffer|flat|global}}_load_ushort [[REGA:v[0-9]+]]
-; GCN: {{buffer|flat|global}}_load_ushort [[REGB:v[0-9]+]]
-; GCN: {{buffer|flat|global}}_load_ushort [[REGC:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[REGA:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[REGB:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[REGC:v[0-9]+]]
 
 ; VI-FLUSH: v_mac_f16_e32 [[REGC]], [[REGA]], [[REGB]]
 ; VI-FLUSH: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[REGC]]
 
-; VI-DENORM-CONTRACT:    v_fma_f16 [[RESULT:v[0-9]+]], [[REGA]], [[REGB]], [[REGC]]
-; GFX10-DENORM-CONTRACT: v_fmac_f16_e32 [[REGC]], [[REGA]], [[REGB]]
+; VI-DENORM-CONTRACT:        v_fma_f16 [[RESULT:v[0-9]+]], [[REGA]], [[REGB]], [[REGC]]
+; GFX10PLUS-DENORM-CONTRACT: v_fmac_f16_e32 [[REGC]], [[REGA]], [[REGB]]
 
 ; GCN-DENORM-STRICT: v_mul_f16_e32 [[TMP:v[0-9]+]], [[REGA]], [[REGB]]
 ; GCN-DENORM-STRICT: v_add_f16_e32 [[RESULT:v[0-9]+]], [[REGC]], [[TMP]]
 ; VI-DENORM: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 
-; GFX10-FLUSH: v_mul_f16_e32 [[TMP:v[0-9]+]], [[REGA]], [[REGB]]
-; GFX10-FLUSH: v_add_f16_e32 [[RESULT:v[0-9]+]], [[REGC]], [[TMP]]
-; GFX10-FLUSH:  global_store_short v{{[0-9]+}}, [[RESULT]]
-; GFX10-DENORM-STRICT: global_store_short v{{[0-9]+}}, [[RESULT]]
-; GFX10-DENORM-CONTRACT: global_store_short v{{[0-9]+}}, [[REGC]]
+; GFX10PLUS-FLUSH: v_mul_f16_e32 [[TMP:v[0-9]+]], [[REGA]], [[REGB]]
+; GFX10PLUS-FLUSH: v_add_f16_e32 [[RESULT:v[0-9]+]], [[REGC]], [[TMP]]
+; GFX10PLUS-FLUSH:  global_store_{{short|b16}} v{{[0-9]+}}, [[RESULT]]
+; GFX10PLUS-DENORM-STRICT: global_store_{{short|b16}} v{{[0-9]+}}, [[RESULT]]
+; GFX10PLUS-DENORM-CONTRACT: global_store_{{short|b16}} v{{[0-9]+}}, [[REGC]]
 define amdgpu_kernel void @neg_neg_mad_f16(half addrspace(1)* noalias nocapture %out, half addrspace(1)* noalias nocapture readonly %ptr) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tid.ext = sext i32 %tid to i64
@@ -503,9 +508,9 @@ define amdgpu_kernel void @neg_neg_mad_f16(half addrspace(1)* noalias nocapture 
 }
 
 ; GCN-LABEL: {{^}}mad_fabs_sub_f16:
-; GCN: {{buffer|flat|global}}_load_ushort [[REGA:v[0-9]+]]
-; GCN: {{buffer|flat|global}}_load_ushort [[REGB:v[0-9]+]]
-; GCN: {{buffer|flat|global}}_load_ushort [[REGC:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[REGA:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[REGB:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[REGC:v[0-9]+]]
 
 ; VI-FLUSH: v_mad_f16 [[RESULT:v[0-9]+]], [[REGA]], |[[REGB]]|, -[[REGC]]
 
@@ -516,9 +521,9 @@ define amdgpu_kernel void @neg_neg_mad_f16(half addrspace(1)* noalias nocapture 
 
 ; VI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 
-; GFX10-FLUSH: v_mul_f16_e64 [[TMP:v[0-9]+]], [[REGA]], |[[REGB]]|
-; GFX10-FLUSH: v_sub_f16_e32 [[RESULT:v[0-9]+]], [[TMP]], [[REGC]]
-; GFX10:       global_store_short v{{[0-9]+}}, [[RESULT]]
+; GFX10PLUS-FLUSH: v_mul_f16_e64 [[TMP:v[0-9]+]], [[REGA]], |[[REGB]]|
+; GFX10PLUS-FLUSH: v_sub_f16_e32 [[RESULT:v[0-9]+]], [[TMP]], [[REGC]]
+; GFX10PLUS:       global_store_{{short|b16}} v{{[0-9]+}}, [[RESULT]]
 define amdgpu_kernel void @mad_fabs_sub_f16(half addrspace(1)* noalias nocapture %out, half addrspace(1)* noalias nocapture readonly %ptr) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tid.ext = sext i32 %tid to i64
@@ -539,24 +544,24 @@ define amdgpu_kernel void @mad_fabs_sub_f16(half addrspace(1)* noalias nocapture
 }
 
 ; GCN-LABEL: {{^}}fsub_c_fadd_a_a_f16:
-; GCN: {{buffer|flat|global}}_load_ushort [[R1:v[0-9]+]],
-; GCN: {{buffer|flat|global}}_load_ushort [[R2:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[R1:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[R2:v[0-9]+]],
 ; VI-FLUSH: v_mac_f16_e32 [[R2]], -2.0, [[R1]]
 ; VI-FLUSH: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[R2]]
 
-; VI-DENORM-CONTRACT:    v_fma_f16 [[RESULT:v[0-9]+]], [[R1]], -2.0, [[R2]]
-; GFX10-DENORM-CONTRACT: v_fmac_f16_e32 [[R2]], -2.0, [[R1]]
+; VI-DENORM-CONTRACT:        v_fma_f16 [[RESULT:v[0-9]+]], [[R1]], -2.0, [[R2]]
+; GFX10PLUS-DENORM-CONTRACT: v_fmac_f16_e32 [[R2]], -2.0, [[R1]]
 
 ; GCN-DENORM-STRICT: v_add_f16_e32 [[TMP:v[0-9]+]], [[R1]], [[R1]]
 ; GCN-DENORM-STRICT: v_sub_f16_e32 [[RESULT:v[0-9]+]], [[R2]], [[TMP]]
 
 ; VI-DENORM: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 
-; GFX10-FLUSH: v_add_f16_e32 [[TMP:v[0-9]+]], [[R1]], [[R1]]
-; GFX10-FLUSH: v_sub_f16_e32 [[RESULT:v[0-9]+]], [[R2]], [[TMP]]
-; GFX10-FLUSH:  global_store_short v{{[0-9]+}}, [[RESULT]]
-; GFX10-DENORM-STRICT:   global_store_short v{{[0-9]+}}, [[RESULT]]
-; GFX10-DENORM-CONTRACT: global_store_short v{{[0-9]+}}, [[R2]]
+; GFX10PLUS-FLUSH: v_add_f16_e32 [[TMP:v[0-9]+]], [[R1]], [[R1]]
+; GFX10PLUS-FLUSH: v_sub_f16_e32 [[RESULT:v[0-9]+]], [[R2]], [[TMP]]
+; GFX10PLUS-FLUSH: global_store_{{short|b16}} v{{[0-9]+}}, [[RESULT]]
+; GFX10PLUS-DENORM-STRICT:   global_store_{{short|b16}} v{{[0-9]+}}, [[RESULT]]
+; GFX10PLUS-DENORM-CONTRACT: global_store_{{short|b16}} v{{[0-9]+}}, [[R2]]
 define amdgpu_kernel void @fsub_c_fadd_a_a_f16(half addrspace(1)* %out, half addrspace(1)* %in) {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.0 = getelementptr half, half addrspace(1)* %out, i32 %tid
@@ -574,8 +579,8 @@ define amdgpu_kernel void @fsub_c_fadd_a_a_f16(half addrspace(1)* %out, half add
 }
 
 ; GCN-LABEL: {{^}}fsub_fadd_a_a_c_f16:
-; GCN: {{buffer|flat|global}}_load_ushort [[R1:v[0-9]+]],
-; GCN: {{buffer|flat|global}}_load_ushort [[R2:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[R1:v[0-9]+]],
+; GCN: {{buffer|flat|global}}_load_{{ushort|u16}} [[R2:v[0-9]+]],
 
 ; VI-FLUSH: v_mad_f16 [[RESULT:v[0-9]+]], [[R1]], 2.0, -[[R2]]
 
@@ -586,9 +591,9 @@ define amdgpu_kernel void @fsub_c_fadd_a_a_f16(half addrspace(1)* %out, half add
 
 ; VI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 
-; GFX10-FLUSH: v_add_f16_e32 [[TMP:v[0-9]+]], [[R1]], [[R1]]
-; GFX10-FLUSH: v_sub_f16_e32 [[RESULT:v[0-9]+]], [[TMP]], [[R2]]
-; GFX10:       global_store_short v{{[0-9]+}}, [[RESULT]]
+; GFX10PLUS-FLUSH: v_add_f16_e32 [[TMP:v[0-9]+]], [[R1]], [[R1]]
+; GFX10PLUS-FLUSH: v_sub_f16_e32 [[RESULT:v[0-9]+]], [[TMP]], [[R2]]
+; GFX10PLUS:       global_store_{{short|b16}} v{{[0-9]+}}, [[RESULT]]
 define amdgpu_kernel void @fsub_fadd_a_a_c_f16(half addrspace(1)* %out, half addrspace(1)* %in) {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.0 = getelementptr half, half addrspace(1)* %out, i32 %tid

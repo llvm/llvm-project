@@ -12,8 +12,22 @@ define i1 @PR1738(double %x, double %y) {
   ret i1 %and
 }
 
+; TODO: this can be supported by freezing %y
 define i1 @PR1738_logical(double %x, double %y) {
 ; CHECK-LABEL: @PR1738_logical(
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord double [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ord double [[Y:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 false
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %cmp1 = fcmp ord double %x, 0.0
+  %cmp2 = fcmp ord double %y, 0.0
+  %and = select i1 %cmp1, i1 %cmp2, i1 false
+  ret i1 %and
+}
+
+define i1 @PR1738_logical_noundef(double %x, double noundef %y) {
+; CHECK-LABEL: @PR1738_logical_noundef(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
@@ -47,10 +61,13 @@ define i1 @PR41069(i1 %z, float %c, float %d) {
   ret i1 %r
 }
 
+; FIXME: this can be supported by freezing %d
 define i1 @PR41069_logical(i1 %z, float %c, float %d) {
 ; CHECK-LABEL: @PR41069_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord float [[D:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    [[ORD1:%.*]] = fcmp arcp ord float [[C:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[ORD1]], i1 [[Z:%.*]], i1 false
+; CHECK-NEXT:    [[ORD2:%.*]] = fcmp afn ord float [[D:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[AND]], i1 [[ORD2]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %ord1 = fcmp arcp ord float %c, 0.0
@@ -77,9 +94,9 @@ define i1 @PR41069_commute(i1 %z, float %c, float %d) {
 define i1 @PR41069_commute_logical(i1 %z, float %c, float %d) {
 ; CHECK-LABEL: @PR41069_commute_logical(
 ; CHECK-NEXT:    [[ORD1:%.*]] = fcmp ninf ord float [[C:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[ORD1]], [[Z:%.*]]
 ; CHECK-NEXT:    [[ORD2:%.*]] = fcmp reassoc ninf ord float [[D:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[ORD2]], i1 [[AND]], i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[ORD2]], i1 [[ORD1]], i1 false
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i1 [[Z:%.*]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %ord1 = fcmp ninf ord float %c, 0.0
@@ -138,7 +155,7 @@ define i1 @PR15737_logical(float %a, double %b) {
 ; CHECK-LABEL: @PR15737_logical(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[A:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord double [[B:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[CMP1]]
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[CMP]], i1 [[CMP1]], i1 false
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %cmp = fcmp ord float %a, 0.000000e+00
@@ -171,10 +188,13 @@ define i1 @fcmp_ord_nonzero(float %x, float %y) {
   ret i1 %and
 }
 
+; TODO: this can be supported by freezing %y
 define i1 @fcmp_ord_nonzero_logical(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_ord_nonzero_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ord float [[Y:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 false
+; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %cmp1 = fcmp ord float %x, 1.0
   %cmp2 = fcmp ord float %y, 2.0

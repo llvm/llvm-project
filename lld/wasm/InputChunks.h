@@ -24,6 +24,8 @@
 #include "InputFiles.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/LLVM.h"
+#include "llvm/ADT/CachedHashString.h"
+#include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/Wasm.h"
 
 namespace lld {
@@ -35,7 +37,14 @@ class OutputSection;
 
 class InputChunk {
 public:
-  enum Kind { DataSegment, Function, SyntheticFunction, Section };
+  enum Kind {
+    DataSegment,
+    Merge,
+    MergedSegment,
+    Function,
+    SyntheticFunction,
+    Section
+  };
 
   Kind kind() const { return sectionKind; }
 
@@ -43,6 +52,7 @@ public:
   virtual uint32_t getInputSize() const { return getSize(); };
 
   virtual void writeTo(uint8_t *buf) const;
+  void relocate(uint8_t *buf) const;
 
   ArrayRef<WasmRelocation> getRelocations() const { return relocations; }
   void setRelocations(ArrayRef<WasmRelocation> rs) { relocations = rs; }
@@ -97,31 +107,150 @@ protected:
 // each global variable.
 class InputSegment : public InputChunk {
 public:
-  InputSegment(const WasmSegment &seg, ObjFile *f)
+  InputSegment(const WasmSegment *seg, ObjFile *f)
       : InputChunk(f, InputChunk::DataSegment), segment(seg) {
-    alignment = segment.Data.Alignment;
+    alignment = segment->Data.Alignment;
+    flags = segment->Data.LinkingFlags;
   }
 
-  static bool classof(const InputChunk *c) { return c->kind() == DataSegment; }
+  InputSegment(uint32_t alignment, uint32_t flags)
+      : InputChunk(nullptr, InputChunk::DataSegment), alignment(alignment),
+        flags(flags) {}
+
+  static bool classof(const InputChunk *c) {
+    return c->kind() == DataSegment || c->kind() == Merge ||
+           c->kind() == MergedSegment;
+  }
 
   void generateRelocationCode(raw_ostream &os) const;
 
-  StringRef getName() const override { return segment.Data.Name; }
+  StringRef getName() const override { return segment->Data.Name; }
   StringRef getDebugName() const override { return StringRef(); }
-  uint32_t getComdat() const override { return segment.Data.Comdat; }
+  uint32_t getComdat() const override { return segment->Data.Comdat; }
   uint32_t getInputSectionOffset() const override {
-    return segment.SectionOffset;
+    return segment->SectionOffset;
   }
+
+  // Translate an offset in the input section to an offset in the output
+  // section.
+  uint64_t getOffset(uint64_t offset) const;
+
   uint64_t getVA(uint64_t offset = 0) const;
+
+  bool isTLS() const {
+    // Older object files don't include WASM_SEG_FLAG_TLS and instead
+    // relied on the naming convention.
+    return flags & llvm::wasm::WASM_SEG_FLAG_TLS ||
+           getName().startswith(".tdata") || getName().startswith(".tbss");
+  }
 
   const OutputSegment *outputSeg = nullptr;
   uint32_t outputSegmentOffset = 0;
   uint32_t alignment = 0;
+  uint32_t flags = 0;
 
 protected:
-  ArrayRef<uint8_t> data() const override { return segment.Data.Content; }
+  ArrayRef<uint8_t> data() const override { return segment->Data.Content; }
 
-  const WasmSegment &segment;
+  const WasmSegment *segment = nullptr;
+};
+
+class SyntheticMergedDataSegment;
+
+// Merge segment handling copied from lld/ELF/InputSection.h.  Keep in sync
+// where possible.
+
+// SegmentPiece represents a piece of splittable segment contents.
+// We allocate a lot of these and binary search on them. This means that they
+// have to be as compact as possible, which is why we don't store the size (can
+// be found by looking at the next one).
+struct SegmentPiece {
+  SegmentPiece(size_t off, uint32_t hash, bool live)
+      : inputOff(off), live(live || !config->gcSections), hash(hash >> 1) {}
+
+  uint32_t inputOff;
+  uint32_t live : 1;
+  uint32_t hash : 31;
+  uint64_t outputOff = 0;
+};
+
+static_assert(sizeof(SegmentPiece) == 16, "SectionPiece is too big");
+
+// This corresponds segments marked as WASM_SEG_FLAG_STRINGS.
+class MergeInputSegment : public InputSegment {
+public:
+  MergeInputSegment(const WasmSegment *seg, ObjFile *f) : InputSegment(seg, f) {
+    sectionKind = Merge;
+  }
+
+  static bool classof(const InputChunk *s) { return s->kind() == Merge; }
+  void splitIntoPieces();
+
+  // Translate an offset in the input section to an offset in the parent
+  // MergeSyntheticSection.
+  uint64_t getParentOffset(uint64_t offset) const;
+
+  // Splittable sections are handled as a sequence of data
+  // rather than a single large blob of data.
+  std::vector<SegmentPiece> pieces;
+
+  // Returns I'th piece's data. This function is very hot when
+  // string merging is enabled, so we want to inline.
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
+  llvm::CachedHashStringRef getData(size_t i) const {
+    size_t begin = pieces[i].inputOff;
+    size_t end =
+        (pieces.size() - 1 == i) ? data().size() : pieces[i + 1].inputOff;
+    return {toStringRef(data().slice(begin, end - begin)), pieces[i].hash};
+  }
+
+  // Returns the SectionPiece at a given input section offset.
+  SegmentPiece *getSegmentPiece(uint64_t offset);
+  const SegmentPiece *getSegmentPiece(uint64_t offset) const {
+    return const_cast<MergeInputSegment *>(this)->getSegmentPiece(offset);
+  }
+
+  SyntheticMergedDataSegment *parent = nullptr;
+
+private:
+  void splitStrings(ArrayRef<uint8_t> a);
+};
+
+// SyntheticMergedDataSegment is a class that allows us to put mergeable
+// sections with different attributes in a single output sections. To do that we
+// put them into SyntheticMergedDataSegment synthetic input sections which are
+// attached to regular output sections.
+class SyntheticMergedDataSegment : public InputSegment {
+public:
+  SyntheticMergedDataSegment(StringRef name, uint32_t alignment, uint32_t flags)
+      : InputSegment(alignment, flags), name(name),
+        builder(llvm::StringTableBuilder::RAW, 1ULL << alignment) {
+    sectionKind = InputChunk::MergedSegment;
+  }
+
+  static bool classof(const InputChunk *c) {
+    return c->kind() == InputChunk::MergedSegment;
+  }
+
+  uint32_t getSize() const override;
+
+  StringRef getName() const override { return name; }
+
+  uint32_t getComdat() const override { return segments[0]->getComdat(); }
+
+  void writeTo(uint8_t *buf) const override;
+
+  void addMergeSegment(MergeInputSegment *ms) {
+    ms->parent = this;
+    segments.push_back(ms);
+  }
+
+  void finalizeContents();
+
+protected:
+  std::vector<MergeInputSegment *> segments;
+  StringRef name;
+  llvm::StringTableBuilder builder;
 };
 
 // Represents a single wasm function within and input file.  These are

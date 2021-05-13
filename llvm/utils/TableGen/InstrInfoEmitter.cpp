@@ -494,8 +494,8 @@ void InstrInfoEmitter::emitLogicalOperandSizeMappings(
     }
     OS << "  static const unsigned SizeMap[][" << LogicalOpListSize
        << "] = {\n";
-    for (int r = 0, rs = LogicalOpSizeList.size(); r < rs; ++r) {
-      const auto &Row = *LogicalOpSizeList[r];
+    for (auto &R : LogicalOpSizeList) {
+      const auto &Row = *R;
       OS << "   {";
       int i;
       for (i = 0; i < static_cast<int>(Row.size()); ++i) {

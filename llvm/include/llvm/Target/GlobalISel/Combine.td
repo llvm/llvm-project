@@ -149,11 +149,12 @@ def combine_indexed_load_store : GICombineRule<
          [{ return Helper.matchCombineIndexedLoadStore(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineIndexedLoadStore(*${root}, ${matchinfo}); }])>;
 
+def opt_brcond_by_inverting_cond_matchdata : GIDefMatchData<"MachineInstr *">;
 def opt_brcond_by_inverting_cond : GICombineRule<
-  (defs root:$root),
+  (defs root:$root, opt_brcond_by_inverting_cond_matchdata:$matchinfo),
   (match (wip_match_opcode G_BR):$root,
-         [{ return Helper.matchOptBrCondByInvertingCond(*${root}); }]),
-  (apply [{ Helper.applyOptBrCondByInvertingCond(*${root}); }])>;
+         [{ return Helper.matchOptBrCondByInvertingCond(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyOptBrCondByInvertingCond(*${root}, ${matchinfo}); }])>;
 
 def ptr_add_immed_matchdata : GIDefMatchData<"PtrAddChain">;
 def ptr_add_immed_chain : GICombineRule<
@@ -657,3 +658,10 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
     shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
     div_rem_to_divrem, funnel_shift_combines]>;
+
+// A combine group used to for prelegalizer combiners at -O0. The combines in
+// this group have been selected based on experiments to balance code size and
+// compile time performance.
+def optnone_combines : GICombineGroup<[trivial_combines,
+    ptr_add_immed_chain, combines_for_extload,
+    not_cmp_fold, opt_brcond_by_inverting_cond]>;

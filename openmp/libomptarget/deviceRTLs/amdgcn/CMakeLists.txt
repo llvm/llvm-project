@@ -6,34 +6,16 @@
 #
 ##===----------------------------------------------------------------------===##
 #
-# Build the AMDGCN Device RTL if the ROCM tools are available
+# Build the AMDGCN Device RTL bitcode library using clang -ffreestanding
 #
 ##===----------------------------------------------------------------------===##
 
-find_package(LLVM QUIET CONFIG
-  PATHS
-  $ENV{AOMP}
-  $ENV{HOME}/rocm/aomp
-  /opt/rocm/aomp
-  /usr/lib/rocm/aomp
-  ${LIBOMPTARGET_NVPTX_CUDA_COMPILER_DIR}
-  ${LIBOMPTARGET_NVPTX_CUDA_LINKER_DIR}
-  ${CMAKE_CXX_COMPILER_DIR}
-  NO_DEFAULT_PATH)
+set(LIBOMPTARGET_BUILD_AMDGCN_BCLIB TRUE CACHE BOOL
+  "Can be set to false to disable building this library.")
 
-if (LLVM_DIR)
-  libomptarget_say("Found LLVM ${LLVM_PACKAGE_VERSION}. Configure: ${LLVM_DIR}/LLVMConfig.cmake")
-else()
-  libomptarget_say("Not building AMDGCN device RTL: AOMP not found")
+if (NOT LIBOMPTARGET_BUILD_AMDGCN_BCLIB)
+  libomptarget_say("Not building AMDGCN device RTL: Disabled by LIBOMPTARGET_BUILD_AMDGCN_BCLIB")
   return()
-endif()
-
-set(AOMP_INSTALL_PREFIX ${LLVM_INSTALL_PREFIX})
-
-if (AOMP_INSTALL_PREFIX)
-  set(AOMP_BINDIR ${AOMP_INSTALL_PREFIX}/bin)
-else()
-  set(AOMP_BINDIR ${LLVM_BUILD_BINARY_DIR}/bin)
 endif()
 
 # Copied from nvptx CMakeLists
@@ -48,7 +30,20 @@ else()
   return()
 endif()
 
-libomptarget_say("Building AMDGCN device RTL. LLVM_COMPILER_PATH=${AOMP_BINDIR}")
+if (LLVM_DIR)
+  # Builds that use pre-installed LLVM have LLVM_DIR set.
+  find_program(CLANG_TOOL clang PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
+  find_program(LINK_TOOL llvm-link PATHS ${LLVM_TOOLS_BINARY_DIR}
+    NO_DEFAULT_PATH)
+  find_program(OPT_TOOL opt PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
+  libomptarget_say("Building AMDGCN device RTL. Using clang: ${CLANG_TOOL}")
+else()
+  # LLVM in-tree builds may use CMake target names to discover the tools.
+  set(CLANG_TOOL $<TARGET_FILE:clang>)
+  set(LINK_TOOL $<TARGET_FILE:llvm-link>)
+  set(OPT_TOOL $<TARGET_FILE:opt>)
+  libomptarget_say("Building AMDGCN device RTL. Using clang from in-tree build")
+endif()
 
 project(omptarget-amdgcn)
 
@@ -109,7 +104,7 @@ if (DEFINED LIBOMPTARGET_AMDGCN_GFXLIST)
 endif()
 
 macro(add_cuda_bc_library)
-  set(cu_cmd ${AOMP_BINDIR}/clang++
+  set(cu_cmd ${CLANG_TOOL}
     -xc++
     -c
     -std=c++14
@@ -145,7 +140,7 @@ macro(add_cuda_bc_library)
 
   add_custom_command(
     OUTPUT linkout.cuda.${mcpu}.bc
-    COMMAND ${AOMP_BINDIR}/llvm-link ${bc1_files} -o linkout.cuda.${mcpu}.bc
+    COMMAND ${LINK_TOOL} ${bc1_files} -o linkout.cuda.${mcpu}.bc
     DEPENDS ${bc1_files})
 
   list(APPEND bc_files linkout.cuda.${mcpu}.bc)
@@ -160,7 +155,7 @@ foreach(mcpu ${mcpus})
   set(bc_libname lib${libname}-${mcpu}.bc)
   add_custom_command(
     OUTPUT ${bc_libname}
-    COMMAND ${AOMP_BINDIR}/llvm-link ${bc_files} | ${AOMP_BINDIR}/opt --always-inline -o ${OUTPUTDIR}/${bc_libname}
+    COMMAND ${LINK_TOOL} ${bc_files} | ${OPT_TOOL} --always-inline -o ${OUTPUTDIR}/${bc_libname}
     DEPENDS ${bc_files})
 
   add_custom_target(lib${libname}-${mcpu} ALL DEPENDS ${bc_libname})

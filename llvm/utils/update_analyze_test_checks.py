@@ -114,7 +114,7 @@ def main():
             'verbose': args.verbose,
             'function_signature': False,
             'check_attributes': False,
-            'replace_function_regex': []}),
+            'replace_value_regex': []}),
       scrubber_args = [])
 
     for prefixes, opt_args in prefix_list:

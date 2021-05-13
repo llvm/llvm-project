@@ -168,6 +168,7 @@ public:
   bool empty() const;
   std::size_t size() const;
 
+  const Scalar<Result> &values() const { return values_; }
   ConstantSubscript LEN() const { return length_; }
 
   std::optional<Scalar<Result>> GetScalarValue() const {

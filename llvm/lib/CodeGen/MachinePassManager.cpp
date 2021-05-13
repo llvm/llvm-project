@@ -49,11 +49,6 @@ Error MachineFunctionPassManager::run(Module &M,
     });
   }
 
-  if (DebugLogging) {
-    dbgs() << "Starting " << getTypeName<MachineFunction>()
-           << " pass manager run.\n";
-  }
-
   for (auto &F : InitializationFuncs) {
     if (auto Err = F(M, MFAM))
       return Err;
@@ -64,9 +59,6 @@ Error MachineFunctionPassManager::run(Module &M,
   do {
     // Run machine module passes
     for (; MachineModulePasses.count(Idx) && Idx != Size; ++Idx) {
-      if (DebugLogging)
-        dbgs() << "Running pass: " << Passes[Idx]->name() << " on "
-               << M.getName() << '\n';
       if (auto Err = MachineModulePasses.at(Idx)(M, MFAM))
         return Err;
     }
@@ -108,11 +100,6 @@ Error MachineFunctionPassManager::run(Module &M,
   for (auto &F : FinalizationFuncs) {
     if (auto Err = F(M, MFAM))
       return Err;
-  }
-
-  if (DebugLogging) {
-    dbgs() << "Finished " << getTypeName<MachineFunction>()
-           << " pass manager run.\n";
   }
 
   return Error::success();

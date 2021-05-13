@@ -8,7 +8,6 @@
 
 ; RUN: opt -passes='function(require<postdomtree>),ipsccp,function(verify<domtree>)' -S  %s | FileCheck -check-prefixes='IR' %s
 
-; NEW-PM: Starting llvm::Module pass manager run.
 ; NEW-PM: Running analysis: DominatorTreeAnalysis on f1
 ; NEW-PM: Running analysis: PostDominatorTreeAnalysis on f1
 ; NEW-PM: Running analysis: DominatorTreeAnalysis on f2

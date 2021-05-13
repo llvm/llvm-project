@@ -28,32 +28,61 @@
 
 namespace mlir {
 namespace lsp {
-class JSONTransport;
+class MessageHandler;
 
 //===----------------------------------------------------------------------===//
-// Reply
+// JSONTransport
 //===----------------------------------------------------------------------===//
 
-/// Function object to reply to an LSP call.
-/// Each instance must be called exactly once, otherwise:
-///  - if there was no reply, an error reply is sent
-///  - if there were multiple replies, only the first is sent
-class Reply {
+/// The encoding style of the JSON-RPC messages (both input and output).
+enum JSONStreamStyle {
+  /// Encoding per the LSP specification, with mandatory Content-Length header.
+  Standard,
+  /// Messages are delimited by a '// -----' line. Comment lines start with //.
+  Delimited
+};
+
+/// A transport class that performs the JSON-RPC communication with the LSP
+/// client.
+class JSONTransport {
 public:
-  Reply(const llvm::json::Value &id, StringRef method,
-        JSONTransport &transport);
-  Reply(Reply &&other);
-  Reply &operator=(Reply &&) = delete;
-  Reply(const Reply &) = delete;
-  Reply &operator=(const Reply &) = delete;
+  JSONTransport(std::FILE *in, raw_ostream &out,
+                JSONStreamStyle style = JSONStreamStyle::Standard,
+                bool prettyOutput = false)
+      : in(in), out(out), style(style), prettyOutput(prettyOutput) {}
 
-  void operator()(llvm::Expected<llvm::json::Value> reply);
+  /// The following methods are used to send a message to the LSP client.
+  void notify(StringRef method, llvm::json::Value params);
+  void call(StringRef method, llvm::json::Value params, llvm::json::Value id);
+  void reply(llvm::json::Value id, llvm::Expected<llvm::json::Value> result);
+
+  /// Start executing the JSON-RPC transport.
+  llvm::Error run(MessageHandler &handler);
 
 private:
-  StringRef method;
-  std::atomic<bool> replied = {false};
-  llvm::json::Value id;
-  JSONTransport *transport;
+  /// Dispatches the given incoming json message to the message handler.
+  bool handleMessage(llvm::json::Value msg, MessageHandler &handler);
+  /// Writes the given message to the output stream.
+  void sendMessage(llvm::json::Value msg);
+
+  /// Read in a message from the input stream.
+  LogicalResult readMessage(std::string &json) {
+    return style == JSONStreamStyle::Delimited ? readDelimitedMessage(json)
+                                               : readStandardMessage(json);
+  }
+  LogicalResult readDelimitedMessage(std::string &json);
+  LogicalResult readStandardMessage(std::string &json);
+
+  /// An output buffer used when building output messages.
+  SmallVector<char, 0> outputBuffer;
+  /// The input file stream.
+  std::FILE *in;
+  /// The output file stream.
+  raw_ostream &out;
+  /// The JSON stream style to use.
+  JSONStreamStyle style;
+  /// If the output JSON should be formatted for easier readability.
+  bool prettyOutput;
 };
 
 //===----------------------------------------------------------------------===//
@@ -64,6 +93,11 @@ private:
 /// accepted by functions that logically return T.
 template <typename T>
 using Callback = llvm::unique_function<void(llvm::Expected<T>)>;
+
+/// An OutgoingNotification<T> is a function used for outgoing notifications
+/// send to the client.
+template <typename T>
+using OutgoingNotification = llvm::unique_function<void(const T &)>;
 
 /// A handler used to process the incoming transport messages.
 class MessageHandler {
@@ -119,6 +153,14 @@ public:
     };
   }
 
+  /// Create an OutgoingNotification object used for the given method.
+  template <typename T>
+  OutgoingNotification<T> outgoingNotification(llvm::StringLiteral method) {
+    return [&, method](const T &params) {
+      transport.notify(method, llvm::json::Value(params));
+    };
+  }
+
 private:
   template <typename HandlerT>
   using HandlerMap = llvm::StringMap<llvm::unique_function<HandlerT>>;
@@ -128,61 +170,6 @@ private:
       methodHandlers;
 
   JSONTransport &transport;
-};
-
-//===----------------------------------------------------------------------===//
-// JSONTransport
-//===----------------------------------------------------------------------===//
-
-/// The encoding style of the JSON-RPC messages (both input and output).
-enum JSONStreamStyle {
-  /// Encoding per the LSP specification, with mandatory Content-Length header.
-  Standard,
-  /// Messages are delimited by a '// -----' line. Comment lines start with //.
-  Delimited
-};
-
-/// A transport class that performs the JSON-RPC communication with the LSP
-/// client.
-class JSONTransport {
-public:
-  JSONTransport(std::FILE *in, raw_ostream &out,
-                JSONStreamStyle style = JSONStreamStyle::Standard,
-                bool prettyOutput = false)
-      : in(in), out(out), style(style), prettyOutput(prettyOutput) {}
-
-  /// The following methods are used to send a message to the LSP client.
-  void notify(StringRef method, llvm::json::Value params);
-  void call(StringRef method, llvm::json::Value params, llvm::json::Value id);
-  void reply(llvm::json::Value id, llvm::Expected<llvm::json::Value> result);
-
-  /// Start executing the JSON-RPC transport.
-  llvm::Error run(MessageHandler &handler);
-
-private:
-  /// Dispatches the given incoming json message to the message handler.
-  bool handleMessage(llvm::json::Value msg, MessageHandler &handler);
-  /// Writes the given message to the output stream.
-  void sendMessage(llvm::json::Value msg);
-
-  /// Read in a message from the input stream.
-  LogicalResult readMessage(std::string &json) {
-    return style == JSONStreamStyle::Delimited ? readDelimitedMessage(json)
-                                               : readStandardMessage(json);
-  }
-  LogicalResult readDelimitedMessage(std::string &json);
-  LogicalResult readStandardMessage(std::string &json);
-
-  /// An output buffer used when building output messages.
-  SmallVector<char, 0> outputBuffer;
-  /// The input file stream.
-  std::FILE *in;
-  /// The output file stream.
-  raw_ostream &out;
-  /// The JSON stream style to use.
-  JSONStreamStyle style;
-  /// If the output JSON should be formatted for easier readability.
-  bool prettyOutput;
 };
 
 } // namespace lsp

@@ -169,8 +169,8 @@ SerializeToHsacoPass::assembleIsa(const std::string &isa) {
   mai->setRelaxELFRelocations(true);
 
   llvm::MCObjectFileInfo mofi;
-  llvm::MCContext ctx(mai.get(), mri.get(), &mofi, &srcMgr, &mcOptions);
-  mofi.InitMCObjectFileInfo(triple, false, ctx, false);
+  llvm::MCContext ctx(triple, mai.get(), mri.get(), &mofi, &srcMgr, &mcOptions);
+  mofi.initMCObjectFileInfo(ctx, /*PIC=*/false, /*LargeCodeModel=*/false);
 
   SmallString<128> cwd;
   if (!llvm::sys::fs::current_path(cwd))

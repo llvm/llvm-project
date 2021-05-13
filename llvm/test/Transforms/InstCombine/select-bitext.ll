@@ -319,7 +319,7 @@ define <2 x float> @trunc_sel_equal_fpext_vec(<2 x float> %a, <2 x i1> %cmp) {
 
 define i32 @test_sext1(i1 %cca, i1 %ccb) {
 ; CHECK-LABEL: @test_sext1(
-; CHECK-NEXT:    [[NARROW:%.*]] = and i1 [[CCB:%.*]], [[CCA:%.*]]
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[CCB:%.*]], i1 [[CCA:%.*]], i1 false
 ; CHECK-NEXT:    [[R:%.*]] = sext i1 [[NARROW]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -330,7 +330,7 @@ define i32 @test_sext1(i1 %cca, i1 %ccb) {
 
 define i32 @test_sext2(i1 %cca, i1 %ccb) {
 ; CHECK-LABEL: @test_sext2(
-; CHECK-NEXT:    [[NARROW:%.*]] = or i1 [[CCB:%.*]], [[CCA:%.*]]
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[CCB:%.*]], i1 true, i1 [[CCA:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = sext i1 [[NARROW]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -342,7 +342,7 @@ define i32 @test_sext2(i1 %cca, i1 %ccb) {
 define i32 @test_sext3(i1 %cca, i1 %ccb) {
 ; CHECK-LABEL: @test_sext3(
 ; CHECK-NEXT:    [[NOT_CCB:%.*]] = xor i1 [[CCB:%.*]], true
-; CHECK-NEXT:    [[NARROW:%.*]] = and i1 [[NOT_CCB]], [[CCA:%.*]]
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[NOT_CCB]], i1 [[CCA:%.*]], i1 false
 ; CHECK-NEXT:    [[R:%.*]] = sext i1 [[NARROW]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -354,7 +354,7 @@ define i32 @test_sext3(i1 %cca, i1 %ccb) {
 define i32 @test_sext4(i1 %cca, i1 %ccb) {
 ; CHECK-LABEL: @test_sext4(
 ; CHECK-NEXT:    [[NOT_CCB:%.*]] = xor i1 [[CCB:%.*]], true
-; CHECK-NEXT:    [[NARROW:%.*]] = or i1 [[NOT_CCB]], [[CCA:%.*]]
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[NOT_CCB]], i1 true, i1 [[CCA:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = sext i1 [[NARROW]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -365,7 +365,7 @@ define i32 @test_sext4(i1 %cca, i1 %ccb) {
 
 define i32 @test_zext1(i1 %cca, i1 %ccb) {
 ; CHECK-LABEL: @test_zext1(
-; CHECK-NEXT:    [[NARROW:%.*]] = and i1 [[CCB:%.*]], [[CCA:%.*]]
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[CCB:%.*]], i1 [[CCA:%.*]], i1 false
 ; CHECK-NEXT:    [[R:%.*]] = zext i1 [[NARROW]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -376,7 +376,7 @@ define i32 @test_zext1(i1 %cca, i1 %ccb) {
 
 define i32 @test_zext2(i1 %cca, i1 %ccb) {
 ; CHECK-LABEL: @test_zext2(
-; CHECK-NEXT:    [[NARROW:%.*]] = or i1 [[CCB:%.*]], [[CCA:%.*]]
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[CCB:%.*]], i1 true, i1 [[CCA:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = zext i1 [[NARROW]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -388,7 +388,7 @@ define i32 @test_zext2(i1 %cca, i1 %ccb) {
 define i32 @test_zext3(i1 %cca, i1 %ccb) {
 ; CHECK-LABEL: @test_zext3(
 ; CHECK-NEXT:    [[NOT_CCB:%.*]] = xor i1 [[CCB:%.*]], true
-; CHECK-NEXT:    [[NARROW:%.*]] = and i1 [[NOT_CCB]], [[CCA:%.*]]
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[NOT_CCB]], i1 [[CCA:%.*]], i1 false
 ; CHECK-NEXT:    [[R:%.*]] = zext i1 [[NARROW]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -400,7 +400,7 @@ define i32 @test_zext3(i1 %cca, i1 %ccb) {
 define i32 @test_zext4(i1 %cca, i1 %ccb) {
 ; CHECK-LABEL: @test_zext4(
 ; CHECK-NEXT:    [[NOT_CCB:%.*]] = xor i1 [[CCB:%.*]], true
-; CHECK-NEXT:    [[NARROW:%.*]] = or i1 [[NOT_CCB]], [[CCA:%.*]]
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[NOT_CCB]], i1 true, i1 [[CCA:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = zext i1 [[NARROW]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -503,7 +503,7 @@ define i32 @test_op_op(i32 %a, i32 %b, i32 %c) {
 
 define <2 x i32> @test_vectors_sext(<2 x i1> %cca, <2 x i1> %ccb) {
 ; CHECK-LABEL: @test_vectors_sext(
-; CHECK-NEXT:    [[NARROW:%.*]] = and <2 x i1> [[CCB:%.*]], [[CCA:%.*]]
+; CHECK-NEXT:    [[NARROW:%.*]] = select <2 x i1> [[CCB:%.*]], <2 x i1> [[CCA:%.*]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    [[R:%.*]] = sext <2 x i1> [[NARROW]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
@@ -525,7 +525,7 @@ define <2 x i32> @test_vectors_sext_nonsplat(<2 x i1> %cca, <2 x i1> %ccb) {
 
 define <2 x i32> @test_vectors_zext(<2 x i1> %cca, <2 x i1> %ccb) {
 ; CHECK-LABEL: @test_vectors_zext(
-; CHECK-NEXT:    [[NARROW:%.*]] = and <2 x i1> [[CCB:%.*]], [[CCA:%.*]]
+; CHECK-NEXT:    [[NARROW:%.*]] = select <2 x i1> [[CCB:%.*]], <2 x i1> [[CCA:%.*]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    [[R:%.*]] = zext <2 x i1> [[NARROW]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;

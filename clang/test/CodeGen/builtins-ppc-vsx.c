@@ -2313,3 +2313,634 @@ vector double test_rsqrtd(vector double a, vector double b) {
   // CHECK-LE: fdiv fast <2 x double> <double 1.000000e+00, double 1.000000e+00>
   return vec_rsqrt(a);
 }
+
+void test_p8overloads_backwards_compat() {
+  // CHECK-LABEL: test_p8overloads_backwards_compat
+  res_vsll = vec_add(vsll, vsll);
+  // CHECK: add <4 x i32>
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vaddcuw
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: add <4 x i32>
+  // CHECK-LE: add <4 x i32>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vaddcuw
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  // CHECK-LE: add <4 x i32>
+  res_vull = vec_add(vull, vull);
+  // CHECK: add <4 x i32>
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vaddcuw
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: add <4 x i32>
+  // CHECK-LE: add <4 x i32>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vaddcuw
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  // CHECK-LE: add <4 x i32>
+  dummy();
+  // CHECK: call void @dummy()
+  // CHECK-LE: call void @dummy()
+
+  res_vbll = vec_cmpeq(vsll, vsll);
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: and <4 x i32>
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  // CHECK-LE: and <4 x i32>
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  res_vbll = vec_cmpeq(vull, vull);
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: and <4 x i32>
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  // CHECK-LE: and <4 x i32>
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  res_vbll = vec_cmpeq(vbll, vbll);
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: and <4 x i32>
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  // CHECK-LE: and <4 x i32>
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  dummy();
+  // CHECK: call void @dummy()
+  // CHECK-LE: call void @dummy()
+
+  res_vbll = vec_cmpgt(vsll, vsll);
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpgtsw
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: and <4 x i32>
+  // CHECK: or <4 x i32>
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpgtsw
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  // CHECK-LE: and <4 x i32>
+  // CHECK-LE: or <4 x i32>
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  res_vbll = vec_cmpgt(vull, vull);
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: and <4 x i32>
+  // CHECK: or <4 x i32>
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  // CHECK-LE: and <4 x i32>
+  // CHECK-LE: or <4 x i32>
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  dummy();
+  // CHECK: call void @dummy()
+  // CHECK-LE: call void @dummy()
+
+  res_vbll = vec_cmpge(vsll, vsll);
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpgtsw
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: and <4 x i32>
+  // CHECK: or <4 x i32>
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  // CHECK: xor <2 x i64> {{%.*}}, <i64 -1, i64 -1>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpgtsw
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  // CHECK-LE: and <4 x i32>
+  // CHECK-LE: or <4 x i32>
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  // CHECK-LE: xor <2 x i64> {{%.*}}, <i64 -1, i64 -1>
+  res_vbll = vec_cmpge(vull, vull);
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: and <4 x i32>
+  // CHECK: or <4 x i32>
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  // CHECK: xor <2 x i64> {{%.*}}, <i64 -1, i64 -1>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  // CHECK-LE: and <4 x i32>
+  // CHECK-LE: or <4 x i32>
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  // CHECK-LE: xor <2 x i64> {{%.*}}, <i64 -1, i64 -1>
+  dummy();
+  // CHECK: call void @dummy()
+  // CHECK-LE: call void @dummy()
+
+  res_vbll = vec_cmplt(vsll, vsll);
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpgtsw
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: and <4 x i32>
+  // CHECK: or <4 x i32>
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpgtsw
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  // CHECK-LE: and <4 x i32>
+  // CHECK-LE: or <4 x i32>
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  res_vbll = vec_cmplt(vull, vull);
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: and <4 x i32>
+  // CHECK: or <4 x i32>
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  // CHECK-LE: and <4 x i32>
+  // CHECK-LE: or <4 x i32>
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  dummy();
+  // CHECK: call void @dummy()
+  // CHECK-LE: call void @dummy()
+
+  res_vbll = vec_cmple(vsll, vsll);
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpgtsw
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: and <4 x i32>
+  // CHECK: or <4 x i32>
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  // CHECK: xor <2 x i64> {{%.*}}, <i64 -1, i64 -1>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpgtsw
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  // CHECK-LE: and <4 x i32>
+  // CHECK-LE: or <4 x i32>
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  // CHECK-LE: xor <2 x i64> {{%.*}}, <i64 -1, i64 -1>
+  res_vbll = vec_cmple(vull, vull);
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: and <4 x i32>
+  // CHECK: or <4 x i32>
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  // CHECK: xor <2 x i64> {{%.*}}, <i64 -1, i64 -1>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  // CHECK-LE: and <4 x i32>
+  // CHECK-LE: or <4 x i32>
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  // CHECK-LE: xor <2 x i64> {{%.*}}, <i64 -1, i64 -1>
+  dummy();
+  // CHECK: call void @dummy()
+  // CHECK-LE: call void @dummy()
+
+  res_vsll = vec_sl(vsll, vull);
+  // CHECK: urem <2 x i64> {{%.*}}, <i64 64, i64 64>
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vslo
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vsl
+  // CHECK: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vslo
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vsl
+  // CHECK: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 3>
+  // CHECK-LE: urem <2 x i64> {{%.*}}, <i64 64, i64 64>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vslo
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vsl
+  // CHECK-LE: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK-LE: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vslo
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vsl
+  // CHECK-LE: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 0, i32 2>
+  res_vull = vec_sl(vull, vull);
+  // CHECK: urem <2 x i64> {{%.*}}, <i64 64, i64 64>
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vslo
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vsl
+  // CHECK: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vslo
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vsl
+  // CHECK: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 3>
+  // CHECK-LE: urem <2 x i64> {{%.*}}, <i64 64, i64 64>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vslo
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vsl
+  // CHECK-LE: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK-LE: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vslo
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vsl
+  // CHECK-LE: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 0, i32 2>
+  dummy();
+  // CHECK: call void @dummy()
+  // CHECK-LE: call void @dummy()
+
+  res_vsll = vec_sr(vsll, vull);
+  // CHECK: urem <2 x i64> {{%.*}}, <i64 64, i64 64>
+  // CHECK: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vsro
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vsr
+  // CHECK: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vsro
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vsr
+  // CHECK: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 0, i32 2>
+  // CHECK-LE: urem <2 x i64> {{%.*}}, <i64 64, i64 64>
+  // CHECK-LE: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vsro
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vsr
+  // CHECK-LE: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vsro
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vsr
+  // CHECK-LE: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 3>
+  res_vull = vec_sr(vull, vull);
+  // CHECK: urem <2 x i64> {{%.*}}, <i64 64, i64 64>
+  // CHECK: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vsro
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vsr
+  // CHECK: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vsro
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vsr
+  // CHECK: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 0, i32 2>
+  // CHECK-LE: urem <2 x i64> {{%.*}}, <i64 64, i64 64>
+  // CHECK-LE: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vsro
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vsr
+  // CHECK-LE: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vsro
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vsr
+  // CHECK-LE: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 3>
+  dummy();
+  // CHECK: call void @dummy()
+  // CHECK-LE: call void @dummy()
+
+  res_vsll = vec_sra(vsll, vull);
+  // CHECK: urem <2 x i64> {{%.*}}, <i64 64, i64 64>
+  // CHECK: ashr <2 x i64>
+  // CHECK-LE: urem <2 x i64> {{%.*}}, <i64 64, i64 64>
+  // CHECK-LE: ashr <2 x i64>
+  res_vull = vec_sra(vull, vull);
+  // CHECK: urem <2 x i64> {{%.*}}, <i64 64, i64 64>
+  // CHECK: ashr <2 x i64>
+  // CHECK-LE: urem <2 x i64> {{%.*}}, <i64 64, i64 64>
+  // CHECK-LE: ashr <2 x i64>
+
+  /* ----------------------- predicates --------------------------- */
+  /* vec_all_eq */
+  res_i = vec_all_eq(vsll, vsll);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  res_i = vec_all_eq(vsll, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  res_i = vec_all_eq(vull, vull);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  res_i = vec_all_eq(vull, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  res_i = vec_all_eq(vbll, vsll);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  res_i = vec_all_eq(vbll, vull);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  res_i = vec_all_eq(vbll, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  /* vec_all_ne */
+  res_i = vec_all_ne(vsll, vsll);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  res_i = vec_all_ne(vsll, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  res_i = vec_all_ne(vull, vull);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  res_i = vec_all_ne(vull, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  res_i = vec_all_ne(vbll, vsll);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  res_i = vec_all_ne(vbll, vull);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  res_i = vec_all_ne(vbll, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  dummy();
+  // CHECK: @dummy
+
+  /* vec_any_eq */
+  res_i = vec_any_eq(vsll, vsll);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  res_i = vec_any_eq(vsll, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  res_i = vec_any_eq(vull, vull);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  res_i = vec_any_eq(vull, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  res_i = vec_any_eq(vbll, vsll);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  res_i = vec_any_eq(vbll, vull);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  res_i = vec_any_eq(vbll, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  /* vec_any_ne */
+  res_i = vec_any_ne(vsll, vsll);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  res_i = vec_any_ne(vsll, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  res_i = vec_any_ne(vull, vull);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  res_i = vec_any_ne(vull, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  res_i = vec_any_ne(vbll, vsll);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  res_i = vec_any_ne(vbll, vull);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  res_i = vec_any_ne(vbll, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpequd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
+
+  /* vec_all_ge */
+  res_i = vec_all_ge(vsll, vsll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtsd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
+
+  res_i = vec_all_ge(vsll, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtsd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
+
+  res_i = vec_all_ge(vull, vull);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_all_ge(vull, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_all_ge(vbll, vsll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_all_ge(vbll, vull);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_all_ge(vbll, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  /* vec_all_gt */
+  res_i = vec_all_gt(vsll, vsll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtsd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
+
+  res_i = vec_all_gt(vsll, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtsd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
+
+  res_i = vec_all_gt(vull, vull);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_all_gt(vull, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_all_gt(vbll, vsll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_all_gt(vbll, vull);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_all_gt(vbll, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  /* vec_all_le */
+  res_i = vec_all_le(vsll, vsll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtsd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
+
+  res_i = vec_all_le(vsll, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtsd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
+
+  res_i = vec_all_le(vull, vull);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_all_le(vull, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_all_le(vbll, vsll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_all_le(vbll, vull);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_all_le(vbll, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  /* vec_all_lt */
+  res_i = vec_all_lt(vsll, vsll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtsd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
+
+  res_i = vec_all_lt(vsll, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtsd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
+
+  res_i = vec_all_lt(vull, vull);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_all_lt(vull, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_all_lt(vbll, vsll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_all_lt(vbll, vull);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_all_lt(vbll, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  /* vec_any_ge */
+  res_i = vec_any_ge(vsll, vsll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtsd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
+
+  res_i = vec_any_ge(vsll, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtsd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
+
+  res_i = vec_any_ge(vull, vull);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_any_ge(vull, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_any_ge(vbll, vsll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_any_ge(vbll, vull);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_any_ge(vbll, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  /* vec_any_gt */
+  res_i = vec_any_gt(vsll, vsll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtsd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
+
+  res_i = vec_any_gt(vsll, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtsd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
+
+  res_i = vec_any_gt(vull, vull);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_any_gt(vull, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_any_gt(vbll, vsll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_any_gt(vbll, vull);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_any_gt(vbll, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  /* vec_any_le */
+  res_i = vec_any_le(vsll, vsll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtsd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
+
+  res_i = vec_any_le(vsll, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtsd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
+
+  res_i = vec_any_le(vull, vull);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_any_le(vull, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_any_le(vbll, vsll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_any_le(vbll, vull);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_any_le(vbll, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  /* vec_any_lt */
+  res_i = vec_any_lt(vsll, vsll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtsd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
+
+  res_i = vec_any_lt(vsll, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtsd.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
+
+  res_i = vec_any_lt(vull, vull);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_any_lt(vull, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_any_lt(vbll, vsll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_any_lt(vbll, vull);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+
+  res_i = vec_any_lt(vbll, vbll);
+  // CHECK: @llvm.ppc.altivec.vcmpgtud.p
+  // CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
+}

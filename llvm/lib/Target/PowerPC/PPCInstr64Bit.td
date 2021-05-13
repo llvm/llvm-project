@@ -703,11 +703,11 @@ let isCompare = 1, hasSideEffects = 0 in {
                            "cmpldi $dst, $src1, $src2",
                            IIC_IntCompare>, isPPC64;
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in
-  def CMPRB8 : X_BF3_L1_RS5_RS5<31, 192, (outs crbitrc:$BF),
+  def CMPRB8 : X_BF3_L1_RS5_RS5<31, 192, (outs crrc:$BF),
                                 (ins u1imm:$L, g8rc:$rA, g8rc:$rB),
                                 "cmprb $BF, $L, $rA, $rB", IIC_IntCompare, []>,
                Requires<[IsISA3_0]>;
-  def CMPEQB : X_BF3_RS5_RS5<31, 224, (outs crbitrc:$BF),
+  def CMPEQB : X_BF3_RS5_RS5<31, 224, (outs crrc:$BF),
                              (ins g8rc:$rA, g8rc:$rB), "cmpeqb $BF, $rA, $rB",
                              IIC_IntCompare, []>, Requires<[IsISA3_0]>;
 }
@@ -835,8 +835,6 @@ def MADDLD : VAForm_1a<51, (outs gprc :$RT), (ins gprc:$RA, gprc:$RB, gprc:$RC),
                        "maddld $RT, $RA, $RB, $RC", IIC_IntMulHD,
                        [(set i32:$RT, (add_without_simm16 (mul_without_simm16 i32:$RA, i32:$RB), i32:$RC))]>,
                        isPPC64;
-def SETB : XForm_44<31, 128, (outs gprc:$RT), (ins crrc:$BFA),
-                       "setb $RT, $BFA", IIC_IntGeneral>, isPPC64;
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
   def MADDLD8 : VAForm_1a<51, 
                        (outs g8rc :$RT), (ins g8rc:$RA, g8rc:$RB, g8rc:$RC),

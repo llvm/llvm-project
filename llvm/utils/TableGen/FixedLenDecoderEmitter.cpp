@@ -1506,13 +1506,13 @@ bool FilterChooser::filterProcessor(bool AllowMixed, bool Greedy) {
   if (AllowMixed && !Greedy) {
     assert(numInstructions == 3);
 
-    for (unsigned i = 0; i < Opcodes.size(); ++i) {
+    for (auto Opcode : Opcodes) {
       std::vector<unsigned> StartBits;
       std::vector<unsigned> EndBits;
       std::vector<uint64_t> FieldVals;
       insn_t Insn;
 
-      insnWithID(Insn, Opcodes[i].EncodingID);
+      insnWithID(Insn, Opcode.EncodingID);
 
       // Look for islands of undecoded bits of any instruction.
       if (getIslands(StartBits, EndBits, FieldVals, Insn) > 0) {
@@ -1774,13 +1774,13 @@ void FilterChooser::emitTableEntries(DecoderTableInfo &TableInfo) const {
 
   dumpStack(errs(), "\t\t");
 
-  for (unsigned i = 0; i < Opcodes.size(); ++i) {
+  for (auto Opcode : Opcodes) {
     errs() << '\t';
-    emitNameWithID(errs(), Opcodes[i].EncodingID);
+    emitNameWithID(errs(), Opcode.EncodingID);
     errs() << " ";
     dumpBits(
         errs(),
-        getBitsField(*AllInstructions[Opcodes[i].EncodingID].EncodingDef, "Inst"));
+        getBitsField(*AllInstructions[Opcode.EncodingID].EncodingDef, "Inst"));
     errs() << '\n';
   }
 }

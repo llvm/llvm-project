@@ -101,6 +101,7 @@ TARGET_BUILTIN(__builtin_ia32_testui, "Uc", "n", "uintr")
 TARGET_BUILTIN(__builtin_ia32_senduipi, "vUWi", "n", "uintr")
 
 // AMX internal builtin
+TARGET_BUILTIN(__builtin_ia32_tile_loadconfig_internal, "vvC*", "n", "amx-tile")
 TARGET_BUILTIN(__builtin_ia32_tileloadd64_internal, "V256iUsUsvC*z", "n", "amx-tile")
 TARGET_BUILTIN(__builtin_ia32_tdpbssd_internal, "V256iUsUsUsV256iV256iV256i", "n", "amx-int8")
 TARGET_BUILTIN(__builtin_ia32_tdpbsud_internal, "V256iUsUsUsV256iV256iV256i", "n", "amx-int8")

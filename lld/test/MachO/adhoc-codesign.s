@@ -1,7 +1,6 @@
 # REQUIRES: x86, aarch64
 
-# RUN: rm -rf %t
-# RUN: split-file %s %t
+# RUN: rm -rf %t; split-file %s %t
 
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o %t/main-arm64-macos.o %t/main.s
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-iossimulator -o %t/main-arm64-sim.o %t/main.s

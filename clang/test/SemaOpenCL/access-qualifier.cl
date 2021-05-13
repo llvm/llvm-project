@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -pedantic -fsyntax-only -cl-std=CL1.2 %s
+// RUN: %clang_cc1 -verify -pedantic -fsyntax-only -cl-std=CL1.2 %s -cl-ext=-cl_khr_3d_image_writes
 // RUN: %clang_cc1 -verify -pedantic -fsyntax-only -cl-std=CL2.0 %s
 
 typedef image1d_t img1d_ro_default; // expected-note {{previously declared 'read_only' here}}

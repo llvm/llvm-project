@@ -1,6 +1,6 @@
 # REQUIRES: x86
 
-# RUN: split-file %s %t
+# RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
 # RUN:     %t/basics.s -o %t/basics.o
 

@@ -5,54 +5,42 @@
 ; This test is to make sure we invalidate the post dominator pass after loop rotate simplifies the loop latch.
 ; The adce passes are here to make sure post dominator analysis is required.
 
-; CHECK: Starting llvm::Function pass manager run.
-; CHECK-NEXT: Running pass: ADCEPass on f
+; CHECK: Running pass: ADCEPass on f
 ; CHECK-NEXT: Running analysis: PostDominatorTreeAnalysis on f
-; CHECK-NEXT: Starting llvm::Function pass manager run.
 ; CHECK-NEXT: Running pass: LoopSimplifyPass on f
 ; CHECK-NEXT: Running analysis: LoopAnalysis on f
 ; CHECK-NEXT: Running analysis: DominatorTreeAnalysis on f
 ; CHECK-NEXT: Running analysis: AssumptionAnalysis on f
 ; CHECK-NEXT: Running pass: LCSSAPass on f
-; CHECK-NEXT: Finished llvm::Function pass manager run.
 ; CHECK-NEXT: Running analysis: AAManager on f
 ; CHECK-NEXT: Running analysis: TargetLibraryAnalysis on f
 ; CHECK-NEXT: Running analysis: ScalarEvolutionAnalysis on f
 ; CHECK-NEXT: Running analysis: TargetIRAnalysis on f
 ; CHECK-NEXT: Running analysis: InnerAnalysisManagerProxy{{.*}} on f
-; CHECK-NEXT: Starting Loop pass manager run.
 ; CHECK-NEXT: Running pass: LoopRotatePass on Loop at depth 1 containing: %bb<header><exiting>,%bb4<latch>
 ; CHECK-NEXT: Folding loop latch bb4 into bb
-; CHECK-NEXT: Finished Loop pass manager run.
 ; CHECK-NEXT: Invalidating analysis: PostDominatorTreeAnalysis on f
 ; CHECK-NEXT: Running pass: ADCEPass on f
 ; CHECK-NEXT: Running analysis: PostDominatorTreeAnalysis on f
-; CHECK-NEXT: Finished llvm::Function pass manager run.
 
-; MSSA: Starting llvm::Function pass manager run.
-; MSSA-NEXT: Running pass: ADCEPass on f
+; MSSA: Running pass: ADCEPass on f
 ; MSSA-NEXT: Running analysis: PostDominatorTreeAnalysis on f
-; MSSA-NEXT: Starting llvm::Function pass manager run.
 ; MSSA-NEXT: Running pass: LoopSimplifyPass on f
 ; MSSA-NEXT: Running analysis: LoopAnalysis on f
 ; MSSA-NEXT: Running analysis: DominatorTreeAnalysis on f
 ; MSSA-NEXT: Running analysis: AssumptionAnalysis on f
 ; MSSA-NEXT: Running pass: LCSSAPass on f
-; MSSA-NEXT: Finished llvm::Function pass manager run.
 ; MSSA-NEXT: Running analysis: MemorySSAAnalysis on f
 ; MSSA-NEXT: Running analysis: AAManager on f
 ; MSSA-NEXT: Running analysis: TargetLibraryAnalysis on f
 ; MSSA-NEXT: Running analysis: ScalarEvolutionAnalysis on f
 ; MSSA-NEXT: Running analysis: TargetIRAnalysis on f
 ; MSSA-NEXT: Running analysis: InnerAnalysisManagerProxy{{.*}} on f
-; MSSA-NEXT: Starting Loop pass manager run.
 ; MSSA-NEXT: Running pass: LoopRotatePass on Loop at depth 1 containing: %bb<header><exiting>,%bb4<latch>
 ; MSSA-NEXT: Folding loop latch bb4 into bb
-; MSSA-NEXT: Finished Loop pass manager run.
 ; MSSA-NEXT: Invalidating analysis: PostDominatorTreeAnalysis on f
 ; MSSA-NEXT: Running pass: ADCEPass on f
 ; MSSA-NEXT: Running analysis: PostDominatorTreeAnalysis on f
-; MSSA-NEXT: Finished llvm::Function pass manager run.
 
 ; CHECK-LABEL: define i8 @f() {
 ; CHECK-NEXT:  entry:

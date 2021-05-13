@@ -52,15 +52,8 @@ EXTERN __kmpc_impl_lanemask_t __kmpc_impl_activemask() {
   return __builtin_amdgcn_read_exec();
 }
 
-uint32_t __kmpc_L1_Barrier [[clang::loader_uninitialized]];
-#pragma allocate(__kmpc_L1_Barrier) allocator(omp_pteam_mem_alloc)
-
-EXTERN void __kmpc_impl_target_init() {
-  // Don't have global ctors, and shared memory is not zero init
-  __atomic_store_n(&__kmpc_L1_Barrier, 0u, __ATOMIC_RELEASE);
-}
-
-EXTERN void __kmpc_impl_named_sync(uint32_t num_threads) {
+static void pteam_mem_barrier(uint32_t num_threads, uint32_t * barrier_state)
+{
   __atomic_thread_fence(__ATOMIC_ACQUIRE);
 
   uint32_t num_waves = num_threads / WARPSIZE;
@@ -81,7 +74,7 @@ EXTERN void __kmpc_impl_named_sync(uint32_t num_threads) {
   bool isLowest = GetLaneId() == lowestActiveThread;
 
   if (isLowest) {
-    uint32_t load = __atomic_fetch_add(&__kmpc_L1_Barrier, 1,
+    uint32_t load = __atomic_fetch_add(barrier_state, 1,
                                        __ATOMIC_RELAXED); // commutative
 
     // Record the number of times the barrier has been passed
@@ -94,16 +87,28 @@ EXTERN void __kmpc_impl_named_sync(uint32_t num_threads) {
       load &= 0xffff0000u; // because bits zeroed second
 
       // Reset the wave counter and release the waiting waves
-      __atomic_store_n(&__kmpc_L1_Barrier, load, __ATOMIC_RELAXED);
+      __atomic_store_n(barrier_state, load, __ATOMIC_RELAXED);
     } else {
       // more waves still to go, spin until generation counter changes
       do {
         __builtin_amdgcn_s_sleep(0);
-        load = __atomic_load_n(&__kmpc_L1_Barrier, __ATOMIC_RELAXED);
+        load = __atomic_load_n(barrier_state, __ATOMIC_RELAXED);
       } while ((load & 0xffff0000u) == generation);
     }
   }
   __atomic_thread_fence(__ATOMIC_RELEASE);
+}
+
+uint32_t __kmpc_L0_Barrier [[clang::loader_uninitialized]];
+#pragma allocate(__kmpc_L0_Barrier) allocator(omp_pteam_mem_alloc)
+
+EXTERN void __kmpc_impl_target_init() {
+  // Don't have global ctors, and shared memory is not zero init
+  __atomic_store_n(&__kmpc_L0_Barrier, 0u, __ATOMIC_RELEASE);
+}
+
+EXTERN void __kmpc_impl_named_sync(uint32_t num_threads) {
+  pteam_mem_barrier(num_threads, &__kmpc_L0_Barrier);
 }
 
 namespace {

@@ -21,6 +21,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
@@ -85,9 +86,9 @@ INITIALIZE_PASS_BEGIN(SVEIntrinsicOpts, DEBUG_TYPE, name, false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass);
 INITIALIZE_PASS_END(SVEIntrinsicOpts, DEBUG_TYPE, name, false, false)
 
-namespace llvm {
-ModulePass *createSVEIntrinsicOptsPass() { return new SVEIntrinsicOpts(); }
-} // namespace llvm
+ModulePass *llvm::createSVEIntrinsicOptsPass() {
+  return new SVEIntrinsicOpts();
+}
 
 /// Checks if a ptrue intrinsic call is promoted. The act of promoting a
 /// ptrue will introduce zeroing. For example:
@@ -101,7 +102,7 @@ ModulePass *createSVEIntrinsicOptsPass() { return new SVEIntrinsicOpts(); }
 ///     <vscale x 4 x i1> => <vscale x 16 x i1> => <vscale x 8 x i1>
 ///
 /// via a sequence of the SVE reinterpret intrinsics convert.{to,from}.svbool.
-bool isPTruePromoted(IntrinsicInst *PTrue) {
+static bool isPTruePromoted(IntrinsicInst *PTrue) {
   // Find all users of this intrinsic that are calls to convert-to-svbool
   // reinterpret intrinsics.
   SmallVector<IntrinsicInst *, 4> ConvertToUses;

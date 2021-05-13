@@ -12,12 +12,14 @@
 #include "llvm/Demangle/DemangleConfig.h"
 #include "llvm/Demangle/StringView.h"
 #include "llvm/Demangle/Utility.h"
+#include <cstdint>
 
 namespace llvm {
 namespace rust_demangle {
 
 using llvm::itanium_demangle::OutputStream;
 using llvm::itanium_demangle::StringView;
+using llvm::itanium_demangle::SwapAndRestore;
 
 struct Identifier {
   StringView Name;
@@ -50,17 +52,33 @@ public:
 
 private:
   void demanglePath();
+  void demangleGenericArg();
+  void demangleType();
 
   Identifier parseIdentifier();
-  void parseOptionalBase62Number(char Tag);
+  uint64_t parseOptionalBase62Number(char Tag);
   uint64_t parseBase62Number();
   uint64_t parseDecimalNumber();
+
+  void print(char C) {
+    if (Error)
+      return;
+
+    Output += C;
+  }
 
   void print(StringView S) {
     if (Error)
       return;
 
     Output += S;
+  }
+
+  void printDecimalNumber(uint64_t N) {
+    if (Error)
+      return;
+
+    Output << N;
   }
 
   char look() const {

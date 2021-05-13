@@ -1,21 +1,8 @@
-# TODO: Make the check source feature optional as an argument on *_add_library.
-set(LLVM_OPTIONAL_SOURCES
-  Async.cpp
-  AsyncPasses.cpp
-  GPU.cpp
-  GPUPasses.cpp
-  Linalg.cpp
-  LinalgPasses.cpp
-  SCF.cpp
-  Shape.cpp
-  Standard.cpp
-  Tensor.cpp
-)
-
 add_mlir_public_c_api_library(MLIRCAPIAsync
   Async.cpp
   AsyncPasses.cpp
 
+  PARTIAL_SOURCES_INTENDED
   DEPENDS
   MLIRAsyncPassIncGen
 
@@ -30,6 +17,7 @@ add_mlir_public_c_api_library(MLIRCAPIGPU
   GPU.cpp
   GPUPasses.cpp
 
+  PARTIAL_SOURCES_INTENDED
   DEPENDS
   MLIRGPUPassIncGen
 
@@ -43,6 +31,7 @@ add_mlir_public_c_api_library(MLIRCAPILinalg
   Linalg.cpp
   LinalgPasses.cpp
 
+  PARTIAL_SOURCES_INTENDED
   DEPENDS
   MLIRLinalgPassIncGen
 
@@ -56,6 +45,7 @@ add_mlir_public_c_api_library(MLIRCAPILinalg
 add_mlir_public_c_api_library(MLIRCAPISCF
   SCF.cpp
 
+  PARTIAL_SOURCES_INTENDED
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRSCF
@@ -64,14 +54,27 @@ add_mlir_public_c_api_library(MLIRCAPISCF
 add_mlir_public_c_api_library(MLIRCAPIShape
   Shape.cpp
 
+  PARTIAL_SOURCES_INTENDED
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRShape
 )
 
+add_mlir_public_c_api_library(MLIRCAPISparseTensor
+  SparseTensor.cpp
+  SparseTensorPasses.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIRSparseTensor
+  MLIRSparseTensorTransforms
+)
+
 add_mlir_public_c_api_library(MLIRCAPIStandard
   Standard.cpp
 
+  PARTIAL_SOURCES_INTENDED
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRStandard
@@ -80,6 +83,7 @@ add_mlir_public_c_api_library(MLIRCAPIStandard
 add_mlir_public_c_api_library(MLIRCAPITensor
   Tensor.cpp
 
+  PARTIAL_SOURCES_INTENDED
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRTensor

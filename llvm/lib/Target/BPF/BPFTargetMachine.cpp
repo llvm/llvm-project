@@ -122,11 +122,10 @@ void BPFTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
       });
 }
 
-void BPFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
-                                                    bool DebugPassManager) {
+void BPFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
   PB.registerPipelineStartEPCallback(
       [=](ModulePassManager &MPM, PassBuilder::OptimizationLevel) {
-        FunctionPassManager FPM(DebugPassManager);
+        FunctionPassManager FPM;
         FPM.addPass(BPFAbstractMemberAccessPass(this));
         FPM.addPass(BPFPreserveDITypePass());
         MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));

@@ -164,3 +164,5 @@ void use_inline() {
 // CHECK: store i32 1234, i32* @my_unique_global
 
 // CHECK: attributes #[[NOINLINE]] = { {{.*noinline.*}} }
+
+void seh_in_noexcept() noexcept { __try {} __finally {} }

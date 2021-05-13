@@ -2,7 +2,7 @@
 ; Test removal of AND operations that don't affect last 6 bits of shift amount
 ; operand.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z14 | FileCheck %s
 
 ; Test that AND is not removed when some lower 6 bits are not set.
 define i32 @f1(i32 %a, i32 %sh) {
@@ -119,35 +119,91 @@ define i32 @f10(i32 %a, i32 %sh) {
   ret i32 %reuse
 }
 
-; Test that AND is not removed for i128 (which calls __ashlti3)
 define i128 @f11(i128 %a, i32 %sh) {
 ; CHECK-LABEL: f11:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    stmg %r13, %r15, 104(%r15)
-; CHECK-NEXT:    .cfi_offset %r13, -56
+; CHECK-NEXT:    stmg %r14, %r15, 112(%r15)
 ; CHECK-NEXT:    .cfi_offset %r14, -48
 ; CHECK-NEXT:    .cfi_offset %r15, -40
-; CHECK-NEXT:    aghi %r15, -192
-; CHECK-NEXT:    .cfi_def_cfa_offset 352
 ; CHECK-NEXT:    lg %r0, 8(%r3)
-; CHECK-NEXT:    # kill: def $r4l killed $r4l def $r4d
-; CHECK-NEXT:    lgr %r13, %r2
 ; CHECK-NEXT:    lg %r1, 0(%r3)
-; CHECK-NEXT:    stg %r0, 168(%r15)
-; CHECK-NEXT:    risbg %r4, %r4, 57, 191, 0
-; CHECK-NEXT:    la %r2, 176(%r15)
-; CHECK-NEXT:    la %r3, 160(%r15)
-; CHECK-NEXT:    stg %r1, 160(%r15)
-; CHECK-NEXT:    brasl %r14, __ashlti3@PLT
-; CHECK-NEXT:    lg %r0, 184(%r15)
-; CHECK-NEXT:    lg %r1, 176(%r15)
-; CHECK-NEXT:    stg %r0, 8(%r13)
-; CHECK-NEXT:    stg %r1, 0(%r13)
-; CHECK-NEXT:    lmg %r13, %r15, 296(%r15)
+; CHECK-NEXT:    risblg %r3, %r4, 25, 159, 0
+; CHECK-NEXT:    lcr %r14, %r3
+; CHECK-NEXT:    sllg %r5, %r1, 0(%r4)
+; CHECK-NEXT:    srlg %r14, %r0, 0(%r14)
+; CHECK-NEXT:    ogr %r5, %r14
+; CHECK-NEXT:    sllg %r3, %r0, -64(%r3)
+; CHECK-NEXT:    tmll %r4, 127
+; CHECK-NEXT:    locgrle %r3, %r5
+; CHECK-NEXT:    sllg %r0, %r0, 0(%r4)
+; CHECK-NEXT:    locgre %r3, %r1
+; CHECK-NEXT:    locghinle %r0, 0
+; CHECK-NEXT:    stg %r0, 8(%r2)
+; CHECK-NEXT:    stg %r3, 0(%r2)
+; CHECK-NEXT:    lmg %r14, %r15, 112(%r15)
 ; CHECK-NEXT:    br %r14
   %and = and i32 %sh, 127
   %ext = zext i32 %and to i128
   %shift = shl i128 %a, %ext
+  ret i128 %shift
+}
+
+define i128 @f12(i128 %a, i32 %sh) {
+; CHECK-LABEL: f12:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    stmg %r14, %r15, 112(%r15)
+; CHECK-NEXT:    .cfi_offset %r14, -48
+; CHECK-NEXT:    .cfi_offset %r15, -40
+; CHECK-NEXT:    lg %r0, 0(%r3)
+; CHECK-NEXT:    lg %r1, 8(%r3)
+; CHECK-NEXT:    risblg %r3, %r4, 25, 159, 0
+; CHECK-NEXT:    lcr %r14, %r3
+; CHECK-NEXT:    srlg %r5, %r1, 0(%r4)
+; CHECK-NEXT:    sllg %r14, %r0, 0(%r14)
+; CHECK-NEXT:    ogr %r5, %r14
+; CHECK-NEXT:    srlg %r3, %r0, -64(%r3)
+; CHECK-NEXT:    tmll %r4, 127
+; CHECK-NEXT:    locgrle %r3, %r5
+; CHECK-NEXT:    srlg %r0, %r0, 0(%r4)
+; CHECK-NEXT:    locgre %r3, %r1
+; CHECK-NEXT:    locghinle %r0, 0
+; CHECK-NEXT:    stg %r0, 0(%r2)
+; CHECK-NEXT:    stg %r3, 8(%r2)
+; CHECK-NEXT:    lmg %r14, %r15, 112(%r15)
+; CHECK-NEXT:    br %r14
+  %and = and i32 %sh, 127
+  %ext = zext i32 %and to i128
+  %shift = lshr i128 %a, %ext
+  ret i128 %shift
+}
+
+define i128 @f13(i128 %a, i32 %sh) {
+; CHECK-LABEL: f13:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    stmg %r14, %r15, 112(%r15)
+; CHECK-NEXT:    .cfi_offset %r14, -48
+; CHECK-NEXT:    .cfi_offset %r15, -40
+; CHECK-NEXT:    lg %r0, 0(%r3)
+; CHECK-NEXT:    lg %r1, 8(%r3)
+; CHECK-NEXT:    risblg %r3, %r4, 25, 159, 0
+; CHECK-NEXT:    lcr %r14, %r3
+; CHECK-NEXT:    srlg %r5, %r1, 0(%r4)
+; CHECK-NEXT:    sllg %r14, %r0, 0(%r14)
+; CHECK-NEXT:    ogr %r5, %r14
+; CHECK-NEXT:    srag %r14, %r0, 0(%r4)
+; CHECK-NEXT:    srag %r3, %r0, -64(%r3)
+; CHECK-NEXT:    srag %r0, %r0, 63
+; CHECK-NEXT:    tmll %r4, 127
+; CHECK-NEXT:    locgrle %r3, %r5
+; CHECK-NEXT:    locgre %r3, %r1
+; CHECK-NEXT:    locgrle %r0, %r14
+; CHECK-NEXT:    stg %r0, 0(%r2)
+; CHECK-NEXT:    stg %r3, 8(%r2)
+; CHECK-NEXT:    lmg %r14, %r15, 112(%r15)
+; CHECK-NEXT:    br %r14
+  %and = and i32 %sh, 127
+  %ext = zext i32 %and to i128
+  %shift = ashr i128 %a, %ext
   ret i128 %shift
 }
 

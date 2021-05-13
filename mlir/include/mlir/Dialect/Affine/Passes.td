@@ -112,7 +112,11 @@ def AffineVectorize : FunctionPass<"affine-super-vectorize"> {
                "Specify a 1-D, 2-D or 3-D pattern of fastest varying memory "
                "dimensions to match. See defaultPatterns in Vectorize.cpp for "
                "a description and examples. This is used for testing purposes",
-               "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">
+               "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">,
+    Option<"vectorizeReductions", "vectorize-reductions", "bool",
+           /*default=*/"false",
+           "Vectorize known reductions expressed via iter_args. "
+           "Switched off by default.">
   ];
 }
 

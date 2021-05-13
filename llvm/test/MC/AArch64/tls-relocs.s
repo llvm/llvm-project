@@ -388,7 +388,7 @@
 // CHECK: add    x5, x4, :tlsdesc_lo12:var // encoding: [0x85,0bAAAAAA00,0b00AAAAAA,0x91]
 // CHECK:                                  //   fixup A - offset: 0, value: :tlsdesc_lo12:var, kind: fixup_aarch64_add_imm12
 // CHECK: .tlsdesccall var                // encoding: []
-// CHECK:                                 //   fixup A - offset: 0, value: var, kind: fixup_aarch64_tlsdesc_call
+// CHECK-NEXT:                            //   fixup A - offset: 0, value: var, kind: FK_NONE
 // CHECK: blr    x3                      // encoding: [0x60,0x00,0x3f,0xd6]
 
 // CHECK-ELF-NEXT:     0x104 R_AARCH64_TLSDESC_ADR_PAGE21 [[VARSYM]]

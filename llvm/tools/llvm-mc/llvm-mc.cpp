@@ -379,11 +379,25 @@ int main(int argc, char **argv) {
   }
   MAI->setPreserveAsmComments(PreserveComments);
 
+  // Package up features to be passed to target/subtarget
+  std::string FeaturesStr;
+  if (MAttrs.size()) {
+    SubtargetFeatures Features;
+    for (unsigned i = 0; i != MAttrs.size(); ++i)
+      Features.AddFeature(MAttrs[i]);
+    FeaturesStr = Features.getString();
+  }
+
+  std::unique_ptr<MCSubtargetInfo> STI(
+      TheTarget->createMCSubtargetInfo(TripleName, MCPU, FeaturesStr));
+  assert(STI && "Unable to create subtarget info!");
+
   // FIXME: This is not pretty. MCContext has a ptr to MCObjectFileInfo and
   // MCObjectFileInfo needs a MCContext reference in order to initialize itself.
   MCObjectFileInfo MOFI;
-  MCContext Ctx(MAI.get(), MRI.get(), &MOFI, &SrcMgr, &MCOptions);
-  MOFI.InitMCObjectFileInfo(TheTriple, PIC, Ctx, LargeCodeModel);
+  MCContext Ctx(TheTriple, MAI.get(), MRI.get(), &MOFI, STI.get(), &SrcMgr,
+                &MCOptions);
+  MOFI.initMCObjectFileInfo(Ctx, PIC, LargeCodeModel);
 
   if (SaveTempLabels)
     Ctx.setAllowTemporaryLabels(false);
@@ -443,15 +457,6 @@ int main(int argc, char **argv) {
   if (GenDwarfForAssembly)
     Ctx.setGenDwarfRootFile(InputFilename, Buffer->getBuffer());
 
-  // Package up features to be passed to target/subtarget
-  std::string FeaturesStr;
-  if (MAttrs.size()) {
-    SubtargetFeatures Features;
-    for (unsigned i = 0; i != MAttrs.size(); ++i)
-      Features.AddFeature(MAttrs[i]);
-    FeaturesStr = Features.getString();
-  }
-
   sys::fs::OpenFlags Flags = (FileType == OFT_AssemblyFile)
                                  ? sys::fs::OF_TextWithCRLF
                                  : sys::fs::OF_None;
@@ -476,10 +481,6 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
   assert(MCII && "Unable to create instruction info!");
-
-  std::unique_ptr<MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TripleName, MCPU, FeaturesStr));
-  assert(STI && "Unable to create subtarget info!");
 
   MCInstPrinter *IP = nullptr;
   if (FileType == OFT_AssemblyFile) {

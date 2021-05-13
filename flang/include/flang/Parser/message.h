@@ -200,10 +200,11 @@ public:
     return std::holds_alternative<MessageExpectedText>(text_);
   }
   bool Merge(const Message &);
+  bool operator==(const Message &that) const;
+  bool operator!=(const Message &that) const { return !(*this == that); }
 
 private:
   bool AtSameLocation(const Message &) const;
-
   std::variant<ProvenanceRange, CharBlock> location_;
   std::variant<MessageFixedText, MessageFormattedText, MessageExpectedText>
       text_;

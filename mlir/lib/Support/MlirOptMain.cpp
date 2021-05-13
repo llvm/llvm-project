@@ -24,6 +24,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/DebugCounter.h"
 #include "mlir/Support/FileUtilities.h"
+#include "mlir/Support/Timing.h"
 #include "mlir/Support/ToolUtilities.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
@@ -47,21 +48,28 @@ static LogicalResult performActions(raw_ostream &os, bool verifyDiagnostics,
                                     bool verifyPasses, SourceMgr &sourceMgr,
                                     MLIRContext *context,
                                     const PassPipelineCLParser &passPipeline) {
+  DefaultTimingManager tm;
+  applyDefaultTimingManagerCLOptions(tm);
+  TimingScope timing = tm.getRootScope();
+
   // Disable multi-threading when parsing the input file. This removes the
   // unnecessary/costly context synchronization when parsing.
   bool wasThreadingEnabled = context->isMultithreadingEnabled();
   context->disableMultithreading();
 
   // Parse the input file and reset the context threading state.
+  TimingScope parserTiming = timing.nest("Parser");
   OwningModuleRef module(parseSourceFile(sourceMgr, context));
   context->enableMultithreading(wasThreadingEnabled);
   if (!module)
     return failure();
+  parserTiming.stop();
 
   // Apply any pass manager command line options.
   PassManager pm(context, OpPassManager::Nesting::Implicit);
   pm.enableVerifier(verifyPasses);
   applyPassManagerCLOptions(pm);
+  pm.enableTiming(timing);
 
   auto errorHandler = [&](const Twine &msg) {
     emitError(UnknownLoc::get(context)) << msg;
@@ -77,6 +85,7 @@ static LogicalResult performActions(raw_ostream &os, bool verifyDiagnostics,
     return failure();
 
   // Print the output.
+  TimingScope outputTiming = timing.nest("Output");
   module->print(os);
   os << '\n';
   return success();
@@ -195,6 +204,7 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
   registerAsmPrinterCLOptions();
   registerMLIRContextCLOptions();
   registerPassManagerCLOptions();
+  registerDefaultTimingManagerCLOptions();
   DebugCounter::registerCLOptions();
   PassPipelineCLParser passPipeline("", "Compiler passes to run");
 
@@ -202,7 +212,6 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
   std::string helpHeader = (toolName + "\nAvailable Dialects: ").str();
   {
     llvm::raw_string_ostream os(helpHeader);
-    MLIRContext context;
     interleaveComma(registry.getDialectNames(), os,
                     [&](auto name) { os << name; });
   }

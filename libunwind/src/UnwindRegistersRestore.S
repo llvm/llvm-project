@@ -134,7 +134,7 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind15Registers_ppc646jumptoEv)
 
 // load register (GPR)
 #define PPC64_LR(n) \
-  ld    %r##n, (8 * (n + 2))(%r3)
+  ld    n, (8 * (n + 2))(3)
 
   // restore integral registers
   // skip r0 for now
@@ -176,12 +176,12 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind15Registers_ppc646jumptoEv)
   // (note that this also restores floating point registers and V registers,
   // because part of VS is mapped to these registers)
 
-  addi  %r4, %r3, PPC64_OFFS_FP
+  addi  4, 3, PPC64_OFFS_FP
 
 // load VS register
 #define PPC64_LVS(n)         \
-  lxvd2x  %vs##n, 0, %r4    ;\
-  addi    %r4, %r4, 16
+  lxvd2x  n, 0, 4           ;\
+  addi    4, 4, 16
 
   // restore the first 32 VS regs (and also all floating point regs)
   PPC64_LVS(0)
@@ -220,23 +220,23 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind15Registers_ppc646jumptoEv)
   // use VRSAVE to conditionally restore the remaining VS regs,
   // that are where the V regs are mapped
 
-  ld    %r5, PPC64_OFFS_VRSAVE(%r3)   // test VRsave
-  cmpwi %r5, 0
+  ld    5, PPC64_OFFS_VRSAVE(3)   // test VRsave
+  cmpwi 5, 0
   beq   Lnovec
 
 // conditionally load VS
 #define PPC64_CLVS_BOTTOM(n)               \
   beq    Ldone##n                         ;\
-  addi   %r4, %r3, PPC64_OFFS_FP + n * 16 ;\
-  lxvd2x %vs##n, 0, %r4                   ;\
+  addi   4, 3, PPC64_OFFS_FP + n * 16     ;\
+  lxvd2x n, 0, 4                          ;\
 Ldone##n:
 
-#define PPC64_CLVSl(n)           \
-  andis. %r0, %r5, (1<<(47-n))  ;\
+#define PPC64_CLVSl(n)                    \
+  andis. 0, 5, (1 PPC_LEFT_SHIFT(47-n))  ;\
 PPC64_CLVS_BOTTOM(n)
 
-#define PPC64_CLVSh(n)           \
-  andi.  %r0, %r5, (1<<(63-n))  ;\
+#define PPC64_CLVSh(n)                    \
+  andi.  0, 5, (1 PPC_LEFT_SHIFT(63-n))  ;\
 PPC64_CLVS_BOTTOM(n)
 
   PPC64_CLVSl(32)
@@ -276,7 +276,7 @@ PPC64_CLVS_BOTTOM(n)
 
 // load FP register
 #define PPC64_LF(n) \
-  lfd   %f##n, (PPC64_OFFS_FP + n * 16)(%r3)
+  lfd   n, (PPC64_OFFS_FP + n * 16)(3)
 
   // restore float registers
   PPC64_LF(0)
@@ -314,30 +314,30 @@ PPC64_CLVS_BOTTOM(n)
 
 #if defined(__ALTIVEC__)
   // restore vector registers if any are in use
-  ld    %r5, PPC64_OFFS_VRSAVE(%r3)   // test VRsave
-  cmpwi %r5, 0
+  ld    5, PPC64_OFFS_VRSAVE(3)   // test VRsave
+  cmpwi 5, 0
   beq   Lnovec
 
-  subi  %r4, %r1, 16
+  subi  4, 1, 16
   // r4 is now a 16-byte aligned pointer into the red zone
   // the _vectorScalarRegisters may not be 16-byte aligned
   // so copy via red zone temp buffer
 
 #define PPC64_CLV_UNALIGNED_BOTTOM(n)            \
   beq    Ldone##n                               ;\
-  ld     %r0, (PPC64_OFFS_V + n * 16)(%r3)      ;\
-  std    %r0, 0(%r4)                            ;\
-  ld     %r0, (PPC64_OFFS_V + n * 16 + 8)(%r3)  ;\
-  std    %r0, 8(%r4)                            ;\
-  lvx    %v##n, 0, %r4                          ;\
+  ld     0, (PPC64_OFFS_V + n * 16)(3)          ;\
+  std    0, 0(4)                                ;\
+  ld     0, (PPC64_OFFS_V + n * 16 + 8)(3)      ;\
+  std    0, 8(4)                                ;\
+  lvx    n, 0, 4                                ;\
 Ldone  ## n:
 
-#define PPC64_CLV_UNALIGNEDl(n)  \
-  andis. %r0, %r5, (1<<(15-n))  ;\
+#define PPC64_CLV_UNALIGNEDl(n)                 \
+  andis. 0, 5, (1 PPC_LEFT_SHIFT(15-n))        ;\
 PPC64_CLV_UNALIGNED_BOTTOM(n)
 
-#define PPC64_CLV_UNALIGNEDh(n)  \
-  andi.  %r0, %r5, (1<<(31-n))  ;\
+#define PPC64_CLV_UNALIGNEDh(n)                \
+  andi.  0, 5, (1 PPC_LEFT_SHIFT(31-n))       ;\
 PPC64_CLV_UNALIGNED_BOTTOM(n)
 
   PPC64_CLV_UNALIGNEDl(0)
@@ -377,10 +377,10 @@ PPC64_CLV_UNALIGNED_BOTTOM(n)
 #endif
 
 Lnovec:
-  ld    %r0, PPC64_OFFS_CR(%r3)
-  mtcr  %r0
-  ld    %r0, PPC64_OFFS_SRR0(%r3)
-  mtctr %r0
+  ld    0, PPC64_OFFS_CR(3)
+  mtcr  0
+  ld    0, PPC64_OFFS_SRR0(3)
+  mtctr 0
 
   PPC64_LR(0)
   PPC64_LR(5)
@@ -402,111 +402,111 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind13Registers_ppc6jumptoEv)
   // restore integral registerrs
   // skip r0 for now
   // skip r1 for now
-  lwz     %r2,  16(%r3)
+  lwz     2,  16(3)
   // skip r3 for now
   // skip r4 for now
   // skip r5 for now
-  lwz     %r6,  32(%r3)
-  lwz     %r7,  36(%r3)
-  lwz     %r8,  40(%r3)
-  lwz     %r9,  44(%r3)
-  lwz     %r10, 48(%r3)
-  lwz     %r11, 52(%r3)
-  lwz     %r12, 56(%r3)
-  lwz     %r13, 60(%r3)
-  lwz     %r14, 64(%r3)
-  lwz     %r15, 68(%r3)
-  lwz     %r16, 72(%r3)
-  lwz     %r17, 76(%r3)
-  lwz     %r18, 80(%r3)
-  lwz     %r19, 84(%r3)
-  lwz     %r20, 88(%r3)
-  lwz     %r21, 92(%r3)
-  lwz     %r22, 96(%r3)
-  lwz     %r23,100(%r3)
-  lwz     %r24,104(%r3)
-  lwz     %r25,108(%r3)
-  lwz     %r26,112(%r3)
-  lwz     %r27,116(%r3)
-  lwz     %r28,120(%r3)
-  lwz     %r29,124(%r3)
-  lwz     %r30,128(%r3)
-  lwz     %r31,132(%r3)
+  lwz     6,  32(3)
+  lwz     7,  36(3)
+  lwz     8,  40(3)
+  lwz     9,  44(3)
+  lwz     10, 48(3)
+  lwz     11, 52(3)
+  lwz     12, 56(3)
+  lwz     13, 60(3)
+  lwz     14, 64(3)
+  lwz     15, 68(3)
+  lwz     16, 72(3)
+  lwz     17, 76(3)
+  lwz     18, 80(3)
+  lwz     19, 84(3)
+  lwz     20, 88(3)
+  lwz     21, 92(3)
+  lwz     22, 96(3)
+  lwz     23,100(3)
+  lwz     24,104(3)
+  lwz     25,108(3)
+  lwz     26,112(3)
+  lwz     27,116(3)
+  lwz     28,120(3)
+  lwz     29,124(3)
+  lwz     30,128(3)
+  lwz     31,132(3)
 
 #ifndef __NO_FPRS__
   // restore float registers
-  lfd     %f0, 160(%r3)
-  lfd     %f1, 168(%r3)
-  lfd     %f2, 176(%r3)
-  lfd     %f3, 184(%r3)
-  lfd     %f4, 192(%r3)
-  lfd     %f5, 200(%r3)
-  lfd     %f6, 208(%r3)
-  lfd     %f7, 216(%r3)
-  lfd     %f8, 224(%r3)
-  lfd     %f9, 232(%r3)
-  lfd     %f10,240(%r3)
-  lfd     %f11,248(%r3)
-  lfd     %f12,256(%r3)
-  lfd     %f13,264(%r3)
-  lfd     %f14,272(%r3)
-  lfd     %f15,280(%r3)
-  lfd     %f16,288(%r3)
-  lfd     %f17,296(%r3)
-  lfd     %f18,304(%r3)
-  lfd     %f19,312(%r3)
-  lfd     %f20,320(%r3)
-  lfd     %f21,328(%r3)
-  lfd     %f22,336(%r3)
-  lfd     %f23,344(%r3)
-  lfd     %f24,352(%r3)
-  lfd     %f25,360(%r3)
-  lfd     %f26,368(%r3)
-  lfd     %f27,376(%r3)
-  lfd     %f28,384(%r3)
-  lfd     %f29,392(%r3)
-  lfd     %f30,400(%r3)
-  lfd     %f31,408(%r3)
+  lfd     0, 160(3)
+  lfd     1, 168(3)
+  lfd     2, 176(3)
+  lfd     3, 184(3)
+  lfd     4, 192(3)
+  lfd     5, 200(3)
+  lfd     6, 208(3)
+  lfd     7, 216(3)
+  lfd     8, 224(3)
+  lfd     9, 232(3)
+  lfd     10,240(3)
+  lfd     11,248(3)
+  lfd     12,256(3)
+  lfd     13,264(3)
+  lfd     14,272(3)
+  lfd     15,280(3)
+  lfd     16,288(3)
+  lfd     17,296(3)
+  lfd     18,304(3)
+  lfd     19,312(3)
+  lfd     20,320(3)
+  lfd     21,328(3)
+  lfd     22,336(3)
+  lfd     23,344(3)
+  lfd     24,352(3)
+  lfd     25,360(3)
+  lfd     26,368(3)
+  lfd     27,376(3)
+  lfd     28,384(3)
+  lfd     29,392(3)
+  lfd     30,400(3)
+  lfd     31,408(3)
 #endif
 
 #if defined(__ALTIVEC__)
   // restore vector registers if any are in use
-  lwz     %r5, 156(%r3)       // test VRsave
-  cmpwi   %r5, 0
+  lwz     5, 156(3)       // test VRsave
+  cmpwi   5, 0
   beq     Lnovec
 
-  subi    %r4, %r1, 16
-  rlwinm  %r4, %r4, 0, 0, 27  // mask low 4-bits
+  subi    4, 1, 16
+  rlwinm  4, 4, 0, 0, 27  // mask low 4-bits
   // r4 is now a 16-byte aligned pointer into the red zone
   // the _vectorRegisters may not be 16-byte aligned so copy via red zone temp buffer
- 
 
-#define LOAD_VECTOR_UNALIGNEDl(_index) \
-  andis.  %r0, %r5, (1<<(15-_index))  SEPARATOR \
+
+#define LOAD_VECTOR_UNALIGNEDl(_index)          \
+  andis.  0, 5, (1 PPC_LEFT_SHIFT(15-_index)) SEPARATOR \
   beq     Ldone ## _index             SEPARATOR \
-  lwz     %r0, 424+_index*16(%r3)     SEPARATOR \
-  stw     %r0, 0(%r4)                 SEPARATOR \
-  lwz     %r0, 424+_index*16+4(%r3)   SEPARATOR \
-  stw     %r0, 4(%r4)                 SEPARATOR \
-  lwz     %r0, 424+_index*16+8(%r3)   SEPARATOR \
-  stw     %r0, 8(%r4)                 SEPARATOR \
-  lwz     %r0, 424+_index*16+12(%r3)  SEPARATOR \
-  stw     %r0, 12(%r4)                SEPARATOR \
-  lvx     %v ## _index, 0, %r4        SEPARATOR \
+  lwz     0, 424+_index*16(3)         SEPARATOR \
+  stw     0, 0(%r4)                   SEPARATOR \
+  lwz     0, 424+_index*16+4(%r3)     SEPARATOR \
+  stw     0, 4(%r4)                   SEPARATOR \
+  lwz     0, 424+_index*16+8(%r3)     SEPARATOR \
+  stw     0, 8(%r4)                   SEPARATOR \
+  lwz     0, 424+_index*16+12(%r3)    SEPARATOR \
+  stw     0, 12(%r4)                  SEPARATOR \
+  lvx     _index, 0, 4                SEPARATOR \
   Ldone ## _index:
 
-#define LOAD_VECTOR_UNALIGNEDh(_index) \
-  andi.   %r0, %r5, (1<<(31-_index))  SEPARATOR \
+#define LOAD_VECTOR_UNALIGNEDh(_index)          \
+  andi.   0, 5, (1 PPC_LEFT_SHIFT(31-_index)) SEPARATOR \
   beq     Ldone ## _index             SEPARATOR \
-  lwz     %r0, 424+_index*16(%r3)     SEPARATOR \
-  stw     %r0, 0(%r4)                 SEPARATOR \
-  lwz     %r0, 424+_index*16+4(%r3)   SEPARATOR \
-  stw     %r0, 4(%r4)                 SEPARATOR \
-  lwz     %r0, 424+_index*16+8(%r3)   SEPARATOR \
-  stw     %r0, 8(%r4)                 SEPARATOR \
-  lwz     %r0, 424+_index*16+12(%r3)  SEPARATOR \
-  stw     %r0, 12(%r4)                SEPARATOR \
-  lvx     %v ## _index, 0, %r4        SEPARATOR \
+  lwz     0, 424+_index*16(3)         SEPARATOR \
+  stw     0, 0(4)                     SEPARATOR \
+  lwz     0, 424+_index*16+4(3)       SEPARATOR \
+  stw     0, 4(4)                     SEPARATOR \
+  lwz     0, 424+_index*16+8(3)       SEPARATOR \
+  stw     0, 8(%r4)                   SEPARATOR \
+  lwz     0, 424+_index*16+12(3)      SEPARATOR \
+  stw     0, 12(4)                    SEPARATOR \
+  lvx     _index, 0, 4                SEPARATOR \
   Ldone ## _index:
 
 
@@ -545,17 +545,17 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind13Registers_ppc6jumptoEv)
 #endif
 
 Lnovec:
-  lwz     %r0, 136(%r3)   // __cr
-  mtcr    %r0
-  lwz     %r0, 148(%r3)   // __ctr
-  mtctr   %r0
-  lwz     %r0,   0(%r3)   // __ssr0
-  mtctr   %r0
-  lwz     %r0,   8(%r3)   // do r0 now
-  lwz     %r5,  28(%r3)   // do r5 now
-  lwz     %r4,  24(%r3)   // do r4 now
-  lwz     %r1,  12(%r3)   // do sp now
-  lwz     %r3,  20(%r3)   // do r3 last
+  lwz     0, 136(3)   // __cr
+  mtcr    0
+  lwz     0, 148(3)   // __ctr
+  mtctr   0
+  lwz     0,   0(3)   // __ssr0
+  mtctr   0
+  lwz     0,   8(3)   // do r0 now
+  lwz     5,  28(3)   // do r5 now
+  lwz     4,  24(3)   // do r4 now
+  lwz     1,  12(3)   // do sp now
+  lwz     3,  20(3)   // do r3 last
   bctr
 
 #elif defined(__aarch64__)

@@ -119,7 +119,6 @@ class Configuration(object):
         self.target_info = make_target_info(self)
         self.executor = self.get_lit_conf('executor')
         self.configure_cxx()
-        self.configure_triple()
         self.configure_src_root()
         self.configure_obj_root()
         self.cxx_stdlib_under_test = self.get_lit_conf('cxx_stdlib_under_test', 'libc++')
@@ -247,21 +246,6 @@ class Configuration(object):
                 # using this feature. (Also see llvm.org/PR32730)
                 self.config.available_features.add('LIBCXX-WINDOWS-FIXME')
 
-        target_triple = getattr(self.config, 'target_triple', None)
-        if target_triple:
-            if re.match(r'^x86_64.*-apple', target_triple):
-                self.config.available_features.add('x86_64-apple')
-            if re.match(r'^x86_64.*-linux', target_triple):
-                self.config.available_features.add('x86_64-linux')
-            if re.match(r'^i.86.*', target_triple):
-                self.config.available_features.add('target-x86')
-            elif re.match(r'^x86_64.*', target_triple):
-                self.config.available_features.add('target-x86_64')
-            elif re.match(r'^aarch64.*', target_triple):
-                self.config.available_features.add('target-aarch64')
-            elif re.match(r'^arm.*', target_triple):
-                self.config.available_features.add('target-arm')
-
     def configure_compile_flags(self):
         self.configure_default_compile_flags()
         # Configure extra flags
@@ -306,9 +290,6 @@ class Configuration(object):
         # being elided.
         if self.target_info.is_windows() and self.debug_build:
             self.cxx.compile_flags += ['-D_DEBUG']
-        if not self.cxx.addFlagIfSupported(['--target=' + self.config.target_triple]):
-            self.lit_config.warning('Not adding any target triple -- the compiler does '
-                                    'not support --target=<triple>')
 
         # Add includes for support headers used in the tests.
         support_path = os.path.join(self.libcxx_src_root, 'test/support')
@@ -356,10 +337,11 @@ class Configuration(object):
             self.lit_config.fatal("cxx_headers='{}' is not a directory.".format(cxx_headers))
         (path, version) = os.path.split(cxx_headers)
         (path, cxx) = os.path.split(path)
-        cxx_target_headers = os.path.join(
-            path, self.get_lit_conf('target_triple', None), cxx, version)
-        if os.path.isdir(cxx_target_headers):
-            self.cxx.compile_flags += ['-I' + cxx_target_headers]
+        triple = self.get_lit_conf('target_triple', None)
+        if triple is not None:
+            cxx_target_headers = os.path.join(path, triple, cxx, version)
+            if os.path.isdir(cxx_target_headers):
+                self.cxx.compile_flags += ['-I' + cxx_target_headers]
         self.cxx.compile_flags += ['-I' + cxx_headers]
         if self.libcxx_obj_root is not None:
             cxxabi_headers = os.path.join(self.libcxx_obj_root, 'include',
@@ -590,34 +572,6 @@ class Configuration(object):
             '--env {}'.format(env_vars)
         ]
         sub.append(('%{exec}', '{} {} -- '.format(self.executor, ' '.join(exec_args))))
-
-    def configure_triple(self):
-        # Get or infer the target triple.
-        target_triple = self.get_lit_conf('target_triple')
-
-        # If no target triple was given, try to infer it from the compiler
-        # under test.
-        if not target_triple:
-            self.lit_config.note('Trying to infer the target_triple because none was specified')
-
-            target_triple = self.cxx.getTriple()
-            # Drop sub-major version components from the triple, because the
-            # current XFAIL handling expects exact matches for feature checks.
-            # Example: x86_64-apple-darwin14.0.0 -> x86_64-apple-darwin14
-            # The 5th group handles triples greater than 3 parts
-            # (ex x86_64-pc-linux-gnu).
-            target_triple = re.sub(r'([^-]+)-([^-]+)-([^.]+)([^-]*)(.*)',
-                                   r'\1-\2-\3\5', target_triple)
-            # linux-gnu is needed in the triple to properly identify linuxes
-            # that use GLIBC. Handle redhat and opensuse triples as special
-            # cases and append the missing `-gnu` portion.
-            if (target_triple.endswith('redhat-linux') or
-                target_triple.endswith('suse-linux')):
-                target_triple += '-gnu'
-
-        # Save the triple
-        self.lit_config.note("Setting target_triple to {}".format(target_triple))
-        self.config.target_triple = target_triple
 
     def configure_env(self):
         self.config.environment = dict(os.environ)

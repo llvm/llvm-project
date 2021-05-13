@@ -1,8 +1,10 @@
 ; RUN: llc -march=amdgcn -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX7LESS %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX8MORE,GFX8MORE64,GFX89,DPPCOMB %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX8MORE,GFX8MORE64,GFX89,DPPCOMB %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX8MORE,GFX8MORE64,GFX10 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN32,GFX8MORE,GFX8MORE32,GFX10 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX8MORE,GFX8MORE64,GFX10PLUS %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN32,GFX8MORE,GFX8MORE32,GFX10PLUS %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX8MORE,GFX8MORE64,GFX10PLUS %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN32,GFX8MORE,GFX8MORE32,GFX10PLUS %s
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 declare i32 @llvm.amdgcn.struct.buffer.atomic.add(i32, <4 x i32>, i32, i32, i32, i32)
@@ -21,7 +23,7 @@ declare i32 @llvm.amdgcn.struct.buffer.atomic.sub(i32, <4 x i32>, i32, i32, i32,
 ; GCN64: s_bcnt1_i32_b64 s[[popcount:[0-9]+]], s{{\[}}[[exec_lo]]:[[exec_hi]]{{\]}}
 ; GCN: s_mul_i32 s[[popcount]], s[[popcount]], 5
 ; GCN: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[popcount]]
-; GCN: buffer_atomic_add v[[value]]
+; GCN: buffer_atomic_add{{(_u32)?}} v[[value]]
 define amdgpu_kernel void @add_i32_constant(i32 addrspace(1)* %out, <4 x i32> %inout) {
 entry:
   %old = call i32 @llvm.amdgcn.struct.buffer.atomic.add(i32 5, <4 x i32> %inout, i32 0, i32 0, i32 0, i32 0)
@@ -40,7 +42,7 @@ entry:
 ; GCN64: s_bcnt1_i32_b64 s[[popcount:[0-9]+]], s{{\[}}[[exec_lo]]:[[exec_hi]]{{\]}}
 ; GCN: s_mul_i32 s[[scalar_value:[0-9]+]], s{{[0-9]+}}, s[[popcount]]
 ; GCN: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[scalar_value]]
-; GCN: buffer_atomic_add v[[value]]
+; GCN: buffer_atomic_add{{(_u32)?}} v[[value]]
 define amdgpu_kernel void @add_i32_uniform(i32 addrspace(1)* %out, <4 x i32> %inout, i32 %additive) {
 entry:
   %old = call i32 @llvm.amdgcn.struct.buffer.atomic.add(i32 %additive, <4 x i32> %inout, i32 0, i32 0, i32 0, i32 0)
@@ -58,9 +60,9 @@ entry:
 ; GFX8MORE32: v_readlane_b32 s[[scalar_value:[0-9]+]], v{{[0-9]+}}, 31
 ; GFX8MORE64: v_readlane_b32 s[[scalar_value:[0-9]+]], v{{[0-9]+}}, 63
 ; GFX89: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[scalar_value]]
-; GFX10: s_mov_b32 s[[copy_value:[0-9]+]], s[[scalar_value]]
-; GFX10: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[copy_value]]
-; GFX8MORE: buffer_atomic_add v[[value]]
+; GFX10PLUS: s_mov_b32 s[[copy_value:[0-9]+]], s[[scalar_value]]
+; GFX10PLUS: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[copy_value]]
+; GFX8MORE: buffer_atomic_add{{(_u32)?}} v[[value]]
 define amdgpu_kernel void @add_i32_varying_vdata(i32 addrspace(1)* %out, <4 x i32> %inout) {
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
@@ -73,7 +75,7 @@ entry:
 ; GCN-NOT: v_mbcnt_lo_u32_b32
 ; GCN-NOT: v_mbcnt_hi_u32_b32
 ; GCN-NOT: s_bcnt1_i32_b64
-; GCN: buffer_atomic_add v{{[0-9]+}}
+; GCN: buffer_atomic_add{{(_u32)?}} v{{[0-9]+}}
 define amdgpu_kernel void @add_i32_varying_vindex(i32 addrspace(1)* %out, <4 x i32> %inout) {
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
@@ -86,7 +88,7 @@ entry:
 ; GCN-NOT: v_mbcnt_lo_u32_b32
 ; GCN-NOT: v_mbcnt_hi_u32_b32
 ; GCN-NOT: s_bcnt1_i32_b64
-; GCN: buffer_atomic_add v{{[0-9]+}}
+; GCN: buffer_atomic_add{{(_u32)?}} v{{[0-9]+}}
 define amdgpu_kernel void @add_i32_varying_offset(i32 addrspace(1)* %out, <4 x i32> %inout) {
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
@@ -106,7 +108,7 @@ entry:
 ; GCN64: s_bcnt1_i32_b64 s[[popcount:[0-9]+]], s{{\[}}[[exec_lo]]:[[exec_hi]]{{\]}}
 ; GCN: s_mul_i32 s[[popcount]], s[[popcount]], 5
 ; GCN: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[popcount]]
-; GCN: buffer_atomic_sub v[[value]]
+; GCN: buffer_atomic_sub{{(_u32)?}} v[[value]]
 define amdgpu_kernel void @sub_i32_constant(i32 addrspace(1)* %out, <4 x i32> %inout) {
 entry:
   %old = call i32 @llvm.amdgcn.struct.buffer.atomic.sub(i32 5, <4 x i32> %inout, i32 0, i32 0, i32 0, i32 0)
@@ -125,7 +127,7 @@ entry:
 ; GCN64: s_bcnt1_i32_b64 s[[popcount:[0-9]+]], s{{\[}}[[exec_lo]]:[[exec_hi]]{{\]}}
 ; GCN: s_mul_i32 s[[scalar_value:[0-9]+]], s{{[0-9]+}}, s[[popcount]]
 ; GCN: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[scalar_value]]
-; GCN: buffer_atomic_sub v[[value]]
+; GCN: buffer_atomic_sub{{(_u32)?}} v[[value]]
 define amdgpu_kernel void @sub_i32_uniform(i32 addrspace(1)* %out, <4 x i32> %inout, i32 %subitive) {
 entry:
   %old = call i32 @llvm.amdgcn.struct.buffer.atomic.sub(i32 %subitive, <4 x i32> %inout, i32 0, i32 0, i32 0, i32 0)
@@ -143,9 +145,9 @@ entry:
 ; GFX8MORE32: v_readlane_b32 s[[scalar_value:[0-9]+]], v{{[0-9]+}}, 31
 ; GFX8MORE64: v_readlane_b32 s[[scalar_value:[0-9]+]], v{{[0-9]+}}, 63
 ; GFX89: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[scalar_value]]
-; GFX10: s_mov_b32 s[[copy_value:[0-9]+]], s[[scalar_value]]
-; GFX10: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[copy_value]]
-; GFX8MORE: buffer_atomic_sub v[[value]]
+; GFX10PLUS: s_mov_b32 s[[copy_value:[0-9]+]], s[[scalar_value]]
+; GFX10PLUS: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[copy_value]]
+; GFX8MORE: buffer_atomic_sub{{(_u32)?}} v[[value]]
 define amdgpu_kernel void @sub_i32_varying_vdata(i32 addrspace(1)* %out, <4 x i32> %inout) {
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
@@ -158,7 +160,7 @@ entry:
 ; GCN-NOT: v_mbcnt_lo_u32_b32
 ; GCN-NOT: v_mbcnt_hi_u32_b32
 ; GCN-NOT: s_bcnt1_i32_b64
-; GCN: buffer_atomic_sub v{{[0-9]+}}
+; GCN: buffer_atomic_sub{{(_u32)?}} v{{[0-9]+}}
 define amdgpu_kernel void @sub_i32_varying_vindex(i32 addrspace(1)* %out, <4 x i32> %inout) {
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
@@ -171,7 +173,7 @@ entry:
 ; GCN-NOT: v_mbcnt_lo_u32_b32
 ; GCN-NOT: v_mbcnt_hi_u32_b32
 ; GCN-NOT: s_bcnt1_i32_b64
-; GCN: buffer_atomic_sub v{{[0-9]+}}
+; GCN: buffer_atomic_sub{{(_u32)?}} v{{[0-9]+}}
 define amdgpu_kernel void @sub_i32_varying_offset(i32 addrspace(1)* %out, <4 x i32> %inout) {
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()

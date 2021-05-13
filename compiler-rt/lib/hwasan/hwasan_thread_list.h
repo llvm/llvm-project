@@ -173,6 +173,7 @@ class HwasanThreadList {
 
  private:
   Thread *AllocThread() {
+    SpinMutexLock l(&free_space_mutex_);
     uptr align = ring_buffer_size_ * 2;
     CHECK(IsAligned(free_space_, align));
     Thread *t = (Thread *)(free_space_ + ring_buffer_size_);
@@ -181,6 +182,7 @@ class HwasanThreadList {
     return t;
   }
 
+  SpinMutex free_space_mutex_;
   uptr free_space_;
   uptr free_space_end_;
   uptr ring_buffer_size_;

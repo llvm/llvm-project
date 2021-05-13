@@ -28,7 +28,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER > 17
 
 template<class _Tp, class ..._Args, class = decltype(
-    ::new (_VSTD::declval<void*>()) _Tp(_VSTD::declval<_Args>()...)
+    ::new (declval<void*>()) _Tp(declval<_Args>()...)
 )>
 _LIBCPP_INLINE_VISIBILITY
 constexpr _Tp* construct_at(_Tp* __location, _Args&& ...__args) {

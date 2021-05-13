@@ -9,6 +9,7 @@ add_mlir_python_extension(MLIRCoreBindingsPythonExtension _mlir
     python
   SOURCES
     DialectLinalg.cpp
+    DialectSparseTensor.cpp
     MainModule.cpp
     IRAffine.cpp
     IRAttributes.cpp
@@ -31,6 +32,14 @@ add_mlir_python_extension(MLIRAsyncPassesBindingsPythonExtension _mlirAsyncPasse
     AsyncPasses.cpp
 )
 add_dependencies(MLIRBindingsPythonExtension MLIRAsyncPassesBindingsPythonExtension)
+
+add_mlir_python_extension(MLIRSparseTensorPassesBindingsPythonExtension _mlirSparseTensorPasses
+  INSTALL_DIR
+    python
+  SOURCES
+  SparseTensorPasses.cpp
+)
+add_dependencies(MLIRBindingsPythonExtension MLIRSparseTensorPassesBindingsPythonExtension)
 
 add_mlir_python_extension(MLIRGPUPassesBindingsPythonExtension _mlirGPUPasses
   INSTALL_DIR

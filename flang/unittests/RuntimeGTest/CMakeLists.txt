@@ -3,6 +3,7 @@ add_flang_unittest(FlangRuntimeTests
   CrashHandlerFixture.cpp
   Format.cpp
   MiscIntrinsic.cpp
+  Namelist.cpp
   Numeric.cpp
   NumericalFormatTest.cpp
   Random.cpp

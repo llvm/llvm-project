@@ -33,6 +33,7 @@
 # PIE-NEXT: __DATA_CONST __got    0x[[#ADDR + 8]]  pointer
 
 ## Check that a non-locally-defined symbol is still bound at the correct offset:
+# CHECK-EMPTY:
 # CHECK-NEXT: Bind table:
 # CHECK-NEXT: segment      section  address         type     addend  dylib     symbol
 # CHECK-NEXT: __DATA_CONST __got    0x[[#ADDR+16]]  pointer  0       libhello  _hello_its_me

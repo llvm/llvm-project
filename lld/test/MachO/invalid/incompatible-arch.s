@@ -30,6 +30,21 @@
 # RUN:  -o /dev/null 2>&1 | FileCheck %s --check-prefix=OBJ-VERSION
 # OBJ-VERSION: {{.*}}test_x86.o has version 10.15.0, which is newer than target minimum of 10.14.0
 
+## Test that simulators platforms are compat with their simulatees.		
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-ios14.0 %s -o %t/test_x86_ios.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-ios14.0-simulator %s -o %t/test_x86_ios_sim.o
+
+# RUN: %lld -dylib -platform_version ios-simulator 14.0.0 14.0.0 %t/test_x86_ios.o -o /dev/null
+# RUN: %lld -dylib -platform_version ios 14.0.0 14.0.0 %t/test_x86_ios_sim.o -o /dev/null
+
+# RUN: not %lld -dylib  -platform_version watchos-simulator 14.0.0 14.0.0 %t/test_x86_ios.o \
+# RUN:	-o /dev/null 2>&1 | FileCheck %s --check-prefix=CROSS-SIM
+# CROSS-SIM: {{.*}}test_x86_ios.o has platform iOS, which is different from target platform watchOS Simulator
+# RUN: not %lld -dylib  -platform_version watchos-simulator 14.0.0 14.0.0 %t/test_x86_ios_sim.o \
+# RUN:	-o /dev/null 2>&1 | FileCheck %s --check-prefix=CROSS-SIM2
+# CROSS-SIM2: {{.*}}test_x86_ios_sim.o has platform iOS Simulator, which is different from target platform watchOS Simulator
+	
+
 .globl _main
 _main:
   ret

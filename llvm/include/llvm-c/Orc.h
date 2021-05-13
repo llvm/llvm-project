@@ -672,6 +672,37 @@ void LLVMOrcJITTargetMachineBuilderDisposeTargetTriple(
     LLVMOrcJITTargetMachineBuilderRef JTMB, char *TargetTriple);
 
 /**
+ * Add an object to an ObjectLayer to the given JITDylib.
+ *
+ * Adds a buffer representing an object file to the given JITDylib using the
+ * given ObjectLayer instance. This operation transfers ownership of the buffer
+ * to the ObjectLayer instance. The buffer should not be disposed of or
+ * referenced once this function returns.
+ *
+ * Resources associated with the given object will be tracked by the given
+ * JITDylib's default ResourceTracker.
+ */
+LLVMErrorRef LLVMOrcObjectLayerAddObjectFile(LLVMOrcObjectLayerRef ObjLayer,
+                                             LLVMOrcJITDylibRef JD,
+                                             LLVMMemoryBufferRef ObjBuffer);
+
+/**
+ * Add an object to an ObjectLayer using the given ResourceTracker.
+ *
+ * Adds a buffer representing an object file to the given ResourceTracker's
+ * JITDylib using the given ObjectLayer instance. This operation transfers
+ * ownership of the buffer to the ObjectLayer instance. The buffer should not
+ * be disposed of or referenced once this function returns.
+ *
+ * Resources associated with the given object will be tracked by
+ * ResourceTracker RT.
+ */
+LLVMErrorRef
+LLVMOrcObjectLayerAddObjectFileWithRT(LLVMOrcObjectLayerRef ObjLayer,
+                                      LLVMOrcResourceTrackerRef RT,
+                                      LLVMMemoryBufferRef ObjBuffer);
+
+/**
  * Emit an object buffer to an ObjectLayer.
  *
  * Ownership of the responsibility object and object buffer pass to this

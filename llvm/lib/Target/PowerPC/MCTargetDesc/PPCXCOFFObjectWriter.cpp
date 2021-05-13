@@ -75,7 +75,18 @@ std::pair<uint8_t, uint8_t> PPCXCOFFObjectWriter::getRelocTypeAndSignSize(
     // Branches are 4 byte aligned, so the 24 bits we encode in
     // the instruction actually represents a 26 bit offset.
     return {XCOFF::RelocationType::R_RBR, EncodedSignednessIndicator | 25};
+  case PPC::fixup_ppc_br24abs:
+    return {XCOFF::RelocationType::R_RBA, EncodedSignednessIndicator | 25};
   case FK_Data_4:
-    return {XCOFF::RelocationType::R_POS, EncodedSignednessIndicator | 31};
+    switch (Modifier) {
+    default:
+      report_fatal_error("Unsupported modifier");
+    case MCSymbolRefExpr::VK_PPC_AIX_TLSGD:
+      return {XCOFF::RelocationType::R_TLS, EncodedSignednessIndicator | 31};
+    case MCSymbolRefExpr::VK_PPC_AIX_TLSGDM:
+      return {XCOFF::RelocationType::R_TLSM, EncodedSignednessIndicator | 31};
+    case MCSymbolRefExpr::VK_None:
+      return {XCOFF::RelocationType::R_POS, EncodedSignednessIndicator | 31};
+    }
   }
 }

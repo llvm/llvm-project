@@ -194,4 +194,15 @@ module attributes {gpu.container_module} {
     %1 = gpu.memcpy async [%0] %dst, %src : memref<3x7xf32>, memref<3x7xf32, 1>
     return
   }
+
+  func @mmamatrix_valid_element_type(){
+    // CHECK-LABEL: func @mmamatrix_valid_element_type
+    %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, 3>
+    // CHECK: %[[wg:.*]] = memref.alloca()
+    %i = constant 16 : index
+    // CHECK: %[[i:.*]] = constant 16 : index
+    %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] {leadDimension = 32 : index} : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xf16, "AOp">
+    // CHECK: gpu.subgroup_mma_load_matrix %[[wg]][%[[i]], %[[i]]] {leadDimension = 32 : index} : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xf16, "AOp">
+    return
+  }
 }

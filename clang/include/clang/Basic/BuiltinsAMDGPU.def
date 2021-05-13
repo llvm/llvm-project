@@ -182,6 +182,7 @@ TARGET_BUILTIN(__builtin_amdgcn_s_memrealtime, "LUi", "n", "s-memrealtime")
 TARGET_BUILTIN(__builtin_amdgcn_mov_dpp, "iiIiIiIiIb", "nc", "dpp")
 TARGET_BUILTIN(__builtin_amdgcn_update_dpp, "iiiIiIiIiIb", "nc", "dpp")
 TARGET_BUILTIN(__builtin_amdgcn_s_dcache_wb, "v", "n", "gfx8-insts")
+TARGET_BUILTIN(__builtin_amdgcn_perm, "UiUiUiUi", "nc", "gfx8-insts")
 
 //===----------------------------------------------------------------------===//
 // GFX9+ only builtins.

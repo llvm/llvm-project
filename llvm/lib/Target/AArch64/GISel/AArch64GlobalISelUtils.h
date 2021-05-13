@@ -11,11 +11,12 @@
 
 #ifndef LLVM_LIB_TARGET_AARCH64_GISEL_AARCH64GLOBALISELUTILS_H
 #define LLVM_LIB_TARGET_AARCH64_GISEL_AARCH64GLOBALISELUTILS_H
-
+#include "MCTargetDesc/AArch64AddressingModes.h"
+#include "Utils/AArch64BaseInfo.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/Register.h"
-#include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/IR/InstrTypes.h"
 #include <cstdint>
 
@@ -43,6 +44,36 @@ Optional<int64_t> getAArch64VectorSplatScalar(const MachineInstr &MI,
 /// integer compare.
 bool isCMN(const MachineInstr *MaybeSub, const CmpInst::Predicate &Pred,
            const MachineRegisterInfo &MRI);
+
+/// Replace a G_MEMSET with a value of 0 with a G_BZERO instruction if it is
+/// supported and beneficial to do so.
+///
+/// \note This only applies on Darwin.
+///
+/// \returns true if \p MI was replaced with a G_BZERO.
+bool tryEmitBZero(MachineInstr &MI, MachineIRBuilder &MIRBuilder, bool MinSize);
+
+/// Find the AArch64 condition codes necessary to represent \p P for a scalar
+/// floating point comparison.
+///
+/// \param [out] CondCode is the first condition code.
+/// \param [out] CondCode2 is the second condition code if necessary.
+/// AArch64CC::AL otherwise.
+void changeFCMPPredToAArch64CC(const CmpInst::Predicate P,
+                               AArch64CC::CondCode &CondCode,
+                               AArch64CC::CondCode &CondCode2);
+
+/// Find the AArch64 condition codes necessary to represent \p P for a vector
+/// floating point comparison.
+///
+/// \param [out] CondCode - The first condition code.
+/// \param [out] CondCode2 - The second condition code if necessary.
+/// AArch64CC::AL otherwise.
+/// \param [out] Invert - True if the comparison must be inverted with a NOT.
+void changeVectorFCMPPredToAArch64CC(const CmpInst::Predicate P,
+                                     AArch64CC::CondCode &CondCode,
+                                     AArch64CC::CondCode &CondCode2,
+                                     bool &Invert);
 
 } // namespace AArch64GISelUtils
 } // namespace llvm

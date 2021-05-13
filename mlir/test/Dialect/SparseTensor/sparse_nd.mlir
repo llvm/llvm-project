@@ -3,26 +3,27 @@
 
 // Example with cyclic iteration graph with sparse and dense constraints,
 // but an acyclic iteration graph using sparse constraints only.
+
+#SparseTensor = #sparse_tensor.encoding<{
+  dimLevelType = [ "dense", "dense", "dense", "compressed",
+                   "compressed", "dense", "dense", "dense" ]
+}>
+
 #trait_mul = {
   indexing_maps = [
     affine_map<(i,j,k,l,m,n,o,p) -> (i,j,k,l,m,n,o,p)>,  // A
     affine_map<(i,j,k,l,m,n,o,p) -> (p,o,n,m,l,k,j,i)>,  // B
     affine_map<(i,j,k,l,m,n,o,p) -> (i,j,k,l,m,n,o,p)>   // X
   ],
-  sparse = [
-    [ "D", "D", "D", "D", "D", "D", "D", "D" ],  // a
-    [ "D", "D", "D", "S", "S", "D", "D", "D" ],  // b
-    [ "D", "D", "D", "D", "D", "D", "D", "D" ]   // x
-  ],
   iterator_types = ["parallel", "parallel", "parallel", "parallel",
                     "parallel", "parallel", "parallel", "parallel"],
-  doc = "X(i,j,k,l,m,n,o,p) = A(i,j,k,l,m,n,o,p)  * B(p,o,n,m,l,k,j,i)"
+  doc = "X(i,j,k,l,m,n,o,p) = A(i,j,k,l,m,n,o,p) * B(p,o,n,m,l,k,j,i)"
 }
 
 // CHECK-LABEL:   func @mul(
-// CHECK-SAME:              %[[VAL_0:.*0]]: tensor<10x20x30x40x50x60x70x80xf32>,
-// CHECK-SAME:              %[[VAL_1:.*1]]: tensor<80x70x60x50x40x30x20x10xf32>,
-// CHECK-SAME:              %[[VAL_2:.*2]]: tensor<10x20x30x40x50x60x70x80xf32>) -> tensor<10x20x30x40x50x60x70x80xf32> {
+// CHECK-SAME:              %[[VAL_0:.*]]: tensor<10x20x30x40x50x60x70x80xf32>,
+// CHECK-SAME:              %[[VAL_1:.*]]: tensor<80x70x60x50x40x30x20x10xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "dense", "dense", "compressed", "compressed", "dense", "dense", "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>>,
+// CHECK-SAME:              %[[VAL_2:.*]]: tensor<10x20x30x40x50x60x70x80xf32>) -> tensor<10x20x30x40x50x60x70x80xf32> {
 // CHECK:           %[[VAL_3:.*]] = constant 3 : index
 // CHECK:           %[[VAL_4:.*]] = constant 4 : index
 // CHECK:           %[[VAL_5:.*]] = constant 10 : index
@@ -34,11 +35,11 @@
 // CHECK:           %[[VAL_11:.*]] = constant 0 : index
 // CHECK:           %[[VAL_12:.*]] = constant 1 : index
 // CHECK:           %[[VAL_13:.*]] = memref.buffer_cast %[[VAL_0]] : memref<10x20x30x40x50x60x70x80xf32>
-// CHECK:           %[[VAL_14:.*]] = sparse_tensor.pointers %[[VAL_1]], %[[VAL_3]] : tensor<80x70x60x50x40x30x20x10xf32> to memref<?xindex>
-// CHECK:           %[[VAL_15:.*]] = sparse_tensor.indices %[[VAL_1]], %[[VAL_3]] : tensor<80x70x60x50x40x30x20x10xf32> to memref<?xindex>
-// CHECK:           %[[VAL_16:.*]] = sparse_tensor.pointers %[[VAL_1]], %[[VAL_4]] : tensor<80x70x60x50x40x30x20x10xf32> to memref<?xindex>
-// CHECK:           %[[VAL_17:.*]] = sparse_tensor.indices %[[VAL_1]], %[[VAL_4]] : tensor<80x70x60x50x40x30x20x10xf32> to memref<?xindex>
-// CHECK:           %[[VAL_18:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<80x70x60x50x40x30x20x10xf32> to memref<?xf32>
+// CHECK:           %[[VAL_14:.*]] = sparse_tensor.pointers %[[VAL_1]], %[[VAL_3]] : tensor<80x70x60x50x40x30x20x10xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "dense", "dense", "compressed", "compressed", "dense", "dense", "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
+// CHECK:           %[[VAL_15:.*]] = sparse_tensor.indices %[[VAL_1]], %[[VAL_3]] : tensor<80x70x60x50x40x30x20x10xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "dense", "dense", "compressed", "compressed", "dense", "dense", "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
+// CHECK:           %[[VAL_16:.*]] = sparse_tensor.pointers %[[VAL_1]], %[[VAL_4]] : tensor<80x70x60x50x40x30x20x10xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "dense", "dense", "compressed", "compressed", "dense", "dense", "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
+// CHECK:           %[[VAL_17:.*]] = sparse_tensor.indices %[[VAL_1]], %[[VAL_4]] : tensor<80x70x60x50x40x30x20x10xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "dense", "dense", "compressed", "compressed", "dense", "dense", "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xindex>
+// CHECK:           %[[VAL_18:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<80x70x60x50x40x30x20x10xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "dense", "dense", "compressed", "compressed", "dense", "dense", "dense" ], pointerBitWidth = 0, indexBitWidth = 0 }>> to memref<?xf32>
 // CHECK:           %[[VAL_19:.*]] = memref.buffer_cast %[[VAL_2]] : memref<10x20x30x40x50x60x70x80xf32>
 // CHECK:           %[[VAL_20:.*]] = memref.alloc() : memref<10x20x30x40x50x60x70x80xf32>
 // CHECK:           linalg.copy(%[[VAL_19]], %[[VAL_20]]) : memref<10x20x30x40x50x60x70x80xf32>, memref<10x20x30x40x50x60x70x80xf32>
@@ -84,12 +85,12 @@
 // CHECK:           return %[[VAL_50]] : tensor<10x20x30x40x50x60x70x80xf32>
 // CHECK:         }
 func @mul(%arga: tensor<10x20x30x40x50x60x70x80xf32>,
-          %argb: tensor<80x70x60x50x40x30x20x10xf32>,
+          %argb: tensor<80x70x60x50x40x30x20x10xf32, #SparseTensor>,
           %argx: tensor<10x20x30x40x50x60x70x80xf32>)
 	      -> tensor<10x20x30x40x50x60x70x80xf32> {
   %0 = linalg.generic #trait_mul
     ins(%arga, %argb: tensor<10x20x30x40x50x60x70x80xf32>,
-                      tensor<80x70x60x50x40x30x20x10xf32>)
+                      tensor<80x70x60x50x40x30x20x10xf32, #SparseTensor>)
     outs(%argx: tensor<10x20x30x40x50x60x70x80xf32>) {
       ^bb(%a: f32, %b: f32, %x: f32):
         %0 = mulf %a, %b : f32

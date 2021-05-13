@@ -44,6 +44,7 @@
 # PIE-NEXT:    __DATA   __la_symbol_ptr    0x[[#%X, ADDR:]]  pointer
 # PIE-NEXT:    __DATA   __la_symbol_ptr    0x[[#ADDR + 8]]   pointer
 
+# CHECK-EMPTY:
 # CHECK-NEXT:  Bind table:
 # CHECK:       __DATA_CONST __got 0x[[#%x, BINDER:]] pointer 0 libSystem dyld_stub_binder
 

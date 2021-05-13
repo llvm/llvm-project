@@ -14,7 +14,6 @@
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVModule.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/IR/BlockAndValueMapping.h"
@@ -88,7 +87,7 @@ LogicalResult spirv::Deserializer::deserialize() {
   return success();
 }
 
-spirv::OwningSPIRVModuleRef spirv::Deserializer::collect() {
+OwningOpRef<spirv::ModuleOp> spirv::Deserializer::collect() {
   return std::move(module);
 }
 
@@ -96,7 +95,7 @@ spirv::OwningSPIRVModuleRef spirv::Deserializer::collect() {
 // Module structure
 //===----------------------------------------------------------------------===//
 
-spirv::OwningSPIRVModuleRef spirv::Deserializer::createModuleOp() {
+OwningOpRef<spirv::ModuleOp> spirv::Deserializer::createModuleOp() {
   OpBuilder builder(context);
   OperationState state(unknownLoc, spirv::ModuleOp::getOperationName());
   spirv::ModuleOp::build(builder, state);
@@ -1574,7 +1573,8 @@ LogicalResult spirv::Deserializer::processPhi(ArrayRef<uint32_t> operands) {
   for (unsigned i = 2, e = operands.size(); i < e; i += 2) {
     uint32_t value = operands[i];
     Block *predecessor = getOrCreateBlock(operands[i + 1]);
-    blockPhiInfo[predecessor].push_back(value);
+    std::pair<Block *, Block *> predecessorTargetPair{predecessor, curBlock};
+    blockPhiInfo[predecessorTargetPair].push_back(value);
     LLVM_DEBUG(llvm::dbgs() << "[phi] predecessor @ " << predecessor
                             << " with arg id = " << value << '\n');
   }
@@ -1854,7 +1854,8 @@ LogicalResult spirv::Deserializer::wireUpBlockArgument() {
   OpBuilder::InsertionGuard guard(opBuilder);
 
   for (const auto &info : blockPhiInfo) {
-    Block *block = info.first;
+    Block *block = info.first.first;
+    Block *target = info.first.second;
     const BlockPhiInfo &phiInfo = info.second;
     LLVM_DEBUG(llvm::dbgs() << "[phi] block " << block << "\n");
     LLVM_DEBUG(llvm::dbgs() << "[phi] before creating block argument:\n");
@@ -1883,6 +1884,24 @@ LogicalResult spirv::Deserializer::wireUpBlockArgument() {
       opBuilder.create<spirv::BranchOp>(branchOp.getLoc(), branchOp.getTarget(),
                                         blockArgs);
       branchOp.erase();
+    } else if (auto branchCondOp = dyn_cast<spirv::BranchConditionalOp>(op)) {
+      assert((branchCondOp.getTrueBlock() == target ||
+              branchCondOp.getFalseBlock() == target) &&
+             "expected target to be either the true or false target");
+      if (target == branchCondOp.trueTarget())
+        opBuilder.create<spirv::BranchConditionalOp>(
+            branchCondOp.getLoc(), branchCondOp.condition(), blockArgs,
+            branchCondOp.getFalseBlockArguments(),
+            branchCondOp.branch_weightsAttr(), branchCondOp.trueTarget(),
+            branchCondOp.falseTarget());
+      else
+        opBuilder.create<spirv::BranchConditionalOp>(
+            branchCondOp.getLoc(), branchCondOp.condition(),
+            branchCondOp.getTrueBlockArguments(), blockArgs,
+            branchCondOp.branch_weightsAttr(), branchCondOp.getTrueBlock(),
+            branchCondOp.getFalseBlock());
+
+      branchCondOp.erase();
     } else {
       return emitError(unknownLoc, "unimplemented terminator for Phi creation");
     }

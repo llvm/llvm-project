@@ -153,10 +153,12 @@ define i32 @main3e_like(i32 %argc, i32 %argc2, i32 %argc3) {
 
 define i32 @main3e_like_logical(i32 %argc, i32 %argc2, i32 %argc3) {
 ; CHECK-LABEL: @main3e_like_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[ARGC2:%.*]], [[ARGC3:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[ARGC:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[TMP3]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ARGC:%.*]], [[ARGC2:%.*]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[ARGC]], [[ARGC3:%.*]]
+; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp ne i32 [[AND2]], 0
+; CHECK-NEXT:    [[AND_COND:%.*]] = select i1 [[TOBOOL]], i1 true, i1 [[TOBOOL3]]
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[AND_COND]] to i32
 ; CHECK-NEXT:    ret i32 [[STOREMERGE]]
 ;
   %and = and i32 %argc, %argc2
@@ -252,10 +254,12 @@ define i32 @main3f_like(i32 %argc, i32 %argc2, i32 %argc3) {
 
 define i32 @main3f_like_logical(i32 %argc, i32 %argc2, i32 %argc3) {
 ; CHECK-LABEL: @main3f_like_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[ARGC2:%.*]], [[ARGC3:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[ARGC:%.*]]
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP2]], 0
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[DOTNOT]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ARGC:%.*]], [[ARGC2:%.*]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[ARGC]], [[ARGC3:%.*]]
+; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp eq i32 [[AND2]], 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TOBOOL]], i1 [[TOBOOL3]], i1 false
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[OR_COND]] to i32
 ; CHECK-NEXT:    ret i32 [[STOREMERGE]]
 ;
   %and = and i32 %argc, %argc2
@@ -351,10 +355,12 @@ define i32 @main4e_like(i32 %argc, i32 %argc2, i32 %argc3) {
 
 define i32 @main4e_like_logical(i32 %argc, i32 %argc2, i32 %argc3) {
 ; CHECK-LABEL: @main4e_like_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[ARGC2:%.*]], [[ARGC3:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[ARGC:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[TMP3]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ARGC:%.*]], [[ARGC2:%.*]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[AND]], [[ARGC2]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[ARGC]], [[ARGC3:%.*]]
+; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp ne i32 [[AND2]], [[ARGC3]]
+; CHECK-NEXT:    [[AND_COND:%.*]] = select i1 [[TOBOOL]], i1 true, i1 [[TOBOOL3]]
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[AND_COND]] to i32
 ; CHECK-NEXT:    ret i32 [[STOREMERGE]]
 ;
   %and = and i32 %argc, %argc2
@@ -450,10 +456,12 @@ define i32 @main4f_like(i32 %argc, i32 %argc2, i32 %argc3) {
 
 define i32 @main4f_like_logical(i32 %argc, i32 %argc2, i32 %argc3) {
 ; CHECK-LABEL: @main4f_like_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[ARGC2:%.*]], [[ARGC3:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[ARGC:%.*]]
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[DOTNOT]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ARGC:%.*]], [[ARGC2:%.*]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[AND]], [[ARGC2]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[ARGC]], [[ARGC3:%.*]]
+; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp eq i32 [[AND2]], [[ARGC3]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TOBOOL]], i1 [[TOBOOL3]], i1 false
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[OR_COND]] to i32
 ; CHECK-NEXT:    ret i32 [[STOREMERGE]]
 ;
   %and = and i32 %argc, %argc2
@@ -485,10 +493,12 @@ define i32 @main5_like(i32 %argc, i32 %argc2) {
 
 define i32 @main5_like_logical(i32 %argc, i32 %argc2) {
 ; CHECK-LABEL: @main5_like_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARGC:%.*]], [[ARGC2:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 7
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 7
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[TMP3]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ARGC:%.*]], 7
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[AND]], 7
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[ARGC2:%.*]], 7
+; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp ne i32 [[AND2]], 7
+; CHECK-NEXT:    [[AND_COND:%.*]] = select i1 [[TOBOOL]], i1 true, i1 [[TOBOOL3]]
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[AND_COND]] to i32
 ; CHECK-NEXT:    ret i32 [[STOREMERGE]]
 ;
   %and = and i32 %argc, 7
@@ -519,10 +529,12 @@ define i32 @main5e_like(i32 %argc, i32 %argc2, i32 %argc3) {
 
 define i32 @main5e_like_logical(i32 %argc, i32 %argc2, i32 %argc3) {
 ; CHECK-LABEL: @main5e_like_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARGC2:%.*]], [[ARGC3:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[ARGC:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], [[ARGC]]
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[TMP3]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ARGC:%.*]], [[ARGC2:%.*]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[AND]], [[ARGC]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[ARGC]], [[ARGC3:%.*]]
+; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp ne i32 [[AND2]], [[ARGC]]
+; CHECK-NEXT:    [[AND_COND:%.*]] = select i1 [[TOBOOL]], i1 true, i1 [[TOBOOL3]]
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[AND_COND]] to i32
 ; CHECK-NEXT:    ret i32 [[STOREMERGE]]
 ;
   %and = and i32 %argc, %argc2
@@ -554,10 +566,12 @@ define i32 @main5c_like(i32 %argc, i32 %argc2) {
 
 define i32 @main5c_like_logical(i32 %argc, i32 %argc2) {
 ; CHECK-LABEL: @main5c_like_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARGC:%.*]], [[ARGC2:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 7
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP2]], 7
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[DOTNOT]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ARGC:%.*]], 7
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[AND]], 7
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[ARGC2:%.*]], 7
+; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp eq i32 [[AND2]], 7
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TOBOOL]], i1 [[TOBOOL3]], i1 false
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[OR_COND]] to i32
 ; CHECK-NEXT:    ret i32 [[STOREMERGE]]
 ;
   %and = and i32 %argc, 7
@@ -588,10 +602,12 @@ define i32 @main5f_like(i32 %argc, i32 %argc2, i32 %argc3) {
 
 define i32 @main5f_like_logical(i32 %argc, i32 %argc2, i32 %argc3) {
 ; CHECK-LABEL: @main5f_like_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARGC2:%.*]], [[ARGC3:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[ARGC:%.*]]
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP2]], [[ARGC]]
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[DOTNOT]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ARGC:%.*]], [[ARGC2:%.*]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[AND]], [[ARGC]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[ARGC]], [[ARGC3:%.*]]
+; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp eq i32 [[AND2]], [[ARGC]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TOBOOL]], i1 [[TOBOOL3]], i1 false
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[OR_COND]] to i32
 ; CHECK-NEXT:    ret i32 [[STOREMERGE]]
 ;
   %and = and i32 %argc, %argc2
@@ -756,10 +772,12 @@ define i32 @main7a(i32 %argc, i32 %argc2, i32 %argc3) {
 
 define i32 @main7a_logical(i32 %argc, i32 %argc2, i32 %argc3) {
 ; CHECK-LABEL: @main7a_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[ARGC2:%.*]], [[ARGC3:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[ARGC:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[TMP3]] to i32
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[ARGC2:%.*]], [[ARGC:%.*]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[AND1]], [[ARGC2]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[ARGC3:%.*]], [[ARGC]]
+; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp ne i32 [[AND2]], [[ARGC3]]
+; CHECK-NEXT:    [[AND_COND:%.*]] = select i1 [[TOBOOL]], i1 true, i1 [[TOBOOL3]]
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[AND_COND]] to i32
 ; CHECK-NEXT:    ret i32 [[STOREMERGE]]
 ;
   %and1 = and i32 %argc2, %argc
@@ -791,10 +809,12 @@ define i32 @main7b(i32 %argc, i32 %argc2, i32 %argc3) {
 
 define i32 @main7b_logical(i32 %argc, i32 %argc2, i32 %argc3) {
 ; CHECK-LABEL: @main7b_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[ARGC2:%.*]], [[ARGC3:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[ARGC:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[TMP3]] to i32
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[ARGC:%.*]], [[ARGC2:%.*]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[AND1]], [[ARGC2]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[ARGC]], [[ARGC3:%.*]]
+; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp ne i32 [[AND2]], [[ARGC3]]
+; CHECK-NEXT:    [[AND_COND:%.*]] = select i1 [[TOBOOL]], i1 true, i1 [[TOBOOL3]]
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[AND_COND]] to i32
 ; CHECK-NEXT:    ret i32 [[STOREMERGE]]
 ;
   %and1 = and i32 %argc, %argc2
@@ -826,10 +846,12 @@ define i32 @main7c(i32 %argc, i32 %argc2, i32 %argc3) {
 
 define i32 @main7c_logical(i32 %argc, i32 %argc2, i32 %argc3) {
 ; CHECK-LABEL: @main7c_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[ARGC2:%.*]], [[ARGC3:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[ARGC:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[TMP3]] to i32
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[ARGC2:%.*]], [[ARGC:%.*]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[AND1]], [[ARGC2]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[ARGC3:%.*]], [[ARGC]]
+; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp ne i32 [[AND2]], [[ARGC3]]
+; CHECK-NEXT:    [[AND_COND:%.*]] = select i1 [[TOBOOL]], i1 true, i1 [[TOBOOL3]]
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[AND_COND]] to i32
 ; CHECK-NEXT:    ret i32 [[STOREMERGE]]
 ;
   %and1 = and i32 %argc2, %argc
@@ -867,10 +889,12 @@ define i32 @main7d_logical(i32 %argc, i32 %argc2, i32 %argc3, i32 %argc4, i32 %a
 ; CHECK-LABEL: @main7d_logical(
 ; CHECK-NEXT:    [[BC:%.*]] = and i32 [[ARGC2:%.*]], [[ARGC4:%.*]]
 ; CHECK-NEXT:    [[DE:%.*]] = and i32 [[ARGC3:%.*]], [[ARGC5:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[BC]], [[DE]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[ARGC:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[TMP3]] to i32
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[BC]], [[ARGC:%.*]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[AND1]], [[BC]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[DE]], [[ARGC]]
+; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp ne i32 [[AND2]], [[DE]]
+; CHECK-NEXT:    [[AND_COND:%.*]] = select i1 [[TOBOOL]], i1 true, i1 [[TOBOOL3]]
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[AND_COND]] to i32
 ; CHECK-NEXT:    ret i32 [[STOREMERGE]]
 ;
   %bc = and i32 %argc2, %argc4
@@ -910,10 +934,12 @@ define i32 @main7e_logical(i32 %argc, i32 %argc2, i32 %argc3, i32 %argc4, i32 %a
 ; CHECK-LABEL: @main7e_logical(
 ; CHECK-NEXT:    [[BC:%.*]] = and i32 [[ARGC2:%.*]], [[ARGC4:%.*]]
 ; CHECK-NEXT:    [[DE:%.*]] = and i32 [[ARGC3:%.*]], [[ARGC5:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[BC]], [[DE]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[ARGC:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[TMP3]] to i32
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[BC]], [[ARGC:%.*]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[AND1]], [[BC]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[DE]], [[ARGC]]
+; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp ne i32 [[AND2]], [[DE]]
+; CHECK-NEXT:    [[AND_COND:%.*]] = select i1 [[TOBOOL]], i1 true, i1 [[TOBOOL3]]
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[AND_COND]] to i32
 ; CHECK-NEXT:    ret i32 [[STOREMERGE]]
 ;
   %bc = and i32 %argc2, %argc4
@@ -953,10 +979,12 @@ define i32 @main7f_logical(i32 %argc, i32 %argc2, i32 %argc3, i32 %argc4, i32 %a
 ; CHECK-LABEL: @main7f_logical(
 ; CHECK-NEXT:    [[BC:%.*]] = and i32 [[ARGC2:%.*]], [[ARGC4:%.*]]
 ; CHECK-NEXT:    [[DE:%.*]] = and i32 [[ARGC3:%.*]], [[ARGC5:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[BC]], [[DE]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[ARGC:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[TMP3]] to i32
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[BC]], [[ARGC:%.*]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[BC]], [[AND1]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[DE]], [[ARGC]]
+; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp ne i32 [[DE]], [[AND2]]
+; CHECK-NEXT:    [[AND_COND:%.*]] = select i1 [[TOBOOL]], i1 true, i1 [[TOBOOL3]]
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[AND_COND]] to i32
 ; CHECK-NEXT:    ret i32 [[STOREMERGE]]
 ;
   %bc = and i32 %argc2, %argc4
@@ -996,10 +1024,12 @@ define i32 @main7g_logical(i32 %argc, i32 %argc2, i32 %argc3, i32 %argc4, i32 %a
 ; CHECK-LABEL: @main7g_logical(
 ; CHECK-NEXT:    [[BC:%.*]] = and i32 [[ARGC2:%.*]], [[ARGC4:%.*]]
 ; CHECK-NEXT:    [[DE:%.*]] = and i32 [[ARGC3:%.*]], [[ARGC5:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[BC]], [[DE]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[ARGC:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[TMP3]] to i32
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[BC]], [[ARGC:%.*]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[BC]], [[AND1]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[DE]], [[ARGC]]
+; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp ne i32 [[DE]], [[AND2]]
+; CHECK-NEXT:    [[AND_COND:%.*]] = select i1 [[TOBOOL]], i1 true, i1 [[TOBOOL3]]
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[AND_COND]] to i32
 ; CHECK-NEXT:    ret i32 [[STOREMERGE]]
 ;
   %bc = and i32 %argc2, %argc4

@@ -24,6 +24,7 @@ namespace macho {
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 class Symbol;
+class Defined;
 class DylibSymbol;
 class InputSection;
 
@@ -65,12 +66,18 @@ public:
 
   virtual uint64_t getPageSize() const = 0;
 
+  virtual void populateThunk(InputSection *thunk, Symbol *funcSym) {
+    llvm_unreachable("target does not use thunks");
+  }
+
   bool hasAttr(uint8_t type, RelocAttrBits bit) const {
     return getRelocAttrs(type).hasAttr(bit);
   }
 
+  bool usesThunks() const { return thunkSize > 0; }
+
   uint32_t magic;
-  uint32_t cpuType;
+  llvm::MachO::CPUType cpuType;
   uint32_t cpuSubtype;
 
   uint64_t pageZeroSize;
@@ -79,6 +86,15 @@ public:
   size_t stubHelperHeaderSize;
   size_t stubHelperEntrySize;
   size_t wordSize;
+
+  size_t thunkSize = 0;
+  uint64_t branchRange = 0;
+
+  // We contrive this value as sufficiently far from any valid address that it
+  // will always be out-of-range for any architecture. UINT64_MAX is not a
+  // good choice because it is (a) only 1 away from wrapping to 0, and (b) the
+  // tombstone value for DenseMap<> and caused weird assertions for me.
+  static constexpr uint64_t outOfRangeVA = 0xfull << 60;
 };
 
 TargetInfo *createX86_64TargetInfo();

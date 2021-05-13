@@ -129,9 +129,6 @@ enum NodeType : unsigned {
   // Truncates a RVV integer vector by one power-of-two. Carries both an extra
   // mask and VL operand.
   TRUNCATE_VECTOR_VL,
-  // Unit-stride fault-only-first load
-  VLEFF,
-  VLEFF_MASK,
   // Matches the semantics of vslideup/vslidedown. The first operand is the
   // pass-thru operand, the second is the source vector, the third is the
   // XLenVT index (either constant or non-constant), the fourth is the mask
@@ -471,8 +468,8 @@ public:
                              MVT PartVT, EVT ValueVT,
                              Optional<CallingConv::ID> CC) const override;
 
-  static RISCVVLMUL getLMUL(MVT VT);
-  static unsigned getRegClassIDForLMUL(RISCVVLMUL LMul);
+  static RISCVII::VLMUL getLMUL(MVT VT);
+  static unsigned getRegClassIDForLMUL(RISCVII::VLMUL LMul);
   static unsigned getSubregIndexByMVT(MVT VT, unsigned Index);
   static unsigned getRegClassIDForVecVT(MVT VT);
   static std::pair<unsigned, unsigned>

@@ -518,7 +518,7 @@ basic_ostream<_CharT, _Traits> &
 __quoted_output ( basic_ostream<_CharT, _Traits> &__os,
         _ForwardIterator __first, _ForwardIterator __last, _CharT __delim, _CharT __escape )
 {
-    _VSTD::basic_string<_CharT, _Traits> __str;
+    basic_string<_CharT, _Traits> __str;
     __str.push_back(__delim);
     for ( ; __first != __last; ++ __first )
     {

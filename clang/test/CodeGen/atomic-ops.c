@@ -490,34 +490,49 @@ void generalFailureOrder(_Atomic(int) *ptr, int *ptr2, int success, int fail) {
 
   // CHECK: [[MONOTONIC]]
   // CHECK: switch {{.*}}, label %[[MONOTONIC_MONOTONIC:[0-9a-zA-Z._]+]] [
+  // CHECK-NEXT: i32 1, label %[[MONOTONIC_ACQUIRE:[0-9a-zA-Z._]+]]
+  // CHECK-NEXT: i32 2, label %[[MONOTONIC_ACQUIRE:[0-9a-zA-Z._]+]]
+  // CHECK-NEXT: i32 5, label %[[MONOTONIC_SEQCST:[0-9a-zA-Z._]+]]
   // CHECK-NEXT: ]
 
   // CHECK: [[ACQUIRE]]
   // CHECK: switch {{.*}}, label %[[ACQUIRE_MONOTONIC:[0-9a-zA-Z._]+]] [
   // CHECK-NEXT: i32 1, label %[[ACQUIRE_ACQUIRE:[0-9a-zA-Z._]+]]
   // CHECK-NEXT: i32 2, label %[[ACQUIRE_ACQUIRE:[0-9a-zA-Z._]+]]
+  // CHECK-NEXT: i32 5, label %[[ACQUIRE_SEQCST:[0-9a-zA-Z._]+]]
   // CHECK-NEXT: ]
 
   // CHECK: [[RELEASE]]
   // CHECK: switch {{.*}}, label %[[RELEASE_MONOTONIC:[0-9a-zA-Z._]+]] [
+  // CHECK-NEXT: i32 1, label %[[RELEASE_ACQUIRE:[0-9a-zA-Z._]+]]
   // CHECK-NEXT: i32 2, label %[[RELEASE_ACQUIRE:[0-9a-zA-Z._]+]]
+  // CHECK-NEXT: i32 5, label %[[RELEASE_SEQCST:[0-9a-zA-Z._]+]]
   // CHECK-NEXT: ]
 
   // CHECK: [[ACQREL]]
   // CHECK: switch {{.*}}, label %[[ACQREL_MONOTONIC:[0-9a-zA-Z._]+]] [
   // CHECK-NEXT: i32 1, label %[[ACQREL_ACQUIRE:[0-9a-zA-Z._]+]]
   // CHECK-NEXT: i32 2, label %[[ACQREL_ACQUIRE:[0-9a-zA-Z._]+]]
+  // CHECK-NEXT: i32 5, label %[[ACQREL_SEQCST:[0-9a-zA-Z._]+]]
   // CHECK-NEXT: ]
 
   // CHECK: [[SEQCST]]
   // CHECK: switch {{.*}}, label %[[SEQCST_MONOTONIC:[0-9a-zA-Z._]+]] [
   // CHECK-NEXT: i32 1, label %[[SEQCST_ACQUIRE:[0-9a-zA-Z._]+]]
-  // CHECK-NEXT: i32 2, label %[[SEQCST_ACQUIRE:[0-9a-zA-Z._]+]]
+  // CHECK-NEXT: i32 2, label %[[SEQCST_ACQUIRE]]
   // CHECK-NEXT: i32 5, label %[[SEQCST_SEQCST:[0-9a-zA-Z._]+]]
   // CHECK-NEXT: ]
 
   // CHECK: [[MONOTONIC_MONOTONIC]]
   // CHECK: cmpxchg {{.*}} monotonic monotonic, align
+  // CHECK: br
+
+  // CHECK: [[MONOTONIC_ACQUIRE]]
+  // CHECK: cmpxchg {{.*}} monotonic acquire, align
+  // CHECK: br
+
+  // CHECK: [[MONOTONIC_SEQCST]]
+  // CHECK: cmpxchg {{.*}} monotonic seq_cst, align
   // CHECK: br
 
   // CHECK: [[ACQUIRE_MONOTONIC]]
@@ -528,6 +543,10 @@ void generalFailureOrder(_Atomic(int) *ptr, int *ptr2, int success, int fail) {
   // CHECK: cmpxchg {{.*}} acquire acquire, align
   // CHECK: br
 
+  // CHECK: [[ACQUIRE_SEQCST]]
+  // CHECK: cmpxchg {{.*}} acquire seq_cst, align
+  // CHECK: br
+
   // CHECK: [[RELEASE_MONOTONIC]]
   // CHECK: cmpxchg {{.*}} release monotonic, align
   // CHECK: br
@@ -536,12 +555,20 @@ void generalFailureOrder(_Atomic(int) *ptr, int *ptr2, int success, int fail) {
   // CHECK: cmpxchg {{.*}} release acquire, align
   // CHECK: br
 
+  // CHECK: [[RELEASE_SEQCST]]
+  // CHECK: cmpxchg {{.*}} release seq_cst, align
+  // CHECK: br
+
   // CHECK: [[ACQREL_MONOTONIC]]
   // CHECK: cmpxchg {{.*}} acq_rel monotonic, align
   // CHECK: br
 
   // CHECK: [[ACQREL_ACQUIRE]]
   // CHECK: cmpxchg {{.*}} acq_rel acquire, align
+  // CHECK: br
+
+  // CHECK: [[ACQREL_SEQCST]]
+  // CHECK: cmpxchg {{.*}} acq_rel seq_cst, align
   // CHECK: br
 
   // CHECK: [[SEQCST_MONOTONIC]]
@@ -593,19 +620,29 @@ void EMIT_ALL_THE_THINGS(int *ptr, int *ptr2, int new, _Bool weak, int success, 
   __atomic_compare_exchange(ptr, ptr2, &new, weak, success, fail);
 
   // CHECK: = cmpxchg {{.*}} monotonic monotonic, align
+  // CHECK: = cmpxchg {{.*}} monotonic acquire, align
+  // CHECK: = cmpxchg {{.*}} monotonic seq_cst, align
   // CHECK: = cmpxchg weak {{.*}} monotonic monotonic, align
+  // CHECK: = cmpxchg weak {{.*}} monotonic acquire, align
+  // CHECK: = cmpxchg weak {{.*}} monotonic seq_cst, align
   // CHECK: = cmpxchg {{.*}} acquire monotonic, align
   // CHECK: = cmpxchg {{.*}} acquire acquire, align
+  // CHECK: = cmpxchg {{.*}} acquire seq_cst, align
   // CHECK: = cmpxchg weak {{.*}} acquire monotonic, align
   // CHECK: = cmpxchg weak {{.*}} acquire acquire, align
+  // CHECK: = cmpxchg weak {{.*}} acquire seq_cst, align
   // CHECK: = cmpxchg {{.*}} release monotonic, align
   // CHECK: = cmpxchg {{.*}} release acquire, align
+  // CHECK: = cmpxchg {{.*}} release seq_cst, align
   // CHECK: = cmpxchg weak {{.*}} release monotonic, align
   // CHECK: = cmpxchg weak {{.*}} release acquire, align
+  // CHECK: = cmpxchg weak {{.*}} release seq_cst, align
   // CHECK: = cmpxchg {{.*}} acq_rel monotonic, align
   // CHECK: = cmpxchg {{.*}} acq_rel acquire, align
+  // CHECK: = cmpxchg {{.*}} acq_rel seq_cst, align
   // CHECK: = cmpxchg weak {{.*}} acq_rel monotonic, align
   // CHECK: = cmpxchg weak {{.*}} acq_rel acquire, align
+  // CHECK: = cmpxchg weak {{.*}} acq_rel seq_cst, align
   // CHECK: = cmpxchg {{.*}} seq_cst monotonic, align
   // CHECK: = cmpxchg {{.*}} seq_cst acquire, align
   // CHECK: = cmpxchg {{.*}} seq_cst seq_cst, align

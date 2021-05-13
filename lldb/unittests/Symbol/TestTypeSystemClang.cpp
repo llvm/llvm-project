@@ -741,3 +741,15 @@ TEST(TestScratchTypeSystemClang, InferSubASTFromLangOpts) {
       ScratchTypeSystemClang::IsolatedASTKind::CppModules,
       ScratchTypeSystemClang::InferIsolatedASTKindFromLangOpts(lang_opts));
 }
+
+TEST_F(TestTypeSystemClang, GetExeModuleWhenMissingSymbolFile) {
+  CompilerType compiler_type = m_ast->GetBasicTypeFromAST(lldb::eBasicTypeInt);
+  lldb_private::Type t(0, nullptr, ConstString("MyType"), llvm::None, nullptr,
+                       0, {}, {}, compiler_type,
+                       lldb_private::Type::ResolveState::Full);
+  // Test that getting the execution module when no type system is present
+  // is handled gracefully.
+  ModuleSP module = t.GetExeModule();
+  EXPECT_EQ(module.get(), nullptr);
+}
+

@@ -381,7 +381,7 @@ def start_group: F<"start-group">,
 def start_lib: F<"start-lib">,
   HelpText<"Start a grouping of objects that should be treated as if they were together in an archive">;
 
-def strip_all: F<"strip-all">, HelpText<"Strip all symbols">;
+def strip_all: F<"strip-all">, HelpText<"Strip all symbols. Implies --strip-debug">;
 
 def strip_debug: F<"strip-debug">, HelpText<"Strip debugging information">;
 

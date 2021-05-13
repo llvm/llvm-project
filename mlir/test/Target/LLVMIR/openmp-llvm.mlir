@@ -151,6 +151,13 @@ llvm.func @test_omp_parallel_num_threads_3() -> () {
 // CHECK: define void @test_omp_parallel_if_1(i32 %[[IF_VAR_1:.*]])
 llvm.func @test_omp_parallel_if_1(%arg0: i32) -> () {
 
+// Check that the allocas are emitted by the OpenMPIRBuilder at the top of the
+// function, before the condition. Allocas are only emitted by the builder when
+// the `if` clause is present. We match specific SSA value names since LLVM
+// actually produces those names.
+// CHECK: %tid.addr{{.*}} = alloca i32
+// CHECK: %zero.addr{{.*}} = alloca i32
+
 // CHECK: %[[IF_COND_VAR_1:.*]] = icmp slt i32 %[[IF_VAR_1]], 0
   %0 = llvm.mlir.constant(0 : index) : i32
   %1 = llvm.icmp "slt" %arg0, %0 : i32
@@ -183,6 +190,60 @@ llvm.func @test_omp_parallel_if_1(%arg0: i32) -> () {
 
 // CHECK: define internal void @[[OMP_OUTLINED_FN_IF_1]]
   // CHECK: call void @__kmpc_barrier
+
+// -----
+
+// CHECK-LABEL: @test_nested_alloca_ip
+llvm.func @test_nested_alloca_ip(%arg0: i32) -> () {
+
+  // Check that the allocas are emitted by the OpenMPIRBuilder at the top of
+  // the function, before the condition. Allocas are only emitted by the
+  // builder when the `if` clause is present. We match specific SSA value names
+  // since LLVM actually produces those names and ensure they come before the
+  // "icmp" that is the first operation we emit.
+  // CHECK: %tid.addr{{.*}} = alloca i32
+  // CHECK: %zero.addr{{.*}} = alloca i32
+  // CHECK: icmp slt i32 %{{.*}}, 0
+  %0 = llvm.mlir.constant(0 : index) : i32
+  %1 = llvm.icmp "slt" %arg0, %0 : i32
+
+  omp.parallel if(%1 : i1) {
+    // The "parallel" operation will be outlined, check the the function is
+    // produced. Inside that function, further allocas should be placed before
+    // another "icmp".
+    // CHECK: define
+    // CHECK: %tid.addr{{.*}} = alloca i32
+    // CHECK: %zero.addr{{.*}} = alloca i32
+    // CHECK: icmp slt i32 %{{.*}}, 1
+    %2 = llvm.mlir.constant(1 : index) : i32
+    %3 = llvm.icmp "slt" %arg0, %2 : i32
+
+    omp.parallel if(%3 : i1) {
+      // One more nesting level.
+      // CHECK: define
+      // CHECK: %tid.addr{{.*}} = alloca i32
+      // CHECK: %zero.addr{{.*}} = alloca i32
+      // CHECK: icmp slt i32 %{{.*}}, 2
+
+      %4 = llvm.mlir.constant(2 : index) : i32
+      %5 = llvm.icmp "slt" %arg0, %4 : i32
+
+      omp.parallel if(%5 : i1) {
+        omp.barrier
+        omp.terminator
+      }
+
+      omp.barrier
+      omp.terminator
+    }
+    omp.barrier
+    omp.terminator
+  }
+
+  llvm.return
+}
+
+// -----
 
 // CHECK-LABEL: define void @test_omp_parallel_3()
 llvm.func @test_omp_parallel_3() -> () {
@@ -354,4 +415,54 @@ llvm.func @wsloop_inclusive_2(%arg0: !llvm.ptr<f32>) {
     omp.yield
   }) {inclusive, operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0, 0, 0]> : vector<9xi32>} : (i64, i64, i64) -> ()
   llvm.return
+}
+
+llvm.func @body(i64)
+
+llvm.func @test_omp_wsloop_dynamic(%lb : i64, %ub : i64, %step : i64) -> () {
+ omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(dynamic) {
+  // CHECK: call void @__kmpc_dispatch_init_8u
+  // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
+  // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
+  // CHECK  br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
+   llvm.call @body(%iv) : (i64) -> ()
+   omp.yield
+ }
+ llvm.return
+}
+
+llvm.func @test_omp_wsloop_auto(%lb : i64, %ub : i64, %step : i64) -> () {
+ omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(auto) {
+  // CHECK: call void @__kmpc_dispatch_init_8u
+  // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
+  // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
+  // CHECK  br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
+   llvm.call @body(%iv) : (i64) -> ()
+   omp.yield
+ }
+ llvm.return
+}
+
+llvm.func @test_omp_wsloop_runtime(%lb : i64, %ub : i64, %step : i64) -> () {
+ omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(runtime) {
+  // CHECK: call void @__kmpc_dispatch_init_8u
+  // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
+  // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
+  // CHECK  br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
+   llvm.call @body(%iv) : (i64) -> ()
+   omp.yield
+ }
+ llvm.return
+}
+
+llvm.func @test_omp_wsloop_guided(%lb : i64, %ub : i64, %step : i64) -> () {
+ omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(guided) {
+  // CHECK: call void @__kmpc_dispatch_init_8u
+  // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
+  // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
+  // CHECK  br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
+   llvm.call @body(%iv) : (i64) -> ()
+   omp.yield
+ }
+ llvm.return
 }

@@ -2,7 +2,7 @@ set(LLVM_OPTIONAL_SOURCES
   AliasAnalysis.cpp
   AffineAnalysis.cpp
   AffineStructures.cpp
-  BufferAliasAnalysis.cpp
+  BufferViewFlowAnalysis.cpp
   CallGraph.cpp
   DataFlowAnalysis.cpp
   LinearTransform.cpp
@@ -19,7 +19,7 @@ set(LLVM_OPTIONAL_SOURCES
 
 add_mlir_library(MLIRAnalysis
   AliasAnalysis.cpp
-  BufferAliasAnalysis.cpp
+  BufferViewFlowAnalysis.cpp
   CallGraph.cpp
   DataFlowAnalysis.cpp
   Liveness.cpp

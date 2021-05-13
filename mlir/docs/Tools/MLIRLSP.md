@@ -109,3 +109,6 @@ monorepo, a few extra steps for setup are required:
 *   Syntax highlighting for .mlir files and `mlir` markdown blocks
 *   go-to-definition and cross references
     *   Definitions include the source file locations of operations in the .mlir
+*   Hover over IR entities to see more information about them
+    *   e.g. for a Block, you can see its block number as well as any
+        predecessors or successors.

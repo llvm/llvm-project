@@ -449,3 +449,31 @@ define void @foo(i32*) {
   musttail call void @must_callee(i8* null)
   ret void
 }
+
+; Verify we emit a tail call with a type that requires splitting into
+; multiple registers.
+declare void @outgoing_v16f16(<16 x half>)
+define void @test_tail_call_outgoing_v16f16(<16 x half> %arg) {
+  ; DARWIN-LABEL: name: test_tail_call_outgoing_v16f16
+  ; DARWIN: bb.1 (%ir-block.0):
+  ; DARWIN:   liveins: $q0, $q1
+  ; DARWIN:   [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
+  ; DARWIN:   [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
+  ; DARWIN:   [[CONCAT_VECTORS:%[0-9]+]]:_(<16 x s16>) = G_CONCAT_VECTORS [[COPY]](<8 x s16>), [[COPY1]](<8 x s16>)
+  ; DARWIN:   [[UV:%[0-9]+]]:_(<8 x s16>), [[UV1:%[0-9]+]]:_(<8 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<16 x s16>)
+  ; DARWIN:   $q0 = COPY [[UV]](<8 x s16>)
+  ; DARWIN:   $q1 = COPY [[UV1]](<8 x s16>)
+  ; DARWIN:   TCRETURNdi @outgoing_v16f16, 0, csr_darwin_aarch64_aapcs, implicit $sp, implicit $q0, implicit $q1
+  ; WINDOWS-LABEL: name: test_tail_call_outgoing_v16f16
+  ; WINDOWS: bb.1 (%ir-block.0):
+  ; WINDOWS:   liveins: $q0, $q1
+  ; WINDOWS:   [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
+  ; WINDOWS:   [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
+  ; WINDOWS:   [[CONCAT_VECTORS:%[0-9]+]]:_(<16 x s16>) = G_CONCAT_VECTORS [[COPY]](<8 x s16>), [[COPY1]](<8 x s16>)
+  ; WINDOWS:   [[UV:%[0-9]+]]:_(<8 x s16>), [[UV1:%[0-9]+]]:_(<8 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<16 x s16>)
+  ; WINDOWS:   $q0 = COPY [[UV]](<8 x s16>)
+  ; WINDOWS:   $q1 = COPY [[UV1]](<8 x s16>)
+  ; WINDOWS:   TCRETURNdi @outgoing_v16f16, 0, csr_aarch64_aapcs, implicit $sp, implicit $q0, implicit $q1
+  tail call void @outgoing_v16f16(<16 x half> %arg)
+  ret void
+}

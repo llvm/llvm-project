@@ -342,6 +342,10 @@ class TestParameter(SetupConfigs):
     def test_empty_choices_should_blow_up(self):
         self.assertRaises(ValueError, lambda: dsl.Parameter(name='std', choices=[], type=str, help='', actions=lambda _: []))
 
+    def test_no_choices_is_ok(self):
+        param = dsl.Parameter(name='triple', type=str, help='', actions=lambda _: [])
+        self.assertEqual(param.name, 'triple')
+
     def test_name_is_set_correctly(self):
         param = dsl.Parameter(name='std', choices=['c++03'], type=str, help='', actions=lambda _: [])
         self.assertEqual(param.name, 'std')

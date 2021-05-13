@@ -88,6 +88,20 @@ func @verifyAuxiliaryNativeCodeCall(%arg0: i32) -> (i32) {
   return %0 : i32
 }
 
+// CHECK-LABEL: verifyNativeCodeCallBinding
+func @verifyNativeCodeCallBinding(%arg0 : i32) -> (i32) {
+  %0 = "test.op_k"() : () -> (i32)
+  // CHECK: %[[A:.*]], %[[B:.*]] = "test.native_code_call5"(%1, %1) : (i32, i32) -> (i32, i32)
+  %1, %2 = "test.native_code_call4"(%0) : (i32) -> (i32, i32)
+  %3 = "test.constant"() {value = 1 : i8} : () -> i8
+  // %3 is i8 so it'll fail at GetFirstI32Result match. The operation should
+  // keep the same form.
+  // CHECK: %{{.*}}, %{{.*}} = "test.native_code_call4"({{%.*}}) : (i8) -> (i32, i32)
+  %4, %5 = "test.native_code_call4"(%3) : (i8) -> (i32, i32)
+  // CHECK: return %[[A]]
+  return %1 : i32
+}
+
 // CHECK-LABEL: verifyAllAttrConstraintOf
 func @verifyAllAttrConstraintOf() -> (i32, i32, i32) {
   // CHECK: "test.all_attr_constraint_of2"

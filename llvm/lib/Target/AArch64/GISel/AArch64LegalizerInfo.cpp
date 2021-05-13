@@ -306,11 +306,17 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_STORE)
       .legalForTypesWithMemDesc({{s8, p0, 8, 8},
+                                 {s16, p0, 8, 8}, // truncstorei8 from s16
+                                 {s32, p0, 8, 8}, // truncstorei8 from s32
+                                 {s64, p0, 8, 8}, // truncstorei8 from s64
                                  {s16, p0, 16, 8},
+                                 {s32, p0, 16, 8}, // truncstorei16 from s32
+                                 {s64, p0, 16, 8}, // truncstorei16 from s64
                                  {s32, p0, 8, 8},
                                  {s32, p0, 16, 8},
                                  {s32, p0, 32, 8},
                                  {s64, p0, 64, 8},
+                                 {s64, p0, 32, 8}, // truncstorei32 from s64
                                  {p0, p0, 64, 8},
                                  {s128, p0, 128, 8},
                                  {v16s8, p0, 128, 8},
@@ -717,11 +723,14 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder({G_SBFX, G_UBFX})
       .customFor({{s32, s32}, {s64, s64}});
 
-  // TODO: s8, s16, s128
+  // TODO: Custom legalization for s128
   // TODO: v2s64, v2s32, v4s32, v4s16, v8s16
   // TODO: Use generic lowering when custom lowering is not possible.
   getActionDefinitionsBuilder(G_CTPOP)
       .legalFor({{v8s8, v8s8}, {v16s8, v16s8}})
+      .clampScalar(0, s32, s128)
+      .widenScalarToNextPow2(0)
+      .scalarSameSizeAs(1, 0)
       .customFor({{s32, s32}, {s64, s64}});
 
   computeTables();

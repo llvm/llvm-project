@@ -65,6 +65,9 @@ public:
 
     /// Enable preview of InlayHints feature.
     bool InlayHints = false;
+
+    /// Limit the number of references returned (0 means no limit).
+    size_t ReferencesLimit = 0;
   };
 
   ClangdLSPServer(Transport &Transp, const ThreadsafeFS &TFS,

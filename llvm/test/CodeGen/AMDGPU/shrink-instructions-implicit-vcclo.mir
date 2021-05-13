@@ -1,4 +1,5 @@
 # RUN: llc -march=amdgcn -mcpu=gfx1010 -run-pass=si-shrink-instructions --verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -run-pass=si-shrink-instructions --verify-machineinstrs %s -o - | FileCheck %s
 
 # Make sure the implicit vcc_lo of V_CNDMASK is preserved and not promoted to vcc.
 ---

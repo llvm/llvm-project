@@ -222,49 +222,16 @@ template <typename T> inline T *alignUp(T *value, size_t alignment) {
 
 extern void register_allocation(void *addr, size_t size,
                                 atmi_mem_place_t place);
-extern hsa_amd_memory_pool_t
-get_memory_pool_by_mem_place(atmi_mem_place_t place);
+
 extern bool atl_is_atmi_initialized();
 
 bool handle_group_signal(hsa_signal_value_t value, void *arg);
 
-void packet_store_release(uint32_t *packet, uint16_t header, uint16_t rest);
-uint16_t
-create_header(hsa_packet_type_t type, int barrier,
-              atmi_task_fence_scope_t acq_fence = ATMI_FENCE_SCOPE_SYSTEM,
-              atmi_task_fence_scope_t rel_fence = ATMI_FENCE_SCOPE_SYSTEM);
 
 void allow_access_to_all_gpu_agents(void *ptr);
 } // namespace core
 
 const char *get_error_string(hsa_status_t err);
 const char *get_atmi_error_string(atmi_status_t err);
-
-#define ATMIErrorCheck(msg, status)                                            \
-  if (status != ATMI_STATUS_SUCCESS) {                                         \
-    printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, #msg,                \
-           get_atmi_error_string(status));                                     \
-    exit(1);                                                                   \
-  } else {                                                                     \
-    /*  printf("%s succeeded.\n", #msg);*/                                     \
-  }
-
-#define ErrorCheck(msg, status)                                                \
-  if (status != HSA_STATUS_SUCCESS) {                                          \
-    printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, #msg,                \
-           get_error_string(status));                                          \
-    exit(1);                                                                   \
-  } else {                                                                     \
-    /*  printf("%s succeeded.\n", #msg);*/                                     \
-  }
-
-#define ErrorCheckAndContinue(msg, status)                                     \
-  if (status != HSA_STATUS_SUCCESS) {                                          \
-    DEBUG_PRINT("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, #msg,           \
-                get_error_string(status));                                     \
-    continue;                                                                  \
-  } else {                                                                     \
-    /*  printf("%s succeeded.\n", #msg);*/                                     \
-  }
 
 #endif // SRC_RUNTIME_INCLUDE_INTERNAL_H_

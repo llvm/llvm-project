@@ -20,10 +20,14 @@
 // MMA builtins that are using their own format documented below.
 
 #if defined(BUILTIN) && !defined(CUSTOM_BUILTIN)
-#   define CUSTOM_BUILTIN(ID, TYPES, ACCUMULATE) BUILTIN(__builtin_##ID, "i.", "t")
+#   define CUSTOM_BUILTIN(ID, INTR, TYPES, ACCUMULATE) \
+      BUILTIN(__builtin_##ID, "i.", "t")
 #elif defined(CUSTOM_BUILTIN) && !defined(BUILTIN)
 #   define BUILTIN(ID, TYPES, ATTRS)
 #endif
+
+#define UNALIASED_CUSTOM_BUILTIN(ID, TYPES, ACCUMULATE) \
+   CUSTOM_BUILTIN(ID, ID, TYPES, ACCUMULATE)
 
 BUILTIN(__builtin_ppc_get_timebase, "ULLi", "n")
 
@@ -674,90 +678,103 @@ BUILTIN(__builtin_dcbf, "vvC*", "")
 // Because these built-ins rely on target-dependent types and to avoid pervasive
 // change, they are type checked manually in Sema using custom type descriptors.
 // The first argument of the CUSTOM_BUILTIN macro is the name of the built-in
-// with its prefix, the second argument specifies the type of the function
+// with its prefix, the second argument is the name of the intrinsic this
+// built-in generates, the third argument specifies the type of the function
 // (result value, then each argument) as follows:
 //  i -> Unsigned integer followed by the greatest possible value for that
 //       argument or 0 if no constraint on the value.
 //       (e.g. i15 for a 4-bits value)
-//  V -> Vector type used with MMA builtins (vector unsigned char)
+//  V -> Vector type used with MMA built-ins (vector unsigned char)
 //  W -> PPC Vector type followed by the size of the vector type.
 //       (e.g. W512 for __vector_quad)
 //  any other descriptor -> Fall back to generic type descriptor decoding.
 // The 'C' suffix can be used as a suffix to specify the const type.
 // The '*' suffix can be used as a suffix to specify a pointer to a type.
-// The third argument is set to true if the builtin accumulates its result into
+// The fourth argument is set to true if the built-in accumulates its result into
 // its given accumulator.
 
-CUSTOM_BUILTIN(vsx_lxvp, "W256SLLiW256C*", false)
-CUSTOM_BUILTIN(vsx_stxvp, "vW256SLLiW256C*", false)
-CUSTOM_BUILTIN(vsx_assemble_pair, "vW256*VV", false)
-CUSTOM_BUILTIN(vsx_disassemble_pair, "vv*W256*", false)
+// Provided builtins with _mma_ prefix for compatibility.
+CUSTOM_BUILTIN(mma_lxvp, vsx_lxvp, "W256SLLiW256C*", false)
+CUSTOM_BUILTIN(mma_stxvp, vsx_stxvp, "vW256SLLiW256C*", false)
+CUSTOM_BUILTIN(mma_assemble_pair, vsx_assemble_pair, "vW256*VV", false)
+CUSTOM_BUILTIN(mma_disassemble_pair, vsx_disassemble_pair, "vv*W256*", false)
 
-CUSTOM_BUILTIN(mma_assemble_acc, "vW512*VVVV", false)
-CUSTOM_BUILTIN(mma_disassemble_acc, "vv*W512*", false)
-CUSTOM_BUILTIN(mma_xxmtacc, "vW512*", true)
-CUSTOM_BUILTIN(mma_xxmfacc, "vW512*", true)
-CUSTOM_BUILTIN(mma_xxsetaccz, "vW512*", false)
-CUSTOM_BUILTIN(mma_xvi4ger8, "vW512*VV", false)
-CUSTOM_BUILTIN(mma_xvi8ger4, "vW512*VV", false)
-CUSTOM_BUILTIN(mma_xvi16ger2, "vW512*VV", false)
-CUSTOM_BUILTIN(mma_xvi16ger2s, "vW512*VV", false)
-CUSTOM_BUILTIN(mma_xvf16ger2, "vW512*VV", false)
-CUSTOM_BUILTIN(mma_xvf32ger, "vW512*VV", false)
-CUSTOM_BUILTIN(mma_xvf64ger, "vW512*W256V", false)
-CUSTOM_BUILTIN(mma_pmxvi4ger8, "vW512*VVi15i15i255", false)
-CUSTOM_BUILTIN(mma_pmxvi8ger4, "vW512*VVi15i15i15", false)
-CUSTOM_BUILTIN(mma_pmxvi16ger2, "vW512*VVi15i15i3", false)
-CUSTOM_BUILTIN(mma_pmxvi16ger2s, "vW512*VVi15i15i3", false)
-CUSTOM_BUILTIN(mma_pmxvf16ger2, "vW512*VVi15i15i3", false)
-CUSTOM_BUILTIN(mma_pmxvf32ger, "vW512*VVi15i15", false)
-CUSTOM_BUILTIN(mma_pmxvf64ger, "vW512*W256Vi15i3", false)
-CUSTOM_BUILTIN(mma_xvi4ger8pp, "vW512*VV", true)
-CUSTOM_BUILTIN(mma_xvi8ger4pp, "vW512*VV", true)
-CUSTOM_BUILTIN(mma_xvi8ger4spp, "vW512*VV", true)
-CUSTOM_BUILTIN(mma_xvi16ger2pp, "vW512*VV", true)
-CUSTOM_BUILTIN(mma_xvi16ger2spp, "vW512*VV", true)
-CUSTOM_BUILTIN(mma_pmxvi4ger8pp, "vW512*VVi15i15i255", true)
-CUSTOM_BUILTIN(mma_pmxvi8ger4pp, "vW512*VVi15i15i15", true)
-CUSTOM_BUILTIN(mma_pmxvi8ger4spp, "vW512*VVi15i15i15", true)
-CUSTOM_BUILTIN(mma_pmxvi16ger2pp, "vW512*VVi15i15i3", true)
-CUSTOM_BUILTIN(mma_pmxvi16ger2spp, "vW512*VVi15i15i3", true)
-CUSTOM_BUILTIN(mma_xvf16ger2pp, "vW512*VV", true)
-CUSTOM_BUILTIN(mma_xvf16ger2pn, "vW512*VV", true)
-CUSTOM_BUILTIN(mma_xvf16ger2np, "vW512*VV", true)
-CUSTOM_BUILTIN(mma_xvf16ger2nn, "vW512*VV", true)
-CUSTOM_BUILTIN(mma_pmxvf16ger2pp, "vW512*VVi15i15i3", true)
-CUSTOM_BUILTIN(mma_pmxvf16ger2pn, "vW512*VVi15i15i3", true)
-CUSTOM_BUILTIN(mma_pmxvf16ger2np, "vW512*VVi15i15i3", true)
-CUSTOM_BUILTIN(mma_pmxvf16ger2nn, "vW512*VVi15i15i3", true)
-CUSTOM_BUILTIN(mma_xvf32gerpp, "vW512*VV", true)
-CUSTOM_BUILTIN(mma_xvf32gerpn, "vW512*VV", true)
-CUSTOM_BUILTIN(mma_xvf32gernp, "vW512*VV", true)
-CUSTOM_BUILTIN(mma_xvf32gernn, "vW512*VV", true)
-CUSTOM_BUILTIN(mma_pmxvf32gerpp, "vW512*VVi15i15", true)
-CUSTOM_BUILTIN(mma_pmxvf32gerpn, "vW512*VVi15i15", true)
-CUSTOM_BUILTIN(mma_pmxvf32gernp, "vW512*VVi15i15", true)
-CUSTOM_BUILTIN(mma_pmxvf32gernn, "vW512*VVi15i15", true)
-CUSTOM_BUILTIN(mma_xvf64gerpp, "vW512*W256V", true)
-CUSTOM_BUILTIN(mma_xvf64gerpn, "vW512*W256V", true)
-CUSTOM_BUILTIN(mma_xvf64gernp, "vW512*W256V", true)
-CUSTOM_BUILTIN(mma_xvf64gernn, "vW512*W256V", true)
-CUSTOM_BUILTIN(mma_pmxvf64gerpp, "vW512*W256Vi15i3", true)
-CUSTOM_BUILTIN(mma_pmxvf64gerpn, "vW512*W256Vi15i3", true)
-CUSTOM_BUILTIN(mma_pmxvf64gernp, "vW512*W256Vi15i3", true)
-CUSTOM_BUILTIN(mma_pmxvf64gernn, "vW512*W256Vi15i3", true)
-CUSTOM_BUILTIN(mma_xvbf16ger2, "vW512*VV", false)
-CUSTOM_BUILTIN(mma_pmxvbf16ger2, "vW512*VVi15i15i3", false)
-CUSTOM_BUILTIN(mma_xvbf16ger2pp, "vW512*VV", true)
-CUSTOM_BUILTIN(mma_xvbf16ger2pn, "vW512*VV", true)
-CUSTOM_BUILTIN(mma_xvbf16ger2np, "vW512*VV", true)
-CUSTOM_BUILTIN(mma_xvbf16ger2nn, "vW512*VV", true)
-CUSTOM_BUILTIN(mma_pmxvbf16ger2pp, "vW512*VVi15i15i3", true)
-CUSTOM_BUILTIN(mma_pmxvbf16ger2pn, "vW512*VVi15i15i3", true)
-CUSTOM_BUILTIN(mma_pmxvbf16ger2np, "vW512*VVi15i15i3", true)
-CUSTOM_BUILTIN(mma_pmxvbf16ger2nn, "vW512*VVi15i15i3", true)
+// UNALIASED_CUSTOM_BUILTIN macro is used for built-ins that have
+// the same name as that of the intrinsic they generate, i.e. the
+// ID and INTR are the same.
+// This avoids repeating the ID and INTR in the macro expression.
+
+UNALIASED_CUSTOM_BUILTIN(vsx_lxvp, "W256SLLiW256C*", false)
+UNALIASED_CUSTOM_BUILTIN(vsx_stxvp, "vW256SLLiW256C*", false)
+UNALIASED_CUSTOM_BUILTIN(vsx_assemble_pair, "vW256*VV", false)
+UNALIASED_CUSTOM_BUILTIN(vsx_disassemble_pair, "vv*W256*", false)
+
+UNALIASED_CUSTOM_BUILTIN(mma_assemble_acc, "vW512*VVVV", false)
+UNALIASED_CUSTOM_BUILTIN(mma_disassemble_acc, "vv*W512*", false)
+UNALIASED_CUSTOM_BUILTIN(mma_xxmtacc, "vW512*", true)
+UNALIASED_CUSTOM_BUILTIN(mma_xxmfacc, "vW512*", true)
+UNALIASED_CUSTOM_BUILTIN(mma_xxsetaccz, "vW512*", false)
+UNALIASED_CUSTOM_BUILTIN(mma_xvi4ger8, "vW512*VV", false)
+UNALIASED_CUSTOM_BUILTIN(mma_xvi8ger4, "vW512*VV", false)
+UNALIASED_CUSTOM_BUILTIN(mma_xvi16ger2, "vW512*VV", false)
+UNALIASED_CUSTOM_BUILTIN(mma_xvi16ger2s, "vW512*VV", false)
+UNALIASED_CUSTOM_BUILTIN(mma_xvf16ger2, "vW512*VV", false)
+UNALIASED_CUSTOM_BUILTIN(mma_xvf32ger, "vW512*VV", false)
+UNALIASED_CUSTOM_BUILTIN(mma_xvf64ger, "vW512*W256V", false)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvi4ger8, "vW512*VVi15i15i255", false)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvi8ger4, "vW512*VVi15i15i15", false)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvi16ger2, "vW512*VVi15i15i3", false)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvi16ger2s, "vW512*VVi15i15i3", false)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvf16ger2, "vW512*VVi15i15i3", false)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvf32ger, "vW512*VVi15i15", false)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvf64ger, "vW512*W256Vi15i3", false)
+UNALIASED_CUSTOM_BUILTIN(mma_xvi4ger8pp, "vW512*VV", true)
+UNALIASED_CUSTOM_BUILTIN(mma_xvi8ger4pp, "vW512*VV", true)
+UNALIASED_CUSTOM_BUILTIN(mma_xvi8ger4spp, "vW512*VV", true)
+UNALIASED_CUSTOM_BUILTIN(mma_xvi16ger2pp, "vW512*VV", true)
+UNALIASED_CUSTOM_BUILTIN(mma_xvi16ger2spp, "vW512*VV", true)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvi4ger8pp, "vW512*VVi15i15i255", true)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvi8ger4pp, "vW512*VVi15i15i15", true)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvi8ger4spp, "vW512*VVi15i15i15", true)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvi16ger2pp, "vW512*VVi15i15i3", true)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvi16ger2spp, "vW512*VVi15i15i3", true)
+UNALIASED_CUSTOM_BUILTIN(mma_xvf16ger2pp, "vW512*VV", true)
+UNALIASED_CUSTOM_BUILTIN(mma_xvf16ger2pn, "vW512*VV", true)
+UNALIASED_CUSTOM_BUILTIN(mma_xvf16ger2np, "vW512*VV", true)
+UNALIASED_CUSTOM_BUILTIN(mma_xvf16ger2nn, "vW512*VV", true)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvf16ger2pp, "vW512*VVi15i15i3", true)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvf16ger2pn, "vW512*VVi15i15i3", true)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvf16ger2np, "vW512*VVi15i15i3", true)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvf16ger2nn, "vW512*VVi15i15i3", true)
+UNALIASED_CUSTOM_BUILTIN(mma_xvf32gerpp, "vW512*VV", true)
+UNALIASED_CUSTOM_BUILTIN(mma_xvf32gerpn, "vW512*VV", true)
+UNALIASED_CUSTOM_BUILTIN(mma_xvf32gernp, "vW512*VV", true)
+UNALIASED_CUSTOM_BUILTIN(mma_xvf32gernn, "vW512*VV", true)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvf32gerpp, "vW512*VVi15i15", true)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvf32gerpn, "vW512*VVi15i15", true)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvf32gernp, "vW512*VVi15i15", true)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvf32gernn, "vW512*VVi15i15", true)
+UNALIASED_CUSTOM_BUILTIN(mma_xvf64gerpp, "vW512*W256V", true)
+UNALIASED_CUSTOM_BUILTIN(mma_xvf64gerpn, "vW512*W256V", true)
+UNALIASED_CUSTOM_BUILTIN(mma_xvf64gernp, "vW512*W256V", true)
+UNALIASED_CUSTOM_BUILTIN(mma_xvf64gernn, "vW512*W256V", true)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvf64gerpp, "vW512*W256Vi15i3", true)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvf64gerpn, "vW512*W256Vi15i3", true)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvf64gernp, "vW512*W256Vi15i3", true)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvf64gernn, "vW512*W256Vi15i3", true)
+UNALIASED_CUSTOM_BUILTIN(mma_xvbf16ger2, "vW512*VV", false)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvbf16ger2, "vW512*VVi15i15i3", false)
+UNALIASED_CUSTOM_BUILTIN(mma_xvbf16ger2pp, "vW512*VV", true)
+UNALIASED_CUSTOM_BUILTIN(mma_xvbf16ger2pn, "vW512*VV", true)
+UNALIASED_CUSTOM_BUILTIN(mma_xvbf16ger2np, "vW512*VV", true)
+UNALIASED_CUSTOM_BUILTIN(mma_xvbf16ger2nn, "vW512*VV", true)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvbf16ger2pp, "vW512*VVi15i15i3", true)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvbf16ger2pn, "vW512*VVi15i15i3", true)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvbf16ger2np, "vW512*VVi15i15i3", true)
+UNALIASED_CUSTOM_BUILTIN(mma_pmxvbf16ger2nn, "vW512*VVi15i15i3", true)
 
 // FIXME: Obviously incomplete.
 
 #undef BUILTIN
 #undef CUSTOM_BUILTIN
+#undef UNALIASED_CUSTOM_BUILTIN

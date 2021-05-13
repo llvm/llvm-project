@@ -314,9 +314,13 @@ public:
     return true;
   }
 
-  void Check() const;
+  // Establishes a pointer to a section or element.
+  bool EstablishPointerSection(const Descriptor &source,
+      const SubscriptValue *lower = nullptr,
+      const SubscriptValue *upper = nullptr,
+      const SubscriptValue *stride = nullptr);
 
-  // TODO: creation of array sections
+  void Check() const;
 
   void Dump(FILE * = stdout) const;
 

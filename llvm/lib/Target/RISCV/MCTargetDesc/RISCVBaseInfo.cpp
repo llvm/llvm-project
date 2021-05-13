@@ -98,27 +98,49 @@ void validate(const Triple &TT, const FeatureBitset &FeatureBits) {
 
 } // namespace RISCVFeatures
 
-void RISCVVType::printVType(unsigned VType, raw_ostream &OS) {
-  RISCVVSEW VSEW = getVSEW(VType);
-  RISCVVLMUL VLMUL = getVLMUL(VType);
+// Encode VTYPE into the binary format used by the the VSETVLI instruction which
+// is used by our MC layer representation.
+//
+// Bits | Name       | Description
+// -----+------------+------------------------------------------------
+// 7    | vma        | Vector mask agnostic
+// 6    | vta        | Vector tail agnostic
+// 5:3  | vsew[2:0]  | Standard element width (SEW) setting
+// 2:0  | vlmul[2:0] | Vector register group multiplier (LMUL) setting
+unsigned RISCVVType::encodeVTYPE(RISCVII::VLMUL VLMUL, unsigned SEW,
+                                 bool TailAgnostic, bool MaskAgnostic) {
+  assert(isValidSEW(SEW) && "Invalid SEW");
+  unsigned VLMULBits = static_cast<unsigned>(VLMUL);
+  unsigned VSEWBits = Log2_32(SEW) - 3;
+  unsigned VTypeI = (VSEWBits << 3) | (VLMULBits & 0x7);
+  if (TailAgnostic)
+    VTypeI |= 0x40;
+  if (MaskAgnostic)
+    VTypeI |= 0x80;
 
-  unsigned Sew = 1 << (static_cast<unsigned>(VSEW) + 3);
+  return VTypeI;
+}
+
+void RISCVVType::printVType(unsigned VType, raw_ostream &OS) {
+  RISCVII::VLMUL VLMUL = getVLMUL(VType);
+
+  unsigned Sew = getSEW(VType);
   OS << "e" << Sew;
 
   switch (VLMUL) {
-  case RISCVVLMUL::LMUL_RESERVED:
+  case RISCVII::VLMUL::LMUL_RESERVED:
     llvm_unreachable("Unexpected LMUL value!");
-  case RISCVVLMUL::LMUL_1:
-  case RISCVVLMUL::LMUL_2:
-  case RISCVVLMUL::LMUL_4:
-  case RISCVVLMUL::LMUL_8: {
+  case RISCVII::VLMUL::LMUL_1:
+  case RISCVII::VLMUL::LMUL_2:
+  case RISCVII::VLMUL::LMUL_4:
+  case RISCVII::VLMUL::LMUL_8: {
     unsigned LMul = 1 << static_cast<unsigned>(VLMUL);
     OS << ",m" << LMul;
     break;
   }
-  case RISCVVLMUL::LMUL_F2:
-  case RISCVVLMUL::LMUL_F4:
-  case RISCVVLMUL::LMUL_F8: {
+  case RISCVII::VLMUL::LMUL_F2:
+  case RISCVII::VLMUL::LMUL_F4:
+  case RISCVII::VLMUL::LMUL_F8: {
     unsigned LMul = 1 << (8 - static_cast<unsigned>(VLMUL));
     OS << ",mf" << LMul;
     break;

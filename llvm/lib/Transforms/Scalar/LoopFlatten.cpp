@@ -679,7 +679,23 @@ PreservedAnalyses LoopFlattenPass::run(Function &F,
   auto *AC = &AM.getResult<AssumptionAnalysis>(F);
   auto *TTI = &AM.getResult<TargetIRAnalysis>(F);
 
-  if (!Flatten(DT, LI, SE, AC, TTI))
+  bool Changed = false;
+
+  // The loop flattening pass requires loops to be
+  // in simplified form, and also needs LCSSA. Running
+  // this pass will simplify all loops that contain inner loops,
+  // regardless of whether anything ends up being flattened.
+  for (const auto &L : *LI) {
+    if (L->isInnermost())
+      continue;
+    Changed |=
+        simplifyLoop(L, DT, LI, SE, AC, nullptr, false /* PreserveLCSSA */);
+    Changed |= formLCSSARecursively(*L, *DT, LI, SE);
+  }
+
+  Changed |= Flatten(DT, LI, SE, AC, TTI);
+
+  if (!Changed)
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();

@@ -170,12 +170,13 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
     abort();
   }
 
+  std::unique_ptr<MCSubtargetInfo> STI(
+      TheTarget->createMCSubtargetInfo(TripleName, MCPU, FeaturesStr));
 
   MCObjectFileInfo MOFI;
-  MCContext Ctx(MAI.get(), MRI.get(), &MOFI, &SrcMgr);
-
+  MCContext Ctx(TheTriple, MAI.get(), MRI.get(), &MOFI, STI.get(), &SrcMgr);
   static const bool UsePIC = false;
-  MOFI.InitMCObjectFileInfo(TheTriple, UsePIC, Ctx);
+  MOFI.initMCObjectFileInfo(Ctx, UsePIC);
 
   const unsigned OutputAsmVariant = 0;
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
@@ -191,8 +192,6 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
   }
 
   const char *ProgName = "llvm-mc-fuzzer";
-  std::unique_ptr<MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TripleName, MCPU, FeaturesStr));
   std::unique_ptr<MCCodeEmitter> CE = nullptr;
   std::unique_ptr<MCAsmBackend> MAB = nullptr;
 

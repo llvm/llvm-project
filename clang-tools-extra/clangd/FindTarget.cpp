@@ -780,6 +780,13 @@ llvm::SmallVector<ReferenceLoc> refInStmt(const Stmt *S,
           explicitReferenceTargets(DynTypedNode::create(*E), {}, Resolver)});
     }
 
+    void VisitObjCIvarRefExpr(const ObjCIvarRefExpr *OIRE) {
+      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                  OIRE->getLocation(),
+                                  /*IsDecl=*/false,
+                                  {OIRE->getDecl()}});
+    }
+
     void VisitObjCMessageExpr(const ObjCMessageExpr *E) {
       // The name may have several tokens, we can only report the first.
       Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),

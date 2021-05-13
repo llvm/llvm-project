@@ -1051,14 +1051,12 @@ public:
                       const CFGBlock *CurrBlock);
 
   void intersectAndWarn(FactSet &FSet1, const FactSet &FSet2,
-                        SourceLocation JoinLoc,
-                        LockErrorKind LEK1, LockErrorKind LEK2,
-                        bool Modify=true);
+                        SourceLocation JoinLoc, LockErrorKind LEK1,
+                        LockErrorKind LEK2);
 
   void intersectAndWarn(FactSet &FSet1, const FactSet &FSet2,
-                        SourceLocation JoinLoc, LockErrorKind LEK1,
-                        bool Modify=true) {
-    intersectAndWarn(FSet1, FSet2, JoinLoc, LEK1, LEK1, Modify);
+                        SourceLocation JoinLoc, LockErrorKind LEK1) {
+    intersectAndWarn(FSet1, FSet2, JoinLoc, LEK1, LEK1);
   }
 
   void runAnalysis(AnalysisDeclContext &AC);
@@ -2206,8 +2204,7 @@ void ThreadSafetyAnalyzer::intersectAndWarn(FactSet &FSet1,
                                             const FactSet &FSet2,
                                             SourceLocation JoinLoc,
                                             LockErrorKind LEK1,
-                                            LockErrorKind LEK2,
-                                            bool Modify) {
+                                            LockErrorKind LEK2) {
   FactSet FSet1Orig = FSet1;
 
   // Find locks in FSet2 that conflict or are not in FSet1, and warn.
@@ -2220,11 +2217,13 @@ void ThreadSafetyAnalyzer::intersectAndWarn(FactSet &FSet1,
       if (LDat1.kind() != LDat2.kind()) {
         Handler.handleExclusiveAndShared("mutex", LDat2.toString(), LDat2.loc(),
                                          LDat1.loc());
-        if (Modify && LDat1.kind() != LK_Exclusive) {
+        if (LEK1 == LEK_LockedSomePredecessors &&
+            LDat1.kind() != LK_Exclusive) {
           // Take the exclusive lock, which is the one in FSet2.
           *Iter1 = Fact;
         }
-      } else if (Modify && LDat1.asserted() && !LDat2.asserted()) {
+      } else if (LEK1 == LEK_LockedSomePredecessors && LDat1.asserted() &&
+                 !LDat2.asserted()) {
         // The non-asserted lock in FSet2 is the one we want to track.
         *Iter1 = Fact;
       }
@@ -2242,7 +2241,7 @@ void ThreadSafetyAnalyzer::intersectAndWarn(FactSet &FSet1,
     if (!LDat2) {
       LDat1->handleRemovalFromIntersection(FSet1Orig, FactMan, JoinLoc, LEK2,
                                            Handler);
-      if (Modify)
+      if (LEK2 == LEK_LockedSomePredecessors)
         FSet1.removeLock(FactMan, *LDat1);
     }
   }
@@ -2469,8 +2468,7 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
         // Do not update EntrySet.
         intersectAndWarn(
             CurrBlockInfo->EntrySet, PrevLockset, PrevBlockInfo->ExitLoc,
-            IsLoop ? LEK_LockedSomeLoopIterations : LEK_LockedSomePredecessors,
-            !IsLoop);
+            IsLoop ? LEK_LockedSomeLoopIterations : LEK_LockedSomePredecessors);
       }
     }
 
@@ -2518,10 +2516,8 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
       CFGBlock *FirstLoopBlock = *SI;
       CFGBlockInfo *PreLoop = &BlockInfo[FirstLoopBlock->getBlockID()];
       CFGBlockInfo *LoopEnd = &BlockInfo[CurrBlockID];
-      intersectAndWarn(LoopEnd->ExitSet, PreLoop->EntrySet,
-                       PreLoop->EntryLoc,
-                       LEK_LockedSomeLoopIterations,
-                       false);
+      intersectAndWarn(LoopEnd->ExitSet, PreLoop->EntrySet, PreLoop->EntryLoc,
+                       LEK_LockedSomeLoopIterations);
     }
   }
 
@@ -2549,11 +2545,8 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
     ExpectedExitSet.removeLock(FactMan, Lock);
 
   // FIXME: Should we call this function for all blocks which exit the function?
-  intersectAndWarn(ExpectedExitSet, Final->ExitSet,
-                   Final->ExitLoc,
-                   LEK_LockedAtEndOfFunction,
-                   LEK_NotLockedAtEndOfFunction,
-                   false);
+  intersectAndWarn(ExpectedExitSet, Final->ExitSet, Final->ExitLoc,
+                   LEK_LockedAtEndOfFunction, LEK_NotLockedAtEndOfFunction);
 
   Handler.leaveFunction(CurrentFunction);
 }

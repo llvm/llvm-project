@@ -286,3 +286,60 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   spv.EntryPoint "GLCompute" @fmul_kernel
   spv.ExecutionMode @fmul_kernel "LocalSize", 32, 1, 1
 }
+
+// -----
+
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
+// CHECK-LABEL: @cond_branch_true_argument
+  spv.func @cond_branch_true_argument() -> () "None" {
+    %true = spv.Constant true
+    %zero = spv.Constant 0 : i32
+    %one = spv.Constant 1 : i32
+// CHECK:   spv.BranchConditional %{{.*}}, ^[[true1:.*]](%{{.*}}, %{{.*}} : i32, i32), ^[[false1:.*]]
+    spv.BranchConditional %true, ^true1(%zero, %zero: i32, i32), ^false1
+// CHECK: [[true1]](%{{.*}}: i32, %{{.*}}: i32)
+  ^true1(%arg0: i32, %arg1: i32):
+    spv.Return
+// CHECK: [[false1]]:
+  ^false1:
+    spv.Return
+  }
+}
+
+// -----
+
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
+// CHECK-LABEL: @cond_branch_false_argument
+  spv.func @cond_branch_false_argument() -> () "None" {
+    %true = spv.Constant true
+    %zero = spv.Constant 0 : i32
+    %one = spv.Constant 1 : i32
+// CHECK:   spv.BranchConditional %{{.*}}, ^[[true1:.*]], ^[[false1:.*]](%{{.*}}, %{{.*}} : i32, i32)
+    spv.BranchConditional %true, ^true1, ^false1(%zero, %zero: i32, i32)
+// CHECK: [[true1]]:
+  ^true1:
+    spv.Return
+// CHECK: [[false1]](%{{.*}}: i32, %{{.*}}: i32):
+  ^false1(%arg0: i32, %arg1: i32):
+    spv.Return
+  }
+}
+
+// -----
+
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
+// CHECK-LABEL: @cond_branch_true_and_false_argument
+  spv.func @cond_branch_true_and_false_argument() -> () "None" {
+    %true = spv.Constant true
+    %zero = spv.Constant 0 : i32
+    %one = spv.Constant 1 : i32
+// CHECK:   spv.BranchConditional %{{.*}}, ^[[true1:.*]](%{{.*}} : i32), ^[[false1:.*]](%{{.*}}, %{{.*}} : i32, i32)
+    spv.BranchConditional %true, ^true1(%one: i32), ^false1(%zero, %zero: i32, i32)
+// CHECK: [[true1]](%{{.*}}: i32):
+  ^true1(%arg0: i32):
+    spv.Return
+// CHECK: [[false1]](%{{.*}}: i32, %{{.*}}: i32):
+  ^false1(%arg1: i32, %arg2: i32):
+    spv.Return
+  }
+}

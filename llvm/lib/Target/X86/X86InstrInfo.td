@@ -2962,14 +2962,15 @@ let Uses = [EAX], SchedRW = [WriteSystem] in
 //===----------------------------------------------------------------------===//
 // SERIALIZE Instruction
 //
-def SERIALIZE : I<0x01, MRM_E8, (outs), (ins), "serialize",
-                  [(int_x86_serialize)]>, PS,
-                  Requires<[HasSERIALIZE]>;
+let SchedRW = [WriteSystem] in
+  def SERIALIZE : I<0x01, MRM_E8, (outs), (ins), "serialize",
+                    [(int_x86_serialize)]>, PS,
+                    Requires<[HasSERIALIZE]>;
 
 //===----------------------------------------------------------------------===//
 // TSXLDTRK - TSX Suspend Load Address Tracking
 //
-let Predicates = [HasTSXLDTRK] in {
+let Predicates = [HasTSXLDTRK], SchedRW = [WriteSystem] in {
   def XSUSLDTRK : I<0x01, MRM_E8, (outs), (ins), "xsusldtrk",
                     [(int_x86_xsusldtrk)]>, XD;
   def XRESLDTRK : I<0x01, MRM_E9, (outs), (ins), "xresldtrk",
@@ -2979,7 +2980,7 @@ let Predicates = [HasTSXLDTRK] in {
 //===----------------------------------------------------------------------===//
 // UINTR Instructions
 //
-let Predicates = [HasUINTR, In64BitMode] in {
+let Predicates = [HasUINTR, In64BitMode], SchedRW = [WriteSystem] in {
   def UIRET : I<0x01, MRM_EC, (outs), (ins), "uiret",
                []>, XS;
   def CLUI : I<0x01, MRM_EE, (outs), (ins), "clui",

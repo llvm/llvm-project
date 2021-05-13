@@ -41,8 +41,7 @@ public:
   }
 
   void adjustPassManager(PassManagerBuilder &) override;
-  void registerPassBuilderCallbacks(PassBuilder &PB,
-                                    bool DebugPassManager) override;
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
 };
 }
 

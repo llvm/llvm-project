@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-DEBUG-FIXME
-
 // <algorithm>
 
 // template<BidirectionalIterator Iter, StrictWeakOrder<auto, Iter::value_type> Compare>
@@ -81,7 +79,9 @@ test_one(unsigned N, unsigned M)
         assert(ia[0] == static_cast<int>(N)-1);
         assert(ia[N-1] == 0);
         assert(std::is_sorted(ia, ia+N, std::greater<value_type>()));
+#ifndef _LIBCPP_DEBUG
         assert(pred.count() <= (N-1));
+#endif
     }
     delete [] ia;
 }

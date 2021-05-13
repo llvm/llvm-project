@@ -49,7 +49,7 @@ class M68kAsmParser : public MCTargetAsmParser {
   // Parser functions.
   void eatComma();
 
-  bool isExpr() const;
+  bool isExpr();
   OperandMatchResultTy parseImm(OperandVector &Operands);
   OperandMatchResultTy parseMemOp(OperandVector &Operands);
 
@@ -479,6 +479,12 @@ bool M68kAsmParser::parseRegisterName(unsigned &RegNo, SMLoc Loc,
                                       StringRef RegisterName) {
   auto RegisterNameLower = RegisterName.lower();
 
+  // CCR register
+  if (RegisterNameLower == "ccr") {
+    RegNo = M68k::CCR;
+    return true;
+  }
+
   // Parse simple general-purpose registers.
   if (RegisterNameLower.size() == 2) {
     static unsigned RegistersByIndex[] = {
@@ -500,13 +506,6 @@ bool M68kAsmParser::parseRegisterName(unsigned &RegNo, SMLoc Loc,
       }
       break;
     }
-
-    case 'c':
-      if (RegisterNameLower[1] == 'c' && RegisterNameLower[2] == 'r') {
-        RegNo = M68k::CCR;
-        return true;
-      }
-      break;
 
     case 's':
       if (RegisterNameLower[1] == 'p') {
@@ -581,11 +580,13 @@ OperandMatchResultTy M68kAsmParser::tryParseRegister(unsigned &RegNo,
   return Result;
 }
 
-bool M68kAsmParser::isExpr() const {
+bool M68kAsmParser::isExpr() {
   switch (Parser.getTok().getKind()) {
   case AsmToken::Identifier:
   case AsmToken::Integer:
     return true;
+  case AsmToken::Minus:
+    return getLexer().peekTok().getKind() == AsmToken::Integer;
 
   default:
     return false;

@@ -211,6 +211,26 @@ void Message::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
   }
 }
 
+// Messages are equal if they're for the same location and text, and the user
+// visible aspects of their attachments are the same
+bool Message::operator==(const Message &that) const {
+  if (!AtSameLocation(that) || ToString() != that.ToString()) {
+    return false;
+  }
+  const Message *thatAttachment{that.attachment_.get()};
+  for (const Message *attachment{attachment_.get()}; attachment;
+       attachment = attachment->attachment_.get()) {
+    if (!thatAttachment ||
+        attachment->attachmentIsContext_ !=
+            thatAttachment->attachmentIsContext_ ||
+        *attachment != *thatAttachment) {
+      return false;
+    }
+    thatAttachment = thatAttachment->attachment_.get();
+  }
+  return true;
+}
+
 bool Message::Merge(const Message &that) {
   return AtSameLocation(that) &&
       (!that.attachment_.get() ||
@@ -305,8 +325,14 @@ void Messages::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
   }
   std::stable_sort(sorted.begin(), sorted.end(),
       [](const Message *x, const Message *y) { return x->SortBefore(*y); });
+  const Message *lastMsg{nullptr};
   for (const Message *msg : sorted) {
+    if (lastMsg && *msg == *lastMsg) {
+      // Don't emit two identical messages for the same location
+      continue;
+    }
     msg->Emit(o, allCooked, echoSourceLines);
+    lastMsg = msg;
   }
 }
 

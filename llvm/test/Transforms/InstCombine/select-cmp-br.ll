@@ -17,7 +17,7 @@ define void @test1(%C* %arg) {
 ; CHECK-NEXT:    [[N:%.*]] = load i64*, i64** [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i64* [[M]], [[N]]
 ; CHECK-NEXT:    [[TMP71:%.*]] = icmp eq %C* [[ARG]], null
-; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP5]], [[TMP71]]
+; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP5]], i1 true, i1 [[TMP71]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[BB10:%.*]], label [[BB8:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    ret void
@@ -67,7 +67,7 @@ define void @test2(%C* %arg) {
 ; CHECK-NEXT:    [[N:%.*]] = load i64*, i64** [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64* [[M]], [[N]]
 ; CHECK-NEXT:    [[TMP71:%.*]] = icmp eq %C* [[ARG]], null
-; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP5]], [[TMP71]]
+; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP5]], i1 true, i1 [[TMP71]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[BB10:%.*]], label [[BB8:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    ret void
@@ -117,7 +117,7 @@ define void @test3(%C* %arg) {
 ; CHECK-NEXT:    [[N:%.*]] = load i64*, i64** [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i64* [[M]], [[N]]
 ; CHECK-NEXT:    [[TMP7_NOT1:%.*]] = icmp eq %C* [[ARG]], null
-; CHECK-NEXT:    [[TMP7_NOT:%.*]] = or i1 [[TMP5]], [[TMP7_NOT1]]
+; CHECK-NEXT:    [[TMP7_NOT:%.*]] = select i1 [[TMP5]], i1 true, i1 [[TMP7_NOT1]]
 ; CHECK-NEXT:    br i1 [[TMP7_NOT]], label [[BB10:%.*]], label [[BB8:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    ret void
@@ -167,7 +167,7 @@ define void @test4(%C* %arg) {
 ; CHECK-NEXT:    [[N:%.*]] = load i64*, i64** [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64* [[M]], [[N]]
 ; CHECK-NEXT:    [[TMP7_NOT1:%.*]] = icmp eq %C* [[ARG]], null
-; CHECK-NEXT:    [[TMP7_NOT:%.*]] = or i1 [[TMP5]], [[TMP7_NOT1]]
+; CHECK-NEXT:    [[TMP7_NOT:%.*]] = select i1 [[TMP5]], i1 true, i1 [[TMP7_NOT1]]
 ; CHECK-NEXT:    br i1 [[TMP7_NOT]], label [[BB10:%.*]], label [[BB8:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    ret void
@@ -212,7 +212,7 @@ define void @test5(%C* %arg, i1 %arg1) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP2_NOT1:%.*]] = icmp eq %C* [[ARG:%.*]], null
-; CHECK-NEXT:    [[TMP2_NOT:%.*]] = or i1 [[TMP2_NOT1]], [[ARG1:%.*]]
+; CHECK-NEXT:    [[TMP2_NOT:%.*]] = select i1 [[ARG1:%.*]], i1 true, i1 [[TMP2_NOT1]]
 ; CHECK-NEXT:    br i1 [[TMP2_NOT]], label [[BB5:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    ret void

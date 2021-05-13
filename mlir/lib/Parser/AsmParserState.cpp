@@ -52,12 +52,22 @@ struct AsmParserState::Impl {
 
 AsmParserState::AsmParserState() : impl(std::make_unique<Impl>()) {}
 AsmParserState::~AsmParserState() {}
+AsmParserState &AsmParserState::operator=(AsmParserState &&other) {
+  impl = std::move(other.impl);
+  return *this;
+}
 
 //===----------------------------------------------------------------------===//
 // Access State
 
 auto AsmParserState::getBlockDefs() const -> iterator_range<BlockDefIterator> {
   return llvm::make_pointee_range(llvm::makeArrayRef(impl->blocks));
+}
+
+auto AsmParserState::getBlockDef(Block *block) const
+    -> const BlockDefinition * {
+  auto it = impl->blocksToIdx.find(block);
+  return it == impl->blocksToIdx.end() ? nullptr : &*impl->blocks[it->second];
 }
 
 auto AsmParserState::getOpDefs() const -> iterator_range<OperationDefIterator> {

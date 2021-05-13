@@ -54,6 +54,7 @@ add_flang_library(FortranRuntime
   main.cpp
   memory.cpp
   misc-intrinsic.cpp
+  namelist.cpp
   numeric.cpp
   random.cpp
   reduction.cpp

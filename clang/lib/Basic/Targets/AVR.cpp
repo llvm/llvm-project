@@ -309,6 +309,8 @@ void AVRTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__AVR__");
   Builder.defineMacro("__ELF__");
   Builder.defineMacro("__flash", "__attribute__((address_space(1)))");
+  Builder.defineMacro("__UINT16_TYPE__", "unsigned int");
+  Builder.defineMacro("__INT16_TYPE__", "int");
 
   if (!this->CPU.empty()) {
     auto It = llvm::find_if(

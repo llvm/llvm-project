@@ -179,6 +179,7 @@ struct MUBUFInfo {
   bool has_vaddr;
   bool has_srsrc;
   bool has_soffset;
+  bool IsBufferInv;
 };
 
 struct MTBUFInfo {
@@ -272,6 +273,11 @@ bool getMUBUFHasSrsrc(unsigned Opc) {
 bool getMUBUFHasSoffset(unsigned Opc) {
   const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
   return Info ? Info->has_soffset : false;
+}
+
+bool getMUBUFIsBufferInv(unsigned Opc) {
+  const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
+  return Info ? Info->IsBufferInv : false;
 }
 
 bool getSMEMIsBuffer(unsigned Opc) {

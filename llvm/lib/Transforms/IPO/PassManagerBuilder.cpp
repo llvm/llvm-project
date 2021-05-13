@@ -29,6 +29,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Transforms/AggressiveInstCombine/AggressiveInstCombine.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/Attributor.h"
@@ -51,6 +52,7 @@
 
 using namespace llvm;
 
+namespace llvm {
 cl::opt<bool> RunPartialInlining("enable-partial-inlining", cl::init(false),
                                  cl::Hidden, cl::ZeroOrMore,
                                  cl::desc("Run Partial inlinining pass"));
@@ -72,7 +74,6 @@ cl::opt<bool> RunNewGVN("enable-newgvn", cl::init(false), cl::Hidden,
                         cl::desc("Run the NewGVN pass"));
 
 // Experimental option to use CFL-AA
-enum class CFLAAType { None, Steensgaard, Andersen, Both };
 static cl::opt<::CFLAAType>
     UseCFLAA("use-cfl-aa", cl::init(::CFLAAType::None), cl::Hidden,
              cl::desc("Enable the new, experimental CFL alias analysis"),
@@ -178,6 +179,7 @@ cl::opt<AttributorRunOption> AttributorRun(
                           "disable attributor runs")));
 
 extern cl::opt<bool> EnableKnowledgeRetention;
+} // namespace llvm
 
 PassManagerBuilder::PassManagerBuilder() {
     OptLevel = 2;
@@ -521,6 +523,124 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
     MPM.add(createControlHeightReductionLegacyPass());
 }
 
+/// FIXME: Should LTO cause any differences to this set of passes?
+void PassManagerBuilder::addVectorPasses(legacy::PassManagerBase &PM,
+                                         bool IsLTO) {
+  PM.add(createLoopVectorizePass(!LoopsInterleaved, !LoopVectorize));
+
+  if (IsLTO) {
+    // The vectorizer may have significantly shortened a loop body; unroll
+    // again. Unroll small loops to hide loop backedge latency and saturate any
+    // parallel execution resources of an out-of-order processor. We also then
+    // need to clean up redundancies and loop invariant code.
+    // FIXME: It would be really good to use a loop-integrated instruction
+    // combiner for cleanup here so that the unrolling and LICM can be pipelined
+    // across the loop nests.
+    // We do UnrollAndJam in a separate LPM to ensure it happens before unroll
+    if (EnableUnrollAndJam && !DisableUnrollLoops)
+      PM.add(createLoopUnrollAndJamPass(OptLevel));
+    PM.add(createLoopUnrollPass(OptLevel, DisableUnrollLoops,
+                                ForgetAllSCEVInLoopUnroll));
+    PM.add(createWarnMissedTransformationsPass());
+  }
+
+  if (!IsLTO) {
+    // Eliminate loads by forwarding stores from the previous iteration to loads
+    // of the current iteration.
+    PM.add(createLoopLoadEliminationPass());
+  }
+  // Cleanup after the loop optimization passes.
+  PM.add(createInstructionCombiningPass());
+
+  if (OptLevel > 1 && ExtraVectorizerPasses) {
+    // At higher optimization levels, try to clean up any runtime overlap and
+    // alignment checks inserted by the vectorizer. We want to track correlated
+    // runtime checks for two inner loops in the same outer loop, fold any
+    // common computations, hoist loop-invariant aspects out of any outer loop,
+    // and unswitch the runtime checks if possible. Once hoisted, we may have
+    // dead (or speculatable) control flows or more combining opportunities.
+    PM.add(createEarlyCSEPass());
+    PM.add(createCorrelatedValuePropagationPass());
+    PM.add(createInstructionCombiningPass());
+    PM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    PM.add(createLoopUnswitchPass(SizeLevel || OptLevel < 3, DivergentTarget));
+    PM.add(createCFGSimplificationPass());
+    PM.add(createInstructionCombiningPass());
+  }
+
+  if (IsLTO) {
+    PM.add(createCFGSimplificationPass(SimplifyCFGOptions() // if-convert
+                                           .hoistCommonInsts(true)));
+  } else {
+    // Now that we've formed fast to execute loop structures, we do further
+    // optimizations. These are run afterward as they might block doing complex
+    // analyses and transforms such as what are needed for loop vectorization.
+
+    // Cleanup after loop vectorization, etc. Simplification passes like CVP and
+    // GVN, loop transforms, and others have already run, so it's now better to
+    // convert to more optimized IR using more aggressive simplify CFG options.
+    // The extra sinking transform can create larger basic blocks, so do this
+    // before SLP vectorization.
+    PM.add(createCFGSimplificationPass(SimplifyCFGOptions()
+                                           .forwardSwitchCondToPhi(true)
+                                           .convertSwitchToLookupTable(true)
+                                           .needCanonicalLoops(false)
+                                           .hoistCommonInsts(true)
+                                           .sinkCommonInsts(true)));
+  }
+  if (IsLTO) {
+    PM.add(createSCCPPass());                 // Propagate exposed constants
+    PM.add(createInstructionCombiningPass()); // Clean up again
+    PM.add(createBitTrackingDCEPass());
+  }
+
+  // Optimize parallel scalar instruction chains into SIMD instructions.
+  if (SLPVectorize) {
+    PM.add(createSLPVectorizerPass());
+    if (OptLevel > 1 && ExtraVectorizerPasses)
+      PM.add(createEarlyCSEPass());
+  }
+
+  // Enhance/cleanup vector code.
+  PM.add(createVectorCombinePass());
+
+  if (!IsLTO) {
+    addExtensionsToPM(EP_Peephole, PM);
+    PM.add(createInstructionCombiningPass());
+
+    if (EnableUnrollAndJam && !DisableUnrollLoops) {
+      // Unroll and Jam. We do this before unroll but need to be in a separate
+      // loop pass manager in order for the outer loop to be processed by
+      // unroll and jam before the inner loop is unrolled.
+      PM.add(createLoopUnrollAndJamPass(OptLevel));
+    }
+
+    // Unroll small loops
+    PM.add(createLoopUnrollPass(OptLevel, DisableUnrollLoops,
+                                ForgetAllSCEVInLoopUnroll));
+
+    if (!DisableUnrollLoops) {
+      // LoopUnroll may generate some redundency to cleanup.
+      PM.add(createInstructionCombiningPass());
+
+      // Runtime unrolling will introduce runtime check in loop prologue. If the
+      // unrolled loop is a inner loop, then the prologue will be inside the
+      // outer loop. LICM pass can help to promote the runtime check out if the
+      // checked value is loop invariant.
+      PM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    }
+
+    PM.add(createWarnMissedTransformationsPass());
+  }
+
+  // After vectorization and unrolling, assume intrinsics may tell us more
+  // about pointer alignments.
+  PM.add(createAlignmentFromAssumptionsPass());
+
+  if (IsLTO)
+    PM.add(createInstructionCombiningPass());
+}
+
 void PassManagerBuilder::populateModulePassManager(
     legacy::PassManagerBase &MPM) {
   // Whether this is a default or *LTO pre-link pipeline. The FullLTO post-link
@@ -792,86 +912,7 @@ void PassManagerBuilder::populateModulePassManager(
   // llvm.loop.distribute=true or when -enable-loop-distribute is specified.
   MPM.add(createLoopDistributePass());
 
-  MPM.add(createLoopVectorizePass(!LoopsInterleaved, !LoopVectorize));
-
-  // Eliminate loads by forwarding stores from the previous iteration to loads
-  // of the current iteration.
-  MPM.add(createLoopLoadEliminationPass());
-
-  // FIXME: Because of #pragma vectorize enable, the passes below are always
-  // inserted in the pipeline, even when the vectorizer doesn't run (ex. when
-  // on -O1 and no #pragma is found). Would be good to have these two passes
-  // as function calls, so that we can only pass them when the vectorizer
-  // changed the code.
-  MPM.add(createInstructionCombiningPass());
-  if (OptLevel > 1 && ExtraVectorizerPasses) {
-    // At higher optimization levels, try to clean up any runtime overlap and
-    // alignment checks inserted by the vectorizer. We want to track correllated
-    // runtime checks for two inner loops in the same outer loop, fold any
-    // common computations, hoist loop-invariant aspects out of any outer loop,
-    // and unswitch the runtime checks if possible. Once hoisted, we may have
-    // dead (or speculatable) control flows or more combining opportunities.
-    MPM.add(createEarlyCSEPass());
-    MPM.add(createCorrelatedValuePropagationPass());
-    MPM.add(createInstructionCombiningPass());
-    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
-    MPM.add(createLoopUnswitchPass(SizeLevel || OptLevel < 3, DivergentTarget));
-    MPM.add(createCFGSimplificationPass());
-    MPM.add(createInstructionCombiningPass());
-  }
-
-  // Cleanup after loop vectorization, etc. Simplification passes like CVP and
-  // GVN, loop transforms, and others have already run, so it's now better to
-  // convert to more optimized IR using more aggressive simplify CFG options.
-  // The extra sinking transform can create larger basic blocks, so do this
-  // before SLP vectorization.
-  MPM.add(createCFGSimplificationPass(SimplifyCFGOptions()
-                                          .forwardSwitchCondToPhi(true)
-                                          .convertSwitchToLookupTable(true)
-                                          .needCanonicalLoops(false)
-                                          .hoistCommonInsts(true)
-                                          .sinkCommonInsts(true)));
-
-  if (SLPVectorize) {
-    MPM.add(createSLPVectorizerPass()); // Vectorize parallel scalar chains.
-    if (OptLevel > 1 && ExtraVectorizerPasses) {
-      MPM.add(createEarlyCSEPass());
-    }
-  }
-
-  // Enhance/cleanup vector code.
-  MPM.add(createVectorCombinePass());
-
-  addExtensionsToPM(EP_Peephole, MPM);
-  MPM.add(createInstructionCombiningPass());
-
-  if (EnableUnrollAndJam && !DisableUnrollLoops) {
-    // Unroll and Jam. We do this before unroll but need to be in a separate
-    // loop pass manager in order for the outer loop to be processed by
-    // unroll and jam before the inner loop is unrolled.
-    MPM.add(createLoopUnrollAndJamPass(OptLevel));
-  }
-
-  // Unroll small loops
-  MPM.add(createLoopUnrollPass(OptLevel, DisableUnrollLoops,
-                               ForgetAllSCEVInLoopUnroll));
-
-  if (!DisableUnrollLoops) {
-    // LoopUnroll may generate some redundency to cleanup.
-    MPM.add(createInstructionCombiningPass());
-
-    // Runtime unrolling will introduce runtime check in loop prologue. If the
-    // unrolled loop is a inner loop, then the prologue will be inside the
-    // outer loop. LICM pass can help to promote the runtime check out if the
-    // checked value is loop invariant.
-    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
-  }
-
-  MPM.add(createWarnMissedTransformationsPass());
-
-  // After vectorization and unrolling, assume intrinsics may tell us more
-  // about pointer alignments.
-  MPM.add(createAlignmentFromAssumptionsPass());
+  addVectorPasses(MPM, /* IsLTO */ false);
 
   // FIXME: We shouldn't bother with this anymore.
   MPM.add(createStripDeadPrototypesPass()); // Get rid of dead prototypes
@@ -1081,35 +1122,9 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
   PM.add(createSimpleLoopUnrollPass(OptLevel, DisableUnrollLoops,
                                     ForgetAllSCEVInLoopUnroll));
   PM.add(createLoopDistributePass());
-  PM.add(createLoopVectorizePass(true, !LoopVectorize));
-  // The vectorizer may have significantly shortened a loop body; unroll again.
-  PM.add(createLoopUnrollPass(OptLevel, DisableUnrollLoops,
-                              ForgetAllSCEVInLoopUnroll));
 
-  PM.add(createWarnMissedTransformationsPass());
+  addVectorPasses(PM, /* IsLTO */ true);
 
-  // Now that we've optimized loops (in particular loop induction variables),
-  // we may have exposed more scalar opportunities. Run parts of the scalar
-  // optimizer again at this point.
-  PM.add(createInstructionCombiningPass()); // Initial cleanup
-  PM.add(createCFGSimplificationPass(SimplifyCFGOptions() // if-convert
-                                         .hoistCommonInsts(true)));
-  PM.add(createSCCPPass()); // Propagate exposed constants
-  PM.add(createInstructionCombiningPass()); // Clean up again
-  PM.add(createBitTrackingDCEPass());
-
-  // More scalar chains could be vectorized due to more alias information
-  if (SLPVectorize)
-    PM.add(createSLPVectorizerPass()); // Vectorize parallel scalar chains.
-
-  PM.add(createVectorCombinePass()); // Clean up partial vectorization.
-
-  // After vectorization, assume intrinsics may tell us more about pointer
-  // alignments.
-  PM.add(createAlignmentFromAssumptionsPass());
-
-  // Cleanup and simplify the code after the scalar optimizations.
-  PM.add(createInstructionCombiningPass());
   addExtensionsToPM(EP_Peephole, PM);
 
   PM.add(createJumpThreadingPass(/*FreezeSelectCond*/ true));

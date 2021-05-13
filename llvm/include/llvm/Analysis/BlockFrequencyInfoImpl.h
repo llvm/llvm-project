@@ -48,9 +48,8 @@
 
 #define DEBUG_TYPE "block-freq"
 
-extern llvm::cl::opt<bool> CheckBFIUnknownBlockQueries;
-
 namespace llvm {
+extern llvm::cl::opt<bool> CheckBFIUnknownBlockQueries;
 
 class BranchProbabilityInfo;
 class Function;

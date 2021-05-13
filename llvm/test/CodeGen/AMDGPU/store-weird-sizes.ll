@@ -152,8 +152,8 @@ define amdgpu_kernel void @local_store_i55(i55 addrspace(3)* %ptr, i55 %arg) #0 
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_or_b32_e32 v0, s1, v0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x7fffff, v0
-; GFX11-NEXT:    ds_store_b16 v1, v2 offset:4
 ; GFX11-NEXT:    ds_store_b8_d16_hi v1, v0 offset:6
+; GFX11-NEXT:    ds_store_b16 v1, v2 offset:4
 ; GFX11-NEXT:    ds_store_b32 v1, v3
 ; GFX11-NEXT:    s_endpgm
   store i55 %arg, i55 addrspace(3)* %ptr, align 8

@@ -335,12 +335,12 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 
 // store register (GPR)
 #define PPC64_STR(n) \
-  std   %r##n, (8 * (n + 2))(%r3)
+  std   n, (8 * (n + 2))(3)
 
   // save GPRs
   PPC64_STR(0)
-  mflr  %r0
-  std   %r0, PPC64_OFFS_SRR0(%r3) // store lr as ssr0
+  mflr  0
+  std   0, PPC64_OFFS_SRR0(3) // store lr as ssr0
   PPC64_STR(1)
   PPC64_STR(2)
   PPC64_STR(3)
@@ -373,28 +373,28 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   PPC64_STR(30)
   PPC64_STR(31)
 
-  mfcr  %r0
-  std   %r0,  PPC64_OFFS_CR(%r3)
-  mfxer %r0
-  std   %r0,  PPC64_OFFS_XER(%r3)
-  mflr  %r0
-  std   %r0,  PPC64_OFFS_LR(%r3)
-  mfctr %r0
-  std   %r0,  PPC64_OFFS_CTR(%r3)
-  mfvrsave    %r0
-  std   %r0,  PPC64_OFFS_VRSAVE(%r3)
+  mfcr  0
+  std   0,  PPC64_OFFS_CR(3)
+  mfxer 0
+  std   0,  PPC64_OFFS_XER(3)
+  mflr  0
+  std   0,  PPC64_OFFS_LR(3)
+  mfctr 0
+  std   0,  PPC64_OFFS_CTR(3)
+  mfvrsave    0
+  std   0,  PPC64_OFFS_VRSAVE(3)
 
 #if defined(__VSX__)
   // save VS registers
   // (note that this also saves floating point registers and V registers,
   // because part of VS is mapped to these registers)
 
-  addi  %r4, %r3, PPC64_OFFS_FP
+  addi  4, 3, PPC64_OFFS_FP
 
 // store VS register
 #define PPC64_STVS(n)      \
-  stxvd2x %vs##n, 0, %r4  ;\
-  addi    %r4, %r4, 16
+  stxvd2x n, 0, 4         ;\
+  addi    4, 4, 16
 
   PPC64_STVS(0)
   PPC64_STVS(1)
@@ -465,7 +465,7 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 
 // store FP register
 #define PPC64_STF(n) \
-  stfd  %f##n, (PPC64_OFFS_FP + n * 16)(%r3)
+  stfd  n, (PPC64_OFFS_FP + n * 16)(3)
 
   // save float registers
   PPC64_STF(0)
@@ -507,14 +507,14 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   // Use 16-bytes below the stack pointer as an
   // aligned buffer to save each vector register.
   // Note that the stack pointer is always 16-byte aligned.
-  subi  %r4, %r1, 16
+  subi  4, 1, 16
 
-#define PPC64_STV_UNALIGNED(n)                 \
-  stvx  %v##n, 0, %r4                         ;\
-  ld    %r5, 0(%r4)                           ;\
-  std   %r5, (PPC64_OFFS_V + n * 16)(%r3)     ;\
-  ld    %r5, 8(%r4)                           ;\
-  std   %r5, (PPC64_OFFS_V + n * 16 + 8)(%r3)
+#define PPC64_STV_UNALIGNED(n)             \
+  stvx  n, 0, 4                           ;\
+  ld    5, 0(4)                           ;\
+  std   5, (PPC64_OFFS_V + n * 16)(3)     ;\
+  ld    5, 8(4)                           ;\
+  std   5, (PPC64_OFFS_V + n * 16 + 8)(3)
 
   PPC64_STV_UNALIGNED(0)
   PPC64_STV_UNALIGNED(1)
@@ -552,7 +552,7 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 #endif
 #endif
 
-  li    %r3,  0   // return UNW_ESUCCESS
+  li    3,  0   // return UNW_ESUCCESS
   blr
 
 
@@ -565,140 +565,140 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 //  thread_state pointer is in r3
 //
 DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
-  stw     %r0,   8(%r3)
-  mflr    %r0
-  stw     %r0,   0(%r3) // store lr as ssr0
-  stw     %r1,  12(%r3)
-  stw     %r2,  16(%r3)
-  stw     %r3,  20(%r3)
-  stw     %r4,  24(%r3)
-  stw     %r5,  28(%r3)
-  stw     %r6,  32(%r3)
-  stw     %r7,  36(%r3)
-  stw     %r8,  40(%r3)
-  stw     %r9,  44(%r3)
-  stw     %r10, 48(%r3)
-  stw     %r11, 52(%r3)
-  stw     %r12, 56(%r3)
-  stw     %r13, 60(%r3)
-  stw     %r14, 64(%r3)
-  stw     %r15, 68(%r3)
-  stw     %r16, 72(%r3)
-  stw     %r17, 76(%r3)
-  stw     %r18, 80(%r3)
-  stw     %r19, 84(%r3)
-  stw     %r20, 88(%r3)
-  stw     %r21, 92(%r3)
-  stw     %r22, 96(%r3)
-  stw     %r23,100(%r3)
-  stw     %r24,104(%r3)
-  stw     %r25,108(%r3)
-  stw     %r26,112(%r3)
-  stw     %r27,116(%r3)
-  stw     %r28,120(%r3)
-  stw     %r29,124(%r3)
-  stw     %r30,128(%r3)
-  stw     %r31,132(%r3)
+  stw     0,   8(3)
+  mflr    0
+  stw     0,   0(3) // store lr as ssr0
+  stw     1,  12(3)
+  stw     2,  16(3)
+  stw     3,  20(3)
+  stw     4,  24(3)
+  stw     5,  28(3)
+  stw     6,  32(3)
+  stw     7,  36(3)
+  stw     8,  40(3)
+  stw     9,  44(3)
+  stw     10, 48(3)
+  stw     11, 52(3)
+  stw     12, 56(3)
+  stw     13, 60(3)
+  stw     14, 64(3)
+  stw     15, 68(3)
+  stw     16, 72(3)
+  stw     17, 76(3)
+  stw     18, 80(3)
+  stw     19, 84(3)
+  stw     20, 88(3)
+  stw     21, 92(3)
+  stw     22, 96(3)
+  stw     23,100(3)
+  stw     24,104(3)
+  stw     25,108(3)
+  stw     26,112(3)
+  stw     27,116(3)
+  stw     28,120(3)
+  stw     29,124(3)
+  stw     30,128(3)
+  stw     31,132(3)
 
   // save VRSave register
-  mfspr   %r0, 256
-  stw     %r0, 156(%r3)
+  mfspr   0, 256
+  stw     0, 156(3)
   // save CR registers
-  mfcr    %r0
-  stw     %r0, 136(%r3)
+  mfcr    0
+  stw     0, 136(3)
   // save CTR register
-  mfctr   %r0
-  stw     %r0, 148(%r3)
+  mfctr   0
+  stw     0, 148(3)
 
 #if !defined(__NO_FPRS__)
   // save float registers
-  stfd    %f0, 160(%r3)
-  stfd    %f1, 168(%r3)
-  stfd    %f2, 176(%r3)
-  stfd    %f3, 184(%r3)
-  stfd    %f4, 192(%r3)
-  stfd    %f5, 200(%r3)
-  stfd    %f6, 208(%r3)
-  stfd    %f7, 216(%r3)
-  stfd    %f8, 224(%r3)
-  stfd    %f9, 232(%r3)
-  stfd    %f10,240(%r3)
-  stfd    %f11,248(%r3)
-  stfd    %f12,256(%r3)
-  stfd    %f13,264(%r3)
-  stfd    %f14,272(%r3)
-  stfd    %f15,280(%r3)
-  stfd    %f16,288(%r3)
-  stfd    %f17,296(%r3)
-  stfd    %f18,304(%r3)
-  stfd    %f19,312(%r3)
-  stfd    %f20,320(%r3)
-  stfd    %f21,328(%r3)
-  stfd    %f22,336(%r3)
-  stfd    %f23,344(%r3)
-  stfd    %f24,352(%r3)
-  stfd    %f25,360(%r3)
-  stfd    %f26,368(%r3)
-  stfd    %f27,376(%r3)
-  stfd    %f28,384(%r3)
-  stfd    %f29,392(%r3)
-  stfd    %f30,400(%r3)
-  stfd    %f31,408(%r3)
+  stfd    0, 160(3)
+  stfd    1, 168(3)
+  stfd    2, 176(3)
+  stfd    3, 184(3)
+  stfd    4, 192(3)
+  stfd    5, 200(3)
+  stfd    6, 208(3)
+  stfd    7, 216(3)
+  stfd    8, 224(3)
+  stfd    9, 232(3)
+  stfd    10,240(3)
+  stfd    11,248(3)
+  stfd    12,256(3)
+  stfd    13,264(3)
+  stfd    14,272(3)
+  stfd    15,280(3)
+  stfd    16,288(3)
+  stfd    17,296(3)
+  stfd    18,304(3)
+  stfd    19,312(3)
+  stfd    20,320(3)
+  stfd    21,328(3)
+  stfd    22,336(3)
+  stfd    23,344(3)
+  stfd    24,352(3)
+  stfd    25,360(3)
+  stfd    26,368(3)
+  stfd    27,376(3)
+  stfd    28,384(3)
+  stfd    29,392(3)
+  stfd    30,400(3)
+  stfd    31,408(3)
 #endif
 
 #if defined(__ALTIVEC__)
   // save vector registers
 
-  subi    %r4, %r1, 16
-  rlwinm  %r4, %r4, 0, 0, 27  // mask low 4-bits
+  subi    4, 1, 16
+  rlwinm  4, 4, 0, 0, 27  // mask low 4-bits
   // r4 is now a 16-byte aligned pointer into the red zone
 
 #define SAVE_VECTOR_UNALIGNED(_vec, _offset) \
-  stvx    _vec, 0, %r4          SEPARATOR \
-  lwz     %r5, 0(%r4)           SEPARATOR \
-  stw     %r5, _offset(%r3)     SEPARATOR \
-  lwz     %r5, 4(%r4)           SEPARATOR \
-  stw     %r5, _offset+4(%r3)   SEPARATOR \
-  lwz     %r5, 8(%r4)           SEPARATOR \
-  stw     %r5, _offset+8(%r3)   SEPARATOR \
-  lwz     %r5, 12(%r4)          SEPARATOR \
-  stw     %r5, _offset+12(%r3)
+  stvx    _vec, 0, 4               SEPARATOR \
+  lwz     5, 0(4)                  SEPARATOR \
+  stw     5, _offset(3)            SEPARATOR \
+  lwz     5, 4(4)                  SEPARATOR \
+  stw     5, _offset+4(3)          SEPARATOR \
+  lwz     5, 8(4)                  SEPARATOR \
+  stw     5, _offset+8(3)          SEPARATOR \
+  lwz     5, 12(4)                 SEPARATOR \
+  stw     5, _offset+12(3)
 
-  SAVE_VECTOR_UNALIGNED( %v0, 424+0x000)
-  SAVE_VECTOR_UNALIGNED( %v1, 424+0x010)
-  SAVE_VECTOR_UNALIGNED( %v2, 424+0x020)
-  SAVE_VECTOR_UNALIGNED( %v3, 424+0x030)
-  SAVE_VECTOR_UNALIGNED( %v4, 424+0x040)
-  SAVE_VECTOR_UNALIGNED( %v5, 424+0x050)
-  SAVE_VECTOR_UNALIGNED( %v6, 424+0x060)
-  SAVE_VECTOR_UNALIGNED( %v7, 424+0x070)
-  SAVE_VECTOR_UNALIGNED( %v8, 424+0x080)
-  SAVE_VECTOR_UNALIGNED( %v9, 424+0x090)
-  SAVE_VECTOR_UNALIGNED(%v10, 424+0x0A0)
-  SAVE_VECTOR_UNALIGNED(%v11, 424+0x0B0)
-  SAVE_VECTOR_UNALIGNED(%v12, 424+0x0C0)
-  SAVE_VECTOR_UNALIGNED(%v13, 424+0x0D0)
-  SAVE_VECTOR_UNALIGNED(%v14, 424+0x0E0)
-  SAVE_VECTOR_UNALIGNED(%v15, 424+0x0F0)
-  SAVE_VECTOR_UNALIGNED(%v16, 424+0x100)
-  SAVE_VECTOR_UNALIGNED(%v17, 424+0x110)
-  SAVE_VECTOR_UNALIGNED(%v18, 424+0x120)
-  SAVE_VECTOR_UNALIGNED(%v19, 424+0x130)
-  SAVE_VECTOR_UNALIGNED(%v20, 424+0x140)
-  SAVE_VECTOR_UNALIGNED(%v21, 424+0x150)
-  SAVE_VECTOR_UNALIGNED(%v22, 424+0x160)
-  SAVE_VECTOR_UNALIGNED(%v23, 424+0x170)
-  SAVE_VECTOR_UNALIGNED(%v24, 424+0x180)
-  SAVE_VECTOR_UNALIGNED(%v25, 424+0x190)
-  SAVE_VECTOR_UNALIGNED(%v26, 424+0x1A0)
-  SAVE_VECTOR_UNALIGNED(%v27, 424+0x1B0)
-  SAVE_VECTOR_UNALIGNED(%v28, 424+0x1C0)
-  SAVE_VECTOR_UNALIGNED(%v29, 424+0x1D0)
-  SAVE_VECTOR_UNALIGNED(%v30, 424+0x1E0)
-  SAVE_VECTOR_UNALIGNED(%v31, 424+0x1F0)
+  SAVE_VECTOR_UNALIGNED( 0, 424+0x000)
+  SAVE_VECTOR_UNALIGNED( 1, 424+0x010)
+  SAVE_VECTOR_UNALIGNED( 2, 424+0x020)
+  SAVE_VECTOR_UNALIGNED( 3, 424+0x030)
+  SAVE_VECTOR_UNALIGNED( 4, 424+0x040)
+  SAVE_VECTOR_UNALIGNED( 5, 424+0x050)
+  SAVE_VECTOR_UNALIGNED( 6, 424+0x060)
+  SAVE_VECTOR_UNALIGNED( 7, 424+0x070)
+  SAVE_VECTOR_UNALIGNED( 8, 424+0x080)
+  SAVE_VECTOR_UNALIGNED( 9, 424+0x090)
+  SAVE_VECTOR_UNALIGNED(10, 424+0x0A0)
+  SAVE_VECTOR_UNALIGNED(11, 424+0x0B0)
+  SAVE_VECTOR_UNALIGNED(12, 424+0x0C0)
+  SAVE_VECTOR_UNALIGNED(13, 424+0x0D0)
+  SAVE_VECTOR_UNALIGNED(14, 424+0x0E0)
+  SAVE_VECTOR_UNALIGNED(15, 424+0x0F0)
+  SAVE_VECTOR_UNALIGNED(16, 424+0x100)
+  SAVE_VECTOR_UNALIGNED(17, 424+0x110)
+  SAVE_VECTOR_UNALIGNED(18, 424+0x120)
+  SAVE_VECTOR_UNALIGNED(19, 424+0x130)
+  SAVE_VECTOR_UNALIGNED(20, 424+0x140)
+  SAVE_VECTOR_UNALIGNED(21, 424+0x150)
+  SAVE_VECTOR_UNALIGNED(22, 424+0x160)
+  SAVE_VECTOR_UNALIGNED(23, 424+0x170)
+  SAVE_VECTOR_UNALIGNED(24, 424+0x180)
+  SAVE_VECTOR_UNALIGNED(25, 424+0x190)
+  SAVE_VECTOR_UNALIGNED(26, 424+0x1A0)
+  SAVE_VECTOR_UNALIGNED(27, 424+0x1B0)
+  SAVE_VECTOR_UNALIGNED(28, 424+0x1C0)
+  SAVE_VECTOR_UNALIGNED(29, 424+0x1D0)
+  SAVE_VECTOR_UNALIGNED(30, 424+0x1E0)
+  SAVE_VECTOR_UNALIGNED(31, 424+0x1F0)
 #endif
 
-  li      %r3, 0  // return UNW_ESUCCESS
+  li      3, 0  // return UNW_ESUCCESS
   blr
 
 

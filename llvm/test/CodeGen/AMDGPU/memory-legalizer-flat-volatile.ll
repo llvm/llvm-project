@@ -416,7 +416,6 @@ define amdgpu_kernel void @flat_volatile_workgroup_acquire_load(
 ; GFX10-WGP-NEXT:    buffer_gl0_inv
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v1, s3
-; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
@@ -459,7 +458,6 @@ define amdgpu_kernel void @flat_volatile_workgroup_acquire_load(
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v1, s3
-; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-WGP-NEXT:    s_endpgm
 ;

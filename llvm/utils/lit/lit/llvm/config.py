@@ -407,13 +407,13 @@ class LLVMConfig(object):
         configuration's PATH."""
         # If the override is specified in the environment, use it without
         # validation.
+        tool = None
         if search_env:
             tool = self.config.environment.get(search_env)
-            if tool:
-                return tool
 
-        # Otherwise look in the path.
-        tool = lit.util.which(name, self.config.environment['PATH'])
+        if not tool:
+            # Otherwise look in the path.
+            tool = lit.util.which(name, self.config.environment['PATH'])
 
         if required and not tool:
             message = "couldn't find '{}' program".format(name)

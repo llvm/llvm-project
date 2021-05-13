@@ -366,11 +366,7 @@ void Sema::Initialize() {
             "cl_khr_int64_base_atomics cl_khr_int64_extended_atomics");
     }
 
-    setOpenCLExtensionForType(Context.DoubleTy, "cl_khr_fp64");
 
-#define GENERIC_IMAGE_TYPE_EXT(Type, Id, Ext) \
-    setOpenCLExtensionForType(Context.Id, Ext);
-#include "clang/Basic/OpenCLImageTypes.def"
 #define EXT_OPAQUE_TYPE(ExtType, Id, Ext)                                      \
   if (getOpenCLOptions().isSupported(#Ext, getLangOpts())) {                   \
     addImplicitTypedef(#ExtType, Context.Id##Ty);                              \
@@ -1572,6 +1568,8 @@ public:
 
   DeferredDiagnosticsEmitter(Sema &S)
       : Inherited(S), ShouldEmitRootNode(false), InOMPDeviceContext(0) {}
+
+  bool shouldVisitDiscardedStmt() const { return false; }
 
   void VisitOMPTargetDirective(OMPTargetDirective *Node) {
     ++InOMPDeviceContext;

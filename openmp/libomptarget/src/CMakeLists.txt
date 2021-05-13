@@ -24,29 +24,19 @@ set(LIBOMPTARGET_SRC_FILES ${LIBOMPTARGET_SRC_FILES} PARENT_SCOPE)
 
 include_directories(${LIBOMPTARGET_LLVM_INCLUDE_DIRS})
 
-# Build libomptarget library with libdl dependency. Add LLVMSupport
-# dependency if building in-tree with profiling enabled.
-if(OPENMP_STANDALONE_BUILD OR (NOT OPENMP_ENABLE_LIBOMPTARGET_PROFILING))
-  add_library(omptarget SHARED ${LIBOMPTARGET_SRC_FILES})
-  target_link_libraries(omptarget
-    ${CMAKE_DL_LIBS}
-    "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports")
-else()
-  set(LLVM_LINK_COMPONENTS
-    Support
-    )
-  add_llvm_library(omptarget SHARED ${LIBOMPTARGET_SRC_FILES}
-      LINK_LIBS ${CMAKE_DL_LIBS}
-      "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports"
-      )
+# Build libomptarget library with libdl dependency.
+add_library(omptarget SHARED ${LIBOMPTARGET_SRC_FILES})
+if (OPENMP_ENABLE_LIBOMPTARGET_PROFILING)
+  # Add LLVMSupport dependency if profiling is enabled.
+  # Linking with LLVM component libraries also requires
+  # aligning the compile flags.
+  llvm_update_compile_flags(omptarget)
   target_compile_definitions(omptarget PUBLIC OMPTARGET_PROFILE_ENABLED)
+  target_link_libraries(omptarget PRIVATE LLVMSupport)
 endif()
-
-# libomptarget needs to be set separately because add_llvm_library doesn't
-# conform with location configuration of its parent scope.
-set_target_properties(omptarget
-  PROPERTIES
-  LIBRARY_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
+target_link_libraries(omptarget PRIVATE
+  ${CMAKE_DL_LIBS}
+  "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports")
 
 # Install libomptarget under the lib destination folder.
 install(TARGETS omptarget LIBRARY COMPONENT omptarget

@@ -1,5 +1,5 @@
-if(NOT (EXISTS ${LIBC_SOURCE_DIR}/loader/linux/${LIBC_TARGET_MACHINE}))
-  message("Skipping loader tests for target machine ${LIBC_TARGET_MACHINE}.")
+if(NOT (EXISTS ${LIBC_SOURCE_DIR}/loader/linux/${LIBC_TARGET_ARCHITECTURE}))
+  message("Skipping loader tests for target architecture ${LIBC_TARGET_ARCHITECTURE}.")
   return()
 endif()
 

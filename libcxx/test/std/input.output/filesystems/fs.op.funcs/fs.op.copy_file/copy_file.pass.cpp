@@ -8,11 +8,9 @@
 
 // UNSUPPORTED: c++03
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 // The string reported on errors changed, which makes those tests fail when run
 // against already-released libc++'s.
-// XFAIL: with_system_cxx_lib=macosx10.15
+// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.15
 
 // <filesystem>
 
@@ -114,7 +112,7 @@ TEST_CASE(test_attributes_get_copied) {
   TEST_REQUIRE(fs::copy_file(file, dest, ec) == true);
   TEST_CHECK(!ec);
   auto new_st = status(dest);
-  TEST_CHECK(new_st.permissions() == new_perms);
+  TEST_CHECK(new_st.permissions() == NormalizeExpectedPerms(new_perms));
 }
 
 TEST_CASE(copy_dir_test) {

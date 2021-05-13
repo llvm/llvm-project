@@ -1371,7 +1371,7 @@ define i32 @test_chr_15(i32* %i, i32* %j, i32 %sum0, i1 %pred, i32 %z) !prof !14
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[I0:%.*]] = load i32, i32* [[I:%.*]], align 4
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i32 [[Z:%.*]], 0
-; CHECK-NEXT:    [[V3:%.*]] = and i1 [[V0]], [[PRED:%.*]]
+; CHECK-NEXT:    [[V3:%.*]] = select i1 [[V0]], i1 [[PRED:%.*]], i1 false
 ; CHECK-NEXT:    br i1 [[V3]], label [[BB0:%.*]], label [[BB1:%.*]], !prof !16
 ; CHECK:       bb0:
 ; CHECK-NEXT:    call void @foo()

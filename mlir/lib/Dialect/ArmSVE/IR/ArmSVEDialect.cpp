@@ -21,6 +21,8 @@
 
 using namespace mlir;
 
+static Type getI1SameShape(Type type);
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/ArmSVE/ArmSVE.cpp.inc"
 
@@ -58,4 +60,17 @@ Type arm_sve::ArmSVEDialect::parseType(DialectAsmParser &parser) const {
 void arm_sve::ArmSVEDialect::printType(Type type, DialectAsmPrinter &os) const {
   if (failed(generatedTypePrinter(type, os)))
     llvm_unreachable("unexpected 'arm_sve' type kind");
+}
+
+//===----------------------------------------------------------------------===//
+// ScalableVector versions of general helpers for comparison ops
+//===----------------------------------------------------------------------===//
+
+// Return the scalable vector of the same shape and containing i1.
+static Type getI1SameShape(Type type) {
+  auto i1Type = IntegerType::get(type.getContext(), 1);
+  if (auto sVectorType = type.dyn_cast<arm_sve::ScalableVectorType>())
+    return arm_sve::ScalableVectorType::get(type.getContext(),
+                                            sVectorType.getShape(), i1Type);
+  return nullptr;
 }

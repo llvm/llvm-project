@@ -6,7 +6,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Base case, empty function
 define void @test1() {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn mustprogress
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    ret void
 ;
@@ -15,7 +15,7 @@ define void @test1() {
 
 ; Show the bottom up walk
 define void @test2() {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn mustprogress
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    call void @test1()
 ; CHECK-NEXT:    ret void
@@ -38,7 +38,7 @@ define void @test3() convergent {
 }
 
 define i32 @test4(i32 %a, i32 %b) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn mustprogress
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i32 [[A]]
@@ -49,7 +49,7 @@ define i32 @test4(i32 %a, i32 %b) {
 
 ; negative case - explicit sync
 define void @test5(i8* %p) {
-; CHECK: Function Attrs: nofree norecurse nounwind willreturn
+; CHECK: Function Attrs: nofree norecurse nounwind willreturn mustprogress
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    store atomic i8 0, i8* [[P:%.*]] seq_cst, align 1
 ; CHECK-NEXT:    ret void
@@ -60,7 +60,7 @@ define void @test5(i8* %p) {
 
 ; negative case - explicit sync
 define i8 @test6(i8* %p) {
-; CHECK: Function Attrs: nofree norecurse nounwind willreturn
+; CHECK: Function Attrs: nofree norecurse nounwind willreturn mustprogress
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    [[V:%.*]] = load atomic i8, i8* [[P:%.*]] seq_cst, align 1
 ; CHECK-NEXT:    ret i8 [[V]]
@@ -71,7 +71,7 @@ define i8 @test6(i8* %p) {
 
 ; negative case - explicit sync
 define void @test7(i8* %p) {
-; CHECK: Function Attrs: nofree norecurse nounwind willreturn
+; CHECK: Function Attrs: nofree norecurse nounwind willreturn mustprogress
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add i8* [[P:%.*]], i8 0 seq_cst, align 1
 ; CHECK-NEXT:    ret void
@@ -82,7 +82,7 @@ define void @test7(i8* %p) {
 
 ; negative case - explicit sync
 define void @test8(i8* %p) {
-; CHECK: Function Attrs: nofree norecurse nounwind willreturn
+; CHECK: Function Attrs: nofree norecurse nounwind willreturn mustprogress
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:    fence seq_cst
 ; CHECK-NEXT:    ret void
@@ -93,7 +93,7 @@ define void @test8(i8* %p) {
 
 ; singlethread fences are okay
 define void @test9(i8* %p) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn mustprogress
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:    fence syncscope("singlethread") seq_cst
 ; CHECK-NEXT:    ret void
@@ -104,7 +104,7 @@ define void @test9(i8* %p) {
 
 ; atomic load with monotonic ordering
 define i32 @load_monotonic(i32* nocapture readonly %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: nofree norecurse nounwind uwtable willreturn
+; CHECK: Function Attrs: nofree norecurse nounwind uwtable willreturn mustprogress
 ; CHECK-LABEL: @load_monotonic(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, i32* [[TMP0:%.*]] monotonic, align 4
 ; CHECK-NEXT:    ret i32 [[TMP2]]
@@ -115,7 +115,7 @@ define i32 @load_monotonic(i32* nocapture readonly %0) norecurse nounwind uwtabl
 
 ; atomic store with monotonic ordering.
 define void @store_monotonic(i32* nocapture %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: nofree norecurse nounwind uwtable willreturn
+; CHECK: Function Attrs: nofree norecurse nounwind uwtable willreturn mustprogress
 ; CHECK-LABEL: @store_monotonic(
 ; CHECK-NEXT:    store atomic i32 10, i32* [[TMP0:%.*]] monotonic, align 4
 ; CHECK-NEXT:    ret void
@@ -127,7 +127,7 @@ define void @store_monotonic(i32* nocapture %0) norecurse nounwind uwtable {
 ; negative, should not deduce nosync
 ; atomic load with acquire ordering.
 define i32 @load_acquire(i32* nocapture readonly %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: nofree norecurse nounwind uwtable willreturn
+; CHECK: Function Attrs: nofree norecurse nounwind uwtable willreturn mustprogress
 ; CHECK-LABEL: @load_acquire(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, i32* [[TMP0:%.*]] acquire, align 4
 ; CHECK-NEXT:    ret i32 [[TMP2]]
@@ -137,7 +137,7 @@ define i32 @load_acquire(i32* nocapture readonly %0) norecurse nounwind uwtable 
 }
 
 define i32 @load_unordered(i32* nocapture readonly %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readonly uwtable willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readonly uwtable willreturn mustprogress
 ; CHECK-LABEL: @load_unordered(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, i32* [[TMP0:%.*]] unordered, align 4
 ; CHECK-NEXT:    ret i32 [[TMP2]]
@@ -148,7 +148,7 @@ define i32 @load_unordered(i32* nocapture readonly %0) norecurse nounwind uwtabl
 
 ; atomic store with unordered ordering.
 define void @store_unordered(i32* nocapture %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind uwtable willreturn writeonly
+; CHECK: Function Attrs: nofree norecurse nosync nounwind uwtable willreturn writeonly mustprogress
 ; CHECK-LABEL: @store_unordered(
 ; CHECK-NEXT:    store atomic i32 10, i32* [[TMP0:%.*]] unordered, align 4
 ; CHECK-NEXT:    ret void
@@ -161,7 +161,7 @@ define void @store_unordered(i32* nocapture %0) norecurse nounwind uwtable {
 ; negative, should not deduce nosync
 ; atomic load with release ordering
 define void @load_release(i32* nocapture %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: nofree norecurse nounwind uwtable willreturn
+; CHECK: Function Attrs: nofree norecurse nounwind uwtable willreturn mustprogress
 ; CHECK-LABEL: @load_release(
 ; CHECK-NEXT:    store atomic volatile i32 10, i32* [[TMP0:%.*]] release, align 4
 ; CHECK-NEXT:    ret void
@@ -172,7 +172,7 @@ define void @load_release(i32* nocapture %0) norecurse nounwind uwtable {
 
 ; negative volatile, relaxed atomic
 define void @load_volatile_release(i32* nocapture %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: nofree norecurse nounwind uwtable willreturn
+; CHECK: Function Attrs: nofree norecurse nounwind uwtable willreturn mustprogress
 ; CHECK-LABEL: @load_volatile_release(
 ; CHECK-NEXT:    store atomic volatile i32 10, i32* [[TMP0:%.*]] release, align 4
 ; CHECK-NEXT:    ret void
@@ -183,7 +183,7 @@ define void @load_volatile_release(i32* nocapture %0) norecurse nounwind uwtable
 
 ; volatile store.
 define void @volatile_store(i32* %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: nofree norecurse nounwind uwtable willreturn
+; CHECK: Function Attrs: nofree norecurse nounwind uwtable willreturn mustprogress
 ; CHECK-LABEL: @volatile_store(
 ; CHECK-NEXT:    store volatile i32 14, i32* [[TMP0:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -195,7 +195,7 @@ define void @volatile_store(i32* %0) norecurse nounwind uwtable {
 ; negative, should not deduce nosync
 ; volatile load.
 define i32 @volatile_load(i32* %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: nofree norecurse nounwind uwtable willreturn
+; CHECK: Function Attrs: nofree norecurse nounwind uwtable willreturn mustprogress
 ; CHECK-LABEL: @volatile_load(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load volatile i32, i32* [[TMP0:%.*]], align 4
 ; CHECK-NEXT:    ret i32 [[TMP2]]
@@ -237,7 +237,7 @@ declare void @llvm.memset(i8* %dest, i8 %val, i32 %len, i1 %isvolatile)
 
 ; negative, checking volatile intrinsics.
 define i32 @memcpy_volatile(i8* %ptr1, i8* %ptr2) {
-; CHECK: Function Attrs: nofree nounwind willreturn
+; CHECK: Function Attrs: nofree nounwind willreturn mustprogress
 ; CHECK-LABEL: @memcpy_volatile(
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[PTR1:%.*]], i8* [[PTR2:%.*]], i32 8, i1 true)
 ; CHECK-NEXT:    ret i32 4
@@ -248,7 +248,7 @@ define i32 @memcpy_volatile(i8* %ptr1, i8* %ptr2) {
 
 ; positive, non-volatile intrinsic.
 define i32 @memset_non_volatile(i8* %ptr1, i8 %val) {
-; CHECK: Function Attrs: nofree nosync nounwind willreturn writeonly
+; CHECK: Function Attrs: nofree nosync nounwind willreturn writeonly mustprogress
 ; CHECK-LABEL: @memset_non_volatile(
 ; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* [[PTR1:%.*]], i8 [[VAL:%.*]], i32 8, i1 false)
 ; CHECK-NEXT:    ret i32 4
@@ -299,7 +299,7 @@ define void @i_totally_sync() {
 declare float @llvm.cos(float %val) readnone
 
 define float @cos_test(float %x) {
-; CHECK: Function Attrs: nofree nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree nosync nounwind readnone willreturn mustprogress
 ; CHECK-LABEL: @cos_test(
 ; CHECK-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X:%.*]])
 ; CHECK-NEXT:    ret float [[C]]

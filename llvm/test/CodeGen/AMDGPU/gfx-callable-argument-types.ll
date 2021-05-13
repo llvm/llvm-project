@@ -275,7 +275,7 @@ define amdgpu_gfx void @test_call_external_void_func_i1_signext(i32) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
   %var = load volatile i1, i1 addrspace(1)* undef
-  call amdgpu_gfx void @external_void_func_i1_signext(i1 %var)
+  call amdgpu_gfx void @external_void_func_i1_signext(i1 signext%var)
   ret void
 }
 
@@ -372,7 +372,7 @@ define amdgpu_gfx void @test_call_external_void_func_i1_zeroext(i32) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
   %var = load volatile i1, i1 addrspace(1)* undef
-  call amdgpu_gfx void @external_void_func_i1_zeroext(i1 %var)
+  call amdgpu_gfx void @external_void_func_i1_zeroext(i1 zeroext %var)
   ret void
 }
 
@@ -548,7 +548,7 @@ define amdgpu_gfx void @test_call_external_void_func_i8_signext(i32) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
   %var = load volatile i8, i8 addrspace(1)* undef
-  call amdgpu_gfx void @external_void_func_i8_signext(i8 %var)
+  call amdgpu_gfx void @external_void_func_i8_signext(i8 signext %var)
   ret void
 }
 
@@ -638,7 +638,7 @@ define amdgpu_gfx void @test_call_external_void_func_i8_zeroext(i32) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
   %var = load volatile i8, i8 addrspace(1)* undef
-  call amdgpu_gfx void @external_void_func_i8_zeroext(i8 %var)
+  call amdgpu_gfx void @external_void_func_i8_zeroext(i8 zeroext %var)
   ret void
 }
 
@@ -814,7 +814,7 @@ define amdgpu_gfx void @test_call_external_void_func_i16_signext(i32) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
   %var = load volatile i16, i16 addrspace(1)* undef
-  call amdgpu_gfx void @external_void_func_i16_signext(i16 %var)
+  call amdgpu_gfx void @external_void_func_i16_signext(i16 signext %var)
   ret void
 }
 
@@ -904,7 +904,7 @@ define amdgpu_gfx void @test_call_external_void_func_i16_zeroext(i32) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
   %var = load volatile i16, i16 addrspace(1)* undef
-  call amdgpu_gfx void @external_void_func_i16_zeroext(i16 %var)
+  call amdgpu_gfx void @external_void_func_i16_zeroext(i16 zeroext %var)
   ret void
 }
 
@@ -4449,7 +4449,7 @@ define amdgpu_gfx void @test_call_external_void_func_byval_struct_i8_i32() #0 {
   %gep1 = getelementptr inbounds { i8, i32 }, { i8, i32 } addrspace(5)* %val, i32 0, i32 1
   store i8 3, i8 addrspace(5)* %gep0
   store i32 8, i32 addrspace(5)* %gep1
-  call amdgpu_gfx void @external_void_func_byval_struct_i8_i32({ i8, i32 } addrspace(5)* %val)
+  call amdgpu_gfx void @external_void_func_byval_struct_i8_i32({ i8, i32 } addrspace(5)* byval({ i8, i32 }) %val)
   ret void
 }
 
@@ -4582,7 +4582,7 @@ define amdgpu_gfx void @test_call_external_void_func_sret_struct_i8_i32_byval_st
   %in.gep1 = getelementptr inbounds { i8, i32 }, { i8, i32 } addrspace(5)* %in.val, i32 0, i32 1
   store i8 3, i8 addrspace(5)* %in.gep0
   store i32 8, i32 addrspace(5)* %in.gep1
-  call amdgpu_gfx void @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32({ i8, i32 } addrspace(5)* %out.val, { i8, i32 } addrspace(5)* %in.val)
+  call amdgpu_gfx void @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32({ i8, i32 } addrspace(5)* sret({ i8, i32 }) %out.val, { i8, i32 } addrspace(5)* byval({ i8, i32 }) %in.val)
   %out.gep0 = getelementptr inbounds { i8, i32 }, { i8, i32 } addrspace(5)* %out.val, i32 0, i32 0
   %out.gep1 = getelementptr inbounds { i8, i32 }, { i8, i32 } addrspace(5)* %out.val, i32 0, i32 1
   %out.val0 = load i8, i8 addrspace(5)* %out.gep0
@@ -4882,7 +4882,7 @@ define amdgpu_gfx void @test_call_external_void_func_i1_imm_inreg() #0 {
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
-  call amdgpu_gfx void @external_void_func_i1_inreg(i1 true)
+  call amdgpu_gfx void @external_void_func_i1_inreg(i1 inreg true)
   ret void
 }
 
@@ -4968,7 +4968,7 @@ define amdgpu_gfx void @test_call_external_void_func_i8_imm_inreg(i32) #0 {
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
-  call amdgpu_gfx void @external_void_func_i8_inreg(i8 123)
+  call amdgpu_gfx void @external_void_func_i8_inreg(i8 inreg 123)
   ret void
 }
 
@@ -5054,7 +5054,7 @@ define amdgpu_gfx void @test_call_external_void_func_i16_imm_inreg() #0 {
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
-  call amdgpu_gfx void @external_void_func_i16_inreg(i16 123)
+  call amdgpu_gfx void @external_void_func_i16_inreg(i16 inreg 123)
   ret void
 }
 
@@ -5140,7 +5140,7 @@ define amdgpu_gfx void @test_call_external_void_func_i32_imm_inreg(i32) #0 {
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
-  call amdgpu_gfx void @external_void_func_i32_inreg(i32 42)
+  call amdgpu_gfx void @external_void_func_i32_inreg(i32 inreg 42)
   ret void
 }
 
@@ -5229,7 +5229,7 @@ define amdgpu_gfx void @test_call_external_void_func_i64_imm_inreg() #0 {
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
-  call amdgpu_gfx void @external_void_func_i64_inreg(i64 123)
+  call amdgpu_gfx void @external_void_func_i64_inreg(i64 inreg 123)
   ret void
 }
 
@@ -5319,7 +5319,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2i64_inreg() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
   %val = load <2 x i64>, <2 x i64> addrspace(4)* null
-  call amdgpu_gfx void @external_void_func_v2i64_inreg(<2 x i64> %val)
+  call amdgpu_gfx void @external_void_func_v2i64_inreg(<2 x i64> inreg %val)
   ret void
 }
 
@@ -5414,7 +5414,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2i64_imm_inreg() #0 {
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
-  call amdgpu_gfx void @external_void_func_v2i64_inreg(<2 x i64> <i64 8589934593, i64 17179869187>)
+  call amdgpu_gfx void @external_void_func_v2i64_inreg(<2 x i64> inreg <i64 8589934593, i64 17179869187>)
   ret void
 }
 
@@ -5512,7 +5512,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3i64_inreg() #0 {
   %load = load <2 x i64>, <2 x i64> addrspace(4)* null
   %val = shufflevector <2 x i64> %load, <2 x i64> <i64 8589934593, i64 undef>, <3 x i32> <i32 0, i32 1, i32 2>
 
-  call amdgpu_gfx void @external_void_func_v3i64_inreg(<3 x i64> %val)
+  call amdgpu_gfx void @external_void_func_v3i64_inreg(<3 x i64> inreg %val)
   ret void
 }
 
@@ -5615,7 +5615,7 @@ define amdgpu_gfx void @test_call_external_void_func_v4i64_inreg() #0 {
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
   %load = load <2 x i64>, <2 x i64> addrspace(4)* null
   %val = shufflevector <2 x i64> %load, <2 x i64> <i64 8589934593, i64 17179869187>, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  call amdgpu_gfx void @external_void_func_v4i64_inreg(<4 x i64> %val)
+  call amdgpu_gfx void @external_void_func_v4i64_inreg(<4 x i64> inreg %val)
   ret void
 }
 
@@ -5701,7 +5701,7 @@ define amdgpu_gfx void @test_call_external_void_func_f16_imm_inreg() #0 {
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
-  call amdgpu_gfx void @external_void_func_f16_inreg(half 4.0)
+  call amdgpu_gfx void @external_void_func_f16_inreg(half inreg 4.0)
   ret void
 }
 
@@ -5787,7 +5787,7 @@ define amdgpu_gfx void @test_call_external_void_func_f32_imm_inreg() #0 {
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
-  call amdgpu_gfx void @external_void_func_f32_inreg(float 4.0)
+  call amdgpu_gfx void @external_void_func_f32_inreg(float inreg 4.0)
   ret void
 }
 
@@ -5876,7 +5876,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2f32_imm_inreg() #0 {
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
-  call amdgpu_gfx void @external_void_func_v2f32_inreg(<2 x float> <float 1.0, float 2.0>)
+  call amdgpu_gfx void @external_void_func_v2f32_inreg(<2 x float> inreg <float 1.0, float 2.0>)
   ret void
 }
 
@@ -5968,7 +5968,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3f32_imm_inreg() #0 {
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
-  call amdgpu_gfx void @external_void_func_v3f32_inreg(<3 x float> <float 1.0, float 2.0, float 4.0>)
+  call amdgpu_gfx void @external_void_func_v3f32_inreg(<3 x float> inreg <float 1.0, float 2.0, float 4.0>)
   ret void
 }
 
@@ -6066,7 +6066,7 @@ define amdgpu_gfx void @test_call_external_void_func_v5f32_imm_inreg() #0 {
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
-  call amdgpu_gfx void @external_void_func_v5f32_inreg(<5 x float> <float 1.0, float 2.0, float 4.0, float -1.0, float 0.5>)
+  call amdgpu_gfx void @external_void_func_v5f32_inreg(<5 x float> inreg <float 1.0, float 2.0, float 4.0, float -1.0, float 0.5>)
   ret void
 }
 
@@ -6155,7 +6155,7 @@ define amdgpu_gfx void @test_call_external_void_func_f64_imm_inreg() #0 {
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
-  call amdgpu_gfx void @external_void_func_f64_inreg(double 4.0)
+  call amdgpu_gfx void @external_void_func_f64_inreg(double inreg 4.0)
   ret void
 }
 
@@ -6250,7 +6250,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2f64_imm_inreg() #0 {
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
-  call amdgpu_gfx void @external_void_func_v2f64_inreg(<2 x double> <double 2.0, double 4.0>)
+  call amdgpu_gfx void @external_void_func_v2f64_inreg(<2 x double> inreg <double 2.0, double 4.0>)
   ret void
 }
 
@@ -6351,7 +6351,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3f64_imm_inreg() #0 {
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
-  call amdgpu_gfx void @external_void_func_v3f64_inreg(<3 x double> <double 2.0, double 4.0, double 8.0>)
+  call amdgpu_gfx void @external_void_func_v3f64_inreg(<3 x double> inreg <double 2.0, double 4.0, double 8.0>)
   ret void
 }
 
@@ -6438,7 +6438,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2i16_inreg() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
   %val = load <2 x i16>, <2 x i16> addrspace(4)* undef
-  call amdgpu_gfx void @external_void_func_v2i16_inreg(<2 x i16> %val)
+  call amdgpu_gfx void @external_void_func_v2i16_inreg(<2 x i16> inreg %val)
   ret void
 }
 
@@ -6525,7 +6525,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3i16_inreg() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
   %val = load <3 x i16>, <3 x i16> addrspace(4)* undef
-  call amdgpu_gfx void @external_void_func_v3i16_inreg(<3 x i16> %val)
+  call amdgpu_gfx void @external_void_func_v3i16_inreg(<3 x i16> inreg %val)
   ret void
 }
 
@@ -6612,7 +6612,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3f16_inreg() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
   %val = load <3 x half>, <3 x half> addrspace(4)* undef
-  call amdgpu_gfx void @external_void_func_v3f16_inreg(<3 x half> %val)
+  call amdgpu_gfx void @external_void_func_v3f16_inreg(<3 x half> inreg %val)
   ret void
 }
 
@@ -6701,7 +6701,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3i16_imm_inreg() #0 {
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
-  call amdgpu_gfx void @external_void_func_v3i16_inreg(<3 x i16> <i16 1, i16 2, i16 3>)
+  call amdgpu_gfx void @external_void_func_v3i16_inreg(<3 x i16> inreg <i16 1, i16 2, i16 3>)
   ret void
 }
 
@@ -6790,7 +6790,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3f16_imm_inreg() #0 {
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
-  call amdgpu_gfx void @external_void_func_v3f16_inreg(<3 x half> <half 1.0, half 2.0, half 4.0>)
+  call amdgpu_gfx void @external_void_func_v3f16_inreg(<3 x half> inreg <half 1.0, half 2.0, half 4.0>)
   ret void
 }
 
@@ -6877,7 +6877,7 @@ define amdgpu_gfx void @test_call_external_void_func_v4i16_inreg() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
   %val = load <4 x i16>, <4 x i16> addrspace(4)* undef
-  call amdgpu_gfx void @external_void_func_v4i16_inreg(<4 x i16> %val)
+  call amdgpu_gfx void @external_void_func_v4i16_inreg(<4 x i16> inreg %val)
   ret void
 }
 
@@ -6966,7 +6966,7 @@ define amdgpu_gfx void @test_call_external_void_func_v4i16_imm_inreg() #0 {
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
-  call amdgpu_gfx void @external_void_func_v4i16_inreg(<4 x i16> <i16 1, i16 2, i16 3, i16 4>)
+  call amdgpu_gfx void @external_void_func_v4i16_inreg(<4 x i16> inreg <i16 1, i16 2, i16 3, i16 4>)
   ret void
 }
 
@@ -7053,7 +7053,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2f16_inreg() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
   %val = load <2 x half>, <2 x half> addrspace(4)* undef
-  call amdgpu_gfx void @external_void_func_v2f16_inreg(<2 x half> %val)
+  call amdgpu_gfx void @external_void_func_v2f16_inreg(<2 x half> inreg %val)
   ret void
 }
 
@@ -7140,7 +7140,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2i32_inreg() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
   %val = load <2 x i32>, <2 x i32> addrspace(4)* undef
-  call amdgpu_gfx void @external_void_func_v2i32_inreg(<2 x i32> %val)
+  call amdgpu_gfx void @external_void_func_v2i32_inreg(<2 x i32> inreg %val)
   ret void
 }
 
@@ -7229,7 +7229,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2i32_imm_inreg() #0 {
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
-  call amdgpu_gfx void @external_void_func_v2i32_inreg(<2 x i32> <i32 1, i32 2>)
+  call amdgpu_gfx void @external_void_func_v2i32_inreg(<2 x i32> inreg <i32 1, i32 2>)
   ret void
 }
 
@@ -7321,7 +7321,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3i32_imm_inreg(i32) #0 {
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
-  call amdgpu_gfx void @external_void_func_v3i32_inreg(<3 x i32> <i32 3, i32 4, i32 5>)
+  call amdgpu_gfx void @external_void_func_v3i32_inreg(<3 x i32> inreg <i32 3, i32 4, i32 5>)
   ret void
 }
 
@@ -7416,7 +7416,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3i32_i32_inreg(i32) #0 {
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
-  call amdgpu_gfx void @external_void_func_v3i32_i32_inreg(<3 x i32> <i32 3, i32 4, i32 5>, i32 6)
+  call amdgpu_gfx void @external_void_func_v3i32_i32_inreg(<3 x i32> inreg <i32 3, i32 4, i32 5>, i32 inreg 6)
   ret void
 }
 
@@ -7503,7 +7503,7 @@ define amdgpu_gfx void @test_call_external_void_func_v4i32_inreg() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
   %val = load <4 x i32>, <4 x i32> addrspace(4)* undef
-  call amdgpu_gfx void @external_void_func_v4i32_inreg(<4 x i32> %val)
+  call amdgpu_gfx void @external_void_func_v4i32_inreg(<4 x i32> inreg %val)
   ret void
 }
 
@@ -7598,7 +7598,7 @@ define amdgpu_gfx void @test_call_external_void_func_v4i32_imm_inreg() #0 {
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
-  call amdgpu_gfx void @external_void_func_v4i32_inreg(<4 x i32> <i32 1, i32 2, i32 3, i32 4>)
+  call amdgpu_gfx void @external_void_func_v4i32_inreg(<4 x i32> inreg <i32 1, i32 2, i32 3, i32 4>)
   ret void
 }
 
@@ -7696,7 +7696,7 @@ define amdgpu_gfx void @test_call_external_void_func_v5i32_imm_inreg() #0 {
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
-  call amdgpu_gfx void @external_void_func_v5i32_inreg(<5 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5>)
+  call amdgpu_gfx void @external_void_func_v5i32_inreg(<5 x i32> inreg <i32 1, i32 2, i32 3, i32 4, i32 5>)
   ret void
 }
 
@@ -7790,7 +7790,7 @@ define amdgpu_gfx void @test_call_external_void_func_v8i32_inreg() #0 {
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
   %ptr = load <8 x i32> addrspace(4)*, <8 x i32> addrspace(4)* addrspace(4)* undef
   %val = load <8 x i32>, <8 x i32> addrspace(4)* %ptr
-  call amdgpu_gfx void @external_void_func_v8i32_inreg(<8 x i32> %val)
+  call amdgpu_gfx void @external_void_func_v8i32_inreg(<8 x i32> inreg %val)
   ret void
 }
 
@@ -7897,7 +7897,7 @@ define amdgpu_gfx void @test_call_external_void_func_v8i32_imm_inreg() #0 {
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
-  call amdgpu_gfx void @external_void_func_v8i32_inreg(<8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>)
+  call amdgpu_gfx void @external_void_func_v8i32_inreg(<8 x i32> inreg <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>)
   ret void
 }
 
@@ -7991,7 +7991,7 @@ define amdgpu_gfx void @test_call_external_void_func_v16i32_inreg() #0 {
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
   %ptr = load <16 x i32> addrspace(4)*, <16 x i32> addrspace(4)* addrspace(4)* undef
   %val = load <16 x i32>, <16 x i32> addrspace(4)* %ptr
-  call amdgpu_gfx void @external_void_func_v16i32_inreg(<16 x i32> %val)
+  call amdgpu_gfx void @external_void_func_v16i32_inreg(<16 x i32> inreg %val)
   ret void
 }
 
@@ -8261,7 +8261,7 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_inreg() #0 {
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
   %ptr = load <32 x i32> addrspace(4)*, <32 x i32> addrspace(4)* addrspace(4)* undef
   %val = load <32 x i32>, <32 x i32> addrspace(4)* %ptr
-  call amdgpu_gfx void @external_void_func_v32i32_inreg(<32 x i32> %val)
+  call amdgpu_gfx void @external_void_func_v32i32_inreg(<32 x i32> inreg %val)
   ret void
 }
 
@@ -8543,7 +8543,7 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_i32_inreg(i32) #0 {
   %ptr0 = load <32 x i32> addrspace(4)*, <32 x i32> addrspace(4)* addrspace(4)* undef
   %val0 = load <32 x i32>, <32 x i32> addrspace(4)* %ptr0
   %val1 = load i32, i32 addrspace(4)* undef
-  call amdgpu_gfx void @external_void_func_v32i32_i32_inreg(<32 x i32> %val0, i32 %val1)
+  call amdgpu_gfx void @external_void_func_v32i32_i32_inreg(<32 x i32> inreg %val0, i32 inreg %val1)
   ret void
 }
 

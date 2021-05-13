@@ -51,8 +51,7 @@ public:
   typedef typename Params::template TSDRegistryT<ThisT> TSDRegistryT;
 
   void callPostInitCallback() {
-    static pthread_once_t OnceControl = PTHREAD_ONCE_INIT;
-    pthread_once(&OnceControl, PostInitCallback);
+    pthread_once(&PostInitNonce, PostInitCallback);
   }
 
   struct QuarantineCallback {
@@ -199,6 +198,11 @@ public:
           &GuardedAlloc, Printf,
           gwp_asan::backtrace::getPrintBacktraceFunction(),
           gwp_asan::backtrace::getSegvBacktraceFunction());
+
+    GuardedAllocSlotSize =
+        GuardedAlloc.getAllocatorState()->maximumAllocationSize();
+    Stats.add(StatFree, static_cast<uptr>(Opt.MaxSimultaneousAllocations) *
+                            GuardedAllocSlotSize);
 #endif // GWP_ASAN_HOOKS
   }
 
@@ -290,19 +294,7 @@ public:
                           bool ZeroContents = false) {
     initThreadMaybe();
 
-#ifdef GWP_ASAN_HOOKS
-    if (UNLIKELY(GuardedAlloc.shouldSample())) {
-      if (void *Ptr = GuardedAlloc.allocate(roundUpTo(Size, Alignment)))
-        return Ptr;
-    }
-#endif // GWP_ASAN_HOOKS
-
     const Options Options = Primary.Options.load();
-    const FillContentsMode FillContents = ZeroContents ? ZeroFill
-                                          : TSDRegistry.getDisableMemInit()
-                                              ? NoFill
-                                              : Options.getFillContentsMode();
-
     if (UNLIKELY(Alignment > MaxAlignment)) {
       if (Options.get(OptionBit::MayReturnNull))
         return nullptr;
@@ -310,6 +302,25 @@ public:
     }
     if (Alignment < MinAlignment)
       Alignment = MinAlignment;
+
+#ifdef GWP_ASAN_HOOKS
+    if (UNLIKELY(GuardedAlloc.shouldSample())) {
+      if (void *Ptr = GuardedAlloc.allocate(Size, Alignment)) {
+        if (UNLIKELY(&__scudo_allocate_hook))
+          __scudo_allocate_hook(Ptr, Size);
+        Stats.lock();
+        Stats.add(StatAllocated, GuardedAllocSlotSize);
+        Stats.sub(StatFree, GuardedAllocSlotSize);
+        Stats.unlock();
+        return Ptr;
+      }
+    }
+#endif // GWP_ASAN_HOOKS
+
+    const FillContentsMode FillContents = ZeroContents ? ZeroFill
+                                          : TSDRegistry.getDisableMemInit()
+                                              ? NoFill
+                                              : Options.getFillContentsMode();
 
     // If the requested size happens to be 0 (more common than you might think),
     // allocate MinAlignment bytes on top of the header. Then add the extra
@@ -503,18 +514,23 @@ public:
     // being destroyed properly. Any other heap operation will do a full init.
     initThreadMaybe(/*MinimalInit=*/true);
 
-#ifdef GWP_ASAN_HOOKS
-    if (UNLIKELY(GuardedAlloc.pointerIsMine(Ptr))) {
-      GuardedAlloc.deallocate(Ptr);
-      return;
-    }
-#endif // GWP_ASAN_HOOKS
-
     if (UNLIKELY(&__scudo_deallocate_hook))
       __scudo_deallocate_hook(Ptr);
 
     if (UNLIKELY(!Ptr))
       return;
+
+#ifdef GWP_ASAN_HOOKS
+    if (UNLIKELY(GuardedAlloc.pointerIsMine(Ptr))) {
+      GuardedAlloc.deallocate(Ptr);
+      Stats.lock();
+      Stats.add(StatFree, GuardedAllocSlotSize);
+      Stats.sub(StatAllocated, GuardedAllocSlotSize);
+      Stats.unlock();
+      return;
+    }
+#endif // GWP_ASAN_HOOKS
+
     if (UNLIKELY(!isAligned(reinterpret_cast<uptr>(Ptr), MinAlignment)))
       reportMisalignedPointer(AllocatorAction::Deallocating, Ptr);
 
@@ -571,6 +587,10 @@ public:
       if (NewPtr)
         memcpy(NewPtr, OldPtr, (NewSize < OldSize) ? NewSize : OldSize);
       GuardedAlloc.deallocate(OldPtr);
+      Stats.lock();
+      Stats.add(StatFree, GuardedAllocSlotSize);
+      Stats.sub(StatAllocated, GuardedAllocSlotSize);
+      Stats.unlock();
       return NewPtr;
     }
 #endif // GWP_ASAN_HOOKS
@@ -952,9 +972,11 @@ private:
   SecondaryT Secondary;
   QuarantineT Quarantine;
   TSDRegistryT TSDRegistry;
+  pthread_once_t PostInitNonce = PTHREAD_ONCE_INIT;
 
 #ifdef GWP_ASAN_HOOKS
   gwp_asan::GuardedPoolAllocator GuardedAlloc;
+  uptr GuardedAllocSlotSize = 0;
 #endif // GWP_ASAN_HOOKS
 
   StackDepot Depot;
@@ -1311,22 +1333,35 @@ private:
          --I) {
       auto *Entry = &RingBuffer->Entries[I % AllocationRingBuffer::NumEntries];
       uptr EntryPtr = atomic_load_relaxed(&Entry->Ptr);
-      uptr UntaggedEntryPtr = untagPointer(EntryPtr);
-      uptr EntrySize = atomic_load_relaxed(&Entry->AllocationSize);
-      if (!EntryPtr || FaultAddr < EntryPtr - getPageSizeCached() ||
-          FaultAddr >= EntryPtr + EntrySize + getPageSizeCached())
+      if (!EntryPtr)
         continue;
 
+      uptr UntaggedEntryPtr = untagPointer(EntryPtr);
+      uptr EntrySize = atomic_load_relaxed(&Entry->AllocationSize);
       u32 AllocationTrace = atomic_load_relaxed(&Entry->AllocationTrace);
       u32 AllocationTid = atomic_load_relaxed(&Entry->AllocationTid);
       u32 DeallocationTrace = atomic_load_relaxed(&Entry->DeallocationTrace);
       u32 DeallocationTid = atomic_load_relaxed(&Entry->DeallocationTid);
 
-      // For UAF the ring buffer will contain two entries, one for the
-      // allocation and another for the deallocation. Don't report buffer
-      // overflow/underflow using the allocation entry if we have already
-      // collected a report from the deallocation entry.
-      if (!DeallocationTrace) {
+      if (DeallocationTid) {
+        // For UAF we only consider in-bounds fault addresses because
+        // out-of-bounds UAF is rare and attempting to detect it is very likely
+        // to result in false positives.
+        if (FaultAddr < EntryPtr || FaultAddr >= EntryPtr + EntrySize)
+          continue;
+      } else {
+        // Ring buffer OOB is only possible with secondary allocations. In this
+        // case we are guaranteed a guard region of at least a page on either
+        // side of the allocation (guard page on the right, guard page + tagged
+        // region on the left), so ignore any faults outside of that range.
+        if (FaultAddr < EntryPtr - getPageSizeCached() ||
+            FaultAddr >= EntryPtr + EntrySize + getPageSizeCached())
+          continue;
+
+        // For UAF the ring buffer will contain two entries, one for the
+        // allocation and another for the deallocation. Don't report buffer
+        // overflow/underflow using the allocation entry if we have already
+        // collected a report from the deallocation entry.
         bool Found = false;
         for (uptr J = 0; J != NextErrorReport; ++J) {
           if (ErrorInfo->reports[J].allocation_address == UntaggedEntryPtr) {

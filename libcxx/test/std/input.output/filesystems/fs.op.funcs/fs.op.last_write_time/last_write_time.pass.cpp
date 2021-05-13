@@ -8,11 +8,9 @@
 
 // UNSUPPORTED: c++03
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 // The string reported on errors changed, which makes those tests fail when run
 // against already-released libc++'s.
-// XFAIL: with_system_cxx_lib=macosx10.15
+// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.15
 
 // <filesystem>
 
@@ -34,20 +32,68 @@
 #include "filesystem_test_helper.h"
 
 #include <fcntl.h>
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <sys/time.h>
 #include <sys/stat.h>
+#endif
 
 using namespace fs;
-
-using TimeSpec = timespec;
-using StatT = struct stat;
 
 using Sec = std::chrono::duration<file_time_type::rep>;
 using Hours = std::chrono::hours;
 using Minutes = std::chrono::minutes;
+using MilliSec = std::chrono::duration<file_time_type::rep, std::milli>;
 using MicroSec = std::chrono::duration<file_time_type::rep, std::micro>;
 using NanoSec = std::chrono::duration<file_time_type::rep, std::nano>;
 using std::chrono::duration_cast;
+
+#ifdef _WIN32
+struct TimeSpec {
+  int64_t tv_sec;
+  int64_t tv_nsec;
+};
+struct StatT {
+  TimeSpec st_atim;
+  TimeSpec st_mtim;
+};
+// There were 369 years and 89 leap days from the Windows epoch
+// (1601) to the Unix epoch (1970).
+#define FILE_TIME_OFFSET_SECS (uint64_t(369 * 365 + 89) * (24 * 60 * 60))
+static TimeSpec filetime_to_timespec(LARGE_INTEGER li) {
+  TimeSpec ret;
+  ret.tv_sec = li.QuadPart / 10000000 - FILE_TIME_OFFSET_SECS;
+  ret.tv_nsec = (li.QuadPart % 10000000) * 100;
+  return ret;
+}
+static int stat_file(const char *path, StatT *buf, int flags) {
+  HANDLE h = CreateFileA(path, FILE_READ_ATTRIBUTES,
+                         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                         nullptr, OPEN_EXISTING,
+                         FILE_FLAG_BACKUP_SEMANTICS | flags, nullptr);
+  if (h == INVALID_HANDLE_VALUE)
+    return -1;
+  int ret = -1;
+  FILE_BASIC_INFO basic;
+  if (GetFileInformationByHandleEx(h, FileBasicInfo, &basic, sizeof(basic))) {
+    buf->st_mtim = filetime_to_timespec(basic.LastWriteTime);
+    buf->st_atim = filetime_to_timespec(basic.LastAccessTime);
+    ret = 0;
+  }
+  CloseHandle(h);
+  return ret;
+}
+static int stat(const char *path, StatT *buf) {
+  return stat_file(path, buf, 0);
+}
+static int lstat(const char *path, StatT *buf) {
+  return stat_file(path, buf, FILE_FLAG_OPEN_REPARSE_POINT);
+}
+#else
+using TimeSpec = timespec;
+using StatT = struct stat;
+#endif
 
 #if defined(__APPLE__)
 TimeSpec extract_mtime(StatT const& st) { return st.st_mtimespec; }
@@ -355,6 +401,11 @@ TEST_CASE(read_last_write_time_static_env_test)
     static_test_env static_env;
     using C = file_time_type::clock;
     file_time_type min = file_time_type::min();
+    // Sleep a little to make sure that static_env.File created above is
+    // strictly older than C::now() even with a coarser clock granularity
+    // in C::now(). (GetSystemTimeAsFileTime on windows has a fairly coarse
+    // granularity.)
+    SleepFor(MilliSec(30));
     {
         file_time_type ret = last_write_time(static_env.File);
         TEST_CHECK(ret != min);

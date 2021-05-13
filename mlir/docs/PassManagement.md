@@ -975,7 +975,7 @@ of passes and computation of analyses. This provides a quick glimpse into what
 passes are taking the most time to execute, as well as how much of an effect a
 pass has on the total execution time of the pipeline. Users can enable this
 instrumentation directly on the PassManager via `enableTiming`. This
-instrumentation is also made available in mlir-opt via the `-pass-timing` flag.
+instrumentation is also made available in mlir-opt via the `-mlir-timing` flag.
 The PassTiming instrumentation provides several different display modes for the
 timing results, each of which is described below:
 
@@ -985,10 +985,10 @@ In this mode, the results are displayed in a list sorted by total time with each
 pass/analysis instance aggregated into one unique result. This view is useful
 for getting an overview of what analyses/passes are taking the most time in a
 pipeline. This display mode is available in mlir-opt via
-`-pass-timing-display=list`.
+`-mlir-timing-display=list`.
 
 ```shell
-$ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='func(cse,canonicalize)' -convert-std-to-llvm -pass-timing -pass-timing-display=list
+$ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='func(cse,canonicalize)' -convert-std-to-llvm -mlir-timing -mlir-timing-display=list
 
 ===-------------------------------------------------------------------------===
                       ... Pass execution timing report ...
@@ -1004,7 +1004,7 @@ $ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='func(cse,canonicaliz
    0.0084 (100.0%)  Total
 ```
 
-##### Pipeline Display Mode
+##### Tree Display Mode
 
 In this mode, the results are displayed in a nested pipeline view that mirrors
 the internal pass pipeline that is being executed in the pass manager. This view
@@ -1013,7 +1013,7 @@ the most time, and can also be used to identify when analyses are being
 invalidated and recomputed. This is the default display mode.
 
 ```shell
-$ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='func(cse,canonicalize)' -convert-std-to-llvm -pass-timing
+$ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='func(cse,canonicalize)' -convert-std-to-llvm -mlir-timing
 
 ===-------------------------------------------------------------------------===
                       ... Pass execution timing report ...
@@ -1044,7 +1044,7 @@ perceived time, or clock time, whereas the `User Time` will display the total
 cpu time.
 
 ```shell
-$ mlir-opt foo.mlir -pass-pipeline='func(cse,canonicalize)' -convert-std-to-llvm -pass-timing
+$ mlir-opt foo.mlir -pass-pipeline='func(cse,canonicalize)' -convert-std-to-llvm -mlir-timing
 
 ===-------------------------------------------------------------------------===
                       ... Pass execution timing report ...

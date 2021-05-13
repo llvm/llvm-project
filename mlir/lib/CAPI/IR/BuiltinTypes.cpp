@@ -206,6 +206,10 @@ MlirType mlirRankedTensorTypeGetChecked(MlirLocation loc, intptr_t rank,
       unwrap(elementType), unwrap(encoding)));
 }
 
+MlirAttribute mlirRankedTensorTypeGetEncoding(MlirType type) {
+  return wrap(unwrap(type).cast<RankedTensorType>().getEncoding());
+}
+
 MlirType mlirUnrankedTensorTypeGet(MlirType elementType) {
   return wrap(UnrankedTensorType::get(unwrap(elementType)));
 }

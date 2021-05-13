@@ -132,7 +132,7 @@ void Demangler::demanglePath() {
     Error = true;
     return;
   }
-  RecursionLevel += 1;
+  SwapAndRestore<size_t> SaveRecursionLevel(RecursionLevel, RecursionLevel + 1);
 
   switch (consume()) {
   case 'C': {
@@ -149,16 +149,43 @@ void Demangler::demanglePath() {
     }
     demanglePath();
 
-    parseOptionalBase62Number('s');
+    uint64_t Disambiguator = parseOptionalBase62Number('s');
     Identifier Ident = parseIdentifier();
 
-    if (!Ident.empty()) {
-      // FIXME print special namespaces:
-      // * "C" closures
-      // * "S" shim
-      print("::");
-      print(Ident.Name);
+    if (isUpper(NS)) {
+      // Special namespaces
+      print("::{");
+      if (NS == 'C')
+        print("closure");
+      else if (NS == 'S')
+        print("shim");
+      else
+        print(NS);
+      if (!Ident.empty()) {
+        print(":");
+        print(Ident.Name);
+      }
+      print('#');
+      printDecimalNumber(Disambiguator);
+      print('}');
+    } else {
+      // Implementation internal namespaces.
+      if (!Ident.empty()) {
+        print("::");
+        print(Ident.Name);
+      }
     }
+    break;
+  }
+  case 'I': {
+    demanglePath();
+    print("::<");
+    for (size_t I = 0; !Error && !consumeIf('E'); ++I) {
+      if (I > 0)
+        print(", ");
+      demangleGenericArg();
+    }
+    print(">");
     break;
   }
   default:
@@ -166,8 +193,92 @@ void Demangler::demanglePath() {
     Error = true;
     break;
   }
+}
 
-  RecursionLevel -= 1;
+// <generic-arg> = <lifetime>
+//               | <type>
+//               | "K" <const>
+// <lifetime> = "L" <base-62-number>
+void Demangler::demangleGenericArg() {
+  // FIXME parse remaining productions
+  demangleType();
+}
+
+static const char *const BasicTypes[] = {
+    "i8",    // a
+    "bool",  // b
+    "char",  // c
+    "f64",   // d
+    "str",   // e
+    "f32",   // f
+    nullptr, // g
+    "u8",    // h
+    "isize", // i
+    "usize", // j
+    nullptr, // k
+    "i32",   // l
+    "u32",   // m
+    "i128",  // n
+    "u128",  // o
+    "_",     // p
+    nullptr, // q
+    nullptr, // r
+    "i16",   // s
+    "u16",   // t
+    "()",    // u
+    "...",   // v
+    nullptr, // w
+    "i64",   // x
+    "u64",   // y
+    "!",     // z
+};
+
+// <basic-type> = "a"      // i8
+//              | "b"      // bool
+//              | "c"      // char
+//              | "d"      // f64
+//              | "e"      // str
+//              | "f"      // f32
+//              | "h"      // u8
+//              | "i"      // isize
+//              | "j"      // usize
+//              | "l"      // i32
+//              | "m"      // u32
+//              | "n"      // i128
+//              | "o"      // u128
+//              | "s"      // i16
+//              | "t"      // u16
+//              | "u"      // ()
+//              | "v"      // ...
+//              | "x"      // i64
+//              | "y"      // u64
+//              | "z"      // !
+//              | "p"      // placeholder (e.g. for generic params), shown as _
+static const char *parseBasicType(char C) {
+  if (isLower(C))
+    return BasicTypes[C - 'a'];
+  return nullptr;
+}
+
+// <type> = | <basic-type>
+//          | <path>                      // named type
+//          | "A" <type> <const>          // [T; N]
+//          | "S" <type>                  // [T]
+//          | "T" {<type>} "E"            // (T1, T2, T3, ...)
+//          | "R" [<lifetime>] <type>     // &T
+//          | "Q" [<lifetime>] <type>     // &mut T
+//          | "P" <type>                  // *const T
+//          | "O" <type>                  // *mut T
+//          | "F" <fn-sig>                // fn(...) -> ...
+//          | "D" <dyn-bounds> <lifetime> // dyn Trait<Assoc = X> + Send + 'a
+//          | <backref>                   // backref
+void Demangler::demangleType() {
+  if (const char *BasicType = parseBasicType(consume())) {
+    print(BasicType);
+  } else {
+    // FIXME parse remaining productions.
+    Error = true;
+  }
 }
 
 // <undisambiguated-identifier> = ["u"] <decimal-number> ["_"] <bytes>
@@ -195,11 +306,16 @@ Identifier Demangler::parseIdentifier() {
 }
 
 // Parses optional base 62 number. The presence of a number is determined using
-// Tag.
-void Demangler::parseOptionalBase62Number(char Tag) {
-  // Parsing result is currently unused.
-  if (consumeIf(Tag))
-    parseBase62Number();
+// Tag. Returns 0 when tag is absent and parsed value + 1 otherwise.
+uint64_t Demangler::parseOptionalBase62Number(char Tag) {
+  if (!consumeIf(Tag))
+    return 0;
+
+  uint64_t N = parseBase62Number();
+  if (Error || !addAssign(N, 1))
+    return 0;
+
+  return N;
 }
 
 // Parses base 62 number with <0-9a-zA-Z> as digits. Number is terminated by

@@ -447,8 +447,8 @@ void GenericOp::build(
         builder.getAffineMapArrayAttr(indexingMaps),
         builder.getStrArrayAttr(iteratorTypes),
         doc.empty() ? StringAttr() : builder.getStringAttr(doc),
-        libraryCall.empty() ? StringAttr() : builder.getStringAttr(libraryCall),
-        ArrayAttr());
+        libraryCall.empty() ? StringAttr()
+                            : builder.getStringAttr(libraryCall));
   if (!bodyBuild)
     return;
 
@@ -502,8 +502,8 @@ void IndexedGenericOp::build(
         builder.getAffineMapArrayAttr(indexingMaps),
         builder.getStrArrayAttr(iteratorTypes),
         doc.empty() ? StringAttr() : builder.getStringAttr(doc),
-        libraryCall.empty() ? StringAttr() : builder.getStringAttr(libraryCall),
-        ArrayAttr());
+        libraryCall.empty() ? StringAttr()
+                            : builder.getStringAttr(libraryCall));
   if (!bodyBuild)
     return;
 
@@ -676,64 +676,56 @@ void IndexedGenericOp::getEffects(
                         getInputBuffers(), getOutputBuffers());
 }
 
-namespace {
-
-template <typename GenericOpType>
-struct AnnotationsVerifier {
-  static LogicalResult verify(GenericOpType op) { return success(); }
-};
-
-template <>
-LogicalResult AnnotationsVerifier<GenericOp>::verify(GenericOp op) {
-  ArrayAttr sparseAttr = op.sparseAttr();
-  if (!sparseAttr)
-    return success();
-  // Verify consistency of sparse annotations.
-  if (!op.hasTensorSemantics())
-    return op.emitOpError("expected sparse annotations on tensors only");
-  if (op.getNumOutputs() != 1)
-    return op.emitOpError("expected single output tensor");
-  unsigned numTensors = op.getNumShapedOperands();
-  if (sparseAttr.size() != numTensors)
-    return op.emitOpError("expected one sparse annotation for each tensor");
-  for (unsigned t = 0; t < numTensors; t++) {
-    auto dimAttr = sparseAttr[t].dyn_cast_or_null<ArrayAttr>();
-    if (!dimAttr)
-      return op.emitOpError("expected sparse annotation array for tensor ")
-             << t;
-    unsigned rank = op.getShapedType(t).getRank();
-    if (dimAttr.size() != rank)
-      return op.emitOpError("expected sparse annotation with rank ")
-             << rank << " for tensor " << t;
-    // Per-dimension annotations for each tensor consist of only "D" or "S".
-    for (unsigned d = 0; d < rank; d++) {
-      if (isDenseDim(dimAttr[d])) {
-        continue;
-      } else if (isSparseDim(dimAttr[d])) {
-        if (t == numTensors - 1)
-          return op.emitOpError("sparse output tensors not supported (yet)");
-        continue;
-      }
-      return op.emitOpError("expected sparse annotation at position ")
-             << d << " for tensor " << t;
-    }
-  }
-  return success();
-}
-
-} // namespace
-
 template <typename GenericOpType>
 static LogicalResult verifyGenericOp(GenericOpType op) {
-  if (failed(AnnotationsVerifier<GenericOpType>::verify(op)))
-    return failure();
-
   return success();
 }
 
 static LogicalResult verify(GenericOp op) { return verifyGenericOp(op); }
 
 static LogicalResult verify(IndexedGenericOp op) { return verifyGenericOp(op); }
+
+namespace {
+
+/// Replace indexed_generic ops by generic ops that access the iteration indices
+/// using index operation calls.
+struct ConvertIndexedToGenericOp : OpRewritePattern<IndexedGenericOp> {
+  using OpRewritePattern<IndexedGenericOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(IndexedGenericOp indexedOp,
+                                PatternRewriter &rewriter) const override {
+    // Replace all uses of the index block arguments.
+    BlockAndValueMapping bvm;
+    if (Block *body = indexedOp.getBody()) {
+      rewriter.setInsertionPointToStart(body);
+      for (const auto &en : llvm::enumerate(
+               body->getArguments().take_front(indexedOp.getNumLoops()))) {
+        Value index = rewriter.create<IndexOp>(indexedOp.getLoc(), en.index());
+        bvm.map(en.value(), index);
+      }
+    }
+
+    // Create a generic replacement operation and clone the body.
+    rewriter.setInsertionPointAfter(indexedOp);
+    SmallVector<StringRef> iterators = llvm::to_vector<4>(
+        indexedOp.iterator_types().getAsValueRange<StringAttr>());
+    GenericOp genericOp = rewriter.create<GenericOp>(
+        indexedOp.getLoc(), indexedOp->getResultTypes(), indexedOp.getInputs(),
+        indexedOp.getOutputs(), indexedOp.getIndexingMaps(), iterators);
+    Region &genericRegion = genericOp.region();
+    Region &indexedRegion = indexedOp.region();
+    rewriter.cloneRegionBefore(indexedRegion, genericRegion,
+                               genericRegion.begin(), bvm);
+
+    rewriter.replaceOp(indexedOp, genericOp->getResults());
+    return success();
+  }
+};
+} // namespace
+
+void IndexedGenericOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                   MLIRContext *context) {
+  results.add<ConvertIndexedToGenericOp>(context);
+}
 
 //===----------------------------------------------------------------------===//
 // InitTensorOp
@@ -1142,10 +1134,12 @@ mlir::linalg::getReassociationIndicesForReshape(ShapedType sourceType,
       return llvm::None;
 
     currIndices.push_back(sourceDim++);
-    // If there are no dimensions in the target to match, then append the
-    // `currIndices` to the last element of the reassociationMap.
+    // If the reassociation is empty but the currIndices is not, this by
+    // definition is folding unit-dimensions with the result being scalar type.
+    // So only append the `currIndices` if reassociation map is not empty.
     if (targetDim == targetShape.size()) {
-      reassociationMap.back().append(currIndices.begin(), currIndices.end());
+      if (!reassociationMap.empty() && !currIndices.empty())
+        reassociationMap.back().append(currIndices.begin(), currIndices.end());
       // Break out of the loops. We should be done here.
       break;
     }
@@ -3161,7 +3155,6 @@ CANONICALIZERS_AND_FOLDERS(PoolingSumOp)
 CANONICALIZERS_AND_FOLDERS(CopyOp)
 CANONICALIZERS_AND_FOLDERS(FillOp)
 CANONICALIZERS_AND_FOLDERS(GenericOp)
-CANONICALIZERS_AND_FOLDERS(IndexedGenericOp)
 
 // All named ops canonicalizers and folders are auto-generated in the
 // .cpp.inc.

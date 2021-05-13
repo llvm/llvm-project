@@ -1,2 +1,5 @@
 ; Runs original SDAG test with -global-isel
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -verify-machineinstrs < %S/../llvm.amdgcn.init.exec.wave32.ll | FileCheck -check-prefixes=GCN,GFX1032  %S/../llvm.amdgcn.init.exec.wave32.ll
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -global-isel -mattr=+wavefrontsize32,-wavefrontsize64 -verify-machineinstrs < %S/../llvm.amdgcn.init.exec.wave32.ll | FileCheck -check-prefixes=GCN,GFX10PLUS32  %S/../llvm.amdgcn.init.exec.wave32.ll
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -global-isel -mattr=+wavefrontsize32,-wavefrontsize64 -verify-machineinstrs < %S/../llvm.amdgcn.init.exec.wave32.ll | FileCheck -check-prefixes=GCN,GFX10PLUS32  %S/../llvm.amdgcn.init.exec.wave32.ll
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -global-isel -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs < %S/../llvm.amdgcn.init.exec.wave32.ll | FileCheck -check-prefixes=GCN,GFX10PLUS64  %S/../llvm.amdgcn.init.exec.wave32.ll
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -global-isel -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs < %S/../llvm.amdgcn.init.exec.wave32.ll | FileCheck -check-prefixes=GCN,GFX10PLUS64  %S/../llvm.amdgcn.init.exec.wave32.ll

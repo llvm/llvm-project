@@ -3065,6 +3065,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     break;
   case ISD::SMULO:
   case ISD::UMULO:
+  case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS:
     if (Op.getResNo() != 1)
       break;
     // The boolean result conforms to getBooleanContents.
@@ -3517,42 +3518,6 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       Known = KnownBits::smax(Known, Known2);
     else
       Known = KnownBits::smin(Known, Known2);
-    break;
-  }
-  case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS:
-    if (Op.getResNo() == 1) {
-      // The boolean result conforms to getBooleanContents.
-      // If we know the result of a setcc has the top bits zero, use this info.
-      // We know that we have an integer-based boolean since these operations
-      // are only available for integer.
-      if (TLI->getBooleanContents(Op.getValueType().isVector(), false) ==
-              TargetLowering::ZeroOrOneBooleanContent &&
-          BitWidth > 1)
-        Known.Zero.setBitsFrom(1);
-      break;
-    }
-    LLVM_FALLTHROUGH;
-  case ISD::ATOMIC_CMP_SWAP:
-  case ISD::ATOMIC_SWAP:
-  case ISD::ATOMIC_LOAD_ADD:
-  case ISD::ATOMIC_LOAD_SUB:
-  case ISD::ATOMIC_LOAD_AND:
-  case ISD::ATOMIC_LOAD_CLR:
-  case ISD::ATOMIC_LOAD_OR:
-  case ISD::ATOMIC_LOAD_XOR:
-  case ISD::ATOMIC_LOAD_NAND:
-  case ISD::ATOMIC_LOAD_MIN:
-  case ISD::ATOMIC_LOAD_MAX:
-  case ISD::ATOMIC_LOAD_UMIN:
-  case ISD::ATOMIC_LOAD_UMAX:
-  case ISD::ATOMIC_LOAD: {
-    unsigned MemBits =
-        cast<AtomicSDNode>(Op)->getMemoryVT().getScalarSizeInBits();
-    // If we are looking at the loaded value.
-    if (Op.getResNo() == 0) {
-      if (TLI->getExtendForAtomicOps() == ISD::ZERO_EXTEND)
-        Known.Zero.setBitsFrom(MemBits);
-    }
     break;
   }
   case ISD::FrameIndex:
@@ -4134,31 +4099,6 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     }
     assert(Tmp <= VTBits && "Failed to determine minimum sign bits");
     return Tmp;
-  }
-  case ISD::ATOMIC_CMP_SWAP:
-  case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS:
-  case ISD::ATOMIC_SWAP:
-  case ISD::ATOMIC_LOAD_ADD:
-  case ISD::ATOMIC_LOAD_SUB:
-  case ISD::ATOMIC_LOAD_AND:
-  case ISD::ATOMIC_LOAD_CLR:
-  case ISD::ATOMIC_LOAD_OR:
-  case ISD::ATOMIC_LOAD_XOR:
-  case ISD::ATOMIC_LOAD_NAND:
-  case ISD::ATOMIC_LOAD_MIN:
-  case ISD::ATOMIC_LOAD_MAX:
-  case ISD::ATOMIC_LOAD_UMIN:
-  case ISD::ATOMIC_LOAD_UMAX:
-  case ISD::ATOMIC_LOAD: {
-    Tmp = cast<AtomicSDNode>(Op)->getMemoryVT().getScalarSizeInBits();
-    // If we are looking at the loaded value.
-    if (Op.getResNo() == 0) {
-      if (TLI->getExtendForAtomicOps() == ISD::SIGN_EXTEND)
-        return VTBits - Tmp + 1;
-      if (TLI->getExtendForAtomicOps() == ISD::ZERO_EXTEND)
-        return VTBits - Tmp;
-    }
-    break;
   }
   }
 

@@ -6,12 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-/// \file This pass extends the live ranges extends the live ranges of registers
-/// used as pointers in sequences of adjacent of SMEM and VMEM instructions if
-/// XNACK is enabled. A load that would overwrite a pointer would require
-/// breaking the soft clause. Artificially extend the life ranges of the pointer
-/// operands by adding implicit-def early-clobber operands throughout the soft
-/// clause.
+/// \file This pass extends the live ranges of registers used as pointers in
+/// sequences of adjacent SMEM and VMEM instructions if XNACK is enabled. A
+/// load that would overwrite a pointer would require breaking the soft clause.
+/// Artificially extend the live ranges of the pointer operands by adding
+/// implicit-def early-clobber operands throughout the soft clause.
 ///
 //===----------------------------------------------------------------------===//
 

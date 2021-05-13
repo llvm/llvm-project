@@ -129,11 +129,11 @@ ProgramHeaders:
 # CHECK2-NEXT: [ 4] .strtab     STRTAB   0000000000000000 000221 000001 00      0   0  1
 # CHECK2-NEXT: [ 5] .shstrtab   STRTAB   0000000000000000 000222 00002b 00      0   0  1
 
-## Check that p_offset or p_filesz of empty segments or PT_PHDR are not modified.
+## Check that p_offset or p_filesz of PT_PHDR are not modified.
 # CHECK2:      Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
 # CHECK2-NEXT: PHDR 0x000040 0x0000000000000040 0x0000000000000040 0x0000a8 0x0000a8 R   0x8
 # CHECK2-NEXT: LOAD 0x000000 0x0000000000000000 0x0000000000000000 0x000202 0x000202 R E 0x1000
-# CHECK2-NEXT: LOAD 0x000202 0x0000000000000202 0x0000000000000202 0x00000e 0x00000e RW  0x1
+# CHECK2-NEXT: LOAD 0x000000 0x0000000000000202 0x0000000000000202 0x000000 0x00000e RW  0x1
 
 --- !ELF
 FileHeader:
@@ -280,3 +280,41 @@ ProgramHeaders:
     VAddr:    0x1240
     FirstSec: .tdata
     LastSec:  .tdata
+
+## The offset and size fields of segments which contain no section and have no
+## parent segment are set to zeros, so that we can decrease the file size. Such
+## segments are not useful for debugging.
+# RUN: yaml2obj --docnum=5 %s -o %t5
+# RUN: llvm-objcopy --only-keep-debug %t5 %t5.dbg
+# RUN: llvm-readelf -S -l %t5.dbg | FileCheck --check-prefix=CHECK5 %s
+# RUN: llvm-objcopy --strip-sections %t5 %t5s
+# RUN: llvm-objcopy --only-keep-debug %t5s %t5s.dbg
+# RUN: llvm-readelf -S -l %t5s.dbg | FileCheck --check-prefix=CHECK5S %s
+
+# CHECK5:      [Nr] Name        Type     Address          Off    Size   ES Flg Lk Inf Al
+# CHECK5:      [ 1] .foo        NOBITS   0000000000000000 000078 001000 00   A  0   0  0
+# CHECK5-NEXT: [ 2] .strtab     STRTAB   0000000000000000 000078 000001 00      0   0  1
+# CHECK5-NEXT: [ 3] .shstrtab   STRTAB   0000000000000000 000079 000018 00      0   0  1
+
+# CHECK5:      Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# CHECK5-NEXT: NULL 0x000000 0x0000000000000000 0x0000000000000000 0x000078 0x001000     0x1
+# CHECK5-EMPTY:
+
+# CHECK5S:      Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# CHECK5S-NEXT: NULL 0x000000 0x0000000000000000 0x0000000000000000 0x000078 0x001000     0x1
+# CHECK5S-EMPTY:
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+Sections:
+  - Name:    .foo
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Size:    0x01000
+ProgramHeaders:
+  - Type:     PT_NULL
+    Flags:    []
+    FileSize: 0x01000
+    MemSize:  0x01000

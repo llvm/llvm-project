@@ -74,8 +74,14 @@ namespace llvm {
     using DiagHandlerTy =
         std::function<void(const SMDiagnostic &, bool, const SourceMgr &,
                            std::vector<const MDNode *> &)>;
+    enum Environment { IsMachO, IsELF, IsCOFF, IsWasm, IsXCOFF };
 
   private:
+    Environment Env;
+
+    /// The triple for this object.
+    Triple TT;
+
     /// The SourceMgr for this object, if any.
     const SourceMgr *SrcMgr;
 
@@ -93,6 +99,9 @@ namespace llvm {
 
     /// The MCObjectFileInfo for this target.
     const MCObjectFileInfo *MOFI;
+
+    /// The MCSubtargetInfo for this target.
+    const MCSubtargetInfo *MSTI;
 
     std::unique_ptr<CodeViewContext> CVContext;
 
@@ -383,8 +392,9 @@ namespace llvm {
     DenseSet<StringRef> ELFSeenGenericMergeableSections;
 
   public:
-    explicit MCContext(const MCAsmInfo *MAI, const MCRegisterInfo *MRI,
-                       const MCObjectFileInfo *MOFI,
+    explicit MCContext(const Triple &TheTriple, const MCAsmInfo *MAI,
+                       const MCRegisterInfo *MRI, const MCObjectFileInfo *MOFI,
+                       const MCSubtargetInfo *MSTI,
                        const SourceMgr *Mgr = nullptr,
                        MCTargetOptions const *TargetOpts = nullptr,
                        bool DoAutoReset = true);
@@ -392,6 +402,9 @@ namespace llvm {
     MCContext &operator=(const MCContext &) = delete;
     ~MCContext();
 
+    Environment getObjectFileType() const { return Env; }
+
+    const Triple &getTargetTriple() const { return TT; }
     const SourceMgr *getSourceManager() const { return SrcMgr; }
 
     void initInlineSourceManager();
@@ -408,6 +421,8 @@ namespace llvm {
     const MCRegisterInfo *getRegisterInfo() const { return MRI; }
 
     const MCObjectFileInfo *getObjectFileInfo() const { return MOFI; }
+
+    const MCSubtargetInfo *getSubtargetInfo() const { return MSTI; }
 
     CodeViewContext &getCVContext();
 
@@ -596,26 +611,27 @@ namespace llvm {
                               unsigned UniqueID = GenericSectionID);
 
     MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K) {
-      return getWasmSection(Section, K, nullptr);
+      return getWasmSection(Section, K, 0, nullptr);
     }
 
     MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
-                                  const char *BeginSymName) {
-      return getWasmSection(Section, K, "", ~0, BeginSymName);
+                                  unsigned Flags, const char *BeginSymName) {
+      return getWasmSection(Section, K, Flags, "", ~0, BeginSymName);
     }
 
     MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
-                                  const Twine &Group, unsigned UniqueID) {
-      return getWasmSection(Section, K, Group, UniqueID, nullptr);
+                                  unsigned Flags, const Twine &Group,
+                                  unsigned UniqueID) {
+      return getWasmSection(Section, K, Flags, Group, UniqueID, nullptr);
     }
 
     MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
-                                  const Twine &Group, unsigned UniqueID,
-                                  const char *BeginSymName);
+                                  unsigned Flags, const Twine &Group,
+                                  unsigned UniqueID, const char *BeginSymName);
 
     MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
-                                  const MCSymbolWasm *Group, unsigned UniqueID,
-                                  const char *BeginSymName);
+                                  unsigned Flags, const MCSymbolWasm *Group,
+                                  unsigned UniqueID, const char *BeginSymName);
 
     MCSectionXCOFF *getXCOFFSection(
         StringRef Section, SectionKind K,

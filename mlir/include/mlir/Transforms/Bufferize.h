@@ -23,7 +23,7 @@
 #ifndef MLIR_TRANSFORMS_BUFFERIZE_H
 #define MLIR_TRANSFORMS_BUFFERIZE_H
 
-#include "mlir/Analysis/BufferAliasAnalysis.h"
+#include "mlir/Analysis/BufferViewFlowAnalysis.h"
 #include "mlir/Analysis/Liveness.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"

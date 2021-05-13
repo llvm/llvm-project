@@ -3831,10 +3831,6 @@ void Verifier::visitAtomicCmpXchgInst(AtomicCmpXchgInst &CXI) {
          "cmpxchg instructions cannot be unordered.", &CXI);
   Assert(CXI.getFailureOrdering() != AtomicOrdering::Unordered,
          "cmpxchg instructions cannot be unordered.", &CXI);
-  Assert(!isStrongerThan(CXI.getFailureOrdering(), CXI.getSuccessOrdering()),
-         "cmpxchg instructions failure argument shall be no stronger than the "
-         "success argument",
-         &CXI);
   Assert(CXI.getFailureOrdering() != AtomicOrdering::Release &&
              CXI.getFailureOrdering() != AtomicOrdering::AcquireRelease,
          "cmpxchg failure ordering cannot include release semantics", &CXI);

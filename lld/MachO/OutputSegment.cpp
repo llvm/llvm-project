@@ -52,6 +52,10 @@ size_t OutputSegment::numNonHiddenSections() const {
 void OutputSegment::addOutputSection(OutputSection *osec) {
   osec->parent = this;
   sections.push_back(osec);
+
+  for (const SectionAlign &sectAlign : config->sectionAlignments)
+    if (sectAlign.segName == name && sectAlign.sectName == osec->name)
+      osec->align = sectAlign.align;
 }
 
 static DenseMap<StringRef, OutputSegment *> nameToOutputSegment;

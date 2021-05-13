@@ -168,10 +168,10 @@
 ; CHECK-NEXT:       Combine redundant instructions
 ; CHECK-NEXT:       Demanded bits analysis
 ; CHECK-NEXT:       Bit-Tracking Dead Code Elimination
+; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       Optimize scalar/vector ops
 ; CHECK-NEXT:       Scalar Evolution Analysis
 ; CHECK-NEXT:       Alignment from assumptions
-; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       Optimization Remark Emitter
 ; CHECK-NEXT:       Combine redundant instructions
 ; CHECK-NEXT:       Lazy Value Information Analysis

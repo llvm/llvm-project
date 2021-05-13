@@ -302,5 +302,167 @@ entry:
   ret i32 %ret
 }
 
+declare hidden void @void_fastcc_multi_byval(i32 %a, [3 x i32] addrspace(5)* byval([3 x i32]) align 16, [2 x i64] addrspace(5)* byval([2 x i64]))
+
+; GCN-LABEL: {{^}}sibling_call_fastcc_multi_byval:
+; GCN-DAG: s_getpc_b64 [[TARGET_ADDR:s\[[0-9]+:[0-9]+\]]]
+; GCN-DAG: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
+; GCN-DAG: v_mov_b32_e32 [[NINE:v[0-9]+]], 9
+
+; GCN-DAG: buffer_store_dword [[NINE]], off, s[0:3], s32 offset:144
+; GCN-DAG: buffer_store_dword [[NINE]], off, s[0:3], s32 offset:148
+; GCN-DAG: buffer_store_dword [[NINE]], off, s[0:3], s32 offset:152
+
+; GCN-DAG: buffer_store_dword [[NINE]], off, s[0:3], s32{{$}}
+; GCN-DAG: buffer_store_dword [[NINE]], off, s[0:3], s32 offset:4{{$}}
+; GCN-DAG: buffer_store_dword [[NINE]], off, s[0:3], s32 offset:8{{$}}
+
+; GCN-DAG: buffer_store_dword [[ZERO]], off, s[0:3], s32 offset:160
+; GCN-DAG: buffer_store_dword [[ZERO]], off, s[0:3], s32 offset:164
+; GCN-DAG: buffer_store_dword [[ZERO]], off, s[0:3], s32 offset:168
+; GCN-DAG: buffer_store_dword [[ZERO]], off, s[0:3], s32 offset:172
+; GCN-DAG: buffer_store_dword [[ZERO]], off, s[0:3], s32 offset:16{{$}}
+; GCN-DAG: buffer_store_dword [[ZERO]], off, s[0:3], s32 offset:20{{$}}
+; GCN-DAG: buffer_store_dword [[ZERO]], off, s[0:3], s32 offset:24{{$}}
+; GCN-DAG: buffer_store_dword [[ZERO]], off, s[0:3], s32 offset:28{{$}}
+
+; GCN: s_setpc_b64 [[TARGET_ADDR]]
+define fastcc void @sibling_call_fastcc_multi_byval(i32 %a, [64 x i32]) #1 {
+entry:
+  %alloca0 = alloca [3 x i32], align 16, addrspace(5)
+  %alloca1 = alloca [2 x i64], align 8, addrspace(5)
+  store [3 x i32] [i32 9, i32 9, i32 9], [3 x i32] addrspace(5)* %alloca0
+  store [2 x i64] zeroinitializer, [2 x i64] addrspace(5)* %alloca1
+  tail call fastcc void @void_fastcc_multi_byval(i32 %a, [3 x i32] addrspace(5)* byval([3 x i32]) %alloca0, [2 x i64] addrspace(5)* byval([2 x i64]) %alloca1)
+  ret void
+}
+
+declare hidden void @void_fastcc_byval_and_stack_passed([3 x i32] addrspace(5)* byval([3 x i32]) align 16, [32 x i32], i32)
+
+; Callee has a byval and non-byval stack passed argument
+; GCN-LABEL: {{^}}sibling_call_byval_and_stack_passed:
+; GCN: v_mov_b32_e32 [[NINE:v[0-9]+]], 9
+
+; GCN-DAG: buffer_store_dword [[NINE]], off, s[0:3], s32 offset:144
+; GCN-DAG: buffer_store_dword [[NINE]], off, s[0:3], s32 offset:148
+; GCN-DAG: buffer_store_dword [[NINE]], off, s[0:3], s32 offset:152
+; GCN-DAG: buffer_store_dword [[NINE]], off, s[0:3], s32{{$}}
+; GCN-DAG: buffer_store_dword [[NINE]], off, s[0:3], s32 offset:4{{$}}
+; GCN-DAG: buffer_store_dword [[NINE]], off, s[0:3], s32 offset:8{{$}}
+; GCN-DAG: buffer_store_dword v0, off, s[0:3], s32 offset:12
+
+; GCN: v_mov_b32_e32 v0, 0
+; GCN: v_mov_b32_e32 v30, 0
+
+; GCN: s_getpc_b64 [[TARGET_ADDR:s\[[0-9]+:[0-9]+\]]]
+; GCN-NEXT: s_add_u32
+; GCN-NEXT: s_addc_u32
+; GCN-NEXT: s_setpc_b64 [[TARGET_ADDR]]
+define fastcc void @sibling_call_byval_and_stack_passed(i32 %stack.out.arg, [64 x i32]) #1 {
+entry:
+  %alloca = alloca [3 x i32], align 16, addrspace(5)
+  store [3 x i32] [i32 9, i32 9, i32 9], [3 x i32] addrspace(5)* %alloca
+  tail call fastcc void @void_fastcc_byval_and_stack_passed([3 x i32] addrspace(5)* byval([3 x i32]) %alloca, [32 x i32] zeroinitializer, i32 %stack.out.arg)
+  ret void
+}
+
+declare hidden fastcc i64 @i64_fastcc_i64(i64 %arg0)
+
+; GCN-LABEL: {{^}}sibling_call_i64_fastcc_i64:
+; GCN: s_waitcnt
+; GCN-NEXT: s_getpc_b64
+; GCN-NEXT: s_add_u32
+; GCN-NEXT: s_addc_u32
+; GCN-NEXT: s_setpc_b64
+define hidden fastcc i64 @sibling_call_i64_fastcc_i64(i64 %a) #1 {
+entry:
+  %ret = tail call fastcc i64 @i64_fastcc_i64(i64 %a)
+  ret i64 %ret
+}
+
+declare hidden fastcc i8 addrspace(1)* @p1i8_fastcc_p1i8(i8 addrspace(1)* %arg0)
+
+; GCN-LABEL: {{^}}sibling_call_p1i8_fastcc_p1i8:
+; GCN: s_waitcnt
+; GCN-NEXT: s_getpc_b64
+; GCN-NEXT: s_add_u32
+; GCN-NEXT: s_addc_u32
+; GCN-NEXT: s_setpc_b64
+define hidden fastcc i8 addrspace(1)* @sibling_call_p1i8_fastcc_p1i8(i8 addrspace(1)* %a) #1 {
+entry:
+  %ret = tail call fastcc i8 addrspace(1)* @p1i8_fastcc_p1i8(i8 addrspace(1)* %a)
+  ret i8 addrspace(1)* %ret
+}
+
+declare hidden fastcc i16 @i16_fastcc_i16(i16 %arg0)
+
+; GCN-LABEL: {{^}}sibling_call_i16_fastcc_i16:
+; GCN: s_waitcnt
+; GCN-NEXT: s_getpc_b64
+; GCN-NEXT: s_add_u32
+; GCN-NEXT: s_addc_u32
+; GCN-NEXT: s_setpc_b64
+define hidden fastcc i16 @sibling_call_i16_fastcc_i16(i16 %a) #1 {
+entry:
+  %ret = tail call fastcc i16 @i16_fastcc_i16(i16 %a)
+  ret i16 %ret
+}
+
+declare hidden fastcc half @f16_fastcc_f16(half %arg0)
+
+; GCN-LABEL: {{^}}sibling_call_f16_fastcc_f16:
+; GCN: s_waitcnt
+; GCN-NEXT: s_getpc_b64
+; GCN-NEXT: s_add_u32
+; GCN-NEXT: s_addc_u32
+; GCN-NEXT: s_setpc_b64
+define hidden fastcc half @sibling_call_f16_fastcc_f16(half %a) #1 {
+entry:
+  %ret = tail call fastcc half @f16_fastcc_f16(half %a)
+  ret half %ret
+}
+
+declare hidden fastcc <3 x i16> @v3i16_fastcc_v3i16(<3 x i16> %arg0)
+
+; GCN-LABEL: {{^}}sibling_call_v3i16_fastcc_v3i16:
+; GCN: s_waitcnt
+; GCN-NEXT: s_getpc_b64
+; GCN-NEXT: s_add_u32
+; GCN-NEXT: s_addc_u32
+; GCN-NEXT: s_setpc_b64
+define hidden fastcc <3 x i16> @sibling_call_v3i16_fastcc_v3i16(<3 x i16> %a) #1 {
+entry:
+  %ret = tail call fastcc <3 x i16> @v3i16_fastcc_v3i16(<3 x i16> %a)
+  ret <3 x i16> %ret
+}
+
+declare hidden fastcc <4 x i16> @v4i16_fastcc_v4i16(<4 x i16> %arg0)
+
+; GCN-LABEL: {{^}}sibling_call_v4i16_fastcc_v4i16:
+; GCN: s_waitcnt
+; GCN-NEXT: s_getpc_b64
+; GCN-NEXT: s_add_u32
+; GCN-NEXT: s_addc_u32
+; GCN-NEXT: s_setpc_b64
+define hidden fastcc <4 x i16> @sibling_call_v4i16_fastcc_v4i16(<4 x i16> %a) #1 {
+entry:
+  %ret = tail call fastcc <4 x i16> @v4i16_fastcc_v4i16(<4 x i16> %a)
+  ret <4 x i16> %ret
+}
+
+declare hidden fastcc <2 x i64> @v2i64_fastcc_v2i64(<2 x i64> %arg0)
+
+; GCN-LABEL: {{^}}sibling_call_v2i64_fastcc_v2i64:
+; GCN: s_waitcnt
+; GCN-NEXT: s_getpc_b64
+; GCN-NEXT: s_add_u32
+; GCN-NEXT: s_addc_u32
+; GCN-NEXT: s_setpc_b64
+define hidden fastcc <2 x i64> @sibling_call_v2i64_fastcc_v2i64(<2 x i64> %a) #1 {
+entry:
+  %ret = tail call fastcc <2 x i64> @v2i64_fastcc_v2i64(<2 x i64> %a)
+  ret <2 x i64> %ret
+}
+
 attributes #0 = { nounwind }
 attributes #1 = { nounwind noinline }

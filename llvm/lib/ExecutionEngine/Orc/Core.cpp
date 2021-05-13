@@ -29,6 +29,8 @@ char SymbolsNotFound::ID = 0;
 char SymbolsCouldNotBeRemoved::ID = 0;
 char MissingSymbolDefinitions::ID = 0;
 char UnexpectedSymbolDefinitions::ID = 0;
+char Task::ID = 0;
+char MaterializationTask::ID = 0;
 
 RegisterDependenciesFunction NoDependenciesToRegister =
     RegisterDependenciesFunction();
@@ -168,13 +170,30 @@ void AsynchronousSymbolQuery::notifySymbolMetRequiredState(
   --OutstandingSymbolsCount;
 }
 
-void AsynchronousSymbolQuery::handleComplete() {
+void AsynchronousSymbolQuery::handleComplete(ExecutionSession &ES) {
   assert(OutstandingSymbolsCount == 0 &&
          "Symbols remain, handleComplete called prematurely");
 
-  auto TmpNotifyComplete = std::move(NotifyComplete);
+  class RunQueryCompleteTask : public Task {
+  public:
+    RunQueryCompleteTask(SymbolMap ResolvedSymbols,
+                         SymbolsResolvedCallback NotifyComplete)
+        : ResolvedSymbols(std::move(ResolvedSymbols)),
+          NotifyComplete(std::move(NotifyComplete)) {}
+    void printDescription(raw_ostream &OS) override {
+      OS << "Execute query complete callback for " << ResolvedSymbols;
+    }
+    void run() override { NotifyComplete(std::move(ResolvedSymbols)); }
+
+  private:
+    SymbolMap ResolvedSymbols;
+    SymbolsResolvedCallback NotifyComplete;
+  };
+
+  auto T = std::make_unique<RunQueryCompleteTask>(std::move(ResolvedSymbols),
+                                                  std::move(NotifyComplete));
   NotifyComplete = SymbolsResolvedCallback();
-  TmpNotifyComplete(std::move(ResolvedSymbols));
+  ES.dispatchTask(std::move(T));
 }
 
 void AsynchronousSymbolQuery::handleFailed(Error Err) {
@@ -750,7 +769,8 @@ Error JITDylib::replace(MaterializationResponsibility &FromMR,
 
   if (MustRunMU) {
     assert(MustRunMR && "MustRunMU set implies MustRunMR set");
-    ES.dispatchMaterialization(std::move(MustRunMU), std::move(MustRunMR));
+    ES.dispatchTask(std::make_unique<MaterializationTask>(
+        std::move(MustRunMU), std::move(MustRunMR)));
   } else {
     assert(!MustRunMR && "MustRunMU unset implies MustRunMR unset");
   }
@@ -966,7 +986,7 @@ Error JITDylib::resolve(MaterializationResponsibility &MR,
   // Otherwise notify all the completed queries.
   for (auto &Q : CompletedQueries) {
     assert(Q->isComplete() && "Q not completed");
-    Q->handleComplete();
+    Q->handleComplete(ES);
   }
 
   return Error::success();
@@ -1117,7 +1137,7 @@ Error JITDylib::emit(MaterializationResponsibility &MR,
   // Otherwise notify all the completed queries.
   for (auto &Q : CompletedQueries) {
     assert(Q->isComplete() && "Q is not complete");
-    Q->handleComplete();
+    Q->handleComplete(ES);
   }
 
   return Error::success();
@@ -1730,6 +1750,15 @@ Expected<DenseMap<JITDylib *, SymbolMap>> Platform::lookupInitSymbols(
   return std::move(CompoundResult);
 }
 
+void Task::anchor() {}
+
+void MaterializationTask::printDescription(raw_ostream &OS) {
+  OS << "Materialization task: " << MU->getName() << " in "
+     << MR->getTargetJITDylib().getName() << "\n";
+}
+
+void MaterializationTask::run() { MU->materialize(std::move(MR)); }
+
 ExecutionSession::ExecutionSession(std::shared_ptr<SymbolStringPool> SSP)
     : SSP(SSP ? std::move(SSP) : std::make_shared<SymbolStringPool>()) {}
 
@@ -2003,7 +2032,8 @@ void ExecutionSession::dispatchOutstandingMUs() {
 
     assert(JMU->first && "No MU?");
     LLVM_DEBUG(dbgs() << "  Dispatching \"" << JMU->first->getName() << "\"\n");
-    dispatchMaterialization(std::move(JMU->first), std::move(JMU->second));
+    dispatchTask(std::make_unique<MaterializationTask>(std::move(JMU->first),
+                                                       std::move(JMU->second)));
   }
   LLVM_DEBUG(dbgs() << "Done dispatching MaterializationUnits.\n");
 }
@@ -2528,7 +2558,7 @@ void ExecutionSession::OL_completeLookup(
 
   if (QueryComplete) {
     LLVM_DEBUG(dbgs() << "Completing query\n");
-    Q->handleComplete();
+    Q->handleComplete(*this);
   }
 
   dispatchOutstandingMUs();
@@ -2776,9 +2806,10 @@ void ExecutionSession::OL_addDependenciesForAll(
 }
 
 #ifndef NDEBUG
-void ExecutionSession::dumpDispatchInfo(JITDylib &JD, MaterializationUnit &MU) {
+void ExecutionSession::dumpDispatchInfo(Task &T) {
   runSessionLocked([&]() {
-    dbgs() << "Dispatching " << MU << " for " << JD.getName() << "\n";
+    dbgs() << "Dispatching: ";
+    T.printDescription(dbgs());
   });
 }
 #endif // NDEBUG

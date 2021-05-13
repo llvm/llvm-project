@@ -259,15 +259,13 @@ static bool ParseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       columns = -1;
     }
     if (columns < 0) {
-      diags.Report(clang::diag::err_drv_invalid_value_with_suggestion)
-          << arg->getOption().getName() << arg->getValue()
-          << "value must be 'none' or a non-negative integer";
+      diags.Report(clang::diag::err_drv_negative_columns)
+          << arg->getOption().getName() << arg->getValue();
     } else if (columns == 0) {
       opts.fixedFormColumns_ = 1000000;
     } else if (columns < 7) {
-      diags.Report(clang::diag::err_drv_invalid_value_with_suggestion)
-          << arg->getOption().getName() << arg->getValue()
-          << "value must be at least seven";
+      diags.Report(clang::diag::err_drv_small_columns)
+          << arg->getOption().getName() << arg->getValue() << "7";
     } else {
       opts.fixedFormColumns_ = columns;
     }

@@ -22,12 +22,14 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsHexagon.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/KnownBits.h"
@@ -179,12 +181,13 @@ private:
 
   struct ByteSpan {
     struct Segment {
+      // Segment of a Value: 'Len' bytes starting at byte 'Begin'.
       Segment(Value *Val, int Begin, int Len)
           : Val(Val), Start(Begin), Size(Len) {}
       Segment(const Segment &Seg) = default;
-      Value *Val;
-      int Start;
-      int Size;
+      Value *Val; // Value representable as a sequence of bytes.
+      int Start;  // First byte of the value that belongs to the segment.
+      int Size;   // Number of bytes in the segment.
     };
 
     struct Block {
@@ -192,13 +195,14 @@ private:
       Block(Value *Val, int Off, int Len, int Pos)
           : Seg(Val, Off, Len), Pos(Pos) {}
       Block(const Block &Blk) = default;
-      Segment Seg;
-      int Pos;
+      Segment Seg; // Value segment.
+      int Pos;     // Position (offset) of the segment in the Block.
     };
 
     int extent() const;
     ByteSpan section(int Start, int Length) const;
     ByteSpan &shift(int Offset);
+    SmallVector<Value *, 8> values() const;
 
     int size() const { return Blocks.size(); }
     Block &operator[](int i) { return Blocks[i]; }
@@ -352,6 +356,13 @@ auto AlignVectors::ByteSpan::shift(int Offset) -> ByteSpan & {
   for (Block &B : Blocks)
     B.Pos += Offset;
   return *this;
+}
+
+auto AlignVectors::ByteSpan::values() const -> SmallVector<Value *, 8> {
+  SmallVector<Value *, 8> Values(Blocks.size());
+  for (int i = 0, e = Blocks.size(); i != e; ++i)
+    Values[i] = Blocks[i].Seg.Val;
+  return Values;
 }
 
 auto AlignVectors::getAlignFromValue(const Value *V) const -> Align {
@@ -763,28 +774,37 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
 
   Type *SecTy = HVC.getByteTy(ScLen);
   int NumSectors = (VSpan.extent() + ScLen - 1) / ScLen;
+  bool DoAlign = !HVC.isZero(AlignVal);
 
   if (Move.IsLoad) {
     ByteSpan ASpan;
     auto *True = HVC.getFullValue(HVC.getBoolTy(ScLen));
     auto *Undef = UndefValue::get(SecTy);
 
-    for (int i = 0; i != NumSectors + 1; ++i) {
+    for (int i = 0; i != NumSectors + DoAlign; ++i) {
       Value *Ptr = createAdjustedPointer(Builder, AlignAddr, SecTy, i * ScLen);
       // FIXME: generate a predicated load?
       Value *Load = createAlignedLoad(Builder, SecTy, Ptr, ScLen, True, Undef);
+      // If vector shifting is potentially needed, accumulate metadata
+      // from source sections of twice the load width.
+      int Start = (i - DoAlign) * ScLen;
+      int Width = (1 + DoAlign) * ScLen;
+      propagateMetadata(cast<Instruction>(Load),
+                        VSpan.section(Start, Width).values());
       ASpan.Blocks.emplace_back(Load, ScLen, i * ScLen);
     }
 
-    for (int j = 0; j != NumSectors; ++j) {
-      ASpan[j].Seg.Val = HVC.vralignb(Builder, ASpan[j].Seg.Val,
-                                      ASpan[j + 1].Seg.Val, AlignVal);
+    if (DoAlign) {
+      for (int j = 0; j != NumSectors; ++j) {
+        ASpan[j].Seg.Val = HVC.vralignb(Builder, ASpan[j].Seg.Val,
+                                        ASpan[j + 1].Seg.Val, AlignVal);
+      }
     }
 
     for (ByteSpan::Block &B : VSpan) {
-      ByteSpan Section = ASpan.section(B.Pos, B.Seg.Size).shift(-B.Pos);
+      ByteSpan ASection = ASpan.section(B.Pos, B.Seg.Size).shift(-B.Pos);
       Value *Accum = UndefValue::get(HVC.getByteTy(B.Seg.Size));
-      for (ByteSpan::Block &S : Section) {
+      for (ByteSpan::Block &S : ASection) {
         Value *Pay = HVC.vbytes(Builder, getPayload(S.Seg.Val));
         Accum =
             HVC.insertb(Builder, Accum, Pay, S.Seg.Start, S.Seg.Size, S.Pos);
@@ -817,13 +837,13 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
 
     // Create an extra "undef" sector at the beginning and at the end.
     // They will be used as the left/right filler in the vlalign step.
-    for (int i = -1; i != NumSectors + 1; ++i) {
+    for (int i = (DoAlign ? -1 : 0); i != NumSectors + DoAlign; ++i) {
       // For stores, the size of each section is an aligned vector length.
       // Adjust the store offsets relative to the section start offset.
-      ByteSpan Section = VSpan.section(i * ScLen, ScLen).shift(-i * ScLen);
+      ByteSpan VSection = VSpan.section(i * ScLen, ScLen).shift(-i * ScLen);
       Value *AccumV = UndefValue::get(SecTy);
       Value *AccumM = HVC.getNullValue(SecTy);
-      for (ByteSpan::Block &S : Section) {
+      for (ByteSpan::Block &S : VSection) {
         Value *Pay = getPayload(S.Seg.Val);
         Value *Mask = HVC.rescale(Builder, MakeVec(Builder, getMask(S.Seg.Val)),
                                   Pay->getType(), HVC.getByteTy());
@@ -837,19 +857,29 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
     }
 
     // vlalign
-    for (int j = 1; j != NumSectors + 2; ++j) {
-      ASpanV[j - 1].Seg.Val = HVC.vlalignb(Builder, ASpanV[j - 1].Seg.Val,
-                                           ASpanV[j].Seg.Val, AlignVal);
-      ASpanM[j - 1].Seg.Val = HVC.vlalignb(Builder, ASpanM[j - 1].Seg.Val,
-                                           ASpanM[j].Seg.Val, AlignVal);
+    if (DoAlign) {
+      for (int j = 1; j != NumSectors + 2; ++j) {
+        ASpanV[j - 1].Seg.Val = HVC.vlalignb(Builder, ASpanV[j - 1].Seg.Val,
+                                             ASpanV[j].Seg.Val, AlignVal);
+        ASpanM[j - 1].Seg.Val = HVC.vlalignb(Builder, ASpanM[j - 1].Seg.Val,
+                                             ASpanM[j].Seg.Val, AlignVal);
+      }
     }
 
-    for (int i = 0; i != NumSectors + 1; ++i) {
+    for (int i = 0; i != NumSectors + DoAlign; ++i) {
       Value *Ptr = createAdjustedPointer(Builder, AlignAddr, SecTy, i * ScLen);
       Value *Val = ASpanV[i].Seg.Val;
       Value *Mask = ASpanM[i].Seg.Val; // bytes
-      if (!HVC.isUndef(Val) && !HVC.isZero(Mask))
-        createAlignedStore(Builder, Val, Ptr, ScLen, HVC.vlsb(Builder, Mask));
+      if (!HVC.isUndef(Val) && !HVC.isZero(Mask)) {
+        Value *Store = createAlignedStore(Builder, Val, Ptr, ScLen,
+                                          HVC.vlsb(Builder, Mask));
+        // If vector shifting is potentially needed, accumulate metadata
+        // from source sections of twice the store width.
+        int Start = (i - DoAlign) * ScLen;
+        int Width = (1 + DoAlign) * ScLen;
+        propagateMetadata(cast<Instruction>(Store),
+                          VSpan.section(Start, Width).values());
+      }
     }
   }
 

@@ -515,7 +515,7 @@ MCStreamer *llvm::createMachOStreamer(MCContext &Context,
   MCMachOStreamer *S =
       new MCMachOStreamer(Context, std::move(MAB), std::move(OW), std::move(CE),
                           DWARFMustBeAtTheEnd, LabelSections);
-  const Triple &Target = Context.getObjectFileInfo()->getTargetTriple();
+  const Triple &Target = Context.getTargetTriple();
   S->emitVersionForTarget(Target, Context.getObjectFileInfo()->getSDKVersion());
   if (RelaxAll)
     S->getAssembler().setRelaxAll(true);

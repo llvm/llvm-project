@@ -1,5 +1,6 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=CHECK,WAVE64  %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=CHECK,WAVE32 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=CHECK,WAVE32 %s
 
 ;CHECK-LABEL: {{^}}ret:
 ;CHECK: v_cmp_eq_u32_e32 [[CMP:[^,]+]], v0, v1
@@ -45,7 +46,7 @@ main_body:
 
 ;WAVE32: s_wqm_b32 [[WQM:[^,]+]], [[CMP]]
 ;WAVE32: s_xor_b32 [[KILL:[^,]+]], [[WQM]], exec
-;WAVE32: s_andn2_b32 [[MASK:[^,]+]], [[EXEC:[^,]+]], [[KILL]]
+;WAVE32: s_and{{n2|_not1}}_b32 [[MASK:[^,]+]], [[EXEC:[^,]+]], [[KILL]]
 ;WAVE32: s_and_b32 exec_lo, exec_lo, [[MASK]]
 
 ;CHECK: s_endpgm

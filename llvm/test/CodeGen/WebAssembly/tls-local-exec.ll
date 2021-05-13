@@ -72,7 +72,7 @@ define i32 @tls_size() {
 }
 
 ; CHECK: .type tls,@object
-; TLS-NEXT: .section .tbss.tls,"",@
+; TLS-NEXT: .section .tbss.tls,"T",@
 ; NO-TLS-NEXT: .section .bss.tls,"",@
 ; CHECK-NEXT: .p2align 2
 ; CHECK-NEXT: tls:

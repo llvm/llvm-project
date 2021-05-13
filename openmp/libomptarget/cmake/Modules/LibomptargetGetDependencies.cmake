@@ -20,6 +20,25 @@
 include (FindPackageHandleStandardArgs)
 
 ################################################################################
+# Looking for LLVM...
+################################################################################
+
+if (OPENMP_STANDALONE_BUILD)
+  # Complete LLVM package is required for building libomptarget
+  # in an out-of-tree mode.
+  find_package(LLVM REQUIRED)
+  message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+  message(STATUS "Using LLVM in: ${LLVM_DIR}")
+  list(APPEND LIBOMPTARGET_LLVM_INCLUDE_DIRS ${LLVM_INCLUDE_DIRS})
+  list(APPEND CMAKE_MODULE_PATH ${LLVM_CMAKE_DIR})
+  include(AddLLVM)
+else()
+  list(APPEND LIBOMPTARGET_LLVM_INCLUDE_DIRS
+    ${LLVM_MAIN_INCLUDE_DIR} ${LLVM_BINARY_DIR}/include
+    )
+endif()
+
+################################################################################
 # Looking for libelf...
 ################################################################################
 
@@ -250,27 +269,4 @@ if (NOT LIBOMPTARGET_CUDA_TOOLKIT_ROOT_DIR_PRESET AND
   endif()
 endif()
 
-if (OPENMP_STANDALONE_BUILD)
-  # This duplicates code from llvm/cmake/config-ix.cmake
-  if( WIN32 AND NOT CYGWIN )
-    # We consider Cygwin as another Unix
-    set(PURE_WINDOWS 1)
-  endif()
-
-  # library checks
-  if( NOT PURE_WINDOWS )
-    check_library_exists(pthread pthread_create "" HAVE_LIBPTHREAD)
-  endif()
-
-  if(HAVE_LIBPTHREAD)
-    # We want to find pthreads library and at the moment we do want to
-    # have it reported as '-l<lib>' instead of '-pthread'.
-    # TODO: switch to -pthread once the rest of the build system can deal with it.
-    set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
-    set(THREADS_HAVE_PTHREAD_ARG Off)
-    find_package(Threads REQUIRED)
-    set(OPENMP_PTHREAD_LIB ${CMAKE_THREAD_LIBS_INIT})
-  endif()
-else()
-  set(OPENMP_PTHREAD_LIB ${LLVM_PTHREAD_LIB})
-endif()
+set(OPENMP_PTHREAD_LIB ${LLVM_PTHREAD_LIB})

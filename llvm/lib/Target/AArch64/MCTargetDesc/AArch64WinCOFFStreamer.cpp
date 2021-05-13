@@ -59,8 +59,6 @@ void AArch64WinCOFFStreamer::finishImpl() {
 }
 } // end anonymous namespace
 
-namespace llvm {
-
 // Helper function to common out unwind code setup for those codes that can
 // belong to both prolog and epilog.
 // There are three types of Windows ARM64 SEH codes.  They can
@@ -223,7 +221,7 @@ void AArch64TargetWinCOFFStreamer::EmitARM64WinCFIClearUnwoundToCall() {
   EmitARM64WinUnwindCode(Win64EH::UOP_ClearUnwoundToCall, -1, 0);
 }
 
-MCWinCOFFStreamer *createAArch64WinCOFFStreamer(
+MCWinCOFFStreamer *llvm::createAArch64WinCOFFStreamer(
     MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
     std::unique_ptr<MCObjectWriter> OW, std::unique_ptr<MCCodeEmitter> Emitter,
     bool RelaxAll, bool IncrementalLinkerCompatible) {
@@ -232,5 +230,3 @@ MCWinCOFFStreamer *createAArch64WinCOFFStreamer(
   S->getAssembler().setIncrementalLinkerCompatible(IncrementalLinkerCompatible);
   return S;
 }
-
-} // end llvm namespace

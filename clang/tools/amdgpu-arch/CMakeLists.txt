@@ -14,4 +14,6 @@ endif()
 
 add_clang_tool(amdgpu-arch AMDGPUArch.cpp)
 
+set_target_properties(amdgpu-arch PROPERTIES INSTALL_RPATH_USE_LINK_PATH ON)
+
 clang_target_link_libraries(amdgpu-arch PRIVATE hsa-runtime64::hsa-runtime64)

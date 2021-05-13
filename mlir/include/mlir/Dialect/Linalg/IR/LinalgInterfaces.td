@@ -36,6 +36,22 @@ def LinalgContractionOpInterface : OpInterface<"ContractionOpInterface"> {
   let verify = [{ return detail::verifyContractionInterface($_op); }];
   let methods = [
     InterfaceMethod<
+    /*desc=*/"Returns the left-hand side operand.",
+    /*retTy=*/"Value",
+    /*methodName=*/"lhs",
+    /*args=*/(ins),
+    /*methodBody=*/[{
+      return $_op.getOperation()->getOperand(0);
+    }]>,
+    InterfaceMethod<
+    /*desc=*/"Returns the right-hand side operand.",
+    /*retTy=*/"Value",
+    /*methodName=*/"rhs",
+    /*args=*/(ins),
+    /*methodBody=*/[{
+      return $_op.getOperation()->getOperand(1);
+    }]>,
+    InterfaceMethod<
     /*desc=*/[{
       Returns whether the given op has indexing maps that correspond to a
       row-major matmul operation.
@@ -998,19 +1014,6 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         return llvm::all_of(getShapedOperands(), [](Value v) {
           return v.getType().template isa<RankedTensorType>();
         });
-      }]
-    >,
-    InterfaceMethod<
-      /*desc=*/[{
-        Return whether the op has sparse tensor semantics.
-      }],
-      /*retTy=*/"bool",
-      /*methodName=*/"hasSparseSemantics",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{
-        return $_op->getAttr(getSparseAttrName()).
-          template dyn_cast_or_null<ArrayAttr>() != nullptr;
       }]
     >,
     InterfaceMethod<

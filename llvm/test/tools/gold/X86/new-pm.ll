@@ -8,7 +8,7 @@
 ; RUN:     --plugin-opt=cache-dir=%t.cache \
 ; RUN:     -o %t2.o %t.o 2>&1 | FileCheck %s
 
-; CHECK: Starting llvm::Module pass manager run
+; CHECK: Running pass:
 
 ;; --plugin-opt=debug-pass-manager is a no-op for the legacy pass manager.
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \

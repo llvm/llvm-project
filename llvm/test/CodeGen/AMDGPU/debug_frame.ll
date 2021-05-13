@@ -1,14 +1,9 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -filetype=obj -o - < %s | llvm-readelf -S - | FileCheck --check-prefixes=NOEXCEPTIONS_NOFORCE-DEBUG %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -filetype=obj --force-dwarf-frame-section -o - < %s | llvm-readelf -S - | FileCheck --check-prefixes=NOEXCEPTIONS_FORCE-DEBUG %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -filetype=obj --exception-model=dwarf -o - < %s | llvm-readelf -S - | FileCheck --check-prefixes=EXCEPTIONS_NOFORCE-DEBUG %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -filetype=obj --force-dwarf-frame-section --exception-model=dwarf -o - < %s | llvm-readelf -S - | FileCheck --check-prefixes=EXCEPTIONS_FORCE-DEBUG %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -o - < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa --force-dwarf-frame-section -o - < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa --exception-model=dwarf -o - < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa --force-dwarf-frame-section --exception-model=dwarf -o - < %s | FileCheck %s
 
-; Test that demonstrates we produce a .debug_frame only when exceptions are enabled even if --force-dwarf-frame-section is enabled
-
-; NOEXCEPTIONS_NOFORCE-DEBUG-NOT: .debug_frame
-; NOEXCEPTIONS_FORCE-DEBUG-NOT: .debug_frame
-; EXCEPTIONS_NOFORCE-DEBUG: .debug_frame
-; EXCEPTIONS_FORCE-DEBUG: .debug_frame
+; CHECK: .cfi_sections .debug_frame
 
 define void @f() nounwind !dbg !0 {
 entry:

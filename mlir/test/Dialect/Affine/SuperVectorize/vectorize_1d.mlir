@@ -590,3 +590,24 @@ func @vec_no_vecdim_last_value(%in: memref<128x256xf32>, %out: memref<256xf32>) 
 // CHECK:         }
 // CHECK:         vector.transfer_write %[[last_val]], %{{.*}} : vector<128xf32>, memref<256xf32>
 // CHECK:       }
+
+// -----
+
+// The inner reduction loop '%j' is not vectorized if we do not request
+// reduction vectorization.
+
+func @vec_vecdim_reduction_rejected(%in: memref<256x512xf32>, %out: memref<256xf32>) {
+ %cst = constant 0.000000e+00 : f32
+ affine.for %i = 0 to 256 {
+   %final_red = affine.for %j = 0 to 512 iter_args(%red_iter = %cst) -> (f32) {
+     %ld = affine.load %in[%i, %j] : memref<256x512xf32>
+     %add = addf %red_iter, %ld : f32
+     affine.yield %add : f32
+   }
+   affine.store %final_red, %out[%i] : memref<256xf32>
+ }
+ return
+}
+
+// CHECK-LABEL: @vec_vecdim_reduction_rejected
+// CHECK-NOT: vector

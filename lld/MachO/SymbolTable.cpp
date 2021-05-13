@@ -51,13 +51,26 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
   bool overridesWeakDef = false;
   std::tie(s, wasInserted) = insert(name, file);
 
+  assert(!isWeakDef || (isa<BitcodeFile>(file) && !isec) ||
+         (isa<ObjFile>(file) && file == isec->file));
+
   if (!wasInserted) {
     if (auto *defined = dyn_cast<Defined>(s)) {
       if (isWeakDef) {
         // Both old and new symbol weak (e.g. inline function in two TUs):
         // If one of them isn't private extern, the merged symbol isn't.
-        if (defined->isWeakDef())
+        if (defined->isWeakDef()) {
           defined->privateExtern &= isPrivateExtern;
+
+          // FIXME: Handle this for bitcode files.
+          // FIXME: We currently only do this if both symbols are weak.
+          //        We could do this if either is weak (but getting the
+          //        case where !isWeakDef && defined->isWeakDef() right
+          //        requires some care and testing).
+          if (isec)
+            isec->canOmitFromOutput = true;
+        }
+
         return defined;
       }
       if (!defined->isWeakDef())
@@ -173,20 +186,21 @@ Defined *SymbolTable::addSynthetic(StringRef name, InputSection *isec,
   return s;
 }
 
-void lld::macho::treatUndefinedSymbol(const Undefined &sym) {
-  auto message = [](const Undefined &sym) {
+void lld::macho::treatUndefinedSymbol(const Undefined &sym, StringRef source) {
+  auto message = [source, &sym]() {
     std::string message = "undefined symbol: " + toString(sym);
-    std::string fileName = toString(sym.getFile());
-    if (!fileName.empty())
-      message += "\n>>> referenced by " + fileName;
+    if (!source.empty())
+      message += "\n>>> referenced by " + source.str();
+    else
+      message += "\n>>> referenced by " + toString(sym.getFile());
     return message;
   };
   switch (config->undefinedSymbolTreatment) {
   case UndefinedSymbolTreatment::error:
-    error(message(sym));
+    error(message());
     break;
   case UndefinedSymbolTreatment::warning:
-    warn(message(sym));
+    warn(message());
     LLVM_FALLTHROUGH;
   case UndefinedSymbolTreatment::dynamic_lookup:
   case UndefinedSymbolTreatment::suppress:

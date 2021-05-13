@@ -21,6 +21,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/BasicBlockSectionUtils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -153,7 +154,7 @@ void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
          ? dwarf::DW_EH_PE_sdata4 : dwarf::DW_EH_PE_sdata8);
       TTypeEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
         ((CM == CodeModel::Small || CM == CodeModel::Medium)
-         ? dwarf::DW_EH_PE_sdata8 : dwarf::DW_EH_PE_sdata4);
+         ? dwarf::DW_EH_PE_sdata4 : dwarf::DW_EH_PE_sdata8);
     } else {
       PersonalityEncoding =
         (CM == CodeModel::Small || CM == CodeModel::Medium)
@@ -1645,7 +1646,7 @@ MCSection *TargetLoweringObjectFileCOFF::SelectSectionForGlobal(
       // Append "$symbol" to the section name *before* IR-level mangling is
       // applied when targetting mingw. This is what GCC does, and the ld.bfd
       // COFF linker will not properly handle comdats otherwise.
-      if (getTargetTriple().isWindowsGNUEnvironment())
+      if (getContext().getTargetTriple().isWindowsGNUEnvironment())
         raw_svector_ostream(Name) << '$' << ComdatGV->getName();
 
       return getContext().getCOFFSection(Name, Characteristics, Kind,
@@ -1762,7 +1763,8 @@ void TargetLoweringObjectFileCOFF::emitLinkerDirectives(
   std::string Flags;
   for (const GlobalValue &GV : M.global_values()) {
     raw_string_ostream OS(Flags);
-    emitLinkerFlagsForGlobalCOFF(OS, &GV, getTargetTriple(), getMangler());
+    emitLinkerFlagsForGlobalCOFF(OS, &GV, getContext().getTargetTriple(),
+                                 getMangler());
     OS.flush();
     if (!Flags.empty()) {
       Streamer.SwitchSection(getDrectveSection());
@@ -1786,7 +1788,8 @@ void TargetLoweringObjectFileCOFF::emitLinkerDirectives(
           continue;
 
         raw_string_ostream OS(Flags);
-        emitLinkerFlagsForUsedCOFF(OS, GV, getTargetTriple(), getMangler());
+        emitLinkerFlagsForUsedCOFF(OS, GV, getContext().getTargetTriple(),
+                                   getMangler());
         OS.flush();
 
         if (!Flags.empty()) {
@@ -1865,16 +1868,16 @@ static MCSectionCOFF *getCOFFStaticStructorSection(MCContext &Ctx,
 
 MCSection *TargetLoweringObjectFileCOFF::getStaticCtorSection(
     unsigned Priority, const MCSymbol *KeySym) const {
-  return getCOFFStaticStructorSection(getContext(), getTargetTriple(), true,
-                                      Priority, KeySym,
-                                      cast<MCSectionCOFF>(StaticCtorSection));
+  return getCOFFStaticStructorSection(
+      getContext(), getContext().getTargetTriple(), true, Priority, KeySym,
+      cast<MCSectionCOFF>(StaticCtorSection));
 }
 
 MCSection *TargetLoweringObjectFileCOFF::getStaticDtorSection(
     unsigned Priority, const MCSymbol *KeySym) const {
-  return getCOFFStaticStructorSection(getContext(), getTargetTriple(), false,
-                                      Priority, KeySym,
-                                      cast<MCSectionCOFF>(StaticDtorSection));
+  return getCOFFStaticStructorSection(
+      getContext(), getContext().getTargetTriple(), false, Priority, KeySym,
+      cast<MCSectionCOFF>(StaticDtorSection));
 }
 
 const MCExpr *TargetLoweringObjectFileCOFF::lowerRelativeReference(
@@ -2003,6 +2006,20 @@ static const Comdat *getWasmComdat(const GlobalValue *GV) {
   return C;
 }
 
+static unsigned getWasmSectionFlags(SectionKind K) {
+  unsigned Flags = 0;
+
+  if (K.isThreadLocal())
+    Flags |= wasm::WASM_SEG_FLAG_TLS;
+
+  if (K.isMergeableCString())
+    Flags |= wasm::WASM_SEG_FLAG_STRINGS;
+
+  // TODO(sbc): Add suport for K.isMergeableConst()
+
+  return Flags;
+}
+
 MCSection *TargetLoweringObjectFileWasm::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   // We don't support explict section names for functions in the wasm object
@@ -2026,9 +2043,9 @@ MCSection *TargetLoweringObjectFileWasm::getExplicitSectionGlobal(
     Group = C->getName();
   }
 
-  MCSectionWasm* Section =
-      getContext().getWasmSection(Name, Kind, Group,
-                                  MCContext::GenericSectionID);
+  unsigned Flags = getWasmSectionFlags(Kind);
+  MCSectionWasm *Section = getContext().getWasmSection(
+      Name, Kind, Flags, Group, MCContext::GenericSectionID);
 
   return Section;
 }
@@ -2060,7 +2077,8 @@ static MCSectionWasm *selectWasmSectionForGlobal(
     (*NextUniqueID)++;
   }
 
-  return Ctx.getWasmSection(Name, Kind, Group, UniqueID);
+  unsigned Flags = getWasmSectionFlags(Kind);
+  return Ctx.getWasmSection(Name, Kind, Flags, Group, UniqueID);
 }
 
 MCSection *TargetLoweringObjectFileWasm::SelectSectionForGlobal(

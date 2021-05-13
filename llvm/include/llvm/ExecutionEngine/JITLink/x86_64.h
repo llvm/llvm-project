@@ -336,8 +336,11 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   return Error::success();
 }
 
+/// x86_64 pointer size.
+constexpr uint64_t PointerSize = 8;
+
 /// x86-64 null pointer content.
-extern const char NullPointerContent[8];
+extern const char NullPointerContent[PointerSize];
 
 /// x86-64 pointer jump stub content.
 ///
@@ -366,20 +369,30 @@ inline Symbol &createAnonymousPointer(LinkGraph &G, Section &PointerSection,
   return G.addAnonymousSymbol(B, 0, 8, false, false);
 }
 
-/// Create a jump stub that jumps via the pointer at the given symbol, returns
-/// an anonymous symbol pointing to it.
+/// Create a jump stub block that jumps via the pointer at the given symbol.
 ///
 /// The stub block will have the following default values:
 ///   alignment: 8-bit
 ///   alignment-offset: 0
 ///   address: highest allowable: (~5U)
-inline Symbol &createAnonymousPointerJumpStub(LinkGraph &G,
-                                              Section &StubSection,
-                                              Symbol &PointerSymbol) {
+inline Block &createPointerJumpStubBlock(LinkGraph &G, Section &StubSection,
+                                         Symbol &PointerSymbol) {
   auto &B =
       G.createContentBlock(StubSection, PointerJumpStubContent, ~5ULL, 1, 0);
   B.addEdge(Delta32, 2, PointerSymbol, -4);
-  return G.addAnonymousSymbol(B, 0, 6, true, false);
+  return B;
+}
+
+/// Create a jump stub that jumps via the pointer at the given symbol and
+/// an anonymous symbol pointing to it. Return the anonymous symbol.
+///
+/// The stub block will be created by createPointerJumpStubBlock.
+inline Symbol &createAnonymousPointerJumpStub(LinkGraph &G,
+                                              Section &StubSection,
+                                              Symbol &PointerSymbol) {
+  return G.addAnonymousSymbol(
+      createPointerJumpStubBlock(G, StubSection, PointerSymbol), 0, 6, true,
+      false);
 }
 
 } // namespace x86_64

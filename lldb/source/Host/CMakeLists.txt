@@ -58,7 +58,6 @@ add_host_subdirectory(posix
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
   add_host_subdirectory(windows
     windows/ConnectionGenericFileWindows.cpp
-    windows/EditLineWin.cpp
     windows/FileSystem.cpp
     windows/Host.cpp
     windows/HostInfoWindows.cpp

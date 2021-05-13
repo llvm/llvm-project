@@ -64,6 +64,7 @@ MachHeaderSection::MachHeaderSection()
   // Setting the index to 1 to pretend that this section is the text
   // section.
   index = 1;
+  isec->isFinal = true;
 }
 
 void MachHeaderSection::addLoadCommand(LoadCommand *lc) {
@@ -424,6 +425,8 @@ void StubsSection::writeTo(uint8_t *buf) const {
     off += target->stubSize;
   }
 }
+
+void StubsSection::finalize() { isFinal = true; }
 
 bool StubsSection::addEntry(Symbol *sym) {
   bool inserted = entries.insert(sym);
@@ -1101,12 +1104,12 @@ void macho::createSyntheticSymbols() {
     //  __TEXT, __text)
     // Otherwise, it's an absolute symbol.
     if (config->isPic)
-      symtab->addSynthetic("__mh_execute_header", in.header->isec, 0,
+      symtab->addSynthetic("__mh_execute_header", in.header->isec, /*value=*/0,
                            /*privateExtern=*/false,
                            /*includeInSymtab=*/true);
     else
       symtab->addSynthetic("__mh_execute_header",
-                           /*isec*/ nullptr, 0,
+                           /*isec*/ nullptr, /*value=*/0,
                            /*privateExtern=*/false,
                            /*includeInSymtab=*/true);
     break;

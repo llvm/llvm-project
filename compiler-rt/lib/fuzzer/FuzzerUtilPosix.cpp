@@ -77,10 +77,13 @@ static void SetSigaction(int signum,
       return;
   }
 
-  sigact = {};
-  sigact.sa_flags = SA_SIGINFO;
-  sigact.sa_sigaction = callback;
-  if (sigaction(signum, &sigact, 0)) {
+  struct sigaction new_sigact = {};
+  // Address sanitizer needs SA_ONSTACK (causing the signal handler to run on a
+  // dedicated stack) in order to be able to detect stack overflows; keep the
+  // flag if it's set.
+  new_sigact.sa_flags = SA_SIGINFO | (sigact.sa_flags & SA_ONSTACK);
+  new_sigact.sa_sigaction = callback;
+  if (sigaction(signum, &new_sigact, nullptr)) {
     Printf("libFuzzer: sigaction failed with %d\n", errno);
     exit(1);
   }

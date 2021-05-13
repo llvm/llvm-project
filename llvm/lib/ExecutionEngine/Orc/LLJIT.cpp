@@ -1126,20 +1126,16 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     InitHelperTransformLayer->setCloneToNewContextOnEmit(true);
     CompileThreads =
         std::make_unique<ThreadPool>(hardware_concurrency(S.NumCompileThreads));
-    ES->setDispatchMaterialization(
-        [this](std::unique_ptr<MaterializationUnit> MU,
-               std::unique_ptr<MaterializationResponsibility> MR) {
-          // FIXME: We should be able to use move-capture here, but ThreadPool's
-          // AsyncTaskTys are std::functions rather than unique_functions
-          // (because MSVC's std::packaged_tasks don't support move-only types).
-          // Fix this when all the above gets sorted out.
-          CompileThreads->async(
-              [UnownedMU = MU.release(), UnownedMR = MR.release()]() mutable {
-                std::unique_ptr<MaterializationUnit> MU(UnownedMU);
-                std::unique_ptr<MaterializationResponsibility> MR(UnownedMR);
-                MU->materialize(std::move(MR));
-              });
-        });
+    ES->setDispatchTask([this](std::unique_ptr<Task> T) {
+      // FIXME: We should be able to use move-capture here, but ThreadPool's
+      // AsyncTaskTys are std::functions rather than unique_functions
+      // (because MSVC's std::packaged_tasks don't support move-only types).
+      // Fix this when all the above gets sorted out.
+      CompileThreads->async([UnownedT = T.release()]() mutable {
+        std::unique_ptr<Task> T(UnownedT);
+        T->run();
+      });
+    });
   }
 
   if (S.SetUpPlatform)

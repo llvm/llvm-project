@@ -11,6 +11,8 @@
 #include "AArch64GlobalISelUtils.h"
 #include "AArch64InstrInfo.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -56,4 +58,123 @@ bool AArch64GISelUtils::isCMN(const MachineInstr *MaybeSub,
   auto MaybeZero =
       getConstantVRegValWithLookThrough(MaybeSub->getOperand(1).getReg(), MRI);
   return MaybeZero && MaybeZero->Value.getZExtValue() == 0;
+}
+
+bool AArch64GISelUtils::tryEmitBZero(MachineInstr &MI,
+                                     MachineIRBuilder &MIRBuilder,
+                                     bool MinSize) {
+  assert(MI.getOpcode() == TargetOpcode::G_MEMSET);
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
+  if (!TLI.getLibcallName(RTLIB::BZERO))
+    return false;
+  auto Zero = getConstantVRegValWithLookThrough(MI.getOperand(1).getReg(), MRI);
+  if (!Zero || Zero->Value.getSExtValue() != 0)
+    return false;
+
+  // It's not faster to use bzero rather than memset for sizes <= 256.
+  // However, it *does* save us a mov from wzr, so if we're going for
+  // minsize, use bzero even if it's slower.
+  if (!MinSize) {
+    // If the size is known, check it. If it is not known, assume using bzero is
+    // better.
+    if (auto Size =
+            getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI)) {
+      if (Size->Value.getSExtValue() <= 256)
+        return false;
+    }
+  }
+
+  MIRBuilder.setInstrAndDebugLoc(MI);
+  MIRBuilder
+      .buildInstr(TargetOpcode::G_BZERO, {},
+                  {MI.getOperand(0), MI.getOperand(2)})
+      .addImm(MI.getOperand(3).getImm())
+      .addMemOperand(*MI.memoperands_begin());
+  MI.eraseFromParent();
+  return true;
+}
+
+void AArch64GISelUtils::changeFCMPPredToAArch64CC(
+    const CmpInst::Predicate P, AArch64CC::CondCode &CondCode,
+    AArch64CC::CondCode &CondCode2) {
+  CondCode2 = AArch64CC::AL;
+  switch (P) {
+  default:
+    llvm_unreachable("Unknown FP condition!");
+  case CmpInst::FCMP_OEQ:
+    CondCode = AArch64CC::EQ;
+    break;
+  case CmpInst::FCMP_OGT:
+    CondCode = AArch64CC::GT;
+    break;
+  case CmpInst::FCMP_OGE:
+    CondCode = AArch64CC::GE;
+    break;
+  case CmpInst::FCMP_OLT:
+    CondCode = AArch64CC::MI;
+    break;
+  case CmpInst::FCMP_OLE:
+    CondCode = AArch64CC::LS;
+    break;
+  case CmpInst::FCMP_ONE:
+    CondCode = AArch64CC::MI;
+    CondCode2 = AArch64CC::GT;
+    break;
+  case CmpInst::FCMP_ORD:
+    CondCode = AArch64CC::VC;
+    break;
+  case CmpInst::FCMP_UNO:
+    CondCode = AArch64CC::VS;
+    break;
+  case CmpInst::FCMP_UEQ:
+    CondCode = AArch64CC::EQ;
+    CondCode2 = AArch64CC::VS;
+    break;
+  case CmpInst::FCMP_UGT:
+    CondCode = AArch64CC::HI;
+    break;
+  case CmpInst::FCMP_UGE:
+    CondCode = AArch64CC::PL;
+    break;
+  case CmpInst::FCMP_ULT:
+    CondCode = AArch64CC::LT;
+    break;
+  case CmpInst::FCMP_ULE:
+    CondCode = AArch64CC::LE;
+    break;
+  case CmpInst::FCMP_UNE:
+    CondCode = AArch64CC::NE;
+    break;
+  }
+}
+
+void AArch64GISelUtils::changeVectorFCMPPredToAArch64CC(
+    const CmpInst::Predicate P, AArch64CC::CondCode &CondCode,
+    AArch64CC::CondCode &CondCode2, bool &Invert) {
+  Invert = false;
+  switch (P) {
+  default:
+    // Mostly the scalar mappings work fine.
+    changeFCMPPredToAArch64CC(P, CondCode, CondCode2);
+    break;
+  case CmpInst::FCMP_UNO:
+    Invert = true;
+    LLVM_FALLTHROUGH;
+  case CmpInst::FCMP_ORD:
+    CondCode = AArch64CC::MI;
+    CondCode2 = AArch64CC::GE;
+    break;
+  case CmpInst::FCMP_UEQ:
+  case CmpInst::FCMP_ULT:
+  case CmpInst::FCMP_ULE:
+  case CmpInst::FCMP_UGT:
+  case CmpInst::FCMP_UGE:
+    // All of the compare-mask comparisons are ordered, but we can switch
+    // between the two by a double inversion. E.g. ULE == !OGT.
+    Invert = true;
+    changeFCMPPredToAArch64CC(CmpInst::getInversePredicate(P), CondCode,
+                              CondCode2);
+    break;
+  }
 }

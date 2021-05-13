@@ -279,30 +279,31 @@ define amdgpu_kernel void @local_stack_offset_uses_sp_flat(<3 x i64> addrspace(1
 ; FLATSCR-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s2, s5
 ; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s3, 0
-; FLATSCR-NEXT:    s_add_u32 s2, 16, 0x4000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v0, 0
-; FLATSCR-NEXT:    s_movk_i32 vcc_hi, 0x2000
-; FLATSCR-NEXT:    s_mov_b32 s3, 0
-; FLATSCR-NEXT:    scratch_store_dword off, v0, vcc_hi
+; FLATSCR-NEXT:    s_mov_b32 vcc_hi, 0
+; FLATSCR-NEXT:    s_mov_b32 s2, 0
+; FLATSCR-NEXT:    scratch_store_dword off, v0, vcc_hi offset:1024
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:  BB2_1: ; %loadstoreloop
 ; FLATSCR-NEXT:    ; =>This Inner Loop Header: Depth=1
-; FLATSCR-NEXT:    s_add_u32 s4, 0x4000, s3
-; FLATSCR-NEXT:    s_add_i32 s3, s3, 1
-; FLATSCR-NEXT:    s_cmpk_lt_u32 s3, 0x2120
-; FLATSCR-NEXT:    scratch_store_byte off, v0, s4
+; FLATSCR-NEXT:    s_add_u32 s3, 0x2000, s2
+; FLATSCR-NEXT:    s_add_i32 s2, s2, 1
+; FLATSCR-NEXT:    s_cmpk_lt_u32 s2, 0x2120
+; FLATSCR-NEXT:    scratch_store_byte off, v0, s3
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_cbranch_scc1 BB2_1
 ; FLATSCR-NEXT:  ; %bb.2: ; %split
-; FLATSCR-NEXT:    s_movk_i32 s3, 0x1000
-; FLATSCR-NEXT:    s_add_u32 s3, 0x4000, s3
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[8:9], off, s3 offset:720 glc
+; FLATSCR-NEXT:    s_movk_i32 s2, 0x1000
+; FLATSCR-NEXT:    s_add_u32 s2, 0x2000, s2
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[8:9], off, s2 offset:720 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    scratch_load_dwordx4 v[0:3], off, s3 offset:704 glc
+; FLATSCR-NEXT:    scratch_load_dwordx4 v[0:3], off, s2 offset:704 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[10:11], off, s2 glc
+; FLATSCR-NEXT:    s_movk_i32 s2, 0x2000
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[10:11], off, s2 offset:16 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    scratch_load_dwordx4 v[4:7], off, s2 offset:-16 glc
+; FLATSCR-NEXT:    s_movk_i32 s2, 0x2000
+; FLATSCR-NEXT:    scratch_load_dwordx4 v[4:7], off, s2 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    v_mov_b32_e32 v12, 0
 ; FLATSCR-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v6

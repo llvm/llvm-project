@@ -52,8 +52,7 @@ public:
 
   void adjustPassManager(PassManagerBuilder &) override;
 
-  void registerPassBuilderCallbacks(PassBuilder &PB,
-                                    bool DebugPassManager) override;
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
   void registerDefaultAliasAnalyses(AAManager &) override;
 
   /// Get the integer value of a null pointer in the given address space.

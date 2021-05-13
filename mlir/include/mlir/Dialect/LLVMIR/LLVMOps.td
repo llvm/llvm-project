@@ -907,6 +907,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     StrAttr:$sym_name,
     Linkage:$linkage,
     OptionalAttr<AnyAttr>:$value,
+    OptionalAttr<I64Attr>:$alignment,
     DefaultValuedAttr<Confined<I32Attr, [IntNonNegative]>, "0">:$addr_space,
     OptionalAttr<UnnamedAddr>:$unnamed_addr,
     OptionalAttr<StrAttr>:$section
@@ -991,13 +992,30 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     // By default, "external" linkage is assumed and the global participates in
     // symbol resolution at link-time.
     llvm.mlir.global @glob(0 : f32) : f32
+
+    // Alignment is optional
+    llvm.mlir.global private constant @y(dense<1.0> : tensor<8xf32>) : !llvm.array<8 x f32>
     ```
+
+    Like global variables in LLVM IR, globals can have an (optional)
+    alignment attribute using keyword `alignment`. The integer value of the
+    alignment must be a positive integer that is a power of 2.
+
+    Examples:
+
+    ```mlir
+    // Alignment is optional
+    llvm.mlir.global private constant @y(dense<1.0> : tensor<8xf32>) { alignment = 32 : i64 } : !llvm.array<8 x f32>
+    ```
+
   }];
   let regions = (region AnyRegion:$initializer);
 
   let builders = [
     OpBuilder<(ins "Type":$type, "bool":$isConstant, "Linkage":$linkage,
-      "StringRef":$name, "Attribute":$value, CArg<"unsigned", "0">:$addrSpace,
+      "StringRef":$name, "Attribute":$value,
+      CArg<"uint64_t", "0">:$alignment,
+      CArg<"unsigned", "0">:$addrSpace,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
   ];
 

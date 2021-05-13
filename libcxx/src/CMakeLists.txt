@@ -64,6 +64,7 @@ endif()
 
 if (LIBCXX_ENABLE_LOCALIZATION)
   list(APPEND LIBCXX_SOURCES
+    include/sso_allocator.h
     ios.cpp
     ios.instantiations.cpp
     iostream.cpp

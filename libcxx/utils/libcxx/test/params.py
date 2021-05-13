@@ -54,6 +54,21 @@ def getStdFlag(cfg, std):
 
 DEFAULT_PARAMETERS = [
   # Core parameters of the test suite
+  Parameter(name='target_triple', type=str, default=getHostTriple,
+            help="The target triple to compile the test suite for. This must be "
+                 "compatible with the target that the tests will be run on.",
+            actions=lambda triple: filter(None, [
+              AddFeature(triple),
+              AddFlagIfSupported('--target={}'.format(triple)),
+              AddFeature('linux-gnu') if re.match(r'^.*-linux-gnu', triple) else None,
+              AddFeature('x86_64-linux') if re.match(r'^x86_64.*-linux', triple) else None,
+              AddFeature('x86_64-apple') if re.match(r'^x86_64.*-apple', triple) else None,
+              AddFeature('target-x86') if re.match(r'^i.86.*', triple) else None,
+              AddFeature('target-x86_64') if re.match(r'^x86_64.*', triple) else None,
+              AddFeature('target-aarch64') if re.match(r'^aarch64.*', triple) else None,
+              AddFeature('target-arm') if re.match(r'^arm.*', triple) else None,
+            ])),
+
   Parameter(name='std', choices=_allStandards, type=str,
             help="The version of the standard to compile the test suite with.",
             default=lambda cfg: next(s for s in reversed(_allStandards) if getStdFlag(cfg, s)),
@@ -88,18 +103,6 @@ DEFAULT_PARAMETERS = [
               AddOptionalWarningFlag(w) for w in _warningFlags
             ]),
 
-  Parameter(name='use_system_cxx_lib', choices=[True, False], type=bool, default=False,
-            help="Whether the test suite is being *run* against the library shipped on "
-                 "the target triple in use, as opposed to the trunk library.",
-            actions=lambda useSystem: [
-              # TODO: Remove this, see comment in features.py
-              AddFeature('use_system_cxx_lib')
-            ] if useSystem else [
-              # If we're testing upstream libc++, disable availability markup,
-              # which is not relevant for non-shipped flavors of libc++.
-              AddCompileFlag('-D_LIBCPP_DISABLE_AVAILABILITY')
-            ]),
-
   Parameter(name='debug_level', choices=['', '0', '1'], type=str, default='',
             help="The debugging level to enable in the test suite.",
             actions=lambda debugLevel: [] if debugLevel == '' else [
@@ -131,4 +134,39 @@ DEFAULT_PARAMETERS = [
             actions=lambda enabled: [] if enabled else [
               AddFeature('libcxx-no-debug-mode')
             ]),
+]
+
+DEFAULT_PARAMETERS += [
+  Parameter(name='use_system_cxx_lib', choices=[True, False], type=bool, default=False,
+            help="""
+    Whether the test suite is being *run* against the library shipped on the
+    target triple in use, as opposed to the trunk library.
+
+    When vendor-specific availability annotations are enabled, we add the
+    'use_system_cxx_lib' Lit feature to allow writing XFAIL or UNSUPPORTED
+    markup for tests that are known to fail on a particular triple.
+
+    That feature can be used to XFAIL a test that fails when deployed on (or is
+    compiled for) an older system. For example, if the test exhibits a bug in the
+    libc on a particular system version, or if the test uses a symbol that is not
+    available on an older version of the dylib, it can be marked as XFAIL with
+    the above feature.
+
+    It is sometimes useful to check that a test fails specifically when compiled
+    for a given deployment target. For example, this is the case when testing
+    availability markup, where we want to make sure that using the annotated
+    facility on a deployment target that doesn't support it will fail at compile
+    time, not at runtime. This can be achieved by creating a `.compile.pass.cpp`
+    and XFAILing it for the right deployment target. If the test doesn't fail at
+    compile-time like it's supposed to, the test will XPASS. Another option is to
+    create a `.verify.cpp` test that checks for the right errors, and mark that
+    test as requiring `use_system_cxx_lib && <target>`.
+    """,
+    actions=lambda useSystem: [
+      AddFeature('use_system_cxx_lib')
+    ] if useSystem else [
+      # If we're testing upstream libc++, disable availability markup,
+      # which is not relevant for non-shipped flavors of libc++.
+      AddCompileFlag('-D_LIBCPP_DISABLE_AVAILABILITY')
+    ])
 ]

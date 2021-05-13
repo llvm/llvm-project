@@ -22,6 +22,7 @@
 using namespace mlir;
 using namespace mlir::LLVM;
 using mlir::LLVM::detail::createIntrinsicCall;
+using mlir::LLVM::detail::createNvvmIntrinsicCall;
 
 static llvm::Intrinsic::ID getShflBflyIntrinsicId(llvm::Type *resultType,
                                                   bool withPredicate) {

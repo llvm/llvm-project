@@ -630,7 +630,7 @@ bool TypeInfer::EnforceVectorSubVectorTypeIs(TypeSetByHwMode &Vec,
       return false;
     if (B.getVectorElementType() != P.getVectorElementType())
       return false;
-    return B.getVectorNumElements() < P.getVectorNumElements();
+    return B.getVectorMinNumElements() < P.getVectorMinNumElements();
   };
 
   /// Return true if S has no element (vector type) that T is a sub-vector of,
@@ -696,8 +696,10 @@ bool TypeInfer::EnforceSameNumElts(TypeSetByHwMode &V, TypeSetByHwMode &W) {
   // An actual vector type cannot have 0 elements, so we can treat scalars
   // as zero-length vectors. This way both vectors and scalars can be
   // processed identically.
-  auto NoLength = [](const SmallSet<unsigned,2> &Lengths, MVT T) -> bool {
-    return !Lengths.count(T.isVector() ? T.getVectorNumElements() : 0);
+  auto NoLength = [](const SmallDenseSet<ElementCount> &Lengths,
+                     MVT T) -> bool {
+    return !Lengths.count(T.isVector() ? T.getVectorElementCount()
+                                       : ElementCount::getNull());
   };
 
   SmallVector<unsigned, 4> Modes;
@@ -706,11 +708,13 @@ bool TypeInfer::EnforceSameNumElts(TypeSetByHwMode &V, TypeSetByHwMode &W) {
     TypeSetByHwMode::SetType &VS = V.get(M);
     TypeSetByHwMode::SetType &WS = W.get(M);
 
-    SmallSet<unsigned,2> VN, WN;
+    SmallDenseSet<ElementCount> VN, WN;
     for (MVT T : VS)
-      VN.insert(T.isVector() ? T.getVectorNumElements() : 0);
+      VN.insert(T.isVector() ? T.getVectorElementCount()
+                             : ElementCount::getNull());
     for (MVT T : WS)
-      WN.insert(T.isVector() ? T.getVectorNumElements() : 0);
+      WN.insert(T.isVector() ? T.getVectorElementCount()
+                             : ElementCount::getNull());
 
     Changed |= berase_if(VS, std::bind(NoLength, WN, std::placeholders::_1));
     Changed |= berase_if(WS, std::bind(NoLength, VN, std::placeholders::_1));

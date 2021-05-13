@@ -20,7 +20,9 @@
 
 using namespace llvm;
 
+namespace {
 enum DefaultOnOff { Default, Enable, Disable };
+}
 static cl::opt<DefaultOnOff> DwarfExtendedLoc(
     "dwarf-extended-loc", cl::Hidden,
     cl::desc("Disable emission of the extended flags in .loc directives."),
@@ -28,11 +30,13 @@ static cl::opt<DefaultOnOff> DwarfExtendedLoc(
                clEnumVal(Enable, "Enabled"), clEnumVal(Disable, "Disabled")),
     cl::init(Default));
 
+namespace llvm {
 cl::opt<cl::boolOrDefault> UseLEB128Directives(
     "use-leb128-directives", cl::Hidden,
     cl::desc(
         "Disable the usage of LEB128 directives, and generate .byte instead."),
     cl::init(cl::BOU_UNSET));
+}
 
 MCAsmInfo::MCAsmInfo() {
   SeparatorString = ";";

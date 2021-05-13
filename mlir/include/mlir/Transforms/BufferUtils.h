@@ -14,7 +14,7 @@
 #ifndef MLIR_TRANSFORMS_BUFFERUTILS_H
 #define MLIR_TRANSFORMS_BUFFERUTILS_H
 
-#include "mlir/Analysis/BufferAliasAnalysis.h"
+#include "mlir/Analysis/BufferViewFlowAnalysis.h"
 #include "mlir/Analysis/Liveness.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"
@@ -71,7 +71,7 @@ private:
 /// The base class for all BufferPlacement transformations.
 class BufferPlacementTransformationBase {
 public:
-  using ValueSetT = BufferAliasAnalysis::ValueSetT;
+  using ValueSetT = BufferViewFlowAnalysis::ValueSetT;
 
   /// Finds a common dominator for the given value while taking the positions
   /// of the values in the value set into account. It supports dominator and
@@ -106,7 +106,7 @@ public:
 
 protected:
   /// Alias information that can be updated during the insertion of copies.
-  BufferAliasAnalysis aliases;
+  BufferViewFlowAnalysis aliases;
 
   /// Stores all internally managed allocations.
   BufferPlacementAllocs allocs;

@@ -38,6 +38,17 @@ def testInitTensor():
 
   print(module)
 
+# CHECK-LABEL: TEST: testInitTensorStaticSizesAttribute
+@run
+def testInitTensorStaticSizesAttribute():
+  with Context() as ctx, Location.unknown():
+    module = Module.create()
+    f32 = F32Type.get()
+    with InsertionPoint(module.body):
+      op = linalg.InitTensorOp([3, 4], f32)
+      # CHECK: [3, 4]
+      print(op.attributes['static_sizes'])
+
 # CHECK-LABEL: TEST: testFill
 @run
 def testFill():
@@ -153,7 +164,7 @@ def testNamedStructuredOpGenericForm():
         # CHECK-NEXT:    std.mulf{{.*}} (f32, f32) -> f32
         # CHECK-NEXT:    std.addf{{.*}} (f32, f32) -> f32
         # CHECK-NEXT:    linalg.yield{{.*}} (f32) -> ()
-        # CHECK-NEXT:    {linalg.memoized_indexing_maps{{.*}}operand_segment_sizes = dense<[2, 1]> : vector<2xi32>} : 
+        # CHECK-NEXT:    {linalg.memoized_indexing_maps{{.*}}operand_segment_sizes = dense<[2, 1]> : vector<2xi32>} :
         # CHECK-SAME: (tensor<4x16xf32>, tensor<16x8xf32>, tensor<4x8xf32>) -> tensor<4x8xf32>
         return linalg.matmul(lhs, rhs, outs=[init_result.result])
 

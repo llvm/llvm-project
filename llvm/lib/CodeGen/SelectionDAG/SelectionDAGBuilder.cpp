@@ -607,30 +607,39 @@ static void getCopyToParts(SelectionDAG &DAG, const SDLoc &DL, SDValue Val,
     std::reverse(Parts, Parts + OrigNumParts);
 }
 
-static SDValue widenVectorToPartType(SelectionDAG &DAG,
-                                     SDValue Val, const SDLoc &DL, EVT PartVT) {
-  if (!PartVT.isFixedLengthVector())
+static SDValue widenVectorToPartType(SelectionDAG &DAG, SDValue Val,
+                                     const SDLoc &DL, EVT PartVT) {
+  if (!PartVT.isVector())
     return SDValue();
 
   EVT ValueVT = Val.getValueType();
-  unsigned PartNumElts = PartVT.getVectorNumElements();
-  unsigned ValueNumElts = ValueVT.getVectorNumElements();
-  if (PartNumElts > ValueNumElts &&
-      PartVT.getVectorElementType() == ValueVT.getVectorElementType()) {
-    EVT ElementVT = PartVT.getVectorElementType();
-    // Vector widening case, e.g. <2 x float> -> <4 x float>.  Shuffle in
-    // undef elements.
-    SmallVector<SDValue, 16> Ops;
-    DAG.ExtractVectorElements(Val, Ops);
-    SDValue EltUndef = DAG.getUNDEF(ElementVT);
-    for (unsigned i = ValueNumElts, e = PartNumElts; i != e; ++i)
-      Ops.push_back(EltUndef);
+  ElementCount PartNumElts = PartVT.getVectorElementCount();
+  ElementCount ValueNumElts = ValueVT.getVectorElementCount();
 
-    // FIXME: Use CONCAT for 2x -> 4x.
-    return DAG.getBuildVector(PartVT, DL, Ops);
-  }
+  // We only support widening vectors with equivalent element types and
+  // fixed/scalable properties. If a target needs to widen a fixed-length type
+  // to a scalable one, it should be possible to use INSERT_SUBVECTOR below.
+  if (ElementCount::isKnownLE(PartNumElts, ValueNumElts) ||
+      PartNumElts.isScalable() != ValueNumElts.isScalable() ||
+      PartVT.getVectorElementType() != ValueVT.getVectorElementType())
+    return SDValue();
 
-  return SDValue();
+  // Widening a scalable vector to another scalable vector is done by inserting
+  // the vector into a larger undef one.
+  if (PartNumElts.isScalable())
+    return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, PartVT, DAG.getUNDEF(PartVT),
+                       Val, DAG.getVectorIdxConstant(0, DL));
+
+  EVT ElementVT = PartVT.getVectorElementType();
+  // Vector widening case, e.g. <2 x float> -> <4 x float>.  Shuffle in
+  // undef elements.
+  SmallVector<SDValue, 16> Ops;
+  DAG.ExtractVectorElements(Val, Ops);
+  SDValue EltUndef = DAG.getUNDEF(ElementVT);
+  Ops.append((PartNumElts - ValueNumElts).getFixedValue(), EltUndef);
+
+  // FIXME: Use CONCAT for 2x -> 4x.
+  return DAG.getBuildVector(PartVT, DL, Ops);
 }
 
 /// getCopyToPartsVector - Create a series of nodes that contain the specified
@@ -9409,7 +9418,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     // FIXME: Split arguments if CLI.IsPostTypeLegalization
     Type *FinalType = Args[i].Ty;
     if (Args[i].IsByVal)
-      FinalType = cast<PointerType>(Args[i].Ty)->getElementType();
+      FinalType = Args[i].IndirectType;
     bool NeedsRegBlock = functionArgumentNeedsConsecutiveRegisters(
         FinalType, CLI.CallConv, CLI.IsVarArg);
     for (unsigned Value = 0, NumValues = ValueVTs.size(); Value != NumValues;
@@ -9480,11 +9489,10 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
       }
       Align MemAlign;
       if (Args[i].IsByVal || Args[i].IsInAlloca || Args[i].IsPreallocated) {
-        PointerType *Ty = cast<PointerType>(Args[i].Ty);
-        Type *ElementTy = Ty->getElementType();
+        Type *ElementTy = Args[i].IndirectType;
+        assert(ElementTy && "Indirect type not set in ArgListEntry");
 
-        unsigned FrameSize = DL.getTypeAllocSize(
-            Args[i].ByValType ? Args[i].ByValType : ElementTy);
+        unsigned FrameSize = DL.getTypeAllocSize(ElementTy);
         Flags.setByValSize(FrameSize);
 
         // info is not there but there are cases it cannot get right.

@@ -43,8 +43,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "cgscc-passmgr"
 
+namespace llvm {
 cl::opt<unsigned> MaxDevirtIterations("max-devirt-iterations", cl::ReallyHidden,
                                       cl::init(4));
+}
 
 STATISTIC(MaxSCCIterations, "Maximum CGSCCPassMgr iterations on one SCC");
 

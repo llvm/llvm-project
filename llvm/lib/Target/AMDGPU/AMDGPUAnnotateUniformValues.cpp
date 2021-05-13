@@ -14,11 +14,8 @@
 
 #include "AMDGPU.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/DepthFirstIterator.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
-#include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/MemoryDependenceAnalysis.h"
+#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/InitializePasses.h"
 
@@ -31,8 +28,7 @@ namespace {
 class AMDGPUAnnotateUniformValues : public FunctionPass,
                        public InstVisitor<AMDGPUAnnotateUniformValues> {
   LegacyDivergenceAnalysis *DA;
-  MemoryDependenceResults *MDR;
-  LoopInfo *LI;
+  MemorySSA *MSSA;
   DenseMap<Value*, GetElementPtrInst*> noClobberClones;
   bool isEntryFunc;
 
@@ -47,8 +43,7 @@ public:
   }
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LegacyDivergenceAnalysis>();
-    AU.addRequired<MemoryDependenceWrapperPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
+    AU.addRequired<MemorySSAWrapperPass>();
     AU.setPreservesAll();
  }
 
@@ -62,8 +57,7 @@ public:
 INITIALIZE_PASS_BEGIN(AMDGPUAnnotateUniformValues, DEBUG_TYPE,
                       "Add AMDGPU uniform metadata", false, false)
 INITIALIZE_PASS_DEPENDENCY(LegacyDivergenceAnalysis)
-INITIALIZE_PASS_DEPENDENCY(MemoryDependenceWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_END(AMDGPUAnnotateUniformValues, DEBUG_TYPE,
                     "Add AMDGPU uniform metadata", false, false)
 
@@ -77,37 +71,8 @@ static void setNoClobberMetadata(Instruction *I) {
 }
 
 bool AMDGPUAnnotateUniformValues::isClobberedInFunction(LoadInst * Load) {
-  // 1. get Loop for the Load->getparent();
-  // 2. if it exists, collect all the BBs from the most outer
-  // loop and check for the writes. If NOT - start DFS over all preds.
-  // 3. Start DFS over all preds from the most outer loop header.
-  SetVector<BasicBlock *> Checklist;
-  BasicBlock *Start = Load->getParent();
-  Checklist.insert(Start);
-  const Value *Ptr = Load->getPointerOperand();
-  const Loop *L = LI->getLoopFor(Start);
-  if (L) {
-    const Loop *P = L;
-    do {
-      L = P;
-      P = P->getParentLoop();
-    } while (P);
-    Checklist.insert(L->block_begin(), L->block_end());
-    Start = L->getHeader();
-  }
-
-  Checklist.insert(idf_begin(Start), idf_end(Start));
-  for (auto &BB : Checklist) {
-    BasicBlock::iterator StartIt = (!L && (BB == Load->getParent())) ?
-      BasicBlock::iterator(Load) : BB->end();
-    auto Q = MDR->getPointerDependencyFrom(
-        MemoryLocation::getBeforeOrAfter(Ptr), true, StartIt, BB, Load);
-    if (Q.isClobber() || Q.isUnknown() ||
-        // Store defines the load and thus clobbers it.
-        (Q.isDef() && Q.getInst()->mayWriteToMemory()))
-      return true;
-  }
-  return false;
+  const MemoryAccess *MA = MSSA->getWalker()->getClobberingMemoryAccess(Load);
+  return !MSSA->isLiveOnEntryDef(MA);
 }
 
 void AMDGPUAnnotateUniformValues::visitBranchInst(BranchInst &I) {
@@ -172,9 +137,8 @@ bool AMDGPUAnnotateUniformValues::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
 
-  DA  = &getAnalysis<LegacyDivergenceAnalysis>();
-  MDR = &getAnalysis<MemoryDependenceWrapperPass>().getMemDep();
-  LI  = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  DA = &getAnalysis<LegacyDivergenceAnalysis>();
+  MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
   isEntryFunc = AMDGPU::isEntryFunctionCC(F.getCallingConv());
 
   visit(F);

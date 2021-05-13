@@ -31,11 +31,11 @@ module {
   // GENERIC-SAME: () -> ()
   }) {sym_name = "baz", type = !llvm.func<i64 (i64)>} : () -> ()
 
-  // CHECK: llvm.func @qux(!llvm.ptr<i64> {llvm.noalias = true}, i64)
+  // CHECK: llvm.func @qux(!llvm.ptr<i64> {llvm.noalias}, i64)
   // CHECK: attributes {xxx = {yyy = 42 : i64}}
   "llvm.func"() ({
   }) {sym_name = "qux", type = !llvm.func<void (ptr<i64>, i64)>,
-      arg0 = {llvm.noalias = true}, xxx = {yyy = 42}} : () -> ()
+      arg_attrs = [{llvm.noalias}, {}], xxx = {yyy = 42}} : () -> ()
 
   // CHECK: llvm.func @roundtrip1()
   llvm.func @roundtrip1()
@@ -69,20 +69,20 @@ module {
   // CHECK: llvm.func @roundtrip8() -> i32
   llvm.func @roundtrip8() -> i32 attributes {}
 
-  // CHECK: llvm.func @roundtrip9(!llvm.ptr<i32> {llvm.noalias = true})
-  llvm.func @roundtrip9(!llvm.ptr<i32> {llvm.noalias = true})
+  // CHECK: llvm.func @roundtrip9(!llvm.ptr<i32> {llvm.noalias})
+  llvm.func @roundtrip9(!llvm.ptr<i32> {llvm.noalias})
 
-  // CHECK: llvm.func @roundtrip10(!llvm.ptr<i32> {llvm.noalias = true})
-  llvm.func @roundtrip10(%arg0: !llvm.ptr<i32> {llvm.noalias = true})
+  // CHECK: llvm.func @roundtrip10(!llvm.ptr<i32> {llvm.noalias})
+  llvm.func @roundtrip10(%arg0: !llvm.ptr<i32> {llvm.noalias})
 
-  // CHECK: llvm.func @roundtrip11(%{{.*}}: !llvm.ptr<i32> {llvm.noalias = true}) {
-  llvm.func @roundtrip11(%arg0: !llvm.ptr<i32> {llvm.noalias = true}) {
+  // CHECK: llvm.func @roundtrip11(%{{.*}}: !llvm.ptr<i32> {llvm.noalias}) {
+  llvm.func @roundtrip11(%arg0: !llvm.ptr<i32> {llvm.noalias}) {
     llvm.return
   }
 
-  // CHECK: llvm.func @roundtrip12(%{{.*}}: !llvm.ptr<i32> {llvm.noalias = true})
+  // CHECK: llvm.func @roundtrip12(%{{.*}}: !llvm.ptr<i32> {llvm.noalias})
   // CHECK: attributes {foo = 42 : i32}
-  llvm.func @roundtrip12(%arg0: !llvm.ptr<i32> {llvm.noalias = true})
+  llvm.func @roundtrip12(%arg0: !llvm.ptr<i32> {llvm.noalias})
   attributes {foo = 42 : i32} {
     llvm.return
   }

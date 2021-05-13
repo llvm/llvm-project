@@ -90,9 +90,11 @@ static cl::opt<unsigned> GuardWideningWindow(
     cl::desc("How wide an instruction window to bypass looking for "
              "another guard"));
 
+namespace llvm {
 /// enable preservation of attributes in assume like:
 /// call void @llvm.assume(i1 true) [ "nonnull"(i32* %PTR) ]
 extern cl::opt<bool> EnableKnowledgeRetention;
+} // namespace llvm
 
 /// Return the specified type promoted as it would be to pass though a va_arg
 /// area.
@@ -288,16 +290,20 @@ Value *InstCombinerImpl::simplifyMaskedLoad(IntrinsicInst &II) {
 
   // If the mask is all ones or undefs, this is a plain vector load of the 1st
   // argument.
-  if (maskIsAllOneOrUndef(II.getArgOperand(2)))
-    return Builder.CreateAlignedLoad(II.getType(), LoadPtr, Alignment,
-                                     "unmaskedload");
+  if (maskIsAllOneOrUndef(II.getArgOperand(2))) {
+    LoadInst *L = Builder.CreateAlignedLoad(II.getType(), LoadPtr, Alignment,
+                                            "unmaskedload");
+    L->copyMetadata(II);
+    return L;
+  }
 
   // If we can unconditionally load from this address, replace with a
   // load/select idiom. TODO: use DT for context sensitive query
   if (isDereferenceablePointer(LoadPtr, II.getType(),
                                II.getModule()->getDataLayout(), &II, nullptr)) {
-    Value *LI = Builder.CreateAlignedLoad(II.getType(), LoadPtr, Alignment,
-                                         "unmaskedload");
+    LoadInst *LI = Builder.CreateAlignedLoad(II.getType(), LoadPtr, Alignment,
+                                             "unmaskedload");
+    LI->copyMetadata(II);
     return Builder.CreateSelect(II.getArgOperand(2), LI, II.getArgOperand(3));
   }
 
@@ -320,7 +326,10 @@ Instruction *InstCombinerImpl::simplifyMaskedStore(IntrinsicInst &II) {
   if (ConstMask->isAllOnesValue()) {
     Value *StorePtr = II.getArgOperand(1);
     Align Alignment = cast<ConstantInt>(II.getArgOperand(2))->getAlignValue();
-    return new StoreInst(II.getArgOperand(0), StorePtr, false, Alignment);
+    StoreInst *S =
+        new StoreInst(II.getArgOperand(0), StorePtr, false, Alignment);
+    S->copyMetadata(II);
+    return S;
   }
 
   if (isa<ScalableVectorType>(ConstMask->getType()))

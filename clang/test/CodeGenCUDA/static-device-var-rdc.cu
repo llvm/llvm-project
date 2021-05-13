@@ -2,25 +2,44 @@
 // REQUIRES: amdgpu-registered-target
 
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device \
-// RUN:   -fgpu-rdc -emit-llvm -o - -x hip %s | FileCheck \
+// RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s | FileCheck \
 // RUN:   -check-prefixes=DEV,INT-DEV %s
 
 // RUN: %clang_cc1 -triple x86_64-gnu-linux \
-// RUN:   -fgpu-rdc -emit-llvm -o - -x hip %s | FileCheck \
+// RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s | FileCheck \
 // RUN:   -check-prefixes=HOST,INT-HOST %s
 
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -cuid=abc \
-// RUN:   -fgpu-rdc -emit-llvm -o - -x hip %s > %t.dev
+// RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s > %t.dev
 // RUN: cat %t.dev | FileCheck -check-prefixes=DEV,EXT-DEV %s
 
 // RUN: %clang_cc1 -triple x86_64-gnu-linux -cuid=abc \
-// RUN:   -fgpu-rdc -emit-llvm -o - -x hip %s > %t.host
+// RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s > %t.host
 // RUN: cat %t.host | FileCheck -check-prefixes=HOST,EXT-HOST %s
 
 // Check host and device compilations use the same postfixes for static
 // variable names.
 
 // RUN: cat %t.dev %t.host | FileCheck -check-prefix=POSTFIX %s
+
+// Negative tests.
+
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device \
+// RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s | FileCheck \
+// RUN:   -check-prefix=DEV-NEG %s
+
+// RUN: %clang_cc1 -triple x86_64-gnu-linux \
+// RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s | FileCheck \
+// RUN:   -check-prefix=HOST-NEG %s
+
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -cuid=abc \
+// RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s > %t.dev
+// RUN: cat %t.dev | FileCheck -check-prefix=DEV-NEG %s
+
+// RUN: %clang_cc1 -triple x86_64-gnu-linux -cuid=abc \
+// RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s > %t.host
+// RUN: cat %t.host | FileCheck -check-prefix=HOST-NEG %s
+
 
 #include "Inputs/cuda.h"
 
@@ -61,8 +80,13 @@ static __constant__ int y;
 
 // Test static host variable, which should not be externalized nor registered.
 // HOST-DAG: @_ZL1z = internal global i32 0
-// DEV-NOT: @_ZL1z
+// DEV-NEG-NOT: @_ZL1z
 static int z;
+
+// Test non-ODR-use of static device variable is not emitted or registered.
+// DEV-NEG-NOT: @_ZL1u
+// HOST-NEG-NOT: @_ZL1u
+static __device__ int u;
 
 // Test static device variable in inline function, which should not be
 // externalized nor registered.
@@ -77,6 +101,7 @@ __global__ void kernel(int *a, const int **b) {
   const static int w = 1;
   a[0] = x;
   a[1] = y;
+  a[2] = sizeof(u);
   b[0] = &w;
   b[1] = &x2;
   devfun(b);
@@ -88,10 +113,12 @@ void foo() {
   getDeviceSymbol(&x);
   getDeviceSymbol(&y);
   z = 123;
+  decltype(u) tmp;
 }
 
-// HOST: __hipRegisterVar({{.*}}@_ZL1x {{.*}}@[[DEVNAMEX]]
-// HOST: __hipRegisterVar({{.*}}@_ZL1y {{.*}}@[[DEVNAMEY]]
-// HOST-NOT: __hipRegisterVar({{.*}}@_ZL2x2
-// HOST-NOT: __hipRegisterVar({{.*}}@_ZZ6kernelPiPPKiE1w
-// HOST-NOT: __hipRegisterVar({{.*}}@_ZZ6devfunPPKiE1p
+// HOST-DAG: __hipRegisterVar({{.*}}@_ZL1x {{.*}}@[[DEVNAMEX]]
+// HOST-DAG: __hipRegisterVar({{.*}}@_ZL1y {{.*}}@[[DEVNAMEY]]
+// HOST-NEG-NOT: __hipRegisterVar({{.*}}@_ZL2x2
+// HOST-NEG-NOT: __hipRegisterVar({{.*}}@_ZZ6kernelPiPPKiE1w
+// HOST-NEG-NOT: __hipRegisterVar({{.*}}@_ZZ6devfunPPKiE1p
+// HOST-NEG-NOT: __hipRegisterVar({{.*}}@_ZL1u

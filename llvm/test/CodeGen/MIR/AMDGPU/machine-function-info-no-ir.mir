@@ -340,3 +340,18 @@ body:             |
     S_ENDPGM 0
 
 ...
+
+---
+# ALL-LABEL: name: scavenge_fi
+# ALL: scavengeFI: '%stack.0'
+name: scavenge_fi
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4 }
+machineFunctionInfo:
+  scavengeFI: '%stack.0'
+
+body:             |
+  bb.0:
+    S_ENDPGM 0
+
+...

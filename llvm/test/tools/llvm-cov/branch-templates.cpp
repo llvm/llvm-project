@@ -1,9 +1,9 @@
 // RUN: llvm-profdata merge %S/Inputs/branch-templates.proftext -o %t.profdata
 // RUN: llvm-cov show --show-expansions --show-branches=count %S/Inputs/branch-templates.o32l -instr-profile %t.profdata -path-equivalence=/tmp,%S %s | FileCheck %s
 // RUN: llvm-cov report --show-branch-summary %S/Inputs/branch-templates.o32l -instr-profile %t.profdata -show-functions -path-equivalence=/tmp,%S %s | FileCheck %s -check-prefix=REPORT
+// RUN: llvm-cov report --show-branch-summary %S/Inputs/branch-templates.o32l -instr-profile %t.profdata -path-equivalence=/tmp,%S %s | FileCheck %s -check-prefix=REPORTFILE
 
 #include <stdio.h>
-
 template<typename T>
 void unused(T x) {
   return;
@@ -45,3 +45,17 @@ int main() {
 // REPORT-NEXT: _Z4funcIfEiT_                     5       2  60.00%         7       3  57.14%         2       1  50.00%
 // REPORT-NEXT: ---
 // REPORT-NEXT: TOTAL                            22       7  68.18%        31      11  64.52%        12       6  50.00%
+
+// Make sure the covered branch tally for the function instantiation group is
+// merged to reflect maximum branch coverage of a single instantiation, just
+// like what is done for lines and regions. Also, the total branch tally
+// summary for an instantiation group should agree with the total number of
+// branches in the definition (In this case, 2 and 6 for func<>() and main(),
+// respectively).  This is returned by: FunctionCoverageSummary::get(const
+// InstantiationGroup &Group, ...)
+
+// REPORTFILE: Filename                      Regions    Missed Regions     Cover   Functions  Missed Functions  Executed       Lines      Missed Lines     Cover    Branches   Missed Branches     Cover
+// REPORTFILE-NEXT: ---
+// REPORTFILE-NEXT: branch-templates.cpp          12                 3    75.00%           2                 0   100.00%          17                 4    76.47%           8                 4    50.00%
+// REPORTFILE-NEXT: ---
+// REPORTFILE-NEXT: TOTAL                              12                 3    75.00%           2                 0   100.00%          17                 4    76.47%           8                 4    50.00%

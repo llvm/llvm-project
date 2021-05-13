@@ -223,17 +223,9 @@ public:
   /// Return the size in bits of the memory reference.
   uint64_t getSizeInBits() const { return Size * 8; }
 
-  LLVM_ATTRIBUTE_DEPRECATED(uint64_t getAlignment() const,
-                            "Use getAlign instead");
-
   /// Return the minimum known alignment in bytes of the actual memory
   /// reference.
   Align getAlign() const;
-
-  LLVM_ATTRIBUTE_DEPRECATED(uint64_t getBaseAlignment() const,
-                            "Use getBaseAlign instead") {
-    return BaseAlign.value();
-  }
 
   /// Return the minimum known alignment in bytes of the base address, without
   /// the offset.
@@ -276,7 +268,7 @@ public:
 
   /// Returns true if this memory operation doesn't have any ordering
   /// constraints other than normal aliasing. Volatile and (ordered) atomic
-  /// memory operations can't be reordered. 
+  /// memory operations can't be reordered.
   bool isUnordered() const {
     return (getOrdering() == AtomicOrdering::NotAtomic ||
             getOrdering() == AtomicOrdering::Unordered) &&

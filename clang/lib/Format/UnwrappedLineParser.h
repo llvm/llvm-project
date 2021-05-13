@@ -114,6 +114,7 @@ private:
   void parseNew();
   void parseAccessSpecifier();
   bool parseEnum();
+  bool parseStructLike();
   void parseConcept();
   void parseRequires();
   void parseRequiresExpression(unsigned int OriginalLevel);

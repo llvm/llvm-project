@@ -10,4 +10,7 @@ register read --all
 # CHECK-DAG: ds = 0x0000003b
 # CHECK-DAG: es = 0x0000003b
 
-# TODO: fix reading fp registers
+# CHECK-DAG: fiseg = 0x00000000
+# CHECK-DAG: fioff = 0x00401c52
+# CHECK-DAG: foseg = 0x00000000
+# CHECK-DAG: fooff = 0xffffd8b8

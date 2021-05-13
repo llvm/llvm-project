@@ -135,71 +135,6 @@ uint64_t ObjFile::calcNewAddend(const WasmRelocation &reloc) const {
   }
 }
 
-// Calculate the value we expect to find at the relocation location.
-// This is used as a sanity check before applying a relocation to a given
-// location.  It is useful for catching bugs in the compiler and linker.
-uint64_t ObjFile::calcExpectedValue(const WasmRelocation &reloc) const {
-  switch (reloc.Type) {
-  case R_WASM_TABLE_INDEX_I32:
-  case R_WASM_TABLE_INDEX_I64:
-  case R_WASM_TABLE_INDEX_SLEB:
-  case R_WASM_TABLE_INDEX_SLEB64: {
-    const WasmSymbol &sym = wasmObj->syms()[reloc.Index];
-    return tableEntries[sym.Info.ElementIndex];
-  }
-  case R_WASM_TABLE_INDEX_REL_SLEB: {
-    const WasmSymbol &sym = wasmObj->syms()[reloc.Index];
-    return tableEntriesRel[sym.Info.ElementIndex];
-  }
-  case R_WASM_MEMORY_ADDR_LEB:
-  case R_WASM_MEMORY_ADDR_LEB64:
-  case R_WASM_MEMORY_ADDR_SLEB:
-  case R_WASM_MEMORY_ADDR_SLEB64:
-  case R_WASM_MEMORY_ADDR_REL_SLEB:
-  case R_WASM_MEMORY_ADDR_REL_SLEB64:
-  case R_WASM_MEMORY_ADDR_I32:
-  case R_WASM_MEMORY_ADDR_I64:
-  case R_WASM_MEMORY_ADDR_TLS_SLEB:
-  case R_WASM_MEMORY_ADDR_LOCREL_I32: {
-    const WasmSymbol &sym = wasmObj->syms()[reloc.Index];
-    if (sym.isUndefined())
-      return 0;
-    const WasmSegment &segment =
-        wasmObj->dataSegments()[sym.Info.DataRef.Segment];
-    if (segment.Data.Offset.Opcode == WASM_OPCODE_I32_CONST)
-      return segment.Data.Offset.Value.Int32 + sym.Info.DataRef.Offset +
-             reloc.Addend;
-    else if (segment.Data.Offset.Opcode == WASM_OPCODE_I64_CONST)
-      return segment.Data.Offset.Value.Int64 + sym.Info.DataRef.Offset +
-             reloc.Addend;
-    else
-      llvm_unreachable("unknown init expr opcode");
-  }
-  case R_WASM_FUNCTION_OFFSET_I32:
-  case R_WASM_FUNCTION_OFFSET_I64: {
-    const WasmSymbol &sym = wasmObj->syms()[reloc.Index];
-    InputFunction *f =
-        functions[sym.Info.ElementIndex - wasmObj->getNumImportedFunctions()];
-    return f->getFunctionInputOffset() + f->getFunctionCodeOffset() +
-           reloc.Addend;
-  }
-  case R_WASM_SECTION_OFFSET_I32:
-    return reloc.Addend;
-  case R_WASM_TYPE_INDEX_LEB:
-    return reloc.Index;
-  case R_WASM_FUNCTION_INDEX_LEB:
-  case R_WASM_GLOBAL_INDEX_LEB:
-  case R_WASM_GLOBAL_INDEX_I32:
-  case R_WASM_EVENT_INDEX_LEB:
-  case R_WASM_TABLE_NUMBER_LEB: {
-    const WasmSymbol &sym = wasmObj->syms()[reloc.Index];
-    return sym.Info.ElementIndex;
-  }
-  default:
-    llvm_unreachable("unknown relocation type");
-  }
-}
-
 // Translate from the relocation's index into the final linked output value.
 uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
                                const InputChunk *chunk) const {
@@ -247,10 +182,10 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
     // files created before we introduced TLS relocations.
     // TODO(sbc): Remove this legacy behaviour one day.  This will break
     // backward compat with old object files built with `-fPIC`.
-    if (D->segment && D->segment->outputSeg->name == ".tdata")
+    if (D->segment && D->segment->outputSeg->isTLS())
       return D->getOutputSegmentOffset() + reloc.Addend;
 
-    uint64_t value = D->getVA(reloc.Addend);
+    uint64_t value = D->getVA() + reloc.Addend;
     if (reloc.Type == R_WASM_MEMORY_ADDR_LOCREL_I32) {
       const auto *segment = cast<InputSegment>(chunk);
       uint64_t p = segment->outputSeg->startVA + segment->outputSegmentOffset +
@@ -425,6 +360,29 @@ void ObjFile::addLegacyIndirectFunctionTableIfNeeded(
   config->legacyFunctionTable = true;
 }
 
+static bool shouldMerge(const WasmSegment &seg) {
+  // As of now we only support merging strings, and only with single byte
+  // alignment (2^0).
+  if (!(seg.Data.LinkingFlags & WASM_SEG_FLAG_STRINGS) ||
+      (seg.Data.Alignment != 0))
+    return false;
+
+  // On a regular link we don't merge sections if -O0 (default is -O1). This
+  // sometimes makes the linker significantly faster, although the output will
+  // be bigger.
+  if (config->optimize == 0)
+    return false;
+
+  // A mergeable section with size 0 is useless because they don't have
+  // any data to merge. A mergeable string section with size 0 can be
+  // argued as invalid because it doesn't end with a null character.
+  // We'll avoid a mess by handling them as if they were non-mergeable.
+  if (seg.Data.Content.size() == 0)
+    return false;
+
+  return true;
+}
+
 void ObjFile::parse(bool ignoreComdats) {
   // Parse a memory buffer as a wasm file.
   LLVM_DEBUG(dbgs() << "Parsing object: " << toString(this) << "\n");
@@ -506,8 +464,13 @@ void ObjFile::parse(bool ignoreComdats) {
 
   // Populate `Segments`.
   for (const WasmSegment &s : wasmObj->dataSegments()) {
-    auto* seg = make<InputSegment>(s, this);
+    InputSegment *seg;
+    if (shouldMerge(s)) {
+      seg = make<MergeInputSegment>(&s, this);
+    } else
+      seg = make<InputSegment>(&s, this);
     seg->discarded = isExcludedByComdat(seg);
+
     segments.emplace_back(seg);
   }
   setRelocs(segments, dataSection);

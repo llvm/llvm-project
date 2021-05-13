@@ -38,7 +38,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp,
     auto globalOp = rewriter.create<LLVM::GlobalOp>(
         gpuFuncOp.getLoc(), arrayType, /*isConstant=*/false,
         LLVM::Linkage::Internal, name, /*value=*/Attribute(),
-        gpu::GPUDialect::getWorkgroupAddressSpace());
+        /*alignment=*/0, gpu::GPUDialect::getWorkgroupAddressSpace());
     workgroupBuffers.push_back(globalOp);
   }
 
@@ -58,7 +58,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp,
   SmallVector<NamedAttribute, 4> attributes;
   for (const auto &attr : gpuFuncOp->getAttrs()) {
     if (attr.first == SymbolTable::getSymbolAttrName() ||
-        attr.first == impl::getTypeAttrName() ||
+        attr.first == function_like_impl::getTypeAttrName() ||
         attr.first == gpu::GPUFuncOp::getNumWorkgroupAttributionsAttrName())
       continue;
     attributes.push_back(attr);

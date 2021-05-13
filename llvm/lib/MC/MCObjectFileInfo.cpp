@@ -855,9 +855,9 @@ void MCObjectFileInfo::initWasmMCObjectFileInfo(const Triple &T) {
 
   // DWP Sections
   DwarfCUIndexSection =
-      Ctx->getWasmSection(".debug_cu_index", SectionKind::getMetadata(), 0);
+      Ctx->getWasmSection(".debug_cu_index", SectionKind::getMetadata());
   DwarfTUIndexSection =
-      Ctx->getWasmSection(".debug_tu_index", SectionKind::getMetadata(), 0);
+      Ctx->getWasmSection(".debug_tu_index", SectionKind::getMetadata());
 
   // Wasm use data section for LSDA.
   // TODO Consider putting each function's exception table in a separate
@@ -959,11 +959,10 @@ void MCObjectFileInfo::initXCOFFMCObjectFileInfo(const Triple &T) {
       /* MultiSymbolsAllowed */ true, ".dwmac", XCOFF::SSUBTYP_DWMAC);
 }
 
-void MCObjectFileInfo::InitMCObjectFileInfo(const Triple &TheTriple, bool PIC,
-                                            MCContext &ctx,
+void MCObjectFileInfo::initMCObjectFileInfo(MCContext &MCCtx, bool PIC,
                                             bool LargeCodeModel) {
   PositionIndependent = PIC;
-  Ctx = &ctx;
+  Ctx = &MCCtx;
 
   // Common.
   CommDirectiveSupportsAlignment = true;
@@ -982,51 +981,35 @@ void MCObjectFileInfo::InitMCObjectFileInfo(const Triple &TheTriple, bool PIC,
   DwarfAccelNamespaceSection = nullptr; // Used only by selected targets.
   DwarfAccelTypesSection = nullptr;     // Used only by selected targets.
 
-  TT = TheTriple;
-
-  switch (TT.getObjectFormat()) {
-  case Triple::MachO:
-    Env = IsMachO;
-    initMachOMCObjectFileInfo(TT);
+  Triple TheTriple = Ctx->getTargetTriple();
+  switch (Ctx->getObjectFileType()) {
+  case MCContext::IsMachO:
+    initMachOMCObjectFileInfo(TheTriple);
     break;
-  case Triple::COFF:
-    if (!TT.isOSWindows())
-      report_fatal_error(
-          "Cannot initialize MC for non-Windows COFF object files.");
-
-    Env = IsCOFF;
-    initCOFFMCObjectFileInfo(TT);
+  case MCContext::IsCOFF:
+    initCOFFMCObjectFileInfo(TheTriple);
     break;
-  case Triple::ELF:
-    Env = IsELF;
-    initELFMCObjectFileInfo(TT, LargeCodeModel);
+  case MCContext::IsELF:
+    initELFMCObjectFileInfo(TheTriple, LargeCodeModel);
     break;
-  case Triple::Wasm:
-    Env = IsWasm;
-    initWasmMCObjectFileInfo(TT);
+  case MCContext::IsWasm:
+    initWasmMCObjectFileInfo(TheTriple);
     break;
-  case Triple::GOFF:
-    report_fatal_error("Cannot initialize MC for GOFF object file format");
-    break;
-  case Triple::XCOFF:
-    Env = IsXCOFF;
-    initXCOFFMCObjectFileInfo(TT);
-    break;
-  case Triple::UnknownObjectFormat:
-    report_fatal_error("Cannot initialize MC for unknown object file format.");
+  case MCContext::IsXCOFF:
+    initXCOFFMCObjectFileInfo(TheTriple);
     break;
   }
 }
 
 MCSection *MCObjectFileInfo::getDwarfComdatSection(const char *Name,
                                                    uint64_t Hash) const {
-  switch (TT.getObjectFormat()) {
+  switch (Ctx->getTargetTriple().getObjectFormat()) {
   case Triple::ELF:
     return Ctx->getELFSection(Name, ELF::SHT_PROGBITS, ELF::SHF_GROUP, 0,
                               utostr(Hash), /*IsComdat=*/true);
   case Triple::Wasm:
-    return Ctx->getWasmSection(Name, SectionKind::getMetadata(), utostr(Hash),
-                               MCContext::GenericSectionID);
+    return Ctx->getWasmSection(Name, SectionKind::getMetadata(), 0,
+                               utostr(Hash), MCContext::GenericSectionID);
   case Triple::MachO:
   case Triple::COFF:
   case Triple::GOFF:
@@ -1041,7 +1024,7 @@ MCSection *MCObjectFileInfo::getDwarfComdatSection(const char *Name,
 
 MCSection *
 MCObjectFileInfo::getStackSizesSection(const MCSection &TextSec) const {
-  if (Env != IsELF)
+  if (Ctx->getObjectFileType() != MCContext::IsELF)
     return StackSizesSection;
 
   const MCSectionELF &ElfSec = static_cast<const MCSectionELF &>(TextSec);
@@ -1059,7 +1042,7 @@ MCObjectFileInfo::getStackSizesSection(const MCSection &TextSec) const {
 
 MCSection *
 MCObjectFileInfo::getBBAddrMapSection(const MCSection &TextSec) const {
-  if (Env != IsELF)
+  if (Ctx->getObjectFileType() != MCContext::IsELF)
     return nullptr;
 
   const MCSectionELF &ElfSec = static_cast<const MCSectionELF &>(TextSec);
@@ -1079,7 +1062,7 @@ MCObjectFileInfo::getBBAddrMapSection(const MCSection &TextSec) const {
 
 MCSection *
 MCObjectFileInfo::getPseudoProbeSection(const MCSection *TextSec) const {
-  if (Env == IsELF) {
+  if (Ctx->getObjectFileType() == MCContext::IsELF) {
     const auto *ElfSec = static_cast<const MCSectionELF *>(TextSec);
     // Create a separate section for probes that comes with a comdat function.
     if (const MCSymbol *Group = ElfSec->getGroup()) {
@@ -1095,7 +1078,7 @@ MCObjectFileInfo::getPseudoProbeSection(const MCSection *TextSec) const {
 
 MCSection *
 MCObjectFileInfo::getPseudoProbeDescSection(StringRef FuncName) const {
-  if (Env == IsELF) {
+  if (Ctx->getObjectFileType() == MCContext::IsELF) {
     // Create a separate comdat group for each function's descriptor in order
     // for the linker to deduplicate. The duplication, must be from different
     // tranlation unit, can come from:
@@ -1105,7 +1088,7 @@ MCObjectFileInfo::getPseudoProbeDescSection(StringRef FuncName) const {
     // Use a concatenation of the section name and the function name as the
     // group name so that descriptor-only groups won't be folded with groups of
     // code.
-    if (TT.supportsCOMDAT() && !FuncName.empty()) {
+    if (Ctx->getTargetTriple().supportsCOMDAT() && !FuncName.empty()) {
       auto *S = static_cast<MCSectionELF *>(PseudoProbeDescSection);
       auto Flags = S->getFlags() | ELF::SHF_GROUP;
       return Ctx->getELFSection(S->getName(), S->getType(), Flags,

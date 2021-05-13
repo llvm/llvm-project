@@ -108,12 +108,12 @@ def main():
       check_indent = ''
 
     builder = common.FunctionTestBuilder(
-        run_list=run_list, 
+        run_list=run_list,
         flags=type('', (object,), {
             'verbose': ti.args.verbose,
             'function_signature': False,
             'check_attributes': False,
-            'replace_function_regex': []}),
+            'replace_value_regex': []}),
         scrubber_args=[ti.args])
 
     for prefixes, llc_tool, llc_args, preprocess_cmd, triple_in_cmd, march_in_cmd in run_list:

@@ -176,6 +176,82 @@ public:
   /// it if it does not exist.
   llvm::NamedMDNode *getOrInsertNamedModuleMetadata(StringRef name);
 
+  /// Common CRTP base class for ModuleTranslation stack frames.
+  class StackFrame {
+  public:
+    virtual ~StackFrame() {}
+    TypeID getTypeID() const { return typeID; }
+
+  protected:
+    explicit StackFrame(TypeID typeID) : typeID(typeID) {}
+
+  private:
+    const TypeID typeID;
+    virtual void anchor();
+  };
+
+  /// Concrete CRTP base class for ModuleTranslation stack frames. When
+  /// translating operations with regions, users of ModuleTranslation can store
+  /// state on ModuleTranslation stack before entering the region and inspect
+  /// it when converting operations nested within that region. Users are
+  /// expected to derive this class and put any relevant information into fields
+  /// of the derived class. The usual isa/dyn_cast functionality is available
+  /// for instances of derived classes.
+  template <typename Derived>
+  class StackFrameBase : public StackFrame {
+  public:
+    explicit StackFrameBase() : StackFrame(TypeID::get<Derived>()) {}
+  };
+
+  /// Creates a stack frame of type `T` on ModuleTranslation stack. `T` must
+  /// be derived from `StackFrameBase<T>` and constructible from the provided
+  /// arguments. Doing this before entering the region of the op being
+  /// translated makes the frame available when translating ops within that
+  /// region.
+  template <typename T, typename... Args>
+  void stackPush(Args &&... args) {
+    static_assert(
+        std::is_base_of<StackFrame, T>::value,
+        "can only push instances of StackFrame on ModuleTranslation stack");
+    stack.push_back(std::make_unique<T>(std::forward<Args>(args)...));
+  }
+
+  /// Pops the last element from the ModuleTranslation stack.
+  void stackPop() { stack.pop_back(); }
+
+  /// Calls `callback` for every ModuleTranslation stack frame of type `T`
+  /// starting from the top of the stack.
+  template <typename T>
+  WalkResult
+  stackWalk(llvm::function_ref<WalkResult(const T &)> callback) const {
+    static_assert(std::is_base_of<StackFrame, T>::value,
+                  "expected T derived from StackFrame");
+    if (!callback)
+      return WalkResult::skip();
+    for (const std::unique_ptr<StackFrame> &frame : llvm::reverse(stack)) {
+      if (T *ptr = dyn_cast_or_null<T>(frame.get())) {
+        WalkResult result = callback(*ptr);
+        if (result.wasInterrupted())
+          return result;
+      }
+    }
+    return WalkResult::advance();
+  }
+
+  /// RAII object calling stackPush/stackPop on construction/destruction.
+  template <typename T>
+  struct SaveStack {
+    template <typename... Args>
+    explicit SaveStack(ModuleTranslation &m, Args &&...args)
+        : moduleTranslation(m) {
+      moduleTranslation.stackPush<T>(std::forward<Args>(args)...);
+    }
+    ~SaveStack() { moduleTranslation.stackPop(); }
+
+  private:
+    ModuleTranslation &moduleTranslation;
+  };
+
 private:
   ModuleTranslation(Operation *module,
                     std::unique_ptr<llvm::Module> llvmModule);
@@ -233,6 +309,10 @@ private:
   /// metadata. The metadata is attached to Latch block branches with this
   /// attribute.
   DenseMap<Attribute, llvm::MDNode *> loopOptionsMetadataMapping;
+
+  /// Stack of user-specified state elements, useful when translating operations
+  /// with regions.
+  SmallVector<std::unique_ptr<StackFrame>> stack;
 };
 
 namespace detail {
@@ -257,9 +337,27 @@ llvm::Value *createIntrinsicCall(llvm::IRBuilderBase &builder,
                                  llvm::Intrinsic::ID intrinsic,
                                  ArrayRef<llvm::Value *> args = {},
                                  ArrayRef<llvm::Type *> tys = {});
+
+/// Creates a call to an LLVM IR intrinsic function with the given arguments
+/// for NVVM WMMA ops. Handles cases where the intrinsic name is overloaded
+/// using the types of arguments supplied. Selects the correct intrinsic
+/// by inspecting the argument types.
+llvm::Value *createNvvmIntrinsicCall(llvm::IRBuilderBase &builder,
+                                     llvm::Intrinsic::ID intrinsic,
+                                     ArrayRef<llvm::Value *> args = {});
 } // namespace detail
 
 } // namespace LLVM
 } // namespace mlir
+
+namespace llvm {
+template <typename T>
+struct isa_impl<T, ::mlir::LLVM::ModuleTranslation::StackFrame> {
+  static inline bool
+  doit(const ::mlir::LLVM::ModuleTranslation::StackFrame &frame) {
+    return frame.getTypeID() == ::mlir::TypeID::get<T>();
+  }
+};
+} // namespace llvm
 
 #endif // MLIR_TARGET_LLVMIR_MODULETRANSLATION_H

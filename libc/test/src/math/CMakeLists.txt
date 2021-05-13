@@ -976,7 +976,7 @@ add_fp_unittest(
 # from insufficient precision in MPFR calculations leading to
 # https://hal.archives-ouvertes.fr/hal-01091186/document. We will
 # renable after fixing the precision issue.
-if(${LIBC_TARGET_MACHINE} MATCHES "x86_64")
+if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
   add_fp_unittest(
     sqrtl_test
     NEED_MPFR

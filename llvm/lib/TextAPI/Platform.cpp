@@ -12,6 +12,7 @@
 
 #include "llvm/TextAPI/Platform.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
 
 namespace llvm {
@@ -28,7 +29,7 @@ PlatformKind mapToPlatformKind(PlatformKind Platform, bool WantSim) {
   case PlatformKind::watchOS:
     return WantSim ? PlatformKind::watchOSSimulator : PlatformKind::watchOS;
   }
-  llvm_unreachable("Unknown llvm.MachO.PlatformKind enum");
+  llvm_unreachable("Unknown llvm::MachO::PlatformKind enum");
 }
 
 PlatformKind mapToPlatformKind(const Triple &Target) {
@@ -86,7 +87,22 @@ StringRef getPlatformName(PlatformKind Platform) {
   case PlatformKind::driverKit:
     return "DriverKit";
   }
-  llvm_unreachable("Unknown llvm.MachO.PlatformKind enum");
+  llvm_unreachable("Unknown llvm::MachO::PlatformKind enum");
+}
+
+PlatformKind getPlatformFromName(StringRef Name) {
+  return StringSwitch<PlatformKind>(Name)
+      .Case("macos", PlatformKind::macOS)
+      .Case("ios", PlatformKind::iOS)
+      .Case("tvos", PlatformKind::tvOS)
+      .Case("watchos", PlatformKind::watchOS)
+      .Case("bridgeos", PlatformKind::macOS)
+      .Case("ios-macabi", PlatformKind::macCatalyst)
+      .Case("ios-simulator", PlatformKind::iOSSimulator)
+      .Case("tvos-simulator", PlatformKind::tvOSSimulator)
+      .Case("watchos-simulator", PlatformKind::watchOSSimulator)
+      .Case("driverkit", PlatformKind::driverKit)
+      .Default(PlatformKind::unknown);
 }
 
 } // end namespace MachO.

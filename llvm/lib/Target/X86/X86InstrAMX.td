@@ -48,6 +48,8 @@ let Predicates = [HasAMXTILE, In64BitMode] in {
                      VEX, T8XD;
 
     // Pseduo instruction for RA.
+    def PLDTILECFGV : PseudoI<(outs), (ins opaquemem:$src),
+                              [(int_x86_ldtilecfg_internal addr:$src)]>;
     def PTILELOADDV : PseudoI<(outs TILE:$dst), (ins GR16:$src1,
                                                      GR16:$src2,
                                                      opaquemem:$src3), []>;

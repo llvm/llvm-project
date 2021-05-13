@@ -180,8 +180,8 @@ template<class _Tp, class _Up>
 concept common_with =
   same_as<common_type_t<_Tp, _Up>, common_type_t<_Up, _Tp>> &&
   requires {
-    static_cast<common_type_t<_Tp, _Up>>(_VSTD::declval<_Tp>());
-    static_cast<common_type_t<_Tp, _Up>>(_VSTD::declval<_Up>());
+    static_cast<common_type_t<_Tp, _Up>>(declval<_Tp>());
+    static_cast<common_type_t<_Tp, _Up>>(declval<_Up>());
   } &&
   common_reference_with<
     add_lvalue_reference_t<const _Tp>,
@@ -217,12 +217,12 @@ concept assignable_from =
 // [concept.destructible]
 
 template<class _Tp>
-concept destructible = _VSTD::is_nothrow_destructible_v<_Tp>;
+concept destructible = is_nothrow_destructible_v<_Tp>;
 
 // [concept.constructible]
 template<class _Tp, class... _Args>
 concept constructible_from =
-    destructible<_Tp> && _VSTD::is_constructible_v<_Tp, _Args...>;
+    destructible<_Tp> && is_constructible_v<_Tp, _Args...>;
 
 // [concept.default.init]
 

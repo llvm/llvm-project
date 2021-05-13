@@ -15,7 +15,7 @@
 // liveness analysis does not pay attention to aliases, which can occur due to
 // branches (and their associated block arguments) in general. For this purpose,
 // BufferDeallocation firstly finds all possible aliases for a single value
-// (using the BufferAliasAnalysis class). Consider the following example:
+// (using the BufferViewFlowAnalysis class). Consider the following example:
 //
 // ^bb0(%arg0):
 //   cond_br %cond, ^bb1, ^bb2
@@ -30,7 +30,7 @@
 // We should place the dealloc for %new_value in exit. However, we have to free
 // the buffer in the same block, because it cannot be freed in the post
 // dominator. However, this requires a new clone buffer for %arg1 that will
-// contain the actual contents. Using the class BufferAliasAnalysis, we
+// contain the actual contents. Using the class BufferViewFlowAnalysis, we
 // will find out that %new_value has a potential alias %arg1. In order to find
 // the dealloc position we have to find all potential aliases, iterate over
 // their uses and find the common post-dominator block (note that additional

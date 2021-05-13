@@ -194,12 +194,14 @@ func @indexed_generic_op_reshape_producer_fusion(%arg0 : tensor<?x?x4x?xi32>,
 // checking the op body here.
 //       CHECK: #[[MAP:.+]] =  affine_map<(d0, d1) -> (d0 + d1 * 4)>
 //       CHECK: func @indexed_generic_op_reshape_producer_fusion
-//       CHECK:   linalg.indexed_generic
+//       CHECK:   linalg.generic
 //       CHECK:   ^{{.*}}(
-//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index, %[[ARG3:[a-zA-Z0-9]+]]: index,
-//  CHECK-SAME:     %[[ARG4:[a-zA-Z0-9]+]]: index, %[[ARG5:[a-zA-Z0-9]+]]: index,
 //  CHECK-SAME:     %[[ARG6:[a-zA-Z0-9]+]]: i32, %[[ARG7:[a-zA-Z0-9]+]]: i32,
 //  CHECK-SAME:     %[[ARG8:[a-zA-Z0-9]+]]: i32)
+//       CHECK:     %[[ARG2:.+]] = linalg.index 0 : index
+//       CHECK:     %[[ARG3:.+]] = linalg.index 1 : index
+//       CHECK:     %[[ARG4:.+]] = linalg.index 2 : index
+//       CHECK:     %[[ARG5:.+]] = linalg.index 3 : index
 //       CHECK:     %[[T3:.+]] = affine.apply #[[MAP]](%[[ARG3]], %[[ARG2]])
 //       CHECK:     %[[T4:.+]] = muli %[[ARG6]], %[[ARG7]]
 //       CHECK:     %[[T5:.+]] = index_cast %[[T3]]
@@ -290,12 +292,14 @@ func @indexed_generic_op_reshape_consumer_fusion(%arg0 : tensor<?x?xi32>,
 // checking the op body here.
 //       CHECK: #[[MAP:.+]] = affine_map<(d0, d1, d2) -> (d0 + d1 * 5 + d2 * 20)>
 //       CHECK: func @indexed_generic_op_reshape_consumer_fusion
-//       CHECK:   linalg.indexed_generic
+//       CHECK:   linalg.generic
 //       CHECK:   ^{{.*}}(
-//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index, %[[ARG3:[a-zA-Z0-9]+]]: index,
-//  CHECK-SAME:     %[[ARG4:[a-zA-Z0-9]+]]: index, %[[ARG5:[a-zA-Z0-9]+]]: index,
 //  CHECK-SAME:     %[[ARG6:[a-zA-Z0-9]+]]: i32, %[[ARG7:[a-zA-Z0-9]+]]: i32,
 //  CHECK-SAME:     %[[ARG8:[a-zA-Z0-9]+]]: i32)
+//       CHECK:     %[[ARG2:.+]] = linalg.index 0 : index
+//       CHECK:     %[[ARG3:.+]] = linalg.index 1 : index
+//       CHECK:     %[[ARG4:.+]] = linalg.index 2 : index
+//       CHECK:     %[[ARG5:.+]] = linalg.index 3 : index
 //       CHECK:     %[[T3:.+]] = affine.apply #[[MAP]](%[[ARG5]], %[[ARG4]], %[[ARG3]])
 //       CHECK:     %[[T4:.+]] = muli %[[ARG6]], %[[ARG7]]
 //       CHECK:     %[[T5:.+]] = index_cast %[[ARG2]]
@@ -390,16 +394,19 @@ func @reshape_as_consumer_permutation
 //   CHECK-DAG:   %[[T2:.+]] = linalg.tensor_reshape %[[ARG1]]
 //  CHECK-SAME:     [0, 1, 2], [3]
 //   CHECK-DAG:   %[[T0:.+]] = linalg.init_tensor [2, 3, 4, 5, 6, 7]
-//       CHECK:   %[[T4:.+]] = linalg.indexed_generic
+//       CHECK:   %[[T4:.+]] = linalg.generic
 //  CHECK-SAME:     indexing_maps = [#[[MAP5]], #[[MAP6]], #[[MAP7]]]
 //  CHECK-SAME:     ins(%[[T1]], %[[T2]] : tensor<5x6x7x2x3x4xi32>, tensor<5x6x7x4xi32>)
 //  CHECK-SAME:     outs(%[[T0]] : tensor<2x3x4x5x6x7xi32>)
 //       CHECK:   ^{{.+}}(
-//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index, %[[ARG3:[a-zA-Z0-9]+]]: index,
-//  CHECK-SAME:     %[[ARG4:[a-zA-Z0-9]+]]: index, %[[ARG5:[a-zA-Z0-9]+]]: index,
-//  CHECK-SAME:     %[[ARG6:[a-zA-Z0-9]+]]: index, %[[ARG7:[a-zA-Z0-9]+]]: index,
 //  CHECK-SAME:     %[[ARG8:[a-zA-Z0-9]+]]: i32, %[[ARG9:[a-zA-Z0-9]+]]: i32,
 //  CHECK-SAME:     %[[ARG10:[a-zA-Z0-9]+]]: i32)
+//       CHECK:     %[[ARG2:.+]] = linalg.index 0 : index
+//       CHECK:     %[[ARG3:.+]] = linalg.index 1 : index
+//       CHECK:     %[[ARG4:.+]] = linalg.index 2 : index
+//       CHECK:     %[[ARG5:.+]] = linalg.index 3 : index
+//       CHECK:     %[[ARG6:.+]] = linalg.index 4 : index
+//       CHECK:     %[[ARG7:.+]] = linalg.index 5 : index
 //   CHECK-DAG:       %[[T5:.+]] = affine.apply #[[MAP8]](%[[ARG3]], %[[ARG2]])
 //   CHECK-DAG:       %[[T6:.+]] = affine.apply #[[MAP9]](%[[ARG6]], %[[ARG5]], %[[ARG4]])
 //   CHECK-DAG:       %[[T7:.+]] = addi %[[ARG8]], %[[ARG9]]
@@ -508,16 +515,16 @@ func @reshape_as_producer_projected_permutation(
 //   CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1) -> (d0 + d1 * 8)>
 //       CHECK: @reshape_as_producer_projected_permutation
 //  CHECK-SAME:   %[[ARG0:.+]]: tensor<33x8x?xi32>
-//       CHECK:   %[[RES:.+]] = linalg.indexed_generic
+//       CHECK:   %[[RES:.+]] = linalg.generic
 //  CHECK-SAME:     indexing_maps = [#[[MAP0]], #[[MAP1]]]
 //  CHECK-SAME:     ins(%[[ARG0]] : tensor<33x8x?xi32>)
 //       CHECK:   ^{{.+}}(
-//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
-//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index,
-//  CHECK-SAME:     %[[ARG3:[a-zA-Z0-9]+]]: index,
-//  CHECK-SAME:     %[[ARG4:[a-zA-Z0-9]+]]: index,
 //  CHECK-SAME:     %[[ARG5:[a-zA-Z0-9]+]]: i32,
 //  CHECK-SAME:     %[[ARG7:[a-zA-Z0-9]+]]: i32)
+//       CHECK:       %[[ARG1:.+]] = linalg.index 0 : index
+//       CHECK:       %[[ARG2:.+]] = linalg.index 1 : index
+//       CHECK:       %[[ARG3:.+]] = linalg.index 2 : index
+//       CHECK:       %[[ARG4:.+]] = linalg.index 3 : index
 //       CHECK:       %[[T0:.+]] = affine.apply #[[MAP2]](%[[ARG2]], %[[ARG1]])
 //       CHECK:       %[[T1:.+]] = index_cast %[[T0]] : index to i32
 //       CHECK:       %[[T2:.+]] = addi %[[ARG5]], %[[T1]] : i32

@@ -6,11 +6,7 @@ define <2 x float> @foo() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SOURCE:%.*]] = insertelement <2 x float> undef, float undef, i32 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = fsub <2 x float> [[SOURCE]], [[SOURCE]]
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[RES1:%.*]] = insertelement <2 x float> undef, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[RES2:%.*]] = insertelement <2 x float> [[RES1]], float [[TMP2]], i32 1
-; CHECK-NEXT:    ret <2 x float> [[RES2]]
+; CHECK-NEXT:    ret <2 x float> [[TMP0]]
 ;
 entry:
   %source = insertelement <2 x float> undef, float undef, i32 0

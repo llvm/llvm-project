@@ -433,11 +433,6 @@ bool MachineCSE::isProfitableToCSE(Register CSReg, Register Reg,
                                    MachineBasicBlock *CSBB, MachineInstr *MI) {
   // FIXME: Heuristics that works around the lack the live range splitting.
 
-  MachineBasicBlock *BB = MI->getParent();
-  // Prevent CSE-ing non-local convergent instructions.
-  if (MI->isConvergent() && CSBB != BB)
-    return false;
-
   // If CSReg is used at all uses of Reg, CSE should not increase register
   // pressure of CSReg.
   bool MayIncreasePressure = true;
@@ -460,6 +455,7 @@ bool MachineCSE::isProfitableToCSE(Register CSReg, Register Reg,
   // an immediate predecessor. We don't want to increase register pressure and
   // end up causing other computation to be spilled.
   if (TII->isAsCheapAsAMove(*MI)) {
+    MachineBasicBlock *BB = MI->getParent();
     if (CSBB != BB && !CSBB->isSuccessor(BB))
       return false;
   }
@@ -591,6 +587,23 @@ bool MachineCSE::ProcessBlockCSE(MachineBasicBlock *MBB) {
     MachineInstr *CSMI = Exps[CSVN];
     LLVM_DEBUG(dbgs() << "Examining: " << *MI);
     LLVM_DEBUG(dbgs() << "*** Found a common subexpression: " << *CSMI);
+
+    // Prevent CSE-ing non-local convergent instructions.
+    // LLVM's current definition of `isConvergent` does not necessarily prove
+    // that non-local CSE is illegal. The following check extends the definition
+    // of `isConvergent` to assume a convergent instruction is dependent not
+    // only on additional conditions, but also on fewer conditions. LLVM does
+    // not have a MachineInstr attribute which expresses this extended
+    // definition, so it's necessary to use `isConvergent` to prevent illegally
+    // CSE-ing the subset of `isConvergent` instructions which do fall into this
+    // extended definition.
+    if (MI->isConvergent() && MI->getParent() != CSMI->getParent()) {
+      LLVM_DEBUG(dbgs() << "*** Convergent MI and subexpression exist in "
+                           "different BBs, avoid CSE!\n");
+      VNT.insert(MI, CurrVN++);
+      Exps.push_back(MI);
+      continue;
+    }
 
     // Check if it's profitable to perform this CSE.
     bool DoCSE = true;
@@ -824,6 +837,15 @@ bool MachineCSE::ProcessBlockPRE(MachineDominatorTree *DT,
       if (BB != nullptr && BB1 != nullptr &&
           (isPotentiallyReachable(BB1, BB) ||
            isPotentiallyReachable(BB, BB1))) {
+        // The following check extends the definition of `isConvergent` to
+        // assume a convergent instruction is dependent not only on additional
+        // conditions, but also on fewer conditions. LLVM does not have a
+        // MachineInstr attribute which expresses this extended definition, so
+        // it's necessary to use `isConvergent` to prevent illegally PRE-ing the
+        // subset of `isConvergent` instructions which do fall into this
+        // extended definition.
+        if (MI->isConvergent() && CMBB != MBB)
+          continue;
 
         assert(MI->getOperand(0).isDef() &&
                "First operand of instr with one explicit def must be this def");

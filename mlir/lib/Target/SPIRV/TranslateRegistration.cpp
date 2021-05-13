@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVModule.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -52,7 +51,8 @@ static OwningModuleRef deserializeModule(const llvm::MemoryBuffer *input,
   auto binary = llvm::makeArrayRef(reinterpret_cast<const uint32_t *>(start),
                                    size / sizeof(uint32_t));
 
-  spirv::OwningSPIRVModuleRef spirvModule = spirv::deserialize(binary, context);
+  OwningOpRef<spirv::ModuleOp> spirvModule =
+      spirv::deserialize(binary, context);
   if (!spirvModule)
     return {};
 
@@ -140,7 +140,7 @@ static LogicalResult roundTripModule(ModuleOp srcModule, bool emitDebugInfo,
   // TODO: we should only load the required dialects instead of all dialects.
   deserializationContext.loadAllAvailableDialects();
   // Then deserialize to get back a SPIR-V module.
-  spirv::OwningSPIRVModuleRef spirvModule =
+  OwningOpRef<spirv::ModuleOp> spirvModule =
       spirv::deserialize(binary, &deserializationContext);
   if (!spirvModule)
     return failure();

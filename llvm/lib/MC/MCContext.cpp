@@ -62,11 +62,13 @@ static void defaultDiagHandler(const SMDiagnostic &SMD, bool, const SourceMgr &,
   SMD.print(nullptr, errs());
 }
 
-MCContext::MCContext(const MCAsmInfo *mai, const MCRegisterInfo *mri,
-                     const MCObjectFileInfo *mofi, const SourceMgr *mgr,
+MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
+                     const MCRegisterInfo *mri, const MCObjectFileInfo *mofi,
+                     const MCSubtargetInfo *msti, const SourceMgr *mgr,
                      MCTargetOptions const *TargetOpts, bool DoAutoReset)
-    : SrcMgr(mgr), InlineSrcMgr(nullptr), DiagHandler(defaultDiagHandler),
-      MAI(mai), MRI(mri), MOFI(mofi), Symbols(Allocator), UsedNames(Allocator),
+    : TT(TheTriple), SrcMgr(mgr), InlineSrcMgr(nullptr),
+      DiagHandler(defaultDiagHandler), MAI(mai), MRI(mri), MOFI(mofi),
+      MSTI(msti), Symbols(Allocator), UsedNames(Allocator),
       InlineAsmUsedLabelNames(Allocator),
       CurrentDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0),
       AutoReset(DoAutoReset), TargetOptions(TargetOpts) {
@@ -75,6 +77,34 @@ MCContext::MCContext(const MCAsmInfo *mai, const MCRegisterInfo *mri,
   if (SrcMgr && SrcMgr->getNumBuffers())
     MainFileName = std::string(SrcMgr->getMemoryBuffer(SrcMgr->getMainFileID())
                                    ->getBufferIdentifier());
+
+  switch (TheTriple.getObjectFormat()) {
+  case Triple::MachO:
+    Env = IsMachO;
+    break;
+  case Triple::COFF:
+    if (!TheTriple.isOSWindows())
+      report_fatal_error(
+          "Cannot initialize MC for non-Windows COFF object files.");
+
+    Env = IsCOFF;
+    break;
+  case Triple::ELF:
+    Env = IsELF;
+    break;
+  case Triple::Wasm:
+    Env = IsWasm;
+    break;
+  case Triple::XCOFF:
+    Env = IsXCOFF;
+    break;
+  case Triple::GOFF:
+    report_fatal_error("Cannot initialize MC for GOFF object file format");
+    break;
+  case Triple::UnknownObjectFormat:
+    report_fatal_error("Cannot initialize MC for unknown object file format.");
+    break;
+  }
 }
 
 MCContext::~MCContext() {
@@ -195,19 +225,18 @@ MCSymbol *MCContext::createSymbolImpl(const StringMapEntry<bool> *Name,
                 "MCSymbol classes must be trivially destructible");
   static_assert(std::is_trivially_destructible<MCSymbolXCOFF>(),
                 "MCSymbol classes must be trivially destructible");
-  if (MOFI) {
-    switch (MOFI->getObjectFileType()) {
-    case MCObjectFileInfo::IsCOFF:
-      return new (Name, *this) MCSymbolCOFF(Name, IsTemporary);
-    case MCObjectFileInfo::IsELF:
-      return new (Name, *this) MCSymbolELF(Name, IsTemporary);
-    case MCObjectFileInfo::IsMachO:
-      return new (Name, *this) MCSymbolMachO(Name, IsTemporary);
-    case MCObjectFileInfo::IsWasm:
-      return new (Name, *this) MCSymbolWasm(Name, IsTemporary);
-    case MCObjectFileInfo::IsXCOFF:
-      return createXCOFFSymbolImpl(Name, IsTemporary);
-    }
+
+  switch (getObjectFileType()) {
+  case MCContext::IsCOFF:
+    return new (Name, *this) MCSymbolCOFF(Name, IsTemporary);
+  case MCContext::IsELF:
+    return new (Name, *this) MCSymbolELF(Name, IsTemporary);
+  case MCContext::IsMachO:
+    return new (Name, *this) MCSymbolMachO(Name, IsTemporary);
+  case MCContext::IsWasm:
+    return new (Name, *this) MCSymbolWasm(Name, IsTemporary);
+  case MCContext::IsXCOFF:
+    return createXCOFFSymbolImpl(Name, IsTemporary);
   }
   return new (Name, *this) MCSymbol(MCSymbol::SymbolKindUnset, Name,
                                     IsTemporary);
@@ -643,7 +672,8 @@ MCSectionCOFF *MCContext::getAssociativeCOFFSection(MCSectionCOFF *Sec,
 }
 
 MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind K,
-                                         const Twine &Group, unsigned UniqueID,
+                                         unsigned Flags, const Twine &Group,
+                                         unsigned UniqueID,
                                          const char *BeginSymName) {
   MCSymbolWasm *GroupSym = nullptr;
   if (!Group.isTriviallyEmpty() && !Group.str().empty()) {
@@ -651,10 +681,11 @@ MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind K,
     GroupSym->setComdat(true);
   }
 
-  return getWasmSection(Section, K, GroupSym, UniqueID, BeginSymName);
+  return getWasmSection(Section, K, Flags, GroupSym, UniqueID, BeginSymName);
 }
 
 MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind Kind,
+                                         unsigned Flags,
                                          const MCSymbolWasm *GroupSym,
                                          unsigned UniqueID,
                                          const char *BeginSymName) {
@@ -675,7 +706,7 @@ MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind Kind,
   cast<MCSymbolWasm>(Begin)->setType(wasm::WASM_SYMBOL_TYPE_SECTION);
 
   MCSectionWasm *Result = new (WasmAllocator.Allocate())
-      MCSectionWasm(CachedName, Kind, GroupSym, UniqueID, Begin);
+      MCSectionWasm(CachedName, Kind, Flags, GroupSym, UniqueID, Begin);
   Entry.second = Result;
 
   auto *F = new MCDataFragment();

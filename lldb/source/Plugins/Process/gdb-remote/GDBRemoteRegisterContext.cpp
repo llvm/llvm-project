@@ -364,7 +364,7 @@ bool GDBRemoteRegisterContext::WriteRegisterBytes(const RegisterInfo *reg_info,
                                reg_info->byte_size,        // dst length
                                m_reg_data.GetByteOrder())) // dst byte order
   {
-    GDBRemoteClientBase::Lock lock(gdb_comm, false);
+    GDBRemoteClientBase::Lock lock(gdb_comm);
     if (lock) {
       if (m_write_all_at_once) {
         // Invalidate all register values
@@ -508,7 +508,7 @@ bool GDBRemoteRegisterContext::ReadAllRegisterValues(
   const bool use_g_packet =
       !gdb_comm.AvoidGPackets((ProcessGDBRemote *)process);
 
-  GDBRemoteClientBase::Lock lock(gdb_comm, false);
+  GDBRemoteClientBase::Lock lock(gdb_comm);
   if (lock) {
     if (gdb_comm.SyncThreadState(m_thread.GetProtocolID()))
       InvalidateAllRegisters();
@@ -574,7 +574,7 @@ bool GDBRemoteRegisterContext::WriteAllRegisterValues(
   const bool use_g_packet =
       !gdb_comm.AvoidGPackets((ProcessGDBRemote *)process);
 
-  GDBRemoteClientBase::Lock lock(gdb_comm, false);
+  GDBRemoteClientBase::Lock lock(gdb_comm);
   if (lock) {
     // The data_sp contains the G response packet.
     if (use_g_packet) {

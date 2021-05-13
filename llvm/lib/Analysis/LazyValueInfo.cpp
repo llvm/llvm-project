@@ -1175,13 +1175,6 @@ getValueFromConditionImpl(Value *Val, Value *Cond, bool isTrueDest,
   else
     return ValueLatticeElement::getOverdefined();
 
-  // Prevent infinite recursion if Cond references itself as in this example:
-  //  Cond: "%tmp4 = and i1 %tmp4, undef"
-  //    BL: "%tmp4 = and i1 %tmp4, undef"
-  //    BR: "i1 undef"
-  if (L == Cond || R == Cond)
-    return ValueLatticeElement::getOverdefined();
-
   // if (L && R) -> intersect L and R
   // if (!(L || R)) -> intersect L and R
   // if (L || R) -> union L and R
@@ -1201,9 +1194,14 @@ getValueFromConditionImpl(Value *Val, Value *Cond, bool isTrueDest,
 static ValueLatticeElement
 getValueFromCondition(Value *Val, Value *Cond, bool isTrueDest,
                       SmallDenseMap<Value*, ValueLatticeElement> &Visited) {
-  auto I = Visited.find(Cond);
-  if (I != Visited.end())
-    return I->second;
+  // Insert an Overdefined placeholder into the set to prevent
+  // infinite recursion if there exists IRs that use not
+  // dominated by its def as in this example:
+  //   "%tmp3 = or i1 undef, %tmp4"
+  //   "%tmp4 = or i1 undef, %tmp3"
+  auto Iter = Visited.try_emplace(Cond, ValueLatticeElement::getOverdefined());
+  if (!Iter.second)
+    return Iter.first->getSecond();
 
   auto Result = getValueFromConditionImpl(Val, Cond, isTrueDest, Visited);
   Visited[Cond] = Result;

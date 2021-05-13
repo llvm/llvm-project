@@ -357,8 +357,14 @@ protected:
   LCOMM::LCOMMType LCOMMDirectiveAlignmentType = LCOMM::NoAlignment;
 
   /// True if the target only has basename for .file directive. False if the
-  /// target also needs the directory along with the basename. Default to true.
+  /// target also needs the directory along with the basename. Defaults to true.
   bool HasBasenameOnlyForFileDirective = true;
+
+  /// True if the target represents string constants as mostly raw characters in
+  /// paired double quotation with paired double quotation marks as the escape
+  /// mechanism to represent a double quotation mark within the string. Defaults
+  /// to false.
+  bool HasPairedDoubleQuoteStringConstants = false;
 
   // True if the target allows .align directives on functions. This is true for
   // most targets, so defaults to true.
@@ -424,6 +430,10 @@ protected:
 
   /// Exception handling format for the target.  Defaults to None.
   ExceptionHandling ExceptionsType = ExceptionHandling::None;
+
+  /// True if target uses CFI unwind information for debugging purpose when
+  /// `ExceptionsType == ExceptionHandling::None`.
+  bool UsesCFIForDebug = false;
 
   /// Windows exception handling data (.pdata) encoding.  Defaults to Invalid.
   WinEH::EncodingType WinEHEncodingType = WinEH::EncodingType::Invalid;
@@ -693,6 +703,9 @@ public:
   bool hasBasenameOnlyForFileDirective() const {
     return HasBasenameOnlyForFileDirective;
   }
+  bool hasPairedDoubleQuoteStringConstants() const {
+    return HasPairedDoubleQuoteStringConstants;
+  }
   bool hasFunctionAlignment() const { return HasFunctionAlignment; }
   bool hasDotTypeDotSizeDirective() const { return HasDotTypeDotSizeDirective; }
   bool hasSingleParameterDotFile() const { return HasSingleParameterDotFile; }
@@ -727,6 +740,8 @@ public:
   void setExceptionsType(ExceptionHandling EH) {
     ExceptionsType = EH;
   }
+
+  bool doesUseCFIForDebug() const { return UsesCFIForDebug; }
 
   /// Returns true if the exception handling method for the platform uses call
   /// frame information to unwind.

@@ -138,8 +138,7 @@ class VPatBinarySDNode_XI<SDNode vop,
                      xop_kind:$rs2,
                      avl, sew)>;
 
-multiclass VPatBinarySDNode_VV_VX<SDNode vop, string instruction_name>
-{
+multiclass VPatBinarySDNode_VV_VX<SDNode vop, string instruction_name> {
   foreach vti = AllIntegerVectors in {
     def : VPatBinarySDNode_VV<vop, instruction_name,
                               vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
@@ -153,15 +152,8 @@ multiclass VPatBinarySDNode_VV_VX<SDNode vop, string instruction_name>
 
 multiclass VPatBinarySDNode_VV_VX_VI<SDNode vop, string instruction_name,
                                      Operand ImmType = simm5>
-{
+    : VPatBinarySDNode_VV_VX<vop, instruction_name> {
   foreach vti = AllIntegerVectors in {
-    def : VPatBinarySDNode_VV<vop, instruction_name,
-                              vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
-                              vti.LMul, vti.AVL, vti.RegClass, vti.RegClass>;
-    def : VPatBinarySDNode_XI<vop, instruction_name, "VX",
-                              vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
-                              vti.LMul, vti.AVL, vti.RegClass, vti.RegClass,
-                              SplatPat, GPR>;
     def : VPatBinarySDNode_XI<vop, instruction_name, "VI",
                               vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
                               vti.LMul, vti.AVL, vti.RegClass, vti.RegClass,

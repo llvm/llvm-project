@@ -253,12 +253,19 @@ public:
   void removeRegisterWrite(const WriteState &WS,
                            MutableArrayRef<unsigned> FreedPhysRegs);
 
-  // Returns true if a move from RS to WS can be eliminated.
-  // On success, it updates WriteState by setting flag `WS.isEliminated`.
-  // If RS is a read from a zero register, and WS is eliminated, then
-  // `WS.WritesZero` is also set, so that method addRegisterWrite() would not
-  // reserve a physical register for it.
-  bool tryEliminateMove(WriteState &WS, ReadState &RS);
+  // Returns true if the PRF at index `PRFIndex` can eliminate a move from RS to
+  // WS.
+  bool canEliminateMove(const WriteState &WS, const ReadState &RS,
+                        unsigned PRFIndex) const;
+
+  // Returns true if this instruction can be fully eliminated at register
+  // renaming stage. On success, this method updates the internal state of each
+  // WriteState by setting flag `WS.isEliminated`, and by propagating the zero
+  // flag for known zero registers. It internally uses `canEliminateMove` to
+  // determine if a read/write pair can be eliminated. By default, it assumes a
+  // register swap if there is more than one register definition.
+  bool tryEliminateMoveOrSwap(MutableArrayRef<WriteState> Writes,
+                              MutableArrayRef<ReadState> Reads);
 
   // Checks if there are enough physical registers in the register files.
   // Returns a "response mask" where each bit represents the response from a

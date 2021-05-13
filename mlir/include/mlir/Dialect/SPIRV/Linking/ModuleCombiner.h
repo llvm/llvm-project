@@ -13,9 +13,8 @@
 #ifndef MLIR_DIALECT_SPIRV_LINKING_MODULECOMBINER_H_
 #define MLIR_DIALECT_SPIRV_LINKING_MODULECOMBINER_H_
 
-#include "mlir/Dialect/SPIRV/IR/SPIRVModule.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
+#include "mlir/IR/OwningOpRef.h"
+#include "mlir/Support/LLVM.h"
 
 namespace mlir {
 class OpBuilder;
@@ -67,11 +66,9 @@ class ModuleOp;
 ///                           function call.
 ///
 /// \return the combined module.
-OwningSPIRVModuleRef
-combine(llvm::MutableArrayRef<ModuleOp> modules,
-        OpBuilder &combinedModuleBuilder,
-        llvm::function_ref<void(ModuleOp, StringRef, StringRef)>
-            symbRenameListener);
+OwningOpRef<spirv::ModuleOp>
+combine(MutableArrayRef<ModuleOp> modules, OpBuilder &combinedModuleBuilder,
+        function_ref<void(ModuleOp, StringRef, StringRef)> symbRenameListener);
 } // namespace spirv
 } // namespace mlir
 

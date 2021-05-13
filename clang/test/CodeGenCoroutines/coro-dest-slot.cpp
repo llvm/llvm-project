@@ -25,7 +25,7 @@ extern "C" coro f(int) { co_return; }
 // CHECK: %[[CLEANUP_DEST0:.+]] = phi i32 [ 0, %[[INIT_READY]] ], [ 2, %[[INIT_CLEANUP]] ]
 
 // CHECK: %[[FINAL_SUSPEND:.+]] = call i8 @llvm.coro.suspend(
-// CHECK-NEXT: switch i8 %29, label %coro.ret [
+// CHECK-NEXT: switch i8 %{{.*}}, label %coro.ret [
 // CHECK-NEXT:   i8 0, label %[[FINAL_READY:.+]]
 // CHECK-NEXT:   i8 1, label %[[FINAL_CLEANUP:.+]]
 // CHECK-NEXT: ]

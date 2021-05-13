@@ -2,13 +2,15 @@
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx810 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PREGFX10,PREGFX10-PACKED %s
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx900 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PREGFX10,PREGFX10-PACKED %s
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,GFX10,GFX10-PACKED %s
+; RUN: llc < %s -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,GFX11 %s
 
 ; GCN-LABEL: {{^}}tbuffer_store_d16_x:
-; GCN-DAG: s_load_dwordx4
-; GCN-DAG: s_load_dword s[[S_LO:[0-9]+]]
+; GCN-DAG: s_load_{{dwordx4|b128}}
+; GCN-DAG: s_load_{{dword|b32}} s[[S_LO:[0-9]+]]
 ; GCN-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[S_LO]]
 ; PREGFX10: tbuffer_store_format_d16_x v[[V_LO]], off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED]
 ; GFX10: tbuffer_store_format_d16_x v[[V_LO]], off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_FMT_10_11_11_SSCALED]
+; GFX11: tbuffer_store_d16_format_x v[[V_LO]], off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_FMT_10_10_10_2_SNORM]
 define amdgpu_kernel void @tbuffer_store_d16_x(<4 x i32> %rsrc, half %data) {
 main_body:
   call void @llvm.amdgcn.raw.tbuffer.store.f16(half %data, <4 x i32> %rsrc, i32 0, i32 0, i32 33, i32 0)
@@ -16,7 +18,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}tbuffer_store_d16_xy:
-; GCN: s_load_dword [[S_DATA:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}},
+; GCN: s_load_{{dword|b32}} [[S_DATA:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}},
 ; UNPACKED-DAG: s_lshr_b32 [[SHR:s[0-9]+]], [[S_DATA]], 16
 ; UNPACKED-DAG: s_and_b32 [[MASKED:s[0-9]+]], [[S_DATA]], 0xffff{{$}}
 ; UNPACKED-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], [[MASKED]]
@@ -25,6 +27,7 @@ main_body:
 
 ; PREGFX10-PACKED: tbuffer_store_format_d16_xy v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED]
 ; GFX10-PACKED: tbuffer_store_format_d16_xy v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_FMT_10_11_11_SSCALED]
+; GFX11: tbuffer_store_d16_format_xy v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_FMT_10_10_10_2_SNORM]
 define amdgpu_kernel void @tbuffer_store_d16_xy(<4 x i32> %rsrc, <2 x half> %data) {
 main_body:
   call void @llvm.amdgcn.raw.tbuffer.store.v2f16(<2 x half> %data, <4 x i32> %rsrc, i32 0, i32 0, i32 33, i32 0)
@@ -32,7 +35,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}tbuffer_store_d16_xyz:
-; GCN-DAG: s_load_dwordx2 s{{\[}}[[S_DATA_0:[0-9]+]]:[[S_DATA_1:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}},
+; GCN-DAG: s_load_{{dwordx2|b64}} s{{\[}}[[S_DATA_0:[0-9]+]]:[[S_DATA_1:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}},
 
 ; UNPACKED-DAG: s_mov_b32 [[K:s[0-9]+]], 0xffff{{$}}
 ; UNPACKED-DAG: s_lshr_b32 [[SHR0:s[0-9]+]], s[[S_DATA_0]], 16
@@ -49,6 +52,7 @@ main_body:
 ; PACKED-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[MASKED0]]
 ; PREGFX10-PACKED: tbuffer_store_format_d16_xyz v{{\[}}[[LO]]:[[HI]]{{\]}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED]
 ; GFX10-PACKED: tbuffer_store_format_d16_xyz v{{\[}}[[LO]]:[[HI]]{{\]}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_FMT_10_11_11_SSCALED]
+; GFX11: tbuffer_store_d16_format_xyz v{{\[}}[[LO]]:[[HI]]{{\]}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_FMT_10_10_10_2_SNORM]
 define amdgpu_kernel void @tbuffer_store_d16_xyz(<4 x i32> %rsrc, <4 x half> %data) {
 main_body:
   %data_subvec = shufflevector <4 x half> %data, <4 x half> undef, <3 x i32> <i32 0, i32 1, i32 2>
@@ -57,7 +61,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}tbuffer_store_d16_xyzw:
-; GCN-DAG: s_load_dwordx2 s{{\[}}[[S_DATA_0:[0-9]+]]:[[S_DATA_1:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}},
+; GCN-DAG: s_load_{{dwordx2|b64}} s{{\[}}[[S_DATA_0:[0-9]+]]:[[S_DATA_1:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}},
 
 ; UNPACKED-DAG: s_mov_b32 [[K:s[0-9]+]], 0xffff{{$}}
 ; UNPACKED-DAG: s_lshr_b32 [[SHR0:s[0-9]+]], s[[S_DATA_0]], 16
@@ -74,6 +78,7 @@ main_body:
 ; PACKED-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], s[[S_DATA_1]]
 ; PREGFX10-PACKED: tbuffer_store_format_d16_xyzw v{{\[}}[[LO]]:[[HI]]{{\]}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED]
 ; GFX10-PACKED: tbuffer_store_format_d16_xyzw v{{\[}}[[LO]]:[[HI]]{{\]}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_FMT_10_11_11_SSCALED]
+; GFX11: tbuffer_store_d16_format_xyzw v{{\[}}[[LO]]:[[HI]]{{\]}}, off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_FMT_10_10_10_2_SNORM]
 define amdgpu_kernel void @tbuffer_store_d16_xyzw(<4 x i32> %rsrc, <4 x half> %data) {
 main_body:
   call void @llvm.amdgcn.raw.tbuffer.store.v4f16(<4 x half> %data, <4 x i32> %rsrc, i32 0, i32 0, i32 33, i32 0)

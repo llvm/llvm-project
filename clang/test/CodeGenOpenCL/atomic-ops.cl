@@ -225,7 +225,7 @@ void failureOrder(atomic_int *ptr, int *ptr2) {
 // CHECK-LABEL: @generalFailureOrder
 void generalFailureOrder(atomic_int *ptr, int *ptr2, int success, int fail) {
   __opencl_atomic_compare_exchange_strong(ptr, ptr2, 42, success, fail, memory_scope_work_group);
-  // CHECK: switch i32 {{.*}}, label %[[MONOTONIC:[0-9a-zA-Z._]+]] [
+// CHECK: switch i32 {{.*}}, label %[[MONOTONIC:[0-9a-zA-Z._]+]] [
   // CHECK-NEXT: i32 1, label %[[ACQUIRE:[0-9a-zA-Z._]+]]
   // CHECK-NEXT: i32 2, label %[[ACQUIRE]]
   // CHECK-NEXT: i32 3, label %[[RELEASE:[0-9a-zA-Z._]+]]
@@ -234,34 +234,49 @@ void generalFailureOrder(atomic_int *ptr, int *ptr2, int success, int fail) {
 
   // CHECK: [[MONOTONIC]]
   // CHECK: switch {{.*}}, label %[[MONOTONIC_MONOTONIC:[0-9a-zA-Z._]+]] [
+  // CHECK-NEXT: i32 1, label %[[MONOTONIC_ACQUIRE:[0-9a-zA-Z._]+]]
+  // CHECK-NEXT: i32 2, label %[[MONOTONIC_ACQUIRE:[0-9a-zA-Z._]+]]
+  // CHECK-NEXT: i32 5, label %[[MONOTONIC_SEQCST:[0-9a-zA-Z._]+]]
   // CHECK-NEXT: ]
 
   // CHECK: [[ACQUIRE]]
   // CHECK: switch {{.*}}, label %[[ACQUIRE_MONOTONIC:[0-9a-zA-Z._]+]] [
   // CHECK-NEXT: i32 1, label %[[ACQUIRE_ACQUIRE:[0-9a-zA-Z._]+]]
   // CHECK-NEXT: i32 2, label %[[ACQUIRE_ACQUIRE:[0-9a-zA-Z._]+]]
+  // CHECK-NEXT: i32 5, label %[[ACQUIRE_SEQCST:[0-9a-zA-Z._]+]]
   // CHECK-NEXT: ]
 
   // CHECK: [[RELEASE]]
   // CHECK: switch {{.*}}, label %[[RELEASE_MONOTONIC:[0-9a-zA-Z._]+]] [
+  // CHECK-NEXT: i32 1, label %[[RELEASE_ACQUIRE:[0-9a-zA-Z._]+]]
   // CHECK-NEXT: i32 2, label %[[RELEASE_ACQUIRE:[0-9a-zA-Z._]+]]
+  // CHECK-NEXT: i32 5, label %[[RELEASE_SEQCST:[0-9a-zA-Z._]+]]
   // CHECK-NEXT: ]
 
   // CHECK: [[ACQREL]]
   // CHECK: switch {{.*}}, label %[[ACQREL_MONOTONIC:[0-9a-zA-Z._]+]] [
   // CHECK-NEXT: i32 1, label %[[ACQREL_ACQUIRE:[0-9a-zA-Z._]+]]
   // CHECK-NEXT: i32 2, label %[[ACQREL_ACQUIRE:[0-9a-zA-Z._]+]]
+  // CHECK-NEXT: i32 5, label %[[ACQREL_SEQCST:[0-9a-zA-Z._]+]]
   // CHECK-NEXT: ]
 
   // CHECK: [[SEQCST]]
   // CHECK: switch {{.*}}, label %[[SEQCST_MONOTONIC:[0-9a-zA-Z._]+]] [
   // CHECK-NEXT: i32 1, label %[[SEQCST_ACQUIRE:[0-9a-zA-Z._]+]]
-  // CHECK-NEXT: i32 2, label %[[SEQCST_ACQUIRE:[0-9a-zA-Z._]+]]
+  // CHECK-NEXT: i32 2, label %[[SEQCST_ACQUIRE]]
   // CHECK-NEXT: i32 5, label %[[SEQCST_SEQCST:[0-9a-zA-Z._]+]]
   // CHECK-NEXT: ]
 
   // CHECK: [[MONOTONIC_MONOTONIC]]
   // CHECK: cmpxchg {{.*}} monotonic monotonic, align 4
+  // CHECK: br
+
+  // CHECK: [[MONOTONIC_ACQUIRE]]
+  // CHECK: cmpxchg {{.*}} monotonic acquire, align 4
+  // CHECK: br
+
+  // CHECK: [[MONOTONIC_SEQCST]]
+  // CHECK: cmpxchg {{.*}} monotonic seq_cst, align 4
   // CHECK: br
 
   // CHECK: [[ACQUIRE_MONOTONIC]]
@@ -272,6 +287,10 @@ void generalFailureOrder(atomic_int *ptr, int *ptr2, int success, int fail) {
   // CHECK: cmpxchg {{.*}} acquire acquire, align 4
   // CHECK: br
 
+  // CHECK: [[ACQUIRE_SEQCST]]
+  // CHECK: cmpxchg {{.*}} acquire seq_cst, align 4
+  // CHECK: br
+
   // CHECK: [[RELEASE_MONOTONIC]]
   // CHECK: cmpxchg {{.*}} release monotonic, align 4
   // CHECK: br
@@ -280,12 +299,20 @@ void generalFailureOrder(atomic_int *ptr, int *ptr2, int success, int fail) {
   // CHECK: cmpxchg {{.*}} release acquire, align 4
   // CHECK: br
 
+  // CHECK: [[RELEASE_SEQCST]]
+  // CHECK: cmpxchg {{.*}} release seq_cst, align 4
+  // CHECK: br
+
   // CHECK: [[ACQREL_MONOTONIC]]
   // CHECK: cmpxchg {{.*}} acq_rel monotonic, align 4
   // CHECK: br
 
   // CHECK: [[ACQREL_ACQUIRE]]
   // CHECK: cmpxchg {{.*}} acq_rel acquire, align 4
+  // CHECK: br
+
+  // CHECK: [[ACQREL_SEQCST]]
+  // CHECK: cmpxchg {{.*}} acq_rel seq_cst, align 4
   // CHECK: br
 
   // CHECK: [[SEQCST_MONOTONIC]]

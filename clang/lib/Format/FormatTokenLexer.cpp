@@ -92,20 +92,46 @@ void FormatTokenLexer::tryMergePreviousTokens() {
   if (Style.isCpp() && tryTransformTryUsageForC())
     return;
 
+  if (Style.Language == FormatStyle::LK_JavaScript || Style.isCSharp()) {
+    static const tok::TokenKind NullishCoalescingOperator[] = {tok::question,
+                                                               tok::question};
+    static const tok::TokenKind NullPropagatingOperator[] = {tok::question,
+                                                             tok::period};
+    static const tok::TokenKind FatArrow[] = {tok::equal, tok::greater};
+
+    if (tryMergeTokens(FatArrow, TT_FatArrow))
+      return;
+    if (tryMergeTokens(NullishCoalescingOperator, TT_NullCoalescingOperator)) {
+      // Treat like the "||" operator (as opposed to the ternary ?).
+      Tokens.back()->Tok.setKind(tok::pipepipe);
+      return;
+    }
+    if (tryMergeTokens(NullPropagatingOperator, TT_NullPropagatingOperator)) {
+      // Treat like a regular "." access.
+      Tokens.back()->Tok.setKind(tok::period);
+      return;
+    }
+    if (tryMergeNullishCoalescingEqual()) {
+      return;
+    }
+  }
+
   if (Style.isCSharp()) {
+    static const tok::TokenKind CSharpNullConditionalLSquare[] = {
+        tok::question, tok::l_square};
+
     if (tryMergeCSharpKeywordVariables())
       return;
     if (tryMergeCSharpStringLiteral())
       return;
-    if (tryMergeCSharpDoubleQuestion())
-      return;
-    if (tryMergeCSharpNullConditional())
-      return;
     if (tryTransformCSharpForEach())
       return;
-    static const tok::TokenKind JSRightArrow[] = {tok::equal, tok::greater};
-    if (tryMergeTokens(JSRightArrow, TT_JsFatArrow))
+    if (tryMergeTokens(CSharpNullConditionalLSquare,
+                       TT_CSharpNullConditionalLSquare)) {
+      // Treat like a regular "[" operator.
+      Tokens.back()->Tok.setKind(tok::l_square);
       return;
+    }
   }
 
   if (tryMergeNSStringLiteral())
@@ -117,16 +143,9 @@ void FormatTokenLexer::tryMergePreviousTokens() {
                                                    tok::equal};
     static const tok::TokenKind JSShiftEqual[] = {tok::greater, tok::greater,
                                                   tok::greaterequal};
-    static const tok::TokenKind JSRightArrow[] = {tok::equal, tok::greater};
     static const tok::TokenKind JSExponentiation[] = {tok::star, tok::star};
     static const tok::TokenKind JSExponentiationEqual[] = {tok::star,
                                                            tok::starequal};
-    static const tok::TokenKind JSNullPropagatingOperator[] = {tok::question,
-                                                               tok::period};
-    static const tok::TokenKind JSNullishOperator[] = {tok::question,
-                                                       tok::question};
-    static const tok::TokenKind JSNullishEqual[] = {tok::question,
-                                                    tok::question, tok::equal};
     static const tok::TokenKind JSPipePipeEqual[] = {tok::pipepipe, tok::equal};
     static const tok::TokenKind JSAndAndEqual[] = {tok::ampamp, tok::equal};
 
@@ -137,28 +156,14 @@ void FormatTokenLexer::tryMergePreviousTokens() {
       return;
     if (tryMergeTokens(JSShiftEqual, TT_BinaryOperator))
       return;
-    if (tryMergeTokens(JSRightArrow, TT_JsFatArrow))
-      return;
     if (tryMergeTokens(JSExponentiation, TT_JsExponentiation))
       return;
     if (tryMergeTokens(JSExponentiationEqual, TT_JsExponentiationEqual)) {
       Tokens.back()->Tok.setKind(tok::starequal);
       return;
     }
-    if (tryMergeTokens(JSNullishOperator, TT_JsNullishCoalescingOperator)) {
-      // Treat like the "||" operator (as opposed to the ternary ?).
-      Tokens.back()->Tok.setKind(tok::pipepipe);
-      return;
-    }
-    if (tryMergeTokens(JSNullPropagatingOperator,
-                       TT_JsNullPropagatingOperator)) {
-      // Treat like a regular "." access.
-      Tokens.back()->Tok.setKind(tok::period);
-      return;
-    }
     if (tryMergeTokens(JSAndAndEqual, TT_JsAndAndEqual) ||
-        tryMergeTokens(JSPipePipeEqual, TT_JsPipePipeEqual) ||
-        tryMergeTokens(JSNullishEqual, TT_JsNullishCoalescingEqual)) {
+        tryMergeTokens(JSPipePipeEqual, TT_JsPipePipeEqual)) {
       // Treat like the "=" assignment operator.
       Tokens.back()->Tok.setKind(tok::equal);
       return;
@@ -310,45 +315,20 @@ const llvm::StringSet<> FormatTokenLexer::CSharpAttributeTargets = {
     "param",    "property", "return", "type",
 };
 
-bool FormatTokenLexer::tryMergeCSharpDoubleQuestion() {
+bool FormatTokenLexer::tryMergeNullishCoalescingEqual() {
   if (Tokens.size() < 2)
     return false;
-  auto &FirstQuestion = *(Tokens.end() - 2);
-  auto &SecondQuestion = *(Tokens.end() - 1);
-  if (!FirstQuestion->is(tok::question) || !SecondQuestion->is(tok::question))
+  auto &NullishCoalescing = *(Tokens.end() - 2);
+  auto &Equal = *(Tokens.end() - 1);
+  if (NullishCoalescing->getType() != TT_NullCoalescingOperator ||
+      !Equal->is(tok::equal))
     return false;
-  FirstQuestion->Tok.setKind(tok::question); // no '??' in clang tokens.
-  FirstQuestion->TokenText = StringRef(FirstQuestion->TokenText.begin(),
-                                       SecondQuestion->TokenText.end() -
-                                           FirstQuestion->TokenText.begin());
-  FirstQuestion->ColumnWidth += SecondQuestion->ColumnWidth;
-  FirstQuestion->setType(TT_CSharpNullCoalescing);
-  Tokens.erase(Tokens.end() - 1);
-  return true;
-}
-
-// Merge '?[' and '?.' pairs into single tokens.
-bool FormatTokenLexer::tryMergeCSharpNullConditional() {
-  if (Tokens.size() < 2)
-    return false;
-  auto &Question = *(Tokens.end() - 2);
-  auto &PeriodOrLSquare = *(Tokens.end() - 1);
-  if (!Question->is(tok::question) ||
-      !PeriodOrLSquare->isOneOf(tok::l_square, tok::period))
-    return false;
-  Question->TokenText =
-      StringRef(Question->TokenText.begin(),
-                PeriodOrLSquare->TokenText.end() - Question->TokenText.begin());
-  Question->ColumnWidth += PeriodOrLSquare->ColumnWidth;
-
-  if (PeriodOrLSquare->is(tok::l_square)) {
-    Question->Tok.setKind(tok::question); // no '?[' in clang tokens.
-    Question->setType(TT_CSharpNullConditionalLSquare);
-  } else {
-    Question->Tok.setKind(tok::question); // no '?.' in clang tokens.
-    Question->setType(TT_CSharpNullConditional);
-  }
-
+  NullishCoalescing->Tok.setKind(tok::equal); // no '??=' in clang tokens.
+  NullishCoalescing->TokenText =
+      StringRef(NullishCoalescing->TokenText.begin(),
+                Equal->TokenText.end() - NullishCoalescing->TokenText.begin());
+  NullishCoalescing->ColumnWidth += Equal->ColumnWidth;
+  NullishCoalescing->setType(TT_NullCoalescingEqual);
   Tokens.erase(Tokens.end() - 1);
   return true;
 }

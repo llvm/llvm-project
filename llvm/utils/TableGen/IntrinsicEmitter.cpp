@@ -378,7 +378,7 @@ static void EncodeFixedType(Record *R, std::vector<unsigned char> &ArgCodes,
     MVT VVT = VT;
     if (VVT.isScalableVector())
       Sig.push_back(IIT_SCALABLE_VEC);
-    switch (VVT.getVectorNumElements()) {
+    switch (VVT.getVectorMinNumElements()) {
     default: PrintFatalError("unhandled vector type width in intrinsic!");
     case 1: Sig.push_back(IIT_V1); break;
     case 2: Sig.push_back(IIT_V2); break;
@@ -662,28 +662,27 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
   OS << "  if (id != 0) {\n";
   OS << "    switch(IntrinsicsToAttributesMap[id - 1]) {\n";
   OS << "    default: llvm_unreachable(\"Invalid attribute number\");\n";
-  for (UniqAttrMapTy::const_iterator I = UniqAttributes.begin(),
-       E = UniqAttributes.end(); I != E; ++I) {
-    OS << "    case " << I->second << ": {\n";
+  for (auto UniqAttribute : UniqAttributes) {
+    OS << "    case " << UniqAttribute.second << ": {\n";
 
-    const CodeGenIntrinsic &intrinsic = *(I->first);
+    const CodeGenIntrinsic &Intrinsic = *(UniqAttribute.first);
 
     // Keep track of the number of attributes we're writing out.
     unsigned numAttrs = 0;
 
     // The argument attributes are alreadys sorted by argument index.
-    unsigned ai = 0, ae = intrinsic.ArgumentAttributes.size();
-    if (ae) {
-      while (ai != ae) {
-        unsigned attrIdx = intrinsic.ArgumentAttributes[ai].Index;
+    unsigned Ai = 0, Ae = Intrinsic.ArgumentAttributes.size();
+    if (Ae) {
+      while (Ai != Ae) {
+        unsigned AttrIdx = Intrinsic.ArgumentAttributes[Ai].Index;
 
-        OS << "      const Attribute::AttrKind AttrParam" << attrIdx << "[]= {";
+        OS << "      const Attribute::AttrKind AttrParam" << AttrIdx << "[]= {";
         ListSeparator LS(",");
 
         bool AllValuesAreZero = true;
         SmallVector<uint64_t, 8> Values;
         do {
-          switch (intrinsic.ArgumentAttributes[ai].Kind) {
+          switch (Intrinsic.ArgumentAttributes[Ai].Kind) {
           case CodeGenIntrinsic::NoCapture:
             OS << LS << "Attribute::NoCapture";
             break;
@@ -712,17 +711,17 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
             OS << LS << "Attribute::Alignment";
             break;
           }
-          uint64_t V = intrinsic.ArgumentAttributes[ai].Value;
+          uint64_t V = Intrinsic.ArgumentAttributes[Ai].Value;
           Values.push_back(V);
           AllValuesAreZero &= (V == 0);
 
-          ++ai;
-        } while (ai != ae && intrinsic.ArgumentAttributes[ai].Index == attrIdx);
+          ++Ai;
+        } while (Ai != Ae && Intrinsic.ArgumentAttributes[Ai].Index == AttrIdx);
         OS << "};\n";
 
         // Generate attribute value array if not all attribute values are zero.
         if (!AllValuesAreZero) {
-          OS << "      const uint64_t AttrValParam" << attrIdx << "[]= {";
+          OS << "      const uint64_t AttrValParam" << AttrIdx << "[]= {";
           ListSeparator LSV(",");
           for (const auto V : Values)
             OS << LSV << V;
@@ -730,46 +729,46 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
         }
 
         OS << "      AS[" << numAttrs++ << "] = AttributeList::get(C, "
-           << attrIdx << ", AttrParam" << attrIdx;
+           << AttrIdx << ", AttrParam" << AttrIdx;
         if (!AllValuesAreZero)
-          OS << ", AttrValParam" << attrIdx;
+          OS << ", AttrValParam" << AttrIdx;
         OS << ");\n";
       }
     }
 
-    if (!intrinsic.canThrow ||
-        (intrinsic.ModRef != CodeGenIntrinsic::ReadWriteMem &&
-         !intrinsic.hasSideEffects) ||
-        intrinsic.isNoReturn || intrinsic.isNoSync || intrinsic.isNoFree ||
-        intrinsic.isWillReturn || intrinsic.isCold || intrinsic.isNoDuplicate ||
-        intrinsic.isNoMerge || intrinsic.isConvergent ||
-        intrinsic.isSpeculatable) {
+    if (!Intrinsic.canThrow ||
+        (Intrinsic.ModRef != CodeGenIntrinsic::ReadWriteMem &&
+         !Intrinsic.hasSideEffects) ||
+        Intrinsic.isNoReturn || Intrinsic.isNoSync || Intrinsic.isNoFree ||
+        Intrinsic.isWillReturn || Intrinsic.isCold || Intrinsic.isNoDuplicate ||
+        Intrinsic.isNoMerge || Intrinsic.isConvergent ||
+        Intrinsic.isSpeculatable) {
       OS << "      const Attribute::AttrKind Atts[] = {";
       ListSeparator LS(",");
-      if (!intrinsic.canThrow)
+      if (!Intrinsic.canThrow)
         OS << LS << "Attribute::NoUnwind";
-      if (intrinsic.isNoReturn)
+      if (Intrinsic.isNoReturn)
         OS << LS << "Attribute::NoReturn";
-      if (intrinsic.isNoSync)
+      if (Intrinsic.isNoSync)
         OS << LS << "Attribute::NoSync";
-      if (intrinsic.isNoFree)
+      if (Intrinsic.isNoFree)
         OS << LS << "Attribute::NoFree";
-      if (intrinsic.isWillReturn)
+      if (Intrinsic.isWillReturn)
         OS << LS << "Attribute::WillReturn";
-      if (intrinsic.isCold)
+      if (Intrinsic.isCold)
         OS << LS << "Attribute::Cold";
-      if (intrinsic.isNoDuplicate)
+      if (Intrinsic.isNoDuplicate)
         OS << LS << "Attribute::NoDuplicate";
-      if (intrinsic.isNoMerge)
+      if (Intrinsic.isNoMerge)
         OS << LS << "Attribute::NoMerge";
-      if (intrinsic.isConvergent)
+      if (Intrinsic.isConvergent)
         OS << LS << "Attribute::Convergent";
-      if (intrinsic.isSpeculatable)
+      if (Intrinsic.isSpeculatable)
         OS << LS << "Attribute::Speculatable";
 
-      switch (intrinsic.ModRef) {
+      switch (Intrinsic.ModRef) {
       case CodeGenIntrinsic::NoMem:
-        if (intrinsic.hasSideEffects)
+        if (Intrinsic.hasSideEffects)
           break;
         OS << LS;
         OS << "Attribute::ReadNone";
@@ -906,25 +905,25 @@ void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
   OS << "  StringRef TargetPrefix(TargetPrefixStr);\n\n";
 
   // Note: this could emit significantly better code if we cared.
-  for (BIMTy::iterator I = BuiltinMap.begin(), E = BuiltinMap.end();I != E;++I){
+  for (auto &I : BuiltinMap) {
     OS << "  ";
-    if (!I->first.empty())
-      OS << "if (TargetPrefix == \"" << I->first << "\") ";
+    if (!I.first.empty())
+      OS << "if (TargetPrefix == \"" << I.first << "\") ";
     else
       OS << "/* Target Independent Builtins */ ";
     OS << "{\n";
 
     // Emit the comparisons for this target prefix.
-    OS << "    static const BuiltinEntry " << I->first << "Names[] = {\n";
-    for (const auto &P : I->second) {
+    OS << "    static const BuiltinEntry " << I.first << "Names[] = {\n";
+    for (const auto &P : I.second) {
       OS << "      {Intrinsic::" << P.second << ", "
          << Table.GetOrAddStringOffset(P.first) << "}, // " << P.first << "\n";
     }
     OS << "    };\n";
-    OS << "    auto I = std::lower_bound(std::begin(" << I->first << "Names),\n";
-    OS << "                              std::end(" << I->first << "Names),\n";
+    OS << "    auto I = std::lower_bound(std::begin(" << I.first << "Names),\n";
+    OS << "                              std::end(" << I.first << "Names),\n";
     OS << "                              BuiltinNameStr);\n";
-    OS << "    if (I != std::end(" << I->first << "Names) &&\n";
+    OS << "    if (I != std::end(" << I.first << "Names) &&\n";
     OS << "        I->getName() == BuiltinNameStr)\n";
     OS << "      return I->IntrinID;\n";
     OS << "  }\n";

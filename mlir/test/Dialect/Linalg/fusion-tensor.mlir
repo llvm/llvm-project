@@ -231,11 +231,8 @@ func @indexed_generic_op_constant_fusion(%arg0 : tensor<5x?x?xf32>)
 //   CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 // CHECK-LABEL: func @indexed_generic_op_constant_fusion
 //       CHECK:   %[[CST:.*]] = constant {{.*}} : f32
-//       CHECK:   linalg.indexed_generic
+//       CHECK:   linalg.generic
 //       CHECK:   ^{{[a-zA-Z0-9_]*}}
-//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]*]]: index
-//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]*]]: index
-//  CHECK-SAME:     %[[ARG3:[a-zA-Z0-9]*]]: index
 //  CHECK-SAME:     %[[ARG4:[a-zA-Z0-9_]*]]: f32, %{{.*}}: f32)
 //       CHECK:     mulf %[[CST]], %[[ARG4]]
 
@@ -299,11 +296,8 @@ func @indexed_generic_op_zero_dim_constant_fusion
 //   CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 // CHECK-LABEL: func @indexed_generic_op_zero_dim_constant_fusion
 //       CHECK:   %[[CST:.*]] = constant {{.*}} : f32
-//       CHECK:   linalg.indexed_generic
+//       CHECK:   linalg.generic
 //       CHECK:   ^{{[a-zA-Z0-9_]*}}
-//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]*]]: index
-//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]*]]: index
-//  CHECK-SAME:     %[[ARG3:[a-zA-Z0-9]*]]: index
 //  CHECK-SAME:     %[[ARG4:[a-zA-Z0-9_]*]]: f32, %{{.*}}: f32)
 //       CHECK:     mulf %[[CST]], %[[ARG4]]
 
@@ -342,14 +336,14 @@ func @generic_op_indexed_generic_op_fusion(%arg0: tensor<?x?xi32>,
 }
 //   CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
 // CHECK-LABEL: func @generic_op_indexed_generic_op_fusion
-//   CHECK-NOT: linalg.generic
-//       CHECK: linalg.indexed_generic
+//   CHECK-NOT: linalg.indexed_generic
+//       CHECK: linalg.generic
 // CHECK-SAME:    indexing_maps = [#[[$MAP0]], #[[$MAP0]], #[[$MAP0]]]
 //      CHECK: ^{{[a-zA-Z0-9_]*}}
-// CHECK-SAME: %[[ARG0:[a-zA-Z0-9_]*]]: index
-// CHECK-SAME: %[[ARG1:[a-zA-Z0-9_]*]]: index
 // CHECK-SAME: %[[ARG2:[a-zA-Z0-9_]*]]: i32
 // CHECK-SAME: %[[ARG3:[a-zA-Z0-9_]*]]: i32
+//      CHECK:   %[[ARG0:.+]] = linalg.index 0 : index
+//      CHECK:   %[[ARG1:.+]] = linalg.index 1 : index
 //      CHECK:   %[[VAL1:.+]] = addi %[[ARG2]], %[[ARG3]] : i32
 //      CHECK:   %[[ADD_OPERAND:.+]] = index_cast %[[ARG0]] : index to i32
 //      CHECK:   %[[SUB_OPERAND:.+]] = index_cast %[[ARG1]] : index to i32
@@ -444,13 +438,13 @@ func @indexed_generic_op_generic_op_fusion(%arg0: tensor<?x?xi32>,
 }
 //   CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
 // CHECK-LABEL: func @indexed_generic_op_generic_op_fusion
-//       CHECK: linalg.indexed_generic
+//       CHECK: linalg.generic
 // CHECK-SAME:    indexing_maps = [#[[$MAP0]], #[[$MAP0]], #[[$MAP0]]]
 //      CHECK: ^{{[a-zA-Z0-9_]*}}
-// CHECK-SAME: %[[ARG0:[a-zA-Z0-9_]*]]: index
-// CHECK-SAME: %[[ARG1:[a-zA-Z0-9_]*]]: index
 // CHECK-SAME: %[[ARG2:[a-zA-Z0-9_]*]]: i32
 // CHECK-SAME: %[[ARG3:[a-zA-Z0-9_]*]]: i32
+//      CHECK:   %[[ARG0:.+]] = linalg.index 0 : index
+//      CHECK:   %[[ARG1:.+]] = linalg.index 1 : index
 //      CHECK:   %[[ADD_OPERAND:.+]] = index_cast %[[ARG0]] : index to i32
 //      CHECK:   %[[SUB_OPERAND:.+]] = index_cast %[[ARG1]] : index to i32
 //      CHECK:   %[[VAL1:.+]] = addi %[[ARG2]], %[[ADD_OPERAND]] : i32
@@ -549,12 +543,12 @@ func @indexed_generic_op_fusion(%arg0: tensor<?x?xi32>) -> tensor<?x?xi32> {
 }
 //   CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
 // CHECK-LABEL: func @indexed_generic_op_fusion
-//       CHECK: linalg.indexed_generic
+//       CHECK: linalg.generic
 // CHECK-SAME:    indexing_maps = [#[[$MAP0]], #[[$MAP0]]]
 //      CHECK: ^{{[a-zA-Z0-9_]*}}
-// CHECK-SAME: %[[ARG0:[a-zA-Z0-9_]*]]: index
-// CHECK-SAME: %[[ARG1:[a-zA-Z0-9_]*]]: index
 // CHECK-SAME: %[[ARG2:[a-zA-Z0-9_]*]]: i32
+//      CHECK:   %[[ARG0:.+]] = linalg.index 0 : index
+//      CHECK:   %[[ARG1:.+]] = linalg.index 1 : index
 //      CHECK:   %[[ADD_OPERAND1:.+]] = index_cast %[[ARG1]] : index to i32
 //      CHECK:   %[[SUB_OPERAND1:.+]] = index_cast %[[ARG0]] : index to i32
 //      CHECK:   %[[VAL1:.+]] = addi %[[ARG2]], %[[ADD_OPERAND1]] : i32
@@ -564,7 +558,7 @@ func @indexed_generic_op_fusion(%arg0: tensor<?x?xi32>) -> tensor<?x?xi32> {
 //      CHECK:   %[[VAL3:.+]] = addi %[[VAL2]], %[[ADD_OPERAND2]] : i32
 //      CHECK:   %[[VAL4:.+]] = subi %[[VAL3]], %[[SUB_OPERAND2]] : i32
 //      CHECK:   linalg.yield %[[VAL4]] : i32
-//   CHECK-NOT: linalg.indexed_generic
+//   CHECK-NOT: linalg.generic
 
 // -----
 
@@ -663,7 +657,7 @@ func @scalar_indexed_generic_fusion
 //       CHECK: func @scalar_indexed_generic_fusion
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9]+]]: tensor<5x1x1xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9]+]]: tensor<i32>
-//       CHECK:   %[[T0:.+]] = linalg.indexed_generic
+//       CHECK:   %[[T0:.+]] = linalg.generic
 //  CHECK-SAME:     indexing_maps = [#[[MAP0]], #[[MAP1]]]
 //  CHECK-SAME:     iterator_types = ["parallel"]
 //  CHECK-SAME:     ins(%[[ARG1]] : tensor<i32>)

@@ -1,6 +1,11 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -verify-diagnostics
 
-// expected-error@+1{{llvm.noalias argument attribute of non boolean type}}
+// expected-error@+1{{alignment attribute is not a power of 2}}
+llvm.mlir.global private @invalid_global_alignment(42 : i64) {alignment = 63} : i64
+
+// -----
+
+// expected-error@+1{{expected llvm.noalias argument attribute to be a unit attribute}}
 func @invalid_noalias(%arg0: i32 {llvm.noalias = 3}) {
   "llvm.return"() : () -> ()
 }
@@ -842,4 +847,163 @@ module {
   llvm.metadata @metadata {
     llvm.return
   }
+}
+
+// -----
+
+llvm.func @wmmaLoadOp_invalid_mem_space(%arg0: !llvm.ptr<i32, 5>, %arg1: i32) {
+  // expected-error@+1 {{'nvvm.wmma.m16n16k16.load.a.f16.row.stride' op expected operands to be a source pointer in memory space 0, 1, 3 followed by ldm of the source}}
+  %0 = nvvm.wmma.m16n16k16.load.a.f16.row.stride %arg0, %arg1 : (!llvm.ptr<i32, 5>, i32) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
+
+  llvm.return
+}
+
+// -----
+
+llvm.func @wmmaLoadOp_invalid_missing_ldm(%arg0: !llvm.ptr<i32, 3>, %arg1: i32) {
+  // expected-error@+1 {{'nvvm.wmma.m16n16k16.load.a.f16.row.stride' op expected operands to be a source pointer in memory space 0, 1, 3 followed by ldm of the source}}
+  %0 = nvvm.wmma.m16n16k16.load.a.f16.row.stride %arg0: (!llvm.ptr<i32, 3>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
+
+  llvm.return
+}
+
+// -----
+
+llvm.func @wmmaLoadOp_invalid_AOp(%arg0: !llvm.ptr<i32, 3>, %arg1: i32) {
+  // expected-error@+1 {{'nvvm.wmma.m16n16k16.load.a.f16.row.stride' op expected result type of loadAOp and loadBOp to be a struct of 8 <halfx2>s}}
+  %0 = nvvm.wmma.m16n16k16.load.a.f16.row.stride %arg0, %arg1 : (!llvm.ptr<i32, 3>, i32) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
+
+  llvm.return
+}
+
+// -----
+
+llvm.func @wmmaLoadOp_invalid_AOp(%arg0: !llvm.ptr<i32, 3>, %arg1: i32) {
+  // expected-error@+1 {{nvvm.wmma.m16n16k16.load.a.f16.row.stride' op expected result type of loadAOp and loadBOp to be a struct of 8 <halfx2>s}}
+  %0 = nvvm.wmma.m16n16k16.load.a.f16.row.stride %arg0, %arg1 : (!llvm.ptr<i32, 3>, i32) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
+
+  llvm.return
+}
+
+// -----
+
+llvm.func @wmmaLoadOp_invalid_BOp(%arg0: !llvm.ptr<i32, 3>, %arg1: i32) {
+  // expected-error@+1 {{'nvvm.wmma.m16n16k16.load.b.f16.row.stride' op expected result type of loadAOp and loadBOp to be a struct of 8 <halfx2>s}}
+  %0 = nvvm.wmma.m16n16k16.load.b.f16.row.stride %arg0, %arg1 : (!llvm.ptr<i32, 3>, i32) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
+
+  llvm.return
+}
+
+// -----
+
+llvm.func @wmmaLoadOp_invalid_COp(%arg0: !llvm.ptr<i32, 3>, %arg1: i32) {
+  // expected-error@+1 {{'nvvm.wmma.m16n16k16.load.c.f16.row.stride' op expected result type of loadCOp to be a struct of 4 <halfx2>s or 8 f32s}}
+  %0 = nvvm.wmma.m16n16k16.load.c.f16.row.stride %arg0, %arg1 : (!llvm.ptr<i32, 3>, i32) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
+
+  llvm.return
+}
+
+// -----
+
+llvm.func @wmmaStoreOp_invalid_mem_space(%arg0: !llvm.ptr<i32, 5>, %arg1: vector<2 x f16>,
+                            %arg2: vector<2 x f16>, %arg3: vector<2 x f16>,
+                            %arg4: vector<2 xf16>, %arg5: i32) {
+  // expected-error@+1 {{'nvvm.wmma.m16n16k16.store.d.f16.row.stride' op expected operands to be a source pointer in memoryspace 0, 1, 3 followed by ldm of the source}}
+  nvvm.wmma.m16n16k16.store.d.f16.row.stride %arg0, %arg1, %arg2, %arg3, %arg4, %arg5 : !llvm.ptr<i32, 5>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, i32
+  llvm.return
+}
+
+// -----
+
+llvm.func @wmmaStoreOp_invalid_missing_ldm(%arg0: !llvm.ptr<i32, 3>, %arg1: vector<2 x f16>,
+                            %arg2: vector<2 x f16>, %arg3: vector<2 x f16>,
+                            %arg4: vector<2 xf16>, %arg5: i32) {
+  // expected-error@+1 {{'nvvm.wmma.m16n16k16.store.d.f16.row.stride' op expected operands to be a source pointer in memoryspace 0, 1, 3 followed by ldm of the source}}
+  nvvm.wmma.m16n16k16.store.d.f16.row.stride %arg0, %arg1, %arg2, %arg3, %arg4 : !llvm.ptr<i32, 3>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>
+  llvm.return
+}
+
+// -----
+
+llvm.func @gpu_wmma_mma_op_invalid_operands(%arg0: vector<2 x f16>, %arg1: vector<2 x f16>,
+                        %arg2: vector<2 x f16>, %arg3: vector<2 x f16>,
+                        %arg4: vector<2 x f16>, %arg5: vector<2 x f16>,
+                        %arg6: vector<2 x f16>, %arg7: vector<2 x f16>,
+                        %arg8: vector<2 x f16>, %arg9: vector<2 x f16>,
+                        %arg10: vector<2 x f16>, %arg11: vector<2 x f16>,
+                        %arg12: vector<2 x f16>, %arg13: vector<2 x f16>,
+                        %arg14: vector<2 x f16>, %arg15: vector<2 x f16>,
+                        %arg16: vector<2 x f16>, %arg17: vector<2 x f16>,
+                        %arg18: vector<2 x f16>) {
+  // expected-error@+1 {{'nvvm.wmma.m16n16k16.mma.row.row.f16.f16' op expected 20 <halfx2>s as operands}}
+  %0 = nvvm.wmma.m16n16k16.mma.row.row.f16.f16 %arg0, %arg1, %arg2, %arg3, %arg4, %arg5, %arg6, %arg7, %arg8, %arg9, %arg10, %arg11, %arg12, %arg13, %arg14, %arg15, %arg16, %arg17, %arg18 : vector<2 x f16> -> !llvm.struct<(vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>)>
+  llvm.return
+}
+
+// -----
+
+llvm.func @gpu_wmma_mma_op_results(%arg0: vector<2 x f16>, %arg1: vector<2 x f16>,
+                        %arg2: vector<2 x f16>, %arg3: vector<2 x f16>,
+                        %arg4: vector<2 x f16>, %arg5: vector<2 x f16>,
+                        %arg6: vector<2 x f16>, %arg7: vector<2 x f16>,
+                        %arg8: vector<2 x f16>, %arg9: vector<2 x f16>,
+                        %arg10: vector<2 x f16>, %arg11: vector<2 x f16>,
+                        %arg12: vector<2 x f16>, %arg13: vector<2 x f16>,
+                        %arg14: vector<2 x f16>, %arg15: vector<2 x f16>,
+                        %arg16: vector<2 x f16>, %arg17: vector<2 x f16>,
+                        %arg18: vector<2 x f16>, %arg19: vector<2 x f16>) {
+  // expected-error@+1 {{expected result type to be a struct of 4 <halfx2>s}}
+  %0 = nvvm.wmma.m16n16k16.mma.row.row.f16.f16 %arg0, %arg1, %arg2, %arg3, %arg4, %arg5, %arg6, %arg7, %arg8, %arg9, %arg10, %arg11, %arg12, %arg13, %arg14, %arg15, %arg16, %arg17, %arg18, %arg19 : vector<2 x f16> -> !llvm.struct<(vector<2 x f16>, vector<2 x f16>, vector<2 x f16>)>
+  llvm.return
+}
+
+// -----
+
+llvm.func @gpu_wmma_mma_op_invalid_ab_operands(%arg0: vector<2 x f16>, %arg1: vector<2 x f16>,
+                        %arg2: vector<2 x f16>, %arg3: vector<2 x f16>,
+                        %arg4: vector<2 x f16>, %arg5: vector<2 x f16>,
+                        %arg6: vector<2 x f16>, %arg7: vector<2 x f16>,
+                        %arg8: vector<2 x f16>, %arg9: vector<2 x f16>,
+                        %arg10: vector<2 x f16>, %arg11: vector<2 x f16>,
+                        %arg12: vector<2 x f16>, %arg13: vector<2 x f16>,
+                        %arg14: vector<2 x f16>, %arg15: f32,
+                        %arg16: f32, %arg17: f32, %arg18: f32, %arg19: f32,
+                        %arg20: f32, %arg21: f32, %arg22: f32, %arg23: f32) {
+  // expected-error@+1 {{'nvvm.wmma.m16n16k16.mma.row.row.f32.f32' op expected 16 <halfx2>s for `a` and `b` operand}}
+  %0 = nvvm.wmma.m16n16k16.mma.row.row.f32.f32 %arg0, %arg1, %arg2, %arg3, %arg4, %arg5, %arg6, %arg7, %arg8, %arg9, %arg10, %arg11, %arg12, %arg13, %arg14, %arg15, %arg16, %arg17, %arg18, %arg19, %arg20, %arg21, %arg22, %arg23 : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32, f32, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
+  llvm.return
+}
+
+// -----
+
+llvm.func @gpu_wmma_mma_op_invalid_c_operand(%arg0: vector<2 x f16>, %arg1: vector<2 x f16>,
+                        %arg2: vector<2 x f16>, %arg3: vector<2 x f16>,
+                        %arg4: vector<2 x f16>, %arg5: vector<2 x f16>,
+                        %arg6: vector<2 x f16>, %arg7: vector<2 x f16>,
+                        %arg8: vector<2 x f16>, %arg9: vector<2 x f16>,
+                        %arg10: vector<2 x f16>, %arg11: vector<2 x f16>,
+                        %arg12: vector<2 x f16>, %arg13: vector<2 x f16>,
+                        %arg14: vector<2 x f16>, %arg15: vector<2xf16>,
+                        %arg16: f32, %arg17: f32, %arg18: f32, %arg19: f32,
+                        %arg20: f32, %arg21: f32, %arg22: f32, %arg23: vector<2xf16>) {
+  // expected-error@+1 {{'nvvm.wmma.m16n16k16.mma.row.row.f32.f32' op expected 8 f32s for `c` operand}}
+  %0 = nvvm.wmma.m16n16k16.mma.row.row.f32.f32 %arg0, %arg1, %arg2, %arg3, %arg4, %arg5, %arg6, %arg7, %arg8, %arg9, %arg10, %arg11, %arg12, %arg13, %arg14, %arg15, %arg16, %arg17, %arg18, %arg19, %arg20, %arg21, %arg22, %arg23 : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32, f32, f32, f32, vector<2xf16>) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
+  llvm.return
+}
+
+// -----
+
+llvm.func @gpu_wmma_mma_op_invalid_result(%arg0: vector<2 x f16>, %arg1: vector<2 x f16>,
+                        %arg2: vector<2 x f16>, %arg3: vector<2 x f16>,
+                        %arg4: vector<2 x f16>, %arg5: vector<2 x f16>,
+                        %arg6: vector<2 x f16>, %arg7: vector<2 x f16>,
+                        %arg8: vector<2 x f16>, %arg9: vector<2 x f16>,
+                        %arg10: vector<2 x f16>, %arg11: vector<2 x f16>,
+                        %arg12: vector<2 x f16>, %arg13: vector<2 x f16>,
+                        %arg14: vector<2 x f16>, %arg15: vector<2xf16>,
+                        %arg16: f32, %arg17: f32, %arg18: f32, %arg19: f32,
+                        %arg20: f32, %arg21: f32, %arg22: f32, %arg23: f32) {
+  // expected-error@+1 {{'nvvm.wmma.m16n16k16.mma.row.row.f32.f32' op expected result type to be a struct of 8 f32s}}
+  %0 = nvvm.wmma.m16n16k16.mma.row.row.f32.f32 %arg0, %arg1, %arg2, %arg3, %arg4, %arg5, %arg6, %arg7, %arg8, %arg9, %arg10, %arg11, %arg12, %arg13, %arg14, %arg15, %arg16, %arg17, %arg18, %arg19, %arg20, %arg21, %arg22, %arg23 : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, vector<2xf16>)>
+  llvm.return
 }

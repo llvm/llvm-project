@@ -1205,6 +1205,10 @@ static bool sectionWithinSegment(const SectionBase &Sec, const Segment &Seg) {
   // not the first.
   uint64_t SecSize = Sec.Size ? Sec.Size : 1;
 
+  // Ignore just added sections.
+  if (Sec.OriginalOffset == std::numeric_limits<uint64_t>::max())
+    return false;
+
   if (Sec.Type == SHT_NOBITS) {
     if (!(Sec.Flags & SHF_ALLOC))
       return false;
@@ -2315,18 +2319,19 @@ static uint64_t layoutSegmentsForOnlyKeepDebug(std::vector<Segment *> &Segments,
                                                uint64_t HdrEnd) {
   uint64_t MaxOffset = 0;
   for (Segment *Seg : Segments) {
-    // An empty segment contains no section (see sectionWithinSegment). If it
-    // has a parent segment, copy the parent segment's offset field. This works
-    // for empty PT_TLS. We don't handle empty segments without a parent for
-    // now.
-    if (Seg->ParentSegment != nullptr && Seg->MemSize == 0)
-      Seg->Offset = Seg->ParentSegment->Offset;
-
-    const SectionBase *FirstSec = Seg->firstSection();
-    if (Seg->Type == PT_PHDR || !FirstSec)
+    if (Seg->Type == PT_PHDR)
       continue;
 
-    uint64_t Offset = FirstSec->Offset;
+    // The segment offset is generally the offset of the first section.
+    //
+    // For a segment containing no section (see sectionWithinSegment), if it has
+    // a parent segment, copy the parent segment's offset field. This works for
+    // empty PT_TLS. If no parent segment, use 0: the segment is not useful for
+    // debugging anyway.
+    const SectionBase *FirstSec = Seg->firstSection();
+    uint64_t Offset =
+        FirstSec ? FirstSec->Offset
+                 : (Seg->ParentSegment ? Seg->ParentSegment->Offset : 0);
     uint64_t FileSize = 0;
     for (const SectionBase *Sec : Seg->Sections) {
       uint64_t Size = Sec->Type == SHT_NOBITS ? 0 : Sec->Size;

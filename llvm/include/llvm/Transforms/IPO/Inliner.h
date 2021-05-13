@@ -119,8 +119,7 @@ class ModuleInlinerWrapperPass
     : public PassInfoMixin<ModuleInlinerWrapperPass> {
 public:
   ModuleInlinerWrapperPass(
-      InlineParams Params = getInlineParams(), bool Debugging = false,
-      bool MandatoryFirst = true,
+      InlineParams Params = getInlineParams(), bool MandatoryFirst = true,
       InliningAdvisorMode Mode = InliningAdvisorMode::Default,
       unsigned MaxDevirtIterations = 0);
   ModuleInlinerWrapperPass(ModuleInlinerWrapperPass &&Arg) = default;

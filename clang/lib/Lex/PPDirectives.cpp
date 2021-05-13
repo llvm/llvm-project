@@ -100,26 +100,6 @@ enum MacroDiag {
   MD_ReservedMacro  //> #define of #undef reserved id, disabled by default
 };
 
-/// Checks if the specified identifier is reserved in the specified
-/// language.
-/// This function does not check if the identifier is a keyword.
-static bool isReservedId(StringRef Text, const LangOptions &Lang) {
-  // C++ [macro.names], C11 7.1.3:
-  // All identifiers that begin with an underscore and either an uppercase
-  // letter or another underscore are always reserved for any use.
-  if (Text.size() >= 2 && Text[0] == '_' &&
-      (isUppercase(Text[1]) || Text[1] == '_'))
-      return true;
-  // C++ [global.names]
-  // Each name that contains a double underscore ... is reserved to the
-  // implementation for any use.
-  if (Lang.CPlusPlus) {
-    if (Text.find("__") != StringRef::npos)
-      return true;
-  }
-  return false;
-}
-
 // The -fmodule-name option tells the compiler to textually include headers in
 // the specified module, meaning clang won't build the specified module. This is
 // useful in a number of situations, for instance, when building a library that
@@ -141,9 +121,50 @@ static bool isForModuleBuilding(Module *M, StringRef CurrentModule,
 
 static MacroDiag shouldWarnOnMacroDef(Preprocessor &PP, IdentifierInfo *II) {
   const LangOptions &Lang = PP.getLangOpts();
-  StringRef Text = II->getName();
-  if (isReservedId(Text, Lang))
+  if (II->isReserved(Lang) != ReservedIdentifierStatus::NotReserved) {
+    // list from:
+    // - https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_macros.html
+    // - https://docs.microsoft.com/en-us/cpp/c-runtime-library/security-features-in-the-crt?view=msvc-160
+    // - man 7 feature_test_macros
+    // The list must be sorted for correct binary search.
+    static constexpr StringRef ReservedMacro[] = {
+        "_ATFILE_SOURCE",
+        "_BSD_SOURCE",
+        "_CRT_NONSTDC_NO_WARNINGS",
+        "_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES",
+        "_CRT_SECURE_NO_WARNINGS",
+        "_FILE_OFFSET_BITS",
+        "_FORTIFY_SOURCE",
+        "_GLIBCXX_ASSERTIONS",
+        "_GLIBCXX_CONCEPT_CHECKS",
+        "_GLIBCXX_DEBUG",
+        "_GLIBCXX_DEBUG_PEDANTIC",
+        "_GLIBCXX_PARALLEL",
+        "_GLIBCXX_PARALLEL_ASSERTIONS",
+        "_GLIBCXX_SANITIZE_VECTOR",
+        "_GLIBCXX_USE_CXX11_ABI",
+        "_GLIBCXX_USE_DEPRECATED",
+        "_GNU_SOURCE",
+        "_ISOC11_SOURCE",
+        "_ISOC95_SOURCE",
+        "_ISOC99_SOURCE",
+        "_LARGEFILE64_SOURCE",
+        "_POSIX_C_SOURCE",
+        "_REENTRANT",
+        "_SVID_SOURCE",
+        "_THREAD_SAFE",
+        "_XOPEN_SOURCE",
+        "_XOPEN_SOURCE_EXTENDED",
+        "__STDCPP_WANT_MATH_SPEC_FUNCS__",
+        "__STDC_FORMAT_MACROS",
+    };
+    if (std::binary_search(std::begin(ReservedMacro), std::end(ReservedMacro),
+                           II->getName()))
+      return MD_NoWarn;
+
     return MD_ReservedMacro;
+  }
+  StringRef Text = II->getName();
   if (II->isKeyword(Lang))
     return MD_KeywordDef;
   if (Lang.CPlusPlus11 && (Text.equals("override") || Text.equals("final")))
@@ -153,9 +174,8 @@ static MacroDiag shouldWarnOnMacroDef(Preprocessor &PP, IdentifierInfo *II) {
 
 static MacroDiag shouldWarnOnMacroUndef(Preprocessor &PP, IdentifierInfo *II) {
   const LangOptions &Lang = PP.getLangOpts();
-  StringRef Text = II->getName();
   // Do not warn on keyword undef.  It is generally harmless and widely used.
-  if (isReservedId(Text, Lang))
+  if (II->isReserved(Lang) != ReservedIdentifierStatus::NotReserved)
     return MD_ReservedMacro;
   return MD_NoWarn;
 }
@@ -595,6 +615,9 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
           CurPPLexer->LexingRawMode = false;
           IdentifierInfo *IfNDefMacro = nullptr;
           DirectiveEvalResult DER = EvaluateDirectiveExpression(IfNDefMacro);
+          // Stop if Lexer became invalid after hitting code completion token.
+          if (!CurPPLexer)
+            return;
           const bool CondValue = DER.Conditional;
           CurPPLexer->LexingRawMode = true;
           if (Callbacks) {
@@ -3023,6 +3046,10 @@ void Preprocessor::HandleIfDirective(Token &IfToken,
   IdentifierInfo *IfNDefMacro = nullptr;
   const DirectiveEvalResult DER = EvaluateDirectiveExpression(IfNDefMacro);
   const bool ConditionalTrue = DER.Conditional;
+  // Lexer might become invalid if we hit code completion point while evaluating
+  // expression.
+  if (!CurPPLexer)
+    return;
 
   // If this condition is equivalent to #ifndef X, and if this is the first
   // directive seen, handle it for the multiple-include optimization.

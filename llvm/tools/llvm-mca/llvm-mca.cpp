@@ -377,9 +377,9 @@ int main(int argc, char **argv) {
   // Tell SrcMgr about this buffer, which is what the parser will pick up.
   SrcMgr.AddNewSourceBuffer(std::move(*BufferPtr), SMLoc());
 
-  MCContext Ctx(MAI.get(), MRI.get(), &MOFI, &SrcMgr);
+  MCContext Ctx(TheTriple, MAI.get(), MRI.get(), &MOFI, STI.get(), &SrcMgr);
 
-  MOFI.InitMCObjectFileInfo(TheTriple, /* PIC= */ false, Ctx);
+  MOFI.initMCObjectFileInfo(Ctx, /*PIC=*/false);
 
   std::unique_ptr<buffer_ostream> BOS;
 

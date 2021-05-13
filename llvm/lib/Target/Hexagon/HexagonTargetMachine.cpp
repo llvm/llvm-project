@@ -278,8 +278,7 @@ void HexagonTargetMachine::adjustPassManager(PassManagerBuilder &PMB) {
       });
 }
 
-void HexagonTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
-                                                        bool DebugPassManager) {
+void HexagonTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, PassBuilder::OptimizationLevel Level) {
         LPM.addPass(HexagonLoopIdiomRecognitionPass());

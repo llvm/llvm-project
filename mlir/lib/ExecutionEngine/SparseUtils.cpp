@@ -513,7 +513,7 @@ void *newSparseTensor(char *filename, bool *abase, bool *adata, uint64_t aoff,
                       uint64_t asize, uint64_t astride, uint64_t ptrTp,
                       uint64_t indTp, uint64_t valTp) {
   assert(astride == 1);
-  bool *sparsity = abase + aoff;
+  bool *sparsity = adata + aoff;
 
   // The most common cases: 64-bit or 32-bit overhead, double/float values.
   CASE(kU64, kU64, kF64, uint64_t, uint64_t, double);
@@ -553,10 +553,12 @@ uint64_t sparseDimSize(void *tensor, uint64_t d) {
   return static_cast<SparseTensorStorageBase *>(tensor)->getDimSize(d);
 }
 
+IMPL2(MemRef1DU64, sparsePointers, uint64_t, getPointers)
 IMPL2(MemRef1DU64, sparsePointers64, uint64_t, getPointers)
 IMPL2(MemRef1DU32, sparsePointers32, uint32_t, getPointers)
 IMPL2(MemRef1DU16, sparsePointers16, uint16_t, getPointers)
 IMPL2(MemRef1DU8, sparsePointers8, uint8_t, getPointers)
+IMPL2(MemRef1DU64, sparseIndices, uint64_t, getIndices)
 IMPL2(MemRef1DU64, sparseIndices64, uint64_t, getIndices)
 IMPL2(MemRef1DU32, sparseIndices32, uint32_t, getIndices)
 IMPL2(MemRef1DU16, sparseIndices16, uint16_t, getIndices)

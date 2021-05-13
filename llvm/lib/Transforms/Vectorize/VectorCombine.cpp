@@ -50,14 +50,18 @@ static cl::opt<bool> DisableBinopExtractShuffle(
     "disable-binop-extract-shuffle", cl::init(false), cl::Hidden,
     cl::desc("Disable binop extract to shuffle transforms"));
 
+static cl::opt<unsigned> MaxInstrsToScan(
+    "vector-combine-max-scan-instrs", cl::init(30), cl::Hidden,
+    cl::desc("Max number of instructions to scan for vector combining."));
+
 static const unsigned InvalidIndex = std::numeric_limits<unsigned>::max();
 
 namespace {
 class VectorCombine {
 public:
   VectorCombine(Function &F, const TargetTransformInfo &TTI,
-                const DominatorTree &DT)
-      : F(F), Builder(F.getContext()), TTI(TTI), DT(DT) {}
+                const DominatorTree &DT, AAResults &AA)
+      : F(F), Builder(F.getContext()), TTI(TTI), DT(DT), AA(AA) {}
 
   bool run();
 
@@ -66,6 +70,7 @@ private:
   IRBuilder<> Builder;
   const TargetTransformInfo &TTI;
   const DominatorTree &DT;
+  AAResults &AA;
 
   bool vectorizeLoadInsert(Instruction &I);
   ExtractElementInst *getShuffleExtract(ExtractElementInst *Ext0,
@@ -83,6 +88,7 @@ private:
   bool foldBitcastShuf(Instruction &I);
   bool scalarizeBinopOrCmp(Instruction &I);
   bool foldExtractedCmps(Instruction &I);
+  bool foldSingleElementStore(Instruction &I);
 };
 } // namespace
 
@@ -754,6 +760,71 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
   return true;
 }
 
+// Check if memory loc modified between two instrs in the same BB
+static bool isMemModifiedBetween(BasicBlock::iterator Begin,
+                                 BasicBlock::iterator End,
+                                 const MemoryLocation &Loc, AAResults &AA) {
+  unsigned NumScanned = 0;
+  return std::any_of(Begin, End, [&](const Instruction &Instr) {
+    return isModSet(AA.getModRefInfo(&Instr, Loc)) ||
+           ++NumScanned > MaxInstrsToScan;
+  });
+}
+
+// Combine patterns like:
+//   %0 = load <4 x i32>, <4 x i32>* %a
+//   %1 = insertelement <4 x i32> %0, i32 %b, i32 1
+//   store <4 x i32> %1, <4 x i32>* %a
+// to:
+//   %0 = bitcast <4 x i32>* %a to i32*
+//   %1 = getelementptr inbounds i32, i32* %0, i64 0, i64 1
+//   store i32 %b, i32* %1
+bool VectorCombine::foldSingleElementStore(Instruction &I) {
+  StoreInst *SI = dyn_cast<StoreInst>(&I);
+  if (!SI || !SI->isSimple() ||
+      !isa<FixedVectorType>(SI->getValueOperand()->getType()))
+    return false;
+
+  // TODO: Combine more complicated patterns (multiple insert) by referencing
+  // TargetTransformInfo.
+  Instruction *Source;
+  Value *NewElement;
+  ConstantInt *Idx;
+  if (!match(SI->getValueOperand(),
+             m_InsertElt(m_Instruction(Source), m_Value(NewElement),
+                         m_ConstantInt(Idx))))
+    return false;
+
+  if (auto *Load = dyn_cast<LoadInst>(Source)) {
+    auto VecTy = cast<FixedVectorType>(SI->getValueOperand()->getType());
+    const DataLayout &DL = I.getModule()->getDataLayout();
+    Value *SrcAddr = Load->getPointerOperand()->stripPointerCasts();
+    // Don't optimize for atomic/volatile load or store. Ensure memory is not
+    // modified between, vector type matches store size, and index is inbounds.
+    if (!Load->isSimple() || Load->getParent() != SI->getParent() ||
+        !DL.typeSizeEqualsStoreSize(Load->getType()) ||
+        Idx->uge(VecTy->getNumElements()) ||
+        SrcAddr != SI->getPointerOperand()->stripPointerCasts() ||
+        isMemModifiedBetween(Load->getIterator(), SI->getIterator(),
+                             MemoryLocation::get(SI), AA))
+      return false;
+
+    Value *GEP = GetElementPtrInst::CreateInBounds(
+        SI->getPointerOperand(), {ConstantInt::get(Idx->getType(), 0), Idx});
+    Builder.Insert(GEP);
+    StoreInst *NSI = Builder.CreateStore(NewElement, GEP);
+    NSI->copyMetadata(*SI);
+    if (SI->getAlign() < NSI->getAlign())
+      NSI->setAlignment(SI->getAlign());
+    replaceValue(I, *NSI);
+    // Need erasing the store manually.
+    I.eraseFromParent();
+    return true;
+  }
+
+  return false;
+}
+
 /// This is the entry point for all transforms. Pass manager differences are
 /// handled in the callers of this function.
 bool VectorCombine::run() {
@@ -769,11 +840,8 @@ bool VectorCombine::run() {
     // Ignore unreachable basic blocks.
     if (!DT.isReachableFromEntry(&BB))
       continue;
-    // Do not delete instructions under here and invalidate the iterator.
-    // Walk the block forwards to enable simple iterative chains of transforms.
-    // TODO: It could be more efficient to remove dead instructions
-    //       iteratively in this loop rather than waiting until the end.
-    for (Instruction &I : BB) {
+    // Use early increment range so that we can erase instructions in loop.
+    for (Instruction &I : make_early_inc_range(BB)) {
       if (isa<DbgInfoIntrinsic>(I))
         continue;
       Builder.SetInsertPoint(&I);
@@ -782,6 +850,7 @@ bool VectorCombine::run() {
       MadeChange |= foldBitcastShuf(I);
       MadeChange |= scalarizeBinopOrCmp(I);
       MadeChange |= foldExtractedCmps(I);
+      MadeChange |= foldSingleElementStore(I);
     }
   }
 
@@ -806,6 +875,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
+    AU.addRequired<AAResultsWrapperPass>();
     AU.setPreservesCFG();
     AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
@@ -819,7 +889,8 @@ public:
       return false;
     auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    VectorCombine Combiner(F, TTI, DT);
+    auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
+    VectorCombine Combiner(F, TTI, DT, AA);
     return Combiner.run();
   }
 };
@@ -840,7 +911,8 @@ PreservedAnalyses VectorCombinePass::run(Function &F,
                                          FunctionAnalysisManager &FAM) {
   TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
   DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
-  VectorCombine Combiner(F, TTI, DT);
+  AAResults &AA = FAM.getResult<AAManager>(F);
+  VectorCombine Combiner(F, TTI, DT, AA);
   if (!Combiner.run())
     return PreservedAnalyses::all();
   PreservedAnalyses PA;

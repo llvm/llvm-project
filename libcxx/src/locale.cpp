@@ -27,7 +27,6 @@
 #define _CTYPE_DISABLE_MACROS
 #endif
 #include "cwctype"
-#include "__sso_allocator"
 #if defined(_LIBCPP_MSVCRT) || defined(__MINGW32__)
 #include "__support/win32/locale_win32.h"
 #elif !defined(__BIONIC__) && !defined(__NuttX__)
@@ -36,6 +35,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "include/atomic_support.h"
+#include "include/sso_allocator.h"
 #include "__undef_macros"
 
 // On Linux, wint_t and wchar_t have different signed-ness, and this causes
@@ -1139,7 +1139,7 @@ ctype<char>::classic_table() noexcept
     return _C_ctype_tab_ + 1;
 #elif defined(__GLIBC__)
     return _LIBCPP_GET_C_LOCALE->__ctype_b;
-#elif __sun__
+#elif defined(__sun__)
     return __ctype_mask;
 #elif defined(_LIBCPP_MSVCRT) || defined(__MINGW32__)
     return __pctype_func();

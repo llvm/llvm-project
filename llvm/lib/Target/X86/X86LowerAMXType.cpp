@@ -1,4 +1,4 @@
-//===- llvm/CodeGen/TileShapeInfo.h - ---------------------------*- C++ -*-===//
+//===- Target/X86/X86LowerAMXType.cpp - -------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,6 +14,27 @@
 /// load/store <256 x i32> instruction to AMX load/store. If the bitcast can
 /// not be combined with load/store, we transform the bitcast to amx load/store
 /// and <256 x i32> store/load.
+///
+/// If Front End not use O0 but the Mid/Back end use O0, (e.g. "Clang -O2 -S
+/// -emit-llvm t.c" + "llc t.ll") we should make sure the amx data is volatile,
+/// because that is necessary for AMX fast register allocation. (In Fast
+/// registera allocation, register will be allocated before spill/reload, so
+/// there is no additional register for amx to identify the step in spill.)
+/// The volatileTileData() will handle this case.
+/// e.g.
+/// ----------------------------------------------------------
+/// | def %td = ...                                          |
+/// | ...                                                    |
+/// | "use %td"                                              |
+/// ----------------------------------------------------------
+/// will transfer to -->
+/// ----------------------------------------------------------
+/// | def %td = ...                                          |
+/// | call void @llvm.x86.tilestored64.internal(mem, %td)    |
+/// | ...                                                    |
+/// | %td2 = call x86_amx @llvm.x86.tileloadd64.internal(mem)|
+/// | "use %td2"                                             |
+/// ----------------------------------------------------------
 //
 //===----------------------------------------------------------------------===//
 //
@@ -41,7 +62,8 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "lower-amx-type"
 
-static AllocaInst *CreateAllocaInst(IRBuilder<> &Builder, BasicBlock *BB) {
+static AllocaInst *createAllocaInstAtEntry(IRBuilder<> &Builder,
+                                           BasicBlock *BB) {
   Function &F = *BB->getParent();
   Module *M = BB->getModule();
   const DataLayout &DL = M->getDataLayout();
@@ -56,7 +78,44 @@ static AllocaInst *CreateAllocaInst(IRBuilder<> &Builder, BasicBlock *BB) {
   return AllocaRes;
 }
 
-static std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo) {
+namespace {
+class X86LowerAMXType {
+  Function &Func;
+  TargetMachine *TM = nullptr;
+
+  // In AMX intrinsics we let Shape = {Row, Col}, but the
+  // RealCol = Col / ElementSize. We may use the RealCol
+  // as a new Row for other new created AMX intrinsics.
+  std::map<Value *, Value *> Col2Row;
+
+public:
+  X86LowerAMXType(Function &F, TargetMachine *TargetM) : Func(F), TM(TargetM) {}
+  bool visit();
+  void combineLoadBitcast(LoadInst *LD, BitCastInst *Bitcast);
+  void combineBitcastStore(BitCastInst *Bitcast, StoreInst *ST);
+  bool transformBitcast(BitCastInst *Bitcast);
+  std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo);
+  Value *getRowFromCol(Instruction *II, Value *V, unsigned Granularity);
+};
+
+Value *X86LowerAMXType::getRowFromCol(Instruction *II, Value *V,
+                                      unsigned Granularity) {
+  if (Col2Row.count(V))
+    return Col2Row[V];
+  IRBuilder<> Builder(&*II->getParent()->getFirstInsertionPt());
+  if (auto *I = dyn_cast<Instruction>(V)) {
+    BasicBlock::iterator Iter = I->getIterator();
+    ++Iter;
+    Builder.SetInsertPoint(&*Iter);
+  }
+  ConstantInt *Gran = Builder.getInt16(Granularity);
+  Value *RealRow = Builder.CreateUDiv(V, Gran);
+  Col2Row[V] = RealRow;
+  return RealRow;
+}
+
+std::pair<Value *, Value *> X86LowerAMXType::getShape(IntrinsicInst *II,
+                                                      unsigned OpNo) {
   Value *Row = nullptr, *Col = nullptr;
   switch (II->getIntrinsicID()) {
   default:
@@ -85,6 +144,13 @@ static std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo) {
       break;
     case 5:
       Row = II->getArgOperand(2);
+      // FIXME: There is a design bug for AMX shape, which the Col should be
+      // Col/4 if it will be used as Row, but current Greedy RA can't handle
+      // this case well, it may failed if we generate a new Shape definition.
+      // So Let's just do it in O0 first.
+      // Row = Row / 4
+      if (TM->getOptLevel() == CodeGenOpt::None)
+        Row = getRowFromCol(II, Row, 4);
       Col = II->getArgOperand(1);
       break;
     }
@@ -100,7 +166,7 @@ static std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo) {
 // -->
 // %2 = call x86_amx @llvm.x86.tileloadd64.internal(i16 %row, i16 %col,
 // i8* %addr, i64 %stride64)
-static void combineLoadBitcast(LoadInst *LD, BitCastInst *Bitcast) {
+void X86LowerAMXType::combineLoadBitcast(LoadInst *LD, BitCastInst *Bitcast) {
   Value *Row = nullptr, *Col = nullptr;
   Use &U = *(Bitcast->use_begin());
   unsigned OpNo = U.getOperandNo();
@@ -125,7 +191,7 @@ static void combineLoadBitcast(LoadInst *LD, BitCastInst *Bitcast) {
 // -->
 // call void @llvm.x86.tilestored64.internal(%row, %col, %addr,
 //                                           %stride64, %13)
-static void combineBitcastStore(BitCastInst *Bitcast, StoreInst *ST) {
+void X86LowerAMXType::combineBitcastStore(BitCastInst *Bitcast, StoreInst *ST) {
 
   Value *Tile = Bitcast->getOperand(0);
   auto *II = cast<IntrinsicInst>(Tile);
@@ -157,14 +223,14 @@ static void combineBitcastStore(BitCastInst *Bitcast, StoreInst *ST) {
 }
 
 // transform bitcast to <store, load> instructions.
-static bool transformBitcast(BitCastInst *Bitcast) {
+bool X86LowerAMXType::transformBitcast(BitCastInst *Bitcast) {
   IRBuilder<> Builder(Bitcast);
   AllocaInst *AllocaAddr;
   Value *I8Ptr, *Stride;
   auto *Src = Bitcast->getOperand(0);
 
   auto Prepare = [&]() {
-    AllocaAddr = CreateAllocaInst(Builder, Bitcast->getParent());
+    AllocaAddr = createAllocaInstAtEntry(Builder, Bitcast->getParent());
     I8Ptr = Builder.CreateBitCast(AllocaAddr, Builder.getInt8PtrTy());
     Stride = Builder.getInt64(64);
   };
@@ -215,17 +281,9 @@ static bool transformBitcast(BitCastInst *Bitcast) {
   return true;
 }
 
-namespace {
-class X86LowerAMXType {
-  Function &Func;
-
-public:
-  X86LowerAMXType(Function &F) : Func(F) {}
-  bool visit();
-};
-
 bool X86LowerAMXType::visit() {
   SmallVector<Instruction *, 8> DeadInsts;
+  Col2Row.clear();
 
   for (BasicBlock *BB : post_order(&Func)) {
     for (BasicBlock::reverse_iterator II = BB->rbegin(), IE = BB->rend();
@@ -322,6 +380,260 @@ bool X86LowerAMXType::visit() {
 }
 } // anonymous namespace
 
+static Value *getAllocaPos(BasicBlock *BB) {
+  Module *M = BB->getModule();
+  Function *F = BB->getParent();
+  IRBuilder<> Builder(&F->getEntryBlock().front());
+  const DataLayout &DL = M->getDataLayout();
+  unsigned AllocaAS = DL.getAllocaAddrSpace();
+  Type *V256I32Ty = VectorType::get(Builder.getInt32Ty(), 256, false);
+  AllocaInst *AllocaRes =
+      new AllocaInst(V256I32Ty, AllocaAS, "", &F->getEntryBlock().front());
+  BasicBlock::iterator Iter = AllocaRes->getIterator();
+  ++Iter;
+  Builder.SetInsertPoint(&*Iter);
+  Value *I8Ptr = Builder.CreateBitCast(AllocaRes, Builder.getInt8PtrTy());
+  return I8Ptr;
+}
+
+static Instruction *createTileStore(Instruction *TileDef, Value *Ptr) {
+  assert(TileDef->getType()->isX86_AMXTy() && "Not define tile!");
+  auto *II = cast<IntrinsicInst>(TileDef);
+  assert(II && "Not tile intrinsic!");
+  Value *Row = II->getOperand(0);
+  Value *Col = II->getOperand(1);
+
+  BasicBlock *BB = TileDef->getParent();
+  BasicBlock::iterator Iter = TileDef->getIterator();
+  IRBuilder<> Builder(BB, ++Iter);
+  Value *Stride = Builder.getInt64(64);
+  std::array<Value *, 5> Args = {Row, Col, Ptr, Stride, TileDef};
+
+  Instruction *TileStore =
+      Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, None, Args);
+  return TileStore;
+}
+
+static void replaceWithTileLoad(Use &U, Value *Ptr, bool IsPHI = false) {
+  Value *V = U.get();
+  assert(V->getType()->isX86_AMXTy() && "Not define tile!");
+
+  // Get tile shape.
+  IntrinsicInst *II = nullptr;
+  if (IsPHI) {
+    Value *PhiOp = dyn_cast<PHINode>(V)->getIncomingValue(0);
+    II = cast<IntrinsicInst>(PhiOp);
+  } else {
+    II = cast<IntrinsicInst>(V);
+  }
+  Value *Row = II->getOperand(0);
+  Value *Col = II->getOperand(1);
+
+  Instruction *UserI = dyn_cast<Instruction>(U.getUser());
+  IRBuilder<> Builder(UserI);
+  Value *Stride = Builder.getInt64(64);
+  std::array<Value *, 4> Args = {Row, Col, Ptr, Stride};
+
+  Value *TileLoad =
+      Builder.CreateIntrinsic(Intrinsic::x86_tileloadd64_internal, None, Args);
+  UserI->replaceUsesOfWith(V, TileLoad);
+}
+
+static bool isIncomingOfPHI(Instruction *I) {
+  for (Use &U : I->uses()) {
+    User *V = U.getUser();
+    if (isa<PHINode>(V))
+      return true;
+  }
+  return false;
+}
+
+// Let all AMX tile data become volatile data, shorten the life range
+// of each tile register before fast register allocation.
+namespace {
+class X86VolatileTileData {
+  Function &F;
+
+public:
+  X86VolatileTileData(Function &Func) : F(Func) {}
+  Value *updatePhiIncomings(BasicBlock *BB,
+                            SmallVector<Instruction *, 2> &Imcomings);
+  void replacePhiDefWithLoad(Instruction *PHI, Value *StorePtr);
+  bool volatileTileData();
+  void volatileTilePHI(PHINode *Inst);
+  void volatileTileNonPHI(Instruction *I);
+};
+
+Value *X86VolatileTileData::updatePhiIncomings(
+    BasicBlock *BB, SmallVector<Instruction *, 2> &Imcomings) {
+  Value *I8Ptr = getAllocaPos(BB);
+
+  for (auto *I : Imcomings) {
+    User *Store = createTileStore(I, I8Ptr);
+
+    // All its uses (except phi) should load from stored mem.
+    for (Use &U : I->uses()) {
+      User *V = U.getUser();
+      if (isa<PHINode>(V) || V == Store)
+        continue;
+      replaceWithTileLoad(U, I8Ptr);
+    }
+  }
+  return I8Ptr;
+}
+
+void X86VolatileTileData::replacePhiDefWithLoad(Instruction *PHI,
+                                                Value *StorePtr) {
+  for (Use &U : PHI->uses())
+    replaceWithTileLoad(U, StorePtr, true);
+  PHI->eraseFromParent();
+}
+
+// Smilar with volatileTileNonPHI, this function only handle PHI Nodes
+// and their related AMX intrinsics.
+// 1) PHI Def should change to tileload.
+// 2) PHI Incoming Values should tilestored in just after their def.
+// 3) The mem of these tileload and tilestores should be same.
+// e.g.
+// ------------------------------------------------------
+// bb_dom:
+//   ...
+//   br i1 %bool.cond, label %if.else, label %if.then
+//
+// if.then:
+//   def %t0 = ...
+//   ...
+//   use %t0
+//   ...
+//   br label %if.end
+//
+// if.else:
+//   def %t1 = ...
+//   br label %if.end
+//
+// if.end:
+//   %td = phi x86_amx [ %t1, %if.else ], [ %t0, %if.then ]
+//   ...
+//   use %td
+// ------------------------------------------------------
+// -->
+// ------------------------------------------------------
+// bb_entry:
+//   %mem = alloca <256 x i32>, align 1024                  *
+//   ...
+// bb_dom:
+//   ...
+//   br i1 %bool.cond, label %if.else, label %if.then
+//
+// if.then:
+//   def %t0 = ...
+//   call void @llvm.x86.tilestored64.internal(mem, %t0)    *
+//   ...
+//   %t0` = call x86_amx @llvm.x86.tileloadd64.internal(mem)*
+//   use %t0`                                               *
+//   ...
+//   br label %if.end
+//
+// if.else:
+//   def %t1 = ...
+//   call void @llvm.x86.tilestored64.internal(mem, %t1)    *
+//   br label %if.end
+//
+// if.end:
+//   ...
+//   %td = call x86_amx @llvm.x86.tileloadd64.internal(mem) *
+//   use %td
+// ------------------------------------------------------
+void X86VolatileTileData::volatileTilePHI(PHINode *PHI) {
+  BasicBlock *BB = PHI->getParent();
+  SmallVector<Instruction *, 2> Imcomings;
+
+  for (unsigned I = 0, E = PHI->getNumIncomingValues(); I != E; ++I) {
+    Value *Op = PHI->getIncomingValue(I);
+    Instruction *Inst = dyn_cast<Instruction>(Op);
+    assert(Inst && "We shouldn't fold AMX instrution!");
+    Imcomings.push_back(Inst);
+  }
+
+  Value *StorePtr = updatePhiIncomings(BB, Imcomings);
+  replacePhiDefWithLoad(PHI, StorePtr);
+}
+
+// Store the defined tile and load it before use.
+// All its users are not PHI.
+// e.g.
+// ------------------------------------------------------
+// def %td = ...
+// ...
+// "use %td"
+// ------------------------------------------------------
+// -->
+// ------------------------------------------------------
+// def %td = ...
+// call void @llvm.x86.tilestored64.internal(mem, %td)
+// ...
+// %td2 = call x86_amx @llvm.x86.tileloadd64.internal(mem)
+// "use %td2"
+// ------------------------------------------------------
+void X86VolatileTileData::volatileTileNonPHI(Instruction *I) {
+  BasicBlock *BB = I->getParent();
+  Value *I8Ptr = getAllocaPos(BB);
+  User *Store = createTileStore(I, I8Ptr);
+
+  // All its uses should load from stored mem.
+  for (Use &U : I->uses()) {
+    User *V = U.getUser();
+    assert(!isa<PHINode>(V) && "PHI Nodes should be excluded!");
+    if (V != Store)
+      replaceWithTileLoad(U, I8Ptr);
+  }
+}
+
+// Volatile Tile Model:
+// 1) All the uses of tile data comes from tileload in time.
+// 2) All the defs of tile data tilestore into mem immediately.
+// For example:
+// --------------------------------------------------------------------------
+// %t1 = call x86_amx @llvm.x86.tileloadd64.internal(m, k, ...)          key
+// %t2 = call x86_amx @llvm.x86.tileloadd64.internal(k, n, ...)
+// %t3 = call x86_amx @llvm.x86.tileloadd64.internal(m, n, ...)          amx
+// %td = tail call x86_amx @llvm.x86.tdpbssd.internal(m, n, k, t1, t2, t3)
+// call void @llvm.x86.tilestored64.internal(... td)                     area
+// --------------------------------------------------------------------------
+// 3) No terminator, call or other amx instructions in the key amx area.
+bool X86VolatileTileData::volatileTileData() {
+  bool Changed = false;
+  for (BasicBlock &BB : F) {
+    SmallVector<Instruction *, 2> PHIInsts;
+    SmallVector<Instruction *, 8> AMXDefInsts;
+
+    for (Instruction &I : BB) {
+      if (!I.getType()->isX86_AMXTy())
+        continue;
+      if (isa<PHINode>(&I))
+        PHIInsts.push_back(&I);
+      else
+        AMXDefInsts.push_back(&I);
+    }
+
+    // First we "volatile" the non-phi related amx intrinsics.
+    for (Instruction *I : AMXDefInsts) {
+      if (isIncomingOfPHI(I))
+        continue;
+      volatileTileNonPHI(I);
+      Changed = true;
+    }
+
+    for (Instruction *I : PHIInsts) {
+      volatileTilePHI(dyn_cast<PHINode>(I));
+      Changed = true;
+    }
+  }
+  return Changed;
+}
+
+} // anonymous namespace
+
 namespace {
 
 class X86LowerAMXTypeLegacyPass : public FunctionPass {
@@ -334,11 +646,24 @@ public:
 
   bool runOnFunction(Function &F) override {
     TargetMachine *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
-    if (F.hasFnAttribute(Attribute::OptimizeNone) ||
-        TM->getOptLevel() == CodeGenOpt::None)
-      return false;
-    X86LowerAMXType LAT(F);
+
+    X86LowerAMXType LAT(F, TM);
     bool C = LAT.visit();
+
+    // Prepare for fast register allocation at O0.
+    // Todo: May better check the volatile model of AMX code, not just
+    // by checking Attribute::OptimizeNone and CodeGenOpt::None.
+    if (TM->getOptLevel() == CodeGenOpt::None) {
+      // If Front End not use O0 but the Mid/Back end use O0, (e.g.
+      // "Clang -O2 -S -emit-llvm t.c" + "llc t.ll") we should make
+      // sure the amx data is volatile, that is nessary for AMX fast
+      // register allocation.
+      if (!F.hasFnAttribute(Attribute::OptimizeNone)) {
+        X86VolatileTileData VTD(F);
+        C = VTD.volatileTileData() || C;
+      }
+    }
+
     return C;
   }
 

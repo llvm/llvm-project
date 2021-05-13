@@ -39,6 +39,7 @@ PlatformKind mapToPlatformKind(PlatformKind Platform, bool WantSim);
 PlatformKind mapToPlatformKind(const Triple &Target);
 PlatformSet mapToPlatformSet(ArrayRef<Triple> Targets);
 StringRef getPlatformName(PlatformKind Platform);
+PlatformKind getPlatformFromName(StringRef Name);
 
 } // end namespace MachO.
 } // end namespace llvm.

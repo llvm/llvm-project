@@ -19,9 +19,13 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "AArch64TargetMachine.h"
 #include "AArch64GlobalISelUtils.h"
+#include "AArch64Subtarget.h"
+#include "AArch64TargetMachine.h"
+#include "GISel/AArch64LegalizerInfo.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
+#include "TargetInfo/AArch64TargetInfo.h"
+#include "Utils/AArch64BaseInfo.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
@@ -33,8 +37,10 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "aarch64-postlegalizer-lowering"
 
@@ -838,6 +844,130 @@ static bool applySwapICmpOperands(MachineInstr &MI,
   MI.getOperand(1).setPredicate(CmpInst::getSwappedPredicate(Pred));
   MI.getOperand(2).setReg(RHS);
   MI.getOperand(3).setReg(LHS);
+  Observer.changedInstr(MI);
+  return true;
+}
+
+/// \returns a function which builds a vector floating point compare instruction
+/// for a condition code \p CC.
+/// \param [in] IsZero - True if the comparison is against 0.
+/// \param [in] NoNans - True if the target has NoNansFPMath.
+static std::function<Register(MachineIRBuilder &)>
+getVectorFCMP(AArch64CC::CondCode CC, Register LHS, Register RHS, bool IsZero,
+              bool NoNans, MachineRegisterInfo &MRI) {
+  LLT DstTy = MRI.getType(LHS);
+  assert(DstTy.isVector() && "Expected vector types only?");
+  assert(DstTy == MRI.getType(RHS) && "Src and Dst types must match!");
+  switch (CC) {
+  default:
+    llvm_unreachable("Unexpected condition code!");
+  case AArch64CC::NE:
+    return [LHS, RHS, IsZero, DstTy](MachineIRBuilder &MIB) {
+      auto FCmp = IsZero
+                      ? MIB.buildInstr(AArch64::G_FCMEQZ, {DstTy}, {LHS})
+                      : MIB.buildInstr(AArch64::G_FCMEQ, {DstTy}, {LHS, RHS});
+      return MIB.buildNot(DstTy, FCmp).getReg(0);
+    };
+  case AArch64CC::EQ:
+    return [LHS, RHS, IsZero, DstTy](MachineIRBuilder &MIB) {
+      return IsZero
+                 ? MIB.buildInstr(AArch64::G_FCMEQZ, {DstTy}, {LHS}).getReg(0)
+                 : MIB.buildInstr(AArch64::G_FCMEQ, {DstTy}, {LHS, RHS})
+                       .getReg(0);
+    };
+  case AArch64CC::GE:
+    return [LHS, RHS, IsZero, DstTy](MachineIRBuilder &MIB) {
+      return IsZero
+                 ? MIB.buildInstr(AArch64::G_FCMGEZ, {DstTy}, {LHS}).getReg(0)
+                 : MIB.buildInstr(AArch64::G_FCMGE, {DstTy}, {LHS, RHS})
+                       .getReg(0);
+    };
+  case AArch64CC::GT:
+    return [LHS, RHS, IsZero, DstTy](MachineIRBuilder &MIB) {
+      return IsZero
+                 ? MIB.buildInstr(AArch64::G_FCMGTZ, {DstTy}, {LHS}).getReg(0)
+                 : MIB.buildInstr(AArch64::G_FCMGT, {DstTy}, {LHS, RHS})
+                       .getReg(0);
+    };
+  case AArch64CC::LS:
+    return [LHS, RHS, IsZero, DstTy](MachineIRBuilder &MIB) {
+      return IsZero
+                 ? MIB.buildInstr(AArch64::G_FCMLEZ, {DstTy}, {LHS}).getReg(0)
+                 : MIB.buildInstr(AArch64::G_FCMGE, {DstTy}, {RHS, LHS})
+                       .getReg(0);
+    };
+  case AArch64CC::MI:
+    return [LHS, RHS, IsZero, DstTy](MachineIRBuilder &MIB) {
+      return IsZero
+                 ? MIB.buildInstr(AArch64::G_FCMLTZ, {DstTy}, {LHS}).getReg(0)
+                 : MIB.buildInstr(AArch64::G_FCMGT, {DstTy}, {RHS, LHS})
+                       .getReg(0);
+    };
+  }
+}
+
+/// Try to lower a vector G_FCMP \p MI into an AArch64-specific pseudo.
+static bool lowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
+                            MachineIRBuilder &MIB) {
+  assert(MI.getOpcode() == TargetOpcode::G_FCMP);
+  const auto &ST = MI.getMF()->getSubtarget<AArch64Subtarget>();
+  Register Dst = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  if (!DstTy.isVector() || !ST.hasNEON())
+    return false;
+  const auto Pred =
+      static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
+  Register LHS = MI.getOperand(2).getReg();
+  // TODO: Handle v4s16 case.
+  unsigned EltSize = MRI.getType(LHS).getScalarSizeInBits();
+  if (EltSize != 32 && EltSize != 64)
+    return false;
+  Register RHS = MI.getOperand(3).getReg();
+  auto Splat = getAArch64VectorSplat(*MRI.getVRegDef(RHS), MRI);
+
+  // Compares against 0 have special target-specific pseudos.
+  bool IsZero = Splat && Splat->isCst() && Splat->getCst() == 0;
+  bool Invert;
+  AArch64CC::CondCode CC, CC2;
+  changeVectorFCMPPredToAArch64CC(Pred, CC, CC2, Invert);
+  bool NoNans = ST.getTargetLowering()->getTargetMachine().Options.NoNaNsFPMath;
+
+  // Instead of having an apply function, just build here to simplify things.
+  MIB.setInstrAndDebugLoc(MI);
+  auto Cmp = getVectorFCMP(CC, LHS, RHS, IsZero, NoNans, MRI);
+  Register CmpRes;
+  if (CC2 == AArch64CC::AL)
+    CmpRes = Cmp(MIB);
+  else {
+    auto Cmp2 = getVectorFCMP(CC2, LHS, RHS, IsZero, NoNans, MRI);
+    auto Cmp2Dst = Cmp2(MIB);
+    auto Cmp1Dst = Cmp(MIB);
+    CmpRes = MIB.buildOr(DstTy, Cmp1Dst, Cmp2Dst).getReg(0);
+  }
+  if (Invert)
+    CmpRes = MIB.buildNot(DstTy, CmpRes).getReg(0);
+  MRI.replaceRegWith(Dst, CmpRes);
+  MI.eraseFromParent();
+  return false;
+}
+
+static bool matchFormTruncstore(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                Register &SrcReg) {
+  assert(MI.getOpcode() == TargetOpcode::G_STORE);
+  Register DstReg = MI.getOperand(0).getReg();
+  if (MRI.getType(DstReg).isVector())
+    return false;
+  // Match a store of a truncate.
+  return mi_match(DstReg, MRI, m_GTrunc(m_Reg(SrcReg)));
+}
+
+static bool applyFormTruncstore(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                MachineIRBuilder &B,
+                                GISelChangeObserver &Observer,
+                                Register &SrcReg) {
+  assert(MI.getOpcode() == TargetOpcode::G_STORE);
+  Observer.changingInstr(MI);
+  MI.getOperand(0).setReg(SrcReg);
   Observer.changedInstr(MI);
   return true;
 }

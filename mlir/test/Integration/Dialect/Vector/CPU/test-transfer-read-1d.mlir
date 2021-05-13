@@ -1,10 +1,23 @@
 // RUN: mlir-opt %s -test-progressive-convert-vector-to-scf -lower-affine -convert-scf-to-std -convert-vector-to-llvm -convert-std-to-llvm | \
-// RUN: mlir-cpu-runner -e entry -entry-point-result=void \
+// RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
+// RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN: FileCheck %s
+
+// RUN: mlir-opt %s -test-unrolled-progressive-convert-vector-to-scf -lower-affine -convert-scf-to-std -convert-vector-to-llvm -convert-std-to-llvm | \
+// RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
 // Test for special cases of 1D vector transfer ops.
 
+memref.global "private" @gv : memref<5x6xf32> =
+    dense<[[0. , 1. , 2. , 3. , 4. , 5. ],
+           [10., 11., 12., 13., 14., 15.],
+           [20., 21., 22., 23., 24., 25.],
+           [30., 31., 32., 33., 34., 35.],
+           [40., 41., 42., 43., 44., 45.]]>
+
+// Non-contiguous, strided load.
 func @transfer_read_1d(%A : memref<?x?xf32>, %base1 : index, %base2 : index) {
   %fm42 = constant -42.0: f32
   %f = vector.transfer_read %A[%base1, %base2], %fm42
@@ -14,6 +27,7 @@ func @transfer_read_1d(%A : memref<?x?xf32>, %base1 : index, %base2 : index) {
   return
 }
 
+// Broadcast.
 func @transfer_read_1d_broadcast(
     %A : memref<?x?xf32>, %base1 : index, %base2 : index) {
   %fm42 = constant -42.0: f32
@@ -24,6 +38,7 @@ func @transfer_read_1d_broadcast(
   return
 }
 
+// Non-contiguous, strided load.
 func @transfer_read_1d_in_bounds(
     %A : memref<?x?xf32>, %base1 : index, %base2 : index) {
   %fm42 = constant -42.0: f32
@@ -34,6 +49,7 @@ func @transfer_read_1d_in_bounds(
   return
 }
 
+// Non-contiguous, strided load.
 func @transfer_read_1d_mask(
     %A : memref<?x?xf32>, %base1 : index, %base2 : index) {
   %fm42 = constant -42.0: f32
@@ -45,6 +61,7 @@ func @transfer_read_1d_mask(
   return
 }
 
+// Non-contiguous, strided load.
 func @transfer_read_1d_mask_in_bounds(
     %A : memref<?x?xf32>, %base1 : index, %base2 : index) {
   %fm42 = constant -42.0: f32
@@ -56,10 +73,22 @@ func @transfer_read_1d_mask_in_bounds(
   return
 }
 
+// Non-contiguous, strided store.
 func @transfer_write_1d(%A : memref<?x?xf32>, %base1 : index, %base2 : index) {
   %fn1 = constant -1.0 : f32
   %vf0 = splat %fn1 : vector<7xf32>
   vector.transfer_write %vf0, %A[%base1, %base2]
+    {permutation_map = affine_map<(d0, d1) -> (d0)>}
+    : vector<7xf32>, memref<?x?xf32>
+  return
+}
+
+// Non-contiguous, strided store.
+func @transfer_write_1d_mask(%A : memref<?x?xf32>, %base1 : index, %base2 : index) {
+  %fn1 = constant -2.0 : f32
+  %vf0 = splat %fn1 : vector<7xf32>
+  %mask = constant dense<[1, 0, 1, 0, 1, 1, 1]> : vector<7xi1>
+  vector.transfer_write %vf0, %A[%base1, %base2], %mask
     {permutation_map = affine_map<(d0, d1) -> (d0)>}
     : vector<7xf32>, memref<?x?xf32>
   return
@@ -70,52 +99,52 @@ func @entry() {
   %c1 = constant 1: index
   %c2 = constant 2: index
   %c3 = constant 3: index
-  %f10 = constant 10.0: f32
-  // work with dims of 4, not of 3
-  %first = constant 5: index
-  %second = constant 6: index
-  %A = memref.alloc(%first, %second) : memref<?x?xf32>
-  scf.for %i = %c0 to %first step %c1 {
-    %i32 = index_cast %i : index to i32
-    %fi = sitofp %i32 : i32 to f32
-    %fi10 = mulf %fi, %f10 : f32
-    scf.for %j = %c0 to %second step %c1 {
-        %j32 = index_cast %j : index to i32
-        %fj = sitofp %j32 : i32 to f32
-        %fres = addf %fi10, %fj : f32
-        memref.store %fres, %A[%i, %j] : memref<?x?xf32>
-    }
-  }
+  %0 = memref.get_global @gv : memref<5x6xf32>
+  %A = memref.cast %0 : memref<5x6xf32> to memref<?x?xf32>
 
-  // Read from 2D memref on first dimension. Cannot be lowered to an LLVM
-  // vector load. Instead, generates scalar loads.
+  // 1. Read from 2D memref on first dimension. Cannot be lowered to an LLVM
+  //    vector load. Instead, generates scalar loads.
   call @transfer_read_1d(%A, %c1, %c2) : (memref<?x?xf32>, index, index) -> ()
-  // Write to 2D memref on first dimension. Cannot be lowered to an LLVM
-  // vector store. Instead, generates scalar stores.
+  // CHECK: ( 12, 22, 32, 42, -42, -42, -42, -42, -42 )
+
+  // 2. Write to 2D memref on first dimension. Cannot be lowered to an LLVM
+  //    vector store. Instead, generates scalar stores.
   call @transfer_write_1d(%A, %c3, %c2) : (memref<?x?xf32>, index, index) -> ()
-  // (Same as above.)
+
+  // 3. (Same as 1. To check if 2 works correctly.)
   call @transfer_read_1d(%A, %c0, %c2) : (memref<?x?xf32>, index, index) -> ()
-  // Read a scalar from a 2D memref and broadcast the value to a 1D vector.
-  // Generates a loop with vector.insertelement.
+  // CHECK: ( 2, 12, 22, -1, -1, -42, -42, -42, -42 )
+
+  // 4. Read a scalar from a 2D memref and broadcast the value to a 1D vector.
+  //    Generates a loop with vector.insertelement.
   call @transfer_read_1d_broadcast(%A, %c1, %c2)
       : (memref<?x?xf32>, index, index) -> ()
-  //  Read from 2D memref on first dimension. Accesses are in-bounds, so no
-  // if-check is generated inside the generated loop.
+  // CHECK: ( 12, 12, 12, 12, 12, 12, 12, 12, 12 )
+
+  // 5. Read from 2D memref on first dimension. Accesses are in-bounds, so no
+  //    if-check is generated inside the generated loop.
   call @transfer_read_1d_in_bounds(%A, %c1, %c2)
       : (memref<?x?xf32>, index, index) -> ()
-  // Optional mask attribute is specified and, in addition, there may be
-  // out-of-bounds accesses.
+  // CHECK: ( 12, 22, -1 )
+
+  // 6. Optional mask attribute is specified and, in addition, there may be
+  //    out-of-bounds accesses.
   call @transfer_read_1d_mask(%A, %c1, %c2)
       : (memref<?x?xf32>, index, index) -> ()
-  // Same as above, but accesses are in-bounds.
+  // CHECK: ( 12, -42, -1, -42, -42, -42, -42, -42, -42 )
+
+  // 7. Same as 6, but accesses are in-bounds.
   call @transfer_read_1d_mask_in_bounds(%A, %c1, %c2)
       : (memref<?x?xf32>, index, index) -> ()
+  // CHECK: ( 12, -42, -1 )
+
+  // 8. Write to 2D memref on first dimension with a mask.
+  call @transfer_write_1d_mask(%A, %c1, %c0)
+      : (memref<?x?xf32>, index, index) -> ()
+
+  // 9. (Same as 1. To check if 8 works correctly.)
+  call @transfer_read_1d(%A, %c0, %c0) : (memref<?x?xf32>, index, index) -> ()
+  // CHECK: ( 0, -2, 20, -2, 40, -42, -42, -42, -42 )
+
   return
 }
-
-// CHECK: ( 12, 22, 32, 42, -42, -42, -42, -42, -42 )
-// CHECK: ( 2, 12, 22, -1, -1, -42, -42, -42, -42 )
-// CHECK: ( 12, 12, 12, 12, 12, 12, 12, 12, 12 )
-// CHECK: ( 12, 22, -1 )
-// CHECK: ( 12, -42, -1, -42, -42, -42, -42, -42, -42 )
-// CHECK: ( 12, -42, -1 )

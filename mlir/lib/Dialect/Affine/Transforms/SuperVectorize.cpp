@@ -21,6 +21,7 @@
 #include "mlir/Dialect/Vector/VectorUtils.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 
 using namespace mlir;
@@ -324,7 +325,7 @@ using namespace vector;
 /// Unsupported cases, extensions, and work in progress (help welcome :-) ):
 /// ========================================================================
 ///   1. lowering to concrete vector types for various HW;
-///   2. reduction support;
+///   2. reduction support for n-D vectorization and non-unit steps;
 ///   3. non-effecting padding during vector.transfer_read and filter during
 ///      vector.transfer_write;
 ///   4. misalignment support vector.transfer_read / vector.transfer_write
@@ -487,6 +488,73 @@ using namespace vector;
 ///
 /// Of course, much more intricate n-D imperfectly-nested patterns can be
 /// vectorized too and specified in a fully declarative fashion.
+///
+/// Reduction:
+/// ==========
+/// Vectorizing reduction loops along the reduction dimension is supported if:
+/// - the reduction kind is supported,
+/// - the vectorization is 1-D, and
+/// - the step size of the loop equals to one.
+///
+/// Comparing to the non-vector-dimension case, two additional things are done
+/// during vectorization of such loops:
+/// - The resulting vector returned from the loop is reduced to a scalar using
+///   `vector.reduce`.
+/// - In some cases a mask is applied to the vector yielded at the end of the
+///   loop to prevent garbage values from being written to the accumulator.
+///
+/// Reduction vectorization is switched off by default, it can be enabled by
+/// passing a map from loops to reductions to utility functions, or by passing
+/// `vectorize-reductions=true` to the vectorization pass.
+///
+/// Consider the following example:
+/// ```mlir
+/// func @vecred(%in: memref<512xf32>) -> f32 {
+///   %cst = constant 0.000000e+00 : f32
+///   %sum = affine.for %i = 0 to 500 iter_args(%part_sum = %cst) -> (f32) {
+///     %ld = affine.load %in[%i] : memref<512xf32>
+///     %cos = math.cos %ld : f32
+///     %add = addf %part_sum, %cos : f32
+///     affine.yield %add : f32
+///   }
+///   return %sum : f32
+/// }
+/// ```
+///
+/// The -affine-vectorize pass with the following arguments:
+/// ```
+/// -affine-vectorize="virtual-vector-size=128 test-fastest-varying=0 \
+///                    vectorize-reductions=true"
+/// ```
+/// produces the following output:
+/// ```mlir
+/// #map = affine_map<(d0) -> (-d0 + 500)>
+/// func @vecred(%arg0: memref<512xf32>) -> f32 {
+///   %cst = constant 0.000000e+00 : f32
+///   %cst_0 = constant dense<0.000000e+00> : vector<128xf32>
+///   %0 = affine.for %arg1 = 0 to 500 step 128 iter_args(%arg2 = %cst_0)
+///           -> (vector<128xf32>) {
+///     // %2 is the number of iterations left in the original loop.
+///     %2 = affine.apply #map(%arg1)
+///     %3 = vector.create_mask %2 : vector<128xi1>
+///     %cst_1 = constant 0.000000e+00 : f32
+///     %4 = vector.transfer_read %arg0[%arg1], %cst_1 :
+///                     memref<512xf32>, vector<128xf32>
+///     %5 = math.cos %4 : vector<128xf32>
+///     %6 = addf %arg2, %5 : vector<128xf32>
+///     // We filter out the effect of last 12 elements using the mask.
+///     %7 = select %3, %6, %arg2 : vector<128xi1>, vector<128xf32>
+///     affine.yield %7 : vector<128xf32>
+///   }
+///   %1 = vector.reduction "add", %0 : vector<128xf32> into f32
+///   return %1 : f32
+/// }
+/// ```
+///
+/// Note that because of loop misalignment we needed to apply a mask to prevent
+/// last 12 elements from affecting the final result. The mask is full of ones
+/// in every iteration except for the last one, in which it has the form
+/// `11...100...0` with 116 ones and 12 zeros.
 
 #define DEBUG_TYPE "early-vect"
 
@@ -644,6 +712,17 @@ struct VectorizationState {
   void registerValueScalarReplacement(BlockArgument replaced,
                                       BlockArgument replacement);
 
+  /// Registers the scalar replacement of a scalar result returned from a
+  /// reduction loop. 'replacement' must be scalar.
+  ///
+  /// This utility is used to register the replacement for scalar results of
+  /// vectorized reduction loops with iter_args.
+  ///
+  /// Example 2:
+  ///   * 'replaced': %0 = affine.for %i = 0 to 512 iter_args(%x = ...) -> (f32)
+  ///   * 'replacement': %1 = vector.reduction "add" %0 : vector<4xf32> into f32
+  void registerLoopResultScalarReplacement(Value replaced, Value replacement);
+
   /// Returns in 'replacedVals' the scalar replacement for values in
   /// 'inputVals'.
   void getScalarValueReplacementsFor(ValueRange inputVals,
@@ -663,9 +742,15 @@ struct VectorizationState {
   // Maps input scalar values to their new scalar counterparts in the vector
   // loop nest.
   BlockAndValueMapping valueScalarReplacement;
+  // Maps results of reduction loops to their new scalar counterparts.
+  DenseMap<Value, Value> loopResultScalarReplacement;
 
   // Maps the newly created vector loops to their vector dimension.
   DenseMap<Operation *, unsigned> vecLoopToVecDim;
+
+  // Maps the new vectorized loops to the corresponding vector masks if it is
+  // required.
+  DenseMap<Operation *, Value> vecLoopToMask;
 
   // The strategy drives which loop to vectorize by which amount.
   const VectorizationStrategy *strategy;
@@ -761,6 +846,26 @@ void VectorizationState::registerValueScalarReplacement(
   registerValueScalarReplacementImpl(replaced, replacement);
 }
 
+/// Registers the scalar replacement of a scalar result returned from a
+/// reduction loop. 'replacement' must be scalar.
+///
+/// This utility is used to register the replacement for scalar results of
+/// vectorized reduction loops with iter_args.
+///
+/// Example 2:
+///   * 'replaced': %0 = affine.for %i = 0 to 512 iter_args(%x = ...) -> (f32)
+///   * 'replacement': %1 = vector.reduction "add" %0 : vector<4xf32> into f32
+void VectorizationState::registerLoopResultScalarReplacement(
+    Value replaced, Value replacement) {
+  assert(isa<AffineForOp>(replaced.getDefiningOp()));
+  assert(loopResultScalarReplacement.count(replaced) == 0 &&
+         "already registered");
+  LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ will replace a result of the loop "
+                       "with scalar: "
+                    << replacement);
+  loopResultScalarReplacement[replaced] = replacement;
+}
+
 void VectorizationState::registerValueScalarReplacementImpl(Value replaced,
                                                             Value replacement) {
   assert(!valueScalarReplacement.contains(replaced) &&
@@ -848,6 +953,101 @@ static ConstantOp vectorizeConstant(ConstantOp constOp,
   // Register vector replacement for future uses in the scope.
   state.registerOpVectorReplacement(constOp, newConstOp);
   return newConstOp;
+}
+
+/// Creates a constant vector filled with the neutral elements of the given
+/// reduction. The scalar type of vector elements will be taken from
+/// `oldOperand`.
+static ConstantOp createInitialVector(AtomicRMWKind reductionKind,
+                                      Value oldOperand,
+                                      VectorizationState &state) {
+  Type scalarTy = oldOperand.getType();
+  if (!VectorType::isValidElementType(scalarTy))
+    return nullptr;
+
+  Attribute valueAttr = getIdentityValueAttr(
+      reductionKind, scalarTy, state.builder, oldOperand.getLoc());
+  auto vecTy = getVectorType(scalarTy, state.strategy);
+  auto vecAttr = DenseElementsAttr::get(vecTy, valueAttr);
+  auto newConstOp =
+      state.builder.create<ConstantOp>(oldOperand.getLoc(), vecAttr);
+
+  return newConstOp;
+}
+
+/// Creates a mask used to filter out garbage elements in the last iteration
+/// of unaligned loops. If a mask is not required then `nullptr` is returned.
+/// The mask will be a vector of booleans representing meaningful vector
+/// elements in the current iteration. It is filled with ones for each iteration
+/// except for the last one, where it has the form `11...100...0` with the
+/// number of ones equal to the number of meaningful elements (i.e. the number
+/// of iterations that would be left in the original loop).
+static Value createMask(AffineForOp vecForOp, VectorizationState &state) {
+  assert(state.strategy->vectorSizes.size() == 1 &&
+         "Creating a mask non-1-D vectors is not supported.");
+  assert(vecForOp.getStep() == state.strategy->vectorSizes[0] &&
+         "Creating a mask for loops with non-unit original step size is not "
+         "supported.");
+
+  // Check if we have already created the mask.
+  if (Value mask = state.vecLoopToMask.lookup(vecForOp))
+    return mask;
+
+  // If the loop has constant bounds and the original number of iterations is
+  // divisable by the vector size then we don't need a mask.
+  if (vecForOp.hasConstantBounds()) {
+    int64_t originalTripCount =
+        vecForOp.getConstantUpperBound() - vecForOp.getConstantLowerBound();
+    if (originalTripCount % vecForOp.getStep() == 0)
+      return nullptr;
+  }
+
+  OpBuilder::InsertionGuard guard(state.builder);
+  state.builder.setInsertionPointToStart(vecForOp.getBody());
+
+  // We generate the mask using the `vector.create_mask` operation which accepts
+  // the number of meaningful elements (i.e. the legth of the prefix of 1s).
+  // To compute the number of meaningful elements we subtract the current value
+  // of the iteration variable from the upper bound of the loop. Example:
+  //
+  //     // 500 is the upper bound of the loop
+  //     #map = affine_map<(d0) -> (500 - d0)>
+  //     %elems_left = affine.apply #map(%iv)
+  //     %mask = vector.create_mask %elems_left : vector<128xi1>
+
+  Location loc = vecForOp.getLoc();
+
+  // First we get the upper bound of the loop using `affine.apply` or
+  // `affine.min`.
+  AffineMap ubMap = vecForOp.getUpperBoundMap();
+  Value ub;
+  if (ubMap.getNumResults() == 1)
+    ub = state.builder.create<AffineApplyOp>(loc, vecForOp.getUpperBoundMap(),
+                                             vecForOp.getUpperBoundOperands());
+  else
+    ub = state.builder.create<AffineMinOp>(loc, vecForOp.getUpperBoundMap(),
+                                           vecForOp.getUpperBoundOperands());
+  // Then we compute the number of (original) iterations left in the loop.
+  AffineExpr subExpr =
+      state.builder.getAffineDimExpr(0) - state.builder.getAffineDimExpr(1);
+  Value itersLeft =
+      makeComposedAffineApply(state.builder, loc, AffineMap::get(2, 0, subExpr),
+                              {ub, vecForOp.getInductionVar()});
+  // If the affine maps were successfully composed then `ub` is unneeded.
+  if (ub.use_empty())
+    ub.getDefiningOp()->erase();
+  // Finally we create the mask.
+  Type maskTy = VectorType::get(state.strategy->vectorSizes,
+                                state.builder.getIntegerType(1));
+  Value mask =
+      state.builder.create<vector::CreateMaskOp>(loc, maskTy, itersLeft);
+
+  LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ creating a mask:\n"
+                    << itersLeft << "\n"
+                    << mask << "\n");
+
+  state.vecLoopToMask[vecForOp] = mask;
+  return mask;
 }
 
 /// Returns true if the provided value is vector uniform given the vectorization
@@ -1023,26 +1223,40 @@ static Operation *vectorizeAffineStore(AffineStoreOp storeOp,
   return transfer;
 }
 
+/// Returns true if `value` is a constant equal to the neutral element of the
+/// given vectorizable reduction.
+static bool isNeutralElementConst(AtomicRMWKind reductionKind, Value value,
+                                  VectorizationState &state) {
+  Type scalarTy = value.getType();
+  if (!VectorType::isValidElementType(scalarTy))
+    return false;
+  Attribute valueAttr = getIdentityValueAttr(reductionKind, scalarTy,
+                                             state.builder, value.getLoc());
+  if (auto constOp = dyn_cast_or_null<ConstantOp>(value.getDefiningOp()))
+    return constOp.value() == valueAttr;
+  return false;
+}
+
 /// Vectorizes a loop with the vectorization strategy in 'state'. A new loop is
 /// created and registered as replacement for the scalar loop. The builder's
 /// insertion point is set to the new loop's body so that subsequent vectorized
 /// operations are inserted into the new loop. If the loop is a vector
 /// dimension, the step of the newly created loop will reflect the vectorization
 /// factor used to vectorized that dimension.
-// TODO: Add support for 'iter_args'. Related operands and results will be
-// vectorized at this point.
 static Operation *vectorizeAffineForOp(AffineForOp forOp,
                                        VectorizationState &state) {
   const VectorizationStrategy &strategy = *state.strategy;
   auto loopToVecDimIt = strategy.loopToVectorDim.find(forOp);
   bool isLoopVecDim = loopToVecDimIt != strategy.loopToVectorDim.end();
 
-  // We only support 'iter_args' when the loop is not one of the vector
-  // dimensions.
-  // TODO: Support vector dimension loops. They require special handling:
-  // generate horizontal reduction, last-value extraction, etc.
-  if (forOp.getNumIterOperands() > 0 && isLoopVecDim)
+  // TODO: Vectorization of reduction loops is not supported for non-unit steps.
+  if (isLoopVecDim && forOp.getNumIterOperands() > 0 && forOp.getStep() != 1) {
+    LLVM_DEBUG(
+        dbgs()
+        << "\n[early-vect]+++++ unsupported step size for reduction loop: "
+        << forOp.getStep() << "\n");
     return nullptr;
+  }
 
   // If we are vectorizing a vector dimension, compute a new step for the new
   // vectorized loop using the vectorization factor for the vector dimension.
@@ -1057,10 +1271,31 @@ static Operation *vectorizeAffineForOp(AffineForOp forOp,
     newStep = forOp.getStep();
   }
 
+  // Get information about reduction kinds.
+  ArrayRef<LoopReduction> reductions;
+  if (isLoopVecDim && forOp.getNumIterOperands() > 0) {
+    auto it = strategy.reductionLoops.find(forOp);
+    assert(it != strategy.reductionLoops.end() &&
+           "Reduction descriptors not found when vectorizing a reduction loop");
+    reductions = it->second;
+    assert(reductions.size() == forOp.getNumIterOperands() &&
+           "The size of reductions array must match the number of iter_args");
+  }
+
   // Vectorize 'iter_args'.
   SmallVector<Value, 8> vecIterOperands;
-  for (auto operand : forOp.getIterOperands())
-    vecIterOperands.push_back(vectorizeOperand(operand, state));
+  if (!isLoopVecDim) {
+    for (auto operand : forOp.getIterOperands())
+      vecIterOperands.push_back(vectorizeOperand(operand, state));
+  } else {
+    // For reduction loops we need to pass a vector of neutral elements as an
+    // initial value of the accumulator. We will add the original initial value
+    // later.
+    for (auto redAndOperand : llvm::zip(reductions, forOp.getIterOperands())) {
+      vecIterOperands.push_back(createInitialVector(
+          std::get<0>(redAndOperand).kind, std::get<1>(redAndOperand), state));
+    }
+  }
 
   auto vecForOp = state.builder.create<AffineForOp>(
       forOp.getLoc(), forOp.getLowerBoundOperands(), forOp.getLowerBoundMap(),
@@ -1075,13 +1310,16 @@ static Operation *vectorizeAffineForOp(AffineForOp forOp,
   // Register loop-related replacements:
   //   1) The new vectorized loop is registered as vector replacement of the
   //      scalar loop.
-  //      TODO: Support reductions along the vector dimension.
   //   2) The new iv of the vectorized loop is registered as scalar replacement
   //      since a scalar copy of the iv will prevail in the vectorized loop.
   //      TODO: A vector replacement will also be added in the future when
   //      vectorization of linear ops is supported.
   //   3) The new 'iter_args' region arguments are registered as vector
   //      replacements since they have been vectorized.
+  //   4) If the loop performs a reduction along the vector dimension, a
+  //      `vector.reduction` or similar op is inserted for each resulting value
+  //      of the loop and its scalar value replaces the corresponding scalar
+  //      result of the loop.
   state.registerOpVectorReplacement(forOp, vecForOp);
   state.registerValueScalarReplacement(forOp.getInductionVar(),
                                        vecForOp.getInductionVar());
@@ -1090,12 +1328,37 @@ static Operation *vectorizeAffineForOp(AffineForOp forOp,
     state.registerBlockArgVectorReplacement(std::get<0>(iterTuple),
                                             std::get<1>(iterTuple));
 
+  if (isLoopVecDim) {
+    for (unsigned i = 0; i < vecForOp.getNumIterOperands(); ++i) {
+      // First, we reduce the vector returned from the loop into a scalar.
+      Value reducedRes =
+          getVectorReductionOp(reductions[i].kind, state.builder,
+                               vecForOp.getLoc(), vecForOp.getResult(i));
+      LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ creating a vector reduction: "
+                        << reducedRes);
+      // Then we combine it with the original (scalar) initial value unless it
+      // is equal to the neutral element of the reduction.
+      Value origInit = forOp.getOperand(forOp.getNumControlOperands() + i);
+      Value finalRes = reducedRes;
+      if (!isNeutralElementConst(reductions[i].kind, origInit, state))
+        finalRes = getReductionOp(reductions[i].kind, state.builder,
+                                  reducedRes.getLoc(), reducedRes, origInit);
+      state.registerLoopResultScalarReplacement(forOp.getResult(i), finalRes);
+    }
+  }
+
   if (isLoopVecDim)
     state.vecLoopToVecDim[vecForOp] = loopToVecDimIt->second;
 
   // Change insertion point so that upcoming vectorized instructions are
   // inserted into the vectorized loop's body.
   state.builder.setInsertionPointToStart(vecForOp.getBody());
+
+  // If this is a reduction loop then we may need to create a mask to filter out
+  // garbage in the last iteration.
+  if (isLoopVecDim && forOp.getNumIterOperands() > 0)
+    createMask(vecForOp, state);
+
   return vecForOp;
 }
 
@@ -1133,11 +1396,35 @@ static Operation *widenOp(Operation *op, VectorizationState &state) {
 
 /// Vectorizes a yield operation by widening its types. The builder's insertion
 /// point is set after the vectorized parent op to continue vectorizing the
-/// operations after the parent op.
+/// operations after the parent op. When vectorizing a reduction loop a mask may
+/// be used to prevent adding garbage values to the accumulator.
 static Operation *vectorizeAffineYieldOp(AffineYieldOp yieldOp,
                                          VectorizationState &state) {
   Operation *newYieldOp = widenOp(yieldOp, state);
   Operation *newParentOp = state.builder.getInsertionBlock()->getParentOp();
+
+  // If there is a mask for this loop then we must prevent garbage values from
+  // being added to the accumulator by inserting `select` operations, for
+  // example:
+  //
+  //   %res = addf %acc, %val : vector<128xf32>
+  //   %res_masked = select %mask, %res, %acc : vector<128xi1>, vector<128xf32>
+  //   affine.yield %res_masked : vector<128xf32>
+  //
+  if (Value mask = state.vecLoopToMask.lookup(newParentOp)) {
+    state.builder.setInsertionPoint(newYieldOp);
+    for (unsigned i = 0; i < newYieldOp->getNumOperands(); ++i) {
+      Value result = newYieldOp->getOperand(i);
+      Value iterArg = cast<AffineForOp>(newParentOp).getRegionIterArgs()[i];
+      Value maskedResult = state.builder.create<SelectOp>(result.getLoc(), mask,
+                                                          result, iterArg);
+      LLVM_DEBUG(
+          dbgs() << "\n[early-vect]+++++ masking a yielded vector value: "
+                 << maskedResult);
+      newYieldOp->setOperand(i, maskedResult);
+    }
+  }
+
   state.builder.setInsertionPointAfter(newParentOp);
   return newYieldOp;
 }
@@ -1241,8 +1528,12 @@ vectorizeLoopNest(std::vector<SmallVector<AffineForOp, 2>> &loops,
   auto opVecResult = rootLoop.walk<WalkOrder::PreOrder>([&](Operation *op) {
     LLVM_DEBUG(dbgs() << "[early-vect]+++++ Vectorizing: " << *op);
     Operation *vectorOp = vectorizeOneOperation(op, state);
-    if (!vectorOp)
+    if (!vectorOp) {
+      LLVM_DEBUG(
+          dbgs() << "[early-vect]+++++ failed vectorizing the operation: "
+                 << *op << "\n");
       return WalkResult::interrupt();
+    }
 
     return WalkResult::advance();
   });
@@ -1257,6 +1548,11 @@ vectorizeLoopNest(std::vector<SmallVector<AffineForOp, 2>> &loops,
 
     return failure();
   }
+
+  // Replace results of reduction loops with the scalar values computed using
+  // `vector.reduce` or similar ops.
+  for (auto resPair : state.loopResultScalarReplacement)
+    resPair.first.replaceAllUsesWith(resPair.second);
 
   assert(state.opVectorReplacement.count(rootLoop) == 1 &&
          "Expected vector replacement for loop nest");
@@ -1325,10 +1621,15 @@ static void computeIntersectionBuckets(
 /// vectorization factors in 'vectorSizes'. By default, each vectorization
 /// factor is applied inner-to-outer to the loops of each loop nest.
 /// 'fastestVaryingPattern' can be optionally used to provide a different loop
-/// vectorization order.
+/// vectorization order. `reductionLoops` can be provided to specify loops which
+/// can be vectorized along the reduction dimension.
 static void vectorizeLoops(Operation *parentOp, DenseSet<Operation *> &loops,
                            ArrayRef<int64_t> vectorSizes,
-                           ArrayRef<int64_t> fastestVaryingPattern) {
+                           ArrayRef<int64_t> fastestVaryingPattern,
+                           const ReductionLoopMap &reductionLoops) {
+  assert((reductionLoops.empty() || vectorSizes.size() == 1) &&
+         "Vectorizing reductions is supported only for 1-D vectors");
+
   // Compute 1-D, 2-D or 3-D loop pattern to be matched on the target loops.
   Optional<NestedPattern> pattern =
       makePattern(loops, vectorSizes.size(), fastestVaryingPattern);
@@ -1359,6 +1660,7 @@ static void vectorizeLoops(Operation *parentOp, DenseSet<Operation *> &loops,
       VectorizationStrategy strategy;
       // TODO: depending on profitability, elect to reduce the vector size.
       strategy.vectorSizes.assign(vectorSizes.begin(), vectorSizes.end());
+      strategy.reductionLoops = reductionLoops;
       if (failed(analyzeProfitability(match.getMatchedChildren(), 1,
                                       patternDepth, &strategy))) {
         continue;
@@ -1396,15 +1698,37 @@ void Vectorize::runOnFunction() {
     return signalPassFailure();
   }
 
+  if (vectorizeReductions && vectorSizes.size() != 1) {
+    f.emitError("Vectorizing reductions is supported only for 1-D vectors.");
+    return signalPassFailure();
+  }
+
   DenseSet<Operation *> parallelLoops;
-  f.walk([&parallelLoops](AffineForOp loop) {
-    if (isLoopParallel(loop))
-      parallelLoops.insert(loop);
-  });
+  ReductionLoopMap reductionLoops;
+
+  // If 'vectorize-reduction=true' is provided, we also populate the
+  // `reductionLoops` map.
+  if (vectorizeReductions) {
+    f.walk([&parallelLoops, &reductionLoops](AffineForOp loop) {
+      SmallVector<LoopReduction, 2> reductions;
+      if (isLoopParallel(loop, &reductions)) {
+        parallelLoops.insert(loop);
+        // If it's not a reduction loop, adding it to the map is not necessary.
+        if (!reductions.empty())
+          reductionLoops[loop] = reductions;
+      }
+    });
+  } else {
+    f.walk([&parallelLoops](AffineForOp loop) {
+      if (isLoopParallel(loop))
+        parallelLoops.insert(loop);
+    });
+  }
 
   // Thread-safe RAII local context, BumpPtrAllocator freed on exit.
   NestedPatternContext mlContext;
-  vectorizeLoops(f, parallelLoops, vectorSizes, fastestVaryingPattern);
+  vectorizeLoops(f, parallelLoops, vectorSizes, fastestVaryingPattern,
+                 reductionLoops);
 }
 
 /// Verify that affine loops in 'loops' meet the nesting criteria expected by
@@ -1452,12 +1776,17 @@ namespace mlir {
 /// factor is applied inner-to-outer to the loops of each loop nest.
 /// 'fastestVaryingPattern' can be optionally used to provide a different loop
 /// vectorization order.
+/// If `reductionLoops` is not empty, the given reduction loops may be
+/// vectorized along the reduction dimension.
+/// TODO: Vectorizing reductions is supported only for 1-D vectorization.
 void vectorizeAffineLoops(Operation *parentOp, DenseSet<Operation *> &loops,
                           ArrayRef<int64_t> vectorSizes,
-                          ArrayRef<int64_t> fastestVaryingPattern) {
+                          ArrayRef<int64_t> fastestVaryingPattern,
+                          const ReductionLoopMap &reductionLoops) {
   // Thread-safe RAII local context, BumpPtrAllocator freed on exit.
   NestedPatternContext mlContext;
-  vectorizeLoops(parentOp, loops, vectorSizes, fastestVaryingPattern);
+  vectorizeLoops(parentOp, loops, vectorSizes, fastestVaryingPattern,
+                 reductionLoops);
 }
 
 /// External utility to vectorize affine loops from a single loop nest using an

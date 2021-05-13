@@ -7571,9 +7571,6 @@ int LLParser::parseCmpXchg(Instruction *&Inst, PerFunctionState &PFS) {
   if (SuccessOrdering == AtomicOrdering::Unordered ||
       FailureOrdering == AtomicOrdering::Unordered)
     return tokError("cmpxchg cannot be unordered");
-  if (isStrongerThan(FailureOrdering, SuccessOrdering))
-    return tokError("cmpxchg failure argument shall be no stronger than the "
-                    "success argument");
   if (FailureOrdering == AtomicOrdering::Release ||
       FailureOrdering == AtomicOrdering::AcquireRelease)
     return tokError(

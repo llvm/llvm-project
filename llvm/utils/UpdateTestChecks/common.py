@@ -32,8 +32,8 @@ def parse_commandline_args(parser):
                        help='Activate CHECK line generation from this point forward')
   parser.add_argument('--disable', action='store_false', dest='enabled',
                       help='Deactivate CHECK line generation from this point forward')
-  parser.add_argument('--replace-function-regex', nargs='+', default=[],
-                      help='List of regular expressions to replace matching function names')
+  parser.add_argument('--replace-value-regex', nargs='+', default=[],
+                      help='List of regular expressions to replace matching value names')
   parser.add_argument('--prefix-filecheck-ir-name', default='',
                       help='Add a prefix to FileCheck IR value names to avoid conflicts with scripted names')
   args = parser.parse_args()
@@ -297,7 +297,7 @@ class FunctionTestBuilder:
     self._check_attributes = flags.check_attributes
     self._scrubber_args = scrubber_args
     # Strip double-quotes if input was read by UTC_ARGS
-    self._replace_function_regex = list(map(lambda x: x.strip('"'), flags.replace_function_regex))
+    self._replace_value_regex = list(map(lambda x: x.strip('"'), flags.replace_value_regex))
     self._func_dict = {}
     self._func_order = {}
     self._global_var_dict = {}
@@ -372,7 +372,7 @@ class FunctionTestBuilder:
               continue
 
         # Replace function names matching the regex.
-        for regex in self._replace_function_regex:
+        for regex in self._replace_value_regex:
           # Pattern that matches capture groups in the regex in leftmost order.
           group_regex = re.compile('\(.*?\)')
           # Replace function name with regex.

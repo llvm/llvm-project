@@ -14,6 +14,8 @@
 
 // T* polymorphic_allocator<T>::deallocate(T*, size_t size)
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 int AssertCount = 0;
 
 #define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : (void)::AssertCount++)

@@ -688,10 +688,6 @@ def Linalg_IndexOp : Linalg_Op<"index", [NoSideEffect]>,
     }
     ```
   }];
-  let builders = [
-    OpBuilder<(ins "int64_t":$dim),
-      [{ build($_builder, $_state, $_builder.getIndexType(), dim); }]>
-  ];
 
   let assemblyFormat = [{ $dim attr-dict `:` type($result) }];
 }

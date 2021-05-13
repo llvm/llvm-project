@@ -64,27 +64,52 @@ MONOREPO_ROOT="${MONOREPO_ROOT:="$(git rev-parse --show-toplevel)"}"
 BUILD_DIR="${BUILD_DIR:=${MONOREPO_ROOT}/build/${BUILDER}}"
 INSTALL_DIR="${BUILD_DIR}/install"
 
-# On macOS, fall back to using the Ninja provided with Xcode if no other Ninja can be found.
-if which ninja &>/dev/null; then
-    NINJA="$(which ninja)"
-else
-    NINJA="$(xcrun --find ninja)"
-fi
+# If we can find Ninja/CMake provided by Xcode, use those since we know their
+# version will generally work with the Clang shipped in Xcode (e.g. if Clang
+# knows about -std=c++20, the CMake bundled in Xcode will probably know about
+# that flag too).
+if xcrun --find ninja &>/dev/null; then NINJA="$(xcrun --find ninja)"; else NINJA="ninja"; fi
+if xcrun --find cmake &>/dev/null; then CMAKE="$(xcrun --find cmake)"; else CMAKE="cmake"; fi
 
 function clean() {
     rm -rf "${BUILD_DIR}"
 }
 
-function generate-cmake() {
+function generate-cmake-base() {
     echo "--- Generating CMake"
-    cmake -S "${MONOREPO_ROOT}/llvm" \
+    ${CMAKE} \
           -B "${BUILD_DIR}" \
           -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
           -DCMAKE_BUILD_TYPE=RelWithDebInfo \
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-          -DLLVM_ENABLE_PROJECTS="libcxx;libunwind;libcxxabi" \
           -DLLVM_LIT_ARGS="-sv --show-unsupported --xunit-xml-output test-results.xml" \
+          "${@}"
+}
+
+function generate-cmake() {
+    generate-cmake-base \
+          -S "${MONOREPO_ROOT}/llvm" \
+          -DLLVM_ENABLE_PROJECTS="libcxx;libunwind;libcxxabi" \
           -DLIBCXX_CXX_ABI=libcxxabi \
+          "${@}"
+}
+
+function generate-cmake-libcxx-win() {
+    # TODO: Clang-cl in MSVC configurations don't have access to compiler_rt
+    # builtins helpers for int128 division. See
+    # https://reviews.llvm.org/D91139#2429595 for a comment about longterm
+    # intent for handling the issue. In the meantime, define
+    # -D_LIBCPP_HAS_NO_INT128 (both when building the library itself and
+    # when building tests) to allow enabling filesystem for running tests,
+    # even if it uses a non-permanent ABI.
+
+    generate-cmake-base \
+          -S "${MONOREPO_ROOT}/libcxx" \
+          -DCMAKE_C_COMPILER=clang-cl \
+          -DCMAKE_CXX_COMPILER=clang-cl \
+          -DLIBCXX_ENABLE_FILESYSTEM=YES \
+          -DCMAKE_CXX_FLAGS="-D_LIBCPP_HAS_NO_INT128" \
+          -DLIBCXX_TEST_COMPILER_FLAGS="-D_LIBCPP_HAS_NO_INT128" \
           "${@}"
 }
 
@@ -116,7 +141,7 @@ function check-cxx-benchmarks() {
 }
 
 # Print the version of a few tools to aid diagnostics in some cases
-cmake --version
+${CMAKE} --version
 ${NINJA} --version
 
 case "${BUILDER}" in
@@ -378,7 +403,8 @@ unified-standalone)
     clean
 
     echo "--- Generating CMake"
-    cmake -S "${MONOREPO_ROOT}/libcxx/utils/ci/runtimes" \
+    ${CMAKE} \
+          -S "${MONOREPO_ROOT}/libcxx/utils/ci/runtimes" \
           -B "${BUILD_DIR}" \
           -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
           -DCMAKE_BUILD_TYPE=RelWithDebInfo \
@@ -394,9 +420,10 @@ runtimes-build)
     clean
 
     echo "--- Generating CMake"
-    cmake -S "${MONOREPO_ROOT}/llvm" \
+    ${CMAKE} \
+          -S "${MONOREPO_ROOT}/llvm" \
           -B "${BUILD_DIR}" \
-          -GNinja \
+          -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
           -DCMAKE_BUILD_TYPE=RelWithDebInfo \
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
           -DLLVM_ENABLE_PROJECTS="clang" \
@@ -416,7 +443,8 @@ legacy-standalone)
     clean
 
     echo "--- Generating CMake"
-    cmake -S "${MONOREPO_ROOT}/libcxx" \
+    ${CMAKE} \
+          -S "${MONOREPO_ROOT}/libcxx" \
           -B "${BUILD_DIR}/libcxx" \
           -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
           -DCMAKE_BUILD_TYPE=RelWithDebInfo \
@@ -426,7 +454,8 @@ legacy-standalone)
           -DLIBCXX_CXX_ABI_INCLUDE_PATHS="${MONOREPO_ROOT}/libcxxabi/include" \
           -DLIBCXX_CXX_ABI_LIBRARY_PATH="${BUILD_DIR}/libcxxabi/lib"
 
-    cmake -S "${MONOREPO_ROOT}/libcxxabi" \
+    ${CMAKE} \
+          -S "${MONOREPO_ROOT}/libcxxabi" \
           -B "${BUILD_DIR}/libcxxabi" \
           -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
           -DCMAKE_BUILD_TYPE=RelWithDebInfo \
@@ -485,35 +514,21 @@ armv7-noexceptions)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7Thumb-noexceptions.cmake"
     check-cxx-cxxabi
 ;;
-generic-win)
+windows-dll)
     clean
-    # TODO: Clang-cl in MSVC configurations don't have access to compiler_rt
-    # builtins helpers for int128 division. See
-    # https://reviews.llvm.org/D91139#2429595 for a comment about longterm
-    # intent for handling the issue. In the meantime, define
-    # -D_LIBCPP_HAS_NO_INT128 (both when building the library itself and
-    # when building tests) to allow enabling filesystem for running tests,
-    # even if it uses a non-permanent ABI.
-
     # TODO: Currently, building with the experimental library breaks running
     # tests (the test linking look for the c++experimental library with the
     # wrong name, and the statically linked c++experimental can't be linked
     # correctly when libc++ visibility attributes indicate dllimport linkage
     # anyway), thus just disable the experimental library. Remove this
     # setting when cmake and the test driver does the right thing automatically.
-
-    echo "--- Generating CMake"
-    cmake -S "${MONOREPO_ROOT}/libcxx" \
-          -B "${BUILD_DIR}" \
-          -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
-          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-          -DCMAKE_C_COMPILER=clang-cl \
-          -DCMAKE_CXX_COMPILER=clang-cl \
-          -DLLVM_LIT_ARGS="-sv --show-unsupported --xunit-xml-output test-results.xml" \
-          -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=NO \
-          -DLIBCXX_ENABLE_FILESYSTEM=YES \
-          -DCMAKE_CXX_FLAGS="-D_LIBCPP_HAS_NO_INT128" \
-          -DLIBCXX_TEST_COMPILER_FLAGS="-D_LIBCPP_HAS_NO_INT128"
+    generate-cmake-libcxx-win -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=OFF
+    echo "+++ Running the libc++ tests"
+    ${NINJA} -vC "${BUILD_DIR}" check-cxx
+;;
+windows-static)
+    clean
+    generate-cmake-libcxx-win -DLIBCXX_ENABLE_SHARED=OFF
     echo "+++ Running the libc++ tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
 ;;

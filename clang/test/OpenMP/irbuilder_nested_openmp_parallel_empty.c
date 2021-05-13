@@ -12,10 +12,10 @@
 
 // ALL-LABEL: @_Z17nested_parallel_0v(
 // ALL-NEXT:  entry:
-// ALL-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @1)
+// ALL-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]])
 // ALL-NEXT:    br label [[OMP_PARALLEL:%.*]]
 // ALL:       omp_parallel:
-// ALL-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @1, i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @_Z17nested_parallel_0v..omp_par.1 to void (i32*, i32*, ...)*))
+// ALL-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @_Z17nested_parallel_0v..omp_par.1 to void (i32*, i32*, ...)*))
 // ALL-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT12:%.*]]
 // ALL:       omp.par.outlined.exit12:
 // ALL-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
@@ -39,10 +39,10 @@ void nested_parallel_0(void) {
 // ALL-NEXT:    store float* [[R:%.*]], float** [[R_ADDR]], align 8
 // ALL-NEXT:    store i32 [[A:%.*]], i32* [[A_ADDR]], align 4
 // ALL-NEXT:    store double [[B:%.*]], double* [[B_ADDR]], align 8
-// ALL-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @1)
+// ALL-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // ALL-NEXT:    br label [[OMP_PARALLEL:%.*]]
 // ALL:       omp_parallel:
-// ALL-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @1, i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, double*, float**)* @_Z17nested_parallel_1Pfid..omp_par.2 to void (i32*, i32*, ...)*), i32* [[A_ADDR]], double* [[B_ADDR]], float** [[R_ADDR]])
+// ALL-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, double*, float**)* @_Z17nested_parallel_1Pfid..omp_par.2 to void (i32*, i32*, ...)*), i32* [[A_ADDR]], double* [[B_ADDR]], float** [[R_ADDR]])
 // ALL-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT13:%.*]]
 // ALL:       omp.par.outlined.exit13:
 // ALL-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
@@ -67,10 +67,10 @@ void nested_parallel_1(float *r, int a, double b) {
 // ALL-NEXT:    store float* [[R:%.*]], float** [[R_ADDR]], align 8
 // ALL-NEXT:    store i32 [[A:%.*]], i32* [[A_ADDR]], align 4
 // ALL-NEXT:    store double [[B:%.*]], double* [[B_ADDR]], align 8
-// ALL-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @1)
+// ALL-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // ALL-NEXT:    br label [[OMP_PARALLEL:%.*]]
 // ALL:       omp_parallel:
-// ALL-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @1, i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, double*, float**)* @_Z17nested_parallel_2Pfid..omp_par.5 to void (i32*, i32*, ...)*), i32* [[A_ADDR]], double* [[B_ADDR]], float** [[R_ADDR]])
+// ALL-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, double*, float**)* @_Z17nested_parallel_2Pfid..omp_par.5 to void (i32*, i32*, ...)*), i32* [[A_ADDR]], double* [[B_ADDR]], float** [[R_ADDR]])
 // ALL-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT55:%.*]]
 // ALL:       omp.par.outlined.exit55:
 // ALL-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]

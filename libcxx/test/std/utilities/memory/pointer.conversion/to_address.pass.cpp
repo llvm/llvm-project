@@ -17,110 +17,133 @@
 #include <cassert>
 #include "test_macros.h"
 
-class P1
-{
-public:
-    using element_type = int;
+struct Irrelevant;
 
-    constexpr explicit P1(int* p)
-    : p_(p) { }
-
-    constexpr int* operator->() const noexcept
-    { return p_; }
-
-private:
-    int* p_;
+struct P1 {
+    using element_type = Irrelevant;
+    constexpr explicit P1(int *p) : p_(p) { }
+    constexpr int *operator->() const { return p_; }
+    int *p_;
 };
 
-class P2
-{
-public:
-    using element_type = int;
-
-    constexpr explicit P2(int* p)
-    : p_(p) { }
-
-    constexpr P1 operator->() const noexcept
-    { return p_; }
-
-private:
+struct P2 {
+    using element_type = Irrelevant;
+    constexpr explicit P2(int *p) : p_(p) { }
+    constexpr P1 operator->() const { return p_; }
     P1 p_;
 };
 
-class P3
-{
-public:
-    constexpr explicit P3(int* p)
-    : p_(p) { }
-
-    constexpr int* get() const noexcept
-    { return p_; }
-
-private:
-    int* p_;
+struct P3 {
+    constexpr explicit P3(int *p) : p_(p) { }
+    int *p_;
 };
 
-namespace std
-{
 template<>
-struct pointer_traits<::P3>
-{
-    static constexpr int* to_address(const ::P3& p) noexcept
-    { return p.get(); }
-};
-}
-
-class P4
-{
-public:
-    constexpr explicit P4(int* p)
-    : p_(p) { }
-
-    constexpr int* operator->() const noexcept
-    { return nullptr; }
-
-    constexpr int* get() const noexcept
-    { return p_; }
-
-private:
-    int* p_;
+struct std::pointer_traits<P3> {
+    static constexpr int *to_address(const P3& p) { return p.p_; }
 };
 
-namespace std
-{
+struct P4 {
+    constexpr explicit P4(int *p) : p_(p) { }
+    int *operator->() const;  // should never be called
+    int *p_;
+};
+
 template<>
-struct pointer_traits<::P4>
-{
-    constexpr static int* to_address(const ::P4& p) noexcept
-    { return p.get(); }
+struct std::pointer_traits<P4> {
+    static constexpr int *to_address(const P4& p) { return p.p_; }
 };
-}
 
-int n = 0;
-static_assert(std::to_address(&n) == &n);
+struct P5 {
+    using element_type = Irrelevant;
+    int const* const& operator->() const;
+};
+
+struct P6 {};
+
+template<>
+struct std::pointer_traits<P6> {
+    static int const* const& to_address(const P6&);
+};
+
+// Taken from a build breakage caused in Clang
+namespace P7 {
+    template<typename T> struct CanProxy;
+    template<typename T>
+    struct CanQual {
+        CanProxy<T> operator->() const { return CanProxy<T>(); }
+    };
+    template<typename T>
+    struct CanProxy {
+        const CanProxy<T> *operator->() const { return nullptr; }
+    };
+} // namespace P7
+
+namespace P8 {
+    template<class T>
+    struct FancyPtrA {
+        using element_type = Irrelevant;
+        T *p_;
+        TEST_CONSTEXPR FancyPtrA(T *p) : p_(p) {}
+        T& operator*() const;
+        TEST_CONSTEXPR T *operator->() const { return p_; }
+    };
+    template<class T>
+    struct FancyPtrB {
+        T *p_;
+        TEST_CONSTEXPR FancyPtrB(T *p) : p_(p) {}
+        T& operator*() const;
+    };
+} // namespace P8
+
+template<class T>
+struct std::pointer_traits<P8::FancyPtrB<T> > {
+    static TEST_CONSTEXPR T *to_address(const P8::FancyPtrB<T>& p) { return p.p_; }
+};
+
+struct Incomplete;
+template<class T> struct Holder { T t; };
+
 
 constexpr bool test() {
-  int i = 0;
-  ASSERT_NOEXCEPT(std::to_address(&i));
-  assert(std::to_address(&i) == &i);
-  P1 p1(&i);
-  ASSERT_NOEXCEPT(std::to_address(p1));
-  assert(std::to_address(p1) == &i);
-  P2 p2(&i);
-  ASSERT_NOEXCEPT(std::to_address(p2));
-  assert(std::to_address(p2) == &i);
-  P3 p3(&i);
-  ASSERT_NOEXCEPT(std::to_address(p3));
-  assert(std::to_address(p3) == &i);
-  P4 p4(&i);
-  ASSERT_NOEXCEPT(std::to_address(p4));
-  assert(std::to_address(p4) == &i);
+    int i = 0;
+    ASSERT_NOEXCEPT(std::to_address(&i));
+    assert(std::to_address(&i) == &i);
+    P1 p1(&i);
+    ASSERT_NOEXCEPT(std::to_address(p1));
+    assert(std::to_address(p1) == &i);
+    P2 p2(&i);
+    ASSERT_NOEXCEPT(std::to_address(p2));
+    assert(std::to_address(p2) == &i);
+    P3 p3(&i);
+    ASSERT_NOEXCEPT(std::to_address(p3));
+    assert(std::to_address(p3) == &i);
+    P4 p4(&i);
+    ASSERT_NOEXCEPT(std::to_address(p4));
+    assert(std::to_address(p4) == &i);
 
-  return true;
+    ASSERT_SAME_TYPE(decltype(std::to_address(std::declval<int const*>())), int const*);
+    ASSERT_SAME_TYPE(decltype(std::to_address(std::declval<P5>())), int const*);
+    ASSERT_SAME_TYPE(decltype(std::to_address(std::declval<P6>())), int const*);
+
+    P7::CanQual<int>* p7 = nullptr;
+    assert(std::to_address(p7) == nullptr);
+    ASSERT_SAME_TYPE(decltype(std::to_address(p7)), P7::CanQual<int>*);
+
+    Holder<Incomplete> *p8_nil = nullptr;  // for C++03 compatibility
+    P8::FancyPtrA<Holder<Incomplete> > p8a = p8_nil;
+    assert(std::to_address(p8a) == p8_nil);
+    ASSERT_SAME_TYPE(decltype(std::to_address(p8a)), decltype(p8_nil));
+
+    P8::FancyPtrB<Holder<Incomplete> > p8b = p8_nil;
+    assert(std::to_address(p8b) == p8_nil);
+    ASSERT_SAME_TYPE(decltype(std::to_address(p8b)), decltype(p8_nil));
+
+    return true;
 }
 
 int main(int, char**) {
-  test();
-  static_assert(test());
-  return 0;
+    test();
+    static_assert(test());
+    return 0;
 }

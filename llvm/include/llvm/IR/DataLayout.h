@@ -589,25 +589,6 @@ public:
   ///
   /// This includes an explicitly requested alignment (if the global has one).
   Align getPreferredAlign(const GlobalVariable *GV) const;
-
-  /// Returns the preferred alignment of the specified global.
-  ///
-  /// This includes an explicitly requested alignment (if the global has one).
-  LLVM_ATTRIBUTE_DEPRECATED(
-      inline unsigned getPreferredAlignment(const GlobalVariable *GV) const,
-      "Use getPreferredAlign instead") {
-    return getPreferredAlign(GV).value();
-  }
-
-  /// Returns the preferred alignment of the specified global, returned
-  /// in log form.
-  ///
-  /// This includes an explicitly requested alignment (if the global has one).
-  LLVM_ATTRIBUTE_DEPRECATED(
-      inline unsigned getPreferredAlignmentLog(const GlobalVariable *GV) const,
-      "Inline where needed") {
-    return Log2(getPreferredAlign(GV));
-  }
 };
 
 inline DataLayout *unwrap(LLVMTargetDataRef P) {

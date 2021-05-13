@@ -142,10 +142,85 @@ public:
   /// returns. However, once a decision has been made on where an
   /// argument should go, exactly what happens can vary slightly. This
   /// class abstracts the differences.
+  ///
+  /// ValueAssigner should not depend on any specific function state, and
+  /// only determine the types and locations for arguments.
+  struct ValueAssigner {
+    ValueAssigner(bool IsIncoming, CCAssignFn *AssignFn_,
+                  CCAssignFn *AssignFnVarArg_ = nullptr)
+        : AssignFn(AssignFn_), AssignFnVarArg(AssignFnVarArg_),
+          IsIncomingArgumentHandler(IsIncoming) {
+
+      // Some targets change the handler depending on whether the call is
+      // varargs or not. If
+      if (!AssignFnVarArg)
+        AssignFnVarArg = AssignFn;
+    }
+
+    virtual ~ValueAssigner() = default;
+
+    /// Returns true if the handler is dealing with incoming arguments,
+    /// i.e. those that move values from some physical location to vregs.
+    bool isIncomingArgumentHandler() const {
+      return IsIncomingArgumentHandler;
+    }
+
+    /// Wrap call to (typically tablegenerated CCAssignFn). This may be
+    /// overridden to track additional state information as arguments are
+    /// assigned or apply target specific hacks around the legacy
+    /// infrastructure.
+    virtual bool assignArg(unsigned ValNo, EVT OrigVT, MVT ValVT, MVT LocVT,
+                           CCValAssign::LocInfo LocInfo, const ArgInfo &Info,
+                           ISD::ArgFlagsTy Flags, CCState &State) {
+      if (getAssignFn(State.isVarArg())(ValNo, ValVT, LocVT, LocInfo, Flags,
+                                        State))
+        return true;
+      StackOffset = State.getNextStackOffset();
+      return false;
+    }
+
+    /// Assignment function to use for a general call.
+    CCAssignFn *AssignFn;
+
+    /// Assignment function to use for a variadic call. This is usually the same
+    /// as AssignFn on most targets.
+    CCAssignFn *AssignFnVarArg;
+
+    /// Stack offset for next argument. At the end of argument evaluation, this
+    /// is typically the total stack size.
+    uint64_t StackOffset = 0;
+
+    /// Select the appropriate assignment function depending on whether this is
+    /// a variadic call.
+    CCAssignFn *getAssignFn(bool IsVarArg) const {
+      return IsVarArg ? AssignFnVarArg : AssignFn;
+    }
+
+  private:
+    const bool IsIncomingArgumentHandler;
+    virtual void anchor();
+  };
+
+  struct IncomingValueAssigner : public ValueAssigner {
+    IncomingValueAssigner(CCAssignFn *AssignFn_,
+                          CCAssignFn *AssignFnVarArg_ = nullptr)
+        : ValueAssigner(true, AssignFn_, AssignFnVarArg_) {}
+  };
+
+  struct OutgoingValueAssigner : public ValueAssigner {
+    OutgoingValueAssigner(CCAssignFn *AssignFn_,
+                          CCAssignFn *AssignFnVarArg_ = nullptr)
+        : ValueAssigner(false, AssignFn_, AssignFnVarArg_) {}
+  };
+
   struct ValueHandler {
+    MachineIRBuilder &MIRBuilder;
+    MachineRegisterInfo &MRI;
+    const bool IsIncomingArgumentHandler;
+
     ValueHandler(bool IsIncoming, MachineIRBuilder &MIRBuilder,
-                 MachineRegisterInfo &MRI, CCAssignFn *AssignFn)
-        : MIRBuilder(MIRBuilder), MRI(MRI), AssignFn(AssignFn),
+                 MachineRegisterInfo &MRI)
+        : MIRBuilder(MIRBuilder), MRI(MRI),
           IsIncomingArgumentHandler(IsIncoming) {}
 
     virtual ~ValueHandler() = default;
@@ -164,6 +239,14 @@ public:
     virtual Register getStackAddress(uint64_t Size, int64_t Offset,
                                      MachinePointerInfo &MPO,
                                      ISD::ArgFlagsTy Flags) = 0;
+
+    /// Return the in-memory size to write for the argument at \p VA. This may
+    /// be smaller than the allocated stack slot size.
+    ///
+    /// This is overridable primarily for targets to maintain compatibility with
+    /// hacks around the existing DAG call lowering infrastructure.
+    virtual uint64_t getStackValueStoreSize(const DataLayout &DL,
+                                            const CCValAssign &VA) const;
 
     /// The specified value has been assigned to a physical register,
     /// handle the appropriate COPY (either to or from) and mark any
@@ -211,26 +294,13 @@ public:
     /// to at most MaxSize bits. If MaxSizeBits is 0 then no maximum is set.
     Register extendRegister(Register ValReg, CCValAssign &VA,
                             unsigned MaxSizeBits = 0);
-
-    virtual bool assignArg(unsigned ValNo, MVT ValVT, MVT LocVT,
-                           CCValAssign::LocInfo LocInfo, const ArgInfo &Info,
-                           ISD::ArgFlagsTy Flags, CCState &State) {
-      return AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State);
-    }
-
-    MachineIRBuilder &MIRBuilder;
-    MachineRegisterInfo &MRI;
-    CCAssignFn *AssignFn;
-
-  private:
-    bool IsIncomingArgumentHandler;
-    virtual void anchor();
   };
 
+  /// Base class for ValueHandlers used for arguments coming into the current
+  /// function, or for return values received from a call.
   struct IncomingValueHandler : public ValueHandler {
-    IncomingValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
-                         CCAssignFn *AssignFn)
-        : ValueHandler(true, MIRBuilder, MRI, AssignFn) {}
+    IncomingValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
+        : ValueHandler(/*IsIncoming*/ true, MIRBuilder, MRI) {}
 
     /// Insert G_ASSERT_ZEXT/G_ASSERT_SEXT or other hint instruction based on \p
     /// VA, returning the new register if a hint was inserted.
@@ -241,10 +311,11 @@ public:
                           CCValAssign &VA) override;
   };
 
+  /// Base class for ValueHandlers used for arguments passed to a function call,
+  /// or for return values.
   struct OutgoingValueHandler : public ValueHandler {
-    OutgoingValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
-                         CCAssignFn *AssignFn)
-        : ValueHandler(false, MIRBuilder, MRI, AssignFn) {}
+    OutgoingValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
+        : ValueHandler(/*IsIncoming*/ false, MIRBuilder, MRI) {}
   };
 
 protected:
@@ -289,27 +360,40 @@ protected:
   void unpackRegs(ArrayRef<Register> DstRegs, Register SrcReg, Type *PackedTy,
                   MachineIRBuilder &MIRBuilder) const;
 
-  /// Invoke Handler::assignArg on each of the given \p Args and then use
+  /// Analyze the argument list in \p Args, using \p Assigner to populate \p
+  /// CCInfo. This will determine the types and locations to use for passed or
+  /// returned values. This may resize fields in \p Args if the value is split
+  /// across multiple registers or stack slots.
+  ///
+  /// This is independent of the function state and can be used
+  /// to determine how a call would pass arguments without needing to change the
+  /// function. This can be used to check if arguments are suitable for tail
+  /// call lowering.
+  ///
+  /// \return True if everything has succeeded, false otherwise.
+  bool determineAssignments(ValueAssigner &Assigner,
+                            SmallVectorImpl<ArgInfo> &Args,
+                            CCState &CCInfo) const;
+
+  /// Invoke ValueAssigner::assignArg on each of the given \p Args and then use
   /// \p Handler to move them to the assigned locations.
   ///
   /// \return True if everything has succeeded, false otherwise.
-  bool handleAssignments(MachineIRBuilder &MIRBuilder,
-                         SmallVectorImpl<ArgInfo> &Args, ValueHandler &Handler,
-                         CallingConv::ID CallConv, bool IsVarArg,
-                         Register ThisReturnReg = Register()) const;
-  bool handleAssignments(CCState &CCState,
+  bool determineAndHandleAssignments(ValueHandler &Handler,
+                                     ValueAssigner &Assigner,
+                                     SmallVectorImpl<ArgInfo> &Args,
+                                     MachineIRBuilder &MIRBuilder,
+                                     CallingConv::ID CallConv, bool IsVarArg,
+                                     Register ThisReturnReg = Register()) const;
+
+  /// Use \p Handler to insert code to handle the argument/return values
+  /// represented by \p Args. It's expected determineAssignments previously
+  /// processed these arguments to populate \p CCState and \p ArgLocs.
+  bool handleAssignments(ValueHandler &Handler, SmallVectorImpl<ArgInfo> &Args,
+                         CCState &CCState,
                          SmallVectorImpl<CCValAssign> &ArgLocs,
                          MachineIRBuilder &MIRBuilder,
-                         SmallVectorImpl<ArgInfo> &Args, ValueHandler &Handler,
                          Register ThisReturnReg = Register()) const;
-
-  /// Analyze passed or returned values from a call, supplied in \p ArgInfo,
-  /// incorporating info about the passed values into \p CCState.
-  ///
-  /// Used to check if arguments are suitable for tail call lowering.
-  bool analyzeArgInfo(CCState &CCState, SmallVectorImpl<ArgInfo> &Args,
-                      CCAssignFn &AssignFnFixed,
-                      CCAssignFn &AssignFnVarArg) const;
 
   /// Check whether parameters to a call that are passed in callee saved
   /// registers are the same as from the calling function.  This needs to be
@@ -325,18 +409,14 @@ protected:
   /// \p Info is the CallLoweringInfo for the call.
   /// \p MF is the MachineFunction for the caller.
   /// \p InArgs contains the results of the call.
-  /// \p CalleeAssignFnFixed is the CCAssignFn to be used for the callee for
-  /// fixed arguments.
-  /// \p CalleeAssignFnVarArg is similar, but for varargs.
-  /// \p CallerAssignFnFixed is the CCAssignFn to be used for the caller for
-  /// fixed arguments.
-  /// \p CallerAssignFnVarArg is similar, but for varargs.
+  /// \p CalleeAssigner specifies the target's handling of the argument types
+  /// for the callee.
+  /// \p CallerAssigner specifies the target's handling of the
+  /// argument types for the caller.
   bool resultsCompatible(CallLoweringInfo &Info, MachineFunction &MF,
                          SmallVectorImpl<ArgInfo> &InArgs,
-                         CCAssignFn &CalleeAssignFnFixed,
-                         CCAssignFn &CalleeAssignFnVarArg,
-                         CCAssignFn &CallerAssignFnFixed,
-                         CCAssignFn &CallerAssignFnVarArg) const;
+                         ValueAssigner &CalleeAssigner,
+                         ValueAssigner &CallerAssigner) const;
 
 public:
   CallLowering(const TargetLowering *TLI) : TLI(TLI) {}

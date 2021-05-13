@@ -13,6 +13,6 @@ entry:
 ; CHECK-NOT: r0
 ; CHECK: bl      returns_r0
 ; CHECK-NOT: r0
-  %b = call i32 @returns_r0(i32 %a)
+  %b = call i32 @returns_r0(i32 returned %a)
   ret i32 %a
 }

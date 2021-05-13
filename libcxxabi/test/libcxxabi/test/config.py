@@ -71,10 +71,11 @@ class Configuration(LibcxxConfiguration):
                                   % cxx_headers)
         (path, version) = os.path.split(cxx_headers)
         (path, cxx) = os.path.split(path)
-        cxx_target_headers = os.path.join(
-            path, self.get_lit_conf('target_triple', None), cxx, version)
-        if os.path.isdir(cxx_target_headers):
-            self.cxx.compile_flags += ['-I' + cxx_target_headers]
+        triple = self.get_lit_conf('target_triple', None)
+        if triple is not None:
+            cxx_target_headers = os.path.join(path, triple, cxx, version)
+            if os.path.isdir(cxx_target_headers):
+                self.cxx.compile_flags += ['-I' + cxx_target_headers]
         self.cxx.compile_flags += ['-I' + cxx_headers]
 
         libcxxabi_headers = self.get_lit_conf(

@@ -21,8 +21,6 @@ namespace macho {
 class InputFile;
 class InputSection;
 class OutputSection;
-class Symbol;
-class Defined;
 
 class InputSection {
 public:
@@ -44,6 +42,23 @@ public:
 
   uint32_t align = 1;
   uint32_t flags = 0;
+  uint32_t callSiteCount = 0;
+  bool isFinal = false; // is address assigned?
+
+  // How many symbols refer to this InputSection.
+  uint32_t numRefs = 0;
+
+  // True if this InputSection could not be written to the output file.
+  // With subsections_via_symbols, most symbol have its own InputSection,
+  // and for weak symbols (e.g. from inline functions), only the
+  // InputSection from one translation unit will make it to the output,
+  // while all copies in other translation units are coalesced into the
+  // first and not copied to the output.
+  bool canOmitFromOutput = false;
+
+  bool shouldOmitFromOutput() const {
+    return canOmitFromOutput && numRefs == 0;
+  }
 
   ArrayRef<uint8_t> data;
   std::vector<Reloc> relocs;

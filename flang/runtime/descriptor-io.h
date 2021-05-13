@@ -32,6 +32,10 @@ inline A &ExtractElement(IoStatementState &io, const Descriptor &descriptor,
 
 // Per-category descriptor-based I/O templates
 
+// TODO (perhaps as a nontrivial but small starter project): implement
+// automatic repetition counts, like "10*3.14159", for list-directed and
+// NAMELIST array output.
+
 template <typename A, Direction DIR>
 inline bool FormattedIntegerIO(
     IoStatementState &io, const Descriptor &descriptor) {

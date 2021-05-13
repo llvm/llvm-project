@@ -1356,6 +1356,10 @@ public:
   /// \param D Requires declaration
   void EmitOMPRequiresDecl(const OMPRequiresDecl *D);
 
+  /// Emit a code for the allocate directive.
+  /// \param D The allocate declaration
+  void EmitOMPAllocateDecl(const OMPAllocateDecl *D);
+
   /// Returns whether the given record has hidden LTO visibility and therefore
   /// may participate in (single-module) CFI and whole-program vtable
   /// optimization.

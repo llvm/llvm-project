@@ -538,10 +538,10 @@ template <class _InputIter, class _Distance>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 void advance(_InputIter& __i, _Distance __orig_n)
 {
-    _LIBCPP_ASSERT(__orig_n >= 0 || __is_cpp17_bidirectional_iterator<_InputIter>::value,
-                   "Attempt to advance(it, n) with negative n on a non-bidirectional iterator");
     typedef decltype(_VSTD::__convert_to_integral(__orig_n)) _IntegralSize;
     _IntegralSize __n = __orig_n;
+    _LIBCPP_ASSERT(__n >= 0 || __is_cpp17_bidirectional_iterator<_InputIter>::value,
+                   "Attempt to advance(it, n) with negative n on a non-bidirectional iterator");
     _VSTD::__advance(__i, __n, typename iterator_traits<_InputIter>::iterator_category());
 }
 
@@ -1356,13 +1356,13 @@ public:
         _LIBCPP_ASSERT(__get_const_db()->__dereferenceable(this),
                        "Attempted to dereference a non-dereferenceable iterator");
 #endif
-        return (pointer)_VSTD::addressof(*__i);
+        return _VSTD::__to_address(__i);
     }
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG __wrap_iter& operator++() _NOEXCEPT
     {
 #if _LIBCPP_DEBUG_LEVEL == 2
         _LIBCPP_ASSERT(__get_const_db()->__dereferenceable(this),
-                       "Attempted to increment non-incrementable iterator");
+                       "Attempted to increment a non-incrementable iterator");
 #endif
         ++__i;
         return *this;
@@ -1374,7 +1374,7 @@ public:
     {
 #if _LIBCPP_DEBUG_LEVEL == 2
         _LIBCPP_ASSERT(__get_const_db()->__decrementable(this),
-                       "Attempted to decrement non-decrementable iterator");
+                       "Attempted to decrement a non-decrementable iterator");
 #endif
         --__i;
         return *this;
@@ -1387,7 +1387,7 @@ public:
     {
 #if _LIBCPP_DEBUG_LEVEL == 2
         _LIBCPP_ASSERT(__get_const_db()->__addable(this, __n),
-                   "Attempted to add/subtract iterator outside of valid range");
+                   "Attempted to add/subtract an iterator outside its valid range");
 #endif
         __i += __n;
         return *this;
@@ -1400,7 +1400,7 @@ public:
     {
 #if _LIBCPP_DEBUG_LEVEL == 2
         _LIBCPP_ASSERT(__get_const_db()->__subscriptable(this, __n),
-                   "Attempted to subscript iterator outside of valid range");
+                   "Attempted to subscript an iterator outside its valid range");
 #endif
         return __i[__n];
     }

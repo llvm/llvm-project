@@ -74,9 +74,9 @@ class InitTensorOp:
       result_type = RankedTensorType.get(sizes, element_type)
       static_size_ints = sizes
 
-    index_type = IndexType.get(context)
+    i64_type = IntegerType.get_signless(64)
     attributes["static_sizes"] = ArrayAttr.get(
-        [IntegerAttr.get(index_type, s) for s in static_size_ints],
+        [IntegerAttr.get(i64_type, s) for s in static_size_ints],
         context=context)
     op = self.build_generic(results=[result_type],
                             operands=operands,

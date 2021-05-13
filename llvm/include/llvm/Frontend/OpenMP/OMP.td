@@ -922,6 +922,13 @@ def OMP_Distribute : Directive<"distribute"> {
     VersionedClause<OMPC_DistSchedule>
   ];
 }
+def OMP_BeginDeclareTarget : Directive<"begin declare target"> {
+  let allowedClauses = [
+    VersionedClause<OMPC_To>,
+    VersionedClause<OMPC_Link>,
+    VersionedClause<OMPC_DeviceType>,
+  ];
+}
 def OMP_DeclareTarget : Directive<"declare target"> {
   let allowedClauses = [
     VersionedClause<OMPC_To>,

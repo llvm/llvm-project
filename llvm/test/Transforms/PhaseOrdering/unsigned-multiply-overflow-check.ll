@@ -52,7 +52,8 @@ define i1 @will_not_overflow(i64 %arg, i64 %arg1) {
 ;
 ; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-LABEL: @will_not_overflow(
 ; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:  bb:
-; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:    [[UMUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[ARG:%.*]], i64 [[ARG1:%.*]])
+; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:    [[ARG1_FR:%.*]] = freeze i64 [[ARG1:%.*]]
+; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:    [[UMUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[ARG:%.*]], i64 [[ARG1_FR]])
 ; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:    [[UMUL_OV:%.*]] = extractvalue { i64, i1 } [[UMUL]], 1
 ; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:    ret i1 [[UMUL_OV]]
 ;
@@ -110,7 +111,8 @@ define i1 @will_overflow(i64 %arg, i64 %arg1) {
 ;
 ; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-LABEL: @will_overflow(
 ; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:  bb:
-; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:    [[UMUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[ARG:%.*]], i64 [[ARG1:%.*]])
+; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:    [[ARG1_FR:%.*]] = freeze i64 [[ARG1:%.*]]
+; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:    [[UMUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[ARG:%.*]], i64 [[ARG1_FR]])
 ; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:    [[UMUL_OV:%.*]] = extractvalue { i64, i1 } [[UMUL]], 1
 ; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:    [[PHI_BO:%.*]] = xor i1 [[UMUL_OV]], true
 ; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:    ret i1 [[PHI_BO]]

@@ -44,6 +44,8 @@ static cl::opt<bool> AbortOnMaxDevirtIterationsReached(
     cl::desc("Abort when the max iterations for devirtualization CGSCC repeat "
              "pass is reached"));
 
+AnalysisKey FunctionStatusAnalysis::Key;
+
 // Explicit instantiations for the core proxy templates.
 template class AllAnalysesOn<LazyCallGraph::SCC>;
 template class AnalysisManager<LazyCallGraph::SCC, LazyCallGraph &>;
@@ -68,9 +70,6 @@ PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
       AM.getResult<PassInstrumentationAnalysis>(InitialC, G);
 
   PreservedAnalyses PA = PreservedAnalyses::all();
-
-  if (DebugLogging)
-    dbgs() << "Starting CGSCC pass manager run.\n";
 
   // The SCC may be refined while we are running passes over it, so set up
   // a pointer that we can update.
@@ -141,9 +140,6 @@ PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
   // preserved. We mark this with a set so that we don't need to inspect each
   // one individually.
   PA.preserveSet<AllAnalysesOn<LazyCallGraph::SCC>>();
-
-  if (DebugLogging)
-    dbgs() << "Finished CGSCC pass manager run.\n";
 
   return PA;
 }
@@ -547,6 +543,13 @@ PreservedAnalyses CGSCCToFunctionPassAdaptor::run(LazyCallGraph::SCC &C,
       continue;
 
     Function &F = N->getFunction();
+    // The expectation here is that FunctionStatusAnalysis was required at the
+    // end of the function passes pipeline managed by this adaptor. Then, if any
+    // CGSCC passes were re-run because CGSCCs changed (or devirtualization),
+    // and none changed F, then FunctionStatusAnalysis would still be cached
+    // here and we don't need to rerun the passes managed by this adaptor.
+    if (FAM.getCachedResult<FunctionStatusAnalysis>(F))
+      continue;
 
     PassInstrumentation PI = FAM.getResult<PassInstrumentationAnalysis>(F);
     if (!PI.runBeforePass<Function>(*Pass, F))
