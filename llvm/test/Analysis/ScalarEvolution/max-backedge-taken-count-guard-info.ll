@@ -200,14 +200,14 @@ define void @test_guard_ule_12_step2(i32* nocapture %a, i64 %N) {
 ; CHECK-LABEL: 'test_guard_ule_12_step2'
 ; CHECK-NEXT:  Classifying expressions for: @test_guard_ule_12_step2
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
-; CHECK-NEXT:    --> {0,+,2}<nuw><nsw><%loop> U: [0,-9223372036854775808) S: [0,9223372036854775807) Exits: (2 * (%N /u 2))<nuw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,2}<nuw><nsw><%loop> U: [0,13) S: [0,13) Exits: (2 * (%N /u 2))<nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %a, i64 %iv
 ; CHECK-NEXT:    --> {%a,+,8}<nuw><%loop> U: full-set S: full-set Exits: ((8 * (%N /u 2)) + %a) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 2
-; CHECK-NEXT:    --> {2,+,2}<nuw><%loop> U: [2,-1) S: [-9223372036854775808,9223372036854775807) Exits: (2 + (2 * (%N /u 2))<nuw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {2,+,2}<nuw><nsw><%loop> U: [2,15) S: [2,15) Exits: (2 + (2 * (%N /u 2))<nuw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_ule_12_step2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%N /u 2)
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is 9223372036854775807
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 6
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%N /u 2)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
