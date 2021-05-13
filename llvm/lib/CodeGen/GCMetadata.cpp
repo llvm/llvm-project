@@ -13,7 +13,6 @@
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/CodeGen/GCStrategy.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
