@@ -104,8 +104,6 @@ bb:
   ret void
 }
 
-declare void @llvm.assume(i1)
-
 define void @ld_v4i8_add_known_bits(i32 %ind0, i32 %ind1, i8* %src, <4 x i8>* %dst) {
 ; CHECK-LABEL: @ld_v4i8_add_known_bits(
 ; CHECK-NEXT:  bb:
@@ -272,6 +270,315 @@ bb:
   %tmp21 = insertelement <4 x i8> %tmp20, i8 %tmp13, i32 2
   %tmp22 = insertelement <4 x i8> %tmp21, i8 %tmp18, i32 3
   store <4 x i8> %tmp22, <4 x i8>* %dst
+  ret void
+}
+
+declare void @llvm.assume(i1)
+
+define void @ld_v4i8_add_assume_on_arg(i32 %v0, i32 %v1, i8* %src, <4 x i8>* %dst) {
+; CHECK-LABEL: @ld_v4i8_add_assume_on_arg(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[AND_I:%.*]] = and i32 [[V0:%.*]], 3
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq i32 [[AND_I]], 0
+; CHECK-NEXT:    [[AND_I_1:%.*]] = and i32 [[V1:%.*]], 3
+; CHECK-NEXT:    [[CMP_I_1:%.*]] = icmp eq i32 [[AND_I_1]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_I]])
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_I_1]])
+; CHECK-NEXT:    [[TMP:%.*]] = add nsw i32 [[V0]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[V1]], [[TMP]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, i8* [[SRC:%.*]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, i8* [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[V1]], [[V0]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[TMP7]] to <3 x i8>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x i8>, <3 x i8>* [[TMP0]], align 1
+; CHECK-NEXT:    [[TMP81:%.*]] = extractelement <3 x i8> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP132:%.*]] = extractelement <3 x i8> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP183:%.*]] = extractelement <3 x i8> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i8> undef, i8 [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i8> [[TMP19]], i8 [[TMP81]], i32 1
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i8> [[TMP20]], i8 [[TMP132]], i32 2
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i8> [[TMP21]], i8 [[TMP183]], i32 3
+; CHECK-NEXT:    store <4 x i8> [[TMP22]], <4 x i8>* [[DST:%.*]]
+; CHECK-NEXT:    ret void
+;
+bb:
+  %and.i = and i32 %v0, 3
+  %cmp.i = icmp eq i32 %and.i, 0
+  %and.i.1 = and i32 %v1, 3
+  %cmp.i.1 = icmp eq i32 %and.i.1, 0
+  call void @llvm.assume(i1 %cmp.i)
+  call void @llvm.assume(i1 %cmp.i.1)
+  %tmp = add nsw i32 %v0, -1
+  %tmp1 = add i32 %v1, %tmp
+  %tmp2 = sext i32 %tmp1 to i64
+  %tmp3 = getelementptr inbounds i8, i8* %src, i64 %tmp2
+  %tmp4 = load i8, i8* %tmp3, align 1
+  %tmp5 = add i32 %v1, %v0
+  %tmp6 = sext i32 %tmp5 to i64
+  %tmp7 = getelementptr inbounds i8, i8* %src, i64 %tmp6
+  %tmp8 = load i8, i8* %tmp7, align 1
+  %tmp9 = add nsw i32 %v0, 1
+  %tmp10 = add i32 %v1, %tmp9
+  %tmp11 = sext i32 %tmp10 to i64
+  %tmp12 = getelementptr inbounds i8, i8* %src, i64 %tmp11
+  %tmp13 = load i8, i8* %tmp12, align 1
+  %tmp14 = add nsw i32 %v0, 2
+  %tmp15 = add i32 %v1, %tmp14
+  %tmp16 = sext i32 %tmp15 to i64
+  %tmp17 = getelementptr inbounds i8, i8* %src, i64 %tmp16
+  %tmp18 = load i8, i8* %tmp17, align 1
+  %tmp19 = insertelement <4 x i8> undef, i8 %tmp4, i32 0
+  %tmp20 = insertelement <4 x i8> %tmp19, i8 %tmp8, i32 1
+  %tmp21 = insertelement <4 x i8> %tmp20, i8 %tmp13, i32 2
+  %tmp22 = insertelement <4 x i8> %tmp21, i8 %tmp18, i32 3
+  store <4 x i8> %tmp22, <4 x i8>* %dst
+  ret void
+}
+
+define void @ld_v4i8_add_assume_on_arg1(i32 %v0, i32 %v1, i8* %src, <4 x i8>* %dst) {
+; CHECK-LABEL: @ld_v4i8_add_assume_on_arg1(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[AND_I:%.*]] = and i32 [[V0:%.*]], 3
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq i32 [[AND_I]], 0
+; CHECK-NEXT:    [[AND_I_1:%.*]] = and i32 [[V1:%.*]], 3
+; CHECK-NEXT:    [[CMP_I_1:%.*]] = icmp eq i32 [[AND_I_1]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_I]])
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_I_1]])
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[V1]], [[V0]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, i8* [[SRC:%.*]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[TMP7]] to <4 x i8>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, <4 x i8>* [[TMP0]], align 1
+; CHECK-NEXT:    [[TMP81:%.*]] = extractelement <4 x i8> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP132:%.*]] = extractelement <4 x i8> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP183:%.*]] = extractelement <4 x i8> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP44:%.*]] = extractelement <4 x i8> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i8> undef, i8 [[TMP44]], i32 0
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i8> [[TMP19]], i8 [[TMP81]], i32 1
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i8> [[TMP20]], i8 [[TMP132]], i32 2
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i8> [[TMP21]], i8 [[TMP183]], i32 3
+; CHECK-NEXT:    store <4 x i8> [[TMP22]], <4 x i8>* [[DST:%.*]]
+; CHECK-NEXT:    ret void
+;
+bb:
+  %and.i = and i32 %v0, 3
+  %cmp.i = icmp eq i32 %and.i, 0
+  %and.i.1 = and i32 %v1, 3
+  %cmp.i.1 = icmp eq i32 %and.i.1, 0
+  call void @llvm.assume(i1 %cmp.i)
+  call void @llvm.assume(i1 %cmp.i.1)
+  %tmp = add nsw i32 %v0, 3
+  %tmp1 = add i32 %v1, %tmp
+  %tmp2 = sext i32 %tmp1 to i64
+  %tmp3 = getelementptr inbounds i8, i8* %src, i64 %tmp2
+  %tmp4 = load i8, i8* %tmp3, align 1
+  %tmp5 = add i32 %v1, %v0
+  %tmp6 = sext i32 %tmp5 to i64
+  %tmp7 = getelementptr inbounds i8, i8* %src, i64 %tmp6
+  %tmp8 = load i8, i8* %tmp7, align 1
+  %tmp9 = add nsw i32 %v0, 1
+  %tmp10 = add i32 %v1, %tmp9
+  %tmp11 = sext i32 %tmp10 to i64
+  %tmp12 = getelementptr inbounds i8, i8* %src, i64 %tmp11
+  %tmp13 = load i8, i8* %tmp12, align 1
+  %tmp14 = add nsw i32 %v0, 2
+  %tmp15 = add i32 %v1, %tmp14
+  %tmp16 = sext i32 %tmp15 to i64
+  %tmp17 = getelementptr inbounds i8, i8* %src, i64 %tmp16
+  %tmp18 = load i8, i8* %tmp17, align 1
+  %tmp19 = insertelement <4 x i8> undef, i8 %tmp4, i32 0
+  %tmp20 = insertelement <4 x i8> %tmp19, i8 %tmp8, i32 1
+  %tmp21 = insertelement <4 x i8> %tmp20, i8 %tmp13, i32 2
+  %tmp22 = insertelement <4 x i8> %tmp21, i8 %tmp18, i32 3
+  store <4 x i8> %tmp22, <4 x i8>* %dst
+  ret void
+}
+
+; Address computations are partly separated by control flow and with llvm.assume placed
+; in the second basic block
+
+define void @ld_v2i8_add_different_contexts(i32 %ind0, i32 %ind1, i8* %src, <2 x i8>* %dst) {
+; CHECK-LABEL: @ld_v2i8_add_different_contexts(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[V0:%.*]] = mul i32 [[IND0:%.*]], 4
+; CHECK-NEXT:    [[V1:%.*]] = mul i32 [[IND1:%.*]], 3
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[V1]], [[V0]]
+; CHECK-NEXT:    [[BIT_COND:%.*]] = icmp eq i32 [[V1]], 0
+; CHECK-NEXT:    br i1 [[BIT_COND]], label [[BB_LOADS:%.*]], label [[BB_SKIP:%.*]]
+; CHECK:       bb.loads:
+; CHECK-NEXT:    call void @llvm.assume(i1 [[BIT_COND]])
+; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, i8* [[SRC:%.*]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[TMP7]] to <2 x i8>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i8>, <2 x i8>* [[TMP0]], align 1
+; CHECK-NEXT:    [[TMP81:%.*]] = extractelement <2 x i8> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP42:%.*]] = extractelement <2 x i8> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x i8> undef, i8 [[TMP42]], i32 0
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x i8> [[TMP19]], i8 [[TMP81]], i32 1
+; CHECK-NEXT:    store <2 x i8> [[TMP20]], <2 x i8>* [[DST:%.*]]
+; CHECK-NEXT:    br label [[BB_SKIP]]
+; CHECK:       bb.skip:
+; CHECK-NEXT:    ret void
+;
+bb:
+  %v0 = mul i32 %ind0, 4
+  %v1 = mul i32 %ind1, 3
+  %tmp5 = add i32 %v1, %v0
+  %bit_cond = icmp eq i32 %v1, 0
+  br i1 %bit_cond, label %bb.loads, label %bb.skip
+
+bb.loads:
+  call void @llvm.assume(i1 %bit_cond)
+  %tmp = add nsw i32 %v0, 1
+  %tmp1 = add i32 %v1, %tmp
+  %tmp2 = sext i32 %tmp1 to i64
+  %tmp3 = getelementptr inbounds i8, i8* %src, i64 %tmp2
+  %tmp4 = load i8, i8* %tmp3, align 1
+  %tmp6 = sext i32 %tmp5 to i64
+  %tmp7 = getelementptr inbounds i8, i8* %src, i64 %tmp6
+  %tmp8 = load i8, i8* %tmp7, align 1
+  %tmp19 = insertelement <2 x i8> undef, i8 %tmp4, i32 0
+  %tmp20 = insertelement <2 x i8> %tmp19, i8 %tmp8, i32 1
+  store <2 x i8> %tmp20, <2 x i8>* %dst
+  br label %bb.skip
+
+bb.skip:
+  ret void
+}
+
+; Same as ld_v2i8_add_different_contexts but with llvm.assume placed between loads
+
+define void @ld_v2i8_add_different_contexts1(i32 %ind0, i32 %ind1, i8* %src, <2 x i8>* %dst) {
+; CHECK-LABEL: @ld_v2i8_add_different_contexts1(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[V0:%.*]] = mul i32 [[IND0:%.*]], 4
+; CHECK-NEXT:    [[V1:%.*]] = mul i32 [[IND1:%.*]], 3
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[V1]], [[V0]]
+; CHECK-NEXT:    [[BIT_COND:%.*]] = icmp eq i32 [[V1]], 0
+; CHECK-NEXT:    br i1 [[BIT_COND]], label [[BB_LOADS:%.*]], label [[BB_SKIP:%.*]]
+; CHECK:       bb.loads:
+; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, i8* [[SRC:%.*]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[TMP7]] to <2 x i8>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i8>, <2 x i8>* [[TMP0]], align 1
+; CHECK-NEXT:    [[TMP81:%.*]] = extractelement <2 x i8> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP42:%.*]] = extractelement <2 x i8> [[TMP1]], i32 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[BIT_COND]])
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x i8> undef, i8 [[TMP42]], i32 0
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x i8> [[TMP19]], i8 [[TMP81]], i32 1
+; CHECK-NEXT:    store <2 x i8> [[TMP20]], <2 x i8>* [[DST:%.*]]
+; CHECK-NEXT:    br label [[BB_SKIP]]
+; CHECK:       bb.skip:
+; CHECK-NEXT:    ret void
+;
+bb:
+  %v0 = mul i32 %ind0, 4
+  %v1 = mul i32 %ind1, 3
+  %tmp5 = add i32 %v1, %v0
+  %bit_cond = icmp eq i32 %v1, 0
+  br i1 %bit_cond, label %bb.loads, label %bb.skip
+
+bb.loads:
+  %tmp6 = sext i32 %tmp5 to i64
+  %tmp7 = getelementptr inbounds i8, i8* %src, i64 %tmp6
+  %tmp8 = load i8, i8* %tmp7, align 1
+  call void @llvm.assume(i1 %bit_cond)
+  %tmp = add nsw i32 %v0, 1
+  %tmp1 = add i32 %v1, %tmp
+  %tmp2 = sext i32 %tmp1 to i64
+  %tmp3 = getelementptr inbounds i8, i8* %src, i64 %tmp2
+  %tmp4 = load i8, i8* %tmp3, align 1
+  %tmp19 = insertelement <2 x i8> undef, i8 %tmp4, i32 0
+  %tmp20 = insertelement <2 x i8> %tmp19, i8 %tmp8, i32 1
+  store <2 x i8> %tmp20, <2 x i8>* %dst
+  br label %bb.skip
+
+bb.skip:
+  ret void
+}
+
+; llvm.assume is placed between loads in a single basic block
+
+define void @ld_v2i8_add_context(i32 %ind0, i32 %ind1, i8* %src, <2 x i8>* %dst) {
+; CHECK-LABEL: @ld_v2i8_add_context(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[V0:%.*]] = mul i32 [[IND0:%.*]], 4
+; CHECK-NEXT:    [[V1:%.*]] = mul i32 [[IND1:%.*]], 3
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[V1]], [[V0]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, i8* [[SRC:%.*]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[TMP7]] to <2 x i8>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i8>, <2 x i8>* [[TMP0]], align 1
+; CHECK-NEXT:    [[TMP81:%.*]] = extractelement <2 x i8> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP42:%.*]] = extractelement <2 x i8> [[TMP1]], i32 1
+; CHECK-NEXT:    [[BIT_COND:%.*]] = icmp eq i32 [[TMP5]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[BIT_COND]])
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x i8> undef, i8 [[TMP42]], i32 0
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x i8> [[TMP19]], i8 [[TMP81]], i32 1
+; CHECK-NEXT:    store <2 x i8> [[TMP20]], <2 x i8>* [[DST:%.*]]
+; CHECK-NEXT:    ret void
+;
+bb:
+  %v0 = mul i32 %ind0, 4
+  %v1 = mul i32 %ind1, 3
+  %tmp5 = add i32 %v1, %v0
+  %tmp6 = sext i32 %tmp5 to i64
+  %tmp7 = getelementptr inbounds i8, i8* %src, i64 %tmp6
+  %tmp8 = load i8, i8* %tmp7, align 1
+  %bit_cond = icmp eq i32 %tmp5, 0
+  call void @llvm.assume(i1 %bit_cond)
+  %tmp = add nsw i32 %v0, 1
+  %tmp1 = add i32 %v1, %tmp
+  %tmp2 = sext i32 %tmp1 to i64
+  %tmp3 = getelementptr inbounds i8, i8* %src, i64 %tmp2
+  %tmp4 = load i8, i8* %tmp3, align 1
+  %tmp19 = insertelement <2 x i8> undef, i8 %tmp4, i32 0
+  %tmp20 = insertelement <2 x i8> %tmp19, i8 %tmp8, i32 1
+  store <2 x i8> %tmp20, <2 x i8>* %dst
+  ret void
+}
+
+; Placing llvm.assume after all the loads and stores in the basic block still works
+
+define void @ld_v2i8_add_context1(i32 %ind0, i32 %ind1, i8* %src, <2 x i8>* %dst) {
+; CHECK-LABEL: @ld_v2i8_add_context1(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[V0:%.*]] = mul i32 [[IND0:%.*]], 4
+; CHECK-NEXT:    [[V1:%.*]] = mul i32 [[IND1:%.*]], 3
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[V1]], [[V0]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, i8* [[SRC:%.*]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[TMP7]] to <2 x i8>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i8>, <2 x i8>* [[TMP0]], align 1
+; CHECK-NEXT:    [[TMP81:%.*]] = extractelement <2 x i8> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP42:%.*]] = extractelement <2 x i8> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x i8> undef, i8 [[TMP42]], i32 0
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x i8> [[TMP19]], i8 [[TMP81]], i32 1
+; CHECK-NEXT:    store <2 x i8> [[TMP20]], <2 x i8>* [[DST:%.*]]
+; CHECK-NEXT:    [[BIT_COND:%.*]] = icmp eq i32 [[TMP5]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[BIT_COND]])
+; CHECK-NEXT:    ret void
+;
+bb:
+  %v0 = mul i32 %ind0, 4
+  %v1 = mul i32 %ind1, 3
+  %tmp5 = add i32 %v1, %v0
+  %tmp6 = sext i32 %tmp5 to i64
+  %tmp7 = getelementptr inbounds i8, i8* %src, i64 %tmp6
+  %tmp8 = load i8, i8* %tmp7, align 1
+  %tmp = add nsw i32 %v0, 1
+  %tmp1 = add i32 %v1, %tmp
+  %tmp2 = sext i32 %tmp1 to i64
+  %tmp3 = getelementptr inbounds i8, i8* %src, i64 %tmp2
+  %tmp4 = load i8, i8* %tmp3, align 1
+  %tmp19 = insertelement <2 x i8> undef, i8 %tmp4, i32 0
+  %tmp20 = insertelement <2 x i8> %tmp19, i8 %tmp8, i32 1
+  store <2 x i8> %tmp20, <2 x i8>* %dst
+  %bit_cond = icmp eq i32 %tmp5, 0
+  call void @llvm.assume(i1 %bit_cond)
   ret void
 }
 
