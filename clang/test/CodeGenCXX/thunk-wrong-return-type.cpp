@@ -1,0 +1,26 @@
+// RUN: %clang_cc1 -emit-llvm-only -triple %itanium_abi_triple %s -emit-llvm -o - %s | FileCheck %s
+
+struct A {};
+struct alignas(32) B : virtual A {
+  char c[32];
+};
+struct Pad {
+  char c[7];
+};
+struct C : B, Pad, virtual A {};
+
+struct X {
+  virtual A &f();
+};
+struct U {
+  virtual ~U();
+};
+C c;
+struct Y : U, X {
+  virtual B &f() override { return c; }
+};
+
+Y y;
+
+// FIXME: The return type should be  align 1 dereferenceable(1) %struct.A.8*
+// CHECK: define linkonce_odr nonnull align 32 dereferenceable(40) %struct.B.1* @_ZTchn8_v0_n24_N1Y1fEv(%struct.Y.5* nonnull dereferenceable(16) %this) unnamed_addr #1 comdat align 2 {
