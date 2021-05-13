@@ -1120,6 +1120,29 @@ public:
     destroyAddressable(OldBase);
   }
 
+  /// Transfer a defined symbol from one block to another.
+  ///
+  /// The symbol's offset within DestBlock is set to NewOffset.
+  ///
+  /// If ExplicitNewSize is given as None then the size of the symbol will be
+  /// checked and auto-truncated to at most the size of the remainder (from the
+  /// given offset) of the size of the new block.
+  ///
+  /// All other symbol attributes are unchanged.
+  void transferDefinedSymbol(Symbol &Sym, Block &DestBlock,
+                             JITTargetAddress NewOffset,
+                             Optional<JITTargetAddress> ExplicitNewSize) {
+    Sym.setBlock(DestBlock);
+    Sym.setOffset(NewOffset);
+    if (ExplicitNewSize)
+      Sym.setSize(*ExplicitNewSize);
+    else {
+      JITTargetAddress RemainingBlockSize = DestBlock.getSize() - NewOffset;
+      if (Sym.getSize() > RemainingBlockSize)
+        Sym.setSize(RemainingBlockSize);
+    }
+  }
+
   /// Removes an external symbol. Also removes the underlying Addressable.
   void removeExternalSymbol(Symbol &Sym) {
     assert(!Sym.isDefined() && !Sym.isAbsolute() &&
