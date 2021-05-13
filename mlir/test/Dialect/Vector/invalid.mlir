@@ -339,6 +339,18 @@ func @test_vector.transfer_read(%arg0: memref<?x?x?xf32>) {
 
 // -----
 
+func @test_vector.transfer_read(%arg0: memref<?x?x?xf32>) {
+  %c1 = constant 1 : i1
+  %c3 = constant 3 : index
+  %cst = constant 3.0 : f32
+  // expected-note@+1 {{prior use here}}
+  %mask = splat %c1 : vector<3x8x7xi1>
+  // expected-error@+1 {{expects different type than prior uses: 'vector<3x7xi1>' vs 'vector<3x8x7xi1>'}}
+  %0 = vector.transfer_read %arg0[%c3, %c3, %c3], %cst, %mask {permutation_map = affine_map<(d0, d1, d2)->(d0, 0, d2)>} : memref<?x?x?xf32>, vector<3x8x7xf32>
+}
+
+// -----
+
 func @test_vector.transfer_read(%arg0: memref<?x?xvector<4x3xf32>>) {
   %c3 = constant 3 : index
   %f0 = constant 0.0 : f32
@@ -365,6 +377,17 @@ func @test_vector.transfer_read(%arg0: memref<?x?xvector<2x3xf32>>) {
   %vf0 = splat %f0 : vector<2x3xf32>
   // expected-error@+1 {{ expects the optional in_bounds attr of same rank as permutation_map results: affine_map<(d0, d1) -> (d0, d1)>}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 {in_bounds = [true], permutation_map = affine_map<(d0, d1)->(d0, d1)>} : memref<?x?xvector<2x3xf32>>, vector<1x1x2x3xf32>
+}
+
+// -----
+
+func @test_vector.transfer_read(%arg0: memref<?x?xvector<2x3xf32>>) {
+  %c3 = constant 3 : index
+  %f0 = constant 0.0 : f32
+  %vf0 = splat %f0 : vector<2x3xf32>
+  %mask = splat %c1 : vector<2x3xi1>
+  // expected-error@+1 {{does not support masks with vector element type}}
+  %0 = vector.transfer_read %arg0[%c3, %c3], %vf0, %mask {permutation_map = affine_map<(d0, d1)->(d0, d1)>} : memref<?x?xvector<2x3xf32>>, vector<1x1x2x3xf32>
 }
 
 // -----
