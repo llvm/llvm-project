@@ -10,6 +10,26 @@
 
 using namespace mlir;
 
+namespace mlir {
+namespace vector {
+namespace detail {
+
+VectorType transferMaskType(VectorType vecType, AffineMap map) {
+  auto i1Type = IntegerType::get(map.getContext(), 1);
+  SmallVector<int64_t, 8> shape;
+  for (int64_t i = 0; i < vecType.getRank(); ++i) {
+    // Only result dims have a corresponding dim in the mask.
+    if (auto expr = map.getResult(i).template isa<AffineDimExpr>()) {
+      shape.push_back(vecType.getDimSize(i));
+    }
+  }
+  return VectorType::get(shape, i1Type);
+}
+
+} // namespace detail
+} // namespace vector
+} // namespace mlir
+
 //===----------------------------------------------------------------------===//
 // VectorUnroll Interfaces
 //===----------------------------------------------------------------------===//
