@@ -3069,13 +3069,11 @@ struct TransferReadPermutationLowering
     AffineMap map = op.permutation_map();
     if (!map.isPermutationOfMinorIdentityWithBroadcasting(permutation))
       return failure();
-
     AffineMap permutationMap =
         map.getPermutationMap(permutation, op.getContext());
     if (permutationMap.isIdentity())
       return failure();
-    if (op.mask())
-      return failure();
+
     // Caluclate the map of the new read by applying the inverse permutation.
     permutationMap = inversePermutation(permutationMap);
     AffineMap newMap = permutationMap.compose(map);
@@ -3085,11 +3083,32 @@ struct TransferReadPermutationLowering
     for (auto pos : llvm::enumerate(permutation)) {
       newVectorShape[pos.value()] = originalShape[pos.index()];
     }
+
+    Value newMask;
+    if (op.mask()) {
+      // Remove unused dims from the permutation map. E.g.:
+      // E.g.:  (d0, d1, d2, d3, d4, d5) -> (d5, 0, d3, 0, d2)
+      // comp = (d0, d1, d2) -> (d2, 0, d1, 0 d0)
+      auto comp = compressUnusedDims(map);
+      // Get positions of remaining result dims.
+      // E.g.:  (d0, d1, d2) -> (d2, 0, d1, 0 d0)
+      // maskTransposeIndices = [ 2,     1,    0]
+      SmallVector<int64_t> maskTransposeIndices;
+      for (unsigned i = 0; i < comp.getNumResults(); ++i) {
+        if (auto expr = comp.getResult(i).dyn_cast<AffineDimExpr>())
+          maskTransposeIndices.push_back(expr.getPosition());
+      }
+
+      newMask = rewriter.create<vector::TransposeOp>(op.getLoc(), op.mask(),
+                                                     maskTransposeIndices);
+    }
+
     VectorType newReadType =
         VectorType::get(newVectorShape, op.getVectorType().getElementType());
     Value newRead = rewriter.create<vector::TransferReadOp>(
         op.getLoc(), newReadType, op.source(), op.indices(), newMap,
-        op.padding(), op.in_bounds() ? *op.in_bounds() : ArrayAttr());
+        op.padding(), newMask, op.in_bounds() ? *op.in_bounds() : ArrayAttr());
+
     SmallVector<int64_t> transposePerm(permutation.begin(), permutation.end());
     rewriter.replaceOpWithNewOp<vector::TransposeOp>(op, newRead,
                                                      transposePerm);
@@ -3110,8 +3129,6 @@ struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
 
   LogicalResult matchAndRewrite(vector::TransferReadOp op,
                                 PatternRewriter &rewriter) const override {
-    if (op.mask())
-      return failure();
     AffineMap map = op.permutation_map();
     unsigned numLeadingBroadcast = 0;
     for (auto expr : map.getResults()) {
@@ -3147,7 +3164,7 @@ struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
             : ArrayAttr();
     Value newRead = rewriter.create<vector::TransferReadOp>(
         op.getLoc(), newReadType, op.source(), op.indices(), newMap,
-        op.padding(), newInBounds);
+        op.padding(), op.mask(), newInBounds);
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(op, originalVecType,
                                                      newRead);
     return success();
