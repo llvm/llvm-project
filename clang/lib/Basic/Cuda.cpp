@@ -109,6 +109,7 @@ static const CudaArchToStringMap arch_names[] = {
     GFX(1031), // gfx1031
     GFX(1032), // gfx1032
     GFX(1033), // gfx1033
+    GFX(1034), // gfx1034
     // clang-format on
 };
 #undef SM

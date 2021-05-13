@@ -121,8 +121,7 @@ mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes) {
     Value inner_index = std::get<0>(ivs);
     AddIOp newIndex =
         b.create<AddIOp>(op.getLoc(), std::get<0>(ivs), std::get<1>(ivs));
-    inner_index.replaceAllUsesExcept(
-        newIndex, SmallPtrSet<Operation *, 1>{newIndex.getOperation()});
+    inner_index.replaceAllUsesExcept(newIndex, newIndex);
   }
 
   op.erase();
