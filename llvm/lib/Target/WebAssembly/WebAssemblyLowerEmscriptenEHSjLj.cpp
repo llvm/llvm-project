@@ -677,8 +677,6 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
   if (EnableEH && TM.Options.ExceptionModel == ExceptionHandling::Wasm)
     report_fatal_error("-exception-model=wasm not allowed with "
                        "-enable-emscripten-cxx-exceptions");
-  if (DoSjLj && TM.Options.ExceptionModel == ExceptionHandling::Wasm)
-    report_fatal_error("Emscripten SjLj is not supported with Wasm EH yet");
 
   // Declare (or get) global variables __THREW__, __threwValue, and
   // getTempRet0/setTempRet0 function which are used in common for both
