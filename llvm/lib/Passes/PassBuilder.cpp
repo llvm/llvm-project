@@ -1827,7 +1827,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   FunctionPassManager MainFPM;
 
   MainFPM.addPass(createFunctionToLoopPassAdaptor(
-      LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap)));
+      LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap),
+      EnableMSSALoopDependency, /*UseBlockFrequencyInfo=*/true));
 
   if (RunNewGVN)
     MainFPM.addPass(NewGVNPass());
