@@ -647,32 +647,32 @@ void CoroCloner::replaceSwiftErrorOps() {
 }
 
 void CoroCloner::salvageDebugInfo() {
-  SmallVector<DbgDeclareInst *, 8> Worklist;
+  SmallVector<DbgVariableIntrinsic *, 8> Worklist;
   SmallDenseMap<llvm::Value *, llvm::AllocaInst *, 4> DbgPtrAllocaCache;
   for (auto &BB : *NewF)
     for (auto &I : BB)
-      if (auto *DDI = dyn_cast<DbgDeclareInst>(&I))
-        Worklist.push_back(DDI);
-  for (DbgDeclareInst *DDI : Worklist)
-    coro::salvageDebugInfo(DbgPtrAllocaCache, DDI, Shape.ReuseFrameSlot);
+      if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
+        Worklist.push_back(DVI);
+  for (DbgVariableIntrinsic *DVI : Worklist)
+    coro::salvageDebugInfo(DbgPtrAllocaCache, DVI, Shape.ReuseFrameSlot);
 
   // Remove all salvaged dbg.declare intrinsics that became
   // either unreachable or stale due to the CoroSplit transformation.
   auto IsUnreachableBlock = [&](BasicBlock *BB) {
     return BB->hasNPredecessors(0) && BB != &NewF->getEntryBlock();
   };
-  for (DbgDeclareInst *DDI : Worklist) {
-    if (IsUnreachableBlock(DDI->getParent()))
-      DDI->eraseFromParent();
-    else if (dyn_cast_or_null<AllocaInst>(DDI->getAddress())) {
+  for (DbgVariableIntrinsic *DVI : Worklist) {
+    if (IsUnreachableBlock(DVI->getParent()))
+      DVI->eraseFromParent();
+    else if (dyn_cast_or_null<AllocaInst>(DVI->getVariableLocationOp(0))) {
       // Count all non-debuginfo uses in reachable blocks.
       unsigned Uses = 0;
-      for (auto *User : DDI->getAddress()->users())
+      for (auto *User : DVI->getVariableLocationOp(0)->users())
         if (auto *I = dyn_cast<Instruction>(User))
           if (!isa<AllocaInst>(I) && !IsUnreachableBlock(I->getParent()))
             ++Uses;
       if (!Uses)
-        DDI->eraseFromParent();
+        DVI->eraseFromParent();
     }
   }
 }
