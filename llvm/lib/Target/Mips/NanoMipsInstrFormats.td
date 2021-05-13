@@ -4,6 +4,7 @@ class InstNM<dag outs, dag ins, string asmstr, list<dag> pattern>:
   let Namespace = "Mips";
   let DecoderNamespace = "NanoMips";
   let EncodingPredicates = [HasNanoMips];
+  string Arch = "nanomips";
 
   let OutOperandList = outs;
   let InOperandList  = ins;

@@ -47,19 +47,25 @@ class RegImmNM<string opstr, Operand Od, RegisterOperand RO,
   InstNM<(outs RO:$rt), (ins Od:$imm), !strconcat(opstr, "\t$rt, $imm"),
          [(set RO:$rt, (OpNode imm_type:$imm))]>;
 
-class LoadNM<string opstr, DAGOperand RO, SDPatternOperator OpNode = null_frag,
-             InstrItinClass Itin = NoItinerary, ComplexPattern Addr = addr> :
-             LoadMemory<opstr, RO, mem, OpNode, Itin, Addr> {
-  let DecoderNamespace = "NanoMips";
-  let EncodingPredicates = [HasNanoMips];
+class LoadMemoryNM<string opstr, DAGOperand RO, DAGOperand MO,
+                 SDPatternOperator OpNode = null_frag,
+                 ComplexPattern Addr = addr> :
+    InstNM<(outs RO:$rt), (ins MO:$addr), !strconcat(opstr, "\t$rt, $addr"),
+           [(set RO:$rt, (OpNode Addr:$addr))]> {
+  let DecoderMethod = "DecodeMem";
+  let canFoldAsLoad = 1;
+  let mayLoad = 1;
+  string BaseOpcode = opstr;
 }
 
-class StoreNM<string opstr, DAGOperand RO, SDPatternOperator OpNode = null_frag,
-              InstrItinClass Itin = NoItinerary, ComplexPattern Addr = addr,
-              DAGOperand MO = mem> :
-              StoreMemory<opstr, RO, MO, OpNode, Itin, Addr> {
-  let DecoderNamespace = "NanoMips";
-  let EncodingPredicates = [HasNanoMips];
+class StoreMemoryNM<string opstr, DAGOperand RO, DAGOperand MO,
+                    SDPatternOperator OpNode = null_frag,
+                    ComplexPattern Addr = addr> :
+    InstNM<(outs), (ins RO:$rt, MO:$addr), !strconcat(opstr, "\t$rt, $addr"),
+           [(OpNode RO:$rt, Addr:$addr)]> {
+  let DecoderMethod = "DecodeMem";
+  let mayStore = 1;
+  string BaseOpcode = opstr;
 }
 
 class CallNM<string opstr,
@@ -106,10 +112,11 @@ def ADDu_NM : ArithLogicRNM<"addu", GPR32NMOpnd, add>;
 def ADDiu_NM : ArithLogicINM<"addiu", simm16_relaxed, GPR32NMOpnd,
                              imm32SExt16, add>;
 def AND_NM : ArithLogicRNM<"and", GPR32NMOpnd, and>;
-def LW_NM : StdMMR6Rel, LoadNM<"lw", GPR32NMOpnd, load>, ISA_NANOMIPS;
 def OR_NM : ArithLogicRNM<"or", GPR32NMOpnd, or>;
 def SUBu_NM : ArithLogicRNM<"subu", GPR32NMOpnd, sub>;
-def SW_NM : StoreNM<"sw", GPR32NMOpnd, store>, ISA_NANOMIPS;
+
+def LW_NM : LoadMemoryNM<"lw", GPR32NMOpnd, mem, load>, InstSize32;
+def SW_NM : StoreMemoryNM<"sw", GPR32NMOpnd, mem, store>, InstSize32;
 
 def JRC_NM : IndirectBranchNM<"jrc", GPR32NMOpnd>;
 
