@@ -68,12 +68,21 @@ TemplateParameterList::TemplateParameterList(const ASTContext& C,
       if (!IsPack &&
           TTP->getTemplateParameters()->containsUnexpandedParameterPack())
         ContainsUnexpandedParameterPack = true;
-    } else if (const TypeConstraint *TC =
-        cast<TemplateTypeParmDecl>(P)->getTypeConstraint()) {
-      if (TC->getImmediatelyDeclaredConstraint()
-          ->containsUnexpandedParameterPack())
-        ContainsUnexpandedParameterPack = true;
-      HasConstrainedParameters = true;
+    } else if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(P)) {
+      // FIXME: The type parameter might have a constraint that has not been
+      // attached yet. If so, we can compute the wrong value for
+      // 'ContainsUnexpandedParameterPack' here. Note that this only happens
+      // for implicit parameters, for which the ParmVarDecl will correctly
+      // track that it contains an unexpanded parameter pack, so this should
+      // not be problematic in practice.
+      if (const TypeConstraint *TC = TTP->getTypeConstraint()) {
+        if (TC->getImmediatelyDeclaredConstraint()
+            ->containsUnexpandedParameterPack())
+          ContainsUnexpandedParameterPack = true;
+      }
+      HasConstrainedParameters = TTP->hasTypeConstraint();
+    } else {
+      llvm_unreachable("unexpcted template parameter type");
     }
     // FIXME: If a default argument contains an unexpanded parameter pack, the
     // template parameter list does too.
