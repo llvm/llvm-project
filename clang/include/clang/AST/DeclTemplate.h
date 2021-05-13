@@ -160,9 +160,7 @@ public:
 
   /// Determine whether this template parameter list contains an
   /// unexpanded parameter pack.
-  bool containsUnexpandedParameterPack() const {
-    return ContainsUnexpandedParameterPack;
-  }
+  bool containsUnexpandedParameterPack() const;
 
   /// Determine whether this template parameter list contains a parameter pack.
   bool hasParameterPack() const {
