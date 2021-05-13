@@ -4,19 +4,21 @@
 func @vector_transfer_ops(%arg0: memref<?x?xf32>,
                           %arg1 : memref<?x?xvector<4x3xf32>>,
                           %arg2 : memref<?x?xvector<4x3xi32>>,
-                          %arg3 : memref<?x?xvector<4x3xindex>>) {
+                          %arg3 : memref<?x?xvector<4x3xindex>>,
+                          %arg4 : memref<?x?x?xf32>) {
   // CHECK: %[[C3:.*]] = constant 3 : index
   %c3 = constant 3 : index
   %cst = constant 3.0 : f32
   %f0 = constant 0.0 : f32
   %c0 = constant 0 : i32
   %i0 = constant 0 : index
+  %i1 = constant 1 : i1
 
   %vf0 = splat %f0 : vector<4x3xf32>
   %v0 = splat %c0 : vector<4x3xi32>
   %vi0 = splat %i0 : vector<4x3xindex>
   %m = constant dense<[0, 0, 1, 0, 1]> : vector<5xi1>
-
+  %m2 = splat %i1 : vector<5x4xi1>
   //
   // CHECK: vector.transfer_read
   %0 = vector.transfer_read %arg0[%c3, %c3], %f0 {permutation_map = affine_map<(d0, d1)->(d0)>} : memref<?x?xf32>, vector<128xf32>
@@ -36,6 +38,8 @@ func @vector_transfer_ops(%arg0: memref<?x?xf32>,
   %7 = vector.transfer_read %arg3[%c3, %c3], %vi0 : memref<?x?xvector<4x3xindex>>, vector<5x48xi8>
   // CHECK: vector.transfer_read %{{.*}}[%[[C3]], %[[C3]]], %{{.*}}, %{{.*}} : memref<?x?xf32>, vector<5xf32>
   %8 = vector.transfer_read %arg0[%c3, %c3], %f0, %m : memref<?x?xf32>, vector<5xf32>
+  // CHECK: vector.transfer_read %{{.*}}[%[[C3]], %[[C3]], %[[C3]]], %{{.*}}, %{{.*}} : memref<?x?x?xf32>, vector<5x4x8xf32>
+  %9 = vector.transfer_read %arg4[%c3, %c3, %c3], %f0, %m2 {permutation_map = affine_map<(d0, d1, d2)->(d1, d0, 0)>} : memref<?x?x?xf32>, vector<5x4x8xf32>
 
   // CHECK: vector.transfer_write
   vector.transfer_write %0, %arg0[%c3, %c3] {permutation_map = affine_map<(d0, d1)->(d0)>} : vector<128xf32>, memref<?x?xf32>
