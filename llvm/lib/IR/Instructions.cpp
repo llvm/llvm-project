@@ -1436,7 +1436,7 @@ LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
                    Align Align, AtomicOrdering Order, SyncScope::ID SSID,
                    Instruction *InsertBef)
     : UnaryInstruction(Ty, Load, Ptr, InsertBef) {
-  assert(Ty == cast<PointerType>(Ptr->getType())->getElementType());
+  assert(cast<PointerType>(Ptr->getType())->isOpaqueOrPointeeTypeMatches(Ty));
   setVolatile(isVolatile);
   setAlignment(Align);
   setAtomic(Order, SSID);
@@ -1448,7 +1448,7 @@ LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
                    Align Align, AtomicOrdering Order, SyncScope::ID SSID,
                    BasicBlock *InsertAE)
     : UnaryInstruction(Ty, Load, Ptr, InsertAE) {
-  assert(Ty == cast<PointerType>(Ptr->getType())->getElementType());
+  assert(cast<PointerType>(Ptr->getType())->isOpaqueOrPointeeTypeMatches(Ty));
   setVolatile(isVolatile);
   setAlignment(Align);
   setAtomic(Order, SSID);
@@ -1464,9 +1464,9 @@ void StoreInst::AssertOK() {
   assert(getOperand(0) && getOperand(1) && "Both operands must be non-null!");
   assert(getOperand(1)->getType()->isPointerTy() &&
          "Ptr must have pointer type!");
-  assert(getOperand(0)->getType() ==
-                 cast<PointerType>(getOperand(1)->getType())->getElementType()
-         && "Ptr must be a pointer to Val type!");
+  assert(cast<PointerType>(getOperand(1)->getType())
+             ->isOpaqueOrPointeeTypeMatches(getOperand(0)->getType()) &&
+         "Ptr must be a pointer to Val type!");
   assert(!(isAtomic() && getAlignment() == 0) &&
          "Alignment required for atomic store");
 }

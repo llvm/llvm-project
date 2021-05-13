@@ -24,3 +24,19 @@ define ptr addrspace(2) @g2(ptr addrspace(0) %a) {
     %b = addrspacecast ptr addrspace(0) %a to ptr addrspace(2)
     ret ptr addrspace(2) %b
 }
+
+; CHECK: define i32 @load(ptr %a)
+; CHECK:     %i = load i32, ptr %a
+; CHECK:     ret i32 %i
+define i32 @load(ptr %a) {
+    %i = load i32, ptr %a
+    ret i32 %i
+}
+
+; CHECK: define void @store(ptr %a, i32 %i)
+; CHECK:     store i32 %i, ptr %a
+; CHECK:     ret void
+define void @store(ptr %a, i32 %i) {
+    store i32 %i, ptr %a
+    ret void
+}

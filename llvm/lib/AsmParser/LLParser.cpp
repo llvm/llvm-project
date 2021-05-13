@@ -7483,7 +7483,7 @@ int LLParser::parseLoad(Instruction *&Inst, PerFunctionState &PFS) {
       Ordering == AtomicOrdering::AcquireRelease)
     return error(Loc, "atomic load cannot use Release ordering");
 
-  if (Ty != cast<PointerType>(Val->getType())->getElementType()) {
+  if (!cast<PointerType>(Val->getType())->isOpaqueOrPointeeTypeMatches(Ty)) {
     return error(
         ExplicitTypeLoc,
         typeComparisonErrorMessage(
@@ -7534,7 +7534,8 @@ int LLParser::parseStore(Instruction *&Inst, PerFunctionState &PFS) {
     return error(PtrLoc, "store operand must be a pointer");
   if (!Val->getType()->isFirstClassType())
     return error(Loc, "store operand must be a first class value");
-  if (cast<PointerType>(Ptr->getType())->getElementType() != Val->getType())
+  if (!cast<PointerType>(Ptr->getType())
+           ->isOpaqueOrPointeeTypeMatches(Val->getType()))
     return error(Loc, "stored value and pointer type do not match");
   if (isAtomic && !Alignment)
     return error(Loc, "atomic store must have explicit non-zero alignment");

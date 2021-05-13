@@ -3753,8 +3753,8 @@ void Verifier::visitLoadInst(LoadInst &LI) {
 void Verifier::visitStoreInst(StoreInst &SI) {
   PointerType *PTy = dyn_cast<PointerType>(SI.getOperand(1)->getType());
   Assert(PTy, "Store operand must be a pointer.", &SI);
-  Type *ElTy = PTy->getElementType();
-  Assert(ElTy == SI.getOperand(0)->getType(),
+  Type *ElTy = SI.getOperand(0)->getType();
+  Assert(PTy->isOpaqueOrPointeeTypeMatches(ElTy),
          "Stored value type does not match pointer operand type!", &SI, ElTy);
   Assert(SI.getAlignment() <= Value::MaximumAlignment,
          "huge alignment values are unsupported", &SI);
