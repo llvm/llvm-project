@@ -1,5 +1,6 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI,FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI,SIVI,FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,SIVI,FUNC %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,FUNC %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 declare i32 @llvm.amdgcn.workitem.id.y() nounwind readnone
@@ -31,6 +32,7 @@ entry:
 ; FUNC-LABEL: {{^}}test_umul24_i16_vgpr_sext:
 ; SI: v_mul_u32_u24_e{{(32|64)}} [[MUL:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
 ; VI: v_mul_lo_u16_e{{(32|64)}} [[MUL:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
+; GFX9: v_mul_lo_u16_e{{(32|64)}} [[MUL:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
 ; GCN: v_bfe_i32 v{{[0-9]}}, [[MUL]], 0, 16
 define amdgpu_kernel void @test_umul24_i16_vgpr_sext(i32 addrspace(1)* %out, i16 addrspace(1)* %in) {
   %tid.x = call i32 @llvm.amdgcn.workitem.id.x()
@@ -60,6 +62,7 @@ entry:
 ; SI: v_mul_u32_u24_e32
 ; SI: v_and_b32_e32
 ; VI: v_mul_lo_u16
+; GFX9: v_mul_lo_u16
 define amdgpu_kernel void @test_umul24_i16_vgpr(i32 addrspace(1)* %out, i16 addrspace(1)* %in) {
   %tid.x = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.y = call i32 @llvm.amdgcn.workitem.id.y()
@@ -76,6 +79,7 @@ define amdgpu_kernel void @test_umul24_i16_vgpr(i32 addrspace(1)* %out, i16 addr
 ; FUNC-LABEL: {{^}}test_umul24_i8_vgpr:
 ; SI: v_mul_u32_u24_e{{(32|64)}} [[MUL:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
 ; VI: v_mul_lo_u16_e{{(32|64)}} [[MUL:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
+; GFX9: v_mul_lo_u16_e{{(32|64)}} [[MUL:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
 ; GCN: v_bfe_i32 v{{[0-9]}}, [[MUL]], 0, 8
 define amdgpu_kernel void @test_umul24_i8_vgpr(i32 addrspace(1)* %out, i8 addrspace(1)* %a, i8 addrspace(1)* %b) {
 entry:
@@ -92,8 +96,10 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}test_umulhi24_i32_i64:
-; GCN-NOT: and
-; GCN: v_mul_hi_u32_u24_e32 [[RESULT:v[0-9]+]],
+; SIVI-NOT: and
+; SIVI: v_mul_hi_u32_u24_e32 [[RESULT:v[0-9]+]],
+; GFX9: s_mul_hi_u32 [[SRESULT:s[0-9]+]],
+; GFX9: v_mov_b32_e32 [[RESULT:v[0-9]+]], [[SRESULT]]
 ; GCN-NEXT: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @test_umulhi24_i32_i64(i32 addrspace(1)* %out, i32 %a, i32 %b) {
 entry:
@@ -109,8 +115,10 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}test_umulhi24:
-; GCN-NOT: and
-; GCN: v_mul_hi_u32_u24_e32 [[RESULT:v[0-9]+]],
+; SIVI-NOT: and
+; SIVI: v_mul_hi_u32_u24_e32 [[RESULT:v[0-9]+]],
+; GFX9: s_mul_hi_u32 [[SRESULT:s[0-9]+]],
+; GFX9: v_mov_b32_e32 [[RESULT:v[0-9]+]], [[SRESULT]]
 ; GCN-NEXT: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @test_umulhi24(i32 addrspace(1)* %out, i64 %a, i64 %b) {
 entry:
@@ -126,8 +134,10 @@ entry:
 ; Multiply with 24-bit inputs and 64-bit output.
 ; FUNC-LABEL: {{^}}test_umul24_i64:
 ; GCN-NOT: lshr
-; GCN-DAG: s_mul_i32
-; GCN-DAG: v_mul_hi_u32_u24_e32
+; SIVI-DAG: s_mul_i32
+; SIVI-DAG: v_mul_hi_u32_u24_e32
+; GFX9-DAG: s_mul_i32
+; GFX9-DAG: s_mul_hi_u32
 ; GCN: buffer_store_dwordx2
 define amdgpu_kernel void @test_umul24_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
 entry:
@@ -143,8 +153,10 @@ entry:
 ; FUNC-LABEL: {{^}}test_umul24_i64_square:
 ; GCN: s_load_dword [[A:s[0-9]+]]
 ; GCN: s_and_b32 [[B:s[0-9]+]], [[A]], 0xffffff
-; GCN-DAG: s_mul_i32 s{{[0-9]+}}, [[B]], [[B]]
-; GCN-DAG: v_mul_hi_u32_u24_e64 v{{[0-9]+}}, [[A]], [[A]]
+; SIVI-DAG: s_mul_i32 s{{[0-9]+}}, [[B]], [[B]]
+; SIVI-DAG: v_mul_hi_u32_u24_e64 v{{[0-9]+}}, [[A]], [[A]]
+; GFX9-DAG: s_mul_i32 s{{[0-9]+}}, [[B]], [[B]]
+; GFX9-DAG: s_mul_hi_u32 s{{[0-9]+}}, [[B]], [[B]]
 define amdgpu_kernel void @test_umul24_i64_square(i64 addrspace(1)* %out, [8 x i32], i64 %a) {
 entry:
   %tmp0 = shl i64 %a, 40
@@ -158,7 +170,9 @@ entry:
 ; GCN: s_and_b32
 ; GCN: s_and_b32
 ; GCN: s_mul_i32 [[MUL24:s[0-9]+]]
-; GCN: s_lshr_b32 s{{[0-9]+}}, [[MUL24]], 16
+; SIVI: s_lshr_b32 s{{[0-9]+}}, [[MUL24]], 16
+; GFX9: v_mov_b32_e32 [[RESULT:v[0-9]+]], [[MUL24]]
+; GFX9: global_store_short_d16_hi v{{[0-9]+}}, [[RESULT]]
 define amdgpu_kernel void @test_umulhi16_i32(i16 addrspace(1)* %out, i32 %a, i32 %b) {
 entry:
   %a.16 = and i32 %a, 65535
@@ -174,10 +188,15 @@ entry:
 ; GCN: s_load_dword s
 ; GCN: s_load_dword s
 ; GCN-NOT: lshr
-; GCN-DAG: s_mul_i32 s[[MUL_LO:[0-9]+]],
-; GCN-DAG: v_mul_hi_u32_u24_e32 v[[MUL_HI:[0-9]+]],
-; GCN-DAG: v_and_b32_e32 v[[HI:[0-9]+]], 1, v[[MUL_HI]]
-; GCN-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], s[[MUL_LO]]
+; SIVI-DAG: s_mul_i32 s[[MUL_LO:[0-9]+]],
+; SIVI-DAG: v_mul_hi_u32_u24_e32 v[[MUL_HI:[0-9]+]],
+; SIVI-DAG: v_and_b32_e32 v[[HI:[0-9]+]], 1, v[[MUL_HI]]
+; SIVI-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], s[[MUL_LO]]
+; GFX9-DAG: s_mul_i32 s[[MUL_LO:[0-9]+]],
+; GFX9-DAG: s_mul_hi_u32 s[[MUL_HI:[0-9]+]],
+; GFX9-DAG: s_and_b32 s[[AND_HI:[0-9]+]], s[[MUL_HI]], 1
+; GFX9-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], s[[MUL_LO]]
+; GFX9-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], s[[AND_HI]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
 define amdgpu_kernel void @test_umul24_i33(i64 addrspace(1)* %out, i33 %a, i33 %b) {
 entry:
@@ -194,10 +213,13 @@ entry:
 ; FUNC-LABEL: {{^}}test_umulhi24_i33:
 ; GCN: s_load_dword s
 ; GCN: s_load_dword s
-; GCN-NOT: and
+; SIVI-NOT: and
 ; GCN-NOT: lshr
-; GCN: v_mul_hi_u32_u24_e32 v[[MUL_HI:[0-9]+]],
-; GCN: v_and_b32_e32 v[[HI:[0-9]+]], 1, v[[MUL_HI]]
+; SIVI: v_mul_hi_u32_u24_e32 v[[MUL_HI:[0-9]+]],
+; SIVI: v_and_b32_e32 v[[HI:[0-9]+]], 1, v[[MUL_HI]]
+; GFX9: s_mul_hi_u32 s[[MUL_HI:[0-9]+]],
+; GFX9: s_and_b32 s[[AND_HI:[0-9]+]], s[[MUL_HI]], 1
+; GFX9: v_mov_b32_e32 v[[HI:[0-9]+]], s[[AND_HI]]
 ; GCN-NEXT: buffer_store_dword v[[HI]]
 define amdgpu_kernel void @test_umulhi24_i33(i32 addrspace(1)* %out, i33 %a, i33 %b) {
 entry:
