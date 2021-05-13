@@ -65,6 +65,7 @@ BUILTIN(__builtin_amdgcn_ds_gws_sema_v, "vUi", "n")
 BUILTIN(__builtin_amdgcn_ds_gws_sema_br, "vUiUi", "n")
 BUILTIN(__builtin_amdgcn_ds_gws_sema_p, "vUi", "n")
 BUILTIN(__builtin_amdgcn_fence, "vUicC*", "n")
+BUILTIN(__builtin_amdgcn_groupstaticsize, "Ui", "n")
 
 BUILTIN(__builtin_amdgcn_atomic_inc32, "UZiUZiD*UZiUicC*", "n")
 BUILTIN(__builtin_amdgcn_atomic_inc64, "UWiUWiD*UWiUicC*", "n")
