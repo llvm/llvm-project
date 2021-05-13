@@ -491,9 +491,34 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
                                            args.front(), zero);
     }
 
-    if (mlir::FPToSIOp::areCastCompatible(srcTy, dstTy))
-      return rewriter.create<mlir::FPToSIOp>(loc, resultTypes, args,
-                                             mlir::None);
+    if (mlir::FPToSIOp::areCastCompatible(srcTy, dstTy)) {
+      auto zero =
+          rewriter.create<ConstantOp>(loc, rewriter.getF32FloatAttr(0.0f));
+      auto half =
+          rewriter.create<ConstantOp>(loc, rewriter.getF32FloatAttr(0.5f));
+
+      auto intMin = rewriter.create<ConstantOp>(
+          loc, rewriter.getF32FloatAttr(
+                   APInt::getSignedMinValue(dstTy.getIntOrFloatBitWidth())
+                       .getSExtValue()));
+
+      auto intMax = rewriter.create<ConstantOp>(
+          loc, rewriter.getF32FloatAttr(
+                   APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())
+                       .getSExtValue()));
+
+      auto added = rewriter.create<AddFOp>(loc, args[0], half);
+      auto subbed = rewriter.create<SubFOp>(loc, args[0], half);
+      auto negative =
+          rewriter.create<mlir::CmpFOp>(loc, CmpFPredicate::OLT, args[0], zero);
+      auto rounded =
+          rewriter.create<mlir::SelectOp>(loc, negative, subbed, added);
+
+      auto clamped = clampHelper<mlir::CmpFOp>(loc, rounded, intMin, intMax,
+                                               CmpFPredicate::OLT, rewriter);
+
+      return rewriter.create<mlir::FPToSIOp>(loc, dstTy, clamped);
+    }
 
     // Casting to boolean, integers need to only be checked as not-equal to
     // zero.
@@ -508,9 +533,23 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
       return rewriter.create<mlir::SignExtendIOp>(loc, resultTypes, args,
                                                   mlir::None);
 
-    if (srcTy.isa<IntegerType>() && dstTy.isa<IntegerType>() && !bitExtend)
-      return rewriter.create<mlir::TruncateIOp>(loc, resultTypes, args,
-                                                mlir::None);
+    if (srcTy.isa<IntegerType>() && dstTy.isa<IntegerType>() && !bitExtend) {
+      auto intMin = rewriter.create<ConstantIntOp>(
+          loc,
+          APInt::getSignedMinValue(dstTy.getIntOrFloatBitWidth())
+              .getSExtValue(),
+          srcTy.getIntOrFloatBitWidth());
+
+      auto intMax = rewriter.create<ConstantIntOp>(
+          loc,
+          APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())
+              .getSExtValue(),
+          srcTy.getIntOrFloatBitWidth());
+
+      auto clamped = clampHelper<mlir::CmpIOp>(loc, args[0], intMin, intMax,
+                                               CmpIPredicate::slt, rewriter);
+      return rewriter.create<mlir::TruncateIOp>(loc, dstTy, clamped);
+    }
   }
 
   (void)rewriter.notifyMatchFailure(
