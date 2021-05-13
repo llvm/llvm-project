@@ -16,6 +16,7 @@ namespace mlir {
 class DialectRegistry;
 
 namespace lsp {
+struct Diagnostic;
 struct Hover;
 struct Location;
 struct Position;
@@ -30,8 +31,10 @@ public:
   MLIRServer(DialectRegistry &registry);
   ~MLIRServer();
 
-  /// Add or update the document at the given URI.
-  void addOrUpdateDocument(const URIForFile &uri, StringRef contents);
+  /// Add or update the document at the given URI. Any diagnostics emitted for
+  /// this document should be added to `diagnostics`
+  void addOrUpdateDocument(const URIForFile &uri, StringRef contents,
+                           std::vector<Diagnostic> &diagnostics);
 
   /// Remove the document with the given uri.
   void removeDocument(const URIForFile &uri);

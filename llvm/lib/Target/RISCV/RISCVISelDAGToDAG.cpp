@@ -630,13 +630,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       assert(Node->getNumOperands() == Offset + 2 &&
              "Unexpected number of operands");
 
-      RISCVII::VSEW VSEW =
-          static_cast<RISCVII::VSEW>(Node->getConstantOperandVal(Offset) & 0x7);
+      unsigned SEW =
+          RISCVVType::decodeVSEW(Node->getConstantOperandVal(Offset) & 0x7);
       RISCVII::VLMUL VLMul = static_cast<RISCVII::VLMUL>(
           Node->getConstantOperandVal(Offset + 1) & 0x7);
 
       unsigned VTypeI = RISCVVType::encodeVTYPE(
-          VLMul, VSEW, /*TailAgnostic*/ true, /*MaskAgnostic*/ false);
+          VLMul, SEW, /*TailAgnostic*/ true, /*MaskAgnostic*/ false);
       SDValue VTypeIOp = CurDAG->getTargetConstant(VTypeI, DL, XLenVT);
 
       SDValue VLOperand;

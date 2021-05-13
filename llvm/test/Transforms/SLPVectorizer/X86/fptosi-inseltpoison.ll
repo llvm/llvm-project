@@ -487,15 +487,12 @@ define void @fptosi_8f32_8i8() #0 {
 
 define <4 x i32> @fptosi_4xf64_4i32(double %a0, double %a1, double %a2, double %a3) #0 {
 ; CHECK-LABEL: @fptosi_4xf64_4i32(
-; CHECK-NEXT:    [[CVT0:%.*]] = fptosi double [[A0:%.*]] to i32
-; CHECK-NEXT:    [[CVT1:%.*]] = fptosi double [[A1:%.*]] to i32
-; CHECK-NEXT:    [[CVT2:%.*]] = fptosi double [[A2:%.*]] to i32
-; CHECK-NEXT:    [[CVT3:%.*]] = fptosi double [[A3:%.*]] to i32
-; CHECK-NEXT:    [[RES0:%.*]] = insertelement <4 x i32> poison, i32 [[CVT0]], i32 0
-; CHECK-NEXT:    [[RES1:%.*]] = insertelement <4 x i32> [[RES0]], i32 [[CVT1]], i32 1
-; CHECK-NEXT:    [[RES2:%.*]] = insertelement <4 x i32> [[RES1]], i32 [[CVT2]], i32 2
-; CHECK-NEXT:    [[RES3:%.*]] = insertelement <4 x i32> [[RES2]], i32 [[CVT3]], i32 3
-; CHECK-NEXT:    ret <4 x i32> [[RES3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[A0:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[A1:%.*]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[A2:%.*]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[A3:%.*]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = fptosi <4 x double> [[TMP4]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[TMP5]]
 ;
   %cvt0 = fptosi double %a0 to i32
   %cvt1 = fptosi double %a1 to i32
@@ -510,15 +507,12 @@ define <4 x i32> @fptosi_4xf64_4i32(double %a0, double %a1, double %a2, double %
 
 define <4 x i32> @fptosi_4xf32_4i32(float %a0, float %a1, float %a2, float %a3) #0 {
 ; CHECK-LABEL: @fptosi_4xf32_4i32(
-; CHECK-NEXT:    [[CVT0:%.*]] = fptosi float [[A0:%.*]] to i32
-; CHECK-NEXT:    [[CVT1:%.*]] = fptosi float [[A1:%.*]] to i32
-; CHECK-NEXT:    [[CVT2:%.*]] = fptosi float [[A2:%.*]] to i32
-; CHECK-NEXT:    [[CVT3:%.*]] = fptosi float [[A3:%.*]] to i32
-; CHECK-NEXT:    [[RES0:%.*]] = insertelement <4 x i32> poison, i32 [[CVT0]], i32 0
-; CHECK-NEXT:    [[RES1:%.*]] = insertelement <4 x i32> [[RES0]], i32 [[CVT1]], i32 1
-; CHECK-NEXT:    [[RES2:%.*]] = insertelement <4 x i32> [[RES1]], i32 [[CVT2]], i32 2
-; CHECK-NEXT:    [[RES3:%.*]] = insertelement <4 x i32> [[RES2]], i32 [[CVT3]], i32 3
-; CHECK-NEXT:    ret <4 x i32> [[RES3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A0:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[A1:%.*]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[A2:%.*]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[A3:%.*]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = fptosi <4 x float> [[TMP4]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[TMP5]]
 ;
   %cvt0 = fptosi float %a0 to i32
   %cvt1 = fptosi float %a1 to i32

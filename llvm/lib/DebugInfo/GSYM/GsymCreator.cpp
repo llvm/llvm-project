@@ -161,6 +161,26 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
   return ErrorSuccess();
 }
 
+// Similar to std::remove_if, but the predicate is binary and it is passed both
+// the previous and the current element.
+template <class ForwardIt, class BinaryPredicate>
+static ForwardIt removeIfBinary(ForwardIt FirstIt, ForwardIt LastIt,
+                                BinaryPredicate Pred) {
+  if (FirstIt != LastIt) {
+    auto PrevIt = FirstIt++;
+    FirstIt = std::find_if(FirstIt, LastIt, [&](const auto &Curr) {
+      return Pred(*PrevIt++, Curr);
+    });
+    if (FirstIt != LastIt)
+      for (ForwardIt CurrIt = FirstIt; ++CurrIt != LastIt;)
+        if (!Pred(*PrevIt, *CurrIt)) {
+          PrevIt = FirstIt;
+          *FirstIt++ = std::move(*CurrIt);
+        }
+  }
+  return FirstIt;
+}
+
 llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
   std::lock_guard<std::recursive_mutex> Guard(Mutex);
   if (Finalized)
@@ -195,55 +215,59 @@ llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
   // we wouldn't find any function for range (end of Y, end of X)
   // with binary search
   auto NumBefore = Funcs.size();
-  auto Curr = Funcs.begin();
-  auto Prev = Funcs.end();
-  while (Curr != Funcs.end()) {
-    // Can't check for overlaps or same address ranges if we don't have a
-    // previous entry
-    if (Prev != Funcs.end()) {
-      if (Prev->Range.intersects(Curr->Range)) {
-        // Overlapping address ranges.
-        if (Prev->Range == Curr->Range) {
-          // Same address range. Check if one is from debug info and the other
-          // is from a symbol table. If so, then keep the one with debug info.
-          // Our sorting guarantees that entries with matching address ranges
-          // that have debug info are last in the sort.
-          if (*Prev == *Curr) {
-            // FunctionInfo entries match exactly (range, lines, inlines)
-            OS << "warning: duplicate function info entries for range: "
-               << Curr->Range << '\n';
-            Curr = Funcs.erase(Prev);
-          } else {
-            if (!Prev->hasRichInfo() && Curr->hasRichInfo()) {
-              // Same address range, one with no debug info (symbol) and the
-              // next with debug info. Keep the latter.
-              Curr = Funcs.erase(Prev);
-            } else {
-              OS << "warning: same address range contains different debug "
-                 << "info. Removing:\n"
-                 << *Prev << "\nIn favor of this one:\n"
-                 << *Curr << "\n";
-              Curr = Funcs.erase(Prev);
-            }
-          }
-        } else {
-          // print warnings about overlaps
-          OS << "warning: function ranges overlap:\n"
-             << *Prev << "\n"
-             << *Curr << "\n";
-        }
-      } else if (Prev->Range.size() == 0 &&
-                 Curr->Range.contains(Prev->Range.Start)) {
-        OS << "warning: removing symbol:\n"
-           << *Prev << "\nKeeping:\n"
-           << *Curr << "\n";
-        Curr = Funcs.erase(Prev);
-      }
-    }
-    if (Curr == Funcs.end())
-      break;
-    Prev = Curr++;
-  }
+  Funcs.erase(
+      removeIfBinary(Funcs.begin(), Funcs.end(),
+                     [&](const auto &Prev, const auto &Curr) {
+                       if (Prev.Range.intersects(Curr.Range)) {
+                         // Overlapping address ranges.
+                         if (Prev.Range == Curr.Range) {
+                           // Same address range. Check if one is from debug
+                           // info and the other is from a symbol table. If
+                           // so, then keep the one with debug info. Our
+                           // sorting guarantees that entries with matching
+                           // address ranges that have debug info are last in
+                           // the sort.
+                           if (Prev == Curr) {
+                             // FunctionInfo entries match exactly (range,
+                             // lines, inlines)
+
+                             // We used to output a warning here, but this was
+                             // so frequent on some binaries, in particular
+                             // when those were built with GCC, that it slowed
+                             // down processing extremely.
+                             return true;
+                           } else {
+                             if (!Prev.hasRichInfo() && Curr.hasRichInfo()) {
+                               // Same address range, one with no debug info
+                               // (symbol) and the next with debug info. Keep
+                               // the latter.
+                               return true;
+                             } else {
+                               OS << "warning: same address range contains "
+                                     "different debug "
+                                  << "info. Removing:\n"
+                                  << Prev << "\nIn favor of this one:\n"
+                                  << Curr << "\n";
+                               return true;
+                             }
+                           }
+                         } else {
+                           // print warnings about overlaps
+                           OS << "warning: function ranges overlap:\n"
+                              << Prev << "\n"
+                              << Curr << "\n";
+                         }
+                       } else if (Prev.Range.size() == 0 &&
+                                  Curr.Range.contains(Prev.Range.Start)) {
+                         OS << "warning: removing symbol:\n"
+                            << Prev << "\nKeeping:\n"
+                            << Curr << "\n";
+                         return true;
+                       }
+
+                       return false;
+                     }),
+      Funcs.end());
 
   // If our last function info entry doesn't have a size and if we have valid
   // text ranges, we should set the size of the last entry since any search for

@@ -7,7 +7,6 @@ add_llvm_component_library(LLVMCodeGen
   BranchFolding.cpp
   BranchRelaxation.cpp
   BreakFalseDeps.cpp
-  BuiltinGCs.cpp
   BasicBlockSections.cpp
   CalcSpillWeights.cpp
   CallingConvLower.cpp
@@ -38,7 +37,6 @@ add_llvm_component_library(LLVMCodeGen
   GCMetadata.cpp
   GCMetadataPrinter.cpp
   GCRootLowering.cpp
-  GCStrategy.cpp
   GlobalMerge.cpp
   HardwareLoops.cpp
   IfConversion.cpp

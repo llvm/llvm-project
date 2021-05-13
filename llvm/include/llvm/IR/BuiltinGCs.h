@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_BUILTINGCS_H
-#define LLVM_CODEGEN_BUILTINGCS_H
+#ifndef LLVM_IR_BUILTINGCS_H
+#define LLVM_IR_BUILTINGCS_H
 
 namespace llvm {
 
@@ -27,6 +27,7 @@ void linkOcamlGCPrinter();
 
 /// Creates an erlang-compatible metadata printer.
 void linkErlangGCPrinter();
-}
 
-#endif
+} // namespace llvm
+
+#endif // LLVM_IR_BUILTINGCS_H

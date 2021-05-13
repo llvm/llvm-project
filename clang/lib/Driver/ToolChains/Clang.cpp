@@ -4394,7 +4394,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-emit-llvm");
     } else if (JA.getType() == types::TY_LLVM_BC ||
                JA.getType() == types::TY_LTO_BC) {
-      CmdArgs.push_back("-emit-llvm-bc");
+      // Emit textual llvm IR for AMDGPU offloading for -emit-llvm -S
+      if (Triple.isAMDGCN() && IsOpenMPDevice && Args.hasArg(options::OPT_S) &&
+          Args.hasArg(options::OPT_emit_llvm)) {
+        CmdArgs.push_back("-emit-llvm");
+      } else {
+        CmdArgs.push_back("-emit-llvm-bc");
+      }
     } else if (JA.getType() == types::TY_IFS ||
                JA.getType() == types::TY_IFS_CPP) {
       StringRef ArgStr =

@@ -3,6 +3,16 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
+// RUN: mlir-opt %s -test-unrolled-progressive-convert-vector-to-scf -lower-affine -convert-scf-to-std -convert-vector-to-llvm -convert-std-to-llvm | \
+// RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
+// RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN: FileCheck %s
+
+memref.global "private" @gv : memref<3x4xf32> = dense<[[0. , 1. , 2. , 3. ],
+                                                       [10., 11., 12., 13.],
+                                                       [20., 21., 22., 23.]]>
+
+// Vector load.
 func @transfer_read_2d(%A : memref<?x?xf32>, %base1: index, %base2: index) {
   %fm42 = constant -42.0: f32
   %f = vector.transfer_read %A[%base1, %base2], %fm42
@@ -12,6 +22,7 @@ func @transfer_read_2d(%A : memref<?x?xf32>, %base1: index, %base2: index) {
   return
 }
 
+// Vector load with mask.
 func @transfer_read_2d_mask(%A : memref<?x?xf32>, %base1: index, %base2: index) {
   %fm42 = constant -42.0: f32
   %mask = constant dense<[[1, 0, 1, 0, 1, 1, 1, 0, 1],
@@ -25,6 +36,47 @@ func @transfer_read_2d_mask(%A : memref<?x?xf32>, %base1: index, %base2: index) 
   return
 }
 
+// Vector load with mask + transpose.
+func @transfer_read_2d_mask_transposed(
+    %A : memref<?x?xf32>, %base1: index, %base2: index) {
+  %fm42 = constant -42.0: f32
+  %mask = constant dense<[[1, 0, 1, 0], [0, 0, 1, 0],
+                          [1, 1, 1, 1], [0, 1, 1, 0],
+                          [1, 1, 1, 1], [1, 1, 1, 1],
+                          [1, 1, 1, 1], [0, 0, 0, 0],
+                          [1, 1, 1, 1]]> : vector<9x4xi1>
+  %f = vector.transfer_read %A[%base1, %base2], %fm42, %mask
+      {permutation_map = affine_map<(d0, d1) -> (d1, d0)>} :
+    memref<?x?xf32>, vector<9x4xf32>
+  vector.print %f: vector<9x4xf32>
+  return
+}
+
+// Vector load with mask + broadcast.
+func @transfer_read_2d_mask_broadcast(
+    %A : memref<?x?xf32>, %base1: index, %base2: index) {
+  %fm42 = constant -42.0: f32
+  %mask = constant dense<[1, 0, 1, 0, 1, 1, 1, 0, 1]> : vector<9xi1>
+  %f = vector.transfer_read %A[%base1, %base2], %fm42, %mask
+      {permutation_map = affine_map<(d0, d1) -> (0, d1)>} :
+    memref<?x?xf32>, vector<4x9xf32>
+  vector.print %f: vector<4x9xf32>
+  return
+}
+
+// Transpose + vector load with mask + broadcast.
+func @transfer_read_2d_mask_transpose_broadcast_last_dim(
+    %A : memref<?x?xf32>, %base1: index, %base2: index) {
+  %fm42 = constant -42.0: f32
+  %mask = constant dense<[1, 0, 1, 1]> : vector<4xi1>
+  %f = vector.transfer_read %A[%base1, %base2], %fm42, %mask
+      {permutation_map = affine_map<(d0, d1) -> (d1, 0)>} :
+    memref<?x?xf32>, vector<4x9xf32>
+  vector.print %f: vector<4x9xf32>
+  return
+}
+
+// Load + transpose.
 func @transfer_read_2d_transposed(
     %A : memref<?x?xf32>, %base1: index, %base2: index) {
   %fm42 = constant -42.0: f32
@@ -35,6 +87,7 @@ func @transfer_read_2d_transposed(
   return
 }
 
+// Load 1D + broadcast to 2D.
 func @transfer_read_2d_broadcast(
     %A : memref<?x?xf32>, %base1: index, %base2: index) {
   %fm42 = constant -42.0: f32
@@ -45,10 +98,22 @@ func @transfer_read_2d_broadcast(
   return
 }
 
+// Vector store.
 func @transfer_write_2d(%A : memref<?x?xf32>, %base1: index, %base2: index) {
   %fn1 = constant -1.0 : f32
   %vf0 = splat %fn1 : vector<1x4xf32>
   vector.transfer_write %vf0, %A[%base1, %base2]
+    {permutation_map = affine_map<(d0, d1) -> (d0, d1)>} :
+    vector<1x4xf32>, memref<?x?xf32>
+  return
+}
+
+// Vector store with mask.
+func @transfer_write_2d_mask(%A : memref<?x?xf32>, %base1: index, %base2: index) {
+  %fn1 = constant -2.0 : f32
+  %mask = constant dense<[[1, 0, 1, 0]]> : vector<1x4xi1>
+  %vf0 = splat %fn1 : vector<1x4xf32>
+  vector.transfer_write %vf0, %A[%base1, %base2], %mask
     {permutation_map = affine_map<(d0, d1) -> (d0, d1)>} :
     vector<1x4xf32>, memref<?x?xf32>
   return
@@ -59,50 +124,63 @@ func @entry() {
   %c1 = constant 1: index
   %c2 = constant 2: index
   %c3 = constant 3: index
-  %c4 = constant 4: index
-  %c5 = constant 5: index
-  %c8 = constant 5: index
-  %f10 = constant 10.0: f32
-  // work with dims of 4, not of 3
-  %first = constant 3: index
-  %second = constant 4: index
-  %A = memref.alloc(%first, %second) : memref<?x?xf32>
-  scf.for %i = %c0 to %first step %c1 {
-    %i32 = index_cast %i : index to i32
-    %fi = sitofp %i32 : i32 to f32
-    %fi10 = mulf %fi, %f10 : f32
-    scf.for %j = %c0 to %second step %c1 {
-        %j32 = index_cast %j : index to i32
-        %fj = sitofp %j32 : i32 to f32
-        %fres = addf %fi10, %fj : f32
-        memref.store %fres, %A[%i, %j] : memref<?x?xf32>
-    }
-  }
-  // On input, memory contains [[ 0, 1, 2, ...], [10, 11, 12, ...], ...]
-  // Read shifted by 2 and pad with -42:
+  %0 = memref.get_global @gv : memref<3x4xf32>
+  %A = memref.cast %0 : memref<3x4xf32> to memref<?x?xf32>
+
+  // 1. Read 2D vector from 2D memref.
   call @transfer_read_2d(%A, %c1, %c2) : (memref<?x?xf32>, index, index) -> ()
-  // Same as above, but transposed
+  // CHECK: ( ( 12, 13, -42, -42, -42, -42, -42, -42, -42 ), ( 22, 23, -42, -42, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ) )
+
+  // 2. Read 2D vector from 2D memref at specified location and transpose the
+  //    result.
   call @transfer_read_2d_transposed(%A, %c1, %c2)
       : (memref<?x?xf32>, index, index) -> ()
-  // Write into memory shifted by 3
-  call @transfer_write_2d(%A, %c3, %c1) : (memref<?x?xf32>, index, index) -> ()
-  // Read shifted by 0 and pad with -42:
-  call @transfer_read_2d(%A, %c0, %c0) : (memref<?x?xf32>, index, index) -> ()
-  // Same as above, but apply a mask
+  // CHECK: ( ( 12, 22, -42, -42, -42, -42, -42, -42, -42 ), ( 13, 23, -42, -42, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ) )
+
+  // 3. Read 2D vector from 2D memref with a 2D mask. In addition, some
+  //    accesses are out-of-bounds.
   call @transfer_read_2d_mask(%A, %c0, %c0)
       : (memref<?x?xf32>, index, index) -> ()
-  // Same as above, but without mask and transposed
-  call @transfer_read_2d_transposed(%A, %c0, %c0)
+  // CHECK: ( ( 0, -42, 2, -42, -42, -42, -42, -42, -42 ), ( -42, -42, 12, 13, -42, -42, -42, -42, -42 ), ( 20, 21, 22, 23, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ) )
+
+  // 4. Same as 3, but transpose the result.
+  call @transfer_read_2d_mask_transposed(%A, %c0, %c0)
       : (memref<?x?xf32>, index, index) -> ()
-  // Second vector dimension is a broadcast
+  // CHECK: ( ( 0, -42, 20, -42 ), ( -42, -42, 21, -42 ), ( 2, 12, 22, -42 ), ( -42, 13, 23, -42 ), ( -42, -42, -42, -42 ), ( -42, -42, -42, -42 ), ( -42, -42, -42, -42 ), ( -42, -42, -42, -42 ), ( -42, -42, -42, -42 ) )
+
+  // 5. Read 1D vector from 2D memref at specified location and broadcast the
+  //    result to 2D.
   call @transfer_read_2d_broadcast(%A, %c1, %c2)
       : (memref<?x?xf32>, index, index) -> ()
+  // CHECK: ( ( 12, 12, 12, 12, 12, 12, 12, 12, 12 ), ( 13, 13, 13, 13, 13, 13, 13, 13, 13 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ) )
+
+  // 6. Read 1D vector from 2D memref at specified location with mask and
+  //    broadcast the result to 2D.
+  call @transfer_read_2d_mask_broadcast(%A, %c2, %c1)
+      : (memref<?x?xf32>, index, index) -> ()
+  // CHECK: ( ( 21, -42, 23, -42, -42, -42, -42, -42, -42 ), ( 21, -42, 23, -42, -42, -42, -42, -42, -42 ), ( 21, -42, 23, -42, -42, -42, -42, -42, -42 ), ( 21, -42, 23, -42, -42, -42, -42, -42, -42 ) )
+
+  // 7. Read 1D vector from 2D memref (second dimension) at specified location
+  //    with mask and broadcast the result to 2D. In this test case, mask
+  //    elements must be evaluated before lowering to an (N>1)-D transfer.
+  call @transfer_read_2d_mask_transpose_broadcast_last_dim(%A, %c0, %c1)
+      : (memref<?x?xf32>, index, index) -> ()
+  // CHECK: ( ( 1, 1, 1, 1, 1, 1, 1, 1, 1 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ), ( 3, 3, 3, 3, 3, 3, 3, 3, 3 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ) )
+
+  // 8. Write 2D vector into 2D memref at specified location.
+  call @transfer_write_2d(%A, %c1, %c2) : (memref<?x?xf32>, index, index) -> ()
+
+  // 9. Read memref to verify step 8.
+  call @transfer_read_2d(%A, %c0, %c0) : (memref<?x?xf32>, index, index) -> ()
+  // CHECK: ( ( 0, 1, 2, 3, -42, -42, -42, -42, -42 ), ( 10, 11, -1, -1, -42, -42, -42, -42, -42 ), ( 20, 21, 22, 23, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ) )
+
+  // 10. Write 2D vector into 2D memref at specified location with mask.
+  call @transfer_write_2d_mask(%A, %c0, %c2) : (memref<?x?xf32>, index, index) -> ()
+
+  // 11. Read memref to verify step 10.
+  call @transfer_read_2d(%A, %c0, %c0) : (memref<?x?xf32>, index, index) -> ()
+  // CHECK: ( ( 0, 1, -2, 3, -42, -42, -42, -42, -42 ), ( 10, 11, -1, -1, -42, -42, -42, -42, -42 ), ( 20, 21, 22, 23, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ) )
+
   return
 }
 
-// CHECK: ( ( 12, 13, -42, -42, -42, -42, -42, -42, -42 ), ( 22, 23, -42, -42, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ) )
-// CHECK: ( ( 12, 22, -42, -42, -42, -42, -42, -42, -42 ), ( 13, 23, -42, -42, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ) )
-// CHECK: ( ( 0, 1, 2, 3, -42, -42, -42, -42, -42 ), ( 10, 11, 12, 13, -42, -42, -42, -42, -42 ), ( 20, 21, 22, 23, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ) )
-// CHECK: ( ( 0, -42, 2, -42, -42, -42, -42, -42, -42 ), ( -42, -42, 12, 13, -42, -42, -42, -42, -42 ), ( 20, 21, 22, 23, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ) )
-// CHECK: ( ( 0, 10, 20, -42, -42, -42, -42, -42, -42 ), ( 1, 11, 21, -42, -42, -42, -42, -42, -42 ), ( 2, 12, 22, -42, -42, -42, -42, -42, -42 ), ( 3, 13, 23, -42, -42, -42, -42, -42, -42 ) )
-// CHECK: ( ( 12, 12, 12, 12, 12, 12, 12, 12, 12 ), ( 13, 13, 13, 13, 13, 13, 13, 13, 13 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ) )

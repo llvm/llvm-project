@@ -44,6 +44,9 @@ template<typename T> auto var_template = [] {
 
 int *use_var_template = var_template<int>();
 
+// CHECK-LABEL: define {{.*}} @_Z29use_var_template_substitutionN12var_templateIiEMUlvE_ENS_IfEMUlvE_E
+void use_var_template_substitution(decltype(var_template<int>), decltype(var_template<float>)) {}
+
 struct S {
   void f(int = []{return 1;}()
              + []{return 2;}(),

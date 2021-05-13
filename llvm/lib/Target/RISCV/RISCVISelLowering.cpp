@@ -6456,8 +6456,8 @@ static MachineBasicBlock *addVSetVL(MachineInstr &MI, MachineBasicBlock *BB,
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
 
   unsigned Log2SEW = MI.getOperand(SEWIndex).getImm();
-  assert(RISCVVType::isValidSEW(1 << Log2SEW) && "Unexpected SEW");
-  RISCVII::VSEW ElementWidth = static_cast<RISCVII::VSEW>(Log2SEW - 3);
+  unsigned SEW = 1 << Log2SEW;
+  assert(RISCVVType::isValidSEW(SEW) && "Unexpected SEW");
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
@@ -6507,7 +6507,7 @@ static MachineBasicBlock *addVSetVL(MachineInstr &MI, MachineBasicBlock *BB,
   }
 
   // For simplicity we reuse the vtype representation here.
-  MIB.addImm(RISCVVType::encodeVTYPE(VLMul, ElementWidth,
+  MIB.addImm(RISCVVType::encodeVTYPE(VLMul, SEW,
                                      /*TailAgnostic*/ TailAgnostic,
                                      /*MaskAgnostic*/ false));
 

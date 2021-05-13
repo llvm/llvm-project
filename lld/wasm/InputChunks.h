@@ -137,8 +137,11 @@ public:
 
   uint64_t getVA(uint64_t offset = 0) const;
 
-  bool isTLS() {
-    return getName().startswith(".tdata") || getName().startswith(".tbss");
+  bool isTLS() const {
+    // Older object files don't include WASM_SEG_FLAG_TLS and instead
+    // relied on the naming convention.
+    return flags & llvm::wasm::WASM_SEG_FLAG_TLS ||
+           getName().startswith(".tdata") || getName().startswith(".tbss");
   }
 
   const OutputSegment *outputSeg = nullptr;
