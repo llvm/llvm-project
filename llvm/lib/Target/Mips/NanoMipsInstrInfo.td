@@ -122,8 +122,12 @@ def SUBu_NM : ArithLogicRNM<"subu", GPR32NMOpnd, sub>;
 def AND_NM : ArithLogicRNM<"and", GPR32NMOpnd, and>;
 def OR_NM  : ArithLogicRNM<"or", GPR32NMOpnd, or>;
 def XOR_NM : ArithLogicRNM<"xor", GPR32NMOpnd, xor>;
-def NOT_NM : ArithLogicR16<"not", GPR32NMOpnd, not>;
 def NOR_NM : ArithLogicRNM<"nor", GPR32NMOpnd>;
+
+def NOT_NM   : ArithLogicR16<"not", GPR3Opnd, not>;
+def XOR16_NM : ArithLogicR16<"xor16", GPR3Opnd>;
+def AND16_NM : ArithLogicR16<"and16", GPR3Opnd>;
+def OR16_NM  : ArithLogicR16<"or16", GPR3Opnd>;
 
 def LW_NM : LoadMemoryNM<"lw", GPR32NMOpnd, mem, load>, InstSize32;
 def SW_NM : StoreMemoryNM<"sw", GPR32NMOpnd, mem, store>, InstSize32;

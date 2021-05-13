@@ -329,6 +329,11 @@ class GPR32ClassNM<list<ValueType> regTypes> :
 
 def GPR32NM : GPR32ClassNM<[i32]>;
 
+// nanoMIPS "gpr3" register encoding type.
+def GPR3 :
+  RegisterClass<"Mips", [i32], 32,
+                (add A0_NM, A1_NM, A2_NM, A3_NM, S0_NM, S1_NM, S2_NM, S3_NM)>;
+
 class GPR32Class<list<ValueType> regTypes> :
   RegisterClass<"Mips", regTypes, 32, (add
   // Reserved
@@ -679,6 +684,10 @@ def GPR32Opnd : RegisterOperand<GPR32> {
 }
 
 def GPR32NMOpnd : RegisterOperand<GPR32NM> {
+  let ParserMatchClass = GPR32AsmOperand;
+}
+
+def GPR3Opnd : RegisterOperand<GPR3> {
   let ParserMatchClass = GPR32AsmOperand;
 }
 
