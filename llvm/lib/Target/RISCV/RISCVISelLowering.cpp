@@ -6712,6 +6712,9 @@ static bool CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
 
   // Allocate to a register if possible, or else a stack slot.
   Register Reg;
+  unsigned StoreSizeBytes = XLen / 8;
+  Align StackAlign = Align(XLen / 8);
+
   if (ValVT == MVT::f16 && !UseGPRForF16_F32)
     Reg = State.AllocateReg(ArgFPR16s);
   else if (ValVT == MVT::f32 && !UseGPRForF16_F32)
@@ -6746,15 +6749,27 @@ static bool CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
       // but we're using all of them.
       if (IsRet)
         return true;
-      LocInfo = CCValAssign::Indirect;
       // Try using a GPR to pass the address
-      Reg = State.AllocateReg(ArgGPRs);
-      LocVT = XLenVT;
+      if ((Reg = State.AllocateReg(ArgGPRs))) {
+        LocVT = XLenVT;
+        LocInfo = CCValAssign::Indirect;
+      } else if (ValVT.isScalableVector()) {
+        report_fatal_error("Unable to pass scalable vector types on the stack");
+      } else {
+        // Pass fixed-length vectors on the stack.
+        LocVT = ValVT;
+        StoreSizeBytes = ValVT.getStoreSize();
+        // Align vectors to their element sizes, being careful for vXi1
+        // vectors.
+        StackAlign = MaybeAlign(ValVT.getScalarSizeInBits() / 8).valueOrOne();
+      }
     }
-  } else
+  } else {
     Reg = State.AllocateReg(ArgGPRs);
+  }
+
   unsigned StackOffset =
-      Reg ? 0 : State.AllocateStack(XLen / 8, Align(XLen / 8));
+      Reg ? 0 : State.AllocateStack(StoreSizeBytes, StackAlign);
 
   // If we reach this point and PendingLocs is non-empty, we must be at the
   // end of a split argument that must be passed indirectly.
@@ -6937,8 +6952,8 @@ static SDValue unpackFromMemLoc(SelectionDAG &DAG, SDValue Chain,
   EVT LocVT = VA.getLocVT();
   EVT ValVT = VA.getValVT();
   EVT PtrVT = MVT::getIntegerVT(DAG.getDataLayout().getPointerSizeInBits(0));
-  int FI = MFI.CreateFixedObject(ValVT.getSizeInBits() / 8,
-                                 VA.getLocMemOffset(), /*Immutable=*/true);
+  int FI = MFI.CreateFixedObject(ValVT.getStoreSize(), VA.getLocMemOffset(),
+                                 /*Immutable=*/true);
   SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
   SDValue Val;
 

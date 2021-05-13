@@ -1168,3 +1168,428 @@ define <32 x i32> @call_split_vector_args(<2 x i32>* %pa, <32 x i32>* %pb) {
   %r = call <32 x i32> @split_vector_args(<2 x i32> %a, <2 x i32> %a, <2 x i32> %a, <2 x i32> %a, <2 x i32> %a, <32 x i32> %b, <32 x i32> %b)
   ret <32 x i32> %r
 }
+
+; A rather pathological test case in which we exhaust all vector registers and
+; all scalar registers, forcing %z and %8 to go through the stack.
+define <32 x i32> @vector_arg_via_stack(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, <32 x i32> %x, <32 x i32> %y, <32 x i32> %z, i32 %8) {
+; LMULMAX8-LABEL: vector_arg_via_stack:
+; LMULMAX8:       # %bb.0:
+; LMULMAX8-NEXT:    addi a0, zero, 32
+; LMULMAX8-NEXT:    vsetvli zero, a0, e32,m8,ta,mu
+; LMULMAX8-NEXT:    vle32.v v16, (sp)
+; LMULMAX8-NEXT:    vadd.vv v8, v8, v16
+; LMULMAX8-NEXT:    ret
+;
+; LMULMAX4-LABEL: vector_arg_via_stack:
+; LMULMAX4:       # %bb.0:
+; LMULMAX4-NEXT:    vsetivli zero, 16, e32,m4,ta,mu
+; LMULMAX4-NEXT:    vle32.v v28, (sp)
+; LMULMAX4-NEXT:    addi a0, sp, 64
+; LMULMAX4-NEXT:    vle32.v v16, (a0)
+; LMULMAX4-NEXT:    vadd.vv v8, v8, v28
+; LMULMAX4-NEXT:    vadd.vv v12, v12, v16
+; LMULMAX4-NEXT:    ret
+;
+; LMULMAX2-LABEL: vector_arg_via_stack:
+; LMULMAX2:       # %bb.0:
+; LMULMAX2-NEXT:    vsetivli zero, 8, e32,m2,ta,mu
+; LMULMAX2-NEXT:    vle32.v v26, (sp)
+; LMULMAX2-NEXT:    addi a0, sp, 32
+; LMULMAX2-NEXT:    vle32.v v28, (a0)
+; LMULMAX2-NEXT:    addi a0, sp, 64
+; LMULMAX2-NEXT:    vle32.v v30, (a0)
+; LMULMAX2-NEXT:    addi a0, sp, 96
+; LMULMAX2-NEXT:    vle32.v v16, (a0)
+; LMULMAX2-NEXT:    vadd.vv v8, v8, v26
+; LMULMAX2-NEXT:    vadd.vv v10, v10, v28
+; LMULMAX2-NEXT:    vadd.vv v12, v12, v30
+; LMULMAX2-NEXT:    vadd.vv v14, v14, v16
+; LMULMAX2-NEXT:    ret
+;
+; LMULMAX1-LABEL: vector_arg_via_stack:
+; LMULMAX1:       # %bb.0:
+; LMULMAX1-NEXT:    vsetivli zero, 4, e32,m1,ta,mu
+; LMULMAX1-NEXT:    addi a0, sp, 112
+; LMULMAX1-NEXT:    vle32.v v25, (a0)
+; LMULMAX1-NEXT:    addi a0, sp, 96
+; LMULMAX1-NEXT:    vle32.v v26, (a0)
+; LMULMAX1-NEXT:    addi a0, sp, 80
+; LMULMAX1-NEXT:    vle32.v v27, (a0)
+; LMULMAX1-NEXT:    addi a0, sp, 64
+; LMULMAX1-NEXT:    vle32.v v28, (a0)
+; LMULMAX1-NEXT:    vle32.v v29, (sp)
+; LMULMAX1-NEXT:    addi a0, sp, 16
+; LMULMAX1-NEXT:    vle32.v v30, (a0)
+; LMULMAX1-NEXT:    addi a0, sp, 32
+; LMULMAX1-NEXT:    vle32.v v31, (a0)
+; LMULMAX1-NEXT:    addi a0, sp, 48
+; LMULMAX1-NEXT:    vle32.v v16, (a0)
+; LMULMAX1-NEXT:    vadd.vv v8, v8, v29
+; LMULMAX1-NEXT:    vadd.vv v9, v9, v30
+; LMULMAX1-NEXT:    vadd.vv v10, v10, v31
+; LMULMAX1-NEXT:    vadd.vv v11, v11, v16
+; LMULMAX1-NEXT:    vadd.vv v12, v12, v28
+; LMULMAX1-NEXT:    vadd.vv v13, v13, v27
+; LMULMAX1-NEXT:    vadd.vv v14, v14, v26
+; LMULMAX1-NEXT:    vadd.vv v15, v15, v25
+; LMULMAX1-NEXT:    ret
+  %s = add <32 x i32> %x, %z
+  ret <32 x i32> %s
+}
+
+; Calling the function above. Ensure we pass the arguments correctly.
+define <32 x i32> @pass_vector_arg_via_stack(<32 x i32> %x, <32 x i32> %y, <32 x i32> %z) {
+; LMULMAX8-LABEL: pass_vector_arg_via_stack:
+; LMULMAX8:       # %bb.0:
+; LMULMAX8-NEXT:    addi sp, sp, -144
+; LMULMAX8-NEXT:    .cfi_def_cfa_offset 144
+; LMULMAX8-NEXT:    sd ra, 136(sp) # 8-byte Folded Spill
+; LMULMAX8-NEXT:    .cfi_offset ra, -8
+; LMULMAX8-NEXT:    addi a0, zero, 32
+; LMULMAX8-NEXT:    vsetvli zero, a0, e32,m8,ta,mu
+; LMULMAX8-NEXT:    vmv.v.i v8, 0
+; LMULMAX8-NEXT:    vse32.v v8, (sp)
+; LMULMAX8-NEXT:    addi a0, zero, 8
+; LMULMAX8-NEXT:    addi a1, zero, 1
+; LMULMAX8-NEXT:    addi a2, zero, 2
+; LMULMAX8-NEXT:    addi a3, zero, 3
+; LMULMAX8-NEXT:    addi a4, zero, 4
+; LMULMAX8-NEXT:    addi a5, zero, 5
+; LMULMAX8-NEXT:    addi a6, zero, 6
+; LMULMAX8-NEXT:    addi a7, zero, 7
+; LMULMAX8-NEXT:    sd a0, 128(sp)
+; LMULMAX8-NEXT:    mv a0, zero
+; LMULMAX8-NEXT:    vmv8r.v v16, v8
+; LMULMAX8-NEXT:    call vector_arg_via_stack@plt
+; LMULMAX8-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
+; LMULMAX8-NEXT:    addi sp, sp, 144
+; LMULMAX8-NEXT:    ret
+;
+; LMULMAX4-LABEL: pass_vector_arg_via_stack:
+; LMULMAX4:       # %bb.0:
+; LMULMAX4-NEXT:    addi sp, sp, -144
+; LMULMAX4-NEXT:    .cfi_def_cfa_offset 144
+; LMULMAX4-NEXT:    sd ra, 136(sp) # 8-byte Folded Spill
+; LMULMAX4-NEXT:    .cfi_offset ra, -8
+; LMULMAX4-NEXT:    addi a0, zero, 8
+; LMULMAX4-NEXT:    sd a0, 128(sp)
+; LMULMAX4-NEXT:    vsetivli zero, 16, e32,m4,ta,mu
+; LMULMAX4-NEXT:    vmv.v.i v8, 0
+; LMULMAX4-NEXT:    vse32.v v8, (sp)
+; LMULMAX4-NEXT:    addi a0, sp, 64
+; LMULMAX4-NEXT:    addi a1, zero, 1
+; LMULMAX4-NEXT:    addi a2, zero, 2
+; LMULMAX4-NEXT:    addi a3, zero, 3
+; LMULMAX4-NEXT:    addi a4, zero, 4
+; LMULMAX4-NEXT:    addi a5, zero, 5
+; LMULMAX4-NEXT:    addi a6, zero, 6
+; LMULMAX4-NEXT:    addi a7, zero, 7
+; LMULMAX4-NEXT:    vse32.v v8, (a0)
+; LMULMAX4-NEXT:    mv a0, zero
+; LMULMAX4-NEXT:    vmv4r.v v12, v8
+; LMULMAX4-NEXT:    vmv4r.v v16, v8
+; LMULMAX4-NEXT:    vmv4r.v v20, v8
+; LMULMAX4-NEXT:    call vector_arg_via_stack@plt
+; LMULMAX4-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
+; LMULMAX4-NEXT:    addi sp, sp, 144
+; LMULMAX4-NEXT:    ret
+;
+; LMULMAX2-LABEL: pass_vector_arg_via_stack:
+; LMULMAX2:       # %bb.0:
+; LMULMAX2-NEXT:    addi sp, sp, -144
+; LMULMAX2-NEXT:    .cfi_def_cfa_offset 144
+; LMULMAX2-NEXT:    sd ra, 136(sp) # 8-byte Folded Spill
+; LMULMAX2-NEXT:    .cfi_offset ra, -8
+; LMULMAX2-NEXT:    addi a0, zero, 8
+; LMULMAX2-NEXT:    sd a0, 128(sp)
+; LMULMAX2-NEXT:    vsetivli zero, 8, e32,m2,ta,mu
+; LMULMAX2-NEXT:    vmv.v.i v8, 0
+; LMULMAX2-NEXT:    vse32.v v8, (sp)
+; LMULMAX2-NEXT:    addi a0, sp, 96
+; LMULMAX2-NEXT:    vse32.v v8, (a0)
+; LMULMAX2-NEXT:    addi a0, sp, 64
+; LMULMAX2-NEXT:    vse32.v v8, (a0)
+; LMULMAX2-NEXT:    addi a0, sp, 32
+; LMULMAX2-NEXT:    addi a1, zero, 1
+; LMULMAX2-NEXT:    addi a2, zero, 2
+; LMULMAX2-NEXT:    addi a3, zero, 3
+; LMULMAX2-NEXT:    addi a4, zero, 4
+; LMULMAX2-NEXT:    addi a5, zero, 5
+; LMULMAX2-NEXT:    addi a6, zero, 6
+; LMULMAX2-NEXT:    addi a7, zero, 7
+; LMULMAX2-NEXT:    vse32.v v8, (a0)
+; LMULMAX2-NEXT:    mv a0, zero
+; LMULMAX2-NEXT:    vmv2r.v v10, v8
+; LMULMAX2-NEXT:    vmv2r.v v12, v8
+; LMULMAX2-NEXT:    vmv2r.v v14, v8
+; LMULMAX2-NEXT:    vmv2r.v v16, v8
+; LMULMAX2-NEXT:    vmv2r.v v18, v8
+; LMULMAX2-NEXT:    vmv2r.v v20, v8
+; LMULMAX2-NEXT:    vmv2r.v v22, v8
+; LMULMAX2-NEXT:    call vector_arg_via_stack@plt
+; LMULMAX2-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
+; LMULMAX2-NEXT:    addi sp, sp, 144
+; LMULMAX2-NEXT:    ret
+;
+; LMULMAX1-LABEL: pass_vector_arg_via_stack:
+; LMULMAX1:       # %bb.0:
+; LMULMAX1-NEXT:    addi sp, sp, -144
+; LMULMAX1-NEXT:    .cfi_def_cfa_offset 144
+; LMULMAX1-NEXT:    sd ra, 136(sp) # 8-byte Folded Spill
+; LMULMAX1-NEXT:    .cfi_offset ra, -8
+; LMULMAX1-NEXT:    addi a0, zero, 8
+; LMULMAX1-NEXT:    sd a0, 128(sp)
+; LMULMAX1-NEXT:    vsetivli zero, 4, e32,m1,ta,mu
+; LMULMAX1-NEXT:    vmv.v.i v8, 0
+; LMULMAX1-NEXT:    vse32.v v8, (sp)
+; LMULMAX1-NEXT:    addi a0, sp, 112
+; LMULMAX1-NEXT:    vse32.v v8, (a0)
+; LMULMAX1-NEXT:    addi a0, sp, 96
+; LMULMAX1-NEXT:    vse32.v v8, (a0)
+; LMULMAX1-NEXT:    addi a0, sp, 80
+; LMULMAX1-NEXT:    vse32.v v8, (a0)
+; LMULMAX1-NEXT:    addi a0, sp, 64
+; LMULMAX1-NEXT:    vse32.v v8, (a0)
+; LMULMAX1-NEXT:    addi a0, sp, 48
+; LMULMAX1-NEXT:    vse32.v v8, (a0)
+; LMULMAX1-NEXT:    addi a0, sp, 32
+; LMULMAX1-NEXT:    vse32.v v8, (a0)
+; LMULMAX1-NEXT:    addi a0, sp, 16
+; LMULMAX1-NEXT:    addi a1, zero, 1
+; LMULMAX1-NEXT:    addi a2, zero, 2
+; LMULMAX1-NEXT:    addi a3, zero, 3
+; LMULMAX1-NEXT:    addi a4, zero, 4
+; LMULMAX1-NEXT:    addi a5, zero, 5
+; LMULMAX1-NEXT:    addi a6, zero, 6
+; LMULMAX1-NEXT:    addi a7, zero, 7
+; LMULMAX1-NEXT:    vse32.v v8, (a0)
+; LMULMAX1-NEXT:    mv a0, zero
+; LMULMAX1-NEXT:    vmv1r.v v9, v8
+; LMULMAX1-NEXT:    vmv1r.v v10, v8
+; LMULMAX1-NEXT:    vmv1r.v v11, v8
+; LMULMAX1-NEXT:    vmv1r.v v12, v8
+; LMULMAX1-NEXT:    vmv1r.v v13, v8
+; LMULMAX1-NEXT:    vmv1r.v v14, v8
+; LMULMAX1-NEXT:    vmv1r.v v15, v8
+; LMULMAX1-NEXT:    vmv1r.v v16, v8
+; LMULMAX1-NEXT:    vmv1r.v v17, v8
+; LMULMAX1-NEXT:    vmv1r.v v18, v8
+; LMULMAX1-NEXT:    vmv1r.v v19, v8
+; LMULMAX1-NEXT:    vmv1r.v v20, v8
+; LMULMAX1-NEXT:    vmv1r.v v21, v8
+; LMULMAX1-NEXT:    vmv1r.v v22, v8
+; LMULMAX1-NEXT:    vmv1r.v v23, v8
+; LMULMAX1-NEXT:    call vector_arg_via_stack@plt
+; LMULMAX1-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
+; LMULMAX1-NEXT:    addi sp, sp, 144
+; LMULMAX1-NEXT:    ret
+  %s = call <32 x i32> @vector_arg_via_stack(i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, <32 x i32> zeroinitializer, <32 x i32> zeroinitializer, <32 x i32> zeroinitializer, i32 8)
+  ret <32 x i32> %s
+}
+
+; Another pathological case but where a small mask vector must be passed on the
+; stack.
+define <4 x i1> @vector_mask_arg_via_stack(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, <32 x i32> %x, <32 x i32> %y, <32 x i32> %z, i32 %8, <4 x i1> %9, <4 x i1> %10) {
+; CHECK-LABEL: vector_mask_arg_via_stack:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e8,mf4,ta,mu
+; CHECK-NEXT:    addi a0, sp, 136
+; CHECK-NEXT:    vle1.v v0, (a0)
+; CHECK-NEXT:    ret
+  ret <4 x i1> %10
+}
+
+; Calling the function above. Ensure we pass the mask arguments correctly. We
+; legalize stores of small masks such that the value is at least byte-sized.
+define <4 x i1> @pass_vector_mask_arg_via_stack(<4 x i1> %v) {
+; LMULMAX8-LABEL: pass_vector_mask_arg_via_stack:
+; LMULMAX8:       # %bb.0:
+; LMULMAX8-NEXT:    addi sp, sp, -160
+; LMULMAX8-NEXT:    .cfi_def_cfa_offset 160
+; LMULMAX8-NEXT:    sd ra, 152(sp) # 8-byte Folded Spill
+; LMULMAX8-NEXT:    .cfi_offset ra, -8
+; LMULMAX8-NEXT:    addi a0, zero, 32
+; LMULMAX8-NEXT:    vsetvli zero, a0, e32,m8,ta,mu
+; LMULMAX8-NEXT:    vmv.v.i v8, 0
+; LMULMAX8-NEXT:    vse32.v v8, (sp)
+; LMULMAX8-NEXT:    addi a0, zero, 8
+; LMULMAX8-NEXT:    sd a0, 128(sp)
+; LMULMAX8-NEXT:    vsetivli zero, 4, e8,mf4,ta,mu
+; LMULMAX8-NEXT:    vmv.v.i v25, 0
+; LMULMAX8-NEXT:    vmerge.vim v25, v25, 1, v0
+; LMULMAX8-NEXT:    vsetivli zero, 8, e8,mf2,ta,mu
+; LMULMAX8-NEXT:    vmv.v.i v26, 0
+; LMULMAX8-NEXT:    vsetivli zero, 4, e8,mf2,tu,mu
+; LMULMAX8-NEXT:    vslideup.vi v26, v25, 0
+; LMULMAX8-NEXT:    vsetivli zero, 8, e8,mf2,ta,mu
+; LMULMAX8-NEXT:    vmsne.vi v25, v26, 0
+; LMULMAX8-NEXT:    addi a0, sp, 136
+; LMULMAX8-NEXT:    addi a5, zero, 5
+; LMULMAX8-NEXT:    addi a6, zero, 6
+; LMULMAX8-NEXT:    addi a7, zero, 7
+; LMULMAX8-NEXT:    vse1.v v25, (a0)
+; LMULMAX8-NEXT:    mv a0, zero
+; LMULMAX8-NEXT:    mv a1, zero
+; LMULMAX8-NEXT:    mv a2, zero
+; LMULMAX8-NEXT:    mv a3, zero
+; LMULMAX8-NEXT:    mv a4, zero
+; LMULMAX8-NEXT:    vmv8r.v v16, v8
+; LMULMAX8-NEXT:    call vector_mask_arg_via_stack@plt
+; LMULMAX8-NEXT:    ld ra, 152(sp) # 8-byte Folded Reload
+; LMULMAX8-NEXT:    addi sp, sp, 160
+; LMULMAX8-NEXT:    ret
+;
+; LMULMAX4-LABEL: pass_vector_mask_arg_via_stack:
+; LMULMAX4:       # %bb.0:
+; LMULMAX4-NEXT:    addi sp, sp, -160
+; LMULMAX4-NEXT:    .cfi_def_cfa_offset 160
+; LMULMAX4-NEXT:    sd ra, 152(sp) # 8-byte Folded Spill
+; LMULMAX4-NEXT:    .cfi_offset ra, -8
+; LMULMAX4-NEXT:    addi a0, zero, 8
+; LMULMAX4-NEXT:    sd a0, 128(sp)
+; LMULMAX4-NEXT:    vsetivli zero, 16, e32,m4,ta,mu
+; LMULMAX4-NEXT:    vmv.v.i v8, 0
+; LMULMAX4-NEXT:    vse32.v v8, (sp)
+; LMULMAX4-NEXT:    addi a0, sp, 64
+; LMULMAX4-NEXT:    vse32.v v8, (a0)
+; LMULMAX4-NEXT:    vsetivli zero, 4, e8,mf4,ta,mu
+; LMULMAX4-NEXT:    vmv.v.i v25, 0
+; LMULMAX4-NEXT:    vmerge.vim v25, v25, 1, v0
+; LMULMAX4-NEXT:    vsetivli zero, 8, e8,mf2,ta,mu
+; LMULMAX4-NEXT:    vmv.v.i v26, 0
+; LMULMAX4-NEXT:    vsetivli zero, 4, e8,mf2,tu,mu
+; LMULMAX4-NEXT:    vslideup.vi v26, v25, 0
+; LMULMAX4-NEXT:    vsetivli zero, 8, e8,mf2,ta,mu
+; LMULMAX4-NEXT:    vmsne.vi v25, v26, 0
+; LMULMAX4-NEXT:    addi a0, sp, 136
+; LMULMAX4-NEXT:    addi a5, zero, 5
+; LMULMAX4-NEXT:    addi a6, zero, 6
+; LMULMAX4-NEXT:    addi a7, zero, 7
+; LMULMAX4-NEXT:    vse1.v v25, (a0)
+; LMULMAX4-NEXT:    mv a0, zero
+; LMULMAX4-NEXT:    mv a1, zero
+; LMULMAX4-NEXT:    mv a2, zero
+; LMULMAX4-NEXT:    mv a3, zero
+; LMULMAX4-NEXT:    mv a4, zero
+; LMULMAX4-NEXT:    vmv4r.v v12, v8
+; LMULMAX4-NEXT:    vmv4r.v v16, v8
+; LMULMAX4-NEXT:    vmv4r.v v20, v8
+; LMULMAX4-NEXT:    call vector_mask_arg_via_stack@plt
+; LMULMAX4-NEXT:    ld ra, 152(sp) # 8-byte Folded Reload
+; LMULMAX4-NEXT:    addi sp, sp, 160
+; LMULMAX4-NEXT:    ret
+;
+; LMULMAX2-LABEL: pass_vector_mask_arg_via_stack:
+; LMULMAX2:       # %bb.0:
+; LMULMAX2-NEXT:    addi sp, sp, -160
+; LMULMAX2-NEXT:    .cfi_def_cfa_offset 160
+; LMULMAX2-NEXT:    sd ra, 152(sp) # 8-byte Folded Spill
+; LMULMAX2-NEXT:    .cfi_offset ra, -8
+; LMULMAX2-NEXT:    addi a0, zero, 8
+; LMULMAX2-NEXT:    sd a0, 128(sp)
+; LMULMAX2-NEXT:    vsetivli zero, 8, e32,m2,ta,mu
+; LMULMAX2-NEXT:    vmv.v.i v8, 0
+; LMULMAX2-NEXT:    vse32.v v8, (sp)
+; LMULMAX2-NEXT:    addi a0, sp, 96
+; LMULMAX2-NEXT:    vse32.v v8, (a0)
+; LMULMAX2-NEXT:    addi a0, sp, 64
+; LMULMAX2-NEXT:    vse32.v v8, (a0)
+; LMULMAX2-NEXT:    addi a0, sp, 32
+; LMULMAX2-NEXT:    vse32.v v8, (a0)
+; LMULMAX2-NEXT:    vsetivli zero, 4, e8,mf4,ta,mu
+; LMULMAX2-NEXT:    vmv.v.i v25, 0
+; LMULMAX2-NEXT:    vmerge.vim v25, v25, 1, v0
+; LMULMAX2-NEXT:    vsetivli zero, 8, e8,mf2,ta,mu
+; LMULMAX2-NEXT:    vmv.v.i v26, 0
+; LMULMAX2-NEXT:    vsetivli zero, 4, e8,mf2,tu,mu
+; LMULMAX2-NEXT:    vslideup.vi v26, v25, 0
+; LMULMAX2-NEXT:    vsetivli zero, 8, e8,mf2,ta,mu
+; LMULMAX2-NEXT:    vmsne.vi v25, v26, 0
+; LMULMAX2-NEXT:    addi a0, sp, 136
+; LMULMAX2-NEXT:    addi a5, zero, 5
+; LMULMAX2-NEXT:    addi a6, zero, 6
+; LMULMAX2-NEXT:    addi a7, zero, 7
+; LMULMAX2-NEXT:    vse1.v v25, (a0)
+; LMULMAX2-NEXT:    mv a0, zero
+; LMULMAX2-NEXT:    mv a1, zero
+; LMULMAX2-NEXT:    mv a2, zero
+; LMULMAX2-NEXT:    mv a3, zero
+; LMULMAX2-NEXT:    mv a4, zero
+; LMULMAX2-NEXT:    vmv2r.v v10, v8
+; LMULMAX2-NEXT:    vmv2r.v v12, v8
+; LMULMAX2-NEXT:    vmv2r.v v14, v8
+; LMULMAX2-NEXT:    vmv2r.v v16, v8
+; LMULMAX2-NEXT:    vmv2r.v v18, v8
+; LMULMAX2-NEXT:    vmv2r.v v20, v8
+; LMULMAX2-NEXT:    vmv2r.v v22, v8
+; LMULMAX2-NEXT:    call vector_mask_arg_via_stack@plt
+; LMULMAX2-NEXT:    ld ra, 152(sp) # 8-byte Folded Reload
+; LMULMAX2-NEXT:    addi sp, sp, 160
+; LMULMAX2-NEXT:    ret
+;
+; LMULMAX1-LABEL: pass_vector_mask_arg_via_stack:
+; LMULMAX1:       # %bb.0:
+; LMULMAX1-NEXT:    addi sp, sp, -160
+; LMULMAX1-NEXT:    .cfi_def_cfa_offset 160
+; LMULMAX1-NEXT:    sd ra, 152(sp) # 8-byte Folded Spill
+; LMULMAX1-NEXT:    .cfi_offset ra, -8
+; LMULMAX1-NEXT:    addi a0, zero, 8
+; LMULMAX1-NEXT:    sd a0, 128(sp)
+; LMULMAX1-NEXT:    vsetivli zero, 4, e32,m1,ta,mu
+; LMULMAX1-NEXT:    vmv.v.i v8, 0
+; LMULMAX1-NEXT:    vse32.v v8, (sp)
+; LMULMAX1-NEXT:    addi a0, sp, 112
+; LMULMAX1-NEXT:    vse32.v v8, (a0)
+; LMULMAX1-NEXT:    addi a0, sp, 96
+; LMULMAX1-NEXT:    vse32.v v8, (a0)
+; LMULMAX1-NEXT:    addi a0, sp, 80
+; LMULMAX1-NEXT:    vse32.v v8, (a0)
+; LMULMAX1-NEXT:    addi a0, sp, 64
+; LMULMAX1-NEXT:    vse32.v v8, (a0)
+; LMULMAX1-NEXT:    addi a0, sp, 48
+; LMULMAX1-NEXT:    vse32.v v8, (a0)
+; LMULMAX1-NEXT:    addi a0, sp, 32
+; LMULMAX1-NEXT:    vse32.v v8, (a0)
+; LMULMAX1-NEXT:    addi a0, sp, 16
+; LMULMAX1-NEXT:    vse32.v v8, (a0)
+; LMULMAX1-NEXT:    vsetivli zero, 4, e8,mf4,ta,mu
+; LMULMAX1-NEXT:    vmv.v.i v25, 0
+; LMULMAX1-NEXT:    vmerge.vim v25, v25, 1, v0
+; LMULMAX1-NEXT:    vsetivli zero, 8, e8,mf2,ta,mu
+; LMULMAX1-NEXT:    vmv.v.i v26, 0
+; LMULMAX1-NEXT:    vsetivli zero, 4, e8,mf2,tu,mu
+; LMULMAX1-NEXT:    vslideup.vi v26, v25, 0
+; LMULMAX1-NEXT:    vsetivli zero, 8, e8,mf2,ta,mu
+; LMULMAX1-NEXT:    vmsne.vi v25, v26, 0
+; LMULMAX1-NEXT:    addi a0, sp, 136
+; LMULMAX1-NEXT:    addi a5, zero, 5
+; LMULMAX1-NEXT:    addi a6, zero, 6
+; LMULMAX1-NEXT:    addi a7, zero, 7
+; LMULMAX1-NEXT:    vse1.v v25, (a0)
+; LMULMAX1-NEXT:    mv a0, zero
+; LMULMAX1-NEXT:    mv a1, zero
+; LMULMAX1-NEXT:    mv a2, zero
+; LMULMAX1-NEXT:    mv a3, zero
+; LMULMAX1-NEXT:    mv a4, zero
+; LMULMAX1-NEXT:    vmv1r.v v9, v8
+; LMULMAX1-NEXT:    vmv1r.v v10, v8
+; LMULMAX1-NEXT:    vmv1r.v v11, v8
+; LMULMAX1-NEXT:    vmv1r.v v12, v8
+; LMULMAX1-NEXT:    vmv1r.v v13, v8
+; LMULMAX1-NEXT:    vmv1r.v v14, v8
+; LMULMAX1-NEXT:    vmv1r.v v15, v8
+; LMULMAX1-NEXT:    vmv1r.v v16, v8
+; LMULMAX1-NEXT:    vmv1r.v v17, v8
+; LMULMAX1-NEXT:    vmv1r.v v18, v8
+; LMULMAX1-NEXT:    vmv1r.v v19, v8
+; LMULMAX1-NEXT:    vmv1r.v v20, v8
+; LMULMAX1-NEXT:    vmv1r.v v21, v8
+; LMULMAX1-NEXT:    vmv1r.v v22, v8
+; LMULMAX1-NEXT:    vmv1r.v v23, v8
+; LMULMAX1-NEXT:    call vector_mask_arg_via_stack@plt
+; LMULMAX1-NEXT:    ld ra, 152(sp) # 8-byte Folded Reload
+; LMULMAX1-NEXT:    addi sp, sp, 160
+; LMULMAX1-NEXT:    ret
+  %r = call <4 x i1> @vector_mask_arg_via_stack(i32 0, i32 0, i32 0, i32 0, i32 0, i32 5, i32 6, i32 7, <32 x i32> zeroinitializer, <32 x i32> zeroinitializer, <32 x i32> zeroinitializer, i32 8, <4 x i1> %v, <4 x i1> %v)
+  ret <4 x i1> %r
+}
