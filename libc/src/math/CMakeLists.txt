@@ -29,7 +29,15 @@ function(add_math_entrypoint_object name)
     return()
   endif()
 
-  message(FATAL_ERROR "No machine specific or generic implementation found for ${name}.")
+  # Add a dummy entrypoint object for missing implementations. They will be skipped
+  # anyway as there will be no entry for them in the target entrypoints list.
+  add_entrypoint_object(
+    ${name}
+    SRCS
+      dummy_srcs
+    HDRS
+      dummy_hdrs
+  )
 endfunction()
 
 add_entrypoint_object(
