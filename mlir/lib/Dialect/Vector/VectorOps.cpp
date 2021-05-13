@@ -872,8 +872,6 @@ static ParseResult parseExtractOp(OpAsmParser &parser, OperationState &result) {
 
 static LogicalResult verify(vector::ExtractOp op) {
   auto positionAttr = op.position().getValue();
-  if (positionAttr.empty())
-    return op.emitOpError("expected non-empty position attribute");
   if (positionAttr.size() > static_cast<unsigned>(op.getVectorType().getRank()))
     return op.emitOpError(
         "expected position attribute of rank smaller than vector rank");
@@ -1151,6 +1149,8 @@ static Value foldExtractFromShapeCast(ExtractOp extractOp) {
 }
 
 OpFoldResult ExtractOp::fold(ArrayRef<Attribute>) {
+  if (position().empty())
+    return vector();
   if (succeeded(foldExtractOpFromExtractChain(*this)))
     return getResult();
   if (succeeded(foldExtractOpFromTranspose(*this)))
@@ -1557,8 +1557,6 @@ void InsertOp::build(OpBuilder &builder, OperationState &result, Value source,
 
 static LogicalResult verify(InsertOp op) {
   auto positionAttr = op.position().getValue();
-  if (positionAttr.empty())
-    return op.emitOpError("expected non-empty position attribute");
   auto destVectorType = op.getDestVectorType();
   if (positionAttr.size() > static_cast<unsigned>(destVectorType.getRank()))
     return op.emitOpError(
@@ -1610,6 +1608,15 @@ public:
 void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
   results.add<InsertToShapeCast>(context);
+}
+
+// Eliminates insert operations that produce values identical to their source
+// value. This happens when the source and destination vectors have identical
+// sizes.
+OpFoldResult vector::InsertOp::fold(ArrayRef<Attribute> operands) {
+  if (position().empty())
+    return source();
+  return {};
 }
 
 //===----------------------------------------------------------------------===//

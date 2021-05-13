@@ -158,14 +158,16 @@ func @extract_element(%a: vector<16xf32>) -> f32 {
 }
 
 // CHECK-LABEL: @extract
-func @extract(%arg0: vector<4x8x16xf32>) -> (vector<8x16xf32>, vector<16xf32>, f32) {
+func @extract(%arg0: vector<4x8x16xf32>) -> (vector<4x8x16xf32>, vector<8x16xf32>, vector<16xf32>, f32) {
+  // CHECK: vector.extract {{.*}}[] : vector<4x8x16xf32>
+  %0 = vector.extract %arg0[] : vector<4x8x16xf32>
   // CHECK: vector.extract {{.*}}[3] : vector<4x8x16xf32>
   %1 = vector.extract %arg0[3] : vector<4x8x16xf32>
   // CHECK-NEXT: vector.extract {{.*}}[3, 3] : vector<4x8x16xf32>
   %2 = vector.extract %arg0[3, 3] : vector<4x8x16xf32>
   // CHECK-NEXT: vector.extract {{.*}}[3, 3, 3] : vector<4x8x16xf32>
   %3 = vector.extract %arg0[3, 3, 3] : vector<4x8x16xf32>
-  return %1, %2, %3 : vector<8x16xf32>, vector<16xf32>, f32
+  return %0, %1, %2, %3 : vector<4x8x16xf32>, vector<8x16xf32>, vector<16xf32>, f32
 }
 
 // CHECK-LABEL: @insert_element
@@ -185,7 +187,9 @@ func @insert(%a: f32, %b: vector<16xf32>, %c: vector<8x16xf32>, %res: vector<4x8
   %2 = vector.insert %b, %res[3, 3] : vector<16xf32> into vector<4x8x16xf32>
   // CHECK: vector.insert %{{.*}}, %{{.*}}[3, 3, 3] : f32 into vector<4x8x16xf32>
   %3 = vector.insert %a, %res[3, 3, 3] : f32 into vector<4x8x16xf32>
-  return %3 : vector<4x8x16xf32>
+  // CHECK: vector.insert %{{.*}}, %{{.*}}[] : vector<4x8x16xf32> into vector<4x8x16xf32>
+  %4 = vector.insert %3, %3[] : vector<4x8x16xf32> into vector<4x8x16xf32>
+  return %4 : vector<4x8x16xf32>
 }
 
 // CHECK-LABEL: @outerproduct
