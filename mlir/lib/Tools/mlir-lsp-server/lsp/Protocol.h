@@ -228,6 +228,10 @@ raw_ostream &operator<<(raw_ostream &os, const Position &value);
 //===----------------------------------------------------------------------===//
 
 struct Range {
+  Range() = default;
+  Range(Position start, Position end) : start(start), end(end) {}
+  Range(Position loc) : Range(loc, loc) {}
+
   /// The range's start position.
   Position start;
 
@@ -392,6 +396,79 @@ struct Hover {
   Optional<Range> range;
 };
 llvm::json::Value toJSON(const Hover &hover);
+
+//===----------------------------------------------------------------------===//
+// DiagnosticRelatedInformation
+//===----------------------------------------------------------------------===//
+
+/// Represents a related message and source code location for a diagnostic.
+/// This should be used to point to code locations that cause or related to a
+/// diagnostics, e.g. when duplicating a symbol in a scope.
+struct DiagnosticRelatedInformation {
+  DiagnosticRelatedInformation(Location location, std::string message)
+      : location(location), message(std::move(message)) {}
+
+  /// The location of this related diagnostic information.
+  Location location;
+  /// The message of this related diagnostic information.
+  std::string message;
+};
+llvm::json::Value toJSON(const DiagnosticRelatedInformation &info);
+
+//===----------------------------------------------------------------------===//
+// Diagnostic
+//===----------------------------------------------------------------------===//
+
+enum class DiagnosticSeverity {
+  /// It is up to the client to interpret diagnostics as error, warning, info or
+  /// hint.
+  Undetermined = 0,
+  Error = 1,
+  Warning = 2,
+  Information = 3,
+  Hint = 4
+};
+
+struct Diagnostic {
+  /// The source range where the message applies.
+  Range range;
+
+  /// The diagnostic's severity. Can be omitted. If omitted it is up to the
+  /// client to interpret diagnostics as error, warning, info or hint.
+  DiagnosticSeverity severity = DiagnosticSeverity::Undetermined;
+
+  /// A human-readable string describing the source of this diagnostic, e.g.
+  /// 'typescript' or 'super lint'.
+  std::string source;
+
+  /// The diagnostic's message.
+  std::string message;
+
+  /// An array of related diagnostic information, e.g. when symbol-names within
+  /// a scope collide all definitions can be marked via this property.
+  Optional<std::vector<DiagnosticRelatedInformation>> relatedInformation;
+
+  /// The diagnostic's category. Can be omitted.
+  /// An LSP extension that's used to send the name of the category over to the
+  /// client. The category typically describes the compilation stage during
+  /// which the issue was produced, e.g. "Semantic Issue" or "Parse Issue".
+  Optional<std::string> category;
+};
+llvm::json::Value toJSON(const Diagnostic &diag);
+
+//===----------------------------------------------------------------------===//
+// PublishDiagnosticsParams
+//===----------------------------------------------------------------------===//
+
+struct PublishDiagnosticsParams {
+  PublishDiagnosticsParams(URIForFile uri) : uri(uri) {}
+
+  /// The URI for which diagnostic information is reported.
+  URIForFile uri;
+  /// The list of reported diagnostics.
+  std::vector<Diagnostic> diagnostics;
+};
+llvm::json::Value toJSON(const PublishDiagnosticsParams &params);
 
 } // namespace lsp
 } // namespace mlir
