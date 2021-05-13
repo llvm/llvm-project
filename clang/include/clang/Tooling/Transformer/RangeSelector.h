@@ -73,9 +73,9 @@ RangeSelector statement(std::string ID);
 /// binding in the match result.
 RangeSelector member(std::string ID);
 
-/// Given a node with a "name", (like \c NamedDecl, \c DeclRefExpr or \c
-/// CxxCtorInitializer) selects the name's token.  Only selects the final
-/// identifier of a qualified name, but not any qualifiers or template
+/// Given a node with a "name", (like \c NamedDecl, \c DeclRefExpr, \c
+/// CxxCtorInitializer, and \c TypeLoc) selects the name's token.  Only selects
+/// the final identifier of a qualified name, but not any qualifiers or template
 /// arguments.  For example, for `::foo::bar::baz` and `::foo::bar::baz<int>`,
 /// it selects only `baz`.
 ///

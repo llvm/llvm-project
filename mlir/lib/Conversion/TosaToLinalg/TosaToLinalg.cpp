@@ -102,6 +102,15 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
   if (isa<tosa::AbsOp>(op) && elementTy.isa<FloatType>())
     return rewriter.create<mlir::AbsFOp>(loc, resultTypes, args);
 
+  if (isa<tosa::AbsOp>(op) && elementTy.isa<IntegerType>()) {
+    auto zero =
+        rewriter.create<mlir::ConstantOp>(loc, rewriter.getZeroAttr(elementTy));
+    auto cmp =
+        rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::sgt, args[0], zero);
+    auto neg = rewriter.create<mlir::SubIOp>(loc, zero, args[0]);
+    return rewriter.create<mlir::SelectOp>(loc, cmp, args[0], neg);
+  }
+
   // tosa::AddOp
   if (isa<tosa::AddOp>(op) && elementTy.isa<FloatType>())
     return rewriter.create<mlir::AddFOp>(loc, resultTypes, args);
@@ -125,6 +134,10 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
     }
     return rewriter.create<mlir::MulFOp>(loc, resultTypes, args);
   }
+
+  // tosa::DivOp
+  if (isa<tosa::DivOp>(op) && elementTy.isa<IntegerType>())
+    return rewriter.create<mlir::SignedDivIOp>(loc, resultTypes, args);
 
   // tosa::ReciprocalOp
   if (isa<tosa::ReciprocalOp>(op) && elementTy.isa<FloatType>()) {
@@ -2335,6 +2348,7 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       PointwiseConverter<tosa::AddOp>,
       PointwiseConverter<tosa::SubOp>,
       PointwiseConverter<tosa::MulOp>,
+      PointwiseConverter<tosa::DivOp>,
       PointwiseConverter<tosa::NegateOp>,
       PointwiseConverter<tosa::PowOp>,
       PointwiseConverter<tosa::ReciprocalOp>,
