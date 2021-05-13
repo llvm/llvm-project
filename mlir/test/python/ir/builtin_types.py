@@ -294,6 +294,9 @@ def testRankedTensorType():
     else:
       print("Exception not produced")
 
+    # Encoding should be None.
+    assert RankedTensorType.get(shape, f32).encoding is None
+
 
 # CHECK-LABEL: TEST: testUnrankedTensorType
 @run

@@ -65,6 +65,7 @@ public:
   void emitEndOfAsmFile(Module &M) override;
   void EmitProducerInfo(Module &M);
   void EmitTargetFeatures(Module &M);
+  void emitGlobalVariable(const GlobalVariable *GV) override;
   void emitJumpTableInfo() override;
   void emitConstantPool() override;
   void emitFunctionBodyStart() override;

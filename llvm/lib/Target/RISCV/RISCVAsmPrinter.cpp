@@ -193,16 +193,7 @@ void RISCVAsmPrinter::emitEndOfAsmFile(Module &M) {
 void RISCVAsmPrinter::emitAttributes() {
   RISCVTargetStreamer &RTS =
       static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
-
-  const Triple &TT = TM.getTargetTriple();
-  StringRef CPU = TM.getTargetCPU();
-  StringRef FS = TM.getTargetFeatureString();
-  const RISCVTargetMachine &RTM = static_cast<const RISCVTargetMachine &>(TM);
-  /* TuneCPU doesn't impact emission of ELF attributes, ELF attributes only
-     care about arch related features, so we can set TuneCPU as CPU.  */
-  const RISCVSubtarget STI(TT, CPU, /*TuneCPU=*/CPU, FS, /*ABIName=*/"", RTM);
-
-  RTS.emitTargetAttributes(STI);
+  RTS.emitTargetAttributes(*STI);
 }
 
 // Force static initialization.

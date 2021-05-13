@@ -2302,7 +2302,7 @@ struct GlobalMemrefOpLowering
 
     rewriter.replaceOpWithNewOp<LLVM::GlobalOp>(
         global, arrayTy, global.constant(), linkage, global.sym_name(),
-        initialValue, type.getMemorySpaceAsInt());
+        initialValue, /*alignment=*/0, type.getMemorySpaceAsInt());
     return success();
   }
 };

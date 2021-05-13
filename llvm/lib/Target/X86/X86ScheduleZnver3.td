@@ -611,7 +611,7 @@ defm : Zn3WriteResIntPair<WriteIMul16Reg, [Zn3Multiplier], 3, [1], 1>; // Intege
 defm : Zn3WriteResIntPair<WriteIMul32, [Zn3Multiplier], 3, [3], 2>;    // Integer 32-bit multiplication.
 
 def Zn3MULX32rr : SchedWriteRes<[Zn3Multiplier]> {
-  let Latency = 3;
+  let Latency = 4;
   let ResourceCycles = [1];
   let NumMicroOps = 2;
 }
@@ -1443,12 +1443,12 @@ defm : Zn3WriteResInt<WriteNop, [Zn3ALU0123], 0, [1], 1>; // FIXME: latency not 
 // Zero Cycle Move
 ///////////////////////////////////////////////////////////////////////////////
 
-def Zn3WriteMoveRenameable : SchedWriteRes<[]> {
+def Zn3WriteZeroLatency : SchedWriteRes<[]> {
   let Latency = 0;
   let ResourceCycles = [];
   let NumMicroOps = 1;
 }
-def : InstRW<[Zn3WriteMoveRenameable], (instrs MOV32rr, MOV32rr_REV,
+def : InstRW<[Zn3WriteZeroLatency], (instrs MOV32rr, MOV32rr_REV,
                                                MOV64rr, MOV64rr_REV,
                                                MOVSX32rr32)>;
 
@@ -1506,6 +1506,66 @@ def : IsOptimizableRegisterMove<[
     VMOVDQAYrr, VMOVDQAYrr_REV,
     VMOVDQUYrr, VMOVDQUYrr_REV,
   ], TruePred >
+]>;
+
+///////////////////////////////////////////////////////////////////////////////
+// Dependency breaking instructions.
+///////////////////////////////////////////////////////////////////////////////
+
+def Zn3WriteZeroIdiom : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [Zn3WriteZeroLatency]>,
+    SchedVar<NoSchedPred,                          [WriteALU]>
+]>;
+def : InstRW<[Zn3WriteZeroIdiom], (instrs XOR32rr, XOR32rr_REV,
+                                          XOR64rr, XOR64rr_REV,
+                                          SUB32rr, SUB32rr_REV,
+                                          SUB64rr, SUB64rr_REV)>;
+
+def Zn3WriteZeroIdiomEFLAGS : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<CheckSameRegOperand<0, 1>>, [Zn3WriteZeroLatency]>,
+    SchedVar<NoSchedPred,                                 [WriteALU]>
+]>;
+def : InstRW<[Zn3WriteZeroIdiomEFLAGS], (instrs CMP8rr,  CMP8rr_REV,
+                                                CMP16rr, CMP16rr_REV,
+                                                CMP32rr, CMP32rr_REV,
+                                                CMP64rr, CMP64rr_REV)>;
+
+def : IsZeroIdiomFunction<[
+  // GPR Zero-idioms.
+  DepBreakingClass<[ XOR32rr, XOR32rr_REV,
+                     XOR64rr, XOR64rr_REV,
+                     SUB32rr, SUB32rr_REV,
+                     SUB64rr, SUB64rr_REV ], ZeroIdiomPredicate>,
+]>;
+
+def : IsDepBreakingFunction<[
+  // GPR
+  DepBreakingClass<[ SBB32rr, SBB32rr_REV,
+                     SBB64rr, SBB64rr_REV ], ZeroIdiomPredicate>,
+  DepBreakingClass<[ CMP8rr,  CMP8rr_REV,
+                     CMP16rr, CMP16rr_REV,
+                     CMP32rr, CMP32rr_REV,
+                     CMP64rr, CMP64rr_REV ], CheckSameRegOperand<0, 1> >,
+
+  // MMX
+  DepBreakingClass<[
+    MMX_PCMPEQBirr, MMX_PCMPEQWirr, MMX_PCMPEQDirr
+  ], ZeroIdiomPredicate>,
+
+  // SSE
+  DepBreakingClass<[
+    PCMPEQBrr, PCMPEQWrr, PCMPEQDrr, PCMPEQQrr
+  ], ZeroIdiomPredicate>,
+
+  // AVX XMM
+  DepBreakingClass<[
+    VPCMPEQBrr, VPCMPEQWrr, VPCMPEQDrr, VPCMPEQQrr
+  ], ZeroIdiomPredicate>,
+
+  // AVX YMM
+  DepBreakingClass<[
+    VPCMPEQBYrr, VPCMPEQWYrr, VPCMPEQDYrr, VPCMPEQQYrr
+  ], ZeroIdiomPredicate>,
 ]>;
 
 } // SchedModel

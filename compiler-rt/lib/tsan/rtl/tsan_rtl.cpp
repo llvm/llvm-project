@@ -374,6 +374,18 @@ static void TsanOnDeadlySignal(int signo, void *siginfo, void *context) {
 }
 #endif
 
+void CheckUnwind() {
+  // There is high probability that interceptors will check-fail as well,
+  // on the other hand there is no sense in processing interceptors
+  // since we are going to die soon.
+  ScopedIgnoreInterceptors ignore;
+#if !SANITIZER_GO
+  cur_thread()->ignore_sync++;
+  cur_thread()->ignore_reads_and_writes++;
+#endif
+  PrintCurrentStackSlow(StackTrace::GetCurrentPc());
+}
+
 void Initialize(ThreadState *thr) {
   // Thread safe because done before all threads exist.
   static bool is_initialized = false;
@@ -384,7 +396,7 @@ void Initialize(ThreadState *thr) {
   ScopedIgnoreInterceptors ignore;
   SanitizerToolName = "ThreadSanitizer";
   // Install tool-specific callbacks in sanitizer_common.
-  SetCheckFailedCallback(TsanCheckFailed);
+  SetCheckUnwindCallback(CheckUnwind);
 
   ctx = new(ctx_placeholder) Context;
   const char *env_name = SANITIZER_GO ? "GORACE" : "TSAN_OPTIONS";

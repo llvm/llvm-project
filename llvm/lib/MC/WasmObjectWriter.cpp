@@ -67,7 +67,7 @@ struct WasmDataSegment {
   uint32_t InitFlags;
   uint64_t Offset;
   uint32_t Alignment;
-  uint32_t LinkerFlags;
+  uint32_t LinkingFlags;
   SmallVector<char, 4> Data;
 };
 
@@ -1133,7 +1133,7 @@ void WasmObjectWriter::writeLinkingMetaDataSection(
     for (const WasmDataSegment &Segment : DataSegments) {
       writeString(Segment.Name);
       encodeULEB128(Segment.Alignment, W->OS);
-      encodeULEB128(Segment.LinkerFlags, W->OS);
+      encodeULEB128(Segment.LinkingFlags, W->OS);
     }
     endSection(SubSection);
   }
@@ -1440,7 +1440,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
       Segment.Section = &Section;
       addData(Segment.Data, Section);
       Segment.Alignment = Log2_32(Section.getAlignment());
-      Segment.LinkerFlags = 0;
+      Segment.LinkingFlags = Section.getSegmentFlags();
       DataSize += Segment.Data.size();
       Section.setSegmentIndex(SegmentIndex);
 

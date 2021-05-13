@@ -146,6 +146,7 @@ bool Symbol::isLive() const {
 
 void Symbol::markLive() {
   assert(!isDiscarded());
+  referenced = true;
   if (file != NULL && isDefined())
     file->markLive();
   if (auto *g = dyn_cast<DefinedGlobal>(this))
@@ -154,9 +155,17 @@ void Symbol::markLive() {
     e->event->live = true;
   if (auto *t = dyn_cast<DefinedTable>(this))
     t->table->live = true;
-  if (InputChunk *c = getChunk())
+  if (InputChunk *c = getChunk()) {
+    // Usually, a whole chunk is marked as live or dead, but in mergeable
+    // (splittable) sections, each piece of data has independent liveness bit.
+    // So we explicitly tell it which offset is in use.
+    if (auto *d = dyn_cast<DefinedData>(this)) {
+      if (auto *ms = dyn_cast<MergeInputSegment>(c)) {
+        ms->getSegmentPiece(d->value)->live = true;
+      }
+    }
     c->live = true;
-  referenced = true;
+  }
 }
 
 uint32_t Symbol::getOutputSymbolIndex() const {
@@ -207,13 +216,14 @@ bool Symbol::isExported() const {
   if (!isDefined() || isLocal())
     return false;
 
-  if (forceExport || config->exportAll)
+  if (config->exportAll || (config->exportDynamic && !isHidden()))
     return true;
 
-  if (config->exportDynamic && !isHidden())
-    return true;
+  return isExportedExplicit();
+}
 
-  return flags & WASM_SYMBOL_EXPORTED;
+bool Symbol::isExportedExplicit() const {
+  return forceExport || flags & WASM_SYMBOL_EXPORTED;
 }
 
 bool Symbol::isNoStrip() const {
@@ -276,10 +286,10 @@ DefinedFunction::DefinedFunction(StringRef name, uint32_t flags, InputFile *f,
                      function ? &function->signature : nullptr),
       function(function) {}
 
-uint64_t DefinedData::getVA(uint64_t addend) const {
+uint64_t DefinedData::getVA() const {
   LLVM_DEBUG(dbgs() << "getVA: " << getName() << "\n");
   if (segment)
-    return segment->getVA(value + addend);
+    return segment->getVA(value);
   return value;
 }
 
@@ -291,7 +301,7 @@ void DefinedData::setVA(uint64_t value_) {
 
 uint64_t DefinedData::getOutputSegmentOffset() const {
   LLVM_DEBUG(dbgs() << "getOutputSegmentOffset: " << getName() << "\n");
-  return segment->outputSegmentOffset + value;
+  return segment->getOffset(value);
 }
 
 uint64_t DefinedData::getOutputSegmentIndex() const {

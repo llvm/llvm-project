@@ -78,7 +78,7 @@ void f(int val, MoveOnly moParam, MoveAndCopy mcParam) {
   // CHECK-NEXT: invoke void @_ZNSt12experimental16coroutine_traitsIJvi8MoveOnly11MoveAndCopyEE12promise_typeC1Ev(
 
   // CHECK: call void @_ZN14suspend_always12await_resumeEv(
-  // CHECK: %[[IntParam:.+]] = load i32, i32* %val1
+  // CHECK: %[[IntParam:.+]] = load i32, i32* %{{.*}}
   // CHECK: %[[MoGep:.+]] = getelementptr inbounds %struct.MoveOnly, %struct.MoveOnly* %[[MoCopy]], i32 0, i32 0
   // CHECK: %[[MoVal:.+]] = load i32, i32* %[[MoGep]]
   // CHECK: %[[McGep:.+]] =  getelementptr inbounds %struct.MoveAndCopy, %struct.MoveAndCopy* %[[McCopy]], i32 0, i32 0
@@ -121,7 +121,7 @@ void dependent_params(T x, U, U y) {
   // CHECK-NEXT: bitcast %struct.B* %[[unnamed_copy]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(
   // CHECK-NEXT: call void @_ZN1BC1EOS_(%struct.B* {{[^,]*}} %[[unnamed_copy]], %struct.B* nonnull align 4 dereferenceable(512) %0)
-  // CHECK-NEXT: %10 = bitcast %struct.B* %[[y_copy]] to i8*
+  // CHECK-NEXT: bitcast %struct.B* %[[y_copy]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(
   // CHECK-NEXT: call void @_ZN1BC1EOS_(%struct.B* {{[^,]*}} %[[y_copy]], %struct.B* nonnull align 4 dereferenceable(512) %y)
   // CHECK-NEXT: bitcast %"struct.std::experimental::coroutine_traits<void, A, B, B>::promise_type"* %__promise to i8*

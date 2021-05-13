@@ -798,36 +798,30 @@ foldAndOrOfEqualityCmpsWithConstants(ICmpInst *LHS, ICmpInst *RHS,
 // Fold (!iszero(A & K1) & !iszero(A & K2)) -> (A & (K1 | K2)) == (K1 | K2)
 Value *InstCombinerImpl::foldAndOrOfICmpsOfAndWithPow2(ICmpInst *LHS,
                                                        ICmpInst *RHS,
-                                                       BinaryOperator &Logic) {
-  bool JoinedByAnd = Logic.getOpcode() == Instruction::And;
-  assert((JoinedByAnd || Logic.getOpcode() == Instruction::Or) &&
-         "Wrong opcode");
-  ICmpInst::Predicate Pred = LHS->getPredicate();
-  if (Pred != RHS->getPredicate())
-    return nullptr;
-  if (JoinedByAnd && Pred != ICmpInst::ICMP_NE)
-    return nullptr;
-  if (!JoinedByAnd && Pred != ICmpInst::ICMP_EQ)
+                                                       Instruction *CxtI,
+                                                       bool IsAnd) {
+  CmpInst::Predicate Pred = IsAnd ? CmpInst::ICMP_NE : CmpInst::ICMP_EQ;
+  if (LHS->getPredicate() != Pred || RHS->getPredicate() != Pred)
     return nullptr;
 
   if (!match(LHS->getOperand(1), m_Zero()) ||
       !match(RHS->getOperand(1), m_Zero()))
     return nullptr;
 
-  Value *A, *B, *C, *D;
-  if (match(LHS->getOperand(0), m_And(m_Value(A), m_Value(B))) &&
-      match(RHS->getOperand(0), m_And(m_Value(C), m_Value(D)))) {
-    if (A == D || B == D)
-      std::swap(C, D);
-    if (B == C)
-      std::swap(A, B);
+  Value *L1, *L2, *R1, *R2;
+  if (match(LHS->getOperand(0), m_And(m_Value(L1), m_Value(L2))) &&
+      match(RHS->getOperand(0), m_And(m_Value(R1), m_Value(R2)))) {
+    if (L1 == R2 || L2 == R2)
+      std::swap(R1, R2);
+    if (L2 == R1)
+      std::swap(L1, L2);
 
-    if (A == C &&
-        isKnownToBeAPowerOfTwo(B, false, 0, &Logic) &&
-        isKnownToBeAPowerOfTwo(D, false, 0, &Logic)) {
-      Value *Mask = Builder.CreateOr(B, D);
-      Value *Masked = Builder.CreateAnd(A, Mask);
-      auto NewPred = JoinedByAnd ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE;
+    if (L1 == R1 &&
+        isKnownToBeAPowerOfTwo(L2, false, 0, CxtI) &&
+        isKnownToBeAPowerOfTwo(R2, false, 0, CxtI)) {
+      Value *Mask = Builder.CreateOr(L2, R2);
+      Value *Masked = Builder.CreateAnd(L1, Mask);
+      auto NewPred = IsAnd ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE;
       return Builder.CreateICmp(NewPred, Masked, Mask);
     }
   }
@@ -1076,6 +1070,87 @@ static Value *foldUnsignedUnderflowCheck(ICmpInst *ZeroICmp,
   return nullptr;
 }
 
+struct IntPart {
+  Value *From;
+  unsigned StartBit;
+  unsigned NumBits;
+};
+
+/// Match an extraction of bits from an integer.
+static Optional<IntPart> matchIntPart(Value *V) {
+  Value *X;
+  if (!match(V, m_OneUse(m_Trunc(m_Value(X)))))
+    return None;
+
+  unsigned NumOriginalBits = X->getType()->getScalarSizeInBits();
+  unsigned NumExtractedBits = V->getType()->getScalarSizeInBits();
+  Value *Y;
+  const APInt *Shift;
+  // For a trunc(lshr Y, Shift) pattern, make sure we're only extracting bits
+  // from Y, not any shifted-in zeroes.
+  if (match(X, m_OneUse(m_LShr(m_Value(Y), m_APInt(Shift)))) &&
+      Shift->ule(NumOriginalBits - NumExtractedBits))
+    return {{Y, (unsigned)Shift->getZExtValue(), NumExtractedBits}};
+  return {{X, 0, NumExtractedBits}};
+}
+
+/// Materialize an extraction of bits from an integer in IR.
+static Value *extractIntPart(const IntPart &P, IRBuilderBase &Builder) {
+  Value *V = P.From;
+  if (P.StartBit)
+    V = Builder.CreateLShr(V, P.StartBit);
+  Type *TruncTy = V->getType()->getWithNewBitWidth(P.NumBits);
+  if (TruncTy != V->getType())
+    V = Builder.CreateTrunc(V, TruncTy);
+  return V;
+}
+
+/// (icmp eq X0, Y0) & (icmp eq X1, Y1) -> icmp eq X01, Y01
+/// (icmp ne X0, Y0) | (icmp ne X1, Y1) -> icmp ne X01, Y01
+/// where X0, X1 and Y0, Y1 are adjacent parts extracted from an integer.
+static Value *foldEqOfParts(ICmpInst *Cmp0, ICmpInst *Cmp1, bool IsAnd,
+                            InstCombiner::BuilderTy &Builder) {
+  if (!Cmp0->hasOneUse() || !Cmp1->hasOneUse())
+    return nullptr;
+
+  CmpInst::Predicate Pred = IsAnd ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE;
+  if (Cmp0->getPredicate() != Pred || Cmp1->getPredicate() != Pred)
+    return nullptr;
+
+  Optional<IntPart> L0 = matchIntPart(Cmp0->getOperand(0));
+  Optional<IntPart> R0 = matchIntPart(Cmp0->getOperand(1));
+  Optional<IntPart> L1 = matchIntPart(Cmp1->getOperand(0));
+  Optional<IntPart> R1 = matchIntPart(Cmp1->getOperand(1));
+  if (!L0 || !R0 || !L1 || !R1)
+    return nullptr;
+
+  // Make sure the LHS/RHS compare a part of the same value, possibly after
+  // an operand swap.
+  if (L0->From != L1->From || R0->From != R1->From) {
+    if (L0->From != R1->From || R0->From != L1->From)
+      return nullptr;
+    std::swap(L1, R1);
+  }
+
+  // Make sure the extracted parts are adjacent, canonicalizing to L0/R0 being
+  // the low part and L1/R1 being the high part.
+  if (L0->StartBit + L0->NumBits != L1->StartBit ||
+      R0->StartBit + R0->NumBits != R1->StartBit) {
+    if (L1->StartBit + L1->NumBits != L0->StartBit ||
+        R1->StartBit + R1->NumBits != R0->StartBit)
+      return nullptr;
+    std::swap(L0, L1);
+    std::swap(R0, R1);
+  }
+
+  // We can simplify to a comparison of these larger parts of the integers.
+  IntPart L = {L0->From, L0->StartBit, L0->NumBits + L1->NumBits};
+  IntPart R = {R0->From, R0->StartBit, R0->NumBits + R1->NumBits};
+  Value *LValue = extractIntPart(L, Builder);
+  Value *RValue = extractIntPart(R, Builder);
+  return Builder.CreateICmp(Pred, LValue, RValue);
+}
+
 /// Reduce logic-of-compares with equality to a constant by substituting a
 /// common operand with the constant. Callers are expected to call this with
 /// Cmp0/Cmp1 switched to handle logic op commutativity.
@@ -1129,7 +1204,8 @@ Value *InstCombinerImpl::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
 
   // Fold (!iszero(A & K1) & !iszero(A & K2)) ->  (A & (K1 | K2)) == (K1 | K2)
   // if K1 and K2 are a one-bit mask.
-  if (Value *V = foldAndOrOfICmpsOfAndWithPow2(LHS, RHS, And))
+  if (Value *V = foldAndOrOfICmpsOfAndWithPow2(LHS, RHS, &And,
+                                               /* IsAnd */ true))
     return V;
 
   ICmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
@@ -1179,6 +1255,9 @@ Value *InstCombinerImpl::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     return X;
   if (Value *X =
           foldUnsignedUnderflowCheck(RHS, LHS, /*IsAnd=*/true, Q, Builder))
+    return X;
+
+  if (Value *X = foldEqOfParts(LHS, RHS, /*IsAnd=*/true, Builder))
     return X;
 
   // This only handles icmp of constants: (icmp1 A, C1) & (icmp2 B, C2).
@@ -2280,7 +2359,8 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
 
   // Fold (iszero(A & K1) | iszero(A & K2)) ->  (A & (K1 | K2)) != (K1 | K2)
   // if K1 and K2 are a one-bit mask.
-  if (Value *V = foldAndOrOfICmpsOfAndWithPow2(LHS, RHS, Or))
+  if (Value *V = foldAndOrOfICmpsOfAndWithPow2(LHS, RHS, &Or,
+                                               /* IsAnd */ false))
     return V;
 
   ICmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
@@ -2406,6 +2486,9 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     return X;
   if (Value *X =
           foldUnsignedUnderflowCheck(RHS, LHS, /*IsAnd=*/false, Q, Builder))
+    return X;
+
+  if (Value *X = foldEqOfParts(LHS, RHS, /*IsAnd=*/false, Builder))
     return X;
 
   // (icmp ne A, 0) | (icmp ne B, 0) --> (icmp ne (A|B), 0)
@@ -3266,11 +3349,6 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
       }
     }
 
-    // ~(X - Y) --> ~X + Y
-    if (match(NotVal, m_Sub(m_Value(X), m_Value(Y))))
-      if (isa<Constant>(X) || NotVal->hasOneUse())
-        return BinaryOperator::CreateAdd(Builder.CreateNot(X), Y);
-
     // ~((-X) | Y) --> (X - 1) & (~Y)
     if (match(NotVal,
               m_OneUse(m_c_Or(m_OneUse(m_Neg(m_Value(X))), m_Value(Y))))) {
@@ -3309,9 +3387,15 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
       return BinaryOperator::CreateAShr(ConstantExpr::getNot(C), Y);
     }
 
-    // ~(X + C) --> -(C + 1) - X
-    if (match(Op0, m_Add(m_Value(X), m_Constant(C))))
-      return BinaryOperator::CreateSub(ConstantExpr::getNeg(AddOne(C)), X);
+    // ~(X + C) --> ~C - X
+    if (match(NotVal, m_c_Add(m_Value(X), m_ImmConstant(C))))
+      return BinaryOperator::CreateSub(ConstantExpr::getNot(C), X);
+
+    // ~(X - Y) --> ~X + Y
+    // FIXME: is it really beneficial to sink the `not` here?
+    if (match(NotVal, m_Sub(m_Value(X), m_Value(Y))))
+      if (isa<Constant>(X) || NotVal->hasOneUse())
+        return BinaryOperator::CreateAdd(Builder.CreateNot(X), Y);
 
     // ~(~X + Y) --> X - Y
     if (match(NotVal, m_c_Add(m_Not(m_Value(X)), m_Value(Y))))

@@ -971,7 +971,7 @@ public:
       FnPattern(LogicalResult (*implFn)(OpType, PatternRewriter &rewriter),
                 MLIRContext *context)
           : OpRewritePattern<OpType>(context), implFn(implFn) {
-        setDebugName(llvm::getTypeName<FnPattern>());
+        this->setDebugName(llvm::getTypeName<FnPattern>());
       }
 
       LogicalResult matchAndRewrite(OpType op,

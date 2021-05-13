@@ -491,3 +491,29 @@ body:             |
     %val:_(<4 x s64>) = G_LOAD %ptr(p0) :: (load 32)
     G_STORE %val(<4 x s64>), %ptr(p0) :: (store 32)
     RET_ReallyLR
+...
+---
+name:            test_trunc_store
+body: |
+  bb.0:
+    liveins: $x0, $w1
+
+    ; CHECK-LABEL: name: test_trunc_store
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK: %val64:_(s64) = COPY $x2
+    ; CHECK: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store 1)
+    ; CHECK: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store 2)
+    ; CHECK: G_STORE %val64(s64), [[COPY]](p0) :: (store 1)
+    ; CHECK: G_STORE %val64(s64), [[COPY]](p0) :: (store 2)
+    ; CHECK: G_STORE %val64(s64), [[COPY]](p0) :: (store 4)
+    %0:_(p0) = COPY $x0
+    %1:_(s32) = COPY $w1
+    %2:_(s8) = G_TRUNC %1(s32)
+    %val64:_(s64) = COPY $x2
+    G_STORE %1(s32), %0(p0) :: (store 1)
+    G_STORE %1(s32), %0(p0) :: (store 2)
+    G_STORE %val64(s64), %0(p0) :: (store 1)
+    G_STORE %val64(s64), %0(p0) :: (store 2)
+    G_STORE %val64(s64), %0(p0) :: (store 4)
+...

@@ -9,7 +9,7 @@ declare <2 x i8> @llvm.vp.xor.v2i8(<2 x i8>, <2 x i8>, <2 x i1>, i32)
 define <2 x i8> @vxor_vv_v2i8(<2 x i8> %va, <2 x i8> %b, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vv_v2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e8,mf8,ta,mu
 ; CHECK-NEXT:    vxor.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %v = call <2 x i8> @llvm.vp.xor.v2i8(<2 x i8> %va, <2 x i8> %b, <2 x i1> %m, i32 %evl)
@@ -19,7 +19,7 @@ define <2 x i8> @vxor_vv_v2i8(<2 x i8> %va, <2 x i8> %b, <2 x i1> %m, i32 zeroex
 define <2 x i8> @vxor_vv_v2i8_unmasked(<2 x i8> %va, <2 x i8> %b, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vv_v2i8_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e8,mf8,ta,mu
 ; CHECK-NEXT:    vxor.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x i1> undef, i1 true, i32 0
@@ -31,7 +31,7 @@ define <2 x i8> @vxor_vv_v2i8_unmasked(<2 x i8> %va, <2 x i8> %b, i32 zeroext %e
 define <2 x i8> @vxor_vx_v2i8(<2 x i8> %va, i8 %b, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vx_v2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i8> undef, i8 %b, i32 0
@@ -43,7 +43,7 @@ define <2 x i8> @vxor_vx_v2i8(<2 x i8> %va, i8 %b, <2 x i1> %m, i32 zeroext %evl
 define <2 x i8> @vxor_vx_v2i8_unmasked(<2 x i8> %va, i8 %b, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vx_v2i8_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i8> undef, i8 %b, i32 0
@@ -57,7 +57,7 @@ define <2 x i8> @vxor_vx_v2i8_unmasked(<2 x i8> %va, i8 %b, i32 zeroext %evl) {
 define <2 x i8> @vxor_vi_v2i8(<2 x i8> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e8,mf8,ta,mu
 ; CHECK-NEXT:    vxor.vi v8, v8, 7, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i8> undef, i8 7, i32 0
@@ -69,7 +69,7 @@ define <2 x i8> @vxor_vi_v2i8(<2 x i8> %va, <2 x i1> %m, i32 zeroext %evl) {
 define <2 x i8> @vxor_vi_v2i8_unmasked(<2 x i8> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v2i8_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e8,mf8,ta,mu
 ; CHECK-NEXT:    vxor.vi v8, v8, 7
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i8> undef, i8 7, i32 0
@@ -83,7 +83,7 @@ define <2 x i8> @vxor_vi_v2i8_unmasked(<2 x i8> %va, i32 zeroext %evl) {
 define <2 x i8> @vxor_vi_v2i8_1(<2 x i8> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v2i8_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e8,mf8,ta,mu
 ; CHECK-NEXT:    vnot.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i8> undef, i8 -1, i32 0
@@ -95,7 +95,7 @@ define <2 x i8> @vxor_vi_v2i8_1(<2 x i8> %va, <2 x i1> %m, i32 zeroext %evl) {
 define <2 x i8> @vxor_vi_v2i8_unmasked_1(<2 x i8> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v2i8_unmasked_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e8,mf8,ta,mu
 ; CHECK-NEXT:    vxor.vi v8, v8, -1
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i8> undef, i8 -1, i32 0
@@ -111,7 +111,7 @@ declare <4 x i8> @llvm.vp.xor.v4i8(<4 x i8>, <4 x i8>, <4 x i1>, i32)
 define <4 x i8> @vxor_vv_v4i8(<4 x i8> %va, <4 x i8> %b, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vv_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e8,mf4,ta,mu
 ; CHECK-NEXT:    vxor.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %v = call <4 x i8> @llvm.vp.xor.v4i8(<4 x i8> %va, <4 x i8> %b, <4 x i1> %m, i32 %evl)
@@ -121,7 +121,7 @@ define <4 x i8> @vxor_vv_v4i8(<4 x i8> %va, <4 x i8> %b, <4 x i1> %m, i32 zeroex
 define <4 x i8> @vxor_vv_v4i8_unmasked(<4 x i8> %va, <4 x i8> %b, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vv_v4i8_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e8,mf4,ta,mu
 ; CHECK-NEXT:    vxor.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x i1> undef, i1 true, i32 0
@@ -133,7 +133,7 @@ define <4 x i8> @vxor_vv_v4i8_unmasked(<4 x i8> %va, <4 x i8> %b, i32 zeroext %e
 define <4 x i8> @vxor_vx_v4i8(<4 x i8> %va, i8 %b, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vx_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x i8> undef, i8 %b, i32 0
@@ -145,7 +145,7 @@ define <4 x i8> @vxor_vx_v4i8(<4 x i8> %va, i8 %b, <4 x i1> %m, i32 zeroext %evl
 define <4 x i8> @vxor_vx_v4i8_unmasked(<4 x i8> %va, i8 %b, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vx_v4i8_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x i8> undef, i8 %b, i32 0
@@ -159,7 +159,7 @@ define <4 x i8> @vxor_vx_v4i8_unmasked(<4 x i8> %va, i8 %b, i32 zeroext %evl) {
 define <4 x i8> @vxor_vi_v4i8(<4 x i8> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e8,mf4,ta,mu
 ; CHECK-NEXT:    vxor.vi v8, v8, 7, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x i8> undef, i8 7, i32 0
@@ -171,7 +171,7 @@ define <4 x i8> @vxor_vi_v4i8(<4 x i8> %va, <4 x i1> %m, i32 zeroext %evl) {
 define <4 x i8> @vxor_vi_v4i8_unmasked(<4 x i8> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v4i8_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e8,mf4,ta,mu
 ; CHECK-NEXT:    vxor.vi v8, v8, 7
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x i8> undef, i8 7, i32 0
@@ -185,7 +185,7 @@ define <4 x i8> @vxor_vi_v4i8_unmasked(<4 x i8> %va, i32 zeroext %evl) {
 define <4 x i8> @vxor_vi_v4i8_1(<4 x i8> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v4i8_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e8,mf4,ta,mu
 ; CHECK-NEXT:    vnot.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x i8> undef, i8 -1, i32 0
@@ -197,7 +197,7 @@ define <4 x i8> @vxor_vi_v4i8_1(<4 x i8> %va, <4 x i1> %m, i32 zeroext %evl) {
 define <4 x i8> @vxor_vi_v4i8_unmasked_1(<4 x i8> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v4i8_unmasked_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e8,mf4,ta,mu
 ; CHECK-NEXT:    vxor.vi v8, v8, -1
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x i8> undef, i8 -1, i32 0
@@ -213,7 +213,7 @@ declare <8 x i8> @llvm.vp.xor.v8i8(<8 x i8>, <8 x i8>, <8 x i1>, i32)
 define <8 x i8> @vxor_vv_v8i8(<8 x i8> %va, <8 x i8> %b, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vv_v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e8,mf2,ta,mu
 ; CHECK-NEXT:    vxor.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %v = call <8 x i8> @llvm.vp.xor.v8i8(<8 x i8> %va, <8 x i8> %b, <8 x i1> %m, i32 %evl)
@@ -223,7 +223,7 @@ define <8 x i8> @vxor_vv_v8i8(<8 x i8> %va, <8 x i8> %b, <8 x i1> %m, i32 zeroex
 define <8 x i8> @vxor_vv_v8i8_unmasked(<8 x i8> %va, <8 x i8> %b, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vv_v8i8_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e8,mf2,ta,mu
 ; CHECK-NEXT:    vxor.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x i1> undef, i1 true, i32 0
@@ -235,7 +235,7 @@ define <8 x i8> @vxor_vv_v8i8_unmasked(<8 x i8> %va, <8 x i8> %b, i32 zeroext %e
 define <8 x i8> @vxor_vx_v8i8(<8 x i8> %va, i8 %b, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vx_v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x i8> undef, i8 %b, i32 0
@@ -247,7 +247,7 @@ define <8 x i8> @vxor_vx_v8i8(<8 x i8> %va, i8 %b, <8 x i1> %m, i32 zeroext %evl
 define <8 x i8> @vxor_vx_v8i8_unmasked(<8 x i8> %va, i8 %b, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vx_v8i8_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x i8> undef, i8 %b, i32 0
@@ -261,7 +261,7 @@ define <8 x i8> @vxor_vx_v8i8_unmasked(<8 x i8> %va, i8 %b, i32 zeroext %evl) {
 define <8 x i8> @vxor_vi_v8i8(<8 x i8> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e8,mf2,ta,mu
 ; CHECK-NEXT:    vxor.vi v8, v8, 7, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x i8> undef, i8 7, i32 0
@@ -273,7 +273,7 @@ define <8 x i8> @vxor_vi_v8i8(<8 x i8> %va, <8 x i1> %m, i32 zeroext %evl) {
 define <8 x i8> @vxor_vi_v8i8_unmasked(<8 x i8> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v8i8_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e8,mf2,ta,mu
 ; CHECK-NEXT:    vxor.vi v8, v8, 7
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x i8> undef, i8 7, i32 0
@@ -287,7 +287,7 @@ define <8 x i8> @vxor_vi_v8i8_unmasked(<8 x i8> %va, i32 zeroext %evl) {
 define <8 x i8> @vxor_vi_v8i8_1(<8 x i8> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v8i8_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e8,mf2,ta,mu
 ; CHECK-NEXT:    vnot.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x i8> undef, i8 -1, i32 0
@@ -299,7 +299,7 @@ define <8 x i8> @vxor_vi_v8i8_1(<8 x i8> %va, <8 x i1> %m, i32 zeroext %evl) {
 define <8 x i8> @vxor_vi_v8i8_unmasked_1(<8 x i8> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v8i8_unmasked_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e8,mf2,ta,mu
 ; CHECK-NEXT:    vxor.vi v8, v8, -1
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x i8> undef, i8 -1, i32 0
@@ -417,7 +417,7 @@ declare <2 x i16> @llvm.vp.xor.v2i16(<2 x i16>, <2 x i16>, <2 x i1>, i32)
 define <2 x i16> @vxor_vv_v2i16(<2 x i16> %va, <2 x i16> %b, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vv_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e16,mf4,ta,mu
 ; CHECK-NEXT:    vxor.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %v = call <2 x i16> @llvm.vp.xor.v2i16(<2 x i16> %va, <2 x i16> %b, <2 x i1> %m, i32 %evl)
@@ -427,7 +427,7 @@ define <2 x i16> @vxor_vv_v2i16(<2 x i16> %va, <2 x i16> %b, <2 x i1> %m, i32 ze
 define <2 x i16> @vxor_vv_v2i16_unmasked(<2 x i16> %va, <2 x i16> %b, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vv_v2i16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e16,mf4,ta,mu
 ; CHECK-NEXT:    vxor.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x i1> undef, i1 true, i32 0
@@ -439,7 +439,7 @@ define <2 x i16> @vxor_vv_v2i16_unmasked(<2 x i16> %va, <2 x i16> %b, i32 zeroex
 define <2 x i16> @vxor_vx_v2i16(<2 x i16> %va, i16 %b, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vx_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i16> undef, i16 %b, i32 0
@@ -451,7 +451,7 @@ define <2 x i16> @vxor_vx_v2i16(<2 x i16> %va, i16 %b, <2 x i1> %m, i32 zeroext 
 define <2 x i16> @vxor_vx_v2i16_unmasked(<2 x i16> %va, i16 %b, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vx_v2i16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i16> undef, i16 %b, i32 0
@@ -465,7 +465,7 @@ define <2 x i16> @vxor_vx_v2i16_unmasked(<2 x i16> %va, i16 %b, i32 zeroext %evl
 define <2 x i16> @vxor_vi_v2i16(<2 x i16> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e16,mf4,ta,mu
 ; CHECK-NEXT:    vxor.vi v8, v8, 7, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i16> undef, i16 7, i32 0
@@ -477,7 +477,7 @@ define <2 x i16> @vxor_vi_v2i16(<2 x i16> %va, <2 x i1> %m, i32 zeroext %evl) {
 define <2 x i16> @vxor_vi_v2i16_unmasked(<2 x i16> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v2i16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e16,mf4,ta,mu
 ; CHECK-NEXT:    vxor.vi v8, v8, 7
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i16> undef, i16 7, i32 0
@@ -491,7 +491,7 @@ define <2 x i16> @vxor_vi_v2i16_unmasked(<2 x i16> %va, i32 zeroext %evl) {
 define <2 x i16> @vxor_vi_v2i16_1(<2 x i16> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v2i16_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e16,mf4,ta,mu
 ; CHECK-NEXT:    vnot.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i16> undef, i16 -1, i32 0
@@ -503,7 +503,7 @@ define <2 x i16> @vxor_vi_v2i16_1(<2 x i16> %va, <2 x i1> %m, i32 zeroext %evl) 
 define <2 x i16> @vxor_vi_v2i16_unmasked_1(<2 x i16> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v2i16_unmasked_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e16,mf4,ta,mu
 ; CHECK-NEXT:    vxor.vi v8, v8, -1
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i16> undef, i16 -1, i32 0
@@ -519,7 +519,7 @@ declare <4 x i16> @llvm.vp.xor.v4i16(<4 x i16>, <4 x i16>, <4 x i1>, i32)
 define <4 x i16> @vxor_vv_v4i16(<4 x i16> %va, <4 x i16> %b, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vv_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e16,mf2,ta,mu
 ; CHECK-NEXT:    vxor.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %v = call <4 x i16> @llvm.vp.xor.v4i16(<4 x i16> %va, <4 x i16> %b, <4 x i1> %m, i32 %evl)
@@ -529,7 +529,7 @@ define <4 x i16> @vxor_vv_v4i16(<4 x i16> %va, <4 x i16> %b, <4 x i1> %m, i32 ze
 define <4 x i16> @vxor_vv_v4i16_unmasked(<4 x i16> %va, <4 x i16> %b, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vv_v4i16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e16,mf2,ta,mu
 ; CHECK-NEXT:    vxor.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x i1> undef, i1 true, i32 0
@@ -541,7 +541,7 @@ define <4 x i16> @vxor_vv_v4i16_unmasked(<4 x i16> %va, <4 x i16> %b, i32 zeroex
 define <4 x i16> @vxor_vx_v4i16(<4 x i16> %va, i16 %b, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vx_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x i16> undef, i16 %b, i32 0
@@ -553,7 +553,7 @@ define <4 x i16> @vxor_vx_v4i16(<4 x i16> %va, i16 %b, <4 x i1> %m, i32 zeroext 
 define <4 x i16> @vxor_vx_v4i16_unmasked(<4 x i16> %va, i16 %b, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vx_v4i16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x i16> undef, i16 %b, i32 0
@@ -567,7 +567,7 @@ define <4 x i16> @vxor_vx_v4i16_unmasked(<4 x i16> %va, i16 %b, i32 zeroext %evl
 define <4 x i16> @vxor_vi_v4i16(<4 x i16> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e16,mf2,ta,mu
 ; CHECK-NEXT:    vxor.vi v8, v8, 7, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x i16> undef, i16 7, i32 0
@@ -579,7 +579,7 @@ define <4 x i16> @vxor_vi_v4i16(<4 x i16> %va, <4 x i1> %m, i32 zeroext %evl) {
 define <4 x i16> @vxor_vi_v4i16_unmasked(<4 x i16> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v4i16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e16,mf2,ta,mu
 ; CHECK-NEXT:    vxor.vi v8, v8, 7
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x i16> undef, i16 7, i32 0
@@ -593,7 +593,7 @@ define <4 x i16> @vxor_vi_v4i16_unmasked(<4 x i16> %va, i32 zeroext %evl) {
 define <4 x i16> @vxor_vi_v4i16_1(<4 x i16> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v4i16_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e16,mf2,ta,mu
 ; CHECK-NEXT:    vnot.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x i16> undef, i16 -1, i32 0
@@ -605,7 +605,7 @@ define <4 x i16> @vxor_vi_v4i16_1(<4 x i16> %va, <4 x i1> %m, i32 zeroext %evl) 
 define <4 x i16> @vxor_vi_v4i16_unmasked_1(<4 x i16> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v4i16_unmasked_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e16,mf2,ta,mu
 ; CHECK-NEXT:    vxor.vi v8, v8, -1
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x i16> undef, i16 -1, i32 0
@@ -825,7 +825,7 @@ declare <2 x i32> @llvm.vp.xor.v2i32(<2 x i32>, <2 x i32>, <2 x i1>, i32)
 define <2 x i32> @vxor_vv_v2i32(<2 x i32> %va, <2 x i32> %b, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vv_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e32,mf2,ta,mu
 ; CHECK-NEXT:    vxor.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %v = call <2 x i32> @llvm.vp.xor.v2i32(<2 x i32> %va, <2 x i32> %b, <2 x i1> %m, i32 %evl)
@@ -835,7 +835,7 @@ define <2 x i32> @vxor_vv_v2i32(<2 x i32> %va, <2 x i32> %b, <2 x i1> %m, i32 ze
 define <2 x i32> @vxor_vv_v2i32_unmasked(<2 x i32> %va, <2 x i32> %b, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vv_v2i32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e32,mf2,ta,mu
 ; CHECK-NEXT:    vxor.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x i1> undef, i1 true, i32 0
@@ -847,7 +847,7 @@ define <2 x i32> @vxor_vv_v2i32_unmasked(<2 x i32> %va, <2 x i32> %b, i32 zeroex
 define <2 x i32> @vxor_vx_v2i32(<2 x i32> %va, i32 %b, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vx_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i32> undef, i32 %b, i32 0
@@ -859,7 +859,7 @@ define <2 x i32> @vxor_vx_v2i32(<2 x i32> %va, i32 %b, <2 x i1> %m, i32 zeroext 
 define <2 x i32> @vxor_vx_v2i32_unmasked(<2 x i32> %va, i32 %b, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vx_v2i32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i32> undef, i32 %b, i32 0
@@ -873,7 +873,7 @@ define <2 x i32> @vxor_vx_v2i32_unmasked(<2 x i32> %va, i32 %b, i32 zeroext %evl
 define <2 x i32> @vxor_vi_v2i32(<2 x i32> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e32,mf2,ta,mu
 ; CHECK-NEXT:    vxor.vi v8, v8, 7, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i32> undef, i32 7, i32 0
@@ -885,7 +885,7 @@ define <2 x i32> @vxor_vi_v2i32(<2 x i32> %va, <2 x i1> %m, i32 zeroext %evl) {
 define <2 x i32> @vxor_vi_v2i32_unmasked(<2 x i32> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v2i32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e32,mf2,ta,mu
 ; CHECK-NEXT:    vxor.vi v8, v8, 7
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i32> undef, i32 7, i32 0
@@ -899,7 +899,7 @@ define <2 x i32> @vxor_vi_v2i32_unmasked(<2 x i32> %va, i32 zeroext %evl) {
 define <2 x i32> @vxor_vi_v2i32_1(<2 x i32> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v2i32_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e32,mf2,ta,mu
 ; CHECK-NEXT:    vnot.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i32> undef, i32 -1, i32 0
@@ -911,7 +911,7 @@ define <2 x i32> @vxor_vi_v2i32_1(<2 x i32> %va, <2 x i1> %m, i32 zeroext %evl) 
 define <2 x i32> @vxor_vi_v2i32_unmasked_1(<2 x i32> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v2i32_unmasked_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e32,mf2,ta,mu
 ; CHECK-NEXT:    vxor.vi v8, v8, -1
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i32> undef, i32 -1, i32 0

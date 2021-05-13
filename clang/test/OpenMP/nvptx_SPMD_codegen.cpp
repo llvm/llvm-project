@@ -120,10 +120,7 @@ int a;
 // CHECK-DAG: [[DISTR_LIGHT]]
 // CHECK-DAG: [[FOR_LIGHT]]
 // CHECK-DAG: [[LIGHT]]
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0)
-// CHECK-DAG: [[DISTR_LIGHT]]
-// CHECK-DAG: [[FOR_LIGHT]]
-// CHECK-DAG: [[LIGHT]]
+// CHECK: call void @__kmpc_kernel_init(
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
 // CHECK-DAG: [[DISTR_FULL]]
 // CHECK-DAG: [[FULL]]

@@ -73,6 +73,24 @@ func @test_broadcast(%arg0: tensor<1xf32>, %arg1: tensor<2xf32>) -> tensor<2xf32
 
 // -----
 
+// CHECK: #[[$MAP0:.*]] = affine_map<(d0) -> (d0)>
+// CHECK: #[[$MAP1:.*]] = affine_map<(d0) -> ()>
+
+// CHECK-LABEL: @test_broadcast_swapped_args
+func @test_broadcast_swapped_args(%arg0: tensor<2xf32>, %arg1: tensor<1xf32>) -> tensor<2xf32> {
+  // CHECK: [[INIT:%.+]] = linalg.init_tensor [2] : tensor<2xf32>
+  // CHECK: [[RESHAPE:%.+]] = linalg.tensor_reshape %arg1
+  // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP0]]], iterator_types = ["parallel"]} ins(%arg0, [[RESHAPE]] : tensor<2xf32>, tensor<f32>) outs([[INIT]] : tensor<2xf32>) {
+  // CHECK: ^bb0(%arg2: f32, %arg3: f32, %arg4: f32):
+  // CHECK:   [[ELEMENT:%.+]] = addf %arg2, %arg3 : f32
+  // CHECK:   linalg.yield [[ELEMENT]] : f32
+  // CHECK: } -> tensor<2xf32>
+  %0 = "tosa.add"(%arg0, %arg1) : (tensor<2xf32>, tensor<1xf32>) -> tensor<2xf32>
+  return %0 : tensor<2xf32>
+}
+
+// -----
+
 // CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
 // CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (d1)>
 // CHECK-DAG: #[[$MAP2:.*]] = affine_map<(d0, d1) -> (d0)>

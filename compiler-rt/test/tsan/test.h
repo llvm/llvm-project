@@ -69,6 +69,8 @@ const int kPCInc = 1;
 extern "C" {
 #endif
 
+void AnnotateThreadName(const char *f, int l, const char *name);
+
 void AnnotateRWLockCreate(const char *f, int l, void *m);
 void AnnotateRWLockCreateStatic(const char *f, int l, void *m);
 void AnnotateRWLockDestroy(const char *f, int l, void *m);
@@ -79,6 +81,15 @@ void AnnotateIgnoreReadsBegin(const char *f, int l);
 void AnnotateIgnoreReadsEnd(const char *f, int l);
 void AnnotateIgnoreWritesBegin(const char *f, int l);
 void AnnotateIgnoreWritesEnd(const char *f, int l);
+
+void AnnotateIgnoreSyncBegin(const char *f, int l);
+void AnnotateIgnoreSyncEnd(const char *f, int l);
+
+void AnnotateHappensBefore(const char *f, int l, void *addr);
+void AnnotateHappensAfter(const char *f, int l, void *addr);
+
+void AnnotateBenignRaceSized(const char *f, int l, void *mem, unsigned int size, const char *desc);
+void WTFAnnotateBenignRaceSized(const char *f, int l, void *mem, unsigned int size, const char *desc);
 
 #ifdef __cplusplus
 }
@@ -94,6 +105,14 @@ void AnnotateIgnoreWritesEnd(const char *f, int l);
     AnnotateRWLockAcquired(__FILE__, __LINE__, m, is_w)
 #define ANNOTATE_RWLOCK_RELEASED(m, is_w) \
     AnnotateRWLockReleased(__FILE__, __LINE__, m, is_w)
+#define ANNOTATE_HAPPENS_BEFORE(addr) \
+  AnnotateHappensBefore(__FILE__, __LINE__, (void *)(addr))
+#define ANNOTATE_HAPPENS_AFTER(addr) \
+  AnnotateHappensAfter(__FILE__, __LINE__, (void *)(addr))
+#define ANNOTATE_BENIGN_RACE(var) \
+  AnnotateBenignRaceSized(__FILE__, __LINE__, &(var), sizeof(var), #var)
+#define WTF_ANNOTATE_BENIGN_RACE(var) \
+  WTFAnnotateBenignRaceSized(__FILE__, __LINE__, &(var), sizeof(var), #var)
 
 #ifdef __APPLE__
 #define ASM_SYMBOL(symbol) "_" #symbol

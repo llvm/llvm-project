@@ -1,1 +1,0 @@
-void placeholder(void) {}

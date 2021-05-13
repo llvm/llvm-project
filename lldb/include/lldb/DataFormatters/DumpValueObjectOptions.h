@@ -62,8 +62,6 @@ public:
 
   DumpValueObjectOptions();
 
-  DumpValueObjectOptions(const DumpValueObjectOptions &rhs) = default;
-
   DumpValueObjectOptions(ValueObject &valobj);
 
   DumpValueObjectOptions &

@@ -84,9 +84,6 @@ typedef Allocator::AllocatorCache AllocatorCache;
 Allocator *allocator();
 #endif
 
-void TsanCheckFailed(const char *file, int line, const char *cond,
-                     u64 v1, u64 v2);
-
 const u64 kShadowRodata = (u64)-1;  // .rodata shadow marker
 
 // FastState (from most significant bit):

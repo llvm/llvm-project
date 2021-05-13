@@ -139,7 +139,7 @@ module attributes {
 {
   func @alloc_dealloc_dynamic_workgroup_mem(%arg0 : memref<4x?xf32, 3>) {
     // expected-error @+2 {{unhandled deallocation type}}
-    // expected-error @+1 {{'memref.dealloc' op operand #0 must be memref of any type values}}
+    // expected-error @+1 {{'memref.dealloc' op operand #0 must be unranked.memref of any type values or memref of any type values}}
     memref.dealloc %arg0 : memref<4x?xf32, 3>
     return
   }
@@ -154,7 +154,7 @@ module attributes {
 {
   func @alloc_dealloc_mem(%arg0 : memref<4x5xf32>) {
     // expected-error @+2 {{unhandled deallocation type}}
-    // expected-error @+1 {{op operand #0 must be memref of any type values}}
+    // expected-error @+1 {{op operand #0 must be unranked.memref of any type values or memref of any type values}}
     memref.dealloc %arg0 : memref<4x5xf32>
     return
   }

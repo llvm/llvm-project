@@ -6,7 +6,7 @@
 #
 ##===----------------------------------------------------------------------===##
 #
-# Build the AMDGCN Device RTL if the ROCM tools are available
+# Build the AMDGCN Device RTL bitcode library using clang -ffreestanding
 #
 ##===----------------------------------------------------------------------===##
 
@@ -35,6 +35,14 @@ if (AOMP_INSTALL_PREFIX)
   set(AOMP_BINDIR ${AOMP_INSTALL_PREFIX}/bin)
 else()
   set(AOMP_BINDIR ${LLVM_BUILD_BINARY_DIR}/bin)
+endif()
+
+set(LIBOMPTARGET_BUILD_AMDGCN_BCLIB TRUE CACHE BOOL
+  "Can be set to false to disable building this library.")
+
+if (NOT LIBOMPTARGET_BUILD_AMDGCN_BCLIB)
+  libomptarget_say("Not building AMDGCN device RTL: Disabled by LIBOMPTARGET_BUILD_AMDGCN_BCLIB")
+  return()
 endif()
 
 # Copied from nvptx CMakeLists

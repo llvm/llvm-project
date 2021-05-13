@@ -149,6 +149,10 @@ protected:
   DebugLoc DL;
 };
 
+class OpenMPIRBuilderTestWithParams
+    : public OpenMPIRBuilderTest,
+      public ::testing::WithParamInterface<omp::OMPScheduleType> {};
+
 // Returns the value stored in the given allocation. Returns null if the given
 // value is not a result of an allocation, if no value is stored or if there is
 // more than one store.
@@ -1708,18 +1712,34 @@ TEST_F(OpenMPIRBuilderTest, StaticWorkShareLoop) {
   EXPECT_EQ(NumCallsInExitBlock, 3u);
 }
 
-TEST_F(OpenMPIRBuilderTest, DynamicWorkShareLoop) {
+TEST_P(OpenMPIRBuilderTestWithParams, DynamicWorkShareLoop) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
   OMPBuilder.initialize();
   IRBuilder<> Builder(BB);
   OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
 
+  omp::OMPScheduleType SchedType = GetParam();
+  uint32_t ChunkSize = 1;
+  switch (SchedType) {
+  case omp::OMPScheduleType::DynamicChunked:
+  case omp::OMPScheduleType::GuidedChunked:
+    ChunkSize = 7;
+    break;
+  case omp::OMPScheduleType::Auto:
+  case omp::OMPScheduleType::Runtime:
+    ChunkSize = 1;
+    break;
+  default:
+    assert(0 && "unknown type for this test");
+    break;
+  }
+
   Type *LCTy = Type::getInt32Ty(Ctx);
   Value *StartVal = ConstantInt::get(LCTy, 10);
   Value *StopVal = ConstantInt::get(LCTy, 52);
   Value *StepVal = ConstantInt::get(LCTy, 2);
-  Value *ChunkVal = ConstantInt::get(LCTy, 7);
+  Value *ChunkVal = ConstantInt::get(LCTy, ChunkSize);
   auto LoopBodyGen = [&](InsertPointTy, llvm::Value *) {};
 
   CanonicalLoopInfo *CLI = OMPBuilder.createCanonicalLoop(
@@ -1737,7 +1757,7 @@ TEST_F(OpenMPIRBuilderTest, DynamicWorkShareLoop) {
   Value *IV = CLI->getIndVar();
 
   InsertPointTy EndIP =
-      OMPBuilder.createDynamicWorkshareLoop(Loc, CLI, AllocaIP,
+      OMPBuilder.createDynamicWorkshareLoop(Loc, CLI, AllocaIP, SchedType,
                                             /*NeedsBarrier=*/true, ChunkVal);
   // The returned value should be the "after" point.
   ASSERT_EQ(EndIP.getBlock(), AfterIP.getBlock());
@@ -1775,7 +1795,7 @@ TEST_F(OpenMPIRBuilderTest, DynamicWorkShareLoop) {
             "__kmpc_dispatch_init_4u");
   EXPECT_EQ(InitCall->getNumArgOperands(), 7U);
   EXPECT_EQ(InitCall->getArgOperand(6),
-            ConstantInt::get(Type::getInt32Ty(Ctx), 7));
+            ConstantInt::get(Type::getInt32Ty(Ctx), ChunkSize));
 
   ConstantInt *OrigLowerBound =
       dyn_cast<ConstantInt>(LowerBoundStore->getValueOperand());
@@ -1806,6 +1826,13 @@ TEST_F(OpenMPIRBuilderTest, DynamicWorkShareLoop) {
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
+
+INSTANTIATE_TEST_CASE_P(OpenMPWSLoopSchedulingTypes,
+                        OpenMPIRBuilderTestWithParams,
+                        ::testing::Values(omp::OMPScheduleType::DynamicChunked,
+                                          omp::OMPScheduleType::GuidedChunked,
+                                          omp::OMPScheduleType::Auto,
+                                          omp::OMPScheduleType::Runtime));
 
 TEST_F(OpenMPIRBuilderTest, MasterDirective) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;

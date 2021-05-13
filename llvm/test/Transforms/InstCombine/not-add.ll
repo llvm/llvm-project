@@ -137,3 +137,31 @@ define <4 x i32> @vector_test_undef_nsw_nuw(<4 x i32> %x, <4 x i32> %y) {
   %nota = xor <4 x i32> %a, <i32 -1, i32 -1, i32 undef, i32 undef>
   ret <4 x i32> %nota
 }
+
+define i32 @pr50308(i1 %c1, i32 %v1, i32 %v2, i32 %v3) {
+; CHECK-LABEL: @pr50308(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
+; CHECK:       cond.true:
+; CHECK-NEXT:    [[ADD_NOT:%.*]] = sub i32 -2, [[V1:%.*]]
+; CHECK-NEXT:    [[ADD1_NEG:%.*]] = xor i32 [[ADD_NOT]], [[V2:%.*]]
+; CHECK-NEXT:    br label [[COND_END]]
+; CHECK:       cond.end:
+; CHECK-NEXT:    [[COND_NEG:%.*]] = phi i32 [ [[ADD1_NEG]], [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[COND_NEG]], [[V3:%.*]]
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+entry:
+  br i1 %c1, label %cond.true, label %cond.end
+
+cond.true:
+  %add = add nsw i32 1, %v1
+  %xor = xor i32 %add, %v2
+  %add1 = add nsw i32 1, %xor
+  br label %cond.end
+
+cond.end:
+  %cond = phi i32 [ %add1, %cond.true ], [ 0, %entry ]
+  %sub = sub nsw i32 %v3, %cond
+  ret i32 %sub
+}

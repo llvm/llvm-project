@@ -287,6 +287,11 @@ public:
   /// Return the location of the original name token.
   virtual llvm::SMLoc getNameLoc() const = 0;
 
+  /// Re-encode the given source location as an MLIR location and return it.
+  /// Note: This method should only be used when a `Location` is necessary, as
+  /// the encoding process is not efficient.
+  virtual Location getEncodedSourceLoc(llvm::SMLoc loc) = 0;
+
   // These methods emit an error and return failure or success. This allows
   // these to be chained together into a linear sequence of || expressions in
   // many cases.
@@ -435,21 +440,24 @@ public:
   }
 
   /// Parse an optional integer value from the stream.
-  virtual OptionalParseResult parseOptionalInteger(uint64_t &result) = 0;
+  virtual OptionalParseResult parseOptionalInteger(APInt &result) = 0;
 
   template <typename IntT>
   OptionalParseResult parseOptionalInteger(IntT &result) {
     auto loc = getCurrentLocation();
 
     // Parse the unsigned variant.
-    uint64_t uintResult;
+    APInt uintResult;
     OptionalParseResult parseResult = parseOptionalInteger(uintResult);
     if (!parseResult.hasValue() || failed(*parseResult))
       return parseResult;
 
-    // Try to convert to the provided integer type.
-    result = IntT(uintResult);
-    if (uint64_t(result) != uintResult)
+    // Try to convert to the provided integer type.  sextOrTrunc is correct even
+    // for unsigned types because parseOptionalInteger ensures the sign bit is
+    // zero for non-negated integers.
+    result =
+        (IntT)uintResult.sextOrTrunc(sizeof(IntT) * CHAR_BIT).getLimitedValue();
+    if (APInt(uintResult.getBitWidth(), result) != uintResult)
       return emitError(loc, "integer value too large");
     return success();
   }

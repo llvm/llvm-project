@@ -236,7 +236,7 @@ OPTIONS
 
 .. _llvm-symbolizer-opt-output-style:
 
-.. option:: --output-style <LLVM|GNU>
+.. option:: --output-style <LLVM|GNU|JSON>
 
   Specify the preferred output style. Defaults to ``LLVM``. When the output
   style is set to ``GNU``, the tool follows the style of GNU's **addr2line**.
@@ -247,11 +247,14 @@ OPTIONS
   * Does not add an empty line after the report for an address.
 
   * Does not replace the name of an inlined function with the name of the
-    topmost caller when inlined frames are not shown and :option:`--use-symbol-table`
-    is on.
+    topmost caller when inlined frames are not shown.
 
   * Prints an address's debug-data discriminator when it is non-zero. One way to
     produce discriminators is to compile with clang's -fdebug-info-for-profiling.
+
+  ``JSON`` style provides a machine readable output in JSON. If addresses are
+    supplied via stdin, the output JSON will be a series of individual objects.
+    Otherwise, all results will be contained in a single array.
 
   .. code-block:: console
 
@@ -274,10 +277,58 @@ OPTIONS
     $ llvm-symbolizer --output-style=GNU --obj=profiling.elf 0x401167 -p --no-inlines
     main at /tmp/test.cpp:15 (discriminator 2)
 
+    $ llvm-symbolizer --output-style=JSON --obj=inlined.elf 0x4004be 0x400486 -p
+    [
+      {
+        "Address": "0x4004be",
+        "ModuleName": "inlined.elf",
+        "Symbol": [
+          {
+            "Column": 18,
+            "Discriminator": 0,
+            "FileName": "/tmp/test.cpp",
+            "FunctionName": "baz()",
+            "Line": 11,
+            "Source": "",
+            "StartFileName": "/tmp/test.cpp",
+            "StartLine": 9
+          },
+          {
+            "Column": 0,
+            "Discriminator": 0,
+            "FileName": "/tmp/test.cpp",
+            "FunctionName": "main",
+            "Line": 15,
+            "Source": "",
+            "StartFileName": "/tmp/test.cpp",
+            "StartLine": 14
+          }
+        ]
+      },
+      {
+        "Address": "0x400486",
+        "ModuleName": "inlined.elf",
+        "Symbol": [
+          {
+            "Column": 3,
+            "Discriminator": 0,
+            "FileName": "/tmp/test.cpp",
+            "FunctionName": "foo()",
+            "Line": 6,
+            "Source": "",
+            "StartFileName": "/tmp/test.cpp",
+            "StartLine": 5
+          }
+        ]
+      }
+    ]
+
 .. option:: --pretty-print, -p
 
   Print human readable output. If :option:`--inlining` is specified, the
   enclosing scope is prefixed by (inlined by).
+  For JSON output, the option will cause JSON to be indented and split over
+  new lines. Otherwise, the JSON output will be printed in a compact form.
 
   .. code-block:: console
 
@@ -320,13 +371,6 @@ OPTIONS
   Print the file's path relative to the compilation directory, instead
   of the absolute path. If the command-line to the compiler included
   the full path, this will be the same as the default.
-
-.. _llvm-symbolizer-opt-use-symbol-table:
-
-.. option:: --use-symbol-table
-
-  Prefer function names stored in symbol table to function names in debug info
-  sections. Defaults to true.
 
 .. option:: --verbose
 

@@ -132,28 +132,81 @@ def G_TRN2 : AArch64GenericInstruction {
 def G_EXT: AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$v1, type0:$v2, untyped_imm_0:$imm);
+  let hasSideEffects = 0;
 }
 
 // Represents a vector G_ASHR with an immediate.
 def G_VASHR : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, untyped_imm_0:$imm);
+  let hasSideEffects = 0;
 }
 
 // Represents a vector G_LSHR with an immediate.
 def G_VLSHR : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, untyped_imm_0:$imm);
+  let hasSideEffects = 0;
 }
 
 // Represents an integer to FP conversion on the FPR bank.
 def G_SITOF : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src);
+  let hasSideEffects = 0;
 }
 def G_UITOF : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src);
+  let hasSideEffects = 0;
+}
+
+def G_FCMEQ : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type1:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_FCMGE : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type1:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_FCMGT : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type1:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_FCMEQZ : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = 0;
+}
+
+def G_FCMGEZ : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = 0;
+}
+
+def G_FCMGTZ : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = 0;
+}
+
+def G_FCMLEZ : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = 0;
+}
+
+def G_FCMLTZ : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = 0;
 }
 
 def : GINodeEquiv<G_REV16, AArch64rev16>;
@@ -175,6 +228,16 @@ def : GINodeEquiv<G_VASHR, AArch64vashr>;
 def : GINodeEquiv<G_VLSHR, AArch64vlshr>;
 def : GINodeEquiv<G_SITOF, AArch64sitof>;
 def : GINodeEquiv<G_UITOF, AArch64uitof>;
+
+def : GINodeEquiv<G_FCMEQ, AArch64fcmeq>;
+def : GINodeEquiv<G_FCMGE, AArch64fcmge>;
+def : GINodeEquiv<G_FCMGT, AArch64fcmgt>;
+
+def : GINodeEquiv<G_FCMEQZ, AArch64fcmeqz>;
+def : GINodeEquiv<G_FCMGEZ, AArch64fcmgez>;
+def : GINodeEquiv<G_FCMGTZ, AArch64fcmgtz>;
+def : GINodeEquiv<G_FCMLEZ, AArch64fcmlez>;
+def : GINodeEquiv<G_FCMLTZ, AArch64fcmltz>;
 
 def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, vector_extract>;
 

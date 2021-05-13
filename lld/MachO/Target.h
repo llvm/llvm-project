@@ -70,7 +70,7 @@ public:
   }
 
   uint32_t magic;
-  uint32_t cpuType;
+  llvm::MachO::CPUType cpuType;
   uint32_t cpuSubtype;
 
   uint64_t pageZeroSize;

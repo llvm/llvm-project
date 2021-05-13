@@ -83,7 +83,7 @@ define void @buildvec_merge0_v4f32(<4 x float>* %x, float %f) {
 ; CHECK-LABEL: buildvec_merge0_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a1, zero, 6
-; CHECK-NEXT:    vsetivli a2, 1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 1, e8,mf8,ta,mu
 ; CHECK-NEXT:    lui a2, %hi(.LCPI4_0)
 ; CHECK-NEXT:    flw ft0, %lo(.LCPI4_0)(a2)
 ; CHECK-NEXT:    vmv.s.x v0, a1

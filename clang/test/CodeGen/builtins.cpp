@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-linux-gnu -ffreestanding -verify %s
 // RUN: %clang_cc1 -std=c++11 -triple i686-pc-linux-gnu -ffreestanding -verify %s
-// RUN: %clang_cc1 -std=c++11 -triple avr-unknown-unknown -ffreestanding -verify %s
 
 // expected-no-diagnostics
 

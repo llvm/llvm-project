@@ -4371,6 +4371,12 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
     Attribute NewAttr = Attribute::getWithByValType(F.getContext(), ByValTy);
     F.addParamAttr(0, NewAttr);
   }
+
+  // If function has void return type, check it has align attribute. It has no
+  // affect on the return type and no longer passes the verifier.
+  if (F.getReturnType()->isVoidTy() &&
+      F.hasAttribute(AttributeList::ReturnIndex, Attribute::Alignment))
+    F.removeAttribute(AttributeList::ReturnIndex, Attribute::Alignment);
 }
 
 static bool isOldLoopArgument(Metadata *MD) {

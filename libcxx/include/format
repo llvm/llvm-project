@@ -105,13 +105,13 @@ class _LIBCPP_TEMPLATE_VIS basic_format_parse_context {
 public:
   using char_type = _CharT;
   using const_iterator =
-      typename _VSTD::basic_string_view<_CharT>::const_iterator;
+      typename basic_string_view<_CharT>::const_iterator;
   using iterator = const_iterator;
 
 public:
   _LIBCPP_INLINE_VISIBILITY
   constexpr explicit basic_format_parse_context(
-      _VSTD::basic_string_view<_CharT> __fmt, size_t __num_args = 0) noexcept
+      basic_string_view<_CharT> __fmt, size_t __num_args = 0) noexcept
       : __begin_(__fmt.begin()),
         __end_(__fmt.end()),
         __indexing_(__unknown),
@@ -156,7 +156,7 @@ public:
     //   expressions ([expr.const]).
     // Note: the Throws clause [format.parse.ctx]/10 doesn't specify the
     // behavior when id >= num_args_.
-    if (_VSTD::is_constant_evaluated() && __id >= __num_args_)
+    if (is_constant_evaluated() && __id >= __num_args_)
       __throw_format_error("Argument index outside the valid range");
   }
 

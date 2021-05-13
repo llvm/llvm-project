@@ -9,7 +9,7 @@ declare <1 x i8> @llvm.masked.gather.v1i8.v1p0i8(<1 x i8*>, i32, <1 x i1>, <1 x 
 define <1 x i8> @mgather_v1i8(<1 x i8*> %ptrs, <1 x i1> %m, <1 x i8> %passthru) {
 ; RV32-LABEL: mgather_v1i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 1, e8,mf4,tu,mu
+; RV32-NEXT:    vsetivli a0, 1, e8,mf8,tu,mu
 ; RV32-NEXT:    vloxei32.v v9, (zero), v8, v0.t
 ; RV32-NEXT:    vmv1r.v v8, v9
 ; RV32-NEXT:    ret
@@ -29,7 +29,7 @@ declare <2 x i8> @llvm.masked.gather.v2i8.v2p0i8(<2 x i8*>, i32, <2 x i1>, <2 x 
 define <2 x i8> @mgather_v2i8(<2 x i8*> %ptrs, <2 x i1> %m, <2 x i8> %passthru) {
 ; RV32-LABEL: mgather_v2i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 2, e8,mf4,tu,mu
+; RV32-NEXT:    vsetivli a0, 2, e8,mf8,tu,mu
 ; RV32-NEXT:    vloxei32.v v9, (zero), v8, v0.t
 ; RV32-NEXT:    vmv1r.v v8, v9
 ; RV32-NEXT:    ret
@@ -47,9 +47,9 @@ define <2 x i8> @mgather_v2i8(<2 x i8*> %ptrs, <2 x i1> %m, <2 x i8> %passthru) 
 define <2 x i16> @mgather_v2i8_sextload_v2i16(<2 x i8*> %ptrs, <2 x i1> %m, <2 x i8> %passthru) {
 ; RV32-LABEL: mgather_v2i8_sextload_v2i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 2, e8,mf4,tu,mu
+; RV32-NEXT:    vsetivli a0, 2, e8,mf8,tu,mu
 ; RV32-NEXT:    vloxei32.v v9, (zero), v8, v0.t
-; RV32-NEXT:    vsetivli a0, 2, e16,m1,ta,mu
+; RV32-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; RV32-NEXT:    vsext.vf2 v8, v9
 ; RV32-NEXT:    ret
 ;
@@ -57,7 +57,7 @@ define <2 x i16> @mgather_v2i8_sextload_v2i16(<2 x i8*> %ptrs, <2 x i1> %m, <2 x
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli a0, 2, e8,mf8,tu,mu
 ; RV64-NEXT:    vloxei64.v v9, (zero), v8, v0.t
-; RV64-NEXT:    vsetivli a0, 2, e16,m1,ta,mu
+; RV64-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; RV64-NEXT:    vsext.vf2 v8, v9
 ; RV64-NEXT:    ret
   %v = call <2 x i8> @llvm.masked.gather.v2i8.v2p0i8(<2 x i8*> %ptrs, i32 1, <2 x i1> %m, <2 x i8> %passthru)
@@ -68,9 +68,9 @@ define <2 x i16> @mgather_v2i8_sextload_v2i16(<2 x i8*> %ptrs, <2 x i1> %m, <2 x
 define <2 x i16> @mgather_v2i8_zextload_v2i16(<2 x i8*> %ptrs, <2 x i1> %m, <2 x i8> %passthru) {
 ; RV32-LABEL: mgather_v2i8_zextload_v2i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 2, e8,mf4,tu,mu
+; RV32-NEXT:    vsetivli a0, 2, e8,mf8,tu,mu
 ; RV32-NEXT:    vloxei32.v v9, (zero), v8, v0.t
-; RV32-NEXT:    vsetivli a0, 2, e16,m1,ta,mu
+; RV32-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; RV32-NEXT:    vzext.vf2 v8, v9
 ; RV32-NEXT:    ret
 ;
@@ -78,7 +78,7 @@ define <2 x i16> @mgather_v2i8_zextload_v2i16(<2 x i8*> %ptrs, <2 x i1> %m, <2 x
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli a0, 2, e8,mf8,tu,mu
 ; RV64-NEXT:    vloxei64.v v9, (zero), v8, v0.t
-; RV64-NEXT:    vsetivli a0, 2, e16,m1,ta,mu
+; RV64-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; RV64-NEXT:    vzext.vf2 v8, v9
 ; RV64-NEXT:    ret
   %v = call <2 x i8> @llvm.masked.gather.v2i8.v2p0i8(<2 x i8*> %ptrs, i32 1, <2 x i1> %m, <2 x i8> %passthru)
@@ -89,9 +89,9 @@ define <2 x i16> @mgather_v2i8_zextload_v2i16(<2 x i8*> %ptrs, <2 x i1> %m, <2 x
 define <2 x i32> @mgather_v2i8_sextload_v2i32(<2 x i8*> %ptrs, <2 x i1> %m, <2 x i8> %passthru) {
 ; RV32-LABEL: mgather_v2i8_sextload_v2i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 2, e8,mf4,tu,mu
+; RV32-NEXT:    vsetivli a0, 2, e8,mf8,tu,mu
 ; RV32-NEXT:    vloxei32.v v9, (zero), v8, v0.t
-; RV32-NEXT:    vsetivli a0, 2, e32,m1,ta,mu
+; RV32-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; RV32-NEXT:    vsext.vf4 v8, v9
 ; RV32-NEXT:    ret
 ;
@@ -99,7 +99,7 @@ define <2 x i32> @mgather_v2i8_sextload_v2i32(<2 x i8*> %ptrs, <2 x i1> %m, <2 x
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli a0, 2, e8,mf8,tu,mu
 ; RV64-NEXT:    vloxei64.v v9, (zero), v8, v0.t
-; RV64-NEXT:    vsetivli a0, 2, e32,m1,ta,mu
+; RV64-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; RV64-NEXT:    vsext.vf4 v8, v9
 ; RV64-NEXT:    ret
   %v = call <2 x i8> @llvm.masked.gather.v2i8.v2p0i8(<2 x i8*> %ptrs, i32 1, <2 x i1> %m, <2 x i8> %passthru)
@@ -110,9 +110,9 @@ define <2 x i32> @mgather_v2i8_sextload_v2i32(<2 x i8*> %ptrs, <2 x i1> %m, <2 x
 define <2 x i32> @mgather_v2i8_zextload_v2i32(<2 x i8*> %ptrs, <2 x i1> %m, <2 x i8> %passthru) {
 ; RV32-LABEL: mgather_v2i8_zextload_v2i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 2, e8,mf4,tu,mu
+; RV32-NEXT:    vsetivli a0, 2, e8,mf8,tu,mu
 ; RV32-NEXT:    vloxei32.v v9, (zero), v8, v0.t
-; RV32-NEXT:    vsetivli a0, 2, e32,m1,ta,mu
+; RV32-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; RV32-NEXT:    vzext.vf4 v8, v9
 ; RV32-NEXT:    ret
 ;
@@ -120,7 +120,7 @@ define <2 x i32> @mgather_v2i8_zextload_v2i32(<2 x i8*> %ptrs, <2 x i1> %m, <2 x
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli a0, 2, e8,mf8,tu,mu
 ; RV64-NEXT:    vloxei64.v v9, (zero), v8, v0.t
-; RV64-NEXT:    vsetivli a0, 2, e32,m1,ta,mu
+; RV64-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; RV64-NEXT:    vzext.vf4 v8, v9
 ; RV64-NEXT:    ret
   %v = call <2 x i8> @llvm.masked.gather.v2i8.v2p0i8(<2 x i8*> %ptrs, i32 1, <2 x i1> %m, <2 x i8> %passthru)
@@ -131,7 +131,7 @@ define <2 x i32> @mgather_v2i8_zextload_v2i32(<2 x i8*> %ptrs, <2 x i1> %m, <2 x
 define <2 x i64> @mgather_v2i8_sextload_v2i64(<2 x i8*> %ptrs, <2 x i1> %m, <2 x i8> %passthru) {
 ; RV32-LABEL: mgather_v2i8_sextload_v2i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 2, e8,mf4,tu,mu
+; RV32-NEXT:    vsetivli a0, 2, e8,mf8,tu,mu
 ; RV32-NEXT:    vloxei32.v v9, (zero), v8, v0.t
 ; RV32-NEXT:    vsetivli a0, 2, e64,m1,ta,mu
 ; RV32-NEXT:    vsext.vf8 v8, v9
@@ -152,7 +152,7 @@ define <2 x i64> @mgather_v2i8_sextload_v2i64(<2 x i8*> %ptrs, <2 x i1> %m, <2 x
 define <2 x i64> @mgather_v2i8_zextload_v2i64(<2 x i8*> %ptrs, <2 x i1> %m, <2 x i8> %passthru) {
 ; RV32-LABEL: mgather_v2i8_zextload_v2i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 2, e8,mf4,tu,mu
+; RV32-NEXT:    vsetivli a0, 2, e8,mf8,tu,mu
 ; RV32-NEXT:    vloxei32.v v9, (zero), v8, v0.t
 ; RV32-NEXT:    vsetivli a0, 2, e64,m1,ta,mu
 ; RV32-NEXT:    vzext.vf8 v8, v9
@@ -272,7 +272,7 @@ declare <1 x i16> @llvm.masked.gather.v1i16.v1p0i16(<1 x i16*>, i32, <1 x i1>, <
 define <1 x i16> @mgather_v1i16(<1 x i16*> %ptrs, <1 x i1> %m, <1 x i16> %passthru) {
 ; RV32-LABEL: mgather_v1i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 1, e16,mf2,tu,mu
+; RV32-NEXT:    vsetivli a0, 1, e16,mf4,tu,mu
 ; RV32-NEXT:    vloxei32.v v9, (zero), v8, v0.t
 ; RV32-NEXT:    vmv1r.v v8, v9
 ; RV32-NEXT:    ret
@@ -292,7 +292,7 @@ declare <2 x i16> @llvm.masked.gather.v2i16.v2p0i16(<2 x i16*>, i32, <2 x i1>, <
 define <2 x i16> @mgather_v2i16(<2 x i16*> %ptrs, <2 x i1> %m, <2 x i16> %passthru) {
 ; RV32-LABEL: mgather_v2i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 2, e16,mf2,tu,mu
+; RV32-NEXT:    vsetivli a0, 2, e16,mf4,tu,mu
 ; RV32-NEXT:    vloxei32.v v9, (zero), v8, v0.t
 ; RV32-NEXT:    vmv1r.v v8, v9
 ; RV32-NEXT:    ret
@@ -310,9 +310,9 @@ define <2 x i16> @mgather_v2i16(<2 x i16*> %ptrs, <2 x i1> %m, <2 x i16> %passth
 define <2 x i32> @mgather_v2i16_sextload_v2i32(<2 x i16*> %ptrs, <2 x i1> %m, <2 x i16> %passthru) {
 ; RV32-LABEL: mgather_v2i16_sextload_v2i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 2, e16,mf2,tu,mu
+; RV32-NEXT:    vsetivli a0, 2, e16,mf4,tu,mu
 ; RV32-NEXT:    vloxei32.v v9, (zero), v8, v0.t
-; RV32-NEXT:    vsetivli a0, 2, e32,m1,ta,mu
+; RV32-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; RV32-NEXT:    vsext.vf2 v8, v9
 ; RV32-NEXT:    ret
 ;
@@ -320,7 +320,7 @@ define <2 x i32> @mgather_v2i16_sextload_v2i32(<2 x i16*> %ptrs, <2 x i1> %m, <2
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli a0, 2, e16,mf4,tu,mu
 ; RV64-NEXT:    vloxei64.v v9, (zero), v8, v0.t
-; RV64-NEXT:    vsetivli a0, 2, e32,m1,ta,mu
+; RV64-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; RV64-NEXT:    vsext.vf2 v8, v9
 ; RV64-NEXT:    ret
   %v = call <2 x i16> @llvm.masked.gather.v2i16.v2p0i16(<2 x i16*> %ptrs, i32 2, <2 x i1> %m, <2 x i16> %passthru)
@@ -331,9 +331,9 @@ define <2 x i32> @mgather_v2i16_sextload_v2i32(<2 x i16*> %ptrs, <2 x i1> %m, <2
 define <2 x i32> @mgather_v2i16_zextload_v2i32(<2 x i16*> %ptrs, <2 x i1> %m, <2 x i16> %passthru) {
 ; RV32-LABEL: mgather_v2i16_zextload_v2i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 2, e16,mf2,tu,mu
+; RV32-NEXT:    vsetivli a0, 2, e16,mf4,tu,mu
 ; RV32-NEXT:    vloxei32.v v9, (zero), v8, v0.t
-; RV32-NEXT:    vsetivli a0, 2, e32,m1,ta,mu
+; RV32-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; RV32-NEXT:    vzext.vf2 v8, v9
 ; RV32-NEXT:    ret
 ;
@@ -341,7 +341,7 @@ define <2 x i32> @mgather_v2i16_zextload_v2i32(<2 x i16*> %ptrs, <2 x i1> %m, <2
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli a0, 2, e16,mf4,tu,mu
 ; RV64-NEXT:    vloxei64.v v9, (zero), v8, v0.t
-; RV64-NEXT:    vsetivli a0, 2, e32,m1,ta,mu
+; RV64-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; RV64-NEXT:    vzext.vf2 v8, v9
 ; RV64-NEXT:    ret
   %v = call <2 x i16> @llvm.masked.gather.v2i16.v2p0i16(<2 x i16*> %ptrs, i32 2, <2 x i1> %m, <2 x i16> %passthru)
@@ -352,7 +352,7 @@ define <2 x i32> @mgather_v2i16_zextload_v2i32(<2 x i16*> %ptrs, <2 x i1> %m, <2
 define <2 x i64> @mgather_v2i16_sextload_v2i64(<2 x i16*> %ptrs, <2 x i1> %m, <2 x i16> %passthru) {
 ; RV32-LABEL: mgather_v2i16_sextload_v2i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 2, e16,mf2,tu,mu
+; RV32-NEXT:    vsetivli a0, 2, e16,mf4,tu,mu
 ; RV32-NEXT:    vloxei32.v v9, (zero), v8, v0.t
 ; RV32-NEXT:    vsetivli a0, 2, e64,m1,ta,mu
 ; RV32-NEXT:    vsext.vf4 v8, v9
@@ -373,7 +373,7 @@ define <2 x i64> @mgather_v2i16_sextload_v2i64(<2 x i16*> %ptrs, <2 x i1> %m, <2
 define <2 x i64> @mgather_v2i16_zextload_v2i64(<2 x i16*> %ptrs, <2 x i1> %m, <2 x i16> %passthru) {
 ; RV32-LABEL: mgather_v2i16_zextload_v2i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 2, e16,mf2,tu,mu
+; RV32-NEXT:    vsetivli a0, 2, e16,mf4,tu,mu
 ; RV32-NEXT:    vloxei32.v v9, (zero), v8, v0.t
 ; RV32-NEXT:    vsetivli a0, 2, e64,m1,ta,mu
 ; RV32-NEXT:    vzext.vf4 v8, v9
@@ -572,7 +572,7 @@ declare <1 x i32> @llvm.masked.gather.v1i32.v1p0i32(<1 x i32*>, i32, <1 x i1>, <
 define <1 x i32> @mgather_v1i32(<1 x i32*> %ptrs, <1 x i1> %m, <1 x i32> %passthru) {
 ; RV32-LABEL: mgather_v1i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 1, e32,m1,tu,mu
+; RV32-NEXT:    vsetivli a0, 1, e32,mf2,tu,mu
 ; RV32-NEXT:    vloxei32.v v9, (zero), v8, v0.t
 ; RV32-NEXT:    vmv1r.v v8, v9
 ; RV32-NEXT:    ret
@@ -592,7 +592,7 @@ declare <2 x i32> @llvm.masked.gather.v2i32.v2p0i32(<2 x i32*>, i32, <2 x i1>, <
 define <2 x i32> @mgather_v2i32(<2 x i32*> %ptrs, <2 x i1> %m, <2 x i32> %passthru) {
 ; RV32-LABEL: mgather_v2i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 2, e32,m1,tu,mu
+; RV32-NEXT:    vsetivli a0, 2, e32,mf2,tu,mu
 ; RV32-NEXT:    vloxei32.v v9, (zero), v8, v0.t
 ; RV32-NEXT:    vmv1r.v v8, v9
 ; RV32-NEXT:    ret
@@ -610,7 +610,7 @@ define <2 x i32> @mgather_v2i32(<2 x i32*> %ptrs, <2 x i1> %m, <2 x i32> %passth
 define <2 x i64> @mgather_v2i32_sextload_v2i64(<2 x i32*> %ptrs, <2 x i1> %m, <2 x i32> %passthru) {
 ; RV32-LABEL: mgather_v2i32_sextload_v2i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 2, e32,m1,tu,mu
+; RV32-NEXT:    vsetivli a0, 2, e32,mf2,tu,mu
 ; RV32-NEXT:    vloxei32.v v9, (zero), v8, v0.t
 ; RV32-NEXT:    vsetivli a0, 2, e64,m1,ta,mu
 ; RV32-NEXT:    vsext.vf2 v8, v9
@@ -631,7 +631,7 @@ define <2 x i64> @mgather_v2i32_sextload_v2i64(<2 x i32*> %ptrs, <2 x i1> %m, <2
 define <2 x i64> @mgather_v2i32_zextload_v2i64(<2 x i32*> %ptrs, <2 x i1> %m, <2 x i32> %passthru) {
 ; RV32-LABEL: mgather_v2i32_zextload_v2i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 2, e32,m1,tu,mu
+; RV32-NEXT:    vsetivli a0, 2, e32,mf2,tu,mu
 ; RV32-NEXT:    vloxei32.v v9, (zero), v8, v0.t
 ; RV32-NEXT:    vsetivli a0, 2, e64,m1,ta,mu
 ; RV32-NEXT:    vzext.vf2 v8, v9
@@ -1271,7 +1271,7 @@ declare <1 x half> @llvm.masked.gather.v1f16.v1p0f16(<1 x half*>, i32, <1 x i1>,
 define <1 x half> @mgather_v1f16(<1 x half*> %ptrs, <1 x i1> %m, <1 x half> %passthru) {
 ; RV32-LABEL: mgather_v1f16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 1, e16,mf2,tu,mu
+; RV32-NEXT:    vsetivli a0, 1, e16,mf4,tu,mu
 ; RV32-NEXT:    vloxei32.v v9, (zero), v8, v0.t
 ; RV32-NEXT:    vmv1r.v v8, v9
 ; RV32-NEXT:    ret
@@ -1291,7 +1291,7 @@ declare <2 x half> @llvm.masked.gather.v2f16.v2p0f16(<2 x half*>, i32, <2 x i1>,
 define <2 x half> @mgather_v2f16(<2 x half*> %ptrs, <2 x i1> %m, <2 x half> %passthru) {
 ; RV32-LABEL: mgather_v2f16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 2, e16,mf2,tu,mu
+; RV32-NEXT:    vsetivli a0, 2, e16,mf4,tu,mu
 ; RV32-NEXT:    vloxei32.v v9, (zero), v8, v0.t
 ; RV32-NEXT:    vmv1r.v v8, v9
 ; RV32-NEXT:    ret
@@ -1487,7 +1487,7 @@ declare <1 x float> @llvm.masked.gather.v1f32.v1p0f32(<1 x float*>, i32, <1 x i1
 define <1 x float> @mgather_v1f32(<1 x float*> %ptrs, <1 x i1> %m, <1 x float> %passthru) {
 ; RV32-LABEL: mgather_v1f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 1, e32,m1,tu,mu
+; RV32-NEXT:    vsetivli a0, 1, e32,mf2,tu,mu
 ; RV32-NEXT:    vloxei32.v v9, (zero), v8, v0.t
 ; RV32-NEXT:    vmv1r.v v8, v9
 ; RV32-NEXT:    ret
@@ -1507,7 +1507,7 @@ declare <2 x float> @llvm.masked.gather.v2f32.v2p0f32(<2 x float*>, i32, <2 x i1
 define <2 x float> @mgather_v2f32(<2 x float*> %ptrs, <2 x i1> %m, <2 x float> %passthru) {
 ; RV32-LABEL: mgather_v2f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 2, e32,m1,tu,mu
+; RV32-NEXT:    vsetivli a0, 2, e32,mf2,tu,mu
 ; RV32-NEXT:    vloxei32.v v9, (zero), v8, v0.t
 ; RV32-NEXT:    vmv1r.v v8, v9
 ; RV32-NEXT:    ret
@@ -2185,7 +2185,7 @@ define <32 x i8> @mgather_baseidx_v32i8(i8* %base, <32 x i8> %idxs, <32 x i1> %m
 ; RV64-NEXT:    vslidedown.vi v28, v8, 16
 ; RV64-NEXT:    vsetivli a1, 16, e64,m8,ta,mu
 ; RV64-NEXT:    vsext.vf8 v16, v28
-; RV64-NEXT:    vsetivli a1, 2, e8,m1,ta,mu
+; RV64-NEXT:    vsetivli a1, 2, e8,mf4,ta,mu
 ; RV64-NEXT:    vslidedown.vi v0, v0, 2
 ; RV64-NEXT:    vsetivli a1, 16, e8,m1,tu,mu
 ; RV64-NEXT:    vloxei64.v v26, (a0), v16, v0.t

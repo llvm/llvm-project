@@ -93,6 +93,12 @@ llvm::cl::opt<size_t> IdleTimeoutSeconds(
     llvm::cl::desc("Maximum time a channel may stay idle until server closes "
                    "the connection, in seconds. Defaults to 480."));
 
+llvm::cl::opt<size_t> LimitResults(
+    "limit-results", llvm::cl::init(10000),
+    llvm::cl::desc("Maximum number of results to stream as a response to "
+                   "single request. Limit is to keep the server from being "
+                   "DOS'd. Defaults to 10000."));
+
 static Key<grpc::ServerContext *> CurrentRequest;
 
 class RemoteIndexServer final : public v1::SymbolIndex::Service {
@@ -123,7 +129,12 @@ private:
     }
     unsigned Sent = 0;
     unsigned FailedToSend = 0;
+    bool HasMore = false;
     Index.lookup(*Req, [&](const clangd::Symbol &Item) {
+      if (Sent >= LimitResults) {
+        HasMore = true;
+        return;
+      }
       auto SerializedItem = ProtobufMarshaller->toProtobuf(Item);
       if (!SerializedItem) {
         elog("Unable to convert Symbol to protobuf: {0}",
@@ -137,8 +148,10 @@ private:
       Reply->Write(NextMessage);
       ++Sent;
     });
+    if (HasMore)
+      log("[public] Limiting result size for Lookup request.");
     LookupReply LastMessage;
-    LastMessage.mutable_final_result()->set_has_more(true);
+    LastMessage.mutable_final_result()->set_has_more(HasMore);
     logResponse(LastMessage);
     Reply->Write(LastMessage);
     SPAN_ATTACH(Tracer, "Sent", Sent);
@@ -159,6 +172,11 @@ private:
       elog("Can not parse FuzzyFindRequest from protobuf: {0}",
            Req.takeError());
       return grpc::Status::CANCELLED;
+    }
+    if (!Req->Limit || *Req->Limit > LimitResults) {
+      log("[public] Limiting result size for FuzzyFind request from {0} to {1}",
+          Req->Limit, LimitResults);
+      Req->Limit = LimitResults;
     }
     unsigned Sent = 0;
     unsigned FailedToSend = 0;
@@ -196,6 +214,11 @@ private:
     if (!Req) {
       elog("Can not parse RefsRequest from protobuf: {0}", Req.takeError());
       return grpc::Status::CANCELLED;
+    }
+    if (!Req->Limit || *Req->Limit > LimitResults) {
+      log("[public] Limiting result size for Refs request from {0} to {1}.",
+          Req->Limit, LimitResults);
+      Req->Limit = LimitResults;
     }
     unsigned Sent = 0;
     unsigned FailedToSend = 0;
@@ -235,6 +258,12 @@ private:
       elog("Can not parse RelationsRequest from protobuf: {0}",
            Req.takeError());
       return grpc::Status::CANCELLED;
+    }
+    if (!Req->Limit || *Req->Limit > LimitResults) {
+      log("[public] Limiting result size for Relations request from {0} to "
+          "{1}.",
+          Req->Limit, LimitResults);
+      Req->Limit = LimitResults;
     }
     unsigned Sent = 0;
     unsigned FailedToSend = 0;

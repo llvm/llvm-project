@@ -22,6 +22,7 @@
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
 #include "llvm/ExecutionEngine/OrcV1Deprecation.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ExtensibleRTTI.h"
 
 #include <atomic>
 #include <memory>
@@ -637,6 +638,8 @@ class MaterializationUnit {
   friend class JITDylib;
 
 public:
+  static char ID;
+
   MaterializationUnit(SymbolFlagsMap InitalSymbolFlags,
                       SymbolStringPtr InitSymbol)
       : SymbolFlags(std::move(InitalSymbolFlags)),
@@ -816,13 +819,10 @@ public:
   ///        resolved.
   bool isComplete() const { return OutstandingSymbolsCount == 0; }
 
-  /// Call the NotifyComplete callback.
-  ///
-  /// This should only be called if all symbols covered by the query have
-  /// reached the specified state.
-  void handleComplete();
 
 private:
+  void handleComplete(ExecutionSession &ES);
+
   SymbolState getRequiredState() { return RequiredState; }
 
   void addQueryDependence(JITDylib &JD, SymbolStringPtr Name);
@@ -1217,6 +1217,37 @@ public:
                     const DenseMap<JITDylib *, SymbolLookupSet> &InitSyms);
 };
 
+/// Represents an abstract task for ORC to run.
+class Task : public RTTIExtends<Task, RTTIRoot> {
+public:
+  static char ID;
+
+  /// Description of the task to be performed. Used for logging.
+  virtual void printDescription(raw_ostream &OS) = 0;
+
+  /// Run the task.
+  virtual void run() = 0;
+
+private:
+  void anchor() override;
+};
+
+/// A materialization task.
+class MaterializationTask : public RTTIExtends<MaterializationTask, Task> {
+public:
+  static char ID;
+
+  MaterializationTask(std::unique_ptr<MaterializationUnit> MU,
+                      std::unique_ptr<MaterializationResponsibility> MR)
+      : MU(std::move(MU)), MR(std::move(MR)) {}
+  void printDescription(raw_ostream &OS) override;
+  void run() override;
+
+private:
+  std::unique_ptr<MaterializationUnit> MU;
+  std::unique_ptr<MaterializationResponsibility> MR;
+};
+
 /// An ExecutionSession represents a running JIT program.
 class ExecutionSession {
   friend class InProgressLookupFlagsState;
@@ -1230,10 +1261,8 @@ public:
   /// For reporting errors.
   using ErrorReporter = std::function<void(Error)>;
 
-  /// For dispatching MaterializationUnit::materialize calls.
-  using DispatchMaterializationFunction =
-      std::function<void(std::unique_ptr<MaterializationUnit> MU,
-                         std::unique_ptr<MaterializationResponsibility> MR)>;
+  /// For dispatching ORC tasks (typically materialization tasks).
+  using DispatchTaskFunction = unique_function<void(std::unique_ptr<Task> T)>;
 
   /// Construct an ExecutionSession.
   ///
@@ -1306,10 +1335,9 @@ public:
   /// Unhandled errors can be sent here to log them.
   void reportError(Error Err) { ReportError(std::move(Err)); }
 
-  /// Set the materialization dispatch function.
-  ExecutionSession &setDispatchMaterialization(
-      DispatchMaterializationFunction DispatchMaterialization) {
-    this->DispatchMaterialization = std::move(DispatchMaterialization);
+  /// Set the task dispatch function.
+  ExecutionSession &setDispatchTask(DispatchTaskFunction DispatchTask) {
+    this->DispatchTask = std::move(DispatchTask);
     return *this;
   }
 
@@ -1384,12 +1412,10 @@ public:
          SymbolState RequiredState = SymbolState::Ready);
 
   /// Materialize the given unit.
-  void
-  dispatchMaterialization(std::unique_ptr<MaterializationUnit> MU,
-                          std::unique_ptr<MaterializationResponsibility> MR) {
-    assert(MU && "MU must be non-null");
-    DEBUG_WITH_TYPE("orc", dumpDispatchInfo(MR->getTargetJITDylib(), *MU));
-    DispatchMaterialization(std::move(MU), std::move(MR));
+  void dispatchTask(std::unique_ptr<Task> T) {
+    assert(T && "T must be non-null");
+    DEBUG_WITH_TYPE("orc", dumpDispatchInfo(*T));
+    DispatchTask(std::move(T));
   }
 
   /// Dump the state of all the JITDylibs in this session.
@@ -1400,11 +1426,7 @@ private:
     logAllUnhandledErrors(std::move(Err), errs(), "JIT session error: ");
   }
 
-  static void materializeOnCurrentThread(
-      std::unique_ptr<MaterializationUnit> MU,
-      std::unique_ptr<MaterializationResponsibility> MR) {
-    MU->materialize(std::move(MR));
-  }
+  static void runOnCurrentThread(std::unique_ptr<Task> T) { T->run(); }
 
   void dispatchOutstandingMUs();
 
@@ -1474,7 +1496,7 @@ private:
                                 const SymbolDependenceMap &Dependencies);
 
 #ifndef NDEBUG
-  void dumpDispatchInfo(JITDylib &JD, MaterializationUnit &MU);
+  void dumpDispatchInfo(Task &T);
 #endif // NDEBUG
 
   mutable std::recursive_mutex SessionMutex;
@@ -1482,8 +1504,7 @@ private:
   std::shared_ptr<SymbolStringPool> SSP;
   std::unique_ptr<Platform> P;
   ErrorReporter ReportError = logErrorsToStdErr;
-  DispatchMaterializationFunction DispatchMaterialization =
-      materializeOnCurrentThread;
+  DispatchTaskFunction DispatchTask = runOnCurrentThread;
 
   std::vector<ResourceManager *> ResourceManagers;
 

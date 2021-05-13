@@ -62,8 +62,8 @@ shrx        %rax, (%rbx), %rcx
 # CHECK-NEXT:  2      5     0.50    *                   bzhil	%eax, (%rbx), %ecx
 # CHECK-NEXT:  1      1     0.50                        bzhiq	%rax, %rbx, %rcx
 # CHECK-NEXT:  2      5     0.50    *                   bzhiq	%rax, (%rbx), %rcx
-# CHECK-NEXT:  2      3     1.00                        mulxl	%eax, %ebx, %ecx
-# CHECK-NEXT:  2      7     2.00    *                   mulxl	(%rax), %ebx, %ecx
+# CHECK-NEXT:  2      4     1.00                        mulxl	%eax, %ebx, %ecx
+# CHECK-NEXT:  2      8     2.00    *                   mulxl	(%rax), %ebx, %ecx
 # CHECK-NEXT:  2      4     1.00                        mulxq	%rax, %rbx, %rcx
 # CHECK-NEXT:  2      8     2.00    *                   mulxq	(%rax), %rbx, %rcx
 # CHECK-NEXT:  1      3     1.00                        pdepl	%eax, %ebx, %ecx
