@@ -1105,8 +1105,17 @@ bool Sema::ActOnTypeConstraint(const CXXScopeSpec &SS,
                                TemplateIdAnnotation *TypeConstr,
                                TemplateTypeParmDecl *ConstrainedParameter,
                                SourceLocation EllipsisLoc) {
-  ConceptDecl *CD =
-      cast<ConceptDecl>(TypeConstr->Template.get().getAsTemplateDecl());
+  return BuildTypeConstraint(SS, TypeConstr, ConstrainedParameter, EllipsisLoc,
+                             false);
+}
+
+bool Sema::BuildTypeConstraint(const CXXScopeSpec &SS,
+                               TemplateIdAnnotation *TypeConstr,
+                               TemplateTypeParmDecl *ConstrainedParameter,
+                               SourceLocation EllipsisLoc,
+                               bool AllowUnexpandedPack) {
+  TemplateName TN = TypeConstr->Template.get();
+  ConceptDecl *CD = cast<ConceptDecl>(TN.getAsTemplateDecl());
 
   // C++2a [temp.param]p4:
   //     [...] The concept designated by a type-constraint shall be a type
@@ -1126,15 +1135,24 @@ bool Sema::ActOnTypeConstraint(const CXXScopeSpec &SS,
     return true;
   }
 
+  DeclarationNameInfo ConceptName(DeclarationName(TypeConstr->Name),
+                                  TypeConstr->TemplateNameLoc);
+
   TemplateArgumentListInfo TemplateArgs;
   if (TypeConstr->LAngleLoc.isValid()) {
     TemplateArgs =
         makeTemplateArgumentListInfo(*this, *TypeConstr);
+
+    if (EllipsisLoc.isInvalid() && !AllowUnexpandedPack) {
+      for (TemplateArgumentLoc Arg : TemplateArgs.arguments()) {
+        if (DiagnoseUnexpandedParameterPack(Arg, UPPC_TypeConstraint))
+          return true;
+      }
+    }
   }
   return AttachTypeConstraint(
       SS.isSet() ? SS.getWithLocInContext(Context) : NestedNameSpecifierLoc(),
-      DeclarationNameInfo(DeclarationName(TypeConstr->Name),
-                          TypeConstr->TemplateNameLoc), CD,
+      ConceptName, CD,
       TypeConstr->LAngleLoc.isValid() ? &TemplateArgs : nullptr,
       ConstrainedParameter, EllipsisLoc);
 }
