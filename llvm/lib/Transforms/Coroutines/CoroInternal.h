@@ -133,6 +133,8 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
     AllocaInst *PromiseAlloca;
     BasicBlock *ResumeEntryBlock;
     unsigned IndexField;
+    unsigned IndexAlign;
+    unsigned IndexOffset;
     bool HasFinalSuspend;
   };
 
