@@ -409,6 +409,13 @@ def CTRRC8 : RegisterClass<"PPC", [i64], 64, (add CTR8)> {
   let isAllocatable = 0;
 }
 
+def LRRC : RegisterClass<"PPC", [i32], 32, (add LR)> {
+  let isAllocatable = 0;
+}
+def LR8RC : RegisterClass<"PPC", [i64], 64, (add LR8)> {
+  let isAllocatable = 0;
+}
+
 def VRSAVERC : RegisterClass<"PPC", [i32], 32, (add VRSAVE)>;
 def CARRYRC : RegisterClass<"PPC", [i32], 32, (add CARRY, XER)> {
   let CopyCost = -1;
