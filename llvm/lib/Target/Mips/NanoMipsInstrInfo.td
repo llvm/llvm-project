@@ -30,6 +30,12 @@ class ArithLogicRNM<string opstr, RegisterOperand RO,
          !strconcat(opstr, "\t$rd, $rs, $rt"),
          [(set RO:$rd, (OpNode RO:$rs, RO:$rt))]>, InstSize32;
 
+// 16-bit arithmetic and logical instructions with 2 register operands.
+class ArithLogicR16<string opstr, RegisterOperand RO,
+                    SDPatternOperator OpNode = null_frag>:
+    InstNM<(outs RO:$rt), (ins RO:$rs), !strconcat(opstr, "\t$rt, $rs"),
+           [(set RO:$rt, (OpNode RO:$rs))]>, InstSize16;
+
 // Arithmetic and logical instructions with 2 register operands and immediate.
 class ArithLogicINM<string opstr, Operand Od, RegisterOperand RO,
                     SDPatternOperator imm_type = null_frag,
@@ -114,8 +120,9 @@ def ADDiu_NM : ArithLogicINM<"addiu", simm16_relaxed, GPR32NMOpnd,
 def SUBu_NM : ArithLogicRNM<"subu", GPR32NMOpnd, sub>;
 
 def AND_NM : ArithLogicRNM<"and", GPR32NMOpnd, and>;
-def OR_NM : ArithLogicRNM<"or", GPR32NMOpnd, or>;
+def OR_NM  : ArithLogicRNM<"or", GPR32NMOpnd, or>;
 def XOR_NM : ArithLogicRNM<"xor", GPR32NMOpnd, xor>;
+def NOT_NM : ArithLogicR16<"not", GPR32NMOpnd, not>;
 
 def LW_NM : LoadMemoryNM<"lw", GPR32NMOpnd, mem, load>, InstSize32;
 def SW_NM : StoreMemoryNM<"sw", GPR32NMOpnd, mem, store>, InstSize32;
