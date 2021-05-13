@@ -239,4 +239,8 @@ nub_bool_t DNBResolveExecutablePath(const char *path, char *resolved_path,
 bool DNBGetOSVersionNumbers(uint64_t *major, uint64_t *minor, uint64_t *patch);
 /// \return the iOSSupportVersion of the host OS.
 std::string DNBGetMacCatalystVersionString();
+
+/// \return true if debugserver is running in translation
+/// (is an x86_64 process on arm64)
+bool DNBDebugserverIsTranslated();
 #endif
