@@ -14790,7 +14790,7 @@ static __inline__ int __ATTRS_o_ai vec_all_eq(vector bool int __a,
                                       (vector int)__b);
 }
 
-#ifdef __POWER8_VECTOR__
+#ifdef __VSX__
 static __inline__ int __ATTRS_o_ai vec_all_eq(vector signed long long __a,
                                               vector signed long long __b) {
   return __builtin_altivec_vcmpequd_p(__CR6_LT, __a, __b);
@@ -14974,7 +14974,7 @@ static __inline__ int __ATTRS_o_ai vec_all_ge(vector bool int __a,
                                       (vector unsigned int)__a);
 }
 
-#ifdef __POWER8_VECTOR__
+#ifdef __VSX__
 static __inline__ int __ATTRS_o_ai vec_all_ge(vector signed long long __a,
                                               vector signed long long __b) {
   return __builtin_altivec_vcmpgtsd_p(__CR6_EQ, __b, __a);
@@ -15157,7 +15157,7 @@ static __inline__ int __ATTRS_o_ai vec_all_gt(vector bool int __a,
                                       (vector unsigned int)__b);
 }
 
-#ifdef __POWER8_VECTOR__
+#ifdef __VSX__
 static __inline__ int __ATTRS_o_ai vec_all_gt(vector signed long long __a,
                                               vector signed long long __b) {
   return __builtin_altivec_vcmpgtsd_p(__CR6_LT, __a, __b);
@@ -15347,7 +15347,7 @@ static __inline__ int __ATTRS_o_ai vec_all_le(vector bool int __a,
                                       (vector unsigned int)__b);
 }
 
-#ifdef __POWER8_VECTOR__
+#ifdef __VSX__
 static __inline__ int __ATTRS_o_ai vec_all_le(vector signed long long __a,
                                               vector signed long long __b) {
   return __builtin_altivec_vcmpgtsd_p(__CR6_EQ, __a, __b);
@@ -15531,7 +15531,7 @@ static __inline__ int __ATTRS_o_ai vec_all_lt(vector bool int __a,
                                       (vector unsigned int)__a);
 }
 
-#ifdef __POWER8_VECTOR__
+#ifdef __VSX__
 static __inline__ int __ATTRS_o_ai vec_all_lt(vector signed long long __a,
                                               vector signed long long __b) {
   return __builtin_altivec_vcmpgtsd_p(__CR6_LT, __b, __a);
@@ -15746,7 +15746,7 @@ static __inline__ int __ATTRS_o_ai vec_all_ne(vector bool int __a,
                                       (vector int)__b);
 }
 
-#ifdef __POWER8_VECTOR__
+#ifdef __VSX__
 static __inline__ int __ATTRS_o_ai vec_all_ne(vector signed long long __a,
                                               vector signed long long __b) {
   return __builtin_altivec_vcmpequd_p(__CR6_EQ, __a, __b);
@@ -16035,7 +16035,7 @@ static __inline__ int __ATTRS_o_ai vec_any_eq(vector bool int __a,
                                       (vector int)__b);
 }
 
-#ifdef __POWER8_VECTOR__
+#ifdef __VSX__
 static __inline__ int __ATTRS_o_ai vec_any_eq(vector signed long long __a,
                                               vector signed long long __b) {
   return __builtin_altivec_vcmpequd_p(__CR6_EQ_REV, __a, __b);
@@ -16225,7 +16225,7 @@ static __inline__ int __ATTRS_o_ai vec_any_ge(vector bool int __a,
                                       (vector unsigned int)__a);
 }
 
-#ifdef __POWER8_VECTOR__
+#ifdef __VSX__
 static __inline__ int __ATTRS_o_ai vec_any_ge(vector signed long long __a,
                                               vector signed long long __b) {
   return __builtin_altivec_vcmpgtsd_p(__CR6_LT_REV, __b, __a);
@@ -16416,7 +16416,7 @@ static __inline__ int __ATTRS_o_ai vec_any_gt(vector bool int __a,
                                       (vector unsigned int)__b);
 }
 
-#ifdef __POWER8_VECTOR__
+#ifdef __VSX__
 static __inline__ int __ATTRS_o_ai vec_any_gt(vector signed long long __a,
                                               vector signed long long __b) {
   return __builtin_altivec_vcmpgtsd_p(__CR6_EQ_REV, __a, __b);
@@ -16607,7 +16607,7 @@ static __inline__ int __ATTRS_o_ai vec_any_le(vector bool int __a,
                                       (vector unsigned int)__b);
 }
 
-#ifdef __POWER8_VECTOR__
+#ifdef __VSX__
 static __inline__ int __ATTRS_o_ai vec_any_le(vector signed long long __a,
                                               vector signed long long __b) {
   return __builtin_altivec_vcmpgtsd_p(__CR6_LT_REV, __a, __b);
@@ -16798,7 +16798,7 @@ static __inline__ int __ATTRS_o_ai vec_any_lt(vector bool int __a,
                                       (vector unsigned int)__a);
 }
 
-#ifdef __POWER8_VECTOR__
+#ifdef __VSX__
 static __inline__ int __ATTRS_o_ai vec_any_lt(vector signed long long __a,
                                               vector signed long long __b) {
   return __builtin_altivec_vcmpgtsd_p(__CR6_EQ_REV, __b, __a);
@@ -17014,7 +17014,7 @@ static __inline__ int __ATTRS_o_ai vec_any_ne(vector bool int __a,
                                       (vector int)__b);
 }
 
-#ifdef __POWER8_VECTOR__
+#ifdef __VSX__
 static __inline__ int __ATTRS_o_ai vec_any_ne(vector signed long long __a,
                                               vector signed long long __b) {
   return __builtin_altivec_vcmpequd_p(__CR6_LT_REV, __a, __b);
