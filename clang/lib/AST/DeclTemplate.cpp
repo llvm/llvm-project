@@ -69,12 +69,6 @@ TemplateParameterList::TemplateParameterList(const ASTContext& C,
           TTP->getTemplateParameters()->containsUnexpandedParameterPack())
         ContainsUnexpandedParameterPack = true;
     } else if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(P)) {
-      // FIXME: The type parameter might have a constraint that has not been
-      // attached yet. If so, we can compute the wrong value for
-      // 'ContainsUnexpandedParameterPack' here. Note that this only happens
-      // for implicit parameters, for which the ParmVarDecl will correctly
-      // track that it contains an unexpanded parameter pack, so this should
-      // not be problematic in practice.
       if (const TypeConstraint *TC = TTP->getTypeConstraint()) {
         if (TC->getImmediatelyDeclaredConstraint()
             ->containsUnexpandedParameterPack())
@@ -93,6 +87,30 @@ TemplateParameterList::TemplateParameterList(const ASTContext& C,
       ContainsUnexpandedParameterPack = true;
     *getTrailingObjects<Expr *>() = RequiresClause;
   }
+}
+
+bool TemplateParameterList::containsUnexpandedParameterPack() const {
+  if (ContainsUnexpandedParameterPack)
+    return true;
+  if (!HasConstrainedParameters)
+    return false;
+
+  // An implicit constrained parameter might have had a use of an unexpanded
+  // pack added to it after the template parameter list was created. All
+  // implicit parameters are at the end of the parameter list.
+  for (const NamedDecl *Param : llvm::reverse(asArray())) {
+    if (!Param->isImplicit())
+      break;
+
+    if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
+      const auto *TC = TTP->getTypeConstraint();
+      if (TC && TC->getImmediatelyDeclaredConstraint()
+                    ->containsUnexpandedParameterPack())
+        return true;
+    }
+  }
+
+  return false;
 }
 
 TemplateParameterList *

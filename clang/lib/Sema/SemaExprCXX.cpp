@@ -8629,8 +8629,9 @@ Sema::ActOnCompoundRequirement(
                                               /*ParameterPack=*/false,
                                               /*HasTypeConstraint=*/true);
 
-  if (ActOnTypeConstraint(SS, TypeConstraint, TParam,
-                          /*EllpsisLoc=*/SourceLocation()))
+  if (BuildTypeConstraint(SS, TypeConstraint, TParam,
+                          /*EllpsisLoc=*/SourceLocation(),
+                          /*AllowUnexpandedPack=*/true))
     // Just produce a requirement with no type requirements.
     return BuildExprRequirement(E, /*IsSimple=*/false, NoexceptLoc, {});
 
