@@ -11,8 +11,7 @@ define void @vldst4(half* nocapture readonly %pIn, half* nocapture %pOut, i32 %n
 ; CHECK-NEXT:    .pad #24
 ; CHECK-NEXT:    sub sp, #24
 ; CHECK-NEXT:    mul r12, r3, r2
-; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    cmp.w r2, r12, lsr #2
+; CHECK-NEXT:    lsrs.w r2, r12, #2
 ; CHECK-NEXT:    beq.w .LBB0_3
 ; CHECK-NEXT:  @ %bb.1: @ %vector.ph
 ; CHECK-NEXT:    mvn r3, #7
