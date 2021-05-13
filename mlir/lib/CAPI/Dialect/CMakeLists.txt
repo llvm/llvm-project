@@ -62,11 +62,13 @@ add_mlir_public_c_api_library(MLIRCAPIShape
 
 add_mlir_public_c_api_library(MLIRCAPISparseTensor
   SparseTensor.cpp
+  SparseTensorPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRSparseTensor
+  MLIRSparseTensorTransforms
 )
 
 add_mlir_public_c_api_library(MLIRCAPIStandard
