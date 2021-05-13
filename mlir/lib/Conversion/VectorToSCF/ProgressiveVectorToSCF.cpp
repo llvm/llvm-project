@@ -79,11 +79,18 @@ static BufferAllocs allocBuffers(OpTy xferOp) {
 
   if (xferOp.mask()) {
     auto maskType = MemRefType::get({}, xferOp.mask().getType());
-    result.maskBuffer = memref_alloca(maskType).value;
-    memref_store(xferOp.mask(), result.maskBuffer);
+    auto maskBuffer = memref_alloca(maskType).value;
+    memref_store(xferOp.mask(), maskBuffer);
+    result.maskBuffer = memref_load(maskBuffer);
   }
 
   return result;
+}
+
+template <typename OpTy>
+static bool isOutermostDimBroadcast(OpTy xferOp) {
+  auto map = xferOp.permutation_map();
+  return map.getResult(0).template isa<AffineConstantExpr>();
 }
 
 /// Given a vector transfer op, calculate which dimension of the `source`
@@ -95,7 +102,7 @@ static Optional<int64_t> unpackedDim(OpTy xferOp) {
   if (auto expr = map.getResult(0).template dyn_cast<AffineDimExpr>()) {
     return expr.getPosition();
   }
-  assert(map.getResult(0).template isa<AffineConstantExpr>() &&
+  assert(isOutermostDimBroadcast(xferOp) &&
          "Expected AffineDimExpr or AffineConstantExpr");
   return None;
 }
@@ -143,13 +150,16 @@ static void maybeYieldValue(
 }
 
 /// Generates a boolean Value that is true if the iv-th bit in xferOp's mask
-/// is set to true. Does not return a Value if the transfer op is not 1D or
-/// if the transfer op does not have a mask.
+/// is set to true. Does not return a Value if the transfer op does not have a
+/// mask, if the transfer op's mask is not 1D or if the to-be-unpacked dim of
+/// the transfer op is a broadcast.
 template <typename OpTy>
 static Value maybeGenerateMaskCheck(OpBuilder &builder, OpTy xferOp, Value iv) {
-  if (xferOp.getVectorType().getRank() != 1)
-    return Value();
   if (!xferOp.mask())
+    return Value();
+  if (xferOp.getMaskType()->getRank() != 1)
+    return Value();
+  if (isOutermostDimBroadcast(xferOp))
     return Value();
 
   auto ivI32 = std_index_cast(IntegerType::get(builder.getContext(), 32), iv);
@@ -488,8 +498,8 @@ struct PrepareTransferReadConversion
     auto *newXfer = rewriter.clone(*xferOp.getOperation());
     newXfer->setAttr(kPassLabel, rewriter.getUnitAttr());
     if (xferOp.mask()) {
-      auto loadedMask = memref_load(buffers.maskBuffer);
-      dyn_cast<TransferReadOp>(newXfer).maskMutable().assign(loadedMask);
+      dyn_cast<TransferReadOp>(newXfer).maskMutable().assign(
+          buffers.maskBuffer);
     }
 
     memref_store(newXfer->getResult(0), buffers.dataBuffer);
@@ -541,9 +551,8 @@ struct PrepareTransferWriteConversion
     });
 
     if (xferOp.mask()) {
-      auto loadedMask = memref_load(buffers.maskBuffer);
       rewriter.updateRootInPlace(
-          xferOp, [&]() { xferOp.maskMutable().assign(loadedMask); });
+          xferOp, [&]() { xferOp.maskMutable().assign(buffers.maskBuffer); });
     }
 
     return success();
@@ -590,8 +599,18 @@ struct TransferOpConversion : public OpRewritePattern<OpTy> {
       auto maskBuffer = getMaskBuffer(xferOp);
       auto maskBufferType =
           maskBuffer.getType().template dyn_cast<MemRefType>();
-      auto castedMaskType = unpackOneDim(maskBufferType);
-      castedMaskBuffer = vector_type_cast(castedMaskType, maskBuffer);
+      if (isOutermostDimBroadcast(xferOp) ||
+          xferOp.getMaskType()->getRank() == 1) {
+        // Do not unpack a dimension of the mask, if:
+        // * To-be-unpacked transfer op dimension is a broadcast.
+        // * Mask is 1D, i.e., the mask cannot be further unpacked.
+        //   (That means that all remaining dimensions of the transfer op must
+        //   be broadcasts.)
+        castedMaskBuffer = maskBuffer;
+      } else {
+        auto castedMaskType = unpackOneDim(maskBufferType);
+        castedMaskBuffer = vector_type_cast(castedMaskType, maskBuffer);
+      }
     }
 
     // Loop bounds and step.
@@ -616,13 +635,20 @@ struct TransferOpConversion : public OpRewritePattern<OpTy> {
                 Strategy<OpTy>::rewriteOp(b, xferOp, castedDataBuffer, iv);
 
             // If old transfer op has a mask: Set mask on new transfer op.
-            if (xferOp.mask()) {
+            // Special case: If the mask of the old transfer op is 1D and the
+            //               unpacked dim is not a broadcast, no mask is needed
+            //               on the new transfer op.
+            if (xferOp.mask() && (isOutermostDimBroadcast(xferOp) ||
+                                  xferOp.getMaskType()->getRank() > 1)) {
               OpBuilder::InsertionGuard guard(b);
               b.setInsertionPoint(newXfer); // Insert load before newXfer.
 
               SmallVector<Value, 8> loadIndices;
               Strategy<OpTy>::getBufferIndices(xferOp, loadIndices);
-              loadIndices.push_back(iv);
+              // In case of broadcast: Use same indices to load from memref as
+              // before.
+              if (!isOutermostDimBroadcast(xferOp))
+                loadIndices.push_back(iv);
 
               auto mask = memref_load(castedMaskBuffer, loadIndices);
               rewriter.updateRootInPlace(
@@ -661,7 +687,7 @@ static Optional<int64_t> get1dMemrefIndices(
     return dim;
   }
 
-  assert(map.getResult(0).template isa<AffineConstantExpr>() &&
+  assert(isOutermostDimBroadcast(xferOp) &&
          "Expected AffineDimExpr or AffineConstantExpr");
   return None;
 }
