@@ -16970,6 +16970,22 @@ bool DAGCombiner::mergeStoresOfConstantsOrVecElts(
   unsigned SizeInBits = NumStores * ElementSizeBits;
   unsigned NumMemElts = MemVT.isVector() ? MemVT.getVectorNumElements() : 1;
 
+  Optional<MachineMemOperand::Flags> Flags;
+  AAMDNodes AAInfo;
+  for (unsigned I = 0; I != NumStores; ++I) {
+    StoreSDNode *St = cast<StoreSDNode>(StoreNodes[I].MemNode);
+    if (!Flags) {
+      Flags = St->getMemOperand()->getFlags();
+      AAInfo = St->getAAInfo();
+      continue;
+    }
+    // Skip merging if there's an inconsistent flag.
+    if (Flags != St->getMemOperand()->getFlags())
+      return false;
+    // Concatenate AA metadata.
+    AAInfo = AAInfo.concat(St->getAAInfo());
+  }
+
   EVT StoreTy;
   if (UseVector) {
     unsigned Elts = NumStores * NumMemElts;
@@ -17087,9 +17103,9 @@ bool DAGCombiner::mergeStoresOfConstantsOrVecElts(
   // make sure we use trunc store if it's necessary to be legal.
   SDValue NewStore;
   if (!UseTrunc) {
-    NewStore =
-        DAG.getStore(NewChain, DL, StoredVal, FirstInChain->getBasePtr(),
-                     FirstInChain->getPointerInfo(), FirstInChain->getAlign());
+    NewStore = DAG.getStore(NewChain, DL, StoredVal, FirstInChain->getBasePtr(),
+                            FirstInChain->getPointerInfo(),
+                            FirstInChain->getAlign(), Flags.getValue(), AAInfo);
   } else { // Must be realized as a trunc store
     EVT LegalizedStoredValTy =
         TLI.getTypeToTransformTo(*DAG.getContext(), StoredVal.getValueType());
@@ -17101,7 +17117,7 @@ bool DAGCombiner::mergeStoresOfConstantsOrVecElts(
     NewStore = DAG.getTruncStore(
         NewChain, DL, ExtendedStoreVal, FirstInChain->getBasePtr(),
         FirstInChain->getPointerInfo(), StoredVal.getValueType() /*TVT*/,
-        FirstInChain->getAlign(), FirstInChain->getMemOperand()->getFlags());
+        FirstInChain->getAlign(), Flags.getValue(), AAInfo);
   }
 
   // Replace all merged stores with the new store.
