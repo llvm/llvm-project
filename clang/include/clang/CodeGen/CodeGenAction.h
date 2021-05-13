@@ -19,7 +19,6 @@ namespace llvm {
 
 namespace clang {
 class BackendConsumer;
-class CodeGenerator;
 
 class CodeGenAction : public ASTFrontendAction {
 private:
@@ -77,8 +76,6 @@ public:
 
   /// Take the LLVM context used by this action.
   llvm::LLVMContext *takeLLVMContext();
-
-  CodeGenerator *getCodeGenerator() const;
 
   BackendConsumer *BEConsumer;
 };
