@@ -63,6 +63,12 @@ def t2_so_reg : Operand<i32>,    // reg imm
   let MIOperandInfo = (ops rGPR, i32imm);
 }
 
+// Same as above, but only matching on a single use node.
+def t2_so_reg_oneuse : Operand<i32>,
+                       ComplexPattern<i32, 2,
+                                      "SelectShiftImmShifterOperandOneUse",
+                                      [shl,srl,sra,rotr]>;
+
 // t2_so_imm_not_XFORM - Return the complement of a t2_so_imm value
 def t2_so_imm_not_XFORM : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(~((uint32_t)N->getZExtValue()), SDLoc(N),
@@ -3377,8 +3383,8 @@ def : T2Pat<(ARMcmpZ  GPRnopc:$lhs, t2_so_imm:$imm),
             (t2CMPri  GPRnopc:$lhs, t2_so_imm:$imm)>;
 def : T2Pat<(ARMcmpZ  GPRnopc:$lhs, rGPR:$rhs),
             (t2CMPrr  GPRnopc:$lhs, rGPR:$rhs)>;
-def : T2Pat<(ARMcmpZ  GPRnopc:$lhs, t2_so_reg:$rhs),
-            (t2CMPrs  GPRnopc:$lhs, t2_so_reg:$rhs)>;
+def : T2Pat<(ARMcmpZ  GPRnopc:$lhs, t2_so_reg_oneuse:$rhs),
+            (t2CMPrs  GPRnopc:$lhs, t2_so_reg_oneuse:$rhs)>;
 
 let isCompare = 1, Defs = [CPSR] in {
    // shifted imm
