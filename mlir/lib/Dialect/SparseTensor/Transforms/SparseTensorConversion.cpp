@@ -19,6 +19,7 @@
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
@@ -103,15 +104,21 @@ class SparseTensorNewConverter : public OpConversionPattern<NewOp> {
       return failure();
     // User pointer.
     params.push_back(operands[0]);
-    // Sparsity annotations.
+    // Sparsity annotations in tensor constant form. Note that we cast
+    // the static shape into a dynamic shape to ensure that the method
+    // signature remains uniform accross different tensor dimensions.
     SmallVector<bool, 4> attrs;
     unsigned sz = enc.getDimLevelType().size();
     for (unsigned i = 0; i < sz; i++)
       attrs.push_back(enc.getDimLevelType()[i] ==
                       SparseTensorEncodingAttr::DimLevelType::Compressed);
-    auto elts = DenseElementsAttr::get(
-        RankedTensorType::get({sz}, rewriter.getIntegerType(1)), attrs);
-    params.push_back(rewriter.create<ConstantOp>(loc, elts));
+    Type etp = rewriter.getIntegerType(1);
+    RankedTensorType tt1 = RankedTensorType::get({sz}, etp);
+    RankedTensorType tt2 =
+        RankedTensorType::get({ShapedType::kDynamicSize}, etp);
+    auto elts =
+        rewriter.create<ConstantOp>(loc, DenseElementsAttr::get(tt1, attrs));
+    params.push_back(rewriter.create<tensor::CastOp>(loc, tt2, elts));
     // Seconary and primary types encoding.
     unsigned secPtr = getOverheadTypeEncoding(enc.getPointerBitWidth());
     unsigned secInd = getOverheadTypeEncoding(enc.getIndexBitWidth());

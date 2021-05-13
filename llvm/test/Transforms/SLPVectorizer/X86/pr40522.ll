@@ -31,15 +31,12 @@ entry:
 define void @test1_vec(float %a, float %b, float %c, float %d, <4 x i32>* nocapture %p) {
 ; CHECK-LABEL: @test1_vec(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV:%.*]] = fptosi float [[A:%.*]] to i32
-; CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x i32> undef, i32 [[CONV]], i32 0
-; CHECK-NEXT:    [[CONV1:%.*]] = fptosi float [[B:%.*]] to i32
-; CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <4 x i32> [[VECINIT]], i32 [[CONV1]], i32 1
-; CHECK-NEXT:    [[CONV3:%.*]] = fptosi float [[C:%.*]] to i32
-; CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <4 x i32> [[VECINIT2]], i32 [[CONV3]], i32 2
-; CHECK-NEXT:    [[CONV5:%.*]] = fptosi float [[D:%.*]] to i32
-; CHECK-NEXT:    [[VECINIT6:%.*]] = insertelement <4 x i32> [[VECINIT4]], i32 [[CONV5]], i32 3
-; CHECK-NEXT:    store <4 x i32> [[VECINIT6]], <4 x i32>* [[P:%.*]], align 16, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[B:%.*]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[C:%.*]], i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[D:%.*]], i32 3
+; CHECK-NEXT:    [[TMP4:%.*]] = fptosi <4 x float> [[TMP3]] to <4 x i32>
+; CHECK-NEXT:    store <4 x i32> [[TMP4]], <4 x i32>* [[P:%.*]], align 16, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -84,15 +81,12 @@ entry:
 
 define void @test2_vec(i32 %0, i32 %1, i32 %2, i32 %3, <4 x i32>* nocapture %4) {
 ; CHECK-LABEL: @test2_vec(
-; CHECK-NEXT:    [[TMP6:%.*]] = add nsw i32 [[TMP0:%.*]], 1
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> undef, i32 [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = add nsw i32 [[TMP1:%.*]], 1
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[TMP8]], i32 1
-; CHECK-NEXT:    [[TMP10:%.*]] = add nsw i32 [[TMP2:%.*]], 1
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP9]], i32 [[TMP10]], i32 2
-; CHECK-NEXT:    [[TMP12:%.*]] = add nsw i32 [[TMP3:%.*]], 1
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP12]], i32 3
-; CHECK-NEXT:    store <4 x i32> [[TMP13]], <4 x i32>* [[TMP4:%.*]], align 16, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0:%.*]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[TMP1:%.*]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[TMP2:%.*]], i32 2
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> [[TMP8]], i32 [[TMP3:%.*]], i32 3
+; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <4 x i32> [[TMP9]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    store <4 x i32> [[TMP10]], <4 x i32>* [[TMP4:%.*]], align 16, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    ret void
 ;
   %6 = add nsw i32 %0, 1

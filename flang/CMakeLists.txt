@@ -17,10 +17,6 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR AND NOT MSVC_IDE)
           `CMakeFiles'. Please delete them.")
 endif()
 
-# Add Flang-centric modules to cmake path.
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
-include(AddFlang)
-
 option(FLANG_ENABLE_WERROR "Fail and stop building flang if a warning is triggered." OFF)
 
 # Check for a standalone build and configure as appropriate from
@@ -228,12 +224,13 @@ endif()
 # Always build tco tool
 set(LLVM_BUILD_TOOLS ON)
 
-# Add Flang-centric modules to cmake path.
 include_directories(BEFORE
   ${FLANG_BINARY_DIR}/include
   ${FLANG_SOURCE_DIR}/include)
 
+# Add Flang-centric modules to cmake path.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
+include(AddFlang)
 
 if (NOT DEFAULT_SYSROOT)
   set(DEFAULT_SYSROOT "" CACHE PATH

@@ -1064,8 +1064,8 @@ public:
   // Implicitly-declared type 'struct _GUID'.
   mutable TagDecl *MSGuidTagDecl = nullptr;
 
-  /// Keep track of CUDA/HIP static device variables referenced by host code.
-  llvm::DenseSet<const VarDecl *> CUDAStaticDeviceVarReferencedByHost;
+  /// Keep track of CUDA/HIP device-side variables ODR-used by host code.
+  llvm::DenseSet<const VarDecl *> CUDADeviceVarODRUsedByHost;
 
   ASTContext(LangOptions &LOpts, SourceManager &SM, IdentifierTable &idents,
              SelectorTable &sels, Builtin::Context &builtins);

@@ -46,8 +46,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_GCSTRATEGY_H
-#define LLVM_CODEGEN_GCSTRATEGY_H
+#ifndef LLVM_IR_GCSTRATEGY_H
+#define LLVM_IR_GCSTRATEGY_H
 
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
@@ -133,4 +133,4 @@ using GCRegistry = Registry<GCStrategy>;
 
 } // end namespace llvm
 
-#endif // LLVM_CODEGEN_GCSTRATEGY_H
+#endif // LLVM_IR_GCSTRATEGY_H

@@ -1568,8 +1568,8 @@ bool SITargetLowering::isMemOpUniform(const SDNode *N) const {
 
 TargetLoweringBase::LegalizeTypeAction
 SITargetLowering::getPreferredVectorAction(MVT VT) const {
-  int NumElts = VT.getVectorNumElements();
-  if (NumElts != 1 && VT.getScalarType().bitsLE(MVT::i16))
+  if (!VT.isScalableVector() && VT.getVectorNumElements() != 1 &&
+      VT.getScalarType().bitsLE(MVT::i16))
     return VT.isPow2VectorType() ? TypeSplitVector : TypeWidenVector;
   return TargetLoweringBase::getPreferredVectorAction(VT);
 }
@@ -12112,7 +12112,6 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     if (!Ty->isFloatTy() && (!Subtarget->hasGFX90AInsts() || !Ty->isDoubleTy()))
       return AtomicExpansionKind::CmpXChg;
 
-    // TODO: Do have these for flat. Older targets also had them for buffers.
     unsigned AS = RMW->getPointerAddressSpace();
 
     if ((AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS) &&
@@ -12128,20 +12127,22 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
         return AtomicExpansionKind::CmpXChg;
 
       if (Subtarget->hasGFX90AInsts()) {
+        if (Ty->isFloatTy() && AS == AMDGPUAS::FLAT_ADDRESS)
+          return AtomicExpansionKind::CmpXChg;
+
         auto SSID = RMW->getSyncScopeID();
         if (SSID == SyncScope::System ||
             SSID == RMW->getContext().getOrInsertSyncScopeID("one-as"))
           return AtomicExpansionKind::CmpXChg;
 
-        return (Ty->isFloatTy() && AS == AMDGPUAS::FLAT_ADDRESS) ?
-          AtomicExpansionKind::CmpXChg : AtomicExpansionKind::None;
+        return AtomicExpansionKind::None;
       }
 
-      if (!Subtarget->hasGFX90AInsts() && AS != AMDGPUAS::GLOBAL_ADDRESS)
+      if (AS == AMDGPUAS::FLAT_ADDRESS)
         return AtomicExpansionKind::CmpXChg;
 
-      return RMW->use_empty() ? AtomicExpansionKind::None :
-                                AtomicExpansionKind::CmpXChg;
+      return RMW->use_empty() ? AtomicExpansionKind::None
+                              : AtomicExpansionKind::CmpXChg;
     }
 
     // DS FP atomics do repect the denormal mode, but the rounding mode is fixed

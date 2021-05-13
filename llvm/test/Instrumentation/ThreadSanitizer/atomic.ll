@@ -349,41 +349,61 @@ entry:
 define void @atomic8_cas_monotonic(i8* %a) nounwind uwtable {
 entry:
   cmpxchg i8* %a, i8 0, i8 1 monotonic monotonic, !dbg !7
+  cmpxchg i8* %a, i8 0, i8 1 monotonic acquire, !dbg !7
+  cmpxchg i8* %a, i8 0, i8 1 monotonic seq_cst, !dbg !7
   ret void, !dbg !7
 }
 ; CHECK-LABEL: atomic8_cas_monotonic
 ; CHECK: call i8 @__tsan_atomic8_compare_exchange_val(i8* %a, i8 0, i8 1, i32 0, i32 0), !dbg
+; CHECK: call i8 @__tsan_atomic8_compare_exchange_val(i8* %a, i8 0, i8 1, i32 0, i32 2), !dbg
+; CHECK: call i8 @__tsan_atomic8_compare_exchange_val(i8* %a, i8 0, i8 1, i32 0, i32 5), !dbg
 
 define void @atomic8_cas_acquire(i8* %a) nounwind uwtable {
 entry:
+  cmpxchg i8* %a, i8 0, i8 1 acquire monotonic, !dbg !7
   cmpxchg i8* %a, i8 0, i8 1 acquire acquire, !dbg !7
+  cmpxchg i8* %a, i8 0, i8 1 acquire seq_cst, !dbg !7
   ret void, !dbg !7
 }
 ; CHECK-LABEL: atomic8_cas_acquire
+; CHECK: call i8 @__tsan_atomic8_compare_exchange_val(i8* %a, i8 0, i8 1, i32 2, i32 0), !dbg
 ; CHECK: call i8 @__tsan_atomic8_compare_exchange_val(i8* %a, i8 0, i8 1, i32 2, i32 2), !dbg
+; CHECK: call i8 @__tsan_atomic8_compare_exchange_val(i8* %a, i8 0, i8 1, i32 2, i32 5), !dbg
 
 define void @atomic8_cas_release(i8* %a) nounwind uwtable {
 entry:
   cmpxchg i8* %a, i8 0, i8 1 release monotonic, !dbg !7
+  cmpxchg i8* %a, i8 0, i8 1 release acquire, !dbg !7
+  cmpxchg i8* %a, i8 0, i8 1 release seq_cst, !dbg !7
   ret void, !dbg !7
 }
 ; CHECK-LABEL: atomic8_cas_release
 ; CHECK: call i8 @__tsan_atomic8_compare_exchange_val(i8* %a, i8 0, i8 1, i32 3, i32 0), !dbg
+; CHECK: call i8 @__tsan_atomic8_compare_exchange_val(i8* %a, i8 0, i8 1, i32 3, i32 2), !dbg
+; CHECK: call i8 @__tsan_atomic8_compare_exchange_val(i8* %a, i8 0, i8 1, i32 3, i32 5), !dbg
 
 define void @atomic8_cas_acq_rel(i8* %a) nounwind uwtable {
 entry:
+  cmpxchg i8* %a, i8 0, i8 1 acq_rel monotonic, !dbg !7
   cmpxchg i8* %a, i8 0, i8 1 acq_rel acquire, !dbg !7
+  cmpxchg i8* %a, i8 0, i8 1 acq_rel seq_cst, !dbg !7
   ret void, !dbg !7
 }
 ; CHECK-LABEL: atomic8_cas_acq_rel
+; CHECK: call i8 @__tsan_atomic8_compare_exchange_val(i8* %a, i8 0, i8 1, i32 4, i32 0), !dbg
 ; CHECK: call i8 @__tsan_atomic8_compare_exchange_val(i8* %a, i8 0, i8 1, i32 4, i32 2), !dbg
+; CHECK: call i8 @__tsan_atomic8_compare_exchange_val(i8* %a, i8 0, i8 1, i32 4, i32 5), !dbg
 
 define void @atomic8_cas_seq_cst(i8* %a) nounwind uwtable {
 entry:
+  cmpxchg i8* %a, i8 0, i8 1 seq_cst monotonic, !dbg !7
+  cmpxchg i8* %a, i8 0, i8 1 seq_cst acquire, !dbg !7
   cmpxchg i8* %a, i8 0, i8 1 seq_cst seq_cst, !dbg !7
   ret void, !dbg !7
 }
 ; CHECK-LABEL: atomic8_cas_seq_cst
+; CHECK: call i8 @__tsan_atomic8_compare_exchange_val(i8* %a, i8 0, i8 1, i32 5, i32 0), !dbg
+; CHECK: call i8 @__tsan_atomic8_compare_exchange_val(i8* %a, i8 0, i8 1, i32 5, i32 2), !dbg
 ; CHECK: call i8 @__tsan_atomic8_compare_exchange_val(i8* %a, i8 0, i8 1, i32 5, i32 5), !dbg
 
 define i16 @atomic16_load_unordered(i16* %a) nounwind uwtable {
@@ -733,41 +753,61 @@ entry:
 define void @atomic16_cas_monotonic(i16* %a) nounwind uwtable {
 entry:
   cmpxchg i16* %a, i16 0, i16 1 monotonic monotonic, !dbg !7
+  cmpxchg i16* %a, i16 0, i16 1 monotonic acquire, !dbg !7
+  cmpxchg i16* %a, i16 0, i16 1 monotonic seq_cst, !dbg !7
   ret void, !dbg !7
 }
 ; CHECK-LABEL: atomic16_cas_monotonic
 ; CHECK: call i16 @__tsan_atomic16_compare_exchange_val(i16* %a, i16 0, i16 1, i32 0, i32 0), !dbg
+; CHECK: call i16 @__tsan_atomic16_compare_exchange_val(i16* %a, i16 0, i16 1, i32 0, i32 2), !dbg
+; CHECK: call i16 @__tsan_atomic16_compare_exchange_val(i16* %a, i16 0, i16 1, i32 0, i32 5), !dbg
 
 define void @atomic16_cas_acquire(i16* %a) nounwind uwtable {
 entry:
+  cmpxchg i16* %a, i16 0, i16 1 acquire monotonic, !dbg !7
   cmpxchg i16* %a, i16 0, i16 1 acquire acquire, !dbg !7
+  cmpxchg i16* %a, i16 0, i16 1 acquire seq_cst, !dbg !7
   ret void, !dbg !7
 }
 ; CHECK-LABEL: atomic16_cas_acquire
+; CHECK: call i16 @__tsan_atomic16_compare_exchange_val(i16* %a, i16 0, i16 1, i32 2, i32 0), !dbg
 ; CHECK: call i16 @__tsan_atomic16_compare_exchange_val(i16* %a, i16 0, i16 1, i32 2, i32 2), !dbg
+; CHECK: call i16 @__tsan_atomic16_compare_exchange_val(i16* %a, i16 0, i16 1, i32 2, i32 5), !dbg
 
 define void @atomic16_cas_release(i16* %a) nounwind uwtable {
 entry:
   cmpxchg i16* %a, i16 0, i16 1 release monotonic, !dbg !7
+  cmpxchg i16* %a, i16 0, i16 1 release acquire, !dbg !7
+  cmpxchg i16* %a, i16 0, i16 1 release seq_cst, !dbg !7
   ret void, !dbg !7
 }
 ; CHECK-LABEL: atomic16_cas_release
 ; CHECK: call i16 @__tsan_atomic16_compare_exchange_val(i16* %a, i16 0, i16 1, i32 3, i32 0), !dbg
+; CHECK: call i16 @__tsan_atomic16_compare_exchange_val(i16* %a, i16 0, i16 1, i32 3, i32 2), !dbg
+; CHECK: call i16 @__tsan_atomic16_compare_exchange_val(i16* %a, i16 0, i16 1, i32 3, i32 5), !dbg
 
 define void @atomic16_cas_acq_rel(i16* %a) nounwind uwtable {
 entry:
+  cmpxchg i16* %a, i16 0, i16 1 acq_rel monotonic, !dbg !7
   cmpxchg i16* %a, i16 0, i16 1 acq_rel acquire, !dbg !7
+  cmpxchg i16* %a, i16 0, i16 1 acq_rel seq_cst, !dbg !7
   ret void, !dbg !7
 }
 ; CHECK-LABEL: atomic16_cas_acq_rel
+; CHECK: call i16 @__tsan_atomic16_compare_exchange_val(i16* %a, i16 0, i16 1, i32 4, i32 0), !dbg
 ; CHECK: call i16 @__tsan_atomic16_compare_exchange_val(i16* %a, i16 0, i16 1, i32 4, i32 2), !dbg
+; CHECK: call i16 @__tsan_atomic16_compare_exchange_val(i16* %a, i16 0, i16 1, i32 4, i32 5), !dbg
 
 define void @atomic16_cas_seq_cst(i16* %a) nounwind uwtable {
 entry:
+  cmpxchg i16* %a, i16 0, i16 1 seq_cst monotonic, !dbg !7
+  cmpxchg i16* %a, i16 0, i16 1 seq_cst acquire, !dbg !7
   cmpxchg i16* %a, i16 0, i16 1 seq_cst seq_cst, !dbg !7
   ret void, !dbg !7
 }
 ; CHECK-LABEL: atomic16_cas_seq_cst
+; CHECK: call i16 @__tsan_atomic16_compare_exchange_val(i16* %a, i16 0, i16 1, i32 5, i32 0), !dbg
+; CHECK: call i16 @__tsan_atomic16_compare_exchange_val(i16* %a, i16 0, i16 1, i32 5, i32 2), !dbg
 ; CHECK: call i16 @__tsan_atomic16_compare_exchange_val(i16* %a, i16 0, i16 1, i32 5, i32 5), !dbg
 
 define i32 @atomic32_load_unordered(i32* %a) nounwind uwtable {
@@ -1117,41 +1157,61 @@ entry:
 define void @atomic32_cas_monotonic(i32* %a) nounwind uwtable {
 entry:
   cmpxchg i32* %a, i32 0, i32 1 monotonic monotonic, !dbg !7
+  cmpxchg i32* %a, i32 0, i32 1 monotonic acquire, !dbg !7
+  cmpxchg i32* %a, i32 0, i32 1 monotonic seq_cst, !dbg !7
   ret void, !dbg !7
 }
 ; CHECK-LABEL: atomic32_cas_monotonic
 ; CHECK: call i32 @__tsan_atomic32_compare_exchange_val(i32* %a, i32 0, i32 1, i32 0, i32 0), !dbg
+; CHECK: call i32 @__tsan_atomic32_compare_exchange_val(i32* %a, i32 0, i32 1, i32 0, i32 2), !dbg
+; CHECK: call i32 @__tsan_atomic32_compare_exchange_val(i32* %a, i32 0, i32 1, i32 0, i32 5), !dbg
 
 define void @atomic32_cas_acquire(i32* %a) nounwind uwtable {
 entry:
+  cmpxchg i32* %a, i32 0, i32 1 acquire monotonic, !dbg !7
   cmpxchg i32* %a, i32 0, i32 1 acquire acquire, !dbg !7
+  cmpxchg i32* %a, i32 0, i32 1 acquire seq_cst, !dbg !7
   ret void, !dbg !7
 }
 ; CHECK-LABEL: atomic32_cas_acquire
+; CHECK: call i32 @__tsan_atomic32_compare_exchange_val(i32* %a, i32 0, i32 1, i32 2, i32 0), !dbg
 ; CHECK: call i32 @__tsan_atomic32_compare_exchange_val(i32* %a, i32 0, i32 1, i32 2, i32 2), !dbg
+; CHECK: call i32 @__tsan_atomic32_compare_exchange_val(i32* %a, i32 0, i32 1, i32 2, i32 5), !dbg
 
 define void @atomic32_cas_release(i32* %a) nounwind uwtable {
 entry:
   cmpxchg i32* %a, i32 0, i32 1 release monotonic, !dbg !7
+  cmpxchg i32* %a, i32 0, i32 1 release acquire, !dbg !7
+  cmpxchg i32* %a, i32 0, i32 1 release seq_cst, !dbg !7
   ret void, !dbg !7
 }
 ; CHECK-LABEL: atomic32_cas_release
 ; CHECK: call i32 @__tsan_atomic32_compare_exchange_val(i32* %a, i32 0, i32 1, i32 3, i32 0), !dbg
+; CHECK: call i32 @__tsan_atomic32_compare_exchange_val(i32* %a, i32 0, i32 1, i32 3, i32 2), !dbg
+; CHECK: call i32 @__tsan_atomic32_compare_exchange_val(i32* %a, i32 0, i32 1, i32 3, i32 5), !dbg
 
 define void @atomic32_cas_acq_rel(i32* %a) nounwind uwtable {
 entry:
+  cmpxchg i32* %a, i32 0, i32 1 acq_rel monotonic, !dbg !7
   cmpxchg i32* %a, i32 0, i32 1 acq_rel acquire, !dbg !7
+  cmpxchg i32* %a, i32 0, i32 1 acq_rel seq_cst, !dbg !7
   ret void, !dbg !7
 }
 ; CHECK-LABEL: atomic32_cas_acq_rel
+; CHECK: call i32 @__tsan_atomic32_compare_exchange_val(i32* %a, i32 0, i32 1, i32 4, i32 0), !dbg
 ; CHECK: call i32 @__tsan_atomic32_compare_exchange_val(i32* %a, i32 0, i32 1, i32 4, i32 2), !dbg
+; CHECK: call i32 @__tsan_atomic32_compare_exchange_val(i32* %a, i32 0, i32 1, i32 4, i32 5), !dbg
 
 define void @atomic32_cas_seq_cst(i32* %a) nounwind uwtable {
 entry:
+  cmpxchg i32* %a, i32 0, i32 1 seq_cst monotonic, !dbg !7
+  cmpxchg i32* %a, i32 0, i32 1 seq_cst acquire, !dbg !7
   cmpxchg i32* %a, i32 0, i32 1 seq_cst seq_cst, !dbg !7
   ret void, !dbg !7
 }
 ; CHECK-LABEL: atomic32_cas_seq_cst
+; CHECK: call i32 @__tsan_atomic32_compare_exchange_val(i32* %a, i32 0, i32 1, i32 5, i32 0), !dbg
+; CHECK: call i32 @__tsan_atomic32_compare_exchange_val(i32* %a, i32 0, i32 1, i32 5, i32 2), !dbg
 ; CHECK: call i32 @__tsan_atomic32_compare_exchange_val(i32* %a, i32 0, i32 1, i32 5, i32 5), !dbg
 
 define i64 @atomic64_load_unordered(i64* %a) nounwind uwtable {
@@ -1521,41 +1581,61 @@ entry:
 define void @atomic64_cas_monotonic(i64* %a) nounwind uwtable {
 entry:
   cmpxchg i64* %a, i64 0, i64 1 monotonic monotonic, !dbg !7
+  cmpxchg i64* %a, i64 0, i64 1 monotonic acquire, !dbg !7
+  cmpxchg i64* %a, i64 0, i64 1 monotonic seq_cst, !dbg !7
   ret void, !dbg !7
 }
 ; CHECK-LABEL: atomic64_cas_monotonic
 ; CHECK: call i64 @__tsan_atomic64_compare_exchange_val(i64* %a, i64 0, i64 1, i32 0, i32 0), !dbg
+; CHECK: call i64 @__tsan_atomic64_compare_exchange_val(i64* %a, i64 0, i64 1, i32 0, i32 2), !dbg
+; CHECK: call i64 @__tsan_atomic64_compare_exchange_val(i64* %a, i64 0, i64 1, i32 0, i32 5), !dbg
 
 define void @atomic64_cas_acquire(i64* %a) nounwind uwtable {
 entry:
+  cmpxchg i64* %a, i64 0, i64 1 acquire monotonic, !dbg !7
   cmpxchg i64* %a, i64 0, i64 1 acquire acquire, !dbg !7
+  cmpxchg i64* %a, i64 0, i64 1 acquire seq_cst, !dbg !7
   ret void, !dbg !7
 }
 ; CHECK-LABEL: atomic64_cas_acquire
+; CHECK: call i64 @__tsan_atomic64_compare_exchange_val(i64* %a, i64 0, i64 1, i32 2, i32 0), !dbg
 ; CHECK: call i64 @__tsan_atomic64_compare_exchange_val(i64* %a, i64 0, i64 1, i32 2, i32 2), !dbg
+; CHECK: call i64 @__tsan_atomic64_compare_exchange_val(i64* %a, i64 0, i64 1, i32 2, i32 5), !dbg
 
 define void @atomic64_cas_release(i64* %a) nounwind uwtable {
 entry:
   cmpxchg i64* %a, i64 0, i64 1 release monotonic, !dbg !7
+  cmpxchg i64* %a, i64 0, i64 1 release acquire, !dbg !7
+  cmpxchg i64* %a, i64 0, i64 1 release seq_cst, !dbg !7
   ret void, !dbg !7
 }
 ; CHECK-LABEL: atomic64_cas_release
 ; CHECK: call i64 @__tsan_atomic64_compare_exchange_val(i64* %a, i64 0, i64 1, i32 3, i32 0), !dbg
+; CHECK: call i64 @__tsan_atomic64_compare_exchange_val(i64* %a, i64 0, i64 1, i32 3, i32 2), !dbg
+; CHECK: call i64 @__tsan_atomic64_compare_exchange_val(i64* %a, i64 0, i64 1, i32 3, i32 5), !dbg
 
 define void @atomic64_cas_acq_rel(i64* %a) nounwind uwtable {
 entry:
+  cmpxchg i64* %a, i64 0, i64 1 acq_rel monotonic, !dbg !7
   cmpxchg i64* %a, i64 0, i64 1 acq_rel acquire, !dbg !7
+  cmpxchg i64* %a, i64 0, i64 1 acq_rel seq_cst, !dbg !7
   ret void, !dbg !7
 }
 ; CHECK-LABEL: atomic64_cas_acq_rel
+; CHECK: call i64 @__tsan_atomic64_compare_exchange_val(i64* %a, i64 0, i64 1, i32 4, i32 0), !dbg
 ; CHECK: call i64 @__tsan_atomic64_compare_exchange_val(i64* %a, i64 0, i64 1, i32 4, i32 2), !dbg
+; CHECK: call i64 @__tsan_atomic64_compare_exchange_val(i64* %a, i64 0, i64 1, i32 4, i32 5), !dbg
 
 define void @atomic64_cas_seq_cst(i64* %a) nounwind uwtable {
 entry:
+  cmpxchg i64* %a, i64 0, i64 1 seq_cst monotonic, !dbg !7
+  cmpxchg i64* %a, i64 0, i64 1 seq_cst acquire, !dbg !7
   cmpxchg i64* %a, i64 0, i64 1 seq_cst seq_cst, !dbg !7
   ret void, !dbg !7
 }
 ; CHECK-LABEL: atomic64_cas_seq_cst
+; CHECK: call i64 @__tsan_atomic64_compare_exchange_val(i64* %a, i64 0, i64 1, i32 5, i32 0), !dbg
+; CHECK: call i64 @__tsan_atomic64_compare_exchange_val(i64* %a, i64 0, i64 1, i32 5, i32 2), !dbg
 ; CHECK: call i64 @__tsan_atomic64_compare_exchange_val(i64* %a, i64 0, i64 1, i32 5, i32 5), !dbg
 
 define void @atomic64_cas_seq_cst_ptr_ty(i8** %a, i8* %v1, i8* %v2) nounwind uwtable {

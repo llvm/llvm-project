@@ -21,6 +21,30 @@ using namespace mlir::lsp;
 // Reply
 //===----------------------------------------------------------------------===//
 
+namespace {
+/// Function object to reply to an LSP call.
+/// Each instance must be called exactly once, otherwise:
+///  - if there was no reply, an error reply is sent
+///  - if there were multiple replies, only the first is sent
+class Reply {
+public:
+  Reply(const llvm::json::Value &id, StringRef method,
+        JSONTransport &transport);
+  Reply(Reply &&other);
+  Reply &operator=(Reply &&) = delete;
+  Reply(const Reply &) = delete;
+  Reply &operator=(const Reply &) = delete;
+
+  void operator()(llvm::Expected<llvm::json::Value> reply);
+
+private:
+  StringRef method;
+  std::atomic<bool> replied = {false};
+  llvm::json::Value id;
+  JSONTransport *transport;
+};
+} // namespace
+
 Reply::Reply(const llvm::json::Value &id, llvm::StringRef method,
              JSONTransport &transport)
     : id(id), transport(&transport) {}

@@ -82,6 +82,7 @@ public:
 
   AsmParserState();
   ~AsmParserState();
+  AsmParserState &operator=(AsmParserState &&other);
 
   //===--------------------------------------------------------------------===//
   // Access State

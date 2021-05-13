@@ -223,7 +223,8 @@ fetchTemplateParameters(const TemplateParameterList *Params,
       if (TTPD->hasDefaultArgument()) {
         P.Default.emplace();
         llvm::raw_string_ostream Out(*P.Default);
-        TTPD->getDefaultArgument().getArgument().print(PP, Out);
+        TTPD->getDefaultArgument().getArgument().print(PP, Out,
+                                                       /*IncludeType*/ false);
       }
     }
     TempParameters.push_back(std::move(P));

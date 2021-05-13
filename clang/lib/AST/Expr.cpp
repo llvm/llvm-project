@@ -32,6 +32,7 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/LiteralSupport.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstring>
@@ -705,7 +706,9 @@ std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl) {
         StringRef Param = Params->getParam(i)->getName();
         if (Param.empty()) continue;
         TOut << Param << " = ";
-        Args.get(i).print(Policy, TOut);
+        Args.get(i).print(
+            Policy, TOut,
+            TemplateParameterList::shouldIncludeTypeForArgument(Params, i));
         TOut << ", ";
       }
     }
@@ -721,7 +724,7 @@ std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl) {
         StringRef Param = Params->getParam(i)->getName();
         if (Param.empty()) continue;
         TOut << Param << " = ";
-        Args->get(i).print(Policy, TOut);
+        Args->get(i).print(Policy, TOut, /*IncludeType*/ true);
         TOut << ", ";
       }
     }
@@ -863,6 +866,76 @@ std::string FixedPointLiteral::getValueAsString(unsigned Radix) const {
   FixedPointValueToString(
       S, llvm::APSInt::getUnsigned(getValue().getZExtValue()), Scale);
   return std::string(S.str());
+}
+
+void CharacterLiteral::print(unsigned Val, CharacterKind Kind,
+                             raw_ostream &OS) {
+  switch (Kind) {
+  case CharacterLiteral::Ascii:
+    break; // no prefix.
+  case CharacterLiteral::Wide:
+    OS << 'L';
+    break;
+  case CharacterLiteral::UTF8:
+    OS << "u8";
+    break;
+  case CharacterLiteral::UTF16:
+    OS << 'u';
+    break;
+  case CharacterLiteral::UTF32:
+    OS << 'U';
+    break;
+  }
+
+  switch (Val) {
+  case '\\':
+    OS << "'\\\\'";
+    break;
+  case '\'':
+    OS << "'\\''";
+    break;
+  case '\a':
+    // TODO: K&R: the meaning of '\\a' is different in traditional C
+    OS << "'\\a'";
+    break;
+  case '\b':
+    OS << "'\\b'";
+    break;
+  // Nonstandard escape sequence.
+  /*case '\e':
+    OS << "'\\e'";
+    break;*/
+  case '\f':
+    OS << "'\\f'";
+    break;
+  case '\n':
+    OS << "'\\n'";
+    break;
+  case '\r':
+    OS << "'\\r'";
+    break;
+  case '\t':
+    OS << "'\\t'";
+    break;
+  case '\v':
+    OS << "'\\v'";
+    break;
+  default:
+    // A character literal might be sign-extended, which
+    // would result in an invalid \U escape sequence.
+    // FIXME: multicharacter literals such as '\xFF\xFF\xFF\xFF'
+    // are not correctly handled.
+    if ((Val & ~0xFFu) == ~0xFFu && Kind == CharacterLiteral::Ascii)
+      Val &= 0xFFu;
+    if (Val < 256 && isPrintable((unsigned char)Val))
+      OS << "'" << (char)Val << "'";
+    else if (Val < 256)
+      OS << "'\\x" << llvm::format("%02x", Val) << "'";
+    else if (Val <= 0xFFFF)
+      OS << "'\\u" << llvm::format("%04x", Val) << "'";
+    else
+      OS << "'\\U" << llvm::format("%08x", Val) << "'";
+  }
 }
 
 FloatingLiteral::FloatingLiteral(const ASTContext &C, const llvm::APFloat &V,

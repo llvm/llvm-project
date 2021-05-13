@@ -976,15 +976,20 @@ static bool checkComplexDecomposition(Sema &S,
 }
 
 static std::string printTemplateArgs(const PrintingPolicy &PrintingPolicy,
-                                     TemplateArgumentListInfo &Args) {
+                                     TemplateArgumentListInfo &Args,
+                                     const TemplateParameterList *Params) {
   SmallString<128> SS;
   llvm::raw_svector_ostream OS(SS);
   bool First = true;
+  unsigned I = 0;
   for (auto &Arg : Args.arguments()) {
     if (!First)
       OS << ", ";
-    Arg.getArgument().print(PrintingPolicy, OS);
+    Arg.getArgument().print(
+        PrintingPolicy, OS,
+        TemplateParameterList::shouldIncludeTypeForArgument(Params, I));
     First = false;
+    I++;
   }
   return std::string(OS.str());
 }
@@ -996,7 +1001,7 @@ static bool lookupStdTypeTraitMember(Sema &S, LookupResult &TraitMemberLookup,
   auto DiagnoseMissing = [&] {
     if (DiagID)
       S.Diag(Loc, DiagID) << printTemplateArgs(S.Context.getPrintingPolicy(),
-                                               Args);
+                                               Args, /*Params*/ nullptr);
     return true;
   };
 
@@ -1034,7 +1039,8 @@ static bool lookupStdTypeTraitMember(Sema &S, LookupResult &TraitMemberLookup,
     if (DiagID)
       S.RequireCompleteType(
           Loc, TraitTy, DiagID,
-          printTemplateArgs(S.Context.getPrintingPolicy(), Args));
+          printTemplateArgs(S.Context.getPrintingPolicy(), Args,
+                            TraitTD->getTemplateParameters()));
     return true;
   }
 
@@ -1089,7 +1095,8 @@ static IsTupleLike isTupleLike(Sema &S, SourceLocation Loc, QualType T,
     Sema::SemaDiagnosticBuilder diagnoseNotICE(Sema &S,
                                                SourceLocation Loc) override {
       return S.Diag(Loc, diag::err_decomp_decl_std_tuple_size_not_constant)
-          << printTemplateArgs(S.Context.getPrintingPolicy(), Args);
+             << printTemplateArgs(S.Context.getPrintingPolicy(), Args,
+                                  /*Params*/ nullptr);
     }
   } Diagnoser(R, Args);
 
@@ -1125,7 +1132,8 @@ static QualType getTupleLikeElementType(Sema &S, SourceLocation Loc,
   if (!TD) {
     R.suppressDiagnostics();
     S.Diag(Loc, diag::err_decomp_decl_std_tuple_element_not_specialized)
-      << printTemplateArgs(S.Context.getPrintingPolicy(), Args);
+        << printTemplateArgs(S.Context.getPrintingPolicy(), Args,
+                             /*Params*/ nullptr);
     if (!R.empty())
       S.Diag(R.getRepresentativeDecl()->getLocation(), diag::note_declared_at);
     return QualType();

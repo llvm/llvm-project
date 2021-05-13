@@ -68,12 +68,15 @@ TemplateParameterList::TemplateParameterList(const ASTContext& C,
       if (!IsPack &&
           TTP->getTemplateParameters()->containsUnexpandedParameterPack())
         ContainsUnexpandedParameterPack = true;
-    } else if (const TypeConstraint *TC =
-        cast<TemplateTypeParmDecl>(P)->getTypeConstraint()) {
-      if (TC->getImmediatelyDeclaredConstraint()
-          ->containsUnexpandedParameterPack())
-        ContainsUnexpandedParameterPack = true;
-      HasConstrainedParameters = true;
+    } else if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(P)) {
+      if (const TypeConstraint *TC = TTP->getTypeConstraint()) {
+        if (TC->getImmediatelyDeclaredConstraint()
+            ->containsUnexpandedParameterPack())
+          ContainsUnexpandedParameterPack = true;
+      }
+      HasConstrainedParameters = TTP->hasTypeConstraint();
+    } else {
+      llvm_unreachable("unexpcted template parameter type");
     }
     // FIXME: If a default argument contains an unexpanded parameter pack, the
     // template parameter list does too.
@@ -84,6 +87,30 @@ TemplateParameterList::TemplateParameterList(const ASTContext& C,
       ContainsUnexpandedParameterPack = true;
     *getTrailingObjects<Expr *>() = RequiresClause;
   }
+}
+
+bool TemplateParameterList::containsUnexpandedParameterPack() const {
+  if (ContainsUnexpandedParameterPack)
+    return true;
+  if (!HasConstrainedParameters)
+    return false;
+
+  // An implicit constrained parameter might have had a use of an unexpanded
+  // pack added to it after the template parameter list was created. All
+  // implicit parameters are at the end of the parameter list.
+  for (const NamedDecl *Param : llvm::reverse(asArray())) {
+    if (!Param->isImplicit())
+      break;
+
+    if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
+      const auto *TC = TTP->getTypeConstraint();
+      if (TC && TC->getImmediatelyDeclaredConstraint()
+                    ->containsUnexpandedParameterPack())
+        return true;
+    }
+  }
+
+  return false;
 }
 
 TemplateParameterList *
@@ -165,6 +192,18 @@ getAssociatedConstraints(llvm::SmallVectorImpl<const Expr *> &AC) const {
 
 bool TemplateParameterList::hasAssociatedConstraints() const {
   return HasRequiresClause || HasConstrainedParameters;
+}
+
+bool TemplateParameterList::shouldIncludeTypeForArgument(
+    const TemplateParameterList *TPL, unsigned Idx) {
+  if (!TPL || Idx >= TPL->size())
+    return true;
+  const NamedDecl *TemplParam = TPL->getParam(Idx);
+  if (const auto *ParamValueDecl =
+          dyn_cast<NonTypeTemplateParmDecl>(TemplParam))
+    if (ParamValueDecl->getType()->getContainedDeducedType())
+      return true;
+  return false;
 }
 
 namespace clang {
@@ -1420,8 +1459,9 @@ void TypeConstraint::print(llvm::raw_ostream &OS, PrintingPolicy Policy) const {
   ConceptName.printName(OS, Policy);
   if (hasExplicitTemplateArgs()) {
     OS << "<";
+    // FIXME: Find corresponding parameter for argument
     for (auto &ArgLoc : ArgsAsWritten->arguments())
-      ArgLoc.getArgument().print(Policy, OS);
+      ArgLoc.getArgument().print(Policy, OS, /*IncludeType*/ false);
     OS << ">";
   }
 }

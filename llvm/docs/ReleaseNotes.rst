@@ -64,6 +64,10 @@ Changes to the LLVM IR
 Changes to building LLVM
 ------------------------
 
+* The build system now supports building multiple distributions, so that you can
+  e.g. have one distribution containing just tools and another for libraries (to
+  enable development). See :ref:`Multi-distribution configurations` for details.
+
 Changes to TableGen
 -------------------
 

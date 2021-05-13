@@ -1,0 +1,31 @@
+# RUN: llc -mtriple=aarch64-- -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+---
+name:            test_constant_vec_pool_v2f64
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.1:
+    liveins: $x0
+    ; Check that we have an MMO on the load, which is needed for MachineLICM to hoist it.
+    ; CHECK-LABEL: name: test_constant_vec_pool_v2f64
+    ; CHECK: liveins: $x0
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
+    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0 :: (load 16 from constant-pool)
+    ; CHECK: STRQui [[LDRQui]], [[COPY]], 0 :: (store 16)
+    ; CHECK: RET_ReallyLR
+    %0:gpr(p0) = COPY $x0
+    %3:fpr(s64) = G_FCONSTANT double 5.000000e-01
+    %2:fpr(s64) = G_FCONSTANT double 1.600000e+01
+    %1:fpr(<2 x s64>) = G_BUILD_VECTOR %2(s64), %3(s64)
+    G_STORE %1(<2 x s64>), %0(p0) :: (store 16)
+    RET_ReallyLR
+
+...
