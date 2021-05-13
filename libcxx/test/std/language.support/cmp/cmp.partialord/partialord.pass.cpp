@@ -52,6 +52,17 @@ void test_signatures() {
 #endif
 }
 
+constexpr void test_equality() {
+#ifndef TEST_HAS_NO_SPACESHIP_OPERATOR
+  auto& PartialEq = std::partial_ordering::equivalent;
+  auto& WeakEq = std::weak_ordering::equivalent;
+  assert(PartialEq == WeakEq);
+
+  auto& StrongEq = std::strong_ordering::equal;
+  assert(PartialEq == StrongEq);
+#endif
+}
+
 constexpr bool test_constexpr() {
   auto& Eq = std::partial_ordering::equivalent;
   auto& Less = std::partial_ordering::less;
@@ -167,6 +178,8 @@ constexpr bool test_constexpr() {
     static_assert(std::partial_ordering::unordered ==
                   std::partial_ordering::unordered);
   }
+
+  test_equality();
 #endif
 
   return true;
@@ -175,6 +188,7 @@ constexpr bool test_constexpr() {
 int main(int, char**) {
   test_static_members();
   test_signatures();
+  test_equality();
   static_assert(test_constexpr(), "constexpr test failed");
 
   return 0;
