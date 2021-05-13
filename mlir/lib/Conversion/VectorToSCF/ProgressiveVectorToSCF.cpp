@@ -724,35 +724,39 @@ static void maybeAssignMask(OpBuilder &builder, OpTy xferOp, OpTy newXferOp,
 /// %vec = vector.insert %tmp1, %v3[4] : vector<4xf32> into vector<5x4xf32>
 /// ```
 ///
-/// Note: A pass label is attached to new TransferReadOps, so that subsequent
-/// applications of this pattern do not create an additional %v_init vector.
+/// Note: As an optimization, if the result of the original TransferReadOp
+/// was directly inserted into another vector, no new %v_init vector is created.
+/// Instead, the new TransferReadOp results are inserted into that vector.
 struct UnrollTransferReadConversion : public OpRewritePattern<TransferReadOp> {
   using OpRewritePattern<TransferReadOp>::OpRewritePattern;
 
-  /// Find the result vector %v_init or create a new vector if this the first
-  /// application of the pattern.
+  /// Return the vector into which the newly created TransferReadOp results
+  /// are inserted.
   Value getResultVector(TransferReadOp xferOp,
                         PatternRewriter &rewriter) const {
-    if (xferOp->hasAttr(kPassLabel)) {
-      return getInsertOp(xferOp).dest();
-    }
+    if (auto insertOp = getInsertOp(xferOp))
+      return insertOp.dest();
     return std_splat(xferOp.getVectorType(), xferOp.padding()).value;
   }
 
-  /// Assuming that this not the first application of the pattern, return the
-  /// vector.insert op in which the result of this transfer op is used.
+  /// If the result of the TransferReadOp has exactly one user, which is a
+  /// vector::InsertOp, return that operation.
   vector::InsertOp getInsertOp(TransferReadOp xferOp) const {
-    Operation *xferOpUser = *xferOp->getUsers().begin();
-    return dyn_cast<vector::InsertOp>(xferOpUser);
+    if (xferOp->hasOneUse()) {
+      Operation *xferOpUser = *xferOp->getUsers().begin();
+      if (auto insertOp = dyn_cast<vector::InsertOp>(xferOpUser))
+        return insertOp;
+    }
+
+    return vector::InsertOp();
   }
 
-  /// Assuming that this not the first application of the pattern, return the
-  /// indices of the vector.insert op in which the result of this transfer op
-  /// is used.
+  /// If the result of the TransferReadOp has exactly one user, which is a
+  /// vector::InsertOp, return that operation's indices.
   void getInsertionIndices(TransferReadOp xferOp,
                            SmallVector<int64_t, 8> &indices) const {
-    if (xferOp->hasAttr(kPassLabel)) {
-      llvm::for_each(getInsertOp(xferOp).position(), [&](Attribute attr) {
+    if (auto insertOp = getInsertOp(xferOp)) {
+      llvm::for_each(insertOp.position(), [&](Attribute attr) {
         indices.push_back(attr.dyn_cast<IntegerAttr>().getInt());
       });
     }
@@ -766,6 +770,7 @@ struct UnrollTransferReadConversion : public OpRewritePattern<TransferReadOp> {
       return failure();
 
     ScopedContext scope(rewriter, xferOp.getLoc());
+    auto insertOp = getInsertOp(xferOp);
     auto vec = getResultVector(xferOp, rewriter);
     auto vecType = vec.getType().dyn_cast<VectorType>();
     auto xferVecType = xferOp.getVectorType();
@@ -803,7 +808,6 @@ struct UnrollTransferReadConversion : public OpRewritePattern<TransferReadOp> {
                 dyn_cast<TransferReadOp>(newXferOpVal.getDefiningOp());
 
             maybeAssignMask(b, xferOp, newXferOp, i);
-            maybeApplyPassLabel(b, newXferOp);
 
             return vector_insert(newXferOp, vec, insertionIndices).value;
           },
@@ -814,8 +818,9 @@ struct UnrollTransferReadConversion : public OpRewritePattern<TransferReadOp> {
           });
     }
 
-    if (xferOp->hasAttr(kPassLabel)) {
-      rewriter.replaceOp(getInsertOp(xferOp), vec);
+    if (insertOp) {
+      // Rewrite single user of the old TransferReadOp, which was an InsertOp.
+      rewriter.replaceOp(insertOp, vec);
       rewriter.eraseOp(xferOp);
     } else {
       rewriter.replaceOp(xferOp, vec);
@@ -846,32 +851,33 @@ struct UnrollTransferReadConversion : public OpRewritePattern<TransferReadOp> {
 /// vector.transfer_write %v4, %A[%a, %b + 4, %c] : vector<4xf32>, memref<...>
 /// ```
 ///
-/// Note: A pass label is attached to new TransferWriteOps, so that subsequent
-/// applications of this pattern can read the indices of previously generated
-/// vector.extract ops.
+/// Note: As an optimization, if the vector of the original TransferWriteOp
+/// was directly extracted from another vector via an ExtractOp `a`, extract
+/// the vectors for the newly generated TransferWriteOps from `a`'s input. By
+/// doing so, `a` may become dead, and the number of ExtractOps generated during
+/// recursive application of this pattern will be minimal.
 struct UnrollTransferWriteConversion
     : public OpRewritePattern<TransferWriteOp> {
   using OpRewritePattern<TransferWriteOp>::OpRewritePattern;
 
-  /// If this is not the first application of the pattern, find the original
-  /// vector %vec that is written by this transfer op. Otherwise, return the
-  /// vector of this transfer op.
+  /// Return the vector from which newly generated ExtracOps will extract.
   Value getDataVector(TransferWriteOp xferOp) const {
-    if (xferOp->hasAttr(kPassLabel))
-      return getExtractOp(xferOp).vector();
+    if (auto extractOp = getExtractOp(xferOp))
+      return extractOp.vector();
     return xferOp.vector();
   }
 
-  /// Assuming that this is not the first application of the pattern, find the
-  /// vector.extract op whose result is written by this transfer op.
+  /// If the input of the given TransferWriteOp is an ExtractOp, return it.
   vector::ExtractOp getExtractOp(TransferWriteOp xferOp) const {
     return dyn_cast<vector::ExtractOp>(xferOp.vector().getDefiningOp());
   }
 
+  /// If the input of the given TransferWriteOp is an ExtractOp, return its
+  /// indices.
   void getExtractionIndices(TransferWriteOp xferOp,
                             SmallVector<int64_t, 8> &indices) const {
-    if (xferOp->hasAttr(kPassLabel)) {
-      llvm::for_each(getExtractOp(xferOp).position(), [&](Attribute attr) {
+    if (auto extractOp = getExtractOp(xferOp)) {
+      llvm::for_each(extractOp.position(), [&](Attribute attr) {
         indices.push_back(attr.dyn_cast<IntegerAttr>().getInt());
       });
     }
@@ -918,7 +924,6 @@ struct UnrollTransferWriteConversion
                     .op;
 
             maybeAssignMask(b, xferOp, newXferOp, i);
-            maybeApplyPassLabel(b, newXferOp);
           });
     }
 
