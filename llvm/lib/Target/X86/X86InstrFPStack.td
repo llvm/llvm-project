@@ -24,6 +24,7 @@ def SDTX86Fild      : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisPtrTy<1>]>;
 def SDTX86Fist      : SDTypeProfile<0, 2, [SDTCisFP<0>, SDTCisPtrTy<1>]>;
 
 def SDTX86CwdStore  : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
+def SDTX86CwdLoad   : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
 
 def X86fld          : SDNode<"X86ISD::FLD", SDTX86Fld,
                              [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
@@ -37,6 +38,9 @@ def X86fp_to_mem : SDNode<"X86ISD::FP_TO_INT_IN_MEM", SDTX86Fst,
                           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def X86fp_cwd_get16 : SDNode<"X86ISD::FNSTCW16m",          SDTX86CwdStore,
                              [SDNPHasChain, SDNPMayStore, SDNPSideEffect,
+                              SDNPMemOperand]>;
+def X86fp_cwd_set16 : SDNode<"X86ISD::FLDCW16m",           SDTX86CwdLoad,
+                             [SDNPHasChain, SDNPMayLoad, SDNPSideEffect,
                               SDNPMemOperand]>;
 
 def X86fstf32 : PatFrag<(ops node:$val, node:$ptr),
@@ -705,7 +709,8 @@ def FNSTCW16m : I<0xD9, MRM7m,                   // [mem16] = X87 control world
 } // SchedRW
 let Defs = [FPSW,FPCW], mayLoad = 1 in
 def FLDCW16m  : I<0xD9, MRM5m,                   // X87 control world = [mem16]
-                  (outs), (ins i16mem:$dst), "fldcw\t$dst", []>,
+                  (outs), (ins i16mem:$dst), "fldcw\t$dst",
+                  [(X86fp_cwd_set16 addr:$dst)]>,
                 Sched<[WriteLoad]>;
 
 // FPU control instructions

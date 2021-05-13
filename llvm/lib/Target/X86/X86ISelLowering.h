@@ -780,8 +780,11 @@ namespace llvm {
     // subvector broadcast from memory.
     SUBV_BROADCAST_LOAD,
 
-    // Store FP control world into i16 memory.
+    // Store FP control word into i16 memory.
     FNSTCW16m,
+
+    // Load FP control word from i16 memory.
+    FLDCW16m,
 
     /// This instruction implements FP_TO_SINT with the
     /// integer destination in memory and a FP reg source.  This corresponds
@@ -846,6 +849,19 @@ namespace llvm {
     // opcodes will be thought as target memory ops!
   };
   } // end namespace X86ISD
+
+  namespace X86 {
+    /// Current rounding mode is represented in bits 11:10 of FPSR. These
+    /// values are same as corresponding constants for rounding mode used
+    /// in glibc.
+    enum RoundingMode {
+      rmToNearest   = 0,        // FE_TONEAREST
+      rmDownward    = 1 << 10,  // FE_DOWNWARD
+      rmUpward      = 2 << 10,  // FE_UPWARD
+      rmTowardZero  = 3 << 10,  // FE_TOWARDZERO
+      rmMask        = 3 << 10   // Bit mask selecting rounding mode
+    };
+  }
 
   /// Define some predicates that are used for node matching.
   namespace X86 {
@@ -1518,6 +1534,7 @@ namespace llvm {
     SDValue lowerEH_SJLJ_SETUP_DISPATCH(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFLT_ROUNDS_(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGC_TRANSITION(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
