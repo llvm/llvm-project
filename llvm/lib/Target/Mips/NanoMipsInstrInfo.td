@@ -111,9 +111,11 @@ let isCodeGenOnly = 1 in {
 def ADDu_NM : ArithLogicRNM<"addu", GPR32NMOpnd, add>;
 def ADDiu_NM : ArithLogicINM<"addiu", simm16_relaxed, GPR32NMOpnd,
                              imm32SExt16, add>;
+def SUBu_NM : ArithLogicRNM<"subu", GPR32NMOpnd, sub>;
+
 def AND_NM : ArithLogicRNM<"and", GPR32NMOpnd, and>;
 def OR_NM : ArithLogicRNM<"or", GPR32NMOpnd, or>;
-def SUBu_NM : ArithLogicRNM<"subu", GPR32NMOpnd, sub>;
+def XOR_NM : ArithLogicRNM<"xor", GPR32NMOpnd, xor>;
 
 def LW_NM : LoadMemoryNM<"lw", GPR32NMOpnd, mem, load>, InstSize32;
 def SW_NM : StoreMemoryNM<"sw", GPR32NMOpnd, mem, store>, InstSize32;
