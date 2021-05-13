@@ -10,6 +10,10 @@
 // RUN: wasm-ld -O0 %t.o -o %t2.wasm --no-gc-sections --no-entry
 // RUN: obj2yaml %t2.wasm | FileCheck --check-prefixes=COMMON,NOMERGE %s
 
+// Check relocatable
+// RUN: wasm-ld -r %t.o -o %t2.o
+// RUN: obj2yaml %t2.o | FileCheck --check-prefixes=RELOC %s
+
         .section .rodata1,"S",@
         .asciz "abc"
 foo:
@@ -18,7 +22,7 @@ foo:
 bar:
         .asciz "bc"
         .asciz "bc"
-        .size bar, 4
+        .size bar, 6
 
         .section .rodata_relocs,"",@
 negative_addend:
@@ -74,3 +78,24 @@ negative_addend:
 //  COMMON-NEXT:          Value:           1024
 //   MERGE-NEXT:          Content:         '61626300'
 // NOMERGE-NEXT:          Content:         '6162630061626300626300'
+
+
+//      RELOC:  - Type:            DATA
+// RELOC-NEXT:    Relocations:
+// RELOC-NEXT:      - Type:            R_WASM_MEMORY_ADDR_I32
+// RELOC-NEXT:        Index:           0
+// RELOC-NEXT:        Offset:          0xF
+// RELOC-NEXT:        Addend:          -10
+// RELOC-NEXT:    Segments:
+// RELOC-NEXT:      - SectionOffset:   6
+// RELOC-NEXT:        InitFlags:       0
+// RELOC-NEXT:        Offset:
+// RELOC-NEXT:          Opcode:          I32_CONST
+// RELOC-NEXT:          Value:           0
+// RELOC-NEXT:        Content:         '61626300'
+// RELOC-NEXT:      - SectionOffset:   15
+// RELOC-NEXT:        InitFlags:       0
+// RELOC-NEXT:        Offset:
+// RELOC-NEXT:          Opcode:          I32_CONST
+// RELOC-NEXT:          Value:           4
+// RELOC-NEXT:        Content:         F6FFFFFF

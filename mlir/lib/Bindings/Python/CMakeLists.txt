@@ -33,6 +33,14 @@ add_mlir_python_extension(MLIRAsyncPassesBindingsPythonExtension _mlirAsyncPasse
 )
 add_dependencies(MLIRBindingsPythonExtension MLIRAsyncPassesBindingsPythonExtension)
 
+add_mlir_python_extension(MLIRSparseTensorPassesBindingsPythonExtension _mlirSparseTensorPasses
+  INSTALL_DIR
+    python
+  SOURCES
+  SparseTensorPasses.cpp
+)
+add_dependencies(MLIRBindingsPythonExtension MLIRSparseTensorPassesBindingsPythonExtension)
+
 add_mlir_python_extension(MLIRGPUPassesBindingsPythonExtension _mlirGPUPasses
   INSTALL_DIR
     python

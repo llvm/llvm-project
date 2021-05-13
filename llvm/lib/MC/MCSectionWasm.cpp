@@ -69,6 +69,8 @@ void MCSectionWasm::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     OS << 'G';
   if (SegmentFlags & wasm::WASM_SEG_FLAG_STRINGS)
     OS << 'S';
+  if (SegmentFlags & wasm::WASM_SEG_FLAG_TLS)
+    OS << 'T';
 
   OS << '"';
 

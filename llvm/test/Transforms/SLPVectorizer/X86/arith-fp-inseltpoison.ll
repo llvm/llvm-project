@@ -14,11 +14,7 @@
 define <2 x double> @buildvector_add_2f64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: @buildvector_add_2f64(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x double> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i32 0
-; CHECK-NEXT:    [[R0:%.*]] = insertelement <2 x double> poison, double [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
-; CHECK-NEXT:    [[R1:%.*]] = insertelement <2 x double> [[R0]], double [[TMP3]], i32 1
-; CHECK-NEXT:    ret <2 x double> [[R1]]
+; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %a0 = extractelement <2 x double> %a, i32 0
   %a1 = extractelement <2 x double> %a, i32 1
@@ -34,11 +30,7 @@ define <2 x double> @buildvector_add_2f64(<2 x double> %a, <2 x double> %b) {
 define <2 x double> @buildvector_sub_2f64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: @buildvector_sub_2f64(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub <2 x double> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i32 0
-; CHECK-NEXT:    [[R0:%.*]] = insertelement <2 x double> poison, double [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
-; CHECK-NEXT:    [[R1:%.*]] = insertelement <2 x double> [[R0]], double [[TMP3]], i32 1
-; CHECK-NEXT:    ret <2 x double> [[R1]]
+; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %a0 = extractelement <2 x double> %a, i32 0
   %a1 = extractelement <2 x double> %a, i32 1
@@ -54,11 +46,7 @@ define <2 x double> @buildvector_sub_2f64(<2 x double> %a, <2 x double> %b) {
 define <2 x double> @buildvector_mul_2f64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: @buildvector_mul_2f64(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x double> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i32 0
-; CHECK-NEXT:    [[R0:%.*]] = insertelement <2 x double> poison, double [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
-; CHECK-NEXT:    [[R1:%.*]] = insertelement <2 x double> [[R0]], double [[TMP3]], i32 1
-; CHECK-NEXT:    ret <2 x double> [[R1]]
+; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %a0 = extractelement <2 x double> %a, i32 0
   %a1 = extractelement <2 x double> %a, i32 1
@@ -74,11 +62,7 @@ define <2 x double> @buildvector_mul_2f64(<2 x double> %a, <2 x double> %b) {
 define <2 x double> @buildvector_div_2f64(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: @buildvector_div_2f64(
 ; SSE-NEXT:    [[TMP1:%.*]] = fdiv <2 x double> [[A:%.*]], [[B:%.*]]
-; SSE-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i32 0
-; SSE-NEXT:    [[R0:%.*]] = insertelement <2 x double> poison, double [[TMP2]], i32 0
-; SSE-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
-; SSE-NEXT:    [[R1:%.*]] = insertelement <2 x double> [[R0]], double [[TMP3]], i32 1
-; SSE-NEXT:    ret <2 x double> [[R1]]
+; SSE-NEXT:    ret <2 x double> [[TMP1]]
 ;
 ; SLM-LABEL: @buildvector_div_2f64(
 ; SLM-NEXT:    [[A0:%.*]] = extractelement <2 x double> [[A:%.*]], i32 0
@@ -93,19 +77,11 @@ define <2 x double> @buildvector_div_2f64(<2 x double> %a, <2 x double> %b) {
 ;
 ; AVX-LABEL: @buildvector_div_2f64(
 ; AVX-NEXT:    [[TMP1:%.*]] = fdiv <2 x double> [[A:%.*]], [[B:%.*]]
-; AVX-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i32 0
-; AVX-NEXT:    [[R0:%.*]] = insertelement <2 x double> poison, double [[TMP2]], i32 0
-; AVX-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
-; AVX-NEXT:    [[R1:%.*]] = insertelement <2 x double> [[R0]], double [[TMP3]], i32 1
-; AVX-NEXT:    ret <2 x double> [[R1]]
+; AVX-NEXT:    ret <2 x double> [[TMP1]]
 ;
 ; AVX512-LABEL: @buildvector_div_2f64(
 ; AVX512-NEXT:    [[TMP1:%.*]] = fdiv <2 x double> [[A:%.*]], [[B:%.*]]
-; AVX512-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i32 0
-; AVX512-NEXT:    [[R0:%.*]] = insertelement <2 x double> poison, double [[TMP2]], i32 0
-; AVX512-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
-; AVX512-NEXT:    [[R1:%.*]] = insertelement <2 x double> [[R0]], double [[TMP3]], i32 1
-; AVX512-NEXT:    ret <2 x double> [[R1]]
+; AVX512-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %a0 = extractelement <2 x double> %a, i32 0
   %a1 = extractelement <2 x double> %a, i32 1
@@ -121,15 +97,7 @@ define <2 x double> @buildvector_div_2f64(<2 x double> %a, <2 x double> %b) {
 define <4 x float> @buildvector_add_4f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @buildvector_add_4f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd <4 x float> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
-; CHECK-NEXT:    [[R0:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
-; CHECK-NEXT:    [[R1:%.*]] = insertelement <4 x float> [[R0]], float [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
-; CHECK-NEXT:    [[R2:%.*]] = insertelement <4 x float> [[R1]], float [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
-; CHECK-NEXT:    [[R3:%.*]] = insertelement <4 x float> [[R2]], float [[TMP5]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[R3]]
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %a0 = extractelement <4 x float> %a, i32 0
   %a1 = extractelement <4 x float> %a, i32 1
@@ -153,15 +121,7 @@ define <4 x float> @buildvector_add_4f32(<4 x float> %a, <4 x float> %b) {
 define <4 x float> @buildvector_sub_4f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @buildvector_sub_4f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub <4 x float> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
-; CHECK-NEXT:    [[R0:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
-; CHECK-NEXT:    [[R1:%.*]] = insertelement <4 x float> [[R0]], float [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
-; CHECK-NEXT:    [[R2:%.*]] = insertelement <4 x float> [[R1]], float [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
-; CHECK-NEXT:    [[R3:%.*]] = insertelement <4 x float> [[R2]], float [[TMP5]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[R3]]
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %a0 = extractelement <4 x float> %a, i32 0
   %a1 = extractelement <4 x float> %a, i32 1
@@ -185,15 +145,7 @@ define <4 x float> @buildvector_sub_4f32(<4 x float> %a, <4 x float> %b) {
 define <4 x float> @buildvector_mul_4f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @buildvector_mul_4f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <4 x float> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
-; CHECK-NEXT:    [[R0:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
-; CHECK-NEXT:    [[R1:%.*]] = insertelement <4 x float> [[R0]], float [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
-; CHECK-NEXT:    [[R2:%.*]] = insertelement <4 x float> [[R1]], float [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
-; CHECK-NEXT:    [[R3:%.*]] = insertelement <4 x float> [[R2]], float [[TMP5]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[R3]]
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %a0 = extractelement <4 x float> %a, i32 0
   %a1 = extractelement <4 x float> %a, i32 1
@@ -217,15 +169,7 @@ define <4 x float> @buildvector_mul_4f32(<4 x float> %a, <4 x float> %b) {
 define <4 x float> @buildvector_div_4f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @buildvector_div_4f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv <4 x float> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
-; CHECK-NEXT:    [[R0:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
-; CHECK-NEXT:    [[R1:%.*]] = insertelement <4 x float> [[R0]], float [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
-; CHECK-NEXT:    [[R2:%.*]] = insertelement <4 x float> [[R1]], float [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
-; CHECK-NEXT:    [[R3:%.*]] = insertelement <4 x float> [[R2]], float [[TMP5]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[R3]]
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %a0 = extractelement <4 x float> %a, i32 0
   %a1 = extractelement <4 x float> %a, i32 1
@@ -253,15 +197,7 @@ define <4 x float> @buildvector_div_4f32(<4 x float> %a, <4 x float> %b) {
 define <4 x double> @buildvector_add_4f64(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: @buildvector_add_4f64(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd <4 x double> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x double> [[TMP1]], i32 0
-; CHECK-NEXT:    [[R0:%.*]] = insertelement <4 x double> poison, double [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x double> [[TMP1]], i32 1
-; CHECK-NEXT:    [[R1:%.*]] = insertelement <4 x double> [[R0]], double [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x double> [[TMP1]], i32 2
-; CHECK-NEXT:    [[R2:%.*]] = insertelement <4 x double> [[R1]], double [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x double> [[TMP1]], i32 3
-; CHECK-NEXT:    [[R3:%.*]] = insertelement <4 x double> [[R2]], double [[TMP5]], i32 3
-; CHECK-NEXT:    ret <4 x double> [[R3]]
+; CHECK-NEXT:    ret <4 x double> [[TMP1]]
 ;
   %a0 = extractelement <4 x double> %a, i32 0
   %a1 = extractelement <4 x double> %a, i32 1
@@ -285,15 +221,7 @@ define <4 x double> @buildvector_add_4f64(<4 x double> %a, <4 x double> %b) {
 define <4 x double> @buildvector_sub_4f64(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: @buildvector_sub_4f64(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub <4 x double> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x double> [[TMP1]], i32 0
-; CHECK-NEXT:    [[R0:%.*]] = insertelement <4 x double> poison, double [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x double> [[TMP1]], i32 1
-; CHECK-NEXT:    [[R1:%.*]] = insertelement <4 x double> [[R0]], double [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x double> [[TMP1]], i32 2
-; CHECK-NEXT:    [[R2:%.*]] = insertelement <4 x double> [[R1]], double [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x double> [[TMP1]], i32 3
-; CHECK-NEXT:    [[R3:%.*]] = insertelement <4 x double> [[R2]], double [[TMP5]], i32 3
-; CHECK-NEXT:    ret <4 x double> [[R3]]
+; CHECK-NEXT:    ret <4 x double> [[TMP1]]
 ;
   %a0 = extractelement <4 x double> %a, i32 0
   %a1 = extractelement <4 x double> %a, i32 1
@@ -317,15 +245,7 @@ define <4 x double> @buildvector_sub_4f64(<4 x double> %a, <4 x double> %b) {
 define <4 x double> @buildvector_mul_4f64(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: @buildvector_mul_4f64(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <4 x double> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x double> [[TMP1]], i32 0
-; CHECK-NEXT:    [[R0:%.*]] = insertelement <4 x double> poison, double [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x double> [[TMP1]], i32 1
-; CHECK-NEXT:    [[R1:%.*]] = insertelement <4 x double> [[R0]], double [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x double> [[TMP1]], i32 2
-; CHECK-NEXT:    [[R2:%.*]] = insertelement <4 x double> [[R1]], double [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x double> [[TMP1]], i32 3
-; CHECK-NEXT:    [[R3:%.*]] = insertelement <4 x double> [[R2]], double [[TMP5]], i32 3
-; CHECK-NEXT:    ret <4 x double> [[R3]]
+; CHECK-NEXT:    ret <4 x double> [[TMP1]]
 ;
   %a0 = extractelement <4 x double> %a, i32 0
   %a1 = extractelement <4 x double> %a, i32 1
@@ -349,15 +269,7 @@ define <4 x double> @buildvector_mul_4f64(<4 x double> %a, <4 x double> %b) {
 define <4 x double> @buildvector_div_4f64(<4 x double> %a, <4 x double> %b) {
 ; SSE-LABEL: @buildvector_div_4f64(
 ; SSE-NEXT:    [[TMP1:%.*]] = fdiv <4 x double> [[A:%.*]], [[B:%.*]]
-; SSE-NEXT:    [[TMP2:%.*]] = extractelement <4 x double> [[TMP1]], i32 0
-; SSE-NEXT:    [[R0:%.*]] = insertelement <4 x double> poison, double [[TMP2]], i32 0
-; SSE-NEXT:    [[TMP3:%.*]] = extractelement <4 x double> [[TMP1]], i32 1
-; SSE-NEXT:    [[R1:%.*]] = insertelement <4 x double> [[R0]], double [[TMP3]], i32 1
-; SSE-NEXT:    [[TMP4:%.*]] = extractelement <4 x double> [[TMP1]], i32 2
-; SSE-NEXT:    [[R2:%.*]] = insertelement <4 x double> [[R1]], double [[TMP4]], i32 2
-; SSE-NEXT:    [[TMP5:%.*]] = extractelement <4 x double> [[TMP1]], i32 3
-; SSE-NEXT:    [[R3:%.*]] = insertelement <4 x double> [[R2]], double [[TMP5]], i32 3
-; SSE-NEXT:    ret <4 x double> [[R3]]
+; SSE-NEXT:    ret <4 x double> [[TMP1]]
 ;
 ; SLM-LABEL: @buildvector_div_4f64(
 ; SLM-NEXT:    [[A0:%.*]] = extractelement <4 x double> [[A:%.*]], i32 0
@@ -380,27 +292,11 @@ define <4 x double> @buildvector_div_4f64(<4 x double> %a, <4 x double> %b) {
 ;
 ; AVX-LABEL: @buildvector_div_4f64(
 ; AVX-NEXT:    [[TMP1:%.*]] = fdiv <4 x double> [[A:%.*]], [[B:%.*]]
-; AVX-NEXT:    [[TMP2:%.*]] = extractelement <4 x double> [[TMP1]], i32 0
-; AVX-NEXT:    [[R0:%.*]] = insertelement <4 x double> poison, double [[TMP2]], i32 0
-; AVX-NEXT:    [[TMP3:%.*]] = extractelement <4 x double> [[TMP1]], i32 1
-; AVX-NEXT:    [[R1:%.*]] = insertelement <4 x double> [[R0]], double [[TMP3]], i32 1
-; AVX-NEXT:    [[TMP4:%.*]] = extractelement <4 x double> [[TMP1]], i32 2
-; AVX-NEXT:    [[R2:%.*]] = insertelement <4 x double> [[R1]], double [[TMP4]], i32 2
-; AVX-NEXT:    [[TMP5:%.*]] = extractelement <4 x double> [[TMP1]], i32 3
-; AVX-NEXT:    [[R3:%.*]] = insertelement <4 x double> [[R2]], double [[TMP5]], i32 3
-; AVX-NEXT:    ret <4 x double> [[R3]]
+; AVX-NEXT:    ret <4 x double> [[TMP1]]
 ;
 ; AVX512-LABEL: @buildvector_div_4f64(
 ; AVX512-NEXT:    [[TMP1:%.*]] = fdiv <4 x double> [[A:%.*]], [[B:%.*]]
-; AVX512-NEXT:    [[TMP2:%.*]] = extractelement <4 x double> [[TMP1]], i32 0
-; AVX512-NEXT:    [[R0:%.*]] = insertelement <4 x double> poison, double [[TMP2]], i32 0
-; AVX512-NEXT:    [[TMP3:%.*]] = extractelement <4 x double> [[TMP1]], i32 1
-; AVX512-NEXT:    [[R1:%.*]] = insertelement <4 x double> [[R0]], double [[TMP3]], i32 1
-; AVX512-NEXT:    [[TMP4:%.*]] = extractelement <4 x double> [[TMP1]], i32 2
-; AVX512-NEXT:    [[R2:%.*]] = insertelement <4 x double> [[R1]], double [[TMP4]], i32 2
-; AVX512-NEXT:    [[TMP5:%.*]] = extractelement <4 x double> [[TMP1]], i32 3
-; AVX512-NEXT:    [[R3:%.*]] = insertelement <4 x double> [[R2]], double [[TMP5]], i32 3
-; AVX512-NEXT:    ret <4 x double> [[R3]]
+; AVX512-NEXT:    ret <4 x double> [[TMP1]]
 ;
   %a0 = extractelement <4 x double> %a, i32 0
   %a1 = extractelement <4 x double> %a, i32 1
@@ -424,23 +320,7 @@ define <4 x double> @buildvector_div_4f64(<4 x double> %a, <4 x double> %b) {
 define <8 x float> @buildvector_add_8f32(<8 x float> %a, <8 x float> %b) {
 ; CHECK-LABEL: @buildvector_add_8f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd <8 x float> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[TMP1]], i32 0
-; CHECK-NEXT:    [[R0:%.*]] = insertelement <8 x float> poison, float [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x float> [[TMP1]], i32 1
-; CHECK-NEXT:    [[R1:%.*]] = insertelement <8 x float> [[R0]], float [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x float> [[TMP1]], i32 2
-; CHECK-NEXT:    [[R2:%.*]] = insertelement <8 x float> [[R1]], float [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x float> [[TMP1]], i32 3
-; CHECK-NEXT:    [[R3:%.*]] = insertelement <8 x float> [[R2]], float [[TMP5]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x float> [[TMP1]], i32 4
-; CHECK-NEXT:    [[R4:%.*]] = insertelement <8 x float> [[R3]], float [[TMP6]], i32 4
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x float> [[TMP1]], i32 5
-; CHECK-NEXT:    [[R5:%.*]] = insertelement <8 x float> [[R4]], float [[TMP7]], i32 5
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x float> [[TMP1]], i32 6
-; CHECK-NEXT:    [[R6:%.*]] = insertelement <8 x float> [[R5]], float [[TMP8]], i32 6
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x float> [[TMP1]], i32 7
-; CHECK-NEXT:    [[R7:%.*]] = insertelement <8 x float> [[R6]], float [[TMP9]], i32 7
-; CHECK-NEXT:    ret <8 x float> [[R7]]
+; CHECK-NEXT:    ret <8 x float> [[TMP1]]
 ;
   %a0 = extractelement <8 x float> %a, i32 0
   %a1 = extractelement <8 x float> %a, i32 1
@@ -480,23 +360,7 @@ define <8 x float> @buildvector_add_8f32(<8 x float> %a, <8 x float> %b) {
 define <8 x float> @buildvector_sub_8f32(<8 x float> %a, <8 x float> %b) {
 ; CHECK-LABEL: @buildvector_sub_8f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub <8 x float> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[TMP1]], i32 0
-; CHECK-NEXT:    [[R0:%.*]] = insertelement <8 x float> poison, float [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x float> [[TMP1]], i32 1
-; CHECK-NEXT:    [[R1:%.*]] = insertelement <8 x float> [[R0]], float [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x float> [[TMP1]], i32 2
-; CHECK-NEXT:    [[R2:%.*]] = insertelement <8 x float> [[R1]], float [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x float> [[TMP1]], i32 3
-; CHECK-NEXT:    [[R3:%.*]] = insertelement <8 x float> [[R2]], float [[TMP5]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x float> [[TMP1]], i32 4
-; CHECK-NEXT:    [[R4:%.*]] = insertelement <8 x float> [[R3]], float [[TMP6]], i32 4
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x float> [[TMP1]], i32 5
-; CHECK-NEXT:    [[R5:%.*]] = insertelement <8 x float> [[R4]], float [[TMP7]], i32 5
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x float> [[TMP1]], i32 6
-; CHECK-NEXT:    [[R6:%.*]] = insertelement <8 x float> [[R5]], float [[TMP8]], i32 6
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x float> [[TMP1]], i32 7
-; CHECK-NEXT:    [[R7:%.*]] = insertelement <8 x float> [[R6]], float [[TMP9]], i32 7
-; CHECK-NEXT:    ret <8 x float> [[R7]]
+; CHECK-NEXT:    ret <8 x float> [[TMP1]]
 ;
   %a0 = extractelement <8 x float> %a, i32 0
   %a1 = extractelement <8 x float> %a, i32 1
@@ -536,23 +400,7 @@ define <8 x float> @buildvector_sub_8f32(<8 x float> %a, <8 x float> %b) {
 define <8 x float> @buildvector_mul_8f32(<8 x float> %a, <8 x float> %b) {
 ; CHECK-LABEL: @buildvector_mul_8f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <8 x float> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[TMP1]], i32 0
-; CHECK-NEXT:    [[R0:%.*]] = insertelement <8 x float> poison, float [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x float> [[TMP1]], i32 1
-; CHECK-NEXT:    [[R1:%.*]] = insertelement <8 x float> [[R0]], float [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x float> [[TMP1]], i32 2
-; CHECK-NEXT:    [[R2:%.*]] = insertelement <8 x float> [[R1]], float [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x float> [[TMP1]], i32 3
-; CHECK-NEXT:    [[R3:%.*]] = insertelement <8 x float> [[R2]], float [[TMP5]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x float> [[TMP1]], i32 4
-; CHECK-NEXT:    [[R4:%.*]] = insertelement <8 x float> [[R3]], float [[TMP6]], i32 4
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x float> [[TMP1]], i32 5
-; CHECK-NEXT:    [[R5:%.*]] = insertelement <8 x float> [[R4]], float [[TMP7]], i32 5
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x float> [[TMP1]], i32 6
-; CHECK-NEXT:    [[R6:%.*]] = insertelement <8 x float> [[R5]], float [[TMP8]], i32 6
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x float> [[TMP1]], i32 7
-; CHECK-NEXT:    [[R7:%.*]] = insertelement <8 x float> [[R6]], float [[TMP9]], i32 7
-; CHECK-NEXT:    ret <8 x float> [[R7]]
+; CHECK-NEXT:    ret <8 x float> [[TMP1]]
 ;
   %a0 = extractelement <8 x float> %a, i32 0
   %a1 = extractelement <8 x float> %a, i32 1
@@ -592,23 +440,7 @@ define <8 x float> @buildvector_mul_8f32(<8 x float> %a, <8 x float> %b) {
 define <8 x float> @buildvector_div_8f32(<8 x float> %a, <8 x float> %b) {
 ; CHECK-LABEL: @buildvector_div_8f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv <8 x float> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[TMP1]], i32 0
-; CHECK-NEXT:    [[R0:%.*]] = insertelement <8 x float> poison, float [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x float> [[TMP1]], i32 1
-; CHECK-NEXT:    [[R1:%.*]] = insertelement <8 x float> [[R0]], float [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x float> [[TMP1]], i32 2
-; CHECK-NEXT:    [[R2:%.*]] = insertelement <8 x float> [[R1]], float [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x float> [[TMP1]], i32 3
-; CHECK-NEXT:    [[R3:%.*]] = insertelement <8 x float> [[R2]], float [[TMP5]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x float> [[TMP1]], i32 4
-; CHECK-NEXT:    [[R4:%.*]] = insertelement <8 x float> [[R3]], float [[TMP6]], i32 4
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x float> [[TMP1]], i32 5
-; CHECK-NEXT:    [[R5:%.*]] = insertelement <8 x float> [[R4]], float [[TMP7]], i32 5
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x float> [[TMP1]], i32 6
-; CHECK-NEXT:    [[R6:%.*]] = insertelement <8 x float> [[R5]], float [[TMP8]], i32 6
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x float> [[TMP1]], i32 7
-; CHECK-NEXT:    [[R7:%.*]] = insertelement <8 x float> [[R6]], float [[TMP9]], i32 7
-; CHECK-NEXT:    ret <8 x float> [[R7]]
+; CHECK-NEXT:    ret <8 x float> [[TMP1]]
 ;
   %a0 = extractelement <8 x float> %a, i32 0
   %a1 = extractelement <8 x float> %a, i32 1
@@ -652,23 +484,7 @@ define <8 x float> @buildvector_div_8f32(<8 x float> %a, <8 x float> %b) {
 define <8 x double> @buildvector_add_8f64(<8 x double> %a, <8 x double> %b) {
 ; CHECK-LABEL: @buildvector_add_8f64(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd <8 x double> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x double> [[TMP1]], i32 0
-; CHECK-NEXT:    [[R0:%.*]] = insertelement <8 x double> poison, double [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x double> [[TMP1]], i32 1
-; CHECK-NEXT:    [[R1:%.*]] = insertelement <8 x double> [[R0]], double [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x double> [[TMP1]], i32 2
-; CHECK-NEXT:    [[R2:%.*]] = insertelement <8 x double> [[R1]], double [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x double> [[TMP1]], i32 3
-; CHECK-NEXT:    [[R3:%.*]] = insertelement <8 x double> [[R2]], double [[TMP5]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x double> [[TMP1]], i32 4
-; CHECK-NEXT:    [[R4:%.*]] = insertelement <8 x double> [[R3]], double [[TMP6]], i32 4
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x double> [[TMP1]], i32 5
-; CHECK-NEXT:    [[R5:%.*]] = insertelement <8 x double> [[R4]], double [[TMP7]], i32 5
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x double> [[TMP1]], i32 6
-; CHECK-NEXT:    [[R6:%.*]] = insertelement <8 x double> [[R5]], double [[TMP8]], i32 6
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x double> [[TMP1]], i32 7
-; CHECK-NEXT:    [[R7:%.*]] = insertelement <8 x double> [[R6]], double [[TMP9]], i32 7
-; CHECK-NEXT:    ret <8 x double> [[R7]]
+; CHECK-NEXT:    ret <8 x double> [[TMP1]]
 ;
   %a0 = extractelement <8 x double> %a, i32 0
   %a1 = extractelement <8 x double> %a, i32 1
@@ -708,23 +524,7 @@ define <8 x double> @buildvector_add_8f64(<8 x double> %a, <8 x double> %b) {
 define <8 x double> @buildvector_sub_8f64(<8 x double> %a, <8 x double> %b) {
 ; CHECK-LABEL: @buildvector_sub_8f64(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub <8 x double> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x double> [[TMP1]], i32 0
-; CHECK-NEXT:    [[R0:%.*]] = insertelement <8 x double> poison, double [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x double> [[TMP1]], i32 1
-; CHECK-NEXT:    [[R1:%.*]] = insertelement <8 x double> [[R0]], double [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x double> [[TMP1]], i32 2
-; CHECK-NEXT:    [[R2:%.*]] = insertelement <8 x double> [[R1]], double [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x double> [[TMP1]], i32 3
-; CHECK-NEXT:    [[R3:%.*]] = insertelement <8 x double> [[R2]], double [[TMP5]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x double> [[TMP1]], i32 4
-; CHECK-NEXT:    [[R4:%.*]] = insertelement <8 x double> [[R3]], double [[TMP6]], i32 4
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x double> [[TMP1]], i32 5
-; CHECK-NEXT:    [[R5:%.*]] = insertelement <8 x double> [[R4]], double [[TMP7]], i32 5
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x double> [[TMP1]], i32 6
-; CHECK-NEXT:    [[R6:%.*]] = insertelement <8 x double> [[R5]], double [[TMP8]], i32 6
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x double> [[TMP1]], i32 7
-; CHECK-NEXT:    [[R7:%.*]] = insertelement <8 x double> [[R6]], double [[TMP9]], i32 7
-; CHECK-NEXT:    ret <8 x double> [[R7]]
+; CHECK-NEXT:    ret <8 x double> [[TMP1]]
 ;
   %a0 = extractelement <8 x double> %a, i32 0
   %a1 = extractelement <8 x double> %a, i32 1
@@ -764,23 +564,7 @@ define <8 x double> @buildvector_sub_8f64(<8 x double> %a, <8 x double> %b) {
 define <8 x double> @buildvector_mul_8f64(<8 x double> %a, <8 x double> %b) {
 ; CHECK-LABEL: @buildvector_mul_8f64(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <8 x double> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x double> [[TMP1]], i32 0
-; CHECK-NEXT:    [[R0:%.*]] = insertelement <8 x double> poison, double [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x double> [[TMP1]], i32 1
-; CHECK-NEXT:    [[R1:%.*]] = insertelement <8 x double> [[R0]], double [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x double> [[TMP1]], i32 2
-; CHECK-NEXT:    [[R2:%.*]] = insertelement <8 x double> [[R1]], double [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x double> [[TMP1]], i32 3
-; CHECK-NEXT:    [[R3:%.*]] = insertelement <8 x double> [[R2]], double [[TMP5]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x double> [[TMP1]], i32 4
-; CHECK-NEXT:    [[R4:%.*]] = insertelement <8 x double> [[R3]], double [[TMP6]], i32 4
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x double> [[TMP1]], i32 5
-; CHECK-NEXT:    [[R5:%.*]] = insertelement <8 x double> [[R4]], double [[TMP7]], i32 5
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x double> [[TMP1]], i32 6
-; CHECK-NEXT:    [[R6:%.*]] = insertelement <8 x double> [[R5]], double [[TMP8]], i32 6
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x double> [[TMP1]], i32 7
-; CHECK-NEXT:    [[R7:%.*]] = insertelement <8 x double> [[R6]], double [[TMP9]], i32 7
-; CHECK-NEXT:    ret <8 x double> [[R7]]
+; CHECK-NEXT:    ret <8 x double> [[TMP1]]
 ;
   %a0 = extractelement <8 x double> %a, i32 0
   %a1 = extractelement <8 x double> %a, i32 1
@@ -820,23 +604,7 @@ define <8 x double> @buildvector_mul_8f64(<8 x double> %a, <8 x double> %b) {
 define <8 x double> @buildvector_div_8f64(<8 x double> %a, <8 x double> %b) {
 ; SSE-LABEL: @buildvector_div_8f64(
 ; SSE-NEXT:    [[TMP1:%.*]] = fdiv <8 x double> [[A:%.*]], [[B:%.*]]
-; SSE-NEXT:    [[TMP2:%.*]] = extractelement <8 x double> [[TMP1]], i32 0
-; SSE-NEXT:    [[R0:%.*]] = insertelement <8 x double> poison, double [[TMP2]], i32 0
-; SSE-NEXT:    [[TMP3:%.*]] = extractelement <8 x double> [[TMP1]], i32 1
-; SSE-NEXT:    [[R1:%.*]] = insertelement <8 x double> [[R0]], double [[TMP3]], i32 1
-; SSE-NEXT:    [[TMP4:%.*]] = extractelement <8 x double> [[TMP1]], i32 2
-; SSE-NEXT:    [[R2:%.*]] = insertelement <8 x double> [[R1]], double [[TMP4]], i32 2
-; SSE-NEXT:    [[TMP5:%.*]] = extractelement <8 x double> [[TMP1]], i32 3
-; SSE-NEXT:    [[R3:%.*]] = insertelement <8 x double> [[R2]], double [[TMP5]], i32 3
-; SSE-NEXT:    [[TMP6:%.*]] = extractelement <8 x double> [[TMP1]], i32 4
-; SSE-NEXT:    [[R4:%.*]] = insertelement <8 x double> [[R3]], double [[TMP6]], i32 4
-; SSE-NEXT:    [[TMP7:%.*]] = extractelement <8 x double> [[TMP1]], i32 5
-; SSE-NEXT:    [[R5:%.*]] = insertelement <8 x double> [[R4]], double [[TMP7]], i32 5
-; SSE-NEXT:    [[TMP8:%.*]] = extractelement <8 x double> [[TMP1]], i32 6
-; SSE-NEXT:    [[R6:%.*]] = insertelement <8 x double> [[R5]], double [[TMP8]], i32 6
-; SSE-NEXT:    [[TMP9:%.*]] = extractelement <8 x double> [[TMP1]], i32 7
-; SSE-NEXT:    [[R7:%.*]] = insertelement <8 x double> [[R6]], double [[TMP9]], i32 7
-; SSE-NEXT:    ret <8 x double> [[R7]]
+; SSE-NEXT:    ret <8 x double> [[TMP1]]
 ;
 ; SLM-LABEL: @buildvector_div_8f64(
 ; SLM-NEXT:    [[A0:%.*]] = extractelement <8 x double> [[A:%.*]], i32 0
@@ -855,63 +623,43 @@ define <8 x double> @buildvector_div_8f64(<8 x double> %a, <8 x double> %b) {
 ; SLM-NEXT:    [[B5:%.*]] = extractelement <8 x double> [[B]], i32 5
 ; SLM-NEXT:    [[B6:%.*]] = extractelement <8 x double> [[B]], i32 6
 ; SLM-NEXT:    [[B7:%.*]] = extractelement <8 x double> [[B]], i32 7
-; SLM-NEXT:    [[C0:%.*]] = fdiv double [[A0]], [[B0]]
-; SLM-NEXT:    [[C1:%.*]] = fdiv double [[A1]], [[B1]]
-; SLM-NEXT:    [[C2:%.*]] = fdiv double [[A2]], [[B2]]
-; SLM-NEXT:    [[C3:%.*]] = fdiv double [[A3]], [[B3]]
-; SLM-NEXT:    [[C4:%.*]] = fdiv double [[A4]], [[B4]]
-; SLM-NEXT:    [[C5:%.*]] = fdiv double [[A5]], [[B5]]
-; SLM-NEXT:    [[C6:%.*]] = fdiv double [[A6]], [[B6]]
-; SLM-NEXT:    [[C7:%.*]] = fdiv double [[A7]], [[B7]]
-; SLM-NEXT:    [[R0:%.*]] = insertelement <8 x double> poison, double [[C0]], i32 0
-; SLM-NEXT:    [[R1:%.*]] = insertelement <8 x double> [[R0]], double [[C1]], i32 1
-; SLM-NEXT:    [[R2:%.*]] = insertelement <8 x double> [[R1]], double [[C2]], i32 2
-; SLM-NEXT:    [[R3:%.*]] = insertelement <8 x double> [[R2]], double [[C3]], i32 3
-; SLM-NEXT:    [[R4:%.*]] = insertelement <8 x double> [[R3]], double [[C4]], i32 4
-; SLM-NEXT:    [[R5:%.*]] = insertelement <8 x double> [[R4]], double [[C5]], i32 5
-; SLM-NEXT:    [[R6:%.*]] = insertelement <8 x double> [[R5]], double [[C6]], i32 6
-; SLM-NEXT:    [[R7:%.*]] = insertelement <8 x double> [[R6]], double [[C7]], i32 7
-; SLM-NEXT:    ret <8 x double> [[R7]]
+; SLM-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[A0]], i32 0
+; SLM-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[A1]], i32 1
+; SLM-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[B0]], i32 0
+; SLM-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[B1]], i32 1
+; SLM-NEXT:    [[TMP5:%.*]] = fdiv <2 x double> [[TMP2]], [[TMP4]]
+; SLM-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[A2]], i32 0
+; SLM-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> [[TMP6]], double [[A3]], i32 1
+; SLM-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> poison, double [[B2]], i32 0
+; SLM-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> [[TMP8]], double [[B3]], i32 1
+; SLM-NEXT:    [[TMP10:%.*]] = fdiv <2 x double> [[TMP7]], [[TMP9]]
+; SLM-NEXT:    [[TMP11:%.*]] = insertelement <2 x double> poison, double [[A4]], i32 0
+; SLM-NEXT:    [[TMP12:%.*]] = insertelement <2 x double> [[TMP11]], double [[A5]], i32 1
+; SLM-NEXT:    [[TMP13:%.*]] = insertelement <2 x double> poison, double [[B4]], i32 0
+; SLM-NEXT:    [[TMP14:%.*]] = insertelement <2 x double> [[TMP13]], double [[B5]], i32 1
+; SLM-NEXT:    [[TMP15:%.*]] = fdiv <2 x double> [[TMP12]], [[TMP14]]
+; SLM-NEXT:    [[TMP16:%.*]] = insertelement <2 x double> poison, double [[A6]], i32 0
+; SLM-NEXT:    [[TMP17:%.*]] = insertelement <2 x double> [[TMP16]], double [[A7]], i32 1
+; SLM-NEXT:    [[TMP18:%.*]] = insertelement <2 x double> poison, double [[B6]], i32 0
+; SLM-NEXT:    [[TMP19:%.*]] = insertelement <2 x double> [[TMP18]], double [[B7]], i32 1
+; SLM-NEXT:    [[TMP20:%.*]] = fdiv <2 x double> [[TMP17]], [[TMP19]]
+; SLM-NEXT:    [[TMP21:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; SLM-NEXT:    [[R11:%.*]] = shufflevector <8 x double> poison, <8 x double> [[TMP21]], <8 x i32> <i32 8, i32 9, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; SLM-NEXT:    [[TMP22:%.*]] = shufflevector <2 x double> [[TMP10]], <2 x double> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; SLM-NEXT:    [[R32:%.*]] = shufflevector <8 x double> [[R11]], <8 x double> [[TMP22]], <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 4, i32 5, i32 6, i32 7>
+; SLM-NEXT:    [[TMP23:%.*]] = shufflevector <2 x double> [[TMP15]], <2 x double> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; SLM-NEXT:    [[R53:%.*]] = shufflevector <8 x double> [[R32]], <8 x double> [[TMP23]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 6, i32 7>
+; SLM-NEXT:    [[TMP24:%.*]] = shufflevector <2 x double> [[TMP20]], <2 x double> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; SLM-NEXT:    [[R74:%.*]] = shufflevector <8 x double> [[R53]], <8 x double> [[TMP24]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
+; SLM-NEXT:    ret <8 x double> [[R74]]
 ;
 ; AVX-LABEL: @buildvector_div_8f64(
 ; AVX-NEXT:    [[TMP1:%.*]] = fdiv <8 x double> [[A:%.*]], [[B:%.*]]
-; AVX-NEXT:    [[TMP2:%.*]] = extractelement <8 x double> [[TMP1]], i32 0
-; AVX-NEXT:    [[R0:%.*]] = insertelement <8 x double> poison, double [[TMP2]], i32 0
-; AVX-NEXT:    [[TMP3:%.*]] = extractelement <8 x double> [[TMP1]], i32 1
-; AVX-NEXT:    [[R1:%.*]] = insertelement <8 x double> [[R0]], double [[TMP3]], i32 1
-; AVX-NEXT:    [[TMP4:%.*]] = extractelement <8 x double> [[TMP1]], i32 2
-; AVX-NEXT:    [[R2:%.*]] = insertelement <8 x double> [[R1]], double [[TMP4]], i32 2
-; AVX-NEXT:    [[TMP5:%.*]] = extractelement <8 x double> [[TMP1]], i32 3
-; AVX-NEXT:    [[R3:%.*]] = insertelement <8 x double> [[R2]], double [[TMP5]], i32 3
-; AVX-NEXT:    [[TMP6:%.*]] = extractelement <8 x double> [[TMP1]], i32 4
-; AVX-NEXT:    [[R4:%.*]] = insertelement <8 x double> [[R3]], double [[TMP6]], i32 4
-; AVX-NEXT:    [[TMP7:%.*]] = extractelement <8 x double> [[TMP1]], i32 5
-; AVX-NEXT:    [[R5:%.*]] = insertelement <8 x double> [[R4]], double [[TMP7]], i32 5
-; AVX-NEXT:    [[TMP8:%.*]] = extractelement <8 x double> [[TMP1]], i32 6
-; AVX-NEXT:    [[R6:%.*]] = insertelement <8 x double> [[R5]], double [[TMP8]], i32 6
-; AVX-NEXT:    [[TMP9:%.*]] = extractelement <8 x double> [[TMP1]], i32 7
-; AVX-NEXT:    [[R7:%.*]] = insertelement <8 x double> [[R6]], double [[TMP9]], i32 7
-; AVX-NEXT:    ret <8 x double> [[R7]]
+; AVX-NEXT:    ret <8 x double> [[TMP1]]
 ;
 ; AVX512-LABEL: @buildvector_div_8f64(
 ; AVX512-NEXT:    [[TMP1:%.*]] = fdiv <8 x double> [[A:%.*]], [[B:%.*]]
-; AVX512-NEXT:    [[TMP2:%.*]] = extractelement <8 x double> [[TMP1]], i32 0
-; AVX512-NEXT:    [[R0:%.*]] = insertelement <8 x double> poison, double [[TMP2]], i32 0
-; AVX512-NEXT:    [[TMP3:%.*]] = extractelement <8 x double> [[TMP1]], i32 1
-; AVX512-NEXT:    [[R1:%.*]] = insertelement <8 x double> [[R0]], double [[TMP3]], i32 1
-; AVX512-NEXT:    [[TMP4:%.*]] = extractelement <8 x double> [[TMP1]], i32 2
-; AVX512-NEXT:    [[R2:%.*]] = insertelement <8 x double> [[R1]], double [[TMP4]], i32 2
-; AVX512-NEXT:    [[TMP5:%.*]] = extractelement <8 x double> [[TMP1]], i32 3
-; AVX512-NEXT:    [[R3:%.*]] = insertelement <8 x double> [[R2]], double [[TMP5]], i32 3
-; AVX512-NEXT:    [[TMP6:%.*]] = extractelement <8 x double> [[TMP1]], i32 4
-; AVX512-NEXT:    [[R4:%.*]] = insertelement <8 x double> [[R3]], double [[TMP6]], i32 4
-; AVX512-NEXT:    [[TMP7:%.*]] = extractelement <8 x double> [[TMP1]], i32 5
-; AVX512-NEXT:    [[R5:%.*]] = insertelement <8 x double> [[R4]], double [[TMP7]], i32 5
-; AVX512-NEXT:    [[TMP8:%.*]] = extractelement <8 x double> [[TMP1]], i32 6
-; AVX512-NEXT:    [[R6:%.*]] = insertelement <8 x double> [[R5]], double [[TMP8]], i32 6
-; AVX512-NEXT:    [[TMP9:%.*]] = extractelement <8 x double> [[TMP1]], i32 7
-; AVX512-NEXT:    [[R7:%.*]] = insertelement <8 x double> [[R6]], double [[TMP9]], i32 7
-; AVX512-NEXT:    ret <8 x double> [[R7]]
+; AVX512-NEXT:    ret <8 x double> [[TMP1]]
 ;
   %a0 = extractelement <8 x double> %a, i32 0
   %a1 = extractelement <8 x double> %a, i32 1
@@ -951,39 +699,7 @@ define <8 x double> @buildvector_div_8f64(<8 x double> %a, <8 x double> %b) {
 define <16 x float> @buildvector_add_16f32(<16 x float> %a, <16 x float> %b) {
 ; CHECK-LABEL: @buildvector_add_16f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd <16 x float> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <16 x float> [[TMP1]], i32 0
-; CHECK-NEXT:    [[R0:%.*]] = insertelement <16 x float> poison, float [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <16 x float> [[TMP1]], i32 1
-; CHECK-NEXT:    [[R1:%.*]] = insertelement <16 x float> [[R0]], float [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <16 x float> [[TMP1]], i32 2
-; CHECK-NEXT:    [[R2:%.*]] = insertelement <16 x float> [[R1]], float [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <16 x float> [[TMP1]], i32 3
-; CHECK-NEXT:    [[R3:%.*]] = insertelement <16 x float> [[R2]], float [[TMP5]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <16 x float> [[TMP1]], i32 4
-; CHECK-NEXT:    [[R4:%.*]] = insertelement <16 x float> [[R3]], float [[TMP6]], i32 4
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <16 x float> [[TMP1]], i32 5
-; CHECK-NEXT:    [[R5:%.*]] = insertelement <16 x float> [[R4]], float [[TMP7]], i32 5
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <16 x float> [[TMP1]], i32 6
-; CHECK-NEXT:    [[R6:%.*]] = insertelement <16 x float> [[R5]], float [[TMP8]], i32 6
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <16 x float> [[TMP1]], i32 7
-; CHECK-NEXT:    [[R7:%.*]] = insertelement <16 x float> [[R6]], float [[TMP9]], i32 7
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <16 x float> [[TMP1]], i32 8
-; CHECK-NEXT:    [[R8:%.*]] = insertelement <16 x float> [[R7]], float [[TMP10]], i32 8
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <16 x float> [[TMP1]], i32 9
-; CHECK-NEXT:    [[R9:%.*]] = insertelement <16 x float> [[R8]], float [[TMP11]], i32 9
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <16 x float> [[TMP1]], i32 10
-; CHECK-NEXT:    [[R10:%.*]] = insertelement <16 x float> [[R9]], float [[TMP12]], i32 10
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <16 x float> [[TMP1]], i32 11
-; CHECK-NEXT:    [[R11:%.*]] = insertelement <16 x float> [[R10]], float [[TMP13]], i32 11
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <16 x float> [[TMP1]], i32 12
-; CHECK-NEXT:    [[R12:%.*]] = insertelement <16 x float> [[R11]], float [[TMP14]], i32 12
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <16 x float> [[TMP1]], i32 13
-; CHECK-NEXT:    [[R13:%.*]] = insertelement <16 x float> [[R12]], float [[TMP15]], i32 13
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <16 x float> [[TMP1]], i32 14
-; CHECK-NEXT:    [[R14:%.*]] = insertelement <16 x float> [[R13]], float [[TMP16]], i32 14
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <16 x float> [[TMP1]], i32 15
-; CHECK-NEXT:    [[R15:%.*]] = insertelement <16 x float> [[R14]], float [[TMP17]], i32 15
-; CHECK-NEXT:    ret <16 x float> [[R15]]
+; CHECK-NEXT:    ret <16 x float> [[TMP1]]
 ;
   %a0  = extractelement <16 x float> %a, i32 0
   %a1  = extractelement <16 x float> %a, i32 1
@@ -1055,39 +771,7 @@ define <16 x float> @buildvector_add_16f32(<16 x float> %a, <16 x float> %b) {
 define <16 x float> @buildvector_sub_16f32(<16 x float> %a, <16 x float> %b) {
 ; CHECK-LABEL: @buildvector_sub_16f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub <16 x float> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <16 x float> [[TMP1]], i32 0
-; CHECK-NEXT:    [[R0:%.*]] = insertelement <16 x float> poison, float [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <16 x float> [[TMP1]], i32 1
-; CHECK-NEXT:    [[R1:%.*]] = insertelement <16 x float> [[R0]], float [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <16 x float> [[TMP1]], i32 2
-; CHECK-NEXT:    [[R2:%.*]] = insertelement <16 x float> [[R1]], float [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <16 x float> [[TMP1]], i32 3
-; CHECK-NEXT:    [[R3:%.*]] = insertelement <16 x float> [[R2]], float [[TMP5]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <16 x float> [[TMP1]], i32 4
-; CHECK-NEXT:    [[R4:%.*]] = insertelement <16 x float> [[R3]], float [[TMP6]], i32 4
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <16 x float> [[TMP1]], i32 5
-; CHECK-NEXT:    [[R5:%.*]] = insertelement <16 x float> [[R4]], float [[TMP7]], i32 5
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <16 x float> [[TMP1]], i32 6
-; CHECK-NEXT:    [[R6:%.*]] = insertelement <16 x float> [[R5]], float [[TMP8]], i32 6
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <16 x float> [[TMP1]], i32 7
-; CHECK-NEXT:    [[R7:%.*]] = insertelement <16 x float> [[R6]], float [[TMP9]], i32 7
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <16 x float> [[TMP1]], i32 8
-; CHECK-NEXT:    [[R8:%.*]] = insertelement <16 x float> [[R7]], float [[TMP10]], i32 8
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <16 x float> [[TMP1]], i32 9
-; CHECK-NEXT:    [[R9:%.*]] = insertelement <16 x float> [[R8]], float [[TMP11]], i32 9
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <16 x float> [[TMP1]], i32 10
-; CHECK-NEXT:    [[R10:%.*]] = insertelement <16 x float> [[R9]], float [[TMP12]], i32 10
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <16 x float> [[TMP1]], i32 11
-; CHECK-NEXT:    [[R11:%.*]] = insertelement <16 x float> [[R10]], float [[TMP13]], i32 11
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <16 x float> [[TMP1]], i32 12
-; CHECK-NEXT:    [[R12:%.*]] = insertelement <16 x float> [[R11]], float [[TMP14]], i32 12
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <16 x float> [[TMP1]], i32 13
-; CHECK-NEXT:    [[R13:%.*]] = insertelement <16 x float> [[R12]], float [[TMP15]], i32 13
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <16 x float> [[TMP1]], i32 14
-; CHECK-NEXT:    [[R14:%.*]] = insertelement <16 x float> [[R13]], float [[TMP16]], i32 14
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <16 x float> [[TMP1]], i32 15
-; CHECK-NEXT:    [[R15:%.*]] = insertelement <16 x float> [[R14]], float [[TMP17]], i32 15
-; CHECK-NEXT:    ret <16 x float> [[R15]]
+; CHECK-NEXT:    ret <16 x float> [[TMP1]]
 ;
   %a0  = extractelement <16 x float> %a, i32 0
   %a1  = extractelement <16 x float> %a, i32 1
@@ -1159,39 +843,7 @@ define <16 x float> @buildvector_sub_16f32(<16 x float> %a, <16 x float> %b) {
 define <16 x float> @buildvector_mul_16f32(<16 x float> %a, <16 x float> %b) {
 ; CHECK-LABEL: @buildvector_mul_16f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <16 x float> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <16 x float> [[TMP1]], i32 0
-; CHECK-NEXT:    [[R0:%.*]] = insertelement <16 x float> poison, float [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <16 x float> [[TMP1]], i32 1
-; CHECK-NEXT:    [[R1:%.*]] = insertelement <16 x float> [[R0]], float [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <16 x float> [[TMP1]], i32 2
-; CHECK-NEXT:    [[R2:%.*]] = insertelement <16 x float> [[R1]], float [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <16 x float> [[TMP1]], i32 3
-; CHECK-NEXT:    [[R3:%.*]] = insertelement <16 x float> [[R2]], float [[TMP5]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <16 x float> [[TMP1]], i32 4
-; CHECK-NEXT:    [[R4:%.*]] = insertelement <16 x float> [[R3]], float [[TMP6]], i32 4
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <16 x float> [[TMP1]], i32 5
-; CHECK-NEXT:    [[R5:%.*]] = insertelement <16 x float> [[R4]], float [[TMP7]], i32 5
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <16 x float> [[TMP1]], i32 6
-; CHECK-NEXT:    [[R6:%.*]] = insertelement <16 x float> [[R5]], float [[TMP8]], i32 6
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <16 x float> [[TMP1]], i32 7
-; CHECK-NEXT:    [[R7:%.*]] = insertelement <16 x float> [[R6]], float [[TMP9]], i32 7
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <16 x float> [[TMP1]], i32 8
-; CHECK-NEXT:    [[R8:%.*]] = insertelement <16 x float> [[R7]], float [[TMP10]], i32 8
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <16 x float> [[TMP1]], i32 9
-; CHECK-NEXT:    [[R9:%.*]] = insertelement <16 x float> [[R8]], float [[TMP11]], i32 9
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <16 x float> [[TMP1]], i32 10
-; CHECK-NEXT:    [[R10:%.*]] = insertelement <16 x float> [[R9]], float [[TMP12]], i32 10
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <16 x float> [[TMP1]], i32 11
-; CHECK-NEXT:    [[R11:%.*]] = insertelement <16 x float> [[R10]], float [[TMP13]], i32 11
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <16 x float> [[TMP1]], i32 12
-; CHECK-NEXT:    [[R12:%.*]] = insertelement <16 x float> [[R11]], float [[TMP14]], i32 12
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <16 x float> [[TMP1]], i32 13
-; CHECK-NEXT:    [[R13:%.*]] = insertelement <16 x float> [[R12]], float [[TMP15]], i32 13
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <16 x float> [[TMP1]], i32 14
-; CHECK-NEXT:    [[R14:%.*]] = insertelement <16 x float> [[R13]], float [[TMP16]], i32 14
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <16 x float> [[TMP1]], i32 15
-; CHECK-NEXT:    [[R15:%.*]] = insertelement <16 x float> [[R14]], float [[TMP17]], i32 15
-; CHECK-NEXT:    ret <16 x float> [[R15]]
+; CHECK-NEXT:    ret <16 x float> [[TMP1]]
 ;
   %a0  = extractelement <16 x float> %a, i32 0
   %a1  = extractelement <16 x float> %a, i32 1
@@ -1263,39 +915,7 @@ define <16 x float> @buildvector_mul_16f32(<16 x float> %a, <16 x float> %b) {
 define <16 x float> @buildvector_div_16f32(<16 x float> %a, <16 x float> %b) {
 ; CHECK-LABEL: @buildvector_div_16f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv <16 x float> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <16 x float> [[TMP1]], i32 0
-; CHECK-NEXT:    [[R0:%.*]] = insertelement <16 x float> poison, float [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <16 x float> [[TMP1]], i32 1
-; CHECK-NEXT:    [[R1:%.*]] = insertelement <16 x float> [[R0]], float [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <16 x float> [[TMP1]], i32 2
-; CHECK-NEXT:    [[R2:%.*]] = insertelement <16 x float> [[R1]], float [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <16 x float> [[TMP1]], i32 3
-; CHECK-NEXT:    [[R3:%.*]] = insertelement <16 x float> [[R2]], float [[TMP5]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <16 x float> [[TMP1]], i32 4
-; CHECK-NEXT:    [[R4:%.*]] = insertelement <16 x float> [[R3]], float [[TMP6]], i32 4
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <16 x float> [[TMP1]], i32 5
-; CHECK-NEXT:    [[R5:%.*]] = insertelement <16 x float> [[R4]], float [[TMP7]], i32 5
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <16 x float> [[TMP1]], i32 6
-; CHECK-NEXT:    [[R6:%.*]] = insertelement <16 x float> [[R5]], float [[TMP8]], i32 6
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <16 x float> [[TMP1]], i32 7
-; CHECK-NEXT:    [[R7:%.*]] = insertelement <16 x float> [[R6]], float [[TMP9]], i32 7
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <16 x float> [[TMP1]], i32 8
-; CHECK-NEXT:    [[R8:%.*]] = insertelement <16 x float> [[R7]], float [[TMP10]], i32 8
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <16 x float> [[TMP1]], i32 9
-; CHECK-NEXT:    [[R9:%.*]] = insertelement <16 x float> [[R8]], float [[TMP11]], i32 9
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <16 x float> [[TMP1]], i32 10
-; CHECK-NEXT:    [[R10:%.*]] = insertelement <16 x float> [[R9]], float [[TMP12]], i32 10
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <16 x float> [[TMP1]], i32 11
-; CHECK-NEXT:    [[R11:%.*]] = insertelement <16 x float> [[R10]], float [[TMP13]], i32 11
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <16 x float> [[TMP1]], i32 12
-; CHECK-NEXT:    [[R12:%.*]] = insertelement <16 x float> [[R11]], float [[TMP14]], i32 12
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <16 x float> [[TMP1]], i32 13
-; CHECK-NEXT:    [[R13:%.*]] = insertelement <16 x float> [[R12]], float [[TMP15]], i32 13
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <16 x float> [[TMP1]], i32 14
-; CHECK-NEXT:    [[R14:%.*]] = insertelement <16 x float> [[R13]], float [[TMP16]], i32 14
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <16 x float> [[TMP1]], i32 15
-; CHECK-NEXT:    [[R15:%.*]] = insertelement <16 x float> [[R14]], float [[TMP17]], i32 15
-; CHECK-NEXT:    ret <16 x float> [[R15]]
+; CHECK-NEXT:    ret <16 x float> [[TMP1]]
 ;
   %a0  = extractelement <16 x float> %a, i32 0
   %a1  = extractelement <16 x float> %a, i32 1

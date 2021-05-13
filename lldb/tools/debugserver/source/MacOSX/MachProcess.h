@@ -343,6 +343,9 @@ public:
 
   bool ProcessUsingFrontBoard();
 
+  // Size of addresses in the inferior process (4 or 8).
+  int GetInferiorAddrSize(pid_t pid);
+
   Genealogy::ThreadActivitySP GetGenealogyInfoForThread(nub_thread_t tid,
                                                         bool &timed_out);
 

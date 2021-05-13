@@ -1812,3 +1812,11 @@ nub_bool_t DNBSetArchitecture(const char *arch) {
   }
   return false;
 }
+
+bool DNBDebugserverIsTranslated() {
+  int ret = 0;
+  size_t size = sizeof(ret);
+  if (sysctlbyname("sysctl.proc_translated", &ret, &size, NULL, 0) == -1)
+    return false;
+  return ret == 1;
+}

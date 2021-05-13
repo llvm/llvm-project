@@ -1125,7 +1125,9 @@ void TypePrinter::printAutoBefore(const AutoType *T, raw_ostream &OS) {
     printBefore(T->getDeducedType(), OS);
   } else {
     if (T->isConstrained()) {
-      OS << T->getTypeConstraintConcept()->getName();
+      // FIXME: Track a TypeConstraint as type sugar, so that we can print the
+      // type as it was written.
+      T->getTypeConstraintConcept()->getDeclName().print(OS, Policy);
       auto Args = T->getTypeConstraintArguments();
       if (!Args.empty())
         printTemplateArgumentList(

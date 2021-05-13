@@ -481,6 +481,8 @@ private:
   template <typename T>
   bool TraverseDeclTemplateParameterLists(T *D);
 
+  bool TraverseTemplateTypeParamDeclConstraints(const TemplateTypeParmDecl *D);
+
   bool TraverseTemplateArgumentLocsHelper(const TemplateArgumentLoc *TAL,
                                           unsigned Count);
   bool TraverseArrayTypeLocHelper(ArrayTypeLoc TL);
@@ -658,8 +660,14 @@ bool RecursiveASTVisitor<Derived>::TraverseDecl(Decl *D) {
 
   // As a syntax visitor, by default we want to ignore declarations for
   // implicit declarations (ones not typed explicitly by the user).
-  if (!getDerived().shouldVisitImplicitCode() && D->isImplicit())
+  if (!getDerived().shouldVisitImplicitCode() && D->isImplicit()) {
+    // For an implicit template type parameter, its type constraints are not
+    // implicit and are not represented anywhere else. We still need to visit
+    // them.
+    if (auto *TTPD = dyn_cast<TemplateTypeParmDecl>(D))
+      return TraverseTemplateTypeParamDeclConstraints(TTPD);
     return true;
+  }
 
   switch (D->getKind()) {
 #define ABSTRACT_DECL(DECL)
@@ -1779,10 +1787,9 @@ DEF_TRAVERSE_DECL(BuiltinTemplateDecl, {
   TRY_TO(TraverseTemplateParameterListHelper(D->getTemplateParameters()));
 })
 
-DEF_TRAVERSE_DECL(TemplateTypeParmDecl, {
-  // D is the "T" in something like "template<typename T> class vector;"
-  if (D->getTypeForDecl())
-    TRY_TO(TraverseType(QualType(D->getTypeForDecl(), 0)));
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::TraverseTemplateTypeParamDeclConstraints(
+    const TemplateTypeParmDecl *D) {
   if (const auto *TC = D->getTypeConstraint()) {
     if (Expr *IDC = TC->getImmediatelyDeclaredConstraint()) {
       TRY_TO(TraverseStmt(IDC));
@@ -1794,6 +1801,14 @@ DEF_TRAVERSE_DECL(TemplateTypeParmDecl, {
       TRY_TO(TraverseConceptReference(*TC));
     }
   }
+  return true;
+}
+
+DEF_TRAVERSE_DECL(TemplateTypeParmDecl, {
+  // D is the "T" in something like "template<typename T> class vector;"
+  if (D->getTypeForDecl())
+    TRY_TO(TraverseType(QualType(D->getTypeForDecl(), 0)));
+  TRY_TO(TraverseTemplateTypeParamDeclConstraints(D));
   if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited())
     TRY_TO(TraverseTypeLoc(D->getDefaultArgumentInfo()->getTypeLoc()));
 })

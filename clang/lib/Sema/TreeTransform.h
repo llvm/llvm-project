@@ -6515,11 +6515,9 @@ QualType TreeTransform<Derived>::TransformAutoType(TypeLocBuilder &TLB,
   ConceptDecl *NewCD = nullptr;
   TemplateArgumentListInfo NewTemplateArgs;
   NestedNameSpecifierLoc NewNestedNameSpec;
-  if (TL.getTypePtr()->isConstrained()) {
-    NewCD = cast_or_null<ConceptDecl>(
-        getDerived().TransformDecl(
-            TL.getConceptNameLoc(),
-            TL.getTypePtr()->getTypeConstraintConcept()));
+  if (T->isConstrained()) {
+    NewCD = cast_or_null<ConceptDecl>(getDerived().TransformDecl(
+        TL.getConceptNameLoc(), T->getTypeConstraintConcept()));
 
     NewTemplateArgs.setLAngleLoc(TL.getLAngleLoc());
     NewTemplateArgs.setRAngleLoc(TL.getRAngleLoc());
@@ -6541,7 +6539,8 @@ QualType TreeTransform<Derived>::TransformAutoType(TypeLocBuilder &TLB,
 
   QualType Result = TL.getType();
   if (getDerived().AlwaysRebuild() || NewDeduced != OldDeduced ||
-      T->isDependentType()) {
+      T->isDependentType() || T->isConstrained()) {
+    // FIXME: Maybe don't rebuild if all template arguments are the same.
     llvm::SmallVector<TemplateArgument, 4> NewArgList;
     NewArgList.reserve(NewArgList.size());
     for (const auto &ArgLoc : NewTemplateArgs.arguments())

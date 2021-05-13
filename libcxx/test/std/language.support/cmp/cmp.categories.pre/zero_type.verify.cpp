@@ -17,40 +17,35 @@
 
 #include <compare>
 
-#define TEST_OP(v, op)                                                         \
+#define TEST_FAIL(v, op)                                                       \
   void(v op 0L);                                                               \
   void(0L op v);                                                               \
   void(v op nullptr);                                                          \
   void(nullptr op v);                                                          \
   void(v op(1 - 1));                                                           \
-  void((1 - 1) op v);
+  void((1 - 1) op v)
+
+#define TEST_PASS(v, op)                                                       \
+  void(v op 0);                                                                \
+  void(0 op v)
 
 template <typename T>
 void test_category(T v) {
-  TEST_OP(v, ==);  // expected-error 18 {{}}
-  TEST_OP(v, !=);  // expected-error 18 {{}}
-  TEST_OP(v, <);   // expected-error 18 {{}}
-  TEST_OP(v, <=);  // expected-error 18 {{}}
-  TEST_OP(v, >);   // expected-error 18 {{}}
-  TEST_OP(v, >=);  // expected-error 18 {{}}
-  TEST_OP(v, <=>); // expected-error 18 {{}}
+  TEST_FAIL(v, ==);  // expected-error 18 {{}}
+  TEST_FAIL(v, !=);  // expected-error 18 {{}}
+  TEST_FAIL(v, <);   // expected-error 18 {{}}
+  TEST_FAIL(v, <=);  // expected-error 18 {{}}
+  TEST_FAIL(v, >);   // expected-error 18 {{}}
+  TEST_FAIL(v, >=);  // expected-error 18 {{}}
+  TEST_FAIL(v, <=>); // expected-error 18 {{}}
 
-  void(v == 0);
-  void(0 == v);
-  void(v != 0);
-  void(0 != v);
-  void(v < 0);
-  void(0 < v);
-  void(v <= 0);
-  void(0 <= v);
-  void(v > 0);
-  void(0 > v);
-  void(v >= 0);
-  void(0 >= v);
-#ifndef _LIBCPP_HAS_NO_SPACESHIP_OPERATOR
-  void(v <=> 0);
-  void(0 <=> v);
-#endif
+  TEST_PASS(v, ==);
+  TEST_PASS(v, !=);
+  TEST_PASS(v, <);
+  TEST_PASS(v, >);
+  TEST_PASS(v, <=);
+  TEST_PASS(v, >=);
+  TEST_PASS(v, <=>);
 }
 
 int main(int, char**) {

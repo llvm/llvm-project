@@ -9981,7 +9981,7 @@ static bool getVectorCompareInfo(SDValue Intrin, int &CompareOpc,
     isDot = true;
     break;
   case Intrinsic::ppc_altivec_vcmpequd_p:
-    if (Subtarget.hasP8Altivec()) {
+    if (Subtarget.hasVSX() || Subtarget.hasP8Altivec()) {
       CompareOpc = 199;
       isDot = true;
     } else
@@ -10041,7 +10041,7 @@ static bool getVectorCompareInfo(SDValue Intrin, int &CompareOpc,
     isDot = true;
     break;
   case Intrinsic::ppc_altivec_vcmpgtsd_p:
-    if (Subtarget.hasP8Altivec()) {
+    if (Subtarget.hasVSX() || Subtarget.hasP8Altivec()) {
       CompareOpc = 967;
       isDot = true;
     } else
@@ -10060,7 +10060,7 @@ static bool getVectorCompareInfo(SDValue Intrin, int &CompareOpc,
     isDot = true;
     break;
   case Intrinsic::ppc_altivec_vcmpgtud_p:
-    if (Subtarget.hasP8Altivec()) {
+    if (Subtarget.hasVSX() || Subtarget.hasP8Altivec()) {
       CompareOpc = 711;
       isDot = true;
     } else

@@ -72,6 +72,17 @@ constexpr bool test_conversion() {
   return true;
 }
 
+constexpr void test_equality() {
+#ifndef TEST_HAS_NO_SPACESHIP_OPERATOR
+  auto& WeakEq = std::weak_ordering::equivalent;
+  auto& PartialEq = std::partial_ordering::equivalent;
+  assert(WeakEq == PartialEq);
+
+  auto& StrongEq = std::strong_ordering::equal;
+  assert(WeakEq == StrongEq);
+#endif
+}
+
 constexpr bool test_constexpr() {
   auto& Eq = std::weak_ordering::equivalent;
   auto& Less = std::weak_ordering::less;
@@ -157,6 +168,8 @@ constexpr bool test_constexpr() {
                   std::weak_ordering::equivalent);
     static_assert(std::weak_ordering::greater == std::weak_ordering::greater);
   }
+
+  test_equality();
 #endif
 
   return true;
@@ -165,6 +178,7 @@ constexpr bool test_constexpr() {
 int main(int, char**) {
   test_static_members();
   test_signatures();
+  test_equality();
   static_assert(test_conversion(), "conversion test failed");
   static_assert(test_constexpr(), "constexpr test failed");
 
