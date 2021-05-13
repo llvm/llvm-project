@@ -150,7 +150,7 @@ class CompilerInstance : public ModuleLoader {
   bool HaveFullGlobalModuleIndex = false;
 
   /// One or more modules failed to build.
-  bool ModuleBuildFailed = false;
+  bool DisableGeneratingGlobalModuleIndex = false;
 
   /// The stream for verbose output if owned, otherwise nullptr.
   std::unique_ptr<raw_ostream> OwnedVerboseOutputStream;

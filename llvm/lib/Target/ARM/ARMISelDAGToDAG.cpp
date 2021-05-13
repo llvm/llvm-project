@@ -86,14 +86,18 @@ public:
                                bool CheckProfitability = true);
   bool SelectImmShifterOperand(SDValue N, SDValue &A,
                                SDValue &B, bool CheckProfitability = true);
-  bool SelectShiftRegShifterOperand(SDValue N, SDValue &A,
-                                    SDValue &B, SDValue &C) {
+  bool SelectShiftRegShifterOperand(SDValue N, SDValue &A, SDValue &B,
+                                    SDValue &C) {
     // Don't apply the profitability check
     return SelectRegShifterOperand(N, A, B, C, false);
   }
-  bool SelectShiftImmShifterOperand(SDValue N, SDValue &A,
-                                    SDValue &B) {
+  bool SelectShiftImmShifterOperand(SDValue N, SDValue &A, SDValue &B) {
     // Don't apply the profitability check
+    return SelectImmShifterOperand(N, A, B, false);
+  }
+  bool SelectShiftImmShifterOperandOneUse(SDValue N, SDValue &A, SDValue &B) {
+    if (!N.hasOneUse())
+      return false;
     return SelectImmShifterOperand(N, A, B, false);
   }
 

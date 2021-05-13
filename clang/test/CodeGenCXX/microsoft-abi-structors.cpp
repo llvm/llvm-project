@@ -173,13 +173,12 @@ void foo() {
   C c;
 }
 // DTORS2-LABEL: define linkonce_odr dso_local x86_thiscallcc i8* @"??_EC@dtor_in_second_nvbase@@W3AEPAXI@Z"
-// DTORS2:       (%"struct.dtor_in_second_nvbase::C"* {{[^,]*}} %this, i32 %should_call_delete)
+// DTORS2:       (%"struct.dtor_in_second_nvbase::C"* %this, i32 %should_call_delete)
 //      Do an adjustment from B* to C*.
 // DTORS2:   getelementptr i8, i8* %{{.*}}, i32 -4
 // DTORS2:   bitcast i8* %{{.*}} to %"struct.dtor_in_second_nvbase::C"*
 // DTORS2:   %[[CALL:.*]] = tail call x86_thiscallcc i8* @"??_GC@dtor_in_second_nvbase@@UAEPAXI@Z"
 // DTORS2:   ret i8* %[[CALL]]
-
 }
 
 namespace test2 {
