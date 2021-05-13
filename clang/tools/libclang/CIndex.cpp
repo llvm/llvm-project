@@ -5185,8 +5185,9 @@ CXString clang_getCursorDisplayName(CXCursor C) {
     SmallString<128> Str;
     llvm::raw_svector_ostream OS(Str);
     OS << *ClassSpec;
-    printTemplateArgumentList(OS, ClassSpec->getTemplateArgs().asArray(),
-                              Policy);
+    printTemplateArgumentList(
+        OS, ClassSpec->getTemplateArgs().asArray(), Policy,
+        ClassSpec->getSpecializedTemplate()->getTemplateParameters());
     return cxstring::createDup(OS.str());
   }
 

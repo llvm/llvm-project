@@ -140,9 +140,9 @@ ASTNodeKind ASTNodeKind::getFromNode(const OMPClause &C) {
 void DynTypedNode::print(llvm::raw_ostream &OS,
                          const PrintingPolicy &PP) const {
   if (const TemplateArgument *TA = get<TemplateArgument>())
-    TA->print(PP, OS);
+    TA->print(PP, OS, /*IncludeType*/ true);
   else if (const TemplateArgumentLoc *TAL = get<TemplateArgumentLoc>())
-    TAL->getArgument().print(PP, OS);
+    TAL->getArgument().print(PP, OS, /*IncludeType*/ true);
   else if (const TemplateName *TN = get<TemplateName>())
     TN->print(OS, PP);
   else if (const NestedNameSpecifier *NNS = get<NestedNameSpecifier>())
