@@ -18,7 +18,7 @@ define <64 x i16> @f0(i16* %a0, i32 %a1) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], -128
 ; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i32 [[TMP1]] to <64 x i16>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint i16* [[V1]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i32 [[TMP1]] to <32 x i32>*
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <64 x i16>* [[TMP2]] to <32 x i32>*
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <32 x i32>, <32 x i32>* [[TMP4]], align 128, !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr <64 x i16>, <64 x i16>* [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <64 x i16>* [[TMP6]] to <128 x i8>*
@@ -59,7 +59,7 @@ define <64 x i16> @f1(i16* %a0, i32 %a1) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], -128
 ; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i32 [[TMP1]] to <64 x i16>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint i16* [[V1]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i32 [[TMP1]] to <32 x i32>*
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <64 x i16>* [[TMP2]] to <32 x i32>*
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <32 x i32>, <32 x i32>* [[TMP4]], align 128, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr <64 x i16>, <64 x i16>* [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <64 x i16>* [[TMP6]] to <128 x i8>*
@@ -100,7 +100,7 @@ define <64 x i16> @f2(i16* %a0, i32 %a1) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], -128
 ; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i32 [[TMP1]] to <64 x i16>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint i16* [[V1]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i32 [[TMP1]] to <32 x i32>*
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <64 x i16>* [[TMP2]] to <32 x i32>*
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <32 x i32>, <32 x i32>* [[TMP4]], align 128, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr <64 x i16>, <64 x i16>* [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <64 x i16>* [[TMP6]] to <128 x i8>*
@@ -157,7 +157,7 @@ define void @f3(i16* %a0, i32 %a1, <64 x i16> %a2, <64 x i16> %a3) #0 {
 ; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <32 x i32> [[TMP16]] to <128 x i8>
 ; CHECK-NEXT:    [[TMP18:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> zeroinitializer, <32 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, i32 [[TMP3]])
 ; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <32 x i32> [[TMP18]] to <128 x i8>
-; CHECK-NEXT:    [[TMP20:%.*]] = inttoptr i32 [[TMP1]] to <128 x i8>*
+; CHECK-NEXT:    [[TMP20:%.*]] = bitcast <64 x i16>* [[TMP2]] to <128 x i8>*
 ; CHECK-NEXT:    [[TMP21:%.*]] = trunc <128 x i8> [[TMP8]] to <128 x i1>
 ; CHECK-NEXT:    call void @llvm.masked.store.v128i8.p0v128i8(<128 x i8> [[TMP6]], <128 x i8>* [[TMP20]], i32 128, <128 x i1> [[TMP21]]), !tbaa [[TBAA5:![0-9]+]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr <64 x i16>, <64 x i16>* [[TMP2]], i32 1
@@ -209,7 +209,7 @@ define void @f4(i16* %a0, i32 %a1, <64 x i16> %a2, <64 x i16> %a3) #0 {
 ; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <32 x i32> [[TMP16]] to <128 x i8>
 ; CHECK-NEXT:    [[TMP18:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> zeroinitializer, <32 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, i32 [[TMP3]])
 ; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <32 x i32> [[TMP18]] to <128 x i8>
-; CHECK-NEXT:    [[TMP20:%.*]] = inttoptr i32 [[TMP1]] to <128 x i8>*
+; CHECK-NEXT:    [[TMP20:%.*]] = bitcast <64 x i16>* [[TMP2]] to <128 x i8>*
 ; CHECK-NEXT:    [[TMP21:%.*]] = trunc <128 x i8> [[TMP8]] to <128 x i1>
 ; CHECK-NEXT:    call void @llvm.masked.store.v128i8.p0v128i8(<128 x i8> [[TMP6]], <128 x i8>* [[TMP20]], i32 128, <128 x i1> [[TMP21]])
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr <64 x i16>, <64 x i16>* [[TMP2]], i32 1
@@ -261,7 +261,7 @@ define void @f5(i16* %a0, i32 %a1, <64 x i16> %a2, <64 x i16> %a3) #0 {
 ; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <32 x i32> [[TMP16]] to <128 x i8>
 ; CHECK-NEXT:    [[TMP18:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> zeroinitializer, <32 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, i32 [[TMP3]])
 ; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <32 x i32> [[TMP18]] to <128 x i8>
-; CHECK-NEXT:    [[TMP20:%.*]] = inttoptr i32 [[TMP1]] to <128 x i8>*
+; CHECK-NEXT:    [[TMP20:%.*]] = bitcast <64 x i16>* [[TMP2]] to <128 x i8>*
 ; CHECK-NEXT:    [[TMP21:%.*]] = trunc <128 x i8> [[TMP8]] to <128 x i1>
 ; CHECK-NEXT:    call void @llvm.masked.store.v128i8.p0v128i8(<128 x i8> [[TMP6]], <128 x i8>* [[TMP20]], i32 128, <128 x i1> [[TMP21]]), !tbaa [[TBAA5]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr <64 x i16>, <64 x i16>* [[TMP2]], i32 1
