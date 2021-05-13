@@ -157,19 +157,6 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
         }]
     >,
     InterfaceMethod<
-      /*desc=*/"Return the mask type if the op has a mask.",
-      /*retTy=*/"Optional<VectorType>",
-      /*methodName=*/"getMaskType",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{
-        return $_op.mask()
-            ? llvm::Optional<VectorType>(mlir::vector::detail::transferMaskType(
-                $_op.getVectorType(), $_op.permutation_map()))
-            : llvm::None;
-      }]
-    >,
-    InterfaceMethod<
       /*desc=*/[{ Return the number of dimensions that participate in the
                   permutation map.}],
       /*retTy=*/"unsigned",
