@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
 add_clang_unittest(ClangCodeGenTests
   BufferSourceTest.cpp
   CodeGenExternalTest.cpp
+  IncrementalProcessingTest.cpp
   TBAAMetadataTest.cpp
   CheckTargetFeaturesTest.cpp
   )
@@ -16,7 +17,6 @@ clang_target_link_libraries(ClangCodeGenTests
   clangBasic
   clangCodeGen
   clangFrontend
-  clangInterpreter
   clangLex
   clangParse
   clangSerialization
