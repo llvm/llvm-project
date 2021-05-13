@@ -2,8 +2,8 @@
 // REQUIRES: swift
 
 // RUN: %lldb --repl < %s 2>&1 | FileCheck %s
-// CHECK: modification requires exclusive access
-// CHECK: Execution interrupted
+// CHECK-DAG: modification requires exclusive access
+// CHECK-DAG: Execution interrupted
 
 class C {
   var f = 12
