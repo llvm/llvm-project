@@ -7,11 +7,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define <2 x float> @insertelement-fixed-vector() {
 ; CHECK-LABEL: @insertelement-fixed-vector(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x float> @llvm.fabs.v2f32(<2 x float> undef)
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[TMP1]], i32 0
-; CHECK-NEXT:    [[I0:%.*]] = insertelement <2 x float> poison, float [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP1]], i32 1
-; CHECK-NEXT:    [[I1:%.*]] = insertelement <2 x float> [[I0]], float [[TMP3]], i32 1
-; CHECK-NEXT:    ret <2 x float> [[I1]]
+; CHECK-NEXT:    ret <2 x float> [[TMP1]]
 ;
   %f0 = tail call fast float @llvm.fabs.f32(float undef)
   %f1 = tail call fast float @llvm.fabs.f32(float undef)
