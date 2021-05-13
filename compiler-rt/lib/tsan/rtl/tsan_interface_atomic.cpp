@@ -402,34 +402,45 @@ static T NoTsanAtomicCAS(volatile T *a, T c, T v, morder mo, morder fmo) {
 template<typename T>
 static bool AtomicCAS(ThreadState *thr, uptr pc,
     volatile T *a, T *c, T v, morder mo, morder fmo) {
-  (void)fmo;  // Unused because llvm does not pass it yet.
+  // 31.7.2.18: "The failure argument shall not be memory_order_release
+  // nor memory_order_acq_rel". LLVM (2021-05) fallbacks to Monotonic
+  // (mo_relaxed) when those are used.
+  CHECK(IsLoadOrder(fmo));
+
   MemoryWriteAtomic(thr, pc, (uptr)a, SizeLog<T>());
   SyncVar *s = 0;
-  bool write_lock = mo != mo_acquire && mo != mo_consume;
-  if (mo != mo_relaxed) {
+  bool write_lock = IsReleaseOrder(mo);
+
+  if (mo != mo_relaxed || fmo != mo_relaxed)
     s = ctx->metamap.GetOrCreateAndLock(thr, pc, (uptr)a, write_lock);
+
+  T cc = *c;
+  T pr = func_cas(a, cc, v);
+  bool success = pr == cc;
+  if (!success) {
+    *c = pr;
+    mo = fmo;
+  }
+
+  if (s) {
     thr->fast_state.IncrementEpoch();
     // Can't increment epoch w/o writing to the trace as well.
     TraceAddEvent(thr, thr->fast_state, EventTypeMop, 0);
-    if (IsAcqRelOrder(mo))
+
+    if (success && IsAcqRelOrder(mo))
       AcquireReleaseImpl(thr, pc, &s->clock);
-    else if (IsReleaseOrder(mo))
+    else if (success && IsReleaseOrder(mo))
       ReleaseImpl(thr, pc, &s->clock);
     else if (IsAcquireOrder(mo))
       AcquireImpl(thr, pc, &s->clock);
-  }
-  T cc = *c;
-  T pr = func_cas(a, cc, v);
-  if (s) {
+
     if (write_lock)
       s->mtx.Unlock();
     else
       s->mtx.ReadUnlock();
   }
-  if (pr == cc)
-    return true;
-  *c = pr;
-  return false;
+
+  return success;
 }
 
 template<typename T>
