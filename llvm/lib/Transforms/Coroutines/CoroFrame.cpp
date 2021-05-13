@@ -162,6 +162,16 @@ struct SuspendCrossingInfo {
 
     return isDefinitionAcrossSuspend(DefBB, U);
   }
+
+  bool isDefinitionAcrossSuspend(Value &V, User *U) const {
+    if (auto *Arg = dyn_cast<Argument>(&V))
+      return isDefinitionAcrossSuspend(*Arg, U);
+    if (auto *Inst = dyn_cast<Instruction>(&V))
+      return isDefinitionAcrossSuspend(*Inst, U);
+
+    llvm_unreachable(
+        "Coroutine could only collect Argument and Instruction now.");
+  }
 };
 } // end anonymous namespace
 
@@ -1655,8 +1665,8 @@ static Instruction *insertSpills(const FrameDataInfo &FrameData,
   }
 
   // If we found any alloca, replace all of their remaining uses with GEP
-  // instructions. Because new dbg.declare have been created for these alloca,
-  // we also delete the original dbg.declare and replace other uses with undef.
+  // instructions. To remain debugbility, we replace the uses of allocas for
+  // dbg.declares and dbg.values with the reload from the frame.
   // Note: We cannot replace the alloca with GEP instructions indiscriminately,
   // as some of the uses may not be dominated by CoroBegin.
   Builder.SetInsertPoint(&Shape.AllocaSpillBlock->front());
@@ -1674,16 +1684,10 @@ static Instruction *insertSpills(const FrameDataInfo &FrameData,
     auto *G = GetFramePointer(Alloca);
     G->setName(Alloca->getName() + Twine(".reload.addr"));
 
-    TinyPtrVector<DbgDeclareInst *> DIs = FindDbgDeclareUses(Alloca);
-    if (!DIs.empty())
-      DIBuilder(*Alloca->getModule(),
-                /*AllowUnresolved*/ false)
-          .insertDeclare(G, DIs.front()->getVariable(),
-                         DIs.front()->getExpression(),
-                         DIs.front()->getDebugLoc(), DIs.front());
-    for (auto *DI : FindDbgDeclareUses(Alloca))
-      DI->eraseFromParent();
-    replaceDbgUsesWithUndef(Alloca);
+    SmallVector<DbgVariableIntrinsic *, 4> DIs;
+    findDbgUsers(DIs, Alloca);
+    for (auto *DVI : DIs)
+      DVI->replaceUsesOfWith(Alloca, G);
 
     for (Instruction *I : UsersToUpdate)
       I->replaceUsesOfWith(Alloca, G);
@@ -2435,18 +2439,18 @@ static void collectFrameAllocas(Function &F, coro::Shape &Shape,
 
 void coro::salvageDebugInfo(
     SmallDenseMap<llvm::Value *, llvm::AllocaInst *, 4> &DbgPtrAllocaCache,
-    DbgDeclareInst *DDI, bool ReuseFrameSlot) {
-  Function *F = DDI->getFunction();
+    DbgVariableIntrinsic *DVI, bool ReuseFrameSlot) {
+  Function *F = DVI->getFunction();
   IRBuilder<> Builder(F->getContext());
   auto InsertPt = F->getEntryBlock().getFirstInsertionPt();
   while (isa<IntrinsicInst>(InsertPt))
     ++InsertPt;
   Builder.SetInsertPoint(&F->getEntryBlock(), InsertPt);
-  DIExpression *Expr = DDI->getExpression();
+  DIExpression *Expr = DVI->getExpression();
   // Follow the pointer arithmetic all the way to the incoming
   // function argument and convert into a DIExpression.
   bool OutermostLoad = true;
-  Value *Storage = DDI->getAddress();
+  Value *Storage = DVI->getVariableLocationOp(0);
   Value *OriginalStorage = Storage;
   while (Storage) {
     if (auto *LdInst = dyn_cast<LoadInst>(Storage)) {
@@ -2502,12 +2506,16 @@ void coro::salvageDebugInfo(
       if (Expr && Expr->isComplex())
         Expr = DIExpression::prepend(Expr, DIExpression::DerefBefore);
     }
-  DDI->replaceVariableLocationOp(OriginalStorage, Storage);
-  DDI->setExpression(Expr);
-  if (auto *InsertPt = dyn_cast<Instruction>(Storage))
-    DDI->moveAfter(InsertPt);
-  else if (isa<Argument>(Storage))
-    DDI->moveAfter(F->getEntryBlock().getFirstNonPHI());
+
+  DVI->replaceVariableLocationOp(OriginalStorage, Storage);
+  DVI->setExpression(Expr);
+  /// It makes no sense to move the dbg.value intrinsic.
+  if (!isa<DbgValueInst>(DVI)) {
+    if (auto *InsertPt = dyn_cast<Instruction>(Storage))
+      DVI->moveAfter(InsertPt);
+    else if (isa<Argument>(Storage))
+      DVI->moveAfter(F->getEntryBlock().getFirstNonPHI());
+  }
 }
 
 void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
@@ -2567,10 +2575,18 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
     for (int Repeat = 0; Repeat < 4; ++Repeat) {
       // See if there are materializable instructions across suspend points.
       for (Instruction &I : instructions(F))
-        if (materializable(I))
+        if (materializable(I)) {
           for (User *U : I.users())
             if (Checker.isDefinitionAcrossSuspend(I, U))
               Spills[&I].push_back(cast<Instruction>(U));
+
+          // Manually add dbg.value metadata uses of I.
+          SmallVector<DbgValueInst *, 16> DVIs;
+          findDbgValues(DVIs, &I);
+          for (auto *DVI : DVIs)
+            if (Checker.isDefinitionAcrossSuspend(I, DVI))
+              Spills[&I].push_back(DVI);
+        }
 
       if (Spills.empty())
         break;
@@ -2644,6 +2660,21 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
         FrameData.Spills[&I].push_back(cast<Instruction>(U));
       }
   }
+
+  // We don't want the layout of coroutine frame to be affected
+  // by debug information. So we only choose to salvage DbgValueInst for
+  // whose value is already in the frame.
+  // We would handle the dbg.values for allocas specially
+  for (auto &Iter : FrameData.Spills) {
+    auto *V = Iter.first;
+    SmallVector<DbgValueInst *, 16> DVIs;
+    findDbgValues(DVIs, V);
+    llvm::for_each(DVIs, [&](DbgValueInst *DVI) {
+      if (Checker.isDefinitionAcrossSuspend(*V, DVI))
+        FrameData.Spills[V].push_back(DVI);
+    });
+  }
+
   LLVM_DEBUG(dumpSpills("Spills", FrameData.Spills));
   if (Shape.ABI == coro::ABI::Retcon || Shape.ABI == coro::ABI::RetconOnce ||
       Shape.ABI == coro::ABI::Async)

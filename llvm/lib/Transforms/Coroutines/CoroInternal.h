@@ -54,7 +54,7 @@ void updateCallGraph(Function &Caller, ArrayRef<Function *> Funcs,
 /// holding a pointer to the coroutine frame.
 void salvageDebugInfo(
     SmallDenseMap<llvm::Value *, llvm::AllocaInst *, 4> &DbgPtrAllocaCache,
-    DbgDeclareInst *DDI, bool ReuseFrameSlot);
+    DbgVariableIntrinsic *DVI, bool ReuseFrameSlot);
 
 // Keeps data and helper functions for lowering coroutine intrinsics.
 struct LowererBase {
