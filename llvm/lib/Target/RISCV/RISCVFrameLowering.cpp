@@ -319,7 +319,8 @@ void RISCVFrameLowering::adjustStackForRVV(MachineFunction &MF,
   }
 
   // 1. Multiply the number of v-slots to the length of registers
-  Register FactorRegister = TII->getVLENFactoredAmount(MF, MBB, MBBI, Amount);
+  Register FactorRegister =
+      TII->getVLENFactoredAmount(MF, MBB, MBBI, DL, Amount);
   // 2. SP = SP - RVV stack size
   BuildMI(MBB, MBBI, DL, TII->get(Opc), SPReg)
       .addReg(SPReg)
