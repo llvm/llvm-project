@@ -19,7 +19,9 @@
 namespace llvm {
 
 class AMDGPUTargetLowering;
+class GCNSubtarget;
 class MachineInstrBuilder;
+class SIMachineFunctionInfo;
 
 class AMDGPUCallLowering final : public CallLowering {
   void lowerParameterPtr(Register DstReg, MachineIRBuilder &B, Type *ParamTy,
@@ -54,6 +56,29 @@ public:
                          SmallVectorImpl<std::pair<MCRegister, Register>> &ArgRegs,
                          CallLoweringInfo &Info) const;
 
+  bool
+  doCallerAndCalleePassArgsTheSameWay(CallLoweringInfo &Info,
+                                      MachineFunction &MF,
+                                      SmallVectorImpl<ArgInfo> &InArgs) const;
+
+  bool
+  areCalleeOutgoingArgsTailCallable(CallLoweringInfo &Info, MachineFunction &MF,
+                                    SmallVectorImpl<ArgInfo> &OutArgs) const;
+
+  /// Returns true if the call can be lowered as a tail call.
+  bool
+  isEligibleForTailCallOptimization(MachineIRBuilder &MIRBuilder,
+                                    CallLoweringInfo &Info,
+                                    SmallVectorImpl<ArgInfo> &InArgs,
+                                    SmallVectorImpl<ArgInfo> &OutArgs) const;
+
+  void handleImplicitCallArguments(
+      MachineIRBuilder &MIRBuilder, MachineInstrBuilder &CallInst,
+      const GCNSubtarget &ST, const SIMachineFunctionInfo &MFI,
+      ArrayRef<std::pair<MCRegister, Register>> ImplicitArgRegs) const;
+
+  bool lowerTailCall(MachineIRBuilder &MIRBuilder, CallLoweringInfo &Info,
+                     SmallVectorImpl<ArgInfo> &OutArgs) const;
   bool lowerCall(MachineIRBuilder &MIRBuilder,
                  CallLoweringInfo &Info) const override;
 

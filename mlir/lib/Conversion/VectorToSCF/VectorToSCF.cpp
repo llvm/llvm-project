@@ -38,54 +38,16 @@ namespace {
 /// Attribute name used for labeling transfer ops during progressive lowering.
 static const char kPassLabel[] = "__vector_to_scf_lowering__";
 
-/// Lower to 1D transfer ops. Target-specific lowering will lower those.
-static const int64_t kTargetRank = 1;
-
-/// Given a MemRefType with VectorType element type, unpack one dimension from
-/// the VectorType into the MemRefType.
-///
-/// E.g.: memref<9xvector<5x6xf32>> --> memref<9x5xvector<6xf32>>
-static MemRefType unpackOneDim(MemRefType type) {
-  auto vectorType = type.getElementType().dyn_cast<VectorType>();
-  auto memrefShape = type.getShape();
-  SmallVector<int64_t, 8> newMemrefShape;
-  newMemrefShape.append(memrefShape.begin(), memrefShape.end());
-  newMemrefShape.push_back(vectorType.getDimSize(0));
-  return MemRefType::get(newMemrefShape,
-                         VectorType::get(vectorType.getShape().drop_front(),
-                                         vectorType.getElementType()));
-}
-
-/// Helper data structure for data and mask buffers.
-struct BufferAllocs {
-  Value dataBuffer;
-  Value maskBuffer;
-};
-
-/// Allocate temporary buffers for data (vector) and mask (if present).
-/// TODO: Parallelism and threadlocal considerations.
+/// Patterns that inherit from this struct have access to
+/// VectorTransferToSCFOptions.
 template <typename OpTy>
-static BufferAllocs allocBuffers(OpTy xferOp) {
-  auto &b = ScopedContext::getBuilderRef();
-  OpBuilder::InsertionGuard guard(b);
-  Operation *scope =
-      xferOp->template getParentWithTrait<OpTrait::AutomaticAllocationScope>();
-  assert(scope && "Expected op to be inside automatic allocation scope");
-  b.setInsertionPointToStart(&scope->getRegion(0).front());
+struct VectorToSCFPattern : public OpRewritePattern<OpTy> {
+  explicit VectorToSCFPattern(MLIRContext *context,
+                              VectorTransferToSCFOptions opt)
+      : OpRewritePattern<OpTy>(context), options(opt) {}
 
-  BufferAllocs result;
-  auto bufferType = MemRefType::get({}, xferOp.getVectorType());
-  result.dataBuffer = memref_alloca(bufferType).value;
-
-  if (xferOp.mask()) {
-    auto maskType = MemRefType::get({}, xferOp.mask().getType());
-    Value maskBuffer = memref_alloca(maskType);
-    memref_store(xferOp.mask(), maskBuffer);
-    result.maskBuffer = memref_load(maskBuffer);
-  }
-
-  return result;
-}
+  VectorTransferToSCFOptions options;
+};
 
 /// Given a vector transfer op, calculate which dimension of the `source`
 /// memref should be unpacked in the next application of TransferOpConversion.
@@ -270,9 +232,58 @@ static ArrayAttr dropFirstElem(OpBuilder &builder, ArrayAttr attr) {
 /// Add the pass label to a vector transfer op if its rank is not the target
 /// rank.
 template <typename OpTy>
-static void maybeApplyPassLabel(OpBuilder &builder, OpTy newXferOp) {
-  if (newXferOp.getVectorType().getRank() > kTargetRank)
+static void maybeApplyPassLabel(OpBuilder &builder, OpTy newXferOp,
+                                unsigned targetRank) {
+  if (newXferOp.getVectorType().getRank() > targetRank)
     newXferOp->setAttr(kPassLabel, builder.getUnitAttr());
+}
+
+namespace lowering_n_d {
+
+/// Helper data structure for data and mask buffers.
+struct BufferAllocs {
+  Value dataBuffer;
+  Value maskBuffer;
+};
+
+/// Allocate temporary buffers for data (vector) and mask (if present).
+/// TODO: Parallelism and threadlocal considerations.
+template <typename OpTy>
+static BufferAllocs allocBuffers(OpTy xferOp) {
+  auto &b = ScopedContext::getBuilderRef();
+  OpBuilder::InsertionGuard guard(b);
+  Operation *scope =
+      xferOp->template getParentWithTrait<OpTrait::AutomaticAllocationScope>();
+  assert(scope && "Expected op to be inside automatic allocation scope");
+  b.setInsertionPointToStart(&scope->getRegion(0).front());
+
+  BufferAllocs result;
+  auto bufferType = MemRefType::get({}, xferOp.getVectorType());
+  result.dataBuffer = memref_alloca(bufferType).value;
+
+  if (xferOp.mask()) {
+    auto maskType = MemRefType::get({}, xferOp.mask().getType());
+    auto maskBuffer = memref_alloca(maskType).value;
+    memref_store(xferOp.mask(), maskBuffer);
+    result.maskBuffer = memref_load(maskBuffer);
+  }
+
+  return result;
+}
+
+/// Given a MemRefType with VectorType element type, unpack one dimension from
+/// the VectorType into the MemRefType.
+///
+/// E.g.: memref<9xvector<5x6xf32>> --> memref<9x5xvector<6xf32>>
+static MemRefType unpackOneDim(MemRefType type) {
+  auto vectorType = type.getElementType().dyn_cast<VectorType>();
+  auto memrefShape = type.getShape();
+  SmallVector<int64_t, 8> newMemrefShape;
+  newMemrefShape.append(memrefShape.begin(), memrefShape.end());
+  newMemrefShape.push_back(vectorType.getDimSize(0));
+  return MemRefType::get(newMemrefShape,
+                         VectorType::get(vectorType.getShape().drop_front(),
+                                         vectorType.getElementType()));
 }
 
 /// Given a transfer op, find the memref from which the mask is loaded. This
@@ -347,8 +358,10 @@ struct Strategy<TransferReadOp> {
   /// Note: The loop and type cast are generated in TransferOpConversion.
   ///       The original TransferReadOp and store op are deleted in `cleanup`.
   /// Note: The `mask` operand is set in TransferOpConversion.
-  static TransferReadOp rewriteOp(OpBuilder &builder, TransferReadOp xferOp,
-                                  Value buffer, Value iv) {
+  static TransferReadOp rewriteOp(OpBuilder &builder,
+                                  VectorTransferToSCFOptions options,
+                                  TransferReadOp xferOp, Value buffer,
+                                  Value iv) {
     SmallVector<Value, 8> storeIndices;
     getBufferIndices(xferOp, storeIndices);
     storeIndices.push_back(iv);
@@ -367,7 +380,8 @@ struct Strategy<TransferReadOp> {
             .value;
 
     maybeApplyPassLabel(builder,
-                        dyn_cast<TransferReadOp>(newXfer.getDefiningOp()));
+                        dyn_cast<TransferReadOp>(newXfer.getDefiningOp()),
+                        options.targetRank);
 
     memref_store(newXfer, buffer, storeIndices);
     return newXfer.getDefiningOp<TransferReadOp>();
@@ -428,8 +442,10 @@ struct Strategy<TransferWriteOp> {
   ///    to memory.
   ///
   /// Note: For more details, see comments on Strategy<TransferReadOp>.
-  static TransferWriteOp rewriteOp(OpBuilder &builder, TransferWriteOp xferOp,
-                                   Value buffer, Value iv) {
+  static TransferWriteOp rewriteOp(OpBuilder &builder,
+                                   VectorTransferToSCFOptions options,
+                                   TransferWriteOp xferOp, Value buffer,
+                                   Value iv) {
     SmallVector<Value, 8> loadIndices;
     getBufferIndices(xferOp, loadIndices);
     loadIndices.push_back(iv);
@@ -444,7 +460,7 @@ struct Strategy<TransferWriteOp> {
         AffineMapAttr::get(unpackedPermutationMap(xferOp, builder)), Value(),
         inBoundsAttr);
 
-    maybeApplyPassLabel(builder, newXfer.op);
+    maybeApplyPassLabel(builder, newXfer.op, options.targetRank);
 
     return newXfer;
   }
@@ -460,10 +476,10 @@ struct Strategy<TransferWriteOp> {
 };
 
 template <typename OpTy>
-LogicalResult checkPrepareXferOp(OpTy xferOp) {
+LogicalResult checkPrepareXferOp(OpTy xferOp, unsigned targetRank) {
   if (xferOp->hasAttr(kPassLabel))
     return failure();
-  if (xferOp.getVectorType().getRank() <= kTargetRank)
+  if (xferOp.getVectorType().getRank() <= targetRank)
     return failure();
   return success();
 }
@@ -491,12 +507,13 @@ LogicalResult checkPrepareXferOp(OpTy xferOp) {
 /// ```
 ///
 /// Note: A second temporary buffer may be allocated for the `mask` operand.
-struct PrepareTransferReadConversion : public OpRewritePattern<TransferReadOp> {
-  using OpRewritePattern<TransferReadOp>::OpRewritePattern;
+struct PrepareTransferReadConversion
+    : public VectorToSCFPattern<TransferReadOp> {
+  using VectorToSCFPattern<TransferReadOp>::VectorToSCFPattern;
 
   LogicalResult matchAndRewrite(TransferReadOp xferOp,
                                 PatternRewriter &rewriter) const override {
-    if (checkPrepareXferOp(xferOp).failed())
+    if (checkPrepareXferOp(xferOp, options.targetRank).failed())
       return failure();
 
     ScopedContext scope(rewriter, xferOp.getLoc());
@@ -539,12 +556,12 @@ struct PrepareTransferReadConversion : public OpRewritePattern<TransferReadOp> {
 ///
 /// Note: A second temporary buffer may be allocated for the `mask` operand.
 struct PrepareTransferWriteConversion
-    : public OpRewritePattern<TransferWriteOp> {
-  using OpRewritePattern<TransferWriteOp>::OpRewritePattern;
+    : public VectorToSCFPattern<TransferWriteOp> {
+  using VectorToSCFPattern<TransferWriteOp>::VectorToSCFPattern;
 
   LogicalResult matchAndRewrite(TransferWriteOp xferOp,
                                 PatternRewriter &rewriter) const override {
-    if (checkPrepareXferOp(xferOp).failed())
+    if (checkPrepareXferOp(xferOp, options.targetRank).failed())
       return failure();
 
     ScopedContext scope(rewriter, xferOp.getLoc());
@@ -583,8 +600,8 @@ struct PrepareTransferWriteConversion
 ///    out-of-bounds, generate an if-check and handle both cases separately.
 /// 3. Clean up according to the corresponding Strategy<OpTy>.
 template <typename OpTy>
-struct TransferOpConversion : public OpRewritePattern<OpTy> {
-  using OpRewritePattern<OpTy>::OpRewritePattern;
+struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
+  using VectorToSCFPattern<OpTy>::VectorToSCFPattern;
 
   LogicalResult matchAndRewrite(OpTy xferOp,
                                 PatternRewriter &rewriter) const override {
@@ -635,8 +652,8 @@ struct TransferOpConversion : public OpRewritePattern<OpTy> {
               /*inBoundsCase=*/
               [&](OpBuilder &b, Location /*loc*/) {
                 // Create new transfer op.
-                OpTy newXfer =
-                    Strategy<OpTy>::rewriteOp(b, xferOp, castedDataBuffer, iv);
+                OpTy newXfer = Strategy<OpTy>::rewriteOp(
+                    b, this->options, xferOp, castedDataBuffer, iv);
 
                 // If old transfer op has a mask: Set mask on new transfer op.
                 // Special case: If the mask of the old transfer op is 1D and
@@ -672,6 +689,10 @@ struct TransferOpConversion : public OpRewritePattern<OpTy> {
     return success();
   }
 };
+
+} // namespace lowering_n_d
+
+namespace lowering_n_d_unrolled {
 
 /// If the original transfer op has a mask, compute the mask of the new transfer
 /// op (for the current iteration `i`) and assign it.
@@ -731,8 +752,9 @@ static void maybeAssignMask(OpBuilder &builder, OpTy xferOp, OpTy newXferOp,
 /// Note: As an optimization, if the result of the original TransferReadOp
 /// was directly inserted into another vector, no new %v_init vector is created.
 /// Instead, the new TransferReadOp results are inserted into that vector.
-struct UnrollTransferReadConversion : public OpRewritePattern<TransferReadOp> {
-  using OpRewritePattern<TransferReadOp>::OpRewritePattern;
+struct UnrollTransferReadConversion
+    : public VectorToSCFPattern<TransferReadOp> {
+  using VectorToSCFPattern<TransferReadOp>::VectorToSCFPattern;
 
   /// Return the vector into which the newly created TransferReadOp results
   /// are inserted.
@@ -770,7 +792,7 @@ struct UnrollTransferReadConversion : public OpRewritePattern<TransferReadOp> {
   /// accesses, and broadcasts and transposes in permutation maps.
   LogicalResult matchAndRewrite(TransferReadOp xferOp,
                                 PatternRewriter &rewriter) const override {
-    if (xferOp.getVectorType().getRank() <= kTargetRank)
+    if (xferOp.getVectorType().getRank() <= options.targetRank)
       return failure();
 
     ScopedContext scope(rewriter, xferOp.getLoc());
@@ -861,8 +883,8 @@ struct UnrollTransferReadConversion : public OpRewritePattern<TransferReadOp> {
 /// doing so, `a` may become dead, and the number of ExtractOps generated during
 /// recursive application of this pattern will be minimal.
 struct UnrollTransferWriteConversion
-    : public OpRewritePattern<TransferWriteOp> {
-  using OpRewritePattern<TransferWriteOp>::OpRewritePattern;
+    : public VectorToSCFPattern<TransferWriteOp> {
+  using VectorToSCFPattern<TransferWriteOp>::VectorToSCFPattern;
 
   /// Return the vector from which newly generated ExtracOps will extract.
   Value getDataVector(TransferWriteOp xferOp) const {
@@ -893,7 +915,7 @@ struct UnrollTransferWriteConversion
   /// accesses, and broadcasts and transposes in permutation maps.
   LogicalResult matchAndRewrite(TransferWriteOp xferOp,
                                 PatternRewriter &rewriter) const override {
-    if (xferOp.getVectorType().getRank() <= kTargetRank)
+    if (xferOp.getVectorType().getRank() <= options.targetRank)
       return failure();
 
     ScopedContext scope(rewriter, xferOp.getLoc());
@@ -937,6 +959,10 @@ struct UnrollTransferWriteConversion
     return success();
   }
 };
+
+} // namespace lowering_n_d_unrolled
+
+namespace lowering_1_d {
 
 /// Compute the indices into the memref for the LoadOp/StoreOp generated as
 /// part of TransferOp1dConversion. Return the memref dimension on which
@@ -1062,8 +1088,8 @@ static bool isLastMemrefDimUnitStride(MemRefType type) {
 /// }
 /// ```
 template <typename OpTy>
-struct TransferOp1dConversion : public OpRewritePattern<OpTy> {
-  using OpRewritePattern<OpTy>::OpRewritePattern;
+struct TransferOp1dConversion : public VectorToSCFPattern<OpTy> {
+  using VectorToSCFPattern<OpTy>::VectorToSCFPattern;
 
   LogicalResult matchAndRewrite(OpTy xferOp,
                                 PatternRewriter &rewriter) const override {
@@ -1098,6 +1124,7 @@ struct TransferOp1dConversion : public OpRewritePattern<OpTy> {
   }
 };
 
+} // namespace lowering_1_d
 } // namespace
 
 namespace mlir {
@@ -1105,18 +1132,21 @@ namespace mlir {
 void populateVectorToSCFConversionPatterns(
     RewritePatternSet &patterns, const VectorTransferToSCFOptions &options) {
   if (options.unroll) {
-    patterns.add<UnrollTransferReadConversion, UnrollTransferWriteConversion>(
-        patterns.getContext());
+    patterns.add<lowering_n_d_unrolled::UnrollTransferReadConversion,
+                 lowering_n_d_unrolled::UnrollTransferWriteConversion>(
+        patterns.getContext(), options);
   } else {
-    patterns.add<PrepareTransferReadConversion, PrepareTransferWriteConversion,
-                 TransferOpConversion<TransferReadOp>,
-                 TransferOpConversion<TransferWriteOp>>(patterns.getContext());
+    patterns.add<lowering_n_d::PrepareTransferReadConversion,
+                 lowering_n_d::PrepareTransferWriteConversion,
+                 lowering_n_d::TransferOpConversion<TransferReadOp>,
+                 lowering_n_d::TransferOpConversion<TransferWriteOp>>(
+        patterns.getContext(), options);
   }
 
-  if (kTargetRank == 1) {
-    patterns.add<TransferOp1dConversion<TransferReadOp>,
-                 TransferOp1dConversion<TransferWriteOp>>(
-        patterns.getContext());
+  if (options.targetRank == 1) {
+    patterns.add<lowering_1_d::TransferOp1dConversion<TransferReadOp>,
+                 lowering_1_d::TransferOp1dConversion<TransferWriteOp>>(
+        patterns.getContext(), options);
   }
 }
 
@@ -1129,12 +1159,16 @@ struct ConvertVectorToSCFPass
   ConvertVectorToSCFPass() = default;
   ConvertVectorToSCFPass(const VectorTransferToSCFOptions &options) {
     this->fullUnroll = options.unroll;
+    this->targetRank = options.targetRank;
   }
 
   void runOnFunction() override {
+    VectorTransferToSCFOptions options;
+    options.setUnroll(fullUnroll);
+    options.setTargetRank(targetRank);
+
     RewritePatternSet patterns(getFunction().getContext());
-    populateVectorToSCFConversionPatterns(
-        patterns, VectorTransferToSCFOptions().setUnroll(fullUnroll));
+    populateVectorToSCFConversionPatterns(patterns, options);
     (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
 };

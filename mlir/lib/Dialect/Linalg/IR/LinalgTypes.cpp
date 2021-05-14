@@ -15,6 +15,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/FunctionSupport.h"
 #include "mlir/Parser.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -56,6 +57,14 @@ struct LinalgInlinerInterface : public DialectInlinerInterface {
 //===----------------------------------------------------------------------===//
 // LinalgDialect
 //===----------------------------------------------------------------------===//
+
+/// Attribute name used to to memoize indexing maps for named ops.
+constexpr const ::llvm::StringLiteral
+    LinalgDialect::kMemoizedIndexingMapsAttrName;
+
+/// Attribute name used to mark region arguments that can be bufferized
+/// in-place during linalg comprehensive bufferization.
+constexpr const ::llvm::StringLiteral LinalgDialect::kInplaceableAttrName;
 
 /// Trait to check if T provides a `regionBuilder` method.
 template <typename T, typename... Args>
@@ -130,4 +139,22 @@ static void print(RangeType rt, DialectAsmPrinter &os) { os << "range"; }
 void mlir::linalg::LinalgDialect::printType(Type type,
                                             DialectAsmPrinter &os) const {
   print(type.cast<RangeType>(), os);
+}
+
+LogicalResult LinalgDialect::verifyOperationAttribute(Operation *op,
+                                                      NamedAttribute attr) {
+  if (attr.first == LinalgDialect::kInplaceableAttrName) {
+    if (!attr.second.isa<BoolAttr>()) {
+      return op->emitError() << "'" << LinalgDialect::kInplaceableAttrName
+                             << "' is expected to be a boolean attribute";
+    }
+    if (!op->hasTrait<OpTrait::FunctionLike>())
+      return op->emitError() << "expected " << attr.first
+                             << " to be used on function-like operations";
+    return success();
+  }
+  if (attr.first == LinalgDialect::kMemoizedIndexingMapsAttrName)
+    return success();
+  return op->emitError() << "attribute '" << attr.first
+                         << "' not supported by the linalg dialect";
 }

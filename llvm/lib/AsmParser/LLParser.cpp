@@ -2595,6 +2595,13 @@ bool LLParser::parseType(Type *&Result, const Twine &Msg, bool AllowVoid) {
   }
   }
 
+  if (Result->isPointerTy() && cast<PointerType>(Result)->isOpaque()) {
+    unsigned AddrSpace;
+    if (parseOptionalAddrSpace(AddrSpace))
+      return true;
+    Result = PointerType::get(getContext(), AddrSpace);
+  }
+
   // parse the type suffixes.
   while (true) {
     switch (Lex.getKind()) {

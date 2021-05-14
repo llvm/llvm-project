@@ -21,9 +21,6 @@ using namespace llvm::orc;
 
 namespace {
 
-class RTDyldObjectLinkingLayerExecutionTest : public testing::Test,
-                                               public OrcExecutionTest {};
-
 // Adds an object with a debug section to RuntimeDyld and then returns whether
 // the debug section was passed to the memory manager.
 static bool testSetProcessAllSections(std::unique_ptr<MemoryBuffer> Obj,
