@@ -55,3 +55,39 @@ define i8 addrspace(1)* @nosync(i8 addrspace(1)* %arg) nosync gc "statepoint-exa
   ret i8 addrspace(1)* %arg
 }
 
+define i8 addrspace(1)* @readnone(i8 addrspace(1)* readnone %arg) readnone gc "statepoint-example" {
+; CHECK: define i8 addrspace(1)* @readnone(i8 addrspace(1)* %arg) gc "statepoint-example" {
+  call void @f()
+  ret i8 addrspace(1)* %arg
+}
+
+define i8 addrspace(1)* @readonly(i8 addrspace(1)* readonly %arg) readonly gc "statepoint-example" {
+; CHECK: define i8 addrspace(1)* @readonly(i8 addrspace(1)* %arg) gc "statepoint-example" {
+  call void @f()
+  ret i8 addrspace(1)* %arg
+}
+
+define i8 addrspace(1)* @writeonly(i8 addrspace(1)* writeonly %arg) writeonly gc "statepoint-example" {
+; CHECK: define i8 addrspace(1)* @writeonly(i8 addrspace(1)* %arg) gc "statepoint-example" {
+  call void @f()
+  ret i8 addrspace(1)* %arg
+}
+
+define i8 addrspace(1)* @argmemonly(i8 addrspace(1)* %arg) argmemonly gc "statepoint-example" {
+; CHECK: define i8 addrspace(1)* @argmemonly(i8 addrspace(1)* %arg) gc "statepoint-example" {
+  call void @f()
+  ret i8 addrspace(1)* %arg
+}
+
+define i8 addrspace(1)* @inaccessiblememonly(i8 addrspace(1)* %arg) inaccessiblememonly gc "statepoint-example" {
+; CHECK: define i8 addrspace(1)* @inaccessiblememonly(i8 addrspace(1)* %arg) gc "statepoint-example" {
+  call void @f()
+  ret i8 addrspace(1)* %arg
+}
+
+define i8 addrspace(1)* @inaccessiblemem_or_argmemonly(i8 addrspace(1)* %arg) inaccessiblemem_or_argmemonly gc "statepoint-example" {
+; CHECK: define i8 addrspace(1)* @inaccessiblemem_or_argmemonly(i8 addrspace(1)* %arg) gc "statepoint-example" {
+  call void @f()
+  ret i8 addrspace(1)* %arg
+}
+
