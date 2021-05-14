@@ -437,7 +437,7 @@ public:
           if (NextPage < PrevEnd && loadTag(NextPage) != NextPage)
             PrevEnd = NextPage;
           TaggedPtr = reinterpret_cast<void *>(TaggedUserPtr);
-          resizeTaggedChunk(PrevEnd, TaggedUserPtr + Size, BlockEnd);
+          resizeTaggedChunk(PrevEnd, TaggedUserPtr + Size, Size, BlockEnd);
           if (UNLIKELY(FillContents != NoFill && !Header.OriginOrWasZeroed)) {
             // If an allocation needs to be zeroed (i.e. calloc) we can normally
             // avoid zeroing the memory now since we can rely on memory having
@@ -643,7 +643,7 @@ public:
           if (ClassId) {
             resizeTaggedChunk(reinterpret_cast<uptr>(OldTaggedPtr) + OldSize,
                               reinterpret_cast<uptr>(OldTaggedPtr) + NewSize,
-                              BlockEnd);
+                              NewSize, BlockEnd);
             storePrimaryAllocationStackMaybe(Options, OldPtr);
           } else {
             storeSecondaryAllocationStackMaybe(Options, OldPtr, NewSize);
@@ -927,12 +927,25 @@ public:
 
     auto *Depot = reinterpret_cast<const StackDepot *>(DepotPtr);
     size_t NextErrorReport = 0;
+
+    // Check for OOB in the current block and the two surrounding blocks. Beyond
+    // that, UAF is more likely.
     if (extractTag(FaultAddr) != 0)
       getInlineErrorInfo(ErrorInfo, NextErrorReport, FaultAddr, Depot,
                          RegionInfoPtr, Memory, MemoryTags, MemoryAddr,
-                         MemorySize);
+                         MemorySize, 0, 2);
+
+    // Check the ring buffer. For primary allocations this will only find UAF;
+    // for secondary allocations we can find either UAF or OOB.
     getRingBufferErrorInfo(ErrorInfo, NextErrorReport, FaultAddr, Depot,
                            RingBufferPtr);
+
+    // Check for OOB in the 28 blocks surrounding the 3 we checked earlier.
+    // Beyond that we are likely to hit false positives.
+    if (extractTag(FaultAddr) != 0)
+      getInlineErrorInfo(ErrorInfo, NextErrorReport, FaultAddr, Depot,
+                         RegionInfoPtr, Memory, MemoryTags, MemoryAddr,
+                         MemorySize, 2, 16);
   }
 
 private:
@@ -1130,6 +1143,27 @@ private:
     return Offset + Chunk::getHeaderSize();
   }
 
+  // Set the tag of the granule past the end of the allocation to 0, to catch
+  // linear overflows even if a previous larger allocation used the same block
+  // and tag. Only do this if the granule past the end is in our block, because
+  // this would otherwise lead to a SEGV if the allocation covers the entire
+  // block and our block is at the end of a mapping. The tag of the next block's
+  // header granule will be set to 0, so it will serve the purpose of catching
+  // linear overflows in this case.
+  //
+  // For allocations of size 0 we do not end up storing the address tag to the
+  // memory tag space, which getInlineErrorInfo() normally relies on to match
+  // address tags against chunks. To allow matching in this case we store the
+  // address tag in the first byte of the chunk.
+  void storeEndMarker(uptr End, uptr Size, uptr BlockEnd) {
+    uptr UntaggedEnd = untagPointer(End);
+    if (UntaggedEnd != BlockEnd) {
+      storeTag(UntaggedEnd);
+      if (Size == 0)
+        *reinterpret_cast<u8 *>(UntaggedEnd) = extractTag(End);
+    }
+  }
+
   void *prepareTaggedChunk(void *Ptr, uptr Size, uptr ExcludeMask,
                            uptr BlockEnd) {
     // Prepare the granule before the chunk to store the chunk header by setting
@@ -1142,25 +1176,17 @@ private:
     uptr TaggedBegin, TaggedEnd;
     setRandomTag(Ptr, Size, ExcludeMask, &TaggedBegin, &TaggedEnd);
 
-    // Finally, set the tag of the granule past the end of the allocation to 0,
-    // to catch linear overflows even if a previous larger allocation used the
-    // same block and tag. Only do this if the granule past the end is in our
-    // block, because this would otherwise lead to a SEGV if the allocation
-    // covers the entire block and our block is at the end of a mapping. The tag
-    // of the next block's header granule will be set to 0, so it will serve the
-    // purpose of catching linear overflows in this case.
-    uptr UntaggedEnd = untagPointer(TaggedEnd);
-    if (UntaggedEnd != BlockEnd)
-      storeTag(UntaggedEnd);
+    storeEndMarker(TaggedEnd, Size, BlockEnd);
     return reinterpret_cast<void *>(TaggedBegin);
   }
 
-  void resizeTaggedChunk(uptr OldPtr, uptr NewPtr, uptr BlockEnd) {
+  void resizeTaggedChunk(uptr OldPtr, uptr NewPtr, uptr NewSize,
+                         uptr BlockEnd) {
     uptr RoundOldPtr = roundUpTo(OldPtr, archMemoryTagGranuleSize());
     uptr RoundNewPtr;
     if (RoundOldPtr >= NewPtr) {
       // If the allocation is shrinking we just need to set the tag past the end
-      // of the allocation to 0. See explanation in prepareTaggedChunk above.
+      // of the allocation to 0. See explanation in storeEndMarker() above.
       RoundNewPtr = roundUpTo(NewPtr, archMemoryTagGranuleSize());
     } else {
       // Set the memory tag of the region
@@ -1168,10 +1194,7 @@ private:
       // to the pointer tag stored in OldPtr.
       RoundNewPtr = storeTags(RoundOldPtr, NewPtr);
     }
-
-    uptr UntaggedNewPtr = untagPointer(RoundNewPtr);
-    if (UntaggedNewPtr != BlockEnd)
-      storeTag(UntaggedNewPtr);
+    storeEndMarker(RoundNewPtr, NewSize, BlockEnd);
   }
 
   void storePrimaryAllocationStackMaybe(Options Options, void *Ptr) {
@@ -1247,7 +1270,8 @@ private:
                                  const StackDepot *Depot,
                                  const char *RegionInfoPtr, const char *Memory,
                                  const char *MemoryTags, uintptr_t MemoryAddr,
-                                 size_t MemorySize) {
+                                 size_t MemorySize, size_t MinDistance,
+                                 size_t MaxDistance) {
     uptr UntaggedFaultAddr = untagPointer(FaultAddr);
     u8 FaultAddrTag = extractTag(FaultAddr);
     BlockInfo Info =
@@ -1279,6 +1303,12 @@ private:
       *Header = *reinterpret_cast<const Chunk::UnpackedHeader *>(
           ChunkBegin - Chunk::getHeaderSize());
       *Data = reinterpret_cast<const u32 *>(ChunkBegin);
+
+      // Allocations of size 0 will have stashed the tag in the first byte of
+      // the chunk, see storeEndMarker().
+      if (Header->SizeOrUnusedBytes == 0)
+        *Tag = static_cast<u8>(*ChunkBegin);
+
       return true;
     };
 
@@ -1308,12 +1338,10 @@ private:
       return NextErrorReport == NumErrorReports;
     };
 
-    if (CheckOOB(Info.BlockBegin))
+    if (MinDistance == 0 && CheckOOB(Info.BlockBegin))
       return;
 
-    // Check for OOB in the 30 surrounding blocks. Beyond that we are likely to
-    // hit false positives.
-    for (int I = 1; I != 16; ++I)
+    for (size_t I = Max<size_t>(MinDistance, 1); I != MaxDistance; ++I)
       if (CheckOOB(Info.BlockBegin + I * Info.BlockSize) ||
           CheckOOB(Info.BlockBegin - I * Info.BlockSize))
         return;

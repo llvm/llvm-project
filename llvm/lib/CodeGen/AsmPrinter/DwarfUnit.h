@@ -18,6 +18,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/DIE.h"
+#include "llvm/Target/TargetMachine.h"
 #include <string>
 
 namespace llvm {
@@ -79,6 +80,15 @@ protected:
   template <typename T>
   void addAttribute(DIEValueList &Die, dwarf::Attribute Attribute,
                     dwarf::Form Form, T &&Value) {
+    // For strict DWARF mode, only generate attributes available to current
+    // DWARF version.
+    // Attribute 0 is used when emitting form-encoded values in blocks, which
+    // don't have attributes (only forms) so we cannot detect their DWARF
+    // version compatibility here and assume they are compatible.
+    if (Attribute != 0 && Asm->TM.Options.DebugStrictDwarf &&
+        DD->getDwarfVersion() < dwarf::AttributeVersion(Attribute))
+      return;
+
     Die.addValue(DIEValueAllocator,
                  DIEValue(Attribute, Form, std::forward<T>(Value)));
   }
@@ -247,7 +257,7 @@ public:
 
   /// Create a DIE with the given Tag, add the DIE to its parent, and
   /// call insertDIE if MD is not null.
-  DIE &createAndAddDIE(unsigned Tag, DIE &Parent, const DINode *N = nullptr);
+  DIE &createAndAddDIE(dwarf::Tag Tag, DIE &Parent, const DINode *N = nullptr);
 
   bool useSegmentedStringOffsetsTable() const {
     return DD->useSegmentedStringOffsetsTable();

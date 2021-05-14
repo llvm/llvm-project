@@ -49,8 +49,15 @@ class RewritePatternSet;
 
 struct VectorTransferToSCFOptions {
   bool unroll = false;
+  unsigned targetRank = 1;
+
   VectorTransferToSCFOptions &setUnroll(bool u) {
     unroll = u;
+    return *this;
+  }
+
+  VectorTransferToSCFOptions &setTargetRank(unsigned r) {
+    targetRank = r;
     return *this;
   }
 };
