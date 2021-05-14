@@ -214,6 +214,10 @@ public:
   /// both must either be scalars or vectors with the same element count. If no
   /// changes are made, the constant C is returned.
   static Constant *mergeUndefsWith(Constant *C, Constant *Other);
+
+  /// Return true if a constant is ConstantData or a ConstantAggregate or
+  /// ConstantExpr that contain only ConstantData.
+  bool isManifestConstant() const;
 };
 
 } // end namespace llvm

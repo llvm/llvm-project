@@ -1808,19 +1808,6 @@ double getValueAsDouble(ConstantFP *Op) {
   return APF.convertToDouble();
 }
 
-static bool isManifestConstant(const Constant *c) {
-  if (isa<ConstantData>(c)) {
-    return true;
-  } else if (isa<ConstantAggregate>(c) || isa<ConstantExpr>(c)) {
-    for (const Value *subc : c->operand_values()) {
-      if (!isManifestConstant(cast<Constant>(subc)))
-        return false;
-    }
-    return true;
-  }
-  return false;
-}
-
 static bool getConstIntOrUndef(Value *Op, const APInt *&C) {
   if (auto *CI = dyn_cast<ConstantInt>(Op)) {
     C = &CI->getValue();
@@ -1845,7 +1832,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     // We know we have a "Constant" argument. But we want to only
     // return true for manifest constants, not those that depend on
     // constants with unknowable values, e.g. GlobalValue or BlockAddress.
-    if (isManifestConstant(Operands[0]))
+    if (Operands[0]->isManifestConstant())
       return ConstantInt::getTrue(Ty->getContext());
     return nullptr;
   }
