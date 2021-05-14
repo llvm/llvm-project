@@ -491,9 +491,10 @@ static void propagateInPlace(const SmallVector<OpOperand *> &initalWorklist,
                              const DominanceInfo &domInfo) {
   LLVM_DEBUG(DBGS() << "\n\n");
   LLVM_DEBUG(DBGS() << "Start propagateInPlace from initial WL\n");
-  for (OpOperand *operand : initalWorklist)
-    LLVM_DEBUG(DBGS() << "WL item: " << operand->get() << " used by "
-                      << *operand->getOwner() << "\n");
+  LLVM_DEBUG(for (OpOperand *operand
+                  : initalWorklist) DBGS()
+             << "WL item: " << operand->get() << " used by "
+             << *operand->getOwner() << "\n");
   SmallVector<OpOperand *> worklist(initalWorklist);
   for (unsigned idx = 0; idx < worklist.size(); ++idx) {
     // TODO: bail on subtensor/subtensor_insert and vector.transfer_read/write
@@ -559,8 +560,7 @@ static void destructiveUpdateAnalysis(Block *block,
                     [&](Operation *op) { return op->getBlock() == block; });
 
     LLVM_DEBUG(DBGS() << "Slice:\n");
-    for (auto *op : slice)
-      LLVM_DEBUG(DBGS() << *op << "\n");
+    LLVM_DEBUG(for (auto *op : slice) DBGS() << *op << "\n");
 
     bool failedDetectingDestructiveUpdate =
         // func / return inplace patterns.
@@ -705,8 +705,8 @@ static LogicalResult convertReturnOp(OpBuilder &b, ReturnOp returnOp,
   OpBuilder::InsertionGuard g(b);
   b.setInsertionPoint(returnOp);
 
-  FuncOp funcOp = cast<FuncOp>(returnOp->getParentOp());
-  assert(funcOp && "only support FuncOp parent for ReturnOp");
+  assert(isa<FuncOp>(returnOp->getParentOp()) &&
+         "only support FuncOp parent for ReturnOp");
   for (OpOperand &operand : returnOp->getOpOperands()) {
     auto tensorType = operand.get().getType().dyn_cast<TensorType>();
     if (!tensorType)
