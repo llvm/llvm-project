@@ -316,39 +316,22 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
   }
 
   if (isMUBUF(LdSt) || isMTBUF(LdSt)) {
-    const MachineOperand *SOffset = getNamedOperand(LdSt, AMDGPU::OpName::soffset);
-    if (SOffset && SOffset->isReg()) {
-      // We can only handle this if it's a stack access, as any other resource
-      // would require reporting multiple base registers.
-      const MachineOperand *AddrReg = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
-      if (AddrReg && !AddrReg->isFI())
-        return false;
-
-      const MachineOperand *RSrc = getNamedOperand(LdSt, AMDGPU::OpName::srsrc);
-      const SIMachineFunctionInfo *MFI
-        = LdSt.getParent()->getParent()->getInfo<SIMachineFunctionInfo>();
-      if (RSrc->getReg() != MFI->getScratchRSrcReg())
-        return false;
-
-      const MachineOperand *OffsetImm =
-        getNamedOperand(LdSt, AMDGPU::OpName::offset);
-      BaseOps.push_back(RSrc);
-      BaseOps.push_back(SOffset);
-      Offset = OffsetImm->getImm();
-    } else {
-      BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::srsrc);
-      if (!BaseOp) // e.g. BUFFER_WBINVL1_VOL
-        return false;
+    const MachineOperand *RSrc = getNamedOperand(LdSt, AMDGPU::OpName::srsrc);
+    if (!RSrc) // e.g. BUFFER_WBINVL1_VOL
+      return false;
+    BaseOps.push_back(RSrc);
+    BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
+    if (BaseOp && !BaseOp->isFI())
       BaseOps.push_back(BaseOp);
-
-      BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
-      if (BaseOp)
-        BaseOps.push_back(BaseOp);
-
-      const MachineOperand *OffsetImm =
-          getNamedOperand(LdSt, AMDGPU::OpName::offset);
-      Offset = OffsetImm->getImm();
-      if (SOffset) // soffset can be an inline immediate.
+    const MachineOperand *OffsetImm =
+        getNamedOperand(LdSt, AMDGPU::OpName::offset);
+    Offset = OffsetImm->getImm();
+    const MachineOperand *SOffset =
+        getNamedOperand(LdSt, AMDGPU::OpName::soffset);
+    if (SOffset) {
+      if (SOffset->isReg())
+        BaseOps.push_back(SOffset);
+      else
         Offset += SOffset->getImm();
     }
     // Get appropriate operand, and compute width accordingly.
