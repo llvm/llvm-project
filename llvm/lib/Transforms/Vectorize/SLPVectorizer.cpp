@@ -4317,8 +4317,12 @@ InstructionCost BoUpSLP::getSpillCost() const {
 
     if (NumCalls) {
       SmallVector<Type*, 4> V;
-      for (auto *II : LiveValues)
-        V.push_back(FixedVectorType::get(II->getType(), BundleWidth));
+      for (auto *II : LiveValues) {
+        auto *ScalarTy = II->getType();
+        if (auto *VectorTy = dyn_cast<FixedVectorType>(ScalarTy))
+          ScalarTy = VectorTy->getElementType();
+        V.push_back(FixedVectorType::get(ScalarTy, BundleWidth));
+      }
       Cost += NumCalls * TTI->getCostOfKeepingLiveOverCall(V);
     }
 
