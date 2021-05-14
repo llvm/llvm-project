@@ -207,6 +207,12 @@ public:
     return result;
   }
 
+  MPFRNumber tan() const {
+    MPFRNumber result;
+    mpfr_tan(result.value, value, MPFR_RNDN);
+    return result;
+  }
+
   MPFRNumber trunc() const {
     MPFRNumber result;
     mpfr_trunc(result.value, value);
@@ -311,6 +317,8 @@ unaryOperation(Operation op, InputType input) {
     return mpfrInput.sin();
   case Operation::Sqrt:
     return mpfrInput.sqrt();
+  case Operation::Tan:
+    return mpfrInput.tan();
   case Operation::Trunc:
     return mpfrInput.trunc();
   default:
