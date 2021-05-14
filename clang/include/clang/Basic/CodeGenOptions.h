@@ -55,11 +55,12 @@ public:
   };
 
   enum VectorLibrary {
-    NoLibrary,  // Don't use any vector library.
-    Accelerate, // Use the Accelerate framework.
-    LIBMVEC,    // GLIBC vector math library.
-    MASSV,      // IBM MASS vector library.
-    SVML        // Intel short vector math library.
+    NoLibrary,         // Don't use any vector library.
+    Accelerate,        // Use the Accelerate framework.
+    LIBMVEC,           // GLIBC vector math library.
+    MASSV,             // IBM MASS vector library.
+    SVML,              // Intel short vector math library.
+    Darwin_libsystem_m // Use Darwin's libsytem_m vector functions.
   };
 
   enum ObjCDispatchMethodKind {

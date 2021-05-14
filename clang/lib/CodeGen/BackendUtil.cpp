@@ -402,6 +402,10 @@ static TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
   case CodeGenOptions::SVML:
     TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::SVML);
     break;
+  case CodeGenOptions::Darwin_libsystem_m:
+    TLII->addVectorizableFunctionsFromVecLib(
+        TargetLibraryInfoImpl::DarwinLibSystemM);
+    break;
   default:
     break;
   }
