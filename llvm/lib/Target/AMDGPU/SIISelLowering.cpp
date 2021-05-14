@@ -5926,11 +5926,11 @@ static bool parseTexFail(SDValue TexFailCtrl, SelectionDAG &DAG, SDValue *TFE,
   return Value == 0;
 }
 
-static void packImageA16AddressToDwords(SelectionDAG &DAG, SDValue Op,
-                                        MVT PackVectorVT,
-                                        SmallVectorImpl<SDValue> &PackedAddrs,
-                                        unsigned DimIdx, unsigned EndIdx,
-                                        unsigned NumGradients) {
+static void packImage16bitOpsToDwords(SelectionDAG &DAG, SDValue Op,
+                                      MVT PackVectorVT,
+                                      SmallVectorImpl<SDValue> &PackedAddrs,
+                                      unsigned DimIdx, unsigned EndIdx,
+                                      unsigned NumGradients) {
   SDLoc DL(Op);
   for (unsigned I = DimIdx; I < EndIdx; I++) {
     SDValue Addr = Op.getOperand(I);
@@ -6085,56 +6085,64 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   MVT VAddrVT =
       Op.getOperand(ArgOffset + Intr->GradientStart).getSimpleValueType();
   MVT VAddrScalarVT = VAddrVT.getScalarType();
-  MVT PackVectorVT = VAddrScalarVT == MVT::f16 ? MVT::v2f16 : MVT::v2i16;
+  MVT GradPackVectorVT = VAddrScalarVT == MVT::f16 ? MVT::v2f16 : MVT::v2i16;
   IsG16 = VAddrScalarVT == MVT::f16 || VAddrScalarVT == MVT::i16;
 
   VAddrVT = Op.getOperand(ArgOffset + Intr->CoordStart).getSimpleValueType();
   VAddrScalarVT = VAddrVT.getScalarType();
+  MVT AddrPackVectorVT = VAddrScalarVT == MVT::f16 ? MVT::v2f16 : MVT::v2i16;
   IsA16 = VAddrScalarVT == MVT::f16 || VAddrScalarVT == MVT::i16;
-  if (IsA16 || IsG16) {
-    if (IsA16) {
-      if (!ST->hasA16()) {
-        LLVM_DEBUG(dbgs() << "Failed to lower image intrinsic: Target does not "
-                             "support 16 bit addresses\n");
-        return Op;
-      }
-      if (!IsG16) {
-        LLVM_DEBUG(
-            dbgs() << "Failed to lower image intrinsic: 16 bit addresses "
-                      "need 16 bit derivatives but got 32 bit derivatives\n");
-        return Op;
-      }
-    } else if (!ST->hasG16()) {
+
+  if (BaseOpcode->Gradients && !ST->hasG16() && (IsA16 != IsG16)) {
+    // 16 bit gradients are supported, but are tied to the A16 control
+    // so both gradients and addresses must be 16 bit
+    LLVM_DEBUG(
+        dbgs() << "Failed to lower image intrinsic: 16 bit addresses "
+                  "require 16 bit args for both gradients and addresses");
+    return Op;
+  }
+
+  if (IsA16) {
+    if (!ST->hasA16()) {
       LLVM_DEBUG(dbgs() << "Failed to lower image intrinsic: Target does not "
-                           "support 16 bit derivatives\n");
+                           "support 16 bit addresses\n");
       return Op;
     }
+  }
 
-    if (BaseOpcode->Gradients && !IsA16) {
-      if (!ST->hasG16()) {
-        LLVM_DEBUG(dbgs() << "Failed to lower image intrinsic: Target does not "
-                             "support 16 bit derivatives\n");
-        return Op;
-      }
-      // Activate g16
-      const AMDGPU::MIMGG16MappingInfo *G16MappingInfo =
-          AMDGPU::getMIMGG16MappingInfo(Intr->BaseOpcode);
-      IntrOpcode = G16MappingInfo->G16; // set new opcode to variant with _g16
-    }
+  // We've dealt with incorrect input so we know that if IsA16, IsG16
+  // are set then we have to compress/pack operands (either address,
+  // gradient or both)
+  // In the case where a16 and gradients are tied (no G16 support) then we
+  // have already verified that both IsA16 and IsG16 are true
+  if (BaseOpcode->Gradients && IsG16 && ST->hasG16()) {
+    // Activate g16
+    const AMDGPU::MIMGG16MappingInfo *G16MappingInfo =
+        AMDGPU::getMIMGG16MappingInfo(Intr->BaseOpcode);
+    IntrOpcode = G16MappingInfo->G16; // set new opcode to variant with _g16
+  }
 
-    // Don't compress addresses for G16
-    const int PackEndIdx = IsA16 ? VAddrEnd : (ArgOffset + Intr->CoordStart);
-    packImageA16AddressToDwords(DAG, Op, PackVectorVT, VAddrs,
-                                ArgOffset + Intr->GradientStart, PackEndIdx,
-                                Intr->NumGradients);
-
-    if (!IsA16) {
-      // Add uncompressed address
-      for (unsigned I = ArgOffset + Intr->CoordStart; I < VAddrEnd; I++)
-        VAddrs.push_back(Op.getOperand(I));
-    }
+  // Add gradients (packed or unpacked)
+  if (IsG16) {
+    // Pack the gradients
+    // const int PackEndIdx = IsA16 ? VAddrEnd : (ArgOffset + Intr->CoordStart);
+    packImage16bitOpsToDwords(DAG, Op, GradPackVectorVT, VAddrs,
+                              ArgOffset + Intr->GradientStart,
+                              ArgOffset + Intr->CoordStart, Intr->NumGradients);
   } else {
-    for (unsigned I = ArgOffset + Intr->GradientStart; I < VAddrEnd; I++)
+    for (unsigned I = ArgOffset + Intr->GradientStart;
+         I < ArgOffset + Intr->CoordStart; I++)
+      VAddrs.push_back(Op.getOperand(I));
+  }
+
+  // Add addresses (packed or unpacked)
+  if (IsA16) {
+    packImage16bitOpsToDwords(DAG, Op, AddrPackVectorVT, VAddrs,
+                              ArgOffset + Intr->CoordStart, VAddrEnd,
+                              0 /* No gradients */);
+  } else {
+    // Add uncompressed address
+    for (unsigned I = ArgOffset + Intr->CoordStart; I < VAddrEnd; I++)
       VAddrs.push_back(Op.getOperand(I));
   }
 
