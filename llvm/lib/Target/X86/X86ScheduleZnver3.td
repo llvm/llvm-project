@@ -1615,7 +1615,8 @@ def : IsZeroIdiomFunction<[
     // int variants.
     VPXORYrr,
     VPANDNYrr,
-    VPSUBBYrr, VPSUBWYrr, VPSUBDYrr, VPSUBQYrr
+    VPSUBBYrr, VPSUBWYrr, VPSUBDYrr, VPSUBQYrr,
+    VPSUBSBYrr, VPSUBSWYrr
   ], ZeroIdiomPredicate>,
 ]>;
 
