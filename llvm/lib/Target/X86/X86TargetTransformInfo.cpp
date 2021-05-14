@@ -4691,9 +4691,17 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX2(
     ScalarTy =
         Type::getIntNTy(ScalarTy->getContext(), DL.getTypeSizeInBits(ScalarTy));
 
-  // Get the cost of all the memory operations.
-  InstructionCost MemOpCosts = getMemoryOpCost(
-      Opcode, VecTy, MaybeAlign(Alignment), AddressSpace, CostKind);
+  // Calculate the number of memory operations (NumOfMemOps), required
+  // for load/store the VecTy.
+  unsigned VecTySize = DL.getTypeStoreSize(VecTy);
+  unsigned LegalVTSize = LegalVT.getStoreSize();
+  unsigned NumOfMemOps = (VecTySize + LegalVTSize - 1) / LegalVTSize;
+
+  // Get the cost of one memory operation.
+  auto *SingleMemOpTy = FixedVectorType::get(VecTy->getElementType(),
+                                             LegalVT.getVectorNumElements());
+  InstructionCost MemOpCost = getMemoryOpCost(
+      Opcode, SingleMemOpTy, MaybeAlign(Alignment), AddressSpace, CostKind);
 
   auto *VT = FixedVectorType::get(ScalarTy, VF);
   EVT ETy = TLI->getValueType(DL, VT);
@@ -4748,13 +4756,13 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX2(
   if (Opcode == Instruction::Load) {
     if (const auto *Entry =
             CostTableLookup(AVX2InterleavedLoadTbl, Factor, ETy.getSimpleVT()))
-      return MemOpCosts + Entry->Cost;
+      return NumOfMemOps * MemOpCost + Entry->Cost;
   } else {
     assert(Opcode == Instruction::Store &&
            "Expected Store Instruction at this  point");
     if (const auto *Entry =
             CostTableLookup(AVX2InterleavedStoreTbl, Factor, ETy.getSimpleVT()))
-      return MemOpCosts + Entry->Cost;
+      return NumOfMemOps * MemOpCost + Entry->Cost;
   }
 
   return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
