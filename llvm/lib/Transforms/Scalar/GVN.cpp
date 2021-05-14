@@ -999,9 +999,21 @@ bool GVN::AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo,
       // Can't forward from non-atomic to atomic without violating memory model.
       if (DepLoad != Load && Address &&
           Load->isAtomic() <= DepLoad->isAtomic()) {
-        int Offset = analyzeLoadFromClobberingLoad(Load->getType(), Address,
-                                                   DepLoad, DL);
+        Type *LoadType = Load->getType();
+        int Offset = -1;
 
+        // If MD reported clobber, check it was nested.
+        if (DepInfo.isClobber() &&
+            canCoerceMustAliasedValueToLoad(DepLoad, LoadType, DL)) {
+          const auto ClobberOff = MD->getClobberOffset(DepLoad);
+          // GVN has no deal with a negative offset.
+          Offset = (ClobberOff == None || ClobberOff.getValue() < 0)
+                       ? -1
+                       : ClobberOff.getValue();
+        }
+        if (Offset == -1)
+          Offset =
+              analyzeLoadFromClobberingLoad(LoadType, Address, DepLoad, DL);
         if (Offset != -1) {
           Res = AvailableValue::getLoad(DepLoad, Offset);
           return true;
