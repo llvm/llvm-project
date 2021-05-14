@@ -1174,7 +1174,8 @@ bool AMDGPUCallLowering::lowerTailCall(
     // particular across call boundaries. Therefore our own arguments started at
     // a 16-byte aligned SP and the delta applied for the tail call should
     // satisfy the same constraint.
-    assert(FPDiff % 16 == 0 && "unaligned stack on tail call");
+    assert(isAligned(ST.getStackAlignment(), FPDiff) &&
+           "unaligned stack on tail call");
   }
 
   SmallVector<CCValAssign, 16> ArgLocs;
