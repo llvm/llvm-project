@@ -80,6 +80,7 @@ private:
   void demangleType();
   void demangleConst();
   void demangleConstInt();
+  void demangleConstBool();
 
   Identifier parseIdentifier();
   uint64_t parseOptionalBase62Number(char Tag);

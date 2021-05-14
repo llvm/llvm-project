@@ -411,11 +411,14 @@ void Demangler::demangleConst() {
     case BasicType::USize:
       demangleConstInt();
       break;
+    case BasicType::Bool:
+      demangleConstBool();
+      break;
     case BasicType::Placeholder:
       print('_');
       break;
     default:
-      // FIXME demangle backreferences, bool constants, and char constants.
+      // FIXME demangle backreferences and char constants.
       Error = true;
       break;
     }
@@ -437,6 +440,19 @@ void Demangler::demangleConstInt() {
     print("0x");
     print(HexDigits);
   }
+}
+
+// <const-data> = "0_" // false
+//              | "1_" // true
+void Demangler::demangleConstBool() {
+  StringView HexDigits;
+  parseHexNumber(HexDigits);
+  if (HexDigits == "0")
+    print("false");
+  else if (HexDigits == "1")
+    print("true");
+  else
+    Error = true;
 }
 
 // <undisambiguated-identifier> = ["u"] <decimal-number> ["_"] <bytes>
