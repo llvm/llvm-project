@@ -54,20 +54,20 @@ extern "C" void workshareloop_rangefor(float *a, float *b, float *c) {
 // CHECK-NEXT:    store float* [[A]], float** [[A_ADDR]], align 8
 // CHECK-NEXT:    store float* [[B]], float** [[B_ADDR]], align 8
 // CHECK-NEXT:    store float* [[C]], float** [[C_ADDR]], align 8
-// CHECK-NEXT:    call void @_ZN7MyRangeC1Ei(%struct.MyRange* nonnull dereferenceable(1) [[REF_TMP]], i32 42)
+// CHECK-NEXT:    call void @_ZN7MyRangeC1Ei(%struct.MyRange* nonnull align 1 dereferenceable(1) [[REF_TMP]], i32 42)
 // CHECK-NEXT:    store %struct.MyRange* [[REF_TMP]], %struct.MyRange** [[__RANGE2]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load %struct.MyRange*, %struct.MyRange** [[__RANGE2]], align 8
-// CHECK-NEXT:    call void @_ZN7MyRange5beginEv(%struct.MyIterator* sret([[STRUCT_MYITERATOR]]) align 1 [[__BEGIN2]], %struct.MyRange* nonnull dereferenceable(1) [[TMP0]])
+// CHECK-NEXT:    call void @_ZN7MyRange5beginEv(%struct.MyIterator* sret([[STRUCT_MYITERATOR]]) align 1 [[__BEGIN2]], %struct.MyRange* nonnull align 1 dereferenceable(1) [[TMP0]])
 // CHECK-NEXT:    [[TMP1:%.*]] = load %struct.MyRange*, %struct.MyRange** [[__RANGE2]], align 8
-// CHECK-NEXT:    call void @_ZN7MyRange3endEv(%struct.MyIterator* sret([[STRUCT_MYITERATOR]]) align 1 [[__END2]], %struct.MyRange* nonnull dereferenceable(1) [[TMP1]])
-// CHECK-NEXT:    [[CALL:%.*]] = call i32 @_ZNK10MyIteratordeEv(%struct.MyIterator* nonnull dereferenceable(1) [[__BEGIN2]])
+// CHECK-NEXT:    call void @_ZN7MyRange3endEv(%struct.MyIterator* sret([[STRUCT_MYITERATOR]]) align 1 [[__END2]], %struct.MyRange* nonnull align 1 dereferenceable(1) [[TMP1]])
+// CHECK-NEXT:    [[CALL:%.*]] = call i32 @_ZNK10MyIteratordeEv(%struct.MyIterator* nonnull align 1 dereferenceable(1) [[__BEGIN2]])
 // CHECK-NEXT:    store i32 [[CALL]], i32* [[I]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[AGG_CAPTURED]], i32 0, i32 0
 // CHECK-NEXT:    store %struct.MyIterator* [[__BEGIN2]], %struct.MyIterator** [[TMP2]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[AGG_CAPTURED]], i32 0, i32 1
 // CHECK-NEXT:    store %struct.MyIterator* [[__END2]], %struct.MyIterator** [[TMP3]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], %struct.anon.0* [[AGG_CAPTURED1]], i32 0, i32 0
-// CHECK-NEXT:    call void @_ZN10MyIteratorC1ERKS_(%struct.MyIterator* nonnull dereferenceable(1) [[TMP4]], %struct.MyIterator* nonnull align 1 dereferenceable(1) [[__BEGIN2]])
+// CHECK-NEXT:    call void @_ZN10MyIteratorC1ERKS_(%struct.MyIterator* nonnull align 1 dereferenceable(1) [[TMP4]], %struct.MyIterator* nonnull align 1 dereferenceable(1) [[__BEGIN2]])
 // CHECK-NEXT:    call void @__captured_stmt(i64* [[DOTCOUNT_ADDR]], %struct.anon* [[AGG_CAPTURED]])
 // CHECK-NEXT:    [[DOTCOUNT:%.*]] = load i64, i64* [[DOTCOUNT_ADDR]], align 8
 // CHECK-NEXT:    br label [[OMP_LOOP_PREHEADER:%.*]]
@@ -134,23 +134,23 @@ extern "C" void workshareloop_rangefor(float *a, float *b, float *c) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load %struct.anon*, %struct.anon** [[__CONTEXT_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON:%.*]], %struct.anon* [[TMP0]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load %struct.MyIterator*, %struct.MyIterator** [[TMP1]], align 8
-// CHECK-NEXT:    call void @_ZN10MyIteratorC1ERKS_(%struct.MyIterator* nonnull dereferenceable(1) [[DOTSTART]], %struct.MyIterator* nonnull align 1 dereferenceable(1) [[TMP2]])
+// CHECK-NEXT:    call void @_ZN10MyIteratorC1ERKS_(%struct.MyIterator* nonnull align 1 dereferenceable(1) [[DOTSTART]], %struct.MyIterator* nonnull align 1 dereferenceable(1) [[TMP2]])
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[TMP0]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP4:%.*]] = load %struct.MyIterator*, %struct.MyIterator** [[TMP3]], align 8
-// CHECK-NEXT:    call void @_ZN10MyIteratorC1ERKS_(%struct.MyIterator* nonnull dereferenceable(1) [[DOTSTOP]], %struct.MyIterator* nonnull align 1 dereferenceable(1) [[TMP4]])
+// CHECK-NEXT:    call void @_ZN10MyIteratorC1ERKS_(%struct.MyIterator* nonnull align 1 dereferenceable(1) [[DOTSTOP]], %struct.MyIterator* nonnull align 1 dereferenceable(1) [[TMP4]])
 // CHECK-NEXT:    store i64 1, i64* [[DOTSTEP]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, i64* [[DOTSTEP]], align 8
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[TMP5]], 0
 // CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 // CHECK:       cond.true:
-// CHECK-NEXT:    [[CALL:%.*]] = call i32 @_ZNK10MyIteratormiERKS_(%struct.MyIterator* nonnull dereferenceable(1) [[DOTSTART]], %struct.MyIterator* nonnull align 1 dereferenceable(1) [[DOTSTOP]])
+// CHECK-NEXT:    [[CALL:%.*]] = call i32 @_ZNK10MyIteratormiERKS_(%struct.MyIterator* nonnull align 1 dereferenceable(1) [[DOTSTART]], %struct.MyIterator* nonnull align 1 dereferenceable(1) [[DOTSTOP]])
 // CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[CALL]] to i64
 // CHECK-NEXT:    [[TMP6:%.*]] = load i64, i64* [[DOTSTEP]], align 8
 // CHECK-NEXT:    [[SUB:%.*]] = sub i64 0, [[TMP6]]
 // CHECK-NEXT:    [[DIV:%.*]] = udiv i64 [[CONV]], [[SUB]]
 // CHECK-NEXT:    br label [[COND_END:%.*]]
 // CHECK:       cond.false:
-// CHECK-NEXT:    [[CALL1:%.*]] = call i32 @_ZNK10MyIteratormiERKS_(%struct.MyIterator* nonnull dereferenceable(1) [[DOTSTOP]], %struct.MyIterator* nonnull align 1 dereferenceable(1) [[DOTSTART]])
+// CHECK-NEXT:    [[CALL1:%.*]] = call i32 @_ZNK10MyIteratormiERKS_(%struct.MyIterator* nonnull align 1 dereferenceable(1) [[DOTSTOP]], %struct.MyIterator* nonnull align 1 dereferenceable(1) [[DOTSTART]])
 // CHECK-NEXT:    [[CONV2:%.*]] = sext i32 [[CALL1]] to i64
 // CHECK-NEXT:    [[TMP7:%.*]] = load i64, i64* [[DOTSTEP]], align 8
 // CHECK-NEXT:    [[DIV3:%.*]] = udiv i64 [[CONV2]], [[TMP7]]
@@ -177,8 +177,8 @@ extern "C" void workshareloop_rangefor(float *a, float *b, float *c) {
 // CHECK-NEXT:    [[TMP2:%.*]] = load i64, i64* [[LOGICAL_ADDR]], align 8
 // CHECK-NEXT:    [[MUL:%.*]] = mul i64 1, [[TMP2]]
 // CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[MUL]] to i32
-// CHECK-NEXT:    call void @_ZNK10MyIteratorplEj(%struct.MyIterator* sret([[STRUCT_MYITERATOR]]) align 1 [[REF_TMP]], %struct.MyIterator* nonnull dereferenceable(1) [[TMP1]], i32 [[CONV]])
-// CHECK-NEXT:    [[CALL:%.*]] = call i32 @_ZNK10MyIteratordeEv(%struct.MyIterator* nonnull dereferenceable(1) [[REF_TMP]])
+// CHECK-NEXT:    call void @_ZNK10MyIteratorplEj(%struct.MyIterator* sret([[STRUCT_MYITERATOR]]) align 1 [[REF_TMP]], %struct.MyIterator* nonnull align 1 dereferenceable(1) [[TMP1]], i32 [[CONV]])
+// CHECK-NEXT:    [[CALL:%.*]] = call i32 @_ZNK10MyIteratordeEv(%struct.MyIterator* nonnull align 1 dereferenceable(1) [[REF_TMP]])
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32*, i32** [[LOOPVAR_ADDR]], align 8
 // CHECK-NEXT:    store i32 [[CALL]], i32* [[TMP3]], align 4
 // CHECK-NEXT:    ret void
