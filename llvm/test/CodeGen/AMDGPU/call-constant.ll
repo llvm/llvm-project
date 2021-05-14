@@ -19,7 +19,7 @@ define amdgpu_kernel void @test_call_undef() #0 {
 ; SDAG: s_waitcnt
 ; SDAG-NEXT: .Lfunc_end
 
-; GISEL: s_swappc_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}
+; GISEL: s_setpc_b64 s{{\[[0-9]+:[0-9]+\]}}
 define i32 @test_tail_call_undef() #0 {
   %call = tail call i32 undef(i32 1)
   ret i32 %call
@@ -43,7 +43,7 @@ define amdgpu_kernel void @test_call_null() #0 {
 ; SDAG: s_waitcnt
 ; SDAG-NEXT: .Lfunc_end
 
-; GISEL: s_swappc_b64 s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; GISEL: s_setpc_b64 s{{\[[0-9]+:[0-9]+\]$}}
 define i32 @test_tail_call_null() #0 {
   %call = tail call i32 null(i32 1)
   ret i32 %call
