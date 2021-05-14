@@ -132,49 +132,6 @@ private:
   DestructorFunction Destructor;
 };
 
-// Base class for Orc tests that will execute code.
-class OrcExecutionTest {
-public:
-
-  OrcExecutionTest() {
-
-    // Initialize the native target if it hasn't been done already.
-    OrcNativeTarget::initialize();
-
-    // Try to select a TargetMachine for the host.
-    TM.reset(EngineBuilder().selectTarget());
-
-    if (TM) {
-      // If we found a TargetMachine, check that it's one that Orc supports.
-      const Triple& TT = TM->getTargetTriple();
-
-      // Bail out for windows platforms. We do not support these yet.
-      if ((TT.getArch() != Triple::x86_64 && TT.getArch() != Triple::x86) ||
-           TT.isOSWindows())
-        return;
-
-      // Target can JIT?
-      SupportsJIT = TM->getTarget().hasJIT();
-      // Use ability to create callback manager to detect whether Orc
-      // has indirection support on this platform. This way the test
-      // and Orc code do not get out of sync.
-      SupportsIndirection = !!orc::createLocalCompileCallbackManager(TT, ES, 0);
-    }
-  };
-
-  ~OrcExecutionTest() {
-    if (auto Err = ES.endSession())
-      ES.reportError(std::move(Err));
-  }
-
-protected:
-  orc::ExecutionSession ES;
-  LLVMContext Context;
-  std::unique_ptr<TargetMachine> TM;
-  bool SupportsJIT = false;
-  bool SupportsIndirection = false;
-};
-
 class ModuleBuilder {
 public:
   ModuleBuilder(LLVMContext &Context, StringRef Triple,
