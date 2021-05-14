@@ -1155,7 +1155,7 @@ bool GCNHazardRecognizer::fixLdsDirectVALUHazard(MachineInstr *MI) {
     // Cover both WAR and WAW
     return I.readsRegister(VDSTReg, &TRI) || I.modifiesRegister(VDSTReg, &TRI);
   };
-  auto IsExpiredFn = [](const MachineInstr &I, int WaitStates) {
+  auto IsExpiredFn = [&](const MachineInstr &I, int WaitStates) {
     if (WaitStates >= NoHazardWaitStates)
       return true;
     // Instructions which cause va_vdst==0 expire hazard
