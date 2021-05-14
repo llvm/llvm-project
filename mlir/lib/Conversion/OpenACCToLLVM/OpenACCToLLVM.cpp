@@ -70,6 +70,8 @@ void DataDescriptor::setSize(OpBuilder &builder, Location loc, Value size) {
 // Conversion patterns
 //===----------------------------------------------------------------------===//
 
+namespace {
+
 template <typename Op>
 class LegalizeDataOpForLLVMTranslation : public ConvertOpToLLVMPattern<Op> {
   using ConvertOpToLLVMPattern<Op>::ConvertOpToLLVMPattern;
@@ -131,6 +133,7 @@ class LegalizeDataOpForLLVMTranslation : public ConvertOpToLLVMPattern<Op> {
     return success();
   }
 };
+} // namespace
 
 void mlir::populateOpenACCToLLVMConversionPatterns(
     LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
