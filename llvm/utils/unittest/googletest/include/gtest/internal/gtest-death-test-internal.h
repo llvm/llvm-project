@@ -27,12 +27,11 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-// Authors: wan@google.com (Zhanyong Wan), eefacm@gmail.com (Sean Mcafee)
-//
-// The Google C++ Testing Framework (Google Test)
+// The Google C++ Testing and Mocking Framework (Google Test)
 //
 // This header file defines internal utilities needed for implementing
 // death tests.  They are subject to change without notice.
+// GOOGLETEST_CM0001 DO NOT DELETE
 
 #ifndef GTEST_INCLUDE_GTEST_INTERNAL_GTEST_DEATH_TEST_INTERNAL_H_
 #define GTEST_INCLUDE_GTEST_INTERNAL_GTEST_DEATH_TEST_INTERNAL_H_
@@ -52,6 +51,9 @@ const char kDeathTestUseFork[] = "death_test_use_fork";
 const char kInternalRunDeathTestFlag[] = "internal_run_death_test";
 
 #if GTEST_HAS_DEATH_TEST
+
+GTEST_DISABLE_MSC_WARNINGS_PUSH_(4251 \
+/* class A needs to have dll-interface to be used by clients of class B */)
 
 // DeathTest is a class that hides much of the complexity of the
 // GTEST_DEATH_TEST_ macro.  It is abstract; its static Create method
@@ -136,6 +138,8 @@ class GTEST_API_ DeathTest {
   GTEST_DISALLOW_COPY_AND_ASSIGN_(DeathTest);
 };
 
+GTEST_DISABLE_MSC_WARNINGS_POP_()  //  4251
+
 // Factory interface for death tests.  May be mocked out for testing.
 class DeathTestFactory {
  public:
@@ -216,14 +220,18 @@ GTEST_API_ bool ExitedUnsuccessfully(int exit_status);
 // can be streamed.
 
 // This macro is for implementing ASSERT/EXPECT_DEBUG_DEATH when compiled in
-// NDEBUG mode. In this case we need the statements to be executed, the regex is
-// ignored, and the macro must accept a streamed message even though the message
-// is never printed.
-# define GTEST_EXECUTE_STATEMENT_(statement, regex) \
-  GTEST_AMBIGUOUS_ELSE_BLOCKER_ \
-  if (::testing::internal::AlwaysTrue()) { \
-     GTEST_SUPPRESS_UNREACHABLE_CODE_WARNING_BELOW_(statement); \
-  } else \
+// NDEBUG mode. In this case we need the statements to be executed and the macro
+// must accept a streamed message even though the message is never printed.
+// The regex object is not evaluated, but it is used to prevent "unused"
+// warnings and to avoid an expression that doesn't compile in debug mode.
+#define GTEST_EXECUTE_STATEMENT_(statement, regex)             \
+  GTEST_AMBIGUOUS_ELSE_BLOCKER_                                \
+  if (::testing::internal::AlwaysTrue()) {                     \
+    GTEST_SUPPRESS_UNREACHABLE_CODE_WARNING_BELOW_(statement); \
+  } else if (!::testing::internal::AlwaysTrue()) {             \
+    const ::testing::internal::RE& gtest_regex = (regex);      \
+    static_cast<void>(gtest_regex);                            \
+  } else                                                       \
     ::testing::Message()
 
 // A class representing the parsed contents of the
@@ -261,53 +269,6 @@ class InternalRunDeathTestFlag {
 // initialized from the GTEST_FLAG(internal_run_death_test) flag if
 // the flag is specified; otherwise returns NULL.
 InternalRunDeathTestFlag* ParseInternalRunDeathTestFlag();
-
-#else  // GTEST_HAS_DEATH_TEST
-
-// This macro is used for implementing macros such as
-// EXPECT_DEATH_IF_SUPPORTED and ASSERT_DEATH_IF_SUPPORTED on systems where
-// death tests are not supported. Those macros must compile on such systems
-// iff EXPECT_DEATH and ASSERT_DEATH compile with the same parameters on
-// systems that support death tests. This allows one to write such a macro
-// on a system that does not support death tests and be sure that it will
-// compile on a death-test supporting system.
-//
-// Parameters:
-//   statement -  A statement that a macro such as EXPECT_DEATH would test
-//                for program termination. This macro has to make sure this
-//                statement is compiled but not executed, to ensure that
-//                EXPECT_DEATH_IF_SUPPORTED compiles with a certain
-//                parameter iff EXPECT_DEATH compiles with it.
-//   regex     -  A regex that a macro such as EXPECT_DEATH would use to test
-//                the output of statement.  This parameter has to be
-//                compiled but not evaluated by this macro, to ensure that
-//                this macro only accepts expressions that a macro such as
-//                EXPECT_DEATH would accept.
-//   terminator - Must be an empty statement for EXPECT_DEATH_IF_SUPPORTED
-//                and a return statement for ASSERT_DEATH_IF_SUPPORTED.
-//                This ensures that ASSERT_DEATH_IF_SUPPORTED will not
-//                compile inside functions where ASSERT_DEATH doesn't
-//                compile.
-//
-//  The branch that has an always false condition is used to ensure that
-//  statement and regex are compiled (and thus syntactically correct) but
-//  never executed. The unreachable code macro protects the terminator
-//  statement from generating an 'unreachable code' warning in case
-//  statement unconditionally returns or throws. The Message constructor at
-//  the end allows the syntax of streaming additional messages into the
-//  macro, for compilational compatibility with EXPECT_DEATH/ASSERT_DEATH.
-# define GTEST_UNSUPPORTED_DEATH_TEST_(statement, regex, terminator) \
-    GTEST_AMBIGUOUS_ELSE_BLOCKER_ \
-    if (::testing::internal::AlwaysTrue()) { \
-      GTEST_LOG_(WARNING) \
-          << "Death tests are not supported on this platform.\n" \
-          << "Statement '" #statement "' cannot be verified."; \
-    } else if (::testing::internal::AlwaysFalse()) { \
-      ::testing::internal::RE::PartialMatch(".*", (regex)); \
-      GTEST_SUPPRESS_UNREACHABLE_CODE_WARNING_BELOW_(statement); \
-      terminator; \
-    } else \
-      ::testing::Message()
 
 #endif  // GTEST_HAS_DEATH_TEST
 

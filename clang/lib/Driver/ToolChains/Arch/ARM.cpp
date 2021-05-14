@@ -636,6 +636,10 @@ fp16_fml_fallthrough:
   // FIXME: this needs reimplementation after the TargetParser rewrite
   bool HasSHA2 = false;
   bool HasAES = false;
+  const auto ItCrypto =
+      llvm::find_if(llvm::reverse(Features), [](const StringRef F) {
+        return F.contains("crypto");
+      });
   const auto ItSHA2 =
       llvm::find_if(llvm::reverse(Features), [](const StringRef F) {
         return F.contains("crypto") || F.contains("sha2");
@@ -650,7 +654,7 @@ fp16_fml_fallthrough:
     HasSHA2 = ItSHA2->take_front() == "+";
   if (FoundAES)
     HasAES = ItAES->take_front() == "+";
-  if (FoundSHA2 || FoundAES) {
+  if (ItCrypto != Features.rend()) {
     if (HasSHA2 && HasAES)
       Features.push_back("+crypto");
     else

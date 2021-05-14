@@ -19,7 +19,7 @@
 
 using clang::tooling::ReplacementTest;
 using clang::tooling::toReplacements;
-using testing::internal::ScopedTrace;
+using testing::ScopedTrace;
 
 namespace clang {
 namespace format {

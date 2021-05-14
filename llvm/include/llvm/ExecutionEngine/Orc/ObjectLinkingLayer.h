@@ -129,6 +129,17 @@ public:
     return *this;
   }
 
+  /// Add a LinkGraph to the JITDylib targeted by the given tracker.
+  Error add(ResourceTrackerSP, std::unique_ptr<jitlink::LinkGraph> G);
+
+  /// Add a LinkGraph to the given JITDylib.
+  Error add(JITDylib &JD, std::unique_ptr<jitlink::LinkGraph> G) {
+    return add(JD.getDefaultResourceTracker(), std::move(G));
+  }
+
+  // Un-hide ObjectLayer add methods.
+  using ObjectLayer::add;
+
   /// Emit an object file.
   void emit(std::unique_ptr<MaterializationResponsibility> R,
             std::unique_ptr<MemoryBuffer> O) override;

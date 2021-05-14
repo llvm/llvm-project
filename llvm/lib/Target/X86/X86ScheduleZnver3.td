@@ -1530,6 +1530,21 @@ def : InstRW<[Zn3WriteZeroIdiomEFLAGS], (instrs CMP8rr,  CMP8rr_REV,
                                                 CMP32rr, CMP32rr_REV,
                                                 CMP64rr, CMP64rr_REV)>;
 
+def Zn3WriteFZeroIdiom : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [Zn3WriteZeroLatency]>,
+    SchedVar<NoSchedPred,                          [WriteFLogic]>
+]>;
+// NOTE: XORPSrr, XORPDrr are not zero-cycle!
+def : InstRW<[Zn3WriteFZeroIdiom], (instrs VXORPSrr, VXORPDrr,
+                                           VANDNPSrr, VANDNPDrr)>;
+
+def Zn3WriteFZeroIdiomY : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [Zn3WriteZeroLatency]>,
+    SchedVar<NoSchedPred,                          [WriteFLogicY]>
+]>;
+def : InstRW<[Zn3WriteFZeroIdiomY], (instrs VXORPSYrr, VXORPDYrr,
+                                            VANDNPSYrr, VANDNPDYrr)>;
+
 def : IsZeroIdiomFunction<[
   // GPR Zero-idioms.
   DepBreakingClass<[ XOR32rr, XOR32rr_REV,
@@ -1538,7 +1553,16 @@ def : IsZeroIdiomFunction<[
                      SUB64rr, SUB64rr_REV ], ZeroIdiomPredicate>,
 
   // SSE XMM Zero-idioms.
-  DepBreakingClass<[ XORPSrr ], ZeroIdiomPredicate>,
+  DepBreakingClass<[ XORPSrr, XORPDrr,
+                     ANDNPSrr, ANDNPDrr ], ZeroIdiomPredicate>,
+
+  // AVX XMM Zero-idioms.
+  DepBreakingClass<[ VXORPSrr, VXORPDrr,
+                     VANDNPSrr, VANDNPDrr ], ZeroIdiomPredicate>,
+
+  // AVX YMM Zero-idioms.
+  DepBreakingClass<[ VXORPSYrr, VXORPDYrr,
+                     VANDNPSYrr, VANDNPDYrr ], ZeroIdiomPredicate>,
 ]>;
 
 def : IsDepBreakingFunction<[

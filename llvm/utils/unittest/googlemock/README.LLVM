@@ -1,7 +1,7 @@
 LLVM notes
 ----------
 
-This directory contains the 'googlemock' component of Google Test 1.8.0, with
+This directory contains the 'googlemock' component of Google Test 1.8.1, with
 all elements removed except for the actual source code, to minimize the
 addition to the LLVM distribution.
 

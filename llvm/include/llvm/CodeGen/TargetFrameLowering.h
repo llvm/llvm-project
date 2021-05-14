@@ -149,6 +149,14 @@ public:
   /// returns false, spill slots will be assigned using generic implementation.
   /// assignCalleeSavedSpillSlots() may add, delete or rearrange elements of
   /// CSI.
+  virtual bool assignCalleeSavedSpillSlots(MachineFunction &MF,
+                                           const TargetRegisterInfo *TRI,
+                                           std::vector<CalleeSavedInfo> &CSI,
+                                           unsigned &MinCSFrameIndex,
+                                           unsigned &MaxCSFrameIndex) const {
+    return assignCalleeSavedSpillSlots(MF, TRI, CSI);
+  }
+
   virtual bool
   assignCalleeSavedSpillSlots(MachineFunction &MF,
                               const TargetRegisterInfo *TRI,

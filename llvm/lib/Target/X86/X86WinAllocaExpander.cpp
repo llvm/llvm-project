@@ -196,7 +196,7 @@ static unsigned getSubOpcode(bool Is64Bit, int64_t Amount) {
 }
 
 void X86WinAllocaExpander::lower(MachineInstr* MI, Lowering L) {
-  DebugLoc DL = MI->getDebugLoc();
+  const DebugLoc &DL = MI->getDebugLoc();
   MachineBasicBlock *MBB = MI->getParent();
   MachineBasicBlock::iterator I = *MI;
 

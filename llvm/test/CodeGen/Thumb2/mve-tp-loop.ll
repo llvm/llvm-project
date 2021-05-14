@@ -409,5 +409,39 @@ entry:
   ret void
 }
 
+define void @csprlive(i32* noalias %X, i32* noalias readonly %Y, i32 %n) {
+; CHECK-LABEL: csprlive:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    wlstp.8 lr, r2, .LBB16_2
+; CHECK-NEXT:  .LBB16_1: @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vldrb.u8 q0, [r1], #16
+; CHECK-NEXT:    vstrb.8 q0, [r0], #16
+; CHECK-NEXT:    letp lr, .LBB16_1
+; CHECK-NEXT:  .LBB16_2: @ %entry
+; CHECK-NEXT:    bl other
+; CHECK-NEXT:    pop {r7, pc}
+entry:
+  %cmp6 = icmp sgt i32 %n, 0
+  %X.bits = bitcast i32* %X to i8*
+  %Y.bits = bitcast i32* %Y to i8*
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %X.bits, i8* align 4 %Y.bits, i32 %n, i1 false)
+  br i1 %cmp6, label %if, label %else
+
+if:
+  call void @other()
+  br label %cleanup
+
+else:
+  call void @other()
+  br label %cleanup
+
+cleanup:
+  ret void
+}
+
+declare void @other()
+
 attributes #0 = { noinline  optnone }
 attributes #1 = { optsize }

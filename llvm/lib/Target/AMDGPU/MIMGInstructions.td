@@ -744,8 +744,8 @@ class MIMG_Sampler_AddrSizes<AMDGPUSampleVariant sample> {
   list<int> AllNumAddrWords =
     !foreach(dw, !if(sample.Gradients,
                      !if(!eq(sample.LodOrClamp, ""),
-                         [2, 3, 4, 5, 6, 7, 9],
-                         [2, 3, 4, 5, 7, 8, 10]),
+                         [2, 3, 4, 5, 6, 7, 8, 9],
+                         [2, 3, 4, 5, 6, 7, 8, 9, 10]),
                      !if(!eq(sample.LodOrClamp, ""),
                          [1, 2, 3],
                          [1, 2, 3, 4])),

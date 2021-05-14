@@ -814,6 +814,18 @@ One useful source of information about the LLVM source base is the LLVM `doxygen
 `<https://llvm.org/doxygen/>`_.  The following is a brief introduction to code
 layout:
 
+``llvm/cmake``
+--------------
+Genereates system build files.
+
+``llvm/cmake/modules``
+  Build configuration for llvm user defined options. Checks compiler version and 
+  linker flags.
+
+``llvm/cmake/platforms``
+  Toolchain configuration for Android NDK, iOS systems and non-Windows hosts to
+  target MSVC.
+
 ``llvm/examples``
 -----------------
 

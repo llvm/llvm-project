@@ -364,6 +364,10 @@ private:
 
   unsigned DefaultBlockScanLimit;
 
+  /// Offsets to dependant clobber loads.
+  using ClobberOffsetsMapType = DenseMap<LoadInst *, int32_t>;
+  ClobberOffsetsMapType ClobberOffsets;
+
 public:
   MemoryDependenceResults(AAResults &AA, AssumptionCache &AC,
                           const TargetLibraryInfo &TLI, DominatorTree &DT,
@@ -467,6 +471,14 @@ public:
 
   /// Release memory in caches.
   void releaseMemory();
+
+  /// Return the clobber offset to dependent instruction.
+  Optional<int32_t> getClobberOffset(LoadInst *DepInst) const {
+    const auto Off = ClobberOffsets.find(DepInst);
+    if (Off != ClobberOffsets.end())
+      return Off->getSecond();
+    return None;
+  }
 
 private:
   MemDepResult getCallDependencyFrom(CallBase *Call, bool isReadOnlyCall,

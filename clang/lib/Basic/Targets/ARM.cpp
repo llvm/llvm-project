@@ -649,7 +649,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
     // ACLE 6.5.7 Crypto Extension
     // The __ARM_FEATURE_CRYPTO is deprecated in favor of finer grained
     // feature macros for AES and SHA2
-    if (Crypto || (SHA2 && AES))
+    if (SHA2 && AES)
       Builder.defineMacro("__ARM_FEATURE_CRYPTO", "1");
     if (SHA2)
       Builder.defineMacro("__ARM_FEATURE_SHA2", "1");

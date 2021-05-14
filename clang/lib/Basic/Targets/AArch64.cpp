@@ -289,7 +289,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   // The __ARM_FEATURE_CRYPTO is deprecated in favor of finer grained feature
   // macros for AES, SHA2, SHA3 and SM4
-  if (HasCrypto || (HasAES && HasSHA2))
+  if (HasAES && HasSHA2)
     Builder.defineMacro("__ARM_FEATURE_CRYPTO", "1");
 
   if (HasAES)

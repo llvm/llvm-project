@@ -86,6 +86,8 @@ private:
                           unsigned N);
   bool expandCALL_RVMARKER(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI);
+  bool expandStoreSwiftAsyncContext(MachineBasicBlock &MBB,
+                                    MachineBasicBlock::iterator MBBI);
 };
 
 } // end anonymous namespace
@@ -696,6 +698,63 @@ bool AArch64ExpandPseudo::expandCALL_RVMARKER(
   return true;
 }
 
+bool AArch64ExpandPseudo::expandStoreSwiftAsyncContext(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
+  Register CtxReg = MBBI->getOperand(0).getReg();
+  Register BaseReg = MBBI->getOperand(1).getReg();
+  int Offset = MBBI->getOperand(2).getImm();
+  DebugLoc DL(MBBI->getDebugLoc());
+  auto &STI = MBB.getParent()->getSubtarget<AArch64Subtarget>();
+
+  if (STI.getTargetTriple().getArchName() != "arm64e") {
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::STRXui))
+        .addUse(CtxReg)
+        .addUse(BaseReg)
+        .addImm(Offset / 8)
+        .setMIFlag(MachineInstr::FrameSetup);
+    MBBI->eraseFromParent();
+    return true;
+  }
+
+  // We need to sign the context in an address-discriminated way. 0xc31a is a
+  // fixed random value, chosen as part of the ABI.
+  //     add x16, xBase, #Offset
+  //     movk x16, #0xc31a, lsl #48
+  //     mov x17, x22/xzr
+  //     pacdb x17, x16
+  //     str x17, [xBase, #Offset]
+  unsigned Opc = Offset >= 0 ? AArch64::ADDXri : AArch64::SUBXri;
+  BuildMI(MBB, MBBI, DL, TII->get(Opc), AArch64::X16)
+      .addUse(BaseReg)
+      .addImm(abs(Offset))
+      .addImm(0)
+      .setMIFlag(MachineInstr::FrameSetup);
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::MOVKXi), AArch64::X16)
+      .addUse(AArch64::X16)
+      .addImm(0xc31a)
+      .addImm(48)
+      .setMIFlag(MachineInstr::FrameSetup);
+  // We're not allowed to clobber X22 (and couldn't clobber XZR if we tried), so
+  // move it somewhere before signing.
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), AArch64::X17)
+      .addUse(AArch64::XZR)
+      .addUse(CtxReg)
+      .addImm(0)
+      .setMIFlag(MachineInstr::FrameSetup);
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACDB), AArch64::X17)
+      .addUse(AArch64::X17)
+      .addUse(AArch64::X16)
+      .setMIFlag(MachineInstr::FrameSetup);
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::STRXui))
+      .addUse(AArch64::X17)
+      .addUse(BaseReg)
+      .addImm(Offset / 8)
+      .setMIFlag(MachineInstr::FrameSetup);
+
+  MBBI->eraseFromParent();
+  return true;
+}
+
 /// If MBBI references a pseudo instruction that should be expanded here,
 /// do the expansion and return true.  Otherwise return false.
 bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
@@ -1110,6 +1169,8 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      return expandSVESpillFill(MBB, MBBI, AArch64::LDR_ZXI, 2);
    case AArch64::BLR_RVMARKER:
      return expandCALL_RVMARKER(MBB, MBBI);
+   case AArch64::StoreSwiftAsyncContext:
+     return expandStoreSwiftAsyncContext(MBB, MBBI);
   }
   return false;
 }
