@@ -114,21 +114,22 @@ class AdjustStack<SDPatternOperator operator> :
 
 let isCodeGenOnly = 1 in {
 
+// _POOL32A0_0 pool of instruction.
 def SLLV_NM  : ArithLoginR32<"sllv", GPR32NMOpnd, shl>;
 def SRLV_NM  : ArithLoginR32<"srlv", GPR32NMOpnd, srl>;
 def SRAV_NM  : ArithLoginR32<"srav", GPR32NMOpnd, sra>;
 def ROTRV_NM : ArithLoginR32<"rotrv", GPR32NMOpnd, rotr>;
 def ADD_NM   : ArithLoginR32<"add", GPR32NMOpnd>;
 def ADDu_NM  : ArithLoginR32<"addu", GPR32NMOpnd, add>;
-def ADDiu_NM : ArithLogicINM<"addiu", simm16_relaxed, GPR32NMOpnd,
-                             imm32SExt16, add>;
 def SUB_NM   : ArithLoginR32<"sub", GPR32NMOpnd>;
 def SUBu_NM  : ArithLoginR32<"subu", GPR32NMOpnd, sub>;
+def AND_NM   : ArithLoginR32<"and", GPR32NMOpnd, and>;
+def OR_NM    : ArithLoginR32<"or", GPR32NMOpnd, or>;
+def NOR_NM   : ArithLoginR32<"nor", GPR32NMOpnd>;
+def XOR_NM   : ArithLoginR32<"xor", GPR32NMOpnd, xor>;
 
-def AND_NM : ArithLoginR32<"and", GPR32NMOpnd, and>;
-def OR_NM  : ArithLoginR32<"or", GPR32NMOpnd, or>;
-def XOR_NM : ArithLoginR32<"xor", GPR32NMOpnd, xor>;
-def NOR_NM : ArithLoginR32<"nor", GPR32NMOpnd>;
+def ADDiu_NM : ArithLogicINM<"addiu", simm16_relaxed, GPR32NMOpnd,
+                             imm32SExt16, add>;
 
 def NOT_NM   : ArithLogicR16<"not", GPR3Opnd, not>;
 def XOR16_NM : ArithLogicR16<"xor16", GPR3Opnd>;
