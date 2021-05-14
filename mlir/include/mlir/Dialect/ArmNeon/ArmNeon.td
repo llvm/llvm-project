@@ -108,7 +108,7 @@ def SdotOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"sdot",[1], [
   }];
   // Supports either:
   //   (vector<2xi32>, vector<8xi8>, vector<8xi8>) -> vector<2xi32>
-  //   (vector<4xi32>, vector<16xi8>, vector<16xi8>) -> vector<16xi32>
+  //   (vector<4xi32>, vector<16xi8>, vector<16xi8>) -> vector<4xi32>
   let arguments = (ins VectorOfLengthAndType<[4, 2], [I32]>:$a,
                        VectorOfLengthAndType<[16, 8], [I8]>:$b,
                        VectorOfLengthAndType<[16, 8], [I8]>:$c);
