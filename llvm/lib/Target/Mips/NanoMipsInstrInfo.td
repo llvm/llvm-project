@@ -116,6 +116,7 @@ let isCodeGenOnly = 1 in {
 
 def SLLV_NM : ArithLoginR32<"sllv", GPR32NMOpnd, shl>;
 def SRLV_NM : ArithLoginR32<"srlv", GPR32NMOpnd, srl>;
+def SRAV_NM : ArithLoginR32<"srav", GPR32NMOpnd, sra>;
 def ADDu_NM : ArithLoginR32<"addu", GPR32NMOpnd, add>;
 def ADDiu_NM : ArithLogicINM<"addiu", simm16_relaxed, GPR32NMOpnd,
                              imm32SExt16, add>;
