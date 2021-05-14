@@ -81,3 +81,39 @@ func @not_inplace(%A : tensor<?x?xf32> {linalg.inplaceable = true}) -> tensor<?x
     -> tensor<?x?xf32>
   return %r: tensor<?x?xf32>
 }
+// -----
+
+// CHECK-LABEL: func @vec_inplace
+func @vec_inplace(%A : tensor<?xf32> {linalg.inplaceable = true}, %vec : vector<4xf32>)
+    -> tensor<?xf32>
+{
+  %c0 = constant 0 : index
+  // CHECK-NOT: alloc
+  %r = vector.transfer_write %vec, %A[%c0] : vector<4xf32>, tensor<?xf32>
+  return %r: tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @vec_not_inplace
+//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: tensor<?xf32> {linalg.inplaceable = true}
+func @vec_not_inplace(%A : tensor<?xf32> {linalg.inplaceable = true}, %vec : vector<4xf32>)
+    -> (tensor<?xf32>, tensor<?xf32>)
+{
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+
+  //       CHECK: %[[BUFFER_CAST:.*]] = memref.buffer_cast %[[A]] : memref<?xf32, #[[$map_2d_dyn]]>
+
+  /// Cross-op multiple uses of %A, the first vector.transfer which has interfering reads must alloc.
+  //      CHECK: %[[ALLOC:.*]] = memref.alloc
+  // CHECK-NEXT: vector.transfer_write {{.*}}, %[[ALLOC]]
+  %r0 = vector.transfer_write %vec, %A[%c0] : vector<4xf32>, tensor<?xf32>
+
+  /// The second vector.transfer has no interfering reads and can reuse the buffer.
+  //  CHECK-NOT: alloc
+  // CHECK-NEXT: vector.transfer_write {{.*}}, %[[BUFFER_CAST]]
+  %r1 = vector.transfer_write %vec, %A[%c1] : vector<4xf32>, tensor<?xf32>
+  return %r0, %r1: tensor<?xf32>, tensor<?xf32>
+}
+
