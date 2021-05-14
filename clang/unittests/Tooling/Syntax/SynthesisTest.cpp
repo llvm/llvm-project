@@ -38,8 +38,8 @@ protected:
   }
 };
 
-INSTANTIATE_TEST_CASE_P(SynthesisTests, SynthesisTest,
-                        ::testing::ValuesIn(allTestClangConfigs()), );
+INSTANTIATE_TEST_SUITE_P(SynthesisTests, SynthesisTest,
+                        ::testing::ValuesIn(allTestClangConfigs()) );
 
 TEST_P(SynthesisTest, Leaf_Punctuation) {
   buildTree("", GetParam());

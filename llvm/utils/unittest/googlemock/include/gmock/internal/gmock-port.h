@@ -54,14 +54,13 @@
 // here, as Google Mock depends on Google Test.  Only add a utility
 // here if it's truly specific to Google Mock.
 
-#include "gtest/internal/gtest-linked_ptr.h"
 #include "gtest/internal/gtest-port.h"
 #include "gmock/internal/custom/gmock-port.h"
 
-// For MS Visual C++, check the compiler version. At least VS 2003 is
+// For MS Visual C++, check the compiler version. At least VS 2015 is
 // required to compile Google Mock.
-#if defined(_MSC_VER) && _MSC_VER < 1310
-# error "At least Visual C++ 2003 (7.1) is required to compile Google Mock."
+#if defined(_MSC_VER) && _MSC_VER < 1900
+# error "At least Visual C++ 2015 (14.0) is required to compile Google Mock."
 #endif
 
 // Macro for referencing flags.  This is public as we want the user to

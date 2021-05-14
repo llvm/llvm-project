@@ -330,7 +330,7 @@ TEST_P(ExpressionFormatParameterisedFixture, FormatBoolOperator) {
   EXPECT_TRUE(bool(Format));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     AllowedExplicitExpressionFormat, ExpressionFormatParameterisedFixture,
     ::testing::Values(
         std::make_tuple(ExpressionFormat::Kind::Unsigned, 0, false),
@@ -355,7 +355,7 @@ INSTANTIATE_TEST_CASE_P(
         std::make_tuple(ExpressionFormat::Kind::HexUpper, 16, true),
 
         std::make_tuple(ExpressionFormat::Kind::Unsigned, 20, false),
-        std::make_tuple(ExpressionFormat::Kind::Signed, 20, false)), );
+        std::make_tuple(ExpressionFormat::Kind::Signed, 20, false)));
 
 TEST_F(FileCheckTest, NoFormatProperties) {
   ExpressionFormat NoFormat(ExpressionFormat::Kind::NoFormat);

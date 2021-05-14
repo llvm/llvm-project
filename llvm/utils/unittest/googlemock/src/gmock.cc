@@ -33,12 +33,9 @@
 
 namespace testing {
 
-// FIXME: support using environment variables to
-// control the flag values, like what Google Test does.
-
 GMOCK_DEFINE_bool_(catch_leaked_mocks, true,
-                   "true iff Google Mock should report leaked mock objects "
-                   "as failures.");
+                   "true if and only if Google Mock should report leaked "
+                   "mock objects as failures.");
 
 GMOCK_DEFINE_string_(verbose, internal::kWarningVerbosity,
                      "Controls how verbose Google Mock's output is."
@@ -65,12 +62,12 @@ static const char* ParseGoogleMockFlagValue(const char* str,
                                             const char* flag,
                                             bool def_optional) {
   // str and flag must not be NULL.
-  if (str == NULL || flag == NULL) return NULL;
+  if (str == nullptr || flag == nullptr) return nullptr;
 
   // The flag must start with "--gmock_".
   const std::string flag_str = std::string("--gmock_") + flag;
   const size_t flag_len = flag_str.length();
-  if (strncmp(str, flag_str.c_str(), flag_len) != 0) return NULL;
+  if (strncmp(str, flag_str.c_str(), flag_len) != 0) return nullptr;
 
   // Skips the flag name.
   const char* flag_end = str + flag_len;
@@ -83,7 +80,7 @@ static const char* ParseGoogleMockFlagValue(const char* str,
   // If def_optional is true and there are more characters after the
   // flag name, or if def_optional is false, there must be a '=' after
   // the flag name.
-  if (flag_end[0] != '=') return NULL;
+  if (flag_end[0] != '=') return nullptr;
 
   // Returns the string after "=".
   return flag_end + 1;
@@ -100,7 +97,7 @@ static bool ParseGoogleMockBoolFlag(const char* str, const char* flag,
   const char* const value_str = ParseGoogleMockFlagValue(str, flag, true);
 
   // Aborts if the parsing failed.
-  if (value_str == NULL) return false;
+  if (value_str == nullptr) return false;
 
   // Converts the string value to a bool.
   *value = !(*value_str == '0' || *value_str == 'f' || *value_str == 'F');
@@ -119,7 +116,7 @@ static bool ParseGoogleMockStringFlag(const char* str, const char* flag,
   const char* const value_str = ParseGoogleMockFlagValue(str, flag, false);
 
   // Aborts if the parsing failed.
-  if (value_str == NULL) return false;
+  if (value_str == nullptr) return false;
 
   // Sets *value to the value of the flag.
   *value = value_str;
@@ -132,7 +129,7 @@ static bool ParseGoogleMockIntFlag(const char* str, const char* flag,
   const char* const value_str = ParseGoogleMockFlagValue(str, flag, true);
 
   // Aborts if the parsing failed.
-  if (value_str == NULL) return false;
+  if (value_str == nullptr) return false;
 
   // Sets *value to the value of the flag.
   return ParseInt32(Message() << "The value of flag --" << flag,
@@ -199,6 +196,18 @@ GTEST_API_ void InitGoogleMock(int* argc, char** argv) {
 // UNICODE mode.
 GTEST_API_ void InitGoogleMock(int* argc, wchar_t** argv) {
   internal::InitGoogleMockImpl(argc, argv);
+}
+
+// This overloaded version can be used on Arduino/embedded platforms where
+// there is no argc/argv.
+GTEST_API_ void InitGoogleMock() {
+  // Since Arduino doesn't have a command line, fake out the argc/argv arguments
+  int argc = 1;
+  const auto arg0 = "dummy";
+  char* argv0 = const_cast<char*>(arg0);
+  char** argv = &argv0;
+
+  internal::InitGoogleMockImpl(&argc, argv);
 }
 
 }  // namespace testing
