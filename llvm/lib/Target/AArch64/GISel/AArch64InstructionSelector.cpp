@@ -490,6 +490,8 @@ getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB,
     if (Ty.getSizeInBits() == 64)
       return GetAllRegSet ? &AArch64::GPR64allRegClass
                           : &AArch64::GPR64RegClass;
+    if (Ty.getSizeInBits() == 128)
+      return &AArch64::XSeqPairsClassRegClass;
     return nullptr;
   }
 
@@ -522,6 +524,8 @@ getMinClassForRegBank(const RegisterBank &RB, unsigned SizeInBits,
     if (SizeInBits == 64)
       return GetAllRegSet ? &AArch64::GPR64allRegClass
                           : &AArch64::GPR64RegClass;
+    if (SizeInBits == 128)
+      return &AArch64::XSeqPairsClassRegClass;
   }
 
   if (RegBankID == AArch64::FPRRegBankID) {
@@ -2465,19 +2469,24 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       if (DstTy.getSizeInBits() != 64)
         return false;
 
-      const RegisterBank &SrcRB = *RBI.getRegBank(SrcReg, MRI, TRI);
-      const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
-      // Check we have the right regbank always.
-      assert(SrcRB.getID() == AArch64::FPRRegBankID &&
-             DstRB.getID() == AArch64::FPRRegBankID &&
-             "Wrong extract regbank!");
-      (void)SrcRB;
-
-      // Emit the same code as a vector extract.
-      // Offset must be a multiple of 64.
       unsigned Offset = I.getOperand(2).getImm();
       if (Offset % 64 != 0)
         return false;
+
+      // Check we have the right regbank always.
+      const RegisterBank &SrcRB = *RBI.getRegBank(SrcReg, MRI, TRI);
+      const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
+      assert(SrcRB.getID() == DstRB.getID() && "Wrong extract regbank!");
+
+      if (SrcRB.getID() == AArch64::GPRRegBankID) {
+        MIB.buildInstr(TargetOpcode::COPY, {DstReg}, {})
+            .addUse(SrcReg, 0, Offset == 0 ? AArch64::sube64 : AArch64::subo64);
+        I.eraseFromParent();
+        return true;
+      }
+
+      // Emit the same code as a vector extract.
+      // Offset must be a multiple of 64.
       unsigned LaneIdx = Offset / 64;
       MachineInstr *Extract = emitExtractVectorElt(
           DstReg, DstRB, LLT::scalar(64), SrcReg, LaneIdx, MIB);
@@ -4900,6 +4909,15 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
   switch (IntrinID) {
   default:
     return false;
+  case Intrinsic::aarch64_ldxp:
+  case Intrinsic::aarch64_ldaxp: {
+    auto NewI = MIB.buildInstr(
+        IntrinID == Intrinsic::aarch64_ldxp ? AArch64::LDXPX : AArch64::LDAXPX,
+        {I.getOperand(0).getReg(), I.getOperand(1).getReg()},
+        {I.getOperand(3)});
+    NewI.cloneMemRefs(I);
+    break;
+  }
   case Intrinsic::trap:
     MIB.buildInstr(AArch64::BRK, {}, {}).addImm(1);
     break;
