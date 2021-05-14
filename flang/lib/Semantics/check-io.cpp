@@ -831,9 +831,16 @@ void IoChecker::CheckStringValue(IoSpecKind specKind, const std::string &value,
       {IoSpecKind::Convert, {"BIG_ENDIAN", "LITTLE_ENDIAN", "NATIVE"}},
       {IoSpecKind::Dispose, {"DELETE", "KEEP"}},
   };
-  if (!specValues.at(specKind).count(parser::ToUpperCaseLetters(value))) {
-    context_.Say(source, "Invalid %s value '%s'"_err_en_US,
-        parser::ToUpperCaseLetters(common::EnumToString(specKind)), value);
+  auto upper{parser::ToUpperCaseLetters(value)};
+  if (specValues.at(specKind).count(upper) == 0) {
+    if (specKind == IoSpecKind::Access && upper == "APPEND" &&
+        context_.languageFeatures().ShouldWarn(
+            common::LanguageFeature::OpenAccessAppend)) {
+      context_.Say(source, "ACCESS='%s' interpreted as POSITION='%s'"_en_US, value, upper);
+    } else {
+      context_.Say(source, "Invalid %s value '%s'"_err_en_US,
+          parser::ToUpperCaseLetters(common::EnumToString(specKind)), value);
+    }
   }
 }
 
