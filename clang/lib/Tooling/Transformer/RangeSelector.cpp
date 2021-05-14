@@ -8,6 +8,7 @@
 
 #include "clang/Tooling/Transformer/RangeSelector.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
@@ -228,8 +229,16 @@ RangeSelector transformer::name(std::string ID) {
       SourceLocation L = I->getMemberLocation();
       return CharSourceRange::getTokenRange(L, L);
     }
+    if (const auto *T = Node.get<TypeLoc>()) {
+      TypeLoc Loc = *T;
+      auto ET = Loc.getAs<ElaboratedTypeLoc>();
+      if (!ET.isNull()) {
+        Loc = ET.getNamedTypeLoc();
+      }
+      return CharSourceRange::getTokenRange(Loc.getSourceRange());
+    }
     return typeError(ID, Node.getNodeKind(),
-                     "DeclRefExpr, NamedDecl, CXXCtorInitializer");
+                     "DeclRefExpr, NamedDecl, CXXCtorInitializer, TypeLoc");
   };
 }
 
