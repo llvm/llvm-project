@@ -5790,6 +5790,10 @@ void test6() {
 // CHECK: @llvm.ppc.altivec.vupkhpx
 // CHECK-LE: @llvm.ppc.altivec.vupklpx
 
+  res_vui = vec_vupkhpx(vp);
+// CHECK: @llvm.ppc.altivec.vupkhpx
+// CHECK-LE: @llvm.ppc.altivec.vupklpx
+
   res_vs  = vec_vupkhsb(vsc);
 // CHECK: @llvm.ppc.altivec.vupkhsb
 // CHECK-LE: @llvm.ppc.altivec.vupklsb
@@ -5828,6 +5832,10 @@ void test6() {
 // CHECK-LE: @llvm.ppc.altivec.vupkhsh
 
   res_vui = vec_unpackl(vp);
+// CHECK: @llvm.ppc.altivec.vupklpx
+// CHECK-LE: @llvm.ppc.altivec.vupkhpx
+
+  res_vui = vec_vupklpx(vp);
 // CHECK: @llvm.ppc.altivec.vupklpx
 // CHECK-LE: @llvm.ppc.altivec.vupkhpx
 
