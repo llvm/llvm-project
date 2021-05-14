@@ -122,7 +122,8 @@ def ADD_NM   : ArithLoginR32<"add", GPR32NMOpnd>;
 def ADDu_NM  : ArithLoginR32<"addu", GPR32NMOpnd, add>;
 def ADDiu_NM : ArithLogicINM<"addiu", simm16_relaxed, GPR32NMOpnd,
                              imm32SExt16, add>;
-def SUBu_NM : ArithLoginR32<"subu", GPR32NMOpnd, sub>;
+def SUB_NM   : ArithLoginR32<"sub", GPR32NMOpnd>;
+def SUBu_NM  : ArithLoginR32<"subu", GPR32NMOpnd, sub>;
 
 def AND_NM : ArithLoginR32<"and", GPR32NMOpnd, and>;
 def OR_NM  : ArithLoginR32<"or", GPR32NMOpnd, or>;
