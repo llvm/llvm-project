@@ -72,7 +72,7 @@ void mlir::normalizeAffineParallel(AffineParallelOp op) {
     applyOperands.push_back(iv);
     applyOperands.append(symbolOperands.begin(), symbolOperands.end());
     auto apply = builder.create<AffineApplyOp>(op.getLoc(), map, applyOperands);
-    iv.replaceAllUsesExcept(apply, SmallPtrSet<Operation *, 1>{apply});
+    iv.replaceAllUsesExcept(apply, apply);
   }
 
   SmallVector<int64_t, 8> newSteps(op.getNumDims(), 1);
@@ -181,8 +181,7 @@ static void normalizeAffineFor(AffineForOp op) {
   AffineMap ivMap = AffineMap::get(origLbMap.getNumDims() + 1,
                                    origLbMap.getNumSymbols(), newIVExpr);
   Operation *newIV = opBuilder.create<AffineApplyOp>(loc, ivMap, lbOperands);
-  op.getInductionVar().replaceAllUsesExcept(newIV->getResult(0),
-                                            SmallPtrSet<Operation *, 1>{newIV});
+  op.getInductionVar().replaceAllUsesExcept(newIV->getResult(0), newIV);
 }
 
 namespace {
