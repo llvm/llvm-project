@@ -26,14 +26,12 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// Authors: keith.ray@gmail.com (Keith Ray)
 
-#include "gtest/gtest-message.h"
 #include "gtest/internal/gtest-filepath.h"
-#include "gtest/internal/gtest-port.h"
 
 #include <stdlib.h>
+#include "gtest/internal/gtest-port.h"
+#include "gtest/gtest-message.h"
 
 #if GTEST_OS_WINDOWS_MOBILE
 # include <windows.h>
@@ -48,6 +46,8 @@
 # include <climits>  // Some Linux distributions define PATH_MAX here.
 #endif  // GTEST_OS_WINDOWS_MOBILE
 
+#include "gtest/internal/gtest-string.h"
+
 #if GTEST_OS_WINDOWS
 # define GTEST_PATH_MAX_ _MAX_PATH
 #elif defined(PATH_MAX)
@@ -57,8 +57,6 @@
 #else
 # define GTEST_PATH_MAX_ _POSIX_PATH_MAX
 #endif  // GTEST_OS_WINDOWS
-
-#include "gtest/internal/gtest-string.h"
 
 namespace testing {
 namespace internal {
@@ -252,7 +250,7 @@ bool FilePath::DirectoryExists() const {
 // root directory per disk drive.)
 bool FilePath::IsRootDirectory() const {
 #if GTEST_OS_WINDOWS
-  // TODO(wan@google.com): on Windows a network share like
+  // FIXME: on Windows a network share like
   // \\server\share can be a root directory, although it cannot be the
   // current directory.  Handle this properly.
   return pathname_.length() == 3 && IsAbsolutePath();
@@ -352,7 +350,7 @@ FilePath FilePath::RemoveTrailingPathSeparator() const {
 // Removes any redundant separators that might be in the pathname.
 // For example, "bar///foo" becomes "bar/foo". Does not eliminate other
 // redundancies that might be in a pathname involving "." or "..".
-// TODO(wan@google.com): handle Windows network shares (e.g. \\server\share).
+// FIXME: handle Windows network shares (e.g. \\server\share).
 void FilePath::Normalize() {
   if (pathname_.c_str() == NULL) {
     pathname_ = "";

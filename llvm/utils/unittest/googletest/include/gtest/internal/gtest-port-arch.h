@@ -27,7 +27,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-// The Google C++ Testing Framework (Google Test)
+// The Google C++ Testing and Mocking Framework (Google Test)
 //
 // This header file defines the GTEST_OS_* macro.
 // It is separate from gtest-port.h so that custom/gtest-port.h can include it.
@@ -54,6 +54,9 @@
 #   define GTEST_OS_WINDOWS_PHONE 1
 #  elif WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP)
 #   define GTEST_OS_WINDOWS_RT 1
+#  elif WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_TV_TITLE)
+#   define GTEST_OS_WINDOWS_PHONE 1
+#   define GTEST_OS_WINDOWS_TV_TITLE 1
 #  else
     // WINAPI_FAMILY defined but no known partition matched.
     // Default to desktop.
@@ -69,6 +72,8 @@
 # endif
 #elif defined __FreeBSD__
 # define GTEST_OS_FREEBSD 1
+#elif defined __Fuchsia__
+# define GTEST_OS_FUCHSIA 1
 #elif defined __linux__
 # define GTEST_OS_LINUX 1
 # if defined __ANDROID__
@@ -90,10 +95,6 @@
 # define GTEST_OS_OPENBSD 1
 #elif defined __QNX__
 # define GTEST_OS_QNX 1
-#elif defined(__HAIKU__)
-# define GTEST_OS_HAIKU 1
-#elif defined(_MINIX)
-# define GTEST_OS_MINIX 1
 #endif  // __CYGWIN__
 
 #endif  // GTEST_INCLUDE_GTEST_INTERNAL_GTEST_PORT_ARCH_H_

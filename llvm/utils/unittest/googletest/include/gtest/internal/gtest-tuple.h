@@ -30,10 +30,11 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// Author: wan@google.com (Zhanyong Wan)
+
 
 // Implements a subset of TR1 tuple needed by Google Test and Google Mock.
+
+// GOOGLETEST_CM0001 DO NOT DELETE
 
 #ifndef GTEST_INCLUDE_GTEST_INTERNAL_GTEST_TUPLE_H_
 #define GTEST_INCLUDE_GTEST_INTERNAL_GTEST_TUPLE_H_
@@ -42,7 +43,7 @@
 
 // The compiler used in Symbian has a bug that prevents us from declaring the
 // tuple template as a friend (it complains that tuple is redefined).  This
-// hack bypasses the bug by declaring the members that should otherwise be
+// bypasses the bug by declaring the members that should otherwise be
 // private as public.
 // Sun Studio versions < 12 also have the above bug.
 #if defined(__SYMBIAN32__) || (defined(__SUNPRO_CC) && __SUNPRO_CC < 0x590)

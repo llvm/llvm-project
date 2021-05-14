@@ -26,14 +26,15 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// Author: wan@google.com (Zhanyong Wan)
+
 
 // Google Mock - a framework for writing C++ mock classes.
 //
 // This file defines some utilities useful for implementing Google
 // Mock.  They are subject to change without notice, so please DO NOT
 // USE THEM IN USER CODE.
+
+// GOOGLETEST_CM0002 DO NOT DELETE
 
 // IWYU pragma: private, include "gmock/gmock.h"
 
@@ -43,7 +44,6 @@
 #include <stdio.h>
 #include <ostream>  // NOLINT
 #include <string>
-
 #include "gmock/internal/gmock-generated-internal-utils.h"
 #include "gmock/internal/gmock-port.h"
 #include "gtest/gtest.h"
@@ -51,11 +51,23 @@
 namespace testing {
 namespace internal {
 
+// Silence MSVC C4100 (unreferenced formal parameter) and
+// C4805('==': unsafe mix of type 'const int' and type 'const bool')
+#ifdef _MSC_VER
+# pragma warning(push)
+# pragma warning(disable:4100)
+# pragma warning(disable:4805)
+#endif
+
+// Joins a vector of strings as if they are fields of a tuple; returns
+// the joined string.
+GTEST_API_ std::string JoinAsTuple(const Strings& fields);
+
 // Converts an identifier name to a space-separated list of lower-case
 // words.  Each maximum substring of the form [A-Za-z][a-z]*|\d+ is
 // treated as one word.  For example, both "FooBar123" and
 // "foo_bar_123" are converted to "foo bar 123".
-GTEST_API_ string ConvertIdentifierNameToWords(const char* id_name);
+GTEST_API_ std::string ConvertIdentifierNameToWords(const char* id_name);
 
 // PointeeOf<Pointer>::type is the type of a value pointed to by a
 // Pointer, which can be either a smart pointer or a raw pointer.  The
@@ -116,8 +128,10 @@ struct LinkedPtrLessThan {
 // To gcc,
 //   wchar_t == signed wchar_t != unsigned wchar_t == unsigned int
 #ifdef __GNUC__
+#if !defined(__WCHAR_UNSIGNED__)
 // signed/unsigned wchar_t are valid types.
 # define GMOCK_HAS_SIGNED_WCHAR_T_ 1
+#endif
 #endif
 
 // In what follows, we use the term "kind" to indicate whether a type
@@ -269,7 +283,7 @@ class FailureReporterInterface {
 
   // Reports a failure that occurred at the given source file location.
   virtual void ReportFailure(FailureType type, const char* file, int line,
-                             const string& message) = 0;
+                             const std::string& message) = 0;
 };
 
 // Returns the failure reporter used by Google Mock.
@@ -281,7 +295,7 @@ GTEST_API_ FailureReporterInterface* GetFailureReporter();
 // inline this function to prevent it from showing up in the stack
 // trace.
 inline void Assert(bool condition, const char* file, int line,
-                   const string& msg) {
+                   const std::string& msg) {
   if (!condition) {
     GetFailureReporter()->ReportFailure(FailureReporterInterface::kFatal,
                                         file, line, msg);
@@ -294,7 +308,7 @@ inline void Assert(bool condition, const char* file, int line) {
 // Verifies that condition is true; generates a non-fatal failure if
 // condition is false.
 inline void Expect(bool condition, const char* file, int line,
-                   const string& msg) {
+                   const std::string& msg) {
   if (!condition) {
     GetFailureReporter()->ReportFailure(FailureReporterInterface::kNonfatal,
                                         file, line, msg);
@@ -330,11 +344,25 @@ GTEST_API_ bool LogIsVisible(LogSeverity severity);
 // stack_frames_to_skip is treated as 0, since we don't know which
 // function calls will be inlined by the compiler and need to be
 // conservative.
-GTEST_API_ void Log(LogSeverity severity,
-                    const string& message,
+GTEST_API_ void Log(LogSeverity severity, const std::string& message,
                     int stack_frames_to_skip);
 
-// TODO(wan@google.com): group all type utilities together.
+// A marker class that is used to resolve parameterless expectations to the
+// correct overload. This must not be instantiable, to prevent client code from
+// accidentally resolving to the overload; for example:
+//
+//    ON_CALL(mock, Method({}, nullptr))...
+//
+class WithoutMatchers {
+ private:
+  WithoutMatchers() {}
+  friend GTEST_API_ WithoutMatchers GetWithoutMatchers();
+};
+
+// Internal use only: access the singleton instance of WithoutMatchers.
+GTEST_API_ WithoutMatchers GetWithoutMatchers();
+
+// FIXME: group all type utilities together.
 
 // Type traits.
 
@@ -506,8 +534,44 @@ struct RemoveConstFromKey<std::pair<const K, V> > {
 template <bool kValue>
 struct BooleanConstant {};
 
+// Emit an assertion failure due to incorrect DoDefault() usage. Out-of-lined to
+// reduce code size.
+GTEST_API_ void IllegalDoDefault(const char* file, int line);
+
+#if GTEST_LANG_CXX11
+// Helper types for Apply() below.
+template <size_t... Is> struct int_pack { typedef int_pack type; };
+
+template <class Pack, size_t I> struct append;
+template <size_t... Is, size_t I>
+struct append<int_pack<Is...>, I> : int_pack<Is..., I> {};
+
+template <size_t C>
+struct make_int_pack : append<typename make_int_pack<C - 1>::type, C - 1> {};
+template <> struct make_int_pack<0> : int_pack<> {};
+
+template <typename F, typename Tuple, size_t... Idx>
+auto ApplyImpl(F&& f, Tuple&& args, int_pack<Idx...>) -> decltype(
+    std::forward<F>(f)(std::get<Idx>(std::forward<Tuple>(args))...)) {
+  return std::forward<F>(f)(std::get<Idx>(std::forward<Tuple>(args))...);
+}
+
+// Apply the function to a tuple of arguments.
+template <typename F, typename Tuple>
+auto Apply(F&& f, Tuple&& args)
+    -> decltype(ApplyImpl(std::forward<F>(f), std::forward<Tuple>(args),
+                          make_int_pack<std::tuple_size<Tuple>::value>())) {
+  return ApplyImpl(std::forward<F>(f), std::forward<Tuple>(args),
+                   make_int_pack<std::tuple_size<Tuple>::value>());
+}
+#endif
+
+
+#ifdef _MSC_VER
+# pragma warning(pop)
+#endif
+
 }  // namespace internal
 }  // namespace testing
 
 #endif  // GMOCK_INCLUDE_GMOCK_INTERNAL_GMOCK_INTERNAL_UTILS_H_
-

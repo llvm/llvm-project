@@ -27,13 +27,10 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-// ============================================================
-// An installation-specific extension point for gmock-matchers.h.
-// ============================================================
+// Injection point for custom user configurations. See README for details
 //
-// Adds google3 callback support to CallableTraits.
-//
-#ifndef GMOCK_INCLUDE_GMOCK_INTERNAL_CUSTOM_CALLBACK_MATCHERS_H_
-#define GMOCK_INCLUDE_GMOCK_INTERNAL_CUSTOM_CALLBACK_MATCHERS_H_
+// GOOGLETEST_CM0002 DO NOT DELETE
 
-#endif  //  GMOCK_INCLUDE_GMOCK_INTERNAL_CUSTOM_CALLBACK_MATCHERS_H_
+#ifndef GMOCK_INCLUDE_GMOCK_INTERNAL_CUSTOM_GMOCK_MATCHERS_H_
+#define GMOCK_INCLUDE_GMOCK_INTERNAL_CUSTOM_GMOCK_MATCHERS_H_
+#endif  // GMOCK_INCLUDE_GMOCK_INTERNAL_CUSTOM_GMOCK_MATCHERS_H_

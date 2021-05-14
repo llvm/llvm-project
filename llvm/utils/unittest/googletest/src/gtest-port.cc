@@ -26,8 +26,7 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// Author: wan@google.com (Zhanyong Wan)
+
 
 #include "gtest/internal/gtest-port.h"
 
@@ -63,19 +62,16 @@
 # include <sys/types.h>
 #endif  // GTEST_OS_AIX
 
+#if GTEST_OS_FUCHSIA
+# include <zircon/process.h>
+# include <zircon/syscalls.h>
+#endif  // GTEST_OS_FUCHSIA
+
 #include "gtest/gtest-spi.h"
 #include "gtest/gtest-message.h"
 #include "gtest/internal/gtest-internal.h"
 #include "gtest/internal/gtest-string.h"
-
-// Indicates that this translation unit is part of Google Test's
-// implementation.  It must come before gtest-internal-inl.h is
-// included, or there will be a compiler error.  This trick exists to
-// prevent the accidental inclusion of gtest-internal-inl.h in the
-// user's code.
-#define GTEST_IMPLEMENTATION_ 1
 #include "src/gtest-internal-inl.h"
-#undef GTEST_IMPLEMENTATION_
 
 namespace testing {
 namespace internal {
@@ -93,7 +89,7 @@ const int kStdErrFileno = STDERR_FILENO;
 
 namespace {
 template <typename T>
-T ReadProcFileField(const string& filename, int field) {
+T ReadProcFileField(const std::string& filename, int field) {
   std::string dummy;
   std::ifstream file(filename.c_str());
   while (field-- > 0) {
@@ -107,7 +103,7 @@ T ReadProcFileField(const string& filename, int field) {
 
 // Returns the number of active threads, or 0 when there is an error.
 size_t GetThreadCount() {
-  const string filename =
+  const std::string filename =
       (Message() << "/proc/" << getpid() << "/stat").GetString();
   return ReadProcFileField<int>(filename, 19);
 }
@@ -159,6 +155,25 @@ size_t GetThreadCount() {
   int status = getprocs64(&entry, sizeof(entry), NULL, 0, &pid, 1);
   if (status == 1) {
     return entry.pi_thcount;
+  } else {
+    return 0;
+  }
+}
+
+#elif GTEST_OS_FUCHSIA
+
+size_t GetThreadCount() {
+  int dummy_buffer;
+  size_t avail;
+  zx_status_t status = zx_object_get_info(
+      zx_process_self(),
+      ZX_INFO_PROCESS_THREADS,
+      &dummy_buffer,
+      0,
+      nullptr,
+      &avail);
+  if (status == ZX_OK) {
+    return avail;
   } else {
     return 0;
   }
@@ -246,9 +261,9 @@ Mutex::Mutex()
 Mutex::~Mutex() {
   // Static mutexes are leaked intentionally. It is not thread-safe to try
   // to clean them up.
-  // TODO(yukawa): Switch to Slim Reader/Writer (SRW) Locks, which requires
+  // FIXME: Switch to Slim Reader/Writer (SRW) Locks, which requires
   // nothing to clean it up but is available only on Vista and later.
-  // http://msdn.microsoft.com/en-us/library/windows/desktop/aa904937.aspx
+  // https://docs.microsoft.com/en-us/windows/desktop/Sync/slim-reader-writer--srw--locks
   if (type_ == kDynamic) {
     ::DeleteCriticalSection(critical_section_);
     delete critical_section_;
@@ -279,6 +294,43 @@ void Mutex::AssertHeld() {
       << "The current thread is not holding the mutex @" << this;
 }
 
+namespace {
+
+// Use the RAII idiom to flag mem allocs that are intentionally never
+// deallocated. The motivation is to silence the false positive mem leaks
+// that are reported by the debug version of MS's CRT which can only detect
+// if an alloc is missing a matching deallocation.
+// Example:
+//    MemoryIsNotDeallocated memory_is_not_deallocated;
+//    critical_section_ = new CRITICAL_SECTION;
+//
+class MemoryIsNotDeallocated
+{
+ public:
+  MemoryIsNotDeallocated() : old_crtdbg_flag_(0) {
+#ifdef _MSC_VER
+    old_crtdbg_flag_ = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
+    // Set heap allocation block type to _IGNORE_BLOCK so that MS debug CRT
+    // doesn't report mem leak if there's no matching deallocation.
+    _CrtSetDbgFlag(old_crtdbg_flag_ & ~_CRTDBG_ALLOC_MEM_DF);
+#endif  //  _MSC_VER
+  }
+
+  ~MemoryIsNotDeallocated() {
+#ifdef _MSC_VER
+    // Restore the original _CRTDBG_ALLOC_MEM_DF flag
+    _CrtSetDbgFlag(old_crtdbg_flag_);
+#endif  //  _MSC_VER
+  }
+
+ private:
+  int old_crtdbg_flag_;
+
+  GTEST_DISALLOW_COPY_AND_ASSIGN_(MemoryIsNotDeallocated);
+};
+
+}  // namespace
+
 // Initializes owner_thread_id_ and critical_section_ in static mutexes.
 void Mutex::ThreadSafeLazyInit() {
   // Dynamic mutexes are initialized in the constructor.
@@ -289,7 +341,11 @@ void Mutex::ThreadSafeLazyInit() {
         // If critical_section_init_phase_ was 0 before the exchange, we
         // are the first to test it and need to perform the initialization.
         owner_thread_id_ = 0;
-        critical_section_ = new CRITICAL_SECTION;
+        {
+          // Use RAII to flag that following mem alloc is never deallocated.
+          MemoryIsNotDeallocated memory_is_not_deallocated;
+          critical_section_ = new CRITICAL_SECTION;
+        }
         ::InitializeCriticalSection(critical_section_);
         // Updates the critical_section_init_phase_ to 2 to signal
         // initialization complete.
@@ -328,7 +384,7 @@ class ThreadWithParamSupport : public ThreadWithParamBase {
                              Notification* thread_can_start) {
     ThreadMainParam* param = new ThreadMainParam(runnable, thread_can_start);
     DWORD thread_id;
-    // TODO(yukawa): Consider to use _beginthreadex instead.
+    // FIXME: Consider to use _beginthreadex instead.
     HANDLE thread_handle = ::CreateThread(
         NULL,    // Default security.
         0,       // Default stack size.
@@ -531,7 +587,8 @@ class ThreadLocalRegistryImpl {
   // Returns map of thread local instances.
   static ThreadIdToThreadLocals* GetThreadLocalsMapLocked() {
     mutex_.AssertHeld();
-    static ThreadIdToThreadLocals* map = new ThreadIdToThreadLocals;
+    MemoryIsNotDeallocated memory_is_not_deallocated;
+    static ThreadIdToThreadLocals* map = new ThreadIdToThreadLocals();
     return map;
   }
 
@@ -671,7 +728,7 @@ bool AtomMatchesChar(bool escaped, char pattern_char, char ch) {
 }
 
 // Helper function used by ValidateRegex() to format error messages.
-std::string FormatRegexSyntaxError(const char* regex, int index) {
+static std::string FormatRegexSyntaxError(const char* regex, int index) {
   return (Message() << "Syntax error at index " << index
           << " in simple regular expression \"" << regex << "\": ").GetString();
 }
@@ -680,7 +737,7 @@ std::string FormatRegexSyntaxError(const char* regex, int index) {
 // otherwise returns true.
 bool ValidateRegex(const char* regex) {
   if (regex == NULL) {
-    // TODO(wan@google.com): fix the source file location in the
+    // FIXME: fix the source file location in the
     // assertion failures to match where the regex is used in user
     // code.
     ADD_FAILURE() << "NULL is not a valid simple regular expression.";
@@ -923,9 +980,10 @@ GTestLog::~GTestLog() {
     posix::Abort();
   }
 }
+
 // Disable Microsoft deprecation warnings for POSIX functions called from
 // this class (creat, dup, dup2, and close)
-GTEST_DISABLE_MSC_WARNINGS_PUSH_(4996)
+GTEST_DISABLE_MSC_DEPRECATED_PUSH_()
 
 #if GTEST_HAS_STREAM_REDIRECTION
 
@@ -1009,13 +1067,14 @@ class CapturedStream {
   GTEST_DISALLOW_COPY_AND_ASSIGN_(CapturedStream);
 };
 
-GTEST_DISABLE_MSC_WARNINGS_POP_()
+GTEST_DISABLE_MSC_DEPRECATED_POP_()
 
 static CapturedStream* g_captured_stderr = NULL;
 static CapturedStream* g_captured_stdout = NULL;
 
 // Starts capturing an output stream (stdout/stderr).
-void CaptureStream(int fd, const char* stream_name, CapturedStream** stream) {
+static void CaptureStream(int fd, const char* stream_name,
+                          CapturedStream** stream) {
   if (*stream != NULL) {
     GTEST_LOG_(FATAL) << "Only one " << stream_name
                       << " capturer can exist at a time.";
@@ -1024,7 +1083,7 @@ void CaptureStream(int fd, const char* stream_name, CapturedStream** stream) {
 }
 
 // Stops capturing the output stream and returns the captured string.
-std::string GetCapturedStream(CapturedStream** captured_stream) {
+static std::string GetCapturedStream(CapturedStream** captured_stream) {
   const std::string content = (*captured_stream)->GetCapturedString();
 
   delete *captured_stream;
@@ -1055,23 +1114,9 @@ std::string GetCapturedStderr() {
 
 #endif  // GTEST_HAS_STREAM_REDIRECTION
 
-std::string TempDir() {
-#if GTEST_OS_WINDOWS_MOBILE
-  return "\\temp\\";
-#elif GTEST_OS_WINDOWS
-  const char* temp_dir = posix::GetEnv("TEMP");
-  if (temp_dir == NULL || temp_dir[0] == '\0')
-    return "\\temp\\";
-  else if (temp_dir[strlen(temp_dir) - 1] == '\\')
-    return temp_dir;
-  else
-    return std::string(temp_dir) + "\\";
-#elif GTEST_OS_LINUX_ANDROID
-  return "/sdcard/";
-#else
-  return "/tmp/";
-#endif  // GTEST_OS_WINDOWS_MOBILE
-}
+
+
+
 
 size_t GetFileSize(FILE* file) {
   fseek(file, 0, SEEK_END);
@@ -1101,21 +1146,35 @@ std::string ReadEntireFile(FILE* file) {
 }
 
 #if GTEST_HAS_DEATH_TEST
+static const std::vector<std::string>* g_injected_test_argvs = NULL;  // Owned.
 
-static const ::std::vector<testing::internal::string>* g_injected_test_argvs =
-                                        NULL;  // Owned.
-
-void SetInjectableArgvs(const ::std::vector<testing::internal::string>* argvs) {
-  if (g_injected_test_argvs != argvs)
-    delete g_injected_test_argvs;
-  g_injected_test_argvs = argvs;
-}
-
-const ::std::vector<testing::internal::string>& GetInjectableArgvs() {
+std::vector<std::string> GetInjectableArgvs() {
   if (g_injected_test_argvs != NULL) {
     return *g_injected_test_argvs;
   }
   return GetArgvs();
+}
+
+void SetInjectableArgvs(const std::vector<std::string>* new_argvs) {
+  if (g_injected_test_argvs != new_argvs) delete g_injected_test_argvs;
+  g_injected_test_argvs = new_argvs;
+}
+
+void SetInjectableArgvs(const std::vector<std::string>& new_argvs) {
+  SetInjectableArgvs(
+      new std::vector<std::string>(new_argvs.begin(), new_argvs.end()));
+}
+
+#if GTEST_HAS_GLOBAL_STRING
+void SetInjectableArgvs(const std::vector< ::string>& new_argvs) {
+  SetInjectableArgvs(
+      new std::vector<std::string>(new_argvs.begin(), new_argvs.end()));
+}
+#endif  // GTEST_HAS_GLOBAL_STRING
+
+void ClearInjectableArgvs() {
+  delete g_injected_test_argvs;
+  g_injected_test_argvs = NULL;
 }
 #endif  // GTEST_HAS_DEATH_TEST
 
@@ -1191,11 +1250,12 @@ bool ParseInt32(const Message& src_text, const char* str, Int32* value) {
 bool BoolFromGTestEnv(const char* flag, bool default_value) {
 #if defined(GTEST_GET_BOOL_FROM_ENV_)
   return GTEST_GET_BOOL_FROM_ENV_(flag, default_value);
-#endif  // defined(GTEST_GET_BOOL_FROM_ENV_)
+#else
   const std::string env_var = FlagToEnvVar(flag);
   const char* const string_value = posix::GetEnv(env_var.c_str());
   return string_value == NULL ?
       default_value : strcmp(string_value, "0") != 0;
+#endif  // defined(GTEST_GET_BOOL_FROM_ENV_)
 }
 
 // Reads and returns a 32-bit integer stored in the environment
@@ -1204,7 +1264,7 @@ bool BoolFromGTestEnv(const char* flag, bool default_value) {
 Int32 Int32FromGTestEnv(const char* flag, Int32 default_value) {
 #if defined(GTEST_GET_INT32_FROM_ENV_)
   return GTEST_GET_INT32_FROM_ENV_(flag, default_value);
-#endif  // defined(GTEST_GET_INT32_FROM_ENV_)
+#else
   const std::string env_var = FlagToEnvVar(flag);
   const char* const string_value = posix::GetEnv(env_var.c_str());
   if (string_value == NULL) {
@@ -1222,37 +1282,36 @@ Int32 Int32FromGTestEnv(const char* flag, Int32 default_value) {
   }
 
   return result;
+#endif  // defined(GTEST_GET_INT32_FROM_ENV_)
+}
+
+// As a special case for the 'output' flag, if GTEST_OUTPUT is not
+// set, we look for XML_OUTPUT_FILE, which is set by the Bazel build
+// system.  The value of XML_OUTPUT_FILE is a filename without the
+// "xml:" prefix of GTEST_OUTPUT.
+// Note that this is meant to be called at the call site so it does
+// not check that the flag is 'output'
+// In essence this checks an env variable called XML_OUTPUT_FILE
+// and if it is set we prepend "xml:" to its value, if it not set we return ""
+std::string OutputFlagAlsoCheckEnvVar(){
+  std::string default_value_for_output_flag = "";
+  const char* xml_output_file_env = posix::GetEnv("XML_OUTPUT_FILE");
+  if (NULL != xml_output_file_env) {
+    default_value_for_output_flag = std::string("xml:") + xml_output_file_env;
+  }
+  return default_value_for_output_flag;
 }
 
 // Reads and returns the string environment variable corresponding to
 // the given flag; if it's not set, returns default_value.
-std::string StringFromGTestEnv(const char* flag, const char* default_value) {
+const char* StringFromGTestEnv(const char* flag, const char* default_value) {
 #if defined(GTEST_GET_STRING_FROM_ENV_)
   return GTEST_GET_STRING_FROM_ENV_(flag, default_value);
-#endif  // defined(GTEST_GET_STRING_FROM_ENV_)
+#else
   const std::string env_var = FlagToEnvVar(flag);
-  const char* value = posix::GetEnv(env_var.c_str());
-  if (value != NULL) {
-    return value;
-  }
-
-  // As a special case for the 'output' flag, if GTEST_OUTPUT is not
-  // set, we look for XML_OUTPUT_FILE, which is set by the Bazel build
-  // system.  The value of XML_OUTPUT_FILE is a filename without the
-  // "xml:" prefix of GTEST_OUTPUT.
-  //
-  // The net priority order after flag processing is thus:
-  //   --gtest_output command line flag
-  //   GTEST_OUTPUT environment variable
-  //   XML_OUTPUT_FILE environment variable
-  //   'default_value'
-  if (strcmp(flag, "output") == 0) {
-    value = posix::GetEnv("XML_OUTPUT_FILE");
-    if (value != NULL) {
-      return std::string("xml:") + value;
-    }
-  }
-  return default_value;
+  const char* const value = posix::GetEnv(env_var.c_str());
+  return value == NULL ? default_value : value;
+#endif  // defined(GTEST_GET_STRING_FROM_ENV_)
 }
 
 }  // namespace internal
