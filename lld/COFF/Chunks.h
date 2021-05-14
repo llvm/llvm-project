@@ -86,8 +86,8 @@ public:
   // can be stored with 32 bits.
   uint32_t getRVA() const { return rva; }
   void setRVA(uint64_t v) {
+    // This may truncate. The writer checks for overflow later.
     rva = (uint32_t)v;
-    assert(rva == v && "RVA truncated");
   }
 
   // Returns readable/writable/executable bits.
