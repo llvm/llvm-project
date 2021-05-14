@@ -18,6 +18,7 @@ add_llvm_unittest(OrcJITTests
   IndirectionUtilsTest.cpp
   JITTargetMachineBuilderTest.cpp
   LazyCallThroughAndReexportsTest.cpp
+  ObjectLinkingLayerTest.cpp
   OrcCAPITest.cpp
   OrcTestCommon.cpp
   QueueChannel.cpp
