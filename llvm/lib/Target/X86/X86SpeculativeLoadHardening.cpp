@@ -1574,7 +1574,7 @@ void X86SpeculativeLoadHardeningPass::hardenLoadAddr(
     MachineInstr &MI, MachineOperand &BaseMO, MachineOperand &IndexMO,
     SmallDenseMap<unsigned, unsigned, 32> &AddrRegToHardenedReg) {
   MachineBasicBlock &MBB = *MI.getParent();
-  DebugLoc Loc = MI.getDebugLoc();
+  const DebugLoc &Loc = MI.getDebugLoc();
 
   // Check if EFLAGS are alive by seeing if there is a def of them or they
   // live-in, and then seeing if that def is in turn used.
@@ -1959,7 +1959,7 @@ unsigned X86SpeculativeLoadHardeningPass::hardenValueInRegister(
 /// Returns the newly hardened register.
 unsigned X86SpeculativeLoadHardeningPass::hardenPostLoad(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
-  DebugLoc Loc = MI.getDebugLoc();
+  const DebugLoc &Loc = MI.getDebugLoc();
 
   auto &DefOp = MI.getOperand(0);
   Register OldDefReg = DefOp.getReg();
@@ -2010,7 +2010,7 @@ unsigned X86SpeculativeLoadHardeningPass::hardenPostLoad(MachineInstr &MI) {
 /// predicate state from the stack pointer and continue to harden loads.
 void X86SpeculativeLoadHardeningPass::hardenReturnInstr(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
-  DebugLoc Loc = MI.getDebugLoc();
+  const DebugLoc &Loc = MI.getDebugLoc();
   auto InsertPt = MI.getIterator();
 
   if (FenceCallAndRet)
@@ -2059,7 +2059,7 @@ void X86SpeculativeLoadHardeningPass::tracePredStateThroughCall(
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
   auto InsertPt = MI.getIterator();
-  DebugLoc Loc = MI.getDebugLoc();
+  const DebugLoc &Loc = MI.getDebugLoc();
 
   if (FenceCallAndRet) {
     if (MI.isReturn())
