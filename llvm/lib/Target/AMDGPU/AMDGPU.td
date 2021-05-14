@@ -226,6 +226,12 @@ def FeatureNSAtoVMEMBug : SubtargetFeature<"nsa-to-vmem-bug",
   "MIMG-NSA followed by VMEM fail if EXEC_LO or EXEC_HI equals zero"
 >;
 
+def FeatureNSAClauseBug : SubtargetFeature<"nsa-clause-bug",
+  "HasNSAClauseBug",
+  "true",
+  "MIMG-NSA in a hard clause has unpredictable results on GFX10.1"
+>;
+
 def FeatureFlatSegmentOffsetBug : SubtargetFeature<"flat-segment-offset-bug",
   "HasFlatSegmentOffsetBug",
   "true",
@@ -1000,6 +1006,7 @@ def FeatureGroup {
     FeatureVcmpxExecWARHazard,
     FeatureLdsBranchVmemWARHazard,
     FeatureNSAtoVMEMBug,
+    FeatureNSAClauseBug,
     FeatureOffset3fBug,
     FeatureFlatSegmentOffsetBug,
     FeatureNegativeUnalignedScratchOffsetBug

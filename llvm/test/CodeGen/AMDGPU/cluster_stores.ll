@@ -359,7 +359,6 @@ define amdgpu_ps void @cluster_image_sample(<8 x i32> inreg %src, <4 x i32> inre
 ; GFX10-NEXT:    v_add_f32_e32 v12, 1.0, v3
 ; GFX10-NEXT:    v_add_f32_e32 v14, 2.0, v2
 ; GFX10-NEXT:    v_add_f32_e32 v15, 2.0, v3
-; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    image_sample_d v[2:5], [v11, v12, v13, v13, v13, v13], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GFX10-NEXT:    image_sample_d v[6:9], [v14, v15, v10, v10, v10, v10], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
