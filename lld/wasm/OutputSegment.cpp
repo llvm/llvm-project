@@ -19,7 +19,7 @@ namespace lld {
 
 namespace wasm {
 
-void OutputSegment::addInputSegment(InputSegment *inSeg) {
+void OutputSegment::addInputSegment(InputChunk *inSeg) {
   alignment = std::max(alignment, inSeg->alignment);
   inputSegments.push_back(inSeg);
   size = llvm::alignTo(size, 1ULL << inSeg->alignment);
@@ -33,16 +33,16 @@ void OutputSegment::addInputSegment(InputSegment *inSeg) {
 
 // This function scans over the input segments.
 //
-// It removes MergeInputSegments from the input section array and adds
+// It removes MergeInputChunks from the input section array and adds
 // new synthetic sections at the location of the first input section
 // that it replaces. It then finalizes each synthetic section in order
 // to compute an output offset for each piece of each input section.
 void OutputSegment::finalizeInputSegments() {
   LLVM_DEBUG(llvm::dbgs() << "finalizeInputSegments: " << name << "\n");
-  std::vector<SyntheticMergedDataSegment *> mergedSegments;
-  std::vector<InputSegment *> newSegments;
-  for (InputSegment *s : inputSegments) {
-    MergeInputSegment *ms = dyn_cast<MergeInputSegment>(s);
+  std::vector<SyntheticMergedChunk *> mergedSegments;
+  std::vector<InputChunk *> newSegments;
+  for (InputChunk *s : inputSegments) {
+    MergeInputChunk *ms = dyn_cast<MergeInputChunk>(s);
     if (!ms) {
       newSegments.push_back(s);
       continue;
@@ -51,15 +51,14 @@ void OutputSegment::finalizeInputSegments() {
     // A segment should not make it here unless its alive
     assert(ms->live);
 
-    auto i =
-        llvm::find_if(mergedSegments, [=](SyntheticMergedDataSegment *seg) {
-          return seg->flags == ms->flags && seg->alignment == ms->alignment;
-        });
+    auto i = llvm::find_if(mergedSegments, [=](SyntheticMergedChunk *seg) {
+      return seg->flags == ms->flags && seg->alignment == ms->alignment;
+    });
     if (i == mergedSegments.end()) {
       LLVM_DEBUG(llvm::dbgs() << "new merge section: " << name
                               << " alignment=" << ms->alignment << "\n");
-      SyntheticMergedDataSegment *syn =
-          make<SyntheticMergedDataSegment>(name, ms->alignment, ms->flags);
+      SyntheticMergedChunk *syn =
+          make<SyntheticMergedChunk>(name, ms->alignment, ms->flags);
       syn->outputSeg = this;
       mergedSegments.push_back(syn);
       i = std::prev(mergedSegments.end());
@@ -67,7 +66,7 @@ void OutputSegment::finalizeInputSegments() {
     } else {
       LLVM_DEBUG(llvm::dbgs() << "adding to merge section: " << name << "\n");
     }
-    (*i)->addMergeSegment(ms);
+    (*i)->addMergeChunk(ms);
   }
 
   for (auto *ms : mergedSegments)
@@ -75,7 +74,7 @@ void OutputSegment::finalizeInputSegments() {
 
   inputSegments = newSegments;
   size = 0;
-  for (InputSegment *seg : inputSegments) {
+  for (InputChunk *seg : inputSegments) {
     size = llvm::alignTo(size, 1ULL << seg->alignment);
     LLVM_DEBUG(llvm::dbgs() << "outputSegmentOffset set: " << seg->getName()
                             << " -> " << size << "\n");
