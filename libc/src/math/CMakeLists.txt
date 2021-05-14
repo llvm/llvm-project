@@ -29,7 +29,15 @@ function(add_math_entrypoint_object name)
     return()
   endif()
 
-  message(FATAL_ERROR "No machine specific or generic implementation found for ${name}.")
+  # Add a dummy entrypoint object for missing implementations. They will be skipped
+  # anyway as there will be no entry for them in the target entrypoints list.
+  add_entrypoint_object(
+    ${name}
+    SRCS
+      dummy_srcs
+    HDRS
+      dummy_hdrs
+  )
 endfunction()
 
 add_entrypoint_object(
@@ -64,6 +72,7 @@ add_math_entrypoint_object(copysign)
 add_math_entrypoint_object(copysignf)
 add_math_entrypoint_object(copysignl)
 
+add_math_entrypoint_object(cos)
 add_math_entrypoint_object(cosf)
 
 add_math_entrypoint_object(expf)
@@ -155,11 +164,14 @@ add_math_entrypoint_object(roundl)
 
 add_math_entrypoint_object(sincosf)
 
+add_math_entrypoint_object(sin)
 add_math_entrypoint_object(sinf)
 
 add_math_entrypoint_object(sqrt)
 add_math_entrypoint_object(sqrtf)
 add_math_entrypoint_object(sqrtl)
+
+add_math_entrypoint_object(tan)
 
 add_math_entrypoint_object(trunc)
 add_math_entrypoint_object(truncf)

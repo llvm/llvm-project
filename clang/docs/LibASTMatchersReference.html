@@ -8813,8 +8813,40 @@ alignof.
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('forCallable0')"><a name="forCallable0Anchor">forCallable</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="forCallable0"><pre>Matches declaration of the function, method, or block the statement
+belongs to.
+
+Given:
+F&amp; operator=(const F&amp; o) {
+  std::copy_if(o.begin(), o.end(), begin(), [](V v) { return v &gt; 0; });
+  return *this;
+}
+returnStmt(forCallable(functionDecl(hasName("operator="))))
+  matches 'return *this'
+  but does not match 'return v &gt; 0'
+
+Given:
+-(void) foo {
+  int x = 1;
+  dispatch_sync(queue, ^{ int y = 2; });
+}
+declStmt(forCallable(objcMethodDecl()))
+  matches 'int x = 1'
+  but does not match 'int y = 2'.
+whereas declStmt(forCallable(blockDecl()))
+  matches 'int y = 2'
+  but does not match 'int x = 1'.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('forFunction0')"><a name="forFunction0Anchor">forFunction</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="forFunction0"><pre>Matches declaration of the function the statement belongs to
+<tr><td colspan="4" class="doc" id="forFunction0"><pre>Matches declaration of the function the statement belongs to.
+
+Deprecated. Use forCallable() to correctly handle the situation when
+the declaration is not a function (but a block or an Objective-C method).
+forFunction() not only fails to take non-functions into account but also
+may match the wrong declaration in their presence.
 
 Given:
 F&amp; operator=(const F&amp; o) {

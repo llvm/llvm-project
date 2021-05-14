@@ -229,6 +229,8 @@ cl::opt<bool> AddInlinedInfo("add-inlinedinfo",
                                       "TBD(Mach-O) only"),
                              cl::cat(NMCat));
 
+cl::opt<bool> Version("V", cl::desc("Print version info"), cl::cat(NMCat));
+
 cl::extrahelp HelpResponse("\nPass @FILE as argument to read options from FILE.\n");
 
 bool PrintAddress = true;
@@ -2235,10 +2237,22 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
   }
 }
 
+static void printExtraVersionInfo(raw_ostream &Outs) {
+  // This needs to contain the word "GNU", libtool looks for that string.
+  Outs << "llvm-nm, compatible with GNU nm\n";
+}
+
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   cl::HideUnrelatedOptions(NMCat);
+  cl::AddExtraVersionPrinter(printExtraVersionInfo);
   cl::ParseCommandLineOptions(argc, argv, "llvm symbol table dumper\n");
+
+  if (Version) {
+    cl::PrintVersionMessage();
+    printExtraVersionInfo(outs());
+    return 0;
+  }
 
   // llvm-nm only reads binary files.
   if (error(sys::ChangeStdinToBinary()))

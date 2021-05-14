@@ -224,6 +224,10 @@ def : ProcessorModel<"gfx1033", GFX10SpeedModel,
   FeatureISAVersion10_3_0.Features
 >;
 
+def : ProcessorModel<"gfx1034", GFX10SpeedModel,
+  FeatureISAVersion10_3_0.Features
+>;
+
 //===----------------------------------------------------------------------===//
 // GCN GFX11.
 //===----------------------------------------------------------------------===//

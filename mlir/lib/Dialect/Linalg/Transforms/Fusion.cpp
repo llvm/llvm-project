@@ -191,8 +191,7 @@ static LinalgOp fuse(OpBuilder &builder, LinalgOp producer,
       AffineApplyOp applyOp = builder.create<AffineApplyOp>(
           indexOp.getLoc(), index + offset,
           ValueRange{indexOp.getResult(), loopRanges[indexOp.dim()].offset});
-      indexOp.getResult().replaceAllUsesExcept(
-          applyOp, SmallPtrSet<Operation *, 1>{applyOp});
+      indexOp.getResult().replaceAllUsesExcept(applyOp, applyOp);
     }
   }
 

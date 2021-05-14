@@ -39,6 +39,7 @@ add_flang_library(FortranRuntime
   connection.cpp
   derived.cpp
   descriptor.cpp
+  dot-product.cpp
   edit-input.cpp
   edit-output.cpp
   environment.cpp

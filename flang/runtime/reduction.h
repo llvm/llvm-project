@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 // Defines the API for the reduction transformational intrinsic functions.
-// (Except the complex-valued total reduction forms of SUM and PRODUCT;
-// the API for those is in complex-reduction.h so that C's _Complex can
-// be used for their return types.)
+// (Except the complex-valued DOT_PRODUCT and the complex-valued total reduction
+// forms of SUM & PRODUCT; the API for those is in complex-reduction.h so that
+// C's _Complex can be used for their return types.)
 
 #ifndef FORTRAN_RUNTIME_REDUCTION_H_
 #define FORTRAN_RUNTIME_REDUCTION_H_
@@ -274,6 +274,48 @@ bool RTNAME(Parity)(
     const Descriptor &, const char *source, int line, int dim = 0);
 void RTNAME(ParityDim)(Descriptor &result, const Descriptor &, int dim,
     const char *source, int line);
+
+// DOT_PRODUCT
+std::int8_t RTNAME(DotProductInteger1)(const Descriptor &, const Descriptor &,
+    const char *source = nullptr, int line = 0);
+std::int16_t RTNAME(DotProductInteger2)(const Descriptor &, const Descriptor &,
+    const char *source = nullptr, int line = 0);
+std::int32_t RTNAME(DotProductInteger4)(const Descriptor &, const Descriptor &,
+    const char *source = nullptr, int line = 0);
+std::int64_t RTNAME(DotProductInteger8)(const Descriptor &, const Descriptor &,
+    const char *source = nullptr, int line = 0);
+#ifdef __SIZEOF_INT128__
+common::int128_t RTNAME(DotProductInteger16)(const Descriptor &,
+    const Descriptor &, const char *source = nullptr, int line = 0);
+#endif
+float RTNAME(DotProductReal2)(const Descriptor &, const Descriptor &,
+    const char *source = nullptr, int line = 0);
+float RTNAME(DotProductReal3)(const Descriptor &, const Descriptor &,
+    const char *source = nullptr, int line = 0);
+float RTNAME(DotProductReal4)(const Descriptor &, const Descriptor &,
+    const char *source = nullptr, int line = 0);
+double RTNAME(DotProductReal8)(const Descriptor &, const Descriptor &,
+    const char *source = nullptr, int line = 0);
+long double RTNAME(DotProductReal10)(const Descriptor &, const Descriptor &,
+    const char *source = nullptr, int line = 0);
+long double RTNAME(DotProductReal16)(const Descriptor &, const Descriptor &,
+    const char *source = nullptr, int line = 0);
+void RTNAME(CppDotProductComplex2)(std::complex<float> &, const Descriptor &,
+    const Descriptor &, const char *source = nullptr, int line = 0);
+void RTNAME(CppDotProductComplex3)(std::complex<float> &, const Descriptor &,
+    const Descriptor &, const char *source = nullptr, int line = 0);
+void RTNAME(CppDotProductComplex4)(std::complex<float> &, const Descriptor &,
+    const Descriptor &, const char *source = nullptr, int line = 0);
+void RTNAME(CppDotProductComplex8)(std::complex<double> &, const Descriptor &,
+    const Descriptor &, const char *source = nullptr, int line = 0);
+void RTNAME(CppDotProductComplex10)(std::complex<long double> &,
+    const Descriptor &, const Descriptor &, const char *source = nullptr,
+    int line = 0);
+void RTNAME(CppDotProductComplex16)(std::complex<long double> &,
+    const Descriptor &, const Descriptor &, const char *source = nullptr,
+    int line = 0);
+bool RTNAME(DotProductLogical)(const Descriptor &, const Descriptor &,
+    const char *source = nullptr, int line = 0);
 
 } // extern "C"
 } // namespace Fortran::runtime

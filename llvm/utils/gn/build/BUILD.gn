@@ -233,7 +233,9 @@ config("compiler_defaults") {
       "-fprofile-instr-generate=" +
           rebase_path("$root_build_dir/profiles/%4m.profraw"),
     ]
-    ldflags += [ "-fprofile-instr-generate" ]
+    if (host_os != "win") {
+      ldflags += [ "-fprofile-instr-generate" ]
+    }
   }
 
   # Deterministic build setup, see

@@ -1764,11 +1764,15 @@ int32_t __tgt_rtl_run_target_team_region_locked(
   KernelTy *KernelInfo = (KernelTy *)tgt_entry_ptr;
 
   std::string kernel_name = std::string(KernelInfo->Name);
+  if (KernelInfoTable[device_id].find(kernel_name) ==
+      KernelInfoTable[device_id].end()) {
+    DP("Kernel %s not found\n", kernel_name.c_str());
+    return OFFLOAD_FAIL;
+  }
+
   uint32_t sgpr_count, vgpr_count, sgpr_spill_count, vgpr_spill_count;
 
   {
-    assert(KernelInfoTable[device_id].find(kernel_name) !=
-           KernelInfoTable[device_id].end());
     auto it = KernelInfoTable[device_id][kernel_name];
     sgpr_count = it.sgpr_count;
     vgpr_count = it.vgpr_count;
@@ -1832,8 +1836,6 @@ int32_t __tgt_rtl_run_target_team_region_locked(
     packet->completion_signal = {0}; // may want a pool of signals
 
     {
-      assert(KernelInfoTable[device_id].find(kernel_name) !=
-             KernelInfoTable[device_id].end());
       auto it = KernelInfoTable[device_id][kernel_name];
       packet->kernel_object = it.kernel_object;
       packet->private_segment_size = it.private_segment_size;

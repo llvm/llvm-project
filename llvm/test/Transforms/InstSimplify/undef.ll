@@ -90,7 +90,7 @@ define i64 @test10() {
 
 define i64 @test11() {
 ; CHECK-LABEL: @test11(
-; CHECK:         ret i64 undef
+; CHECK:         ret i64 poison
 ;
   %r = shl i64 undef, undef
   ret i64 %r
@@ -106,7 +106,7 @@ define i64 @test11b(i64 %a) {
 
 define i64 @test12() {
 ; CHECK-LABEL: @test12(
-; CHECK:         ret i64 undef
+; CHECK:         ret i64 poison
 ;
   %r = ashr i64 undef, undef
   ret i64 %r
@@ -122,7 +122,7 @@ define i64 @test12b(i64 %a) {
 
 define i64 @test13() {
 ; CHECK-LABEL: @test13(
-; CHECK:         ret i64 undef
+; CHECK:         ret i64 poison
 ;
   %r = lshr i64 undef, undef
   ret i64 %r
@@ -235,7 +235,7 @@ define i32 @test23(i32 %a) {
 
 define i32 @test24() {
 ; CHECK-LABEL: @test24(
-; CHECK:         ret i32 undef
+; CHECK:         ret i32 poison
 ;
   %b = udiv i32 undef, 0
   ret i32 %b
@@ -243,7 +243,7 @@ define i32 @test24() {
 
 define i32 @test25() {
 ; CHECK-LABEL: @test25(
-; CHECK:         ret i32 undef
+; CHECK:         ret i32 poison
 ;
   %b = lshr i32 0, undef
   ret i32 %b
@@ -251,7 +251,7 @@ define i32 @test25() {
 
 define i32 @test26() {
 ; CHECK-LABEL: @test26(
-; CHECK:         ret i32 undef
+; CHECK:         ret i32 poison
 ;
   %b = ashr i32 0, undef
   ret i32 %b
@@ -259,7 +259,7 @@ define i32 @test26() {
 
 define i32 @test27() {
 ; CHECK-LABEL: @test27(
-; CHECK:         ret i32 undef
+; CHECK:         ret i32 poison
 ;
   %b = shl i32 0, undef
   ret i32 %b
@@ -339,7 +339,7 @@ define i32 @test36(i32 %V) {
 
 define i32 @test37() {
 ; CHECK-LABEL: @test37(
-; CHECK:         ret i32 undef
+; CHECK:         ret i32 poison
 ;
   %b = udiv i32 undef, undef
   ret i32 %b
@@ -355,7 +355,7 @@ define i32 @test38(i32 %a) {
 
 define i32 @test39() {
 ; CHECK-LABEL: @test39(
-; CHECK:         ret i32 undef
+; CHECK:         ret i32 poison
 ;
   %b = udiv i32 0, undef
   ret i32 %b

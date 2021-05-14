@@ -5524,6 +5524,83 @@ TEST(StatementMatcher, ForFunction) {
   EXPECT_TRUE(notMatches(CppString2, returnStmt(forFunction(hasName("F")))));
 }
 
+TEST(StatementMatcher, ForCallable) {
+  // These tests are copied over from the forFunction() test above.
+  StringRef CppString1 = "struct PosVec {"
+                         "  PosVec& operator=(const PosVec&) {"
+                         "    auto x = [] { return 1; };"
+                         "    return *this;"
+                         "  }"
+                         "};";
+  StringRef CppString2 = "void F() {"
+                         "  struct S {"
+                         "    void F2() {"
+                         "       return;"
+                         "    }"
+                         "  };"
+                         "}";
+
+  EXPECT_TRUE(
+    matches(
+      CppString1,
+      returnStmt(forCallable(functionDecl(hasName("operator="))),
+                 has(unaryOperator(hasOperatorName("*"))))));
+  EXPECT_TRUE(
+    notMatches(
+      CppString1,
+      returnStmt(forCallable(functionDecl(hasName("operator="))),
+                 has(integerLiteral()))));
+  EXPECT_TRUE(
+    matches(
+      CppString1,
+      returnStmt(forCallable(functionDecl(hasName("operator()"))),
+                 has(integerLiteral()))));
+  EXPECT_TRUE(matches(CppString2,
+                      returnStmt(forCallable(functionDecl(hasName("F2"))))));
+  EXPECT_TRUE(notMatches(CppString2,
+                         returnStmt(forCallable(functionDecl(hasName("F"))))));
+
+  // These tests are specific to forCallable().
+  StringRef ObjCString1 = "@interface I"
+                          "-(void) foo;"
+                          "@end"
+                          "@implementation I"
+                          "-(void) foo {"
+                          "  void (^block)() = ^{ 0x2b | ~0x2b; };"
+                          "}"
+                          "@end";
+
+  EXPECT_TRUE(
+    matchesObjC(
+      ObjCString1,
+      binaryOperator(forCallable(blockDecl()))));
+
+  EXPECT_TRUE(
+    notMatchesObjC(
+      ObjCString1,
+      binaryOperator(forCallable(objcMethodDecl()))));
+
+  StringRef ObjCString2 = "@interface I"
+                          "-(void) foo;"
+                          "@end"
+                          "@implementation I"
+                          "-(void) foo {"
+                          "  0x2b | ~0x2b;"
+                          "  void (^block)() = ^{};"
+                          "}"
+                          "@end";
+
+  EXPECT_TRUE(
+    matchesObjC(
+      ObjCString2,
+      binaryOperator(forCallable(objcMethodDecl()))));
+
+  EXPECT_TRUE(
+    notMatchesObjC(
+      ObjCString2,
+      binaryOperator(forCallable(blockDecl()))));
+}
+
 TEST(Matcher, ForEachOverriden) {
   const auto ForEachOverriddenInClass = [](const char *ClassName) {
     return cxxMethodDecl(ofClass(hasName(ClassName)), isVirtual(),

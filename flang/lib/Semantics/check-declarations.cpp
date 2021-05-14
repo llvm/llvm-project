@@ -538,13 +538,10 @@ void CheckHelper::CheckPointerInitialization(const Symbol &symbol) {
       !scopeIsUninstantiatedPDT_) {
     if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
       if (object->init()) { // C764, C765; C808
-        if (auto dyType{evaluate::DynamicType::From(symbol)}) {
-          if (auto designator{evaluate::TypedWrapper<evaluate::Designator>(
-                  *dyType, evaluate::DataRef{symbol})}) {
-            auto restorer{messages_.SetLocation(symbol.name())};
-            context_.set_location(symbol.name());
-            CheckInitialTarget(foldingContext_, *designator, *object->init());
-          }
+        if (auto designator{evaluate::AsGenericExpr(symbol)}) {
+          auto restorer{messages_.SetLocation(symbol.name())};
+          context_.set_location(symbol.name());
+          CheckInitialTarget(foldingContext_, *designator, *object->init());
         }
       }
     } else if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
