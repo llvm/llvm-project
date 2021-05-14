@@ -153,7 +153,7 @@ protected:
   void setTag(unsigned Tag) { SubclassData16 = Tag; }
 
 public:
-  unsigned getTag() const { return SubclassData16; }
+  dwarf::Tag getTag() const { return (dwarf::Tag)SubclassData16; }
 
   /// Debug info flags.
   ///
@@ -262,7 +262,7 @@ public:
   /// Return a (temporary) clone of this.
   TempGenericDINode clone() const { return cloneImpl(); }
 
-  unsigned getTag() const { return SubclassData16; }
+  dwarf::Tag getTag() const { return (dwarf::Tag)SubclassData16; }
   StringRef getHeader() const { return getStringOperand(0); }
   MDString *getRawHeader() const { return getOperandAs<MDString>(0); }
 
