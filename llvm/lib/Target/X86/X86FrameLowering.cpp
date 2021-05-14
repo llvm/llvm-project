@@ -2508,7 +2508,7 @@ void X86FrameLowering::emitCatchRetReturnValue(MachineBasicBlock &MBB,
   assert(!isAsynchronousEHPersonality(classifyEHPersonality(
              MBB.getParent()->getFunction().getPersonalityFn())) &&
          "SEH should not use CATCHRET");
-  const DebugLoc &DL = CatchRet->getDebugLoc();
+  DebugLoc DL = CatchRet->getDebugLoc();
   MachineBasicBlock *CatchRetTarget = CatchRet->getOperand(0).getMBB();
 
   // Fill EAX/RAX with the address of the target block.
@@ -3160,7 +3160,7 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
   bool reserveCallFrame = hasReservedCallFrame(MF);
   unsigned Opcode = I->getOpcode();
   bool isDestroy = Opcode == TII.getCallFrameDestroyOpcode();
-  const DebugLoc &DL = I->getDebugLoc();
+  DebugLoc DL = I->getDebugLoc();
   uint64_t Amount = TII.getFrameSize(*I);
   uint64_t InternalAmt = (isDestroy || Amount) ? TII.getFrameAdjustment(*I) : 0;
   I = MBB.erase(I);
