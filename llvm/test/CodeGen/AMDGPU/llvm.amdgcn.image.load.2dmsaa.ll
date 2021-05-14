@@ -3,10 +3,10 @@
 
 ; GFX10-NOT:  %0 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
 ; GFX11:  %0 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
-; GFX11:  %1 = extractelement <4 x float> %0, i32 0
-; GFX11:  %2 = extractelement <4 x float> %0, i32 1
-; GFX11:  %3 = extractelement <4 x float> %0, i32 2
-; GFX11:  %4 = extractelement <4 x float> %0, i32 3
+; GFX11:  %1 = extractelement <4 x float> %0, i64 0
+; GFX11:  %2 = extractelement <4 x float> %0, i64 1
+; GFX11:  %3 = extractelement <4 x float> %0, i64 2
+; GFX11:  %4 = extractelement <4 x float> %0, i64 3
 define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_dmask1(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
 main_body:
   %i = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
@@ -21,10 +21,10 @@ main_body:
 }
 
 ; GFX11:  %0 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 2, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
-; GFX11:  %1 = extractelement <4 x float> %0, i32 0
-; GFX11:  %2 = extractelement <4 x float> %0, i32 1
-; GFX11:  %3 = extractelement <4 x float> %0, i32 2
-; GFX11:  %4 = extractelement <4 x float> %0, i32 3
+; GFX11:  %1 = extractelement <4 x float> %0, i64 0
+; GFX11:  %2 = extractelement <4 x float> %0, i64 1
+; GFX11:  %3 = extractelement <4 x float> %0, i64 2
+; GFX11:  %4 = extractelement <4 x float> %0, i64 3
 define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_dmask2(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
 main_body:
   %i = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 2, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
@@ -39,10 +39,10 @@ main_body:
 }
 
 ; GFX11:  %0 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 4, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
-; GFX11:  %1 = extractelement <4 x float> %0, i32 0
-; GFX11:  %2 = extractelement <4 x float> %0, i32 1
-; GFX11:  %3 = extractelement <4 x float> %0, i32 2
-; GFX11:  %4 = extractelement <4 x float> %0, i32 3
+; GFX11:  %1 = extractelement <4 x float> %0, i64 0
+; GFX11:  %2 = extractelement <4 x float> %0, i64 1
+; GFX11:  %3 = extractelement <4 x float> %0, i64 2
+; GFX11:  %4 = extractelement <4 x float> %0, i64 3
 define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_dmask4(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
 main_body:
   %i = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 4, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
@@ -57,10 +57,10 @@ main_body:
 }
 
 ; GFX11:  %0 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 8, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
-; GFX11:  %1 = extractelement <4 x float> %0, i32 0
-; GFX11:  %2 = extractelement <4 x float> %0, i32 1
-; GFX11:  %3 = extractelement <4 x float> %0, i32 2
-; GFX11:  %4 = extractelement <4 x float> %0, i32 3
+; GFX11:  %1 = extractelement <4 x float> %0, i64 0
+; GFX11:  %2 = extractelement <4 x float> %0, i64 1
+; GFX11:  %3 = extractelement <4 x float> %0, i64 2
+; GFX11:  %4 = extractelement <4 x float> %0, i64 3
 define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_dmask8(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
 main_body:
   %i = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 8, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
@@ -75,10 +75,10 @@ main_body:
 }
 
 ; GFX11:  %0 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
-; GFX11:  %1 = extractelement <4 x float> %0, i32 3
-; GFX11:  %2 = extractelement <4 x float> %0, i32 2
-; GFX11:  %3 = extractelement <4 x float> %0, i32 1
-; GFX11:  %4 = extractelement <4 x float> %0, i32 0
+; GFX11:  %1 = extractelement <4 x float> %0, i64 3
+; GFX11:  %2 = extractelement <4 x float> %0, i64 2
+; GFX11:  %3 = extractelement <4 x float> %0, i64 1
+; GFX11:  %4 = extractelement <4 x float> %0, i64 0
 define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_reverse(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
 main_body:
   %i = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 %s, i32 %t, i32 3, <8 x i32> %rsrc, i32 0, i32 0)
@@ -107,10 +107,10 @@ main_body:
 }
 
 ; GFX11:  %0 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
-; GFX11:  %1 = extractelement <4 x float> %0, i32 0
-; GFX11:  %2 = extractelement <4 x float> %0, i32 1
-; GFX11:  %3 = extractelement <4 x float> %0, i32 2
-; GFX11:  %4 = extractelement <4 x float> %0, i32 3
+; GFX11:  %1 = extractelement <4 x float> %0, i64 0
+; GFX11:  %2 = extractelement <4 x float> %0, i64 1
+; GFX11:  %3 = extractelement <4 x float> %0, i64 2
+; GFX11:  %4 = extractelement <4 x float> %0, i64 3
 define amdgpu_ps [8 x float] @load_2dmsaa_v8f32(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
 main_body:
   %i = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
@@ -133,10 +133,10 @@ main_body:
 }
 
 ; GFX11:  %0 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
-; GFX11:  %1 = extractelement <4 x float> %0, i32 0
-; GFX11:  %2 = extractelement <4 x float> %0, i32 1
-; GFX11:  %3 = extractelement <4 x float> %0, i32 2
-; GFX11:  %4 = extractelement <4 x float> %0, i32 3
+; GFX11:  %1 = extractelement <4 x float> %0, i64 0
+; GFX11:  %2 = extractelement <4 x float> %0, i64 1
+; GFX11:  %3 = extractelement <4 x float> %0, i64 2
+; GFX11:  %4 = extractelement <4 x float> %0, i64 3
 define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_interleaved(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
 main_body:
   %i = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
@@ -151,8 +151,8 @@ main_body:
 }
 
 ; GFX11:  %0 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
-; GFX11:  %1 = extractelement <4 x float> %0, i32 0
-; GFX11:  %2 = extractelement <4 x float> %0, i32 1
+; GFX11:  %1 = extractelement <4 x float> %0, i64 0
+; GFX11:  %2 = extractelement <4 x float> %0, i64 1
 define amdgpu_ps [2 x float] @load_2dmsaa_v2f32_fragId01(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
 main_body:
   %i = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
@@ -163,8 +163,8 @@ main_body:
 }
 
 ; GFX11:  %0 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
-; GFX11:  %1 = extractelement <4 x float> %0, i32 2
-; GFX11:  %2 = extractelement <4 x float> %0, i32 3
+; GFX11:  %1 = extractelement <4 x float> %0, i64 2
+; GFX11:  %2 = extractelement <4 x float> %0, i64 3
 define amdgpu_ps [2 x float] @load_2dmsaa_v2f32_fragId23(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
 main_body:
   %i = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 %s, i32 %t, i32 2, <8 x i32> %rsrc, i32 0, i32 0)
@@ -177,14 +177,14 @@ main_body:
 ; GFX11:  %0 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
 ; GFX11:  %1 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 2, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
 
-; GFX11:  %2 = extractelement <4 x float> %0, i32 0
+; GFX11:  %2 = extractelement <4 x float> %0, i64 0
 ; GFX11:  %3 = insertelement <2 x float> undef, float %2, i64 0
-; GFX11:  %4 = extractelement <4 x float> %1, i32 0
+; GFX11:  %4 = extractelement <4 x float> %1, i64 0
 ; GFX11:  %5 = insertelement <2 x float> %3, float %4, i64 1
 
-; GFX11:  %6 = extractelement <4 x float> %0, i32 1
+; GFX11:  %6 = extractelement <4 x float> %0, i64 1
 ; GFX11:  %7 = insertelement <2 x float> undef, float  %6, i64 0
-; GFX11:  %8 = extractelement <4 x float> %1, i32 1
+; GFX11:  %8 = extractelement <4 x float> %1, i64 1
 ; GFX11:  %9 = insertelement <2 x float> %7, float %8, i64 1
 define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask3(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
 main_body:
@@ -202,14 +202,14 @@ main_body:
 ; GFX11:  %0 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
 ; GFX11:  %1 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 4, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
 
-; GFX11:  %2 = extractelement <4 x float> %0, i32 0
+; GFX11:  %2 = extractelement <4 x float> %0, i64 0
 ; GFX11:  %3 = insertelement <2 x float> undef, float %2, i64 0
-; GFX11:  %4 = extractelement <4 x float> %1, i32 0
+; GFX11:  %4 = extractelement <4 x float> %1, i64 0
 ; GFX11:  %5 = insertelement <2 x float> %3, float %4, i64 1
 
-; GFX11:  %6 = extractelement <4 x float> %0, i32 1
+; GFX11:  %6 = extractelement <4 x float> %0, i64 1
 ; GFX11:  %7 = insertelement <2 x float> undef, float  %6, i64 0
-; GFX11:  %8 = extractelement <4 x float> %1, i32 1
+; GFX11:  %8 = extractelement <4 x float> %1, i64 1
 ; GFX11:  %9 = insertelement <2 x float> %7, float %8, i64 1
 define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask5(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
 main_body:
@@ -227,14 +227,14 @@ main_body:
 ; GFX11:  %0 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 2, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
 ; GFX11:  %1 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 4, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
 
-; GFX11:  %2 = extractelement <4 x float> %0, i32 0
+; GFX11:  %2 = extractelement <4 x float> %0, i64 0
 ; GFX11:  %3 = insertelement <2 x float> undef, float %2, i64 0
-; GFX11:  %4 = extractelement <4 x float> %1, i32 0
+; GFX11:  %4 = extractelement <4 x float> %1, i64 0
 ; GFX11:  %5 = insertelement <2 x float> %3, float %4, i64 1
 
-; GFX11:  %6 = extractelement <4 x float> %0, i32 1
+; GFX11:  %6 = extractelement <4 x float> %0, i64 1
 ; GFX11:  %7 = insertelement <2 x float> undef, float  %6, i64 0
-; GFX11:  %8 = extractelement <4 x float> %1, i32 1
+; GFX11:  %8 = extractelement <4 x float> %1, i64 1
 ; GFX11:  %9 = insertelement <2 x float> %7, float %8, i64 1
 define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask6(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
 main_body:
@@ -252,14 +252,14 @@ main_body:
 ; GFX11:  %0 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
 ; GFX11:  %1 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 8, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
 
-; GFX11:  %2 = extractelement <4 x float> %0, i32 0
+; GFX11:  %2 = extractelement <4 x float> %0, i64 0
 ; GFX11:  %3 = insertelement <2 x float> undef, float %2, i64 0
-; GFX11:  %4 = extractelement <4 x float> %1, i32 0
+; GFX11:  %4 = extractelement <4 x float> %1, i64 0
 ; GFX11:  %5 = insertelement <2 x float> %3, float %4, i64 1
 
-; GFX11:  %6 = extractelement <4 x float> %0, i32 1
+; GFX11:  %6 = extractelement <4 x float> %0, i64 1
 ; GFX11:  %7 = insertelement <2 x float> undef, float  %6, i64 0
-; GFX11:  %8 = extractelement <4 x float> %1, i32 1
+; GFX11:  %8 = extractelement <4 x float> %1, i64 1
 ; GFX11:  %9 = insertelement <2 x float> %7, float %8, i64 1
 define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask9(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
 main_body:
@@ -277,14 +277,14 @@ main_body:
 ; GFX11:  %0 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 2, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
 ; GFX11:  %1 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 8, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
 
-; GFX11:  %2 = extractelement <4 x float> %0, i32 0
+; GFX11:  %2 = extractelement <4 x float> %0, i64 0
 ; GFX11:  %3 = insertelement <2 x float> undef, float %2, i64 0
-; GFX11:  %4 = extractelement <4 x float> %1, i32 0
+; GFX11:  %4 = extractelement <4 x float> %1, i64 0
 ; GFX11:  %5 = insertelement <2 x float> %3, float %4, i64 1
 
-; GFX11:  %6 = extractelement <4 x float> %0, i32 1
+; GFX11:  %6 = extractelement <4 x float> %0, i64 1
 ; GFX11:  %7 = insertelement <2 x float> undef, float  %6, i64 0
-; GFX11:  %8 = extractelement <4 x float> %1, i32 1
+; GFX11:  %8 = extractelement <4 x float> %1, i64 1
 ; GFX11:  %9 = insertelement <2 x float> %7, float %8, i64 1
 define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask10(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
 main_body:
@@ -302,14 +302,14 @@ main_body:
 ; GFX11:  %0 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 4, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
 ; GFX11:  %1 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 8, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
 
-; GFX11:  %2 = extractelement <4 x float> %0, i32 0
+; GFX11:  %2 = extractelement <4 x float> %0, i64 0
 ; GFX11:  %3 = insertelement <2 x float> undef, float %2, i64 0
-; GFX11:  %4 = extractelement <4 x float> %1, i32 0
+; GFX11:  %4 = extractelement <4 x float> %1, i64 0
 ; GFX11:  %5 = insertelement <2 x float> %3, float %4, i64 1
 
-; GFX11:  %6 = extractelement <4 x float> %0, i32 1
+; GFX11:  %6 = extractelement <4 x float> %0, i64 1
 ; GFX11:  %7 = insertelement <2 x float> undef, float  %6, i64 0
-; GFX11:  %8 = extractelement <4 x float> %1, i32 1
+; GFX11:  %8 = extractelement <4 x float> %1, i64 1
 ; GFX11:  %9 = insertelement <2 x float> %7, float %8, i64 1
 define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask12(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
 main_body:
@@ -325,8 +325,8 @@ main_body:
 }
 
 ; GFX11:  %0 = call <4 x half> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f16.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
-; GFX11:  %1 = extractelement <4 x half> %0, i32 0
-; GFX11:  %2 = extractelement <4 x half> %0, i32 1
+; GFX11:  %1 = extractelement <4 x half> %0, i64 0
+; GFX11:  %2 = extractelement <4 x half> %0, i64 1
 define amdgpu_ps [2 x half] @load_2dmsaa_v2f16_fragId01(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
 main_body:
   %i = call half @llvm.amdgcn.image.load.2dmsaa.f16.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
@@ -337,10 +337,10 @@ main_body:
 }
 
 ; GFX11:  %0 = call <4 x float> @llvm.amdgcn.image.msaa.load.2darraymsaa.v4f32.i32(i32 1, i32 %s, i32 %t, i32 %slice, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
-; GFX11:  %1 = extractelement <4 x float> %0, i32 0
-; GFX11:  %2 = extractelement <4 x float> %0, i32 1
-; GFX11:  %3 = extractelement <4 x float> %0, i32 2
-; GFX11:  %4 = extractelement <4 x float> %0, i32 3
+; GFX11:  %1 = extractelement <4 x float> %0, i64 0
+; GFX11:  %2 = extractelement <4 x float> %0, i64 1
+; GFX11:  %3 = extractelement <4 x float> %0, i64 2
+; GFX11:  %4 = extractelement <4 x float> %0, i64 3
 define amdgpu_ps [4 x float] @load_2darraymsaa_v4f32_dmask1(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i32 %slice) {
 main_body:
   %i = call float @llvm.amdgcn.image.load.2darraymsaa.f32.i32(i32 1, i32 %s, i32 %t, i32 %slice, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
@@ -357,14 +357,14 @@ main_body:
 ; GFX11:  %0 = call <4 x float> @llvm.amdgcn.image.msaa.load.2darraymsaa.v4f32.i32(i32 1, i32 %s, i32 %t, i32 %slice, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
 ; GFX11:  %1 = call <4 x float> @llvm.amdgcn.image.msaa.load.2darraymsaa.v4f32.i32(i32 2, i32 %s, i32 %t, i32 %slice, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
 
-; GFX11:  %2 = extractelement <4 x float> %0, i32 0
+; GFX11:  %2 = extractelement <4 x float> %0, i64 0
 ; GFX11:  %3 = insertelement <2 x float> undef, float %2, i64 0
-; GFX11:  %4 = extractelement <4 x float> %1, i32 0
+; GFX11:  %4 = extractelement <4 x float> %1, i64 0
 ; GFX11:  %5 = insertelement <2 x float> %3, float %4, i64 1
 
-; GFX11:  %6 = extractelement <4 x float> %0, i32 1
+; GFX11:  %6 = extractelement <4 x float> %0, i64 1
 ; GFX11:  %7 = insertelement <2 x float> undef, float  %6, i64 0
-; GFX11:  %8 = extractelement <4 x float> %1, i32 1
+; GFX11:  %8 = extractelement <4 x float> %1, i64 1
 ; GFX11:  %9 = insertelement <2 x float> %7, float %8, i64 1
 define amdgpu_ps [4 x <2 x float>] @load_2darraymsaa_v4v2f32_dmask3(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i32 %slice) {
 main_body:
@@ -383,32 +383,32 @@ main_body:
 ; GFX11:  %1 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 2, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
 ; GFX11:  %2 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 4, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
 
-; GFX11:  %3 = extractelement <4 x float> %0, i32 0
+; GFX11:  %3 = extractelement <4 x float> %0, i64 0
 ; GFX11:  %4 = insertelement <3 x float> undef, float %3, i64 0
-; GFX11:  %5 = extractelement <4 x float> %1, i32 0
+; GFX11:  %5 = extractelement <4 x float> %1, i64 0
 ; GFX11:  %6 = insertelement <3 x float> %4, float %5, i64 1
-; GFX11:  %7 = extractelement <4 x float> %2, i32 0
+; GFX11:  %7 = extractelement <4 x float> %2, i64 0
 ; GFX11:  %8 = insertelement <3 x float> %6, float %7, i64 2
 
-; GFX11:  %9 = extractelement <4 x float> %0, i32 1
+; GFX11:  %9 = extractelement <4 x float> %0, i64 1
 ; GFX11:  %10 = insertelement <3 x float> undef, float  %9, i64 0
-; GFX11:  %11 = extractelement <4 x float> %1, i32 1
+; GFX11:  %11 = extractelement <4 x float> %1, i64 1
 ; GFX11:  %12 = insertelement <3 x float> %10, float %11, i64 1
-; GFX11:  %13 = extractelement <4 x float> %2, i32 1
+; GFX11:  %13 = extractelement <4 x float> %2, i64 1
 ; GFX11:  %14 = insertelement <3 x float> %12, float %13, i64 2
 
-; GFX11:  %15 = extractelement <4 x float> %0, i32 2
+; GFX11:  %15 = extractelement <4 x float> %0, i64 2
 ; GFX11:  %16 = insertelement <3 x float> undef, float %15, i64 0
-; GFX11:  %17 = extractelement <4 x float> %1, i32 2
+; GFX11:  %17 = extractelement <4 x float> %1, i64 2
 ; GFX11:  %18 = insertelement <3 x float> %16, float %17, i64 1
-; GFX11:  %19 = extractelement <4 x float> %2, i32 2
+; GFX11:  %19 = extractelement <4 x float> %2, i64 2
 ; GFX11:  %20 = insertelement <3 x float> %18, float %19, i64 2
 
-; GFX11:  %21 = extractelement <4 x float> %0, i32 3
+; GFX11:  %21 = extractelement <4 x float> %0, i64 3
 ; GFX11:  %22 = insertelement <3 x float> undef, float %21, i64 0
-; GFX11:  %23 = extractelement <4 x float> %1, i32 3
+; GFX11:  %23 = extractelement <4 x float> %1, i64 3
 ; GFX11:  %24 = insertelement <3 x float> %22, float %23, i64 1
-; GFX11:  %25 = extractelement <4 x float> %2, i32 3
+; GFX11:  %25 = extractelement <4 x float> %2, i64 3
 ; GFX11:  %26 = insertelement <3 x float> %24, float %25, i64 2
 define amdgpu_ps [4 x <3 x float>] @load_2dmsaa_v4v3f32_dmask7(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
 main_body:
@@ -423,13 +423,57 @@ main_body:
   ret [4 x <3 x float>] %i7
 }
 
+; GFX11:  %0 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 %s, i32 %t, i32 4, <8 x i32> %rsrc, i32 0, i32 0)
+; GFX11:  %1 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 2, i32 %s, i32 %t, i32 4, <8 x i32> %rsrc, i32 0, i32 0)
+; GFX11:  %2 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 4, i32 %s, i32 %t, i32 4, <8 x i32> %rsrc, i32 0, i32 0)
+
+; GFX11:  %3 = extractelement <4 x float> %0, i64 0
+; GFX11:  %4 = insertelement <3 x float> undef, float %3, i64 0
+; GFX11:  %5 = extractelement <4 x float> %1, i64 0
+; GFX11:  %6 = insertelement <3 x float> %4, float %5, i64 1
+; GFX11:  %7 = extractelement <4 x float> %2, i64 0
+; GFX11:  %8 = insertelement <3 x float> %6, float %7, i64 2
+
+; GFX11:  %9 = extractelement <4 x float> %0, i64 1
+; GFX11:  %10 = insertelement <3 x float> undef, float  %9, i64 0
+; GFX11:  %11 = extractelement <4 x float> %1, i64 1
+; GFX11:  %12 = insertelement <3 x float> %10, float %11, i64 1
+; GFX11:  %13 = extractelement <4 x float> %2, i64 1
+; GFX11:  %14 = insertelement <3 x float> %12, float %13, i64 2
+
+; GFX11:  %15 = extractelement <4 x float> %0, i64 2
+; GFX11:  %16 = insertelement <3 x float> undef, float %15, i64 0
+; GFX11:  %17 = extractelement <4 x float> %1, i64 2
+; GFX11:  %18 = insertelement <3 x float> %16, float %17, i64 1
+; GFX11:  %19 = extractelement <4 x float> %2, i64 2
+; GFX11:  %20 = insertelement <3 x float> %18, float %19, i64 2
+
+; GFX11:  %21 = extractelement <4 x float> %0, i64 3
+; GFX11:  %22 = insertelement <3 x float> undef, float %21, i64 0
+; GFX11:  %23 = extractelement <4 x float> %1, i64 3
+; GFX11:  %24 = insertelement <3 x float> %22, float %23, i64 1
+; GFX11:  %25 = extractelement <4 x float> %2, i64 3
+; GFX11:  %26 = insertelement <3 x float> %24, float %25, i64 2
+define amdgpu_ps [4 x <3 x float>] @load_2dmsaa_v4v3f32_dmask7_group1(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
+main_body:
+  %i = call <3 x float> @llvm.amdgcn.image.load.2dmsaa.v3f32.i32(i32 7, i32 %s, i32 %t, i32 4, <8 x i32> %rsrc, i32 0, i32 0)
+  %i1 = call <3 x float> @llvm.amdgcn.image.load.2dmsaa.v3f32.i32(i32 7, i32 %s, i32 %t, i32 5, <8 x i32> %rsrc, i32 0, i32 0)
+  %i2 = call <3 x float> @llvm.amdgcn.image.load.2dmsaa.v3f32.i32(i32 7, i32 %s, i32 %t, i32 6, <8 x i32> %rsrc, i32 0, i32 0)
+  %i3 = call <3 x float> @llvm.amdgcn.image.load.2dmsaa.v3f32.i32(i32 7, i32 %s, i32 %t, i32 7, <8 x i32> %rsrc, i32 0, i32 0)
+  %i4 = insertvalue [4 x <3 x float>] undef, <3 x float> %i, 0
+  %i5 = insertvalue [4 x <3 x float>] %i4, <3 x float> %i1, 1
+  %i6 = insertvalue [4 x <3 x float>] %i5, <3 x float> %i2, 2
+  %i7 = insertvalue [4 x <3 x float>] %i6, <3 x float> %i3, 3
+  ret [4 x <3 x float>] %i7
+}
+
 ; GFX11:  %0 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
-; GFX11:  %1 = extractelement <4 x float> %0, i32 0
-; GFX11:  %2 = extractelement <4 x float> %0, i32 1
+; GFX11:  %1 = extractelement <4 x float> %0, i64 0
+; GFX11:  %2 = extractelement <4 x float> %0, i64 1
 ; GFX11:  call void @llvm.amdgcn.image.store.2dmsaa.f32.i32(float %vdata, i32 1, i32 %s, i32 %t, i32 %fragid, <8 x i32> %rsrc, i32 0, i32 0)
 ; GFX11:  %3 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
-; GFX11:  %4 = extractelement <4 x float> %3, i32 2
-; GFX11:  %5 = extractelement <4 x float> %3, i32 3
+; GFX11:  %4 = extractelement <4 x float> %3, i64 2
+; GFX11:  %5 = extractelement <4 x float> %3, i64 3
 define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_sections(<8 x i32> inreg %rsrc, float %vdata, i32 %s, i32 %t, i32 %fragid) {
 main_body:
   %i = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
@@ -445,22 +489,22 @@ main_body:
 }
 
 ; GFX11:  %0 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
-; GFX11:  %1 = extractelement <4 x float> %0, i32 0
-; GFX11:  %2 = extractelement <4 x float> %0, i32 1
-; GFX11:  %3 = extractelement <4 x float> %0, i32 2
-; GFX11:  %4 = extractelement <4 x float> %0, i32 3
+; GFX11:  %1 = extractelement <4 x float> %0, i64 0
+; GFX11:  %2 = extractelement <4 x float> %0, i64 1
+; GFX11:  %3 = extractelement <4 x float> %0, i64 2
+; GFX11:  %4 = extractelement <4 x float> %0, i64 3
 ; GFX11-LABEL: if_equal:
 ; GFX11:  %5 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
-; GFX11:  %6 = extractelement <4 x float> %5, i32 0
-; GFX11:  %7 = extractelement <4 x float> %5, i32 1
-; GFX11:  %8 = extractelement <4 x float> %5, i32 2
-; GFX11:  %9 = extractelement <4 x float> %5, i32 3
+; GFX11:  %6 = extractelement <4 x float> %5, i64 0
+; GFX11:  %7 = extractelement <4 x float> %5, i64 1
+; GFX11:  %8 = extractelement <4 x float> %5, i64 2
+; GFX11:  %9 = extractelement <4 x float> %5, i64 3
 ; GFX11-LABEL: if_unequal:
 ; GFX11:  %10 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
-; GFX11:  %11 = extractelement <4 x float> %10, i32 0
-; GFX11:  %12 = extractelement <4 x float> %10, i32 1
-; GFX11:  %13 = extractelement <4 x float> %10, i32 2
-; GFX11:  %14 = extractelement <4 x float> %10, i32 3
+; GFX11:  %11 = extractelement <4 x float> %10, i64 0
+; GFX11:  %12 = extractelement <4 x float> %10, i64 1
+; GFX11:  %13 = extractelement <4 x float> %10, i64 2
+; GFX11:  %14 = extractelement <4 x float> %10, i64 3
 define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_blocks(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i32 %cond) {
 main_body:
   %i = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
