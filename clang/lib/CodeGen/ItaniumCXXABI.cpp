@@ -3220,7 +3220,7 @@ ItaniumCXXABI::getOrCreateVirtualFunctionPointerThunk(const CXXMethodDecl *MD) {
   ThunkFn->setVisibility(llvm::GlobalValue::HiddenVisibility);
   assert(ThunkFn->getName() == ThunkName && "name was uniqued!");
 
-  CGM.SetLLVMFunctionAttributes(MD, FnInfo, ThunkFn);
+  CGM.SetLLVMFunctionAttributes(MD, FnInfo, ThunkFn, /*IsThunk=*/true);
   CGM.SetLLVMFunctionAttributesForDefinition(MD, ThunkFn);
 
   // Start codegen.
