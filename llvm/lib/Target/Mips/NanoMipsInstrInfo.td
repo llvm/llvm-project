@@ -23,8 +23,8 @@ def MipsFullAddr : SDNode<"MipsISD::FullAddr", SDTIntUnaryOp>;
 //
 //===----------------------------------------------------------------------===//
 
-// Arithmetic and logical instructions with 3 register operands.
-class ArithLogicRNM<string opstr, RegisterOperand RO,
+// 32-bit arithmetic and logical instructions with 3 register operands.
+class ArithLoginR32<string opstr, RegisterOperand RO,
                     SDPatternOperator OpNode = null_frag>:
   InstNM<(outs RO:$rd), (ins RO:$rs, RO:$rt),
          !strconcat(opstr, "\t$rd, $rs, $rt"),
@@ -114,15 +114,15 @@ class AdjustStack<SDPatternOperator operator> :
 
 let isCodeGenOnly = 1 in {
 
-def ADDu_NM : ArithLogicRNM<"addu", GPR32NMOpnd, add>;
+def ADDu_NM : ArithLoginR32<"addu", GPR32NMOpnd, add>;
 def ADDiu_NM : ArithLogicINM<"addiu", simm16_relaxed, GPR32NMOpnd,
                              imm32SExt16, add>;
-def SUBu_NM : ArithLogicRNM<"subu", GPR32NMOpnd, sub>;
+def SUBu_NM : ArithLoginR32<"subu", GPR32NMOpnd, sub>;
 
-def AND_NM : ArithLogicRNM<"and", GPR32NMOpnd, and>;
-def OR_NM  : ArithLogicRNM<"or", GPR32NMOpnd, or>;
-def XOR_NM : ArithLogicRNM<"xor", GPR32NMOpnd, xor>;
-def NOR_NM : ArithLogicRNM<"nor", GPR32NMOpnd>;
+def AND_NM : ArithLoginR32<"and", GPR32NMOpnd, and>;
+def OR_NM  : ArithLoginR32<"or", GPR32NMOpnd, or>;
+def XOR_NM : ArithLoginR32<"xor", GPR32NMOpnd, xor>;
+def NOR_NM : ArithLoginR32<"nor", GPR32NMOpnd>;
 
 def NOT_NM   : ArithLogicR16<"not", GPR3Opnd, not>;
 def XOR16_NM : ArithLogicR16<"xor16", GPR3Opnd>;
