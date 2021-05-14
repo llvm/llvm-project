@@ -61,6 +61,7 @@
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx1031 < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1031 %s
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx1032 < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1032 %s
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx1033 < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1033 %s
+; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx1034 < %s | llvm-readobj -file-headers - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1034 %s
 
 ; FIXME: With the default attributes the eflags are not accurate for
 ; xnack and sramecc. Subsequent Target-ID patches will address this.
@@ -119,6 +120,7 @@
 ; GFX1031:       EF_AMDGPU_MACH_AMDGCN_GFX1031 (0x37)
 ; GFX1032:       EF_AMDGPU_MACH_AMDGCN_GFX1032 (0x38)
 ; GFX1033:       EF_AMDGPU_MACH_AMDGCN_GFX1033 (0x39)
+; GFX1034:       EF_AMDGPU_MACH_AMDGCN_GFX1034 (0x3E)
 ; ALL:         ]
 
 define amdgpu_kernel void @elf_header() {
