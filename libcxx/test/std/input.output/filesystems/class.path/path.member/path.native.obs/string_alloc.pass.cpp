@@ -150,6 +150,9 @@ int main(int, char**)
     doShortStringTest<wchar_t>(S);
     doShortStringTest<char16_t>(S);
     doShortStringTest<char32_t>(S);
+#if TEST_STD_VER > 17 && defined(__cpp_lib_char8_t)
+    doShortStringTest<char8_t>(S);
+#endif
   }
   {
     auto const& S = longString;
@@ -157,6 +160,9 @@ int main(int, char**)
     doLongStringTest<wchar_t>(S);
     doLongStringTest<char16_t>(S);
     doLongStringTest<char32_t>(S);
+#if TEST_STD_VER > 17 && defined(__cpp_lib_char8_t)
+    doLongStringTest<char8_t>(S);
+#endif
   }
 
   return 0;
