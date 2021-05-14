@@ -76,6 +76,8 @@ private:
   bool ReplaceConstByVPNOTs(MachineBasicBlock &MBB, MachineDominatorTree *DT);
   bool ConvertVPSEL(MachineBasicBlock &MBB);
   bool HintDoLoopStartReg(MachineBasicBlock &MBB);
+  MachineInstr *CheckForLRUseInPredecessors(MachineBasicBlock *PreHeader,
+                                            MachineInstr *LoopStart);
 };
 
 char MVETPAndVPTOptimisations::ID = 0;
@@ -253,6 +255,53 @@ bool MVETPAndVPTOptimisations::LowerWhileLoopStart(MachineLoop *ML) {
   return true;
 }
 
+// Return true if this instruction is invalid in a low overhead loop, usually
+// because it clobbers LR.
+static bool IsInvalidTPInstruction(MachineInstr &MI) {
+  return MI.isCall() || isLoopStart(MI);
+}
+
+// Starting from PreHeader, search for invalid instructions back until the
+// LoopStart block is reached. If invalid instructions are found, the loop start
+// is reverted from a WhileLoopStart to a DoLoopStart on the same loop. Will
+// return the new DLS LoopStart if updated.
+MachineInstr *MVETPAndVPTOptimisations::CheckForLRUseInPredecessors(
+    MachineBasicBlock *PreHeader, MachineInstr *LoopStart) {
+  SmallVector<MachineBasicBlock *> Worklist;
+  SmallPtrSet<MachineBasicBlock *, 4> Visited;
+  Worklist.push_back(PreHeader);
+  Visited.insert(LoopStart->getParent());
+
+  while (!Worklist.empty()) {
+    MachineBasicBlock *MBB = Worklist.pop_back_val();
+    if (Visited.count(MBB))
+      continue;
+
+    for (MachineInstr &MI : *MBB) {
+      if (!IsInvalidTPInstruction(MI))
+        continue;
+
+      LLVM_DEBUG(dbgs() << "Found LR use in predecessors, reverting: " << MI);
+
+      // Create a t2DoLoopStart at the end of the preheader.
+      MachineInstrBuilder MIB =
+          BuildMI(*PreHeader, PreHeader->getFirstTerminator(),
+                  LoopStart->getDebugLoc(), TII->get(ARM::t2DoLoopStart));
+      MIB.add(LoopStart->getOperand(0));
+      MIB.add(LoopStart->getOperand(1));
+
+      // Revert the t2WhileLoopStartLR to a CMP and Br.
+      RevertWhileLoopStartLR(LoopStart, TII, ARM::t2Bcc, true);
+      return MIB;
+    }
+
+    Visited.insert(MBB);
+    for (auto *Pred : MBB->predecessors())
+      Worklist.push_back(Pred);
+  }
+  return LoopStart;
+}
+
 // This function converts loops with t2LoopEnd and t2LoopEnd instructions into
 // a single t2LoopEndDec instruction. To do that it needs to make sure that LR
 // will be valid to be used for the low overhead loop, which means nothing else
@@ -275,29 +324,13 @@ bool MVETPAndVPTOptimisations::MergeLoopEnd(MachineLoop *ML) {
   // and if so revert it now before we get any further. While loops also need to
   // check the preheaders, but can be reverted to a DLS loop if needed.
   auto *PreHeader = ML->getLoopPreheader();
-  if (LoopStart->getOpcode() == ARM::t2WhileLoopStartLR && PreHeader &&
-      LoopStart->getParent() != PreHeader) {
-    for (MachineInstr &MI : *PreHeader) {
-      if (MI.isCall()) {
-        // Create a t2DoLoopStart at the end of the preheader.
-        MachineInstrBuilder MIB =
-            BuildMI(*PreHeader, PreHeader->getFirstTerminator(),
-                    LoopStart->getDebugLoc(), TII->get(ARM::t2DoLoopStart));
-        MIB.add(LoopStart->getOperand(0));
-        MIB.add(LoopStart->getOperand(1));
-
-        // Revert the t2WhileLoopStartLR to a CMP and Br.
-        RevertWhileLoopStartLR(LoopStart, TII, ARM::t2Bcc, true);
-        LoopStart = MIB;
-        break;
-      }
-    }
-  }
+  if (LoopStart->getOpcode() == ARM::t2WhileLoopStartLR && PreHeader)
+    LoopStart = CheckForLRUseInPredecessors(PreHeader, LoopStart);
 
   for (MachineBasicBlock *MBB : ML->blocks()) {
     for (MachineInstr &MI : *MBB) {
-      if (MI.isCall()) {
-        LLVM_DEBUG(dbgs() << "Found call in loop, reverting: " << MI);
+      if (IsInvalidTPInstruction(MI)) {
+        LLVM_DEBUG(dbgs() << "Found LR use in loop, reverting: " << MI);
         if (LoopStart->getOpcode() == ARM::t2DoLoopStart)
           RevertDoLoopStart(LoopStart, TII);
         else
