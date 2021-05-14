@@ -93,8 +93,8 @@ void use_while_incomplete() {
 struct InitiallyIncomplete { int x; };
 // CHECK-LABEL: define void @use_while_complete()
 void use_while_complete() {
-  // CHECK:      [[VAR:%.*]] = alloca i64 ()*,
-  // CHECK-NEXT: store i64 ()*  bitcast ({ i8*, i32, i64, i64 }* @returns_initially_incomplete.ptrauth to i64 ()*), i64 ()** [[VAR]],
+  // CHECK:      [[VAR:%.*]] = alloca i32 ()*,
+  // CHECK-NEXT: store i32 ()*  bitcast ({ i8*, i32, i64, i64 }* @returns_initially_incomplete.ptrauth to i32 ()*), i32 ()** [[VAR]],
   // CHECK-NEXT: ret void
   struct InitiallyIncomplete (*fnptr)(void) = &returns_initially_incomplete;
 }
