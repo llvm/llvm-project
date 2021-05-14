@@ -20,3 +20,15 @@ define i32 @test_srav(i32 %a, i32 %b) {
   %srav = ashr i32 %a, %b
   ret i32 %srav
 }
+
+define i32 @test_rotrv(i32 %a, i32 %b) {
+; CHECK-NOT: srlv
+; CHECK-NOT: sllv
+; CHECK: rotrv $a0, $a0, $a1
+; CHECK: ROTRV_NM
+  %sub = sub i32 32, %b
+  %shl = shl i32 %a, %sub
+  %shr = lshr i32 %a, %b
+  %or = or i32 %shl, %shr
+  ret i32 %or
+}

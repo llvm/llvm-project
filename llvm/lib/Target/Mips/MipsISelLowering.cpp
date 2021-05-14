@@ -425,7 +425,7 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i32,  Expand);
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i64,  Expand);
 
-  if (!Subtarget.hasMips32r2())
+  if (!Subtarget.hasMips32r2() && !Subtarget.hasNanoMips())
     setOperationAction(ISD::ROTR, MVT::i32,   Expand);
 
   if (!Subtarget.hasMips64r2())

@@ -117,9 +117,9 @@ def : InstRW<[GenericWriteALU], (instrs ADDIUPC_MMR6, ADDIU_MMR6, ADDU16_MMR6,
 // =============
 
 def : InstRW<[GenericWriteALU], (instrs ADDu_NM, ADDiu_NM, AND_NM, AND16_NM,
-                                 Li_NM, OR_NM, OR16_NM, SLLV_NM, SRAV_NM,
-                                 SRLV_NM, NOR_NM, NOT_NM, SUBu_NM, XOR_NM,
-                                 XOR16_NM)>;
+                                 Li_NM, OR_NM, OR16_NM, ROTRV_NM, SLLV_NM,
+                                 SRAV_NM, SRLV_NM, NOR_NM, NOT_NM, SUBu_NM,
+                                 XOR_NM, XOR16_NM)>;
 
 // MIPS64
 // ======
