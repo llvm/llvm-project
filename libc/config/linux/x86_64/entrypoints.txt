@@ -65,6 +65,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ceil
     libc.src.math.ceilf
     libc.src.math.ceill
+    libc.src.math.cos
     libc.src.math.cosf
     libc.src.math.expf
     libc.src.math.exp2f
@@ -136,11 +137,13 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.round
     libc.src.math.roundf
     libc.src.math.roundl
+    libc.src.math.sin
     libc.src.math.sincosf
     libc.src.math.sinf
     libc.src.math.sqrt
     libc.src.math.sqrtf
     libc.src.math.sqrtl
+    libc.src.math.tan
     libc.src.math.trunc
     libc.src.math.truncf
     libc.src.math.truncl
