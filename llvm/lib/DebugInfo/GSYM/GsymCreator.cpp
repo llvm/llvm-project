@@ -293,6 +293,9 @@ llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
 uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
   if (S.empty())
     return 0;
+
+  // The hash can be calculated outside the lock.
+  CachedHashStringRef CHStr(S);
   std::lock_guard<std::recursive_mutex> Guard(Mutex);
   if (Copy) {
     // We need to provide backing storage for the string if requested
@@ -301,11 +304,11 @@ uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
     // copied, but any string created by code will need to be copied.
     // This allows GsymCreator to be really fast when parsing DWARF and
     // other object files as most strings don't need to be copied.
-    CachedHashStringRef CHStr(S);
     if (!StrTab.contains(CHStr))
-      S = StringStorage.insert(S).first->getKey();
+      CHStr = CachedHashStringRef{StringStorage.insert(S).first->getKey(),
+                                  CHStr.hash()};
   }
-  return StrTab.add(S);
+  return StrTab.add(CHStr);
 }
 
 void GsymCreator::addFunctionInfo(FunctionInfo &&FI) {
