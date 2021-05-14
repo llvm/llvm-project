@@ -504,6 +504,9 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
     if (llvm::omp::teamSet.test(GetContextParent().directive)) {
       HasInvalidTeamsNesting(beginDir.v, beginDir.source);
     }
+    if (GetContext().directive == llvm::omp::Directive::OMPD_master) {
+      CheckMasterNesting(x);
+    }
   }
 
   CheckNoBranching(block, beginDir.v, beginDir.source);
@@ -523,6 +526,20 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
     break;
   default:
     break;
+  }
+}
+
+void OmpStructureChecker::CheckMasterNesting(
+    const parser::OpenMPBlockConstruct &x) {
+  // A MASTER region may not be `closely nested` inside a worksharing, loop,
+  // task, taskloop, or atomic region.
+  // TODO:  Expand the check to include `LOOP` construct as well when it is
+  // supported.
+  if (IsCloselyNestedRegion(llvm::omp::nestedMasterErrSet)) {
+    context_.Say(parser::FindSourceLocation(x),
+        "`MASTER` region may not be closely nested inside of `WORKSHARING`, "
+        "`LOOP`, `TASK`, `TASKLOOP`,"
+        " or `ATOMIC` region."_err_en_US);
   }
 }
 
