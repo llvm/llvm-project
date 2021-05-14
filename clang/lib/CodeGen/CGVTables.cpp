@@ -427,7 +427,8 @@ void CodeGenFunction::EmitMustTailThunk(GlobalDecl GD,
   unsigned CallingConv;
   llvm::AttributeList Attrs;
   CGM.ConstructAttributeList(Callee.getCallee()->getName(), *CurFnInfo, GD,
-                             Attrs, CallingConv, /*AttrOnCallSite=*/true);
+                             Attrs, CallingConv, /*AttrOnCallSite=*/true,
+                             /*IsThunk=*/false);
   Call->setAttributes(Attrs);
   Call->setCallingConv(static_cast<llvm::CallingConv::ID>(CallingConv));
 
@@ -531,7 +532,7 @@ llvm::Constant *CodeGenVTables::maybeEmitThunk(GlobalDecl GD,
     OldThunkFn->setName(StringRef());
     ThunkFn = llvm::Function::Create(ThunkFnTy, llvm::Function::ExternalLinkage,
                                      Name.str(), &CGM.getModule());
-    CGM.SetLLVMFunctionAttributes(MD, FnInfo, ThunkFn);
+    CGM.SetLLVMFunctionAttributes(MD, FnInfo, ThunkFn, /*IsThunk=*/false);
 
     // If needed, replace the old thunk with a bitcast.
     if (!OldThunkFn->use_empty()) {
