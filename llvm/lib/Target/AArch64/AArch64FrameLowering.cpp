@@ -47,8 +47,9 @@
 // | callee-saved gpr registers        | <--.
 // |                                   |    | On Darwin platforms these
 // |- - - - - - - - - - - - - - - - - -|    | callee saves are swapped,
-// |                                   |    | (frame record first)
-// | prev_fp, prev_lr                  | <--'
+// | prev_lr                           |    | (frame record first)
+// | prev_fp                           | <--'
+// | async context if needed           |
 // | (a.k.a. "frame record")           |
 // |-----------------------------------| <- fp(=x29)
 // |                                   |
@@ -950,6 +951,8 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
       SEH->eraseFromParent();
   }
 
+  // If the first store isn't right where we want SP then we can't fold the
+  // update in so create a normal arithmetic instruction instead.
   if (MBBI->getOperand(MBBI->getNumOperands() - 1).getImm() != 0) {
     emitFrameOffset(MBB, MBBI, DL, AArch64::SP, AArch64::SP,
                     StackOffset::getFixed(CSStackSizeInc), TII,
@@ -1828,9 +1831,10 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
         .setMIFlag(MachineInstr::FrameDestroy);
   }
 
-  // We need to reset FP to its untagged state on return. Bit 60 is currently
-  // used to show the presence of an extended frame.
   if (hasFP(MF) && AFI->hasSwiftAsyncContext()) {
+    // We need to reset FP to its untagged state on return. Bit 60 is currently
+    // used to show the presence of an extended frame.
+
     // BIC x29, x29, #0x1000_0000_0000_0000
     BuildMI(MBB, MBB.getFirstTerminator(), DL, TII->get(AArch64::ANDXri),
             AArch64::FP)
@@ -2405,7 +2409,8 @@ static void computeCalleeSaveRegisterPairs(
 
     // Swift's async context is directly before FP, so allocate an extra
     // 8 bytes for it.
-    if (NeedsFrameRecord && AFI->hasSwiftAsyncContext() && RPI.Reg2 == AArch64::FP)
+    if (NeedsFrameRecord && AFI->hasSwiftAsyncContext() &&
+        RPI.Reg2 == AArch64::FP)
       ByteOffset += StackFillDir * 8;
 
     assert(!(RPI.isScalable() && RPI.isPaired()) &&
@@ -2434,7 +2439,8 @@ static void computeCalleeSaveRegisterPairs(
 
     // The FP, LR pair goes 8 bytes into our expanded 24-byte slot so that the
     // Swift context can directly precede FP.
-    if (NeedsFrameRecord && AFI->hasSwiftAsyncContext() && RPI.Reg2 == AArch64::FP)
+    if (NeedsFrameRecord && AFI->hasSwiftAsyncContext() &&
+        RPI.Reg2 == AArch64::FP)
       Offset += 8;
     RPI.Offset = Offset / Scale;
 
@@ -2945,16 +2951,14 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   // Now that we know which registers need to be saved and restored, allocate
   // stack slots for them.
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  auto AFI = MF.getInfo<AArch64FunctionInfo>();
+  auto *AFI = MF.getInfo<AArch64FunctionInfo>();
   for (auto &CS : CSI) {
-    unsigned Reg = CS.getReg();
+    Register Reg = CS.getReg();
     const TargetRegisterClass *RC = RegInfo->getMinimalPhysRegClass(Reg);
 
-    int FrameIdx;
     unsigned Size = RegInfo->getSpillSize(*RC);
-
     Align Alignment(RegInfo->getSpillAlign(*RC));
-    FrameIdx = MFI.CreateStackObject(Size, Alignment, true);
+    int FrameIdx = MFI.CreateStackObject(Size, Alignment, true);
     CS.setFrameIdx(FrameIdx);
 
     if ((unsigned)FrameIdx < MinCSFrameIndex) MinCSFrameIndex = FrameIdx;
