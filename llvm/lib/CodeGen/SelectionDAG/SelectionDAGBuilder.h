@@ -763,7 +763,8 @@ private:
   void visitStoreToSwiftError(const StoreInst &I);
   void visitFreeze(const FreezeInst &I);
 
-  void visitInlineAsm(const CallBase &Call);
+  void visitInlineAsm(const CallBase &Call,
+                      const BasicBlock *EHPadBB = nullptr);
   void visitIntrinsicCall(const CallInst &I, unsigned Intrinsic);
   void visitTargetIntrinsic(const CallInst &I, unsigned Intrinsic);
   void visitConstrainedFPIntrinsic(const ConstrainedFPIntrinsic &FPI);
@@ -820,6 +821,11 @@ private:
 
   /// Lowers CallInst to an external symbol.
   void lowerCallToExternalSymbol(const CallInst &I, const char *FunctionName);
+
+  SDValue lowerStartEH(SDValue Chain, const BasicBlock *EHPadBB,
+                       MCSymbol *&BeginLabel);
+  SDValue lowerEndEH(SDValue Chain, const InvokeInst *II,
+                     const BasicBlock *EHPadBB, MCSymbol *BeginLabel);
 };
 
 /// This struct represents the registers (physical or virtual)
