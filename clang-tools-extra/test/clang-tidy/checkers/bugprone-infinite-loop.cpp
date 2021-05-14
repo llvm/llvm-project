@@ -511,8 +511,7 @@ void block_capture_with_loop_inside_block_bad() {
   bool finished = false;
   auto block = ^() {
     while (!finished) {
-      // FIXME: This should warn. It currently reacts to &finished
-      // outside the block which ideally shouldn't have any effect.
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: this loop is infinite; none of its condition variables (finished) are updated in the loop body [bugprone-infinite-loop]
       wait();
     }
   };

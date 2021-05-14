@@ -56,6 +56,8 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasP10Vector = true;
     } else if (Feature == "+pcrelative-memops") {
       HasPCRelativeMemops = true;
+    } else if (Feature == "+prefix-instrs") {
+      HasPrefixInstrs = true;
     } else if (Feature == "+spe" || Feature == "+efpu2") {
       HasSPE = true;
       LongDoubleWidth = LongDoubleAlign = 64;
@@ -394,6 +396,7 @@ void PPCTargetInfo::addP10SpecificFeatures(
   Features["mma"] = true;
   Features["power10-vector"] = true;
   Features["pcrelative-memops"] = true;
+  Features["prefix-instrs"] = true;
   return;
 }
 
@@ -419,6 +422,7 @@ bool PPCTargetInfo::hasFeature(StringRef Feature) const {
       .Case("paired-vector-memops", PairedVectorMemops)
       .Case("power10-vector", HasP10Vector)
       .Case("pcrelative-memops", HasPCRelativeMemops)
+      .Case("prefix-instrs", HasPrefixInstrs)
       .Case("spe", HasSPE)
       .Case("mma", HasMMA)
       .Case("rop-protect", HasROPProtect)
@@ -451,6 +455,8 @@ void PPCTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
       Features["power8-vector"] = Features["power9-vector"] = true;
     if (Name == "pcrel")
       Features["pcrelative-memops"] = true;
+    else if (Name == "prefixed")
+      Features["prefix-instrs"] = true;
     else
       Features[Name] = true;
   } else {
@@ -471,6 +477,8 @@ void PPCTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
           Features["power10-vector"] = false;
     if (Name == "pcrel")
       Features["pcrelative-memops"] = false;
+    else if (Name == "prefixed")
+      Features["prefix-instrs"] = false;
     else
       Features[Name] = false;
   }

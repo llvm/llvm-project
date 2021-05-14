@@ -431,3 +431,37 @@ TEST(Reductions, FindlocNumeric) {
   EXPECT_EQ(*res.ZeroBasedIndexedElement<SubscriptValue>(1), 0);
   res.Destroy();
 }
+
+TEST(Reductions, DotProduct) {
+  auto realVector{MakeArray<TypeCategory::Real, 8>(
+      std::vector<int>{4}, std::vector<double>{0.0, -0.0, 1.0, -2.0})};
+  EXPECT_EQ(
+      RTNAME(DotProductReal8)(*realVector, *realVector, __FILE__, __LINE__),
+      5.0);
+  auto complexVector{MakeArray<TypeCategory::Complex, 4>(std::vector<int>{4},
+      std::vector<std::complex<float>>{
+          {0.0}, {-0.0, -0.0}, {1.0, -2.0}, {-2.0, 4.0}})};
+  std::complex<double> result8;
+  RTNAME(CppDotProductComplex8)
+  (result8, *realVector, *complexVector, __FILE__, __LINE__);
+  EXPECT_EQ(result8, (std::complex<double>{5.0, -10.0}));
+  RTNAME(CppDotProductComplex8)
+  (result8, *complexVector, *realVector, __FILE__, __LINE__);
+  EXPECT_EQ(result8, (std::complex<double>{5.0, 10.0}));
+  std::complex<float> result4;
+  RTNAME(CppDotProductComplex4)
+  (result4, *complexVector, *complexVector, __FILE__, __LINE__);
+  EXPECT_EQ(result4, (std::complex<float>{25.0, 0.0}));
+  auto logicalVector1{MakeArray<TypeCategory::Logical, 1>(
+      std::vector<int>{4}, std::vector<bool>{false, false, true, true})};
+  EXPECT_TRUE(RTNAME(DotProductLogical)(
+      *logicalVector1, *logicalVector1, __FILE__, __LINE__));
+  auto logicalVector2{MakeArray<TypeCategory::Logical, 1>(
+      std::vector<int>{4}, std::vector<bool>{true, true, false, false})};
+  EXPECT_TRUE(RTNAME(DotProductLogical)(
+      *logicalVector2, *logicalVector2, __FILE__, __LINE__));
+  EXPECT_FALSE(RTNAME(DotProductLogical)(
+      *logicalVector1, *logicalVector2, __FILE__, __LINE__));
+  EXPECT_FALSE(RTNAME(DotProductLogical)(
+      *logicalVector2, *logicalVector1, __FILE__, __LINE__));
+}

@@ -12120,10 +12120,9 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
       // floating point atomic instructions. May generate more efficient code,
       // but may not respect rounding and denormal modes, and may give incorrect
       // results for certain memory destinations.
-      if (!fpModeMatchesGlobalFPAtomicMode(RMW) &&
-          RMW->getFunction()
-                  ->getFnAttribute("amdgpu-unsafe-fp-atomics")
-                  .getValueAsString() != "true")
+      if (RMW->getFunction()
+              ->getFnAttribute("amdgpu-unsafe-fp-atomics")
+              .getValueAsString() != "true")
         return AtomicExpansionKind::CmpXChg;
 
       if (Subtarget->hasGFX90AInsts()) {

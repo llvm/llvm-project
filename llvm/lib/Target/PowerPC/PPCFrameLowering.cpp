@@ -642,6 +642,8 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   bool HasFP = hasFP(MF);
   bool HasBP = RegInfo->hasBasePointer(MF);
   bool HasRedZone = isPPC64 || !isSVR4ABI;
+  bool HasROPProtect = Subtarget.hasROPProtect();
+  bool HasPrivileged = Subtarget.hasPrivileged();
 
   Register SPReg       = isPPC64 ? PPC::X1  : PPC::R1;
   Register BPReg = RegInfo->getBaseRegister(MF);
@@ -672,6 +674,8 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   const MCInstrDesc &MoveFromCondRegInst = TII.get(isPPC64 ? PPC::MFCR8
                                                            : PPC::MFCR);
   const MCInstrDesc &StoreWordInst = TII.get(isPPC64 ? PPC::STW8 : PPC::STW);
+  const MCInstrDesc &HashST =
+      TII.get(HasPrivileged ? PPC::HASHSTP : PPC::HASHST);
 
   // Regarding this assert: Even though LR is saved in the caller's frame (i.e.,
   // LROffset is positive), that slot is callee-owned. Because PPC32 SVR4 has no
@@ -833,11 +837,34 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
         .addReg(SPReg);
   }
 
-  if (MustSaveLR)
+  // Generate the instruction to store the LR. In the case where ROP protection
+  // is required the register holding the LR should not be killed as it will be
+  // used by the hash store instruction.
+  if (MustSaveLR) {
     BuildMI(MBB, StackUpdateLoc, dl, StoreInst)
-      .addReg(ScratchReg, getKillRegState(true))
-      .addImm(LROffset)
-      .addReg(SPReg);
+        .addReg(ScratchReg, getKillRegState(!HasROPProtect))
+        .addImm(LROffset)
+        .addReg(SPReg);
+
+    // Add the ROP protection Hash Store instruction.
+    // NOTE: This is technically a violation of the ABI. The hash can be saved
+    // up to 512 bytes into the Protected Zone. This can be outside of the
+    // initial 288 byte volatile program storage region in the Protected Zone.
+    // However, this restriction will be removed in an upcoming revision of the
+    // ABI.
+    if (HasROPProtect) {
+      const int SaveIndex = FI->getROPProtectionHashSaveIndex();
+      const int ImmOffset = MFI.getObjectOffset(SaveIndex);
+      assert((ImmOffset <= -8 && ImmOffset >= -512) &&
+             "ROP hash save offset out of range.");
+      assert(((ImmOffset & 0x7) == 0) &&
+             "ROP hash save offset must be 8 byte aligned.");
+      BuildMI(MBB, StackUpdateLoc, dl, HashST)
+          .addReg(ScratchReg, getKillRegState(true))
+          .addImm(ImmOffset)
+          .addReg(SPReg);
+    }
+  }
 
   if (MustSaveCR &&
       !(SingleScratchReg && MustSaveLR)) {
@@ -1528,6 +1555,8 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
   bool HasFP = hasFP(MF);
   bool HasBP = RegInfo->hasBasePointer(MF);
   bool HasRedZone = Subtarget.isPPC64() || !Subtarget.isSVR4ABI();
+  bool HasROPProtect = Subtarget.hasROPProtect();
+  bool HasPrivileged = Subtarget.hasPrivileged();
 
   Register SPReg      = isPPC64 ? PPC::X1  : PPC::R1;
   Register BPReg = RegInfo->getBaseRegister(MF);
@@ -1552,6 +1581,8 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
                                                      : PPC::LWZ);
   const MCInstrDesc& MoveToCRInst = TII.get( isPPC64 ? PPC::MTOCRF8
                                                      : PPC::MTOCRF);
+  const MCInstrDesc &HashChk =
+      TII.get(HasPrivileged ? PPC::HASHCHKP : PPC::HASHCHK);
   int LROffset = getReturnSaveOffset();
 
   int FPOffset = 0;
@@ -1820,8 +1851,23 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
       BuildMI(MBB, MBBI, dl, MoveToCRInst, MustSaveCRs[i])
         .addReg(TempReg, getKillRegState(i == e-1));
 
-  if (MustSaveLR)
+  if (MustSaveLR) {
+    // If ROP protection is required, an extra instruction is added to compute a
+    // hash and then compare it to the hash stored in the prologue.
+    if (HasROPProtect) {
+      const int SaveIndex = FI->getROPProtectionHashSaveIndex();
+      const int ImmOffset = MFI.getObjectOffset(SaveIndex);
+      assert((ImmOffset <= -8 && ImmOffset >= -512) &&
+             "ROP hash check location offset out of range.");
+      assert(((ImmOffset & 0x7) == 0) &&
+             "ROP hash check location offset must be 8 byte aligned.");
+      BuildMI(MBB, StackUpdateLoc, dl, HashChk)
+          .addReg(ScratchReg)
+          .addImm(ImmOffset)
+          .addReg(SPReg);
+    }
     BuildMI(MBB, StackUpdateLoc, dl, MTLRInst).addReg(ScratchReg);
+  }
 
   // Callee pop calling convention. Pop parameter/linkage area. Used for tail
   // call optimization

@@ -401,7 +401,7 @@ void VPBasicBlock::dropAllReferences(VPValue *NewValue) {
 }
 
 VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {
-  assert(SplitAt->getParent() == this &&
+  assert((SplitAt == end() || SplitAt->getParent() == this) &&
          "can only split at a position in the same block");
 
   SmallVector<VPBlockBase *, 2> Succs(getSuccessors().begin(),

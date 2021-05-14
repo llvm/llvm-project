@@ -21,6 +21,7 @@ namespace bugprone {
 
 static internal::Matcher<Stmt>
 loopEndingStmt(internal::Matcher<Stmt> Internal) {
+  // FIXME: Cover noreturn ObjC methods (and blocks?).
   return stmt(anyOf(
       mapAnyOf(breakStmt, returnStmt, gotoStmt, cxxThrowExpr).with(Internal),
       callExpr(Internal, callee(functionDecl(isNoReturn())))));
@@ -43,9 +44,8 @@ static bool isChanged(const Stmt *LoopStmt, const VarDecl *Var,
 }
 
 /// Return whether `Cond` is a variable that is possibly changed in `LoopStmt`.
-static bool isVarThatIsPossiblyChanged(const FunctionDecl *Func,
-                                       const Stmt *LoopStmt, const Stmt *Cond,
-                                       ASTContext *Context) {
+static bool isVarThatIsPossiblyChanged(const Decl *Func, const Stmt *LoopStmt,
+                                       const Stmt *Cond, ASTContext *Context) {
   if (const auto *DRE = dyn_cast<DeclRefExpr>(Cond)) {
     if (const auto *Var = dyn_cast<VarDecl>(DRE->getDecl())) {
       if (!Var->isLocalVarDeclOrParm())
@@ -61,7 +61,8 @@ static bool isVarThatIsPossiblyChanged(const FunctionDecl *Func,
              isChanged(LoopStmt, Var, Context);
       // FIXME: Track references.
     }
-  } else if (isa<MemberExpr>(Cond) || isa<CallExpr>(Cond)) {
+  } else if (isa<MemberExpr, CallExpr,
+                 ObjCIvarRefExpr, ObjCPropertyRefExpr, ObjCMessageExpr>(Cond)) {
     // FIXME: Handle MemberExpr.
     return true;
   }
@@ -70,9 +71,8 @@ static bool isVarThatIsPossiblyChanged(const FunctionDecl *Func,
 }
 
 /// Return whether at least one variable of `Cond` changed in `LoopStmt`.
-static bool isAtLeastOneCondVarChanged(const FunctionDecl *Func,
-                                       const Stmt *LoopStmt, const Stmt *Cond,
-                                       ASTContext *Context) {
+static bool isAtLeastOneCondVarChanged(const Decl *Func, const Stmt *LoopStmt,
+                                       const Stmt *Cond, ASTContext *Context) {
   if (isVarThatIsPossiblyChanged(Func, LoopStmt, Cond, Context))
     return true;
 
@@ -118,9 +118,9 @@ static bool isKnownFalse(const Expr &Cond, const ASTContext &Ctx) {
 void InfiniteLoopCheck::registerMatchers(MatchFinder *Finder) {
   const auto LoopCondition = allOf(
       hasCondition(
-          expr(forFunction(functionDecl().bind("func"))).bind("condition")),
+          expr(forCallable(decl().bind("func"))).bind("condition")),
       unless(hasBody(hasDescendant(
-          loopEndingStmt(forFunction(equalsBoundNode("func")))))));
+          loopEndingStmt(forCallable(equalsBoundNode("func")))))));
 
   Finder->addMatcher(mapAnyOf(whileStmt, doStmt, forStmt)
                          .with(LoopCondition)
@@ -131,7 +131,7 @@ void InfiniteLoopCheck::registerMatchers(MatchFinder *Finder) {
 void InfiniteLoopCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Cond = Result.Nodes.getNodeAs<Expr>("condition");
   const auto *LoopStmt = Result.Nodes.getNodeAs<Stmt>("loop-stmt");
-  const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>("func");
+  const auto *Func = Result.Nodes.getNodeAs<Decl>("func");
 
   if (isKnownFalse(*Cond, *Result.Context))
     return;

@@ -41,6 +41,7 @@ namespace __empty {
 
   template <class _Tp>
   concept __can_compare_begin_end =
+    !__member_empty<_Tp> &&
     !__can_invoke_size<_Tp> &&
     requires(_Tp&& __t) {
       bool(ranges::begin(__t) == ranges::end(__t));

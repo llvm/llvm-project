@@ -91,7 +91,7 @@ DEVICE void __kmpc_impl_target_init() {
 DEVICE void __kmpc_impl_named_sync(uint32_t num_threads) {
   __atomic_thread_fence(__ATOMIC_ACQUIRE);
 
-  uint32_t num_waves = num_threads / WARPSIZE;
+  uint32_t num_waves = (num_threads + WARPSIZE - 1) / WARPSIZE;
 
   // Partial barrier implementation for amdgcn.
   // Uses two 16 bit unsigned counters. One for the number of waves to have

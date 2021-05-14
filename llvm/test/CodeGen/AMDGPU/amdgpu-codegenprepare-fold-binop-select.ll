@@ -42,7 +42,7 @@ define i32 @select_sdiv_rhs_const_i32(i1 %cond) {
 
 define <2 x i32> @select_sdiv_lhs_const_v2i32(i1 %cond) {
 ; IR-LABEL: @select_sdiv_lhs_const_v2i32(
-; IR-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], <2 x i32> <i32 666, i32 undef>, <2 x i32> <i32 555, i32 1428>
+; IR-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], <2 x i32> <i32 666, i32 poison>, <2 x i32> <i32 555, i32 1428>
 ; IR-NEXT:    ret <2 x i32> [[OP]]
 ;
 ; GCN-LABEL: select_sdiv_lhs_const_v2i32:

@@ -78,7 +78,7 @@ static bool hasPtrOrReferenceInStmt(const Stmt *S, const VarDecl *Var) {
   return false;
 }
 
-static bool refersToEnclosingLambdaCaptureByRef(const FunctionDecl *Func,
+static bool refersToEnclosingLambdaCaptureByRef(const Decl *Func,
                                                 const VarDecl *Var) {
   const auto *MD = dyn_cast<CXXMethodDecl>(Func);
   if (!MD)
@@ -91,7 +91,7 @@ static bool refersToEnclosingLambdaCaptureByRef(const FunctionDecl *Func,
   return capturesByRef(RD, Var);
 }
 
-bool hasPtrOrReferenceInFunc(const FunctionDecl *Func, const VarDecl *Var) {
+bool hasPtrOrReferenceInFunc(const Decl *Func, const VarDecl *Var) {
   return hasPtrOrReferenceInStmt(Func->getBody(), Var) ||
          refersToEnclosingLambdaCaptureByRef(Func, Var);
 }

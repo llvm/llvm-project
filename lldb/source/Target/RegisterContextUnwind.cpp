@@ -1946,6 +1946,8 @@ bool RegisterContextUnwind::ReadFrameAddress(
             reg_info, cfa_reg_contents, reg_info->byte_size, reg_value);
         if (error.Success()) {
           address = reg_value.GetAsUInt64();
+          if (ABISP abi_sp = m_thread.GetProcess()->GetABI())
+            address = abi_sp->FixCodeAddress(address);
           UnwindLogMsg(
               "CFA value via dereferencing reg %s (%d): reg has val 0x%" PRIx64
               ", CFA value is 0x%" PRIx64,
@@ -2000,6 +2002,8 @@ bool RegisterContextUnwind::ReadFrameAddress(
     if (dwarfexpr.Evaluate(&exe_ctx, this, 0, nullptr, nullptr, result,
                            &error)) {
       address = result.GetScalar().ULongLong();
+      if (ABISP abi_sp = m_thread.GetProcess()->GetABI())
+        address = abi_sp->FixCodeAddress(address);
 
       UnwindLogMsg("CFA value set by DWARF expression is 0x%" PRIx64,
                    address);
