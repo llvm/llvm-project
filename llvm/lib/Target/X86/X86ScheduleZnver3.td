@@ -1604,7 +1604,8 @@ def : IsZeroIdiomFunction<[
     VPXORrr,
     VPANDNrr,
     VPSUBBrr, VPSUBWrr, VPSUBDrr, VPSUBQrr,
-    VPSUBSBrr, VPSUBSWrr
+    VPSUBSBrr, VPSUBSWrr,
+    VPSUBUSBrr, VPSUBUSWrr,
   ], ZeroIdiomPredicate>,
 
   // AVX YMM Zero-idioms.
