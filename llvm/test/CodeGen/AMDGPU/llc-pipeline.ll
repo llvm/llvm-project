@@ -353,7 +353,6 @@
 ; GCN-O1-NEXT:         Live Register Matrix
 ; GCN-O1-NEXT:         SI Pre-allocate WWM Registers
 ; GCN-O1-NEXT:         SI optimize exec mask operations pre-RA
-; GCN-O1-NEXT:         SI Form memory clauses
 ; GCN-O1-NEXT:         Machine Natural Loop Construction
 ; GCN-O1-NEXT:         Machine Block Frequency Analysis
 ; GCN-O1-NEXT:         Debug Variable Analysis
@@ -638,7 +637,6 @@
 ; GCN-O1-OPTS-NEXT:         Live Register Matrix
 ; GCN-O1-OPTS-NEXT:         SI Pre-allocate WWM Registers
 ; GCN-O1-OPTS-NEXT:         SI optimize exec mask operations pre-RA
-; GCN-O1-OPTS-NEXT:         SI Form memory clauses
 ; GCN-O1-OPTS-NEXT:         Machine Natural Loop Construction
 ; GCN-O1-OPTS-NEXT:         Machine Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:         Debug Variable Analysis

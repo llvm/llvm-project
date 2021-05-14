@@ -4397,8 +4397,8 @@ AutoType::AutoType(QualType DeducedAsType, AutoTypeKeyword Keyword,
   if (TypeConstraintConcept) {
     TemplateArgument *ArgBuffer = getArgBuffer();
     for (const TemplateArgument &Arg : TypeConstraintArgs) {
-      addDependence(toTypeDependence(
-          Arg.getDependence() & TemplateArgumentDependence::UnexpandedPack));
+      addDependence(
+          toSyntacticDependence(toTypeDependence(Arg.getDependence())));
 
       new (ArgBuffer++) TemplateArgument(Arg);
     }

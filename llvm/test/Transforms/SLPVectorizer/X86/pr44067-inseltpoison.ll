@@ -9,11 +9,7 @@ define <2 x float> @foo({{float, float}}* %A) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast { { float, float } }* [[A:%.*]] to <2 x float>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, <2 x float>* [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x float> [[TMP1]], <float 2.000000e+00, float 2.000000e+00>
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
-; CHECK-NEXT:    [[INS1:%.*]] = insertelement <2 x float> poison, float [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
-; CHECK-NEXT:    [[INS0:%.*]] = insertelement <2 x float> [[INS1]], float [[TMP4]], i32 0
-; CHECK-NEXT:    ret <2 x float> [[INS0]]
+; CHECK-NEXT:    ret <2 x float> [[TMP2]]
 ;
 entry:
   %0 = bitcast {{float, float}}* %A to <2 x float>*

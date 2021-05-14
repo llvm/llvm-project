@@ -1,3 +1,5 @@
+include(LLVMDistributionSupport)
+
 macro(set_flang_windows_version_resource_properties name)
   if (DEFINED windows_resource_file)
     set_windows_version_resource_properties(${name} ${windows_resource_file}
@@ -63,14 +65,7 @@ macro(add_flang_library name)
   if (TARGET ${name})
 
     if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "libflang")
-      set(export_to_flangtargets)
-      if (${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
-          "flang-libraries" IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
-          NOT LLVM_DISTRIBUTION_COMPONENTS)
-        set(export_to_flangtargets EXPORT FlangTargets)
-        set_property(GLOBAL PROPERTY FLANG_HAS_EXPORTS True)
-      endif()
-
+      get_target_export_arg(${name} Flang export_to_flangtargets UMBRELLA flang-libraries)
       install(TARGETS ${name}
         COMPONENT ${name}
         ${export_to_flangtargets}
@@ -110,13 +105,7 @@ macro(add_flang_tool name)
   add_flang_executable(${name} ${ARGN})
 
   if (FLANG_BUILD_TOOLS)
-    set(export_to_flangtargets)
-    if (${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
-        NOT LLVM_DISTRIBUTION_COMPONENTS)
-      set(export_to_flangtargets EXPORT FlangTargets)
-      set_property(GLOBAL PROPERTY FLANG_HAS_EXPORTS True)
-    endif()
-
+    get_target_export_arg(${name} Flang export_to_flangtargets)
     install(TARGETS ${name}
       ${export_to_flangtargets}
       RUNTIME DESTINATION bin

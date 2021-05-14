@@ -145,6 +145,21 @@ public:
   ArrayRef<Statistic *> getStatistics() const { return statistics; }
   MutableArrayRef<Statistic *> getStatistics() { return statistics; }
 
+  /// Returns the thread sibling of this pass.
+  ///
+  /// If this pass was cloned by the pass manager for the sake of
+  /// multi-threading, this function returns the original pass it was cloned
+  /// from. This is useful for diagnostic purposes to distinguish passes that
+  /// were replicated for threading purposes from passes instantiated by the
+  /// user. Used to collapse passes in timing statistics.
+  const Pass *getThreadingSibling() const { return threadingSibling; }
+
+  /// Returns the thread sibling of this pass, or the pass itself it has no
+  /// sibling. See `getThreadingSibling()` for details.
+  const Pass *getThreadingSiblingOrThis() const {
+    return threadingSibling ? threadingSibling : this;
+  }
+
 protected:
   explicit Pass(TypeID passID, Optional<StringRef> opName = llvm::None)
       : passID(passID), opName(opName) {}
@@ -291,6 +306,10 @@ private:
 
   /// The pass options registered to this pass instance.
   detail::PassOptions passOptions;
+
+  /// A pointer to the pass this pass was cloned from, if the clone was made by
+  /// the pass manager for the sake of multi-threading.
+  const Pass *threadingSibling = nullptr;
 
   /// Allow access to 'clone'.
   friend class OpPassManager;

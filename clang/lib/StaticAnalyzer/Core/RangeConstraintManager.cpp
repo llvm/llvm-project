@@ -1487,15 +1487,18 @@ private:
       // This is an infeasible assumption.
       return nullptr;
 
-    ProgramStateRef NewState = setConstraint(State, Sym, NewConstraint);
-    if (auto Equality = EqualityInfo::extract(Sym, Int, Adjustment)) {
-      // If the original assumption is not Sym + Adjustment !=/</> Int,
-      // we should invert IsEquality flag.
-      Equality->IsEquality = Equality->IsEquality != EQ;
-      return track(NewState, *Equality);
+    if (ProgramStateRef NewState = setConstraint(State, Sym, NewConstraint)) {
+      if (auto Equality = EqualityInfo::extract(Sym, Int, Adjustment)) {
+        // If the original assumption is not Sym + Adjustment !=/</> Int,
+        // we should invert IsEquality flag.
+        Equality->IsEquality = Equality->IsEquality != EQ;
+        return track(NewState, *Equality);
+      }
+
+      return NewState;
     }
 
-    return NewState;
+    return nullptr;
   }
 
   ProgramStateRef track(ProgramStateRef State, EqualityInfo ToTrack) {

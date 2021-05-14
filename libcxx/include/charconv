@@ -332,18 +332,11 @@ __complement(_Tp __x)
 }
 
 template <typename _Tp>
-inline _LIBCPP_INLINE_VISIBILITY typename make_unsigned<_Tp>::type
-__to_unsigned(_Tp __x)
-{
-    return static_cast<typename make_unsigned<_Tp>::type>(__x);
-}
-
-template <typename _Tp>
 _LIBCPP_AVAILABILITY_TO_CHARS
 inline _LIBCPP_INLINE_VISIBILITY to_chars_result
 __to_chars_itoa(char* __first, char* __last, _Tp __value, true_type)
 {
-    auto __x = __to_unsigned(__value);
+    auto __x = __to_unsigned_like(__value);
     if (__value < 0 && __first != __last)
     {
         *__first++ = '-';
@@ -391,7 +384,7 @@ inline _LIBCPP_INLINE_VISIBILITY to_chars_result
 __to_chars_integral(char* __first, char* __last, _Tp __value, int __base,
                     true_type)
 {
-    auto __x = __to_unsigned(__value);
+    auto __x = __to_unsigned_like(__value);
     if (__value < 0 && __first != __last)
     {
         *__first++ = '-';
@@ -474,7 +467,7 @@ inline _LIBCPP_INLINE_VISIBILITY from_chars_result
 __sign_combinator(_It __first, _It __last, _Tp& __value, _Fn __f, _Ts... __args)
 {
     using __tl = numeric_limits<_Tp>;
-    decltype(__to_unsigned(__value)) __x;
+    decltype(__to_unsigned_like(__value)) __x;
 
     bool __neg = (__first != __last && *__first == '-');
     auto __r = __f(__neg ? __first + 1 : __first, __last, __x, __args...);
@@ -490,7 +483,7 @@ __sign_combinator(_It __first, _It __last, _Tp& __value, _Fn __f, _Ts... __args)
 
     if (__neg)
     {
-        if (__x <= __complement(__to_unsigned(__tl::min())))
+        if (__x <= __complement(__to_unsigned_like(__tl::min())))
         {
             __x = __complement(__x);
             _VSTD::memcpy(&__value, &__x, sizeof(__x));
@@ -605,7 +598,7 @@ template <typename _Tp, typename enable_if<is_signed<_Tp>::value, int>::type = 0
 inline _LIBCPP_INLINE_VISIBILITY from_chars_result
 __from_chars_atoi(const char* __first, const char* __last, _Tp& __value)
 {
-    using __t = decltype(__to_unsigned(__value));
+    using __t = decltype(__to_unsigned_like(__value));
     return __sign_combinator(__first, __last, __value, __from_chars_atoi<__t>);
 }
 
@@ -661,7 +654,7 @@ inline _LIBCPP_INLINE_VISIBILITY from_chars_result
 __from_chars_integral(const char* __first, const char* __last, _Tp& __value,
                       int __base)
 {
-    using __t = decltype(__to_unsigned(__value));
+    using __t = decltype(__to_unsigned_like(__value));
     return __sign_combinator(__first, __last, __value,
                              __from_chars_integral<__t>, __base);
 }

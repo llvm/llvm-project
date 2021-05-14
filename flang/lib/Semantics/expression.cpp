@@ -195,12 +195,11 @@ MaybeExpr ExpressionAnalyzer::Designate(DataRef &&ref) {
     } else {
       Say("'%s' is not a specific intrinsic procedure"_err_en_US,
           symbol.name());
-      return std::nullopt;
     }
-  } else if (auto dyType{DynamicType::From(symbol)}) {
-    return TypedWrapper<Designator, DataRef>(*dyType, std::move(ref));
+    return std::nullopt;
+  } else {
+    return AsGenericExpr(std::move(ref));
   }
-  return std::nullopt;
 }
 
 // Some subscript semantic checks must be deferred until all of the

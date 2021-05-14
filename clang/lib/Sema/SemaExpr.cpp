@@ -10779,17 +10779,7 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
                                                LHS.get(), RHS.get()))
         return QualType();
 
-      bool LHSIsNullPtr = LHS.get()->IgnoreParenCasts()->isNullPointerConstant(
-          Context, Expr::NPC_ValueDependentIsNotNull);
-      bool RHSIsNullPtr = RHS.get()->IgnoreParenCasts()->isNullPointerConstant(
-          Context, Expr::NPC_ValueDependentIsNotNull);
-
-      // Subtracting nullptr or from nullptr should produce
-      // a warning expect nullptr - nullptr is valid in C++ [expr.add]p7
-      if (LHSIsNullPtr && (!getLangOpts().CPlusPlus || !RHSIsNullPtr))
-        diagnoseArithmeticOnNullPointer(*this, Loc, LHS.get(), false);
-      if (RHSIsNullPtr && (!getLangOpts().CPlusPlus || !LHSIsNullPtr))
-        diagnoseArithmeticOnNullPointer(*this, Loc, RHS.get(), false);
+      // FIXME: Add warnings for nullptr - ptr.
 
       // The pointee type may have zero size.  As an extension, a structure or
       // union may have zero size or an array may have zero length.  In this
@@ -17136,10 +17126,7 @@ MarkVarDeclODRUsed(VarDecl *Var, SourceLocation Loc, Sema &SemaRef,
     CaptureType, DeclRefType,
     FunctionScopeIndexToStopAt);
 
-  // Diagnose ODR-use of host global variables in device functions. Reference
-  // of device global variables in host functions is allowed through shadow
-  // variables therefore it is not diagnosed.
-  if (SemaRef.LangOpts.CUDA && SemaRef.LangOpts.CUDAIsDevice) {
+  if (SemaRef.LangOpts.CUDA && Var && Var->hasGlobalStorage()) {
     auto *FD = dyn_cast_or_null<FunctionDecl>(SemaRef.CurContext);
     auto Target = SemaRef.IdentifyCUDATarget(FD);
     auto IsEmittedOnDeviceSide = [](VarDecl *Var) {
@@ -17155,9 +17142,26 @@ MarkVarDeclODRUsed(VarDecl *Var, SourceLocation Loc, Sema &SemaRef,
       }
       return false;
     };
-    if (Var && Var->hasGlobalStorage() && !IsEmittedOnDeviceSide(Var)) {
-      SemaRef.targetDiag(Loc, diag::err_ref_bad_target)
-          << /*host*/ 2 << /*variable*/ 1 << Var << Target;
+    if (!IsEmittedOnDeviceSide(Var)) {
+      // Diagnose ODR-use of host global variables in device functions.
+      // Reference of device global variables in host functions is allowed
+      // through shadow variables therefore it is not diagnosed.
+      if (SemaRef.LangOpts.CUDAIsDevice)
+        SemaRef.targetDiag(Loc, diag::err_ref_bad_target)
+            << /*host*/ 2 << /*variable*/ 1 << Var << Target;
+    } else if ((Target == Sema::CFT_Host || Target == Sema::CFT_HostDevice) &&
+               !Var->hasExternalStorage()) {
+      // Record a CUDA/HIP device side variable if it is ODR-used
+      // by host code. This is done conservatively, when the variable is
+      // referenced in any of the following contexts:
+      //   - a non-function context
+      //   - a host function
+      //   - a host device function
+      // This makes the ODR-use of the device side variable by host code to
+      // be visible in the device compilation for the compiler to be able to
+      // emit template variables instantiated by host code only and to
+      // externalize the static device side variable ODR-used by host code.
+      SemaRef.getASTContext().CUDADeviceVarODRUsedByHost.insert(Var);
     }
   }
 
@@ -18322,24 +18326,6 @@ static void DoMarkVarDeclReferenced(Sema &SemaRef, SourceLocation Loc,
 
   if (Var->isInvalidDecl())
     return;
-
-  // Record a CUDA/HIP static device/constant variable if it is referenced
-  // by host code. This is done conservatively, when the variable is referenced
-  // in any of the following contexts:
-  //   - a non-function context
-  //   - a host function
-  //   - a host device function
-  // This also requires the reference of the static device/constant variable by
-  // host code to be visible in the device compilation for the compiler to be
-  // able to externalize the static device/constant variable.
-  if (SemaRef.getASTContext().mayExternalizeStaticVar(Var)) {
-    auto *CurContext = SemaRef.CurContext;
-    if (!CurContext || !isa<FunctionDecl>(CurContext) ||
-        cast<FunctionDecl>(CurContext)->hasAttr<CUDAHostAttr>() ||
-        (!cast<FunctionDecl>(CurContext)->hasAttr<CUDADeviceAttr>() &&
-         !cast<FunctionDecl>(CurContext)->hasAttr<CUDAGlobalAttr>()))
-      SemaRef.getASTContext().CUDAStaticDeviceVarReferencedByHost.insert(Var);
-  }
 
   auto *MSI = Var->getMemberSpecializationInfo();
   TemplateSpecializationKind TSK = MSI ? MSI->getTemplateSpecializationKind()

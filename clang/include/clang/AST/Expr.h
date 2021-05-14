@@ -1615,6 +1615,8 @@ public:
     return T->getStmtClass() == CharacterLiteralClass;
   }
 
+  static void print(unsigned val, CharacterKind Kind, raw_ostream &OS);
+
   // Iterators
   child_range children() {
     return child_range(child_iterator(), child_iterator());

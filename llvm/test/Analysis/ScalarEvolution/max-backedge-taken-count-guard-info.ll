@@ -200,14 +200,14 @@ define void @test_guard_ule_12_step2(i32* nocapture %a, i64 %N) {
 ; CHECK-LABEL: 'test_guard_ule_12_step2'
 ; CHECK-NEXT:  Classifying expressions for: @test_guard_ule_12_step2
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
-; CHECK-NEXT:    --> {0,+,2}<nuw><nsw><%loop> U: [0,-9223372036854775808) S: [0,9223372036854775807) Exits: (2 * (%N /u 2))<nuw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,2}<nuw><nsw><%loop> U: [0,13) S: [0,13) Exits: (2 * (%N /u 2))<nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %a, i64 %iv
 ; CHECK-NEXT:    --> {%a,+,8}<nuw><%loop> U: full-set S: full-set Exits: ((8 * (%N /u 2)) + %a) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 2
-; CHECK-NEXT:    --> {2,+,2}<nuw><%loop> U: [2,-1) S: [-9223372036854775808,9223372036854775807) Exits: (2 + (2 * (%N /u 2))<nuw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {2,+,2}<nuw><nsw><%loop> U: [2,15) S: [2,15) Exits: (2 + (2 * (%N /u 2))<nuw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_ule_12_step2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%N /u 2)
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is 9223372036854775807
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 6
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%N /u 2)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -823,9 +823,9 @@ exit:
 ; Function Attrs: nounwind willreturn
 declare void @llvm.assume(i1 noundef)
 
-define void @guard_pessimizes_analysis(i1 %c, i32 %N) {
-; CHECK-LABEL: 'guard_pessimizes_analysis'
-; CHECK-NEXT:  Classifying expressions for: @guard_pessimizes_analysis
+define void @guard_pessimizes_analysis_step1(i1 %c, i32 %N) {
+; CHECK-LABEL: 'guard_pessimizes_analysis_step1'
+; CHECK-NEXT:  Classifying expressions for: @guard_pessimizes_analysis_step1
 ; CHECK-NEXT:    %init = phi i32 [ 2, %entry ], [ 3, %bb1 ]
 ; CHECK-NEXT:    --> %init U: [2,4) S: [2,4)
 ; CHECK-NEXT:    %iv = phi i32 [ %iv.next, %loop ], [ %init, %loop.ph ]
@@ -863,6 +863,43 @@ exit:
   ret void
 }
 
+define void @guard_pessimizes_analysis_step2(i1 %c, i32 %N) {
+; CHECK-LABEL: guard_pessimizes_analysis_step2
+; CHECK-NEXT: Classifying expressions for: @guard_pessimizes_analysis_step2
+; CHECK-NEXT:   %init = phi i32 [ 2, %entry ], [ 3, %bb1 ]
+; CHECK-NEXT:   -->  %init U: [2,4) S: [2,4)
+; CHECK-NEXT:   %iv = phi i32 [ %iv.next, %loop ], [ %init, %loop.ph ]
+; CHECK-NEXT:   -->  {%init,+,2}<nuw><nsw><%loop> U: [2,10) S: [2,10)		Exits: ((2 * ((8 + (-1 * %init)<nsw>)<nsw> /u 2))<nuw><nsw> + %init) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:   %iv.next = add nuw nsw i32 %iv, 2
+ ; CHECK-NEXT:  -->  {(2 + %init)<nuw><nsw>,+,2}<nuw><nsw><%loop> U: [4,12) S: [4,12)		Exits: (2 + (2 * ((8 + (-1 * %init)<nsw>)<nsw> /u 2))<nuw><nsw> + %init)		LoopDispositions: { %loop: Computable }
+; CHECK-NEXT: Determining loop execution counts for: @guard_pessimizes_analysis_step2
+; CHECK-NEXT: Loop %loop: backedge-taken count is ((8 + (-1 * %init)<nsw>)<nsw> /u 2)
+; CHECK-NEXT: Loop %loop: max backedge-taken count is 3
+; CHECK-NEXT: Loop %loop: Predicated backedge-taken count is ((8 + (-1 * %init)<nsw>)<nsw> /u 2)
+; CHECK:      Loop %loop: Trip multiple is 1
+entry:
+  br i1 %c, label %bb1, label %guard
+
+bb1:
+  br label %guard
+
+guard:
+  %init = phi i32 [ 2, %entry ], [ 3, %bb1 ]
+  %c.1 = icmp ult i32 %init, %N
+  br i1 %c.1, label %loop.ph, label %exit
+
+loop.ph:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %iv.next, %loop ], [ %init, %loop.ph ]
+  %iv.next = add nuw nsw i32 %iv, 2
+  %exitcond = icmp eq i32 %iv.next, 10
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
 define void @crash(i8* %ptr) {
 ; CHECK-LABEL: 'crash'
 ; CHECK-NEXT:  Classifying expressions for: @crash

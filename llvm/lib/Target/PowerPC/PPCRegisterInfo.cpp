@@ -433,6 +433,16 @@ bool PPCRegisterInfo::requiresFrameIndexScavenging(const MachineFunction &MF) co
   return false;
 }
 
+bool PPCRegisterInfo::requiresVirtualBaseRegisters(
+    const MachineFunction &MF) const {
+  const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
+  // Do not use virtual base registers when ROP protection is turned on.
+  // Virtual base registers break the layout of the local variable space and may
+  // push the ROP Hash location past the 512 byte range of the ROP store
+  // instruction.
+  return !Subtarget.hasROPProtect();
+}
+
 bool PPCRegisterInfo::isCallerPreservedPhysReg(MCRegister PhysReg,
                                                const MachineFunction &MF) const {
   assert(Register::isPhysicalRegister(PhysReg));

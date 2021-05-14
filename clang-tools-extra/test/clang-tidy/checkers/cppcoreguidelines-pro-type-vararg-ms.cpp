@@ -2,9 +2,7 @@
 // Ensure that the 'cppcoreguidelines-pro-type-vararg' check works with the
 // built-in va_list on Windows systems.
 
-// REQUIRES: system-windows
-
-// RUN: %check_clang_tidy %s cppcoreguidelines-pro-type-vararg %t
+// RUN: %check_clang_tidy %s cppcoreguidelines-pro-type-vararg %t -- --extra-arg=--target=x86_64-windows
 
 void test_ms_va_list(int a, ...) {
   __builtin_ms_va_list ap;

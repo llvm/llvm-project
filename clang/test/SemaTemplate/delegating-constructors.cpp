@@ -9,7 +9,7 @@ namespace PR10457 {
   public:
     template <unsigned N>
     string(const char (&str)[N])
-      : string(str) {} // expected-error{{constructor for 'string<6>' creates a delegation cycle}}
+      : string(str) {} // expected-error{{constructor for 'string<6U>' creates a delegation cycle}}
   };
 
   void f() {

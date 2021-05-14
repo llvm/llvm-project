@@ -1,75 +1,18 @@
 // RUN: mlir-opt -split-input-file -linalg-fold-reshape-ops-by-linearization %s | FileCheck %s
 
 #map0 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
-func @generic_op_reshape_producer_fusion(%arg0 : tensor<?x?x?xf32>,
-    %arg1 : tensor<?x?x4x?xf32>) -> tensor<?x?x4x?xf32> {
-  %0 = linalg.tensor_reshape %arg0 [[0], [1, 2], [3]] :
-    tensor<?x?x?xf32> into tensor<?x?x4x?xf32>
-  %1 = linalg.generic {
-    indexing_maps = [#map0, #map0, #map0],
-    iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
-    ins(%0, %arg1 : tensor<?x?x4x?xf32>, tensor<?x?x4x?xf32>)
-    outs(%0 : tensor<?x?x4x?xf32>) {
-    ^bb0(%arg3: f32, %arg4: f32, %arg5: f32):       // no predecessors
-      %1 = mulf %arg3, %arg4 : f32
-      linalg.yield %1 : f32
-  } -> tensor<?x?x4x?xf32>
-  return %1 : tensor<?x?x4x?xf32>
-}
-//   CHECK-DAG: #[[MAP3:.*]] = affine_map<(d0, d1, d2, d3) -> (d0, d1 * 4 + d2, d3)>
-//   CHECK-DAG: #[[MAP4:.*]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
-//       CHECK: func @generic_op_reshape_producer_fusion
-//  CHECK-SAME:   %[[ARG0:.+]]: tensor<?x?x?xf32>
-//       CHECK: %[[T0:.+]] = linalg.tensor_reshape %[[ARG0]]
-//  CHECK-SAME:   [0], [1, 2], [3]
-//       CHECK: linalg.generic
-//  CHECK-SAME:   indexing_maps = [#[[MAP3]], #[[MAP4]], #[[MAP4]]]
-//  CHECK-SAME:   ins(%[[ARG0]], %{{.+}} : tensor<?x?x?xf32>, tensor<?x?x4x?xf32>)
-//  CHECK-SAME:   outs(%[[T0]] : tensor<?x?x4x?xf32>)
-
-// -----
-
-#map0 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
-func @generic_op_reshape_consumer_fusion(%arg0 : tensor<?x?x4x5xf32>,
-    %arg1 : tensor<?x?x4x5xf32>) -> tensor<?x?xf32> {
-  %0 = linalg.generic {
-    indexing_maps = [#map0, #map0, #map0],
-    iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
-    ins(%arg0, %arg1 : tensor<?x?x4x5xf32>, tensor<?x?x4x5xf32>)
-    outs(%arg0 : tensor<?x?x4x5xf32>){
-    ^bb0(%arg3: f32, %arg4: f32, %arg5: f32):       // no predecessors
-      %1 = mulf %arg3, %arg4 : f32
-      linalg.yield %1 : f32
-  } -> tensor<?x?x4x5xf32>
-  %1 = linalg.tensor_reshape %0 [[0], [1, 2, 3]] :
-    tensor<?x?x4x5xf32> into tensor<?x?xf32>
-  return %1 : tensor<?x?xf32>
-}
-
-//   CHECK-DAG: #[[MAP2:.*]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
-//   CHECK-DAG: #[[MAP3:.*]] = affine_map<(d0, d1, d2, d3) -> (d0, d1 * 20 + d2 * 5 + d3)>
-//       CHECK: func @generic_op_reshape_consumer_fusion
-//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?x4x5xf32>
-//       CHECK:   %[[T0:.+]] = linalg.tensor_reshape %[[ARG0]]
-//  CHECK-SAME:     [0], [1, 2, 3]
-//       CHECK:   linalg.generic
-//  CHECK-SAME:     indexing_maps = [#[[MAP2]], #[[MAP2]], #[[MAP3]]]
-//  CHECK-SAME:     outs(%[[T0]] : tensor<?x?xf32>)
-
-// -----
-
-#map0 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
-func @indexed_generic_op_reshape_producer_fusion(%arg0 : tensor<?x?x?xi32>)
+func @generic_op_reshape_producer_fusion(%arg0 : tensor<?x?x?xi32>)
   -> tensor<?x?x4x?xi32> {
   %0 = linalg.tensor_reshape %arg0 [[0], [1, 2], [3]] :
     tensor<?x?x?xi32> into tensor<?x?x4x?xi32>
-  %1 = linalg.indexed_generic {
+  %1 = linalg.generic {
     indexing_maps = [#map0, #map0],
     iterator_types = ["parallel", "parallel", "parallel", "parallel"] }
     ins(%0 : tensor<?x?x4x?xi32>)
     outs(%0 : tensor<?x?x4x?xi32>) {
-  ^bb0(%arg2: index, %arg3: index, %arg4: index, %arg5: index, %arg6: i32, %arg7 : i32):       // no predecessors
-    %2 = index_cast %arg2 : index to i32
+  ^bb0(%arg6: i32, %arg7 : i32):       // no predecessors
+    %idx = linalg.index 0 : index
+    %2 = index_cast %idx : index to i32
     %3 = addi %arg6, %2 : i32
     linalg.yield %3 : i32
   } -> tensor<?x?x4x?xi32>
@@ -77,26 +20,29 @@ func @indexed_generic_op_reshape_producer_fusion(%arg0 : tensor<?x?x?xi32>)
 }
 //   CHECK-DAG: #[[MAP3:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1 * 4 + d2, d3)>
 //   CHECK-DAG: #[[MAP4:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
-//       CHECK: func @indexed_generic_op_reshape_producer_fusion
+//       CHECK: func @generic_op_reshape_producer_fusion
 //  CHECK-SAME:   %[[ARG0:.+]]: tensor<?x?x?xi32>
 //       CHECK:   %[[T0:.+]] = linalg.tensor_reshape %[[ARG0]]
 //  CHECK-SAME:     [0], [1, 2], [3]
-//       CHECK:   linalg.indexed_generic
+//       CHECK:   linalg.generic
 //  CHECK-SAME:     indexing_maps = [#[[MAP3]], #[[MAP4]]]
 //  CHECK-SAME:     ins(%[[ARG0]] : tensor<?x?x?xi32>)
 //  CHECK-SAME:     outs(%[[T0]] : tensor<?x?x4x?xi32>)
+//       CHECK:   %[[IDX:.+]] = linalg.index 0 : index
+//  CHECK-NEXT:   %[[IDX_CASTED:.+]] = index_cast %[[IDX]] : index to i32
 
 // -----
 
 #map0 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
-func @indexed_generic_op_reshape_consumer_fusion(%arg0 : tensor<?x?x4x5xi32>)
+func @generic_op_reshape_consumer_fusion(%arg0 : tensor<?x?x4x5xi32>)
   -> tensor<?x?xi32> {
-  %0 = linalg.indexed_generic {
+  %0 = linalg.generic {
     indexing_maps = [#map0, #map0],
     iterator_types = ["parallel", "parallel", "parallel", "parallel"] }
     ins(%arg0 : tensor<?x?x4x5xi32>) outs(%arg0 : tensor<?x?x4x5xi32>) {
-  ^bb0(%arg2: index, %arg3: index, %arg4: index, %arg5: index, %arg6: i32, %arg7: i32):       // no predecessors
-    %2 = index_cast %arg2 : index to i32
+  ^bb0(%arg6: i32, %arg7: i32):       // no predecessors
+    %idx = linalg.index 0 : index
+    %2 = index_cast %idx : index to i32
     %3 = addi %arg6, %2 : i32
     linalg.yield %3 : i32
   } -> tensor<?x?x4x5xi32>
@@ -106,13 +52,15 @@ func @indexed_generic_op_reshape_consumer_fusion(%arg0 : tensor<?x?x4x5xi32>)
 }
 //   CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
 //   CHECK-DAG: #[[MAP3:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1 * 20 + d2 * 5 + d3)>
-//       CHECK: func @indexed_generic_op_reshape_consumer_fusion
+//       CHECK: func @generic_op_reshape_consumer_fusion
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?x4x5xi32>
 //       CHECK:   %[[T0:.+]] = linalg.tensor_reshape %[[ARG0]]
 //  CHECK-SAME:     [0], [1, 2, 3]
-//       CHECK:   linalg.indexed_generic
+//       CHECK:   linalg.generic
 //  CHECK-SAME:     indexing_maps = [#[[MAP2]], #[[MAP3]]]
 //  CHECK-SAME:     outs(%[[T0]] : tensor<?x?xi32>)
+//       CHECK:   %[[IDX:.+]] = linalg.index 0 : index
+//  CHECK-NEXT:   %[[IDX_CASTED:.+]] = index_cast %[[IDX]] : index to i32
 //   CHECK-NOT:   linalg.tensor_reshape
 
 // -----

@@ -341,7 +341,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    br label [[OMP_OFFLOAD_CONT11]]
 // CHECK1:       omp_offload.cont11:
 // CHECK1-NEXT:    [[TMP171:%.*]] = load i32, i32* [[ARGC_ADDR]], align 4
-// CHECK1-NEXT:    [[CALL:%.*]] = call signext i32 @_ZN1S3fooEv(%struct.S* nonnull dereferenceable(4) @s)
+// CHECK1-NEXT:    [[CALL:%.*]] = call signext i32 @_ZN1S3fooEv(%struct.S* nonnull align 4 dereferenceable(4) @s)
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP171]], [[CALL]]
 // CHECK1-NEXT:    ret i32 [[ADD]]
 //
@@ -392,7 +392,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    store i32 [[TMP10]], i32* [[C7]], align 4
 // CHECK1-NEXT:    store i32* [[C7]], i32** [[_TMP8]], align 8
 // CHECK1-NEXT:    [[TMP11:%.*]] = load %class.anon*, %class.anon** [[_TMP4]], align 8
-// CHECK1-NEXT:    [[CALL:%.*]] = call i64 @"_ZZ4mainENK3$_0clEv"(%class.anon* nonnull dereferenceable(40) [[TMP11]])
+// CHECK1-NEXT:    [[CALL:%.*]] = call i64 @"_ZZ4mainENK3$_0clEv"(%class.anon* nonnull align 8 dereferenceable(40) [[TMP11]])
 // CHECK1-NEXT:    ret void
 //
 //
@@ -486,12 +486,12 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP13:%.*]] = load i32, i32* [[TMP3]], align 4
 // CHECK1-NEXT:    store i32 [[TMP13]], i32* [[A10]], align 4
 // CHECK1-NEXT:    [[TMP14:%.*]] = load %class.anon*, %class.anon** [[_TMP4]], align 8
-// CHECK1-NEXT:    [[CALL:%.*]] = call i64 @"_ZZ4mainENK3$_0clEv"(%class.anon* nonnull dereferenceable(40) [[TMP14]])
+// CHECK1-NEXT:    [[CALL:%.*]] = call i64 @"_ZZ4mainENK3$_0clEv"(%class.anon* nonnull align 8 dereferenceable(40) [[TMP14]])
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN1S3fooEv
-// CHECK1-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]]) #[[ATTR3:[0-9]+]] comdat align 2 {
+// CHECK1-SAME: (%struct.S* nonnull align 4 dereferenceable(4) [[THIS:%.*]]) #[[ATTR3:[0-9]+]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
 // CHECK1-NEXT:    [[L:%.*]] = alloca %class.anon.0*, align 8
@@ -612,12 +612,12 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP3]], i8* align 8 [[TMP4]], i64 8, i1 false)
 // CHECK1-NEXT:    store %class.anon.0* [[L1]], %class.anon.0** [[_TMP2]], align 8
 // CHECK1-NEXT:    [[TMP5:%.*]] = load %class.anon.0*, %class.anon.0** [[_TMP2]], align 8
-// CHECK1-NEXT:    [[CALL:%.*]] = call signext i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* nonnull dereferenceable(8) [[TMP5]])
+// CHECK1-NEXT:    [[CALL:%.*]] = call signext i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* nonnull align 8 dereferenceable(8) [[TMP5]])
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZZN1S3fooEvENKUlvE_clEv
-// CHECK1-SAME: (%class.anon.0* nonnull dereferenceable(8) [[THIS:%.*]]) #[[ATTR3]] comdat align 2 {
+// CHECK1-SAME: (%class.anon.0* nonnull align 8 dereferenceable(8) [[THIS:%.*]]) #[[ATTR3]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca %class.anon.0*, align 8
 // CHECK1-NEXT:    store %class.anon.0* [[THIS]], %class.anon.0** [[THIS_ADDR]], align 8
@@ -668,7 +668,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP3]], i8* align 8 [[TMP4]], i64 8, i1 false)
 // CHECK1-NEXT:    store %class.anon.0* [[L1]], %class.anon.0** [[_TMP2]], align 8
 // CHECK1-NEXT:    [[TMP5:%.*]] = load %class.anon.0*, %class.anon.0** [[_TMP2]], align 8
-// CHECK1-NEXT:    [[CALL:%.*]] = call signext i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* nonnull dereferenceable(8) [[TMP5]])
+// CHECK1-NEXT:    [[CALL:%.*]] = call signext i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* nonnull align 8 dereferenceable(8) [[TMP5]])
 // CHECK1-NEXT:    ret void
 //
 //
@@ -747,7 +747,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP2]], i8* align 8 [[TMP3]], i64 8, i1 false)
 // CHECK1-NEXT:    store %class.anon.0* [[T1]], %class.anon.0** [[_TMP2]], align 8
 // CHECK1-NEXT:    [[TMP4:%.*]] = load %class.anon.0*, %class.anon.0** [[_TMP2]], align 8
-// CHECK1-NEXT:    [[CALL:%.*]] = call signext i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* nonnull dereferenceable(8) [[TMP4]])
+// CHECK1-NEXT:    [[CALL:%.*]] = call signext i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* nonnull align 8 dereferenceable(8) [[TMP4]])
 // CHECK1-NEXT:    ret void
 //
 //
@@ -840,7 +840,7 @@ int main(int argc, char **argv) {
 // CHECK2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[CLASS_ANON]], %class.anon* [[TMP10]], i32 0, i32 0
 // CHECK2-NEXT:    store %struct.S* [[TMP0]], %struct.S** [[TMP11]], align 8
 // CHECK2-NEXT:    [[TMP12:%.*]] = load %class.anon*, %class.anon** [[_TMP8]], align 8
-// CHECK2-NEXT:    [[CALL:%.*]] = call i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon* nonnull dereferenceable(8) [[TMP12]]) #[[ATTR7:[0-9]+]]
+// CHECK2-NEXT:    [[CALL:%.*]] = call i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon* nonnull align 8 dereferenceable(8) [[TMP12]]) #[[ATTR7:[0-9]+]]
 // CHECK2-NEXT:    br label [[DOTTERMINATION_NOTIFIER:%.*]]
 // CHECK2:       .termination.notifier:
 // CHECK2-NEXT:    call void @__kmpc_kernel_deinit(i16 1)
@@ -851,7 +851,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZZN1S3fooEvENKUlvE_clEv
-// CHECK2-SAME: (%class.anon* nonnull dereferenceable(8) [[THIS:%.*]]) #[[ATTR4:[0-9]+]] comdat align 2 {
+// CHECK2-SAME: (%class.anon* nonnull align 8 dereferenceable(8) [[THIS:%.*]]) #[[ATTR4:[0-9]+]] comdat align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca %class.anon*, align 8
 // CHECK2-NEXT:    store %class.anon* [[THIS]], %class.anon** [[THIS_ADDR]], align 8
@@ -924,7 +924,7 @@ int main(int argc, char **argv) {
 // CHECK2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[CLASS_ANON]], %class.anon* [[TMP5]], i32 0, i32 0
 // CHECK2-NEXT:    store %struct.S* [[TMP0]], %struct.S** [[TMP6]], align 8
 // CHECK2-NEXT:    [[TMP7:%.*]] = load %class.anon*, %class.anon** [[_TMP2]], align 8
-// CHECK2-NEXT:    [[CALL:%.*]] = call i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon* nonnull dereferenceable(8) [[TMP7]]) #[[ATTR7]]
+// CHECK2-NEXT:    [[CALL:%.*]] = call i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon* nonnull align 8 dereferenceable(8) [[TMP7]]) #[[ATTR7]]
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1047,7 +1047,7 @@ int main(int argc, char **argv) {
 // CHECK2-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], %class.anon.0* [[TMP16]], i32 0, i32 4
 // CHECK2-NEXT:    store i32* [[TMP2]], i32** [[TMP23]], align 8
 // CHECK2-NEXT:    [[TMP24:%.*]] = load %class.anon.0*, %class.anon.0** [[_TMP10]], align 8
-// CHECK2-NEXT:    [[CALL:%.*]] = call i64 @"_ZZ4mainENK3$_0clEv"(%class.anon.0* nonnull dereferenceable(40) [[TMP24]]) #[[ATTR7]]
+// CHECK2-NEXT:    [[CALL:%.*]] = call i64 @"_ZZ4mainENK3$_0clEv"(%class.anon.0* nonnull align 8 dereferenceable(40) [[TMP24]]) #[[ATTR7]]
 // CHECK2-NEXT:    br label [[DOTTERMINATION_NOTIFIER:%.*]]
 // CHECK2:       .termination.notifier:
 // CHECK2-NEXT:    call void @__kmpc_kernel_deinit(i16 1)
@@ -1191,7 +1191,7 @@ int main(int argc, char **argv) {
 // CHECK2-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], %class.anon.0* [[TMP14]], i32 0, i32 4
 // CHECK2-NEXT:    store i32* [[A10]], i32** [[TMP21]], align 8
 // CHECK2-NEXT:    [[TMP22:%.*]] = load %class.anon.0*, %class.anon.0** [[_TMP4]], align 8
-// CHECK2-NEXT:    [[CALL:%.*]] = call i64 @"_ZZ4mainENK3$_0clEv"(%class.anon.0* nonnull dereferenceable(40) [[TMP22]]) #[[ATTR7]]
+// CHECK2-NEXT:    [[CALL:%.*]] = call i64 @"_ZZ4mainENK3$_0clEv"(%class.anon.0* nonnull align 8 dereferenceable(40) [[TMP22]]) #[[ATTR7]]
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1245,7 +1245,7 @@ int main(int argc, char **argv) {
 // CHECK2-NEXT:    store %class.anon* [[T1]], %class.anon** [[_TMP2]], align 8
 // CHECK2-NEXT:    [[TMP4:%.*]] = load %class.anon*, %class.anon** [[_TMP2]], align 8
 // CHECK2-NEXT:    [[TMP5:%.*]] = load %class.anon*, %class.anon** [[_TMP2]], align 8
-// CHECK2-NEXT:    [[CALL:%.*]] = call i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon* nonnull dereferenceable(8) [[TMP5]]) #[[ATTR7]]
+// CHECK2-NEXT:    [[CALL:%.*]] = call i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon* nonnull align 8 dereferenceable(8) [[TMP5]]) #[[ATTR7]]
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1368,7 +1368,7 @@ int main(int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[CLASS_ANON]], %class.anon* [[TMP16]], i32 0, i32 4
 // CHECK3-NEXT:    store i32* [[TMP2]], i32** [[TMP23]], align 8
 // CHECK3-NEXT:    [[TMP24:%.*]] = load %class.anon*, %class.anon** [[_TMP10]], align 8
-// CHECK3-NEXT:    [[CALL:%.*]] = call i64 @"_ZZ4mainENK3$_0clEv"(%class.anon* nonnull dereferenceable(40) [[TMP24]]) #[[ATTR7:[0-9]+]]
+// CHECK3-NEXT:    [[CALL:%.*]] = call i64 @"_ZZ4mainENK3$_0clEv"(%class.anon* nonnull align 8 dereferenceable(40) [[TMP24]]) #[[ATTR7:[0-9]+]]
 // CHECK3-NEXT:    br label [[DOTTERMINATION_NOTIFIER:%.*]]
 // CHECK3:       .termination.notifier:
 // CHECK3-NEXT:    call void @__kmpc_kernel_deinit(i16 1)
@@ -1512,7 +1512,7 @@ int main(int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[CLASS_ANON]], %class.anon* [[TMP14]], i32 0, i32 4
 // CHECK3-NEXT:    store i32* [[A10]], i32** [[TMP21]], align 8
 // CHECK3-NEXT:    [[TMP22:%.*]] = load %class.anon*, %class.anon** [[_TMP4]], align 8
-// CHECK3-NEXT:    [[CALL:%.*]] = call i64 @"_ZZ4mainENK3$_0clEv"(%class.anon* nonnull dereferenceable(40) [[TMP22]]) #[[ATTR7]]
+// CHECK3-NEXT:    [[CALL:%.*]] = call i64 @"_ZZ4mainENK3$_0clEv"(%class.anon* nonnull align 8 dereferenceable(40) [[TMP22]]) #[[ATTR7]]
 // CHECK3-NEXT:    ret void
 //
 //
@@ -1598,7 +1598,7 @@ int main(int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], %class.anon.0* [[TMP10]], i32 0, i32 0
 // CHECK3-NEXT:    store %struct.S* [[TMP0]], %struct.S** [[TMP11]], align 8
 // CHECK3-NEXT:    [[TMP12:%.*]] = load %class.anon.0*, %class.anon.0** [[_TMP8]], align 8
-// CHECK3-NEXT:    [[CALL:%.*]] = call i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* nonnull dereferenceable(8) [[TMP12]]) #[[ATTR7]]
+// CHECK3-NEXT:    [[CALL:%.*]] = call i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* nonnull align 8 dereferenceable(8) [[TMP12]]) #[[ATTR7]]
 // CHECK3-NEXT:    br label [[DOTTERMINATION_NOTIFIER:%.*]]
 // CHECK3:       .termination.notifier:
 // CHECK3-NEXT:    call void @__kmpc_kernel_deinit(i16 1)
@@ -1609,7 +1609,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_ZZN1S3fooEvENKUlvE_clEv
-// CHECK3-SAME: (%class.anon.0* nonnull dereferenceable(8) [[THIS:%.*]]) #[[ATTR4:[0-9]+]] comdat align 2 {
+// CHECK3-SAME: (%class.anon.0* nonnull align 8 dereferenceable(8) [[THIS:%.*]]) #[[ATTR4:[0-9]+]] comdat align 2 {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca %class.anon.0*, align 8
 // CHECK3-NEXT:    store %class.anon.0* [[THIS]], %class.anon.0** [[THIS_ADDR]], align 8
@@ -1682,7 +1682,7 @@ int main(int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], %class.anon.0* [[TMP5]], i32 0, i32 0
 // CHECK3-NEXT:    store %struct.S* [[TMP0]], %struct.S** [[TMP6]], align 8
 // CHECK3-NEXT:    [[TMP7:%.*]] = load %class.anon.0*, %class.anon.0** [[_TMP2]], align 8
-// CHECK3-NEXT:    [[CALL:%.*]] = call i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* nonnull dereferenceable(8) [[TMP7]]) #[[ATTR7]]
+// CHECK3-NEXT:    [[CALL:%.*]] = call i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* nonnull align 8 dereferenceable(8) [[TMP7]]) #[[ATTR7]]
 // CHECK3-NEXT:    ret void
 //
 //
@@ -1736,7 +1736,7 @@ int main(int argc, char **argv) {
 // CHECK3-NEXT:    store %class.anon.0* [[T1]], %class.anon.0** [[_TMP2]], align 8
 // CHECK3-NEXT:    [[TMP4:%.*]] = load %class.anon.0*, %class.anon.0** [[_TMP2]], align 8
 // CHECK3-NEXT:    [[TMP5:%.*]] = load %class.anon.0*, %class.anon.0** [[_TMP2]], align 8
-// CHECK3-NEXT:    [[CALL:%.*]] = call i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* nonnull dereferenceable(8) [[TMP5]]) #[[ATTR7]]
+// CHECK3-NEXT:    [[CALL:%.*]] = call i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* nonnull align 8 dereferenceable(8) [[TMP5]]) #[[ATTR7]]
 // CHECK3-NEXT:    ret void
 //
 //
@@ -1859,7 +1859,7 @@ int main(int argc, char **argv) {
 // CHECK4-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[CLASS_ANON]], %class.anon* [[TMP16]], i32 0, i32 4
 // CHECK4-NEXT:    store i32* [[TMP2]], i32** [[TMP23]], align 8
 // CHECK4-NEXT:    [[TMP24:%.*]] = load %class.anon*, %class.anon** [[_TMP10]], align 8
-// CHECK4-NEXT:    [[CALL:%.*]] = call i64 @"_ZZ4mainENK3$_0clEv"(%class.anon* nonnull dereferenceable(40) [[TMP24]]) #[[ATTR7:[0-9]+]]
+// CHECK4-NEXT:    [[CALL:%.*]] = call i64 @"_ZZ4mainENK3$_0clEv"(%class.anon* nonnull align 8 dereferenceable(40) [[TMP24]]) #[[ATTR7:[0-9]+]]
 // CHECK4-NEXT:    br label [[DOTTERMINATION_NOTIFIER:%.*]]
 // CHECK4:       .termination.notifier:
 // CHECK4-NEXT:    call void @__kmpc_kernel_deinit(i16 1)
@@ -2003,7 +2003,7 @@ int main(int argc, char **argv) {
 // CHECK4-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[CLASS_ANON]], %class.anon* [[TMP14]], i32 0, i32 4
 // CHECK4-NEXT:    store i32* [[A10]], i32** [[TMP21]], align 8
 // CHECK4-NEXT:    [[TMP22:%.*]] = load %class.anon*, %class.anon** [[_TMP4]], align 8
-// CHECK4-NEXT:    [[CALL:%.*]] = call i64 @"_ZZ4mainENK3$_0clEv"(%class.anon* nonnull dereferenceable(40) [[TMP22]]) #[[ATTR7]]
+// CHECK4-NEXT:    [[CALL:%.*]] = call i64 @"_ZZ4mainENK3$_0clEv"(%class.anon* nonnull align 8 dereferenceable(40) [[TMP22]]) #[[ATTR7]]
 // CHECK4-NEXT:    ret void
 //
 //
@@ -2089,7 +2089,7 @@ int main(int argc, char **argv) {
 // CHECK4-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], %class.anon.0* [[TMP10]], i32 0, i32 0
 // CHECK4-NEXT:    store %struct.S* [[TMP0]], %struct.S** [[TMP11]], align 8
 // CHECK4-NEXT:    [[TMP12:%.*]] = load %class.anon.0*, %class.anon.0** [[_TMP8]], align 8
-// CHECK4-NEXT:    [[CALL:%.*]] = call i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* nonnull dereferenceable(8) [[TMP12]]) #[[ATTR7]]
+// CHECK4-NEXT:    [[CALL:%.*]] = call i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* nonnull align 8 dereferenceable(8) [[TMP12]]) #[[ATTR7]]
 // CHECK4-NEXT:    br label [[DOTTERMINATION_NOTIFIER:%.*]]
 // CHECK4:       .termination.notifier:
 // CHECK4-NEXT:    call void @__kmpc_kernel_deinit(i16 1)
@@ -2100,7 +2100,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@_ZZN1S3fooEvENKUlvE_clEv
-// CHECK4-SAME: (%class.anon.0* nonnull dereferenceable(8) [[THIS:%.*]]) #[[ATTR4:[0-9]+]] comdat align 2 {
+// CHECK4-SAME: (%class.anon.0* nonnull align 8 dereferenceable(8) [[THIS:%.*]]) #[[ATTR4:[0-9]+]] comdat align 2 {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[THIS_ADDR:%.*]] = alloca %class.anon.0*, align 8
 // CHECK4-NEXT:    store %class.anon.0* [[THIS]], %class.anon.0** [[THIS_ADDR]], align 8
@@ -2173,7 +2173,7 @@ int main(int argc, char **argv) {
 // CHECK4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], %class.anon.0* [[TMP5]], i32 0, i32 0
 // CHECK4-NEXT:    store %struct.S* [[TMP0]], %struct.S** [[TMP6]], align 8
 // CHECK4-NEXT:    [[TMP7:%.*]] = load %class.anon.0*, %class.anon.0** [[_TMP2]], align 8
-// CHECK4-NEXT:    [[CALL:%.*]] = call i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* nonnull dereferenceable(8) [[TMP7]]) #[[ATTR7]]
+// CHECK4-NEXT:    [[CALL:%.*]] = call i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* nonnull align 8 dereferenceable(8) [[TMP7]]) #[[ATTR7]]
 // CHECK4-NEXT:    ret void
 //
 //
@@ -2227,6 +2227,6 @@ int main(int argc, char **argv) {
 // CHECK4-NEXT:    store %class.anon.0* [[T1]], %class.anon.0** [[_TMP2]], align 8
 // CHECK4-NEXT:    [[TMP4:%.*]] = load %class.anon.0*, %class.anon.0** [[_TMP2]], align 8
 // CHECK4-NEXT:    [[TMP5:%.*]] = load %class.anon.0*, %class.anon.0** [[_TMP2]], align 8
-// CHECK4-NEXT:    [[CALL:%.*]] = call i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* nonnull dereferenceable(8) [[TMP5]]) #[[ATTR7]]
+// CHECK4-NEXT:    [[CALL:%.*]] = call i32 @_ZZN1S3fooEvENKUlvE_clEv(%class.anon.0* nonnull align 8 dereferenceable(8) [[TMP5]]) #[[ATTR7]]
 // CHECK4-NEXT:    ret void
 //

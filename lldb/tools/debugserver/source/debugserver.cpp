@@ -809,8 +809,11 @@ void FileLogCallback(void *baton, uint32_t flags, const char *format,
 }
 
 void show_version_and_exit(int exit_code) {
-  printf("%s-%s for %s.\n", DEBUGSERVER_PROGRAM_NAME, DEBUGSERVER_VERSION_STR,
-         RNB_ARCH);
+  const char *in_translation = "";
+  if (DNBDebugserverIsTranslated())
+    in_translation = " (running under translation)";
+  printf("%s-%s for %s%s.\n", DEBUGSERVER_PROGRAM_NAME, DEBUGSERVER_VERSION_STR,
+         RNB_ARCH, in_translation);
   exit(exit_code);
 }
 
@@ -1353,8 +1356,12 @@ int main(int argc, char *argv[]) {
   // as long as we're dropping remotenub in as a replacement for gdbserver,
   // explicitly note that this is not gdbserver.
 
-  RNBLogSTDOUT("%s-%s %sfor %s.\n", DEBUGSERVER_PROGRAM_NAME,
-               DEBUGSERVER_VERSION_STR, compile_options.c_str(), RNB_ARCH);
+  const char *in_translation = "";
+  if (DNBDebugserverIsTranslated())
+    in_translation = " (running under translation)";
+  RNBLogSTDOUT("%s-%s %sfor %s%s.\n", DEBUGSERVER_PROGRAM_NAME,
+               DEBUGSERVER_VERSION_STR, compile_options.c_str(), RNB_ARCH,
+               in_translation);
 
   std::string host;
   int port = INT32_MAX;

@@ -799,7 +799,8 @@ foldAndOrOfEqualityCmpsWithConstants(ICmpInst *LHS, ICmpInst *RHS,
 Value *InstCombinerImpl::foldAndOrOfICmpsOfAndWithPow2(ICmpInst *LHS,
                                                        ICmpInst *RHS,
                                                        Instruction *CxtI,
-                                                       bool IsAnd) {
+                                                       bool IsAnd,
+                                                       bool IsLogical) {
   CmpInst::Predicate Pred = IsAnd ? CmpInst::ICMP_NE : CmpInst::ICMP_EQ;
   if (LHS->getPredicate() != Pred || RHS->getPredicate() != Pred)
     return nullptr;
@@ -819,6 +820,10 @@ Value *InstCombinerImpl::foldAndOrOfICmpsOfAndWithPow2(ICmpInst *LHS,
     if (L1 == R1 &&
         isKnownToBeAPowerOfTwo(L2, false, 0, CxtI) &&
         isKnownToBeAPowerOfTwo(R2, false, 0, CxtI)) {
+      // If this is a logical and/or, then we must prevent propagation of a
+      // poison value from the RHS by inserting freeze.
+      if (IsLogical)
+        R2 = Builder.CreateFreeze(R2);
       Value *Mask = Builder.CreateOr(L2, R2);
       Value *Masked = Builder.CreateAnd(L1, Mask);
       auto NewPred = IsAnd ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE;

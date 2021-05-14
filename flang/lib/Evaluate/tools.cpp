@@ -19,6 +19,18 @@ using namespace Fortran::parser::literals;
 
 namespace Fortran::evaluate {
 
+std::optional<Expr<SomeType>> AsGenericExpr(DataRef &&ref) {
+  const Symbol &symbol{ref.GetLastSymbol()};
+  if (auto dyType{DynamicType::From(symbol)}) {
+    return TypedWrapper<Designator, DataRef>(*dyType, std::move(ref));
+  }
+  return std::nullopt;
+}
+
+std::optional<Expr<SomeType>> AsGenericExpr(const Symbol &symbol) {
+  return AsGenericExpr(DataRef{symbol});
+}
+
 Expr<SomeType> Parenthesize(Expr<SomeType> &&expr) {
   return std::visit(
       [&](auto &&x) {

@@ -87,7 +87,7 @@
 // AMDGCN-SAME: gfx802, iceland, tonga, gfx803, fiji, polaris10, polaris11,
 // AMDGCN-SAME: gfx805, tongapro, gfx810, stoney, gfx900, gfx902, gfx904, gfx906,
 // AMDGCN-SAME: gfx908, gfx909, gfx90a, gfx90c, gfx1010, gfx1011, gfx1012, gfx1030, gfx1031,
-// AMDGCN-SAME: gfx1032, gfx1033
+// AMDGCN-SAME: gfx1032, gfx1033, gfx1034
 
 // RUN: not %clang_cc1 -triple wasm64--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix WEBASM
 // WEBASM: error: unknown target CPU 'not-a-cpu'

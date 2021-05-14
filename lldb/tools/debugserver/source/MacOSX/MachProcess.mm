@@ -987,23 +987,15 @@ JSONGenerator::ObjectSP MachProcess::GetLoadedDynamicLibrariesInfos(
     nub_process_t pid, nub_addr_t image_list_address, nub_addr_t image_count) {
   JSONGenerator::DictionarySP reply_sp;
 
-  int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
-  struct kinfo_proc processInfo;
-  size_t bufsize = sizeof(processInfo);
-  if (sysctl(mib, (unsigned)(sizeof(mib) / sizeof(int)), &processInfo, &bufsize,
-             NULL, 0) == 0 &&
-      bufsize > 0) {
-    uint32_t pointer_size = 4;
-    if (processInfo.kp_proc.p_flag & P_LP64)
-      pointer_size = 8;
+  int pointer_size = GetInferiorAddrSize(pid);
 
-    std::vector<struct binary_image_information> image_infos;
-    size_t image_infos_size = image_count * 3 * pointer_size;
+  std::vector<struct binary_image_information> image_infos;
+  size_t image_infos_size = image_count * 3 * pointer_size;
 
-    uint8_t *image_info_buf = (uint8_t *)malloc(image_infos_size);
-    if (image_info_buf == NULL) {
-      return reply_sp;
-    }
+  uint8_t *image_info_buf = (uint8_t *)malloc(image_infos_size);
+  if (image_info_buf == NULL) {
+    return reply_sp;
+  }
     if (ReadMemory(image_list_address, image_infos_size, image_info_buf) !=
         image_infos_size) {
       return reply_sp;
@@ -1085,7 +1077,6 @@ JSONGenerator::ObjectSP MachProcess::GetLoadedDynamicLibrariesInfos(
     ////  Third, format all of the above in the JSONGenerator object.
 
     return FormatDynamicLibrariesIntoJSON(image_infos);
-  }
 
   return reply_sp;
 }
@@ -1146,28 +1137,16 @@ JSONGenerator::ObjectSP
 MachProcess::GetAllLoadedLibrariesInfos(nub_process_t pid) {
   JSONGenerator::DictionarySP reply_sp;
 
-  int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
-  struct kinfo_proc processInfo;
-  size_t bufsize = sizeof(processInfo);
-  if (sysctl(mib, (unsigned)(sizeof(mib) / sizeof(int)), &processInfo, &bufsize,
-             NULL, 0) == 0 &&
-      bufsize > 0) {
-    uint32_t pointer_size = 4;
-    if (processInfo.kp_proc.p_flag & P_LP64)
-      pointer_size = 8;
-
-    std::vector<struct binary_image_information> image_infos;
-    GetAllLoadedBinariesViaDYLDSPI(image_infos);
-    uint32_t platform = GetProcessPlatformViaDYLDSPI();
-    const size_t image_count = image_infos.size();
-    for (size_t i = 0; i < image_count; i++) {
-      GetMachOInformationFromMemory(platform,
-                                    image_infos[i].load_address, pointer_size,
-                                    image_infos[i].macho_info);
-    }
-    return FormatDynamicLibrariesIntoJSON(image_infos);
+  int pointer_size = GetInferiorAddrSize(pid);
+  std::vector<struct binary_image_information> image_infos;
+  GetAllLoadedBinariesViaDYLDSPI(image_infos);
+  uint32_t platform = GetProcessPlatformViaDYLDSPI();
+  const size_t image_count = image_infos.size();
+  for (size_t i = 0; i < image_count; i++) {
+    GetMachOInformationFromMemory(platform, image_infos[i].load_address,
+                                  pointer_size, image_infos[i].macho_info);
   }
-  return reply_sp;
+    return FormatDynamicLibrariesIntoJSON(image_infos);
 }
 
 // Fetch information about the shared libraries at the given load addresses
@@ -1177,30 +1156,22 @@ JSONGenerator::ObjectSP MachProcess::GetLibrariesInfoForAddresses(
     nub_process_t pid, std::vector<uint64_t> &macho_addresses) {
   JSONGenerator::DictionarySP reply_sp;
 
-  int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
-  struct kinfo_proc processInfo;
-  size_t bufsize = sizeof(processInfo);
-  if (sysctl(mib, (unsigned)(sizeof(mib) / sizeof(int)), &processInfo, &bufsize,
-             NULL, 0) == 0 &&
-      bufsize > 0) {
-    uint32_t pointer_size = 4;
-    if (processInfo.kp_proc.p_flag & P_LP64)
-      pointer_size = 8;
+  int pointer_size = GetInferiorAddrSize(pid);
 
-    std::vector<struct binary_image_information> all_image_infos;
-    GetAllLoadedBinariesViaDYLDSPI(all_image_infos);
-    uint32_t platform = GetProcessPlatformViaDYLDSPI();
+  std::vector<struct binary_image_information> all_image_infos;
+  GetAllLoadedBinariesViaDYLDSPI(all_image_infos);
+  uint32_t platform = GetProcessPlatformViaDYLDSPI();
 
-    std::vector<struct binary_image_information> image_infos;
-    const size_t macho_addresses_count = macho_addresses.size();
-    const size_t all_image_infos_count = all_image_infos.size();
-    for (size_t i = 0; i < macho_addresses_count; i++) {
-      for (size_t j = 0; j < all_image_infos_count; j++) {
-        if (all_image_infos[j].load_address == macho_addresses[i]) {
-          image_infos.push_back(all_image_infos[j]);
-        }
+  std::vector<struct binary_image_information> image_infos;
+  const size_t macho_addresses_count = macho_addresses.size();
+  const size_t all_image_infos_count = all_image_infos.size();
+  for (size_t i = 0; i < macho_addresses_count; i++) {
+    for (size_t j = 0; j < all_image_infos_count; j++) {
+      if (all_image_infos[j].load_address == macho_addresses[i]) {
+        image_infos.push_back(all_image_infos[j]);
       }
     }
+  }
 
     const size_t image_infos_count = image_infos.size();
     for (size_t i = 0; i < image_infos_count; i++) {
@@ -1209,8 +1180,6 @@ JSONGenerator::ObjectSP MachProcess::GetLibrariesInfoForAddresses(
                                     image_infos[i].macho_info);
     }
     return FormatDynamicLibrariesIntoJSON(image_infos);
-  }
-  return reply_sp;
 }
 
 // From dyld's internal podyld_process_info.h:
@@ -4192,4 +4161,18 @@ bool MachProcess::ProcessUsingBackBoard() {
 bool MachProcess::ProcessUsingFrontBoard() {
   CalculateBoardStatus();
   return (m_flags & eMachProcessFlagsUsingFBS) != 0;
+}
+
+int MachProcess::GetInferiorAddrSize(pid_t pid) {
+  int pointer_size = 8;
+  int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
+  struct kinfo_proc processInfo;
+  size_t bufsize = sizeof(processInfo);
+  if (sysctl(mib, (unsigned)(sizeof(mib) / sizeof(int)), &processInfo, &bufsize,
+             NULL, 0) == 0 &&
+      bufsize > 0) {
+    if ((processInfo.kp_proc.p_flag & P_LP64) == 0)
+      pointer_size = 4;
+  }
+  return pointer_size;
 }

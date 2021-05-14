@@ -73,6 +73,7 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
   bool PairedVectorMemops = false;
   bool HasP10Vector = false;
   bool HasPCRelativeMemops = false;
+  bool HasPrefixInstrs = false;
 
 protected:
   std::string ABI;

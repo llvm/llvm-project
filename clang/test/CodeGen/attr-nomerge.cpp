@@ -77,7 +77,7 @@ void something_else_again() {
 // CHECK: %[[AG:.*]] = load void (%class.A*)*, void (%class.A*)**
 // CHECK-NEXT: call void %[[AG]](%class.A* {{.*}}) #[[ATTR0]]
 // CHECK: %[[BG:.*]] = load void (%class.B*)*, void (%class.B*)**
-// CHECK-NEXT: call void %[[BG]](%class.B* nonnull dereferenceable
+// CHECK-NEXT: call void %[[BG]](%class.B* nonnull align {{.*}} dereferenceable
 // CHECK: call void @_ZN1AC1Ev({{.*}}) #[[ATTR0]]
 // CHECK: call void @_ZN1A1fEv({{.*}}) #[[ATTR0]]
 // CHECK: call void @_ZN1A1gEv({{.*}}) #[[ATTR0]]

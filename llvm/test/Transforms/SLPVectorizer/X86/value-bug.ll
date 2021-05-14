@@ -11,32 +11,30 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 define void @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  bb279:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float undef, i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float undef, i32 1
 ; CHECK-NEXT:    br label [[BB283:%.*]]
 ; CHECK:       bb283:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x float> [ undef, [[BB279:%.*]] ], [ [[TMP13:%.*]], [[EXIT:%.*]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x float> [ undef, [[BB279]] ], [ [[TMP1]], [[EXIT]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x float> [ undef, [[BB279:%.*]] ], [ [[TMP11:%.*]], [[EXIT:%.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x float> [ undef, [[BB279]] ], [ undef, [[EXIT]] ]
 ; CHECK-NEXT:    br label [[BB284:%.*]]
 ; CHECK:       bb284:
-; CHECK-NEXT:    [[TMP4:%.*]] = fpext <2 x float> [[TMP2]] to <2 x double>
-; CHECK-NEXT:    [[TMP5:%.*]] = fsub <2 x double> [[TMP4]], undef
-; CHECK-NEXT:    [[TMP6:%.*]] = fsub <2 x double> [[TMP5]], undef
+; CHECK-NEXT:    [[TMP2:%.*]] = fpext <2 x float> [[TMP0]] to <2 x double>
+; CHECK-NEXT:    [[TMP3:%.*]] = fsub <2 x double> [[TMP2]], undef
+; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[TMP3]], undef
 ; CHECK-NEXT:    br label [[BB21_I:%.*]]
 ; CHECK:       bb21.i:
 ; CHECK-NEXT:    br i1 undef, label [[BB22_I:%.*]], label [[EXIT]]
 ; CHECK:       bb22.i:
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> undef, [[TMP6]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> undef, [[TMP4]]
 ; CHECK-NEXT:    br label [[BB32_I:%.*]]
 ; CHECK:       bb32.i:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x double> [ [[TMP7]], [[BB22_I]] ], [ zeroinitializer, [[BB32_I]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x double> [ [[TMP5]], [[BB22_I]] ], [ zeroinitializer, [[BB32_I]] ]
 ; CHECK-NEXT:    br i1 undef, label [[BB32_I]], label [[BB21_I]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP9:%.*]] = fpext <2 x float> [[TMP3]] to <2 x double>
-; CHECK-NEXT:    [[TMP10:%.*]] = fmul <2 x double> [[TMP9]], <double undef, double 0.000000e+00>
-; CHECK-NEXT:    [[TMP11:%.*]] = fadd <2 x double> undef, [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = fadd <2 x double> [[TMP11]], undef
-; CHECK-NEXT:    [[TMP13]] = fptrunc <2 x double> [[TMP12]] to <2 x float>
+; CHECK-NEXT:    [[TMP7:%.*]] = fpext <2 x float> [[TMP1]] to <2 x double>
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP7]], <double undef, double 0.000000e+00>
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> undef, [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd <2 x double> [[TMP9]], undef
+; CHECK-NEXT:    [[TMP11]] = fptrunc <2 x double> [[TMP10]] to <2 x float>
 ; CHECK-NEXT:    br label [[BB283]]
 ;
 bb279:
@@ -93,9 +91,7 @@ exit:
 define <4 x double> @constant_folding() {
 ; CHECK-LABEL: @constant_folding(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x double> undef, double 1.000000e+00, i32 1
-; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x double> [[I1]], double 2.000000e+00, i32 0
-; CHECK-NEXT:    ret <4 x double> [[I2]]
+; CHECK-NEXT:    ret <4 x double> <double 2.000000e+00, double 1.000000e+00, double undef, double undef>
 ;
 entry:
   %t0 = fadd double 1.000000e+00 , 0.000000e+00

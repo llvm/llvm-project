@@ -842,54 +842,57 @@ SSANameState::SSANameState(
   llvm::SaveAndRestore<unsigned> argumentIDSaver(nextArgumentID);
   llvm::SaveAndRestore<unsigned> conflictIDSaver(nextConflictID);
 
-  // The context includes nextValueID, nextArgumentID, nextConflictID and scoped
-  // HashTable.
-  using hashTableScopeTy = llvm::ScopedHashTable<StringRef, char>::ScopeTy;
-  // A namingContext carries the information inherits from parent region.
-  using namingContext =
-      std::tuple<Region *, unsigned, unsigned, unsigned, hashTableScopeTy *>;
-  // Allocator for hashTableScopeTy
+  // The naming context includes `nextValueID`, `nextArgumentID`,
+  // `nextConflictID` and `usedNames` scoped HashTable. This information is
+  // carried from the parent region.
+  using UsedNamesScopeTy = llvm::ScopedHashTable<StringRef, char>::ScopeTy;
+  using NamingContext =
+      std::tuple<Region *, unsigned, unsigned, unsigned, UsedNamesScopeTy *>;
+
+  // Allocator for UsedNamesScopeTy
   llvm::BumpPtrAllocator allocator;
 
-  SmallVector<namingContext, 8> nameContext;
+  // Add a scope for the top level operation.
+  auto *topLevelNamesScope =
+      new (allocator.Allocate<UsedNamesScopeTy>()) UsedNamesScopeTy(usedNames);
+
+  SmallVector<NamingContext, 8> nameContext;
   for (Region &region : op->getRegions())
     nameContext.push_back(std::make_tuple(&region, nextValueID, nextArgumentID,
-                                          nextConflictID, nullptr));
+                                          nextConflictID, topLevelNamesScope));
 
   numberValuesInOp(*op, interfaces);
 
   while (!nameContext.empty()) {
     Region *region;
-    hashTableScopeTy *parentScope;
+    UsedNamesScopeTy *parentScope;
     std::tie(region, nextValueID, nextArgumentID, nextConflictID, parentScope) =
         nameContext.pop_back_val();
 
     // When we switch from one subtree to another, pop the scopes(needless)
     // until the parent scope.
     while (usedNames.getCurScope() != parentScope) {
-      usedNames.getCurScope()->~hashTableScopeTy();
+      usedNames.getCurScope()->~UsedNamesScopeTy();
       assert((usedNames.getCurScope() != nullptr || parentScope == nullptr) &&
              "top level parentScope must be a nullptr");
     }
 
     // Add a scope for the current region.
-    auto *curNamesScope = allocator.Allocate<hashTableScopeTy>();
-    new (curNamesScope) hashTableScopeTy(usedNames);
+    auto *curNamesScope = new (allocator.Allocate<UsedNamesScopeTy>())
+        UsedNamesScopeTy(usedNames);
 
     numberValuesInRegion(*region, interfaces);
 
-    for (Block &block : *region) {
-      for (Operation &op : block)
-        for (Region &region : op.getRegions())
-          nameContext.push_back(std::make_tuple(&region, nextValueID,
-                                                nextArgumentID, nextConflictID,
-                                                curNamesScope));
-    }
+    for (Operation &op : region->getOps())
+      for (Region &region : op.getRegions())
+        nameContext.push_back(std::make_tuple(&region, nextValueID,
+                                              nextArgumentID, nextConflictID,
+                                              curNamesScope));
   }
 
   // Manually remove all the scopes.
   while (usedNames.getCurScope() != nullptr)
-    usedNames.getCurScope()->~hashTableScopeTy();
+    usedNames.getCurScope()->~UsedNamesScopeTy();
 }
 
 void SSANameState::printValueID(Value value, bool printResultNo,

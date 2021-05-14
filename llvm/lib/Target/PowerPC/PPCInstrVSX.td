@@ -2419,6 +2419,22 @@ def MrgWords {
   dag CVCAU = (v4i32 (XVCVDPUXWS CA));
 }
 
+def DblwdCmp {
+  dag SGTW = (v2i64 (v2i64 (VCMPGTSW v2i64:$vA, v2i64:$vB)));
+  dag UGTW = (v2i64 (v2i64 (VCMPGTUW v2i64:$vA, v2i64:$vB)));
+  dag EQW = (v2i64 (v2i64 (VCMPEQUW v2i64:$vA, v2i64:$vB)));
+  dag UGTWSHAND = (v2i64 (XXLAND (v2i64 (XXSLDWI UGTW, UGTW, 1)), EQW));
+  dag EQWSHAND = (v2i64 (XXLAND (v2i64 (XXSLDWI EQW, EQW, 1)), EQW));
+  dag SGTWOR = (v2i64 (XXLOR SGTW, UGTWSHAND));
+  dag UGTWOR = (v2i64 (XXLOR UGTW, UGTWSHAND));
+  dag MRGSGT = (v2i64 (XXPERMDI (v2i64 (XXSPLTW SGTWOR, 0)),
+                                (v2i64 (XXSPLTW SGTWOR, 2)), 0));
+  dag MRGUGT = (v2i64 (XXPERMDI (v2i64 (XXSPLTW UGTWOR, 0)),
+                                (v2i64 (XXSPLTW UGTWOR, 2)), 0));
+  dag MRGEQ = (v2i64 (XXPERMDI (v2i64 (XXSPLTW EQWSHAND, 0)),
+                               (v2i64 (XXSPLTW EQWSHAND, 2)), 0));
+}
+
 //---------------------------- Anonymous Patterns ----------------------------//
 // Predicate combinations are kept in roughly chronological order in terms of
 // instruction availability in the architecture. For example, VSX came in with
@@ -2816,6 +2832,16 @@ defm : ScalToVecWPermute<
 defm : ScalToVecWPermute<
   v2i64, DblToULongLoad.A,
   (XVCVDPUXDS (LXVDSX ForceXForm:$A)), (XVCVDPUXDS (LXVDSX ForceXForm:$A))>;
+
+// Doubleword vector predicate comparisons without Power8.
+let AddedComplexity = 0 in {
+def : Pat<(v2i64 (PPCvcmp_rec v2i64:$vA, v2i64:$vB, 967)),
+          (VCMPGTUB_rec DblwdCmp.MRGSGT, (v2i64 (XXLXORz)))>;
+def : Pat<(v2i64 (PPCvcmp_rec v2i64:$vA, v2i64:$vB, 711)),
+          (VCMPGTUB_rec DblwdCmp.MRGUGT, (v2i64 (XXLXORz)))>;
+def : Pat<(v2i64 (PPCvcmp_rec v2i64:$vA, v2i64:$vB, 199)),
+          (VCMPGTUB_rec DblwdCmp.MRGEQ, (v2i64 (XXLXORz)))>;
+} // AddedComplexity = 0
 } // HasVSX
 
 // Any big endian VSX subtarget.

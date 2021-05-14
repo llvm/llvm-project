@@ -42,6 +42,8 @@ public:
 
   uint32_t align = 1;
   uint32_t flags = 0;
+  uint32_t callSiteCount = 0;
+  bool isFinal = false; // is address assigned?
 
   // How many symbols refer to this InputSection.
   uint32_t numRefs = 0;

@@ -503,10 +503,12 @@ void Parser::Initialize() {
 
   Ident_vector = nullptr;
   Ident_bool = nullptr;
+  Ident_Bool = nullptr;
   Ident_pixel = nullptr;
   if (getLangOpts().AltiVec || getLangOpts().ZVector) {
     Ident_vector = &PP.getIdentifierTable().get("vector");
     Ident_bool = &PP.getIdentifierTable().get("bool");
+    Ident_Bool = &PP.getIdentifierTable().get("_Bool");
   }
   if (getLangOpts().AltiVec)
     Ident_pixel = &PP.getIdentifierTable().get("pixel");
