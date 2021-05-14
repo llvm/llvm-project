@@ -4237,25 +4237,10 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
         IsA16 = A16->getImm() != 0;
       }
 
-      bool PackDerivatives = IsA16 || BaseOpcode->G16;
       bool IsNSA = SRsrcIdx - VAddr0Idx > 1;
 
-      unsigned AddrWords = BaseOpcode->NumExtraArgs;
-      unsigned AddrComponents = (BaseOpcode->Coordinates ? Dim->NumCoords : 0) +
-                                (BaseOpcode->LodOrClampOrMip ? 1 : 0);
-      if (IsA16)
-        AddrWords += divideCeil(AddrComponents, 2);
-      else
-        AddrWords += AddrComponents;
-
-      if (BaseOpcode->Gradients) {
-        if (PackDerivatives)
-          // There are two gradients per coordinate, we pack them separately.
-          // For the 3d case, we get (dy/du, dx/du) (-, dz/du) (dy/dv, dx/dv) (-, dz/dv)
-          AddrWords += alignTo<2>(Dim->NumGradients / 2);
-        else
-          AddrWords += Dim->NumGradients;
-      }
+      unsigned AddrWords =
+          AMDGPU::getAddrSizeMIMGOp(BaseOpcode, Dim, IsA16, ST.hasG16());
 
       unsigned VAddrWords;
       if (IsNSA) {
