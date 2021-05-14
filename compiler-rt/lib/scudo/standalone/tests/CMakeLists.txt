@@ -23,7 +23,8 @@ if(ANDROID)
 endif()
 
 if (COMPILER_RT_HAS_GWP_ASAN)
-  list(APPEND SCUDO_UNITTEST_CFLAGS -DGWP_ASAN_HOOKS)
+  list(APPEND SCUDO_UNITTEST_CFLAGS -DGWP_ASAN_HOOKS -fno-omit-frame-pointer
+       -mno-omit-leaf-frame-pointer)
 endif()
 
 set(SCUDO_TEST_ARCH ${SCUDO_STANDALONE_SUPPORTED_ARCH})
