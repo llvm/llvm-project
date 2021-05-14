@@ -76,10 +76,17 @@ public:
   }
 
   HardClauseType getHardClauseType(const MachineInstr &MI) {
+
     // On current architectures we only get a benefit from clausing loads.
     if (MI.mayLoad()) {
-      if (SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSegmentSpecificFLAT(MI))
+      if (SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSegmentSpecificFLAT(MI)) {
+        if (ST->hasNSAClauseBug()) {
+          const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
+          if (Info && Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA)
+            return HARDCLAUSE_ILLEGAL;
+        }
         return HARDCLAUSE_VMEM;
+      }
       if (SIInstrInfo::isFLAT(MI))
         return HARDCLAUSE_FLAT;
       // TODO: LDS
