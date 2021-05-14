@@ -601,13 +601,13 @@ vpsubq %xmm1, %xmm0, %xmm0
 
 # CHECK:      Iterations:        10000
 # CHECK-NEXT: Instructions:      20000
-# CHECK-NEXT: Total Cycles:      20003
+# CHECK-NEXT: Total Cycles:      3337
 # CHECK-NEXT: Total uOps:        20000
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    1.00
-# CHECK-NEXT: IPC:               1.00
-# CHECK-NEXT: Block RThroughput: 0.5
+# CHECK-NEXT: uOps Per Cycle:    5.99
+# CHECK-NEXT: IPC:               5.99
+# CHECK-NEXT: Block RThroughput: 0.3
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -618,17 +618,17 @@ vpsubq %xmm1, %xmm0, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      1     0.25                        vpsubb	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT:  1      0     0.17                        vpsubb	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT:  1      1     0.25                        vpsubb	%xmm1, %xmm0, %xmm0
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    20000
-# CHECK-NEXT: Max number of mappings used:         66
+# CHECK-NEXT: Total number of mappings created:    10000
+# CHECK-NEXT: Max number of mappings used:         9
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
-# CHECK-NEXT:    Total number of mappings created: 20000
-# CHECK-NEXT:    Max number of mappings used:      66
+# CHECK-NEXT:    Total number of mappings created: 10000
+# CHECK-NEXT:    Max number of mappings used:      9
 
 # CHECK:      *  Register File #2 -- Zn3IntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     192
@@ -662,20 +662,20 @@ vpsubq %xmm1, %xmm0, %xmm0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50    -     0.50    -      -      -      -      -      -      -      -      -      -      -     vpsubb	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50    -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     vpsubb	%xmm1, %xmm0, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubb	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     vpsubb	%xmm1, %xmm0, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456
+# CHECK-NEXT: Index     0123
 
-# CHECK:      [0,0]     DeER ..   vpsubb	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [0,1]     D=eER..   vpsubb	%xmm1, %xmm0, %xmm0
-# CHECK-NEXT: [1,0]     D==eER.   vpsubb	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [1,1]     D===eER   vpsubb	%xmm1, %xmm0, %xmm0
+# CHECK:      [0,0]     DR .   vpsubb	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [0,1]     DeER   vpsubb	%xmm1, %xmm0, %xmm0
+# CHECK-NEXT: [1,0]     D--R   vpsubb	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [1,1]     DeER   vpsubb	%xmm1, %xmm0, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -684,21 +684,21 @@ vpsubq %xmm1, %xmm0, %xmm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     2.0    0.5    0.0       vpsubb	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: 1.     2     3.0    0.0    0.0       vpsubb	%xmm1, %xmm0, %xmm0
-# CHECK-NEXT:        2     2.5    0.3    0.0       <total>
+# CHECK-NEXT: 0.     2     0.0    0.0    1.0       vpsubb	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: 1.     2     1.0    1.0    0.0       vpsubb	%xmm1, %xmm0, %xmm0
+# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
 
 # CHECK:      [7] Code Region
 
 # CHECK:      Iterations:        10000
 # CHECK-NEXT: Instructions:      20000
-# CHECK-NEXT: Total Cycles:      20003
+# CHECK-NEXT: Total Cycles:      3337
 # CHECK-NEXT: Total uOps:        20000
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    1.00
-# CHECK-NEXT: IPC:               1.00
-# CHECK-NEXT: Block RThroughput: 0.5
+# CHECK-NEXT: uOps Per Cycle:    5.99
+# CHECK-NEXT: IPC:               5.99
+# CHECK-NEXT: Block RThroughput: 0.3
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -709,17 +709,17 @@ vpsubq %xmm1, %xmm0, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      1     0.25                        vpsubw	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT:  1      0     0.17                        vpsubw	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT:  1      1     0.25                        vpsubw	%xmm1, %xmm0, %xmm0
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    20000
-# CHECK-NEXT: Max number of mappings used:         66
+# CHECK-NEXT: Total number of mappings created:    10000
+# CHECK-NEXT: Max number of mappings used:         9
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
-# CHECK-NEXT:    Total number of mappings created: 20000
-# CHECK-NEXT:    Max number of mappings used:      66
+# CHECK-NEXT:    Total number of mappings created: 10000
+# CHECK-NEXT:    Max number of mappings used:      9
 
 # CHECK:      *  Register File #2 -- Zn3IntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     192
@@ -753,20 +753,20 @@ vpsubq %xmm1, %xmm0, %xmm0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50    -     0.50    -      -      -      -      -      -      -      -      -      -      -     vpsubw	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50    -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     vpsubw	%xmm1, %xmm0, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubw	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     vpsubw	%xmm1, %xmm0, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456
+# CHECK-NEXT: Index     0123
 
-# CHECK:      [0,0]     DeER ..   vpsubw	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [0,1]     D=eER..   vpsubw	%xmm1, %xmm0, %xmm0
-# CHECK-NEXT: [1,0]     D==eER.   vpsubw	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [1,1]     D===eER   vpsubw	%xmm1, %xmm0, %xmm0
+# CHECK:      [0,0]     DR .   vpsubw	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [0,1]     DeER   vpsubw	%xmm1, %xmm0, %xmm0
+# CHECK-NEXT: [1,0]     D--R   vpsubw	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [1,1]     DeER   vpsubw	%xmm1, %xmm0, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -775,21 +775,21 @@ vpsubq %xmm1, %xmm0, %xmm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     2.0    0.5    0.0       vpsubw	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: 1.     2     3.0    0.0    0.0       vpsubw	%xmm1, %xmm0, %xmm0
-# CHECK-NEXT:        2     2.5    0.3    0.0       <total>
+# CHECK-NEXT: 0.     2     0.0    0.0    1.0       vpsubw	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: 1.     2     1.0    1.0    0.0       vpsubw	%xmm1, %xmm0, %xmm0
+# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
 
 # CHECK:      [8] Code Region
 
 # CHECK:      Iterations:        10000
 # CHECK-NEXT: Instructions:      20000
-# CHECK-NEXT: Total Cycles:      20003
+# CHECK-NEXT: Total Cycles:      3337
 # CHECK-NEXT: Total uOps:        20000
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    1.00
-# CHECK-NEXT: IPC:               1.00
-# CHECK-NEXT: Block RThroughput: 0.5
+# CHECK-NEXT: uOps Per Cycle:    5.99
+# CHECK-NEXT: IPC:               5.99
+# CHECK-NEXT: Block RThroughput: 0.3
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -800,17 +800,17 @@ vpsubq %xmm1, %xmm0, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      1     0.25                        vpsubd	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT:  1      0     0.17                        vpsubd	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT:  1      1     0.25                        vpsubd	%xmm1, %xmm0, %xmm0
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    20000
-# CHECK-NEXT: Max number of mappings used:         66
+# CHECK-NEXT: Total number of mappings created:    10000
+# CHECK-NEXT: Max number of mappings used:         9
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
-# CHECK-NEXT:    Total number of mappings created: 20000
-# CHECK-NEXT:    Max number of mappings used:      66
+# CHECK-NEXT:    Total number of mappings created: 10000
+# CHECK-NEXT:    Max number of mappings used:      9
 
 # CHECK:      *  Register File #2 -- Zn3IntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     192
@@ -844,20 +844,20 @@ vpsubq %xmm1, %xmm0, %xmm0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50    -     0.50    -      -      -      -      -      -      -      -      -      -      -     vpsubd	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50    -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     vpsubd	%xmm1, %xmm0, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubd	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     vpsubd	%xmm1, %xmm0, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456
+# CHECK-NEXT: Index     0123
 
-# CHECK:      [0,0]     DeER ..   vpsubd	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [0,1]     D=eER..   vpsubd	%xmm1, %xmm0, %xmm0
-# CHECK-NEXT: [1,0]     D==eER.   vpsubd	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [1,1]     D===eER   vpsubd	%xmm1, %xmm0, %xmm0
+# CHECK:      [0,0]     DR .   vpsubd	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [0,1]     DeER   vpsubd	%xmm1, %xmm0, %xmm0
+# CHECK-NEXT: [1,0]     D--R   vpsubd	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [1,1]     DeER   vpsubd	%xmm1, %xmm0, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -866,21 +866,21 @@ vpsubq %xmm1, %xmm0, %xmm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     2.0    0.5    0.0       vpsubd	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: 1.     2     3.0    0.0    0.0       vpsubd	%xmm1, %xmm0, %xmm0
-# CHECK-NEXT:        2     2.5    0.3    0.0       <total>
+# CHECK-NEXT: 0.     2     0.0    0.0    1.0       vpsubd	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: 1.     2     1.0    1.0    0.0       vpsubd	%xmm1, %xmm0, %xmm0
+# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
 
 # CHECK:      [9] Code Region
 
 # CHECK:      Iterations:        10000
 # CHECK-NEXT: Instructions:      20000
-# CHECK-NEXT: Total Cycles:      20003
+# CHECK-NEXT: Total Cycles:      3337
 # CHECK-NEXT: Total uOps:        20000
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    1.00
-# CHECK-NEXT: IPC:               1.00
-# CHECK-NEXT: Block RThroughput: 0.5
+# CHECK-NEXT: uOps Per Cycle:    5.99
+# CHECK-NEXT: IPC:               5.99
+# CHECK-NEXT: Block RThroughput: 0.3
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -891,17 +891,17 @@ vpsubq %xmm1, %xmm0, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      1     0.25                        vpsubq	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT:  1      0     0.17                        vpsubq	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT:  1      1     0.25                        vpsubq	%xmm1, %xmm0, %xmm0
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    20000
-# CHECK-NEXT: Max number of mappings used:         66
+# CHECK-NEXT: Total number of mappings created:    10000
+# CHECK-NEXT: Max number of mappings used:         9
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
-# CHECK-NEXT:    Total number of mappings created: 20000
-# CHECK-NEXT:    Max number of mappings used:      66
+# CHECK-NEXT:    Total number of mappings created: 10000
+# CHECK-NEXT:    Max number of mappings used:      9
 
 # CHECK:      *  Register File #2 -- Zn3IntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     192
@@ -935,20 +935,20 @@ vpsubq %xmm1, %xmm0, %xmm0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50    -     0.50    -      -      -      -      -      -      -      -      -      -      -     vpsubq	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50    -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     vpsubq	%xmm1, %xmm0, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpsubq	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     vpsubq	%xmm1, %xmm0, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456
+# CHECK-NEXT: Index     0123
 
-# CHECK:      [0,0]     DeER ..   vpsubq	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [0,1]     D=eER..   vpsubq	%xmm1, %xmm0, %xmm0
-# CHECK-NEXT: [1,0]     D==eER.   vpsubq	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [1,1]     D===eER   vpsubq	%xmm1, %xmm0, %xmm0
+# CHECK:      [0,0]     DR .   vpsubq	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [0,1]     DeER   vpsubq	%xmm1, %xmm0, %xmm0
+# CHECK-NEXT: [1,0]     D--R   vpsubq	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [1,1]     DeER   vpsubq	%xmm1, %xmm0, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -957,6 +957,6 @@ vpsubq %xmm1, %xmm0, %xmm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     2.0    0.5    0.0       vpsubq	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: 1.     2     3.0    0.0    0.0       vpsubq	%xmm1, %xmm0, %xmm0
-# CHECK-NEXT:        2     2.5    0.3    0.0       <total>
+# CHECK-NEXT: 0.     2     0.0    0.0    1.0       vpsubq	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: 1.     2     1.0    1.0    0.0       vpsubq	%xmm1, %xmm0, %xmm0
+# CHECK-NEXT:        2     0.5    0.5    0.5       <total>

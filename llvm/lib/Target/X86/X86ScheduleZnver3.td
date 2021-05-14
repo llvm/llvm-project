@@ -1558,6 +1558,14 @@ def Zn3WriteVZeroIdiomLogicY : SchedWriteVariant<[
 ]>;
 def : InstRW<[Zn3WriteVZeroIdiomLogicY], (instrs VPXORYrr, VPANDNYrr)>;
 
+def Zn3WriteVZeroIdiomALUX : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [Zn3WriteZeroLatency]>,
+    SchedVar<NoSchedPred,                          [WriteVecALUX]>
+]>;
+// NOTE: PSUBBrr, PSUBWrr, PSUBDrr, PSUBQrr are not zero-cycle!
+def : InstRW<[Zn3WriteVZeroIdiomALUX],
+             (instrs VPSUBBrr, VPSUBWrr, VPSUBDrr, VPSUBQrr)>;
+
 def : IsZeroIdiomFunction<[
   // GPR Zero-idioms.
   DepBreakingClass<[ XOR32rr, XOR32rr_REV,
@@ -1585,7 +1593,8 @@ def : IsZeroIdiomFunction<[
 
     // int variants.
     VPXORrr,
-    VPANDNrr
+    VPANDNrr,
+    VPSUBBrr, VPSUBWrr, VPSUBDrr, VPSUBQrr
   ], ZeroIdiomPredicate>,
 
   // AVX YMM Zero-idioms.
