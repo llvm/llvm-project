@@ -412,7 +412,7 @@ namespace Test13 {
   // CHECK: getelementptr inbounds i8, i8* {{.*}}, i64 8
   // CHECK: ret %"struct.Test13::D"*
 
-  // WIN64-LABEL: define weak_odr dso_local nonnull align 8 dereferenceable(8) %"struct.Test13::D"* @"?foo1@D@Test13@@$4PPPPPPPE@A@EAAAEAUB1@2@XZ"(
+  // WIN64-LABEL: define weak_odr dso_local %"struct.Test13::D"* @"?foo1@D@Test13@@$4PPPPPPPE@A@EAAAEAUB1@2@XZ"(
   //    This adjustment.
   // WIN64: getelementptr inbounds i8, i8* {{.*}}, i64 -12
   //    Call implementation.
@@ -529,7 +529,7 @@ C c;
 // CHECK-NONOPT-LABEL: define linkonce_odr void @_ZThn8_N6Test101C3fooEv
 
 // Checking with opt
-// CHECK-OPT-LABEL: define internal void @_ZThn8_N6Test4B12_GLOBAL__N_11C1fEv(%"struct.Test4B::(anonymous namespace)::C"* {{[^,]*}} %this) unnamed_addr #1 align 2
+// CHECK-OPT-LABEL: define internal void @_ZThn8_N6Test4B12_GLOBAL__N_11C1fEv(%"struct.Test4B::(anonymous namespace)::C"* %this) unnamed_addr #1 align 2
 
 // This is from Test5:
 // CHECK-OPT-LABEL: define linkonce_odr void @_ZTv0_n24_N5Test51B1fEv

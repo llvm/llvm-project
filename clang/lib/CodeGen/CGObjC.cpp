@@ -760,7 +760,7 @@ void CodeGenFunction::StartObjCMethod(const ObjCMethodDecl *OMD,
   const CGFunctionInfo &FI = CGM.getTypes().arrangeObjCMethodDeclaration(OMD);
   if (OMD->isDirectMethod()) {
     Fn->setVisibility(llvm::Function::HiddenVisibility);
-    CGM.SetLLVMFunctionAttributes(OMD, FI, Fn);
+    CGM.SetLLVMFunctionAttributes(OMD, FI, Fn, /*IsThunk=*/false);
     CGM.SetLLVMFunctionAttributesForDefinition(OMD, Fn);
   } else {
     CGM.SetInternalFunctionAttributes(OMD, Fn, FI);
