@@ -20,6 +20,9 @@ namespace std {
         class basic_string_view;
 
     template<class charT, class traits>
+    inline constexpr bool ranges::enable_view<basic_string_view<charT, traits>> = true;
+
+    template<class charT, class traits>
     inline constexpr bool ranges::enable_borrowed_range<basic_string_view<charT, traits>> = true;  // C++20
 
     // 7.9, basic_string_view non-member comparison functions
@@ -184,6 +187,7 @@ namespace std {
 #include <__config>
 #include <__debug>
 #include <__ranges/enable_borrowed_range.h>
+#include <__ranges/enable_view.h>
 #include <__string>
 #include <algorithm>
 #include <compare>
@@ -654,6 +658,9 @@ private:
 };
 
 #if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_RANGES)
+template <class _CharT, class _Traits>
+inline constexpr bool ranges::enable_view<basic_string_view<_CharT, _Traits>> = true;
+
 template <class _CharT, class _Traits>
 inline constexpr bool ranges::enable_borrowed_range<basic_string_view<_CharT, _Traits> > = true;
 #endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_RANGES)

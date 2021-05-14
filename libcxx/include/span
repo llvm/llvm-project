@@ -23,6 +23,9 @@ template <class ElementType, size_t Extent = dynamic_extent>
     class span;
 
 template<class ElementType, size_t Extent>
+  inline constexpr bool ranges::enable_view<span<ElementType, Extent>> = true;
+
+template<class ElementType, size_t Extent>
     inline constexpr bool ranges::enable_borrowed_range<span<ElementType, Extent>> = true;
 
 // [span.objectrep], views of object representation
@@ -127,6 +130,7 @@ template<class Container>
 #include <__config>
 #include <__debug>
 #include <__ranges/enable_borrowed_range.h>
+#include <__ranges/enable_view.h>
 #include <array>        // for array
 #include <cstddef>      // for byte
 #include <iterator>     // for iterators
@@ -531,6 +535,9 @@ private:
 #if !defined(_LIBCPP_HAS_NO_RANGES)
 template <class _Tp, size_t _Extent>
 inline constexpr bool ranges::enable_borrowed_range<span<_Tp, _Extent> > = true;
+
+template <class _ElementType, size_t _Extent>
+inline constexpr bool ranges::enable_view<span<_ElementType, _Extent>> = true;
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
 
 //  as_bytes & as_writable_bytes
