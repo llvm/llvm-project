@@ -1462,6 +1462,7 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::BITCAST, VT, Custom);
   setOperationAction(ISD::BITREVERSE, VT, Custom);
   setOperationAction(ISD::BSWAP, VT, Custom);
+  setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
   setOperationAction(ISD::CTLZ, VT, Custom);
   setOperationAction(ISD::CTPOP, VT, Custom);
   setOperationAction(ISD::CTTZ, VT, Custom);
@@ -1910,6 +1911,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::REV32)
     MAKE_CASE(AArch64ISD::REV64)
     MAKE_CASE(AArch64ISD::EXT)
+    MAKE_CASE(AArch64ISD::SPLICE)
     MAKE_CASE(AArch64ISD::VSHL)
     MAKE_CASE(AArch64ISD::VLSHR)
     MAKE_CASE(AArch64ISD::VASHR)
@@ -3861,6 +3863,9 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_sve_zip2:
     return DAG.getNode(AArch64ISD::ZIP2, dl, Op.getValueType(),
                        Op.getOperand(1), Op.getOperand(2));
+  case Intrinsic::aarch64_sve_splice:
+    return DAG.getNode(AArch64ISD::SPLICE, dl, Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
   case Intrinsic::aarch64_sve_ptrue:
     return DAG.getNode(AArch64ISD::PTRUE, dl, Op.getValueType(),
                        Op.getOperand(1));
@@ -10035,6 +10040,9 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
 
 SDValue AArch64TargetLowering::LowerCONCAT_VECTORS(SDValue Op,
                                                    SelectionDAG &DAG) const {
+  if (useSVEForFixedLengthVectorVT(Op.getValueType()))
+    return LowerFixedLengthConcatVectorsToSVE(Op, DAG);
+
   assert(Op.getValueType().isScalableVector() &&
          isTypeLegal(Op.getValueType()) &&
          "Expected legal scalable vector type!");
@@ -14569,6 +14577,16 @@ static SDValue splitStores(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                       S->getMemOperand()->getFlags());
 }
 
+static SDValue performSpliceCombine(SDNode *N, SelectionDAG &DAG) {
+  assert(N->getOpcode() == AArch64ISD::SPLICE && "Unexepected Opcode!");
+
+  // splice(pg, op1, undef) -> op1
+  if (N->getOperand(2).isUndef())
+    return N->getOperand(1);
+
+  return SDValue();
+}
+
 static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG) {
   SDLoc DL(N);
   SDValue Op0 = N->getOperand(0);
@@ -16133,6 +16151,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performPostLD1Combine(N, DCI, false);
   case AArch64ISD::NVCAST:
     return performNVCASTCombine(N);
+  case AArch64ISD::SPLICE:
+    return performSpliceCombine(N, DAG);
   case AArch64ISD::UZP1:
     return performUzpCombine(N, DAG);
   case AArch64ISD::GLD1_MERGE_ZERO:
@@ -17879,6 +17899,40 @@ AArch64TargetLowering::LowerFixedLengthBitcastToSVE(SDValue Op,
 
   SrcOp = convertToScalableVector(DAG, ContainerSrcVT, SrcOp);
   Op = DAG.getNode(ISD::BITCAST, DL, ContainerDstVT, SrcOp);
+  return convertFromScalableVector(DAG, VT, Op);
+}
+
+SDValue AArch64TargetLowering::LowerFixedLengthConcatVectorsToSVE(
+    SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  unsigned NumOperands = Op->getNumOperands();
+
+  assert(NumOperands > 1 && isPowerOf2_32(NumOperands) &&
+         "Unexpected number of operands in CONCAT_VECTORS");
+
+  auto SrcOp1 = Op.getOperand(0);
+  auto SrcOp2 = Op.getOperand(1);
+  EVT VT = Op.getValueType();
+  EVT SrcVT = SrcOp1.getValueType();
+
+  if (NumOperands > 2) {
+    SmallVector<SDValue, 4> Ops;
+    EVT PairVT = SrcVT.getDoubleNumVectorElementsVT(*DAG.getContext());
+    for (unsigned I = 0; I < NumOperands; I += 2)
+      Ops.push_back(DAG.getNode(ISD::CONCAT_VECTORS, DL, PairVT,
+                                Op->getOperand(I), Op->getOperand(I + 1)));
+
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Ops);
+  }
+
+  EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+
+  SDValue Pg = getPredicateForFixedLengthVector(DAG, DL, SrcVT);
+  SrcOp1 = convertToScalableVector(DAG, ContainerVT, SrcOp1);
+  SrcOp2 = convertToScalableVector(DAG, ContainerVT, SrcOp2);
+
+  Op = DAG.getNode(AArch64ISD::SPLICE, DL, ContainerVT, Pg, SrcOp1, SrcOp2);
+
   return convertFromScalableVector(DAG, VT, Op);
 }
 

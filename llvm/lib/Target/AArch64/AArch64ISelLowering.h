@@ -186,6 +186,7 @@ enum NodeType : unsigned {
   REV32,
   REV64,
   EXT,
+  SPLICE,
 
   // Vector shift by scalar
   VSHL,
@@ -1000,6 +1001,8 @@ private:
   SDValue LowerFixedLengthExtractVectorElt(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthInsertVectorElt(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthBitcastToSVE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFixedLengthConcatVectorsToSVE(SDValue Op,
+                                             SelectionDAG &DAG) const;
 
   SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
                         SmallVectorImpl<SDNode *> &Created) const override;
