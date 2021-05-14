@@ -1535,7 +1535,8 @@ def Zn3WriteFZeroIdiom : SchedWriteVariant<[
     SchedVar<NoSchedPred,                          [WriteFLogic]>
 ]>;
 // NOTE: XORPSrr, XORPDrr are not zero-cycle!
-def : InstRW<[Zn3WriteFZeroIdiom], (instrs VXORPSrr, VXORPDrr)>;
+def : InstRW<[Zn3WriteFZeroIdiom], (instrs VXORPSrr, VXORPDrr,
+                                           VANDNPSrr)>;
 
 def Zn3WriteFZeroIdiomY : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [Zn3WriteZeroLatency]>,
@@ -1555,7 +1556,8 @@ def : IsZeroIdiomFunction<[
                      ANDNPSrr ], ZeroIdiomPredicate>,
 
   // AVX XMM Zero-idioms.
-  DepBreakingClass<[ VXORPSrr, VXORPDrr ], ZeroIdiomPredicate>,
+  DepBreakingClass<[ VXORPSrr, VXORPDrr,
+                     VANDNPSrr ], ZeroIdiomPredicate>,
 
   // AVX YMM Zero-idioms.
   DepBreakingClass<[ VXORPSYrr, VXORPDYrr ], ZeroIdiomPredicate>,
