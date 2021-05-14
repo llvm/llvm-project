@@ -126,6 +126,10 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
     return rewriter.create<mlir::MulFOp>(loc, resultTypes, args);
   }
 
+  // tosa::DivOp
+  if (isa<tosa::DivOp>(op) && elementTy.isa<IntegerType>())
+    return rewriter.create<mlir::SignedDivIOp>(loc, resultTypes, args);
+
   // tosa::ReciprocalOp
   if (isa<tosa::ReciprocalOp>(op) && elementTy.isa<FloatType>()) {
     auto one =
@@ -2335,6 +2339,7 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       PointwiseConverter<tosa::AddOp>,
       PointwiseConverter<tosa::SubOp>,
       PointwiseConverter<tosa::MulOp>,
+      PointwiseConverter<tosa::DivOp>,
       PointwiseConverter<tosa::NegateOp>,
       PointwiseConverter<tosa::PowOp>,
       PointwiseConverter<tosa::ReciprocalOp>,
