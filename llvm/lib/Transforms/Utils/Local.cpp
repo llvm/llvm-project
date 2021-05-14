@@ -2903,17 +2903,18 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
 
     // If this is an or instruction, it may be an inner node of the bswap.
     if (match(V, m_Or(m_Value(X), m_Value(Y)))) {
+      // Check we have both sources and they are from the same provider.
       const auto &A =
           collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
+      if (!A || !A->Provider)
+        return Result;
+
       const auto &B =
           collectBitParts(Y, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
-      if (!A || !B)
+      if (!B || A->Provider != B->Provider)
         return Result;
 
       // Try and merge the two together.
-      if (!A->Provider || A->Provider != B->Provider)
-        return Result;
-
       Result = BitPart(A->Provider, BitWidth);
       for (unsigned BitIdx = 0; BitIdx < BitWidth; ++BitIdx) {
         if (A->Provenance[BitIdx] != BitPart::Unset &&
@@ -3061,13 +3062,15 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
       if (!MatchBitReversals && (ModAmt % 8) != 0)
         return Result;
 
+      // Check we have both sources and they are from the same provider.
       const auto &LHS =
           collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
+      if (!LHS || !LHS->Provider)
+          return Result;
+
       const auto &RHS =
           collectBitParts(Y, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
-
-      // Check we have both sources and they are from the same provider.
-      if (!LHS || !RHS || !LHS->Provider || LHS->Provider != RHS->Provider)
+      if (!RHS || LHS->Provider != RHS->Provider)
         return Result;
 
       unsigned StartBitRHS = BitWidth - ModAmt;
