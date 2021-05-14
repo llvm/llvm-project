@@ -312,12 +312,12 @@ std::optional<Expr<SomeType>> OffsetToDesignator(FoldingContext &context,
   if (std::optional<DataRef> dataRef{
           OffsetToDataRef(context, NamedEntity{baseSymbol}, offset, size)}) {
     const Symbol &symbol{dataRef->GetLastSymbol()};
-    if (auto type{DynamicType::From(symbol)}) {
-      if (std::optional<Expr<SomeType>> result{
-              TypedWrapper<Designator>(*type, std::move(*dataRef))}) {
-        if (IsAllocatableOrPointer(symbol)) {
-        } else if (auto elementBytes{
-                       ToInt64(type->MeasureSizeInBytes(context, true))}) {
+    if (std::optional<Expr<SomeType>> result{
+            AsGenericExpr(std::move(*dataRef))}) {
+      if (IsAllocatableOrPointer(symbol)) {
+      } else if (auto type{DynamicType::From(symbol)}) {
+        if (auto elementBytes{
+                ToInt64(type->MeasureSizeInBytes(context, true))}) {
           if (auto *zExpr{std::get_if<Expr<SomeComplex>>(&result->u)}) {
             if (size * 2 > static_cast<std::size_t>(*elementBytes)) {
               return result;
@@ -351,9 +351,9 @@ std::optional<Expr<SomeType>> OffsetToDesignator(FoldingContext &context,
             }
           }
         }
-        if (offset == 0) {
-          return result;
-        }
+      }
+      if (offset == 0) {
+        return result;
       }
     }
   }

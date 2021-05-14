@@ -115,13 +115,18 @@ common::IfNoLvalue<Expr<SomeType>, A> AsGenericExpr(A &&x) {
   }
 }
 
+inline Expr<SomeType> AsGenericExpr(Expr<SomeType> &&x) { return std::move(x); }
+
+// These overloads wrap DataRefs and simple whole variables up into
+// generic expressions if they have a known type.
+std::optional<Expr<SomeType>> AsGenericExpr(DataRef &&);
+std::optional<Expr<SomeType>> AsGenericExpr(const Symbol &);
+
 template <typename A>
 common::IfNoLvalue<Expr<SomeKind<ResultType<A>::category>>, A> AsCategoryExpr(
     A &&x) {
   return Expr<SomeKind<ResultType<A>::category>>{AsExpr(std::move(x))};
 }
-
-inline Expr<SomeType> AsGenericExpr(Expr<SomeType> &&x) { return std::move(x); }
 
 Expr<SomeType> Parenthesize(Expr<SomeType> &&);
 
