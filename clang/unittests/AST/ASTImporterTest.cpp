@@ -5568,15 +5568,15 @@ TEST_P(ASTImporterOptionSpecificTestBase,
   EXPECT_EQ(ImportedX->isAggregate(), FromX->isAggregate());
 }
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, SVEBuiltins,
-                        ::testing::Values(std::vector<std::string>{
-                            "-target", "aarch64-linux-gnu"}), );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, SVEBuiltins,
+                         ::testing::Values(std::vector<std::string>{
+                             "-target", "aarch64-linux-gnu"}));
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, DeclContextTest,
-                        ::testing::Values(std::vector<std::string>()), );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, DeclContextTest,
+                         ::testing::Values(std::vector<std::string>()));
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, CanonicalRedeclChain,
-                        ::testing::Values(std::vector<std::string>()), );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, CanonicalRedeclChain,
+                         ::testing::Values(std::vector<std::string>()));
 
 TEST_P(ASTImporterOptionSpecificTestBase, LambdasAreDifferentiated) {
   Decl *FromTU = getTuDecl(
@@ -6226,8 +6226,8 @@ TEST_P(CTAD, DeductionGuideShouldCopyALocalTypedef) {
   EXPECT_NE(Param->getType()->castAs<TypedefType>()->getDecl(), Typedef);
 }
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, CTAD,
-                        DefaultTestValuesForRunOptions, );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, CTAD,
+                         DefaultTestValuesForRunOptions);
 
 TEST_P(ASTImporterOptionSpecificTestBase, TypedefWithAttribute) {
   Decl *TU = getTuDecl(
@@ -6323,79 +6323,79 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportEnumMemberSpecialization) {
             ToD->getTemplateSpecializationKind());
 }
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, ASTImporterLookupTableTest,
-                        DefaultTestValuesForRunOptions, );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ASTImporterLookupTableTest,
+                         DefaultTestValuesForRunOptions);
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportPath,
-                        ::testing::Values(std::vector<std::string>()), );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportPath,
+                         ::testing::Values(std::vector<std::string>()));
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportExpr,
-                        DefaultTestValuesForRunOptions, );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportExpr,
+                         DefaultTestValuesForRunOptions);
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportFixedPointExpr,
-                        ExtendWithOptions(DefaultTestArrayForRunOptions,
-                                          std::vector<std::string>{
-                                              "-ffixed-point"}), );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportFixedPointExpr,
+                         ExtendWithOptions(DefaultTestArrayForRunOptions,
+                                           std::vector<std::string>{
+                                               "-ffixed-point"}));
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportBlock,
-                        ExtendWithOptions(DefaultTestArrayForRunOptions,
-                                          std::vector<std::string>{
-                                              "-fblocks"}), );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportBlock,
+                         ExtendWithOptions(DefaultTestArrayForRunOptions,
+                                           std::vector<std::string>{
+                                               "-fblocks"}));
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportType,
-                        DefaultTestValuesForRunOptions, );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportType,
+                         DefaultTestValuesForRunOptions);
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportDecl,
-                        DefaultTestValuesForRunOptions, );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportDecl,
+                         DefaultTestValuesForRunOptions);
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, ASTImporterOptionSpecificTestBase,
-                        DefaultTestValuesForRunOptions, );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ASTImporterOptionSpecificTestBase,
+                         DefaultTestValuesForRunOptions);
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, ErrorHandlingTest,
-                        DefaultTestValuesForRunOptions, );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ErrorHandlingTest,
+                         DefaultTestValuesForRunOptions);
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, RedirectingImporterTest,
-                        DefaultTestValuesForRunOptions, );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, RedirectingImporterTest,
+                         DefaultTestValuesForRunOptions);
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportFunctions,
-                        DefaultTestValuesForRunOptions, );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportFunctions,
+                         DefaultTestValuesForRunOptions);
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportAutoFunctions,
-                        DefaultTestValuesForRunOptions, );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportAutoFunctions,
+                         DefaultTestValuesForRunOptions);
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportFunctionTemplates,
-                        DefaultTestValuesForRunOptions, );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportFunctionTemplates,
+                         DefaultTestValuesForRunOptions);
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportFriendFunctionTemplates,
-                        DefaultTestValuesForRunOptions, );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportFriendFunctionTemplates,
+                         DefaultTestValuesForRunOptions);
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportClasses,
-                        DefaultTestValuesForRunOptions, );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportClasses,
+                         DefaultTestValuesForRunOptions);
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportFriendFunctions,
-                        DefaultTestValuesForRunOptions, );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportFriendFunctions,
+                         DefaultTestValuesForRunOptions);
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportFriendClasses,
-                        DefaultTestValuesForRunOptions, );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportFriendClasses,
+                         DefaultTestValuesForRunOptions);
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests,
-                        ImportFunctionTemplateSpecializations,
-                        DefaultTestValuesForRunOptions, );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests,
+                         ImportFunctionTemplateSpecializations,
+                         DefaultTestValuesForRunOptions);
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportImplicitMethods,
-                        DefaultTestValuesForRunOptions, );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportImplicitMethods,
+                         DefaultTestValuesForRunOptions);
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportVariables,
-                        DefaultTestValuesForRunOptions, );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportVariables,
+                         DefaultTestValuesForRunOptions);
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, LLDBLookupTest,
-                        DefaultTestValuesForRunOptions, );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, LLDBLookupTest,
+                         DefaultTestValuesForRunOptions);
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportSourceLocations,
-                        DefaultTestValuesForRunOptions, );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportSourceLocations,
+                         DefaultTestValuesForRunOptions);
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportWithExternalSource,
-                        DefaultTestValuesForRunOptions, );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportWithExternalSource,
+                         DefaultTestValuesForRunOptions);
 
 } // end namespace ast_matchers
 } // end namespace clang

@@ -57,6 +57,7 @@ class SanitizerArgs {
   // True if cross-dso CFI support if provided by the system (i.e. Android).
   bool ImplicitCfiRuntime = false;
   bool NeedsMemProfRt = false;
+  bool HwasanUseAliases = false;
 
 public:
   /// Parses the sanitizer arguments from an argument list.
@@ -68,6 +69,9 @@ public:
   bool needsAsanRt() const { return Sanitizers.has(SanitizerKind::Address); }
   bool needsHwasanRt() const {
     return Sanitizers.has(SanitizerKind::HWAddress);
+  }
+  bool needsHwasanAliasesRt() const {
+    return needsHwasanRt() && HwasanUseAliases;
   }
   bool needsTsanRt() const { return Sanitizers.has(SanitizerKind::Thread); }
   bool needsMsanRt() const { return Sanitizers.has(SanitizerKind::Memory); }

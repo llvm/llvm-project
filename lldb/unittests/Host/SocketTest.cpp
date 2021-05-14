@@ -228,7 +228,7 @@ TEST_P(SocketTest, DomainGetConnectURI) {
 }
 #endif
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SocketTests, SocketTest,
     testing::Values(SocketTestParams{/*is_ipv6=*/false,
                                      /*localhost_ip=*/"127.0.0.1"},

@@ -161,7 +161,6 @@ GTEST_API_ bool InDeathTestChild();
 //   is rarely a problem as people usually don't put the test binary
 //   directory in PATH.
 //
-// FIXME: make thread-safe death tests search the PATH.
 
 // Asserts that a given statement causes the program to exit, with an
 // integer exit status that satisfies predicate, and emitting error output
@@ -170,7 +169,7 @@ GTEST_API_ bool InDeathTestChild();
     GTEST_DEATH_TEST_(statement, predicate, regex, GTEST_FATAL_FAILURE_)
 
 // Like ASSERT_EXIT, but continues on to successive tests in the
-// test case, if any:
+// test suite, if any:
 # define EXPECT_EXIT(statement, predicate, regex) \
     GTEST_DEATH_TEST_(statement, predicate, regex, GTEST_NONFATAL_FAILURE_)
 
@@ -181,7 +180,7 @@ GTEST_API_ bool InDeathTestChild();
     ASSERT_EXIT(statement, ::testing::internal::ExitedUnsuccessfully, regex)
 
 // Like ASSERT_DEATH, but continues on to successive tests in the
-// test case, if any:
+// test suite, if any:
 # define EXPECT_DEATH(statement, regex) \
     EXPECT_EXIT(statement, ::testing::internal::ExitedUnsuccessfully, regex)
 
@@ -228,7 +227,7 @@ class GTEST_API_ KilledBySignal {
 //   return 12;
 // }
 //
-// TEST(TestCase, TestDieOr12WorksInDgbAndOpt) {
+// TEST(TestSuite, TestDieOr12WorksInDgbAndOpt) {
 //   int sideeffect = 0;
 //   // Only asserts in dbg.
 //   EXPECT_DEBUG_DEATH(DieInDebugOr12(&sideeffect), "death");
@@ -277,20 +276,20 @@ class GTEST_API_ KilledBySignal {
 // This macro is used for implementing macros such as
 // EXPECT_DEATH_IF_SUPPORTED and ASSERT_DEATH_IF_SUPPORTED on systems where
 // death tests are not supported. Those macros must compile on such systems
-// iff EXPECT_DEATH and ASSERT_DEATH compile with the same parameters on
-// systems that support death tests. This allows one to write such a macro
-// on a system that does not support death tests and be sure that it will
-// compile on a death-test supporting system. It is exposed publicly so that
-// systems that have death-tests with stricter requirements than
-// GTEST_HAS_DEATH_TEST can write their own equivalent of
-// EXPECT_DEATH_IF_SUPPORTED and ASSERT_DEATH_IF_SUPPORTED.
+// if and only if EXPECT_DEATH and ASSERT_DEATH compile with the same parameters
+// on systems that support death tests. This allows one to write such a macro on
+// a system that does not support death tests and be sure that it will compile
+// on a death-test supporting system. It is exposed publicly so that systems
+// that have death-tests with stricter requirements than GTEST_HAS_DEATH_TEST
+// can write their own equivalent of EXPECT_DEATH_IF_SUPPORTED and
+// ASSERT_DEATH_IF_SUPPORTED.
 //
 // Parameters:
 //   statement -  A statement that a macro such as EXPECT_DEATH would test
 //                for program termination. This macro has to make sure this
 //                statement is compiled but not executed, to ensure that
 //                EXPECT_DEATH_IF_SUPPORTED compiles with a certain
-//                parameter iff EXPECT_DEATH compiles with it.
+//                parameter if and only if EXPECT_DEATH compiles with it.
 //   regex     -  A regex that a macro such as EXPECT_DEATH would use to test
 //                the output of statement.  This parameter has to be
 //                compiled but not evaluated by this macro, to ensure that
