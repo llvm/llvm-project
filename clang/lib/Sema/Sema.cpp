@@ -313,8 +313,7 @@ void Sema::Initialize() {
       // OpenCLC v2.0, s6.13.11.6 requires that atomic_flag is implemented as
       // 32-bit integer and OpenCLC v2.0, s6.1.1 int is always 32-bit wide.
       addImplicitTypedef("atomic_flag", Context.getAtomicType(Context.IntTy));
-      auto AtomicSizeT = Context.getAtomicType(Context.getSizeType());
-      addImplicitTypedef("atomic_size_t", AtomicSizeT);
+
 
       // OpenCL v2.0 s6.13.11.6:
       // - The atomic_long and atomic_ulong types are supported if the
@@ -327,6 +326,23 @@ void Sema::Initialize() {
       //   atomic_intptr_t, atomic_uintptr_t, atomic_size_t and
       //   atomic_ptrdiff_t are supported if the cl_khr_int64_base_atomics and
       //   cl_khr_int64_extended_atomics extensions are supported.
+
+      auto AddPointerSizeDependentTypes = [&]() {
+        auto AtomicSizeT = Context.getAtomicType(Context.getSizeType());
+        auto AtomicIntPtrT = Context.getAtomicType(Context.getIntPtrType());
+        auto AtomicUIntPtrT = Context.getAtomicType(Context.getUIntPtrType());
+        auto AtomicPtrDiffT =
+            Context.getAtomicType(Context.getPointerDiffType());
+        addImplicitTypedef("atomic_size_t", AtomicSizeT);
+        addImplicitTypedef("atomic_intptr_t", AtomicIntPtrT);
+        addImplicitTypedef("atomic_uintptr_t", AtomicUIntPtrT);
+        addImplicitTypedef("atomic_ptrdiff_t", AtomicPtrDiffT);
+      };
+
+      if (Context.getTypeSize(Context.getSizeType()) == 32) {
+        AddPointerSizeDependentTypes();
+      }
+
       std::vector<QualType> Atomic64BitTypes;
       if (getOpenCLOptions().isSupported("cl_khr_int64_base_atomics",
                                          getLangOpts()) &&
@@ -335,35 +351,18 @@ void Sema::Initialize() {
         if (getOpenCLOptions().isSupported("cl_khr_fp64", getLangOpts())) {
           auto AtomicDoubleT = Context.getAtomicType(Context.DoubleTy);
           addImplicitTypedef("atomic_double", AtomicDoubleT);
-          setOpenCLExtensionForType(AtomicDoubleT, "cl_khr_fp64");
           Atomic64BitTypes.push_back(AtomicDoubleT);
         }
         auto AtomicLongT = Context.getAtomicType(Context.LongTy);
         auto AtomicULongT = Context.getAtomicType(Context.UnsignedLongTy);
-        auto AtomicIntPtrT = Context.getAtomicType(Context.getIntPtrType());
-        auto AtomicUIntPtrT = Context.getAtomicType(Context.getUIntPtrType());
-        auto AtomicPtrDiffT =
-            Context.getAtomicType(Context.getPointerDiffType());
-
         addImplicitTypedef("atomic_long", AtomicLongT);
         addImplicitTypedef("atomic_ulong", AtomicULongT);
-        addImplicitTypedef("atomic_intptr_t", AtomicIntPtrT);
-        addImplicitTypedef("atomic_uintptr_t", AtomicUIntPtrT);
-        addImplicitTypedef("atomic_ptrdiff_t", AtomicPtrDiffT);
 
-        Atomic64BitTypes.push_back(AtomicLongT);
-        Atomic64BitTypes.push_back(AtomicULongT);
-        if (Context.getTypeSize(AtomicSizeT) == 64) {
-          Atomic64BitTypes.push_back(AtomicSizeT);
-          Atomic64BitTypes.push_back(AtomicIntPtrT);
-          Atomic64BitTypes.push_back(AtomicUIntPtrT);
-          Atomic64BitTypes.push_back(AtomicPtrDiffT);
+
+        if (Context.getTypeSize(Context.getSizeType()) == 64) {
+          AddPointerSizeDependentTypes();
         }
       }
-
-      for (auto &I : Atomic64BitTypes)
-        setOpenCLExtensionForType(I,
-            "cl_khr_int64_base_atomics cl_khr_int64_extended_atomics");
     }
 
 
