@@ -62,7 +62,7 @@ TEST_P(LinuxProcMapsTestFixture, ParseMapRegions) {
 
 // Note: ConstString("") != ConstString(nullptr)
 // When a region has no name, it will have the latter in the MemoryRegionInfo
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ProcMapTests, LinuxProcMapsTestFixture,
     ::testing::Values(
         // Nothing in nothing out
@@ -125,11 +125,11 @@ INSTANTIATE_TEST_CASE_P(
                     ConstString("[vsyscall]"), MemoryRegionInfo::eDontKnow, 0,
                     MemoryRegionInfo::eDontKnow),
             },
-            "")), );
+            "")));
 
 class LinuxProcSMapsTestFixture : public LinuxProcMapsTestFixture {};
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ProcSMapTests, LinuxProcSMapsTestFixture,
     ::testing::Values(
         // Nothing in nothing out
@@ -253,7 +253,7 @@ INSTANTIATE_TEST_CASE_P(
                                  MemoryRegionInfo::eDontKnow, 0,
                                  MemoryRegionInfo::eDontKnow),
             },
-            "")), );
+            "")));
 
 TEST_P(LinuxProcSMapsTestFixture, ParseSMapRegions) {
   auto params = GetParam();

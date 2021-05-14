@@ -69,6 +69,10 @@ def CC_AArch64_AAPCS : CallingConv<[
   // A SwiftError is passed in X21.
   CCIfSwiftError<CCIfType<[i64], CCAssignToRegWithShadow<[X21], [W21]>>>,
 
+  // Pass SwiftAsync in an otherwise callee saved register so that it will be
+  // preserved for normal function calls.
+  CCIfSwiftAsync<CCIfType<[i64], CCAssignToRegWithShadow<[X22], [W22]>>>,
+
   CCIfConsecutiveRegs<CCCustom<"CC_AArch64_Custom_Block">>,
 
   CCIfType<[nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv2f16, nxv4f16, nxv8f16,
@@ -202,6 +206,10 @@ def CC_AArch64_DarwinPCS : CallingConv<[
 
   // A SwiftError is passed in X21.
   CCIfSwiftError<CCIfType<[i64], CCAssignToRegWithShadow<[X21], [W21]>>>,
+
+  // Pass SwiftAsync in an otherwise callee saved register so that it will be
+  // preserved for normal function calls.
+  CCIfSwiftAsync<CCIfType<[i64], CCAssignToRegWithShadow<[X22], [W22]>>>,
 
   CCIfConsecutiveRegs<CCCustom<"CC_AArch64_Custom_Block">>,
 

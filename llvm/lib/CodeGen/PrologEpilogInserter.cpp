@@ -399,7 +399,8 @@ static void assignCalleeSavedSpillSlots(MachineFunction &F,
 
   const TargetFrameLowering *TFI = F.getSubtarget().getFrameLowering();
   MachineFrameInfo &MFI = F.getFrameInfo();
-  if (!TFI->assignCalleeSavedSpillSlots(F, RegInfo, CSI)) {
+  if (!TFI->assignCalleeSavedSpillSlots(F, RegInfo, CSI, MinCSFrameIndex,
+                                        MaxCSFrameIndex)) {
     // If target doesn't implement this, use generic code.
 
     if (CSI.empty())
@@ -677,10 +678,12 @@ computeFreeStackSlots(MachineFrameInfo &MFI, bool StackGrowsDown,
     // StackSlot scavenging is only implemented for the default stack.
     if (MFI.getStackID(i) == TargetStackID::Default)
       AllocatedFrameSlots.push_back(i);
-  // Add callee-save objects.
-  for (int i = MinCSFrameIndex; i <= (int)MaxCSFrameIndex; ++i)
-    if (MFI.getStackID(i) == TargetStackID::Default)
-      AllocatedFrameSlots.push_back(i);
+  // Add callee-save objects if there are any.
+  if (MinCSFrameIndex <= MaxCSFrameIndex) {
+    for (int i = MinCSFrameIndex; i <= (int)MaxCSFrameIndex; ++i)
+      if (MFI.getStackID(i) == TargetStackID::Default)
+        AllocatedFrameSlots.push_back(i);
+  }
 
   for (int i : AllocatedFrameSlots) {
     // These are converted from int64_t, but they should always fit in int
@@ -833,7 +836,7 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
 
   // First assign frame offsets to stack objects that are used to spill
   // callee saved registers.
-  if (StackGrowsDown) {
+  if (StackGrowsDown && MaxCSFrameIndex >= MinCSFrameIndex) {
     for (unsigned i = MinCSFrameIndex; i <= MaxCSFrameIndex; ++i) {
       if (MFI.getStackID(i) !=
           TargetStackID::Default) // Only allocate objects on the default stack.

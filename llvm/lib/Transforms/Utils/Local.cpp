@@ -111,8 +111,8 @@ static cl::opt<unsigned> PHICSENumPHISmallSize(
         "perform a (faster!) exhaustive search instead of set-driven one."));
 
 // Max recursion depth for collectBitParts used when detecting bswap and
-// bitreverse idioms
-static const unsigned BitPartRecursionMaxDepth = 64;
+// bitreverse idioms.
+static const unsigned BitPartRecursionMaxDepth = 48;
 
 //===----------------------------------------------------------------------===//
 //  Local constant propagation.
@@ -2940,6 +2940,10 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
       if (BitShift.uge(BitWidth))
         return Result;
 
+      // For bswap-only, limit shift amounts to whole bytes, for an early exit.
+      if (!MatchBitReversals && (BitShift.getZExtValue() % 8) != 0)
+        return Result;
+
       const auto &Res =
           collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
       if (!Res)
@@ -3054,6 +3058,10 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
       unsigned ModAmt = C->urem(BitWidth);
       if (cast<IntrinsicInst>(I)->getIntrinsicID() == Intrinsic::fshr)
         ModAmt = BitWidth - ModAmt;
+
+      // For bswap-only, limit shift amounts to whole bytes, for an early exit.
+      if (!MatchBitReversals && (ModAmt % 8) != 0)
+        return Result;
 
       const auto &LHS =
           collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);

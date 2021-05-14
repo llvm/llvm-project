@@ -447,6 +447,12 @@ define void @f75() vscale_range(0,0)
   ret void
 }
 
+; CHECK: define void @f76(i8* swiftasync %0)
+define void @f76(i8* swiftasync %0)
+{
+  ret void;
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { readnone }

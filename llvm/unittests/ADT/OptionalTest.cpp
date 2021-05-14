@@ -727,10 +727,11 @@ TEST(OptionalTest, UseInUnitTests) {
   // Test that we invoke the streaming operators when pretty-printing values in
   // EXPECT macros.
   EXPECT_NONFATAL_FAILURE(EXPECT_EQ(llvm::None, ComparableAndStreamable::get()),
-                          "Expected: llvm::None\n"
-                          "      Which is: None\n"
-                          "To be equal to: ComparableAndStreamable::get()\n"
-                          "      Which is: ComparableAndStreamable");
+                          "Expected equality of these values:\n"
+                          "  llvm::None\n"
+                          "    Which is: None\n"
+                          "  ComparableAndStreamable::get()\n"
+                          "    Which is: ComparableAndStreamable");
 
   // Test that it is still possible to compare objects which do not have a
   // custom streaming operator.

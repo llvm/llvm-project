@@ -92,6 +92,24 @@ TEST(Modules, Diagnostic) {
   TU.build();
 }
 
+// Unknown module formats are a fatal failure for clang. Ensure we don't crash.
+TEST(Modules, UnknownFormat) {
+  TestTU TU = TestTU::withCode(R"(#include "modular.h")");
+  TU.OverlayRealFileSystemForModules = true;
+  TU.ExtraArgs.push_back("-Xclang");
+  TU.ExtraArgs.push_back("-fmodule-format=obj");
+  TU.ExtraArgs.push_back("-fmodule-map-file=" + testPath("m.modulemap"));
+  TU.ExtraArgs.push_back("-fmodules");
+  TU.ExtraArgs.push_back("-fimplicit-modules");
+  TU.AdditionalFiles["modular.h"] = "";
+  TU.AdditionalFiles["m.modulemap"] = R"modulemap(
+    module M {
+      header "modular.h"
+    })modulemap";
+
+  // Test that we do not crash.
+  TU.build();
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

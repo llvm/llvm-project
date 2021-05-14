@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -527,11 +528,6 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
   }
 
   if (!RestrRegs.empty()) {
-    unsigned BufNum = addInlineAsmDiagBuffer(OS.str(), LocMD);
-    auto &SrcMgr = *MMI->getContext().getInlineSourceManager();
-    SMLoc Loc = SMLoc::getFromPointer(
-        SrcMgr.getMemoryBuffer(BufNum)->getBuffer().begin());
-
     std::string Msg = "inline asm clobber list contains reserved registers: ";
     ListSeparator LS;
     for (const Register &RR : RestrRegs) {
@@ -542,8 +538,10 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
         "Reserved registers on the clobber list may not be "
         "preserved across the asm statement, and clobbering them may "
         "lead to undefined behaviour.";
-    SrcMgr.PrintMessage(Loc, SourceMgr::DK_Warning, Msg);
-    SrcMgr.PrintMessage(Loc, SourceMgr::DK_Note, Note);
+    MMI->getModule()->getContext().diagnose(DiagnosticInfoInlineAsm(
+        LocCookie, Msg.c_str(), DiagnosticSeverity::DS_Warning));
+    MMI->getModule()->getContext().diagnose(
+        DiagnosticInfoInlineAsm(LocCookie, Note, DiagnosticSeverity::DS_Note));
   }
 
   emitInlineAsm(OS.str(), getSubtargetInfo(), TM.Options.MCOptions, LocMD,

@@ -118,7 +118,7 @@ TEST_P(ARMCPUTestFixture, ARMCPUTests) {
 // we expect. This is because the default extensions for a CPU are the sum
 // of the default extensions for its architecture and for the CPU.
 // So if a CPU has no extra extensions, it adds AEK_NONE.
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ARMCPUTestsPart1, ARMCPUTestFixture,
     ::testing::Values(
         ARMCPUTestParams("invalid", "invalid", "invalid", ARM::AEK_NONE, ""),
@@ -194,11 +194,11 @@ INSTANTIATE_TEST_CASE_P(
                              ARM::AEK_SEC | ARM::AEK_VIRT | ARM::AEK_DSP,
                          "7-A"),
         ARMCPUTestParams("cortex-a8", "armv7-a", "neon",
-                         ARM::AEK_SEC | ARM::AEK_DSP, "7-A")), );
+                         ARM::AEK_SEC | ARM::AEK_DSP, "7-A")));
 
 // gtest in llvm has a limit of 50 test cases when using ::Values so we split
 // them into 2 blocks
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ARMCPUTestsPart2, ARMCPUTestFixture,
     ::testing::Values(
         ARMCPUTestParams("cortex-a9", "armv7-a", "neon-fp16",
@@ -309,10 +309,9 @@ INSTANTIATE_TEST_CASE_P(
                              ARM::AEK_FP16 | ARM::AEK_RAS | ARM::AEK_DOTPROD,
                          "8.2-A"),
         ARMCPUTestParams("cortex-a78c", "armv8.2-a", "crypto-neon-fp-armv8",
-                         ARM::AEK_SEC | ARM::AEK_MP |
-                             ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
-                             ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP |
-                             ARM::AEK_CRC | ARM::AEK_RAS |
+                         ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
+                             ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
+                             ARM::AEK_DSP | ARM::AEK_CRC | ARM::AEK_RAS |
                              ARM::AEK_FP16 | ARM::AEK_DOTPROD,
                          "8.2-A"),
         ARMCPUTestParams("cortex-a77", "armv8.2-a", "crypto-neon-fp-armv8",
@@ -390,7 +389,7 @@ INSTANTIATE_TEST_CASE_P(
         ARMCPUTestParams("xscale", "xscale", "none", ARM::AEK_NONE, "xscale"),
         ARMCPUTestParams("swift", "armv7s", "neon-vfpv4",
                          ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
-                         "7-S")), );
+                         "7-S")));
 
 static constexpr unsigned NumARMCPUArchs = 92;
 
@@ -876,7 +875,7 @@ TEST_P(AArch64CPUTestFixture, testAArch64CPU) {
   EXPECT_EQ(params.CPUAttr, AArch64::getCPUAttr(AK));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     AArch64CPUTests, AArch64CPUTestFixture,
     ::testing::Values(
         ARMCPUTestParams("invalid", "invalid", "invalid", AArch64::AEK_NONE,
@@ -1180,7 +1179,7 @@ INSTANTIATE_TEST_CASE_P(
                              AArch64::AEK_FP | AArch64::AEK_SIMD |
                              AArch64::AEK_FP16 | AArch64::AEK_RAS |
                              AArch64::AEK_LSE | AArch64::AEK_RDM,
-                         "8.2-A")), );
+                         "8.2-A")));
 
 static constexpr unsigned NumAArch64CPUArchs = 48;
 

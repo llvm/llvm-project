@@ -1041,8 +1041,8 @@ TEST_F(SparseInstrProfTest, preserve_no_records) {
   ASSERT_TRUE(I == E);
 }
 
-INSTANTIATE_TEST_CASE_P(MaybeSparse, MaybeSparseInstrProfTest,
-                        ::testing::Bool(),);
+INSTANTIATE_TEST_SUITE_P(MaybeSparse, MaybeSparseInstrProfTest,
+                         ::testing::Bool());
 
 #if defined(_LP64) && defined(EXPENSIVE_CHECKS)
 TEST(ProfileReaderTest, ReadsLargeFiles) {

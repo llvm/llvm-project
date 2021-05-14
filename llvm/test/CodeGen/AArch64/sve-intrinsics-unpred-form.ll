@@ -377,6 +377,54 @@ define <vscale x 2 x i64> @and_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
 }
 
 ;
+; BIC
+;
+
+define <vscale x 16 x i8> @bic_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
+; CHECK-LABEL: bic_i8:
+; CHECK: bic z0.d, z0.d, z1.d
+; CHECK-NEXT: ret
+  %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.bic.nxv16i8(<vscale x 16 x i1> %pg,
+                                                               <vscale x 16 x i8> %a,
+                                                               <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %out
+}
+
+define <vscale x 8 x i16> @bic_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
+; CHECK-LABEL: bic_i16:
+; CHECK: bic z0.d, z0.d, z1.d
+; CHECK-NEXT: ret
+  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.bic.nxv8i16(<vscale x 8 x i1> %pg,
+                                                               <vscale x 8 x i16> %a,
+                                                               <vscale x 8 x i16> %b)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @bic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
+; CHECK-LABEL: bic_i32:
+; CHECK: bic z0.d, z0.d, z1.d
+; CHECK-NEXT: ret
+  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.bic.nxv4i32(<vscale x 4 x i1> %pg,
+                                                               <vscale x 4 x i32> %a,
+                                                               <vscale x 4 x i32> %b)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @bic_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
+; CHECK-LABEL: bic_i64:
+; CHECK: bic z0.d, z0.d, z1.d
+; CHECK-NEXT: ret
+  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.bic.nxv2i64(<vscale x 2 x i1> %pg,
+                                                               <vscale x 2 x i64> %a,
+                                                               <vscale x 2 x i64> %b)
+  ret <vscale x 2 x i64> %out
+}
+
+;
 ; EOR
 ;
 
@@ -1044,6 +1092,11 @@ declare <vscale x 16 x  i8> @llvm.aarch64.sve.and.nxv16i8(<vscale x 16 x i1>, <v
 declare <vscale x  8 x i16> @llvm.aarch64.sve.and.nxv8i16(<vscale x  8 x i1>, <vscale x  8 x i16>, <vscale x  8 x i16>)
 declare <vscale x  4 x i32> @llvm.aarch64.sve.and.nxv4i32(<vscale x  4 x i1>, <vscale x  4 x i32>, <vscale x  4 x i32>)
 declare <vscale x  2 x i64> @llvm.aarch64.sve.and.nxv2i64(<vscale x  2 x i1>, <vscale x  2 x i64>, <vscale x  2 x i64>)
+
+declare <vscale x 16 x  i8> @llvm.aarch64.sve.bic.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x  i8>, <vscale x 16 x  i8>)
+declare <vscale x  8 x i16> @llvm.aarch64.sve.bic.nxv8i16(<vscale x  8 x i1>, <vscale x  8 x i16>, <vscale x  8 x i16>)
+declare <vscale x  4 x i32> @llvm.aarch64.sve.bic.nxv4i32(<vscale x  4 x i1>, <vscale x  4 x i32>, <vscale x  4 x i32>)
+declare <vscale x  2 x i64> @llvm.aarch64.sve.bic.nxv2i64(<vscale x  2 x i1>, <vscale x  2 x i64>, <vscale x  2 x i64>)
 
 declare <vscale x 16 x  i8> @llvm.aarch64.sve.eor.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x  i8>, <vscale x 16 x  i8>)
 declare <vscale x  8 x i16> @llvm.aarch64.sve.eor.nxv8i16(<vscale x  8 x i1>, <vscale x  8 x i16>, <vscale x  8 x i16>)

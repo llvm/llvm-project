@@ -696,6 +696,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(speculative_load_hardening);
   KEYWORD(swifterror);
   KEYWORD(swiftself);
+  KEYWORD(swiftasync);
   KEYWORD(uwtable);
   KEYWORD(vscale_range);
   KEYWORD(willreturn);

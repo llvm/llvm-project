@@ -239,6 +239,7 @@ enum Kind {
   kw_strictfp,
   kw_swifterror,
   kw_swiftself,
+  kw_swiftasync,
   kw_uwtable,
   kw_vscale_range,
   kw_willreturn,

@@ -1,7 +1,7 @@
 LLVM notes
 ----------
 
-This directory contains Google Test 1.8.0, with all elements removed except for
+This directory contains Google Test 1.10.0, with all elements removed except for
 the actual source code, to minimize the addition to the LLVM distribution.
 
 Cleaned up as follows:
@@ -18,3 +18,4 @@ $ mv LICENSE LICENSE.TXT
 Modified as follows:
 * Added support for NetBSD, Minix and Haiku.
 * Added raw_os_ostream support to include/gtest/internal/custom/gtest-printers.h.
+* Added StringRef support to include/gtest/internal/custom/gtest-printers.h.

@@ -1,7 +1,4 @@
 add_compiler_rt_component(scudo_standalone)
-if (COMPILER_RT_HAS_GWP_ASAN)
-  add_dependencies(scudo_standalone gwp_asan)
-endif()
 
 include_directories(../.. include)
 
@@ -24,13 +21,6 @@ append_list_if(COMPILER_RT_HAS_WNO_PEDANTIC -Wno-pedantic SCUDO_CFLAGS)
 
 # FIXME: find cleaner way to agree with GWPAsan flags
 append_list_if(COMPILER_RT_HAS_FNO_LTO_FLAG -fno-lto SCUDO_CFLAGS)
-
-if (COMPILER_RT_HAS_GWP_ASAN)
-  append_list_if(COMPILER_RT_HAS_OMIT_FRAME_POINTER_FLAG -fno-omit-frame-pointer
-                SCUDO_CFLAGS)
-  append_list_if(COMPILER_RT_HAS_OMIT_FRAME_POINTER_FLAG
-                -mno-omit-leaf-frame-pointer SCUDO_CFLAGS)
-endif() # COMPILER_RT_HAS_GWP_ASAN
 
 if(COMPILER_RT_DEBUG)
   list(APPEND SCUDO_CFLAGS -O0)
@@ -126,9 +116,13 @@ set(SCUDO_SOURCES_CXX_WRAPPERS
 set(SCUDO_OBJECT_LIBS)
 
 if (COMPILER_RT_HAS_GWP_ASAN)
+  add_dependencies(scudo_standalone gwp_asan)
   list(APPEND SCUDO_OBJECT_LIBS
-       RTGwpAsan RTGwpAsanBacktraceLibc RTGwpAsanSegvHandler)
-  list(APPEND SCUDO_CFLAGS -DGWP_ASAN_HOOKS)
+       RTGwpAsan RTGwpAsanBacktraceLibc RTGwpAsanSegvHandler
+       RTGwpAsanOptionsParser)
+
+  list(APPEND SCUDO_CFLAGS -DGWP_ASAN_HOOKS -fno-omit-frame-pointer
+                           -mno-omit-leaf-frame-pointer)
 endif()
 
 set(SCUDO_LINK_LIBS)
@@ -168,7 +162,6 @@ if(COMPILER_RT_HAS_SCUDO_STANDALONE)
     SOURCES ${SCUDO_SOURCES_CXX_WRAPPERS}
     ADDITIONAL_HEADERS ${SCUDO_HEADERS}
     CFLAGS ${SCUDO_CFLAGS}
-    OBJECT_LIBS ${SCUDO_OBJECT_LIBS}
     PARENT_TARGET scudo_standalone)
 
   add_compiler_rt_runtime(clang_rt.scudo_standalone

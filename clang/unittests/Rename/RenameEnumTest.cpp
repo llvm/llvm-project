@@ -26,7 +26,7 @@ public:
   }
 };
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     RenameEnumTests, RenameEnumTest,
     testing::ValuesIn(std::vector<Case>({
         {"void f(a::A2 arg) { a::A2 t = a::A2::Blue; }",
@@ -142,7 +142,7 @@ INSTANTIATE_TEST_CASE_P(
          "struct Foo { template <typename T> T foo(); }; void g() { Foo f;  "
          "f.foo<b::B2>(); }",
          "a::A2", "b::B2"},
-    })), );
+    })) );
 
 TEST_P(RenameEnumTest, RenameEnums) {
   auto Param = GetParam();

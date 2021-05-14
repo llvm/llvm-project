@@ -31,7 +31,7 @@ Vector registers. There are 256 32-bit vector registers.
 
 A sequence of *vector* registers may be used to operate with more than 32 bits of data.
 
-Assembler currently supports sequences of 1, 2, 3, 4, 8 and 16 *vector* registers.
+Assembler currently supports sequences of 1, 2, 3, 4, 5, 6, 8, 16 and 32 *vector* registers.
 
     =================================================== ====================================================================
     Syntax                                              Description
@@ -61,7 +61,10 @@ Note: *N* and *K* must satisfy the following conditions:
 * *N* <= *K*.
 * 0 <= *N* <= 255.
 * 0 <= *K* <= 255.
-* *K-N+1* must be equal to 1, 2, 3, 4, 8 or 16.
+* *K-N+1* must be equal to 1, 2, 3, 4, 5, 6, 8, 16 or 32.
+
+GFX90A has an additional alignment requirement: pairs of *vector* registers must be even-aligned
+(first register must be even).
 
 Examples:
 
@@ -111,7 +114,7 @@ Accumulator registers. There are 256 32-bit accumulator registers.
 
 A sequence of *accumulator* registers may be used to operate with more than 32 bits of data.
 
-Assembler currently supports sequences of 1, 2, 4 and 16 *accumulator* registers.
+Assembler currently supports sequences of 1, 2, 3, 4, 5, 6, 8, 16 and 32 *accumulator* registers.
 
     =================================================== ========================================================= ====================================================================
     Syntax                                              An Alternative Syntax (SP3)                               Description
@@ -141,7 +144,10 @@ Note: *N* and *K* must satisfy the following conditions:
 * *N* <= *K*.
 * 0 <= *N* <= 255.
 * 0 <= *K* <= 255.
-* *K-N+1* must be equal to 1, 2, 4 or 16.
+* *K-N+1* must be equal to 1, 2, 3, 4, 5, 6, 8, 16 or 32.
+
+GFX90A has an additional alignment requirement: pairs of *accumulator* registers must be even-aligned
+(first register must be even).
 
 Examples:
 
@@ -179,9 +185,9 @@ Scalar 32-bit registers. The number of available *scalar* registers depends on G
     ======= ============================
 
 A sequence of *scalar* registers may be used to operate with more than 32 bits of data.
-Assembler currently supports sequences of 1, 2, 4, 8 and 16 *scalar* registers.
+Assembler currently supports sequences of 1, 2, 4, 8, 16 and 32 *scalar* registers.
 
-Pairs of *scalar* registers must be even-aligned (the first register must be even).
+Pairs of *scalar* registers must be even-aligned (first register must be even).
 Sequences of 4 and more *scalar* registers must be quad-aligned.
 
     ======================================================== ====================================================================
@@ -215,7 +221,7 @@ Note: *N* and *K* must satisfy the following conditions:
 * *N* <= *K*.
 * 0 <= *N* < *SMAX*\ , where *SMAX* is the number of available *scalar* registers.
 * 0 <= *K* < *SMAX*\ , where *SMAX* is the number of available *scalar* registers.
-* *K-N+1* must be equal to 1, 2, 4, 8 or 16.
+* *K-N+1* must be equal to 1, 2, 4, 8, 16 or 32.
 
 Examples:
 
@@ -269,7 +275,7 @@ The number of available *ttmp* registers depends on GPU:
 A sequence of *ttmp* registers may be used to operate with more than 32 bits of data.
 Assembler currently supports sequences of 1, 2, 4, 8 and 16 *ttmp* registers.
 
-Pairs of *ttmp* registers must be even-aligned (the first register must be even).
+Pairs of *ttmp* registers must be even-aligned (first register must be even).
 Sequences of 4 and more *ttmp* registers must be quad-aligned.
 
     ============================================================= ====================================================================
@@ -413,9 +419,10 @@ registers in GFX10, but *flat_scratch* is readable/writable with the help of
 *s_get_reg* and *s_set_reg* instructions.
 
 .. _amdgpu_synid_xnack:
+.. _amdgpu_synid_xnack_mask:
 
-xnack
------
+xnack_mask
+----------
 
 Xnack mask, 64-bits wide. Holds a 64-bit mask of which threads
 received an *XNACK* due to a vector memory operation.
@@ -711,18 +718,6 @@ or an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
 
 The value must be in the range 0..0xFFFFF.
 
-.. _amdgpu_synid_uimm21:
-
-uimm21
-------
-
-A 21-bit :ref:`integer number<amdgpu_synid_integer_number>`
-or an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
-
-The value must be in the range 0..0x1FFFFF.
-
-.. WARNING:: Assembler currently supports 20-bit offsets only. Use :ref:`uimm20<amdgpu_synid_uimm20>` as a replacement.
-
 .. _amdgpu_synid_simm21:
 
 simm21
@@ -732,8 +727,6 @@ A 21-bit :ref:`integer number<amdgpu_synid_integer_number>`
 or an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
 
 The value must be in the range -0x100000..0x0FFFFF.
-
-.. WARNING:: Assembler currently supports 20-bit unsigned offsets only. Use :ref:`uimm20<amdgpu_synid_uimm20>` as a replacement.
 
 .. _amdgpu_synid_off:
 

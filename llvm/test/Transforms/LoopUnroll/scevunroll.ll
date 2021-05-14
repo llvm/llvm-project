@@ -10,7 +10,6 @@
 define i32 @sansCanonical(i32* %base) nounwind {
 ; CHECK-LABEL: @sansCanonical(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 0 to i64
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[ADR:%.*]] = getelementptr inbounds i32, i32* [[BASE:%.*]], i64 9
@@ -39,7 +38,6 @@ define i32 @sansCanonical(i32* %base) nounwind {
 ; CHECK-NEXT:    [[ADR_8:%.*]] = getelementptr inbounds i32, i32* [[BASE]], i64 1
 ; CHECK-NEXT:    [[TMP_8:%.*]] = load i32, i32* [[ADR_8]], align 8
 ; CHECK-NEXT:    [[SUM_NEXT_8:%.*]] = add i32 [[SUM_NEXT_7]], [[TMP_8]]
-; CHECK-NEXT:    [[TMP_9:%.*]] = load i32, i32* [[BASE]], align 8
 ; CHECK-NEXT:    ret i32 [[SUM_NEXT_8]]
 ;
 entry:

@@ -953,8 +953,13 @@ static void readConfigs(opt::InputArgList &args) {
                    OPT_no_allow_multiple_definition, false) ||
       hasZOption(args, "muldefs");
   config->auxiliaryList = args::getStrings(args, OPT_auxiliary);
-  config->bsymbolic = args.hasArg(OPT_Bsymbolic);
-  config->bsymbolicFunctions = args.hasArg(OPT_Bsymbolic_functions);
+  if (opt::Arg *arg = args.getLastArg(OPT_Bno_symbolic, OPT_Bsymbolic_functions,
+                                      OPT_Bsymbolic)) {
+    if (arg->getOption().matches(OPT_Bsymbolic_functions))
+      config->bsymbolicFunctions = true;
+    else if (arg->getOption().matches(OPT_Bsymbolic))
+      config->bsymbolic = true;
+  }
   config->checkSections =
       args.hasFlag(OPT_check_sections, OPT_no_check_sections, true);
   config->chroot = args.getLastArgValue(OPT_chroot);
@@ -1316,8 +1321,7 @@ static void readConfigs(opt::InputArgList &args) {
   // When producing an executable, --dynamic-list specifies non-local defined
   // symbols which are required to be exported. When producing a shared object,
   // symbols not specified by --dynamic-list are non-preemptible.
-  config->symbolic =
-      args.hasArg(OPT_Bsymbolic) || args.hasArg(OPT_dynamic_list);
+  config->symbolic = config->bsymbolic || args.hasArg(OPT_dynamic_list);
   for (auto *arg : args.filtered(OPT_dynamic_list))
     if (Optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
       readDynamicList(*buffer);

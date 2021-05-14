@@ -263,7 +263,7 @@ void initializePollyPasses(PassRegistry &Registry) {
   initializeScopInlinerPass(Registry);
   initializeScopInfoRegionPassPass(Registry);
   initializeScopInfoWrapperPassPass(Registry);
-  initializeRewriteByrefParamsPass(Registry);
+  initializeRewriteByrefParamsWrapperPassPass(Registry);
   initializeCodegenCleanupPass(Registry);
   initializeFlattenSchedulePass(Registry);
   initializeForwardOpTreeWrapperPassPass(Registry);
@@ -429,6 +429,7 @@ registerPollyEarlyAsPossiblePasses(const llvm::PassManagerBuilder &Builder,
     return;
 
   registerCanonicalicationPasses(PM);
+  PM.add(polly::createCodePreparationPass());
   registerPollyPasses(PM, EnableForOpt);
 }
 
@@ -466,13 +467,17 @@ registerPollyScalarOptimizerLatePasses(const llvm::PassManagerBuilder &Builder,
     PM.add(createCodegenCleanupPass());
 }
 
-static void buildDefaultPollyPipeline(FunctionPassManager &PM,
-                                      PassBuilder::OptimizationLevel Level) {
-  bool EnableForOpt =
-      shouldEnablePollyForOptimization() && Level.isOptimizingForSpeed();
-  if (!shouldEnablePollyForDiagnostic() && !EnableForOpt)
-    return;
-
+/// Add the pass sequence required for Polly to the New Pass Manager.
+///
+/// @param PM           The pass manager itself.
+/// @param Level        The optimization level. Used for the cleanup of Polly's
+///                     output.
+/// @param EnableForOpt Whether to add Polly IR transformations. If False, only
+///                     the analysis passes are added, skipping Polly itself.
+///                     The IR may still be modified.
+static void buildCommonPollyPipeline(FunctionPassManager &PM,
+                                     PassBuilder::OptimizationLevel Level,
+                                     bool EnableForOpt) {
   PassBuilder PB;
   ScopPassManager SPM;
 
@@ -581,6 +586,43 @@ static void buildDefaultPollyPipeline(FunctionPassManager &PM,
 
   if (CFGPrinter)
     PM.addPass(llvm::CFGPrinterPass());
+}
+
+static void buildEarlyPollyPipeline(ModulePassManager &MPM,
+                                    PassBuilder::OptimizationLevel Level) {
+  bool EnableForOpt =
+      shouldEnablePollyForOptimization() && Level.isOptimizingForSpeed();
+  if (!shouldEnablePollyForDiagnostic() && !EnableForOpt)
+    return;
+
+  FunctionPassManager FPM = buildCanonicalicationPassesForNPM(MPM, Level);
+
+  if (DumpBefore)
+    report_fatal_error("Option -polly-dump-before not supported with NPM",
+                       false);
+  if (!DumpBeforeFile.empty())
+    report_fatal_error("Option -polly-dump-before-file not supported with NPM",
+                       false);
+
+  buildCommonPollyPipeline(FPM, Level, EnableForOpt);
+  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+}
+
+static void buildLatePollyPipeline(FunctionPassManager &PM,
+                                   PassBuilder::OptimizationLevel Level) {
+  bool EnableForOpt =
+      shouldEnablePollyForOptimization() && Level.isOptimizingForSpeed();
+  if (!shouldEnablePollyForDiagnostic() && !EnableForOpt)
+    return;
+
+  if (DumpBefore)
+    report_fatal_error("Option -polly-dump-before not supported with NPM",
+                       false);
+  if (!DumpBeforeFile.empty())
+    report_fatal_error("Option -polly-dump-before-file not supported with NPM",
+                       false);
+
+  buildCommonPollyPipeline(PM, Level, EnableForOpt);
 }
 
 /// Register Polly to be available as an optimizer
@@ -776,9 +818,20 @@ void registerPollyPasses(PassBuilder &PB) {
         return parseTopLevelPipeline(MPM, PIC, Pipeline);
       });
 
-  if (PassPosition != POSITION_BEFORE_VECTORIZER)
-    report_fatal_error("Option -polly-position not supported with NPM", false);
-  PB.registerVectorizerStartEPCallback(buildDefaultPollyPipeline);
+  switch (PassPosition) {
+  case POSITION_EARLY:
+    PB.registerPipelineStartEPCallback(buildEarlyPollyPipeline);
+    break;
+  case POSITION_AFTER_LOOPOPT:
+    report_fatal_error(
+        "Option -polly-position=after-loopopt not supported with NPM", false);
+    break;
+  case POSITION_BEFORE_VECTORIZER:
+    PB.registerVectorizerStartEPCallback(buildLatePollyPipeline);
+    break;
+  default:
+    llvm_unreachable("Unknown -polly-position option");
+  }
 }
 } // namespace polly
 

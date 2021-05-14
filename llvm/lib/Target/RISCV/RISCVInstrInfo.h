@@ -145,7 +145,7 @@ public:
 
   Register getVLENFactoredAmount(MachineFunction &MF, MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator II,
-                                 int64_t Amount) const;
+                                 const DebugLoc &DL, int64_t Amount) const;
 
   Optional<std::pair<unsigned, unsigned>>
   isRVVSpillForZvlsseg(unsigned Opcode) const;

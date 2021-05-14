@@ -1,14 +1,15 @@
-; RUN: opt < %s -wasm-lower-em-ehsjlj -S | FileCheck %s --check-prefixes=CHECK,NO-TLS
-; RUN: opt < %s -wasm-lower-em-ehsjlj -S --mattr=+atomics,+bulk-memory | FileCheck %s --check-prefixes=CHECK,TLS
+; RUN: opt < %s -wasm-lower-em-ehsjlj -S | FileCheck %s --check-prefixes=CHECK,NO-TLS -DPTR=i32
+; RUN: opt < %s -wasm-lower-em-ehsjlj -S --mattr=+atomics,+bulk-memory | FileCheck %s --check-prefixes=CHECK,TLS -DPTR=i32
+; RUN: opt < %s -wasm-lower-em-ehsjlj --mtriple=wasm64-unknown-unknown -data-layout="e-m:e-p:64:64-i64:64-n32:64-S128" -S | FileCheck %s --check-prefixes=CHECK -DPTR=i64
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 @_ZTIi = external constant i8*
 @_ZTIc = external constant i8*
-; NO-TLS-DAG: __THREW__ = external global i32
+; NO-TLS-DAG: __THREW__ = external global [[PTR]]
 ; NO-TLS-DAG: __threwValue = external global i32
-; TLS-DAG: __THREW__ = external thread_local(localexec) global i32
+; TLS-DAG: __THREW__ = external thread_local(localexec) global [[PTR]]
 ; TLS-DAG: __threwValue = external thread_local(localexec) global i32
 
 ; Test invoke instruction with clauses (try-catch block)
@@ -18,11 +19,11 @@ entry:
   invoke void @foo(i32 3)
           to label %invoke.cont unwind label %lpad
 ; CHECK: entry:
-; CHECK-NEXT: store i32 0, i32* @__THREW__
+; CHECK-NEXT: store [[PTR]] 0, [[PTR]]* @__THREW__
 ; CHECK-NEXT: call cc{{.*}} void @__invoke_void_i32(void (i32)* @foo, i32 3)
-; CHECK-NEXT: %[[__THREW__VAL:.*]] = load i32, i32* @__THREW__
-; CHECK-NEXT: store i32 0, i32* @__THREW__
-; CHECK-NEXT: %cmp = icmp eq i32 %[[__THREW__VAL]], 1
+; CHECK-NEXT: %[[__THREW__VAL:.*]] = load [[PTR]], [[PTR]]* @__THREW__
+; CHECK-NEXT: store [[PTR]] 0, [[PTR]]* @__THREW__
+; CHECK-NEXT: %cmp = icmp eq [[PTR]] %[[__THREW__VAL]], 1
 ; CHECK-NEXT: br i1 %cmp, label %lpad, label %invoke.cont
 
 invoke.cont:                                      ; preds = %entry
@@ -74,11 +75,11 @@ entry:
   invoke void @foo(i32 3)
           to label %invoke.cont unwind label %lpad
 ; CHECK: entry:
-; CHECK-NEXT: store i32 0, i32* @__THREW__
+; CHECK-NEXT: store [[PTR]] 0, [[PTR]]* @__THREW__
 ; CHECK-NEXT: call cc{{.*}} void @__invoke_void_i32(void (i32)* @foo, i32 3)
-; CHECK-NEXT: %[[__THREW__VAL:.*]] = load i32, i32* @__THREW__
-; CHECK-NEXT: store i32 0, i32* @__THREW__
-; CHECK-NEXT: %cmp = icmp eq i32 %[[__THREW__VAL]], 1
+; CHECK-NEXT: %[[__THREW__VAL:.*]] = load [[PTR]], [[PTR]]* @__THREW__
+; CHECK-NEXT: store [[PTR]] 0, [[PTR]]* @__THREW__
+; CHECK-NEXT: %cmp = icmp eq [[PTR]] %[[__THREW__VAL]], 1
 ; CHECK-NEXT: br i1 %cmp, label %lpad, label %invoke.cont
 
 invoke.cont:                                      ; preds = %entry
@@ -125,7 +126,7 @@ entry:
   %0 = invoke noalias i8* @bar(i8 signext 1, i8 zeroext 2)
           to label %invoke.cont unwind label %lpad
 ; CHECK: entry:
-; CHECK-NEXT: store i32 0, i32* @__THREW__
+; CHECK-NEXT: store [[PTR]] 0, [[PTR]]* @__THREW__
 ; CHECK-NEXT: %0 = call cc{{.*}} noalias i8* @"__invoke_i8*_i8_i8"(i8* (i8, i8)* @bar, i8 signext 1, i8 zeroext 2)
 
 invoke.cont:                                      ; preds = %entry
