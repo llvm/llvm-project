@@ -715,15 +715,17 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
   if (STI.getFeatureBits()[AMDGPU::FeatureGFX10]) {
     unsigned DimIdx =
         AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::dim);
+    int A16Idx =
+        AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::a16);
     const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
         AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
     const AMDGPU::MIMGDimInfo *Dim =
         AMDGPU::getMIMGDimInfoByEncoding(MI.getOperand(DimIdx).getImm());
+    const bool IsA16 = (A16Idx != -1 && MI.getOperand(A16Idx).getImm());
 
-    AddrSize = BaseOpcode->NumExtraArgs +
-               (BaseOpcode->Gradients ? Dim->NumGradients : 0) +
-               (BaseOpcode->Coordinates ? Dim->NumCoords : 0) +
-               (BaseOpcode->LodOrClampOrMip ? 1 : 0);
+    AddrSize =
+        AMDGPU::getAddrSizeMIMGOp(BaseOpcode, Dim, IsA16, AMDGPU::hasG16(STI));
+
     IsNSA = Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA;
     if (!IsNSA) {
       if (AddrSize > 8)
