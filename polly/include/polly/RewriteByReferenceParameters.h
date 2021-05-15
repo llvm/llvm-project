@@ -26,7 +26,7 @@ struct RewriteByrefParamsPass : llvm::PassInfoMixin<RewriteByrefParamsPass> {
   RewriteByrefParamsPass() {}
 
   llvm::PreservedAnalyses run(llvm::Function &F,
-    llvm::FunctionAnalysisManager &FAM);
+                              llvm::FunctionAnalysisManager &FAM);
 };
 
 } // namespace polly
