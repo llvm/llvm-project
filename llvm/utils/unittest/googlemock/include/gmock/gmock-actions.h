@@ -58,6 +58,13 @@
 # pragma warning(disable:4100)
 #endif
 
+#ifdef __clang__
+#if __has_warning("-Wdeprecated-copy")
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-copy"
+#endif
+#endif
+
 namespace testing {
 
 // To implement an action Foo, define:
@@ -1135,6 +1142,12 @@ inline ::std::reference_wrapper<T> ByRef(T& l_value) {  // NOLINT
 }
 
 }  // namespace testing
+
+#ifdef __clang__
+#if __has_warning("-Wdeprecated-copy")
+#pragma clang diagnostic pop
+#endif
+#endif
 
 #ifdef _MSC_VER
 # pragma warning(pop)
