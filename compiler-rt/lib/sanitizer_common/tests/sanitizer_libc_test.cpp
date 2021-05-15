@@ -218,9 +218,9 @@ TEST_P(SanitizerCommonFileTest, ReadFileToVectorHalf) {
   EXPECT_EQ(data_, std::vector<char>(buff.begin(), buff.end()));
 }
 
-INSTANTIATE_TEST_CASE_P(FileSizes, SanitizerCommonFileTest,
-                        ::testing::Values(0, 1, 7, 13, 32, 4096, 4097, 1048575,
-                                          1048576, 1048577));
+INSTANTIATE_TEST_SUITE_P(FileSizes, SanitizerCommonFileTest,
+                         ::testing::Values(0, 1, 7, 13, 32, 4096, 4097, 1048575,
+                                           1048576, 1048577));
 
 static const size_t kStrlcpyBufSize = 8;
 void test_internal_strlcpy(char *dbuf, const char *sbuf) {
