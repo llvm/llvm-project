@@ -480,6 +480,10 @@ public:
   /// Return true if it is legal to hoist instructions into this block.
   bool isLegalToHoistInto() const;
 
+  /// Return true if this is the entry block of the containing function.
+  /// This method can only be used on blocks that have a parent function.
+  bool isEntryBlock() const;
+
   Optional<uint64_t> getIrrLoopHeaderWeight() const;
 
   /// Returns true if the Order field of child Instructions is valid.

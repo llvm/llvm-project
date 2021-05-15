@@ -2072,7 +2072,7 @@ bool SelectionDAGBuilder::isExportableFromCurrentBlock(const Value *V,
   // If this is an argument, we can export it if the BB is the entry block or
   // if it is already exported.
   if (isa<Argument>(V)) {
-    if (FromBB == &FromBB->getParent()->getEntryBlock())
+    if (FromBB->isEntryBlock())
       return true;
 
     // Otherwise, can only export this if it is already exported.

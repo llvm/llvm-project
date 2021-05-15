@@ -1270,9 +1270,8 @@ struct DSEState {
 
     Ptr = Ptr->stripPointerCasts();
     if (auto *I = dyn_cast<Instruction>(Ptr)) {
-      if (I->getParent() == &I->getFunction()->getEntryBlock()) {
+      if (I->getParent()->isEntryBlock())
         return true;
-      }
     }
     if (auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
       return IsGuaranteedLoopInvariantBase(GEP->getPointerOperand()) &&

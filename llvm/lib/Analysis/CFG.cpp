@@ -248,7 +248,7 @@ bool llvm::isPotentiallyReachable(
 
     // Can't be in a loop if it's the entry block -- the entry block may not
     // have predecessors.
-    if (BB == &BB->getParent()->getEntryBlock())
+    if (BB->isEntryBlock())
       return false;
 
     // Otherwise, continue doing the normal per-BB CFG walk.
@@ -267,10 +267,10 @@ bool llvm::isPotentiallyReachable(
         !DT->isReachableFromEntry(B->getParent()))
       return false;
     if (!ExclusionSet || ExclusionSet->empty()) {
-      if (A->getParent() == &A->getParent()->getParent()->getEntryBlock() &&
+      if (A->getParent()->isEntryBlock() &&
           DT->isReachableFromEntry(B->getParent()))
         return true;
-      if (B->getParent() == &A->getParent()->getParent()->getEntryBlock() &&
+      if (B->getParent()->isEntryBlock() &&
           DT->isReachableFromEntry(A->getParent()))
         return false;
     }

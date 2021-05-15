@@ -134,8 +134,7 @@ namespace {
         //
         //  (1) BB is an entry block or have no successors.
         //  (2) There's no path coming back through BB successors.
-        if (BB == &BB->getParent()->getEntryBlock() ||
-            !BB->getTerminator()->getNumSuccessors())
+        if (BB->isEntryBlock() || !BB->getTerminator()->getNumSuccessors())
           return true;
 
         SmallVector<BasicBlock*, 32> Worklist;
