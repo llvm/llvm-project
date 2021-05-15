@@ -3,11 +3,11 @@
 // as expected and we didn't accidentally break the supporting allocator.
 
 // RUN: %clangxx_gwp_asan %s -o %t
-// RUN: %env_gwp_asan_options=MaxSimultaneousAllocations=1 %run %t
-// RUN: %env_gwp_asan_options=MaxSimultaneousAllocations=2 %run %t
-// RUN: %env_gwp_asan_options=MaxSimultaneousAllocations=11 %run %t
-// RUN: %env_gwp_asan_options=MaxSimultaneousAllocations=12 %run %t
-// RUN: %env_gwp_asan_options=MaxSimultaneousAllocations=13 %run %t
+// RUN: %env_scudo_options=GWP_ASAN_MaxSimultaneousAllocations=1 %run %t
+// RUN: %env_scudo_options=GWP_ASAN_MaxSimultaneousAllocations=2 %run %t
+// RUN: %env_scudo_options=GWP_ASAN_MaxSimultaneousAllocations=11 %run %t
+// RUN: %env_scudo_options=GWP_ASAN_MaxSimultaneousAllocations=12 %run %t
+// RUN: %env_scudo_options=GWP_ASAN_MaxSimultaneousAllocations=13 %run %t
 
 #include <cstdlib>
 
