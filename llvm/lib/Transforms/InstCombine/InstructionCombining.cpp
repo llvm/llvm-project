@@ -1098,7 +1098,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
     // If the incoming non-constant value is in I's block, we will remove one
     // instruction, but insert another equivalent one, leading to infinite
     // instcombine.
-    if (isPotentiallyReachable(I.getParent(), NonConstBB, &DT, LI))
+    if (isPotentiallyReachable(I.getParent(), NonConstBB, nullptr, &DT, LI))
       return nullptr;
   }
 
