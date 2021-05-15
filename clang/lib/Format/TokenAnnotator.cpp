@@ -1917,12 +1917,12 @@ private:
     if (Tok.Next->isOneOf(tok::identifier, tok::kw_this))
       return true;
 
-    if (Tok.Next->is(tok::l_paren) &&
-        !(Tok.Previous && Tok.Previous->is(tok::identifier) &&
-          Tok.Previous->Previous &&
-          Tok.Previous->Previous->isOneOf(tok::arrowstar, tok::arrow,
-                                          tok::star)))
-      return true;
+    // Look for a cast `( x ) (`.
+    if (Tok.Next->is(tok::l_paren) && Tok.Previous && Tok.Previous->Previous) {
+      if (Tok.Previous->is(tok::identifier) &&
+          Tok.Previous->Previous->is(tok::l_paren))
+        return true;
+    }
 
     if (!Tok.Next->Next)
       return false;
