@@ -61,6 +61,9 @@ StateType GDBRemoteClientBase::SendContinuePacketAndWaitForResponse(
                                                    kWakeupInterval);
   for (;;) {
     PacketResult read_result = ReadPacket(response, computed_timeout, false);
+    // Reset the computed_timeout to the default value in case we are going
+    // round again.
+    computed_timeout = std::min(interrupt_timeout, kWakeupInterval);
     switch (read_result) {
     case PacketResult::ErrorReplyTimeout: {
       std::lock_guard<std::mutex> lock(m_mutex);
