@@ -125,6 +125,7 @@ def: Flag<["--"], "full-shutdown">;
 def: F<"high-entropy-va">;
 def: S<"major-image-version">;
 def: S<"minor-image-version">;
+def: F<"no-undefined">;
 def: F<"nxcompat">;
 def: F<"pic-executable">;
 def: S<"plugin">;
