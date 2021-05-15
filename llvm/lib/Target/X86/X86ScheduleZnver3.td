@@ -1572,7 +1572,8 @@ def : IsZeroIdiomFunction<[
     ANDNPSrr, ANDNPDrr,
 
     // int variants.
-    PXORrr
+    PXORrr,
+    PANDNrr
   ], ZeroIdiomPredicate>,
 
   // AVX XMM Zero-idioms.
