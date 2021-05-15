@@ -19,8 +19,7 @@ using namespace llvm;
 using namespace llvm::sys;
 
 std::string LibPath(const std::string Name = "PipSqueak") {
-  const std::vector<testing::internal::string> &Argvs =
-      testing::internal::GetArgvs();
+  const auto &Argvs = testing::internal::GetArgvs();
   const char *Argv0 =
       Argvs.size() > 0 ? Argvs[0].c_str() : "DynamicLibraryTests";
   void *Ptr = (void*)(intptr_t)TestA;

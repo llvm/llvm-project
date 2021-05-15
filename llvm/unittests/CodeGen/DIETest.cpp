@@ -67,7 +67,7 @@ TEST_P(DIEExprFixture, EmitValue) {
   Tst.emitValue(TestPrinter->getAP(), Form);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     DIETestParams, DIEExprFixture,
     testing::Values(
         DIETestParams{4, dwarf::DWARF32, dwarf::DW_FORM_data4, 4u},
@@ -75,7 +75,7 @@ INSTANTIATE_TEST_CASE_P(
         DIETestParams{4, dwarf::DWARF32, dwarf::DW_FORM_sec_offset, 4u},
         DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_data4, 4u},
         DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_data8, 8u},
-        DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_sec_offset, 8u}), );
+        DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_sec_offset, 8u}));
 
 struct DIELabelFixture : public DIEFixtureBase {
   void SetUp() override {
@@ -113,7 +113,7 @@ TEST_P(DIELabelFixture, EmitValue) {
   EXPECT_EQ(&(ActualArg0->getSymbol()), Val);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     DIETestParams, DIELabelFixture,
     testing::Values(
         DIETestParams{4, dwarf::DWARF32, dwarf::DW_FORM_data4, 4u},
@@ -125,7 +125,7 @@ INSTANTIATE_TEST_CASE_P(
         DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_data8, 8u},
         DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_sec_offset, 8u},
         DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_strp, 8u},
-        DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_addr, 8u}), );
+        DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_addr, 8u}));
 
 struct DIEDeltaFixture : public DIEFixtureBase {
   void SetUp() override {
@@ -158,7 +158,7 @@ TEST_P(DIEDeltaFixture, EmitValue) {
   Tst.emitValue(TestPrinter->getAP(), Form);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     DIETestParams, DIEDeltaFixture,
     testing::Values(
         DIETestParams{4, dwarf::DWARF32, dwarf::DW_FORM_data4, 4u},
@@ -166,7 +166,7 @@ INSTANTIATE_TEST_CASE_P(
         DIETestParams{4, dwarf::DWARF32, dwarf::DW_FORM_sec_offset, 4u},
         DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_data4, 4u},
         DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_data8, 8u},
-        DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_sec_offset, 8u}), );
+        DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_sec_offset, 8u}));
 
 struct DIELocListFixture : public DIEFixtureBase {
   void SetUp() override { DIEFixtureBase::SetUp(); }
@@ -180,7 +180,7 @@ TEST_P(DIELocListFixture, SizeOf) {
   EXPECT_EQ(Size, Tst.SizeOf(TestPrinter->getAP(), Form));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     DIETestParams, DIELocListFixture,
     testing::Values(
         DIETestParams{4, dwarf::DWARF32, dwarf::DW_FORM_loclistx, 2u},
@@ -188,6 +188,6 @@ INSTANTIATE_TEST_CASE_P(
         DIETestParams{4, dwarf::DWARF32, dwarf::DW_FORM_sec_offset, 4u},
         DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_loclistx, 2u},
         DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_data8, 8u},
-        DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_sec_offset, 8u}), );
+        DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_sec_offset, 8u}));
 
 } // end namespace

@@ -382,7 +382,7 @@ struct ODRViolation : ASTImporterOptionSpecificTestBase {
 // Define the parametrized tests.
 // ==============================
 
-#define ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(                           \
+#define ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(                           \
     TypeParam, ODRHandlingParam, NamePrefix, TestCase)                         \
   using TypeParam##ODRHandlingParam =                                          \
       ODRViolation<TypeParam, ASTImporter::ODRHandlingType::ODRHandlingParam>; \
@@ -392,167 +392,167 @@ struct ODRViolation : ASTImporterOptionSpecificTestBase {
 
 // clang-format off
 
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     Function, Liberal, ,
     ImportConflictingDefAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     Typedef, Liberal, ,
     ImportConflictingDefAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     TypedefAlias, Liberal, ,
     ImportConflictingDefAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     Enum, Liberal, ,
     ImportConflictingDefAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     EnumClass, Liberal, ,
     ImportConflictingDefAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     EnumConstant, Liberal, ,
     ImportConflictingDefAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     Class, Liberal, ,
     ImportConflictingDefAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     Variable, Liberal, ,
     ImportConflictingDefAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     ClassTemplate, Liberal, ,
     ImportConflictingDefAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     VarTemplate, Liberal, ,
     ImportConflictingDefAfterDef)
 // Class and variable template specializations/instantiatons are always
 // imported conservatively, because the AST holds the specializations in a set,
 // and the key within the set is a hash calculated from the arguments of the
 // specialization.
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     ClassTemplateSpec, Liberal, ,
     DontImportConflictingDefAfterDef) // Don't import !!!
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     VarTemplateSpec, Liberal, ,
     DontImportConflictingDefAfterDef) // Don't import !!!
 
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     Function, Conservative, ,
     DontImportConflictingDefAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     Typedef, Conservative, ,
     DontImportConflictingDefAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     TypedefAlias, Conservative, ,
     DontImportConflictingDefAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     Enum, Conservative, ,
     DontImportConflictingDefAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     EnumClass, Conservative, ,
     DontImportConflictingDefAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     EnumConstant, Conservative, ,
     DontImportConflictingDefAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     Class, Conservative, ,
     DontImportConflictingDefAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     Variable, Conservative, ,
     DontImportConflictingDefAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     ClassTemplate, Conservative, ,
     DontImportConflictingDefAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     VarTemplate, Conservative, ,
     DontImportConflictingDefAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     ClassTemplateSpec, Conservative, ,
     DontImportConflictingDefAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     VarTemplateSpec, Conservative, ,
     DontImportConflictingDefAfterDef)
 
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     Function, Liberal, ,
     ImportConflictingProtoAfterProto)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     Variable, Liberal, ,
     ImportConflictingProtoAfterProto)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     ClassTemplate, Liberal, ,
     ImportConflictingProtoAfterProto)
 
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     Function, Conservative, ,
     DontImportConflictingProtoAfterProto)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     Variable, Conservative, ,
     DontImportConflictingProtoAfterProto)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     ClassTemplate, Conservative, ,
     DontImportConflictingProtoAfterProto)
 
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     Variable, Liberal, ,
     ImportConflictingProtoAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     ClassTemplate, Liberal, ,
     ImportConflictingProtoAfterDef)
 
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     Variable, Conservative, ,
     DontImportConflictingProtoAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     ClassTemplate, Conservative, ,
     DontImportConflictingProtoAfterDef)
 
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     Function, Liberal, ,
     ImportConflictingDefAfterProto)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     Variable, Liberal, ,
     ImportConflictingDefAfterProto)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     ClassTemplate, Liberal, ,
     ImportConflictingDefAfterProto)
 
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     Function, Conservative, ,
     DontImportConflictingDefAfterProto)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     Variable, Conservative, ,
     DontImportConflictingDefAfterProto)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     ClassTemplate, Conservative, ,
     DontImportConflictingDefAfterProto)
 
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     ClassTemplate, Liberal, ,
     ImportConflictingProtoDefAfterProto)
 
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     ClassTemplate, Conservative, ,
     DontImportConflictingProtoDefAfterProto)
 
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     ClassTemplate, Liberal, ,
     ImportConflictingProtoAfterProtoDef)
 
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     ClassTemplate, Conservative, ,
     DontImportConflictingProtoAfterProtoDef)
 
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     ClassTemplate, Liberal, ,
     ImportConflictingProtoDefAfterDef)
 
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     ClassTemplate, Conservative, ,
     DontImportConflictingProtoDefAfterDef)
 
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     ClassTemplate, Liberal, ,
     ImportConflictingDefAfterProtoDef)
 
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     ClassTemplate, Conservative, ,
     DontImportConflictingDefAfterProtoDef)
 
@@ -565,28 +565,28 @@ ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
 // has nothing to do with function template specializations. Fully specialized
 // function templates are imported as new nodes if their template arguments are
 // different.
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     FunctionTemplate, Liberal, ,
     ImportDifferentDefAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     FunctionTemplateSpec, Liberal, ,
     ImportDifferentDefAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     FunctionTemplate, Conservative, ,
     ImportDifferentDefAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     FunctionTemplateSpec, Conservative, ,
     ImportDifferentDefAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     FunctionTemplate, Liberal, ,
     DontImportSameDefAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     FunctionTemplateSpec, Liberal, ,
     DontImportSameDefAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     FunctionTemplate, Conservative, ,
     DontImportSameDefAfterDef)
-ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
+ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_SUITE(
     FunctionTemplateSpec, Conservative, ,
     DontImportSameDefAfterDef)
 
@@ -596,99 +596,99 @@ ASTIMPORTER_ODR_INSTANTIATE_TYPED_TEST_CASE(
 
 // FIXME: These fail on Windows.
 #if !defined(_WIN32)
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, FunctionConservative,
-    DefaultTestValuesForRunOptions, );
+    DefaultTestValuesForRunOptions );
 #endif
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, TypedefConservative,
-    DefaultTestValuesForRunOptions, );
-INSTANTIATE_TEST_CASE_P(
+    DefaultTestValuesForRunOptions );
+INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, TypedefAliasConservative,
-    DefaultTestValuesForRunOptions, );
-INSTANTIATE_TEST_CASE_P(
+    DefaultTestValuesForRunOptions );
+INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, EnumConservative,
-    DefaultTestValuesForRunOptions, );
-INSTANTIATE_TEST_CASE_P(
+    DefaultTestValuesForRunOptions );
+INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, EnumClassConservative,
-    DefaultTestValuesForRunOptions, );
-INSTANTIATE_TEST_CASE_P(
+    DefaultTestValuesForRunOptions );
+INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, EnumConstantConservative,
-    DefaultTestValuesForRunOptions, );
-INSTANTIATE_TEST_CASE_P(
+    DefaultTestValuesForRunOptions );
+INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, ClassConservative,
-    DefaultTestValuesForRunOptions, );
-INSTANTIATE_TEST_CASE_P(
+    DefaultTestValuesForRunOptions );
+INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, VariableConservative,
-    DefaultTestValuesForRunOptions, );
-INSTANTIATE_TEST_CASE_P(
+    DefaultTestValuesForRunOptions);
+INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, ClassTemplateConservative,
-    DefaultTestValuesForRunOptions, );
-INSTANTIATE_TEST_CASE_P(
+    DefaultTestValuesForRunOptions);
+INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, FunctionTemplateConservative,
-    DefaultTestValuesForRunOptions, );
+    DefaultTestValuesForRunOptions);
 // FIXME: Make VarTemplate tests work.
-//INSTANTIATE_TEST_CASE_P(
+//INSTANTIATE_TEST_SUITE_P(
     //ODRViolationTests, VarTemplateConservative,
-    //DefaultTestValuesForRunOptions, );
-INSTANTIATE_TEST_CASE_P(
+    //DefaultTestValuesForRunOptions);
+INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, FunctionTemplateSpecConservative,
-    DefaultTestValuesForRunOptions, );
-INSTANTIATE_TEST_CASE_P(
+    DefaultTestValuesForRunOptions);
+INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, ClassTemplateSpecConservative,
-    DefaultTestValuesForRunOptions, );
+    DefaultTestValuesForRunOptions);
 // FIXME: Make VarTemplateSpec tests work.
-//INSTANTIATE_TEST_CASE_P(
+//INSTANTIATE_TEST_SUITE_P(
     //ODRViolationTests, VarTemplateSpecConservative,
-    //DefaultTestValuesForRunOptions, );
+    //DefaultTestValuesForRunOptions);
 
 // FIXME: These fail on Windows.
 #if !defined(_WIN32)
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, FunctionLiberal,
-    DefaultTestValuesForRunOptions, );
+    DefaultTestValuesForRunOptions);
 #endif
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, TypedefLiberal,
-    DefaultTestValuesForRunOptions, );
-INSTANTIATE_TEST_CASE_P(
+    DefaultTestValuesForRunOptions);
+INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, TypedefAliasLiberal,
-    DefaultTestValuesForRunOptions, );
-INSTANTIATE_TEST_CASE_P(
+    DefaultTestValuesForRunOptions);
+INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, EnumLiberal,
-    DefaultTestValuesForRunOptions, );
-INSTANTIATE_TEST_CASE_P(
+    DefaultTestValuesForRunOptions);
+INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, EnumClassLiberal,
-    DefaultTestValuesForRunOptions, );
-INSTANTIATE_TEST_CASE_P(
+    DefaultTestValuesForRunOptions);
+INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, EnumConstantLiberal,
-    DefaultTestValuesForRunOptions, );
-INSTANTIATE_TEST_CASE_P(
+    DefaultTestValuesForRunOptions);
+INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, ClassLiberal,
-    DefaultTestValuesForRunOptions, );
-INSTANTIATE_TEST_CASE_P(
+    DefaultTestValuesForRunOptions);
+INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, VariableLiberal,
-    DefaultTestValuesForRunOptions, );
-INSTANTIATE_TEST_CASE_P(
+    DefaultTestValuesForRunOptions);
+INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, ClassTemplateLiberal,
-    DefaultTestValuesForRunOptions, );
-INSTANTIATE_TEST_CASE_P(
+    DefaultTestValuesForRunOptions);
+INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, FunctionTemplateLiberal,
-    DefaultTestValuesForRunOptions, );
+    DefaultTestValuesForRunOptions);
 // FIXME: Make VarTemplate tests work.
-// INSTANTIATE_TEST_CASE_P(
+// INSTANTIATE_TEST_SUITE_P(
 //     ODRViolationTests, VarTemplateLiberal,
-//     DefaultTestValuesForRunOptions, );
-INSTANTIATE_TEST_CASE_P(
+//     DefaultTestValuesForRunOptions);
+INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, ClassTemplateSpecLiberal,
-    DefaultTestValuesForRunOptions, );
-INSTANTIATE_TEST_CASE_P(
+    DefaultTestValuesForRunOptions);
+INSTANTIATE_TEST_SUITE_P(
     ODRViolationTests, FunctionTemplateSpecLiberal,
-    DefaultTestValuesForRunOptions, );
+    DefaultTestValuesForRunOptions);
 // FIXME: Make VarTemplateSpec tests work.
-//INSTANTIATE_TEST_CASE_P(
+//INSTANTIATE_TEST_SUITE_P(
     //ODRViolationTests, VarTemplateSpecLiberal,
-    //DefaultTestValuesForRunOptions, );
+    //DefaultTestValuesForRunOptions );
 
 // clang-format on
 
