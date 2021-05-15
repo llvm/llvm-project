@@ -217,6 +217,10 @@ public:
   /// changes are made, the constant C is returned.
   static Constant *mergeUndefsWith(Constant *C, Constant *Other);
 
+  /// Return true if a constant is ConstantData or a ConstantAggregate or
+  /// ConstantExpr that contain only ConstantData.
+  bool isManifestConstant() const;
+
 private:
   enum PossibleRelocationsTy {
     /// This constant requires no relocations. That is, it holds simple
