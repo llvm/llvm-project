@@ -902,7 +902,7 @@ def run_to_breakpoint_do_run(test, target, bkpt, launch_info = None,
         error_string = "Failed to hit initial breakpoint:\n%s\n"%(print_stacktraces(process, True))
         test.fail(error_string)
 
-    test.assertEqual(process.GetState(), lldb.eStateStopped, error_string)
+    test.assertEqual(process.GetState(), lldb.eStateStopped)
 
     # Frame #0 should be at our breakpoint.
     threads = get_threads_stopped_at_breakpoint(
