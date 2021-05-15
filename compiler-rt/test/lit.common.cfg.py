@@ -133,7 +133,9 @@ if compiler_libdir:
       # Use just built runtime libraries, i.e. the the libraries this built just built.
       if not config.test_suite_supports_overriding_runtime_lib_path:
         # Test suite doesn't support this configuration.
-        lit_config.fatal(
+        # TODO(dliew): This should be an error but it seems several bots are
+        # testing incorrectly and having this as an error breaks them.
+        lit_config.warning(
             'COMPILER_RT_TEST_STANDALONE_BUILD_LIBS=ON, but this test suite '
             'does not support testing the just-built runtime libraries '
             'when the test compiler is configured to use different runtime '
