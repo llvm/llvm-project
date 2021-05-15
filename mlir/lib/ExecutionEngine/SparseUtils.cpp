@@ -18,6 +18,8 @@
 
 #ifdef MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS
 
+#define AART
+
 #include <algorithm>
 #include <cassert>
 #include <cctype>
@@ -112,6 +114,8 @@ private:
 /// function overloading to implement "partial" method specialization.
 class SparseTensorStorageBase {
 public:
+  enum DimLevelType : uint8_t { kDense = 0, kCompressed = 1, kSingleton = 2 };
+
   virtual uint64_t getDimSize(uint64_t) = 0;
 
   // Overhead storage.
@@ -152,7 +156,7 @@ class SparseTensorStorage : public SparseTensorStorageBase {
 public:
   /// Constructs sparse tensor storage scheme following the given
   /// per-rank dimension dense/sparse annotations.
-  SparseTensorStorage(SparseTensor *tensor, bool *sparsity)
+  SparseTensorStorage(SparseTensor *tensor, uint8_t *sparsity)
       : sizes(tensor->getSizes()), pointers(getRank()), indices(getRank()) {
     // Provide hints on capacity.
     // TODO: needs fine-tuning based on sparsity
@@ -160,15 +164,91 @@ public:
     values.reserve(nnz);
     for (uint64_t d = 0, s = 1, rank = getRank(); d < rank; d++) {
       s *= sizes[d];
-      if (sparsity[d]) {
+      if (sparsity[d] == kCompressed) {
         pointers[d].reserve(s + 1);
         indices[d].reserve(s);
         s = 1;
+      } else {
+        assert(sparsity[d] == kDense && "singleton not yet supported");
       }
     }
     // Then setup the tensor.
     traverse(tensor, sparsity, 0, nnz, 0);
+#ifdef AART
+    dump();
+#endif
   }
+
+#ifdef AART
+  void dump() {
+    fprintf(stderr, "++++++++++ rank=%lu +++++++++++\n", sizes.size());
+    if constexpr (std::is_same_v<P, uint64_t>)
+      fprintf(stderr, "PTR64 ");
+    else if constexpr (std::is_same_v<P, uint32_t>)
+      fprintf(stderr, "PTR32 ");
+    else if constexpr (std::is_same_v<P, uint16_t>)
+      fprintf(stderr, "PTR16 ");
+    else if constexpr (std::is_same_v<P, uint8_t>)
+      fprintf(stderr, "PTR8 ");
+    if constexpr (std::is_same_v<I, uint64_t>)
+      fprintf(stderr, "INDX64 ");
+    else if constexpr (std::is_same_v<I, uint32_t>)
+      fprintf(stderr, "INDX32 ");
+    else if constexpr (std::is_same_v<I, uint16_t>)
+      fprintf(stderr, "INDX16 ");
+    else if constexpr (std::is_same_v<I, uint8_t>)
+      fprintf(stderr, "INDX8 ");
+    if constexpr (std::is_same_v<V, double>)
+      fprintf(stderr, "VALF64\n");
+    else if constexpr (std::is_same_v<V, float>)
+      fprintf(stderr, "VALF32\n");
+    else if constexpr (std::is_same_v<V, int64_t>)
+      fprintf(stderr, "VALI64\n");
+    else if constexpr (std::is_same_v<V, int32_t>)
+      fprintf(stderr, "VALI32\n");
+    else if constexpr (std::is_same_v<V, int16_t>)
+      fprintf(stderr, "VALI16\n");
+    else if constexpr (std::is_same_v<V, int8_t>)
+      fprintf(stderr, "VALI8\n");
+    for (uint64_t r = 0; r < sizes.size(); r++) {
+      fprintf(stderr, "dim %lu #%lu\n", r, sizes[r]);
+      fprintf(stderr, "  positions[%lu] #%lu :", r, pointers[r].size());
+      for (uint64_t i = 0; i < pointers[r].size(); i++)
+        if constexpr (std::is_same_v<P, uint64_t>)
+          fprintf(stderr, " %lu", pointers[r][i]);
+        else if constexpr (std::is_same_v<P, uint32_t>)
+          fprintf(stderr, " %u", pointers[r][i]);
+        else if constexpr (std::is_same_v<P, uint16_t>)
+          fprintf(stderr, " %u", pointers[r][i]);
+        else if constexpr (std::is_same_v<P, uint8_t>)
+          fprintf(stderr, " %u", pointers[r][i]);
+      fprintf(stderr, "\n  indices[%lu] #%lu :", r, indices[r].size());
+      for (uint64_t i = 0; i < indices[r].size(); i++)
+        if constexpr (std::is_same_v<I, uint64_t>)
+          fprintf(stderr, " %lu", indices[r][i]);
+        else if constexpr (std::is_same_v<I, uint32_t>)
+          fprintf(stderr, " %u", indices[r][i]);
+        else if constexpr (std::is_same_v<I, uint16_t>)
+          fprintf(stderr, " %u", indices[r][i]);
+        else if constexpr (std::is_same_v<I, uint8_t>)
+          fprintf(stderr, " %u", indices[r][i]);
+      fprintf(stderr, "\n");
+    }
+    fprintf(stderr, "values #%lu :", values.size());
+    for (uint64_t i = 0; i < values.size(); i++)
+      if constexpr (std::is_same_v<V, double>)
+        fprintf(stderr, " %lf", values[i]);
+      else if constexpr (std::is_same_v<V, float>)
+        fprintf(stderr, " %f", values[i]);
+      else if constexpr (std::is_same_v<V, int32_t>)
+        fprintf(stderr, " %d", values[i]);
+      else if constexpr (std::is_same_v<V, int16_t>)
+        fprintf(stderr, " %d", values[i]);
+      else if constexpr (std::is_same_v<V, int8_t>)
+        fprintf(stderr, " %d", values[i]);
+    fprintf(stderr, "\n+++++++++++++++++++++++++++++\n");
+  }
+#endif
 
   virtual ~SparseTensorStorage() {}
 
@@ -190,8 +270,8 @@ private:
   /// representation of an external sparse tensor. This method prepares
   /// the pointers and indices arrays under the given per-rank dimension
   /// dense/sparse annotations.
-  void traverse(SparseTensor *tensor, bool *sparsity, uint64_t lo, uint64_t hi,
-                uint64_t d) {
+  void traverse(SparseTensor *tensor, uint8_t *sparsity, uint64_t lo,
+                uint64_t hi, uint64_t d) {
     const std::vector<Element> &elements = tensor->getElements();
     // Once dimensions are exhausted, insert the numerical values.
     if (d == getRank()) {
@@ -199,7 +279,7 @@ private:
       return;
     }
     // Prepare a sparse pointer structure at this dimension.
-    if (sparsity[d] && pointers[d].empty())
+    if (sparsity[d] == kCompressed && pointers[d].empty())
       pointers[d].push_back(0);
     // Visit all elements in this interval.
     uint64_t full = 0;
@@ -210,7 +290,7 @@ private:
       while (seg < hi && elements[seg].indices[d] == idx)
         seg++;
       // Handle segment in interval for sparse or dense dimension.
-      if (sparsity[d]) {
+      if (sparsity[d] == kCompressed) {
         indices[d].push_back(idx);
       } else {
         for (; full < idx; full++)
@@ -222,7 +302,7 @@ private:
       lo = seg;
     }
     // Finalize the sparse pointer structure at this dimension.
-    if (sparsity[d]) {
+    if (sparsity[d] == kCompressed) {
       pointers[d].push_back(indices[d].size());
     } else {
       for (uint64_t sz = tensor->getSizes()[d]; full < sz; full++)
@@ -239,7 +319,7 @@ private:
 
 /// Templated reader.
 template <typename P, typename I, typename V>
-void *newSparseTensor(char *filename, bool *sparsity, uint64_t size) {
+void *newSparseTensor(char *filename, uint8_t *sparsity, uint64_t size) {
   uint64_t idata[64];
   SparseTensor *t = static_cast<SparseTensor *>(openTensorC(filename, idata));
   assert(size == t->getRank()); // sparsity array must match rank
@@ -410,6 +490,16 @@ void *openTensorC(char *filename, uint64_t *idata) {
   // Close the file and return sorted tensor.
   fclose(file);
   tensor->sort(); // sort lexicographically
+#if 1
+  const std::vector<Element> &elements = tensor->getElements();
+  for (uint64_t k = 1; k < nnz; k++) {
+    uint64_t same = 0;
+    for (uint64_t r = 0; r < rank; r++)
+      if (elements[k].indices[r] == elements[k - 1].indices[r])
+        same++;
+    assert(same < rank && "duplicate element");
+  }
+#endif
   return tensor;
 }
 
@@ -509,11 +599,11 @@ enum PrimaryTypeEnum : uint64_t {
   kI8 = 5
 };
 
-void *newSparseTensor(char *filename, bool *abase, bool *adata, uint64_t aoff,
-                      uint64_t asize, uint64_t astride, uint64_t ptrTp,
-                      uint64_t indTp, uint64_t valTp) {
+void *newSparseTensor(char *filename, uint8_t *abase, uint8_t *adata,
+                      uint64_t aoff, uint64_t asize, uint64_t astride,
+                      uint64_t ptrTp, uint64_t indTp, uint64_t valTp) {
   assert(astride == 1);
-  bool *sparsity = adata + aoff;
+  uint8_t *sparsity = adata + aoff;
 
   // The most common cases: 64-bit or 32-bit overhead, double/float values.
   CASE(kU64, kU64, kF64, uint64_t, uint64_t, double);
