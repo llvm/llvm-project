@@ -499,7 +499,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
   MachineBasicBlock &MBB = *(FrameSetup->getParent());
   TII->setFrameAdjustment(*FrameSetup, Context.ExpectedDist);
 
-  DebugLoc DL = FrameSetup->getDebugLoc();
+  const DebugLoc &DL = FrameSetup->getDebugLoc();
   bool Is64Bit = STI->is64Bit();
   // Now, iterate through the vector in reverse order, and replace the store to
   // stack with pushes. MOVmi/MOVmr doesn't have any defs, so no need to
