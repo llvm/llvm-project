@@ -88,7 +88,7 @@ body:             |
     %2:rgpr = COPY $r2
     %1:rgpr = COPY $r1
     %0:rgpr = COPY $r0
-    MVE_MEMCPYLOOPINST %0, %1, %2
+    MVE_MEMCPYLOOPINST %0, %1, %2, implicit-def $cpsr
     tBX_RET 14 /* CC::al */, $noreg
 
 ...
@@ -142,7 +142,7 @@ body:             |
   bb.1.for.body.preheader:
     successors: %bb.2(0x80000000)
 
-    MVE_MEMCPYLOOPINST %0, %1, %2
+    MVE_MEMCPYLOOPINST %0, %1, %2, implicit-def $cpsr
 
   bb.2.for.cond.cleanup:
     tBX_RET 14 /* CC::al */, $noreg
@@ -180,7 +180,7 @@ body:             |
     %2:rgpr = COPY $r2
     %1:mqpr = COPY $r1
     %0:rgpr = COPY $r0
-    MVE_MEMSETLOOPINST %0, %1, %2
+    MVE_MEMSETLOOPINST %0, %1, %2, implicit-def $cpsr
     tBX_RET 14 /* CC::al */, $noreg
 
 ...
@@ -231,7 +231,7 @@ body:             |
     t2B %bb.1, 14 /* CC::al */, $noreg
 
   bb.1.for.body.preheader:
-    MVE_MEMSETLOOPINST %0, %1, %2
+    MVE_MEMSETLOOPINST %0, %1, %2, implicit-def $cpsr
 
   bb.2.for.cond.cleanup:
     tBX_RET 14 /* CC::al */, $noreg
