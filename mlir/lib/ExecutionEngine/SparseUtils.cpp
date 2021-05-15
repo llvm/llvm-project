@@ -112,6 +112,8 @@ private:
 /// function overloading to implement "partial" method specialization.
 class SparseTensorStorageBase {
 public:
+  enum DimLevelType : uint8_t { kDense = 0, kCompressed = 1, kSingleton = 2 };
+
   virtual uint64_t getDimSize(uint64_t) = 0;
 
   // Overhead storage.
@@ -152,7 +154,7 @@ class SparseTensorStorage : public SparseTensorStorageBase {
 public:
   /// Constructs sparse tensor storage scheme following the given
   /// per-rank dimension dense/sparse annotations.
-  SparseTensorStorage(SparseTensor *tensor, bool *sparsity)
+  SparseTensorStorage(SparseTensor *tensor, uint8_t *sparsity)
       : sizes(tensor->getSizes()), pointers(getRank()), indices(getRank()) {
     // Provide hints on capacity.
     // TODO: needs fine-tuning based on sparsity
@@ -160,10 +162,12 @@ public:
     values.reserve(nnz);
     for (uint64_t d = 0, s = 1, rank = getRank(); d < rank; d++) {
       s *= sizes[d];
-      if (sparsity[d]) {
+      if (sparsity[d] == kCompressed) {
         pointers[d].reserve(s + 1);
         indices[d].reserve(s);
         s = 1;
+      } else {
+        assert(sparsity[d] == kDense && "singleton not yet supported");
       }
     }
     // Then setup the tensor.
@@ -190,8 +194,8 @@ private:
   /// representation of an external sparse tensor. This method prepares
   /// the pointers and indices arrays under the given per-rank dimension
   /// dense/sparse annotations.
-  void traverse(SparseTensor *tensor, bool *sparsity, uint64_t lo, uint64_t hi,
-                uint64_t d) {
+  void traverse(SparseTensor *tensor, uint8_t *sparsity, uint64_t lo,
+                uint64_t hi, uint64_t d) {
     const std::vector<Element> &elements = tensor->getElements();
     // Once dimensions are exhausted, insert the numerical values.
     if (d == getRank()) {
@@ -199,7 +203,7 @@ private:
       return;
     }
     // Prepare a sparse pointer structure at this dimension.
-    if (sparsity[d] && pointers[d].empty())
+    if (sparsity[d] == kCompressed && pointers[d].empty())
       pointers[d].push_back(0);
     // Visit all elements in this interval.
     uint64_t full = 0;
@@ -210,7 +214,7 @@ private:
       while (seg < hi && elements[seg].indices[d] == idx)
         seg++;
       // Handle segment in interval for sparse or dense dimension.
-      if (sparsity[d]) {
+      if (sparsity[d] == kCompressed) {
         indices[d].push_back(idx);
       } else {
         for (; full < idx; full++)
@@ -222,7 +226,7 @@ private:
       lo = seg;
     }
     // Finalize the sparse pointer structure at this dimension.
-    if (sparsity[d]) {
+    if (sparsity[d] == kCompressed) {
       pointers[d].push_back(indices[d].size());
     } else {
       for (uint64_t sz = tensor->getSizes()[d]; full < sz; full++)
@@ -239,7 +243,7 @@ private:
 
 /// Templated reader.
 template <typename P, typename I, typename V>
-void *newSparseTensor(char *filename, bool *sparsity, uint64_t size) {
+void *newSparseTensor(char *filename, uint8_t *sparsity, uint64_t size) {
   uint64_t idata[64];
   SparseTensor *t = static_cast<SparseTensor *>(openTensorC(filename, idata));
   assert(size == t->getRank()); // sparsity array must match rank
@@ -509,11 +513,11 @@ enum PrimaryTypeEnum : uint64_t {
   kI8 = 5
 };
 
-void *newSparseTensor(char *filename, bool *abase, bool *adata, uint64_t aoff,
-                      uint64_t asize, uint64_t astride, uint64_t ptrTp,
-                      uint64_t indTp, uint64_t valTp) {
+void *newSparseTensor(char *filename, uint8_t *abase, uint8_t *adata,
+                      uint64_t aoff, uint64_t asize, uint64_t astride,
+                      uint64_t ptrTp, uint64_t indTp, uint64_t valTp) {
   assert(astride == 1);
-  bool *sparsity = adata + aoff;
+  uint8_t *sparsity = adata + aoff;
 
   // The most common cases: 64-bit or 32-bit overhead, double/float values.
   CASE(kU64, kU64, kF64, uint64_t, uint64_t, double);

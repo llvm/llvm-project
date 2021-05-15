@@ -33,9 +33,9 @@ func @sparse_dim(%arg0: tensor<?xf64, #SparseVector>) -> index {
 
 // CHECK-LABEL: func @sparse_new1d(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>) -> !llvm.ptr<i8>
-//       CHECK: %[[D:.*]] = constant dense<true> : tensor<1xi1>
-//       CHECK: %[[C:.*]] = tensor.cast %[[D]] : tensor<1xi1> to tensor<?xi1>
-//       CHECK: %[[T:.*]] = call @newSparseTensor(%[[A]], %[[C]], %{{.*}}, %{{.*}}, %{{.*}}) : (!llvm.ptr<i8>, tensor<?xi1>, i64, i64, i64) -> !llvm.ptr<i8>
+//       CHECK: %[[D:.*]] = constant dense<1> : tensor<1xi8>
+//       CHECK: %[[C:.*]] = tensor.cast %[[D]] : tensor<1xi8> to tensor<?xi8>
+//       CHECK: %[[T:.*]] = call @newSparseTensor(%[[A]], %[[C]], %{{.*}}, %{{.*}}, %{{.*}}) : (!llvm.ptr<i8>, tensor<?xi8>, i64, i64, i64) -> !llvm.ptr<i8>
 //       CHECK: return %[[T]] : !llvm.ptr<i8>
 func @sparse_new1d(%arg0: !llvm.ptr<i8>) -> tensor<128xf64, #SparseVector> {
   %0 = sparse_tensor.new %arg0 : !llvm.ptr<i8> to tensor<128xf64, #SparseVector>
@@ -44,9 +44,9 @@ func @sparse_new1d(%arg0: !llvm.ptr<i8>) -> tensor<128xf64, #SparseVector> {
 
 // CHECK-LABEL: func @sparse_new2d(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>) -> !llvm.ptr<i8>
-//       CHECK: %[[D:.*]] = constant dense<[false, true]> : tensor<2xi1>
-//       CHECK: %[[C:.*]] = tensor.cast %[[D]] : tensor<2xi1> to tensor<?xi1>
-//       CHECK: %[[T:.*]] = call @newSparseTensor(%[[A]], %[[C]], %{{.*}}, %{{.*}}, %{{.*}}) : (!llvm.ptr<i8>, tensor<?xi1>, i64, i64, i64) -> !llvm.ptr<i8>
+//       CHECK: %[[D:.*]] = constant dense<[0, 1]> : tensor<2xi8>
+//       CHECK: %[[C:.*]] = tensor.cast %[[D]] : tensor<2xi8> to tensor<?xi8>
+//       CHECK: %[[T:.*]] = call @newSparseTensor(%[[A]], %[[C]], %{{.*}}, %{{.*}}, %{{.*}}) : (!llvm.ptr<i8>, tensor<?xi8>, i64, i64, i64) -> !llvm.ptr<i8>
 //       CHECK: return %[[T]] : !llvm.ptr<i8>
 func @sparse_new2d(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf32, #SparseMatrix> {
   %0 = sparse_tensor.new %arg0 : !llvm.ptr<i8> to tensor<?x?xf32, #SparseMatrix>

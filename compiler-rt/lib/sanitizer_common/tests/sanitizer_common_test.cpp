@@ -295,8 +295,8 @@ const std::vector<int> kSortAndDedupTests[] = {
     {1, 2, 1, 1, 2, 1, 1, 1, 2, 2},
     {1, 3, 3, 2, 3, 1, 3, 1, 4, 4, 2, 1, 4, 1, 1, 2, 2},
 };
-INSTANTIATE_TEST_CASE_P(SortAndDedupTest, SortAndDedupTest,
-                        ::testing::ValuesIn(kSortAndDedupTests));
+INSTANTIATE_TEST_SUITE_P(SortAndDedupTest, SortAndDedupTest,
+                         ::testing::ValuesIn(kSortAndDedupTests));
 
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
 TEST(SanitizerCommon, FindPathToBinary) {
