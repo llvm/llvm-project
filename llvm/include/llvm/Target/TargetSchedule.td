@@ -52,8 +52,6 @@
 // Include legacy support for instruction itineraries.
 include "llvm/Target/TargetItinerary.td"
 
-class Instruction; // Forward def
-
 class Predicate; // Forward def
 
 // DAG operator that interprets the DAG args as Instruction defs.
