@@ -19,7 +19,15 @@
 # RUN: ld.lld -shared -Bsymbolic-functions -Bsymbolic %t/a.o %t/b.o -o %t.so
 # RUN: cmp %t.so %t2.so
 # RUN: ld.lld -shared -Bsymbolic -Bsymbolic-functions %t/a.o %t/b.o -o %t.so
+# RUN: cmp %t.so %t1.so
+# RUN: ld.lld -shared -Bno-symbolic -Bsymbolic %t/a.o %t/b.o -o %t.so
 # RUN: cmp %t.so %t2.so
+
+## -Bno-symbolic can cancel previously specified -Bsymbolic and -Bsymbolic-functions.
+# RUN: ld.lld -shared -Bsymbolic -Bno-symbolic %t/a.o %t/b.o -o %t.so
+# RUN: cmp %t.so %t0.so
+# RUN: ld.lld -shared -Bsymbolic-functions -Bno-symbolic %t/a.o %t/b.o -o %t.so
+# RUN: cmp %t.so %t0.so
 
 # REL_DEF:      .rela.dyn {
 # REL_DEF-NEXT:   R_X86_64_RELATIVE -

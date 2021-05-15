@@ -36,10 +36,12 @@ multiclass B<string name, string help1, string help2> {
 
 defm auxiliary: Eq<"auxiliary", "Set DT_AUXILIARY field to the specified name">;
 
-def Bsymbolic: F<"Bsymbolic">, HelpText<"Bind defined symbols locally">;
+def Bno_symbolic: F<"Bno-symbolic">, HelpText<"Don't bind default visibility defined symbols locally for -shared (default)">;
+
+def Bsymbolic: F<"Bsymbolic">, HelpText<"Bind default visibility defined symbols locally for -shared">;
 
 def Bsymbolic_functions: F<"Bsymbolic-functions">,
-  HelpText<"Bind defined function symbols locally">;
+  HelpText<"Bind default visibility defined function symbols locally for -shared">;
 
 def Bdynamic: F<"Bdynamic">, HelpText<"Link against shared libraries (default)">;
 

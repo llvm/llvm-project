@@ -143,8 +143,8 @@ struct Configuration {
   bool armHasMovtMovw = false;
   bool armJ1J2BranchEncoding = false;
   bool asNeeded = false;
-  bool bsymbolic;
-  bool bsymbolicFunctions;
+  bool bsymbolic = false;
+  bool bsymbolicFunctions = false;
   bool callGraphProfileSort;
   bool checkSections;
   bool compressDebugSections;
