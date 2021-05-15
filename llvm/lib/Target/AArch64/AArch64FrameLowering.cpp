@@ -2419,7 +2419,8 @@ static void computeCalleeSaveRegisterPairs(
 
     // Swift's async context is directly before FP, so allocate an extra
     // 8 bytes for it.
-    if (NeedsFrameRecord && AFI->hasSwiftAsyncContext() && RPI.Reg2 == AArch64::FP)
+    if (NeedsFrameRecord && AFI->hasSwiftAsyncContext() &&
+        RPI.Reg2 == AArch64::FP)
       ByteOffset += StackFillDir * 8;
 
     assert(!(RPI.isScalable() && RPI.isPaired()) &&
@@ -2447,7 +2448,8 @@ static void computeCalleeSaveRegisterPairs(
 
     // The FP, LR pair goes 8 bytes into our expanded 24-byte slot so that the
     // Swift context can directly precede FP.
-    if (NeedsFrameRecord && AFI->hasSwiftAsyncContext() && RPI.Reg2 == AArch64::FP)
+    if (NeedsFrameRecord && AFI->hasSwiftAsyncContext() &&
+        RPI.Reg2 == AArch64::FP)
       Offset += 8;
     RPI.Offset = Offset / Scale;
 
@@ -2958,16 +2960,14 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   // Now that we know which registers need to be saved and restored, allocate
   // stack slots for them.
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  auto AFI = MF.getInfo<AArch64FunctionInfo>();
+  auto *AFI = MF.getInfo<AArch64FunctionInfo>();
   for (auto &CS : CSI) {
-    unsigned Reg = CS.getReg();
+    Register Reg = CS.getReg();
     const TargetRegisterClass *RC = RegInfo->getMinimalPhysRegClass(Reg);
 
-    int FrameIdx;
     unsigned Size = RegInfo->getSpillSize(*RC);
-
     Align Alignment(RegInfo->getSpillAlign(*RC));
-    FrameIdx = MFI.CreateStackObject(Size, Alignment, true);
+    int FrameIdx = MFI.CreateStackObject(Size, Alignment, true);
     CS.setFrameIdx(FrameIdx);
 
     if ((unsigned)FrameIdx < MinCSFrameIndex) MinCSFrameIndex = FrameIdx;

@@ -747,6 +747,8 @@ bool AArch64ExpandPseudo::expandStoreSwiftAsyncContext(
     return true;
   }
 
+  // We need to sign the context in an address-discriminated way. 0xc31a is a
+  // fixed random value, chosen as part of the ABI.
   //     add x16, xBase, #Offset
   //     movk x16, #0xc31a, lsl #48
   //     mov x17, x22/xzr

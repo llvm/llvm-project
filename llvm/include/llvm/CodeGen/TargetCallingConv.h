@@ -59,11 +59,12 @@ namespace ISD {
 
   public:
     ArgFlagsTy()
-      : IsZExt(0), IsSExt(0), IsInReg(0), IsSRet(0), IsByVal(0), IsByRef(0),
-          IsNest(0), IsReturned(0), IsSplit(0), IsInAlloca(0), IsPreallocated(0),
-          IsSplitEnd(0), IsSwiftSelf(0), IsSwiftAsync(0), IsSwiftError(0),
-          IsCFGuardTarget(0), IsHva(0), IsHvaStart(0), IsSecArgPass(0), MemAlign(0),
-          OrigAlign(0), IsInConsecutiveRegsLast(0), IsInConsecutiveRegs(0),
+        : IsZExt(0), IsSExt(0), IsInReg(0), IsSRet(0), IsByVal(0), IsByRef(0),
+          IsNest(0), IsReturned(0), IsSplit(0), IsInAlloca(0),
+          IsPreallocated(0), IsSplitEnd(0), IsSwiftSelf(0), IsSwiftAsync(0),
+          IsSwiftError(0), IsCFGuardTarget(0), IsHva(0), IsHvaStart(0),
+          IsSecArgPass(0), MemAlign(0), OrigAlign(0),
+          IsInConsecutiveRegsLast(0), IsInConsecutiveRegs(0),
           IsCopyElisionCandidate(0), IsPointer(0), ByValOrByRefSize(0),
           PointerAddrSpace(0) {
       static_assert(sizeof(*this) == 3 * sizeof(unsigned), "flags are too big");
