@@ -428,8 +428,7 @@ unsigned MemoryFlags[] = {
                            Memory::MF_READ|Memory::MF_WRITE|Memory::MF_EXEC
                          };
 
-INSTANTIATE_TEST_CASE_P(AllocationTests,
-                        MappedMemoryTest,
-                        ::testing::ValuesIn(MemoryFlags),);
+INSTANTIATE_TEST_SUITE_P(AllocationTests, MappedMemoryTest,
+                         ::testing::ValuesIn(MemoryFlags));
 
 }  // anonymous namespace

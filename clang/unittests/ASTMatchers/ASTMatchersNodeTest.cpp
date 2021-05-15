@@ -2302,8 +2302,8 @@ static std::vector<TestClangConfig> allTestClangConfigs() {
   return all_configs;
 }
 
-INSTANTIATE_TEST_CASE_P(ASTMatchersTests, ASTMatchersTest,
-                        testing::ValuesIn(allTestClangConfigs()), );
+INSTANTIATE_TEST_SUITE_P(ASTMatchersTests, ASTMatchersTest,
+                         testing::ValuesIn(allTestClangConfigs()));
 
 } // namespace ast_matchers
 } // namespace clang

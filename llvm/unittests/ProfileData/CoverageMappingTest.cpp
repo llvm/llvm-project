@@ -893,11 +893,12 @@ TEST_P(CoverageMappingTest, skip_duplicate_function_record) {
 }
 
 // FIXME: Use ::testing::Combine() when llvm updates its copy of googletest.
-INSTANTIATE_TEST_CASE_P(ParameterizedCovMapTest, CoverageMappingTest,
-                        ::testing::Values(std::pair<bool, bool>({false, false}),
-                                          std::pair<bool, bool>({false, true}),
-                                          std::pair<bool, bool>({true, false}),
-                                          std::pair<bool, bool>({true, true})),);
+INSTANTIATE_TEST_SUITE_P(
+    ParameterizedCovMapTest, CoverageMappingTest,
+    ::testing::Values(std::pair<bool, bool>({false, false}),
+                      std::pair<bool, bool>({false, true}),
+                      std::pair<bool, bool>({true, false}),
+                      std::pair<bool, bool>({true, true})));
 
 TEST(CoverageMappingTest, filename_roundtrip) {
   std::vector<std::string> Paths({"dir", "a", "b", "c", "d", "e"});
