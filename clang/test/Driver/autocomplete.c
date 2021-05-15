@@ -76,7 +76,6 @@
 // FLTOALL-NEXT: thin
 // RUN: %clang --autocomplete=-fveclib= | FileCheck %s -check-prefix=FVECLIBALL
 // FVECLIBALL: Accelerate
-// FVECLIBALL-NEXT: Darwin_libsystem_m
 // FVECLIBALL-NEXT: libmvec
 // FVECLIBALL-NEXT: MASSV
 // FVECLIBALL-NEXT: none
