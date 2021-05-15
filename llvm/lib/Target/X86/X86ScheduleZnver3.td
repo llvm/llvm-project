@@ -1590,7 +1590,8 @@ def : IsZeroIdiomFunction<[
     PXORrr,
     PANDNrr,
     PSUBBrr, PSUBWrr, PSUBDrr, PSUBQrr,
-    PSUBSBrr, PSUBSWrr
+    PSUBSBrr, PSUBSWrr,
+    PSUBUSBrr, PSUBUSWrr
   ], ZeroIdiomPredicate>,
 
   // AVX XMM Zero-idioms.
