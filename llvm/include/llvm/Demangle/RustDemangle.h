@@ -28,6 +28,30 @@ struct Identifier {
   bool empty() const { return Name.empty(); }
 };
 
+enum class BasicType {
+  Bool,
+  Char,
+  I8,
+  I16,
+  I32,
+  I64,
+  I128,
+  ISize,
+  U8,
+  U16,
+  U32,
+  U64,
+  U128,
+  USize,
+  F32,
+  F64,
+  Str,
+  Placeholder,
+  Unit,
+  Variadic,
+  Never,
+};
+
 class Demangler {
   // Maximum recursion level. Used to avoid stack overflow.
   size_t MaxRecursionLevel;
@@ -54,11 +78,14 @@ private:
   void demanglePath();
   void demangleGenericArg();
   void demangleType();
+  void demangleConst();
+  void demangleConstInt();
 
   Identifier parseIdentifier();
   uint64_t parseOptionalBase62Number(char Tag);
   uint64_t parseBase62Number();
   uint64_t parseDecimalNumber();
+  uint64_t parseHexNumber(StringView &HexDigits);
 
   void print(char C) {
     if (Error)
@@ -80,6 +107,8 @@ private:
 
     Output << N;
   }
+
+  void printBasicType(BasicType);
 
   char look() const {
     if (Error || Position >= Input.size())
