@@ -1562,9 +1562,11 @@ def Zn3WriteVZeroIdiomALUX : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [Zn3WriteZeroLatency]>,
     SchedVar<NoSchedPred,                          [WriteVecALUX]>
 ]>;
-// NOTE: PSUBBrr, PSUBWrr, PSUBDrr, PSUBQrr are not zero-cycle!
+// NOTE: PSUBBrr, PSUBWrr, PSUBDrr, PSUBQrr,
+//       PCMPGTBrr, PCMPGTWrr, PCMPGTDrr, PCMPGTQrr are not zero-cycle!
 def : InstRW<[Zn3WriteVZeroIdiomALUX],
-             (instrs VPSUBBrr, VPSUBWrr, VPSUBDrr, VPSUBQrr)>;
+             (instrs VPSUBBrr, VPSUBWrr, VPSUBDrr, VPSUBQrr,
+                     VPCMPGTBrr, VPCMPGTWrr, VPCMPGTDrr, VPCMPGTQrr)>;
 
 def Zn3WriteVZeroIdiomALUY : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [Zn3WriteZeroLatency]>,
@@ -1607,6 +1609,7 @@ def : IsZeroIdiomFunction<[
     VPSUBBrr, VPSUBWrr, VPSUBDrr, VPSUBQrr,
     VPSUBSBrr, VPSUBSWrr,
     VPSUBUSBrr, VPSUBUSWrr,
+    VPCMPGTBrr, VPCMPGTWrr, VPCMPGTDrr, VPCMPGTQrr,
   ], ZeroIdiomPredicate>,
 
   // AVX YMM Zero-idioms.
