@@ -44,3 +44,22 @@ define <1 x half> @test_v1s16(<1 x float> %x) {
   %tmp = fptrunc <1 x float> %x to <1 x half>
   ret <1 x half> %tmp
 }
+
+declare <3 x float> @bar(float)
+define void @test_return_v3f32() {
+  ; CHECK-LABEL: name: test_return_v3f32
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK:   $s0 = COPY [[DEF]](s32)
+  ; CHECK:   BL @bar, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit-def $q0
+  ; CHECK:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+  ; CHECK:   [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY]](<2 x s64>)
+  ; CHECK:   [[DEF1:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
+  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s32>) = G_CONCAT_VECTORS [[BITCAST]](<4 x s32>), [[DEF1]](<4 x s32>), [[DEF1]](<4 x s32>)
+  ; CHECK:   [[UV:%[0-9]+]]:_(<3 x s32>), [[UV1:%[0-9]+]]:_(<3 x s32>), [[UV2:%[0-9]+]]:_(<3 x s32>), [[UV3:%[0-9]+]]:_(<3 x s32>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<12 x s32>)
+  ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK:   RET_ReallyLR
+  %call = call <3 x float> @bar(float undef)
+  ret void
+}
