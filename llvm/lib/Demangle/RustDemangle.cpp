@@ -153,6 +153,15 @@ void Demangler::demanglePath() {
     print(">");
     break;
   }
+  case 'X': {
+    demangleImplPath();
+    print("<");
+    demangleType();
+    print(" as ");
+    demanglePath();
+    print(">");
+    break;
+  }
   case 'N': {
     char NS = consume();
     if (!isLower(NS) && !isUpper(NS)) {
