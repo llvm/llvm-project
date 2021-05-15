@@ -608,8 +608,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     ModRefInfo MR = BatchAA.getModRefInfo(Inst, MemLoc);
     // If necessary, perform additional analysis.
     if (isModAndRefSet(MR))
-      // TODO: Support callCapturesBefore() on BatchAAResults.
-      MR = AA.callCapturesBefore(Inst, MemLoc, &DT);
+      MR = BatchAA.callCapturesBefore(Inst, MemLoc, &DT);
     switch (clearMust(MR)) {
     case ModRefInfo::NoModRef:
       // If the call has no effect on the queried pointer, just ignore it.
