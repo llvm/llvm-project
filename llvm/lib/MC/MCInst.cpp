@@ -10,6 +10,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
@@ -17,13 +18,17 @@
 
 using namespace llvm;
 
-void MCOperand::print(raw_ostream &OS) const {
+void MCOperand::print(raw_ostream &OS, const MCRegisterInfo *RegInfo) const {
   OS << "<MCOperand ";
   if (!isValid())
     OS << "INVALID";
-  else if (isReg())
-    OS << "Reg:" << getReg();
-  else if (isImm())
+  else if (isReg()) {
+    OS << "Reg:";
+    if (RegInfo)
+      OS << RegInfo->getName(getReg());
+    else
+      OS << getReg();
+  } else if (isImm())
     OS << "Imm:" << getImm();
   else if (isSFPImm())
     OS << "SFPImm:" << bit_cast<float>(getSFPImm());
@@ -32,7 +37,9 @@ void MCOperand::print(raw_ostream &OS) const {
   else if (isExpr()) {
     OS << "Expr:(" << *getExpr() << ")";
   } else if (isInst()) {
-    OS << "Inst:(" << *getInst() << ")";
+    OS << "Inst:(";
+    getInst()->print(OS, RegInfo);
+    OS << ")";
   } else
     OS << "UNDEFINED";
   OS << ">";
@@ -62,23 +69,24 @@ LLVM_DUMP_METHOD void MCOperand::dump() const {
 }
 #endif
 
-void MCInst::print(raw_ostream &OS) const {
+void MCInst::print(raw_ostream &OS, const MCRegisterInfo *RegInfo) const {
   OS << "<MCInst " << getOpcode();
   for (unsigned i = 0, e = getNumOperands(); i != e; ++i) {
     OS << " ";
-    getOperand(i).print(OS);
+    getOperand(i).print(OS, RegInfo);
   }
   OS << ">";
 }
 
 void MCInst::dump_pretty(raw_ostream &OS, const MCInstPrinter *Printer,
-                         StringRef Separator) const {
+                         StringRef Separator,
+                         const MCRegisterInfo *RegInfo) const {
   StringRef InstName = Printer ? Printer->getOpcodeName(getOpcode()) : "";
-  dump_pretty(OS, InstName, Separator);
+  dump_pretty(OS, InstName, Separator, RegInfo);
 }
 
-void MCInst::dump_pretty(raw_ostream &OS, StringRef Name,
-                         StringRef Separator) const {
+void MCInst::dump_pretty(raw_ostream &OS, StringRef Name, StringRef Separator,
+                         const MCRegisterInfo *RegInfo) const {
   OS << "<MCInst #" << getOpcode();
 
   // Show the instruction opcode name if we have it.
@@ -87,7 +95,7 @@ void MCInst::dump_pretty(raw_ostream &OS, StringRef Name,
 
   for (unsigned i = 0, e = getNumOperands(); i != e; ++i) {
     OS << Separator;
-    getOperand(i).print(OS);
+    getOperand(i).print(OS, RegInfo);
   }
   OS << ">";
 }
