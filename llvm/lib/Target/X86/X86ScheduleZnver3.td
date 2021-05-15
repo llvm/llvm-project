@@ -1542,7 +1542,8 @@ def Zn3WriteFZeroIdiomY : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [Zn3WriteZeroLatency]>,
     SchedVar<NoSchedPred,                          [WriteFLogicY]>
 ]>;
-def : InstRW<[Zn3WriteFZeroIdiomY], (instrs VXORPSYrr, VXORPDYrr)>;
+def : InstRW<[Zn3WriteFZeroIdiomY], (instrs VXORPSYrr, VXORPDYrr,
+                                            VANDNPSYrr)>;
 
 def : IsZeroIdiomFunction<[
   // GPR Zero-idioms.
@@ -1560,7 +1561,8 @@ def : IsZeroIdiomFunction<[
                      VANDNPSrr ], ZeroIdiomPredicate>,
 
   // AVX YMM Zero-idioms.
-  DepBreakingClass<[ VXORPSYrr, VXORPDYrr ], ZeroIdiomPredicate>,
+  DepBreakingClass<[ VXORPSYrr, VXORPDYrr,
+                     VANDNPSYrr ], ZeroIdiomPredicate>,
 ]>;
 
 def : IsDepBreakingFunction<[
