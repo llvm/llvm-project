@@ -11,7 +11,6 @@ config("googletest_config") {
   # of C++11 on MSVC, so we force it on.
   defines = [
     "GTEST_LANG_CXX11",
-    "GTEST_HAS_TR1_TUPLE=0",
   ]
   if (host_os == "win") {
     defines += [ "GTEST_OS_WINDOWS" ]
