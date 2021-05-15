@@ -737,12 +737,10 @@ static unsigned getFullUnrollBoostingFactor(const EstimatedUnrollCost &Cost,
 // cheaply estimate cost for full unrolling when we don't want to symbolically
 // evaluate all iterations.
 class UnrollCostEstimator {
-  Loop &TheLoop;
   const unsigned LoopSize;
 
 public:
-  UnrollCostEstimator(Loop &L, unsigned LoopSize)
-    : TheLoop(L), LoopSize(LoopSize) {}
+  UnrollCostEstimator(Loop &L, unsigned LoopSize) : LoopSize(LoopSize) {}
 
   // Returns loop size estimation for unrolled loop, given the unrolling
   // configuration specified by UP.
