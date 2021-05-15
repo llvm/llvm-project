@@ -15,6 +15,7 @@ User Guide for AMDGPU Backend
    AMDGPU/AMDGPUAsmGFX904
    AMDGPU/AMDGPUAsmGFX906
    AMDGPU/AMDGPUAsmGFX908
+   AMDGPU/AMDGPUAsmGFX90a
    AMDGPU/AMDGPUAsmGFX10
    AMDGPU/AMDGPUAsmGFX1011
    AMDGPUModifierSyntax
@@ -11369,6 +11370,8 @@ in this description.
                                         :doc:`gfx908<AMDGPU/AMDGPUAsmGFX908>`
 
                                         :doc:`gfx909<AMDGPU/AMDGPUAsmGFX900>`
+
+                                        :doc:`gfx90a<AMDGPU/AMDGPUAsmGFX90a>`
 
     :doc:`GFX10<AMDGPU/AMDGPUAsmGFX10>` :doc:`gfx1011<AMDGPU/AMDGPUAsmGFX1011>`
 
