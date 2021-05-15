@@ -1032,8 +1032,8 @@ GFX10 only.
 Note: numeric values may be specified as either :ref:`integer numbers<amdgpu_synid_integer_number>` or
 :ref:`absolute expressions<amdgpu_synid_absolute_expression>`.
 
-DPP/DPP16 Modifiers
--------------------
+DPP Modifiers
+-------------
 
 GFX8, GFX9 and GFX10 only.
 
@@ -1114,6 +1114,77 @@ Examples:
 
   quad_perm:[0, 1, 2, 3]
   row_shl:3
+
+.. _amdgpu_synid_dpp32_ctrl:
+
+dpp32_ctrl
+~~~~~~~~~~
+
+Specifies how data are shared between threads. This is a mandatory modifier.
+There is no default value.
+
+May be used only with GFX90A 32-bit instructions.
+
+Note: the lanes of a wavefront are organized in four *rows* and four *banks*.
+
+    ======================================== ==================================================
+    Syntax                                   Description
+    ======================================== ==================================================
+    quad_perm:[{0..3},{0..3},{0..3},{0..3}]  Full permute of 4 threads.
+    row_mirror                               Mirror threads within row.
+    row_half_mirror                          Mirror threads within 1/2 row (8 threads).
+    row_bcast:15                             Broadcast 15th thread of each row to next row.
+    row_bcast:31                             Broadcast thread 31 to rows 2 and 3.
+    wave_shl:1                               Wavefront left shift by 1 thread.
+    wave_rol:1                               Wavefront left rotate by 1 thread.
+    wave_shr:1                               Wavefront right shift by 1 thread.
+    wave_ror:1                               Wavefront right rotate by 1 thread.
+    row_shl:{1..15}                          Row shift left by 1-15 threads.
+    row_shr:{1..15}                          Row shift right by 1-15 threads.
+    row_ror:{1..15}                          Row rotate right by 1-15 threads.
+    row_newbcast:{1..15}                     Broadcast a thread within a row to the whole row.
+    ======================================== ==================================================
+
+Note: numeric values may be specified as either
+:ref:`integer numbers<amdgpu_synid_integer_number>` or
+:ref:`absolute expressions<amdgpu_synid_absolute_expression>`.
+
+Examples:
+
+.. parsed-literal::
+
+  quad_perm:[0, 1, 2, 3]
+  row_shl:3
+
+
+.. _amdgpu_synid_dpp64_ctrl:
+
+dpp64_ctrl
+~~~~~~~~~~
+
+Specifies how data are shared between threads. This is a mandatory modifier.
+There is no default value.
+
+May be used only with GFX90A 64-bit instructions.
+
+Note: the lanes of a wavefront are organized in four *rows* and four *banks*.
+
+    ======================================== ==================================================
+    Syntax                                   Description
+    ======================================== ==================================================
+    row_newbcast:{1..15}                     Broadcast a thread within a row to the whole row.
+    ======================================== ==================================================
+
+Note: numeric values may be specified as either
+:ref:`integer numbers<amdgpu_synid_integer_number>` or
+:ref:`absolute expressions<amdgpu_synid_absolute_expression>`.
+
+Examples:
+
+.. parsed-literal::
+
+  row_newbcast:3
+
 
 .. _amdgpu_synid_row_mask:
 
@@ -1778,15 +1849,19 @@ See a description :ref:`here<amdgpu_synid_clamp>`.
 VOP3P MFMA Modifiers
 --------------------
 
+These modifiers may only be used with GFX908 and GFX90A.
+
 .. _amdgpu_synid_cbsz:
 
 cbsz
 ~~~~
 
+Specifies a broadcast mode.
+
     =============================== ==================================================================
     Syntax                          Description
     =============================== ==================================================================
-    cbsz:[{0..7}]                   TBD
+    cbsz:[{0..7}]                   A broadcast mode.
     =============================== ==================================================================
 
 Note: numeric value may be specified as either
@@ -1798,10 +1873,12 @@ an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
 abid
 ~~~~
 
+Specifies matrix A group select.
+
     =============================== ==================================================================
     Syntax                          Description
     =============================== ==================================================================
-    abid:[{0..15}]                  TBD
+    abid:[{0..15}]                  Matrix A group select id.
     =============================== ==================================================================
 
 Note: numeric value may be specified as either
@@ -1813,10 +1890,12 @@ an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
 blgp
 ~~~~
 
+Specifies matrix B lane group pattern.
+
     =============================== ==================================================================
     Syntax                          Description
     =============================== ==================================================================
-    blgp:[{0..7}]                   TBD
+    blgp:[{0..7}]                   Matrix B lane group pattern.
     =============================== ==================================================================
 
 Note: numeric value may be specified as either
