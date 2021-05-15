@@ -68,7 +68,6 @@ define double @test_with_lcssa(double %arg1, double* %arg2) {
 ; CHECK-NEXT:    [[RES_LCSSA:%.*]] = phi double [ [[RES_1]], [[LOOP_LATCH]] ]
 ; CHECK-NEXT:    ret double [[RES_LCSSA]]
 ; CHECK:       loop.latch.1:
-; CHECK-NEXT:    [[PTR_1:%.*]] = getelementptr inbounds double, double* [[ARG2]], i64 2
 ; CHECK-NEXT:    unreachable
 ;
 

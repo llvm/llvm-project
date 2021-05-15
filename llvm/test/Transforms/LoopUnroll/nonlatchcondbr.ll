@@ -40,7 +40,6 @@ define void @test1(i32* noalias %A) {
 ; CHECK:       for.body.3:
 ; CHECK-NEXT:    br i1 false, label [[FOR_BODY_FOR_BODY_CRIT_EDGE_3:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.for.body_crit_edge.3:
-; CHECK-NEXT:    [[ARRAYIDX_PHI_TRANS_INSERT_3:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 4
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -124,7 +123,7 @@ define void @test2(i32* noalias %A) {
 ; CHECK:       for.body.for.body_crit_edge.3:
 ; CHECK-NEXT:    [[ARRAYIDX_PHI_TRANS_INSERT_3:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INC_3]]
 ; CHECK-NEXT:    [[DOTPRE_3]] = load i32, i32* [[ARRAYIDX_PHI_TRANS_INSERT_3]], align 4
-; CHECK-NEXT:    br label [[FOR_HEADER]], !llvm.loop !0
+; CHECK-NEXT:    br label [[FOR_HEADER]], !llvm.loop [[LOOP0:![0-9]+]]
 ;
 entry:
   br i1 true, label %for.preheader, label %for.end
@@ -202,7 +201,7 @@ define void @test3(i32* noalias %A, i1 %cond) {
 ; CHECK:       for.body.for.body_crit_edge.3:
 ; CHECK-NEXT:    [[ARRAYIDX_PHI_TRANS_INSERT_3:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INC_3]]
 ; CHECK-NEXT:    [[DOTPRE_3]] = load i32, i32* [[ARRAYIDX_PHI_TRANS_INSERT_3]], align 4
-; CHECK-NEXT:    br label [[FOR_HEADER]], !llvm.loop !2
+; CHECK-NEXT:    br label [[FOR_HEADER]], !llvm.loop [[LOOP2:![0-9]+]]
 ;
 entry:
   %0 = load i32, i32* %A, align 4
