@@ -89,10 +89,6 @@ protected:
   virtual ArrayRef<uint8_t> data() const = 0;
   virtual uint64_t getTombstone() const { return 0; }
 
-  // Verifies the existing data at relocation targets matches our expectations.
-  // This is performed only debug builds as an extra sanity check.
-  void verifyRelocTargets() const;
-
   ArrayRef<WasmRelocation> relocations;
   Kind sectionKind;
 };
