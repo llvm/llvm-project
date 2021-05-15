@@ -1573,7 +1573,8 @@ def Zn3WriteVZeroIdiomALUY : SchedWriteVariant<[
     SchedVar<NoSchedPred,                          [WriteVecALUY]>
 ]>;
 def : InstRW<[Zn3WriteVZeroIdiomALUY],
-             (instrs VPSUBBYrr, VPSUBWYrr, VPSUBDYrr, VPSUBQYrr)>;
+             (instrs VPSUBBYrr, VPSUBWYrr, VPSUBDYrr, VPSUBQYrr,
+                     VPCMPGTBYrr, VPCMPGTWYrr, VPCMPGTDYrr, VPCMPGTQYrr)>;
 
 def : IsZeroIdiomFunction<[
   // GPR Zero-idioms.
@@ -1623,7 +1624,8 @@ def : IsZeroIdiomFunction<[
     VPANDNYrr,
     VPSUBBYrr, VPSUBWYrr, VPSUBDYrr, VPSUBQYrr,
     VPSUBSBYrr, VPSUBSWYrr,
-    VPSUBUSBYrr, VPSUBUSWYrr
+    VPSUBUSBYrr, VPSUBUSWYrr,
+    VPCMPGTBYrr, VPCMPGTWYrr, VPCMPGTDYrr, VPCMPGTQYrr
   ], ZeroIdiomPredicate>,
 ]>;
 
