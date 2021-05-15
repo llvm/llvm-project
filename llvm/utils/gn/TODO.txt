@@ -1,6 +1,6 @@
 Ideas for things to do:
 
-- more projects (compiler-rt's asan/ubsan/msan/tsan, lldb)
+- more projects (lldb, check- targets for compiler-rt's asan/ubsan/msan/tsan)
   - once there are more projects, have an llvm_enable_projects arg, modeled
     after llvm_targets_to_build in the GN build
   - a check-all build target that runs test of all projects
