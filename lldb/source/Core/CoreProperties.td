@@ -138,5 +138,5 @@ let Definition = "debugger" in {
   def ShowAutosuggestion: Property<"show-autosuggestion", "Boolean">,
     Global,
     DefaultFalse,
-    Desc<"If true, LLDB will show suggestions to complete the command the user typed.">;
+    Desc<"If true, LLDB will show suggestions to complete the command the user typed. Suggestions may be accepted using Ctrl-F.">;
 }
