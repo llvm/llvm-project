@@ -34,9 +34,11 @@ static_assert(!std::sized_sentinel_for<reverse_bidirectional_iterator, reverse_b
 using reverse_random_access_iterator = std::reverse_iterator<random_access_iterator<int*>>;
 static_assert(common_reverse_iterator_checks<reverse_random_access_iterator>());
 static_assert(std::random_access_iterator<reverse_random_access_iterator>);
+static_assert(!std::contiguous_iterator<reverse_random_access_iterator>);
 static_assert(std::sized_sentinel_for<reverse_random_access_iterator, reverse_random_access_iterator>);
 
 using reverse_contiguous_iterator = std::reverse_iterator<contiguous_iterator<int*>>;
 static_assert(common_reverse_iterator_checks<reverse_contiguous_iterator>());
 static_assert(std::random_access_iterator<reverse_contiguous_iterator>);
+static_assert(!std::contiguous_iterator<reverse_contiguous_iterator>);
 static_assert(std::sized_sentinel_for<reverse_contiguous_iterator, reverse_contiguous_iterator>);
