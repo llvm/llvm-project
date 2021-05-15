@@ -39,9 +39,84 @@ inline bool isHighReg(unsigned int Reg) {
 }
 } // end namespace SystemZ
 
+/// A SystemZ-specific class detailing special use registers
+/// particular for calling conventions.
+/// It is abstract, all calling conventions must override and
+/// define the pure virtual member function defined in this class.
+class SystemZCallingConventionRegisters {
+public:
+  /// \returns the register that keeps the
+  /// return function address.
+  virtual int getReturnFunctionAddressRegister() = 0;
+
+  /// \returns the register that keeps the
+  /// stack pointer address.
+  virtual int getStackPointerRegister() = 0;
+
+  /// \returns the register that keeps the
+  /// frame pointer address.
+  virtual int getFramePointerRegister() = 0;
+
+  /// \returns an array of all the callee saved registers.
+  virtual const MCPhysReg *
+  getCalleeSavedRegs(const MachineFunction *MF) const = 0;
+
+  /// \returns the mask of all the call preserved registers.
+  virtual const uint32_t *getCallPreservedMask(const MachineFunction &MF,
+                                               CallingConv::ID CC) const = 0;
+
+  /// Destroys the object. Bogus destructor allowing derived classes
+  /// to override it.
+  virtual ~SystemZCallingConventionRegisters(){};
+};
+
+/// XPLINK64 calling convention specific use registers
+/// Particular to z/OS when in 64 bit mode
+class SystemZXPLINK64Registers : public SystemZCallingConventionRegisters {
+public:
+  int getReturnFunctionAddressRegister() override final {
+    return SystemZ::R7D;
+  };
+
+  int getStackPointerRegister() override final { return SystemZ::R4D; };
+
+  int getFramePointerRegister() override final { return SystemZ::R8D; };
+
+  const MCPhysReg *
+  getCalleeSavedRegs(const MachineFunction *MF) const override final;
+
+  const uint32_t *getCallPreservedMask(const MachineFunction &MF,
+                                       CallingConv::ID CC) const override final;
+
+  /// Destroys the object. Bogus destructor overriding base class destructor
+  ~SystemZXPLINK64Registers(){};
+};
+
+/// ELF calling convention specific use registers
+/// Particular when on zLinux in 64 bit mode
+class SystemZELFRegisters : public SystemZCallingConventionRegisters {
+public:
+  int getReturnFunctionAddressRegister() override final {
+    return SystemZ::R14D;
+  };
+
+  int getStackPointerRegister() override final { return SystemZ::R15D; };
+
+  int getFramePointerRegister() override final { return SystemZ::R11D; };
+
+  const MCPhysReg *
+  getCalleeSavedRegs(const MachineFunction *MF) const override final;
+
+  const uint32_t *getCallPreservedMask(const MachineFunction &MF,
+                                       CallingConv::ID CC) const override final;
+
+  /// Destroys the object. Bogus destructor overriding base class destructor
+  ~SystemZELFRegisters(){};
+};
+
 struct SystemZRegisterInfo : public SystemZGenRegisterInfo {
 public:
-  SystemZRegisterInfo();
+  SystemZRegisterInfo(unsigned int RA);
 
   /// getPointerRegClass - Return the register class to use to hold pointers.
   /// This is currently only used by LOAD_STACK_GUARD, which requires a non-%r0
