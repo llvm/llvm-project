@@ -245,7 +245,8 @@ MemDepResult MemoryDependenceResults::getCallDependencyFrom(
 
 MemDepResult MemoryDependenceResults::getPointerDependencyFrom(
     const MemoryLocation &MemLoc, bool isLoad, BasicBlock::iterator ScanIt,
-    BasicBlock *BB, Instruction *QueryInst, unsigned *Limit) {
+    BasicBlock *BB, Instruction *QueryInst, unsigned *Limit,
+    BatchAAResults &BatchAA) {
   MemDepResult InvariantGroupDependency = MemDepResult::getUnknown();
   if (QueryInst != nullptr) {
     if (auto *LI = dyn_cast<LoadInst>(QueryInst)) {
@@ -256,7 +257,7 @@ MemDepResult MemoryDependenceResults::getPointerDependencyFrom(
     }
   }
   MemDepResult SimpleDep = getSimplePointerDependencyFrom(
-      MemLoc, isLoad, ScanIt, BB, QueryInst, Limit);
+      MemLoc, isLoad, ScanIt, BB, QueryInst, Limit, BatchAA);
   if (SimpleDep.isDef())
     return SimpleDep;
   // Non-local invariant group dependency indicates there is non local Def
@@ -268,6 +269,14 @@ MemDepResult MemoryDependenceResults::getPointerDependencyFrom(
   assert(InvariantGroupDependency.isUnknown() &&
          "InvariantGroupDependency should be only unknown at this point");
   return SimpleDep;
+}
+
+MemDepResult MemoryDependenceResults::getPointerDependencyFrom(
+    const MemoryLocation &MemLoc, bool isLoad, BasicBlock::iterator ScanIt,
+    BasicBlock *BB, Instruction *QueryInst, unsigned *Limit) {
+  BatchAAResults BatchAA(AA);
+  return getPointerDependencyFrom(MemLoc, isLoad, ScanIt, BB, QueryInst, Limit,
+                                  BatchAA);
 }
 
 MemDepResult
@@ -359,9 +368,8 @@ MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
 
 MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     const MemoryLocation &MemLoc, bool isLoad, BasicBlock::iterator ScanIt,
-    BasicBlock *BB, Instruction *QueryInst, unsigned *Limit) {
-  // We can batch AA queries, because IR does not change during a MemDep query.
-  BatchAAResults BatchAA(AA);
+    BasicBlock *BB, Instruction *QueryInst, unsigned *Limit,
+    BatchAAResults &BatchAA) {
   bool isInvariantLoad = false;
 
   unsigned DefaultLimit = getDefaultBlockScanLimit();
@@ -896,7 +904,8 @@ void MemoryDependenceResults::getNonLocalPointerDependency(
 /// If we do a lookup, add the result to the cache.
 MemDepResult MemoryDependenceResults::GetNonLocalInfoForBlock(
     Instruction *QueryInst, const MemoryLocation &Loc, bool isLoad,
-    BasicBlock *BB, NonLocalDepInfo *Cache, unsigned NumSortedEntries) {
+    BasicBlock *BB, NonLocalDepInfo *Cache, unsigned NumSortedEntries,
+    BatchAAResults &BatchAA) {
 
   bool isInvariantLoad = false;
 
@@ -946,8 +955,8 @@ MemDepResult MemoryDependenceResults::GetNonLocalInfoForBlock(
   }
 
   // Scan the block for the dependency.
-  MemDepResult Dep =
-      getPointerDependencyFrom(Loc, isLoad, ScanPos, BB, QueryInst);
+  MemDepResult Dep = getPointerDependencyFrom(Loc, isLoad, ScanPos, BB,
+                                              QueryInst, nullptr, BatchAA);
 
   // Don't cache results for invariant load.
   if (isInvariantLoad)
@@ -1188,6 +1197,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
   bool GotWorklistLimit = false;
   LLVM_DEBUG(AssertSorted(*Cache));
 
+  BatchAAResults BatchAA(AA);
   while (!Worklist.empty()) {
     BasicBlock *BB = Worklist.pop_back_val();
 
@@ -1219,7 +1229,8 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
       // information, we will use it, otherwise we compute it.
       LLVM_DEBUG(AssertSorted(*Cache, NumSortedEntries));
       MemDepResult Dep = GetNonLocalInfoForBlock(QueryInst, Loc, isLoad, BB,
-                                                 Cache, NumSortedEntries);
+                                                 Cache, NumSortedEntries,
+                                                 BatchAA);
 
       // If we got a Def or Clobber, add this to the list of results.
       if (!Dep.isNonLocal()) {
