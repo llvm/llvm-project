@@ -84,7 +84,7 @@ void BufferedStackTrace::Unwind(u32 max_depth, uptr pc, uptr bp, void *context,
       UnwindSlow(pc, max_depth);
     // If there are too few frames, the program may be built with
     // -fno-asynchronous-unwind-tables. Fall back to fast unwinder below.
-    if (size > 2)
+    if (size > 2 || size >= max_depth)
       return;
 #else
     UNREACHABLE("slow unwind requested but not available");
