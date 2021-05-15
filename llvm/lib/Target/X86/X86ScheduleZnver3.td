@@ -1554,7 +1554,7 @@ def : IsZeroIdiomFunction<[
 
   // SSE XMM Zero-idioms.
   DepBreakingClass<[ XORPSrr, XORPDrr,
-                     ANDNPSrr ], ZeroIdiomPredicate>,
+                     ANDNPSrr, ANDNPDrr ], ZeroIdiomPredicate>,
 
   // AVX XMM Zero-idioms.
   DepBreakingClass<[ VXORPSrr, VXORPDrr,
