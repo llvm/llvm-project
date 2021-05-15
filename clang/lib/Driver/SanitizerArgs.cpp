@@ -865,6 +865,11 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     } else {
       HwasanAbi = "interceptor";
     }
+    if (TC.getTriple().getArch() == llvm::Triple::x86_64)
+      HwasanUseAliases = Args.hasFlag(
+          options::OPT_fsanitize_hwaddress_experimental_aliasing,
+          options::OPT_fno_sanitize_hwaddress_experimental_aliasing,
+          HwasanUseAliases);
   }
 
   if (AllAddedKinds & SanitizerKind::SafeStack) {
