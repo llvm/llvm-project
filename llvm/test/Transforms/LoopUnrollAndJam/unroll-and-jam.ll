@@ -141,8 +141,6 @@ target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 ; CHECK-NEXT:    [[ADD_LCSSA_EPIL_2:%.*]] = phi i32 [ [[ADD_EPIL_2]], [[FOR_INNER_EPIL_2]] ]
 ; CHECK-NEXT:    [[ARRAYIDX6_EPIL_2:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[ADD8_EPIL_1]]
 ; CHECK-NEXT:    store i32 [[ADD_LCSSA_EPIL_2]], i32* [[ARRAYIDX6_EPIL_2]], align 4, !tbaa !0
-; CHECK-NEXT:    [[ADD8_EPIL_2:%.*]] = add nuw i32 [[ADD8_EPIL_1]], 1
-; CHECK-NEXT:    [[EPIL_ITER_SUB_2:%.*]] = sub i32 [[EPIL_ITER_SUB_1]], 1
 ; CHECK-NEXT:    br label [[FOR_END_LOOPEXIT_EPILOG_LCSSA]]
 define void @test1(i32 %I, i32 %J, i32* noalias nocapture %A, i32* noalias nocapture readonly %B) #0 {
 entry:

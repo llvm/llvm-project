@@ -213,16 +213,11 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
 
     // Aggressively clean up dead instructions that simplifyLoopIVs already
     // identified. Any remaining should be cleaned up below.
-    while (!DeadInsts.empty()) {
-      Value *V = DeadInsts.pop_back_val();
-      if (Instruction *Inst = dyn_cast_or_null<Instruction>(V))
-        RecursivelyDeleteTriviallyDeadInstructions(Inst);
-    }
+    RecursivelyDeleteTriviallyDeadInstructions(DeadInsts);
   }
 
-  // At this point, the code is well formed.  We now do a quick sweep over the
-  // inserted code, doing constant propagation and dead code elimination as we
-  // go.
+  // At this point, the code is well formed.  Perform constprop, instsimplify,
+  // and dce.
   const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
   for (BasicBlock *BB : L->getBlocks()) {
     for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E;) {
@@ -232,14 +227,9 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
         if (LI->replacementPreservesLCSSAForm(Inst, V))
           Inst->replaceAllUsesWith(V);
       if (isInstructionTriviallyDead(Inst))
-        BB->getInstList().erase(Inst);
+        RecursivelyDeleteTriviallyDeadInstructions(Inst);
     }
   }
-
-  // TODO: after peeling or unrolling, previously loop variant conditions are
-  // likely to fold to constants, eagerly propagating those here will require
-  // fewer cleanup passes to be run.  Alternatively, a LoopEarlyCSE might be
-  // appropriate.
 }
 
 /// Unroll the given loop by Count. The loop must be in LCSSA form.  Unrolling
