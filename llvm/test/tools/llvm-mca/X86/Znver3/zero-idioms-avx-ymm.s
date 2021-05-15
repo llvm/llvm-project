@@ -975,12 +975,12 @@ vpxor %ymm1, %ymm0, %ymm0
 
 # CHECK:      Iterations:        10000
 # CHECK-NEXT: Instructions:      20000
-# CHECK-NEXT: Total Cycles:      20003
+# CHECK-NEXT: Total Cycles:      5004
 # CHECK-NEXT: Total uOps:        20000
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    1.00
-# CHECK-NEXT: IPC:               1.00
+# CHECK-NEXT: uOps Per Cycle:    4.00
+# CHECK-NEXT: IPC:               4.00
 # CHECK-NEXT: Block RThroughput: 0.5
 
 # CHECK:      Instruction Info:
@@ -996,13 +996,13 @@ vpxor %ymm1, %ymm0, %ymm0
 # CHECK-NEXT:  1      1     0.25                        vpxor	%ymm1, %ymm0, %ymm0
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    20000
-# CHECK-NEXT: Max number of mappings used:         66
+# CHECK-NEXT: Total number of mappings created:    10000
+# CHECK-NEXT: Max number of mappings used:         37
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
-# CHECK-NEXT:    Total number of mappings created: 20000
-# CHECK-NEXT:    Max number of mappings used:      66
+# CHECK-NEXT:    Total number of mappings created: 10000
+# CHECK-NEXT:    Max number of mappings used:      37
 
 # CHECK:      *  Register File #2 -- Zn3IntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     192
@@ -1044,12 +1044,12 @@ vpxor %ymm1, %ymm0, %ymm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vpxor	%ymm1, %ymm0, %ymm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456
+# CHECK-NEXT: Index     01234
 
-# CHECK:      [0,0]     DeER ..   vpsubsb	%ymm0, %ymm0, %ymm0
-# CHECK-NEXT: [0,1]     D=eER..   vpxor	%ymm1, %ymm0, %ymm0
-# CHECK-NEXT: [1,0]     D==eER.   vpsubsb	%ymm0, %ymm0, %ymm0
-# CHECK-NEXT: [1,1]     D===eER   vpxor	%ymm1, %ymm0, %ymm0
+# CHECK:      [0,0]     DeER.   vpsubsb	%ymm0, %ymm0, %ymm0
+# CHECK-NEXT: [0,1]     D=eER   vpxor	%ymm1, %ymm0, %ymm0
+# CHECK-NEXT: [1,0]     DeE-R   vpsubsb	%ymm0, %ymm0, %ymm0
+# CHECK-NEXT: [1,1]     D=eER   vpxor	%ymm1, %ymm0, %ymm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1058,20 +1058,20 @@ vpxor %ymm1, %ymm0, %ymm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     2.0    0.5    0.0       vpsubsb	%ymm0, %ymm0, %ymm0
-# CHECK-NEXT: 1.     2     3.0    0.0    0.0       vpxor	%ymm1, %ymm0, %ymm0
-# CHECK-NEXT:        2     2.5    0.3    0.0       <total>
+# CHECK-NEXT: 0.     2     1.0    1.0    0.5       vpsubsb	%ymm0, %ymm0, %ymm0
+# CHECK-NEXT: 1.     2     2.0    0.0    0.0       vpxor	%ymm1, %ymm0, %ymm0
+# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
 
 # CHECK:      [11] Code Region
 
 # CHECK:      Iterations:        10000
 # CHECK-NEXT: Instructions:      20000
-# CHECK-NEXT: Total Cycles:      20003
+# CHECK-NEXT: Total Cycles:      5004
 # CHECK-NEXT: Total uOps:        20000
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    1.00
-# CHECK-NEXT: IPC:               1.00
+# CHECK-NEXT: uOps Per Cycle:    4.00
+# CHECK-NEXT: IPC:               4.00
 # CHECK-NEXT: Block RThroughput: 0.5
 
 # CHECK:      Instruction Info:
@@ -1087,13 +1087,13 @@ vpxor %ymm1, %ymm0, %ymm0
 # CHECK-NEXT:  1      1     0.25                        vpxor	%ymm1, %ymm0, %ymm0
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    20000
-# CHECK-NEXT: Max number of mappings used:         66
+# CHECK-NEXT: Total number of mappings created:    10000
+# CHECK-NEXT: Max number of mappings used:         37
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
-# CHECK-NEXT:    Total number of mappings created: 20000
-# CHECK-NEXT:    Max number of mappings used:      66
+# CHECK-NEXT:    Total number of mappings created: 10000
+# CHECK-NEXT:    Max number of mappings used:      37
 
 # CHECK:      *  Register File #2 -- Zn3IntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     192
@@ -1135,12 +1135,12 @@ vpxor %ymm1, %ymm0, %ymm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vpxor	%ymm1, %ymm0, %ymm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456
+# CHECK-NEXT: Index     01234
 
-# CHECK:      [0,0]     DeER ..   vpsubsw	%ymm0, %ymm0, %ymm0
-# CHECK-NEXT: [0,1]     D=eER..   vpxor	%ymm1, %ymm0, %ymm0
-# CHECK-NEXT: [1,0]     D==eER.   vpsubsw	%ymm0, %ymm0, %ymm0
-# CHECK-NEXT: [1,1]     D===eER   vpxor	%ymm1, %ymm0, %ymm0
+# CHECK:      [0,0]     DeER.   vpsubsw	%ymm0, %ymm0, %ymm0
+# CHECK-NEXT: [0,1]     D=eER   vpxor	%ymm1, %ymm0, %ymm0
+# CHECK-NEXT: [1,0]     DeE-R   vpsubsw	%ymm0, %ymm0, %ymm0
+# CHECK-NEXT: [1,1]     D=eER   vpxor	%ymm1, %ymm0, %ymm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1149,6 +1149,6 @@ vpxor %ymm1, %ymm0, %ymm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     2.0    0.5    0.0       vpsubsw	%ymm0, %ymm0, %ymm0
-# CHECK-NEXT: 1.     2     3.0    0.0    0.0       vpxor	%ymm1, %ymm0, %ymm0
-# CHECK-NEXT:        2     2.5    0.3    0.0       <total>
+# CHECK-NEXT: 0.     2     1.0    1.0    0.5       vpsubsw	%ymm0, %ymm0, %ymm0
+# CHECK-NEXT: 1.     2     2.0    0.0    0.0       vpxor	%ymm1, %ymm0, %ymm0
+# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
