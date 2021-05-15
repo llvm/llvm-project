@@ -18,8 +18,6 @@
 
 #ifdef MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS
 
-#define AART
-
 #include <algorithm>
 #include <cassert>
 #include <cctype>
@@ -174,81 +172,7 @@ public:
     }
     // Then setup the tensor.
     traverse(tensor, sparsity, 0, nnz, 0);
-#ifdef AART
-    dump();
-#endif
   }
-
-#ifdef AART
-  void dump() {
-    fprintf(stderr, "++++++++++ rank=%lu +++++++++++\n", sizes.size());
-    if constexpr (std::is_same_v<P, uint64_t>)
-      fprintf(stderr, "PTR64 ");
-    else if constexpr (std::is_same_v<P, uint32_t>)
-      fprintf(stderr, "PTR32 ");
-    else if constexpr (std::is_same_v<P, uint16_t>)
-      fprintf(stderr, "PTR16 ");
-    else if constexpr (std::is_same_v<P, uint8_t>)
-      fprintf(stderr, "PTR8 ");
-    if constexpr (std::is_same_v<I, uint64_t>)
-      fprintf(stderr, "INDX64 ");
-    else if constexpr (std::is_same_v<I, uint32_t>)
-      fprintf(stderr, "INDX32 ");
-    else if constexpr (std::is_same_v<I, uint16_t>)
-      fprintf(stderr, "INDX16 ");
-    else if constexpr (std::is_same_v<I, uint8_t>)
-      fprintf(stderr, "INDX8 ");
-    if constexpr (std::is_same_v<V, double>)
-      fprintf(stderr, "VALF64\n");
-    else if constexpr (std::is_same_v<V, float>)
-      fprintf(stderr, "VALF32\n");
-    else if constexpr (std::is_same_v<V, int64_t>)
-      fprintf(stderr, "VALI64\n");
-    else if constexpr (std::is_same_v<V, int32_t>)
-      fprintf(stderr, "VALI32\n");
-    else if constexpr (std::is_same_v<V, int16_t>)
-      fprintf(stderr, "VALI16\n");
-    else if constexpr (std::is_same_v<V, int8_t>)
-      fprintf(stderr, "VALI8\n");
-    for (uint64_t r = 0; r < sizes.size(); r++) {
-      fprintf(stderr, "dim %lu #%lu\n", r, sizes[r]);
-      fprintf(stderr, "  positions[%lu] #%lu :", r, pointers[r].size());
-      for (uint64_t i = 0; i < pointers[r].size(); i++)
-        if constexpr (std::is_same_v<P, uint64_t>)
-          fprintf(stderr, " %lu", pointers[r][i]);
-        else if constexpr (std::is_same_v<P, uint32_t>)
-          fprintf(stderr, " %u", pointers[r][i]);
-        else if constexpr (std::is_same_v<P, uint16_t>)
-          fprintf(stderr, " %u", pointers[r][i]);
-        else if constexpr (std::is_same_v<P, uint8_t>)
-          fprintf(stderr, " %u", pointers[r][i]);
-      fprintf(stderr, "\n  indices[%lu] #%lu :", r, indices[r].size());
-      for (uint64_t i = 0; i < indices[r].size(); i++)
-        if constexpr (std::is_same_v<I, uint64_t>)
-          fprintf(stderr, " %lu", indices[r][i]);
-        else if constexpr (std::is_same_v<I, uint32_t>)
-          fprintf(stderr, " %u", indices[r][i]);
-        else if constexpr (std::is_same_v<I, uint16_t>)
-          fprintf(stderr, " %u", indices[r][i]);
-        else if constexpr (std::is_same_v<I, uint8_t>)
-          fprintf(stderr, " %u", indices[r][i]);
-      fprintf(stderr, "\n");
-    }
-    fprintf(stderr, "values #%lu :", values.size());
-    for (uint64_t i = 0; i < values.size(); i++)
-      if constexpr (std::is_same_v<V, double>)
-        fprintf(stderr, " %lf", values[i]);
-      else if constexpr (std::is_same_v<V, float>)
-        fprintf(stderr, " %f", values[i]);
-      else if constexpr (std::is_same_v<V, int32_t>)
-        fprintf(stderr, " %d", values[i]);
-      else if constexpr (std::is_same_v<V, int16_t>)
-        fprintf(stderr, " %d", values[i]);
-      else if constexpr (std::is_same_v<V, int8_t>)
-        fprintf(stderr, " %d", values[i]);
-    fprintf(stderr, "\n+++++++++++++++++++++++++++++\n");
-  }
-#endif
 
   virtual ~SparseTensorStorage() {}
 
@@ -490,16 +414,6 @@ void *openTensorC(char *filename, uint64_t *idata) {
   // Close the file and return sorted tensor.
   fclose(file);
   tensor->sort(); // sort lexicographically
-#if 1
-  const std::vector<Element> &elements = tensor->getElements();
-  for (uint64_t k = 1; k < nnz; k++) {
-    uint64_t same = 0;
-    for (uint64_t r = 0; r < rank; r++)
-      if (elements[k].indices[r] == elements[k - 1].indices[r])
-        same++;
-    assert(same < rank && "duplicate element");
-  }
-#endif
   return tensor;
 }
 
