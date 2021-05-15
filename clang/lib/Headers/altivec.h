@@ -12520,6 +12520,13 @@ vec_vrfiz(vector float __a) {
 
 /* The vector unpack instructions all have a big-endian bias, so for
    little endian we must reverse the meanings of "high" and "low."  */
+#ifdef __LITTLE_ENDIAN__
+#define vec_vupkhpx(__a) __builtin_altivec_vupklpx((vector short)(__a))
+#define vec_vupklpx(__a) __builtin_altivec_vupkhpx((vector short)(__a))
+#else
+#define vec_vupkhpx(__a) __builtin_altivec_vupkhpx((vector short)(__a))
+#define vec_vupklpx(__a) __builtin_altivec_vupklpx((vector short)(__a))
+#endif
 
 static __inline__ vector short __ATTRS_o_ai
 vec_unpackh(vector signed char __a) {
