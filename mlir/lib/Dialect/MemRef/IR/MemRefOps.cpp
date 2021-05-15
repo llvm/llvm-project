@@ -943,10 +943,6 @@ LogicalResult DmaStartOp::verify() {
                     [](Type t) { return t.isIndex(); }))
     return emitOpError("expected tag indices to be of index type");
 
-  // DMAs from different memory spaces supported.
-  if (getSrcMemorySpace() == getDstMemorySpace())
-    return emitOpError("DMA should be between different memory spaces");
-
   // Optional stride-related operands must be either both present or both
   // absent.
   if (numOperands != numExpectedOperands &&
