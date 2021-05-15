@@ -4,6 +4,9 @@
 // RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=SEC
 // RUN: %run %t 2>&1 | FileCheck %s
 
+// On android %t is a wrapper python script so llvm-readelf will fail.
+// UNSUPPORTED: android
+
 /// No .eh_frame && -g => .debug_frame
 // SEC: .debug_frame
 
