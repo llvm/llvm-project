@@ -263,6 +263,11 @@ def sve_incdec_imm : Operand<i32>, TImmLeaf<i32, [{
 def sve_cnt_mul_imm : ComplexPattern<i32, 1, "SelectCntImm<1, 16, 1, false>">;
 def sve_cnt_shl_imm : ComplexPattern<i32, 1, "SelectCntImm<1, 16, 1, true>">;
 
+def int_aarch64_sve_cntp_oneuse : PatFrag<(ops node:$pred, node:$src2),
+                                          (int_aarch64_sve_cntp node:$pred, node:$src2), [{
+  return N->hasOneUse();
+}]>;
+
 //===----------------------------------------------------------------------===//
 // SVE PTrue - These are used extensively throughout the pattern matching so
 //             it's important we define them first.
@@ -664,7 +669,8 @@ multiclass sve_int_count_r_u32<bits<5> opc, string asm,
 }
 
 multiclass sve_int_count_r_x64<bits<5> opc, string asm,
-                               SDPatternOperator op = null_frag> {
+                               SDPatternOperator op,
+                               SDPatternOperator combine_op = null_frag> {
   def _B : sve_int_count_r<0b00, opc, asm, GPR64z, PPR8, GPR64z>;
   def _H : sve_int_count_r<0b01, opc, asm, GPR64z, PPR16, GPR64z>;
   def _S : sve_int_count_r<0b10, opc, asm, GPR64z, PPR32, GPR64z>;
@@ -678,6 +684,16 @@ multiclass sve_int_count_r_x64<bits<5> opc, string asm,
             (!cast<Instruction>(NAME # _S) PPRAny:$Pg, $Rn)>;
   def : Pat<(i64 (op GPR64:$Rn, (nxv2i1 PPRAny:$Pg))),
             (!cast<Instruction>(NAME # _D) PPRAny:$Pg, $Rn)>;
+
+  // Combine cntp with combine_op
+  def : Pat<(i64 (combine_op GPR64:$Rn, (int_aarch64_sve_cntp_oneuse (nxv16i1 (SVEAllActive)), (nxv16i1 PPRAny:$pred)))),
+            (!cast<Instruction>(NAME # _B) PPRAny:$pred, $Rn)>;
+  def : Pat<(i64 (combine_op GPR64:$Rn, (int_aarch64_sve_cntp_oneuse (nxv8i1 (SVEAllActive)), (nxv8i1 PPRAny:$pred)))),
+            (!cast<Instruction>(NAME # _H) PPRAny:$pred, $Rn)>;
+  def : Pat<(i64 (combine_op GPR64:$Rn, (int_aarch64_sve_cntp_oneuse (nxv4i1 (SVEAllActive)), (nxv4i1 PPRAny:$pred)))),
+            (!cast<Instruction>(NAME # _S) PPRAny:$pred, $Rn)>;
+  def : Pat<(i64 (combine_op GPR64:$Rn, (int_aarch64_sve_cntp_oneuse (nxv2i1 (SVEAllActive)), (nxv2i1 PPRAny:$pred)))),
+            (!cast<Instruction>(NAME # _D) PPRAny:$pred, $Rn)>;
 }
 
 class sve_int_count_v<bits<2> sz8_64, bits<5> opc, string asm,
