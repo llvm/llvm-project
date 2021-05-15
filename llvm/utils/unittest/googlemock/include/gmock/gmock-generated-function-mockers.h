@@ -30,12 +30,13 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// Author: wan@google.com (Zhanyong Wan)
+
 
 // Google Mock - a framework for writing C++ mock classes.
 //
 // This file implements function mockers of various arities.
+
+// GOOGLETEST_CM0002 DO NOT DELETE
 
 // IWYU pragma: private, include "gmock/gmock.h"
 
@@ -70,8 +71,8 @@ class FunctionMocker<R()> : public
   typedef R F();
   typedef typename internal::Function<F>::ArgumentTuple ArgumentTuple;
 
-  MockSpec<F>& With() {
-    return this->current_spec();
+  MockSpec<F> With() {
+    return MockSpec<F>(this, ::testing::make_tuple());
   }
 
   R Invoke() {
@@ -90,9 +91,8 @@ class FunctionMocker<R(A1)> : public
   typedef R F(A1);
   typedef typename internal::Function<F>::ArgumentTuple ArgumentTuple;
 
-  MockSpec<F>& With(const Matcher<A1>& m1) {
-    this->current_spec().SetMatchers(::testing::make_tuple(m1));
-    return this->current_spec();
+  MockSpec<F> With(const Matcher<A1>& m1) {
+    return MockSpec<F>(this, ::testing::make_tuple(m1));
   }
 
   R Invoke(A1 a1) {
@@ -100,7 +100,7 @@ class FunctionMocker<R(A1)> : public
     // by the C++ standard [14.6.4] here, as the base class type is
     // dependent on the template argument (and thus shouldn't be
     // looked into when resolving InvokeWith).
-    return this->InvokeWith(ArgumentTuple(a1));
+    return this->InvokeWith(ArgumentTuple(internal::forward<A1>(a1)));
   }
 };
 
@@ -111,9 +111,8 @@ class FunctionMocker<R(A1, A2)> : public
   typedef R F(A1, A2);
   typedef typename internal::Function<F>::ArgumentTuple ArgumentTuple;
 
-  MockSpec<F>& With(const Matcher<A1>& m1, const Matcher<A2>& m2) {
-    this->current_spec().SetMatchers(::testing::make_tuple(m1, m2));
-    return this->current_spec();
+  MockSpec<F> With(const Matcher<A1>& m1, const Matcher<A2>& m2) {
+    return MockSpec<F>(this, ::testing::make_tuple(m1, m2));
   }
 
   R Invoke(A1 a1, A2 a2) {
@@ -121,7 +120,8 @@ class FunctionMocker<R(A1, A2)> : public
     // by the C++ standard [14.6.4] here, as the base class type is
     // dependent on the template argument (and thus shouldn't be
     // looked into when resolving InvokeWith).
-    return this->InvokeWith(ArgumentTuple(a1, a2));
+    return this->InvokeWith(ArgumentTuple(internal::forward<A1>(a1),
+        internal::forward<A2>(a2)));
   }
 };
 
@@ -132,10 +132,9 @@ class FunctionMocker<R(A1, A2, A3)> : public
   typedef R F(A1, A2, A3);
   typedef typename internal::Function<F>::ArgumentTuple ArgumentTuple;
 
-  MockSpec<F>& With(const Matcher<A1>& m1, const Matcher<A2>& m2,
+  MockSpec<F> With(const Matcher<A1>& m1, const Matcher<A2>& m2,
       const Matcher<A3>& m3) {
-    this->current_spec().SetMatchers(::testing::make_tuple(m1, m2, m3));
-    return this->current_spec();
+    return MockSpec<F>(this, ::testing::make_tuple(m1, m2, m3));
   }
 
   R Invoke(A1 a1, A2 a2, A3 a3) {
@@ -143,7 +142,8 @@ class FunctionMocker<R(A1, A2, A3)> : public
     // by the C++ standard [14.6.4] here, as the base class type is
     // dependent on the template argument (and thus shouldn't be
     // looked into when resolving InvokeWith).
-    return this->InvokeWith(ArgumentTuple(a1, a2, a3));
+    return this->InvokeWith(ArgumentTuple(internal::forward<A1>(a1),
+        internal::forward<A2>(a2), internal::forward<A3>(a3)));
   }
 };
 
@@ -154,10 +154,9 @@ class FunctionMocker<R(A1, A2, A3, A4)> : public
   typedef R F(A1, A2, A3, A4);
   typedef typename internal::Function<F>::ArgumentTuple ArgumentTuple;
 
-  MockSpec<F>& With(const Matcher<A1>& m1, const Matcher<A2>& m2,
+  MockSpec<F> With(const Matcher<A1>& m1, const Matcher<A2>& m2,
       const Matcher<A3>& m3, const Matcher<A4>& m4) {
-    this->current_spec().SetMatchers(::testing::make_tuple(m1, m2, m3, m4));
-    return this->current_spec();
+    return MockSpec<F>(this, ::testing::make_tuple(m1, m2, m3, m4));
   }
 
   R Invoke(A1 a1, A2 a2, A3 a3, A4 a4) {
@@ -165,7 +164,9 @@ class FunctionMocker<R(A1, A2, A3, A4)> : public
     // by the C++ standard [14.6.4] here, as the base class type is
     // dependent on the template argument (and thus shouldn't be
     // looked into when resolving InvokeWith).
-    return this->InvokeWith(ArgumentTuple(a1, a2, a3, a4));
+    return this->InvokeWith(ArgumentTuple(internal::forward<A1>(a1),
+        internal::forward<A2>(a2), internal::forward<A3>(a3),
+        internal::forward<A4>(a4)));
   }
 };
 
@@ -177,10 +178,9 @@ class FunctionMocker<R(A1, A2, A3, A4, A5)> : public
   typedef R F(A1, A2, A3, A4, A5);
   typedef typename internal::Function<F>::ArgumentTuple ArgumentTuple;
 
-  MockSpec<F>& With(const Matcher<A1>& m1, const Matcher<A2>& m2,
+  MockSpec<F> With(const Matcher<A1>& m1, const Matcher<A2>& m2,
       const Matcher<A3>& m3, const Matcher<A4>& m4, const Matcher<A5>& m5) {
-    this->current_spec().SetMatchers(::testing::make_tuple(m1, m2, m3, m4, m5));
-    return this->current_spec();
+    return MockSpec<F>(this, ::testing::make_tuple(m1, m2, m3, m4, m5));
   }
 
   R Invoke(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5) {
@@ -188,7 +188,9 @@ class FunctionMocker<R(A1, A2, A3, A4, A5)> : public
     // by the C++ standard [14.6.4] here, as the base class type is
     // dependent on the template argument (and thus shouldn't be
     // looked into when resolving InvokeWith).
-    return this->InvokeWith(ArgumentTuple(a1, a2, a3, a4, a5));
+    return this->InvokeWith(ArgumentTuple(internal::forward<A1>(a1),
+        internal::forward<A2>(a2), internal::forward<A3>(a3),
+        internal::forward<A4>(a4), internal::forward<A5>(a5)));
   }
 };
 
@@ -200,12 +202,10 @@ class FunctionMocker<R(A1, A2, A3, A4, A5, A6)> : public
   typedef R F(A1, A2, A3, A4, A5, A6);
   typedef typename internal::Function<F>::ArgumentTuple ArgumentTuple;
 
-  MockSpec<F>& With(const Matcher<A1>& m1, const Matcher<A2>& m2,
+  MockSpec<F> With(const Matcher<A1>& m1, const Matcher<A2>& m2,
       const Matcher<A3>& m3, const Matcher<A4>& m4, const Matcher<A5>& m5,
       const Matcher<A6>& m6) {
-    this->current_spec().SetMatchers(::testing::make_tuple(m1, m2, m3, m4, m5,
-        m6));
-    return this->current_spec();
+    return MockSpec<F>(this, ::testing::make_tuple(m1, m2, m3, m4, m5, m6));
   }
 
   R Invoke(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6) {
@@ -213,7 +213,10 @@ class FunctionMocker<R(A1, A2, A3, A4, A5, A6)> : public
     // by the C++ standard [14.6.4] here, as the base class type is
     // dependent on the template argument (and thus shouldn't be
     // looked into when resolving InvokeWith).
-    return this->InvokeWith(ArgumentTuple(a1, a2, a3, a4, a5, a6));
+    return this->InvokeWith(ArgumentTuple(internal::forward<A1>(a1),
+        internal::forward<A2>(a2), internal::forward<A3>(a3),
+        internal::forward<A4>(a4), internal::forward<A5>(a5),
+        internal::forward<A6>(a6)));
   }
 };
 
@@ -225,12 +228,10 @@ class FunctionMocker<R(A1, A2, A3, A4, A5, A6, A7)> : public
   typedef R F(A1, A2, A3, A4, A5, A6, A7);
   typedef typename internal::Function<F>::ArgumentTuple ArgumentTuple;
 
-  MockSpec<F>& With(const Matcher<A1>& m1, const Matcher<A2>& m2,
+  MockSpec<F> With(const Matcher<A1>& m1, const Matcher<A2>& m2,
       const Matcher<A3>& m3, const Matcher<A4>& m4, const Matcher<A5>& m5,
       const Matcher<A6>& m6, const Matcher<A7>& m7) {
-    this->current_spec().SetMatchers(::testing::make_tuple(m1, m2, m3, m4, m5,
-        m6, m7));
-    return this->current_spec();
+    return MockSpec<F>(this, ::testing::make_tuple(m1, m2, m3, m4, m5, m6, m7));
   }
 
   R Invoke(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7) {
@@ -238,7 +239,10 @@ class FunctionMocker<R(A1, A2, A3, A4, A5, A6, A7)> : public
     // by the C++ standard [14.6.4] here, as the base class type is
     // dependent on the template argument (and thus shouldn't be
     // looked into when resolving InvokeWith).
-    return this->InvokeWith(ArgumentTuple(a1, a2, a3, a4, a5, a6, a7));
+    return this->InvokeWith(ArgumentTuple(internal::forward<A1>(a1),
+        internal::forward<A2>(a2), internal::forward<A3>(a3),
+        internal::forward<A4>(a4), internal::forward<A5>(a5),
+        internal::forward<A6>(a6), internal::forward<A7>(a7)));
   }
 };
 
@@ -250,12 +254,11 @@ class FunctionMocker<R(A1, A2, A3, A4, A5, A6, A7, A8)> : public
   typedef R F(A1, A2, A3, A4, A5, A6, A7, A8);
   typedef typename internal::Function<F>::ArgumentTuple ArgumentTuple;
 
-  MockSpec<F>& With(const Matcher<A1>& m1, const Matcher<A2>& m2,
+  MockSpec<F> With(const Matcher<A1>& m1, const Matcher<A2>& m2,
       const Matcher<A3>& m3, const Matcher<A4>& m4, const Matcher<A5>& m5,
       const Matcher<A6>& m6, const Matcher<A7>& m7, const Matcher<A8>& m8) {
-    this->current_spec().SetMatchers(::testing::make_tuple(m1, m2, m3, m4, m5,
-        m6, m7, m8));
-    return this->current_spec();
+    return MockSpec<F>(this, ::testing::make_tuple(m1, m2, m3, m4, m5, m6, m7,
+        m8));
   }
 
   R Invoke(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8) {
@@ -263,7 +266,11 @@ class FunctionMocker<R(A1, A2, A3, A4, A5, A6, A7, A8)> : public
     // by the C++ standard [14.6.4] here, as the base class type is
     // dependent on the template argument (and thus shouldn't be
     // looked into when resolving InvokeWith).
-    return this->InvokeWith(ArgumentTuple(a1, a2, a3, a4, a5, a6, a7, a8));
+    return this->InvokeWith(ArgumentTuple(internal::forward<A1>(a1),
+        internal::forward<A2>(a2), internal::forward<A3>(a3),
+        internal::forward<A4>(a4), internal::forward<A5>(a5),
+        internal::forward<A6>(a6), internal::forward<A7>(a7),
+        internal::forward<A8>(a8)));
   }
 };
 
@@ -275,13 +282,12 @@ class FunctionMocker<R(A1, A2, A3, A4, A5, A6, A7, A8, A9)> : public
   typedef R F(A1, A2, A3, A4, A5, A6, A7, A8, A9);
   typedef typename internal::Function<F>::ArgumentTuple ArgumentTuple;
 
-  MockSpec<F>& With(const Matcher<A1>& m1, const Matcher<A2>& m2,
+  MockSpec<F> With(const Matcher<A1>& m1, const Matcher<A2>& m2,
       const Matcher<A3>& m3, const Matcher<A4>& m4, const Matcher<A5>& m5,
       const Matcher<A6>& m6, const Matcher<A7>& m7, const Matcher<A8>& m8,
       const Matcher<A9>& m9) {
-    this->current_spec().SetMatchers(::testing::make_tuple(m1, m2, m3, m4, m5,
-        m6, m7, m8, m9));
-    return this->current_spec();
+    return MockSpec<F>(this, ::testing::make_tuple(m1, m2, m3, m4, m5, m6, m7,
+        m8, m9));
   }
 
   R Invoke(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9) {
@@ -289,7 +295,11 @@ class FunctionMocker<R(A1, A2, A3, A4, A5, A6, A7, A8, A9)> : public
     // by the C++ standard [14.6.4] here, as the base class type is
     // dependent on the template argument (and thus shouldn't be
     // looked into when resolving InvokeWith).
-    return this->InvokeWith(ArgumentTuple(a1, a2, a3, a4, a5, a6, a7, a8, a9));
+    return this->InvokeWith(ArgumentTuple(internal::forward<A1>(a1),
+        internal::forward<A2>(a2), internal::forward<A3>(a3),
+        internal::forward<A4>(a4), internal::forward<A5>(a5),
+        internal::forward<A6>(a6), internal::forward<A7>(a7),
+        internal::forward<A8>(a8), internal::forward<A9>(a9)));
   }
 };
 
@@ -302,13 +312,12 @@ class FunctionMocker<R(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10)> : public
   typedef R F(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10);
   typedef typename internal::Function<F>::ArgumentTuple ArgumentTuple;
 
-  MockSpec<F>& With(const Matcher<A1>& m1, const Matcher<A2>& m2,
+  MockSpec<F> With(const Matcher<A1>& m1, const Matcher<A2>& m2,
       const Matcher<A3>& m3, const Matcher<A4>& m4, const Matcher<A5>& m5,
       const Matcher<A6>& m6, const Matcher<A7>& m7, const Matcher<A8>& m8,
       const Matcher<A9>& m9, const Matcher<A10>& m10) {
-    this->current_spec().SetMatchers(::testing::make_tuple(m1, m2, m3, m4, m5,
-        m6, m7, m8, m9, m10));
-    return this->current_spec();
+    return MockSpec<F>(this, ::testing::make_tuple(m1, m2, m3, m4, m5, m6, m7,
+        m8, m9, m10));
   }
 
   R Invoke(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9,
@@ -317,10 +326,66 @@ class FunctionMocker<R(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10)> : public
     // by the C++ standard [14.6.4] here, as the base class type is
     // dependent on the template argument (and thus shouldn't be
     // looked into when resolving InvokeWith).
-    return this->InvokeWith(ArgumentTuple(a1, a2, a3, a4, a5, a6, a7, a8, a9,
-        a10));
+    return this->InvokeWith(ArgumentTuple(internal::forward<A1>(a1),
+        internal::forward<A2>(a2), internal::forward<A3>(a3),
+        internal::forward<A4>(a4), internal::forward<A5>(a5),
+        internal::forward<A6>(a6), internal::forward<A7>(a7),
+        internal::forward<A8>(a8), internal::forward<A9>(a9),
+        internal::forward<A10>(a10)));
   }
 };
+
+// Removes the given pointer; this is a helper for the expectation setter method
+// for parameterless matchers.
+//
+// We want to make sure that the user cannot set a parameterless expectation on
+// overloaded methods, including methods which are overloaded on const. Example:
+//
+//   class MockClass {
+//     MOCK_METHOD0(GetName, string&());
+//     MOCK_CONST_METHOD0(GetName, const string&());
+//   };
+//
+//   TEST() {
+//     // This should be an error, as it's not clear which overload is expected.
+//     EXPECT_CALL(mock, GetName).WillOnce(ReturnRef(value));
+//   }
+//
+// Here are the generated expectation-setter methods:
+//
+//   class MockClass {
+//     // Overload 1
+//     MockSpec<string&()> gmock_GetName() { ... }
+//     // Overload 2. Declared const so that the compiler will generate an
+//     // error when trying to resolve between this and overload 4 in
+//     // 'gmock_GetName(WithoutMatchers(), nullptr)'.
+//     MockSpec<string&()> gmock_GetName(
+//         const WithoutMatchers&, const Function<string&()>*) const {
+//       // Removes const from this, calls overload 1
+//       return AdjustConstness_(this)->gmock_GetName();
+//     }
+//
+//     // Overload 3
+//     const string& gmock_GetName() const { ... }
+//     // Overload 4
+//     MockSpec<const string&()> gmock_GetName(
+//         const WithoutMatchers&, const Function<const string&()>*) const {
+//       // Does not remove const, calls overload 3
+//       return AdjustConstness_const(this)->gmock_GetName();
+//     }
+//   }
+//
+template <typename MockType>
+const MockType* AdjustConstness_const(const MockType* mock) {
+  return mock;
+}
+
+// Removes const from and returns the given pointer; this is a helper for the
+// expectation setter method for parameterless matchers.
+template <typename MockType>
+MockType* AdjustConstness_(const MockType* mock) {
+  return const_cast<MockType*>(mock);
+}
 
 }  // namespace internal
 
@@ -355,324 +420,534 @@ using internal::FunctionMocker;
     GTEST_CONCAT_TOKEN_(gmock##constness##arity##_##Method##_, __LINE__)
 
 // INTERNAL IMPLEMENTATION - DON'T USE IN USER CODE!!!
-#define GMOCK_METHOD0_(tn, constness, ct, Method, ...) \
-  GMOCK_RESULT_(tn, __VA_ARGS__) ct Method( \
-      ) constness { \
-    GTEST_COMPILE_ASSERT_((::testing::tuple_size<                          \
-        tn ::testing::internal::Function<__VA_ARGS__>::ArgumentTuple>::value \
-            == 0), \
-        this_method_does_not_take_0_arguments); \
-    GMOCK_MOCKER_(0, constness, Method).SetOwnerAndName(this, #Method); \
-    return GMOCK_MOCKER_(0, constness, Method).Invoke(); \
-  } \
-  ::testing::MockSpec<__VA_ARGS__>& \
-      gmock_##Method() constness { \
-    GMOCK_MOCKER_(0, constness, Method).RegisterOwner(this); \
-    return GMOCK_MOCKER_(0, constness, Method).With(); \
-  } \
+#define GMOCK_METHOD0_(tn, constness, ct, Method, ...)                       \
+  GMOCK_RESULT_(tn, __VA_ARGS__) ct Method() constness {                     \
+    GTEST_COMPILE_ASSERT_(                                                   \
+        (::testing::tuple_size<tn ::testing::internal::Function<             \
+             __VA_ARGS__>::ArgumentTuple>::value == 0),                      \
+        this_method_does_not_take_0_arguments);                              \
+    GMOCK_MOCKER_(0, constness, Method).SetOwnerAndName(this, #Method);      \
+    return GMOCK_MOCKER_(0, constness, Method).Invoke();                     \
+  }                                                                          \
+  ::testing::MockSpec<__VA_ARGS__> gmock_##Method() constness {              \
+    GMOCK_MOCKER_(0, constness, Method).RegisterOwner(this);                 \
+    return GMOCK_MOCKER_(0, constness, Method).With();                       \
+  }                                                                          \
+  ::testing::MockSpec<__VA_ARGS__> gmock_##Method(                           \
+      const ::testing::internal::WithoutMatchers&,                           \
+      constness ::testing::internal::Function<__VA_ARGS__>*) const {         \
+    return ::testing::internal::AdjustConstness_##constness(this)            \
+        ->gmock_##Method();                                                  \
+  }                                                                          \
   mutable ::testing::FunctionMocker<__VA_ARGS__> GMOCK_MOCKER_(0, constness, \
-      Method)
+                                                               Method)
 
 // INTERNAL IMPLEMENTATION - DON'T USE IN USER CODE!!!
-#define GMOCK_METHOD1_(tn, constness, ct, Method, ...) \
-  GMOCK_RESULT_(tn, __VA_ARGS__) ct Method( \
-      GMOCK_ARG_(tn, 1, __VA_ARGS__) gmock_a1) constness { \
-    GTEST_COMPILE_ASSERT_((::testing::tuple_size<                          \
-        tn ::testing::internal::Function<__VA_ARGS__>::ArgumentTuple>::value \
-            == 1), \
-        this_method_does_not_take_1_argument); \
-    GMOCK_MOCKER_(1, constness, Method).SetOwnerAndName(this, #Method); \
-    return GMOCK_MOCKER_(1, constness, Method).Invoke(gmock_a1); \
-  } \
-  ::testing::MockSpec<__VA_ARGS__>& \
-      gmock_##Method(GMOCK_MATCHER_(tn, 1, __VA_ARGS__) gmock_a1) constness { \
-    GMOCK_MOCKER_(1, constness, Method).RegisterOwner(this); \
-    return GMOCK_MOCKER_(1, constness, Method).With(gmock_a1); \
-  } \
-  mutable ::testing::FunctionMocker<__VA_ARGS__> GMOCK_MOCKER_(1, constness, \
-      Method)
+#define GMOCK_METHOD1_(tn, constness, ct, Method, ...)                        \
+  GMOCK_RESULT_(tn, __VA_ARGS__)                                              \
+  ct Method(GMOCK_ARG_(tn, 1, __VA_ARGS__) gmock_a1) constness {              \
+    GTEST_COMPILE_ASSERT_(                                                    \
+        (::testing::tuple_size<tn ::testing::internal::Function<              \
+             __VA_ARGS__>::ArgumentTuple>::value == 1),                       \
+        this_method_does_not_take_1_argument);                                \
+    GMOCK_MOCKER_(1, constness, Method).SetOwnerAndName(this, #Method);       \
+    return GMOCK_MOCKER_(1, constness, Method)                                \
+        .Invoke(::testing::internal::forward<GMOCK_ARG_(tn, 1, __VA_ARGS__)>( \
+            gmock_a1));                                                       \
+  }                                                                           \
+  ::testing::MockSpec<__VA_ARGS__> gmock_##Method(                            \
+      GMOCK_MATCHER_(tn, 1, __VA_ARGS__) gmock_a1) constness {                \
+    GMOCK_MOCKER_(1, constness, Method).RegisterOwner(this);                  \
+    return GMOCK_MOCKER_(1, constness, Method).With(gmock_a1);                \
+  }                                                                           \
+  ::testing::MockSpec<__VA_ARGS__> gmock_##Method(                            \
+      const ::testing::internal::WithoutMatchers&,                            \
+      constness ::testing::internal::Function<__VA_ARGS__>*) const {          \
+    return ::testing::internal::AdjustConstness_##constness(this)             \
+        ->gmock_##Method(::testing::A<GMOCK_ARG_(tn, 1, __VA_ARGS__)>());     \
+  }                                                                           \
+  mutable ::testing::FunctionMocker<__VA_ARGS__> GMOCK_MOCKER_(1, constness,  \
+                                                               Method)
 
 // INTERNAL IMPLEMENTATION - DON'T USE IN USER CODE!!!
-#define GMOCK_METHOD2_(tn, constness, ct, Method, ...) \
-  GMOCK_RESULT_(tn, __VA_ARGS__) ct Method( \
-      GMOCK_ARG_(tn, 1, __VA_ARGS__) gmock_a1, \
-      GMOCK_ARG_(tn, 2, __VA_ARGS__) gmock_a2) constness { \
-    GTEST_COMPILE_ASSERT_((::testing::tuple_size<                          \
-        tn ::testing::internal::Function<__VA_ARGS__>::ArgumentTuple>::value \
-            == 2), \
-        this_method_does_not_take_2_arguments); \
-    GMOCK_MOCKER_(2, constness, Method).SetOwnerAndName(this, #Method); \
-    return GMOCK_MOCKER_(2, constness, Method).Invoke(gmock_a1, gmock_a2); \
-  } \
-  ::testing::MockSpec<__VA_ARGS__>& \
-      gmock_##Method(GMOCK_MATCHER_(tn, 1, __VA_ARGS__) gmock_a1, \
-                     GMOCK_MATCHER_(tn, 2, __VA_ARGS__) gmock_a2) constness { \
-    GMOCK_MOCKER_(2, constness, Method).RegisterOwner(this); \
-    return GMOCK_MOCKER_(2, constness, Method).With(gmock_a1, gmock_a2); \
-  } \
-  mutable ::testing::FunctionMocker<__VA_ARGS__> GMOCK_MOCKER_(2, constness, \
-      Method)
+#define GMOCK_METHOD2_(tn, constness, ct, Method, ...)                        \
+  GMOCK_RESULT_(tn, __VA_ARGS__)                                              \
+  ct Method(GMOCK_ARG_(tn, 1, __VA_ARGS__) gmock_a1,                          \
+            GMOCK_ARG_(tn, 2, __VA_ARGS__) gmock_a2) constness {              \
+    GTEST_COMPILE_ASSERT_(                                                    \
+        (::testing::tuple_size<tn ::testing::internal::Function<              \
+             __VA_ARGS__>::ArgumentTuple>::value == 2),                       \
+        this_method_does_not_take_2_arguments);                               \
+    GMOCK_MOCKER_(2, constness, Method).SetOwnerAndName(this, #Method);       \
+    return GMOCK_MOCKER_(2, constness, Method)                                \
+        .Invoke(::testing::internal::forward<GMOCK_ARG_(tn, 1, __VA_ARGS__)>( \
+                    gmock_a1),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 2, __VA_ARGS__)>( \
+                    gmock_a2));                                               \
+  }                                                                           \
+  ::testing::MockSpec<__VA_ARGS__> gmock_##Method(                            \
+      GMOCK_MATCHER_(tn, 1, __VA_ARGS__) gmock_a1,                            \
+      GMOCK_MATCHER_(tn, 2, __VA_ARGS__) gmock_a2) constness {                \
+    GMOCK_MOCKER_(2, constness, Method).RegisterOwner(this);                  \
+    return GMOCK_MOCKER_(2, constness, Method).With(gmock_a1, gmock_a2);      \
+  }                                                                           \
+  ::testing::MockSpec<__VA_ARGS__> gmock_##Method(                            \
+      const ::testing::internal::WithoutMatchers&,                            \
+      constness ::testing::internal::Function<__VA_ARGS__>*) const {          \
+    return ::testing::internal::AdjustConstness_##constness(this)             \
+        ->gmock_##Method(::testing::A<GMOCK_ARG_(tn, 1, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 2, __VA_ARGS__)>());     \
+  }                                                                           \
+  mutable ::testing::FunctionMocker<__VA_ARGS__> GMOCK_MOCKER_(2, constness,  \
+                                                               Method)
 
 // INTERNAL IMPLEMENTATION - DON'T USE IN USER CODE!!!
-#define GMOCK_METHOD3_(tn, constness, ct, Method, ...) \
-  GMOCK_RESULT_(tn, __VA_ARGS__) ct Method( \
-      GMOCK_ARG_(tn, 1, __VA_ARGS__) gmock_a1, \
-      GMOCK_ARG_(tn, 2, __VA_ARGS__) gmock_a2, \
-      GMOCK_ARG_(tn, 3, __VA_ARGS__) gmock_a3) constness { \
-    GTEST_COMPILE_ASSERT_((::testing::tuple_size<                          \
-        tn ::testing::internal::Function<__VA_ARGS__>::ArgumentTuple>::value \
-            == 3), \
-        this_method_does_not_take_3_arguments); \
-    GMOCK_MOCKER_(3, constness, Method).SetOwnerAndName(this, #Method); \
-    return GMOCK_MOCKER_(3, constness, Method).Invoke(gmock_a1, gmock_a2, \
-        gmock_a3); \
-  } \
-  ::testing::MockSpec<__VA_ARGS__>& \
-      gmock_##Method(GMOCK_MATCHER_(tn, 1, __VA_ARGS__) gmock_a1, \
-                     GMOCK_MATCHER_(tn, 2, __VA_ARGS__) gmock_a2, \
-                     GMOCK_MATCHER_(tn, 3, __VA_ARGS__) gmock_a3) constness { \
-    GMOCK_MOCKER_(3, constness, Method).RegisterOwner(this); \
-    return GMOCK_MOCKER_(3, constness, Method).With(gmock_a1, gmock_a2, \
-        gmock_a3); \
-  } \
-  mutable ::testing::FunctionMocker<__VA_ARGS__> GMOCK_MOCKER_(3, constness, \
-      Method)
+#define GMOCK_METHOD3_(tn, constness, ct, Method, ...)                        \
+  GMOCK_RESULT_(tn, __VA_ARGS__)                                              \
+  ct Method(GMOCK_ARG_(tn, 1, __VA_ARGS__) gmock_a1,                          \
+            GMOCK_ARG_(tn, 2, __VA_ARGS__) gmock_a2,                          \
+            GMOCK_ARG_(tn, 3, __VA_ARGS__) gmock_a3) constness {              \
+    GTEST_COMPILE_ASSERT_(                                                    \
+        (::testing::tuple_size<tn ::testing::internal::Function<              \
+             __VA_ARGS__>::ArgumentTuple>::value == 3),                       \
+        this_method_does_not_take_3_arguments);                               \
+    GMOCK_MOCKER_(3, constness, Method).SetOwnerAndName(this, #Method);       \
+    return GMOCK_MOCKER_(3, constness, Method)                                \
+        .Invoke(::testing::internal::forward<GMOCK_ARG_(tn, 1, __VA_ARGS__)>( \
+                    gmock_a1),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 2, __VA_ARGS__)>( \
+                    gmock_a2),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 3, __VA_ARGS__)>( \
+                    gmock_a3));                                               \
+  }                                                                           \
+  ::testing::MockSpec<__VA_ARGS__> gmock_##Method(                            \
+      GMOCK_MATCHER_(tn, 1, __VA_ARGS__) gmock_a1,                            \
+      GMOCK_MATCHER_(tn, 2, __VA_ARGS__) gmock_a2,                            \
+      GMOCK_MATCHER_(tn, 3, __VA_ARGS__) gmock_a3) constness {                \
+    GMOCK_MOCKER_(3, constness, Method).RegisterOwner(this);                  \
+    return GMOCK_MOCKER_(3, constness, Method)                                \
+        .With(gmock_a1, gmock_a2, gmock_a3);                                  \
+  }                                                                           \
+  ::testing::MockSpec<__VA_ARGS__> gmock_##Method(                            \
+      const ::testing::internal::WithoutMatchers&,                            \
+      constness ::testing::internal::Function<__VA_ARGS__>*) const {          \
+    return ::testing::internal::AdjustConstness_##constness(this)             \
+        ->gmock_##Method(::testing::A<GMOCK_ARG_(tn, 1, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 2, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 3, __VA_ARGS__)>());     \
+  }                                                                           \
+  mutable ::testing::FunctionMocker<__VA_ARGS__> GMOCK_MOCKER_(3, constness,  \
+                                                               Method)
 
 // INTERNAL IMPLEMENTATION - DON'T USE IN USER CODE!!!
-#define GMOCK_METHOD4_(tn, constness, ct, Method, ...) \
-  GMOCK_RESULT_(tn, __VA_ARGS__) ct Method( \
-      GMOCK_ARG_(tn, 1, __VA_ARGS__) gmock_a1, \
-      GMOCK_ARG_(tn, 2, __VA_ARGS__) gmock_a2, \
-      GMOCK_ARG_(tn, 3, __VA_ARGS__) gmock_a3, \
-      GMOCK_ARG_(tn, 4, __VA_ARGS__) gmock_a4) constness { \
-    GTEST_COMPILE_ASSERT_((::testing::tuple_size<                          \
-        tn ::testing::internal::Function<__VA_ARGS__>::ArgumentTuple>::value \
-            == 4), \
-        this_method_does_not_take_4_arguments); \
-    GMOCK_MOCKER_(4, constness, Method).SetOwnerAndName(this, #Method); \
-    return GMOCK_MOCKER_(4, constness, Method).Invoke(gmock_a1, gmock_a2, \
-        gmock_a3, gmock_a4); \
-  } \
-  ::testing::MockSpec<__VA_ARGS__>& \
-      gmock_##Method(GMOCK_MATCHER_(tn, 1, __VA_ARGS__) gmock_a1, \
-                     GMOCK_MATCHER_(tn, 2, __VA_ARGS__) gmock_a2, \
-                     GMOCK_MATCHER_(tn, 3, __VA_ARGS__) gmock_a3, \
-                     GMOCK_MATCHER_(tn, 4, __VA_ARGS__) gmock_a4) constness { \
-    GMOCK_MOCKER_(4, constness, Method).RegisterOwner(this); \
-    return GMOCK_MOCKER_(4, constness, Method).With(gmock_a1, gmock_a2, \
-        gmock_a3, gmock_a4); \
-  } \
-  mutable ::testing::FunctionMocker<__VA_ARGS__> GMOCK_MOCKER_(4, constness, \
-      Method)
+#define GMOCK_METHOD4_(tn, constness, ct, Method, ...)                        \
+  GMOCK_RESULT_(tn, __VA_ARGS__)                                              \
+  ct Method(GMOCK_ARG_(tn, 1, __VA_ARGS__) gmock_a1,                          \
+            GMOCK_ARG_(tn, 2, __VA_ARGS__) gmock_a2,                          \
+            GMOCK_ARG_(tn, 3, __VA_ARGS__) gmock_a3,                          \
+            GMOCK_ARG_(tn, 4, __VA_ARGS__) gmock_a4) constness {              \
+    GTEST_COMPILE_ASSERT_(                                                    \
+        (::testing::tuple_size<tn ::testing::internal::Function<              \
+             __VA_ARGS__>::ArgumentTuple>::value == 4),                       \
+        this_method_does_not_take_4_arguments);                               \
+    GMOCK_MOCKER_(4, constness, Method).SetOwnerAndName(this, #Method);       \
+    return GMOCK_MOCKER_(4, constness, Method)                                \
+        .Invoke(::testing::internal::forward<GMOCK_ARG_(tn, 1, __VA_ARGS__)>( \
+                    gmock_a1),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 2, __VA_ARGS__)>( \
+                    gmock_a2),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 3, __VA_ARGS__)>( \
+                    gmock_a3),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 4, __VA_ARGS__)>( \
+                    gmock_a4));                                               \
+  }                                                                           \
+  ::testing::MockSpec<__VA_ARGS__> gmock_##Method(                            \
+      GMOCK_MATCHER_(tn, 1, __VA_ARGS__) gmock_a1,                            \
+      GMOCK_MATCHER_(tn, 2, __VA_ARGS__) gmock_a2,                            \
+      GMOCK_MATCHER_(tn, 3, __VA_ARGS__) gmock_a3,                            \
+      GMOCK_MATCHER_(tn, 4, __VA_ARGS__) gmock_a4) constness {                \
+    GMOCK_MOCKER_(4, constness, Method).RegisterOwner(this);                  \
+    return GMOCK_MOCKER_(4, constness, Method)                                \
+        .With(gmock_a1, gmock_a2, gmock_a3, gmock_a4);                        \
+  }                                                                           \
+  ::testing::MockSpec<__VA_ARGS__> gmock_##Method(                            \
+      const ::testing::internal::WithoutMatchers&,                            \
+      constness ::testing::internal::Function<__VA_ARGS__>*) const {          \
+    return ::testing::internal::AdjustConstness_##constness(this)             \
+        ->gmock_##Method(::testing::A<GMOCK_ARG_(tn, 1, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 2, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 3, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 4, __VA_ARGS__)>());     \
+  }                                                                           \
+  mutable ::testing::FunctionMocker<__VA_ARGS__> GMOCK_MOCKER_(4, constness,  \
+                                                               Method)
 
 // INTERNAL IMPLEMENTATION - DON'T USE IN USER CODE!!!
-#define GMOCK_METHOD5_(tn, constness, ct, Method, ...) \
-  GMOCK_RESULT_(tn, __VA_ARGS__) ct Method( \
-      GMOCK_ARG_(tn, 1, __VA_ARGS__) gmock_a1, \
-      GMOCK_ARG_(tn, 2, __VA_ARGS__) gmock_a2, \
-      GMOCK_ARG_(tn, 3, __VA_ARGS__) gmock_a3, \
-      GMOCK_ARG_(tn, 4, __VA_ARGS__) gmock_a4, \
-      GMOCK_ARG_(tn, 5, __VA_ARGS__) gmock_a5) constness { \
-    GTEST_COMPILE_ASSERT_((::testing::tuple_size<                          \
-        tn ::testing::internal::Function<__VA_ARGS__>::ArgumentTuple>::value \
-            == 5), \
-        this_method_does_not_take_5_arguments); \
-    GMOCK_MOCKER_(5, constness, Method).SetOwnerAndName(this, #Method); \
-    return GMOCK_MOCKER_(5, constness, Method).Invoke(gmock_a1, gmock_a2, \
-        gmock_a3, gmock_a4, gmock_a5); \
-  } \
-  ::testing::MockSpec<__VA_ARGS__>& \
-      gmock_##Method(GMOCK_MATCHER_(tn, 1, __VA_ARGS__) gmock_a1, \
-                     GMOCK_MATCHER_(tn, 2, __VA_ARGS__) gmock_a2, \
-                     GMOCK_MATCHER_(tn, 3, __VA_ARGS__) gmock_a3, \
-                     GMOCK_MATCHER_(tn, 4, __VA_ARGS__) gmock_a4, \
-                     GMOCK_MATCHER_(tn, 5, __VA_ARGS__) gmock_a5) constness { \
-    GMOCK_MOCKER_(5, constness, Method).RegisterOwner(this); \
-    return GMOCK_MOCKER_(5, constness, Method).With(gmock_a1, gmock_a2, \
-        gmock_a3, gmock_a4, gmock_a5); \
-  } \
-  mutable ::testing::FunctionMocker<__VA_ARGS__> GMOCK_MOCKER_(5, constness, \
-      Method)
+#define GMOCK_METHOD5_(tn, constness, ct, Method, ...)                        \
+  GMOCK_RESULT_(tn, __VA_ARGS__)                                              \
+  ct Method(GMOCK_ARG_(tn, 1, __VA_ARGS__) gmock_a1,                          \
+            GMOCK_ARG_(tn, 2, __VA_ARGS__) gmock_a2,                          \
+            GMOCK_ARG_(tn, 3, __VA_ARGS__) gmock_a3,                          \
+            GMOCK_ARG_(tn, 4, __VA_ARGS__) gmock_a4,                          \
+            GMOCK_ARG_(tn, 5, __VA_ARGS__) gmock_a5) constness {              \
+    GTEST_COMPILE_ASSERT_(                                                    \
+        (::testing::tuple_size<tn ::testing::internal::Function<              \
+             __VA_ARGS__>::ArgumentTuple>::value == 5),                       \
+        this_method_does_not_take_5_arguments);                               \
+    GMOCK_MOCKER_(5, constness, Method).SetOwnerAndName(this, #Method);       \
+    return GMOCK_MOCKER_(5, constness, Method)                                \
+        .Invoke(::testing::internal::forward<GMOCK_ARG_(tn, 1, __VA_ARGS__)>( \
+                    gmock_a1),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 2, __VA_ARGS__)>( \
+                    gmock_a2),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 3, __VA_ARGS__)>( \
+                    gmock_a3),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 4, __VA_ARGS__)>( \
+                    gmock_a4),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 5, __VA_ARGS__)>( \
+                    gmock_a5));                                               \
+  }                                                                           \
+  ::testing::MockSpec<__VA_ARGS__> gmock_##Method(                            \
+      GMOCK_MATCHER_(tn, 1, __VA_ARGS__) gmock_a1,                            \
+      GMOCK_MATCHER_(tn, 2, __VA_ARGS__) gmock_a2,                            \
+      GMOCK_MATCHER_(tn, 3, __VA_ARGS__) gmock_a3,                            \
+      GMOCK_MATCHER_(tn, 4, __VA_ARGS__) gmock_a4,                            \
+      GMOCK_MATCHER_(tn, 5, __VA_ARGS__) gmock_a5) constness {                \
+    GMOCK_MOCKER_(5, constness, Method).RegisterOwner(this);                  \
+    return GMOCK_MOCKER_(5, constness, Method)                                \
+        .With(gmock_a1, gmock_a2, gmock_a3, gmock_a4, gmock_a5);              \
+  }                                                                           \
+  ::testing::MockSpec<__VA_ARGS__> gmock_##Method(                            \
+      const ::testing::internal::WithoutMatchers&,                            \
+      constness ::testing::internal::Function<__VA_ARGS__>*) const {          \
+    return ::testing::internal::AdjustConstness_##constness(this)             \
+        ->gmock_##Method(::testing::A<GMOCK_ARG_(tn, 1, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 2, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 3, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 4, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 5, __VA_ARGS__)>());     \
+  }                                                                           \
+  mutable ::testing::FunctionMocker<__VA_ARGS__> GMOCK_MOCKER_(5, constness,  \
+                                                               Method)
 
 // INTERNAL IMPLEMENTATION - DON'T USE IN USER CODE!!!
-#define GMOCK_METHOD6_(tn, constness, ct, Method, ...) \
-  GMOCK_RESULT_(tn, __VA_ARGS__) ct Method( \
-      GMOCK_ARG_(tn, 1, __VA_ARGS__) gmock_a1, \
-      GMOCK_ARG_(tn, 2, __VA_ARGS__) gmock_a2, \
-      GMOCK_ARG_(tn, 3, __VA_ARGS__) gmock_a3, \
-      GMOCK_ARG_(tn, 4, __VA_ARGS__) gmock_a4, \
-      GMOCK_ARG_(tn, 5, __VA_ARGS__) gmock_a5, \
-      GMOCK_ARG_(tn, 6, __VA_ARGS__) gmock_a6) constness { \
-    GTEST_COMPILE_ASSERT_((::testing::tuple_size<                          \
-        tn ::testing::internal::Function<__VA_ARGS__>::ArgumentTuple>::value \
-            == 6), \
-        this_method_does_not_take_6_arguments); \
-    GMOCK_MOCKER_(6, constness, Method).SetOwnerAndName(this, #Method); \
-    return GMOCK_MOCKER_(6, constness, Method).Invoke(gmock_a1, gmock_a2, \
-        gmock_a3, gmock_a4, gmock_a5, gmock_a6); \
-  } \
-  ::testing::MockSpec<__VA_ARGS__>& \
-      gmock_##Method(GMOCK_MATCHER_(tn, 1, __VA_ARGS__) gmock_a1, \
-                     GMOCK_MATCHER_(tn, 2, __VA_ARGS__) gmock_a2, \
-                     GMOCK_MATCHER_(tn, 3, __VA_ARGS__) gmock_a3, \
-                     GMOCK_MATCHER_(tn, 4, __VA_ARGS__) gmock_a4, \
-                     GMOCK_MATCHER_(tn, 5, __VA_ARGS__) gmock_a5, \
-                     GMOCK_MATCHER_(tn, 6, __VA_ARGS__) gmock_a6) constness { \
-    GMOCK_MOCKER_(6, constness, Method).RegisterOwner(this); \
-    return GMOCK_MOCKER_(6, constness, Method).With(gmock_a1, gmock_a2, \
-        gmock_a3, gmock_a4, gmock_a5, gmock_a6); \
-  } \
-  mutable ::testing::FunctionMocker<__VA_ARGS__> GMOCK_MOCKER_(6, constness, \
-      Method)
+#define GMOCK_METHOD6_(tn, constness, ct, Method, ...)                        \
+  GMOCK_RESULT_(tn, __VA_ARGS__)                                              \
+  ct Method(GMOCK_ARG_(tn, 1, __VA_ARGS__) gmock_a1,                          \
+            GMOCK_ARG_(tn, 2, __VA_ARGS__) gmock_a2,                          \
+            GMOCK_ARG_(tn, 3, __VA_ARGS__) gmock_a3,                          \
+            GMOCK_ARG_(tn, 4, __VA_ARGS__) gmock_a4,                          \
+            GMOCK_ARG_(tn, 5, __VA_ARGS__) gmock_a5,                          \
+            GMOCK_ARG_(tn, 6, __VA_ARGS__) gmock_a6) constness {              \
+    GTEST_COMPILE_ASSERT_(                                                    \
+        (::testing::tuple_size<tn ::testing::internal::Function<              \
+             __VA_ARGS__>::ArgumentTuple>::value == 6),                       \
+        this_method_does_not_take_6_arguments);                               \
+    GMOCK_MOCKER_(6, constness, Method).SetOwnerAndName(this, #Method);       \
+    return GMOCK_MOCKER_(6, constness, Method)                                \
+        .Invoke(::testing::internal::forward<GMOCK_ARG_(tn, 1, __VA_ARGS__)>( \
+                    gmock_a1),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 2, __VA_ARGS__)>( \
+                    gmock_a2),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 3, __VA_ARGS__)>( \
+                    gmock_a3),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 4, __VA_ARGS__)>( \
+                    gmock_a4),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 5, __VA_ARGS__)>( \
+                    gmock_a5),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 6, __VA_ARGS__)>( \
+                    gmock_a6));                                               \
+  }                                                                           \
+  ::testing::MockSpec<__VA_ARGS__> gmock_##Method(                            \
+      GMOCK_MATCHER_(tn, 1, __VA_ARGS__) gmock_a1,                            \
+      GMOCK_MATCHER_(tn, 2, __VA_ARGS__) gmock_a2,                            \
+      GMOCK_MATCHER_(tn, 3, __VA_ARGS__) gmock_a3,                            \
+      GMOCK_MATCHER_(tn, 4, __VA_ARGS__) gmock_a4,                            \
+      GMOCK_MATCHER_(tn, 5, __VA_ARGS__) gmock_a5,                            \
+      GMOCK_MATCHER_(tn, 6, __VA_ARGS__) gmock_a6) constness {                \
+    GMOCK_MOCKER_(6, constness, Method).RegisterOwner(this);                  \
+    return GMOCK_MOCKER_(6, constness, Method)                                \
+        .With(gmock_a1, gmock_a2, gmock_a3, gmock_a4, gmock_a5, gmock_a6);    \
+  }                                                                           \
+  ::testing::MockSpec<__VA_ARGS__> gmock_##Method(                            \
+      const ::testing::internal::WithoutMatchers&,                            \
+      constness ::testing::internal::Function<__VA_ARGS__>*) const {          \
+    return ::testing::internal::AdjustConstness_##constness(this)             \
+        ->gmock_##Method(::testing::A<GMOCK_ARG_(tn, 1, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 2, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 3, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 4, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 5, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 6, __VA_ARGS__)>());     \
+  }                                                                           \
+  mutable ::testing::FunctionMocker<__VA_ARGS__> GMOCK_MOCKER_(6, constness,  \
+                                                               Method)
 
 // INTERNAL IMPLEMENTATION - DON'T USE IN USER CODE!!!
-#define GMOCK_METHOD7_(tn, constness, ct, Method, ...) \
-  GMOCK_RESULT_(tn, __VA_ARGS__) ct Method( \
-      GMOCK_ARG_(tn, 1, __VA_ARGS__) gmock_a1, \
-      GMOCK_ARG_(tn, 2, __VA_ARGS__) gmock_a2, \
-      GMOCK_ARG_(tn, 3, __VA_ARGS__) gmock_a3, \
-      GMOCK_ARG_(tn, 4, __VA_ARGS__) gmock_a4, \
-      GMOCK_ARG_(tn, 5, __VA_ARGS__) gmock_a5, \
-      GMOCK_ARG_(tn, 6, __VA_ARGS__) gmock_a6, \
-      GMOCK_ARG_(tn, 7, __VA_ARGS__) gmock_a7) constness { \
-    GTEST_COMPILE_ASSERT_((::testing::tuple_size<                          \
-        tn ::testing::internal::Function<__VA_ARGS__>::ArgumentTuple>::value \
-            == 7), \
-        this_method_does_not_take_7_arguments); \
-    GMOCK_MOCKER_(7, constness, Method).SetOwnerAndName(this, #Method); \
-    return GMOCK_MOCKER_(7, constness, Method).Invoke(gmock_a1, gmock_a2, \
-        gmock_a3, gmock_a4, gmock_a5, gmock_a6, gmock_a7); \
-  } \
-  ::testing::MockSpec<__VA_ARGS__>& \
-      gmock_##Method(GMOCK_MATCHER_(tn, 1, __VA_ARGS__) gmock_a1, \
-                     GMOCK_MATCHER_(tn, 2, __VA_ARGS__) gmock_a2, \
-                     GMOCK_MATCHER_(tn, 3, __VA_ARGS__) gmock_a3, \
-                     GMOCK_MATCHER_(tn, 4, __VA_ARGS__) gmock_a4, \
-                     GMOCK_MATCHER_(tn, 5, __VA_ARGS__) gmock_a5, \
-                     GMOCK_MATCHER_(tn, 6, __VA_ARGS__) gmock_a6, \
-                     GMOCK_MATCHER_(tn, 7, __VA_ARGS__) gmock_a7) constness { \
-    GMOCK_MOCKER_(7, constness, Method).RegisterOwner(this); \
-    return GMOCK_MOCKER_(7, constness, Method).With(gmock_a1, gmock_a2, \
-        gmock_a3, gmock_a4, gmock_a5, gmock_a6, gmock_a7); \
-  } \
-  mutable ::testing::FunctionMocker<__VA_ARGS__> GMOCK_MOCKER_(7, constness, \
-      Method)
+#define GMOCK_METHOD7_(tn, constness, ct, Method, ...)                        \
+  GMOCK_RESULT_(tn, __VA_ARGS__)                                              \
+  ct Method(GMOCK_ARG_(tn, 1, __VA_ARGS__) gmock_a1,                          \
+            GMOCK_ARG_(tn, 2, __VA_ARGS__) gmock_a2,                          \
+            GMOCK_ARG_(tn, 3, __VA_ARGS__) gmock_a3,                          \
+            GMOCK_ARG_(tn, 4, __VA_ARGS__) gmock_a4,                          \
+            GMOCK_ARG_(tn, 5, __VA_ARGS__) gmock_a5,                          \
+            GMOCK_ARG_(tn, 6, __VA_ARGS__) gmock_a6,                          \
+            GMOCK_ARG_(tn, 7, __VA_ARGS__) gmock_a7) constness {              \
+    GTEST_COMPILE_ASSERT_(                                                    \
+        (::testing::tuple_size<tn ::testing::internal::Function<              \
+             __VA_ARGS__>::ArgumentTuple>::value == 7),                       \
+        this_method_does_not_take_7_arguments);                               \
+    GMOCK_MOCKER_(7, constness, Method).SetOwnerAndName(this, #Method);       \
+    return GMOCK_MOCKER_(7, constness, Method)                                \
+        .Invoke(::testing::internal::forward<GMOCK_ARG_(tn, 1, __VA_ARGS__)>( \
+                    gmock_a1),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 2, __VA_ARGS__)>( \
+                    gmock_a2),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 3, __VA_ARGS__)>( \
+                    gmock_a3),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 4, __VA_ARGS__)>( \
+                    gmock_a4),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 5, __VA_ARGS__)>( \
+                    gmock_a5),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 6, __VA_ARGS__)>( \
+                    gmock_a6),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 7, __VA_ARGS__)>( \
+                    gmock_a7));                                               \
+  }                                                                           \
+  ::testing::MockSpec<__VA_ARGS__> gmock_##Method(                            \
+      GMOCK_MATCHER_(tn, 1, __VA_ARGS__) gmock_a1,                            \
+      GMOCK_MATCHER_(tn, 2, __VA_ARGS__) gmock_a2,                            \
+      GMOCK_MATCHER_(tn, 3, __VA_ARGS__) gmock_a3,                            \
+      GMOCK_MATCHER_(tn, 4, __VA_ARGS__) gmock_a4,                            \
+      GMOCK_MATCHER_(tn, 5, __VA_ARGS__) gmock_a5,                            \
+      GMOCK_MATCHER_(tn, 6, __VA_ARGS__) gmock_a6,                            \
+      GMOCK_MATCHER_(tn, 7, __VA_ARGS__) gmock_a7) constness {                \
+    GMOCK_MOCKER_(7, constness, Method).RegisterOwner(this);                  \
+    return GMOCK_MOCKER_(7, constness, Method)                                \
+        .With(gmock_a1, gmock_a2, gmock_a3, gmock_a4, gmock_a5, gmock_a6,     \
+              gmock_a7);                                                      \
+  }                                                                           \
+  ::testing::MockSpec<__VA_ARGS__> gmock_##Method(                            \
+      const ::testing::internal::WithoutMatchers&,                            \
+      constness ::testing::internal::Function<__VA_ARGS__>*) const {          \
+    return ::testing::internal::AdjustConstness_##constness(this)             \
+        ->gmock_##Method(::testing::A<GMOCK_ARG_(tn, 1, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 2, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 3, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 4, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 5, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 6, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 7, __VA_ARGS__)>());     \
+  }                                                                           \
+  mutable ::testing::FunctionMocker<__VA_ARGS__> GMOCK_MOCKER_(7, constness,  \
+                                                               Method)
 
 // INTERNAL IMPLEMENTATION - DON'T USE IN USER CODE!!!
-#define GMOCK_METHOD8_(tn, constness, ct, Method, ...) \
-  GMOCK_RESULT_(tn, __VA_ARGS__) ct Method( \
-      GMOCK_ARG_(tn, 1, __VA_ARGS__) gmock_a1, \
-      GMOCK_ARG_(tn, 2, __VA_ARGS__) gmock_a2, \
-      GMOCK_ARG_(tn, 3, __VA_ARGS__) gmock_a3, \
-      GMOCK_ARG_(tn, 4, __VA_ARGS__) gmock_a4, \
-      GMOCK_ARG_(tn, 5, __VA_ARGS__) gmock_a5, \
-      GMOCK_ARG_(tn, 6, __VA_ARGS__) gmock_a6, \
-      GMOCK_ARG_(tn, 7, __VA_ARGS__) gmock_a7, \
-      GMOCK_ARG_(tn, 8, __VA_ARGS__) gmock_a8) constness { \
-    GTEST_COMPILE_ASSERT_((::testing::tuple_size<                          \
-        tn ::testing::internal::Function<__VA_ARGS__>::ArgumentTuple>::value \
-            == 8), \
-        this_method_does_not_take_8_arguments); \
-    GMOCK_MOCKER_(8, constness, Method).SetOwnerAndName(this, #Method); \
-    return GMOCK_MOCKER_(8, constness, Method).Invoke(gmock_a1, gmock_a2, \
-        gmock_a3, gmock_a4, gmock_a5, gmock_a6, gmock_a7, gmock_a8); \
-  } \
-  ::testing::MockSpec<__VA_ARGS__>& \
-      gmock_##Method(GMOCK_MATCHER_(tn, 1, __VA_ARGS__) gmock_a1, \
-                     GMOCK_MATCHER_(tn, 2, __VA_ARGS__) gmock_a2, \
-                     GMOCK_MATCHER_(tn, 3, __VA_ARGS__) gmock_a3, \
-                     GMOCK_MATCHER_(tn, 4, __VA_ARGS__) gmock_a4, \
-                     GMOCK_MATCHER_(tn, 5, __VA_ARGS__) gmock_a5, \
-                     GMOCK_MATCHER_(tn, 6, __VA_ARGS__) gmock_a6, \
-                     GMOCK_MATCHER_(tn, 7, __VA_ARGS__) gmock_a7, \
-                     GMOCK_MATCHER_(tn, 8, __VA_ARGS__) gmock_a8) constness { \
-    GMOCK_MOCKER_(8, constness, Method).RegisterOwner(this); \
-    return GMOCK_MOCKER_(8, constness, Method).With(gmock_a1, gmock_a2, \
-        gmock_a3, gmock_a4, gmock_a5, gmock_a6, gmock_a7, gmock_a8); \
-  } \
-  mutable ::testing::FunctionMocker<__VA_ARGS__> GMOCK_MOCKER_(8, constness, \
-      Method)
+#define GMOCK_METHOD8_(tn, constness, ct, Method, ...)                        \
+  GMOCK_RESULT_(tn, __VA_ARGS__)                                              \
+  ct Method(GMOCK_ARG_(tn, 1, __VA_ARGS__) gmock_a1,                          \
+            GMOCK_ARG_(tn, 2, __VA_ARGS__) gmock_a2,                          \
+            GMOCK_ARG_(tn, 3, __VA_ARGS__) gmock_a3,                          \
+            GMOCK_ARG_(tn, 4, __VA_ARGS__) gmock_a4,                          \
+            GMOCK_ARG_(tn, 5, __VA_ARGS__) gmock_a5,                          \
+            GMOCK_ARG_(tn, 6, __VA_ARGS__) gmock_a6,                          \
+            GMOCK_ARG_(tn, 7, __VA_ARGS__) gmock_a7,                          \
+            GMOCK_ARG_(tn, 8, __VA_ARGS__) gmock_a8) constness {              \
+    GTEST_COMPILE_ASSERT_(                                                    \
+        (::testing::tuple_size<tn ::testing::internal::Function<              \
+             __VA_ARGS__>::ArgumentTuple>::value == 8),                       \
+        this_method_does_not_take_8_arguments);                               \
+    GMOCK_MOCKER_(8, constness, Method).SetOwnerAndName(this, #Method);       \
+    return GMOCK_MOCKER_(8, constness, Method)                                \
+        .Invoke(::testing::internal::forward<GMOCK_ARG_(tn, 1, __VA_ARGS__)>( \
+                    gmock_a1),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 2, __VA_ARGS__)>( \
+                    gmock_a2),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 3, __VA_ARGS__)>( \
+                    gmock_a3),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 4, __VA_ARGS__)>( \
+                    gmock_a4),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 5, __VA_ARGS__)>( \
+                    gmock_a5),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 6, __VA_ARGS__)>( \
+                    gmock_a6),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 7, __VA_ARGS__)>( \
+                    gmock_a7),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 8, __VA_ARGS__)>( \
+                    gmock_a8));                                               \
+  }                                                                           \
+  ::testing::MockSpec<__VA_ARGS__> gmock_##Method(                            \
+      GMOCK_MATCHER_(tn, 1, __VA_ARGS__) gmock_a1,                            \
+      GMOCK_MATCHER_(tn, 2, __VA_ARGS__) gmock_a2,                            \
+      GMOCK_MATCHER_(tn, 3, __VA_ARGS__) gmock_a3,                            \
+      GMOCK_MATCHER_(tn, 4, __VA_ARGS__) gmock_a4,                            \
+      GMOCK_MATCHER_(tn, 5, __VA_ARGS__) gmock_a5,                            \
+      GMOCK_MATCHER_(tn, 6, __VA_ARGS__) gmock_a6,                            \
+      GMOCK_MATCHER_(tn, 7, __VA_ARGS__) gmock_a7,                            \
+      GMOCK_MATCHER_(tn, 8, __VA_ARGS__) gmock_a8) constness {                \
+    GMOCK_MOCKER_(8, constness, Method).RegisterOwner(this);                  \
+    return GMOCK_MOCKER_(8, constness, Method)                                \
+        .With(gmock_a1, gmock_a2, gmock_a3, gmock_a4, gmock_a5, gmock_a6,     \
+              gmock_a7, gmock_a8);                                            \
+  }                                                                           \
+  ::testing::MockSpec<__VA_ARGS__> gmock_##Method(                            \
+      const ::testing::internal::WithoutMatchers&,                            \
+      constness ::testing::internal::Function<__VA_ARGS__>*) const {          \
+    return ::testing::internal::AdjustConstness_##constness(this)             \
+        ->gmock_##Method(::testing::A<GMOCK_ARG_(tn, 1, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 2, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 3, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 4, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 5, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 6, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 7, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 8, __VA_ARGS__)>());     \
+  }                                                                           \
+  mutable ::testing::FunctionMocker<__VA_ARGS__> GMOCK_MOCKER_(8, constness,  \
+                                                               Method)
 
 // INTERNAL IMPLEMENTATION - DON'T USE IN USER CODE!!!
-#define GMOCK_METHOD9_(tn, constness, ct, Method, ...) \
-  GMOCK_RESULT_(tn, __VA_ARGS__) ct Method( \
-      GMOCK_ARG_(tn, 1, __VA_ARGS__) gmock_a1, \
-      GMOCK_ARG_(tn, 2, __VA_ARGS__) gmock_a2, \
-      GMOCK_ARG_(tn, 3, __VA_ARGS__) gmock_a3, \
-      GMOCK_ARG_(tn, 4, __VA_ARGS__) gmock_a4, \
-      GMOCK_ARG_(tn, 5, __VA_ARGS__) gmock_a5, \
-      GMOCK_ARG_(tn, 6, __VA_ARGS__) gmock_a6, \
-      GMOCK_ARG_(tn, 7, __VA_ARGS__) gmock_a7, \
-      GMOCK_ARG_(tn, 8, __VA_ARGS__) gmock_a8, \
-      GMOCK_ARG_(tn, 9, __VA_ARGS__) gmock_a9) constness { \
-    GTEST_COMPILE_ASSERT_((::testing::tuple_size<                          \
-        tn ::testing::internal::Function<__VA_ARGS__>::ArgumentTuple>::value \
-            == 9), \
-        this_method_does_not_take_9_arguments); \
-    GMOCK_MOCKER_(9, constness, Method).SetOwnerAndName(this, #Method); \
-    return GMOCK_MOCKER_(9, constness, Method).Invoke(gmock_a1, gmock_a2, \
-        gmock_a3, gmock_a4, gmock_a5, gmock_a6, gmock_a7, gmock_a8, \
-        gmock_a9); \
-  } \
-  ::testing::MockSpec<__VA_ARGS__>& \
-      gmock_##Method(GMOCK_MATCHER_(tn, 1, __VA_ARGS__) gmock_a1, \
-                     GMOCK_MATCHER_(tn, 2, __VA_ARGS__) gmock_a2, \
-                     GMOCK_MATCHER_(tn, 3, __VA_ARGS__) gmock_a3, \
-                     GMOCK_MATCHER_(tn, 4, __VA_ARGS__) gmock_a4, \
-                     GMOCK_MATCHER_(tn, 5, __VA_ARGS__) gmock_a5, \
-                     GMOCK_MATCHER_(tn, 6, __VA_ARGS__) gmock_a6, \
-                     GMOCK_MATCHER_(tn, 7, __VA_ARGS__) gmock_a7, \
-                     GMOCK_MATCHER_(tn, 8, __VA_ARGS__) gmock_a8, \
-                     GMOCK_MATCHER_(tn, 9, __VA_ARGS__) gmock_a9) constness { \
-    GMOCK_MOCKER_(9, constness, Method).RegisterOwner(this); \
-    return GMOCK_MOCKER_(9, constness, Method).With(gmock_a1, gmock_a2, \
-        gmock_a3, gmock_a4, gmock_a5, gmock_a6, gmock_a7, gmock_a8, \
-        gmock_a9); \
-  } \
-  mutable ::testing::FunctionMocker<__VA_ARGS__> GMOCK_MOCKER_(9, constness, \
-      Method)
+#define GMOCK_METHOD9_(tn, constness, ct, Method, ...)                        \
+  GMOCK_RESULT_(tn, __VA_ARGS__)                                              \
+  ct Method(GMOCK_ARG_(tn, 1, __VA_ARGS__) gmock_a1,                          \
+            GMOCK_ARG_(tn, 2, __VA_ARGS__) gmock_a2,                          \
+            GMOCK_ARG_(tn, 3, __VA_ARGS__) gmock_a3,                          \
+            GMOCK_ARG_(tn, 4, __VA_ARGS__) gmock_a4,                          \
+            GMOCK_ARG_(tn, 5, __VA_ARGS__) gmock_a5,                          \
+            GMOCK_ARG_(tn, 6, __VA_ARGS__) gmock_a6,                          \
+            GMOCK_ARG_(tn, 7, __VA_ARGS__) gmock_a7,                          \
+            GMOCK_ARG_(tn, 8, __VA_ARGS__) gmock_a8,                          \
+            GMOCK_ARG_(tn, 9, __VA_ARGS__) gmock_a9) constness {              \
+    GTEST_COMPILE_ASSERT_(                                                    \
+        (::testing::tuple_size<tn ::testing::internal::Function<              \
+             __VA_ARGS__>::ArgumentTuple>::value == 9),                       \
+        this_method_does_not_take_9_arguments);                               \
+    GMOCK_MOCKER_(9, constness, Method).SetOwnerAndName(this, #Method);       \
+    return GMOCK_MOCKER_(9, constness, Method)                                \
+        .Invoke(::testing::internal::forward<GMOCK_ARG_(tn, 1, __VA_ARGS__)>( \
+                    gmock_a1),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 2, __VA_ARGS__)>( \
+                    gmock_a2),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 3, __VA_ARGS__)>( \
+                    gmock_a3),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 4, __VA_ARGS__)>( \
+                    gmock_a4),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 5, __VA_ARGS__)>( \
+                    gmock_a5),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 6, __VA_ARGS__)>( \
+                    gmock_a6),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 7, __VA_ARGS__)>( \
+                    gmock_a7),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 8, __VA_ARGS__)>( \
+                    gmock_a8),                                                \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 9, __VA_ARGS__)>( \
+                    gmock_a9));                                               \
+  }                                                                           \
+  ::testing::MockSpec<__VA_ARGS__> gmock_##Method(                            \
+      GMOCK_MATCHER_(tn, 1, __VA_ARGS__) gmock_a1,                            \
+      GMOCK_MATCHER_(tn, 2, __VA_ARGS__) gmock_a2,                            \
+      GMOCK_MATCHER_(tn, 3, __VA_ARGS__) gmock_a3,                            \
+      GMOCK_MATCHER_(tn, 4, __VA_ARGS__) gmock_a4,                            \
+      GMOCK_MATCHER_(tn, 5, __VA_ARGS__) gmock_a5,                            \
+      GMOCK_MATCHER_(tn, 6, __VA_ARGS__) gmock_a6,                            \
+      GMOCK_MATCHER_(tn, 7, __VA_ARGS__) gmock_a7,                            \
+      GMOCK_MATCHER_(tn, 8, __VA_ARGS__) gmock_a8,                            \
+      GMOCK_MATCHER_(tn, 9, __VA_ARGS__) gmock_a9) constness {                \
+    GMOCK_MOCKER_(9, constness, Method).RegisterOwner(this);                  \
+    return GMOCK_MOCKER_(9, constness, Method)                                \
+        .With(gmock_a1, gmock_a2, gmock_a3, gmock_a4, gmock_a5, gmock_a6,     \
+              gmock_a7, gmock_a8, gmock_a9);                                  \
+  }                                                                           \
+  ::testing::MockSpec<__VA_ARGS__> gmock_##Method(                            \
+      const ::testing::internal::WithoutMatchers&,                            \
+      constness ::testing::internal::Function<__VA_ARGS__>*) const {          \
+    return ::testing::internal::AdjustConstness_##constness(this)             \
+        ->gmock_##Method(::testing::A<GMOCK_ARG_(tn, 1, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 2, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 3, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 4, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 5, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 6, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 7, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 8, __VA_ARGS__)>(),      \
+                         ::testing::A<GMOCK_ARG_(tn, 9, __VA_ARGS__)>());     \
+  }                                                                           \
+  mutable ::testing::FunctionMocker<__VA_ARGS__> GMOCK_MOCKER_(9, constness,  \
+                                                               Method)
 
 // INTERNAL IMPLEMENTATION - DON'T USE IN USER CODE!!!
-#define GMOCK_METHOD10_(tn, constness, ct, Method, ...) \
-  GMOCK_RESULT_(tn, __VA_ARGS__) ct Method( \
-      GMOCK_ARG_(tn, 1, __VA_ARGS__) gmock_a1, \
-      GMOCK_ARG_(tn, 2, __VA_ARGS__) gmock_a2, \
-      GMOCK_ARG_(tn, 3, __VA_ARGS__) gmock_a3, \
-      GMOCK_ARG_(tn, 4, __VA_ARGS__) gmock_a4, \
-      GMOCK_ARG_(tn, 5, __VA_ARGS__) gmock_a5, \
-      GMOCK_ARG_(tn, 6, __VA_ARGS__) gmock_a6, \
-      GMOCK_ARG_(tn, 7, __VA_ARGS__) gmock_a7, \
-      GMOCK_ARG_(tn, 8, __VA_ARGS__) gmock_a8, \
-      GMOCK_ARG_(tn, 9, __VA_ARGS__) gmock_a9, \
-      GMOCK_ARG_(tn, 10, __VA_ARGS__) gmock_a10) constness { \
-    GTEST_COMPILE_ASSERT_((::testing::tuple_size<                          \
-        tn ::testing::internal::Function<__VA_ARGS__>::ArgumentTuple>::value \
-            == 10), \
-        this_method_does_not_take_10_arguments); \
-    GMOCK_MOCKER_(10, constness, Method).SetOwnerAndName(this, #Method); \
-    return GMOCK_MOCKER_(10, constness, Method).Invoke(gmock_a1, gmock_a2, \
-        gmock_a3, gmock_a4, gmock_a5, gmock_a6, gmock_a7, gmock_a8, gmock_a9, \
-        gmock_a10); \
-  } \
-  ::testing::MockSpec<__VA_ARGS__>& \
-      gmock_##Method(GMOCK_MATCHER_(tn, 1, __VA_ARGS__) gmock_a1, \
-                     GMOCK_MATCHER_(tn, 2, __VA_ARGS__) gmock_a2, \
-                     GMOCK_MATCHER_(tn, 3, __VA_ARGS__) gmock_a3, \
-                     GMOCK_MATCHER_(tn, 4, __VA_ARGS__) gmock_a4, \
-                     GMOCK_MATCHER_(tn, 5, __VA_ARGS__) gmock_a5, \
-                     GMOCK_MATCHER_(tn, 6, __VA_ARGS__) gmock_a6, \
-                     GMOCK_MATCHER_(tn, 7, __VA_ARGS__) gmock_a7, \
-                     GMOCK_MATCHER_(tn, 8, __VA_ARGS__) gmock_a8, \
-                     GMOCK_MATCHER_(tn, 9, __VA_ARGS__) gmock_a9, \
-                     GMOCK_MATCHER_(tn, 10, \
-                         __VA_ARGS__) gmock_a10) constness { \
-    GMOCK_MOCKER_(10, constness, Method).RegisterOwner(this); \
-    return GMOCK_MOCKER_(10, constness, Method).With(gmock_a1, gmock_a2, \
-        gmock_a3, gmock_a4, gmock_a5, gmock_a6, gmock_a7, gmock_a8, gmock_a9, \
-        gmock_a10); \
-  } \
-  mutable ::testing::FunctionMocker<__VA_ARGS__> GMOCK_MOCKER_(10, constness, \
-      Method)
+#define GMOCK_METHOD10_(tn, constness, ct, Method, ...)                        \
+  GMOCK_RESULT_(tn, __VA_ARGS__)                                               \
+  ct Method(GMOCK_ARG_(tn, 1, __VA_ARGS__) gmock_a1,                           \
+            GMOCK_ARG_(tn, 2, __VA_ARGS__) gmock_a2,                           \
+            GMOCK_ARG_(tn, 3, __VA_ARGS__) gmock_a3,                           \
+            GMOCK_ARG_(tn, 4, __VA_ARGS__) gmock_a4,                           \
+            GMOCK_ARG_(tn, 5, __VA_ARGS__) gmock_a5,                           \
+            GMOCK_ARG_(tn, 6, __VA_ARGS__) gmock_a6,                           \
+            GMOCK_ARG_(tn, 7, __VA_ARGS__) gmock_a7,                           \
+            GMOCK_ARG_(tn, 8, __VA_ARGS__) gmock_a8,                           \
+            GMOCK_ARG_(tn, 9, __VA_ARGS__) gmock_a9,                           \
+            GMOCK_ARG_(tn, 10, __VA_ARGS__) gmock_a10) constness {             \
+    GTEST_COMPILE_ASSERT_(                                                     \
+        (::testing::tuple_size<tn ::testing::internal::Function<               \
+             __VA_ARGS__>::ArgumentTuple>::value == 10),                       \
+        this_method_does_not_take_10_arguments);                               \
+    GMOCK_MOCKER_(10, constness, Method).SetOwnerAndName(this, #Method);       \
+    return GMOCK_MOCKER_(10, constness, Method)                                \
+        .Invoke(::testing::internal::forward<GMOCK_ARG_(tn, 1, __VA_ARGS__)>(  \
+                    gmock_a1),                                                 \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 2, __VA_ARGS__)>(  \
+                    gmock_a2),                                                 \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 3, __VA_ARGS__)>(  \
+                    gmock_a3),                                                 \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 4, __VA_ARGS__)>(  \
+                    gmock_a4),                                                 \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 5, __VA_ARGS__)>(  \
+                    gmock_a5),                                                 \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 6, __VA_ARGS__)>(  \
+                    gmock_a6),                                                 \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 7, __VA_ARGS__)>(  \
+                    gmock_a7),                                                 \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 8, __VA_ARGS__)>(  \
+                    gmock_a8),                                                 \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 9, __VA_ARGS__)>(  \
+                    gmock_a9),                                                 \
+                ::testing::internal::forward<GMOCK_ARG_(tn, 10, __VA_ARGS__)>( \
+                    gmock_a10));                                               \
+  }                                                                            \
+  ::testing::MockSpec<__VA_ARGS__> gmock_##Method(                             \
+      GMOCK_MATCHER_(tn, 1, __VA_ARGS__) gmock_a1,                             \
+      GMOCK_MATCHER_(tn, 2, __VA_ARGS__) gmock_a2,                             \
+      GMOCK_MATCHER_(tn, 3, __VA_ARGS__) gmock_a3,                             \
+      GMOCK_MATCHER_(tn, 4, __VA_ARGS__) gmock_a4,                             \
+      GMOCK_MATCHER_(tn, 5, __VA_ARGS__) gmock_a5,                             \
+      GMOCK_MATCHER_(tn, 6, __VA_ARGS__) gmock_a6,                             \
+      GMOCK_MATCHER_(tn, 7, __VA_ARGS__) gmock_a7,                             \
+      GMOCK_MATCHER_(tn, 8, __VA_ARGS__) gmock_a8,                             \
+      GMOCK_MATCHER_(tn, 9, __VA_ARGS__) gmock_a9,                             \
+      GMOCK_MATCHER_(tn, 10, __VA_ARGS__) gmock_a10) constness {               \
+    GMOCK_MOCKER_(10, constness, Method).RegisterOwner(this);                  \
+    return GMOCK_MOCKER_(10, constness, Method)                                \
+        .With(gmock_a1, gmock_a2, gmock_a3, gmock_a4, gmock_a5, gmock_a6,      \
+              gmock_a7, gmock_a8, gmock_a9, gmock_a10);                        \
+  }                                                                            \
+  ::testing::MockSpec<__VA_ARGS__> gmock_##Method(                             \
+      const ::testing::internal::WithoutMatchers&,                             \
+      constness ::testing::internal::Function<__VA_ARGS__>*) const {           \
+    return ::testing::internal::AdjustConstness_##constness(this)              \
+        ->gmock_##Method(::testing::A<GMOCK_ARG_(tn, 1, __VA_ARGS__)>(),       \
+                         ::testing::A<GMOCK_ARG_(tn, 2, __VA_ARGS__)>(),       \
+                         ::testing::A<GMOCK_ARG_(tn, 3, __VA_ARGS__)>(),       \
+                         ::testing::A<GMOCK_ARG_(tn, 4, __VA_ARGS__)>(),       \
+                         ::testing::A<GMOCK_ARG_(tn, 5, __VA_ARGS__)>(),       \
+                         ::testing::A<GMOCK_ARG_(tn, 6, __VA_ARGS__)>(),       \
+                         ::testing::A<GMOCK_ARG_(tn, 7, __VA_ARGS__)>(),       \
+                         ::testing::A<GMOCK_ARG_(tn, 8, __VA_ARGS__)>(),       \
+                         ::testing::A<GMOCK_ARG_(tn, 9, __VA_ARGS__)>(),       \
+                         ::testing::A<GMOCK_ARG_(tn, 10, __VA_ARGS__)>());     \
+  }                                                                            \
+  mutable ::testing::FunctionMocker<__VA_ARGS__> GMOCK_MOCKER_(10, constness,  \
+                                                               Method)
 
 #define MOCK_METHOD0(m, ...) GMOCK_METHOD0_(, , , m, __VA_ARGS__)
 #define MOCK_METHOD1(m, ...) GMOCK_METHOD1_(, , , m, __VA_ARGS__)
@@ -882,7 +1157,7 @@ class MockFunction<R()> {
   MOCK_METHOD0_T(Call, R());
 
 #if GTEST_HAS_STD_FUNCTION_
-  std::function<R()> AsStdFunction() {
+  ::std::function<R()> AsStdFunction() {
     return [this]() -> R {
       return this->Call();
     };
@@ -901,9 +1176,9 @@ class MockFunction<R(A0)> {
   MOCK_METHOD1_T(Call, R(A0));
 
 #if GTEST_HAS_STD_FUNCTION_
-  std::function<R(A0)> AsStdFunction() {
+  ::std::function<R(A0)> AsStdFunction() {
     return [this](A0 a0) -> R {
-      return this->Call(a0);
+      return this->Call(::std::move(a0));
     };
   }
 #endif  // GTEST_HAS_STD_FUNCTION_
@@ -920,9 +1195,9 @@ class MockFunction<R(A0, A1)> {
   MOCK_METHOD2_T(Call, R(A0, A1));
 
 #if GTEST_HAS_STD_FUNCTION_
-  std::function<R(A0, A1)> AsStdFunction() {
+  ::std::function<R(A0, A1)> AsStdFunction() {
     return [this](A0 a0, A1 a1) -> R {
-      return this->Call(a0, a1);
+      return this->Call(::std::move(a0), ::std::move(a1));
     };
   }
 #endif  // GTEST_HAS_STD_FUNCTION_
@@ -939,9 +1214,9 @@ class MockFunction<R(A0, A1, A2)> {
   MOCK_METHOD3_T(Call, R(A0, A1, A2));
 
 #if GTEST_HAS_STD_FUNCTION_
-  std::function<R(A0, A1, A2)> AsStdFunction() {
+  ::std::function<R(A0, A1, A2)> AsStdFunction() {
     return [this](A0 a0, A1 a1, A2 a2) -> R {
-      return this->Call(a0, a1, a2);
+      return this->Call(::std::move(a0), ::std::move(a1), ::std::move(a2));
     };
   }
 #endif  // GTEST_HAS_STD_FUNCTION_
@@ -958,9 +1233,10 @@ class MockFunction<R(A0, A1, A2, A3)> {
   MOCK_METHOD4_T(Call, R(A0, A1, A2, A3));
 
 #if GTEST_HAS_STD_FUNCTION_
-  std::function<R(A0, A1, A2, A3)> AsStdFunction() {
+  ::std::function<R(A0, A1, A2, A3)> AsStdFunction() {
     return [this](A0 a0, A1 a1, A2 a2, A3 a3) -> R {
-      return this->Call(a0, a1, a2, a3);
+      return this->Call(::std::move(a0), ::std::move(a1), ::std::move(a2),
+          ::std::move(a3));
     };
   }
 #endif  // GTEST_HAS_STD_FUNCTION_
@@ -978,9 +1254,10 @@ class MockFunction<R(A0, A1, A2, A3, A4)> {
   MOCK_METHOD5_T(Call, R(A0, A1, A2, A3, A4));
 
 #if GTEST_HAS_STD_FUNCTION_
-  std::function<R(A0, A1, A2, A3, A4)> AsStdFunction() {
+  ::std::function<R(A0, A1, A2, A3, A4)> AsStdFunction() {
     return [this](A0 a0, A1 a1, A2 a2, A3 a3, A4 a4) -> R {
-      return this->Call(a0, a1, a2, a3, a4);
+      return this->Call(::std::move(a0), ::std::move(a1), ::std::move(a2),
+          ::std::move(a3), ::std::move(a4));
     };
   }
 #endif  // GTEST_HAS_STD_FUNCTION_
@@ -998,9 +1275,10 @@ class MockFunction<R(A0, A1, A2, A3, A4, A5)> {
   MOCK_METHOD6_T(Call, R(A0, A1, A2, A3, A4, A5));
 
 #if GTEST_HAS_STD_FUNCTION_
-  std::function<R(A0, A1, A2, A3, A4, A5)> AsStdFunction() {
+  ::std::function<R(A0, A1, A2, A3, A4, A5)> AsStdFunction() {
     return [this](A0 a0, A1 a1, A2 a2, A3 a3, A4 a4, A5 a5) -> R {
-      return this->Call(a0, a1, a2, a3, a4, a5);
+      return this->Call(::std::move(a0), ::std::move(a1), ::std::move(a2),
+          ::std::move(a3), ::std::move(a4), ::std::move(a5));
     };
   }
 #endif  // GTEST_HAS_STD_FUNCTION_
@@ -1018,9 +1296,10 @@ class MockFunction<R(A0, A1, A2, A3, A4, A5, A6)> {
   MOCK_METHOD7_T(Call, R(A0, A1, A2, A3, A4, A5, A6));
 
 #if GTEST_HAS_STD_FUNCTION_
-  std::function<R(A0, A1, A2, A3, A4, A5, A6)> AsStdFunction() {
+  ::std::function<R(A0, A1, A2, A3, A4, A5, A6)> AsStdFunction() {
     return [this](A0 a0, A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6) -> R {
-      return this->Call(a0, a1, a2, a3, a4, a5, a6);
+      return this->Call(::std::move(a0), ::std::move(a1), ::std::move(a2),
+          ::std::move(a3), ::std::move(a4), ::std::move(a5), ::std::move(a6));
     };
   }
 #endif  // GTEST_HAS_STD_FUNCTION_
@@ -1038,9 +1317,11 @@ class MockFunction<R(A0, A1, A2, A3, A4, A5, A6, A7)> {
   MOCK_METHOD8_T(Call, R(A0, A1, A2, A3, A4, A5, A6, A7));
 
 #if GTEST_HAS_STD_FUNCTION_
-  std::function<R(A0, A1, A2, A3, A4, A5, A6, A7)> AsStdFunction() {
+  ::std::function<R(A0, A1, A2, A3, A4, A5, A6, A7)> AsStdFunction() {
     return [this](A0 a0, A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7) -> R {
-      return this->Call(a0, a1, a2, a3, a4, a5, a6, a7);
+      return this->Call(::std::move(a0), ::std::move(a1), ::std::move(a2),
+          ::std::move(a3), ::std::move(a4), ::std::move(a5), ::std::move(a6),
+          ::std::move(a7));
     };
   }
 #endif  // GTEST_HAS_STD_FUNCTION_
@@ -1058,10 +1339,12 @@ class MockFunction<R(A0, A1, A2, A3, A4, A5, A6, A7, A8)> {
   MOCK_METHOD9_T(Call, R(A0, A1, A2, A3, A4, A5, A6, A7, A8));
 
 #if GTEST_HAS_STD_FUNCTION_
-  std::function<R(A0, A1, A2, A3, A4, A5, A6, A7, A8)> AsStdFunction() {
+  ::std::function<R(A0, A1, A2, A3, A4, A5, A6, A7, A8)> AsStdFunction() {
     return [this](A0 a0, A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7,
         A8 a8) -> R {
-      return this->Call(a0, a1, a2, a3, a4, a5, a6, a7, a8);
+      return this->Call(::std::move(a0), ::std::move(a1), ::std::move(a2),
+          ::std::move(a3), ::std::move(a4), ::std::move(a5), ::std::move(a6),
+          ::std::move(a7), ::std::move(a8));
     };
   }
 #endif  // GTEST_HAS_STD_FUNCTION_
@@ -1080,10 +1363,12 @@ class MockFunction<R(A0, A1, A2, A3, A4, A5, A6, A7, A8, A9)> {
   MOCK_METHOD10_T(Call, R(A0, A1, A2, A3, A4, A5, A6, A7, A8, A9));
 
 #if GTEST_HAS_STD_FUNCTION_
-  std::function<R(A0, A1, A2, A3, A4, A5, A6, A7, A8, A9)> AsStdFunction() {
+  ::std::function<R(A0, A1, A2, A3, A4, A5, A6, A7, A8, A9)> AsStdFunction() {
     return [this](A0 a0, A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7,
         A8 a8, A9 a9) -> R {
-      return this->Call(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9);
+      return this->Call(::std::move(a0), ::std::move(a1), ::std::move(a2),
+          ::std::move(a3), ::std::move(a4), ::std::move(a5), ::std::move(a6),
+          ::std::move(a7), ::std::move(a8), ::std::move(a9));
     };
   }
 #endif  // GTEST_HAS_STD_FUNCTION_

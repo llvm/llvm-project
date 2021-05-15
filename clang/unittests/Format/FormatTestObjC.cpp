@@ -17,8 +17,7 @@
 
 #define DEBUG_TYPE "format-test"
 
-using clang::tooling::ReplacementTest;
-using testing::internal::ScopedTrace;
+using testing::ScopedTrace;
 
 namespace clang {
 namespace format {

@@ -26,8 +26,9 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// Author: wan@google.com (Zhanyong Wan)
+
+
+// GOOGLETEST_CM0001 DO NOT DELETE
 
 #ifndef GTEST_INCLUDE_GTEST_GTEST_TYPED_TEST_H_
 #define GTEST_INCLUDE_GTEST_GTEST_TYPED_TEST_H_
@@ -81,6 +82,24 @@ TYPED_TEST(FooTest, DoesBlah) {
 }
 
 TYPED_TEST(FooTest, HasPropertyA) { ... }
+
+// TYPED_TEST_CASE takes an optional third argument which allows to specify a
+// class that generates custom test name suffixes based on the type. This should
+// be a class which has a static template function GetName(int index) returning
+// a string for each type. The provided integer index equals the index of the
+// type in the provided type list. In many cases the index can be ignored.
+//
+// For example:
+//   class MyTypeNames {
+//    public:
+//     template <typename T>
+//     static std::string GetName(int) {
+//       if (std::is_same<T, char>()) return "char";
+//       if (std::is_same<T, int>()) return "int";
+//       if (std::is_same<T, unsigned int>()) return "unsignedInt";
+//     }
+//   };
+//   TYPED_TEST_CASE(FooTest, MyTypes, MyTypeNames);
 
 #endif  // 0
 
@@ -143,6 +162,11 @@ INSTANTIATE_TYPED_TEST_CASE_P(My, FooTest, MyTypes);
 // If the type list contains only one type, you can write that type
 // directly without Types<...>:
 //   INSTANTIATE_TYPED_TEST_CASE_P(My, FooTest, int);
+//
+// Similar to the optional argument of TYPED_TEST_CASE above,
+// INSTANTIATE_TEST_CASE_P takes an optional fourth argument which allows to
+// generate custom names.
+//   INSTANTIATE_TYPED_TEST_CASE_P(My, FooTest, MyTypes, MyTypeNames);
 
 #endif  // 0
 
@@ -159,32 +183,46 @@ INSTANTIATE_TYPED_TEST_CASE_P(My, FooTest, MyTypes);
 // given test case.
 # define GTEST_TYPE_PARAMS_(TestCaseName) gtest_type_params_##TestCaseName##_
 
+// Expands to the name of the typedef for the NameGenerator, responsible for
+// creating the suffixes of the name.
+#define GTEST_NAME_GENERATOR_(TestCaseName) \
+  gtest_type_params_##TestCaseName##_NameGenerator
+
 // The 'Types' template argument below must have spaces around it
 // since some compilers may choke on '>>' when passing a template
 // instance (e.g. Types<int>)
-# define TYPED_TEST_CASE(CaseName, Types) \
-  typedef ::testing::internal::TypeList< Types >::type \
-      GTEST_TYPE_PARAMS_(CaseName)
+# define TYPED_TEST_CASE(CaseName, Types, ...)                             \
+  typedef ::testing::internal::TypeList< Types >::type GTEST_TYPE_PARAMS_( \
+      CaseName);                                                           \
+  typedef ::testing::internal::NameGeneratorSelector<__VA_ARGS__>::type    \
+      GTEST_NAME_GENERATOR_(CaseName)
 
-# define TYPED_TEST(CaseName, TestName) \
-  template <typename gtest_TypeParam_> \
-  class GTEST_TEST_CLASS_NAME_(CaseName, TestName) \
-      : public CaseName<gtest_TypeParam_> { \
-   private: \
-    typedef CaseName<gtest_TypeParam_> TestFixture; \
-    typedef gtest_TypeParam_ TypeParam; \
-    virtual void TestBody(); \
-  }; \
-  bool gtest_##CaseName##_##TestName##_registered_ GTEST_ATTRIBUTE_UNUSED_ = \
-      ::testing::internal::TypeParameterizedTest< \
-          CaseName, \
-          ::testing::internal::TemplateSel< \
-              GTEST_TEST_CLASS_NAME_(CaseName, TestName)>, \
-          GTEST_TYPE_PARAMS_(CaseName)>::Register(\
-              "", ::testing::internal::CodeLocation(__FILE__, __LINE__), \
-              #CaseName, #TestName, 0); \
-  template <typename gtest_TypeParam_> \
-  void GTEST_TEST_CLASS_NAME_(CaseName, TestName)<gtest_TypeParam_>::TestBody()
+# define TYPED_TEST(CaseName, TestName)                                       \
+  template <typename gtest_TypeParam_>                                        \
+  class GTEST_TEST_CLASS_NAME_(CaseName, TestName)                            \
+      : public CaseName<gtest_TypeParam_> {                                   \
+   private:                                                                   \
+    typedef CaseName<gtest_TypeParam_> TestFixture;                           \
+    typedef gtest_TypeParam_ TypeParam;                                       \
+    virtual void TestBody();                                                  \
+  };                                                                          \
+  static bool gtest_##CaseName##_##TestName##_registered_                     \
+        GTEST_ATTRIBUTE_UNUSED_ =                                             \
+      ::testing::internal::TypeParameterizedTest<                             \
+          CaseName,                                                           \
+          ::testing::internal::TemplateSel<GTEST_TEST_CLASS_NAME_(CaseName,   \
+                                                                  TestName)>, \
+          GTEST_TYPE_PARAMS_(                                                 \
+              CaseName)>::Register("",                                        \
+                                   ::testing::internal::CodeLocation(         \
+                                       __FILE__, __LINE__),                   \
+                                   #CaseName, #TestName, 0,                   \
+                                   ::testing::internal::GenerateNames<        \
+                                       GTEST_NAME_GENERATOR_(CaseName),       \
+                                       GTEST_TYPE_PARAMS_(CaseName)>());      \
+  template <typename gtest_TypeParam_>                                        \
+  void GTEST_TEST_CLASS_NAME_(CaseName,                                       \
+                              TestName)<gtest_TypeParam_>::TestBody()
 
 #endif  // GTEST_HAS_TYPED_TEST
 
@@ -241,22 +279,27 @@ INSTANTIATE_TYPED_TEST_CASE_P(My, FooTest, MyTypes);
   namespace GTEST_CASE_NAMESPACE_(CaseName) { \
   typedef ::testing::internal::Templates<__VA_ARGS__>::type gtest_AllTests_; \
   } \
-  static const char* const GTEST_REGISTERED_TEST_NAMES_(CaseName) = \
-      GTEST_TYPED_TEST_CASE_P_STATE_(CaseName).VerifyRegisteredTestNames(\
-          __FILE__, __LINE__, #__VA_ARGS__)
+  static const char* const GTEST_REGISTERED_TEST_NAMES_(CaseName) \
+      GTEST_ATTRIBUTE_UNUSED_ = \
+          GTEST_TYPED_TEST_CASE_P_STATE_(CaseName).VerifyRegisteredTestNames( \
+              __FILE__, __LINE__, #__VA_ARGS__)
 
 // The 'Types' template argument below must have spaces around it
 // since some compilers may choke on '>>' when passing a template
 // instance (e.g. Types<int>)
-# define INSTANTIATE_TYPED_TEST_CASE_P(Prefix, CaseName, Types) \
-  bool gtest_##Prefix##_##CaseName GTEST_ATTRIBUTE_UNUSED_ = \
-      ::testing::internal::TypeParameterizedTestCase<CaseName, \
-          GTEST_CASE_NAMESPACE_(CaseName)::gtest_AllTests_, \
-          ::testing::internal::TypeList< Types >::type>::Register(\
-              #Prefix, \
-              ::testing::internal::CodeLocation(__FILE__, __LINE__), \
-              &GTEST_TYPED_TEST_CASE_P_STATE_(CaseName), \
-              #CaseName, GTEST_REGISTERED_TEST_NAMES_(CaseName))
+# define INSTANTIATE_TYPED_TEST_CASE_P(Prefix, CaseName, Types, ...)      \
+  static bool gtest_##Prefix##_##CaseName GTEST_ATTRIBUTE_UNUSED_ =       \
+      ::testing::internal::TypeParameterizedTestCase<                     \
+          CaseName, GTEST_CASE_NAMESPACE_(CaseName)::gtest_AllTests_,     \
+          ::testing::internal::TypeList< Types >::type>::                 \
+          Register(#Prefix,                                               \
+                   ::testing::internal::CodeLocation(__FILE__, __LINE__), \
+                   &GTEST_TYPED_TEST_CASE_P_STATE_(CaseName), #CaseName,  \
+                   GTEST_REGISTERED_TEST_NAMES_(CaseName),                \
+                   ::testing::internal::GenerateNames<                    \
+                       ::testing::internal::NameGeneratorSelector<        \
+                           __VA_ARGS__>::type,                            \
+                       ::testing::internal::TypeList< Types >::type>())
 
 #endif  // GTEST_HAS_TYPED_TEST_P
 

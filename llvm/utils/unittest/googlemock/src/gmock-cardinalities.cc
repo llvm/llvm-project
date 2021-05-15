@@ -26,8 +26,7 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// Author: wan@google.com (Zhanyong Wan)
+
 
 // Google Mock - a framework for writing C++ mock classes.
 //
@@ -92,7 +91,7 @@ class BetweenCardinalityImpl : public CardinalityInterface {
 };
 
 // Formats "n times" in a human-friendly way.
-inline internal::string FormatTimes(int n) {
+inline std::string FormatTimes(int n) {
   if (n == 1) {
     return "once";
   } else if (n == 2) {
