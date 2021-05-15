@@ -89,7 +89,7 @@ define i32 @set_shl_mask(i32 %x, i32 %y) {
 
 define i8 @must_drop_poison(i32 %x, i32 %y)  {
 ; CHECK-LABEL: @must_drop_poison(
-; CHECK-NEXT:    [[S:%.*]] = shl nuw nsw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = shl i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[S]] to i8
 ; CHECK-NEXT:    ret i8 [[T]]
 ;
