@@ -411,10 +411,8 @@ if(MSVC)
 elseif(MINGW) # FIXME: Also cygwin?
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--stack,16777216")
 
-  # Pass -mbig-obj to mingw gas on Win64. COFF has a 2**16 section limit, and
-  # on Win64, every COMDAT function creates at least 3 sections: .text, .pdata,
-  # and .xdata.
-  if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+  # Pass -mbig-obj to mingw gas to avoid COFF 2**16 section limit.
+  if (NOT CLANG)
     append("-Wa,-mbig-obj" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   endif()
 endif()
