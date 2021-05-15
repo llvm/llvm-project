@@ -13,6 +13,7 @@ add_mlir_library(MLIRTestTransforms
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Transforms
 
   LINK_LIBS PUBLIC
+  MLIRTestDialect
   MLIRTransforms
   )
 
