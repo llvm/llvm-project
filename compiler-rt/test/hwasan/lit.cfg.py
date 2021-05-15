@@ -12,6 +12,11 @@ config.test_source_root = os.path.dirname(__file__)
 clang_cflags = [config.target_cflags] + config.debug_info_flags
 clang_cxxflags = config.cxx_mode_flags + clang_cflags
 clang_hwasan_common_cflags = clang_cflags + ["-fsanitize=hwaddress", "-fuse-ld=lld"]
+
+if config.target_arch == 'x86_64' and config.enable_aliases == '1':
+  clang_hwasan_common_cflags += ["-fsanitize-hwaddress-experimental-aliasing"]
+if config.enable_aliases != '1':
+  config.available_features.add('pointer-tagging')
 if config.target_arch == 'x86_64':
   # This does basically the same thing as tagged-globals on aarch64. Because
   # the x86_64 implementation is for testing purposes only there is no
