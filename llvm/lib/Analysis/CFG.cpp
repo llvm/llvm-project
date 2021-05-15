@@ -242,12 +242,9 @@ bool llvm::isPotentiallyReachable(
     if (LI && LI->getLoopFor(BB) != nullptr)
       return true;
 
-    // Linear scan, start at 'A', see whether we hit 'B' or the end first.
-    for (BasicBlock::const_iterator I = A->getIterator(), E = BB->end(); I != E;
-         ++I) {
-      if (&*I == B)
-        return true;
-    }
+    // If A comes before B, then B is definitively reachable from A.
+    if (A == B || A->comesBefore(B))
+      return true;
 
     // Can't be in a loop if it's the entry block -- the entry block may not
     // have predecessors.
