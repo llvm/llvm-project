@@ -191,6 +191,22 @@ CHECK: i64::<0>
 CHECK: u64::<0>
        _RIC3u64Ky0_E
 
+; Bool constants
+
+CHECK: bool::<false>
+       _RIC4boolKb0_E
+
+CHECK: bool::<true>
+       _RIC4boolKb1_E
+
+; Invalid bool constants
+
+CHECK: _RIC4boolKb2_E
+       _RIC4boolKb2_E
+
+CHECK: _RIC4boolKbn0_E
+       _RIC4boolKbn0_E
+
 ; Invalid mangled characters
 
 CHECK: _RNvC2a.1c
