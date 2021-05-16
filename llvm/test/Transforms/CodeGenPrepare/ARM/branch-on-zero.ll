@@ -7,12 +7,12 @@ target triple = "thumbv8.1m.main-none-eabi"
 define i32 @lshr3_then(i32 %a) {
 ; CHECK-LABEL: @lshr3_then(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[A:%.*]], 8
-; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    [[L:%.*]] = lshr i32 [[A:%.*]], 3
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[L]], 0
+; CHECK-NEXT:    br i1 [[TMP0]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       else:
-; CHECK-NEXT:    [[L:%.*]] = lshr i32 [[A]], 3
 ; CHECK-NEXT:    ret i32 [[L]]
 ;
 entry:
@@ -30,10 +30,10 @@ else:
 define i32 @lshr5_else(i32 %a) {
 ; CHECK-LABEL: @lshr5_else(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[A:%.*]], 32
-; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    [[L:%.*]] = lshr i32 [[A:%.*]], 5
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[L]], 0
+; CHECK-NEXT:    br i1 [[TMP0]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[L:%.*]] = lshr i32 [[A]], 5
 ; CHECK-NEXT:    ret i32 [[L]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i32 0
@@ -54,8 +54,8 @@ define i32 @lshr2_entry(i32 %a) {
 ; CHECK-LABEL: @lshr2_entry(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[L:%.*]] = lshr i32 [[A:%.*]], 1
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[A]], 2
-; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[L]], 0
+; CHECK-NEXT:    br i1 [[TMP0]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i32 [[L]]
 ; CHECK:       else:
@@ -99,10 +99,10 @@ else:
 define i32 @ashr5_else(i32 %a) {
 ; CHECK-LABEL: @ashr5_else(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[A:%.*]], 32
-; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    [[L:%.*]] = ashr i32 [[A:%.*]], 5
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[L]], 0
+; CHECK-NEXT:    br i1 [[TMP0]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[L:%.*]] = ashr i32 [[A]], 5
 ; CHECK-NEXT:    ret i32 [[L]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i32 0
@@ -145,10 +145,10 @@ else:
 define i32 @addm10_then(i32 %a) {
 ; CHECK-LABEL: @addm10_then(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[A:%.*]], 10
-; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    [[L:%.*]] = add i32 [[A:%.*]], -10
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[L]], 0
+; CHECK-NEXT:    br i1 [[TMP0]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[L:%.*]] = add i32 [[A]], -10
 ; CHECK-NEXT:    ret i32 [[L]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i32 0
@@ -191,12 +191,12 @@ else:
 define i32 @sub10_else(i32 %a) {
 ; CHECK-LABEL: @sub10_else(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[A:%.*]], 10
-; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    [[L:%.*]] = sub i32 [[A:%.*]], 10
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[L]], 0
+; CHECK-NEXT:    br i1 [[TMP0]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       else:
-; CHECK-NEXT:    [[L:%.*]] = sub i32 [[A]], 10
 ; CHECK-NEXT:    ret i32 [[L]]
 ;
 entry:
@@ -214,10 +214,10 @@ else:
 define i32 @subm10_then(i32 %a) {
 ; CHECK-LABEL: @subm10_then(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[A:%.*]], -10
-; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    [[L:%.*]] = sub i32 [[A:%.*]], -10
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[L]], 0
+; CHECK-NEXT:    br i1 [[TMP0]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[L:%.*]] = sub i32 [[A]], -10
 ; CHECK-NEXT:    ret i32 [[L]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i32 0
@@ -237,12 +237,12 @@ else:
 define i64 @lshr64(i64 %a) {
 ; CHECK-LABEL: @lshr64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[A:%.*]], 1099511627776
-; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    [[L:%.*]] = lshr i64 [[A:%.*]], 40
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[L]], 0
+; CHECK-NEXT:    br i1 [[TMP0]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i64 0
 ; CHECK:       else:
-; CHECK-NEXT:    [[L:%.*]] = lshr i64 [[A]], 40
 ; CHECK-NEXT:    ret i64 [[L]]
 ;
 entry:
@@ -260,12 +260,12 @@ else:
 define i128 @lshr128(i128 %a) {
 ; CHECK-LABEL: @lshr128(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i128 [[A:%.*]], 36893488147419103232
-; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    [[L:%.*]] = lshr i128 [[A:%.*]], 65
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i128 [[L]], 0
+; CHECK-NEXT:    br i1 [[TMP0]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i128 0
 ; CHECK:       else:
-; CHECK-NEXT:    [[L:%.*]] = lshr i128 [[A]], 65
 ; CHECK-NEXT:    ret i128 [[L]]
 ;
 entry:

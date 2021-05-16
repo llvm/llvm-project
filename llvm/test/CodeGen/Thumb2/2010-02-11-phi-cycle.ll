@@ -7,18 +7,16 @@ define i32 @test(i32 %n) nounwind {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    cmp r0, #1
+; CHECK-NEXT:    subs r4, r0, #1
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r4, pc}
-; CHECK-NEXT:  .LBB0_1: @ %bb.nph
-; CHECK-NEXT:    subs r4, r0, #1
-; CHECK-NEXT:  .LBB0_2: @ %bb
+; CHECK-NEXT:  .LBB0_1: @ %bb
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    bl f
 ; CHECK-NEXT:    bl g
 ; CHECK-NEXT:    subs r4, #1
-; CHECK-NEXT:    bne .LBB0_2
-; CHECK-NEXT:  @ %bb.3: @ %return
+; CHECK-NEXT:    bne .LBB0_1
+; CHECK-NEXT:  @ %bb.2: @ %return
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
   %0 = icmp eq i32 %n, 1                          ; <i1> [#uses=1]
@@ -50,26 +48,22 @@ define i32 @test_dead_cycle(i32 %n) nounwind {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    cmp r0, #1
+; CHECK-NEXT:    subs r4, r0, #1
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r4, pc}
-; CHECK-NEXT:  .LBB1_1: @ %bb.nph
-; CHECK-NEXT:    subs r4, r0, #1
-; CHECK-NEXT:    b .LBB1_3
-; CHECK-NEXT:  .LBB1_2: @ %bb2
-; CHECK-NEXT:    @ in Loop: Header=BB1_3 Depth=1
-; CHECK-NEXT:    subs r4, #1
-; CHECK-NEXT:    beq .LBB1_5
-; CHECK-NEXT:  .LBB1_3: @ %bb
+; CHECK-NEXT:  .LBB1_1: @ %bb
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    cmp r4, #2
-; CHECK-NEXT:    blt .LBB1_2
-; CHECK-NEXT:  @ %bb.4: @ %bb1
-; CHECK-NEXT:    @ in Loop: Header=BB1_3 Depth=1
+; CHECK-NEXT:    blt .LBB1_3
+; CHECK-NEXT:  @ %bb.2: @ %bb1
+; CHECK-NEXT:    @ in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    bl f
 ; CHECK-NEXT:    bl g
-; CHECK-NEXT:    b .LBB1_2
-; CHECK-NEXT:  .LBB1_5: @ %return
+; CHECK-NEXT:  .LBB1_3: @ %bb2
+; CHECK-NEXT:    @ in Loop: Header=BB1_1 Depth=1
+; CHECK-NEXT:    subs r4, #1
+; CHECK-NEXT:    bne .LBB1_1
+; CHECK-NEXT:  @ %bb.4: @ %return
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
   %0 = icmp eq i32 %n, 1                          ; <i1> [#uses=1]
