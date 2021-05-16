@@ -58,9 +58,11 @@ void StructPackAlignCheck::check(const MatchFinder::MatchResult &Result) {
     // For each StructField, record how big it is (in bits).
     // Would be good to use a pair of <offset, size> to advise a better
     // packing order.
+    QualType StructFieldTy = StructField->getType();
+    if (StructFieldTy->isIncompleteType())
+      return;
     unsigned int StructFieldWidth =
-        (unsigned int)Result.Context
-            ->getTypeInfo(StructField->getType().getTypePtr())
+        (unsigned int)Result.Context->getTypeInfo(StructFieldTy.getTypePtr())
             .Width;
     FieldSizes.emplace_back(StructFieldWidth, StructField->getFieldIndex());
     // FIXME: Recommend a reorganization of the struct (sort by StructField
