@@ -207,6 +207,40 @@ CHECK: _RIC4boolKb2_E
 CHECK: _RIC4boolKbn0_E
        _RIC4boolKbn0_E
 
+; Char constants
+
+CHECK: char::<'a'>
+       _RIC4charKc61_E
+
+CHECK: char::<'"'>
+       _RIC4charKc22_E
+
+CHECK: char::<'\t'>
+       _RIC4charKc9_E
+
+CHECK: char::<'\r'>
+       _RIC4charKcd_E
+
+CHECK: char::<'\n'>
+       _RIC4charKca_E
+
+CHECK: char::<'\\'>
+       _RIC4charKc5c_E
+
+CHECK: char::<'\''>
+       _RIC4charKc27_E
+
+CHECK: char::<'\u{1f40d}'>
+       _RIC4charKc1f40d_E
+
+CHECK: char::<'\u{10ffff}'>
+       _RIC4charKc10ffff_E
+
+; Invalid char constants
+
+CHECK: _RIC4charKc1234567_E
+       _RIC4charKc1234567_E
+
 ; Invalid mangled characters
 
 CHECK: _RNvC2a.1c
