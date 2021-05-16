@@ -414,11 +414,14 @@ void Demangler::demangleConst() {
     case BasicType::Bool:
       demangleConstBool();
       break;
+    case BasicType::Char:
+      demangleConstChar();
+      break;
     case BasicType::Placeholder:
       print('_');
       break;
     default:
-      // FIXME demangle backreferences and char constants.
+      // FIXME demangle backreferences.
       Error = true;
       break;
     }
@@ -453,6 +456,54 @@ void Demangler::demangleConstBool() {
     print("true");
   else
     Error = true;
+}
+
+/// Returns true if CodePoint represents a printable ASCII character.
+static bool isAsciiPrintable(uint64_t CodePoint) {
+  return 0x20 <= CodePoint && CodePoint <= 0x7e;
+}
+
+// <const-data> = <hex-number>
+void Demangler::demangleConstChar() {
+  StringView HexDigits;
+  uint64_t CodePoint = parseHexNumber(HexDigits);
+  if (Error || HexDigits.size() > 6) {
+    Error = true;
+    return;
+  }
+
+  print("'");
+  switch (CodePoint) {
+  case '\t':
+    print(R"(\t)");
+    break;
+  case '\r':
+    print(R"(\r)");
+    break;
+  case '\n':
+    print(R"(\n)");
+    break;
+  case '\\':
+    print(R"(\\)");
+    break;
+  case '"':
+    print(R"(")");
+    break;
+  case '\'':
+    print(R"(\')");
+    break;
+  default:
+    if (isAsciiPrintable(CodePoint)) {
+      char C = CodePoint;
+      print(C);
+    } else {
+      print(R"(\u{)");
+      print(HexDigits);
+      print('}');
+    }
+    break;
+  }
+  print('\'');
 }
 
 // <undisambiguated-identifier> = ["u"] <decimal-number> ["_"] <bytes>
