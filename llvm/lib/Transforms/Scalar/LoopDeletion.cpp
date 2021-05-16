@@ -114,7 +114,7 @@ static bool isLoopNeverExecuted(Loop *L) {
   // predecessor.
   assert(Preheader && "Needs preheader!");
 
-  if (Preheader == &Preheader->getParent()->getEntryBlock())
+  if (Preheader->isEntryBlock())
     return false;
   // All predecessors of the preheader should have a constant conditional
   // branch, with the loop's preheader as not-taken.
