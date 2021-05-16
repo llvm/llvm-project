@@ -74,6 +74,8 @@ define i64 @fn2c() {
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@fn2c
 ; IS__CGSCC____-SAME: () #[[ATTR0]] {
 ; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    [[CONV:%.*]] = sext i32 undef to i64
+; IS__CGSCC____-NEXT:    [[ADD:%.*]] = add i64 42, [[CONV]]
 ; IS__CGSCC____-NEXT:    [[CALL2:%.*]] = call i64 @fn1(i64 noundef 42) #[[ATTR1]]
 ; IS__CGSCC____-NEXT:    ret i64 [[CALL2]]
 ;
