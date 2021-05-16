@@ -114,6 +114,7 @@ void traverseBasicBlock(Function &F, int nestedLevel) {
       if (isa<CallInst>(i)) {
         auto *call = &cast<CallBase>(i);
         outs() << prefix << "Traversing nestedLevel function " << call->getCalledFunction()->getName() << " Instruction '" << i << "'\n";
+        // use this hack to check if function is external
         outs() << prefix << "Check is external? empty " << call->getCalledFunction()->empty() << "\n";
         outs() << prefix << "Check is external? size " << call->getCalledFunction()->size() << "\n";
         traverseBasicBlock(*call->getCalledFunction(), nestedLevel + 1);
