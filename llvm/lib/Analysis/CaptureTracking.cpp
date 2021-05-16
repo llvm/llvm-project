@@ -106,10 +106,12 @@ namespace {
     void tooManyUses() override { Captured = true; }
 
     bool isSafeToPrune(Instruction *I) {
+      assert(I != BeforeHere && "Should have been handled earlier");
+
       BasicBlock *BB = I->getParent();
       // We explore this usage only if the usage can reach "BeforeHere".
       // If use is not reachable from entry, there is no need to explore.
-      if (BeforeHere != I && !DT->isReachableFromEntry(BB))
+      if (!DT->isReachableFromEntry(BB))
         return true;
 
       // Compute the case where both instructions are inside the same basic
@@ -121,7 +123,7 @@ namespace {
         // if it dominates every instruction in UseBB. A PHI is dominated only
         // if the instruction dominates every possible use in the UseBB. Since
         // UseBB == BB, avoid pruning.
-        if (isa<InvokeInst>(BeforeHere) || isa<PHINode>(I) || I == BeforeHere)
+        if (isa<InvokeInst>(BeforeHere) || isa<PHINode>(I))
           return false;
         if (!BeforeHere->comesBefore(I))
           return false;
@@ -144,7 +146,7 @@ namespace {
       // If the value is defined in the same basic block as use and BeforeHere,
       // there is no need to explore the use if BeforeHere dominates use.
       // Check whether there is a path from I to BeforeHere.
-      if (BeforeHere != I && DT->dominates(BeforeHere, I) &&
+      if (DT->dominates(BeforeHere, I) &&
           !isPotentiallyReachable(I, BeforeHere, nullptr, DT))
         return true;
 
@@ -154,13 +156,10 @@ namespace {
     bool shouldExplore(const Use *U) override {
       Instruction *I = cast<Instruction>(U->getUser());
 
-      if (BeforeHere == I && !IncludeI)
-        return false;
+      if (BeforeHere == I)
+        return IncludeI;
 
-      if (isSafeToPrune(I))
-        return false;
-
-      return true;
+      return !isSafeToPrune(I);
     }
 
     bool captured(const Use *U) override {
