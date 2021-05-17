@@ -5,6 +5,27 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
+#include "mathF.h"
+
+#if !defined EXTRA_ACCURACY
+CONSTATTR extern float MATH_PRIVATE(erfcx)(float);
+
+CONSTATTR float
+MATH_MANGLE(erfc)(float x)
+{
+    float ax = BUILTIN_ABS_F32(x);
+    float x2h = -x*x;
+    float x2l = BUILTIN_FMA_F32(-x, x, -x2h);
+    float e = MATH_MANGLE(exp)(x2h);
+    e = BUILTIN_FMA_F32(e, x2l, e);
+    float ret = e * MATH_PRIVATE(erfcx)(ax);
+    ret = ax > 0x1.41bbf8p+3f ? 0.0f : ret;
+    float nret = 2.0f - ret;
+    return x < 0.0f ? nret : ret;
+}
+
+#else
+
 // Some of this implementation is based on ideas from Sun LLVM
 /*
  * ====================================================
@@ -16,9 +37,6 @@
  * is preserved.
  * ====================================================
  */
-
-
-#include "mathF.h"
 
 CONSTATTR float
 MATH_MANGLE(erfc)(float x)
@@ -95,4 +113,5 @@ MATH_MANGLE(erfc)(float x)
 
     return ret;
 }
+#endif
 
