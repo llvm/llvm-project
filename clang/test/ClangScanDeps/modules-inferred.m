@@ -23,6 +23,7 @@ inferred a = 0;
 // CHECK-NEXT:       "clang-module-deps": [],
 // CHECK-NEXT:       "clang-modulemap-file": "[[SOURCEDIR]]/Inputs/frameworks/module.modulemap",
 // CHECK-NEXT:       "command-line": [
+// CHECK-NEXT:         "-cc1",
 // CHECK:              "-emit-module",
 // CHECK:              "-fmodule-name=Inferred",
 // CHECK:              "-fno-implicit-modules",
