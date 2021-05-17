@@ -349,10 +349,10 @@ TEST_P(DebugLineUnsupportedVersionFixture, ErrorForUnsupportedVersion) {
                         std::to_string(Version)));
 }
 
-INSTANTIATE_TEST_CASE_P(UnsupportedVersionTestParams,
-                        DebugLineUnsupportedVersionFixture,
-                        Values(/*1 below min */ 1, /* 1 above max */ 6,
-                               /* Maximum possible */ 0xffff), );
+INSTANTIATE_TEST_SUITE_P(UnsupportedVersionTestParams,
+                         DebugLineUnsupportedVersionFixture,
+                         Values(/*1 below min */ 1, /* 1 above max */ 6,
+                                /* Maximum possible */ 0xffff));
 
 TEST_F(DebugLineBasicFixture, ErrorForInvalidV5IncludeDirTable) {
   if (!setupGenerator(5))
@@ -477,13 +477,13 @@ TEST_P(DebugLineParameterisedFixture, ErrorForTooShortPrologueLength) {
                     FailedWithMessageArray(testing::ElementsAreArray(Errs)));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     LineTableTestParams, DebugLineParameterisedFixture,
     Values(std::make_pair(
                2, DWARF32), // Test lower-bound of v2-3 fields and DWARF32.
            std::make_pair(3, DWARF32), // Test upper-bound of v2-3 fields.
            std::make_pair(4, DWARF64), // Test v4 fields and DWARF64.
-           std::make_pair(5, DWARF32), std::make_pair(5, DWARF64)), );
+           std::make_pair(5, DWARF32), std::make_pair(5, DWARF64)));
 
 TEST_F(DebugLineBasicFixture, ErrorForExtendedOpcodeLengthSmallerThanExpected) {
   if (!setupGenerator())
@@ -950,13 +950,13 @@ TEST_P(MaxOpsPerInstFixture, MaxOpsPerInstProblemsReportedCorrectly) {
               ", which is unsupported. Assuming a value of 1 instead");
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     MaxOpsPerInstParams, MaxOpsPerInstFixture,
     Values(std::make_tuple(3, 0, false), // Test for version < 4 (no error).
            std::make_tuple(4, 0, true),  // Test zero value for V4 (error).
            std::make_tuple(4, 1, false), // Test good value for V4 (no error).
            std::make_tuple(
-               4, 2, true)), ); // Test one higher than permitted V4 (error).
+               4, 2, true))); // Test one higher than permitted V4 (error).
 
 struct LineRangeFixture : TestWithParam<std::tuple<uint8_t, bool>>,
                           AdjustAddressFixtureBase {
@@ -993,10 +993,10 @@ TEST_P(LineRangeFixture, LineRangeProblemsReportedCorrectly) {
           "not be adjusted");
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     LineRangeParams, LineRangeFixture,
-    Values(std::make_tuple(0, true),       // Test zero value (error).
-           std::make_tuple(14, false)), ); // Test non-zero value (no error).
+    Values(std::make_tuple(0, true),     // Test zero value (error).
+           std::make_tuple(14, false))); // Test non-zero value (no error).
 
 struct BadMinInstLenFixture : TestWithParam<std::tuple<uint8_t, bool>>,
                               AdjustAddressFixtureBase {
@@ -1028,10 +1028,10 @@ TEST_P(BadMinInstLenFixture, MinInstLengthProblemsReportedCorrectly) {
           "prevents any address advancing");
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     BadMinInstLenParams, BadMinInstLenFixture,
-    Values(std::make_tuple(0, true),      // Test zero value (error).
-           std::make_tuple(1, false)), ); // Test non-zero value (no error).
+    Values(std::make_tuple(0, true),    // Test zero value (error).
+           std::make_tuple(1, false))); // Test non-zero value (no error).
 
 TEST_F(DebugLineBasicFixture, ParserParsesCorrectly) {
   if (!setupGenerator())
@@ -1422,7 +1422,7 @@ TEST_P(TruncatedPrologueFixture, ErrorForTruncatedPrologue) {
   EXPECT_EQ(Offset, ExpectedOffset);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TruncatedPrologueParams, TruncatedPrologueFixture,
     Values(
         // Truncated length:
@@ -1501,7 +1501,7 @@ INSTANTIATE_TEST_CASE_P(
         std::make_tuple(
             0x12, 0x12, 4, DWARF32,
             "parsing line table prologue at offset 0x00000001: unexpected end "
-            "of data at offset 0x12 while reading [0x12, 0x13)")), );
+            "of data at offset 0x12 while reading [0x12, 0x13)")));
 
 using ValueAndLengths = std::vector<LineTable::ValueAndLength>;
 
@@ -1581,7 +1581,7 @@ TEST_P(TruncatedExtendedOpcodeFixture, ErrorForTruncatedExtendedOpcode) {
                     FailedWithMessage(ExpectedErr.str()));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TruncatedExtendedOpcodeParams, TruncatedExtendedOpcodeFixture,
     Values(
         // Truncated length:
@@ -1648,7 +1648,7 @@ INSTANTIATE_TEST_CASE_P(
             ValueAndLengths{{0x12343412, LineTable::Long}},
             "Unrecognized extended op 0x7f length 5 (<parsing error> 12 34 34)",
             "unexpected end of data at offset 0x35 while reading [0x32, "
-            "0x36)")), );
+            "0x36)")));
 
 TEST_P(TruncatedStandardOpcodeFixture, ErrorForTruncatedStandardOpcode) {
   if (!setupGenerator())
@@ -1660,7 +1660,7 @@ TEST_P(TruncatedStandardOpcodeFixture, ErrorForTruncatedStandardOpcode) {
                     FailedWithMessage(ExpectedErr.str()));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TruncatedStandardOpcodeParams, TruncatedStandardOpcodeFixture,
     Values(
         std::make_tuple(2, DW_LNS_advance_pc,
@@ -1704,7 +1704,7 @@ INSTANTIATE_TEST_CASE_P(
             ValueAndLengths{{0x900, LineTable::ULEB}, {0xa00, LineTable::ULEB}},
             "Unrecognized standard opcode (operands: 0x0000000000000900)",
             "unable to decode LEB128 at offset 0x00000032: "
-            "malformed uleb128, extends past end")), );
+            "malformed uleb128, extends past end")));
 
 TEST_F(DebugLineBasicFixture, PrintPathsProperly) {
   if (!setupGenerator(5))

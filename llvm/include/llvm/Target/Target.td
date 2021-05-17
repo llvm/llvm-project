@@ -18,8 +18,6 @@ include "llvm/IR/Intrinsics.td"
 // Register file description - These classes are used to fill in the target
 // description classes.
 
-class RegisterClass; // Forward def
-
 class HwMode<string FS> {
   // A string representing subtarget features that turn on this HW mode.
   // For example, "+feat1,-feat2" will indicate that the mode is active

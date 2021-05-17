@@ -316,39 +316,22 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
   }
 
   if (isMUBUF(LdSt) || isMTBUF(LdSt)) {
-    const MachineOperand *SOffset = getNamedOperand(LdSt, AMDGPU::OpName::soffset);
-    if (SOffset && SOffset->isReg()) {
-      // We can only handle this if it's a stack access, as any other resource
-      // would require reporting multiple base registers.
-      const MachineOperand *AddrReg = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
-      if (AddrReg && !AddrReg->isFI())
-        return false;
-
-      const MachineOperand *RSrc = getNamedOperand(LdSt, AMDGPU::OpName::srsrc);
-      const SIMachineFunctionInfo *MFI
-        = LdSt.getParent()->getParent()->getInfo<SIMachineFunctionInfo>();
-      if (RSrc->getReg() != MFI->getScratchRSrcReg())
-        return false;
-
-      const MachineOperand *OffsetImm =
-        getNamedOperand(LdSt, AMDGPU::OpName::offset);
-      BaseOps.push_back(RSrc);
-      BaseOps.push_back(SOffset);
-      Offset = OffsetImm->getImm();
-    } else {
-      BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::srsrc);
-      if (!BaseOp) // e.g. BUFFER_WBINVL1_VOL
-        return false;
+    const MachineOperand *RSrc = getNamedOperand(LdSt, AMDGPU::OpName::srsrc);
+    if (!RSrc) // e.g. BUFFER_WBINVL1_VOL
+      return false;
+    BaseOps.push_back(RSrc);
+    BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
+    if (BaseOp && !BaseOp->isFI())
       BaseOps.push_back(BaseOp);
-
-      BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
-      if (BaseOp)
-        BaseOps.push_back(BaseOp);
-
-      const MachineOperand *OffsetImm =
-          getNamedOperand(LdSt, AMDGPU::OpName::offset);
-      Offset = OffsetImm->getImm();
-      if (SOffset) // soffset can be an inline immediate.
+    const MachineOperand *OffsetImm =
+        getNamedOperand(LdSt, AMDGPU::OpName::offset);
+    Offset = OffsetImm->getImm();
+    const MachineOperand *SOffset =
+        getNamedOperand(LdSt, AMDGPU::OpName::soffset);
+    if (SOffset) {
+      if (SOffset->isReg())
+        BaseOps.push_back(SOffset);
+      else
         Offset += SOffset->getImm();
     }
     // Get appropriate operand, and compute width accordingly.
@@ -4244,25 +4227,10 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
         IsA16 = A16->getImm() != 0;
       }
 
-      bool PackDerivatives = IsA16 || BaseOpcode->G16;
       bool IsNSA = SRsrcIdx - VAddr0Idx > 1;
 
-      unsigned AddrWords = BaseOpcode->NumExtraArgs;
-      unsigned AddrComponents = (BaseOpcode->Coordinates ? Dim->NumCoords : 0) +
-                                (BaseOpcode->LodOrClampOrMip ? 1 : 0);
-      if (IsA16)
-        AddrWords += divideCeil(AddrComponents, 2);
-      else
-        AddrWords += AddrComponents;
-
-      if (BaseOpcode->Gradients) {
-        if (PackDerivatives)
-          // There are two gradients per coordinate, we pack them separately.
-          // For the 3d case, we get (dy/du, dx/du) (-, dz/du) (dy/dv, dx/dv) (-, dz/dv)
-          AddrWords += alignTo<2>(Dim->NumGradients / 2);
-        else
-          AddrWords += Dim->NumGradients;
-      }
+      unsigned AddrWords =
+          AMDGPU::getAddrSizeMIMGOp(BaseOpcode, Dim, IsA16, ST.hasG16());
 
       unsigned VAddrWords;
       if (IsNSA) {
@@ -5073,8 +5041,24 @@ bool SIInstrInfo::moveFlatAddrToVGPR(MachineInstr &Inst) const {
   } else {
     assert(OldSAddrIdx == NewVAddrIdx);
 
-    if (OldVAddrIdx >= 0)
+    if (OldVAddrIdx >= 0) {
+      int NewVDstIn = AMDGPU::getNamedOperandIdx(NewOpc,
+                                                 AMDGPU::OpName::vdst_in);
+
+      // RemoveOperand doesn't try to fixup tied operand indexes at it goes, so
+      // it asserts. Untie the operands for now and retie them afterwards.
+      if (NewVDstIn != -1) {
+        int OldVDstIn = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst_in);
+        Inst.untieRegOperand(OldVDstIn);
+      }
+
       Inst.RemoveOperand(OldVAddrIdx);
+
+      if (NewVDstIn != -1) {
+        int NewVDst = AMDGPU::getNamedOperandIdx(NewOpc, AMDGPU::OpName::vdst);
+        Inst.tieOperands(NewVDst, NewVDstIn);
+      }
+    }
   }
 
   if (VAddrDef && MRI.use_nodbg_empty(VAddrDef->getOperand(0).getReg()))

@@ -192,6 +192,7 @@ protected:
   bool HasVcmpxExecWARHazard;
   bool HasLdsBranchVmemWARHazard;
   bool HasNSAtoVMEMBug;
+  bool HasNSAClauseBug;
   bool HasOffset3fBug;
   bool HasFlatSegmentOffsetBug;
   bool HasImageStoreD16Bug;
@@ -971,6 +972,8 @@ public:
   bool hasNSAtoVMEMBug() const {
     return HasNSAtoVMEMBug;
   }
+
+  bool hasNSAClauseBug() const { return HasNSAClauseBug; }
 
   bool hasHardClauses() const { return getGeneration() >= GFX10; }
 

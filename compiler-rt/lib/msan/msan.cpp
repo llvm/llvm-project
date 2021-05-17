@@ -308,7 +308,8 @@ void __sanitizer::BufferedStackTrace::UnwindImpl(
   if (!t || !StackTrace::WillUseFastUnwind(request_fast)) {
     // Block reports from our interceptors during _Unwind_Backtrace.
     SymbolizerScope sym_scope;
-    return Unwind(max_depth, pc, bp, context, 0, 0, false);
+    return Unwind(max_depth, pc, bp, context, t ? t->stack_top() : 0,
+                  t ? t->stack_bottom() : 0, false);
   }
   if (StackTrace::WillUseFastUnwind(request_fast))
     Unwind(max_depth, pc, bp, nullptr, t->stack_top(), t->stack_bottom(), true);

@@ -27,11 +27,12 @@ using namespace llvm;
 namespace {
 using testing::AnyNumber;
 using testing::AtLeast;
+using testing::DoAll;
 using testing::DoDefault;
-using testing::Not;
-using testing::Return;
 using testing::Expectation;
 using testing::Invoke;
+using testing::Not;
+using testing::Return;
 using testing::WithArgs;
 using testing::_;
 
