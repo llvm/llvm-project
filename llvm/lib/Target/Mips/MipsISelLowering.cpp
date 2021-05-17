@@ -388,7 +388,8 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   if (Subtarget.isGP64bit())
     setOperationAction(ISD::EH_DWARF_CFA,       MVT::i64,   Custom);
 
-  setOperationAction(ISD::SDIV, MVT::i32, Expand);
+  if (!Subtarget.hasNanoMips())
+    setOperationAction(ISD::SDIV, MVT::i32, Expand);
   setOperationAction(ISD::SREM, MVT::i32, Expand);
   setOperationAction(ISD::UDIV, MVT::i32, Expand);
   setOperationAction(ISD::UREM, MVT::i32, Expand);
@@ -1253,7 +1254,8 @@ addLiveIn(MachineFunction &MF, unsigned PReg, const TargetRegisterClass *RC)
 static MachineBasicBlock *insertDivByZeroTrap(MachineInstr &MI,
                                               MachineBasicBlock &MBB,
                                               const TargetInstrInfo &TII,
-                                              bool Is64Bit, bool IsMicroMips) {
+                                              bool Is64Bit, bool IsMicroMips,
+                                              bool IsNanoMips) {
   if (NoZeroDivCheck)
     return &MBB;
 
@@ -1261,10 +1263,12 @@ static MachineBasicBlock *insertDivByZeroTrap(MachineInstr &MI,
   MachineBasicBlock::iterator I(MI);
   MachineInstrBuilder MIB;
   MachineOperand &Divisor = MI.getOperand(2);
-  MIB = BuildMI(MBB, std::next(I), MI.getDebugLoc(),
-                TII.get(IsMicroMips ? Mips::TEQ_MM : Mips::TEQ))
+  auto TeqIns =
+      IsMicroMips ? Mips::TEQ_MM : (IsNanoMips ? Mips::TEQ_NM : Mips::TEQ);
+  auto ZeroReg = IsNanoMips ? Mips::ZERO_NM : Mips::ZERO;
+  MIB = BuildMI(MBB, std::next(I), MI.getDebugLoc(), TII.get(TeqIns))
             .addReg(Divisor.getReg(), getKillRegState(Divisor.isKill()))
-            .addReg(Mips::ZERO)
+            .addReg(ZeroReg)
             .addImm(7);
 
   // Use the 32-bit sub-register if this is a 64-bit division.
@@ -1401,7 +1405,7 @@ MipsTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case Mips::MOD:
   case Mips::MODU:
     return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), false,
-                               false);
+                               false, false);
   case Mips::SDIV_MM_Pseudo:
   case Mips::UDIV_MM_Pseudo:
   case Mips::SDIV_MM:
@@ -1410,14 +1414,19 @@ MipsTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case Mips::DIVU_MMR6:
   case Mips::MOD_MMR6:
   case Mips::MODU_MMR6:
-    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), false, true);
+    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), false, true,
+                               false);
   case Mips::PseudoDSDIV:
   case Mips::PseudoDUDIV:
   case Mips::DDIV:
   case Mips::DDIVU:
   case Mips::DMOD:
   case Mips::DMODU:
-    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), true, false);
+    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), true, false,
+                               false);
+  case Mips::DIV_NM:
+    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), false, false,
+                               true);
 
   case Mips::PseudoSELECT_I:
   case Mips::PseudoSELECT_I64:

@@ -18,6 +18,17 @@
 def MipsFullAddr : SDNode<"MipsISD::FullAddr", SDTIntUnaryOp>;
 
 //===----------------------------------------------------------------------===//
+// nanoMIPS Operand, Complex Patterns and Transformations Definitions.
+//===----------------------------------------------------------------------===//
+
+def UImm5AsmOperandClass : UImmAsmOperandClass<5, []>;
+
+def uimm5_nm : Operand<i32> {
+  let PrintMethod = "printUImm<5>";
+  let ParserMatchClass = !cast<AsmOperandClass>("UImm5AsmOperandClass");
+}
+
+//===----------------------------------------------------------------------===//
 //
 // Instruction Descriptions
 //
@@ -44,6 +55,19 @@ class ArithLogicINM<string opstr, Operand Od, RegisterOperand RO,
          !strconcat(opstr, "\t$rt, $rs, $imm16"),
          [(set RO:$rt, (OpNode RO:$rs, imm_type:$imm16))]>, InstSize32 {
   let isReMaterializable = 1;
+}
+
+class DivMod<string opstr, SDPatternOperator OpNode = null_frag> :
+    ArithLoginR32<opstr, GPR32NMOpnd, OpNode> {
+  // Need to insert TEQ, because DIV(U)/MOD(U) don't trap on division by zero.
+  bit usesCustomInserter = 1;
+}
+
+class Trap<string opstr> :
+  InstNM<(outs), (ins GPR32NMOpnd:$rs, GPR32NMOpnd:$rt, uimm5_nm:$imm),
+         !strconcat(opstr, "\t$rt, $rs, $imm"), []>, InstSize32 {
+  let hasSideEffects = 1;
+  let isCTI = 1;
 }
 
 // Instructions with 1 register (dest) and 1 immediate operand.
@@ -114,7 +138,7 @@ class AdjustStack<SDPatternOperator operator> :
 
 let isCodeGenOnly = 1 in {
 
-// _POOL32A0_0 pool of instruction.
+// _POOL32A0_0 pool of instructions.
 def SLLV_NM  : ArithLoginR32<"sllv", GPR32NMOpnd, shl>;
 def SRLV_NM  : ArithLoginR32<"srlv", GPR32NMOpnd, srl>;
 def SRAV_NM  : ArithLoginR32<"srav", GPR32NMOpnd, sra>;
@@ -128,9 +152,14 @@ def OR_NM    : ArithLoginR32<"or", GPR32NMOpnd, or>;
 def NOR_NM   : ArithLoginR32<"nor", GPR32NMOpnd>;
 def XOR_NM   : ArithLoginR32<"xor", GPR32NMOpnd, xor>;
 def MUL_NM   : ArithLoginR32<"mul", GPR32NMOpnd, mul>;
+def DIV_NM   : DivMod<"div", sdiv>;
 
 def ADDiu_NM : ArithLogicINM<"addiu", simm16_relaxed, GPR32NMOpnd,
                              imm32SExt16, add>;
+
+// P.TRAP pool of instructions.
+def TEQ_NM : Trap<"teq">;
+def TNE_NM : Trap<"tne">;
 
 def NOT_NM   : ArithLogicR16<"not", GPR3Opnd, not>;
 def XOR16_NM : ArithLogicR16<"xor16", GPR3Opnd>;
