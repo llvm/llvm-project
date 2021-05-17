@@ -1299,7 +1299,8 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
       if (AFI->hasSwiftAsyncContext()) {
         const auto &Attrs = MF.getFunction().getAttributes();
         bool HaveInitialContext = Attrs.hasAttrSomewhere(Attribute::SwiftAsync);
-
+        if (HaveInitialContext)
+          MBB.addLiveIn(AArch64::X22);
         BuildMI(MBB, MBBI, DL, TII->get(AArch64::StoreSwiftAsyncContext))
             .addUse(HaveInitialContext ? AArch64::X22 : AArch64::XZR)
             .addUse(AArch64::SP)
