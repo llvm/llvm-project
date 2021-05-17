@@ -101,6 +101,7 @@ static inline bool isValid(const char C) {
 bool Demangler::demangle(StringView Mangled) {
   Position = 0;
   Error = false;
+  Print = true;
   RecursionLevel = 0;
 
   if (!Mangled.consumeFront("_R")) {
@@ -143,6 +144,13 @@ void Demangler::demanglePath() {
     parseOptionalBase62Number('s');
     Identifier Ident = parseIdentifier();
     print(Ident.Name);
+    break;
+  }
+  case 'M': {
+    demangleImplPath();
+    print("<");
+    demangleType();
+    print(">");
     break;
   }
   case 'N': {
@@ -197,6 +205,14 @@ void Demangler::demanglePath() {
     Error = true;
     break;
   }
+}
+
+// <impl-path> = [<disambiguator>] <path>
+// <disambiguator> = "s" <base-62-number>
+void Demangler::demangleImplPath() {
+  SwapAndRestore<bool> SavePrint(Print, false);
+  parseOptionalBase62Number('s');
+  demanglePath();
 }
 
 // <generic-arg> = <lifetime>
