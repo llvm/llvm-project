@@ -144,7 +144,6 @@ def ImOp : Complex_Op<"im",
   let results = (outs AnyFloat:$imaginary);
 
   let assemblyFormat = "$complex attr-dict `:` type($complex)";
-  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -186,7 +185,6 @@ def ReOp : Complex_Op<"re",
   let results = (outs AnyFloat:$real);
 
   let assemblyFormat = "$complex attr-dict `:` type($complex)";
-  let hasFolder = 1;
 }
 
 
