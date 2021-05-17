@@ -35,3 +35,27 @@ define i32 @test_modu(i32 %a, i32 %b) {
   %mod = urem i32 %a, %b
   ret i32 %mod
 }
+
+define i64 @test_div64(i64 %a, i64 %b) {
+; CHECK: balc __divdi3
+  %div = sdiv i64 %a, %b
+  ret i64 %div
+}
+
+define i64 @test_mod64(i64 %a, i64 %b) {
+; CHECK: balc __moddi3
+  %mod = srem i64 %a, %b
+  ret i64 %mod
+}
+
+define i64 @test_divu64(i64 %a, i64 %b) {
+; CHECK: balc __udivdi3
+  %div = udiv i64 %a, %b
+  ret i64 %div
+}
+
+define i64 @test_modu64(i64 %a, i64 %b) {
+; CHECK: balc __umoddi3
+  %mod = urem i64 %a, %b
+  ret i64 %mod
+}
