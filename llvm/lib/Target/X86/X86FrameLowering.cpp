@@ -1496,7 +1496,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
         const auto &Attrs = MF.getFunction().getAttributes();
 
         if (Attrs.hasAttrSomewhere(Attribute::SwiftAsync)) {
-          // We have an initial context in r14, store it just before the frame
+          // We have an initial context in r11, store it just before the frame
           // pointer.
           BuildMI(MBB, MBBI, DL, TII.get(X86::PUSH64r))
               .addReg(X86::R14)
