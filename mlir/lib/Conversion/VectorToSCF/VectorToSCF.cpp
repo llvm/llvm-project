@@ -264,6 +264,7 @@ static BufferAllocs allocBuffers(OpTy xferOp) {
   if (xferOp.mask()) {
     auto maskType = MemRefType::get({}, xferOp.mask().getType());
     auto maskBuffer = memref_alloca(maskType).value;
+    b.setInsertionPoint(xferOp);
     memref_store(xferOp.mask(), maskBuffer);
     result.maskBuffer = memref_load(maskBuffer);
   }
@@ -476,10 +477,11 @@ struct Strategy<TransferWriteOp> {
 };
 
 template <typename OpTy>
-LogicalResult checkPrepareXferOp(OpTy xferOp, unsigned targetRank) {
+LogicalResult checkPrepareXferOp(OpTy xferOp,
+                                 VectorTransferToSCFOptions options) {
   if (xferOp->hasAttr(kPassLabel))
     return failure();
-  if (xferOp.getVectorType().getRank() <= targetRank)
+  if (xferOp.getVectorType().getRank() <= options.targetRank)
     return failure();
   return success();
 }
@@ -513,7 +515,7 @@ struct PrepareTransferReadConversion
 
   LogicalResult matchAndRewrite(TransferReadOp xferOp,
                                 PatternRewriter &rewriter) const override {
-    if (checkPrepareXferOp(xferOp, options.targetRank).failed())
+    if (checkPrepareXferOp(xferOp, options).failed())
       return failure();
 
     ScopedContext scope(rewriter, xferOp.getLoc());
@@ -561,7 +563,7 @@ struct PrepareTransferWriteConversion
 
   LogicalResult matchAndRewrite(TransferWriteOp xferOp,
                                 PatternRewriter &rewriter) const override {
-    if (checkPrepareXferOp(xferOp, options.targetRank).failed())
+    if (checkPrepareXferOp(xferOp, options).failed())
       return failure();
 
     ScopedContext scope(rewriter, xferOp.getLoc());
@@ -1160,12 +1162,23 @@ struct ConvertVectorToSCFPass
   ConvertVectorToSCFPass(const VectorTransferToSCFOptions &options) {
     this->fullUnroll = options.unroll;
     this->targetRank = options.targetRank;
+    this->lowerPermutationMaps = options.lowerPermutationMaps;
   }
 
   void runOnFunction() override {
     VectorTransferToSCFOptions options;
-    options.setUnroll(fullUnroll);
-    options.setTargetRank(targetRank);
+    options.unroll = fullUnroll;
+    options.targetRank = targetRank;
+    options.lowerPermutationMaps = lowerPermutationMaps;
+
+    // Lower permutation maps first.
+    if (lowerPermutationMaps) {
+      RewritePatternSet lowerTransferPatterns(getFunction().getContext());
+      mlir::vector::populateVectorTransferPermutationMapLoweringPatterns(
+          lowerTransferPatterns);
+      (void)applyPatternsAndFoldGreedily(getFunction(),
+                                         std::move(lowerTransferPatterns));
+    }
 
     RewritePatternSet patterns(getFunction().getContext());
     populateVectorToSCFConversionPatterns(patterns, options);
