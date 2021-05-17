@@ -44,6 +44,25 @@ template <typename B1, typename... Bn>
 struct disjunction<B1, Bn...>
     : std::conditional<bool(B1::value), B1, disjunction<Bn...>>::type {};
 
+struct in_place_t // NOLINT(readability-identifier-naming)
+{
+  explicit in_place_t() = default;
+};
+/// \warning This must not be odr-used, as it cannot be made \c inline in C++14.
+constexpr in_place_t in_place; // NOLINT(readability-identifier-naming)
+
+template <typename T>
+struct in_place_type_t // NOLINT(readability-identifier-naming)
+{
+  explicit in_place_type_t() = default;
+};
+
+template <std::size_t I>
+struct in_place_index_t // NOLINT(readability-identifier-naming)
+{
+  explicit in_place_index_t() = default;
+};
+
 //===----------------------------------------------------------------------===//
 //     Features from C++20
 //===----------------------------------------------------------------------===//
