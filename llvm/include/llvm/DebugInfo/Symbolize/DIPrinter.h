@@ -29,6 +29,8 @@ class raw_ostream;
 
 namespace symbolize {
 
+class SourceCode;
+
 struct Request {
   StringRef ModuleName;
   Optional<uint64_t> Address;
@@ -74,7 +76,7 @@ protected:
   void printFunctionName(StringRef FunctionName, bool Inlined);
   virtual void printSimpleLocation(StringRef Filename,
                                    const DILineInfo &Info) = 0;
-  void printContext(StringRef FileName, int64_t Line);
+  void printContext(SourceCode SourceCode);
   void printVerbose(StringRef Filename, const DILineInfo &Info);
   virtual void printFooter() {}
 

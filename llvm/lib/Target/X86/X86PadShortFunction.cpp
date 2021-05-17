@@ -222,7 +222,7 @@ bool PadShortFunc::cyclesUntilReturn(MachineBasicBlock *MBB,
 void PadShortFunc::addPadding(MachineBasicBlock *MBB,
                               MachineBasicBlock::iterator &MBBI,
                               unsigned int NOOPsToAdd) {
-  DebugLoc DL = MBBI->getDebugLoc();
+  const DebugLoc &DL = MBBI->getDebugLoc();
   unsigned IssueWidth = TSM.getIssueWidth();
 
   for (unsigned i = 0, e = IssueWidth * NOOPsToAdd; i != e; ++i)

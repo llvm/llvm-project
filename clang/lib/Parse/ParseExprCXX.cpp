@@ -2033,6 +2033,8 @@ Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
     DeclGroupPtrTy DG = ParseSimpleDeclaration(DeclaratorContext::ForInit,
                                                DeclEnd, attrs, false, FRI);
     FRI->LoopVar = Actions.ActOnDeclStmt(DG, DeclStart, Tok.getLocation());
+    assert((FRI->ColonLoc.isValid() || !DG) &&
+           "cannot find for range declaration");
     return Sema::ConditionResult();
   }
 

@@ -970,7 +970,7 @@ static void printBBName(raw_ostream &out, const BasicBlock *BB) {
     return;
   }
 
-  if (BB == &BB->getParent()->getEntryBlock()) {
+  if (BB->isEntryBlock()) {
     out << "entry"
         << "<" << BB << ">";
     return;

@@ -2183,6 +2183,15 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
     report_fatal_error("Encountered a global variable kind that is "
                        "not supported yet.");
 
+  // Print GV in verbose mode
+  if (isVerbose()) {
+    if (GV->hasInitializer()) {
+      GV->printAsOperand(OutStreamer->GetCommentOS(),
+                         /*PrintType=*/false, GV->getParent());
+      OutStreamer->GetCommentOS() << '\n';
+    }
+  }
+
   MCSectionXCOFF *Csect = cast<MCSectionXCOFF>(
       getObjFileLowering().SectionForGlobal(GV, GVKind, TM));
 

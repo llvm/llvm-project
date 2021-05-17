@@ -3858,7 +3858,7 @@ void AssemblyWriter::printArgument(const Argument *Arg, AttributeSet Attrs) {
 /// printBasicBlock - This member is called for each basic block in a method.
 void AssemblyWriter::printBasicBlock(const BasicBlock *BB) {
   assert(BB && BB->getParent() && "block without parent!");
-  bool IsEntryBlock = BB == &BB->getParent()->getEntryBlock();
+  bool IsEntryBlock = BB->isEntryBlock();
   if (BB->hasName()) {              // Print out the label if it exists...
     Out << "\n";
     PrintLLVMName(Out, BB->getName(), LabelPrefix);

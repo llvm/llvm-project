@@ -320,6 +320,39 @@ entry:
   ret void
 }
 
+define void @twoloops(i32* %X, i32 %n, i32 %m) {
+; CHECK-LABEL: twoloops:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    add.w r1, r2, #15
+; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    bic r1, r1, #16
+; CHECK-NEXT:    mov r3, r2
+; CHECK-NEXT:    lsr.w lr, r1, #4
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    mov r12, lr
+; CHECK-NEXT:    wls lr, lr, .LBB13_2
+; CHECK-NEXT:  .LBB13_1: @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vctp.8 r3
+; CHECK-NEXT:    subs r3, #16
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vstrbt.8 q0, [r1], #16
+; CHECK-NEXT:    le lr, .LBB13_1
+; CHECK-NEXT:  .LBB13_2: @ %entry
+; CHECK-NEXT:    wlstp.8 lr, r2, .LBB13_4
+; CHECK-NEXT:  .LBB13_3: @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vstrb.8 q0, [r0], #16
+; CHECK-NEXT:    letp lr, .LBB13_3
+; CHECK-NEXT:  .LBB13_4: @ %entry
+; CHECK-NEXT:    pop {r7, pc}
+entry:
+  %0 = bitcast i32* %X to i8*
+  call void @llvm.memset.p0i8.i32(i8* align 4 %0, i8 0, i32 %m, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* align 4 %0, i8 0, i32 %m, i1 false)
+  ret void
+}
+
 
 ; Checks that transform correctly handles input with some arithmetic on input arguments.
 ; void test14(int* X, char c, int n)
@@ -336,11 +369,11 @@ define void @test14(i32* %X, i8 zeroext %c, i32 %n) {
 ; CHECK-NEXT:    add.w r2, r3, r2, lsl #1
 ; CHECK-NEXT:    vdup.8 q0, r1
 ; CHECK-NEXT:    adds r0, #8
-; CHECK-NEXT:    wlstp.8 lr, r2, .LBB13_2
-; CHECK-NEXT:  .LBB13_1: @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    wlstp.8 lr, r2, .LBB14_2
+; CHECK-NEXT:  .LBB14_1: @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vstrb.8 q0, [r0], #16
-; CHECK-NEXT:    letp lr, .LBB13_1
-; CHECK-NEXT:  .LBB13_2: @ %entry
+; CHECK-NEXT:    letp lr, .LBB14_1
+; CHECK-NEXT:  .LBB14_2: @ %entry
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %add.ptr = getelementptr inbounds i32, i32* %X, i32 2
@@ -367,15 +400,15 @@ define void @test15(i8* nocapture %X, i8 zeroext %c, i32 %n) {
 ; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    bxlt lr
-; CHECK-NEXT:  .LBB14_1: @ %for.body.preheader
+; CHECK-NEXT:  .LBB15_1: @ %for.body.preheader
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    vdup.8 q0, r1
-; CHECK-NEXT:    wlstp.8 lr, r2, .LBB14_3
-; CHECK-NEXT:  .LBB14_2: @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    wlstp.8 lr, r2, .LBB15_3
+; CHECK-NEXT:  .LBB15_2: @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vstrb.8 q0, [r0], #16
-; CHECK-NEXT:    letp lr, .LBB14_2
-; CHECK-NEXT:  .LBB14_3: @ %for.body.preheader
+; CHECK-NEXT:    letp lr, .LBB15_2
+; CHECK-NEXT:  .LBB15_3: @ %for.body.preheader
 ; CHECK-NEXT:    pop.w {r7, lr}
 ; CHECK-NEXT:    bx lr
 entry:
@@ -397,11 +430,11 @@ define void @test16(i32* %X, i8 zeroext %c, i32 %n) {
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    wlstp.8 lr, r2, .LBB15_2
-; CHECK-NEXT:  .LBB15_1: @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    wlstp.8 lr, r2, .LBB16_2
+; CHECK-NEXT:  .LBB16_1: @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vstrb.8 q0, [r0], #16
-; CHECK-NEXT:    letp lr, .LBB15_1
-; CHECK-NEXT:  .LBB15_2: @ %entry
+; CHECK-NEXT:    letp lr, .LBB16_1
+; CHECK-NEXT:  .LBB16_2: @ %entry
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %0 = bitcast i32* %X to i8*
@@ -414,12 +447,12 @@ define void @csprlive(i32* noalias %X, i32* noalias readonly %Y, i32 %n) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    wlstp.8 lr, r2, .LBB16_2
-; CHECK-NEXT:  .LBB16_1: @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    wlstp.8 lr, r2, .LBB17_2
+; CHECK-NEXT:  .LBB17_1: @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrb.u8 q0, [r1], #16
 ; CHECK-NEXT:    vstrb.8 q0, [r0], #16
-; CHECK-NEXT:    letp lr, .LBB16_1
-; CHECK-NEXT:  .LBB16_2: @ %entry
+; CHECK-NEXT:    letp lr, .LBB17_1
+; CHECK-NEXT:  .LBB17_2: @ %entry
 ; CHECK-NEXT:    bl other
 ; CHECK-NEXT:    pop {r7, pc}
 entry:

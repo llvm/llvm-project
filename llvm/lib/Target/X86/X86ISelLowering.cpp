@@ -46248,7 +46248,7 @@ static bool isHorizontalBinOp(unsigned HOpcode, SDValue &LHS, SDValue &RHS,
   return true;
 }
 
-// Try to synthesize horizontal (f)add/sub from (f)adds/subs of shuffles.
+// Try to synthesize horizontal (f)hadd/hsub from (f)adds/subs of shuffles.
 static SDValue combineToHorizontalAddSub(SDNode *N, SelectionDAG &DAG,
                                          const X86Subtarget &Subtarget) {
   EVT VT = N->getValueType(0);
@@ -46276,8 +46276,8 @@ static SDValue combineToHorizontalAddSub(SDNode *N, SelectionDAG &DAG,
     break;
   case ISD::ADD:
   case ISD::SUB:
-    if (Subtarget.hasSSE3() && (VT == MVT::v8i16 || VT == MVT::v4i32 ||
-                                VT == MVT::v16i16 || VT == MVT::v8i32)) {
+    if (Subtarget.hasSSSE3() && (VT == MVT::v8i16 || VT == MVT::v4i32 ||
+                                 VT == MVT::v16i16 || VT == MVT::v8i32)) {
       SDValue LHS = N->getOperand(0);
       SDValue RHS = N->getOperand(1);
       auto HorizOpcode = IsAdd ? X86ISD::HADD : X86ISD::HSUB;

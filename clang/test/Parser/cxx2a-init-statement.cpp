@@ -15,6 +15,8 @@ void f() {
   int A<0>::*arr2[3];
   for (int n = 5; int A<true ? 0 : 1>::*x : arr2) {}
 
+  for (int i = 0; int x = i < 2 ? 1 : 0; i++) {}
+
   F (*arr3[3])(int);
   for (int n = 5; F (*p)(int n) : arr3) {}
   for (int n = 5; F (*p)(int (n)) : arr3) {}

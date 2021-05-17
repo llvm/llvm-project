@@ -1287,23 +1287,6 @@ bool RISCVDAGToDAGISel::selectZExti32(SDValue N, SDValue &Val) {
   return false;
 }
 
-// Check if (add r, imm) can be optimized to (ADDI (ADDI r, imm0), imm1),
-// in which imm = imm0 + imm1 and both imm0 and imm1 are simm12.
-bool RISCVDAGToDAGISel::selectAddiPair(SDValue N, SDValue &Val) {
-  if (auto *ConstOp = dyn_cast<ConstantSDNode>(N)) {
-    // The immediate operand must have only use.
-    if (!(ConstOp->hasOneUse()))
-      return false;
-    // The immediate operand must be in range [-4096,-2049] or [2048,4094].
-    int64_t Imm = ConstOp->getSExtValue();
-    if ((-4096 <= Imm && Imm <= -2049) || (2048 <= Imm && Imm <= 4094)) {
-      Val = N;
-      return true;
-    }
-  }
-  return false;
-}
-
 // Check that it is a SLLIUW (Shift Logical Left Immediate Unsigned i32
 // on RV64).
 // SLLIUW is the same as SLLI except for the fact that it clears the bits

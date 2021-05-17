@@ -48,6 +48,10 @@ endif()
 
 include(builtin-config-ix)
 
+if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  include(CompilerRTAIXUtils)
+endif()
+
 option(COMPILER_RT_BUILTINS_HIDE_SYMBOLS
   "Do not export any symbols from the static library." ON)
 
@@ -746,5 +750,43 @@ else ()
     endif ()
   endforeach ()
 endif ()
+
+option(COMPILER_RT_BUILD_STANDALONE_LIBATOMIC
+  "Build standalone shared atomic library."
+  OFF)
+
+if(COMPILER_RT_BUILD_STANDALONE_LIBATOMIC)
+  add_custom_target(builtins-standalone-atomic)
+  set(BUILTIN_DEPS "")
+  if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+    if(NOT COMPILER_RT_LIBATOMIC_LINK_FLAGS)
+      get_aix_libatomic_default_link_flags(COMPILER_RT_LIBATOMIC_LINK_FLAGS
+        "${CMAKE_CURRENT_SOURCE_DIR}/ppc/atomic.exp")
+    endif()
+    # The compiler needs builtins to link any other binaries, so let
+    # clang_rt.atomic be built after builtins.
+    set(BUILTIN_DEPS builtins)
+  endif()
+  foreach (arch ${BUILTIN_SUPPORTED_ARCH})
+    if(CAN_TARGET_${arch})
+      add_compiler_rt_runtime(clang_rt.atomic
+                              SHARED
+                              ARCHS ${arch}
+                              SOURCES atomic.c
+                              LINK_FLAGS ${COMPILER_RT_LIBATOMIC_LINK_FLAGS}
+                              DEPS ${BUILTIN_DEPS}
+                              PARENT_TARGET builtins-standalone-atomic)
+    endif()
+  endforeach()
+  # FIXME: On AIX, we have to archive built shared libraries into a static
+  # archive, i.e., libatomic.a. Once cmake adds support of such usage for AIX,
+  # this ad-hoc part can be removed.
+  if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+    archive_aix_libatomic(clang_rt.atomic
+                          ARCHS ${BUILTIN_SUPPORTED_ARCH}
+                          PARENT_TARGET builtins-standalone-atomic)
+  endif()
+  add_dependencies(compiler-rt builtins-standalone-atomic)
+endif()
 
 add_dependencies(compiler-rt builtins)
