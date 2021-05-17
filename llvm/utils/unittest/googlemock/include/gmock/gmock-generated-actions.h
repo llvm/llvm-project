@@ -657,6 +657,10 @@ class ActionHelper {
    public:\
     explicit GMOCK_ACTION_CLASS_(name, value_params)\
         GMOCK_INTERNAL_INIT_##value_params {}\
+    GMOCK_ACTION_CLASS_(name, value_params)(\
+        const GMOCK_ACTION_CLASS_(name, value_params)&) noexcept = default;\
+    GMOCK_ACTION_CLASS_(name, value_params)(\
+        GMOCK_ACTION_CLASS_(name, value_params)&&) noexcept = default;\
     template <typename F>\
     class gmock_Impl : public ::testing::ActionInterface<F> {\
      public:\
@@ -688,8 +692,6 @@ class ActionHelper {
           new gmock_Impl<F>(GMOCK_INTERNAL_LIST_##value_params));\
     }\
     GMOCK_INTERNAL_DEFN_##value_params\
-   private:\
-    GTEST_DISALLOW_ASSIGN_(GMOCK_ACTION_CLASS_(name, value_params));\
   };\
   template <GMOCK_INTERNAL_DECL_##template_params\
             GMOCK_INTERNAL_DECL_TYPE_##value_params>\
