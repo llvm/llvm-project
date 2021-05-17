@@ -30,6 +30,60 @@
 namespace llvm {
 namespace symbolize {
 
+class SourceCode {
+  std::unique_ptr<MemoryBuffer> MemBuf;
+
+  const Optional<StringRef> load(StringRef FileName,
+                                 const Optional<StringRef> &EmbeddedSource) {
+    if (Lines <= 0)
+      return None;
+
+    if (EmbeddedSource)
+      return EmbeddedSource;
+    else {
+      ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+          MemoryBuffer::getFile(FileName);
+      if (!BufOrErr)
+        return None;
+      MemBuf = std::move(*BufOrErr);
+      return MemBuf->getBuffer();
+    }
+  }
+
+  const Optional<StringRef> pruneSource(const Optional<StringRef> &Source) {
+    if (!Source)
+      return None;
+    size_t FirstLinePos = StringRef::npos, Pos = 0;
+    for (int64_t L = 1; L <= LastLine; ++L, ++Pos) {
+      if (L == FirstLine)
+        FirstLinePos = Pos;
+      Pos = Source->find('\n', Pos);
+      if (Pos == StringRef::npos)
+        break;
+    }
+    if (FirstLinePos == StringRef::npos)
+      return None;
+    return Source->substr(FirstLinePos, (Pos == StringRef::npos)
+                                            ? StringRef::npos
+                                            : Pos - FirstLinePos);
+  }
+
+public:
+  const int64_t Line;
+  const int Lines;
+  const int64_t FirstLine;
+  const int64_t LastLine;
+  const Optional<StringRef> PrunedSource;
+
+  SourceCode(
+      StringRef FileName, int64_t Line, int Lines,
+      const Optional<StringRef> &EmbeddedSource = Optional<StringRef>(None))
+      : Line(Line), Lines(Lines),
+        FirstLine(std::max(static_cast<int64_t>(1), Line - Lines / 2)),
+        LastLine(FirstLine + Lines - 1),
+        PrunedSource(pruneSource(load(FileName, EmbeddedSource))) {}
+};
+
 void PlainPrinterBase::printHeader(uint64_t Address) {
   if (Config.PrintAddress) {
     OS << "0x";
@@ -40,32 +94,27 @@ void PlainPrinterBase::printHeader(uint64_t Address) {
 }
 
 // Prints source code around in the FileName the Line.
-void PlainPrinterBase::printContext(StringRef FileName, int64_t Line) {
-  if (Config.SourceContextLines <= 0)
+void PlainPrinterBase::printContext(SourceCode SourceCode) {
+  if (!SourceCode.PrunedSource)
     return;
 
-  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
-      MemoryBuffer::getFile(FileName);
-  if (!BufOrErr)
-    return;
+  StringRef Source = *SourceCode.PrunedSource;
+  std::string SourceCopy;
+  if (*Source.end() != '\0') {
+    SourceCopy = Source.str();
+    Source = SourceCopy;
+  }
 
-  std::unique_ptr<MemoryBuffer> Buf = std::move(BufOrErr.get());
-  int64_t FirstLine =
-      std::max(static_cast<int64_t>(1), Line - Config.SourceContextLines / 2);
-  int64_t LastLine = FirstLine + Config.SourceContextLines;
-  size_t MaxLineNumberWidth = std::ceil(std::log10(LastLine));
-
-  for (line_iterator I = line_iterator(*Buf, false);
-       !I.is_at_eof() && I.line_number() <= LastLine; ++I) {
-    int64_t L = I.line_number();
-    if (L >= FirstLine && L <= LastLine) {
-      OS << format_decimal(L, MaxLineNumberWidth);
-      if (L == Line)
-        OS << " >: ";
-      else
-        OS << "  : ";
-      OS << *I << "\n";
-    }
+  size_t MaxLineNumberWidth = std::ceil(std::log10(SourceCode.LastLine));
+  for (line_iterator I = line_iterator(MemoryBufferRef(Source, ""), false);
+       !I.is_at_eof(); ++I) {
+    int64_t L = SourceCode.FirstLine + I.line_number() - 1;
+    OS << format_decimal(L, MaxLineNumberWidth);
+    if (L == SourceCode.Line)
+      OS << " >: ";
+    else
+      OS << "  : ";
+    OS << *I << '\n';
   }
 }
 
@@ -82,7 +131,7 @@ void PlainPrinterBase::printFunctionName(StringRef FunctionName, bool Inlined) {
 void LLVMPrinter::printSimpleLocation(StringRef Filename,
                                       const DILineInfo &Info) {
   OS << Filename << ':' << Info.Line << ':' << Info.Column << '\n';
-  printContext(Filename, Info.Line);
+  printContext(SourceCode(Filename, Info.Line, Config.SourceContextLines));
 }
 
 void GNUPrinter::printSimpleLocation(StringRef Filename,
@@ -91,7 +140,7 @@ void GNUPrinter::printSimpleLocation(StringRef Filename,
   if (Info.Discriminator)
     OS << " (discriminator " << Info.Discriminator << ')';
   OS << '\n';
-  printContext(Filename, Info.Line);
+  printContext(SourceCode(Filename, Info.Line, Config.SourceContextLines));
 }
 
 void PlainPrinterBase::printVerbose(StringRef Filename,
