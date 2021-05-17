@@ -833,10 +833,12 @@ void IoChecker::CheckStringValue(IoSpecKind specKind, const std::string &value,
   };
   auto upper{parser::ToUpperCaseLetters(value)};
   if (specValues.at(specKind).count(upper) == 0) {
-    if (specKind == IoSpecKind::Access && upper == "APPEND" &&
-        context_.languageFeatures().ShouldWarn(
-            common::LanguageFeature::OpenAccessAppend)) {
-      context_.Say(source, "ACCESS='%s' interpreted as POSITION='%s'"_en_US, value, upper);
+    if (specKind == IoSpecKind::Access && upper == "APPEND") {
+      if (context_.languageFeatures().ShouldWarn(
+              common::LanguageFeature::OpenAccessAppend)) {
+        context_.Say(source, "ACCESS='%s' interpreted as POSITION='%s'"_en_US,
+            value, upper);
+      }
     } else {
       context_.Say(source, "Invalid %s value '%s'"_err_en_US,
           parser::ToUpperCaseLetters(common::EnumToString(specKind)), value);
