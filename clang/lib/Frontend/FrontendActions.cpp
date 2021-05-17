@@ -297,7 +297,8 @@ bool GenerateHeaderModuleAction::BeginSourceFileAction(
         << Name;
       continue;
     }
-    Headers.push_back({std::string(Name), &FE->getFileEntry()});
+    Headers.push_back(
+        {std::string(Name), std::string(Name), &FE->getFileEntry()});
   }
   HS.getModuleMap().createHeaderModule(CI.getLangOpts().CurrentModule, Headers);
 

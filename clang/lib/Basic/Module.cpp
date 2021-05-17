@@ -245,9 +245,10 @@ bool Module::fullModuleNameIs(ArrayRef<StringRef> nameParts) const {
 
 Module::DirectoryName Module::getUmbrellaDir() const {
   if (Header U = getUmbrellaHeader())
-    return {"", U.Entry->getDir()};
+    return {"", "", U.Entry->getDir()};
 
-  return {UmbrellaAsWritten, Umbrella.dyn_cast<const DirectoryEntry *>()};
+  return {UmbrellaAsWritten, UmbrellaRelativeToRootModuleDirectory,
+          Umbrella.dyn_cast<const DirectoryEntry *>()};
 }
 
 void Module::addTopHeader(const FileEntry *File) {
