@@ -51,21 +51,27 @@ def find_compiler_libdir():
         lit_config.warning(msg)
       else:
         lit_config.fatal(msg)
-    return path
+    return path, clang_cmd
 
   # Try using `-print-runtime-dir`. This is only supported by very new versions of Clang.
   # so allow failure here.
-  runtime_dir = get_path_from_clang(['-print-runtime-dir'], allow_failure=True)
+  runtime_dir, clang_cmd = get_path_from_clang(['-print-runtime-dir'], allow_failure=True)
   if runtime_dir:
     if os.path.exists(runtime_dir):
       return os.path.realpath(runtime_dir)
-    lit_config.fatal(f'Path reported by clang does not exist: {runtime_dir}')
+    # TODO(dliew): This should be a fatal error but it seems to trip the `llvm-clang-win-x-aarch64`
+    # bot which is likely misconfigured
+    lit_config.warning(
+      f'Path reported by clang does not exist: \"{runtime_dir}\". '
+      f'This path was found by running {clang_cmd}.'
+    )
+    return None
 
   # Fall back for older AppleClang that doesn't support `-print-runtime-dir`
   # Note `-print-file-name=<path to compiler-rt lib>` was broken for Apple
   # platforms so we can't use that approach here (see https://reviews.llvm.org/D101682).
   if config.host_os == 'Darwin':
-    lib_dir = get_path_from_clang(['-print-file-name=lib'], allow_failure=False)
+    lib_dir, _ = get_path_from_clang(['-print-file-name=lib'], allow_failure=False)
     runtime_dir = os.path.join(lib_dir, 'darwin')
     if not os.path.exists(runtime_dir):
       lit_config.fatal(f'Path reported by clang does not exist: {runtime_dir}')
