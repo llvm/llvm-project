@@ -7782,9 +7782,34 @@ ExprResult Sema::ActOnNoexceptExpr(SourceLocation KeyLoc, SourceLocation,
   return BuildCXXNoexceptExpr(KeyLoc, Operand, RParen);
 }
 
+static void MaybeDecrementCount(
+    Expr *E, llvm::DenseMap<const VarDecl *, int> &RefsMinusAssignments) {
+  DeclRefExpr *LHS = nullptr;
+  if (BinaryOperator *BO = dyn_cast<BinaryOperator>(E)) {
+    if (!BO->isAssignmentOp())
+      return;
+    LHS = dyn_cast<DeclRefExpr>(BO->getLHS());
+  } else if (CXXOperatorCallExpr *COCE = dyn_cast<CXXOperatorCallExpr>(E)) {
+    if (!COCE->isAssignmentOp())
+      return;
+    LHS = dyn_cast<DeclRefExpr>(COCE->getArg(0));
+  }
+  if (!LHS)
+    return;
+  VarDecl *VD = dyn_cast<VarDecl>(LHS->getDecl());
+  if (!VD)
+    return;
+  auto iter = RefsMinusAssignments.find(VD);
+  if (iter == RefsMinusAssignments.end())
+    return;
+  iter->getSecond()--;
+}
+
 /// Perform the conversions required for an expression used in a
 /// context that ignores the result.
 ExprResult Sema::IgnoredValueConversions(Expr *E) {
+  MaybeDecrementCount(E, RefsMinusAssignments);
+
   if (E->hasPlaceholderType()) {
     ExprResult result = CheckPlaceholderExpr(E);
     if (result.isInvalid()) return E;
