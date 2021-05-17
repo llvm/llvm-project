@@ -319,6 +319,7 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   MlirOperation parentOperation = operation;
   block = mlirRegionGetFirstBlock(region);
   operation = mlirBlockGetFirstOperation(block);
+  assert(mlirModuleIsNull(mlirModuleFromOperation(operation)));
 
   // Verify that parent operation and block report correctly.
   fprintf(stderr, "Parent operation eq: %d\n",
@@ -460,6 +461,7 @@ static int constructAndTraverseIr(MlirContext ctx) {
 
   MlirModule moduleOp = makeAndDumpAdd(ctx, location);
   MlirOperation module = mlirModuleGetOperation(moduleOp);
+  assert(!mlirModuleIsNull(mlirModuleFromOperation(module)));
 
   int errcode = collectStats(module);
   if (errcode)

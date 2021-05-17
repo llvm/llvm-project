@@ -22,7 +22,7 @@ using reverse_iterator = std::string::reverse_iterator;
 using const_reverse_iterator = std::string::const_reverse_iterator;
 using value_type = char;
 
-static_assert(std::random_access_iterator<iterator>);
+static_assert(std::contiguous_iterator<iterator>);
 static_assert(std::indirectly_writable<iterator, value_type>);
 static_assert(std::sentinel_for<iterator, iterator>);
 static_assert(std::sentinel_for<iterator, const_iterator>);
@@ -33,7 +33,7 @@ static_assert(std::sized_sentinel_for<iterator, const_iterator>);
 static_assert(!std::sized_sentinel_for<iterator, reverse_iterator>);
 static_assert(!std::sized_sentinel_for<iterator, const_reverse_iterator>);
 
-static_assert(std::random_access_iterator<const_iterator>);
+static_assert(std::contiguous_iterator<const_iterator>);
 static_assert(!std::indirectly_writable<const_iterator, value_type>);
 static_assert(std::sentinel_for<const_iterator, iterator>);
 static_assert(std::sentinel_for<const_iterator, const_iterator>);

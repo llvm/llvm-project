@@ -46,6 +46,11 @@ set_default("android_files_to_push", [])
 set_default("have_rpc_xdr_h", @HAVE_RPC_XDR_H@)
 set_default("gwp_asan", @COMPILER_RT_HAS_GWP_ASAN_PYBOOL@)
 set_default("expensive_checks", @LLVM_ENABLE_EXPENSIVE_CHECKS_PYBOOL@)
+set_default("test_standalone_build_libs", @COMPILER_RT_TEST_STANDALONE_BUILD_LIBS_PYBOOL@)
+# True iff the test suite supports ignoring the test compiler's runtime library path
+# and using `config.compiler_rt_libdir` instead. This only matters when the runtime
+# library paths differ.
+set_default("test_suite_supports_overriding_runtime_lib_path", False)
 config.available_features.add('target-is-%s' % config.target_arch)
 
 if config.enable_per_target_runtime_dir:

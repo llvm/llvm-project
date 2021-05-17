@@ -2695,6 +2695,38 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
     MinOffset = 0;
     MaxOffset = 4095;
     break;
+  case AArch64::STPXpre:
+  case AArch64::LDPXpost:
+  case AArch64::STPDpre:
+  case AArch64::LDPDpost:
+    Scale = TypeSize::Fixed(8);
+    Width = 8;
+    MinOffset = -512;
+    MaxOffset = 504;
+    break;
+  case AArch64::STPQpre:
+  case AArch64::LDPQpost:
+    Scale = TypeSize::Fixed(16);
+    Width = 16;
+    MinOffset = -1024;
+    MaxOffset = 1008;
+    break;
+  case AArch64::STRXpre:
+  case AArch64::STRDpre:
+  case AArch64::LDRXpost:
+  case AArch64::LDRDpost:
+    Scale = TypeSize::Fixed(1);
+    Width = 8;
+    MinOffset = -256;
+    MaxOffset = 255;
+    break;
+  case AArch64::STRQpre:
+  case AArch64::LDRQpost:
+    Scale = TypeSize::Fixed(1);
+    Width = 16;
+    MinOffset = -256;
+    MaxOffset = 255;
+    break;
   case AArch64::ADDG:
     Scale = TypeSize::Fixed(16);
     Width = 0;

@@ -732,13 +732,24 @@ static unsigned getFullUnrollBoostingFactor(const EstimatedUnrollCost &Cost,
     return MaxPercentThresholdBoost;
 }
 
-// Returns loop size estimation for unrolled loop.
-static uint64_t getUnrolledLoopSize(
-    unsigned LoopSize,
-    TargetTransformInfo::UnrollingPreferences &UP) {
-  assert(LoopSize >= UP.BEInsns && "LoopSize should not be less than BEInsns!");
-  return (uint64_t)(LoopSize - UP.BEInsns) * UP.Count + UP.BEInsns;
-}
+// Produce an estimate of the unrolled cost of the specified loop.  This
+// is used to a) produce a cost estimate for partial unrolling and b) to
+// cheaply estimate cost for full unrolling when we don't want to symbolically
+// evaluate all iterations.
+class UnrollCostEstimator {
+  const unsigned LoopSize;
+
+public:
+  UnrollCostEstimator(Loop &L, unsigned LoopSize) : LoopSize(LoopSize) {}
+
+  // Returns loop size estimation for unrolled loop, given the unrolling
+  // configuration specified by UP.
+  uint64_t getUnrolledLoopSize(TargetTransformInfo::UnrollingPreferences &UP) {
+    assert(LoopSize >= UP.BEInsns &&
+           "LoopSize should not be less than BEInsns!");
+    return (uint64_t)(LoopSize - UP.BEInsns) * UP.Count + UP.BEInsns;
+  }
+};
 
 // Returns true if unroll count was set explicitly.
 // Calculates unroll count and writes it to UP.Count.
@@ -756,6 +767,8 @@ bool llvm::computeUnrollCount(
     TargetTransformInfo::UnrollingPreferences &UP,
     TargetTransformInfo::PeelingPreferences &PP, bool &UseUpperBound) {
 
+  UnrollCostEstimator UCE(*L, LoopSize);
+
   // Check for explicit Count.
   // 1st priority is unroll count set by "unroll-count" option.
   bool UserUnrollCount = UnrollCount.getNumOccurrences() > 0;
@@ -763,7 +776,7 @@ bool llvm::computeUnrollCount(
     UP.Count = UnrollCount;
     UP.AllowExpensiveTripCount = true;
     UP.Force = true;
-    if (UP.AllowRemainder && getUnrolledLoopSize(LoopSize, UP) < UP.Threshold)
+    if (UP.AllowRemainder && UCE.getUnrolledLoopSize(UP) < UP.Threshold)
       return true;
   }
 
@@ -775,13 +788,13 @@ bool llvm::computeUnrollCount(
     UP.AllowExpensiveTripCount = true;
     UP.Force = true;
     if ((UP.AllowRemainder || (TripMultiple % PragmaCount == 0)) &&
-        getUnrolledLoopSize(LoopSize, UP) < PragmaUnrollThreshold)
+        UCE.getUnrolledLoopSize(UP) < PragmaUnrollThreshold)
       return true;
   }
   bool PragmaFullUnroll = hasUnrollFullPragma(L);
   if (PragmaFullUnroll && TripCount != 0) {
     UP.Count = TripCount;
-    if (getUnrolledLoopSize(LoopSize, UP) < PragmaUnrollThreshold)
+    if (UCE.getUnrolledLoopSize(UP) < PragmaUnrollThreshold)
       return false;
   }
 
@@ -830,7 +843,7 @@ bool llvm::computeUnrollCount(
   if (FullUnrollTripCount && FullUnrollTripCount <= UP.FullUnrollMaxCount) {
     // When computing the unrolled size, note that BEInsns are not replicated
     // like the rest of the loop body.
-    if (getUnrolledLoopSize(LoopSize, UP) < UP.Threshold) {
+    if (UCE.getUnrolledLoopSize(UP) < UP.Threshold) {
       UseUpperBound = (FullUnrollMaxTripCount == FullUnrollTripCount);
       TripCount = FullUnrollTripCount;
       TripMultiple = UP.UpperBound ? 1 : TripMultiple;
@@ -877,7 +890,7 @@ bool llvm::computeUnrollCount(
       UP.Count = TripCount;
     if (UP.PartialThreshold != NoThreshold) {
       // Reduce unroll count to be modulo of TripCount for partial unrolling.
-      if (getUnrolledLoopSize(LoopSize, UP) > UP.PartialThreshold)
+      if (UCE.getUnrolledLoopSize(UP) > UP.PartialThreshold)
         UP.Count =
             (std::max(UP.PartialThreshold, UP.BEInsns + 1) - UP.BEInsns) /
             (LoopSize - UP.BEInsns);
@@ -892,7 +905,7 @@ bool llvm::computeUnrollCount(
         // remainder loop is allowed.
         UP.Count = UP.DefaultUnrollRuntimeCount;
         while (UP.Count != 0 &&
-               getUnrolledLoopSize(LoopSize, UP) > UP.PartialThreshold)
+               UCE.getUnrolledLoopSize(UP) > UP.PartialThreshold)
           UP.Count >>= 1;
       }
       if (UP.Count < 2) {
@@ -976,7 +989,7 @@ bool llvm::computeUnrollCount(
   // Reduce unroll count to be the largest power-of-two factor of
   // the original count which satisfies the threshold limit.
   while (UP.Count != 0 &&
-         getUnrolledLoopSize(LoopSize, UP) > UP.PartialThreshold)
+         UCE.getUnrolledLoopSize(UP) > UP.PartialThreshold)
     UP.Count >>= 1;
 
 #ifndef NDEBUG

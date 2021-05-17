@@ -673,7 +673,7 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueNonLocal(
 
   // If this is the entry block, we must be asking about an argument.  The
   // value is overdefined.
-  if (BB == &BB->getParent()->getEntryBlock()) {
+  if (BB->isEntryBlock()) {
     assert(isa<Argument>(Val) && "Unknown live-in to the entry block");
     return ValueLatticeElement::getOverdefined();
   }

@@ -563,8 +563,8 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      4     2.00                        pextrw	$1, %xmm0, %ecx
 # CHECK-NEXT:  1      1     1.00                        pinsrw	$1, %eax, %xmm0
 # CHECK-NEXT:  1      1     1.00    *                   pinsrw	$1, (%rax), %xmm0
-# CHECK-NEXT:  1      5     5.00                        pmaddwd	%xmm0, %xmm2
-# CHECK-NEXT:  1      5     5.00    *                   pmaddwd	(%rax), %xmm2
+# CHECK-NEXT:  1      5     2.00                        pmaddwd	%xmm0, %xmm2
+# CHECK-NEXT:  1      5     2.00    *                   pmaddwd	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        pmaxsw	%xmm0, %xmm2
 # CHECK-NEXT:  1      1     1.00    *                   pmaxsw	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        pmaxub	%xmm0, %xmm2
@@ -574,20 +574,20 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        pminub	%xmm0, %xmm2
 # CHECK-NEXT:  1      1     1.00    *                   pminub	(%rax), %xmm2
 # CHECK-NEXT:  1      3     3.00                        pmovmskb	%xmm0, %ecx
-# CHECK-NEXT:  1      5     5.00                        pmulhuw	%xmm0, %xmm2
-# CHECK-NEXT:  1      5     5.00    *                   pmulhuw	(%rax), %xmm2
-# CHECK-NEXT:  1      5     5.00                        pmulhw	%xmm0, %xmm2
-# CHECK-NEXT:  1      5     5.00    *                   pmulhw	(%rax), %xmm2
-# CHECK-NEXT:  1      5     5.00                        pmullw	%xmm0, %xmm2
-# CHECK-NEXT:  1      5     5.00    *                   pmullw	(%rax), %xmm2
-# CHECK-NEXT:  1      4     4.00                        pmuludq	%mm0, %mm2
-# CHECK-NEXT:  1      4     4.00    *                   pmuludq	(%rax), %mm2
-# CHECK-NEXT:  1      5     5.00                        pmuludq	%xmm0, %xmm2
-# CHECK-NEXT:  1      5     5.00    *                   pmuludq	(%rax), %xmm2
+# CHECK-NEXT:  1      5     2.00                        pmulhuw	%xmm0, %xmm2
+# CHECK-NEXT:  1      5     2.00    *                   pmulhuw	(%rax), %xmm2
+# CHECK-NEXT:  1      5     2.00                        pmulhw	%xmm0, %xmm2
+# CHECK-NEXT:  1      5     2.00    *                   pmulhw	(%rax), %xmm2
+# CHECK-NEXT:  1      5     2.00                        pmullw	%xmm0, %xmm2
+# CHECK-NEXT:  1      5     2.00    *                   pmullw	(%rax), %xmm2
+# CHECK-NEXT:  1      4     1.00                        pmuludq	%mm0, %mm2
+# CHECK-NEXT:  1      4     1.00    *                   pmuludq	(%rax), %mm2
+# CHECK-NEXT:  1      5     2.00                        pmuludq	%xmm0, %xmm2
+# CHECK-NEXT:  1      5     2.00    *                   pmuludq	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        por	%xmm0, %xmm2
 # CHECK-NEXT:  1      1     1.00    *                   por	(%rax), %xmm2
-# CHECK-NEXT:  1      5     5.00                        psadbw	%xmm0, %xmm2
-# CHECK-NEXT:  1      5     5.00    *                   psadbw	(%rax), %xmm2
+# CHECK-NEXT:  1      5     2.00                        psadbw	%xmm0, %xmm2
+# CHECK-NEXT:  1      5     2.00    *                   psadbw	(%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                        pshufd	$1, %xmm0, %xmm2
 # CHECK-NEXT:  1      1     1.00    *                   pshufd	$1, (%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                        pshufhw	$1, %xmm0, %xmm2
@@ -681,7 +681,7 @@ xorpd       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]
-# CHECK-NEXT: 871.50 638.50
+# CHECK-NEXT: 829.50 638.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    Instructions:
@@ -841,8 +841,8 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT: 2.00   2.00   pextrw	$1, %xmm0, %ecx
 # CHECK-NEXT: 1.00    -     pinsrw	$1, %eax, %xmm0
 # CHECK-NEXT: 1.00    -     pinsrw	$1, (%rax), %xmm0
-# CHECK-NEXT: 5.00    -     pmaddwd	%xmm0, %xmm2
-# CHECK-NEXT: 5.00    -     pmaddwd	(%rax), %xmm2
+# CHECK-NEXT: 2.00    -     pmaddwd	%xmm0, %xmm2
+# CHECK-NEXT: 2.00    -     pmaddwd	(%rax), %xmm2
 # CHECK-NEXT: 0.50   0.50   pmaxsw	%xmm0, %xmm2
 # CHECK-NEXT: 1.00    -     pmaxsw	(%rax), %xmm2
 # CHECK-NEXT: 0.50   0.50   pmaxub	%xmm0, %xmm2
@@ -852,20 +852,20 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT: 0.50   0.50   pminub	%xmm0, %xmm2
 # CHECK-NEXT: 1.00    -     pminub	(%rax), %xmm2
 # CHECK-NEXT: 3.00    -     pmovmskb	%xmm0, %ecx
-# CHECK-NEXT: 5.00    -     pmulhuw	%xmm0, %xmm2
-# CHECK-NEXT: 5.00    -     pmulhuw	(%rax), %xmm2
-# CHECK-NEXT: 5.00    -     pmulhw	%xmm0, %xmm2
-# CHECK-NEXT: 5.00    -     pmulhw	(%rax), %xmm2
-# CHECK-NEXT: 5.00    -     pmullw	%xmm0, %xmm2
-# CHECK-NEXT: 5.00    -     pmullw	(%rax), %xmm2
-# CHECK-NEXT: 4.00    -     pmuludq	%mm0, %mm2
-# CHECK-NEXT: 4.00    -     pmuludq	(%rax), %mm2
-# CHECK-NEXT: 5.00    -     pmuludq	%xmm0, %xmm2
-# CHECK-NEXT: 5.00    -     pmuludq	(%rax), %xmm2
+# CHECK-NEXT: 2.00    -     pmulhuw	%xmm0, %xmm2
+# CHECK-NEXT: 2.00    -     pmulhuw	(%rax), %xmm2
+# CHECK-NEXT: 2.00    -     pmulhw	%xmm0, %xmm2
+# CHECK-NEXT: 2.00    -     pmulhw	(%rax), %xmm2
+# CHECK-NEXT: 2.00    -     pmullw	%xmm0, %xmm2
+# CHECK-NEXT: 2.00    -     pmullw	(%rax), %xmm2
+# CHECK-NEXT: 1.00    -     pmuludq	%mm0, %mm2
+# CHECK-NEXT: 1.00    -     pmuludq	(%rax), %mm2
+# CHECK-NEXT: 2.00    -     pmuludq	%xmm0, %xmm2
+# CHECK-NEXT: 2.00    -     pmuludq	(%rax), %xmm2
 # CHECK-NEXT: 0.50   0.50   por	%xmm0, %xmm2
 # CHECK-NEXT: 1.00    -     por	(%rax), %xmm2
-# CHECK-NEXT: 5.00    -     psadbw	%xmm0, %xmm2
-# CHECK-NEXT: 5.00    -     psadbw	(%rax), %xmm2
+# CHECK-NEXT: 2.00    -     psadbw	%xmm0, %xmm2
+# CHECK-NEXT: 2.00    -     psadbw	(%rax), %xmm2
 # CHECK-NEXT: 1.00    -     pshufd	$1, %xmm0, %xmm2
 # CHECK-NEXT: 1.00    -     pshufd	$1, (%rax), %xmm2
 # CHECK-NEXT: 1.00    -     pshufhw	$1, %xmm0, %xmm2

@@ -7688,6 +7688,67 @@ static bool tryUnmergingGEPsAcrossIndirectBr(GetElementPtrInst *GEPI,
   return true;
 }
 
+static bool optimizeBranch(BranchInst *Branch, const TargetLowering &TLI) {
+  // Try and convert
+  //  %c = icmp ult %x, 8
+  //  br %c, bla, blb
+  //  %tc = lshr %x, 3
+  // to
+  //  %tc = lshr %x, 3
+  //  %c = icmp eq %tc, 0
+  //  br %c, bla, blb
+  // Creating the cmp to zero can be better for the backend, especially if the
+  // lshr produces flags that can be used automatically.
+  if (!TLI.preferZeroCompareBranch() || !Branch->isConditional())
+    return false;
+
+  ICmpInst *Cmp = dyn_cast<ICmpInst>(Branch->getCondition());
+  if (!Cmp || !isa<ConstantInt>(Cmp->getOperand(1)) || !Cmp->hasOneUse())
+    return false;
+
+  Value *X = Cmp->getOperand(0);
+  APInt CmpC = cast<ConstantInt>(Cmp->getOperand(1))->getValue();
+
+  for (auto *U : X->users()) {
+    Instruction *UI = dyn_cast<Instruction>(U);
+    // A quick dominance check
+    if (!UI ||
+        (UI->getParent() != Branch->getParent() &&
+         UI->getParent() != Branch->getSuccessor(0) &&
+         UI->getParent() != Branch->getSuccessor(1)) ||
+        (UI->getParent() != Branch->getParent() &&
+         !UI->getParent()->getSinglePredecessor()))
+      continue;
+
+    if (CmpC.isPowerOf2() && Cmp->getPredicate() == ICmpInst::ICMP_ULT &&
+        match(UI, m_Shr(m_Specific(X), m_SpecificInt(CmpC.logBase2())))) {
+      IRBuilder<> Builder(Branch);
+      if (UI->getParent() != Branch->getParent())
+        UI->moveBefore(Branch);
+      Value *NewCmp = Builder.CreateCmp(ICmpInst::ICMP_EQ, UI,
+                                        ConstantInt::get(UI->getType(), 0));
+      LLVM_DEBUG(dbgs() << "Converting " << *Cmp << "\n");
+      LLVM_DEBUG(dbgs() << " to compare on zero: " << *NewCmp << "\n");
+      Cmp->replaceAllUsesWith(NewCmp);
+      return true;
+    }
+    if (Cmp->isEquality() &&
+        (match(UI, m_Add(m_Specific(X), m_SpecificInt(-CmpC))) ||
+         match(UI, m_Sub(m_Specific(X), m_SpecificInt(CmpC))))) {
+      IRBuilder<> Builder(Branch);
+      if (UI->getParent() != Branch->getParent())
+        UI->moveBefore(Branch);
+      Value *NewCmp = Builder.CreateCmp(Cmp->getPredicate(), UI,
+                                        ConstantInt::get(UI->getType(), 0));
+      LLVM_DEBUG(dbgs() << "Converting " << *Cmp << "\n");
+      LLVM_DEBUG(dbgs() << " to compare on zero: " << *NewCmp << "\n");
+      Cmp->replaceAllUsesWith(NewCmp);
+      return true;
+    }
+  }
+  return false;
+}
+
 bool CodeGenPrepare::optimizeInst(Instruction *I, bool &ModifiedDT) {
   // Bail out if we inserted the instruction to prevent optimizations from
   // stepping on each other's toes.
@@ -7849,6 +7910,8 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, bool &ModifiedDT) {
     return optimizeSwitchInst(cast<SwitchInst>(I));
   case Instruction::ExtractElement:
     return optimizeExtractElementInst(cast<ExtractElementInst>(I));
+  case Instruction::Br:
+    return optimizeBranch(cast<BranchInst>(I), *TLI);
   }
 
   return false;

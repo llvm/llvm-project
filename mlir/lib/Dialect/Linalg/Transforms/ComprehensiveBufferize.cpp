@@ -128,10 +128,20 @@ OpResult getMatchingOpResult(LinalgOp linalgOp, OpOperand &opOperand) {
   return linalgOp->getResult(outputOperandIndex - numOutputBuffers);
 }
 
+/// Return the OpResult that matches an operand.
+/// Return null if no such result exists.
 OpResult getMatchingOpResult(VectorTransferOpInterface op,
                              OpOperand &opOperand) {
   if (opOperand.get() != op.source() ||
       !op.source().getType().isa<TensorType>())
+    return OpResult();
+  return op->getResult(0);
+}
+
+/// Return the OpResult that matches an operand.
+/// Return null if no such result exists.
+OpResult getMatchingOpResult(SubTensorInsertOp op, OpOperand &opOperand) {
+  if (opOperand.get() != op.dest())
     return OpResult();
   return op->getResult(0);
 }
@@ -142,11 +152,11 @@ OpResult getMatchingOpResult(VectorTransferOpInterface op,
 /// analysis to determine which op results reuse the same buffer as some
 /// operand.
 OpResult getMatchingOpResult(OpOperand &opOperand) {
-  OpResult res = llvm::TypeSwitch<Operation *, OpResult>(opOperand.getOwner())
-                     .Case<LinalgOp, VectorTransferOpInterface>([&](auto op) {
-                       return getMatchingOpResult(op, opOperand);
-                     })
-                     .Default([&](Operation *op) { return OpResult(); });
+  OpResult res =
+      llvm::TypeSwitch<Operation *, OpResult>(opOperand.getOwner())
+          .Case<LinalgOp, SubTensorInsertOp, VectorTransferOpInterface>(
+              [&](auto op) { return getMatchingOpResult(op, opOperand); })
+          .Default([&](Operation *op) { return OpResult(); });
   return res;
 }
 
@@ -275,7 +285,7 @@ static Value lookup(BlockAndValueMapping &bvm, Value key) {
       key.getDefiningOp()->getParentOfType<FuncOp>()->dump();
     }
     llvm::errs() << "NO VALUE FOR KEY: " << key << "\n";
-    abort();
+    return Value();
   }
   return bvm.lookup(key);
 }
@@ -585,9 +595,10 @@ static void destructiveUpdateAnalysis(Block *block,
 /// the Linalg op. If the tensor is an "init" tensor (i.e. its value is
 /// actually used in the payload region), we additionally copy the original
 /// value into the newly allocated buffer.
-static void allocateBuffersForResults(OpBuilder &b, Location loc, LinalgOp op,
-                                      SmallVectorImpl<Value> &resultBuffers,
-                                      BlockAndValueMapping &bvm) {
+static LogicalResult
+allocateBuffersForResults(OpBuilder &b, Location loc, LinalgOp op,
+                          SmallVectorImpl<Value> &resultBuffers,
+                          BlockAndValueMapping &bvm) {
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(b);
 
@@ -608,7 +619,10 @@ static void allocateBuffersForResults(OpBuilder &b, Location loc, LinalgOp op,
     // results.
     OpResult tiedResult = getMatchingOpResult(op, opOperand);
     if (getInPlace(tiedResult) == InPlaceSpec::True) {
-      resultBuffers.push_back(lookup(bvm, output));
+      Value v = lookup(bvm, output);
+      if (!v)
+        return failure();
+      resultBuffers.push_back(v);
       continue;
     }
 
@@ -618,11 +632,17 @@ static void allocateBuffersForResults(OpBuilder &b, Location loc, LinalgOp op,
     resultBuffers.push_back(alloc);
 
     // Additionally, if the output buffer is used, clone its value for now.
-    if (op.payloadUsesValueFromOpOperand(&opOperand))
-      b.create<CopyOp>(loc, lookup(bvm, output), alloc);
+    if (op.payloadUsesValueFromOpOperand(&opOperand)) {
+      Value v = lookup(bvm, output);
+      if (!v)
+        return failure();
+      b.create<CopyOp>(loc, v, alloc);
+    }
   }
   if (op->getNumResults())
     map(bvm, op->getResults(), resultBuffers);
+
+  return success();
 }
 
 static void finalizeBufferAllocation(OpBuilder &b, LinalgOp op,
@@ -644,40 +664,49 @@ static void finalizeBufferAllocation(OpBuilder &b, LinalgOp op,
 
 /// Generic conversion for any LinalgOp.
 /// Operate on mixed tensor + buffer Linalg ops for progressive bufferization.
-static LogicalResult convertAnyLinalgOp(OpBuilder &b, LinalgOp op,
-                                        BlockAndValueMapping &bvm) {
+static LogicalResult bufferize(OpBuilder &b, LinalgOp op,
+                               BlockAndValueMapping &bvm) {
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(b);
 
   if (op.hasBufferSemantics())
     return failure();
 
-  LLVM_DEBUG(DBGS() << "convert: " << *op << "\n");
+  LLVM_DEBUG(DBGS() << "bufferize: " << *op << "\n");
 
   b.setInsertionPoint(op);
   Location loc = op.getLoc();
   SmallVector<Value, 2> newInputBuffers;
   newInputBuffers.reserve(op.getNumInputs());
-  for (Value v : op.getInputs())
-    newInputBuffers.push_back(lookup(bvm, v));
+  for (Value in : op.getInputs()) {
+    Value v = lookup(bvm, in);
+    if (!v)
+      return failure();
+    newInputBuffers.push_back(v);
+  }
   SmallVector<Value, 2> newOutputBuffers;
-  allocateBuffersForResults(b, loc, op, newOutputBuffers, bvm);
+  if (failed(allocateBuffersForResults(b, loc, op, newOutputBuffers, bvm)))
+    return failure();
   finalizeBufferAllocation(b, op, newInputBuffers, newOutputBuffers, bvm);
   return success();
 }
 
 /// DimOp tensor operand is modified inplace. This allows leaving dead tensors
 /// behind that will get DCE'd.
-static LogicalResult convertDimOp(OpBuilder &b, memref::DimOp dimOp,
-                                  BlockAndValueMapping &bvm) {
-  if (dimOp.memrefOrTensor().getType().isa<RankedTensorType>())
-    dimOp.memrefOrTensorMutable().assign(lookup(bvm, dimOp.memrefOrTensor()));
+static LogicalResult bufferize(OpBuilder &b, memref::DimOp dimOp,
+                               BlockAndValueMapping &bvm) {
+  if (dimOp.memrefOrTensor().getType().isa<RankedTensorType>()) {
+    Value v = lookup(bvm, dimOp.memrefOrTensor());
+    if (!v)
+      return failure();
+    dimOp.memrefOrTensorMutable().assign(v);
+  }
   return success();
 }
 
 /// FuncOp always creates TensorToMemRef ops.
-static LogicalResult convertFuncOp(OpBuilder &b, FuncOp funcOp,
-                                   BlockAndValueMapping &bvm) {
+static LogicalResult bufferize(OpBuilder &b, FuncOp funcOp,
+                               BlockAndValueMapping &bvm) {
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(b);
   b.setInsertionPointToStart(&funcOp.body().front());
@@ -699,8 +728,8 @@ static LogicalResult convertFuncOp(OpBuilder &b, FuncOp funcOp,
 }
 
 /// ReturnOp always creates memref::TensorLoadOp.
-static LogicalResult convertReturnOp(OpBuilder &b, ReturnOp returnOp,
-                                     BlockAndValueMapping &bvm) {
+static LogicalResult bufferize(OpBuilder &b, ReturnOp returnOp,
+                               BlockAndValueMapping &bvm) {
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(b);
   b.setInsertionPoint(returnOp);
@@ -711,15 +740,81 @@ static LogicalResult convertReturnOp(OpBuilder &b, ReturnOp returnOp,
     auto tensorType = operand.get().getType().dyn_cast<TensorType>();
     if (!tensorType)
       continue;
-    operand.set(b.create<memref::TensorLoadOp>(returnOp.getLoc(),
-                                               lookup(bvm, operand.get())));
+    Value v = lookup(bvm, operand.get());
+    if (!v)
+      return failure();
+    operand.set(b.create<memref::TensorLoadOp>(returnOp.getLoc(), v));
   }
   return success();
 }
 
-static LogicalResult convertTransferOp(OpBuilder &b,
-                                       VectorTransferOpInterface op,
-                                       BlockAndValueMapping &bvm) {
+static LogicalResult bufferize(OpBuilder &b,
+                               SubTensorInsertOp subTensorInsertOp,
+                               BlockAndValueMapping &bvm) {
+  LLVM_DEBUG(DBGS() << "bufferize: " << *subTensorInsertOp << "\n");
+
+  // Take a guard before anything else.
+  OpBuilder::InsertionGuard g(b);
+  b.setInsertionPoint(subTensorInsertOp);
+  Location loc = subTensorInsertOp.getLoc();
+
+  Value dstMemref = lookup(bvm, subTensorInsertOp.dest());
+  if (!dstMemref)
+    return failure();
+  auto inPlace = getInPlace(subTensorInsertOp->getResult(0));
+  if (inPlace != InPlaceSpec::True) {
+    // Since subtensor_insert arise from tiling and introducing loops, this case
+    // is generally a deal breaker. When used with loops, this ends up cloning
+    // the whole tensor on every single iteration and is a symtpom of a
+    // catastrophically bad scheduling decision.
+    // TODO: be very loud about it or even consider failing the pass.
+    Value newDstMemref = createNewAllocDeallocPairForShapedValue(
+        b, loc, subTensorInsertOp.result());
+    b.setInsertionPointAfter(newDstMemref.getDefiningOp());
+    b.create<CopyOp>(subTensorInsertOp.getLoc(), dstMemref, newDstMemref);
+    dstMemref = newDstMemref;
+  }
+  auto dstMemrefType = dstMemref.getType().cast<MemRefType>();
+
+  Value srcMemref = lookup(bvm, subTensorInsertOp.source());
+  if (!srcMemref)
+    return failure();
+  auto subviewMemRefType =
+      memref::SubViewOp::inferRankReducedResultType(
+          subTensorInsertOp.getSourceType().getRank(), dstMemrefType,
+          subTensorInsertOp.getMixedOffsets(),
+          subTensorInsertOp.getMixedSizes(),
+          subTensorInsertOp.getMixedStrides())
+          .cast<MemRefType>();
+
+  // A copy of the source buffer is needed if either:
+  //   - The producer of `source` is not inplace. This is the case where a
+  //     subtensor is computed out of place into the inplace full tensor.
+  //   - The result is not inplace. This is the case where the whole tensor is
+  //     cloned and the clone needs to be updated.
+  Value source = subTensorInsertOp.source();
+  InPlaceSpec inPlaceProducer = InPlaceSpec::None;
+  if (auto opResult = source.dyn_cast<OpResult>())
+    inPlaceProducer = getInPlace(opResult);
+  else
+    inPlaceProducer = getInPlace(source.cast<BlockArgument>());
+  if (inPlaceProducer != InPlaceSpec::True) {
+    LLVM_DEBUG(DBGS() << "subtensor_insert needs extra source copy: " << source
+                      << " -> copy\n");
+    // Take a subview of the dst.
+    Value subView = b.create<memref::SubViewOp>(
+        loc, subviewMemRefType, dstMemref, subTensorInsertOp.getMixedOffsets(),
+        subTensorInsertOp.getMixedSizes(), subTensorInsertOp.getMixedStrides());
+    b.create<CopyOp>(subTensorInsertOp.getLoc(), srcMemref, subView);
+  }
+
+  map(bvm, subTensorInsertOp.result(), dstMemref);
+
+  return success();
+}
+
+static LogicalResult bufferize(OpBuilder &b, VectorTransferOpInterface op,
+                               BlockAndValueMapping &bvm) {
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(b);
   b.setInsertionPoint(op);
@@ -728,11 +823,14 @@ static LogicalResult convertTransferOp(OpBuilder &b,
   if (op.getShapedType().isa<MemRefType>())
     return failure();
 
-  LLVM_DEBUG(DBGS() << "convert: " << *op << "\n");
+  LLVM_DEBUG(DBGS() << "bufferize: " << *op << "\n");
 
-  /// transfer_read from buffer
+  /// transfer_read from buffer always reads from the bufferized op.source().
   if (auto readOp = dyn_cast<vector::TransferReadOp>(op.getOperation())) {
-    readOp.sourceMutable().assign(lookup(bvm, op.source()));
+    Value v = lookup(bvm, op.source());
+    if (!v)
+      return failure();
+    readOp.sourceMutable().assign(v);
     return success();
   }
 
@@ -750,6 +848,8 @@ static LogicalResult convertTransferOp(OpBuilder &b,
     // InPlace write will result in memref.tensor_load(x) which must
     // canonicalize away with one of it uses.
     newInputBuffer = lookup(bvm, writeOp.source());
+    if (!newInputBuffer)
+      return failure();
   }
 
   // Create a new transfer_write on buffer that doesn't have a return value.
@@ -778,8 +878,8 @@ static LogicalResult bufferizeFuncOpInternals(
     FuncOp funcOp, BlockAndValueMapping &bvm,
     const DenseMap<FuncOp, SmallVector<int64_t>> &tiedResultsMap) {
   OpBuilder b(funcOp->getContext());
-  /// Start by converting `funcOp` arguments.
-  if (failed(convertFuncOp(b, funcOp, bvm)))
+  /// Start by bufferizing `funcOp` arguments.
+  if (failed(bufferize(b, funcOp, bvm)))
     return failure();
   WalkResult result = funcOp.walk<WalkOrder::PreOrder>([&](Operation *op) {
     LogicalResult status =
@@ -787,12 +887,9 @@ static LogicalResult bufferizeFuncOpInternals(
             // Skip BufferCast and TensorLoad ops.
             .Case<memref::BufferCastOp, memref::TensorLoadOp>(
                 [&](auto) { return success(); })
-            .Case([&](memref::DimOp op) { return convertDimOp(b, op, bvm); })
-            .Case([&](LinalgOp op) { return convertAnyLinalgOp(b, op, bvm); })
-            .Case([&](ReturnOp op) { return convertReturnOp(b, op, bvm); })
-            .Case([&](VectorTransferOpInterface op) {
-              return convertTransferOp(b, op, bvm);
-            })
+            .Case<memref::DimOp, LinalgOp, ReturnOp, SubTensorInsertOp,
+                  VectorTransferOpInterface>(
+                [&](auto op) { return bufferize(b, op, bvm); })
             .Default([&](Operation *op) {
               auto isaTensor = [](Type t) { return t.isa<TensorType>(); };
               if (llvm::any_of(op->getOperandTypes(), isaTensor) ||

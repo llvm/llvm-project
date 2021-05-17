@@ -1185,6 +1185,37 @@ void AsmPrinter::emitStackSizeSection(const MachineFunction &MF) {
   OutStreamer->PopSection();
 }
 
+void AsmPrinter::emitStackUsage(const MachineFunction &MF) {
+  const std::string &OutputFilename = MF.getTarget().Options.StackUsageOutput;
+
+  // OutputFilename empty implies -fstack-usage is not passed.
+  if (OutputFilename.empty())
+    return;
+
+  const MachineFrameInfo &FrameInfo = MF.getFrameInfo();
+  uint64_t StackSize = FrameInfo.getStackSize();
+
+  if (StackUsageStream == nullptr) {
+    std::error_code EC;
+    StackUsageStream =
+        std::make_unique<raw_fd_ostream>(OutputFilename, EC, sys::fs::OF_Text);
+    if (EC) {
+      errs() << "Could not open file: " << EC.message();
+      return;
+    }
+  }
+
+  *StackUsageStream << MF.getFunction().getParent()->getName();
+  if (const DISubprogram *DSP = MF.getFunction().getSubprogram())
+    *StackUsageStream << ':' << DSP->getLine();
+
+  *StackUsageStream << ':' << MF.getName() << '\t' << StackSize << '\t';
+  if (FrameInfo.hasVarSizedObjects())
+    *StackUsageStream << "dynamic\n";
+  else
+    *StackUsageStream << "static\n";
+}
+
 static bool needFuncLabelsForEHOrDebugInfo(const MachineFunction &MF) {
   MachineModuleInfo &MMI = MF.getMMI();
   if (!MF.getLandingPads().empty() || MF.hasEHFunclets() || MMI.hasDebugInfo())
@@ -1468,6 +1499,9 @@ void AsmPrinter::emitFunctionBody() {
 
   // Emit section containing stack size metadata.
   emitStackSizeSection(*MF);
+
+  // Emit .su file containing function stack size information.
+  emitStackUsage(*MF);
 
   emitPatchableFunctionEntries();
 

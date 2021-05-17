@@ -732,8 +732,7 @@ bool BCECmpChain::simplify(const TargetLibraryInfo &TLI, AliasAnalysis &AA,
 
   // If the old cmp chain was the function entry, we need to update the function
   // entry.
-  const bool ChainEntryIsFnEntry =
-      (EntryBlock_ == &EntryBlock_->getParent()->getEntryBlock());
+  const bool ChainEntryIsFnEntry = EntryBlock_->isEntryBlock();
   if (ChainEntryIsFnEntry && DTU.hasDomTree()) {
     LLVM_DEBUG(dbgs() << "Changing function entry from "
                       << EntryBlock_->getName() << " to "

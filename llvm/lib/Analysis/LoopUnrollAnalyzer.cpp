@@ -35,6 +35,11 @@ bool UnrolledInstAnalyzer::simplifyInstWithSCEV(Instruction *I) {
     return true;
   }
 
+  // If we have a loop invariant computation, we only need to compute it once.
+  // Given that, all but the first occurance are free.
+  if (!IterationNumber->isZero() && SE.isLoopInvariant(S, L))
+    return true;
+
   auto *AR = dyn_cast<SCEVAddRecExpr>(S);
   if (!AR || AR->getLoop() != L)
     return false;

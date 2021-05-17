@@ -546,8 +546,8 @@ void IRPosition::verify() {
 Optional<Constant *>
 Attributor::getAssumedConstant(const Value &V, const AbstractAttribute &AA,
                                bool &UsedAssumedInformation) {
-  const auto &ValueSimplifyAA =
-      getAAFor<AAValueSimplify>(AA, IRPosition::value(V), DepClassTy::NONE);
+  const auto &ValueSimplifyAA = getAAFor<AAValueSimplify>(
+      AA, IRPosition::value(V, AA.getCallBaseContext()), DepClassTy::NONE);
   Optional<Value *> SimplifiedV =
       ValueSimplifyAA.getAssumedSimplifiedValue(*this);
   bool IsKnown = ValueSimplifyAA.isKnown();
@@ -624,9 +624,13 @@ bool Attributor::isAssumedDead(const Instruction &I,
                                const AbstractAttribute *QueryingAA,
                                const AAIsDead *FnLivenessAA,
                                bool CheckBBLivenessOnly, DepClassTy DepClass) {
+  const IRPosition::CallBaseContext *CBCtx =
+      QueryingAA ? QueryingAA->getCallBaseContext() : nullptr;
+
   if (!FnLivenessAA)
-    FnLivenessAA = lookupAAFor<AAIsDead>(IRPosition::function(*I.getFunction()),
-                                         QueryingAA, DepClassTy::NONE);
+    FnLivenessAA =
+        lookupAAFor<AAIsDead>(IRPosition::function(*I.getFunction(), CBCtx),
+                              QueryingAA, DepClassTy::NONE);
 
   // If we have a context instruction and a liveness AA we use it.
   if (FnLivenessAA &&
@@ -641,7 +645,7 @@ bool Attributor::isAssumedDead(const Instruction &I,
     return false;
 
   const AAIsDead &IsDeadAA = getOrCreateAAFor<AAIsDead>(
-      IRPosition::value(I), QueryingAA, DepClassTy::NONE);
+      IRPosition::value(I, CBCtx), QueryingAA, DepClassTy::NONE);
   // Don't check liveness for AAIsDead.
   if (QueryingAA == &IsDeadAA)
     return false;
@@ -899,7 +903,8 @@ bool Attributor::checkForAllReturnedValues(
     return false;
 
   // TODO: use the function scope once we have call site AAReturnedValues.
-  const IRPosition &QueryIRP = IRPosition::function(*AssociatedFunction);
+  const IRPosition &QueryIRP = IRPosition::function(
+      *AssociatedFunction, QueryingAA.getCallBaseContext());
   const auto &AARetVal =
       getAAFor<AAReturnedValues>(QueryingAA, QueryIRP, DepClassTy::REQUIRED);
   if (!AARetVal.getState().isValidState())

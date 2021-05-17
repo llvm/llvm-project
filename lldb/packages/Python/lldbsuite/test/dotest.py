@@ -751,7 +751,7 @@ def canRunLibcxxTests():
         with tempfile.NamedTemporaryFile() as f:
             cmd = [configuration.compiler, "-xc++", "-stdlib=libc++", "-o", f.name, "-"]
             p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-            _, stderr = p.communicate("#include <algorithm>\nint main() {}")
+            _, stderr = p.communicate("#include <cassert>\nint main() {}")
             if not p.returncode:
                 return True, "Compiling with -stdlib=libc++ works"
             return False, "Compiling with -stdlib=libc++ fails with the error: %s" % stderr

@@ -4,7 +4,7 @@ define <8 x i8> @rbit_8b(<8 x i8>* %A) nounwind {
 ;CHECK-LABEL: rbit_8b:
 ;CHECK: rbit.8b
 	%tmp1 = load <8 x i8>, <8 x i8>* %A
-	%tmp3 = call <8 x i8> @llvm.aarch64.neon.rbit.v8i8(<8 x i8> %tmp1)
+	%tmp3 = call <8 x i8> @llvm.bitreverse.v8i8(<8 x i8> %tmp1)
 	ret <8 x i8> %tmp3
 }
 
@@ -12,12 +12,12 @@ define <16 x i8> @rbit_16b(<16 x i8>* %A) nounwind {
 ;CHECK-LABEL: rbit_16b:
 ;CHECK: rbit.16b
 	%tmp1 = load <16 x i8>, <16 x i8>* %A
-	%tmp3 = call <16 x i8> @llvm.aarch64.neon.rbit.v16i8(<16 x i8> %tmp1)
+	%tmp3 = call <16 x i8> @llvm.bitreverse.v16i8(<16 x i8> %tmp1)
 	ret <16 x i8> %tmp3
 }
 
-declare <8 x i8> @llvm.aarch64.neon.rbit.v8i8(<8 x i8>) nounwind readnone
-declare <16 x i8> @llvm.aarch64.neon.rbit.v16i8(<16 x i8>) nounwind readnone
+declare <8 x i8> @llvm.bitreverse.v8i8(<8 x i8>) nounwind readnone
+declare <16 x i8> @llvm.bitreverse.v16i8(<16 x i8>) nounwind readnone
 
 define <8 x i16> @sxtl8h(<8 x i8>* %A) nounwind {
 ;CHECK-LABEL: sxtl8h:

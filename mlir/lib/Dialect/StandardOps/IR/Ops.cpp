@@ -1067,8 +1067,8 @@ static void print(OpAsmPrinter &p, ConstantOp &op) {
     p << ' ';
   p << op.getValue();
 
-  // If the value is a symbol reference, print a trailing type.
-  if (op.getValue().isa<SymbolRefAttr>())
+  // If the value is a symbol reference or Array, print a trailing type.
+  if (op.getValue().isa<SymbolRefAttr, ArrayAttr>())
     p << " : " << op.getType();
 }
 
@@ -1079,9 +1079,10 @@ static ParseResult parseConstantOp(OpAsmParser &parser,
       parser.parseAttribute(valueAttr, "value", result.attributes))
     return failure();
 
-  // If the attribute is a symbol reference, then we expect a trailing type.
+  // If the attribute is a symbol reference or array, then we expect a trailing
+  // type.
   Type type;
-  if (!valueAttr.isa<SymbolRefAttr>())
+  if (!valueAttr.isa<SymbolRefAttr, ArrayAttr>())
     type = valueAttr.getType();
   else if (parser.parseColonType(type))
     return failure();
@@ -1116,6 +1117,24 @@ static LogicalResult verify(ConstantOp &op) {
     if (!intVal.isSignedIntN(bitwidth) && !intVal.isIntN(bitwidth))
       return op.emitOpError("requires 'value' to be an integer within the "
                             "range of the integer result type");
+    return success();
+  }
+
+  if (auto complexTy = type.dyn_cast<ComplexType>()) {
+    auto arrayAttr = value.dyn_cast<ArrayAttr>();
+    if (!complexTy || arrayAttr.size() != 2)
+      return op.emitOpError(
+          "requires 'value' to be a complex constant, represented as array of "
+          "two values");
+    auto complexEltTy = complexTy.getElementType();
+    if (complexEltTy != arrayAttr[0].getType() ||
+        complexEltTy != arrayAttr[1].getType()) {
+      return op.emitOpError()
+             << "requires attribute's element types (" << arrayAttr[0].getType()
+             << ", " << arrayAttr[1].getType()
+             << ") to match the element type of the op's return type ("
+             << complexEltTy << ")";
+    }
     return success();
   }
 
@@ -1193,13 +1212,21 @@ bool ConstantOp::isBuildableWith(Attribute value, Type type) {
   if (value.isa<SymbolRefAttr>())
     return type.isa<FunctionType>();
   // The attribute must have the same type as 'type'.
-  if (value.getType() != type)
+  if (!value.getType().isa<NoneType>() && value.getType() != type)
     return false;
   // If the type is an integer type, it must be signless.
   if (IntegerType integerTy = type.dyn_cast<IntegerType>())
     if (!integerTy.isSignless())
       return false;
   // Finally, check that the attribute kind is handled.
+  if (auto arrAttr = value.dyn_cast<ArrayAttr>()) {
+    auto complexTy = type.dyn_cast<ComplexType>();
+    if (!complexTy)
+      return false;
+    auto complexEltTy = complexTy.getElementType();
+    return arrAttr.size() == 2 && arrAttr[0].getType() == complexEltTy &&
+           arrAttr[1].getType() == complexEltTy;
+  }
   return value.isa<IntegerAttr, FloatAttr, ElementsAttr, UnitAttr>();
 }
 

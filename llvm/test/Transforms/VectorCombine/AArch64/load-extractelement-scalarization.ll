@@ -113,6 +113,66 @@ entry:
 
 declare void @llvm.assume(i1)
 
+define i32 @load_extract_idx_var_i64_known_valid_by_and(<4 x i32>* %x, i64 %idx) {
+; CHECK-LABEL: @load_extract_idx_var_i64_known_valid_by_and(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = and i64 [[IDX:%.*]], 3
+; CHECK-NEXT:    [[LV:%.*]] = load <4 x i32>, <4 x i32>* [[X:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[LV]], i64 [[IDX_CLAMPED]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %idx.clamped = and i64 %idx, 3
+  %lv = load <4 x i32>, <4 x i32>* %x
+  %r = extractelement <4 x i32> %lv, i64 %idx.clamped
+  ret i32 %r
+}
+
+define i32 @load_extract_idx_var_i64_not_known_valid_by_and(<4 x i32>* %x, i64 %idx) {
+; CHECK-LABEL: @load_extract_idx_var_i64_not_known_valid_by_and(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = and i64 [[IDX:%.*]], 4
+; CHECK-NEXT:    [[LV:%.*]] = load <4 x i32>, <4 x i32>* [[X:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[LV]], i64 [[IDX_CLAMPED]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %idx.clamped = and i64 %idx, 4
+  %lv = load <4 x i32>, <4 x i32>* %x
+  %r = extractelement <4 x i32> %lv, i64 %idx.clamped
+  ret i32 %r
+}
+
+define i32 @load_extract_idx_var_i64_known_valid_by_urem(<4 x i32>* %x, i64 %idx) {
+; CHECK-LABEL: @load_extract_idx_var_i64_known_valid_by_urem(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = urem i64 [[IDX:%.*]], 4
+; CHECK-NEXT:    [[LV:%.*]] = load <4 x i32>, <4 x i32>* [[X:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[LV]], i64 [[IDX_CLAMPED]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %idx.clamped = urem i64 %idx, 4
+  %lv = load <4 x i32>, <4 x i32>* %x
+  %r = extractelement <4 x i32> %lv, i64 %idx.clamped
+  ret i32 %r
+}
+
+define i32 @load_extract_idx_var_i64_not_known_valid_by_urem(<4 x i32>* %x, i64 %idx) {
+; CHECK-LABEL: @load_extract_idx_var_i64_not_known_valid_by_urem(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = urem i64 [[IDX:%.*]], 5
+; CHECK-NEXT:    [[LV:%.*]] = load <4 x i32>, <4 x i32>* [[X:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[LV]], i64 [[IDX_CLAMPED]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %idx.clamped = urem i64 %idx, 5
+  %lv = load <4 x i32>, <4 x i32>* %x
+  %r = extractelement <4 x i32> %lv, i64 %idx.clamped
+  ret i32 %r
+}
+
 define i32 @load_extract_idx_var_i32(<4 x i32>* %x, i32 %idx) {
 ; CHECK-LABEL: @load_extract_idx_var_i32(
 ; CHECK-NEXT:    [[LV:%.*]] = load <4 x i32>, <4 x i32>* [[X:%.*]], align 16

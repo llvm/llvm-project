@@ -57,8 +57,6 @@ public:
   bool selectSExti32(SDValue N, SDValue &Val);
   bool selectZExti32(SDValue N, SDValue &Val);
 
-  bool selectAddiPair(SDValue N, SDValue &Val);
-
   bool MatchSLLIUW(SDNode *N) const;
 
   bool selectVLOp(SDValue N, SDValue &VL);

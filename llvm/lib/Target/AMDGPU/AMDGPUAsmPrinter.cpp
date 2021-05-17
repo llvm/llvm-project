@@ -723,7 +723,9 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
   const SIRegisterInfo &TRI = TII->getRegisterInfo();
 
   Info.UsesFlatScratch = MRI.isPhysRegUsed(AMDGPU::FLAT_SCR_LO) ||
-                         MRI.isPhysRegUsed(AMDGPU::FLAT_SCR_HI);
+                         MRI.isPhysRegUsed(AMDGPU::FLAT_SCR_HI) ||
+                         MRI.isLiveIn(MFI->getPreloadedReg(
+                             AMDGPUFunctionArgInfo::FLAT_SCRATCH_INIT));
 
   // Even if FLAT_SCRATCH is implicitly used, it has no effect if flat
   // instructions aren't used to access the scratch buffer. Inline assembly may

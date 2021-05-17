@@ -573,6 +573,8 @@ class VectorType;
 
     Sched::Preference getSchedulingPreference(SDNode *N) const override;
 
+    bool preferZeroCompareBranch() const override { return true; }
+
     bool
     isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;

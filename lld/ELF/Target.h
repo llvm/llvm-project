@@ -122,6 +122,7 @@ public:
   RelType tlsGotRel;
   RelType tlsModuleIndexRel;
   RelType tlsOffsetRel;
+  unsigned gotEntrySize = config->wordsize;
   unsigned pltEntrySize;
   unsigned pltHeaderSize;
   unsigned ipltEntrySize;

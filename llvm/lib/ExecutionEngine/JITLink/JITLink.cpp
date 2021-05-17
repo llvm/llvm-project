@@ -237,12 +237,12 @@ void LinkGraph::dump(raw_ostream &OS) {
   // relevance.
   for (auto &KV : BlockSymbols)
     llvm::sort(KV.second, [](const Symbol *LHS, const Symbol *RHS) {
-      if (LHS->getOffset() < RHS->getOffset())
-        return true;
-      if (LHS->getLinkage() < RHS->getLinkage())
-        return true;
-      if (LHS->getScope() < RHS->getScope())
-        return true;
+      if (LHS->getOffset() != RHS->getOffset())
+        return LHS->getOffset() < RHS->getOffset();
+      if (LHS->getLinkage() != RHS->getLinkage())
+        return LHS->getLinkage() < RHS->getLinkage();
+      if (LHS->getScope() != RHS->getScope())
+        return LHS->getScope() < RHS->getScope();
       if (LHS->hasName()) {
         if (!RHS->hasName())
           return true;

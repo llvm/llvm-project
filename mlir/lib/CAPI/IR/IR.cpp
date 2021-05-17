@@ -181,6 +181,10 @@ MlirOperation mlirModuleGetOperation(MlirModule module) {
   return wrap(unwrap(module).getOperation());
 }
 
+MlirModule mlirModuleFromOperation(MlirOperation op) {
+  return wrap(dyn_cast<ModuleOp>(unwrap(op)));
+}
+
 //===----------------------------------------------------------------------===//
 // Operation state API.
 //===----------------------------------------------------------------------===//
