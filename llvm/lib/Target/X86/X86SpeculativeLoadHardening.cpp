@@ -1915,8 +1915,9 @@ unsigned X86SpeculativeLoadHardeningPass::hardenValueInRegister(
 
   auto *RC = MRI->getRegClass(Reg);
   int Bytes = TRI->getRegSizeInBits(*RC) / 8;
-
   unsigned StateReg = PS->SSA.GetValueAtEndOfBlock(&MBB);
+  assert((Bytes == 1 || Bytes == 2 || Bytes == 4 || Bytes == 8) &&
+         "Unknown register size");
 
   // FIXME: Need to teach this about 32-bit mode.
   if (Bytes != 8) {
