@@ -8,8 +8,8 @@
 
 #include <assert.h>
 #include <pthread.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <sanitizer/allocator_interface.h>
 
@@ -24,17 +24,21 @@ char go = 0;
 
 void *thread_fun(void *arg) {
   pthread_mutex_lock(&mutex);
-  while (!go) pthread_cond_wait(&cond, &mutex);
+  while (!go)
+    pthread_cond_wait(&cond, &mutex);
   pthread_mutex_unlock(&mutex);
   for (int i = 0; i < total_num_alloc / num_threads; i++) {
     void *p = malloc(10);
-    __asm__ __volatile__("" : : "r"(p) : "memory");
+    __asm__ __volatile__(""
+                         :
+                         : "r"(p)
+                         : "memory");
     free(p);
   }
   return 0;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   assert(argc == 3);
   num_threads = atoi(argv[1]);
   assert(num_threads > 0);
