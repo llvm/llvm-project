@@ -3040,6 +3040,18 @@ struct TransferWriteToVectorStoreLowering
   }
 };
 
+/// Transpose a vector transfer op's `in_bounds` attribute according to given
+/// indices.
+static ArrayAttr
+transposeInBoundsAttr(OpBuilder &builder, ArrayAttr attr,
+                      const SmallVector<unsigned> &permutation) {
+  SmallVector<bool> newInBoundsValues;
+  for (unsigned pos : permutation)
+    newInBoundsValues.push_back(
+        attr.getValue()[pos].cast<BoolAttr>().getValue());
+  return builder.getBoolArrayAttr(newInBoundsValues);
+}
+
 /// Lower transfer_read op with permutation into a transfer_read with a
 /// permutation map composed of leading zeros followed by a minor identiy +
 /// vector.transpose op.
@@ -3084,6 +3096,7 @@ struct TransferReadPermutationLowering
       newVectorShape[pos.value()] = originalShape[pos.index()];
     }
 
+    // Transpose mask operand.
     Value newMask;
     if (op.mask()) {
       // Remove unused dims from the permutation map. E.g.:
@@ -3103,12 +3116,20 @@ struct TransferReadPermutationLowering
                                                      maskTransposeIndices);
     }
 
+    // Transpose in_bounds attribute.
+    ArrayAttr newInBounds =
+        op.in_bounds() ? transposeInBoundsAttr(
+                             rewriter, op.in_bounds().getValue(), permutation)
+                       : ArrayAttr();
+
+    // Generate new transfer_read operation.
     VectorType newReadType =
         VectorType::get(newVectorShape, op.getVectorType().getElementType());
     Value newRead = rewriter.create<vector::TransferReadOp>(
         op.getLoc(), newReadType, op.source(), op.indices(), newMap,
-        op.padding(), newMask, op.in_bounds() ? *op.in_bounds() : ArrayAttr());
+        op.padding(), newMask, newInBounds);
 
+    // Transpose result of transfer_read.
     SmallVector<int64_t> transposePerm(permutation.begin(), permutation.end());
     rewriter.replaceOpWithNewOp<vector::TransposeOp>(op, newRead,
                                                      transposePerm);
