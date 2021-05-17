@@ -79,7 +79,6 @@ typedef struct atl_context_s {
   bool g_tasks_initialized;
 } atl_context_t;
 extern atl_context_t atlc;
-extern atl_context_t *atlc_p;
 
 #ifdef __cplusplus
 }
@@ -117,8 +116,6 @@ extern std::vector<std::map<std::string, atl_kernel_info_t>> KernelInfoTable;
 extern std::vector<std::map<std::string, atl_symbol_info_t>> SymbolInfoTable;
 
 // ---------------------- Kernel End -------------
-
-extern struct timespec context_init_time;
 
 namespace core {
 class TaskgroupImpl;
