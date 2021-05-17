@@ -11640,6 +11640,7 @@ public:
 
   bool areMatrixTypesOfTheSameDimension(QualType srcTy, QualType destTy);
 
+  bool areVectorTypesSameSize(QualType srcType, QualType destType);
   bool areLaxCompatibleVectorTypes(QualType srcType, QualType destType);
   bool isLaxVectorConversion(QualType srcType, QualType destType);
 
