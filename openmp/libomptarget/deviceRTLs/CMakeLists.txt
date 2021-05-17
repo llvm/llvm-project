@@ -14,3 +14,10 @@ if (OPENMP_ENABLE_LIBOMPTARGET_HSA)
   add_subdirectory(amdgcn)
 endif()
 add_subdirectory(nvptx)
+# Currently device libm functions are created by clang headers.  These do not
+# work for FORTRAN. The libm here  builds a libm device library by turning on
+# __BUILD_MATH_BUILTINS_LIB__ This converts the math functions in the clang
+# headers from static to extern to build device linkable libm for FORTRAN.
+# Eventually, we can make a linkable device libm for c and c++ and remove a
+# lot of header definitions that get compiled with every offload compilation.
+add_subdirectory(libm)

@@ -55,8 +55,10 @@
 #pragma omp begin declare variant match(                                       \
     device = {arch(amdgcn)}, implementation = {extension(match_any)})
 
+#ifdef  __AMDGCN__
 #ifndef __OPENMP_AMDGCN__
 #define __OPENMP_AMDGCN__
+#endif
 #endif
 
 #ifndef __HIP__
