@@ -8,7 +8,12 @@
 
 // test get_new_handler
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
+// FIXME: When libc++ is linked against vcruntime (i.e. the default config in
+// MSVC mode), the declarations of std::set_new_handler and std::get_new_handler
+// are provided by vcruntime/UCRT's new.h. However, that header actually only
+// declares set_new_handler - it's missing a declaration of get_new_handler.
+
+// XFAIL: msvc
 
 #include <new>
 #include <cassert>
