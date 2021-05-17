@@ -75,9 +75,8 @@ struct ModuleDeps {
   // the primary TU.
   bool ImportedByMainFile = false;
 
-  /// The compiler invocation associated with the translation unit that imports
-  /// this module.
-  std::shared_ptr<CompilerInvocation> Invocation;
+  /// Compiler invocation that can be used to build this module (without paths).
+  CompilerInvocation Invocation;
 
   /// Gets the canonical command line suitable for passing to clang.
   ///

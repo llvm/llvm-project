@@ -19,9 +19,10 @@ using namespace tooling;
 using namespace dependencies;
 
 static CompilerInvocation
-makeInvocationForModuleBuildWithoutPaths(const ModuleDeps &Deps) {
+makeInvocationForModuleBuildWithoutPaths(const ModuleDeps &Deps,
+                                         const CompilerInvocation &Invocation) {
   // Make a deep copy of the invocation.
-  CompilerInvocation CI(*Deps.Invocation);
+  CompilerInvocation CI(Invocation);
 
   // Remove options incompatible with explicit module build.
   CI.getFrontendOpts().Inputs.clear();
@@ -38,7 +39,7 @@ makeInvocationForModuleBuildWithoutPaths(const ModuleDeps &Deps) {
 }
 
 static std::vector<std::string>
-serializeCompilerInvocation(CompilerInvocation &CI) {
+serializeCompilerInvocation(const CompilerInvocation &CI) {
   // Set up string allocator.
   llvm::BumpPtrAllocator Alloc;
   llvm::StringSaver Strings(Alloc);
@@ -55,7 +56,7 @@ serializeCompilerInvocation(CompilerInvocation &CI) {
 std::vector<std::string> ModuleDeps::getCanonicalCommandLine(
     std::function<StringRef(ModuleID)> LookupPCMPath,
     std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps) const {
-  CompilerInvocation CI(makeInvocationForModuleBuildWithoutPaths(*this));
+  CompilerInvocation CI(Invocation);
 
   dependencies::detail::collectPCMAndModuleMapPaths(
       ClangModuleDeps, LookupPCMPath, LookupModuleDeps,
@@ -66,9 +67,7 @@ std::vector<std::string> ModuleDeps::getCanonicalCommandLine(
 
 std::vector<std::string>
 ModuleDeps::getCanonicalCommandLineWithoutModulePaths() const {
-  CompilerInvocation CI(makeInvocationForModuleBuildWithoutPaths(*this));
-
-  return serializeCompilerInvocation(CI);
+  return serializeCompilerInvocation(Invocation);
 }
 
 void dependencies::detail::collectPCMAndModuleMapPaths(
@@ -190,11 +189,9 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
         MD.FileDeps.insert(IF.getFile()->getName());
       });
 
-  // FIXME: Prepare the CompilerInvocation for building this module **now**, so
-  //        that we store the actual context hash for this module (not just the
-  //        context hash inherited from the original TU).
-  MD.Invocation = Instance.getInvocationPtr();
-  MD.ID.ContextHash = MD.Invocation->getModuleHash();
+  MD.Invocation =
+      makeInvocationForModuleBuildWithoutPaths(MD, Instance.getInvocation());
+  MD.ID.ContextHash = MD.Invocation.getModuleHash();
 
   llvm::DenseSet<const Module *> AddedModules;
   addAllSubmoduleDeps(M, MD, AddedModules);
