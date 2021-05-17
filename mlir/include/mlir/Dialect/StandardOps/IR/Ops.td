@@ -27,6 +27,9 @@ def StandardOps_Dialect : Dialect {
   let name = "std";
   let cppNamespace = "";
   let hasConstantMaterializer = 1;
+  // TODO: This dependency is needed to handle memref ops in the
+  // canonicalize pass and should be resolved.
+  let dependentDialects = ["memref::MemRefDialect"];
 }
 
 // Base class for Standard dialect ops.
