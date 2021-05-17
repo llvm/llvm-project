@@ -77,13 +77,6 @@ class ConditionalController(DebuggerControllerBase):
                                                               cond_expr)
                 self._conditional_bp_handles[id] = cbp
 
-    def _conditional_met(self, cbp):
-        for cond_expr in cbp.get_conditional_expression_list():
-            valueIR = self.debugger.evaluate_expression(cond_expr)
-            if valueIR.type_name == 'bool' and valueIR.value == 'true':
-                return True
-        return False
-
     def _run_debugger_custom(self):
         # TODO: Add conditional and unconditional breakpoint support to dbgeng.
         if self.debugger.get_name() == 'dbgeng':
@@ -116,15 +109,12 @@ class ConditionalController(DebuggerControllerBase):
                     # This is an unconditional bp. Mark it for removal.
                     bp_to_delete.append(bp_id)
                     continue
-                # We have triggered a breakpoint with a condition. Check that
-                # the condition has been met.
-                if self._conditional_met(cbp):
-                    # Add a range of unconditional breakpoints covering the
-                    # lines requested in the DexLimitSteps command. Ignore
-                    # first line as that's the conditional bp we just hit and
-                    # include the final line.
-                    for line in range(cbp.range_from + 1, cbp.range_to + 1):
-                        self.debugger.add_breakpoint(cbp.path, line)
+                # Add a range of unconditional breakpoints covering the lines
+                # requested in the DexLimitSteps command. Ignore first line as
+                # that's the conditional bp we just hit and include the final
+                # line.
+                for line in range(cbp.range_from + 1, cbp.range_to + 1):
+                    self.debugger.add_breakpoint(cbp.path, line)
 
             # Remove any unconditional breakpoints we just hit.
             for bp_id in bp_to_delete:
