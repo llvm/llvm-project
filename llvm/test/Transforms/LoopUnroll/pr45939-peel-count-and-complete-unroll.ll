@@ -163,7 +163,6 @@ define void @test1() {
 ; PEEL8-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* @a, i64 0, i64 [[INDVARS_IV_NEXT_6]]
 ; PEEL8-NEXT:    [[TMP15:%.*]] = trunc i64 [[INDVARS_IV_NEXT_6]] to i32
 ; PEEL8-NEXT:    store i32 [[TMP15]], i32* [[ARRAYIDX_7]], align 4
-; PEEL8-NEXT:    [[INDVARS_IV_NEXT_7:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT_6]], 1
 ; PEEL8-NEXT:    br label [[FOR_EXIT]]
 ; PEEL8:       for.exit:
 ; PEEL8-NEXT:    ret void
@@ -206,7 +205,7 @@ define void @test1() {
 ; PEEL2UNROLL2-NEXT:    store i32 [[TMP3]], i32* [[ARRAYIDX_1]], align 4
 ; PEEL2UNROLL2-NEXT:    [[INDVARS_IV_NEXT_1]] = add nuw nsw i64 [[INDVARS_IV_NEXT]], 1
 ; PEEL2UNROLL2-NEXT:    [[EXITCOND_1:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT_1]], 8
-; PEEL2UNROLL2-NEXT:    br i1 [[EXITCOND_1]], label [[FOR_BODY]], label [[FOR_EXIT_LOOPEXIT:%.*]], !llvm.loop !0
+; PEEL2UNROLL2-NEXT:    br i1 [[EXITCOND_1]], label [[FOR_BODY]], label [[FOR_EXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; PEEL2UNROLL2:       for.exit.loopexit:
 ; PEEL2UNROLL2-NEXT:    br label [[FOR_EXIT]]
 ; PEEL2UNROLL2:       for.exit:

@@ -16,7 +16,7 @@ using namespace llvm;
 class PassBuilderCTest : public testing::Test {
   void SetUp() override {
     LLVMInitializeNativeTarget();
-    const char *Triple = LLVMGetDefaultTargetTriple();
+    char *Triple = LLVMGetDefaultTargetTriple();
     char *Err;
     LLVMTargetRef Target;
     if (LLVMGetTargetFromTriple(Triple, &Target, &Err)) {
@@ -25,6 +25,7 @@ class PassBuilderCTest : public testing::Test {
     TM = LLVMCreateTargetMachine(Target, Triple, "generic", "",
                                  LLVMCodeGenLevelDefault, LLVMRelocDefault,
                                  LLVMCodeModelDefault);
+    LLVMDisposeMessage(Triple);
     Context = LLVMContextCreate();
     Module = LLVMModuleCreateWithNameInContext("test", Context);
   }
