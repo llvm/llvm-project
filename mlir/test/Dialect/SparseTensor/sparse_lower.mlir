@@ -7,11 +7,6 @@
 // RUN: --convert-linalg-to-loops --func-bufferize --tensor-constant-bufferize \
 // RUN: --tensor-bufferize --finalizing-bufferize |                            \
 // RUN: FileCheck %s --check-prefix=CHECK-LIR
-//
-// RUN: mlir-opt %s -sparsification="fast-output" --sparse-tensor-conversion   \
-// RUN: --convert-linalg-to-loops --func-bufferize --tensor-constant-bufferize \
-// RUN: --tensor-bufferize --finalizing-bufferize |                            \
-// RUN: FileCheck %s --check-prefix=CHECK-FAST
 
 #CSR = #sparse_tensor.encoding<{dimLevelType = [ "dense", "compressed" ]}>
 
@@ -32,9 +27,9 @@
 // CHECK-HIR:           %[[VAL_3:.*]] = constant 64 : index
 // CHECK-HIR:           %[[VAL_4:.*]] = constant 0 : index
 // CHECK-HIR:           %[[VAL_5:.*]] = constant 1 : index
-// CHECK-HIR:           %[[VAL_7:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_5]] : tensor<64x64xf64, #{{.*}}> to memref<?xindex>
-// CHECK-HIR:           %[[VAL_8:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_5]] : tensor<64x64xf64, #{{.*}}> to memref<?xindex>
-// CHECK-HIR:           %[[VAL_9:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<64x64xf64, #{{.*}}> to memref<?xf64>
+// CHECK-HIR:           %[[VAL_7:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_5]] : tensor<64x64xf64, #sparse_tensor.encoding<{{.*}}>> to memref<?xindex>
+// CHECK-HIR:           %[[VAL_8:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_5]] : tensor<64x64xf64, #sparse_tensor.encoding<{{.*}}>> to memref<?xindex>
+// CHECK-HIR:           %[[VAL_9:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<64x64xf64, #sparse_tensor.encoding<{{.*}}>> to memref<?xf64>
 // CHECK-HIR:           %[[VAL_10:.*]] = memref.buffer_cast %[[VAL_1]] : memref<64xf64>
 // CHECK-HIR:           %[[VAL_11:.*]] = memref.buffer_cast %[[VAL_2]] : memref<64xf64>
 // CHECK-HIR:           %[[VAL_12:.*]] = memref.alloc() : memref<64xf64>
@@ -127,35 +122,9 @@
 // CHECK-LIR:           return %[[VAL_9]] : memref<64xf64>
 // CHECK-LIR:         }
 
-// CHECK-FAST-LABEL:   func @matvec(
-// CHECK-FAST-SAME:                 %[[VAL_0:.*]]: !llvm.ptr<i8>,
-// CHECK-FAST-SAME:                 %[[VAL_1:.*]]: memref<64xf64>,
-// CHECK-FAST-SAME:                 %[[VAL_2:.*]]: memref<64xf64>) -> memref<64xf64> {
-// CHECK-FAST:           %[[VAL_3:.*]] = constant 64 : index
-// CHECK-FAST:           %[[VAL_4:.*]] = constant 0 : index
-// CHECK-FAST:           %[[VAL_5:.*]] = constant 1 : index
-// CHECK-FAST:           %[[VAL_6:.*]] = call @sparsePointers(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
-// CHECK-FAST:           %[[VAL_7:.*]] = call @sparseIndices(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
-// CHECK-FAST:           %[[VAL_8:.*]] = call @sparseValuesF64(%[[VAL_0]]) : (!llvm.ptr<i8>) -> memref<?xf64>
-// CHECK-FAST:           scf.for %[[VAL_9:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {
-// CHECK-FAST:             %[[VAL_10:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_9]]] : memref<?xindex>
-// CHECK-FAST:             %[[VAL_11:.*]] = addi %[[VAL_9]], %[[VAL_5]] : index
-// CHECK-FAST:             %[[VAL_12:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_11]]] : memref<?xindex>
-// CHECK-FAST:             %[[VAL_13:.*]] = memref.load %[[VAL_2]]{{\[}}%[[VAL_9]]] : memref<64xf64>
-// CHECK-FAST:             %[[VAL_14:.*]] = scf.for %[[VAL_15:.*]] = %[[VAL_10]] to %[[VAL_12]] step %[[VAL_5]] iter_args(%[[VAL_16:.*]] = %[[VAL_13]]) -> (f64) {
-// CHECK-FAST:               %[[VAL_17:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_15]]] : memref<?xindex>
-// CHECK-FAST:               %[[VAL_18:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_15]]] : memref<?xf64>
-// CHECK-FAST:               %[[VAL_19:.*]] = memref.load %[[VAL_1]]{{\[}}%[[VAL_17]]] : memref<64xf64>
-// CHECK-FAST:               %[[VAL_20:.*]] = mulf %[[VAL_18]], %[[VAL_19]] : f64
-// CHECK-FAST:               %[[VAL_21:.*]] = addf %[[VAL_16]], %[[VAL_20]] : f64
-// CHECK-FAST:               scf.yield %[[VAL_21]] : f64
-// CHECK-FAST:             }
-// CHECK-FAST:             store %[[VAL_22:.*]], %[[VAL_2]]{{\[}}%[[VAL_9]]] : memref<64xf64>
-// CHECK-FAST:           }
-// CHECK-FAST:           return %[[VAL_2]] : memref<64xf64>
-// CHECK-FAST:         }
-
-func @matvec(%arga: tensor<64x64xf64, #CSR>, %argb: tensor<64xf64>, %argx: tensor<64xf64>) -> tensor<64xf64> {
+func @matvec(%arga: tensor<64x64xf64, #CSR>,
+             %argb: tensor<64xf64>,
+	     %argx: tensor<64xf64>) -> tensor<64xf64> {
   %0 = linalg.generic #trait_matvec
       ins(%arga, %argb : tensor<64x64xf64, #CSR>, tensor<64xf64>)
       outs(%argx: tensor<64xf64>) {
