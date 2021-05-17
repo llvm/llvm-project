@@ -1092,7 +1092,10 @@ def ConstantOp : Std_Op<"constant",
 
   let builders = [
     OpBuilder<(ins "Attribute":$value),
-    [{ build($_builder, $_state, value.getType(), value); }]>];
+    [{ build($_builder, $_state, value.getType(), value); }]>,
+    OpBuilder<(ins "Attribute":$value, "Type":$type),
+    [{ build($_builder, $_state, type, value); }]>,
+  ];
 
   let extraClassDeclaration = [{
     Attribute getValue() { return (*this)->getAttr("value"); }
