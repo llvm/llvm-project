@@ -187,7 +187,7 @@ void UnwindInfoSectionImpl<Ptr>::prepareRelocations(InputSection *isec) {
         s = make<Defined>("<internal>", /*file=*/nullptr, referentIsec,
                           r.addend, /*size=*/0, /*isWeakDef=*/false,
                           /*isExternal=*/false, /*isPrivateExtern=*/false,
-                          /*isThumb=*/false);
+                          /*isThumb=*/false, /*isReferencedDynamically=*/false);
         in.got->addEntry(s);
       }
       r.referent = s;
