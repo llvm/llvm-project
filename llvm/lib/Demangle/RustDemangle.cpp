@@ -162,6 +162,14 @@ void Demangler::demanglePath() {
     print(">");
     break;
   }
+  case 'Y': {
+    print("<");
+    demangleType();
+    print(" as ");
+    demanglePath();
+    print(">");
+    break;
+  }
   case 'N': {
     char NS = consume();
     if (!isLower(NS) && !isUpper(NS)) {

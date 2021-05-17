@@ -49,6 +49,11 @@ CHECK: <_ as Clone>
 CHECK: <_ as Clone>
        _RXs_C5cratepC5Clone
 
+; Trait definition
+
+CHECK: <_ as Ord>
+       _RYpC3Ord
+
 ; Generic type arguments
 
 CHECK: generic::<_>
