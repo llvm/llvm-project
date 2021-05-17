@@ -739,3 +739,128 @@ define <2 x i64> @unsigned_sat_variable_v2i64_using_cmp_notval(<2 x i64> %x, <2 
   ret <2 x i64> %r
 }
 
+declare <4 x i128> @llvm.sadd.sat.v4i128(<4 x i128> %a, <4 x i128> %b);
+
+define <4 x i128> @sadd(<4 x i128> %a, <4 x i128> %b) local_unnamed_addr {
+; CHECK-LABEL: sadd:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vadduqm 0, 2, 6
+; CHECK-NEXT:    xxswapd 0, 34
+; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
+; CHECK-NEXT:    li 3, -1
+; CHECK-NEXT:    vadduqm 1, 3, 7
+; CHECK-NEXT:    xxswapd 1, 35
+; CHECK-NEXT:    xxswapd 2, 32
+; CHECK-NEXT:    mfvsrd 4, 34
+; CHECK-NEXT:    mfvsrd 9, 32
+; CHECK-NEXT:    mffprd 0, 0
+; CHECK-NEXT:    xxswapd 0, 33
+; CHECK-NEXT:    mfvsrd 5, 38
+; CHECK-NEXT:    cmpld 9, 4
+; CHECK-NEXT:    cmpd 1, 9, 4
+; CHECK-NEXT:    vadduqm 6, 4, 8
+; CHECK-NEXT:    mffprd 4, 2
+; CHECK-NEXT:    sradi 5, 5, 63
+; CHECK-NEXT:    mffprd 30, 1
+; CHECK-NEXT:    xxswapd 1, 36
+; CHECK-NEXT:    crandc 20, 4, 2
+; CHECK-NEXT:    cmpld 1, 4, 0
+; CHECK-NEXT:    mffprd 4, 0
+; CHECK-NEXT:    xxswapd 0, 38
+; CHECK-NEXT:    mfvsrd 6, 35
+; CHECK-NEXT:    vadduqm 10, 5, 9
+; CHECK-NEXT:    cmpld 6, 4, 30
+; CHECK-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
+; CHECK-NEXT:    mfvsrd 10, 33
+; CHECK-NEXT:    mfvsrd 7, 36
+; CHECK-NEXT:    mfvsrd 11, 38
+; CHECK-NEXT:    crand 21, 2, 4
+; CHECK-NEXT:    cmpld 10, 6
+; CHECK-NEXT:    cmpd 1, 10, 6
+; CHECK-NEXT:    mffprd 6, 1
+; CHECK-NEXT:    xxswapd 1, 37
+; CHECK-NEXT:    mffprd 4, 0
+; CHECK-NEXT:    xxswapd 0, 42
+; CHECK-NEXT:    mfvsrd 8, 37
+; CHECK-NEXT:    mfvsrd 12, 42
+; CHECK-NEXT:    crandc 22, 4, 2
+; CHECK-NEXT:    cmpd 1, 11, 7
+; CHECK-NEXT:    crand 23, 2, 24
+; CHECK-NEXT:    cmpld 11, 7
+; CHECK-NEXT:    crandc 24, 4, 2
+; CHECK-NEXT:    cmpld 1, 4, 6
+; CHECK-NEXT:    mffprd 4, 1
+; CHECK-NEXT:    mffprd 6, 0
+; CHECK-NEXT:    crand 25, 2, 4
+; CHECK-NEXT:    cmpld 12, 8
+; CHECK-NEXT:    cmpd 1, 12, 8
+; CHECK-NEXT:    crandc 26, 4, 2
+; CHECK-NEXT:    cmpld 1, 6, 4
+; CHECK-NEXT:    mfvsrd 4, 39
+; CHECK-NEXT:    mtfprd 0, 5
+; CHECK-NEXT:    sradi 4, 4, 63
+; CHECK-NEXT:    mfvsrd 5, 41
+; CHECK-NEXT:    mtfprd 1, 4
+; CHECK-NEXT:    xxspltd 34, 0, 0
+; CHECK-NEXT:    mfvsrd 4, 40
+; CHECK-NEXT:    crnor 20, 21, 20
+; CHECK-NEXT:    sradi 4, 4, 63
+; CHECK-NEXT:    crand 27, 2, 4
+; CHECK-NEXT:    mtfprd 2, 4
+; CHECK-NEXT:    sradi 4, 5, 63
+; CHECK-NEXT:    sradi 5, 10, 63
+; CHECK-NEXT:    mtfprd 3, 4
+; CHECK-NEXT:    isel 4, 0, 3, 20
+; CHECK-NEXT:    xxspltd 36, 2, 0
+; CHECK-NEXT:    crnor 20, 23, 22
+; CHECK-NEXT:    mtfprd 4, 4
+; CHECK-NEXT:    sradi 4, 9, 63
+; CHECK-NEXT:    mtfprd 0, 4
+; CHECK-NEXT:    addis 4, 2, .LCPI48_0@toc@ha
+; CHECK-NEXT:    mtfprd 5, 5
+; CHECK-NEXT:    xxspltd 35, 4, 0
+; CHECK-NEXT:    addi 4, 4, .LCPI48_0@toc@l
+; CHECK-NEXT:    isel 5, 0, 3, 20
+; CHECK-NEXT:    lxvd2x 6, 0, 4
+; CHECK-NEXT:    mtfprd 4, 5
+; CHECK-NEXT:    addis 5, 2, .LCPI48_1@toc@ha
+; CHECK-NEXT:    xxspltd 37, 5, 0
+; CHECK-NEXT:    addi 4, 5, .LCPI48_1@toc@l
+; CHECK-NEXT:    xxlxor 7, 34, 35
+; CHECK-NEXT:    xxspltd 34, 1, 0
+; CHECK-NEXT:    sradi 5, 11, 63
+; CHECK-NEXT:    lxvd2x 8, 0, 4
+; CHECK-NEXT:    xxspltd 35, 4, 0
+; CHECK-NEXT:    crnor 20, 25, 24
+; CHECK-NEXT:    sradi 4, 12, 63
+; CHECK-NEXT:    crnor 21, 27, 26
+; CHECK-NEXT:    xxswapd 4, 6
+; CHECK-NEXT:    mtfprd 1, 5
+; CHECK-NEXT:    mtfprd 9, 4
+; CHECK-NEXT:    xxswapd 6, 8
+; CHECK-NEXT:    xxlxor 2, 34, 35
+; CHECK-NEXT:    xxspltd 35, 0, 0
+; CHECK-NEXT:    isel 4, 0, 3, 20
+; CHECK-NEXT:    xxspltd 39, 1, 0
+; CHECK-NEXT:    isel 3, 0, 3, 21
+; CHECK-NEXT:    xxspltd 40, 9, 0
+; CHECK-NEXT:    mtfprd 0, 4
+; CHECK-NEXT:    xxspltd 34, 3, 0
+; CHECK-NEXT:    mtfprd 1, 3
+; CHECK-NEXT:    xxsel 3, 6, 4, 39
+; CHECK-NEXT:    xxspltd 41, 0, 0
+; CHECK-NEXT:    xxsel 0, 6, 4, 35
+; CHECK-NEXT:    xxspltd 35, 1, 0
+; CHECK-NEXT:    xxsel 1, 6, 4, 37
+; CHECK-NEXT:    xxsel 4, 6, 4, 40
+; CHECK-NEXT:    xxlxor 5, 36, 41
+; CHECK-NEXT:    xxlxor 6, 34, 35
+; CHECK-NEXT:    xxsel 34, 32, 0, 7
+; CHECK-NEXT:    xxsel 35, 33, 1, 2
+; CHECK-NEXT:    xxsel 36, 38, 3, 5
+; CHECK-NEXT:    xxsel 37, 42, 4, 6
+; CHECK-NEXT:    blr
+  %c = call <4 x i128> @llvm.sadd.sat.v4i128(<4 x i128> %a, <4 x i128> %b)
+  ret <4 x i128> %c
+}
+

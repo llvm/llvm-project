@@ -1142,6 +1142,8 @@ def : Pat<(v4f32 (vselect v4i32:$vA, v4f32:$vB, v4f32:$vC)),
           (VSEL $vC, $vB, $vA)>;
 def : Pat<(v2f64 (vselect v2i64:$vA, v2f64:$vB, v2f64:$vC)),
           (VSEL $vC, $vB, $vA)>;
+def : Pat<(v1i128 (vselect v1i128:$vA, v1i128:$vB, v1i128:$vC)),
+          (VSEL $vC, $vB, $vA)>;
 
 // Vector Integer Average Instructions
 def : Pat<(v4i32 (sra (sub v4i32:$vA, (vnot v4i32:$vB)),
