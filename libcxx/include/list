@@ -2053,7 +2053,7 @@ list<_Tp, _Alloc>::splice(const_iterator __p, list& __c, const_iterator __i)
         " not referring to this list");
     _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__i) == &__c,
         "list::splice(iterator, list, iterator) called with the second iterator"
-        " not referring to list argument");
+        " not referring to the list argument");
     _LIBCPP_ASSERT(__get_const_db()->__dereferenceable(&__i),
         "list::splice(iterator, list, iterator) called with the second iterator"
         " not dereferenceable");
@@ -2098,10 +2098,10 @@ list<_Tp, _Alloc>::splice(const_iterator __p, list& __c, const_iterator __f, con
         " referring to this list");
     _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__f) == &__c,
         "list::splice(iterator, list, iterator, iterator) called with second iterator not"
-        " referring to list argument");
+        " referring to the list argument");
     _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__l) == &__c,
         "list::splice(iterator, list, iterator, iterator) called with third iterator not"
-        " referring to list argument");
+        " referring to the list argument");
     if (this == &__c)
     {
         for (const_iterator __i = __f; __i != __l; ++__i)
