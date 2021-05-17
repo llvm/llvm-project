@@ -147,7 +147,7 @@ private:
   /// Traverses the previously collected direct modular dependencies to discover
   /// transitive modular dependencies and fills the parent \c ModuleDepCollector
   /// with both.
-  void handleTopLevelModule(const Module *M);
+  ModuleID handleTopLevelModule(const Module *M);
   void addAllSubmoduleDeps(const Module *M, ModuleDeps &MD,
                            llvm::DenseSet<const Module *> &AddedModules);
   void addModuleDep(const Module *M, ModuleDeps &MD,
@@ -173,13 +173,13 @@ private:
   DependencyConsumer &Consumer;
   /// Path to the main source file.
   std::string MainFile;
-  /// The module hash identifying the compilation conditions.
+  /// Hash identifying the compilation conditions of the current TU.
   std::string ContextHash;
   /// Non-modular file dependencies. This includes the main source file and
   /// textually included header files.
   std::vector<std::string> FileDeps;
   /// Direct and transitive modular dependencies of the main source file.
-  std::unordered_map<std::string, ModuleDeps> ModularDeps;
+  std::unordered_map<const Module *, ModuleDeps> ModularDeps;
   /// Options that control the dependency output generation.
   std::unique_ptr<DependencyOutputOptions> Opts;
 };

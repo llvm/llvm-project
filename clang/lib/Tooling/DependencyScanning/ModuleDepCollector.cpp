@@ -144,8 +144,6 @@ void ModuleDepCollectorPP::handleImport(const Module *Imported) {
     return;
 
   const Module *TopLevelModule = Imported->getTopLevelModule();
-  MDC.ModularDeps[MDC.ContextHash + TopLevelModule->getFullModuleName()]
-      .ImportedByMainFile = true;
   DirectModularDeps.insert(TopLevelModule);
 }
 
@@ -164,28 +162,27 @@ void ModuleDepCollectorPP::EndOfMainFile() {
     MDC.Consumer.handleFileDependency(*MDC.Opts, I);
 }
 
-void ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
+ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   assert(M == M->getTopLevelModule() && "Expected top level module!");
 
-  auto ModI = MDC.ModularDeps.insert(
-      std::make_pair(MDC.ContextHash + M->getFullModuleName(), ModuleDeps{}));
-
-  if (!ModI.first->second.ID.ModuleName.empty())
-    return;
+  // If this module has been handled already, just return its ID.
+  auto ModI = MDC.ModularDeps.insert({M, ModuleDeps{}});
+  if (!ModI.second)
+    return ModI.first->second.ID;
 
   ModuleDeps &MD = ModI.first->second;
+
+  MD.ID.ModuleName = M->getFullModuleName();
+  MD.ImportedByMainFile = DirectModularDeps.contains(M);
+  MD.ImplicitModulePCMPath = std::string(M->getASTFile()->getName());
+  MD.IsSystem = M->IsSystem;
 
   const FileEntry *ModuleMap = Instance.getPreprocessor()
                                    .getHeaderSearchInfo()
                                    .getModuleMap()
                                    .getContainingModuleMapFile(M);
-
-  MD.Invocation = Instance.getInvocationPtr();
   MD.ClangModuleMapFile = std::string(ModuleMap ? ModuleMap->getName() : "");
-  MD.ID.ModuleName = M->getFullModuleName();
-  MD.ImplicitModulePCMPath = std::string(M->getASTFile()->getName());
-  MD.ID.ContextHash = MDC.ContextHash;
-  MD.IsSystem = M->IsSystem;
+
   serialization::ModuleFile *MF =
       MDC.Instance.getASTReader()->getModuleManager().lookup(M->getASTFile());
   MDC.Instance.getASTReader()->visitInputFiles(
@@ -193,8 +190,16 @@ void ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
         MD.FileDeps.insert(IF.getFile()->getName());
       });
 
+  // FIXME: Prepare the CompilerInvocation for building this module **now**, so
+  //        that we store the actual context hash for this module (not just the
+  //        context hash inherited from the original TU).
+  MD.Invocation = Instance.getInvocationPtr();
+  MD.ID.ContextHash = MD.Invocation->getModuleHash();
+
   llvm::DenseSet<const Module *> AddedModules;
   addAllSubmoduleDeps(M, MD, AddedModules);
+
+  return MD.ID;
 }
 
 void ModuleDepCollectorPP::addAllSubmoduleDeps(
@@ -211,11 +216,9 @@ void ModuleDepCollectorPP::addModuleDep(
     llvm::DenseSet<const Module *> &AddedModules) {
   for (const Module *Import : M->Imports) {
     if (Import->getTopLevelModule() != M->getTopLevelModule()) {
+      ModuleID ImportID = handleTopLevelModule(Import->getTopLevelModule());
       if (AddedModules.insert(Import->getTopLevelModule()).second)
-        MD.ClangModuleDeps.push_back(
-            {std::string(Import->getTopLevelModuleName()),
-             Instance.getInvocation().getModuleHash()});
-      handleTopLevelModule(Import->getTopLevelModule());
+        MD.ClangModuleDeps.push_back(ImportID);
     }
   }
 }
