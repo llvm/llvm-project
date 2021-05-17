@@ -44378,8 +44378,7 @@ static SDValue combineAndLoadToBZHI(SDNode *Node, SelectionDAG &DAG,
           uint64_t ArrayElementCount = Init->getType()->getArrayNumElements();
           bool ConstantsMatch = true;
           for (uint64_t j = 0; j < ArrayElementCount; j++) {
-            ConstantInt *Elem =
-                dyn_cast<ConstantInt>(Init->getAggregateElement(j));
+            auto *Elem = cast<ConstantInt>(Init->getAggregateElement(j));
             if (Elem->getZExtValue() != (((uint64_t)1 << j) - 1)) {
               ConstantsMatch = false;
               break;
