@@ -225,11 +225,9 @@ public:
 
   bool hasInvocation() const { return Invocation != nullptr; }
 
-  CompilerInvocation &getInvocation() { return *getInvocationPtr(); }
-
-  std::shared_ptr<CompilerInvocation> getInvocationPtr() {
+  CompilerInvocation &getInvocation() {
     assert(Invocation && "Compiler instance has no invocation!");
-    return Invocation;
+    return *Invocation;
   }
 
   /// setInvocation - Replace the current invocation.
