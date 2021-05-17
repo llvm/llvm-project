@@ -103,16 +103,30 @@ static llvm::Type *getInnermostElementType(llvm::Type *type) {
 
 /// Create an LLVM IR constant of `llvmType` from the MLIR attribute `attr`.
 /// This currently supports integer, floating point, splat and dense element
-/// attributes and combinations thereof.  In case of error, report it to `loc`
-/// and return nullptr.
+/// attributes and combinations thereof. Also, an array attribute with two
+/// elements is supported to represent a complex constant.  In case of error,
+/// report it to `loc` and return nullptr.
 llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
     llvm::Type *llvmType, Attribute attr, Location loc,
-    const ModuleTranslation &moduleTranslation) {
+    const ModuleTranslation &moduleTranslation, bool isTopLevel) {
   if (!attr)
     return llvm::UndefValue::get(llvmType);
-  if (llvmType->isStructTy()) {
-    emitError(loc, "struct types are not supported in constants");
-    return nullptr;
+  if (auto *structType = dyn_cast<::llvm::StructType>(llvmType)) {
+    if (!isTopLevel) {
+      emitError(loc, "nested struct types are not supported in constants");
+      return nullptr;
+    }
+    auto arrayAttr = attr.cast<ArrayAttr>();
+    llvm::Type *elementType = structType->getElementType(0);
+    llvm::Constant *real = getLLVMConstant(elementType, arrayAttr[0], loc,
+                                           moduleTranslation, false);
+    if (!real)
+      return nullptr;
+    llvm::Constant *imag = getLLVMConstant(elementType, arrayAttr[1], loc,
+                                           moduleTranslation, false);
+    if (!imag)
+      return nullptr;
+    return llvm::ConstantStruct::get(structType, {real, imag});
   }
   // For integer types, we allow a mismatch in sizes as the index type in
   // MLIR might have a different size than the index type in the LLVM module.
@@ -120,8 +134,15 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
     return llvm::ConstantInt::get(
         llvmType,
         intAttr.getValue().sextOrTrunc(llvmType->getIntegerBitWidth()));
-  if (auto floatAttr = attr.dyn_cast<FloatAttr>())
+  if (auto floatAttr = attr.dyn_cast<FloatAttr>()) {
+    if (llvmType !=
+        llvm::Type::getFloatingPointTy(llvmType->getContext(),
+                                       floatAttr.getValue().getSemantics())) {
+      emitError(loc, "FloatAttr does not match expected type of the constant");
+      return nullptr;
+    }
     return llvm::ConstantFP::get(llvmType, floatAttr.getValue());
+  }
   if (auto funcAttr = attr.dyn_cast<FlatSymbolRefAttr>())
     return llvm::ConstantExpr::getBitCast(
         moduleTranslation.lookupFunction(funcAttr.getValue()), llvmType);
@@ -144,7 +165,7 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
     llvm::Constant *child = getLLVMConstant(
         elementType,
         elementTypeSequential ? splatAttr : splatAttr.getSplatValue(), loc,
-        moduleTranslation);
+        moduleTranslation, false);
     if (!child)
       return nullptr;
     if (llvmType->isVectorTy())
@@ -169,7 +190,7 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
     llvm::Type *innermostType = getInnermostElementType(llvmType);
     for (auto n : elementsAttr.getValues<Attribute>()) {
       constants.push_back(
-          getLLVMConstant(innermostType, n, loc, moduleTranslation));
+          getLLVMConstant(innermostType, n, loc, moduleTranslation, false));
       if (!constants.back())
         return nullptr;
     }

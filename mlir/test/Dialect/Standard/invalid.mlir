@@ -37,3 +37,35 @@ func @unsupported_attribute() {
   %0 = constant "" : index
   return
 }
+
+// -----
+
+func @complex_constant_wrong_array_attribute_length() {
+  // expected-error @+1 {{requires 'value' to be a complex constant, represented as array of two values}}
+  %0 = constant [1.0 : f32] : complex<f32>
+  return
+}
+
+// -----
+
+func @complex_constant_wrong_attribute_type() {
+  // expected-error @+1 {{requires attribute's type ('f32') to match op's return type ('complex<f32>')}}
+  %0 = "std.constant" () {value = 1.0 : f32} : () -> complex<f32>
+  return
+}
+
+// -----
+
+func @complex_constant_wrong_element_types() {
+  // expected-error @+1 {{requires attribute's element types ('f32', 'f32') to match the element type of the op's return type ('f64')}}
+  %0 = constant [1.0 : f32, -1.0 : f32] : complex<f64>
+  return
+}
+
+// -----
+
+func @complex_constant_two_different_element_types() {
+  // expected-error @+1 {{requires attribute's element types ('f32', 'f64') to match the element type of the op's return type ('f64')}}
+  %0 = constant [1.0 : f32, -1.0 : f64] : complex<f64>
+  return
+}
