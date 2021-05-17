@@ -93,24 +93,6 @@ add_compiler_rt_object_libraries(RTHwasan_dynamic
   CFLAGS ${HWASAN_DYNAMIC_CFLAGS}
   DEFS ${HWASAN_DEFINITIONS})
 
-# Compile a different runtime for x86 aliasing mode.
-set(HWASAN_ALIASES_RTL_CFLAGS ${HWASAN_RTL_CFLAGS})
-list(APPEND HWASAN_ALIASES_RTL_CFLAGS -DHWASAN_ALIASING_MODE)
-set(HWASAN_ALIASES_DYNAMIC_CFLAGS ${HWASAN_DYNAMIC_CFLAGS})
-list(APPEND HWASAN_ALIASES_DYNAMIC_CFLAGS -DHWASAN_ALIASING_MODE)
-add_compiler_rt_object_libraries(RTHwasanAliases
-  ARCHS ${HWASAN_SUPPORTED_ARCH}
-  SOURCES ${HWASAN_RTL_SOURCES}
-  ADDITIONAL_HEADERS ${HWASAN_RTL_HEADERS}
-  CFLAGS ${HWASAN_ALIASES_RTL_CFLAGS}
-  DEFS ${HWASAN_DEFINITIONS})
-add_compiler_rt_object_libraries(RTHwasanAliases_dynamic
-  ARCHS ${HWASAN_SUPPORTED_ARCH}
-  SOURCES ${HWASAN_RTL_SOURCES} ${HWASAN_RTL_CXX_SOURCES}
-  ADDITIONAL_HEADERS ${HWASAN_RTL_HEADERS}
-  CFLAGS ${HWASAN_ALIASES_DYNAMIC_CFLAGS}
-  DEFS ${HWASAN_DEFINITIONS})
-
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/dummy.cpp "")
 add_compiler_rt_object_libraries(RTHwasan_dynamic_version_script_dummy
   ARCHS ${HWASAN_SUPPORTED_ARCH}
@@ -127,11 +109,24 @@ function(add_hwasan_runtimes arch use_aliases)
   set(hwasan_rtl_flags ${HWASAN_RTL_CFLAGS})
   set(hwasan_dyn_flags ${HWASAN_DYNAMIC_CFLAGS})
   if(use_aliases)
+    list(APPEND hwasan_rtl_flags -DHWASAN_ALIASING_MODE)
+    list(APPEND hwasan_dyn_flags -DHWASAN_ALIASING_MODE)
+    add_compiler_rt_object_libraries(RTHwasanAliases
+      ARCHS ${arch}
+      SOURCES ${HWASAN_RTL_SOURCES}
+      ADDITIONAL_HEADERS ${HWASAN_RTL_HEADERS}
+      CFLAGS ${hwasan_rtl_flags}
+      DEFS ${HWASAN_DEFINITIONS})
+    add_compiler_rt_object_libraries(RTHwasanAliases_dynamic
+      ARCHS ${arch}
+      SOURCES ${HWASAN_RTL_SOURCES} ${HWASAN_RTL_CXX_SOURCES}
+      ADDITIONAL_HEADERS ${HWASAN_RTL_HEADERS}
+      CFLAGS ${hwasan_dyn_flags}
+      DEFS ${HWASAN_DEFINITIONS})
+
     set(hwasan_object_lib RTHwasanAliases)
     set(hwasan_object_dyn_lib RTHwasanAliases_dynamic)
     set(hwasan_runtime clang_rt.hwasan_aliases)
-    set(hwasan_rtl_flags ${HWASAN_ALIASES_RTL_CFLAGS})
-    set(hwasan_dyn_flags ${HWASAN_ALIASES_DYNAMIC_CFLAGS})
   endif()
   add_compiler_rt_runtime(${hwasan_runtime}
     STATIC
