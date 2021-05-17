@@ -4010,6 +4010,13 @@ def m68030 : Flag<["-"], "m68030">, Group<m_m68k_Features_Group>;
 def m68040 : Flag<["-"], "m68040">, Group<m_m68k_Features_Group>;
 def m68060 : Flag<["-"], "m68060">, Group<m_m68k_Features_Group>;
 
+foreach i = {0-6} in
+  def ffixed_a#i : Flag<["-"], "ffixed-a"#i>, Group<m_m68k_Features_Group>,
+    HelpText<"Reserve the a"#i#" register (M68k only)">;
+foreach i = {0-7} in
+  def ffixed_d#i : Flag<["-"], "ffixed-d"#i>, Group<m_m68k_Features_Group>,
+    HelpText<"Reserve the d"#i#" register (M68k only)">;
+
 // X86 feature flags
 def mx87 : Flag<["-"], "mx87">, Group<m_x86_Features_Group>;
 def mno_x87 : Flag<["-"], "mno-x87">, Group<m_x86_Features_Group>;
