@@ -41,6 +41,14 @@ CHECK: <_>
 CHECK: <_>
        _RMs_C5cratep
 
+; Trait impl
+
+CHECK: <_ as Clone>
+       _RXC5cratepC5Clone
+
+CHECK: <_ as Clone>
+       _RXs_C5cratepC5Clone
+
 ; Generic type arguments
 
 CHECK: generic::<_>
