@@ -347,7 +347,7 @@ def DSS      : DSS_Form<0, 822, (outs), (ins u5imm:$STRM),
 }
 
 def DSSALL   : DSS_Form<1, 822, (outs), (ins),
-                        "dssall", IIC_LdStLoad /*FIXME*/, [(int_ppc_altivec_dssall)]>,
+                        "dssall", IIC_LdStLoad /*FIXME*/, []>,
                         Deprecated<DeprecatedDST> {
   let STRM = 0;
   let A = 0;
@@ -864,6 +864,13 @@ def V_SETALLONES  : VXForm_3<908, (outs vrrc:$vD), (ins),
 // Extended mnemonics
 def : InstAlias<"vmr $vD, $vA", (VOR vrrc:$vD, vrrc:$vA, vrrc:$vA)>;
 def : InstAlias<"vnot $vD, $vA", (VNOR vrrc:$vD, vrrc:$vA, vrrc:$vA)>;
+
+// This is a nop on all supported architectures and the AIX assembler
+// doesn't support it (and will not be updated to support it).
+let Predicates = [IsAIX] in
+def : Pat<(int_ppc_altivec_dssall), (NOP)>;
+let Predicates = [NotAIX] in
+def : Pat<(int_ppc_altivec_dssall), (DSSALL)>;
 
 // Rotates.
 def : Pat<(v16i8 (rotl v16i8:$vA, v16i8:$vB)),
