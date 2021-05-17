@@ -1528,12 +1528,17 @@ void ItaniumRecordLayoutBuilder::LayoutWideBitField(uint64_t FieldSize,
   UpdateAlignment(TypeAlign);
 }
 
+static bool isAIXLayout(const ASTContext &Context) {
+  return Context.getTargetInfo().getTriple().getOS() == llvm::Triple::AIX;
+}
+
 void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
   bool FieldPacked = Packed || D->hasAttr<PackedAttr>();
   uint64_t FieldSize = D->getBitWidthValue(Context);
   TypeInfo FieldInfo = Context.getTypeInfo(D->getType());
   uint64_t StorageUnitSize = FieldInfo.Width;
   unsigned FieldAlign = FieldInfo.Align;
+  bool AlignIsRequired = FieldInfo.AlignIsRequired;
 
   // UnfilledBitsInLastUnit is the difference between the end of the
   // last allocated bitfield (i.e. the first bit offset available for
@@ -1611,9 +1616,33 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
     }
   }
 
+  if (isAIXLayout(Context)) {
+    if (StorageUnitSize < Context.getTypeSize(Context.UnsignedIntTy)) {
+      // On AIX, [bool, char, short] bitfields have the same alignment
+      // as [unsigned].
+      StorageUnitSize = Context.getTypeSize(Context.UnsignedIntTy);
+    } else if (StorageUnitSize > Context.getTypeSize(Context.UnsignedIntTy) &&
+               Context.getTargetInfo().getTriple().isArch32Bit() &&
+               FieldSize <= 32) {
+      // Under 32-bit compile mode, the bitcontainer is 32 bits if a single
+      // long long bitfield has length no greater than 32 bits.
+      StorageUnitSize = 32;
+
+      if (!AlignIsRequired)
+        FieldAlign = 32;
+    }
+
+    if (FieldAlign < StorageUnitSize) {
+      // The bitfield alignment should always be greater than or equal to
+      // bitcontainer size.
+      FieldAlign = StorageUnitSize;
+    }
+  }
+
   // If the field is wider than its declared type, it follows
-  // different rules in all cases.
-  if (FieldSize > StorageUnitSize) {
+  // different rules in all cases, except on AIX.
+  // On AIX, wide bitfield follows the same rules as normal bitfield.
+  if (FieldSize > StorageUnitSize && !isAIXLayout(Context)) {
     LayoutWideBitField(FieldSize, StorageUnitSize, FieldPacked, D);
     return;
   }
