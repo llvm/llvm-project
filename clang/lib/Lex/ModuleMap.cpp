@@ -262,7 +262,8 @@ void ModuleMap::resolveHeader(Module *Mod,
         // Record this umbrella header.
         setUmbrellaHeader(Mod, *File, Header.FileName, RelativePathName.str());
     } else {
-      Module::Header H = {Header.FileName, std::string(RelativePathName.str()), *File};
+      Module::Header H = {Header.FileName, std::string(RelativePathName.str()),
+                          *File};
       if (Header.Kind == Module::HK_Excluded)
         excludeHeader(Mod, H);
       else
@@ -1048,9 +1049,8 @@ Module *ModuleMap::inferFrameworkModule(const DirectoryEntry *FrameworkDir,
   Result->Directory = FrameworkDir;
 
   // Chop off the first framework bit, as that is implied.
-  StringRef RelativePath =
-      UmbrellaName.str().substr(
-          Result->getTopLevelModule()->Directory->getName().size());
+  StringRef RelativePath = UmbrellaName.str().substr(
+      Result->getTopLevelModule()->Directory->getName().size());
   RelativePath = llvm::sys::path::relative_path(RelativePath);
 
   // umbrella header "umbrella-header-name"
@@ -1133,9 +1133,9 @@ Module *ModuleMap::createShadowedModule(StringRef Name, bool IsFramework,
   return Result;
 }
 
-void ModuleMap::setUmbrellaHeader(Module *Mod, const FileEntry *UmbrellaHeader,
-                                  Twine NameAsWritten,
-                                  Twine PathRelativeToRootModuleDirectory) {
+void ModuleMap::setUmbrellaHeader(
+    Module *Mod, const FileEntry *UmbrellaHeader, const Twine &NameAsWritten,
+    const Twine &PathRelativeToRootModuleDirectory) {
   Headers[UmbrellaHeader].push_back(KnownHeader(Mod, NormalHeader));
   Mod->Umbrella = UmbrellaHeader;
   Mod->UmbrellaAsWritten = NameAsWritten.str();
@@ -1149,8 +1149,8 @@ void ModuleMap::setUmbrellaHeader(Module *Mod, const FileEntry *UmbrellaHeader,
 }
 
 void ModuleMap::setUmbrellaDir(Module *Mod, const DirectoryEntry *UmbrellaDir,
-                               Twine NameAsWritten,
-                               Twine PathRelativeToRootModuleDirectory) {
+                               const Twine &NameAsWritten,
+                               const Twine &PathRelativeToRootModuleDirectory) {
   Mod->Umbrella = UmbrellaDir;
   Mod->UmbrellaAsWritten = NameAsWritten.str();
   Mod->UmbrellaRelativeToRootModuleDirectory =

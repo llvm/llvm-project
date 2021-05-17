@@ -12,8 +12,14 @@ from dex.command.CommandBase import CommandBase
 
 class DexLimitSteps(CommandBase):
     def __init__(self, *args, **kwargs):
-        self.expression = args[0]
-        self.values = [str(arg) for arg in args[1:]]
+        if len(args) == 0:
+            self.expression = None
+            self.values = []
+        elif len(args) == 1:
+            raise TypeError("expected 0 or at least 2 positional arguments")
+        else:
+            self.expression = args[0]
+            self.values = [str(arg) for arg in args[1:]]
         try:
             on_line = kwargs.pop('on_line')
             self.from_line = on_line

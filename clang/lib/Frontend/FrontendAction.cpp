@@ -388,7 +388,7 @@ static std::error_code collectModuleHeaderIncludes(
       for (int I = 0; I != Dir.level() + 1; ++I, ++PathIt)
         Components.push_back(*PathIt);
       SmallString<128> RelativeHeader(
-                                UmbrellaDir.PathRelativeToRootModuleDirectory);
+          UmbrellaDir.PathRelativeToRootModuleDirectory);
       for (auto It = Components.rbegin(), End = Components.rend(); It != End;
            ++It)
         llvm::sys::path::append(RelativeHeader, *It);
