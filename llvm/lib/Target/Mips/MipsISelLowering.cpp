@@ -388,9 +388,10 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   if (Subtarget.isGP64bit())
     setOperationAction(ISD::EH_DWARF_CFA,       MVT::i64,   Custom);
 
-  if (!Subtarget.hasNanoMips())
+  if (!Subtarget.hasNanoMips()) {
     setOperationAction(ISD::SDIV, MVT::i32, Expand);
-  setOperationAction(ISD::SREM, MVT::i32, Expand);
+    setOperationAction(ISD::SREM, MVT::i32, Expand);
+  }
   setOperationAction(ISD::UDIV, MVT::i32, Expand);
   setOperationAction(ISD::UREM, MVT::i32, Expand);
   setOperationAction(ISD::SDIV, MVT::i64, Expand);
@@ -1425,6 +1426,7 @@ MipsTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), true, false,
                                false);
   case Mips::DIV_NM:
+  case Mips::MOD_NM:
     return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), false, false,
                                true);
 
