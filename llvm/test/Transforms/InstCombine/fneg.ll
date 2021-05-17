@@ -503,3 +503,86 @@ define float @fake_fneg_nsz_fadd_constant_expr(float %x) {
   %r = fsub nsz float -0.0, %a
   ret float %r
 }
+
+define float @select_fneg_true(float %x, float %y, i1 %b) {
+; CHECK-LABEL: @select_fneg_true(
+; CHECK-NEXT:    [[NX:%.*]] = fneg float [[X:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], float [[NX]], float [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fneg float [[S]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %nx = fneg float %x
+  %s = select i1 %b, float %nx, float %y
+  %r = fneg float %s
+  ret float %r
+}
+
+define <2 x float> @select_fneg_false(<2 x float> %x, <2 x float> %y, <2 x i1> %b) {
+; CHECK-LABEL: @select_fneg_false(
+; CHECK-NEXT:    [[NY:%.*]] = fneg nnan <2 x float> [[Y:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = select ninf <2 x i1> [[B:%.*]], <2 x float> [[X:%.*]], <2 x float> [[NY]]
+; CHECK-NEXT:    [[R:%.*]] = fneg nnan nsz <2 x float> [[S]]
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %ny = fneg nnan <2 x float> %y
+  %s = select ninf <2 x i1> %b, <2 x float> %x, <2 x float> %ny
+  %r = fneg nsz nnan <2 x float> %s
+  ret <2 x float> %r
+}
+
+define float @select_fneg_both(float %x, float %y, i1 %b) {
+; CHECK-LABEL: @select_fneg_both(
+; CHECK-NEXT:    [[S_V:%.*]] = select i1 [[B:%.*]], float [[X:%.*]], float [[Y:%.*]]
+; CHECK-NEXT:    ret float [[S_V]]
+;
+  %nx = fneg float %x
+  %ny = fneg float %y
+  %s = select i1 %b, float %nx, float %ny
+  %r = fneg float %s
+  ret float %r
+}
+
+define float @select_fneg_use1(float %x, float %y, i1 %b) {
+; CHECK-LABEL: @select_fneg_use1(
+; CHECK-NEXT:    [[NX:%.*]] = fneg ninf float [[X:%.*]]
+; CHECK-NEXT:    call void @use(float [[NX]])
+; CHECK-NEXT:    [[S:%.*]] = select fast i1 [[B:%.*]], float [[NX]], float [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fneg float [[S]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %nx = fneg ninf float %x
+  call void @use(float %nx)
+  %s = select fast i1 %b, float %nx, float %y
+  %r = fneg float %s
+  ret float %r
+}
+
+define float @select_fneg_use2(float %x, float %y, i1 %b) {
+; CHECK-LABEL: @select_fneg_use2(
+; CHECK-NEXT:    call void @use(float [[Y:%.*]])
+; CHECK-NEXT:    [[NX:%.*]] = fneg nsz float [[X:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = select ninf i1 [[B:%.*]], float [[NX]], float [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = fneg fast float [[S]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  call void @use(float %y)
+  %nx = fneg nsz float %x
+  %s = select ninf i1 %b, float %nx, float %y
+  %r = fneg fast float %s
+  ret float %r
+}
+
+define float @select_fneg_use3(float %x, float %y, i1 %b) {
+; CHECK-LABEL: @select_fneg_use3(
+; CHECK-NEXT:    [[NX:%.*]] = fneg float [[X:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], float [[NX]], float [[Y:%.*]]
+; CHECK-NEXT:    call void @use(float [[S]])
+; CHECK-NEXT:    [[R:%.*]] = fneg float [[S]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %nx = fneg float %x
+  %s = select i1 %b, float %nx, float %y
+  call void @use(float %s)
+  %r = fneg float %s
+  ret float %r
+}
