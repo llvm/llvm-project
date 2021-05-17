@@ -209,6 +209,10 @@ MLIR_CAPI_EXPORTED void mlirModuleDestroy(MlirModule module);
 /// Views the module as a generic operation.
 MLIR_CAPI_EXPORTED MlirOperation mlirModuleGetOperation(MlirModule module);
 
+/// Views the generic operation as a module.
+/// The returned module is null when the input operation was not a ModuleOp.
+MLIR_CAPI_EXPORTED MlirModule mlirModuleFromOperation(MlirOperation op);
+
 //===----------------------------------------------------------------------===//
 // Operation state.
 //===----------------------------------------------------------------------===//
