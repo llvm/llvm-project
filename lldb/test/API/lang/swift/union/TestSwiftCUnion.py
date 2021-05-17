@@ -6,7 +6,7 @@ import os
 import unittest2
 
 
-class TestSwiftAnyType(lldbtest.TestBase):
+class TestSwiftCUnion(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
