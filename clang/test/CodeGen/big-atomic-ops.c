@@ -311,4 +311,10 @@ void atomic_init_foo()
   // CHECK: }
 }
 
+// Check this doesn't crash
+// CHECK: @test_atomic_array_param(
+void test_atomic_array_param(_Atomic(struct foo) a) {
+  test_atomic_array_param(a);
+}
+
 #endif
