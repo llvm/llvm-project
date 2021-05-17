@@ -3635,30 +3635,6 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       }
       break;
 
-    case OPENCL_EXTENSION_TYPES:
-      for (unsigned I = 0, E = Record.size(); I != E;) {
-        auto TypeID = static_cast<::TypeID>(Record[I++]);
-        auto *Type = GetType(TypeID).getTypePtr();
-        auto NumExt = static_cast<unsigned>(Record[I++]);
-        for (unsigned II = 0; II != NumExt; ++II) {
-          auto Ext = ReadString(Record, I);
-          OpenCLTypeExtMap[Type].insert(Ext);
-        }
-      }
-      break;
-
-    case OPENCL_EXTENSION_DECLS:
-      for (unsigned I = 0, E = Record.size(); I != E;) {
-        auto DeclID = static_cast<::DeclID>(Record[I++]);
-        auto *Decl = GetDecl(DeclID);
-        auto NumExt = static_cast<unsigned>(Record[I++]);
-        for (unsigned II = 0; II != NumExt; ++II) {
-          auto Ext = ReadString(Record, I);
-          OpenCLDeclExtMap[Decl].insert(Ext);
-        }
-      }
-      break;
-
     case TENTATIVE_DEFINITIONS:
       for (unsigned I = 0, N = Record.size(); I != N; ++I)
         TentativeDefinitions.push_back(getGlobalDeclID(F, Record[I]));
@@ -7894,8 +7870,6 @@ void ASTReader::InitializeSema(Sema &S) {
   }
 
   SemaObj->OpenCLFeatures = OpenCLExtensions;
-  SemaObj->OpenCLTypeExtMap = OpenCLTypeExtMap;
-  SemaObj->OpenCLDeclExtMap = OpenCLDeclExtMap;
 
   UpdateSema();
 }
