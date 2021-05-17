@@ -146,14 +146,14 @@ psignw      (%rax), %xmm2
 # CHECK-NEXT:  1      6     3.00    *                   phsubw	(%rax), %mm2
 # CHECK-NEXT:  1      7     3.50                        phsubw	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     4.00    *                   phsubw	(%rax), %xmm2
-# CHECK-NEXT:  1      4     4.00                        pmaddubsw	%mm0, %mm2
-# CHECK-NEXT:  1      4     4.00    *                   pmaddubsw	(%rax), %mm2
-# CHECK-NEXT:  1      5     5.00                        pmaddubsw	%xmm0, %xmm2
-# CHECK-NEXT:  1      5     5.00    *                   pmaddubsw	(%rax), %xmm2
-# CHECK-NEXT:  1      4     4.00                        pmulhrsw	%mm0, %mm2
-# CHECK-NEXT:  1      4     4.00    *                   pmulhrsw	(%rax), %mm2
-# CHECK-NEXT:  1      5     5.00                        pmulhrsw	%xmm0, %xmm2
-# CHECK-NEXT:  1      5     5.00    *                   pmulhrsw	(%rax), %xmm2
+# CHECK-NEXT:  1      4     1.00                        pmaddubsw	%mm0, %mm2
+# CHECK-NEXT:  1      4     1.00    *                   pmaddubsw	(%rax), %mm2
+# CHECK-NEXT:  1      5     2.00                        pmaddubsw	%xmm0, %xmm2
+# CHECK-NEXT:  1      5     2.00    *                   pmaddubsw	(%rax), %xmm2
+# CHECK-NEXT:  1      4     1.00                        pmulhrsw	%mm0, %mm2
+# CHECK-NEXT:  1      4     1.00    *                   pmulhrsw	(%rax), %mm2
+# CHECK-NEXT:  1      5     2.00                        pmulhrsw	%xmm0, %xmm2
+# CHECK-NEXT:  1      5     2.00    *                   pmulhrsw	(%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                        pshufb	%mm0, %mm2
 # CHECK-NEXT:  1      1     1.00    *                   pshufb	(%rax), %mm2
 # CHECK-NEXT:  1      4     2.00                        pshufb	%xmm0, %xmm2
@@ -177,7 +177,7 @@ psignw      (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]
-# CHECK-NEXT: 130.50 76.50
+# CHECK-NEXT: 106.50 76.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    Instructions:
@@ -221,14 +221,14 @@ psignw      (%rax), %xmm2
 # CHECK-NEXT: 3.00   3.00   phsubw	(%rax), %mm2
 # CHECK-NEXT: 3.50   3.50   phsubw	%xmm0, %xmm2
 # CHECK-NEXT: 4.00   4.00   phsubw	(%rax), %xmm2
-# CHECK-NEXT: 4.00    -     pmaddubsw	%mm0, %mm2
-# CHECK-NEXT: 4.00    -     pmaddubsw	(%rax), %mm2
-# CHECK-NEXT: 5.00    -     pmaddubsw	%xmm0, %xmm2
-# CHECK-NEXT: 5.00    -     pmaddubsw	(%rax), %xmm2
-# CHECK-NEXT: 4.00    -     pmulhrsw	%mm0, %mm2
-# CHECK-NEXT: 4.00    -     pmulhrsw	(%rax), %mm2
-# CHECK-NEXT: 5.00    -     pmulhrsw	%xmm0, %xmm2
-# CHECK-NEXT: 5.00    -     pmulhrsw	(%rax), %xmm2
+# CHECK-NEXT: 1.00    -     pmaddubsw	%mm0, %mm2
+# CHECK-NEXT: 1.00    -     pmaddubsw	(%rax), %mm2
+# CHECK-NEXT: 2.00    -     pmaddubsw	%xmm0, %xmm2
+# CHECK-NEXT: 2.00    -     pmaddubsw	(%rax), %xmm2
+# CHECK-NEXT: 1.00    -     pmulhrsw	%mm0, %mm2
+# CHECK-NEXT: 1.00    -     pmulhrsw	(%rax), %mm2
+# CHECK-NEXT: 2.00    -     pmulhrsw	%xmm0, %xmm2
+# CHECK-NEXT: 2.00    -     pmulhrsw	(%rax), %xmm2
 # CHECK-NEXT: 1.00    -     pshufb	%mm0, %mm2
 # CHECK-NEXT: 1.00    -     pshufb	(%rax), %mm2
 # CHECK-NEXT: 2.00   2.00   pshufb	%xmm0, %xmm2
