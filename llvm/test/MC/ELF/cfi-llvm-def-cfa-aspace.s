@@ -12,8 +12,6 @@ f:
 // ASM-NEXT: .cfi_startproc
 // ASM-NEXT: nop
 // ASM-NEXT: .cfi_llvm_def_aspace_cfa %rcx, 0, 6
-// FIXME Why emit an extra empty line?
-// ASM-EMPTY:
 // ASM-NEXT: nop
 // ASM-NEXT: .cfi_endproc
 

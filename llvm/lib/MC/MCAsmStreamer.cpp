@@ -1794,9 +1794,6 @@ void MCAsmStreamer::emitCFILLVMDefAspaceCfa(int64_t Register, int64_t Offset,
   EmitRegisterName(Register);
   OS << ", " << Offset;
   OS << ", " << AddressSpace;
-  // FIXME: When going from ASM->ASM a lot of these directives seem to add too
-  // much whitespace; maybe something isn't consuming whitespace eagerly enough
-  // while parsing?
   EmitEOL();
 }
 

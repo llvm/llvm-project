@@ -4222,11 +4222,9 @@ bool AsmParser::parseDirectiveCFIDefCfaRegister(SMLoc DirectiveLoc) {
 /// ::= .cfi_llvm_def_aspace_cfa register, offset, address_space
 bool AsmParser::parseDirectiveCFILLVMDefAspaceCfa(SMLoc DirectiveLoc) {
   int64_t Register = 0, Offset = 0, AddressSpace = 0;
-  if (parseRegisterOrRegisterNumber(Register, DirectiveLoc) ||
-      parseToken(AsmToken::Comma, "unexpected token in directive") ||
-      parseAbsoluteExpression(Offset) ||
-      parseToken(AsmToken::Comma, "unexpected token in directive") ||
-      parseAbsoluteExpression(AddressSpace))
+  if (parseRegisterOrRegisterNumber(Register, DirectiveLoc) || parseComma() ||
+      parseAbsoluteExpression(Offset) || parseComma() ||
+      parseAbsoluteExpression(AddressSpace) || parseEOL())
     return true;
 
   getStreamer().emitCFILLVMDefAspaceCfa(Register, Offset, AddressSpace);
