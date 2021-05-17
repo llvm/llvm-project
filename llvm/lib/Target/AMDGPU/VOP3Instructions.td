@@ -264,7 +264,7 @@ class VOP3_INTERP16 <list<ValueType> ArgVT> : VOPProfile<ArgVT> {
   let HasOMod = !ne(DstVT.Value, f16.Value);
   let HasHigh = 1;
 
-  let Outs64 = (outs VGPR_32:$vdst);
+  let Outs64 = (outs DstRC.RegClass:$vdst);
   let Ins64 = getInterp16Ins<HasSrc2, HasOMod, Src0Mod, Src2Mod>.ret;
   let Asm64 = getInterp16Asm<HasSrc2, HasOMod>.ret;
 }
