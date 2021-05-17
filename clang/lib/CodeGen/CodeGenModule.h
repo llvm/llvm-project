@@ -1477,11 +1477,10 @@ private:
                                                   const FunctionDecl *FD);
   void UpdateMultiVersionNames(GlobalDecl GD, const FunctionDecl *FD);
 
-  llvm::Constant *GetOrCreateLLVMGlobal(StringRef MangledName,
-                                        llvm::PointerType *PTy,
-                                        const VarDecl *D,
-                                        ForDefinition_t IsForDefinition
-                                          = NotForDefinition);
+  llvm::Constant *
+  GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
+                        unsigned AddrSpace, const VarDecl *D,
+                        ForDefinition_t IsForDefinition = NotForDefinition);
 
   bool GetCPUAndFeaturesAttributes(GlobalDecl GD,
                                    llvm::AttrBuilder &AttrBuilder);
