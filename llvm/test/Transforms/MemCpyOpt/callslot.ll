@@ -252,8 +252,8 @@ define void @capture_nopath_call(i1 %cond) {
 ; CHECK-NEXT:    call void @accept_ptr(i8* [[DEST_I8]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       nocaptures:
-; CHECK-NEXT:    [[DEST1:%.*]] = bitcast [16 x i8]* [[DEST]] to i8*
-; CHECK-NEXT:    call void @accept_ptr(i8* [[DEST1]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @accept_ptr(i8* [[SRC_I8]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DEST_I8]], i8* [[SRC_I8]], i64 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %dest = alloca [16 x i8]
