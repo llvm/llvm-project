@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Converts clang-scan-deps output into response files.
 #   * For modules, arguments in the resulting response file are enough to build a PCM.
