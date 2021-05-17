@@ -521,7 +521,8 @@ static void replaceCommonSymbols() {
                            /*size=*/0,
                            /*isWeakDef=*/false,
                            /*isExternal=*/true, common->privateExtern,
-                           /*isThumb=*/false);
+                           /*isThumb=*/false,
+                           /*isReferencedDynamically=*/false);
   }
 }
 
