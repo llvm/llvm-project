@@ -2,12 +2,14 @@
 // RUN: %clang -### -c -fveclib=Accelerate %s 2>&1 | FileCheck -check-prefix CHECK-ACCELERATE %s
 // RUN: %clang -### -c -fveclib=libmvec %s 2>&1 | FileCheck -check-prefix CHECK-libmvec %s
 // RUN: %clang -### -c -fveclib=MASSV %s 2>&1 | FileCheck -check-prefix CHECK-MASSV %s
+// RUN: %clang -### -c -fveclib=Darwin_libsystem_m %s 2>&1 | FileCheck -check-prefix CHECK-DARWIN_LIBSYSTEM_M %s
 // RUN: not %clang -c -fveclib=something %s 2>&1 | FileCheck -check-prefix CHECK-INVALID %s
 
 // CHECK-NOLIB: "-fveclib=none"
 // CHECK-ACCELERATE: "-fveclib=Accelerate"
 // CHECK-libmvec: "-fveclib=libmvec"
 // CHECK-MASSV: "-fveclib=MASSV"
+// CHECK-DARWIN_LIBSYSTEM_M: "-fveclib=Darwin_libsystem_m"
 
 // CHECK-INVALID: error: invalid value 'something' in '-fveclib=something'
 
