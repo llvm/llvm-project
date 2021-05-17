@@ -362,7 +362,6 @@ def Canonicalizer : Pass<"canonicalize"> {
     details.
   }];
   let constructor = "mlir::createCanonicalizerPass()";
-  let dependentDialects = ["memref::MemRefDialect"];
 }
 
 def CSE : Pass<"cse"> {
