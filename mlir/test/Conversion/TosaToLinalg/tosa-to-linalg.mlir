@@ -1087,17 +1087,59 @@ func @max_pool_i32(%arg0: tensor<1x6x34x62xi32>) -> () {
 // -----
 
 // CHECK-LABEL: @avg_pool
-func @avg_pool(%arg0: tensor<1x6x34x62xf32>) -> () {
-  // CHECK-DAG: [[CONST:%.+]] = constant 0
-  // CHECK-DAG: [[INIT:%.+]] = linalg.init_tensor [1, 3, 31, 62]
-  // CHECK-DAG: [[FILL:%.+]] = linalg.fill([[INIT]], [[CONST]])
-  // CHECK-DAG: [[KERNEL:%.+]] = linalg.init_tensor [4, 4]
-  // CHECK: linalg.pooling_nhwc_sum {dilations = dense<1> : vector<2xi64>, strides = dense<1> : vector<2xi64>} ins(%arg0, [[KERNEL]] : tensor<1x6x34x62xf32>, tensor<4x4xf32>) outs([[FILL]] : tensor<1x3x31x62xf32>)
-  // CHECK: constant dense<6.250000e-02>
-  // CHECK: linalg.generic
-  // CHECK: mulf
-  %0 = "tosa.avg_pool2d"(%arg0) {pad = [0, 0, 0, 0], kernel = [4, 4], stride = [1, 1]} : (tensor<1x6x34x62xf32>)  -> (tensor<1x3x31x62xf32>)
-  return
+func @avg_pool(%arg0: tensor<1x6x34x62xf32>) -> (tensor<1x5x33x62xf32>) {
+  // Initial piece computes the sum of the pooling region, with appropriate padding.
+  // CHECK: [[CONST:%.+]] = constant 0
+  // CHECK: [[PAD:%.+]] = linalg.pad_tensor %arg0 low[0, 1, 1, 0] high[0, 1, 1, 0] 
+  // CHECK: [[CONST:%.+]] = constant 0
+  // CHECK: [[INIT:%.+]] = linalg.init_tensor [1, 5, 33, 62]
+  // CHECK: [[FILL:%.+]] = linalg.fill([[INIT]], [[CONST]])
+  // CHECK: [[KERNEL:%.+]] = linalg.init_tensor [4, 4]
+  // CHECK: [[POOL:%.+]] = linalg.pooling_nhwc_sum {dilations = dense<1> : vector<2xi64>, strides = dense<1> : vector<2xi64>} ins([[PAD]], [[KERNEL]] : tensor<1x8x36x62xf32>, tensor<4x4xf32>) outs([[FILL]] : tensor<1x5x33x62xf32>)
+  // CHECK: [[GENERIC:%.+]] = linalg.indexed_generic {indexing_maps = [#map], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} outs([[POOL]] : tensor<1x5x33x62xf32>)
+  // CHECK:   [[ZERO:%.0]] = constant 0
+  // CHECK:   [[ONE:%.+]] = constant 1
+  // CHECK:   [[HEIGHT:%.+]] = constant 4
+  // CHECK:   [[WIDTH:%.+]] = constant 32
+
+  // The large block below computes what portion of the kernel is within non-padded input.
+  // CHECK:   [[NY:%.+]] = subi [[HEIGHT]], %arg2
+  // CHECK:   [[NX:%.+]] = subi [[WIDTH]], %arg3
+  // CHECK:   [[KH:%.+]] = constant 4
+  // CHECK:   [[PAD0:%.+]] = constant 1
+  // CHECK:   [[SUBP0:%.+]] = subi %arg2, [[PAD0]]
+  // CHECK:   [[P0CMP:%.+]] = cmpi slt, [[SUBP0]], [[ZERO]]
+  // CHECK:   [[SELP0:%.+]] = select [[P0CMP]], [[SUBP0]], [[ZERO]]
+  // CHECK:   [[ADDP0:%.+]] = addi [[KH]], [[SELP0]]
+  // CHECK:   [[PAD1:%.+]] = constant 1
+  // CHECK:   [[SUBP1:%.+]] = subi [[NY]], [[PAD1]]
+  // CHECK:   [[P1CMP:%.+]] = cmpi slt, [[SUBP1]], [[ZERO]]
+  // CHECK:   [[SELP1:%.+]] = select [[P1CMP]], [[SUBP1]], [[ZERO]]
+  // CHECK:   [[ADDP1:%.+]] = addi [[ADDP0]], [[SELP1]]
+  // CHECK:   [[YCMP:%.+]] = cmpi slt, [[ADDP1]], [[ONE]]
+  // CHECK:   [[YSEL:%.+]] = select [[YCMP]], [[ONE]], [[ADDP1]]
+  // CHECK:   [[KW:%.+]] = constant 4 : index
+  // CHECK:   [[PAD2:%.+]] = constant 1 : index
+  // CHECK:   [[SUBP2:%.+]] = subi %arg3, [[PAD2]]
+  // CHECK:   [[P2CMP:%.+]] = cmpi slt, [[SUBP2]], [[ZERO]]
+  // CHECK:   [[SELP2:%.+]] = select [[P2CMP]], [[SUBP2]], [[ZERO]]
+  // CHECK:   [[ADDP2:%.+]] = addi [[KW]], [[SELP2]]
+  // CHECK:   [[PAD3:%.+]] = constant 1 : index
+  // CHECK:   [[SUBP3:%.+]] = subi [[NX]], [[PAD3]]
+  // CHECK:   [[P3CMP:%.+]] = cmpi slt, [[SUBP3]], [[ZERO]]
+  // CHECK:   [[SELP3:%.+]] = select [[P3CMP]], [[SUBP3]], [[ZERO]]
+  // CHECK:   [[ADDP3:%.+]] = addi [[ADDP2]], [[SELP3]]
+  // CHECK:   [[XCMP:%.+]] = cmpi slt, [[ADDP3]], [[ONE]]
+  // CHECK:   [[XSEL:%.+]] = select [[XCMP]], [[ONE]], [[ADDP3]]
+
+  // Given the valid coverage of the pooling region, normalize the summation.
+  // CHECK:   [[C:%.+]] = muli [[YSEL]], [[XSEL]]
+  // CHECK:   [[CI:%.+]] = index_cast [[C]]
+  // CHECK:   [[CF:%.+]] = sitofp [[CI]]
+  // CHECK:   [[RESULT:%.+]] = divf %arg5, [[CF]]
+  // CHECK:   linalg.yield [[RESULT]]
+  %0 = "tosa.avg_pool2d"(%arg0) {pad = [1, 1, 1, 1], kernel = [4, 4], stride = [1, 1]} : (tensor<1x6x34x62xf32>)  -> (tensor<1x5x33x62xf32>)
+  return %0 : tensor<1x5x33x62xf32>
 }
 
 // -----
