@@ -154,6 +154,7 @@ def XOR_NM   : ArithLoginR32<"xor", GPR32NMOpnd, xor>;
 def MUL_NM   : ArithLoginR32<"mul", GPR32NMOpnd, mul>;
 def DIV_NM   : DivMod<"div", sdiv>;
 def MOD_NM   : DivMod<"mod", srem>;
+def DIVU_NM  : DivMod<"divu", udiv>;
 
 def ADDiu_NM : ArithLogicINM<"addiu", simm16_relaxed, GPR32NMOpnd,
                              imm32SExt16, add>;

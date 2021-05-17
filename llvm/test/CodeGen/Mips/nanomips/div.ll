@@ -17,3 +17,12 @@ define i32 @test_mod(i32 %a, i32 %b) {
   %mod = srem i32 %a, %b
   ret i32 %mod
 }
+
+define i32 @test_udiv(i32 %a, i32 %b) {
+; CHECK: divu $a0, $a0, $a1
+; CHECK: DIVU_NM
+; CHECK: teq $zero, $a1, 7
+; CHECK: TEQ_NM
+  %div = udiv i32 %a, %b
+  ret i32 %div
+}
