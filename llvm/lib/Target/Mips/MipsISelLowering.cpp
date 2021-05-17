@@ -392,8 +392,8 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::SDIV, MVT::i32, Expand);
     setOperationAction(ISD::SREM, MVT::i32, Expand);
     setOperationAction(ISD::UDIV, MVT::i32, Expand);
+    setOperationAction(ISD::UREM, MVT::i32, Expand);
   }
-  setOperationAction(ISD::UREM, MVT::i32, Expand);
   setOperationAction(ISD::SDIV, MVT::i64, Expand);
   setOperationAction(ISD::SREM, MVT::i64, Expand);
   setOperationAction(ISD::UDIV, MVT::i64, Expand);
@@ -1428,6 +1428,7 @@ MipsTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case Mips::DIV_NM:
   case Mips::MOD_NM:
   case Mips::DIVU_NM:
+  case Mips::MODU_NM:
     return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), false, false,
                                true);
 
