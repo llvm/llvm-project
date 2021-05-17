@@ -87,6 +87,30 @@ def BSETINVMask : ImmLeaf<XLenVT, [{
   return !isInt<12>(Imm) && isPowerOf2_32(Imm);
 }], BSETINVXForm>;
 
+// Check if (or r, i) can be optimized to (BSETI (BSETI r, i0), i1),
+// in which i = (1 << i0) | (1 << i1).
+def BSETINVTwoBitsMask : PatLeaf<(imm), [{
+   if (!N->hasOneUse())
+     return false;
+   // The immediate should not be a simm12.
+   if (isInt<12>(N->getSExtValue()))
+     return false;
+   // The immediate must have exactly two bits set.
+   return countPopulation(N->getZExtValue()) == 2;
+}]>;
+
+def BSETINVTwoBitsMaskLow : SDNodeXForm<imm, [{
+  uint64_t I = N->getZExtValue();
+  return CurDAG->getTargetConstant(countTrailingZeros(I), SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+
+def BSETINVTwoBitsMaskHigh : SDNodeXForm<imm, [{
+  uint64_t I = N->getZExtValue();
+  return CurDAG->getTargetConstant(63 - countLeadingZeros(I), SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+
 //===----------------------------------------------------------------------===//
 // Instruction class templates
 //===----------------------------------------------------------------------===//
@@ -723,6 +747,13 @@ def : Pat<(xor GPR:$rs1, BSETINVMask:$mask),
 
 def : Pat<(and (srl GPR:$rs1, uimmlog2xlen:$shamt), (XLenVT 1)),
           (BEXTI GPR:$rs1, uimmlog2xlen:$shamt)>;
+
+def : Pat<(or GPR:$r, BSETINVTwoBitsMask:$i),
+          (BSETI (BSETI GPR:$r, (BSETINVTwoBitsMaskLow BSETINVTwoBitsMask:$i)),
+                 (BSETINVTwoBitsMaskHigh BSETINVTwoBitsMask:$i))>;
+def : Pat<(xor GPR:$r, BSETINVTwoBitsMask:$i),
+          (BINVI (BINVI GPR:$r, (BSETINVTwoBitsMaskLow BSETINVTwoBitsMask:$i)),
+                 (BSETINVTwoBitsMaskHigh BSETINVTwoBitsMask:$i))>;
 }
 
 // There's no encoding for roli in the the 'B' extension as it can be
