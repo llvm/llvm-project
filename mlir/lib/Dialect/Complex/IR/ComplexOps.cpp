@@ -17,13 +17,3 @@ using namespace mlir::complex;
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Complex/IR/ComplexOps.cpp.inc"
-
-OpFoldResult ReOp::fold(ArrayRef<Attribute> operands) {
-  ArrayAttr arrayAttr = operands[0].dyn_cast<ArrayAttr>();
-  return arrayAttr[0];
-}
-
-OpFoldResult ImOp::fold(ArrayRef<Attribute> operands) {
-  ArrayAttr arrayAttr = operands[0].dyn_cast<ArrayAttr>();
-  return arrayAttr[1];
-}
