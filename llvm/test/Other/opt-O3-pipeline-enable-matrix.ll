@@ -347,7 +347,7 @@
 ; NEWPM-NEXT:Running pass: Annotation2MetadataPass on
 ; NEWPM-NEXT:Running pass: ForceFunctionAttrsPass on
 ; NEWPM-NEXT:Running pass: InferFunctionAttrsPass on
-; NEWPM-NEXT:Running analysis: InnerAnalysisManagerProxy<{{.*}}FunctionAnalysisManager
+; NEWPM-NEXT:Running analysis: InnerAnalysisManagerProxy<
 ; NEWPM-NEXT:Running analysis: PreservedCFGCheckerAnalysis on f
 ; NEWPM-NEXT:Running pass: LowerExpectIntrinsicPass on f
 ; NEWPM-NEXT: Running pass: SimplifyCFGPass on f
@@ -363,8 +363,8 @@
 ; NEWPM-NEXT: Running pass: CalledValuePropagationPass on
 ; NEWPM-NEXT: Running pass: GlobalOptPass on
 ; NEWPM-NEXT: Invalidating analysis: VerifierAnalysis on
-; NEWPM-NEXT: Invalidating analysis: InnerAnalysisManagerProxy<{{.*}}FunctionAnalysisManager
-; NEWPM-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}FunctionAnalysisManager
+; NEWPM-NEXT: Invalidating analysis: InnerAnalysisManagerProxy<
+; NEWPM-NEXT: Running analysis: InnerAnalysisManagerProxy<
 ; NEWPM-NEXT: Running pass: PromotePass on f
 ; NEWPM-NEXT: Running analysis: PreservedCFGCheckerAnalysis on f
 ; NEWPM-NEXT: Running analysis: DominatorTreeAnalysis on f
@@ -389,7 +389,7 @@
 ; NEWPM-NEXT: Invalidating analysis: AAManager on f
 ; NEWPM-NEXT: Running pass: RequireAnalysisPass<{{.*}}ProfileSummaryAnalysis
 ; NEWPM-NEXT: Running analysis: ProfileSummaryAnalysis on
-; NEWPM-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}CGSCCAnalysisManager, llvm::Module> on
+; NEWPM-NEXT: Running analysis: InnerAnalysisManagerProxy<
 ; NEWPM-NEXT: Running analysis: LazyCallGraphAnalysis on
 ; NEWPM-NEXT: Running analysis: FunctionAnalysisManagerCGSCCProxy on (f)
 ; NEWPM-NEXT: Running analysis: OuterAnalysisManagerProxy<llvm::ModuleAnalysisManager, LazyCallGraph::SCC, llvm::LazyCallGraph &> on (f)
@@ -459,7 +459,7 @@
 ; NEWPM-NEXT: Running pass: LCSSAPass on f
 ; NEWPM-NEXT: Running pass: LoopDistributePass on f
 ; NEWPM-NEXT: Running analysis: ScalarEvolutionAnalysis on f
-; NEWPM-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}LoopAnalysisManager
+; NEWPM-NEXT: Running analysis: InnerAnalysisManagerProxy<
 ; NEWPM-NEXT: Running pass: InjectTLIMappings on f
 ; NEWPM-NEXT: Running pass: LoopVectorizePass on f
 ; NEWPM-NEXT: Running analysis: BlockFrequencyAnalysis on f
