@@ -62,7 +62,6 @@ executable("llvm-objcopy") {
   ]
   include_dirs = [ "." ]
   sources = [
-    "Buffer.cpp",
     "COFF/COFFObjcopy.cpp",
     "COFF/Object.cpp",
     "COFF/Reader.cpp",

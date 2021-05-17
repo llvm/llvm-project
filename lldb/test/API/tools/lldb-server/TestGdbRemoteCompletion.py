@@ -29,7 +29,7 @@ class GdbRemoteCompletionTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.sock = self.create_socket()
         self._server = Server(self.sock, server)
 
-        self.add_no_ack_remote_stream()
+        self.do_handshake()
 
     def generate_hex_path(self, target):
         return str(os.path.join(self.getBuildDir(), target)).encode().hex()

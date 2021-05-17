@@ -13,8 +13,8 @@
 // CHECK-NEXT: movq {{.*}}(%rip), %rbx  # 2021a8
 // CHECK-NEXT: movq {{.*}}(%rip), %rcx  # 2021b0
 
-// READELF:      0000000000011010  0 NOTYPE GLOBAL DEFAULT ABS __wrap_foo
 // READELF:      0000000000011000  0 NOTYPE GLOBAL DEFAULT ABS foo
+// READELF:      0000000000011010  0 NOTYPE GLOBAL DEFAULT ABS __wrap_foo
 // READELF:      Hex dump of section '.got':
 // READELF-NEXT: 0x[[#%x,ADDR:]] 10100100 00000000 00100100 00000000
 

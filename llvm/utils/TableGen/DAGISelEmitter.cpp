@@ -115,7 +115,7 @@ struct PatternSortingPredicate {
     // pattern may have been resolved into multiple match patterns due to
     // alternative fragments.  To ensure deterministic output, always use
     // std::stable_sort with this predicate.
-    return LHS->ID < RHS->ID;
+    return LHS->getID() < RHS->getID();
   }
 };
 } // End anonymous namespace
@@ -153,9 +153,8 @@ void DAGISelEmitter::run(raw_ostream &OS) {
   // Add all the patterns to a temporary list so we can sort them.
   Records.startTimer("Sort patterns");
   std::vector<const PatternToMatch*> Patterns;
-  for (CodeGenDAGPatterns::ptm_iterator I = CGP.ptm_begin(), E = CGP.ptm_end();
-       I != E; ++I)
-    Patterns.push_back(&*I);
+  for (const PatternToMatch &PTM : CGP.ptms())
+    Patterns.push_back(&PTM);
 
   // We want to process the matches in order of minimal cost.  Sort the patterns
   // so the least cost one is at the start.
@@ -164,9 +163,9 @@ void DAGISelEmitter::run(raw_ostream &OS) {
   // Convert each variant of each pattern into a Matcher.
   Records.startTimer("Convert to matchers");
   std::vector<Matcher*> PatternMatchers;
-  for (unsigned i = 0, e = Patterns.size(); i != e; ++i) {
+  for (const PatternToMatch *PTM : Patterns) {
     for (unsigned Variant = 0; ; ++Variant) {
-      if (Matcher *M = ConvertPatternToMatcher(*Patterns[i], Variant, CGP))
+      if (Matcher *M = ConvertPatternToMatcher(*PTM, Variant, CGP))
         PatternMatchers.push_back(M);
       else
         break;

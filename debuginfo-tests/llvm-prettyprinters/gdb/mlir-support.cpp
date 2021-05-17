@@ -24,18 +24,18 @@ mlir::Type TupleType =
     mlir::TupleType::get(&Context, mlir::TypeRange({IndexType, FloatType}));
 
 auto UnknownLoc = mlir::UnknownLoc::get(&Context);
-auto FileLineColLoc = mlir::FileLineColLoc::get("file", 7, 8, &Context);
+auto FileLineColLoc = mlir::FileLineColLoc::get(&Context, "file", 7, 8);
 auto OpaqueLoc = mlir::OpaqueLoc::get<uintptr_t>(9, &Context);
-auto NameLoc = mlir::NameLoc::get(Identifier, &Context);
+auto NameLoc = mlir::NameLoc::get(Identifier);
 auto CallSiteLoc = mlir::CallSiteLoc::get(FileLineColLoc, OpaqueLoc);
-auto FusedLoc = mlir::FusedLoc::get({FileLineColLoc, NameLoc}, &Context);
+auto FusedLoc = mlir::FusedLoc::get(&Context, {FileLineColLoc, NameLoc});
 
 mlir::Attribute UnitAttr = mlir::UnitAttr::get(&Context);
 mlir::Attribute FloatAttr = mlir::FloatAttr::get(FloatType, 1.0);
 mlir::Attribute IntegerAttr = mlir::IntegerAttr::get(IntegerType, 10);
 mlir::Attribute TypeAttr = mlir::TypeAttr::get(IndexType);
-mlir::Attribute ArrayAttr = mlir::ArrayAttr::get({UnitAttr}, &Context);
-mlir::Attribute StringAttr = mlir::StringAttr::get("foo", &Context);
+mlir::Attribute ArrayAttr = mlir::ArrayAttr::get(&Context, {UnitAttr});
+mlir::Attribute StringAttr = mlir::StringAttr::get(&Context, "foo");
 mlir::Attribute ElementsAttr = mlir::DenseElementsAttr::get(
     VectorType.cast<mlir::ShapedType>(), llvm::ArrayRef<float>{2.0f, 3.0f});
 

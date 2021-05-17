@@ -7,7 +7,7 @@
 
 // RUN: echo /link bar.lib baz.lib > %t.args
 // RUN: touch %t.obj
-// RUN: %clang_cl -### @%t.args -- %t.obj 2>&1 | FileCheck %s -check-prefix=ARGS
+// RUN: %clang_cl -fuse-ld=link -### @%t.args -- %t.obj 2>&1 | FileCheck %s -check-prefix=ARGS
 // If the "/link" option captures all remaining args beyond its response file,
 // it will also capture "--" and our input argument. In this case, Clang will
 // be clueless and will emit "argument unused" warnings. If PR17239 is properly

@@ -37,7 +37,7 @@ asm(\"cas w0, w1, [x2]\");
 ")
 
 set(ARM64 aarch64)
-set(ARM32 arm armhf armv6m armv7m armv7em armv7 armv7s armv7k)
+set(ARM32 arm armhf armv6m armv7m armv7em armv7 armv7s armv7k armv8m.main armv8.1m.main)
 set(HEXAGON hexagon)
 set(X86 i386)
 set(X86_64 x86_64)
@@ -122,7 +122,7 @@ if(APPLE)
     set(DARWIN_watchos_BUILTIN_MIN_VER 2.0)
     set(DARWIN_watchos_BUILTIN_MIN_VER_FLAG
       ${DARWIN_watchos_MIN_VER_FLAG}=${DARWIN_watchos_BUILTIN_MIN_VER})
-    set(DARWIN_watchos_BUILTIN_ALL_POSSIBLE_ARCHS armv7 armv7k)
+    set(DARWIN_watchos_BUILTIN_ALL_POSSIBLE_ARCHS armv7 armv7k arm64_32)
     set(DARWIN_watchossim_BUILTIN_ALL_POSSIBLE_ARCHS ${X86})
   endif()
   if(COMPILER_RT_ENABLE_TVOS)

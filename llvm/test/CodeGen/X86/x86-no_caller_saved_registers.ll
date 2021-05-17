@@ -28,4 +28,13 @@ entry:
   ret void
 }
 
+; Same as foo, but rely on attribute on @bar decl, not callsite
+define x86_intrcc void @baz(i8* byval(i8) nocapture readnone %c) {
+; CHECK-LABEL: baz
+; CHECK-NOT: xmm
+entry:
+  tail call i32 @bar(i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8)
+  ret void
+}
+
 attributes #0 = { "no_caller_saved_registers" }

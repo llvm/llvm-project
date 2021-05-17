@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <features.h> // IWYU pragma: keep (for __BIONIC__ macro)
+
 #ifdef __BIONIC__
+#include "gwp_asan/definitions.h"
 #include <stdlib.h>
 extern "C" GWP_ASAN_WEAK void android_set_abort_message(const char *);
 #else // __BIONIC__

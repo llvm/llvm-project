@@ -13,7 +13,7 @@ long test_InterlockedAdd_constant(long volatile *Addend) {
 }
 
 // CHECK-LABEL: define {{.*}} i32 @test_InterlockedAdd(i32* %Addend, i32 %Value) {{.*}} {
-// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add i32* %1, i32 %2 seq_cst
+// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add i32* %1, i32 %2 seq_cst, align 4
 // CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i32 %[[OLDVAL:[0-9]+]], %2
 // CHECK-MSVC: ret i32 %[[NEWVAL:[0-9]+]]
 // CHECK-LINUX: error: implicit declaration of function '_InterlockedAdd'

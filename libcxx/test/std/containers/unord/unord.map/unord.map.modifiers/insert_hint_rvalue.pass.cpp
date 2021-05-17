@@ -38,7 +38,7 @@ int main(int, char**)
         assert(r->first == 3.5);
         assert(r->second == 3);
 
-        r = c.insert(c.end(), P(3.5, static_cast<short>(4)));
+        r = c.insert(r, P(3.5, static_cast<short>(4)));
         assert(c.size() == 1);
         assert(r->first == 3.5);
         assert(r->second == 3);
@@ -64,7 +64,7 @@ int main(int, char**)
         assert(r->first == 3);
         assert(r->second == 3);
 
-        r = c.insert(c.end(), P(3, 4));
+        r = c.insert(r, P(3, 4));
         assert(c.size() == 1);
         assert(r->first == 3);
         assert(r->second == 3);
@@ -91,7 +91,7 @@ int main(int, char**)
         assert(r->first == 3.5);
         assert(r->second == 3);
 
-        r = c.insert(c.end(), P(3.5, static_cast<short>(4)));
+        r = c.insert(r, P(3.5, static_cast<short>(4)));
         assert(c.size() == 1);
         assert(r->first == 3.5);
         assert(r->second == 3);
@@ -118,7 +118,7 @@ int main(int, char**)
         assert(r->first == 3);
         assert(r->second == 3);
 
-        r = c.insert(c.end(), P(3, 4));
+        r = c.insert(r, P(3, 4));
         assert(c.size() == 1);
         assert(r->first == 3);
         assert(r->second == 3);
@@ -143,7 +143,7 @@ int main(int, char**)
         assert(r->first == 3.5);
         assert(r->second == 3);
 
-        r = c.insert(c.end(), {3.5, 4});
+        r = c.insert(r, {3.5, 4});
         assert(c.size() == 1);
         assert(r->first == 3.5);
         assert(r->second == 3);

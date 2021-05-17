@@ -278,7 +278,7 @@ SymbolFileBreakpad::ResolveSymbolContext(const Address &so_addr,
 }
 
 uint32_t SymbolFileBreakpad::ResolveSymbolContext(
-    const FileSpec &file_spec, uint32_t line, bool check_inlines,
+    const SourceLocationSpec &src_location_spec,
     lldb::SymbolContextItem resolve_scope, SymbolContextList &sc_list) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (!(resolve_scope & eSymbolContextCompUnit))
@@ -287,8 +287,7 @@ uint32_t SymbolFileBreakpad::ResolveSymbolContext(
   uint32_t old_size = sc_list.GetSize();
   for (size_t i = 0, size = GetNumCompileUnits(); i < size; ++i) {
     CompileUnit &cu = *GetCompileUnitAtIndex(i);
-    cu.ResolveSymbolContext(file_spec, line, check_inlines,
-                            /*exact*/ false, resolve_scope, sc_list);
+    cu.ResolveSymbolContext(src_location_spec, resolve_scope, sc_list);
   }
   return sc_list.GetSize() - old_size;
 }
@@ -716,10 +715,10 @@ void SymbolFileBreakpad::ParseLineTableAndSupportFiles(CompileUnit &cu,
   llvm::Optional<addr_t> next_addr;
   auto finish_sequence = [&]() {
     LineTable::AppendLineEntryToSequence(
-        line_seq_up.get(), *next_addr, /*line*/ 0, /*column*/ 0,
-        /*file_idx*/ 0, /*is_start_of_statement*/ false,
-        /*is_start_of_basic_block*/ false, /*is_prologue_end*/ false,
-        /*is_epilogue_begin*/ false, /*is_terminal_entry*/ true);
+        line_seq_up.get(), *next_addr, /*line=*/0, /*column=*/0,
+        /*file_idx=*/0, /*is_start_of_statement=*/false,
+        /*is_start_of_basic_block=*/false, /*is_prologue_end=*/false,
+        /*is_epilogue_begin=*/false, /*is_terminal_entry=*/true);
     sequences.push_back(std::move(line_seq_up));
     line_seq_up = LineTable::CreateLineSequenceContainer();
   };
@@ -739,10 +738,10 @@ void SymbolFileBreakpad::ParseLineTableAndSupportFiles(CompileUnit &cu,
       finish_sequence();
     }
     LineTable::AppendLineEntryToSequence(
-        line_seq_up.get(), record->Address, record->LineNum, /*column*/ 0,
-        map[record->FileNum], /*is_start_of_statement*/ true,
-        /*is_start_of_basic_block*/ false, /*is_prologue_end*/ false,
-        /*is_epilogue_begin*/ false, /*is_terminal_entry*/ false);
+        line_seq_up.get(), record->Address, record->LineNum, /*column=*/0,
+        map[record->FileNum], /*is_start_of_statement=*/true,
+        /*is_start_of_basic_block=*/false, /*is_prologue_end=*/false,
+        /*is_epilogue_begin=*/false, /*is_terminal_entry=*/false);
     next_addr = record->Address + record->Size;
   }
   if (next_addr)

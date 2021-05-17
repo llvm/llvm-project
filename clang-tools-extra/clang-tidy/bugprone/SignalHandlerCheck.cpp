@@ -21,6 +21,25 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
+
+template <>
+struct OptionEnumMapping<
+    bugprone::SignalHandlerCheck::AsyncSafeFunctionSetType> {
+  static llvm::ArrayRef<std::pair<
+      bugprone::SignalHandlerCheck::AsyncSafeFunctionSetType, StringRef>>
+  getEnumMapping() {
+    static constexpr std::pair<
+        bugprone::SignalHandlerCheck::AsyncSafeFunctionSetType, StringRef>
+        Mapping[] = {
+            {bugprone::SignalHandlerCheck::AsyncSafeFunctionSetType::Minimal,
+             "minimal"},
+            {bugprone::SignalHandlerCheck::AsyncSafeFunctionSetType::POSIX,
+             "POSIX"},
+        };
+    return makeArrayRef(Mapping);
+  }
+};
+
 namespace bugprone {
 
 static bool isSystemCall(const FunctionDecl *FD) {
@@ -56,14 +75,19 @@ static bool isSystemCall(const FunctionDecl *FD) {
 
 AST_MATCHER(FunctionDecl, isSystemCall) { return isSystemCall(&Node); }
 
-// This is the  minimal set of safe functions.
-// FIXME: Add checker option to allow a POSIX compliant extended set.
-llvm::StringSet<> SignalHandlerCheck::StrictConformingFunctions{
-    "signal", "abort", "_Exit", "quick_exit"};
-
 SignalHandlerCheck::SignalHandlerCheck(StringRef Name,
                                        ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context) {}
+    : ClangTidyCheck(Name, Context),
+      AsyncSafeFunctionSet(
+          Options.get("AsyncSafeFunctionSet", AsyncSafeFunctionSetType::POSIX)),
+      ConformingFunctions(AsyncSafeFunctionSet ==
+                                  AsyncSafeFunctionSetType::Minimal
+                              ? MinimalConformingFunctions
+                              : POSIXConformingFunctions) {}
+
+void SignalHandlerCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "AsyncSafeFunctionSet", AsyncSafeFunctionSet);
+}
 
 bool SignalHandlerCheck::isLanguageVersionSupported(
     const LangOptions &LangOpts) const {
@@ -161,7 +185,7 @@ bool SignalHandlerCheck::isSystemCallAllowed(const FunctionDecl *FD) const {
     return false;
 
   // FIXME: Improve for C++ (check for namespace).
-  if (StrictConformingFunctions.count(II->getName()))
+  if (ConformingFunctions.count(II->getName()))
     return true;
 
   return false;
@@ -180,6 +204,211 @@ void SignalHandlerCheck::reportBug(const FunctionDecl *CalledFunction,
   diag(HandlerDecl->getBeginLoc(), "handler function declared here",
        DiagnosticIDs::Note);
 }
+
+// This is the minimal set of safe functions.
+// https://wiki.sei.cmu.edu/confluence/display/c/SIG30-C.+Call+only+asynchronous-safe+functions+within+signal+handlers
+llvm::StringSet<> SignalHandlerCheck::MinimalConformingFunctions{
+    "signal", "abort", "_Exit", "quick_exit"};
+
+// The POSIX-defined set of safe functions.
+// https://pubs.opengroup.org/onlinepubs/9699919799/functions/V2_chap02.html#tag_15_04_03
+// 'quick_exit' is added to the set additionally because it looks like the
+// mentioned POSIX specification was not updated after 'quick_exit' appeared
+// in the C11 standard.
+// Also, we want to keep the "minimal set" a subset of the "POSIX set".
+llvm::StringSet<> SignalHandlerCheck::POSIXConformingFunctions{
+    "_Exit",
+    "_exit",
+    "abort",
+    "accept",
+    "access",
+    "aio_error",
+    "aio_return",
+    "aio_suspend",
+    "alarm",
+    "bind",
+    "cfgetispeed",
+    "cfgetospeed",
+    "cfsetispeed",
+    "cfsetospeed",
+    "chdir",
+    "chmod",
+    "chown",
+    "clock_gettime",
+    "close",
+    "connect",
+    "creat",
+    "dup",
+    "dup2",
+    "execl",
+    "execle",
+    "execv",
+    "execve",
+    "faccessat",
+    "fchdir",
+    "fchmod",
+    "fchmodat",
+    "fchown",
+    "fchownat",
+    "fcntl",
+    "fdatasync",
+    "fexecve",
+    "ffs",
+    "fork",
+    "fstat",
+    "fstatat",
+    "fsync",
+    "ftruncate",
+    "futimens",
+    "getegid",
+    "geteuid",
+    "getgid",
+    "getgroups",
+    "getpeername",
+    "getpgrp",
+    "getpid",
+    "getppid",
+    "getsockname",
+    "getsockopt",
+    "getuid",
+    "htonl",
+    "htons",
+    "kill",
+    "link",
+    "linkat",
+    "listen",
+    "longjmp",
+    "lseek",
+    "lstat",
+    "memccpy",
+    "memchr",
+    "memcmp",
+    "memcpy",
+    "memmove",
+    "memset",
+    "mkdir",
+    "mkdirat",
+    "mkfifo",
+    "mkfifoat",
+    "mknod",
+    "mknodat",
+    "ntohl",
+    "ntohs",
+    "open",
+    "openat",
+    "pause",
+    "pipe",
+    "poll",
+    "posix_trace_event",
+    "pselect",
+    "pthread_kill",
+    "pthread_self",
+    "pthread_sigmask",
+    "quick_exit",
+    "raise",
+    "read",
+    "readlink",
+    "readlinkat",
+    "recv",
+    "recvfrom",
+    "recvmsg",
+    "rename",
+    "renameat",
+    "rmdir",
+    "select",
+    "sem_post",
+    "send",
+    "sendmsg",
+    "sendto",
+    "setgid",
+    "setpgid",
+    "setsid",
+    "setsockopt",
+    "setuid",
+    "shutdown",
+    "sigaction",
+    "sigaddset",
+    "sigdelset",
+    "sigemptyset",
+    "sigfillset",
+    "sigismember",
+    "siglongjmp",
+    "signal",
+    "sigpause",
+    "sigpending",
+    "sigprocmask",
+    "sigqueue",
+    "sigset",
+    "sigsuspend",
+    "sleep",
+    "sockatmark",
+    "socket",
+    "socketpair",
+    "stat",
+    "stpcpy",
+    "stpncpy",
+    "strcat",
+    "strchr",
+    "strcmp",
+    "strcpy",
+    "strcspn",
+    "strlen",
+    "strncat",
+    "strncmp",
+    "strncpy",
+    "strnlen",
+    "strpbrk",
+    "strrchr",
+    "strspn",
+    "strstr",
+    "strtok_r",
+    "symlink",
+    "symlinkat",
+    "tcdrain",
+    "tcflow",
+    "tcflush",
+    "tcgetattr",
+    "tcgetpgrp",
+    "tcsendbreak",
+    "tcsetattr",
+    "tcsetpgrp",
+    "time",
+    "timer_getoverrun",
+    "timer_gettime",
+    "timer_settime",
+    "times",
+    "umask",
+    "uname",
+    "unlink",
+    "unlinkat",
+    "utime",
+    "utimensat",
+    "utimes",
+    "wait",
+    "waitpid",
+    "wcpcpy",
+    "wcpncpy",
+    "wcscat",
+    "wcschr",
+    "wcscmp",
+    "wcscpy",
+    "wcscspn",
+    "wcslen",
+    "wcsncat",
+    "wcsncmp",
+    "wcsncpy",
+    "wcsnlen",
+    "wcspbrk",
+    "wcsrchr",
+    "wcsspn",
+    "wcsstr",
+    "wcstok",
+    "wmemchr",
+    "wmemcmp",
+    "wmemcpy",
+    "wmemmove",
+    "wmemset",
+    "write"};
 
 } // namespace bugprone
 } // namespace tidy

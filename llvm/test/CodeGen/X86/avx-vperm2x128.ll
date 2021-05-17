@@ -130,7 +130,6 @@ define <32 x i8> @shuffle_v32i8_2323_domain(<32 x i8> %a, <32 x i8> %b) nounwind
 ; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,2,3]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: shuffle_v32i8_2323_domain:

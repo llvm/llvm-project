@@ -37,8 +37,8 @@ class DebugBreakTestCase(TestBase):
         # We should be in funciton 'bar'.
         self.assertTrue(frame.IsValid())
         function_name = frame.GetFunctionName()
-        self.assertTrue('bar' in function_name,
-                        "Unexpected function name {}".format(function_name))
+        self.assertIn('bar', function_name,
+                      "Unexpected function name {}".format(function_name))
 
         # We should be able to evaluate the parameter foo.
         value = frame.EvaluateExpression('*foo')

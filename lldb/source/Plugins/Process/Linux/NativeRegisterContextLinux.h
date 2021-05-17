@@ -15,6 +15,8 @@
 namespace lldb_private {
 namespace process_linux {
 
+class NativeThreadLinux;
+
 class NativeRegisterContextLinux
     : public virtual NativeRegisterContextRegisterInfo {
 public:
@@ -24,7 +26,7 @@ public:
   // variant should be compiled into the final executable.
   static std::unique_ptr<NativeRegisterContextLinux>
   CreateHostNativeRegisterContextLinux(const ArchSpec &target_arch,
-                                       NativeThreadProtocol &native_thread);
+                                       NativeThreadLinux &native_thread);
 
   // Invalidates cached values in register context data structures
   virtual void InvalidateAllRegisters(){}
@@ -56,6 +58,12 @@ public:
   virtual llvm::Optional<MmapData> GetMmapData() { return llvm::None; }
 
 protected:
+  // NB: This constructor is here only because gcc<=6.5 requires a virtual base
+  // class initializer on abstract class (even though it is never used). It can
+  // be deleted once we move to gcc>=7.0.
+  NativeRegisterContextLinux(NativeThreadProtocol &thread)
+      : NativeRegisterContextRegisterInfo(thread, nullptr) {}
+
   lldb::ByteOrder GetByteOrder() const;
 
   virtual Status ReadRegisterRaw(uint32_t reg_index, RegisterValue &reg_value);

@@ -76,7 +76,7 @@ will need to run ``clang-format`` over the processed file, as the tool
 (intentionally) makes no attempt to get that right.
 
 The ``LLDB_REGISTER`` macros are printed to standard out between curly braces.
-You'll have to copy-paste those into the corresponding `RegsiterMethods`
+You'll have to copy-paste those into the corresponding ``RegisterMethods``
 function in the implementation file. This function is fully specialized in the
 corresponding type.
 

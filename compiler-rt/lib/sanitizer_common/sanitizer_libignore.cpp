@@ -38,7 +38,7 @@ void LibIgnore::AddIgnoredLibrary(const char *name_templ) {
 void LibIgnore::OnLibraryLoaded(const char *name) {
   BlockingMutexLock lock(&mutex_);
   // Try to match suppressions with symlink target.
-  InternalScopedString buf(kMaxPathLength);
+  InternalMmapVector<char> buf(kMaxPathLength);
   if (name && internal_readlink(name, buf.data(), buf.size() - 1) > 0 &&
       buf[0]) {
     for (uptr i = 0; i < count_; i++) {

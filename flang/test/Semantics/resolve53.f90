@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %S/test_errors.sh %s %t %flang_fc1
 ! 15.4.3.4.5 Restrictions on generic declarations
 ! Specific procedures of generic interfaces must be distinguishable.
 
@@ -304,7 +304,7 @@ module m15
 
 contains
   subroutine s1(x)
-    type(t1(1, 4)) :: x
+    type(t1(1, 5)) :: x
   end
   subroutine s2(x)
     type(t1(2, 4)) :: x
@@ -319,7 +319,7 @@ contains
     type(t3) :: x
   end subroutine
   subroutine s6(x)
-    type(t3(1, 99, k2b=2, k2a=3, l2=*, l3=97, k3=4)) :: x
+    type(t3(1, 99, k2b=2, k2a=3, l2=*, l3=103, k3=4)) :: x
   end subroutine
   subroutine s7(x)
     type(t3(k1=1, l1=99, k2a=3, k2b=2, k3=4)) :: x

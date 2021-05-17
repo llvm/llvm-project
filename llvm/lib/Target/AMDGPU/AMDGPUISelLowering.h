@@ -66,8 +66,7 @@ protected:
 
   SDValue LowerFP64_TO_INT(SDValue Op, SelectionDAG &DAG, bool Signed) const;
   SDValue LowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerFP_TO_UINT(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerFP_TO_SINT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerSIGN_EXTEND_INREG(SDValue Op, SelectionDAG &DAG) const;
 
@@ -523,6 +522,8 @@ enum NodeType : unsigned {
   BUFFER_ATOMIC_CMPSWAP,
   BUFFER_ATOMIC_CSUB,
   BUFFER_ATOMIC_FADD,
+  BUFFER_ATOMIC_FMIN,
+  BUFFER_ATOMIC_FMAX,
 
   LAST_AMDGPU_ISD_NUMBER
 };

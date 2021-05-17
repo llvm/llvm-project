@@ -20,7 +20,7 @@ target triple = "x86_64-apple-macosx10.10.0"
 ; GCDA-SAME: { i32 0,
 ; GCDA-SAME: { i32 1,
 ;
-; GCDA-LABEL: define internal void @__llvm_gcov_writeout() {{.*}} {
+; GCDA-LABEL: define internal void @__llvm_gcov_writeout() unnamed_addr #[[#ATTR:]] {
 ; GCDA-NEXT:  entry:
 ; GCDA-NEXT:    br label %[[FILE_LOOP_HEADER:.*]]
 ;
@@ -93,6 +93,8 @@ define void @bar() !dbg !7 {
 define void @baz() !dbg !8 {
   ret void, !dbg !13
 }
+
+; GCDA: attributes #[[#ATTR]] = { noinline nounwind }
 
 !llvm.gcov = !{!14}
 !llvm.dbg.cu = !{!0}

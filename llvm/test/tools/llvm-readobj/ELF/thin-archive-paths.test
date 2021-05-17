@@ -14,9 +14,9 @@
 # Show that relative paths in an error message for both archive and member look
 # sensible.
 # RUN: rm a/b/1.o
-# RUN: not llvm-readobj --file-headers a/relative.a 2>&1 | FileCheck %s --check-prefix=ERR1
-# RUN: not llvm-readelf --file-headers a/relative.a 2>&1 | FileCheck %s --check-prefix=ERR1
-# ERR1: error: 'a/relative.a': 'b/1.o': {{[Nn]}}o such file or directory
+# RUN: not llvm-readobj --file-headers a/relative.a 2>&1 | FileCheck %s --check-prefix=ERR1 -DMSG=%errc_ENOENT
+# RUN: not llvm-readelf --file-headers a/relative.a 2>&1 | FileCheck %s --check-prefix=ERR1 -DMSG=%errc_ENOENT
+# ERR1: error: 'a/relative.a': 'b/1.o': [[MSG]]
 
 # RUN: mkdir -p %t/c
 # RUN: yaml2obj %s -o a/b/1.o
@@ -28,9 +28,9 @@
 
 # Show that absolute paths in an error message for both archive and member are correct.
 # RUN: rm a/b/1.o
-# RUN: not llvm-readobj --file-headers %/t/c/absolute.a 2>&1 | FileCheck %s --check-prefix=ERR2 -DDIR=%/t
-# RUN: not llvm-readelf --file-headers %/t/c/absolute.a 2>&1 | FileCheck %s --check-prefix=ERR2 -DDIR=%/t
-# ERR2: error: '[[DIR]]/c/absolute.a': '[[DIR]]/a/b/1.o': {{[Nn]}}o such file or directory
+# RUN: not llvm-readobj --file-headers %/t/c/absolute.a 2>&1 | FileCheck %s --check-prefix=ERR2 -DDIR=%/t -DMSG=%errc_ENOENT
+# RUN: not llvm-readelf --file-headers %/t/c/absolute.a 2>&1 | FileCheck %s --check-prefix=ERR2 -DDIR=%/t -DMSG=%errc_ENOENT
+# ERR2: error: '[[DIR]]/c/absolute.a': '[[DIR]]/a/b/1.o': [[MSG]]
 
 --- !ELF
 FileHeader:

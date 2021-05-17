@@ -5,8 +5,8 @@
 ; they're carrying unknown operand bundles since the presence of
 ; unknown operand bundles implies arbitrary memory effects.
 
-declare void @readonly_function() readonly nounwind
-declare void @readnone_function() readnone nounwind
+declare void @readonly_function() readonly nounwind willreturn
+declare void @readnone_function() readnone nounwind willreturn
 
 define i32 @test0(i32* %x) {
 ; CHECK-LABEL: @test0(

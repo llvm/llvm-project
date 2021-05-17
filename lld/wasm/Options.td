@@ -151,6 +151,9 @@ def allow_undefined_file_s: Separate<["-"], "allow-undefined-file">,
 
 defm export: Eq<"export", "Force a symbol to be exported">;
 
+defm export_if_defined: Eq<"export-if-defined",
+     "Force a symbol to be exported, if it is defined in the input">;
+
 def export_all: F<"export-all">,
   HelpText<"Export all symbols (normally combined with --no-gc-sections)">;
 
@@ -214,13 +217,13 @@ def lto_O: J<"lto-O">, MetaVarName<"<opt-level>">,
 def lto_partitions: J<"lto-partitions=">,
   HelpText<"Number of LTO codegen partitions">;
 def disable_verify: F<"disable-verify">;
-def save_temps: F<"save-temps">;
+def save_temps: F<"save-temps">, HelpText<"Save intermediate LTO compilation results">;
 def thinlto_cache_dir: J<"thinlto-cache-dir=">,
   HelpText<"Path to ThinLTO cached object file directory">;
 defm thinlto_cache_policy: Eq<"thinlto-cache-policy", "Pruning policy for the ThinLTO cache">;
 def thinlto_jobs: J<"thinlto-jobs=">,
   HelpText<"Number of ThinLTO jobs. Default to --threads=">;
-defm lto_new_pass_manager: BB<"lto-new-pass-manager", "Use new pass manager", "Use legacy pass manager">;
+defm lto_legacy_pass_manager: BB<"lto-legacy-pass-manager", "Use legacy pass manager", "Use new pass manager">;
 def lto_debug_pass_manager: F<"lto-debug-pass-manager">,
   HelpText<"Debug new pass manager">;
 

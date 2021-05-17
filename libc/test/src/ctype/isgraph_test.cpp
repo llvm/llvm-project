@@ -9,7 +9,7 @@
 #include "src/ctype/isgraph.h"
 #include "utils/UnitTest/Test.h"
 
-TEST(IsGraph, DefaultLocale) {
+TEST(LlvmLibcIsGraph, DefaultLocale) {
   // Loops through all characters, verifying that graphical characters
   // return a non-zero integer, everything else returns zero.
   for (int ch = 0; ch < 255; ++ch) {

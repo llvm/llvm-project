@@ -104,22 +104,17 @@ class XunitReport(object):
         failures = sum(1 for t in tests if t.isFailure())
 
         name = suite.config.name.replace('.', '-')
-        # file.write(f'<testsuite name={quo(name)} tests="{len(tests)}" failures="{failures}" skipped="{skipped}">\n')
-        file.write('<testsuite name={name} tests="{tests}" failures="{failures}" skipped="{skipped}">\n'.format(
-            name=quo(name), tests=len(tests), failures=failures, skipped=skipped))
+        file.write(f'<testsuite name={quo(name)} tests="{len(tests)}" failures="{failures}" skipped="{skipped}">\n')
         for test in tests:
             self._write_test(file, test, name)
         file.write('</testsuite>\n')
 
     def _write_test(self, file, test, suite_name):
         path = '/'.join(test.path_in_suite[:-1]).replace('.', '_')
-        # class_name = f'{suite_name}.{path or suite_name}'
-        class_name = suite_name + '.' + (path or suite_name)
+        class_name = f'{suite_name}.{path or suite_name}'
         name = test.path_in_suite[-1]
         time = test.result.elapsed or 0.0
-        # file.write(f'<testcase classname={quo(class_name)} name={quo(name)} time="{time:.2f}"')
-        file.write('<testcase classname={class_name} name={name} time="{time:.2f}"'.format(
-            class_name=quo(class_name), name=quo(name), time=time))
+        file.write(f'<testcase classname={quo(class_name)} name={quo(name)} time="{time:.2f}"')
 
         if test.isFailure():
             file.write('>\n  <failure><![CDATA[')
@@ -140,9 +135,7 @@ class XunitReport(object):
             file.write(']]></failure>\n</testcase>\n')
         elif test.result.code in self.skipped_codes:
             reason = self._get_skip_reason(test)
-            # file.write(f'>\n  <skipped message={quo(reason)}/>\n</testcase>\n')
-            file.write('>\n  <skipped message={reason}/>\n</testcase>\n'.format(
-                reason=quo(reason)))
+            file.write(f'>\n  <skipped message={quo(reason)}/>\n</testcase>\n')
         else:
             file.write('/>\n')
 

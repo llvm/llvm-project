@@ -10,7 +10,6 @@
 #define LLVM_ADT_ITERATOR_H
 
 #include "llvm/ADT/iterator_range.h"
-#include <algorithm>
 #include <cstddef>
 #include <iterator>
 #include <type_traits>
@@ -64,9 +63,14 @@ namespace llvm {
 template <typename DerivedT, typename IteratorCategoryT, typename T,
           typename DifferenceTypeT = std::ptrdiff_t, typename PointerT = T *,
           typename ReferenceT = T &>
-class iterator_facade_base
-    : public std::iterator<IteratorCategoryT, T, DifferenceTypeT, PointerT,
-                           ReferenceT> {
+class iterator_facade_base {
+public:
+  using iterator_category = IteratorCategoryT;
+  using value_type = T;
+  using difference_type = DifferenceTypeT;
+  using pointer = PointerT;
+  using reference = ReferenceT;
+
 protected:
   enum {
     IsRandomAccess = std::is_base_of<std::random_access_iterator_tag,

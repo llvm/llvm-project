@@ -41,6 +41,8 @@
 #define CAN_SANITIZE_LEAKS 1
 #elif defined(__arm__) && SANITIZER_LINUX
 #define CAN_SANITIZE_LEAKS 1
+#elif SANITIZER_RISCV64 && SANITIZER_LINUX
+#define CAN_SANITIZE_LEAKS 1
 #elif SANITIZER_NETBSD || SANITIZER_FUCHSIA
 #define CAN_SANITIZE_LEAKS 1
 #else
@@ -50,6 +52,7 @@
 namespace __sanitizer {
 class FlagParser;
 class ThreadRegistry;
+class ThreadContextBase;
 struct DTLS;
 }
 
@@ -62,8 +65,6 @@ enum ChunkTag {
   kReachable = 2,
   kIgnored = 3
 };
-
-const u32 kInvalidTid = (u32) -1;
 
 struct Flags {
 #define LSAN_FLAG(Type, Name, DefaultValue, Description) Type Name;
@@ -142,6 +143,7 @@ InternalMmapVector<RootRegion> const *GetRootRegions();
 void ScanRootRegion(Frontier *frontier, RootRegion const &region,
                     uptr region_begin, uptr region_end, bool is_readable);
 void ForEachExtraStackRangeCb(uptr begin, uptr end, void* arg);
+void GetAdditionalThreadContextPtrs(ThreadContextBase *tctx, void *ptrs);
 // Run stoptheworld while holding any platform-specific locks, as well as the
 // allocator and thread registry locks.
 void LockStuffAndStopTheWorld(StopTheWorldCallback callback,

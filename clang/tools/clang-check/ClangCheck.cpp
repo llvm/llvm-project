@@ -24,6 +24,9 @@
 #include "clang/Rewrite/Frontend/FrontendActions.h"
 #include "clang/StaticAnalyzer/Frontend/FrontendActions.h"
 #include "clang/Tooling/CommonOptionsParser.h"
+#include "clang/Tooling/Syntax/BuildTree.h"
+#include "clang/Tooling/Syntax/Tokens.h"
+#include "clang/Tooling/Syntax/Tree.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Option/OptTable.h"
@@ -82,6 +85,13 @@ static cl::opt<bool> FixWhatYouCan(
     cl::desc(Options.getOptionHelpText(options::OPT_fix_what_you_can)),
     cl::cat(ClangCheckCategory));
 
+static cl::opt<bool> SyntaxTreeDump("syntax-tree-dump",
+                                    cl::desc("dump the syntax tree"),
+                                    cl::cat(ClangCheckCategory));
+static cl::opt<bool> TokensDump("tokens-dump",
+                                cl::desc("dump the preprocessed tokens"),
+                                cl::cat(ClangCheckCategory));
+
 namespace {
 
 // FIXME: Move FixItRewriteInPlace from lib/Rewrite/Frontend/FrontendActions.cpp
@@ -131,6 +141,30 @@ public:
   }
 };
 
+class DumpSyntaxTree : public clang::ASTFrontendAction {
+public:
+  std::unique_ptr<clang::ASTConsumer>
+  CreateASTConsumer(clang::CompilerInstance &CI, StringRef InFile) override {
+    class Consumer : public clang::ASTConsumer {
+    public:
+      Consumer(clang::CompilerInstance &CI) : Collector(CI.getPreprocessor()) {}
+
+      void HandleTranslationUnit(clang::ASTContext &AST) override {
+        clang::syntax::TokenBuffer TB = std::move(Collector).consume();
+        if (TokensDump)
+          llvm::outs() << TB.dumpForTests();
+        clang::syntax::Arena A(AST.getSourceManager(), AST.getLangOpts(), TB);
+        llvm::outs() << clang::syntax::buildSyntaxTree(A, AST)->dump(
+            AST.getSourceManager());
+      }
+
+    private:
+      clang::syntax::TokenCollector Collector;
+    };
+    return std::make_unique<Consumer>(CI);
+  }
+};
+
 class ClangCheckActionFactory {
 public:
   std::unique_ptr<clang::ASTConsumer> newASTConsumer() {
@@ -160,7 +194,13 @@ int main(int argc, const char **argv) {
   llvm::InitializeAllAsmPrinters();
   llvm::InitializeAllAsmParsers();
 
-  CommonOptionsParser OptionsParser(argc, argv, ClangCheckCategory);
+  auto ExpectedParser =
+      CommonOptionsParser::create(argc, argv, ClangCheckCategory);
+  if (!ExpectedParser) {
+    llvm::errs() << ExpectedParser.takeError();
+    return 1;
+  }
+  CommonOptionsParser &OptionsParser = ExpectedParser.get();
   ClangTool Tool(OptionsParser.getCompilations(),
                  OptionsParser.getSourcePathList());
 
@@ -182,6 +222,8 @@ int main(int argc, const char **argv) {
     FrontendFactory = newFrontendActionFactory<clang::ento::AnalysisAction>();
   else if (Fixit)
     FrontendFactory = newFrontendActionFactory<ClangCheckFixItAction>();
+  else if (SyntaxTreeDump || TokensDump)
+    FrontendFactory = newFrontendActionFactory<DumpSyntaxTree>();
   else
     FrontendFactory = newFrontendActionFactory(&CheckFactory);
 

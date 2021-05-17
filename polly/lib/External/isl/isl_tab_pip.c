@@ -4379,6 +4379,7 @@ static __isl_give isl_basic_map *align_context_divs(
 	}
 	other = bmap_n_div - common;
 	if (dom->n_div - common > 0) {
+		bmap = isl_basic_map_cow(bmap);
 		bmap = isl_basic_map_extend(bmap, dom->n_div - common, 0, 0);
 		if (!bmap)
 			return NULL;

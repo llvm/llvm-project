@@ -125,7 +125,7 @@ let Command = "breakpoint set" in {
   def breakpoint_set_address : Option<"address", "a">, Group<2>,
     Arg<"AddressOrExpression">, Required,
     Desc<"Set the breakpoint at the specified address.  If the address maps "
-    "uniquely toa particular binary, then the address will be converted to "
+    "uniquely to a particular binary, then the address will be converted to "
     "a \"file\"address, so that the breakpoint will track that binary+offset "
     "no matter where the binary eventually loads.  Alternately, if you also "
     "specify the module - with the -s option - then the address will be "
@@ -200,7 +200,7 @@ let Command = "breakpoint set" in {
   def breakpoint_set_move_to_nearest_code : Option<"move-to-nearest-code", "m">,
     Groups<[1,9,12]>, Arg<"Boolean">,
     Desc<"Move breakpoints to nearest code. If not set the "
-    "target.move-to-nearest-codesetting is used.">;
+    "target.move-to-nearest-code setting is used.">;
   def breakpoint_set_file_colon_line : Option<"joint-specifier", "y">, Group<12>, Arg<"FileLineColumn">,
     Required, Completion<"SourceFile">,
     Desc<"A specifier in the form filename:line[:column] for setting file & line breakpoints.">;
@@ -642,6 +642,37 @@ let Command = "platform shell" in {
     Desc<"Seconds to wait for the remote host to finish running the command.">;
   def platform_shell_interpreter : Option<"shell", "s">, Arg<"Path">,
     Desc<"Shell interpreter path. This is the binary used to run the command.">;
+}
+
+let Command = "process launch" in {
+  def process_launch_stop_at_entry : Option<"stop-at-entry", "s">,
+    Desc<"Stop at the entry point of the program when launching a process.">;
+  def process_launch_disable_aslr : Option<"disable-aslr", "A">, Arg<"Boolean">,
+    Desc<"Set whether to disable address space layout randomization when launching a process.">;
+  def process_launch_plugin : Option<"plugin", "P">, Arg<"Plugin">,
+    Desc<"Name of the process plugin you want to use.">;
+  def process_launch_working_dir : Option<"working-dir", "w">, Arg<"DirectoryName">,
+    Desc<"Set the current working directory to <path> when running the inferior.">;
+  def process_launch_arch : Option<"arch", "a">, Arg<"Architecture">,
+    Desc<"Set the architecture for the process to launch when ambiguous.">;
+  def process_launch_environment : Option<"environment", "E">,
+    Arg<"None">, Desc<"Specify an environment variable name/value string "
+    "(--environment NAME=VALUE). Can be specified multiple times for subsequent "
+    "environment entries.">;
+  def process_launch_shell : Option<"shell", "c">, GroupRange<1,3>,
+    OptionalArg<"Filename">, Desc<"Run the process in a shell (not supported on all platforms).">;
+  def process_launch_stdin : Option<"stdin", "i">, Group<1>,
+    Arg<"Filename">, Desc<"Redirect stdin for the process to <filename>.">;
+  def process_launch_stdout : Option<"stdout", "o">, Group<1>,
+    Arg<"Filename">, Desc<"Redirect stdout for the process to <filename>.">;
+  def process_launch_stderr : Option<"stderr", "e">, Group<1>,
+    Arg<"Filename">, Desc<"Redirect stderr for the process to <filename>.">;
+  def process_launch_tty : Option<"tty", "t">, Group<2>,
+    Desc<"Start the process in a terminal (not supported on all platforms).">;
+  def process_launch_no_stdio : Option<"no-stdio", "n">, Group<3>,
+    Desc<"Do not set up for terminal I/O to go to running process.">;
+  def process_launch_shell_expand_args : Option<"shell-expand-args", "X">, Group<4>,
+    Arg<"Boolean">, Desc<"Set whether to shell expand arguments to the process when launching.">;
 }
 
 let Command = "process attach" in {

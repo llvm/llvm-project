@@ -26,18 +26,18 @@
 int
 main (int argc, char** argv)
 {
-    int master;
-    int pid = forkpty(&master, NULL, NULL, NULL);
+    int m;
+    int pid = forkpty(&m, NULL, NULL, NULL);
 
     if(pid == -1) {
       fprintf(stderr, "forkpty failed\n");
       return 1;
     } else if (pid > 0) {
       char buf[1024];
-      int res = read(master, buf, sizeof(buf));
+      int res = read(m, buf, sizeof(buf));
       write(1, buf, res);
-      write(master, "password\n", 9);
-      while ((res = read(master, buf, sizeof(buf))) > 0) write(1, buf, res);
+      write(m, "password\n", 9);
+      while ((res = read(m, buf, sizeof(buf))) > 0) write(1, buf, res);
     } else {
       char *s = getpass("prompt");
       assert(strcmp(s, "password") == 0);

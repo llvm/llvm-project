@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ExecutionEngine/Orc/OrcError.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
 

@@ -658,7 +658,7 @@ bool LazyValueInfoImpl::isNonNullAtEndOfBlock(Value *Val, BasicBlock *BB) {
                            Val->getType()->getPointerAddressSpace()))
     return false;
 
-  Val = getUnderlyingObject(Val);
+  Val = Val->stripInBoundsOffsets();
   return TheCache.isNonNullAtEndOfBlock(Val, BB, [](BasicBlock *BB) {
     NonNullPointerSet NonNullPointers;
     for (Instruction &I : *BB)
@@ -673,7 +673,7 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueNonLocal(
 
   // If this is the entry block, we must be asking about an argument.  The
   // value is overdefined.
-  if (BB == &BB->getParent()->getEntryBlock()) {
+  if (BB->isEntryBlock()) {
     assert(isa<Argument>(Val) && "Unknown live-in to the entry block");
     return ValueLatticeElement::getOverdefined();
   }
@@ -687,8 +687,8 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueNonLocal(
   // find a path to function entry.  TODO: We should consider explicitly
   // canonicalizing to make this true rather than relying on this happy
   // accident.
-  for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI) {
-    Optional<ValueLatticeElement> EdgeResult = getEdgeValue(Val, *PI, BB);
+  for (BasicBlock *Pred : predecessors(BB)) {
+    Optional<ValueLatticeElement> EdgeResult = getEdgeValue(Val, Pred, BB);
     if (!EdgeResult)
       // Explore that input, then return here
       return None;
@@ -801,21 +801,11 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueSelect(
     return None;
   ValueLatticeElement &TrueVal = *OptTrueVal;
 
-  // If we hit overdefined, don't ask more queries.  We want to avoid poisoning
-  // extra slots in the table if we can.
-  if (TrueVal.isOverdefined())
-    return ValueLatticeElement::getOverdefined();
-
   Optional<ValueLatticeElement> OptFalseVal =
       getBlockValue(SI->getFalseValue(), BB);
   if (!OptFalseVal)
     return None;
   ValueLatticeElement &FalseVal = *OptFalseVal;
-
-  // If we hit overdefined, don't ask more queries.  We want to avoid poisoning
-  // extra slots in the table if we can.
-  if (FalseVal.isOverdefined())
-    return ValueLatticeElement::getOverdefined();
 
   if (TrueVal.isConstantRange() && FalseVal.isConstantRange()) {
     const ConstantRange &TrueCR = TrueVal.getConstantRange();
@@ -874,48 +864,6 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueSelect(
                       getValueFromCondition(SI->getTrueValue(), Cond, true));
   FalseVal = intersect(FalseVal,
                        getValueFromCondition(SI->getFalseValue(), Cond, false));
-
-  // Handle clamp idioms such as:
-  //   %24 = constantrange<0, 17>
-  //   %39 = icmp eq i32 %24, 0
-  //   %40 = add i32 %24, -1
-  //   %siv.next = select i1 %39, i32 16, i32 %40
-  //   %siv.next = constantrange<0, 17> not <-1, 17>
-  // In general, this can handle any clamp idiom which tests the edge
-  // condition via an equality or inequality.
-  if (auto *ICI = dyn_cast<ICmpInst>(Cond)) {
-    ICmpInst::Predicate Pred = ICI->getPredicate();
-    Value *A = ICI->getOperand(0);
-    if (ConstantInt *CIBase = dyn_cast<ConstantInt>(ICI->getOperand(1))) {
-      auto addConstants = [](ConstantInt *A, ConstantInt *B) {
-        assert(A->getType() == B->getType());
-        return ConstantInt::get(A->getType(), A->getValue() + B->getValue());
-      };
-      // See if either input is A + C2, subject to the constraint from the
-      // condition that A != C when that input is used.  We can assume that
-      // that input doesn't include C + C2.
-      ConstantInt *CIAdded;
-      switch (Pred) {
-      default: break;
-      case ICmpInst::ICMP_EQ:
-        if (match(SI->getFalseValue(), m_Add(m_Specific(A),
-                                             m_ConstantInt(CIAdded)))) {
-          auto ResNot = addConstants(CIBase, CIAdded);
-          FalseVal = intersect(FalseVal,
-                               ValueLatticeElement::getNot(ResNot));
-        }
-        break;
-      case ICmpInst::ICMP_NE:
-        if (match(SI->getTrueValue(), m_Add(m_Specific(A),
-                                            m_ConstantInt(CIAdded)))) {
-          auto ResNot = addConstants(CIBase, CIAdded);
-          TrueVal = intersect(TrueVal,
-                              ValueLatticeElement::getNot(ResNot));
-        }
-        break;
-      };
-    }
-  }
 
   ValueLatticeElement Result = TrueVal;
   Result.mergeIn(FalseVal);
@@ -1042,8 +990,8 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueIntrinsic(
     IntrinsicInst *II, BasicBlock *BB) {
   if (!ConstantRange::isIntrinsicSupported(II->getIntrinsicID())) {
     LLVM_DEBUG(dbgs() << " compute BB '" << BB->getName()
-                      << "' - overdefined (unknown intrinsic).\n");
-    return ValueLatticeElement::getOverdefined();
+                      << "' - unknown intrinsic.\n");
+    return getFromRangeMetadata(II);
   }
 
   SmallVector<ConstantRange, 2> OpRanges;
@@ -1076,15 +1024,25 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueExtractValue(
   return ValueLatticeElement::getOverdefined();
 }
 
-static bool matchICmpOperand(const APInt *&Offset, Value *LHS, Value *Val,
+static bool matchICmpOperand(APInt &Offset, Value *LHS, Value *Val,
                              ICmpInst::Predicate Pred) {
   if (LHS == Val)
     return true;
 
   // Handle range checking idiom produced by InstCombine. We will subtract the
   // offset from the allowed range for RHS in this case.
-  if (match(LHS, m_Add(m_Specific(Val), m_APInt(Offset))))
+  const APInt *C;
+  if (match(LHS, m_Add(m_Specific(Val), m_APInt(C)))) {
+    Offset = *C;
     return true;
+  }
+
+  // Handle the symmetric case. This appears in saturation patterns like
+  // (x == 16) ? 16 : (x + 1).
+  if (match(Val, m_Add(m_Specific(LHS), m_APInt(C)))) {
+    Offset = -*C;
+    return true;
+  }
 
   // If (x | y) < C, then (x < C) && (y < C).
   if (match(LHS, m_c_Or(m_Specific(Val), m_Value())) &&
@@ -1101,7 +1059,7 @@ static bool matchICmpOperand(const APInt *&Offset, Value *LHS, Value *Val,
 
 /// Get value range for a "(Val + Offset) Pred RHS" condition.
 static ValueLatticeElement getValueFromSimpleICmpCondition(
-    CmpInst::Predicate Pred, Value *RHS, const APInt *Offset) {
+    CmpInst::Predicate Pred, Value *RHS, const APInt &Offset) {
   ConstantRange RHSRange(RHS->getType()->getIntegerBitWidth(),
                          /*isFullSet=*/true);
   if (ConstantInt *CI = dyn_cast<ConstantInt>(RHS))
@@ -1112,11 +1070,7 @@ static ValueLatticeElement getValueFromSimpleICmpCondition(
 
   ConstantRange TrueValues =
       ConstantRange::makeAllowedICmpRegion(Pred, RHSRange);
-
-  if (Offset)
-    TrueValues = TrueValues.subtract(*Offset);
-
-  return ValueLatticeElement::getRange(std::move(TrueValues));
+  return ValueLatticeElement::getRange(TrueValues.subtract(Offset));
 }
 
 static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
@@ -1137,10 +1091,11 @@ static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
     }
   }
 
-  if (!Val->getType()->isIntegerTy())
+  Type *Ty = Val->getType();
+  if (!Ty->isIntegerTy())
     return ValueLatticeElement::getOverdefined();
 
-  const APInt *Offset = nullptr;
+  APInt Offset(Ty->getScalarSizeInBits(), 0);
   if (matchICmpOperand(Offset, LHS, Val, EdgePred))
     return getValueFromSimpleICmpCondition(EdgePred, RHS, Offset);
 
@@ -1148,17 +1103,27 @@ static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
   if (matchICmpOperand(Offset, RHS, Val, SwappedPred))
     return getValueFromSimpleICmpCondition(SwappedPred, LHS, Offset);
 
-  // If (Val & Mask) == C then all the masked bits are known and we can compute
-  // a value range based on that.
   const APInt *Mask, *C;
-  if (EdgePred == ICmpInst::ICMP_EQ &&
-      match(LHS, m_And(m_Specific(Val), m_APInt(Mask))) &&
+  if (match(LHS, m_And(m_Specific(Val), m_APInt(Mask))) &&
       match(RHS, m_APInt(C))) {
-    KnownBits Known;
-    Known.Zero = ~*C & *Mask;
-    Known.One = *C & *Mask;
-    return ValueLatticeElement::getRange(
-        ConstantRange::fromKnownBits(Known, /*IsSigned*/ false));
+    // If (Val & Mask) == C then all the masked bits are known and we can
+    // compute a value range based on that.
+    if (EdgePred == ICmpInst::ICMP_EQ) {
+      KnownBits Known;
+      Known.Zero = ~*C & *Mask;
+      Known.One = *C & *Mask;
+      return ValueLatticeElement::getRange(
+          ConstantRange::fromKnownBits(Known, /*IsSigned*/ false));
+    }
+    // If (Val & Mask) != 0 then the value must be larger than the lowest set
+    // bit of Mask.
+    if (EdgePred == ICmpInst::ICMP_NE && !Mask->isNullValue() &&
+        C->isNullValue()) {
+      unsigned BitWidth = Ty->getIntegerBitWidth();
+      return ValueLatticeElement::getRange(ConstantRange::getNonEmpty(
+          APInt::getOneBitSet(BitWidth, Mask->countTrailingZeros()),
+          APInt::getNullValue(BitWidth)));
+    }
   }
 
   return ValueLatticeElement::getOverdefined();
@@ -1210,13 +1175,6 @@ getValueFromConditionImpl(Value *Val, Value *Cond, bool isTrueDest,
   else
     return ValueLatticeElement::getOverdefined();
 
-  // Prevent infinite recursion if Cond references itself as in this example:
-  //  Cond: "%tmp4 = and i1 %tmp4, undef"
-  //    BL: "%tmp4 = and i1 %tmp4, undef"
-  //    BR: "i1 undef"
-  if (L == Cond || R == Cond)
-    return ValueLatticeElement::getOverdefined();
-
   // if (L && R) -> intersect L and R
   // if (!(L || R)) -> intersect L and R
   // if (L || R) -> union L and R
@@ -1236,9 +1194,14 @@ getValueFromConditionImpl(Value *Val, Value *Cond, bool isTrueDest,
 static ValueLatticeElement
 getValueFromCondition(Value *Val, Value *Cond, bool isTrueDest,
                       SmallDenseMap<Value*, ValueLatticeElement> &Visited) {
-  auto I = Visited.find(Cond);
-  if (I != Visited.end())
-    return I->second;
+  // Insert an Overdefined placeholder into the set to prevent
+  // infinite recursion if there exists IRs that use not
+  // dominated by its def as in this example:
+  //   "%tmp3 = or i1 undef, %tmp4"
+  //   "%tmp4 = or i1 undef, %tmp3"
+  auto Iter = Visited.try_emplace(Cond, ValueLatticeElement::getOverdefined());
+  if (!Iter.second)
+    return Iter.first->getSecond();
 
   auto Result = getValueFromConditionImpl(Val, Cond, isTrueDest, Visited);
   Visited[Cond] = Result;
@@ -1855,6 +1818,24 @@ LazyValueInfo::getPredicateAt(unsigned Pred, Value *V, Constant *C,
     }
   }
   return Unknown;
+}
+
+LazyValueInfo::Tristate LazyValueInfo::getPredicateAt(unsigned P, Value *LHS,
+                                                      Value *RHS,
+                                                      Instruction *CxtI,
+                                                      bool UseBlockValue) {
+  CmpInst::Predicate Pred = (CmpInst::Predicate)P;
+
+  if (auto *C = dyn_cast<Constant>(RHS))
+    return getPredicateAt(P, LHS, C, CxtI, UseBlockValue);
+  if (auto *C = dyn_cast<Constant>(LHS))
+    return getPredicateAt(CmpInst::getSwappedPredicate(Pred), RHS, C, CxtI,
+                          UseBlockValue);
+
+  // Got two non-Constant values. While we could handle them somewhat,
+  // by getting their constant ranges, and applying ConstantRange::icmp(),
+  // so far it did not appear to be profitable.
+  return LazyValueInfo::Unknown;
 }
 
 void LazyValueInfo::threadEdge(BasicBlock *PredBB, BasicBlock *OldSucc,

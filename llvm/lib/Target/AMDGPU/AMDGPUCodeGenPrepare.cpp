@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
@@ -740,6 +739,11 @@ bool AMDGPUCodeGenPrepare::visitFDiv(BinaryOperator &FDiv) {
 
   Type *Ty = FDiv.getType()->getScalarType();
 
+  // The f64 rcp/rsq approximations are pretty inaccurate. We can do an
+  // expansion around them in codegen.
+  if (Ty->isDoubleTy())
+    return false;
+
   // No intrinsic for fdiv16 if target does not support f16.
   if (Ty->isHalfTy() && !ST->has16BitInsts())
     return false;
@@ -805,7 +809,7 @@ bool AMDGPUCodeGenPrepare::visitFDiv(BinaryOperator &FDiv) {
 
 static bool hasUnsafeFPMath(const Function &F) {
   Attribute Attr = F.getFnAttribute("unsafe-fp-math");
-  return Attr.getValueAsString() == "true";
+  return Attr.getValueAsBool();
 }
 
 static std::pair<Value*, Value*> getMul64(IRBuilder<> &Builder,

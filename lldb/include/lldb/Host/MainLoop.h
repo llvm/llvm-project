@@ -13,6 +13,7 @@
 #include "lldb/Host/MainLoopBase.h"
 #include "llvm/ADT/DenseMap.h"
 #include <csignal>
+#include <list>
 
 #if !HAVE_PPOLL && !HAVE_SYS_EVENT_H && !defined(__ANDROID__)
 #define SIGNAL_POLLING_UNSUPPORTED 1
@@ -68,7 +69,7 @@ public:
 protected:
   void UnregisterReadObject(IOObject::WaitableHandle handle) override;
 
-  void UnregisterSignal(int signo);
+  void UnregisterSignal(int signo, std::list<Callback>::iterator callback_it);
 
 private:
   void ProcessReadObject(IOObject::WaitableHandle handle);
@@ -76,14 +77,16 @@ private:
 
   class SignalHandle {
   public:
-    ~SignalHandle() { m_mainloop.UnregisterSignal(m_signo); }
+    ~SignalHandle() { m_mainloop.UnregisterSignal(m_signo, m_callback_it); }
 
   private:
-    SignalHandle(MainLoop &mainloop, int signo)
-        : m_mainloop(mainloop), m_signo(signo) {}
+    SignalHandle(MainLoop &mainloop, int signo,
+                 std::list<Callback>::iterator callback_it)
+        : m_mainloop(mainloop), m_signo(signo), m_callback_it(callback_it) {}
 
     MainLoop &m_mainloop;
     int m_signo;
+    std::list<Callback>::iterator m_callback_it;
 
     friend class MainLoop;
     SignalHandle(const SignalHandle &) = delete;
@@ -91,7 +94,7 @@ private:
   };
 
   struct SignalInfo {
-    Callback callback;
+    std::list<Callback> callbacks;
 #if HAVE_SIGACTION
     struct sigaction old_action;
 #endif

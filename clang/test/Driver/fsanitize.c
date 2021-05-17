@@ -15,22 +15,22 @@
 // RUN: %clang -target x86_64-apple-darwin10 -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-DARWIN
 // CHECK-UNDEFINED-DARWIN: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|function|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute),?){18}"}}
 
-// RUN: %clang -target i386-pc-win32 -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-WIN --check-prefix=CHECK-UNDEFINED-WIN32 --check-prefix=CHECK-UNDEFINED-MSVC
-// RUN: %clang -target i386-pc-win32 -fsanitize=undefined -x c++ %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-WIN --check-prefix=CHECK-UNDEFINED-WIN32 --check-prefix=CHECK-UNDEFINED-WIN-CXX --check-prefix=CHECK-UNDEFINED-MSVC
-// RUN: %clang -target x86_64-pc-win32 -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-WIN --check-prefix=CHECK-UNDEFINED-WIN64 --check-prefix=CHECK-UNDEFINED-MSVC
-// RUN: %clang -target x86_64-w64-mingw32 -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-WIN --check-prefix=CHECK-UNDEFINED-WIN64-MINGW
-// RUN: %clang -target x86_64-pc-win32 -fsanitize=undefined -x c++ %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-WIN --check-prefix=CHECK-UNDEFINED-WIN64 --check-prefix=CHECK-UNDEFINED-WIN-CXX --check-prefix=CHECK-UNDEFINED-MSVC
-// CHECK-UNDEFINED-WIN32: "--dependent-lib={{[^"]*}}ubsan_standalone-i386.lib"
-// CHECK-UNDEFINED-WIN64: "--dependent-lib={{[^"]*}}ubsan_standalone-x86_64.lib"
-// CHECK-UNDEFINED-WIN64-MINGW: "--dependent-lib={{[^"]*}}libclang_rt.ubsan_standalone-x86_64.a"
+// RUN: %clang -target i386-pc-win32 -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK-UNDEFINED-WIN32,CHECK-UNDEFINED-MSVC
+// RUN: %clang -target i386-pc-win32 -fsanitize=undefined -x c++ %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK-UNDEFINED-WIN32,CHECK-UNDEFINED-WIN-CXX,CHECK-UNDEFINED-MSVC
+// RUN: %clang -target x86_64-pc-win32 -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK-UNDEFINED-WIN64,CHECK-UNDEFINED-MSVC
+// RUN: %clang -target x86_64-w64-mingw32 -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-WIN64-MINGW
+// RUN: %clang -target x86_64-pc-win32 -fsanitize=undefined -x c++ %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK-UNDEFINED-WIN64,CHECK-UNDEFINED-WIN-CXX,CHECK-UNDEFINED-MSVC
+// CHECK-UNDEFINED-WIN32: "--dependent-lib={{[^"]*}}ubsan_standalone{{(-i386)?}}.lib"
+// CHECK-UNDEFINED-WIN64: "--dependent-lib={{[^"]*}}ubsan_standalone{{(-x86_64)?}}.lib"
+// CHECK-UNDEFINED-WIN64-MINGW: "--dependent-lib={{[^"]*}}libclang_rt.ubsan_standalone{{(-x86_64)?}}.a"
 // CHECK-UNDEFINED-WIN-CXX: "--dependent-lib={{[^"]*}}ubsan_standalone_cxx{{[^"]*}}.lib"
 // CHECK-UNDEFINED-MSVC-SAME: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute),?){17}"}}
 // CHECK-UNDEFINED-WIN64-MINGW-SAME: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|vptr),?){18}"}}
 
 // RUN: %clang -target i386-pc-win32 -fsanitize-coverage=bb %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-COVERAGE-WIN32
-// CHECK-COVERAGE-WIN32: "--dependent-lib={{[^"]*}}ubsan_standalone-i386.lib"
+// CHECK-COVERAGE-WIN32: "--dependent-lib={{[^"]*}}ubsan_standalone{{(-i386)?}}.lib"
 // RUN: %clang -target x86_64-pc-win32 -fsanitize-coverage=bb %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-COVERAGE-WIN64
-// CHECK-COVERAGE-WIN64: "--dependent-lib={{[^"]*}}ubsan_standalone-x86_64.lib"
+// CHECK-COVERAGE-WIN64: "--dependent-lib={{[^"]*}}ubsan_standalone{{(-x86_64)?}}.lib"
 
 // RUN: %clang -target %itanium_abi_triple -fsanitize=integer %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-INTEGER -implicit-check-not="-fsanitize-address-use-after-scope"
 // CHECK-INTEGER: "-fsanitize={{((signed-integer-overflow|unsigned-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|implicit-unsigned-integer-truncation|implicit-signed-integer-truncation|implicit-integer-sign-change|unsigned-shift-base),?){9}"}}
@@ -434,6 +434,12 @@
 // RUN: %clang -target powerpc-unknown-linux -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANL-PPC
 // CHECK-SANL-PPC: unsupported option '-fsanitize=leak' for target 'powerpc-unknown-linux'
 
+// RUN: %clang -target riscv64-linux-gnu -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANL-RISCV64
+// CHECK-SANL-RISCV64: "-fsanitize=leak"
+
+// RUN: %clang -target riscv64-linux-gnu -fsanitize=address,leak -fno-sanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANA-SANL-NO-SANA-RISCV64
+// CHECK-SANA-SANL-NO-SANA-RISCV64: "-fsanitize=leak"
+
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MSAN
 // CHECK-MSAN: "-fno-assume-sane-operator-new"
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN
@@ -689,7 +695,13 @@
 // RUN: %clang -target x86_64-unknown-cloudabi -fsanitize=safe-stack %s -### 2>&1 | FileCheck %s -check-prefix=SAFESTACK-CLOUDABI
 // SAFESTACK-CLOUDABI: "-fsanitize=safe-stack"
 
+// RUN: %clang -target x86_64--freebsd -fsanitize=kernel-address %s -### 2>&1 | FileCheck %s -check-prefix=KERNEL-ADDRESS-FREEBSD
+// RUN: %clang -target aarch64--freebsd -fsanitize=kernel-address %s -### 2>&1 | FileCheck %s -check-prefix=KERNEL-ADDRESS-FREEBSD
+// KERNEL-ADDRESS-FREEBSD: "-fsanitize=kernel-address"
 
+// RUN: %clang -target x86_64--freebsd -fsanitize=kernel-memory %s -### 2>&1 | FileCheck %s -check-prefix=KERNEL-MEMORY-FREEBSD
+// RUN: %clang -target aarch64--freebsd -fsanitize=kernel-memory %s -### 2>&1 | FileCheck %s -check-prefix=KERNEL-MEMORY-FREEBSD
+// KERNEL-MEMORY-FREEBSD: "-fsanitize=kernel-memory"
 
 // * NetBSD; please keep ordered as in Sanitizers.def *
 

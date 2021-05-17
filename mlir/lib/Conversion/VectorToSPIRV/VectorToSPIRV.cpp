@@ -19,10 +19,40 @@
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include <numeric>
 
 using namespace mlir;
 
+/// Gets the first integer value from `attr`, assuming it is an integer array
+/// attribute.
+static uint64_t getFirstIntValue(ArrayAttr attr) {
+  return (*attr.getAsValueRange<IntegerAttr>().begin()).getZExtValue();
+}
+
 namespace {
+
+struct VectorBitcastConvert final
+    : public OpConversionPattern<vector::BitCastOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::BitCastOp bitcastOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto dstType = getTypeConverter()->convertType(bitcastOp.getType());
+    if (!dstType)
+      return failure();
+
+    vector::BitCastOp::Adaptor adaptor(operands);
+    if (dstType == adaptor.source().getType())
+      rewriter.replaceOp(bitcastOp, adaptor.source());
+    else
+      rewriter.replaceOpWithNewOp<spirv::BitcastOp>(bitcastOp, dstType,
+                                                    adaptor.source());
+
+    return success();
+  }
+};
+
 struct VectorBroadcastConvert final
     : public OpConversionPattern<vector::BroadcastOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -36,9 +66,8 @@ struct VectorBroadcastConvert final
     vector::BroadcastOp::Adaptor adaptor(operands);
     SmallVector<Value, 4> source(broadcastOp.getVectorType().getNumElements(),
                                  adaptor.source());
-    Value construct = rewriter.create<spirv::CompositeConstructOp>(
-        broadcastOp.getLoc(), broadcastOp.getVectorType(), source);
-    rewriter.replaceOp(broadcastOp, construct);
+    rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
+        broadcastOp, broadcastOp.getVectorType(), source);
     return success();
   }
 };
@@ -50,14 +79,78 @@ struct VectorExtractOpConvert final
   LogicalResult
   matchAndRewrite(vector::ExtractOp extractOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    if (extractOp.getType().isa<VectorType>() ||
-        !spirv::CompositeType::isValid(extractOp.getVectorType()))
+    // Only support extracting a scalar value now.
+    VectorType resultVectorType = extractOp.getType().dyn_cast<VectorType>();
+    if (resultVectorType && resultVectorType.getNumElements() > 1)
       return failure();
+
+    auto dstType = getTypeConverter()->convertType(extractOp.getType());
+    if (!dstType)
+      return failure();
+
     vector::ExtractOp::Adaptor adaptor(operands);
-    int32_t id = extractOp.position().begin()->cast<IntegerAttr>().getInt();
-    Value newExtract = rewriter.create<spirv::CompositeExtractOp>(
-        extractOp.getLoc(), adaptor.vector(), id);
-    rewriter.replaceOp(extractOp, newExtract);
+    if (adaptor.vector().getType().isa<spirv::ScalarType>()) {
+      rewriter.replaceOp(extractOp, adaptor.vector());
+      return success();
+    }
+
+    int32_t id = getFirstIntValue(extractOp.position());
+    rewriter.replaceOpWithNewOp<spirv::CompositeExtractOp>(
+        extractOp, adaptor.vector(), id);
+    return success();
+  }
+};
+
+struct VectorExtractStridedSliceOpConvert final
+    : public OpConversionPattern<vector::ExtractStridedSliceOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::ExtractStridedSliceOp extractOp,
+                  ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto dstType = getTypeConverter()->convertType(extractOp.getType());
+    if (!dstType)
+      return failure();
+
+
+    uint64_t offset = getFirstIntValue(extractOp.offsets());
+    uint64_t size = getFirstIntValue(extractOp.sizes());
+    uint64_t stride = getFirstIntValue(extractOp.strides());
+    if (stride != 1)
+      return failure();
+
+    Value srcVector = operands.front();
+
+    // Extract vector<1xT> case.
+    if (dstType.isa<spirv::ScalarType>()) {
+      rewriter.replaceOpWithNewOp<spirv::CompositeExtractOp>(extractOp,
+                                                             srcVector, offset);
+      return success();
+    }
+
+    SmallVector<int32_t, 2> indices(size);
+    std::iota(indices.begin(), indices.end(), offset);
+
+    rewriter.replaceOpWithNewOp<spirv::VectorShuffleOp>(
+        extractOp, dstType, srcVector, srcVector,
+        rewriter.getI32ArrayAttr(indices));
+
+    return success();
+  }
+};
+
+struct VectorFmaOpConvert final : public OpConversionPattern<vector::FMAOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::FMAOp fmaOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (!spirv::CompositeType::isValid(fmaOp.getVectorType()))
+      return failure();
+    vector::FMAOp::Adaptor adaptor(operands);
+    rewriter.replaceOpWithNewOp<spirv::GLSLFmaOp>(
+        fmaOp, fmaOp.getType(), adaptor.lhs(), adaptor.rhs(), adaptor.acc());
     return success();
   }
 };
@@ -73,10 +166,9 @@ struct VectorInsertOpConvert final
         !spirv::CompositeType::isValid(insertOp.getDestVectorType()))
       return failure();
     vector::InsertOp::Adaptor adaptor(operands);
-    int32_t id = insertOp.position().begin()->cast<IntegerAttr>().getInt();
-    Value newInsert = rewriter.create<spirv::CompositeInsertOp>(
-        insertOp.getLoc(), adaptor.source(), adaptor.dest(), id);
-    rewriter.replaceOp(insertOp, newInsert);
+    int32_t id = getFirstIntValue(insertOp.position());
+    rewriter.replaceOpWithNewOp<spirv::CompositeInsertOp>(
+        insertOp, adaptor.source(), adaptor.dest(), id);
     return success();
   }
 };
@@ -92,10 +184,9 @@ struct VectorExtractElementOpConvert final
     if (!spirv::CompositeType::isValid(extractElementOp.getVectorType()))
       return failure();
     vector::ExtractElementOp::Adaptor adaptor(operands);
-    Value newExtractElement = rewriter.create<spirv::VectorExtractDynamicOp>(
-        extractElementOp.getLoc(), extractElementOp.getType(), adaptor.vector(),
+    rewriter.replaceOpWithNewOp<spirv::VectorExtractDynamicOp>(
+        extractElementOp, extractElementOp.getType(), adaptor.vector(),
         extractElementOp.position());
-    rewriter.replaceOp(extractElementOp, newExtractElement);
     return success();
   }
 };
@@ -111,20 +202,60 @@ struct VectorInsertElementOpConvert final
     if (!spirv::CompositeType::isValid(insertElementOp.getDestVectorType()))
       return failure();
     vector::InsertElementOp::Adaptor adaptor(operands);
-    Value newInsertElement = rewriter.create<spirv::VectorInsertDynamicOp>(
-        insertElementOp.getLoc(), insertElementOp.getType(),
-        insertElementOp.dest(), adaptor.source(), insertElementOp.position());
-    rewriter.replaceOp(insertElementOp, newInsertElement);
+    rewriter.replaceOpWithNewOp<spirv::VectorInsertDynamicOp>(
+        insertElementOp, insertElementOp.getType(), insertElementOp.dest(),
+        adaptor.source(), insertElementOp.position());
+    return success();
+  }
+};
+
+struct VectorInsertStridedSliceOpConvert final
+    : public OpConversionPattern<vector::InsertStridedSliceOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::InsertStridedSliceOp insertOp,
+                  ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    Value srcVector = operands.front();
+    Value dstVector = operands.back();
+
+    // Insert scalar values not supported yet.
+    if (srcVector.getType().isa<spirv::ScalarType>() ||
+        dstVector.getType().isa<spirv::ScalarType>())
+      return failure();
+
+    uint64_t stride = getFirstIntValue(insertOp.strides());
+    if (stride != 1)
+      return failure();
+
+    uint64_t totalSize =
+        dstVector.getType().cast<VectorType>().getNumElements();
+    uint64_t insertSize =
+        srcVector.getType().cast<VectorType>().getNumElements();
+    uint64_t offset = getFirstIntValue(insertOp.offsets());
+
+    SmallVector<int32_t, 2> indices(totalSize);
+    std::iota(indices.begin(), indices.end(), 0);
+    std::iota(indices.begin() + offset, indices.begin() + offset + insertSize,
+              totalSize);
+
+    rewriter.replaceOpWithNewOp<spirv::VectorShuffleOp>(
+        insertOp, dstVector.getType(), dstVector, srcVector,
+        rewriter.getI32ArrayAttr(indices));
+
     return success();
   }
 };
 
 } // namespace
 
-void mlir::populateVectorToSPIRVPatterns(MLIRContext *context,
-                                         SPIRVTypeConverter &typeConverter,
-                                         OwningRewritePatternList &patterns) {
-  patterns.insert<VectorBroadcastConvert, VectorExtractOpConvert,
-                  VectorInsertOpConvert, VectorExtractElementOpConvert,
-                  VectorInsertElementOpConvert>(typeConverter, context);
+void mlir::populateVectorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+                                         RewritePatternSet &patterns) {
+  patterns.add<VectorBitcastConvert, VectorBroadcastConvert,
+               VectorExtractElementOpConvert, VectorExtractOpConvert,
+               VectorExtractStridedSliceOpConvert, VectorFmaOpConvert,
+               VectorInsertElementOpConvert, VectorInsertOpConvert,
+               VectorInsertStridedSliceOpConvert>(typeConverter,
+                                                  patterns.getContext());
 }

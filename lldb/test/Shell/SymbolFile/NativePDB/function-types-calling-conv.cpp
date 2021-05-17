@@ -1,5 +1,5 @@
 // clang-format off
-// REQUIRES: lld
+// REQUIRES: lld, x86
 
 // RUN: %clang_cl --target=i386-windows-msvc -Od -Z7 -c /Fo%t.obj -- %s
 // RUN: lld-link -debug:full -nodefaultlib -entry:main %t.obj -out:%t.exe -pdb:%t.pdb

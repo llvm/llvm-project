@@ -573,6 +573,11 @@ class CoverageMapping {
 
   CoverageMapping() = default;
 
+  // Load coverage records from readers.
+  static Error loadFromReaders(
+      ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
+      IndexedInstrProfReader &ProfileReader, CoverageMapping &Coverage);
+
   /// Add a function record corresponding to \p Record.
   Error loadFunctionRecord(const CoverageMappingRecord &Record,
                            IndexedInstrProfReader &ProfileReader);
@@ -598,7 +603,7 @@ public:
   /// Ignores non-instrumented object files unless all are not instrumented.
   static Expected<std::unique_ptr<CoverageMapping>>
   load(ArrayRef<StringRef> ObjectFilenames, StringRef ProfileFilename,
-       ArrayRef<StringRef> Arches = None);
+       ArrayRef<StringRef> Arches = None, StringRef CompilationDir = "");
 
   /// The number of functions that couldn't have their profiles mapped.
   ///
@@ -996,7 +1001,10 @@ enum CovMapVersion {
   Version4 = 3,
   // Branch regions referring to two counters are added
   Version5 = 4,
-  // The current version is Version5.
+  // Compilation directory is stored separately and combined with relative
+  // filenames to produce an absolute file path.
+  Version6 = 5,
+  // The current version is Version6.
   CurrentVersion = INSTR_PROF_COVMAP_VERSION
 };
 

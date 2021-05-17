@@ -14,23 +14,25 @@
 # RUN: llvm-readobj --file-headers %t6 | FileCheck %s --check-prefix=ADD
 # RUN: llvm-objcopy --change-start 0x100000000 %t %t7
 # RUN: llvm-readobj --file-headers %t7 | FileCheck %s --check-prefix=ADD-LARGE
-# RUN: llvm-objcopy --change-start -4353 %t %t8
-# RUN: llvm-readobj --file-headers %t8 | FileCheck %s --check-prefix=ADD-UNDERFLOW
-# RUN: llvm-objcopy --change-start -0x1101 %t %t9
-# RUN: cmp %t8 %t9
-# RUN: not llvm-objcopy --change-start -xyz %t %t10 2>&1 | FileCheck %s --check-prefix=ADD-ERR
+# RUN: llvm-objcopy --change-start -128 %t %t8
+# RUN: llvm-readobj --file-headers %t8 | FileCheck %s --check-prefix=SUB
+# RUN: llvm-objcopy --change-start -4353 %t %t9
+# RUN: llvm-readobj --file-headers %t9 | FileCheck %s --check-prefix=ADD-UNDERFLOW
+# RUN: llvm-objcopy --change-start -0x1101 %t %t10
+# RUN: cmp %t9 %t10
+# RUN: not llvm-objcopy --change-start -xyz %t %t11 2>&1 | FileCheck %s --check-prefix=ADD-ERR
 
 # Test --change-start after --set-start. Result should be 0x1150.
-# RUN: llvm-objcopy --set-start 0x1000 --change-start 0x100 --change-start 0x50 %t %t11
-# RUN: cmp %t6 %t11
+# RUN: llvm-objcopy --set-start 0x1000 --change-start 0x100 --change-start 0x50 %t %t12
+# RUN: cmp %t6 %t12
 
 # If --set-start is after --change-start then --change-start has no effect.
-# RUN: llvm-objcopy --change-start 0x150 --set-start 0x1000 %t %t12
-# RUN: cmp %t2 %t12
+# RUN: llvm-objcopy --change-start 0x150 --set-start 0x1000 %t %t13
+# RUN: cmp %t2 %t13
 
 # --adjust-start is an alias for --change-start.
-# RUN: llvm-objcopy --adjust-start -0x1101 %t %t13
-# RUN: cmp %t9 %t13
+# RUN: llvm-objcopy --adjust-start -0x1101 %t %t14
+# RUN: cmp %t10 %t14
 
 !ELF
 FileHeader:

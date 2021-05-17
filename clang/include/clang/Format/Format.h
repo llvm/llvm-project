@@ -19,6 +19,7 @@
 #include "clang/Tooling/Inclusions/IncludeStyle.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/SourceMgr.h"
 #include <system_error>
 
 namespace llvm {
@@ -52,6 +53,11 @@ std::error_code make_error_code(ParseError e);
 /// The ``FormatStyle`` is used to configure the formatting to follow
 /// specific guidelines.
 struct FormatStyle {
+  // If the BasedOn: was InheritParentConfig and this style needs the file from
+  // the parent directories. It is not part of the actual style for formatting.
+  // Thus the // instead of ///.
+  bool InheritsParentConfig;
+
   /// The extra indent or outdent of access modifiers, e.g. ``public:``.
   int AccessModifierOffset;
 
@@ -84,10 +90,23 @@ struct FormatStyle {
   /// brackets.
   BracketAlignmentStyle AlignAfterOpenBracket;
 
-  /// \brief If ``true``, aligns consecutive C/C++ preprocessor macros.
+  /// Styles for alignment of consecutive tokens. Tokens can be assignment signs
+  /// (see
+  /// ``AlignConsecutiveAssignments``), bitfield member separators (see
+  /// ``AlignConsecutiveBitFields``), names in declarations (see
+  /// ``AlignConsecutiveDeclarations``) or macro definitions (see
+  /// ``AlignConsecutiveMacros``).
+  enum AlignConsecutiveStyle {
+    ACS_None,
+    ACS_Consecutive,
+    ACS_AcrossEmptyLines,
+    ACS_AcrossComments,
+    ACS_AcrossEmptyLinesAndComments
+  };
+
+  /// Style of aligning consecutive macro definitions.
   ///
-  /// This will align C/C++ preprocessor macros of consecutive lines.
-  /// Will result in formattings like
+  /// ``Consecutive`` will result in formattings like:
   /// \code
   ///   #define SHORT_NAME       42
   ///   #define LONGER_NAME      0x007f
@@ -95,40 +114,271 @@ struct FormatStyle {
   ///   #define foo(x)           (x * x)
   ///   #define bar(y, z)        (y + z)
   /// \endcode
-  bool AlignConsecutiveMacros;
-
-  /// If ``true``, aligns consecutive assignments.
   ///
-  /// This will align the assignment operators of consecutive lines. This
-  /// will result in formattings like
+  /// Possible values:
+  ///
+  /// * ``ACS_None`` (in configuration: ``None``)
+  ///    Do not align macro definitions on consecutive lines.
+  ///
+  /// * ``ACS_Consecutive`` (in configuration: ``Consecutive``)
+  ///    Align macro definitions on consecutive lines. This will result in
+  ///    formattings like:
+  ///    \code
+  ///      #define SHORT_NAME       42
+  ///      #define LONGER_NAME      0x007f
+  ///      #define EVEN_LONGER_NAME (2)
+  ///
+  ///      #define foo(x) (x * x)
+  ///      /* some comment */
+  ///      #define bar(y, z) (y + z)
+  ///    \endcode
+  ///
+  /// * ``ACS_AcrossEmptyLines`` (in configuration: ``AcrossEmptyLines``)
+  ///    Same as ACS_Consecutive, but also spans over empty lines, e.g.
+  ///    \code
+  ///      #define SHORT_NAME       42
+  ///      #define LONGER_NAME      0x007f
+  ///      #define EVEN_LONGER_NAME (2)
+  ///
+  ///      #define foo(x)           (x * x)
+  ///      /* some comment */
+  ///      #define bar(y, z) (y + z)
+  ///    \endcode
+  ///
+  /// * ``ACS_AcrossComments`` (in configuration: ``AcrossComments``)
+  ///    Same as ACS_Consecutive, but also spans over lines only containing
+  ///    comments, e.g.
+  ///    \code
+  ///      #define SHORT_NAME       42
+  ///      #define LONGER_NAME      0x007f
+  ///      #define EVEN_LONGER_NAME (2)
+  ///
+  ///      #define foo(x)    (x * x)
+  ///      /* some comment */
+  ///      #define bar(y, z) (y + z)
+  ///    \endcode
+  ///
+  /// * ``ACS_AcrossEmptyLinesAndComments``
+  ///   (in configuration: ``AcrossEmptyLinesAndComments``)
+  ///
+  ///    Same as ACS_Consecutive, but also spans over lines only containing
+  ///    comments and empty lines, e.g.
+  ///    \code
+  ///      #define SHORT_NAME       42
+  ///      #define LONGER_NAME      0x007f
+  ///      #define EVEN_LONGER_NAME (2)
+  ///
+  ///      #define foo(x)           (x * x)
+  ///      /* some comment */
+  ///      #define bar(y, z)        (y + z)
+  ///    \endcode
+  AlignConsecutiveStyle AlignConsecutiveMacros;
+
+  /// Style of aligning consecutive assignments.
+  ///
+  /// ``Consecutive`` will result in formattings like:
   /// \code
-  ///   int aaaa = 12;
-  ///   int b    = 23;
-  ///   int ccc  = 23;
+  ///   int a            = 1;
+  ///   int somelongname = 2;
+  ///   double c         = 3;
   /// \endcode
-  bool AlignConsecutiveAssignments;
-
-  /// If ``true``, aligns consecutive bitfield members.
   ///
-  /// This will align the bitfield separators of consecutive lines. This
-  /// will result in formattings like
+  /// Possible values:
+  ///
+  /// * ``ACS_None`` (in configuration: ``None``)
+  ///    Do not align assignments on consecutive lines.
+  ///
+  /// * ``ACS_Consecutive`` (in configuration: ``Consecutive``)
+  ///    Align assignments on consecutive lines. This will result in
+  ///    formattings like:
+  ///    \code
+  ///      int a            = 1;
+  ///      int somelongname = 2;
+  ///      double c         = 3;
+  ///
+  ///      int d = 3;
+  ///      /* A comment. */
+  ///      double e = 4;
+  ///    \endcode
+  ///
+  /// * ``ACS_AcrossEmptyLines`` (in configuration: ``AcrossEmptyLines``)
+  ///    Same as ACS_Consecutive, but also spans over empty lines, e.g.
+  ///    \code
+  ///      int a            = 1;
+  ///      int somelongname = 2;
+  ///      double c         = 3;
+  ///
+  ///      int d            = 3;
+  ///      /* A comment. */
+  ///      double e = 4;
+  ///    \endcode
+  ///
+  /// * ``ACS_AcrossComments`` (in configuration: ``AcrossComments``)
+  ///    Same as ACS_Consecutive, but also spans over lines only containing
+  ///    comments, e.g.
+  ///    \code
+  ///      int a            = 1;
+  ///      int somelongname = 2;
+  ///      double c         = 3;
+  ///
+  ///      int d    = 3;
+  ///      /* A comment. */
+  ///      double e = 4;
+  ///    \endcode
+  ///
+  /// * ``ACS_AcrossEmptyLinesAndComments``
+  ///   (in configuration: ``AcrossEmptyLinesAndComments``)
+  ///
+  ///    Same as ACS_Consecutive, but also spans over lines only containing
+  ///    comments and empty lines, e.g.
+  ///    \code
+  ///      int a            = 1;
+  ///      int somelongname = 2;
+  ///      double c         = 3;
+  ///
+  ///      int d            = 3;
+  ///      /* A comment. */
+  ///      double e         = 4;
+  ///    \endcode
+  AlignConsecutiveStyle AlignConsecutiveAssignments;
+
+  /// Style of aligning consecutive bit field.
+  ///
+  /// ``Consecutive`` will align the bitfield separators of consecutive lines.
+  /// This will result in formattings like:
   /// \code
   ///   int aaaa : 1;
   ///   int b    : 12;
   ///   int ccc  : 8;
   /// \endcode
-  bool AlignConsecutiveBitFields;
-
-  /// If ``true``, aligns consecutive declarations.
   ///
-  /// This will align the declaration names of consecutive lines. This
-  /// will result in formattings like
+  /// Possible values:
+  ///
+  /// * ``ACS_None`` (in configuration: ``None``)
+  ///    Do not align bit fields on consecutive lines.
+  ///
+  /// * ``ACS_Consecutive`` (in configuration: ``Consecutive``)
+  ///    Align bit fields on consecutive lines. This will result in
+  ///    formattings like:
+  ///    \code
+  ///      int aaaa : 1;
+  ///      int b    : 12;
+  ///      int ccc  : 8;
+  ///
+  ///      int d : 2;
+  ///      /* A comment. */
+  ///      int ee : 3;
+  ///    \endcode
+  ///
+  /// * ``ACS_AcrossEmptyLines`` (in configuration: ``AcrossEmptyLines``)
+  ///    Same as ACS_Consecutive, but also spans over empty lines, e.g.
+  ///    \code
+  ///      int aaaa : 1;
+  ///      int b    : 12;
+  ///      int ccc  : 8;
+  ///
+  ///      int d    : 2;
+  ///      /* A comment. */
+  ///      int ee : 3;
+  ///    \endcode
+  ///
+  /// * ``ACS_AcrossComments`` (in configuration: ``AcrossComments``)
+  ///    Same as ACS_Consecutive, but also spans over lines only containing
+  ///    comments, e.g.
+  ///    \code
+  ///      int aaaa : 1;
+  ///      int b    : 12;
+  ///      int ccc  : 8;
+  ///
+  ///      int d  : 2;
+  ///      /* A comment. */
+  ///      int ee : 3;
+  ///    \endcode
+  ///
+  /// * ``ACS_AcrossEmptyLinesAndComments``
+  ///   (in configuration: ``AcrossEmptyLinesAndComments``)
+  ///
+  ///    Same as ACS_Consecutive, but also spans over lines only containing
+  ///    comments and empty lines, e.g.
+  ///    \code
+  ///      int aaaa : 1;
+  ///      int b    : 12;
+  ///      int ccc  : 8;
+  ///
+  ///      int d    : 2;
+  ///      /* A comment. */
+  ///      int ee   : 3;
+  ///    \endcode
+  AlignConsecutiveStyle AlignConsecutiveBitFields;
+
+  /// Style of aligning consecutive declarations.
+  ///
+  /// ``Consecutive`` will align the declaration names of consecutive lines.
+  /// This will result in formattings like:
   /// \code
   ///   int         aaaa = 12;
   ///   float       b = 23;
-  ///   std::string ccc = 23;
+  ///   std::string ccc;
   /// \endcode
-  bool AlignConsecutiveDeclarations;
+  ///
+  /// Possible values:
+  ///
+  /// * ``ACS_None`` (in configuration: ``None``)
+  ///    Do not align bit declarations on consecutive lines.
+  ///
+  /// * ``ACS_Consecutive`` (in configuration: ``Consecutive``)
+  ///    Align declarations on consecutive lines. This will result in
+  ///    formattings like:
+  ///    \code
+  ///      int         aaaa = 12;
+  ///      float       b = 23;
+  ///      std::string ccc;
+  ///
+  ///      int a = 42;
+  ///      /* A comment. */
+  ///      bool c = false;
+  ///    \endcode
+  ///
+  /// * ``ACS_AcrossEmptyLines`` (in configuration: ``AcrossEmptyLines``)
+  ///    Same as ACS_Consecutive, but also spans over empty lines, e.g.
+  ///    \code
+  ///      int         aaaa = 12;
+  ///      float       b = 23;
+  ///      std::string ccc;
+  ///
+  ///      int         a = 42;
+  ///      /* A comment. */
+  ///      bool c = false;
+  ///    \endcode
+  ///
+  /// * ``ACS_AcrossComments`` (in configuration: ``AcrossComments``)
+  ///    Same as ACS_Consecutive, but also spans over lines only containing
+  ///    comments, e.g.
+  ///    \code
+  ///      int         aaaa = 12;
+  ///      float       b = 23;
+  ///      std::string ccc;
+  ///
+  ///      int  a = 42;
+  ///      /* A comment. */
+  ///      bool c = false;
+  ///    \endcode
+  ///
+  /// * ``ACS_AcrossEmptyLinesAndComments``
+  ///   (in configuration: ``AcrossEmptyLinesAndComments``)
+  ///
+  ///    Same as ACS_Consecutive, but also spans over lines only containing
+  ///    comments and empty lines, e.g.
+  ///    \code
+  ///      int         aaaa = 12;
+  ///      float       b = 23;
+  ///      std::string ccc;
+  ///
+  ///      int         a = 42;
+  ///      /* A comment. */
+  ///      bool        c = false;
+  ///    \endcode
+  AlignConsecutiveStyle AlignConsecutiveDeclarations;
 
   /// Different styles for aligning escaped newlines.
   enum EscapedNewlineAlignmentStyle : unsigned char {
@@ -370,37 +620,74 @@ struct FormatStyle {
   /// single line.
   ShortFunctionStyle AllowShortFunctionsOnASingleLine;
 
-  /// Different styles for handling short if lines
+  /// Different styles for handling short if statements.
   enum ShortIfStyle : unsigned char {
     /// Never put short ifs on the same line.
     /// \code
     ///   if (a)
-    ///     return ;
+    ///     return;
+    ///
+    ///   if (b)
+    ///     return;
+    ///   else
+    ///     return;
+    ///
+    ///   if (c)
+    ///     return;
     ///   else {
     ///     return;
     ///   }
     /// \endcode
     SIS_Never,
-    /// Without else put short ifs on the same line only if
-    /// the else is not a compound statement.
+    /// Put short ifs on the same line only if there is no else statement.
     /// \code
     ///   if (a) return;
+    ///
+    ///   if (b)
+    ///     return;
     ///   else
     ///     return;
-    /// \endcode
-    SIS_WithoutElse,
-    /// Always put short ifs on the same line if
-    /// the else is not a compound statement or not.
-    /// \code
-    ///   if (a) return;
+    ///
+    ///   if (c)
+    ///     return;
     ///   else {
     ///     return;
     ///   }
     /// \endcode
-    SIS_Always,
+    SIS_WithoutElse,
+    /// Put short ifs, but not else ifs nor else statements, on the same line.
+    /// \code
+    ///   if (a) return;
+    ///
+    ///   if (b) return;
+    ///   else if (b)
+    ///     return;
+    ///   else
+    ///     return;
+    ///
+    ///   if (c) return;
+    ///   else {
+    ///     return;
+    ///   }
+    /// \endcode
+    SIS_OnlyFirstIf,
+    /// Always put short ifs, else ifs and else statements on the same
+    /// line.
+    /// \code
+    ///   if (a) return;
+    ///
+    ///   if (b) return;
+    ///   else return;
+    ///
+    ///   if (c) return;
+    ///   else {
+    ///     return;
+    ///   }
+    /// \endcode
+    SIS_AllIfsAndElse,
   };
 
-  /// If ``true``, ``if (a) return;`` can be put on a single line.
+  /// Dependent on the value, ``if (a) return;`` can be put on a single line.
   ShortIfStyle AllowShortIfStatementsOnASingleLine;
 
   /// Different styles for merging short lambdas containing at most one
@@ -1641,6 +1928,116 @@ struct FormatStyle {
   /// Disables formatting completely.
   bool DisableFormat;
 
+  /// Different styles for empty line after access modifiers.
+  /// ``EmptyLineBeforeAccessModifier`` configuration handles the number of
+  /// empty lines between two access modifiers.
+  enum EmptyLineAfterAccessModifierStyle : unsigned char {
+    /// Remove all empty lines after access modifiers.
+    /// \code
+    ///   struct foo {
+    ///   private:
+    ///     int i;
+    ///   protected:
+    ///     int j;
+    ///     /* comment */
+    ///   public:
+    ///     foo() {}
+    ///   private:
+    ///   protected:
+    ///   };
+    /// \endcode
+    ELAAMS_Never,
+    /// Keep existing empty lines after access modifiers.
+    /// MaxEmptyLinesToKeep is applied instead.
+    ELAAMS_Leave,
+    /// Always add empty line after access modifiers if there are none.
+    /// MaxEmptyLinesToKeep is applied also.
+    /// \code
+    ///   struct foo {
+    ///   private:
+    ///
+    ///     int i;
+    ///   protected:
+    ///
+    ///     int j;
+    ///     /* comment */
+    ///   public:
+    ///
+    ///     foo() {}
+    ///   private:
+    ///
+    ///   protected:
+    ///
+    ///   };
+    /// \endcode
+    ELAAMS_Always,
+  };
+
+  /// Defines in which cases to put empty line after access modifiers.
+  EmptyLineAfterAccessModifierStyle EmptyLineAfterAccessModifier;
+
+  /// Different styles for empty line before access modifiers.
+  enum EmptyLineBeforeAccessModifierStyle : unsigned char {
+    /// Remove all empty lines before access modifiers.
+    /// \code
+    ///   struct foo {
+    ///   private:
+    ///     int i;
+    ///   protected:
+    ///     int j;
+    ///     /* comment */
+    ///   public:
+    ///     foo() {}
+    ///   private:
+    ///   protected:
+    ///   };
+    /// \endcode
+    ELBAMS_Never,
+    /// Keep existing empty lines before access modifiers.
+    ELBAMS_Leave,
+    /// Add empty line only when access modifier starts a new logical block.
+    /// Logical block is a group of one or more member fields or functions.
+    /// \code
+    ///   struct foo {
+    ///   private:
+    ///     int i;
+    ///
+    ///   protected:
+    ///     int j;
+    ///     /* comment */
+    ///   public:
+    ///     foo() {}
+    ///
+    ///   private:
+    ///   protected:
+    ///   };
+    /// \endcode
+    ELBAMS_LogicalBlock,
+    /// Always add empty line before access modifiers unless access modifier
+    /// is at the start of struct or class definition.
+    /// \code
+    ///   struct foo {
+    ///   private:
+    ///     int i;
+    ///
+    ///   protected:
+    ///     int j;
+    ///     /* comment */
+    ///
+    ///   public:
+    ///     foo() {}
+    ///
+    ///   private:
+    ///
+    ///   protected:
+    ///   };
+    /// \endcode
+    ELBAMS_Always,
+  };
+
+  /// Defines in which cases to put empty line before access modifiers.
+  EmptyLineBeforeAccessModifierStyle EmptyLineBeforeAccessModifier;
+
   /// If ``true``, clang-format detects whether function calls and
   /// definitions are formatted with one parameter per line.
   ///
@@ -1653,12 +2050,14 @@ struct FormatStyle {
   /// not use this in config files, etc. Use at your own risk.
   bool ExperimentalAutoDetectBinPacking;
 
-  /// If ``true``, clang-format adds missing namespace end comments and
-  /// fixes invalid existing ones.
+  /// If ``true``, clang-format adds missing namespace end comments for
+  /// short namespaces and fixes invalid existing ones. Short ones are
+  /// controlled by "ShortNamespaceLines".
   /// \code
   ///    true:                                  false:
   ///    namespace a {                  vs.     namespace a {
   ///    foo();                                 foo();
+  ///    bar();                                 bar();
   ///    } // namespace a                       }
   /// \endcode
   bool FixNamespaceComments;
@@ -1736,6 +2135,32 @@ struct FormatStyle {
 
   tooling::IncludeStyle IncludeStyle;
 
+  /// Specify whether access modifiers should have their own indentation level.
+  ///
+  /// When ``false``, access modifiers are indented (or outdented) relative to
+  /// the record members, respecting the ``AccessModifierOffset``. Record
+  /// members are indented one level below the record.
+  /// When ``true``, access modifiers get their own indentation level. As a
+  /// consequence, record members are always indented 2 levels below the record,
+  /// regardless of the access modifier presence. Value of the
+  /// ``AccessModifierOffset`` is ignored.
+  /// \code
+  ///    false:                                 true:
+  ///    class C {                      vs.     class C {
+  ///      class D {                                class D {
+  ///        void bar();                                void bar();
+  ///      protected:                                 protected:
+  ///        D();                                       D();
+  ///      };                                       };
+  ///    public:                                  public:
+  ///      C();                                     C();
+  ///    };                                     };
+  ///    void foo() {                           void foo() {
+  ///      return 1;                              return 1;
+  ///    }                                      }
+  /// \endcode
+  bool IndentAccessModifiers;
+
   /// Indent case labels one level from the switch statement.
   ///
   /// When ``false``, use the same indentation level as for the switch
@@ -1791,29 +2216,6 @@ struct FormatStyle {
   ///    }                                      }
   /// \endcode
   bool IndentGotoLabels;
-
-  /// Indent pragmas
-  ///
-  /// When ``false``, pragmas are flushed left or follow IndentPPDirectives.
-  /// When ``true``, pragmas are indented to the current scope level.
-  /// \code
-  ///   false:                                  true:
-  ///   #pragma once                   vs       #pragma once
-  ///   void foo() {                            void foo() {
-  ///   #pragma omp simd                          #pragma omp simd
-  ///     for (int i=0;i<10;i++) {                for (int i=0;i<10;i++) {
-  ///   #pragma omp simd                            #pragma omp simd
-  ///       for (int i=0;i<10;i++) {                for (int i=0;i<10;i++) {
-  ///       }                                       }
-  ///   #if 1                                   #if 1
-  ///   #pragma omp simd                            #pragma omp simd
-  ///       for (int i=0;i<10;i++) {                for (int i=0;i<10;i++) {
-  ///       }                                       }
-  ///   #endif                                  #endif
-  ///     }                                       }
-  ///   }                                       }
-  /// \endcode
-  bool IndentPragmas;
 
   /// Options for indenting preprocessor directives.
   enum PPDirectiveIndentStyle : unsigned char {
@@ -2330,13 +2732,65 @@ struct FormatStyle {
   bool ReflowComments;
   // clang-format on
 
-  /// If ``true``, clang-format will sort ``#includes``.
+  /// The maximal number of unwrapped lines that a short namespace spans.
+  /// Defaults to 1.
+  ///
+  /// This determines the maximum length of short namespaces by counting
+  /// unwrapped lines (i.e. containing neither opening nor closing
+  /// namespace brace) and makes "FixNamespaceComments" omit adding
+  /// end comments for those.
   /// \code
-  ///    false:                                 true:
-  ///    #include "b.h"                 vs.     #include "a.h"
-  ///    #include "a.h"                         #include "b.h"
+  ///    ShortNamespaceLines: 1     vs.     ShortNamespaceLines: 0
+  ///    namespace a {                      namespace a {
+  ///      int foo;                           int foo;
+  ///    }                                  } // namespace a
+  ///
+  ///    ShortNamespaceLines: 1     vs.     ShortNamespaceLines: 0
+  ///    namespace b {                      namespace b {
+  ///      int foo;                           int foo;
+  ///      int bar;                           int bar;
+  ///    } // namespace b                   } // namespace b
   /// \endcode
-  bool SortIncludes;
+  unsigned ShortNamespaceLines;
+
+  /// Include sorting options.
+  enum SortIncludesOptions : unsigned char {
+    /// Includes are never sorted.
+    /// \code
+    ///    #include "B/A.h"
+    ///    #include "A/B.h"
+    ///    #include "a/b.h"
+    ///    #include "A/b.h"
+    ///    #include "B/a.h"
+    /// \endcode
+    SI_Never,
+    /// Includes are sorted in an ASCIIbetical or case sensitive fashion.
+    /// \code
+    ///    #include "A/B.h"
+    ///    #include "A/b.h"
+    ///    #include "B/A.h"
+    ///    #include "B/a.h"
+    ///    #include "a/b.h"
+    /// \endcode
+    SI_CaseSensitive,
+    /// Includes are sorted in an alphabetical or case insensitive fashion.
+    /// \code
+    ///    #include "A/B.h"
+    ///    #include "A/b.h"
+    ///    #include "a/b.h"
+    ///    #include "B/A.h"
+    ///    #include "B/a.h"
+    /// \endcode
+    SI_CaseInsensitive,
+  };
+
+  /// Controls if and how clang-format will sort ``#includes``.
+  /// If ``Never``, includes are never sorted.
+  /// If ``CaseInsensitive``, includes are sorted in an ASCIIbetical or case
+  /// insensitive fashion.
+  /// If ``CaseSensitive``, includes are sorted in an alphabetical or case
+  /// sensitive fashion.
+  SortIncludesOptions SortIncludes;
 
   /// Position for Java Static imports.
   enum SortJavaStaticImportOptions : unsigned char {
@@ -2577,14 +3031,27 @@ struct FormatStyle {
   /// \endcode
   unsigned SpacesBeforeTrailingComments;
 
-  /// If ``true``, spaces will be inserted after ``<`` and before ``>``
-  /// in template argument lists.
-  /// \code
-  ///    true:                                  false:
-  ///    static_cast< int >(arg);       vs.     static_cast<int>(arg);
-  ///    std::function< void(int) > fct;        std::function<void(int)> fct;
-  /// \endcode
-  bool SpacesInAngles;
+  /// Styles for adding spacing after ``<`` and before ``>`
+  ///  in template argument lists.
+  enum SpacesInAnglesStyle : unsigned char {
+    /// Remove spaces after ``<`` and before ``>``.
+    /// \code
+    ///    static_cast<int>(arg);
+    ///    std::function<void(int)> fct;
+    /// \endcode
+    SIAS_Never,
+    /// Add spaces after ``<`` and before ``>``.
+    /// \code
+    ///    static_cast< int >(arg);
+    ///    std::function< void(int) > fct;
+    /// \endcode
+    SIAS_Always,
+    /// Keep a single space after ``<`` and before ``>`` if any spaces were
+    /// present. Option ``Standard: Cpp03`` takes precedence.
+    SIAS_Leave
+  };
+  /// The SpacesInAnglesStyle to use for template argument lists.
+  SpacesInAnglesStyle SpacesInAngles;
 
   /// If ``true``, spaces will be inserted around if/for/switch/while
   /// conditions.
@@ -2610,6 +3077,43 @@ struct FormatStyle {
   ///    x = ( int32 )y                 vs.     x = (int32)y
   /// \endcode
   bool SpacesInCStyleCastParentheses;
+
+  /// Control of spaces within a single line comment
+  struct SpacesInLineComment {
+    /// The minimum number of spaces at the start of the comment.
+    unsigned Minimum;
+    /// The maximum number of spaces at the start of the comment.
+    unsigned Maximum;
+  };
+
+  /// How many spaces are allowed at the start of a line comment. To disable the
+  /// maximum set it to ``-1``, apart from that the maximum takes precedence
+  /// over the minimum.
+  /// \code Minimum = 1 Maximum = -1
+  /// // One space is forced
+  ///
+  /// //  but more spaces are possible
+  ///
+  /// Minimum = 0
+  /// Maximum = 0
+  /// //Forces to start every comment directly after the slashes
+  /// \endcode
+  ///
+  /// Note that in line comment sections the relative indent of the subsequent
+  /// lines is kept, that means the following:
+  /// \code
+  /// before:                                   after:
+  /// Minimum: 1
+  /// //if (b) {                                // if (b) {
+  /// //  return true;                          //   return true;
+  /// //}                                       // }
+  ///
+  /// Maximum: 0
+  /// /// List:                                 ///List:
+  /// ///  - Foo                                /// - Foo
+  /// ///    - Bar                              ///   - Bar
+  /// \endcode
+  SpacesInLineComment SpacesInLineCommentPrefix;
 
   /// If ``true``, spaces will be inserted after ``(`` and before ``)``.
   /// \code
@@ -2699,6 +3203,22 @@ struct FormatStyle {
   /// \endcode
   LanguageStandard Standard;
 
+  /// Macros which are ignored in front of a statement, as if they were an
+  /// attribute. So that they are not parsed as identifier, for example for Qts
+  /// emit.
+  /// \code
+  ///   AlignConsecutiveDeclarations: true
+  ///   StatementAttributeLikeMacros: []
+  ///   unsigned char data = 'x';
+  ///   emit          signal(data); // This is parsed as variable declaration.
+  ///
+  ///   AlignConsecutiveDeclarations: true
+  ///   StatementAttributeLikeMacros: [emit]
+  ///   unsigned char data = 'x';
+  ///   emit signal(data); // Now it's fine again.
+  /// \endcode
+  std::vector<std::string> StatementAttributeLikeMacros;
+
   /// The number of columns used for tab stops.
   unsigned TabWidth;
 
@@ -2732,6 +3252,7 @@ struct FormatStyle {
            AlignConsecutiveAssignments == R.AlignConsecutiveAssignments &&
            AlignConsecutiveBitFields == R.AlignConsecutiveBitFields &&
            AlignConsecutiveDeclarations == R.AlignConsecutiveDeclarations &&
+           AlignConsecutiveMacros == R.AlignConsecutiveMacros &&
            AlignEscapedNewlines == R.AlignEscapedNewlines &&
            AlignOperands == R.AlignOperands &&
            AlignTrailingComments == R.AlignTrailingComments &&
@@ -2777,6 +3298,8 @@ struct FormatStyle {
            DeriveLineEnding == R.DeriveLineEnding &&
            DerivePointerAlignment == R.DerivePointerAlignment &&
            DisableFormat == R.DisableFormat &&
+           EmptyLineAfterAccessModifier == R.EmptyLineAfterAccessModifier &&
+           EmptyLineBeforeAccessModifier == R.EmptyLineBeforeAccessModifier &&
            ExperimentalAutoDetectBinPacking ==
                R.ExperimentalAutoDetectBinPacking &&
            FixNamespaceComments == R.FixNamespaceComments &&
@@ -2787,10 +3310,10 @@ struct FormatStyle {
                R.IncludeStyle.IncludeIsMainRegex &&
            IncludeStyle.IncludeIsMainSourceRegex ==
                R.IncludeStyle.IncludeIsMainSourceRegex &&
+           IndentAccessModifiers == R.IndentAccessModifiers &&
            IndentCaseLabels == R.IndentCaseLabels &&
            IndentCaseBlocks == R.IndentCaseBlocks &&
            IndentGotoLabels == R.IndentGotoLabels &&
-           IndentPragmas == R.IndentPragmas &&
            IndentPPDirectives == R.IndentPPDirectives &&
            IndentExternBlock == R.IndentExternBlock &&
            IndentRequires == R.IndentRequires && IndentWidth == R.IndentWidth &&
@@ -2824,6 +3347,8 @@ struct FormatStyle {
                R.PenaltyBreakTemplateDeclaration &&
            PointerAlignment == R.PointerAlignment &&
            RawStringFormats == R.RawStringFormats &&
+           ShortNamespaceLines == R.ShortNamespaceLines &&
+           SortIncludes == R.SortIncludes &&
            SortJavaStaticImport == R.SortJavaStaticImport &&
            SpaceAfterCStyleCast == R.SpaceAfterCStyleCast &&
            SpaceAfterLogicalNot == R.SpaceAfterLogicalNot &&
@@ -2845,13 +3370,19 @@ struct FormatStyle {
            SpacesInConditionalStatement == R.SpacesInConditionalStatement &&
            SpacesInContainerLiterals == R.SpacesInContainerLiterals &&
            SpacesInCStyleCastParentheses == R.SpacesInCStyleCastParentheses &&
+           SpacesInLineCommentPrefix.Minimum ==
+               R.SpacesInLineCommentPrefix.Minimum &&
+           SpacesInLineCommentPrefix.Maximum ==
+               R.SpacesInLineCommentPrefix.Maximum &&
            SpacesInParentheses == R.SpacesInParentheses &&
            SpacesInSquareBrackets == R.SpacesInSquareBrackets &&
            SpaceBeforeSquareBrackets == R.SpaceBeforeSquareBrackets &&
            BitFieldColonSpacing == R.BitFieldColonSpacing &&
-           Standard == R.Standard && TabWidth == R.TabWidth &&
-           StatementMacros == R.StatementMacros && UseTab == R.UseTab &&
-           UseCRLF == R.UseCRLF && TypenameMacros == R.TypenameMacros;
+           Standard == R.Standard &&
+           StatementAttributeLikeMacros == R.StatementAttributeLikeMacros &&
+           StatementMacros == R.StatementMacros && TabWidth == R.TabWidth &&
+           UseTab == R.UseTab && UseCRLF == R.UseCRLF &&
+           TypenameMacros == R.TypenameMacros;
   }
 
   llvm::Optional<FormatStyle> GetLanguageStyle(LanguageKind Language) const;
@@ -2889,9 +3420,11 @@ struct FormatStyle {
 private:
   FormatStyleSet StyleSet;
 
-  friend std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
-                                            FormatStyle *Style,
-                                            bool AllowUnknownOptions);
+  friend std::error_code
+  parseConfiguration(llvm::MemoryBufferRef Config, FormatStyle *Style,
+                     bool AllowUnknownOptions,
+                     llvm::SourceMgr::DiagHandlerTy DiagHandler,
+                     void *DiagHandlerCtxt);
 };
 
 /// Returns a format style complying with the LLVM coding standards:
@@ -2949,9 +3482,13 @@ bool getPredefinedStyle(StringRef Name, FormatStyle::LanguageKind Language,
 ///
 /// If AllowUnknownOptions is true, no errors are emitted if unknown
 /// format options are occured.
-std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
-                                   FormatStyle *Style,
-                                   bool AllowUnknownOptions = false);
+///
+/// If set all diagnostics are emitted through the DiagHandler.
+std::error_code
+parseConfiguration(llvm::MemoryBufferRef Config, FormatStyle *Style,
+                   bool AllowUnknownOptions = false,
+                   llvm::SourceMgr::DiagHandlerTy DiagHandler = nullptr,
+                   void *DiagHandlerCtx = nullptr);
 
 /// Like above but accepts an unnamed buffer.
 inline std::error_code parseConfiguration(StringRef Config, FormatStyle *Style,

@@ -50,6 +50,7 @@ class Preprocessor;
 class Sema;
 class SourceManager;
 class TargetInfo;
+enum class DisableValidationForModuleKind;
 
 /// CompilerInstance - Helper class for managing a single instance of the Clang
 /// compiler.
@@ -149,7 +150,7 @@ class CompilerInstance : public ModuleLoader {
   bool HaveFullGlobalModuleIndex = false;
 
   /// One or more modules failed to build.
-  bool ModuleBuildFailed = false;
+  bool DisableGeneratingGlobalModuleIndex = false;
 
   /// The stream for verbose output if owned, otherwise nullptr.
   std::unique_ptr<raw_ostream> OwnedVerboseOutputStream;
@@ -170,11 +171,6 @@ class CompilerInstance : public ModuleLoader {
         : Filename(std::move(filename)), TempFilename(std::move(tempFilename)) {
     }
   };
-
-  /// If the output doesn't support seeking (terminal, pipe). we switch
-  /// the stream to a buffer_ostream. These are the buffer and the original
-  /// stream.
-  std::unique_ptr<llvm::raw_fd_ostream> NonSeekStream;
 
   /// The list of active output files.
   std::list<OutputFile> OutputFiles;
@@ -229,9 +225,11 @@ public:
 
   bool hasInvocation() const { return Invocation != nullptr; }
 
-  CompilerInvocation &getInvocation() {
+  CompilerInvocation &getInvocation() { return *getInvocationPtr(); }
+
+  std::shared_ptr<CompilerInvocation> getInvocationPtr() {
     assert(Invocation && "Compiler instance has no invocation!");
-    return *Invocation;
+    return Invocation;
   }
 
   /// setInvocation - Replace the current invocation.
@@ -385,6 +383,9 @@ public:
 
   /// Replace the current AuxTarget.
   void setAuxTarget(TargetInfo *Value);
+
+  // Create Target and AuxTarget based on current options
+  bool createTarget();
 
   /// }
   /// @name Virtual File System
@@ -582,11 +583,6 @@ public:
   /// @name Output Files
   /// {
 
-  /// addOutputFile - Add an output file onto the list of tracked output files.
-  ///
-  /// \param OutFile - The output file info.
-  void addOutputFile(OutputFile &&OutFile);
-
   /// clearOutputFiles - Clear the output file list. The underlying output
   /// streams must have been closed beforehand.
   ///
@@ -659,16 +655,17 @@ public:
 
   /// Create an external AST source to read a PCH file and attach it to the AST
   /// context.
-  void createPCHExternalASTSource(StringRef Path, bool DisablePCHValidation,
-                                  bool AllowPCHWithCompilerErrors,
-                                  void *DeserializationListener,
-                                  bool OwnDeserializationListener);
+  void createPCHExternalASTSource(
+      StringRef Path, DisableValidationForModuleKind DisableValidation,
+      bool AllowPCHWithCompilerErrors, void *DeserializationListener,
+      bool OwnDeserializationListener);
 
   /// Create an external AST source to read a PCH file.
   ///
   /// \return - The new object on success, or null on failure.
   static IntrusiveRefCntPtr<ASTReader> createPCHExternalASTSource(
-      StringRef Path, StringRef Sysroot, bool DisablePCHValidation,
+      StringRef Path, StringRef Sysroot,
+      DisableValidationForModuleKind DisableValidation,
       bool AllowPCHWithCompilerErrors, Preprocessor &PP,
       InMemoryModuleCache &ModuleCache, ASTContext &Context,
       const PCHContainerReader &PCHContainerRdr,
@@ -698,25 +695,29 @@ public:
   /// Create the default output file (from the invocation's options) and add it
   /// to the list of tracked output files.
   ///
-  /// The files created by this function always use temporary files to write to
-  /// their result (that is, the data is written to a temporary file which will
-  /// atomically replace the target output on success).
+  /// The files created by this are usually removed on signal, and, depending
+  /// on FrontendOptions, may also use a temporary file (that is, the data is
+  /// written to a temporary file which will atomically replace the target
+  /// output on success). If a client (like libclang) needs to disable
+  /// RemoveFileOnSignal, temporary files will be forced on.
   ///
   /// \return - Null on error.
   std::unique_ptr<raw_pwrite_stream>
   createDefaultOutputFile(bool Binary = true, StringRef BaseInput = "",
-                          StringRef Extension = "");
+                          StringRef Extension = "",
+                          bool RemoveFileOnSignal = true,
+                          bool CreateMissingDirectories = false);
 
-  /// Create a new output file and add it to the list of tracked output files,
-  /// optionally deriving the output path name.
+  /// Create a new output file, optionally deriving the output path name, and
+  /// add it to the list of tracked output files.
   ///
   /// \return - Null on error.
   std::unique_ptr<raw_pwrite_stream>
   createOutputFile(StringRef OutputPath, bool Binary, bool RemoveFileOnSignal,
-                   StringRef BaseInput, StringRef Extension, bool UseTemporary,
-                   bool CreateMissingDirectories = false);
+                   bool UseTemporary, bool CreateMissingDirectories = false);
 
-  /// Create a new output file, optionally deriving the output path name.
+private:
+  /// Create a new output file and add it to the list of tracked output files.
   ///
   /// If \p OutputPath is empty, then createOutputFile will derive an output
   /// path location as \p BaseInput, with any suffix removed, and \p Extension
@@ -725,10 +726,6 @@ public:
   /// renamed to \p OutputPath in the end.
   ///
   /// \param OutputPath - If given, the path to the output file.
-  /// \param Error [out] - On failure, the error.
-  /// \param BaseInput - If \p OutputPath is empty, the input path name to use
-  /// for deriving the output path.
-  /// \param Extension - The extension to use for derived output names.
   /// \param Binary - The mode to open the file in.
   /// \param RemoveFileOnSignal - Whether the file should be registered with
   /// llvm::sys::RemoveFileOnSignal. Note that this is not safe for
@@ -737,17 +734,12 @@ public:
   /// OutputPath in the end.
   /// \param CreateMissingDirectories - When \p UseTemporary is true, create
   /// missing directories in the output path.
-  /// \param ResultPathName [out] - If given, the result path name will be
-  /// stored here on success.
-  /// \param TempPathName [out] - If given, the temporary file path name
-  /// will be stored here on success.
-  std::unique_ptr<raw_pwrite_stream>
-  createOutputFile(StringRef OutputPath, std::error_code &Error, bool Binary,
-                   bool RemoveFileOnSignal, StringRef BaseInput,
-                   StringRef Extension, bool UseTemporary,
-                   bool CreateMissingDirectories, std::string *ResultPathName,
-                   std::string *TempPathName);
+  Expected<std::unique_ptr<raw_pwrite_stream>>
+  createOutputFileImpl(StringRef OutputPath, bool Binary,
+                       bool RemoveFileOnSignal, bool UseTemporary,
+                       bool CreateMissingDirectories);
 
+public:
   std::unique_ptr<raw_pwrite_stream> createNullOutputFile();
 
   /// }

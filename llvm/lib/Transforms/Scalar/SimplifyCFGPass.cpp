@@ -36,6 +36,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -141,13 +142,17 @@ static bool mergeEmptyReturnBlocks(Function &F, DomTreeUpdater *DTU) {
           cast<ReturnInst>(RetBlock->getTerminator())->getOperand(0)) {
       // All predecessors of BB should now branch to RetBlock instead.
       if (DTU) {
-        for (auto *Predecessor : predecessors(&BB)) {
+        SmallPtrSet<BasicBlock *, 2> PredsOfBB(pred_begin(&BB), pred_end(&BB));
+        SmallPtrSet<BasicBlock *, 2> PredsOfRetBlock(pred_begin(RetBlock),
+                                                     pred_end(RetBlock));
+        Updates.reserve(Updates.size() + 2 * PredsOfBB.size());
+        for (auto *Predecessor : PredsOfBB)
           // But, iff Predecessor already branches to RetBlock,
           // don't (re-)add DomTree edge, because it already exists.
-          if (!is_contained(successors(Predecessor), RetBlock))
+          if (!PredsOfRetBlock.contains(Predecessor))
             Updates.push_back({DominatorTree::Insert, Predecessor, RetBlock});
+        for (auto *Predecessor : PredsOfBB)
           Updates.push_back({DominatorTree::Delete, Predecessor, &BB});
-        }
       }
       BB.replaceAllUsesWith(RetBlock);
       DeadBlocks.emplace_back(&BB);
@@ -200,9 +205,12 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
 
   SmallVector<std::pair<const BasicBlock *, const BasicBlock *>, 32> Edges;
   FindFunctionBackedges(F, Edges);
-  SmallPtrSet<BasicBlock *, 16> LoopHeaders;
+  SmallPtrSet<BasicBlock *, 16> UniqueLoopHeaders;
   for (unsigned i = 0, e = Edges.size(); i != e; ++i)
-    LoopHeaders.insert(const_cast<BasicBlock *>(Edges[i].second));
+    UniqueLoopHeaders.insert(const_cast<BasicBlock *>(Edges[i].second));
+
+  SmallVector<WeakVH, 16> LoopHeaders(UniqueLoopHeaders.begin(),
+                                      UniqueLoopHeaders.end());
 
   while (LocalChange) {
     LocalChange = false;
@@ -219,7 +227,7 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
         while (BBIt != F.end() && DTU->isBBPendingDeletion(&*BBIt))
           ++BBIt;
       }
-      if (simplifyCFG(&BB, TTI, DTU, Options, &LoopHeaders)) {
+      if (simplifyCFG(&BB, TTI, DTU, Options, LoopHeaders)) {
         LocalChange = true;
         ++NumSimpl;
       }

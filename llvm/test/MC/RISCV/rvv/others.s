@@ -1,12 +1,12 @@
 # RUN: llvm-mc -triple=riscv64 -show-encoding --mattr=+experimental-v %s \
-# RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
+# RUN:   --riscv-no-aliases | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 # RUN: not llvm-mc -triple=riscv64 -show-encoding %s 2>&1 \
-# RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
+# RUN:   | FileCheck %s --check-prefix=CHECK-ERROR
 # RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+experimental-v %s \
-# RUN:        | llvm-objdump -d --mattr=+experimental-v - \
-# RUN:        | FileCheck %s --check-prefix=CHECK-INST
+# RUN:   | llvm-objdump -d --mattr=+experimental-v -M no-aliases - \
+# RUN:   | FileCheck %s --check-prefix=CHECK-INST
 # RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+experimental-v %s \
-# RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
+# RUN:   | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 
 vmerge.vvm v8, v4, v20, v0
 # CHECK-INST: vmerge.vvm v8, v4, v20, v0
@@ -133,6 +133,18 @@ vrgather.vi v8, v4, 31
 # CHECK-ENCODING: [0x57,0xb4,0x4f,0x32]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 57 b4 4f 32 <unknown>
+
+vrgatherei16.vv v8, v4, v20, v0.t
+# CHECK-INST: vrgatherei16.vv v8, v4, v20, v0.t
+# CHECK-ENCODING: [0x57,0x04,0x4a,0x38]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 57 04 4a 38 <unknown>
+
+vrgatherei16.vv v8, v4, v20
+# CHECK-INST: vrgatherei16.vv v8, v4, v20
+# CHECK-ENCODING: [0x57,0x04,0x4a,0x3a]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 57 04 4a 3a <unknown>
 
 vcompress.vm v8, v4, v20
 # CHECK-INST: vcompress.vm v8, v4, v20

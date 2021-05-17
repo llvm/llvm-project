@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - %s | \
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -debug-info-kind=limited -o - %s | \
 // RUN:   FileCheck %s -check-prefix=CHECK -check-prefix=SSE -check-prefix=NO-AVX512
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - %s -target-feature +avx | \
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -debug-info-kind=limited -o - %s -target-feature +avx | \
 // RUN:   FileCheck %s -check-prefix=CHECK -check-prefix=AVX -check-prefix=NO-AVX512
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - %s -target-feature +avx512f | \
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -debug-info-kind=limited -o - %s -target-feature +avx512f | \
 // RUN:   FileCheck %s -check-prefix=CHECK -check-prefix=AVX -check-prefix=AVX512
 #include <stdarg.h>
 
@@ -545,3 +545,9 @@ struct t65 {
 // AVX: @f65(<8 x float> %{{[^,)]+}})
 void f65(struct t65 a0) {
 }
+
+/// The synthesized __va_list_tag does not have file/line fields.
+// CHECK:      = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "__va_list_tag",
+// CHECK-NOT:  file:
+// CHECK-NOT:  line:
+// CHECK-SAME: size:

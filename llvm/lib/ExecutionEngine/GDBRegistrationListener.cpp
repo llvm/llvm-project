@@ -47,20 +47,27 @@ extern "C" {
   // We put information about the JITed function in this global, which the
   // debugger reads.  Make sure to specify the version statically, because the
   // debugger checks the version before we can set it during runtime.
-  struct jit_descriptor __jit_debug_descriptor = { 1, 0, nullptr, nullptr };
+  extern struct jit_descriptor __jit_debug_descriptor;
 
   // Debuggers puts a breakpoint in this function.
-  LLVM_ATTRIBUTE_NOINLINE void __jit_debug_register_code() {
-    // The noinline and the asm prevent calls to this function from being
-    // optimized out.
-#if !defined(_MSC_VER)
-    asm volatile("":::"memory");
-#endif
-  }
-
+  extern "C" void __jit_debug_register_code();
 }
 
 namespace {
+
+// FIXME: lli aims to provide both, RuntimeDyld and JITLink, as the dynamic
+// loaders for it's JIT implementations. And they both offer debugging via the
+// GDB JIT interface, which builds on the two well-known symbol names below.
+// As these symbols must be unique accross the linked executable, we can only
+// define them in one of the libraries and make the other depend on it.
+// OrcTargetProcess is a minimal stub for embedding a JIT client in remote
+// executors. For the moment it seems reasonable to have the definition there
+// and let ExecutionEngine depend on it, until we find a better solution.
+//
+LLVM_ATTRIBUTE_USED void requiredSymbolDefinitionsFromOrcTargetProcess() {
+  errs() << (void *)&__jit_debug_register_code
+         << (void *)&__jit_debug_descriptor;
+}
 
 struct RegisteredObjectInfo {
   RegisteredObjectInfo() {}

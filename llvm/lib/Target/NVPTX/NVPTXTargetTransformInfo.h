@@ -71,7 +71,9 @@ public:
 
   // Only <2 x half> should be vectorized, so always return 32 for the vector
   // register size.
-  unsigned getRegisterBitWidth(bool Vector) const { return 32; }
+  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
+    return TypeSize::getFixed(32);
+  }
   unsigned getMinVectorRegisterBitWidth() const { return 32; }
 
   // We don't want to prevent inlining because of target-cpu and -features
@@ -86,7 +88,7 @@ public:
   // calls are particularly expensive in NVPTX.
   unsigned getInliningThresholdMultiplier() { return 5; }
 
-  int getArithmeticInstrCost(
+  InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,

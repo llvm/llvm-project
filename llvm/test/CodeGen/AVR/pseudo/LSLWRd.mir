@@ -12,6 +12,7 @@
 name:            test
 body: |
   bb.0.entry:
+    liveins: $r15r14
 
     ; CHECK-LABEL: test
 

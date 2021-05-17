@@ -3,7 +3,7 @@
 # RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-b \
 # RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-b < %s \
-# RUN:     | llvm-objdump -d -r --riscv-no-aliases --mattr=+experimental-b - \
+# RUN:     | llvm-objdump -d -r -M no-aliases --mattr=+experimental-b - \
 # RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ-NOALIAS %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-b < %s \
 # RUN:     | llvm-objdump -d -r --mattr=+experimental-b - \
@@ -19,7 +19,7 @@
 # CHECK-S-OBJ: andi t0, t1, 255
 zext.b x5, x6
 
-# CHECK-S-OBJ-NOALIAS: pack t0, t1, zero
+# CHECK-S-OBJ-NOALIAS: zext.h t0, t1
 # CHECK-S-OBJ: zext.h t0, t1
 zext.h x5, x6
 
@@ -67,7 +67,7 @@ rev.h x5, x6
 # CHECK-S-OBJ: rev16 t0, t1
 rev16 x5, x6
 
-# CHECK-S-OBJ-NOALIAS: grevi t0, t1, 24
+# CHECK-S-OBJ-NOALIAS: rev8 t0, t1
 # CHECK-S-OBJ: rev8 t0, t1
 rev8 x5, x6
 
@@ -183,7 +183,7 @@ orc4.b x5, x6
 # CHECK-S-OBJ: orc2.b t0, t1
 orc2.b x5, x6
 
-# CHECK-S-OBJ-NOALIAS: gorci t0, t1, 7
+# CHECK-S-OBJ-NOALIAS: orc.b t0, t1
 # CHECK-S-OBJ: orc.b t0, t1
 orc.b x5, x6
 
@@ -222,3 +222,39 @@ orc2 x5, x6
 # CHECK-S-OBJ-NOALIAS: gorci t0, t1, 31
 # CHECK-S-OBJ: orc t0, t1
 orc x5, x6
+
+# CHECK-S-OBJ-NOALIAS: rori t0, t1, 8
+# CHECK-S-OBJ: rori t0, t1, 8
+ror x5, x6, 8
+
+# CHECK-S-OBJ-NOALIAS: bseti t0, t1, 8
+# CHECK-S-OBJ: bseti t0, t1, 8
+bset x5, x6, 8
+
+# CHECK-S-OBJ-NOALIAS: bclri t0, t1, 8
+# CHECK-S-OBJ: bclri t0, t1, 8
+bclr x5, x6, 8
+
+# CHECK-S-OBJ-NOALIAS: binvi t0, t1, 8
+# CHECK-S-OBJ: binvi t0, t1, 8
+binv x5, x6, 8
+
+# CHECK-S-OBJ-NOALIAS: bexti t0, t1, 8
+# CHECK-S-OBJ: bexti t0, t1, 8
+bext x5, x6, 8
+
+# CHECK-S-OBJ-NOALIAS: grevi t0, t1, 13
+# CHECK-S-OBJ: grevi t0, t1, 13
+grev x5, x6, 13
+
+# CHECK-S-OBJ-NOALIAS: gorci t0, t1, 13
+# CHECK-S-OBJ: gorci t0, t1, 13
+gorc x5, x6, 13
+
+# CHECK-S-OBJ-NOALIAS: shfli t0, t1, 13
+# CHECK-S-OBJ: shfli t0, t1, 13
+shfl x5, x6, 13
+
+# CHECK-S-OBJ-NOALIAS: unshfli t0, t1, 13
+# CHECK-S-OBJ: unshfli t0, t1, 13
+unshfl x5, x6, 13

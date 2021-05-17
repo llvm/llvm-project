@@ -88,7 +88,7 @@ void CodeSection::finalizeContents() {
 
   for (InputFunction *func : functions) {
     func->outputSec = this;
-    func->outputOffset = bodySize;
+    func->outSecOff = bodySize;
     func->calculateSize();
     // All functions should have a non-empty body at this point
     assert(func->getSize());
@@ -138,7 +138,7 @@ void DataSection::finalizeContents() {
 #ifndef NDEBUG
   unsigned activeCount = std::count_if(
       segments.begin(), segments.end(), [](OutputSegment *segment) {
-        return (segment->initFlags & WASM_SEGMENT_IS_PASSIVE) == 0;
+        return (segment->initFlags & WASM_DATA_SEGMENT_IS_PASSIVE) == 0;
       });
 #endif
 
@@ -154,17 +154,19 @@ void DataSection::finalizeContents() {
       continue;
     raw_string_ostream os(segment->header);
     writeUleb128(os, segment->initFlags, "init flags");
-    if (segment->initFlags & WASM_SEGMENT_HAS_MEMINDEX)
+    if (segment->initFlags & WASM_DATA_SEGMENT_HAS_MEMINDEX)
       writeUleb128(os, 0, "memory index");
-    if ((segment->initFlags & WASM_SEGMENT_IS_PASSIVE) == 0) {
+    if ((segment->initFlags & WASM_DATA_SEGMENT_IS_PASSIVE) == 0) {
       WasmInitExpr initExpr;
       if (config->isPic) {
         initExpr.Opcode = WASM_OPCODE_GLOBAL_GET;
         initExpr.Value.Global = WasmSym::memoryBase->getGlobalIndex();
+      } else if (config->is64.getValueOr(false)) {
+        initExpr.Opcode = WASM_OPCODE_I64_CONST;
+        initExpr.Value.Int64 = static_cast<int64_t>(segment->startVA);
       } else {
-        // FIXME(wvo): I64?
         initExpr.Opcode = WASM_OPCODE_I32_CONST;
-        initExpr.Value.Int32 = segment->startVA;
+        initExpr.Value.Int32 = static_cast<int32_t>(segment->startVA);      
       }
       writeInitExpr(os, initExpr);
     }
@@ -178,8 +180,8 @@ void DataSection::finalizeContents() {
 
     for (InputSegment *inputSeg : segment->inputSegments) {
       inputSeg->outputSec = this;
-      inputSeg->outputOffset = segment->sectionOffset + segment->header.size() +
-                               inputSeg->outputSegmentOffset;
+      inputSeg->outSecOff = segment->sectionOffset + segment->header.size() +
+                            inputSeg->outputSegmentOffset;
     }
   }
 
@@ -241,7 +243,7 @@ void CustomSection::finalizeContents() {
   for (InputSection *section : inputSections) {
     assert(!section->discarded);
     section->outputSec = this;
-    section->outputOffset = payloadSize;
+    section->outSecOff = payloadSize;
     payloadSize += section->getSize();
   }
 

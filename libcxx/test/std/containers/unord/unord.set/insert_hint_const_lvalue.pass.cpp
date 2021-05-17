@@ -33,17 +33,17 @@ void do_insert_hint_const_lvalue_test()
     assert(c.size() == 1);
     assert(*r == 3.5);
 
-    r = c.insert(e, v1);
+    r = c.insert(r, v1);
     assert(c.size() == 1);
     assert(*r == 3.5);
 
     const VT v2(4.5);
-    r = c.insert(e, v2);
+    r = c.insert(c.end(), v2);
     assert(c.size() == 2);
     assert(*r == 4.5);
 
     const VT v3(5.5);
-    r = c.insert(e, v3);
+    r = c.insert(c.end(), v3);
     assert(c.size() == 3);
     assert(*r == 5.5);
 }

@@ -1,5 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+unimplemented-simd128,+sign-ext | FileCheck %s --check-prefixes CHECK,SIMD128
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+simd128,+sign-ext | FileCheck %s --check-prefixes CHECK,SIMD128-VM
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+simd128,+sign-ext | FileCheck %s --check-prefixes CHECK,SIMD128
 ; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s --check-prefixes CHECK,NO-SIMD128
 
 ; Test that basic SIMD128 vector manipulation operations assemble as expected.
@@ -12,7 +11,6 @@ target triple = "wasm32-unknown-unknown"
 ; ==============================================================================
 ; CHECK-LABEL: const_v16i8:
 ; NO-SIMD128-NOT: i8x16
-; SIMD128-VM-NOT: v128.const
 ; SIMD128-NEXT: .functype const_v16i8 () -> (v128){{$}}
 ; SIMD128-NEXT: v128.const $push[[R:[0-9]+]]=,
 ; SIMD128-SAME: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
@@ -277,7 +275,6 @@ define <16 x i8> @build_v16i8(i8 %x0, i8 %x1, i8 %x2, i8 %x3,
 ; ==============================================================================
 ; CHECK-LABEL: const_v8i16:
 ; NO-SIMD128-NOT: i16x8
-; SIMD128-VM-NOT: v128.const
 ; SIMD128-NEXT: .functype const_v8i16 () -> (v128){{$}}
 ; SIMD128-NEXT: v128.const $push[[R:[0-9]+]]=, 256, 770, 1284, 1798, 2312, 2826, 3340, 3854{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -526,7 +523,6 @@ define <8 x i16> @build_v8i16(i16 %x0, i16 %x1, i16 %x2, i16 %x3,
 ; ==============================================================================
 ; CHECK-LABEL: const_v4i32:
 ; NO-SIMD128-NOT: i32x4
-; SIMD128-VM-NOT: v128.const
 ; SIMD128-NEXT: .functype const_v4i32 () -> (v128){{$}}
 ; SIMD128-NEXT: v128.const $push[[R:[0-9]+]]=, 50462976, 117835012, 185207048, 252579084{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -678,7 +674,6 @@ define <4 x i32> @build_v4i32(i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
 ; ==============================================================================
 ; CHECK-LABEL: const_v2i64:
 ; NO-SIMD128-NOT: i64x2
-; SIMD128-VM-NOT: v128.const
 ; SIMD128-NEXT: .functype const_v2i64 () -> (v128){{$}}
 ; SIMD128-NEXT: v128.const $push[[R:[0-9]+]]=, 506097522914230528, 1084818905618843912{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -824,7 +819,6 @@ define <2 x i64> @build_v2i64(i64 %x0, i64 %x1) {
 ; ==============================================================================
 ; CHECK-LABEL: const_v4f32:
 ; NO-SIMD128-NOT: f32x4
-; SIMD128-VM-NOT: v128.const
 ; SIMD128-NEXT: .functype const_v4f32 () -> (v128){{$}}
 ; SIMD128-NEXT: v128.const $push[[R:[0-9]+]]=,
 ; SIMD128-SAME: 0x1.0402p-121, 0x1.0c0a08p-113, 0x1.14121p-105, 0x1.1c1a18p-97{{$}}
@@ -978,7 +972,6 @@ define <4 x float> @build_v4f32(float %x0, float %x1, float %x2, float %x3) {
 ; ==============================================================================
 ; CHECK-LABEL: const_v2f64:
 ; NO-SIMD128-NOT: f64x2
-; SIMD128-VM-NOT: v128.const
 ; SIMD128-NEXT: .functype const_v2f64 () -> (v128){{$}}
 ; SIMD128-NEXT: v128.const $push[[R:[0-9]+]]=, 0x1.60504030201p-911, 0x1.e0d0c0b0a0908p-783{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}

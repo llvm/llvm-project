@@ -287,7 +287,6 @@ void BottleneckAnalysis::printInstruction(formatted_raw_ostream &FOS,
                                           const MCInst &MCI,
                                           bool UseDifferentColor) const {
   FOS.PadToColumn(14);
-
   if (UseDifferentColor)
     FOS.changeColor(raw_ostream::CYAN, true, false);
   FOS << printInstructionString(MCI);

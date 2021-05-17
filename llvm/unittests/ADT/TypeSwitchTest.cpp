@@ -47,7 +47,7 @@ TEST(TypeSwitchTest, CasesResult) {
     return TypeSwitch<Base *, int>(&value)
         .Case<DerivedA, DerivedB, DerivedD>([](auto *) { return 0; })
         .Case([](DerivedC *) { return 1; })
-        .Default([](Base *) { return -1; });
+        .Default(-1);
   };
   EXPECT_EQ(0, translate(DerivedA()));
   EXPECT_EQ(0, translate(DerivedB()));

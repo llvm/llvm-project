@@ -1,0 +1,15 @@
+# RUN: not --crash llc -march=arm64 -verify-machineinstrs -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+
+name:            test
+body: |
+  bb.0:
+    %v1:_(<2 x s64>) = G_IMPLICIT_DEF
+    %v2:_(<2 x s64>) = G_IMPLICIT_DEF
+    %v3:_(<2 x s64>) = G_IMPLICIT_DEF
+
+    ; CHECK: *** Bad machine code: Bitfield extraction is not supported on vectors ***
+    %ubfx_vector:_(<2 x s64>) = G_UBFX %v1, %v2, %v3
+    ; CHECK: *** Bad machine code: Bitfield extraction is not supported on vectors ***
+    %sbfx_vector:_(<2 x s64>) = G_SBFX %v1, %v2, %v3
+...

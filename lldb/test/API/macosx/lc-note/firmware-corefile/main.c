@@ -1,2 +1,2 @@
 #include <stdio.h>
-int main () { puts ("this is the lc-note test program."); }
+int main () { puts ("this is the standalone binary test program"); }

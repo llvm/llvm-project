@@ -613,7 +613,7 @@ ClassImplementsAllMethodsAndProperties(ASTContext &Ctx,
         continue;
       HasAtleastOneRequiredProperty = true;
       DeclContext::lookup_result R = IDecl->lookup(Property->getDeclName());
-      if (R.size() == 0) {
+      if (R.empty()) {
         // Relax the rule and look into class's implementation for a synthesize
         // or dynamic declaration. Class is implementing a property coming from
         // another protocol. This still makes the target protocol as conforming.
@@ -621,14 +621,12 @@ ClassImplementsAllMethodsAndProperties(ASTContext &Ctx,
                                   Property->getDeclName().getAsIdentifierInfo(),
                                   Property->getQueryKind()))
           return false;
-      }
-      else if (ObjCPropertyDecl *ClassProperty = dyn_cast<ObjCPropertyDecl>(R[0])) {
-          if ((ClassProperty->getPropertyAttributes()
-              != Property->getPropertyAttributes()) ||
-              !Ctx.hasSameType(ClassProperty->getType(), Property->getType()))
-            return false;
-      }
-      else
+      } else if (auto *ClassProperty = R.find_first<ObjCPropertyDecl>()) {
+        if ((ClassProperty->getPropertyAttributes() !=
+             Property->getPropertyAttributes()) ||
+            !Ctx.hasSameType(ClassProperty->getType(), Property->getType()))
+          return false;
+      } else
         return false;
     }
 
@@ -645,12 +643,12 @@ ClassImplementsAllMethodsAndProperties(ASTContext &Ctx,
       if (MD->getImplementationControl() == ObjCMethodDecl::Optional)
         continue;
       DeclContext::lookup_result R = ImpDecl->lookup(MD->getDeclName());
-      if (R.size() == 0)
+      if (R.empty())
         return false;
       bool match = false;
       HasAtleastOneRequiredMethod = true;
-      for (unsigned I = 0, N = R.size(); I != N; ++I)
-        if (ObjCMethodDecl *ImpMD = dyn_cast<ObjCMethodDecl>(R[0]))
+      for (NamedDecl *ND : R)
+        if (ObjCMethodDecl *ImpMD = dyn_cast<ObjCMethodDecl>(ND))
           if (Ctx.ObjCMethodsAreEqual(MD, ImpMD)) {
             match = true;
             break;

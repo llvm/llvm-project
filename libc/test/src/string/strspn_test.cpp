@@ -10,14 +10,14 @@
 
 #include "utils/UnitTest/Test.h"
 
-TEST(StrSpnTest, EmptyStringShouldReturnZeroLengthSpan) {
+TEST(LlvmLibcStrSpnTest, EmptyStringShouldReturnZeroLengthSpan) {
   // The search should not include the null terminator.
   EXPECT_EQ(__llvm_libc::strspn("", ""), size_t{0});
   EXPECT_EQ(__llvm_libc::strspn("_", ""), size_t{0});
   EXPECT_EQ(__llvm_libc::strspn("", "_"), size_t{0});
 }
 
-TEST(StrSpnTest, ShouldNotSpanAnythingAfterNullTerminator) {
+TEST(LlvmLibcStrSpnTest, ShouldNotSpanAnythingAfterNullTerminator) {
   const char src[4] = {'a', 'b', '\0', 'c'};
   EXPECT_EQ(__llvm_libc::strspn(src, "ab"), size_t{2});
   EXPECT_EQ(__llvm_libc::strspn(src, "c"), size_t{0});
@@ -27,7 +27,7 @@ TEST(StrSpnTest, ShouldNotSpanAnythingAfterNullTerminator) {
   EXPECT_EQ(__llvm_libc::strspn("123", segment), size_t{2});
 }
 
-TEST(StrSpnTest, SpanEachIndividualCharacter) {
+TEST(LlvmLibcStrSpnTest, SpanEachIndividualCharacter) {
   const char *src = "12345";
   EXPECT_EQ(__llvm_libc::strspn(src, "1"), size_t{1});
   // Since '1' is not within the segment, the span
@@ -38,13 +38,13 @@ TEST(StrSpnTest, SpanEachIndividualCharacter) {
   EXPECT_EQ(__llvm_libc::strspn(src, "5"), size_t{0});
 }
 
-TEST(StrSpnTest, UnmatchedCharacterShouldNotBeCountedInSpan) {
+TEST(LlvmLibcStrSpnTest, UnmatchedCharacterShouldNotBeCountedInSpan) {
   EXPECT_EQ(__llvm_libc::strspn("a", "b"), size_t{0});
   EXPECT_EQ(__llvm_libc::strspn("abcdef", "1"), size_t{0});
   EXPECT_EQ(__llvm_libc::strspn("123", "4"), size_t{0});
 }
 
-TEST(StrSpnTest, SequentialCharactersShouldSpan) {
+TEST(LlvmLibcStrSpnTest, SequentialCharactersShouldSpan) {
   const char *src = "abcde";
   EXPECT_EQ(__llvm_libc::strspn(src, "a"), size_t{1});
   EXPECT_EQ(__llvm_libc::strspn(src, "ab"), size_t{2});
@@ -59,14 +59,14 @@ TEST(StrSpnTest, SequentialCharactersShouldSpan) {
   EXPECT_EQ(__llvm_libc::strspn("a", src), size_t{1});
 }
 
-TEST(StrSpnTest, NonSequentialCharactersShouldNotSpan) {
+TEST(LlvmLibcStrSpnTest, NonSequentialCharactersShouldNotSpan) {
   const char *src = "123456789";
   EXPECT_EQ(__llvm_libc::strspn(src, "_1_abc_2_def_3_"), size_t{3});
   // Only spans 4 since '5' is not within the span.
   EXPECT_EQ(__llvm_libc::strspn(src, "67__34abc12"), size_t{4});
 }
 
-TEST(StrSpnTest, ReverseCharacters) {
+TEST(LlvmLibcStrSpnTest, ReverseCharacters) {
   // Since these are still sequential, this should span.
   EXPECT_EQ(__llvm_libc::strspn("12345", "54321"), size_t{5});
   // Does not span any since '1' is not within the span.
@@ -75,7 +75,7 @@ TEST(StrSpnTest, ReverseCharacters) {
   EXPECT_EQ(__llvm_libc::strspn("12345", "51"), size_t{1});
 }
 
-TEST(StrSpnTest, DuplicatedCharactersToBeSearchedForShouldStillMatch) {
+TEST(LlvmLibcStrSpnTest, DuplicatedCharactersToBeSearchedForShouldStillMatch) {
   // Only a single character, so only spans 1.
   EXPECT_EQ(__llvm_libc::strspn("a", "aa"), size_t{1});
   // This should count once for each 'a' in the source string.

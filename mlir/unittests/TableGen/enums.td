@@ -15,6 +15,7 @@ def StrEnum: StrEnumAttr<"StrEnum", "A test enum", [CaseA, CaseB]> {
   let cppNamespace = "Outer::Inner";
   let stringToSymbolFnName = "ConvertToEnum";
   let symbolToStringFnName = "ConvertToString";
+  let genSpecializedAttr = 1;
 }
 
 def Case5: I32EnumAttrCase<"Case5", 5>;

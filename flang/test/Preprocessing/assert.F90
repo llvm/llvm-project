@@ -1,4 +1,4 @@
-!RUN: %f18 -E %s 2>&1 | FileCheck %s
+!RUN: %flang -E %s 2>&1 | FileCheck %s
 !CHECK: if(.not.(.true.)) error stop "assert(" // ".TRUE." // ") failed " // "at ""
 !CHECK-SAME: assert.F90"": " // "7"
 #define STR(x) #x

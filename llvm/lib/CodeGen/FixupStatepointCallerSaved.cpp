@@ -380,7 +380,9 @@ public:
                   EndIdx = MI.getNumOperands();
          Idx < EndIdx; ++Idx) {
       MachineOperand &MO = MI.getOperand(Idx);
-      if (!MO.isReg() || MO.isImplicit())
+      // Leave `undef` operands as is, StackMaps will rewrite them
+      // into a constant.
+      if (!MO.isReg() || MO.isImplicit() || MO.isUndef())
         continue;
       Register Reg = MO.getReg();
       assert(Reg.isPhysical() && "Only physical regs are expected");
@@ -482,6 +484,16 @@ public:
       MachineOperand &DefMO = MI.getOperand(I);
       assert(DefMO.isReg() && DefMO.isDef() && "Expected Reg Def operand");
       Register Reg = DefMO.getReg();
+      assert(DefMO.isTied() && "Def is expected to be tied");
+      // We skipped undef uses and did not spill them, so we should not
+      // proceed with defs here.
+      if (MI.getOperand(MI.findTiedOperandIdx(I)).isUndef()) {
+        if (AllowGCPtrInCSR) {
+          NewIndices.push_back(NewMI->getNumOperands());
+          MIB.addReg(Reg, RegState::Define);
+        }
+        continue;
+      }
       if (!AllowGCPtrInCSR) {
         assert(is_contained(RegsToSpill, Reg));
         RegsToReload.push_back(Reg);

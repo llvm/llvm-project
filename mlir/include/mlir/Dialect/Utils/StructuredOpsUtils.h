@@ -24,27 +24,23 @@
 
 namespace mlir {
 
-inline bool isRowMajorMatmul(ArrayAttr indexingMaps) {
-  auto context = indexingMaps.getContext();
-  AffineExpr m, n, k;
-  bindDims(context, m, n, k);
-  auto mapA = AffineMapAttr::get(AffineMap::get(3, 0, {m, k}, context));
-  auto mapB = AffineMapAttr::get(AffineMap::get(3, 0, {k, n}, context));
-  auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {m, n}, context));
-  auto maps = ArrayAttr::get({mapA, mapB, mapC}, context);
-  return indexingMaps == maps;
-}
+/// Tests whether the given maps describe a row major matmul. The test is
+/// permutation-invariant. Note that this only checks the affine maps from an
+/// operation, so does not perform any checks on the math being performed within
+/// the reduction.
+bool isRowMajorMatmul(ArrayAttr indexingMaps);
 
-inline bool isColumnMajorMatmul(ArrayAttr indexingMaps) {
-  auto context = indexingMaps.getContext();
-  AffineExpr m, n, k;
-  bindDims(context, m, n, k);
-  auto mapA = AffineMapAttr::get(AffineMap::get(3, 0, {k, n}, context));
-  auto mapB = AffineMapAttr::get(AffineMap::get(3, 0, {m, k}, context));
-  auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {n, m}, context));
-  auto maps = ArrayAttr::get({mapA, mapB, mapC}, context);
-  return indexingMaps == maps;
-}
+/// Tests whether the given maps describe a column major matmul. The test is
+/// permutation-invariant. Note that this only checks the affine maps from an
+/// operation, so does not perform any checks on the math being performed within
+/// the reduction.
+bool isColumnMajorMatmul(ArrayAttr indexingMaps);
+
+/// Tests whether the given maps describe a row major batch matmul. The test is
+/// permutation-invariant. Note that this only checks the affine maps from an
+/// operation, so does not perform any checks on the math being performed within
+/// the reduction.
+bool isRowMajorBatchMatmul(ArrayAttr indexingMaps);
 
 /// Attribute name for the AffineArrayAttr which encodes the relationship
 /// between a structured op iterators' and its operands.
@@ -61,9 +57,6 @@ constexpr StringRef getDocAttrName() { return "doc"; }
 /// Attribute name for the StrArrayAttr which encodes the external library
 /// function that implements the structured op.
 constexpr StringRef getLibraryCallAttrName() { return "library_call"; }
-
-/// Attribute name for the ArrayAttr of StrArrayAttr that encodes sparsity.
-constexpr StringRef getSparseAttrName() { return "sparse"; }
 
 /// Attribute name for the StrArrayAttr which encodes the value of strides.
 constexpr StringRef getStridesAttrName() { return "strides"; }
@@ -131,18 +124,6 @@ inline StringRef toString(IteratorType t) {
     return getReductionIteratorTypeName();
   }
   llvm_unreachable("Unsupported IteratorType");
-}
-
-/// Use to encode a dense or sparse dimension.
-constexpr StringRef getSparseDimName() { return "S"; }
-inline bool isSparseDim(Attribute attr) {
-  auto strAttr = attr.dyn_cast_or_null<StringAttr>();
-  return strAttr && strAttr.getValue() == getSparseDimName();
-}
-constexpr StringRef getDenseDimName() { return "D"; }
-inline bool isDenseDim(Attribute attr) {
-  auto strAttr = attr.dyn_cast_or_null<StringAttr>();
-  return strAttr && strAttr.getValue() == getDenseDimName();
 }
 
 } // end namespace mlir

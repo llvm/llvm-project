@@ -1,5 +1,8 @@
 # Check the various features of the ShTest format.
-#
+
+# FIXME: this test depends on order of tests
+# RUN: rm -f %{inputs}/shtest-format/.lit_test_times.txt
+
 # RUN: rm -f %t.xml
 # RUN: not %{lit} -j 1 -v %{inputs}/shtest-format --xunit-xml-output %t.xml > %t.out
 # RUN: FileCheck < %t.out %s

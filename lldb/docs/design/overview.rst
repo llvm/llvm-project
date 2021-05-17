@@ -72,7 +72,7 @@ Core
 ----
 
 The Core source files contain basic functionality that is required in the
-debugger as well as the class represeting the debugger it self (Debugger). A
+debugger as well as the class representing the debugger itself (Debugger). A
 wide variety of classes are implemented:
 
 - Address (section offset addressing)

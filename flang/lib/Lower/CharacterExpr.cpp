@@ -341,36 +341,7 @@ fir::CharBoxValue Fortran::lower::CharacterExprHelper::createSubstring(
 
 mlir::Value Fortran::lower::CharacterExprHelper::createLenTrim(
     const fir::CharBoxValue &str) {
-  // Note: Runtime for LEN_TRIM should also be available at some
-  // point. For now use an inlined implementation.
-  auto indexType = builder.getIndexType();
-  auto len = builder.createConvert(loc, indexType, str.getLen());
-  auto one = builder.createIntegerConstant(loc, indexType, 1);
-  auto minusOne = builder.createIntegerConstant(loc, indexType, -1);
-  auto zero = builder.createIntegerConstant(loc, indexType, 0);
-  auto trueVal = builder.createIntegerConstant(loc, builder.getI1Type(), 1);
-  auto blank = createBlankConstantCode(getCharacterType(str));
-  mlir::Value lastChar = builder.create<mlir::SubIOp>(loc, len, one);
-
-  auto iterWhile = builder.create<fir::IterWhileOp>(
-      loc, lastChar, zero, minusOne, trueVal, lastChar);
-  auto insPt = builder.saveInsertionPoint();
-  builder.setInsertionPointToStart(iterWhile.getBody());
-  auto index = iterWhile.getInductionVar();
-  // Look for first non-blank from the right of the character.
-  auto c = createLoadCharAt(str, index);
-  c = builder.createConvert(loc, blank.getType(), c);
-  auto isBlank =
-      builder.create<mlir::CmpIOp>(loc, mlir::CmpIPredicate::eq, blank, c);
-  llvm::SmallVector<mlir::Value, 2> results = {isBlank, index};
-  builder.create<fir::ResultOp>(loc, results);
-  builder.restoreInsertionPoint(insPt);
-  // Compute length after iteration (zero if all blanks)
-  mlir::Value newLen =
-      builder.create<mlir::AddIOp>(loc, iterWhile.getResult(1), one);
-  auto result =
-      builder.create<SelectOp>(loc, iterWhile.getResult(0), zero, newLen);
-  return builder.createConvert(loc, getLengthType(), result);
+  return {};
 }
 
 mlir::Value Fortran::lower::CharacterExprHelper::createTemp(mlir::Type type,

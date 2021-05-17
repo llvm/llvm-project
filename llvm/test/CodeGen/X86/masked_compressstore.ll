@@ -603,10 +603,10 @@ define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i
 define void @compressstore_v2f32_v2i32(float* %base, <2 x float> %V, <2 x i32> %trigger) {
 ; SSE2-LABEL: compressstore_v2f32_v2i32:
 ; SSE2:       ## %bb.0:
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,1,1]
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,0,1,1]
-; SSE2-NEXT:    movmskpd %xmm1, %eax
+; SSE2-NEXT:    movmskpd %xmm2, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    jne LBB2_1
 ; SSE2-NEXT:  ## %bb.2: ## %else

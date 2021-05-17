@@ -12,8 +12,8 @@
 ///
 //===-----------------------------------------------------------------------===/
 
-#ifndef LLVM_TEXTAPI_ELF_TBEHANDLER_H
-#define LLVM_TEXTAPI_ELF_TBEHANDLER_H
+#ifndef LLVM_INTERFACESTUB_TBEHANDLER_H
+#define LLVM_INTERFACESTUB_TBEHANDLER_H
 
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
@@ -40,4 +40,4 @@ Error writeTBEToOutputStream(raw_ostream &OS, const ELFStub &Stub);
 } // end namespace elfabi
 } // end namespace llvm
 
-#endif // LLVM_TEXTAPI_ELF_TBEHANDLER_H
+#endif // LLVM_INTERFACESTUB_TBEHANDLER_H

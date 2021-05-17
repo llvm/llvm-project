@@ -50,8 +50,6 @@ static void terminate_debugger() { g_debugger_lifetime->Terminate(); }
 // main
 int main(int argc, char *argv[]) {
   llvm::InitLLVM IL(argc, argv, /*InstallPipeSignalExitHandler=*/false);
-  llvm::StringRef ToolName = argv[0];
-  llvm::sys::PrintStackTraceOnErrorSignal(ToolName);
   llvm::PrettyStackTraceProgram X(argc, argv);
 
   int option_error = 0;

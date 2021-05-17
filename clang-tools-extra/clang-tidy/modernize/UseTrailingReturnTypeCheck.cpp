@@ -31,7 +31,7 @@ public:
 
   bool shouldWalkTypesOfTypeLocs() const { return false; }
 
-  bool VisitUnqualName(StringRef UnqualName) {
+  bool visitUnqualName(StringRef UnqualName) {
     // Check for collisions with function arguments.
     for (ParmVarDecl *Param : F.parameters())
       if (const IdentifierInfo *Ident = Param->getIdentifier())
@@ -49,17 +49,17 @@ public:
     if (!Elaborated) {
       switch (TL.getTypeLocClass()) {
       case TypeLoc::Record:
-        if (VisitUnqualName(
+        if (visitUnqualName(
                 TL.getAs<RecordTypeLoc>().getTypePtr()->getDecl()->getName()))
           return false;
         break;
       case TypeLoc::Enum:
-        if (VisitUnqualName(
+        if (visitUnqualName(
                 TL.getAs<EnumTypeLoc>().getTypePtr()->getDecl()->getName()))
           return false;
         break;
       case TypeLoc::TemplateSpecialization:
-        if (VisitUnqualName(TL.getAs<TemplateSpecializationTypeLoc>()
+        if (visitUnqualName(TL.getAs<TemplateSpecializationTypeLoc>()
                                 .getTypePtr()
                                 ->getTemplateName()
                                 .getAsTemplateDecl()
@@ -67,7 +67,7 @@ public:
           return false;
         break;
       case TypeLoc::Typedef:
-        if (VisitUnqualName(
+        if (visitUnqualName(
                 TL.getAs<TypedefTypeLoc>().getTypePtr()->getDecl()->getName()))
           return false;
         break;
@@ -97,7 +97,7 @@ public:
   bool VisitDeclRefExpr(DeclRefExpr *S) {
     DeclarationName Name = S->getNameInfo().getName();
     return S->getQualifierLoc() || !Name.isIdentifier() ||
-           !VisitUnqualName(Name.getAsIdentifierInfo()->getName());
+           !visitUnqualName(Name.getAsIdentifierInfo()->getName());
   }
 
 private:
@@ -160,11 +160,11 @@ SourceLocation UseTrailingReturnTypeCheck::findTrailingReturnTypeSourceLocation(
   return Result;
 }
 
-static bool IsCVR(Token T) {
+static bool isCvr(Token T) {
   return T.isOneOf(tok::kw_const, tok::kw_volatile, tok::kw_restrict);
 }
 
-static bool IsSpecifier(Token T) {
+static bool isSpecifier(Token T) {
   return T.isOneOf(tok::kw_constexpr, tok::kw_inline, tok::kw_extern,
                    tok::kw_static, tok::kw_friend, tok::kw_virtual);
 }
@@ -192,8 +192,8 @@ classifyToken(const FunctionDecl &F, Preprocessor &PP, Token Tok) {
     if (T.is(tok::eof))
       break;
 
-    bool Qual = IsCVR(T);
-    bool Spec = IsSpecifier(T);
+    bool Qual = isCvr(T);
+    bool Spec = isSpecifier(T);
     CT.isQualifier &= Qual;
     CT.isSpecifier &= Spec;
     ContainsQualifiers |= Qual;

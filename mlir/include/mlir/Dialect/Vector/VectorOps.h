@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_VECTOR_VECTOROPS_H
 #define MLIR_DIALECT_VECTOR_VECTOROPS_H
 
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -21,19 +22,56 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
+#include "llvm/ADT/StringExtras.h"
+
+// Pull in all enum type definitions and utility function declarations.
+#include "mlir/Dialect/Vector/VectorOpsEnums.h.inc"
 
 namespace mlir {
 class MLIRContext;
-class OwningRewritePatternList;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
+
 namespace vector {
+class VectorDialect;
+
+namespace detail {
+struct BitmaskEnumStorage;
+} // namespace detail
 
 /// Collect a set of vector-to-vector canonicalization patterns.
 void populateVectorToVectorCanonicalizationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context);
+    RewritePatternSet &patterns);
 
 /// Collect a set of vector-to-vector transformation patterns.
-void populateVectorToVectorTransformationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context);
+void populateVectorToVectorTransformationPatterns(RewritePatternSet &patterns);
+
+/// Collect a set of patterns to split transfer read/write ops.
+///
+/// These patterns unrolls transfer read/write ops if the vector consumers/
+/// producers are extract/insert slices op. Transfer ops can map to hardware
+/// load/store functionalities, where the vector size matters for bandwith
+/// considerations. So these patterns should be collected separately, instead
+/// of being generic canonicalization patterns. Also one can let the
+/// `ignoreFilter` to return true to fail matching for fine-grained control.
+void populateSplitVectorTransferPatterns(
+    RewritePatternSet &patterns,
+    std::function<bool(Operation *)> ignoreFilter = nullptr);
+
+/// Collect a set of leading one dimension removal patterns.
+///
+/// These patterns insert vector.shape_cast to remove leading one dimensions
+/// to expose more canonical forms of read/write/insert/extract operations.
+/// With them, there are more chances that we can cancel out extract-insert
+/// pairs or forward write-read pairs.
+void populateCastAwayVectorLeadingOneDimPatterns(RewritePatternSet &patterns);
+
+/// Collect a set of patterns that bubble up/down bitcast ops.
+///
+/// These patterns move vector.bitcast ops to be before insert ops or after
+/// extract ops where suitable. With them, bitcast will happen on smaller
+/// vectors and there are more chances to share extract/insert ops.
+void populateBubbleVectorBitCastOpPatterns(RewritePatternSet &patterns);
 
 /// Collect a set of vector slices transformation patterns:
 ///    ExtractSlicesOpLowering, InsertSlicesOpLowering
@@ -43,8 +81,37 @@ void populateVectorToVectorTransformationPatterns(
 /// use for "slices" ops), this lowering removes all tuple related
 /// operations as well (through DCE and folding). If tuple values
 /// "leak" coming in, however, some tuple related ops will remain.
-void populateVectorSlicesLoweringPatterns(OwningRewritePatternList &patterns,
-                                          MLIRContext *context);
+void populateVectorSlicesLoweringPatterns(RewritePatternSet &patterns);
+
+/// Collect a set of transfer read/write lowering patterns.
+///
+/// These patterns lower transfer ops to simpler ops like `vector.load`,
+/// `vector.store` and `vector.broadcast`.
+void populateVectorTransferLoweringPatterns(RewritePatternSet &patterns);
+
+/// These patterns materialize masks for various vector ops such as transfers.
+void populateVectorMaskMaterializationPatterns(RewritePatternSet &patterns,
+                                               bool enableIndexOptimizations);
+
+// Collect a set of patterns to convert vector.multi_reduction op into
+// a sequence of vector.reduction ops.
+void populateVectorMultiReductionLoweringPatterns(RewritePatternSet &patterns);
+
+/// An attribute that specifies the combining function for `vector.contract`,
+/// and `vector.reduction`.
+class CombiningKindAttr
+    : public Attribute::AttrBase<CombiningKindAttr, Attribute,
+                                 detail::BitmaskEnumStorage> {
+public:
+  using Base::Base;
+
+  static CombiningKindAttr get(CombiningKind kind, MLIRContext *context);
+
+  CombiningKind getKind() const;
+
+  void print(DialectAsmPrinter &p) const;
+  static Attribute parse(DialectAsmParser &parser);
+};
 
 /// Enum to control the lowering of `vector.contract` operations.
 enum class VectorContractLowering {
@@ -63,18 +130,18 @@ enum class VectorTransposeLowering {
   /// intrinsics.
   Flat = 1,
 };
-/// Enum to control the splitting of `vector.transfer` operations into masked
-/// and unmasked variants.
+/// Enum to control the splitting of `vector.transfer` operations into
+/// in-bounds and out-of-bounds variants.
 enum class VectorTransferSplit {
   /// Do not split vector transfer operations.
   None = 0,
-  /// Split using masked + unmasked vector.transfer operations.
+  /// Split using in-bounds + out-of-bounds vector.transfer operations.
   VectorTransfer = 1,
-  /// Split using a unmasked vector.transfer + linalg.fill + linalg.copy
+  /// Split using an in-bounds vector.transfer + linalg.fill + linalg.copy
   /// operations.
   LinalgCopy = 2,
-  /// Do not split vector transfer operation but instead mark it as "unmasked".
-  ForceUnmasked = 3
+  /// Do not split vector transfer operation but instead mark it as "in-bounds".
+  ForceInBounds = 3
 };
 /// Structure to control the behavior of vector transform patterns.
 struct VectorTransformsOptions {
@@ -107,12 +174,16 @@ struct VectorTransformsOptions {
 ///   ShapeCastOp2DDownCastRewritePattern,
 ///   ShapeCastOp2DUpCastRewritePattern
 ///   BroadcastOpLowering,
-///   TransposeOpLowering
 ///   OuterproductOpLowering
 /// These transformation express higher level vector ops in terms of more
 /// elementary extraction, insertion, reduction, product, and broadcast ops.
 void populateVectorContractLoweringPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context,
+    RewritePatternSet &patterns,
+    VectorTransformsOptions vectorTransformOptions = VectorTransformsOptions());
+
+/// Insert TransposeLowering patterns into extraction/insertion.
+void populateVectorTransposeLoweringPatterns(
+    RewritePatternSet &patterns,
     VectorTransformsOptions vectorTransformOptions = VectorTransformsOptions());
 
 /// Returns the integer type required for subscripts in the vector dialect.
@@ -121,6 +192,11 @@ IntegerType getVectorSubscriptType(Builder &builder);
 /// Returns an integer array attribute containing the given values using
 /// the integer type required for subscripts in the vector dialect.
 ArrayAttr getVectorSubscriptAttr(Builder &b, ArrayRef<int64_t> values);
+
+/// Returns the value obtained by reducing the vector into a scalar using the
+/// operation kind associated with a binary AtomicRMWKind op.
+Value getVectorReductionOp(AtomicRMWKind op, OpBuilder &builder, Location loc,
+                           Value vector);
 
 namespace impl {
 /// Build the default minor identity map suitable for a vector transfer. This

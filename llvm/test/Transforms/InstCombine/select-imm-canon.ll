@@ -87,3 +87,41 @@ define i8 @original_logical(i32 %A, i32 %B) {
   %conv7 = trunc i32 %spec.select.i to i8
   ret i8 %conv7
 }
+
+; This would infinite loop because we have potentially opposing
+; constant transforms on degenerate (unsimplified) cmps.
+
+define i32 @PR49205(i32 %t0, i1 %b) {
+; CHECK-LABEL: @PR49205(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_COND:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    br i1 [[B:%.*]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    br label [[FOR_COND]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret i32 1
+;
+entry:
+  br label %for.cond
+
+for.cond:
+  %s = phi i32 [ 7, %entry ], [ %add, %for.body ]
+  br i1 %b, label %for.body, label %for.end
+
+for.body:
+  %div = add i32 %t0, undef
+  %add = add nsw i32 %div, 1
+  br label %for.cond
+
+for.end:
+  %cmp6 = icmp ne i32 %s, 4
+  %conv = zext i1 %cmp6 to i32
+  %and7 = and i32 %s, %conv
+  %sub = sub i32 %s, %and7
+  %cmp9 = icmp ne i32 %sub, 4
+  %conv10 = zext i1 %cmp9 to i32
+  %sub11 = sub i32 %conv10, %sub
+  %and = and i32 %sub11, 1
+  ret i32 %and
+}

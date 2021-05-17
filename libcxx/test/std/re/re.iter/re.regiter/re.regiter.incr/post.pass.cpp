@@ -94,7 +94,7 @@ int main(int, char**)
         assert((*i2).position() == 0);
         assert((*i2).str() == "555-1234");
     }
-    { // https://bugs.llvm.org/show_bug.cgi?id=33681
+    { // https://llvm.org/PR33681
         std::regex rex(".*");
         const char foo[] = "foo";
     //  The -1 is because we don't want the implicit null from the array.

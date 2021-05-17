@@ -126,4 +126,4 @@ raw_ostream &operator<<(raw_ostream &OS, const llvm::gsym::Header &H);
 } // namespace gsym
 } // namespace llvm
 
-#endif // #ifndef LLVM_DEBUGINFO_GSYM_HEADER_H
+#endif // LLVM_DEBUGINFO_GSYM_HEADER_H

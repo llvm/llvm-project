@@ -1,9 +1,9 @@
-; RUN: opt -mtriple=armv7 -mcpu=cortex-a57 -loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-UNROLL-A
-; RUN: opt -mtriple=thumbv7 -mcpu=cortex-a57 -loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-UNROLL-A
-; RUN: opt -mtriple=thumbv7 -mcpu=cortex-a72 -loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-UNROLL-A
-; RUN: opt -mtriple=thumbv8m -mcpu=cortex-m23 -loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-UNROLL-T1
-; RUN: opt -mtriple=thumbv8m.main -mcpu=cortex-m33 -loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-UNROLL-T2
-; RUN: opt -mtriple=thumbv7em -mcpu=cortex-m7 -loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-UNROLL-T2
+; RUN: opt -mtriple=armv7 -mcpu=cortex-a57 -loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-NOUNROLL
+; RUN: opt -mtriple=thumbv7 -mcpu=cortex-a57 -loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-NOUNROLL
+; RUN: opt -mtriple=thumbv7 -mcpu=cortex-a72 -loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-NOUNROLL
+; RUN: opt -mtriple=thumbv8m -mcpu=cortex-m23 -loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-UNROLL
+; RUN: opt -mtriple=thumbv8m.main -mcpu=cortex-m33 -loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-UNROLL
+; RUN: opt -mtriple=thumbv7em -mcpu=cortex-m7 -loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-UNROLL
 
 ; CHECK-LABEL: partial
 define arm_aapcs_vfpcc void @partial(i32* nocapture %C, i32* nocapture readonly %A, i32* nocapture readonly %B) local_unnamed_addr #0 {
@@ -13,36 +13,31 @@ entry:
 ; CHECK-LABEL: for.body
 for.body:
 
-; CHECK-UNROLL-A: [[IV0:%[a-z.0-9]+]] = phi i32 [ 0, %entry ], [ [[IV2:%[a-z.0-9]+]], %for.body ]
-; CHECK-UNROLL-A: [[IV1:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 1
-; CHECK-UNROLL-A: [[IV2]] = add nuw nsw i32 [[IV1]], 1
-; CHECK-UNROLL-A: [[CMP:%[a-z.0-9]+]] = icmp eq i32 [[IV2]], 1024
-; CHECK-UNROLL-A: br i1 [[CMP]], label [[END:%[a-z.]+]], label %for.body
+; CHECK-NOUNROLL: [[IV0:%[a-z.0-9]+]] = phi i32 [ 0, %entry ], [ [[IV2:%[a-z.0-9]+]], %for.body ]
+; CHECK-NOUNROLL: [[IV1:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 1
+; CHECK-NOUNROLL: [[IV2]] = add nuw nsw i32 [[IV1]], 1
+; CHECK-NOUNROLL: [[CMP:%[a-z.0-9]+]] = icmp eq i32 [[IV2]], 1024
+; CHECK-NOUNROLL: br i1 [[CMP]], label [[END:%[a-z.]+]], label %for.body
 
-; CHECK-UNROLL-T1: [[IV0:%[a-z.0-9]+]] = phi i32 [ 0, %entry ], [ [[IV1:%[a-z.0-9]+]], %for.body ]
-; CHECK-UNROLL-T1: [[IV1]] = add nuw nsw i32 [[IV0]], 1
-; CHECK-UNROLL-T1: [[CMP:%[a-z.0-9]+]] = icmp eq i32 [[IV1]], 1024
-; CHECK-UNROLL-T1: br i1 [[CMP]], label [[END:%[a-z.]+]], label %for.body
-
-; CHECK-UNROLL-T2: [[IV0:%[a-z.0-9]+]] = phi i32 [ 0, %entry ], [ [[IV16:%[a-z.0-9]+]], %for.body ]
-; CHECK-UNROLL-T2: [[IV1:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 1
-; CHECK-UNROLL-T2: [[IV2:%[a-z.0-9]+]] = add nuw nsw i32 [[IV1]], 1
-; CHECK-UNROLL-T2: [[IV3:%[a-z.0-9]+]] = add nuw nsw i32 [[IV2]], 1
-; CHECK-UNROLL-T2: [[IV4:%[a-z.0-9]+]] = add nuw nsw i32 [[IV3]], 1
-; CHECK-UNROLL-T2: [[IV5:%[a-z.0-9]+]] = add nuw nsw i32 [[IV4]], 1
-; CHECK-UNROLL-T2: [[IV6:%[a-z.0-9]+]] = add nuw nsw i32 [[IV5]], 1
-; CHECK-UNROLL-T2: [[IV7:%[a-z.0-9]+]] = add nuw nsw i32 [[IV6]], 1
-; CHECK-UNROLL-T2: [[IV8:%[a-z.0-9]+]] = add nuw nsw i32 [[IV7]], 1
-; CHECK-UNROLL-T2: [[IV9:%[a-z.0-9]+]] = add nuw nsw i32 [[IV8]], 1
-; CHECK-UNROLL-T2: [[IV10:%[a-z.0-9]+]] = add nuw nsw i32 [[IV9]], 1
-; CHECK-UNROLL-T2: [[IV11:%[a-z.0-9]+]] = add nuw nsw i32 [[IV10]], 1
-; CHECK-UNROLL-T2: [[IV12:%[a-z.0-9]+]] = add nuw nsw i32 [[IV11]], 1
-; CHECK-UNROLL-T2: [[IV13:%[a-z.0-9]+]] = add nuw nsw i32 [[IV12]], 1
-; CHECK-UNROLL-T2: [[IV14:%[a-z.0-9]+]] = add nuw nsw i32 [[IV13]], 1
-; CHECK-UNROLL-T2: [[IV15:%[a-z.0-9]+]] = add nuw nsw i32 [[IV14]], 1
-; CHECK-UNROLL-T2: [[IV16]] = add nuw nsw i32 [[IV15]], 1
-; CHECK-UNROLL-T2: [[CMP:%[a-z.0-9]+]] = icmp eq i32 [[IV16]], 1024
-; CHECK-UNROLL-T2: br i1 [[CMP]], label [[END:%[a-z.]+]], label %for.body
+; CHECK-UNROLL: [[IV0:%[a-z.0-9]+]] = phi i32 [ 0, %entry ], [ [[IV16:%[a-z.0-9]+]], %for.body ]
+; CHECK-UNROLL: [[IV1:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 1
+; CHECK-UNROLL: [[IV2:%[a-z.0-9]+]] = add nuw nsw i32 [[IV1]], 1
+; CHECK-UNROLL: [[IV3:%[a-z.0-9]+]] = add nuw nsw i32 [[IV2]], 1
+; CHECK-UNROLL: [[IV4:%[a-z.0-9]+]] = add nuw nsw i32 [[IV3]], 1
+; CHECK-UNROLL: [[IV5:%[a-z.0-9]+]] = add nuw nsw i32 [[IV4]], 1
+; CHECK-UNROLL: [[IV6:%[a-z.0-9]+]] = add nuw nsw i32 [[IV5]], 1
+; CHECK-UNROLL: [[IV7:%[a-z.0-9]+]] = add nuw nsw i32 [[IV6]], 1
+; CHECK-UNROLL: [[IV8:%[a-z.0-9]+]] = add nuw nsw i32 [[IV7]], 1
+; CHECK-UNROLL: [[IV9:%[a-z.0-9]+]] = add nuw nsw i32 [[IV8]], 1
+; CHECK-UNROLL: [[IV10:%[a-z.0-9]+]] = add nuw nsw i32 [[IV9]], 1
+; CHECK-UNROLL: [[IV11:%[a-z.0-9]+]] = add nuw nsw i32 [[IV10]], 1
+; CHECK-UNROLL: [[IV12:%[a-z.0-9]+]] = add nuw nsw i32 [[IV11]], 1
+; CHECK-UNROLL: [[IV13:%[a-z.0-9]+]] = add nuw nsw i32 [[IV12]], 1
+; CHECK-UNROLL: [[IV14:%[a-z.0-9]+]] = add nuw nsw i32 [[IV13]], 1
+; CHECK-UNROLL: [[IV15:%[a-z.0-9]+]] = add nuw nsw i32 [[IV14]], 1
+; CHECK-UNROLL: [[IV16]] = add nuw nsw i32 [[IV15]], 1
+; CHECK-UNROLL: [[CMP:%[a-z.0-9]+]] = icmp eq i32 [[IV16]], 1024
+; CHECK-UNROLL: br i1 [[CMP]], label [[END:%[a-z.]+]], label %for.body
 
   %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds i32, i32* %A, i32 %i.08
@@ -68,26 +63,21 @@ entry:
 
 ; CHECK-LABEL: for.body
 for.body:
-; CHECK-UNROLL-A: [[IV0:%[a-z.0-9]+]] = phi i32 [ 0, [[PRE:%[a-z.0-9]+]] ], [ [[IV2:%[a-z.0-9]+]], %for.body ]
-; CHECK-UNROLL-A: [[IV1:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 1
-; CHECK-UNROLL-A: [[IV2]] = add nuw i32 [[IV1]], 1
-; CHECK-UNROLL-A: br
+; CHECK-NOUNROLL: [[IV0:%[a-z.0-9]+]] = phi i32 [ 0, [[PRE:%[a-z.0-9]+]] ], [ [[IV2:%[a-z.0-9]+]], %for.body ]
+; CHECK-NOUNROLL: [[IV1:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 1
+; CHECK-NOUNROLL: [[IV2]] = add nuw i32 [[IV1]], 1
+; CHECK-NOUNROLL: br
 
-; CHECK-UNROLL-T1: %i.09 = phi i32 [ %inc, %for.body ], [ 0
-; CHECK-UNROLL-T1: %inc = add nuw i32 %i.09, 1
-; CHECK-UNROLL-T1: %exitcond = icmp eq i32 %inc, %N
-; CHECK-UNROLL-T1: br
+; CHECK-UNROLL: [[IV0:%[a-z.0-9]+]] = phi i32 [ 0, [[PRE:%[a-z.0-9]+]] ], [ [[IV4:%[a-z.0-9]+]], %for.body ]
+; CHECK-UNROLL: [[IV1:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 1
+; CHECK-UNROLL: [[IV2:%[a-z.0-9]+]] = add nuw nsw i32 [[IV1]], 1
+; CHECK-UNROLL: [[IV3:%[a-z.0-9]+]] = add nuw nsw i32 [[IV2]], 1
+; CHECK-UNROLL: [[IV4]] = add nuw i32 [[IV3]], 1
+; CHECK-UNROLL: br
 
-; CHECK-UNROLL-T2: [[IV0:%[a-z.0-9]+]] = phi i32 [ 0, [[PRE:%[a-z.0-9]+]] ], [ [[IV4:%[a-z.0-9]+]], %for.body ]
-; CHECK-UNROLL-T2: [[IV1:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 1
-; CHECK-UNROLL-T2: [[IV2:%[a-z.0-9]+]] = add nuw nsw i32 [[IV1]], 1
-; CHECK-UNROLL-T2: [[IV3:%[a-z.0-9]+]] = add nuw nsw i32 [[IV2]], 1
-; CHECK-UNROLL-T2: [[IV4]] = add nuw i32 [[IV3]], 1
-; CHECK-UNROLL-T2: br
-
-; CHECK-UNROLL-T2: for.body.epil:
-; CHECK-UNROLL-T2: for.body.epil.1:
-; CHECK-UNROLL-T2: for.body.epil.2:
+; CHECK-UNROLL: for.body.epil:
+; CHECK-UNROLL: for.body.epil.1:
+; CHECK-UNROLL: for.body.epil.2:
 
   %i.09 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, i32* %A, i32 %i.09
@@ -126,19 +116,19 @@ for.cond.cleanup3:
 
 ; CHECK-LABEL: for.body4
 for.body4:
-; CHECK-UNROLL-T1: [[IV0:%[a-z.0-9]+]] = phi i32 [ 0, [[PRE:%[a-z0-9.]+]] ], [ [[IV1:%[a-z.0-9]+]], %for.body4 ]
-; CHECK-UNROLL-T1: [[IV1]] = add nuw i32 [[IV0]], 1
-; CHECK-UNROLL-T1: br
+; CHECK-NOUNROLL: [[IV0:%[a-z.0-9]+]] = phi i32 [ 0, [[PRE:%[a-z0-9.]+]] ], [ [[IV1:%[a-z.0-9]+]], %for.body4 ]
+; CHECK-NOUNROLL: [[IV1]] = add nuw i32 [[IV0]], 1
+; CHECK-NOUNROLL: br
 
-; CHECK-UNROLL-T2: for.body4.epil:
-; CHECK-UNROLL-T2: [[IV0:%[a-z.0-9]+]] = phi i32 [ 0, [[PRE:%[a-z0-9.]+]] ], [ [[IV4:%[a-z.0-9]+]], %for.body4 ]
-; CHECK-UNROLL-T2: [[IV1:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 1
-; CHECK-UNROLL-T2: [[IV2:%[a-z.0-9]+]] = add nuw nsw i32 [[IV1]], 1
-; CHECK-UNROLL-T2: [[IV3:%[a-z.0-9]+]] = add nuw nsw i32 [[IV2]], 1
-; CHECK-UNROLL-T2: [[IV4]] = add nuw i32 [[IV3]], 1
-; CHECK-UNROLL-T2: br
-; CHECK-UNROLL-T2: for.body4.epil.1:
-; CHECK-UNROLL-T2: for.body4.epil.2:
+; CHECK-UNROLL: for.body4.epil:
+; CHECK-UNROLL: [[IV0:%[a-z.0-9]+]] = phi i32 [ 0, [[PRE:%[a-z0-9.]+]] ], [ [[IV4:%[a-z.0-9]+]], %for.body4 ]
+; CHECK-UNROLL: [[IV1:%[a-z.0-9]+]] = add nuw nsw i32 [[IV0]], 1
+; CHECK-UNROLL: [[IV2:%[a-z.0-9]+]] = add nuw nsw i32 [[IV1]], 1
+; CHECK-UNROLL: [[IV3:%[a-z.0-9]+]] = add nuw nsw i32 [[IV2]], 1
+; CHECK-UNROLL: [[IV4]] = add nuw i32 [[IV3]], 1
+; CHECK-UNROLL: br
+; CHECK-UNROLL: for.body4.epil.1:
+; CHECK-UNROLL: for.body4.epil.2:
 
   %w.024 = phi i32 [ 0, %for.body4.lr.ph ], [ %inc, %for.body4 ]
   %add = add i32 %w.024, %mul
@@ -168,20 +158,15 @@ for.cond.cleanup:
 
 ; CHECK-LABEL: for.body
 for.body:
-; CHECK-UNROLL-A: [[IV0:%[a-z.0-9]+]] = phi i32 [ 0, %entry ], [ [[IV1:%[a-z.0-9]+]], %for.body ]
-; CHECK-UNROLL-A: [[IV1]] = add nuw nsw i32 [[IV0]], 1
-; CHECK-UNROLL-A: icmp eq i32 [[IV1]], 1024
-; CHECK-UNROLL-A: br
+; CHECK-NOUNROLL: [[IV0:%[a-z.0-9]+]] = phi i32 [ 0, %entry ], [ [[IV1:%[a-z.0-9]+]], %for.body ]
+; CHECK-NOUNROLL: [[IV1]] = add nuw nsw i32 [[IV0]], 1
+; CHECK-NOUNROLL: icmp eq i32 [[IV1]], 1024
+; CHECK-NOUNROLL: br
 
-; CHECK-UNROLL-T1: [[IV0:%[a-z.0-9]+]] = phi i32 [ 0, %entry ], [ [[IV1:%[a-z.0-9]+]], %for.body ]
-; CHECK-UNROLL-T1: [[IV1]] = add nuw nsw i32 [[IV0]], 1
-; CHECK-UNROLL-T1: icmp eq i32 [[IV1]], 1024
-; CHECK-UNROLL-T1: br
-
-; CHECK-UNROLL-T2: [[IV0:%[a-z.0-9]+]] = phi i32 [ 0, %entry ], [ [[IV1:%[a-z.0-9]+]], %for.body ]
-; CHECK-UNROLL-T2: [[IV1]] = add nuw nsw i32 [[IV0]], 1
-; CHECK-UNROLL-T2: icmp eq i32 [[IV1]], 1024
-; CHECK-UNROLL-T2: br
+; CHECK-UNROLL: [[IV0:%[a-z.0-9]+]] = phi i32 [ 0, %entry ], [ [[IV1:%[a-z.0-9]+]], %for.body ]
+; CHECK-UNROLL: [[IV1]] = add nuw nsw i32 [[IV0]], 1
+; CHECK-UNROLL: icmp eq i32 [[IV1]], 1024
+; CHECK-UNROLL: br
 
   %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %arrayidx = getelementptr inbounds i32, i32* %A, i32 %i.08
@@ -197,27 +182,22 @@ for.body:
 }
 
 ; CHECK-LABEL: iterate_inc
-; CHECK-UNROLL-A: %n.addr.04 = phi %struct.Node* [ %1, %while.body ], [ %n, %while.body.preheader ]
-; CHECK-UNROLL-A: %tobool = icmp eq %struct.Node* %1, null
-; CHECK-UNROLL-A: br i1 %tobool
-; CHECK-UNROLL-A-NOT: load
+; CHECK-NOUNROLL: %n.addr.04 = phi %struct.Node* [ %1, %while.body ], [ %n, %while.body.preheader ]
+; CHECK-NOUNROLL: %tobool = icmp eq %struct.Node* %1, null
+; CHECK-NOUNROLL: br i1 %tobool
+; CHECK-NOUNROLL-NOT: load
 
-; CHECK-UNROLL-T1: %n.addr.04 = phi %struct.Node* [ %1, %while.body ], [ %n, %while.body.preheader ]
-; CHECK-UNROLL-T1: %tobool = icmp eq %struct.Node* %1, null
-; CHECK-UNROLL-T1: br i1 %tobool
-; CHECK-UNROLL-T1-NOT: load
-
-; CHECK-UNROLL-T2: [[CMP0:%[a-z.0-9]+]] = icmp eq %struct.Node* [[VAR0:%[a-z.0-9]+]], null
-; CHECK-UNROLL-T2: br i1 [[CMP0]], label [[END:%[a-z.0-9]+]]
-; CHECK-UNROLL-T2: [[CMP1:%[a-z.0-9]+]] = icmp eq %struct.Node* [[VAR1:%[a-z.0-9]+]], null
-; CHECK-UNROLL-T2: br i1 [[CMP1]], label [[END]]
-; CHECK-UNROLL-T2: [[CMP2:%[a-z.0-9]+]] = icmp eq %struct.Node* [[VAR2:%[a-z.0-9]+]], null
-; CHECK-UNROLL-T2: br i1 [[CMP2]], label [[END]]
-; CHECK-UNROLL-T2: [[CMP3:%[a-z.0-9]+]] = icmp eq %struct.Node* [[VAR3:%[a-z.0-9]+]], null
-; CHECK-UNROLL-T2: br i1 [[CMP3]], label [[END]]
-; CHECK-UNROLL-T2: [[CMP4:%[a-z.0-9]+]] = icmp eq %struct.Node* [[VAR4:%[a-z.0-9]+]], null
-; CHECK-UNROLL-T2: br i1 [[CMP4]], label [[END]]
-; CHECK-UNROLL-T2-NOT: load
+; CHECK-UNROLL: [[CMP0:%[a-z.0-9]+]] = icmp eq %struct.Node* [[VAR0:%[a-z.0-9]+]], null
+; CHECK-UNROLL: br i1 [[CMP0]], label [[END:%[a-z.0-9]+]]
+; CHECK-UNROLL: [[CMP1:%[a-z.0-9]+]] = icmp eq %struct.Node* [[VAR1:%[a-z.0-9]+]], null
+; CHECK-UNROLL: br i1 [[CMP1]], label [[END]]
+; CHECK-UNROLL: [[CMP2:%[a-z.0-9]+]] = icmp eq %struct.Node* [[VAR2:%[a-z.0-9]+]], null
+; CHECK-UNROLL: br i1 [[CMP2]], label [[END]]
+; CHECK-UNROLL: [[CMP3:%[a-z.0-9]+]] = icmp eq %struct.Node* [[VAR3:%[a-z.0-9]+]], null
+; CHECK-UNROLL: br i1 [[CMP3]], label [[END]]
+; CHECK-UNROLL: [[CMP4:%[a-z.0-9]+]] = icmp eq %struct.Node* [[VAR4:%[a-z.0-9]+]], null
+; CHECK-UNROLL: br i1 [[CMP4]], label [[END]]
+; CHECK-UNROLL-NOT: load
 
 %struct.Node = type { %struct.Node*, i32 }
 

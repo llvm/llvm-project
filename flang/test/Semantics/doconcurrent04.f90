@@ -1,5 +1,5 @@
 ! C1122 The index-name shall be a named scalar variable of type integer.
-! RUN: not %f18 -funparse-with-symbols %s 2>&1 | FileCheck %s
+! RUN: not %flang_fc1 -fdebug-unparse-with-symbols %s 2>&1 | FileCheck %s
 ! CHECK: Must have INTEGER type, but is REAL(4)
 
 subroutine do_concurrent_test1(n)

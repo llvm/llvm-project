@@ -188,7 +188,7 @@ void RuntimeDebugBuilder::createGPUPrinterT(PollyIRBuilder &Builder,
   Value *Data = new AllocaInst(
       T, DL.getAllocaAddrSpace(), "polly.vprint.buffer",
       &Builder.GetInsertBlock()->getParent()->getEntryBlock().front());
-  auto *DataPtr = Builder.CreateGEP(Data, {Zero, Zero});
+  auto *DataPtr = Builder.CreateGEP(T, Data, {Zero, Zero});
 
   int Offset = 0;
   for (auto Val : ToPrint) {

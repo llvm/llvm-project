@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_GLOB_PATTERN_H
-#define LLVM_SUPPORT_GLOB_PATTERN_H
+#ifndef LLVM_SUPPORT_GLOBPATTERN_H
+#define LLVM_SUPPORT_GLOBPATTERN_H
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/Optional.h"
@@ -54,4 +54,4 @@ private:
 };
 }
 
-#endif // LLVM_SUPPORT_GLOB_PATTERN_H
+#endif // LLVM_SUPPORT_GLOBPATTERN_H

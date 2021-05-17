@@ -333,39 +333,6 @@
 // uses the last one.  This is true for e.g. /Fo too, so not warning on this
 // is self-consistent with clang-cl's flag handling.
 
-// Interaction with /fallback
-
-// /Yc /fallback => /Yc not passed on (but /FI is)
-// RUN: %clang_cl -Werror /Ycpchfile.h /FIpchfile.h /Fpfoo.pch /fallback /c -### -- %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK-YC-FALLBACK %s
-// Note that in /fallback builds, if creation of the pch fails the main compile
-// does still run so that /fallback can have an effect (this part is not tested)
-// CHECK-YC-FALLBACK: cc1
-// CHECK-YC-FALLBACK: -emit-obj
-// CHECK-YC-FALLBACK: -include-pch
-// CHECK-YC-FALLBACK: foo.pch
-// CHECK-YC-FALLBACK: ||
-// CHECK-YC-FALLBACK: cl.exe
-// CHECK-YC-FALLBACK-NOT: -include-pch
-// CHECK-YC-FALLBACK-NOT: /Ycpchfile.h
-// CHECK-YC-FALLBACK: /FIpchfile.h
-// CHECK-YC-FALLBACK-NOT: /Fpfoo.pch
-
-// /Yu /fallback => /Yu not passed on (but /FI is)
-// RUN: %clang_cl -Werror /Yupchfile.h /FIpchfile.h /Fpfoo.pch /fallback /c -### -- %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK-YU-FALLBACK %s
-// CHECK-YU-FALLBACK-NOT: -emit-pch
-// CHECK-YU-FALLBACK: cc1
-// CHECK-YU-FALLBACK: -emit-obj
-// CHECK-YU-FALLBACK: -include-pch
-// CHECK-YU-FALLBACK: foo.pch
-// CHECK-YU-FALLBACK: ||
-// CHECK-YU-FALLBACK: cl.exe
-// CHECK-YU-FALLBACK-NOT: -include-pch
-// CHECK-YU-FALLBACK-NOT: /Yupchfile.h
-// CHECK-YU-FALLBACK: /FIpchfile.h
-// CHECK-YU-FALLBACK-NOT: /Fpfoo.pch
-
 // /FI without /Yu => pch file not used, even if it exists (different from
 // -include, which picks up .gch files if they exist).
 // RUN: touch %t.pch

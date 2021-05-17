@@ -18,6 +18,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/DIE.h"
+#include "llvm/Target/TargetMachine.h"
 #include <string>
 
 namespace llvm {
@@ -75,6 +76,22 @@ protected:
   bool applySubprogramDefinitionAttributes(const DISubprogram *SP, DIE &SPDie);
 
   bool isShareableAcrossCUs(const DINode *D) const;
+
+  template <typename T>
+  void addAttribute(DIEValueList &Die, dwarf::Attribute Attribute,
+                    dwarf::Form Form, T &&Value) {
+    // For strict DWARF mode, only generate attributes available to current
+    // DWARF version.
+    // Attribute 0 is used when emitting form-encoded values in blocks, which
+    // don't have attributes (only forms) so we cannot detect their DWARF
+    // version compatibility here and assume they are compatible.
+    if (Attribute != 0 && Asm->TM.Options.DebugStrictDwarf &&
+        DD->getDwarfVersion() < dwarf::AttributeVersion(Attribute))
+      return;
+
+    Die.addValue(DIEValueAllocator,
+                 DIEValue(Attribute, Form, std::forward<T>(Value)));
+  }
 
 public:
   // Accessors.
@@ -147,10 +164,8 @@ public:
   void addString(DIE &Die, dwarf::Attribute Attribute, StringRef Str);
 
   /// Add a Dwarf label attribute data and value.
-  DIEValueList::value_iterator addLabel(DIEValueList &Die,
-                                        dwarf::Attribute Attribute,
-                                        dwarf::Form Form,
-                                        const MCSymbol *Label);
+  void addLabel(DIEValueList &Die, dwarf::Attribute Attribute, dwarf::Form Form,
+                const MCSymbol *Label);
 
   void addLabel(DIELoc &Die, dwarf::Form Form, const MCSymbol *Label);
 
@@ -160,10 +175,11 @@ public:
   /// Add a dwarf op address data and value using the form given and an
   /// op of either DW_FORM_addr or DW_FORM_GNU_addr_index.
   void addOpAddress(DIELoc &Die, const MCSymbol *Sym);
+  void addPoolOpAddress(DIEValueList &Die, const MCSymbol *Label);
 
   /// Add a label delta attribute data and value.
-  void addLabelDelta(DIE &Die, dwarf::Attribute Attribute, const MCSymbol *Hi,
-                     const MCSymbol *Lo);
+  void addLabelDelta(DIEValueList &Die, dwarf::Attribute Attribute,
+                     const MCSymbol *Hi, const MCSymbol *Lo);
 
   /// Add a DIE attribute data and value.
   void addDIEEntry(DIE &Die, dwarf::Attribute Attribute, DIE &Entry);
@@ -179,6 +195,8 @@ public:
 
   /// Add block data.
   void addBlock(DIE &Die, dwarf::Attribute Attribute, DIEBlock *Block);
+  void addBlock(DIE &Die, dwarf::Attribute Attribute, dwarf::Form Form,
+                DIEBlock *Block);
 
   /// Add location information to specified debug information entry.
   void addSourceLine(DIE &Die, unsigned Line, const DIFile *File);
@@ -239,7 +257,7 @@ public:
 
   /// Create a DIE with the given Tag, add the DIE to its parent, and
   /// call insertDIE if MD is not null.
-  DIE &createAndAddDIE(unsigned Tag, DIE &Parent, const DINode *N = nullptr);
+  DIE &createAndAddDIE(dwarf::Tag Tag, DIE &Parent, const DINode *N = nullptr);
 
   bool useSegmentedStringOffsetsTable() const {
     return DD->useSegmentedStringOffsetsTable();
@@ -269,13 +287,12 @@ public:
   void constructTypeDIE(DIE &Buffer, const DICompositeType *CTy);
 
   /// addSectionDelta - Add a label delta attribute data and value.
-  DIE::value_iterator addSectionDelta(DIE &Die, dwarf::Attribute Attribute,
-                                      const MCSymbol *Hi, const MCSymbol *Lo);
+  void addSectionDelta(DIE &Die, dwarf::Attribute Attribute, const MCSymbol *Hi,
+                       const MCSymbol *Lo);
 
   /// Add a Dwarf section label attribute data and value.
-  DIE::value_iterator addSectionLabel(DIE &Die, dwarf::Attribute Attribute,
-                                      const MCSymbol *Label,
-                                      const MCSymbol *Sec);
+  void addSectionLabel(DIE &Die, dwarf::Attribute Attribute,
+                       const MCSymbol *Label, const MCSymbol *Sec);
 
   /// Get context owner's DIE.
   DIE *createTypeDIE(const DICompositeType *Ty);

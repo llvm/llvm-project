@@ -19,7 +19,7 @@ define double @func(double %d, i32 %n) nounwind {
 ; RV32IFD-NEXT:    lw a0, 16(sp)
 ; RV32IFD-NEXT:    lw a1, 20(sp)
 ; RV32IFD-NEXT:    fsd ft0, 8(sp) # 8-byte Folded Spill
-; RV32IFD-NEXT:    call func
+; RV32IFD-NEXT:    call func@plt
 ; RV32IFD-NEXT:    sw a0, 16(sp)
 ; RV32IFD-NEXT:    sw a1, 20(sp)
 ; RV32IFD-NEXT:    fld ft0, 16(sp)
@@ -37,15 +37,14 @@ define double @func(double %d, i32 %n) nounwind {
 ; RV64IFD:       # %bb.0: # %entry
 ; RV64IFD-NEXT:    addi sp, sp, -16
 ; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    slli a2, a1, 32
-; RV64IFD-NEXT:    srli a2, a2, 32
+; RV64IFD-NEXT:    sext.w a2, a1
 ; RV64IFD-NEXT:    fmv.d.x ft0, a0
 ; RV64IFD-NEXT:    beqz a2, .LBB0_2
 ; RV64IFD-NEXT:  # %bb.1: # %if.else
 ; RV64IFD-NEXT:    addi a1, a1, -1
 ; RV64IFD-NEXT:    fmv.x.d a0, ft0
 ; RV64IFD-NEXT:    fsd ft0, 0(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    call func
+; RV64IFD-NEXT:    call func@plt
 ; RV64IFD-NEXT:    fmv.d.x ft0, a0
 ; RV64IFD-NEXT:    fld ft1, 0(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    fadd.d ft0, ft0, ft1

@@ -13,7 +13,7 @@
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace clang;
@@ -64,7 +64,7 @@ private:
 SVal PlacementNewChecker::getExtentSizeOfPlace(const CXXNewExpr *NE,
                                                CheckerContext &C) const {
   const Expr *Place = NE->getPlacementArg(0);
-  return getDynamicSizeWithOffset(C.getState(), C.getSVal(Place));
+  return getDynamicExtentWithOffset(C.getState(), C.getSVal(Place));
 }
 
 SVal PlacementNewChecker::getExtentSizeOfNewTarget(const CXXNewExpr *NE,

@@ -648,4 +648,18 @@ TEST_F(AArch64SelectionDAGTest, getTypeConversion_NoScalarizeEVT_nxv1f128) {
   EXPECT_DEATH(getTypeAction(FromVT), "Cannot legalize this vector");
 }
 
+TEST_F(AArch64SelectionDAGTest, TestFold_STEP_VECTOR) {
+  if (!TM)
+    return;
+
+  SDLoc Loc;
+  auto IntVT = EVT::getIntegerVT(Context, 8);
+  auto VecVT = EVT::getVectorVT(Context, MVT::i8, 16, true);
+
+  // Should create SPLAT_VECTOR
+  SDValue Zero = DAG->getConstant(0, Loc, IntVT);
+  SDValue Op = DAG->getNode(ISD::STEP_VECTOR, Loc, VecVT, Zero);
+  EXPECT_EQ(Op.getOpcode(), ISD::SPLAT_VECTOR);
+}
+
 } // end namespace llvm

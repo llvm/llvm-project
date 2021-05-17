@@ -146,9 +146,7 @@ static bool isSubclass(const Decl *D,
 }
 
 static bool isOSObjectSubclass(const Decl *D) {
-  // OSSymbols are particular OSObjects that are allocated globally
-  // and therefore aren't really refcounted, so we ignore them.
-  return D && isSubclass(D, "OSMetaClassBase") && !isSubclass(D, "OSSymbol");
+  return D && isSubclass(D, "OSMetaClassBase");
 }
 
 static bool isOSObjectDynamicCast(StringRef S) {
@@ -883,8 +881,8 @@ RetainSummaryManager::getRetEffectFromAnnotations(QualType RetTy,
   return None;
 }
 
-/// \return Whether the chain of typedefs starting from {@code QT}
-/// has a typedef with a given name {@code Name}.
+/// \return Whether the chain of typedefs starting from @c QT
+/// has a typedef with a given name @c Name.
 static bool hasTypedefNamed(QualType QT,
                             StringRef Name) {
   while (auto *T = dyn_cast<TypedefType>(QT)) {

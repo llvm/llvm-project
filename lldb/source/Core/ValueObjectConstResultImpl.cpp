@@ -132,7 +132,7 @@ lldb::ValueObjectSP ValueObjectConstResultImpl::AddressOf(Status &error) {
         ConstString(new_name.c_str()), buffer, endian::InlHostByteOrder(),
         exe_ctx.GetAddressByteSize());
 
-    m_address_of_backend->GetValue().SetValueType(Value::eValueTypeScalar);
+    m_address_of_backend->GetValue().SetValueType(Value::ValueType::Scalar);
     m_address_of_backend->GetValue().GetScalar() = m_live_address;
 
     return m_address_of_backend;

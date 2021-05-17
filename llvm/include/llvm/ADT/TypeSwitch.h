@@ -124,6 +124,12 @@ public:
       return std::move(*result);
     return defaultFn(this->value);
   }
+  /// As a default, return the given value.
+  LLVM_NODISCARD ResultT Default(ResultT defaultResult) {
+    if (result)
+      return std::move(*result);
+    return defaultResult;
+  }
 
   LLVM_NODISCARD
   operator ResultT() {

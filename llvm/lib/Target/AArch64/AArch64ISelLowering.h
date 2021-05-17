@@ -16,6 +16,7 @@
 
 #include "AArch64.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/CallingConv.h"
@@ -50,6 +51,10 @@ enum NodeType : unsigned {
   WrapperLarge, // 4-instruction MOVZ/MOVK sequence for 64-bit addresses.
   CALL,         // Function call.
 
+  // Pseudo for a OBJC call that gets emitted together with a special `mov
+  // x29, x29` marker instruction.
+  CALL_RVMARKER,
+
   // Produces the full sequence of instructions for getting the thread pointer
   // offset of a variable into X0, using the TLSDesc model.
   TLSDESC_CALLSEQ,
@@ -61,7 +66,6 @@ enum NodeType : unsigned {
   RET_FLAG, // Return with a flag operand. Operand 0 is the chain operand.
   BRCOND,   // Conditional branch instruction; "b.cond".
   CSEL,
-  FCSEL, // Conditional move instruction.
   CSINV, // Conditional select invert.
   CSNEG, // Conditional select negate.
   CSINC, // Conditional select increment.
@@ -79,9 +83,13 @@ enum NodeType : unsigned {
   FMA_PRED,
   FMAXNM_PRED,
   FMINNM_PRED,
+  FMAX_PRED,
+  FMIN_PRED,
   FMUL_PRED,
   FSUB_PRED,
   MUL_PRED,
+  MULHS_PRED,
+  MULHU_PRED,
   SDIV_PRED,
   SHL_PRED,
   SMAX_PRED,
@@ -92,6 +100,9 @@ enum NodeType : unsigned {
   UDIV_PRED,
   UMAX_PRED,
   UMIN_PRED,
+
+  // Unpredicated vector instructions
+  BIC,
 
   // Predicated instructions with the result of inactive lanes provided by the
   // last operand.
@@ -231,6 +242,10 @@ enum NodeType : unsigned {
   UABD,
   SABD,
 
+  // udot/sdot instructions
+  UDOT,
+  SDOT,
+
   // Vector across-lanes min/max
   // Only the lower result lane is defined.
   SMINV,
@@ -274,6 +289,8 @@ enum NodeType : unsigned {
   /// mode without emitting such REV instructions.
   NVCAST,
 
+  MRS, // MRS, also sets the flags via a glue.
+
   SMULL,
   UMULL,
 
@@ -292,7 +309,6 @@ enum NodeType : unsigned {
   CLASTB_N,
   LASTA,
   LASTB,
-  REV,
   TBL,
 
   // Floating-point reductions.
@@ -425,10 +441,6 @@ enum NodeType : unsigned {
   LDP,
   STP,
   STNP,
-
-  // Pseudo for a OBJC call that gets emitted together with a special `mov
-  // x29, x29` marker instruction.
-  CALL_RVMARKER
 };
 
 } // end namespace AArch64ISD
@@ -449,6 +461,21 @@ static inline bool isDef32(const SDNode &N) {
 }
 
 } // end anonymous namespace
+
+namespace AArch64 {
+/// Possible values of current rounding mode, which is specified in bits
+/// 23:22 of FPCR.
+enum Rounding {
+  RN = 0,    // Round to Nearest
+  RP = 1,    // Round towards Plus infinity
+  RM = 2,    // Round towards Minus infinity
+  RZ = 3,    // Round towards Zero
+  rmMask = 3 // Bit mask selecting rounding mode
+};
+
+// Bit position of rounding mode bits in FPCR.
+const unsigned RoundingBitsPos = 22;
+} // namespace AArch64
 
 class AArch64Subtarget;
 class AArch64TargetMachine;
@@ -488,7 +515,7 @@ public:
   /// Returns true if the target allows unaligned memory accesses of the
   /// specified type.
   bool allowsMisalignedMemoryAccesses(
-      EVT VT, unsigned AddrSpace = 0, unsigned Align = 1,
+      EVT VT, unsigned AddrSpace = 0, Align Alignment = Align(1),
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       bool *Fast = nullptr) const override;
   /// LLT variant.
@@ -586,8 +613,8 @@ public:
   /// of the specified type.
   /// If the AM is supported, the return value must be >= 0.
   /// If the AM is not supported, it returns a negative value.
-  int getScalingFactorCost(const DataLayout &DL, const AddrMode &AM, Type *Ty,
-                           unsigned AS) const override;
+  InstructionCost getScalingFactorCost(const DataLayout &DL, const AddrMode &AM,
+                                       Type *Ty, unsigned AS) const override;
 
   /// Return true if an FMA operation is faster than a pair of fmul and fadd
   /// instructions. fmuladd intrinsics will be expanded to FMAs when this method
@@ -595,6 +622,9 @@ public:
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                   EVT VT) const override;
   bool isFMAFasterThanFMulAndFAdd(const Function &F, Type *Ty) const override;
+
+  bool generateFMAsInMachineCombiner(EVT VT,
+                                     CodeGenOpt::Level OptLevel) const override;
 
   const MCPhysReg *getScratchRegisters(CallingConv::ID CC) const override;
 
@@ -786,6 +816,15 @@ public:
   /// vector types this override can be removed.
   bool mergeStoresAfterLegalization(EVT VT) const override;
 
+  // If the platform/function should have a redzone, return the size in bytes.
+  unsigned getRedZoneSize(const Function &F) const {
+    if (F.hasFnAttribute(Attribute::NoRedZone))
+      return 0;
+    return 128;
+  }
+
+  bool isAllActivePredicate(SDValue N) const;
+
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can
   /// make the right decision when generating code for different targets.
@@ -896,6 +935,7 @@ private:
   SDValue LowerSPONENTRY(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFLT_ROUNDS_(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSCALAR_TO_VECTOR(SDValue Op, SelectionDAG &DAG) const;
@@ -911,8 +951,7 @@ private:
   SDValue LowerDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerMUL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVectorSRA_SRL_SHL(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerShiftRightParts(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerShiftParts(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCTPOP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCTTZ(SDValue Op, SelectionDAG &DAG) const;
@@ -927,6 +966,7 @@ private:
   SDValue LowerXOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVSCALE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
@@ -953,6 +993,9 @@ private:
   SDValue LowerFixedLengthVectorStoreToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthVectorTruncateToSVE(SDValue Op,
                                               SelectionDAG &DAG) const;
+  SDValue LowerFixedLengthExtractVectorElt(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFixedLengthInsertVectorElt(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFixedLengthBitcastToSVE(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
                         SmallVectorImpl<SDNode *> &Created) const override;
@@ -961,6 +1004,10 @@ private:
                           bool Reciprocal) const override;
   SDValue getRecipEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
                            int &ExtraSteps) const override;
+  SDValue getSqrtInputTest(SDValue Operand, SelectionDAG &DAG,
+                           const DenormalMode &Mode) const override;
+  SDValue getSqrtResultForDenormInput(SDValue Operand,
+                                      SelectionDAG &DAG) const override;
   unsigned combineRepeatedFPDivisors() const override;
 
   ConstraintType getConstraintType(StringRef Constraint) const override;
@@ -992,6 +1039,7 @@ private:
     return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
   }
 
+  bool shouldExtendGSIndex(EVT VT, EVT &EltTy) const override;
   bool shouldRemoveExtendFromGSIndex(EVT VT) const override;
   bool isVectorLoadExtDesirable(SDValue ExtVal) const override;
   bool isUsedByReturnOnly(SDNode *N, SDValue &Chain) const override;

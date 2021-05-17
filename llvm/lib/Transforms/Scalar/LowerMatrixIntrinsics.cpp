@@ -413,7 +413,9 @@ public:
   /// \p VT * N.
   unsigned getNumOps(Type *ST, unsigned N) {
     return std::ceil((ST->getPrimitiveSizeInBits() * N).getFixedSize() /
-                     double(TTI.getRegisterBitWidth(true)));
+                     double(TTI.getRegisterBitWidth(
+                                   TargetTransformInfo::RGK_FixedWidthVector)
+                                .getFixedSize()));
   }
 
   /// Return the set of vectors that a matrix value is lowered to.
@@ -488,6 +490,7 @@ public:
     case Instruction::FAdd:
     case Instruction::FSub:
     case Instruction::FMul: // Scalar multiply.
+    case Instruction::FNeg:
     case Instruction::Add:
     case Instruction::Mul:
     case Instruction::Sub:
@@ -530,8 +533,7 @@ public:
     // list.
     LLVM_DEBUG(dbgs() << "Forward-propagate shapes:\n");
     while (!WorkList.empty()) {
-      Instruction *Inst = WorkList.back();
-      WorkList.pop_back();
+      Instruction *Inst = WorkList.pop_back_val();
 
       // New entry, set the value and insert operands
       bool Propagate = false;
@@ -601,8 +603,7 @@ public:
     // worklist.
     LLVM_DEBUG(dbgs() << "Backward-propagate shapes:\n");
     while (!WorkList.empty()) {
-      Value *V = WorkList.back();
-      WorkList.pop_back();
+      Value *V = WorkList.pop_back_val();
 
       size_t BeforeProcessingV = WorkList.size();
       if (!isa<Instruction>(V))
@@ -724,6 +725,8 @@ public:
       Value *Op2;
       if (auto *BinOp = dyn_cast<BinaryOperator>(Inst))
         Changed |= VisitBinaryOperator(BinOp);
+      if (auto *UnOp = dyn_cast<UnaryOperator>(Inst))
+        Changed |= VisitUnaryOperator(UnOp);
       if (match(Inst, m_Load(m_Value(Op1))))
         Changed |= VisitLoad(cast<LoadInst>(Inst), Op1, Builder);
       else if (match(Inst, m_Store(m_Value(Op1), m_Value(Op2))))
@@ -796,15 +799,16 @@ public:
   /// vectors.
   MatrixTy loadMatrix(Type *Ty, Value *Ptr, MaybeAlign MAlign, Value *Stride,
                       bool IsVolatile, ShapeInfo Shape, IRBuilder<> &Builder) {
-    auto VType = cast<VectorType>(Ty);
-    Value *EltPtr = createElementPtr(Ptr, VType->getElementType(), Builder);
+    auto *VType = cast<VectorType>(Ty);
+    Type *EltTy = VType->getElementType();
+    Type *VecTy = FixedVectorType::get(EltTy, Shape.getStride());
+    Value *EltPtr = createElementPtr(Ptr, EltTy, Builder);
     MatrixTy Result;
     for (unsigned I = 0, E = Shape.getNumVectors(); I < E; ++I) {
       Value *GEP = computeVectorAddr(EltPtr, Builder.getInt64(I), Stride,
-                                     Shape.getStride(), VType->getElementType(),
-                                     Builder);
+                                     Shape.getStride(), EltTy, Builder);
       Value *Vector = Builder.CreateAlignedLoad(
-          GEP, getAlignForIndex(I, Stride, VType->getElementType(), MAlign),
+          VecTy, GEP, getAlignForIndex(I, Stride, EltTy, MAlign),
           IsVolatile, "col.load");
 
       Result.addVector(Vector);
@@ -996,8 +1000,7 @@ public:
 
     ToRemove.push_back(Inst);
     Value *Flattened = nullptr;
-    for (auto I = Inst->use_begin(), E = Inst->use_end(); I != E;) {
-      Use &U = *I++;
+    for (Use &U : llvm::make_early_inc_range(Inst->uses())) {
       if (ShapeMap.find(U.getUser()) == ShapeMap.end()) {
         if (!Flattened)
           Flattened = Matrix.embedInVector(Builder);
@@ -1012,7 +1015,8 @@ public:
                           const MatrixTy &B, bool AllowContraction,
                           IRBuilder<> &Builder, bool isTiled) {
     const unsigned VF = std::max<unsigned>(
-        TTI.getRegisterBitWidth(true) /
+        TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
+                .getFixedSize() /
             Result.getElementType()->getPrimitiveSizeInBits().getFixedSize(),
         1U);
     unsigned R = Result.getNumRows();
@@ -1088,10 +1092,8 @@ public:
     MemoryLocation StoreLoc = MemoryLocation::get(Store);
     MemoryLocation LoadLoc = MemoryLocation::get(Load);
 
-    AliasResult LdAliased = AA->alias(LoadLoc, StoreLoc);
-
     // If we can statically determine noalias we're good.
-    if (!LdAliased)
+    if (AA->isNoAlias(LoadLoc, StoreLoc))
       return Load->getPointerOperand();
 
     // Create code to check if the memory locations of the Load and Store
@@ -1178,10 +1180,11 @@ public:
     const unsigned M = LShape.NumColumns;
     auto *EltType = cast<VectorType>(MatMul->getType())->getElementType();
 
-    const unsigned VF =
-        std::max<unsigned>(TTI.getRegisterBitWidth(true) /
-                               EltType->getPrimitiveSizeInBits().getFixedSize(),
-                           1U);
+    const unsigned VF = std::max<unsigned>(
+        TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
+                .getFixedSize() /
+            EltType->getPrimitiveSizeInBits().getFixedSize(),
+        1U);
 
     // Cost model for tiling
     //
@@ -1491,6 +1494,40 @@ public:
 
     for (unsigned I = 0; I < Shape.getNumVectors(); ++I)
       Result.addVector(BuildVectorOp(A.getVector(I), B.getVector(I)));
+
+    finalizeLowering(Inst,
+                     Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
+                                             Result.getNumVectors()),
+                     Builder);
+    return true;
+  }
+
+  /// Lower unary operators, if shape information is available.
+  bool VisitUnaryOperator(UnaryOperator *Inst) {
+    auto I = ShapeMap.find(Inst);
+    if (I == ShapeMap.end())
+      return false;
+
+    Value *Op = Inst->getOperand(0);
+
+    IRBuilder<> Builder(Inst);
+    ShapeInfo &Shape = I->second;
+
+    MatrixTy Result;
+    MatrixTy M = getMatrix(Op, Shape, Builder);
+
+    // Helper to perform unary op on vectors.
+    auto BuildVectorOp = [&Builder, Inst](Value *Op) {
+      switch (Inst->getOpcode()) {
+      case Instruction::FNeg:
+        return Builder.CreateFNeg(Op);
+      default:
+        llvm_unreachable("Unsupported unary operator for matrix");
+      }
+    };
+
+    for (unsigned I = 0; I < Shape.getNumVectors(); ++I)
+      Result.addVector(BuildVectorOp(M.getVector(I)));
 
     finalizeLowering(Inst,
                      Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *

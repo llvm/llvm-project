@@ -21,7 +21,7 @@ define void @ccosl(%0* noalias sret(%0) %agg.result, %0* byval(%0) align 8 %z) n
 ; CHECK-NEXT:    [[TMP8:%.*]] = load x86_fp80, x86_fp80* [[TMP7]], align 16
 ; CHECK-NEXT:    store x86_fp80 [[TMP3]], x86_fp80* [[REAL]], align 16
 ; CHECK-NEXT:    store x86_fp80 [[TMP8]], x86_fp80* [[TMP4]], align 16
-; CHECK-NEXT:    call void @ccoshl(%0* noalias sret(%0) [[AGG_RESULT:%.*]], %0* byval(%0) align 8 [[IZ]]) [[ATTR0:#.*]]
+; CHECK-NEXT:    call void @ccoshl(%0* noalias sret([[TMP0]]) [[AGG_RESULT:%.*]], %0* byval([[TMP0]]) align 8 [[IZ]]) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    [[MEMTMP14:%.*]] = bitcast %0* [[MEMTMP]] to i8*
 ; CHECK-NEXT:    [[AGG_RESULT15:%.*]] = bitcast %0* [[AGG_RESULT]] to i8*
 ; CHECK-NEXT:    ret void

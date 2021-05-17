@@ -10,11 +10,13 @@
 #define FORTRAN_RUNTIME_TRANSFORMATIONAL_H_
 
 #include "descriptor.h"
+#include "entry-names.h"
 #include "memory.h"
 
 namespace Fortran::runtime {
 
-OwningPtr<Descriptor> RESHAPE(const Descriptor &source, const Descriptor &shape,
-    const Descriptor *pad = nullptr, const Descriptor *order = nullptr);
+OwningPtr<Descriptor> RTNAME(Reshape)(const Descriptor &source,
+    const Descriptor &shape, const Descriptor *pad = nullptr,
+    const Descriptor *order = nullptr);
 }
 #endif // FORTRAN_RUNTIME_TRANSFORMATIONAL_H_

@@ -17,6 +17,7 @@
 #include "mlir/Analysis/AffineStructures.h"
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dominance.h"
@@ -24,22 +25,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 using namespace mlir;
-
-/// Return true if this operation dereferences one or more memref's.
-// Temporary utility: will be replaced when this is modeled through
-// side-effects/op traits. TODO
-static bool isMemRefDereferencingOp(Operation &op) {
-  return isa<AffineReadOpInterface, AffineWriteOpInterface, AffineDmaStartOp,
-             AffineDmaWaitOp>(op);
-}
-
-/// Return the AffineMapAttr associated with memory 'op' on 'memref'.
-static NamedAttribute getAffineMapAttrForMemRef(Operation *op, Value memref) {
-  return TypeSwitch<Operation *, NamedAttribute>(op)
-      .Case<AffineDmaStartOp, AffineReadOpInterface, AffinePrefetchOp,
-            AffineWriteOpInterface, AffineDmaWaitOp>(
-          [=](auto op) { return op.getAffineMapAttrForMemRef(memref); });
-}
 
 // Perform the replacement in `op`.
 LogicalResult mlir::replaceAllMemRefUsesWith(Value oldMemRef, Value newMemRef,
@@ -88,17 +73,20 @@ LogicalResult mlir::replaceAllMemRefUsesWith(Value oldMemRef, Value newMemRef,
   OpBuilder builder(op);
   // The following checks if op is dereferencing memref and performs the access
   // index rewrites.
-  if (!isMemRefDereferencingOp(*op)) {
-    if (!allowNonDereferencingOps)
+  auto affMapAccInterface = dyn_cast<AffineMapAccessInterface>(op);
+  if (!affMapAccInterface) {
+    if (!allowNonDereferencingOps) {
       // Failure: memref used in a non-dereferencing context (potentially
       // escapes); no replacement in these cases unless allowNonDereferencingOps
       // is set.
       return failure();
+    }
     op->setOperand(memRefOperandPos, newMemRef);
     return success();
   }
   // Perform index rewrites for the dereferencing op and then replace the op
-  NamedAttribute oldMapAttrPair = getAffineMapAttrForMemRef(op, oldMemRef);
+  NamedAttribute oldMapAttrPair =
+      affMapAccInterface.getAffineMapAttrForMemRef(oldMemRef);
   AffineMap oldMap = oldMapAttrPair.second.cast<AffineMapAttr>().getValue();
   unsigned oldMapNumInputs = oldMap.getNumInputs();
   SmallVector<Value, 4> oldMapOperands(
@@ -266,13 +254,13 @@ LogicalResult mlir::replaceAllMemRefUsesWith(
 
     // Skip dealloc's - no replacement is necessary, and a memref replacement
     // at other uses doesn't hurt these dealloc's.
-    if (isa<DeallocOp>(op) && !replaceInDeallocOp)
+    if (isa<memref::DeallocOp>(op) && !replaceInDeallocOp)
       continue;
 
     // Check if the memref was used in a non-dereferencing context. It is fine
     // for the memref to be used in a non-dereferencing way outside of the
     // region where this replacement is happening.
-    if (!isMemRefDereferencingOp(*op)) {
+    if (!isa<AffineMapAccessInterface>(*op)) {
       if (!allowNonDereferencingOps)
         return failure();
       // Currently we support the following non-dereferencing ops to be a
@@ -393,24 +381,24 @@ void mlir::createAffineComputationSlice(
 }
 
 // TODO: Currently works for static memrefs with a single layout map.
-LogicalResult mlir::normalizeMemRef(AllocOp allocOp) {
-  MemRefType memrefType = allocOp.getType();
-  OpBuilder b(allocOp);
+LogicalResult mlir::normalizeMemRef(memref::AllocOp *allocOp) {
+  MemRefType memrefType = allocOp->getType();
+  OpBuilder b(*allocOp);
 
   // Fetch a new memref type after normalizing the old memref to have an
   // identity map layout.
   MemRefType newMemRefType =
-      normalizeMemRefType(memrefType, b, allocOp.symbolOperands().size());
+      normalizeMemRefType(memrefType, b, allocOp->symbolOperands().size());
   if (newMemRefType == memrefType)
     // Either memrefType already had an identity map or the map couldn't be
     // transformed to an identity map.
     return failure();
 
-  Value oldMemRef = allocOp.getResult();
+  Value oldMemRef = allocOp->getResult();
 
-  SmallVector<Value, 4> symbolOperands(allocOp.symbolOperands());
-  AllocOp newAlloc = b.create<AllocOp>(allocOp.getLoc(), newMemRefType,
-                                       allocOp.alignmentAttr());
+  SmallVector<Value, 4> symbolOperands(allocOp->symbolOperands());
+  memref::AllocOp newAlloc = b.create<memref::AllocOp>(
+      allocOp->getLoc(), newMemRefType, allocOp->alignmentAttr());
   AffineMap layoutMap = memrefType.getAffineMaps().front();
   // Replace all uses of the old memref.
   if (failed(replaceAllMemRefUsesWith(oldMemRef, /*newMemRef=*/newAlloc,
@@ -427,10 +415,11 @@ LogicalResult mlir::normalizeMemRef(AllocOp allocOp) {
   }
   // Replace any uses of the original alloc op and erase it. All remaining uses
   // have to be dealloc's; RAMUW above would've failed otherwise.
-  assert(llvm::all_of(oldMemRef.getUsers(),
-                      [](Operation *op) { return isa<DeallocOp>(op); }));
+  assert(llvm::all_of(oldMemRef.getUsers(), [](Operation *op) {
+    return isa<memref::DeallocOp>(op);
+  }));
   oldMemRef.replaceAllUsesWith(newAlloc);
-  allocOp.erase();
+  allocOp->erase();
   return success();
 }
 

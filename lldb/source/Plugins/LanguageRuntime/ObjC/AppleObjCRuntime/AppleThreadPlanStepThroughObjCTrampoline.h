@@ -24,8 +24,7 @@ class AppleThreadPlanStepThroughObjCTrampoline : public ThreadPlan {
 public:
   AppleThreadPlanStepThroughObjCTrampoline(
       Thread &thread, AppleObjCTrampolineHandler &trampoline_handler,
-      ValueList &values, lldb::addr_t isa_addr, lldb::addr_t sel_addr,
-      bool stop_others);
+      ValueList &values, lldb::addr_t isa_addr, lldb::addr_t sel_addr);
 
   ~AppleThreadPlanStepThroughObjCTrampoline() override;
 
@@ -39,7 +38,9 @@ public:
 
   bool ShouldStop(Event *event_ptr) override;
 
-  bool StopOthers() override { return m_stop_others; }
+  // The step through code might have to fill in the cache, so it is not safe
+  // to run only one thread.
+  bool StopOthers() override { return false; }
 
   // The base class MischiefManaged does some cleanup - so you have to call it
   // in your MischiefManaged derived class.
@@ -69,15 +70,13 @@ private:
   FunctionCaller *m_impl_function; /// This is a pointer to a impl function that
                                    /// is owned by the client that pushes this
                                    /// plan.
-  bool m_stop_others;  /// Whether we should stop other threads.
 };
 
 class AppleThreadPlanStepThroughDirectDispatch: public ThreadPlanStepOut {
 public:
-  AppleThreadPlanStepThroughDirectDispatch(
-      Thread &thread, AppleObjCTrampolineHandler &handler,
-      llvm::StringRef dispatch_func_name, bool stop_others,
-      LazyBool step_in_avoids_code_without_debug_info);
+  AppleThreadPlanStepThroughDirectDispatch(Thread &thread,
+                                           AppleObjCTrampolineHandler &handler,
+                                           llvm::StringRef dispatch_func_name);
 
   ~AppleThreadPlanStepThroughDirectDispatch() override;
 
@@ -85,7 +84,7 @@ public:
 
   bool ShouldStop(Event *event_ptr) override;
 
-  bool StopOthers() override { return m_stop_others; }
+  bool StopOthers() override { return false; }
 
   bool MischiefManaged() override;
 
@@ -107,7 +106,6 @@ protected:
   std::vector<lldb::BreakpointSP> m_msgSend_bkpts; /// Breakpoints on the objc
                                                    /// dispatch functions.
   bool m_at_msg_send;  /// Are we currently handling an msg_send
-  bool m_stop_others;  /// Whether we should stop other threads.
 
 };
 

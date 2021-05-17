@@ -367,6 +367,8 @@ static bool less_name(const FunctionDecl *a, const FunctionDecl *b)
  * functions as belonging to the subclasses.
  * Sort the names of the functions based on their lengths
  * to ensure that nested subclasses are handled later.
+ *
+ * Also extract information about automatic conversion functions.
  */
 generator::generator(SourceManager &SM, set<RecordDecl *> &exported_types,
 	set<FunctionDecl *> exported_functions, set<FunctionDecl *> functions) :

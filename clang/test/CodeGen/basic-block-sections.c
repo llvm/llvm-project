@@ -7,7 +7,7 @@
 // RUN: %clang_cc1 -triple x86_64 -S -fbasic-block-sections=list=%S/Inputs/basic-block-sections.funcnames -o - < %s | FileCheck %s --check-prefix=BB_WORLD --check-prefix=BB_LIST
 // RUN: %clang_cc1 -triple x86_64 -S -fbasic-block-sections=all -funique-basic-block-section-names -o - < %s | FileCheck %s --check-prefix=UNIQUE
 // RUN: rm -f %t
-// RUN: not %clang_cc1 -fbasic-block-sections=list= -emit-obj -o %t %s 2>&1 | FileCheck %s --check-prefix=ERROR
+// RUN: not %clang_cc1 -fbasic-block-sections=list= -emit-obj -o %t %s 2>&1 | FileCheck -DMSG=%errc_ENOENT %s --check-prefix=ERROR
 // RUN: not ls %t
 
 int world(int a) {
@@ -32,13 +32,12 @@ int another(int a) {
 // BB_WORLD: world:
 // BB_WORLD: .section .text.world,"ax",@progbits,unique
 // BB_WORLD: world.__part.1:
-// BB_WORLD: .section .text.another,"ax",@progbits
-// BB_ALL: .section .text.another,"ax",@progbits,unique
+// BB_ALL: .section .text.another,"ax",@progbits
 // BB_ALL: another.__part.1:
-// BB_LIST-NOT: .section .text.another,"ax",@progbits,unique
+// BB_LIST-NOT: .section .text.another,"ax",@progbits
 // BB_LIST: another:
 // BB_LIST-NOT: another.__part.1:
 //
 // UNIQUE: .section .text.world.world.__part.1,
 // UNIQUE: .section .text.another.another.__part.1,
-// ERROR: error:  unable to load basic block sections function list: '{{[Nn]}}o such file or directory'
+// ERROR: error:  unable to load basic block sections function list: '[[MSG]]'

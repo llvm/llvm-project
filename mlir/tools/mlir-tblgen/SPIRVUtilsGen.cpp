@@ -171,7 +171,7 @@ static void emitInterfaceDef(const Availability &availability,
   StringRef methodName = availability.getQueryFnName();
   os << availability.getQueryFnRetType() << " "
      << availability.getInterfaceClassName() << "::" << methodName << "() {\n"
-     << "  return getImpl()->" << methodName << "(getOperation());\n"
+     << "  return getImpl()->" << methodName << "(getImpl(), getOperation());\n"
      << "}\n";
 }
 
@@ -208,23 +208,25 @@ static void emitConceptDecl(const Availability &availability, raw_ostream &os) {
      << "    virtual ~Concept() = default;\n"
      << "    virtual " << availability.getQueryFnRetType() << " "
      << availability.getQueryFnName()
-     << "(Operation *tblgen_opaque_op) const = 0;\n"
+     << "(const Concept *impl, Operation *tblgen_opaque_op) const = 0;\n"
      << "  };\n";
 }
 
 static void emitModelDecl(const Availability &availability, raw_ostream &os) {
-  os << "  template<typename ConcreteOp>\n";
-  os << "  class Model : public Concept {\n"
-     << "  public:\n"
-     << "    " << availability.getQueryFnRetType() << " "
-     << availability.getQueryFnName()
-     << "(Operation *tblgen_opaque_op) const final {\n"
-     << "      auto op = llvm::cast<ConcreteOp>(tblgen_opaque_op);\n"
-     << "      (void)op;\n"
-     // Forward to the method on the concrete operation type.
-     << "      return op." << availability.getQueryFnName() << "();\n"
-     << "    }\n"
-     << "  };\n";
+  for (const char *modelClass : {"Model", "FallbackModel"}) {
+    os << "  template<typename ConcreteOp>\n";
+    os << "  class " << modelClass << " : public Concept {\n"
+       << "  public:\n"
+       << "    " << availability.getQueryFnRetType() << " "
+       << availability.getQueryFnName()
+       << "(const Concept *impl, Operation *tblgen_opaque_op) const final {\n"
+       << "      auto op = llvm::cast<ConcreteOp>(tblgen_opaque_op);\n"
+       << "      (void)op;\n"
+       // Forward to the method on the concrete operation type.
+       << "      return op." << availability.getQueryFnName() << "();\n"
+       << "    }\n"
+       << "  };\n";
+  }
 }
 
 static void emitInterfaceDecl(const Availability &availability,
@@ -709,13 +711,15 @@ static void emitSerializationFunction(const Record *attrClass,
                             elidedAttrs, os);
 
   if (record->isSubClassOf("SPV_ExtInstOp")) {
-    os << formatv("  encodeExtensionInstruction({0}, \"{1}\", {2}, {3});\n",
-                  opVar, record->getValueAsString("extendedInstSetName"),
-                  record->getValueAsInt("extendedInstOpcode"), operands);
+    os << formatv(
+        "  (void)encodeExtensionInstruction({0}, \"{1}\", {2}, {3});\n", opVar,
+        record->getValueAsString("extendedInstSetName"),
+        record->getValueAsInt("extendedInstOpcode"), operands);
   } else {
     // Emit debug info.
-    os << formatv("  emitDebugLine(functionBody, {0}.getLoc());\n", opVar);
-    os << formatv("  encodeInstructionInto("
+    os << formatv("  (void)emitDebugLine(functionBody, {0}.getLoc());\n",
+                  opVar);
+    os << formatv("  (void)encodeInstructionInto("
                   "functionBody, spirv::Opcode::{1}, {2});\n",
                   op.getQualCppClassName(),
                   record->getValueAsString("spirvOpName"), operands);
@@ -987,7 +991,7 @@ static void emitDeserializationFunction(const Record *attrClass,
   // this instruction, up to the first occurrence of any of the following: the
   // next end of block.
   os << formatv("  if ({0}.hasTrait<OpTrait::IsTerminator>())\n", opVar);
-  os << formatv("    clearDebugLine();\n");
+  os << formatv("    (void)clearDebugLine();\n");
   os << "  return success();\n";
   os << "}\n\n";
 }

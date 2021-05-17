@@ -29,6 +29,10 @@
 #include <string_view>
 #include <cassert>
 
+// On Windows, the append function converts all inputs (pointers, iterators)
+// to an intermediate path object, causing allocations in cases where no
+// allocations are done on other platforms.
+
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "count_new.h"
@@ -38,40 +42,74 @@
 struct AppendOperatorTestcase {
   MultiStringType lhs;
   MultiStringType rhs;
-  MultiStringType expect;
+  MultiStringType expect_posix;
+  MultiStringType expect_windows;
+
+  MultiStringType const& expected_result() const {
+#ifdef _WIN32
+    return expect_windows;
+#else
+    return expect_posix;
+#endif
+  }
 };
 
 #define S(Str) MKSTR(Str)
 const AppendOperatorTestcase Cases[] =
     {
-        {S(""),     S(""),      S("")}
-      , {S("p1"),   S("p2"),    S("p1/p2")}
-      , {S("p1/"),  S("p2"),    S("p1/p2")}
-      , {S("p1"),   S("/p2"),   S("/p2")}
-      , {S("p1/"),  S("/p2"),   S("/p2")}
-      , {S("p1"),   S("\\p2"),  S("p1/\\p2")}
-      , {S("p1\\"), S("p2"),  S("p1\\/p2")}
-      , {S("p1\\"), S("\\p2"),  S("p1\\/\\p2")}
-      , {S(""),     S("p2"),    S("p2")}
-      , {S("/p1"),  S("p2"),    S("/p1/p2")}
-      , {S("/p1"),  S("/p2"),    S("/p2")}
-      , {S("/p1/p3"),  S("p2"),    S("/p1/p3/p2")}
-      , {S("/p1/p3/"),  S("p2"),    S("/p1/p3/p2")}
-      , {S("/p1/"),  S("p2"),    S("/p1/p2")}
-      , {S("/p1/p3/"),  S("/p2/p4"),    S("/p2/p4")}
-      , {S("/"),    S(""),      S("/")}
-      , {S("/p1"), S("/p2/"), S("/p2/")}
-      , {S("p1"),   S(""),      S("p1/")}
-      , {S("p1/"),  S(""),      S("p1/")}
+        {S(""),        S(""),         S(""),              S("")}
+      , {S("p1"),      S("p2"),       S("p1/p2"),         S("p1\\p2")}
+      , {S("p1/"),     S("p2"),       S("p1/p2"),         S("p1/p2")}
+      , {S("p1"),      S("/p2"),      S("/p2"),           S("/p2")}
+      , {S("p1/"),     S("/p2"),      S("/p2"),           S("/p2")}
+      , {S("p1"),      S("\\p2"),     S("p1/\\p2"),       S("\\p2")}
+      , {S("p1\\"),    S("p2"),       S("p1\\/p2"),       S("p1\\p2")}
+      , {S("p1\\"),    S("\\p2"),     S("p1\\/\\p2"),     S("\\p2")}
+      , {S(""),        S("p2"),       S("p2"),            S("p2")}
+      , {S("/p1"),     S("p2"),       S("/p1/p2"),        S("/p1\\p2")}
+      , {S("/p1"),     S("/p2"),      S("/p2"),           S("/p2")}
+      , {S("/p1/p3"),  S("p2"),       S("/p1/p3/p2"),     S("/p1/p3\\p2")}
+      , {S("/p1/p3/"), S("p2"),       S("/p1/p3/p2"),     S("/p1/p3/p2")}
+      , {S("/p1/"),    S("p2"),       S("/p1/p2"),        S("/p1/p2")}
+      , {S("/p1/p3/"), S("/p2/p4"),   S("/p2/p4"),        S("/p2/p4")}
+      , {S("/"),       S(""),         S("/"),             S("/")}
+      , {S("/p1"),     S("/p2/"),     S("/p2/"),          S("/p2/")}
+      , {S("p1"),      S(""),         S("p1/"),           S("p1\\")}
+      , {S("p1/"),     S(""),         S("p1/"),           S("p1/")}
+
+      , {S("//host"),  S("foo"),      S("//host/foo"),    S("//host\\foo")}
+      , {S("//host/"), S("foo"),      S("//host/foo"),    S("//host/foo")}
+      , {S("//host"),  S(""),         S("//host/"),       S("//host\\")}
+
+      , {S("foo"),     S("C:/bar"),   S("foo/C:/bar"),    S("C:/bar")}
+      , {S("foo"),     S("C:"),       S("foo/C:"),        S("C:")}
+
+      , {S("C:"),      S(""),         S("C:/"),           S("C:")}
+      , {S("C:foo"),   S("/bar"),     S("/bar"),          S("C:/bar")}
+      , {S("C:foo"),   S("bar"),      S("C:foo/bar"),     S("C:foo\\bar")}
+      , {S("C:/foo"),  S("bar"),      S("C:/foo/bar"),    S("C:/foo\\bar")}
+      , {S("C:/foo"),  S("/bar"),     S("/bar"),          S("C:/bar")}
+
+      , {S("C:foo"),   S("C:/bar"),   S("C:foo/C:/bar"),  S("C:/bar")}
+      , {S("C:foo"),   S("C:bar"),    S("C:foo/C:bar"),   S("C:foo\\bar")}
+      , {S("C:/foo"),  S("C:/bar"),   S("C:/foo/C:/bar"), S("C:/bar")}
+      , {S("C:/foo"),  S("C:bar"),    S("C:/foo/C:bar"),  S("C:/foo\\bar")}
+
+      , {S("C:foo"),   S("c:/bar"),   S("C:foo/c:/bar"),  S("c:/bar")}
+      , {S("C:foo"),   S("c:bar"),    S("C:foo/c:bar"),   S("c:bar")}
+      , {S("C:/foo"),  S("c:/bar"),   S("C:/foo/c:/bar"), S("c:/bar")}
+      , {S("C:/foo"),  S("c:bar"),    S("C:/foo/c:bar"),  S("c:bar")}
+
+      , {S("C:/foo"),  S("D:bar"),    S("C:/foo/D:bar"),  S("D:bar")}
     };
 
 
 const AppendOperatorTestcase LongLHSCases[] =
     {
-        {S("p1"),   S("p2"),    S("p1/p2")}
-      , {S("p1/"),  S("p2"),    S("p1/p2")}
-      , {S("p1"),   S("/p2"),   S("/p2")}
-      , {S("/p1"),  S("p2"),    S("/p1/p2")}
+        {S("p1"),   S("p2"),    S("p1/p2"),  S("p1\\p2")}
+      , {S("p1/"),  S("p2"),    S("p1/p2"),  S("p1/p2")}
+      , {S("p1"),   S("/p2"),   S("/p2"),    S("/p2")}
+      , {S("/p1"),  S("p2"),    S("/p1/p2"), S("/p1\\p2")}
     };
 #undef S
 
@@ -90,11 +128,11 @@ void doAppendSourceAllocTest(AppendOperatorTestcase const& TC)
   using Ptr = CharT const*;
   using Str = std::basic_string<CharT>;
   using StrView = std::basic_string_view<CharT>;
-  using InputIter = input_iterator<Ptr>;
+  using InputIter = cpp17_input_iterator<Ptr>;
 
   const Ptr L = TC.lhs;
   Str RShort = (Ptr)TC.rhs;
-  Str EShort = (Ptr)TC.expect;
+  Str EShort = (Ptr)TC.expected_result();
   assert(RShort.size() >= 2);
   CharT c = RShort.back();
   RShort.append(100, c);
@@ -107,7 +145,7 @@ void doAppendSourceAllocTest(AppendOperatorTestcase const& TC)
     path LHS(L); PathReserve(LHS, ReserveSize);
     Str  RHS(R);
     {
-      DisableAllocationGuard g;
+      TEST_NOT_WIN32(DisableAllocationGuard g);
       LHS /= RHS;
     }
     assert(PathEq(LHS, E));
@@ -117,7 +155,7 @@ void doAppendSourceAllocTest(AppendOperatorTestcase const& TC)
     path LHS(L); PathReserve(LHS, ReserveSize);
     StrView  RHS(R);
     {
-      DisableAllocationGuard g;
+      TEST_NOT_WIN32(DisableAllocationGuard g);
       LHS /= RHS;
     }
     assert(PathEq(LHS, E));
@@ -127,7 +165,7 @@ void doAppendSourceAllocTest(AppendOperatorTestcase const& TC)
     path LHS(L); PathReserve(LHS, ReserveSize);
     Ptr RHS(R);
     {
-      DisableAllocationGuard g;
+      TEST_NOT_WIN32(DisableAllocationGuard g);
       LHS /= RHS;
     }
     assert(PathEq(LHS, E));
@@ -136,8 +174,17 @@ void doAppendSourceAllocTest(AppendOperatorTestcase const& TC)
     path LHS(L); PathReserve(LHS, ReserveSize);
     Ptr RHS(R);
     {
-      DisableAllocationGuard g;
+      TEST_NOT_WIN32(DisableAllocationGuard g);
       LHS.append(RHS, StrEnd(RHS));
+    }
+    assert(PathEq(LHS, E));
+  }
+  {
+    path LHS(L); PathReserve(LHS, ReserveSize);
+    path RHS(R);
+    {
+      DisableAllocationGuard g;
+      LHS /= RHS;
     }
     assert(PathEq(LHS, E));
   }
@@ -146,13 +193,23 @@ void doAppendSourceAllocTest(AppendOperatorTestcase const& TC)
   // code_cvt conversions.
   // For "char" no allocations will be performed because no conversion is
   // required.
+  // On Windows, the append method is more complex and uses intermediate
+  // path objects, which causes extra allocations.
+  // In DLL builds on Windows, the overridden operator new won't pick up
+  // allocations done within the DLL, so the RequireAllocationGuard below
+  // won't necessarily see allocations in the cases where they're expected.
+#ifdef _WIN32
+  bool DisableAllocations = false;
+#else
   bool DisableAllocations = std::is_same<CharT, char>::value;
+#endif
   {
     path LHS(L); PathReserve(LHS, ReserveSize);
     InputIter RHS(R);
     {
       RequireAllocationGuard  g; // requires 1 or more allocations occur by default
       if (DisableAllocations) g.requireExactly(0);
+      else TEST_ONLY_WIN32_DLL(g.requireAtLeast(0));
       LHS /= RHS;
     }
     assert(PathEq(LHS, E));
@@ -164,6 +221,7 @@ void doAppendSourceAllocTest(AppendOperatorTestcase const& TC)
     {
       RequireAllocationGuard g;
       if (DisableAllocations) g.requireExactly(0);
+      else TEST_ONLY_WIN32_DLL(g.requireAtLeast(0));
       LHS.append(RHS, REnd);
     }
     assert(PathEq(LHS, E));
@@ -177,10 +235,10 @@ void doAppendSourceTest(AppendOperatorTestcase const& TC)
   using Ptr = CharT const*;
   using Str = std::basic_string<CharT>;
   using StrView = std::basic_string_view<CharT>;
-  using InputIter = input_iterator<Ptr>;
+  using InputIter = cpp17_input_iterator<Ptr>;
   const Ptr L = TC.lhs;
   const Ptr R = TC.rhs;
-  const Ptr E = TC.expect;
+  const Ptr E = TC.expected_result();
   // basic_string
   {
     path Result(L);
@@ -283,7 +341,7 @@ void test_sfinae()
     static_assert(has_append<It>(), "");
   }
   {
-    using It = input_iterator<const char*>;
+    using It = cpp17_input_iterator<const char*>;
     static_assert(has_append<It>(), "");
   }
   {
@@ -294,7 +352,7 @@ void test_sfinae()
       using reference = const char&;
       using difference_type = std::ptrdiff_t;
     };
-    using It = input_iterator<const char*, Traits>;
+    using It = cpp17_input_iterator<const char*, Traits>;
     static_assert(has_append<It>(), "");
   }
   {
@@ -321,7 +379,7 @@ int main(int, char**)
       path LHS(LHS_In);
       path RHS(RHS_In);
       path& Res = (LHS /= RHS);
-      assert(PathEq(Res, (const char*)TC.expect));
+      assert(PathEq(Res, (const char*)TC.expected_result()));
       assert(&Res == &LHS);
     }
     doAppendSourceTest<char>    (TC);

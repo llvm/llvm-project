@@ -17,22 +17,22 @@
 
 using RunContext = __llvm_libc::testing::RunContext;
 
-TEST_F(ILogbTest, SpecialNumbers_ilogbl) {
+TEST_F(LlvmLibcILogbTest, SpecialNumbers_ilogbl) {
   testSpecialNumbers<long double>(&__llvm_libc::ilogbl);
 }
 
-TEST_F(ILogbTest, PowersOfTwo_ilogbl) {
+TEST_F(LlvmLibcILogbTest, PowersOfTwo_ilogbl) {
   testPowersOfTwo<long double>(&__llvm_libc::ilogbl);
 }
 
-TEST_F(ILogbTest, SomeIntegers_ilogbl) {
+TEST_F(LlvmLibcILogbTest, SomeIntegers_ilogbl) {
   testSomeIntegers<long double>(&__llvm_libc::ilogbl);
 }
 
-TEST_F(ILogbTest, SubnormalRange_ilogbl) {
+TEST_F(LlvmLibcILogbTest, SubnormalRange_ilogbl) {
   testSubnormalRange<long double>(&__llvm_libc::ilogbl);
 }
 
-TEST_F(ILogbTest, NormalRange_ilogbl) {
+TEST_F(LlvmLibcILogbTest, NormalRange_ilogbl) {
   testNormalRange<long double>(&__llvm_libc::ilogbl);
 }

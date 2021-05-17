@@ -8,6 +8,8 @@
 #include "Inputs/system-header-simulator.h"
 
 void clang_analyzer_eval(int);
+void clang_analyzer_dump(int);
+void clang_analyzer_dumpExtent(void *);
 
 // Without -fms-compatibility, wchar_t isn't a builtin type. MSVC defines
 // _WCHAR_T_DEFINED if wchar_t is available. Microsoft recommends that you use
@@ -1780,7 +1782,9 @@ void freeIndirectFunctionPtr() {
 }
 
 void freeFunctionPtr() {
-  free((void *)fnptr); // expected-warning {{Argument to free() is a function pointer}}
+  free((void *)fnptr);
+  // expected-warning@-1{{Argument to free() is a function pointer}}
+  // expected-warning@-2{{attempt to call free on non-heap object '(void *)fnptr'}}
 }
 
 void allocateSomeMemory(void *offendingParameter, void **ptr) {
@@ -1881,3 +1885,14 @@ void testMallocIntoMalloc() {
   s->memP = malloc(sizeof(int));
   free(s);
 } // FIXME: should warn here
+
+int conjure();
+void testExtent() {
+  int x = conjure();
+  clang_analyzer_dump(x);
+  // expected-warning-re@-1 {{{{^conj_\$[[:digit:]]+{int, LC1, S[[:digit:]]+, #1}}}}}}
+  int *p = (int *)malloc(x);
+  clang_analyzer_dumpExtent(p);
+  // expected-warning-re@-1 {{{{^conj_\$[[:digit:]]+{int, LC1, S[[:digit:]]+, #1}}}}}}
+  free(p);
+}

@@ -9,14 +9,14 @@
 ; VI-DAG: v_add_u32_e32 [[B2:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
 ; VI-DAG: v_add_u32_e32 [[B3:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
 
-; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 0x320, [[BASE]]
-; GFX9-DAG: v_add_u32_e32 [[B2:v[0-9]+]], 0x640, [[BASE]]
-; GFX9-DAG: v_add_u32_e32 [[B3:v[0-9]+]], 0x960, [[BASE]]
+; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 0x200, [[BASE]]
+; GFX9-DAG: v_add_u32_e32 [[B2:v[0-9]+]], 0x400, [[BASE]]
+; GFX9-DAG: v_add_u32_e32 [[B3:v[0-9]+]], 0x800, [[BASE]]
 
 ; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[BASE]] offset1:100
-; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B1]] offset1:100
-; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B2]] offset1:100
-; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B3]] offset1:100
+; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B1]] offset0:72 offset1:172
+; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B2]] offset0:144 offset1:244
+; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B3]] offset0:88 offset1:188
 define amdgpu_kernel void @ds_read32_combine_stride_400(float addrspace(3)* nocapture readonly %arg, float *nocapture %arg1) {
 bb:
   %tmp = load float, float addrspace(3)* %arg, align 4
@@ -46,6 +46,50 @@ bb:
   ret void
 }
 
+; GCN-LABEL: ds_read32_combine_stride_20:
+; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
+; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
+
+; VI-DAG: v_add_u32_e32 [[B1:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
+; VI-DAG: v_add_u32_e32 [[B2:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
+
+; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 0x400, [[BASE]]
+; GFX9-DAG: v_add_u32_e32 [[B2:v[0-9]+]], 0x800, [[BASE]]
+
+; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B1]] offset0:144 offset1:164
+; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B1]] offset0:184 offset1:204
+; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B1]] offset0:224 offset1:244
+; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B2]] offset0:8 offset1:28
+define amdgpu_kernel void @ds_read32_combine_stride_20(float addrspace(3)* nocapture readonly %arg, float *nocapture %arg1) {
+bb:
+  %tmp = getelementptr inbounds float, float addrspace(3)* %arg, i32 400
+  %tmp1 = load float, float addrspace(3)* %tmp, align 4
+  %tmp2 = fadd float %tmp1, 0.000000e+00
+  %tmp3 = getelementptr inbounds float, float addrspace(3)* %arg, i32 420
+  %tmp4 = load float, float addrspace(3)* %tmp3, align 4
+  %tmp5 = fadd float %tmp2, %tmp4
+  %tmp6 = getelementptr inbounds float, float addrspace(3)* %arg, i32 440
+  %tmp7 = load float, float addrspace(3)* %tmp6, align 4
+  %tmp8 = fadd float %tmp5, %tmp7
+  %tmp9 = getelementptr inbounds float, float addrspace(3)* %arg, i32 460
+  %tmp10 = load float, float addrspace(3)* %tmp9, align 4
+  %tmp11 = fadd float %tmp8, %tmp10
+  %tmp12 = getelementptr inbounds float, float addrspace(3)* %arg, i32 480
+  %tmp13 = load float, float addrspace(3)* %tmp12, align 4
+  %tmp14 = fadd float %tmp11, %tmp13
+  %tmp15 = getelementptr inbounds float, float addrspace(3)* %arg, i32 500
+  %tmp16 = load float, float addrspace(3)* %tmp15, align 4
+  %tmp17 = fadd float %tmp14, %tmp16
+  %tmp18 = getelementptr inbounds float, float addrspace(3)* %arg, i32 520
+  %tmp19 = load float, float addrspace(3)* %tmp18, align 4
+  %tmp20 = fadd float %tmp17, %tmp19
+  %tmp21 = getelementptr inbounds float, float addrspace(3)* %arg, i32 540
+  %tmp22 = load float, float addrspace(3)* %tmp21, align 4
+  %tmp23 = fadd float %tmp20, %tmp22
+  store float %tmp23, float *%arg1, align 4
+  ret void
+}
+
 ; GCN-LABEL: ds_read32_combine_stride_400_back:
 ; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
 ; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
@@ -54,14 +98,14 @@ bb:
 ; VI-DAG: v_add_u32_e32 [[B2:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
 ; VI-DAG: v_add_u32_e32 [[B3:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
 
-; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 0x320, [[BASE]]
-; GFX9-DAG: v_add_u32_e32 [[B2:v[0-9]+]], 0x640, [[BASE]]
-; GFX9-DAG: v_add_u32_e32 [[B3:v[0-9]+]], 0x960, [[BASE]]
+; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 0x800, [[BASE]]
+; GFX9-DAG: v_add_u32_e32 [[B2:v[0-9]+]], 0x400, [[BASE]]
+; GFX9-DAG: v_add_u32_e32 [[B3:v[0-9]+]], 0x200, [[BASE]]
 
 ; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[BASE]] offset1:100
-; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B1]] offset1:100
-; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B2]] offset1:100
-; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B3]] offset1:100
+; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B1]] offset0:88 offset1:188
+; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B2]] offset0:144 offset1:244
+; GCN-DAG: ds_read2_b32  v[{{[0-9]+:[0-9]+}}], [[B3]] offset0:72 offset1:172
 define amdgpu_kernel void @ds_read32_combine_stride_400_back(float addrspace(3)* nocapture readonly %arg, float *nocapture %arg1) {
 bb:
   %tmp = getelementptr inbounds float, float addrspace(3)* %arg, i32 700
@@ -132,16 +176,11 @@ bb:
 ; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
 
 ; VI-DAG: v_add_u32_e32 [[B1:v[0-9]+]], vcc, 8, [[BASE]]
-; VI-DAG: v_add_u32_e32 [[B2:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
-; VI-DAG: v_add_u32_e32 [[B3:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
-
 ; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 8, [[BASE]]
-; GFX9-DAG: v_add_u32_e32 [[B2:v[0-9]+]], 0x4008, [[BASE]]
-; GFX9-DAG: v_add_u32_e32 [[B3:v[0-9]+]], 0x8008, [[BASE]]
 
 ; GCN-DAG: ds_read2st64_b32 v[{{[0-9]+:[0-9]+}}], [[B1]] offset1:32
-; GCN-DAG: ds_read2st64_b32 v[{{[0-9]+:[0-9]+}}], [[B2]] offset1:32
-; GCN-DAG: ds_read2st64_b32 v[{{[0-9]+:[0-9]+}}], [[B3]] offset1:32
+; GCN-DAG: ds_read2st64_b32 v[{{[0-9]+:[0-9]+}}], [[B1]] offset0:64 offset1:96
+; GCN-DAG: ds_read2st64_b32 v[{{[0-9]+:[0-9]+}}], [[B1]] offset0:128 offset1:160
 define amdgpu_kernel void @ds_read32_combine_stride_8192_shifted(float addrspace(3)* nocapture readonly %arg, float *nocapture %arg1) {
 bb:
   %tmp = getelementptr inbounds float, float addrspace(3)* %arg, i32 2
@@ -171,12 +210,12 @@ bb:
 ; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
 
 ; VI-DAG: v_add_u32_e32 [[B1:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
-; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 0x960, [[BASE]]
+; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 0x800, [[BASE]]
 
 ; GCN-DAG: ds_read2_b64  v[{{[0-9]+:[0-9]+}}], [[BASE]] offset1:50
 ; GCN-DAG: ds_read2_b64  v[{{[0-9]+:[0-9]+}}], [[BASE]] offset0:100 offset1:150
 ; GCN-DAG: ds_read2_b64  v[{{[0-9]+:[0-9]+}}], [[BASE]] offset0:200 offset1:250
-; GCN-DAG: ds_read2_b64  v[{{[0-9]+:[0-9]+}}], [[B1]] offset1:50
+; GCN-DAG: ds_read2_b64  v[{{[0-9]+:[0-9]+}}], [[B1]] offset0:44 offset1:94
 define amdgpu_kernel void @ds_read64_combine_stride_400(double addrspace(3)* nocapture readonly %arg, double *nocapture %arg1) {
 bb:
   %tmp = load double, double addrspace(3)* %arg, align 8
@@ -211,16 +250,11 @@ bb:
 ; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
 
 ; VI-DAG: v_add_u32_e32 [[B1:v[0-9]+]], vcc, 8, [[BASE]]
-; VI-DAG: v_add_u32_e32 [[B2:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
-; VI-DAG: v_add_u32_e32 [[B3:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
-
 ; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 8, [[BASE]]
-; GFX9-DAG: v_add_u32_e32 [[B2:v[0-9]+]], 0x4008, [[BASE]]
-; GFX9-DAG: v_add_u32_e32 [[B3:v[0-9]+]], 0x8008, [[BASE]]
 
 ; GCN-DAG: ds_read2st64_b64 v[{{[0-9]+:[0-9]+}}], [[B1]] offset1:16
-; GCN-DAG: ds_read2st64_b64 v[{{[0-9]+:[0-9]+}}], [[B2]] offset1:16
-; GCN-DAG: ds_read2st64_b64 v[{{[0-9]+:[0-9]+}}], [[B3]] offset1:16
+; GCN-DAG: ds_read2st64_b64 v[{{[0-9]+:[0-9]+}}], [[B1]] offset0:32 offset1:48
+; GCN-DAG: ds_read2st64_b64 v[{{[0-9]+:[0-9]+}}], [[B1]] offset0:64 offset1:80
 define amdgpu_kernel void @ds_read64_combine_stride_8192_shifted(double addrspace(3)* nocapture readonly %arg, double *nocapture %arg1) {
 bb:
   %tmp = getelementptr inbounds double, double addrspace(3)* %arg, i32 1
@@ -253,14 +287,14 @@ bb:
 ; VI-DAG: v_add_u32_e32 [[B2:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
 ; VI-DAG: v_add_u32_e32 [[B3:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
 
-; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 0x320, [[BASE]]
-; GFX9-DAG: v_add_u32_e32 [[B2:v[0-9]+]], 0x640, [[BASE]]
-; GFX9-DAG: v_add_u32_e32 [[B3:v[0-9]+]], 0x960, [[BASE]]
+; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 0x200, [[BASE]]
+; GFX9-DAG: v_add_u32_e32 [[B2:v[0-9]+]], 0x400, [[BASE]]
+; GFX9-DAG: v_add_u32_e32 [[B3:v[0-9]+]], 0x800, [[BASE]]
 
 ; GCN-DAG: ds_write2_b32 [[BASE]], v{{[0-9]+}}, v{{[0-9]+}} offset1:100
-; GCN-DAG: ds_write2_b32 [[B1]], v{{[0-9]+}}, v{{[0-9]+}} offset1:100
-; GCN-DAG: ds_write2_b32 [[B2]], v{{[0-9]+}}, v{{[0-9]+}} offset1:100
-; GCN-DAG: ds_write2_b32 [[B3]], v{{[0-9]+}}, v{{[0-9]+}} offset1:100
+; GCN-DAG: ds_write2_b32 [[B1]], v{{[0-9]+}}, v{{[0-9]+}} offset0:72 offset1:172
+; GCN-DAG: ds_write2_b32 [[B2]], v{{[0-9]+}}, v{{[0-9]+}} offset0:144 offset1:244
+; GCN-DAG: ds_write2_b32 [[B3]], v{{[0-9]+}}, v{{[0-9]+}} offset0:88 offset1:188
 define amdgpu_kernel void @ds_write32_combine_stride_400(float addrspace(3)* nocapture %arg) {
 bb:
   store float 1.000000e+00, float addrspace(3)* %arg, align 4
@@ -289,14 +323,14 @@ bb:
 ; VI-DAG: v_add_u32_e32 [[B2:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
 ; VI-DAG: v_add_u32_e32 [[B3:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
 
-; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 0x320, [[BASE]]
-; GFX9-DAG: v_add_u32_e32 [[B2:v[0-9]+]], 0x640, [[BASE]]
-; GFX9-DAG: v_add_u32_e32 [[B3:v[0-9]+]], 0x960, [[BASE]]
+; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 0x800, [[BASE]]
+; GFX9-DAG: v_add_u32_e32 [[B2:v[0-9]+]], 0x400, [[BASE]]
+; GFX9-DAG: v_add_u32_e32 [[B3:v[0-9]+]], 0x200, [[BASE]]
 
+; GCN-DAG: ds_write2_b32 [[B1]], v{{[0-9]+}}, v{{[0-9]+}} offset0:88 offset1:188
+; GCN-DAG: ds_write2_b32 [[B2]], v{{[0-9]+}}, v{{[0-9]+}} offset0:144 offset1:244
+; GCN-DAG: ds_write2_b32 [[B3]], v{{[0-9]+}}, v{{[0-9]+}} offset0:72 offset1:172
 ; GCN-DAG: ds_write2_b32 [[BASE]], v{{[0-9]+}}, v{{[0-9]+}} offset1:100
-; GCN-DAG: ds_write2_b32 [[B1]], v{{[0-9]+}}, v{{[0-9]+}} offset1:100
-; GCN-DAG: ds_write2_b32 [[B2]], v{{[0-9]+}}, v{{[0-9]+}} offset1:100
-; GCN-DAG: ds_write2_b32 [[B3]], v{{[0-9]+}}, v{{[0-9]+}} offset1:100
 define amdgpu_kernel void @ds_write32_combine_stride_400_back(float addrspace(3)* nocapture %arg) {
 bb:
   %tmp = getelementptr inbounds float, float addrspace(3)* %arg, i32 700
@@ -348,17 +382,12 @@ bb:
 ; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
 ; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
 
-; VI-DAG: v_add_u32_e32 [[B1:v[0-9]+]], vcc, 4, [[BASE]]
-; VI-DAG: v_add_u32_e32 [[B2:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
-; VI-DAG: v_add_u32_e32 [[B3:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
+; VI-DAG: v_add_u32_e32 [[BASE:v[0-9]+]], vcc, 4, [[BASE]]
+; GFX9-DAG: v_add_u32_e32 [[BASE:v[0-9]+]], 4, [[BASE]]
 
-; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 4, [[BASE]]
-; GFX9-DAG: v_add_u32_e32 [[B2:v[0-9]+]], 0x4004, [[BASE]]
-; GFX9-DAG: v_add_u32_e32 [[B3:v[0-9]+]], 0x8004, [[BASE]]
-
-; GCN-DAG: ds_write2st64_b32 [[B1]], v{{[0-9]+}}, v{{[0-9]+}} offset1:32
-; GCN-DAG: ds_write2st64_b32 [[B2]], v{{[0-9]+}}, v{{[0-9]+}} offset1:32
-; GCN-DAG: ds_write2st64_b32 [[B3]], v{{[0-9]+}}, v{{[0-9]+}} offset1:32
+; GCN-DAG: ds_write2st64_b32 [[BASE]], v{{[0-9]+}}, v{{[0-9]+}} offset1:32
+; GCN-DAG: ds_write2st64_b32 [[BASE]], v{{[0-9]+}}, v{{[0-9]+}} offset0:64 offset1:96
+; GCN-DAG: ds_write2st64_b32 [[BASE]], v{{[0-9]+}}, v{{[0-9]+}} offset0:128 offset1:160
 define amdgpu_kernel void @ds_write32_combine_stride_8192_shifted(float addrspace(3)* nocapture %arg) {
 bb:
   %tmp = getelementptr inbounds float, float addrspace(3)* %arg, i32 1
@@ -381,12 +410,12 @@ bb:
 ; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
 
 ; VI-DAG: v_add_u32_e32 [[B1:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
-; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 0x960, [[BASE]]
+; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 0x800, [[BASE]]
 
 ; GCN-DAG: ds_write2_b64 [[BASE]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] offset1:50
 ; GCN-DAG: ds_write2_b64 [[BASE]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] offset0:100 offset1:150
 ; GCN-DAG: ds_write2_b64 [[BASE]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] offset0:200 offset1:250
-; GCN-DAG: ds_write2_b64 [[B1]],   v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] offset1:50
+; GCN-DAG: ds_write2_b64 [[B1]],   v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] offset0:44 offset1:94
 define amdgpu_kernel void @ds_write64_combine_stride_400(double addrspace(3)* nocapture %arg) {
 bb:
   store double 1.000000e+00, double addrspace(3)* %arg, align 8
@@ -411,17 +440,12 @@ bb:
 ; GCN:     s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x0
 ; GCN:     v_mov_b32_e32 [[BASE:v[0-9]+]], [[ARG]]
 
-; VI-DAG: v_add_u32_e32 [[B1:v[0-9]+]], vcc, 8, [[BASE]]
-; VI-DAG: v_add_u32_e32 [[B2:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
-; VI-DAG: v_add_u32_e32 [[B3:v[0-9]+]], vcc, {{s[0-9]+}}, [[BASE]]
+; VI-DAG: v_add_u32_e32 [[BASE]], vcc, 8, [[BASE]]
+; GFX9-DAG: v_add_u32_e32 [[BASE]], 8, [[BASE]]
 
-; GFX9-DAG: v_add_u32_e32 [[B1:v[0-9]+]], 8, [[BASE]]
-; GFX9-DAG: v_add_u32_e32 [[B2:v[0-9]+]], 0x4008, [[BASE]]
-; GFX9-DAG: v_add_u32_e32 [[B3:v[0-9]+]], 0x8008, [[BASE]]
-
-; GCN-DAG: ds_write2st64_b64 [[B1]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] offset1:16
-; GCN-DAG: ds_write2st64_b64 [[B2]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] offset1:16
-; GCN-DAG: ds_write2st64_b64 [[B3]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] offset1:16
+; GCN-DAG: ds_write2st64_b64 [[BASE]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] offset1:16
+; GCN-DAG: ds_write2st64_b64 [[BASE]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] offset0:32 offset1:48
+; GCN-DAG: ds_write2st64_b64 [[BASE]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] offset0:64 offset1:80
 define amdgpu_kernel void @ds_write64_combine_stride_8192_shifted(double addrspace(3)* nocapture %arg) {
 bb:
   %tmp = getelementptr inbounds double, double addrspace(3)* %arg, i32 1

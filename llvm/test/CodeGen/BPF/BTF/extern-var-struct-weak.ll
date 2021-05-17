@@ -24,9 +24,9 @@ entry:
 ; CHECK-NEXT:        .byte   0
 ; CHECK-NEXT:        .long   24
 ; CHECK-NEXT:        .long   0
-; CHECK-NEXT:        .long   116
-; CHECK-NEXT:        .long   116
-; CHECK-NEXT:        .long   81
+; CHECK-NEXT:        .long   92
+; CHECK-NEXT:        .long   92
+; CHECK-NEXT:        .long   73
 ; CHECK-NEXT:        .long   0                       # BTF_KIND_FUNC_PROTO(id = 1)
 ; CHECK-NEXT:        .long   218103808               # 0xd000000
 ; CHECK-NEXT:        .long   2
@@ -50,12 +50,6 @@ entry:
 ; CHECK-NEXT:        .long   234881024               # 0xe000000
 ; CHECK-NEXT:        .long   4
 ; CHECK-NEXT:        .long   2
-; CHECK-NEXT:        .long   73                      # BTF_KIND_DATASEC(id = 7)
-; CHECK-NEXT:        .long   251658241               # 0xf000001
-; CHECK-NEXT:        .long   0
-; CHECK-NEXT:        .long   6
-; CHECK-NEXT:        .long   global
-; CHECK-NEXT:        .long   4
 ; CHECK-NEXT:        .byte   0                       # string offset=0
 ; CHECK-NEXT:        .ascii  "int"                   # string offset=1
 ; CHECK-NEXT:        .byte   0
@@ -72,8 +66,6 @@ entry:
 ; CHECK-NEXT:        .ascii  "f1"                    # string offset=63
 ; CHECK-NEXT:        .byte   0
 ; CHECK-NEXT:        .ascii  "global"                # string offset=66
-; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .ascii  ".extern"               # string offset=73
 ; CHECK-NEXT:        .byte   0
 
 attributes #0 = { norecurse nounwind readonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

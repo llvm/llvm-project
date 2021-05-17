@@ -171,5 +171,30 @@ void ResourcePressureView::printResourcePressurePerInst(raw_ostream &OS) const {
     ++InstrIndex;
   }
 }
+
+json::Value ResourcePressureView::toJSON() const {
+  // We're dumping the instructions and the ResourceUsage array.
+  json::Array ResourcePressureInfo;
+
+  // The ResourceUsage matrix is sparse, so we only consider
+  // non-zero values.
+  ArrayRef<llvm::MCInst> Source = getSource();
+  const unsigned Executions = LastInstructionIdx / Source.size() + 1;
+  for (const auto &R : enumerate(ResourceUsage)) {
+    const ResourceCycles &RU = R.value();
+    if (RU.getNumerator() == 0)
+      continue;
+    unsigned InstructionIndex = R.index() / NumResourceUnits;
+    unsigned ResourceIndex = R.index() % NumResourceUnits;
+    double Usage = RU / Executions;
+    ResourcePressureInfo.push_back(
+        json::Object({{"InstructionIndex", InstructionIndex},
+                      {"ResourceIndex", ResourceIndex},
+                      {"ResourceUsage", Usage}}));
+  }
+
+  json::Object JO({{"ResourcePressureInfo", std::move(ResourcePressureInfo)}});
+  return JO;
+}
 } // namespace mca
 } // namespace llvm

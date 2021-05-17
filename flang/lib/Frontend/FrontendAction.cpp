@@ -9,7 +9,11 @@
 #include "flang/Frontend/FrontendAction.h"
 #include "flang/Frontend/CompilerInstance.h"
 #include "flang/Frontend/FrontendActions.h"
+#include "flang/Frontend/FrontendOptions.h"
+#include "flang/FrontendTool/Utils.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace Fortran::frontend;
 
@@ -29,14 +33,64 @@ bool FrontendAction::BeginSourceFile(
     CompilerInstance &ci, const FrontendInputFile &realInput) {
 
   FrontendInputFile input(realInput);
+
+  // Return immediately if the input file does not exist or is not a file. Note
+  // that we cannot check this for input from stdin.
+  if (input.file() != "-") {
+    if (!llvm::sys::fs::is_regular_file(input.file())) {
+      // Create an diagnostic ID to report
+      unsigned diagID;
+      if (llvm::vfs::getRealFileSystem()->exists(input.file())) {
+        ci.diagnostics().Report(clang::diag::err_fe_error_reading)
+            << input.file();
+        diagID = ci.diagnostics().getCustomDiagID(
+            clang::DiagnosticsEngine::Error, "%0 is not a regular file");
+      } else {
+        diagID = ci.diagnostics().getCustomDiagID(
+            clang::DiagnosticsEngine::Error, "%0 does not exist");
+      }
+
+      // Report the diagnostic and return
+      ci.diagnostics().Report(diagID) << input.file();
+      BeginSourceFileCleanUp(*this, ci);
+      return false;
+    }
+  }
+
   assert(!instance_ && "Already processing a source file!");
   assert(!realInput.IsEmpty() && "Unexpected empty filename!");
   set_currentInput(realInput);
   set_instance(&ci);
+
   if (!ci.HasAllSources()) {
     BeginSourceFileCleanUp(*this, ci);
     return false;
   }
+
+  auto &invoc = ci.invocation();
+
+  // Include command-line and predefined preprocessor macros. Use either:
+  //  * `-cpp/-nocpp`, or
+  //  * the file extension (if the user didn't express any preference)
+  // to decide whether to include them or not.
+  if ((invoc.preprocessorOpts().macrosFlag_ == PPMacrosFlag::Include) ||
+      (invoc.preprocessorOpts().macrosFlag_ == PPMacrosFlag::Unknown &&
+          currentInput().MustBePreprocessed())) {
+    invoc.setDefaultPredefinitions();
+    invoc.collectMacroDefinitions();
+  }
+
+  // Decide between fixed and free form (if the user didn't express any
+  // preference, use the file extension to decide)
+  if (invoc.frontendOpts().fortranForm_ == FortranForm::Unknown) {
+    invoc.fortranOpts().isFixedForm = currentInput().IsFixedForm();
+  }
+
+  if (!BeginSourceFileAction(ci)) {
+    BeginSourceFileCleanUp(*this, ci);
+    return false;
+  }
+
   return true;
 }
 
@@ -45,25 +99,6 @@ bool FrontendAction::ShouldEraseOutputFiles() {
 }
 
 llvm::Error FrontendAction::Execute() {
-  CompilerInstance &ci = this->instance();
-
-  std::string currentInputPath{GetCurrentFileOrBufferName()};
-
-  Fortran::parser::Options parserOptions =
-      this->instance().invocation().fortranOpts();
-
-  // Prescan. In case of failure, report and return.
-  ci.parsing().Prescan(currentInputPath, parserOptions);
-
-  if (ci.parsing().messages().AnyFatalError()) {
-    const unsigned diagID = ci.diagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "Could not scan %0");
-    ci.diagnostics().Report(diagID) << GetCurrentFileOrBufferName();
-    ci.parsing().messages().Emit(llvm::errs(), ci.allCookedSources());
-
-    return llvm::Error::success();
-  }
-
   ExecuteAction();
 
   return llvm::Error::success();

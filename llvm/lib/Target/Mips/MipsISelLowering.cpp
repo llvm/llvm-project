@@ -122,9 +122,7 @@ unsigned MipsTargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
                                                            CallingConv::ID CC,
                                                            EVT VT) const {
   if (VT.isVector())
-    return std::max(((unsigned)VT.getSizeInBits() /
-                     (Subtarget.isABI_O32() ? 32 : 64)),
-                    1U);
+    return divideCeil(VT.getSizeInBits(), Subtarget.isABI_O32() ? 32 : 64);
   return MipsTargetLowering::getNumRegisters(Context, VT);
 }
 
@@ -134,10 +132,10 @@ unsigned MipsTargetLowering::getVectorTypeBreakdownForCallingConv(
   // Break down vector types to either 2 i64s or 4 i32s.
   RegisterVT = getRegisterTypeForCallingConv(Context, CC, VT);
   IntermediateVT = RegisterVT;
-  NumIntermediates = VT.getFixedSizeInBits() < RegisterVT.getFixedSizeInBits()
-                         ? VT.getVectorNumElements()
-                         : VT.getSizeInBits() / RegisterVT.getSizeInBits();
-
+  NumIntermediates =
+      VT.getFixedSizeInBits() < RegisterVT.getFixedSizeInBits()
+          ? VT.getVectorNumElements()
+          : divideCeil(VT.getSizeInBits(), RegisterVT.getSizeInBits());
   return NumIntermediates;
 }
 

@@ -150,6 +150,46 @@ define i32 @add32_accept(i32 %a) nounwind {
   ret i32 %1
 }
 
+define signext i32 @add32_sext_accept(i32 signext %a) nounwind {
+; RV32I-LABEL: add32_sext_accept:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a0, a0, 1500
+; RV32I-NEXT:    addi a0, a0, 1499
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: add32_sext_accept:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addiw a0, a0, 1500
+; RV64I-NEXT:    addiw a0, a0, 1499
+; RV64I-NEXT:    ret
+  %1 = add i32 %a, 2999
+  ret i32 %1
+}
+
+@gv0 = global i32 0, align 4
+define signext i32 @add32_sext_reject_on_rv64(i32 signext %a) nounwind {
+; RV32I-LABEL: add32_sext_reject_on_rv64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a0, a0, 1500
+; RV32I-NEXT:    addi a0, a0, 1500
+; RV32I-NEXT:    lui a1, %hi(gv0)
+; RV32I-NEXT:    sw a0, %lo(gv0)(a1)
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: add32_sext_reject_on_rv64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 1
+; RV64I-NEXT:    addiw a1, a1, -1096
+; RV64I-NEXT:    add a2, a0, a1
+; RV64I-NEXT:    lui a3, %hi(gv0)
+; RV64I-NEXT:    addw a0, a0, a1
+; RV64I-NEXT:    sw a2, %lo(gv0)(a3)
+; RV64I-NEXT:    ret
+  %b = add nsw i32 %a, 3000
+  store i32 %b, i32* @gv0, align 4
+  ret i32 %b
+}
+
 define i64 @add64_accept(i64 %a) nounwind {
 ; RV32I-LABEL: add64_accept:
 ; RV32I:       # %bb.0:

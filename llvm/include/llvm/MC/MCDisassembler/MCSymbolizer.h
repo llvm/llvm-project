@@ -15,6 +15,7 @@
 #ifndef LLVM_MC_MCDISASSEMBLER_MCSYMBOLIZER_H
 #define LLVM_MC_MCDISASSEMBLER_MCSYMBOLIZER_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCDisassembler/MCRelocationInfo.h"
 #include <algorithm>
 #include <cstdint>
@@ -75,6 +76,17 @@ public:
   virtual void tryAddingPcLoadReferenceComment(raw_ostream &cStream,
                                                int64_t Value,
                                                uint64_t Address) = 0;
+
+  /// Get the MCSymbolizer's list of addresses that were referenced by
+  /// symbolizable operands but not resolved to a symbol. The caller (some
+  /// code that is disassembling a section or other chunk of code) would
+  /// typically create a synthetic label at each address and add them to its
+  /// list of symbols in the section, before creating a new MCSymbolizer with
+  /// the enhanced symbol list and retrying disassembling the section.
+  /// The returned array is unordered and may have duplicates.
+  /// The returned ArrayRef stops being valid on any call to or destruction of
+  /// the MCSymbolizer object.
+  virtual ArrayRef<uint64_t> getReferencedAddresses() const { return {}; }
 };
 
 } // end namespace llvm

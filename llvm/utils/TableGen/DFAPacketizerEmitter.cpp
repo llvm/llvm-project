@@ -157,8 +157,8 @@ int DFAPacketizerEmitter::collectAllComboFuncs(ArrayRef<Record *> ComboFuncList)
       uint64_t ComboResources = ComboBit;
       LLVM_DEBUG(dbgs() << "      combo: " << ComboFuncName << ":0x"
                         << Twine::utohexstr(ComboResources) << "\n");
-      for (unsigned k = 0, M = FuncList.size(); k < M; ++k) {
-        std::string FuncName = std::string(FuncList[k]->getName());
+      for (auto *K : FuncList) {
+        std::string FuncName = std::string(K->getName());
         uint64_t FuncResources = FUNameToBitsMap[FuncName];
         LLVM_DEBUG(dbgs() << "        " << FuncName << ":0x"
                           << Twine::utohexstr(FuncResources) << "\n");

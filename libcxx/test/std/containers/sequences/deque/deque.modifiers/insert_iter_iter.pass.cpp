@@ -51,7 +51,7 @@ test(int P, const C& c0, const C& c2)
 {
     {
     typedef typename C::const_iterator CI;
-    typedef input_iterator<CI> BCI;
+    typedef cpp17_input_iterator<CI> BCI;
     C c1 = c0;
     std::size_t c1_osize = c1.size();
     CI i = c1.insert(c1.begin() + P, BCI(c2.begin()), BCI(c2.end()));
@@ -167,7 +167,7 @@ void
 testI(int P, C& c1, const C& c2)
 {
     typedef typename C::const_iterator CI;
-    typedef input_iterator<CI> ICI;
+    typedef cpp17_input_iterator<CI> ICI;
     std::size_t c1_osize = c1.size();
     CI i = c1.insert(c1.begin() + P, ICI(c2.begin()), ICI(c2.end()));
     assert(i == c1.begin() + P);
@@ -250,7 +250,7 @@ test_move()
         assert(*i == MoveOnly(j));
     {
         MoveOnly mo(1);
-        typedef input_iterator<MoveOnly*> I;
+        typedef cpp17_input_iterator<MoveOnly*> I;
         c.insert(c.end(), std::move_iterator<I>(I(&mo)), std::move_iterator<I>(I(&mo+1)));
     }
     j = 0;

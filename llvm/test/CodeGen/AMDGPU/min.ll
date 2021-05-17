@@ -180,7 +180,7 @@ define amdgpu_kernel void @v_test_imin_slt_i32(i32 addrspace(1)* %out, i32 addrs
 ; SI: v_min_i32_e32
 
 ; GFX8_9: v_min_i16_e32
-; GFX10:  v_min_i16_e64
+; GFX10:  v_min_i16
 
 ; EG: MIN_INT
 define amdgpu_kernel void @v_test_imin_slt_i16(i16 addrspace(1)* %out, i16 addrspace(1)* %aptr, i16 addrspace(1)* %bptr) #0 {
@@ -354,7 +354,7 @@ define amdgpu_kernel void @v_test_umin_ult_i32(i32 addrspace(1)* %out, i32 addrs
 ; GFX8_9_10: {{flat|global}}_load_ubyte
 ; GFX8_9_10: {{flat|global}}_load_ubyte
 ; GFX8_9:    v_min_u16_e32
-; GFX10:     v_min_u16_e64
+; GFX10:     v_min_u16
 
 ; EG: MIN_UINT
 define amdgpu_kernel void @v_test_umin_ult_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %a.ptr, i8 addrspace(1)* %b.ptr) #0 {
@@ -495,8 +495,8 @@ define amdgpu_kernel void @s_test_umin_ult_v8i16(<8 x i16> addrspace(1)* %out, <
 ; FUNC-LABEL: {{^}}simplify_demanded_bits_test_umin_ult_i16:
 ; GCN-DAG: s_load_dword [[A:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, {{0xa|0x28}}
 ; GCN-DAG: s_load_dword [[B:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, {{0x13|0x4c}}
-; GCN: s_min_u32 [[MIN:s[0-9]+]], [[A]], [[B]]
-; GCN: v_mov_b32_e32 [[VMIN:v[0-9]+]], [[MIN]]
+; GCN: s_min_u32 [[MIN:s[0-9]+]], s{{[0-9]}}, s{{[0-9]}}
+; GCN: v_mov_b32_e32 [[VMIN:v[0-9]+]], s{{[0-9]}}
 ; GCN: buffer_store_dword [[VMIN]]
 
 ; EG: MIN_UINT

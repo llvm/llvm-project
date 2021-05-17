@@ -144,8 +144,7 @@ static bool areEquivalentExpr(const Expr *Left, const Expr *Right) {
     if (LeftUnaryExpr->isArgumentType() && RightUnaryExpr->isArgumentType())
       return LeftUnaryExpr->getArgumentType() ==
              RightUnaryExpr->getArgumentType();
-    else if (!LeftUnaryExpr->isArgumentType() &&
-             !RightUnaryExpr->isArgumentType())
+    if (!LeftUnaryExpr->isArgumentType() && !RightUnaryExpr->isArgumentType())
       return areEquivalentExpr(LeftUnaryExpr->getArgumentExpr(),
                                RightUnaryExpr->getArgumentExpr());
 
@@ -166,11 +165,11 @@ static bool areEquivalentRanges(BinaryOperatorKind OpcodeLHS,
     return OpcodeLHS == OpcodeRHS;
 
   // Handle the case where constants are off by one: x <= 4  <==>  x < 5.
-  APSInt ValueLHS_plus1;
+  APSInt ValueLhsPlus1;
   return ((OpcodeLHS == BO_LE && OpcodeRHS == BO_LT) ||
           (OpcodeLHS == BO_GT && OpcodeRHS == BO_GE)) &&
-         incrementWithoutOverflow(ValueLHS, ValueLHS_plus1) &&
-         APSInt::compareValues(ValueLHS_plus1, ValueRHS) == 0;
+         incrementWithoutOverflow(ValueLHS, ValueLhsPlus1) &&
+         APSInt::compareValues(ValueLhsPlus1, ValueRHS) == 0;
 }
 
 // For a given expression 'x', returns whether the ranges covered by the
@@ -208,10 +207,10 @@ static bool areExclusiveRanges(BinaryOperatorKind OpcodeLHS,
     return true;
 
   // Handle the case where constants are off by one: x > 5 && x < 6.
-  APSInt ValueLHS_plus1;
+  APSInt ValueLhsPlus1;
   if (OpcodeLHS == BO_GT && OpcodeRHS == BO_LT &&
-      incrementWithoutOverflow(ValueLHS, ValueLHS_plus1) &&
-      APSInt::compareValues(ValueLHS_plus1, ValueRHS) == 0)
+      incrementWithoutOverflow(ValueLHS, ValueLhsPlus1) &&
+      APSInt::compareValues(ValueLhsPlus1, ValueRHS) == 0)
     return true;
 
   return false;
@@ -247,10 +246,10 @@ static bool rangesFullyCoverDomain(BinaryOperatorKind OpcodeLHS,
   }
 
   // Handle the case where constants are off by one: x <= 4 || x >= 5.
-  APSInt ValueLHS_plus1;
+  APSInt ValueLhsPlus1;
   if (OpcodeLHS == BO_LE && OpcodeRHS == BO_GE &&
-      incrementWithoutOverflow(ValueLHS, ValueLHS_plus1) &&
-      APSInt::compareValues(ValueLHS_plus1, ValueRHS) == 0)
+      incrementWithoutOverflow(ValueLHS, ValueLhsPlus1) &&
+      APSInt::compareValues(ValueLhsPlus1, ValueRHS) == 0)
     return true;
 
   // Handle cases where the constants are different: x > 4 || x <= 7.
@@ -623,7 +622,7 @@ static bool isNonConstReferenceType(QualType ParamType) {
 // controlled by the parameter `ParamsToCheckCount`.
 static bool
 canOverloadedOperatorArgsBeModified(const CXXOperatorCallExpr *OperatorCall,
-                                    bool checkSecondParam) {
+                                    bool CheckSecondParam) {
   const auto *OperatorDecl =
       dyn_cast_or_null<FunctionDecl>(OperatorCall->getCalleeDecl());
   // if we can't find the declaration, conservatively assume it can modify
@@ -643,7 +642,7 @@ canOverloadedOperatorArgsBeModified(const CXXOperatorCallExpr *OperatorCall,
   if (isNonConstReferenceType(OperatorDecl->getParamDecl(0)->getType()))
     return true;
 
-  return checkSecondParam && ParamCount == 2 &&
+  return CheckSecondParam && ParamCount == 2 &&
          isNonConstReferenceType(OperatorDecl->getParamDecl(1)->getType());
 }
 

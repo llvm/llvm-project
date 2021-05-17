@@ -3,7 +3,7 @@
 !CHECK: flang_major = {{[1-9][0-9]*$}}
 !CHECK: flang_minor = {{[0-9]+$}}
 !CHECK: flang_patchlevel = {{[0-9]+$}}
-!RUN: %f18 -E %s | FileCheck  --ignore-case %s
+!RUN: %flang -E %s | FileCheck  --ignore-case %s
 
   
 integer, parameter :: flang_major = __flang_major__

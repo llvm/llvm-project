@@ -11,6 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIB_TARGET_AARCH64_AARCH64MACROFUSION_H
+#define LLVM_LIB_TARGET_AARCH64_AARCH64MACROFUSION_H
+
 #include "llvm/CodeGen/MachineScheduler.h"
 
 namespace llvm {
@@ -21,3 +24,5 @@ namespace llvm {
 std::unique_ptr<ScheduleDAGMutation> createAArch64MacroFusionDAGMutation();
 
 } // llvm
+
+#endif // LLVM_LIB_TARGET_AARCH64_AARCH64MACROFUSION_H

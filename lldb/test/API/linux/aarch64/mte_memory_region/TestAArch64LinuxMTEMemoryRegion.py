@@ -17,11 +17,18 @@ class AArch64LinuxMTEMemoryRegionTestCase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIf(archs=no_match(["aarch64"]))
+    @skipUnlessArch("aarch64")
     @skipUnlessPlatform(["linux"])
+    @skipUnlessAArch64MTELinuxCompiler
     def test_mte_regions(self):
-        if not self.hasLinuxVmFlags():
-            self.skipTest('/proc/{pid}/smaps VmFlags must be present')
+        if not self.isAArch64MTE():
+            self.skipTest('Target must support MTE.')
+
+        # This test assumes that we have /proc/<PID>/smaps files
+        # that include "VmFlags:" lines.
+        # AArch64 kernel config defaults to enabling smaps with
+        # PROC_PAGE_MONITOR and "VmFlags" was added in kernel 3.8,
+        # before MTE was supported at all.
 
         self.build()
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
@@ -33,15 +40,6 @@ class AArch64LinuxMTEMemoryRegionTestCase(TestBase):
         self.runCmd("run", RUN_SUCCEEDED)
 
         if self.process().GetState() == lldb.eStateExited:
-            # 47 = non MTE toolchain
-            # 48 = non MTE target
-            exit_status = self.process().GetExitStatus()
-            if exit_status == 47:
-                self.skipTest("MTE must be available in toolchain")
-            elif exit_status == 48:
-                self.skipTest("target must have MTE enabled")
-
-            # Otherwise we have MTE but another problem occured
             self.fail("Test program failed to run.")
 
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,

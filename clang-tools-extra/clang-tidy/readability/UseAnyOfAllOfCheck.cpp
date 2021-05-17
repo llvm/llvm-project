@@ -42,32 +42,32 @@ namespace tidy {
 namespace readability {
 
 void UseAnyOfAllOfCheck::registerMatchers(MatchFinder *Finder) {
-  auto returns = [](bool V) {
+  auto Returns = [](bool V) {
     return returnStmt(hasReturnValue(cxxBoolLiteral(equals(V))));
   };
 
-  auto returnsButNotTrue =
+  auto ReturnsButNotTrue =
       returnStmt(hasReturnValue(unless(cxxBoolLiteral(equals(true)))));
-  auto returnsButNotFalse =
+  auto ReturnsButNotFalse =
       returnStmt(hasReturnValue(unless(cxxBoolLiteral(equals(false)))));
 
   Finder->addMatcher(
       cxxForRangeStmt(
-          nextStmt(returns(false).bind("final_return")),
-          hasBody(allOf(hasDescendant(returns(true)),
+          nextStmt(Returns(false).bind("final_return")),
+          hasBody(allOf(hasDescendant(Returns(true)),
                         unless(anyOf(hasDescendant(breakStmt()),
                                      hasDescendant(gotoStmt()),
-                                     hasDescendant(returnsButNotTrue))))))
+                                     hasDescendant(ReturnsButNotTrue))))))
           .bind("any_of_loop"),
       this);
 
   Finder->addMatcher(
       cxxForRangeStmt(
-          nextStmt(returns(true).bind("final_return")),
-          hasBody(allOf(hasDescendant(returns(false)),
+          nextStmt(Returns(true).bind("final_return")),
+          hasBody(allOf(hasDescendant(Returns(false)),
                         unless(anyOf(hasDescendant(breakStmt()),
                                      hasDescendant(gotoStmt()),
-                                     hasDescendant(returnsButNotFalse))))))
+                                     hasDescendant(ReturnsButNotFalse))))))
           .bind("all_of_loop"),
       this);
 }
@@ -88,19 +88,20 @@ static bool isViableLoop(const CXXForRangeStmt &S, ASTContext &Context) {
 }
 
 void UseAnyOfAllOfCheck::check(const MatchFinder::MatchResult &Result) {
-  StringRef Ranges = getLangOpts().CPlusPlus20 ? "::ranges" : "";
 
   if (const auto *S = Result.Nodes.getNodeAs<CXXForRangeStmt>("any_of_loop")) {
     if (!isViableLoop(*S, *Result.Context))
       return;
 
-    diag(S->getForLoc(), "replace loop by 'std%0::any_of()'") << Ranges;
+    diag(S->getForLoc(), "replace loop by 'std%select{|::ranges}0::any_of()'")
+        << getLangOpts().CPlusPlus20;
   } else if (const auto *S =
                  Result.Nodes.getNodeAs<CXXForRangeStmt>("all_of_loop")) {
     if (!isViableLoop(*S, *Result.Context))
       return;
 
-    diag(S->getForLoc(), "replace loop by 'std%0::all_of()'") << Ranges;
+    diag(S->getForLoc(), "replace loop by 'std%select{|::ranges}0::all_of()'")
+        << getLangOpts().CPlusPlus20;
   }
 }
 

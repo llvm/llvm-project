@@ -740,9 +740,8 @@ getMachineOpValue(const MCInst &MI, const MCOperand &MO,
     return RegNo;
   } else if (MO.isImm()) {
     return static_cast<unsigned>(MO.getImm());
-  } else if (MO.isFPImm()) {
-    return static_cast<unsigned>(APFloat(MO.getFPImm())
-        .bitcastToAPInt().getHiBits(32).getLimitedValue());
+  } else if (MO.isDFPImm()) {
+    return static_cast<unsigned>(bit_cast<double>(MO.getDFPImm()));
   }
   // MO must be an Expr.
   assert(MO.isExpr());

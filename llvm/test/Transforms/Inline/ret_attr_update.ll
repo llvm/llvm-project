@@ -2,7 +2,7 @@
 ; RUN: opt < %s -inline-threshold=0 -always-inline -S | FileCheck %s
 ; RUN: opt < %s -passes=always-inline -S | FileCheck %s
 
-declare i8* @foo(i8*) argmemonly nounwind
+declare i8* @foo(i8*) nounwind willreturn
 
 define i8* @callee(i8 *%p) alwaysinline {
 ; CHECK-LABEL: @callee(
@@ -120,7 +120,7 @@ define i8* @test4(i8* %ptr, i64 %x) {
   ret i8* %p
 }
 
-declare i8* @baz(i8*) nounwind readonly
+declare i8* @baz(i8*) nounwind willreturn
 define internal i8* @callee5(i8* %p) alwaysinline {
   %r = call i8* @foo(i8* %p)
   %v = call i8* @baz(i8* %p)

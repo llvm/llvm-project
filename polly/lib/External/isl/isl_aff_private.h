@@ -200,6 +200,9 @@ __isl_give isl_basic_set *isl_aff_pos_basic_set(__isl_take isl_aff *aff);
 
 #undef EXPLICIT_DOMAIN
 
+__isl_give isl_map *isl_map_intersect_multi_pw_aff_explicit_domain(
+	__isl_take isl_map *map, __isl_keep isl_multi_pw_aff *mpa);
+
 #undef EL
 #define EL isl_union_pw_aff
 

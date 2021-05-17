@@ -253,7 +253,7 @@ class ProgressBar:
             elapsed = time.time() - self.startTime
             if percent > .0001 and elapsed > 1:
                 total = elapsed / percent
-                eta = int(total - elapsed)
+                eta = total - elapsed
                 h = eta//3600.
                 m = (eta//60) % 60
                 s = eta % 60

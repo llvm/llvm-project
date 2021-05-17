@@ -54,7 +54,7 @@ public:
         (1 << 2) // Show all parent DIEs when dumping single DIEs
   };
 
-  llvm::Expected<DWARFDebugAranges &> GetCompileUnitAranges();
+  const DWARFDebugAranges &GetCompileUnitAranges();
 
 protected:
   typedef std::vector<DWARFUnitSP> UnitColl;

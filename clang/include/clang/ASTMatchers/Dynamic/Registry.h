@@ -33,6 +33,23 @@ namespace internal {
 
 class MatcherDescriptor;
 
+/// A smart (owning) pointer for MatcherDescriptor. We can't use unique_ptr
+/// because MatcherDescriptor is forward declared
+class MatcherDescriptorPtr {
+public:
+  explicit MatcherDescriptorPtr(MatcherDescriptor *);
+  ~MatcherDescriptorPtr();
+  MatcherDescriptorPtr(MatcherDescriptorPtr &&) = default;
+  MatcherDescriptorPtr &operator=(MatcherDescriptorPtr &&) = default;
+  MatcherDescriptorPtr(const MatcherDescriptorPtr &) = delete;
+  MatcherDescriptorPtr &operator=(const MatcherDescriptorPtr &) = delete;
+
+  MatcherDescriptor *get() { return Ptr; }
+
+private:
+  MatcherDescriptor *Ptr;
+};
+
 } // namespace internal
 
 using MatcherCtor = const internal::MatcherDescriptor *;
@@ -65,6 +82,14 @@ struct MatcherCompletion {
 class Registry {
 public:
   Registry() = delete;
+
+  static ASTNodeKind nodeMatcherType(MatcherCtor);
+
+  static bool isBuilderMatcher(MatcherCtor Ctor);
+
+  static internal::MatcherDescriptorPtr
+  buildMatcherCtor(MatcherCtor, SourceRange NameRange,
+                   ArrayRef<ParserValue> Args, Diagnostics *Error);
 
   /// Look up a matcher in the registry by name,
   ///

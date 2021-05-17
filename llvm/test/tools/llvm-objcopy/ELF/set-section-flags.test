@@ -72,6 +72,10 @@
 # RUN:   --set-section-flags=.rela.baz=aLlOc,LoAd,NoLoad,rEAdONly,Debug,codE,DaTa,rOm,CoNtEnTs,mErGe,sTRINGs,SharE %t %t.mixed
 # RUN: llvm-readobj --sections %t.mixed | FileCheck %s --check-prefixes=CHECK,PROGBITS,ALLOC,EXEC,MERGE,STRINGS
 
+## Unspecified sections are not affected:
+# RUN: llvm-objcopy --set-section-flags=.foo=alloc %t %t.unspecified
+# RUN: llvm-readobj --sections %t.unspecified | FileCheck %s --check-prefixes=UNSPECIFIED
+
 !ELF
 FileHeader:
   Class:           ELFCLASS64
@@ -127,3 +131,20 @@ Sections:
 # MULTIPLE-SETS: --set-section-flags set multiple times for section '.foo'
 
 # BAD-FLAG: unrecognized section flag 'xyzzy'. Flags supported for GNU compatibility: alloc, load, noload, readonly, exclude, debug, code, data, rom, share, contents, merge, strings
+
+# UNSPECIFIED:      Name: .foo
+# UNSPECIFIED-NEXT: Type: SHT_PROGBITS
+# UNSPECIFIED-NEXT: Flags [
+# UNSPECIFIED-NEXT:   SHF_ALLOC (0x2)
+# UNSPECIFIED-NEXT:   SHF_WRITE (0x1)
+# UNSPECIFIED-NEXT: ]
+
+# UNSPECIFIED:      Name: .baz
+# UNSPECIFIED-NEXT: Type: SHT_NOBITS
+# UNSPECIFIED-NEXT: Flags [ (0x0)
+# UNSPECIFIED-NEXT: ]
+
+# UNSPECIFIED:      Name: .rela.baz
+# UNSPECIFIED-NEXT: Type: SHT_RELA
+# UNSPECIFIED-NEXT: Flags [ (0x0)
+# UNSPECIFIED-NEXT: ]

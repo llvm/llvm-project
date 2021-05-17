@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03
 
 // This test requires the dylib support introduced in D92769.
-// XFAIL: with_system_cxx_lib=macosx10.15
+// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.15
 
 // <filesystem>
 
@@ -137,5 +137,19 @@ TEST_CASE(dest_final_part_is_file)
     TEST_CHECK(is_regular_file(file));
     TEST_CHECK(!exists(dir));
 }
+
+#ifdef _WIN32
+TEST_CASE(nonexistent_root)
+{
+    std::error_code ec = GetTestEC();
+    // If Q:\ doesn't exist, create_directories would try to recurse upwards
+    // to parent_path() until it finds a directory that does exist. As the
+    // whole path is the root name, parent_path() returns itself, and it
+    // would recurse indefinitely, unless the recursion is broken.
+    if (!exists("Q:\\"))
+       TEST_CHECK(fs::create_directories("Q:\\", ec) == false);
+    TEST_CHECK(fs::create_directories("\\\\nonexistentserver", ec) == false);
+}
+#endif
 
 TEST_SUITE_END()

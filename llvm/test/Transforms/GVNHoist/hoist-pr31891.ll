@@ -52,7 +52,7 @@ declare void @useit1(float)
 declare void @useit2(float)
 
 attributes #0 = { noinline nounwind readnone uwtable }
-attributes #1 = { nounwind readnone }
+attributes #1 = { nounwind readnone willreturn }
 attributes #2 = { noinline nounwind uwtable }
 
 !llvm.dbg.cu = !{!0}

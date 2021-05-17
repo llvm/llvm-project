@@ -12,6 +12,7 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Support/Timing.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
@@ -130,7 +131,7 @@ private:
   /// Initialize all of the passes within this pass manager with the given
   /// initialization generation. The initialization generation is used to detect
   /// if a pass manager has already been initialized.
-  void initialize(MLIRContext *context, unsigned newInitGeneration);
+  LogicalResult initialize(MLIRContext *context, unsigned newInitGeneration);
 
   /// A pointer to an internal implementation instance.
   std::unique_ptr<detail::OpPassManagerImpl> impl;
@@ -178,7 +179,6 @@ public:
   /// Run the passes within this manager on the provided operation. The
   /// specified operation must have the same name as the one provided the pass
   /// manager on construction.
-  LLVM_NODISCARD
   LogicalResult run(Operation *op);
 
   /// Return an instance of the context.
@@ -190,6 +190,29 @@ public:
   /// manager will attempt to generate a local reproducer that contains the
   /// smallest pipeline.
   void enableCrashReproducerGeneration(StringRef outputFile,
+                                       bool genLocalReproducer = false);
+
+  /// Streams on which to output crash reproducer.
+  struct ReproducerStream {
+    virtual ~ReproducerStream() = default;
+
+    /// Description of the reproducer stream.
+    virtual StringRef description() = 0;
+
+    /// Stream on which to output reproducer.
+    virtual raw_ostream &os() = 0;
+  };
+
+  /// Method type for constructing ReproducerStream.
+  using ReproducerStreamFactory =
+      std::function<std::unique_ptr<ReproducerStream>(std::string &error)>;
+
+  /// Enable support for the pass manager to generate a reproducer on the event
+  /// of a crash or a pass failure. `factory` is used to construct the streams
+  /// to write the generated reproducer to. If `genLocalReproducer` is true, the
+  /// pass manager will attempt to generate a local reproducer that contains the
+  /// smallest pipeline.
+  void enableCrashReproducerGeneration(ReproducerStreamFactory factory,
                                        bool genLocalReproducer = false);
 
   /// Runs the verifier after each individual pass.
@@ -291,38 +314,36 @@ public:
   //===--------------------------------------------------------------------===//
   // Pass Timing
 
-  /// A configuration struct provided to the pass timing feature.
-  class PassTimingConfig {
-  public:
-    using PrintCallbackFn = function_ref<void(raw_ostream &)>;
-
-    /// Initialize the configuration.
-    /// * 'displayMode' switch between list or pipeline display (see the
-    /// `PassDisplayMode` enum documentation).
-    explicit PassTimingConfig(
-        PassDisplayMode displayMode = PassDisplayMode::Pipeline)
-        : displayMode(displayMode) {}
-
-    virtual ~PassTimingConfig();
-
-    /// A hook that may be overridden by a derived config to control the
-    /// printing. The callback is supplied by the framework and the config is
-    /// responsible to call it back with a stream for the output.
-    virtual void printTiming(PrintCallbackFn printCallback);
-
-    /// Return the `PassDisplayMode` this config was created with.
-    PassDisplayMode getDisplayMode() { return displayMode; }
-
-  private:
-    PassDisplayMode displayMode;
-  };
-
   /// Add an instrumentation to time the execution of passes and the computation
-  /// of analyses.
+  /// of analyses. Timing will be reported by nesting timers into the provided
+  /// `timingScope`.
+  ///
   /// Note: Timing should be enabled after all other instrumentations to avoid
   /// any potential "ghost" timing from other instrumentations being
   /// unintentionally included in the timing results.
-  void enableTiming(std::unique_ptr<PassTimingConfig> config = nullptr);
+  void enableTiming(TimingScope &timingScope);
+
+  /// Add an instrumentation to time the execution of passes and the computation
+  /// of analyses. The pass manager will take ownership of the timing manager
+  /// passed to the function and timing will be reported by nesting timers into
+  /// the timing manager's root scope.
+  ///
+  /// Note: Timing should be enabled after all other instrumentations to avoid
+  /// any potential "ghost" timing from other instrumentations being
+  /// unintentionally included in the timing results.
+  void enableTiming(std::unique_ptr<TimingManager> tm);
+
+  /// Add an instrumentation to time the execution of passes and the computation
+  /// of analyses. Creates a temporary TimingManager owned by this PassManager
+  /// which will be used to report timing.
+  ///
+  /// Note: Timing should be enabled after all other instrumentations to avoid
+  /// any potential "ghost" timing from other instrumentations being
+  /// unintentionally included in the timing results.
+  void enableTiming();
+
+  //===--------------------------------------------------------------------===//
+  // Pass Statistics
 
   /// Prompts the pass manager to print the statistics collected for each of the
   /// held passes after each call to 'run'.
@@ -349,8 +370,11 @@ private:
   /// A manager for pass instrumentations.
   std::unique_ptr<PassInstrumentor> instrumentor;
 
-  /// An optional filename to use when generating a crash reproducer if valid.
-  Optional<std::string> crashReproducerFileName;
+  /// An optional factory to use when generating a crash reproducer if valid.
+  ReproducerStreamFactory crashReproducerStreamFactory;
+
+  /// A hash key used to detect when reinitialization is necessary.
+  llvm::hash_code initializationKey;
 
   /// Flag that specifies if pass timing is enabled.
   bool passTiming : 1;
@@ -370,6 +394,13 @@ void registerPassManagerCLOptions();
 /// Apply any values provided to the pass manager options that were registered
 /// with 'registerPassManagerOptions'.
 void applyPassManagerCLOptions(PassManager &pm);
+
+/// Apply any values provided to the timing manager options that were registered
+/// with `registerDefaultTimingManagerOptions`. This is a handy helper function
+/// if you do not want to bother creating your own timing manager and passing it
+/// to the pass manager.
+void applyDefaultTimingPassManagerCLOptions(PassManager &pm);
+
 } // end namespace mlir
 
 #endif // MLIR_PASS_PASSMANAGER_H

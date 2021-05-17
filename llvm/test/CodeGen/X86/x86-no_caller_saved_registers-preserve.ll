@@ -41,7 +41,7 @@ define x86_64_sysvcc float @foo(i32 %a0, i32 %a1, float %b0) {
 ; CHECK-NEXT:  cvtsi2ss %eax, %xmm0
 ; CHECK-NEXT:  addss %xmm0, %xmm1
 ; CHECK:       retq
-	%call = call i32 @bar(i32 %a0, i32 %a1, float %b0) #0
+	%call = call i32 @bar(i32 %a0, i32 %a1, float %b0)
 	%c0   = add i32 %a0, %call
 	%c1   = add i32 %c0, %a1
 	%c2 = sitofp i32 %c1 to float

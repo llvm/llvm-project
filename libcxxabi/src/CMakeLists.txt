@@ -36,7 +36,8 @@ else()
   )
 endif()
 
-if (LIBCXXABI_ENABLE_THREADS AND (UNIX OR FUCHSIA) AND NOT (APPLE OR CYGWIN))
+if (LIBCXXABI_ENABLE_THREADS AND (UNIX OR FUCHSIA) AND NOT (APPLE OR CYGWIN)
+    AND NOT (${CMAKE_SYSTEM_NAME} MATCHES "AIX"))
   list(APPEND LIBCXXABI_SOURCES
     cxa_thread_atexit.cpp
   )
@@ -55,7 +56,8 @@ if (MSVC_IDE OR XCODE)
   endif()
 endif()
 
-include_directories("${LIBCXXABI_LIBCXX_INCLUDES}")
+# stdlib_stdexcept.cpp depends on libc++ internals.
+include_directories("${LIBCXXABI_LIBCXX_PATH}")
 
 if (LIBCXXABI_HAS_CXA_THREAD_ATEXIT_IMPL)
   add_definitions(-DHAVE___CXA_THREAD_ATEXIT_IMPL)
@@ -74,6 +76,11 @@ else()
 
   add_library_flags_if(LIBCXXABI_HAS_C_LIB c)
 endif()
+
+if (LIBCXXABI_USE_COMPILER_RT)
+  find_compiler_rt_library(builtins LIBCXXABI_BUILTINS_LIBRARY)
+  list(APPEND LIBCXXABI_SHARED_LIBRARIES "${LIBCXXABI_BUILTINS_LIBRARY}")
+endif ()
 
 if (LIBCXXABI_USE_LLVM_UNWINDER)
   # Prefer using the in-tree version of libunwind, either shared or static. If
@@ -109,7 +116,11 @@ if (NOT LIBCXXABI_USE_COMPILER_RT)
 endif ()
 
 # Setup flags.
-add_link_flags_if_supported(-nodefaultlibs)
+if (LIBCXXABI_SUPPORTS_NOSTDLIBXX_FLAG)
+  add_link_flags_if_supported(-nostdlib++)
+else()
+  add_link_flags_if_supported(-nodefaultlibs)
+endif()
 
 if ( APPLE )
   if (LLVM_USE_SANITIZER)
@@ -165,7 +176,7 @@ endif()
 # Build the shared library.
 if (LIBCXXABI_ENABLE_SHARED)
   add_library(cxxabi_shared SHARED ${LIBCXXABI_SOURCES} ${LIBCXXABI_HEADERS})
-  target_link_libraries(cxxabi_shared PRIVATE ${LIBCXXABI_SHARED_LIBRARIES} ${LIBCXXABI_LIBRARIES})
+  target_link_libraries(cxxabi_shared PRIVATE cxx-headers ${LIBCXXABI_SHARED_LIBRARIES} ${LIBCXXABI_LIBRARIES})
   if (TARGET pstl::ParallelSTL)
     target_link_libraries(cxxabi_shared PUBLIC pstl::ParallelSTL)
   endif()
@@ -232,7 +243,7 @@ endif()
 # Build the static library.
 if (LIBCXXABI_ENABLE_STATIC)
   add_library(cxxabi_static STATIC ${LIBCXXABI_SOURCES} ${LIBCXXABI_HEADERS})
-  target_link_libraries(cxxabi_static PRIVATE ${LIBCXXABI_STATIC_LIBRARIES} ${LIBCXXABI_LIBRARIES})
+  target_link_libraries(cxxabi_static PRIVATE cxx-headers ${LIBCXXABI_STATIC_LIBRARIES} ${LIBCXXABI_LIBRARIES})
   if (TARGET pstl::ParallelSTL)
     target_link_libraries(cxxabi_static PUBLIC pstl::ParallelSTL)
   endif()
@@ -290,6 +301,7 @@ if (LIBCXXABI_ENABLE_STATIC)
         "$<TARGET_LINKER_FILE:cxxabi_static>"
         "$<TARGET_LINKER_FILE:unwind_static>"
       WORKING_DIRECTORY ${LIBCXXABI_BUILD_DIR}
+      DEPENDS unwind_static
     )
   endif()
 endif()
@@ -299,8 +311,8 @@ add_custom_target(cxxabi DEPENDS ${LIBCXXABI_BUILD_TARGETS})
 
 if (LIBCXXABI_INSTALL_LIBRARY)
   install(TARGETS ${LIBCXXABI_INSTALL_TARGETS}
-    LIBRARY DESTINATION ${LIBCXXABI_INSTALL_PREFIX}${LIBCXXABI_INSTALL_LIBRARY_DIR} COMPONENT cxxabi
-    ARCHIVE DESTINATION ${LIBCXXABI_INSTALL_PREFIX}${LIBCXXABI_INSTALL_LIBRARY_DIR} COMPONENT cxxabi
+    LIBRARY DESTINATION ${LIBCXXABI_INSTALL_LIBRARY_DIR} COMPONENT cxxabi
+    ARCHIVE DESTINATION ${LIBCXXABI_INSTALL_LIBRARY_DIR} COMPONENT cxxabi
     )
 endif()
 

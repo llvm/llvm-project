@@ -1,10 +1,37 @@
 # MLIR project.
+
+# Check if MLIR is built as a standalone project.
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  project(mlir)
+  cmake_minimum_required(VERSION 3.13.4)
+
+  find_package(LLVM CONFIG REQUIRED)
+  set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${LLVM_CMAKE_DIR})
+  include(HandleLLVMOptions)
+  include(AddLLVM)
+  include(TableGen)
+
+  include_directories(${LLVM_INCLUDE_DIRS})
+
+  set(LLVM_MAIN_SRC_DIR ${CMAKE_SOURCE_DIR}/../llvm CACHE PATH
+      "Path to LLVM source tree")
+  set(UNITTEST_DIR ${LLVM_MAIN_SRC_DIR}/utils/unittest)
+  if(EXISTS ${UNITTEST_DIR}/googletest/include/gtest/gtest.h)
+    add_subdirectory(${UNITTEST_DIR} utils/unittest)
+  endif()
+
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
+    "${CMAKE_CURRENT_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}")
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
+endif()
+
 set(MLIR_MAIN_SRC_DIR     ${CMAKE_CURRENT_SOURCE_DIR}  )
 set(MLIR_MAIN_INCLUDE_DIR ${MLIR_MAIN_SRC_DIR}/include )
 
 set(MLIR_SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR})
 set(MLIR_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
 set(MLIR_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
+set(MLIR_TOOLS_DIR   ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
@@ -79,7 +106,8 @@ set(MLIR_PYTHON_BINDINGS_VERSION_LOCKED 1 CACHE BOOL
 
 if(MLIR_BINDINGS_PYTHON_ENABLED)
   include(MLIRDetectPythonEnv)
-  find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
+  find_package(Python3 ${LLVM_MINIMUM_PYTHON_VERSION}
+    COMPONENTS Interpreter Development NumPy REQUIRED)
   message(STATUS "Found python include dirs: ${Python3_INCLUDE_DIRS}")
   message(STATUS "Found python libraries: ${Python3_LIBRARIES}")
   message(STATUS "Found numpy v${Python3_NumPy_VERSION}: ${Python3_NumPy_INCLUDE_DIRS}")
@@ -98,6 +126,7 @@ include_directories( ${MLIR_INCLUDE_DIR})
 # MLIR_TABLEGEN_EXE in PARENT_SCOPE which gets lost if that folder is included
 # from another directory like tools
 add_subdirectory(tools/mlir-tblgen)
+add_subdirectory(tools/mlir-linalg-ods-gen)
 
 add_subdirectory(include/mlir)
 add_subdirectory(lib)
@@ -105,16 +134,22 @@ add_subdirectory(lib)
 add_subdirectory(lib/CAPI)
 if (MLIR_INCLUDE_TESTS)
   add_definitions(-DMLIR_INCLUDE_TESTS)
-  add_subdirectory(unittests)
+  add_custom_target(MLIRUnitTests)
+  if (EXISTS ${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest/include/gtest/gtest.h)
+    add_subdirectory(unittests)
+  else()
+    message(WARNING "gtest not found, unittests will not be available")
+  endif()
   add_subdirectory(test)
-endif()
-if (MLIR_INCLUDE_INTEGRATION_TESTS)
-  add_definitions(-DMLIR_INCLUDE_INTEGRATION_TESTS)
-  add_subdirectory(integration_test)
 endif()
 # Tools needs to come late to ensure that MLIR_ALL_LIBS is populated.
 # Generally things after this point may depend on MLIR_ALL_LIBS or libMLIR.so.
 add_subdirectory(tools)
+
+if(MLIR_BINDINGS_PYTHON_ENABLED)
+  # Python sources: built extensions come in via lib/Bindings/Python
+  add_subdirectory(python)
+endif()
 
 if( LLVM_INCLUDE_EXAMPLES )
   add_subdirectory(examples)

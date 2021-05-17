@@ -37,3 +37,12 @@ unsigned no_warn_on_other_type_cast(A *a) {
   return b->getCount();
 }
 
+unsigned no_warn_alloc_class_with_name() {
+  OSArray *a = (OSArray *)OSMetaClass::allocClassWithName("OSArray"); // no warning
+  return a->getCount();
+}
+
+unsigned warn_alloc_class_with_name() {
+  OSArray *a = (OSArray *)OSMetaClass::allocClassWithName("OSObject"); // expected-warning{{C-style cast of an OSObject is prone to type confusion attacks; use 'OSRequiredCast' if the object is definitely of type 'OSArray', or 'OSDynamicCast' followed by a null check if unsure}}
+  return a->getCount();
+}

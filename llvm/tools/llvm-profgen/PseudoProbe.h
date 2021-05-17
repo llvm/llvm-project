@@ -45,9 +45,10 @@ class PseudoProbeInlineTree {
       return std::get<0>(Site) ^ std::get<1>(Site);
     }
   };
-  std::unordered_map<InlineSite, std::unique_ptr<PseudoProbeInlineTree>,
-                     InlineSiteHash>
-      Children;
+  using InlinedProbeTreeMap =
+      std::unordered_map<InlineSite, std::unique_ptr<PseudoProbeInlineTree>,
+                         InlineSiteHash>;
+  InlinedProbeTreeMap Children;
 
 public:
   // Inlinee function GUID
@@ -71,9 +72,11 @@ public:
     return Ret.first->second.get();
   }
 
+  InlinedProbeTreeMap &getChildren() { return Children; }
+  std::vector<PseudoProbe *> &getProbes() { return ProbeVector; }
   void addProbes(PseudoProbe *Probe) { ProbeVector.push_back(Probe); }
   // Return false if it's a dummy inline site
-  bool hasInlineSite() const { return !std::get<0>(ISite); }
+  bool hasInlineSite() const { return std::get<0>(ISite) != 0; }
 };
 
 // Function descriptor decoded from .pseudo_probe_desc section
@@ -91,7 +94,7 @@ struct PseudoProbeFuncDesc {
 // GUID to PseudoProbeFuncDesc map
 using GUIDProbeFunctionMap = std::unordered_map<uint64_t, PseudoProbeFuncDesc>;
 // Address to pseudo probes map.
-using AddressProbesMap = std::unordered_map<uint64_t, std::vector<PseudoProbe>>;
+using AddressProbesMap = std::unordered_map<uint64_t, std::list<PseudoProbe>>;
 
 /*
 A pseudo probe has the format like below:
@@ -135,10 +138,12 @@ struct PseudoProbe {
   bool isDirectCall() const { return Type == PseudoProbeType::DirectCall; }
   bool isCall() const { return isIndirectCall() || isDirectCall(); }
 
+  PseudoProbeInlineTree *getInlineTreeNode() const { return InlineTree; }
+
   // Get the inlined context by traversing current inline tree backwards,
   // each tree node has its InlineSite which is taken as the context.
   // \p ContextStack is populated in root to leaf order
-  void getInlineContext(SmallVector<std::string, 16> &ContextStack,
+  void getInlineContext(SmallVectorImpl<std::string> &ContextStack,
                         const GUIDProbeFunctionMap &GUID2FuncMAP,
                         bool ShowName) const;
   // Helper function to get the string from context stack
@@ -203,17 +208,26 @@ public:
   // Look up the probe of a call for the input address
   const PseudoProbe *getCallProbeForAddr(uint64_t Address) const;
 
+  const PseudoProbeFuncDesc *getFuncDescForGUID(uint64_t GUID) const;
+
   // Helper function to populate one probe's inline stack into
   // \p InlineContextStack.
   // Current leaf location info will be added if IncludeLeaf is true
   // Example:
   //  Current probe(bar:3) inlined at foo:2 then inlined at main:1
   //  IncludeLeaf = true,  Output: [main:1, foo:2, bar:3]
-  //  IncludeLeaf = false, OUtput: [main:1, foo:2]
+  //  IncludeLeaf = false, Output: [main:1, foo:2]
   void
   getInlineContextForProbe(const PseudoProbe *Probe,
-                           SmallVector<std::string, 16> &InlineContextStack,
+                           SmallVectorImpl<std::string> &InlineContextStack,
                            bool IncludeLeaf) const;
+
+  const AddressProbesMap &getAddress2ProbesMap() const {
+    return Address2ProbesMap;
+  }
+
+  const PseudoProbeFuncDesc *
+  getInlinerDescForProbe(const PseudoProbe *Probe) const;
 };
 
 } // end namespace sampleprof

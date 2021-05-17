@@ -1,7 +1,7 @@
 ; Test for a bug specific to the new pass manager where we may build a domtree
 ; to make more precise AA queries for functions.
 ;
-; RUN: opt -aa-pipeline=default -passes='no-op-module' -debug-pass-manager -thinlto-bc -thinlto-split-lto-unit -o %t %s
+; RUN: opt -passes='no-op-module' -debug-pass-manager -thinlto-bc -thinlto-split-lto-unit -o %t %s
 ; RUN: llvm-modextract -b -n 0 -o - %t | llvm-dis | FileCheck --check-prefix=M0 %s
 ; RUN: llvm-modextract -b -n 1 -o - %t | llvm-dis | FileCheck --check-prefix=M1 %s
 

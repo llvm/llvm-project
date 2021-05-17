@@ -142,11 +142,13 @@ template <> struct hash<std::error_condition>;
 
 */
 
+#include <__config>
 #include <__errc>
-#include <type_traits>
+#include <__functional_base> // unary_function
+#include <compare>
 #include <stdexcept>
-#include <__functional_base>
 #include <string>
+#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -484,4 +486,4 @@ void __throw_system_error(int ev, const char* what_arg);
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_SYSTEM_ERROR
+#endif // _LIBCPP_SYSTEM_ERROR

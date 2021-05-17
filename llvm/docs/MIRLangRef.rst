@@ -791,6 +791,24 @@ For an int eq predicate ``ICMP_EQ``, the syntax is:
 .. TODO: Describe the syntax of the register live out machine operands.
 .. TODO: Describe the syntax of the machine memory operands.
 
+Comments
+^^^^^^^^
+
+Machine operands can have C/C++ style comments, which are annotations enclosed
+between ``/*`` and ``*/`` to improve readability of e.g. immediate operands.
+In the example below, ARM instructions EOR and BCC and immediate operands
+``14`` and ``0`` have been annotated with their condition codes (CC)
+definitions, i.e. the ``always`` and ``eq`` condition codes:
+
+.. code-block:: text
+
+  dead renamable $r2, $cpsr = tEOR killed renamable $r2, renamable $r1, 14 /* CC::always */, $noreg
+  t2Bcc %bb.4, 0 /* CC:eq */, killed $cpsr
+
+As these annotations are comments, they are ignored by the MI parser.
+Comments can be added or customized by overriding InstrInfo's hook
+``createMIROperandComment()``.
+
 Debug-Info constructs
 ---------------------
 
@@ -816,7 +834,7 @@ represented by an empty ``DebugLoc`` object in the machine instruction.
 Fixed variable locations
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-There are several ways of specifying variable locations. The simpliest is
+There are several ways of specifying variable locations. The simplest is
 describing a variable that is permanently located on the stack. In the stack
 or fixedStack attribute of the machine function, the variable, scope, and
 any qualifying location modifier are provided:

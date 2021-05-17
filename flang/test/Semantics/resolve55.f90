@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %S/test_errors.sh %s %t %flang_fc1
 ! Tests for C1128:
 ! A variable-name that appears in a LOCAL or LOCAL_INIT locality-spec shall not
 ! have the ALLOCATABLE; INTENT (IN); or OPTIONAL attribute; shall not be of

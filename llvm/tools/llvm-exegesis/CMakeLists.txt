@@ -1,4 +1,5 @@
 set(LLVM_LINK_COMPONENTS
+  MC
   MCParser
   Support
   native
@@ -7,6 +8,9 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_tool(llvm-exegesis
   DISABLE_LLVM_LINK_LLVM_DYLIB
   llvm-exegesis.cpp
+
+  DEPENDS
+  intrinsics_gen
   )
 
 add_subdirectory(lib)

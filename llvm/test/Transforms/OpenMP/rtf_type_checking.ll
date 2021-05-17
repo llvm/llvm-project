@@ -1,7 +1,7 @@
-; RUN: opt -S -openmpopt -stats < %s 2>&1 -enable-new-pm=0 | FileCheck %s --check-prefixes=CHECK,LPM
-; RUN: opt -S -passes='devirt<2>(cgscc(openmpopt))' -stats -debug-pass-manager < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NPM
-; RUN: opt -S -attributor -openmpopt -stats < %s 2>&1 -enable-new-pm=0 | FileCheck %s --check-prefixes=CHECK,LPM
-; RUN: opt -S -passes='attributor,cgscc(devirt<2>(openmpopt))' -stats -debug-pass-manager < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NPM
+; RUN: opt -S -openmp-opt-cgscc -stats < %s 2>&1 -enable-new-pm=0 | FileCheck %s --check-prefixes=CHECK,LPM
+; RUN: opt -S -passes='devirt<2>(cgscc(openmp-opt-cgscc))' -stats -debug-pass-manager < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NPM
+; RUN: opt -S -attributor -openmp-opt-cgscc -stats < %s 2>&1 -enable-new-pm=0 | FileCheck %s --check-prefixes=CHECK,LPM
+; RUN: opt -S -passes='attributor,cgscc(devirt<2>(openmp-opt-cgscc))' -stats -debug-pass-manager < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NPM
 ; REQUIRES: asserts
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -57,10 +57,10 @@ declare void @omp_get_thread_num()
 !2 = !{!3}
 !3 = !{i64 2, i64 -1, i64 -1, i1 true}
 
-; NPM: Running pass: OpenMPOptPass on (.omp_outlined.)
-; NPM-NOT: Running pass: OpenMPOptPass on (.omp_outlined.)
-; NPM: Running pass: OpenMPOptPass on (main)
-; NPM-NOT: Running pass: OpenMPOptPass on (main)
+; NPM: Running pass: OpenMPOptCGSCCPass on (.omp_outlined.)
+; NPM-NOT: Running pass: OpenMPOptCGSCCPass on (.omp_outlined.)
+; NPM: Running pass: OpenMPOptCGSCCPass on (main)
+; NPM-NOT: Running pass: OpenMPOptCGSCCPass on (main)
 ; ===-------------------------------------------------------------------------===
 ;                         ... Statistics Collected ...
 ; ===-------------------------------------------------------------------------===

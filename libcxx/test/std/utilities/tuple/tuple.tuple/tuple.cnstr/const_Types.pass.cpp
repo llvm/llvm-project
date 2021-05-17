@@ -137,28 +137,6 @@ int main(int, char**)
         assert(std::get<2>(t) == 2);
         assert(std::get<3>(t) == 3);
     }
-// extensions
-#ifdef _LIBCPP_VERSION
-    {
-        std::tuple<int, char*, std::string> t(2);
-        assert(std::get<0>(t) == 2);
-        assert(std::get<1>(t) == nullptr);
-        assert(std::get<2>(t) == "");
-    }
-    {
-        std::tuple<int, char*, std::string> t(2, nullptr);
-        assert(std::get<0>(t) == 2);
-        assert(std::get<1>(t) == nullptr);
-        assert(std::get<2>(t) == "");
-    }
-    {
-        std::tuple<int, char*, std::string, double> t(2, nullptr, "text");
-        assert(std::get<0>(t) == 2);
-        assert(std::get<1>(t) == nullptr);
-        assert(std::get<2>(t) == "text");
-        assert(std::get<3>(t) == 0.0);
-    }
-#endif
 
   return 0;
 }

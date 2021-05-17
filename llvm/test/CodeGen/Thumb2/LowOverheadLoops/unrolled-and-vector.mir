@@ -301,7 +301,6 @@ body:             |
   ; CHECK:   renamable $r3, dead $cpsr = tSUBi8 killed renamable $r3, 4, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $lr = nuw nsw t2ADDrs killed renamable $lr, killed renamable $r3, 19, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $r3, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
-  ; CHECK:   $lr = t2DLS killed renamable $lr
   ; CHECK: bb.7.for.body:
   ; CHECK:   successors: %bb.7(0x7c000000), %bb.8(0x04000000)
   ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3, $r12

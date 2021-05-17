@@ -1,4 +1,4 @@
-#import <Foundation/Foundation.h>
+#import <objc/NSObject.h>
 #import <stdint.h>
 
 @interface InternalDefiner : NSObject {

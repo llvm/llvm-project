@@ -29,6 +29,7 @@ add_lldb_unittest(UtilityTests
   StatusTest.cpp
   StreamTeeTest.cpp
   StreamTest.cpp
+  StringExtractorGDBRemoteTest.cpp
   StringExtractorTest.cpp
   StringLexerTest.cpp
   StringListTest.cpp

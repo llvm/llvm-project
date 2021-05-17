@@ -10,6 +10,7 @@
 # RUN:   | FileCheck %s
 
 # RUN: %lldb -c %t %T/command-disassemble-process.big.exe \
+# RUN:   -o "settings set stop-disassembly-max-size 8000" \
 # RUN:   -o disassemble -o exit 2>&1 | FileCheck %s --check-prefix=BIG
 
 # CHECK:       (lldb) disassemble

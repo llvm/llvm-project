@@ -646,7 +646,7 @@ def VABS    : SInst<"vabs", "..", "csifQcQsQiQf">;
 def VQABS   : SInst<"vqabs", "..", "csiQcQsQi">;
 def VNEG    : SOpInst<"vneg", "..", "csifQcQsQiQf", OP_NEG>;
 def VQNEG   : SInst<"vqneg", "..", "csiQcQsQi">;
-def VCLS    : SInst<"vcls", "..", "csiQcQsQi">;
+def VCLS    : SInst<"vcls", "S.", "csiUcUsUiQcQsQiQUcQUsQUi">;
 def VCLZ    : IInst<"vclz", "..", "csiUcUsUiQcQsQiQUcQUsQUi">;
 def VCNT    : WInst<"vcnt", "..", "UccPcQUcQcQPc">;
 def VRECPE  : SInst<"vrecpe", "..", "fUiQfQUi">;
@@ -707,6 +707,11 @@ def SCALAR_HALF_GET_LANE : IOpInst<"vget_lane", "1.I", "h", OP_SCALAR_HALF_GET_L
 def SCALAR_HALF_SET_LANE : IOpInst<"vset_lane", ".1.I", "h", OP_SCALAR_HALF_SET_LN>;
 def SCALAR_HALF_GET_LANEQ : IOpInst<"vget_lane", "1.I", "Qh", OP_SCALAR_HALF_GET_LNQ>;
 def SCALAR_HALF_SET_LANEQ : IOpInst<"vset_lane", ".1.I", "Qh", OP_SCALAR_HALF_SET_LNQ>;
+
+////////////////////////////////////////////////////////////////////////////////
+// Non poly128_t vaddp for Arm and AArch64
+// TODO: poly128_t not implemented on arm32
+def VADDP   : WInst<"vadd", "...", "PcPsPlQPcQPsQPl">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // AArch64 Intrinsics
@@ -1117,12 +1122,14 @@ def VEXT_A64 : WInst<"vext", "...I", "dQdPlQPl">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Crypto
-let ArchGuard = "__ARM_ARCH >= 8 && defined(__ARM_FEATURE_CRYPTO)" in {
+let ArchGuard = "__ARM_ARCH >= 8 && defined(__ARM_FEATURE_AES)" in {
 def AESE : SInst<"vaese", "...", "QUc">;
 def AESD : SInst<"vaesd", "...", "QUc">;
 def AESMC : SInst<"vaesmc", "..", "QUc">;
 def AESIMC : SInst<"vaesimc", "..", "QUc">;
+}
 
+let ArchGuard = "__ARM_ARCH >= 8 && defined(__ARM_FEATURE_SHA2)" in {
 def SHA1H : SInst<"vsha1h", "11", "Ui">;
 def SHA1SU1 : SInst<"vsha1su1", "...", "QUi">;
 def SHA256SU0 : SInst<"vsha256su0", "...", "QUi">;
@@ -1135,6 +1142,43 @@ def SHA256H : SInst<"vsha256h", "....", "QUi">;
 def SHA256H2 : SInst<"vsha256h2", "....", "QUi">;
 def SHA256SU1 : SInst<"vsha256su1", "....", "QUi">;
 }
+
+let ArchGuard = "__ARM_ARCH >= 8 && defined(__ARM_FEATURE_SHA3) && defined(__aarch64__)" in {
+def BCAX : SInst<"vbcax", "....", "QUcQUsQUiQUlQcQsQiQl">;
+def EOR3 : SInst<"veor3", "....", "QUcQUsQUiQUlQcQsQiQl">;
+def RAX1 : SInst<"vrax1", "...", "QUl">;
+
+let isVXAR = 1 in {
+def XAR :  SInst<"vxar", "...I", "QUl">;
+}
+}
+
+let ArchGuard = "__ARM_ARCH >= 8 && defined(__ARM_FEATURE_SHA512) && defined(__aarch64__)" in {
+
+def SHA512SU0 : SInst<"vsha512su0", "...", "QUl">;
+def SHA512su1 : SInst<"vsha512su1", "....", "QUl">;
+def SHA512H : SInst<"vsha512h", "....", "QUl">;
+def SHA512H2 : SInst<"vsha512h2", "....", "QUl">;
+}
+
+let ArchGuard = "__ARM_ARCH >= 8 && defined(__ARM_FEATURE_SM3) && defined(__aarch64__)" in {
+def SM3SS1 : SInst<"vsm3ss1", "....", "QUi">;
+def SM3TT1A : SInst<"vsm3tt1a", "....I", "QUi">;
+def SM3TT1B : SInst<"vsm3tt1b", "....I", "QUi">;
+def SM3TT2A : SInst<"vsm3tt2a", "....I", "QUi">;
+def SM3TT2B : SInst<"vsm3tt2b", "....I", "QUi">;
+def SM3PARTW1 : SInst<"vsm3partw1", "....", "QUi">;
+def SM3PARTW2 : SInst<"vsm3partw2", "....", "QUi">;
+}
+
+let ArchGuard = "__ARM_ARCH >= 8 && defined(__ARM_FEATURE_SM4) && defined(__aarch64__)" in {
+def SM4E : SInst<"vsm4e", "...", "QUi">;
+def SM4EKEY : SInst<"vsm4ekey", "...", "QUi">;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// poly128_t vadd for AArch64 only see VADDP for the rest
+def VADDP_Q   : WInst<"vadd", "...", "QPk">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Float -> Int conversions with explicit rounding mode
@@ -1182,6 +1226,13 @@ def FRINTM_S64 : SInst<"vrndm", "..", "dQd">;
 def FRINTX_S64 : SInst<"vrndx", "..", "dQd">;
 def FRINTZ_S64 : SInst<"vrnd", "..", "dQd">;
 def FRINTI_S64 : SInst<"vrndi", "..", "dQd">;
+}
+
+let ArchGuard = "__ARM_ARCH >= 8 && defined(__aarch64__) && defined(__ARM_FEATURE_FRINT)" in {
+def FRINT32X_S32 : SInst<"vrnd32x", "..", "fQf">;
+def FRINT32Z_S32 : SInst<"vrnd32z", "..", "fQf">;
+def FRINT64X_S32 : SInst<"vrnd64x", "..", "fQf">;
+def FRINT64Z_S32 : SInst<"vrnd64z", "..", "fQf">;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1838,7 +1889,7 @@ let ArchGuard = "defined(__ARM_FEATURE_DOTPROD) && defined(__aarch64__)" in {
 }
 
 // v8.2-A FP16 fused multiply-add long instructions.
-let ArchGuard = "defined(__ARM_FEATURE_FP16FML) && defined(__aarch64__)" in {
+let ArchGuard = "defined(__ARM_FEATURE_FP16_FML) && defined(__aarch64__)" in {
   def VFMLAL_LOW  : SInst<"vfmlal_low",  ">>..", "hQh">;
   def VFMLSL_LOW  : SInst<"vfmlsl_low",  ">>..", "hQh">;
   def VFMLAL_HIGH : SInst<"vfmlal_high", ">>..", "hQh">;

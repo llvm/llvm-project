@@ -1,0 +1,31 @@
+# RUN: llc -o /dev/null %s -mtriple=aarch64-apple-ios -run-pass=aarch64-collect-loh -debug-only=aarch64-collect-loh 2>&1 | FileCheck %s
+# REQUIRES: asserts
+--- |
+  @sym2 = local_unnamed_addr global [10000000 x i32] zeroinitializer, align 8
+  @sym = local_unnamed_addr global i32 zeroinitializer, align 8
+
+  define i32 @main() {
+    ret i32 0
+  }
+
+...
+---
+name:            main
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x22', virtual-reg: '' }
+  - { reg: '$x21', virtual-reg: '' }
+body:             |
+  bb.0:
+    liveins: $x21, $x22
+    ; Check we don't emit an loh here because there's a clobbering def of x8 before the ldr.
+    ; CHECK-LABEL: main
+    ; CHECK-NOT: MCLOH_AdrpAddLdr
+    renamable $x8 = ADRP target-flags(aarch64-page) @sym
+    renamable $x9 = ADDXri killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @sym, 0
+    renamable $x8 = ADDXri killed renamable $x22, 1, 0
+    $x9 = LDRXui $x9, 0
+    RET undef $lr
+
+...

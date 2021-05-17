@@ -69,4 +69,4 @@ private:
 } // end namespace orc
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_ORC_IRCOMPILINGLAYER_H
+#endif // LLVM_EXECUTIONENGINE_ORC_IRCOMPILELAYER_H

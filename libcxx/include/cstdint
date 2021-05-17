@@ -187,4 +187,4 @@ using::uintmax_t;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_CSTDINT
+#endif // _LIBCPP_CSTDINT

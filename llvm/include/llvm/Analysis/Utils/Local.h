@@ -100,4 +100,4 @@ Value *EmitGEPOffset(IRBuilderTy *Builder, const DataLayout &DL, User *GEP,
 
 }
 
-#endif // LLVM_TRANSFORMS_UTILS_LOCAL_H
+#endif // LLVM_ANALYSIS_UTILS_LOCAL_H

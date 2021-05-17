@@ -44,4 +44,4 @@ using ::longjmp;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_CSETJMP
+#endif // _LIBCPP_CSETJMP

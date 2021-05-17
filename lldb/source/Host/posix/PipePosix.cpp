@@ -12,13 +12,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
-
-#if defined(__GNUC__) && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 8))
-#ifndef _GLIBCXX_USE_NANOSLEEP
-#define _GLIBCXX_USE_NANOSLEEP
-#endif
-#endif
-
 #include <functional>
 #include <thread>
 

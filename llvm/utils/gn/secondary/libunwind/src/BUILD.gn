@@ -1,4 +1,5 @@
 import("//clang/runtimes.gni")
+import("//compiler-rt/target.gni")
 
 declare_args() {
   # Build libunwind as a shared library.
@@ -6,16 +7,13 @@ declare_args() {
 
   # Build libunwind as a static library.
   libunwind_enable_static = true
-
-  # Do not export any symbols from the static library.
-  libunwind_hermetic_static_library = true
 }
 
 unwind_headers = [
   "../include/libunwind.h",
   "../include/unwind.h",
 ]
-if (target_os == "mac") {
+if (current_os == "mac") {
   unwind_headers += [
     # Make `gn format` not collapse this, for sync_source_lists_from_cmake.py.
     "../include/mach-o/compact_unwind_encoding.h",
@@ -44,25 +42,39 @@ unwind_sources = [
   "libunwind.cpp",
   "libunwind_ext.h",
 ]
-if (target_os == "mac") {
+if (current_os == "mac") {
   unwind_sources += [ "Unwind_AppleExtras.cpp" ]
+}
+
+if (current_os == "android") {
+  if (current_cpu == "arm64") {
+    unwind_output_dir = "$crt_current_out_dir/aarch64"
+  } else if (current_cpu == "arm") {
+    unwind_output_dir = "$crt_current_out_dir/arm"
+  }
+} else {
+  unwind_output_dir = runtimes_dir
 }
 
 config("unwind_config") {
   cflags = []
   cflags_c = [ "-std=c99" ]
   cflags_cc = [ "-fno-rtti" ]
+  defines = [ "_LIBUNWIND_IS_NATIVE_ONLY" ]
   include_dirs = [ "//libunwind/include" ]
-  if (target_os == "mac") {
+  if (current_os == "mac") {
     cflags += [ "-U__STRICT_ANSI__" ]
+  }
+  if (current_os == "android") {
+    defines += [ "_LIBUNWIND_USE_DLADDR=0" ]
   }
 }
 
 if (libunwind_enable_shared) {
   shared_library("unwind_shared") {
-    output_dir = runtimes_dir
+    output_dir = unwind_output_dir
     output_name = "unwind"
-    if (target_os == "linux" || target_os == "mac") {
+    if (current_os == "linux" || current_os == "mac") {
       cflags = [ "-fPIC" ]
       ldflags = [ "-nostdlib++" ]
       libs = [
@@ -70,7 +82,7 @@ if (libunwind_enable_shared) {
         "pthread",
       ]
     }
-    if (target_os == "mac") {
+    if (current_os == "mac") {
       ldflags += [
         "-compatibility_version 1",
         "-install_name /usr/lib/libunwind.1.dylib",
@@ -88,24 +100,35 @@ if (libunwind_enable_shared) {
 }
 
 if (libunwind_enable_static) {
-  static_library("unwind_static") {
-    output_dir = runtimes_dir
-    output_name = "unwind"
-    complete_static_lib = true
-    configs -= [ "//llvm/utils/gn/build:thin_archive" ]
-    sources = unwind_sources
-    public = unwind_headers
-    if (libunwind_hermetic_static_library) {
-      cflags = [ "-fvisibility=hidden" ]
-      cflags_cc = [ "-fvisibility-global-new-delete-hidden" ]
-      defines = [ "_LIBUNWIND_DISABLE_VISIBILITY_ANNOTATIONS" ]
+  template("libunwind_static_library") {
+    static_library(target_name) {
+      output_dir = unwind_output_dir
+      output_name = invoker.output_name
+      complete_static_lib = true
+      configs -= [ "//llvm/utils/gn/build:thin_archive" ]
+      sources = unwind_sources
+      public = unwind_headers
+      if (!invoker.export) {
+        cflags = [ "-fvisibility=hidden" ]
+        cflags_cc = [ "-fvisibility-global-new-delete-hidden" ]
+        defines = [ "_LIBUNWIND_HIDE_SYMBOLS" ]
+      }
+      deps = [ "//compiler-rt/lib/builtins" ]
+      configs += [ ":unwind_config" ]
+      configs -= [
+        "//llvm/utils/gn/build:no_exceptions",
+        "//llvm/utils/gn/build:no_rtti",
+      ]
     }
-    deps = [ "//compiler-rt/lib/builtins" ]
-    configs += [ ":unwind_config" ]
-    configs -= [
-      "//llvm/utils/gn/build:no_exceptions",
-      "//llvm/utils/gn/build:no_rtti",
-    ]
+  }
+
+  libunwind_static_library("unwind_static_exported") {
+    output_name = "unwind-exported"
+    export = true
+  }
+  libunwind_static_library("unwind_static") {
+    output_name = "unwind"
+    export = false
   }
 }
 
@@ -115,6 +138,9 @@ group("src") {
     deps += [ ":unwind_shared" ]
   }
   if (libunwind_enable_static) {
-    deps += [ ":unwind_static" ]
+    deps += [
+      ":unwind_static",
+      ":unwind_static_exported",
+    ]
   }
 }

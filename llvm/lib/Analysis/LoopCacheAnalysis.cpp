@@ -505,8 +505,7 @@ CacheCost::getCacheCost(Loop &Root, LoopStandardAnalysisResults &AR,
   }
 
   LoopVectorTy Loops;
-  for (Loop *L : breadth_first(&Root))
-    Loops.push_back(L);
+  append_range(Loops, breadth_first(&Root));
 
   if (!getInnerMostLoop(Loops)) {
     LLVM_DEBUG(dbgs() << "Cannot compute cache cost of loop nest with more "

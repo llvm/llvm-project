@@ -1,4 +1,4 @@
-; RUN: lli -O0 -force-interpreter < %s
+; RUN: lli -jit-kind=mcjit -O0 -force-interpreter < %s
 
 ; libffi does not support fp128 so we don’t test it
 declare float  @llvm.sin.f32(float)

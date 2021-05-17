@@ -1,11 +1,8 @@
-; RUN: llc -mtriple=aarch64-unknown-linux-gnu -mattr=+sve < %s 2>%t | FileCheck %s
-; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
+; RUN: llc -mtriple=aarch64-unknown-linux-gnu -mattr=+sve < %s | FileCheck %s
 
 ; If this check fails please read
 ; clang/test/CodeGen/aarch64-sve-intrinsics/README for instructions on
 ; how to resolve it.
-
-; WARN-NOT: warning
 
 ; CHECK-LABEL: do_something:
 define <vscale x 2 x double> @do_something(<vscale x 2 x double> %vx) {

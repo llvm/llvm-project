@@ -9,7 +9,7 @@
 #include "src/ctype/islower.h"
 #include "utils/UnitTest/Test.h"
 
-TEST(IsLower, DefaultLocale) {
+TEST(LlvmLibcIsLower, DefaultLocale) {
   // Loops through all characters, verifying that lowercase letters
   // return a non-zero integer and everything else returns zero.
   for (int ch = 0; ch < 255; ++ch) {

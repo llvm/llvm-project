@@ -111,12 +111,18 @@ public:
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
   std::optional<parser::CharBlock> keyword() const { return keyword_; }
-  void set_keyword(parser::CharBlock x) { keyword_ = x; }
+  ActualArgument &set_keyword(parser::CharBlock x) {
+    keyword_ = x;
+    return *this;
+  }
   bool isAlternateReturn() const {
     return std::holds_alternative<common::Label>(u_);
   }
   bool isPassedObject() const { return isPassedObject_; }
-  void set_isPassedObject(bool yes = true) { isPassedObject_ = yes; }
+  ActualArgument &set_isPassedObject(bool yes = true) {
+    isPassedObject_ = yes;
+    return *this;
+  }
 
   bool Matches(const characteristics::DummyArgument &) const;
   common::Intent dummyIntent() const { return dummyIntent_; }

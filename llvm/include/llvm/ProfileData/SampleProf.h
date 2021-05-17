@@ -164,7 +164,9 @@ struct SecHdrTableEntry {
 // will be saved in the higher 32 bits.
 enum class SecCommonFlags : uint32_t {
   SecFlagInValid = 0,
-  SecFlagCompress = (1 << 0)
+  SecFlagCompress = (1 << 0),
+  // Indicate the section contains only profile without context.
+  SecFlagFlat = (1 << 1)
 };
 
 // Section specific flags are defined here.
@@ -175,19 +177,26 @@ enum class SecNameTableFlags : uint32_t {
   SecFlagMD5Name = (1 << 0),
   // Store MD5 in fixed length instead of ULEB128 so NameTable can be
   // accessed like an array.
-  SecFlagFixedLengthMD5 = (1 << 1)
+  SecFlagFixedLengthMD5 = (1 << 1),
+  // Profile contains ".__uniq." suffix name. Compiler shouldn't strip
+  // the suffix when doing profile matching when seeing the flag.
+  SecFlagUniqSuffix = (1 << 2)
 };
 enum class SecProfSummaryFlags : uint32_t {
   SecFlagInValid = 0,
   /// SecFlagPartial means the profile is for common/shared code.
   /// The common profile is usually merged from profiles collected
   /// from running other targets.
-  SecFlagPartial = (1 << 0)
+  SecFlagPartial = (1 << 0),
+  /// SecFlagContext means this is context-sensitive profile for
+  /// CSSPGO
+  SecFlagFullContext = (1 << 1)
 };
 
 enum class SecFuncMetadataFlags : uint32_t {
   SecFlagInvalid = 0,
   SecFlagIsProbeBased = (1 << 0),
+  SecFlagHasAttribute = (1 << 1)
 };
 
 // Verify section specific flag is used for the correct section.
@@ -345,16 +354,19 @@ public:
     return SortedTargets;
   }
 
-  /// Merge the samples in \p Other into this record.
-  /// Optionally scale sample counts by \p Weight.
-  sampleprof_error merge(const SampleRecord &Other, uint64_t Weight = 1) {
-    sampleprof_error Result = addSamples(Other.getSamples(), Weight);
-    for (const auto &I : Other.getCallTargets()) {
-      MergeResult(Result, addCalledTarget(I.first(), I.second, Weight));
+  /// Prorate call targets by a distribution factor.
+  static const CallTargetMap adjustCallTargets(const CallTargetMap &Targets,
+                                               float DistributionFactor) {
+    CallTargetMap AdjustedTargets;
+    for (const auto &I : Targets) {
+      AdjustedTargets[I.first()] = I.second * DistributionFactor;
     }
-    return Result;
+    return AdjustedTargets;
   }
 
+  /// Merge the samples in \p Other into this record.
+  /// Optionally scale sample counts by \p Weight.
+  sampleprof_error merge(const SampleRecord &Other, uint64_t Weight = 1);
   void print(raw_ostream &OS, unsigned Indent) const;
   void dump() const;
 
@@ -374,6 +386,13 @@ enum ContextStateMask {
   MergedContext = 0x8     // Profile for context merged into base profile
 };
 
+// Attribute of context associated with FunctionSamples
+enum ContextAttributeMask {
+  ContextNone = 0x0,
+  ContextWasInlined = 0x1,      // Leaf of context was inlined in previous build
+  ContextShouldBeInlined = 0x2, // Leaf of context should be inlined
+};
+
 // Sample context for FunctionSamples. It consists of the calling context,
 // the function name and context state. Internally sample context is represented
 // using StringRef, which is also the input for constructing a `SampleContext`.
@@ -385,9 +404,9 @@ enum ContextStateMask {
 //    `_Z8funcLeafi`
 class SampleContext {
 public:
-  SampleContext() : State(UnknownContext) {}
-  SampleContext(StringRef ContextStr,
-                ContextStateMask CState = UnknownContext) {
+  SampleContext() : State(UnknownContext), Attributes(ContextNone) {}
+  SampleContext(StringRef ContextStr, ContextStateMask CState = UnknownContext)
+      : Attributes(ContextNone) {
     setContext(ContextStr, CState);
   }
 
@@ -432,12 +451,16 @@ public:
   }
 
   operator StringRef() const { return FullContext; }
+  bool hasAttribute(ContextAttributeMask A) { return Attributes & (uint32_t)A; }
+  void setAttribute(ContextAttributeMask A) { Attributes |= (uint32_t)A; }
+  uint32_t getAllAttributes() { return Attributes; }
+  void setAllAttributes(uint32_t A) { Attributes = A; }
   bool hasState(ContextStateMask S) { return State & (uint32_t)S; }
   void setState(ContextStateMask S) { State |= (uint32_t)S; }
   void clearState(ContextStateMask S) { State &= (uint32_t)~S; }
   bool hasContext() const { return State != UnknownContext; }
   bool isBaseContext() const { return CallingContext.empty(); }
-  StringRef getName() const { return Name; }
+  StringRef getNameWithoutContext() const { return Name; }
   StringRef getCallingContext() const { return CallingContext; }
   StringRef getNameWithContext() const { return FullContext; }
 
@@ -486,6 +509,8 @@ private:
   StringRef CallingContext;
   // State of the associated sample profile
   uint32_t State;
+  // Attribute of the associated sample profile
+  uint32_t Attributes;
 };
 
 class FunctionSamples;
@@ -541,6 +566,13 @@ public:
         FName, Num, Weight);
   }
 
+  sampleprof_error addBodySamplesForProbe(uint32_t Index, uint64_t Num,
+                                          uint64_t Weight = 1) {
+    SampleRecord S;
+    S.addSamples(Num, Weight);
+    return BodySamples[LineLocation(Index, 0)].merge(S, Weight);
+  }
+
   /// Return the number of samples collected at the given location.
   /// Each location is specified by \p LineOffset and \p Discriminator.
   /// If the location is not found in profile, return error.
@@ -551,16 +583,15 @@ public:
       // For CSSPGO, in order to conserve profile size, we no longer write out
       // locations profile for those not hit during training, so we need to
       // treat them as zero instead of error here.
-      if (ProfileIsCS)
-        return 0;
-      return std::error_code();
-      // A missing counter for a probe likely means the probe was not executed.
-      // Treat it as a zero count instead of an unknown count to help edge
-      // weight inference.
-      if (FunctionSamples::ProfileIsProbeBased)
+      if (FunctionSamples::ProfileIsCS || FunctionSamples::ProfileIsProbeBased)
         return 0;
       return std::error_code();
     } else {
+      // Return error for an invalid sample count which is usually assigned to
+      // dangling probe.
+      if (FunctionSamples::ProfileIsProbeBased &&
+          ret->second.getSamples() == FunctionSamples::InvalidProbeCount)
+        return std::error_code();
       return ret->second.getSamples();
     }
   }
@@ -674,7 +705,8 @@ public:
     Name = Other.getName();
     if (!GUIDToFuncNameMap)
       GUIDToFuncNameMap = Other.GUIDToFuncNameMap;
-
+    if (Context.getNameWithContext().empty())
+      Context = Other.getContext();
     if (FunctionHash == 0) {
       // Set the function hash code for the target profile.
       FunctionHash = Other.getFunctionHash();
@@ -709,14 +741,15 @@ public:
   /// corresponding function is no less than \p Threshold, add its corresponding
   /// GUID to \p S. Also traverse the BodySamples to add hot CallTarget's GUID
   /// to \p S.
-  void findInlinedFunctions(DenseSet<GlobalValue::GUID> &S, const Module *M,
+  void findInlinedFunctions(DenseSet<GlobalValue::GUID> &S,
+                            const StringMap<Function *> &SymbolMap,
                             uint64_t Threshold) const {
     if (TotalSamples <= Threshold)
       return;
     auto isDeclaration = [](const Function *F) {
       return !F || F->isDeclaration();
     };
-    if (isDeclaration(M->getFunction(getFuncName()))) {
+    if (isDeclaration(SymbolMap.lookup(getFuncName()))) {
       // Add to the import list only when it's defined out of module.
       S.insert(getGUID(Name));
     }
@@ -725,13 +758,13 @@ public:
     for (const auto &BS : BodySamples)
       for (const auto &TS : BS.second.getCallTargets())
         if (TS.getValue() > Threshold) {
-          const Function *Callee = M->getFunction(getFuncName(TS.getKey()));
+          const Function *Callee = SymbolMap.lookup(getFuncName(TS.getKey()));
           if (isDeclaration(Callee))
             S.insert(getGUID(TS.getKey()));
         }
     for (const auto &CS : CallsiteSamples)
       for (const auto &NameFS : CS.second)
-        NameFS.second.findInlinedFunctions(S, M, Threshold);
+        NameFS.second.findInlinedFunctions(S, SymbolMap, Threshold);
   }
 
   /// Set the name of the function.
@@ -760,17 +793,31 @@ public:
     return getCanonicalFnName(F.getName(), Attr);
   }
 
-  static StringRef getCanonicalFnName(StringRef FnName, StringRef Attr = "") {
-    static const char *knownSuffixes[] = { ".llvm.", ".part." };
+  /// Name suffixes which canonicalization should handle to avoid
+  /// profile mismatch.
+  static constexpr const char *LLVMSuffix = ".llvm.";
+  static constexpr const char *PartSuffix = ".part.";
+  static constexpr const char *UniqSuffix = ".__uniq.";
+
+  static StringRef getCanonicalFnName(StringRef FnName,
+                                      StringRef Attr = "selected") {
+    // Note the sequence of the suffixes in the knownSuffixes array matters.
+    // If suffix "A" is appended after the suffix "B", "A" should be in front
+    // of "B" in knownSuffixes.
+    const char *knownSuffixes[] = {LLVMSuffix, PartSuffix, UniqSuffix};
     if (Attr == "" || Attr == "all") {
       return FnName.split('.').first;
     } else if (Attr == "selected") {
       StringRef Cand(FnName);
       for (const auto &Suf : knownSuffixes) {
         StringRef Suffix(Suf);
+        // If the profile contains ".__uniq." suffix, don't strip the
+        // suffix for names in the IR.
+        if (Suffix == UniqSuffix && FunctionSamples::HasUniqSuffix)
+          continue;
         auto It = Cand.rfind(Suffix);
         if (It == StringRef::npos)
-          return Cand;
+          continue;
         auto Dit = Cand.rfind('.');
         if (Dit == It + Suffix.size() - 1)
           Cand = Cand.substr(0, It);
@@ -824,6 +871,10 @@ public:
       const DILocation *DIL,
       SampleProfileReaderItaniumRemapper *Remapper = nullptr) const;
 
+  // The invalid sample count is used to represent samples collected for a
+  // dangling probe.
+  static constexpr uint64_t InvalidProbeCount = UINT64_MAX;
+
   static bool ProfileIsProbeBased;
 
   static bool ProfileIsCS;
@@ -836,6 +887,9 @@ public:
 
   /// Whether the profile uses MD5 to represent string.
   static bool UseMD5;
+
+  /// Whether the profile contains any ".__uniq." suffix in a name.
+  static bool HasUniqSuffix;
 
   /// GUIDToFuncNameMap saves the mapping from GUID to the symbol name, for
   /// all the function symbols defined or declared in current module.
@@ -922,6 +976,24 @@ public:
 
 private:
   SamplesWithLocList V;
+};
+
+/// SampleContextTrimmer impelements helper functions to trim, merge cold
+/// context profiles. It also supports context profile canonicalization to make
+/// sure ProfileMap's key is consistent with FunctionSample's name/context.
+class SampleContextTrimmer {
+public:
+  SampleContextTrimmer(StringMap<FunctionSamples> &Profiles)
+      : ProfileMap(Profiles){};
+  // Trim and merge cold context profile when requested.
+  void trimAndMergeColdContextProfiles(uint64_t ColdCountThreshold,
+                                       bool TrimColdContext = true,
+                                       bool MergeColdContext = true);
+  // Canonicalize context profile name and attributes.
+  void canonicalizeContextProfiles();
+
+private:
+  StringMap<FunctionSamples> &ProfileMap;
 };
 
 /// ProfileSymbolList records the list of function symbols shown up

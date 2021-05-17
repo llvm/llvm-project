@@ -38,8 +38,8 @@ int main(int, char**)
             3
         };
         M m;
-        m.insert(input_iterator<const V*>(ar),
-                 input_iterator<const V*>(ar + sizeof(ar)/sizeof(ar[0])));
+        m.insert(cpp17_input_iterator<const V*>(ar),
+                 cpp17_input_iterator<const V*>(ar + sizeof(ar)/sizeof(ar[0])));
         assert(m.size() == 9);
         assert(*next(m.begin(), 0) == 1);
         assert(*next(m.begin(), 1) == 1);
@@ -68,8 +68,8 @@ int main(int, char**)
             3
         };
         M m;
-        m.insert(input_iterator<const V*>(ar),
-                 input_iterator<const V*>(ar + sizeof(ar)/sizeof(ar[0])));
+        m.insert(cpp17_input_iterator<const V*>(ar),
+                 cpp17_input_iterator<const V*>(ar + sizeof(ar)/sizeof(ar[0])));
         assert(m.size() == 9);
         assert(*next(m.begin(), 0) == 1);
         assert(*next(m.begin(), 1) == 1);

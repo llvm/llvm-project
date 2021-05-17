@@ -7,8 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Basic/TargetOptions.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
+#include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Serialization/ModuleFileExtension.h"
 #include "llvm/Support/Host.h"
 
 #include "gmock/gmock.h"
@@ -92,6 +95,29 @@ TEST(ContainsN, Two) {
   ASSERT_THAT(Array, Not(ContainsN(StrEq("x"), 0)));
   ASSERT_THAT(Array, Not(ContainsN(StrEq("x"), 1)));
   ASSERT_THAT(Array, ContainsN(StrEq("x"), 2));
+}
+
+// Copy constructor/assignment perform deep copy of reference-counted pointers.
+
+TEST(CompilerInvocationTest, DeepCopyConstructor) {
+  CompilerInvocation A;
+  A.getAnalyzerOpts()->Config["Key"] = "Old";
+
+  CompilerInvocation B(A);
+  B.getAnalyzerOpts()->Config["Key"] = "New";
+
+  ASSERT_EQ(A.getAnalyzerOpts()->Config["Key"], "Old");
+}
+
+TEST(CompilerInvocationTest, DeepCopyAssignment) {
+  CompilerInvocation A;
+  A.getAnalyzerOpts()->Config["Key"] = "Old";
+
+  CompilerInvocation B;
+  B = A;
+  B.getAnalyzerOpts()->Config["Key"] = "New";
+
+  ASSERT_EQ(A.getAnalyzerOpts()->Config["Key"], "Old");
 }
 
 // Boolean option with a keypath that defaults to true.
@@ -513,7 +539,8 @@ TEST_F(CommandLineTest, ConditionalParsingIfFalseFlagNotPresent) {
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
   ASSERT_FALSE(Diags->hasErrorOccurred());
-  ASSERT_FALSE(Invocation.getLangOpts()->SYCL);
+  ASSERT_FALSE(Invocation.getLangOpts()->SYCLIsDevice);
+  ASSERT_FALSE(Invocation.getLangOpts()->SYCLIsHost);
   ASSERT_EQ(Invocation.getLangOpts()->getSYCLVersion(), LangOptions::SYCL_None);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
@@ -528,42 +555,42 @@ TEST_F(CommandLineTest, ConditionalParsingIfFalseFlagPresent) {
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
   ASSERT_FALSE(Diags->hasErrorOccurred());
-  ASSERT_FALSE(Invocation.getLangOpts()->SYCL);
+  ASSERT_FALSE(Invocation.getLangOpts()->SYCLIsDevice);
+  ASSERT_FALSE(Invocation.getLangOpts()->SYCLIsHost);
   ASSERT_EQ(Invocation.getLangOpts()->getSYCLVersion(), LangOptions::SYCL_None);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
-  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fsycl"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fsycl-is-device"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fsycl-is-host"))));
   ASSERT_THAT(GeneratedArgs, Not(Contains(HasSubstr("-sycl-std="))));
 }
 
 TEST_F(CommandLineTest, ConditionalParsingIfTrueFlagNotPresent) {
-  const char *Args[] = {"-fsycl"};
+  const char *Args[] = {"-fsycl-is-host"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
   ASSERT_FALSE(Diags->hasErrorOccurred());
-  ASSERT_TRUE(Invocation.getLangOpts()->SYCL);
   ASSERT_EQ(Invocation.getLangOpts()->getSYCLVersion(), LangOptions::SYCL_None);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
-  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fsycl")));
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fsycl-is-host")));
   ASSERT_THAT(GeneratedArgs, Not(Contains(HasSubstr("-sycl-std="))));
 }
 
 TEST_F(CommandLineTest, ConditionalParsingIfTrueFlagPresent) {
-  const char *Args[] = {"-fsycl", "-sycl-std=2017"};
+  const char *Args[] = {"-fsycl-is-device", "-sycl-std=2017"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
   ASSERT_FALSE(Diags->hasErrorOccurred());
-  ASSERT_TRUE(Invocation.getLangOpts()->SYCL);
   ASSERT_EQ(Invocation.getLangOpts()->getSYCLVersion(), LangOptions::SYCL_2017);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
-  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fsycl")));
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fsycl-is-device")));
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-sycl-std=2017")));
 }
 
@@ -694,5 +721,194 @@ TEST_F(CommandLineTest, DiagnosticOptionPresent) {
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
   ASSERT_THAT(GeneratedArgs, ContainsN(StrEq("-verify=xyz"), 1));
+}
+
+// Option default depends on language standard.
+
+TEST_F(CommandLineTest, DigraphsImplied) {
+  const char *Args[] = {""};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+  ASSERT_TRUE(Invocation.getLangOpts()->Digraphs);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fno-digraphs"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fdigraphs"))));
+}
+
+TEST_F(CommandLineTest, DigraphsDisabled) {
+  const char *Args[] = {"-fno-digraphs"};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+  ASSERT_FALSE(Invocation.getLangOpts()->Digraphs);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fno-digraphs")));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fdigraphs"))));
+}
+
+TEST_F(CommandLineTest, DigraphsNotImplied) {
+  const char *Args[] = {"-std=c89"};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+  ASSERT_FALSE(Invocation.getLangOpts()->Digraphs);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fno-digraphs"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fdigraphs"))));
+}
+
+TEST_F(CommandLineTest, DigraphsEnabled) {
+  const char *Args[] = {"-std=c89", "-fdigraphs"};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+  ASSERT_TRUE(Invocation.getLangOpts()->Digraphs);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fdigraphs")));
+}
+
+struct DummyModuleFileExtension
+    : public llvm::RTTIExtends<DummyModuleFileExtension, ModuleFileExtension> {
+  static char ID;
+
+  ModuleFileExtensionMetadata getExtensionMetadata() const override {
+    return {};
+  };
+
+  llvm::hash_code hashExtension(llvm::hash_code Code) const override {
+    return {};
+  }
+
+  std::unique_ptr<ModuleFileExtensionWriter>
+  createExtensionWriter(ASTWriter &Writer) override {
+    return {};
+  }
+
+  std::unique_ptr<ModuleFileExtensionReader>
+  createExtensionReader(const ModuleFileExtensionMetadata &Metadata,
+                        ASTReader &Reader, serialization::ModuleFile &Mod,
+                        const llvm::BitstreamCursor &Stream) override {
+    return {};
+  }
+};
+
+char DummyModuleFileExtension::ID = 0;
+
+TEST_F(CommandLineTest, TestModuleFileExtension) {
+  const char *Args[] = {"-ftest-module-file-extension=first:2:1:0:first",
+                        "-ftest-module-file-extension=second:3:2:1:second"};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+  ASSERT_THAT(Invocation.getFrontendOpts().ModuleFileExtensions.size(), 2);
+
+  // Exercise the check that only serializes instances of
+  // TestModuleFileExtension by providing an instance of another
+  // ModuleFileExtension subclass.
+  Invocation.getFrontendOpts().ModuleFileExtensions.push_back(
+      std::make_shared<DummyModuleFileExtension>());
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  ASSERT_THAT(GeneratedArgs,
+              ContainsN(HasSubstr("-ftest-module-file-extension="), 2));
+  ASSERT_THAT(
+      GeneratedArgs,
+      Contains(StrEq("-ftest-module-file-extension=first:2:1:0:first")));
+  ASSERT_THAT(
+      GeneratedArgs,
+      Contains(StrEq("-ftest-module-file-extension=second:3:2:1:second")));
+}
+
+TEST_F(CommandLineTest, RoundTrip) {
+  // Testing one marshalled and one manually generated option from each
+  // CompilerInvocation member.
+  const char *Args[] = {
+      "-round-trip-args",
+      // LanguageOptions
+      "-std=c17",
+      "-fmax-tokens=10",
+      // TargetOptions
+      "-target-sdk-version=1.2.3",
+      "-meabi",
+      "4",
+      // DiagnosticOptions
+      "-Wundef-prefix=XY",
+      "-fdiagnostics-format",
+      "clang",
+      // HeaderSearchOptions
+      "-stdlib=libc++",
+      "-fimplicit-module-maps",
+      // PreprocessorOptions
+      "-DXY=AB",
+      "-include-pch",
+      "a.pch",
+      // AnalyzerOptions
+      "-analyzer-config",
+      "ctu-import-threshold=42",
+      "-unoptimized-cfg",
+      // MigratorOptions (no manually handled arguments)
+      "-no-ns-alloc-error",
+      // CodeGenOptions
+      "-debug-info-kind=limited",
+      "-debug-info-macro",
+      // DependencyOutputOptions
+      "--show-includes",
+      "-H",
+      // FileSystemOptions (no manually handled arguments)
+      "-working-directory",
+      "folder",
+      // FrontendOptions
+      "-load",
+      "plugin",
+      "-ast-merge",
+      // PreprocessorOutputOptions
+      "-dD",
+      "-CC",
+  };
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+
+  ASSERT_TRUE(Invocation.getLangOpts()->C17);
+  ASSERT_EQ(Invocation.getLangOpts()->MaxTokens, 10u);
+
+  ASSERT_EQ(Invocation.getTargetOpts().SDKVersion, llvm::VersionTuple(1, 2, 3));
+  ASSERT_EQ(Invocation.getTargetOpts().EABIVersion, EABI::EABI4);
+
+  ASSERT_THAT(Invocation.getDiagnosticOpts().UndefPrefixes,
+              Contains(StrEq("XY")));
+  ASSERT_EQ(Invocation.getDiagnosticOpts().getFormat(),
+            TextDiagnosticFormat::Clang);
+
+  ASSERT_TRUE(Invocation.getHeaderSearchOpts().UseLibcxx);
+  ASSERT_TRUE(Invocation.getHeaderSearchOpts().ImplicitModuleMaps);
+
+  ASSERT_THAT(Invocation.getPreprocessorOpts().Macros,
+              Contains(std::make_pair(std::string("XY=AB"), false)));
+  ASSERT_EQ(Invocation.getPreprocessorOpts().ImplicitPCHInclude, "a.pch");
+
+  ASSERT_EQ(Invocation.getAnalyzerOpts()->Config["ctu-import-threshold"], "42");
+  ASSERT_TRUE(Invocation.getAnalyzerOpts()->UnoptimizedCFG);
+
+  ASSERT_TRUE(Invocation.getMigratorOpts().NoNSAllocReallocError);
+
+  ASSERT_EQ(Invocation.getCodeGenOpts().getDebugInfo(),
+            codegenoptions::DebugInfoKind::LimitedDebugInfo);
+  ASSERT_TRUE(Invocation.getCodeGenOpts().MacroDebugInfo);
+
+  ASSERT_EQ(Invocation.getDependencyOutputOpts().ShowIncludesDest,
+            ShowIncludesDestination::Stdout);
+  ASSERT_TRUE(Invocation.getDependencyOutputOpts().ShowHeaderIncludes);
+}
+
+TEST_F(CommandLineTest, PluginArgsRoundTripDeterminism) {
+  const char *Args[] = {
+      "-plugin-arg-blink-gc-plugin", "no-members-in-stack-allocated",
+      "-plugin-arg-find-bad-constructs", "checked-ptr-as-trivial-member",
+      "-plugin-arg-find-bad-constructs", "check-ipc",
+      // Enable round-trip to ensure '-plugin-arg' generation is deterministic.
+      "-round-trip-args"};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
 }
 } // anonymous namespace

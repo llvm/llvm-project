@@ -1,9 +1,10 @@
-RUN: %lld -v \
+RUN: %lld --version \
 RUN:   -dynamic \
 RUN:   -no_deduplicate \
 RUN:   -lto_library /lib/foo \
 RUN:   -macosx_version_min 0 \
 RUN:   -dependency_info /path/to/dependency_info.dat \
+RUN:   -lto_library ../lib/libLTO.dylib \
 RUN:   -mllvm -time-passes \
 RUN:   -objc_abi_version 2 \
 RUN:   -ios_simulator_version_min 9.0.0 \

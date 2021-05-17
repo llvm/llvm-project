@@ -71,7 +71,7 @@ public:
   IoErrorHandler &GetIoErrorHandler() const;
   ExternalFileUnit *GetExternalFileUnit() const; // null if internal unit
   MutableModes &mutableModes();
-  void BeginReadingRecord();
+  bool BeginReadingRecord();
   void FinishReadingRecord();
   bool Inquire(InquiryKeywordHash, char *, std::size_t);
   bool Inquire(InquiryKeywordHash, bool &);
@@ -93,9 +93,16 @@ public:
   bool EmitRepeated(char, std::size_t);
   bool EmitField(const char *, std::size_t length, std::size_t width);
 
+  // For fixed-width fields, initialize the number of remaining characters.
+  // Skip over leading blanks, then return the first non-blank character (if
+  // any).
+  std::optional<char32_t> PrepareInput(
+      const DataEdit &edit, std::optional<int> &remaining);
+
   std::optional<char32_t> SkipSpaces(std::optional<int> &remaining);
   std::optional<char32_t> NextInField(std::optional<int> &remaining);
-  std::optional<char32_t> GetNextNonBlank(); // can advance record
+  // Skips spaces, advances records, and ignores NAMELIST comments
+  std::optional<char32_t> GetNextNonBlank();
 
   template <Direction D> void CheckFormattedStmtType(const char *name) {
     if (!get_if<FormattedIoStatementState>() ||
@@ -139,7 +146,7 @@ struct IoStatementBase : public DefaultFormatControlCallbacks {
   int EndIoStatement();
   std::optional<DataEdit> GetNextDataEdit(IoStatementState &, int = 1);
   ExternalFileUnit *GetExternalFileUnit() const { return nullptr; }
-  void BeginReadingRecord() {}
+  bool BeginReadingRecord() { return true; }
   void FinishReadingRecord() {}
   bool Inquire(InquiryKeywordHash, char *, std::size_t);
   bool Inquire(InquiryKeywordHash, bool &);
@@ -148,19 +155,25 @@ struct IoStatementBase : public DefaultFormatControlCallbacks {
   void BadInquiryKeywordHashCrash(InquiryKeywordHash);
 };
 
-// Common state for list-directed internal & external I/O
+// Common state for list-directed & NAMELIST I/O, both internal & external
 template <Direction> class ListDirectedStatementState;
 template <>
 class ListDirectedStatementState<Direction::Output>
     : public FormattedIoStatementState {
 public:
-  static std::size_t RemainingSpaceInRecord(const ConnectionState &);
-  bool NeedAdvance(const ConnectionState &, std::size_t) const;
   bool EmitLeadingSpaceOrAdvance(
-      IoStatementState &, std::size_t, bool isCharacter = false);
+      IoStatementState &, std::size_t = 1, bool isCharacter = false);
   std::optional<DataEdit> GetNextDataEdit(
       IoStatementState &, int maxRepeat = 1);
-  bool lastWasUndelimitedCharacter{false};
+  bool lastWasUndelimitedCharacter() const {
+    return lastWasUndelimitedCharacter_;
+  }
+  void set_lastWasUndelimitedCharacter(bool yes = true) {
+    lastWasUndelimitedCharacter_ = yes;
+  }
+
+private:
+  bool lastWasUndelimitedCharacter_{false};
 };
 template <>
 class ListDirectedStatementState<Direction::Input>
@@ -282,7 +295,7 @@ public:
   void BackspaceRecord();
   void HandleRelativePosition(std::int64_t);
   void HandleAbsolutePosition(std::int64_t);
-  void BeginReadingRecord();
+  bool BeginReadingRecord();
   void FinishReadingRecord();
 };
 

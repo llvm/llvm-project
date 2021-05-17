@@ -1,4 +1,5 @@
-; RUN: opt -mtriple amdgcn-unknown-amdhsa -analyze -divergence -use-gpu-divergence-analysis %s | FileCheck %s
+; RUN: opt -mtriple amdgcn-unknown-amdhsa -enable-new-pm=0 -analyze -divergence -use-gpu-divergence-analysis %s | FileCheck %s
+; RUN: opt -mtriple amdgcn-unknown-amdhsa -passes='print<divergence>' -disable-output %s 2>&1 | FileCheck %s
 
 ; CHECK: bb3:
 ; CHECK: DIVERGENT:       %Guard.bb4 = phi i1 [ true, %bb1 ], [ false, %bb2 ]

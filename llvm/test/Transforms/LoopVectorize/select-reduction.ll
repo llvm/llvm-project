@@ -41,13 +41,7 @@ define i32 @test(i64 %N, i32 %x) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp sgt <4 x i32> [[TMP4]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP]], <4 x i32> [[TMP4]], <4 x i32> [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF5:%.*]] = shufflevector <4 x i32> [[RDX_MINMAX_SELECT]], <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP6:%.*]] = icmp sgt <4 x i32> [[RDX_MINMAX_SELECT]], [[RDX_SHUF5]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT7:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP6]], <4 x i32> [[RDX_MINMAX_SELECT]], <4 x i32> [[RDX_SHUF5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[RDX_MINMAX_SELECT7]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[TMP4]])
 ; CHECK-NEXT:    br i1 true, label [[EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[EXTRA_ITER]], [[LOOP_PREHEADER]] ]

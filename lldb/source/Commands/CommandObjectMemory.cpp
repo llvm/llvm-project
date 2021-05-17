@@ -356,8 +356,8 @@ protected:
       result.AppendErrorWithFormat("%s takes a start address expression with "
                                    "an optional end address expression.\n",
                                    m_cmd_name.c_str());
-      result.AppendRawWarning("Expressions should be quoted if they contain "
-                              "spaces or other special characters.\n");
+      result.AppendWarning("Expressions should be quoted if they contain "
+                           "spaces or other special characters.");
       result.SetStatus(eReturnStatusFailed);
       return false;
     }
@@ -608,7 +608,7 @@ protected:
       } else if (end_addr <= addr) {
         result.AppendErrorWithFormat(
             "end address (0x%" PRIx64
-            ") must be greater that the start address (0x%" PRIx64 ").\n",
+            ") must be greater than the start address (0x%" PRIx64 ").\n",
             end_addr, addr);
         result.SetStatus(eReturnStatusFailed);
         return false;
@@ -669,8 +669,8 @@ protected:
       }
 
       Address address(addr, nullptr);
-      bytes_read = target->ReadMemory(address, false, data_sp->GetBytes(),
-                                      data_sp->GetByteSize(), error);
+      bytes_read = target->ReadMemory(address, data_sp->GetBytes(),
+                                      data_sp->GetByteSize(), error, true);
       if (bytes_read == 0) {
         const char *error_cstr = error.AsCString();
         if (error_cstr && error_cstr[0]) {
@@ -767,10 +767,11 @@ protected:
     std::string path = outfile_spec.GetPath();
     if (outfile_spec) {
 
-      auto open_options = File::eOpenOptionWrite | File::eOpenOptionCanCreate;
+      File::OpenOptions open_options =
+          File::eOpenOptionWrite | File::eOpenOptionCanCreate;
       const bool append = m_outfile_options.GetAppend().GetCurrentValue();
-      if (append)
-        open_options |= File::eOpenOptionAppend;
+      open_options |=
+          append ? File::eOpenOptionAppend : File::eOpenOptionTruncate;
 
       auto outfile = FileSystem::Instance().Open(outfile_spec, open_options);
 
@@ -1505,7 +1506,7 @@ protected:
 
       case eFormatUnsigned:
 
-        if (!entry.ref().getAsInteger(0, uval64)) {
+        if (entry.ref().getAsInteger(0, uval64)) {
           result.AppendErrorWithFormat(
               "'%s' is not a valid unsigned decimal string value.\n",
               entry.c_str());

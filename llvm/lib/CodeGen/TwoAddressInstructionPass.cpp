@@ -801,8 +801,8 @@ bool TwoAddressInstructionPass::rescheduleMIBelowKill(
   MachineBasicBlock::iterator KillPos = KillMI;
   ++KillPos;
   for (MachineInstr &OtherMI : make_range(End, KillPos)) {
-    // Debug instructions cannot be counted against the limit.
-    if (OtherMI.isDebugInstr())
+    // Debug or pseudo instructions cannot be counted against the limit.
+    if (OtherMI.isDebugOrPseudoInstr())
       continue;
     if (NumVisited > 10)  // FIXME: Arbitrary limit to reduce compile time cost.
       return false;
@@ -974,8 +974,8 @@ bool TwoAddressInstructionPass::rescheduleKillAboveMI(
   unsigned NumVisited = 0;
   for (MachineInstr &OtherMI :
        make_range(mi, MachineBasicBlock::iterator(KillMI))) {
-    // Debug instructions cannot be counted against the limit.
-    if (OtherMI.isDebugInstr())
+    // Debug or pseudo instructions cannot be counted against the limit.
+    if (OtherMI.isDebugOrPseudoInstr())
       continue;
     if (NumVisited > 10)  // FIXME: Arbitrary limit to reduce compile time cost.
       return false;
@@ -1357,11 +1357,9 @@ void
 TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
                                             TiedPairList &TiedPairs,
                                             unsigned &Dist) {
-  bool IsEarlyClobber = false;
-  for (unsigned tpi = 0, tpe = TiedPairs.size(); tpi != tpe; ++tpi) {
-    const MachineOperand &DstMO = MI->getOperand(TiedPairs[tpi].second);
-    IsEarlyClobber |= DstMO.isEarlyClobber();
-  }
+  bool IsEarlyClobber = llvm::find_if(TiedPairs, [MI](auto const &TP) {
+                          return MI->getOperand(TP.second).isEarlyClobber();
+                        }) != TiedPairs.end();
 
   bool RemovedKillFlag = false;
   bool AllUsesCopied = true;
@@ -1369,9 +1367,9 @@ TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
   SlotIndex LastCopyIdx;
   Register RegB = 0;
   unsigned SubRegB = 0;
-  for (unsigned tpi = 0, tpe = TiedPairs.size(); tpi != tpe; ++tpi) {
-    unsigned SrcIdx = TiedPairs[tpi].first;
-    unsigned DstIdx = TiedPairs[tpi].second;
+  for (auto &TP : TiedPairs) {
+    unsigned SrcIdx = TP.first;
+    unsigned DstIdx = TP.second;
 
     const MachineOperand &DstMO = MI->getOperand(DstIdx);
     Register RegA = DstMO.getReg();
@@ -1549,9 +1547,8 @@ bool TwoAddressInstructionPass::runOnMachineFunction(MachineFunction &Func) {
       .set(MachineFunctionProperties::Property::TiedOpsRewritten);
 
   TiedOperandMap TiedOperands;
-  for (MachineFunction::iterator MBBI = MF->begin(), MBBE = MF->end();
-       MBBI != MBBE; ++MBBI) {
-    MBB = &*MBBI;
+  for (MachineBasicBlock &MBBI : *MF) {
+    MBB = &MBBI;
     unsigned Dist = 0;
     DistanceMap.clear();
     SrcRegMap.clear();

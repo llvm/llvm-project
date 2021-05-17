@@ -44,8 +44,18 @@ void doShortStringTest(MultiStringType const& MS) {
   using Alloc = std::allocator<CharT>;
   Ptr value = MS;
   const path p((const char*)MS);
+#ifdef _WIN32
+  // On Windows, charset conversions cause allocations outside of the
+  // provided allocator, but accessing the native type should work without
+  // extra allocations.
+  bool DisableAllocations = std::is_same<CharT, path::value_type>::value;
+#else
+  // On other platforms, these methods only use the provided allocator, and
+  // no extra allocations should be done.
+  bool DisableAllocations = true;
+#endif
   {
-      DisableAllocationGuard g;
+      DisableAllocationGuard g(DisableAllocations);
       Str s = p.string<CharT>();
       assert(s == value);
       Str s2 = p.string<CharT>(Alloc{});
@@ -56,7 +66,7 @@ void doShortStringTest(MultiStringType const& MS) {
   {
       using Traits = std::char_traits<CharT>;
       using AStr = std::basic_string<CharT, Traits, MAlloc>;
-      DisableAllocationGuard g;
+      DisableAllocationGuard g(DisableAllocations);
       AStr s = p.string<CharT, Traits, MAlloc>();
       assert(s == value);
       assert(MAlloc::alloc_count == 0);
@@ -66,7 +76,7 @@ void doShortStringTest(MultiStringType const& MS) {
   { // Other allocator - provided copy
       using Traits = std::char_traits<CharT>;
       using AStr = std::basic_string<CharT, Traits, MAlloc>;
-      DisableAllocationGuard g;
+      DisableAllocationGuard g(DisableAllocations);
       MAlloc a;
       // don't allow another allocator to be default constructed.
       MAlloc::disable_default_constructor = true;
@@ -94,10 +104,21 @@ void doLongStringTest(MultiStringType const& MS) {
   }
   using MAlloc = malloc_allocator<CharT>;
   MAlloc::reset();
+#ifdef _WIN32
+  // On Windows, charset conversions cause allocations outside of the
+  // provided allocator, but accessing the native type should work without
+  // extra allocations.
+  bool DisableAllocations = std::is_same<CharT, path::value_type>::value;
+#else
+  // On other platforms, these methods only use the provided allocator, and
+  // no extra allocations should be done.
+  bool DisableAllocations = true;
+#endif
+
   { // Other allocator - default construct
       using Traits = std::char_traits<CharT>;
       using AStr = std::basic_string<CharT, Traits, MAlloc>;
-      DisableAllocationGuard g;
+      DisableAllocationGuard g(DisableAllocations);
       AStr s = p.string<CharT, Traits, MAlloc>();
       assert(s == value);
       assert(MAlloc::alloc_count > 0);
@@ -107,7 +128,7 @@ void doLongStringTest(MultiStringType const& MS) {
   { // Other allocator - provided copy
       using Traits = std::char_traits<CharT>;
       using AStr = std::basic_string<CharT, Traits, MAlloc>;
-      DisableAllocationGuard g;
+      DisableAllocationGuard g(DisableAllocations);
       MAlloc a;
       // don't allow another allocator to be default constructed.
       MAlloc::disable_default_constructor = true;
@@ -129,6 +150,9 @@ int main(int, char**)
     doShortStringTest<wchar_t>(S);
     doShortStringTest<char16_t>(S);
     doShortStringTest<char32_t>(S);
+#if TEST_STD_VER > 17 && defined(__cpp_lib_char8_t)
+    doShortStringTest<char8_t>(S);
+#endif
   }
   {
     auto const& S = longString;
@@ -136,6 +160,9 @@ int main(int, char**)
     doLongStringTest<wchar_t>(S);
     doLongStringTest<char16_t>(S);
     doLongStringTest<char32_t>(S);
+#if TEST_STD_VER > 17 && defined(__cpp_lib_char8_t)
+    doLongStringTest<char8_t>(S);
+#endif
   }
 
   return 0;

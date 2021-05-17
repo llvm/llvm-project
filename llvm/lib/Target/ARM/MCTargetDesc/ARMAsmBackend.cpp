@@ -55,6 +55,10 @@ Optional<MCFixupKind> ARMAsmBackend::getFixupKind(StringRef Name) const {
 #define ELF_RELOC(X, Y) .Case(#X, Y)
 #include "llvm/BinaryFormat/ELFRelocs/ARM.def"
 #undef ELF_RELOC
+                      .Case("BFD_RELOC_NONE", ELF::R_ARM_NONE)
+                      .Case("BFD_RELOC_8", ELF::R_ARM_ABS8)
+                      .Case("BFD_RELOC_16", ELF::R_ARM_ABS16)
+                      .Case("BFD_RELOC_32", ELF::R_ARM_ABS32)
                       .Default(-1u);
   if (Type == -1u)
     return None;
@@ -80,6 +84,7 @@ const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_arm_pcrel_9", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_t2_pcrel_9", 0, 32,
        IsPCRelConstant | MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+      {"fixup_arm_ldst_abs_12", 0, 32, 0},
       {"fixup_thumb_adr_pcrel_10", 0, 8,
        IsPCRelConstant | MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_arm_adr_pcrel_12", 0, 32, IsPCRelConstant},
@@ -116,8 +121,7 @@ const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_bfc_target", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_bfcsel_else_target", 0, 32, 0},
       {"fixup_wls", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_le", 0, 32, MCFixupKindInfo::FKF_IsPCRel}
-  };
+      {"fixup_le", 0, 32, MCFixupKindInfo::FKF_IsPCRel}};
   const static MCFixupKindInfo InfosBE[ARM::NumTargetFixupKinds] = {
       // This table *must* be in the order that the fixup_* kinds are defined in
       // ARMFixupKinds.h.
@@ -134,6 +138,7 @@ const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_arm_pcrel_9", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_t2_pcrel_9", 0, 32,
        IsPCRelConstant | MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+      {"fixup_arm_ldst_abs_12", 0, 32, 0},
       {"fixup_thumb_adr_pcrel_10", 8, 8,
        IsPCRelConstant | MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_arm_adr_pcrel_12", 0, 32, IsPCRelConstant},
@@ -170,8 +175,7 @@ const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_bfc_target", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_bfcsel_else_target", 0, 32, 0},
       {"fixup_wls", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_le", 0, 32, MCFixupKindInfo::FKF_IsPCRel}
-  };
+      {"fixup_le", 0, 32, MCFixupKindInfo::FKF_IsPCRel}};
 
   // Fixup kinds from .reloc directive are like R_ARM_NONE. They do not require
   // any extra processing.
@@ -486,9 +490,11 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
     // ARM PC-relative values are offset by 8.
     Value -= 4;
     LLVM_FALLTHROUGH;
-  case ARM::fixup_t2_ldst_pcrel_12: {
+  case ARM::fixup_t2_ldst_pcrel_12:
     // Offset by 4, adjusted by two due to the half-word ordering of thumb.
     Value -= 4;
+    LLVM_FALLTHROUGH;
+  case ARM::fixup_arm_ldst_abs_12: {
     bool isAdd = true;
     if ((int64_t)Value < 0) {
       Value = -Value;
@@ -936,6 +942,7 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   case ARM::fixup_arm_ldst_pcrel_12:
   case ARM::fixup_arm_pcrel_10:
   case ARM::fixup_arm_pcrel_9:
+  case ARM::fixup_arm_ldst_abs_12:
   case ARM::fixup_arm_adr_pcrel_12:
   case ARM::fixup_arm_uncondbl:
   case ARM::fixup_arm_condbl:

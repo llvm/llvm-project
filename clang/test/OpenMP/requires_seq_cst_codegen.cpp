@@ -16,19 +16,19 @@
 // CHECK-LABEL: foo
 void foo() {
   int a = 0, b = 0;
-// CHECK: load atomic i32,{{.*}}seq_cst
+// CHECK: load atomic i32, {{.*}} seq_cst, align 4
 #pragma omp atomic read
   a = b;
-// CHECK: store atomic i32{{.*}}seq_cst
+// CHECK: store atomic i32 {{.*}} seq_cst, align 4
 #pragma omp atomic write
   a = b;
-// CHECK: atomicrmw add i32{{.*}}seq_cst
+// CHECK: atomicrmw add i32* {{.*}} seq_cst, align 4
 #pragma omp atomic
   a += 1;
-// CHECK: atomicrmw add i32{{.*}}seq_cst
+// CHECK: atomicrmw add i32* {{.*}} seq_cst, align 4
 #pragma omp atomic update
   a += 1;
-// CHECK: atomicrmw add i32{{.*}}seq_cst
+// CHECK: atomicrmw add i32* {{.*}} seq_cst, align 4
 #pragma omp atomic capture
   {
     b = a;

@@ -442,10 +442,7 @@ public:
   /// Return true if there is exactly one operand defining the specified
   /// register.
   bool hasOneDef(Register RegNo) const {
-    def_iterator DI = def_begin(RegNo);
-    if (DI == def_end())
-      return false;
-    return ++DI == def_end();
+    return hasSingleElement(def_operands(RegNo));
   }
 
   /// Returns the defining operand if there is exactly one operand defining the
@@ -511,10 +508,7 @@ public:
   /// hasOneUse - Return true if there is exactly one instruction using the
   /// specified register.
   bool hasOneUse(Register RegNo) const {
-    use_iterator UI = use_begin(RegNo);
-    if (UI == use_end())
-      return false;
-    return ++UI == use_end();
+    return hasSingleElement(use_operands(RegNo));
   }
 
   /// use_nodbg_iterator/use_nodbg_begin/use_nodbg_end - Walk all uses of the
@@ -829,12 +823,27 @@ public:
 
   /// updateDbgUsersToReg - Update a collection of DBG_VALUE instructions
   /// to refer to the designated register.
-  void updateDbgUsersToReg(Register Reg,
-                           ArrayRef<MachineInstr*> Users) const {
+  void updateDbgUsersToReg(MCRegister OldReg, MCRegister NewReg,
+                           ArrayRef<MachineInstr *> Users) const {
+    SmallSet<MCRegister, 4> OldRegUnits;
+    for (MCRegUnitIterator RUI(OldReg, getTargetRegisterInfo()); RUI.isValid();
+         ++RUI)
+      OldRegUnits.insert(*RUI);
     for (MachineInstr *MI : Users) {
-      assert(MI->isDebugInstr());
-      assert(MI->getOperand(0).isReg());
-      MI->getOperand(0).setReg(Reg);
+      assert(MI->isDebugValue());
+      for (auto &Op : MI->debug_operands()) {
+        if (Op.isReg()) {
+          for (MCRegUnitIterator RUI(OldReg, getTargetRegisterInfo());
+               RUI.isValid(); ++RUI) {
+            if (OldRegUnits.contains(*RUI)) {
+              Op.setReg(NewReg);
+              break;
+            }
+          }
+        }
+      }
+      assert(MI->hasDebugOperandForReg(NewReg) &&
+             "Expected debug value to have some overlap with OldReg");
     }
   }
 
@@ -974,12 +983,19 @@ public:
   /// returns defs.  If neither are true then you are silly and it always
   /// returns end().  If SkipDebug is true it skips uses marked Debug
   /// when incrementing.
-  template<bool ReturnUses, bool ReturnDefs, bool SkipDebug,
-           bool ByOperand, bool ByInstr, bool ByBundle>
-  class defusechain_iterator
-    : public std::iterator<std::forward_iterator_tag, MachineInstr, ptrdiff_t> {
+  template <bool ReturnUses, bool ReturnDefs, bool SkipDebug, bool ByOperand,
+            bool ByInstr, bool ByBundle>
+  class defusechain_iterator {
     friend class MachineRegisterInfo;
 
+  public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = MachineOperand;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
+  private:
     MachineOperand *Op = nullptr;
 
     explicit defusechain_iterator(MachineOperand *op) : Op(op) {
@@ -1014,11 +1030,6 @@ public:
     }
 
   public:
-    using reference = std::iterator<std::forward_iterator_tag,
-                                    MachineInstr, ptrdiff_t>::reference;
-    using pointer = std::iterator<std::forward_iterator_tag,
-                                  MachineInstr, ptrdiff_t>::pointer;
-
     defusechain_iterator() = default;
 
     bool operator==(const defusechain_iterator &x) const {
@@ -1080,12 +1091,19 @@ public:
   /// returns defs.  If neither are true then you are silly and it always
   /// returns end().  If SkipDebug is true it skips uses marked Debug
   /// when incrementing.
-  template<bool ReturnUses, bool ReturnDefs, bool SkipDebug,
-           bool ByOperand, bool ByInstr, bool ByBundle>
-  class defusechain_instr_iterator
-    : public std::iterator<std::forward_iterator_tag, MachineInstr, ptrdiff_t> {
+  template <bool ReturnUses, bool ReturnDefs, bool SkipDebug, bool ByOperand,
+            bool ByInstr, bool ByBundle>
+  class defusechain_instr_iterator {
     friend class MachineRegisterInfo;
 
+  public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = MachineInstr;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
+  private:
     MachineOperand *Op = nullptr;
 
     explicit defusechain_instr_iterator(MachineOperand *op) : Op(op) {
@@ -1120,11 +1138,6 @@ public:
     }
 
   public:
-    using reference = std::iterator<std::forward_iterator_tag,
-                                    MachineInstr, ptrdiff_t>::reference;
-    using pointer = std::iterator<std::forward_iterator_tag,
-                                  MachineInstr, ptrdiff_t>::pointer;
-
     defusechain_instr_iterator() = default;
 
     bool operator==(const defusechain_instr_iterator &x) const {

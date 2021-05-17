@@ -27,7 +27,7 @@ int main(int, char**)
 #endif
     assert( std::char_traits<char16_t>::eq_int_type(std::char_traits<char16_t>::eof(),
                                                     std::char_traits<char16_t>::eof()));
-#endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
+#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
 
   return 0;
 }

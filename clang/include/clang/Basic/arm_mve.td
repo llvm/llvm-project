@@ -1543,7 +1543,7 @@ foreach desttype = T.All in {
 let params = T.All in {
   let pnt = PNT_None in {
     def vcreateq: Intrinsic<Vector, (args u64:$a, u64:$b),
-        (bitcast (ielt_const (ielt_const (undef VecOf<u64>), $a, 0),
+        (vreinterpret (ielt_const (ielt_const (undef VecOf<u64>), $a, 0),
                              $b, 1), Vector)>;
     def vuninitializedq: Intrinsic<Vector, (args), (undef Vector)>;
   }

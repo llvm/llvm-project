@@ -63,6 +63,7 @@ public:
 protected:
   friend class SBCommandInterpreter;
   friend class SBCommunication;
+  friend class SBDebugger;
   friend class SBEvent;
   friend class SBListener;
   friend class SBProcess;

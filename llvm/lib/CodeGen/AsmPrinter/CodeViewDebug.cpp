@@ -273,9 +273,9 @@ static StringRef getPrettyScopeName(const DIScope *Scope) {
     return "<unnamed-tag>";
   case dwarf::DW_TAG_namespace:
     return "`anonymous namespace'";
+  default:
+    return StringRef();
   }
-
-  return StringRef();
 }
 
 const DISubprogram *CodeViewDebug::collectParentScopeNames(
@@ -358,6 +358,25 @@ TypeIndex CodeViewDebug::getScopeIndex(const DIScope *Scope) {
   return recordTypeIndexForDINode(Scope, TI);
 }
 
+static StringRef removeTemplateArgs(StringRef Name) {
+  // Remove template args from the display name. Assume that the template args
+  // are the last thing in the name.
+  if (Name.empty() || Name.back() != '>')
+    return Name;
+
+  int OpenBrackets = 0;
+  for (int i = Name.size() - 1; i >= 0; --i) {
+    if (Name[i] == '>')
+      ++OpenBrackets;
+    else if (Name[i] == '<') {
+      --OpenBrackets;
+      if (OpenBrackets == 0)
+        return Name.substr(0, i);
+    }
+  }
+  return Name;
+}
+
 TypeIndex CodeViewDebug::getFuncIdForSubprogram(const DISubprogram *SP) {
   assert(SP);
 
@@ -367,8 +386,9 @@ TypeIndex CodeViewDebug::getFuncIdForSubprogram(const DISubprogram *SP) {
     return I->second;
 
   // The display name includes function template arguments. Drop them to match
-  // MSVC.
-  StringRef DisplayName = SP->getName().split('<').first;
+  // MSVC. We need to have the template arguments in the DISubprogram name
+  // because they are used in other symbol records, such as S_GPROC32_IDs.
+  StringRef DisplayName = removeTemplateArgs(SP->getName());
 
   const DIScope *Scope = SP->getScope();
   TypeIndex TI;
@@ -784,6 +804,9 @@ void CodeViewDebug::emitCompilerInformation() {
   // The low byte of the flags indicates the source language.
   Flags = MapDWLangToCVLang(CU->getSourceLanguage());
   // TODO:  Figure out which other flags need to be set.
+  if (MMI->getModule()->getProfileSummary(/*IsCS*/ false) != nullptr) {
+    Flags |= static_cast<uint32_t>(CompileSym3Flags::PGO);
+  }
 
   OS.AddComment("Flags and language");
   OS.emitInt32(Flags);
@@ -794,8 +817,8 @@ void CodeViewDebug::emitCompilerInformation() {
   StringRef CompilerVersion = CU->getProducer();
   Version FrontVer = parseVersion(CompilerVersion);
   OS.AddComment("Frontend version");
-  for (int N = 0; N < 4; ++N)
-    OS.emitInt16(FrontVer.Part[N]);
+  for (int N : FrontVer.Part)
+    OS.emitInt16(N);
 
   // Some Microsoft tools, like Binscope, expect a backend version number of at
   // least 8.something, so we'll coerce the LLVM version into a form that
@@ -807,8 +830,8 @@ void CodeViewDebug::emitCompilerInformation() {
   Major = std::min<int>(Major, std::numeric_limits<uint16_t>::max());
   Version BackVer = {{ Major, 0, 0, 0 }};
   OS.AddComment("Backend version");
-  for (int N = 0; N < 4; ++N)
-    OS.emitInt16(BackVer.Part[N]);
+  for (int N : BackVer.Part)
+    OS.emitInt16(N);
 
   OS.AddComment("Null-terminated compiler version string");
   emitNullTerminatedSymbolName(OS, CompilerVersion);
@@ -1357,7 +1380,7 @@ void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
   CurFn->CSRSize = MFI.getCVBytesOfCalleeSavedRegisters();
   CurFn->FrameSize = MFI.getStackSize();
   CurFn->OffsetAdjustment = MFI.getOffsetAdjustment();
-  CurFn->HasStackRealignment = TRI->needsStackRealignment(*MF);
+  CurFn->HasStackRealignment = TRI->hasStackRealignment(*MF);
 
   // For this function S_FRAMEPROC record, figure out which codeview register
   // will be the frame pointer.
@@ -1408,6 +1431,10 @@ void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
   if (Asm->TM.getOptLevel() != CodeGenOpt::None &&
       !GV.hasOptSize() && !GV.hasOptNone())
     FPO |= FrameProcedureOptions::OptimizedForSpeed;
+  if (GV.hasProfileData()) {
+    FPO |= FrameProcedureOptions::ValidProfileCounts;
+    FPO |= FrameProcedureOptions::ProfileGuidedOptimization;
+  }
   // FIXME: Set GuardCfg when it is implemented.
   CurFn->FrameProcOpts = FPO;
 
@@ -1460,6 +1487,9 @@ static bool shouldEmitUdt(const DIType *T) {
       case dwarf::DW_TAG_class_type:
       case dwarf::DW_TAG_union_type:
         return false;
+      default:
+          // do nothing.
+          ;
       }
     }
   }
@@ -2005,10 +2035,13 @@ static MethodKind translateMethodKindFlags(const DISubprogram *SP,
 
 static TypeRecordKind getRecordKind(const DICompositeType *Ty) {
   switch (Ty->getTag()) {
-  case dwarf::DW_TAG_class_type:     return TypeRecordKind::Class;
-  case dwarf::DW_TAG_structure_type: return TypeRecordKind::Struct;
+  case dwarf::DW_TAG_class_type:
+    return TypeRecordKind::Class;
+  case dwarf::DW_TAG_structure_type:
+    return TypeRecordKind::Struct;
+  default:
+    llvm_unreachable("unexpected tag");
   }
-  llvm_unreachable("unexpected tag");
 }
 
 /// Return ClassOptions that should be present on both the forward declaration

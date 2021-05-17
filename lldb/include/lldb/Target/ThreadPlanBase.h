@@ -44,8 +44,7 @@ protected:
   ThreadPlanBase(Thread &thread);
 
 private:
-  friend lldb::ThreadPlanSP
-  Thread::QueueFundamentalPlan(bool abort_other_plans);
+  friend lldb::ThreadPlanSP Thread::QueueBasePlan(bool abort_other_plans);
 
   ThreadPlanBase(const ThreadPlanBase &) = delete;
   const ThreadPlanBase &operator=(const ThreadPlanBase &) = delete;

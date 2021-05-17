@@ -15,12 +15,19 @@
 # CHECK-SAME:                   0{{$}}
 
 ## If a section is specified multiple times, the last wins.
+## Also incidentally show that unmentioned sections are not impacted.
 # RUN: llvm-objcopy --set-section-alignment .foo=4 --set-section-alignment=.foo=7 %t %t.3
 # RUN: llvm-readobj --sections %t.3 | FileCheck --check-prefix=MULTI %s
 
 # MULTI:      Name: .foo
 # MULTI:      AddressAlignment:
 # MULTI-SAME:                   7{{$}}
+# MULTI:      Name: .bar
+# MULTI:      AddressAlignment:
+# MULTI-SAME:                   0{{$}}
+# MULTI:      Name: .baz
+# MULTI:      AddressAlignment:
+# MULTI-SAME:                   4{{$}}
 
 ## Ignore the option if the section does not exist.
 # RUN: llvm-objcopy --set-section-alignment .not_exist=4 %t.3 %t.4

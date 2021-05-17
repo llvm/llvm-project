@@ -41,24 +41,28 @@ void AMDGPUAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
 }
 
-// These arrays are indexed by address space value enum elements 0 ... to 7
-static const AliasResult ASAliasRules[8][8] = {
-  /*                    Flat       Global    Region    Group     Constant  Private   Constant 32-bit  Buffer Fat Ptr */
-  /* Flat     */        {MayAlias, MayAlias, NoAlias,  MayAlias, MayAlias, MayAlias, MayAlias,        MayAlias},
-  /* Global   */        {MayAlias, MayAlias, NoAlias , NoAlias , MayAlias, NoAlias , MayAlias,        MayAlias},
-  /* Region   */        {NoAlias,  NoAlias , MayAlias, NoAlias , NoAlias,  NoAlias , NoAlias,         NoAlias},
-  /* Group    */        {MayAlias, NoAlias , NoAlias , MayAlias, NoAlias , NoAlias , NoAlias ,        NoAlias},
-  /* Constant */        {MayAlias, MayAlias, NoAlias,  NoAlias , NoAlias , NoAlias , MayAlias,        MayAlias},
-  /* Private  */        {MayAlias, NoAlias , NoAlias , NoAlias , NoAlias , MayAlias, NoAlias ,        NoAlias},
-  /* Constant 32-bit */ {MayAlias, MayAlias, NoAlias,  NoAlias , MayAlias, NoAlias , NoAlias ,        MayAlias},
-  /* Buffer Fat Ptr  */ {MayAlias, MayAlias, NoAlias , NoAlias , MayAlias, NoAlias , MayAlias,        MayAlias}
-};
-
 static AliasResult getAliasResult(unsigned AS1, unsigned AS2) {
   static_assert(AMDGPUAS::MAX_AMDGPU_ADDRESS <= 7, "Addr space out of range");
 
   if (AS1 > AMDGPUAS::MAX_AMDGPU_ADDRESS || AS2 > AMDGPUAS::MAX_AMDGPU_ADDRESS)
-    return MayAlias;
+    return AliasResult::MayAlias;
+
+#define ASMay AliasResult::MayAlias
+#define ASNo AliasResult::NoAlias
+  // This array is indexed by address space value enum elements 0 ... to 7
+  static const AliasResult ASAliasRules[8][8] = {
+    /*                    Flat    Global Region Group  Constant Private Const32 Buf Fat Ptr */
+    /* Flat     */        {ASMay, ASMay, ASNo,  ASMay, ASMay,   ASMay,  ASMay,  ASMay},
+    /* Global   */        {ASMay, ASMay, ASNo,  ASNo,  ASMay,   ASNo,   ASMay,  ASMay},
+    /* Region   */        {ASNo,  ASNo,  ASMay, ASNo,  ASNo,    ASNo,   ASNo,   ASNo},
+    /* Group    */        {ASMay, ASNo,  ASNo,  ASMay, ASNo,    ASNo,   ASNo,   ASNo},
+    /* Constant */        {ASMay, ASMay, ASNo,  ASNo,  ASNo,    ASNo,   ASMay,  ASMay},
+    /* Private  */        {ASMay, ASNo,  ASNo,  ASNo,  ASNo,    ASMay,  ASNo,   ASNo},
+    /* Constant 32-bit */ {ASMay, ASMay, ASNo,  ASNo,  ASMay,   ASNo,   ASNo,   ASMay},
+    /* Buffer Fat Ptr  */ {ASMay, ASMay, ASNo,  ASNo,  ASMay,   ASNo,   ASMay,  ASMay}
+  };
+#undef ASMay
+#undef ASNo
 
   return ASAliasRules[AS1][AS2];
 }
@@ -70,7 +74,7 @@ AliasResult AMDGPUAAResult::alias(const MemoryLocation &LocA,
   unsigned asB = LocB.Ptr->getType()->getPointerAddressSpace();
 
   AliasResult Result = getAliasResult(asA, asB);
-  if (Result == NoAlias)
+  if (Result == AliasResult::NoAlias)
     return Result;
 
   // In general, FLAT (generic) pointers could be aliased to LOCAL or PRIVATE
@@ -87,21 +91,21 @@ AliasResult AMDGPUAAResult::alias(const MemoryLocation &LocA,
   if (asA == AMDGPUAS::FLAT_ADDRESS &&
       (asB == AMDGPUAS::LOCAL_ADDRESS || asB == AMDGPUAS::PRIVATE_ADDRESS)) {
     const auto *ObjA =
-        getUnderlyingObject(A.Ptr->stripPointerCastsAndInvariantGroups());
+        getUnderlyingObject(A.Ptr->stripPointerCastsForAliasAnalysis());
     if (const LoadInst *LI = dyn_cast<LoadInst>(ObjA)) {
       // If a generic pointer is loaded from the constant address space, it
       // could only be a GLOBAL or CONSTANT one as that address space is soley
       // prepared on the host side, where only GLOBAL or CONSTANT variables are
       // visible. Note that this even holds for regular functions.
       if (LI->getPointerAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS)
-        return NoAlias;
+        return AliasResult::NoAlias;
     } else if (const Argument *Arg = dyn_cast<Argument>(ObjA)) {
       const Function *F = Arg->getParent();
       switch (F->getCallingConv()) {
       case CallingConv::AMDGPU_KERNEL:
         // In the kernel function, kernel arguments won't alias to (local)
         // variables in shared or private address space.
-        return NoAlias;
+        return AliasResult::NoAlias;
       default:
         // TODO: In the regular function, if that local variable in the
         // location B is not captured, that argument pointer won't alias to it

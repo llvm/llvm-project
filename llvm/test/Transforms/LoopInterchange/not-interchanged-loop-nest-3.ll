@@ -13,10 +13,10 @@ target triple = "x86_64-unknown-linux-gnu"
 ;;      for(int k=0;k<100;k++)
 ;;        D[i][k][j] = D[i][k][j]+t;
 
-; CHECK: Processing Inner Loop Id = 2 and OuterLoopId = 1
+; CHECK: Processing InnerLoopId = 2 and OuterLoopId = 1
 ; CHECK: Loops interchanged.
 
-; CHECK: Processing Inner Loop Id = 1 and OuterLoopId = 0
+; CHECK: Processing InnerLoopId = 1 and OuterLoopId = 0
 ; CHECK: Interchanging loops not profitable.
 
 define void @interchange_08(i32 %t){

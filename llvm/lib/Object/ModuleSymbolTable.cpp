@@ -100,8 +100,8 @@ initializeRecordStreamer(const Module &M,
     return;
 
   MCObjectFileInfo MOFI;
-  MCContext MCCtx(MAI.get(), MRI.get(), &MOFI);
-  MOFI.InitMCObjectFileInfo(TT, /*PIC*/ false, MCCtx);
+  MCContext MCCtx(TT, MAI.get(), MRI.get(), &MOFI, STI.get());
+  MOFI.initMCObjectFileInfo(MCCtx, /*PIC=*/false);
   MOFI.setSDKVersion(M.getSDKVersion());
   RecordStreamer Streamer(MCCtx, M);
   T->createNullTargetStreamer(Streamer);

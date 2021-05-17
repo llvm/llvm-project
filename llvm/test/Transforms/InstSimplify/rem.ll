@@ -326,27 +326,8 @@ define <2 x i32> @srem_with_sext_bool_divisor_vec(<2 x i1> %x, <2 x i32> %y) {
 }
 
 define i8 @srem_minusone_divisor() {
-; CHECK-LABEL: @srem_minusone_divisor(
-; CHECK-NEXT:    ret i8 poison
-;
+; CHECK-LABEL: @srem_minusone_divisor
+; CHECK-NEXT:   ret i8 poison
   %v = srem i8 -128, -1
   ret i8 %v
-}
-
-define i32 @poison(i32 %x) {
-; CHECK-LABEL: @poison(
-; CHECK-NEXT:    ret i32 poison
-;
-  %v = urem i32 %x, poison
-  ret i32 %v
-}
-
-; TODO: this should be poison
-
-define i32 @poison2(i32 %x) {
-; CHECK-LABEL: @poison2(
-; CHECK-NEXT:    ret i32 0
-;
-  %v = urem i32 poison, %x
-  ret i32 %v
 }

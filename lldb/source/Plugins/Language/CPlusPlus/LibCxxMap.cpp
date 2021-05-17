@@ -26,7 +26,6 @@ class MapEntry {
 public:
   MapEntry() = default;
   explicit MapEntry(ValueObjectSP entry_sp) : m_entry_sp(entry_sp) {}
-  MapEntry(const MapEntry &rhs) = default;
   explicit MapEntry(ValueObject *entry)
       : m_entry_sp(entry ? entry->GetSP() : ValueObjectSP()) {}
 
@@ -86,9 +85,9 @@ class MapIterator {
 public:
   MapIterator() = default;
   MapIterator(MapEntry entry, size_t depth = 0)
-      : m_entry(entry), m_max_depth(depth), m_error(false) {}
+      : m_entry(std::move(entry)), m_max_depth(depth), m_error(false) {}
   MapIterator(ValueObjectSP entry, size_t depth = 0)
-      : m_entry(entry), m_max_depth(depth), m_error(false) {}
+      : m_entry(std::move(entry)), m_max_depth(depth), m_error(false) {}
   MapIterator(const MapIterator &rhs)
       : m_entry(rhs.m_entry), m_max_depth(rhs.m_max_depth), m_error(false) {}
   MapIterator(ValueObject *entry, size_t depth = 0)
@@ -138,7 +137,7 @@ protected:
   }
 
 private:
-  MapEntry tree_min(MapEntry &&x) {
+  MapEntry tree_min(MapEntry x) {
     if (x.null())
       return MapEntry();
     MapEntry left(x.left());

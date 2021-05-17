@@ -24,6 +24,10 @@ def verbose: F<"verbose">,
   HelpText<"Enable verbose mode.">,
   Group<grp_general>;
 
+def keep_func_for_static: F<"keep-function-for-static">,
+  HelpText<"Make a static variable keep the enclosing function even if it would have been omitted otherwise.">,
+  Group<grp_general>;
+
 def statistics: F<"statistics">,
   HelpText<"Print statistics about the contribution of each object file to "
            "the linked debug info. This prints a table after linking with the "
@@ -81,19 +85,6 @@ def: Flag<["-"], "f">,
   HelpText<"Alias for --flat">,
   Group<grp_general>;
 
-def minimize: F<"minimize">,
-  HelpText<"When used when creating a dSYM file with Apple accelerator tables, "
-           "this option will suppress the emission of the .debug_inlines, "
-           ".debug_pubnames, and .debug_pubtypes sections since dsymutil "
-           "has better equivalents: .apple_names and .apple_types. When used in "
-           "conjunction with --update option, this option will cause redundant "
-           "accelerator tables to be removed.">,
-  Group<grp_general>;
-def: Flag<["-"], "z">,
-  Alias<minimize>,
-  HelpText<"Alias for --minimize">,
-  Group<grp_general>;
-
 def update: F<"update">,
   HelpText<"Updates existing dSYM files to contain the latest accelerator tables and other DWARF optimizations.">,
   Group<grp_general>;
@@ -146,7 +137,7 @@ def: Joined<["--", "-"], "arch=">, Alias<arch>;
 
 def accelerator: Separate<["--", "-"], "accelerator">,
   MetaVarName<"<accelerator type>">,
-  HelpText<"Specify the desired type of accelerator table. Valid options are 'Apple', 'Dwarf' and 'Default'">,
+  HelpText<"Specify the desired type of accelerator table. Valid options are 'Apple' (.apple_names, .apple_namespaces, .apple_types, .apple_objc), 'Dwarf' (.debug_names), 'Pub' (.debug_pubnames, .debug_pubtypes) and 'Default'">,
   Group<grp_general>;
 def: Joined<["--", "-"], "accelerator=">, Alias<accelerator>;
 

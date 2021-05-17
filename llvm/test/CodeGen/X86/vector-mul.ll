@@ -55,7 +55,7 @@ define <16 x i8> @mul_v16i8_32(<16 x i8> %a0) nounwind {
 ; X86-SSE-LABEL: mul_v16i8_32:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    psllw $5, %xmm0
-; X86-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: mul_v16i8_32:
@@ -118,7 +118,7 @@ define <2 x i64> @mul_v2i64_32_8(<2 x i64> %a0) nounwind {
 define <4 x i32> @mul_v4i32_1_2_4_8(<4 x i32> %a0) nounwind {
 ; X86-SSE-LABEL: mul_v4i32_1_2_4_8:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pmulld {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    pmulld {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: mul_v4i32_1_2_4_8:
@@ -147,7 +147,7 @@ define <4 x i32> @mul_v4i32_1_2_4_8(<4 x i32> %a0) nounwind {
 define <8 x i16> @mul_v8i16_1_2_4_8_16_32_64_128(<8 x i16> %a0) nounwind {
 ; X86-SSE-LABEL: mul_v8i16_1_2_4_8_16_32_64_128:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pmullw {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    pmullw {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: mul_v8i16_1_2_4_8_16_32_64_128:
@@ -250,7 +250,7 @@ define <2 x i64> @mul_v2i64_17(<2 x i64> %a0) nounwind {
 define <4 x i32> @mul_v4i32_17(<4 x i32> %a0) nounwind {
 ; X86-SSE-LABEL: mul_v4i32_17:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pmulld {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    pmulld {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: mul_v4i32_17:
@@ -280,7 +280,7 @@ define <4 x i32> @mul_v4i32_17(<4 x i32> %a0) nounwind {
 define <8 x i16> @mul_v8i16_17(<8 x i16> %a0) nounwind {
 ; X86-SSE-LABEL: mul_v8i16_17:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pmullw {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    pmullw {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: mul_v8i16_17:
@@ -301,7 +301,7 @@ define <16 x i8> @mul_v16i8_17(<16 x i8> %a0) nounwind {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movdqa %xmm0, %xmm1
 ; X86-SSE-NEXT:    psllw $4, %xmm1
-; X86-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm1
+; X86-SSE-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE-NEXT:    paddb %xmm0, %xmm1
 ; X86-SSE-NEXT:    movdqa %xmm1, %xmm0
 ; X86-SSE-NEXT:    retl
@@ -523,7 +523,7 @@ define <2 x i64> @mul_v2i64_neg1025(<2 x i64> %a0) nounwind {
 define <4 x i32> @mul_v4i32_neg33(<4 x i32> %a0) nounwind {
 ; X86-SSE-LABEL: mul_v4i32_neg33:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pmulld {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    pmulld {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: mul_v4i32_neg33:
@@ -553,7 +553,7 @@ define <4 x i32> @mul_v4i32_neg33(<4 x i32> %a0) nounwind {
 define <8 x i16> @mul_v8i16_neg9(<8 x i16> %a0) nounwind {
 ; X86-SSE-LABEL: mul_v8i16_neg9:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pmullw {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    pmullw {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: mul_v8i16_neg9:
@@ -574,7 +574,7 @@ define <16 x i8> @mul_v16i8_neg5(<16 x i8> %a0) nounwind {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movdqa %xmm0, %xmm1
 ; X86-SSE-NEXT:    psllw $2, %xmm1
-; X86-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm1
+; X86-SSE-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE-NEXT:    paddb %xmm0, %xmm1
 ; X86-SSE-NEXT:    pxor %xmm0, %xmm0
 ; X86-SSE-NEXT:    psubb %xmm1, %xmm0
@@ -845,7 +845,7 @@ define <2 x i64> @mul_v2i64_17_65(<2 x i64> %a0) nounwind {
 define <4 x i32> @mul_v4i32_5_17_33_65(<4 x i32> %a0) nounwind {
 ; X86-SSE-LABEL: mul_v4i32_5_17_33_65:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pmulld {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    pmulld {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: mul_v4i32_5_17_33_65:
@@ -864,7 +864,7 @@ define <4 x i32> @mul_v4i32_5_17_33_65(<4 x i32> %a0) nounwind {
 define <8 x i16> @mul_v8i16_2_3_9_17_33_65_129_257(<8 x i16> %a0) nounwind {
 ; X86-SSE-LABEL: mul_v8i16_2_3_9_17_33_65_129_257:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pmullw {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    pmullw {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: mul_v8i16_2_3_9_17_33_65_129_257:
@@ -885,10 +885,10 @@ define <16 x i8> @mul_v16i8_2_3_9_17_33_65_129_2_3_9_17_33_65_129_2_3(<16 x i8> 
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    pmovzxbw {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; X86-SSE-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; X86-SSE-NEXT:    pmullw {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    pmullw {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
 ; X86-SSE-NEXT:    pand %xmm2, %xmm0
-; X86-SSE-NEXT:    pmullw {{\.LCPI.*}}, %xmm1
+; X86-SSE-NEXT:    pmullw {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE-NEXT:    pand %xmm2, %xmm1
 ; X86-SSE-NEXT:    packuswb %xmm0, %xmm1
 ; X86-SSE-NEXT:    movdqa %xmm1, %xmm0
@@ -974,7 +974,7 @@ define <2 x i64> @mul_v2i64_7(<2 x i64> %a0) nounwind {
 define <4 x i32> @mul_v4i32_7(<4 x i32> %a0) nounwind {
 ; X86-SSE-LABEL: mul_v4i32_7:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pmulld {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    pmulld {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: mul_v4i32_7:
@@ -1004,7 +1004,7 @@ define <4 x i32> @mul_v4i32_7(<4 x i32> %a0) nounwind {
 define <8 x i16> @mul_v8i16_7(<8 x i16> %a0) nounwind {
 ; X86-SSE-LABEL: mul_v8i16_7:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pmullw {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    pmullw {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: mul_v8i16_7:
@@ -1025,7 +1025,7 @@ define <16 x i8> @mul_v16i8_31(<16 x i8> %a0) nounwind {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movdqa %xmm0, %xmm1
 ; X86-SSE-NEXT:    psllw $5, %xmm1
-; X86-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm1
+; X86-SSE-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE-NEXT:    psubb %xmm0, %xmm1
 ; X86-SSE-NEXT:    movdqa %xmm1, %xmm0
 ; X86-SSE-NEXT:    retl
@@ -1097,7 +1097,7 @@ define <2 x i64> @mul_v2i64_neg7(<2 x i64> %a0) nounwind {
 define <4 x i32> @mul_v4i32_neg63(<4 x i32> %a0) nounwind {
 ; X86-SSE-LABEL: mul_v4i32_neg63:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pmulld {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    pmulld {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: mul_v4i32_neg63:
@@ -1127,7 +1127,7 @@ define <4 x i32> @mul_v4i32_neg63(<4 x i32> %a0) nounwind {
 define <8 x i16> @mul_v8i16_neg31(<8 x i16> %a0) nounwind {
 ; X86-SSE-LABEL: mul_v8i16_neg31:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pmullw {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    pmullw {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: mul_v8i16_neg31:
@@ -1148,7 +1148,7 @@ define <16 x i8> @mul_v16i8_neg15(<16 x i8> %a0) nounwind {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movdqa %xmm0, %xmm1
 ; X86-SSE-NEXT:    psllw $4, %xmm1
-; X86-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm1
+; X86-SSE-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE-NEXT:    psubb %xmm1, %xmm0
 ; X86-SSE-NEXT:    retl
 ;
@@ -1503,7 +1503,7 @@ define <2 x i64> @mul_v2i64_15_neg_63(<2 x i64> %a0) nounwind {
 define <4 x i32> @mul_v4i32_0_15_31_7(<4 x i32> %a0) nounwind {
 ; X86-SSE-LABEL: mul_v4i32_0_15_31_7:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pmulld {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    pmulld {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: mul_v4i32_0_15_31_7:
@@ -1522,7 +1522,7 @@ define <4 x i32> @mul_v4i32_0_15_31_7(<4 x i32> %a0) nounwind {
 define <8 x i16> @mul_v8i16_0_1_7_15_31_63_127_255(<8 x i16> %a0) nounwind {
 ; X86-SSE-LABEL: mul_v8i16_0_1_7_15_31_63_127_255:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pmullw {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    pmullw {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: mul_v8i16_0_1_7_15_31_63_127_255:

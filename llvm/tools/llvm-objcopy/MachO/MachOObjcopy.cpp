@@ -17,6 +17,8 @@
 #include "llvm/Object/MachOUniversalWriter.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/Support/SmallVectorMemoryBuffer.h"
 
 namespace llvm {
 namespace objcopy {
@@ -93,6 +95,8 @@ static void updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
 
   auto RemovePred = [Config, &Obj](const std::unique_ptr<SymbolEntry> &N) {
     if (N->Referenced)
+      return false;
+    if (Config.KeepUndefined && N->isUndefinedSymbol())
       return false;
     if (Config.StripAll)
       return true;
@@ -327,14 +331,12 @@ static Error isValidMachOCannonicalName(StringRef Name) {
 }
 
 static Error handleArgs(const CopyConfig &Config, Object &Obj) {
-  if (Config.AllowBrokenLinks || !Config.BuildIdLinkDir.empty() ||
-      Config.BuildIdLinkInput || Config.BuildIdLinkOutput ||
-      !Config.SplitDWO.empty() || !Config.SymbolsPrefix.empty() ||
-      !Config.AllocSectionsPrefix.empty() || !Config.KeepSection.empty() ||
-      Config.NewSymbolVisibility || !Config.SymbolsToGlobalize.empty() ||
-      !Config.SymbolsToKeep.empty() || !Config.SymbolsToLocalize.empty() ||
-      !Config.SymbolsToWeaken.empty() || !Config.SymbolsToKeepGlobal.empty() ||
-      !Config.SectionsToRename.empty() ||
+  if (Config.AllowBrokenLinks || !Config.SplitDWO.empty() ||
+      !Config.SymbolsPrefix.empty() || !Config.AllocSectionsPrefix.empty() ||
+      !Config.KeepSection.empty() || Config.NewSymbolVisibility ||
+      !Config.SymbolsToGlobalize.empty() || !Config.SymbolsToKeep.empty() ||
+      !Config.SymbolsToLocalize.empty() || !Config.SymbolsToWeaken.empty() ||
+      !Config.SymbolsToKeepGlobal.empty() || !Config.SectionsToRename.empty() ||
       !Config.UnneededSymbolsToRemove.empty() ||
       !Config.SetSectionAlignment.empty() || !Config.SetSectionFlags.empty() ||
       Config.ExtractDWO || Config.LocalizeHidden || Config.PreserveDates ||
@@ -386,7 +388,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
 }
 
 Error executeObjcopyOnBinary(const CopyConfig &Config,
-                             object::MachOObjectFile &In, Buffer &Out) {
+                             object::MachOObjectFile &In, raw_ostream &Out) {
   MachOReader Reader(In);
   Expected<std::unique_ptr<Object>> O = Reader.create();
   if (!O)
@@ -416,7 +418,7 @@ Error executeObjcopyOnBinary(const CopyConfig &Config,
 
 Error executeObjcopyOnMachOUniversalBinary(CopyConfig &Config,
                                            const MachOUniversalBinary &In,
-                                           Buffer &Out) {
+                                           raw_ostream &Out) {
   SmallVector<OwningBinary<Binary>, 2> Binaries;
   SmallVector<Slice, 2> Slices;
   for (const auto &O : In.objects()) {
@@ -460,27 +462,28 @@ Error executeObjcopyOnMachOUniversalBinary(CopyConfig &Config,
                                Config.InputFilename.str().c_str());
     }
     std::string ArchFlagName = O.getArchFlagName();
-    MemBuffer MB(ArchFlagName);
-    if (Error E = executeObjcopyOnBinary(Config, **ObjOrErr, MB))
+
+    SmallVector<char, 0> Buffer;
+    raw_svector_ostream MemStream(Buffer);
+
+    if (Error E = executeObjcopyOnBinary(Config, **ObjOrErr, MemStream))
       return E;
-    std::unique_ptr<WritableMemoryBuffer> OutputBuffer =
-        MB.releaseMemoryBuffer();
-    Expected<std::unique_ptr<Binary>> BinaryOrErr =
-        object::createBinary(*OutputBuffer);
+
+    std::unique_ptr<MemoryBuffer> MB =
+        std::make_unique<SmallVectorMemoryBuffer>(std::move(Buffer),
+                                                  ArchFlagName);
+    Expected<std::unique_ptr<Binary>> BinaryOrErr = object::createBinary(*MB);
     if (!BinaryOrErr)
       return BinaryOrErr.takeError();
-    Binaries.emplace_back(std::move(*BinaryOrErr), std::move(OutputBuffer));
+    Binaries.emplace_back(std::move(*BinaryOrErr), std::move(MB));
     Slices.emplace_back(*cast<MachOObjectFile>(Binaries.back().getBinary()),
                         O.getAlign());
   }
-  Expected<std::unique_ptr<MemoryBuffer>> B =
-      writeUniversalBinaryToBuffer(Slices);
-  if (!B)
-    return B.takeError();
-  if (Error E = Out.allocate((*B)->getBufferSize()))
-    return E;
-  memcpy(Out.getBufferStart(), (*B)->getBufferStart(), (*B)->getBufferSize());
-  return Out.commit();
+
+  if (Error Err = writeUniversalBinaryToStream(Slices, Out))
+    return Err;
+
+  return Error::success();
 }
 
 } // end namespace macho

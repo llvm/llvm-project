@@ -1,0 +1,7 @@
+
+namespace std
+{
+
+struct nothrow_t { explicit nothrow_t() = default; };
+
+}

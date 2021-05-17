@@ -19,14 +19,19 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 
 namespace llvm {
 
 class AMDGPUTargetLowering;
+class AMDGPUTargetMachine;
+class GCNSubtarget;
 class InstCombiner;
 class Loop;
+class R600Subtarget;
 class ScalarEvolution;
+class SITargetLowering;
 class Type;
 class Value;
 
@@ -38,7 +43,7 @@ class AMDGPUTTIImpl final : public BasicTTIImplBase<AMDGPUTTIImpl> {
 
   Triple TargetTriple;
 
-  const GCNSubtarget *ST;
+  const TargetSubtargetInfo *ST;
   const TargetLoweringBase *TLI;
 
   const TargetSubtargetInfo *getST() const { return ST; }
@@ -68,34 +73,10 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
   bool HasFP64FP16Denormals;
   unsigned MaxVGPRs;
 
-  const FeatureBitset InlineFeatureIgnoreList = {
-    // Codegen control options which don't matter.
-    AMDGPU::FeatureEnableLoadStoreOpt,
-    AMDGPU::FeatureEnableSIScheduler,
-    AMDGPU::FeatureEnableUnsafeDSOffsetFolding,
-    AMDGPU::FeatureFlatForGlobal,
-    AMDGPU::FeaturePromoteAlloca,
-    AMDGPU::FeatureUnalignedScratchAccess,
-    AMDGPU::FeatureUnalignedAccessMode,
-
-    AMDGPU::FeatureAutoWaitcntBeforeBarrier,
-
-    // Property of the kernel/environment which can't actually differ.
-    AMDGPU::FeatureSGPRInitBug,
-    AMDGPU::FeatureXNACK,
-    AMDGPU::FeatureTrapHandler,
-
-    // The default assumption needs to be ecc is enabled, but no directly
-    // exposed operations depend on it, so it can be safely inlined.
-    AMDGPU::FeatureSRAMECC,
-
-    // Perf-tuning features
-    AMDGPU::FeatureFastFMAF32,
-    AMDGPU::HalfRate64Ops
-  };
+  static const FeatureBitset InlineFeatureIgnoreList;
 
   const GCNSubtarget *getST() const { return ST; }
-  const AMDGPUTargetLowering *getTLI() const { return TLI; }
+  const SITargetLowering *getTLI() const { return TLI; }
 
   static inline int getFullRateInstrCost() {
     return TargetTransformInfo::TCC_Basic;
@@ -117,11 +98,8 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
 
   // On some parts, normal fp64 operations are half rate, and others
   // quarter. This also applies to some integer operations.
-  inline int get64BitInstrCost(
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const {
-    return ST->hasHalfRate64Ops() ? getHalfRateInstrCost(CostKind)
-                                  : getQuarterRateInstrCost(CostKind);
-  }
+  int get64BitInstrCost(
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
 public:
   explicit GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F);
@@ -143,7 +121,7 @@ public:
   unsigned getHardwareNumberOfRegisters(bool Vector) const;
   unsigned getNumberOfRegisters(bool Vector) const;
   unsigned getNumberOfRegisters(unsigned RCID) const;
-  unsigned getRegisterBitWidth(bool Vector) const;
+  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind Vector) const;
   unsigned getMinVectorRegisterBitWidth() const;
   unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const;
   unsigned getLoadVectorFactor(unsigned VF, unsigned LoadSize,
@@ -175,7 +153,7 @@ public:
 
   bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info) const;
 
-  int getArithmeticInstrCost(
+  InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,
@@ -185,12 +163,14 @@ public:
       ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
       const Instruction *CxtI = nullptr);
 
-  unsigned getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind);
+  InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
+                                 const Instruction *I = nullptr);
 
   bool isInlineAsmSourceOfDivergence(const CallInst *CI,
                                      ArrayRef<unsigned> Indices = {}) const;
 
-  int getVectorInstrCost(unsigned Opcode, Type *ValTy, unsigned Index);
+  InstructionCost getVectorInstrCost(unsigned Opcode, Type *ValTy,
+                                     unsigned Index);
   bool isSourceOfDivergence(const Value *V) const;
   bool isAlwaysUniform(const Value *V) const;
 
@@ -217,29 +197,29 @@ public:
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
           SimplifyAndSetOp) const;
 
-  unsigned getVectorSplitCost() { return 0; }
+  InstructionCost getVectorSplitCost() { return 0; }
 
-  unsigned getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, int Index,
-                          VectorType *SubTp);
+  InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
+                                 ArrayRef<int> Mask, int Index,
+                                 VectorType *SubTp);
 
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const;
 
   unsigned getInliningThresholdMultiplier() { return 11; }
+  unsigned adjustInliningThreshold(const CallBase *CB) const;
 
   int getInlinerVectorBonusPercent() { return 0; }
 
-  int getArithmeticReductionCost(
-      unsigned Opcode,
-      VectorType *Ty,
-      bool IsPairwise,
+  InstructionCost getArithmeticReductionCost(
+      unsigned Opcode, VectorType *Ty, bool IsPairwise,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput);
 
-  int getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                            TTI::TargetCostKind CostKind);
-  int getMinMaxReductionCost(
-    VectorType *Ty, VectorType *CondTy, bool IsPairwiseForm, bool IsUnsigned,
-    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput);
+  InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                        TTI::TargetCostKind CostKind);
+  InstructionCost getMinMaxReductionCost(
+      VectorType *Ty, VectorType *CondTy, bool IsPairwiseForm, bool IsUnsigned,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput);
 };
 
 class R600TTIImpl final : public BasicTTIImplBase<R600TTIImpl> {
@@ -264,7 +244,7 @@ public:
                              TTI::PeelingPreferences &PP);
   unsigned getHardwareNumberOfRegisters(bool Vec) const;
   unsigned getNumberOfRegisters(bool Vec) const;
-  unsigned getRegisterBitWidth(bool Vector) const;
+  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind Vector) const;
   unsigned getMinVectorRegisterBitWidth() const;
   unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const;
   bool isLegalToVectorizeMemChain(unsigned ChainSizeInBytes, Align Alignment,
@@ -274,8 +254,10 @@ public:
   bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes, Align Alignment,
                                     unsigned AddrSpace) const;
   unsigned getMaxInterleaveFactor(unsigned VF);
-  unsigned getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind);
-  int getVectorInstrCost(unsigned Opcode, Type *ValTy, unsigned Index);
+  InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
+                                 const Instruction *I = nullptr);
+  InstructionCost getVectorInstrCost(unsigned Opcode, Type *ValTy,
+                                     unsigned Index);
 };
 
 } // end namespace llvm

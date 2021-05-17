@@ -119,7 +119,7 @@ void RegScavenger::determineKillsAndDefs() {
   DefRegUnits.reset();
   for (const MachineOperand &MO : MI.operands()) {
     if (MO.isRegMask()) {
-      TmpRegUnits.clear();
+      TmpRegUnits.reset();
       for (unsigned RU = 0, RUEnd = TRI->getNumRegUnits(); RU != RUEnd; ++RU) {
         for (MCRegUnitRootIterator RURI(RU, TRI); RURI.isValid(); ++RURI) {
           if (MO.clobbersPhysReg(*RURI)) {
@@ -167,16 +167,15 @@ void RegScavenger::forward() {
 
   MachineInstr &MI = *MBBI;
 
-  for (SmallVectorImpl<ScavengedInfo>::iterator I = Scavenged.begin(),
-         IE = Scavenged.end(); I != IE; ++I) {
-    if (I->Restore != &MI)
+  for (ScavengedInfo &I : Scavenged) {
+    if (I.Restore != &MI)
       continue;
 
-    I->Reg = 0;
-    I->Restore = nullptr;
+    I.Reg = 0;
+    I.Restore = nullptr;
   }
 
-  if (MI.isDebugInstr())
+  if (MI.isDebugOrPseudoInstr())
     return;
 
   determineKillsAndDefs();
@@ -299,7 +298,7 @@ Register RegScavenger::findSurvivorReg(MachineBasicBlock::iterator StartMI,
 
   bool inVirtLiveRange = false;
   for (++MI; InstrLimit > 0 && MI != ME; ++MI, --InstrLimit) {
-    if (MI->isDebugInstr()) {
+    if (MI->isDebugOrPseudoInstr()) {
       ++InstrLimit; // Don't count debug instructions
       continue;
     }
@@ -370,6 +369,10 @@ findSurvivorBackwards(const MachineRegisterInfo &MRI,
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
   LiveRegUnits Used(TRI);
 
+  assert(From->getParent() == To->getParent() &&
+         "Target instruction is in other than current basic block, use "
+         "enterBasicBlockEnd first");
+
   for (MachineBasicBlock::iterator I = From;; --I) {
     const MachineInstr &MI = *I;
 
@@ -424,6 +427,8 @@ findSurvivorBackwards(const MachineRegisterInfo &MRI,
       if (I == MBB.begin())
         break;
     }
+    assert(I != MBB.begin() && "Did not find target instruction while "
+                               "iterating backwards");
   }
 
   return std::make_pair(Survivor, Pos);

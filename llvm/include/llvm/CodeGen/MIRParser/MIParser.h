@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_CODEGEN_MIRPARSER_MIPARSER_H
-#define LLVM_LIB_CODEGEN_MIRPARSER_MIPARSER_H
+#ifndef LLVM_CODEGEN_MIRPARSER_MIPARSER_H
+#define LLVM_CODEGEN_MIRPARSER_MIPARSER_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
@@ -235,4 +235,4 @@ bool parseMDNode(PerFunctionMIParsingState &PFS, MDNode *&Node, StringRef Src,
 
 } // end namespace llvm
 
-#endif // LLVM_LIB_CODEGEN_MIRPARSER_MIPARSER_H
+#endif // LLVM_CODEGEN_MIRPARSER_MIPARSER_H

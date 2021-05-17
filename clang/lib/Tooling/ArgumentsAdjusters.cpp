@@ -62,7 +62,8 @@ ArgumentsAdjuster getClangSyntaxOnlyAdjuster() {
         HasSyntaxOnly = true;
     }
     if (!HasSyntaxOnly)
-      AdjustedArgs.push_back("-fsyntax-only");
+      AdjustedArgs =
+          getInsertArgumentAdjuster("-fsyntax-only")(AdjustedArgs, "");
     return AdjustedArgs;
   };
 }
@@ -137,7 +138,7 @@ ArgumentsAdjuster getInsertArgumentAdjuster(const CommandLineArguments &Extra,
 
     CommandLineArguments::iterator I;
     if (Pos == ArgumentInsertPosition::END) {
-      I = Return.end();
+      I = std::find(Return.begin(), Return.end(), "--");
     } else {
       I = Return.begin();
       ++I; // To leave the program name in place

@@ -252,6 +252,13 @@ def FeatureMMA : SubtargetFeature<"mma", "HasMMA", "true",
                                   "Enable MMA instructions",
                                   [FeatureP8Vector, FeatureP9Altivec,
                                    FeaturePairedVectorMemops]>;
+def FeatureROPProtect :
+  SubtargetFeature<"rop-protect", "HasROPProtect", "true",
+                   "Add ROP protect">;
+
+def FeaturePrivileged :
+  SubtargetFeature<"privileged", "HasPrivileged", "true",
+                   "Add privileged instructions">;
 
 def FeaturePredictableSelectIsExpensive :
   SubtargetFeature<"predictable-select-expensive",

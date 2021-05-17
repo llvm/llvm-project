@@ -49,7 +49,7 @@ int main(int, char**)
 #endif
 
     {
-// https://bugs.llvm.org/show_bug.cgi?id=31454
+// https://llvm.org/PR31454
     std::basic_string<veryLarge> s;
     veryLarge vl = {};
     s.push_back(vl);

@@ -238,6 +238,8 @@ public:
     MP_Constructor = 0x2,
     MP_Private = 0x4,
     MP_Declaration = 0x8,
+    MP_Inline = 0x10,
+    MP_Constexpr = 0x20 | MP_Inline,
     MP_StaticDeclaration = MP_Static | MP_Declaration,
   };
 
@@ -259,6 +261,9 @@ public:
 
   // Returns true if this is a private method.
   bool isPrivate() const { return properties & MP_Private; }
+
+  // Returns true if this is an inline method.
+  bool isInline() const { return properties & MP_Inline; }
 
   // Returns the name of this method.
   StringRef getName() const { return methodSignature.getName(); }

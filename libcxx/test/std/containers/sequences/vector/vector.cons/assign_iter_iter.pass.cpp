@@ -45,7 +45,7 @@ void test_emplaceable_concept() {
   }
   {
     using T = EmplaceConstructibleMoveableAndAssignable<int>;
-    using It = input_iterator<int*>;
+    using It = cpp17_input_iterator<int*>;
     {
       std::vector<T> v;
       v.assign(It(arr1), It(std::end(arr1)));

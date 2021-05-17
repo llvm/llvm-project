@@ -72,12 +72,15 @@ are welcome:
 * macOS debugging for i386, x86_64 and AArch64
 * iOS, tvOS, and watchOS simulator debugging on i386, x86_64 and AArch64
 * iOS, tvOS, and watchOS device debugging on ARM and AArch64
-* Linux user-space debugging for i386, x86_64 and PPC64le
-* FreeBSD user-space debugging for i386 and x86_64
-* Windows user-space debugging for i386 (*)
+* Linux user-space debugging for i386, x86_64, ARM, AArch64, MIPS64, PPC64le,
+  s390x
+* FreeBSD user-space debugging for i386, x86_64, ARM, AArch64, MIPS64, PPC
+* NetBSD user-space debugging for i386 and x86_64
+* Windows user-space debugging for i386, x86_64, ARM and AArch64 (*)
 
 (*) Support for Windows is under active development. Basic functionality is
-expected to work, with functionality improving rapidly.
+expected to work, with functionality improving rapidly. ARM and AArch64 support
+is more experimental, with more known issues than the others.
 
 Get Involved
 ------------
@@ -164,7 +167,7 @@ interesting areas to contribute to lldb.
    :maxdepth: 1
    :caption: Reference
 
-   Public Python API <https://lldb.llvm.org/python_reference/index.html>
+   Public Python API <python_api>
    Public C++ API <https://lldb.llvm.org/cpp_reference/namespacelldb.html>
    Private C++ API <https://lldb.llvm.org/cpp_reference/index.html>
    Man Page <man/lldb>

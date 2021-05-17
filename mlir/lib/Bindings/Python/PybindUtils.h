@@ -215,6 +215,16 @@ class Sliceable {
 protected:
   using ClassTy = pybind11::class_<Derived>;
 
+  intptr_t wrapIndex(intptr_t index) {
+    if (index < 0)
+      index = length + index;
+    if (index < 0 || index >= length) {
+      throw python::SetPyError(PyExc_IndexError,
+                               "attempt to access out of bounds");
+    }
+    return index;
+  }
+
 public:
   explicit Sliceable(intptr_t startIndex, intptr_t length, intptr_t step)
       : startIndex(startIndex), length(length), step(step) {
@@ -228,12 +238,7 @@ public:
   /// by taking elements in inverse order. Throws if the index is out of bounds.
   ElementTy dunderGetItem(intptr_t index) {
     // Negative indices mean we count from the end.
-    if (index < 0)
-      index = length + index;
-    if (index < 0 || index >= length) {
-      throw python::SetPyError(PyExc_IndexError,
-                               "attempt to access out of bounds");
-    }
+    index = wrapIndex(index);
 
     // Compute the linear index given the current slice properties.
     int linearIndex = index * step + startIndex;

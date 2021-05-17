@@ -11,6 +11,7 @@
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/Error.h"
 
 #define DEBUG_TYPE "cseinfo"
 
@@ -278,8 +279,7 @@ Error GISelCSEInfo::verify() {
 
   // For every node in the CSEMap, make sure that the InstrMapping
   // points to it.
-  for (auto It = CSEMap.begin(), End = CSEMap.end(); It != End; ++It) {
-    const UniqueMachineInstr &UMI = *It;
+  for (const UniqueMachineInstr &UMI : CSEMap) {
     if (!InstrMapping.count(UMI.MI))
       return createStringError(std::errc::not_supported,
                                "Node in CSE without InstrMapping", UMI.MI);

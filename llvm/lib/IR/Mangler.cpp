@@ -12,6 +12,7 @@
 
 #include "llvm/IR/Mangler.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DataLayout.h"
@@ -97,12 +98,11 @@ static void addByteCountSuffix(raw_ostream &OS, const Function *F,
 
   const unsigned PtrSize = DL.getPointerSize();
 
-  for (Function::const_arg_iterator AI = F->arg_begin(), AE = F->arg_end();
-       AI != AE; ++AI) {
+  for (const Argument &A : F->args()) {
     // 'Dereference' type in case of byval or inalloca parameter attribute.
-    uint64_t AllocSize = AI->hasPassPointeeByValueCopyAttr() ?
-      AI->getPassPointeeByValueCopySize(DL) :
-      DL.getTypeAllocSize(AI->getType());
+    uint64_t AllocSize = A.hasPassPointeeByValueCopyAttr() ?
+      A.getPassPointeeByValueCopySize(DL) :
+      DL.getTypeAllocSize(A.getType());
 
     // Size should be aligned to pointer size.
     ArgWords += alignTo(AllocSize, PtrSize);
@@ -186,8 +186,7 @@ void Mangler::getNameWithPrefix(SmallVectorImpl<char> &OutName,
 
 // Check if the name needs quotes to be safe for the linker to interpret.
 static bool canBeUnquotedInDirective(char C) {
-  return (C >= 'a' && C <= 'z') || (C >= 'A' && C <= 'Z') ||
-         (C >= '0' && C <= '9') || C == '_' || C == '$' || C == '.' || C == '@';
+  return isAlnum(C) || C == '_' || C == '$' || C == '.' || C == '@';
 }
 
 static bool canBeUnquotedInDirective(StringRef Name) {

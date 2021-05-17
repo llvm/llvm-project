@@ -5,7 +5,7 @@
 // RUN: %clangxx_msan -DERROR -DMSANCB_SET -DMSANCB_CLEAR %s -o %t && not %run %t 2>&1 | \
 // RUN:     FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NOCB
 // RUN: %clangxx_msan -DMSANCB_SET %s -o %t && %run %t 2>&1 | \
-// RUN:     FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NOCB
+// RUN:     FileCheck %s --check-prefixes=SUCCEED,CHECK-NOCB
 
 #include <sanitizer/msan_interface.h>
 #include <stdio.h>
@@ -34,6 +34,9 @@ int main(int argc, char **argv) {
 #endif
   // CHECK-CB: msan-death-callback
   // CHECK-NOCB-NOT: msan-death-callback
+
+  // CHECK-NOT: done
+  // SUCCEED: done
   fprintf(stderr, "done\n");
   return 0;
 }

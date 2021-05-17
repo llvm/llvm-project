@@ -134,6 +134,24 @@ public:
   ///   The Address object set to the current PC value.
   const Address &GetFrameCodeAddress();
 
+  /// Get the current code Address suitable for symbolication,
+  /// may not be the same as GetFrameCodeAddress().
+  ///
+  /// For a frame in the middle of the stack, the return-pc is the
+  /// current code address, but for symbolication purposes the
+  /// return address after a noreturn call may point to the next
+  /// function, a DWARF location list entry that is a completely
+  /// different code path, or the wrong source line.
+  ///
+  /// The address returned should be used for symbolication (source line,
+  /// block, function, DWARF location entry selection) but should NOT
+  /// be shown to the user.  It may not point to an actual instruction
+  /// boundary.
+  ///
+  /// \return
+  ///   The Address object set to the current PC value.
+  Address GetFrameCodeAddressForSymbolication();
+
   /// Change the pc value for a given thread.
   ///
   /// Change the current pc value for the frame on this thread.
@@ -403,22 +421,6 @@ public:
   lldb::ValueObjectSP
   GetValueObjectForFrameVariable(const lldb::VariableSP &variable_sp,
                                  lldb::DynamicValueType use_dynamic);
-
-  /// Add an arbitrary Variable object (e.g. one that specifics a global or
-  /// static) to a StackFrame's list of ValueObjects.
-  ///
-  /// \params [in] variable_sp
-  ///   The Variable to base this ValueObject on
-  ///
-  /// \params [in] use_dynamic
-  ///     Whether the correct dynamic type of the variable should be
-  ///     determined before creating the ValueObject, or if the static type
-  ///     is sufficient.  One of the DynamicValueType enumerated values.
-  ///
-  /// \return
-  ///     A ValueObject for this variable.
-  lldb::ValueObjectSP TrackGlobalVariable(const lldb::VariableSP &variable_sp,
-                                          lldb::DynamicValueType use_dynamic);
 
   /// Query this frame to determine what the default language should be when
   /// parsing expressions given the execution context.

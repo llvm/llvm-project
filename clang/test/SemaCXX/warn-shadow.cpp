@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -fsyntax-only -std=c++11 -Wshadow-all %s
+// RUN: %clang_cc1 -verify -fsyntax-only -std=c++17 -Wshadow-all %s
 
 namespace {
   int i; // expected-note {{previous declaration is here}}
@@ -265,3 +265,44 @@ struct PR24718_2 {
     PR24718_1 // Does not shadow a type.
   };
 };
+
+namespace structured_binding_tests {
+int x; // expected-note {{previous declaration is here}}
+int y; // expected-note {{previous declaration is here}}
+struct S {
+  int a, b;
+};
+
+void test1() {
+  const auto [x, y] = S(); // expected-warning 2 {{declaration shadows a variable in namespace 'structured_binding_tests'}}
+}
+
+void test2() {
+  int a; // expected-note {{previous declaration is here}}
+  bool b; // expected-note {{previous declaration is here}}
+  {
+    auto [a, b] = S(); // expected-warning 2 {{declaration shadows a local variable}}
+  }
+}
+
+class A
+{
+  int m_a; // expected-note {{previous declaration is here}}
+  int m_b; // expected-note {{previous declaration is here}}
+
+  void test3() {
+    auto [m_a, m_b] = S(); // expected-warning 2 {{declaration shadows a field of 'structured_binding_tests::A'}}
+  }
+};
+
+void test4() {
+  const auto [a, b] = S(); // expected-note 3 {{previous declaration is here}}
+  {
+    int a = 4; // expected-warning {{declaration shadows a structured binding}}
+  }
+  {
+    const auto [a, b] = S(); // expected-warning 2 {{declaration shadows a structured binding}}
+  }
+}
+
+}; // namespace structured_binding_tests

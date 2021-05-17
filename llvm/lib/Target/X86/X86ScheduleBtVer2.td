@@ -733,6 +733,7 @@ defm : JWriteResFpuPair<WriteVecTest,     [JFPU0, JFPA, JALU0], 3>;
 defm : JWriteResYMMPair<WriteVecTestY,    [JFPU01, JFPX, JFPA, JALU0], 4, [2, 2, 2, 1], 3>;
 defm : X86WriteResPairUnsupported<WriteVecTestZ>;
 defm : X86WriteResPairUnsupported<WriteShuffle256>;
+defm : X86WriteResPairUnsupported<WriteVPMOV256>;
 defm : X86WriteResPairUnsupported<WriteVarShuffle256>;
 
 ////////////////////////////////////////////////////////////////////////////////

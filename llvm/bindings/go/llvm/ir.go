@@ -1304,12 +1304,12 @@ func (v Value) IncomingBlock(i int) (bb BasicBlock) {
 }
 
 // Operations on inline assembly
-func InlineAsm(t Type, asmString, constraints string, hasSideEffects, isAlignStack bool, dialect InlineAsmDialect) (rv Value) {
+func InlineAsm(t Type, asmString, constraints string, hasSideEffects, isAlignStack bool, dialect InlineAsmDialect, canThrow bool) (rv Value) {
 	casm := C.CString(asmString)
 	defer C.free(unsafe.Pointer(casm))
 	cconstraints := C.CString(constraints)
 	defer C.free(unsafe.Pointer(cconstraints))
-	rv.C = C.LLVMGetInlineAsm(t.C, casm, C.size_t(len(asmString)), cconstraints, C.size_t(len(constraints)), boolToLLVMBool(hasSideEffects), boolToLLVMBool(isAlignStack), C.LLVMInlineAsmDialect(dialect))
+	rv.C = C.LLVMGetInlineAsm(t.C, casm, C.size_t(len(asmString)), cconstraints, C.size_t(len(constraints)), boolToLLVMBool(hasSideEffects), boolToLLVMBool(isAlignStack), C.LLVMInlineAsmDialect(dialect), boolToLLVMBool(canThrow))
 	return
 }
 

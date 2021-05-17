@@ -22,7 +22,7 @@ OUTPUT = """struct AvailableComponent {
     const char *RequiredLibraries[84];
   } AvailableComponents[84] = {
   { "aggressiveinstcombine", "LLVMAggressiveInstCombine", true, {"analysis", "core", "support", "transformutils"} },
-{ "all", nullptr, true, {"demangle", "support", "tablegen", "core", "fuzzmutate", "filecheck", "interfacestub", "irreader", "codegen", "selectiondag", "asmprinter", "mirparser", "globalisel", "binaryformat", "bitreader", "bitwriter", "bitstreamreader", "dwarflinker", "extensions", "frontendopenmp", "transformutils", "instrumentation", "aggressiveinstcombine", "instcombine", "scalaropts", "ipo", "vectorize", "hellonew", "objcarcopts", "coroutines", "cfguard", "linker", "analysis", "lto", "mc", "mcparser", "mcdisassembler", "mca", "object", "objectyaml", "option", "remarks", "debuginfodwarf", "debuginfogsym", "debuginfomsf", "debuginfocodeview", "debuginfopdb", "symbolize", "executionengine", "interpreter", "jitlink", "mcjit", "orcjit", "orcshared", "orctargetprocess", "runtimedyld", "target", "asmparser", "lineeditor", "profiledata", "coverage", "passes", "textapi", "dlltooldriver", "libdriver", "xray", "windowsmanifest"} },
+{ "all", nullptr, true, {"demangle", "support", "tablegen", "core", "fuzzmutate", "filecheck", "interfacestub", "irreader", "codegen", "selectiondag", "asmprinter", "mirparser", "globalisel", "binaryformat", "bitreader", "bitwriter", "bitstreamreader", "dwarflinker", "extensions", "frontendopenmp", "transformutils", "instrumentation", "aggressiveinstcombine", "instcombine", "scalaropts", "ipo", "vectorize", "objcarcopts", "coroutines", "cfguard", "linker", "analysis", "lto", "mc", "mcparser", "mcdisassembler", "mca", "object", "objectyaml", "option", "remarks", "debuginfodwarf", "debuginfogsym", "debuginfomsf", "debuginfocodeview", "debuginfopdb", "symbolize", "executionengine", "interpreter", "jitlink", "mcjit", "orcjit", "orcshared", "orctargetprocess", "runtimedyld", "target", "asmparser", "lineeditor", "profiledata", "coverage", "passes", "textapi", "dlltooldriver", "libdriver", "xray", "windowsmanifest"} },
 { "all-targets", nullptr, true, {} },
 { "analysis", "LLVMAnalysis", true, {"binaryformat", "core", "object", "profiledata", "support"} },
 { "asmparser", "LLVMAsmParser", true, {"binaryformat", "core", "support"} },
@@ -51,7 +51,6 @@ OUTPUT = """struct AvailableComponent {
 { "frontendopenmp", "LLVMFrontendOpenMP", true, {"core", "support", "transformutils"} },
 { "fuzzmutate", "LLVMFuzzMutate", true, {"analysis", "bitreader", "bitwriter", "core", "scalaropts", "support", "target"} },
 { "globalisel", "LLVMGlobalISel", true, {"analysis", "codegen", "core", "mc", "selectiondag", "support", "target", "transformutils"} },
-{ "hellonew", "LLVMHelloNew", true, {"core", "support"} },
 { "instcombine", "LLVMInstCombine", true, {"analysis", "core", "support", "transformutils"} },
 { "instrumentation", "LLVMInstrumentation", true, {"analysis", "core", "mc", "support", "transformutils", "profiledata"} },
 { "interfacestub", "LLVMInterfaceStub", true, {"object", "support"} },
@@ -78,7 +77,7 @@ OUTPUT = """struct AvailableComponent {
 { "orcjit", "LLVMOrcJIT", true, {"core", "executionengine", "jitlink", "object", "orcshared", "orctargetprocess", "mc", "passes", "runtimedyld", "support", "target", "transformutils"} },
 { "orcshared", "LLVMOrcShared", true, {"support"} },
 { "orctargetprocess", "LLVMOrcTargetProcess", true, {"orcshared", "support"} },
-{ "passes", "LLVMPasses", true, {"aggressiveinstcombine", "analysis", "core", "coroutines", "hellonew", "ipo", "instcombine", "objcarcopts", "scalaropts", "support", "target", "transformutils", "vectorize", "instrumentation"} },
+{ "passes", "LLVMPasses", true, {"aggressiveinstcombine", "analysis", "core", "coroutines", "ipo", "instcombine", "objcarcopts", "scalaropts", "support", "target", "transformutils", "vectorize", "instrumentation"} },
 { "profiledata", "LLVMProfileData", true, {"core", "support", "demangle"} },
 { "remarks", "LLVMRemarks", true, {"bitstreamreader", "support"} },
 { "runtimedyld", "LLVMRuntimeDyld", true, {"core", "mc", "object", "support"} },

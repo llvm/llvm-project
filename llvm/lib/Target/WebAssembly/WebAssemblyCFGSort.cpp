@@ -17,11 +17,11 @@
 ////===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "Utils/WebAssemblyUtilities.h"
 #include "WebAssembly.h"
 #include "WebAssemblyExceptionInfo.h"
 #include "WebAssemblySortRegion.h"
 #include "WebAssemblySubtarget.h"
-#include "WebAssemblyUtilities.h"
 #include "llvm/ADT/PriorityQueue.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -218,6 +219,7 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
                 CompareBlockNumbersBackwards>
       Ready;
 
+  const auto *EHInfo = MF.getWasmEHFuncInfo();
   SortRegionInfo SRI(MLI, WEI);
   SmallVector<Entry, 4> Entries;
   for (MachineBasicBlock *MBB = &MF.front();;) {
@@ -245,8 +247,34 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
         if (SuccL->getHeader() == Succ && SuccL->contains(MBB))
           continue;
       // Decrement the predecessor count. If it's now zero, it's ready.
-      if (--NumPredsLeft[Succ->getNumber()] == 0)
+      if (--NumPredsLeft[Succ->getNumber()] == 0) {
+        // When we are in a SortRegion, we allow sorting of not only BBs that
+        // belong to the current (innermost) region but also BBs that are
+        // dominated by the current region header. But we should not do this for
+        // exceptions because there can be cases in which, for example:
+        // EHPad A's unwind destination (where the exception lands when it is
+        // not caught by EHPad A) is EHPad B, so EHPad B does not belong to the
+        // exception dominated by EHPad A. But EHPad B is dominated by EHPad A,
+        // so EHPad B can be sorted within EHPad A's exception. This is
+        // incorrect because we may end up delegating/rethrowing to an inner
+        // scope in CFGStackify. So here we make sure those unwind destinations
+        // are deferred until their unwind source's exception is sorted.
+        if (EHInfo && EHInfo->hasUnwindSrcs(Succ)) {
+          SmallPtrSet<MachineBasicBlock *, 4> UnwindSrcs =
+              EHInfo->getUnwindSrcs(Succ);
+          bool IsDeferred = false;
+          for (Entry &E : Entries) {
+            if (UnwindSrcs.count(E.TheRegion->getHeader())) {
+              E.Deferred.push_back(Succ);
+              IsDeferred = true;
+              break;
+            }
+          }
+          if (IsDeferred)
+            continue;
+        }
         Preferred.push(Succ);
+      }
     }
     // Determine the block to follow MBB. First try to find a preferred block,
     // to preserve the original block order when possible.

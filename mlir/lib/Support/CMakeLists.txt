@@ -1,14 +1,18 @@
 set(LLVM_OPTIONAL_SOURCES
+  DebugCounter.cpp
   FileUtilities.cpp
   IndentedOstream.cpp
   MlirOptMain.cpp
   StorageUniquer.cpp
+  Timing.cpp
   ToolUtilities.cpp
 )
 
 add_mlir_library(MLIRSupport
+  DebugCounter.cpp
   FileUtilities.cpp
   StorageUniquer.cpp
+  Timing.cpp
   ToolUtilities.cpp
 
   ADDITIONAL_HEADER_DIRS

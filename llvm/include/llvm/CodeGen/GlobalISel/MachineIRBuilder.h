@@ -363,7 +363,7 @@ public:
   void setDebugLoc(const DebugLoc &DL) { this->State.DL = DL; }
 
   /// Get the current instruction's debug location.
-  DebugLoc getDebugLoc() { return State.DL; }
+  const DebugLoc &getDebugLoc() { return State.DL; }
 
   /// Build and insert <empty> = \p Opcode <empty>.
   /// The insertion point is the one set by the last call of either
@@ -712,6 +712,12 @@ public:
   MachineInstrBuilder buildExtOrTrunc(unsigned ExtOpc, const DstOp &Res,
                                       const SrcOp &Op);
 
+  /// Build and inserts \p Res = \p G_AND \p Op, \p LowBitsSet(ImmOp)
+  /// Since there is no G_ZEXT_INREG like G_SEXT_INREG, the instruction is
+  /// emulated using G_AND.
+  MachineInstrBuilder buildZExtInReg(const DstOp &Res, const SrcOp &Op,
+                                     int64_t ImmOp);
+
   /// Build and insert an appropriate cast between two registers of equal size.
   MachineInstrBuilder buildCast(const DstOp &Dst, const SrcOp &Src);
 
@@ -809,6 +815,18 @@ public:
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildCopy(const DstOp &Res, const SrcOp &Op);
+
+  /// Build and insert \p Res = G_ASSERT_ZEXT Op, Size
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAssertZExt(const DstOp &Res, const SrcOp &Op,
+                                      unsigned Size);
+
+  /// Build and insert \p Res = G_ASSERT_SEXT Op, Size
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAssertSExt(const DstOp &Res, const SrcOp &Op,
+                                      unsigned Size);
 
   /// Build and insert `Res = G_LOAD Addr, MMO`.
   ///
@@ -1426,6 +1444,13 @@ public:
     return buildInstr(TargetOpcode::G_SMULH, {Dst}, {Src0, Src1}, Flags);
   }
 
+  /// Build and insert \p Res = G_UREM \p Op0, \p Op1
+  MachineInstrBuilder buildURem(const DstOp &Dst, const SrcOp &Src0,
+                                const SrcOp &Src1,
+                                Optional<unsigned> Flags = None) {
+    return buildInstr(TargetOpcode::G_UREM, {Dst}, {Src0, Src1}, Flags);
+  }
+
   MachineInstrBuilder buildFMul(const DstOp &Dst, const SrcOp &Src0,
                                 const SrcOp &Src1,
                                 Optional<unsigned> Flags = None) {
@@ -1501,8 +1526,9 @@ public:
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildOr(const DstOp &Dst, const SrcOp &Src0,
-                              const SrcOp &Src1) {
-    return buildInstr(TargetOpcode::G_OR, {Dst}, {Src0, Src1});
+                              const SrcOp &Src1,
+                              Optional<unsigned> Flags = None) {
+    return buildInstr(TargetOpcode::G_OR, {Dst}, {Src0, Src1}, Flags);
   }
 
   /// Build and insert \p Res = G_XOR \p Op0, \p Op1
@@ -1797,6 +1823,51 @@ public:
   MachineInstrBuilder buildVecReduceUMin(const DstOp &Dst, const SrcOp &Src) {
     return buildInstr(TargetOpcode::G_VECREDUCE_UMIN, {Dst}, {Src});
   }
+
+  /// Build and insert G_MEMCPY or G_MEMMOVE
+  MachineInstrBuilder buildMemTransferInst(unsigned Opcode, const SrcOp &DstPtr,
+                                           const SrcOp &SrcPtr,
+                                           const SrcOp &Size,
+                                           MachineMemOperand &DstMMO,
+                                           MachineMemOperand &SrcMMO) {
+    auto MIB = buildInstr(
+        Opcode, {}, {DstPtr, SrcPtr, Size, SrcOp(INT64_C(0) /*isTailCall*/)});
+    MIB.addMemOperand(&DstMMO);
+    MIB.addMemOperand(&SrcMMO);
+    return MIB;
+  }
+
+  MachineInstrBuilder buildMemCpy(const SrcOp &DstPtr, const SrcOp &SrcPtr,
+                                  const SrcOp &Size, MachineMemOperand &DstMMO,
+                                  MachineMemOperand &SrcMMO) {
+    return buildMemTransferInst(TargetOpcode::G_MEMCPY, DstPtr, SrcPtr, Size,
+                                DstMMO, SrcMMO);
+  }
+
+  /// Build and insert \p Dst = G_SBFX \p Src, \p LSB, \p Width.
+  MachineInstrBuilder buildSbfx(const DstOp &Dst, const SrcOp &Src,
+                                const SrcOp &LSB, const SrcOp &Width) {
+    return buildInstr(TargetOpcode::G_SBFX, {Dst}, {Src, LSB, Width});
+  }
+
+  /// Build and insert \p Dst = G_UBFX \p Src, \p LSB, \p Width.
+  MachineInstrBuilder buildUbfx(const DstOp &Dst, const SrcOp &Src,
+                                const SrcOp &LSB, const SrcOp &Width) {
+    return buildInstr(TargetOpcode::G_UBFX, {Dst}, {Src, LSB, Width});
+  }
+
+  /// Build and insert \p Dst = G_ROTR \p Src, \p Amt
+  MachineInstrBuilder buildRotateRight(const DstOp &Dst, const SrcOp &Src,
+                                       const SrcOp &Amt) {
+    return buildInstr(TargetOpcode::G_ROTR, {Dst}, {Src, Amt});
+  }
+
+  /// Build and insert \p Dst = G_ROTL \p Src, \p Amt
+  MachineInstrBuilder buildRotateLeft(const DstOp &Dst, const SrcOp &Src,
+                                      const SrcOp &Amt) {
+    return buildInstr(TargetOpcode::G_ROTL, {Dst}, {Src, Amt});
+  }
+
   virtual MachineInstrBuilder buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
                                          ArrayRef<SrcOp> SrcOps,
                                          Optional<unsigned> Flags = None);

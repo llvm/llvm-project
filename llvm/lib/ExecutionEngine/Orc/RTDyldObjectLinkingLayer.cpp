@@ -75,9 +75,13 @@ private:
 namespace llvm {
 namespace orc {
 
+char RTDyldObjectLinkingLayer::ID;
+
+using BaseT = RTTIExtends<RTDyldObjectLinkingLayer, ObjectLayer>;
+
 RTDyldObjectLinkingLayer::RTDyldObjectLinkingLayer(
     ExecutionSession &ES, GetMemoryManagerFunction GetMemoryManager)
-    : ObjectLayer(ES), GetMemoryManager(GetMemoryManager) {
+    : BaseT(ES), GetMemoryManager(GetMemoryManager) {
   ES.registerResourceManager(*this);
 }
 

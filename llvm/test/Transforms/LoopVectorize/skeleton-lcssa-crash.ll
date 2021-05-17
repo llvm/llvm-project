@@ -23,22 +23,22 @@ define i16 @test(i16** %arg, i64 %N) {
 ; CHECK-NEXT:    [[C_3:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_3]], label [[LOOP3_PREHEADER:%.*]], label [[INNER_LATCH:%.*]]
 ; CHECK:       loop3.preheader:
-; CHECK-NEXT:    [[L_1_LCSSA11:%.*]] = phi i16* [ [[L_1]], [[INNER_BB]] ]
+; CHECK-NEXT:    [[L_1_LCSSA8:%.*]] = phi i16* [ [[L_1]], [[INNER_BB]] ]
 ; CHECK-NEXT:    [[L_1_LCSSA:%.*]] = phi i16* [ [[L_1]], [[INNER_BB]] ]
 ; CHECK-NEXT:    [[L_2_LCSSA:%.*]] = phi i16* [ [[L_2]], [[INNER_BB]] ]
-; CHECK-NEXT:    [[L_2_LCSSA4:%.*]] = bitcast i16* [[L_2_LCSSA]] to i8*
+; CHECK-NEXT:    [[L_2_LCSSA3:%.*]] = bitcast i16* [[L_2_LCSSA]] to i8*
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, i8* [[L_2_LCSSA4]], i64 1
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, i8* [[L_2_LCSSA3]], i64 1
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i16, i16* [[L_1_LCSSA]], i64 1
-; CHECK-NEXT:    [[SCEVGEP9:%.*]] = bitcast i16* [[SCEVGEP]] to i8*
+; CHECK-NEXT:    [[SCEVGEP6:%.*]] = bitcast i16* [[SCEVGEP]] to i8*
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[N]], 2
-; CHECK-NEXT:    [[SCEVGEP10:%.*]] = getelementptr i16, i16* [[L_1_LCSSA11]], i64 [[TMP1]]
-; CHECK-NEXT:    [[SCEVGEP1013:%.*]] = bitcast i16* [[SCEVGEP10]] to i8*
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult i8* [[L_2_LCSSA4]], [[SCEVGEP1013]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult i8* [[SCEVGEP9]], [[UGLYGEP]]
+; CHECK-NEXT:    [[SCEVGEP7:%.*]] = getelementptr i16, i16* [[L_1_LCSSA8]], i64 [[TMP1]]
+; CHECK-NEXT:    [[SCEVGEP710:%.*]] = bitcast i16* [[SCEVGEP7]] to i8*
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult i8* [[L_2_LCSSA3]], [[SCEVGEP710]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult i8* [[SCEVGEP6]], [[UGLYGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    [[MEMCHECK_CONFLICT:%.*]] = and i1 [[FOUND_CONFLICT]], true
 ; CHECK-NEXT:    br i1 [[MEMCHECK_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
@@ -66,8 +66,6 @@ define i16 @test(i16** %arg, i64 %N) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[L_18:%.*]] = phi i16* [ [[L_1_LCSSA]], [[VECTOR_MEMCHECK]] ], [ [[L_1_LCSSA]], [[LOOP3_PREHEADER]] ], [ [[L_1_LCSSA]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[L_23:%.*]] = phi i16* [ [[L_2_LCSSA]], [[VECTOR_MEMCHECK]] ], [ [[L_2_LCSSA]], [[LOOP3_PREHEADER]] ], [ [[L_2_LCSSA]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP3_PREHEADER]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label [[LOOP3:%.*]]
 ; CHECK:       inner.latch:
@@ -79,20 +77,19 @@ define i16 @test(i16** %arg, i64 %N) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP3]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp ult i64 [[IV]], [[N]]
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i16, i16* [[L_18]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i16, i16* [[L_1_LCSSA]], i64 [[IV_NEXT]]
 ; CHECK-NEXT:    [[LOOP_L_1:%.*]] = load i16, i16* [[GEP_1]], align 2
-; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i16, i16* [[L_23]], i64 0
+; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i16, i16* [[L_2_LCSSA]], i64 0
 ; CHECK-NEXT:    store i16 [[LOOP_L_1]], i16* [[GEP_2]], align 2
 ; CHECK-NEXT:    br i1 [[C_5]], label [[LOOP3]], label [[EXIT_LOOPEXIT]], [[LOOP7:!llvm.loop !.*]]
 ; CHECK:       exit.loopexit:
-; CHECK-NEXT:    [[L_17:%.*]] = phi i16* [ [[L_1_LCSSA]], [[MIDDLE_BLOCK]] ], [ [[L_18]], [[LOOP3]] ]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit.loopexit1:
-; CHECK-NEXT:    [[L_1_LCSSA5:%.*]] = phi i16* [ [[L_1]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[L_1_LCSSA4:%.*]] = phi i16* [ [[L_1]], [[INNER_LATCH]] ]
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[L_16:%.*]] = phi i16* [ [[L_1_LCSSA5]], [[EXIT_LOOPEXIT1]] ], [ [[L_17]], [[EXIT_LOOPEXIT]] ]
-; CHECK-NEXT:    [[L_3:%.*]] = load i16, i16* [[L_16]], align 2
+; CHECK-NEXT:    [[L_15:%.*]] = phi i16* [ [[L_1_LCSSA4]], [[EXIT_LOOPEXIT1]] ], [ [[L_1_LCSSA]], [[EXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    [[L_3:%.*]] = load i16, i16* [[L_15]], align 2
 ; CHECK-NEXT:    ret i16 [[L_3]]
 ;
 entry:

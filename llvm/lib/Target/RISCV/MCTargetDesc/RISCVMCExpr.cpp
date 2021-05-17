@@ -138,7 +138,8 @@ RISCVMCExpr::VariantKind RISCVMCExpr::getVariantKindForName(StringRef name) {
 
 StringRef RISCVMCExpr::getVariantKindName(VariantKind Kind) {
   switch (Kind) {
-  default:
+  case VK_RISCV_Invalid:
+  case VK_RISCV_None:
     llvm_unreachable("Invalid ELF symbol kind");
   case VK_RISCV_LO:
     return "lo";
@@ -160,7 +161,14 @@ StringRef RISCVMCExpr::getVariantKindName(VariantKind Kind) {
     return "tls_ie_pcrel_hi";
   case VK_RISCV_TLS_GD_HI:
     return "tls_gd_pcrel_hi";
+  case VK_RISCV_CALL:
+    return "call";
+  case VK_RISCV_CALL_PLT:
+    return "call_plt";
+  case VK_RISCV_32_PCREL:
+    return "32_pcrel";
   }
+  llvm_unreachable("Invalid ELF symbol kind");
 }
 
 static void fixELFSymbolsInTLSFixupsImpl(const MCExpr *Expr, MCAssembler &Asm) {

@@ -19,17 +19,18 @@ namespace tidy {
 namespace bugprone {
 
 void TerminatingContinueCheck::registerMatchers(MatchFinder *Finder) {
-  const auto doWithFalse =
+  const auto DoWithFalse =
       doStmt(hasCondition(ignoringImpCasts(
                  anyOf(cxxBoolLiteral(equals(false)), integerLiteral(equals(0)),
                        cxxNullPtrLiteralExpr(), gnuNullExpr()))),
              equalsBoundNode("closestLoop"));
 
   Finder->addMatcher(
-      continueStmt(hasAncestor(stmt(anyOf(forStmt(), whileStmt(),
-                                          cxxForRangeStmt(), doStmt()))
-                                   .bind("closestLoop")),
-                   hasAncestor(doWithFalse))
+      continueStmt(
+          hasAncestor(stmt(anyOf(forStmt(), whileStmt(), cxxForRangeStmt(),
+                                 doStmt(), switchStmt()))
+                          .bind("closestLoop")),
+          hasAncestor(DoWithFalse))
           .bind("continue"),
       this);
 }

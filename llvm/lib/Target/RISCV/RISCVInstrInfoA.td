@@ -61,14 +61,13 @@ multiclass AMO_rr_aq_rl<bits<5> funct5, bits<3> funct3, string opcodestr> {
   def _AQ_RL : AMO_rr<funct5, 1, 1, funct3, opcodestr # ".aqrl">;
 }
 
-multiclass AtomicStPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy> {
-  def : Pat<(StoreOp GPR:$rs1, StTy:$rs2), (Inst StTy:$rs2, GPR:$rs1, 0)>;
-  def : Pat<(StoreOp AddrFI:$rs1, StTy:$rs2), (Inst StTy:$rs2, AddrFI:$rs1, 0)>;
-  def : Pat<(StoreOp (add GPR:$rs1, simm12:$imm12), StTy:$rs2),
-            (Inst StTy:$rs2, GPR:$rs1, simm12:$imm12)>;
-  def : Pat<(StoreOp (add AddrFI:$rs1, simm12:$imm12), StTy:$rs2),
-            (Inst StTy:$rs2, AddrFI:$rs1, simm12:$imm12)>;
-  def : Pat<(StoreOp (IsOrAdd AddrFI:$rs1, simm12:$imm12), StTy:$rs2),
+multiclass AtomicStPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
+                       ValueType vt = XLenVT> {
+  def : Pat<(StoreOp BaseAddr:$rs1, (vt StTy:$rs2)),
+            (Inst StTy:$rs2, BaseAddr:$rs1, 0)>;
+  def : Pat<(StoreOp (add BaseAddr:$rs1, simm12:$imm12), (vt StTy:$rs2)),
+            (Inst StTy:$rs2, BaseAddr:$rs1, simm12:$imm12)>;
+  def : Pat<(StoreOp (IsOrAdd AddrFI:$rs1, simm12:$imm12), (vt StTy:$rs2)),
             (Inst StTy:$rs2, AddrFI:$rs1, simm12:$imm12)>;
 }
 
@@ -320,8 +319,8 @@ let Predicates = [HasStdExtA, IsRV64] in {
 
 // Fences will be inserted for atomic load/stores according to the logic in
 // RISCVTargetLowering::{emitLeadingFence,emitTrailingFence}.
-defm : LdPat<atomic_load_64, LD>;
-defm : AtomicStPat<atomic_store_64, SD, GPR>;
+defm : LdPat<atomic_load_64, LD, i64>;
+defm : AtomicStPat<atomic_store_64, SD, GPR, i64>;
 
 defm : AMOPat<"atomic_swap_64", "AMOSWAP_D">;
 defm : AMOPat<"atomic_load_add_64", "AMOADD_D">;
@@ -335,15 +334,15 @@ defm : AMOPat<"atomic_load_umin_64", "AMOMINU_D">;
 
 /// 64-bit AMOs
 
-def : Pat<(atomic_load_sub_64_monotonic GPR:$addr, GPR:$incr),
+def : Pat<(i64 (atomic_load_sub_64_monotonic GPR:$addr, GPR:$incr)),
           (AMOADD_D GPR:$addr, (SUB X0, GPR:$incr))>;
-def : Pat<(atomic_load_sub_64_acquire GPR:$addr, GPR:$incr),
+def : Pat<(i64 (atomic_load_sub_64_acquire GPR:$addr, GPR:$incr)),
           (AMOADD_D_AQ GPR:$addr, (SUB X0, GPR:$incr))>;
-def : Pat<(atomic_load_sub_64_release GPR:$addr, GPR:$incr),
+def : Pat<(i64 (atomic_load_sub_64_release GPR:$addr, GPR:$incr)),
           (AMOADD_D_RL GPR:$addr, (SUB X0, GPR:$incr))>;
-def : Pat<(atomic_load_sub_64_acq_rel GPR:$addr, GPR:$incr),
+def : Pat<(i64 (atomic_load_sub_64_acq_rel GPR:$addr, GPR:$incr)),
           (AMOADD_D_AQ_RL GPR:$addr, (SUB X0, GPR:$incr))>;
-def : Pat<(atomic_load_sub_64_seq_cst GPR:$addr, GPR:$incr),
+def : Pat<(i64 (atomic_load_sub_64_seq_cst GPR:$addr, GPR:$incr)),
           (AMOADD_D_AQ_RL GPR:$addr, (SUB X0, GPR:$incr))>;
 
 /// 64-bit pseudo AMOs
@@ -351,15 +350,15 @@ def : Pat<(atomic_load_sub_64_seq_cst GPR:$addr, GPR:$incr),
 def PseudoAtomicLoadNand64 : PseudoAMO;
 // Ordering constants must be kept in sync with the AtomicOrdering enum in
 // AtomicOrdering.h.
-def : Pat<(atomic_load_nand_64_monotonic GPR:$addr, GPR:$incr),
+def : Pat<(i64 (atomic_load_nand_64_monotonic GPR:$addr, GPR:$incr)),
           (PseudoAtomicLoadNand64 GPR:$addr, GPR:$incr, 2)>;
-def : Pat<(atomic_load_nand_64_acquire GPR:$addr, GPR:$incr),
+def : Pat<(i64 (atomic_load_nand_64_acquire GPR:$addr, GPR:$incr)),
           (PseudoAtomicLoadNand64 GPR:$addr, GPR:$incr, 4)>;
-def : Pat<(atomic_load_nand_64_release GPR:$addr, GPR:$incr),
+def : Pat<(i64 (atomic_load_nand_64_release GPR:$addr, GPR:$incr)),
           (PseudoAtomicLoadNand64 GPR:$addr, GPR:$incr, 5)>;
-def : Pat<(atomic_load_nand_64_acq_rel GPR:$addr, GPR:$incr),
+def : Pat<(i64 (atomic_load_nand_64_acq_rel GPR:$addr, GPR:$incr)),
           (PseudoAtomicLoadNand64 GPR:$addr, GPR:$incr, 6)>;
-def : Pat<(atomic_load_nand_64_seq_cst GPR:$addr, GPR:$incr),
+def : Pat<(i64 (atomic_load_nand_64_seq_cst GPR:$addr, GPR:$incr)),
           (PseudoAtomicLoadNand64 GPR:$addr, GPR:$incr, 7)>;
 
 def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_xchg_i64,

@@ -131,7 +131,7 @@ TEST_F(ExtractVariableTest, Test) {
                    int a = 5 * (4 + (3 [[- 1)]]);
                  })cpp",
        R"cpp(void varDecl() {
-                   auto dummy = (3 - 1); int a = 5 * (4 + dummy);
+                   auto placeholder = (3 - 1); int a = 5 * (4 + placeholder);
                  })cpp"},
       // FIXME: extraction from switch case
       /*{R"cpp(void f(int a) {
@@ -146,11 +146,11 @@ TEST_F(ExtractVariableTest, Test) {
                    }
              })cpp",
        R"cpp(void f(int a) {
-               auto dummy = 1 + 2; if(1)
+               auto placeholder = 1 + 2; if(1)
                  while(a < 1)
                    switch (1) {
                        case 1:
-                         a = dummy;
+                         a = placeholder;
                          break;
                        default:
                          break;
@@ -164,11 +164,11 @@ TEST_F(ExtractVariableTest, Test) {
        /*FIXME: It should be extracted like this.
         R"cpp(#define PLUS(x) x++
               void f(int a) {
-                auto dummy = 1+a; int y = PLUS(dummy);
+                auto placeholder = 1+a; int y = PLUS(placeholder);
               })cpp"},*/
        R"cpp(#define PLUS(x) x++
                  void f(int a) {
-                   auto dummy = PLUS(1+a); int y = dummy;
+                   auto placeholder = PLUS(1+a); int y = placeholder;
                  })cpp"},
       // ensure InsertionPoint isn't inside a macro
       {R"cpp(#define LOOP(x) while (1) {a = x;}
@@ -178,8 +178,8 @@ TEST_F(ExtractVariableTest, Test) {
                  })cpp",
        R"cpp(#define LOOP(x) while (1) {a = x;}
                  void f(int a) {
-                   auto dummy = 3; if(1)
-                    LOOP(5 + dummy)
+                   auto placeholder = 3; if(1)
+                    LOOP(5 + placeholder)
                  })cpp"},
       {R"cpp(#define LOOP(x) do {x;} while(1);
                  void f(int a) {
@@ -188,15 +188,15 @@ TEST_F(ExtractVariableTest, Test) {
                  })cpp",
        R"cpp(#define LOOP(x) do {x;} while(1);
                  void f(int a) {
-                   auto dummy = 3; if(1)
-                    LOOP(5 + dummy)
+                   auto placeholder = 3; if(1)
+                    LOOP(5 + placeholder)
                  })cpp"},
       // attribute testing
       {R"cpp(void f(int a) {
                     [ [gsl::suppress("type")] ] for (;;) a = [[1]] + 1;
                  })cpp",
        R"cpp(void f(int a) {
-                    auto dummy = 1; [ [gsl::suppress("type")] ] for (;;) a = dummy + 1;
+                    auto placeholder = 1; [ [gsl::suppress("type")] ] for (;;) a = placeholder + 1;
                  })cpp"},
       // MemberExpr
       {R"cpp(class T {
@@ -206,7 +206,7 @@ TEST_F(ExtractVariableTest, Test) {
                  };)cpp",
        R"cpp(class T {
                    T f() {
-                     auto dummy = T().f(); return dummy.f();
+                     auto placeholder = T().f(); return placeholder.f();
                    }
                  };)cpp"},
       // Function DeclRefExpr
@@ -214,7 +214,7 @@ TEST_F(ExtractVariableTest, Test) {
                    return [[f]]();
                  })cpp",
        R"cpp(int f() {
-                   auto dummy = f(); return dummy;
+                   auto placeholder = f(); return placeholder;
                  })cpp"},
       // FIXME: Wrong result for \[\[clang::uninitialized\]\] int b = [[1]];
       // since the attr is inside the DeclStmt and the bounds of
@@ -225,33 +225,33 @@ TEST_F(ExtractVariableTest, Test) {
                    int x = 1 + [[2 + 3 + 4]] + 5;
                  })cpp",
        R"cpp(void f() {
-                   auto dummy = 2 + 3 + 4; int x = 1 + dummy + 5;
+                   auto placeholder = 2 + 3 + 4; int x = 1 + placeholder + 5;
                  })cpp"},
       {R"cpp(void f() {
                    int x = [[1 + 2 + 3]] + 4 + 5;
                  })cpp",
        R"cpp(void f() {
-                   auto dummy = 1 + 2 + 3; int x = dummy + 4 + 5;
+                   auto placeholder = 1 + 2 + 3; int x = placeholder + 4 + 5;
                  })cpp"},
       {R"cpp(void f() {
                    int x = 1 + 2 + [[3 + 4 + 5]];
                  })cpp",
        R"cpp(void f() {
-                   auto dummy = 3 + 4 + 5; int x = 1 + 2 + dummy;
+                   auto placeholder = 3 + 4 + 5; int x = 1 + 2 + placeholder;
                  })cpp"},
       // Non-associative operations have no special support
       {R"cpp(void f() {
                    int x = 1 - [[2 - 3 - 4]] - 5;
                  })cpp",
        R"cpp(void f() {
-                   auto dummy = 1 - 2 - 3 - 4; int x = dummy - 5;
+                   auto placeholder = 1 - 2 - 3 - 4; int x = placeholder - 5;
                  })cpp"},
       // A mix of associative operators isn't associative.
       {R"cpp(void f() {
                    int x = 0 + 1 * [[2 + 3]] * 4 + 5;
                  })cpp",
        R"cpp(void f() {
-                   auto dummy = 1 * 2 + 3 * 4; int x = 0 + dummy + 5;
+                   auto placeholder = 1 * 2 + 3 * 4; int x = 0 + placeholder + 5;
                  })cpp"},
       // Overloaded operators are supported, we assume associativity
       // as if they were built-in.
@@ -269,7 +269,7 @@ TEST_F(ExtractVariableTest, Test) {
                  S operator+(S, S);
 
                  void f() {
-                   auto dummy = S(2) + S(3) + S(4); S x = S(1) + dummy + S(5);
+                   auto placeholder = S(2) + S(3) + S(4); S x = S(1) + placeholder + S(5);
                  })cpp"},
       // Don't try to analyze across macro boundaries
       // FIXME: it'd be nice to do this someday (in a safe way)
@@ -279,7 +279,7 @@ TEST_F(ExtractVariableTest, Test) {
                  })cpp",
        R"cpp(#define ECHO(X) X
                  void f() {
-                   auto dummy = 1 + ECHO(2 + 3) + 4; int x = dummy + 5;
+                   auto placeholder = 1 + ECHO(2 + 3) + 4; int x = placeholder + 5;
                  })cpp"},
       {R"cpp(#define ECHO(X) X
                  void f() {
@@ -287,7 +287,7 @@ TEST_F(ExtractVariableTest, Test) {
                  })cpp",
        R"cpp(#define ECHO(X) X
                  void f() {
-                   auto dummy = 1 + ECHO(2) + ECHO(3) + 4; int x = dummy + 5;
+                   auto placeholder = 1 + ECHO(2) + ECHO(3) + 4; int x = placeholder + 5;
                  })cpp"},
   };
   for (const auto &IO : InputOutputs) {

@@ -1,6 +1,4 @@
 set(LLVM_LINK_COMPONENTS
-  Core
-  MC
   Support
   )
 
@@ -56,9 +54,11 @@ add_clang_library(clangBasic
   LangStandards.cpp
   Module.cpp
   ObjCRuntime.cpp
+  OpenCLOptions.cpp
   OpenMPKinds.cpp
   OperatorPrecedence.cpp
-  SanitizerBlacklist.cpp
+  ProfileList.cpp
+  NoSanitizeList.cpp
   SanitizerSpecialCaseList.cpp
   Sanitizers.cpp
   SourceLocation.cpp
@@ -76,6 +76,7 @@ add_clang_library(clangBasic
   Targets/Hexagon.cpp
   Targets/Lanai.cpp
   Targets/Le64.cpp
+  Targets/M68k.cpp
   Targets/MSP430.cpp
   Targets/Mips.cpp
   Targets/NVPTX.cpp

@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -mtriple=aarch64 -mcpu=cyclone -mattr=+use-aa,+slow-misaligned-128store -enable-misched -verify-misched -o - | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64 -mcpu=cyclone -mattr=+slow-misaligned-128store -enable-misched -verify-misched -o - | FileCheck %s
 
 ; Tests to check that the scheduler dependencies derived from alias analysis are
 ; correct when we have loads that have been split up so that they can later be

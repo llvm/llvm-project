@@ -199,14 +199,12 @@ size_t writeLoadCommandData<MachO::build_version_command>(
 }
 
 void ZeroFillBytes(raw_ostream &OS, size_t Size) {
-  std::vector<uint8_t> FillData;
-  FillData.insert(FillData.begin(), Size, 0);
+  std::vector<uint8_t> FillData(Size, 0);
   OS.write(reinterpret_cast<char *>(FillData.data()), Size);
 }
 
 void Fill(raw_ostream &OS, size_t Size, uint32_t Data) {
-  std::vector<uint32_t> FillData;
-  FillData.insert(FillData.begin(), (Size / 4) + 1, Data);
+  std::vector<uint32_t> FillData((Size / 4) + 1, Data);
   OS.write(reinterpret_cast<char *>(FillData.data()), Size);
 }
 

@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <chrono>
 #include <fstream>
 #include <mutex>
+#include <sstream>
 #include <stdarg.h>
 
 #include "LLDBUtils.h"
@@ -38,8 +40,10 @@ VSCode::VSCode()
            {"swift_catch", "Swift Catch", lldb::eLanguageTypeSwift},
            {"swift_throw", "Swift Throw", lldb::eLanguageTypeSwift}}),
       focus_tid(LLDB_INVALID_THREAD_ID), sent_terminated_event(false),
-      stop_at_entry(false), is_attach(false),
-      reverse_request_seq(0), waiting_for_run_in_terminal(false) {
+      stop_at_entry(false), is_attach(false), reverse_request_seq(0),
+      waiting_for_run_in_terminal(false),
+      progress_event_queue(
+          [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }) {
   const char *log_file_path = getenv("LLDBVSCODE_LOG");
 #if defined(_WIN32)
   // Windows opens stdout and stdin in text mode which converts \n to 13,10
@@ -225,6 +229,103 @@ void VSCode::SendOutput(OutputType o, const llvm::StringRef output) {
   SendJSON(llvm::json::Value(std::move(event)));
 }
 
+// interface ProgressStartEvent extends Event {
+//   event: 'progressStart';
+//
+//   body: {
+//     /**
+//      * An ID that must be used in subsequent 'progressUpdate' and
+//      'progressEnd'
+//      * events to make them refer to the same progress reporting.
+//      * IDs must be unique within a debug session.
+//      */
+//     progressId: string;
+//
+//     /**
+//      * Mandatory (short) title of the progress reporting. Shown in the UI to
+//      * describe the long running operation.
+//      */
+//     title: string;
+//
+//     /**
+//      * The request ID that this progress report is related to. If specified a
+//      * debug adapter is expected to emit
+//      * progress events for the long running request until the request has
+//      been
+//      * either completed or cancelled.
+//      * If the request ID is omitted, the progress report is assumed to be
+//      * related to some general activity of the debug adapter.
+//      */
+//     requestId?: number;
+//
+//     /**
+//      * If true, the request that reports progress may be canceled with a
+//      * 'cancel' request.
+//      * So this property basically controls whether the client should use UX
+//      that
+//      * supports cancellation.
+//      * Clients that don't support cancellation are allowed to ignore the
+//      * setting.
+//      */
+//     cancellable?: boolean;
+//
+//     /**
+//      * Optional, more detailed progress message.
+//      */
+//     message?: string;
+//
+//     /**
+//      * Optional progress percentage to display (value range: 0 to 100). If
+//      * omitted no percentage will be shown.
+//      */
+//     percentage?: number;
+//   };
+// }
+//
+// interface ProgressUpdateEvent extends Event {
+//   event: 'progressUpdate';
+//
+//   body: {
+//     /**
+//      * The ID that was introduced in the initial 'progressStart' event.
+//      */
+//     progressId: string;
+//
+//     /**
+//      * Optional, more detailed progress message. If omitted, the previous
+//      * message (if any) is used.
+//      */
+//     message?: string;
+//
+//     /**
+//      * Optional progress percentage to display (value range: 0 to 100). If
+//      * omitted no percentage will be shown.
+//      */
+//     percentage?: number;
+//   };
+// }
+//
+// interface ProgressEndEvent extends Event {
+//   event: 'progressEnd';
+//
+//   body: {
+//     /**
+//      * The ID that was introduced in the initial 'ProgressStartEvent'.
+//      */
+//     progressId: string;
+//
+//     /**
+//      * Optional, more detailed progress message. If omitted, the previous
+//      * message (if any) is used.
+//      */
+//     message?: string;
+//   };
+// }
+
+void VSCode::SendProgressEvent(const ProgressEvent &event) {
+  progress_event_queue.Push(event);
+}
+
 void __attribute__((format(printf, 3, 4)))
 VSCode::SendFormattedOutput(OutputType o, const char *format, ...) {
   char buffer[1024];
@@ -355,11 +456,6 @@ void VSCode::SetTarget(const lldb::SBTarget target) {
         lldb::SBTarget::eBroadcastBitBreakpointChanged);
     listener.StartListeningForEvents(this->broadcaster,
                                      eBroadcastBitStopEventThread);
-    listener.StartListeningForEvents(
-        this->target.GetBroadcaster(),
-        lldb::SBTarget::eBroadcastBitModulesLoaded |
-            lldb::SBTarget::eBroadcastBitModulesUnloaded |
-            lldb::SBTarget::eBroadcastBitSymbolsLoaded);
   }
 }
 

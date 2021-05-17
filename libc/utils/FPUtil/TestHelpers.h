@@ -41,13 +41,13 @@ public:
     fputil::FPBits<T> actualBits(actual), expectedBits(expected);
     if (Condition == __llvm_libc::testing::Cond_EQ)
       return (actualBits.isNaN() && expectedBits.isNaN()) ||
-             (actualBits.bitsAsUInt() == expectedBits.bitsAsUInt());
+             (actualBits.uintval() == expectedBits.uintval());
 
     // If condition == Cond_NE.
     if (actualBits.isNaN())
       return !expectedBits.isNaN();
     return expectedBits.isNaN() ||
-           (actualBits.bitsAsUInt() != expectedBits.bitsAsUInt());
+           (actualBits.uintval() != expectedBits.uintval());
   }
 
   void explainError(testutils::StreamWrapper &stream) override {
@@ -66,11 +66,13 @@ FPMatcher<T, C> getMatcher(T expectedValue) {
 } // namespace __llvm_libc
 
 #define DECLARE_SPECIAL_CONSTANTS(T)                                           \
-  static const T zero = __llvm_libc::fputil::FPBits<T>::zero();                \
-  static const T negZero = __llvm_libc::fputil::FPBits<T>::negZero();          \
-  static const T aNaN = __llvm_libc::fputil::FPBits<T>::buildNaN(1);           \
-  static const T inf = __llvm_libc::fputil::FPBits<T>::inf();                  \
-  static const T negInf = __llvm_libc::fputil::FPBits<T>::negInf();
+  using FPBits = __llvm_libc::fputil::FPBits<T>;                               \
+  using UIntType = typename FPBits::UIntType;                                  \
+  const T zero = T(FPBits::zero());                                            \
+  const T negZero = T(FPBits::negZero());                                      \
+  const T aNaN = T(FPBits::buildNaN(1));                                       \
+  const T inf = T(FPBits::inf());                                              \
+  const T negInf = T(FPBits::negInf());
 
 #define EXPECT_FP_EQ(expected, actual)                                         \
   EXPECT_THAT(                                                                 \

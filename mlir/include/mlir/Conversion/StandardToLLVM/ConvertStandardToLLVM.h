@@ -77,7 +77,7 @@ public:
   /// supported LLVM IR type.  In particular, if more than one value is
   /// returned, create an LLVM IR structure type with elements that correspond
   /// to each of the MLIR types converted with `convertType`.
-  Type packFunctionResults(ArrayRef<Type> types);
+  Type packFunctionResults(TypeRange types);
 
   /// Convert a type in the context of the default or bare pointer calling
   /// convention. Calling convention sensitive types, such as MemRefType and
@@ -116,8 +116,10 @@ public:
                                    OpBuilder &builder);
 
   /// Converts the function type to a C-compatible format, in particular using
-  /// pointers to memref descriptors for arguments.
-  Type convertFunctionTypeCWrapper(FunctionType type);
+  /// pointers to memref descriptors for arguments. Also converts the return
+  /// type to a pointer argument if it is a struct. Returns true if this
+  /// was the case.
+  std::pair<Type, bool> convertFunctionTypeCWrapper(FunctionType type);
 
   /// Returns the data layout to use during and after conversion.
   const llvm::DataLayout &getDataLayout() { return options.dataLayout; }
@@ -127,7 +129,7 @@ public:
   Type getIndexType();
 
   /// Gets the bitwidth of the index type when converted to LLVM.
-  unsigned getIndexTypeBitwidth() { return options.indexBitwidth; }
+  unsigned getIndexTypeBitwidth() { return options.getIndexBitwidth(); }
 
   /// Gets the pointer bitwidth.
   unsigned getPointerBitwidth(unsigned addressSpace = 0);
@@ -656,9 +658,6 @@ public:
     static_assert(
         std::is_base_of<OpTrait::OneResult<SourceOp>, SourceOp>::value,
         "expected single result op");
-    static_assert(std::is_base_of<OpTrait::SameOperandsAndResultType<SourceOp>,
-                                  SourceOp>::value,
-                  "expected same operands and result type");
     return LLVM::detail::vectorOneToOneRewrite(
         op, TargetOp::getOperationName(), operands, *this->getTypeConverter(),
         rewriter);

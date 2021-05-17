@@ -63,7 +63,7 @@ struct WasmExport {
 
 struct WasmLimits {
   uint8_t Flags;
-  uint64_t Initial;
+  uint64_t Minimum;
   uint64_t Maximum;
 };
 
@@ -146,17 +146,22 @@ struct WasmFunction {
 
 struct WasmDataSegment {
   uint32_t InitFlags;
-  uint32_t MemoryIndex; // present if InitFlags & WASM_SEGMENT_HAS_MEMINDEX
-  WasmInitExpr Offset; // present if InitFlags & WASM_SEGMENT_IS_PASSIVE == 0
+  // Present if InitFlags & WASM_DATA_SEGMENT_HAS_MEMINDEX.
+  uint32_t MemoryIndex;
+  // Present if InitFlags & WASM_DATA_SEGMENT_IS_PASSIVE == 0.
+  WasmInitExpr Offset;
+
   ArrayRef<uint8_t> Content;
   StringRef Name; // from the "segment info" section
   uint32_t Alignment;
-  uint32_t LinkerFlags;
+  uint32_t LinkingFlags;
   uint32_t Comdat; // from the "comdat info" section
 };
 
 struct WasmElemSegment {
-  uint32_t TableIndex;
+  uint32_t Flags;
+  uint32_t TableNumber;
+  uint8_t ElemKind;
   WasmInitExpr Offset;
   std::vector<uint32_t> Functions;
 };
@@ -300,9 +305,16 @@ enum : unsigned {
 };
 
 enum : unsigned {
-  WASM_SEGMENT_IS_PASSIVE = 0x01,
-  WASM_SEGMENT_HAS_MEMINDEX = 0x02,
+  WASM_DATA_SEGMENT_IS_PASSIVE = 0x01,
+  WASM_DATA_SEGMENT_HAS_MEMINDEX = 0x02,
 };
+
+enum : unsigned {
+  WASM_ELEM_SEGMENT_IS_PASSIVE = 0x01,
+  WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER = 0x02,
+  WASM_ELEM_SEGMENT_HAS_INIT_EXPRS = 0x04,
+};
+const unsigned WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND = 0x3;
 
 // Feature policy prefixes used in the custom "target_features" section
 enum : uint8_t {
@@ -343,6 +355,11 @@ enum WasmSymbolType : unsigned {
   WASM_SYMBOL_TYPE_SECTION = 0x3,
   WASM_SYMBOL_TYPE_EVENT = 0x4,
   WASM_SYMBOL_TYPE_TABLE = 0x5,
+};
+
+enum WasmSegmentFlag : unsigned {
+  WASM_SEG_FLAG_STRINGS = 0x1,
+  WASM_SEG_FLAG_TLS = 0x2,
 };
 
 // Kinds of event attributes.

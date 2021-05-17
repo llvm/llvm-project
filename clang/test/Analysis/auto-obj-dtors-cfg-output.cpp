@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -std=c++98 -fcxx-exceptions -fexceptions -analyzer-checker=debug.DumpCFG -analyzer-config cfg-rich-constructors=false %s > %t 2>&1
-// RUN: FileCheck --input-file=%t -check-prefixes=CHECK,CXX98,WARNINGS,CXX98-WARNINGS %s
+// RUN: FileCheck --input-file=%t -check-prefixes=CHECK,CXX98,WARNINGS %s
 // RUN: %clang_analyze_cc1 -std=c++98 -fcxx-exceptions -fexceptions -analyzer-checker=debug.DumpCFG -analyzer-config cfg-rich-constructors=true %s > %t 2>&1
 // RUN: FileCheck --input-file=%t -check-prefixes=CHECK,CXX98,ANALYZER,CXX98-ANALYZER %s
 // RUN: %clang_analyze_cc1 -std=c++11 -fcxx-exceptions -fexceptions -analyzer-checker=debug.DumpCFG -analyzer-config cfg-rich-constructors=false %s > %t 2>&1
@@ -1074,6 +1074,59 @@ void test_for_implicit_scope() {
   for (A a; A b = a; )
     A c;
 }
+
+// CHECK-LABEL: void test_for_range_implicit_scope()
+// CHECK:      [B5 (ENTRY)]
+// CHECK-NEXT:   Succs (1): B4
+// CHECK:      [B1]
+// CHECK-NEXT:   1: __begin1
+// CHECK-NEXT:   2: [B1.1] (ImplicitCastExpr, LValueToRValue, int *)
+// CHECK-NEXT:   3: __end1
+// CHECK-NEXT:   4: [B1.3] (ImplicitCastExpr, LValueToRValue, int *)
+// CHECK-NEXT:   5: [B1.2] != [B1.4]
+// CHECK-NEXT:   T: for (int n : [B4.2])
+// CHECK-NEXT:[B3.7]
+// CHECK-NEXT:   Preds (2): B2 B4
+// CHECK-NEXT:   Succs (2): B3 B0
+// CHECK:      [B2]
+// CHECK-NEXT:   1: __begin1
+// CHECK-NEXT:   2: ++[B2.1]
+// CHECK-NEXT:   Preds (1): B3
+// CHECK-NEXT:   Succs (1): B1
+// CHECK:      [B3]
+// CHECK-NEXT:   1: __begin1
+// CHECK-NEXT:   2: [B3.1] (ImplicitCastExpr, LValueToRValue, int *)
+// CHECK-NEXT:   3: *[B3.2]
+// CHECK-NEXT:   4: [B3.3] (ImplicitCastExpr, LValueToRValue, int)
+// CHECK-NEXT:   5: int n = *__begin1;
+// WARNINGS-NEXT:   6:  (CXXConstructExpr, class A)
+// ANALYZER-NEXT:   6:  (CXXConstructExpr, [B3.7], class A)
+// CHECK-NEXT:   7: A c;
+// CHECK-NEXT:   8: [B3.7].~A() (Implicit destructor)
+// CHECK-NEXT:   Preds (1): B1
+// CHECK-NEXT:   Succs (1): B2
+// CHECK:      [B4]
+// CHECK-NEXT:   1: int nums[4];
+// CHECK-NEXT:   2: nums
+// CHECK-NEXT:   3: auto &&__range1 = nums;
+// CHECK-NEXT:   4: __range1
+// CHECK-NEXT:   5: [B4.4] (ImplicitCastExpr, ArrayToPointerDecay, int *)
+// CHECK-NEXT:   6: 4{{L*}}
+// CHECK-NEXT:   7: [B4.5] + [B4.6]
+// CHECK-NEXT:   8: auto __end1 = __range1 + 4{{L*}};
+// CHECK-NEXT:   9: __range1
+// CHECK-NEXT:  10: [B4.9] (ImplicitCastExpr, ArrayToPointerDecay, int *)
+// CHECK-NEXT:  11: auto __begin1 = __range1;
+// CHECK-NEXT:   Preds (1): B5
+// CHECK-NEXT:   Succs (1): B1
+// CHECK:      [B0 (EXIT)]
+// CHECK-NEXT:   Preds (1): B1
+void test_for_range_implicit_scope() {
+  int nums[4];
+  for (int n : nums)
+    A c;
+}
+
 
 // CHECK:      [B12 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B11

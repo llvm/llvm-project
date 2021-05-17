@@ -2,6 +2,9 @@
 ;RUN: llc < %s -o /dev/null
 ;Radar 7937109
 
+;XCore default subtarget does not support 8-byte alignment on stack.
+;XFAIL: xcore
+
 %struct.anon = type { i64, i32, i32, i32, [1 x i32] }
 %struct.gpm_t = type { i32, i8*, [16 x i8], i32, i64, i64, i64, i64, i64, i64, i32, i16, i16, [8 x %struct.gpmr_t] }
 %struct.gpmr_t = type { [48 x i8], [48 x i8], [16 x i8], i64, i64, i64, i64, i16 }

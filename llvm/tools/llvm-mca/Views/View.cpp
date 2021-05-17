@@ -12,18 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "Views/View.h"
+#include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 
 namespace llvm {
 namespace mca {
 
 void View::anchor() {}
 
-StringRef InstructionView::printInstructionString(const llvm::MCInst &MCI) const {
-    InstructionString = "";
-    MCIP.printInst(&MCI, 0, "", STI, InstrStream);
-    InstrStream.flush();
-    // Remove any tabs or spaces at the beginning of the instruction.
-    return StringRef(InstructionString).ltrim();
-  }
 } // namespace mca
 } // namespace llvm

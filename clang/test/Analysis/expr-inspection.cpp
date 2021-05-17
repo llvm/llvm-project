@@ -12,7 +12,7 @@ void clang_analyzer_express();
 
 void foo(int x, unsigned y) {
   clang_analyzer_denote(); // expected-warning{{clang_analyzer_denote() requires a symbol and a string literal}}
-  clang_analyzer_express(); // expected-warning{{clang_analyzer_express() requires a symbol}}
+  clang_analyzer_express(); // expected-warning{{Missing argument}}
 
   clang_analyzer_denote(x); // expected-warning{{clang_analyzer_denote() requires a symbol and a string literal}}
   clang_analyzer_express(x); // expected-warning{{Unable to express}}

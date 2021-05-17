@@ -80,6 +80,19 @@ define amdgpu_kernel void @v_test_smed3_r_i_i_i64(i64 addrspace(1)* %out, i64 ad
   ret void
 }
 
+; Regression test for performIntMed3ImmCombine extending arguments to 32 bit
+; which failed for 64 bit arguments. Previously asserted / crashed.
+; GCN-LABEL: {{^}}test_intMed3ImmCombine_no_32bit_extend:
+; GCN: v_cmp_lt_i64
+; GCN: v_cmp_gt_i64
+define i64 @test_intMed3ImmCombine_no_32bit_extend(i64 %x) {
+  %smax = call i64 @llvm.smax.i64(i64 %x, i64 -2)
+  %smin = call i64 @llvm.smin.i64(i64 %smax, i64 2)
+  ret i64 %smin
+}
+declare i64 @llvm.smax.i64(i64, i64)
+declare i64 @llvm.smin.i64(i64, i64)
+
 ; GCN-LABEL: {{^}}v_test_smed3_r_i_i_i16:
 ; SICIVI: v_med3_i32 v{{[0-9]+}}, v{{[0-9]+}}, 12, 17
 ; GFX9: v_med3_i16 v{{[0-9]+}}, v{{[0-9]+}}, 12, 17

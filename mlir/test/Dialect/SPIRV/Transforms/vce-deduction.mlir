@@ -192,6 +192,6 @@ spv.module Logical GLSL450 attributes {
     #spv.vce<v1.5, [Shader, UniformAndStorageBuffer8BitAccess, StorageBuffer16BitAccess, StorageUniform16, Int16, ImageBuffer, StorageImageExtendedFormats], []>,
     {}>
 } {
-  spv.globalVariable @data : !spv.ptr<!spv.struct<(i8 [0], f16 [2], i64 [4])>, Uniform>
-  spv.globalVariable @img  : !spv.ptr<!spv.image<f32, Buffer, NoDepth, NonArrayed, SingleSampled, SamplerUnknown, Rg32f>, UniformConstant>
+  spv.GlobalVariable @data : !spv.ptr<!spv.struct<(i8 [0], f16 [2], i64 [4])>, Uniform>
+  spv.GlobalVariable @img  : !spv.ptr<!spv.image<f32, Buffer, NoDepth, NonArrayed, SingleSampled, SamplerUnknown, Rg32f>, UniformConstant>
 }

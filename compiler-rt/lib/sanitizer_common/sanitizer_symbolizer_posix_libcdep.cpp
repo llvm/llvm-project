@@ -400,11 +400,20 @@ const char *Symbolizer::PlatformDemangle(const char *name) {
 
 static SymbolizerTool *ChooseExternalSymbolizer(LowLevelAllocator *allocator) {
   const char *path = common_flags()->external_symbolizer_path;
+
+  if (path && internal_strchr(path, '%')) {
+    char *new_path = (char *)InternalAlloc(kMaxPathLength);
+    SubstituteForFlagValue(path, new_path, kMaxPathLength);
+    path = new_path;
+  }
+
   const char *binary_name = path ? StripModuleName(path) : "";
+  static const char kLLVMSymbolizerPrefix[] = "llvm-symbolizer";
   if (path && path[0] == '\0') {
     VReport(2, "External symbolizer is explicitly disabled.\n");
     return nullptr;
-  } else if (!internal_strcmp(binary_name, "llvm-symbolizer")) {
+  } else if (!internal_strncmp(binary_name, kLLVMSymbolizerPrefix,
+                               internal_strlen(kLLVMSymbolizerPrefix))) {
     VReport(2, "Using llvm-symbolizer at user-specified path: %s\n", path);
     return new(*allocator) LLVMSymbolizer(path, allocator);
   } else if (!internal_strcmp(binary_name, "atos")) {

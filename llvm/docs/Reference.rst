@@ -33,7 +33,6 @@ LLVM and API reference documentation.
    MarkedUpDisassembly
    MIRLangRef
    OptBisect
-   ORCv2
    PDB/index
    ScudoHardenedAllocator
    MemTagSanitizer
@@ -61,10 +60,6 @@ API Reference
   Answers some questions about the new Attributes infrastructure.
 
 `Documentation for Go bindings <http://godoc.org/llvm.org/llvm/bindings/go/llvm>`_
-
-:doc:`ORCv2`
-   Describes the design and implementation of the ORC APIs, including some
-   usage examples, and a guide for users transitioning from ORCv1 to ORCv2.
 
 LLVM Reference
 --------------

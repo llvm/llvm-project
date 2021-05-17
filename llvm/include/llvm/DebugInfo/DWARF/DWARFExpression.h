@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARFEXPRESSION_H
-#define LLVM_DEBUGINFO_DWARFEXPRESSION_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFEXPRESSION_H
+#define LLVM_DEBUGINFO_DWARF_DWARFEXPRESSION_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
@@ -80,7 +80,7 @@ public:
     friend class DWARFExpression::iterator;
     uint8_t Opcode; ///< The Op Opcode, DW_OP_<something>.
     Description Desc;
-    bool Error;
+    bool Error = false;
     uint64_t EndOffset;
     uint64_t Operands[2];
     uint64_t OperandEndOffsets[2];
@@ -156,6 +156,8 @@ public:
   bool printCompact(raw_ostream &OS, const MCRegisterInfo &RegInfo);
 
   bool verify(DWARFUnit *U);
+
+  bool operator==(const DWARFExpression &RHS) const;
 
 private:
   DataExtractor Data;

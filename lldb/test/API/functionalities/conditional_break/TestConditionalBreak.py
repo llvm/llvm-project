@@ -49,7 +49,7 @@ class ConditionalBreakTestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # The stop reason of the thread should be breakpoint.
-        self.assertTrue(process.GetState() == lldb.eStateStopped,
+        self.assertEqual(process.GetState(), lldb.eStateStopped,
                         STOPPED_DUE_TO_BREAKPOINT)
 
         # Find the line number where a's parent frame function is c.
@@ -77,12 +77,12 @@ class ConditionalBreakTestCase(TestBase):
                 frame1 = thread.GetFrameAtIndex(1)
                 name1 = frame1.GetFunction().GetName()
                 # lldbutil.print_stacktrace(thread)
-                self.assertTrue(name0 == "c", "Break on function c()")
+                self.assertEqual(name0, "c", "Break on function c()")
                 if (name1 == "a"):
                     # By design, we know that a() calls c() only from main.c:27.
                     # In reality, similar logic can be used to find out the call
                     # site.
-                    self.assertTrue(frame1.GetLineEntry().GetLine() == line,
+                    self.assertEqual(frame1.GetLineEntry().GetLine(), line,
                                     "Immediate caller a() at main.c:%d" % line)
 
                     # And the local variable 'val' should have a value of (int)

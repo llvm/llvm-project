@@ -75,3 +75,12 @@ class DataFormatterBoolRefPtr(TestBase):
                     substrs=['NO'])
         if not(isArm):
             self.expect('frame variable unset', substrs=['12'])
+
+        self.expect_expr('myField', result_type="BoolBitFields",
+                 result_children=[
+                     ValueCheck(name="fieldOne", summary="NO"),
+                     ValueCheck(name="fieldTwo", summary="-1"),
+                     ValueCheck(name="fieldThree", summary="NO"),
+                     ValueCheck(name="fieldFour", summary="NO"),
+                     ValueCheck(name="fieldFive", summary="-1")
+                 ])

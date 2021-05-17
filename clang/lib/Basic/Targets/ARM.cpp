@@ -44,7 +44,8 @@ void ARMTargetInfo::setABIAAPCS() {
   if (T.isOSBinFormatMachO()) {
     resetDataLayout(BigEndian
                         ? "E-m:o-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-                        : "e-m:o-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64");
+                        : "e-m:o-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64",
+                    "_");
   } else if (T.isOSWindows()) {
     assert(!BigEndian && "Windows on ARM does not support big endian");
     resetDataLayout("e"
@@ -93,12 +94,13 @@ void ARMTargetInfo::setABIAPCS(bool IsAAPCS16) {
 
   if (T.isOSBinFormatMachO() && IsAAPCS16) {
     assert(!BigEndian && "AAPCS16 does not support big-endian");
-    resetDataLayout("e-m:o-p:32:32-Fi8-i64:64-a:0:32-n32-S128");
+    resetDataLayout("e-m:o-p:32:32-Fi8-i64:64-a:0:32-n32-S128", "_");
   } else if (T.isOSBinFormatMachO())
     resetDataLayout(
         BigEndian
             ? "E-m:o-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
-            : "e-m:o-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32");
+            : "e-m:o-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32",
+        "_");
   else
     resetDataLayout(
         BigEndian
@@ -426,6 +428,8 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   MVE = 0;
   CRC = 0;
   Crypto = 0;
+  SHA2 = 0;
+  AES = 0;
   DSP = 0;
   Unaligned = 1;
   SoftFloat = false;
@@ -476,6 +480,10 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       CRC = 1;
     } else if (Feature == "+crypto") {
       Crypto = 1;
+    } else if (Feature == "+sha2") {
+      SHA2 = 1;
+    } else if (Feature == "+aes") {
+      AES = 1;
     } else if (Feature == "+dsp") {
       DSP = 1;
     } else if (Feature == "+fp64") {
@@ -639,8 +647,14 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (ArchVersion >= 8) {
     // ACLE 6.5.7 Crypto Extension
-    if (Crypto)
+    // The __ARM_FEATURE_CRYPTO is deprecated in favor of finer grained
+    // feature macros for AES and SHA2
+    if (SHA2 && AES)
       Builder.defineMacro("__ARM_FEATURE_CRYPTO", "1");
+    if (SHA2)
+      Builder.defineMacro("__ARM_FEATURE_SHA2", "1");
+    if (AES)
+      Builder.defineMacro("__ARM_FEATURE_AES", "1");
     // ACLE 6.5.8 CRC32 Extension
     if (CRC)
       Builder.defineMacro("__ARM_FEATURE_CRC32", "1");
@@ -755,8 +769,12 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   // Note, this is always on in gcc, even though it doesn't make sense.
   Builder.defineMacro("__APCS_32__");
 
+  // __VFP_FP__ means that the floating-point format is VFP, not that a hardware
+  // FPU is present. Moreover, the VFP format is the only one supported by
+  // clang. For these reasons, this macro is always defined.
+  Builder.defineMacro("__VFP_FP__");
+
   if (FPUModeIsVFP((FPUMode)FPU)) {
-    Builder.defineMacro("__VFP_FP__");
     if (FPU & VFP2FPU)
       Builder.defineMacro("__ARM_VFPV2__");
     if (FPU & VFP3FPU)

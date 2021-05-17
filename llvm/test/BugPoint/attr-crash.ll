@@ -1,4 +1,4 @@
-; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%shlibext %s -output-prefix %t -bugpoint-crashfuncattr 2>&1 | FileCheck %s
+; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%pluginext %s -output-prefix %t -bugpoint-crashfuncattr 2>&1 | FileCheck %s
 ; REQUIRES: plugins
 ;
 ; ModuleID = 'attr-crash.ll'

@@ -17,12 +17,33 @@ v_div_scale_f64  v[24:25], vcc, -|v[22:23]|, v[22:23], v[20:21]
 // CHECK-NEXT:{{^}}^
 
 //==============================================================================
+// dlc modifier is not supported on this GPU
+
+scratch_load_ubyte v1, v2, off dlc
+// CHECK: error: dlc modifier is not supported on this GPU
+// CHECK-NEXT:{{^}}scratch_load_ubyte v1, v2, off dlc
+// CHECK-NEXT:{{^}}                               ^
+
+scratch_load_ubyte v1, v2, off nodlc
+// CHECK: error: dlc modifier is not supported on this GPU
+// CHECK-NEXT:{{^}}scratch_load_ubyte v1, v2, off nodlc
+// CHECK-NEXT:{{^}}                               ^
+
+//==============================================================================
 // duplicate VGPR index mode
 
 s_set_gpr_idx_on s0, gpr_idx(SRC0,DST,SRC1,DST)
 // CHECK: error: duplicate VGPR index mode
 // CHECK-NEXT:{{^}}s_set_gpr_idx_on s0, gpr_idx(SRC0,DST,SRC1,DST)
 // CHECK-NEXT:{{^}}                                           ^
+
+//==============================================================================
+// exp target is not supported on this GPU
+
+exp pos4 v4, v3, v2, v1
+// CHECK: error: exp target is not supported on this GPU
+// CHECK-NEXT:{{^}}exp pos4 v4, v3, v2, v1
+// CHECK-NEXT:{{^}}    ^
 
 //==============================================================================
 // expected a 12-bit unsigned offset
@@ -163,6 +184,11 @@ v_add_i16 v5, 0.5, v2
 image_atomic_add v10, v6, s[8:15] dmask:0x1 r128
 // CHECK: error: r128 modifier is not supported on this GPU
 // CHECK-NEXT:{{^}}image_atomic_add v10, v6, s[8:15] dmask:0x1 r128
+// CHECK-NEXT:{{^}}                                            ^
+
+image_atomic_add v10, v6, s[8:15] dmask:0x1 nor128
+// CHECK: error: r128 modifier is not supported on this GPU
+// CHECK-NEXT:{{^}}image_atomic_add v10, v6, s[8:15] dmask:0x1 nor128
 // CHECK-NEXT:{{^}}                                            ^
 
 //==============================================================================

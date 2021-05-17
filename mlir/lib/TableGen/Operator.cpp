@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/Operator.h"
-#include "mlir/TableGen/OpTrait.h"
 #include "mlir/TableGen/Predicate.h"
+#include "mlir/TableGen/Trait.h"
 #include "mlir/TableGen/Type.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/STLExtras.h"
@@ -50,6 +50,8 @@ Operator::Operator(const llvm::Record &def)
     cppClassName = prefix;
   }
 
+  cppNamespace = def.getValueAsString("cppNamespace");
+
   populateOpStructure();
 }
 
@@ -70,11 +72,12 @@ StringRef Operator::getDialectName() const { return dialect.getName(); }
 StringRef Operator::getCppClassName() const { return cppClassName; }
 
 std::string Operator::getQualCppClassName() const {
-  auto prefix = dialect.getCppNamespace();
-  if (prefix.empty())
+  if (cppNamespace.empty())
     return std::string(cppClassName);
-  return std::string(llvm::formatv("{0}::{1}", prefix, cppClassName));
+  return std::string(llvm::formatv("{0}::{1}", cppNamespace, cppClassName));
 }
+
+StringRef Operator::getCppNamespace() const { return cppNamespace; }
 
 int Operator::getNumResults() const {
   DagInit *results = def.getValueAsDag("results");
@@ -158,17 +161,17 @@ auto Operator::getArgDecorators(int index) const -> var_decorator_range {
   return *arg->getValueAsListInit("decorators");
 }
 
-const OpTrait *Operator::getTrait(StringRef trait) const {
+const Trait *Operator::getTrait(StringRef trait) const {
   for (const auto &t : traits) {
-    if (const auto *opTrait = dyn_cast<NativeOpTrait>(&t)) {
-      if (opTrait->getTrait() == trait)
-        return opTrait;
-    } else if (const auto *opTrait = dyn_cast<InternalOpTrait>(&t)) {
-      if (opTrait->getTrait() == trait)
-        return opTrait;
-    } else if (const auto *opTrait = dyn_cast<InterfaceOpTrait>(&t)) {
-      if (opTrait->getTrait() == trait)
-        return opTrait;
+    if (const auto *traitDef = dyn_cast<NativeTrait>(&t)) {
+      if (traitDef->getFullyQualifiedTraitName() == trait)
+        return traitDef;
+    } else if (const auto *traitDef = dyn_cast<InternalTrait>(&t)) {
+      if (traitDef->getFullyQualifiedTraitName() == trait)
+        return traitDef;
+    } else if (const auto *traitDef = dyn_cast<InterfaceTrait>(&t)) {
+      if (traitDef->getFullyQualifiedTraitName() == trait)
+        return traitDef;
     }
   }
   return nullptr;
@@ -314,7 +317,7 @@ void Operator::populateTypeInferenceInfo(
     return found;
   };
 
-  for (const OpTrait &trait : traits) {
+  for (const Trait &trait : traits) {
     const llvm::Record &def = trait.getDef();
     // If the infer type op interface was manually added, then treat it as
     // intention that the op needs special handling.
@@ -323,8 +326,8 @@ void Operator::populateTypeInferenceInfo(
     if (def.isSubClassOf(
             llvm::formatv("{0}::Trait", inferTypeOpInterface).str()))
       return;
-    if (const auto *opTrait = dyn_cast<InterfaceOpTrait>(&trait))
-      if (&opTrait->getDef() == inferTrait)
+    if (const auto *traitDef = dyn_cast<InterfaceTrait>(&trait))
+      if (&traitDef->getDef() == inferTrait)
         return;
 
     if (!def.isSubClassOf("AllTypesMatch"))
@@ -344,7 +347,7 @@ void Operator::populateTypeInferenceInfo(
 
   // If the types could be computed, then add type inference trait.
   if (allResultsHaveKnownTypes)
-    traits.push_back(OpTrait::create(inferTrait->getDefInit()));
+    traits.push_back(Trait::create(inferTrait->getDefInit()));
 }
 
 void Operator::populateOpStructure() {
@@ -489,7 +492,7 @@ void Operator::populateOpStructure() {
     for (auto *traitInit : *traitList) {
       // Keep traits in the same order while skipping over duplicates.
       if (traitSet.insert(traitInit).second)
-        traits.push_back(OpTrait::create(traitInit));
+        traits.push_back(Trait::create(traitInit));
     }
   }
 

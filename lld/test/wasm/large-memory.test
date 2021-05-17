@@ -12,7 +12,7 @@ RUN: obj2yaml %t2.wasm | FileCheck %s --check-prefixes=CHECK,CHECK-4G
 CHECK:      - Type:            MEMORY
 CHECK-NEXT:   Memories:
 CHECK-NEXT:     - Flags:           [ HAS_MAX ]
-CHECK-NEXT:       Initial:         0x2
+CHECK-NEXT:       Minimum:         0x2
 CHECK-2G-NEXT:    Maximum:         0x8000
 CHECK-4G-NEXT:    Maximum:         0x10000
 

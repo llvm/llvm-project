@@ -8,6 +8,8 @@
 
 // test <ctime>
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 #include <ctime>
 #include <type_traits>
 #include "test_macros.h"

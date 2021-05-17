@@ -10,14 +10,9 @@
 define i8 @test_demandedbits_umin_ult(i8 %a0, i8 %a1) {
 ; CHECK-LABEL: test_demandedbits_umin_ult:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    orb $12, %dil
-; CHECK-NEXT:    orb $4, %sil
-; CHECK-NEXT:    andb $13, %dil
-; CHECK-NEXT:    andb $12, %sil
-; CHECK-NEXT:    movzbl %dil, %ecx
-; CHECK-NEXT:    movzbl %sil, %eax
-; CHECK-NEXT:    cmpb %al, %cl
-; CHECK-NEXT:    cmovbl %ecx, %eax
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    orb $4, %al
+; CHECK-NEXT:    andb $12, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %lhs0 = and i8 %a0, 13  ; b1101

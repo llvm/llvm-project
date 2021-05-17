@@ -16,6 +16,10 @@
 #include "../bitset_test_cases.h"
 #include "test_macros.h"
 
+#if defined(TEST_COMPILER_C1XX)
+#pragma warning(disable: 6294) // Ill-defined for-loop:  initial condition does not satisfy test.  Loop body not executed.
+#endif
+
 template <std::size_t N>
 void test_reset_one() {
     std::vector<std::bitset<N> > const cases = get_test_cases<N>();

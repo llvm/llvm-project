@@ -13,8 +13,11 @@ if (current_os == "android") {
   target_flags += [
     "--target=$llvm_current_triple",
     "--sysroot=$android_ndk_path/toolchains/llvm/prebuilt/linux-x86_64/sysroot",
-    "-B$android_ndk_path/toolchains/llvm/prebuilt/linux-x86_64",
+    "--gcc-toolchain=$android_ndk_path/toolchains/llvm/prebuilt/linux-x86_64",
   ]
+  if (current_cpu != "arm") {
+    target_flags += [ "-rtlib=libgcc" ]
+  }
   target_ldflags += [ "-static-libstdc++" ]
   if (current_cpu == "arm") {
     target_flags += [ "-march=armv7-a" ]

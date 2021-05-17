@@ -2468,7 +2468,7 @@ Basic Inspection and Traversal Routines
 The LLVM compiler infrastructure have many different data structures that may be
 traversed.  Following the example of the C++ standard template library, the
 techniques used to traverse these various data structures are all basically the
-same.  For a enumerable sequence of values, the ``XXXbegin()`` function (or
+same.  For an enumerable sequence of values, the ``XXXbegin()`` function (or
 method) returns an iterator to the start of the sequence, the ``XXXend()``
 function returns an iterator pointing to one past the last valid element of the
 sequence, and there is some ``XXXiterator`` data type that is common between the

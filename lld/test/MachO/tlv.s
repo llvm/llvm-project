@@ -61,6 +61,7 @@
 ## Make sure we don't emit rebase opcodes for relocations in __thread_vars.
 # LINKEDIT:       Rebase table:
 # LINKEDIT-NEXT:  segment  section            address     type
+# LINKEDIT-EMPTY:
 # LINKEDIT-NEXT:  Bind table:
 # LINKEDIT:       __DATA  __thread_vars   0x{{[0-9a-f]*}}  pointer 0 libSystem __tlv_bootstrap
 # LINKEDIT:       __DATA  __thread_vars   0x{{[0-9a-f]*}}  pointer 0 libSystem __tlv_bootstrap
@@ -76,24 +77,24 @@ _main:
   mov _bar@TLVP(%rip), %rax
   ret
 
-.section	__DATA,__thread_data,thread_local_regular
+.section __DATA,__thread_data,thread_local_regular
 _foo$tlv$init:
   .quad 123
 
-.section	__DATA,more_thread_data,thread_local_regular
+.section __DATA,more_thread_data,thread_local_regular
 _bar$tlv$init:
   .quad 123
 
-.section	__DATA,__thread_vars,thread_local_variables
-.globl	_foo, _bar
+.section __DATA,__thread_vars,thread_local_variables
+.globl  _foo, _bar
 _foo:
-  .quad	__tlv_bootstrap
-  .quad	0
-  .quad	_foo$tlv$init
+  .quad  __tlv_bootstrap
+  .quad  0
+  .quad  _foo$tlv$init
 _bar:
-  .quad	__tlv_bootstrap
-  .quad	0
-  .quad	_bar$tlv$init
+  .quad  __tlv_bootstrap
+  .quad  0
+  .quad  _bar$tlv$init
 
 #--- tbss.s
 
@@ -106,12 +107,12 @@ _f:
 .tbss _baz$tlv$init, 8, 3
 .tbss _qux$tlv$init, 8, 3
 
-.section	__DATA,__thread_vars,thread_local_variables
+.section __DATA,__thread_vars,thread_local_variables
 _baz:
-  .quad	__tlv_bootstrap
-  .quad	0
-  .quad	_baz$tlv$init
+  .quad  __tlv_bootstrap
+  .quad  0
+  .quad  _baz$tlv$init
 _qux:
-  .quad	__tlv_bootstrap
-  .quad	0
-  .quad	_qux$tlv$init
+  .quad  __tlv_bootstrap
+  .quad  0
+  .quad  _qux$tlv$init

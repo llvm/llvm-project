@@ -10,6 +10,7 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "MtUnsafeCheck.h"
+#include "ThreadCanceltypeAsynchronousCheck.h"
 
 namespace clang {
 namespace tidy {
@@ -20,6 +21,8 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<concurrency::MtUnsafeCheck>(
         "concurrency-mt-unsafe");
+    CheckFactories.registerCheck<ThreadCanceltypeAsynchronousCheck>(
+        "concurrency-thread-canceltype-asynchronous");
   }
 };
 

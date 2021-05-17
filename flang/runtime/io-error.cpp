@@ -17,20 +17,13 @@
 
 namespace Fortran::runtime::io {
 
-void IoErrorHandler::Begin(const char *sourceFileName, int sourceLine) {
-  flags_ = 0;
-  ioStat_ = 0;
-  ioMsg_.reset();
-  SetLocation(sourceFileName, sourceLine);
-}
-
 void IoErrorHandler::SignalError(int iostatOrErrno, const char *msg, ...) {
   if (iostatOrErrno == IostatEnd && (flags_ & hasEnd)) {
-    if (!ioStat_ || ioStat_ < IostatEnd) {
+    if (ioStat_ == IostatOk || ioStat_ < IostatEnd) {
       ioStat_ = IostatEnd;
     }
   } else if (iostatOrErrno == IostatEor && (flags_ & hasEor)) {
-    if (!ioStat_ || ioStat_ < IostatEor) {
+    if (ioStat_ == IostatOk || ioStat_ < IostatEor) {
       ioStat_ = IostatEor; // least priority
     }
   } else if (iostatOrErrno != IostatOk) {
@@ -43,12 +36,14 @@ void IoErrorHandler::SignalError(int iostatOrErrno, const char *msg, ...) {
           va_start(ap, msg);
           std::vsnprintf(buffer, sizeof buffer, msg, ap);
           ioMsg_ = SaveDefaultCharacter(buffer, std::strlen(buffer) + 1, *this);
+          va_end(ap);
         }
       }
     } else if (msg) {
       va_list ap;
       va_start(ap, msg);
       CrashArgs(msg, ap);
+      va_end(ap);
     } else if (const char *errstr{IostatErrorString(iostatOrErrno)}) {
       Crash(errstr);
     } else {

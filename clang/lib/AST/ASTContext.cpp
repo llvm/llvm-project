@@ -56,8 +56,8 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Linkage.h"
 #include "clang/Basic/Module.h"
+#include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/ObjCRuntime.h"
-#include "clang/Basic/SanitizerBlacklist.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
@@ -84,6 +84,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -879,10 +880,15 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
   return CanonTTP;
 }
 
+TargetCXXABI::Kind ASTContext::getCXXABIKind() const {
+  auto Kind = getTargetInfo().getCXXABI().getKind();
+  return getLangOpts().CXXABI.getValueOr(Kind);
+}
+
 CXXABI *ASTContext::createCXXABI(const TargetInfo &T) {
   if (!LangOpts.CPlusPlus) return nullptr;
 
-  switch (T.getCXXABI().getKind()) {
+  switch (getCXXABIKind()) {
   case TargetCXXABI::AppleARM64:
   case TargetCXXABI::Fuchsia:
   case TargetCXXABI::GenericARM: // Same as Itanium at this level
@@ -930,6 +936,9 @@ static const LangASMap *getAddressSpaceMap(const TargetInfo &T,
         7,  // cuda_device
         8,  // cuda_constant
         9,  // cuda_shared
+        1,  // sycl_global
+        3,  // sycl_local
+        0,  // sycl_private
         10, // ptr32_sptr
         11, // ptr32_uptr
         12  // ptr64
@@ -961,10 +970,11 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
       DependentTemplateSpecializationTypes(this_()), AutoTypes(this_()),
       SubstTemplateTemplateParmPacks(this_()),
       CanonTemplateTemplateParms(this_()), SourceMgr(SM), LangOpts(LOpts),
-      SanitizerBL(new SanitizerBlacklist(LangOpts.SanitizerBlacklistFiles, SM)),
+      NoSanitizeL(new NoSanitizeList(LangOpts.NoSanitizeFiles, SM)),
       XRayFilter(new XRayFunctionFilter(LangOpts.XRayAlwaysInstrumentFiles,
                                         LangOpts.XRayNeverInstrumentFiles,
                                         LangOpts.XRayAttrListFiles, SM)),
+      ProfList(new ProfileList(LangOpts.ProfileListFiles, SM)),
       PrintingPolicy(LOpts), Idents(idents), Selectors(sels),
       BuiltinInfo(builtins), DeclarationNames(*this), Comments(SM),
       CommentCommandTraits(BumpAlloc, LOpts.CommentOpts),
@@ -1435,6 +1445,12 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 #include "clang/Basic/PPCTypes.def"
   }
 
+  if (Target.hasRISCVVTypes()) {
+#define RVV_TYPE(Name, Id, SingletonId)                                        \
+  InitBuiltinType(SingletonId, BuiltinType::Id);
+#include "clang/Basic/RISCVVTypes.def"
+  }
+
   // Builtin type for __objc_yes and __objc_no
   ObjCBuiltinBoolTy = (Target.useSignedCharForObjCBool() ?
                        SignedCharTy : BoolTy);
@@ -1444,7 +1460,7 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
   ObjCSuperType = QualType();
 
   // void * type
-  if (LangOpts.OpenCLVersion >= 200) {
+  if (LangOpts.OpenCLGenericAddressSpace) {
     auto Q = VoidTy.getQualifiers();
     Q.setAddressSpace(LangAS::opencl_generic);
     VoidPtrTy = getPointerType(getCanonicalType(
@@ -1774,6 +1790,13 @@ CharUnits ASTContext::getDeclAlign(const Decl *D, bool ForAlignof) const {
       }
     }
   }
+
+  // Some targets have hard limitation on the maximum requestable alignment in
+  // aligned attribute for static variables.
+  const unsigned MaxAlignedAttr = getTargetInfo().getMaxAlignedAttribute();
+  const auto *VD = dyn_cast<VarDecl>(D);
+  if (MaxAlignedAttr && VD && VD->getStorageClass() == SC_Static)
+    Align = std::min(Align, MaxAlignedAttr);
 
   return toCharUnitsFromBits(Align);
 }
@@ -2166,6 +2189,18 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Align = Size;                                                              \
     break;
 #include "clang/Basic/PPCTypes.def"
+#define RVV_VECTOR_TYPE(Name, Id, SingletonId, ElKind, ElBits, NF, IsSigned,   \
+                        IsFP)                                                  \
+  case BuiltinType::Id:                                                        \
+    Width = 0;                                                                 \
+    Align = ElBits;                                                            \
+    break;
+#define RVV_PREDICATE_TYPE(Name, Id, SingletonId, ElKind)                      \
+  case BuiltinType::Id:                                                        \
+    Width = 0;                                                                 \
+    Align = 8;                                                                 \
+    break;
+#include "clang/Basic/RISCVVTypes.def"
     }
     break;
   case Type::ObjCObjectPointer:
@@ -3810,6 +3845,19 @@ ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
     return SVE_ELTTY(BFloat16Ty, 8, 3);
   case BuiltinType::SveBFloat16x4:
     return SVE_ELTTY(BFloat16Ty, 8, 4);
+#define RVV_VECTOR_TYPE_INT(Name, Id, SingletonId, NumEls, ElBits, NF,         \
+                            IsSigned)                                          \
+  case BuiltinType::Id:                                                        \
+    return {getIntTypeForBitwidth(ElBits, IsSigned),                           \
+            llvm::ElementCount::getScalable(NumEls), NF};
+#define RVV_VECTOR_TYPE_FLOAT(Name, Id, SingletonId, NumEls, ElBits, NF)       \
+  case BuiltinType::Id:                                                        \
+    return {ElBits == 16 ? HalfTy : (ElBits == 32 ? FloatTy : DoubleTy),       \
+            llvm::ElementCount::getScalable(NumEls), NF};
+#define RVV_PREDICATE_TYPE(Name, Id, SingletonId, NumEls)                      \
+  case BuiltinType::Id:                                                        \
+    return {BoolTy, llvm::ElementCount::getScalable(NumEls), 1};
+#include "clang/Basic/RISCVVTypes.def"
   }
 }
 
@@ -3836,6 +3884,20 @@ QualType ASTContext::getScalableVectorType(QualType EltTy,
   if (EltTy->isBooleanType() && NumElts == NumEls)                             \
     return SingletonId;
 #include "clang/Basic/AArch64SVEACLETypes.def"
+  } else if (Target->hasRISCVVTypes()) {
+    uint64_t EltTySize = getTypeSize(EltTy);
+#define RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned,   \
+                        IsFP)                                                  \
+    if (!EltTy->isBooleanType() &&                                             \
+        ((EltTy->hasIntegerRepresentation() &&                                 \
+          EltTy->hasSignedIntegerRepresentation() == IsSigned) ||              \
+         (EltTy->hasFloatingRepresentation() && IsFP)) &&                      \
+        EltTySize == ElBits && NumElts == NumEls)                              \
+      return SingletonId;
+#define RVV_PREDICATE_TYPE(Name, Id, SingletonId, NumEls)                      \
+    if (EltTy->isBooleanType() && NumElts == NumEls)                           \
+      return SingletonId;
+#include "clang/Basic/RISCVVTypes.def"
   }
   return QualType();
 }
@@ -5704,29 +5766,29 @@ QualType ASTContext::getUnqualifiedArrayType(QualType type,
 /// Attempt to unwrap two types that may both be array types with the same bound
 /// (or both be array types of unknown bound) for the purpose of comparing the
 /// cv-decomposition of two types per C++ [conv.qual].
-bool ASTContext::UnwrapSimilarArrayTypes(QualType &T1, QualType &T2) {
-  bool UnwrappedAny = false;
+void ASTContext::UnwrapSimilarArrayTypes(QualType &T1, QualType &T2) {
   while (true) {
     auto *AT1 = getAsArrayType(T1);
-    if (!AT1) return UnwrappedAny;
+    if (!AT1)
+      return;
 
     auto *AT2 = getAsArrayType(T2);
-    if (!AT2) return UnwrappedAny;
+    if (!AT2)
+      return;
 
     // If we don't have two array types with the same constant bound nor two
     // incomplete array types, we've unwrapped everything we can.
     if (auto *CAT1 = dyn_cast<ConstantArrayType>(AT1)) {
       auto *CAT2 = dyn_cast<ConstantArrayType>(AT2);
       if (!CAT2 || CAT1->getSize() != CAT2->getSize())
-        return UnwrappedAny;
+        return;
     } else if (!isa<IncompleteArrayType>(AT1) ||
                !isa<IncompleteArrayType>(AT2)) {
-      return UnwrappedAny;
+      return;
     }
 
     T1 = AT1->getElementType();
     T2 = AT2->getElementType();
-    UnwrappedAny = true;
   }
 }
 
@@ -5839,9 +5901,8 @@ ASTContext::getNameForTemplate(TemplateName Name,
     } else {
       DName = DeclarationNames.getCXXOperatorName(DTN->getOperator());
       // DNInfo work in progress: FIXME: source locations?
-      DeclarationNameLoc DNLoc;
-      DNLoc.CXXOperatorName.BeginOpNameLoc = SourceLocation().getRawEncoding();
-      DNLoc.CXXOperatorName.EndOpNameLoc = SourceLocation().getRawEncoding();
+      DeclarationNameLoc DNLoc =
+          DeclarationNameLoc::makeCXXOperatorNameLoc(SourceRange());
       return DeclarationNameInfo(DName, NameLoc, DNLoc);
     }
   }
@@ -7212,13 +7273,15 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
 #define SVE_TYPE(Name, Id, SingletonId) \
     case BuiltinType::Id:
 #include "clang/Basic/AArch64SVEACLETypes.def"
-    {
-      DiagnosticsEngine &Diags = C->getDiagnostics();
-      unsigned DiagID = Diags.getCustomDiagID(
-          DiagnosticsEngine::Error, "cannot yet @encode type %0");
-      Diags.Report(DiagID) << BT->getName(C->getPrintingPolicy());
-      return ' ';
-    }
+#define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/RISCVVTypes.def"
+      {
+        DiagnosticsEngine &Diags = C->getDiagnostics();
+        unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
+                                                "cannot yet @encode type %0");
+        Diags.Report(DiagID) << BT->getName(C->getPrintingPolicy());
+        return ' ';
+      }
 
     case BuiltinType::ObjCId:
     case BuiltinType::ObjCClass:
@@ -7303,6 +7366,40 @@ static void EncodeBitField(const ASTContext *Ctx, std::string& S,
     }
   }
   S += llvm::utostr(FD->getBitWidthValue(*Ctx));
+}
+
+// Helper function for determining whether the encoded type string would include
+// a template specialization type.
+static bool hasTemplateSpecializationInEncodedString(const Type *T,
+                                                     bool VisitBasesAndFields) {
+  T = T->getBaseElementTypeUnsafe();
+
+  if (auto *PT = T->getAs<PointerType>())
+    return hasTemplateSpecializationInEncodedString(
+        PT->getPointeeType().getTypePtr(), false);
+
+  auto *CXXRD = T->getAsCXXRecordDecl();
+
+  if (!CXXRD)
+    return false;
+
+  if (isa<ClassTemplateSpecializationDecl>(CXXRD))
+    return true;
+
+  if (!CXXRD->hasDefinition() || !VisitBasesAndFields)
+    return false;
+
+  for (auto B : CXXRD->bases())
+    if (hasTemplateSpecializationInEncodedString(B.getType().getTypePtr(),
+                                                 true))
+      return true;
+
+  for (auto *FD : CXXRD->fields())
+    if (hasTemplateSpecializationInEncodedString(FD->getType().getTypePtr(),
+                                                 true))
+      return true;
+
+  return false;
 }
 
 // FIXME: Use SmallString for accumulating string.
@@ -7395,6 +7492,15 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
       // GCC binary compat: Need to convert "struct objc_object *" to "@".
       if (RTy->getDecl()->getIdentifier() == &Idents.get("objc_object")) {
         S += '@';
+        return;
+      }
+      // If the encoded string for the class includes template names, just emit
+      // "^v" for pointers to the class.
+      if (getLangOpts().CPlusPlus &&
+          (!getLangOpts().EncodeCXXClassTemplateSpec &&
+           hasTemplateSpecializationInEncodedString(
+               RTy, Options.ExpandPointedToStructures()))) {
+        S += "^v";
         return;
       }
       // fall through...
@@ -9999,7 +10105,12 @@ QualType ASTContext::getCorrespondingUnsignedType(QualType T) const {
     return getVectorType(getCorrespondingUnsignedType(VTy->getElementType()),
                          VTy->getNumElements(), VTy->getVectorKind());
 
-  // For enums, we return the unsigned version of the base type.
+  // For _ExtInt, return an unsigned _ExtInt with same width.
+  if (const auto *EITy = T->getAs<ExtIntType>())
+    return getExtIntType(/*IsUnsigned=*/true, EITy->getNumBits());
+
+  // For enums, get the underlying integer type of the enum, and let the general
+  // integer type signchanging code handle it.
   if (const auto *ETy = T->getAs<EnumType>())
     T = ETy->getDecl()->getIntegerType();
 
@@ -10049,6 +10160,74 @@ QualType ASTContext::getCorrespondingUnsignedType(QualType T) const {
     return SatUnsignedLongFractTy;
   default:
     llvm_unreachable("Unexpected signed integer or fixed point type");
+  }
+}
+
+QualType ASTContext::getCorrespondingSignedType(QualType T) const {
+  assert((T->hasUnsignedIntegerRepresentation() ||
+          T->isUnsignedFixedPointType()) &&
+         "Unexpected type");
+
+  // Turn <4 x unsigned int> -> <4 x signed int>
+  if (const auto *VTy = T->getAs<VectorType>())
+    return getVectorType(getCorrespondingSignedType(VTy->getElementType()),
+                         VTy->getNumElements(), VTy->getVectorKind());
+
+  // For _ExtInt, return a signed _ExtInt with same width.
+  if (const auto *EITy = T->getAs<ExtIntType>())
+    return getExtIntType(/*IsUnsigned=*/false, EITy->getNumBits());
+
+  // For enums, get the underlying integer type of the enum, and let the general
+  // integer type signchanging code handle it.
+  if (const auto *ETy = T->getAs<EnumType>())
+    T = ETy->getDecl()->getIntegerType();
+
+  switch (T->castAs<BuiltinType>()->getKind()) {
+  case BuiltinType::Char_U:
+  case BuiltinType::UChar:
+    return SignedCharTy;
+  case BuiltinType::UShort:
+    return ShortTy;
+  case BuiltinType::UInt:
+    return IntTy;
+  case BuiltinType::ULong:
+    return LongTy;
+  case BuiltinType::ULongLong:
+    return LongLongTy;
+  case BuiltinType::UInt128:
+    return Int128Ty;
+  // wchar_t is special. It is either unsigned or not, but when it's unsigned,
+  // there's no matching "signed wchar_t". Therefore we return the signed
+  // version of it's underlying type instead.
+  case BuiltinType::WChar_U:
+    return getSignedWCharType();
+
+  case BuiltinType::UShortAccum:
+    return ShortAccumTy;
+  case BuiltinType::UAccum:
+    return AccumTy;
+  case BuiltinType::ULongAccum:
+    return LongAccumTy;
+  case BuiltinType::SatUShortAccum:
+    return SatShortAccumTy;
+  case BuiltinType::SatUAccum:
+    return SatAccumTy;
+  case BuiltinType::SatULongAccum:
+    return SatLongAccumTy;
+  case BuiltinType::UShortFract:
+    return ShortFractTy;
+  case BuiltinType::UFract:
+    return FractTy;
+  case BuiltinType::ULongFract:
+    return LongFractTy;
+  case BuiltinType::SatUShortFract:
+    return SatShortFractTy;
+  case BuiltinType::SatUFract:
+    return SatFractTy;
+  case BuiltinType::SatULongFract:
+    return SatLongFractTy;
+  default:
+    llvm_unreachable("Unexpected unsigned integer or fixed point type");
   }
 }
 
@@ -10555,7 +10734,10 @@ static GVALinkage adjustGVALinkageForAttributes(const ASTContext &Context,
       return GVA_StrongODR;
     // Single source offloading languages like CUDA/HIP need to be able to
     // access static device variables from host code of the same compilation
-    // unit. This is done by externalizing the static variable.
+    // unit. This is done by externalizing the static variable with a shared
+    // name between the host and device compilation which is the same for the
+    // same compilation unit whereas different among different compilation
+    // units.
     if (Context.shouldExternalizeStaticVar(D))
       return GVA_StrongExternal;
   }
@@ -10798,6 +10980,9 @@ void ASTContext::forEachMultiversionedFunctionVersion(
   assert(FD->isMultiVersion() && "Only valid for multiversioned functions");
   llvm::SmallDenseSet<const FunctionDecl*, 4> SeenDecls;
   FD = FD->getMostRecentDecl();
+  // FIXME: The order of traversal here matters and depends on the order of
+  // lookup results, which happens to be (mostly) oldest-to-newest, but we
+  // shouldn't rely on that.
   for (auto *CurDecl :
        FD->getDeclContext()->getRedeclContext()->lookup(FD->getDeclName())) {
     FunctionDecl *CurFD = CurDecl->getAsFunction()->getMostRecentDecl();
@@ -11435,16 +11620,29 @@ operator<<(const StreamingDiagnostic &DB,
 }
 
 bool ASTContext::mayExternalizeStaticVar(const Decl *D) const {
-  return !getLangOpts().GPURelocatableDeviceCode &&
-         ((D->hasAttr<CUDADeviceAttr>() &&
-           !D->getAttr<CUDADeviceAttr>()->isImplicit()) ||
-          (D->hasAttr<CUDAConstantAttr>() &&
-           !D->getAttr<CUDAConstantAttr>()->isImplicit())) &&
-         isa<VarDecl>(D) && cast<VarDecl>(D)->isFileVarDecl() &&
-         cast<VarDecl>(D)->getStorageClass() == SC_Static;
+  bool IsStaticVar =
+      isa<VarDecl>(D) && cast<VarDecl>(D)->getStorageClass() == SC_Static;
+  bool IsExplicitDeviceVar = (D->hasAttr<CUDADeviceAttr>() &&
+                              !D->getAttr<CUDADeviceAttr>()->isImplicit()) ||
+                             (D->hasAttr<CUDAConstantAttr>() &&
+                              !D->getAttr<CUDAConstantAttr>()->isImplicit());
+  // CUDA/HIP: static managed variables need to be externalized since it is
+  // a declaration in IR, therefore cannot have internal linkage.
+  return IsStaticVar &&
+         (D->hasAttr<HIPManagedAttr>() || IsExplicitDeviceVar);
 }
 
 bool ASTContext::shouldExternalizeStaticVar(const Decl *D) const {
   return mayExternalizeStaticVar(D) &&
-         CUDAStaticDeviceVarReferencedByHost.count(cast<VarDecl>(D));
+         (D->hasAttr<HIPManagedAttr>() ||
+          CUDADeviceVarODRUsedByHost.count(cast<VarDecl>(D)));
+}
+
+StringRef ASTContext::getCUIDHash() const {
+  if (!CUIDHash.empty())
+    return CUIDHash;
+  if (LangOpts.CUID.empty())
+    return StringRef();
+  CUIDHash = llvm::utohexstr(llvm::MD5Hash(LangOpts.CUID), /*LowerCase=*/true);
+  return CUIDHash;
 }

@@ -1838,7 +1838,7 @@ private:
                           SrcMgr::CharacteristicKind DirCharacter, int LoadedID,
                           unsigned LoadedOffset);
 
-  SrcMgr::ContentCache &getOrCreateContentCache(const FileEntry *SourceFile,
+  SrcMgr::ContentCache &getOrCreateContentCache(FileEntryRef SourceFile,
                                                 bool isSystemFile = false);
 
   /// Create a new ContentCache for the specified  memory buffer.

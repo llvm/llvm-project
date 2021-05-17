@@ -180,7 +180,7 @@ void MipsSERegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
   if ((FrameIndex >= MinCSFI && FrameIndex <= MaxCSFI) || EhDataRegFI ||
       IsISRRegFI)
     FrameReg = ABI.GetStackPtr();
-  else if (RegInfo->needsStackRealignment(MF)) {
+  else if (RegInfo->hasStackRealignment(MF)) {
     if (MFI.hasVarSizedObjects() && !MFI.isFixedObjectIndex(FrameIndex))
       FrameReg = ABI.GetBasePtr();
     else if (MFI.isFixedObjectIndex(FrameIndex))

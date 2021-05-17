@@ -3920,6 +3920,17 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
     char err_str[1024] = {'\0'};
     std::string attach_name;
 
+    if (DNBDebugserverIsTranslated()) {
+      DNBLogError("debugserver is x86_64 binary running in translation, attach "
+                  "failed.");
+      std::string return_message = "E96;";
+      return_message +=
+          cstring_to_asciihex_string("debugserver is x86_64 binary running in "
+                                     "translation, attached failed.");
+      SendPacket(return_message.c_str());
+      return rnb_err;
+    }
+
     if (strstr(p, "vAttachWait;") == p) {
       p += strlen("vAttachWait;");
       if (!GetProcessNameFrom_vAttach(p, attach_name)) {
@@ -4578,7 +4589,8 @@ rnb_err_t RNBRemote::HandlePacket_qSpeedTest(const char *p) {
         __FILE__, __LINE__, p,
         "Didn't find response_size value at right offset");
   else if (*end == ';') {
-    static char g_data[4 * 1024 * 1024 + 16] = "data:";
+    static char g_data[4 * 1024 * 1024 + 16];
+    strcpy(g_data, "data:");
     memset(g_data + 5, 'a', response_size);
     g_data[response_size + 5] = '\0';
     return SendPacket(g_data);

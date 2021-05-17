@@ -985,6 +985,7 @@ bool ABISysV_mips::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
 
   UnwindPlan::RowSP row(new UnwindPlan::Row);
 
+  row->SetUnspecifiedRegistersAreUndefined(true);
   row->GetCFAValue().SetIsRegisterPlusOffset(dwarf_r29, 0);
 
   row->SetRegisterLocationToRegister(dwarf_pc, dwarf_r31, true);

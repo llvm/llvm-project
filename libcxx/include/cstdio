@@ -172,4 +172,4 @@ using ::vprintf;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_CSTDIO
+#endif // _LIBCPP_CSTDIO

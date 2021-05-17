@@ -56,8 +56,12 @@ void S2::f(int i) {
   (void)[&, &i, &i]{}; // expected-error 2{{'&' cannot precede a capture when the capture default is '&'}}
   (void)[i, i]{ }; // expected-error{{'i' can appear only once in a capture list}}
   (void)[&, i, i]{ }; // expected-error{{'i' can appear only once in a capture list}}
-  (void)[] mutable { }; // expected-error{{lambda requires '()' before 'mutable'}}
-  (void)[] -> int { }; // expected-error{{lambda requires '()' before return type}}
+  (void)[] mutable {};
+  (void)[]->int{};
+#if __cplusplus <= 202002L
+  // expected-warning@-3{{is a C++2b extension}}
+  // expected-warning@-3{{is a C++2b extension}}
+#endif
 
   delete []() { return new int; }(); // expected-error{{'[]' after delete interpreted as 'delete[]'}}
   delete [] { return new int; }(); // expected-error{{'[]' after delete interpreted as 'delete[]'}}

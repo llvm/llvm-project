@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H
 
-#include "src/errno/llvmlibc_errno.h"
 #include "utils/FPUtil/FPBits.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/Test.h"
@@ -36,18 +35,18 @@ private:
   using FPBits = __llvm_libc::fputil::FPBits<F>;
   using UIntType = typename FPBits::UIntType;
 
-  const F zero = __llvm_libc::fputil::FPBits<F>::zero();
-  const F negZero = __llvm_libc::fputil::FPBits<F>::negZero();
-  const F inf = __llvm_libc::fputil::FPBits<F>::inf();
-  const F negInf = __llvm_libc::fputil::FPBits<F>::negInf();
-  const F nan = __llvm_libc::fputil::FPBits<F>::buildNaN(1);
+  const F zero = F(__llvm_libc::fputil::FPBits<F>::zero());
+  const F negZero = F(__llvm_libc::fputil::FPBits<F>::negZero());
+  const F inf = F(__llvm_libc::fputil::FPBits<F>::inf());
+  const F negInf = F(__llvm_libc::fputil::FPBits<F>::negInf());
+  const F nan = F(__llvm_libc::fputil::FPBits<F>::buildNaN(1));
   static constexpr I IntegerMin = I(1) << (sizeof(I) * 8 - 1);
   static constexpr I IntegerMax = -(IntegerMin + 1);
 
   void testOneInput(RoundToIntegerFunc func, F input, I expected,
                     bool expectError) {
 #if math_errhandling & MATH_ERRNO
-    llvmlibc_errno = 0;
+    errno = 0;
 #endif
 #if math_errhandling & MATH_ERREXCEPT
     __llvm_libc::fputil::clearExcept(FE_ALL_EXCEPT);
@@ -60,14 +59,14 @@ private:
       ASSERT_EQ(__llvm_libc::fputil::testExcept(FE_ALL_EXCEPT), FE_INVALID);
 #endif
 #if math_errhandling & MATH_ERRNO
-      ASSERT_EQ(llvmlibc_errno, EDOM);
+      ASSERT_EQ(errno, EDOM);
 #endif
     } else {
 #if math_errhandling & MATH_ERREXCEPT
       ASSERT_EQ(__llvm_libc::fputil::testExcept(FE_ALL_EXCEPT), 0);
 #endif
 #if math_errhandling & MATH_ERRNO
-      ASSERT_EQ(llvmlibc_errno, 0);
+      ASSERT_EQ(errno, 0);
 #endif
     }
   }
@@ -136,11 +135,11 @@ public:
     // We start with 1.0 so that the implicit bit for x86 long doubles
     // is set.
     FPBits bits(F(1.0));
-    bits.exponent = exponentLimit + FPBits::exponentBias;
-    bits.sign = 1;
-    bits.mantissa = 0;
+    bits.encoding.exponent = exponentLimit + FPBits::exponentBias;
+    bits.encoding.sign = 1;
+    bits.encoding.mantissa = 0;
 
-    F x = bits;
+    F x = F(bits);
     long mpfrResult;
     bool erangeflag = mpfr::RoundToLong(x, mpfrResult);
     ASSERT_FALSE(erangeflag);
@@ -200,12 +199,12 @@ public:
     // We start with 1.0 so that the implicit bit for x86 long doubles
     // is set.
     FPBits bits(F(1.0));
-    bits.exponent = exponentLimit + FPBits::exponentBias;
-    bits.sign = 1;
-    bits.mantissa = UIntType(0x1)
-                    << (__llvm_libc::fputil::MantissaWidth<F>::value - 1);
+    bits.encoding.exponent = exponentLimit + FPBits::exponentBias;
+    bits.encoding.sign = 1;
+    bits.encoding.mantissa =
+        UIntType(0x1) << (__llvm_libc::fputil::MantissaWidth<F>::value - 1);
 
-    F x = bits;
+    F x = F(bits);
     if (TestModes) {
       for (int m : roundingModes) {
         __llvm_libc::fputil::setRound(m);
@@ -229,7 +228,7 @@ public:
         (FPBits::maxSubnormal - FPBits::minSubnormal) / count;
     for (UIntType i = FPBits::minSubnormal; i <= FPBits::maxSubnormal;
          i += step) {
-      F x = FPBits(i);
+      F x = F(FPBits(i));
       if (x == F(0.0))
         continue;
       // All subnormal numbers should round to zero.
@@ -271,7 +270,7 @@ public:
     constexpr UIntType count = 1000001;
     constexpr UIntType step = (FPBits::maxNormal - FPBits::minNormal) / count;
     for (UIntType i = FPBits::minNormal; i <= FPBits::maxNormal; i += step) {
-      F x = FPBits(i);
+      F x = F(FPBits(i));
       // In normal range on x86 platforms, the long double implicit 1 bit can be
       // zero making the numbers NaN. We will skip them.
       if (isnan(x)) {
@@ -304,13 +303,22 @@ public:
 };
 
 #define LIST_ROUND_TO_INTEGER_TESTS_HELPER(F, I, func, TestModes)              \
-  using RoundToIntegerTest = RoundToIntegerTestTemplate<F, I, TestModes>;      \
-  TEST_F(RoundToIntegerTest, InfinityAndNaN) { testInfinityAndNaN(&func); }    \
-  TEST_F(RoundToIntegerTest, RoundNumbers) { testRoundNumbers(&func); }        \
-  TEST_F(RoundToIntegerTest, Fractions) { testFractions(&func); }              \
-  TEST_F(RoundToIntegerTest, IntegerOverflow) { testIntegerOverflow(&func); }  \
-  TEST_F(RoundToIntegerTest, SubnormalRange) { testSubnormalRange(&func); }    \
-  TEST_F(RoundToIntegerTest, NormalRange) { testNormalRange(&func); }
+  using LlvmLibcRoundToIntegerTest =                                           \
+      RoundToIntegerTestTemplate<F, I, TestModes>;                             \
+  TEST_F(LlvmLibcRoundToIntegerTest, InfinityAndNaN) {                         \
+    testInfinityAndNaN(&func);                                                 \
+  }                                                                            \
+  TEST_F(LlvmLibcRoundToIntegerTest, RoundNumbers) {                           \
+    testRoundNumbers(&func);                                                   \
+  }                                                                            \
+  TEST_F(LlvmLibcRoundToIntegerTest, Fractions) { testFractions(&func); }      \
+  TEST_F(LlvmLibcRoundToIntegerTest, IntegerOverflow) {                        \
+    testIntegerOverflow(&func);                                                \
+  }                                                                            \
+  TEST_F(LlvmLibcRoundToIntegerTest, SubnormalRange) {                         \
+    testSubnormalRange(&func);                                                 \
+  }                                                                            \
+  TEST_F(LlvmLibcRoundToIntegerTest, NormalRange) { testNormalRange(&func); }
 
 #define LIST_ROUND_TO_INTEGER_TESTS(F, I, func)                                \
   LIST_ROUND_TO_INTEGER_TESTS_HELPER(F, I, func, false)

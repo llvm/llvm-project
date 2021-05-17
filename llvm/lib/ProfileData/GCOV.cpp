@@ -564,7 +564,7 @@ public:
     // Open source files without requiring a NUL terminator. The concurrent
     // modification may nullify the NUL terminator condition.
     ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-        MemoryBuffer::getFileOrSTDIN(Filename, -1,
+        MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/false,
                                      /*RequiresNullTerminator=*/false);
     if (std::error_code EC = BufferOrErr.getError()) {
       errs() << Filename << ": " << EC.message() << "\n";
@@ -866,7 +866,7 @@ void Context::print(StringRef filename, StringRef gcno, StringRef gcda,
     Optional<raw_fd_ostream> os;
     if (!options.UseStdout) {
       std::error_code ec;
-      os.emplace(gcovName, ec, sys::fs::OF_Text);
+      os.emplace(gcovName, ec, sys::fs::OF_TextWithCRLF);
       if (ec) {
         errs() << ec.message() << '\n';
         continue;
@@ -881,7 +881,7 @@ void Context::print(StringRef filename, StringRef gcno, StringRef gcda,
     // (PR GCC/82702). We create just one file.
     std::string outputPath(sys::path::filename(filename));
     std::error_code ec;
-    raw_fd_ostream os(outputPath + ".gcov", ec, sys::fs::OF_Text);
+    raw_fd_ostream os(outputPath + ".gcov", ec, sys::fs::OF_TextWithCRLF);
     if (ec) {
       errs() << ec.message() << '\n';
       return;

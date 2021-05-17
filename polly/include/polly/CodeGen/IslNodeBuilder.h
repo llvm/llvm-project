@@ -23,13 +23,11 @@
 #include "isl/ctx.h"
 #include "isl/isl-noexceptions.h"
 
-using namespace llvm;
-using namespace polly;
-
 namespace polly {
+using llvm::LoopInfo;
+using llvm::SmallSet;
 
 struct InvariantEquivClassTy;
-} // namespace polly
 
 struct SubtreeReferences {
   LoopInfo &LI;
@@ -250,7 +248,7 @@ protected:
   ///               this subtree.
   /// @param Loops  A vector that will be filled with the Loops referenced in
   ///               this subtree.
-  void getReferencesInSubtree(__isl_keep isl_ast_node *For,
+  void getReferencesInSubtree(const isl::ast_node &For,
                               SetVector<Value *> &Values,
                               SetVector<const Loop *> &Loops);
 
@@ -400,8 +398,7 @@ protected:
   ///         below this ast node to the scheduling vectors used to enumerate
   ///         them.
   ///
-  virtual __isl_give isl_union_map *
-  getScheduleForAstNode(__isl_take isl_ast_node *Node);
+  virtual isl::union_map getScheduleForAstNode(const isl::ast_node &Node);
 
 private:
   /// Create code for a copy statement.
@@ -428,5 +425,7 @@ private:
   /// See [Code generation of induction variables of loops outside Scops]
   Value *materializeNonScopLoopInductionVariable(const Loop *L);
 };
+
+} // namespace polly
 
 #endif // POLLY_ISLNODEBUILDER_H

@@ -54,12 +54,20 @@ test()
 #else
     static_assert((std::is_same<typename R::reference, typename T::reference>::value), "");
 #endif
+#if TEST_STD_VER > 17
+    if constexpr (std::is_same_v<typename T::iterator_category, std::contiguous_iterator_tag>) {
+        static_assert((std::is_same<typename R::iterator_category, std::random_access_iterator_tag>::value), "");
+    } else {
+        static_assert((std::is_same<typename R::iterator_category, typename T::iterator_category>::value), "");
+    }
+#else
     static_assert((std::is_same<typename R::iterator_category, typename T::iterator_category>::value), "");
+#endif
 }
 
 int main(int, char**)
 {
-    test<input_iterator<char*> >();
+    test<cpp17_input_iterator<char*> >();
     test<forward_iterator<char*> >();
     test<bidirectional_iterator<char*> >();
     test<random_access_iterator<char*> >();
@@ -92,6 +100,15 @@ int main(int, char**)
         typedef std::move_iterator<T> It;
         static_assert(std::is_same<It::reference, int&&>::value, "");
     }
+#endif
+
+#if TEST_STD_VER > 17
+    test<contiguous_iterator<char*>>();
+    static_assert(std::is_same_v<typename std::move_iterator<forward_iterator<char*>>::iterator_concept, std::input_iterator_tag>);
+    static_assert(std::is_same_v<typename std::move_iterator<bidirectional_iterator<char*>>::iterator_concept, std::input_iterator_tag>);
+    static_assert(std::is_same_v<typename std::move_iterator<random_access_iterator<char*>>::iterator_concept, std::input_iterator_tag>);
+    static_assert(std::is_same_v<typename std::move_iterator<contiguous_iterator<char*>>::iterator_concept, std::input_iterator_tag>);
+    static_assert(std::is_same_v<typename std::move_iterator<char*>::iterator_concept, std::input_iterator_tag>);
 #endif
 
   return 0;

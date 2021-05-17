@@ -81,7 +81,7 @@ Prefer zext over sext when legal
 On some architectures (X86_64 is one), sign extension can involve an extra
 instruction whereas zero extension can be folded into a load.  LLVM will try to
 replace a sext with a zext when it can be proven safe, but if you have
-information in your source language about the range of a integer value, it can
+information in your source language about the range of an integer value, it can
 be profitable to use a zext rather than a sext.
 
 Alternatively, you can :ref:`specify the range of the value using metadata

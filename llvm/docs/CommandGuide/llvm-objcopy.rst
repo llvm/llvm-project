@@ -59,7 +59,7 @@ multiple file formats.
 
  Remove most local symbols from the output. Different file formats may limit
  this to a subset of the local symbols. For example, file and section symbols in
- ELF objects will not be discarded.
+ ELF objects will not be discarded. Additionally, remove all debug sections.
 
 .. option:: --dump-section <section>=<file>
 
@@ -285,23 +285,6 @@ them.
  Allow :program:`llvm-objcopy` to remove sections even if it would leave invalid
  section references. Any invalid sh_link fields will be set to zero.
 
-.. option:: --build-id-link-dir <dir>
-
- Set the directory used by :option:`--build-id-link-input` and
- :option:`--build-id-link-output`.
-
-.. option:: --build-id-link-input <suffix>
-
- Hard-link the input to ``<dir>/xx/xxx<suffix>``, where ``<dir>`` is the directory
- specified by :option:`--build-id-link-dir`. The path used is derived from the
- hex build ID.
-
-.. option:: --build-id-link-output <suffix>
-
- Hard-link the output to ``<dir>/xx/xxx<suffix>``, where ``<dir>`` is the directory
- specified by :option:`--build-id-link-dir`. The path used is derived from the
- hex build ID.
-
 .. option:: --change-start <incr>, --adjust-start
 
  Add ``<incr>`` to the program's start address. Can be specified multiple
@@ -486,6 +469,13 @@ them.
 .. option:: --weaken
 
  Mark all defined global symbols as weak in the output.
+
+MACH-O-SPECIFIC OPTIONS
+-----------------------
+
+.. option:: --keep-undefined
+
+ Keep undefined symbols, even if they would otherwise be stripped.
 
 SUPPORTED FORMATS
 -----------------

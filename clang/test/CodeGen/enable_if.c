@@ -31,22 +31,22 @@ void bar(int m) __attribute__((overloadable, enable_if(m > 0, "")));
 void bar(int m) __attribute__((overloadable, enable_if(1, "")));
 // CHECK-LABEL: define{{.*}} void @test2
 void test2() {
-  // CHECK: store void (i32)* @_Z3barUa9enable_ifIXLi1EEEi
+  // CHECK: store void (i32)* @_Z3barUa9enable_ifILi1EEi
   void (*p)(int) = bar;
-  // CHECK: store void (i32)* @_Z3barUa9enable_ifIXLi1EEEi
+  // CHECK: store void (i32)* @_Z3barUa9enable_ifILi1EEi
   void (*p2)(int) = &bar;
-  // CHECK: store void (i32)* @_Z3barUa9enable_ifIXLi1EEEi
+  // CHECK: store void (i32)* @_Z3barUa9enable_ifILi1EEi
   p = bar;
-  // CHECK: store void (i32)* @_Z3barUa9enable_ifIXLi1EEEi
+  // CHECK: store void (i32)* @_Z3barUa9enable_ifILi1EEi
   p = &bar;
 
-  // CHECK: store i8* bitcast (void (i32)* @_Z3barUa9enable_ifIXLi1EEEi to i8*)
+  // CHECK: store i8* bitcast (void (i32)* @_Z3barUa9enable_ifILi1EEi to i8*)
   void *vp1 = (void*)&bar;
-  // CHECK: store i8* bitcast (void (i32)* @_Z3barUa9enable_ifIXLi1EEEi to i8*)
+  // CHECK: store i8* bitcast (void (i32)* @_Z3barUa9enable_ifILi1EEi to i8*)
   void *vp2 = (void*)bar;
-  // CHECK: store i8* bitcast (void (i32)* @_Z3barUa9enable_ifIXLi1EEEi to i8*)
+  // CHECK: store i8* bitcast (void (i32)* @_Z3barUa9enable_ifILi1EEi to i8*)
   vp1 = (void*)&bar;
-  // CHECK: store i8* bitcast (void (i32)* @_Z3barUa9enable_ifIXLi1EEEi to i8*)
+  // CHECK: store i8* bitcast (void (i32)* @_Z3barUa9enable_ifILi1EEi to i8*)
   vp1 = (void*)bar;
 }
 
@@ -54,13 +54,13 @@ void baz(int m) __attribute__((overloadable, enable_if(1, "")));
 void baz(int m) __attribute__((overloadable));
 // CHECK-LABEL: define{{.*}} void @test3
 void test3() {
-  // CHECK: store void (i32)* @_Z3bazUa9enable_ifIXLi1EEEi
+  // CHECK: store void (i32)* @_Z3bazUa9enable_ifILi1EEi
   void (*p)(int) = baz;
-  // CHECK: store void (i32)* @_Z3bazUa9enable_ifIXLi1EEEi
+  // CHECK: store void (i32)* @_Z3bazUa9enable_ifILi1EEi
   void (*p2)(int) = &baz;
-  // CHECK: store void (i32)* @_Z3bazUa9enable_ifIXLi1EEEi
+  // CHECK: store void (i32)* @_Z3bazUa9enable_ifILi1EEi
   p = baz;
-  // CHECK: store void (i32)* @_Z3bazUa9enable_ifIXLi1EEEi
+  // CHECK: store void (i32)* @_Z3bazUa9enable_ifILi1EEi
   p = &baz;
 }
 
@@ -71,13 +71,13 @@ void qux(int m) __attribute__((overloadable, enable_if(1, ""),
 void qux(int m) __attribute__((overloadable, enable_if(1, "")));
 // CHECK-LABEL: define{{.*}} void @test4
 void test4() {
-  // CHECK: store void (i32)* @_Z3quxUa9enable_ifIXLi1EEXLi1EEEi
+  // CHECK: store void (i32)* @_Z3quxUa9enable_ifILi1ELi1EEi
   void (*p)(int) = qux;
-  // CHECK: store void (i32)* @_Z3quxUa9enable_ifIXLi1EEXLi1EEEi
+  // CHECK: store void (i32)* @_Z3quxUa9enable_ifILi1ELi1EEi
   void (*p2)(int) = &qux;
-  // CHECK: store void (i32)* @_Z3quxUa9enable_ifIXLi1EEXLi1EEEi
+  // CHECK: store void (i32)* @_Z3quxUa9enable_ifILi1ELi1EEi
   p = qux;
-  // CHECK: store void (i32)* @_Z3quxUa9enable_ifIXLi1EEXLi1EEEi
+  // CHECK: store void (i32)* @_Z3quxUa9enable_ifILi1ELi1EEi
   p = &qux;
 }
 
@@ -90,6 +90,6 @@ void test5() {
   int foo(char *i __attribute__((pass_object_size(0))))
       __attribute__((enable_if(1, ""), overloadable));
 
-  // CHECK: call i32 @_Z3fooUa9enable_ifIXLi1EEEPcU17pass_object_size0
+  // CHECK: call i32 @_Z3fooUa9enable_ifILi1EEPcU17pass_object_size0
   foo((void*)0);
 }

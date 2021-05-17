@@ -12,8 +12,8 @@
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
-#include "llvm/ExecutionEngine/Orc/OrcError.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcessControl.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -124,7 +124,6 @@ private:
 /// some runtime API, including __cxa_atexit, dlopen, and dlclose.
 class GenericLLVMIRPlatformSupport : public LLJIT::PlatformSupport {
 public:
-  // GenericLLVMIRPlatform &P) : P(P) {
   GenericLLVMIRPlatformSupport(LLJIT &J)
       : J(J), InitFunctionPrefix(J.mangle("__orc_init_func.")) {
 
@@ -239,7 +238,7 @@ public:
       });
       for (auto DeinitFnAddr : *Deinitializers) {
         LLVM_DEBUG({
-          dbgs() << "  Running init " << formatv("{0:x16}", DeinitFnAddr)
+          dbgs() << "  Running deinit " << formatv("{0:x16}", DeinitFnAddr)
                  << "...\n";
         });
         auto *DeinitFn = jitTargetAddressToFunction<void (*)()>(DeinitFnAddr);
@@ -894,6 +893,28 @@ private:
   std::map<std::thread::id, std::unique_ptr<std::string>> dlErrorMsgs;
 };
 
+/// Inactive Platform Support
+///
+/// Explicitly disables platform support. JITDylibs are not scanned for special
+/// init/deinit symbols. No runtime API interposes are injected.
+class InactivePlatformSupport : public LLJIT::PlatformSupport {
+public:
+  InactivePlatformSupport() = default;
+
+  Error initialize(JITDylib &JD) override {
+    LLVM_DEBUG(dbgs() << "InactivePlatformSupport: no initializers running for "
+                      << JD.getName() << "\n");
+    return Error::success();
+  }
+
+  Error deinitialize(JITDylib &JD) override {
+    LLVM_DEBUG(
+        dbgs() << "InactivePlatformSupport: no deinitializers running for "
+               << JD.getName() << "\n");
+    return Error::success();
+  }
+};
+
 } // end anonymous namespace
 
 namespace llvm {
@@ -922,7 +943,8 @@ Error LLJITBuilderState::prepareForConstruction() {
   }
 
   LLVM_DEBUG({
-    dbgs() << "  JITTargetMachineBuilder is " << JTMB << "\n"
+    dbgs() << "  JITTargetMachineBuilder is "
+           << JITTargetMachineBuilderPrinter(*JTMB, "  ")
            << "  Pre-constructed ExecutionSession: " << (ES ? "Yes" : "No")
            << "\n"
            << "  DataLayout: ";
@@ -1022,18 +1044,18 @@ LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES) {
   // Otherwise default to creating an RTDyldObjectLinkingLayer that constructs
   // a new SectionMemoryManager for each object.
   auto GetMemMgr = []() { return std::make_unique<SectionMemoryManager>(); };
-  auto ObjLinkingLayer =
+  auto Layer =
       std::make_unique<RTDyldObjectLinkingLayer>(ES, std::move(GetMemMgr));
 
   if (S.JTMB->getTargetTriple().isOSBinFormatCOFF()) {
-    ObjLinkingLayer->setOverrideObjectFlagsWithResponsibilityFlags(true);
-    ObjLinkingLayer->setAutoClaimResponsibilityForObjectSymbols(true);
+    Layer->setOverrideObjectFlagsWithResponsibilityFlags(true);
+    Layer->setAutoClaimResponsibilityForObjectSymbols(true);
   }
 
   // FIXME: Explicit conversion to std::unique_ptr<ObjectLayer> added to silence
   //        errors from some GCC / libstdc++ bots. Remove this conversion (i.e.
   //        just return ObjLinkingLayer) once those bots are upgraded.
-  return std::unique_ptr<ObjectLayer>(std::move(ObjLinkingLayer));
+  return std::unique_ptr<ObjectLayer>(std::move(Layer));
 }
 
 Expected<std::unique_ptr<IRCompileLayer::IRCompiler>>
@@ -1104,20 +1126,16 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     InitHelperTransformLayer->setCloneToNewContextOnEmit(true);
     CompileThreads =
         std::make_unique<ThreadPool>(hardware_concurrency(S.NumCompileThreads));
-    ES->setDispatchMaterialization(
-        [this](std::unique_ptr<MaterializationUnit> MU,
-               std::unique_ptr<MaterializationResponsibility> MR) {
-          // FIXME: We should be able to use move-capture here, but ThreadPool's
-          // AsyncTaskTys are std::functions rather than unique_functions
-          // (because MSVC's std::packaged_tasks don't support move-only types).
-          // Fix this when all the above gets sorted out.
-          CompileThreads->async(
-              [UnownedMU = MU.release(), UnownedMR = MR.release()]() mutable {
-                std::unique_ptr<MaterializationUnit> MU(UnownedMU);
-                std::unique_ptr<MaterializationResponsibility> MR(UnownedMR);
-                MU->materialize(std::move(MR));
-              });
-        });
+    ES->setDispatchTask([this](std::unique_ptr<Task> T) {
+      // FIXME: We should be able to use move-capture here, but ThreadPool's
+      // AsyncTaskTys are std::functions rather than unique_functions
+      // (because MSVC's std::packaged_tasks don't support move-only types).
+      // Fix this when all the above gets sorted out.
+      CompileThreads->async([UnownedT = T.release()]() mutable {
+        std::unique_ptr<Task> T(UnownedT);
+        T->run();
+      });
+    });
   }
 
   if (S.SetUpPlatform)
@@ -1161,6 +1179,13 @@ Error setUpMachOPlatform(LLJIT &J) {
   if (!MP)
     return MP.takeError();
   J.setPlatformSupport(std::move(*MP));
+  return Error::success();
+}
+
+Error setUpInactivePlatform(LLJIT &J) {
+  LLVM_DEBUG(
+      { dbgs() << "Explicitly deactivated platform support for LLJIT\n"; });
+  J.setPlatformSupport(std::make_unique<InactivePlatformSupport>());
   return Error::success();
 }
 

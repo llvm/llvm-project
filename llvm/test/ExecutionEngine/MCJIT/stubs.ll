@@ -1,4 +1,4 @@
-; RUN: %lli -disable-lazy-compilation=false %s
+; RUN: %lli -jit-kind=mcjit -disable-lazy-compilation=false %s
 
 define i32 @main() nounwind {
 entry:

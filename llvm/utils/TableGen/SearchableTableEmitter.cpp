@@ -348,17 +348,13 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
       IndexRowsStorage.push_back(Entry.first);
 
       OS << "    { ";
-      bool NeedComma = false;
+      ListSeparator LS;
       for (const auto &Field : Index.Fields) {
-        if (NeedComma)
-          OS << ", ";
-        NeedComma = true;
-
         std::string Repr = primaryRepresentation(
             Index.Loc, Field, Entry.first->getValueInit(Field.Name));
         if (isa<StringRecTy>(Field.RecType))
           Repr = StringRef(Repr).upper();
-        OS << Repr;
+        OS << LS << Repr;
       }
       OS << ", " << Entry.second << " },\n";
     }
@@ -414,13 +410,9 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
   }
   OS << "  };\n";
   OS << "  KeyType Key = {";
-  bool NeedComma = false;
+  ListSeparator LS;
   for (const auto &Field : Index.Fields) {
-    if (NeedComma)
-      OS << ", ";
-    NeedComma = true;
-
-    OS << Field.Name;
+    OS << LS << Field.Name;
     if (isa<StringRecTy>(Field.RecType)) {
       OS << ".upper()";
       if (IsPrimary)
@@ -482,15 +474,10 @@ void SearchableTableEmitter::emitLookupDeclaration(const GenericTable &Table,
                                                    raw_ostream &OS) {
   OS << "const " << Table.CppTypeName << " *" << Index.Name << "(";
 
-  bool NeedComma = false;
-  for (const auto &Field : Index.Fields) {
-    if (NeedComma)
-      OS << ", ";
-    NeedComma = true;
-
-    OS << searchableFieldType(Table, Index, Field, TypeInArgument) << " "
+  ListSeparator LS;
+  for (const auto &Field : Index.Fields)
+    OS << LS << searchableFieldType(Table, Index, Field, TypeInArgument) << " "
        << Field.Name;
-  }
   OS << ")";
 }
 
@@ -518,15 +505,11 @@ void SearchableTableEmitter::emitGenericTable(const GenericTable &Table,
     Record *Entry = Table.Entries[i];
     OS << "  { ";
 
-    bool NeedComma = false;
-    for (const auto &Field : Table.Fields) {
-      if (NeedComma)
-        OS << ", ";
-      NeedComma = true;
-
-      OS << primaryRepresentation(Table.Locs[0], Field,
+    ListSeparator LS;
+    for (const auto &Field : Table.Fields)
+      OS << LS
+         << primaryRepresentation(Table.Locs[0], Field,
                                   Entry->getValueInit(Field.Name));
-    }
 
     OS << " }, // " << i << "\n";
   }

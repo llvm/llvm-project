@@ -579,6 +579,28 @@ public:
     }
   }
 
+  /// If a label is defined before the .type directive sets the label's type
+  /// then the label can't be recorded as thumb function when the label is
+  /// defined. We override emitSymbolAttribute() which is called as part of the
+  /// parsing of .type so that if the symbol has already been defined we can
+  /// record the label as Thumb. FIXME: there is a corner case where the state
+  /// is changed in between the label definition and the .type directive, this
+  /// is not expected to occur in practice and handling it would require the
+  /// backend to track IsThumb for every label.
+  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
+    bool Val = MCELFStreamer::emitSymbolAttribute(Symbol, Attribute);
+
+    if (!IsThumb)
+      return Val;
+
+    unsigned Type = cast<MCSymbolELF>(Symbol)->getType();
+    if ((Type == ELF::STT_FUNC || Type == ELF::STT_GNU_IFUNC) &&
+        Symbol->isDefined())
+      getAssembler().setIsThumbFunc(Symbol);
+
+    return Val;
+  };
+
 private:
   enum ElfMappingSymbol {
     EMS_None,
@@ -1203,7 +1225,8 @@ inline void ARMELFStreamer::SwitchToEHSection(StringRef Prefix,
   if (Group)
     Flags |= ELF::SHF_GROUP;
   MCSectionELF *EHSection = getContext().getELFSection(
-      EHSecName, Type, Flags, 0, Group, FnSection.getUniqueID(),
+      EHSecName, Type, Flags, 0, Group, /*IsComdat=*/true,
+      FnSection.getUniqueID(),
       static_cast<const MCSymbolELF *>(FnSection.getBeginSymbol()));
 
   assert(EHSection && "Failed to get the required EH section");

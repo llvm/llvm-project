@@ -10,6 +10,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Basic/TargetInfo.h"
 
 using namespace clang::ast_matchers;
 
@@ -17,7 +18,7 @@ namespace clang {
 namespace tidy {
 namespace cppcoreguidelines {
 
-const internal::VariadicDynCastAllOfMatcher<Stmt, VAArgExpr> vAArgExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, VAArgExpr> VAArgExpr;
 
 static constexpr StringRef AllowedVariadics[] = {
     // clang-format off
@@ -60,8 +61,45 @@ namespace {
 AST_MATCHER(QualType, isVAList) {
   ASTContext &Context = Finder->getASTContext();
   QualType Desugar = Node.getDesugaredType(Context);
-  return Context.getBuiltinVaListType().getDesugaredType(Context) == Desugar ||
-         Context.getBuiltinMSVaListType().getDesugaredType(Context) == Desugar;
+  QualType NodeTy = Node.getUnqualifiedType();
+
+  auto CheckVaList = [](QualType NodeTy, QualType Expected,
+                        const ASTContext &Context) {
+    if (NodeTy == Expected)
+      return true;
+    QualType Desugar = NodeTy;
+    QualType Ty;
+    do {
+      Ty = Desugar;
+      Desugar = Ty.getSingleStepDesugaredType(Context);
+      if (Desugar == Expected)
+        return true;
+    } while (Desugar != Ty);
+    return false;
+  };
+
+  // The internal implementation of __builtin_va_list depends on the target
+  // type. Some targets implements va_list as 'char *' or 'void *'.
+  // In these cases we need to remove all typedefs one by one to check this.
+  using BuiltinVaListKind = TargetInfo::BuiltinVaListKind;
+  BuiltinVaListKind VaListKind = Context.getTargetInfo().getBuiltinVaListKind();
+  if (VaListKind == BuiltinVaListKind::CharPtrBuiltinVaList ||
+      VaListKind == BuiltinVaListKind::VoidPtrBuiltinVaList) {
+    if (CheckVaList(NodeTy, Context.getBuiltinVaListType(), Context))
+      return true;
+  } else if (Desugar ==
+             Context.getBuiltinVaListType().getDesugaredType(Context)) {
+    return true;
+  }
+
+  // We also need to check the implementation of __builtin_ms_va_list in the
+  // same way, because it may differ from the va_list implementation.
+  if (Desugar == Context.getBuiltinMSVaListType().getDesugaredType(Context) &&
+      CheckVaList(NodeTy, Context.getBuiltinMSVaListType(), Context)) {
+    return true;
+  }
+
+  return false;
 }
 
 AST_MATCHER_P(AdjustedType, hasOriginalType,
@@ -71,7 +109,7 @@ AST_MATCHER_P(AdjustedType, hasOriginalType,
 } // namespace
 
 void ProTypeVarargCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(vAArgExpr().bind("va_use"), this);
+  Finder->addMatcher(VAArgExpr().bind("va_use"), this);
 
   Finder->addMatcher(
       callExpr(callee(functionDecl(isVariadic(),

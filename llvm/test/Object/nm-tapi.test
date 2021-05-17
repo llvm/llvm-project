@@ -10,6 +10,9 @@ RUN:          | FileCheck %s -check-prefix V3
 RUN: llvm-nm %p/Inputs/tapi-v4.tbd \
 RUN:          | FileCheck %s -check-prefix V4
 
+RUN: llvm-nm %p/Inputs/tapi-v4-watchos.tbd \
+RUN:          | FileCheck %s -check-prefix V4-WATCH
+
 V1: /u/l/libfoo.dylib (for architecture armv7):
 V1-NEXT: 00000000 S _sym
 V1: /u/l/libfoo.dylib (for architecture armv7s):
@@ -56,3 +59,8 @@ V4-NEXT: 00000000 S _sym4
 V4: /u/l/libFoo.dylib (for architecture x86_64):
 V4-NEXT: 0000000000000000 S _sym3
 V4-NEXT: 0000000000000000 S _sym4
+
+V4-WATCH: /u/l/libFoo.dylib (for architecture armv7k)
+V4-WATCH-NEXT: 00000000 S _sym1
+V4-WATCH: /u/l/libFoo.dylib (for architecture arm64_32)
+V4-WATCH-NEXT: 00000000 S _sym1

@@ -666,7 +666,7 @@ void unittest_b2_08_02() {
 // CHECK-NOTES: :[[@LINE-1]]:5: note: +2, including nesting penalty of 1, nesting level increased to 2{{$}}
     }
   };
-// CHECK-NOTES: :[[@LINE-6]]:14: warning: function 'operator()' has cognitive complexity of 1 (threshold 0) [readability-function-cognitive-complexity]
+// CHECK-NOTES: :[[@LINE-6]]:14: warning: lambda has cognitive complexity of 1 (threshold 0) [readability-function-cognitive-complexity]
 // CHECK-NOTES: :[[@LINE-5]]:5: note: +1, including nesting penalty of 0, nesting level increased to 1{{$}}
 }
 

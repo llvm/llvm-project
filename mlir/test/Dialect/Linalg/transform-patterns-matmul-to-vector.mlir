@@ -22,6 +22,6 @@ func @matmul(%A: memref<1584x1584xf32, offset: 0, strides: [1584, 1]>,
 //
 //      CHECK: vector.contract
 // CHECK-SAME:   iterator_types = ["parallel", "parallel", "reduction"]
-// CHECK-SAME:   : vector<8x16xf32>, vector<16x12xf32> into vector<8x12xf32>
+// CHECK-SAME:   : vector<8x16xf32>, vector<12x16xf32> into vector<8x12xf32>
 //
 //      CHECK: linalg.copy

@@ -80,17 +80,22 @@ declare i32 @ret32(i32, i64, i32) local_unnamed_addr
 ; RELOC-NEXT:         Segment:         0
 ; RELOC-NEXT:         Size:            4
 ; RELOC-NEXT:       - Index:           3
+; RELOC-NEXT:         Kind:            TABLE
+; RELOC-NEXT:         Name:            __indirect_function_table
+; RELOC-NEXT:         Flags:           [ UNDEFINED, NO_STRIP ]
+; RELOC-NEXT:         Table:           0
+; RELOC-NEXT:       - Index:           4
 ; RELOC-NEXT:         Kind:            FUNCTION
 ; RELOC-NEXT:         Name:            call_ret32
 ; RELOC-NEXT:         Flags:           [ ]
 ; RELOC-NEXT:         Function:        3
-; RELOC-NEXT:       - Index:           4
+; RELOC-NEXT:       - Index:           5
 ; RELOC-NEXT:         Kind:            DATA
 ; RELOC-NEXT:         Name:            ret32_address
 ; RELOC-NEXT:         Flags:           [  ]
 ; RELOC-NEXT:         Segment:         1
 ; RELOC-NEXT:         Size:            4
-; RELOC-NEXT:       - Index:           5
+; RELOC-NEXT:       - Index:           6
 ; RELOC-NEXT:         Kind:            FUNCTION
 ; RELOC-NEXT:         Name:            'signature_mismatch:ret32'
 ; RELOC-NEXT:         Flags:           [ BINDING_LOCAL ]

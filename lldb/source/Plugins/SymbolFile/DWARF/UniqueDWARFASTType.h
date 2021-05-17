@@ -14,7 +14,7 @@
 #include "llvm/ADT/DenseMap.h"
 
 #include "DWARFDIE.h"
-#include "lldb/Symbol/Declaration.h"
+#include "lldb/Core/Declaration.h"
 
 class UniqueDWARFASTType {
 public:

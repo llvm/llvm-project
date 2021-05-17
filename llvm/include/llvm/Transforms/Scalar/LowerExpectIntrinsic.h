@@ -17,7 +17,6 @@
 
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
 
@@ -32,8 +31,6 @@ struct LowerExpectIntrinsicPass : PassInfoMixin<LowerExpectIntrinsicPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
 };
 
-extern cl::opt<uint32_t> LikelyBranchWeight;
-extern cl::opt<uint32_t> UnlikelyBranchWeight;
 }
 
 #endif

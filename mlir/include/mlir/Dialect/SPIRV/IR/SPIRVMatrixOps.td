@@ -62,9 +62,11 @@ def SPV_MatrixTimesMatrixOp : SPV_Op<"MatrixTimesMatrix", [NoSideEffect]> {
   let results = (outs
     SPV_AnyMatrix:$result
   );
+
   let assemblyFormat = [{
     operands attr-dict `:` type($leftmatrix) `,` type($rightmatrix) `->` type($result)
   }];
+
   let verifier = [{ return verifyMatrixTimesMatrix(*this); }];
 }
 

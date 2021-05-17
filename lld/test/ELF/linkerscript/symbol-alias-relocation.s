@@ -8,7 +8,7 @@
 ## (It should belong to the section .text and point to it's start).
 
 # CHECK:      Symbol {
-# CHECK:        Name: __text
+# CHECK:        Name: aliasto__text
 # CHECK-NEXT:   Value: 0x1000
 # CHECK-NEXT:   Size: 0
 # CHECK-NEXT:   Binding: Global
@@ -18,7 +18,7 @@
 # CHECK-NEXT: }
 
 # CHECK:      Symbol {
-# CHECK:        Name: aliasto__text
+# CHECK:        Name: __text
 # CHECK-NEXT:   Value: 0x1000
 # CHECK-NEXT:   Size: 0
 # CHECK-NEXT:   Binding: Global

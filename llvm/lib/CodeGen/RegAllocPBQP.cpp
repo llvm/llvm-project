@@ -703,9 +703,8 @@ void RegAllocPBQP::spillVReg(Register VReg,
 
   // Copy any newly inserted live intervals into the list of regs to
   // allocate.
-  for (LiveRangeEdit::iterator I = LRE.begin(), E = LRE.end();
-       I != E; ++I) {
-    const LiveInterval &LI = LIS.getInterval(*I);
+  for (const Register &R : LRE) {
+    const LiveInterval &LI = LIS.getInterval(R);
     assert(!LI.empty() && "Empty spill range.");
     LLVM_DEBUG(dbgs() << printReg(LI.reg(), &TRI) << " ");
     VRegsToAlloc.insert(LI.reg());
@@ -759,10 +758,8 @@ void RegAllocPBQP::finalizeAlloc(MachineFunction &MF,
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   // First allocate registers for the empty intervals.
-  for (RegSet::const_iterator
-         I = EmptyIntervalVRegs.begin(), E = EmptyIntervalVRegs.end();
-         I != E; ++I) {
-    LiveInterval &LI = LIS.getInterval(*I);
+  for (const Register &R : EmptyIntervalVRegs) {
+    LiveInterval &LI = LIS.getInterval(R);
 
     Register PReg = MRI.getSimpleHint(LI.reg());
 
@@ -803,7 +800,14 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
   PBQPVirtRegAuxInfo VRAI(MF, LIS, VRM, getAnalysis<MachineLoopInfo>(), MBFI);
   VRAI.calculateSpillWeightsAndHints();
 
-  std::unique_ptr<Spiller> VRegSpiller(createInlineSpiller(*this, MF, VRM));
+  // FIXME: we create DefaultVRAI here to match existing behavior pre-passing
+  // the VRAI through the spiller to the live range editor. However, it probably
+  // makes more sense to pass the PBQP VRAI. The existing behavior had
+  // LiveRangeEdit make its own VirtRegAuxInfo object.
+  VirtRegAuxInfo DefaultVRAI(MF, LIS, VRM, getAnalysis<MachineLoopInfo>(),
+                             MBFI);
+  std::unique_ptr<Spiller> VRegSpiller(
+      createInlineSpiller(*this, MF, VRM, DefaultVRAI));
 
   MF.getRegInfo().freezeReservedRegs(MF);
 
@@ -855,7 +859,7 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
         std::string GraphFileName = FullyQualifiedName + "." + RS.str() +
                                     ".pbqpgraph";
         std::error_code EC;
-        raw_fd_ostream OS(GraphFileName, EC, sys::fs::OF_Text);
+        raw_fd_ostream OS(GraphFileName, EC, sys::fs::OF_TextWithCRLF);
         LLVM_DEBUG(dbgs() << "Dumping graph for round " << Round << " to \""
                           << GraphFileName << "\"\n");
         G.dump(OS);

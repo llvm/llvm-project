@@ -17,7 +17,7 @@ import time
 import threading
 
 
-def kill_server_after_delay(server_process):
+def kill_process_after_delay(server_process):
   time.sleep(10)
   if server_process.poll() is None:
     server_process.kill()
@@ -48,7 +48,7 @@ def main():
   # This will kill index_server_process if it hangs without printing init
   # message.
   shutdown_thread = threading.Thread(
-      target=kill_server_after_delay, args=(index_server_process,))
+      target=kill_process_after_delay, args=(index_server_process,))
   shutdown_thread.daemon = True
   shutdown_thread.start()
 
@@ -67,6 +67,13 @@ def main():
     print('Server initialization failed. Shutting down.', file=sys.stderr)
     sys.exit(1)
 
+  print('Running clangd-index-server-monitor...', file=sys.stderr)
+  index_server_monitor_process = subprocess.Popen([
+      'clangd-index-server-monitor', server_address,
+  ], stderr=subprocess.PIPE)
+
+  index_server_monitor_process.wait()
+
   in_file = open(args.input_file_name)
 
   print('Staring clangd...', file=sys.stderr)
@@ -81,6 +88,10 @@ def main():
       file=sys.stderr)
   index_server_process.kill()
   for line in index_server_process.stderr:
+    args.server_log.write(line)
+    args.server_log.flush()
+
+  for line in index_server_monitor_process.stderr:
     args.server_log.write(line)
     args.server_log.flush()
 

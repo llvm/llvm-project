@@ -1,11 +1,11 @@
 ; RUN: opt %loadPolly -polly-dependences -analyze < %s | FileCheck %s
 ;
 ; CHECK:      RAW dependences:
-; CHECK-NEXT:     { Stmt_S2[i0, i1] -> Stmt_S3[o0] : i1 <= 1 - i0 and -i1 < o0 <= 1 and o0 <= 1 + i0 - i1; Stmt_S3[i0] -> Stmt_S2[o0, 1 - i0] : 0 <= i0 <= 1 and i0 < o0 <= 98; Stmt_S1[i0] -> Stmt_S3[2 + i0] : 0 <= i0 <= 96 }
+; CHECK-NEXT:     { Stmt_S1[i0] -> Stmt_S3[2 + i0] : 0 <= i0 <= 96; Stmt_S2[i0, i1] -> Stmt_S3[o0] : i1 <= 1 - i0 and -i1 < o0 <= 1 and o0 <= 1 + i0 - i1; Stmt_S3[i0] -> Stmt_S2[o0, 1 - i0] : 0 <= i0 <= 1 and i0 < o0 <= 98 }
 ; CHECK-NEXT: WAR dependences:
-; CHECK-NEXT:   { Stmt_S2[i0, i1] -> Stmt_S3[o0] : i1 <= 1 - i0 and -i1 < o0 <= 1 and o0 <= 1 + i0 - i1; Stmt_S3[i0] -> Stmt_S2[o0, 1 - i0] : 0 <= i0 <= 1 and i0 < o0 <= 98; Stmt_S1[i0] -> Stmt_S3[2 + i0] : 0 <= i0 <= 96 }
+; CHECK-NEXT:     { Stmt_S1[i0] -> Stmt_S3[2 + i0] : 0 <= i0 <= 96; Stmt_S2[i0, i1] -> Stmt_S3[o0] : i1 <= 1 - i0 and -i1 < o0 <= 1 and o0 <= 1 + i0 - i1; Stmt_S3[i0] -> Stmt_S2[o0, 1 - i0] : 0 <= i0 <= 1 and i0 < o0 <= 98 }
 ; CHECK-NEXT: WAW dependences:
-; CHECK-NEXT:     { Stmt_S2[i0, i1] -> Stmt_S3[o0] : i1 <= 1 - i0 and -i1 < o0 <= 1 and o0 <= 1 + i0 - i1; Stmt_S3[i0] -> Stmt_S2[o0, 1 - i0] : 0 <= i0 <= 1 and i0 < o0 <= 98; Stmt_S1[i0] -> Stmt_S3[2 + i0] : 0 <= i0 <= 96 }
+; CHECK-NEXT:     { Stmt_S1[i0] -> Stmt_S3[2 + i0] : 0 <= i0 <= 96; Stmt_S2[i0, i1] -> Stmt_S3[o0] : i1 <= 1 - i0 and -i1 < o0 <= 1 and o0 <= 1 + i0 - i1; Stmt_S3[i0] -> Stmt_S2[o0, 1 - i0] : 0 <= i0 <= 1 and i0 < o0 <= 98 }
 ; CHECK-NEXT: Reduction dependences:
 ; CHECK-NEXT:     { Stmt_S2[i0, i1] -> Stmt_S2[1 + i0, i1] : 0 <= i0 <= 97 and i1 >= 0 and 2 - i0 <= i1 <= 98 - i0; Stmt_S2[0, 0] -> Stmt_S2[1, 0] }
 ;

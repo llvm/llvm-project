@@ -17,7 +17,7 @@
 // CHECK: define internal void @[[TEST_BLOCK_INVOKE5]]({{.*}}) #[[DISABLEATTR]] {
 // CHECK: define internal void @[[TEST_BLOCK_INVOKE6]]({{.*}}) #[[ENABLEATTR]] {
 
-// CHECK: attributes #[[ENABLEATTR]] = {{{.*}}"disable-tail-calls"="false"{{.*}}}
+// CHECK-NOT: attributes #[[ENABLEATTR]] = {{{.*}}"disable-tail-calls"="false"{{.*}}}
 // CHECK: attributes #[[DISABLEATTR]] = {{{.*}}"disable-tail-calls"="true"{{.*}}}
 
 typedef void (^BlockTy)(void);

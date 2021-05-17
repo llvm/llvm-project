@@ -14,11 +14,7 @@
 
 // template <class Alloc> tuple(allocator_arg_t, Alloc const&)
 
-// Libc++ has to deduce the 'allocator_arg_t' parameter for this constructor
-// as 'AllocArgT'. Previously libc++ has tried to support tags derived from
-// 'allocator_arg_t' by using 'is_base_of<AllocArgT, allocator_arg_t>'.
-// However this breaks whenever a 2-tuple contains a reference to an incomplete
-// type as its first parameter. See PR27684.
+// See https://llvm.org/PR27684.
 
 #include <tuple>
 #include <cassert>

@@ -1570,10 +1570,10 @@ bool ClangASTSource::layoutRecordType(const RecordDecl *record, uint64_t &size,
 
   if (log) {
     LLDB_LOG(log, "LRT returned:");
-    LLDB_LOG(log, "LRT   Original = (RecordDecl*)%p",
+    LLDB_LOG(log, "LRT   Original = (RecordDecl*){0}",
              static_cast<const void *>(origin_record.decl));
-    LLDB_LOG(log, "LRT   Size = %" PRId64, size);
-    LLDB_LOG(log, "LRT   Alignment = %" PRId64, alignment);
+    LLDB_LOG(log, "LRT   Size = {0}", size);
+    LLDB_LOG(log, "LRT   Alignment = {0}", alignment);
     LLDB_LOG(log, "LRT   Fields:");
     for (RecordDecl::field_iterator fi = record->field_begin(),
                                     fe = record->field_end();

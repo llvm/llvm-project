@@ -62,7 +62,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
   RegisterTargetMachine<X86TargetMachine> Y(getTheX86_64Target());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeX86LowerAMXIntrinsicsLegacyPassPass(PR);
   initializeX86LowerAMXTypeLegacyPassPass(PR);
+  initializeX86PreAMXConfigPassPass(PR);
   initializeGlobalISel(PR);
   initializeWinEHStatePassPass(PR);
   initializeFixupBWInstPassPass(PR);
@@ -73,6 +75,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
   initializeX86CallFrameOptimizationPass(PR);
   initializeX86CmovConverterPassPass(PR);
   initializeX86TileConfigPass(PR);
+  initializeX86FastTileConfigPass(PR);
+  initializeX86LowerTileCopyPass(PR);
   initializeX86ExpandPseudoPass(PR);
   initializeX86ExecutionDomainFixPass(PR);
   initializeX86DomainReassignmentPass(PR);
@@ -259,7 +263,7 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
     StringRef Val = PreferVecWidthAttr.getValueAsString();
     unsigned Width;
     if (!Val.getAsInteger(0, Width)) {
-      Key += "prefer-vector-width=";
+      Key += 'p';
       Key += Val;
       PreferVectorWidthOverride = Width;
     }
@@ -272,7 +276,7 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
     StringRef Val = MinLegalVecWidthAttr.getValueAsString();
     unsigned Width;
     if (!Val.getAsInteger(0, Width)) {
-      Key += "min-legal-vector-width=";
+      Key += 'm';
       Key += Val;
       RequiredVectorWidth = Width;
     }
@@ -282,7 +286,6 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
   Key += CPU;
 
   // Add tune CPU to the Key.
-  Key += "tune=";
   Key += TuneCPU;
 
   // Keep track of the start of the feature portion of the string.
@@ -293,8 +296,7 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
   // function before we can generate a subtarget. We also need to use
   // it as a key for the subtarget since that can be the only difference
   // between two functions.
-  bool SoftFloat =
-      F.getFnAttribute("use-soft-float").getValueAsString() == "true";
+  bool SoftFloat = F.getFnAttribute("use-soft-float").getValueAsBool();
   // If the soft float attribute is set on the function turn on the soft float
   // subtarget feature.
   if (SoftFloat)
@@ -377,6 +379,7 @@ public:
   bool addPreISel() override;
   void addMachineSSAOptimization() override;
   void addPreRegAlloc() override;
+  bool addPostFastRegAllocRewrite() override;
   void addPostRegAlloc() override;
   void addPreEmitPass() override;
   void addPreEmitPass2() override;
@@ -410,7 +413,14 @@ TargetPassConfig *X86TargetMachine::createPassConfig(PassManagerBase &PM) {
 
 void X86PassConfig::addIRPasses() {
   addPass(createAtomicExpandPass());
+
+  // We add both pass anyway and when these two passes run, we skip the pass
+  // based on the option level and option attribute.
+  addPass(createX86LowerAMXIntrinsicsPass());
   addPass(createX86LowerAMXTypePass());
+
+  if (TM->getOptLevel() == CodeGenOpt::None)
+    addPass(createX86PreAMXConfigPass());
 
   TargetPassConfig::addIRPasses();
 
@@ -464,7 +474,7 @@ bool X86PassConfig::addRegBankSelect() {
 }
 
 bool X86PassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect());
+  addPass(new InstructionSelect(getOptLevel()));
   return false;
 }
 
@@ -508,6 +518,7 @@ void X86PassConfig::addMachineSSAOptimization() {
 }
 
 void X86PassConfig::addPostRegAlloc() {
+  addPass(createX86LowerTileCopyPass());
   addPass(createX86FloatingPointStackifierPass());
   // When -O0 is enabled, the Load Value Injection Hardening pass will fall back
   // to using the Speculative Execution Side Effect Suppression pass for
@@ -568,10 +579,19 @@ void X86PassConfig::addPreEmitPass2() {
       (!TT.isOSWindows() ||
        MAI->getExceptionHandlingType() == ExceptionHandling::DwarfCFI))
     addPass(createCFIInstrInserter());
-  // Identify valid longjmp targets for Windows Control Flow Guard.
-  if (TT.isOSWindows())
+
+  if (TT.isOSWindows()) {
+    // Identify valid longjmp targets for Windows Control Flow Guard.
     addPass(createCFGuardLongjmpPass());
+    // Identify valid eh continuation targets for Windows EHCont Guard.
+    addPass(createEHContGuardCatchretPass());
+  }
   addPass(createX86LoadValueInjectionRetHardeningPass());
+}
+
+bool X86PassConfig::addPostFastRegAllocRewrite() {
+  addPass(createX86FastTileConfigPass());
+  return true;
 }
 
 bool X86PassConfig::addPreRewrite() {

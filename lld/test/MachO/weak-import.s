@@ -1,5 +1,5 @@
 # REQUIRES: x86
-# RUN: split-file %s %t
+# RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/weak-ref-only.s -o %t/weak-ref-only.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/weak-ref-sub-library.s -o %t/weak-ref-sub-library.o
@@ -24,7 +24,7 @@
 
 # WEAK-SYS:          cmd LC_LOAD_WEAK_DYLIB
 # WEAK-SYS-NEXT: cmdsize
-# WEAK-SYS-NEXT:    name /usr/lib/libSystem.B.dylib
+# WEAK-SYS-NEXT:    name /usr/lib/libSystem.dylib
 
 # WEAK-SYS:          cmd LC_LOAD_WEAK_DYLIB
 # WEAK-SYS-NEXT: cmdsize
@@ -32,7 +32,7 @@
 
 # SYS:               cmd LC_LOAD_DYLIB
 # SYS-NEXT:      cmdsize
-# SYS-NEXT:         name /usr/lib/libSystem.B.dylib
+# SYS-NEXT:         name /usr/lib/libSystem.dylib
 
 # WEAK-FOO:          cmd LC_LOAD_WEAK_DYLIB
 # WEAK-FOO-NEXT: cmdsize

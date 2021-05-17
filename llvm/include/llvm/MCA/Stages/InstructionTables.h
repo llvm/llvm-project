@@ -13,8 +13,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MCA_INSTRUCTIONTABLES_H
-#define LLVM_MCA_INSTRUCTIONTABLES_H
+#ifndef LLVM_MCA_STAGES_INSTRUCTIONTABLES_H
+#define LLVM_MCA_STAGES_INSTRUCTIONTABLES_H
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCSchedule.h"
@@ -42,4 +42,4 @@ public:
 } // namespace mca
 } // namespace llvm
 
-#endif // LLVM_MCA_INSTRUCTIONTABLES_H
+#endif // LLVM_MCA_STAGES_INSTRUCTIONTABLES_H

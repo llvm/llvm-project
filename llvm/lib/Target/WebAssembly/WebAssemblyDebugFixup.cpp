@@ -15,10 +15,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "Utils/WebAssemblyUtilities.h"
 #include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
-#include "WebAssemblyUtilities.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -111,14 +111,17 @@ bool WebAssemblyDebugFixup::runOnMachineFunction(MachineFunction &MF) {
             Stack.pop_back();
             assert(Prev.Reg == MO.getReg() &&
                    "WebAssemblyDebugFixup: Pop: Register not matched!");
-            if (Prev.DebugValue) {
+            // We should not put a DBG_VALUE after a terminator; debug ranges
+            // are terminated at the end of a BB anyway.
+            if (Prev.DebugValue && !MI.isTerminator()) {
               // This stackified reg is a variable that started life at
               // Prev.DebugValue, so now that we're popping it we must insert
               // a $noreg DBG_VALUE for the variable to end it, right after
               // the current instruction.
               BuildMI(*Prev.DebugValue->getParent(), std::next(MII),
-                      Prev.DebugValue->getDebugLoc(), TII->get(WebAssembly::DBG_VALUE), false,
-                      Register(), Prev.DebugValue->getOperand(2).getMetadata(),
+                      Prev.DebugValue->getDebugLoc(),
+                      TII->get(WebAssembly::DBG_VALUE), false, Register(),
+                      Prev.DebugValue->getOperand(2).getMetadata(),
                       Prev.DebugValue->getOperand(3).getMetadata());
             }
           }

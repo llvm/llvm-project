@@ -10,8 +10,8 @@
 // from a sequence of FDR mode records in arrival order into a collection.
 //
 //===----------------------------------------------------------------------===//
-#ifndef INCLUDE_LLVM_XRAY_FDRTRACEEXPANDER_H_
-#define INCLUDE_LLVM_XRAY_FDRTRACEEXPANDER_H_
+#ifndef LLVM_XRAY_FDRTRACEEXPANDER_H
+#define LLVM_XRAY_FDRTRACEEXPANDER_H
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/XRay/FDRRecords.h"
@@ -59,4 +59,4 @@ public:
 } // namespace xray
 } // namespace llvm
 
-#endif // INCLUDE_LLVM_XRAY_FDRTRACEEXPANDER_H_
+#endif // LLVM_XRAY_FDRTRACEEXPANDER_H

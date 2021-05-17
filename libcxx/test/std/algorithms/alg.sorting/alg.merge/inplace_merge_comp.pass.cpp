@@ -53,7 +53,7 @@ struct S {
     };
 
 
-#endif  // TEST_STD_VER >= 11
+#endif // TEST_STD_VER >= 11
 
 #include "test_iterators.h"
 #include "counting_predicates.h"
@@ -79,7 +79,9 @@ test_one(unsigned N, unsigned M)
         assert(ia[0] == static_cast<int>(N)-1);
         assert(ia[N-1] == 0);
         assert(std::is_sorted(ia, ia+N, std::greater<value_type>()));
+#ifndef _LIBCPP_DEBUG
         assert(pred.count() <= (N-1));
+#endif
     }
     delete [] ia;
 }
@@ -164,7 +166,7 @@ int main(int, char**)
     }
     delete [] ia;
     }
-#endif  // TEST_STD_VER >= 11
+#endif // TEST_STD_VER >= 11
 
     test_PR31166();
 

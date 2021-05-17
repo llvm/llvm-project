@@ -58,3 +58,11 @@ void ignoredBuiltinsTest() {
   (void)__builtin_isinf_sign(0.f);
   (void)__builtin_prefetch(nullptr);
 }
+
+// Some implementations of __builtin_va_list and __builtin_ms_va_list desugared
+// as 'char *' or 'void *'. This test checks whether we are handling this case
+// correctly and not generating false positives.
+void no_false_positive_desugar_va_list(char *in) {
+  char *tmp1 = in;
+  void *tmp2 = in;
+}

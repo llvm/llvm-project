@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // <regex>
 
 // template <class charT> struct regex_traits;

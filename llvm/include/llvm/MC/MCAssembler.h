@@ -119,7 +119,7 @@ private:
   std::vector<std::vector<std::string>> LinkerOptions;
 
   /// List of declared file names
-  std::vector<std::string> FileNames;
+  std::vector<std::pair<std::string, size_t>> FileNames;
 
   MCDwarfLineTableParams LTParams;
 
@@ -212,9 +212,11 @@ private:
 
 public:
   struct Symver {
-    StringRef Name;
-    const MCSymbol *Sym;
     SMLoc Loc;
+    const MCSymbol *Sym;
+    StringRef Name;
+    // True if .symver *, *@@@* or .symver *, *, remove.
+    bool KeepOriginalSym;
   };
   std::vector<Symver> Symvers;
 
@@ -445,11 +447,12 @@ public:
 
   void registerSymbol(const MCSymbol &Symbol, bool *Created = nullptr);
 
-  ArrayRef<std::string> getFileNames() { return FileNames; }
+  MutableArrayRef<std::pair<std::string, size_t>> getFileNames() {
+    return FileNames;
+  }
 
   void addFileName(StringRef FileName) {
-    if (!is_contained(FileNames, FileName))
-      FileNames.push_back(std::string(FileName));
+    FileNames.emplace_back(std::string(FileName), Symbols.size());
   }
 
   /// Write the necessary bundle padding to \p OS.

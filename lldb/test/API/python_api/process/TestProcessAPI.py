@@ -23,7 +23,6 @@ class ProcessAPITestCase(TestBase):
             "main.cpp",
             "// Set break point at this line and check variable 'my_char'.")
 
-    @add_test_categories(['pyapi'])
     @skipIfReproducer # SBProcess::ReadMemory is not instrumented.
     def test_read_memory(self):
         """Test Python SBProcess.ReadMemory() API."""
@@ -122,7 +121,6 @@ class ProcessAPITestCase(TestBase):
             self.fail(
                 "Result from SBProcess.ReadUnsignedFromMemory() does not match our expected output")
 
-    @add_test_categories(['pyapi'])
     @skipIfReproducer # SBProcess::WriteMemory is not instrumented.
     def test_write_memory(self):
         """Test Python SBProcess.WriteMemory() API."""
@@ -182,7 +180,6 @@ class ProcessAPITestCase(TestBase):
             exe=False,
             startstr=b'a')
 
-    @add_test_categories(['pyapi'])
     @skipIfReproducer # SBProcess::WriteMemory is not instrumented.
     def test_access_my_int(self):
         """Test access 'my_int' using Python SBProcess.GetByteOrder() and other APIs."""
@@ -281,7 +278,6 @@ class ProcessAPITestCase(TestBase):
             for i in content:
                 print("byte:", i)
 
-    @add_test_categories(['pyapi'])
     def test_remote_launch(self):
         """Test SBProcess.RemoteLaunch() API with a process not in eStateConnected, and it should fail."""
         self.build()
@@ -305,7 +301,6 @@ class ProcessAPITestCase(TestBase):
             not success,
             "RemoteLaunch() should fail for process state != eStateConnected")
 
-    @add_test_categories(['pyapi'])
     def test_get_num_supported_hardware_watchpoints(self):
         """Test SBProcess.GetNumSupportedHardwareWatchpoints() API with a process."""
         self.build()
@@ -327,7 +322,6 @@ class ProcessAPITestCase(TestBase):
         if self.TraceOn() and error.Success():
             print("Number of supported hardware watchpoints: %d" % num)
 
-    @add_test_categories(['pyapi'])
     @no_debug_info_test
     def test_get_process_info(self):
         """Test SBProcess::GetProcessInfo() API with a locally launched process."""

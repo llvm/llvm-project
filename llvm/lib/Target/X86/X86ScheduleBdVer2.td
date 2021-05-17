@@ -1196,6 +1196,7 @@ defm : PdWriteResYMMPair<WriteVecTestY,      [PdFPU01, PdFPFMA, PdEX0], 1, [2, 4
 defm : X86WriteResPairUnsupported<WriteVecTestZ>;
 
 defm : PdWriteResXMMPair<WriteShuffle256,    [PdFPU01, PdFPMAL]>;
+defm : PdWriteResXMMPair<WriteVPMOV256,      [PdFPU01, PdFPMAL]>;
 defm : PdWriteResXMMPair<WriteVarShuffle256, [PdFPU01, PdFPMAL]>;
 
 defm : PdWriteResXMMPair<WriteVarVecShift,   [PdFPU01, PdFPMAL], 3, [1, 2]>;

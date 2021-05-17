@@ -153,7 +153,7 @@ int llvm::runFuzzerOnInputs(int ArgC, char *ArgV[], FuzzerTestFun TestOne,
       continue;
     }
 
-    auto BufOrErr = MemoryBuffer::getFile(Arg, /*FileSize-*/ -1,
+    auto BufOrErr = MemoryBuffer::getFile(Arg, /*IsText=*/false,
                                           /*RequiresNullTerminator=*/false);
     if (std::error_code EC = BufOrErr.getError()) {
       errs() << "Error reading file: " << Arg << ": " << EC.message() << "\n";

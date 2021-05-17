@@ -305,10 +305,10 @@ struct __invoke_return
 
 #include <__functional_base_03>
 
-#endif  // !defined(_LIBCPP_CXX03_LANG)
+#endif // !defined(_LIBCPP_CXX03_LANG)
 
 
-template <class _Ret>
+template <class _Ret, bool = is_void<_Ret>::value>
 struct __invoke_void_return_wrapper
 {
 #ifndef _LIBCPP_CXX03_LANG
@@ -339,8 +339,8 @@ struct __invoke_void_return_wrapper
 #endif
 };
 
-template <>
-struct __invoke_void_return_wrapper<void>
+template <class _Ret>
+struct __invoke_void_return_wrapper<_Ret, true>
 {
 #ifndef _LIBCPP_CXX03_LANG
     template <class ..._Args>
@@ -380,13 +380,24 @@ public:
 private:
     type* __f_;
 
+#ifndef _LIBCPP_CXX03_LANG
+    static void __fun(_Tp&) _NOEXCEPT;
+    static void __fun(_Tp&&) = delete;
+#endif
+
 public:
     // construct/copy/destroy
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+#ifdef _LIBCPP_CXX03_LANG
+    _LIBCPP_INLINE_VISIBILITY
     reference_wrapper(type& __f) _NOEXCEPT
         : __f_(_VSTD::addressof(__f)) {}
-#ifndef _LIBCPP_CXX03_LANG
-    private: reference_wrapper(type&&); public: // = delete; // do not bind to temps
+#else
+    template <class _Up, class = _EnableIf<!__is_same_uncvref<_Up, reference_wrapper>::value, decltype(__fun(declval<_Up>())) >>
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+    reference_wrapper(_Up&& __u) _NOEXCEPT_(noexcept(__fun(declval<_Up>()))) {
+        type& __f = static_cast<_Up&&>(__u);
+        __f_ = _VSTD::addressof(__f);
+    }
 #endif
 
     // access
@@ -511,6 +522,10 @@ public:
 #endif // _LIBCPP_CXX03_LANG
 };
 
+#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+template <class _Tp>
+reference_wrapper(_Tp&) -> reference_wrapper<_Tp>;
+#endif
 
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
@@ -648,8 +663,20 @@ void __user_alloc_construct_impl (integral_constant<int, 2>, _Tp *__storage, con
     new (__storage) _Tp (_VSTD::forward<_Args>(__args)..., __a);
 }
 
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
+
+#if _LIBCPP_STD_VER > 14
+
+template <class _Fn, class ..._Args>
+_LIBCPP_CONSTEXPR_AFTER_CXX17 invoke_result_t<_Fn, _Args...>
+invoke(_Fn&& __f, _Args&&... __args)
+    noexcept(is_nothrow_invocable_v<_Fn, _Args...>)
+{
+    return _VSTD::__invoke(_VSTD::forward<_Fn>(__f), _VSTD::forward<_Args>(__args)...);
+}
+
+#endif // _LIBCPP_STD_VER > 14
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_FUNCTIONAL_BASE
+#endif // _LIBCPP_FUNCTIONAL_BASE

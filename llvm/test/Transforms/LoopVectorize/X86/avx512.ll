@@ -10,6 +10,8 @@ target triple = "x86_64-apple-macosx10.9.0"
 ; CHECK-LABEL: f:
 ; CHECK: vmovdqu64 %zmm{{.}},
 ; CHECK-NOT: %ymm
+; CHECK: epilog
+; CHECK: %ymm
 
 ; Verify that we don't generate 512-bit wide vectors when subtarget feature says not to
 
@@ -82,10 +84,14 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; CHECK-LABEL: h:
 ; CHECK: vmovdqu64 %zmm{{.}},
 ; CHECK-NOT: %ymm
+; CHECK: epilog
+; CHECK: %ymm
 
 ; CHECK-PREFER-AVX256-LABEL: h:
 ; CHECK-PREFER-AVX256: vmovdqu64 %zmm{{.}},
 ; CHECK-PREFER-AVX256-NOT: %ymm
+; CHECK-PREFER-AVX256: epilog
+; CHECK-PREFER-AVX256: %ymm
 
 define void @h(i32* %a, i32 %n) "prefer-vector-width"="512" {
 entry:

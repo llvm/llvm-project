@@ -17,6 +17,7 @@
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/Dialect/Standard.h"
+#include "mlir-c/IntegerSet.h"
 #include "mlir-c/Registration.h"
 
 #include <assert.h>
@@ -34,7 +35,7 @@ void populateLoopBody(MlirContext ctx, MlirBlock loopBody,
       mlirTypeParseGet(ctx, mlirStringRefCreateFromCString("f32"));
 
   MlirOperationState loadLHSState = mlirOperationStateGet(
-      mlirStringRefCreateFromCString("std.load"), location);
+      mlirStringRefCreateFromCString("memref.load"), location);
   MlirValue loadLHSOperands[] = {funcArg0, iv};
   mlirOperationStateAddOperands(&loadLHSState, 2, loadLHSOperands);
   mlirOperationStateAddResults(&loadLHSState, 1, &f32Type);
@@ -42,7 +43,7 @@ void populateLoopBody(MlirContext ctx, MlirBlock loopBody,
   mlirBlockAppendOwnedOperation(loopBody, loadLHS);
 
   MlirOperationState loadRHSState = mlirOperationStateGet(
-      mlirStringRefCreateFromCString("std.load"), location);
+      mlirStringRefCreateFromCString("memref.load"), location);
   MlirValue loadRHSOperands[] = {funcArg1, iv};
   mlirOperationStateAddOperands(&loadRHSState, 2, loadRHSOperands);
   mlirOperationStateAddResults(&loadRHSState, 1, &f32Type);
@@ -59,7 +60,7 @@ void populateLoopBody(MlirContext ctx, MlirBlock loopBody,
   mlirBlockAppendOwnedOperation(loopBody, add);
 
   MlirOperationState storeState = mlirOperationStateGet(
-      mlirStringRefCreateFromCString("std.store"), location);
+      mlirStringRefCreateFromCString("memref.store"), location);
   MlirValue storeOperands[] = {mlirOperationGetResult(add, 0), funcArg0, iv};
   mlirOperationStateAddOperands(&storeState, 3, storeOperands);
   MlirOperation store = mlirOperationCreate(&storeState);
@@ -120,14 +121,15 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
   MlirValue constZeroValue = mlirOperationGetResult(constZero, 0);
   MlirValue dimOperands[] = {funcArg0, constZeroValue};
   MlirOperationState dimState = mlirOperationStateGet(
-      mlirStringRefCreateFromCString("std.dim"), location);
+      mlirStringRefCreateFromCString("memref.dim"), location);
   mlirOperationStateAddOperands(&dimState, 2, dimOperands);
   mlirOperationStateAddResults(&dimState, 1, &indexType);
   MlirOperation dim = mlirOperationCreate(&dimState);
   mlirBlockAppendOwnedOperation(funcBody, dim);
 
   MlirRegion loopBodyRegion = mlirRegionCreate();
-  MlirBlock loopBody = mlirBlockCreate(/*nArgs=*/1, &indexType);
+  MlirBlock loopBody = mlirBlockCreate(0, NULL);
+  mlirBlockAddArgument(loopBody, indexType);
   mlirRegionAppendOwnedBlock(loopBodyRegion, loopBody);
 
   MlirAttribute indexOneLiteral =
@@ -165,13 +167,13 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
   // CHECK: module {
   // CHECK:   func @add(%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: memref<?xf32>) {
   // CHECK:     %[[C0:.*]] = constant 0 : index
-  // CHECK:     %[[DIM:.*]] = dim %[[ARG0]], %[[C0]] : memref<?xf32>
+  // CHECK:     %[[DIM:.*]] = memref.dim %[[ARG0]], %[[C0]] : memref<?xf32>
   // CHECK:     %[[C1:.*]] = constant 1 : index
   // CHECK:     scf.for %[[I:.*]] = %[[C0]] to %[[DIM]] step %[[C1]] {
-  // CHECK:       %[[LHS:.*]] = load %[[ARG0]][%[[I]]] : memref<?xf32>
-  // CHECK:       %[[RHS:.*]] = load %[[ARG1]][%[[I]]] : memref<?xf32>
+  // CHECK:       %[[LHS:.*]] = memref.load %[[ARG0]][%[[I]]] : memref<?xf32>
+  // CHECK:       %[[RHS:.*]] = memref.load %[[ARG1]][%[[I]]] : memref<?xf32>
   // CHECK:       %[[SUM:.*]] = addf %[[LHS]], %[[RHS]] : f32
-  // CHECK:       store %[[SUM]], %[[ARG0]][%[[I]]] : memref<?xf32>
+  // CHECK:       memref.store %[[SUM]], %[[ARG0]][%[[I]]] : memref<?xf32>
   // CHECK:     }
   // CHECK:     return
   // CHECK:   }
@@ -291,7 +293,7 @@ int collectStats(MlirOperation operation) {
   fprintf(stderr, "Number of op results: %u\n", stats.numOpResults);
   // clang-format off
   // CHECK-LABEL: @stats
-  // CHECK: Number of operations: 13
+  // CHECK: Number of operations: 12
   // CHECK: Number of attributes: 4
   // CHECK: Number of blocks: 3
   // CHECK: Number of regions: 3
@@ -328,7 +330,7 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   // CHECK: Block eq: 1
 
   // In the module we created, the first operation of the first function is
-  // an "std.dim", which has an attribute and a single result that we can
+  // an "memref.dim", which has an attribute and a single result that we can
   // use to test the printing mechanism.
   mlirBlockPrint(block, printToStderr, NULL);
   fprintf(stderr, "\n");
@@ -337,13 +339,13 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   fprintf(stderr, "\n");
   // clang-format off
   // CHECK:   %[[C0:.*]] = constant 0 : index
-  // CHECK:   %[[DIM:.*]] = dim %{{.*}}, %[[C0]] : memref<?xf32>
+  // CHECK:   %[[DIM:.*]] = memref.dim %{{.*}}, %[[C0]] : memref<?xf32>
   // CHECK:   %[[C1:.*]] = constant 1 : index
   // CHECK:   scf.for %[[I:.*]] = %[[C0]] to %[[DIM]] step %[[C1]] {
-  // CHECK:     %[[LHS:.*]] = load %{{.*}}[%[[I]]] : memref<?xf32>
-  // CHECK:     %[[RHS:.*]] = load %{{.*}}[%[[I]]] : memref<?xf32>
+  // CHECK:     %[[LHS:.*]] = memref.load %{{.*}}[%[[I]]] : memref<?xf32>
+  // CHECK:     %[[RHS:.*]] = memref.load %{{.*}}[%[[I]]] : memref<?xf32>
   // CHECK:     %[[SUM:.*]] = addf %[[LHS]], %[[RHS]] : f32
-  // CHECK:     store %[[SUM]], %{{.*}}[%[[I]]] : memref<?xf32>
+  // CHECK:     memref.store %[[SUM]], %{{.*}}[%[[I]]] : memref<?xf32>
   // CHECK:   }
   // CHECK: return
   // CHECK: First operation: {{.*}} = constant 0 : index
@@ -436,8 +438,8 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   mlirOperationSetAttributeByName(
       operation, mlirStringRefCreateFromCString("elts"),
       mlirDenseElementsAttrInt32Get(
-          mlirRankedTensorTypeGet(1, eltsShape, mlirIntegerTypeGet(ctx, 32)), 4,
-          eltsData));
+          mlirRankedTensorTypeGet(1, eltsShape, mlirIntegerTypeGet(ctx, 32),
+                                  mlirAttributeGetNull()), 4, eltsData));
   MlirOpPrintingFlags flags = mlirOpPrintingFlagsCreate();
   mlirOpPrintingFlagsElideLargeElementsAttrs(flags, 2);
   mlirOpPrintingFlagsPrintGenericOpForm(flags);
@@ -447,7 +449,7 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   mlirOperationPrintWithFlags(operation, flags, printToStderr, NULL);
   fprintf(stderr, "\n");
   // clang-format off
-  // CHECK: Op print with all flags: %{{.*}} = "std.constant"() {elts = opaque<"", "0xDEADBEEF"> : tensor<4xi32>, value = 0 : index} : () -> index loc(unknown)
+  // CHECK: Op print with all flags: %{{.*}} = "std.constant"() {elts = opaque<"_", "0xDEADBEEF"> : tensor<4xi32>, value = 0 : index} : () -> index loc(unknown)
   // clang-format on
 
   mlirOpPrintingFlagsDestroy(flags);
@@ -553,6 +555,35 @@ static void buildWithInsertionsAndPrint(MlirContext ctx) {
   // clang-format on
 }
 
+/// Creates operations with type inference and tests various failure modes.
+static int createOperationWithTypeInference(MlirContext ctx) {
+  MlirLocation loc = mlirLocationUnknownGet(ctx);
+  MlirAttribute iAttr = mlirIntegerAttrGet(mlirIntegerTypeGet(ctx, 32), 4);
+
+  // The shape.const_size op implements result type inference and is only used
+  // for that reason.
+  MlirOperationState state = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("shape.const_size"), loc);
+  MlirNamedAttribute valueAttr = mlirNamedAttributeGet(
+      mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("value")), iAttr);
+  mlirOperationStateAddAttributes(&state, 1, &valueAttr);
+  mlirOperationStateEnableResultTypeInference(&state);
+
+  // Expect result type inference to succeed.
+  MlirOperation op = mlirOperationCreate(&state);
+  if (mlirOperationIsNull(op)) {
+    fprintf(stderr, "ERROR: Result type inference unexpectedly failed");
+    return 1;
+  }
+
+  // CHECK: RESULT_TYPE_INFERENCE: !shape.size
+  fprintf(stderr, "RESULT_TYPE_INFERENCE: ");
+  mlirTypeDump(mlirValueGetType(mlirOperationGetResult(op, 0)));
+  fprintf(stderr, "\n");
+  mlirOperationDestroy(op);
+  return 0;
+}
+
 /// Dumps instances of all builtin types to check that C API works correctly.
 /// Additionally, performs simple identity checks that a builtin type
 /// constructed with C API can be inspected and has the expected type. The
@@ -656,10 +687,11 @@ static int printBuiltinTypes(MlirContext ctx) {
   // CHECK: vector<2x3xf32>
 
   // Ranked tensor type.
-  MlirType rankedTensor =
-      mlirRankedTensorTypeGet(sizeof(shape) / sizeof(int64_t), shape, f32);
+  MlirType rankedTensor = mlirRankedTensorTypeGet(
+      sizeof(shape) / sizeof(int64_t), shape, f32, mlirAttributeGetNull());
   if (!mlirTypeIsATensor(rankedTensor) ||
-      !mlirTypeIsARankedTensor(rankedTensor))
+      !mlirTypeIsARankedTensor(rankedTensor) ||
+      !mlirAttributeIsNull(mlirRankedTensorTypeGetEncoding(rankedTensor)))
     return 16;
   mlirTypeDump(rankedTensor);
   fprintf(stderr, "\n");
@@ -676,21 +708,24 @@ static int printBuiltinTypes(MlirContext ctx) {
   // CHECK: tensor<*xf32>
 
   // MemRef type.
+  MlirAttribute memSpace2 = mlirIntegerAttrGet(mlirIntegerTypeGet(ctx, 64), 2);
   MlirType memRef = mlirMemRefTypeContiguousGet(
-      f32, sizeof(shape) / sizeof(int64_t), shape, 2);
+      f32, sizeof(shape) / sizeof(int64_t), shape, memSpace2);
   if (!mlirTypeIsAMemRef(memRef) ||
       mlirMemRefTypeGetNumAffineMaps(memRef) != 0 ||
-      mlirMemRefTypeGetMemorySpace(memRef) != 2)
+      !mlirAttributeEqual(mlirMemRefTypeGetMemorySpace(memRef), memSpace2))
     return 18;
   mlirTypeDump(memRef);
   fprintf(stderr, "\n");
   // CHECK: memref<2x3xf32, 2>
 
   // Unranked MemRef type.
-  MlirType unrankedMemRef = mlirUnrankedMemRefTypeGet(f32, 4);
+  MlirAttribute memSpace4 = mlirIntegerAttrGet(mlirIntegerTypeGet(ctx, 64), 4);
+  MlirType unrankedMemRef = mlirUnrankedMemRefTypeGet(f32, memSpace4);
   if (!mlirTypeIsAUnrankedMemRef(unrankedMemRef) ||
       mlirTypeIsAMemRef(unrankedMemRef) ||
-      mlirUnrankedMemrefGetMemorySpace(unrankedMemRef) != 4)
+      !mlirAttributeEqual(mlirUnrankedMemrefGetMemorySpace(unrankedMemRef),
+                          memSpace4))
     return 19;
   mlirTypeDump(unrankedMemRef);
   fprintf(stderr, "\n");
@@ -855,24 +890,30 @@ int printBuiltinAttributes(MlirContext ctx) {
   int64_t ints64[] = {0, 1};
   float floats[] = {0.0f, 1.0f};
   double doubles[] = {0.0, 1.0};
+  MlirAttribute encoding = mlirAttributeGetNull();
   MlirAttribute boolElements = mlirDenseElementsAttrBoolGet(
-      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 1)), 2, bools);
+      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 1), encoding),
+      2, bools);
   MlirAttribute uint32Elements = mlirDenseElementsAttrUInt32Get(
-      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeUnsignedGet(ctx, 32)), 2,
-      uints32);
+      mlirRankedTensorTypeGet(2, shape,
+                              mlirIntegerTypeUnsignedGet(ctx, 32), encoding),
+      2, uints32);
   MlirAttribute int32Elements = mlirDenseElementsAttrInt32Get(
-      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 32)), 2,
-      ints32);
+      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 32), encoding),
+      2, ints32);
   MlirAttribute uint64Elements = mlirDenseElementsAttrUInt64Get(
-      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeUnsignedGet(ctx, 64)), 2,
-      uints64);
+      mlirRankedTensorTypeGet(2, shape,
+                              mlirIntegerTypeUnsignedGet(ctx, 64), encoding),
+      2, uints64);
   MlirAttribute int64Elements = mlirDenseElementsAttrInt64Get(
-      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 64)), 2,
-      ints64);
+      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 64), encoding),
+      2, ints64);
   MlirAttribute floatElements = mlirDenseElementsAttrFloatGet(
-      mlirRankedTensorTypeGet(2, shape, mlirF32TypeGet(ctx)), 2, floats);
+      mlirRankedTensorTypeGet(2, shape, mlirF32TypeGet(ctx), encoding),
+      2, floats);
   MlirAttribute doubleElements = mlirDenseElementsAttrDoubleGet(
-      mlirRankedTensorTypeGet(2, shape, mlirF64TypeGet(ctx)), 2, doubles);
+      mlirRankedTensorTypeGet(2, shape, mlirF64TypeGet(ctx), encoding),
+      2, doubles);
 
   if (!mlirAttributeIsADenseElements(boolElements) ||
       !mlirAttributeIsADenseElements(uint32Elements) ||
@@ -909,19 +950,24 @@ int printBuiltinAttributes(MlirContext ctx) {
   // CHECK: dense<{{\[}}[0.000000e+00, 1.000000e+00]]> : tensor<1x2xf64>
 
   MlirAttribute splatBool = mlirDenseElementsAttrBoolSplatGet(
-      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 1)), 1);
+      mlirRankedTensorTypeGet(2, shape,
+                              mlirIntegerTypeGet(ctx, 1), encoding), 1);
   MlirAttribute splatUInt32 = mlirDenseElementsAttrUInt32SplatGet(
-      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 32)), 1);
+      mlirRankedTensorTypeGet(2, shape,
+                              mlirIntegerTypeGet(ctx, 32), encoding), 1);
   MlirAttribute splatInt32 = mlirDenseElementsAttrInt32SplatGet(
-      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 32)), 1);
+      mlirRankedTensorTypeGet(2, shape,
+                              mlirIntegerTypeGet(ctx, 32), encoding), 1);
   MlirAttribute splatUInt64 = mlirDenseElementsAttrUInt64SplatGet(
-      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 64)), 1);
+      mlirRankedTensorTypeGet(2, shape,
+                              mlirIntegerTypeGet(ctx, 64), encoding), 1);
   MlirAttribute splatInt64 = mlirDenseElementsAttrInt64SplatGet(
-      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 64)), 1);
+      mlirRankedTensorTypeGet(2, shape,
+                              mlirIntegerTypeGet(ctx, 64), encoding), 1);
   MlirAttribute splatFloat = mlirDenseElementsAttrFloatSplatGet(
-      mlirRankedTensorTypeGet(2, shape, mlirF32TypeGet(ctx)), 1.0f);
+      mlirRankedTensorTypeGet(2, shape, mlirF32TypeGet(ctx), encoding), 1.0f);
   MlirAttribute splatDouble = mlirDenseElementsAttrDoubleSplatGet(
-      mlirRankedTensorTypeGet(2, shape, mlirF64TypeGet(ctx)), 1.0);
+      mlirRankedTensorTypeGet(2, shape, mlirF64TypeGet(ctx), encoding), 1.0);
 
   if (!mlirAttributeIsADenseElements(splatBool) ||
       !mlirDenseElementsAttrIsSplat(splatBool) ||
@@ -957,14 +1003,12 @@ int printBuiltinAttributes(MlirContext ctx) {
       (uint64_t *)mlirDenseElementsAttrGetRawData(uint64Elements);
   int64_t *int64RawData =
       (int64_t *)mlirDenseElementsAttrGetRawData(int64Elements);
-  float *floatRawData =
-      (float *)mlirDenseElementsAttrGetRawData(floatElements);
+  float *floatRawData = (float *)mlirDenseElementsAttrGetRawData(floatElements);
   double *doubleRawData =
       (double *)mlirDenseElementsAttrGetRawData(doubleElements);
   if (uint32RawData[0] != 0u || uint32RawData[1] != 1u ||
-      int32RawData[0] != 0 || int32RawData[1] != 1 ||
-      uint64RawData[0] != 0u || uint64RawData[1] != 1u ||
-      int64RawData[0] != 0 || int64RawData[1] != 1 ||
+      int32RawData[0] != 0 || int32RawData[1] != 1 || uint64RawData[0] != 0u ||
+      uint64RawData[1] != 1u || int64RawData[0] != 0 || int64RawData[1] != 1 ||
       floatRawData[0] != 0.0f || floatRawData[1] != 1.0f ||
       doubleRawData[0] != 0.0 || doubleRawData[1] != 1.0)
     return 18;
@@ -992,13 +1036,14 @@ int printBuiltinAttributes(MlirContext ctx) {
   int64_t indices[] = {4, 7};
   int64_t two = 2;
   MlirAttribute indicesAttr = mlirDenseElementsAttrInt64Get(
-      mlirRankedTensorTypeGet(1, &two, mlirIntegerTypeGet(ctx, 64)), 2,
-      indices);
+      mlirRankedTensorTypeGet(1, &two, mlirIntegerTypeGet(ctx, 64), encoding),
+      2, indices);
   MlirAttribute valuesAttr = mlirDenseElementsAttrFloatGet(
-      mlirRankedTensorTypeGet(1, &two, mlirF32TypeGet(ctx)), 2, floats);
+      mlirRankedTensorTypeGet(1, &two, mlirF32TypeGet(ctx), encoding),
+      2, floats);
   MlirAttribute sparseAttr = mlirSparseElementsAttribute(
-      mlirRankedTensorTypeGet(2, shape, mlirF32TypeGet(ctx)), indicesAttr,
-      valuesAttr);
+      mlirRankedTensorTypeGet(2, shape, mlirF32TypeGet(ctx), encoding),
+      indicesAttr, valuesAttr);
   mlirAttributeDump(sparseAttr);
   // CHECK: sparse<[4, 7], [0.000000e+00, 1.000000e+00]> : tensor<1x2xf32>
 
@@ -1298,35 +1343,236 @@ int affineMapFromExprs(MlirContext ctx) {
   return 0;
 }
 
+int printIntegerSet(MlirContext ctx) {
+  MlirIntegerSet emptySet = mlirIntegerSetEmptyGet(ctx, 2, 1);
+
+  // CHECK-LABEL: @printIntegerSet
+  fprintf(stderr, "@printIntegerSet");
+
+  // CHECK: (d0, d1)[s0] : (1 == 0)
+  mlirIntegerSetDump(emptySet);
+
+  if (!mlirIntegerSetIsCanonicalEmpty(emptySet))
+    return 1;
+
+  MlirIntegerSet anotherEmptySet = mlirIntegerSetEmptyGet(ctx, 2, 1);
+  if (!mlirIntegerSetEqual(emptySet, anotherEmptySet))
+    return 2;
+
+  // Construct a set constrained by:
+  //   d0 - s0 == 0,
+  //   d1 - 42 >= 0.
+  MlirAffineExpr negOne = mlirAffineConstantExprGet(ctx, -1);
+  MlirAffineExpr negFortyTwo = mlirAffineConstantExprGet(ctx, -42);
+  MlirAffineExpr d0 = mlirAffineDimExprGet(ctx, 0);
+  MlirAffineExpr d1 = mlirAffineDimExprGet(ctx, 1);
+  MlirAffineExpr s0 = mlirAffineSymbolExprGet(ctx, 0);
+  MlirAffineExpr negS0 = mlirAffineMulExprGet(negOne, s0);
+  MlirAffineExpr d0minusS0 = mlirAffineAddExprGet(d0, negS0);
+  MlirAffineExpr d1minus42 = mlirAffineAddExprGet(d1, negFortyTwo);
+  MlirAffineExpr constraints[] = {d0minusS0, d1minus42};
+  bool flags[] = {true, false};
+
+  MlirIntegerSet set = mlirIntegerSetGet(ctx, 2, 1, 2, constraints, flags);
+  // CHECK: (d0, d1)[s0] : (
+  // CHECK-DAG: d0 - s0 == 0
+  // CHECK-DAG: d1 - 42 >= 0
+  mlirIntegerSetDump(set);
+
+  // Transform d1 into s0.
+  MlirAffineExpr s1 = mlirAffineSymbolExprGet(ctx, 1);
+  MlirAffineExpr repl[] = {d0, s1};
+  MlirIntegerSet replaced = mlirIntegerSetReplaceGet(set, repl, &s0, 1, 2);
+  // CHECK: (d0)[s0, s1] : (
+  // CHECK-DAG: d0 - s0 == 0
+  // CHECK-DAG: s1 - 42 >= 0
+  mlirIntegerSetDump(replaced);
+
+  if (mlirIntegerSetGetNumDims(set) != 2)
+    return 3;
+  if (mlirIntegerSetGetNumDims(replaced) != 1)
+    return 4;
+
+  if (mlirIntegerSetGetNumSymbols(set) != 1)
+    return 5;
+  if (mlirIntegerSetGetNumSymbols(replaced) != 2)
+    return 6;
+
+  if (mlirIntegerSetGetNumInputs(set) != 3)
+    return 7;
+
+  if (mlirIntegerSetGetNumConstraints(set) != 2)
+    return 8;
+
+  if (mlirIntegerSetGetNumEqualities(set) != 1)
+    return 9;
+
+  if (mlirIntegerSetGetNumInequalities(set) != 1)
+    return 10;
+
+  MlirAffineExpr cstr1 = mlirIntegerSetGetConstraint(set, 0);
+  MlirAffineExpr cstr2 = mlirIntegerSetGetConstraint(set, 1);
+  bool isEq1 = mlirIntegerSetIsConstraintEq(set, 0);
+  bool isEq2 = mlirIntegerSetIsConstraintEq(set, 1);
+  if (!mlirAffineExprEqual(cstr1, isEq1 ? d0minusS0 : d1minus42))
+    return 11;
+  if (!mlirAffineExprEqual(cstr2, isEq2 ? d0minusS0 : d1minus42))
+    return 12;
+
+  return 0;
+}
+
 int registerOnlyStd() {
   MlirContext ctx = mlirContextCreate();
   // The built-in dialect is always loaded.
   if (mlirContextGetNumLoadedDialects(ctx) != 1)
     return 1;
 
-  MlirDialect std =
-      mlirContextGetOrLoadDialect(ctx, mlirStandardDialectGetNamespace());
+  MlirDialectHandle stdHandle = mlirGetDialectHandle__std__();
+
+  MlirDialect std = mlirContextGetOrLoadDialect(
+      ctx, mlirDialectHandleGetNamespace(stdHandle));
   if (!mlirDialectIsNull(std))
     return 2;
 
-  mlirContextRegisterStandardDialect(ctx);
+  mlirDialectHandleRegisterDialect(stdHandle, ctx);
 
-  std = mlirContextGetOrLoadDialect(ctx, mlirStandardDialectGetNamespace());
+  std = mlirContextGetOrLoadDialect(ctx,
+                                    mlirDialectHandleGetNamespace(stdHandle));
   if (mlirDialectIsNull(std))
     return 3;
 
-  MlirDialect alsoStd = mlirContextLoadStandardDialect(ctx);
+  MlirDialect alsoStd = mlirDialectHandleLoadDialect(stdHandle, ctx);
   if (!mlirDialectEqual(std, alsoStd))
     return 4;
 
   MlirStringRef stdNs = mlirDialectGetNamespace(std);
-  MlirStringRef alsoStdNs = mlirStandardDialectGetNamespace();
+  MlirStringRef alsoStdNs = mlirDialectHandleGetNamespace(stdHandle);
   if (stdNs.length != alsoStdNs.length ||
       strncmp(stdNs.data, alsoStdNs.data, stdNs.length))
     return 5;
 
   fprintf(stderr, "@registration\n");
   // CHECK-LABEL: @registration
+
+  // CHECK: std.cond_br is_registered: 1
+  fprintf(stderr, "std.cond_br is_registered: %d\n",
+          mlirContextIsRegisteredOperation(
+              ctx, mlirStringRefCreateFromCString("std.cond_br")));
+
+  // CHECK: std.not_existing_op is_registered: 0
+  fprintf(stderr, "std.not_existing_op is_registered: %d\n",
+          mlirContextIsRegisteredOperation(
+              ctx, mlirStringRefCreateFromCString("std.not_existing_op")));
+
+  // CHECK: not_existing_dialect.not_existing_op is_registered: 0
+  fprintf(stderr, "not_existing_dialect.not_existing_op is_registered: %d\n",
+          mlirContextIsRegisteredOperation(
+              ctx, mlirStringRefCreateFromCString(
+                       "not_existing_dialect.not_existing_op")));
+
+  return 0;
+}
+
+/// Tests backreference APIs
+static int testBackreferences() {
+  fprintf(stderr, "@test_backreferences\n");
+
+  MlirContext ctx = mlirContextCreate();
+  mlirContextSetAllowUnregisteredDialects(ctx, true);
+  MlirLocation loc = mlirLocationUnknownGet(ctx);
+
+  MlirOperationState opState =
+      mlirOperationStateGet(mlirStringRefCreateFromCString("invalid.op"), loc);
+  MlirRegion region = mlirRegionCreate();
+  MlirBlock block = mlirBlockCreate(0, NULL);
+  mlirRegionAppendOwnedBlock(region, block);
+  mlirOperationStateAddOwnedRegions(&opState, 1, &region);
+  MlirOperation op = mlirOperationCreate(&opState);
+  MlirIdentifier ident =
+      mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("identifier"));
+
+  if (!mlirContextEqual(ctx, mlirOperationGetContext(op))) {
+    fprintf(stderr, "ERROR: Getting context from operation failed\n");
+    return 1;
+  }
+  if (!mlirOperationEqual(op, mlirBlockGetParentOperation(block))) {
+    fprintf(stderr, "ERROR: Getting parent operation from block failed\n");
+    return 2;
+  }
+  if (!mlirContextEqual(ctx, mlirIdentifierGetContext(ident))) {
+    fprintf(stderr, "ERROR: Getting context from identifier failed\n");
+    return 3;
+  }
+
+  mlirOperationDestroy(op);
+  mlirContextDestroy(ctx);
+
+  // CHECK-LABEL: @test_backreferences
+  return 0;
+}
+
+/// Tests operand APIs.
+int testOperands() {
+  fprintf(stderr, "@testOperands\n");
+  // CHECK-LABEL: @testOperands
+
+  MlirContext ctx = mlirContextCreate();
+  MlirLocation loc = mlirLocationUnknownGet(ctx);
+  MlirType indexType = mlirIndexTypeGet(ctx);
+
+  // Create some constants to use as operands.
+  MlirAttribute indexZeroLiteral =
+      mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("0 : index"));
+  MlirNamedAttribute indexZeroValueAttr = mlirNamedAttributeGet(
+      mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("value")),
+      indexZeroLiteral);
+  MlirOperationState constZeroState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("std.constant"), loc);
+  mlirOperationStateAddResults(&constZeroState, 1, &indexType);
+  mlirOperationStateAddAttributes(&constZeroState, 1, &indexZeroValueAttr);
+  MlirOperation constZero = mlirOperationCreate(&constZeroState);
+  MlirValue constZeroValue = mlirOperationGetResult(constZero, 0);
+
+  MlirAttribute indexOneLiteral =
+      mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("1 : index"));
+  MlirNamedAttribute indexOneValueAttr = mlirNamedAttributeGet(
+      mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("value")),
+      indexOneLiteral);
+  MlirOperationState constOneState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("std.constant"), loc);
+  mlirOperationStateAddResults(&constOneState, 1, &indexType);
+  mlirOperationStateAddAttributes(&constOneState, 1, &indexOneValueAttr);
+  MlirOperation constOne = mlirOperationCreate(&constOneState);
+  MlirValue constOneValue = mlirOperationGetResult(constOne, 0);
+
+  // Create the operation under test.
+  MlirOperationState opState =
+      mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op"), loc);
+  MlirValue initialOperands[] = {constZeroValue};
+  mlirOperationStateAddOperands(&opState, 1, initialOperands);
+  MlirOperation op = mlirOperationCreate(&opState);
+
+  // Test operand APIs.
+  intptr_t numOperands = mlirOperationGetNumOperands(op);
+  fprintf(stderr, "Num Operands: %ld\n", numOperands);
+  // CHECK: Num Operands: 1
+
+  MlirValue opOperand = mlirOperationGetOperand(op, 0);
+  fprintf(stderr, "Original operand: ");
+  mlirValuePrint(opOperand, printToStderr, NULL);
+  // CHECK: Original operand: {{.+}} {value = 0 : index}
+
+  mlirOperationSetOperand(op, 0, constOneValue);
+  opOperand = mlirOperationGetOperand(op, 0);
+  fprintf(stderr, "Updated operand: ");
+  mlirValuePrint(opOperand, printToStderr, NULL);
+  // CHECK: Updated operand: {{.+}} {value = 1 : index}
+
+  mlirOperationDestroy(op);
+  mlirOperationDestroy(constZero);
+  mlirOperationDestroy(constOne);
+  mlirContextDestroy(ctx);
 
   return 0;
 }
@@ -1389,19 +1635,27 @@ int main() {
   if (constructAndTraverseIr(ctx))
     return 1;
   buildWithInsertionsAndPrint(ctx);
+  if (createOperationWithTypeInference(ctx))
+    return 2;
 
   if (printBuiltinTypes(ctx))
-    return 2;
-  if (printBuiltinAttributes(ctx))
     return 3;
-  if (printAffineMap(ctx))
+  if (printBuiltinAttributes(ctx))
     return 4;
-  if (printAffineExpr(ctx))
+  if (printAffineMap(ctx))
     return 5;
-  if (affineMapFromExprs(ctx))
+  if (printAffineExpr(ctx))
     return 6;
-  if (registerOnlyStd())
+  if (affineMapFromExprs(ctx))
     return 7;
+  if (printIntegerSet(ctx))
+    return 8;
+  if (registerOnlyStd())
+    return 9;
+  if (testBackreferences())
+    return 10;
+  if (testOperands())
+    return 11;
 
   mlirContextDestroy(ctx);
 

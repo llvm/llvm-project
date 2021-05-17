@@ -9,8 +9,10 @@ add_lldb_library(lldbPluginProcessUtility
   LinuxProcMaps.cpp
   LinuxSignals.cpp
   MipsLinuxSignals.cpp
+  NativeProcessSoftwareSingleStep.cpp
+  NativeRegisterContextDBReg_arm64.cpp
+  NativeRegisterContextDBReg_x86.cpp
   NativeRegisterContextRegisterInfo.cpp
-  NativeRegisterContextWatchpoint_x86.cpp
   NetBSDSignals.cpp
   RegisterContext_x86.cpp
   RegisterContextDarwin_arm.cpp
@@ -25,8 +27,6 @@ add_lldb_library(lldbPluginProcessUtility
   RegisterContextHistory.cpp
   RegisterContextLinux_i386.cpp
   RegisterContextLinux_x86_64.cpp
-  RegisterContextLinux_mips64.cpp
-  RegisterContextLinux_mips.cpp
   RegisterContextLinux_s390x.cpp
   RegisterContextMach_arm.cpp
   RegisterContextMach_i386.cpp

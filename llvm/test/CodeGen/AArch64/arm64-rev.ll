@@ -561,7 +561,7 @@ define void @float_vrev64(float* nocapture %source, <4 x float>* nocapture %dest
 ;
 ; FALLBACK-LABEL: float_vrev64:
 ; FALLBACK:       // %bb.0: // %entry
-; FALLBACK-NEXT:    fmov s0, wzr
+; FALLBACK-NEXT:    movi  d0, #0000000000000000
 ; FALLBACK-NEXT:    mov.s v0[1], v0[0]
 ; FALLBACK-NEXT:    mov.s v0[2], v0[0]
 ; FALLBACK-NEXT:    adrp x8, .LCPI28_0

@@ -5,4 +5,4 @@ mlir_tablegen(Transforms.capi.h.inc -gen-pass-capi-header --prefix Transforms)
 mlir_tablegen(Transforms.capi.cpp.inc -gen-pass-capi-impl --prefix Transforms)
 add_public_tablegen_target(MLIRTransformsPassIncGen)
 
-add_mlir_doc(Passes -gen-pass-doc GeneralPasses ./)
+add_mlir_doc(Passes GeneralPasses ./ -gen-pass-doc)

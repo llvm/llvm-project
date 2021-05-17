@@ -5,6 +5,9 @@ exp mrt8 v3, v2, v1, v0
 // GCN: :5: error: invalid exp target
 
 exp pos4 v3, v2, v1, v0
+// GCN: :5: error: exp target is not supported on this GPU
+
+exp pos5 v3, v2, v1, v0
 // GCN: :5: error: invalid exp target
 
 exp param32 v3, v2, v1, v0

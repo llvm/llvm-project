@@ -9,8 +9,8 @@
 #include "src/stdlib/abs.h"
 #include "utils/UnitTest/Test.h"
 
-TEST(AbsTest, Zero) { EXPECT_EQ(__llvm_libc::abs(0), 0); }
+TEST(LlvmLibcAbsTest, Zero) { EXPECT_EQ(__llvm_libc::abs(0), 0); }
 
-TEST(AbsTest, Positive) { EXPECT_EQ(__llvm_libc::abs(1), 1); }
+TEST(LlvmLibcAbsTest, Positive) { EXPECT_EQ(__llvm_libc::abs(1), 1); }
 
-TEST(AbsTest, Negative) { EXPECT_EQ(__llvm_libc::abs(-1), 1); }
+TEST(LlvmLibcAbsTest, Negative) { EXPECT_EQ(__llvm_libc::abs(-1), 1); }

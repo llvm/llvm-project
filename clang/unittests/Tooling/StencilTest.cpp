@@ -392,6 +392,37 @@ TEST_F(StencilTest, AccessOpPointerDereference) {
   testExpr(Id, Snippet, access(Id, "field"), "x->field");
 }
 
+TEST_F(StencilTest, AccessOpSmartPointer) {
+  StringRef Snippet = R"cc(
+    Smart x;
+    x;
+  )cc";
+  StringRef Id = "id";
+  testExpr(Id, Snippet, access(Id, "field"), "x->field");
+}
+
+TEST_F(StencilTest, AccessOpSmartPointerDereference) {
+  StringRef Snippet = R"cc(
+    Smart x;
+    *x;
+  )cc";
+  StringRef Id = "id";
+  testExpr(Id, Snippet, access(Id, "field"), "(*x).field");
+}
+
+TEST_F(StencilTest, AccessOpSmartPointerMemberCall) {
+  StringRef Snippet = R"cc(
+    Smart x;
+    x->Field;
+  )cc";
+  StringRef Id = "id";
+  auto StmtMatch =
+      matchStmt(Snippet, memberExpr(hasObjectExpression(expr().bind(Id))));
+  ASSERT_TRUE(StmtMatch);
+  EXPECT_THAT_EXPECTED(access(Id, "field")->eval(StmtMatch->Result),
+                       HasValue("x->field"));
+}
+
 TEST_F(StencilTest, AccessOpExplicitThis) {
   using clang::ast_matchers::hasObjectExpression;
   using clang::ast_matchers::memberExpr;

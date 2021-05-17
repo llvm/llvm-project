@@ -151,13 +151,25 @@ static cl::opt<LinkageNameOption>
                                             "Abstract subprograms")),
                       cl::init(DefaultLinkageNames));
 
-static cl::opt<DefaultOnOff> AlwaysUseRangesInV5(
-    "always-use-ranges-in-v5", cl::Hidden,
+static cl::opt<DwarfDebug::MinimizeAddrInV5> MinimizeAddrInV5Option(
+    "minimize-addr-in-v5", cl::Hidden,
     cl::desc("Always use DW_AT_ranges in DWARFv5 whenever it could allow more "
              "address pool entry sharing to reduce relocations/object size"),
-    cl::values(clEnumVal(Default, "Default for platform"),
-               clEnumVal(Enable, "Enabled"), clEnumVal(Disable, "Disabled")),
-    cl::init(Default));
+    cl::values(clEnumValN(DwarfDebug::MinimizeAddrInV5::Default, "Default",
+                          "Default address minimization strategy"),
+               clEnumValN(DwarfDebug::MinimizeAddrInV5::Ranges, "Ranges",
+                          "Use rnglists for contiguous ranges if that allows "
+                          "using a pre-existing base address"),
+               clEnumValN(DwarfDebug::MinimizeAddrInV5::Expressions,
+                          "Expressions",
+                          "Use exprloc addrx+offset expressions for any "
+                          "address with a prior base address"),
+               clEnumValN(DwarfDebug::MinimizeAddrInV5::Form, "Form",
+                          "Use addrx+offset extension form for any address "
+                          "with a prior base address"),
+               clEnumValN(DwarfDebug::MinimizeAddrInV5::Disabled, "Disabled",
+                          "Stuff")),
+    cl::init(DwarfDebug::MinimizeAddrInV5::Default));
 
 static constexpr unsigned ULEB128PadSize = 4;
 
@@ -223,29 +235,27 @@ const DIType *DbgVariable::getType() const {
 /// Get .debug_loc entry for the instruction range starting at MI.
 static DbgValueLoc getDebugLocValue(const MachineInstr *MI) {
   const DIExpression *Expr = MI->getDebugExpression();
-  assert(MI->getNumOperands() == 4);
-  if (MI->getDebugOperand(0).isReg()) {
-    const auto &RegOp = MI->getDebugOperand(0);
-    const auto &Op1 = MI->getDebugOffset();
-    // If the second operand is an immediate, this is a
-    // register-indirect address.
-    assert((!Op1.isImm() || (Op1.getImm() == 0)) && "unexpected offset");
-    MachineLocation MLoc(RegOp.getReg(), Op1.isImm());
-    return DbgValueLoc(Expr, MLoc);
+  const bool IsVariadic = MI->isDebugValueList();
+  assert(MI->getNumOperands() >= 3);
+  SmallVector<DbgValueLocEntry, 4> DbgValueLocEntries;
+  for (const MachineOperand &Op : MI->debug_operands()) {
+    if (Op.isReg()) {
+      MachineLocation MLoc(Op.getReg(),
+                           MI->isNonListDebugValue() && MI->isDebugOffsetImm());
+      DbgValueLocEntries.push_back(DbgValueLocEntry(MLoc));
+    } else if (Op.isTargetIndex()) {
+      DbgValueLocEntries.push_back(
+          DbgValueLocEntry(TargetIndexLocation(Op.getIndex(), Op.getOffset())));
+    } else if (Op.isImm())
+      DbgValueLocEntries.push_back(DbgValueLocEntry(Op.getImm()));
+    else if (Op.isFPImm())
+      DbgValueLocEntries.push_back(DbgValueLocEntry(Op.getFPImm()));
+    else if (Op.isCImm())
+      DbgValueLocEntries.push_back(DbgValueLocEntry(Op.getCImm()));
+    else
+      llvm_unreachable("Unexpected debug operand in DBG_VALUE* instruction!");
   }
-  if (MI->getDebugOperand(0).isTargetIndex()) {
-    const auto &Op = MI->getDebugOperand(0);
-    return DbgValueLoc(Expr,
-                       TargetIndexLocation(Op.getIndex(), Op.getOffset()));
-  }
-  if (MI->getDebugOperand(0).isImm())
-    return DbgValueLoc(Expr, MI->getDebugOperand(0).getImm());
-  if (MI->getDebugOperand(0).isFPImm())
-    return DbgValueLoc(Expr, MI->getDebugOperand(0).getFPImm());
-  if (MI->getDebugOperand(0).isCImm())
-    return DbgValueLoc(Expr, MI->getDebugOperand(0).getCImm());
-
-  llvm_unreachable("Unexpected 4-operand DBG_VALUE instruction!");
+  return DbgValueLoc(Expr, DbgValueLocEntries, IsVariadic);
 }
 
 void DbgVariable::initializeDbgValue(const MachineInstr *DbgValue) {
@@ -352,11 +362,13 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
     DebuggerTuning = DebuggerKind::LLDB;
   else if (TT.isPS4CPU())
     DebuggerTuning = DebuggerKind::SCE;
+  else if (TT.isOSAIX())
+    DebuggerTuning = DebuggerKind::DBX;
   else
     DebuggerTuning = DebuggerKind::GDB;
 
   if (DwarfInlinedStrings == Default)
-    UseInlineStrings = TT.isNVPTX();
+    UseInlineStrings = TT.isNVPTX() || tuneForDBX();
   else
     UseInlineStrings = DwarfInlinedStrings == Enable;
 
@@ -380,10 +392,21 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
   DwarfVersion =
       TT.isNVPTX() ? 2 : (DwarfVersion ? DwarfVersion : dwarf::DWARF_VERSION);
 
-  bool Dwarf64 = Asm->TM.Options.MCOptions.Dwarf64 &&
-                 DwarfVersion >= 3 &&   // DWARF64 was introduced in DWARFv3.
-                 TT.isArch64Bit() &&    // DWARF64 requires 64-bit relocations.
-                 TT.isOSBinFormatELF(); // Support only ELF for now.
+  bool Dwarf64 = DwarfVersion >= 3 && // DWARF64 was introduced in DWARFv3.
+                 TT.isArch64Bit();    // DWARF64 requires 64-bit relocations.
+
+  // Support DWARF64
+  // 1: For ELF when requested.
+  // 2: For XCOFF64: the AIX assembler will fill in debug section lengths
+  //    according to the DWARF64 format for 64-bit assembly, so we must use
+  //    DWARF64 in the compiler too for 64-bit mode.
+  Dwarf64 &=
+      ((Asm->TM.Options.MCOptions.Dwarf64 || MMI->getModule()->isDwarf64()) &&
+       TT.isOSBinFormatELF()) ||
+      TT.isOSBinFormatXCOFF();
+
+  if (!Dwarf64 && TT.isArch64Bit() && TT.isOSBinFormatXCOFF())
+    report_fatal_error("XCOFF requires DWARF64 for 64-bit mode!");
 
   UseRangesSection = !NoDwarfRangesSection && !TT.isNVPTX();
 
@@ -433,14 +456,12 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
   // Split DWARF would benefit object size significantly by trading reductions
   // in address pool usage for slightly increased range list encodings.
   if (DwarfVersion >= 5) {
-    if (AlwaysUseRangesInV5 == Default) {
-      // FIXME: In the future, enable this by default for Split DWARF where the
-      // tradeoff is more pronounced due to being able to offload the range
-      // lists to the dwo file and shrink object files/reduce relocations there.
-      AlwaysUseRanges = false;
-    } else {
-      AlwaysUseRanges = AlwaysUseRangesInV5 == Enable;
-    }
+    MinimizeAddr = MinimizeAddrInV5Option;
+    // FIXME: In the future, enable this by default for Split DWARF where the
+    // tradeoff is more pronounced due to being able to offload the range
+    // lists to the dwo file and shrink object files/reduce relocations there.
+    if (MinimizeAddr == MinimizeAddrInV5::Default)
+      MinimizeAddr = MinimizeAddrInV5::Disabled;
   }
 
   Asm->OutStreamer->getContext().setDwarfVersion(DwarfVersion);
@@ -624,7 +645,7 @@ static void finishCallSiteParams(ValT Val, const DIExpression *Expr,
     assert((!CombinedExpr || CombinedExpr->isValid()) &&
            "Combined debug expression is invalid");
 
-    DbgValueLoc DbgLocVal(CombinedExpr, Val);
+    DbgValueLoc DbgLocVal(CombinedExpr, DbgValueLocEntry(Val));
     DbgCallSiteParam CSParm(Param.ParamReg, DbgLocVal);
     Params.push_back(CSParm);
     ++NumCSParams;
@@ -698,7 +719,7 @@ static void interpretValues(const MachineInstr *CurMI,
     for (const MachineOperand &MO : MI.operands()) {
       if (MO.isReg() && MO.isDef() &&
           Register::isPhysicalRegister(MO.getReg())) {
-        for (auto FwdReg : ForwardedRegWorklist)
+        for (auto &FwdReg : ForwardedRegWorklist)
           if (TRI.regsOverlap(FwdReg.first, MO.getReg()))
             Defs.insert(FwdReg.first);
       }
@@ -747,7 +768,7 @@ static void interpretValues(const MachineInstr *CurMI,
 
   // Now that we are done handling this instruction, add items from the
   // temporary worklist to the real one.
-  for (auto New : TmpWorklistItems)
+  for (auto &New : TmpWorklistItems)
     addToFwdRegWorklist(ForwardedRegWorklist, New.first, EmptyExpr, New.second);
   TmpWorklistItems.clear();
 }
@@ -782,7 +803,7 @@ static bool interpretNextInstr(const MachineInstr *CurMI,
 static void collectCallSiteParameters(const MachineInstr *CallMI,
                                       ParamSet &Params) {
   const MachineFunction *MF = CallMI->getMF();
-  auto CalleesMap = MF->getCallSitesInfo();
+  const auto &CalleesMap = MF->getCallSitesInfo();
   auto CallFwdRegsInfo = CalleesMap.find(CallMI);
 
   // There is no information for the call instruction.
@@ -800,7 +821,7 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
       DIExpression::get(MF->getFunction().getContext(), {});
 
   // Add all the forwarding registers into the ForwardedRegWorklist.
-  for (auto ArgReg : CallFwdRegsInfo->second) {
+  for (const auto &ArgReg : CallFwdRegsInfo->second) {
     bool InsertedReg =
         ForwardedRegWorklist.insert({ArgReg.Reg, {{ArgReg.Reg, EmptyExpr}}})
             .second;
@@ -848,7 +869,7 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
     // Create an expression where the register's entry value is used.
     DIExpression *EntryExpr = DIExpression::get(
         MF->getFunction().getContext(), {dwarf::DW_OP_LLVM_entry_value, 1});
-    for (auto RegEntry : ForwardedRegWorklist) {
+    for (auto &RegEntry : ForwardedRegWorklist) {
       MachineLocation MLoc(RegEntry.first);
       finishCallSiteParams(MLoc, EntryExpr, RegEntry.second, Params);
     }
@@ -1592,7 +1613,9 @@ static bool validThroughout(LexicalScopes &LScopes,
   // throughout the function. This is a hack, presumably for DWARF v2 and not
   // necessarily correct. It would be much better to use a dbg.declare instead
   // if we know the constant is live throughout the scope.
-  if (DbgValue->getDebugOperand(0).isImm() && MBB->pred_empty())
+  if (MBB->pred_empty() &&
+      all_of(DbgValue->debug_operands(),
+             [](const MachineOperand &Op) { return Op.isImm(); }))
     return true;
 
   // Test if the location terminates before the end of the scope.
@@ -1773,7 +1796,10 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
 
     // Instruction ranges, specifying where IV is accessible.
     const auto &HistoryMapEntries = I.second;
-    if (HistoryMapEntries.empty())
+
+    // Try to find any non-empty variable location. Do not create a concrete
+    // entity if there are no locations.
+    if (!DbgValues.hasNonEmptyLocation(HistoryMapEntries))
       continue;
 
     LexicalScope *Scope = nullptr;
@@ -2360,12 +2386,8 @@ void DwarfDebug::emitDebugPubSection(bool GnuStyle, StringRef Name,
     TheU = Skeleton;
 
   // Emit the header.
-  MCSymbol *BeginLabel = Asm->createTempSymbol("pub" + Name + "_begin");
-  MCSymbol *EndLabel = Asm->createTempSymbol("pub" + Name + "_end");
-  Asm->emitDwarfUnitLength(EndLabel, BeginLabel,
-                           "Length of Public " + Name + " Info");
-
-  Asm->OutStreamer->emitLabel(BeginLabel);
+  MCSymbol *EndLabel = Asm->emitDwarfUnitLength(
+      "pub" + Name, "Length of Public " + Name + " Info");
 
   Asm->OutStreamer->AddComment("DWARF Version");
   Asm->emitInt16(dwarf::DW_PUBNAMES_VERSION);
@@ -2466,51 +2488,93 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
   auto *DIExpr = Value.getExpression();
   DIExpressionCursor ExprCursor(DIExpr);
   DwarfExpr.addFragmentOffset(DIExpr);
-  // Regular entry.
-  if (Value.isInt()) {
-    if (BT && (BT->getEncoding() == dwarf::DW_ATE_signed ||
-               BT->getEncoding() == dwarf::DW_ATE_signed_char))
-      DwarfExpr.addSignedConstant(Value.getInt());
-    else
-      DwarfExpr.addUnsignedConstant(Value.getInt());
-  } else if (Value.isLocation()) {
-    MachineLocation Location = Value.getLoc();
-    DwarfExpr.setLocation(Location, DIExpr);
-    DIExpressionCursor Cursor(DIExpr);
 
-    if (DIExpr->isEntryValue())
-      DwarfExpr.beginEntryValueExpression(Cursor);
+  // If the DIExpr is is an Entry Value, we want to follow the same code path
+  // regardless of whether the DBG_VALUE is variadic or not.
+  if (DIExpr && DIExpr->isEntryValue()) {
+    // Entry values can only be a single register with no additional DIExpr,
+    // so just add it directly.
+    assert(Value.getLocEntries().size() == 1);
+    assert(Value.getLocEntries()[0].isLocation());
+    MachineLocation Location = Value.getLocEntries()[0].getLoc();
+    DwarfExpr.setLocation(Location, DIExpr);
+
+    DwarfExpr.beginEntryValueExpression(ExprCursor);
 
     const TargetRegisterInfo &TRI = *AP.MF->getSubtarget().getRegisterInfo();
-    if (!DwarfExpr.addMachineRegExpression(TRI, Cursor, Location.getReg()))
+    if (!DwarfExpr.addMachineRegExpression(TRI, ExprCursor, Location.getReg()))
       return;
-    return DwarfExpr.addExpression(std::move(Cursor));
-  } else if (Value.isTargetIndexLocation()) {
-    TargetIndexLocation Loc = Value.getTargetIndexLocation();
-    // TODO TargetIndexLocation is a target-independent. Currently only the WebAssembly-specific
-    // encoding is supported.
-    assert(AP.TM.getTargetTriple().isWasm());
-    DwarfExpr.addWasmLocation(Loc.Index, static_cast<uint64_t>(Loc.Offset));
-      DwarfExpr.addExpression(std::move(ExprCursor));
-      return;
-  } else if (Value.isConstantFP()) {
-    if (AP.getDwarfVersion() >= 4 && !AP.getDwarfDebug()->tuneForSCE() &&
-        !ExprCursor) {
-      DwarfExpr.addConstantFP(Value.getConstantFP()->getValueAPF(), AP);
-      return;
-    }
-    if (Value.getConstantFP()->getValueAPF().bitcastToAPInt().getBitWidth() <=
-        64 /*bits*/)
-      DwarfExpr.addUnsignedConstant(
-          Value.getConstantFP()->getValueAPF().bitcastToAPInt());
-    else
-      LLVM_DEBUG(
-          dbgs()
-          << "Skipped DwarfExpression creation for ConstantFP of size"
-          << Value.getConstantFP()->getValueAPF().bitcastToAPInt().getBitWidth()
-          << " bits\n");
+    return DwarfExpr.addExpression(std::move(ExprCursor));
   }
-  DwarfExpr.addExpression(std::move(ExprCursor));
+
+  // Regular entry.
+  auto EmitValueLocEntry = [&DwarfExpr, &BT,
+                            &AP](const DbgValueLocEntry &Entry,
+                                 DIExpressionCursor &Cursor) -> bool {
+    if (Entry.isInt()) {
+      if (BT && (BT->getEncoding() == dwarf::DW_ATE_signed ||
+                 BT->getEncoding() == dwarf::DW_ATE_signed_char))
+        DwarfExpr.addSignedConstant(Entry.getInt());
+      else
+        DwarfExpr.addUnsignedConstant(Entry.getInt());
+    } else if (Entry.isLocation()) {
+      MachineLocation Location = Entry.getLoc();
+      if (Location.isIndirect())
+        DwarfExpr.setMemoryLocationKind();
+
+      const TargetRegisterInfo &TRI = *AP.MF->getSubtarget().getRegisterInfo();
+      if (!DwarfExpr.addMachineRegExpression(TRI, Cursor, Location.getReg()))
+        return false;
+    } else if (Entry.isTargetIndexLocation()) {
+      TargetIndexLocation Loc = Entry.getTargetIndexLocation();
+      // TODO TargetIndexLocation is a target-independent. Currently only the
+      // WebAssembly-specific encoding is supported.
+      assert(AP.TM.getTargetTriple().isWasm());
+      DwarfExpr.addWasmLocation(Loc.Index, static_cast<uint64_t>(Loc.Offset));
+    } else if (Entry.isConstantFP()) {
+      if (AP.getDwarfVersion() >= 4 && !AP.getDwarfDebug()->tuneForSCE() &&
+          !Cursor) {
+        DwarfExpr.addConstantFP(Entry.getConstantFP()->getValueAPF(), AP);
+      } else if (Entry.getConstantFP()
+                     ->getValueAPF()
+                     .bitcastToAPInt()
+                     .getBitWidth() <= 64 /*bits*/) {
+        DwarfExpr.addUnsignedConstant(
+            Entry.getConstantFP()->getValueAPF().bitcastToAPInt());
+      } else {
+        LLVM_DEBUG(
+            dbgs() << "Skipped DwarfExpression creation for ConstantFP of size"
+                   << Entry.getConstantFP()
+                          ->getValueAPF()
+                          .bitcastToAPInt()
+                          .getBitWidth()
+                   << " bits\n");
+        return false;
+      }
+    }
+    return true;
+  };
+
+  if (!Value.isVariadic()) {
+    if (!EmitValueLocEntry(Value.getLocEntries()[0], ExprCursor))
+      return;
+    DwarfExpr.addExpression(std::move(ExprCursor));
+    return;
+  }
+
+  // If any of the location entries are registers with the value 0, then the
+  // location is undefined.
+  if (any_of(Value.getLocEntries(), [](const DbgValueLocEntry &Entry) {
+        return Entry.isLocation() && !Entry.getLoc().getReg();
+      }))
+    return;
+
+  DwarfExpr.addExpression(
+      std::move(ExprCursor),
+      [EmitValueLocEntry, &Value](unsigned Idx,
+                                  DIExpressionCursor &Cursor) -> bool {
+        return EmitValueLocEntry(Value.getLocEntries()[Idx], Cursor);
+      });
 }
 
 void DebugLocEntry::finalize(const AsmPrinter &AP,
@@ -3394,7 +3458,10 @@ dwarf::Form DwarfDebug::getDwarfSectionOffsetForm() const {
 }
 
 const MCSymbol *DwarfDebug::getSectionLabel(const MCSection *S) {
-  return SectionLabels.find(S)->second;
+  auto I = SectionLabels.find(S);
+  if (I == SectionLabels.end())
+    return nullptr;
+  return I->second;
 }
 void DwarfDebug::insertSectionLabel(const MCSymbol *S) {
   if (SectionLabels.insert(std::make_pair(&S->getSection(), S)).second)

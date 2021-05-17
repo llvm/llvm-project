@@ -133,7 +133,7 @@ class BreakpointConditionsTestCase(TestBase):
 
         # We didn't associate a thread index with the breakpoint, so it should
         # be invalid.
-        self.assertTrue(breakpoint.GetThreadIndex() == lldb.UINT32_MAX,
+        self.assertEqual(breakpoint.GetThreadIndex(), lldb.UINT32_MAX,
                         "The thread index should be invalid")
         # The thread name should be invalid, too.
         self.assertTrue(breakpoint.GetThreadName() is None,
@@ -143,7 +143,7 @@ class BreakpointConditionsTestCase(TestBase):
         # indeed, being set correctly.
         # There's only one thread for the process.
         breakpoint.SetThreadIndex(1)
-        self.assertTrue(breakpoint.GetThreadIndex() == 1,
+        self.assertEqual(breakpoint.GetThreadIndex(), 1,
                         "The thread index has been set correctly")
 
         # Get the breakpoint location from breakpoint after we verified that,
@@ -175,7 +175,7 @@ class BreakpointConditionsTestCase(TestBase):
                         var.GetValue() == '3')
 
         # The hit count for the breakpoint should be 1.
-        self.assertTrue(breakpoint.GetHitCount() == 1)
+        self.assertEqual(breakpoint.GetHitCount(), 1)
 
         # Test that the condition expression didn't create a result variable:
         options = lldb.SBExpressionOptions()
@@ -217,7 +217,7 @@ class BreakpointConditionsTestCase(TestBase):
             "There should be a thread stopped due to breakpoint condition")
         frame0 = thread.GetFrameAtIndex(0)
         var = frame0.FindValue('val', lldb.eValueTypeVariableArgument)
-        self.assertTrue(frame0.GetLineEntry().GetLine() == self.line1)
+        self.assertEqual(frame0.GetLineEntry().GetLine(), self.line1)
 
         # The hit count for the breakpoint should be 1.
-        self.assertTrue(breakpoint.GetHitCount() == 1)
+        self.assertEqual(breakpoint.GetHitCount(), 1)

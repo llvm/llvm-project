@@ -687,8 +687,7 @@ public:
 
   bool getExactInverse(APFloat *inv) const;
 
-  friend int ilogb(const DoubleAPFloat &Arg);
-  friend DoubleAPFloat scalbn(DoubleAPFloat X, int Exp, roundingMode);
+  friend DoubleAPFloat scalbn(const DoubleAPFloat &X, int Exp, roundingMode);
   friend DoubleAPFloat frexp(const DoubleAPFloat &X, int &Exp, roundingMode);
   friend hash_code hash_value(const DoubleAPFloat &Arg);
 };
@@ -1219,6 +1218,7 @@ public:
   bool isSmallest() const { APFLOAT_DISPATCH_ON_SEMANTICS(isSmallest()); }
   bool isLargest() const { APFLOAT_DISPATCH_ON_SEMANTICS(isLargest()); }
   bool isInteger() const { APFLOAT_DISPATCH_ON_SEMANTICS(isInteger()); }
+  bool isIEEE() const { return usesLayout<IEEEFloat>(getSemantics()); }
 
   APFloat &operator=(const APFloat &RHS) = default;
   APFloat &operator=(APFloat &&RHS) = default;

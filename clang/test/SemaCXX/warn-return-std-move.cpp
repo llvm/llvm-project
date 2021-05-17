@@ -1,12 +1,19 @@
-// RUN: %clang_cc1 -fsyntax-only -fcxx-exceptions -Wreturn-std-move -Wreturn-std-move-in-c++11 -std=c++14 -verify %s
-// RUN: %clang_cc1 -fsyntax-only -fcxx-exceptions -Wreturn-std-move -Wreturn-std-move-in-c++11 -std=c++14 -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify=cxx20_2b -fcxx-exceptions -Wreturn-std-move %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=cxx20_2b -fcxx-exceptions -Wreturn-std-move %s
+// RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify=cxx11_17 -fcxx-exceptions -Wreturn-std-move %s
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=cxx11_17 -fcxx-exceptions -Wreturn-std-move %s
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify=cxx11_17 -fcxx-exceptions -Wreturn-std-move %s
+
+// RUN: %clang_cc1 -std=c++17 -fsyntax-only -fcxx-exceptions -Wreturn-std-move -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s -check-prefix=CHECK
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -fcxx-exceptions -Wreturn-std-move -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s -check-prefix=CHECK
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -fcxx-exceptions -Wreturn-std-move -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s -check-prefix=CHECK
 
 // definitions for std::move
 namespace std {
 inline namespace foo {
 template <class T> struct remove_reference { typedef T type; };
-template <class T> struct remove_reference<T&> { typedef T type; };
-template <class T> struct remove_reference<T&&> { typedef T type; };
+template <class T> struct remove_reference<T &> { typedef T type; };
+template <class T> struct remove_reference<T &&> { typedef T type; };
 
 template <class T> typename remove_reference<T>::type &&move(T &&t);
 } // namespace foo
@@ -71,36 +78,33 @@ Derived test1() {
 Base test2() {
     Derived d2;
     return d2;  // e1
-    // expected-warning@-1{{will be copied despite being returned by name}}
-    // expected-note@-2{{to avoid copying}}
+    // cxx11_17-warning@-1{{will be copied despite being returned by name}}
+    // cxx11_17-note@-2{{to avoid copying}}
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:14}:"std::move(d2)"
 }
 ConstructFromDerived test3() {
-    Derived d3;
-    return d3;  // e2-cxx11
-    // expected-warning@-1{{would have been copied despite being returned by name}}
-    // expected-note@-2{{to avoid copying on older compilers}}
-    // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:14}:"std::move(d3)"
+  Derived d3;
+  return d3; // ok
 }
 ConstructFromBase test4() {
     Derived d4;
     return d4;  // e3
-    // expected-warning@-1{{will be copied despite being returned by name}}
-    // expected-note@-2{{to avoid copying}}
+    // cxx11_17-warning@-1{{will be copied despite being returned by name}}
+    // cxx11_17-note@-2{{to avoid copying}}
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:14}:"std::move(d4)"
 }
 ConvertFromDerived test5() {
     Derived d5;
     return d5;  // e4
-    // expected-warning@-1{{will be copied despite being returned by name}}
-    // expected-note@-2{{to avoid copying}}
+    // cxx11_17-warning@-1{{will be copied despite being returned by name}}
+    // cxx11_17-note@-2{{to avoid copying}}
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:14}:"std::move(d5)"
 }
 ConvertFromBase test6() {
     Derived d6;
     return d6;  // e5
-    // expected-warning@-1{{will be copied despite being returned by name}}
-    // expected-note@-2{{to avoid copying}}
+    // cxx11_17-warning@-1{{will be copied despite being returned by name}}
+    // cxx11_17-note@-2{{to avoid copying}}
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:14}:"std::move(d6)"
 }
 
@@ -148,137 +152,132 @@ ConvertFromTrivialBase ok_trivial6(TrivialDerived d) { return d; }
 Derived testParam1(Derived d) { return d; }
 Base testParam2(Derived d) {
     return d;  // e6
-    // expected-warning@-1{{will be copied despite being returned by name}}
-    // expected-note@-2{{to avoid copying}}
+    // cxx11_17-warning@-1{{will be copied despite being returned by name}}
+    // cxx11_17-note@-2{{to avoid copying}}
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:13}:"std::move(d)"
 }
 ConstructFromDerived testParam3(Derived d) {
-    return d;  // e7-cxx11
-    // expected-warning@-1{{would have been copied despite being returned by name}}
-    // expected-note@-2{{to avoid copying on older compilers}}
-    // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:13}:"std::move(d)"
+  return d; // ok
 }
 ConstructFromBase testParam4(Derived d) {
     return d;  // e8
-    // expected-warning@-1{{will be copied despite being returned by name}}
-    // expected-note@-2{{to avoid copying}}
+    // cxx11_17-warning@-1{{will be copied despite being returned by name}}
+    // cxx11_17-note@-2{{to avoid copying}}
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:13}:"std::move(d)"
 }
 ConvertFromDerived testParam5(Derived d) {
     return d;  // e9
-    // expected-warning@-1{{will be copied despite being returned by name}}
-    // expected-note@-2{{to avoid copying}}
+    // cxx11_17-warning@-1{{will be copied despite being returned by name}}
+    // cxx11_17-note@-2{{to avoid copying}}
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:13}:"std::move(d)"
 }
 ConvertFromBase testParam6(Derived d) {
     return d;  // e10
-    // expected-warning@-1{{will be copied despite being returned by name}}
-    // expected-note@-2{{to avoid copying}}
+    // cxx11_17-warning@-1{{will be copied despite being returned by name}}
+    // cxx11_17-note@-2{{to avoid copying}}
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:13}:"std::move(d)"
 }
 
 // If the target is an rvalue reference parameter, do apply the diagnostic.
 Derived testRParam1(Derived&& d) {
     return d;  // e11
-    // expected-warning@-1{{will be copied despite being returned by name}}
-    // expected-note@-2{{to avoid copying}}
+    // cxx11_17-warning@-1{{will be copied despite being returned by name}}
+    // cxx11_17-note@-2{{to avoid copying}}
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:13}:"std::move(d)"
 }
 Base testRParam2(Derived&& d) {
     return d;  // e12
-    // expected-warning@-1{{will be copied despite being returned by name}}
-    // expected-note@-2{{to avoid copying}}
+    // cxx11_17-warning@-1{{will be copied despite being returned by name}}
+    // cxx11_17-note@-2{{to avoid copying}}
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:13}:"std::move(d)"
 }
 ConstructFromDerived testRParam3(Derived&& d) {
     return d;  // e13
-    // expected-warning@-1{{will be copied despite being returned by name}}
-    // expected-note@-2{{to avoid copying}}
+    // cxx11_17-warning@-1{{will be copied despite being returned by name}}
+    // cxx11_17-note@-2{{to avoid copying}}
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:13}:"std::move(d)"
 }
 ConstructFromBase testRParam4(Derived&& d) {
     return d;  // e14
-    // expected-warning@-1{{will be copied despite being returned by name}}
-    // expected-note@-2{{to avoid copying}}
+    // cxx11_17-warning@-1{{will be copied despite being returned by name}}
+    // cxx11_17-note@-2{{to avoid copying}}
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:13}:"std::move(d)"
 }
 ConvertFromDerived testRParam5(Derived&& d) {
     return d;  // e15
-    // expected-warning@-1{{will be copied despite being returned by name}}
-    // expected-note@-2{{to avoid copying}}
+    // cxx11_17-warning@-1{{will be copied despite being returned by name}}
+    // cxx11_17-note@-2{{to avoid copying}}
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:13}:"std::move(d)"
 }
 ConvertFromBase testRParam6(Derived&& d) {
     return d;  // e16
-    // expected-warning@-1{{will be copied despite being returned by name}}
-    // expected-note@-2{{to avoid copying}}
+    // cxx11_17-warning@-1{{will be copied despite being returned by name}}
+    // cxx11_17-note@-2{{to avoid copying}}
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:13}:"std::move(d)"
 }
 
 // But if the return type is a reference type, then moving would be wrong.
 Derived& testRetRef1(Derived&& d) { return d; }
 Base& testRetRef2(Derived&& d) { return d; }
+#if __cplusplus >= 201402L
 auto&& testRetRef3(Derived&& d) { return d; }
 decltype(auto) testRetRef4(Derived&& d) { return (d); }
+#endif
 
 // As long as we're checking parentheses, make sure parentheses don't disable the warning.
 Base testParens1() {
     Derived d;
     return (d);  // e17
-    // expected-warning@-1{{will be copied despite being returned by name}}
-    // expected-note@-2{{to avoid copying}}
+    // cxx11_17-warning@-1{{will be copied despite being returned by name}}
+    // cxx11_17-note@-2{{to avoid copying}}
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:15}:"std::move(d)"
 }
 ConstructFromDerived testParens2() {
-    Derived d;
-    return (d);  // e18-cxx11
-    // expected-warning@-1{{would have been copied despite being returned by name}}
-    // expected-note@-2{{to avoid copying}}
-    // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:15}:"std::move(d)"
+  Derived d;
+  return (d); // ok
 }
-
 
 // If the target is a catch-handler parameter, do apply the diagnostic.
 void throw_derived();
 Derived testEParam1() {
     try { throw_derived(); } catch (Derived d) { return d; }  // e19
-    // expected-warning@-1{{will be copied despite being returned by name}}
-    // expected-note@-2{{to avoid copying}}
+    // cxx11_17-warning@-1{{will be copied despite being returned by name}}
+    // cxx11_17-note@-2{{to avoid copying}}
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:57-[[@LINE-3]]:58}:"std::move(d)"
     __builtin_unreachable();
 }
 Base testEParam2() {
     try { throw_derived(); } catch (Derived d) { return d; }  // e20
-    // expected-warning@-1{{will be copied despite being returned by name}}
-    // expected-note@-2{{to avoid copying}}
+    // cxx11_17-warning@-1{{will be copied despite being returned by name}}
+    // cxx11_17-note@-2{{to avoid copying}}
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:57-[[@LINE-3]]:58}:"std::move(d)"
     __builtin_unreachable();
 }
 ConstructFromDerived testEParam3() {
     try { throw_derived(); } catch (Derived d) { return d; }  // e21
-    // expected-warning@-1{{will be copied despite being returned by name}}
-    // expected-note@-2{{to avoid copying}}
+    // cxx11_17-warning@-1{{will be copied despite being returned by name}}
+    // cxx11_17-note@-2{{to avoid copying}}
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:57-[[@LINE-3]]:58}:"std::move(d)"
     __builtin_unreachable();
 }
 ConstructFromBase testEParam4() {
     try { throw_derived(); } catch (Derived d) { return d; }  // e22
-    // expected-warning@-1{{will be copied despite being returned by name}}
-    // expected-note@-2{{to avoid copying}}
+    // cxx11_17-warning@-1{{will be copied despite being returned by name}}
+    // cxx11_17-note@-2{{to avoid copying}}
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:57-[[@LINE-3]]:58}:"std::move(d)"
     __builtin_unreachable();
 }
 ConvertFromDerived testEParam5() {
     try { throw_derived(); } catch (Derived d) { return d; }  // e23
-    // expected-warning@-1{{will be copied despite being returned by name}}
-    // expected-note@-2{{to avoid copying}}
+    // cxx11_17-warning@-1{{will be copied despite being returned by name}}
+    // cxx11_17-note@-2{{to avoid copying}}
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:57-[[@LINE-3]]:58}:"std::move(d)"
     __builtin_unreachable();
 }
 ConvertFromBase testEParam6() {
     try { throw_derived(); } catch (Derived d) { return d; }  // e24
-    // expected-warning@-1{{will be copied despite being returned by name}}
-    // expected-note@-2{{to avoid copying}}
+    // cxx11_17-warning@-1{{will be copied despite being returned by name}}
+    // cxx11_17-note@-2{{to avoid copying}}
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:57-[[@LINE-3]]:58}:"std::move(d)"
     __builtin_unreachable();
 }
@@ -319,8 +318,8 @@ OnlyCopyable ok_copyparam2(OnlyCopyable c) { return c; }
 
 void test_throw1(Derived&& d) {
     throw d;  // e25
-    // expected-warning@-1{{will be copied despite being thrown by name}}
-    // expected-note@-2{{to avoid copying}}
+    // cxx11_17-warning@-1{{will be copied despite being thrown by name}}
+    // cxx11_17-note@-2{{to avoid copying}}
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:11-[[@LINE-3]]:12}:"std::move(d)"
 }
 
@@ -339,7 +338,7 @@ void ok_throw8(OnlyCopyable d) { throw d; }
 namespace test_delete {
 struct Base {
   Base();
-  Base(Base &&) = delete;
+  Base(Base &&) = delete; // cxx20_2b-note {{'Base' has been explicitly marked deleted here}}
   Base(Base const &);
 };
 
@@ -347,6 +346,6 @@ struct Derived : public Base {};
 
 Base test_ok() {
   Derived d;
-  return d;
+  return d; // cxx20_2b-error {{call to deleted constructor of 'test_delete::Base'}}
 }
 } // namespace test_delete

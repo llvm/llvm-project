@@ -1,4 +1,4 @@
-; RUN: opt -aa-pipeline=default -passes="default<O2>" -disable-output %s
+; RUN: opt -passes="default<O2>" -disable-output %s
 ; REQUIRES: asserts
 ; PR42272
 

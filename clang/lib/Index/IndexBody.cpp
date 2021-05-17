@@ -466,6 +466,15 @@ public:
     }
     return true;
   }
+
+  bool VisitUnresolvedLookupExpr(UnresolvedLookupExpr *E) {
+    SmallVector<SymbolRelation, 4> Relations;
+    SymbolRoleSet Roles = getRolesForRef(E, Relations);
+    for (auto *D : E->decls())
+      IndexCtx.handleReference(D, E->getNameLoc(), Parent, ParentDC, Roles,
+                               Relations, E);
+    return true;
+  }
 };
 
 } // anonymous namespace

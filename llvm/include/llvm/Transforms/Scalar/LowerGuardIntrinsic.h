@@ -24,4 +24,4 @@ struct LowerGuardIntrinsicPass : PassInfoMixin<LowerGuardIntrinsicPass> {
 
 }
 
-#endif //LLVM_TRANSFORMS_SCALAR_LOWERGUARDINTRINSIC_H
+#endif // LLVM_TRANSFORMS_SCALAR_LOWERGUARDINTRINSIC_H

@@ -75,8 +75,9 @@ public:
     /// collect macros. For example, `indexTopLevelDecls` will not index any
     /// macro even if this is true.
     bool CollectMacro = false;
-    /// Collect symbols local to main-files, such as static functions
-    /// and symbols inside an anonymous namespace.
+    /// Collect symbols local to main-files, such as static functions, symbols
+    /// inside an anonymous namespace, function-local classes and its member
+    /// functions.
     bool CollectMainFileSymbols = true;
     /// Collect references to main-file symbols.
     bool CollectMainFileRefs = false;
@@ -90,6 +91,7 @@ public:
   };
 
   SymbolCollector(Options Opts);
+  ~SymbolCollector();
 
   /// Returns true is \p ND should be collected.
   static bool shouldCollectSymbol(const NamedDecl &ND, const ASTContext &ASTCtx,
@@ -131,10 +133,9 @@ private:
   void processRelations(const NamedDecl &ND, const SymbolID &ID,
                         ArrayRef<index::SymbolRelation> Relations);
 
+  llvm::Optional<SymbolLocation> getTokenLocation(SourceLocation TokLoc);
+
   llvm::Optional<std::string> getIncludeHeader(const Symbol &S, FileID);
-  bool isSelfContainedHeader(FileID);
-  // Heuristically headers that only want to be included via an umbrella.
-  static bool isDontIncludeMeHeader(llvm::StringRef);
 
   // All Symbols collected from the AST.
   SymbolSlab::Builder Symbols;
@@ -174,7 +175,10 @@ private:
   llvm::DenseMap<const Decl *, const Decl *> CanonicalDecls;
   // Cache whether to index a file or not.
   llvm::DenseMap<FileID, bool> FilesToIndexCache;
-  llvm::DenseMap<FileID, bool> HeaderIsSelfContainedCache;
+  // Encapsulates calculations and caches around header paths, which headers
+  // to insert for which symbol, etc.
+  class HeaderFileURICache;
+  std::unique_ptr<HeaderFileURICache> HeaderFileURIs;
 };
 
 } // namespace clangd

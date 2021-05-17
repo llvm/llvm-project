@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=hexagon -filetype=obj -mhvx %s | llvm-objdump --mhvx -d - | FileCheck %s
+# RUN: llvm-mc -triple=hexagon -filetype=obj -mhvx %s | llvm-objdump --mattr=+hvx -d - | FileCheck %s
 
 # Verify that the .align directive emits the proper insn packets.
 

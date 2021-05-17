@@ -1153,7 +1153,7 @@ namespace dr696 { // dr696: yes
     };
 #if __cplusplus >= 201103L
     (void) [] { int arr[N]; (void)arr; };
-    (void) [] { f(&N); }; // expected-error {{cannot be implicitly captured}} expected-note {{here}}
+    (void)[] { f(&N); }; // expected-error {{cannot be implicitly captured}} expected-note {{here}} expected-note 2 {{capture 'N' by}} expected-note 2 {{default capture by}}
 #endif
   }
 }

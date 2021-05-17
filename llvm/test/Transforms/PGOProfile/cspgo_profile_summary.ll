@@ -103,10 +103,10 @@ for.end:
   ret void
 }
 ; CSPGOSUMMARY-LABEL: @foo
-; CSPGOSUMMARY: %even.sink{{[0-9]*}} = select i1 %tobool.i{{[0-9]*}}, i32* @even, i32* @odd
-; CSPGOSUMMARY-SAME: !prof ![[BW1_CSPGO_FOO:[0-9]+]]
-; CSPGOSUMMARY: %even.sink{{[0-9]*}} = select i1 %tobool.i{{[0-9]*}}, i32* @even, i32* @odd
-; CSPGOSUMMARY-SAME: !prof ![[BW2_CSPGO_FOO:[0-9]+]]
+; CSPGOSUMMARY: %odd.sink.i{{[0-9]*}} = select i1 %tobool.i{{[0-9]*}}, i32* @even, i32* @odd
+; CSPGOSUMMARY-SAME: !prof ![[BW_CSPGO_BAR]]
+; CSPGOSUMMARY: %odd.sink.i{{[0-9]*}} = select i1 %tobool.i{{[0-9]*}}, i32* @even, i32* @odd
+; CSPGOSUMMARY-SAME: !prof ![[BW_CSPGO_BAR]]
 
 declare dso_local i32 @bar_m(i32)
 declare dso_local i32 @bar_m2(i32)
@@ -152,5 +152,3 @@ entry:
 ; CSPGOSUMMARY: {{![0-9]+}} = !{!"MaxFunctionCount", i64 200000}
 ; CSPGOSUMMARY: {{![0-9]+}} = !{!"NumCounts", i64 23}
 ; CSPGOSUMMARY-DAG: ![[BW_CSPGO_BAR]] = !{!"branch_weights", i32 100000, i32 100000}
-; CSPGOSUMMARY-DAG: ![[BW1_CSPGO_FOO]] = !{!"branch_weights", i32 100000, i32 0}
-; CSPGOSUMMARY-DAG: ![[BW2_CSPGO_FOO]] = !{!"branch_weights", i32 0, i32 100000}

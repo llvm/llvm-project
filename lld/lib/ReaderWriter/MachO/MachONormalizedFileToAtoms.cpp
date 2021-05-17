@@ -836,9 +836,8 @@ dataExtractorFromSection(const NormalizedFile &normalizedFile,
 //        inspection" code if possible.
 static uint64_t getCUAbbrevOffset(llvm::DataExtractor abbrevData,
                                   uint64_t abbrCode) {
-  uint64_t curCode;
   uint64_t offset = 0;
-  while ((curCode = abbrevData.getULEB128(&offset)) != abbrCode) {
+  while (abbrevData.getULEB128(&offset) != abbrCode) {
     // Tag
     abbrevData.getULEB128(&offset);
     // DW_CHILDREN

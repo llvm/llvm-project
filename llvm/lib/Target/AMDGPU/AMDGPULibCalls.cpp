@@ -13,7 +13,7 @@
 
 #include "AMDGPU.h"
 #include "AMDGPULibFunc.h"
-#include "AMDGPUSubtarget.h"
+#include "GCNSubtarget.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -476,7 +476,7 @@ bool AMDGPULibCalls::isUnsafeMath(const CallInst *CI) const {
       return true;
   const Function *F = CI->getParent()->getParent();
   Attribute Attr = F->getFnAttribute("unsafe-fp-math");
-  return Attr.getValueAsString() == "true";
+  return Attr.getValueAsBool();
 }
 
 bool AMDGPULibCalls::useNativeFunc(const StringRef F) const {

@@ -137,9 +137,9 @@ void ParentVirtualCallCheck::check(const MatchFinder::MatchResult &Result) {
   assert(Member->getQualifierLoc().getSourceRange().getBegin().isValid());
   auto Diag = diag(Member->getQualifierLoc().getSourceRange().getBegin(),
                    "qualified name '%0' refers to a member overridden "
-                   "in subclass%1; did you mean %2?")
+                   "in %plural{1:subclass|:subclasses}1; did you mean %2?")
               << getExprAsString(*Member, *Result.Context)
-              << (Parents.size() > 1 ? "es" : "") << ParentsStr;
+              << static_cast<unsigned>(Parents.size()) << ParentsStr;
 
   // Propose a fix if there's only one parent class...
   if (Parents.size() == 1 &&

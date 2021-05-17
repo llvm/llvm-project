@@ -475,8 +475,8 @@ define i32 @PR28476_logical(i32 %x, i32 %y) {
 ; CHECK-LABEL: @PR28476_logical(
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[Y:%.*]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[CMP0]], [[CMP1]]
-; CHECK-NEXT:    [[COND:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[CMP0]], i1 true, i1 [[CMP1]]
+; CHECK-NEXT:    [[COND:%.*]] = zext i1 [[AND]] to i32
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %cmp0 = icmp ne i32 %x, 0
@@ -515,3 +515,17 @@ define <4 x i32> @demorgan_plus_and_to_xor_vec(<4 x i32> %a, <4 x i32> %b) {
   ret <4 x i32> %not
 }
 
+; (a ^ b) | ~(a | b) --> ~(a & b)
+
+define i32 @PR45984(i32 %0, i32 %1) {
+; CHECK-LABEL: @PR45984(
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP1:%.*]], [[TMP0:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP3]], -1
+; CHECK-NEXT:    ret i32 [[TMP4]]
+;
+  %3 = xor i32 %1, %0
+  %4 = or i32 %1, %0
+  %5 = xor i32 %4, -1
+  %6 = or i32 %3, %5
+  ret i32 %6
+}

@@ -12,10 +12,13 @@ define i1 @PR1738(double %x, double %y) {
   ret i1 %or
 }
 
+; TODO: this can be fixed by freezing %y
 define i1 @PR1738_logical(double %x, double %y) {
 ; CHECK-LABEL: @PR1738_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp uno double [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp uno double [[Y:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %cmp1 = fcmp uno double %x, 0.0
   %cmp2 = fcmp uno double %y, 0.0
@@ -49,11 +52,14 @@ define i1 @PR41069(double %a, double %b, double %c, double %d) {
   ret i1 %r
 }
 
+; TODO: this can be fixed by freezing %c and %d
 define i1 @PR41069_logical(double %a, double %b, double %c, double %d) {
 ; CHECK-LABEL: @PR41069_logical(
 ; CHECK-NEXT:    [[UNO1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[D:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[UNO1]]
+; CHECK-NEXT:    [[UNO2:%.*]] = fcmp uno double [[C:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[UNO1]], i1 true, i1 [[UNO2]]
+; CHECK-NEXT:    [[UNO3:%.*]] = fcmp uno double [[D:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[OR]], i1 true, i1 [[UNO3]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %uno1 = fcmp uno double %a, %b
@@ -79,11 +85,14 @@ define i1 @PR41069_commute(double %a, double %b, double %c, double %d) {
   ret i1 %r
 }
 
+; TODO: this can be fixed by freezing %c and %d
 define i1 @PR41069_commute_logical(double %a, double %b, double %c, double %d) {
 ; CHECK-LABEL: @PR41069_commute_logical(
 ; CHECK-NEXT:    [[UNO1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[D:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[UNO1]]
+; CHECK-NEXT:    [[UNO2:%.*]] = fcmp uno double [[C:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[UNO3:%.*]] = fcmp uno double [[D:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[UNO3]], i1 true, i1 [[UNO1]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i1 true, i1 [[UNO2]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %uno1 = fcmp uno double %a, %b
@@ -131,10 +140,13 @@ define i1 @fcmp_uno_nonzero(float %x, float %y) {
   ret i1 %or
 }
 
+; TODO: this can be fixed by freezing %y
 define i1 @fcmp_uno_nonzero_logical(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_uno_nonzero_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp uno float [[Y:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %cmp1 = fcmp uno float %x, 1.0
   %cmp2 = fcmp uno float %y, 2.0

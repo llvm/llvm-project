@@ -16,6 +16,7 @@
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "index/Index.h"
+#include "index/SymbolID.h"
 #include "index/SymbolLocation.h"
 #include "support/Path.h"
 #include "clang/AST/ASTTypeTraits.h"
@@ -47,6 +48,8 @@ struct LocatedSymbol {
   Location PreferredDeclaration;
   // Where the symbol is defined, if known. May equal PreferredDeclaration.
   llvm::Optional<Location> Definition;
+  // SymbolID of the located symbol if available.
+  SymbolID ID;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const LocatedSymbol &);
 /// Get definition of symbol at a specified \p Pos.
@@ -79,9 +82,22 @@ std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
                                                       Position Pos);
 
 struct ReferencesResult {
-  std::vector<Location> References;
+  // Bitmask describing whether the occurrence is a declaration, definition etc.
+  enum ReferenceAttributes : unsigned {
+    Declaration = 1 << 0,
+    Definition = 1 << 1,
+    // The occurrence is an override of the target base method.
+    Override = 1 << 2,
+  };
+  struct Reference {
+    Location Loc;
+    unsigned Attributes = 0;
+  };
+  std::vector<Reference> References;
   bool HasMore = false;
 };
+llvm::raw_ostream &operator<<(llvm::raw_ostream &,
+                              const ReferencesResult::Reference &);
 
 /// Returns implementations at a specified \p Pos:
 ///   - overrides for a virtual method;

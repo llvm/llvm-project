@@ -83,7 +83,8 @@ enum GPUKind : uint32_t {
   GK_GFX906 = 63,
   GK_GFX908 = 64,
   GK_GFX909 = 65,
-  GK_GFX90C = 66,
+  GK_GFX90A = 66,
+  GK_GFX90C = 67,
 
   GK_GFX1010 = 71,
   GK_GFX1011 = 72,
@@ -92,9 +93,10 @@ enum GPUKind : uint32_t {
   GK_GFX1031 = 76,
   GK_GFX1032 = 77,
   GK_GFX1033 = 78,
+  GK_GFX1034 = 79,
 
   GK_AMDGCN_FIRST = GK_GFX600,
-  GK_AMDGCN_LAST = GK_GFX1033,
+  GK_AMDGCN_LAST = GK_GFX1034,
 };
 
 /// Instruction set architecture version.

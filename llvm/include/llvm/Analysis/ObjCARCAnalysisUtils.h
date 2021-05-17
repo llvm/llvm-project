@@ -19,8 +19,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_ANALYSIS_OBJCARCANALYSISUTILS_H
-#define LLVM_LIB_ANALYSIS_OBJCARCANALYSISUTILS_H
+#ifndef LLVM_ANALYSIS_OBJCARCANALYSISUTILS_H
+#define LLVM_ANALYSIS_OBJCARCANALYSISUTILS_H
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/Analysis/ObjCARCInstKind.h"

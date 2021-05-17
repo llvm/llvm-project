@@ -11,7 +11,7 @@
     call void @llvm.dbg.value(metadata i32 %sub, metadata !11, metadata !DIExpression()), !dbg !13
     ret i32 %sub, !dbg !14
   }
-  ; CHECK-LABEL: define i32 @test(i32 %a, i32 %b) {
+  ; CHECK-LABEL: define i32 @test(i32 %a, i32 %b) {{(addrspace\([0-9]+\) )?}}{
   ; CHECK-NEXT:    %add = add i32 %a, 2
   ; CHECK-NEXT:    %sub = sub i32 %add, %b
   ; CHECK-NEXT:    ret i32 %sub

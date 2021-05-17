@@ -2,8 +2,18 @@
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=generic -mattr=+crypto | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=cortex-a53 | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=cortex-a57 | FileCheck %s
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=cortex-a65 | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=cortex-a72 | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=cortex-a73 | FileCheck %s
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=cortex-a76 | FileCheck %s
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=cortex-a77 | FileCheck %s
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=cortex-a78 | FileCheck %s
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=cortex-a78c| FileCheck %s
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=cortex-x1  | FileCheck %s
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-e1 | FileCheck %s
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-n1 | FileCheck %s
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-n2 | FileCheck %s
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-v1 | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=exynos-m3  | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=exynos-m4  | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=exynos-m5  | FileCheck %s

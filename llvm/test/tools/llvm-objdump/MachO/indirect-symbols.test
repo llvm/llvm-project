@@ -1,5 +1,7 @@
 RUN: llvm-objdump --macho --indirect-symbols %p/Inputs/hello.exe.macho-x86_64 | FileCheck %s
+RUN: llvm-otool -Iv %p/Inputs/hello.exe.macho-x86_64 | FileCheck %s
 RUN: llvm-objdump --macho --indirect-symbols --non-verbose %p/Inputs/hello.exe.macho-x86_64 | FileCheck %s --check-prefix=NON_VERBOSE
+RUN: llvm-otool -I %p/Inputs/hello.exe.macho-x86_64 | FileCheck %s --check-prefix=NON_VERBOSE
 
 CHECK: Indirect symbols for (__TEXT,__stubs) 1 entries
 CHECK: address            index name

@@ -85,9 +85,8 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_vgpr_descr(i32 %node_ptr, 
 ; GCN-NEXT:    v_readfirstlane_b32 s6, v16
 ; GCN-NEXT:    v_readfirstlane_b32 s7, v17
 ; GCN-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[14:15]
-; GCN-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[16:17]
-; GCN-NEXT:    s_nop 2
 ; GCN-NEXT:    image_bvh_intersect_ray v[18:21], [v0, v1, v2, v3, v4, v6, v7, v8, v10, v11, v12], s[4:7]
+; GCN-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[16:17]
 ; GCN-NEXT:    s_and_b32 s0, s0, vcc_lo
 ; GCN-NEXT:    s_and_saveexec_b32 s0, s0
 ; GCN-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
@@ -125,9 +124,8 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_a16_vgpr_descr(i32 %node_p
 ; GCN-NEXT:    v_readfirstlane_b32 s6, v12
 ; GCN-NEXT:    v_readfirstlane_b32 s7, v13
 ; GCN-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[10:11]
-; GCN-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[12:13]
-; GCN-NEXT:    s_nop 2
 ; GCN-NEXT:    image_bvh_intersect_ray v[5:8], [v0, v1, v2, v3, v4, v9, v14, v15], s[4:7] a16
+; GCN-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[12:13]
 ; GCN-NEXT:    s_and_b32 s0, s0, vcc_lo
 ; GCN-NEXT:    s_and_saveexec_b32 s0, s0
 ; GCN-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
@@ -155,9 +153,8 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_vgpr_descr(i64 %node_ptr
 ; GCN-NEXT:    v_readfirstlane_b32 s6, v17
 ; GCN-NEXT:    v_readfirstlane_b32 s7, v18
 ; GCN-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[15:16]
-; GCN-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[17:18]
-; GCN-NEXT:    s_nop 2
 ; GCN-NEXT:    image_bvh64_intersect_ray v[19:22], [v0, v1, v2, v3, v4, v5, v7, v8, v9, v11, v12, v13], s[4:7]
+; GCN-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[17:18]
 ; GCN-NEXT:    s_and_b32 s0, s0, vcc_lo
 ; GCN-NEXT:    s_and_saveexec_b32 s0, s0
 ; GCN-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
@@ -195,9 +192,8 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_a16_vgpr_descr(i64 %node
 ; GCN-NEXT:    v_readfirstlane_b32 s6, v13
 ; GCN-NEXT:    v_readfirstlane_b32 s7, v14
 ; GCN-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[11:12]
-; GCN-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[13:14]
-; GCN-NEXT:    s_nop 2
 ; GCN-NEXT:    image_bvh64_intersect_ray v[6:9], [v0, v1, v2, v3, v4, v5, v10, v15, v16], s[4:7] a16
+; GCN-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[13:14]
 ; GCN-NEXT:    s_and_b32 s0, s0, vcc_lo
 ; GCN-NEXT:    s_and_saveexec_b32 s0, s0
 ; GCN-NEXT:    s_xor_b32 exec_lo, exec_lo, s0

@@ -181,8 +181,7 @@ void MCWinCOFFStreamer::EndCOFFSymbolDef() {
 void MCWinCOFFStreamer::EmitCOFFSafeSEH(MCSymbol const *Symbol) {
   // SafeSEH is a feature specific to 32-bit x86.  It does not exist (and is
   // unnecessary) on all platforms which use table-based exception dispatch.
-  if (getContext().getObjectFileInfo()->getTargetTriple().getArch() !=
-      Triple::x86)
+  if (getContext().getTargetTriple().getArch() != Triple::x86)
     return;
 
   const MCSymbolCOFF *CSymbol = cast<MCSymbolCOFF>(Symbol);
@@ -266,7 +265,7 @@ void MCWinCOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
                                          unsigned ByteAlignment) {
   auto *Symbol = cast<MCSymbolCOFF>(S);
 
-  const Triple &T = getContext().getObjectFileInfo()->getTargetTriple();
+  const Triple &T = getContext().getTargetTriple();
   if (T.isWindowsMSVCEnvironment()) {
     if (ByteAlignment > 32)
       report_fatal_error("alignment is limited to 32-bytes");

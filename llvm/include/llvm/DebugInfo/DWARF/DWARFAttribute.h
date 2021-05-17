@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARFATTRIBUTE_H
-#define LLVM_DEBUGINFO_DWARFATTRIBUTE_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFATTRIBUTE_H
+#define LLVM_DEBUGINFO_DWARF_DWARFATTRIBUTE_H
 
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
@@ -46,4 +46,4 @@ struct DWARFAttribute {
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_DWARFATTRIBUTE_H
+#endif // LLVM_DEBUGINFO_DWARF_DWARFATTRIBUTE_H

@@ -396,13 +396,6 @@ void test_wave_barrier()
   __builtin_amdgcn_wave_barrier();
 }
 
-// CHECK-LABEL: @test_s_memtime
-// CHECK: call i64 @llvm.amdgcn.s.memtime()
-void test_s_memtime(global ulong* out)
-{
-  *out = __builtin_amdgcn_s_memtime();
-}
-
 // CHECK-LABEL: @test_s_sleep
 // CHECK: call void @llvm.amdgcn.s.sleep(i32 1)
 // CHECK: call void @llvm.amdgcn.s.sleep(i32 15)
@@ -755,7 +748,7 @@ kernel void test_s_setreg(uint val) {
 
 // CHECK-DAG: [[$WI_RANGE]] = !{i32 0, i32 1024}
 // CHECK-DAG: [[$WS_RANGE]] = !{i16 1, i16 1025}
-// CHECK-DAG: attributes #[[$NOUNWIND_READONLY:[0-9]+]] = { nounwind readonly }
+// CHECK-DAG: attributes #[[$NOUNWIND_READONLY:[0-9]+]] = { nofree nounwind readonly }
 // CHECK-DAG: attributes #[[$READ_EXEC_ATTRS]] = { convergent }
 // CHECK-DAG: ![[$EXEC]] = !{!"exec"}
 // CHECK-DAG: ![[$EXEC_LO]] = !{!"exec_lo"}

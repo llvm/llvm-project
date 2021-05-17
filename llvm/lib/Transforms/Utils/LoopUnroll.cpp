@@ -213,16 +213,11 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
 
     // Aggressively clean up dead instructions that simplifyLoopIVs already
     // identified. Any remaining should be cleaned up below.
-    while (!DeadInsts.empty()) {
-      Value *V = DeadInsts.pop_back_val();
-      if (Instruction *Inst = dyn_cast_or_null<Instruction>(V))
-        RecursivelyDeleteTriviallyDeadInstructions(Inst);
-    }
+    RecursivelyDeleteTriviallyDeadInstructions(DeadInsts);
   }
 
-  // At this point, the code is well formed.  We now do a quick sweep over the
-  // inserted code, doing constant propagation and dead code elimination as we
-  // go.
+  // At this point, the code is well formed.  Perform constprop, instsimplify,
+  // and dce.
   const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
   for (BasicBlock *BB : L->getBlocks()) {
     for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E;) {
@@ -232,14 +227,9 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
         if (LI->replacementPreservesLCSSAForm(Inst, V))
           Inst->replaceAllUsesWith(V);
       if (isInstructionTriviallyDead(Inst))
-        BB->getInstList().erase(Inst);
+        RecursivelyDeleteTriviallyDeadInstructions(Inst);
     }
   }
-
-  // TODO: after peeling or unrolling, previously loop variant conditions are
-  // likely to fold to constants, eagerly propagating those here will require
-  // fewer cleanup passes to be run.  Alternatively, a LoopEarlyCSE might be
-  // appropriate.
 }
 
 /// Unroll the given loop by Count. The loop must be in LCSSA form.  Unrolling
@@ -590,6 +580,11 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                          << DIL->getFilename() << " Line: " << DIL->getLine());
           }
 
+  // Identify what noalias metadata is inside the loop: if it is inside the
+  // loop, the associated metadata must be cloned for each iteration.
+  SmallVector<MDNode *, 6> LoopLocalNoAliasDeclScopes;
+  identifyNoAliasScopesToClone(L->getBlocks(), LoopLocalNoAliasDeclScopes);
+
   for (unsigned It = 1; It != ULO.Count; ++It) {
     SmallVector<BasicBlock *, 8> NewBlocks;
     SmallDenseMap<const Loop *, Loop *, 4> NewLoops;
@@ -676,12 +671,18 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
     // Remap all instructions in the most recent iteration
     remapInstructionsInBlocks(NewBlocks, LastValueMap);
-    for (BasicBlock *NewBlock : NewBlocks) {
-      for (Instruction &I : *NewBlock) {
-        if (auto *II = dyn_cast<IntrinsicInst>(&I))
-          if (II->getIntrinsicID() == Intrinsic::assume)
-            AC->registerAssumption(II);
-      }
+    for (BasicBlock *NewBlock : NewBlocks)
+      for (Instruction &I : *NewBlock)
+        if (auto *II = dyn_cast<AssumeInst>(&I))
+          AC->registerAssumption(II);
+
+    {
+      // Identify what other metadata depends on the cloned version. After
+      // cloning, replace the metadata with the corrected version for both
+      // memory instructions and noalias intrinsics.
+      std::string ext = (Twine("It") + Twine(It)).str();
+      cloneAndAdaptNoAliasScopes(LoopLocalNoAliasDeclScopes, NewBlocks,
+                                 Header->getContext(), ext);
     }
   }
 

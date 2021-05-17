@@ -1500,3 +1500,50 @@ TEST(LoopInfoTest, LoopNotRotated) {
     EXPECT_FALSE(L->isRotatedForm());
   });
 }
+
+TEST(LoopInfoTest, LoopUserBranch) {
+  const char *ModuleStr =
+      "target datalayout = \"e-m:o-i64:64-f80:128-n8:16:32:64-S128\"\n"
+      "define void @foo(i32* %B, i64 signext %nx, i1 %cond) {\n"
+      "entry:\n"
+      "  br i1 %cond, label %bb, label %guard\n"
+      "guard:\n"
+      "  %cmp.guard = icmp slt i64 0, %nx\n"
+      "  br i1 %cmp.guard, label %for.i.preheader, label %for.end\n"
+      "for.i.preheader:\n"
+      "  br label %for.i\n"
+      "for.i:\n"
+      "  %i = phi i64 [ 0, %for.i.preheader ], [ %inc13, %for.i ]\n"
+      "  %Bi = getelementptr inbounds i32, i32* %B, i64 %i\n"
+      "  store i32 0, i32* %Bi, align 4\n"
+      "  %inc13 = add nsw i64 %i, 1\n"
+      "  %cmp = icmp slt i64 %inc13, %nx\n"
+      "  br i1 %cmp, label %for.i, label %for.i.exit\n"
+      "for.i.exit:\n"
+      "  br label %bb\n"
+      "bb:\n"
+      "  br label %for.end\n"
+      "for.end:\n"
+      "  ret void\n"
+      "}\n";
+
+  // Parse the module.
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleStr);
+
+  runWithLoopInfo(*M, "foo", [&](Function &F, LoopInfo &LI) {
+    Function::iterator FI = F.begin();
+    FI = ++FI;
+    assert(FI->getName() == "guard");
+
+    FI = ++FI;
+    BasicBlock *Header = &*(++FI);
+    assert(Header->getName() == "for.i");
+
+    Loop *L = LI.getLoopFor(Header);
+    EXPECT_NE(L, nullptr);
+
+    // L should not have a guard branch
+    EXPECT_EQ(L->getLoopGuardBranch(), nullptr);
+  });
+}

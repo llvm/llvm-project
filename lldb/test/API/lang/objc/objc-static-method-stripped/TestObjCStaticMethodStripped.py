@@ -49,8 +49,8 @@ class TestObjCStaticMethodStripped(TestBase):
         thread_list = lldbutil.get_threads_stopped_at_breakpoint(process, bpt)
 
         # Make sure we stopped at the first breakpoint.
-        self.assertTrue(
-            len(thread_list) != 0,
+        self.assertNotEqual(
+            len(thread_list), 0,
             "No thread stopped at our breakpoint.")
         self.assertEquals(len(thread_list), 1,
                         "More than one thread stopped at our breakpoint.")
@@ -63,14 +63,14 @@ class TestObjCStaticMethodStripped(TestBase):
         cmd_value = frame.EvaluateExpression("(char *) sel_getName (_cmd)")
         self.assertTrue(cmd_value.IsValid())
         sel_name = cmd_value.GetSummary()
-        self.assertTrue(
-            sel_name == "\"doSomethingWithString:\"",
+        self.assertEqual(
+            sel_name, "\"doSomethingWithString:\"",
             "Got the right value for the selector as string.")
 
         cmd_value = frame.EvaluateExpression(
             "[Foo doSomethingElseWithString:string]")
         self.assertTrue(cmd_value.IsValid())
         string_length = cmd_value.GetValueAsUnsigned()
-        self.assertTrue(
-            string_length == 27,
+        self.assertEqual(
+            string_length, 27,
             "Got the right value from another class method on the same class.")

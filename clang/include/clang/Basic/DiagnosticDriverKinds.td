@@ -67,6 +67,8 @@ def err_drv_no_hip_runtime : Error<
   "cannot find HIP runtime. Provide its path via --rocm-path, or pass "
   "-nogpuinc to build without HIP runtime.">;
 
+def err_drv_undetermined_amdgpu_arch : Error<
+  "Cannot determine AMDGPU architecture: %0. Consider passing it via --march.">;
 def err_drv_cuda_version_unsupported : Error<
   "GPU arch %0 is supported by CUDA versions between %1 and %2 (inclusive), "
   "but installation at %3 is %4. Use --cuda-path to specify a different CUDA "
@@ -127,6 +129,8 @@ def err_drv_invalid_Xopenmp_target_with_args : Error<
   "invalid -Xopenmp-target argument: '%0', options requiring arguments are unsupported">;
 def err_drv_argument_only_allowed_with : Error<
   "invalid argument '%0' only allowed with '%1'">;
+def err_drv_amdgpu_ieee_without_no_honor_nans : Error<
+  "invalid argument '-mno-amdgpu-ieee' only allowed with relaxed NaN handling">;
 def err_drv_argument_not_allowed_with : Error<
   "invalid argument '%0' not allowed with '%1'">;
 def err_drv_invalid_version_number : Error<
@@ -163,12 +167,12 @@ def err_drv_invalid_libcxx_deployment : Error<
   "invalid deployment target for -stdlib=libc++ (requires %0 or later)">;
 def err_drv_invalid_argument_to_option : Error<
   "invalid argument '%0' to -%1">;
-def err_drv_malformed_sanitizer_blacklist : Error<
-  "malformed sanitizer blacklist: '%0'">;
+def err_drv_malformed_sanitizer_ignorelist : Error<
+  "malformed sanitizer ignorelist: '%0'">;
 def err_drv_malformed_sanitizer_coverage_whitelist : Error<
   "malformed sanitizer coverage whitelist: '%0'">;
-def err_drv_malformed_sanitizer_coverage_blacklist : Error<
-  "malformed sanitizer coverage blacklist: '%0'">;
+def err_drv_malformed_sanitizer_coverage_ignorelist : Error<
+  "malformed sanitizer coverage ignorelist: '%0'">;
 def err_drv_duplicate_config : Error<
   "no more than one option '--config' is allowed">;
 def err_drv_config_file_not_exist : Error<
@@ -210,12 +214,10 @@ def warn_drv_yc_multiple_inputs_clang_cl : Warning<
   "support for '/Yc' with more than one source file not implemented yet; flag ignored">,
   InGroup<ClangClPch>;
 
-def err_drv_dllexport_inlines_and_fallback : Error<
-  "option '/Zc:dllexportInlines-' is ABI-changing and not compatible with '/fallback'">;
-
 def err_drv_invalid_value : Error<"invalid value '%1' in '%0'">;
 def err_drv_invalid_int_value : Error<"invalid integral value '%1' in '%0'">;
-def err_drv_invalid_value_with_suggestion : Error<"invalid value '%1' in '%0','%2'">;
+def err_drv_invalid_value_with_suggestion : Error<
+    "invalid value '%1' in '%0', expected one of: %2">;
 def err_drv_invalid_remap_file : Error<
     "invalid option '%0' not of the form <from-file>;<to-file>">;
 def err_drv_invalid_gcc_output_type : Error<
@@ -263,16 +265,21 @@ def err_drv_omp_host_target_not_supported : Error<
   "The target '%0' is not a supported OpenMP host target.">;
 def err_drv_expecting_fopenmp_with_fopenmp_targets : Error<
   "The option -fopenmp-targets must be used in conjunction with a -fopenmp option compatible with offloading, please use -fopenmp=libomp or -fopenmp=libiomp5.">;
+def err_drv_omp_offload_target_missingbcruntime : Error<
+  "No library '%0' found in the default clang lib directory or in LIBRARY_PATH. Please use --libomptarget-%1-bc-path to specify %1 bitcode library.">;
+def err_drv_omp_offload_target_bcruntime_not_found : Error<"Bitcode library '%0' does not exist.">;
+def err_drv_omp_offload_target_cuda_version_not_support : Error<"NVPTX target requires CUDA 9.2 or above. CUDA %0 is detected.">;
 def warn_drv_omp_offload_target_duplicate : Warning<
   "The OpenMP offloading target '%0' is similar to target '%1' already specified - will be ignored.">,
-  InGroup<OpenMPTarget>;
-def warn_drv_omp_offload_target_missingbcruntime : Warning<
-  "No library '%0' found in the default clang lib directory or in LIBRARY_PATH. Expect degraded performance due to no inlining of runtime functions on target devices.">,
   InGroup<OpenMPTarget>;
 def err_drv_unsupported_embed_bitcode
     : Error<"%0 is not supported with -fembed-bitcode">;
 def err_drv_bitcode_unsupported_on_toolchain : Error<
   "-fembed-bitcode is not supported on versions of iOS prior to 6.0">;
+def err_drv_negative_columns : Error<
+    "invalid value '%1' in '%0', value must be 'none' or a positive integer">;
+def err_drv_small_columns : Error<
+    "invalid value '%1' in '%0', value must be '%2' or greater">;
 
 def err_drv_invalid_malign_branch_EQ : Error<
   "invalid argument '%0' to -malign-branch=; each element must be one of: %1">;
@@ -344,6 +351,10 @@ def warn_drv_disabling_vptr_no_rtti_default : Warning<
 def warn_drv_object_size_disabled_O0 : Warning<
   "the object size sanitizer has no effect at -O0, but is explicitly enabled: %0">,
   InGroup<InvalidCommandLineArgument>, DefaultWarnNoWerror;
+def warn_ignoring_verify_debuginfo_preserve_export : Warning<
+  "ignoring -fverify-debuginfo-preserve-export=%0 because "
+  "-fverify-debuginfo-preserve wasn't enabled">,
+  InGroup<UnusedCommandLineArgument>;
 def err_invalid_branch_protection: Error <
   "invalid branch protection option '%0' in '%1'">;
 def err_invalid_sls_hardening : Error<
@@ -391,9 +402,6 @@ def err_drv_modules_validate_once_requires_timestamp : Error<
 def err_test_module_file_extension_format : Error<
   "-ftest-module-file-extension argument '%0' is not of the required form "
   "'blockname:major:minor:hashed:user info'">;
-
-def warn_drv_invoking_fallback : Warning<"falling back to %0">,
-  InGroup<Fallback>;
 
 def warn_slash_u_filename : Warning<"'/U%0' treated as the '/U' option">,
   InGroup<DiagGroup<"slash-u-filename">>;
@@ -537,5 +545,15 @@ def err_drv_invalid_object_mode : Error<"OBJECT_MODE setting %0 is not recognize
 def err_aix_default_altivec_abi : Error<
   "The default Altivec ABI on AIX is not yet supported, use '-mabi=vec-extabi' for the extended Altivec ABI">;
 
-def err_aix_altivec : Error<"'-mabi=vec-extabi' and '-mabi=vec-default' require '-maltivec'">;
+def err_aix_unsupported_tls_model : Error<"TLS model '%0' is not yet supported on AIX">;
+
+def err_invalid_cxx_abi : Error<"Invalid C++ ABI name '%0'">;
+def err_unsupported_cxx_abi : Error<"C++ ABI '%0' is not supported on target triple '%1'">;
+
+def note_cc1_round_trip_original : Note<"Original arguments in round-trip: %0">;
+def note_cc1_round_trip_generated : Note<"Generated arguments #%0 in round-trip: %1">;
+def remark_cc1_round_trip_generated : Remark<"Generated arguments #%0 in round-trip: %1">, InGroup<RoundTripCC1Args>;
+def err_cc1_round_trip_fail_then_ok : Error<"Original arguments parse failed, then succeeded in round-trip">;
+def err_cc1_round_trip_ok_then_fail : Error<"Generated arguments parse failed in round-trip">;
+def err_cc1_round_trip_mismatch : Error<"Generated arguments do not match in round-trip">;
 }

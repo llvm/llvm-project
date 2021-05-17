@@ -19,7 +19,9 @@ extern const char *const MemoryRefCount;
 extern const char *const MemoryError;
 extern const char *const UnixAPI;
 extern const char *const CXXObjectLifecycle;
+extern const char *const CXXMoveSemantics;
 extern const char *const SecurityError;
+extern const char *const UnusedCode;
 } // namespace categories
 } // namespace ento
 } // namespace clang

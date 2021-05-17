@@ -175,13 +175,13 @@ define void @ptrtoint_of_constantexpr_inttoptr(i64* %out0) {
 ; X64-LABEL: 'ptrtoint_of_constantexpr_inttoptr'
 ; X64-NEXT:  Classifying expressions for: @ptrtoint_of_constantexpr_inttoptr
 ; X64-NEXT:    %p0 = ptrtoint i8* inttoptr (i64 42 to i8*) to i64
-; X64-NEXT:    --> (ptrtoint i8* inttoptr (i64 42 to i8*) to i64) U: [42,43) S: [-64,64)
+; X64-NEXT:    --> (ptrtoint i8* inttoptr (i64 42 to i8*) to i64) U: [42,43) S: [42,43)
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoint_of_constantexpr_inttoptr
 ;
 ; X32-LABEL: 'ptrtoint_of_constantexpr_inttoptr'
 ; X32-NEXT:  Classifying expressions for: @ptrtoint_of_constantexpr_inttoptr
 ; X32-NEXT:    %p0 = ptrtoint i8* inttoptr (i64 42 to i8*) to i64
-; X32-NEXT:    --> (zext i32 (ptrtoint i8* inttoptr (i64 42 to i8*) to i32) to i64) U: [42,43) S: [0,4294967296)
+; X32-NEXT:    --> (zext i32 (ptrtoint i8* inttoptr (i64 42 to i8*) to i32) to i64) U: [42,43) S: [42,43)
 ; X32-NEXT:  Determining loop execution counts for: @ptrtoint_of_constantexpr_inttoptr
 ;
   %p0 = ptrtoint i8* inttoptr (i64 42 to i8*) to i64
@@ -473,9 +473,9 @@ define void @pr46786_c26_int(i32* %arg, i32* %arg1, i32* %arg2) {
 ; X64-NEXT:    %i10 = sub i64 %i9, %i4
 ; X64-NEXT:    --> {0,+,4}<nw><%bb6> U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: (4 * ((-4 + (-1 * %arg) + %arg1) /u 4))<nuw> LoopDispositions: { %bb6: Computable }
 ; X64-NEXT:    %i11 = ashr exact i64 %i10, 2
-; X64-NEXT:    --> ((({0,+,4}<nw><%bb6> smax {0,+,-4}<nw><%bb6>) /u 4) * (1 smin (-1 smax {0,+,4}<nw><%bb6>)))<nsw> U: [-4611686018427387903,4611686018427387904) S: [-4611686018427387903,4611686018427387904) Exits: ((((4 * ((-4 + (-1 * %arg) + %arg1) /u 4))<nuw> smax (-4 * ((-4 + (-1 * %arg) + %arg1) /u 4))) /u 4) * (1 smin (-1 smax (4 * ((-4 + (-1 * %arg) + %arg1) /u 4))<nuw>)))<nsw> LoopDispositions: { %bb6: Computable }
+; X64-NEXT:    --> %i11 U: [-2305843009213693952,2305843009213693952) S: [-2305843009213693952,2305843009213693952) Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X64-NEXT:    %i12 = getelementptr inbounds i32, i32* %arg2, i64 %i11
-; X64-NEXT:    --> ((4 * (({0,+,4}<nw><%bb6> smax {0,+,-4}<nw><%bb6>) /u 4) * (1 smin (-1 smax {0,+,4}<nw><%bb6>))) + %arg2) U: full-set S: full-set Exits: ((4 * (((4 * ((-4 + (-1 * %arg) + %arg1) /u 4))<nuw> smax (-4 * ((-4 + (-1 * %arg) + %arg1) /u 4))) /u 4) * (1 smin (-1 smax (4 * ((-4 + (-1 * %arg) + %arg1) /u 4))<nuw>))) + %arg2) LoopDispositions: { %bb6: Computable }
+; X64-NEXT:    --> ((4 * %i11)<nsw> + %arg2) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X64-NEXT:    %i13 = load i32, i32* %i12, align 4
 ; X64-NEXT:    --> %i13 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X64-NEXT:    %i14 = add nsw i32 %i13, %i8
@@ -502,9 +502,9 @@ define void @pr46786_c26_int(i32* %arg, i32* %arg1, i32* %arg2) {
 ; X32-NEXT:    %i10 = sub i64 %i9, %i4
 ; X32-NEXT:    --> {0,+,4}<nw><%bb6> U: [0,4294967293) S: [0,4294967293) Exits: (4 * ((zext i32* (-4 + (-1 * %arg) + %arg1) to i64) /u 4))<nuw><nsw> LoopDispositions: { %bb6: Computable }
 ; X32-NEXT:    %i11 = ashr exact i64 %i10, 2
-; X32-NEXT:    --> ({0,+,1}<nw><%bb6> * (1 smin {0,+,4}<nuw><nsw><%bb6>))<nuw><nsw> U: [0,1073741824) S: [0,1073741824) Exits: (((zext i32* (-4 + (-1 * %arg) + %arg1) to i64) /u 4) * (1 smin (4 * ((zext i32* (-4 + (-1 * %arg) + %arg1) to i64) /u 4))<nuw><nsw>))<nuw><nsw> LoopDispositions: { %bb6: Computable }
+; X32-NEXT:    --> %i11 U: [-2147483648,2147483648) S: [-2147483648,2147483648) Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X32-NEXT:    %i12 = getelementptr inbounds i32, i32* %arg2, i64 %i11
-; X32-NEXT:    --> (((trunc i64 (1 smin {0,+,4}<nuw><nsw><%bb6>) to i32) * {0,+,4}<%bb6>) + %arg2) U: full-set S: full-set Exits: ((4 * (trunc i64 (1 smin (4 * ((zext i32* (-4 + (-1 * %arg) + %arg1) to i64) /u 4))<nuw><nsw>) to i32) * ((-4 + (-1 * %arg) + %arg1) /u 4)) + %arg2) LoopDispositions: { %bb6: Computable }
+; X32-NEXT:    --> ((4 * (trunc i64 %i11 to i32))<nsw> + %arg2) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X32-NEXT:    %i13 = load i32, i32* %i12, align 4
 ; X32-NEXT:    --> %i13 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X32-NEXT:    %i14 = add nsw i32 %i13, %i8

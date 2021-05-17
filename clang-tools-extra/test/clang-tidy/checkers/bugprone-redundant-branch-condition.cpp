@@ -1,4 +1,5 @@
-// RUN: %check_clang_tidy %s bugprone-redundant-branch-condition %t
+// RUN: %check_clang_tidy %s bugprone-redundant-branch-condition %t \
+// RUN:                   -- -- -fblocks
 
 extern unsigned peopleInTheBuilding;
 extern unsigned fireFighters;
@@ -1177,6 +1178,151 @@ void negative_else_branch(bool isHot) {
       scream();
     }
   }
+}
+
+// Lambda / block captures.
+
+template <typename T> void accept_callback(T t) {
+  // Potentially call the callback.
+  // Possibly on a background thread or something.
+}
+
+void accept_block(void (^)(void)) {
+  // Potentially call the callback.
+  // Possibly on a background thread or something.
+}
+
+void wait(void) {
+  // Wait for the previously passed callback to be called.
+}
+
+void capture_and_mutate_by_lambda() {
+  bool x = true;
+  accept_callback([&]() { x = false; });
+  if (x) {
+    wait();
+    if (x) {
+    }
+  }
+}
+
+void lambda_capture_by_value() {
+  bool x = true;
+  accept_callback([x]() { if (x) {} });
+  if (x) {
+    wait();
+    if (x) {
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant condition 'x' [bugprone-redundant-branch-condition]
+    }
+  }
+}
+
+void capture_by_lambda_but_not_mutate() {
+  bool x = true;
+  accept_callback([&]() { if (x) {} });
+  if (x) {
+    wait();
+    // FIXME: Should warn.
+    if (x) {
+    }
+  }
+}
+
+void capture_and_mutate_by_block() {
+  __block bool x = true;
+  accept_block(^{ x = false; });
+  if (x) {
+    wait();
+    if (x) {
+    }
+  }
+}
+
+void block_capture_by_value() {
+  bool x = true;
+  accept_block(^{ if (x) {} });
+  if (x) {
+    wait();
+    if (x) {
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant condition 'x' [bugprone-redundant-branch-condition]
+    }
+  }
+}
+
+void capture_by_block_but_not_mutate() {
+  __block bool x = true;
+  accept_callback(^{ if (x) {} });
+  if (x) {
+    wait();
+    // FIXME: Should warn.
+    if (x) {
+    }
+  }
+}
+
+void mutate_at_any_time(bool *x);
+
+void capture_with_branches_inside_lambda_bad() {
+  bool x = true;
+  accept_callback([=]() {
+    if (x) {
+      wait();
+      if (x) {
+        // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant condition 'x' [bugprone-redundant-branch-condition]
+      }
+    }
+  });
+  mutate_at_any_time(&x);
+}
+
+void capture_with_branches_inside_lambda_good() {
+  bool x = true;
+  accept_callback([&]() {
+    if (x) {
+      wait();
+      if (x) {
+      }
+    }
+  });
+  mutate_at_any_time(&x);
+}
+
+void capture_with_branches_inside_block_bad() {
+  bool x = true;
+  accept_callback(^{
+    if (x) {
+      wait();
+      if (x) {
+         // FIXME: Should warn. It currently reacts to &x outside the block
+         // which ideally shouldn't have any effect.
+      }
+    }
+  });
+  mutate_at_any_time(&x);
+}
+
+void capture_with_branches_inside_block_bad_simpler() {
+  bool x = true;
+  accept_callback(^{
+    if (x) {
+      wait();
+      if (x) {
+        // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant condition 'x' [bugprone-redundant-branch-condition]
+      }
+    }
+  });
+}
+
+void capture_with_branches_inside_block_good() {
+  __block bool x = true;
+  accept_callback(^{
+    if (x) {
+      wait();
+      if (x) {
+      }
+    }
+  });
+  mutate_at_any_time(&x);
 }
 
 // GNU Expression Statements

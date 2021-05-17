@@ -827,8 +827,8 @@ TEST(CommandLineTest, ResponseFiles) {
   llvm::BumpPtrAllocator A;
   llvm::StringSaver Saver(A);
   ASSERT_TRUE(llvm::cl::ExpandResponseFiles(
-      Saver, llvm::cl::TokenizeGNUCommandLine, Argv, false, true, FS,
-      /*CurrentDir=*/StringRef(TestRoot)));
+      Saver, llvm::cl::TokenizeGNUCommandLine, Argv, false, true,
+      /*CurrentDir=*/StringRef(TestRoot), FS));
   EXPECT_THAT(Argv, testing::Pointwise(
                         StringEquality(),
                         {"test/test", "-flag_1", "-option_1", "-option_2",
@@ -889,9 +889,9 @@ TEST(CommandLineTest, RecursiveResponseFiles) {
 #else
   cl::TokenizerCallback Tokenizer = cl::TokenizeGNUCommandLine;
 #endif
-  ASSERT_FALSE(
-      cl::ExpandResponseFiles(Saver, Tokenizer, Argv, false, false, FS,
-                              /*CurrentDir=*/llvm::StringRef(TestRoot)));
+  ASSERT_FALSE(cl::ExpandResponseFiles(Saver, Tokenizer, Argv, false, false,
+                                       /*CurrentDir=*/llvm::StringRef(TestRoot),
+                                       FS));
 
   EXPECT_THAT(Argv,
               testing::Pointwise(StringEquality(),
@@ -929,8 +929,8 @@ TEST(CommandLineTest, ResponseFilesAtArguments) {
   BumpPtrAllocator A;
   StringSaver Saver(A);
   ASSERT_FALSE(cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Argv,
-                                       false, false, FS,
-                                       /*CurrentDir=*/StringRef(TestRoot)));
+                                       false, false,
+                                       /*CurrentDir=*/StringRef(TestRoot), FS));
 
   // ASSERT instead of EXPECT to prevent potential out-of-bounds access.
   ASSERT_EQ(Argv.size(), 1 + NON_RSP_AT_ARGS + 2);
@@ -964,8 +964,8 @@ TEST(CommandLineTest, ResponseFileRelativePath) {
   BumpPtrAllocator A;
   StringSaver Saver(A);
   ASSERT_TRUE(cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Argv,
-                                      false, true, FS,
-                                      /*CurrentDir=*/StringRef(TestRoot)));
+                                      false, true,
+                                      /*CurrentDir=*/StringRef(TestRoot), FS));
   EXPECT_THAT(Argv,
               testing::Pointwise(StringEquality(), {"test/test", "-flag"}));
 }
@@ -984,8 +984,8 @@ TEST(CommandLineTest, ResponseFileEOLs) {
   BumpPtrAllocator A;
   StringSaver Saver(A);
   ASSERT_TRUE(cl::ExpandResponseFiles(Saver, cl::TokenizeWindowsCommandLine,
-                                      Argv, true, true, FS,
-                                      /*CurrentDir=*/StringRef(TestRoot)));
+                                      Argv, true, true,
+                                      /*CurrentDir=*/StringRef(TestRoot), FS));
   const char *Expected[] = {"clang", "-Xclang", "-Wno-whatever", nullptr,
                             "input.cpp"};
   ASSERT_EQ(array_lengthof(Expected), Argv.size());
@@ -1260,6 +1260,28 @@ TEST_F(PrintOptionInfoTest, PrintOptionInfoEmptyValueDescription) {
   EXPECT_EQ(Output,
             ("  --" + Opt + "=<value> - " + HelpText + "\n"
              "    =v1\n").str());
+  // clang-format on
+}
+
+TEST_F(PrintOptionInfoTest, PrintOptionInfoMultilineValueDescription) {
+  std::string Output =
+      runTest(cl::ValueRequired,
+              cl::values(clEnumValN(OptionValue::Val, "v1",
+                                    "This is the first enum value\n"
+                                    "which has a really long description\n"
+                                    "thus it is multi-line."),
+                         clEnumValN(OptionValue::Val, "",
+                                    "This is an unnamed enum value option\n"
+                                    "Should be indented as well")));
+
+  // clang-format off
+  EXPECT_EQ(Output,
+            ("  --" + Opt + "=<value> - " + HelpText + "\n"
+             "    =v1                 -   This is the first enum value\n"
+             "                            which has a really long description\n"
+             "                            thus it is multi-line.\n"
+             "    =<empty>            -   This is an unnamed enum value option\n"
+             "                            Should be indented as well\n").str());
   // clang-format on
 }
 

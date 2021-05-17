@@ -10,7 +10,7 @@
 
 #include "utils/UnitTest/Test.h"
 
-TEST(ToAscii, DefaultLocale) {
+TEST(LlvmLibcToAscii, DefaultLocale) {
   // Loops through all characters, verifying that ascii characters
   //    (which are all 7 bit unsigned integers)
   // return themself, and that all other characters return themself

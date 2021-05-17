@@ -28,7 +28,7 @@ template <typename IRUnitT> class AllAnalysesOn;
 template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
 class PreservedAnalyses;
 
-/// Implementation details of the pass manager interfaces.
+// Implementation details of the pass manager interfaces.
 namespace detail {
 
 /// Template for the abstract base class used to dispatch

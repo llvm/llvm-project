@@ -1,11 +1,9 @@
 // REQUIRES: aarch64-registered-target
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -emit-llvm -o - -x c++ %s | FileCheck %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -o - %s >/dev/null 2>%t
-// RUN: FileCheck --check-prefix=ASM --allow-empty %s <%t
-
-// If this check fails please read test/CodeGen/aarch64-sve-intrinsics/README for instructions on how to resolve it.
-// ASM-NOT: warning
+// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -emit-llvm -o - -x c++ %s | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -o - %s >/dev/null
 #include <arm_sve.h>
 
 #ifdef SVE_OVERLOADED_FORMS
@@ -114,7 +112,7 @@ svint32_t test_svld1sh_gather_u32base_s32(svbool_t pg, svuint32_t bases) {
 
 svint64_t test_svld1sh_gather_u64base_s64(svbool_t pg, svuint64_t bases) {
   // CHECK-LABEL: test_svld1sh_gather_u64base_s64
-  // CHECK: %[[PG.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
+  // CHECK: %[[PG:.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
   // CHECK: %[[LOAD:.*]] = call <vscale x 2 x i16> @llvm.aarch64.sve.ld1.gather.scalar.offset.nxv2i16.nxv2i64(<vscale x 2 x i1> %[[PG]], <vscale x 2 x i64> %bases, i64 0)
   // CHECK: %[[SEXT:.*]] = sext <vscale x 2 x i16> %[[LOAD]] to <vscale x 2 x i64>
   // CHECK: ret <vscale x 2 x i64> %[[SEXT]]

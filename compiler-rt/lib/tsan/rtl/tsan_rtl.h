@@ -84,9 +84,6 @@ typedef Allocator::AllocatorCache AllocatorCache;
 Allocator *allocator();
 #endif
 
-void TsanCheckFailed(const char *file, int line, const char *cond,
-                     u64 v1, u64 v2);
-
 const u64 kShadowRodata = (u64)-1;  // .rodata shadow marker
 
 // FastState (from most significant bit):
@@ -406,7 +403,7 @@ struct ThreadState {
 #if TSAN_COLLECT_STATS
   u64 stat[StatCnt];
 #endif
-  const int tid;
+  const u32 tid;
   const int unique_id;
   bool in_symbolizer;
   bool in_ignored_lib;
@@ -447,9 +444,8 @@ struct ThreadState {
 
   const ReportDesc *current_report;
 
-  explicit ThreadState(Context *ctx, int tid, int unique_id, u64 epoch,
-                       unsigned reuse_count,
-                       uptr stk_addr, uptr stk_size,
+  explicit ThreadState(Context *ctx, u32 tid, int unique_id, u64 epoch,
+                       unsigned reuse_count, uptr stk_addr, uptr stk_size,
                        uptr tls_addr, uptr tls_size);
 };
 
@@ -624,6 +620,7 @@ class ScopedReport : public ScopedReportBase {
   ScopedErrorReportLock lock_;
 };
 
+bool ShouldReport(ThreadState *thr, ReportType typ);
 ThreadContext *IsThreadStackOrTls(uptr addr, bool *is_stack);
 void RestoreStack(int tid, const u64 epoch, VarSizeStackTrace *stk,
                   MutexSet *mset, uptr *tag = nullptr);

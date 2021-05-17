@@ -147,6 +147,10 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
   auto InstrAttr = F.getFnAttribute("function-instrument");
   bool AlwaysInstrument = InstrAttr.isStringAttribute() &&
                           InstrAttr.getValueAsString() == "xray-always";
+  bool NeverInstrument = InstrAttr.isStringAttribute() &&
+                         InstrAttr.getValueAsString() == "xray-never";
+  if (NeverInstrument && !AlwaysInstrument)
+    return false;
   auto ThresholdAttr = F.getFnAttribute("xray-instruction-threshold");
   auto IgnoreLoopsAttr = F.getFnAttribute("xray-ignore-loops");
   unsigned int XRayThreshold = 0;

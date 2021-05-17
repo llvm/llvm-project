@@ -2042,10 +2042,10 @@ define void @foo7(double* noalias nocapture %out, double** noalias nocapture rea
 ; AVX1-NEXT:    [[TMP49:%.*]] = xor <4 x i1> [[TMP41]], <i1 true, i1 true, i1 true, i1 true>
 ; AVX1-NEXT:    [[TMP50:%.*]] = xor <4 x i1> [[TMP42]], <i1 true, i1 true, i1 true, i1 true>
 ; AVX1-NEXT:    [[TMP51:%.*]] = xor <4 x i1> [[TMP43]], <i1 true, i1 true, i1 true, i1 true>
-; AVX1-NEXT:    [[TMP52:%.*]] = and <4 x i1> [[TMP48]], [[TMP28]]
-; AVX1-NEXT:    [[TMP53:%.*]] = and <4 x i1> [[TMP49]], [[TMP29]]
-; AVX1-NEXT:    [[TMP54:%.*]] = and <4 x i1> [[TMP50]], [[TMP30]]
-; AVX1-NEXT:    [[TMP55:%.*]] = and <4 x i1> [[TMP51]], [[TMP31]]
+; AVX1-NEXT:    [[TMP52:%.*]] = select <4 x i1> [[TMP28]], <4 x i1> [[TMP48]], <4 x i1> zeroinitializer
+; AVX1-NEXT:    [[TMP53:%.*]] = select <4 x i1> [[TMP29]], <4 x i1> [[TMP49]], <4 x i1> zeroinitializer
+; AVX1-NEXT:    [[TMP54:%.*]] = select <4 x i1> [[TMP30]], <4 x i1> [[TMP50]], <4 x i1> zeroinitializer
+; AVX1-NEXT:    [[TMP55:%.*]] = select <4 x i1> [[TMP31]], <4 x i1> [[TMP51]], <4 x i1> zeroinitializer
 ; AVX1-NEXT:    [[TMP56:%.*]] = getelementptr inbounds double, double* [[TMP44]], i32 0
 ; AVX1-NEXT:    [[TMP57:%.*]] = bitcast double* [[TMP56]] to <4 x double>*
 ; AVX1-NEXT:    call void @llvm.masked.store.v4f64.p0v4f64(<4 x double> <double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01>, <4 x double>* [[TMP57]], i32 8, <4 x i1> [[TMP52]])
@@ -2166,10 +2166,10 @@ define void @foo7(double* noalias nocapture %out, double** noalias nocapture rea
 ; AVX2-NEXT:    [[TMP49:%.*]] = xor <4 x i1> [[TMP41]], <i1 true, i1 true, i1 true, i1 true>
 ; AVX2-NEXT:    [[TMP50:%.*]] = xor <4 x i1> [[TMP42]], <i1 true, i1 true, i1 true, i1 true>
 ; AVX2-NEXT:    [[TMP51:%.*]] = xor <4 x i1> [[TMP43]], <i1 true, i1 true, i1 true, i1 true>
-; AVX2-NEXT:    [[TMP52:%.*]] = and <4 x i1> [[TMP48]], [[TMP28]]
-; AVX2-NEXT:    [[TMP53:%.*]] = and <4 x i1> [[TMP49]], [[TMP29]]
-; AVX2-NEXT:    [[TMP54:%.*]] = and <4 x i1> [[TMP50]], [[TMP30]]
-; AVX2-NEXT:    [[TMP55:%.*]] = and <4 x i1> [[TMP51]], [[TMP31]]
+; AVX2-NEXT:    [[TMP52:%.*]] = select <4 x i1> [[TMP28]], <4 x i1> [[TMP48]], <4 x i1> zeroinitializer
+; AVX2-NEXT:    [[TMP53:%.*]] = select <4 x i1> [[TMP29]], <4 x i1> [[TMP49]], <4 x i1> zeroinitializer
+; AVX2-NEXT:    [[TMP54:%.*]] = select <4 x i1> [[TMP30]], <4 x i1> [[TMP50]], <4 x i1> zeroinitializer
+; AVX2-NEXT:    [[TMP55:%.*]] = select <4 x i1> [[TMP31]], <4 x i1> [[TMP51]], <4 x i1> zeroinitializer
 ; AVX2-NEXT:    [[TMP56:%.*]] = getelementptr inbounds double, double* [[TMP44]], i32 0
 ; AVX2-NEXT:    [[TMP57:%.*]] = bitcast double* [[TMP56]] to <4 x double>*
 ; AVX2-NEXT:    call void @llvm.masked.store.v4f64.p0v4f64(<4 x double> <double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01>, <4 x double>* [[TMP57]], i32 8, <4 x i1> [[TMP52]])
@@ -2290,10 +2290,10 @@ define void @foo7(double* noalias nocapture %out, double** noalias nocapture rea
 ; AVX512-NEXT:    [[TMP49:%.*]] = xor <8 x i1> [[TMP41]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
 ; AVX512-NEXT:    [[TMP50:%.*]] = xor <8 x i1> [[TMP42]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
 ; AVX512-NEXT:    [[TMP51:%.*]] = xor <8 x i1> [[TMP43]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
-; AVX512-NEXT:    [[TMP52:%.*]] = and <8 x i1> [[TMP48]], [[TMP28]]
-; AVX512-NEXT:    [[TMP53:%.*]] = and <8 x i1> [[TMP49]], [[TMP29]]
-; AVX512-NEXT:    [[TMP54:%.*]] = and <8 x i1> [[TMP50]], [[TMP30]]
-; AVX512-NEXT:    [[TMP55:%.*]] = and <8 x i1> [[TMP51]], [[TMP31]]
+; AVX512-NEXT:    [[TMP52:%.*]] = select <8 x i1> [[TMP28]], <8 x i1> [[TMP48]], <8 x i1> zeroinitializer
+; AVX512-NEXT:    [[TMP53:%.*]] = select <8 x i1> [[TMP29]], <8 x i1> [[TMP49]], <8 x i1> zeroinitializer
+; AVX512-NEXT:    [[TMP54:%.*]] = select <8 x i1> [[TMP30]], <8 x i1> [[TMP50]], <8 x i1> zeroinitializer
+; AVX512-NEXT:    [[TMP55:%.*]] = select <8 x i1> [[TMP31]], <8 x i1> [[TMP51]], <8 x i1> zeroinitializer
 ; AVX512-NEXT:    [[TMP56:%.*]] = getelementptr inbounds double, double* [[TMP44]], i32 0
 ; AVX512-NEXT:    [[TMP57:%.*]] = bitcast double* [[TMP56]] to <8 x double>*
 ; AVX512-NEXT:    call void @llvm.masked.store.v8f64.p0v8f64(<8 x double> <double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01>, <8 x double>* [[TMP57]], i32 8, <8 x i1> [[TMP52]])
@@ -2459,10 +2459,10 @@ define void @foo8(double* noalias nocapture %out, i32 ()** noalias nocapture rea
 ; AVX1-NEXT:    [[TMP49:%.*]] = xor <4 x i1> [[TMP41]], <i1 true, i1 true, i1 true, i1 true>
 ; AVX1-NEXT:    [[TMP50:%.*]] = xor <4 x i1> [[TMP42]], <i1 true, i1 true, i1 true, i1 true>
 ; AVX1-NEXT:    [[TMP51:%.*]] = xor <4 x i1> [[TMP43]], <i1 true, i1 true, i1 true, i1 true>
-; AVX1-NEXT:    [[TMP52:%.*]] = and <4 x i1> [[TMP48]], [[TMP28]]
-; AVX1-NEXT:    [[TMP53:%.*]] = and <4 x i1> [[TMP49]], [[TMP29]]
-; AVX1-NEXT:    [[TMP54:%.*]] = and <4 x i1> [[TMP50]], [[TMP30]]
-; AVX1-NEXT:    [[TMP55:%.*]] = and <4 x i1> [[TMP51]], [[TMP31]]
+; AVX1-NEXT:    [[TMP52:%.*]] = select <4 x i1> [[TMP28]], <4 x i1> [[TMP48]], <4 x i1> zeroinitializer
+; AVX1-NEXT:    [[TMP53:%.*]] = select <4 x i1> [[TMP29]], <4 x i1> [[TMP49]], <4 x i1> zeroinitializer
+; AVX1-NEXT:    [[TMP54:%.*]] = select <4 x i1> [[TMP30]], <4 x i1> [[TMP50]], <4 x i1> zeroinitializer
+; AVX1-NEXT:    [[TMP55:%.*]] = select <4 x i1> [[TMP31]], <4 x i1> [[TMP51]], <4 x i1> zeroinitializer
 ; AVX1-NEXT:    [[TMP56:%.*]] = getelementptr inbounds double, double* [[TMP44]], i32 0
 ; AVX1-NEXT:    [[TMP57:%.*]] = bitcast double* [[TMP56]] to <4 x double>*
 ; AVX1-NEXT:    call void @llvm.masked.store.v4f64.p0v4f64(<4 x double> <double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01>, <4 x double>* [[TMP57]], i32 8, <4 x i1> [[TMP52]])
@@ -2583,10 +2583,10 @@ define void @foo8(double* noalias nocapture %out, i32 ()** noalias nocapture rea
 ; AVX2-NEXT:    [[TMP49:%.*]] = xor <4 x i1> [[TMP41]], <i1 true, i1 true, i1 true, i1 true>
 ; AVX2-NEXT:    [[TMP50:%.*]] = xor <4 x i1> [[TMP42]], <i1 true, i1 true, i1 true, i1 true>
 ; AVX2-NEXT:    [[TMP51:%.*]] = xor <4 x i1> [[TMP43]], <i1 true, i1 true, i1 true, i1 true>
-; AVX2-NEXT:    [[TMP52:%.*]] = and <4 x i1> [[TMP48]], [[TMP28]]
-; AVX2-NEXT:    [[TMP53:%.*]] = and <4 x i1> [[TMP49]], [[TMP29]]
-; AVX2-NEXT:    [[TMP54:%.*]] = and <4 x i1> [[TMP50]], [[TMP30]]
-; AVX2-NEXT:    [[TMP55:%.*]] = and <4 x i1> [[TMP51]], [[TMP31]]
+; AVX2-NEXT:    [[TMP52:%.*]] = select <4 x i1> [[TMP28]], <4 x i1> [[TMP48]], <4 x i1> zeroinitializer
+; AVX2-NEXT:    [[TMP53:%.*]] = select <4 x i1> [[TMP29]], <4 x i1> [[TMP49]], <4 x i1> zeroinitializer
+; AVX2-NEXT:    [[TMP54:%.*]] = select <4 x i1> [[TMP30]], <4 x i1> [[TMP50]], <4 x i1> zeroinitializer
+; AVX2-NEXT:    [[TMP55:%.*]] = select <4 x i1> [[TMP31]], <4 x i1> [[TMP51]], <4 x i1> zeroinitializer
 ; AVX2-NEXT:    [[TMP56:%.*]] = getelementptr inbounds double, double* [[TMP44]], i32 0
 ; AVX2-NEXT:    [[TMP57:%.*]] = bitcast double* [[TMP56]] to <4 x double>*
 ; AVX2-NEXT:    call void @llvm.masked.store.v4f64.p0v4f64(<4 x double> <double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01>, <4 x double>* [[TMP57]], i32 8, <4 x i1> [[TMP52]])
@@ -2707,10 +2707,10 @@ define void @foo8(double* noalias nocapture %out, i32 ()** noalias nocapture rea
 ; AVX512-NEXT:    [[TMP49:%.*]] = xor <8 x i1> [[TMP41]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
 ; AVX512-NEXT:    [[TMP50:%.*]] = xor <8 x i1> [[TMP42]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
 ; AVX512-NEXT:    [[TMP51:%.*]] = xor <8 x i1> [[TMP43]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
-; AVX512-NEXT:    [[TMP52:%.*]] = and <8 x i1> [[TMP48]], [[TMP28]]
-; AVX512-NEXT:    [[TMP53:%.*]] = and <8 x i1> [[TMP49]], [[TMP29]]
-; AVX512-NEXT:    [[TMP54:%.*]] = and <8 x i1> [[TMP50]], [[TMP30]]
-; AVX512-NEXT:    [[TMP55:%.*]] = and <8 x i1> [[TMP51]], [[TMP31]]
+; AVX512-NEXT:    [[TMP52:%.*]] = select <8 x i1> [[TMP28]], <8 x i1> [[TMP48]], <8 x i1> zeroinitializer
+; AVX512-NEXT:    [[TMP53:%.*]] = select <8 x i1> [[TMP29]], <8 x i1> [[TMP49]], <8 x i1> zeroinitializer
+; AVX512-NEXT:    [[TMP54:%.*]] = select <8 x i1> [[TMP30]], <8 x i1> [[TMP50]], <8 x i1> zeroinitializer
+; AVX512-NEXT:    [[TMP55:%.*]] = select <8 x i1> [[TMP31]], <8 x i1> [[TMP51]], <8 x i1> zeroinitializer
 ; AVX512-NEXT:    [[TMP56:%.*]] = getelementptr inbounds double, double* [[TMP44]], i32 0
 ; AVX512-NEXT:    [[TMP57:%.*]] = bitcast double* [[TMP56]] to <8 x double>*
 ; AVX512-NEXT:    call void @llvm.masked.store.v8f64.p0v8f64(<8 x double> <double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01>, <8 x double>* [[TMP57]], i32 8, <8 x i1> [[TMP52]])

@@ -368,14 +368,14 @@ NVPTXTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   return None;
 }
 
-int NVPTXTTIImpl::getArithmeticInstrCost(
+InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
-    TTI::OperandValueKind Opd1Info,
-    TTI::OperandValueKind Opd2Info, TTI::OperandValueProperties Opd1PropInfo,
+    TTI::OperandValueKind Opd1Info, TTI::OperandValueKind Opd2Info,
+    TTI::OperandValueProperties Opd1PropInfo,
     TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
     const Instruction *CxtI) {
   // Legalize the type.
-  std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
 

@@ -52,21 +52,24 @@ if (MLIR_VULKAN_RUNNER_ENABLED)
     ${Vulkan_LIBRARY}
   )
 
-  get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
   get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
   set(LIBS
-    ${dialect_libs}
     ${conversion_libs}
     MLIRAnalysis
     MLIREDSC
     MLIRExecutionEngine
+    MLIRGPU
     MLIRIR
     MLIRJitRunner
     MLIRLLVMIR
+    MLIRLLVMToLLVMIRTranslation
+    MLIRMemRef
     MLIRParser
+    MLIRSPIRV
     MLIRSPIRVTransforms
+    MLIRStandard
     MLIRSupport
-    MLIRTargetLLVMIR
+    MLIRTargetLLVMIRExport
     MLIRTransforms
     MLIRTranslation
     ${Vulkan_LIBRARY}

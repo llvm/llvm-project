@@ -16,6 +16,7 @@ namespace Fortran::runtime {
   va_list ap;
   va_start(ap, message);
   CrashArgs(message, ap);
+  va_end(ap);
 }
 
 static void (*crashHandler)(const char *, int, const char *, va_list &){

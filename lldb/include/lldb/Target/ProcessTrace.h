@@ -15,6 +15,8 @@
 
 namespace lldb_private {
 
+/// Class that represents a defunct process loaded on memory via the "trace
+/// load" command.
 class ProcessTrace : public PostMortemProcess {
 public:
   static void Initialize();
@@ -54,8 +56,6 @@ public:
     return error;
   }
 
-  bool IsAlive() override;
-
   bool WarnBeforeDetach() const override { return false; }
 
   size_t ReadMemory(lldb::addr_t addr, void *buf, size_t size,
@@ -71,8 +71,8 @@ public:
 protected:
   void Clear();
 
-  bool UpdateThreadList(ThreadList &old_thread_list,
-                        ThreadList &new_thread_list) override;
+  bool DoUpdateThreadList(ThreadList &old_thread_list,
+                          ThreadList &new_thread_list) override;
 
 private:
   static lldb::ProcessSP CreateInstance(lldb::TargetSP target_sp,

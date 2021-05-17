@@ -92,10 +92,10 @@
 // CHECK: "-cc1"
 // ARCH64-SAME: "-triple" "nvptx64-nvidia-cuda"
 // ARCH32-SAME: "-triple" "nvptx-nvidia-cuda"
-// RDC-SAME: "-fgpu-rdc"
-// CHECK-NOT: "-fgpu-rdc"
 // SM20-SAME: "-target-cpu" "sm_20"
 // SM35-SAME: "-target-cpu" "sm_35"
+// RDC-SAME: "-fgpu-rdc"
+// CHECK-NOT: "-fgpu-rdc"
 // SM20-SAME: "-o" "[[PTXFILE:[^"]*]]"
 // SM35-SAME: "-o" "[[PTXFILE:[^"]*]]"
 

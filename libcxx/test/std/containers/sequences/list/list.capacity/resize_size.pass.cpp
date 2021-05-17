@@ -33,7 +33,7 @@ int main(int, char**)
         assert(l.front() == 2);
         assert(l.back() == 0);
     }
-#ifdef __LIBCPP_MOVE
+#if TEST_STD_VER >= 11
     {
         std::list<DefaultOnly> l(10);
         l.resize(5);
@@ -46,8 +46,6 @@ int main(int, char**)
         assert(l.size() == 20);
         assert(std::distance(l.begin(), l.end()) == 20);
     }
-#endif  // __LIBCPP_MOVE
-#if TEST_STD_VER >= 11
     {
         std::list<int, min_allocator<int>> l(5, 2);
         l.resize(2);
@@ -63,7 +61,6 @@ int main(int, char**)
         assert(l.front() == 2);
         assert(l.back() == 0);
     }
-#ifdef __LIBCPP_MOVE
     {
         std::list<DefaultOnly, min_allocator<DefaultOnly>> l(10);
         l.resize(5);
@@ -76,8 +73,7 @@ int main(int, char**)
         assert(l.size() == 20);
         assert(std::distance(l.begin(), l.end()) == 20);
     }
-#endif  // __LIBCPP_MOVE
 #endif
 
-  return 0;
+    return 0;
 }

@@ -4,7 +4,7 @@
 ; CHECK-NEXT:    [N] -> {  :  }
 ; CHECK-NEXT:    Invalid Context:
 ; CHECK-NEXT:    [N] -> {  : false }
-; CHECK-NEXT:    p0: %N
+; CHECK:         p0: %N
 ; CHECK:         Statements {
 ; CHECK-NEXT:    	Stmt_if_then
 ; CHECK-NEXT:            Domain :=

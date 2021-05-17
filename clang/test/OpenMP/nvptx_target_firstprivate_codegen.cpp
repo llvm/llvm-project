@@ -102,7 +102,7 @@ int foo(int n, double *ptr) {
   // TCHECK-NOT: alloca double*,
   // TCHECK:  store double* [[PTR_IN]], double** [[PTR_ADDR]],
   // TCHECK:  [[PTR_IN_REF:%.+]] = load double*, double** [[PTR_ADDR]],
-  // TCHECK-NOT:  store double* [[PTR_IN_REF]], double** [[PTR_PRIV]],
+  // TCHECK-NOT:  store double* [[PTR_IN_REF]], double** {{%.+}},
 
   return a;
 }

@@ -11,10 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -145,7 +146,7 @@ int main(int argc, const char *argv[]) {
     exitWithErrorCode(RemappingBufOrError.getError(), RemappingFile);
 
   std::error_code EC;
-  raw_fd_ostream OS(OutputFilename.data(), EC, sys::fs::OF_Text);
+  raw_fd_ostream OS(OutputFilename.data(), EC, sys::fs::OF_TextWithCRLF);
   if (EC)
     exitWithErrorCode(EC, OutputFilename);
 

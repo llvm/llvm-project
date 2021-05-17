@@ -230,11 +230,11 @@ private:
 
   // Map to keep track of last user of the analysis pass.
   // LastUser->second is the last user of Lastuser->first.
+  // This is kept in sync with InversedLastUser.
   DenseMap<Pass *, Pass *> LastUser;
 
   // Map to keep track of passes that are last used by a pass.
-  // This inverse map is initialized at PM->run() based on
-  // LastUser map.
+  // This is kept in sync with LastUser.
   DenseMap<Pass *, SmallPtrSet<Pass *, 8> > InversedLastUser;
 
   /// Immutable passes are managed by top level manager.
@@ -335,8 +335,8 @@ public:
   /// Initialize available analysis information.
   void initializeAnalysisInfo() {
     AvailableAnalysis.clear();
-    for (unsigned i = 0; i < PMT_Last; ++i)
-      InheritedAnalysis[i] = nullptr;
+    for (auto &IA : InheritedAnalysis)
+      IA = nullptr;
   }
 
   // Return true if P preserves high level analysis used by other
@@ -392,9 +392,8 @@ public:
   // Collect AvailableAnalysis from all the active Pass Managers.
   void populateInheritedAnalysis(PMStack &PMS) {
     unsigned Index = 0;
-    for (PMStack::iterator I = PMS.begin(), E = PMS.end();
-         I != E; ++I)
-      InheritedAnalysis[Index++] = (*I)->getAvailableAnalysis();
+    for (PMDataManager *PMDM : PMS)
+      InheritedAnalysis[Index++] = PMDM->getAvailableAnalysis();
   }
 
   /// Set the initial size of the module if the user has specified that they

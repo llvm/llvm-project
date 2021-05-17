@@ -274,6 +274,7 @@ body:             |
   ; CHECK:   renamable $r5 = tLDRr renamable $r1, $r3, 14 /* CC::al */, $noreg :: (load 4 from %ir.scevgep617)
   ; CHECK:   renamable $r7, dead $cpsr = tADDrr renamable $r2, renamable $r3, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r6 = tLDRr renamable $r2, $r3, 14 /* CC::al */, $noreg :: (load 4 from %ir.scevgep418)
+  ; CHECK:   dead $r12 = tMOVr $lr, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r8 = nuw t2ADDri killed renamable $r8, 4, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $r5, dead $cpsr = tEOR killed renamable $r5, killed renamable $r6, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r6 = tLDRr renamable $r0, $r3, 14 /* CC::al */, $noreg :: (load 4 from %ir.scevgep219)

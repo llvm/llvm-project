@@ -35,10 +35,10 @@ define <4 x i32> @s2v_test1(i32* nocapture readonly %int32, <4 x i32> %vec)  {
 ;
 ; P8BE-LABEL: s2v_test1:
 ; P8BE:       # %bb.0: # %entry
-; P8BE-NEXT:    lfiwzx f0, 0, r3
-; P8BE-NEXT:    xxsldwi vs0, f0, f0, 1
-; P8BE-NEXT:    xxsldwi vs0, v2, vs0, 1
-; P8BE-NEXT:    xxsldwi v2, vs0, vs0, 3
+; P8BE-NEXT:    lxsiwzx v3, 0, r3
+; P8BE-NEXT:    vmrghw v4, v2, v3
+; P8BE-NEXT:    xxsldwi vs0, v2, v3, 1
+; P8BE-NEXT:    xxsldwi v2, v4, vs0, 3
 ; P8BE-NEXT:    blr
 entry:
   %0 = load i32, i32* %int32, align 4
@@ -75,10 +75,10 @@ define <4 x i32> @s2v_test2(i32* nocapture readonly %int32, <4 x i32> %vec)  {
 ; P8BE-LABEL: s2v_test2:
 ; P8BE:       # %bb.0: # %entry
 ; P8BE-NEXT:    addi r3, r3, 4
-; P8BE-NEXT:    lfiwzx f0, 0, r3
-; P8BE-NEXT:    xxsldwi vs0, f0, f0, 1
-; P8BE-NEXT:    xxsldwi vs0, v2, vs0, 1
-; P8BE-NEXT:    xxsldwi v2, vs0, vs0, 3
+; P8BE-NEXT:    lxsiwzx v3, 0, r3
+; P8BE-NEXT:    vmrghw v4, v2, v3
+; P8BE-NEXT:    xxsldwi vs0, v2, v3, 1
+; P8BE-NEXT:    xxsldwi v2, v4, vs0, 3
 ; P8BE-NEXT:    blr
 entry:
   %arrayidx = getelementptr inbounds i32, i32* %int32, i64 1
@@ -118,10 +118,10 @@ define <4 x i32> @s2v_test3(i32* nocapture readonly %int32, <4 x i32> %vec, i32 
 ; P8BE-LABEL: s2v_test3:
 ; P8BE:       # %bb.0: # %entry
 ; P8BE-NEXT:    sldi r4, r7, 2
-; P8BE-NEXT:    lfiwzx f0, r3, r4
-; P8BE-NEXT:    xxsldwi vs0, f0, f0, 1
-; P8BE-NEXT:    xxsldwi vs0, v2, vs0, 1
-; P8BE-NEXT:    xxsldwi v2, vs0, vs0, 3
+; P8BE-NEXT:    lxsiwzx v3, r3, r4
+; P8BE-NEXT:    vmrghw v4, v2, v3
+; P8BE-NEXT:    xxsldwi vs0, v2, v3, 1
+; P8BE-NEXT:    xxsldwi v2, v4, vs0, 3
 ; P8BE-NEXT:    blr
 entry:
   %idxprom = sext i32 %Idx to i64
@@ -160,10 +160,10 @@ define <4 x i32> @s2v_test4(i32* nocapture readonly %int32, <4 x i32> %vec)  {
 ; P8BE-LABEL: s2v_test4:
 ; P8BE:       # %bb.0: # %entry
 ; P8BE-NEXT:    addi r3, r3, 4
-; P8BE-NEXT:    lfiwzx f0, 0, r3
-; P8BE-NEXT:    xxsldwi vs0, f0, f0, 1
-; P8BE-NEXT:    xxsldwi vs0, v2, vs0, 1
-; P8BE-NEXT:    xxsldwi v2, vs0, vs0, 3
+; P8BE-NEXT:    lxsiwzx v3, 0, r3
+; P8BE-NEXT:    vmrghw v4, v2, v3
+; P8BE-NEXT:    xxsldwi vs0, v2, v3, 1
+; P8BE-NEXT:    xxsldwi v2, v4, vs0, 3
 ; P8BE-NEXT:    blr
 entry:
   %arrayidx = getelementptr inbounds i32, i32* %int32, i64 1
@@ -199,10 +199,10 @@ define <4 x i32> @s2v_test5(<4 x i32> %vec, i32* nocapture readonly %ptr1)  {
 ;
 ; P8BE-LABEL: s2v_test5:
 ; P8BE:       # %bb.0: # %entry
-; P8BE-NEXT:    lfiwzx f0, 0, r5
-; P8BE-NEXT:    xxsldwi vs0, f0, f0, 1
-; P8BE-NEXT:    xxsldwi vs0, v2, vs0, 1
-; P8BE-NEXT:    xxsldwi v2, vs0, vs0, 3
+; P8BE-NEXT:    lxsiwzx v3, 0, r5
+; P8BE-NEXT:    vmrghw v4, v2, v3
+; P8BE-NEXT:    xxsldwi vs0, v2, v3, 1
+; P8BE-NEXT:    xxsldwi v2, v4, vs0, 3
 ; P8BE-NEXT:    blr
 entry:
   %0 = load i32, i32* %ptr1, align 4
@@ -239,10 +239,10 @@ define <4 x float> @s2v_test_f1(float* nocapture readonly %f64, <4 x float> %vec
 ;
 ; P8BE-LABEL: s2v_test_f1:
 ; P8BE:       # %bb.0: # %entry
-; P8BE-NEXT:    lfiwzx f0, 0, r3
-; P8BE-NEXT:    xxsldwi vs0, f0, f0, 1
-; P8BE-NEXT:    xxsldwi vs0, v2, vs0, 1
-; P8BE-NEXT:    xxsldwi v2, vs0, vs0, 3
+; P8BE-NEXT:    lxsiwzx v3, 0, r3
+; P8BE-NEXT:    vmrghw v4, v2, v3
+; P8BE-NEXT:    xxsldwi vs0, v2, v3, 1
+; P8BE-NEXT:    xxsldwi v2, v4, vs0, 3
 ; P8BE-NEXT:    blr
 entry:
   %0 = load float, float* %f64, align 4
@@ -263,10 +263,8 @@ define <2 x float> @s2v_test_f2(float* nocapture readonly %f64, <2 x float> %vec
 ; P9BE-LABEL: s2v_test_f2:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    addi r3, r3, 4
-; P9BE-NEXT:    xxspltw v2, v2, 1
-; P9BE-NEXT:    lfiwzx f0, 0, r3
-; P9BE-NEXT:    xxsldwi v3, f0, f0, 1
-; P9BE-NEXT:    vmrghw v2, v3, v2
+; P9BE-NEXT:    lxsiwzx v3, 0, r3
+; P9BE-NEXT:    vmrgow v2, v3, v2
 ; P9BE-NEXT:    blr
 ;
 ; P8LE-LABEL: s2v_test_f2:
@@ -280,10 +278,8 @@ define <2 x float> @s2v_test_f2(float* nocapture readonly %f64, <2 x float> %vec
 ; P8BE-LABEL: s2v_test_f2:
 ; P8BE:       # %bb.0: # %entry
 ; P8BE-NEXT:    addi r3, r3, 4
-; P8BE-NEXT:    xxspltw v2, v2, 1
-; P8BE-NEXT:    lfiwzx f0, 0, r3
-; P8BE-NEXT:    xxsldwi v3, f0, f0, 1
-; P8BE-NEXT:    vmrghw v2, v3, v2
+; P8BE-NEXT:    lxsiwzx v3, 0, r3
+; P8BE-NEXT:    vmrgow v2, v3, v2
 ; P8BE-NEXT:    blr
 entry:
   %arrayidx = getelementptr inbounds float, float* %f64, i64 1
@@ -305,10 +301,8 @@ define <2 x float> @s2v_test_f3(float* nocapture readonly %f64, <2 x float> %vec
 ; P9BE-LABEL: s2v_test_f3:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r7, 2
-; P9BE-NEXT:    xxspltw v2, v2, 1
-; P9BE-NEXT:    lfiwzx f0, r3, r4
-; P9BE-NEXT:    xxsldwi v3, f0, f0, 1
-; P9BE-NEXT:    vmrghw v2, v3, v2
+; P9BE-NEXT:    lxsiwzx v3, r3, r4
+; P9BE-NEXT:    vmrgow v2, v3, v2
 ; P9BE-NEXT:    blr
 ;
 ; P8LE-LABEL: s2v_test_f3:
@@ -322,10 +316,8 @@ define <2 x float> @s2v_test_f3(float* nocapture readonly %f64, <2 x float> %vec
 ; P8BE-LABEL: s2v_test_f3:
 ; P8BE:       # %bb.0: # %entry
 ; P8BE-NEXT:    sldi r4, r7, 2
-; P8BE-NEXT:    xxspltw v2, v2, 1
-; P8BE-NEXT:    lfiwzx f0, r3, r4
-; P8BE-NEXT:    xxsldwi v3, f0, f0, 1
-; P8BE-NEXT:    vmrghw v2, v3, v2
+; P8BE-NEXT:    lxsiwzx v3, r3, r4
+; P8BE-NEXT:    vmrgow v2, v3, v2
 ; P8BE-NEXT:    blr
 entry:
   %idxprom = sext i32 %Idx to i64
@@ -348,10 +340,8 @@ define <2 x float> @s2v_test_f4(float* nocapture readonly %f64, <2 x float> %vec
 ; P9BE-LABEL: s2v_test_f4:
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    addi r3, r3, 4
-; P9BE-NEXT:    xxspltw v2, v2, 1
-; P9BE-NEXT:    lfiwzx f0, 0, r3
-; P9BE-NEXT:    xxsldwi v3, f0, f0, 1
-; P9BE-NEXT:    vmrghw v2, v3, v2
+; P9BE-NEXT:    lxsiwzx v3, 0, r3
+; P9BE-NEXT:    vmrgow v2, v3, v2
 ; P9BE-NEXT:    blr
 ;
 ; P8LE-LABEL: s2v_test_f4:
@@ -365,10 +355,8 @@ define <2 x float> @s2v_test_f4(float* nocapture readonly %f64, <2 x float> %vec
 ; P8BE-LABEL: s2v_test_f4:
 ; P8BE:       # %bb.0: # %entry
 ; P8BE-NEXT:    addi r3, r3, 4
-; P8BE-NEXT:    xxspltw v2, v2, 1
-; P8BE-NEXT:    lfiwzx f0, 0, r3
-; P8BE-NEXT:    xxsldwi v3, f0, f0, 1
-; P8BE-NEXT:    vmrghw v2, v3, v2
+; P8BE-NEXT:    lxsiwzx v3, 0, r3
+; P8BE-NEXT:    vmrgow v2, v3, v2
 ; P8BE-NEXT:    blr
 entry:
   %arrayidx = getelementptr inbounds float, float* %f64, i64 1
@@ -388,10 +376,8 @@ define <2 x float> @s2v_test_f5(<2 x float> %vec, float* nocapture readonly %ptr
 ;
 ; P9BE-LABEL: s2v_test_f5:
 ; P9BE:       # %bb.0: # %entry
-; P9BE-NEXT:    lfiwzx f0, 0, r5
-; P9BE-NEXT:    xxspltw v2, v2, 1
-; P9BE-NEXT:    xxsldwi v3, f0, f0, 1
-; P9BE-NEXT:    vmrghw v2, v3, v2
+; P9BE-NEXT:    lxsiwzx v3, 0, r5
+; P9BE-NEXT:    vmrgow v2, v3, v2
 ; P9BE-NEXT:    blr
 ;
 ; P8LE-LABEL: s2v_test_f5:
@@ -403,10 +389,8 @@ define <2 x float> @s2v_test_f5(<2 x float> %vec, float* nocapture readonly %ptr
 ;
 ; P8BE-LABEL: s2v_test_f5:
 ; P8BE:       # %bb.0: # %entry
-; P8BE-NEXT:    lfiwzx f0, 0, r5
-; P8BE-NEXT:    xxspltw v2, v2, 1
-; P8BE-NEXT:    xxsldwi v3, f0, f0, 1
-; P8BE-NEXT:    vmrghw v2, v3, v2
+; P8BE-NEXT:    lxsiwzx v3, 0, r5
+; P8BE-NEXT:    vmrgow v2, v3, v2
 ; P8BE-NEXT:    blr
 entry:
   %0 = load float, float* %ptr1, align 8

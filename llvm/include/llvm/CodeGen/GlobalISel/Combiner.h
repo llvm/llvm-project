@@ -5,10 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+/// \file
 /// This contains common code to drive combines. Combiner Passes will need to
 /// setup a CombinerInfo and call combineMachineFunction.
-//
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CODEGEN_GLOBALISEL_COMBINER_H
@@ -43,4 +43,4 @@ protected:
 
 } // End namespace llvm.
 
-#endif // LLVM_CODEGEN_GLOBALISEL_GICOMBINER_H
+#endif // LLVM_CODEGEN_GLOBALISEL_COMBINER_H

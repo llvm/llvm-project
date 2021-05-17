@@ -97,14 +97,14 @@ func @affine_max(%arg0 : index, %arg1 : index, %arg2 : index) {
 func @valid_symbols(%arg0: index, %arg1: index, %arg2: index) {
   %c1 = constant 1 : index
   %c0 = constant 0 : index
-  %0 = alloc(%arg0, %arg1) : memref<?x?xf32>
+  %0 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
   affine.for %arg3 = 0 to %arg2 step 768 {
-    %13 = dim %0, %c1 : memref<?x?xf32>
+    %13 = memref.dim %0, %c1 : memref<?x?xf32>
     affine.for %arg4 = 0 to %13 step 264 {
-      %18 = dim %0, %c0 : memref<?x?xf32>
-      %20 = std.subview %0[%c0, %c0][%18,%arg4][%c1,%c1] : memref<?x?xf32>
+      %18 = memref.dim %0, %c0 : memref<?x?xf32>
+      %20 = memref.subview %0[%c0, %c0][%18,%arg4][%c1,%c1] : memref<?x?xf32>
                           to memref<?x?xf32, offset : ?, strides : [?, ?]>
-      %24 = dim %20, %c0 : memref<?x?xf32, offset : ?, strides : [?, ?]>
+      %24 = memref.dim %20, %c0 : memref<?x?xf32, offset : ?, strides : [?, ?]>
       affine.for %arg5 = 0 to %24 step 768 {
         "foo"() : () -> ()
       }
@@ -163,6 +163,21 @@ func @parallel(%A : memref<100x100xf32>, %N : index) {
       %2 = affine.load %A[%i0 + %i0, %j0 + %j1] : memref<100x100xf32>
       affine.yield %2, %2 : f32, f32
     }
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @parallel_min_max
+// CHECK: %[[A:.*]]: index, %[[B:.*]]: index, %[[C:.*]]: index, %[[D:.*]]: index
+func @parallel_min_max(%a: index, %b: index, %c: index, %d: index) {
+  // CHECK: affine.parallel (%{{.*}}, %{{.*}}, %{{.*}}) =
+  // CHECK:                 (max(%[[A]], %[[B]])
+  // CHECK:              to (%[[C]], min(%[[C]], %[[D]]), %[[B]])
+  affine.parallel (%i, %j, %k) = (max(%a, %b), %b, max(%a, %c))
+                              to (%c, min(%c, %d), %b) {
+    affine.yield
   }
   return
 }

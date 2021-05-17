@@ -27,6 +27,12 @@
   void *res = hwasan_malloc(size, &stack);\
   if (!nothrow && UNLIKELY(!res)) ReportOutOfMemory(size, &stack);\
   return res
+#define OPERATOR_NEW_ALIGN_BODY(nothrow)                                    \
+  GET_MALLOC_STACK_TRACE;                                                   \
+  void *res = hwasan_aligned_alloc(static_cast<uptr>(align), size, &stack); \
+  if (!nothrow && UNLIKELY(!res))                                           \
+    ReportOutOfMemory(size, &stack);                                        \
+  return res
 
 #define OPERATOR_DELETE_BODY \
   GET_MALLOC_STACK_TRACE; \
@@ -50,6 +56,7 @@ using namespace __hwasan;
 // Fake std::nothrow_t to avoid including <new>.
 namespace std {
   struct nothrow_t {};
+  enum class align_val_t : size_t {};
 }  // namespace std
 
 
@@ -66,6 +73,22 @@ INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 void *operator new[](size_t size, std::nothrow_t const&) {
   OPERATOR_NEW_BODY(true /*nothrow*/);
 }
+INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void *operator new(
+    size_t size, std::align_val_t align) {
+  OPERATOR_NEW_ALIGN_BODY(false /*nothrow*/);
+}
+INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void *operator new[](
+    size_t size, std::align_val_t align) {
+  OPERATOR_NEW_ALIGN_BODY(false /*nothrow*/);
+}
+INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void *operator new(
+    size_t size, std::align_val_t align, std::nothrow_t const &) {
+  OPERATOR_NEW_ALIGN_BODY(true /*nothrow*/);
+}
+INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void *operator new[](
+    size_t size, std::align_val_t align, std::nothrow_t const &) {
+  OPERATOR_NEW_ALIGN_BODY(true /*nothrow*/);
+}
 
 INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 void operator delete(void *ptr) NOEXCEPT { OPERATOR_DELETE_BODY; }
@@ -75,6 +98,22 @@ INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 void operator delete(void *ptr, std::nothrow_t const&) { OPERATOR_DELETE_BODY; }
 INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 void operator delete[](void *ptr, std::nothrow_t const&) {
+  OPERATOR_DELETE_BODY;
+}
+INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete(
+    void *ptr, std::align_val_t align) NOEXCEPT {
+  OPERATOR_DELETE_BODY;
+}
+INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete[](
+    void *ptr, std::align_val_t) NOEXCEPT {
+  OPERATOR_DELETE_BODY;
+}
+INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete(
+    void *ptr, std::align_val_t, std::nothrow_t const &) NOEXCEPT {
+  OPERATOR_DELETE_BODY;
+}
+INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete[](
+    void *ptr, std::align_val_t, std::nothrow_t const &) NOEXCEPT {
   OPERATOR_DELETE_BODY;
 }
 

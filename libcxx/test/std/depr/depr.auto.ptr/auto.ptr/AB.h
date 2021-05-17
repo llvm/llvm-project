@@ -37,4 +37,4 @@ public:
 
 int B::count = 0;
 
-#endif  // AB_H
+#endif // AB_H

@@ -60,13 +60,13 @@ void negativeConstReference() {
 
 void negativeUserDefinedConversion() {
   Convertible C[0];
-  for (const S &S1 : C) {
+  for (const S S1 : C) {
   }
 }
 
 void negativeImplicitConstructorConversion() {
   ConstructorConvertible C[0];
-  for (const S &S1 : C) {
+  for (const S S1 : C) {
   }
 }
 

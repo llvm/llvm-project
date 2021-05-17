@@ -253,7 +253,7 @@ class FoundationTestCase(TestBase):
         cur_frame = thread.GetFrameAtIndex(0)
 
         line_number = cur_frame.GetLineEntry().GetLine()
-        self.assertTrue(line_number == self.line, "Hit the first breakpoint.")
+        self.assertEqual(line_number, self.line, "Hit the first breakpoint.")
 
         my_var = cur_frame.FindVariable("my")
         self.assertTrue(my_var, "Made a variable object for my")
@@ -270,8 +270,8 @@ class FoundationTestCase(TestBase):
 
         my_str_value = int(my_str_var.GetValue(), 0)
 
-        self.assertTrue(
-            str_value == my_str_value,
+        self.assertEqual(
+            str_value, my_str_value,
             "Got the correct value for my->str")
 
     def test_expression_lookups_objc(self):
@@ -320,5 +320,5 @@ class FoundationTestCase(TestBase):
                             "error: found spurious name lookups when evaluating an expression:")
                     num_errors += 1
                     print(line, end='')
-            self.assertTrue(num_errors == 0, "Spurious lookups detected")
+            self.assertEqual(num_errors, 0, "Spurious lookups detected")
             f.close()

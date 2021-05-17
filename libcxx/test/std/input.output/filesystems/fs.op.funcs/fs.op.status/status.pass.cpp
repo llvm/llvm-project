@@ -54,6 +54,12 @@ TEST_CASE(test_status_not_found)
     }
 }
 
+// Windows doesn't support setting perms::none to trigger failures
+// reading directories. Imaginary files under GetWindowsInaccessibleDir()
+// produce no_such_file_or_directory, not the error codes this test checks
+// for. Finally, status() for a too long file name doesn't return errors
+// on windows.
+#ifndef TEST_WIN_NO_FILESYSTEM_PERMS_NONE
 TEST_CASE(test_status_cannot_resolve)
 {
     scoped_test_env env;
@@ -96,6 +102,7 @@ TEST_CASE(test_status_cannot_resolve)
 #endif
     }
 }
+#endif
 
 TEST_CASE(status_file_types_test)
 {
@@ -109,12 +116,16 @@ TEST_CASE(status_file_types_test)
         {static_env.SymlinkToFile, file_type::regular},
         {static_env.Dir, file_type::directory},
         {static_env.SymlinkToDir, file_type::directory},
-        // Block files tested elsewhere
+        // file_type::block files tested elsewhere
+#ifndef _WIN32
         {static_env.CharFile, file_type::character},
+#endif
 #if !defined(__APPLE__) && !defined(__FreeBSD__) && !defined(_WIN32) // No support for domain sockets
         {env.create_socket("socket"), file_type::socket},
 #endif
+#ifndef _WIN32
         {env.create_fifo("fifo"), file_type::fifo}
+#endif
     };
     for (const auto& TC : cases) {
         // test non-throwing case

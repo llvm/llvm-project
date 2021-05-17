@@ -119,7 +119,7 @@ body:             |
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
     frame-setup CFI_INSTRUCTION offset $lr, -4
     frame-setup CFI_INSTRUCTION offset $r7, -8
-    t2WhileLoopStart $r2, %bb.3, implicit-def dead $cpsr
+    $lr = t2WhileLoopStartLR $r2, %bb.3, implicit-def dead $cpsr
     tB %bb.1, 14, $noreg
 
   bb.1.while.body.preheader:

@@ -27,29 +27,12 @@ class UnsupportedJoinedOrSeparate<string name> :
 class UnsupportedSeparate<string name> : Separate<["/", "-"], name>,
                                          Group<unsupported_Group>;
 
-def help : MLFlag<"?">,
-           HelpText<"Display available options">;
-def help_long : MLFlag<"help">, Alias<help>;
-def assemble_only : MLFlag<"c">, HelpText<"Assemble only; do not link">;
-def define : MLJoinedOrSeparate<"D">, MetaVarName<"<macro>=<value>">,
-             HelpText<"Define <macro> to <value> (or blank if <value> "
-                      "omitted)">;
-def output_file : MLJoinedOrSeparate<"Fo">, HelpText<"Names the output file">;
-def include_path : MLJoinedOrSeparate<"I">,
-                   HelpText<"Sets path for include files">;
-def safeseh : MLFlag<"safeseh">,
-              HelpText<"Mark resulting object files as either containing no "
-                       "exception handlers or containing exception handlers "
-                       "that are all declared with .SAFESEH. Only available in "
-                       "32-bit.">;
-def assembly_file : MLJoinedOrSeparate<"Ta">,
-                    HelpText<"Assemble source file with name not ending with "
-                             "the .asm extension">;
-
 def bitness : LLVMJoined<"m">, Values<"32,64">,
               HelpText<"Target platform (x86 or x86-64)">;
 def as_lex : LLVMFlag<"as-lex">,
              HelpText<"Lex tokens from a .asm file without assembling">;
+def fatal_warnings : LLVMFlag<"fatal-warnings">,
+                     HelpText<"Treat warnings as errors">;
 def filetype : LLVMJoined<"filetype=">, Values<"obj,s,null">,
                HelpText<"Emit a file with the given type">;
 def output_att_asm : LLVMFlag<"output-att-asm">,
@@ -68,6 +51,28 @@ def preserve_comments : LLVMFlag<"preserve-comments">,
                         HelpText<"Preserve comments in output assembly">;
 def save_temp_labels : LLVMFlag<"save-temp-labels">,
                        HelpText<"Don't discard temporary labels">;
+
+def help : MLFlag<"?">,
+           HelpText<"Display available options">;
+def help_long : MLFlag<"help">, Alias<help>;
+def assemble_only : MLFlag<"c">, HelpText<"Assemble only; do not link">;
+def define : MLJoinedOrSeparate<"D">, MetaVarName<"<macro>=<value>">,
+             HelpText<"Define <macro> to <value> (or blank if <value> "
+                      "omitted)">;
+def output_file : MLJoinedOrSeparate<"Fo">, HelpText<"Names the output file">;
+def include_path : MLJoinedOrSeparate<"I">,
+                   HelpText<"Sets path for include files">;
+def safeseh : MLFlag<"safeseh">,
+              HelpText<"Mark resulting object files as either containing no "
+                       "exception handlers or containing exception handlers "
+                       "that are all declared with .SAFESEH. Only available in "
+                       "32-bit.">;
+def assembly_file : MLJoinedOrSeparate<"Ta">,
+                    HelpText<"Assemble source file with name not ending with "
+                             "the .asm extension">;
+def error_on_warning : MLFlag<"WX">, Alias<fatal_warnings>;
+def parse_only : MLFlag<"Zs">, HelpText<"Run a syntax-check only">,
+                 Alias<filetype>, AliasArgs<["null"]>;
 
 def tiny_model_support : UnsupportedFlag<"AT">, HelpText<"">;
 def alternate_linker : UnsupportedJoined<"Bl">, HelpText<"">;
@@ -100,11 +105,9 @@ def listing_title : UnsupportedSeparate<"St">, HelpText<"">;
 def listing_false_conditionals : UnsupportedFlag<"Sx">, HelpText<"">;
 def extra_warnings : UnsupportedFlag<"w">, HelpText<"">;
 def warning_level : UnsupportedJoined<"W">, HelpText<"">;
-def error_on_warning : UnsupportedFlag<"WX">, HelpText<"">;
 def ignore_include_envvar : UnsupportedFlag<"X">, HelpText<"">;
 def line_number_info : UnsupportedFlag<"Zd">, HelpText<"">;
 def export_all_symbols : UnsupportedFlag<"Zf">, HelpText<"">;
 def codeview_info : UnsupportedFlag<"Zi">, HelpText<"">;
 def enable_m510_option : UnsupportedFlag<"Zm">, HelpText<"">;
 def structure_packing : UnsupportedJoined<"Zp">, HelpText<"">;
-def parse_only : UnsupportedFlag<"Zs">, HelpText<"">;

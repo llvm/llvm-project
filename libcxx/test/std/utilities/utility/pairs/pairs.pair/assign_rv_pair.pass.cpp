@@ -35,6 +35,21 @@ struct CountAssign {
   }
 };
 
+struct NotAssignable {
+  NotAssignable& operator=(NotAssignable const&) = delete;
+  NotAssignable& operator=(NotAssignable&&) = delete;
+};
+
+struct MoveAssignable {
+  MoveAssignable& operator=(MoveAssignable const&) = delete;
+  MoveAssignable& operator=(MoveAssignable&&) = default;
+};
+
+struct CopyAssignable {
+  CopyAssignable& operator=(CopyAssignable const&) = default;
+  CopyAssignable& operator=(CopyAssignable&&) = delete;
+};
+
 TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef std::pair<ConstexprTestTypes::MoveOnly, int> P;
@@ -82,6 +97,38 @@ TEST_CONSTEXPR_CXX20 bool test() {
     assert(p.first.copied == 0);
     assert(p2.first.moved == 0);
     assert(p2.first.copied == 0);
+  }
+  {
+    using P1 = std::pair<int, NotAssignable>;
+    using P2 = std::pair<NotAssignable, int>;
+    using P3 = std::pair<NotAssignable, NotAssignable>;
+    static_assert(!std::is_move_assignable<P1>::value, "");
+    static_assert(!std::is_move_assignable<P2>::value, "");
+    static_assert(!std::is_move_assignable<P3>::value, "");
+  }
+  {
+    // We assign through the reference and don't move out of the incoming ref,
+    // so this doesn't work (but would if the type were CopyAssignable).
+    using P1 = std::pair<MoveAssignable&, int>;
+    static_assert(!std::is_move_assignable<P1>::value, "");
+
+    // ... works if it's CopyAssignable
+    using P2 = std::pair<CopyAssignable&, int>;
+    static_assert(std::is_move_assignable<P2>::value, "");
+
+    // For rvalue-references, we can move-assign if the type is MoveAssignable
+    // or CopyAssignable (since in the worst case the move will decay into a copy).
+    using P3 = std::pair<MoveAssignable&&, int>;
+    using P4 = std::pair<CopyAssignable&&, int>;
+    static_assert(std::is_move_assignable<P3>::value, "");
+    static_assert(std::is_move_assignable<P4>::value, "");
+
+    // In all cases, we can't move-assign if the types are not assignable,
+    // since we assign through the reference.
+    using P5 = std::pair<NotAssignable&, int>;
+    using P6 = std::pair<NotAssignable&&, int>;
+    static_assert(!std::is_move_assignable<P5>::value, "");
+    static_assert(!std::is_move_assignable<P6>::value, "");
   }
   return true;
 }

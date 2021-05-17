@@ -880,7 +880,7 @@ TEST_UNINIT(paddedpackednested, paddedpackednested);
 // PATTERN-LABEL: @test_paddedpackednested_uninit()
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_paddedpackednested_uninit.uninit{{.+}}), !annotation [[AUTO_INIT]]
 // PATTERN-O1: getelementptr
-// PATTERN-O1: call void @llvm.memset.p0i8.i64(i8* nonnull align 1 dereferenceable(10) %0, i8 [[I8]], i64 10, i1 false)
+// PATTERN-O1: call void @llvm.memset.p0i8.i64(i8* noundef nonnull align 1 dereferenceable(10) %0, i8 [[I8]], i64 10, i1 false)
 // FIXME: !annotation dropped by optimizations
 // PATTERN-O1-NOT: !annotation
 // ZERO-LABEL: @test_paddedpackednested_uninit()
@@ -1115,7 +1115,7 @@ TEST_UNINIT(intptr4, int*[4]);
 // CHECK:            %uninit = alloca [4 x i32*], align
 // CHECK-NEXT:       call void @{{.*}}used{{.*}}%uninit)
 // PATTERN-O1-LABEL: @test_intptr4_uninit()
-// PATTERN-O1:  call void @llvm.memset.p0i8.i64(i8* nonnull align 16  dereferenceable(32) %{{[0-9*]}}, i8 -86, i64 32, i1 false)
+// PATTERN-O1:  call void @llvm.memset.p0i8.i64(i8* noundef nonnull align 16  dereferenceable(32) %{{[0-9*]}}, i8 -86, i64 32, i1 false)
 // FIXME: !annotation dropped by optimizations
 // PATTERN-O1-NOT: !annotation
 // ZERO-LABEL:       @test_intptr4_uninit()

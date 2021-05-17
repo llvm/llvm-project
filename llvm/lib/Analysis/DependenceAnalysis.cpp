@@ -657,8 +657,8 @@ static AliasResult underlyingObjectsAlias(AAResults *AA,
       MemoryLocation::getBeforeOrAfter(LocA.Ptr, LocA.AATags);
   MemoryLocation LocBS =
       MemoryLocation::getBeforeOrAfter(LocB.Ptr, LocB.AATags);
-  if (AA->alias(LocAS, LocBS) == NoAlias)
-    return NoAlias;
+  if (AA->isNoAlias(LocAS, LocBS))
+    return AliasResult::NoAlias;
 
   // Check the underlying objects are the same
   const Value *AObj = getUnderlyingObject(LocA.Ptr);
@@ -666,16 +666,16 @@ static AliasResult underlyingObjectsAlias(AAResults *AA,
 
   // If the underlying objects are the same, they must alias
   if (AObj == BObj)
-    return MustAlias;
+    return AliasResult::MustAlias;
 
   // We may have hit the recursion limit for underlying objects, or have
   // underlying objects where we don't know they will alias.
   if (!isIdentifiedObject(AObj) || !isIdentifiedObject(BObj))
-    return MayAlias;
+    return AliasResult::MayAlias;
 
   // Otherwise we know the objects are different and both identified objects so
   // must not alias.
-  return NoAlias;
+  return AliasResult::NoAlias;
 }
 
 
@@ -1430,8 +1430,6 @@ static bool findGCD(unsigned Bits, const APInt &AM, const APInt &BM,
   if (R != 0)
     return true; // gcd doesn't divide Delta, no dependence
   Q = Delta.sdiv(G);
-  X *= Q;
-  Y *= Q;
   return false;
 }
 
@@ -1465,17 +1463,21 @@ static APInt ceilingOfQuotient(const APInt &A, const APInt &B) {
 // When we have a pair of subscripts of the form [c1 + a1*i] and [c2 + a2*i],
 // where i is an induction variable, c1 and c2 are loop invariant, and a1
 // and a2 are constant, we can solve it exactly using an algorithm developed
-// by Banerjee and Wolfe. See Section 2.5.3 in
+// by Banerjee and Wolfe. See Algorithm 6.2.1 (case 2.5) in:
 //
-//        Optimizing Supercompilers for Supercomputers
-//        Michael Wolfe
-//        MIT Press, 1989
+//        Dependence Analysis for Supercomputing
+//        Utpal Banerjee
+//        Kluwer Academic Publishers, 1988
 //
 // It's slower than the specialized tests (strong SIV, weak-zero SIV, etc),
 // so use them if possible. They're also a bit better with symbolics and,
 // in the case of the strong SIV test, can compute Distances.
 //
 // Return true if dependence disproved.
+//
+// This is a modified version of the original Banerjee algorithm. The original
+// only tested whether Dst depends on Src. This algorithm extends that and
+// returns all the dependencies that exist between Dst and Src.
 bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
                                   const SCEV *SrcConst, const SCEV *DstConst,
                                   const Loop *CurLoop, unsigned Level,
@@ -1492,8 +1494,8 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   Result.Consistent = false;
   const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
-  NewConstraint.setLine(SrcCoeff, SE->getNegativeSCEV(DstCoeff),
-                        Delta, CurLoop);
+  NewConstraint.setLine(SrcCoeff, SE->getNegativeSCEV(DstCoeff), Delta,
+                        CurLoop);
   const SCEVConstant *ConstDelta = dyn_cast<SCEVConstant>(Delta);
   const SCEVConstant *ConstSrcCoeff = dyn_cast<SCEVConstant>(SrcCoeff);
   const SCEVConstant *ConstDstCoeff = dyn_cast<SCEVConstant>(DstCoeff);
@@ -1504,8 +1506,9 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   APInt G, X, Y;
   APInt AM = ConstSrcCoeff->getAPInt();
   APInt BM = ConstDstCoeff->getAPInt();
+  APInt CM = ConstDelta->getAPInt();
   unsigned Bits = AM.getBitWidth();
-  if (findGCD(Bits, AM, BM, ConstDelta->getAPInt(), G, X, Y)) {
+  if (findGCD(Bits, AM, BM, CM, G, X, Y)) {
     // gcd doesn't divide Delta, no dependence
     ++ExactSIVindependence;
     ++ExactSIVsuccesses;
@@ -1516,55 +1519,73 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
 
   // since SCEV construction normalizes, LM = 0
   APInt UM(Bits, 1, true);
-  bool UMvalid = false;
+  bool UMValid = false;
   // UM is perhaps unavailable, let's check
   if (const SCEVConstant *CUB =
-      collectConstantUpperBound(CurLoop, Delta->getType())) {
+          collectConstantUpperBound(CurLoop, Delta->getType())) {
     UM = CUB->getAPInt();
     LLVM_DEBUG(dbgs() << "\t    UM = " << UM << "\n");
-    UMvalid = true;
+    UMValid = true;
   }
 
   APInt TU(APInt::getSignedMaxValue(Bits));
   APInt TL(APInt::getSignedMinValue(Bits));
+  APInt TC = CM.sdiv(G);
+  APInt TX = X * TC;
+  APInt TY = Y * TC;
+  LLVM_DEBUG(dbgs() << "\t    TC = " << TC << "\n");
+  LLVM_DEBUG(dbgs() << "\t    TX = " << TX << "\n");
+  LLVM_DEBUG(dbgs() << "\t    TY = " << TY << "\n");
 
-  // test(BM/G, LM-X) and test(-BM/G, X-UM)
-  APInt TMUL = BM.sdiv(G);
-  if (TMUL.sgt(0)) {
-    TL = APIntOps::smax(TL, ceilingOfQuotient(-X, TMUL));
-    LLVM_DEBUG(dbgs() << "\t    TL = " << TL << "\n");
-    if (UMvalid) {
-      TU = APIntOps::smin(TU, floorOfQuotient(UM - X, TMUL));
-      LLVM_DEBUG(dbgs() << "\t    TU = " << TU << "\n");
+  SmallVector<APInt, 2> TLVec, TUVec;
+  APInt TB = BM.sdiv(G);
+  if (TB.sgt(0)) {
+    TLVec.push_back(ceilingOfQuotient(-TX, TB));
+    LLVM_DEBUG(dbgs() << "\t    Possible TL = " << TLVec.back() << "\n");
+    // New bound check - modification to Banerjee's e3 check
+    if (UMValid) {
+      TUVec.push_back(floorOfQuotient(UM - TX, TB));
+      LLVM_DEBUG(dbgs() << "\t    Possible TU = " << TUVec.back() << "\n");
     }
-  }
-  else {
-    TU = APIntOps::smin(TU, floorOfQuotient(-X, TMUL));
-    LLVM_DEBUG(dbgs() << "\t    TU = " << TU << "\n");
-    if (UMvalid) {
-      TL = APIntOps::smax(TL, ceilingOfQuotient(UM - X, TMUL));
-      LLVM_DEBUG(dbgs() << "\t    TL = " << TL << "\n");
+  } else {
+    TUVec.push_back(floorOfQuotient(-TX, TB));
+    LLVM_DEBUG(dbgs() << "\t    Possible TU = " << TUVec.back() << "\n");
+    // New bound check - modification to Banerjee's e3 check
+    if (UMValid) {
+      TLVec.push_back(ceilingOfQuotient(UM - TX, TB));
+      LLVM_DEBUG(dbgs() << "\t    Possible TL = " << TLVec.back() << "\n");
     }
   }
 
-  // test(AM/G, LM-Y) and test(-AM/G, Y-UM)
-  TMUL = AM.sdiv(G);
-  if (TMUL.sgt(0)) {
-    TL = APIntOps::smax(TL, ceilingOfQuotient(-Y, TMUL));
-    LLVM_DEBUG(dbgs() << "\t    TL = " << TL << "\n");
-    if (UMvalid) {
-      TU = APIntOps::smin(TU, floorOfQuotient(UM - Y, TMUL));
-      LLVM_DEBUG(dbgs() << "\t    TU = " << TU << "\n");
+  APInt TA = AM.sdiv(G);
+  if (TA.sgt(0)) {
+    if (UMValid) {
+      TUVec.push_back(floorOfQuotient(UM - TY, TA));
+      LLVM_DEBUG(dbgs() << "\t    Possible TU = " << TUVec.back() << "\n");
     }
-  }
-  else {
-    TU = APIntOps::smin(TU, floorOfQuotient(-Y, TMUL));
-    LLVM_DEBUG(dbgs() << "\t    TU = " << TU << "\n");
-    if (UMvalid) {
-      TL = APIntOps::smax(TL, ceilingOfQuotient(UM - Y, TMUL));
-      LLVM_DEBUG(dbgs() << "\t    TL = " << TL << "\n");
+    // New bound check - modification to Banerjee's e3 check
+    TLVec.push_back(ceilingOfQuotient(-TY, TA));
+    LLVM_DEBUG(dbgs() << "\t    Possible TL = " << TLVec.back() << "\n");
+  } else {
+    if (UMValid) {
+      TLVec.push_back(ceilingOfQuotient(UM - TY, TA));
+      LLVM_DEBUG(dbgs() << "\t    Possible TL = " << TLVec.back() << "\n");
     }
+    // New bound check - modification to Banerjee's e3 check
+    TUVec.push_back(floorOfQuotient(-TY, TA));
+    LLVM_DEBUG(dbgs() << "\t    Possible TU = " << TUVec.back() << "\n");
   }
+
+  LLVM_DEBUG(dbgs() << "\t    TA = " << TA << "\n");
+  LLVM_DEBUG(dbgs() << "\t    TB = " << TB << "\n");
+
+  if (TLVec.empty() || TUVec.empty())
+    return false;
+  TL = APIntOps::smax(TLVec.front(), TLVec.back());
+  TU = APIntOps::smin(TUVec.front(), TUVec.back());
+  LLVM_DEBUG(dbgs() << "\t    TL = " << TL << "\n");
+  LLVM_DEBUG(dbgs() << "\t    TU = " << TU << "\n");
+
   if (TL.sgt(TU)) {
     ++ExactSIVindependence;
     ++ExactSIVsuccesses;
@@ -1573,65 +1594,29 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
 
   // explore directions
   unsigned NewDirection = Dependence::DVEntry::NONE;
-
-  // less than
-  APInt SaveTU(TU); // save these
-  APInt SaveTL(TL);
-  LLVM_DEBUG(dbgs() << "\t    exploring LT direction\n");
-  TMUL = AM - BM;
-  if (TMUL.sgt(0)) {
-    TL = APIntOps::smax(TL, ceilingOfQuotient(X - Y + 1, TMUL));
-    LLVM_DEBUG(dbgs() << "\t\t    TL = " << TL << "\n");
-  }
-  else {
-    TU = APIntOps::smin(TU, floorOfQuotient(X - Y + 1, TMUL));
-    LLVM_DEBUG(dbgs() << "\t\t    TU = " << TU << "\n");
-  }
-  if (TL.sle(TU)) {
-    NewDirection |= Dependence::DVEntry::LT;
-    ++ExactSIVsuccesses;
+  APInt LowerDistance, UpperDistance;
+  if (TA.sgt(TB)) {
+    LowerDistance = (TY - TX) + (TA - TB) * TL;
+    UpperDistance = (TY - TX) + (TA - TB) * TU;
+  } else {
+    LowerDistance = (TY - TX) + (TA - TB) * TU;
+    UpperDistance = (TY - TX) + (TA - TB) * TL;
   }
 
-  // equal
-  TU = SaveTU; // restore
-  TL = SaveTL;
-  LLVM_DEBUG(dbgs() << "\t    exploring EQ direction\n");
-  if (TMUL.sgt(0)) {
-    TL = APIntOps::smax(TL, ceilingOfQuotient(X - Y, TMUL));
-    LLVM_DEBUG(dbgs() << "\t\t    TL = " << TL << "\n");
-  }
-  else {
-    TU = APIntOps::smin(TU, floorOfQuotient(X - Y, TMUL));
-    LLVM_DEBUG(dbgs() << "\t\t    TU = " << TU << "\n");
-  }
-  TMUL = BM - AM;
-  if (TMUL.sgt(0)) {
-    TL = APIntOps::smax(TL, ceilingOfQuotient(Y - X, TMUL));
-    LLVM_DEBUG(dbgs() << "\t\t    TL = " << TL << "\n");
-  }
-  else {
-    TU = APIntOps::smin(TU, floorOfQuotient(Y - X, TMUL));
-    LLVM_DEBUG(dbgs() << "\t\t    TU = " << TU << "\n");
-  }
-  if (TL.sle(TU)) {
+  LLVM_DEBUG(dbgs() << "\t    LowerDistance = " << LowerDistance << "\n");
+  LLVM_DEBUG(dbgs() << "\t    UpperDistance = " << UpperDistance << "\n");
+
+  APInt Zero(Bits, 0, true);
+  if (LowerDistance.sle(Zero) && UpperDistance.sge(Zero)) {
     NewDirection |= Dependence::DVEntry::EQ;
     ++ExactSIVsuccesses;
   }
-
-  // greater than
-  TU = SaveTU; // restore
-  TL = SaveTL;
-  LLVM_DEBUG(dbgs() << "\t    exploring GT direction\n");
-  if (TMUL.sgt(0)) {
-    TL = APIntOps::smax(TL, ceilingOfQuotient(Y - X + 1, TMUL));
-    LLVM_DEBUG(dbgs() << "\t\t    TL = " << TL << "\n");
-  }
-  else {
-    TU = APIntOps::smin(TU, floorOfQuotient(Y - X + 1, TMUL));
-    LLVM_DEBUG(dbgs() << "\t\t    TU = " << TU << "\n");
-  }
-  if (TL.sle(TU)) {
+  if (LowerDistance.slt(0)) {
     NewDirection |= Dependence::DVEntry::GT;
+    ++ExactSIVsuccesses;
+  }
+  if (UpperDistance.sgt(0)) {
+    NewDirection |= Dependence::DVEntry::LT;
     ++ExactSIVsuccesses;
   }
 
@@ -1639,9 +1624,10 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   Result.DV[Level].Direction &= NewDirection;
   if (Result.DV[Level].Direction == Dependence::DVEntry::NONE)
     ++ExactSIVindependence;
+  LLVM_DEBUG(dbgs() << "\t    Result = ");
+  LLVM_DEBUG(Result.dump(dbgs()));
   return Result.DV[Level].Direction == Dependence::DVEntry::NONE;
 }
-
 
 
 // Return true if the divisor evenly divides the dividend.
@@ -1903,8 +1889,9 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   APInt G, X, Y;
   APInt AM = ConstSrcCoeff->getAPInt();
   APInt BM = ConstDstCoeff->getAPInt();
+  APInt CM = ConstDelta->getAPInt();
   unsigned Bits = AM.getBitWidth();
-  if (findGCD(Bits, AM, BM, ConstDelta->getAPInt(), G, X, Y)) {
+  if (findGCD(Bits, AM, BM, CM, G, X, Y)) {
     // gcd doesn't divide Delta, no dependence
     ++ExactRDIVindependence;
     return true;
@@ -1917,7 +1904,7 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   bool SrcUMvalid = false;
   // SrcUM is perhaps unavailable, let's check
   if (const SCEVConstant *UpperBound =
-      collectConstantUpperBound(SrcLoop, Delta->getType())) {
+          collectConstantUpperBound(SrcLoop, Delta->getType())) {
     SrcUM = UpperBound->getAPInt();
     LLVM_DEBUG(dbgs() << "\t    SrcUM = " << SrcUM << "\n");
     SrcUMvalid = true;
@@ -1927,7 +1914,7 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   bool DstUMvalid = false;
   // UM is perhaps unavailable, let's check
   if (const SCEVConstant *UpperBound =
-      collectConstantUpperBound(DstLoop, Delta->getType())) {
+          collectConstantUpperBound(DstLoop, Delta->getType())) {
     DstUM = UpperBound->getAPInt();
     LLVM_DEBUG(dbgs() << "\t    DstUM = " << DstUM << "\n");
     DstUMvalid = true;
@@ -1935,44 +1922,59 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
 
   APInt TU(APInt::getSignedMaxValue(Bits));
   APInt TL(APInt::getSignedMinValue(Bits));
+  APInt TC = CM.sdiv(G);
+  APInt TX = X * TC;
+  APInt TY = Y * TC;
+  LLVM_DEBUG(dbgs() << "\t    TC = " << TC << "\n");
+  LLVM_DEBUG(dbgs() << "\t    TX = " << TX << "\n");
+  LLVM_DEBUG(dbgs() << "\t    TY = " << TY << "\n");
 
-  // test(BM/G, LM-X) and test(-BM/G, X-UM)
-  APInt TMUL = BM.sdiv(G);
-  if (TMUL.sgt(0)) {
-    TL = APIntOps::smax(TL, ceilingOfQuotient(-X, TMUL));
-    LLVM_DEBUG(dbgs() << "\t    TL = " << TL << "\n");
+  SmallVector<APInt, 2> TLVec, TUVec;
+  APInt TB = BM.sdiv(G);
+  if (TB.sgt(0)) {
+    TLVec.push_back(ceilingOfQuotient(-TX, TB));
+    LLVM_DEBUG(dbgs() << "\t    Possible TL = " << TLVec.back() << "\n");
     if (SrcUMvalid) {
-      TU = APIntOps::smin(TU, floorOfQuotient(SrcUM - X, TMUL));
-      LLVM_DEBUG(dbgs() << "\t    TU = " << TU << "\n");
+      TUVec.push_back(floorOfQuotient(SrcUM - TX, TB));
+      LLVM_DEBUG(dbgs() << "\t    Possible TU = " << TUVec.back() << "\n");
     }
-  }
-  else {
-    TU = APIntOps::smin(TU, floorOfQuotient(-X, TMUL));
-    LLVM_DEBUG(dbgs() << "\t    TU = " << TU << "\n");
+  } else {
+    TUVec.push_back(floorOfQuotient(-TX, TB));
+    LLVM_DEBUG(dbgs() << "\t    Possible TU = " << TUVec.back() << "\n");
     if (SrcUMvalid) {
-      TL = APIntOps::smax(TL, ceilingOfQuotient(SrcUM - X, TMUL));
-      LLVM_DEBUG(dbgs() << "\t    TL = " << TL << "\n");
+      TLVec.push_back(ceilingOfQuotient(SrcUM - TX, TB));
+      LLVM_DEBUG(dbgs() << "\t    Possible TL = " << TLVec.back() << "\n");
     }
   }
 
-  // test(AM/G, LM-Y) and test(-AM/G, Y-UM)
-  TMUL = AM.sdiv(G);
-  if (TMUL.sgt(0)) {
-    TL = APIntOps::smax(TL, ceilingOfQuotient(-Y, TMUL));
-    LLVM_DEBUG(dbgs() << "\t    TL = " << TL << "\n");
+  APInt TA = AM.sdiv(G);
+  if (TA.sgt(0)) {
+    TLVec.push_back(ceilingOfQuotient(-TY, TA));
+    LLVM_DEBUG(dbgs() << "\t    Possible TL = " << TLVec.back() << "\n");
     if (DstUMvalid) {
-      TU = APIntOps::smin(TU, floorOfQuotient(DstUM - Y, TMUL));
-      LLVM_DEBUG(dbgs() << "\t    TU = " << TU << "\n");
+      TUVec.push_back(floorOfQuotient(DstUM - TY, TA));
+      LLVM_DEBUG(dbgs() << "\t    Possible TU = " << TUVec.back() << "\n");
+    }
+  } else {
+    TUVec.push_back(floorOfQuotient(-TY, TA));
+    LLVM_DEBUG(dbgs() << "\t    Possible TU = " << TUVec.back() << "\n");
+    if (DstUMvalid) {
+      TLVec.push_back(ceilingOfQuotient(DstUM - TY, TA));
+      LLVM_DEBUG(dbgs() << "\t    Possible TL = " << TLVec.back() << "\n");
     }
   }
-  else {
-    TU = APIntOps::smin(TU, floorOfQuotient(-Y, TMUL));
-    LLVM_DEBUG(dbgs() << "\t    TU = " << TU << "\n");
-    if (DstUMvalid) {
-      TL = APIntOps::smax(TL, ceilingOfQuotient(DstUM - Y, TMUL));
-      LLVM_DEBUG(dbgs() << "\t    TL = " << TL << "\n");
-    }
-  }
+
+  if (TLVec.empty() || TUVec.empty())
+    return false;
+
+  LLVM_DEBUG(dbgs() << "\t    TA = " << TA << "\n");
+  LLVM_DEBUG(dbgs() << "\t    TB = " << TB << "\n");
+
+  TL = APIntOps::smax(TLVec.front(), TLVec.back());
+  TU = APIntOps::smin(TUVec.front(), TUVec.back());
+  LLVM_DEBUG(dbgs() << "\t    TL = " << TL << "\n");
+  LLVM_DEBUG(dbgs() << "\t    TU = " << TU << "\n");
+
   if (TL.sgt(TU))
     ++ExactRDIVindependence;
   return TL.sgt(TU);
@@ -3302,16 +3304,6 @@ bool DependenceInfo::tryDelinearizeFixedSize(
     const SCEV *DstAccessFn, SmallVectorImpl<const SCEV *> &SrcSubscripts,
     SmallVectorImpl<const SCEV *> &DstSubscripts) {
 
-  // In general we cannot safely assume that the subscripts recovered from GEPs
-  // are in the range of values defined for their corresponding array
-  // dimensions. For example some C language usage/interpretation make it
-  // impossible to verify this at compile-time. As such we give up here unless
-  // we can assume that the subscripts do not overlap into neighboring
-  // dimensions and that the number of dimensions matches the number of
-  // subscripts being recovered.
-  if (!DisableDelinearizationChecks)
-    return false;
-
   Value *SrcPtr = getLoadStorePointerOperand(Src);
   Value *DstPtr = getLoadStorePointerOperand(Dst);
   const SCEVUnknown *SrcBase =
@@ -3350,22 +3342,55 @@ bool DependenceInfo::tryDelinearizeFixedSize(
 
   // Check that for identical base pointers we do not miss index offsets
   // that have been added before this GEP is applied.
-  if (SrcBasePtr == SrcBase->getValue() && DstBasePtr == DstBase->getValue()) {
-    assert(SrcSubscripts.size() == DstSubscripts.size() &&
-           SrcSubscripts.size() == SrcSizes.size() + 1 &&
-           "Expected equal number of entries in the list of sizes and "
-           "subscripts.");
-    LLVM_DEBUG({
-      dbgs() << "Delinearized subscripts of fixed-size array\n"
-             << "SrcGEP:" << *SrcGEP << "\n"
-             << "DstGEP:" << *DstGEP << "\n";
-    });
-    return true;
+  if (SrcBasePtr != SrcBase->getValue() || DstBasePtr != DstBase->getValue()) {
+    SrcSubscripts.clear();
+    DstSubscripts.clear();
+    return false;
   }
 
-  SrcSubscripts.clear();
-  DstSubscripts.clear();
-  return false;
+  assert(SrcSubscripts.size() == DstSubscripts.size() &&
+         SrcSubscripts.size() == SrcSizes.size() + 1 &&
+         "Expected equal number of entries in the list of sizes and "
+         "subscripts.");
+
+  // In general we cannot safely assume that the subscripts recovered from GEPs
+  // are in the range of values defined for their corresponding array
+  // dimensions. For example some C language usage/interpretation make it
+  // impossible to verify this at compile-time. As such we can only delinearize
+  // iff the subscripts are positive and are less than the range of the
+  // dimension.
+  if (!DisableDelinearizationChecks) {
+    auto AllIndiciesInRange = [&](SmallVector<int, 4> &DimensionSizes,
+                                  SmallVectorImpl<const SCEV *> &Subscripts,
+                                  Value *Ptr) {
+      size_t SSize = Subscripts.size();
+      for (size_t I = 1; I < SSize; ++I) {
+        const SCEV *S = Subscripts[I];
+        if (!isKnownNonNegative(S, Ptr))
+          return false;
+        if (auto *SType = dyn_cast<IntegerType>(S->getType())) {
+          const SCEV *Range = SE->getConstant(
+              ConstantInt::get(SType, DimensionSizes[I - 1], false));
+          if (!isKnownLessThan(S, Range))
+            return false;
+        }
+      }
+      return true;
+    };
+
+    if (!AllIndiciesInRange(SrcSizes, SrcSubscripts, SrcPtr) ||
+        !AllIndiciesInRange(DstSizes, DstSubscripts, DstPtr)) {
+      SrcSubscripts.clear();
+      DstSubscripts.clear();
+      return false;
+    }
+  }
+  LLVM_DEBUG({
+    dbgs() << "Delinearized subscripts of fixed-size array\n"
+           << "SrcGEP:" << *SrcGEP << "\n"
+           << "DstGEP:" << *DstGEP << "\n";
+  });
+  return true;
 }
 
 bool DependenceInfo::tryDelinearizeParametricSize(
@@ -3501,16 +3526,16 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   switch (underlyingObjectsAlias(AA, F->getParent()->getDataLayout(),
                                  MemoryLocation::get(Dst),
                                  MemoryLocation::get(Src))) {
-  case MayAlias:
-  case PartialAlias:
+  case AliasResult::MayAlias:
+  case AliasResult::PartialAlias:
     // cannot analyse objects if we don't understand their aliasing.
     LLVM_DEBUG(dbgs() << "can't analyze may or partial alias\n");
     return std::make_unique<Dependence>(Src, Dst);
-  case NoAlias:
+  case AliasResult::NoAlias:
     // If the objects noalias, they are distinct, accesses are independent.
     LLVM_DEBUG(dbgs() << "no alias\n");
     return nullptr;
-  case MustAlias:
+  case AliasResult::MustAlias:
     break; // The underlying objects alias; test accesses for dependence.
   }
 
@@ -3914,9 +3939,9 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
   assert(isLoadOrStore(Dst));
   Value *SrcPtr = getLoadStorePointerOperand(Src);
   Value *DstPtr = getLoadStorePointerOperand(Dst);
-  assert(underlyingObjectsAlias(AA, F->getParent()->getDataLayout(),
-                                MemoryLocation::get(Dst),
-                                MemoryLocation::get(Src)) == MustAlias);
+  assert(underlyingObjectsAlias(
+             AA, F->getParent()->getDataLayout(), MemoryLocation::get(Dst),
+             MemoryLocation::get(Src)) == AliasResult::MustAlias);
 
   // establish loop nesting levels
   establishNestingLevels(Src, Dst);

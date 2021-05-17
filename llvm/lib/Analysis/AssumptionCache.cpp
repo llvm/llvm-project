@@ -56,7 +56,7 @@ AssumptionCache::getOrInsertAffectedValues(Value *V) {
 }
 
 static void
-findAffectedValues(CallInst *CI,
+findAffectedValues(CallBase *CI,
                    SmallVectorImpl<AssumptionCache::ResultElem> &Affected) {
   // Note: This code must be kept in-sync with the code in
   // computeKnownBitsFromAssume in ValueTracking.
@@ -126,7 +126,7 @@ findAffectedValues(CallInst *CI,
   }
 }
 
-void AssumptionCache::updateAffectedValues(CallInst *CI) {
+void AssumptionCache::updateAffectedValues(AssumeInst *CI) {
   SmallVector<AssumptionCache::ResultElem, 16> Affected;
   findAffectedValues(CI, Affected);
 
@@ -139,7 +139,7 @@ void AssumptionCache::updateAffectedValues(CallInst *CI) {
   }
 }
 
-void AssumptionCache::unregisterAssumption(CallInst *CI) {
+void AssumptionCache::unregisterAssumption(AssumeInst *CI) {
   SmallVector<AssumptionCache::ResultElem, 16> Affected;
   findAffectedValues(CI, Affected);
 
@@ -202,22 +202,19 @@ void AssumptionCache::scanFunction() {
   // Go through all instructions in all blocks, add all calls to @llvm.assume
   // to this cache.
   for (BasicBlock &B : F)
-    for (Instruction &II : B)
-      if (match(&II, m_Intrinsic<Intrinsic::assume>()))
-        AssumeHandles.push_back({&II, ExprResultIdx});
+    for (Instruction &I : B)
+      if (isa<AssumeInst>(&I))
+        AssumeHandles.push_back({&I, ExprResultIdx});
 
   // Mark the scan as complete.
   Scanned = true;
 
   // Update affected values.
   for (auto &A : AssumeHandles)
-    updateAffectedValues(cast<CallInst>(A));
+    updateAffectedValues(cast<AssumeInst>(A));
 }
 
-void AssumptionCache::registerAssumption(CallInst *CI) {
-  assert(match(CI, m_Intrinsic<Intrinsic::assume>()) &&
-         "Registered call does not call @llvm.assume");
-
+void AssumptionCache::registerAssumption(AssumeInst *CI) {
   // If we haven't scanned the function yet, just drop this assumption. It will
   // be found when we scan later.
   if (!Scanned)

@@ -21,6 +21,7 @@ uint64_t status;
 // CHECK-NEXT:    [[__ADDR_ADDR_I:%.*]] = alloca i8*, align 8
 // CHECK-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_DATA512_T:%.*]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8*, i8** @addr, align 8
+// CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata !6)
 // CHECK-NEXT:    store i8* [[TMP0]], i8** [[__ADDR_ADDR_I]], align 8, !noalias !6
 // CHECK-NEXT:    [[TMP1:%.*]] = load i8*, i8** [[__ADDR_ADDR_I]], align 8, !noalias !6
 // CHECK-NEXT:    [[VAL_I:%.*]] = getelementptr inbounds [[STRUCT_DATA512_T]], %struct.data512_t* [[REF_TMP]], i32 0, i32 0

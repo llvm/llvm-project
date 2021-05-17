@@ -15,7 +15,7 @@
 //                  const basic_regex<charT, traits>& e,
 //                  regex_constants::match_flag_type flags = regex_constants::match_default);
 
-// https://bugs.llvm.org/show_bug.cgi?id=11118
+// https://llvm.org/PR11118
 
 #include <regex>
 #include <cassert>

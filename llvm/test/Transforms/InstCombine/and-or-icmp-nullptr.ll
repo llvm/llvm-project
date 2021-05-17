@@ -318,7 +318,9 @@ define i1 @ule_or_min_commute(i8* %x, i8* %y)  {
 define i1 @ule_or_min_commute_logical(i8* %x, i8* %y)  {
 ; CHECK-LABEL: @ule_or_min_commute_logical(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8* [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8* [[X]], null
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMPEQ]], i1 true, i1 [[CMP]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp ule i8* %x, %y
   %cmpeq = icmp eq i8* %x, null
@@ -362,7 +364,9 @@ define i1 @ule_swap_or_min_commute(i8* %x, i8* %y)  {
 define i1 @ule_swap_or_min_commute_logical(i8* %x, i8* %y)  {
 ; CHECK-LABEL: @ule_swap_or_min_commute_logical(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8* [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8* [[X]], null
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMPEQ]], i1 true, i1 [[CMP]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp uge i8* %y, %x
   %cmpeq = icmp eq i8* %x, null
@@ -412,7 +416,9 @@ define i1 @ugt_and_not_min_commute(i8* %x, i8* %y)  {
 define i1 @ugt_and_not_min_commute_logical(i8* %x, i8* %y)  {
 ; CHECK-LABEL: @ugt_and_not_min_commute_logical(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8* [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8* [[X]], null
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMPEQ]], i1 [[CMP]], i1 false
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp ugt i8* %x, %y
   %cmpeq = icmp ne i8* %x, null
@@ -456,7 +462,9 @@ define i1 @ugt_swap_and_not_min_commute(i8* %x, i8* %y)  {
 define i1 @ugt_swap_and_not_min_commute_logical(i8* %x, i8* %y)  {
 ; CHECK-LABEL: @ugt_swap_and_not_min_commute_logical(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8* [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8* [[X]], null
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMPEQ]], i1 [[CMP]], i1 false
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp ult i8* %y, %x
   %cmpeq = icmp ne i8* %x, null
@@ -704,9 +712,9 @@ define i1 @slt_and_min(i8* %a, i8* %b) {
 define i1 @slt_and_min_logical(i8* %a, i8* %b) {
 ; CHECK-LABEL: @slt_and_min_logical(
 ; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8* [[A:%.*]], null
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i8* [[B:%.*]], null
-; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[CMPEQ]], [[TMP1]]
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8* [[B:%.*]], null
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMPEQ]], i1 [[CMP]], i1 false
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmpeq = icmp eq i8* %a, null
   %cmp = icmp slt i8* %a, %b

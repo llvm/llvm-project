@@ -12,13 +12,10 @@
 
 // template <class... Types> class tuple;
 
-// template <class TupleLike>
-//   tuple(TupleLike&&);
-// template <class Alloc, class TupleLike>
-//   tuple(std::allocator_arg_t, Alloc const&, TupleLike&&);
-
 // Check that the tuple-like ctors are properly disabled when the UTypes...
-// constructor should be selected. See PR22806.
+// constructor should be selected.
+//
+// See https://llvm.org/PR22806.
 
 #include <tuple>
 #include <memory>
@@ -90,7 +87,7 @@ int main(int, char**)
     // when both #1 and #2 participate in partial ordering #2 will always
     // be chosen over #1.
     // See PR22806  and LWG issue #2549 for more information.
-    // (https://bugs.llvm.org/show_bug.cgi?id=22806)
+    // (https://llvm.org/PR22806)
     using T = std::tuple<int>;
     std::allocator<int> A;
     { // rvalue reference

@@ -61,7 +61,7 @@ struct C : A, B {
 
 C::C() {}  // Emits vftable and forces thunk generation.
 
-// CODEGEN-LABEL: define linkonce_odr dso_local x86_thiscallcc i8* @"??_EC@@W3AEPAXI@Z"(%struct.C* {{[^,]*}} %this, i32 %should_call_delete) {{.*}} comdat
+// CODEGEN-LABEL: define linkonce_odr dso_local x86_thiscallcc i8* @"??_EC@@W3AEPAXI@Z"(%struct.C* %this, i32 %should_call_delete) {{.*}} comdat
 // CODEGEN:   getelementptr i8, i8* {{.*}}, i32 -4
 // FIXME: should actually call _EC, not _GC.
 // CODEGEN:   call x86_thiscallcc i8* @"??_GC@@UAEPAXI@Z"

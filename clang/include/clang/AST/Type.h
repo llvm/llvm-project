@@ -488,7 +488,11 @@ public:
                                            B == LangAS::opencl_global_host)) ||
            // Consider pointer size address spaces to be equivalent to default.
            ((isPtrSizeAddressSpace(A) || A == LangAS::Default) &&
-            (isPtrSizeAddressSpace(B) || B == LangAS::Default));
+            (isPtrSizeAddressSpace(B) || B == LangAS::Default)) ||
+           // Default is a superset of SYCL address spaces.
+           (A == LangAS::Default &&
+            (B == LangAS::sycl_private || B == LangAS::sycl_local ||
+             B == LangAS::sycl_global));
   }
 
   /// Returns true if the address space in these qualifiers is equal to or
@@ -2492,6 +2496,9 @@ public:
 // PPC MMA Types
 #define PPC_VECTOR_TYPE(Name, Id, Size) Id,
 #include "clang/Basic/PPCTypes.def"
+// RVV Types
+#define RVV_TYPE(Name, Id, SingletonId) Id,
+#include "clang/Basic/RISCVVTypes.def"
 // All other builtin types
 #define BUILTIN_TYPE(Id, SingletonId) Id,
 #define LAST_BUILTIN_TYPE(Id) LastKind = Id
@@ -5412,7 +5419,14 @@ class ElaboratedType final
   ElaboratedType(ElaboratedTypeKeyword Keyword, NestedNameSpecifier *NNS,
                  QualType NamedType, QualType CanonType, TagDecl *OwnedTagDecl)
       : TypeWithKeyword(Keyword, Elaborated, CanonType,
-                        NamedType->getDependence()),
+                        // Any semantic dependence on the qualifier will have
+                        // been incorporated into NamedType. We still need to
+                        // track syntactic (instantiation / error / pack)
+                        // dependence on the qualifier.
+                        NamedType->getDependence() |
+                            (NNS ? toSyntacticDependence(
+                                       toTypeDependence(NNS->getDependence()))
+                                 : TypeDependence::None)),
         NNS(NNS), NamedType(NamedType) {
     ElaboratedTypeBits.HasOwnedTagDecl = false;
     if (OwnedTagDecl) {

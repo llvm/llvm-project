@@ -2,7 +2,7 @@
 
 ---
 # old is undefined: only combine when masks are fully enabled and
-# bound_ctrl:0 is set, otherwise the result of DPP VALU op can be undefined.
+# bound_ctrl:1 is set, otherwise the result of DPP VALU op can be undefined.
 # GCN-LABEL: name: old_is_undef
 # GCN: %2:vgpr_32 = IMPLICIT_DEF
 # VOP2:
@@ -56,20 +56,20 @@ body: |
 # GCN-LABEL: name: old_is_0
 
 # VOP2:
-# case 1: old is zero, masks are fully enabled, bound_ctrl:0 is on:
+# case 1: old is zero, masks are fully enabled, bound_ctrl:1 is on:
 # the DPP mov result would be either zero ({src lane disabled}|{src lane is
 # out of range}) or active src lane result - can combine with old = undef.
 # undef is preffered as it makes life easier for the regalloc.
 # GCN: [[U1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
 # GCN: %4:vgpr_32 = V_ADD_U32_dpp [[U1]], %0, %1, 1, 15, 15, 1, implicit $exec
 
-# case 2: old is zero, masks are fully enabled, bound_ctrl:0 is off:
+# case 2: old is zero, masks are fully enabled, bound_ctrl:1 is off:
 # as the DPP mov old is zero this case is no different from case 1 - combine it
-# setting bound_ctrl0 on for the combined DPP VALU op to make old undefined
+# setting bound_ctrl:1 on for the combined DPP VALU op to make old undefined
 # GCN: [[U2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
 # GCN: %6:vgpr_32 = V_ADD_U32_dpp [[U2]], %0, %1, 1, 15, 15, 1, implicit $exec
 
-# case 3: masks are partialy disabled, bound_ctrl:0 is on:
+# case 3: masks are partialy disabled, bound_ctrl:1 is on:
 # the DPP mov result would be either zero ({src lane disabled}|{src lane is
 # out of range} or {the DPP mov's dest VGPR write is disabled by masks}) or
 # active src lane result - can combine with old = src1 of the VALU op.
@@ -79,7 +79,7 @@ body: |
 # here but let's make it off to keep the combiner's logic simpler.
 # GCN: %8:vgpr_32 = V_ADD_U32_dpp %1, %0, %1, 1, 14, 15, 0, implicit $exec
 
-# case 4: masks are partialy disabled, bound_ctrl:0 is off:
+# case 4: masks are partialy disabled, bound_ctrl:1 is off:
 # the DPP mov result would be either zero ({src lane disabled}|{src lane is
 # out of range} or {the DPP mov's dest VGPR write is disabled by masks}) or
 # active src lane result - can combine with old = src1 of the VALU op.
@@ -137,7 +137,7 @@ body: |
 
 # old is nonzero identity cases:
 
-# old is nonzero identity, masks are fully enabled, bound_ctrl:0 is off:
+# old is nonzero identity, masks are fully enabled, bound_ctrl:1 is off:
 # the DPP mov result would be either identity ({src lane disabled}|{out of
 # range}) or src lane result - can combine with old = src1 of the VALU op
 # The DPP VALU op should have the same masks (and bctrl) as DPP mov as they
@@ -174,7 +174,7 @@ body: |
     %13:vgpr_32 = V_MIN_I32_e32 %12, %1, implicit $exec
 ...
 
-# old is nonzero identity, masks are partially enabled, bound_ctrl:0 is off:
+# old is nonzero identity, masks are partially enabled, bound_ctrl:1 is off:
 # the DPP mov result would be either identity ({src lane disabled}|{src lane is
 # out of range} or {the DPP mov's dest VGPR write is disabled by masks}) or
 # active src lane result - can combine with old = src1 of the VALU op.
@@ -212,7 +212,7 @@ body: |
     %13:vgpr_32 = V_MIN_I32_e32 %12, %1, implicit $exec
 ...
 
-# old is nonzero identity, masks are partially enabled, bound_ctrl:0 is on:
+# old is nonzero identity, masks are partially enabled, bound_ctrl:1 is on:
 # the DPP mov result may have 3 different values:
 #   1. the active src lane result
 #   2. 0 if the src lane is disabled|out of range
@@ -354,6 +354,26 @@ body:             |
     %6:vgpr_32 = V_ADD_U32_e64 %5, %1, 1, implicit $exec
 ...
 
+# GCN-LABEL: name: add_co_u32_e64
+# GCN: %4:vgpr_32, %5:sreg_64_xexec = V_ADD_CO_U32_e64 %3, %1, 0, implicit $exec
+
+name: add_co_u32_e64
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = COPY $vgpr1
+    %2:vgpr_32 = IMPLICIT_DEF
+
+    ; this shouldn't be combined as the carry-out is used
+    %3:vgpr_32 = V_MOV_B32_dpp undef %2, %0, 1, 15, 15, 1, implicit $exec
+    %4:vgpr_32, %5:sreg_64_xexec = V_ADD_CO_U32_e64 %3, %1, 0, implicit $exec
+
+    S_NOP 0, implicit %5
+...
+
 # tests on sequences of dpp consumers
 # GCN-LABEL: name: dpp_seq
 # GCN: %4:vgpr_32 = V_ADD_CO_U32_dpp %1, %0, %1, 1, 14, 15, 0, implicit-def $vcc, implicit $exec
@@ -435,7 +455,7 @@ body: |
     %4:vgpr_32 = V_ADD_U32_e32 %3, %0, implicit $exec
 ...
 
-# old reg def is in diff BB but bound_ctrl:0 - can combine
+# old reg def is in diff BB but bound_ctrl:1 - can combine
 # GCN-LABEL: name: old_in_diff_bb_bctrl_zero
 # GCN: %4:vgpr_32 = V_ADD_U32_dpp {{%[0-9]}}, %0, %1, 1, 15, 15, 1, implicit $exec
 

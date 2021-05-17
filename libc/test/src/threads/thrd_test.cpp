@@ -18,7 +18,7 @@ static int thread_func(void *) {
   return 0;
 }
 
-TEST(ThreadTest, CreateAndJoin) {
+TEST(LlvmLibcThreadTest, CreateAndJoin) {
   for (counter = 0; counter <= thread_count;) {
     thrd_t thread;
     int old_counter_val = counter;
@@ -33,7 +33,7 @@ TEST(ThreadTest, CreateAndJoin) {
 
 static int return_arg(void *arg) { return *reinterpret_cast<int *>(arg); }
 
-TEST(ThreadTest, SpawnAndJoin) {
+TEST(LlvmLibcThreadTest, SpawnAndJoin) {
   thrd_t thread_list[thread_count];
   int args[thread_count];
 

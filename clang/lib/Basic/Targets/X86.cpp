@@ -467,6 +467,7 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_Cooperlake:
   case CK_Cannonlake:
   case CK_IcelakeClient:
+  case CK_Rocketlake:
   case CK_IcelakeServer:
   case CK_Tigerlake:
   case CK_SapphireRapids:
@@ -1314,6 +1315,7 @@ Optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_Tigerlake:
     case CK_SapphireRapids:
     case CK_IcelakeClient:
+    case CK_Rocketlake:
     case CK_IcelakeServer:
     case CK_Alderlake:
     case CK_KNL:
@@ -1396,13 +1398,13 @@ bool X86TargetInfo::validateOperandSize(const llvm::StringMap<bool> &FeatureMap,
       return Size <= 64;
     case 'z':
       // XMM0/YMM/ZMM0
-      if (FeatureMap.lookup("avx512f"))
+      if (hasFeatureEnabled(FeatureMap, "avx512f"))
         // ZMM0 can be used if target supports AVX512F.
         return Size <= 512U;
-      else if (FeatureMap.lookup("avx"))
+      else if (hasFeatureEnabled(FeatureMap, "avx"))
         // YMM0 can be used if target supports AVX.
         return Size <= 256U;
-      else if (FeatureMap.lookup("sse"))
+      else if (hasFeatureEnabled(FeatureMap, "sse"))
         return Size <= 128U;
       return false;
     case 'i':
@@ -1416,10 +1418,10 @@ bool X86TargetInfo::validateOperandSize(const llvm::StringMap<bool> &FeatureMap,
     break;
   case 'v':
   case 'x':
-    if (FeatureMap.lookup("avx512f"))
+    if (hasFeatureEnabled(FeatureMap, "avx512f"))
       // 512-bit zmm registers can be used if target supports AVX512F.
       return Size <= 512U;
-    else if (FeatureMap.lookup("avx"))
+    else if (hasFeatureEnabled(FeatureMap, "avx"))
       // 256-bit ymm registers can be used if target supports AVX.
       return Size <= 256U;
     return Size <= 128U;

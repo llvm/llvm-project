@@ -249,9 +249,9 @@ define void @test_udiv_pow2_v2i32(<2 x i32>* %x, <2 x i32>* %y) nounwind {
 define void @test_urem_pow2_v2i32(<2 x i32>* %x, <2 x i32>* %y) nounwind {
 ; X64-LABEL: test_urem_pow2_v2i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    andps {{.*}}(%rip), %xmm0
-; X64-NEXT:    movlps %xmm0, (%rsi)
+; X64-NEXT:    movabsq $30064771079, %rax # imm = 0x700000007
+; X64-NEXT:    andq (%rdi), %rax
+; X64-NEXT:    movq %rax, (%rsi)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_urem_pow2_v2i32:
@@ -259,7 +259,7 @@ define void @test_urem_pow2_v2i32(<2 x i32>* %x, <2 x i32>* %y) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    andps {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    andps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    movlps %xmm0, (%eax)
 ; X86-NEXT:    retl
   %a = load <2 x i32>, <2 x i32>* %x

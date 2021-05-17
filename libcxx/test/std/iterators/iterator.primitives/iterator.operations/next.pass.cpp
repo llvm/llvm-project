@@ -42,7 +42,7 @@ check_next_1(It it, It result)
 TEST_CONSTEXPR_CXX17 bool tests()
 {
     const char* s = "1234567890";
-    check_next_n(input_iterator<const char*>(s),             10, input_iterator<const char*>(s+10));
+    check_next_n(cpp17_input_iterator<const char*>(s),             10, cpp17_input_iterator<const char*>(s+10));
     check_next_n(forward_iterator<const char*>(s),           10, forward_iterator<const char*>(s+10));
     check_next_n(bidirectional_iterator<const char*>(s),     10, bidirectional_iterator<const char*>(s+10));
     check_next_n(bidirectional_iterator<const char*>(s+10), -10, bidirectional_iterator<const char*>(s));
@@ -50,7 +50,7 @@ TEST_CONSTEXPR_CXX17 bool tests()
     check_next_n(random_access_iterator<const char*>(s+10), -10, random_access_iterator<const char*>(s));
     check_next_n(s, 10, s+10);
 
-    check_next_1(input_iterator<const char*>(s), input_iterator<const char*>(s+1));
+    check_next_1(cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+1));
     check_next_1(forward_iterator<const char*>(s), forward_iterator<const char*>(s+1));
     check_next_1(bidirectional_iterator<const char*>(s), bidirectional_iterator<const char*>(s+1));
     check_next_1(random_access_iterator<const char*>(s), random_access_iterator<const char*>(s+1));

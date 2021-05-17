@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_CODEVIEW_RECORDITERATOR_H
-#define LLVM_DEBUGINFO_CODEVIEW_RECORDITERATOR_H
+#ifndef LLVM_DEBUGINFO_CODEVIEW_CVRECORD_H
+#define LLVM_DEBUGINFO_CODEVIEW_CVRECORD_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
@@ -131,4 +131,4 @@ using CVTypeRange = iterator_range<CVTypeArray::Iterator>;
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_CODEVIEW_RECORDITERATOR_H
+#endif // LLVM_DEBUGINFO_CODEVIEW_CVRECORD_H

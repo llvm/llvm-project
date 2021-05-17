@@ -115,7 +115,12 @@ bool llvm::canPeel(Loop *L) {
   // This can be an indication of two different things:
   // 1) The loop is not rotated.
   // 2) The loop contains irreducible control flow that involves the latch.
-  if (L->getLoopLatch() != L->getExitingBlock())
+  const BasicBlock *Latch = L->getLoopLatch();
+  if (Latch != L->getExitingBlock())
+    return false;
+
+  // Peeling is only supported if the latch is a branch.
+  if (!isa<BranchInst>(Latch->getTerminator()))
     return false;
 
   return true;
@@ -206,9 +211,7 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
 
     // Do not consider predicates that are known to be true or false
     // independently of the loop iteration.
-    if (SE.isKnownPredicate(Pred, LeftSCEV, RightSCEV) ||
-        SE.isKnownPredicate(ICmpInst::getInversePredicate(Pred), LeftSCEV,
-                            RightSCEV))
+    if (SE.evaluatePredicate(Pred, LeftSCEV, RightSCEV))
       continue;
 
     // Check if we have a condition with one AddRec and one non AddRec
@@ -504,7 +507,7 @@ static void cloneLoopBlocks(
     SmallVectorImpl<std::pair<BasicBlock *, BasicBlock *>> &ExitEdges,
     SmallVectorImpl<BasicBlock *> &NewBlocks, LoopBlocksDFS &LoopBlocks,
     ValueToValueMapTy &VMap, ValueToValueMapTy &LVMap, DominatorTree *DT,
-    LoopInfo *LI) {
+    LoopInfo *LI, ArrayRef<MDNode *> LoopLocalNoAliasDeclScopes) {
   BasicBlock *Header = L->getHeader();
   BasicBlock *Latch = L->getLoopLatch();
   BasicBlock *PreHeader = L->getLoopPreheader();
@@ -538,6 +541,15 @@ static void cloneLoopBlocks(
         DT->addNewBlock(NewBB, cast<BasicBlock>(VMap[IDom->getBlock()]));
       }
     }
+  }
+
+  {
+    // Identify what other metadata depends on the cloned version. After
+    // cloning, replace the metadata with the corrected version for both
+    // memory instructions and noalias intrinsics.
+    std::string Ext = (Twine("Peel") + Twine(IterNumber)).str();
+    cloneAndAdaptNoAliasScopes(LoopLocalNoAliasDeclScopes, NewBlocks,
+                               Header->getContext(), Ext);
   }
 
   // Recursively create the new Loop objects for nested loops, if any,
@@ -764,13 +776,19 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   uint64_t ExitWeight = 0, FallThroughWeight = 0;
   initBranchWeights(Header, LatchBR, ExitWeight, FallThroughWeight);
 
+  // Identify what noalias metadata is inside the loop: if it is inside the
+  // loop, the associated metadata must be cloned for each iteration.
+  SmallVector<MDNode *, 6> LoopLocalNoAliasDeclScopes;
+  identifyNoAliasScopesToClone(L->getBlocks(), LoopLocalNoAliasDeclScopes);
+
   // For each peeled-off iteration, make a copy of the loop.
   for (unsigned Iter = 0; Iter < PeelCount; ++Iter) {
     SmallVector<BasicBlock *, 8> NewBlocks;
     ValueToValueMapTy VMap;
 
     cloneLoopBlocks(L, Iter, InsertTop, InsertBot, ExitEdges, NewBlocks,
-                    LoopBlocks, VMap, LVMap, DT, LI);
+                    LoopBlocks, VMap, LVMap, DT, LI,
+                    LoopLocalNoAliasDeclScopes);
 
     // Remap to use values from the current iteration instead of the
     // previous one.

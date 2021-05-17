@@ -381,6 +381,50 @@ template <> struct MappingTraits<FixedMachineStackObject> {
   static const bool flow = true;
 };
 
+/// A serializaable representation of a reference to a stack object or fixed
+/// stack object.
+struct FrameIndex {
+  // The frame index as printed. This is always a positive number, even for
+  // fixed objects. To obtain the real index,
+  // MachineFrameInfo::getObjectIndexBegin has to be added.
+  int FI;
+  bool IsFixed;
+  SMRange SourceRange;
+
+  FrameIndex() {}
+  FrameIndex(int FI, const llvm::MachineFrameInfo &MFI);
+
+  Expected<int> getFI(const llvm::MachineFrameInfo &MFI) const;
+};
+
+template <> struct ScalarTraits<FrameIndex> {
+  static void output(const FrameIndex &FI, void *, raw_ostream &OS) {
+    MachineOperand::printStackObjectReference(OS, FI.FI, FI.IsFixed, "");
+  }
+
+  static StringRef input(StringRef Scalar, void *Ctx, FrameIndex &FI) {
+    FI.IsFixed = false;
+    StringRef Num;
+    if (Scalar.startswith("%stack.")) {
+      Num = Scalar.substr(7);
+    } else if (Scalar.startswith("%fixed-stack.")) {
+      Num = Scalar.substr(13);
+      FI.IsFixed = true;
+    } else {
+      return "Invalid frame index, needs to start with %stack. or "
+             "%fixed-stack.";
+    }
+    if (Num.consumeInteger(10, FI.FI))
+      return "Invalid frame index, not a valid number";
+
+    if (const auto *Node =
+            reinterpret_cast<yaml::Input *>(Ctx)->getCurrentNode())
+      FI.SourceRange = Node->getSourceRange();
+    return StringRef();
+  }
+
+  static QuotingType mustQuote(StringRef S) { return needsQuotes(S); }
+};
 
 /// Serializable representation of CallSiteInfo.
 struct CallSiteInfo {
@@ -564,6 +608,7 @@ struct MachineFrameInfo {
   bool HasOpaqueSPAdjustment = false;
   bool HasVAStart = false;
   bool HasMustTailInVarArgFunc = false;
+  bool HasTailCall = false;
   unsigned LocalFrameSize = 0;
   StringValue SavePoint;
   StringValue RestorePoint;
@@ -584,6 +629,7 @@ struct MachineFrameInfo {
            HasOpaqueSPAdjustment == Other.HasOpaqueSPAdjustment &&
            HasVAStart == Other.HasVAStart &&
            HasMustTailInVarArgFunc == Other.HasMustTailInVarArgFunc &&
+           HasTailCall == Other.HasTailCall &&
            LocalFrameSize == Other.LocalFrameSize &&
            SavePoint == Other.SavePoint && RestorePoint == Other.RestorePoint;
   }
@@ -610,6 +656,7 @@ template <> struct MappingTraits<MachineFrameInfo> {
     YamlIO.mapOptional("hasVAStart", MFI.HasVAStart, false);
     YamlIO.mapOptional("hasMustTailInVarArgFunc", MFI.HasMustTailInVarArgFunc,
                        false);
+    YamlIO.mapOptional("hasTailCall", MFI.HasTailCall, false);
     YamlIO.mapOptional("localFrameSize", MFI.LocalFrameSize, (unsigned)0);
     YamlIO.mapOptional("savePoint", MFI.SavePoint,
                        StringValue()); // Don't print it out when it's empty.

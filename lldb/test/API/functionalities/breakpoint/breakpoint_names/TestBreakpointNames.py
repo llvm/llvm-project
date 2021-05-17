@@ -215,7 +215,7 @@ class BreakpointNames(TestBase):
         # Now find it in the dummy target, and make sure these settings took:
         bp_name = lldb.SBBreakpointName(dummy_target, self.bp_name_string)
         # Make sure the name is right:
-        self.assertTrue (bp_name.GetName() == self.bp_name_string, "Wrong bp_name: %s"%(bp_name.GetName()))
+        self.assertEqual(bp_name.GetName(), self.bp_name_string, "Wrong bp_name: %s"%(bp_name.GetName()))
         bp_name.SetOneShot(self.is_one_shot)
         bp_name.SetIgnoreCount(self.ignore_count)
         bp_name.SetCondition(self.condition)
@@ -288,14 +288,14 @@ class BreakpointNames(TestBase):
         name_list = lldb.SBStringList()
         self.target.GetBreakpointNames(name_list)
         for name_string in [self.bp_name_string, other_bp_name_string, cl_bp_name_string]:
-            self.assertTrue(name_string in name_list, "Didn't find %s in names"%(name_string))
+            self.assertIn(name_string, name_list, "Didn't find %s in names"%(name_string))
 
         # Delete the name from the current target.  Make sure that works and deletes the
         # name from the breakpoint as well:
         self.target.DeleteBreakpointName(self.bp_name_string)
         name_list.Clear()
         self.target.GetBreakpointNames(name_list)
-        self.assertTrue(self.bp_name_string not in name_list, "Didn't delete %s from a real target"%(self.bp_name_string))
+        self.assertNotIn(self.bp_name_string, name_list, "Didn't delete %s from a real target"%(self.bp_name_string))
         # Also make sure the name got removed from breakpoints holding it:
         self.assertFalse(bkpt.MatchesName(self.bp_name_string), "Didn't remove the name from the breakpoint.")
 
@@ -305,7 +305,7 @@ class BreakpointNames(TestBase):
         dummy_target.DeleteBreakpointName(self.bp_name_string)
         name_list.Clear()
         dummy_target.GetBreakpointNames(name_list)
-        self.assertTrue(self.bp_name_string not in name_list, "Didn't delete %s from the dummy target"%(self.bp_name_string))
+        self.assertNotIn(self.bp_name_string, name_list, "Didn't delete %s from the dummy target"%(self.bp_name_string))
         # Also make sure the name got removed from breakpoints holding it:
         self.assertFalse(bkpt.MatchesName(self.bp_name_string), "Didn't remove the name from the breakpoint.")
 

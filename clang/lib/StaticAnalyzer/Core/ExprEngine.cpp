@@ -1238,6 +1238,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::SEHExceptStmtClass:
     case Stmt::SEHLeaveStmtClass:
     case Stmt::SEHFinallyStmtClass:
+    case Stmt::OMPCanonicalLoopClass:
     case Stmt::OMPParallelDirectiveClass:
     case Stmt::OMPSimdDirectiveClass:
     case Stmt::OMPForDirectiveClass:
@@ -1292,6 +1293,10 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPTargetTeamsDistributeParallelForDirectiveClass:
     case Stmt::OMPTargetTeamsDistributeParallelForSimdDirectiveClass:
     case Stmt::OMPTargetTeamsDistributeSimdDirectiveClass:
+    case Stmt::OMPTileDirectiveClass:
+    case Stmt::OMPInteropDirectiveClass:
+    case Stmt::OMPDispatchDirectiveClass:
+    case Stmt::OMPMaskedDirectiveClass:
     case Stmt::CapturedStmtClass: {
       const ExplodedNode *node = Bldr.generateSink(S, Pred, Pred->getState());
       Engine.addAbortedBlock(node, currBldrCtx->getBlock());
@@ -3137,8 +3142,8 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
 
   /// \p PreCallback: callback before break.
   /// \p PostCallback: callback after break.
-  /// \p Stop: stop iteration if returns {@code true}
-  /// \return Whether {@code Stop} ever returned {@code true}.
+  /// \p Stop: stop iteration if returns @c true
+  /// \return Whether @c Stop ever returned @c true.
   static bool traverseHiddenNodes(
       const ExplodedNode *N,
       llvm::function_ref<void(const ExplodedNode *)> PreCallback,

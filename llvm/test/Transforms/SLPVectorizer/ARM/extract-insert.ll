@@ -4,15 +4,7 @@
 define <4 x i32> @PR13837(<4 x float> %in) {
 ; CHECK-LABEL: @PR13837(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptosi <4 x float> [[IN:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <4 x i32> undef, i32 [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <4 x i32> [[V0]], i32 [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[V2:%.*]] = insertelement <4 x i32> [[V1]], i32 [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
-; CHECK-NEXT:    [[V3:%.*]] = insertelement <4 x i32> [[V2]], i32 [[TMP5]], i32 3
-; CHECK-NEXT:    ret <4 x i32> [[V3]]
+; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %t0 = extractelement <4 x float> %in, i64 0
   %t1 = extractelement <4 x float> %in, i64 1

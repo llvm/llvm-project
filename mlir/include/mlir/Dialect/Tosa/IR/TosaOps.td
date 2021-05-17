@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the operation set for the TOSA dialect.
+// This file defines the operation set for the TOSA dialect as defined in
+// the TOSA specfication (https://developer.mlplatform.org/w/tosa/). 
 //
 //===----------------------------------------------------------------------===//
 
@@ -488,6 +489,28 @@ def Tosa_BitwiseXorOp : Tosa_Op<"bitwise_xor", [ResultsBroadcastableShape,
 
   let results = (outs
     Tosa_TensorUpto4D:$output
+  );
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: div
+//===----------------------------------------------------------------------===//
+def Tosa_DivOp : Tosa_Op<"div", [ResultsBroadcastableShape,
+                                 NoSideEffect]> {
+  let summary = "Integer divide operator";
+
+  let description = [{
+    Elementwise integer divide operator of input1 by input2. Axis of size 1
+    will be broadcast, as necessary. Rank of input tensors must match.
+  }];
+
+  let arguments = (ins
+    Tosa_Int32TensorUpto4D:$input1,
+    Tosa_Int32TensorUpto4D:$input2
+  );
+
+  let results = (outs
+    Tosa_Int32TensorUpto4D:$output
   );
 }
 
@@ -1205,13 +1228,12 @@ def Tosa_ConcatOp : Tosa_Op<"concat", [NoSideEffect]> {
   let summary = "Concatenates tensors along one dimension.";
 
   let description = [{
-    Concatenate two tensors along a given axis. No data conversion happens
-    during a concat operation.
+    Concatenate a variadic amount of tensors along a given axis. No data 
+    conversion happens during a concat operation.
   }];
 
   let arguments = (ins
-    Tosa_Tensor1Dto4D:$input1,
-    Tosa_Tensor1Dto4D:$input2,
+    Variadic<Tosa_Tensor1Dto4D>:$input1,
     I64Attr:$axis
   );
 
@@ -1363,17 +1385,38 @@ def Tosa_GatherOp : Tosa_Op<"gather", [NoSideEffect]> {
 
   let description = [{
     Generate a tensor for which each element in the output is a subtensor of the
-    values tensor along the given axis, based on the value of indices.
+    values tensor based on the value of indices.
   }];
 
   let arguments = (ins
-    Tosa_Int32Or64Tensor:$indices,
-    Tosa_Tensor1Dto4D:$values,
-    I32Attr:$axis
+    Tosa_Tensor3D:$values,
+    2DTensorOf<[Tosa_Int32]>:$indices
   );
 
   let results = (outs
-    Tosa_Tensor1Dto4D:$output
+    Tosa_Tensor3D:$output
+  );
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: scatter
+//===----------------------------------------------------------------------===//
+def Tosa_ScatterOp : Tosa_Op<"scatter", [NoSideEffect]> {
+  let summary = "Scatter operation,";
+
+  let description = [{
+    The values_out tensor is set to the values_in tensor with data modified as follows:
+    data from the input tensor is inserted at the positions specified by the indices tensor.
+  }];
+
+  let arguments = (ins
+    Tosa_Tensor3D:$values_in,
+    2DTensorOf<[Tosa_Int32]>:$indices,
+    Tosa_Tensor3D:$input
+  );
+
+  let results = (outs
+    Tosa_Tensor3D:$values_out
   );
 }
 
@@ -1402,6 +1445,8 @@ def Tosa_ResizeOp : Tosa_Op<"resize", [NoSideEffect]> {
     Tosa_IntArrayAttr2:$stride,
     Tosa_IntArrayAttr2:$offset,
     I32Attr:$shift,
+    Tosa_Fp32ArrayAttr2:$stride_fp,
+    Tosa_Fp32ArrayAttr2:$offset_fp,
     Tosa_ResizeTypeAttr:$mode
   );
 
@@ -1462,20 +1507,20 @@ def Tosa_RescaleOp: Tosa_Op<"rescale", [NoSideEffect]> {
   let description = [{
     Rescale quantized values into a new domain. Supported rescalings are:
     Mode                    Input   Output
-    signed 8 to 8           aint8   aint8
-    signed 8 to 16          aint8   int16
-    signed 8 to 32          aint8   int32
-    signed 16 to 8          int16   aint8
+    signed 8 to 8           int8    int8
+    signed 8 to 16          int8    int16
+    signed 8 to 32          int8    int32
+    signed 16 to 8          int16   int8
     signed 16 to 16         int16   int16
     signed 16 to 32         int16   int32
-    signed 32 to 8          int32   aint8
+    signed 32 to 8          int32   int8
     signed 32 to 16         int32   int16
     signed 32 to 32         int32   int32
-    signed 48 to 8          int48   aint8
+    signed 48 to 8          int48   int8
     signed 48 to 16         int48   int16
     signed 48 to 32         int48   int32
-    unsigned 8 to signed 8  uint8   aint8
-    signed 8 to unsigned 8  aint8   uint8
+    unsigned 8 to signed 8  uint8   int8
+    signed 8 to unsigned 8  int8    uint8
   }];
 
   let arguments = (ins
@@ -1537,48 +1582,6 @@ def Tosa_IdentityOp: Tosa_Op<"identity", [NoSideEffect]> {
 
   let results = (outs
     Tosa_TensorUpto6D:$output
-  );
-}
-
-//===----------------------------------------------------------------------===//
-// Operator: identityn
-//===----------------------------------------------------------------------===//
-//===----------------------------------------------------------------------===//
-// Further described in docs/Rationale/RationaleTOSADialect.md .
-//===----------------------------------------------------------------------===//
-def Tosa_IdentityNOp: Tosa_Op<"identityn", [NoSideEffect]> {
-  let summary = "IdentityN operator";
-  let description = [{
-    Returns a list of tensors with the same shape, type, and contents as the
-    input list of tensors.
-  }];
-
-  let arguments = (ins
-    Variadic<Tosa_TensorUpto6D>:$input1
-  );
-
-  let results = (outs
-     Variadic<Tosa_TensorUpto6D>:$output
-  );
-}
-
-
-//===----------------------------------------------------------------------===//
-// Operator: placeholder
-//===----------------------------------------------------------------------===//
-def Tosa_PlaceholderOp : Tosa_Op<"placeholder", [NoSideEffect]> {
-  let summary = "Placeholder op";
-
-  let description = [{
-    A node where data will be inserted into the network at runtime. Generally
-    used for inputs to the network.
-  }];
-
-  let arguments = (ins
-  );
-
-  let results = (outs
-    Tosa_Tensor1Dto4D:$output
   );
 }
 
@@ -1680,23 +1683,6 @@ def Tosa_WhileOp : Tosa_Op<"while_loop", [
   );
 }
 
-//===----------------------------------------------------------------------===//
-// Operator: yield
-//===----------------------------------------------------------------------===//
-def Tosa_YieldOp : Tosa_Op<"yield", [
-       Terminator,
-       NoSideEffect]> {
-  let summary = "yield operator";
-
-  let description = [{
-    return operation within the conditional and body of
-    structured control flow. Operation takes variadic operands
-    but produces no results of its own.
-  }];
-
-  let arguments = (ins
-    Variadic<Tosa_Tensor>:$inputs
-  );
-}
+include "mlir/Dialect/Tosa/IR/TosaUtilOps.td"
 
 #endif // TOSA_OPS

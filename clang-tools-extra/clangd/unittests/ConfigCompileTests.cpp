@@ -11,6 +11,7 @@
 #include "ConfigTesting.h"
 #include "Features.inc"
 #include "TestFS.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
@@ -30,6 +31,7 @@ using ::testing::ElementsAre;
 using ::testing::IsEmpty;
 using ::testing::SizeIs;
 using ::testing::StartsWith;
+using ::testing::UnorderedElementsAre;
 
 class ConfigCompileTests : public ::testing::Test {
 protected:
@@ -97,6 +99,25 @@ TEST_F(ConfigCompileTests, Condition) {
   Frag.If.PathMatch.emplace_back("ba*r");
   EXPECT_FALSE(compileAndApply());
   EXPECT_THAT(Diags.Diagnostics, IsEmpty());
+
+  // Only matches case-insensitively.
+  Frag = {};
+  Frag.If.PathMatch.emplace_back("B.*R");
+  EXPECT_THAT(Diags.Diagnostics, IsEmpty());
+#ifdef CLANGD_PATH_CASE_INSENSITIVE
+  EXPECT_TRUE(compileAndApply());
+#else
+  EXPECT_FALSE(compileAndApply());
+#endif
+
+  Frag = {};
+  Frag.If.PathExclude.emplace_back("B.*R");
+  EXPECT_THAT(Diags.Diagnostics, IsEmpty());
+#ifdef CLANGD_PATH_CASE_INSENSITIVE
+  EXPECT_FALSE(compileAndApply());
+#else
+  EXPECT_TRUE(compileAndApply());
+#endif
 }
 
 TEST_F(ConfigCompileTests, CompileCommands) {
@@ -108,6 +129,46 @@ TEST_F(ConfigCompileTests, CompileCommands) {
   for (auto &Edit : Conf.CompileFlags.Edits)
     Edit(Argv);
   EXPECT_THAT(Argv, ElementsAre("clang", "a.cc", "-foo"));
+}
+
+TEST_F(ConfigCompileTests, CompilationDatabase) {
+  Frag.CompileFlags.CompilationDatabase.emplace("None");
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_EQ(Conf.CompileFlags.CDBSearch.Policy,
+            Config::CDBSearchSpec::NoCDBSearch);
+
+  Frag.CompileFlags.CompilationDatabase.emplace("Ancestors");
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_EQ(Conf.CompileFlags.CDBSearch.Policy,
+            Config::CDBSearchSpec::Ancestors);
+
+  // Relative path not allowed without directory set.
+  Frag.CompileFlags.CompilationDatabase.emplace("Something");
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_EQ(Conf.CompileFlags.CDBSearch.Policy,
+            Config::CDBSearchSpec::Ancestors)
+      << "default value";
+  EXPECT_THAT(Diags.Diagnostics,
+              ElementsAre(DiagMessage(
+                  "CompilationDatabase must be an absolute path, because this "
+                  "fragment is not associated with any directory.")));
+
+  // Relative path allowed if directory is set.
+  Frag.Source.Directory = testRoot();
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_EQ(Conf.CompileFlags.CDBSearch.Policy,
+            Config::CDBSearchSpec::FixedDir);
+  EXPECT_EQ(Conf.CompileFlags.CDBSearch.FixedCDBPath, testPath("Something"));
+  EXPECT_THAT(Diags.Diagnostics, IsEmpty());
+
+  // Absolute path allowed.
+  Frag.Source.Directory.clear();
+  Frag.CompileFlags.CompilationDatabase.emplace(testPath("Something2"));
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_EQ(Conf.CompileFlags.CDBSearch.Policy,
+            Config::CDBSearchSpec::FixedDir);
+  EXPECT_EQ(Conf.CompileFlags.CDBSearch.FixedCDBPath, testPath("Something2"));
+  EXPECT_THAT(Diags.Diagnostics, IsEmpty());
 }
 
 TEST_F(ConfigCompileTests, Index) {
@@ -183,33 +244,70 @@ TEST_F(ConfigCompileTests, PathSpecMatch) {
   }
 }
 
+TEST_F(ConfigCompileTests, DiagnosticSuppression) {
+  Frag.Diagnostics.Suppress.emplace_back("bugprone-use-after-move");
+  Frag.Diagnostics.Suppress.emplace_back("unreachable-code");
+  Frag.Diagnostics.Suppress.emplace_back("-Wunused-variable");
+  Frag.Diagnostics.Suppress.emplace_back("typecheck_bool_condition");
+  Frag.Diagnostics.Suppress.emplace_back("err_unexpected_friend");
+  Frag.Diagnostics.Suppress.emplace_back("warn_alloca");
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_THAT(Conf.Diagnostics.Suppress.keys(),
+              UnorderedElementsAre("bugprone-use-after-move",
+                                   "unreachable-code", "unused-variable",
+                                   "typecheck_bool_condition",
+                                   "unexpected_friend", "warn_alloca"));
+  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(diag::warn_unreachable,
+                                            Conf.Diagnostics.Suppress));
+  // Subcategory not respected/suppressed.
+  EXPECT_FALSE(isBuiltinDiagnosticSuppressed(diag::warn_unreachable_break,
+                                             Conf.Diagnostics.Suppress));
+  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(diag::warn_unused_variable,
+                                            Conf.Diagnostics.Suppress));
+  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(diag::err_typecheck_bool_condition,
+                                            Conf.Diagnostics.Suppress));
+  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(diag::err_unexpected_friend,
+                                            Conf.Diagnostics.Suppress));
+  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(diag::warn_alloca,
+                                            Conf.Diagnostics.Suppress));
+
+  Frag.Diagnostics.Suppress.emplace_back("*");
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_TRUE(Conf.Diagnostics.SuppressAll);
+  EXPECT_THAT(Conf.Diagnostics.Suppress, IsEmpty());
+}
+
 TEST_F(ConfigCompileTests, Tidy) {
-  Frag.ClangTidy.Add.emplace_back("bugprone-use-after-move");
-  Frag.ClangTidy.Add.emplace_back("llvm-*");
-  Frag.ClangTidy.Remove.emplace_back("llvm-include-order");
-  Frag.ClangTidy.Remove.emplace_back("readability-*");
-  Frag.ClangTidy.CheckOptions.emplace_back(
+  auto &Tidy = Frag.Diagnostics.ClangTidy;
+  Tidy.Add.emplace_back("bugprone-use-after-move");
+  Tidy.Add.emplace_back("llvm-*");
+  Tidy.Remove.emplace_back("llvm-include-order");
+  Tidy.Remove.emplace_back("readability-*");
+  Tidy.CheckOptions.emplace_back(
       std::make_pair(std::string("StrictMode"), std::string("true")));
-  Frag.ClangTidy.CheckOptions.emplace_back(std::make_pair(
+  Tidy.CheckOptions.emplace_back(std::make_pair(
       std::string("example-check.ExampleOption"), std::string("0")));
   EXPECT_TRUE(compileAndApply());
   EXPECT_EQ(
-      Conf.ClangTidy.Checks,
+      Conf.Diagnostics.ClangTidy.Checks,
       "bugprone-use-after-move,llvm-*,-llvm-include-order,-readability-*");
-  EXPECT_EQ(Conf.ClangTidy.CheckOptions.size(), 2U);
-  EXPECT_EQ(Conf.ClangTidy.CheckOptions.lookup("StrictMode"), "true");
-  EXPECT_EQ(Conf.ClangTidy.CheckOptions.lookup("example-check.ExampleOption"),
+  EXPECT_EQ(Conf.Diagnostics.ClangTidy.CheckOptions.size(), 2U);
+  EXPECT_EQ(Conf.Diagnostics.ClangTidy.CheckOptions.lookup("StrictMode"),
+            "true");
+  EXPECT_EQ(Conf.Diagnostics.ClangTidy.CheckOptions.lookup(
+                "example-check.ExampleOption"),
             "0");
   EXPECT_THAT(Diags.Diagnostics, IsEmpty());
 }
 
 TEST_F(ConfigCompileTests, TidyBadChecks) {
-  Frag.ClangTidy.Add.emplace_back("unknown-check");
-  Frag.ClangTidy.Remove.emplace_back("*");
-  Frag.ClangTidy.Remove.emplace_back("llvm-includeorder");
+  auto &Tidy = Frag.Diagnostics.ClangTidy;
+  Tidy.Add.emplace_back("unknown-check");
+  Tidy.Remove.emplace_back("*");
+  Tidy.Remove.emplace_back("llvm-includeorder");
   EXPECT_TRUE(compileAndApply());
   // Ensure bad checks are stripped from the glob.
-  EXPECT_EQ(Conf.ClangTidy.Checks, "-*");
+  EXPECT_EQ(Conf.Diagnostics.ClangTidy.Checks, "-*");
   EXPECT_THAT(
       Diags.Diagnostics,
       ElementsAre(
@@ -220,21 +318,44 @@ TEST_F(ConfigCompileTests, TidyBadChecks) {
               DiagKind(llvm::SourceMgr::DK_Warning))));
 }
 
+TEST_F(ConfigCompileTests, ExternalServerNeedsTrusted) {
+  Fragment::IndexBlock::ExternalBlock External;
+  External.Server.emplace("xxx");
+  Frag.Index.External = std::move(External);
+  compileAndApply();
+  EXPECT_THAT(
+      Diags.Diagnostics,
+      ElementsAre(DiagMessage(
+          "Remote index may not be specified by untrusted configuration. "
+          "Copy this into user config to use it.")));
+  EXPECT_FALSE(Conf.Index.External.hasValue());
+}
+
 TEST_F(ConfigCompileTests, ExternalBlockWarnOnMultipleSource) {
+  Frag.Source.Trusted = true;
   Fragment::IndexBlock::ExternalBlock External;
   External.File.emplace("");
   External.Server.emplace("");
   Frag.Index.External = std::move(External);
   compileAndApply();
-  llvm::StringLiteral ExpectedDiag =
 #ifdef CLANGD_ENABLE_REMOTE
-      "Exactly one of File or Server must be set.";
+  EXPECT_THAT(
+      Diags.Diagnostics,
+      Contains(
+          AllOf(DiagMessage("Exactly one of File, Server or None must be set."),
+                DiagKind(llvm::SourceMgr::DK_Error))));
 #else
-      "Clangd isn't compiled with remote index support, ignoring Server.";
+  ASSERT_TRUE(Conf.Index.External.hasValue());
+  EXPECT_EQ(Conf.Index.External->Kind, Config::ExternalIndexSpec::File);
 #endif
-  EXPECT_THAT(Diags.Diagnostics,
-              Contains(AllOf(DiagMessage(ExpectedDiag),
-                             DiagKind(llvm::SourceMgr::DK_Error))));
+}
+
+TEST_F(ConfigCompileTests, ExternalBlockDisableWithNone) {
+  Fragment::IndexBlock::ExternalBlock External;
+  External.IsNone = true;
+  Frag.Index.External = std::move(External);
+  compileAndApply();
+  EXPECT_FALSE(Conf.Index.External.hasValue());
 }
 
 TEST_F(ConfigCompileTests, ExternalBlockErrOnNoSource) {
@@ -242,8 +363,9 @@ TEST_F(ConfigCompileTests, ExternalBlockErrOnNoSource) {
   compileAndApply();
   EXPECT_THAT(
       Diags.Diagnostics,
-      Contains(AllOf(DiagMessage("Exactly one of File or Server must be set."),
-                     DiagKind(llvm::SourceMgr::DK_Error))));
+      Contains(
+          AllOf(DiagMessage("Exactly one of File, Server or None must be set."),
+                DiagKind(llvm::SourceMgr::DK_Error))));
 }
 
 TEST_F(ConfigCompileTests, ExternalBlockDisablesBackgroundIndex) {
@@ -327,6 +449,39 @@ TEST_F(ConfigCompileTests, ExternalBlockMountPoint) {
   ASSERT_THAT(Diags.Diagnostics, IsEmpty());
   ASSERT_TRUE(Conf.Index.External);
   EXPECT_THAT(Conf.Index.External->MountPoint, FooPath);
+
+  // Only matches case-insensitively.
+  BazPath = testPath("fOo/baz.h", llvm::sys::path::Style::posix);
+  BazPath = llvm::sys::path::convert_to_slash(BazPath);
+  Parm.Path = BazPath;
+
+  FooPath = testPath("FOO/", llvm::sys::path::Style::posix);
+  FooPath = llvm::sys::path::convert_to_slash(FooPath);
+  Frag = GetFrag("", FooPath.c_str());
+  compileAndApply();
+  ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+#ifdef CLANGD_PATH_CASE_INSENSITIVE
+  ASSERT_TRUE(Conf.Index.External);
+  EXPECT_THAT(Conf.Index.External->MountPoint, FooPath);
+#else
+  ASSERT_FALSE(Conf.Index.External);
+#endif
+}
+
+TEST_F(ConfigCompileTests, AllScopes) {
+  // Defaults to true.
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_TRUE(Conf.Completion.AllScopes);
+
+  Frag = {};
+  Frag.Completion.AllScopes = false;
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_FALSE(Conf.Completion.AllScopes);
+
+  Frag = {};
+  Frag.Completion.AllScopes = true;
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_TRUE(Conf.Completion.AllScopes);
 }
 } // namespace
 } // namespace config

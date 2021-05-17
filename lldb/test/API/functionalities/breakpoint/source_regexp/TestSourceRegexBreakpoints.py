@@ -40,8 +40,8 @@ class TestSourceRegexBreakpoints(TestBase):
         main_break = target.BreakpointCreateBySourceRegex(
             source_regex, lldb.SBFileSpecList(), target_files, func_names)
         num_locations = main_break.GetNumLocations()
-        self.assertTrue(
-            num_locations == 1,
+        self.assertEqual(
+            num_locations, 1,
             "a.c in a_func should give one breakpoint, got %d." %
             (num_locations))
 
@@ -73,8 +73,8 @@ class TestSourceRegexBreakpoints(TestBase):
             source_regex, lldb.SBFileSpecList(), target_files, lldb.SBStringList())
 
         num_locations = main_break.GetNumLocations()
-        self.assertTrue(
-            num_locations == 2,
+        self.assertEqual(
+            num_locations, 2,
             "main.c should have 2 matches, got %d." %
             (num_locations))
 
@@ -85,8 +85,8 @@ class TestSourceRegexBreakpoints(TestBase):
             source_regex, lldb.SBFileSpecList(), target_files, lldb.SBStringList())
 
         num_locations = main_break.GetNumLocations()
-        self.assertTrue(
-            num_locations == 4,
+        self.assertEqual(
+            num_locations, 4,
             "main.c and a.c should have 4 matches, got %d." %
             (num_locations))
 
@@ -97,7 +97,7 @@ class TestSourceRegexBreakpoints(TestBase):
             source_regex, lldb.SBFileSpecList(), target_files, func_names)
 
         num_locations = main_break.GetNumLocations()
-        self.assertTrue(
-            num_locations == 2,
+        self.assertEqual(
+            num_locations, 2,
             "main_func in main.c and a.c should have 2 matches, got %d." %
             (num_locations))

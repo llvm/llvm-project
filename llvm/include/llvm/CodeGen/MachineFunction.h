@@ -124,11 +124,14 @@ public:
   // NoPHIs: The machine function does not contain any PHI instruction.
   // TracksLiveness: True when tracking register liveness accurately.
   //  While this property is set, register liveness information in basic block
-  //  live-in lists and machine instruction operands (e.g. kill flags, implicit
-  //  defs) is accurate. This means it can be used to change the code in ways
-  //  that affect the values in registers, for example by the register
-  //  scavenger.
-  //  When this property is clear, liveness is no longer reliable.
+  //  live-in lists and machine instruction operands (e.g. implicit defs) is
+  //  accurate, kill flags are conservatively accurate (kill flag correctly
+  //  indicates the last use of a register, an operand without kill flag may or
+  //  may not be the last use of a register). This means it can be used to
+  //  change the code in ways that affect the values in registers, for example
+  //  by the register scavenger.
+  //  When this property is cleared at a very late time, liveness is no longer
+  //  reliable.
   // NoVRegs: The machine function does not use any virtual registers.
   // Legalized: In GlobalISel: the MachineLegalizer ran and all pre-isel generic
   //  instructions have been legalized; i.e., all instructions are now one of:
@@ -321,6 +324,10 @@ class MachineFunction {
   /// construct a table of valid longjmp targets for Windows Control Flow Guard.
   std::vector<MCSymbol *> LongjmpTargets;
 
+  /// List of basic blocks that are the target of catchrets. Used to construct
+  /// a table of valid targets for Windows EHCont Guard.
+  std::vector<MCSymbol *> CatchretTargets;
+
   /// \name Exception Handling
   /// \{
 
@@ -341,6 +348,7 @@ class MachineFunction {
 
   bool CallsEHReturn = false;
   bool CallsUnwindInit = false;
+  bool HasEHCatchret = false;
   bool HasEHScopes = false;
   bool HasEHFunclets = false;
 
@@ -930,6 +938,18 @@ public:
   /// Control Flow Guard.
   void addLongjmpTarget(MCSymbol *Target) { LongjmpTargets.push_back(Target); }
 
+  /// Returns a reference to a list of symbols that we have catchrets.
+  /// Used to construct the catchret target table used by Windows EHCont Guard.
+  const std::vector<MCSymbol *> &getCatchretTargets() const {
+    return CatchretTargets;
+  }
+
+  /// Add the specified symbol to the list of valid catchret targets for Windows
+  /// EHCont Guard.
+  void addCatchretTarget(MCSymbol *Target) {
+    CatchretTargets.push_back(Target);
+  }
+
   /// \name Exception Handling
   /// \{
 
@@ -938,6 +958,9 @@ public:
 
   bool callsUnwindInit() const { return CallsUnwindInit; }
   void setCallsUnwindInit(bool b) { CallsUnwindInit = b; }
+
+  bool hasEHCatchret() const { return HasEHCatchret; }
+  void setHasEHCatchret(bool V) { HasEHCatchret = V; }
 
   bool hasEHScopes() const { return HasEHScopes; }
   void setHasEHScopes(bool V) { HasEHScopes = V; }

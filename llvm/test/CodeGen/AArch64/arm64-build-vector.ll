@@ -88,3 +88,20 @@ entry:
   %add = fadd <1 x double> %arg, <double 1.0>
   ret <1 x double> %add
 }
+
+; Make sure BUILD_VECTOR does not get stuck in a loop trying to convert a
+; single element FP vector constant from a scalar to vector.
+define <1 x double> @convert_single_fp_vector_constant(i1 %cmp) {
+; CHECK-LABEL: convert_single_fp_vector_constant:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    tst w0, #0x1
+; CHECK-NEXT:    mov x8, #4607182418800017408
+; CHECK-NEXT:    csetm x9, ne
+; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    fmov d1, x9
+; CHECK-NEXT:    and.8b v0, v0, v1
+; CHECK-NEXT:    ret
+entry:
+  %sel = select i1 %cmp, <1 x double> <double 1.000000e+00>, <1 x double> zeroinitializer
+  ret <1 x double> %sel
+}

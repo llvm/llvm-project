@@ -9,9 +9,6 @@
 #ifdef DECLARE_REGISTER_INFOS_ARM64_STRUCT
 
 enum {
-  sve_fpsr = fpu_fpsr,
-  sve_fpcr = fpu_fpcr,
-
   sve_vg = exc_far,
 
   sve_z0,

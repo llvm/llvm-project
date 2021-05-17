@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_BITCODE_BITCODE_ANALYZER_H
-#define LLVM_BITCODE_BITCODE_ANALYZER_H
+#ifndef LLVM_BITCODE_BITCODEANALYZER_H
+#define LLVM_BITCODE_BITCODEANALYZER_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
@@ -101,4 +101,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_BITCODE_BITCODE_ANALYZER_H
+#endif // LLVM_BITCODE_BITCODEANALYZER_H

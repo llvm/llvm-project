@@ -476,6 +476,10 @@ void toLSPDiags(
       Res.message = noteMessage(D, Note, Opts);
       OutFn(std::move(Res), llvm::ArrayRef<Fix>());
     }
+
+  // FIXME: Get rid of the copies here by taking in a mutable clangd::Diag.
+  for (auto &Entry : D.OpaqueData)
+    Main.data.insert({Entry.first, Entry.second});
 }
 
 int getSeverity(DiagnosticsEngine::Level L) {
@@ -744,6 +748,8 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
       LastDiag->Fixes.insert(LastDiag->Fixes.end(), ExtraFixes.begin(),
                              ExtraFixes.end());
     }
+    if (DiagCB)
+      DiagCB(Info, *LastDiag);
   } else {
     // Handle a note to an existing diagnostic.
 
@@ -799,6 +805,24 @@ void StoreDiags::flushLastDiag() {
   if (!mentionsMainFile(*LastDiag))
     return;
   Output.push_back(std::move(*LastDiag));
+}
+
+bool isBuiltinDiagnosticSuppressed(unsigned ID,
+                                   const llvm::StringSet<> &Suppress) {
+  if (const char *CodePtr = getDiagnosticCode(ID)) {
+    if (Suppress.contains(normalizeSuppressedCode(CodePtr)))
+      return true;
+  }
+  StringRef Warning = DiagnosticIDs::getWarningOptionForDiag(ID);
+  if (!Warning.empty() && Suppress.contains(Warning))
+    return true;
+  return false;
+}
+
+llvm::StringRef normalizeSuppressedCode(llvm::StringRef Code) {
+  Code.consume_front("err_");
+  Code.consume_front("-W");
+  return Code;
 }
 
 } // namespace clangd

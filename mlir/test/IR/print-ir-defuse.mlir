@@ -18,8 +18,6 @@
 // CHECK: Has 0 results:
 // CHECK: Visiting op 'dialect.op3' with 0 operands:
 // CHECK: Has 0 results:
-// CHECK: Visiting op 'module_terminator' with 0 operands:
-// CHECK: Has 0 results:
 // CHECK: Visiting op 'module' with 0 operands:
 // CHECK: Has 0 results:
 

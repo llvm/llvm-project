@@ -316,8 +316,9 @@ void moveFunctionBody(Function &OrigF, ValueToValueMapTy &VMap,
          "modules.");
 
   SmallVector<ReturnInst *, 8> Returns; // Ignore returns cloned.
-  CloneFunctionInto(NewF, &OrigF, VMap, /*ModuleLevelChanges=*/true, Returns,
-                    "", nullptr, nullptr, Materializer);
+  CloneFunctionInto(NewF, &OrigF, VMap,
+                    CloneFunctionChangeType::DifferentModule, Returns, "",
+                    nullptr, nullptr, Materializer);
   OrigF.deleteBody();
 }
 

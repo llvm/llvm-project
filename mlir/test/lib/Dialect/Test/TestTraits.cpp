@@ -33,7 +33,8 @@ OpFoldResult TestInvolutionTraitSuccesfulOperationFolderOp::fold(
 namespace {
 struct TestTraitFolder : public PassWrapper<TestTraitFolder, FunctionPass> {
   void runOnFunction() override {
-    applyPatternsAndFoldGreedily(getFunction(), OwningRewritePatternList());
+    (void)applyPatternsAndFoldGreedily(getFunction(),
+                                       RewritePatternSet(&getContext()));
   }
 };
 } // end anonymous namespace

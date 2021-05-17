@@ -65,7 +65,7 @@ createLinkGraphFromELFObject(MemoryBufferRef ObjectBuffer) {
 
   switch (*TargetMachineArch) {
   case ELF::EM_X86_64:
-    return createLinkGraphFromELFObject_x86_64(std::move(ObjectBuffer));
+    return createLinkGraphFromELFObject_x86_64(ObjectBuffer);
   default:
     return make_error<JITLinkError>(
         "Unsupported target machine architecture in ELF object " +

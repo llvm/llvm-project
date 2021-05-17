@@ -78,16 +78,14 @@ void ProcessTrace::DidAttach(ArchSpec &process_arch) {
   Process::DidAttach(process_arch);
 }
 
-bool ProcessTrace::UpdateThreadList(ThreadList &old_thread_list,
-                                    ThreadList &new_thread_list) {
+bool ProcessTrace::DoUpdateThreadList(ThreadList &old_thread_list,
+                                      ThreadList &new_thread_list) {
   return false;
 }
 
 void ProcessTrace::RefreshStateAfterStop() {}
 
 Status ProcessTrace::DoDestroy() { return Status(); }
-
-bool ProcessTrace::IsAlive() { return true; }
 
 size_t ProcessTrace::ReadMemory(addr_t addr, void *buf, size_t size,
                                 Status &error) {

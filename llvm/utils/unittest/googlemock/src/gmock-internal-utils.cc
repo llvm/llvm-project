@@ -26,8 +26,7 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// Author: wan@google.com (Zhanyong Wan)
+
 
 // Google Mock - a framework for writing C++ mock classes.
 //
@@ -47,12 +46,31 @@
 namespace testing {
 namespace internal {
 
+// Joins a vector of strings as if they are fields of a tuple; returns
+// the joined string.
+GTEST_API_ std::string JoinAsTuple(const Strings& fields) {
+  switch (fields.size()) {
+    case 0:
+      return "";
+    case 1:
+      return fields[0];
+    default:
+      std::string result = "(" + fields[0];
+      for (size_t i = 1; i < fields.size(); i++) {
+        result += ", ";
+        result += fields[i];
+      }
+      result += ")";
+      return result;
+  }
+}
+
 // Converts an identifier name to a space-separated list of lower-case
 // words.  Each maximum substring of the form [A-Za-z][a-z]*|\d+ is
 // treated as one word.  For example, both "FooBar123" and
 // "foo_bar_123" are converted to "foo bar 123".
-GTEST_API_ string ConvertIdentifierNameToWords(const char* id_name) {
-  string result;
+GTEST_API_ std::string ConvertIdentifierNameToWords(const char* id_name) {
+  std::string result;
   char prev_char = '\0';
   for (const char* p = id_name; *p != '\0'; prev_char = *(p++)) {
     // We don't care about the current locale as the input is
@@ -71,12 +89,12 @@ GTEST_API_ string ConvertIdentifierNameToWords(const char* id_name) {
 }
 
 // This class reports Google Mock failures as Google Test failures.  A
-// user can define another class in a similar fashion if he intends to
+// user can define another class in a similar fashion if they intend to
 // use Google Mock with a testing framework other than Google Test.
 class GoogleTestFailureReporter : public FailureReporterInterface {
  public:
-  virtual void ReportFailure(FailureType type, const char* file, int line,
-                             const string& message) {
+  void ReportFailure(FailureType type, const char* file, int line,
+                     const std::string& message) override {
     AssertHelper(type == kFatal ?
                  TestPartResult::kFatalFailure :
                  TestPartResult::kNonFatalFailure,
@@ -105,8 +123,8 @@ GTEST_API_ FailureReporterInterface* GetFailureReporter() {
 // Protects global resources (stdout in particular) used by Log().
 static GTEST_DEFINE_STATIC_MUTEX_(g_log_mutex);
 
-// Returns true iff a log with the given severity is visible according
-// to the --gmock_verbose flag.
+// Returns true if and only if a log with the given severity is visible
+// according to the --gmock_verbose flag.
 GTEST_API_ bool LogIsVisible(LogSeverity severity) {
   if (GMOCK_FLAG(verbose) == kInfoVerbosity) {
     // Always show the log if --gmock_verbose=info.
@@ -121,24 +139,20 @@ GTEST_API_ bool LogIsVisible(LogSeverity severity) {
   }
 }
 
-// Prints the given message to stdout iff 'severity' >= the level
+// Prints the given message to stdout if and only if 'severity' >= the level
 // specified by the --gmock_verbose flag.  If stack_frames_to_skip >=
 // 0, also prints the stack trace excluding the top
 // stack_frames_to_skip frames.  In opt mode, any positive
 // stack_frames_to_skip is treated as 0, since we don't know which
 // function calls will be inlined by the compiler and need to be
 // conservative.
-GTEST_API_ void Log(LogSeverity severity,
-                    const string& message,
+GTEST_API_ void Log(LogSeverity severity, const std::string& message,
                     int stack_frames_to_skip) {
   if (!LogIsVisible(severity))
     return;
 
   // Ensures that logs from different threads don't interleave.
   MutexLock l(&g_log_mutex);
-
-  // "using ::std::cout;" doesn't work with Symbian's STLport, where cout is a
-  // macro.
 
   if (severity == kWarning) {
     // Prints a GMOCK WARNING marker to make the warnings easily searchable.
@@ -168,6 +182,18 @@ GTEST_API_ void Log(LogSeverity severity,
              ::testing::UnitTest::GetInstance(), actual_to_skip);
   }
   std::cout << ::std::flush;
+}
+
+GTEST_API_ WithoutMatchers GetWithoutMatchers() { return WithoutMatchers(); }
+
+GTEST_API_ void IllegalDoDefault(const char* file, int line) {
+  internal::Assert(
+      false, file, line,
+      "You are using DoDefault() inside a composite action like "
+      "DoAll() or WithArgs().  This is not supported for technical "
+      "reasons.  Please instead spell out the default action, or "
+      "assign the default action to an Action variable and use "
+      "the variable in various places.");
 }
 
 }  // namespace internal

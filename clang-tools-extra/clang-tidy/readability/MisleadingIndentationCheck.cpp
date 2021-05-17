@@ -18,10 +18,10 @@ namespace readability {
 
 static const IfStmt *getPrecedingIf(const SourceManager &SM,
                                     ASTContext *Context, const IfStmt *If) {
-  auto parents = Context->getParents(*If);
-  if (parents.size() != 1)
+  auto Parents = Context->getParents(*If);
+  if (Parents.size() != 1)
     return nullptr;
-  if (const auto *PrecedingIf = parents[0].get<IfStmt>()) {
+  if (const auto *PrecedingIf = Parents[0].get<IfStmt>()) {
     SourceLocation PreviousElseLoc = PrecedingIf->getElseLoc();
     if (SM.getExpansionLineNumber(PreviousElseLoc) ==
         SM.getExpansionLineNumber(If->getIfLoc()))
@@ -44,7 +44,7 @@ void MisleadingIndentationCheck::danglingElseCheck(const SourceManager &SM,
     return;
 
   // Find location of first 'if' in a 'if else if' chain.
-  for (auto PrecedingIf = getPrecedingIf(SM, Context, If); PrecedingIf;
+  for (const auto *PrecedingIf = getPrecedingIf(SM, Context, If); PrecedingIf;
        PrecedingIf = getPrecedingIf(SM, Context, PrecedingIf))
     IfLoc = PrecedingIf->getIfLoc();
 
@@ -56,8 +56,8 @@ void MisleadingIndentationCheck::danglingElseCheck(const SourceManager &SM,
 void MisleadingIndentationCheck::missingBracesCheck(const SourceManager &SM,
                                                     const CompoundStmt *CStmt) {
   const static StringRef StmtNames[] = {"if", "for", "while"};
-  for (unsigned int i = 0; i < CStmt->size() - 1; i++) {
-    const Stmt *CurrentStmt = CStmt->body_begin()[i];
+  for (unsigned int I = 0; I < CStmt->size() - 1; I++) {
+    const Stmt *CurrentStmt = CStmt->body_begin()[I];
     const Stmt *Inner = nullptr;
     int StmtKind = 0;
 
@@ -89,7 +89,7 @@ void MisleadingIndentationCheck::missingBracesCheck(const SourceManager &SM,
         SM.getExpansionLineNumber(OuterLoc))
       continue;
 
-    const Stmt *NextStmt = CStmt->body_begin()[i + 1];
+    const Stmt *NextStmt = CStmt->body_begin()[I + 1];
     SourceLocation NextLoc = NextStmt->getBeginLoc();
 
     if (NextLoc.isInvalid() || NextLoc.isMacroID())
@@ -106,11 +106,7 @@ void MisleadingIndentationCheck::missingBracesCheck(const SourceManager &SM,
 }
 
 void MisleadingIndentationCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(
-      ifStmt(allOf(hasElse(stmt()),
-                   unless(allOf(isConstexpr(), isInTemplateInstantiation()))))
-          .bind("if"),
-      this);
+  Finder->addMatcher(ifStmt(hasElse(stmt())).bind("if"), this);
   Finder->addMatcher(
       compoundStmt(has(stmt(anyOf(ifStmt(), forStmt(), whileStmt()))))
           .bind("compound"),

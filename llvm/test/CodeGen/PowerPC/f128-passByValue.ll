@@ -16,10 +16,9 @@ define fp128 @loadConstant() {
 ;
 ; CHECK-P8-LABEL: loadConstant:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    lis r3, 1
-; CHECK-P8-NEXT:    ori r3, r3, 5
-; CHECK-P8-NEXT:    rldic r4, r3, 46, 1
-; CHECK-P8-NEXT:    li r3, 0
+; CHECK-P8-NEXT:    addis r3, r2, .LCPI0_0@toc@ha
+; CHECK-P8-NEXT:    addi r3, r3, .LCPI0_0@toc@l
+; CHECK-P8-NEXT:    lvx v2, 0, r3
 ; CHECK-P8-NEXT:    blr
   entry:
     ret fp128 0xL00000000000000004001400000000000
@@ -45,10 +44,9 @@ define fp128 @loadConstant2(fp128 %a, fp128 %b) {
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    lis r5, 1
-; CHECK-P8-NEXT:    ori r5, r5, 5
-; CHECK-P8-NEXT:    rldic r6, r5, 46, 1
-; CHECK-P8-NEXT:    li r5, 0
+; CHECK-P8-NEXT:    addis r3, r2, .LCPI1_0@toc@ha
+; CHECK-P8-NEXT:    addi r3, r3, .LCPI1_0@toc@l
+; CHECK-P8-NEXT:    lvx v3, 0, r3
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
@@ -136,12 +134,10 @@ define fp128 @fp128Array(fp128* nocapture readonly %farray,
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    sldi r4, r4, 4
-; CHECK-P8-NEXT:    ld r7, 0(r3)
-; CHECK-P8-NEXT:    add r6, r3, r4
-; CHECK-P8-NEXT:    ld r4, 8(r3)
-; CHECK-P8-NEXT:    ld r5, -16(r6)
-; CHECK-P8-NEXT:    ld r6, -8(r6)
-; CHECK-P8-NEXT:    mr r3, r7
+; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    add r4, r3, r4
+; CHECK-P8-NEXT:    addi r4, r4, -16
+; CHECK-P8-NEXT:    lvx v3, 0, r4
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
@@ -183,139 +179,115 @@ define fp128 @maxVecParam(fp128 %p1, fp128 %p2, fp128 %p3, fp128 %p4, fp128 %p5,
 ; CHECK-P8-LABEL: maxVecParam:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    .cfi_def_cfa_offset 208
-; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    .cfi_offset r14, -144
-; CHECK-P8-NEXT:    .cfi_offset r15, -136
-; CHECK-P8-NEXT:    .cfi_offset r16, -128
-; CHECK-P8-NEXT:    .cfi_offset r17, -120
-; CHECK-P8-NEXT:    .cfi_offset r18, -112
-; CHECK-P8-NEXT:    .cfi_offset r19, -104
-; CHECK-P8-NEXT:    .cfi_offset r20, -96
-; CHECK-P8-NEXT:    .cfi_offset r21, -88
-; CHECK-P8-NEXT:    .cfi_offset r22, -80
-; CHECK-P8-NEXT:    .cfi_offset r23, -72
-; CHECK-P8-NEXT:    .cfi_offset r24, -64
-; CHECK-P8-NEXT:    .cfi_offset r25, -56
-; CHECK-P8-NEXT:    .cfi_offset r26, -48
-; CHECK-P8-NEXT:    .cfi_offset r27, -40
-; CHECK-P8-NEXT:    .cfi_offset r28, -32
-; CHECK-P8-NEXT:    .cfi_offset r29, -24
-; CHECK-P8-NEXT:    .cfi_offset r30, -16
-; CHECK-P8-NEXT:    .cfi_offset r31, -8
-; CHECK-P8-NEXT:    std r14, -144(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r15, -136(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r16, -128(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r17, -120(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r18, -112(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r19, -104(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r20, -96(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r21, -88(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r22, -80(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r23, -72(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r24, -64(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r25, -56(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r26, -48(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r27, -40(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r31, -8(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std r0, 16(r1)
-; CHECK-P8-NEXT:    stdu r1, -208(r1)
-; CHECK-P8-NEXT:    mr r17, r7
-; CHECK-P8-NEXT:    ld r7, 432(r1)
-; CHECK-P8-NEXT:    ld r26, 400(r1)
-; CHECK-P8-NEXT:    ld r25, 408(r1)
-; CHECK-P8-NEXT:    ld r24, 384(r1)
-; CHECK-P8-NEXT:    mr r20, r10
-; CHECK-P8-NEXT:    ld r23, 392(r1)
-; CHECK-P8-NEXT:    ld r22, 368(r1)
-; CHECK-P8-NEXT:    ld r21, 376(r1)
-; CHECK-P8-NEXT:    ld r16, 352(r1)
-; CHECK-P8-NEXT:    mr r19, r9
-; CHECK-P8-NEXT:    mr r18, r8
-; CHECK-P8-NEXT:    ld r15, 360(r1)
-; CHECK-P8-NEXT:    ld r14, 336(r1)
-; CHECK-P8-NEXT:    ld r31, 344(r1)
-; CHECK-P8-NEXT:    ld r30, 320(r1)
-; CHECK-P8-NEXT:    std r7, 56(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    ld r7, 440(r1)
-; CHECK-P8-NEXT:    ld r29, 328(r1)
-; CHECK-P8-NEXT:    ld r28, 304(r1)
-; CHECK-P8-NEXT:    ld r27, 312(r1)
-; CHECK-P8-NEXT:    std r7, 48(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    ld r7, 416(r1)
-; CHECK-P8-NEXT:    std r7, 40(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    ld r7, 424(r1)
-; CHECK-P8-NEXT:    std r7, 32(r1) # 8-byte Folded Spill
+; CHECK-P8-NEXT:    stdu r1, -224(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 224
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset v21, -176
+; CHECK-P8-NEXT:    .cfi_offset v22, -160
+; CHECK-P8-NEXT:    .cfi_offset v23, -144
+; CHECK-P8-NEXT:    .cfi_offset v24, -128
+; CHECK-P8-NEXT:    .cfi_offset v25, -112
+; CHECK-P8-NEXT:    .cfi_offset v26, -96
+; CHECK-P8-NEXT:    .cfi_offset v27, -80
+; CHECK-P8-NEXT:    .cfi_offset v28, -64
+; CHECK-P8-NEXT:    .cfi_offset v29, -48
+; CHECK-P8-NEXT:    .cfi_offset v30, -32
+; CHECK-P8-NEXT:    .cfi_offset v31, -16
+; CHECK-P8-NEXT:    li r3, 48
+; CHECK-P8-NEXT:    stvx v21, r1, r3 # 16-byte Folded Spill
+; CHECK-P8-NEXT:    li r3, 64
+; CHECK-P8-NEXT:    vmr v21, v4
+; CHECK-P8-NEXT:    stvx v22, r1, r3 # 16-byte Folded Spill
+; CHECK-P8-NEXT:    li r3, 80
+; CHECK-P8-NEXT:    vmr v22, v5
+; CHECK-P8-NEXT:    stvx v23, r1, r3 # 16-byte Folded Spill
+; CHECK-P8-NEXT:    li r3, 96
+; CHECK-P8-NEXT:    vmr v23, v6
+; CHECK-P8-NEXT:    stvx v24, r1, r3 # 16-byte Folded Spill
+; CHECK-P8-NEXT:    li r3, 112
+; CHECK-P8-NEXT:    vmr v24, v7
+; CHECK-P8-NEXT:    stvx v25, r1, r3 # 16-byte Folded Spill
+; CHECK-P8-NEXT:    li r3, 128
+; CHECK-P8-NEXT:    vmr v25, v8
+; CHECK-P8-NEXT:    stvx v26, r1, r3 # 16-byte Folded Spill
+; CHECK-P8-NEXT:    li r3, 144
+; CHECK-P8-NEXT:    vmr v26, v9
+; CHECK-P8-NEXT:    stvx v27, r1, r3 # 16-byte Folded Spill
+; CHECK-P8-NEXT:    li r3, 160
+; CHECK-P8-NEXT:    vmr v27, v10
+; CHECK-P8-NEXT:    stvx v28, r1, r3 # 16-byte Folded Spill
+; CHECK-P8-NEXT:    li r3, 176
+; CHECK-P8-NEXT:    vmr v28, v11
+; CHECK-P8-NEXT:    stvx v29, r1, r3 # 16-byte Folded Spill
+; CHECK-P8-NEXT:    li r3, 192
+; CHECK-P8-NEXT:    stvx v30, r1, r3 # 16-byte Folded Spill
+; CHECK-P8-NEXT:    li r3, 208
+; CHECK-P8-NEXT:    vmr v30, v12
+; CHECK-P8-NEXT:    stvx v31, r1, r3 # 16-byte Folded Spill
+; CHECK-P8-NEXT:    addi r3, r1, 448
+; CHECK-P8-NEXT:    vmr v31, v13
+; CHECK-P8-NEXT:    lvx v29, 0, r3
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    mr r5, r17
-; CHECK-P8-NEXT:    mr r6, r18
+; CHECK-P8-NEXT:    vmr v3, v21
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    mr r5, r19
-; CHECK-P8-NEXT:    mr r6, r20
+; CHECK-P8-NEXT:    vmr v3, v22
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    mr r5, r28
-; CHECK-P8-NEXT:    mr r6, r27
+; CHECK-P8-NEXT:    vmr v3, v23
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    mr r5, r30
-; CHECK-P8-NEXT:    mr r6, r29
+; CHECK-P8-NEXT:    vmr v3, v24
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    mr r5, r14
-; CHECK-P8-NEXT:    mr r6, r31
+; CHECK-P8-NEXT:    vmr v3, v25
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    mr r5, r16
-; CHECK-P8-NEXT:    mr r6, r15
+; CHECK-P8-NEXT:    vmr v3, v26
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    mr r5, r22
-; CHECK-P8-NEXT:    mr r6, r21
+; CHECK-P8-NEXT:    vmr v3, v27
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    mr r5, r24
-; CHECK-P8-NEXT:    mr r6, r23
+; CHECK-P8-NEXT:    vmr v3, v28
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    mr r5, r26
-; CHECK-P8-NEXT:    mr r6, r25
+; CHECK-P8-NEXT:    vmr v3, v30
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    ld r5, 40(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r6, 32(r1) # 8-byte Folded Reload
+; CHECK-P8-NEXT:    vmr v3, v31
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    ld r5, 56(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r6, 48(r1) # 8-byte Folded Reload
+; CHECK-P8-NEXT:    vmr v3, v29
 ; CHECK-P8-NEXT:    bl __subkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    addi r1, r1, 208
+; CHECK-P8-NEXT:    li r3, 208
+; CHECK-P8-NEXT:    lvx v31, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    li r3, 192
+; CHECK-P8-NEXT:    lvx v30, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    li r3, 176
+; CHECK-P8-NEXT:    lvx v29, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    li r3, 160
+; CHECK-P8-NEXT:    lvx v28, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    li r3, 144
+; CHECK-P8-NEXT:    lvx v27, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    li r3, 128
+; CHECK-P8-NEXT:    lvx v26, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    li r3, 112
+; CHECK-P8-NEXT:    lvx v25, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    li r3, 96
+; CHECK-P8-NEXT:    lvx v24, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    li r3, 80
+; CHECK-P8-NEXT:    lvx v23, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    li r3, 64
+; CHECK-P8-NEXT:    lvx v22, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    li r3, 48
+; CHECK-P8-NEXT:    lvx v21, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    addi r1, r1, 224
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
-; CHECK-P8-NEXT:    ld r31, -8(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r27, -40(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r26, -48(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r25, -56(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r24, -64(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r23, -72(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r22, -80(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r21, -88(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
-; CHECK-P8-NEXT:    ld r20, -96(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r19, -104(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r18, -112(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r17, -120(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r16, -128(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r15, -136(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r14, -144(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    blr
                           fp128 %p6, fp128 %p7, fp128 %p8, fp128 %p9, fp128 %p10,
                           fp128 %p11, fp128 %p12, fp128 %p13) {
@@ -349,37 +321,31 @@ define fp128 @mixParam_01(fp128 %a, i32 signext %i, fp128 %b) {
 ; CHECK-P8-LABEL: mixParam_01:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    .cfi_offset r28, -32
-; CHECK-P8-NEXT:    .cfi_offset r29, -24
-; CHECK-P8-NEXT:    .cfi_offset r30, -16
-; CHECK-P8-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std r0, 16(r1)
-; CHECK-P8-NEXT:    stdu r1, -64(r1)
+; CHECK-P8-NEXT:    stdu r1, -80(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
+; CHECK-P8-NEXT:    .cfi_offset v31, -32
+; CHECK-P8-NEXT:    li r3, 48
+; CHECK-P8-NEXT:    std r30, 64(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    mr r30, r5
-; CHECK-P8-NEXT:    mr r5, r6
-; CHECK-P8-NEXT:    mr r6, r7
+; CHECK-P8-NEXT:    stvx v31, r1, r3 # 16-byte Folded Spill
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    mr r29, r3
 ; CHECK-P8-NEXT:    mr r3, r30
-; CHECK-P8-NEXT:    mr r28, r4
+; CHECK-P8-NEXT:    vmr v31, v2
 ; CHECK-P8-NEXT:    bl __floatsikf
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    mr r5, r3
-; CHECK-P8-NEXT:    mr r6, r4
-; CHECK-P8-NEXT:    mr r3, r29
-; CHECK-P8-NEXT:    mr r4, r28
+; CHECK-P8-NEXT:    vmr v3, v2
+; CHECK-P8-NEXT:    vmr v2, v31
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    addi r1, r1, 64
+; CHECK-P8-NEXT:    li r3, 48
+; CHECK-P8-NEXT:    ld r30, 64(r1) # 8-byte Folded Reload
+; CHECK-P8-NEXT:    lvx v31, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    addi r1, r1, 80
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
-; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
@@ -401,37 +367,31 @@ define fastcc fp128 @mixParam_01f(fp128 %a, i32 signext %i, fp128 %b) {
 ; CHECK-P8-LABEL: mixParam_01f:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    .cfi_offset r28, -32
-; CHECK-P8-NEXT:    .cfi_offset r29, -24
-; CHECK-P8-NEXT:    .cfi_offset r30, -16
-; CHECK-P8-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std r0, 16(r1)
-; CHECK-P8-NEXT:    stdu r1, -64(r1)
-; CHECK-P8-NEXT:    mr r30, r5
-; CHECK-P8-NEXT:    mr r5, r6
-; CHECK-P8-NEXT:    mr r6, r7
+; CHECK-P8-NEXT:    stdu r1, -80(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
+; CHECK-P8-NEXT:    .cfi_offset v31, -32
+; CHECK-P8-NEXT:    li r4, 48
+; CHECK-P8-NEXT:    std r30, 64(r1) # 8-byte Folded Spill
+; CHECK-P8-NEXT:    mr r30, r3
+; CHECK-P8-NEXT:    stvx v31, r1, r4 # 16-byte Folded Spill
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    mr r29, r3
 ; CHECK-P8-NEXT:    mr r3, r30
-; CHECK-P8-NEXT:    mr r28, r4
+; CHECK-P8-NEXT:    vmr v31, v2
 ; CHECK-P8-NEXT:    bl __floatsikf
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    mr r5, r3
-; CHECK-P8-NEXT:    mr r6, r4
-; CHECK-P8-NEXT:    mr r3, r29
-; CHECK-P8-NEXT:    mr r4, r28
+; CHECK-P8-NEXT:    vmr v3, v2
+; CHECK-P8-NEXT:    vmr v2, v31
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    addi r1, r1, 64
+; CHECK-P8-NEXT:    li r3, 48
+; CHECK-P8-NEXT:    ld r30, 64(r1) # 8-byte Folded Reload
+; CHECK-P8-NEXT:    lvx v31, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    addi r1, r1, 80
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
-; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
@@ -461,48 +421,41 @@ define fp128 @mixParam_02(fp128 %p1, double %p2, i64* nocapture %p3,
 ; CHECK-P8-LABEL: mixParam_02:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    .cfi_offset r29, -32
-; CHECK-P8-NEXT:    .cfi_offset r30, -24
-; CHECK-P8-NEXT:    .cfi_offset f31, -8
-; CHECK-P8-NEXT:    std r29, -32(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r30, -24(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    stfd f31, -8(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std r0, 16(r1)
-; CHECK-P8-NEXT:    stdu r1, -64(r1)
-; CHECK-P8-NEXT:    mr r11, r4
-; CHECK-P8-NEXT:    lwz r4, 160(r1)
-; CHECK-P8-NEXT:    add r5, r7, r9
+; CHECK-P8-NEXT:    stdu r1, -80(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset f31, -8
+; CHECK-P8-NEXT:    .cfi_offset v31, -32
+; CHECK-P8-NEXT:    li r3, 48
+; CHECK-P8-NEXT:    add r4, r7, r9
+; CHECK-P8-NEXT:    vmr v4, v2
+; CHECK-P8-NEXT:    stfd f31, 72(r1) # 8-byte Folded Spill
+; CHECK-P8-NEXT:    stvx v31, r1, r3 # 16-byte Folded Spill
+; CHECK-P8-NEXT:    lwz r3, 176(r1)
+; CHECK-P8-NEXT:    add r4, r4, r10
 ; CHECK-P8-NEXT:    fmr f31, f1
-; CHECK-P8-NEXT:    add r5, r5, r10
-; CHECK-P8-NEXT:    add r4, r5, r4
-; CHECK-P8-NEXT:    clrldi r4, r4, 32
-; CHECK-P8-NEXT:    std r4, 0(r6)
-; CHECK-P8-NEXT:    mr r6, r3
-; CHECK-P8-NEXT:    ld r5, 0(r8)
-; CHECK-P8-NEXT:    ld r4, 8(r8)
-; CHECK-P8-NEXT:    mr r3, r5
-; CHECK-P8-NEXT:    mr r5, r6
-; CHECK-P8-NEXT:    mr r6, r11
+; CHECK-P8-NEXT:    add r3, r4, r3
+; CHECK-P8-NEXT:    clrldi r3, r3, 32
+; CHECK-P8-NEXT:    std r3, 0(r6)
+; CHECK-P8-NEXT:    lvx v3, 0, r8
+; CHECK-P8-NEXT:    vmr v2, v3
+; CHECK-P8-NEXT:    vmr v3, v4
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    fmr f1, f31
-; CHECK-P8-NEXT:    mr r30, r3
-; CHECK-P8-NEXT:    mr r29, r4
+; CHECK-P8-NEXT:    vmr v31, v2
 ; CHECK-P8-NEXT:    bl __extenddfkf2
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    mr r5, r3
-; CHECK-P8-NEXT:    mr r6, r4
-; CHECK-P8-NEXT:    mr r3, r30
-; CHECK-P8-NEXT:    mr r4, r29
+; CHECK-P8-NEXT:    vmr v3, v2
+; CHECK-P8-NEXT:    vmr v2, v31
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    addi r1, r1, 64
+; CHECK-P8-NEXT:    li r3, 48
+; CHECK-P8-NEXT:    lfd f31, 72(r1) # 8-byte Folded Reload
+; CHECK-P8-NEXT:    lvx v31, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    addi r1, r1, 80
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
-; CHECK-P8-NEXT:    lfd f31, -8(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r30, -24(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r29, -32(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
                           i16 signext %p4, fp128* nocapture readonly %p5,
@@ -541,47 +494,40 @@ define fastcc fp128 @mixParam_02f(fp128 %p1, double %p2, i64* nocapture %p3,
 ; CHECK-P8-LABEL: mixParam_02f:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    .cfi_offset r29, -32
-; CHECK-P8-NEXT:    .cfi_offset r30, -24
-; CHECK-P8-NEXT:    .cfi_offset f31, -8
-; CHECK-P8-NEXT:    std r29, -32(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r30, -24(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    stfd f31, -8(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std r0, 16(r1)
-; CHECK-P8-NEXT:    stdu r1, -64(r1)
-; CHECK-P8-NEXT:    mr r11, r4
-; CHECK-P8-NEXT:    add r4, r6, r8
-; CHECK-P8-NEXT:    mr r6, r3
+; CHECK-P8-NEXT:    stdu r1, -80(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset f31, -8
+; CHECK-P8-NEXT:    .cfi_offset v31, -32
+; CHECK-P8-NEXT:    add r4, r4, r6
+; CHECK-P8-NEXT:    vmr v4, v2
+; CHECK-P8-NEXT:    li r9, 48
+; CHECK-P8-NEXT:    stfd f31, 72(r1) # 8-byte Folded Spill
+; CHECK-P8-NEXT:    add r4, r4, r7
+; CHECK-P8-NEXT:    stvx v31, r1, r9 # 16-byte Folded Spill
 ; CHECK-P8-NEXT:    fmr f31, f1
-; CHECK-P8-NEXT:    add r4, r4, r9
-; CHECK-P8-NEXT:    add r4, r4, r10
+; CHECK-P8-NEXT:    add r4, r4, r8
 ; CHECK-P8-NEXT:    clrldi r4, r4, 32
-; CHECK-P8-NEXT:    std r4, 0(r5)
-; CHECK-P8-NEXT:    ld r5, 0(r7)
-; CHECK-P8-NEXT:    ld r4, 8(r7)
-; CHECK-P8-NEXT:    mr r3, r5
-; CHECK-P8-NEXT:    mr r5, r6
-; CHECK-P8-NEXT:    mr r6, r11
+; CHECK-P8-NEXT:    std r4, 0(r3)
+; CHECK-P8-NEXT:    lvx v3, 0, r5
+; CHECK-P8-NEXT:    vmr v2, v3
+; CHECK-P8-NEXT:    vmr v3, v4
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    fmr f1, f31
-; CHECK-P8-NEXT:    mr r30, r3
-; CHECK-P8-NEXT:    mr r29, r4
+; CHECK-P8-NEXT:    vmr v31, v2
 ; CHECK-P8-NEXT:    bl __extenddfkf2
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    mr r5, r3
-; CHECK-P8-NEXT:    mr r6, r4
-; CHECK-P8-NEXT:    mr r3, r30
-; CHECK-P8-NEXT:    mr r4, r29
+; CHECK-P8-NEXT:    vmr v3, v2
+; CHECK-P8-NEXT:    vmr v2, v31
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    addi r1, r1, 64
+; CHECK-P8-NEXT:    li r3, 48
+; CHECK-P8-NEXT:    lfd f31, 72(r1) # 8-byte Folded Reload
+; CHECK-P8-NEXT:    lvx v31, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    addi r1, r1, 80
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
-; CHECK-P8-NEXT:    lfd f31, -8(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r30, -24(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r29, -32(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
                                   i16 signext %p4, fp128* nocapture readonly %p5,
@@ -620,40 +566,35 @@ define void @mixParam_03(fp128 %f1, double* nocapture %d1, <4 x i32> %vec1,
 ; CHECK-P8-LABEL: mixParam_03:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    .cfi_offset r28, -32
-; CHECK-P8-NEXT:    .cfi_offset r29, -24
-; CHECK-P8-NEXT:    .cfi_offset r30, -16
-; CHECK-P8-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std r0, 16(r1)
-; CHECK-P8-NEXT:    stdu r1, -64(r1)
-; CHECK-P8-NEXT:    ld r6, 168(r1)
-; CHECK-P8-NEXT:    std r4, 8(r9)
-; CHECK-P8-NEXT:    std r3, 0(r9)
+; CHECK-P8-NEXT:    stdu r1, -80(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
+; CHECK-P8-NEXT:    .cfi_offset v31, -32
+; CHECK-P8-NEXT:    ld r4, 184(r1)
+; CHECK-P8-NEXT:    li r3, 48
+; CHECK-P8-NEXT:    stvx v2, 0, r9
+; CHECK-P8-NEXT:    std r30, 64(r1) # 8-byte Folded Spill
+; CHECK-P8-NEXT:    mr r30, r5
+; CHECK-P8-NEXT:    stvx v31, r1, r3 # 16-byte Folded Spill
 ; CHECK-P8-NEXT:    mr r3, r10
-; CHECK-P8-NEXT:    mr r28, r5
-; CHECK-P8-NEXT:    stvx v2, 0, r6
-; CHECK-P8-NEXT:    ld r30, 0(r9)
-; CHECK-P8-NEXT:    ld r29, 8(r9)
+; CHECK-P8-NEXT:    stvx v3, 0, r4
+; CHECK-P8-NEXT:    lvx v31, 0, r9
 ; CHECK-P8-NEXT:    bl __floatsikf
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    mr r5, r3
-; CHECK-P8-NEXT:    mr r6, r4
-; CHECK-P8-NEXT:    mr r3, r30
-; CHECK-P8-NEXT:    mr r4, r29
+; CHECK-P8-NEXT:    vmr v3, v2
+; CHECK-P8-NEXT:    vmr v2, v31
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    bl __trunckfdf2
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    stfdx f1, 0, r28
-; CHECK-P8-NEXT:    addi r1, r1, 64
+; CHECK-P8-NEXT:    li r3, 48
+; CHECK-P8-NEXT:    stfdx f1, 0, r30
+; CHECK-P8-NEXT:    ld r30, 64(r1) # 8-byte Folded Reload
+; CHECK-P8-NEXT:    lvx v31, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    addi r1, r1, 80
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
-; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
                          fp128* nocapture %f2, i32 signext %i1, i8 zeroext %c1,
@@ -686,39 +627,34 @@ define fastcc void @mixParam_03f(fp128 %f1, double* nocapture %d1, <4 x i32> %ve
 ; CHECK-P8-LABEL: mixParam_03f:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    .cfi_offset r28, -32
-; CHECK-P8-NEXT:    .cfi_offset r29, -24
-; CHECK-P8-NEXT:    .cfi_offset r30, -16
-; CHECK-P8-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std r0, 16(r1)
-; CHECK-P8-NEXT:    stdu r1, -64(r1)
-; CHECK-P8-NEXT:    std r4, 8(r6)
-; CHECK-P8-NEXT:    std r3, 0(r6)
-; CHECK-P8-NEXT:    mr r3, r7
-; CHECK-P8-NEXT:    mr r28, r5
-; CHECK-P8-NEXT:    stvx v2, 0, r9
-; CHECK-P8-NEXT:    ld r30, 0(r6)
-; CHECK-P8-NEXT:    ld r29, 8(r6)
+; CHECK-P8-NEXT:    stdu r1, -80(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
+; CHECK-P8-NEXT:    .cfi_offset v31, -32
+; CHECK-P8-NEXT:    li r6, 48
+; CHECK-P8-NEXT:    stvx v2, 0, r4
+; CHECK-P8-NEXT:    stvx v3, 0, r7
+; CHECK-P8-NEXT:    std r30, 64(r1) # 8-byte Folded Spill
+; CHECK-P8-NEXT:    mr r30, r3
+; CHECK-P8-NEXT:    mr r3, r5
+; CHECK-P8-NEXT:    stvx v31, r1, r6 # 16-byte Folded Spill
+; CHECK-P8-NEXT:    lvx v31, 0, r4
 ; CHECK-P8-NEXT:    bl __floatsikf
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    mr r5, r3
-; CHECK-P8-NEXT:    mr r6, r4
-; CHECK-P8-NEXT:    mr r3, r30
-; CHECK-P8-NEXT:    mr r4, r29
+; CHECK-P8-NEXT:    vmr v3, v2
+; CHECK-P8-NEXT:    vmr v2, v31
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    bl __trunckfdf2
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    stfdx f1, 0, r28
-; CHECK-P8-NEXT:    addi r1, r1, 64
+; CHECK-P8-NEXT:    li r3, 48
+; CHECK-P8-NEXT:    stfdx f1, 0, r30
+; CHECK-P8-NEXT:    ld r30, 64(r1) # 8-byte Folded Reload
+; CHECK-P8-NEXT:    lvx v31, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    addi r1, r1, 80
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
-; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
                                  fp128* nocapture %f2, i32 signext %i1, i8 zeroext %c1,
@@ -757,15 +693,15 @@ define signext i32 @noopt_call_crash() #0 {
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
 ; CHECK-P8-NEXT:    std r0, 16(r1)
-; CHECK-P8-NEXT:    stdu r1, -32(r1)
-; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    stdu r1, -96(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    bl in
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    bl out
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    li r3, 0
-; CHECK-P8-NEXT:    addi r1, r1, 32
+; CHECK-P8-NEXT:    addi r1, r1, 96
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr

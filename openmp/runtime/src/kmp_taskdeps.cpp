@@ -54,7 +54,7 @@ static inline kmp_depnode_t *__kmp_node_ref(kmp_depnode_t *node) {
 
 enum { KMP_DEPHASH_OTHER_SIZE = 97, KMP_DEPHASH_MASTER_SIZE = 997 };
 
-size_t sizes[] = { 997, 2003, 4001, 8191, 16001, 32003, 64007, 131071, 270029 };
+size_t sizes[] = {997, 2003, 4001, 8191, 16001, 32003, 64007, 131071, 270029};
 const size_t MAX_GEN = 8;
 
 static inline size_t __kmp_dephash_hash(kmp_intptr_t addr, size_t hsize) {
@@ -86,6 +86,12 @@ static kmp_dephash_t *__kmp_dephash_extend(kmp_info_t *thread,
   h->buckets = (kmp_dephash_entry **)(h + 1);
   h->generation = gen;
   h->nconflicts = 0;
+
+  // make sure buckets are properly initialized
+  for (size_t i = 0; i < new_size; i++) {
+    h->buckets[i] = NULL;
+  }
+
   // insert existing elements in the new table
   for (size_t i = 0; i < current_dephash->size; i++) {
     kmp_dephash_entry_t *next, *entry;
@@ -146,11 +152,11 @@ static kmp_dephash_t *__kmp_dephash_create(kmp_info_t *thread,
 #define ENTRY_LAST_INS 0
 #define ENTRY_LAST_MTXS 1
 
-static kmp_dephash_entry *
-__kmp_dephash_find(kmp_info_t *thread, kmp_dephash_t **hash, kmp_intptr_t addr) {
+static kmp_dephash_entry *__kmp_dephash_find(kmp_info_t *thread,
+                                             kmp_dephash_t **hash,
+                                             kmp_intptr_t addr) {
   kmp_dephash_t *h = *hash;
-  if (h->nelements != 0
-      && h->nconflicts/h->size >= 1) {
+  if (h->nelements != 0 && h->nconflicts / h->size >= 1) {
     *hash = __kmp_dephash_extend(thread, h);
     h = *hash;
   }
@@ -209,7 +215,7 @@ static inline void __kmp_track_dependence(kmp_int32 gtid, kmp_depnode_t *source,
                                           kmp_task_t *sink_task) {
 #ifdef KMP_SUPPORT_GRAPH_OUTPUT
   kmp_taskdata_t *task_source = KMP_TASK_TO_TASKDATA(source->dn.task);
-  // do not use sink->dn.task as that is only filled after the dependencies
+  // do not use sink->dn.task as that is only filled after the dependences
   // are already processed!
   kmp_taskdata_t *task_sink = KMP_TASK_TO_TASKDATA(sink_task);
 
@@ -292,7 +298,7 @@ static inline kmp_int32
 __kmp_process_deps(kmp_int32 gtid, kmp_depnode_t *node, kmp_dephash_t **hash,
                    bool dep_barrier, kmp_int32 ndeps,
                    kmp_depend_info_t *dep_list, kmp_task_t *task) {
-  KA_TRACE(30, ("__kmp_process_deps<%d>: T#%d processing %d dependencies : "
+  KA_TRACE(30, ("__kmp_process_deps<%d>: T#%d processing %d dependences : "
                 "dep_barrier = %d\n",
                 filter, gtid, ndeps, dep_barrier));
 
@@ -418,8 +424,8 @@ static bool __kmp_check_deps(kmp_int32 gtid, kmp_depnode_t *node,
 #if KMP_DEBUG
   kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(task);
 #endif
-  KA_TRACE(20, ("__kmp_check_deps: T#%d checking dependencies for task %p : %d "
-                "possibly aliased dependencies, %d non-aliased dependencies : "
+  KA_TRACE(20, ("__kmp_check_deps: T#%d checking dependences for task %p : %d "
+                "possibly aliased dependences, %d non-aliased dependences : "
                 "dep_barrier=%d .\n",
                 gtid, taskdata, ndeps, ndeps_noalias, dep_barrier));
 
@@ -456,7 +462,7 @@ static bool __kmp_check_deps(kmp_int32 gtid, kmp_depnode_t *node,
   // doesn't need to be atomic as no other thread is going to be accessing this
   // node just yet.
   // npredecessors is set -1 to ensure that none of the releasing tasks queues
-  // this task before we have finished processing all the dependencies
+  // this task before we have finished processing all the dependences
   node->dn.npredecessors = -1;
 
   // used to pack all npredecessors additions into a single atomic operation at
@@ -523,22 +529,21 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
       current_task->ompt_task_info.frame.enter_frame.ptr =
           OMPT_GET_FRAME_ADDRESS(0);
     if (ompt_enabled.ompt_callback_task_create) {
-      ompt_data_t task_data = ompt_data_none;
       ompt_callbacks.ompt_callback(ompt_callback_task_create)(
-          current_task ? &(current_task->ompt_task_info.task_data) : &task_data,
-          current_task ? &(current_task->ompt_task_info.frame) : NULL,
+          &(current_task->ompt_task_info.task_data),
+          &(current_task->ompt_task_info.frame),
           &(new_taskdata->ompt_task_info.task_data),
           ompt_task_explicit | TASK_TYPE_DETAILS_FORMAT(new_taskdata), 1,
           OMPT_LOAD_OR_GET_RETURN_ADDRESS(gtid));
     }
 
-    new_taskdata->ompt_task_info.frame.enter_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
+    new_taskdata->ompt_task_info.frame.enter_frame.ptr =
+        OMPT_GET_FRAME_ADDRESS(0);
   }
 
 #if OMPT_OPTIONAL
   /* OMPT grab all dependences if requested by the tool */
-  if (ndeps + ndeps_noalias > 0 &&
-      ompt_enabled.ompt_callback_dependences) {
+  if (ndeps + ndeps_noalias > 0 && ompt_enabled.ompt_callback_dependences) {
     kmp_int32 i;
 
     int ompt_ndeps = ndeps + ndeps_noalias;
@@ -572,7 +577,7 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
     }
     ompt_callbacks.ompt_callback(ompt_callback_dependences)(
         &(new_taskdata->ompt_task_info.task_data), ompt_deps, ompt_ndeps);
-    /* We can now free the allocated memory for the dependencies */
+    /* We can now free the allocated memory for the dependences */
     /* For OMPD we might want to delay the free until end of this function */
     KMP_OMPT_DEPS_FREE(thread, ompt_deps);
   }
@@ -583,10 +588,12 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
                 current_task->td_flags.tasking_ser ||
                 current_task->td_flags.final;
   kmp_task_team_t *task_team = thread->th.th_task_team;
-  serial = serial && !(task_team && task_team->tt.tt_found_proxy_tasks);
+  serial = serial &&
+           !(task_team && (task_team->tt.tt_found_proxy_tasks ||
+                           task_team->tt.tt_hidden_helper_task_encountered));
 
   if (!serial && (ndeps > 0 || ndeps_noalias > 0)) {
-    /* if no dependencies have been tracked yet, create the dependence hash */
+    /* if no dependences have been tracked yet, create the dependence hash */
     if (current_task->td_dephash == NULL)
       current_task->td_dephash = __kmp_dephash_create(thread, current_task);
 
@@ -605,7 +612,7 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
                          NO_DEP_BARRIER, ndeps, dep_list, ndeps_noalias,
                          noalias_dep_list)) {
       KA_TRACE(10, ("__kmpc_omp_task_with_deps(exit): T#%d task had blocking "
-                    "dependencies: "
+                    "dependences: "
                     "loc=%p task=%p, return: TASK_CURRENT_NOT_QUEUED\n",
                     gtid, loc_ref, new_taskdata));
 #if OMPT_SUPPORT
@@ -616,14 +623,13 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
       return TASK_CURRENT_NOT_QUEUED;
     }
   } else {
-    KA_TRACE(10, ("__kmpc_omp_task_with_deps(exit): T#%d ignored dependencies "
-                  "for task (serialized)"
-                  "loc=%p task=%p\n",
+    KA_TRACE(10, ("__kmpc_omp_task_with_deps(exit): T#%d ignored dependences "
+                  "for task (serialized) loc=%p task=%p\n",
                   gtid, loc_ref, new_taskdata));
   }
 
   KA_TRACE(10, ("__kmpc_omp_task_with_deps(exit): T#%d task had no blocking "
-                "dependencies : "
+                "dependences : "
                 "loc=%p task=%p, transferring to __kmp_omp_task\n",
                 gtid, loc_ref, new_taskdata));
 
@@ -640,13 +646,12 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
 void __ompt_taskwait_dep_finish(kmp_taskdata_t *current_task,
                                 ompt_data_t *taskwait_task_data) {
   if (ompt_enabled.ompt_callback_task_schedule) {
-    ompt_data_t task_data = ompt_data_none;
     ompt_callbacks.ompt_callback(ompt_callback_task_schedule)(
-        current_task ? &(current_task->ompt_task_info.task_data) : &task_data,
-        ompt_task_switch, taskwait_task_data);
+        &(current_task->ompt_task_info.task_data), ompt_task_switch,
+        taskwait_task_data);
     ompt_callbacks.ompt_callback(ompt_callback_task_schedule)(
         taskwait_task_data, ompt_task_complete,
-        current_task ? &(current_task->ompt_task_info.task_data) : &task_data);
+        &(current_task->ompt_task_info.task_data));
   }
   current_task->ompt_task_info.frame.enter_frame.ptr = NULL;
   *taskwait_task_data = ompt_data_none;
@@ -662,7 +667,7 @@ void __ompt_taskwait_dep_finish(kmp_taskdata_t *current_task,
 @param ndeps_noalias Number of depend items with no aliasing
 @param noalias_dep_list List of depend items with no aliasing
 
-Blocks the current task until all specifies dependencies have been fulfilled.
+Blocks the current task until all specifies dependences have been fulfilled.
 */
 void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
                           kmp_depend_info_t *dep_list, kmp_int32 ndeps_noalias,
@@ -670,7 +675,7 @@ void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
   KA_TRACE(10, ("__kmpc_omp_wait_deps(enter): T#%d loc=%p\n", gtid, loc_ref));
 
   if (ndeps == 0 && ndeps_noalias == 0) {
-    KA_TRACE(10, ("__kmpc_omp_wait_deps(exit): T#%d has no dependencies to "
+    KA_TRACE(10, ("__kmpc_omp_wait_deps(exit): T#%d has no dependences to "
                   "wait upon : loc=%p\n",
                   gtid, loc_ref));
     return;
@@ -692,11 +697,9 @@ void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
       current_task->ompt_task_info.frame.enter_frame.ptr =
           OMPT_GET_FRAME_ADDRESS(0);
     if (ompt_enabled.ompt_callback_task_create) {
-      ompt_data_t task_data = ompt_data_none;
       ompt_callbacks.ompt_callback(ompt_callback_task_create)(
-          current_task ? &(current_task->ompt_task_info.task_data) : &task_data,
-          current_task ? &(current_task->ompt_task_info.frame) : NULL,
-          taskwait_task_data,
+          &(current_task->ompt_task_info.task_data),
+          &(current_task->ompt_task_info.frame), taskwait_task_data,
           ompt_task_explicit | ompt_task_undeferred | ompt_task_mergeable, 1,
           OMPT_LOAD_OR_GET_RETURN_ADDRESS(gtid));
     }
@@ -739,7 +742,7 @@ void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
     }
     ompt_callbacks.ompt_callback(ompt_callback_dependences)(
         taskwait_task_data, ompt_deps, ompt_ndeps);
-    /* We can now free the allocated memory for the dependencies */
+    /* We can now free the allocated memory for the dependences */
     /* For OMPD we might want to delay the free until end of this function */
     KMP_OMPT_DEPS_FREE(thread, ompt_deps);
     ompt_deps = NULL;
@@ -759,7 +762,7 @@ void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
 
   if (ignore) {
     KA_TRACE(10, ("__kmpc_omp_wait_deps(exit): T#%d has no blocking "
-                  "dependencies : loc=%p\n",
+                  "dependences : loc=%p\n",
                   gtid, loc_ref));
 #if OMPT_SUPPORT
     __ompt_taskwait_dep_finish(current_task, taskwait_task_data);
@@ -776,7 +779,7 @@ void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
                         DEP_BARRIER, ndeps, dep_list, ndeps_noalias,
                         noalias_dep_list)) {
     KA_TRACE(10, ("__kmpc_omp_wait_deps(exit): T#%d has no blocking "
-                  "dependencies : loc=%p\n",
+                  "dependences : loc=%p\n",
                   gtid, loc_ref));
 #if OMPT_SUPPORT
     __ompt_taskwait_dep_finish(current_task, taskwait_task_data);

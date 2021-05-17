@@ -14,7 +14,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUSubtarget.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "R600Subtarget.h"
 #include "llvm/CodeGen/DFAPacketizer.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"

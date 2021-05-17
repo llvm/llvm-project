@@ -194,36 +194,10 @@ define i32 @div1() {
 }
 
 define i8 @sdiv_minusone_divisor() {
-; CHECK-LABEL: @sdiv_minusone_divisor(
-; CHECK-NEXT:    ret i8 poison
-;
+; CHECK-LABEL: @sdiv_minusone_divisor
+; CHECK-NEXT:   ret i8 poison
   %v = sdiv i8 -128, -1
   ret i8 %v
-}
-
-define i32 @poison(i32 %x) {
-; CHECK-LABEL: @poison(
-; CHECK-NEXT:    ret i32 poison
-;
-  %v = udiv i32 %x, poison
-  ret i32 %v
-}
-
-; TODO: this should be poison
-define i32 @poison2(i32 %x) {
-; CHECK-LABEL: @poison2(
-; CHECK-NEXT:    ret i32 0
-;
-  %v = udiv i32 poison, %x
-  ret i32 %v
-}
-
-define <2 x i32> @poison3(<2 x i32> %x) {
-; CHECK-LABEL: @poison3(
-; CHECK-NEXT:    ret <2 x i32> poison
-;
-  %v = udiv <2 x i32> %x, <i32 poison, i32 1>
-  ret <2 x i32> %v
 }
 
 !0 = !{i32 0, i32 3}

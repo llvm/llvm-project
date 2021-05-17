@@ -179,8 +179,8 @@ void SubtargetEmitter::Enumeration(raw_ostream &OS,
 static void printFeatureMask(raw_ostream &OS, RecVec &FeatureList,
                              const DenseMap<Record *, unsigned> &FeatureMap) {
   std::array<uint64_t, MAX_SUBTARGET_WORDS> Mask = {};
-  for (unsigned j = 0, M = FeatureList.size(); j < M; ++j) {
-    unsigned Bit = FeatureMap.lookup(FeatureList[j]);
+  for (const Record *Feature : FeatureList) {
+    unsigned Bit = FeatureMap.lookup(Feature);
     Mask[Bit / 64] |= 1ULL << (Bit % 64);
   }
 
@@ -215,10 +215,8 @@ unsigned SubtargetEmitter::FeatureKeyValues(
 
   // For each feature
   unsigned NumFeatures = 0;
-  for (unsigned i = 0, N = FeatureList.size(); i < N; ++i) {
+  for (const Record *Feature : FeatureList) {
     // Next feature
-    Record *Feature = FeatureList[i];
-
     StringRef Name = Feature->getName();
     StringRef CommandLineName = Feature->getValueAsString("Name");
     StringRef Desc = Feature->getValueAsString("Desc");
@@ -344,13 +342,12 @@ void SubtargetEmitter::FormItineraryOperandCycleString(Record *ItinData,
     ItinData->getValueAsListOfInts("OperandCycles");
 
   // For each operand cycle
-  unsigned N = NOperandCycles = OperandCycleList.size();
-  for (unsigned i = 0; i < N;) {
+  NOperandCycles = OperandCycleList.size();
+  ListSeparator LS;
+  for (int OCycle : OperandCycleList) {
     // Next operand cycle
-    const int OCycle = OperandCycleList[i];
-
+    ItinString += LS;
     ItinString += "  " + itostr(OCycle);
-    if (++i < N) ItinString += ", ";
   }
 }
 
@@ -361,13 +358,14 @@ void SubtargetEmitter::FormItineraryBypassString(const std::string &Name,
   RecVec BypassList = ItinData->getValueAsListOfDefs("Bypasses");
   unsigned N = BypassList.size();
   unsigned i = 0;
-  for (; i < N;) {
+  ListSeparator LS;
+  for (; i < N; ++i) {
+    ItinString += LS;
     ItinString += Name + "Bypass::" + BypassList[i]->getName().str();
-    if (++i < NOperandCycles) ItinString += ", ";
   }
-  for (; i < NOperandCycles;) {
+  for (; i < NOperandCycles; ++i) {
+    ItinString += LS;
     ItinString += " 0";
-    if (++i < NOperandCycles) ItinString += ", ";
   }
 }
 
@@ -730,10 +728,8 @@ void SubtargetEmitter::EmitLoadStoreQueueInfo(const CodeGenProcModel &ProcModel,
   unsigned QueueID = 0;
   if (ProcModel.LoadQueue) {
     const Record *Queue = ProcModel.LoadQueue->getValueAsDef("QueueDescriptor");
-    QueueID =
-        1 + std::distance(ProcModel.ProcResourceDefs.begin(),
-                          std::find(ProcModel.ProcResourceDefs.begin(),
-                                    ProcModel.ProcResourceDefs.end(), Queue));
+    QueueID = 1 + std::distance(ProcModel.ProcResourceDefs.begin(),
+                                find(ProcModel.ProcResourceDefs, Queue));
   }
   OS << "  " << QueueID << ", // Resource Descriptor for the Load Queue\n";
 
@@ -741,10 +737,8 @@ void SubtargetEmitter::EmitLoadStoreQueueInfo(const CodeGenProcModel &ProcModel,
   if (ProcModel.StoreQueue) {
     const Record *Queue =
         ProcModel.StoreQueue->getValueAsDef("QueueDescriptor");
-    QueueID =
-        1 + std::distance(ProcModel.ProcResourceDefs.begin(),
-                          std::find(ProcModel.ProcResourceDefs.begin(),
-                                    ProcModel.ProcResourceDefs.end(), Queue));
+    QueueID = 1 + std::distance(ProcModel.ProcResourceDefs.begin(),
+                                find(ProcModel.ProcResourceDefs, Queue));
   }
   OS << "  " << QueueID << ", // Resource Descriptor for the Store Queue\n";
 }
@@ -999,6 +993,7 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
     SCDesc.NumMicroOps = 0;
     SCDesc.BeginGroup = false;
     SCDesc.EndGroup = false;
+    SCDesc.RetireOOO = false;
     SCDesc.WriteProcResIdx = 0;
     SCDesc.WriteLatencyIdx = 0;
     SCDesc.ReadAdvanceIdx = 0;
@@ -1101,6 +1096,7 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
         SCDesc.EndGroup |= WriteRes->getValueAsBit("EndGroup");
         SCDesc.BeginGroup |= WriteRes->getValueAsBit("SingleIssue");
         SCDesc.EndGroup |= WriteRes->getValueAsBit("SingleIssue");
+        SCDesc.RetireOOO |= WriteRes->getValueAsBit("RetireOOO");
 
         // Create an entry for each ProcResource listed in WriteRes.
         RecVec PRVec = WriteRes->getValueAsListOfDefs("ProcResources");
@@ -1299,7 +1295,7 @@ void SubtargetEmitter::EmitSchedClassTables(SchedClassTables &SchedTables,
     std::vector<MCSchedClassDesc> &SCTab =
       SchedTables.ProcSchedClasses[1 + (PI - SchedModels.procModelBegin())];
 
-    OS << "\n// {Name, NumMicroOps, BeginGroup, EndGroup,"
+    OS << "\n// {Name, NumMicroOps, BeginGroup, EndGroup, RetireOOO,"
        << " WriteProcResIdx,#, WriteLatencyIdx,#, ReadAdvanceIdx,#}\n";
     OS << "static const llvm::MCSchedClassDesc "
        << PI->ModelName << "SchedClasses[] = {\n";
@@ -1310,7 +1306,7 @@ void SubtargetEmitter::EmitSchedClassTables(SchedClassTables &SchedTables,
            && "invalid class not first");
     OS << "  {DBGFIELD(\"InvalidSchedClass\")  "
        << MCSchedClassDesc::InvalidNumMicroOps
-       << ", false, false,  0, 0,  0, 0,  0, 0},\n";
+       << ", false, false, false, 0, 0,  0, 0,  0, 0},\n";
 
     for (unsigned SCIdx = 1, SCEnd = SCTab.size(); SCIdx != SCEnd; ++SCIdx) {
       MCSchedClassDesc &MCDesc = SCTab[SCIdx];
@@ -1321,6 +1317,7 @@ void SubtargetEmitter::EmitSchedClassTables(SchedClassTables &SchedTables,
       OS << MCDesc.NumMicroOps
          << ", " << ( MCDesc.BeginGroup ? "true" : "false" )
          << ", " << ( MCDesc.EndGroup ? "true" : "false" )
+         << ", " << ( MCDesc.RetireOOO ? "true" : "false" )
          << ", " << format("%2d", MCDesc.WriteProcResIdx)
          << ", " << MCDesc.NumWriteProcResEntries
          << ", " << format("%2d", MCDesc.WriteLatencyIdx)

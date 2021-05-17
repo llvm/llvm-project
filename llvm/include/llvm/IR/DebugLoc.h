@@ -113,4 +113,4 @@ namespace llvm {
 
 } // end namespace llvm
 
-#endif /* LLVM_SUPPORT_DEBUGLOC_H */
+#endif // LLVM_IR_DEBUGLOC_H

@@ -3,7 +3,7 @@
 // RUN: %clang -### -S -fasm -fblocks -fbuiltin -fno-math-errno -fcommon -fpascal-strings -fno-blocks -fno-builtin -fmath-errno -fno-common -fno-pascal-strings -fblocks -fbuiltin -fmath-errno -fcommon -fpascal-strings -fsplit-stack %s 2>&1 | FileCheck -check-prefix=CHECK-OPTIONS1 %s
 // RUN: %clang -### -S -fasm -fblocks -fbuiltin -fno-math-errno -fcommon -fpascal-strings -fno-asm -fno-blocks -fno-builtin -fmath-errno -fno-common -fno-pascal-strings -fno-show-source-location -fshort-enums %s 2>&1 | FileCheck -check-prefix=CHECK-OPTIONS2 %s
 
-// CHECK-OPTIONS1: -split-stacks
+// CHECK-OPTIONS1: -fsplit-stack
 // CHECK-OPTIONS1: -fgnu-keywords
 // CHECK-OPTIONS1: -fblocks
 // CHECK-OPTIONS1: -fpascal-strings
@@ -58,6 +58,19 @@
 // RUN: %clang -### -S -fprofile-sample-use=%S/Inputs/file.prof %s 2>&1 | FileCheck -check-prefix=CHECK-SAMPLE-PROFILE %s
 // CHECK-SAMPLE-PROFILE: "-fprofile-sample-use={{.*}}/file.prof"
 
+//
+// RUN: %clang -### -x cuda -nocudainc -nocudalib \
+// RUN:    -c -fprofile-sample-use=%S/Inputs/file.prof %s 2>&1 \
+// RUN:  | FileCheck -check-prefix=CHECK-CUDA-SAMPLE-PROFILE %s
+// -fprofile-sample-use should not be passed to the GPU compilation
+// CHECK-CUDA-SAMPLE-PROFILE: "-cc1"
+// CHECK-CUDA-SAMPLE-PROFILE-SAME: "-triple" "nvptx
+// CHECK-CUDA-SAMPLE-PROFILE-NOT: "-fprofile-sample-use={{.*}}/file.prof"
+// Host compilation should still have the option.
+// CHECK-CUDA-SAMPLE-PROFILE: "-cc1"
+// CHECK-CUDA-SAMPLE-PROFILE-SAME: "-fprofile-sample-use={{.*}}/file.prof"
+
+
 // RUN: %clang -### -S -fauto-profile=%S/Inputs/file.prof %s 2>&1 | FileCheck -check-prefix=CHECK-AUTO-PROFILE %s
 // CHECK-AUTO-PROFILE: "-fprofile-sample-use={{.*}}/file.prof"
 
@@ -99,7 +112,7 @@
 // RUN: %clang -### -S -fcoverage-mapping %s 2>&1 | FileCheck -check-prefix=CHECK-COVERAGE-AND-GEN %s
 // RUN: %clang -### -S -fcoverage-mapping -fno-coverage-mapping %s 2>&1 | FileCheck -check-prefix=CHECK-DISABLE-COVERAGE %s
 // RUN: %clang -### -S -fprofile-instr-generate -fcoverage-mapping -fno-coverage-mapping %s 2>&1 | FileCheck -check-prefix=CHECK-DISABLE-COVERAGE %s
-// RUN: %clang -### -S -fprofile-remapping-file foo/bar.txt %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-REMAP %s
+// RUN: %clang -### -S -fprofile-remapping-file=foo/bar.txt %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-REMAP %s
 // RUN: %clang -### -S -forder-file-instrumentation %s 2>&1 | FileCheck -check-prefix=CHECK-ORDERFILE-INSTR %s
 // RUN: %clang -### -flto -forder-file-instrumentation %s 2>&1 | FileCheck -check-prefix=CHECK-ORDERFILE-INSTR-LTO %s
 // CHECK-PROFILE-GENERATE: "-fprofile-instrument=clang"
@@ -279,6 +292,7 @@
 // RUN:     -fno-delete-null-pointer-checks -fdelete-null-pointer-checks      \
 // RUN:     -fno-inline-small-functions -finline-small-functions              \
 // RUN:     -fno-fat-lto-objects -ffat-lto-objects                            \
+// RUN:     -flto=auto -flto=jobserver                                        \
 // RUN:     -fno-merge-constants -fmerge-constants                            \
 // RUN:     -fno-caller-saves -fcaller-saves                                  \
 // RUN:     -fno-reorder-blocks -freorder-blocks                              \
@@ -504,7 +518,15 @@
 // RUN: %clang -### -S -fdebug-compilation-dir=. %s 2>&1 | FileCheck -check-prefix=CHECK-DEBUG-COMPILATION-DIR %s
 // RUN: %clang -### -fdebug-compilation-dir . -x assembler %s 2>&1 | FileCheck -check-prefix=CHECK-DEBUG-COMPILATION-DIR %s
 // RUN: %clang -### -fdebug-compilation-dir=. -x assembler %s 2>&1 | FileCheck -check-prefix=CHECK-DEBUG-COMPILATION-DIR %s
-// CHECK-DEBUG-COMPILATION-DIR: "-fdebug-compilation-dir" "."
+// RUN: %clang -### -S -ffile-compilation-dir=. %s 2>&1 | FileCheck -check-prefix=CHECK-DEBUG-COMPILATION-DIR %s
+// RUN: %clang -### -ffile-compilation-dir=. -x assembler %s 2>&1 | FileCheck -check-prefixes=CHECK-DEBUG-COMPILATION-DIR %s
+// CHECK-DEBUG-COMPILATION-DIR: "-fdebug-compilation-dir=."
+// CHECK-DEBUG-COMPILATION-DIR-NOT: "-ffile-compilation-dir=."
+
+// RUN: %clang -### -S -fprofile-instr-generate -fcoverage-compilation-dir=. %s 2>&1 | FileCheck -check-prefix=CHECK-COVERAGE-COMPILATION-DIR %s
+// RUN: %clang -### -S -fprofile-instr-generate -ffile-compilation-dir=. %s 2>&1 | FileCheck -check-prefix=CHECK-COVERAGE-COMPILATION-DIR %s
+// CHECK-COVERAGE-COMPILATION-DIR: "-fcoverage-compilation-dir=."
+// CHECK-COVERAGE-COMPILATION-DIR-NOT: "-ffile-compilation-dir=."
 
 // RUN: %clang -### -S -fdiscard-value-names %s 2>&1 | FileCheck -check-prefix=CHECK-DISCARD-NAMES %s
 // RUN: %clang -### -S -fno-discard-value-names %s 2>&1 | FileCheck -check-prefix=CHECK-NO-DISCARD-NAMES %s
@@ -568,3 +590,8 @@
 
 // RUN: %clang -### -S -fno-temp-file %s 2>&1 | FileCheck -check-prefix=CHECK-NO-TEMP-FILE %s
 // CHECK-NO-TEMP-FILE: "-fno-temp-file"
+
+// RUN: %clang -### -xobjective-c -fobjc-disable-direct-methods-for-testing %s 2>&1 | FileCheck -check-prefix=CHECK_DISABLE_DIRECT %s
+// RUN: %clang -### -xobjective-c %s 2>&1 | FileCheck -check-prefix=CHECK_NO_DISABLE_DIRECT %s
+// CHECK_DISABLE_DIRECT: -fobjc-disable-direct-methods-for-testing
+// CHECK_NO_DISABLE_DIRECT-NOT: -fobjc-disable-direct-methods-for-testing

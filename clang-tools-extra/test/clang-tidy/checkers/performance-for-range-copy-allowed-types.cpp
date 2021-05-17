@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s performance-for-range-copy %t -- \
-// RUN:     -config="{CheckOptions: [{key: performance-for-range-copy.AllowedTypes, value: '[Pp]ointer$;[Pp]tr$;[Rr]ef(erence)?$'}]}" \
+// RUN:     -config="{CheckOptions: [{key: performance-for-range-copy.AllowedTypes, value: '[Pp]ointer$;[Pp]tr$;[Rr]ef(erence)?$;qualified::Type;::fully::QualifiedType'}]}" \
 // RUN:     -- -fno-delayed-template-parsing
 
 template <typename T>
@@ -63,6 +63,18 @@ template <typename T> struct SomeComplexTemplate {
 
 typedef SomeComplexTemplate<int> NotTooComplexRef;
 
+namespace qualified {
+struct Type {
+  ~Type();
+};
+} // namespace qualified
+
+namespace fully {
+struct QualifiedType {
+  ~QualifiedType();
+};
+} // namespace fully
+
 void negativeSmartPointer() {
   for (auto P : View<Iterator<SmartPointer>>()) {
     auto P2 = P;
@@ -122,5 +134,25 @@ void positiveOtherType() {
 void negativeNotTooComplexRef() {
   for (NotTooComplexRef R : View<Iterator<NotTooComplexRef>>()) {
     auto R2 = R;
+  }
+}
+
+void negativeQualified() {
+  for (auto Q : View<Iterator<qualified::Type>>()) {
+    auto Q2 = Q;
+  }
+  using qualified::Type;
+  for (auto Q : View<Iterator<Type>>()) {
+    auto Q2 = Q;
+  }
+}
+
+void negativeFullyQualified() {
+  for (auto Q : View<Iterator<fully::QualifiedType>>()) {
+    auto Q2 = Q;
+  }
+  using fully::QualifiedType;
+  for (auto Q : View<Iterator<QualifiedType>>()) {
+    auto Q2 = Q;
   }
 }

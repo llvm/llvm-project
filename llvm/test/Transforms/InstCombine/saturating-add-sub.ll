@@ -1096,6 +1096,61 @@ define i8 @test_scalar_usub_add_const(i8 %a) {
   ret i8 %res
 }
 
+define i8 @test_scalar_usub_sub(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_scalar_usub_sub(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    ret i8 [[TMP1]]
+;
+  %sat = call i8 @llvm.usub.sat.i8(i8 %a, i8 %b)
+  %res = sub i8 %a, %sat
+  ret i8 %res
+}
+
+define i8 @test_scalar_usub_sub_extra_use(i8 %a, i8 %b, i8* %p) {
+; CHECK-LABEL: @test_scalar_usub_sub_extra_use(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    store i8 [[SAT]], i8* [[P:%.*]], align 1
+; CHECK-NEXT:    [[RES:%.*]] = sub i8 [[A]], [[SAT]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sat = call i8 @llvm.usub.sat.i8(i8 %a, i8 %b)
+  store i8 %sat, i8* %p
+  %res = sub i8 %a, %sat
+  ret i8 %res
+}
+
+define <2 x i8> @test_vector_usub_sub(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @test_vector_usub_sub(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.umin.v2i8(<2 x i8> [[A:%.*]], <2 x i8> [[B:%.*]])
+; CHECK-NEXT:    ret <2 x i8> [[TMP1]]
+;
+  %sat = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %a, <2 x i8> %b)
+  %res = sub <2 x i8> %a, %sat
+  ret <2 x i8> %res
+}
+
+define i8 @test_scalar_usub_sub_wrong(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_scalar_usub_sub_wrong(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = sub i8 [[B]], [[SAT]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sat = call i8 @llvm.usub.sat.i8(i8 %a, i8 %b)
+  %res = sub i8 %b, %sat
+  ret i8 %res
+}
+
+define i8 @test_scalar_usub_sub_wrong2(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_scalar_usub_sub_wrong2(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = sub i8 [[SAT]], [[B]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sat = call i8 @llvm.usub.sat.i8(i8 %a, i8 %b)
+  %res = sub i8 %sat, %b
+  ret i8 %res
+}
+
 define i8 @test_scalar_uadd_sub(i8 %a, i8 %b) {
 ; CHECK-LABEL: @test_scalar_uadd_sub(
 ; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 [[B:%.*]])

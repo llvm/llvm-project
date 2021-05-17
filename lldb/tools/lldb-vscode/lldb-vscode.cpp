@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "VSCode.h"
+
 #include <assert.h>
 #include <limits.h>
 #include <stdarg.h>
@@ -42,17 +44,21 @@
 #include <vector>
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
-#include "VSCode.h"
+#include "OutputRedirector.h"
 
 #if defined(_WIN32)
 #ifndef PATH_MAX
@@ -348,6 +354,35 @@ void SendStdOutStdErr(lldb::SBProcess &process) {
     g_vsc.SendOutput(OutputType::Stderr, llvm::StringRef(buffer, count));
 }
 
+void ProgressEventThreadFunction() {
+  lldb::SBListener listener("lldb-vscode.progress.listener");
+  g_vsc.debugger.GetBroadcaster().AddListener(
+      listener, lldb::SBDebugger::eBroadcastBitProgress);
+  g_vsc.broadcaster.AddListener(listener, eBroadcastBitStopProgressThread);
+  lldb::SBEvent event;
+  bool done = false;
+  while (!done) {
+    if (listener.WaitForEvent(1, event)) {
+      const auto event_mask = event.GetType();
+      if (event.BroadcasterMatchesRef(g_vsc.broadcaster)) {
+        if (event_mask & eBroadcastBitStopProgressThread) {
+          done = true;
+        }
+      } else {
+        uint64_t progress_id = 0;
+        uint64_t completed = 0;
+        uint64_t total = 0;
+        bool is_debugger_specific = false;
+        const char *message = lldb::SBDebugger::GetProgressFromEvent(
+            event, progress_id, completed, total, is_debugger_specific);
+        if (message)
+          g_vsc.SendProgressEvent(
+              ProgressEvent(progress_id, message, completed, total));
+      }
+    }
+  }
+}
+
 // All events from the debugger, target, process, thread and frames are
 // received in this function that runs in its own thread. We are using a
 // "FILE *" to output packets back to VS Code and they have mutexes in them
@@ -384,12 +419,7 @@ void EventThreadFunction() {
             break;
           case lldb::eStateSuspended:
             break;
-          case lldb::eStateStopped: {
-            if (g_vsc.waiting_for_run_in_terminal) {
-              g_vsc.waiting_for_run_in_terminal = false;
-              g_vsc.request_in_terminal_cv.notify_one();
-            }
-          }
+          case lldb::eStateStopped:
             // Only report a stopped event if the process was not restarted.
             if (!lldb::SBProcess::GetRestartedFromEvent(event)) {
               SendStdOutStdErr(process);
@@ -438,30 +468,6 @@ void EventThreadFunction() {
             body.try_emplace("reason", "changed");
             bp_event.try_emplace("body", std::move(body));
             g_vsc.SendJSON(llvm::json::Value(std::move(bp_event)));
-          }
-        }
-      } else if (lldb::SBTarget::EventIsTargetEvent(event)) {
-        if (event_mask & lldb::SBTarget::eBroadcastBitModulesLoaded ||
-            event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded ||
-            event_mask & lldb::SBTarget::eBroadcastBitSymbolsLoaded) {
-          int num_modules = lldb::SBTarget::GetNumModulesFromEvent(event);
-          for (int i = 0; i < num_modules; i++) {
-            auto module = lldb::SBTarget::GetModuleAtIndexFromEvent(i, event);
-            auto module_event = CreateEventObject("module");
-            llvm::json::Value module_value = CreateModule(module);
-            llvm::json::Object body;
-            if (event_mask & lldb::SBTarget::eBroadcastBitModulesLoaded) {
-              body.try_emplace("reason", "new");
-            } else if (event_mask &
-                       lldb::SBTarget::eBroadcastBitModulesUnloaded) {
-              body.try_emplace("reason", "removed");
-            } else if (event_mask &
-                       lldb::SBTarget::eBroadcastBitSymbolsLoaded) {
-              body.try_emplace("reason", "changed");
-            }
-            body.try_emplace("module", module_value);
-            module_event.try_emplace("body", std::move(body));
-            g_vsc.SendJSON(llvm::json::Value(std::move(module_event)));
           }
         }
       } else if (event.BroadcasterMatchesRef(g_vsc.broadcaster)) {
@@ -566,6 +572,8 @@ void request_attach(const llvm::json::Object &request) {
   llvm::StringRef core_file = GetString(arguments, "coreFile");
   g_vsc.stop_at_entry =
       core_file.empty() ? GetBoolean(arguments, "stopOnEntry", false) : true;
+  std::vector<std::string> postRunCommands =
+      GetStrings(arguments, "postRunCommands");
   const llvm::StringRef debuggerRoot = GetString(arguments, "debuggerRoot");
 
   // This is a hack for loading DWARF in .o files on Mac where the .o files
@@ -634,12 +642,14 @@ void request_attach(const llvm::json::Object &request) {
   if (error.Fail()) {
     response["success"] = llvm::json::Value(false);
     EmplaceSafeString(response, "message", std::string(error.GetCString()));
+  } else {
+    g_vsc.RunLLDBCommands("Running postRunCommands:", postRunCommands);
   }
+
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
   if (error.Success()) {
     SendProcessEvent(Attach);
     g_vsc.SendJSON(CreateEventObject("initialized"));
-    // SendThreadStoppedEvent();
   }
 }
 
@@ -833,6 +843,10 @@ void request_disconnect(const llvm::json::Object &request) {
   if (g_vsc.event_thread.joinable()) {
     g_vsc.broadcaster.BroadcastEventByType(eBroadcastBitStopEventThread);
     g_vsc.event_thread.join();
+  }
+  if (g_vsc.progress_event_thread.joinable()) {
+    g_vsc.broadcaster.BroadcastEventByType(eBroadcastBitStopProgressThread);
+    g_vsc.progress_event_thread.join();
   }
 }
 
@@ -1153,6 +1167,7 @@ void request_evaluate(const llvm::json::Object &request) {
   auto arguments = request.getObject("arguments");
   lldb::SBFrame frame = g_vsc.GetLLDBFrame(*arguments);
   const auto expression = GetString(arguments, "expression");
+  llvm::StringRef context = GetString(arguments, "context");
 
   if (!expression.empty() && expression[0] == '`') {
     auto result =
@@ -1161,13 +1176,17 @@ void request_evaluate(const llvm::json::Object &request) {
     body.try_emplace("variablesReference", (int64_t)0);
   } else {
     // Always try to get the answer from the local variables if possible. If
-    // this fails, then actually evaluate an expression using the expression
-    // parser. "frame variable" is more reliable than the expression parser in
+    // this fails, then if the context is not "hover", actually evaluate an
+    // expression using the expression parser.
+    //
+    // "frame variable" is more reliable than the expression parser in
     // many cases and it is faster.
     lldb::SBValue value = frame.GetValueForVariablePath(
         expression.data(), lldb::eDynamicDontRunTarget);
-    if (value.GetError().Fail())
+
+    if (value.GetError().Fail() && context != "hover")
       value = frame.EvaluateExpression(expression.data());
+
     if (value.GetError().Fail()) {
       response["success"] = llvm::json::Value(false);
       // This error object must live until we're done with the pointer returned
@@ -1196,26 +1215,26 @@ void request_evaluate(const llvm::json::Object &request) {
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
 }
 
-// "getCompileUnitsRequest": {
+// "compileUnitsRequest": {
 //   "allOf": [ { "$ref": "#/definitions/Request" }, {
 //     "type": "object",
 //     "description": "Compile Unit request; value of command field is
-//                     'getCompileUnits'.",
+//                     'compileUnits'.",
 //     "properties": {
 //       "command": {
 //         "type": "string",
-//         "enum": [ "getCompileUnits" ]
+//         "enum": [ "compileUnits" ]
 //       },
 //       "arguments": {
-//         "$ref": "#/definitions/getCompileUnitRequestArguments"
+//         "$ref": "#/definitions/compileUnitRequestArguments"
 //       }
 //     },
 //     "required": [ "command", "arguments" ]
 //   }]
 // },
-// "getCompileUnitsRequestArguments": {
+// "compileUnitsRequestArguments": {
 //   "type": "object",
-//   "description": "Arguments for 'getCompileUnits' request.",
+//   "description": "Arguments for 'compileUnits' request.",
 //   "properties": {
 //     "moduleId": {
 //       "type": "string",
@@ -1224,23 +1243,21 @@ void request_evaluate(const llvm::json::Object &request) {
 //   },
 //   "required": [ "moduleId" ]
 // },
-// "getCompileUnitsResponse": {
+// "compileUnitsResponse": {
 //   "allOf": [ { "$ref": "#/definitions/Response" }, {
 //     "type": "object",
-//     "description": "Response to 'getCompileUnits' request.",
+//     "description": "Response to 'compileUnits' request.",
 //     "properties": {
 //       "body": {
-//         "description": "Response to 'getCompileUnits' request. Array of
+//         "description": "Response to 'compileUnits' request. Array of
 //                         paths of compile units."
 //       }
 //     }
 //   }]
 // }
-
-void request_getCompileUnits(const llvm::json::Object &request) {
+void request_compileUnits(const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
-  lldb::SBProcess process = g_vsc.target.GetProcess();
   llvm::json::Object body;
   llvm::json::Array units;
   auto arguments = request.getObject("arguments");
@@ -1258,6 +1275,48 @@ void request_getCompileUnits(const llvm::json::Object &request) {
       break;
     }
   }
+  response.try_emplace("body", std::move(body));
+  g_vsc.SendJSON(llvm::json::Value(std::move(response)));
+}
+
+// "modulesRequest": {
+//   "allOf": [ { "$ref": "#/definitions/Request" }, {
+//     "type": "object",
+//     "description": "Modules request; value of command field is
+//                     'modules'.",
+//     "properties": {
+//       "command": {
+//         "type": "string",
+//         "enum": [ "modules" ]
+//       },
+//     },
+//     "required": [ "command" ]
+//   }]
+// },
+// "modulesResponse": {
+//   "allOf": [ { "$ref": "#/definitions/Response" }, {
+//     "type": "object",
+//     "description": "Response to 'modules' request.",
+//     "properties": {
+//       "body": {
+//         "description": "Response to 'modules' request. Array of
+//                         module objects."
+//       }
+//     }
+//   }]
+// }
+void request_modules(const llvm::json::Object &request) {
+  llvm::json::Object response;
+  FillResponse(request, response);
+
+  llvm::json::Array modules;
+  for (size_t i = 0; i < g_vsc.target.GetNumModules(); i++) {
+    lldb::SBModule module = g_vsc.target.GetModuleAtIndex(i);
+    modules.emplace_back(CreateModule(module));
+  }
+
+  llvm::json::Object body;
+  body.try_emplace("modules", std::move(modules));
   response.try_emplace("body", std::move(body));
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
 }
@@ -1340,6 +1399,8 @@ void request_getCompileUnits(const llvm::json::Object &request) {
 // }
 void request_initialize(const llvm::json::Object &request) {
   g_vsc.debugger = lldb::SBDebugger::Create(true /*source_init_files*/);
+  g_vsc.progress_event_thread = std::thread(ProgressEventThreadFunction);
+
   // Create an empty target right away since we might get breakpoint requests
   // before we are given an executable to launch in a "launch" request, or a
   // executable when attaching to a process by process ID in a "attach"
@@ -1436,52 +1497,75 @@ void request_initialize(const llvm::json::Object &request) {
   body.try_emplace("supportsDelayedStackTraceLoading", true);
   // The debug adapter supports the 'loadedSources' request.
   body.try_emplace("supportsLoadedSourcesRequest", false);
+  // The debug adapter supports sending progress reporting events.
+  body.try_emplace("supportsProgressReporting", true);
 
   response.try_emplace("body", std::move(body));
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
 }
 
-void request_runInTerminal(const llvm::json::Object &launch_request,
-                           llvm::json::Object &launch_response) {
-  // We have already created a target that has a valid "program" path to the
-  // executable. We will attach to the next process whose name matches that
-  // of the target's.
+llvm::Error request_runInTerminal(const llvm::json::Object &launch_request) {
   g_vsc.is_attach = true;
   lldb::SBAttachInfo attach_info;
-  lldb::SBError error;
-  attach_info.SetWaitForLaunch(true, /*async*/ true);
-  g_vsc.target.Attach(attach_info, error);
 
-  llvm::json::Object reverse_request =
-      CreateRunInTerminalReverseRequest(launch_request);
+  llvm::Expected<std::shared_ptr<FifoFile>> comm_file_or_err =
+      CreateRunInTerminalCommFile();
+  if (!comm_file_or_err)
+    return comm_file_or_err.takeError();
+  FifoFile &comm_file = *comm_file_or_err.get();
+
+  RunInTerminalDebugAdapterCommChannel comm_channel(comm_file.m_path);
+
+  llvm::json::Object reverse_request = CreateRunInTerminalReverseRequest(
+      launch_request, g_vsc.debug_adaptor_path, comm_file.m_path);
   llvm::json::Object reverse_response;
   lldb_vscode::PacketStatus status =
       g_vsc.SendReverseRequest(reverse_request, reverse_response);
   if (status != lldb_vscode::PacketStatus::Success)
-    error.SetErrorString("Process cannot be launched by IDE.");
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Process cannot be launched by the IDE. %s",
+                                   comm_channel.GetLauncherError().c_str());
 
-  if (error.Success()) {
-    // Wait for the attach stop event to happen or for a timeout.
-    g_vsc.waiting_for_run_in_terminal = true;
-    static std::mutex mutex;
-    std::unique_lock<std::mutex> locker(mutex);
-    g_vsc.request_in_terminal_cv.wait_for(locker, std::chrono::seconds(10));
+  if (llvm::Expected<lldb::pid_t> pid = comm_channel.GetLauncherPid())
+    attach_info.SetProcessID(*pid);
+  else
+    return pid.takeError();
 
-    auto attached_pid = g_vsc.target.GetProcess().GetProcessID();
-    if (attached_pid == LLDB_INVALID_PROCESS_ID)
-      error.SetErrorString("Failed to attach to a process");
-    else
-      SendProcessEvent(Attach);
-  }
+  g_vsc.debugger.SetAsync(false);
+  lldb::SBError error;
+  g_vsc.target.Attach(attach_info, error);
 
-  if (error.Fail()) {
-    launch_response["success"] = llvm::json::Value(false);
-    EmplaceSafeString(launch_response, "message",
-                      std::string(error.GetCString()));
-  } else {
-    launch_response["success"] = llvm::json::Value(true);
-    g_vsc.SendJSON(CreateEventObject("initialized"));
-  }
+  if (error.Fail())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Failed to attach to the target process. %s",
+                                   comm_channel.GetLauncherError().c_str());
+  // This will notify the runInTerminal launcher that we attached.
+  // We have to make this async, as the function won't return until the launcher
+  // resumes and reads the data.
+  std::future<lldb::SBError> did_attach_message_success =
+      comm_channel.NotifyDidAttach();
+
+  // We just attached to the runInTerminal launcher, which was waiting to be
+  // attached. We now resume it, so it can receive the didAttach notification
+  // and then perform the exec. Upon continuing, the debugger will stop the
+  // process right in the middle of the exec. To the user, what we are doing is
+  // transparent, as they will only be able to see the process since the exec,
+  // completely unaware of the preparatory work.
+  g_vsc.target.GetProcess().Continue();
+
+  // Now that the actual target is just starting (i.e. exec was just invoked),
+  // we return the debugger to its async state.
+  g_vsc.debugger.SetAsync(true);
+
+  // If sending the notification failed, the launcher should be dead by now and
+  // the async didAttach notification should have an error message, so we
+  // return it. Otherwise, everything was a success.
+  did_attach_message_success.wait();
+  error = did_attach_message_success.get();
+  if (error.Success())
+    return llvm::Error::success();
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 error.GetCString());
 }
 
 // "LaunchRequest": {
@@ -1530,6 +1614,8 @@ void request_launch(const llvm::json::Object &request) {
   g_vsc.exit_commands = GetStrings(arguments, "exitCommands");
   g_vsc.terminate_commands = GetStrings(arguments, "terminateCommands");
   auto launchCommands = GetStrings(arguments, "launchCommands");
+  std::vector<std::string> postRunCommands =
+      GetStrings(arguments, "postRunCommands");
   g_vsc.stop_at_entry = GetBoolean(arguments, "stopOnEntry", false);
   const llvm::StringRef debuggerRoot = GetString(arguments, "debuggerRoot");
 
@@ -1552,12 +1638,6 @@ void request_launch(const llvm::json::Object &request) {
   if (status.Fail()) {
     response["success"] = llvm::json::Value(false);
     EmplaceSafeString(response, "message", status.GetCString());
-    g_vsc.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
-
-  if (GetBoolean(arguments, "runInTerminal", false)) {
-    request_runInTerminal(request, response);
     g_vsc.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
@@ -1597,7 +1677,11 @@ void request_launch(const llvm::json::Object &request) {
 
   // Run any pre run LLDB commands the user specified in the launch.json
   g_vsc.RunPreRunCommands();
-  if (launchCommands.empty()) {
+
+  if (GetBoolean(arguments, "runInTerminal", false)) {
+    if (llvm::Error err = request_runInTerminal(request))
+      error.SetErrorString(llvm::toString(std::move(err)).c_str());
+  } else if (launchCommands.empty()) {
     // Disable async events so the launch will be successful when we return from
     // the launch call and the launch will happen synchronously
     g_vsc.debugger.SetAsync(false);
@@ -1613,13 +1697,17 @@ void request_launch(const llvm::json::Object &request) {
   if (error.Fail()) {
     response["success"] = llvm::json::Value(false);
     EmplaceSafeString(response, "message", std::string(error.GetCString()));
+  } else {
+    g_vsc.RunLLDBCommands("Running postRunCommands:", postRunCommands);
   }
+
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
 
-  SendProcessEvent(Launch);
+  if (g_vsc.is_attach)
+    SendProcessEvent(Attach); // this happens when doing runInTerminal
+  else
+    SendProcessEvent(Launch);
   g_vsc.SendJSON(llvm::json::Value(CreateEventObject("initialized")));
-  // Reenable async events and start the event thread to catch async events.
-  // g_vsc.debugger.SetAsync(true);
 }
 
 // "NextRequest": {
@@ -2629,7 +2717,9 @@ void request_setVariable(const llvm::json::Object &request) {
   // This is a reference to the containing variable/scope
   const auto variablesReference =
       GetUnsigned(arguments, "variablesReference", 0);
-  const auto name = GetString(arguments, "name");
+  llvm::StringRef name = GetString(arguments, "name");
+  bool is_duplicated_variable_name = name.find(" @") != llvm::StringRef::npos;
+
   const auto value = GetString(arguments, "value");
   // Set success to false just in case we don't find the variable by name
   response.try_emplace("success", false);
@@ -2671,14 +2761,10 @@ void request_setVariable(const llvm::json::Object &request) {
       break;
     }
 
-    // Find the variable by name in the correct scope and hope we don't have
-    // multiple variables with the same name. We search backwards because
-    // the list of variables has the top most variables first and variables
-    // in deeper scopes are last. This means we will catch the deepest
-    // variable whose name matches which is probably what the user wants.
     for (int64_t i = end_idx - 1; i >= start_idx; --i) {
-      auto curr_variable = g_vsc.variables.GetValueAtIndex(i);
-      llvm::StringRef variable_name(curr_variable.GetName());
+      lldb::SBValue curr_variable = g_vsc.variables.GetValueAtIndex(i);
+      std::string variable_name = CreateUniqueVariableNameForDisplay(
+          curr_variable, is_duplicated_variable_name);
       if (variable_name == name) {
         variable = curr_variable;
         if (curr_variable.MightHaveChildren())
@@ -2687,6 +2773,9 @@ void request_setVariable(const llvm::json::Object &request) {
       }
     }
   } else {
+    // This is not under the globals or locals scope, so there are no duplicated
+    // names.
+
     // We have a named item within an actual variable so we need to find it
     // withing the container variable by name.
     const int64_t var_idx = VARREF_TO_VARIDX(variablesReference);
@@ -2723,6 +2812,8 @@ void request_setVariable(const llvm::json::Object &request) {
       EmplaceSafeString(body, "message", std::string(error.GetCString()));
     }
     response["success"] = llvm::json::Value(success);
+  } else {
+    response["success"] = llvm::json::Value(false);
   }
 
   response.try_emplace("body", std::move(body));
@@ -2838,12 +2929,25 @@ void request_variables(const llvm::json::Object &request) {
       break;
     }
     const int64_t end_idx = start_idx + ((count == 0) ? num_children : count);
+
+    // We first find out which variable names are duplicated
+    std::map<std::string, int> variable_name_counts;
     for (auto i = start_idx; i < end_idx; ++i) {
       lldb::SBValue variable = g_vsc.variables.GetValueAtIndex(i);
       if (!variable.IsValid())
         break;
-      variables.emplace_back(
-          CreateVariable(variable, VARIDX_TO_VARREF(i), i, hex));
+      variable_name_counts[GetNonNullVariableName(variable)]++;
+    }
+
+    // Now we construct the result with unique display variable names
+    for (auto i = start_idx; i < end_idx; ++i) {
+      lldb::SBValue variable = g_vsc.variables.GetValueAtIndex(i);
+
+      if (!variable.IsValid())
+        break;
+      variables.emplace_back(CreateVariable(variable, VARIDX_TO_VARREF(i), i,
+                                            hex,
+          variable_name_counts[GetNonNullVariableName(variable)] > 1));
     }
   } else {
     // We are expanding a variable that has children, so we will return its
@@ -2901,7 +3005,6 @@ void RegisterRequestCallbacks() {
   g_vsc.RegisterRequestCallback("disconnect", request_disconnect);
   g_vsc.RegisterRequestCallback("evaluate", request_evaluate);
   g_vsc.RegisterRequestCallback("exceptionInfo", request_exceptionInfo);
-  g_vsc.RegisterRequestCallback("getCompileUnits", request_getCompileUnits);
   g_vsc.RegisterRequestCallback("initialize", request_initialize);
   g_vsc.RegisterRequestCallback("launch", request_launch);
   g_vsc.RegisterRequestCallback("next", request_next);
@@ -2919,6 +3022,9 @@ void RegisterRequestCallbacks() {
   g_vsc.RegisterRequestCallback("stepOut", request_stepOut);
   g_vsc.RegisterRequestCallback("threads", request_threads);
   g_vsc.RegisterRequestCallback("variables", request_variables);
+  // Custom requests
+  g_vsc.RegisterRequestCallback("compileUnits", request_compileUnits);
+  g_vsc.RegisterRequestCallback("modules", request_modules);
   // Testing requests
   g_vsc.RegisterRequestCallback("_testGetTargetBreakpoints",
                                 request__testGetTargetBreakpoints);
@@ -2948,14 +3054,103 @@ EXAMPLES:
   llvm::outs() << examples;
 }
 
+// If --launch-target is provided, this instance of lldb-vscode becomes a
+// runInTerminal launcher. It will ultimately launch the program specified in
+// the --launch-target argument, which is the original program the user wanted
+// to debug. This is done in such a way that the actual debug adaptor can
+// place breakpoints at the beginning of the program.
+//
+// The launcher will communicate with the debug adaptor using a fifo file in the
+// directory specified in the --comm-file argument.
+//
+// Regarding the actual flow, this launcher will first notify the debug adaptor
+// of its pid. Then, the launcher will be in a pending state waiting to be
+// attached by the adaptor.
+//
+// Once attached and resumed, the launcher will exec and become the program
+// specified by --launch-target, which is the original target the
+// user wanted to run.
+//
+// In case of errors launching the target, a suitable error message will be
+// emitted to the debug adaptor.
+void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
+                               llvm::StringRef comm_file, char *argv[]) {
+#if defined(_WIN32)
+  llvm::errs() << "runInTerminal is only supported on POSIX systems\n";
+  exit(EXIT_FAILURE);
+#else
+  RunInTerminalLauncherCommChannel comm_channel(comm_file);
+  if (llvm::Error err = comm_channel.NotifyPid()) {
+    llvm::errs() << llvm::toString(std::move(err)) << "\n";
+    exit(EXIT_FAILURE);
+  }
+
+  // We will wait to be attached with a timeout. We don't wait indefinitely
+  // using a signal to prevent being paused forever.
+
+  // This env var should be used only for tests.
+  const char *timeout_env_var = getenv("LLDB_VSCODE_RIT_TIMEOUT_IN_MS");
+  int timeout_in_ms =
+      timeout_env_var != nullptr ? atoi(timeout_env_var) : 20000;
+  if (llvm::Error err = comm_channel.WaitUntilDebugAdaptorAttaches(
+          std::chrono::milliseconds(timeout_in_ms))) {
+    llvm::errs() << llvm::toString(std::move(err)) << "\n";
+    exit(EXIT_FAILURE);
+  }
+
+  const char *target = target_arg.getValue();
+  execvp(target, argv);
+
+  std::string error = std::strerror(errno);
+  comm_channel.NotifyError(error);
+  llvm::errs() << error << "\n";
+  exit(EXIT_FAILURE);
+#endif
+}
+
+/// used only by TestVSCode_redirection_to_console.py
+void redirection_test() {
+  printf("stdout message\n");
+  fprintf(stderr, "stderr message\n");
+  fflush(stdout);
+  fflush(stderr);
+}
+
+/// Redirect stdout and stderr fo the IDE's console output.
+///
+/// Errors in this operation will be printed to the log file and the IDE's
+/// console output as well.
+///
+/// \return
+///     A fd pointing to the original stdout.
+int SetupStdoutStderrRedirection() {
+  int new_stdout_fd = dup(fileno(stdout));
+  auto stdout_err_redirector_callback = [&](llvm::StringRef data) {
+    g_vsc.SendOutput(OutputType::Console, data);
+  };
+
+  for (int fd : {fileno(stdout), fileno(stderr)}) {
+    if (llvm::Error err = RedirectFd(fd, stdout_err_redirector_callback)) {
+      std::string error_message = llvm::toString(std::move(err));
+      if (g_vsc.log)
+        *g_vsc.log << error_message << std::endl;
+      stdout_err_redirector_callback(error_message);
+    }
+  }
+
+  /// used only by TestVSCode_redirection_to_console.py
+  if (getenv("LLDB_VSCODE_TEST_STDOUT_STDERR_REDIRECTION") != nullptr)
+    redirection_test();
+  return new_stdout_fd;
+}
+
 int main(int argc, char *argv[]) {
+  llvm::InitLLVM IL(argc, argv, /*InstallPipeSignalExitHandler=*/false);
+  llvm::PrettyStackTraceProgram X(argc, argv);
 
-  // Initialize LLDB first before we do anything.
-  lldb::SBDebugger::Initialize();
-
-  RegisterRequestCallbacks();
-
-  int portno = -1;
+  llvm::SmallString<256> program_path(argv[0]);
+  llvm::sys::fs::make_absolute(program_path);
+  g_vsc.debug_adaptor_path = program_path.str().str();
 
   LLDBVSCodeOptTable T;
   unsigned MAI, MAC;
@@ -2964,8 +3159,39 @@ int main(int argc, char *argv[]) {
 
   if (input_args.hasArg(OPT_help)) {
     printHelp(T, llvm::sys::path::filename(argv[0]));
-    return 0;
+    return EXIT_SUCCESS;
   }
+
+  if (llvm::opt::Arg *target_arg = input_args.getLastArg(OPT_launch_target)) {
+    if (llvm::opt::Arg *comm_file = input_args.getLastArg(OPT_comm_file)) {
+      int target_args_pos = argc;
+      for (int i = 0; i < argc; i++)
+        if (strcmp(argv[i], "--launch-target") == 0) {
+          target_args_pos = i + 1;
+          break;
+        }
+      LaunchRunInTerminalTarget(*target_arg, comm_file->getValue(),
+                                argv + target_args_pos);
+    } else {
+      llvm::errs() << "\"--launch-target\" requires \"--comm-file\" to be "
+                      "specified\n";
+      return EXIT_FAILURE;
+    }
+  }
+
+  // stdout/stderr redirection to the IDE's console
+  int new_stdout_fd = SetupStdoutStderrRedirection();
+
+  // Initialize LLDB first before we do anything.
+  lldb::SBDebugger::Initialize();
+
+  // Terminate the debugger before the C++ destructor chain kicks in.
+  auto terminate_debugger =
+      llvm::make_scope_exit([] { lldb::SBDebugger::Terminate(); });
+
+  RegisterRequestCallbacks();
+
+  int portno = -1;
 
   if (auto *arg = input_args.getLastArg(OPT_port)) {
     auto optarg = arg->getValue();
@@ -2973,7 +3199,7 @@ int main(int argc, char *argv[]) {
     portno = strtol(optarg, &remainder, 0);
     if (remainder == optarg || *remainder != '\0') {
       fprintf(stderr, "'%s' is not a valid port number.\n", optarg);
-      exit(1);
+      return EXIT_FAILURE;
     }
   }
 
@@ -2990,13 +3216,13 @@ int main(int argc, char *argv[]) {
       g_vsc.input.descriptor = StreamDescriptor::from_socket(socket_fd, true);
       g_vsc.output.descriptor = StreamDescriptor::from_socket(socket_fd, false);
     } else {
-      exit(1);
+      return EXIT_FAILURE;
     }
   } else {
     g_vsc.input.descriptor = StreamDescriptor::from_file(fileno(stdin), false);
-    g_vsc.output.descriptor =
-        StreamDescriptor::from_file(fileno(stdout), false);
+    g_vsc.output.descriptor = StreamDescriptor::from_file(new_stdout_fd, false);
   }
+
   uint32_t packet_idx = 0;
   while (!g_vsc.sent_terminated_event) {
     llvm::json::Object object;
@@ -3011,8 +3237,5 @@ int main(int argc, char *argv[]) {
     ++packet_idx;
   }
 
-  // We must terminate the debugger in a thread before the C++ destructor
-  // chain messes everything up.
-  lldb::SBDebugger::Terminate();
-  return 0;
+  return EXIT_SUCCESS;
 }

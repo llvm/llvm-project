@@ -174,7 +174,7 @@ otherexit:                                           ; preds = %exiting
 
 ; exit block (%exitB) has an exiting block and another exit block as predecessors.
 ; exiting block comes from inner loop.
-define void @test5() {
+define void @test5(i1 %c) {
 ; CHECK-LABEL: test5
 ; CHECK-LABEL: bb1:
 ; CHECK-NEXT:   br i1 false, label %outerH.prol.preheader, label %outerH.prol.loopexit
@@ -198,10 +198,10 @@ outerH:                                              ; preds = %outerLatch, %bb1
   br label %innerH
 
 innerH:                                              ; preds = %innerLatch, %outerH
-  br i1 undef, label %innerexiting, label %otherexitB
+  br i1 %c, label %innerexiting, label %otherexitB
 
 innerexiting:                                             ; preds = %innerH
-  br i1 undef, label %innerLatch, label %exitB
+  br i1 %c, label %innerLatch, label %exitB
 
 innerLatch:                                             ; preds = %innerexiting
   %tmp13 = fcmp olt double undef, 2.000000e+00
@@ -225,15 +225,16 @@ otherexitB:                                              ; preds = %innerH
 
 ; Blocks reachable from exits (not_zero44) have the IDom as the block within the loop (Header).
 ; Update the IDom to the preheader.
-define void @test6() {
+define void @test6(i1 %c) {
 ; CHECK-LABEL: test6
 ; CHECK-LABEL: header.prol.preheader:
 ; CHECK-NEXT:    br label %header.prol
 
 ; CHECK-LABEL: header.prol:
 ; CHECK-NEXT:    %indvars.iv.prol = phi i64 [ undef, %header.prol.preheader ], [ %indvars.iv.next.prol, %latch.prol ]
-; CHECK-NEXT:    %prol.iter = phi i64 [ 1, %header.prol.preheader ], [ %prol.iter.sub, %latch.prol ]
-; CHECK-NEXT:    br i1 false, label %latch.prol, label %otherexit.loopexit1
+; CHECK-NEXT:    %prol.iter = phi i64 [ %xtraiter, %header.prol.preheader ], [ %prol.iter.sub, %latch.prol ]
+
+; CHECK-NEXT:    br i1 %c, label %latch.prol, label %otherexit.loopexit1
 
 ; CHECK-LABEL: header.prol.loopexit.unr-lcssa:
 ; CHECK-NEXT:    %indvars.iv.unr.ph = phi i64 [ %indvars.iv.next.prol, %latch.prol ]
@@ -241,7 +242,8 @@ define void @test6() {
 
 ; CHECK-LABEL: header.prol.loopexit:
 ; CHECK-NEXT:    %indvars.iv.unr = phi i64 [ undef, %entry ], [ %indvars.iv.unr.ph, %header.prol.loopexit.unr-lcssa ]
-; CHECK-NEXT:    br i1 true, label %latchexit, label %entry.new
+; CHECK-NEXT:    %5 = icmp ult i64 %2, 3
+; CHECK-NEXT:    br i1 %5, label %latchexit, label %entry.new
 
 ; CHECK-LABEL: entry.new:
 ; CHECK-NEXT:    br label %header
@@ -250,7 +252,7 @@ entry:
 
 header:                                          ; preds = %latch, %entry
   %indvars.iv = phi i64 [ undef, %entry ], [ %indvars.iv.next, %latch ]
-  br i1 undef, label %latch, label %otherexit
+  br i1 %c, label %latch, label %otherexit
 
 latch:                                         ; preds = %header
   %indvars.iv.next = add nsw i64 %indvars.iv, 2

@@ -443,7 +443,7 @@ define i64 @fptoui_i64_fp80(x86_fp80 %a0) nounwind {
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    fldt 8(%ebp)
-; X86-NEXT:    flds {{\.LCPI.*}}
+; X86-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}
 ; X86-NEXT:    fucom %st(1)
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    xorl %edx, %edx
@@ -523,7 +523,7 @@ define i64 @fptoui_i64_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    fldt (%eax)
-; X86-NEXT:    flds {{\.LCPI.*}}
+; X86-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}
 ; X86-NEXT:    fucom %st(1)
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    xorl %edx, %edx
@@ -825,7 +825,7 @@ define x86_fp80 @uitofp_fp80_i64(i64 %a0) nounwind {
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    shrl $31, %ecx
 ; X86-NEXT:    fildll (%esp)
-; X86-NEXT:    fadds {{\.LCPI.*}}(,%ecx,4)
+; X86-NEXT:    fadds {{\.LCPI[0-9]+_[0-9]+}}(,%ecx,4)
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
@@ -837,7 +837,7 @@ define x86_fp80 @uitofp_fp80_i64(i64 %a0) nounwind {
 ; X64-NEXT:    testq %rdi, %rdi
 ; X64-NEXT:    sets %al
 ; X64-NEXT:    fildll -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fadds {{\.LCPI.*}}(,%rax,4)
+; X64-NEXT:    fadds {{\.LCPI[0-9]+_[0-9]+}}(,%rax,4)
 ; X64-NEXT:    retq
   %1 = uitofp i64 %a0 to x86_fp80
   ret x86_fp80 %1
@@ -857,7 +857,7 @@ define x86_fp80 @uitofp_fp80_i64_ld(i64 *%a0) nounwind {
 ; X86-NEXT:    movl %ecx, (%esp)
 ; X86-NEXT:    shrl $31, %eax
 ; X86-NEXT:    fildll (%esp)
-; X86-NEXT:    fadds {{\.LCPI.*}}(,%eax,4)
+; X86-NEXT:    fadds {{\.LCPI[0-9]+_[0-9]+}}(,%eax,4)
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
@@ -870,7 +870,7 @@ define x86_fp80 @uitofp_fp80_i64_ld(i64 *%a0) nounwind {
 ; X64-NEXT:    testq %rax, %rax
 ; X64-NEXT:    sets %cl
 ; X64-NEXT:    fildll -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fadds {{\.LCPI.*}}(,%rcx,4)
+; X64-NEXT:    fadds {{\.LCPI[0-9]+_[0-9]+}}(,%rcx,4)
 ; X64-NEXT:    retq
   %1 = load i64, i64 *%a0
   %2 = uitofp i64 %1 to x86_fp80
@@ -896,7 +896,7 @@ define x86_fp80 @floor_fp80(x86_fp80 %a0) nounwind {
 ; X64-NEXT:    subq $24, %rsp
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
-; X64-NEXT:    callq floorl
+; X64-NEXT:    callq floorl@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
   %1 = call x86_fp80 @llvm.floor.f80(x86_fp80 %a0)
@@ -919,7 +919,7 @@ define x86_fp80 @floor_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X64-NEXT:    subq $24, %rsp
 ; X64-NEXT:    fldt (%rdi)
 ; X64-NEXT:    fstpt (%rsp)
-; X64-NEXT:    callq floorl
+; X64-NEXT:    callq floorl@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
   %1 = load x86_fp80, x86_fp80 *%a0
@@ -948,7 +948,7 @@ define x86_fp80 @ceil_fp80(x86_fp80 %a0) nounwind {
 ; X64-NEXT:    subq $24, %rsp
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
-; X64-NEXT:    callq ceill
+; X64-NEXT:    callq ceill@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
   %1 = call x86_fp80 @llvm.ceil.f80(x86_fp80 %a0)
@@ -971,7 +971,7 @@ define x86_fp80 @ceil_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X64-NEXT:    subq $24, %rsp
 ; X64-NEXT:    fldt (%rdi)
 ; X64-NEXT:    fstpt (%rsp)
-; X64-NEXT:    callq ceill
+; X64-NEXT:    callq ceill@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
   %1 = load x86_fp80, x86_fp80 *%a0
@@ -1000,7 +1000,7 @@ define x86_fp80 @trunc_fp80(x86_fp80 %a0) nounwind {
 ; X64-NEXT:    subq $24, %rsp
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
-; X64-NEXT:    callq truncl
+; X64-NEXT:    callq truncl@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
   %1 = call x86_fp80 @llvm.trunc.f80(x86_fp80 %a0)
@@ -1023,7 +1023,7 @@ define x86_fp80 @trunc_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X64-NEXT:    subq $24, %rsp
 ; X64-NEXT:    fldt (%rdi)
 ; X64-NEXT:    fstpt (%rsp)
-; X64-NEXT:    callq truncl
+; X64-NEXT:    callq truncl@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
   %1 = load x86_fp80, x86_fp80 *%a0
@@ -1052,7 +1052,7 @@ define x86_fp80 @rint_fp80(x86_fp80 %a0) nounwind {
 ; X64-NEXT:    subq $24, %rsp
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
-; X64-NEXT:    callq rintl
+; X64-NEXT:    callq rintl@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
   %1 = call x86_fp80 @llvm.rint.f80(x86_fp80 %a0)
@@ -1075,7 +1075,7 @@ define x86_fp80 @rint_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X64-NEXT:    subq $24, %rsp
 ; X64-NEXT:    fldt (%rdi)
 ; X64-NEXT:    fstpt (%rsp)
-; X64-NEXT:    callq rintl
+; X64-NEXT:    callq rintl@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
   %1 = load x86_fp80, x86_fp80 *%a0
@@ -1104,7 +1104,7 @@ define x86_fp80 @roundeven_fp80(x86_fp80 %a0) nounwind {
 ; X64-NEXT:    subq $24, %rsp
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
-; X64-NEXT:    callq roundevenl
+; X64-NEXT:    callq roundevenl@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
   %1 = call x86_fp80 @llvm.roundeven.f80(x86_fp80 %a0)
@@ -1127,7 +1127,7 @@ define x86_fp80 @roundeven_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X64-NEXT:    subq $24, %rsp
 ; X64-NEXT:    fldt (%rdi)
 ; X64-NEXT:    fstpt (%rsp)
-; X64-NEXT:    callq roundevenl
+; X64-NEXT:    callq roundevenl@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
   %1 = load x86_fp80, x86_fp80 *%a0

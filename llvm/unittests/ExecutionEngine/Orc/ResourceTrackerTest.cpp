@@ -1,5 +1,4 @@
-//===------ ResourceTrackerTest.cpp - Unit tests ResourceTracker API
-//-------===//
+//===------ ResourceTrackerTest.cpp - Unit tests ResourceTracker API ------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +10,7 @@
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/OrcError.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
 #include "llvm/Testing/Support/Error.h"
 
 using namespace llvm;

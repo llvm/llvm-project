@@ -114,14 +114,6 @@ public:
   /// which the stack pointer must be aligned at all times, even between
   /// calls.
   ///
-  LLVM_ATTRIBUTE_DEPRECATED(unsigned getTransientStackAlignment() const,
-                            "Use getTransientStackAlign instead") {
-    return TransientStackAlignment.value();
-  }
-  /// getTransientStackAlignment - This method returns the number of bytes to
-  /// which the stack pointer must be aligned at all times, even between
-  /// calls.
-  ///
   Align getTransientStackAlign() const { return TransientStackAlignment; }
 
   /// isStackRealignable - This method returns whether the stack can be
@@ -157,6 +149,14 @@ public:
   /// returns false, spill slots will be assigned using generic implementation.
   /// assignCalleeSavedSpillSlots() may add, delete or rearrange elements of
   /// CSI.
+  virtual bool assignCalleeSavedSpillSlots(MachineFunction &MF,
+                                           const TargetRegisterInfo *TRI,
+                                           std::vector<CalleeSavedInfo> &CSI,
+                                           unsigned &MinCSFrameIndex,
+                                           unsigned &MaxCSFrameIndex) const {
+    return assignCalleeSavedSpillSlots(MF, TRI, CSI);
+  }
+
   virtual bool
   assignCalleeSavedSpillSlots(MachineFunction &MF,
                               const TargetRegisterInfo *TRI,

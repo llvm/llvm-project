@@ -25,10 +25,7 @@
 #include "llvm/IR/Instruction.h"
 #include <cstddef>
 
-using namespace llvm;
-
 namespace llvm {
-
 class AliasSet;
 class BasicBlock;
 class OptimizationRemarkEmitter;
@@ -37,6 +34,17 @@ class SCEV;
 } // namespace llvm
 
 namespace polly {
+using llvm::AliasSet;
+using llvm::BasicBlock;
+using llvm::DebugLoc;
+using llvm::Instruction;
+using llvm::Loop;
+using llvm::OptimizationRemarkEmitter;
+using llvm::raw_ostream;
+using llvm::Region;
+using llvm::SCEV;
+using llvm::SmallVector;
+using llvm::Value;
 
 /// Type to hold region delimiters (entry & exit block).
 using BBPair = std::pair<BasicBlock *, BasicBlock *>;

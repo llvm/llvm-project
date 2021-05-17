@@ -127,8 +127,8 @@ define i1 @test4_as2(i16 %A) {
 ; Pulling the cast out of the load allows us to eliminate the load, and then
 ; the whole array.
 
-        %op = type { float }
-        %unop = type { i32 }
+  %op = type { float }
+  %unop = type { i32 }
 @Array = internal constant [1 x %op* (%op*)*] [ %op* (%op*)* @foo ]
 
 declare %op* @foo(%op* %X)

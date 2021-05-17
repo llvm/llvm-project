@@ -8,7 +8,7 @@
 # RUN: llvm-mc -triple x86_64-windows-msvc %s -filetype=obj -o %basename_t.obj
 
 # Check that the Guard address-taken IAT entry tables are propagated to the final executable.
-# RUN: lld-link %basename_t.obj -guard:cf -entry:main -out:%basename_t-nodelay.exe %basename_t-exp.lib
+# RUN: lld-link %basename_t.obj -guard:cf -guard:longjmp -entry:main -out:%basename_t-nodelay.exe %basename_t-exp.lib
 # RUN: llvm-readobj --file-headers --coff-load-config %basename_t-nodelay.exe | FileCheck %s --check-prefix CHECK
 
 # CHECK: ImageBase: 0x140000000
@@ -28,7 +28,7 @@
 
 
 # Check that the additional load thunk symbol is added to the GFIDs table.
-# RUN: lld-link %basename_t.obj -guard:cf -entry:main -out:%basename_t-delay.exe %basename_t-exp.lib -alternatename:__delayLoadHelper2=main -delayload:%basename_t-exp.dll
+# RUN: lld-link %basename_t.obj -guard:cf -guard:longjmp -entry:main -out:%basename_t-delay.exe %basename_t-exp.lib -alternatename:__delayLoadHelper2=main -delayload:%basename_t-exp.dll
 # RUN: llvm-readobj --file-headers --coff-load-config %basename_t-delay.exe | FileCheck %s --check-prefix DELAY-CHECK
 
 # DELAY-CHECK: ImageBase: 0x140000000

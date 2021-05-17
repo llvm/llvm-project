@@ -2,19 +2,32 @@
 
 #include <stddef.h>
 
+#if __HIP__ || __CUDA__
 #define __constant__ __attribute__((constant))
 #define __device__ __attribute__((device))
 #define __global__ __attribute__((global))
 #define __host__ __attribute__((host))
 #define __shared__ __attribute__((shared))
+#if __HIP__
+#define __managed__ __attribute__((managed))
+#endif
 #define __launch_bounds__(...) __attribute__((launch_bounds(__VA_ARGS__)))
+#else
+#define __constant__
+#define __device__
+#define __global__
+#define __host__
+#define __shared__
+#define __managed__
+#define __launch_bounds__(...)
+#endif
 
 struct dim3 {
   unsigned x, y, z;
   __host__ __device__ dim3(unsigned x, unsigned y = 1, unsigned z = 1) : x(x), y(y), z(z) {}
 };
 
-#ifdef __HIP__
+#if __HIP__ || HIP_PLATFORM
 typedef struct hipStream *hipStream_t;
 typedef enum hipError {} hipError_t;
 int hipConfigureCall(dim3 gridSize, dim3 blockSize, size_t sharedSize = 0,

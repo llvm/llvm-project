@@ -852,9 +852,7 @@ public:
   bool isClassProperty() const {
     return PropertyAttributes & ObjCPropertyAttribute::kind_class;
   }
-  bool isDirectProperty() const {
-    return PropertyAttributes & ObjCPropertyAttribute::kind_direct;
-  }
+  bool isDirectProperty() const;
 
   ObjCPropertyQueryKind getQueryKind() const {
     return isClassProperty() ? ObjCPropertyQueryKind::OBJC_PR_query_class :

@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/Address.h"
+#include "lldb/Core/Declaration.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/Block.h"
-#include "lldb/Symbol/Declaration.h"
 #include "lldb/Symbol/LineEntry.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Symbol.h"
@@ -65,9 +65,9 @@ static size_t ReadBytes(ExecutionContextScope *exe_scope,
   TargetSP target_sp(exe_scope->CalculateTarget());
   if (target_sp) {
     Status error;
-    bool prefer_file_cache = false;
-    return target_sp->ReadMemory(address, prefer_file_cache, dst, dst_len,
-                                 error);
+    bool force_live_memory = true;
+    return target_sp->ReadMemory(address, dst, dst_len, error,
+                                 force_live_memory);
   }
   return 0;
 }

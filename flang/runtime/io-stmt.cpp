@@ -188,17 +188,12 @@ void OpenStatementState::set_path(const char *path, std::size_t length) {
 }
 
 int OpenStatementState::EndIoStatement() {
-  if (wasExtant_ && status_ && *status_ != OpenStatus::Old) {
-    SignalError("OPEN statement for connected unit may not have STATUS= other "
-                "than 'OLD'");
-  }
   if (path_.get() || wasExtant_ ||
       (status_ && *status_ == OpenStatus::Scratch)) {
-    unit().OpenUnit(status_.value_or(OpenStatus::Unknown), action_, position_,
-        std::move(path_), pathLength_, convert_, *this);
+    unit().OpenUnit(status_, action_, position_, std::move(path_), pathLength_,
+        convert_, *this);
   } else {
-    unit().OpenAnonymousUnit(status_.value_or(OpenStatus::Unknown), action_,
-        position_, convert_, *this);
+    unit().OpenAnonymousUnit(status_, action_, position_, convert_, *this);
   }
   if (access_) {
     if (*access_ != unit().access) {
@@ -208,10 +203,10 @@ int OpenStatementState::EndIoStatement() {
     }
     unit().access = *access_;
   }
-  if (!isUnformatted_) {
-    isUnformatted_ = unit().access != Access::Sequential;
+  if (!unit().isUnformatted) {
+    unit().isUnformatted = isUnformatted_;
   }
-  if (*isUnformatted_ != unit().isUnformatted) {
+  if (isUnformatted_ && *isUnformatted_ != *unit().isUnformatted) {
     if (wasExtant_) {
       SignalError("FORM= may not be changed on an open unit");
     }
@@ -235,7 +230,7 @@ int NoUnitIoStatementState::EndIoStatement() {
 
 template <Direction DIR> int ExternalIoStatementState<DIR>::EndIoStatement() {
   if constexpr (DIR == Direction::Input) {
-    BeginReadingRecord(); // in case of READ with no data items
+    BeginReadingRecord(); // in case there were no I/O items
     if (!unit().nonAdvancing) {
       FinishReadingRecord();
     }
@@ -315,12 +310,13 @@ void ExternalIoStatementState<DIR>::HandleRelativePosition(std::int64_t n) {
 }
 
 template <Direction DIR>
-void ExternalIoStatementState<DIR>::BeginReadingRecord() {
+bool ExternalIoStatementState<DIR>::BeginReadingRecord() {
   if constexpr (DIR == Direction::Input) {
-    unit().BeginReadingRecord(*this);
+    return unit().BeginReadingRecord(*this);
   } else {
     Crash("ExternalIoStatementState<Direction::Output>::BeginReadingRecord() "
           "called");
+    return false;
   }
 }
 
@@ -389,8 +385,8 @@ MutableModes &IoStatementState::mutableModes() {
       [](auto &x) -> MutableModes & { return x.get().mutableModes(); }, u_);
 }
 
-void IoStatementState::BeginReadingRecord() {
-  std::visit([](auto &x) { return x.get().BeginReadingRecord(); }, u_);
+bool IoStatementState::BeginReadingRecord() {
+  return std::visit([](auto &x) { return x.get().BeginReadingRecord(); }, u_);
 }
 
 IoErrorHandler &IoStatementState::GetIoErrorHandler() const {
@@ -431,6 +427,20 @@ bool IoStatementState::EmitField(
   }
 }
 
+std::optional<char32_t> IoStatementState::PrepareInput(
+    const DataEdit &edit, std::optional<int> &remaining) {
+  remaining.reset();
+  if (edit.descriptor == DataEdit::ListDirected) {
+    GetNextNonBlank();
+  } else {
+    if (edit.width.value_or(0) > 0) {
+      remaining = *edit.width;
+    }
+    SkipSpaces(remaining);
+  }
+  return NextInField(remaining);
+}
+
 std::optional<char32_t> IoStatementState::SkipSpaces(
     std::optional<int> &remaining) {
   while (!remaining || *remaining > 0) {
@@ -451,7 +461,7 @@ std::optional<char32_t> IoStatementState::SkipSpaces(
 
 std::optional<char32_t> IoStatementState::NextInField(
     std::optional<int> &remaining) {
-  if (!remaining) { // list-directed or namelist: check for separators
+  if (!remaining) { // list-directed or NAMELIST: check for separators
     if (auto next{GetCurrentChar()}) {
       switch (*next) {
       case ' ':
@@ -498,8 +508,9 @@ std::optional<char32_t> IoStatementState::NextInField(
 
 std::optional<char32_t> IoStatementState::GetNextNonBlank() {
   auto ch{GetCurrentChar()};
-  while (!ch || *ch == ' ' || *ch == '\t') {
-    if (ch) {
+  bool inNamelist{GetConnectionState().modes.inNamelist};
+  while (!ch || *ch == ' ' || *ch == '\t' || (inNamelist && *ch == '!')) {
+    if (ch && (*ch == ' ' || *ch == '\t')) {
       HandleRelativePosition(1);
     } else if (!AdvanceRecord()) {
       return std::nullopt;
@@ -507,12 +518,6 @@ std::optional<char32_t> IoStatementState::GetNextNonBlank() {
     ch = GetCurrentChar();
   }
   return ch;
-}
-
-bool ListDirectedStatementState<Direction::Output>::NeedAdvance(
-    const ConnectionState &connection, std::size_t width) const {
-  return connection.positionInRecord > 0 &&
-      width > connection.RemainingSpaceInRecord();
 }
 
 bool IoStatementState::Inquire(
@@ -542,9 +547,9 @@ bool ListDirectedStatementState<Direction::Output>::EmitLeadingSpaceOrAdvance(
   }
   const ConnectionState &connection{io.GetConnectionState()};
   int space{connection.positionInRecord == 0 ||
-      !(isCharacter && lastWasUndelimitedCharacter)};
-  lastWasUndelimitedCharacter = false;
-  if (NeedAdvance(connection, space + length)) {
+      !(isCharacter && lastWasUndelimitedCharacter())};
+  set_lastWasUndelimitedCharacter(false);
+  if (connection.NeedAdvance(space + length)) {
     return io.AdvanceRecord();
   }
   if (space) {
@@ -600,10 +605,6 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
   auto ch{io.GetNextNonBlank()};
   if (imaginaryPart_) {
     imaginaryPart_ = false;
-    if (ch && *ch == ')') {
-      io.HandleRelativePosition(1);
-      ch = io.GetNextNonBlank();
-    }
   } else if (realPart_) {
     realPart_ = false;
     imaginaryPart_ = true;
@@ -625,6 +626,8 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
       return edit;
     }
     // Consume comma & whitespace after previous item.
+    // This includes the comma between real and imaginary components
+    // in list-directed/NAMELIST complex input.
     io.HandleRelativePosition(1);
     ch = io.GetNextNonBlank();
     if (!ch) {
@@ -761,7 +764,7 @@ bool InquireUnitState::Inquire(
     str = unit().mayAsynchronous() ? "YES" : "NO";
     break;
   case HashInquiryKeyword("BLANK"):
-    str = unit().isUnformatted                  ? "UNDEFINED"
+    str = unit().isUnformatted.value_or(true)   ? "UNDEFINED"
         : unit().modes.editingFlags & blankZero ? "ZERO"
                                                 : "NULL";
     break;
@@ -772,12 +775,12 @@ bool InquireUnitState::Inquire(
     str = unit().swapEndianness() ? "SWAP" : "NATIVE";
     break;
   case HashInquiryKeyword("DECIMAL"):
-    str = unit().isUnformatted                     ? "UNDEFINED"
+    str = unit().isUnformatted.value_or(true)      ? "UNDEFINED"
         : unit().modes.editingFlags & decimalComma ? "COMMA"
                                                    : "POINT";
     break;
   case HashInquiryKeyword("DELIM"):
-    if (unit().isUnformatted) {
+    if (unit().isUnformatted.value_or(true)) {
       str = "UNDEFINED";
     } else {
       switch (unit().modes.delim) {
@@ -800,15 +803,19 @@ bool InquireUnitState::Inquire(
         : "NO";
     break;
   case HashInquiryKeyword("ENCODING"):
-    str = unit().isUnformatted ? "UNDEFINED"
-        : unit().isUTF8        ? "UTF-8"
-                               : "ASCII";
+    str = unit().isUnformatted.value_or(true) ? "UNDEFINED"
+        : unit().isUTF8                       ? "UTF-8"
+                                              : "ASCII";
     break;
   case HashInquiryKeyword("FORM"):
-    str = unit().isUnformatted ? "UNFORMATTED" : "FORMATTED";
+    str = !unit().isUnformatted ? "UNKNOWN"
+        : *unit().isUnformatted ? "UNFORMATTED"
+                                : "FORMATTED";
     break;
   case HashInquiryKeyword("FORMATTED"):
-    str = !unit().isUnformatted ? "YES" : "NO";
+    str = !unit().isUnformatted ? "UNKNOWN"
+        : *unit().isUnformatted ? "NO"
+                                : "YES";
     break;
   case HashInquiryKeyword("NAME"):
     str = unit().path();
@@ -817,7 +824,9 @@ bool InquireUnitState::Inquire(
     }
     break;
   case HashInquiryKeyword("PAD"):
-    str = unit().isUnformatted ? "UNDEFINED" : unit().modes.pad ? "YES" : "NO";
+    str = unit().isUnformatted.value_or(true) ? "UNDEFINED"
+        : unit().modes.pad                    ? "YES"
+                                              : "NO";
     break;
   case HashInquiryKeyword("POSITION"):
     if (unit().access == Access::Direct) {
@@ -841,7 +850,7 @@ bool InquireUnitState::Inquire(
     str = unit().mayRead() && unit().mayWrite() ? "YES" : "NO";
     break;
   case HashInquiryKeyword("ROUND"):
-    if (unit().isUnformatted) {
+    if (unit().isUnformatted.value_or(true)) {
       str = "UNDEFINED";
     } else {
       switch (unit().modes.round) {
@@ -869,7 +878,7 @@ bool InquireUnitState::Inquire(
     str = unit().access == Access::Sequential ? "YES" : "NO";
     break;
   case HashInquiryKeyword("SIGN"):
-    str = unit().isUnformatted                 ? "UNDEFINED"
+    str = unit().isUnformatted.value_or(true)  ? "UNDEFINED"
         : unit().modes.editingFlags & signPlus ? "PLUS"
                                                : "SUPPRESS";
     break;
@@ -880,7 +889,9 @@ bool InquireUnitState::Inquire(
     str = unit().mayWrite() ? "YES" : "NO";
     break;
   case HashInquiryKeyword("UNFORMATTED"):
-    str = unit().isUnformatted ? "YES" : "NO";
+    str = !unit().isUnformatted ? "UNKNOWN"
+        : *unit().isUnformatted ? "YES"
+                                : "NO";
     break;
   }
   if (str) {

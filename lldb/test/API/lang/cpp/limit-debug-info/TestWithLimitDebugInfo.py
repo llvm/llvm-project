@@ -36,8 +36,8 @@ class TestWithLimitDebugInfo(TestBase):
         self.assertTrue(process.IsValid(), PROCESS_IS_VALID)
 
         # Get the thread of the process
-        self.assertTrue(
-            process.GetState() == lldb.eStateStopped,
+        self.assertEqual(
+            process.GetState(), lldb.eStateStopped,
             PROCESS_STOPPED)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)

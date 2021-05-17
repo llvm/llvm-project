@@ -50,6 +50,7 @@ body: |
     %17:sgpr(s512) = G_INSERT %16:sgpr, %1:sgpr(s32), 480
     $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = COPY %17:sgpr(s512)
     SI_RETURN_TO_EPILOG $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+...
 
 ---
 
@@ -60,6 +61,11 @@ regBankSelected: true
 body: |
   bb.0:
     liveins:  $vgpr0_vgpr1, $vgpr2
+    ; CHECK-LABEL: name: insert_v_s64_v_s32_0
+    ; CHECK: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:vreg_64 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub0
+    ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s32) = COPY $vgpr2
     %2:vgpr(s64) = G_INSERT %0, %1, 0
@@ -598,3 +604,4 @@ body: |
     %1:sgpr(<2 x s16>) = COPY $sgpr2
     %2:sgpr(<4 x s16>) = G_INSERT %0, %1, 32
     S_ENDPGM 0, implicit %2
+...

@@ -1,5 +1,5 @@
 ; RUN: opt < %s -enable-coroutines -O2 -S | FileCheck %s
-; RUN: opt < %s -enable-coroutines -passes='default<O2>' -S | FileCheck %s
+; RUN: opt < %s -enable-coroutines -passes='default<O2>' -aa-pipeline=default -S | FileCheck %s
 
 define i8* @f(i8* %buffer, i32 %n) {
 entry:

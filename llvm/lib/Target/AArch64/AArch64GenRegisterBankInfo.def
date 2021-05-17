@@ -29,6 +29,8 @@ RegisterBankInfo::PartialMapping AArch64GenRegisterBankInfo::PartMappings[]{
     {0, 32, AArch64::GPRRegBank},
     // 7: GPR 64-bit value.
     {0, 64, AArch64::GPRRegBank},
+    // 8: GPR 128-bit value.
+    {0, 128, AArch64::GPRRegBank},
 };
 
 // ValueMappings.
@@ -66,51 +68,55 @@ RegisterBankInfo::ValueMapping AArch64GenRegisterBankInfo::ValMappings[]{
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
-    // 22: GPR 64-bit value. <-- This must match Last3OpsIdx.
+    // 22: GPR 64-bit value.
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
+    // 25: GPR 128-bit value. <-- This must match Last3OpsIdx.
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR128 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR128 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR128 - PMI_Min], 1},
     // Cross register bank copies.
-    // 25: FPR 16-bit value to GPR 16-bit. <-- This must match
+    // 28: FPR 16-bit value to GPR 16-bit. <-- This must match
     //                                         FirstCrossRegCpyIdx.
     // Note: This is the kind of copy we see with physical registers.
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR16 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
-    // 27: FPR 32-bit value to GPR 32-bit value.
+    // 30: FPR 32-bit value to GPR 32-bit value.
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
-    // 29: FPR 64-bit value to GPR 64-bit value.
+    // 32: FPR 64-bit value to GPR 64-bit value.
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
-    // 31: FPR 128-bit value to GPR 128-bit value (invalid)
+    // 34: FPR 128-bit value to GPR 128-bit value (invalid)
     {nullptr, 1},
     {nullptr, 1},
-    // 33: FPR 256-bit value to GPR 256-bit value (invalid)
+    // 36: FPR 256-bit value to GPR 256-bit value (invalid)
     {nullptr, 1},
     {nullptr, 1},
-    // 35: FPR 512-bit value to GPR 512-bit value (invalid)
+    // 38: FPR 512-bit value to GPR 512-bit value (invalid)
     {nullptr, 1},
     {nullptr, 1},
-    // 37: GPR 32-bit value to FPR 32-bit value.
+    // 40: GPR 32-bit value to FPR 32-bit value.
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
-    // 39: GPR 64-bit value to FPR 64-bit value. <-- This must match
+    // 42: GPR 64-bit value to FPR 64-bit value. <-- This must match
     //                                               LastCrossRegCpyIdx.
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
-    // 41: FPExt: 16 to 32. <-- This must match FPExt16To32Idx.
+    // 44: FPExt: 16 to 32. <-- This must match FPExt16To32Idx.
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR16 - PMI_Min], 1},
-    // 43: FPExt: 16 to 32. <-- This must match FPExt16To64Idx.
+    // 46: FPExt: 16 to 32. <-- This must match FPExt16To64Idx.
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR16 - PMI_Min], 1},
-    // 45: FPExt: 32 to 64. <-- This must match FPExt32To64Idx.
+    // 48: FPExt: 32 to 64. <-- This must match FPExt32To64Idx.
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
-    // 47: FPExt vector: 64 to 128. <-- This must match FPExt64To128Idx.
+    // 50: FPExt vector: 64 to 128. <-- This must match FPExt64To128Idx.
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR128 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
-    // 49: Shift scalar with 64 bit shift imm
+    // 52: Shift scalar with 64 bit shift imm
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
@@ -167,6 +173,8 @@ unsigned AArch64GenRegisterBankInfo::getRegBankBaseIdxOffset(unsigned RBIdx,
       return 0;
     if (Size <= 64)
       return 1;
+    if (Size <= 128)
+      return 2;
     return -1;
   }
   if (RBIdx == PMI_FirstFPR) {

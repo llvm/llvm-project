@@ -36,6 +36,7 @@ static Distro::DistroType DetectOsRelease(llvm::vfs::FileSystem &VFS) {
   for (StringRef Line : Lines)
     if (Version == Distro::UnknownDistro && Line.startswith("ID="))
       Version = llvm::StringSwitch<Distro::DistroType>(Line.substr(3))
+                    .Case("alpine", Distro::AlpineLinux)
                     .Case("fedora", Distro::Fedora)
                     .Case("gentoo", Distro::Gentoo)
                     .Case("arch", Distro::ArchLinux)
@@ -88,6 +89,7 @@ static Distro::DistroType DetectLsbRelease(llvm::vfs::FileSystem &VFS) {
                     .Case("focal", Distro::UbuntuFocal)
                     .Case("groovy", Distro::UbuntuGroovy)
                     .Case("hirsute", Distro::UbuntuHirsute)
+                    .Case("impish", Distro::UbuntuImpish)
                     .Default(Distro::UnknownDistro);
   return Version;
 }
@@ -188,15 +190,6 @@ static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS) {
   }
 
   // ...and others.
-  if (VFS.exists("/etc/exherbo-release"))
-    return Distro::Exherbo;
-
-  if (VFS.exists("/etc/alpine-release"))
-    return Distro::AlpineLinux;
-
-  if (VFS.exists("/etc/arch-release"))
-    return Distro::ArchLinux;
-
   if (VFS.exists("/etc/gentoo-release"))
     return Distro::Gentoo;
 

@@ -72,10 +72,19 @@ field to the specified name.
 Link against shared libraries.
 .It Fl -Bstatic , Fl -static , Fl -dn
 Do not link against shared libraries.
-.It Fl -Bsymbolic
-Bind defined symbols locally.
-.It Fl -Bsymbolic-functions
-Bind defined function symbols locally.
+.It Fl Bno-symbolic
+Don't bind default visibility defined symbols locally for
+.Fl shared
+(default).
+.It Fl Bsymbolic
+Bind default visibility defined symbols locally for
+.Fl shared.
+Also set the
+.Dv DF_SYMBOLIC
+flag.
+.It Fl Bsymbolic-functions
+Bind default visibility defined function symbols locally for
+.Fl shared.
 .It Fl -build-id Ns = Ns Ar value
 Generate a build ID note.
 .Ar value
@@ -161,6 +170,10 @@ Read a list of dynamic symbols from
 (shared object) References to matched non-local STV_DEFAULT symbols shouldn't be bound to definitions within the shared object. Implies
 .Cm -Bsymbolic
 but does not set DF_SYMBOLIC
+.It Fl -EB
+Select the big-endian format in the OUTPUT_FORMAT command.
+.It Fl -EL
+Select the little-endian format in the OUTPUT_FORMAT command.
 .It Fl -eh-frame-hdr
 Request creation of
 .Li .eh_frame_hdr
@@ -483,7 +496,8 @@ Set address of section.
 .It Fl -shared , Fl -Bsharable
 Build a shared object.
 .It Fl -shuffle-sections Ns = Ns Ar seed
-Shuffle input sections using the given seed. If 0, use a random seed.
+Shuffle matched sections using the given seed before mapping them to the output sections.
+If -1, reverse the section order. If 0, use a random seed.
 .It Fl -soname Ns = Ns Ar value , Fl h Ar value
 Set
 .Dv DT_SONAME
@@ -498,6 +512,8 @@ Start a grouping of objects that should be treated as if they were together
 in an archive.
 .It Fl -strip-all , Fl s
 Strip all symbols.
+Implies
+.Fl -strip-debug .
 .It Fl -strip-debug , Fl S
 Strip debugging information.
 .It Fl -symbol-ordering-file Ns = Ns Ar file
@@ -635,7 +651,14 @@ Report unresolved symbols as warnings.
 .It Fl -whole-archive
 Force load of all members in a static library.
 .It Fl -wrap Ns = Ns Ar symbol
-Use wrapper functions for symbol.
+Redirect
+.Ar symbol
+references to
+.Ar __wrap_symbol
+and
+.Ar __real_symbol
+references to
+.Ar symbol.
 .It Fl z Ar option
 Linker option extensions.
 .Bl -tag -width indent -compact
@@ -791,6 +814,8 @@ The stack size is recorded as the size of the
 .Dv PT_GNU_STACK
 program segment.
 .Pp
+.It Cm start-stop-gc
+Don't let __start_/__stop_ references retain non-SHF_LINK_ORDER non-SHF_GROUP C identifier name sections.
 .It Cm text
 Do not allow relocations against read-only segments.
 This is the default.

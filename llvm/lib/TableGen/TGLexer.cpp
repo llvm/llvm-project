@@ -108,16 +108,19 @@ int TGLexer::getNextChar() {
   switch (CurChar) {
   default:
     return (unsigned char)CurChar;
-  case 0: {
-    // A nul character in the stream is either the end of the current buffer or
-    // a random nul in the file.  Disambiguate that here.
-    if (CurPtr-1 != CurBuf.end())
-      return 0;  // Just whitespace.
 
-    // Otherwise, return end of file.
-    --CurPtr;  // Another call to lex will return EOF again.
-    return EOF;
+  case 0: {
+    // A NUL character in the stream is either the end of the current buffer or
+    // a spurious NUL in the file.  Disambiguate that here.
+    if (CurPtr - 1 == CurBuf.end()) {
+      --CurPtr; // Arrange for another call to return EOF again.
+      return EOF;
+    }
+    PrintError(getLoc(),
+               "NUL character is invalid in source; treated as space");
+    return ' ';
   }
+
   case '\n':
   case '\r':
     // Handle the newline character by ignoring it and incrementing the line
@@ -197,7 +200,6 @@ tgtok::TokKind TGLexer::LexToken(bool FileOrLineStart) {
     PrintFatalError("getNextChar() must never return '\r'");
     return tgtok::Error;
 
-  case 0:
   case ' ':
   case '\t':
     // Ignore whitespace.
@@ -415,22 +417,12 @@ bool TGLexer::LexInclude() {
   return false;
 }
 
+/// SkipBCPLComment - Skip over the comment by finding the next CR or LF.
+/// Or we may end up at the end of the buffer.
 void TGLexer::SkipBCPLComment() {
   ++CurPtr;  // skip the second slash.
-  while (true) {
-    switch (*CurPtr) {
-    case '\n':
-    case '\r':
-      return;  // Newline is end of comment.
-    case 0:
-      // If this is the end of the buffer, end the comment.
-      if (CurPtr == CurBuf.end())
-        return;
-      break;
-    }
-    // Otherwise, skip the character.
-    ++CurPtr;
-  }
+  auto EOLPos = CurBuf.find_first_of("\r\n", CurPtr - CurBuf.data());
+  CurPtr = (EOLPos == StringRef::npos) ? CurBuf.end() : CurBuf.data() + EOLPos;
 }
 
 /// SkipCComment - This skips C-style /**/ comments.  The only difference from C
@@ -591,6 +583,7 @@ tgtok::TokKind TGLexer::LexExclaim() {
     .Case("strconcat", tgtok::XStrConcat)
     .Case("interleave", tgtok::XInterleave)
     .Case("substr", tgtok::XSubstr)
+    .Case("find", tgtok::XFind)
     .Cases("setdagop", "setop", tgtok::XSetDagOp) // !setop is deprecated.
     .Cases("getdagop", "getop", tgtok::XGetDagOp) // !getop is deprecated.
     .Default(tgtok::Error);
@@ -626,12 +619,12 @@ bool TGLexer::prepExitInclude(bool IncludeStackMustBeEmpty) {
 }
 
 tgtok::TokKind TGLexer::prepIsDirective() const {
-  for (unsigned ID = 0; ID < llvm::array_lengthof(PreprocessorDirs); ++ID) {
+  for (const auto &PD : PreprocessorDirs) {
     int NextChar = *CurPtr;
     bool Match = true;
     unsigned I = 0;
-    for (; I < strlen(PreprocessorDirs[ID].Word); ++I) {
-      if (NextChar != PreprocessorDirs[ID].Word[I]) {
+    for (; I < strlen(PD.Word); ++I) {
+      if (NextChar != PD.Word[I]) {
         Match = false;
         break;
       }
@@ -642,7 +635,7 @@ tgtok::TokKind TGLexer::prepIsDirective() const {
     // Check for whitespace after the directive.  If there is no whitespace,
     // then we do not recognize it as a preprocessing directive.
     if (Match) {
-      tgtok::TokKind Kind = PreprocessorDirs[ID].Kind;
+      tgtok::TokKind Kind = PD.Kind;
 
       // New line and EOF may follow only #else/#endif.  It will be reported
       // as an error for #ifdef/#define after the call to prepLexMacroName().
@@ -683,10 +676,10 @@ tgtok::TokKind TGLexer::prepIsDirective() const {
 bool TGLexer::prepEatPreprocessorDirective(tgtok::TokKind Kind) {
   TokStart = CurPtr;
 
-  for (unsigned ID = 0; ID < llvm::array_lengthof(PreprocessorDirs); ++ID)
-    if (PreprocessorDirs[ID].Kind == Kind) {
+  for (const auto &PD : PreprocessorDirs)
+    if (PD.Kind == Kind) {
       // Advance CurPtr to the end of the preprocessing word.
-      CurPtr += strlen(PreprocessorDirs[ID].Word);
+      CurPtr += strlen(PD.Word);
       return true;
     }
 

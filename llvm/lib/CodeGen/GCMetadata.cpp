@@ -12,7 +12,7 @@
 
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/CodeGen/GCStrategy.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
@@ -122,14 +122,9 @@ bool Printer::runOnFunction(Function &F) {
     OS << "\t" << PI->Label->getName() << ": " << "post-call"
        << ", live = {";
 
-    for (GCFunctionInfo::live_iterator RI = FD->live_begin(PI),
-                                       RE = FD->live_end(PI);
-         ;) {
-      OS << " " << RI->Num;
-      if (++RI == RE)
-        break;
-      OS << ",";
-    }
+    ListSeparator LS(",");
+    for (const GCRoot &R : make_range(FD->live_begin(PI), FD->live_end(PI)))
+      OS << LS << " " << R.Num;
 
     OS << " }\n";
   }

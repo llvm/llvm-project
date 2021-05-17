@@ -149,6 +149,7 @@ SymbolIndexManager::search(llvm::StringRef Identifier,
   rank(MatchedSymbols, FileName);
   // Strip signals, they are no longer needed.
   std::vector<SymbolInfo> Res;
+  Res.reserve(MatchedSymbols.size());
   for (auto &SymAndSig : MatchedSymbols)
     Res.push_back(std::move(SymAndSig.Symbol));
   return Res;

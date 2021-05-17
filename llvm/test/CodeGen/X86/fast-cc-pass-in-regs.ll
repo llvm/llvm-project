@@ -4,7 +4,7 @@
 declare x86_fastcallcc i64 @callee(i64 inreg)
 
 define i64 @caller() {
-        %X = call x86_fastcallcc  i64 @callee( i64 4294967299 )          ; <i64> [#uses=1]
+        %X = call x86_fastcallcc  i64 @callee( i64 inreg 4294967299 )          ; <i64> [#uses=1]
 ; CHECK: mov{{.*}}edx, 1
         ret i64 %X
 }

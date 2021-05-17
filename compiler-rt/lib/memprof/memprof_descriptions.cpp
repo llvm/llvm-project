@@ -44,11 +44,11 @@ void DescribeThread(MemprofThreadContext *context) {
   CHECK(context);
   memprofThreadRegistry().CheckLocked();
   // No need to announce the main thread.
-  if (context->tid == 0 || context->announced) {
+  if (context->tid == kMainTid || context->announced) {
     return;
   }
   context->announced = true;
-  InternalScopedString str(1024);
+  InternalScopedString str;
   str.append("Thread %s", MemprofThreadIdAndName(context).c_str());
   if (context->parent_tid == kInvalidTid) {
     str.append(" created by unknown thread\n");

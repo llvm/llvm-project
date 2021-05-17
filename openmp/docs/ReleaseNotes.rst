@@ -7,7 +7,7 @@ OpenMP 12.0.0 Release Notes
    These are in-progress notes for the upcoming LLVM 12.0.0 release.
    Release notes for previous releases can be found on
    `the Download Page <https://releases.llvm.org/download.html>`_.
-   
+
 
 Introduction
 ============
@@ -44,3 +44,27 @@ Non-comprehensive list of changes in this release
   ``LIBOMPTARGET_INFO`` allows the user to request certain information from the
   ``libomptarget`` runtime using a 32-bit field. A full description of each
   environment variable is described :ref:`here <libopenmptarget_environment_vars>`.
+
+- ``target nowait`` was supported via hidden helper task, which is a task not
+  bound to any parallel region. A hidden helper team with a number of threads is
+  created when the first hidden helper task is encountered. The number of threads
+  can be configured via the environment variable
+  ``LIBOMP_NUM_HIDDEN_HELPER_THREADS``. By default it is 8. If
+  ``LIBOMP_NUM_HIDDEN_HELPER_THREADS=0``, hidden helper task is disabled and
+  falls back to a regular OpenMP task. It can also be disabled by setting the
+  environment variable ``LIBOMP_USE_HIDDEN_HELPER_TASK=OFF``.
+
+- ``deviceRTLs`` for NVPTX platform is CUDA free now. It is generally OpenMP code.
+  Target dependent parts are implemented with Clang/LLVM/NVVM intrinsics. CUDA
+  SDK is also dropped as a dependence to build the device runtime, which means
+  device runtime can also be built on a CUDA free system. However, it is
+  disabled by default. Set the CMake variable
+  ``LIBOMPTARGET_BUILD_NVPTX_BCLIB=ON`` to enable the build of NVPTX device
+  runtime on a CUDA free system. ``gcc-multilib`` and ``g++-multilib`` are
+  required. If CUDA is found, the device runtime will be built by default.
+
+  - Static NVPTX device runtime library (``libomptarget-nvptx.a``) was dropped.
+  A bitcode library is required to build an OpenMP program. If the library is
+  not found in the default path or any of the paths defined by ``LIBRARY_PATH``,
+  an error will be raised. User can also specify the path to the bitcode device
+  library via ``--libomptarget-nvptx-bc-path=``.

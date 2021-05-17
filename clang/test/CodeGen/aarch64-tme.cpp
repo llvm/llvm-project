@@ -38,5 +38,5 @@ extern "C" void arm_feature_tme_defined() {}
 #endif
 // CHECK: define{{.*}} void @arm_feature_tme_defined()
 
-// CHECK: attributes #1 = { nounwind }
+// CHECK: attributes #1 = { nounwind willreturn }
 

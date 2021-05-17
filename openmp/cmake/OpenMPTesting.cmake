@@ -14,7 +14,7 @@ function(find_standalone_test_dependencies)
 
   # Find executables.
   find_program(OPENMP_LLVM_LIT_EXECUTABLE
-    NAMES llvm-lit lit.py lit
+    NAMES llvm-lit.py llvm-lit lit.py lit
     PATHS ${OPENMP_LLVM_TOOLS_DIR})
   if (NOT OPENMP_LLVM_LIT_EXECUTABLE)
     message(STATUS "Cannot find llvm-lit.")
@@ -58,7 +58,13 @@ if (${OPENMP_STANDALONE_BUILD})
   set(OPENMP_LIT_ARGS "${DEFAULT_LIT_ARGS}" CACHE STRING "Options for lit.")
   separate_arguments(OPENMP_LIT_ARGS)
 else()
-  set(OPENMP_FILECHECK_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/FileCheck)
+  if (NOT TARGET "FileCheck")
+    message(STATUS "Cannot find 'FileCheck'.")
+    message(WARNING "The check targets will not be available!")
+    set(ENABLE_CHECK_TARGETS FALSE)
+  else()
+    set(OPENMP_FILECHECK_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/FileCheck)
+  endif()
   set(OPENMP_NOT_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/not)
 endif()
 

@@ -13,6 +13,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
@@ -168,16 +169,9 @@ public:
 
 static inline raw_ostream &operator<<(raw_ostream &OS, const BitVector &V) {
   OS << "{";
-  int Idx = V.find_first();
-  bool First = true;
-  while (Idx >= 0) {
-    if (!First) {
-      OS << ", ";
-    }
-    First = false;
-    OS << Idx;
-    Idx = V.find_next(Idx);
-  }
+  ListSeparator LS;
+  for (int Idx = V.find_first(); Idx >= 0; Idx = V.find_next(Idx))
+    OS << LS << Idx;
   OS << "}";
   return OS;
 }

@@ -47,8 +47,8 @@ entry:
 ; CHECK: 	restore	$16, $17, $ra, $18, [[FS]]
 ; CHECK: 	.end	foo3
 ; NEG: 	.ent	foo3
-; NEG-NOT: 	save	$16, $17, $ra, $18, [[FS:[0-9]+]] # 16 bit inst
-; NEG-NOT: 	restore	$16, $17, $ra, $18, [[FS]] # 16 bit inst
+; NEG-NOT: 	save	$16, $17, $ra, $18, {{[0-9]+}} # 16 bit inst
+; NEG-NOT: 	restore	$16, $17, $ra, $18, {{[0-9]+}} # 16 bit inst
 ; NEG: 	.end	foo3
 }
 

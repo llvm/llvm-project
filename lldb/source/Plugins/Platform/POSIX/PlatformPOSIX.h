@@ -71,9 +71,6 @@ public:
   lldb_private::Status UnloadImage(lldb_private::Process *process,
                                    uint32_t image_token) override;
 
-  size_t ConnectToWaitingProcesses(lldb_private::Debugger &debugger,
-                                   lldb_private::Status &error) override;
-
   lldb_private::ConstString GetFullNameForDylib(lldb_private::ConstString basename) override;
 
 protected:

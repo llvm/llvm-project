@@ -51,9 +51,11 @@ static void checkSample(bool hasSample, const FlatAffineConstraints &fac,
 /// Construct a FlatAffineConstraints from a set of inequality and
 /// equality constraints.
 static FlatAffineConstraints
-makeFACFromConstraints(unsigned dims, ArrayRef<SmallVector<int64_t, 4>> ineqs,
-                       ArrayRef<SmallVector<int64_t, 4>> eqs) {
-  FlatAffineConstraints fac(ineqs.size(), eqs.size(), dims + 1, dims);
+makeFACFromConstraints(unsigned ids, ArrayRef<SmallVector<int64_t, 4>> ineqs,
+                       ArrayRef<SmallVector<int64_t, 4>> eqs,
+                       unsigned syms = 0) {
+  FlatAffineConstraints fac(ineqs.size(), eqs.size(), ids + 1, ids - syms,
+                            syms);
   for (const auto &eq : eqs)
     fac.addEquality(eq);
   for (const auto &ineq : ineqs)
@@ -212,45 +214,12 @@ TEST(FlatAffineConstraintsTest, FindSampleTest) {
                                                {0, -2, 99}, // 2y <= 99.
                                            },
                                            {}));
-}
-
-TEST(FlatAffineConstraintsTest, IsIntegerEmptyTest) {
-  // 1 <= 5x and 5x <= 4 (no solution).
-  EXPECT_TRUE(
-      makeFACFromConstraints(1, {{5, -1}, {-5, 4}}, {}).isIntegerEmpty());
-  // 1 <= 5x and 5x <= 9 (solution: x = 1).
-  EXPECT_FALSE(
-      makeFACFromConstraints(1, {{5, -1}, {-5, 9}}, {}).isIntegerEmpty());
-
-  // Unbounded sets.
-  EXPECT_TRUE(makeFACFromConstraints(3,
-                                     {
-                                         {2, 0, 0, -1}, // 2x >= 1
-                                         {-2, 0, 0, 1}, // 2x <= 1
-                                         {0, 2, 0, -1}, // 2y >= 1
-                                         {0, -2, 0, 1}, // 2y <= 1
-                                         {0, 0, 2, -1}, // 2z >= 1
-                                     },
-                                     {})
-                  .isIntegerEmpty());
-
-  EXPECT_FALSE(makeFACFromConstraints(3,
-                                      {
-                                          {2, 0, 0, -1},  // 2x >= 1
-                                          {-3, 0, 0, 3},  // 3x <= 3
-                                          {0, 0, 5, -6},  // 5z >= 6
-                                          {0, 0, -7, 17}, // 7z <= 17
-                                          {0, 3, 0, -2},  // 3y >= 2
-                                      },
-                                      {})
-                   .isIntegerEmpty());
-
   // 2D cone with apex at (10000, 10000) and
   // edges passing through (1/3, 0) and (2/3, 0).
-  EXPECT_FALSE(
+  checkSample(
+      true,
       makeFACFromConstraints(
-          2, {{300000, -299999, -100000}, {-300000, 299998, 200000}}, {})
-          .isIntegerEmpty());
+          2, {{300000, -299999, -100000}, {-300000, 299998, 200000}}, {}));
 
   // Cartesian product of a tetrahedron and a 2D cone.
   // The tetrahedron has vertices at
@@ -276,7 +245,7 @@ TEST(FlatAffineConstraintsTest, IsIntegerEmptyTest) {
           // -300000p + 299998q + 200000 >= 0
           {0, 0, 0, -300000, 299998, 200000},
       },
-      {}, TestFunction::Empty);
+      {});
 
   // Cartesian product of same tetrahedron as above and {(p, q) : 1/3 <= p <=
   // 2/3}. Since the second set is empty, the whole set is too.
@@ -297,7 +266,7 @@ TEST(FlatAffineConstraintsTest, IsIntegerEmptyTest) {
           // 3p <= 2
           {0, 0, 0, -3, 0, 2},
       },
-      {}, TestFunction::Empty);
+      {});
 
   // Cartesian product of same tetrahedron as above and
   // {(p, q, r) : 1 <= p <= 2 and p = 3q + 3r}.
@@ -321,8 +290,7 @@ TEST(FlatAffineConstraintsTest, IsIntegerEmptyTest) {
       },
       {
           {0, 0, 0, 1, -3, -3, 0}, // p = 3q + 3r
-      },
-      TestFunction::Empty);
+      });
 
   // Cartesian product of a tetrahedron and a 2D cone.
   // The tetrahedron is empty and has vertices at
@@ -344,7 +312,7 @@ TEST(FlatAffineConstraintsTest, IsIntegerEmptyTest) {
                               // -300000p + 299998q + 200000 >= 0
                               {0, 0, 0, -300000, 299998, 200000},
                           },
-                          {}, TestFunction::Empty);
+                          {});
 
   // Cartesian product of same tetrahedron as above and
   // {(p, q) : 1/3 <= p <= 2/3}.
@@ -362,7 +330,47 @@ TEST(FlatAffineConstraintsTest, IsIntegerEmptyTest) {
                               // 3p <= 2
                               {0, 0, 0, -3, 0, 2},
                           },
-                          {}, TestFunction::Empty);
+                          {});
+
+  checkSample(true, makeFACFromConstraints(3,
+                                           {
+                                               {2, 0, 0, -1}, // 2x >= 1
+                                           },
+                                           {{
+                                               {1, -1, 0, -1}, // y = x - 1
+                                               {0, 1, -1, 0},  // z = y
+                                           }}));
+}
+
+TEST(FlatAffineConstraintsTest, IsIntegerEmptyTest) {
+  // 1 <= 5x and 5x <= 4 (no solution).
+  EXPECT_TRUE(
+      makeFACFromConstraints(1, {{5, -1}, {-5, 4}}, {}).isIntegerEmpty());
+  // 1 <= 5x and 5x <= 9 (solution: x = 1).
+  EXPECT_FALSE(
+      makeFACFromConstraints(1, {{5, -1}, {-5, 9}}, {}).isIntegerEmpty());
+
+  // Unbounded sets.
+  EXPECT_TRUE(makeFACFromConstraints(3,
+                                     {
+                                         {0, 2, 0, -1}, // 2y >= 1
+                                         {0, -2, 0, 1}, // 2y <= 1
+                                         {0, 0, 2, -1}, // 2z >= 1
+                                     },
+                                     {{2, 0, 0, -1}} // 2x = 1
+                                     )
+                  .isIntegerEmpty());
+
+  EXPECT_FALSE(makeFACFromConstraints(3,
+                                      {
+                                          {2, 0, 0, -1},  // 2x >= 1
+                                          {-3, 0, 0, 3},  // 3x <= 3
+                                          {0, 0, 5, -6},  // 5z >= 6
+                                          {0, 0, -7, 17}, // 7z <= 17
+                                          {0, 3, 0, -2},  // 3y >= 2
+                                      },
+                                      {})
+                   .isIntegerEmpty());
 
   EXPECT_FALSE(makeFACFromConstraints(3,
                                       {
@@ -413,6 +421,17 @@ TEST(FlatAffineConstraintsTest, IsIntegerEmptyTest) {
                   },
                   {{2, -3, 0, 0, 0}, {1, -1, 6, 0, -1}, {1, 1, 0, -6, -2}})
                   .isIntegerEmpty());
+
+  // Set with symbols.
+  FlatAffineConstraints fac6 = makeFACFromConstraints(2,
+                                                      {
+                                                          {1, 1, 0},
+                                                      },
+                                                      {
+                                                          {1, -1, 0},
+                                                      },
+                                                      1);
+  EXPECT_FALSE(fac6.isIntegerEmpty());
 }
 
 TEST(FlatAffineConstraintsTest, removeRedundantConstraintsTest) {

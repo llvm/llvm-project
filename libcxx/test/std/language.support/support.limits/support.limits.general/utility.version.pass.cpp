@@ -22,6 +22,7 @@
     __cpp_lib_integer_comparison_functions    202002L [C++20]
     __cpp_lib_integer_sequence                201304L [C++14]
     __cpp_lib_to_chars                        201611L [C++17]
+    __cpp_lib_to_underlying                   202102L [C++2b]
     __cpp_lib_tuples_by_type                  201304L [C++14]
 */
 
@@ -52,6 +53,10 @@
 
 # ifdef __cpp_lib_to_chars
 #   error "__cpp_lib_to_chars should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_to_underlying
+#   error "__cpp_lib_to_underlying should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_tuples_by_type
@@ -88,6 +93,10 @@
 
 # ifdef __cpp_lib_to_chars
 #   error "__cpp_lib_to_chars should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_to_underlying
+#   error "__cpp_lib_to_underlying should not be defined before c++2b"
 # endif
 
 # ifndef __cpp_lib_tuples_by_type
@@ -141,6 +150,10 @@
 #   endif
 # endif
 
+# ifdef __cpp_lib_to_underlying
+#   error "__cpp_lib_to_underlying should not be defined before c++2b"
+# endif
+
 # ifndef __cpp_lib_tuples_by_type
 #   error "__cpp_lib_tuples_by_type should be defined in c++17"
 # endif
@@ -171,16 +184,16 @@
 #   error "__cpp_lib_exchange_function should have the value 201304L in c++20"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
+# if defined(__cpp_concepts) && __cpp_concepts >= 201907L
 #   ifndef __cpp_lib_integer_comparison_functions
 #     error "__cpp_lib_integer_comparison_functions should be defined in c++20"
 #   endif
 #   if __cpp_lib_integer_comparison_functions != 202002L
 #     error "__cpp_lib_integer_comparison_functions should have the value 202002L in c++20"
 #   endif
-# else // _LIBCPP_VERSION
+# else
 #   ifdef __cpp_lib_integer_comparison_functions
-#     error "__cpp_lib_integer_comparison_functions should not be defined because it is unimplemented in libc++!"
+#     error "__cpp_lib_integer_comparison_functions should not be defined when defined(__cpp_concepts) && __cpp_concepts >= 201907L is not defined!"
 #   endif
 # endif
 
@@ -202,6 +215,10 @@
 #   ifdef __cpp_lib_to_chars
 #     error "__cpp_lib_to_chars should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifdef __cpp_lib_to_underlying
+#   error "__cpp_lib_to_underlying should not be defined before c++2b"
 # endif
 
 # ifndef __cpp_lib_tuples_by_type
@@ -234,16 +251,16 @@
 #   error "__cpp_lib_exchange_function should have the value 201304L in c++2b"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
+# if defined(__cpp_concepts) && __cpp_concepts >= 201907L
 #   ifndef __cpp_lib_integer_comparison_functions
 #     error "__cpp_lib_integer_comparison_functions should be defined in c++2b"
 #   endif
 #   if __cpp_lib_integer_comparison_functions != 202002L
 #     error "__cpp_lib_integer_comparison_functions should have the value 202002L in c++2b"
 #   endif
-# else // _LIBCPP_VERSION
+# else
 #   ifdef __cpp_lib_integer_comparison_functions
-#     error "__cpp_lib_integer_comparison_functions should not be defined because it is unimplemented in libc++!"
+#     error "__cpp_lib_integer_comparison_functions should not be defined when defined(__cpp_concepts) && __cpp_concepts >= 201907L is not defined!"
 #   endif
 # endif
 
@@ -265,6 +282,13 @@
 #   ifdef __cpp_lib_to_chars
 #     error "__cpp_lib_to_chars should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifndef __cpp_lib_to_underlying
+#   error "__cpp_lib_to_underlying should be defined in c++2b"
+# endif
+# if __cpp_lib_to_underlying != 202102L
+#   error "__cpp_lib_to_underlying should have the value 202102L in c++2b"
 # endif
 
 # ifndef __cpp_lib_tuples_by_type

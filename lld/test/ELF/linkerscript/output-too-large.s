@@ -21,14 +21,26 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t2.o
 # RUN: echo "SECTIONS { .text : { . = 0x8fffffffffffffff; *(.text*); } }" > %t2.script
 # RUN: not ld.lld -T %t2.script -M %t2.o -o /dev/null 2>&1 | \
-# RUN:   FileCheck --check-prefixes=MAP2,CHECK %s
+# RUN:   FileCheck --check-prefixes=MAP2,CHECK64 %s
 
 # MAP2:                   VMA              LMA     Size Align Out     In      Symbol
 # MAP2:      9000000000000000 9000000000000000        1     4         {{.*}}.o:(.text)
 # MAP2-NEXT: 9000000000000000 9000000000000000        0     1                 _start
 
 # CHECK: error: output file too large
+# CHECK-NEXT: section sizes:
+# CHECK-NEXT: .text 4294967297
+# CHECK-NEXT: .data 1
 
+# CHECK64: error: output file too large
+# CHECK64-NEXT: section sizes:
+# CHECK64-NEXT: .text 10376293541461622785
+# CHECK64-NEXT: .data 1
+
+.data
+.byte 42
+
+.text
 .global _start
 _start:
   nop

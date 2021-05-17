@@ -32,7 +32,7 @@ static int func(void *) {
   return 0;
 }
 
-TEST(CallOnceTest, CallFrom5Threads) {
+TEST(LlvmLibcCallOnceTest, CallFrom5Threads) {
   // Ensure the call count and thread count are 0 to begin with.
   call_count = 0;
   thread_count = 0;
@@ -73,7 +73,7 @@ static int once_func_caller(void *) {
 // Test the synchronization aspect of the call_once function.
 // This is not a fool proof test, but something which might be
 // useful when we add a flakiness detection scheme to UnitTest.
-TEST(CallOnceTest, TestSynchronization) {
+TEST(LlvmLibcCallOnceTest, TestSynchronization) {
   start_count = 0;
   done_count = 0;
 

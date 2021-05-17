@@ -17,13 +17,13 @@
 //                               ValueLatticeElement
 //===----------------------------------------------------------------------===//
 
+namespace llvm {
+
 /// This class represents lattice values for constants.
 ///
 /// FIXME: This is basically just for bringup, this can be made a lot more rich
 /// in the future.
 ///
-
-namespace llvm {
 class ValueLatticeElement {
   enum ValueLatticeElementTy {
     /// This Value has no known value yet.  As a result, this implies the
@@ -474,11 +474,9 @@ public:
 
     const auto &CR = getConstantRange();
     const auto &OtherCR = Other.getConstantRange();
-    if (ConstantRange::makeSatisfyingICmpRegion(Pred, OtherCR).contains(CR))
+    if (CR.icmp(Pred, OtherCR))
       return ConstantInt::getTrue(Ty);
-    if (ConstantRange::makeSatisfyingICmpRegion(
-            CmpInst::getInversePredicate(Pred), OtherCR)
-            .contains(CR))
+    if (CR.icmp(CmpInst::getInversePredicate(Pred), OtherCR))
       return ConstantInt::getFalse(Ty);
 
     return nullptr;

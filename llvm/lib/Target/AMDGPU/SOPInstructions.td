@@ -66,6 +66,7 @@ class SOP1_Real<bits<8> op, SOP1_Pseudo ps, string real_name = ps.Mnemonic> :
   // copy relevant pseudo op flags
   let SubtargetPredicate = ps.SubtargetPredicate;
   let AsmMatchConverter  = ps.AsmMatchConverter;
+  let SchedRW            = ps.SchedRW;
 
   // encoding
   bits<7> sdst;
@@ -195,7 +196,9 @@ def : GCNPat <
 def S_BREV_B32 : SOP1_32 <"s_brev_b32",
   [(set i32:$sdst, (bitreverse i32:$src0))]
 >;
-def S_BREV_B64 : SOP1_64 <"s_brev_b64">;
+def S_BREV_B64 : SOP1_64 <"s_brev_b64",
+  [(set i64:$sdst, (bitreverse i64:$src0))]
+>;
 
 let Defs = [SCC] in {
 def S_BCNT0_I32_B32 : SOP1_32 <"s_bcnt0_i32_b32">;
@@ -367,10 +370,11 @@ class SOP2_Real<bits<7> op, SOP_Pseudo ps, string real_name = ps.Mnemonic> :
   let isCodeGenOnly = 0;
 
   // copy relevant pseudo op flags
-  let SubtargetPredicate = ps.SubtargetPredicate;
-  let AsmMatchConverter  = ps.AsmMatchConverter;
+  let SubtargetPredicate   = ps.SubtargetPredicate;
+  let AsmMatchConverter    = ps.AsmMatchConverter;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
-  let TSFlags = ps.TSFlags;
+  let TSFlags              = ps.TSFlags;
+  let SchedRW              = ps.SchedRW;
 
   // encoding
   bits<7> sdst;
@@ -701,6 +705,7 @@ class SOPK_Real<bits<5> op, SOPK_Pseudo ps> :
   let AsmMatchConverter  = ps.AsmMatchConverter;
   let DisableEncoding    = ps.DisableEncoding;
   let Constraints        = ps.Constraints;
+  let SchedRW            = ps.SchedRW;
 
   // encoding
   bits<7>  sdst;
@@ -951,11 +956,12 @@ class SOPC_Real<bits<7> op, SOPC_Pseudo ps, string real_name = ps.Mnemonic> :
   let isCodeGenOnly = 0;
 
   // copy relevant pseudo op flags
-  let SubtargetPredicate = ps.SubtargetPredicate;
-  let OtherPredicates    = ps.OtherPredicates;
-  let AsmMatchConverter  = ps.AsmMatchConverter;
+  let SubtargetPredicate   = ps.SubtargetPredicate;
+  let OtherPredicates      = ps.OtherPredicates;
+  let AsmMatchConverter    = ps.AsmMatchConverter;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
-  let TSFlags = ps.TSFlags;
+  let TSFlags              = ps.TSFlags;
+  let SchedRW              = ps.SchedRW;
 
   // encoding
   bits<8> src0;
@@ -1079,11 +1085,12 @@ class SOPP_Real<bits<7> op, SOPP_Pseudo ps, string real_name = ps.Mnemonic> :
   let isCodeGenOnly = 0;
 
   // copy relevant pseudo op flags
-  let SubtargetPredicate = ps.SubtargetPredicate;
-  let OtherPredicates    = ps.OtherPredicates;
-  let AsmMatchConverter  = ps.AsmMatchConverter;
+  let SubtargetPredicate   = ps.SubtargetPredicate;
+  let OtherPredicates      = ps.OtherPredicates;
+  let AsmMatchConverter    = ps.AsmMatchConverter;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
-  let TSFlags = ps.TSFlags;
+  let TSFlags              = ps.TSFlags;
+  let SchedRW              = ps.SchedRW;
   bits <16> simm16;
 }
 
@@ -1226,7 +1233,8 @@ def S_WAKEUP : SOPP_Pseudo <"s_wakeup", (ins) > {
 let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in
 def S_WAITCNT : SOPP_Pseudo <"s_waitcnt" , (ins WAIT_FLAG:$simm16), "$simm16",
     [(int_amdgcn_s_waitcnt timm:$simm16)]>;
-def S_SETHALT : SOPP_Pseudo <"s_sethalt" , (ins i16imm:$simm16), "$simm16">;
+def S_SETHALT : SOPP_Pseudo <"s_sethalt" , (ins i32imm:$simm16), "$simm16",
+    [(int_amdgcn_s_sethalt timm:$simm16)]>;
 def S_SETKILL : SOPP_Pseudo <"s_setkill" , (ins i16imm:$simm16), "$simm16">;
 
 // On SI the documentation says sleep for approximately 64 * low 2
@@ -1727,18 +1735,7 @@ multiclass SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<bits<7> op> {
 
 defm S_NOP                      : SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10<0x000>;
 defm S_ENDPGM                   : SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10<0x001, "s_endpgm">;
-defm S_BRANCH                   : SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<0x002>;
 defm S_WAKEUP                   : SOPP_Real_32_gfx8_gfx9_gfx10<0x003>;
-defm S_CBRANCH_SCC0             : SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<0x004>;
-defm S_CBRANCH_SCC1             : SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<0x005>;
-defm S_CBRANCH_VCCZ             : SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<0x006>;
-defm S_CBRANCH_VCCNZ            : SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<0x007>;
-defm S_CBRANCH_EXECZ            : SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<0x008>;
-defm S_CBRANCH_EXECNZ           : SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<0x009>;
-defm S_CBRANCH_CDBGSYS          : SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<0x017>;
-defm S_CBRANCH_CDBGUSER         : SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<0x018>;
-defm S_CBRANCH_CDBGSYS_OR_USER  : SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<0x019>;
-defm S_CBRANCH_CDBGSYS_AND_USER : SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<0x01A>;
 defm S_BARRIER                  : SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10<0x00a>;
 defm S_WAITCNT                  : SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10<0x00c>;
 defm S_SETHALT                  : SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10<0x00d>;
@@ -1764,6 +1761,20 @@ defm S_WAITCNT_DEPCTR           : SOPP_Real_32_gfx10<0x023>;
 defm S_ROUND_MODE               : SOPP_Real_32_gfx10<0x024>;
 defm S_DENORM_MODE              : SOPP_Real_32_gfx10<0x025>;
 defm S_TTRACEDATA_IMM           : SOPP_Real_32_gfx10<0x028>;
+
+let isBranch = 1 in {
+defm S_BRANCH                   : SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<0x002>;
+defm S_CBRANCH_SCC0             : SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<0x004>;
+defm S_CBRANCH_SCC1             : SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<0x005>;
+defm S_CBRANCH_VCCZ             : SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<0x006>;
+defm S_CBRANCH_VCCNZ            : SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<0x007>;
+defm S_CBRANCH_EXECZ            : SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<0x008>;
+defm S_CBRANCH_EXECNZ           : SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<0x009>;
+defm S_CBRANCH_CDBGSYS          : SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<0x017>;
+defm S_CBRANCH_CDBGUSER         : SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<0x018>;
+defm S_CBRANCH_CDBGSYS_OR_USER  : SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<0x019>;
+defm S_CBRANCH_CDBGSYS_AND_USER : SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<0x01A>;
+}
 
 //===----------------------------------------------------------------------===//
 // SOPC - GFX6, GFX7, GFX8, GFX9, GFX10

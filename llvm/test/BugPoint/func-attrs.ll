@@ -1,6 +1,6 @@
-; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%shlibext %s -output-prefix %t -bugpoint-crashfuncattr -silence-passes
+; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%pluginext %s -output-prefix %t -bugpoint-crashfuncattr -silence-passes
 ; RUN: llvm-dis %t-reduced-simplified.bc -o - | FileCheck -check-prefixes=ALL,ENABLED %s
-; RUN: bugpoint -disable-attribute-remove -load %llvmshlibdir/BugpointPasses%shlibext %s -output-prefix %t -bugpoint-crashfuncattr -silence-passes
+; RUN: bugpoint -disable-attribute-remove -load %llvmshlibdir/BugpointPasses%pluginext %s -output-prefix %t -bugpoint-crashfuncattr -silence-passes
 ; RUN: llvm-dis %t-reduced-simplified.bc -o - | FileCheck -check-prefixes=ALL,DISABLED %s
 
 ; REQUIRES: plugins

@@ -32,7 +32,22 @@ protected:
   bool HasC = false;
   bool HasB = false;
   bool HasV = false;
+  bool HasZba = false;
+  bool HasZbb = false;
+  bool HasZbc = false;
+  bool HasZbe = false;
+  bool HasZbf = false;
+  bool HasZbm = false;
+  bool HasZbp = false;
+  bool HasZbproposedc = false;
+  bool HasZbr = false;
+  bool HasZbs = false;
+  bool HasZbt = false;
   bool HasZfh = false;
+  bool HasZvamo = false;
+  bool HasZvlsseg = false;
+
+  static const Builtin::Info BuiltinInfo[];
 
 public:
   RISCVTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
@@ -43,6 +58,8 @@ public:
     SuitableAlign = 128;
     WCharType = SignedInt;
     WIntType = UnsignedInt;
+    HasRISCVVTypes = true;
+    MCountName = "_mcount";
   }
 
   bool setCPU(const std::string &Name) override {
@@ -56,7 +73,7 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override { return None; }
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::VoidPtrBuiltinVaList;
@@ -79,6 +96,13 @@ public:
 
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &Info) const override;
+
+  std::string convertConstraint(const char *&Constraint) const override;
+
+  bool
+  initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
+                 StringRef CPU,
+                 const std::vector<std::string> &FeaturesVec) const override;
 
   bool hasFeature(StringRef Feature) const override;
 

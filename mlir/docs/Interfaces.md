@@ -207,6 +207,45 @@ if (ExampleOpInterface example = dyn_cast<ExampleOpInterface>(op))
   llvm::errs() << "hook returned = " << example.exampleInterfaceHook() << "\n";
 ```
 
+#### Dialect Fallback for OpInterface
+
+Some dialects have an open ecosystem and don't register all of the possible
+operations. In such cases it is still possible to provide support for
+implementing an `OpInterface` for these operation. When an operation isn't
+registered or does not provide an implementation for an interface, the query
+will fallback to the dialect itself.
+
+A second model is used for such cases and automatically generated when
+using ODS (see below) with the name `FallbackModel`. This model can be implemented
+for a particular dialect:
+
+```c++
+// This is the implementation of a dialect fallback for `ExampleOpInterface`.
+struct FallbackExampleOpInterface
+    : public ExampleOpInterface::FallbackModel<
+          FallbackExampleOpInterface> {
+  static bool classof(Operation *op) { return true; }
+
+  unsigned exampleInterfaceHook(Operation *op) const;
+  unsigned exampleStaticInterfaceHook() const;
+};
+```
+
+A dialect can then instantiate this implementation and returns it on specific
+operations by overriding the `getRegisteredInterfaceForOp` method :
+
+```c++
+void *TestDialect::getRegisteredInterfaceForOp(TypeID typeID,
+                                               Identifier opName) {
+  if (typeID == TypeID::get<ExampleOpInterface>()) {
+    if (isSupported(opName))
+      return fallbackExampleOpInterface;
+    return nullptr;
+  }
+  return nullptr;
+}
+```
+
 #### Utilizing the ODS Framework
 
 Note: Before reading this section, the reader should have some familiarity with

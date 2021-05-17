@@ -20,4 +20,4 @@ void test_one() {
 // CHECK-NEXT:         `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc>
 // CHECK-NEXT:           |-CompoundStmt {{.*}} <col:3, col:7>
 // CHECK-NEXT:           | `-NullStmt {{.*}} <col:5>
-// CHECK-NEXT:           `-ImplicitParamDecl {{.*}} <line:9:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-sections.c:9:1) *const restrict'
+// CHECK-NEXT:           `-ImplicitParamDecl {{.*}} <line:9:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-sections.c:9:1) *const restrict'

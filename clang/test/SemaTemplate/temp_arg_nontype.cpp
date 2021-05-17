@@ -270,6 +270,23 @@ namespace PR9227 {
   void test_char_possibly_negative() { enable_if_char<'\x02'>::type i; } // expected-error{{enable_if_char<'\x02'>'; did you mean 'enable_if_char<'a'>::type'?}}
   void test_char_single_quote() { enable_if_char<'\''>::type i; } // expected-error{{enable_if_char<'\''>'; did you mean 'enable_if_char<'a'>::type'?}}
   void test_char_backslash() { enable_if_char<'\\'>::type i; } // expected-error{{enable_if_char<'\\'>'; did you mean 'enable_if_char<'a'>::type'?}}
+
+  template <int N> struct enable_if_int {};
+  template <> struct enable_if_int<1> { typedef int type; }; // expected-note{{'enable_if_int<1>::type' declared here}}
+  void test_int() { enable_if_int<2>::type i; } // expected-error{{enable_if_int<2>'; did you mean 'enable_if_int<1>::type'?}}
+
+  template <unsigned int N> struct enable_if_unsigned_int {};
+  template <> struct enable_if_unsigned_int<1> { typedef int type; }; // expected-note{{'enable_if_unsigned_int<1>::type' declared here}}
+  void test_unsigned_int() { enable_if_unsigned_int<2>::type i; } // expected-error{{enable_if_unsigned_int<2>'; did you mean 'enable_if_unsigned_int<1>::type'?}}
+
+  template <unsigned long long N> struct enable_if_unsigned_long_long {};
+  template <> struct enable_if_unsigned_long_long<1> { typedef int type; }; // expected-note{{'enable_if_unsigned_long_long<1>::type' declared here}}
+  void test_unsigned_long_long() { enable_if_unsigned_long_long<2>::type i; } // expected-error{{enable_if_unsigned_long_long<2>'; did you mean 'enable_if_unsigned_long_long<1>::type'?}}
+
+  template <long long N> struct enable_if_long_long {};
+  template <> struct enable_if_long_long<1> { typedef int type; }; // expected-note{{'enable_if_long_long<1>::type' declared here}}
+  void test_long_long() { enable_if_long_long<2>::type i; } // expected-error{{enable_if_long_long<2>'; did you mean 'enable_if_long_long<1>::type'?}}
+
 }
 
 namespace PR10579 {

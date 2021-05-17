@@ -573,6 +573,7 @@ def : WriteRes<WriteNop, []>;
 defm : SBWriteResPair<WriteFShuffle256, [SBPort5], 1, [1], 1, 7>;
 defm : SBWriteResPair<WriteFVarShuffle256, [SBPort5], 1, [1], 1, 7>;
 defm : SBWriteResPair<WriteShuffle256, [SBPort5], 1, [1], 1, 7>;
+defm : SBWriteResPair<WriteVPMOV256, [SBPort5], 1, [1], 1, 7>;
 defm : SBWriteResPair<WriteVarShuffle256, [SBPort5], 1, [1], 1, 7>;
 defm : SBWriteResPair<WriteFMA,  [SBPort01],  5>;
 defm : SBWriteResPair<WriteFMAX, [SBPort01],  5>;

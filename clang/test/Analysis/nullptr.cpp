@@ -64,7 +64,7 @@ void zoo1backwards() {
 
 typedef __INTPTR_TYPE__ intptr_t;
 void zoo1multiply() {
-  char **p = 0; // FIXME-should-be-note:{{'p' initialized to a null pointer value}}
+  char **p = 0; // expected-note{{'p' initialized to a null pointer value}}
   delete *((char **)((intptr_t)p * 2)); // expected-warning{{Dereference of null pointer}}
                    // expected-note@-1{{Dereference of null pointer}}
 }

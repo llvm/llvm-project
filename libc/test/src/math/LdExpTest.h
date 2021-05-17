@@ -28,11 +28,11 @@ class LdExpTestTemplate : public __llvm_libc::testing::Test {
   // A normalized mantissa to be used with tests.
   static constexpr UIntType mantissa = NormalFloat::one + 0x1234;
 
-  const T zero = __llvm_libc::fputil::FPBits<T>::zero();
-  const T negZero = __llvm_libc::fputil::FPBits<T>::negZero();
-  const T inf = __llvm_libc::fputil::FPBits<T>::inf();
-  const T negInf = __llvm_libc::fputil::FPBits<T>::negInf();
-  const T nan = __llvm_libc::fputil::FPBits<T>::buildNaN(1);
+  const T zero = T(__llvm_libc::fputil::FPBits<T>::zero());
+  const T negZero = T(__llvm_libc::fputil::FPBits<T>::negZero());
+  const T inf = T(__llvm_libc::fputil::FPBits<T>::inf());
+  const T negInf = T(__llvm_libc::fputil::FPBits<T>::negInf());
+  const T nan = T(__llvm_libc::fputil::FPBits<T>::buildNaN(1));
 
 public:
   typedef T (*LdExpFunc)(T, int);
@@ -121,7 +121,7 @@ public:
     FPBits resultBits(result);
     ASSERT_FALSE(resultBits.isZero());
     // Verify that the result is indeed subnormal.
-    ASSERT_EQ(resultBits.exponent, uint16_t(0));
+    ASSERT_EQ(resultBits.encoding.exponent, uint16_t(0));
     // But if the exp is so less that normalization leads to zero, then
     // the result should be zero.
     result = func(x, -FPBits::maxExponent - int(mantissaWidth) - 5);
@@ -140,16 +140,16 @@ public:
 };
 
 #define LIST_LDEXP_TESTS(T, func)                                              \
-  using LdExpTest = LdExpTestTemplate<T>;                                      \
-  TEST_F(LdExpTest, SpecialNumbers) { testSpecialNumbers(&func); }             \
-  TEST_F(LdExpTest, PowersOfTwo) { testPowersOfTwo(&func); }                   \
-  TEST_F(LdExpTest, OverFlow) { testOverflow(&func); }                         \
-  TEST_F(LdExpTest, UnderflowToZeroOnNormal) {                                 \
+  using LlvmLibcLdExpTest = LdExpTestTemplate<T>;                              \
+  TEST_F(LlvmLibcLdExpTest, SpecialNumbers) { testSpecialNumbers(&func); }     \
+  TEST_F(LlvmLibcLdExpTest, PowersOfTwo) { testPowersOfTwo(&func); }           \
+  TEST_F(LlvmLibcLdExpTest, OverFlow) { testOverflow(&func); }                 \
+  TEST_F(LlvmLibcLdExpTest, UnderflowToZeroOnNormal) {                         \
     testUnderflowToZeroOnNormal(&func);                                        \
   }                                                                            \
-  TEST_F(LdExpTest, UnderflowToZeroOnSubnormal) {                              \
+  TEST_F(LlvmLibcLdExpTest, UnderflowToZeroOnSubnormal) {                      \
     testUnderflowToZeroOnSubnormal(&func);                                     \
   }                                                                            \
-  TEST_F(LdExpTest, NormalOperation) { testNormalOperation(&func); }
+  TEST_F(LlvmLibcLdExpTest, NormalOperation) { testNormalOperation(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_LDEXPTEST_H

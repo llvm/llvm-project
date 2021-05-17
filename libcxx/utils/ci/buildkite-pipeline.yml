@@ -13,13 +13,32 @@
 # into scripts. This is critical to being able to reproduce CI issues outside
 # of the CI environment, which is important for debugging.
 #
+# It is also worth noting that this script is split into several sections, the
+# goal being to reduce the load on testers when a commit is known to fail.
+#
 
 steps:
-  - label: "C++03"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx03"
+  #
+  # Light pre-commit tests for things like formatting or when people forget
+  # to update generated files.
+  #
+  - label: "Format"
+    command: "libcxx/utils/ci/run-buildbot check-format"
     artifact_paths:
-      - "**/test-results.xml"
-      - "**/*.abilist"
+      - "**/clang-format.patch"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    soft_fail:
+        - exit_status: 1
+
+  - label: "Generated output"
+    command: "libcxx/utils/ci/run-buildbot check-generated-output"
+    artifact_paths:
+      - "**/generated_output.patch"
     agents:
       queue: "libcxx-builders"
     retry:
@@ -27,32 +46,15 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
 
-  - label: "C++11"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx11"
-    artifact_paths:
-      - "**/test-results.xml"
-      - "**/*.abilist"
-    agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
+  #
+  # General testing with the default configuration, under all the supported
+  # Standard modes, with Clang and GCC. This catches most issues upfront.
+  # The goal of this step is to catch most issues while being very fast.
+  #
+  - wait
 
-  - label: "C++14"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx14"
-    artifact_paths:
-      - "**/test-results.xml"
-      - "**/*.abilist"
-    agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-
-  - label: "C++17"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx17"
+  - label: "C++2b"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx2b"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
@@ -75,8 +77,8 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
 
-  - label: "C++2b"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx2b"
+  - label: "C++17"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx17"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
@@ -86,6 +88,57 @@ steps:
       automatic:
         - exit_status: -1  # Agent was lost
           limit: 2
+
+  - label: "C++14"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx14"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+  - label: "C++11"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx11"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "C++03"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx03"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "GCC/C++20"
+    command: "libcxx/utils/ci/run-buildbot generic-gcc"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  #
+  # All other supported configurations of libc++.
+  #
+  - wait
 
   - label: "-fno-exceptions"
     command: "libcxx/utils/ci/run-buildbot generic-noexceptions"
@@ -98,10 +151,22 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
 
-  - label: "GCC/C++20"
-    command: "libcxx/utils/ci/run-buildbot generic-gcc"
+  - label: "Static libraries"
+    command: "libcxx/utils/ci/run-buildbot generic-static"
     artifact_paths:
       - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "Debug iterators"
+    command: "libcxx/utils/ci/run-buildbot generic-debug-iterators"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
     agents:
       queue: "libcxx-builders"
     retry:
@@ -165,7 +230,18 @@ steps:
           limit: 2
 
   - label: "No debug mode"
-    command: "libcxx/utils/ci/run-buildbot generic-nodebug"
+    command: "libcxx/utils/ci/run-buildbot generic-no-debug"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "No Filesystem"
+    command: "libcxx/utils/ci/run-buildbot generic-no-filesystem"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -192,18 +268,6 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-
-  - label: "MacOS C++20"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx20"
-    artifact_paths:
-      - "**/test-results.xml"
-      - "**/*.abilist"
-    agents:
-      queue: "libcxx-macos-builders"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -253,13 +317,58 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
 
+  - label: "Runtimes build"
+    command: "libcxx/utils/ci/run-buildbot runtimes-build"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "Windows (DLL)"
+    command: "bash libcxx/utils/ci/run-buildbot windows-dll"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "windows"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "Windows (Static)"
+    command: "bash libcxx/utils/ci/run-buildbot windows-static"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "windows"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "MacOS C++20"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx20"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    agents:
+      queue: "libcxx-builders-macos"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
   # Build with the configuration we use to generate libc++.dylib on Apple platforms
   - label: "Apple system"
     command: "libcxx/utils/ci/run-buildbot x86_64-apple-system"
     artifact_paths:
       - "**/test-results.xml"
     agents:
-      queue: "libcxx-macos-builders"
+      queue: "libcxx-builders-macos"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -270,7 +379,7 @@ steps:
     artifact_paths:
       - "**/test-results.xml"
     agents:
-      queue: "libcxx-macos-builders"
+      queue: "libcxx-builders-macos"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -282,7 +391,7 @@ steps:
     artifact_paths:
       - "**/test-results.xml"
     agents:
-      queue: "libcxx-macos-builders"
+      queue: "libcxx-builders-macos10.15" # TODO: For now, we're running the back-deployment tests for 10.9 on 10.15, because we don't have proper 10.9 machines
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -293,7 +402,79 @@ steps:
     artifact_paths:
       - "**/test-results.xml"
     agents:
-      queue: "libcxx-macos-builders"
+      queue: "libcxx-builders-macos10.15"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "AArch64"
+    command: "libcxx/utils/ci/run-buildbot aarch64"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders-linaro-arm"
+      arch: "aarch64"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "AArch64 -fno-exceptions"
+    command: "libcxx/utils/ci/run-buildbot aarch64-noexceptions"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders-linaro-arm"
+      arch: "aarch64"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "Armv8"
+    command: "libcxx/utils/ci/run-buildbot armv8"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders-linaro-arm"
+      arch: "armv8l"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "Armv8 -fno-exceptions"
+    command: "libcxx/utils/ci/run-buildbot armv8-noexceptions"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders-linaro-arm"
+      arch: "armv8l"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "Armv7"
+    command: "libcxx/utils/ci/run-buildbot armv7"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders-linaro-arm"
+      arch: "armv8l" # Compiling for v7, running on v8 hardware
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "Armv7 -fno-exceptions"
+    command: "libcxx/utils/ci/run-buildbot armv7-noexceptions"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders-linaro-arm"
+      arch: "armv8l" # Compiling for v7, running on v8 hardware
     retry:
       automatic:
         - exit_status: -1  # Agent was lost

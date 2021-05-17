@@ -86,8 +86,8 @@ public:
   // can be stored with 32 bits.
   uint32_t getRVA() const { return rva; }
   void setRVA(uint64_t v) {
+    // This may truncate. The writer checks for overflow later.
     rva = (uint32_t)v;
-    assert(rva == v && "RVA truncated");
   }
 
   // Returns readable/writable/executable bits.
@@ -293,8 +293,12 @@ public:
 
   // Allow iteration over the associated child chunks for this section.
   llvm::iterator_range<AssociatedIterator> children() const {
-    return llvm::make_range(AssociatedIterator(assocChildren),
-                            AssociatedIterator(nullptr));
+    // Associated sections do not have children. The assocChildren field is
+    // part of the parent's list of children.
+    bool isAssoc = selection == llvm::COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE;
+    return llvm::make_range(
+        AssociatedIterator(isAssoc ? nullptr : assocChildren),
+        AssociatedIterator(nullptr));
   }
 
   // The section ID this chunk belongs to in its Obj.
@@ -578,6 +582,17 @@ class RVATableChunk : public NonSectionChunk {
 public:
   explicit RVATableChunk(SymbolRVASet s) : syms(std::move(s)) {}
   size_t getSize() const override { return syms.size() * 4; }
+  void writeTo(uint8_t *buf) const override;
+
+private:
+  SymbolRVASet syms;
+};
+
+// Table which contains symbol RVAs with flags. Used for /guard:ehcont.
+class RVAFlagTableChunk : public NonSectionChunk {
+public:
+  explicit RVAFlagTableChunk(SymbolRVASet s) : syms(std::move(s)) {}
+  size_t getSize() const override { return syms.size() * 5; }
   void writeTo(uint8_t *buf) const override;
 
 private:

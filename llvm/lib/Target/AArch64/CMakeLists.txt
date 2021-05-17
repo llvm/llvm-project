@@ -10,6 +10,8 @@ tablegen(LLVM AArch64GenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM AArch64GenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM AArch64GenFastISel.inc -gen-fast-isel)
 tablegen(LLVM AArch64GenGlobalISel.inc -gen-global-isel)
+tablegen(LLVM AArch64GenO0PreLegalizeGICombiner.inc -gen-global-isel-combiner
+              -combiners="AArch64O0PreLegalizerCombinerHelper")
 tablegen(LLVM AArch64GenPreLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="AArch64PreLegalizerCombinerHelper")
 tablegen(LLVM AArch64GenPostLegalizeGICombiner.inc -gen-global-isel-combiner
@@ -29,8 +31,10 @@ add_public_tablegen_target(AArch64CommonTableGen)
 
 add_llvm_target(AArch64CodeGen
   GISel/AArch64CallLowering.cpp
+  GISel/AArch64GlobalISelUtils.cpp
   GISel/AArch64InstructionSelector.cpp
   GISel/AArch64LegalizerInfo.cpp
+  GISel/AArch64O0PreLegalizerCombiner.cpp
   GISel/AArch64PreLegalizerCombiner.cpp
   GISel/AArch64PostLegalizerCombiner.cpp
   GISel/AArch64PostLegalizerLowering.cpp
@@ -59,6 +63,7 @@ add_llvm_target(AArch64CodeGen
   AArch64ISelLowering.cpp
   AArch64InstrInfo.cpp
   AArch64LoadStoreOptimizer.cpp
+  AArch64LowerHomogeneousPrologEpilog.cpp
   AArch64MachineFunctionInfo.cpp
   AArch64MacroFusion.cpp
   AArch64MCInstLower.cpp

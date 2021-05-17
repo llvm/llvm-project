@@ -40,6 +40,7 @@ class TestCase(TestBase):
     class_in_namespace_decl = [class_decl_kind, "ClassInNamespace"]
     class_we_enter_decl = [class_decl_kind, "ClassWeEnter"]
     class_member_decl = [struct_decl_kind, "ClassMember"]
+    class_static_member_decl = [struct_decl_kind, "StaticClassMember"]
     unused_class_member_decl = [struct_decl_kind, "UnusedClassMember"]
     unused_class_member_ptr_decl = [struct_decl_kind, "UnusedClassMemberPtr"]
 
@@ -56,6 +57,7 @@ class TestCase(TestBase):
         self.assert_decl_not_loaded(self.other_struct_decl)
         self.assert_decl_not_loaded(self.class_in_namespace_decl)
         self.assert_decl_not_loaded(self.class_member_decl)
+        self.assert_decl_not_loaded(self.class_static_member_decl)
         self.assert_decl_not_loaded(self.unused_class_member_decl)
 
     def get_ast_dump(self):
@@ -228,6 +230,8 @@ class TestCase(TestBase):
         self.assert_decl_not_completed(self.unused_class_member_ptr_decl)
         # We loaded the member we used.
         self.assert_decl_loaded(self.class_member_decl)
+        # We didn't load the type of the unused static member.
+        self.assert_decl_not_completed(self.class_static_member_decl)
 
         # This should not have loaded anything else.
         self.assert_decl_not_loaded(self.other_struct_decl)

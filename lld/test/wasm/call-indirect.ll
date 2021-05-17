@@ -67,11 +67,11 @@ define void @call_ptr(i64 (i64)* %arg) {
 ; CHECK-NEXT:         ElemType:        FUNCREF
 ; CHECK-NEXT:         Limits:
 ; CHECK-NEXT:           Flags:           [ HAS_MAX ]
-; CHECK-NEXT:           Initial:         0x3
+; CHECK-NEXT:           Minimum:         0x3
 ; CHECK-NEXT:           Maximum:         0x3
 ; CHECK-NEXT:   - Type:            MEMORY
 ; CHECK-NEXT:     Memories:
-; CHECK-NEXT:       - Initial:         0x2
+; CHECK-NEXT:       - Minimum:         0x2
 ; CHECK-NEXT:   - Type:            GLOBAL
 ; CHECK-NEXT:     Globals:
 ; CHECK-NEXT:       - Index:           0
@@ -122,7 +122,7 @@ define void @call_ptr(i64 (i64)* %arg) {
 ; CHECK-NEXT:         Body:            42010B
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            28028088808000118080808000001A28028488808000118180808000001A0B
+; CHECK-NEXT:         Body:            410028028088808000118080808000001A410028028488808000118180808000001A0B
 ; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            41020B

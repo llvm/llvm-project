@@ -38,7 +38,7 @@ static inline spirv::Opcode extractOpcode(uint32_t word) {
 
 Value spirv::Deserializer::getValue(uint32_t id) {
   if (auto constInfo = getConstant(id)) {
-    // Materialize a `spv.constant` op at every use site.
+    // Materialize a `spv.Constant` op at every use site.
     return opBuilder.create<spirv::ConstantOp>(unknownLoc, constInfo->second,
                                                constInfo->first);
   }
@@ -157,6 +157,8 @@ LogicalResult spirv::Deserializer::processInstruction(
   case spirv::Opcode::OpTypeMatrix:
   case spirv::Opcode::OpTypeArray:
   case spirv::Opcode::OpTypeFunction:
+  case spirv::Opcode::OpTypeImage:
+  case spirv::Opcode::OpTypeSampledImage:
   case spirv::Opcode::OpTypeRuntimeArray:
   case spirv::Opcode::OpTypeStruct:
   case spirv::Opcode::OpTypePointer:
@@ -172,7 +174,7 @@ LogicalResult spirv::Deserializer::processInstruction(
     return processConstantComposite(operands);
   case spirv::Opcode::OpSpecConstantComposite:
     return processSpecConstantComposite(operands);
-  case spirv::Opcode::OpSpecConstantOperation:
+  case spirv::Opcode::OpSpecConstantOp:
     return processSpecConstantOperation(operands);
   case spirv::Opcode::OpConstantTrue:
     return processConstantBool(/*isTrue=*/true, operands, /*isSpec=*/false);
@@ -285,7 +287,7 @@ LogicalResult spirv::Deserializer::processOpWithoutGrammarAttr(
     valueMap[valueID] = op->getResult(0);
 
   if (op->hasTrait<OpTrait::IsTerminator>())
-    clearDebugLine();
+    (void)clearDebugLine();
 
   return success();
 }
@@ -329,7 +331,8 @@ Deserializer::processOp<spirv::EntryPointOp>(ArrayRef<uint32_t> words) {
     return emitError(unknownLoc,
                      "missing Execution Model specification in OpEntryPoint");
   }
-  auto execModel = opBuilder.getI32IntegerAttr(words[wordIndex++]);
+  auto execModel = spirv::ExecutionModelAttr::get(
+      context, static_cast<spirv::ExecutionModel>(words[wordIndex++]));
   if (wordIndex >= words.size()) {
     return emitError(unknownLoc, "missing <id> in OpEntryPoint");
   }
@@ -381,7 +384,8 @@ Deserializer::processOp<spirv::ExecutionModeOp>(ArrayRef<uint32_t> words) {
   if (wordIndex >= words.size()) {
     return emitError(unknownLoc, "missing Execution Mode in OpExecutionMode");
   }
-  auto execMode = opBuilder.getI32IntegerAttr(words[wordIndex++]);
+  auto execMode = spirv::ExecutionModeAttr::get(
+      context, static_cast<spirv::ExecutionMode>(words[wordIndex++]));
 
   // Get the values
   SmallVector<Attribute, 4> attrListElems;
@@ -415,8 +419,11 @@ Deserializer::processOp<spirv::ControlBarrierOp>(ArrayRef<uint32_t> operands) {
     argAttrs.push_back(argAttr);
   }
 
-  opBuilder.create<spirv::ControlBarrierOp>(unknownLoc, argAttrs[0],
-                                            argAttrs[1], argAttrs[2]);
+  opBuilder.create<spirv::ControlBarrierOp>(
+      unknownLoc, argAttrs[0].cast<spirv::ScopeAttr>(),
+      argAttrs[1].cast<spirv::ScopeAttr>(),
+      argAttrs[2].cast<spirv::MemorySemanticsAttr>());
+
   return success();
 }
 
@@ -481,8 +488,9 @@ Deserializer::processOp<spirv::MemoryBarrierOp>(ArrayRef<uint32_t> operands) {
     argAttrs.push_back(argAttr);
   }
 
-  opBuilder.create<spirv::MemoryBarrierOp>(unknownLoc, argAttrs[0],
-                                           argAttrs[1]);
+  opBuilder.create<spirv::MemoryBarrierOp>(
+      unknownLoc, argAttrs[0].cast<spirv::ScopeAttr>(),
+      argAttrs[1].cast<spirv::MemorySemanticsAttr>());
   return success();
 }
 

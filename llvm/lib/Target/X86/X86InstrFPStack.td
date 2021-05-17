@@ -24,6 +24,7 @@ def SDTX86Fild      : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisPtrTy<1>]>;
 def SDTX86Fist      : SDTypeProfile<0, 2, [SDTCisFP<0>, SDTCisPtrTy<1>]>;
 
 def SDTX86CwdStore  : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
+def SDTX86CwdLoad   : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
 
 def X86fld          : SDNode<"X86ISD::FLD", SDTX86Fld,
                              [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
@@ -37,6 +38,9 @@ def X86fp_to_mem : SDNode<"X86ISD::FP_TO_INT_IN_MEM", SDTX86Fst,
                           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def X86fp_cwd_get16 : SDNode<"X86ISD::FNSTCW16m",          SDTX86CwdStore,
                              [SDNPHasChain, SDNPMayStore, SDNPSideEffect,
+                              SDNPMemOperand]>;
+def X86fp_cwd_set16 : SDNode<"X86ISD::FLDCW16m",           SDTX86CwdLoad,
+                             [SDNPHasChain, SDNPMayLoad, SDNPSideEffect,
                               SDNPMemOperand]>;
 
 def X86fstf32 : PatFrag<(ops node:$val, node:$ptr),
@@ -168,7 +172,7 @@ class FpIf64<dag outs, dag ins, FPFormat fp, list<dag> pattern> :
              FpI_<outs, ins, fp, pattern>, Requires<[FPStackf64]>;
 
 // Factoring for arithmetic.
-multiclass FPBinary_rr<SDNode OpNode> {
+multiclass FPBinary_rr<SDPatternOperator OpNode> {
 // Register op register -> register
 // These are separated out because they have no reversed form.
 def _Fp32 : FpIf32<(outs RFP32:$dst), (ins RFP32:$src1, RFP32:$src2), TwoArgFP,
@@ -181,7 +185,7 @@ def _Fp80 : FpI_<(outs RFP80:$dst), (ins RFP80:$src1, RFP80:$src2), TwoArgFP,
 // The FopST0 series are not included here because of the irregularities
 // in where the 'r' goes in assembly output.
 // These instructions cannot address 80-bit memory.
-multiclass FPBinary<SDNode OpNode, Format fp, string asmstring,
+multiclass FPBinary<SDPatternOperator OpNode, Format fp, string asmstring,
                     bit Forward = 1> {
 // ST(0) = ST(0) + [mem]
 def _Fp32m  : FpIf32<(outs RFP32:$dst),
@@ -343,7 +347,7 @@ def DIVR_FPrST0 : FPrST0PInst<MRM6r, "fdiv{|r}p\t{%st, $op|$op, st}">;
 } // SchedRW
 
 // Unary operations.
-multiclass FPUnary<SDNode OpNode, Format fp, string asmstring> {
+multiclass FPUnary<SDPatternOperator OpNode, Format fp, string asmstring> {
 def _Fp32  : FpIf32<(outs RFP32:$dst), (ins RFP32:$src), OneArgFPRW,
                  [(set RFP32:$dst, (OpNode RFP32:$src))]>;
 def _Fp64  : FpIf64<(outs RFP64:$dst), (ins RFP64:$src), OneArgFPRW,
@@ -705,7 +709,8 @@ def FNSTCW16m : I<0xD9, MRM7m,                   // [mem16] = X87 control world
 } // SchedRW
 let Defs = [FPSW,FPCW], mayLoad = 1 in
 def FLDCW16m  : I<0xD9, MRM5m,                   // X87 control world = [mem16]
-                  (outs), (ins i16mem:$dst), "fldcw\t$dst", []>,
+                  (outs), (ins i16mem:$dst), "fldcw\t$dst",
+                  [(X86fp_cwd_set16 addr:$dst)]>,
                 Sched<[WriteLoad]>;
 
 // FPU control instructions

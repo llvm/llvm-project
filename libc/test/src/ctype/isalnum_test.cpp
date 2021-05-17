@@ -10,7 +10,7 @@
 
 #include "utils/UnitTest/Test.h"
 
-TEST(IsAlNum, DefaultLocale) {
+TEST(LlvmLibcIsAlNum, DefaultLocale) {
   // Loops through all characters, verifying that numbers and letters
   // return non-zero integer and everything else returns a zero.
   for (int c = 0; c < 255; ++c) {

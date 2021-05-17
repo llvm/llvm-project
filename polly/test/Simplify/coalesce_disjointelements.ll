@@ -49,8 +49,8 @@ return:
 ; CHECK-NEXT:     Stmt_body
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                 [n] -> { Stmt_body[i0] -> MemRef_A[0] };
-; CHECK-NEXT:            new: [n] -> { Stmt_body[i0] -> MemRef_A[0] : n <= 2147483647 };
+; CHECK-NEXT:            new: [n] -> { Stmt_body[i0] -> MemRef_A[0] };
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                 [n] -> { Stmt_body[i0] -> MemRef_A[1] };
-; CHECK-NEXT:            new: [n] -> { Stmt_body[i0] -> MemRef_A[1] : n <= 2147483647 };
+; CHECK-NEXT:            new: [n] -> { Stmt_body[i0] -> MemRef_A[1] };
 ; CHECK-NEXT: }

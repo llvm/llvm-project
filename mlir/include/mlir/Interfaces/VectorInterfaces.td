@@ -53,12 +53,12 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
 
   let methods = [
     StaticInterfaceMethod<
-      /*desc=*/"Return the `masked` attribute name.",
+      /*desc=*/"Return the `in_bounds` attribute name.",
       /*retTy=*/"StringRef",
-      /*methodName=*/"getMaskedAttrName",
+      /*methodName=*/"getInBoundsAttrName",
       /*args=*/(ins),
       /*methodBody=*/"",
-      /*defaultImplementation=*/ [{ return "masked"; }]
+      /*defaultImplementation=*/ [{ return "in_bounds"; }]
     >,
     StaticInterfaceMethod<
       /*desc=*/"Return the `permutation_map` attribute name.",
@@ -70,16 +70,16 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
-      Return `false` when the `masked` attribute at dimension
-      `dim` is set to `false`. Return `true` otherwise.}],
+      Return `true` when the `in_bounds` attribute at dimension
+      `dim` is set to `true`. Return `false` otherwise.}],
       /*retTy=*/"bool",
-      /*methodName=*/"isMaskedDim",
+      /*methodName=*/"isDimInBounds",
       /*args=*/(ins "unsigned":$dim),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return !$_op.masked() ||
-          $_op.masked()->template cast<ArrayAttr>()[dim]
-                        .template cast<BoolAttr>().getValue();
+        return $_op.in_bounds() &&
+          $_op.in_bounds()->template cast<ArrayAttr>()[dim]
+                          .template cast<BoolAttr>().getValue();
       }]
     >,
     InterfaceMethod<
@@ -115,11 +115,38 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       /*defaultImplementation=*/
     >,
     InterfaceMethod<
-      /*desc=*/"Return the `masked` boolean ArrayAttr.",
-      /*retTy=*/"Optional<ArrayAttr>",
-      /*methodName=*/"masked",
+      /*desc=*/[{ Returns true if the specified dimension is a broadcast. }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isBroadcastDim",
+      /*args=*/(ins "unsigned":$idx),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        auto expr = $_op.permutation_map().getResult(idx);
+        return expr.template isa<AffineConstantExpr>() &&
+               expr.template dyn_cast<AffineConstantExpr>().getValue() == 0;
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{ Returns true if at least one of the dimensions in the
+                  permutation map is a broadcast.}],
+      /*retTy=*/"bool",
+      /*methodName=*/"hasBroadcastDim",
       /*args=*/(ins),
-      /*methodBody=*/"return $_op.masked();"
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        for (unsigned i = 0; i < $_op.permutation_map().getNumResults(); ++i) {
+          if ($_op.isBroadcastDim(i))
+            return true;
+        }
+        return false;
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/"Return the `in_bounds` boolean ArrayAttr.",
+      /*retTy=*/"Optional<ArrayAttr>",
+      /*methodName=*/"in_bounds",
+      /*args=*/(ins),
+      /*methodBody=*/"return $_op.in_bounds();"
       /*defaultImplementation=*/
     >,
     InterfaceMethod<
@@ -142,6 +169,19 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
         }]
     >,
     InterfaceMethod<
+      /*desc=*/"Return the mask type if the op has a mask.",
+      /*retTy=*/"VectorType",
+      /*methodName=*/"getMaskType",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return $_op.mask()
+            ? mlir::vector::detail::transferMaskType(
+                $_op.getVectorType(), $_op.permutation_map())
+            : VectorType();
+      }]
+    >,
+    InterfaceMethod<
       /*desc=*/[{ Return the number of dimensions that participate in the
                   permutation map.}],
       /*retTy=*/"unsigned",
@@ -162,14 +202,15 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
         "return $_op.getShapedType().getRank() - $_op.getTransferRank();"
     >,
     InterfaceMethod<
-      /*desc=*/[{ Returns true if at least one of the dimensions is masked.}],
+      /*desc=*/[{ Returns true if at least one of the dimensions may be
+                  out-of-bounds.}],
       /*retTy=*/"bool",
-      /*methodName=*/"hasMaskedDim",
+      /*methodName=*/"hasOutOfBoundsDim",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         for (unsigned idx = 0, e = $_op.getTransferRank(); idx < e; ++idx)
-          if ($_op.isMaskedDim(idx))
+          if (!$_op.isDimInBounds(idx))
             return true;
         return false;
       }]

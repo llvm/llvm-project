@@ -51,6 +51,10 @@ public:
   /// Clangd should treat the results as unreliable.
   virtual tooling::CompileCommand getFallbackCommand(PathRef File) const;
 
+  /// If the CDB does any asynchronous work, wait for it to complete.
+  /// For use in tests.
+  virtual bool blockUntilIdle(Deadline D) const { return true; }
+
   using CommandChanged = Event<std::vector<std::string>>;
   /// The callback is notified when files may have new compile commands.
   /// The argument is a list of full file paths.
@@ -75,6 +79,8 @@ public:
 
   tooling::CompileCommand getFallbackCommand(PathRef File) const override;
 
+  bool blockUntilIdle(Deadline D) const override;
+
 private:
   const GlobalCompilationDatabase *Base;
   std::unique_ptr<GlobalCompilationDatabase> BaseOwner;
@@ -97,7 +103,10 @@ public:
     // (This is more expensive to check frequently, as we check many locations).
     std::chrono::steady_clock::duration RevalidateMissingAfter =
         std::chrono::seconds(30);
+    // Used to provide per-file configuration.
+    std::function<Context(llvm::StringRef)> ContextProvider;
     // Only look for a compilation database in this one fixed directory.
+    // FIXME: fold this into config/context mechanism.
     llvm::Optional<Path> CompileCommandsDir;
   };
 
@@ -114,18 +123,15 @@ public:
   /// \p File's parents.
   llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const override;
 
+  bool blockUntilIdle(Deadline Timeout) const override;
+
 private:
   Options Opts;
 
   class DirectoryCache;
-  // If there's an explicit CompileCommandsDir, cache of the CDB found there.
-  mutable std::unique_ptr<DirectoryCache> OnlyDirCache;
-
   // Keyed by possibly-case-folded directory path.
   // We can hand out pointers as they're stable and entries are never removed.
-  // Empty if CompileCommandsDir is given (OnlyDirCache is used instead).
   mutable llvm::StringMap<DirectoryCache> DirCaches;
-  // DirCaches access must be locked (unlike OnlyDirCache, which is threadsafe).
   mutable std::mutex DirCachesMutex;
 
   std::vector<DirectoryCache *>
@@ -145,6 +151,9 @@ private:
     ProjectInfo PI;
   };
   llvm::Optional<CDBLookupResult> lookupCDB(CDBLookupRequest Request) const;
+
+  class BroadcastThread;
+  std::unique_ptr<BroadcastThread> Broadcaster;
 
   // Performs broadcast on governed files.
   void broadcastCDB(CDBLookupResult Res) const;

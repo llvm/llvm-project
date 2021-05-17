@@ -48,6 +48,8 @@ LLVM_ATTRIBUTE_NORETURN void PrintFatalError(const Record *Rec,
 LLVM_ATTRIBUTE_NORETURN void PrintFatalError(const RecordVal *RecVal,
                                              const Twine &Msg);
 
+void CheckAssert(SMLoc Loc, Init *Condition, Init *Message);
+
 extern SourceMgr SrcMgr;
 extern unsigned ErrorsPrinted;
 

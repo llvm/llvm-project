@@ -10,14 +10,18 @@
 
 // <queue>
 
-// explicit queue(container_type&& c);
+// explicit queue(Container&& c = Container()); // before C++20
+// queue() : queue(Container()) {}              // C++20
+// explicit queue(Container&& c);               // C++20
 
 #include <queue>
 #include <cassert>
 
 #include "test_macros.h"
 #include "MoveOnly.h"
-
+#if TEST_STD_VER >= 11
+#include "test_convertible.h"
+#endif
 
 template <class C>
 C
@@ -29,11 +33,16 @@ make(int n)
     return c;
 }
 
-
 int main(int, char**)
 {
-    std::queue<MoveOnly> q(make<std::deque<MoveOnly> >(5));
+    typedef std::deque<MoveOnly> Container;
+    typedef std::queue<MoveOnly> Q;
+    Q q(make<std::deque<MoveOnly> >(5));
     assert(q.size() == 5);
 
-  return 0;
+#if TEST_STD_VER >= 11
+    static_assert(!test_convertible<Q, Container&&>(), "");
+#endif
+
+    return 0;
 }

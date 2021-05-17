@@ -182,6 +182,7 @@ void AArch64TargetInfo::getTargetDefinesARMV84A(const LangOptions &Opts,
 
 void AArch64TargetInfo::getTargetDefinesARMV85A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
+  Builder.defineMacro("__ARM_FEATURE_FRINT", "1");
   // Also include the Armv8.4 defines
   getTargetDefinesARMV84A(Opts, Builder);
 }
@@ -286,8 +287,26 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasCRC)
     Builder.defineMacro("__ARM_FEATURE_CRC32", "1");
 
-  if (HasCrypto)
+  // The __ARM_FEATURE_CRYPTO is deprecated in favor of finer grained feature
+  // macros for AES, SHA2, SHA3 and SM4
+  if (HasAES && HasSHA2)
     Builder.defineMacro("__ARM_FEATURE_CRYPTO", "1");
+
+  if (HasAES)
+    Builder.defineMacro("__ARM_FEATURE_AES", "1");
+
+  if (HasSHA2)
+    Builder.defineMacro("__ARM_FEATURE_SHA2", "1");
+
+  if (HasSHA3) {
+    Builder.defineMacro("__ARM_FEATURE_SHA3", "1");
+    Builder.defineMacro("__ARM_FEATURE_SHA512", "1");
+  }
+
+  if (HasSM4) {
+    Builder.defineMacro("__ARM_FEATURE_SM3", "1");
+    Builder.defineMacro("__ARM_FEATURE_SM4", "1");
+  }
 
   if (HasUnaligned)
     Builder.defineMacro("__ARM_FEATURE_UNALIGNED", "1");
@@ -333,7 +352,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ARM_FEATURE_SVE_MATMUL_INT8", "1");
 
   if ((FPU & NeonMode) && HasFP16FML)
-    Builder.defineMacro("__ARM_FEATURE_FP16FML", "1");
+    Builder.defineMacro("__ARM_FEATURE_FP16_FML", "1");
 
   if (Opts.hasSignReturnAddress()) {
     // Bitmask:
@@ -358,6 +377,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (HasLS64)
     Builder.defineMacro("__ARM_FEATURE_LS64", "1");
+
+  if (HasRandGen)
+    Builder.defineMacro("__ARM_FEATURE_RNG", "1");
 
   switch (ArchKind) {
   default:
@@ -417,6 +439,10 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   FPU = FPUMode;
   HasCRC = false;
   HasCrypto = false;
+  HasAES = false;
+  HasSHA2 = false;
+  HasSHA3 = false;
+  HasSM4 = false;
   HasUnaligned = true;
   HasFullFP16 = false;
   HasDotProd = false;
@@ -424,6 +450,7 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   HasMTE = false;
   HasTME = false;
   HasLS64 = false;
+  HasRandGen = false;
   HasMatMul = false;
   HasBFloat16 = false;
   HasSVE2 = false;
@@ -485,6 +512,16 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasCRC = true;
     if (Feature == "+crypto")
       HasCrypto = true;
+    if (Feature == "+aes")
+      HasAES = true;
+    if (Feature == "+sha2")
+      HasSHA2 = true;
+    if (Feature == "+sha3") {
+      HasSHA2 = true;
+      HasSHA3 = true;
+    }
+    if (Feature == "+sm4")
+      HasSM4 = true;
     if (Feature == "+strict-align")
       HasUnaligned = false;
     if (Feature == "+v8.1a")
@@ -523,6 +560,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasLSE = true;
     if (Feature == "+ls64")
       HasLS64 = true;
+    if (Feature == "+rand")
+      HasRandGen = true;
     if (Feature == "+flagm")
       HasFlagM = true;
   }
@@ -738,9 +777,9 @@ AArch64leTargetInfo::AArch64leTargetInfo(const llvm::Triple &Triple,
 void AArch64leTargetInfo::setDataLayout() {
   if (getTriple().isOSBinFormatMachO()) {
     if(getTriple().isArch32Bit())
-      resetDataLayout("e-m:o-p:32:32-i64:64-i128:128-n32:64-S128");
+      resetDataLayout("e-m:o-p:32:32-i64:64-i128:128-n32:64-S128", "_");
     else
-      resetDataLayout("e-m:o-i64:64-i128:128-n32:64-S128");
+      resetDataLayout("e-m:o-i64:64-i128:128-n32:64-S128", "_");
   } else
     resetDataLayout("e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128");
 }
@@ -789,7 +828,8 @@ WindowsARM64TargetInfo::WindowsARM64TargetInfo(const llvm::Triple &Triple,
 void WindowsARM64TargetInfo::setDataLayout() {
   resetDataLayout(Triple.isOSBinFormatMachO()
                       ? "e-m:o-i64:64-i128:128-n32:64-S128"
-                      : "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128");
+                      : "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128",
+                  Triple.isOSBinFormatMachO() ? "_" : "");
 }
 
 TargetInfo::BuiltinVaListKind

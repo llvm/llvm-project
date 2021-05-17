@@ -390,6 +390,18 @@ StructType *StructType::get(LLVMContext &Context, ArrayRef<Type*> ETypes,
   return ST;
 }
 
+bool StructType::containsScalableVectorType() const {
+  for (Type *Ty : elements()) {
+    if (isa<ScalableVectorType>(Ty))
+      return true;
+    if (auto *STy = dyn_cast<StructType>(Ty))
+      if (STy->containsScalableVectorType())
+        return true;
+  }
+
+  return false;
+}
+
 void StructType::setBody(ArrayRef<Type*> Elements, bool isPacked) {
   assert(isOpaque() && "Struct body already set!");
 
@@ -509,9 +521,14 @@ bool StructType::isSized(SmallPtrSetImpl<Type*> *Visited) const {
   // Okay, our struct is sized if all of the elements are, but if one of the
   // elements is opaque, the struct isn't sized *yet*, but may become sized in
   // the future, so just bail out without caching.
-  for (element_iterator I = element_begin(), E = element_end(); I != E; ++I)
-    if (!(*I)->isSized(Visited))
+  for (Type *Ty : elements()) {
+    // If the struct contains a scalable vector type, don't consider it sized.
+    // This prevents it from being used in loads/stores/allocas/GEPs.
+    if (isa<ScalableVectorType>(Ty))
       return false;
+    if (!Ty->isSized(Visited))
+      return false;
+  }
 
   // Here we cheat a bit and cast away const-ness. The goal is to memoize when
   // we find a sized type, as types can only move from opaque to sized, not the
@@ -531,7 +548,7 @@ StringRef StructType::getName() const {
 bool StructType::isValidElementType(Type *ElemTy) {
   return !ElemTy->isVoidTy() && !ElemTy->isLabelTy() &&
          !ElemTy->isMetadataTy() && !ElemTy->isFunctionTy() &&
-         !ElemTy->isTokenTy() && !isa<ScalableVectorType>(ElemTy);
+         !ElemTy->isTokenTy();
 }
 
 bool StructType::isLayoutIdentical(StructType *Other) const {
@@ -593,7 +610,8 @@ ArrayType *ArrayType::get(Type *ElementType, uint64_t NumElements) {
 bool ArrayType::isValidElementType(Type *ElemTy) {
   return !ElemTy->isVoidTy() && !ElemTy->isLabelTy() &&
          !ElemTy->isMetadataTy() && !ElemTy->isFunctionTy() &&
-         !ElemTy->isTokenTy() && !isa<ScalableVectorType>(ElemTy);
+         !ElemTy->isTokenTy() && !ElemTy->isX86_AMXTy() &&
+         !isa<ScalableVectorType>(ElemTy);
 }
 
 //===----------------------------------------------------------------------===//
@@ -681,10 +699,29 @@ PointerType *PointerType::get(Type *EltTy, unsigned AddressSpace) {
   return Entry;
 }
 
+PointerType *PointerType::get(LLVMContext &C, unsigned AddressSpace) {
+  LLVMContextImpl *CImpl = C.pImpl;
+
+  // Since AddressSpace #0 is the common case, we special case it.
+  PointerType *&Entry =
+      AddressSpace == 0
+          ? CImpl->PointerTypes[nullptr]
+          : CImpl->ASPointerTypes[std::make_pair(nullptr, AddressSpace)];
+
+  if (!Entry)
+    Entry = new (CImpl->Alloc) PointerType(C, AddressSpace);
+  return Entry;
+}
+
 PointerType::PointerType(Type *E, unsigned AddrSpace)
   : Type(E->getContext(), PointerTyID), PointeeTy(E) {
   ContainedTys = &PointeeTy;
   NumContainedTys = 1;
+  setSubclassData(AddrSpace);
+}
+
+PointerType::PointerType(LLVMContext &C, unsigned AddrSpace)
+    : Type(C, PointerTyID), PointeeTy(nullptr) {
   setSubclassData(AddrSpace);
 }
 
@@ -694,7 +731,9 @@ PointerType *Type::getPointerTo(unsigned addrs) const {
 
 bool PointerType::isValidElementType(Type *ElemTy) {
   return !ElemTy->isVoidTy() && !ElemTy->isLabelTy() &&
-         !ElemTy->isMetadataTy() && !ElemTy->isTokenTy();
+         !ElemTy->isMetadataTy() && !ElemTy->isTokenTy() &&
+         !ElemTy->isX86_AMXTy() &&
+         !(ElemTy->isPointerTy() && cast<PointerType>(ElemTy)->isOpaque());
 }
 
 bool PointerType::isLoadableOrStorableType(Type *ElemTy) {

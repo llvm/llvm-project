@@ -15,18 +15,18 @@ void test(unsigned u) {
   auto b = std::max(u, 0u);
   // expected-warning@-1{{taking the max of a value and unsigned zero is always equal to the other value}}
   // expected-note@-2{{remove call to max function and unsigned zero argument}}
-  // fix-it:"/usr/local/google/home/rtrieu/clang/open/llvm/tools/clang/test/SemaCXX/warn-max-unsigned-zero.cpp":{13:12-13:20}:""
-  // fix-it:"/usr/local/google/home/rtrieu/clang/open/llvm/tools/clang/test/SemaCXX/warn-max-unsigned-zero.cpp":{13:22-13:26}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:20}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:22-[[@LINE-4]]:26}:""
   auto c = std::max(0u, 55u);
   // expected-warning@-1{{taking the max of unsigned zero and a value is always equal to the other value}}
   // expected-note@-2{{remove call to max function and unsigned zero argument}}
-  // fix-it:"/usr/local/google/home/rtrieu/clang/open/llvm/tools/clang/test/SemaCXX/warn-max-unsigned-zero.cpp":{16:12-16:20}:""
-  // fix-it:"/usr/local/google/home/rtrieu/clang/open/llvm/tools/clang/test/SemaCXX/warn-max-unsigned-zero.cpp":{16:21-16:24}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:20}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:21-[[@LINE-4]]:24}:""
   auto d = std::max(0u, u);
   // expected-warning@-1{{taking the max of unsigned zero and a value is always equal to the other value}}
   // expected-note@-2{{remove call to max function and unsigned zero argument}}
-  // fix-it:"/usr/local/google/home/rtrieu/clang/open/llvm/tools/clang/test/SemaCXX/warn-max-unsigned-zero.cpp":{19:12-19:20}:""
-  // fix-it:"/usr/local/google/home/rtrieu/clang/open/llvm/tools/clang/test/SemaCXX/warn-max-unsigned-zero.cpp":{19:21-19:24}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:20}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:21-[[@LINE-4]]:24}:""
 }
 
 void negative_test(signed s) {
@@ -41,8 +41,8 @@ unsigned template_test() {
   return std::max(x, 0u);
   // expected-warning@-1{{taking the max of a value and unsigned zero is always equal to the other value}}
   // expected-note@-2{{remove call to max function and unsigned zero argument}}
-  // fix-it:"/usr/local/google/home/rtrieu/clang/open/llvm/tools/clang/test/SemaCXX/warn-max-unsigned-zero.cpp":{33:10-33:18}:""
-  // fix-it:"/usr/local/google/home/rtrieu/clang/open/llvm/tools/clang/test/SemaCXX/warn-max-unsigned-zero.cpp":{33:20-33:24}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:10-[[@LINE-3]]:18}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:20-[[@LINE-4]]:24}:""
 }
 
 int a = template_test<0>() + template_test<1>() + template_test<2>();

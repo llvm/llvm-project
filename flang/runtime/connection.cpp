@@ -18,6 +18,10 @@ std::size_t ConnectionState::RemainingSpaceInRecord() const {
   return positionInRecord >= recl ? 0 : recl - positionInRecord;
 }
 
+bool ConnectionState::NeedAdvance(std::size_t width) const {
+  return positionInRecord > 0 && width > RemainingSpaceInRecord();
+}
+
 bool ConnectionState::IsAtEOF() const {
   return endfileRecordNumber && currentRecordNumber >= *endfileRecordNumber;
 }

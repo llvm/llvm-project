@@ -244,6 +244,12 @@ class AdvDataFormatterTestCase(TestBase):
         self.expect("frame variable a_simple_object", matching=True,
                     substrs=['x=0x00000003'])
 
+        self.expect_var_path("constInt", value='0x0000002a')
+
+        self.expect_var_path("volatileInt", value='0x0000002b')
+
+        self.expect_var_path("constVolatileInt", value='0x0000002c')
+
         # check that we can correctly cap the number of children shown
         self.runCmd("settings set target.max-children-count 5")
 

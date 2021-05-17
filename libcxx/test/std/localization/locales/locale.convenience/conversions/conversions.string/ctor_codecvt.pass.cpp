@@ -10,13 +10,19 @@
 
 // wstring_convert<Codecvt, Elem, Wide_alloc, Byte_alloc>
 
-// wstring_convert(Codecvt* pcvt = new Codecvt);
+// wstring_convert(Codecvt* pcvt = new Codecvt);          // before C++14
+// explicit wstring_convert(Codecvt* pcvt = new Codecvt); // before C++20
+// wstring_convert() : wstring_convert(new Codecvt) {}    // C++20
+// explicit wstring_convert(Codecvt* pcvt);               // C++20
 
 #include <locale>
 #include <codecvt>
 #include <cassert>
 
 #include "test_macros.h"
+#if TEST_STD_VER >= 11
+#include "test_convertible.h"
+#endif
 
 int main(int, char**)
 {
@@ -37,5 +43,14 @@ int main(int, char**)
 #endif
     }
 
-  return 0;
+#if TEST_STD_VER >= 11
+    {
+      typedef std::codecvt_utf8<wchar_t> Codecvt;
+      typedef std::wstring_convert<Codecvt> B;
+      static_assert(test_convertible<B>(), "");
+      static_assert(!test_convertible<B, Codecvt*>(), "");
+    }
+#endif
+
+    return 0;
 }

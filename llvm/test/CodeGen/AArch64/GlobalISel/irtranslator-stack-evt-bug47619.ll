@@ -17,8 +17,9 @@ define i3 @bug47619(i64 %arg, i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4, i64 %a
   ; CHECK:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x6
   ; CHECK:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x7
   ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s3) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 1 from %fixed-stack.0, align 16)
-  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s3)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.0, align 16)
+  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s3) = G_TRUNC [[LOAD]](s32)
+  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s3)
   ; CHECK:   $w0 = COPY [[ANYEXT]](s32)
   ; CHECK:   RET_ReallyLR implicit $w0
 bb:

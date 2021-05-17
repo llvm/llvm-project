@@ -17,42 +17,68 @@
 using namespace clang;
 using namespace clang::index;
 
+static void addOccurrence(std::vector<DeclOccurrence> &Decls,
+                          DeclOccurrence Info) {
+  auto IsNextOccurence = [&]() -> bool {
+    if (Decls.empty())
+      return true;
+    auto &Last = Decls.back();
+    return Last.Offset < Info.Offset;
+  };
+
+  if (IsNextOccurence()) {
+    Decls.push_back(std::move(Info));
+    return;
+  }
+
+  // We keep Decls in order as we need to access them in this order in all cases.
+  auto It = llvm::upper_bound(Decls, Info);
+  Decls.insert(It, std::move(Info));
+}
+
 void FileIndexRecord::addDeclOccurence(SymbolRoleSet Roles, unsigned Offset,
                                        const Decl *D,
                                        ArrayRef<SymbolRelation> Relations) {
   assert(D->isCanonicalDecl() &&
          "Occurrences should be associated with their canonical decl");
-
-  auto IsNextOccurence = [&]() -> bool {
-    if (Decls.empty())
-      return true;
-    auto &Last = Decls.back();
-    return Last.Offset < Offset;
-  };
-
-  if (IsNextOccurence()) {
-    Decls.emplace_back(Roles, Offset, D, Relations);
-    return;
-  }
-
-  DeclOccurrence NewInfo(Roles, Offset, D, Relations);
-  // We keep Decls in order as we need to access them in this order in all cases.
-  auto It = llvm::upper_bound(Decls, NewInfo);
-  Decls.insert(It, std::move(NewInfo));
+  addOccurrence(Decls, DeclOccurrence(Roles, Offset, D, Relations));
 }
 
-void FileIndexRecord::print(llvm::raw_ostream &OS) const {
+void FileIndexRecord::addMacroOccurence(SymbolRoleSet Roles, unsigned Offset,
+                                        const IdentifierInfo *Name,
+                                        const MacroInfo *MI) {
+  addOccurrence(Decls, DeclOccurrence(Roles, Offset, Name, MI));
+}
+
+void FileIndexRecord::removeHeaderGuardMacros() {
+  auto It =
+      std::remove_if(Decls.begin(), Decls.end(), [](const DeclOccurrence &D) {
+        if (const auto *MI = D.DeclOrMacro.dyn_cast<const MacroInfo *>())
+          return MI->isUsedForHeaderGuard();
+        return false;
+      });
+  Decls.erase(It, Decls.end());
+}
+
+void FileIndexRecord::print(llvm::raw_ostream &OS, SourceManager &SM) const {
   OS << "DECLS BEGIN ---\n";
   for (auto &DclInfo : Decls) {
-    const Decl *D = DclInfo.Dcl;
-    SourceManager &SM = D->getASTContext().getSourceManager();
-    SourceLocation Loc = SM.getFileLoc(D->getLocation());
-    PresumedLoc PLoc = SM.getPresumedLoc(Loc);
-    OS << llvm::sys::path::filename(PLoc.getFilename()) << ':' << PLoc.getLine()
-       << ':' << PLoc.getColumn();
+    if (const auto *D = DclInfo.DeclOrMacro.dyn_cast<const Decl *>()) {
+      SourceLocation Loc = SM.getFileLoc(D->getLocation());
+      PresumedLoc PLoc = SM.getPresumedLoc(Loc);
+      OS << llvm::sys::path::filename(PLoc.getFilename()) << ':'
+         << PLoc.getLine() << ':' << PLoc.getColumn();
 
-    if (auto ND = dyn_cast<NamedDecl>(D)) {
-      OS << ' ' << ND->getDeclName();
+      if (const auto *ND = dyn_cast<NamedDecl>(D)) {
+        OS << ' ' << ND->getDeclName();
+      }
+    } else {
+      const auto *MI = DclInfo.DeclOrMacro.get<const MacroInfo *>();
+      SourceLocation Loc = SM.getFileLoc(MI->getDefinitionLoc());
+      PresumedLoc PLoc = SM.getPresumedLoc(Loc);
+      OS << llvm::sys::path::filename(PLoc.getFilename()) << ':'
+         << PLoc.getLine() << ':' << PLoc.getColumn();
+      OS << ' ' << DclInfo.MacroName->getName();
     }
 
     OS << '\n';

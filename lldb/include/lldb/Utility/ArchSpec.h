@@ -131,6 +131,7 @@ public:
     eCore_arm_arm64,
     eCore_arm_armv8,
     eCore_arm_armv8l,
+    eCore_arm_arm64e,
     eCore_arm_arm64_32,
     eCore_arm_aarch64,
 

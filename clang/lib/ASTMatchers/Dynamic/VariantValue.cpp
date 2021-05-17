@@ -22,7 +22,9 @@ namespace dynamic {
 std::string ArgKind::asString() const {
   switch (getArgKind()) {
   case AK_Matcher:
-    return (Twine("Matcher<") + MatcherKind.asStringRef() + ">").str();
+    return (Twine("Matcher<") + NodeKind.asStringRef() + ">").str();
+  case AK_Node:
+    return NodeKind.asStringRef().str();
   case AK_Boolean:
     return "boolean";
   case AK_Double:
@@ -38,13 +40,13 @@ std::string ArgKind::asString() const {
 bool ArgKind::isConvertibleTo(ArgKind To, unsigned *Specificity) const {
   if (K != To.K)
     return false;
-  if (K != AK_Matcher) {
+  if (K != AK_Matcher && K != AK_Node) {
     if (Specificity)
       *Specificity = 1;
     return true;
   }
   unsigned Distance;
-  if (!MatcherKind.isBaseOf(To.MatcherKind, &Distance))
+  if (!NodeKind.isBaseOf(To.NodeKind, &Distance))
     return false;
 
   if (Specificity)
@@ -57,6 +59,11 @@ VariantMatcher::MatcherOps::canConstructFrom(const DynTypedMatcher &Matcher,
                                              bool &IsExactMatch) const {
   IsExactMatch = Matcher.getSupportedKind().isSame(NodeKind);
   return Matcher.canConvertTo(NodeKind);
+}
+
+DynTypedMatcher VariantMatcher::MatcherOps::convertMatcher(
+    const DynTypedMatcher &Matcher) const {
+  return Matcher.dynCastTo(NodeKind);
 }
 
 llvm::Optional<DynTypedMatcher>
@@ -102,8 +109,8 @@ public:
   }
 
   bool isConvertibleTo(ASTNodeKind Kind, unsigned *Specificity) const override {
-    return ArgKind(Matcher.getSupportedKind())
-        .isConvertibleTo(Kind, Specificity);
+    return ArgKind::MakeMatcherArg(Matcher.getSupportedKind())
+        .isConvertibleTo(ArgKind::MakeMatcherArg(Kind), Specificity);
   }
 
 private:
@@ -162,8 +169,9 @@ public:
     unsigned MaxSpecificity = 0;
     for (const DynTypedMatcher &Matcher : Matchers) {
       unsigned ThisSpecificity;
-      if (ArgKind(Matcher.getSupportedKind())
-              .isConvertibleTo(Kind, &ThisSpecificity)) {
+      if (ArgKind::MakeMatcherArg(Matcher.getSupportedKind())
+              .isConvertibleTo(ArgKind::MakeMatcherArg(Kind),
+                               &ThisSpecificity)) {
         MaxSpecificity = std::max(MaxSpecificity, ThisSpecificity);
       }
     }
@@ -263,6 +271,10 @@ VariantValue::VariantValue(StringRef String) : Type(VT_Nothing) {
   setString(String);
 }
 
+VariantValue::VariantValue(ASTNodeKind NodeKind) : Type(VT_Nothing) {
+  setNodeKind(NodeKind);
+}
+
 VariantValue::VariantValue(const VariantMatcher &Matcher) : Type(VT_Nothing) {
   setMatcher(Matcher);
 }
@@ -285,6 +297,9 @@ VariantValue &VariantValue::operator=(const VariantValue &Other) {
   case VT_String:
     setString(Other.getString());
     break;
+  case VT_NodeKind:
+    setNodeKind(Other.getNodeKind());
+    break;
   case VT_Matcher:
     setMatcher(Other.getMatcher());
     break;
@@ -302,6 +317,9 @@ void VariantValue::reset() {
     break;
   case VT_Matcher:
     delete Value.Matcher;
+    break;
+  case VT_NodeKind:
+    delete Value.NodeKind;
     break;
   // Cases that do nothing.
   case VT_Boolean:
@@ -373,6 +391,19 @@ void VariantValue::setString(StringRef NewValue) {
   Value.String = new std::string(NewValue);
 }
 
+bool VariantValue::isNodeKind() const { return Type == VT_NodeKind; }
+
+const ASTNodeKind &VariantValue::getNodeKind() const {
+  assert(isNodeKind());
+  return *Value.NodeKind;
+}
+
+void VariantValue::setNodeKind(ASTNodeKind NewValue) {
+  reset();
+  Type = VT_NodeKind;
+  Value.NodeKind = new ASTNodeKind(NewValue);
+}
+
 bool VariantValue::isMatcher() const {
   return Type == VT_Matcher;
 }
@@ -414,6 +445,11 @@ bool VariantValue::isConvertibleTo(ArgKind Kind, unsigned *Specificity) const {
     *Specificity = 1;
     return true;
 
+  case ArgKind::AK_Node:
+    if (!isNodeKind())
+      return false;
+    return getMatcher().isConvertibleTo(Kind.getNodeKind(), Specificity);
+
   case ArgKind::AK_Matcher:
     if (!isMatcher())
       return false;
@@ -444,6 +480,8 @@ std::string VariantValue::getTypeAsString() const {
   case VT_Boolean: return "Boolean";
   case VT_Double: return "Double";
   case VT_Unsigned: return "Unsigned";
+  case VT_NodeKind:
+    return getNodeKind().asStringRef().str();
   case VT_Nothing: return "Nothing";
   }
   llvm_unreachable("Invalid Type");

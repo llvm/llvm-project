@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/CodeGen/StackMaps.h"
 #include <cassert>
 #include <tuple>
 
@@ -123,6 +124,16 @@ static bool isRematerializable(const LiveInterval &LI, const LiveIntervals &LIS,
       return false;
   }
   return true;
+}
+
+bool VirtRegAuxInfo::isLiveAtStatepointVarArg(LiveInterval &LI) {
+  return any_of(VRM.getRegInfo().reg_operands(LI.reg()),
+                [](MachineOperand &MO) {
+    MachineInstr *MI = MO.getParent();
+    if (MI->getOpcode() != TargetOpcode::STATEPOINT)
+      return false;
+    return StatepointOpers(MI).getVarIdx() <= MI->getOperandNo(&MO);
+  });
 }
 
 void VirtRegAuxInfo::calculateSpillWeightAndHint(LiveInterval &LI) {
@@ -290,9 +301,15 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
 
   // Mark li as unspillable if all live ranges are tiny and the interval
   // is not live at any reg mask.  If the interval is live at a reg mask
-  // spilling may be required.
+  // spilling may be required. If li is live as use in statepoint instruction
+  // spilling may be required due to if we mark interval with use in statepoint
+  // as not spillable we are risky to end up with no register to allocate.
+  // At the same time STATEPOINT instruction is perfectly fine to have this
+  // operand on stack, so spilling such interval and folding its load from stack
+  // into instruction itself makes perfect sense.
   if (ShouldUpdateLI && LI.isZeroLength(LIS.getSlotIndexes()) &&
-      !LI.isLiveAtIndexes(LIS.getRegMaskSlots())) {
+      !LI.isLiveAtIndexes(LIS.getRegMaskSlots()) &&
+      !isLiveAtStatepointVarArg(LI)) {
     LI.markNotSpillable();
     return -1.0;
   }

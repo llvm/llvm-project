@@ -156,19 +156,19 @@ is very small, and follows the basic pattern of any dialect conversion pass.
 
 ```
 void mlir::populateTensorBufferizePatterns(
-    MLIRContext *context, BufferizeTypeConverter &typeConverter,
-    OwningRewritePatternList &patterns) {
-  patterns.insert<BufferizeCastOp, BufferizeExtractOp>(typeConverter, context);
+    BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns) {
+  patterns.add<BufferizeCastOp, BufferizeExtractOp>(typeConverter,
+                                                    patterns.getContext());
 }
 
 struct TensorBufferizePass : public TensorBufferizeBase<TensorBufferizePass> {
   void runOnFunction() override {
     auto *context = &getContext();
     BufferizeTypeConverter typeConverter;
-    OwningRewritePatternList patterns;
+    RewritePatternSet patterns(context);
     ConversionTarget target(*context);
 
-    populateTensorBufferizePatterns(context, typeConverter, patterns);
+    populateTensorBufferizePatterns(typeConverter, patterns);
     target.addIllegalOp<tensor::CastOp, tensor::ExtractOp>();
     target.addLegalDialect<StandardOpsDialect>();
 
@@ -180,7 +180,7 @@ struct TensorBufferizePass : public TensorBufferizeBase<TensorBufferizePass> {
 ```
 
 The pass has all the hallmarks of a dialect conversion pass that does type
-conversions: a `TypeConverter`, a `OwningRewritePatternList`, and a
+conversions: a `TypeConverter`, a `RewritePatternSet`, and a
 `ConversionTarget`, and a call to `applyPartialConversion`. Note that a function
 `populateTensorBufferizePatterns` is separated, so that power users can use the
 patterns independently, if necessary (such as to combine multiple sets of
@@ -190,8 +190,8 @@ One convenient utility provided by the MLIR bufferization infrastructure is the
 `BufferizeTypeConverter`, which comes pre-loaded with the necessary conversions
 and materializations between `tensor` and `memref`.
 
-In this case, the `StandardOpsDialect` is marked as legal, so the `tensor_load`
-and `tensor_to_memref` ops, which are inserted automatically by the dialect
+In this case, the `MemRefOpsDialect` is marked as legal, so the `tensor_load`
+and `buffer_cast` ops, which are inserted automatically by the dialect
 conversion framework as materializations, are legal. There is a helper
 `populateBufferizeMaterializationLegality`
 ([code](https://github.com/llvm/llvm-project/blob/a0b65a7bcd6065688189b3d678c42ed6af9603db/mlir/include/mlir/Transforms/Bufferize.h#L53))
@@ -247,7 +247,7 @@ from the program.
 
 The easiest way to write a finalizing bufferize pass is to not write one at all!
 MLIR provides a pass `finalizing-bufferize` which eliminates the `tensor_load` /
-`tensor_to_memref` materialization ops inserted by partial bufferization passes
+`buffer_cast` materialization ops inserted by partial bufferization passes
 and emits an error if that is not sufficient to remove all tensors from the
 program.
 
@@ -268,7 +268,7 @@ recommended in new code. A helper,
 `populateEliminateBufferizeMaterializationsPatterns`
 ([code](https://github.com/llvm/llvm-project/blob/a0b65a7bcd6065688189b3d678c42ed6af9603db/mlir/include/mlir/Transforms/Bufferize.h#L58))
 is available for such passes to provide patterns that eliminate `tensor_load`
-and `tensor_to_memref`.
+and `buffer_cast`.
 
 ## Changes since [the talk](#the-talk)
 

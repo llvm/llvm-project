@@ -296,7 +296,6 @@ char *GetProcSelfMaps();
 void InitializeInterceptors();
 
 void MsanAllocatorInit();
-void MsanAllocatorThreadFinish();
 void MsanDeallocate(StackTrace *stack, void *ptr);
 
 void *msan_malloc(uptr size, StackTrace *stack);
@@ -364,15 +363,6 @@ const int STACK_TRACE_TAG_POISON = StackTrace::TAG_CUSTOM + 1;
   BufferedStackTrace stack;                                              \
   if (msan_inited) {                                                     \
     stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_fatal); \
-  }
-
-#define GET_FATAL_STACK_TRACE_HERE \
-  GET_FATAL_STACK_TRACE_PC_BP(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME())
-
-#define PRINT_CURRENT_STACK_CHECK() \
-  {                                 \
-    GET_FATAL_STACK_TRACE_HERE;     \
-    stack.Print();                  \
   }
 
 class ScopedThreadLocalStateBackup {

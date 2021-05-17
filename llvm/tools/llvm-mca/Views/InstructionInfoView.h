@@ -34,7 +34,7 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_INSTRUCTIONINFOVIEW_H
 #define LLVM_TOOLS_LLVM_MCA_INSTRUCTIONINFOVIEW_H
 
-#include "Views/View.h"
+#include "Views/InstructionView.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCInst.h"
@@ -77,6 +77,9 @@ public:
         PrintEncodings(ShouldPrintEncodings) {}
 
   void printView(llvm::raw_ostream &OS) const override;
+  StringRef getNameAsString() const override { return "InstructionInfoView"; }
+  json::Value toJSON() const override;
+  json::Object toJSON(const InstructionInfoViewData &IIVD) const;
 };
 } // namespace mca
 } // namespace llvm

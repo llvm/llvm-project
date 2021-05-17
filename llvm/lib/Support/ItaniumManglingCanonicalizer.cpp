@@ -207,7 +207,7 @@ struct CanonicalizerAllocator::MakeNodeImpl<
 
 using CanonicalizingDemangler =
     itanium_demangle::ManglingParser<CanonicalizerAllocator>;
-}
+} // namespace
 
 struct ItaniumManglingCanonicalizer::Impl {
   CanonicalizingDemangler Demangler = {nullptr, nullptr};

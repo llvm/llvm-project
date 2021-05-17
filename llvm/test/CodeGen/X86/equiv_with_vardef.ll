@@ -6,4 +6,4 @@ module asm ".equiv var, __var"
 
 @var = global i32 0
 ; CHECK: <unknown>:0: error: symbol 'var' is already defined
-; CHECK: <unknown>:0: error: invalid symbol redefinition
+; CHECK: <unknown>:0: error: symbol 'var' is already defined

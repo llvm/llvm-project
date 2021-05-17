@@ -1,7 +1,11 @@
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 < %s | FileCheck %s
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 < %s | FileCheck %s
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -mattr=+crypto < %s | FileCheck %s
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
+; RUN:   -mcpu=pwr8 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN:   -mcpu=pwr8 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-LE
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
+; RUN:   -mcpu=pwr7 -mattr=+crypto < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN:   -mcpu=pwr9 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-LE
 ; FIXME: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s
 ; FIXME: The original intent was to add a check-next for the blr after every check.
 ; However, this currently fails since we don't eliminate stores of the unused
@@ -103,6 +107,7 @@ entry:
   %2 = load <16 x i8>,  <16 x i8>* %c, align 16
   %3 = call <16 x i8> @llvm.ppc.altivec.crypto.vpermxor(<16 x i8> %0, <16 x i8> %1, <16 x i8> %2)
   ret <16 x i8> %3
+; CHECK-LE: xxlnor
 ; CHECK: vpermxor 2,
 }
 
@@ -127,6 +132,7 @@ entry:
   %6 = call <16 x i8> @llvm.ppc.altivec.crypto.vpermxor(<16 x i8> %1, <16 x i8> %3, <16 x i8> %5)
   %7 = bitcast <16 x i8> %6 to <8 x i16>
   ret <8 x i16> %7
+; CHECK-LE: xxlnor
 ; CHECK: vpermxor 2,
 }
 
@@ -148,6 +154,7 @@ entry:
   %6 = call <16 x i8> @llvm.ppc.altivec.crypto.vpermxor(<16 x i8> %1, <16 x i8> %3, <16 x i8> %5)
   %7 = bitcast <16 x i8> %6 to <4 x i32>
   ret <4 x i32> %7
+; CHECK-LE: xxlnor
 ; CHECK: vpermxor 2,
 }
 
@@ -169,6 +176,7 @@ entry:
   %6 = call <16 x i8> @llvm.ppc.altivec.crypto.vpermxor(<16 x i8> %1, <16 x i8> %3, <16 x i8> %5)
   %7 = bitcast <16 x i8> %6 to <2 x i64>
   ret <2 x i64> %7
+; CHECK-LE: xxlnor
 ; CHECK: vpermxor 2,
 }
 

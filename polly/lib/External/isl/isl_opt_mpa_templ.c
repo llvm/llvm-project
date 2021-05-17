@@ -19,8 +19,8 @@
  * for a single dimension.
  *
  * If the resulting multi piecewise affine expression has
- * an explicit domain, then assign it the parameter domain of the input.
- * In other cases, the parameter domain is stored in the individual elements.
+ * an explicit domain, then assign it the (parameter) domain of the input.
+ * In other cases, the (parameter) domain is stored in the individual elements.
  */
 static __isl_give isl_multi_pw_aff *FN(BASE,opt_mpa)(__isl_take TYPE *obj,
 	__isl_give isl_pw_aff *(*opt)(__isl_take TYPE *obj, int pos))
@@ -42,8 +42,8 @@ static __isl_give isl_multi_pw_aff *FN(BASE,opt_mpa)(__isl_take TYPE *obj,
 	if (isl_multi_pw_aff_has_explicit_domain(mpa)) {
 		isl_set *dom;
 
-		dom = FN(TYPE,params)(FN(TYPE,copy)(obj));
-		mpa = isl_multi_pw_aff_intersect_params(mpa, dom);
+		dom = FN(TYPE,domain)(FN(TYPE,copy)(obj));
+		mpa = isl_multi_pw_aff_intersect_domain(mpa, dom);
 	}
 	FN(TYPE,free)(obj);
 

@@ -9,8 +9,8 @@ define <vscale x 1 x i64> @intrinsic_vzext_vf8_nxv1i64(<vscale x 1 x i8> %0, i64
 ; CHECK-LABEL: intrinsic_vzext_vf8_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m1,ta,mu
-; CHECK-NEXT:    vzext.vf8 v25, v16
-; CHECK-NEXT:    vmv1r.v v16, v25
+; CHECK-NEXT:    vzext.vf8 v25, v8
+; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vzext.nxv1i64.nxv1i8(
@@ -30,7 +30,7 @@ define <vscale x 1 x i64> @intrinsic_vzext_mask_vf8_nxv1i64(<vscale x 1 x i1> %0
 ; CHECK-LABEL: intrinsic_vzext_mask_vf8_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m1,tu,mu
-; CHECK-NEXT:    vzext.vf8 v16, v17, v0.t
+; CHECK-NEXT:    vzext.vf8 v8, v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vzext.mask.nxv1i64.nxv1i8(
@@ -50,8 +50,8 @@ define <vscale x 2 x i64> @intrinsic_vzext_vf8_nxv2i64(<vscale x 2 x i8> %0, i64
 ; CHECK-LABEL: intrinsic_vzext_vf8_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m2,ta,mu
-; CHECK-NEXT:    vzext.vf8 v26, v16
-; CHECK-NEXT:    vmv2r.v v16, v26
+; CHECK-NEXT:    vzext.vf8 v26, v8
+; CHECK-NEXT:    vmv2r.v v8, v26
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x i64> @llvm.riscv.vzext.nxv2i64.nxv2i8(
@@ -71,7 +71,7 @@ define <vscale x 2 x i64> @intrinsic_vzext_mask_vf8_nxv2i64(<vscale x 2 x i1> %0
 ; CHECK-LABEL: intrinsic_vzext_mask_vf8_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m2,tu,mu
-; CHECK-NEXT:    vzext.vf8 v16, v18, v0.t
+; CHECK-NEXT:    vzext.vf8 v8, v10, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x i64> @llvm.riscv.vzext.mask.nxv2i64.nxv2i8(
@@ -91,8 +91,8 @@ define <vscale x 4 x i64> @intrinsic_vzext_vf8_nxv4i64(<vscale x 4 x i8> %0, i64
 ; CHECK-LABEL: intrinsic_vzext_vf8_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m4,ta,mu
-; CHECK-NEXT:    vzext.vf8 v28, v16
-; CHECK-NEXT:    vmv4r.v v16, v28
+; CHECK-NEXT:    vzext.vf8 v28, v8
+; CHECK-NEXT:    vmv4r.v v8, v28
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x i64> @llvm.riscv.vzext.nxv4i64.nxv4i8(
@@ -112,7 +112,7 @@ define <vscale x 4 x i64> @intrinsic_vzext_mask_vf8_nxv4i64(<vscale x 4 x i1> %0
 ; CHECK-LABEL: intrinsic_vzext_mask_vf8_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m4,tu,mu
-; CHECK-NEXT:    vzext.vf8 v16, v20, v0.t
+; CHECK-NEXT:    vzext.vf8 v8, v12, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x i64> @llvm.riscv.vzext.mask.nxv4i64.nxv4i8(
@@ -132,8 +132,8 @@ define <vscale x 8 x i64> @intrinsic_vzext_vf8_nxv8i64(<vscale x 8 x i8> %0, i64
 ; CHECK-LABEL: intrinsic_vzext_vf8_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m8,ta,mu
-; CHECK-NEXT:    vzext.vf8 v8, v16
-; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vzext.vf8 v16, v8
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x i64> @llvm.riscv.vzext.nxv8i64.nxv8i8(
@@ -152,10 +152,8 @@ declare <vscale x 8 x i64> @llvm.riscv.vzext.mask.nxv8i64.nxv8i8(
 define <vscale x 8 x i64> @intrinsic_vzext_mask_vf8_nxv8i64(<vscale x 8 x i1> %0, <vscale x 8 x i64> %1, <vscale x 8 x i8> %2, i64 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vzext_mask_vf8_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, zero, e8,m1,ta,mu
-; CHECK-NEXT:    vle8.v v25, (a0)
-; CHECK-NEXT:    vsetvli a0, a1, e64,m8,tu,mu
-; CHECK-NEXT:    vzext.vf8 v16, v25, v0.t
+; CHECK-NEXT:    vsetvli a0, a0, e64,m8,tu,mu
+; CHECK-NEXT:    vzext.vf8 v8, v16, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x i64> @llvm.riscv.vzext.mask.nxv8i64.nxv8i8(
@@ -175,8 +173,8 @@ define <vscale x 1 x i64> @intrinsic_vzext_vf4_nxv1i64(<vscale x 1 x i16> %0, i6
 ; CHECK-LABEL: intrinsic_vzext_vf4_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m1,ta,mu
-; CHECK-NEXT:    vzext.vf4 v25, v16
-; CHECK-NEXT:    vmv1r.v v16, v25
+; CHECK-NEXT:    vzext.vf4 v25, v8
+; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vzext.nxv1i64.nxv1i16(
@@ -196,7 +194,7 @@ define <vscale x 1 x i64> @intrinsic_vzext_mask_vf4_nxv1i64(<vscale x 1 x i1> %0
 ; CHECK-LABEL: intrinsic_vzext_mask_vf4_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m1,tu,mu
-; CHECK-NEXT:    vzext.vf4 v16, v17, v0.t
+; CHECK-NEXT:    vzext.vf4 v8, v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vzext.mask.nxv1i64.nxv1i16(
@@ -216,8 +214,8 @@ define <vscale x 2 x i64> @intrinsic_vzext_vf4_nxv2i64(<vscale x 2 x i16> %0, i6
 ; CHECK-LABEL: intrinsic_vzext_vf4_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m2,ta,mu
-; CHECK-NEXT:    vzext.vf4 v26, v16
-; CHECK-NEXT:    vmv2r.v v16, v26
+; CHECK-NEXT:    vzext.vf4 v26, v8
+; CHECK-NEXT:    vmv2r.v v8, v26
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x i64> @llvm.riscv.vzext.nxv2i64.nxv2i16(
@@ -237,7 +235,7 @@ define <vscale x 2 x i64> @intrinsic_vzext_mask_vf4_nxv2i64(<vscale x 2 x i1> %0
 ; CHECK-LABEL: intrinsic_vzext_mask_vf4_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m2,tu,mu
-; CHECK-NEXT:    vzext.vf4 v16, v18, v0.t
+; CHECK-NEXT:    vzext.vf4 v8, v10, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x i64> @llvm.riscv.vzext.mask.nxv2i64.nxv2i16(
@@ -257,8 +255,8 @@ define <vscale x 4 x i64> @intrinsic_vzext_vf4_nxv4i64(<vscale x 4 x i16> %0, i6
 ; CHECK-LABEL: intrinsic_vzext_vf4_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m4,ta,mu
-; CHECK-NEXT:    vzext.vf4 v28, v16
-; CHECK-NEXT:    vmv4r.v v16, v28
+; CHECK-NEXT:    vzext.vf4 v28, v8
+; CHECK-NEXT:    vmv4r.v v8, v28
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x i64> @llvm.riscv.vzext.nxv4i64.nxv4i16(
@@ -278,7 +276,7 @@ define <vscale x 4 x i64> @intrinsic_vzext_mask_vf4_nxv4i64(<vscale x 4 x i1> %0
 ; CHECK-LABEL: intrinsic_vzext_mask_vf4_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m4,tu,mu
-; CHECK-NEXT:    vzext.vf4 v16, v20, v0.t
+; CHECK-NEXT:    vzext.vf4 v8, v12, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x i64> @llvm.riscv.vzext.mask.nxv4i64.nxv4i16(
@@ -298,8 +296,8 @@ define <vscale x 8 x i64> @intrinsic_vzext_vf4_nxv8i64(<vscale x 8 x i16> %0, i6
 ; CHECK-LABEL: intrinsic_vzext_vf4_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m8,ta,mu
-; CHECK-NEXT:    vzext.vf4 v8, v16
-; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vzext.vf4 v16, v8
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x i64> @llvm.riscv.vzext.nxv8i64.nxv8i16(
@@ -318,10 +316,8 @@ declare <vscale x 8 x i64> @llvm.riscv.vzext.mask.nxv8i64.nxv8i16(
 define <vscale x 8 x i64> @intrinsic_vzext_mask_vf4_nxv8i64(<vscale x 8 x i1> %0, <vscale x 8 x i64> %1, <vscale x 8 x i16> %2, i64 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vzext_mask_vf4_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, zero, e16,m2,ta,mu
-; CHECK-NEXT:    vle16.v v26, (a0)
-; CHECK-NEXT:    vsetvli a0, a1, e64,m8,tu,mu
-; CHECK-NEXT:    vzext.vf4 v16, v26, v0.t
+; CHECK-NEXT:    vsetvli a0, a0, e64,m8,tu,mu
+; CHECK-NEXT:    vzext.vf4 v8, v16, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x i64> @llvm.riscv.vzext.mask.nxv8i64.nxv8i16(
@@ -341,8 +337,8 @@ define <vscale x 1 x i32> @intrinsic_vzext_vf4_nxv1i32(<vscale x 1 x i8> %0, i64
 ; CHECK-LABEL: intrinsic_vzext_vf4_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e32,mf2,ta,mu
-; CHECK-NEXT:    vzext.vf4 v25, v16
-; CHECK-NEXT:    vmv1r.v v16, v25
+; CHECK-NEXT:    vzext.vf4 v25, v8
+; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x i32> @llvm.riscv.vzext.nxv1i32.nxv1i8(
@@ -362,7 +358,7 @@ define <vscale x 1 x i32> @intrinsic_vzext_mask_vf4_nxv1i32(<vscale x 1 x i1> %0
 ; CHECK-LABEL: intrinsic_vzext_mask_vf4_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e32,mf2,tu,mu
-; CHECK-NEXT:    vzext.vf4 v16, v17, v0.t
+; CHECK-NEXT:    vzext.vf4 v8, v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x i32> @llvm.riscv.vzext.mask.nxv1i32.nxv1i8(
@@ -382,8 +378,8 @@ define <vscale x 2 x i32> @intrinsic_vzext_vf4_nxv2i32(<vscale x 2 x i8> %0, i64
 ; CHECK-LABEL: intrinsic_vzext_vf4_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e32,m1,ta,mu
-; CHECK-NEXT:    vzext.vf4 v25, v16
-; CHECK-NEXT:    vmv1r.v v16, v25
+; CHECK-NEXT:    vzext.vf4 v25, v8
+; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x i32> @llvm.riscv.vzext.nxv2i32.nxv2i8(
@@ -403,7 +399,7 @@ define <vscale x 2 x i32> @intrinsic_vzext_mask_vf4_nxv2i32(<vscale x 2 x i1> %0
 ; CHECK-LABEL: intrinsic_vzext_mask_vf4_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e32,m1,tu,mu
-; CHECK-NEXT:    vzext.vf4 v16, v17, v0.t
+; CHECK-NEXT:    vzext.vf4 v8, v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x i32> @llvm.riscv.vzext.mask.nxv2i32.nxv2i8(
@@ -423,8 +419,8 @@ define <vscale x 4 x i32> @intrinsic_vzext_vf4_nxv4i32(<vscale x 4 x i8> %0, i64
 ; CHECK-LABEL: intrinsic_vzext_vf4_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e32,m2,ta,mu
-; CHECK-NEXT:    vzext.vf4 v26, v16
-; CHECK-NEXT:    vmv2r.v v16, v26
+; CHECK-NEXT:    vzext.vf4 v26, v8
+; CHECK-NEXT:    vmv2r.v v8, v26
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x i32> @llvm.riscv.vzext.nxv4i32.nxv4i8(
@@ -444,7 +440,7 @@ define <vscale x 4 x i32> @intrinsic_vzext_mask_vf4_nxv4i32(<vscale x 4 x i1> %0
 ; CHECK-LABEL: intrinsic_vzext_mask_vf4_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e32,m2,tu,mu
-; CHECK-NEXT:    vzext.vf4 v16, v18, v0.t
+; CHECK-NEXT:    vzext.vf4 v8, v10, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x i32> @llvm.riscv.vzext.mask.nxv4i32.nxv4i8(
@@ -464,8 +460,8 @@ define <vscale x 8 x i32> @intrinsic_vzext_vf4_nxv8i32(<vscale x 8 x i8> %0, i64
 ; CHECK-LABEL: intrinsic_vzext_vf4_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e32,m4,ta,mu
-; CHECK-NEXT:    vzext.vf4 v28, v16
-; CHECK-NEXT:    vmv4r.v v16, v28
+; CHECK-NEXT:    vzext.vf4 v28, v8
+; CHECK-NEXT:    vmv4r.v v8, v28
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x i32> @llvm.riscv.vzext.nxv8i32.nxv8i8(
@@ -485,7 +481,7 @@ define <vscale x 8 x i32> @intrinsic_vzext_mask_vf4_nxv8i32(<vscale x 8 x i1> %0
 ; CHECK-LABEL: intrinsic_vzext_mask_vf4_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e32,m4,tu,mu
-; CHECK-NEXT:    vzext.vf4 v16, v20, v0.t
+; CHECK-NEXT:    vzext.vf4 v8, v12, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x i32> @llvm.riscv.vzext.mask.nxv8i32.nxv8i8(
@@ -505,8 +501,8 @@ define <vscale x 16 x i32> @intrinsic_vzext_vf4_nxv16i32(<vscale x 16 x i8> %0, 
 ; CHECK-LABEL: intrinsic_vzext_vf4_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e32,m8,ta,mu
-; CHECK-NEXT:    vzext.vf4 v8, v16
-; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vzext.vf4 v16, v8
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 16 x i32> @llvm.riscv.vzext.nxv16i32.nxv16i8(
@@ -525,10 +521,8 @@ declare <vscale x 16 x i32> @llvm.riscv.vzext.mask.nxv16i32.nxv16i8(
 define <vscale x 16 x i32> @intrinsic_vzext_mask_vf4_nxv16i32(<vscale x 16 x i1> %0, <vscale x 16 x i32> %1, <vscale x 16 x i8> %2, i64 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vzext_mask_vf4_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, zero, e8,m2,ta,mu
-; CHECK-NEXT:    vle8.v v26, (a0)
-; CHECK-NEXT:    vsetvli a0, a1, e32,m8,tu,mu
-; CHECK-NEXT:    vzext.vf4 v16, v26, v0.t
+; CHECK-NEXT:    vsetvli a0, a0, e32,m8,tu,mu
+; CHECK-NEXT:    vzext.vf4 v8, v16, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 16 x i32> @llvm.riscv.vzext.mask.nxv16i32.nxv16i8(
@@ -548,8 +542,8 @@ define <vscale x 1 x i64> @intrinsic_vzext_vf2_nxv1i64(<vscale x 1 x i32> %0, i6
 ; CHECK-LABEL: intrinsic_vzext_vf2_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m1,ta,mu
-; CHECK-NEXT:    vzext.vf2 v25, v16
-; CHECK-NEXT:    vmv1r.v v16, v25
+; CHECK-NEXT:    vzext.vf2 v25, v8
+; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vzext.nxv1i64.nxv1i32(
@@ -569,7 +563,7 @@ define <vscale x 1 x i64> @intrinsic_vzext_mask_vf2_nxv1i64(<vscale x 1 x i1> %0
 ; CHECK-LABEL: intrinsic_vzext_mask_vf2_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m1,tu,mu
-; CHECK-NEXT:    vzext.vf2 v16, v17, v0.t
+; CHECK-NEXT:    vzext.vf2 v8, v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vzext.mask.nxv1i64.nxv1i32(
@@ -589,8 +583,8 @@ define <vscale x 2 x i64> @intrinsic_vzext_vf2_nxv2i64(<vscale x 2 x i32> %0, i6
 ; CHECK-LABEL: intrinsic_vzext_vf2_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m2,ta,mu
-; CHECK-NEXT:    vzext.vf2 v26, v16
-; CHECK-NEXT:    vmv2r.v v16, v26
+; CHECK-NEXT:    vzext.vf2 v26, v8
+; CHECK-NEXT:    vmv2r.v v8, v26
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x i64> @llvm.riscv.vzext.nxv2i64.nxv2i32(
@@ -610,7 +604,7 @@ define <vscale x 2 x i64> @intrinsic_vzext_mask_vf2_nxv2i64(<vscale x 2 x i1> %0
 ; CHECK-LABEL: intrinsic_vzext_mask_vf2_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m2,tu,mu
-; CHECK-NEXT:    vzext.vf2 v16, v18, v0.t
+; CHECK-NEXT:    vzext.vf2 v8, v10, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x i64> @llvm.riscv.vzext.mask.nxv2i64.nxv2i32(
@@ -630,8 +624,8 @@ define <vscale x 4 x i64> @intrinsic_vzext_vf2_nxv4i64(<vscale x 4 x i32> %0, i6
 ; CHECK-LABEL: intrinsic_vzext_vf2_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m4,ta,mu
-; CHECK-NEXT:    vzext.vf2 v28, v16
-; CHECK-NEXT:    vmv4r.v v16, v28
+; CHECK-NEXT:    vzext.vf2 v28, v8
+; CHECK-NEXT:    vmv4r.v v8, v28
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x i64> @llvm.riscv.vzext.nxv4i64.nxv4i32(
@@ -651,7 +645,7 @@ define <vscale x 4 x i64> @intrinsic_vzext_mask_vf2_nxv4i64(<vscale x 4 x i1> %0
 ; CHECK-LABEL: intrinsic_vzext_mask_vf2_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m4,tu,mu
-; CHECK-NEXT:    vzext.vf2 v16, v20, v0.t
+; CHECK-NEXT:    vzext.vf2 v8, v12, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x i64> @llvm.riscv.vzext.mask.nxv4i64.nxv4i32(
@@ -671,8 +665,8 @@ define <vscale x 8 x i64> @intrinsic_vzext_vf2_nxv8i64(<vscale x 8 x i32> %0, i6
 ; CHECK-LABEL: intrinsic_vzext_vf2_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m8,ta,mu
-; CHECK-NEXT:    vzext.vf2 v8, v16
-; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vzext.vf2 v16, v8
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x i64> @llvm.riscv.vzext.nxv8i64.nxv8i32(
@@ -691,10 +685,8 @@ declare <vscale x 8 x i64> @llvm.riscv.vzext.mask.nxv8i64.nxv8i32(
 define <vscale x 8 x i64> @intrinsic_vzext_mask_vf2_nxv8i64(<vscale x 8 x i1> %0, <vscale x 8 x i64> %1, <vscale x 8 x i32> %2, i64 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vzext_mask_vf2_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, zero, e32,m4,ta,mu
-; CHECK-NEXT:    vle32.v v28, (a0)
-; CHECK-NEXT:    vsetvli a0, a1, e64,m8,tu,mu
-; CHECK-NEXT:    vzext.vf2 v16, v28, v0.t
+; CHECK-NEXT:    vsetvli a0, a0, e64,m8,tu,mu
+; CHECK-NEXT:    vzext.vf2 v8, v16, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x i64> @llvm.riscv.vzext.mask.nxv8i64.nxv8i32(
@@ -714,8 +706,8 @@ define <vscale x 1 x i32> @intrinsic_vzext_vf2_nxv1i32(<vscale x 1 x i16> %0, i6
 ; CHECK-LABEL: intrinsic_vzext_vf2_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e32,mf2,ta,mu
-; CHECK-NEXT:    vzext.vf2 v25, v16
-; CHECK-NEXT:    vmv1r.v v16, v25
+; CHECK-NEXT:    vzext.vf2 v25, v8
+; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x i32> @llvm.riscv.vzext.nxv1i32.nxv1i16(
@@ -735,7 +727,7 @@ define <vscale x 1 x i32> @intrinsic_vzext_mask_vf2_nxv1i32(<vscale x 1 x i1> %0
 ; CHECK-LABEL: intrinsic_vzext_mask_vf2_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e32,mf2,tu,mu
-; CHECK-NEXT:    vzext.vf2 v16, v17, v0.t
+; CHECK-NEXT:    vzext.vf2 v8, v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x i32> @llvm.riscv.vzext.mask.nxv1i32.nxv1i16(
@@ -755,8 +747,8 @@ define <vscale x 2 x i32> @intrinsic_vzext_vf2_nxv2i32(<vscale x 2 x i16> %0, i6
 ; CHECK-LABEL: intrinsic_vzext_vf2_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e32,m1,ta,mu
-; CHECK-NEXT:    vzext.vf2 v25, v16
-; CHECK-NEXT:    vmv1r.v v16, v25
+; CHECK-NEXT:    vzext.vf2 v25, v8
+; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x i32> @llvm.riscv.vzext.nxv2i32.nxv2i16(
@@ -776,7 +768,7 @@ define <vscale x 2 x i32> @intrinsic_vzext_mask_vf2_nxv2i32(<vscale x 2 x i1> %0
 ; CHECK-LABEL: intrinsic_vzext_mask_vf2_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e32,m1,tu,mu
-; CHECK-NEXT:    vzext.vf2 v16, v17, v0.t
+; CHECK-NEXT:    vzext.vf2 v8, v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x i32> @llvm.riscv.vzext.mask.nxv2i32.nxv2i16(
@@ -796,8 +788,8 @@ define <vscale x 4 x i32> @intrinsic_vzext_vf2_nxv4i32(<vscale x 4 x i16> %0, i6
 ; CHECK-LABEL: intrinsic_vzext_vf2_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e32,m2,ta,mu
-; CHECK-NEXT:    vzext.vf2 v26, v16
-; CHECK-NEXT:    vmv2r.v v16, v26
+; CHECK-NEXT:    vzext.vf2 v26, v8
+; CHECK-NEXT:    vmv2r.v v8, v26
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x i32> @llvm.riscv.vzext.nxv4i32.nxv4i16(
@@ -817,7 +809,7 @@ define <vscale x 4 x i32> @intrinsic_vzext_mask_vf2_nxv4i32(<vscale x 4 x i1> %0
 ; CHECK-LABEL: intrinsic_vzext_mask_vf2_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e32,m2,tu,mu
-; CHECK-NEXT:    vzext.vf2 v16, v18, v0.t
+; CHECK-NEXT:    vzext.vf2 v8, v10, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x i32> @llvm.riscv.vzext.mask.nxv4i32.nxv4i16(
@@ -837,8 +829,8 @@ define <vscale x 8 x i32> @intrinsic_vzext_vf2_nxv8i32(<vscale x 8 x i16> %0, i6
 ; CHECK-LABEL: intrinsic_vzext_vf2_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e32,m4,ta,mu
-; CHECK-NEXT:    vzext.vf2 v28, v16
-; CHECK-NEXT:    vmv4r.v v16, v28
+; CHECK-NEXT:    vzext.vf2 v28, v8
+; CHECK-NEXT:    vmv4r.v v8, v28
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x i32> @llvm.riscv.vzext.nxv8i32.nxv8i16(
@@ -858,7 +850,7 @@ define <vscale x 8 x i32> @intrinsic_vzext_mask_vf2_nxv8i32(<vscale x 8 x i1> %0
 ; CHECK-LABEL: intrinsic_vzext_mask_vf2_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e32,m4,tu,mu
-; CHECK-NEXT:    vzext.vf2 v16, v20, v0.t
+; CHECK-NEXT:    vzext.vf2 v8, v12, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x i32> @llvm.riscv.vzext.mask.nxv8i32.nxv8i16(
@@ -878,8 +870,8 @@ define <vscale x 16 x i32> @intrinsic_vzext_vf2_nxv16i32(<vscale x 16 x i16> %0,
 ; CHECK-LABEL: intrinsic_vzext_vf2_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e32,m8,ta,mu
-; CHECK-NEXT:    vzext.vf2 v8, v16
-; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vzext.vf2 v16, v8
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 16 x i32> @llvm.riscv.vzext.nxv16i32.nxv16i16(
@@ -898,10 +890,8 @@ declare <vscale x 16 x i32> @llvm.riscv.vzext.mask.nxv16i32.nxv16i16(
 define <vscale x 16 x i32> @intrinsic_vzext_mask_vf2_nxv16i32(<vscale x 16 x i1> %0, <vscale x 16 x i32> %1, <vscale x 16 x i16> %2, i64 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vzext_mask_vf2_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, zero, e16,m4,ta,mu
-; CHECK-NEXT:    vle16.v v28, (a0)
-; CHECK-NEXT:    vsetvli a0, a1, e32,m8,tu,mu
-; CHECK-NEXT:    vzext.vf2 v16, v28, v0.t
+; CHECK-NEXT:    vsetvli a0, a0, e32,m8,tu,mu
+; CHECK-NEXT:    vzext.vf2 v8, v16, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 16 x i32> @llvm.riscv.vzext.mask.nxv16i32.nxv16i16(
@@ -921,8 +911,8 @@ define <vscale x 1 x i16> @intrinsic_vzext_vf2_nxv1i16(<vscale x 1 x i8> %0, i64
 ; CHECK-LABEL: intrinsic_vzext_vf2_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e16,mf4,ta,mu
-; CHECK-NEXT:    vzext.vf2 v25, v16
-; CHECK-NEXT:    vmv1r.v v16, v25
+; CHECK-NEXT:    vzext.vf2 v25, v8
+; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x i16> @llvm.riscv.vzext.nxv1i16.nxv1i8(
@@ -942,7 +932,7 @@ define <vscale x 1 x i16> @intrinsic_vzext_mask_vf2_nxv1i16(<vscale x 1 x i1> %0
 ; CHECK-LABEL: intrinsic_vzext_mask_vf2_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e16,mf4,tu,mu
-; CHECK-NEXT:    vzext.vf2 v16, v17, v0.t
+; CHECK-NEXT:    vzext.vf2 v8, v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x i16> @llvm.riscv.vzext.mask.nxv1i16.nxv1i8(
@@ -962,8 +952,8 @@ define <vscale x 2 x i16> @intrinsic_vzext_vf2_nxv2i16(<vscale x 2 x i8> %0, i64
 ; CHECK-LABEL: intrinsic_vzext_vf2_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e16,mf2,ta,mu
-; CHECK-NEXT:    vzext.vf2 v25, v16
-; CHECK-NEXT:    vmv1r.v v16, v25
+; CHECK-NEXT:    vzext.vf2 v25, v8
+; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x i16> @llvm.riscv.vzext.nxv2i16.nxv2i8(
@@ -983,7 +973,7 @@ define <vscale x 2 x i16> @intrinsic_vzext_mask_vf2_nxv2i16(<vscale x 2 x i1> %0
 ; CHECK-LABEL: intrinsic_vzext_mask_vf2_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e16,mf2,tu,mu
-; CHECK-NEXT:    vzext.vf2 v16, v17, v0.t
+; CHECK-NEXT:    vzext.vf2 v8, v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x i16> @llvm.riscv.vzext.mask.nxv2i16.nxv2i8(
@@ -1003,8 +993,8 @@ define <vscale x 4 x i16> @intrinsic_vzext_vf2_nxv4i16(<vscale x 4 x i8> %0, i64
 ; CHECK-LABEL: intrinsic_vzext_vf2_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e16,m1,ta,mu
-; CHECK-NEXT:    vzext.vf2 v25, v16
-; CHECK-NEXT:    vmv1r.v v16, v25
+; CHECK-NEXT:    vzext.vf2 v25, v8
+; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x i16> @llvm.riscv.vzext.nxv4i16.nxv4i8(
@@ -1024,7 +1014,7 @@ define <vscale x 4 x i16> @intrinsic_vzext_mask_vf2_nxv4i16(<vscale x 4 x i1> %0
 ; CHECK-LABEL: intrinsic_vzext_mask_vf2_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e16,m1,tu,mu
-; CHECK-NEXT:    vzext.vf2 v16, v17, v0.t
+; CHECK-NEXT:    vzext.vf2 v8, v9, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x i16> @llvm.riscv.vzext.mask.nxv4i16.nxv4i8(
@@ -1044,8 +1034,8 @@ define <vscale x 8 x i16> @intrinsic_vzext_vf2_nxv8i16(<vscale x 8 x i8> %0, i64
 ; CHECK-LABEL: intrinsic_vzext_vf2_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e16,m2,ta,mu
-; CHECK-NEXT:    vzext.vf2 v26, v16
-; CHECK-NEXT:    vmv2r.v v16, v26
+; CHECK-NEXT:    vzext.vf2 v26, v8
+; CHECK-NEXT:    vmv2r.v v8, v26
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x i16> @llvm.riscv.vzext.nxv8i16.nxv8i8(
@@ -1065,7 +1055,7 @@ define <vscale x 8 x i16> @intrinsic_vzext_mask_vf2_nxv8i16(<vscale x 8 x i1> %0
 ; CHECK-LABEL: intrinsic_vzext_mask_vf2_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e16,m2,tu,mu
-; CHECK-NEXT:    vzext.vf2 v16, v18, v0.t
+; CHECK-NEXT:    vzext.vf2 v8, v10, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x i16> @llvm.riscv.vzext.mask.nxv8i16.nxv8i8(
@@ -1085,8 +1075,8 @@ define <vscale x 16 x i16> @intrinsic_vzext_vf2_nxv16i16(<vscale x 16 x i8> %0, 
 ; CHECK-LABEL: intrinsic_vzext_vf2_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e16,m4,ta,mu
-; CHECK-NEXT:    vzext.vf2 v28, v16
-; CHECK-NEXT:    vmv4r.v v16, v28
+; CHECK-NEXT:    vzext.vf2 v28, v8
+; CHECK-NEXT:    vmv4r.v v8, v28
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 16 x i16> @llvm.riscv.vzext.nxv16i16.nxv16i8(
@@ -1106,7 +1096,7 @@ define <vscale x 16 x i16> @intrinsic_vzext_mask_vf2_nxv16i16(<vscale x 16 x i1>
 ; CHECK-LABEL: intrinsic_vzext_mask_vf2_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e16,m4,tu,mu
-; CHECK-NEXT:    vzext.vf2 v16, v20, v0.t
+; CHECK-NEXT:    vzext.vf2 v8, v12, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 16 x i16> @llvm.riscv.vzext.mask.nxv16i16.nxv16i8(
@@ -1126,8 +1116,8 @@ define <vscale x 32 x i16> @intrinsic_vzext_vf2_nxv32i16(<vscale x 32 x i8> %0, 
 ; CHECK-LABEL: intrinsic_vzext_vf2_nxv32i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e16,m8,ta,mu
-; CHECK-NEXT:    vzext.vf2 v8, v16
-; CHECK-NEXT:    vmv8r.v v16, v8
+; CHECK-NEXT:    vzext.vf2 v16, v8
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 32 x i16> @llvm.riscv.vzext.nxv32i16.nxv32i8(
@@ -1146,10 +1136,8 @@ declare <vscale x 32 x i16> @llvm.riscv.vzext.mask.nxv32i16.nxv32i8(
 define <vscale x 32 x i16> @intrinsic_vzext_mask_vf2_nxv32i16(<vscale x 32 x i1> %0, <vscale x 32 x i16> %1, <vscale x 32 x i8> %2, i64 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vzext_mask_vf2_nxv32i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, zero, e8,m4,ta,mu
-; CHECK-NEXT:    vle8.v v28, (a0)
-; CHECK-NEXT:    vsetvli a0, a1, e16,m8,tu,mu
-; CHECK-NEXT:    vzext.vf2 v16, v28, v0.t
+; CHECK-NEXT:    vsetvli a0, a0, e16,m8,tu,mu
+; CHECK-NEXT:    vzext.vf2 v8, v16, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 32 x i16> @llvm.riscv.vzext.mask.nxv32i16.nxv32i8(

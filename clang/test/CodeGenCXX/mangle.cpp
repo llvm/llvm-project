@@ -1123,7 +1123,7 @@ namespace test56 {
 namespace test57 {
   struct X { template <int N> int f(); } x;
   template<int N> void f(decltype(x.f<0>() + N)) {}
-  // CHECK-LABEL: @_ZN6test571fILi0EEEvDTplcldtL_ZNS_1xEE1fIXLi0EEEET_E
+  // CHECK-LABEL: @_ZN6test571fILi0EEEvDTplcldtL_ZNS_1xEE1fILi0EEET_E
   template void f<0>(int);
 }
 

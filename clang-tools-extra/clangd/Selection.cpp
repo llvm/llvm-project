@@ -493,6 +493,9 @@ public:
     return traverseNode(
         X, [&] { return Base::TraverseConstructorInitializer(X); });
   }
+  bool TraverseCXXBaseSpecifier(const CXXBaseSpecifier &X) {
+    return traverseNode(&X, [&] { return Base::TraverseCXXBaseSpecifier(X); });
+  }
   // Stmt is the same, but this form allows the data recursion optimization.
   bool dataTraverseStmtPre(Stmt *X) {
     if (!X || isImplicit(X))

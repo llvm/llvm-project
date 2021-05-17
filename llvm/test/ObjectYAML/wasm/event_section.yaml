@@ -27,6 +27,9 @@ Sections:
       - Type:            R_WASM_EVENT_INDEX_LEB
         Index:           1
         Offset:          0x00000006
+      - Type:            10
+        Index:           1
+        Offset:          0x00000006
     Functions:
       - Index:           0
         Locals:
@@ -71,6 +74,9 @@ Sections:
 # CHECK-NEXT:         SigIndex:        1
 # CHECK-NEXT:   - Type:            CODE
 # CHECK-NEXT:     Relocations:
+# CHECK-NEXT:       - Type:            R_WASM_EVENT_INDEX_LEB
+# CHECK-NEXT:         Index:           1
+# CHECK-NEXT:         Offset:          0x6
 # CHECK-NEXT:       - Type:            R_WASM_EVENT_INDEX_LEB
 # CHECK-NEXT:         Index:           1
 # CHECK-NEXT:         Offset:          0x6

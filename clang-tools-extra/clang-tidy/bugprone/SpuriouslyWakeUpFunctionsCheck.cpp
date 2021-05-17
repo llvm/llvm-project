@@ -18,14 +18,14 @@ namespace bugprone {
 
 void SpuriouslyWakeUpFunctionsCheck::registerMatchers(MatchFinder *Finder) {
 
-  auto hasUniqueLock = hasDescendant(declRefExpr(
+  auto HasUniqueLock = hasDescendant(declRefExpr(
       hasDeclaration(varDecl(hasType(recordDecl(classTemplateSpecializationDecl(
           hasName("::std::unique_lock"),
           hasTemplateArgument(
               0, templateArgument(refersToType(qualType(hasDeclaration(
                      cxxRecordDecl(hasName("::std::mutex"))))))))))))));
 
-  auto hasWaitDescendantCPP = hasDescendant(
+  auto HasWaitDescendantCpp = hasDescendant(
       cxxMemberCallExpr(
           anyOf(
               allOf(hasDescendant(memberExpr(hasDeclaration(functionDecl(
@@ -34,61 +34,45 @@ void SpuriouslyWakeUpFunctionsCheck::registerMatchers(MatchFinder *Finder) {
                     onImplicitObjectArgument(
                         declRefExpr(to(varDecl(hasType(references(recordDecl(
                             hasName("::std::condition_variable")))))))),
-                    hasUniqueLock),
+                    HasUniqueLock),
               allOf(hasDescendant(memberExpr(hasDeclaration(functionDecl(
                         allOf(hasName("::std::condition_variable::wait_for"),
                               parameterCountIs(2)))))),
                     onImplicitObjectArgument(
                         declRefExpr(to(varDecl(hasType(references(recordDecl(
                             hasName("::std::condition_variable")))))))),
-                    hasUniqueLock),
+                    HasUniqueLock),
               allOf(hasDescendant(memberExpr(hasDeclaration(functionDecl(
                         allOf(hasName("::std::condition_variable::wait_until"),
                               parameterCountIs(2)))))),
                     onImplicitObjectArgument(
                         declRefExpr(to(varDecl(hasType(references(recordDecl(
                             hasName("::std::condition_variable")))))))),
-                    hasUniqueLock)
+                    HasUniqueLock)
 
                   ))
           .bind("wait"));
 
-  auto hasWaitDescendantC = hasDescendant(
+  auto HasWaitDescendantC = hasDescendant(
       callExpr(callee(functionDecl(hasAnyName("cnd_wait", "cnd_timedwait"))))
           .bind("wait"));
   if (getLangOpts().CPlusPlus) {
     // Check for `CON54-CPP`
     Finder->addMatcher(
-        ifStmt(
-
-            allOf(hasWaitDescendantCPP,
-                  unless(anyOf(hasDescendant(ifStmt(hasWaitDescendantCPP)),
-                               hasDescendant(whileStmt(hasWaitDescendantCPP)),
-                               hasDescendant(forStmt(hasWaitDescendantCPP)),
-                               hasDescendant(doStmt(hasWaitDescendantCPP)))))
-
-                ),
+        ifStmt(HasWaitDescendantCpp,
+               unless(hasDescendant(mapAnyOf(ifStmt, whileStmt, forStmt, doStmt)
+                                        .with(HasWaitDescendantCpp)))),
         this);
   } else {
     // Check for `CON36-C`
     Finder->addMatcher(
-
-        ifStmt(
-            allOf(hasWaitDescendantC,
-                  unless(anyOf(hasDescendant(ifStmt(hasWaitDescendantC)),
-                               hasDescendant(whileStmt(hasWaitDescendantC)),
-                               hasDescendant(forStmt(hasWaitDescendantC)),
-                               hasDescendant(doStmt(hasWaitDescendantC)),
-                               hasParent(whileStmt()),
-                               hasParent(compoundStmt(hasParent(whileStmt()))),
-                               hasParent(forStmt()),
-                               hasParent(compoundStmt(hasParent(forStmt()))),
-                               hasParent(doStmt()),
-                               hasParent(compoundStmt(hasParent(doStmt())))))
-
-                      ))
-
-            ,
+        ifStmt(HasWaitDescendantC,
+               unless(anyOf(
+                   hasDescendant(mapAnyOf(ifStmt, whileStmt, forStmt, doStmt)
+                                     .with(HasWaitDescendantC)),
+                   hasParent(mapAnyOf(whileStmt, forStmt, doStmt)),
+                   hasParent(compoundStmt(
+                       hasParent(mapAnyOf(whileStmt, forStmt, doStmt))))))),
         this);
   }
 }

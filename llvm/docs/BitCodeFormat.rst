@@ -264,7 +264,7 @@ Abbreviated Record Encoding
 
 ``[<abbrevid>, fields...]``
 
-An abbreviated record is a abbreviation id followed by a set of fields that are
+An abbreviated record is an abbreviation id followed by a set of fields that are
 encoded according to the `abbreviation definition`_.  This allows records to be
 encoded significantly more densely than records encoded with the
 `UNABBREV_RECORD`_ type, and allows the abbreviation types to be specified in
@@ -1070,12 +1070,19 @@ The integer codes are mapped to well-known attributes as follows.
 * code 68: ``noundef``
 * code 69: ``byref``
 * code 70: ``mustprogress``
+* code 74: ``vscale_range(<Min>[, <Max>])``
 
 .. note::
   The ``allocsize`` attribute has a special encoding for its arguments. Its two
   arguments, which are 32-bit integers, are packed into one 64-bit integer value
   (i.e. ``(EltSizeParam << 32) | NumEltsParam``), with ``NumEltsParam`` taking on
   the sentinel value -1 if it is not specified.
+
+.. note::
+  The ``vscale_range`` attribute has a special encoding for its arguments. Its two
+  arguments, which are 32-bit integers, are packed into one 64-bit integer value
+  (i.e. ``(Min << 32) | Max``), with ``Max`` taking on the value of ``Min`` if
+  it is not specified.
 
 .. _TYPE_BLOCK:
 
@@ -1314,6 +1321,13 @@ operand fields are
 
 * *paramty*: Zero or more type indices representing the parameter types of the
   function
+
+TYPE_CODE_X86_AMX Record
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+``[X86_AMX]``
+
+The ``X86_AMX`` record (code 24) adds an ``x86_amx`` type to the type table.
 
 .. _CONSTANTS_BLOCK:
 

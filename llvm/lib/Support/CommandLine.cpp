@@ -72,8 +72,8 @@ template class opt<int>;
 template class opt<std::string>;
 template class opt<char>;
 template class opt<bool>;
-}
-} // end namespace llvm::cl
+} // namespace cl
+} // namespace llvm
 
 // Pin the vtables to this file.
 void GenericOptionValue::anchor() {}
@@ -199,7 +199,7 @@ public:
     if (Opt.Subs.empty())
       addLiteralOption(Opt, &*TopLevelSubCommand, Name);
     else {
-      for (auto SC : Opt.Subs)
+      for (auto *SC : Opt.Subs)
         addLiteralOption(Opt, SC, Name);
     }
   }
@@ -260,7 +260,7 @@ public:
     if (O->Subs.empty()) {
       addOption(O, &*TopLevelSubCommand);
     } else {
-      for (auto SC : O->Subs)
+      for (auto *SC : O->Subs)
         addOption(O, SC);
     }
   }
@@ -277,10 +277,10 @@ public:
       auto I = Sub.OptionsMap.find(Name);
       if (I != End && I->getValue() == O)
         Sub.OptionsMap.erase(I);
-      }
+    }
 
     if (O->getFormattingFlag() == cl::Positional)
-      for (auto Opt = Sub.PositionalOpts.begin();
+      for (auto *Opt = Sub.PositionalOpts.begin();
            Opt != Sub.PositionalOpts.end(); ++Opt) {
         if (*Opt == O) {
           Sub.PositionalOpts.erase(Opt);
@@ -288,7 +288,7 @@ public:
         }
       }
     else if (O->getMiscFlags() & cl::Sink)
-      for (auto Opt = Sub.SinkOpts.begin(); Opt != Sub.SinkOpts.end(); ++Opt) {
+      for (auto *Opt = Sub.SinkOpts.begin(); Opt != Sub.SinkOpts.end(); ++Opt) {
         if (*Opt == O) {
           Sub.SinkOpts.erase(Opt);
           break;
@@ -303,10 +303,10 @@ public:
       removeOption(O, &*TopLevelSubCommand);
     else {
       if (O->isInAllSubCommands()) {
-        for (auto SC : RegisteredSubCommands)
+        for (auto *SC : RegisteredSubCommands)
           removeOption(O, SC);
       } else {
-        for (auto SC : O->Subs)
+        for (auto *SC : O->Subs)
           removeOption(O, SC);
       }
     }
@@ -342,10 +342,10 @@ public:
       updateArgStr(O, NewName, &*TopLevelSubCommand);
     else {
       if (O->isInAllSubCommands()) {
-        for (auto SC : RegisteredSubCommands)
+        for (auto *SC : RegisteredSubCommands)
           updateArgStr(O, NewName, SC);
       } else {
-        for (auto SC : O->Subs)
+        for (auto *SC : O->Subs)
           updateArgStr(O, NewName, SC);
       }
     }
@@ -541,7 +541,7 @@ Option *CommandLineParser::LookupOption(SubCommand &Sub, StringRef &Arg,
   if (I == Sub.OptionsMap.end())
     return nullptr;
 
-  auto O = I->second;
+  auto *O = I->second;
   if (O->getFormattingFlag() == cl::AlwaysPrefix)
     return nullptr;
 
@@ -553,7 +553,7 @@ Option *CommandLineParser::LookupOption(SubCommand &Sub, StringRef &Arg,
 SubCommand *CommandLineParser::LookupSubCommand(StringRef Name) {
   if (Name.empty())
     return &*TopLevelSubCommand;
-  for (auto S : RegisteredSubCommands) {
+  for (auto *S : RegisteredSubCommands) {
     if (S == &*AllSubCommands)
       continue;
     if (S->getName().empty())
@@ -599,7 +599,7 @@ static Option *LookupNearestOption(StringRef Arg,
 
     bool PermitValue = O->getValueExpectedFlag() != cl::ValueDisallowed;
     StringRef Flag = PermitValue ? LHS : Arg;
-    for (auto Name : OptionNames) {
+    for (const auto &Name : OptionNames) {
       unsigned Distance = StringRef(Name).edit_distance(
           Flag, /*AllowReplacements=*/true, /*MaxEditDistance=*/BestDistance);
       if (!Best || Distance < BestDistance) {
@@ -1138,8 +1138,9 @@ static llvm::Error ExpandResponseFile(
 /// StringSaver and tokenization strategy.
 bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
                              SmallVectorImpl<const char *> &Argv, bool MarkEOLs,
-                             bool RelativeNames, llvm::vfs::FileSystem &FS,
-                             llvm::Optional<llvm::StringRef> CurrentDir) {
+                             bool RelativeNames,
+                             llvm::Optional<llvm::StringRef> CurrentDir,
+                             llvm::vfs::FileSystem &FS) {
   bool AllExpanded = true;
   struct ResponseFileRecord {
     std::string File;
@@ -1204,7 +1205,7 @@ bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
     };
 
     // Check for recursive response files.
-    if (std::any_of(FileStack.begin() + 1, FileStack.end(), IsEquivalent)) {
+    if (any_of(drop_begin(FileStack), IsEquivalent)) {
       // This file is recursive, so we leave it in the argument stream and
       // move on.
       AllExpanded = false;
@@ -1247,6 +1248,15 @@ bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
   return AllExpanded;
 }
 
+bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
+                             SmallVectorImpl<const char *> &Argv, bool MarkEOLs,
+                             bool RelativeNames,
+                             llvm::Optional<StringRef> CurrentDir) {
+  return ExpandResponseFiles(Saver, std::move(Tokenizer), Argv, MarkEOLs,
+                             RelativeNames, std::move(CurrentDir),
+                             *vfs::getRealFileSystem());
+}
+
 bool cl::expandResponseFiles(int Argc, const char *const *Argv,
                              const char *EnvVar, StringSaver &Saver,
                              SmallVectorImpl<const char *> &NewArgv) {
@@ -1273,14 +1283,14 @@ bool cl::readConfigFile(StringRef CfgFile, StringSaver &Saver,
   }
   if (llvm::Error Err =
           ExpandResponseFile(CfgFile, Saver, cl::tokenizeConfigFile, Argv,
-                             /*MarkEOLs*/ false, /*RelativeNames*/ true,
+                             /*MarkEOLs=*/false, /*RelativeNames=*/true,
                              *llvm::vfs::getRealFileSystem())) {
     // TODO: The error should be propagated up the stack.
     llvm::consumeError(std::move(Err));
     return false;
   }
   return ExpandResponseFiles(Saver, cl::tokenizeConfigFile, Argv,
-                             /*MarkEOLs*/ false, /*RelativeNames*/ true);
+                             /*MarkEOLs=*/false, /*RelativeNames=*/true);
 }
 
 bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
@@ -1312,7 +1322,7 @@ bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
 void CommandLineParser::ResetAllOptionOccurrences() {
   // So that we can parse different command lines multiple times in succession
   // we reset all option values to look like they have never been seen before.
-  for (auto SC : RegisteredSubCommands) {
+  for (auto *SC : RegisteredSubCommands) {
     for (auto &O : SC->OptionsMap)
       O.second->reset();
   }
@@ -1368,7 +1378,7 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
   auto &SinkOpts = ChosenSubCommand->SinkOpts;
   auto &OptionsMap = ChosenSubCommand->OptionsMap;
 
-  for (auto O: DefaultOptions) {
+  for (auto *O: DefaultOptions) {
     addOption(O, true);
   }
 
@@ -1726,6 +1736,19 @@ void Option::printHelpStr(StringRef HelpStr, size_t Indent,
   }
 }
 
+void Option::printEnumValHelpStr(StringRef HelpStr, size_t BaseIndent,
+                                 size_t FirstLineIndentedBy) {
+  const StringRef ValHelpPrefix = "  ";
+  assert(BaseIndent >= FirstLineIndentedBy);
+  std::pair<StringRef, StringRef> Split = HelpStr.split('\n');
+  outs().indent(BaseIndent - FirstLineIndentedBy)
+      << ArgHelpPrefix << ValHelpPrefix << Split.first << "\n";
+  while (!Split.second.empty()) {
+    Split = Split.second.split('\n');
+    outs().indent(BaseIndent + ValHelpPrefix.size()) << Split.first << "\n";
+  }
+}
+
 // Print out the option for the alias.
 void alias::printOptionInfo(size_t GlobalWidth) const {
   outs() << PrintArg(ArgStr);
@@ -1971,17 +1994,17 @@ void generic_parser_base::printOptionInfo(const Option &O,
       StringRef Description = getDescription(i);
       if (!shouldPrintOption(OptionName, Description, O))
         continue;
-      assert(GlobalWidth >= OptionName.size() + OptionPrefixesSize);
-      size_t NumSpaces = GlobalWidth - OptionName.size() - OptionPrefixesSize;
+      size_t FirstLineIndent = OptionName.size() + OptionPrefixesSize;
       outs() << OptionPrefix << OptionName;
       if (OptionName.empty()) {
         outs() << EmptyOption;
-        assert(NumSpaces >= EmptyOption.size());
-        NumSpaces -= EmptyOption.size();
+        assert(FirstLineIndent >= EmptyOption.size());
+        FirstLineIndent += EmptyOption.size();
       }
       if (!Description.empty())
-        outs().indent(NumSpaces) << ArgHelpPrefix << "  " << Description;
-      outs() << '\n';
+        Option::printEnumValHelpStr(Description, GlobalWidth, FirstLineIndent);
+      else
+        outs() << '\n';
     }
   } else {
     if (!O.HelpStr.empty())
@@ -2203,7 +2226,7 @@ public:
              << " [options]";
     }
 
-    for (auto Opt : PositionalOpts) {
+    for (auto *Opt : PositionalOpts) {
       if (Opt->hasArgStr())
         outs() << " --" << Opt->ArgStr;
       outs() << " " << Opt->HelpStr;
@@ -2239,7 +2262,7 @@ public:
     printOptions(Opts, MaxArgLen);
 
     // Print any extra help the user has declared.
-    for (auto I : GlobalParser->MoreHelp)
+    for (const auto &I : GlobalParser->MoreHelp)
       outs() << I;
     GlobalParser->MoreHelp.clear();
   }

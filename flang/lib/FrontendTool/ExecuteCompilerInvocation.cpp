@@ -37,6 +37,42 @@ static std::unique_ptr<FrontendAction> CreateFrontendBaseAction(
   case EmitObj:
     return std::make_unique<EmitObjAction>();
     break;
+  case DebugUnparse:
+    return std::make_unique<DebugUnparseAction>();
+    break;
+  case DebugUnparseNoSema:
+    return std::make_unique<DebugUnparseNoSemaAction>();
+    break;
+  case DebugUnparseWithSymbols:
+    return std::make_unique<DebugUnparseWithSymbolsAction>();
+    break;
+  case DebugDumpSymbols:
+    return std::make_unique<DebugDumpSymbolsAction>();
+    break;
+  case DebugDumpParseTree:
+    return std::make_unique<DebugDumpParseTreeAction>();
+    break;
+  case DebugDumpParseTreeNoSema:
+    return std::make_unique<DebugDumpParseTreeNoSemaAction>();
+    break;
+  case DebugDumpProvenance:
+    return std::make_unique<DebugDumpProvenanceAction>();
+    break;
+  case DebugDumpParsingLog:
+    return std::make_unique<DebugDumpParsingLogAction>();
+    break;
+  case DebugMeasureParseTree:
+    return std::make_unique<DebugMeasureParseTreeAction>();
+    break;
+  case DebugPreFIRTree:
+    return std::make_unique<DebugPreFIRTreeAction>();
+    break;
+  case GetDefinition:
+    return std::make_unique<GetDefinitionAction>();
+    break;
+  case GetSymbolsSources:
+    return std::make_unique<GetSymbolsSourcesAction>();
+    break;
   default:
     break;
     // TODO:

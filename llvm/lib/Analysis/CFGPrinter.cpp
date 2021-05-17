@@ -63,7 +63,7 @@ static void writeCFGToDotFile(Function &F, BlockFrequencyInfo *BFI,
   errs() << "Writing '" << Filename << "'...";
 
   std::error_code EC;
-  raw_fd_ostream File(Filename, EC, sys::fs::F_Text);
+  raw_fd_ostream File(Filename, EC, sys::fs::OF_Text);
 
   DOTFuncInfo CFGInfo(&F, BFI, BPI, MaxFreq);
   CFGInfo.setHeatColors(ShowHeatColors);
@@ -290,8 +290,7 @@ void DOTGraphTraits<DOTFuncInfo *>::computeHiddenNodes(const Function *F) {
   };
   /// The post order traversal iteration is done to know the status of
   /// isHiddenBasicBlock for all the successors on the current BB.
-  for_each(po_begin(&F->getEntryBlock()), po_end(&F->getEntryBlock()),
-           evaluateBB);
+  llvm::for_each(post_order(&F->getEntryBlock()), evaluateBB);
 }
 
 bool DOTGraphTraits<DOTFuncInfo *>::isNodeHidden(const BasicBlock *Node,

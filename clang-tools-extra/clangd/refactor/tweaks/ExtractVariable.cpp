@@ -376,7 +376,7 @@ bool eligibleForExtraction(const SelectionTree::Node *N) {
   if (llvm::isa<DeclRefExpr>(E) || llvm::isa<MemberExpr>(E))
     return false;
 
-  // Extracting Exprs like a = 1 gives dummy = a = 1 which isn't useful.
+  // Extracting Exprs like a = 1 gives placeholder = a = 1 which isn't useful.
   // FIXME: we could still hoist the assignment, and leave the variable there?
   ParsedBinaryOperator BinOp;
   if (BinOp.parse(*N) && BinaryOperator::isAssignmentOp(BinOp.Kind))
@@ -387,7 +387,7 @@ bool eligibleForExtraction(const SelectionTree::Node *N) {
   if (!Parent)
     return false;
   // We don't want to extract expressions used as statements, that would leave
-  // a `dummy;` around that has no effect.
+  // a `placeholder;` around that has no effect.
   // Unfortunately because the AST doesn't have ExprStmt, we have to check in
   // this roundabout way.
   if (childExprIsStmt(Parent->ASTNode.get<Stmt>(),
@@ -422,7 +422,7 @@ const SelectionTree::Node *computeExtractedExpr(const SelectionTree::Node *N) {
       llvm::isa<MemberExpr>(SelectedExpr))
     if (const SelectionTree::Node *Call = getCallExpr(N))
       TargetNode = Call;
-  // Extracting Exprs like a = 1 gives dummy = a = 1 which isn't useful.
+  // Extracting Exprs like a = 1 gives placeholder = a = 1 which isn't useful.
   if (const BinaryOperator *BinOpExpr =
           dyn_cast_or_null<BinaryOperator>(SelectedExpr)) {
     if (BinOpExpr->getOpcode() == BinaryOperatorKind::BO_Assign)
@@ -433,13 +433,13 @@ const SelectionTree::Node *computeExtractedExpr(const SelectionTree::Node *N) {
   return TargetNode;
 }
 
-/// Extracts an expression to the variable dummy
+/// Extracts an expression to the variable placeholder
 /// Before:
 /// int x = 5 + 4 * 3;
 ///         ^^^^^
 /// After:
-/// auto dummy = 5 + 4;
-/// int x = dummy * 3;
+/// auto placeholder = 5 + 4;
+/// int x = placeholder * 3;
 class ExtractVariable : public Tweak {
 public:
   const char *id() const override final;
@@ -476,7 +476,7 @@ bool ExtractVariable::prepare(const Selection &Inputs) {
 Expected<Tweak::Effect> ExtractVariable::apply(const Selection &Inputs) {
   tooling::Replacements Result;
   // FIXME: get variable name from user or suggest based on type
-  std::string VarName = "dummy";
+  std::string VarName = "placeholder";
   SourceRange Range = Target->getExtractionChars();
   // insert new variable declaration
   if (auto Err = Result.add(Target->insertDeclaration(VarName, Range)))

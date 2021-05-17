@@ -1,9 +1,11 @@
+#include <inttypes.h>
 #include <mach-o/loader.h>
 #include <mach/thread_status.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <string>
+#include <sys/errno.h>
 #include <uuid/uuid.h>
 #include <vector>
 
@@ -79,9 +81,17 @@ std::vector<uint8_t> x86_lc_thread_load_command() {
 
 void add_lc_note_kern_ver_str_load_command(
     std::vector<std::vector<uint8_t>> &loadcmds, std::vector<uint8_t> &payload,
-    int payload_file_offset, std::string uuid) {
+    int payload_file_offset, std::string uuid, uint64_t address) {
   std::string ident = "EFI UUID=";
   ident += uuid;
+
+  if (address != 0xffffffffffffffff) {
+    ident += "; stext=";
+    char buf[24];
+    sprintf(buf, "0x%" PRIx64, address);
+    ident += buf;
+  }
+
   std::vector<uint8_t> loadcmd_data;
 
   add_uint32(loadcmd_data, LC_NOTE); // note_command.cmd
@@ -111,7 +121,7 @@ void add_lc_note_kern_ver_str_load_command(
 
 void add_lc_note_main_bin_spec_load_command(
     std::vector<std::vector<uint8_t>> &loadcmds, std::vector<uint8_t> &payload,
-    int payload_file_offset, std::string uuidstr) {
+    int payload_file_offset, std::string uuidstr, uint64_t address) {
   std::vector<uint8_t> loadcmd_data;
 
   add_uint32(loadcmd_data, LC_NOTE); // note_command.cmd
@@ -136,8 +146,8 @@ void add_lc_note_main_bin_spec_load_command(
 
   // Now write the "main bin spec" payload.
   add_uint32(payload, 1);          // version
-  add_uint32(payload, 3);          // type == 3 [ firmware, standalone,e tc ]
-  add_uint64(payload, UINT64_MAX); // load address unknown/unspecified
+  add_uint32(payload, 3);          // type == 3 [ firmware, standalone, etc ]
+  add_uint64(payload, address);    // load address
   uuid_t uuid;
   uuid_parse(uuidstr.c_str(), uuid);
   for (int i = 0; i < sizeof(uuid_t); i++)
@@ -259,9 +269,12 @@ std::string get_uuid_from_binary(const char *fn) {
 }
 
 int main(int argc, char **argv) {
-  if (argc != 4) {
-    fprintf(stderr, "usage: create-empty-corefile version-string|main-bin-spec "
-                    "<output-core-name> <binary-to-copy-uuid-from>\n");
+  if (argc != 5) {
+    fprintf(stderr,
+            "usage: create-empty-corefile version-string|main-bin-spec "
+            "<output-core-name> <binary-to-copy-uuid-from> <address>\n");
+    fprintf(stderr,
+            "     <address> is base 16, 0xffffffffffffffff means unknown\n");
     fprintf(
         stderr,
         "Create a Mach-O corefile with an either LC_NOTE 'kern ver str' or \n");
@@ -284,13 +297,22 @@ int main(int argc, char **argv) {
   // An array of corefile contents (page data, lc_note data, etc)
   std::vector<uint8_t> payload;
 
+  errno = 0;
+  uint64_t address = strtoull(argv[4], NULL, 16);
+  if (errno != 0) {
+    fprintf(stderr, "Unable to parse address %s as base 16", argv[4]);
+    exit(1);
+  }
+
   // First add all the load commands / payload so we can figure out how large
   // the load commands will actually be.
   load_commands.push_back(x86_lc_thread_load_command());
   if (strcmp(argv[1], "version-string") == 0)
-    add_lc_note_kern_ver_str_load_command(load_commands, payload, 0, uuid);
+    add_lc_note_kern_ver_str_load_command(load_commands, payload, 0, uuid,
+                                          address);
   else
-    add_lc_note_main_bin_spec_load_command(load_commands, payload, 0, uuid);
+    add_lc_note_main_bin_spec_load_command(load_commands, payload, 0, uuid,
+                                           address);
   add_lc_segment(load_commands, payload, 0);
 
   int size_of_load_commands = 0;
@@ -308,11 +330,11 @@ int main(int argc, char **argv) {
   load_commands.push_back(x86_lc_thread_load_command());
 
   if (strcmp(argv[1], "version-string") == 0)
-    add_lc_note_kern_ver_str_load_command(load_commands, payload,
-                                          header_and_load_cmd_room, uuid);
+    add_lc_note_kern_ver_str_load_command(
+        load_commands, payload, header_and_load_cmd_room, uuid, address);
   else
-    add_lc_note_main_bin_spec_load_command(load_commands, payload,
-                                           header_and_load_cmd_room, uuid);
+    add_lc_note_main_bin_spec_load_command(
+        load_commands, payload, header_and_load_cmd_room, uuid, address);
 
   add_lc_segment(load_commands, payload, header_and_load_cmd_room);
 

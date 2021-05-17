@@ -16,7 +16,6 @@
 // DEBUG: @{{[0-9]+}} = private unnamed_addr constant [{{[0-9]+}} x i8] c";s.ps->ps;{{.*}}.cpp;{{[0-9]+}};{{[0-9]+}};;\00"
 // DEBUG: @{{[0-9]+}} = private unnamed_addr constant [{{[0-9]+}} x i8] c";s.ps->ps->ps;{{.*}}.cpp;{{[0-9]+}};{{[0-9]+}};;\00"
 // DEBUG: @{{[0-9]+}} = private unnamed_addr constant [{{[0-9]+}} x i8] c";s.ps->ps->s.f[:22];{{.*}}.cpp;{{[0-9]+}};{{[0-9]+}};;\00"
-// DEBUG: @{{[0-9]+}} = private unnamed_addr constant [{{[0-9]+}} x i8] c";s.ps->ps->s.f[:22];{{.*}}.cpp;{{[0-9]+}};{{[0-9]+}};;\00"
 // DEBUG: @{{[0-9]+}} = private unnamed_addr constant [{{[0-9]+}} x i8] c";ps;{{.*}}.cpp;{{[0-9]+}};{{[0-9]+}};;\00"
 // DEBUG: @{{[0-9]+}} = private unnamed_addr constant [{{[0-9]+}} x i8] c";ps->i;{{.*}}.cpp;{{[0-9]+}};{{[0-9]+}};;\00"
 // DEBUG: @{{[0-9]+}} = private unnamed_addr constant [{{[0-9]+}} x i8] c";ps->s.f;{{.*}}.cpp;{{[0-9]+}};{{[0-9]+}};;\00"
@@ -24,7 +23,6 @@
 // DEBUG: @{{[0-9]+}} = private unnamed_addr constant [{{[0-9]+}} x i8] c";ps->ps->s.i;{{.*}}.cpp;{{[0-9]+}};{{[0-9]+}};;\00"
 // DEBUG: @{{[0-9]+}} = private unnamed_addr constant [{{[0-9]+}} x i8] c";ps->ps->ps;{{.*}}.cpp;{{[0-9]+}};{{[0-9]+}};;\00"
 // DEBUG: @{{[0-9]+}} = private unnamed_addr constant [{{[0-9]+}} x i8] c";ps->ps->ps->ps;{{.*}}.cpp;{{[0-9]+}};{{[0-9]+}};;\00"
-// DEBUG: @{{[0-9]+}} = private unnamed_addr constant [{{[0-9]+}} x i8] c";ps->ps->ps->s.f[:22];{{.*}}.cpp;{{[0-9]+}};{{[0-9]+}};;\00"
 // DEBUG: @{{[0-9]+}} = private unnamed_addr constant [{{[0-9]+}} x i8] c";ps->ps->ps->s.f[:22];{{.*}}.cpp;{{[0-9]+}};{{[0-9]+}};;\00"
 // DEBUG: @{{[0-9]+}} = private unnamed_addr constant [{{[0-9]+}} x i8] c";s.f[:22];{{.*}}.cpp;{{[0-9]+}};{{[0-9]+}};;\00"
 // DEBUG: @{{[0-9]+}} = private unnamed_addr constant [{{[0-9]+}} x i8] c";s.p[:33];{{.*}}.cpp;{{[0-9]+}};{{[0-9]+}};;\00"
@@ -167,6 +165,32 @@ void baz() {
 #pragma omp target update to(t) nowait
 }
 
+struct S3 {
+  double Z[64];
+};
+
+#pragma omp declare mapper(id: S3 s) map(s.Z[0:64])
+
+void qux() {
+  S3 s;
+#pragma omp target map(mapper(id), to:s)
+  { }
+}
+
+// DEBUG: @{{[0-9]+}} = private unnamed_addr constant [{{[0-9]+}} x i8] c";s.Z[0:64];{{.*}}.cpp;{{[0-9]+}};{{[0-9]+}};;\00"
+
+// Clang used to mistakenly generate the map name "x" for both x and y on this
+// directive.  Conditions to reproduce the bug: a single map clause has two
+// variables, and at least the second is used in the associated statement.
+//
+// DEBUG: @{{[0-9]+}} = private unnamed_addr constant [{{[0-9]+}} x i8] c";x;{{.*}}.cpp;[[@LINE+3]];7;;\00"
+// DEBUG: @{{[0-9]+}} = private unnamed_addr constant [{{[0-9]+}} x i8] c";y;{{.*}}.cpp;[[@LINE+2]];10;;\00"
+void secondMapNameInClause() {
+  int x, y;
+  #pragma omp target map(to: x, y)
+  x = y = 1;
+}
+
 // DEBUG: %{{.+}} = call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{.+}}, i32 1, i8** %{{.+}}, i8** %{{.+}}, i64* {{.+}}, i64* {{.+}}, i8** getelementptr inbounds ([{{[0-9]+}} x i8*], [{{[0-9]+}} x i8*]* @.offload_mapnames{{.*}}, i32 0, i32 0), i8** {{.+}})
 // DEBUG: %{{.+}} = call i32 @__tgt_target_teams_mapper(%struct.ident_t* @{{.+}}, i64 -1, i8* @{{.+}}, i32 1, i8** %{{.+}}, i8** %{{.+}}, i64* {{.+}}, i64* {{.+}}, i8** getelementptr inbounds ([{{[0-9]+}} x i8*], [{{[0-9]+}} x i8*]* @.offload_mapnames{{.*}}, i32 0, i32 0), i8** {{.+}}, i32 {{.+}}, i32 {{.+}})
 // DEBUG: call void @__tgt_target_data_begin_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 1, i8** %{{.+}}, i8** %{{.+}}, i64* {{.+}}, i64* {{.+}}, i8** getelementptr inbounds ([{{[0-9]+}} x i8*], [{{[0-9]+}} x i8*]* @.offload_mapnames{{.*}}, i32 0, i32 0), i8** {{.+}})
@@ -188,5 +212,11 @@ void baz() {
 // CHECK: call void @__tgt_target_data_begin_nowait_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 1, i8** %{{.+}}, i8** %{{.+}}, i64* {{.+}}, i64* {{.+}}, i8** null, i8** {{.+}})
 // CHECK: call void @__tgt_target_data_end_nowait_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 1, i8** %{{.+}}, i8** %{{.+}}, i64* {{.+}}, i64* {{.+}}, i8** null, i8** {{.+}})
 // CHECK: call void @__tgt_target_data_update_nowait_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 1, i8** %{{.+}}, i8** %{{.+}}, i64* {{.+}}, i64* {{.+}}, i8** null, i8** {{.+}})
+
+
+// DEBUG: void @.omp_mapper._ZTS2S3.id(i8* {{.*}}, i8* {{.*}}, i8* {{.*}}, i64 {{.*}}, i64 {{.*}}, i8* [[NAME_ARG:%.+]])
+// DEBUG: store i8* [[NAME_ARG]], i8** [[NAME_STACK:%.+]]
+// DEBUG: [[MAPPER_NAME:%.+]] = load i8*, i8** [[NAME_STACK]]
+// DEBUG: call void @__tgt_push_mapper_component(i8* %{{.*}}, i8* %{{.*}}, i8* %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, i8* [[MAPPER_NAME]])
 
 #endif

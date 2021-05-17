@@ -67,12 +67,12 @@ def R22 : AVRReg<22, "r22">, DwarfRegNum<[22]>;
 def R23 : AVRReg<23, "r23">, DwarfRegNum<[23]>;
 def R24 : AVRReg<24, "r24">, DwarfRegNum<[24]>;
 def R25 : AVRReg<25, "r25">, DwarfRegNum<[25]>;
-def R26 : AVRReg<26, "r26">, DwarfRegNum<[26]>;
-def R27 : AVRReg<27, "r27">, DwarfRegNum<[27]>;
-def R28 : AVRReg<28, "r28">, DwarfRegNum<[28]>;
-def R29 : AVRReg<29, "r29">, DwarfRegNum<[29]>;
-def R30 : AVRReg<30, "r30">, DwarfRegNum<[30]>;
-def R31 : AVRReg<31, "r31">, DwarfRegNum<[31]>;
+def R26 : AVRReg<26, "r26", [], ["xl"]>, DwarfRegNum<[26]>;
+def R27 : AVRReg<27, "r27", [], ["xh"]>, DwarfRegNum<[27]>;
+def R28 : AVRReg<28, "r28", [], ["yl"]>, DwarfRegNum<[28]>;
+def R29 : AVRReg<29, "r29", [], ["yh"]>, DwarfRegNum<[29]>;
+def R30 : AVRReg<30, "r30", [], ["zl"]>, DwarfRegNum<[30]>;
+def R31 : AVRReg<31, "r31", [], ["zh"]>, DwarfRegNum<[31]>;
 def SPL : AVRReg<32, "SPL">, DwarfRegNum<[32]>;
 def SPH : AVRReg<33, "SPH">, DwarfRegNum<[33]>;
 

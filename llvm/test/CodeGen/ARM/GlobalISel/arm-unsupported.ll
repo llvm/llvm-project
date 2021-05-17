@@ -49,7 +49,7 @@ define i17 @test_funny_ints(i17 %a, i17 %b) {
 }
 
 define half @test_half(half %a, half %b) {
-; CHECK: remark: {{.*}} unable to lower arguments: half (half, half)* (in function: test_half)
+; CHECK: remark: {{.*}} unable to legalize instruction: %{{[0-9]+}}:_(s16) = G_FADD %{{[0-9]+}}:_, %{{[0-9]+}}:_ (in function: test_half)
 ; CHECK-LABEL: warning: Instruction selection used fallback path for test_half
   %res = fadd half %a, %b
   ret half %res

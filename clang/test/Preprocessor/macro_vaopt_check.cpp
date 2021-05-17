@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 %s -Eonly -verify -Wno-all -pedantic -std=c++2a
+// RUN: %clang_cc1 %s -Eonly -verify -Wno-all -pedantic -std=c++20
+// RUN: %clang_cc1 %s -Eonly -verify -Wno-all -pedantic -std=c++11
+// RUN: %clang_cc1 -x c %s -Eonly -verify -Wno-all -pedantic -std=c99
 
 //expected-error@+1{{missing '('}}
 #define V1(...) __VA_OPT__  
@@ -62,3 +64,11 @@
 #define V1(...) __VA_OPT__  ((())
 #undef V1
 
+// __VA_OPT__ can't appear anywhere else.
+#if __VA_OPT__ // expected-warning {{__VA_OPT__ can only appear in the expansion of a variadic macro}}
+#endif
+
+#ifdef __VA_OPT__ // expected-warning {{__VA_OPT__ can only appear in the expansion of a variadic macro}}
+#endif
+
+#define BAD __VA_OPT__ // expected-warning {{__VA_OPT__ can only appear in the expansion of a variadic macro}}

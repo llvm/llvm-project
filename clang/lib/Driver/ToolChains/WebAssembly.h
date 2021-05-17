@@ -70,6 +70,10 @@ private:
   const char *getDefaultLinker() const override { return "wasm-ld"; }
 
   Tool *buildLinker() const override;
+
+  std::string getMultiarchTriple(const Driver &D,
+                                 const llvm::Triple &TargetTriple,
+                                 StringRef SysRoot) const override;
 };
 
 } // end namespace toolchains

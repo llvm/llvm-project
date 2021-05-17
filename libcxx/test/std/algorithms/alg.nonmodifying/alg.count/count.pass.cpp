@@ -33,12 +33,12 @@ int main(int, char**)
 {
     int ia[] = {0, 1, 2, 2, 0, 1, 2, 3};
     const unsigned sa = sizeof(ia)/sizeof(ia[0]);
-    assert(std::count(input_iterator<const int*>(ia),
-                      input_iterator<const int*>(ia + sa), 2) == 3);
-    assert(std::count(input_iterator<const int*>(ia),
-                      input_iterator<const int*>(ia + sa), 7) == 0);
-    assert(std::count(input_iterator<const int*>(ia),
-                      input_iterator<const int*>(ia), 2) == 0);
+    assert(std::count(cpp17_input_iterator<const int*>(ia),
+                      cpp17_input_iterator<const int*>(ia + sa), 2) == 3);
+    assert(std::count(cpp17_input_iterator<const int*>(ia),
+                      cpp17_input_iterator<const int*>(ia + sa), 7) == 0);
+    assert(std::count(cpp17_input_iterator<const int*>(ia),
+                      cpp17_input_iterator<const int*>(ia), 2) == 0);
 
 #if TEST_STD_VER > 17
     static_assert(test_constexpr());

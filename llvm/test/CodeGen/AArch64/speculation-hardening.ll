@@ -16,9 +16,9 @@ entry:
 ; SLH:  mov [[TMPREG:x[0-9]+]], sp
 ; SLH:  and [[TMPREG]], [[TMPREG]], x16
 ; SLH:  mov sp, [[TMPREG]]
-; NOSLH-NOT:  mov [[TMPREG:x[0-9]+]], sp
-; NOSLH-NOT:  and [[TMPREG]], [[TMPREG]], x16
-; NOSLH-NOT:  mov sp, [[TMPREG]]
+; NOSLH-NOT:  mov {{x[0-9]+}}, sp
+; NOSLH-NOT:  and [[TMPREG:x[0-9]+]], [[TMPREG]], x16
+; NOSLH-NOT:  mov sp, {{x[0-9]+}}
   %call = tail call i32 @tail_callee(i32 %i)
 ; SLH:  cmp sp, #0
 ; SLH:  csetm x16, ne
@@ -45,9 +45,9 @@ return:                                           ; preds = %entry, %if.then
 ; SLH:  mov [[TMPREG:x[0-9]+]], sp
 ; SLH:  and [[TMPREG]], [[TMPREG]], x16
 ; SLH:  mov sp, [[TMPREG]]
-; NOSLH-NOT:  mov [[TMPREG:x[0-9]+]], sp
-; NOSLH-NOT:  and [[TMPREG]], [[TMPREG]], x16
-; NOSLH-NOT:  mov sp, [[TMPREG]]
+; NOSLH-NOT:  mov {{x[0-9]+}}, sp
+; NOSLH-NOT:  and [[TMPREG:x[0-9]+]], [[TMPREG]], x16
+; NOSLH-NOT:  mov sp, {{x[0-9]+}}
   ret i32 %retval.0
 }
 
@@ -57,9 +57,9 @@ define i32 @tail_caller(i32 %a) local_unnamed_addr SLHATTR {
 ; SLH:     mov [[TMPREG:x[0-9]+]], sp
 ; SLH:     and [[TMPREG]], [[TMPREG]], x16
 ; SLH:     mov sp, [[TMPREG]]
-; NOSLH-NOT:     mov [[TMPREG:x[0-9]+]], sp
-; NOSLH-NOT:     and [[TMPREG]], [[TMPREG]], x16
-; NOSLH-NOT:     mov sp, [[TMPREG]]
+; NOSLH-NOT:     mov {{x[0-9]+}}, sp
+; NOSLH-NOT:     and [[TMPREG:x[0-9]+]], [[TMPREG]], x16
+; NOSLH-NOT:     mov sp, {{x[0-9]+}}
 ; SLH:     b tail_callee
 ; SLH-NOT:        cmp sp, #0
   %call = tail call i32 @tail_callee(i32 %a)

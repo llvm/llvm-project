@@ -41,11 +41,7 @@ bool X86SelectionDAGInfo::isBaseRegConflictPossible(
 
   const X86RegisterInfo *TRI = static_cast<const X86RegisterInfo *>(
       DAG.getSubtarget().getRegisterInfo());
-  Register BaseReg = TRI->getBaseRegister();
-  for (unsigned R : ClobberSet)
-    if (BaseReg == R)
-      return true;
-  return false;
+  return llvm::is_contained(ClobberSet, TRI->getBaseRegister());
 }
 
 SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(

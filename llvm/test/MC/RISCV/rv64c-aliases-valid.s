@@ -60,9 +60,8 @@ li x12, -0x80000000
 # CHECK-EXPAND: c.li a2, 1
 # CHECK-EXPAND: c.slli a2, 31
 li x12, 0x80000000
-# CHECK-EXPAND: c.li a2, 1
-# CHECK-EXPAND: c.slli a2, 32
-# CHECK-EXPAND: c.addi a2, -1
+# CHECK-EXPAND: c.li a2, -1
+# CHECK-EXPAND: c.srli a2, 32
 li x12, 0xFFFFFFFF
 
 # CHECK-EXPAND: c.li t0, 1

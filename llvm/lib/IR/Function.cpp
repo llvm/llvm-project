@@ -31,6 +31,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -51,6 +52,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
@@ -87,9 +89,11 @@ void Argument::setParent(Function *parent) {
   Parent = parent;
 }
 
-bool Argument::hasNonNullAttr() const {
+bool Argument::hasNonNullAttr(bool AllowUndefOrPoison) const {
   if (!getType()->isPointerTy()) return false;
-  if (getParent()->hasParamAttribute(getArgNo(), Attribute::NonNull))
+  if (getParent()->hasParamAttribute(getArgNo(), Attribute::NonNull) &&
+      (AllowUndefOrPoison ||
+       getParent()->hasParamAttribute(getArgNo(), Attribute::NoUndef)))
     return true;
   else if (getDereferenceableBytes() > 0 &&
            !NullPointerIsDefined(getParent(),
@@ -158,6 +162,8 @@ static Type *getMemoryParamAllocType(AttributeSet ParamAttrs, Type *ArgTy) {
     return ByRefTy;
   if (Type *PreAllocTy = ParamAttrs.getPreallocatedType())
     return PreAllocTy;
+  if (Type *InAllocaTy = ParamAttrs.getInAllocaType())
+    return InAllocaTy;
 
   // FIXME: sret and inalloca always depends on pointee element type. It's also
   // possible for byval to miss it.
@@ -194,6 +200,10 @@ MaybeAlign Argument::getParamAlign() const {
   return getParent()->getParamAlign(getArgNo());
 }
 
+MaybeAlign Argument::getParamStackAlign() const {
+  return getParent()->getParamStackAlign(getArgNo());
+}
+
 Type *Argument::getParamByValType() const {
   assert(getType()->isPointerTy() && "Only pointers have byval types");
   return getParent()->getParamByValType(getArgNo());
@@ -205,8 +215,13 @@ Type *Argument::getParamStructRetType() const {
 }
 
 Type *Argument::getParamByRefType() const {
-  assert(getType()->isPointerTy() && "Only pointers have byval types");
+  assert(getType()->isPointerTy() && "Only pointers have byref types");
   return getParent()->getParamByRefType(getArgNo());
+}
+
+Type *Argument::getParamInAllocaType() const {
+  assert(getType()->isPointerTy() && "Only pointers have inalloca types");
+  return getParent()->getParamInAllocaType(getArgNo());
 }
 
 uint64_t Argument::getDereferenceableBytes() const {
@@ -234,6 +249,11 @@ bool Argument::hasNoAliasAttr() const {
 bool Argument::hasNoCaptureAttr() const {
   if (!getType()->isPointerTy()) return false;
   return hasAttribute(Attribute::NoCapture);
+}
+
+bool Argument::hasNoFreeAttr() const {
+  if (!getType()->isPointerTy()) return false;
+  return hasAttribute(Attribute::NoFree);
 }
 
 bool Argument::hasStructRetAttr() const {
@@ -308,6 +328,29 @@ unsigned Function::getInstructionCount() const {
 Function *Function::Create(FunctionType *Ty, LinkageTypes Linkage,
                            const Twine &N, Module &M) {
   return Create(Ty, Linkage, M.getDataLayout().getProgramAddressSpace(), N, &M);
+}
+
+Function *Function::createWithDefaultAttr(FunctionType *Ty,
+                                          LinkageTypes Linkage,
+                                          unsigned AddrSpace, const Twine &N,
+                                          Module *M) {
+  auto *F = new Function(Ty, Linkage, AddrSpace, N, M);
+  AttrBuilder B;
+  if (M->getUwtable())
+    B.addAttribute(Attribute::UWTable);
+  switch (M->getFramePointer()) {
+  case FramePointerKind::None:
+    // 0 ("none") is the default.
+    break;
+  case FramePointerKind::NonLeaf:
+    B.addAttribute("frame-pointer", "non-leaf");
+    break;
+  case FramePointerKind::All:
+    B.addAttribute("frame-pointer", "all");
+    break;
+  }
+  F->addAttributes(AttributeList::FunctionIndex, B);
+  return F;
 }
 
 void Function::removeFromParent() {
@@ -553,6 +596,12 @@ void Function::removeParamAttrs(unsigned ArgNo, const AttrBuilder &Attrs) {
   setAttributes(PAL);
 }
 
+void Function::removeParamUndefImplyingAttrs(unsigned ArgNo) {
+  AttributeList PAL = getAttributes();
+  PAL = PAL.removeParamUndefImplyingAttributes(getContext(), ArgNo);
+  setAttributes(PAL);
+}
+
 void Function::addDereferenceableAttr(unsigned i, uint64_t Bytes) {
   AttributeList PAL = getAttributes();
   PAL = PAL.addDereferenceableAttr(getContext(), i, Bytes);
@@ -717,30 +766,34 @@ void Function::recalculateIntrinsicID() {
 /// which can't be confused with it's prefix.  This ensures we don't have
 /// collisions between two unrelated function types. Otherwise, you might
 /// parse ffXX as f(fXX) or f(fX)X.  (X is a placeholder for any other type.)
-///
-static std::string getMangledTypeStr(Type* Ty) {
+/// The HasUnnamedType boolean is set if an unnamed type was encountered,
+/// indicating that extra care must be taken to ensure a unique name.
+static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
   std::string Result;
   if (PointerType* PTyp = dyn_cast<PointerType>(Ty)) {
     Result += "p" + utostr(PTyp->getAddressSpace()) +
-      getMangledTypeStr(PTyp->getElementType());
+              getMangledTypeStr(PTyp->getElementType(), HasUnnamedType);
   } else if (ArrayType* ATyp = dyn_cast<ArrayType>(Ty)) {
     Result += "a" + utostr(ATyp->getNumElements()) +
-      getMangledTypeStr(ATyp->getElementType());
+              getMangledTypeStr(ATyp->getElementType(), HasUnnamedType);
   } else if (StructType *STyp = dyn_cast<StructType>(Ty)) {
     if (!STyp->isLiteral()) {
       Result += "s_";
-      Result += STyp->getName();
+      if (STyp->hasName())
+        Result += STyp->getName();
+      else
+        HasUnnamedType = true;
     } else {
       Result += "sl_";
       for (auto Elem : STyp->elements())
-        Result += getMangledTypeStr(Elem);
+        Result += getMangledTypeStr(Elem, HasUnnamedType);
     }
     // Ensure nested structs are distinguishable.
     Result += "s";
   } else if (FunctionType *FT = dyn_cast<FunctionType>(Ty)) {
-    Result += "f_" + getMangledTypeStr(FT->getReturnType());
+    Result += "f_" + getMangledTypeStr(FT->getReturnType(), HasUnnamedType);
     for (size_t i = 0; i < FT->getNumParams(); i++)
-      Result += getMangledTypeStr(FT->getParamType(i));
+      Result += getMangledTypeStr(FT->getParamType(i), HasUnnamedType);
     if (FT->isVarArg())
       Result += "vararg";
     // Ensure nested function types are distinguishable.
@@ -750,7 +803,7 @@ static std::string getMangledTypeStr(Type* Ty) {
     if (EC.isScalable())
       Result += "nx";
     Result += "v" + utostr(EC.getKnownMinValue()) +
-              getMangledTypeStr(VTy->getElementType());
+              getMangledTypeStr(VTy->getElementType(), HasUnnamedType);
   } else if (Ty) {
     switch (Ty->getTypeID()) {
     default: llvm_unreachable("Unhandled type");
@@ -780,15 +833,30 @@ StringRef Intrinsic::getName(ID id) {
   return IntrinsicNameTable[id];
 }
 
-std::string Intrinsic::getName(ID id, ArrayRef<Type*> Tys) {
-  assert(id < num_intrinsics && "Invalid intrinsic ID!");
-  assert((Tys.empty() || Intrinsic::isOverloaded(id)) &&
+std::string Intrinsic::getName(ID Id, ArrayRef<Type *> Tys, Module *M,
+                               FunctionType *FT) {
+  assert(Id < num_intrinsics && "Invalid intrinsic ID!");
+  assert((Tys.empty() || Intrinsic::isOverloaded(Id)) &&
          "This version of getName is for overloaded intrinsics only");
-  std::string Result(IntrinsicNameTable[id]);
+  bool HasUnnamedType = false;
+  std::string Result(IntrinsicNameTable[Id]);
   for (Type *Ty : Tys) {
-    Result += "." + getMangledTypeStr(Ty);
+    Result += "." + getMangledTypeStr(Ty, HasUnnamedType);
+  }
+  assert((M || !HasUnnamedType) && "unnamed types need a module");
+  if (M && HasUnnamedType) {
+    if (!FT)
+      FT = getType(M->getContext(), Id, Tys);
+    else
+      assert((FT == getType(M->getContext(), Id, Tys)) &&
+             "Provided FunctionType must match arguments");
+    return M->getUniqueIntrinsicName(Result, Id, FT);
   }
   return Result;
+}
+
+std::string Intrinsic::getName(ID Id, ArrayRef<Type *> Tys) {
+  return getName(Id, Tys, nullptr, nullptr);
 }
 
 /// IIT_Info - These are enumerators that describe the entries returned by the
@@ -1250,8 +1318,10 @@ bool Intrinsic::isLeaf(ID id) {
 Function *Intrinsic::getDeclaration(Module *M, ID id, ArrayRef<Type*> Tys) {
   // There can never be multiple globals with the same name of different types,
   // because intrinsics must be a specific type.
+  auto *FT = getType(M->getContext(), id, Tys);
   return cast<Function>(
-      M->getOrInsertFunction(Tys.empty() ? getName(id) : getName(id, Tys),
+      M->getOrInsertFunction(Tys.empty() ? getName(id)
+                                         : getName(id, Tys, M, FT),
                              getType(M->getContext(), id, Tys))
           .getCallee());
 }
@@ -1564,7 +1634,8 @@ Optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
 
   Intrinsic::ID ID = F->getIntrinsicID();
   StringRef Name = F->getName();
-  if (Name == Intrinsic::getName(ID, ArgTys))
+  if (Name ==
+      Intrinsic::getName(ID, ArgTys, F->getParent(), F->getFunctionType()))
     return None;
 
   auto NewDecl = Intrinsic::getDeclaration(F->getParent(), ID, ArgTys);
@@ -1576,9 +1647,12 @@ Optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
 
 /// hasAddressTaken - returns true if there are any uses of this function
 /// other than direct calls or invokes to it. Optionally ignores callback
-/// uses.
+/// uses, assume like pointer annotation calls, and references in llvm.used
+/// and llvm.compiler.used variables.
 bool Function::hasAddressTaken(const User **PutOffender,
-                               bool IgnoreCallbackUses) const {
+                               bool IgnoreCallbackUses,
+                               bool IgnoreAssumeLikeCalls,
+                               bool IgnoreLLVMUsed) const {
   for (const Use &U : uses()) {
     const User *FU = U.getUser();
     if (isa<BlockAddress>(FU))
@@ -1592,6 +1666,31 @@ bool Function::hasAddressTaken(const User **PutOffender,
 
     const auto *Call = dyn_cast<CallBase>(FU);
     if (!Call) {
+      if (IgnoreAssumeLikeCalls) {
+        if (const auto *FI = dyn_cast<Instruction>(FU)) {
+          if (FI->isCast() && !FI->user_empty() &&
+              llvm::all_of(FU->users(), [](const User *U) {
+                if (const auto *I = dyn_cast<IntrinsicInst>(U))
+                  return I->isAssumeLikeIntrinsic();
+                return false;
+              }))
+            continue;
+        }
+      }
+      if (IgnoreLLVMUsed && !FU->user_empty()) {
+        const User *FUU = FU;
+        if (isa<BitCastOperator>(FU) && FU->hasOneUse() &&
+            !FU->user_begin()->user_empty())
+          FUU = *FU->user_begin();
+        if (llvm::all_of(FUU->users(), [](const User *U) {
+              if (const auto *GV = dyn_cast<GlobalVariable>(U))
+                return GV->hasName() &&
+                       (GV->getName().equals("llvm.compiler.used") ||
+                        GV->getName().equals("llvm.used"));
+              return false;
+            }))
+          continue;
+      }
       if (PutOffender)
         *PutOffender = FU;
       return true;

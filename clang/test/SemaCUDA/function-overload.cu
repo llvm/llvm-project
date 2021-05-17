@@ -463,7 +463,7 @@ int test_constexpr_overload(C2 &x, C2 &y) {
 // Verify no ambiguity for new operator.
 void *a = new int;
 __device__ void *b = new int;
-// expected-error@-1{{dynamic initialization is not supported for __device__, __constant__, and __shared__ variables.}}
+// expected-error@-1{{dynamic initialization is not supported for __device__, __constant__, __shared__, and __managed__ variables.}}
 
 // Verify no ambiguity for new operator.
 template<typename _Tp> _Tp&& f();

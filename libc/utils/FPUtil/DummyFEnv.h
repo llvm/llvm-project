@@ -21,11 +21,17 @@ static inline int clearExcept(int) { return 0; }
 
 static inline int testExcept(int) { return 0; }
 
+static inline int setExcept(int) { return 0; }
+
 static inline int raiseExcept(int) { return 0; }
 
 static inline int getRound() { return FE_TONEAREST; }
 
 static inline int setRound(int) { return 0; }
+
+static inline int getEnv(fenv_t *) { return 0; }
+
+static inline int setEnv(const fenv_t *) { return 0; }
 
 } // namespace fputil
 } // namespace __llvm_libc

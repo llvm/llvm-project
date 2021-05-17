@@ -1,10 +1,10 @@
 --- !tapi-tbd-v3
-archs:            [ i386, x86_64 ]
-uuids:            [ 'i386: 00000000-0000-0000-0000-000000000000', 'x86_64: 00000000-0000-0000-0000-000000000001' ]
+archs:            [ i386, x86_64, arm64 ]
+uuids:            [ 'i386: 00000000-0000-0000-0000-000000000000', 'x86_64: 00000000-0000-0000-0000-000000000001', 'arm64: 00000000-0000-0000-0000-000000000002' ]
 platform:         macosx
 install-name:     '/usr/lib/libc++.dylib'
 current-version:  1281
 exports:
-  - archs:        [ i386, x86_64 ]
+  - archs:        [ i386, x86_64, arm64 ]
     re-exports:   [ '/usr/lib/libc++abi.dylib' ]
 ...

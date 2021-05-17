@@ -13,8 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyMCInstLower.h"
-#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
+#include "Utils/WebAssemblyTypeUtilities.h"
+#include "Utils/WebAssemblyUtilities.h"
 #include "WebAssemblyAsmPrinter.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyRuntimeLibcallSignatures.h"
@@ -46,8 +47,28 @@ static void removeRegisterOperands(const MachineInstr *MI, MCInst &OutMI);
 MCSymbol *
 WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
   const GlobalValue *Global = MO.getGlobal();
-  if (!isa<Function>(Global))
-    return cast<MCSymbolWasm>(Printer.getSymbol(Global));
+  if (!isa<Function>(Global)) {
+    auto *WasmSym = cast<MCSymbolWasm>(Printer.getSymbol(Global));
+    // If the symbol doesn't have an explicit WasmSymbolType yet and the
+    // GlobalValue is actually a WebAssembly global, then ensure the symbol is a
+    // WASM_SYMBOL_TYPE_GLOBAL.
+    if (WebAssembly::isWasmVarAddressSpace(Global->getAddressSpace()) &&
+        !WasmSym->getType()) {
+      const MachineFunction &MF = *MO.getParent()->getParent()->getParent();
+      const TargetMachine &TM = MF.getTarget();
+      const Function &CurrentFunc = MF.getFunction();
+      SmallVector<MVT, 1> VTs;
+      computeLegalValueVTs(CurrentFunc, TM, Global->getValueType(), VTs);
+      if (VTs.size() != 1)
+        report_fatal_error("Aggregate globals not yet implemented");
+
+      bool Mutable = true;
+      wasm::ValType Type = WebAssembly::toValType(VTs[0]);
+      WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
+      WasmSym->setGlobalType(wasm::WasmGlobalType{uint8_t(Type), Mutable});
+    }
+    return WasmSym;
+  }
 
   const auto *FuncTy = cast<FunctionType>(Global->getValueType());
   const MachineFunction &MF = *MO.getParent()->getParent()->getParent();
@@ -161,6 +182,8 @@ MCOperand WebAssemblyMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
       report_fatal_error("Global indexes with offsets not supported");
     if (WasmSym->isEvent())
       report_fatal_error("Event indexes with offsets not supported");
+    if (WasmSym->isTable())
+      report_fatal_error("Table indexes with offsets not supported");
 
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
@@ -285,13 +308,13 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
       break;
     }
     case MachineOperand::MO_FPImmediate: {
-      // TODO: MC converts all floating point immediate operands to double.
-      // This is fine for numeric values, but may cause NaNs to change bits.
       const ConstantFP *Imm = MO.getFPImm();
+      const uint64_t BitPattern =
+          Imm->getValueAPF().bitcastToAPInt().getZExtValue();
       if (Imm->getType()->isFloatTy())
-        MCOp = MCOperand::createFPImm(Imm->getValueAPF().convertToFloat());
+        MCOp = MCOperand::createSFPImm(static_cast<uint32_t>(BitPattern));
       else if (Imm->getType()->isDoubleTy())
-        MCOp = MCOperand::createFPImm(Imm->getValueAPF().convertToDouble());
+        MCOp = MCOperand::createDFPImm(BitPattern);
       else
         llvm_unreachable("unknown floating point immediate type");
       break;

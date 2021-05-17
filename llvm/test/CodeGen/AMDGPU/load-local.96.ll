@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX9 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=hawaii -verify-machineinstrs < %s | FileCheck --check-prefix=GFX7 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=tahiti -verify-machineinstrs < %s | FileCheck --check-prefix=GFX6 %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX10 %s
 
 define <3 x i32> @load_lds_v3i32(<3 x i32> addrspace(3)* %ptr) {
 ; GFX9-LABEL: load_lds_v3i32:
@@ -28,6 +29,14 @@ define <3 x i32> @load_lds_v3i32(<3 x i32> addrspace(3)* %ptr) {
 ; GFX6-NEXT:    ds_read_b64 v[0:1], v0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: load_lds_v3i32:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    ds_read_b96 v[0:2], v0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %load = load <3 x i32>, <3 x i32> addrspace(3)* %ptr
   ret <3 x i32> %load
 }
@@ -162,6 +171,39 @@ define <3 x i32> @load_lds_v3i32_align1(<3 x i32> addrspace(3)* %ptr) {
 ; GFX6-NEXT:    v_or_b32_e32 v0, v0, v8
 ; GFX6-NEXT:    v_or_b32_e32 v0, v3, v0
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: load_lds_v3i32_align1:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    ds_read_u8 v1, v0
+; GFX10-NEXT:    ds_read_u8 v2, v0 offset:1
+; GFX10-NEXT:    ds_read_u8 v3, v0 offset:2
+; GFX10-NEXT:    ds_read_u8 v4, v0 offset:3
+; GFX10-NEXT:    ds_read_u8 v5, v0 offset:4
+; GFX10-NEXT:    ds_read_u8 v6, v0 offset:5
+; GFX10-NEXT:    ds_read_u8 v7, v0 offset:6
+; GFX10-NEXT:    ds_read_u8 v8, v0 offset:7
+; GFX10-NEXT:    ds_read_u8 v9, v0 offset:8
+; GFX10-NEXT:    ds_read_u8 v10, v0 offset:9
+; GFX10-NEXT:    ds_read_u8 v11, v0 offset:10
+; GFX10-NEXT:    ds_read_u8 v0, v0 offset:11
+; GFX10-NEXT:    s_waitcnt lgkmcnt(10)
+; GFX10-NEXT:    v_lshl_or_b32 v1, v2, 8, v1
+; GFX10-NEXT:    s_waitcnt lgkmcnt(8)
+; GFX10-NEXT:    v_lshl_or_b32 v2, v4, 8, v3
+; GFX10-NEXT:    s_waitcnt lgkmcnt(6)
+; GFX10-NEXT:    v_lshl_or_b32 v3, v6, 8, v5
+; GFX10-NEXT:    s_waitcnt lgkmcnt(4)
+; GFX10-NEXT:    v_lshl_or_b32 v4, v8, 8, v7
+; GFX10-NEXT:    s_waitcnt lgkmcnt(2)
+; GFX10-NEXT:    v_lshl_or_b32 v5, v10, 8, v9
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_lshl_or_b32 v6, v0, 8, v11
+; GFX10-NEXT:    v_lshl_or_b32 v0, v2, 16, v1
+; GFX10-NEXT:    v_lshl_or_b32 v1, v4, 16, v3
+; GFX10-NEXT:    v_lshl_or_b32 v2, v6, 16, v5
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %load = load <3 x i32>, <3 x i32> addrspace(3)* %ptr, align 1
   ret <3 x i32> %load
 }
@@ -231,6 +273,24 @@ define <3 x i32> @load_lds_v3i32_align2(<3 x i32> addrspace(3)* %ptr) {
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_or_b32_e32 v0, v3, v0
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: load_lds_v3i32_align2:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    ds_read_u16 v1, v0
+; GFX10-NEXT:    ds_read_u16 v2, v0 offset:2
+; GFX10-NEXT:    ds_read_u16 v3, v0 offset:4
+; GFX10-NEXT:    ds_read_u16 v4, v0 offset:6
+; GFX10-NEXT:    ds_read_u16 v5, v0 offset:8
+; GFX10-NEXT:    ds_read_u16 v6, v0 offset:10
+; GFX10-NEXT:    s_waitcnt lgkmcnt(4)
+; GFX10-NEXT:    v_lshl_or_b32 v0, v2, 16, v1
+; GFX10-NEXT:    s_waitcnt lgkmcnt(2)
+; GFX10-NEXT:    v_lshl_or_b32 v1, v4, 16, v3
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_lshl_or_b32 v2, v6, 16, v5
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %load = load <3 x i32>, <3 x i32> addrspace(3)* %ptr, align 2
   ret <3 x i32> %load
 }
@@ -266,6 +326,16 @@ define <3 x i32> @load_lds_v3i32_align4(<3 x i32> addrspace(3)* %ptr) {
 ; GFX6-NEXT:    ds_read_b32 v0, v0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: load_lds_v3i32_align4:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    v_mov_b32_e32 v2, v0
+; GFX10-NEXT:    ds_read2_b32 v[0:1], v0 offset1:1
+; GFX10-NEXT:    ds_read_b32 v2, v2 offset:8
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %load = load <3 x i32>, <3 x i32> addrspace(3)* %ptr, align 4
   ret <3 x i32> %load
 }
@@ -301,6 +371,16 @@ define <3 x i32> @load_lds_v3i32_align8(<3 x i32> addrspace(3)* %ptr) {
 ; GFX6-NEXT:    ds_read_b32 v0, v0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: load_lds_v3i32_align8:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    v_mov_b32_e32 v2, v0
+; GFX10-NEXT:    ds_read2_b32 v[0:1], v0 offset1:1
+; GFX10-NEXT:    ds_read_b32 v2, v2 offset:8
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %load = load <3 x i32>, <3 x i32> addrspace(3)* %ptr, align 8
   ret <3 x i32> %load
 }
@@ -330,6 +410,14 @@ define <3 x i32> @load_lds_v3i32_align16(<3 x i32> addrspace(3)* %ptr) {
 ; GFX6-NEXT:    ds_read_b64 v[0:1], v0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: load_lds_v3i32_align16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    ds_read_b96 v[0:2], v0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %load = load <3 x i32>, <3 x i32> addrspace(3)* %ptr, align 16
   ret <3 x i32> %load
 }

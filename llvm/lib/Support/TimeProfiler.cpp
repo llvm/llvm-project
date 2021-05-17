@@ -304,7 +304,7 @@ Error llvm::timeTraceProfilerWrite(StringRef PreferredFileName,
   }
 
   std::error_code EC;
-  raw_fd_ostream OS(Path, EC, sys::fs::OF_Text);
+  raw_fd_ostream OS(Path, EC, sys::fs::OF_TextWithCRLF);
   if (EC)
     return createStringError(EC, "Could not open " + Path);
 

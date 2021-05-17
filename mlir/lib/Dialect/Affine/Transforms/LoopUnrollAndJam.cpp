@@ -74,5 +74,5 @@ void LoopUnrollAndJam::runOnFunction() {
   // any for operation.
   auto &entryBlock = getFunction().front();
   if (auto forOp = dyn_cast<AffineForOp>(entryBlock.front()))
-    loopUnrollJamByFactor(forOp, unrollJamFactor);
+    (void)loopUnrollJamByFactor(forOp, unrollJamFactor);
 }

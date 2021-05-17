@@ -67,7 +67,7 @@ FPredicates ::= oeq | one | olt | ogt | ole | oge | ord | uno | ueq | une
               | ult | ugt | ule | uge | true | false ;
 
 IntType ::= INTTYPE;
-FPType  ::= float | double | "ppc_fp128" | fp128 | "x86_fp80";
+FPType  ::= half | bfloat | float | double | "ppc_fp128" | fp128 | "x86_fp80";
 
 LocalName ::= LOCALVAR | STRINGCONSTANT | PCTSTRINGCONSTANT ;
 OptLocalName ::= LocalName | _ ;
@@ -192,8 +192,8 @@ OptSection    ::= + _ | SectionString ;
 GlobalVarAttributes ::= + _ | ^ "," GlobalVarAttribute GlobalVarAttributes ;
 GlobalVarAttribute  ::= SectionString | align EUINT64VAL ;
 
-PrimType ::= INTTYPE | float | double | "ppc_fp128" | fp128 | "x86_fp80"
-          | - label ;
+PrimType ::= INTTYPE | half | bfloat | float | double | "ppc_fp128" | fp128
+          | "x86_fp80" | "x86_mmx" | "x86_amx" | - label ;
 
 Types
   ::= opaque

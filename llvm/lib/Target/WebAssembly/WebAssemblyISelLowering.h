@@ -66,7 +66,7 @@ private:
   bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
                              unsigned AS,
                              Instruction *I = nullptr) const override;
-  bool allowsMisalignedMemoryAccesses(EVT, unsigned AddrSpace, unsigned Align,
+  bool allowsMisalignedMemoryAccesses(EVT, unsigned AddrSpace, Align Alignment,
                                       MachineMemOperand::Flags Flags,
                                       bool *Fast) const override;
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
@@ -119,6 +119,9 @@ private:
   SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerAccessVectorElement(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerShift(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerLoad(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerStore(SDValue Op, SelectionDAG &DAG) const;
 
   // Custom DAG combine hooks
   SDValue

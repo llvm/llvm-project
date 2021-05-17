@@ -226,6 +226,13 @@ bool shouldSuppressDiagnostic(DiagnosticsEngine::Level DiagLevel,
                               const Diagnostic &Info, ClangTidyContext &Context,
                               bool AllowIO = true);
 
+/// Gets the Fix attached to \p Diagnostic.
+/// If there isn't a Fix attached to the diagnostic and \p AnyFix is true, Check
+/// to see if exactly one note has a Fix and return it. Otherwise return
+/// nullptr.
+const llvm::StringMap<tooling::Replacements> *
+getFixIt(const tooling::Diagnostic &Diagnostic, bool AnyFix);
+
 /// A diagnostic consumer that turns each \c Diagnostic into a
 /// \c SourceManager-independent \c ClangTidyError.
 //
@@ -235,7 +242,8 @@ class ClangTidyDiagnosticConsumer : public DiagnosticConsumer {
 public:
   ClangTidyDiagnosticConsumer(ClangTidyContext &Ctx,
                               DiagnosticsEngine *ExternalDiagEngine = nullptr,
-                              bool RemoveIncompatibleErrors = true);
+                              bool RemoveIncompatibleErrors = true,
+                              bool GetFixesFromNotes = false);
 
   // FIXME: The concept of converting between FixItHints and Replacements is
   // more generic and should be pulled out into a more useful Diagnostics
@@ -265,6 +273,7 @@ private:
   ClangTidyContext &Context;
   DiagnosticsEngine *ExternalDiagEngine;
   bool RemoveIncompatibleErrors;
+  bool GetFixesFromNotes;
   std::vector<ClangTidyError> Errors;
   std::unique_ptr<llvm::Regex> HeaderFilter;
   bool LastErrorRelatesToUserCode;

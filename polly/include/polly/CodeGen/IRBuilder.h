@@ -25,6 +25,7 @@ class ScalarEvolution;
 
 namespace polly {
 class Scop;
+struct BandAttr;
 
 /// Helper class to annotate newly generated SCoPs with metadata.
 ///
@@ -43,6 +44,7 @@ class Scop;
 class ScopAnnotator {
 public:
   ScopAnnotator();
+  ~ScopAnnotator();
 
   /// Build all alias scopes for the given SCoP.
   void buildAliasScopes(Scop &S);
@@ -83,6 +85,13 @@ public:
   /// Add inter iteration alias-free base pointer @p BasePtr.
   void addInterIterationAliasFreeBasePtr(llvm::Value *BasePtr);
 
+  /// Stack for surrounding BandAttr annotations.
+  llvm::SmallVector<BandAttr *, 8> LoopAttrEnv;
+  BandAttr *&getStagingAttrEnv() { return LoopAttrEnv.back(); }
+  BandAttr *getActiveAttrEnv() const {
+    return LoopAttrEnv[LoopAttrEnv.size() - 2];
+  }
+
 private:
   /// Annotate with the second level alias metadata
   ///
@@ -100,7 +109,7 @@ private:
   /// All loops currently under construction.
   llvm::SmallVector<llvm::Loop *, 8> ActiveLoops;
 
-  /// Metadata pointing to parallel loops currently under construction.
+  /// Access groups for the parallel loops currently under construction.
   llvm::SmallVector<llvm::MDNode *, 8> ParallelLoops;
 
   /// The alias scope domain for the current SCoP.

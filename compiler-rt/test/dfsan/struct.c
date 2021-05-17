@@ -2,6 +2,8 @@
 // RUN: %clang_dfsan %s -O1 -DO1 -o %t && %run %t
 // RUN: %clang_dfsan %s -O0 -mllvm -dfsan-fast-16-labels=true -DFAST16_O0 -o %t && %run %t
 // RUN: %clang_dfsan %s -O0 -DO0 -o %t && %run %t
+//
+// REQUIRES: x86_64-target-arch
 
 #include <assert.h>
 #include <sanitizer/dfsan_interface.h>

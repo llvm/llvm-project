@@ -142,7 +142,9 @@ struct GlobalEnv {
         CollectDFT(SF);
       }
       auto Time2 = std::chrono::system_clock::now();
-      Job->DftTimeInSeconds = duration_cast<seconds>(Time2 - Time1).count();
+      auto DftTimeInSeconds = duration_cast<seconds>(Time2 - Time1).count();
+      assert(DftTimeInSeconds < std::numeric_limits<int>::max());
+      Job->DftTimeInSeconds = static_cast<int>(DftTimeInSeconds);
     }
     if (!Seeds.empty()) {
       Job->SeedListPath =
@@ -314,8 +316,11 @@ void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
       Env.Files.push_back(File.File);
   } else {
     auto CFPath = DirPlusFile(Env.TempDir, "merge.txt");
-    CrashResistantMerge(Env.Args, {}, SeedFiles, &Env.Files, {}, &Env.Features,
-                        {}, &Env.Cov, CFPath, false);
+    Set<uint32_t> NewFeatures, NewCov;
+    CrashResistantMerge(Env.Args, {}, SeedFiles, &Env.Files, Env.Features,
+                        &NewFeatures, Env.Cov, &NewCov, CFPath, false);
+    Env.Features.insert(NewFeatures.begin(), NewFeatures.end());
+    Env.Cov.insert(NewFeatures.begin(), NewFeatures.end());
     RemoveFile(CFPath);
   }
   Printf("INFO: -fork=%d: %zd seed inputs, starting to fuzz in %s\n", NumJobs,

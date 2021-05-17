@@ -91,7 +91,7 @@ int main(int, char**)
     typedef T::reference         RT; // expected-error-re {{no type named 'reference' in 'std:{{.*}}:iterator_traits<{{.+}}>}}
     typedef T::iterator_category CT; // expected-error-re {{no type named 'iterator_category' in 'std:{{.*}}:iterator_traits<{{.+}}>}}
     }
-
+#if TEST_STD_VER <= 17 || !defined(__cpp_lib_concepts)
     {
     typedef std::iterator_traits<NotAnIteratorNoPointer> T;
     typedef T::difference_type   DT; // expected-error-re {{no type named 'difference_type' in 'std:{{.*}}:iterator_traits<{{.+}}>}}
@@ -100,7 +100,7 @@ int main(int, char**)
     typedef T::reference         RT; // expected-error-re {{no type named 'reference' in 'std:{{.*}}:iterator_traits<{{.+}}>}}
     typedef T::iterator_category CT; // expected-error-re {{no type named 'iterator_category' in 'std:{{.*}}:iterator_traits<{{.+}}>}}
     }
-
+#endif // TEST_STD_VER <= 17 || !defined(__cpp_lib_concepts)
     {
     typedef std::iterator_traits<NotAnIteratorNoReference> T;
     typedef T::difference_type   DT; // expected-error-re {{no type named 'difference_type' in 'std:{{.*}}:iterator_traits<{{.+}}>}}

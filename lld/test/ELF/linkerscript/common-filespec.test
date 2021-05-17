@@ -67,15 +67,6 @@ SECTIONS {
 # For a common with multiple definitions, the largest one wins and it must be
 # assigned to the section from the file which provided the winning def
 # CHECK:       Symbol {
-# CHECK:         Name: common_multiple
-# CHECK-NEXT:    Value: 0x10
-# CHECK-NEXT:    Size: 32
-# CHECK-NEXT:    Binding: Global
-# CHECK-NEXT:    Type: Object
-# CHECK-NEXT:    Other: 0
-# CHECK-NEXT:    Section: .common_2
-# CHECK-NEXT:  }
-# CHECK:       Symbol {
 # CHECK:         Name: common_uniq_0
 # CHECK-NEXT:    Value: 0x4
 # CHECK-NEXT:    Size: 4
@@ -83,6 +74,15 @@ SECTIONS {
 # CHECK-NEXT:    Type: Object
 # CHECK-NEXT:    Other: 0
 # CHECK-NEXT:    Section: .common_0
+# CHECK-NEXT:  }
+# CHECK:       Symbol {
+# CHECK:         Name: common_multiple
+# CHECK-NEXT:    Value: 0x10
+# CHECK-NEXT:    Size: 32
+# CHECK-NEXT:    Binding: Global
+# CHECK-NEXT:    Type: Object
+# CHECK-NEXT:    Other: 0
+# CHECK-NEXT:    Section: .common_2
 # CHECK-NEXT:  }
 # CHECK:       Symbol {
 # CHECK:         Name: common_uniq_1

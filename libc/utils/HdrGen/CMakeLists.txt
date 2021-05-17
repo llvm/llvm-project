@@ -1,6 +1,6 @@
 set(LLVM_LINK_COMPONENTS Support)
 
-add_tablegen(libc-hdrgen llvm-libc
+add_tablegen(libc-hdrgen LIBC
   Command.h
   Command.cpp
   Generator.cpp

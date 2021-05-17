@@ -565,7 +565,11 @@ Iter MipsDelaySlotFiller::replaceWithCompactBranch(MachineBasicBlock &MBB,
   unsigned NewOpcode = TII->getEquivalentCompactForm(Branch);
   Branch = TII->genInstrWithNewOpc(NewOpcode, Branch);
 
-  std::next(Branch)->eraseFromParent();
+  auto *ToErase = cast<MachineInstr>(&*std::next(Branch));
+  // Update call site info for the Branch.
+  if (ToErase->shouldUpdateCallSiteInfo())
+    ToErase->getMF()->moveCallSiteInfo(ToErase, cast<MachineInstr>(&*Branch));
+  ToErase->eraseFromParent();
   return Branch;
 }
 

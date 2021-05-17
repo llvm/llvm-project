@@ -766,16 +766,18 @@ WriteWindowsDumpFile(PMINIDUMP_EXCEPTION_INFORMATION ExceptionInfo) {
     if (!GetDumpType(DefaultLocalDumpsKey, DumpType))
       DumpType = MiniDumpNormal;
 
-  // Look to see if a dump location is specified in the registry; first with the
+  // Look to see if a dump location is specified on the command line.  If not,
+  // look to see if a dump location is specified in the registry; first with the
   // app-specific key and failing that with the global key.  If none are found
   // we'll just create the dump file in the default temporary file location
   // (GetDumpFolder will return false either if the key is NULL or if there is
   // no valid DumpFolder value at its location).
   bool ExplicitDumpDirectorySet = true;
-  SmallString<MAX_PATH> DumpDirectory;
-  if (!GetDumpFolder(AppSpecificKey, DumpDirectory))
-    if (!GetDumpFolder(DefaultLocalDumpsKey, DumpDirectory))
-      ExplicitDumpDirectorySet = false;
+  SmallString<MAX_PATH> DumpDirectory(CrashDiagnosticsDirectory);
+  if (DumpDirectory.empty())
+    if (!GetDumpFolder(AppSpecificKey, DumpDirectory))
+      if (!GetDumpFolder(DefaultLocalDumpsKey, DumpDirectory))
+        ExplicitDumpDirectorySet = false;
 
   int FD;
   SmallString<MAX_PATH> DumpPath;

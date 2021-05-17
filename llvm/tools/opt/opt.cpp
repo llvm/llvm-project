@@ -66,12 +66,15 @@ static codegen::RegisterCodeGenFlags CFG;
 
 // The OptimizationList is automatically populated with registered Passes by the
 // PassNameParser.
-//
-static cl::list<const PassInfo*, bool, PassNameParser>
-PassList(cl::desc("Optimizations available:"));
+static cl::list<const PassInfo *, bool, PassNameParser> PassList(cl::desc(
+    "Optimizations available (use '-passes=' for the new pass manager)"));
 
 static cl::opt<bool> EnableNewPassManager(
-    "enable-new-pm", cl::desc("Enable the new pass manager"), cl::init(false));
+    "enable-new-pm",
+    cl::desc("Enable the new pass manager, translating "
+             "'opt -foo' to 'opt -passes=foo'. This is strictly for the new PM "
+             "migration, use '-passes=' when possible."),
+    cl::init(LLVM_ENABLE_NEW_PASS_MANAGER));
 
 // This flag specifies a textual description of the optimization pass pipeline
 // to run over the module. This flag switches opt to use the new pass manager
@@ -79,11 +82,14 @@ static cl::opt<bool> EnableNewPassManager(
 // pass management.
 static cl::opt<std::string> PassPipeline(
     "passes",
-    cl::desc("A textual description of the pass pipeline for optimizing"),
-    cl::Hidden);
+    cl::desc(
+        "A textual description of the pass pipeline. To have analysis passes "
+        "available before a certain pass, add 'require<foo-analysis>'."));
 
-// Other command line options...
-//
+static cl::opt<bool> PrintPasses("print-passes",
+                                 cl::desc("Print available passes that can be "
+                                          "specified in -passes=foo and exit"));
+
 static cl::opt<std::string>
 InputFilename(cl::Positional, cl::desc("<input bitcode file>"),
     cl::init("-"), cl::value_desc("filename"));
@@ -140,44 +146,46 @@ static cl::opt<bool>
     StripNamedMetadata("strip-named-metadata",
                        cl::desc("Strip module-level named metadata"));
 
-static cl::opt<bool> DisableInline("disable-inlining",
-                                   cl::desc("Do not run the inliner pass"));
+static cl::opt<bool>
+    DisableInline("disable-inlining",
+                  cl::desc("Do not run the inliner pass (legacy PM only)"));
 
 static cl::opt<bool>
 DisableOptimizations("disable-opt",
                      cl::desc("Do not run any optimization passes"));
 
-static cl::opt<bool>
-StandardLinkOpts("std-link-opts",
-                 cl::desc("Include the standard link time optimizations"));
+static cl::opt<bool> StandardLinkOpts(
+    "std-link-opts",
+    cl::desc("Include the standard link time optimizations (legacy PM only)"));
 
 static cl::opt<bool>
-OptLevelO0("O0",
-  cl::desc("Optimization level 0. Similar to clang -O0"));
+    OptLevelO0("O0", cl::desc("Optimization level 0. Similar to clang -O0. "
+                              "Use -passes='default<O0>' for the new PM"));
 
 static cl::opt<bool>
-OptLevelO1("O1",
-           cl::desc("Optimization level 1. Similar to clang -O1"));
+    OptLevelO1("O1", cl::desc("Optimization level 1. Similar to clang -O1. "
+                              "Use -passes='default<O1>' for the new PM"));
 
 static cl::opt<bool>
-OptLevelO2("O2",
-           cl::desc("Optimization level 2. Similar to clang -O2"));
+    OptLevelO2("O2", cl::desc("Optimization level 2. Similar to clang -O2. "
+                              "Use -passes='default<O2>' for the new PM"));
 
 static cl::opt<bool>
-OptLevelOs("Os",
-           cl::desc("Like -O2 with extra optimizations for size. Similar to clang -Os"));
+    OptLevelOs("Os", cl::desc("Like -O2 but size-conscious. Similar to clang "
+                              "-Os. Use -passes='default<Os>' for the new PM"));
+
+static cl::opt<bool> OptLevelOz(
+    "Oz",
+    cl::desc("Like -O2 but optimize for code size above all else. Similar to "
+             "clang -Oz. Use -passes='default<Oz>' for the new PM"));
 
 static cl::opt<bool>
-OptLevelOz("Oz",
-           cl::desc("Like -Os but reduces code size further. Similar to clang -Oz"));
+    OptLevelO3("O3", cl::desc("Optimization level 3. Similar to clang -O3. "
+                              "Use -passes='default<O3>' for the new PM"));
 
-static cl::opt<bool>
-OptLevelO3("O3",
-           cl::desc("Optimization level 3. Similar to clang -O3"));
-
-static cl::opt<unsigned>
-CodeGenOptLevel("codegen-opt-level",
-                cl::desc("Override optimization level for codegen hooks"));
+static cl::opt<unsigned> CodeGenOptLevel(
+    "codegen-opt-level",
+    cl::desc("Override optimization level for codegen hooks, legacy PM only"));
 
 static cl::opt<std::string>
 TargetTriple("mtriple", cl::desc("Override target triple for module"));
@@ -203,12 +211,30 @@ DisableBuiltins("disable-builtin",
                 cl::ZeroOrMore);
 
 static cl::opt<bool>
-AnalyzeOnly("analyze", cl::desc("Only perform analysis, no optimization"));
+    AnalyzeOnly("analyze", cl::desc("Only perform analysis, no optimization. "
+                                    "Legacy pass manager only."));
 
 static cl::opt<bool> EnableDebugify(
     "enable-debugify",
     cl::desc(
         "Start the pipeline with debugify and end it with check-debugify"));
+
+static cl::opt<bool> VerifyDebugInfoPreserve(
+    "verify-debuginfo-preserve",
+    cl::desc("Start the pipeline with collecting and end it with checking of "
+             "debug info preservation."));
+
+static cl::opt<bool> VerifyEachDebugInfoPreserve(
+    "verify-each-debuginfo-preserve",
+    cl::desc("Start each pass with collecting and end it with checking of "
+             "debug info preservation."));
+
+static cl::opt<std::string>
+    VerifyDIPreserveExport("verify-di-preserve-export",
+                   cl::desc("Export debug info preservation failures into "
+                            "specified (JSON) file (should be abs path as we use"
+                            " append mode to insert new JSON objects)"),
+                   cl::value_desc("filename"), cl::init(""));
 
 static cl::opt<bool>
 PrintBreakpoints("print-breakpoints-for-testing",
@@ -229,10 +255,10 @@ static cl::opt<bool> PreserveAssemblyUseListOrder(
     cl::desc("Preserve use-list order when writing LLVM assembly."),
     cl::init(false), cl::Hidden);
 
-static cl::opt<bool>
-    RunTwice("run-twice",
-             cl::desc("Run all passes twice, re-using the same pass manager."),
-             cl::init(false), cl::Hidden);
+static cl::opt<bool> RunTwice("run-twice",
+                              cl::desc("Run all passes twice, re-using the "
+                                       "same pass manager (legacy PM only)."),
+                              cl::init(false), cl::Hidden);
 
 static cl::opt<bool> DiscardValueNames(
     "discard-value-names",
@@ -287,6 +313,7 @@ static cl::opt<std::string> RemarksFormat(
     cl::desc("The format used for serializing remarks (default: YAML)"),
     cl::value_desc("format"), cl::init("yaml"));
 
+namespace llvm {
 cl::opt<PGOKind>
     PGOKindFlag("pgo-kind", cl::init(NoPGO), cl::Hidden,
                 cl::desc("The kind of profile guided optimization"),
@@ -315,6 +342,7 @@ cl::opt<std::string> CSProfileGenFile(
     "cs-profilegen-file",
     cl::desc("Path to the instrumented context sensitive profile."),
     cl::Hidden);
+} // namespace llvm
 
 static inline void addPass(legacy::PassManagerBase &PM, Pass *P) {
   // Add the pass to the pass manager...
@@ -475,45 +503,34 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "amdgpu-unify-metadata",
       "amdgpu-printf-runtime-binding",
       "amdgpu-always-inline"};
-  for (const auto &P : PassNameExactToIgnore)
-    if (Pass == P)
-      return false;
+  if (llvm::is_contained(PassNameExactToIgnore, Pass))
+    return false;
 
   std::vector<StringRef> PassNamePrefix = {
-      "x86-",  "xcore-", "wasm-",    "systemz-", "ppc-",   "nvvm-",   "nvptx-",
-      "mips-", "lanai-", "hexagon-", "bpf-",     "avr-",   "thumb2-", "arm-",
-      "si-",   "gcn-",   "amdgpu-",  "aarch64-", "amdgcn-"};
+      "x86-",  "xcore-", "wasm-",    "systemz-", "ppc-",    "nvvm-",   "nvptx-",
+      "mips-", "lanai-", "hexagon-", "bpf-",     "avr-",    "thumb2-", "arm-",
+      "si-",   "gcn-",   "amdgpu-",  "aarch64-", "amdgcn-", "polly-"};
   std::vector<StringRef> PassNameContain = {"ehprepare"};
-  std::vector<StringRef> PassNameExact = {"safe-stack",
-                                          "cost-model",
-                                          "codegenprepare",
-                                          "interleaved-load-combine",
-                                          "unreachableblockelim",
-                                          "verify-safepoint-ir",
-                                          "divergence",
-                                          "atomic-expand",
-                                          "hardware-loops",
-                                          "type-promotion",
-                                          "mve-tail-predication",
-                                          "interleaved-access",
-                                          "global-merge",
-                                          "pre-isel-intrinsic-lowering",
-                                          "expand-reductions",
-                                          "indirectbr-expand",
-                                          "generic-to-nvvm",
-                                          "expandmemcmp",
-                                          "loop-reduce",
-                                          "lower-amx-type"};
+  std::vector<StringRef> PassNameExact = {
+      "safe-stack",           "cost-model",
+      "codegenprepare",       "interleaved-load-combine",
+      "unreachableblockelim", "verify-safepoint-ir",
+      "atomic-expand",        "expandvp",
+      "hardware-loops",       "type-promotion",
+      "mve-tail-predication", "interleaved-access",
+      "global-merge",         "pre-isel-intrinsic-lowering",
+      "expand-reductions",    "indirectbr-expand",
+      "generic-to-nvvm",      "expandmemcmp",
+      "loop-reduce",          "lower-amx-type",
+      "pre-amx-config",       "lower-amx-intrinsics",
+      "polyhedral-info",      "replace-with-veclib"};
   for (const auto &P : PassNamePrefix)
     if (Pass.startswith(P))
       return true;
   for (const auto &P : PassNameContain)
     if (Pass.contains(P))
       return true;
-  for (const auto &P : PassNameExact)
-    if (Pass == P)
-      return true;
-  return false;
+  return llvm::is_contained(PassNameExact, Pass);
 }
 
 // For use in NPM transition.
@@ -576,10 +593,12 @@ int main(int argc, char **argv) {
   initializePostInlineEntryExitInstrumenterPass(Registry);
   initializeUnreachableBlockElimLegacyPassPass(Registry);
   initializeExpandReductionsPass(Registry);
+  initializeExpandVectorPredicationPass(Registry);
   initializeWasmEHPreparePass(Registry);
   initializeWriteBitcodePassPass(Registry);
   initializeHardwareLoopsPass(Registry);
   initializeTypePromotionPass(Registry);
+  initializeReplaceWithVeclibLegacyPass(Registry);
 
 #ifdef BUILD_EXAMPLES
   initializeExampleIRTransforms(Registry);
@@ -591,6 +610,14 @@ int main(int argc, char **argv) {
   if (AnalyzeOnly && NoOutput) {
     errs() << argv[0] << ": analyze mode conflicts with no-output mode.\n";
     return 1;
+  }
+
+  // FIXME: once the legacy PM code is deleted, move runPassPipeline() here and
+  // construct the PassBuilder before parsing IR so we can reuse the same
+  // PassBuilder for print passes.
+  if (PrintPasses) {
+    printPasses(outs());
+    return 0;
   }
 
   TimeTracerRAII TimeTracer(argv[0]);
@@ -660,7 +687,8 @@ int main(int argc, char **argv) {
   // specified by an internal option. This is normally done during LTO which is
   // not performed via opt.
   updateVCallVisibilityInModule(*M,
-                                /* WholeProgramVisibilityEnabledInLTO */ false);
+                                /* WholeProgramVisibilityEnabledInLTO */ false,
+                                /* DynamicExportSymbols */ {});
 
   // Figure out what stream we are supposed to write to...
   std::unique_ptr<ToolOutputFile> Out;
@@ -675,8 +703,8 @@ int main(int argc, char **argv) {
       OutputFilename = "-";
 
     std::error_code EC;
-    sys::fs::OpenFlags Flags = OutputAssembly ? sys::fs::OF_Text
-                                              : sys::fs::OF_None;
+    sys::fs::OpenFlags Flags =
+        OutputAssembly ? sys::fs::OF_TextWithCRLF : sys::fs::OF_None;
     Out.reset(new ToolOutputFile(OutputFilename, EC, Flags));
     if (EC) {
       errs() << EC.message() << '\n';
@@ -752,7 +780,16 @@ int main(int argc, char **argv) {
   if ((EnableNewPassManager && !shouldForceLegacyPM()) ||
       PassPipeline.getNumOccurrences() > 0) {
     if (AnalyzeOnly) {
-      errs() << "Cannot specify -analyze under new pass manager\n";
+      errs() << "Cannot specify -analyze under new pass manager, either "
+                "specify '-enable-new-pm=0', or use the corresponding new pass "
+                "manager pass, e.g. '-passes=print<scalar-evolution>'. For a "
+                "full list of passes, see the '--print-passes' flag.\n";
+      return 1;
+    }
+    if (legacy::debugPassSpecified()) {
+      errs()
+          << "-debug-pass does not work with the new PM, either use "
+             "-debug-pass-manager, or use the legacy PM (-enable-new-pm=0)\n";
       return 1;
     }
     if (PassPipeline.getNumOccurrences() > 0 && PassList.size() > 0) {
@@ -803,10 +840,21 @@ int main(int argc, char **argv) {
   // about to build. If the -debugify-each option is set, wrap each pass with
   // the (-check)-debugify passes.
   DebugifyCustomPassManager Passes;
-  if (DebugifyEach)
-    Passes.enableDebugifyEach();
+  DebugifyStatsMap DIStatsMap;
+  DebugInfoPerPassMap DIPreservationMap;
+  if (DebugifyEach) {
+    Passes.setDebugifyMode(DebugifyMode::SyntheticDebugInfo);
+    Passes.setDIStatsMap(DIStatsMap);
+  } else if (VerifyEachDebugInfoPreserve) {
+    Passes.setDebugifyMode(DebugifyMode::OriginalDebugInfo);
+    Passes.setDIPreservationMap(DIPreservationMap);
+    if (!VerifyDIPreserveExport.empty())
+      Passes.setOrigDIVerifyBugsReportFilePath(VerifyDIPreserveExport);
+  }
 
-  bool AddOneTimeDebugifyPasses = EnableDebugify && !DebugifyEach;
+  bool AddOneTimeDebugifyPasses =
+      (EnableDebugify && !DebugifyEach) ||
+      (VerifyDebugInfoPreserve && !VerifyEachDebugInfoPreserve);
 
   Passes.add(new TargetLibraryInfoWrapperPass(TLII));
 
@@ -814,8 +862,17 @@ int main(int argc, char **argv) {
   Passes.add(createTargetTransformInfoWrapperPass(TM ? TM->getTargetIRAnalysis()
                                                      : TargetIRAnalysis()));
 
-  if (AddOneTimeDebugifyPasses)
-    Passes.add(createDebugifyModulePass());
+  if (AddOneTimeDebugifyPasses) {
+    if (EnableDebugify) {
+      Passes.setDIStatsMap(DIStatsMap);
+      Passes.add(createDebugifyModulePass());
+    } else if (VerifyDebugInfoPreserve) {
+      Passes.setDIPreservationMap(DIPreservationMap);
+      Passes.add(createDebugifyModulePass(
+          DebugifyMode::OriginalDebugInfo, "",
+          &(Passes.getDebugInfoPerPassMap())));
+    }
+  }
 
   std::unique_ptr<legacy::FunctionPassManager> FPasses;
   if (OptLevelO0 || OptLevelO1 || OptLevelO2 || OptLevelOs || OptLevelOz ||
@@ -959,8 +1016,17 @@ int main(int argc, char **argv) {
   if (!NoVerify && !VerifyEach)
     Passes.add(createVerifierPass());
 
-  if (AddOneTimeDebugifyPasses)
-    Passes.add(createCheckDebugifyModulePass(false));
+  if (AddOneTimeDebugifyPasses) {
+    if (EnableDebugify)
+      Passes.add(createCheckDebugifyModulePass(false));
+    else if (VerifyDebugInfoPreserve) {
+      if (!VerifyDIPreserveExport.empty())
+        Passes.setOrigDIVerifyBugsReportFilePath(VerifyDIPreserveExport);
+      Passes.add(createCheckDebugifyModulePass(
+          false, "", nullptr, DebugifyMode::OriginalDebugInfo,
+          &(Passes.getDebugInfoPerPassMap()), VerifyDIPreserveExport));
+    }
+  }
 
   // In run twice mode, we want to make sure the output is bit-by-bit
   // equivalent if we run the pass manager again, so setup two buffers and

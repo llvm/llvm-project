@@ -16,14 +16,15 @@
 
 #include <random>
 #include <cassert>
+#include <climits>
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    std::random_device r;
-    double e = r.entropy();
-    ((void)e); // Prevent unused warning
+int main(int, char**) {
+  std::random_device r;
+  double e = r.entropy();
+  assert(e >= 0);
+  assert(e <= sizeof(typename std::random_device::result_type) * CHAR_BIT);
 
   return 0;
 }

@@ -92,23 +92,16 @@ private:
     if (auto constValue{evaluate::ToInt64(expr)}) {
       return PackageIntValue(explicitEnum_, *constValue);
     }
-    if (parameters) {
-      if (const auto *typeParam{
-              evaluate::UnwrapExpr<evaluate::TypeParamInquiry>(expr)}) {
-        if (!typeParam->base()) {
-          const Symbol &symbol{typeParam->parameter()};
-          if (const auto *tpd{symbol.detailsIf<TypeParamDetails>()}) {
-            if (tpd->attr() == common::TypeParamAttr::Len) {
-              return PackageIntValue(lenParameterEnum_,
-                  FindLenParameterIndex(*parameters, symbol));
-            }
-          }
+    if (expr) {
+      if (parameters) {
+        if (const Symbol * lenParam{evaluate::ExtractBareLenParameter(*expr)}) {
+          return PackageIntValue(
+              lenParameterEnum_, FindLenParameterIndex(*parameters, *lenParam));
         }
       }
-    }
-    if (expr) {
       context_.Say(location_,
-          "Specification expression '%s' is neither constant nor a length type parameter"_err_en_US,
+          "Specification expression '%s' is neither constant nor a length "
+          "type parameter"_err_en_US,
           expr->AsFortran());
     }
     return PackageIntValue(deferredEnum_);
@@ -447,12 +440,12 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
               },
               [&](const ObjectEntityDetails &object) {
                 dataComponents.emplace_back(DescribeComponent(
-                    symbol, object, scope, distinctName, parameters));
+                    symbol, object, dtScope, distinctName, parameters));
               },
               [&](const ProcEntityDetails &proc) {
                 if (IsProcedurePointer(symbol)) {
                   procPtrComponents.emplace_back(
-                      DescribeComponent(symbol, proc, scope));
+                      DescribeComponent(symbol, proc, dtScope));
                 }
               },
               [&](const ProcBindingDetails &) { // handled in a later pass
@@ -615,8 +608,9 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
     const Symbol &symbol, const ObjectEntityDetails &object, Scope &scope,
     const std::string &distinctName, const SymbolVector *parameters) {
   evaluate::StructureConstructorValues values;
+  auto &foldingContext{context_.foldingContext()};
   auto typeAndShape{evaluate::characteristics::TypeAndShape::Characterize(
-      object, context_.foldingContext())};
+      symbol, foldingContext)};
   CHECK(typeAndShape.has_value());
   auto dyType{typeAndShape->type()};
   const auto &shape{typeAndShape->shape()};
@@ -632,7 +626,11 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
   }
   AddValue(values, componentSchema_, "offset"s, IntExpr<8>(symbol.offset()));
   // CHARACTER length
-  const auto &len{typeAndShape->LEN()};
+  auto len{typeAndShape->LEN()};
+  if (const semantics::DerivedTypeSpec * pdtInstance{scope.derivedTypeSpec()}) {
+    auto restorer{foldingContext.WithPDTInstance(*pdtInstance)};
+    len = Fold(foldingContext, std::move(len));
+  }
   if (dyType.category() == TypeCategory::Character && len) {
     AddValue(values, componentSchema_, "characterlen"s,
         evaluate::AsGenericExpr(GetValue(len, parameters)));
@@ -687,10 +685,9 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
   // Shape information
   int rank{evaluate::GetRank(shape)};
   AddValue(values, componentSchema_, "rank"s, IntExpr<1>(rank));
-  if (rank > 0) {
+  if (rank > 0 && !IsAllocatable(symbol) && !IsPointer(symbol)) {
     std::vector<evaluate::StructureConstructor> bounds;
     evaluate::NamedEntity entity{symbol};
-    auto &foldingContext{context_.foldingContext()};
     for (int j{0}; j < rank; ++j) {
       bounds.emplace_back(GetValue(std::make_optional(evaluate::GetLowerBound(
                                        foldingContext, entity, j)),

@@ -643,7 +643,8 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
       OutStreamer->SwitchSection(Nt);
 
       // Emitting note header.
-      int WordSize = TT.isArch64Bit() ? 8 : 4;
+      const int WordSize =
+          TT.isArch64Bit() && TT.getEnvironment() != Triple::GNUX32 ? 8 : 4;
       emitAlignment(WordSize == 4 ? Align(4) : Align(8));
       OutStreamer->emitIntValue(4, 4 /*size*/); // data size for "GNU\0"
       OutStreamer->emitIntValue(8 + WordSize, 4 /*size*/); // Elf_Prop size
@@ -683,8 +684,13 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
       Feat00Flags |= 1;
     }
 
-    if (M.getModuleFlag("cfguard"))
+    if (M.getModuleFlag("cfguard")) {
       Feat00Flags |= 0x800; // Object is CFG-aware.
+    }
+
+    if (M.getModuleFlag("ehcontguard")) {
+      Feat00Flags |= 0x4000; // Object also has EHCont.
+    }
 
     OutStreamer->emitSymbolAttribute(S, MCSA_Global);
     OutStreamer->emitAssignment(

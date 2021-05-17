@@ -66,8 +66,8 @@ Aggregates
   worked much in this part of the codebase and it should have attention from
   someone more knowledgeable about it.
 
-Aggregates are lowered to a single scalar vreg.
-This differs from SelectionDAG's multiple vregs via ``GetValueVTs``.
+Aggregates are lowered into multiple virtual registers, similar to
+SelectionDAG's multiple vregs via ``GetValueVTs``.
 
 ``TODO``:
 As some of the bits are undef (padding), we should consider augmenting the

@@ -15,9 +15,40 @@
 
 #include "mlir/ExecutionEngine/RunnerUtils.h"
 
-#ifndef _WIN32
-#include <sys/time.h>
-#endif // _WIN32
+extern "C" void
+_mlir_ciface_print_memref_shape_i8(UnrankedMemRefType<int8_t> *M) {
+  std::cout << "Unranked Memref ";
+  printMemRefMetaData(std::cout, DynamicMemRefType<int8_t>(*M));
+  std::cout << "\n";
+}
+
+extern "C" void
+_mlir_ciface_print_memref_shape_i32(UnrankedMemRefType<int32_t> *M) {
+  std::cout << "Unranked Memref ";
+  printMemRefMetaData(std::cout, DynamicMemRefType<int32_t>(*M));
+  std::cout << "\n";
+}
+
+extern "C" void
+_mlir_ciface_print_memref_shape_i64(UnrankedMemRefType<int64_t> *M) {
+  std::cout << "Unranked Memref ";
+  printMemRefMetaData(std::cout, DynamicMemRefType<int64_t>(*M));
+  std::cout << "\n";
+}
+
+extern "C" void
+_mlir_ciface_print_memref_shape_f32(UnrankedMemRefType<float> *M) {
+  std::cout << "Unranked Memref ";
+  printMemRefMetaData(std::cout, DynamicMemRefType<float>(*M));
+  std::cout << "\n";
+}
+
+extern "C" void
+_mlir_ciface_print_memref_shape_f64(UnrankedMemRefType<double> *M) {
+  std::cout << "Unranked Memref ";
+  printMemRefMetaData(std::cout, DynamicMemRefType<double>(*M));
+  std::cout << "\n";
+}
 
 extern "C" void _mlir_ciface_print_memref_vector_4x4xf32(
     StridedMemRefType<Vector2D<4, 4, float>, 2> *M) {
@@ -85,21 +116,41 @@ _mlir_ciface_print_memref_4d_f32(StridedMemRefType<float, 4> *M) {
   impl::printMemRef(*M);
 }
 
-/// Prints GFLOPS rating.
-extern "C" void print_flops(double flops) {
-  fprintf(stderr, "%lf GFLOPS\n", flops / 1.0E9);
+extern "C" int64_t
+_mlir_ciface_verifyMemRefI32(UnrankedMemRefType<int32_t> *actual,
+                             UnrankedMemRefType<int32_t> *expected) {
+  return impl::verifyMemRef(*actual, *expected);
 }
 
-/// Returns the number of seconds since Epoch 1970-01-01 00:00:00 +0000 (UTC).
-extern "C" double rtclock() {
-#ifndef _WIN32
-  struct timeval tp;
-  int stat = gettimeofday(&tp, NULL);
-  if (stat != 0)
-    fprintf(stderr, "Error returning time from gettimeofday: %d\n", stat);
-  return (tp.tv_sec + tp.tv_usec * 1.0e-6);
-#else
-  fprintf(stderr, "Timing utility not implemented on Windows\n");
-  return 0.0;
-#endif // _WIN32
+extern "C" int64_t
+_mlir_ciface_verifyMemRefF32(UnrankedMemRefType<float> *actual,
+                             UnrankedMemRefType<float> *expected) {
+  return impl::verifyMemRef(*actual, *expected);
+}
+
+extern "C" int64_t
+_mlir_ciface_verifyMemRefF64(UnrankedMemRefType<double> *actual,
+                             UnrankedMemRefType<double> *expected) {
+  return impl::verifyMemRef(*actual, *expected);
+}
+
+extern "C" int64_t verifyMemRefI32(int64_t rank, void *actualPtr,
+                                   void *expectedPtr) {
+  UnrankedMemRefType<int32_t> actualDesc = {rank, actualPtr};
+  UnrankedMemRefType<int32_t> expectedDesc = {rank, expectedPtr};
+  return _mlir_ciface_verifyMemRefI32(&actualDesc, &expectedDesc);
+}
+
+extern "C" int64_t verifyMemRefF32(int64_t rank, void *actualPtr,
+                                   void *expectedPtr) {
+  UnrankedMemRefType<float> actualDesc = {rank, actualPtr};
+  UnrankedMemRefType<float> expectedDesc = {rank, expectedPtr};
+  return _mlir_ciface_verifyMemRefF32(&actualDesc, &expectedDesc);
+}
+
+extern "C" int64_t verifyMemRefF64(int64_t rank, void *actualPtr,
+                                   void *expectedPtr) {
+  UnrankedMemRefType<double> actualDesc = {rank, actualPtr};
+  UnrankedMemRefType<double> expectedDesc = {rank, expectedPtr};
+  return _mlir_ciface_verifyMemRefF64(&actualDesc, &expectedDesc);
 }

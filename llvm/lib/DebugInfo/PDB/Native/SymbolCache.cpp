@@ -514,11 +514,10 @@ SymbolCache::findLineTable(uint16_t Modi) const {
   }
 
   // Sort EntryList, and add flattened contents to the line table.
-  std::sort(EntryList.begin(), EntryList.end(),
-            [](const std::vector<LineTableEntry> &LHS,
-               const std::vector<LineTableEntry> &RHS) {
-              return LHS[0].Addr < RHS[0].Addr;
-            });
+  llvm::sort(EntryList, [](const std::vector<LineTableEntry> &LHS,
+                           const std::vector<LineTableEntry> &RHS) {
+    return LHS[0].Addr < RHS[0].Addr;
+  });
   for (size_t I = 0; I < EntryList.size(); ++I)
     llvm::append_range(ModuleLineTable, EntryList[I]);
 

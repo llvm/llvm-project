@@ -520,7 +520,9 @@ enum NodeType {
   /// The elements of VECTOR1 starting at IDX are overwritten with VECTOR2.
   /// Elements IDX through (IDX + num_elements(T) - 1) must be valid VECTOR1
   /// indices. If this condition cannot be determined statically but is false at
-  /// runtime, then the result vector is undefined.
+  /// runtime, then the result vector is undefined. The IDX parameter must be a
+  /// vector index constant type, which for most targets will be an integer
+  /// pointer type.
   ///
   /// This operation supports inserting a fixed-width vector into a scalable
   /// vector, but not the other way around.
@@ -540,6 +542,11 @@ enum NodeType {
   /// vector, but not the other way around.
   EXTRACT_SUBVECTOR,
 
+  /// VECTOR_REVERSE(VECTOR) - Returns a vector, of the same type as VECTOR,
+  /// whose elements are shuffled using the following algorithm:
+  ///   RESULT[i] = VECTOR[VECTOR.ElementCount - 1 - i]
+  VECTOR_REVERSE,
+
   /// VECTOR_SHUFFLE(VEC1, VEC2) - Returns a vector, of the same type as
   /// VEC1/VEC2.  A VECTOR_SHUFFLE node also contains an array of constant int
   /// values that indicate which value (or undef) each result element will
@@ -548,6 +555,18 @@ enum NodeType {
   /// 'vperm' instruction, except that the indices must be constants and are
   /// in terms of the element size of VEC1/VEC2, not in terms of bytes.
   VECTOR_SHUFFLE,
+
+  /// VECTOR_SPLICE(VEC1, VEC2, IMM) - Returns a subvector of the same type as
+  /// VEC1/VEC2 from CONCAT_VECTORS(VEC1, VEC2), based on the IMM in two ways.
+  /// Let the result type be T, if IMM is positive it represents the starting
+  /// element number (an index) from which a subvector of type T is extracted
+  /// from CONCAT_VECTORS(VEC1, VEC2). If IMM is negative it represents a count
+  /// specifying the number of trailing elements to extract from VEC1, where the
+  /// elements of T are selected using the following algorithm:
+  ///   RESULT[i] = CONCAT_VECTORS(VEC1,VEC2)[VEC1.ElementCount - ABS(IMM) + i]
+  /// If IMM is not in the range [-VL, VL-1] the result vector is undefined. IMM
+  /// is a constant integer.
+  VECTOR_SPLICE,
 
   /// SCALAR_TO_VECTOR(VAL) - This represents the operation of loading a
   /// scalar value into element 0 of the resultant vector type.  The top
@@ -564,13 +583,35 @@ enum NodeType {
   /// implicitly truncated to it.
   SPLAT_VECTOR,
 
+  /// SPLAT_VECTOR_PARTS(SCALAR1, SCALAR2, ...) - Returns a vector with the
+  /// scalar values joined together and then duplicated in all lanes. This
+  /// represents a SPLAT_VECTOR that has had its scalar operand expanded. This
+  /// allows representing a 64-bit splat on a target with 32-bit integers. The
+  /// total width of the scalars must cover the element width. SCALAR1 contains
+  /// the least significant bits of the value regardless of endianness and all
+  /// scalars should have the same type.
+  SPLAT_VECTOR_PARTS,
+
+  /// STEP_VECTOR(IMM) - Returns a scalable vector whose lanes are comprised
+  /// of a linear sequence of unsigned values starting from 0 with a step of
+  /// IMM, where IMM must be a vector index constant integer value which must
+  /// fit in the vector element type.
+  /// Note that IMM may be a smaller type than the vector element type, in
+  /// which case the step is implicitly sign-extended to the vector element
+  /// type. IMM may also be a larger type than the vector element type, in
+  /// which case the step is implicitly truncated to the vector element type.
+  /// The operation does not support returning fixed-width vectors or
+  /// non-constant operands. If the sequence value exceeds the limit allowed
+  /// for the element type then the values for those lanes are undefined.
+  STEP_VECTOR,
+
   /// MULHU/MULHS - Multiply high - Multiply two integers of type iN,
   /// producing an unsigned/signed value of type i[2*N], then return the top
   /// part.
   MULHU,
   MULHS,
 
-  /// [US]{MIN/MAX} - Binary minimum or maximum or signed or unsigned
+  /// [US]{MIN/MAX} - Binary minimum or maximum of signed or unsigned
   /// integers.
   SMIN,
   SMAX,
@@ -735,17 +776,17 @@ enum NodeType {
   FP_TO_UINT,
 
   /// FP_TO_[US]INT_SAT - Convert floating point value in operand 0 to a
-  /// signed or unsigned integer type with the bit width given in operand 1 with
-  /// the following semantics:
+  /// signed or unsigned scalar integer type given in operand 1 with the
+  /// following semantics:
   ///
   ///  * If the value is NaN, zero is returned.
   ///  * If the value is larger/smaller than the largest/smallest integer,
   ///    the largest/smallest integer is returned (saturation).
   ///  * Otherwise the result of rounding the value towards zero is returned.
   ///
-  /// The width given in operand 1 must be equal to, or smaller than, the scalar
-  /// result type width. It may end up being smaller than the result witdh as a
-  /// result of integer type legalization.
+  /// The scalar width of the type given in operand 1 must be equal to, or
+  /// smaller than, the scalar result type width. It may end up being smaller
+  /// than the result width as a result of integer type legalization.
   FP_TO_SINT_SAT,
   FP_TO_UINT_SAT,
 
@@ -762,14 +803,21 @@ enum NodeType {
   /// FP_EXTEND(FP_ROUND(X,0)) because the extra bits aren't removed.
   FP_ROUND,
 
-  /// FLT_ROUNDS_ - Returns current rounding mode:
+  /// Returns current rounding mode:
   /// -1 Undefined
   ///  0 Round to 0
-  ///  1 Round to nearest
+  ///  1 Round to nearest, ties to even
   ///  2 Round to +inf
   ///  3 Round to -inf
+  ///  4 Round to nearest, ties to zero
   /// Result is rounding mode and chain. Input is a chain.
+  /// TODO: Rename this node to GET_ROUNDING.
   FLT_ROUNDS_,
+
+  /// Set rounding mode.
+  /// The first operand is a chain pointer. The second specifies the required
+  /// rounding mode, encoded in the same way as used in '``FLT_ROUNDS_``'.
+  SET_ROUNDING,
 
   /// X = FP_EXTEND(Y) - Extend a smaller FP type into a larger FP type.
   FP_EXTEND,
@@ -1032,7 +1080,8 @@ enum NodeType {
   /// DEBUGTRAP - Trap intended to get the attention of a debugger.
   DEBUGTRAP,
 
-  /// UBSANTRAP - Trap with an immediate describing the kind of sanitizer failure.
+  /// UBSANTRAP - Trap with an immediate describing the kind of sanitizer
+  /// failure.
   UBSANTRAP,
 
   /// PREFETCH - This corresponds to a prefetch intrinsic. The first operand
@@ -1330,6 +1379,12 @@ inline bool isSignedIntSetCC(CondCode Code) {
 /// comparison when used with integer operands.
 inline bool isUnsignedIntSetCC(CondCode Code) {
   return Code == SETUGT || Code == SETUGE || Code == SETULT || Code == SETULE;
+}
+
+/// Return true if this is a setcc instruction that performs an equality
+/// comparison when used with integer operands.
+inline bool isIntEqualitySetCC(CondCode Code) {
+  return Code == SETEQ || Code == SETNE;
 }
 
 /// Return true if the specified condition returns true if the two operands to

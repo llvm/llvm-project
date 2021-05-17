@@ -9,8 +9,8 @@
 /// This file provides the interface for LLVM's Call Graph Profile pass.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_CGPROFILE_H
-#define LLVM_TRANSFORMS_CGPROFILE_H
+#ifndef LLVM_TRANSFORMS_INSTRUMENTATION_CGPROFILE_H
+#define LLVM_TRANSFORMS_INSTRUMENTATION_CGPROFILE_H
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/IR/PassManager.h"
@@ -22,4 +22,4 @@ public:
 };
 } // end namespace llvm
 
-#endif // LLVM_TRANSFORMS_CGPROFILE_H
+#endif // LLVM_TRANSFORMS_INSTRUMENTATION_CGPROFILE_H

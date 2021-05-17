@@ -4,17 +4,15 @@
 define i128 @shl(i128 %r, i128 %s) nounwind readnone {
 ; CHECK-LABEL: shl:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg x8, x2
-; CHECK-NEXT:    lsr x8, x0, x8
-; CHECK-NEXT:    cmp x2, #0 // =0
-; CHECK-NEXT:    csel x8, xzr, x8, eq
-; CHECK-NEXT:    lsl x9, x1, x2
+; CHECK-NEXT:    lsl x8, x1, x2
+; CHECK-NEXT:    mvn w9, w2
+; CHECK-NEXT:    lsr x10, x0, #1
+; CHECK-NEXT:    lsr x9, x10, x9
 ; CHECK-NEXT:    orr x8, x8, x9
 ; CHECK-NEXT:    lsl x9, x0, x2
-; CHECK-NEXT:    sub x10, x2, #64 // =64
-; CHECK-NEXT:    cmp x10, #0 // =0
-; CHECK-NEXT:    csel x1, x9, x8, ge
-; CHECK-NEXT:    csel x0, xzr, x9, ge
+; CHECK-NEXT:    tst x2, #0x40
+; CHECK-NEXT:    csel x1, x9, x8, ne
+; CHECK-NEXT:    csel x0, xzr, x9, ne
 ; CHECK-NEXT:    ret
   %shl = shl i128 %r, %s
   ret i128 %shl
@@ -39,18 +37,16 @@ define i128 @shl_mask(i128 %r, i128 %s) nounwind readnone {
 define i128 @ashr(i128 %r, i128 %s) nounwind readnone {
 ; CHECK-LABEL: ashr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg x8, x2
-; CHECK-NEXT:    lsl x8, x1, x8
-; CHECK-NEXT:    cmp x2, #0 // =0
-; CHECK-NEXT:    csel x8, xzr, x8, eq
-; CHECK-NEXT:    lsr x9, x0, x2
+; CHECK-NEXT:    lsr x8, x0, x2
+; CHECK-NEXT:    mvn w9, w2
+; CHECK-NEXT:    lsl x10, x1, #1
+; CHECK-NEXT:    lsl x9, x10, x9
 ; CHECK-NEXT:    orr x8, x9, x8
 ; CHECK-NEXT:    asr x9, x1, x2
-; CHECK-NEXT:    sub x10, x2, #64 // =64
-; CHECK-NEXT:    cmp x10, #0 // =0
-; CHECK-NEXT:    csel x0, x9, x8, ge
+; CHECK-NEXT:    tst x2, #0x40
+; CHECK-NEXT:    csel x0, x9, x8, ne
 ; CHECK-NEXT:    asr x8, x1, #63
-; CHECK-NEXT:    csel x1, x8, x9, ge
+; CHECK-NEXT:    csel x1, x8, x9, ne
 ; CHECK-NEXT:    ret
   %shr = ashr i128 %r, %s
   ret i128 %shr
@@ -75,17 +71,15 @@ define i128 @ashr_mask(i128 %r, i128 %s) nounwind readnone {
 define i128 @lshr(i128 %r, i128 %s) nounwind readnone {
 ; CHECK-LABEL: lshr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg x8, x2
-; CHECK-NEXT:    lsl x8, x1, x8
-; CHECK-NEXT:    cmp x2, #0 // =0
-; CHECK-NEXT:    csel x8, xzr, x8, eq
-; CHECK-NEXT:    lsr x9, x0, x2
+; CHECK-NEXT:    lsr x8, x0, x2
+; CHECK-NEXT:    mvn w9, w2
+; CHECK-NEXT:    lsl x10, x1, #1
+; CHECK-NEXT:    lsl x9, x10, x9
 ; CHECK-NEXT:    orr x8, x9, x8
 ; CHECK-NEXT:    lsr x9, x1, x2
-; CHECK-NEXT:    sub x10, x2, #64 // =64
-; CHECK-NEXT:    cmp x10, #0 // =0
-; CHECK-NEXT:    csel x0, x9, x8, ge
-; CHECK-NEXT:    csel x1, xzr, x9, ge
+; CHECK-NEXT:    tst x2, #0x40
+; CHECK-NEXT:    csel x0, x9, x8, ne
+; CHECK-NEXT:    csel x1, xzr, x9, ne
 ; CHECK-NEXT:    ret
   %shr = lshr i128 %r, %s
   ret i128 %shr

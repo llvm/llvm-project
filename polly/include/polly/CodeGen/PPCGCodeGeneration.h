@@ -22,6 +22,12 @@ enum GPURuntime { CUDA, OpenCL };
 
 namespace polly {
 extern bool PollyManagedMemory;
-}
+
+/// Use for pass instantiation defaults.
+/// @{
+extern GPURuntime GPURuntimeChoice;
+extern GPUArch GPUArchChoice;
+/// @}
+} // namespace polly
 
 #endif // POLLY_PPCGCODEGENERATION_H

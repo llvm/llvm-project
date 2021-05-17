@@ -11,6 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEINSTRUCTIONS_H
+#define LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEINSTRUCTIONS_H
+
 #include "Delta.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -18,3 +21,5 @@
 namespace llvm {
 void reduceInstructionsDeltaPass(TestRunner &Test);
 } // namespace llvm
+
+#endif

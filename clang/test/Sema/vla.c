@@ -129,4 +129,9 @@ void test_fold_to_constant_array() {
 
   // expected-warning@+1{{variable length array folded to constant array as an extension}}
   char a8[2][ksize] = {{1,2,3,4},{4,3,2,1}};
+
+  // expected-warning@+1{{variable length array folded to constant array as an extension}}
+  char (*a9)[] = (char[2][ksize]) {{1,2,3,4},{4,3,2,1}};
+
+  char (*a10)[ksize] = 0;
 }

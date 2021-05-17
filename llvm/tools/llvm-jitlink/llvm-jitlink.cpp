@@ -15,9 +15,13 @@
 #include "llvm-jitlink.h"
 
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/TPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/TPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/TPCEHFrameRegistrar.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -33,11 +37,13 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Timer.h"
 
+#include <cstring>
 #include <list>
 #include <string>
 
@@ -155,6 +161,12 @@ static cl::opt<std::string> OutOfProcessExecutorConnect(
 
 ExitOnError ExitOnErr;
 
+LLVM_ATTRIBUTE_USED void linkComponents() {
+  errs() << (void *)&llvm_orc_registerEHFrameSectionWrapper
+         << (void *)&llvm_orc_deregisterEHFrameSectionWrapper
+         << (void *)&llvm_orc_registerJITLoaderGDBWrapper;
+}
+
 namespace llvm {
 
 static raw_ostream &
@@ -259,18 +271,17 @@ static void dumpSectionContents(raw_ostream &OS, LinkGraph &G) {
   for (auto &S : G.sections())
     Sections.push_back(&S);
 
-  std::sort(Sections.begin(), Sections.end(),
-            [](const Section *LHS, const Section *RHS) {
-              if (llvm::empty(LHS->symbols()) && llvm::empty(RHS->symbols()))
-                return false;
-              if (llvm::empty(LHS->symbols()))
-                return false;
-              if (llvm::empty(RHS->symbols()))
-                return true;
-              SectionRange LHSRange(*LHS);
-              SectionRange RHSRange(*RHS);
-              return LHSRange.getStart() < RHSRange.getStart();
-            });
+  llvm::sort(Sections, [](const Section *LHS, const Section *RHS) {
+    if (llvm::empty(LHS->symbols()) && llvm::empty(RHS->symbols()))
+      return false;
+    if (llvm::empty(LHS->symbols()))
+      return false;
+    if (llvm::empty(RHS->symbols()))
+      return true;
+    SectionRange LHSRange(*LHS);
+    SectionRange RHSRange(*RHS);
+    return LHSRange.getStart() < RHSRange.getStart();
+  });
 
   for (auto *S : Sections) {
     OS << S->getName() << " content:";
@@ -291,8 +302,9 @@ static void dumpSectionContents(raw_ostream &OS, LinkGraph &G) {
       JITTargetAddress SymStart = Sym->getAddress();
       JITTargetAddress SymSize = Sym->getSize();
       JITTargetAddress SymEnd = SymStart + SymSize;
-      const uint8_t *SymData =
-          IsZeroFill ? nullptr : Sym->getSymbolContent().bytes_begin();
+      const uint8_t *SymData = IsZeroFill ? nullptr
+                                          : reinterpret_cast<const uint8_t *>(
+                                                Sym->getSymbolContent().data());
 
       // Pad any space before the symbol starts.
       while (NextAddr != SymStart) {
@@ -659,6 +671,52 @@ LLVMJITLinkRemoteTargetProcessControl::LaunchExecutor() {
 #endif
 }
 
+#ifdef LLVM_ON_UNIX
+static Error createTCPSocketError(Twine Details) {
+  return make_error<StringError>(
+      formatv("Failed to connect TCP socket '{0}': {1}",
+              OutOfProcessExecutorConnect, Details),
+      inconvertibleErrorCode());
+}
+
+static Expected<int> connectTCPSocket(std::string Host, std::string PortStr) {
+  addrinfo *AI;
+  addrinfo Hints{};
+  Hints.ai_family = AF_INET;
+  Hints.ai_socktype = SOCK_STREAM;
+  Hints.ai_flags = AI_NUMERICSERV;
+
+  if (int EC = getaddrinfo(Host.c_str(), PortStr.c_str(), &Hints, &AI))
+    return createTCPSocketError("Address resolution failed (" +
+                                StringRef(gai_strerror(EC)) + ")");
+
+  // Cycle through the returned addrinfo structures and connect to the first
+  // reachable endpoint.
+  int SockFD;
+  addrinfo *Server;
+  for (Server = AI; Server != nullptr; Server = Server->ai_next) {
+    // socket might fail, e.g. if the address family is not supported. Skip to
+    // the next addrinfo structure in such a case.
+    if ((SockFD = socket(AI->ai_family, AI->ai_socktype, AI->ai_protocol)) < 0)
+      continue;
+
+    // If connect returns null, we exit the loop with a working socket.
+    if (connect(SockFD, Server->ai_addr, Server->ai_addrlen) == 0)
+      break;
+
+    close(SockFD);
+  }
+  freeaddrinfo(AI);
+
+  // If we reached the end of the loop without connecting to a valid endpoint,
+  // dump the last error that was logged in socket() or connect().
+  if (Server == nullptr)
+    return createTCPSocketError(std::strerror(errno));
+
+  return SockFD;
+}
+#endif
+
 Expected<std::unique_ptr<TargetProcessControl>>
 LLVMJITLinkRemoteTargetProcessControl::ConnectToExecutor() {
 #ifndef LLVM_ON_UNIX
@@ -670,42 +728,27 @@ LLVMJITLinkRemoteTargetProcessControl::ConnectToExecutor() {
 
   shared::registerStringError<LLVMJITLinkChannel>();
 
-  StringRef HostNameStr, PortStr;
-  std::tie(HostNameStr, PortStr) =
-      StringRef(OutOfProcessExecutorConnect).split(':');
-
-  if (HostNameStr.empty())
-    return make_error<StringError>("host name for -" +
-                                       OutOfProcessExecutorConnect.ArgStr +
-                                       " can not be empty",
-                                   inconvertibleErrorCode());
+  StringRef Host, PortStr;
+  std::tie(Host, PortStr) = StringRef(OutOfProcessExecutorConnect).split(':');
+  if (Host.empty())
+    return createTCPSocketError("Host name for -" +
+                                OutOfProcessExecutorConnect.ArgStr +
+                                " can not be empty");
   if (PortStr.empty())
-    return make_error<StringError>(
-        "port for -" + OutOfProcessExecutorConnect.ArgStr + " can not be empty",
-        inconvertibleErrorCode());
-
-  std::string HostName = HostNameStr.str();
+    return createTCPSocketError("Port number in -" +
+                                OutOfProcessExecutorConnect.ArgStr +
+                                " can not be empty");
   int Port = 0;
   if (PortStr.getAsInteger(10, Port))
-    return make_error<StringError>("port number " + PortStr +
-                                       " is not a valid integer",
-                                   inconvertibleErrorCode());
+    return createTCPSocketError("Port number '" + PortStr +
+                                "' is not a valid integer");
 
-  int SockFD = socket(PF_INET, SOCK_STREAM, 0);
-  hostent *Server = gethostbyname(HostName.c_str());
-  sockaddr_in ServAddr;
-  memset(&ServAddr, 0, sizeof(ServAddr));
-  ServAddr.sin_family = PF_INET;
-  memmove(&Server->h_addr, &ServAddr.sin_addr.s_addr, Server->h_length);
-  ServAddr.sin_port = htons(Port);
-  if (connect(SockFD, reinterpret_cast<sockaddr *>(&ServAddr),
-              sizeof(ServAddr)) < 0)
-    return make_error<StringError>("Failed to connect to " + HostName + ":" +
-                                       Twine(Port),
-                                   inconvertibleErrorCode());
+  Expected<int> SockFD = connectTCPSocket(Host.str(), PortStr.str());
+  if (!SockFD)
+    return SockFD.takeError();
 
   auto SSP = std::make_shared<SymbolStringPool>();
-  auto Channel = std::make_unique<shared::FDRawByteChannel>(SockFD, SockFD);
+  auto Channel = std::make_unique<shared::FDRawByteChannel>(*SockFD, *SockFD);
   auto Endpoint = std::make_unique<LLVMJITLinkRPCEndpoint>(*Channel, true);
 
   auto ReportError = [](Error Err) {
@@ -792,9 +835,9 @@ Session::Session(std::unique_ptr<TargetProcessControl> TPC, Error &Err)
   class JITLinkSessionPlugin : public ObjectLinkingLayer::Plugin {
   public:
     JITLinkSessionPlugin(Session &S) : S(S) {}
-    void modifyPassConfig(MaterializationResponsibility &MR, const Triple &TT,
+    void modifyPassConfig(MaterializationResponsibility &MR, LinkGraph &G,
                           PassConfiguration &PassConfig) override {
-      S.modifyPassConfig(TT, PassConfig);
+      S.modifyPassConfig(G.getTargetTriple(), PassConfig);
     }
 
     Error notifyFailed(MaterializationResponsibility &MR) override {
@@ -819,9 +862,12 @@ Session::Session(std::unique_ptr<TargetProcessControl> TPC, Error &Err)
     return;
   }
 
-  if (!NoExec && !this->TPC->getTargetTriple().isOSWindows())
+  if (!NoExec && !this->TPC->getTargetTriple().isOSWindows()) {
     ObjLayer.addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
         ES, ExitOnErr(TPCEHFrameRegistrar::Create(*this->TPC))));
+    ObjLayer.addPlugin(std::make_unique<DebugObjectManagerPlugin>(
+        ES, ExitOnErr(createJITLoaderGDBRegistrar(*this->TPC))));
+  }
 
   ObjLayer.addPlugin(std::make_unique<JITLinkSessionPlugin>(*this));
 
@@ -976,11 +1022,22 @@ Session::findSymbolInfo(StringRef SymbolName, Twine ErrorMsgStem) {
 static Triple getFirstFileTriple() {
   static Triple FirstTT = []() {
     assert(!InputFiles.empty() && "InputFiles can not be empty");
-    auto ObjBuffer =
-        ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(InputFiles.front())));
-    auto Obj = ExitOnErr(
-        object::ObjectFile::createObjectFile(ObjBuffer->getMemBufferRef()));
-    return Obj->makeTriple();
+    for (auto InputFile : InputFiles) {
+      auto ObjBuffer =
+          ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(InputFile)));
+      switch (identify_magic(ObjBuffer->getBuffer())) {
+      case file_magic::elf_relocatable:
+      case file_magic::macho_object:
+      case file_magic::coff_object: {
+        auto Obj = ExitOnErr(
+            object::ObjectFile::createObjectFile(ObjBuffer->getMemBufferRef()));
+        return Obj->makeTriple();
+      }
+      default:
+        break;
+      }
+    }
+    return Triple();
   }();
 
   return FirstTT;
@@ -1154,7 +1211,7 @@ static Error loadObjects(Session &S) {
       return Err;
 
     // Register the absolute symbol with the session symbol infos.
-    S.SymbolInfos[Name] = { StringRef(), Addr };
+    S.SymbolInfos[Name] = {ArrayRef<char>(), Addr};
   }
 
   LLVM_DEBUG({
@@ -1199,7 +1256,8 @@ static Error runChecks(Session &S) {
                                           TripleName,
                                       inconvertibleErrorCode()));
 
-  MCContext Ctx(MAI.get(), MRI.get(), nullptr);
+  MCContext Ctx(Triple(TripleName), MAI.get(), MRI.get(), /*MOFI=*/nullptr,
+                STI.get());
 
   std::unique_ptr<MCDisassembler> Disassembler(
       TheTarget->createMCDisassembler(*STI, Ctx));

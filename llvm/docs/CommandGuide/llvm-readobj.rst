@@ -148,6 +148,11 @@ The following options are implemented only for the ELF file format.
 
  Display architecture-specific information, e.g. the ARM attributes section on ARM.
 
+.. option:: --bb-addr-map
+
+ Display the contents of the basic block address map section(s), which contain the
+ address of each function, along with the relative offset of each basic block.
+
 .. option:: --demangle, -C
 
  Display demangled symbol names in the output.

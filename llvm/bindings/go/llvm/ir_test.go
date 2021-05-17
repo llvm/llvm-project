@@ -52,7 +52,6 @@ func TestAttributes(t *testing.T) {
 		"alwaysinline",
 		"builtin",
 		"convergent",
-		"inalloca",
 		"inlinehint",
 		"inreg",
 		"jumptable",

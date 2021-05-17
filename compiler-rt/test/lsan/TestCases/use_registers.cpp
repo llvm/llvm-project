@@ -50,6 +50,10 @@ extern "C" void *registers_thread_func(void *arg) {
   asm("lgr %%r10, %0"
       :
       : "r"(p));
+#elif defined(__riscv)
+  asm("mv s11, %0"
+      :
+      : "r"(p));
 #else
 #error "Test is not supported on this architecture."
 #endif

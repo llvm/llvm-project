@@ -49,7 +49,7 @@
 # T5-PCSSYM:      Symbol table '.symtab' contains 10 entries:
 # T5-PCSSYM:      0 NOTYPE  LOCAL  DEFAULT [VARIANT_PCS] [[#]] pcs_func_local
 # T5-PCSSYM-NEXT: 0 IFUNC   LOCAL  DEFAULT [VARIANT_PCS] [[#]] pcs_ifunc_local
-# T5-PCSSYM-NEXT: 0 NOTYPE  LOCAL  HIDDEN  [VARIANT_PCS] [[#]] pcs_func_global_hidden
+# T5-PCSSYM:      0 NOTYPE  LOCAL  HIDDEN  [VARIANT_PCS] [[#]] pcs_func_global_hidden
 # T5-PCSSYM-NEXT: 0 IFUNC   LOCAL  HIDDEN  [VARIANT_PCS] [[#]] pcs_ifunc_global_hidden
 # T5-PCSSYM:      0 NOTYPE  GLOBAL DEFAULT [VARIANT_PCS] [[#]] pcs_func_global_def
 # T5-PCSSYM-NEXT: 0 NOTYPE  GLOBAL DEFAULT [VARIANT_PCS] UND   pcs_func_global_undef

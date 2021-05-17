@@ -14,7 +14,7 @@ void foo(A a, A b, A c) {
 // Order of destruction should be left to right.
 //
 // X86-LABEL: define dso_local void @"?foo@@YAXUA@@00@Z"
-// X86:          ([[argmem_ty:<{ %struct.A, %struct.A, %struct.A }>]]* inalloca %0)
+// X86:          ([[argmem_ty:<{ %struct.A, %struct.A, %struct.A }>]]* inalloca([[argmem_ty]]) %0)
 // X86: %[[a:[^ ]*]] = getelementptr inbounds [[argmem_ty]], [[argmem_ty]]* %0, i32 0, i32 0
 // X86: %[[b:[^ ]*]] = getelementptr inbounds [[argmem_ty]], [[argmem_ty]]* %0, i32 0, i32 1
 // X86: %[[c:[^ ]*]] = getelementptr inbounds [[argmem_ty]], [[argmem_ty]]* %0, i32 0, i32 2
@@ -47,7 +47,7 @@ void call_foo() {
 // X86: invoke x86_thiscallcc %struct.A* @"??0A@@QAE@H@Z"(%struct.A* {{[^,]*}} %[[arg2]], i32 2)
 // X86: %[[arg1:[^ ]*]] = getelementptr inbounds [[argmem_ty]], [[argmem_ty]]* %[[argmem]], i32 0, i32 0
 // X86: invoke x86_thiscallcc %struct.A* @"??0A@@QAE@H@Z"(%struct.A* {{[^,]*}} %[[arg1]], i32 1)
-// X86: call void @"?foo@@YAXUA@@00@Z"([[argmem_ty]]* inalloca %[[argmem]])
+// X86: call void @"?foo@@YAXUA@@00@Z"([[argmem_ty]]* inalloca([[argmem_ty]]) %[[argmem]])
 // X86: call void @llvm.stackrestore
 // X86: ret void
 //

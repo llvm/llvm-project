@@ -29,6 +29,7 @@
 #define _OMPTARGET_NVPTX_DEBUG_H_
 
 #include "common/device_environment.h"
+#include "target_interface.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // set desired level of debugging
@@ -141,13 +142,17 @@ NOINLINE static void log(const char *fmt, Arguments... parameters) {
 template <typename... Arguments>
 NOINLINE static void check(bool cond, const char *fmt,
                            Arguments... parameters) {
-  if (!cond)
+  if (!cond) {
     printf(fmt, (int)GetBlockIdInKernel(), (int)GetThreadIdInBlock(),
            (int)GetWarpId(), (int)GetLaneId(), parameters...);
-  assert(cond);
+    __builtin_trap();
+  }
 }
 
-NOINLINE static void check(bool cond) { assert(cond); }
+NOINLINE static void check(bool cond) {
+  if (!cond)
+    __builtin_trap();
+}
 #endif
 
 // set flags that are tested (inclusion properties)

@@ -24,7 +24,7 @@
 # CHECK-NEXT:    Section: .text
 
 .text
-.global _start, __ehdr_start
+.global __ehdr_start, _start
 _start:
   .quad __ehdr_start
   .quad __executable_start

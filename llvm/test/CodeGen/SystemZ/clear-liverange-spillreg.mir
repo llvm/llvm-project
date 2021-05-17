@@ -248,7 +248,7 @@ body:             |
     ADJCALLSTACKDOWN 0, 0
     %49 = LGFR %120.subreg_l32
     $r2d = COPY %49
-    CallBRASL @Get_Direct_Cost8x8, killed $r2d, undef $r3d, csr_systemz, implicit-def dead $r14d, implicit-def dead $cc, implicit-def $r2d
+    CallBRASL @Get_Direct_Cost8x8, killed $r2d, undef $r3d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit-def $r2d
     ADJCALLSTACKUP 0, 0
     %51 = COPY killed $r2d
     MVHHI %7, 0, 0 :: (store 2)
@@ -264,7 +264,7 @@ body:             |
   bb.14:
     %124 = AHIMux %124, 1, implicit-def dead $cc
     ADJCALLSTACKDOWN 0, 0
-    CallBRASL @store_coding_state, undef $r2d, csr_systemz, implicit-def dead $r14d, implicit-def dead $cc
+    CallBRASL @store_coding_state, undef $r2d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc
     ADJCALLSTACKUP 0, 0
     %125 = COPY %12
     J %bb.16
@@ -342,10 +342,10 @@ body:             |
     $r4d = LGHI 0
     $r5d = COPY %98
     $r6d = COPY %99
-    CallBRASL @SetRefAndMotionVectors, killed $r2d, killed $r3d, killed $r4d, killed $r5d, killed $r6d, csr_systemz, implicit-def dead $r14d, implicit-def dead $cc
+    CallBRASL @SetRefAndMotionVectors, killed $r2d, killed $r3d, killed $r4d, killed $r5d, killed $r6d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc
     ADJCALLSTACKUP 0, 0
     ADJCALLSTACKDOWN 0, 0
-    CallBRASL @reset_coding_state, undef $r2d, csr_systemz, implicit-def dead $r14d, implicit-def dead $cc
+    CallBRASL @reset_coding_state, undef $r2d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc
     ADJCALLSTACKUP 0, 0
     %120 = LA %120, 1, $noreg
     CGHI %120, 4, implicit-def $cc
@@ -373,11 +373,11 @@ body:             |
     successors: %bb.26(0x00000001), %bb.24(0x7fffffff)
   
     ADJCALLSTACKDOWN 0, 0
-    CallBRASL @Get_Direct_CostMB, undef $f0d, csr_systemz, implicit-def dead $r14d, implicit-def dead $cc, implicit-def dead $r2d
+    CallBRASL @Get_Direct_CostMB, undef $f0d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit-def dead $r2d
     ADJCALLSTACKUP 0, 0
     ADJCALLSTACKDOWN 0, 0
     $r2d = LGHI 0
-    CallBRASL @SetModesAndRefframeForBlocks, killed $r2d, csr_systemz, implicit-def dead $r14d, implicit-def dead $cc
+    CallBRASL @SetModesAndRefframeForBlocks, killed $r2d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc
     ADJCALLSTACKUP 0, 0
     CHIMux undef %111, 13, implicit-def $cc
     BRC 14, 8, %bb.26, implicit killed $cc

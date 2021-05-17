@@ -151,7 +151,7 @@ namespace llvm {
   struct CodeGenRegister {
     Record *TheDef;
     unsigned EnumValue;
-    unsigned CostPerUse;
+    std::vector<int64_t> CostPerUse;
     bool CoveredBySubRegs;
     bool HasDisjunctSubRegs;
     bool Artificial;
@@ -163,7 +163,7 @@ namespace llvm {
 
     CodeGenRegister(Record *R, unsigned Enum);
 
-    const StringRef getName() const;
+    StringRef getName() const;
 
     // Extract more information from TheDef. This is used to build an object
     // graph after all CodeGenRegister objects have been created.
@@ -738,9 +738,8 @@ namespace llvm {
     // Get the sum of unit weights.
     unsigned getRegUnitSetWeight(const std::vector<unsigned> &Units) const {
       unsigned Weight = 0;
-      for (std::vector<unsigned>::const_iterator
-             I = Units.begin(), E = Units.end(); I != E; ++I)
-        Weight += getRegUnit(*I).Weight;
+      for (unsigned Unit : Units)
+        Weight += getRegUnit(Unit).Weight;
       return Weight;
     }
 

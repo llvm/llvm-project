@@ -85,6 +85,7 @@ typedef write_only image1d_t WOImage;
 typedef read_write image1d_t RWImage;
 kernel void foo7(ROImage ro, WOImage wo, RWImage rw) {
 }
+
 // CHECK: define{{.*}} spir_kernel void @foo7{{[^!]+}}
 // CHECK: !kernel_arg_addr_space ![[MD71:[0-9]+]]
 // CHECK: !kernel_arg_access_qual ![[MD72:[0-9]+]]
@@ -93,6 +94,28 @@ kernel void foo7(ROImage ro, WOImage wo, RWImage rw) {
 // CHECK: !kernel_arg_type_qual ![[MD75:[0-9]+]]
 // CHECK-NOT: !kernel_arg_name
 // ARGINFO: !kernel_arg_name ![[MD76:[0-9]+]]
+
+typedef unsigned char uchar;
+typedef uchar uchar2 __attribute__((ext_vector_type(2)));
+kernel void foo8(pipe int p1, pipe uchar p2, pipe uchar2 p3, const pipe uchar p4, write_only pipe uchar p5) {}
+// CHECK: define{{.*}} spir_kernel void @foo8{{[^!]+}}
+// CHECK: !kernel_arg_addr_space ![[PIPE_AS_QUAL:[0-9]+]]
+// CHECK: !kernel_arg_access_qual ![[PIPE_ACCESS_QUAL:[0-9]+]]
+// CHECK: !kernel_arg_type ![[PIPE_TY:[0-9]+]]
+// CHECK: !kernel_arg_base_type ![[PIPE_BASE_TY:[0-9]+]]
+// CHECK: !kernel_arg_type_qual ![[PIPE_QUAL:[0-9]+]]
+// CHECK-NOT: !kernel_arg_name
+// ARGINFO: !kernel_arg_name ![[PIPE_ARG_NAMES:[0-9]+]]
+
+kernel void foo9(signed char sc1,  global const signed char* sc2) {}
+// CHECK: define{{.*}} spir_kernel void @foo9{{[^!]+}}
+// CHECK: !kernel_arg_addr_space ![[SCHAR_AS_QUAL:[0-9]+]]
+// CHECK: !kernel_arg_access_qual ![[MD42]]
+// CHECK: !kernel_arg_type ![[SCHAR_TY:[0-9]+]]
+// CHECK: !kernel_arg_base_type ![[SCHAR_TY]]
+// CHECK: !kernel_arg_type_qual ![[SCHAR_QUAL:[0-9]+]]
+// CHECK-NOT: !kernel_arg_name
+// ARGINFO: !kernel_arg_name ![[SCHAR_ARG_NAMES:[0-9]+]]
 
 // CHECK: ![[MD11]] = !{i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 1, i32 1, i32 1, i32 1, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 0, i32 0, i32 0, i32 0}
 // CHECK: ![[MD12]] = !{!"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none"}
@@ -127,4 +150,13 @@ kernel void foo7(ROImage ro, WOImage wo, RWImage rw) {
 // CHECK: ![[MD74]] = !{!"image1d_t", !"image1d_t", !"image1d_t"}
 // CHECK: ![[MD75]] = !{!"", !"", !""}
 // ARGINFO: ![[MD76]] = !{!"ro", !"wo", !"rw"}
-
+// CHECK: ![[PIPE_AS_QUAL]] = !{i32 1, i32 1, i32 1, i32 1, i32 1}
+// CHECK: ![[PIPE_ACCESS_QUAL]] = !{!"read_only", !"read_only", !"read_only", !"read_only", !"write_only"}
+// CHECK: ![[PIPE_TY]] = !{!"int", !"uchar", !"uchar2", !"uchar", !"uchar"}
+// CHECK: ![[PIPE_BASE_TY]] = !{!"int", !"uchar", !"uchar __attribute__((ext_vector_type(2)))", !"uchar", !"uchar"}
+// CHECK: ![[PIPE_QUAL]] = !{!"pipe", !"pipe", !"pipe", !"pipe", !"pipe"}
+// ARGINFO: ![[PIPE_ARG_NAMES]] = !{!"p1", !"p2", !"p3", !"p4", !"p5"}
+// CHECK: ![[SCHAR_AS_QUAL]] = !{i32 0, i32 1}
+// CHECK: ![[SCHAR_TY]] = !{!"char", !"char*"}
+// CHECK: ![[SCHAR_QUAL]] = !{!"", !"const"}
+// ARGINFO: ![[SCHAR_ARG_NAMES]] = !{!"sc1", !"sc2"}

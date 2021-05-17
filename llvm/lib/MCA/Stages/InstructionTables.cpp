@@ -30,8 +30,7 @@ Error InstructionTables::execute(InstRef &IR) {
     if (!Resource.second.size())
       continue;
     unsigned Cycles = Resource.second.size();
-    unsigned Index = std::distance(
-        Masks.begin(), std::find(Masks.begin(), Masks.end(), Resource.first));
+    unsigned Index = std::distance(Masks.begin(), find(Masks, Resource.first));
     const MCProcResourceDesc &ProcResource = *SM.getProcResource(Index);
     unsigned NumUnits = ProcResource.NumUnits;
     if (!ProcResource.SubUnitsIdxBegin) {

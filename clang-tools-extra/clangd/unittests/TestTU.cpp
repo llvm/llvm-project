@@ -36,6 +36,7 @@ ParseInputs TestTU::inputs(MockFS &FS) const {
   FS.Files[ImportThunk] = ThunkContents;
 
   ParseInputs Inputs;
+  Inputs.FeatureModules = FeatureModules;
   auto &Argv = Inputs.CompileCommand.CommandLine;
   Argv = {"clang"};
   // FIXME: this shouldn't need to be conditional, but it breaks a
@@ -62,8 +63,6 @@ ParseInputs TestTU::inputs(MockFS &FS) const {
   if (ClangTidyProvider)
     Inputs.ClangTidyProvider = ClangTidyProvider;
   Inputs.Index = ExternalIndex;
-  if (Inputs.Index)
-    Inputs.Opts.SuggestMissingIncludes = true;
   return Inputs;
 }
 
@@ -115,6 +114,11 @@ ParsedAST TestTU::build() const {
     ADD_FAILURE() << "Failed to build code:\n" << Code;
     llvm_unreachable("Failed to build TestTU!");
   }
+  if (!AST->getDiagnostics()) {
+    ADD_FAILURE() << "TestTU should always build an AST with a fresh Preamble"
+                  << Code;
+    return std::move(*AST);
+  }
   // Check for error diagnostics and report gtest failures (unless expected).
   // This guards against accidental syntax errors silently subverting tests.
   // error-ok is awfully primitive - using clang -verify would be nicer.
@@ -130,7 +134,8 @@ ParsedAST TestTU::build() const {
     return false;
   }();
   if (!ErrorOk) {
-    for (const auto &D : AST->getDiagnostics())
+    // We always build AST with a fresh preamble in TestTU.
+    for (const auto &D : *AST->getDiagnostics())
       if (D.Severity >= DiagnosticsEngine::Error) {
         ADD_FAILURE()
             << "TestTU failed to build (suppress with /*error-ok*/): \n"
@@ -156,8 +161,7 @@ RefSlab TestTU::headerRefs() const {
 
 std::unique_ptr<SymbolIndex> TestTU::index() const {
   auto AST = build();
-  auto Idx = std::make_unique<FileIndex>(/*UseDex=*/true,
-                                         /*CollectMainFileRefs=*/true);
+  auto Idx = std::make_unique<FileIndex>();
   Idx->updatePreamble(testPath(Filename), /*Version=*/"null",
                       AST.getASTContext(), AST.getPreprocessorPtr(),
                       AST.getCanonicalIncludes());
@@ -192,7 +196,7 @@ const NamedDecl &findDecl(ParsedAST &AST, llvm::StringRef QName) {
                            llvm::StringRef Name) -> const NamedDecl & {
     auto LookupRes = Scope.lookup(DeclarationName(&Ctx.Idents.get(Name)));
     assert(!LookupRes.empty() && "Lookup failed");
-    assert(LookupRes.size() == 1 && "Lookup returned multiple results");
+    assert(LookupRes.isSingleResult() && "Lookup returned multiple results");
     return *LookupRes.front();
   };
 

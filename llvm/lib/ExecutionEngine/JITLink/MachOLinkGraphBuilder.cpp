@@ -45,12 +45,13 @@ Expected<std::unique_ptr<LinkGraph>> MachOLinkGraphBuilder::buildGraph() {
   return std::move(G);
 }
 
-MachOLinkGraphBuilder::MachOLinkGraphBuilder(const object::MachOObjectFile &Obj,
-                                             Triple TT)
+MachOLinkGraphBuilder::MachOLinkGraphBuilder(
+    const object::MachOObjectFile &Obj, Triple TT,
+    LinkGraph::GetEdgeKindNameFunction GetEdgeKindName)
     : Obj(Obj),
-      G(std::make_unique<LinkGraph>(std::string(Obj.getFileName()),
-                                    std::move(TT), getPointerSize(Obj),
-                                    getEndianness(Obj))) {}
+      G(std::make_unique<LinkGraph>(
+          std::string(Obj.getFileName()), std::move(TT), getPointerSize(Obj),
+          getEndianness(Obj), std::move(GetEdgeKindName))) {}
 
 void MachOLinkGraphBuilder::addCustomSectionParser(
     StringRef SectionName, SectionParserFunction Parser) {
@@ -115,10 +116,6 @@ Error MachOLinkGraphBuilder::createNormalizedSections() {
 
     auto SecIndex = Obj.getSectionIndex(SecRef.getRawDataRefImpl());
 
-    auto Name = SecRef.getName();
-    if (!Name)
-      return Name.takeError();
-
     if (Obj.is64Bit()) {
       const MachO::section_64 &Sec64 =
           Obj.getSection64(SecRef.getRawDataRefImpl());
@@ -149,8 +146,9 @@ Error MachOLinkGraphBuilder::createNormalizedSections() {
     }
 
     LLVM_DEBUG({
-      dbgs() << "  " << *Name << ": " << formatv("{0:x16}", NSec.Address)
-             << " -- " << formatv("{0:x16}", NSec.Address + NSec.Size)
+      dbgs() << "  " << NSec.SegName << "," << NSec.SectName << ": "
+             << formatv("{0:x16}", NSec.Address) << " -- "
+             << formatv("{0:x16}", NSec.Address + NSec.Size)
              << ", align: " << NSec.Alignment << ", index: " << SecIndex
              << "\n";
     });
@@ -180,11 +178,15 @@ Error MachOLinkGraphBuilder::createNormalizedSections() {
       Prot = static_cast<sys::Memory::ProtectionFlags>(sys::Memory::MF_READ |
                                                        sys::Memory::MF_WRITE);
 
-    if (!isDebugSection(NSec))
-      NSec.GraphSection = &G->createSection(*Name, Prot);
-    else
+    if (!isDebugSection(NSec)) {
+      auto FullyQualifiedName =
+          G->allocateString(StringRef(NSec.SegName) + "," + NSec.SectName);
+      NSec.GraphSection = &G->createSection(
+          StringRef(FullyQualifiedName.data(), FullyQualifiedName.size()),
+          Prot);
+    } else
       LLVM_DEBUG({
-        dbgs() << "    " << *Name
+        dbgs() << "    " << NSec.SegName << "," << NSec.SectName
                << " is a debug section: No graph section will be created.\n";
       });
 
@@ -316,8 +318,8 @@ void MachOLinkGraphBuilder::addSectionStartSymAndBlock(
     Section &GraphSec, uint64_t Address, const char *Data, uint64_t Size,
     uint32_t Alignment, bool IsLive) {
   Block &B =
-      Data ? G->createContentBlock(GraphSec, StringRef(Data, Size), Address,
-                                   Alignment, 0)
+      Data ? G->createContentBlock(GraphSec, ArrayRef<char>(Data, Size),
+                                   Address, Alignment, 0)
            : G->createZeroFillBlock(GraphSec, Size, Address, Alignment, 0);
   auto &Sym = G->addAnonymousSymbol(B, 0, Size, false, IsLive);
   assert(!AddrToCanonicalSymbol.count(Sym.getAddress()) &&
@@ -508,8 +510,8 @@ Error MachOLinkGraphBuilder::graphifyRegularSymbols() {
           NSec.Data
               ? G->createContentBlock(
                     *NSec.GraphSection,
-                    StringRef(NSec.Data + BlockOffset, BlockSize), BlockStart,
-                    NSec.Alignment, BlockStart % NSec.Alignment)
+                    ArrayRef<char>(NSec.Data + BlockOffset, BlockSize),
+                    BlockStart, NSec.Alignment, BlockStart % NSec.Alignment)
               : G->createZeroFillBlock(*NSec.GraphSection, BlockSize,
                                        BlockStart, NSec.Alignment,
                                        BlockStart % NSec.Alignment);

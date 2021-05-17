@@ -812,6 +812,9 @@ void CodeGenPGO::assignRegionCounters(GlobalDecl GD, llvm::Function *Fn) {
     return;
 
   CGM.ClearUnusedCoverageMapping(D);
+  if (Fn->hasFnAttribute(llvm::Attribute::NoProfile))
+    return;
+
   setFuncName(Fn);
 
   mapRegionCounters(D);

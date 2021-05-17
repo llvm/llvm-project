@@ -444,18 +444,12 @@ bool lldb_private::formatters::NSSetISyntheticFrontEnd::Update() {
   if (!valobj_sp)
     return false;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
-  Status error;
-  if (valobj_sp->IsPointerType()) {
-    valobj_sp = valobj_sp->Dereference(error);
-    if (error.Fail() || !valobj_sp)
-      return false;
-  }
-  error.Clear();
   lldb::ProcessSP process_sp(valobj_sp->GetProcessSP());
   if (!process_sp)
     return false;
   m_ptr_size = process_sp->GetAddressByteSize();
-  uint64_t data_location = valobj_sp->GetAddressOf() + m_ptr_size;
+  uint64_t data_location = valobj_sp->GetValueAsUnsigned(0) + m_ptr_size;
+  Status error;
   if (m_ptr_size == 4) {
     m_data_32 = new DataDescriptor_32();
     process_sp->ReadMemory(data_location, m_data_32, sizeof(DataDescriptor_32),
@@ -728,18 +722,12 @@ lldb_private::formatters::
   if (!valobj_sp)
     return false;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
-  Status error;
-  if (valobj_sp->IsPointerType()) {
-    valobj_sp = valobj_sp->Dereference(error);
-    if (error.Fail() || !valobj_sp)
-      return false;
-  }
-  error.Clear();
   lldb::ProcessSP process_sp(valobj_sp->GetProcessSP());
   if (!process_sp)
     return false;
   m_ptr_size = process_sp->GetAddressByteSize();
-  uint64_t data_location = valobj_sp->GetAddressOf() + m_ptr_size;
+  uint64_t data_location = valobj_sp->GetValueAsUnsigned(0) + m_ptr_size;
+  Status error;
   if (m_ptr_size == 4) {
     m_data_32 = new D32();
     process_sp->ReadMemory(data_location, m_data_32, sizeof(D32),

@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %S/test_errors.sh %s %t %flang_fc1
 ! Test section subscript
 program p1
   real :: a(10,10)

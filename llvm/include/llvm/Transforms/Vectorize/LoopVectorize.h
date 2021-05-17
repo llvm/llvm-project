@@ -174,6 +174,13 @@ void reportVectorizationFailure(const StringRef DebugMsg,
     const StringRef OREMsg, const StringRef ORETag,
     OptimizationRemarkEmitter *ORE, Loop *TheLoop, Instruction *I = nullptr);
 
+/// Reports an informative message: print \p Msg for debugging purposes as well
+/// as an optimization remark. Uses either \p I as location of the remark, or
+/// otherwise \p TheLoop.
+void reportVectorizationInfo(const StringRef OREMsg, const StringRef ORETag,
+                             OptimizationRemarkEmitter *ORE, Loop *TheLoop,
+                             Instruction *I = nullptr);
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZE_H

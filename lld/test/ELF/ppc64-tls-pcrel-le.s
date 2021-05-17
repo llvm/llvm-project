@@ -13,9 +13,9 @@
 ## when using prefixed instructions like paddi.
 
 # SYMBOL:      Symbol table '.symtab' contains 6 entries:
-# SYMBOL:      3: 0000000000000000     0 TLS     LOCAL DEFAULT     2 x
-# SYMBOL-NEXT: 4: 0000000000000004     0 TLS     LOCAL DEFAULT     2 y
-# SYMBOL-NEXT: 5: 0000000000000008     0 TLS     LOCAL DEFAULT     2 z
+# SYMBOL:      0000000000000000     0 TLS     LOCAL DEFAULT     2 x
+# SYMBOL-NEXT: 0000000000000004     0 TLS     LOCAL DEFAULT     2 y
+# SYMBOL-NEXT: 0000000000000008     0 TLS     LOCAL DEFAULT     2 z
 
 # CHECK-LABEL: <LocalExecAddr>:
 # CHECK:       paddi 3, 13, -28672, 0

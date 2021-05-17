@@ -89,7 +89,7 @@
 # ALL-EXPORT:   removing identical section {{.*}}:(.text.non_addrsig2)
 # ALL-EXPORT-NOT: selected section
 
-# OBJCOPY: --icf=safe is incompatible with object files created using objcopy or ld -r
+# OBJCOPY: --icf=safe conservatively ignores SHT_LLVM_ADDRSIG [index [[#]]] with sh_link=0 (likely created using objcopy or ld -r)
 
 .section .text.f1,"ax",@progbits
 .globl f1

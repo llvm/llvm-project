@@ -219,9 +219,10 @@ bool Lowerer::lowerEarlyIntrinsics(Function &F) {
 static bool declaresCoroEarlyIntrinsics(const Module &M) {
   return coro::declaresIntrinsics(
       M, {"llvm.coro.id", "llvm.coro.id.retcon", "llvm.coro.id.retcon.once",
-          "llvm.coro.destroy", "llvm.coro.done", "llvm.coro.end",
-          "llvm.coro.end.async", "llvm.coro.noop", "llvm.coro.free",
-          "llvm.coro.promise", "llvm.coro.resume", "llvm.coro.suspend"});
+          "llvm.coro.id.async", "llvm.coro.destroy", "llvm.coro.done",
+          "llvm.coro.end", "llvm.coro.end.async", "llvm.coro.noop",
+          "llvm.coro.free", "llvm.coro.promise", "llvm.coro.resume",
+          "llvm.coro.suspend"});
 }
 
 PreservedAnalyses CoroEarlyPass::run(Function &F, FunctionAnalysisManager &) {

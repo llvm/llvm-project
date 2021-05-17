@@ -22,6 +22,7 @@
 namespace llvm {
 
 class MCSymbolWasm;
+class formatted_raw_ostream;
 
 /// WebAssembly-specific streamer interface, to implement support
 /// WebAssembly-specific assembly directives.

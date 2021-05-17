@@ -13,11 +13,11 @@
 
 ; NONE:   OS/ABI: SystemV       (0x0)
 ; HSA:    OS/ABI: AMDGPU_HSA    (0x40)
-; HSA:    ABIVersion: 1
+; HSA:    ABIVersion: 2
 ; PAL:    OS/ABI: AMDGPU_PAL    (0x41)
 ; PAL:    ABIVersion: 0
 ; MESA3D: OS/ABI: AMDGPU_MESA3D (0x42)
-; MESA3D:    ABIVersion: 0
+; MESA3D: ABIVersion: 0
 
 define amdgpu_kernel void @elf_header() {
   ret void

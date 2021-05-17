@@ -6,7 +6,7 @@
 
 ; CHECK-SSA: [[QUOTREG:%[0-9]+]]:gpr32 = SDIVWr
 ; CHECK-SSA-NOT: [[QUOTREG]] =
-; CHECK-SSA: {{%[0-9]+}}:gpr32 = MSUBWrrr killed [[QUOTREG]]
+; CHECK-SSA: {{%[0-9]+}}:gpr32 = MSUBWrrr [[QUOTREG]]
 
 ; CHECK-SSA-LABEL: Machine code for function t2
 

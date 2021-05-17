@@ -30,6 +30,7 @@ all_categories = {
     'dyntype': 'Tests related to dynamic type support',
     'expression': 'Tests related to the expression parser',
     'flakey': 'Flakey test cases, i.e. tests that do not reliably pass at each execution',
+    'fork': 'Tests requiring the process plugin fork/vfork event support',
     'gmodules': 'Tests that can be run with -gmodules debug information',
     'instrumentation-runtime': 'Tests for the instrumentation runtime plugins',
     'libc++': 'Test for libc++ data formatters',

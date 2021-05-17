@@ -1,7 +1,7 @@
-// RUN: %check_clang_tidy -check-suffix=0-0 %s modernize-use-auto %t  -- -config="{CheckOptions: [{key: modernize-use-auto.RemoveStars, value: 0}, {key: modernize-use-auto.MinTypeNameLength, value: 0}]}" -- -frtti
-// RUN: %check_clang_tidy -check-suffix=0-8 %s modernize-use-auto %t  -- -config="{CheckOptions: [{key: modernize-use-auto.RemoveStars, value: 0}, {key: modernize-use-auto.MinTypeNameLength, value: 8}]}" -- -frtti
-// RUN: %check_clang_tidy -check-suffix=1-0 %s modernize-use-auto %t  -- -config="{CheckOptions: [{key: modernize-use-auto.RemoveStars, value: 1}, {key: modernize-use-auto.MinTypeNameLength, value: 0}]}" -- -frtti
-// RUN: %check_clang_tidy -check-suffix=1-8 %s modernize-use-auto %t  -- -config="{CheckOptions: [{key: modernize-use-auto.RemoveStars, value: 1}, {key: modernize-use-auto.MinTypeNameLength, value: 8}]}" -- -frtti
+// RUN: %check_clang_tidy -check-suffix=0-0 %s modernize-use-auto %t  -- -config="{CheckOptions: [{key: modernize-use-auto.RemoveStars, value: false}, {key: modernize-use-auto.MinTypeNameLength, value: 0}]}" -- -frtti
+// RUN: %check_clang_tidy -check-suffix=0-8 %s modernize-use-auto %t  -- -config="{CheckOptions: [{key: modernize-use-auto.RemoveStars, value: false}, {key: modernize-use-auto.MinTypeNameLength, value: 8}]}" -- -frtti
+// RUN: %check_clang_tidy -check-suffix=1-0 %s modernize-use-auto %t  -- -config="{CheckOptions: [{key: modernize-use-auto.RemoveStars, value: true}, {key: modernize-use-auto.MinTypeNameLength, value: 0}]}" -- -frtti
+// RUN: %check_clang_tidy -check-suffix=1-8 %s modernize-use-auto %t  -- -config="{CheckOptions: [{key: modernize-use-auto.RemoveStars, value: true}, {key: modernize-use-auto.MinTypeNameLength, value: 8}]}" -- -frtti
 
 template <class T> extern T foo();
 template <class T> struct P {  explicit P(T t) : t_(t) {}  T t_;};

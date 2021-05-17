@@ -83,7 +83,7 @@ static CommandRegistration Unused(&Extract, []() -> Error {
                       InstrumentationMapOrError.takeError());
 
   std::error_code EC;
-  raw_fd_ostream OS(ExtractOutput, EC, sys::fs::OpenFlags::OF_Text);
+  raw_fd_ostream OS(ExtractOutput, EC, sys::fs::OpenFlags::OF_TextWithCRLF);
   if (EC)
     return make_error<StringError>(
         Twine("Cannot open file '") + ExtractOutput + "' for writing.", EC);

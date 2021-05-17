@@ -10,8 +10,6 @@
 #define LLVM_LIB_TARGET_MIPS_MIPSSEFRAMELOWERING_H
 
 #include "MipsFrameLowering.h"
-#include "llvm/Support/TypeSize.h"
-#include <vector>
 
 namespace llvm {
 

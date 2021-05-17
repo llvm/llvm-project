@@ -39,6 +39,12 @@ protected:
   /// By default it returns true if a compiler error occurred.
   virtual bool ShouldEraseOutputFiles();
 
+  /// Callback at the start of processing a single input.
+  ///
+  /// \return True on success; on failure ExecutionAction() and
+  /// EndSourceFileAction() will not be called.
+  virtual bool BeginSourceFileAction(CompilerInstance &ci) { return true; }
+
   /// @}
 
 public:
@@ -76,7 +82,7 @@ public:
 
   /// @}
   /// @name Public Action Interface
-  /// @}
+  /// @{
 
   /// Prepare the action for processing the input file \p input.
   ///

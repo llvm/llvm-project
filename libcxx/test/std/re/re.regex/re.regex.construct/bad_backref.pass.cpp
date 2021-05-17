@@ -52,7 +52,7 @@ int main(int, char**)
     assert(error_badbackref_thrown("\\800000000000000000000000000000", std::regex_constants::ECMAScript)); // overflows
 
 //  this should NOT throw, because we only should look at the '1'
-//  See https://bugs.llvm.org/show_bug.cgi?id=31387
+//  See https://llvm.org/PR31387
     {
     const char *pat1 = "a(b)c\\1234";
     std::regex re(pat1, pat1 + 7); // extra chars after the end.
@@ -76,7 +76,7 @@ int main(int, char**)
     assert(error_badbackref_thrown("\\(cat\\)\\10", std::regex::grep) == false);
     assert(error_badbackref_thrown("(cat)\\10", std::regex::egrep) == false);
 
-//  https://bugs.llvm.org/show_bug.cgi?id=34297
+//  https://llvm.org/PR34297
     assert(error_badbackref_thrown("(cat)\\1", std::regex::basic));
     assert(error_badbackref_thrown("\\(cat\\)\\1", std::regex::basic) == false);
     assert(error_badbackref_thrown("(cat)\\1", std::regex::extended) == false);

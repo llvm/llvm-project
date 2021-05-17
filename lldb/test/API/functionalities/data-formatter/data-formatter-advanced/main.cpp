@@ -128,6 +128,9 @@ int main (int argc, const char * argv[])
 {
     
     int iAmInt = 9;
+    const int constInt = 42;
+    volatile int volatileInt = 43;
+    const volatile int constVolatileInt = 44;
     
     i_am_cool cool_boy(1,0.5,3);
     i_am_cooler cooler_boy(1,2,0.1,0.2,'A','B');

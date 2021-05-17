@@ -352,7 +352,8 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   bit isMemoryFoldable = 1;     // Is it allowed to memory fold/unfold this instruction?
   bit notEVEX2VEXConvertible = 0; // Prevent EVEX->VEX conversion.
   bit ExplicitVEXPrefix = 0; // Force the instruction to use VEX encoding.
-
+  // Force to check predicate before compress EVEX to VEX encoding.
+  bit checkVEXPredicate = 0;
   // TSFlags layout should be kept in sync with X86BaseInfo.h.
   let TSFlags{6-0}   = FormBits;
   let TSFlags{8-7}   = OpSizeBits;

@@ -349,7 +349,6 @@ body:             |
   ; CHECK:   renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $lr = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $r3, dead $cpsr = nsw tRSB renamable $r2, 14 /* CC::al */, $noreg
-  ; CHECK:   $lr = t2DLS killed renamable $lr
   ; CHECK: bb.2.vector.body:
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   liveins: $lr, $q0, $r0, $r1, $r2, $r3
@@ -481,7 +480,6 @@ body:             |
   ; CHECK:   renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $lr = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $r3, dead $cpsr = nsw tRSB renamable $r2, 14 /* CC::al */, $noreg
-  ; CHECK:   $lr = t2DLS killed renamable $lr
   ; CHECK: bb.2.vector.body:
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   liveins: $lr, $q0, $r0, $r1, $r2, $r3
@@ -956,7 +954,6 @@ body:             |
   ; CHECK:   renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $lr = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   dead renamable $r3, dead $cpsr = nsw tRSB renamable $r2, 14 /* CC::al */, $noreg
-  ; CHECK:   $lr = t2DLS killed renamable $lr
   ; CHECK: bb.2.vector.body:
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   liveins: $lr, $q0, $r0, $r1, $r2
@@ -1254,7 +1251,6 @@ body:             |
   ; CHECK:   renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $lr = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $q2 = MVE_VMOVimmi32 4, 0, $noreg, undef renamable $q2
-  ; CHECK:   $lr = t2DLS killed renamable $lr
   ; CHECK: bb.2 (align 4):
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   liveins: $lr, $q0, $q1, $q2, $r0, $r1, $r2

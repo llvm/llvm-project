@@ -51,8 +51,6 @@ void writeLimits(raw_ostream &os, const llvm::wasm::WasmLimits &limits);
 
 void writeGlobalType(raw_ostream &os, const llvm::wasm::WasmGlobalType &type);
 
-void writeGlobal(raw_ostream &os, const llvm::wasm::WasmGlobal &global);
-
 void writeEventType(raw_ostream &os, const llvm::wasm::WasmEventType &type);
 
 void writeEvent(raw_ostream &os, const llvm::wasm::WasmEvent &event);

@@ -8,11 +8,3 @@ performance-move-constructor-init
 The check flags user-defined move constructors that have a ctor-initializer
 initializing a member or base class through a copy constructor instead of a
 move constructor.
-
-Options
--------
-
-.. option:: IncludeStyle
-
-   A string specifying which include-style is used, `llvm` or `google`. Default
-   is `llvm`.

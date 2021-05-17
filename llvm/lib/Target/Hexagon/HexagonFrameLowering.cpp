@@ -576,7 +576,7 @@ static bool enableAllocFrameElim(const MachineFunction &MF) {
   const auto &MFI = MF.getFrameInfo();
   const auto &HST = MF.getSubtarget<HexagonSubtarget>();
   assert(!MFI.hasVarSizedObjects() &&
-         !HST.getRegisterInfo()->needsStackRealignment(MF));
+         !HST.getRegisterInfo()->hasStackRealignment(MF));
   return F.hasFnAttribute(Attribute::NoReturn) &&
     F.hasFnAttribute(Attribute::NoUnwind) &&
     !F.hasFnAttribute(Attribute::UWTable) && HST.noreturnStackElim() &&
@@ -1145,7 +1145,7 @@ bool HexagonFrameLowering::hasFP(const MachineFunction &MF) const {
 
   auto &MFI = MF.getFrameInfo();
   auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
-  bool HasExtraAlign = HRI.needsStackRealignment(MF);
+  bool HasExtraAlign = HRI.hasStackRealignment(MF);
   bool HasAlloca = MFI.hasVarSizedObjects();
 
   // Insert ALLOCFRAME if we need to or at -O0 for the debugger.  Think
@@ -1265,7 +1265,7 @@ HexagonFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
 
   int Offset = MFI.getObjectOffset(FI);
   bool HasAlloca = MFI.hasVarSizedObjects();
-  bool HasExtraAlign = HRI.needsStackRealignment(MF);
+  bool HasExtraAlign = HRI.hasStackRealignment(MF);
   bool NoOpt = MF.getTarget().getOptLevel() == CodeGenOpt::None;
 
   auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();

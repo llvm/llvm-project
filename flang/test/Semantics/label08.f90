@@ -1,5 +1,5 @@
 
-! RUN: not %f18 -funparse-with-symbols %s 2>&1 | FileCheck %s
+! RUN: not %flang_fc1 -fdebug-unparse-with-symbols %s 2>&1 | FileCheck %s
 ! CHECK: CYCLE construct-name is not in scope
 ! CHECK: IF construct name unexpected
 ! CHECK: unnamed IF statement

@@ -42,7 +42,7 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
-.comm	foo,4,4
 .comm	bar,4,4
+.comm	foo,4,4
 movl	$1, foo(%rip)
 movl	$2, bar(%rip)

@@ -1,13 +1,19 @@
-// RUN: %clang_cc1 -verify -fsyntax-only -fblocks -fobjc-exceptions -Wcompletion-handler %s
+// RUN: %clang_cc1 -verify -fsyntax-only -fblocks -fobjc-exceptions -Wcompletion-handler -Wno-pointer-to-int-cast %s
 
 #define NULL (void *)0
 #define nil (id)0
 #define CALLED_ONCE __attribute__((called_once))
 #define NORETURN __attribute__((noreturn))
+#define LIKELY(X) __builtin_expect(!!(X), 1)
+#define UNLIKELY(X) __builtin_expect(!!(X), 0)
+#define LIKELY_WITH_PROBA(X, P) __builtin_expect_with_probability(!!(X), 1, P)
+#define UNLIKELY_WITH_PROBA(X, P) __builtin_expect_with_probability(!!(X), 0, P)
+#define UNPRED(X) __builtin_unpredictable((long)(X))
 
 @protocol NSObject
 @end
 @interface NSObject <NSObject>
+- (instancetype)init;
 - (id)copy;
 - (id)class;
 - autorelease;
@@ -25,6 +31,16 @@ typedef struct {
 @end
 @class NSString, Protocol;
 extern void NSLog(NSString *format, ...);
+
+typedef int group_t;
+typedef struct dispatch_queue_s *dispatch_queue_t;
+typedef void (^dispatch_block_t)(void);
+extern dispatch_queue_t queue;
+
+void dispatch_group_async(dispatch_queue_t queue,
+                          group_t group,
+                          dispatch_block_t block);
+void dispatch_async(dispatch_queue_t queue, dispatch_block_t block);
 
 void escape(void (^callback)(void));
 void escape_void(void *);
@@ -220,11 +236,11 @@ void indirect_call_within_direct_call(void (^callback)(void) CALLED_ONCE,
 }
 
 void block_call_1(void (^callback)(void) CALLED_ONCE) {
-  indirect_call(^{
-    callback();
-  });
-  callback();
-  // no-warning
+  indirect_call( // expected-note{{previous call is here}}
+      ^{
+        callback();
+      });
+  callback(); // expected-warning{{'callback' parameter marked 'called_once' is called twice}}
 }
 
 void block_call_2(void (^callback)(void) CALLED_ONCE) {
@@ -250,7 +266,7 @@ void block_call_4(int cond, void (^callback)(void) CALLED_ONCE) {
       // expected-warning@-1{{'callback' parameter marked 'called_once' is never used when taking false branch}}
       escape(callback);
     }
-  }();
+  }(); // no-warning
 }
 
 void block_call_5(void (^outer)(void) CALLED_ONCE) {
@@ -266,6 +282,32 @@ void block_with_called_once(void (^outer)(void) CALLED_ONCE) {
   });
   outer(); // expected-note{{previous call is here}}
   outer(); // expected-warning{{'outer' parameter marked 'called_once' is called twice}}
+}
+
+void block_dispatch_call(int cond, void (^callback)(void) CALLED_ONCE) {
+  dispatch_async(queue, ^{
+    if (cond) // expected-warning{{'callback' parameter marked 'called_once' is never called when taking false branch}}
+      callback();
+  });
+}
+
+void block_escape_call_1(int cond, void (^callback)(void) CALLED_ONCE) {
+  escape_void((__bridge void *)^{
+    if (cond) {
+      // no-warning
+      callback();
+    }
+  });
+}
+
+void block_escape_call_2(int cond, void (^callback)(void) CALLED_ONCE) {
+  escape_void((__bridge void *)^{
+    if (cond) {
+      callback(); // expected-note{{previous call is here}}
+    }
+    // Double call can still be reported.
+    callback(); // expected-warning{{'callback' parameter marked 'called_once' is called twice}}
+  });
 }
 
 void never_called_one_exit(int cond, void (^callback)(void) CALLED_ONCE) {
@@ -547,6 +589,70 @@ int call_with_check_7(int (^callback)(void) CALLED_ONCE) {
   // no-warning
 }
 
+void call_with_builtin_check_1(int (^callback)(void) CALLED_ONCE) {
+  if (LIKELY(callback))
+    callback();
+  // no-warning
+}
+
+void call_with_builtin_check_2(int (^callback)(void) CALLED_ONCE) {
+  if (!UNLIKELY(callback)) {
+  } else {
+    callback();
+  }
+  // no-warning
+}
+
+void call_with_builtin_check_3(int (^callback)(void) CALLED_ONCE) {
+  if (__builtin_expect((long)callback, 0L)) {
+  } else {
+    callback();
+  }
+  // no-warning
+}
+
+void call_with_builtin_check_4(int (^callback)(void) CALLED_ONCE) {
+  if (__builtin_expect(0L, (long)callback)) {
+  } else {
+    callback();
+  }
+  // no-warning
+}
+
+void call_with_builtin_check_5(int (^callback)(void) CALLED_ONCE) {
+  if (LIKELY_WITH_PROBA(callback, 0.9))
+    callback();
+  // no-warning
+}
+
+void call_with_builtin_check_6(int (^callback)(void) CALLED_ONCE) {
+  if (!UNLIKELY_WITH_PROBA(callback, 0.9)) {
+  } else {
+    callback();
+  }
+  // no-warning
+}
+
+void call_with_builtin_check_7(int (^callback)(void) CALLED_ONCE) {
+  if (UNPRED(callback)) {
+  } else {
+    callback();
+  }
+  // no-warning
+}
+
+void call_with_builtin_check_8(int (^callback)(void) CALLED_ONCE) {
+  if (LIKELY(callback != nil))
+    callback();
+  // no-warning
+}
+
+void call_with_builtin_check_9(int (^callback)(void) CALLED_ONCE) {
+  if (!UNLIKELY(callback == NULL))
+    callback();
+  // no-warning
+}
+
 void unreachable_true_branch(void (^callback)(void) CALLED_ONCE) {
   if (0) {
 
@@ -753,11 +859,10 @@ void suppression_3(int cond, void (^callback)(void) CALLED_ONCE) {
 
 - (void)block_call_1:(void (^)(void))CALLED_ONCE callback {
   // We consider captures by blocks as escapes
-  [self indirect_call:(^{
+  [self indirect_call:(^{ // expected-note{{previous call is here}}
           callback();
         })];
-  callback();
-  // no-warning
+  callback(); // expected-warning{{'callback' parameter marked 'called_once' is called twice}}
 }
 
 - (void)block_call_2:(int)cond callback:(void (^)(void))CALLED_ONCE callback {
@@ -967,6 +1072,20 @@ void suppression_3(int cond, void (^callback)(void) CALLED_ONCE) {
   }
 }
 
+- (void)test:(int)cond fooWithReplyTo:(void (^)(void))handler {
+  if (cond) {
+    // expected-warning@-1{{completion handler is never called when taking false branch}}
+    handler();
+  }
+}
+
+- (void)test:(int)cond with:(void (^)(void))fooWithCompletionBlock {
+  if (cond) {
+    // expected-warning@-1{{completion handler is never called when taking false branch}}
+    fooWithCompletionBlock();
+  }
+}
+
 - (void)completion_handler_wrong_type:(int (^)(void))completionHandler {
   // We don't want to consider completion handlers with non-void return types.
   if ([self condition]) {
@@ -1045,6 +1164,85 @@ void suppression_3(int cond, void (^callback)(void) CALLED_ONCE) {
   if (cond2) {
     handler();
   }
+}
+
+- (void)test_escape_before_branch:(int)cond
+                   withCompletion:(void (^)(void))handler {
+  if (cond) {
+    filler();
+  }
+
+  void (^copiedHandler)(void) = ^{
+    handler();
+  };
+
+  if (cond) {
+    // no-warning
+    handler();
+  } else {
+    copiedHandler();
+  }
+}
+
+- (void)test_escape_after_branch:(int)cond
+                  withCompletion:(void (^)(void))handler {
+  if (cond) {
+    // no-warning
+    handler();
+  }
+
+  escape(handler);
+}
+
+// rdar://74441906
+typedef void (^DeferredBlock)(void);
+static inline void DefferedCallback(DeferredBlock *inBlock) { (*inBlock)(); }
+#define _DEFERCONCAT(a, b) a##b
+#define _DEFERNAME(a) _DEFERCONCAT(__DeferredVar_, a)
+#define DEFER __extension__ __attribute__((cleanup(DefferedCallback), unused)) \
+                  DeferredBlock _DEFERNAME(__COUNTER__) = ^
+
+- (void)test_cleanup_1:(int)cond
+        withCompletion:(void (^)(void))handler {
+  int error = 0;
+  DEFER {
+    if (error)
+      handler();
+  };
+
+  if (cond) {
+    error = 1;
+  } else {
+    // no-warning
+    handler();
+  }
+}
+
+- (void)test_cleanup_2:(int)cond
+        withCompletion:(void (^)(void))handler {
+  int error = 0;
+  DEFER {
+    if (error)
+      handler();
+  };
+
+  if (cond) {
+    error = 1;
+  } else {
+    handler(); // expected-note{{previous call is here}}
+  }
+
+  // We still can warn about double call even in this case.
+  handler(); // expected-warning{{completion handler is called twice}}
+}
+
+- (void)initWithAdditions:(int)cond
+           withCompletion:(void (^)(void))handler {
+  self = [self init];
+  if (self) {
+    escape(handler);
+  }
+  // no-warning
 }
 
 @end

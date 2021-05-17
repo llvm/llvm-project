@@ -158,8 +158,7 @@ bool LiveRangeCalc::isDefOnEntry(LiveRange &LR, ArrayRef<SlotIndex> Undefs,
     // If LR has a segment S that starts at the next block, i.e. [End, ...),
     // std::upper_bound will return the segment following S. Instead,
     // S should be treated as the first segment that does not overlap B.
-    LiveRange::iterator UB = std::upper_bound(LR.begin(), LR.end(),
-                                              End.getPrevSlot());
+    LiveRange::iterator UB = upper_bound(LR, End.getPrevSlot());
     if (UB != LR.begin()) {
       LiveRange::Segment &Seg = *std::prev(UB);
       if (Seg.end > Begin) {

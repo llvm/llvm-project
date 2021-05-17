@@ -51,4 +51,4 @@ using ::localeconv;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_CLOCALE
+#endif // _LIBCPP_CLOCALE

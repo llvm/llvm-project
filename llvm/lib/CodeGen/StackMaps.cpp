@@ -234,6 +234,12 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
     if (MOI->isImplicit())
       return ++MOI;
 
+    if (MOI->isUndef()) {
+      // Record `undef` register as constant. Use same value as ISel uses.
+      Locs.emplace_back(Location::Constant, sizeof(int64_t), 0, 0xFEFEFEFE);
+      return ++MOI;
+    }
+
     assert(Register::isPhysicalRegister(MOI->getReg()) &&
            "Virtreg operands should have been rewritten before now.");
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(MOI->getReg());
@@ -505,7 +511,7 @@ void StackMaps::recordStackMapOpers(const MCSymbol &MILabel,
   const MachineFrameInfo &MFI = AP.MF->getFrameInfo();
   const TargetRegisterInfo *RegInfo = AP.MF->getSubtarget().getRegisterInfo();
   bool HasDynamicFrameSize =
-      MFI.hasVarSizedObjects() || RegInfo->needsStackRealignment(*(AP.MF));
+      MFI.hasVarSizedObjects() || RegInfo->hasStackRealignment(*(AP.MF));
   uint64_t FrameSize = HasDynamicFrameSize ? UINT64_MAX : MFI.getStackSize();
 
   auto CurrentIt = FnInfos.find(AP.CurrentFnSym);

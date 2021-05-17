@@ -91,3 +91,14 @@ class TopLevelExpressionsTestCase(TestBase):
         self.assertEqual(
             resultFromCode,
             resultFromTopLevel.GetValueAsUnsigned())
+
+    def test_top_level_expression_without_target(self):
+        self.expect("expr --top-level -- void func() {}", error=True,
+                    substrs=["Top-level code needs to be inserted into a runnable target"])
+
+        # FIXME: This doesn't actually generate any code, so LLDB should probably
+        # allow these expressions.
+        self.expect("expr --top-level -- template<typename T> struct StructT { T m; };", error=True,
+                    substrs=["Top-level code needs to be inserted into a runnable target"])
+        self.expect("expr --top-level -- struct Struct { int i; };", error=True,
+                    substrs=["Top-level code needs to be inserted into a runnable target"])

@@ -37,7 +37,9 @@ int main(int, char**)
             new std::ctype<char>(new std::ctype<char>::mask[256], true));
         assert(globalMemCounter.checkDeleteArrayCalledEq(0));
     }
-    assert(globalMemCounter.checkDeleteArrayCalledEq(1));
+    // On windows, the operator new from count_new.h can't override the default
+    // operator for calls within the libc++ DLL.
+    TEST_NOT_WIN32_DLL(assert(globalMemCounter.checkDeleteArrayCalledEq(1)));
 
   return 0;
 }

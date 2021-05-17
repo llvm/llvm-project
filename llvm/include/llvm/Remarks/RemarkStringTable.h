@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_REMARKS_REMARK_STRING_TABLE_H
-#define LLVM_REMARKS_REMARK_STRING_TABLE_H
+#ifndef LLVM_REMARKS_REMARKSTRINGTABLE_H
+#define LLVM_REMARKS_REMARKSTRINGTABLE_H
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Allocator.h"
@@ -71,4 +71,4 @@ struct StringTable {
 } // end namespace remarks
 } // end namespace llvm
 
-#endif /* LLVM_REMARKS_REMARK_STRING_TABLE_H */
+#endif // LLVM_REMARKS_REMARKSTRINGTABLE_H

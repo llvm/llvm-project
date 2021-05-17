@@ -16,6 +16,9 @@
 ; CHECK-NEXT:   MustWriteAccess :=	[Reduction Type: +] [Scalar: 0]
 ; CHECK-NEXT:       [val, ptr] -> { Stmt_for_body[i0] -> MemRef_A[9 + ptr] };
 ;
+; IR:      entry:
+; IR-NEXT:   %ptr1 = ptrtoint i64* %ptr to i32
+;
 ; IR:      polly.stmt.for.body:
 ; IR-NEXT:   %p_tmp1 = inttoptr i64 %14 to i64*
 ; IR-NEXT:   %p_add.ptr2 = getelementptr inbounds i64, i64* %p_tmp1, i64 1
@@ -31,9 +34,8 @@
 ;
 ; IR:      polly.loop_preheader:
 ; IR-NEXT:   %14 = add i64 %val, 1
-; IR-NEXT:   %15 = ptrtoint i64* %ptr to i32
-; IR-NEXT:   %16 = add i32 %15, 9
-; IR-NEXT:   %scevgep = getelementptr i64, i64* %A, i32 %16
+; IR-NEXT:   %15 = add i32 %ptr1, 9
+; IR-NEXT:   %scevgep = getelementptr i64, i64* %A, i32 %15
 ; IR-NEXT:   br label %polly.loop_header
 
 ;

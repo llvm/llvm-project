@@ -664,10 +664,11 @@ public:
     auto *BFI = (PSI && PSI->hasProfileSummary()) ?
                 &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI() :
                 nullptr;
+    auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
 
     // Process each loop nest in the function.
     return eliminateLoadsAcrossLoops(
-        F, LI, DT, BFI, PSI, /*SE*/ nullptr, /*AC*/ nullptr,
+        F, LI, DT, BFI, PSI, SE, /*AC*/ nullptr,
         [&LAA](Loop &L) -> const LoopAccessInfo & { return LAA.getInfo(&L); });
   }
 

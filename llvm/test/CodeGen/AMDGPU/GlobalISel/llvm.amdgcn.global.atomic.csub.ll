@@ -23,7 +23,7 @@ define i32 @global_atomic_csub_offset(i32 addrspace(1)* %ptr, i32 %data) {
 ; GCN-NEXT:    s_mov_b32 s5, 0
 ; GCN-NEXT:    v_mov_b32_e32 v3, s4
 ; GCN-NEXT:    v_mov_b32_e32 v4, s5
-; GCN-NEXT:    v_add_co_u32_e64 v0, vcc_lo, v0, v3
+; GCN-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v3
 ; GCN-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v4, vcc_lo
 ; GCN-NEXT:    global_atomic_csub v0, v[0:1], v2, off glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -54,7 +54,7 @@ define void @global_atomic_csub_offset_nortn(i32 addrspace(1)* %ptr, i32 %data) 
 ; GCN-NEXT:    s_mov_b32 s5, 0
 ; GCN-NEXT:    v_mov_b32_e32 v3, s4
 ; GCN-NEXT:    v_mov_b32_e32 v4, s5
-; GCN-NEXT:    v_add_co_u32_e64 v0, vcc_lo, v0, v3
+; GCN-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v3
 ; GCN-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v4, vcc_lo
 ; GCN-NEXT:    global_atomic_csub v0, v[0:1], v2, off glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)

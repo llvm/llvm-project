@@ -7,9 +7,6 @@
 # Check the handling of multiple different CIEs. To have CIEs that
 # appear to be different, use a dwarf2 version of the file along with
 # a dwarf 4 version. The CIE header version (and layout) will be different.
-# FIXME: this test also checks that we didn't reuse the first CIE when it
-# appears again. This is a behavior we inherited from dsymutil-classic
-# but this should be fixed (see comment in patchFrameInfoForObject())
 ---
 triple:          'i386-apple-darwin'
 objects:
@@ -39,11 +36,6 @@ objects:
 # CHECK-NEXT: Version:{{.*}}4
 # CHECK-NOT: FDE
 # CHECK:  FDE cie=[[CIEDW4]] pc=00003000...00003
-# CHECK-NOT: FDE
-# CHECK: [[CIEDW2:[0-9a-f]*]] {{[0-9a-f]*}} ffffffff CIE
-# CHECK-NEXT: Format: DWARF32
-# CHECK-NEXT: Version:{{.*}}1
-# CHECK-NOT: FDE
-# CHECK:  FDE cie=[[CIEDW2]] pc=00004000...00004
+# CHECK:  FDE cie=00000000 pc=00004000...00004
 # CHECK-NOT: FDE
 # CHECK: .eh_frame contents:

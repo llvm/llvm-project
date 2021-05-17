@@ -14,21 +14,26 @@
 
 #include <iterator>
 #include <list>
-#include "nasty_containers.h"
 
 #include "test_macros.h"
+#include "nasty_containers.h"
+#include "test_constexpr_container.h"
 
 template <class C>
-void
+TEST_CONSTEXPR_CXX20 bool
 test(C c)
 {
     std::front_insert_iterator<C> i(c);
+    return true;
 }
 
 int main(int, char**)
 {
     test(std::list<int>());
     test(nasty_list<int>());
-
-  return 0;
+#if TEST_STD_VER >= 20
+    test(ConstexprFixedCapacityDeque<int, 10>());
+    static_assert(test(ConstexprFixedCapacityDeque<int, 10>()));
+#endif
+    return 0;
 }

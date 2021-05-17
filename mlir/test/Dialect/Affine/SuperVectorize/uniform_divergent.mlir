@@ -42,7 +42,7 @@ func @multi_use_uniform_arg(%in : memref<512xf32>, %uniform : f32) {
 // CHECK-LABEL: @uniform_load
 func @uniform_load(%A : memref<?x?xf32>, %C : memref<?x?xf32>) {
   %c0 = constant 0 : index
-  %N = dim %A, %c0 : memref<?x?xf32>
+  %N = memref.dim %A, %c0 : memref<?x?xf32>
   affine.for %i = 0 to %N {
     %uniform_ld = affine.load %A[%i, %i] : memref<?x?xf32>
     affine.for %j = 0 to %N {

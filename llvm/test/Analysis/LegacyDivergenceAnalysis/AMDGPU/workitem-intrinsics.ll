@@ -1,4 +1,4 @@
-; RUN: opt  -mtriple amdgcn-unknown-amdhsa -amdgpu-use-legacy-divergence-analysis -analyze -divergence %s | FileCheck %s
+; RUN: opt  -mtriple amdgcn-unknown-amdhsa -amdgpu-use-legacy-divergence-analysis -enable-new-pm=0 -analyze -divergence %s | FileCheck %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare i32 @llvm.amdgcn.workitem.id.y() #0

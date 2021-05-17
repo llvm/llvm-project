@@ -80,6 +80,28 @@ target_link_libraries(
   "-Wl,-z,defs"
   )
 
+if (LLVM_BINARY_DIR)
+  # for in-tree build using LLVM_ENABLE_RUNTIMES
+  set(AMDGPU_ARCH_TOOL "${LLVM_BINARY_DIR}/bin/amdgpu-arch")
+elseif (OPENMP_LLVM_TOOLS_DIR)
+  set(AMDGPU_ARCH_TOOL "${OPENMP_LLVM_TOOLS_DIR}/amdgpu-arch")
+else()
+  set(AMDGPU_ARCH_TOOL "amdgpu-arch")
+endif()
+
+# in case of amdgcn, skip running tests if amdgpu-arch was not built or fails
+if (NOT EXISTS "${AMDGPU_ARCH_TOOL}")
+  libomptarget_say("Not generating amdgcn test targets as amdgpu-arch is not found")
+  return()
+endif()
+
+execute_process(COMMAND "${AMDGPU_ARCH_TOOL}" RESULT_VARIABLE amdgpu_arch_result
+  OUTPUT_VARIABLE amdgpu_arch_output)
+if (${amdgpu_arch_result})
+  libomptarget_say("Not generating amdgcn test targets as amdgpu-arch exited with ${amdgpu_arch_result}")
+  return()
+endif()
+
 # Report to the parent scope that we are building a plugin for amdgpu
 set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} amdgcn-amd-amdhsa" PARENT_SCOPE)
 

@@ -17,6 +17,8 @@
 
 #include <string>
 
+#include "test_macros.h"
+
 template <class _CharT>
 struct trait // copied from <__string>
 {
@@ -57,12 +59,18 @@ void test() {
     typedef std::basic_string<CharT, trait<CharT> > str_t;
     std::hash<str_t>
         h; // expected-error-re 4 {{{{call to implicitly-deleted default constructor of 'std::hash<str_t>'|implicit instantiation of undefined template}} {{.+}}}}}}
+#if TEST_STD_VER > 17 && defined(__cpp_char8_t)
+    // expected-error-re@-2 {{{{call to implicitly-deleted default constructor of 'std::hash<str_t>'|implicit instantiation of undefined template}} {{.+}}}}}}
+#endif
     (void)h;
 }
 
 int main(int, char**) {
     test<char>();
     test<wchar_t>();
+#if TEST_STD_VER > 17 && defined(__cpp_char8_t)
+    test<char8_t>();
+#endif
     test<char16_t>();
     test<char32_t>();
 

@@ -93,7 +93,7 @@ public:
     return x - start_;
   }
   A OffsetMember(std::size_t n) const {
-    CHECK(n < size_);
+    CHECK(n <= size_);
     return start_ + n;
   }
 

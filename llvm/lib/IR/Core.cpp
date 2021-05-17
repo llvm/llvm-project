@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c/Core.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -165,6 +164,18 @@ uint64_t LLVMGetEnumAttributeValue(LLVMAttributeRef A) {
   return Attr.getValueAsInt();
 }
 
+LLVMAttributeRef LLVMCreateTypeAttribute(LLVMContextRef C, unsigned KindID,
+                                         LLVMTypeRef type_ref) {
+  auto &Ctx = *unwrap(C);
+  auto AttrKind = (Attribute::AttrKind)KindID;
+  return wrap(Attribute::get(Ctx, AttrKind, unwrap(type_ref)));
+}
+
+LLVMTypeRef LLVMGetTypeAttributeValue(LLVMAttributeRef A) {
+  auto Attr = unwrap(A);
+  return wrap(Attr.getValueAsType());
+}
+
 LLVMAttributeRef LLVMCreateStringAttribute(LLVMContextRef C,
                                            const char *K, unsigned KLength,
                                            const char *V, unsigned VLength) {
@@ -193,6 +204,10 @@ LLVMBool LLVMIsEnumAttribute(LLVMAttributeRef A) {
 
 LLVMBool LLVMIsStringAttribute(LLVMAttributeRef A) {
   return unwrap(A).isStringAttribute();
+}
+
+LLVMBool LLVMIsTypeAttribute(LLVMAttributeRef A) {
+  return unwrap(A).isTypeAttribute();
 }
 
 char *LLVMGetDiagInfoDescription(LLVMDiagnosticInfoRef DI) {
@@ -397,7 +412,7 @@ void LLVMDumpModule(LLVMModuleRef M) {
 LLVMBool LLVMPrintModuleToFile(LLVMModuleRef M, const char *Filename,
                                char **ErrorMessage) {
   std::error_code EC;
-  raw_fd_ostream dest(Filename, EC, sys::fs::OF_Text);
+  raw_fd_ostream dest(Filename, EC, sys::fs::OF_TextWithCRLF);
   if (EC) {
     *ErrorMessage = strdup(EC.message().c_str());
     return true;
@@ -445,11 +460,11 @@ const char *LLVMGetModuleInlineAsm(LLVMModuleRef M, size_t *Len) {
   return Str.c_str();
 }
 
-LLVMValueRef LLVMGetInlineAsm(LLVMTypeRef Ty,
-                              char *AsmString, size_t AsmStringSize,
-                              char *Constraints, size_t ConstraintsSize,
-                              LLVMBool HasSideEffects, LLVMBool IsAlignStack,
-                              LLVMInlineAsmDialect Dialect) {
+LLVMValueRef LLVMGetInlineAsm(LLVMTypeRef Ty, char *AsmString,
+                              size_t AsmStringSize, char *Constraints,
+                              size_t ConstraintsSize, LLVMBool HasSideEffects,
+                              LLVMBool IsAlignStack,
+                              LLVMInlineAsmDialect Dialect, LLVMBool CanThrow) {
   InlineAsm::AsmDialect AD;
   switch (Dialect) {
   case LLVMInlineAsmDialectATT:
@@ -462,9 +477,8 @@ LLVMValueRef LLVMGetInlineAsm(LLVMTypeRef Ty,
   return wrap(InlineAsm::get(unwrap<FunctionType>(Ty),
                              StringRef(AsmString, AsmStringSize),
                              StringRef(Constraints, ConstraintsSize),
-                             HasSideEffects, IsAlignStack, AD));
+                             HasSideEffects, IsAlignStack, AD, CanThrow));
 }
-
 
 /*--.. Operations on module contexts ......................................--*/
 LLVMContextRef LLVMGetModuleContext(LLVMModuleRef M) {
@@ -680,9 +694,8 @@ unsigned LLVMCountParamTypes(LLVMTypeRef FunctionTy) {
 
 void LLVMGetParamTypes(LLVMTypeRef FunctionTy, LLVMTypeRef *Dest) {
   FunctionType *Ty = unwrap<FunctionType>(FunctionTy);
-  for (FunctionType::param_iterator I = Ty->param_begin(),
-                                    E = Ty->param_end(); I != E; ++I)
-    *Dest++ = wrap(*I);
+  for (Type *T : Ty->params())
+    *Dest++ = wrap(T);
 }
 
 /*--.. Operations on struct types ..........................................--*/
@@ -724,9 +737,8 @@ unsigned LLVMCountStructElementTypes(LLVMTypeRef StructTy) {
 
 void LLVMGetStructElementTypes(LLVMTypeRef StructTy, LLVMTypeRef *Dest) {
   StructType *Ty = unwrap<StructType>(StructTy);
-  for (StructType::element_iterator I = Ty->element_begin(),
-                                    E = Ty->element_end(); I != E; ++I)
-    *Dest++ = wrap(*I);
+  for (Type *T : Ty->elements())
+    *Dest++ = wrap(T);
 }
 
 LLVMTypeRef LLVMStructGetTypeAtIndex(LLVMTypeRef StructTy, unsigned i) {
@@ -2043,9 +2055,14 @@ unsigned LLVMGetAlignment(LLVMValueRef V) {
     return LI->getAlignment();
   if (StoreInst *SI = dyn_cast<StoreInst>(P))
     return SI->getAlignment();
+  if (AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(P))
+    return RMWI->getAlign().value();
+  if (AtomicCmpXchgInst *CXI = dyn_cast<AtomicCmpXchgInst>(P))
+    return CXI->getAlign().value();
 
   llvm_unreachable(
-      "only GlobalObject, AllocaInst, LoadInst and StoreInst have alignment");
+      "only GlobalValue, AllocaInst, LoadInst, StoreInst, AtomicRMWInst, "
+      "and AtomicCmpXchgInst have alignment");
 }
 
 void LLVMSetAlignment(LLVMValueRef V, unsigned Bytes) {
@@ -2058,9 +2075,14 @@ void LLVMSetAlignment(LLVMValueRef V, unsigned Bytes) {
     LI->setAlignment(Align(Bytes));
   else if (StoreInst *SI = dyn_cast<StoreInst>(P))
     SI->setAlignment(Align(Bytes));
+  else if (AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(P))
+    RMWI->setAlignment(Align(Bytes));
+  else if (AtomicCmpXchgInst *CXI = dyn_cast<AtomicCmpXchgInst>(P))
+    CXI->setAlignment(Align(Bytes));
   else
     llvm_unreachable(
-        "only GlobalValue, AllocaInst, LoadInst and StoreInst have alignment");
+        "only GlobalValue, AllocaInst, LoadInst, StoreInst, AtomicRMWInst, and "
+        "and AtomicCmpXchgInst have alignment");
 }
 
 LLVMValueMetadataEntry *LLVMGlobalCopyAllMetadata(LLVMValueRef Value,
@@ -2486,9 +2508,8 @@ unsigned LLVMCountParams(LLVMValueRef FnRef) {
 
 void LLVMGetParams(LLVMValueRef FnRef, LLVMValueRef *ParamRefs) {
   Function *Fn = unwrap<Function>(FnRef);
-  for (Function::arg_iterator I = Fn->arg_begin(),
-                              E = Fn->arg_end(); I != E; I++)
-    *ParamRefs++ = wrap(&*I);
+  for (Argument &A : Fn->args())
+    *ParamRefs++ = wrap(&A);
 }
 
 LLVMValueRef LLVMGetParam(LLVMValueRef FnRef, unsigned index) {
@@ -3274,9 +3295,8 @@ unsigned LLVMGetNumHandlers(LLVMValueRef CatchSwitch) {
 
 void LLVMGetHandlers(LLVMValueRef CatchSwitch, LLVMBasicBlockRef *Handlers) {
   CatchSwitchInst *CSI = unwrap<CatchSwitchInst>(CatchSwitch);
-  for (CatchSwitchInst::handler_iterator I = CSI->handler_begin(),
-                                         E = CSI->handler_end(); I != E; ++I)
-    *Handlers++ = wrap(*I);
+  for (const BasicBlock *H : CSI->handlers())
+    *Handlers++ = wrap(H);
 }
 
 LLVMValueRef LLVMGetParentCatchSwitch(LLVMValueRef CatchPad) {
@@ -3968,9 +3988,10 @@ LLVMValueRef LLVMBuildAtomicRMW(LLVMBuilderRef B,LLVMAtomicRMWBinOp op,
                                LLVMAtomicOrdering ordering,
                                LLVMBool singleThread) {
   AtomicRMWInst::BinOp intop = mapFromLLVMRMWBinOp(op);
-  return wrap(unwrap(B)->CreateAtomicRMW(intop, unwrap(PTR), unwrap(Val),
-    mapFromLLVMOrdering(ordering), singleThread ? SyncScope::SingleThread
-                                                : SyncScope::System));
+  return wrap(unwrap(B)->CreateAtomicRMW(
+      intop, unwrap(PTR), unwrap(Val), MaybeAlign(),
+      mapFromLLVMOrdering(ordering),
+      singleThread ? SyncScope::SingleThread : SyncScope::System));
 }
 
 LLVMValueRef LLVMBuildAtomicCmpXchg(LLVMBuilderRef B, LLVMValueRef Ptr,
@@ -3979,10 +4000,11 @@ LLVMValueRef LLVMBuildAtomicCmpXchg(LLVMBuilderRef B, LLVMValueRef Ptr,
                                     LLVMAtomicOrdering FailureOrdering,
                                     LLVMBool singleThread) {
 
-  return wrap(unwrap(B)->CreateAtomicCmpXchg(unwrap(Ptr), unwrap(Cmp),
-                unwrap(New), mapFromLLVMOrdering(SuccessOrdering),
-                mapFromLLVMOrdering(FailureOrdering),
-                singleThread ? SyncScope::SingleThread : SyncScope::System));
+  return wrap(unwrap(B)->CreateAtomicCmpXchg(
+      unwrap(Ptr), unwrap(Cmp), unwrap(New), MaybeAlign(),
+      mapFromLLVMOrdering(SuccessOrdering),
+      mapFromLLVMOrdering(FailureOrdering),
+      singleThread ? SyncScope::SingleThread : SyncScope::System));
 }
 
 unsigned LLVMGetNumMaskElements(LLVMValueRef SVInst) {

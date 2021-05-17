@@ -65,9 +65,7 @@ define i1 @movmskps_allof_bitcast_v2f64(<2 x double> %a0) {
 define i1 @pmovmskb_noneof_bitcast_v2i64(<2 x i64> %a0) {
 ; SSE2-LABEL: pmovmskb_noneof_bitcast_v2i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pcmpgtd %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,3,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE2-NEXT:    movmskps %xmm0, %eax
 ; SSE2-NEXT:    testl %eax, %eax
 ; SSE2-NEXT:    sete %al
@@ -97,9 +95,7 @@ define i1 @pmovmskb_noneof_bitcast_v2i64(<2 x i64> %a0) {
 define i1 @pmovmskb_allof_bitcast_v2i64(<2 x i64> %a0) {
 ; SSE2-LABEL: pmovmskb_allof_bitcast_v2i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pcmpgtd %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,3,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE2-NEXT:    movmskps %xmm0, %eax
 ; SSE2-NEXT:    cmpl $15, %eax
 ; SSE2-NEXT:    sete %al

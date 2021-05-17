@@ -64,7 +64,7 @@ LValue CGObjCRuntime::EmitValueForIvarAtOffset(CodeGen::CodeGenFunction &CGF,
       Ivar->getUsageType(ObjectPtrTy).withCVRQualifiers(CVRQualifiers);
   llvm::Type *LTy = CGF.CGM.getTypes().ConvertTypeForMem(IvarTy);
   llvm::Value *V = CGF.Builder.CreateBitCast(BaseValue, CGF.Int8PtrTy);
-  V = CGF.Builder.CreateInBoundsGEP(V, Offset, "add.ptr");
+  V = CGF.Builder.CreateInBoundsGEP(CGF.Int8Ty, V, Offset, "add.ptr");
 
   if (!Ivar->isBitField()) {
     V = CGF.Builder.CreateBitCast(V, llvm::PointerType::getUnqual(LTy));

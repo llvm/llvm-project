@@ -1,5 +1,11 @@
 ; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
 
+; The formal parameter 'b' for Function 'x' when inlined within 'a' is lost on
+; powerpc64 (and on x86_64 at at least -O2). Presumably this is a SelectionDAG
+; issue.
+; FIXME: arm64 is an alias for aarch64 on macs, apparently?
+; XFAIL: powerpc64, aarch64, arm64
+
 ; Build from the following source with clang -O2.
 
 ; The important details are that 'x's abstract definition is first built during
@@ -78,6 +84,7 @@
 ; fastisel succeeds).
 ; CHECK:     DW_TAG_formal_parameter
 ; CHECK-NOT: DW_TAG
+; CHECK:       DW_AT_location
 ; CHECK:       DW_AT_abstract_origin {{.*}} "b"
 
 ; CHECK-NOT: {{DW_TAG|NULL}}

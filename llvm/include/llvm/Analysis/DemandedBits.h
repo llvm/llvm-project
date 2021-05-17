@@ -18,8 +18,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ANALYSIS_DEMANDED_BITS_H
-#define LLVM_ANALYSIS_DEMANDED_BITS_H
+#ifndef LLVM_ANALYSIS_DEMANDEDBITS_H
+#define LLVM_ANALYSIS_DEMANDEDBITS_H
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
@@ -146,4 +146,4 @@ FunctionPass *createDemandedBitsWrapperPass();
 
 } // end namespace llvm
 
-#endif // LLVM_ANALYSIS_DEMANDED_BITS_H
+#endif // LLVM_ANALYSIS_DEMANDEDBITS_H

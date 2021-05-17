@@ -1195,6 +1195,21 @@ class XX2_RD6_DCMX7_RS6<bits<6> opcode, bits<4> xo1, bits<3> xo2,
   let Inst{31}    = XT{5};
 }
 
+class XForm_XD6_RA5_RB5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
+                        string asmstr, InstrItinClass itin, list<dag> pattern>
+  : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<11> D_RA_XD;
+  bits<5> RB;
+
+  let Pattern = pattern;
+
+  let Inst{6-10}  = D_RA_XD{4-0};  // D
+  let Inst{11-15} = D_RA_XD{10-6}; // RA
+  let Inst{16-20} = RB;
+  let Inst{21-30} = xo;
+  let Inst{31}    = D_RA_XD{5};    // DX
+}
+
 class XX3Form<bits<6> opcode, bits<8> xo, dag OOL, dag IOL, string asmstr, 
               InstrItinClass itin, list<dag> pattern>
   : I<opcode, OOL, IOL, asmstr, itin> {

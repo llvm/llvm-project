@@ -334,6 +334,80 @@ SDValue AVRTargetLowering::LowerShifts(SDValue Op, SelectionDAG &DAG) const {
     llvm_unreachable("Invalid shift opcode");
   }
 
+  // Optimize int8/int16 shifts.
+  if (VT.getSizeInBits() == 8) {
+    if (Op.getOpcode() == ISD::SHL && 4 <= ShiftAmount && ShiftAmount < 7) {
+      // Optimize LSL when 4 <= ShiftAmount <= 6.
+      Victim = DAG.getNode(AVRISD::SWAP, dl, VT, Victim);
+      Victim =
+          DAG.getNode(ISD::AND, dl, VT, Victim, DAG.getConstant(0xf0, dl, VT));
+      ShiftAmount -= 4;
+    } else if (Op.getOpcode() == ISD::SRL && 4 <= ShiftAmount &&
+               ShiftAmount < 7) {
+      // Optimize LSR when 4 <= ShiftAmount <= 6.
+      Victim = DAG.getNode(AVRISD::SWAP, dl, VT, Victim);
+      Victim =
+          DAG.getNode(ISD::AND, dl, VT, Victim, DAG.getConstant(0x0f, dl, VT));
+      ShiftAmount -= 4;
+    } else if (Op.getOpcode() == ISD::SHL && ShiftAmount == 7) {
+      // Optimize LSL when ShiftAmount == 7.
+      Victim = DAG.getNode(AVRISD::LSL7, dl, VT, Victim);
+      ShiftAmount = 0;
+    } else if (Op.getOpcode() == ISD::SRL && ShiftAmount == 7) {
+      // Optimize LSR when ShiftAmount == 7.
+      Victim = DAG.getNode(AVRISD::LSR7, dl, VT, Victim);
+      ShiftAmount = 0;
+    } else if (Op.getOpcode() == ISD::SRA && ShiftAmount == 7) {
+      // Optimize ASR when ShiftAmount == 7.
+      Victim = DAG.getNode(AVRISD::ASR7, dl, VT, Victim);
+      ShiftAmount = 0;
+    }
+  } else if (VT.getSizeInBits() == 16) {
+    if (4 <= ShiftAmount && ShiftAmount < 8)
+      switch (Op.getOpcode()) {
+      case ISD::SHL:
+        Victim = DAG.getNode(AVRISD::LSL4, dl, VT, Victim);
+        ShiftAmount -= 4;
+        break;
+      case ISD::SRL:
+        Victim = DAG.getNode(AVRISD::LSR4, dl, VT, Victim);
+        ShiftAmount -= 4;
+        break;
+      default:
+        break;
+      }
+    else if (8 <= ShiftAmount && ShiftAmount < 12)
+      switch (Op.getOpcode()) {
+      case ISD::SHL:
+        Victim = DAG.getNode(AVRISD::LSL8, dl, VT, Victim);
+        ShiftAmount -= 8;
+        break;
+      case ISD::SRL:
+        Victim = DAG.getNode(AVRISD::LSR8, dl, VT, Victim);
+        ShiftAmount -= 8;
+        break;
+      case ISD::SRA:
+        Victim = DAG.getNode(AVRISD::ASR8, dl, VT, Victim);
+        ShiftAmount -= 8;
+        break;
+      default:
+        break;
+      }
+    else if (12 <= ShiftAmount)
+      switch (Op.getOpcode()) {
+      case ISD::SHL:
+        Victim = DAG.getNode(AVRISD::LSL12, dl, VT, Victim);
+        ShiftAmount -= 12;
+        break;
+      case ISD::SRL:
+        Victim = DAG.getNode(AVRISD::LSR12, dl, VT, Victim);
+        ShiftAmount -= 12;
+        break;
+      default:
+        break;
+      }
+  }
+
   while (ShiftAmount--) {
     Victim = DAG.getNode(Opc8, dl, VT, Victim);
   }
@@ -435,6 +509,36 @@ static AVRCC::CondCodes intCCToAVRCC(ISD::CondCode CC) {
   case ISD::SETULT:
     return AVRCC::COND_LO;
   }
+}
+
+/// Returns appropriate CP/CPI/CPC nodes code for the given 8/16-bit operands.
+SDValue AVRTargetLowering::getAVRCmp(SDValue LHS, SDValue RHS,
+                                     SelectionDAG &DAG, SDLoc DL) const {
+  assert((LHS.getSimpleValueType() == RHS.getSimpleValueType()) &&
+         "LHS and RHS have different types");
+  assert(((LHS.getSimpleValueType() == MVT::i16) ||
+          (LHS.getSimpleValueType() == MVT::i8)) && "invalid comparison type");
+
+  SDValue Cmp;
+
+  if (LHS.getSimpleValueType() == MVT::i16 && isa<ConstantSDNode>(RHS)) {
+    // Generate a CPI/CPC pair if RHS is a 16-bit constant.
+    SDValue LHSlo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, LHS,
+                                DAG.getIntPtrConstant(0, DL));
+    SDValue LHShi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, LHS,
+                                DAG.getIntPtrConstant(1, DL));
+    SDValue RHSlo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, RHS,
+                                DAG.getIntPtrConstant(0, DL));
+    SDValue RHShi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8, RHS,
+                                DAG.getIntPtrConstant(1, DL));
+    Cmp = DAG.getNode(AVRISD::CMP, DL, MVT::Glue, LHSlo, RHSlo);
+    Cmp = DAG.getNode(AVRISD::CMPC, DL, MVT::Glue, LHShi, RHShi, Cmp);
+  } else {
+    // Generate ordinary 16-bit comparison.
+    Cmp = DAG.getNode(AVRISD::CMP, DL, MVT::Glue, LHS, RHS);
+  }
+
+  return Cmp;
 }
 
 /// Returns appropriate AVR CMP/CMPC nodes and corresponding condition code for
@@ -549,7 +653,7 @@ SDValue AVRTargetLowering::getAVRCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                                 DAG.getIntPtrConstant(1, DL));
       Cmp = DAG.getNode(AVRISD::TST, DL, MVT::Glue, Top);
     } else {
-      Cmp = DAG.getNode(AVRISD::CMP, DL, MVT::Glue, LHSlo, RHSlo);
+      Cmp = getAVRCmp(LHSlo, RHSlo, DAG, DL);
       Cmp = DAG.getNode(AVRISD::CMPC, DL, MVT::Glue, LHShi, RHShi, Cmp);
     }
   } else if (VT == MVT::i64) {
@@ -587,7 +691,7 @@ SDValue AVRTargetLowering::getAVRCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                                 DAG.getIntPtrConstant(1, DL));
       Cmp = DAG.getNode(AVRISD::TST, DL, MVT::Glue, Top);
     } else {
-      Cmp = DAG.getNode(AVRISD::CMP, DL, MVT::Glue, LHS0, RHS0);
+      Cmp = getAVRCmp(LHS0, RHS0, DAG, DL);
       Cmp = DAG.getNode(AVRISD::CMPC, DL, MVT::Glue, LHS1, RHS1, Cmp);
       Cmp = DAG.getNode(AVRISD::CMPC, DL, MVT::Glue, LHS2, RHS2, Cmp);
       Cmp = DAG.getNode(AVRISD::CMPC, DL, MVT::Glue, LHS3, RHS3, Cmp);
@@ -601,7 +705,7 @@ SDValue AVRTargetLowering::getAVRCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                             : DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i8,
                                           LHS, DAG.getIntPtrConstant(1, DL)));
     } else {
-      Cmp = DAG.getNode(AVRISD::CMP, DL, MVT::Glue, LHS, RHS);
+      Cmp = getAVRCmp(LHS, RHS, DAG, DL);
     }
   } else {
     llvm_unreachable("Invalid comparison size");
@@ -1834,7 +1938,6 @@ AVRTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       if (VT == MVT::i8)
         return std::make_pair(0U, &AVR::GPR8RegClass);
 
-      assert(VT == MVT::i16 && "inline asm constraint too large");
       return std::make_pair(0U, &AVR::DREGSRegClass);
     case 't': // Temporary register: r0.
       return std::make_pair(unsigned(AVR::R0), &AVR::GPR8RegClass);

@@ -14,22 +14,23 @@ class TestGdbRemoteHostInfo(GdbRemoteTestCaseBase):
     mydir = TestBase.compute_mydir(__file__)
 
     KNOWN_HOST_INFO_KEYS = set([
+        "addressing_bits",
         "arch",
-        "cputype",
         "cpusubtype",
+        "cputype",
+        "default_packet_timeout",
         "distribution_id",
         "endian",
         "hostname",
-        "ostype",
+        "maccatalyst_version",
         "os_build",
         "os_kernel",
         "os_version",
-        "maccatalyst_version",
+        "ostype",
         "ptrsize",
         "triple",
         "vendor",
         "watchpoint_exceptions_received",
-        "default_packet_timeout",
     ])
 
     DARWIN_REQUIRED_HOST_INFO_KEYS = set([
@@ -66,8 +67,8 @@ class TestGdbRemoteHostInfo(GdbRemoteTestCaseBase):
 
         # Validate keys are known.
         for (key, val) in list(host_info_dict.items()):
-            self.assertTrue(key in self.KNOWN_HOST_INFO_KEYS,
-                            "unknown qHostInfo key: " + key)
+            self.assertIn(key, self.KNOWN_HOST_INFO_KEYS,
+                          "unknown qHostInfo key: " + key)
             self.assertIsNotNone(val)
 
         # Return the key:val pairs.
@@ -77,7 +78,7 @@ class TestGdbRemoteHostInfo(GdbRemoteTestCaseBase):
         # Launch the debug monitor stub, attaching to the inferior.
         server = self.connect_to_debug_monitor()
         self.assertIsNotNone(server)
-        self.add_no_ack_remote_stream()
+        self.do_handshake()
 
         # Request qHostInfo and get response
         self.add_host_info_collection_packets()

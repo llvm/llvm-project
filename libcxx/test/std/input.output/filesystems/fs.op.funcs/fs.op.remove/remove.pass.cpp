@@ -60,7 +60,13 @@ TEST_CASE(test_error_reporting)
     permissions(bad_perms_dir, perms::none);
     const path testCases[] = {
         non_empty_dir,
+#ifndef TEST_WIN_NO_FILESYSTEM_PERMS_NONE
+        // Windows doesn't support setting perms::none on a directory to
+        // stop it from being accessed. And a fictional file under
+        // GetWindowsInaccessibleDir() doesn't cause fs::remove() to report
+        // errors, it just returns false cleanly.
         file_in_bad_dir,
+#endif
     };
     for (auto& p : testCases) {
         std::error_code ec;

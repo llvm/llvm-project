@@ -26,16 +26,17 @@ define <4 x i32> @test_urem_odd_25(<4 x i32> %X) nounwind {
 define <4 x i32> @test_urem_even_100(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_urem_even_100:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #34079
-; CHECK-NEXT:    movk w8, #20971, lsl #16
-; CHECK-NEXT:    dup v2.4s, w8
-; CHECK-NEXT:    umull2 v3.2d, v0.4s, v2.4s
-; CHECK-NEXT:    umull v2.2d, v0.2s, v2.2s
-; CHECK-NEXT:    uzp2 v2.4s, v2.4s, v3.4s
-; CHECK-NEXT:    movi v1.4s, #100
-; CHECK-NEXT:    ushr v2.4s, v2.4s, #5
-; CHECK-NEXT:    mls v0.4s, v2.4s, v1.4s
-; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    mov w8, #23593
+; CHECK-NEXT:    movk w8, #49807, lsl #16
+; CHECK-NEXT:    dup v1.4s, w8
+; CHECK-NEXT:    mov w9, #23592
+; CHECK-NEXT:    mul v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    movk w9, #655, lsl #16
+; CHECK-NEXT:    shl v1.4s, v0.4s, #30
+; CHECK-NEXT:    ushr v0.4s, v0.4s, #2
+; CHECK-NEXT:    dup v2.4s, w9
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    cmhs v0.4s, v2.4s, v0.4s
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -74,19 +75,11 @@ define <4 x i32> @test_urem_even_neg100(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI3_0]
 ; CHECK-NEXT:    adrp x8, .LCPI3_1
 ; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI3_1]
-; CHECK-NEXT:    adrp x8, .LCPI3_2
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI3_2]
-; CHECK-NEXT:    neg v1.4s, v1.4s
-; CHECK-NEXT:    adrp x8, .LCPI3_3
-; CHECK-NEXT:    ushl v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    umull2 v4.2d, v1.4s, v2.4s
-; CHECK-NEXT:    umull v1.2d, v1.2s, v2.2s
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI3_3]
-; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v4.4s
-; CHECK-NEXT:    neg v3.4s, v3.4s
-; CHECK-NEXT:    ushl v1.4s, v1.4s, v3.4s
-; CHECK-NEXT:    mls v0.4s, v1.4s, v2.4s
-; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    mul v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    shl v1.4s, v0.4s, #30
+; CHECK-NEXT:    ushr v0.4s, v0.4s, #2
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    cmhs v0.4s, v2.4s, v0.4s
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret

@@ -3,6 +3,8 @@
 declare void @alterRefCount()
 declare void @use(i8*)
 
+@g0 = global i8* null, align 8
+
 ; Check that ARC optimizer doesn't reverse the order of the retain call and the
 ; release call when there are debug instructions.
 
@@ -18,6 +20,22 @@ define i32 @test(i8* %x, i8* %y, i8 %z, i32 %i) {
   call void @alterRefCount()
   tail call void @llvm.objc.release(i8* %x)
   ret i32 %i
+}
+
+; ARC optimizer shouldn't move the release call, which is a precise release call
+; past the call to @alterRefCount.
+
+; CHECK-LABEL: define void @test2(
+; CHECK: call void @alterRefCount(
+; CHECK: call void @llvm.objc.release(
+
+define void @test2() {
+  %v0 = load i8*, i8** @g0, align 8
+  %v1 = tail call i8* @llvm.objc.retain(i8* %v0)
+  tail call void @use(i8* %v0)
+  tail call void @alterRefCount()
+  tail call void @llvm.objc.release(i8* %v0)
+  ret void
 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)

@@ -29,8 +29,7 @@ define dso_local void @control_flow_with_mem_access() local_unnamed_addr nounwin
 ; CHECK-NEXT:    lui a0, %hi(s)
 ; CHECK-NEXT:    addi a0, a0, %lo(s)
 ; CHECK-NEXT:    lw a1, 164(a0)
-; CHECK-NEXT:    addi a2, zero, 1
-; CHECK-NEXT:    blt a1, a2, .LBB1_2
+; CHECK-NEXT:    blez a1, .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    addi a1, zero, 10
 ; CHECK-NEXT:    sw a1, 160(a0)

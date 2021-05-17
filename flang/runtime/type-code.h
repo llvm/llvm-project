@@ -45,7 +45,7 @@ public:
   }
   constexpr bool IsLogical() const {
     return raw_ == CFI_type_Bool ||
-        (raw_ >= CFI_type_int_fast8_t && raw_ <= CFI_type_int_fast64_t);
+        (raw_ >= CFI_type_int_least8_t && raw_ <= CFI_type_int_least64_t);
   }
   constexpr bool IsDerived() const { return raw_ == CFI_type_struct; }
   constexpr bool IsIntrinsic() const { return IsValid() && !IsDerived(); }

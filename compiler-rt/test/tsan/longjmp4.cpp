@@ -20,14 +20,14 @@ void foo(jmp_buf env) {
   x++;
 }
 
-void badguy() {
+void badguy() __attribute__((noinline)) {
   pthread_mutex_t mtx;
   pthread_mutex_init(&mtx, 0);
   pthread_mutex_lock(&mtx);
   pthread_mutex_destroy(&mtx);
 }
 
-void mymain() {
+void mymain() __attribute__((noinline)) {
   jmp_buf env;
   if (setjmp(env) == 42) {
     badguy();

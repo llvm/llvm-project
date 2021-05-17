@@ -10,4 +10,7 @@ PointerAlignment: Left
 # Disable formatting options which may break tests.
 SortIncludes: false
 ReflowComments: false
+
+# libc++ has some long names so we need more than the 80 column limit imposed by LLVM style, for sensible formatting
+ColumnLimit: 120
 ---

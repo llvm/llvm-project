@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18 -Mstandard
+! RUN: %S/test_errors.sh %s %t %flang_fc1 -pedantic
 
   write(*, '(B0)')
   write(*, '(B3)')

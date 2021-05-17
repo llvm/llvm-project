@@ -278,13 +278,6 @@ public:
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;
 
-  unsigned
-  getInlineAsmMemConstraint(StringRef ConstraintCode) const override {
-    if (ConstraintCode == "o")
-      return InlineAsm::Constraint_o;
-    return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
-  }
-
   // Intrinsics
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG) const;
@@ -318,8 +311,9 @@ public:
                           bool *Fast) const override;
 
   bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AddrSpace,
-      unsigned Alignment, MachineMemOperand::Flags Flags, bool *Fast)
-      const override;
+                                      Align Alignment,
+                                      MachineMemOperand::Flags Flags,
+                                      bool *Fast) const override;
 
   /// Returns relocation base for the given PIC jumptable.
   SDValue getPICJumpTableRelocBase(SDValue Table, SelectionDAG &DAG)

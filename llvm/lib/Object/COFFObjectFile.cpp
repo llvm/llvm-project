@@ -1791,10 +1791,9 @@ Error ResourceSectionRef::load(const COFFObjectFile *O, const SectionRef &S) {
   Relocs.reserve(OrigRelocs.size());
   for (const coff_relocation &R : OrigRelocs)
     Relocs.push_back(&R);
-  std::sort(Relocs.begin(), Relocs.end(),
-            [](const coff_relocation *A, const coff_relocation *B) {
-              return A->VirtualAddress < B->VirtualAddress;
-            });
+  llvm::sort(Relocs, [](const coff_relocation *A, const coff_relocation *B) {
+    return A->VirtualAddress < B->VirtualAddress;
+  });
   return Error::success();
 }
 

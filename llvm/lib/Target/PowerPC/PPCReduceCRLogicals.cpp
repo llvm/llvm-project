@@ -206,9 +206,9 @@ static bool splitMBB(BlockSplitInfo &BSI) {
   NewMBB->splice(NewMBB->end(), ThisMBB, InsertPoint, ThisMBB->end());
   NewMBB->transferSuccessors(ThisMBB);
   if (!ProbOrigTarget.isUnknown()) {
-    auto MBBI = std::find(NewMBB->succ_begin(), NewMBB->succ_end(), OrigTarget);
+    auto MBBI = find(NewMBB->successors(), OrigTarget);
     NewMBB->setSuccProbability(MBBI, ProbOrigTarget);
-    MBBI = std::find(NewMBB->succ_begin(), NewMBB->succ_end(), OrigFallThrough);
+    MBBI = find(NewMBB->successors(), OrigFallThrough);
     NewMBB->setSuccProbability(MBBI, ProbOrigFallThrough);
   }
 

@@ -21,6 +21,7 @@ unittest("ScudoUnitTest") {
     "quarantine_test.cpp",
     "release_test.cpp",
     "report_test.cpp",
+    "scudo_unit_test.h",
     "scudo_unit_test_main.cpp",
     "secondary_test.cpp",
     "size_class_map_test.cpp",

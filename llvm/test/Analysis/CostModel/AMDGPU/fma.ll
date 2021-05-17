@@ -2,6 +2,7 @@
 ; RUN: opt -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mattr=-half-rate-64-ops < %s | FileCheck -check-prefixes=SLOWF64,SLOWF32,SLOWF16,ALL %s
 ; RUN: opt -cost-model -cost-kind=code-size -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900 -mattr=+half-rate-64-ops < %s | FileCheck -check-prefixes=ALL,SIZEALL,SIZEF16 %s
 ; RUN: opt -cost-model -cost-kind=code-size -analyze -mtriple=amdgcn-unknown-amdhsa -mattr=-half-rate-64-ops < %s | FileCheck -check-prefixes=ALL,SIZEALL,SIZENOF16 %s
+; RUN: opt -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx90a -mattr=+half-rate-64-ops < %s | FileCheck -check-prefixes=GFX90A-FASTF64,FASTF16,PACKEDF32,ALL %s
 
 ; ALL-LABEL: 'fma_f32'
 ; SLOWF32: estimated cost of 4 for {{.*}} call float @llvm.fma.f32
@@ -16,7 +17,7 @@ define amdgpu_kernel void @fma_f32(float addrspace(1)* %out, float addrspace(1)*
 
 ; ALL-LABEL: 'fma_v2f32'
 ; SLOWF32: estimated cost of 8 for {{.*}} call <2 x float> @llvm.fma.v2f32
-; FASTF32: estimated cost of 4 for {{.*}} call <2 x float> @llvm.fma.v2f32
+; PACKEDF32: estimated cost of 2 for {{.*}} call <2 x float> @llvm.fma.v2f32
 ; SIZEALL: estimated cost of 4 for {{.*}} call <2 x float> @llvm.fma.v2f32
 define amdgpu_kernel void @fma_v2f32(<2 x float> addrspace(1)* %out, <2 x float> addrspace(1)* %vaddr) #0 {
   %vec = load <2 x float>, <2 x float> addrspace(1)* %vaddr
@@ -27,7 +28,7 @@ define amdgpu_kernel void @fma_v2f32(<2 x float> addrspace(1)* %out, <2 x float>
 
 ; ALL-LABEL: 'fma_v3f32'
 ; SLOWF32: estimated cost of 12 for {{.*}} call <3 x float> @llvm.fma.v3f32
-; FASTF32: estimated cost of 6 for {{.*}} call <3 x float> @llvm.fma.v3f32
+; PACKEDF32: estimated cost of 4 for {{.*}} call <3 x float> @llvm.fma.v3f32
 ; SIZEALL: estimated cost of 6 for {{.*}} call <3 x float> @llvm.fma.v3f32
 define amdgpu_kernel void @fma_v3f32(<3 x float> addrspace(1)* %out, <3 x float> addrspace(1)* %vaddr) #0 {
   %vec = load <3 x float>, <3 x float> addrspace(1)* %vaddr
@@ -38,7 +39,7 @@ define amdgpu_kernel void @fma_v3f32(<3 x float> addrspace(1)* %out, <3 x float>
 
 ; ALL-LABEL: 'fma_v5f32'
 ; SLOWF32: estimated cost of 20 for {{.*}} call <5 x float> @llvm.fma.v5f32
-; FASTF32: estimated cost of 10 for {{.*}} call <5 x float> @llvm.fma.v5f32
+; PACKEDF32: estimated cost of 6 for {{.*}} call <5 x float> @llvm.fma.v5f32
 ; SIZEALL: estimated cost of 10 for {{.*}} call <5 x float> @llvm.fma.v5f32
 define amdgpu_kernel void @fma_v5f32(<5 x float> addrspace(1)* %out, <5 x float> addrspace(1)* %vaddr) #0 {
   %vec = load <5 x float>, <5 x float> addrspace(1)* %vaddr
@@ -49,6 +50,7 @@ define amdgpu_kernel void @fma_v5f32(<5 x float> addrspace(1)* %out, <5 x float>
 
 ; ALL-LABEL: 'fma_f64'
 ; SLOWF64: estimated cost of 4 for {{.*}} call double @llvm.fma.f64
+; GFX90A-FASTF64: estimated cost of 1 for {{.*}} call double @llvm.fma.f64
 ; FASTF64: estimated cost of 2 for {{.*}} call double @llvm.fma.f64
 ; SIZEALL: estimated cost of 2 for {{.*}} call double @llvm.fma.f64
 define amdgpu_kernel void @fma_f64(double addrspace(1)* %out, double addrspace(1)* %vaddr) #0 {
@@ -60,6 +62,7 @@ define amdgpu_kernel void @fma_f64(double addrspace(1)* %out, double addrspace(1
 
 ; ALL-LABEL: 'fma_v2f64'
 ; SLOWF64: estimated cost of 8 for {{.*}} call <2 x double> @llvm.fma.v2f64
+; GFX90A-FASTF64: estimated cost of 2 for {{.*}} call <2 x double> @llvm.fma.v2f64
 ; FASTF64: estimated cost of 4 for {{.*}} call <2 x double> @llvm.fma.v2f64
 ; SIZEALL: estimated cost of 4 for {{.*}} call <2 x double> @llvm.fma.v2f64
 define amdgpu_kernel void @fma_v2f64(<2 x double> addrspace(1)* %out, <2 x double> addrspace(1)* %vaddr) #0 {

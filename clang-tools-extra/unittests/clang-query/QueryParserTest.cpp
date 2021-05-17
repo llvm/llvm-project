@@ -9,6 +9,7 @@
 #include "QueryParser.h"
 #include "Query.h"
 #include "QuerySession.h"
+#include "clang/Tooling/NodeIntrospection.h"
 #include "llvm/LineEditor/LineEditor.h"
 #include "gtest/gtest.h"
 
@@ -59,6 +60,8 @@ TEST_F(QueryParserTest, Quit) {
 }
 
 TEST_F(QueryParserTest, Set) {
+
+  bool HasIntrospection = tooling::NodeIntrospection::hasIntrospectionSupport();
   QueryRef Q = parse("set");
   ASSERT_TRUE(isa<InvalidQuery>(Q));
   EXPECT_EQ("expected variable name", cast<InvalidQuery>(Q)->ErrStr);
@@ -69,8 +72,13 @@ TEST_F(QueryParserTest, Set) {
 
   Q = parse("set output");
   ASSERT_TRUE(isa<InvalidQuery>(Q));
-  EXPECT_EQ("expected 'diag', 'print', 'detailed-ast' or 'dump', got ''",
-            cast<InvalidQuery>(Q)->ErrStr);
+  if (HasIntrospection)
+    EXPECT_EQ(
+        "expected 'diag', 'print', 'detailed-ast', 'srcloc' or 'dump', got ''",
+        cast<InvalidQuery>(Q)->ErrStr);
+  else
+    EXPECT_EQ("expected 'diag', 'print', 'detailed-ast' or 'dump', got ''",
+              cast<InvalidQuery>(Q)->ErrStr);
 
   Q = parse("set bind-root true foo");
   ASSERT_TRUE(isa<InvalidQuery>(Q));
@@ -78,8 +86,13 @@ TEST_F(QueryParserTest, Set) {
 
   Q = parse("set output foo");
   ASSERT_TRUE(isa<InvalidQuery>(Q));
-  EXPECT_EQ("expected 'diag', 'print', 'detailed-ast' or 'dump', got 'foo'",
-            cast<InvalidQuery>(Q)->ErrStr);
+  if (HasIntrospection)
+    EXPECT_EQ("expected 'diag', 'print', 'detailed-ast', 'srcloc' or 'dump', "
+              "got 'foo'",
+              cast<InvalidQuery>(Q)->ErrStr);
+  else
+    EXPECT_EQ("expected 'diag', 'print', 'detailed-ast' or 'dump', got 'foo'",
+              cast<InvalidQuery>(Q)->ErrStr);
 
   Q = parse("set output dump");
   ASSERT_TRUE(isa<SetExclusiveOutputQuery >(Q));
@@ -217,8 +230,10 @@ TEST_F(QueryParserTest, Complete) {
   EXPECT_EQ("output ", Comps[0].TypedText);
   EXPECT_EQ("output", Comps[0].DisplayText);
 
+  bool HasIntrospection = tooling::NodeIntrospection::hasIntrospectionSupport();
+
   Comps = QueryParser::complete("enable output ", 14, QS);
-  ASSERT_EQ(4u, Comps.size());
+  ASSERT_EQ(HasIntrospection ? 5u : 4u, Comps.size());
 
   EXPECT_EQ("diag ", Comps[0].TypedText);
   EXPECT_EQ("diag", Comps[0].DisplayText);
@@ -226,8 +241,12 @@ TEST_F(QueryParserTest, Complete) {
   EXPECT_EQ("print", Comps[1].DisplayText);
   EXPECT_EQ("detailed-ast ", Comps[2].TypedText);
   EXPECT_EQ("detailed-ast", Comps[2].DisplayText);
-  EXPECT_EQ("dump ", Comps[3].TypedText);
-  EXPECT_EQ("dump", Comps[3].DisplayText);
+  if (HasIntrospection) {
+    EXPECT_EQ("srcloc ", Comps[3].TypedText);
+    EXPECT_EQ("srcloc", Comps[3].DisplayText);
+  }
+  EXPECT_EQ("dump ", Comps[HasIntrospection ? 4 : 3].TypedText);
+  EXPECT_EQ("dump", Comps[HasIntrospection ? 4 : 3].DisplayText);
 
   Comps = QueryParser::complete("set traversal ", 14, QS);
   ASSERT_EQ(2u, Comps.size());

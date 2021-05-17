@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03
 
 // This test requires the dylib support introduced in D92769.
-// XFAIL: with_system_cxx_lib=macosx10.15
+// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.15
 
 // <filesystem>
 
@@ -58,6 +58,8 @@ TEST_CASE(create_existing_directory)
     TEST_CHECK(fs::create_directory(dir, dir2) == false);
 }
 
+// Windows doesn't have the concept of perms::none on directories.
+#ifndef TEST_WIN_NO_FILESYSTEM_PERMS_NONE
 TEST_CASE(create_directory_one_level)
 {
     scoped_test_env env;
@@ -77,6 +79,7 @@ TEST_CASE(create_directory_one_level)
     auto st = status(dir);
     TEST_CHECK(st.permissions() == perms::none);
 }
+#endif
 
 TEST_CASE(create_directory_multi_level)
 {
@@ -147,7 +150,7 @@ TEST_CASE(dest_is_symlink_to_unexisting) {
 TEST_CASE(dest_is_symlink_to_dir) {
   scoped_test_env env;
   const path dir = env.create_dir("dir");
-  const path sym = env.create_symlink(dir, "sym_name");
+  const path sym = env.create_directory_symlink(dir, "sym_name");
   const path attr_dir = env.create_dir("attr_dir");
   {
     std::error_code ec = GetTestEC();

@@ -980,9 +980,12 @@ bool Breakpoint::GetMatchingFileLine(ConstString filename,
   if (m_resolver_sp) {
     BreakpointResolverFileLine *resolverFileLine =
         dyn_cast<BreakpointResolverFileLine>(m_resolver_sp.get());
+
+    // TODO: Handle SourceLocationSpec column information
     if (resolverFileLine &&
-        resolverFileLine->m_file_spec.GetFilename() == filename &&
-        resolverFileLine->m_line_number == line_number) {
+        resolverFileLine->m_location_spec.GetFileSpec().GetFilename() ==
+            filename &&
+        resolverFileLine->m_location_spec.GetLine() == line_number) {
       return true;
     }
   }

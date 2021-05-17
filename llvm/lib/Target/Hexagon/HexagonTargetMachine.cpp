@@ -251,8 +251,7 @@ HexagonTargetMachine::getSubtargetImpl(const Function &F) const {
   // Creating a separate target feature is not strictly necessary, it only
   // exists to make "unsafe-fp-math" force creating a new subtarget.
 
-  if (FnAttrs.hasFnAttribute("unsafe-fp-math") &&
-      F.getFnAttribute("unsafe-fp-math").getValueAsString() == "true")
+  if (F.getFnAttribute("unsafe-fp-math").getValueAsBool())
     FS = FS.empty() ? "+unsafe-fp" : "+unsafe-fp," + FS;
 
   auto &I = SubtargetMap[CPU + FS];
@@ -279,8 +278,7 @@ void HexagonTargetMachine::adjustPassManager(PassManagerBuilder &PMB) {
       });
 }
 
-void HexagonTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
-                                                        bool DebugPassManager) {
+void HexagonTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, PassBuilder::OptimizationLevel Level) {
         LPM.addPass(HexagonLoopIdiomRecognitionPass());

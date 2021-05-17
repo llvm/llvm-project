@@ -1,4 +1,4 @@
 OBJC_SOURCES := main.m
-LD_EXTRAS = -framework Foundation
+LD_EXTRAS = -lobjc
 
 include Makefile.rules

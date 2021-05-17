@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-simplify-boolean-expr %t -- -config="{CheckOptions: [{key: "readability-simplify-boolean-expr.ChainedConditionalAssignment", value: 1}]}" --
+// RUN: %check_clang_tidy %s readability-simplify-boolean-expr %t -- -config="{CheckOptions: [{key: "readability-simplify-boolean-expr.ChainedConditionalAssignment", value: true}]}" --
 
 void chained_conditional_compound_assignment(int i) {
   bool b;

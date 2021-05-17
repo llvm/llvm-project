@@ -15,8 +15,8 @@ body:             |
     successors: %bb.1, %bb.2
 
     %1:sgpr_64 = COPY $sgpr0_sgpr1
-    %4:sgpr_128 = S_LOAD_DWORDX4_IMM %1, 36, 0, 0
-    %11:sreg_64_xexec = S_LOAD_DWORDX2_IMM %4.sub2_sub3, 0, 0, 0
+    %4:sgpr_128 = S_LOAD_DWORDX4_IMM %1, 36, 0
+    %11:sreg_64_xexec = S_LOAD_DWORDX2_IMM %4.sub2_sub3, 0, 0
     undef %15.sub0:vreg_64 = COPY %4.sub0
     %15.sub1:vreg_64 = COPY %4.sub1
     %16:vgpr_32 = COPY %1.sub0
@@ -31,6 +31,6 @@ body:             |
 
   bb.2:
 
-    GLOBAL_STORE_DWORD %15, %16, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %15, %16, 0, 0, implicit $exec
     S_ENDPGM 0
 ...

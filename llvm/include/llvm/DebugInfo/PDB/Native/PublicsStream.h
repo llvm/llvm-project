@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_PUBLICSSTREAM_H
-#define LLVM_DEBUGINFO_PDB_RAW_PUBLICSSTREAM_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_PUBLICSSTREAM_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_PUBLICSSTREAM_H
 
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"

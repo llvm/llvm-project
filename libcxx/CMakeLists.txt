@@ -10,16 +10,7 @@ endif()
 #===============================================================================
 cmake_minimum_required(VERSION 3.13.4)
 
-if(POLICY CMP0042)
-  cmake_policy(SET CMP0042 NEW) # Set MACOSX_RPATH=YES by default
-endif()
-if(POLICY CMP0022)
-  cmake_policy(SET CMP0022 NEW) # Required when interacting with LLVM and Clang
-endif()
-if(POLICY CMP0068)
-  cmake_policy(SET CMP0068 NEW)
-  set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
-endif()
+set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
 
 # Add path for custom modules
 set(CMAKE_MODULE_PATH
@@ -27,6 +18,8 @@ set(CMAKE_MODULE_PATH
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules"
   ${CMAKE_MODULE_PATH}
   )
+
+set(CMAKE_FOLDER "libc++")
 
 set(LIBCXX_SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR})
 set(LIBCXX_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
@@ -36,7 +29,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBCXX_STANDALONE_BUIL
   project(libcxx CXX C)
 
   set(PACKAGE_NAME libcxx)
-  set(PACKAGE_VERSION 12.0.0git)
+  set(PACKAGE_VERSION 13.0.0git)
   set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
   set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
 
@@ -97,7 +90,11 @@ option(LIBCXX_ENABLE_SHARED "Build libc++ as a shared library." ON)
 option(LIBCXX_ENABLE_STATIC "Build libc++ as a static library." ON)
 option(LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY "Build libc++experimental.a" ON)
 set(ENABLE_FILESYSTEM_DEFAULT ON)
-if (WIN32)
+if (WIN32 AND NOT MINGW)
+  # Filesystem is buildable for windows, but it requires __int128 helper
+  # functions, that currently are provided by libgcc or compiler_rt builtins.
+  # These are available in MinGW environments, but not currently in MSVC
+  # environments.
   set(ENABLE_FILESYSTEM_DEFAULT OFF)
 endif()
 option(LIBCXX_ENABLE_FILESYSTEM "Build filesystem as part of the main libc++ library"
@@ -406,28 +403,36 @@ endif ()
 # Configure System
 #===============================================================================
 
+# TODO: Projects that depend on libc++ should use LIBCXX_GENERATED_INCLUDE_DIR
+# instead of hard-coding include/c++/v1.
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
-  set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}/c++)
-  set(LIBCXX_HEADER_DIR ${LLVM_BINARY_DIR})
-  set(LIBCXX_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE}/c++)
+  set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
+  set(LIBCXX_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
+  set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LLVM_BINARY_DIR}/include/${LLVM_DEFAULT_TARGET_TRIPLE}/c++/v1")
+  set(LIBCXX_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE})
+  set(LIBCXX_INSTALL_INCLUDE_DIR "include/c++/v1")
+  set(LIBCXX_INSTALL_INCLUDE_TARGET_DIR "include/${LLVM_DEFAULT_TARGET_TRIPLE}/c++/v1")
   if(LIBCXX_LIBDIR_SUBDIR)
     string(APPEND LIBCXX_LIBRARY_DIR /${LIBCXX_LIBDIR_SUBDIR})
     string(APPEND LIBCXX_INSTALL_LIBRARY_DIR /${LIBCXX_LIBDIR_SUBDIR})
   endif()
 elseif(LLVM_LIBRARY_OUTPUT_INTDIR)
   set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
-  set(LIBCXX_HEADER_DIR  ${LLVM_BINARY_DIR})
+  set(LIBCXX_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
+  set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LIBCXX_GENERATED_INCLUDE_DIR}")
   set(LIBCXX_INSTALL_LIBRARY_DIR lib${LIBCXX_LIBDIR_SUFFIX})
+  set(LIBCXX_INSTALL_INCLUDE_DIR "include/c++/v1")
+  set(LIBCXX_INSTALL_INCLUDE_TARGET_DIR "${LIBCXX_INSTALL_INCLUDE_DIR}")
 else()
   set(LIBCXX_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXX_LIBDIR_SUFFIX})
-  set(LIBCXX_HEADER_DIR  ${CMAKE_BINARY_DIR})
+  set(LIBCXX_GENERATED_INCLUDE_DIR "${CMAKE_BINARY_DIR}/include/c++/v1")
+  set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LIBCXX_GENERATED_INCLUDE_DIR}")
   set(LIBCXX_INSTALL_LIBRARY_DIR lib${LIBCXX_LIBDIR_SUFFIX})
+  set(LIBCXX_INSTALL_INCLUDE_DIR "include/c++/v1")
+  set(LIBCXX_INSTALL_INCLUDE_TARGET_DIR "${LIBCXX_INSTALL_INCLUDE_DIR}")
 endif()
 
 file(MAKE_DIRECTORY "${LIBCXX_BINARY_INCLUDE_DIR}")
-
-set(LIBCXX_INSTALL_PREFIX "" CACHE STRING "Define libc++ destination prefix.")
-set(LIBCXX_INSTALL_HEADER_PREFIX "" CACHE STRING "Define libc++ header destination prefix.")
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBCXX_LIBRARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBCXX_LIBRARY_DIR})
@@ -575,9 +580,16 @@ endfunction()
 # Warning flags ===============================================================
 function(cxx_add_warning_flags target)
   target_compile_definitions(${target} PUBLIC -D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-  target_add_compile_flags_if_supported(${target} PRIVATE -Wall -Wextra -W -Wwrite-strings
+  if (MSVC)
+    # -W4 is the cl.exe/clang-cl equivalent of -Wall. (In cl.exe and clang-cl,
+    # -Wall is equivalent to -Weverything in GCC style compiler drivers.)
+    target_add_compile_flags_if_supported(${target} PRIVATE -W4)
+  else()
+    target_add_compile_flags_if_supported(${target} PRIVATE -Wall)
+  endif()
+  target_add_compile_flags_if_supported(${target} PRIVATE -Wextra -W -Wwrite-strings
                                                           -Wno-unused-parameter -Wno-long-long
-                                                          -Werror=return-type -Wextra-semi)
+                                                          -Werror=return-type -Wextra-semi -Wundef)
   if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     target_add_compile_flags_if_supported(${target} PRIVATE
       -Wno-user-defined-literals
@@ -732,9 +744,19 @@ endif()
 
 # Link system libraries =======================================================
 function(cxx_link_system_libraries target)
-  target_add_link_flags_if_supported(${target} PRIVATE "-nodefaultlibs")
-  target_add_compile_flags_if_supported(${target} PRIVATE "/Zl")
-  target_add_link_flags_if_supported(${target} PRIVATE "/nodefaultlib")
+
+# In order to remove just libc++ from the link step
+# we need to use -nostdlib++ whenever it is supported.
+# Unfortunately this cannot be used universally because for example g++ supports
+# only -nodefaultlibs in which case all libraries will be removed and
+# all libraries but c++ have to be added in manually.
+  if (LIBCXX_SUPPORTS_NOSTDLIBXX_FLAG)
+    target_add_link_flags_if_supported(${target} PRIVATE "-nostdlib++")
+  else()
+    target_add_link_flags_if_supported(${target} PRIVATE "-nodefaultlibs")
+    target_add_compile_flags_if_supported(${target} PRIVATE "/Zl")
+    target_add_link_flags_if_supported(${target} PRIVATE "/nodefaultlib")
+  endif()
 
   if (LIBCXX_HAS_SYSTEM_LIB)
     target_link_libraries(${target} PRIVATE System)
@@ -854,6 +876,7 @@ config_define_if(LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY _LIBCPP_HAS_THREAD_LIBRARY
 config_define_if(LIBCXX_HAS_MUSL_LIBC _LIBCPP_HAS_MUSL_LIBC)
 config_define_if(LIBCXX_NO_VCRUNTIME _LIBCPP_NO_VCRUNTIME)
 config_define_if(LIBCXX_ENABLE_PARALLEL_ALGORITHMS _LIBCPP_HAS_PARALLEL_ALGORITHMS)
+config_define_if_not(LIBCXX_ENABLE_FILESYSTEM _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
 config_define_if_not(LIBCXX_ENABLE_RANDOM_DEVICE _LIBCPP_HAS_NO_RANDOM_DEVICE)
 config_define_if_not(LIBCXX_ENABLE_LOCALIZATION _LIBCPP_HAS_NO_LOCALIZATION)
 config_define_if_not(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)

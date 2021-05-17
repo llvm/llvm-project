@@ -12,6 +12,8 @@
 #ifndef HWASAN_FLAGS_H
 #define HWASAN_FLAGS_H
 
+#include "sanitizer_common/sanitizer_internal_defs.h"
+
 namespace __hwasan {
 
 struct Flags {

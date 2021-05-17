@@ -491,6 +491,17 @@ void F() {
       Code, traverse(TK_IgnoreUnlessSpelledInSource,
                      mapAnyOf(ifStmt, forStmt).with(hasCondition(falseExpr)))));
 
+  EXPECT_TRUE(
+      matches(Code, cxxBoolLiteral(equals(true),
+                                   hasAncestor(mapAnyOf(ifStmt, forStmt)))));
+
+  EXPECT_TRUE(
+      matches(Code, cxxBoolLiteral(equals(false),
+                                   hasAncestor(mapAnyOf(ifStmt, forStmt)))));
+
+  EXPECT_TRUE(
+      notMatches(Code, floatLiteral(hasAncestor(mapAnyOf(ifStmt, forStmt)))));
+
   Code = R"cpp(
 void func(bool b) {}
 struct S {
@@ -852,6 +863,47 @@ void opFree()
                      mapAnyOf(unaryOperator, cxxOperatorCallExpr)
                          .with(hasAnyOperatorName("+", "!"),
                                forFunction(functionDecl(hasName("opFree")))))));
+
+  Code = R"cpp(
+struct ConstructorTakesInt
+{
+  ConstructorTakesInt(int i) {}
+};
+
+void callTakesInt(int i)
+{
+
+}
+
+void doCall()
+{
+  callTakesInt(42);
+}
+
+void doConstruct()
+{
+  ConstructorTakesInt cti(42);
+}
+)cpp";
+
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     invocation(forFunction(functionDecl(hasName("doCall"))),
+                                hasArgument(0, integerLiteral(equals(42))),
+                                hasAnyArgument(integerLiteral(equals(42))),
+                                forEachArgumentWithParam(
+                                    integerLiteral(equals(42)),
+                                    parmVarDecl(hasName("i")))))));
+
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(
+          TK_IgnoreUnlessSpelledInSource,
+          invocation(forFunction(functionDecl(hasName("doConstruct"))),
+                     hasArgument(0, integerLiteral(equals(42))),
+                     hasAnyArgument(integerLiteral(equals(42))),
+                     forEachArgumentWithParam(integerLiteral(equals(42)),
+                                              parmVarDecl(hasName("i")))))));
 }
 
 TEST_P(ASTMatchersTest, IsDerivedFrom) {
@@ -3611,7 +3663,7 @@ TEST_P(ASTMatchersTest, NullPointerConstant) {
                       expr(nullPointerConstant())));
   EXPECT_TRUE(matches("char *cp = (char *)0;", expr(nullPointerConstant())));
   EXPECT_TRUE(matches("int *ip = 0;", expr(nullPointerConstant())));
-  EXPECT_TRUE(matches("int i = 0;", expr(nullPointerConstant())));
+  EXPECT_FALSE(matches("int i = 0;", expr(nullPointerConstant())));
 }
 
 TEST_P(ASTMatchersTest, NullPointerConstant_GNUNull) {
@@ -4347,6 +4399,13 @@ TEST_P(ASTMatchersTest, HasDirectBase) {
   if (!GetParam().isCXX()) {
     return;
   }
+
+  DeclarationMatcher ClassHasAnyDirectBase =
+      cxxRecordDecl(hasDirectBase(cxxBaseSpecifier()));
+  EXPECT_TRUE(notMatches("class X {};", ClassHasAnyDirectBase));
+  EXPECT_TRUE(matches("class X {}; class Y : X {};", ClassHasAnyDirectBase));
+  EXPECT_TRUE(matches("class X {}; class Y : public virtual X {};",
+                      ClassHasAnyDirectBase));
 
   EXPECT_TRUE(matches(
       R"cc(

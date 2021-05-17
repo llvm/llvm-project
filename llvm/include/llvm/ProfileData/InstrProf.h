@@ -260,7 +260,8 @@ bool getValueProfDataFromInst(const Instruction &Inst,
                               InstrProfValueKind ValueKind,
                               uint32_t MaxNumValueData,
                               InstrProfValueData ValueData[],
-                              uint32_t &ActualNumValueData, uint64_t &TotalC);
+                              uint32_t &ActualNumValueData, uint64_t &TotalC,
+                              bool GetNoICPValue = false);
 
 inline StringRef getPGOFuncNameMetadataName() { return "PGOFuncName"; }
 
@@ -290,6 +291,7 @@ enum class instrprof_error {
   truncated,
   malformed,
   unknown_function,
+  invalid_prof,
   hash_mismatch,
   count_mismatch,
   counter_overflow,

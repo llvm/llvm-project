@@ -198,7 +198,8 @@ int foo(int n) {
 // CHECK:       define internal void [[HVT1:@.+]](i[[SZ]]* %{{.+}}, i[[SZ]] %{{.+}})
 
 // CHECK:       define internal{{.*}} i32 [[TASK_ENTRY1_]](i32{{.*}}, [[TASK_TY1_]]* noalias %1)
-// CHECK:       call void (i8*, ...) %
+// CHECK:       [[FN:%.+]] = bitcast void (i8*, ...)* {{%.*}} to void (i8*,
+// CHECK:       call void [[FN]](
 // CHECK:       [[SZT:%.+]] = getelementptr inbounds [2 x i64], [2 x i64]* %{{.+}}, i[[SZ]] 0, i[[SZ]] 0
 // CHECK:       [[DEVICE_CAP:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* %{{.+}}, i32 0, i32 2
 // CHECK:       [[DEV:%.+]] = load i32, i32* [[DEVICE_CAP]],
@@ -220,7 +221,8 @@ int foo(int n) {
 // CHECK:       ret i32 0
 
 // CHECK:       define internal{{.*}} i32 [[TASK_ENTRY1__]](i32{{.*}}, [[TASK_TY1__]]* noalias %1)
-// CHECK:       call void (i8*, ...) %
+// CHECK:       [[FN:%.+]] = bitcast void (i8*, ...)* {{%.*}} to void (i8*,
+// CHECK:       call void [[FN]](
 // CHECK:       [[DEVICE_CAP:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* %{{.+}}, i32 0, i32 2
 // CHECK:       [[BP0:%.+]] = load i[[SZ]]*, i[[SZ]]** %
 // CHECK:       [[BP1_I32:%.+]] = load i32, i32* @
@@ -240,7 +242,8 @@ int foo(int n) {
 // CHECK-32:    load i32, i32* [[AA_ADDR]], align
 
 // CHECK:       define internal{{.*}} i32 [[TASK_ENTRY2]](i32{{.*}}, [[TASK_TY2]]* noalias %1)
-// CHECK:       call void (i8*, ...) %
+// CHECK:       [[FN:%.+]] = bitcast void (i8*, ...)* {{%.*}} to void (i8*,
+// CHECK:       call void [[FN]](
 // CHECK:       [[BP1_I32:%.+]] = load i32, i32* %
 // CHECK-64:    [[BP1_CAST:%.+]] = bitcast i[[SZ]]* [[BP1_PTR:%.+]] to i32*
 // CHECK-64:    store i32 [[BP1_I32]], i32* [[BP1_CAST]],

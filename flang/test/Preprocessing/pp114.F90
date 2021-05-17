@@ -1,4 +1,4 @@
-! RUN: %f18 -E %s 2>&1 | FileCheck %s
+! RUN: %flang -E %s 2>&1 | FileCheck %s
 ! CHECK: res = ((666)+111)
 ! ditto, with & ! comment, leading &
       integer function IFLM(x)

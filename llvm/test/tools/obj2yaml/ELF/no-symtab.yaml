@@ -45,18 +45,14 @@ Symbols: []
 # RUN: obj2yaml %t3 | FileCheck %s --check-prefix=EMPTY
 
 # EMPTY:      Sections:
-# EMPTY-NEXT:   - Name:    .symtab
-# EMPTY-NEXT:     Type:    SHT_SYMTAB
-# EMPTY-NEXT:     Link:    .strtab
-## TODO: we shouldn't dump the default "EntSize" value.
-# EMPTY-NEXT:     EntSize: 0x18
-# EMPTY-NEXT:     Size:    0x0
-# EMPTY-NEXT:   - Name:    .dynsym
-# EMPTY-NEXT:     Type:    SHT_DYNSYM
-# EMPTY-NEXT:     Flags:   [ SHF_ALLOC ]
-## TODO: we shouldn't dump the default "EntSize" value.
-# EMPTY-NEXT:     EntSize: 0x18
-# EMPTY-NEXT:     Size:    0x0
+# EMPTY-NEXT:   - Name:  .symtab
+# EMPTY-NEXT:     Type:  SHT_SYMTAB
+# EMPTY-NEXT:     Link:  .strtab
+# EMPTY-NEXT:     Size:  0x0
+# EMPTY-NEXT:   - Name:  .dynsym
+# EMPTY-NEXT:     Type:  SHT_DYNSYM
+# EMPTY-NEXT:     Flags: [ SHF_ALLOC ]
+# EMPTY-NEXT:     Size:  0x0
 # EMPTY-NEXT: ...
 
 --- !ELF

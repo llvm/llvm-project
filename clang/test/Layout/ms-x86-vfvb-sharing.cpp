@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fno-rtti -emit-llvm-only -triple i686-pc-win32 -fms-extensions -fdump-record-layouts -fsyntax-only %s 2>&1 \
-// RUN:            | FileCheck %s
+// RUN:            | FileCheck %s --strict-whitespace
 // RUN: %clang_cc1 -fno-rtti -emit-llvm-only -triple x86_64-pc-win32 -fms-extensions -fdump-record-layouts -fsyntax-only %s 2>/dev/null \
-// RUN:            | FileCheck %s -check-prefix CHECK-X64
+// RUN:            | FileCheck %s -check-prefix CHECK-X64 --strict-whitespace
 
 extern "C" int printf(const char *fmt, ...);
 
@@ -17,10 +17,7 @@ struct A : B0, virtual B1 {
 	virtual void f() { printf("A"); }
 };
 
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct A
+// CHECK-LABEL:   0 | struct A
 // CHECK-NEXT:    0 |   (A vftable pointer)
 // CHECK-NEXT:   16 |   struct B0 (base)
 // CHECK-NEXT:   16 |     int a
@@ -30,10 +27,7 @@ struct A : B0, virtual B1 {
 // CHECK-NEXT:   64 |     int a
 // CHECK-NEXT:      | [sizeof=80, align=16
 // CHECK-NEXT:      |  nvsize=64, nvalign=16]
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64-NEXT:    0 | struct A
+// CHECK-X64-LABEL:   0 | struct A
 // CHECK-X64-NEXT:    0 |   (A vftable pointer)
 // CHECK-X64-NEXT:   16 |   struct B0 (base)
 // CHECK-X64-NEXT:   16 |     int a
@@ -50,9 +44,7 @@ struct B : B2, B0, virtual B1 {
 	virtual void f() { printf("B"); }
 };
 
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct B
+// CHECK-LABEL:   0 | struct B{{$}}
 // CHECK-NEXT:    0 |   struct B2 (primary base)
 // CHECK-NEXT:    0 |     (B2 vftable pointer)
 // CHECK-NEXT:    4 |   struct B0 (base)
@@ -63,9 +55,7 @@ struct B : B2, B0, virtual B1 {
 // CHECK-NEXT:   48 |     int a
 // CHECK-NEXT:      | [sizeof=64, align=16
 // CHECK-NEXT:      |  nvsize=48, nvalign=16]
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64-NEXT:    0 | struct B
+// CHECK-X64-LABEL:   0 | struct B{{$}}
 // CHECK-X64-NEXT:    0 |   struct B2 (primary base)
 // CHECK-X64-NEXT:    0 |     (B2 vftable pointer)
 // CHECK-X64-NEXT:    8 |   struct B0 (base)
@@ -83,9 +73,7 @@ struct C : B3, B0, virtual B1 {
 	virtual void f() { printf("C"); }
 };
 
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct C
+// CHECK-LABEL:   0 | struct C
 // CHECK-NEXT:    0 |   (C vftable pointer)
 // CHECK-NEXT:   16 |   struct B3 (base)
 // CHECK-NEXT:   16 |     (B3 vbtable pointer)
@@ -96,9 +84,7 @@ struct C : B3, B0, virtual B1 {
 // CHECK-NEXT:   48 |     int a
 // CHECK-NEXT:      | [sizeof=64, align=16
 // CHECK-NEXT:      |  nvsize=48, nvalign=16]
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64-NEXT:    0 | struct C
+// CHECK-X64-LABEL:   0 | struct C
 // CHECK-X64-NEXT:    0 |   (C vftable pointer)
 // CHECK-X64-NEXT:   16 |   struct B3 (base)
 // CHECK-X64-NEXT:   16 |     (B3 vbtable pointer)
@@ -116,9 +102,7 @@ struct D : B4, B0, virtual B1 {
 	virtual void f() { printf("D"); }
 };
 
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct D
+// CHECK-LABEL:   0 | struct D
 // CHECK-NEXT:    0 |   struct B4 (primary base)
 // CHECK-NEXT:    0 |     (B4 vftable pointer)
 // CHECK-NEXT:    4 |     (B4 vbtable pointer)
@@ -129,9 +113,7 @@ struct D : B4, B0, virtual B1 {
 // CHECK-NEXT:   32 |     int a
 // CHECK-NEXT:      | [sizeof=48, align=16
 // CHECK-NEXT:      |  nvsize=32, nvalign=16]
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64-NEXT:    0 | struct D
+// CHECK-X64-LABEL:   0 | struct D
 // CHECK-X64-NEXT:    0 |   struct B4 (primary base)
 // CHECK-X64-NEXT:    0 |     (B4 vftable pointer)
 // CHECK-X64-NEXT:    8 |     (B4 vbtable pointer)

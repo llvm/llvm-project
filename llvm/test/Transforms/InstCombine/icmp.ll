@@ -2232,9 +2232,10 @@ define i1 @or_icmp_eq_B_0_icmp_ult_A_B(i64 %a, i64 %b) {
 
 define i1 @or_icmp_eq_B_0_icmp_ult_A_B_logical(i64 %a, i64 %b) {
 ; CHECK-LABEL: @or_icmp_eq_B_0_icmp_ult_A_B_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[B:%.*]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge i64 [[TMP1]], [[A:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[B:%.*]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i1 true, i1 [[TMP2]]
+; CHECK-NEXT:    ret i1 [[TMP3]]
 ;
   %1 = icmp eq i64 %b, 0
   %2 = icmp ult i64 %a, %b
@@ -2280,9 +2281,10 @@ define i1 @or_icmp_ne_A_0_icmp_ne_B_0(i64 %a, i64 %b) {
 
 define i1 @or_icmp_ne_A_0_icmp_ne_B_0_logical(i64 %a, i64 %b) {
 ; CHECK-LABEL: @or_icmp_ne_A_0_icmp_ne_B_0_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i64 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[A:%.*]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[B:%.*]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i1 true, i1 [[TMP2]]
+; CHECK-NEXT:    ret i1 [[TMP3]]
 ;
   %1 = icmp ne i64 %a, 0
   %2 = icmp ne i64 %b, 0
@@ -3053,7 +3055,7 @@ define i1 @icmp_sle_zero_add_nsw(i32 %a) {
 
 define zeroext i1 @icmp_cmpxchg_strong(i32* %sc, i32 %old_val, i32 %new_val) {
 ; CHECK-LABEL: @icmp_cmpxchg_strong(
-; CHECK-NEXT:    [[XCHG:%.*]] = cmpxchg i32* [[SC:%.*]], i32 [[OLD_VAL:%.*]], i32 [[NEW_VAL:%.*]] seq_cst seq_cst
+; CHECK-NEXT:    [[XCHG:%.*]] = cmpxchg i32* [[SC:%.*]], i32 [[OLD_VAL:%.*]], i32 [[NEW_VAL:%.*]] seq_cst seq_cst, align 4
 ; CHECK-NEXT:    [[ICMP:%.*]] = extractvalue { i32, i1 } [[XCHG]], 1
 ; CHECK-NEXT:    ret i1 [[ICMP]]
 ;

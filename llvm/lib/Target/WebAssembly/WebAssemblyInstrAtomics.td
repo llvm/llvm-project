@@ -607,7 +607,7 @@ multiclass BinRMWPatOffsetOnly<ValueType ty, PatFrag kind, string inst> {
         Requires<[HasAddr64, HasAtomics]>;
 }
 
-multiclass BinRMWPatGlobalAddrOffOnly<ValueType ty, PatFrag kind, NI inst> {
+multiclass BinRMWPatGlobalAddrOffOnly<ValueType ty, PatFrag kind, string inst> {
   def : Pat<(ty (kind (WebAssemblywrapper tglobaladdr:$off), ty:$val)),
             (!cast<NI>(inst#_A32) 0, tglobaladdr:$off, (CONST_I32 0), ty:$val)>,
         Requires<[HasAddr32, HasAtomics, IsNotPIC]>;
@@ -685,7 +685,7 @@ class sext_bin_rmw_16_64<PatFrag kind> : sext_bin_rmw_8_64<kind>;
 // Patterns for various addressing modes for truncating-extending binary RMWs.
 multiclass BinRMWTruncExtPattern<
   PatFrag rmw_8, PatFrag rmw_16, PatFrag rmw_32, PatFrag rmw_64,
-  NI inst8_32, NI inst16_32, NI inst8_64, NI inst16_64, NI inst32_64> {
+  string inst8_32, string inst16_32, string inst8_64, string inst16_64, string inst32_64> {
   // Truncating-extending binary RMWs with no constant offset
   defm : BinRMWPatNoOffset<i32, zext_bin_rmw_8_32<rmw_8>, inst8_32>;
   defm : BinRMWPatNoOffset<i32, zext_bin_rmw_16_32<rmw_16>, inst16_32>;

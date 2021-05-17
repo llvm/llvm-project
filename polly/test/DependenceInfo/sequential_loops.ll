@@ -8,7 +8,7 @@
 ; VALUE-NEXT:      WAR dependences:
 ; VALUE-NEXT:          {  }
 ; VALUE-NEXT:      WAW dependences:
-; VALUE-NEXT:          { Stmt_S1[i0] -> Stmt_S2[i0] : 0 <= i0 <= 9; Stmt_S2[i0] -> Stmt_S3[i0] : 0 <= i0 <= 9; Stmt_S1[i0] -> Stmt_S3[i0] : 10 <= i0 <= 99 }
+; VALUE-NEXT:          { Stmt_S1[i0] -> Stmt_S3[i0] : 10 <= i0 <= 99; Stmt_S1[i0] -> Stmt_S2[i0] : 0 <= i0 <= 9; Stmt_S2[i0] -> Stmt_S3[i0] : 0 <= i0 <= 9 }
 ;
 ;VALUE_ACCESS-LABEL: Printing analysis 'Polly - Calculate dependences' for region: 'S1 => exit.3' in function 'sequential_writes':
 ;VALUE_ACCESS-NEXT:        RAW dependences:
@@ -16,7 +16,7 @@
 ;VALUE_ACCESS-NEXT:        WAR dependences:
 ;VALUE_ACCESS-NEXT:                {  }
 ;VALUE_ACCESS-NEXT:        WAW dependences:
-;VALUE_ACCESS-NEXT:                { Stmt_S1[i0] -> Stmt_S2[i0] : 0 <= i0 <= 9; [Stmt_S1[i0] -> Stmt_S1_Write0[]] -> [Stmt_S2[i0] -> Stmt_S2_Write0[]] : 0 <= i0 <= 9; Stmt_S2[i0] -> Stmt_S3[i0] : 0 <= i0 <= 9; [Stmt_S2[i0] -> Stmt_S2_Write0[]] -> [Stmt_S3[i0] -> Stmt_S3_Write0[]] : 0 <= i0 <= 9; [Stmt_S1[i0] -> Stmt_S1_Write0[]] -> [Stmt_S3[i0] -> Stmt_S3_Write0[]] : 10 <= i0 <= 99; Stmt_S1[i0] -> Stmt_S3[i0] : 10 <= i0 <= 99 }
+;VALUE_ACCESS-NEXT:                { Stmt_S1[i0] -> Stmt_S3[i0] : 10 <= i0 <= 99; Stmt_S1[i0] -> Stmt_S2[i0] : 0 <= i0 <= 9; [Stmt_S2[i0] -> Stmt_S2_Write0[]] -> [Stmt_S3[i0] -> Stmt_S3_Write0[]] : 0 <= i0 <= 9; Stmt_S2[i0] -> Stmt_S3[i0] : 0 <= i0 <= 9; [Stmt_S1[i0] -> Stmt_S1_Write0[]] -> [Stmt_S2[i0] -> Stmt_S2_Write0[]] : 0 <= i0 <= 9; [Stmt_S1[i0] -> Stmt_S1_Write0[]] -> [Stmt_S3[i0] -> Stmt_S3_Write0[]] : 10 <= i0 <= 99 }
 
 ;
 ; VALUE-LABEL: Printing analysis 'Polly - Calculate dependences' for region: 'S1 => exit.3' in function 'read_after_writes':
@@ -29,12 +29,12 @@
 ;
 ;VALUE_ACCESS-LABEL: Printing analysis 'Polly - Calculate dependences' for region: 'S1 => exit.3' in function 'read_after_writes':
 ;VALUE_ACCESS-NEXT:        RAW dependences:
-;VALUE_ACCESS-NEXT:                { [Stmt_S1[i0] -> Stmt_S1_Write0[]] -> [Stmt_S3[i0] -> Stmt_S3_Read0[]] : 10 <= i0 <= 99; [Stmt_S2[i0] -> Stmt_S2_Write0[]] -> [Stmt_S3[i0] -> Stmt_S3_Read0[]] : 0 <= i0 <= 9; Stmt_S2[i0] -> Stmt_S3[i0] : 0 <= i0 <= 9; Stmt_S1[i0] -> Stmt_S3[i0] : 10 <= i0 <= 99 }
+;VALUE_ACCESS-NEXT:                { Stmt_S1[i0] -> Stmt_S3[i0] : 10 <= i0 <= 99; Stmt_S2[i0] -> Stmt_S3[i0] : 0 <= i0 <= 9; [Stmt_S2[i0] -> Stmt_S2_Write0[]] -> [Stmt_S3[i0] -> Stmt_S3_Read0[]] : 0 <= i0 <= 9; [Stmt_S1[i0] -> Stmt_S1_Write0[]] -> [Stmt_S3[i0] -> Stmt_S3_Read0[]] : 10 <= i0 <= 99 }
 
 ;VALUE_ACCESS-NEXT:        WAR dependences:
 ;VALUE_ACCESS-NEXT:                {  }
 ;VALUE_ACCESS-NEXT:        WAW dependences:
-;VALUE_ACCESS-NEXT:                { Stmt_S1[i0] -> Stmt_S2[i0] : 0 <= i0 <= 9; [Stmt_S1[i0] -> Stmt_S1_Write0[]] -> [Stmt_S2[i0] -> Stmt_S2_Write0[]] : 0 <= i0 <= 9 }
+;VALUE_ACCESS-NEXT:                { [Stmt_S1[i0] -> Stmt_S1_Write0[]] -> [Stmt_S2[i0] -> Stmt_S2_Write0[]] : 0 <= i0 <= 9; Stmt_S1[i0] -> Stmt_S2[i0] : 0 <= i0 <= 9 }
 ;
 ; VALUE-LABEL: Printing analysis 'Polly - Calculate dependences' for region: 'S1 => exit.3' in function 'write_after_read':
 ; VALUE-NEXT:      RAW dependences:
@@ -48,7 +48,7 @@
 ;VALUE_ACCESS-NEXT:         RAW dependences:
 ;VALUE_ACCESS-NEXT:                 {  }
 ;VALUE_ACCESS-NEXT:         WAR dependences:
-;VALUE_ACCESS-NEXT:                { Stmt_S1[i0] -> Stmt_S2[i0] : 0 <= i0 <= 9; [Stmt_S1[i0] -> Stmt_S1_Read0[]] -> [Stmt_S2[i0] -> Stmt_S2_Write0[]] : 0 <= i0 <= 9; [Stmt_S1[i0] -> Stmt_S1_Read0[]] -> [Stmt_S3[i0] -> Stmt_S3_Write0[]] : 10 <= i0 <= 99; Stmt_S1[i0] -> Stmt_S3[i0] : 10 <= i0 <= 99 }
+;VALUE_ACCESS-NEXT:                { Stmt_S1[i0] -> Stmt_S2[i0] : 0 <= i0 <= 9; Stmt_S1[i0] -> Stmt_S3[i0] : 10 <= i0 <= 99; [Stmt_S1[i0] -> Stmt_S1_Read0[]] -> [Stmt_S2[i0] -> Stmt_S2_Write0[]] : 0 <= i0 <= 9; [Stmt_S1[i0] -> Stmt_S1_Read0[]] -> [Stmt_S3[i0] -> Stmt_S3_Write0[]] : 10 <= i0 <= 99 }
 ;VALUE_ACCESS-NEXT:         WAW dependences:
 ;VALUE_ACCESS-NEXT:                { Stmt_S2[i0] -> Stmt_S3[i0] : 0 <= i0 <= 9; [Stmt_S2[i0] -> Stmt_S2_Write0[]] -> [Stmt_S3[i0] -> Stmt_S3_Write0[]] : 0 <= i0 <= 9 }
 ;
@@ -62,7 +62,7 @@
 ;
 ;VALUE_ACCESS-LABEL: Printing analysis 'Polly - Calculate dependences' for region: 'S1 => exit.2' in function 'parametric_offset':
 ;VALUE_ACCESS-NEXT:        RAW dependences:
-;VALUE_ACCESS-NEXT:                [p] -> { [Stmt_S1[i0] -> Stmt_S1_Write0[]] -> [Stmt_S2[-p + i0] -> Stmt_S2_Read0[]] : i0 >= p and 0 <= i0 <= 99 and i0 <= 9 + p; Stmt_S1[i0] -> Stmt_S2[-p + i0] : i0 >= p and 0 <= i0 <= 99 and i0 <= 9 + p }
+;VALUE_ACCESS-NEXT:                [p] -> { Stmt_S1[i0] -> Stmt_S2[-p + i0] : i0 >= p and 0 <= i0 <= 99 and i0 <= 9 + p; [Stmt_S1[i0] -> Stmt_S1_Write0[]] -> [Stmt_S2[-p + i0] -> Stmt_S2_Read0[]] : i0 >= p and 0 <= i0 <= 99 and i0 <= 9 + p }
 ;VALUE_ACCESS-NEXT:        WAR dependences:
 ;VALUE_ACCESS-NEXT:                [p] -> {  }
 ;VALUE_ACCESS-NEXT:        WAW dependences:
@@ -74,7 +74,7 @@
 ; MEMORY-NEXT:      WAR dependences:
 ; MEMORY-NEXT:          {  }
 ; MEMORY-NEXT:      WAW dependences:
-; MEMORY-NEXT:          { Stmt_S1[i0] -> Stmt_S2[i0] : 0 <= i0 <= 9; Stmt_S2[i0] -> Stmt_S3[i0] : 0 <= i0 <= 9; Stmt_S1[i0] -> Stmt_S3[i0] : 0 <= i0 <= 99 }
+; MEMORY-NEXT:          { Stmt_S1[i0] -> Stmt_S3[i0] : 0 <= i0 <= 99; Stmt_S1[i0] -> Stmt_S2[i0] : 0 <= i0 <= 9; Stmt_S2[i0] -> Stmt_S3[i0] : 0 <= i0 <= 9 }
 ;
 ; MEMORY-LABEL: Printing analysis 'Polly - Calculate dependences' for region: 'S1 => exit.3' in function 'read_after_writes':
 ; MEMORY-NEXT:      RAW dependences:

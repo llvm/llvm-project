@@ -1333,9 +1333,9 @@ define void @truncstore_v8i64_v8i8(<8 x i64> %x, <8 x i8>* %p, <8 x i32> %mask) 
 ; AVX2-NEXT:    vpcmpgtq %ymm4, %ymm0, %ymm5
 ; AVX2-NEXT:    vblendvpd %ymm5, %ymm0, %ymm4, %ymm0
 ; AVX2-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX2-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm2, %ymm1
 ; AVX2-NEXT:    vmovmskps %ymm1, %eax

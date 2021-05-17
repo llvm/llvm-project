@@ -31,7 +31,7 @@ define i32 @t2(i32 %x, i32 %y) {
 ; CHECK-LABEL: 't2'
 ; CHECK-NEXT:  Classifying expressions for: @t2
 ; CHECK-NEXT:    %i0 = ashr i32 %x, 4
-; CHECK-NEXT:    --> %i0 U: full-set S: [-134217728,134217728)
+; CHECK-NEXT:    --> %i0 U: [-134217728,134217728) S: [-134217728,134217728)
 ; CHECK-NEXT:  Determining loop execution counts for: @t2
 ;
   %i0 = ashr i32 %x, 4
@@ -42,7 +42,7 @@ define i32 @t3(i32 %x, i32 %y) {
 ; CHECK-LABEL: 't3'
 ; CHECK-NEXT:  Classifying expressions for: @t3
 ; CHECK-NEXT:    %i0 = ashr exact i32 %x, 4
-; CHECK-NEXT:    --> ((((-1 * %x) smax %x) /u 16) * (1 smin (-1 smax %x)))<nsw> U: [-268435455,268435456) S: [-268435455,268435456)
+; CHECK-NEXT:    --> %i0 U: [-134217728,134217728) S: [-134217728,134217728)
 ; CHECK-NEXT:  Determining loop execution counts for: @t3
 ;
   %i0 = ashr exact i32 %x, 4
@@ -65,7 +65,7 @@ define i32 @t5(i32 %x, i32 %y) {
 ; CHECK-LABEL: 't5'
 ; CHECK-NEXT:  Classifying expressions for: @t5
 ; CHECK-NEXT:    %i0 = ashr exact i32 %x, 5
-; CHECK-NEXT:    --> ((((-1 * %x) smax %x) /u 32) * (1 smin (-1 smax %x)))<nsw> U: [-134217727,134217728) S: [-134217727,134217728)
+; CHECK-NEXT:    --> %i0 U: [-67108864,67108864) S: [-67108864,67108864)
 ; CHECK-NEXT:  Determining loop execution counts for: @t5
 ;
   %i0 = ashr exact i32 %x, 5

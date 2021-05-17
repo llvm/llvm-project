@@ -30,19 +30,19 @@ ST<int> gb;
 double gc[100];
 
 // CK1: [[SIZE00:@.+]] = {{.+}}constant [1 x i[[sz:64|32]]] [i{{64|32}} 800]
-// CK1: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 34]
+// CK1: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 2]
 
 // CK1: [[SIZE02:@.+]] = {{.+}}constant [1 x i[[sz]]] [i[[sz]] 4]
-// CK1: [[MTYPE02:@.+]] = {{.+}}constant [1 x i64] [i64 33]
+// CK1: [[MTYPE02:@.+]] = {{.+}}constant [1 x i64] [i64 1]
 
-// CK1: [[MTYPE03:@.+]] = {{.+}}constant [1 x i64] [i64 37]
+// CK1: [[MTYPE03:@.+]] = {{.+}}constant [1 x i64] [i64 5]
 
 // CK1: [[SIZE04:@.+]] = {{.+}}constant [2 x i64] [i64 sdiv exact (i64 sub (i64 ptrtoint (double** getelementptr (double*, double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1), i32 1) to i64), i64 ptrtoint (double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1) to i64)), i64 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)), i64 24]
-// CK1: [[MTYPE04:@.+]] = {{.+}}constant [2 x i64] [i64 32, i64 281474976710673]
+// CK1: [[MTYPE04:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976710673]
 
-// CK1: [[MTYPE05:@.+]] = {{.+}}constant [1 x i64] [i64 1057]
+// CK1: [[MTYPE05:@.+]] = {{.+}}constant [1 x i64] [i64 1025]
 
-// CK1: [[MTYPE06:@.+]] = {{.+}}constant [1 x i64] [i64 1061]
+// CK1: [[MTYPE06:@.+]] = {{.+}}constant [1 x i64] [i64 1029]
 
 // CK1-LABEL: _Z3fooi
 void foo(int arg) {
@@ -255,17 +255,17 @@ struct ST {
 ST<int> gb;
 double gc[100];
 
-// PRESENT=0x1000 | TARGET_PARAM=0x20 | TO=0x1 = 0x1021
-// CK1A: [[MTYPE00Begin:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x1021]]]
+// PRESENT=0x1000 | TO=0x1 = 0x1001
+// CK1A: [[MTYPE00Begin:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x1001]]]
 
-// TARGET_PARAM=0x20 | TO=0x1 = 0x21
-// CK1A: [[MTYPE00End:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x21]]]
+// TO=0x1 = 0x1
+// CK1A: [[MTYPE00End:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x1]]]
 
-// PRESENT=0x1000 | CLOSE=0x400 | TARGET_PARAM=0x20 | ALWAYS=0x4 | TO=0x1 = 0x1425
-// CK1A: [[MTYPE01Begin:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x1425]]]
+// PRESENT=0x1000 | CLOSE=0x400 | ALWAYS=0x4 | TO=0x1 = 0x1405
+// CK1A: [[MTYPE01Begin:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x1405]]]
 
-// CLOSE=0x400 | TARGET_PARAM=0x20 | ALWAYS=0x4 | TO=0x1 = 0x425
-// CK1A: [[MTYPE01End:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x425]]]
+// CLOSE=0x400 | ALWAYS=0x4 | TO=0x1 = 0x405
+// CK1A: [[MTYPE01End:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x405]]]
 
 // CK1A-LABEL: _Z3fooi
 void foo(int arg) {
@@ -357,7 +357,7 @@ struct ST {
   }
 };
 
-// CK2: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 32, i64 281474976710677]
+// CK2: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976710677]
 
 // CK2-LABEL: _Z3bari
 int bar(int arg){
@@ -475,7 +475,7 @@ struct STT {
   }
 };
 
-// CK4: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 32, i64 281474976711701]
+// CK4: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976711701]
 
 // CK4-LABEL: _Z3bari
 int bar(int arg){
@@ -561,8 +561,9 @@ struct S2 {
 
 void test_close_modifier(int arg) {
   S2 *ps;
-  // CK5: private unnamed_addr constant [5 x i64] [i64 1059, i64 32, i64 562949953421328, i64 16, i64 1043]
-  #pragma omp target data map(close,tofrom: arg, ps->ps->ps->ps->s)
+// CK5: private unnamed_addr constant [5 x i64] [i64 1027, i64 0, i64 562949953421328, i64 16, i64 1043]
+#pragma omp target data map(close, tofrom \
+                            : arg, ps->ps->ps->ps->s)
   {
     ++(arg);
   }
@@ -585,8 +586,9 @@ void test_close_modifier(int arg) {
 // SIMD-ONLY2-NOT: {{__kmpc|__tgt}}
 #ifdef CK6
 void test_close_modifier(int arg) {
-  // CK6: private unnamed_addr constant [1 x i64] [i64 1059]
-  #pragma omp target data map(close,tofrom: arg)
+// CK6: private unnamed_addr constant [1 x i64] [i64 1027]
+#pragma omp target data map(close, tofrom \
+                            : arg)
   {++arg;}
 }
 #endif
@@ -642,36 +644,39 @@ void test_present_modifier(int arg) {
 
   // CK8: private unnamed_addr constant [11 x i64]
 
-  // ps1
-  //
-  // PRESENT=0x1000 | TARGET_PARAM=0x20 = 0x1020
-  // MEMBER_OF_1=0x1000000000000 | FROM=0x2 | TO=0x1 = 0x1000000000003
-  // MEMBER_OF_1=0x1000000000000 | PRESENT=0x1000 | PTR_AND_OBJ=0x10 = 0x1000000001010
-  // PRESENT=0x1000 | PTR_AND_OBJ=0x10 = 0x1010
-  // PRESENT=0x1000 | PTR_AND_OBJ=0x10 | FROM=0x2 | TO=0x1 = 0x1013
-  //
-  // CK8-SAME: {{^}} [i64 [[#0x1020]], i64 [[#0x1000000000003]],
-  // CK8-SAME: {{^}} i64 [[#0x1000000001010]], i64 [[#0x1010]], i64 [[#0x1013]],
+// ps1
+//
+// PRESENT=0x1000 = 0x1000
+// MEMBER_OF_1=0x1000000000000 | PRESENT=0x1000 | PTR_AND_OBJ=0x10 = 0x1000000001010
+// PRESENT=0x1000 | PTR_AND_OBJ=0x10 = 0x1010
+// PRESENT=0x1000 | PTR_AND_OBJ=0x10 | FROM=0x2 | TO=0x1 = 0x1013
+// MEMBER_OF_1=0x1000000000000 | FROM=0x2 | TO=0x1 = 0x1000000000003
+//
+// CK8-SAME: {{^}} [i64 [[#0x1000]], i64 [[#0x1000000001010]],
+// CK8-SAME: {{^}} i64 [[#0x1010]], i64 [[#0x1013]], i64 [[#0x1000000000003]],
 
-  // arg
-  //
-  // PRESENT=0x1000 | TARGET_PARAM=0x20 | FROM=0x2 | TO=0x1 = 0x1023
-  //
-  // CK8-SAME: {{^}} i64 [[#0x1023]],
+// arg
+//
+// PRESENT=0x1000 | FROM=0x2 | TO=0x1 = 0x1003
+//
+// CK8-SAME: {{^}} i64 [[#0x1003]],
 
-  // ps2
-  //
-  // PRESENT=0x1000 | TARGET_PARAM=0x20 = 0x1020
-  // MEMBER_OF_7=0x7000000000000 | PRESENT=0x1000 | FROM=0x2 | TO=0x1 = 0x7000000001003
-  // MEMBER_OF_7=0x7000000000000 | PTR_AND_OBJ=0x10 = 0x7000000000010
-  // PTR_AND_OBJ=0x10 = 0x10
-  // PTR_AND_OBJ=0x10 | FROM=0x2 | TO=0x1 = 0x13
-  //
-  // CK8-SAME: {{^}} i64 [[#0x1020]], i64 [[#0x7000000001003]],
-  // CK8-SAME: {{^}} i64 [[#0x7000000000010]], i64 [[#0x10]], i64 [[#0x13]]]
-  #pragma omp target data map(tofrom: ps1->s) \
-                          map(present,tofrom: arg, ps1->ps->ps->ps->s, ps2->s) \
-                          map(tofrom: ps2->ps->ps->ps->s)
+// ps2
+//
+// PRESENT=0x1000 = 0x1000
+// MEMBER_OF_7=0x7000000000000 | PRESENT=0x1000 | FROM=0x2 | TO=0x1 = 0x7000000001003
+// MEMBER_OF_7=0x7000000000000 | PTR_AND_OBJ=0x10 = 0x7000000000010
+// PTR_AND_OBJ=0x10 = 0x10
+// PTR_AND_OBJ=0x10 | FROM=0x2 | TO=0x1 = 0x13
+//
+// CK8-SAME: {{^}} i64 [[#0x1000]], i64 [[#0x7000000001003]],
+// CK8-SAME: {{^}} i64 [[#0x7000000000010]], i64 [[#0x10]], i64 [[#0x13]]]
+#pragma omp target data map(tofrom         \
+                            : ps1->s)      \
+    map(present, tofrom                    \
+        : arg, ps1->ps->ps->ps->s, ps2->s) \
+        map(tofrom                         \
+            : ps2->ps->ps->ps->s)
   {
     ++(arg);
   }
@@ -694,9 +699,10 @@ void test_present_modifier(int arg) {
 // SIMD-ONLY2-NOT: {{__kmpc|__tgt}}
 #ifdef CK9
 void test_present_modifier(int arg) {
-  // PRESENT=0x1000 | TARGET_PARAM=0x20 | FROM=0x2 | TO=0x1 = 0x1023
-  // CK9: private unnamed_addr constant [1 x i64] [i64 [[#0x1023]]]
-  #pragma omp target data map(present,tofrom: arg)
+// PRESENT=0x1000 | FROM=0x2 | TO=0x1 = 0x1003
+// CK9: private unnamed_addr constant [1 x i64] [i64 [[#0x1003]]]
+#pragma omp target data map(present, tofrom \
+                            : arg)
   {++arg;}
 }
 #endif

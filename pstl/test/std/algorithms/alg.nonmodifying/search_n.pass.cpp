@@ -71,7 +71,7 @@ test()
             {
                 Sequence<T> in(n1, [](std::size_t) { return T(0); });
                 std::size_t i = r, isub = 0;
-                for (; i < n1 & isub < n2; ++i, ++isub)
+                for (; i < n1 && isub < n2; ++i, ++isub)
                     in[i] = value;
 
                 invoke_on_all_policies(test_one_policy(), in.begin(), in.begin() + n1, n2, value, std::equal_to<T>());

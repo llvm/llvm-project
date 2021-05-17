@@ -1,0 +1,18 @@
+; REQUIRES: shell
+
+; RUN: rm -rf %t && mkdir %t
+
+; Check that a triple prefix on the executable gets picked up as target triple.
+
+; RUN: ln -fs $(which llvm-windres) %t/aarch64-w64-mingw32-windres
+; RUN: %t/aarch64-w64-mingw32-windres -### %p/Inputs/empty.rc %t.res | FileCheck %s --check-prefix=CHECK-PREPROC
+; CHECK-PREPROC: "clang" "--driver-mode=gcc" "-target" "aarch64-w64-mingw32"
+
+; Check that the triple prefix also affects the output object file type.
+
+; RUN: %t/aarch64-w64-mingw32-windres --no-preprocess %p/Inputs/tag-stringtable-basic.rc %t.o
+; RUN: llvm-readobj --coff-resources %t.o | FileCheck %s --check-prefix=CHECK-OBJ
+
+; CHECK-OBJ: Format: COFF-ARM64
+; CHECK-OBJ: Resources [
+; CHECK-OBJ:   Total Number of Resources:

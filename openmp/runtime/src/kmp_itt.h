@@ -53,9 +53,9 @@ void __kmp_itt_reset();
 // --- Parallel region reporting ---
 __kmp_inline void
 __kmp_itt_region_forking(int gtid, int team_size,
-                         int barriers); // Master only, before forking threads.
+                         int barriers); // Primary only, before forking threads.
 __kmp_inline void
-__kmp_itt_region_joined(int gtid); // Master only, after joining threads.
+__kmp_itt_region_joined(int gtid); // Primary only, after joining threads.
 // (*) Note: A thread may execute tasks after this point, though.
 
 // --- Frame reporting ---
@@ -90,6 +90,16 @@ __kmp_inline void __kmp_itt_barrier_finished(int gtid, void *object);
 __kmp_inline void *__kmp_itt_taskwait_object(int gtid);
 __kmp_inline void __kmp_itt_taskwait_starting(int gtid, void *object);
 __kmp_inline void __kmp_itt_taskwait_finished(int gtid, void *object);
+#define KMP_ITT_TASKWAIT_STARTING(obj)                                         \
+  if (UNLIKELY(__itt_sync_create_ptr)) {                                       \
+    obj = __kmp_itt_taskwait_object(gtid);                                     \
+    if (obj != NULL) {                                                         \
+      __kmp_itt_taskwait_starting(gtid, obj);                                  \
+    }                                                                          \
+  }
+#define KMP_ITT_TASKWAIT_FINISHED(obj)                                         \
+  if (UNLIKELY(obj != NULL))                                                   \
+    __kmp_itt_taskwait_finished(gtid, obj);
 
 // --- Task reporting ---
 __kmp_inline void __kmp_itt_task_starting(void *object);
@@ -181,7 +191,7 @@ __kmp_inline void __kmp_itt_stack_callee_leave(__itt_caller);
 #define SSC_MARK_SPIN_END() INSERT_SSC_MARK(0x4377)
 
 // Markers for architecture simulation.
-// FORKING      : Before the master thread forks.
+// FORKING      : Before the primary thread forks.
 // JOINING      : At the start of the join.
 // INVOKING     : Before the threads invoke microtasks.
 // DISPATCH_INIT: At the start of dynamically scheduled loop.

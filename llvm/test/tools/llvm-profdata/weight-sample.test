@@ -48,8 +48,8 @@ RUN: not llvm-profdata merge -sample -weighted-input=3,%p/Inputs/weight-sample-b
 INVALID_WEIGHT: error: Input weight must be a positive integer.
 
 4- Bad merge: input path does not exist
-RUN: not llvm-profdata merge -sample -weighted-input=3,%p/Inputs/does-not-exist.proftext -weighted-input=2,%p/Inputs/does-not-exist-either.proftext -o %t.out 2>&1 | FileCheck %s -check-prefix=INVALID_INPUT
-INVALID_INPUT: {{.*}}: {{.*}}does-not-exist.proftext: {{[Nn]}}o such file or directory
+RUN: not llvm-profdata merge -sample -weighted-input=3,%p/Inputs/does-not-exist.proftext -weighted-input=2,%p/Inputs/does-not-exist-either.proftext -o %t.out 2>&1 | FileCheck -DMSG=%errc_ENOENT %s -check-prefix=INVALID_INPUT
+INVALID_INPUT: {{.*}}: {{.*}}does-not-exist.proftext: [[MSG]]
 
 5- No inputs
 RUN: not llvm-profdata merge -sample -o %t.out 2>&1 | FileCheck %s -check-prefix=NO_INPUT

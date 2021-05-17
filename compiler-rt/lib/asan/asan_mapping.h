@@ -72,26 +72,19 @@
 // || `[0x2000000000, 0x23ffffffff]` || LowShadow  ||
 // || `[0x0000000000, 0x1fffffffff]` || LowMem     ||
 //
+// Default Linux/RISCV64 Sv39 mapping:
+// || `[0x1555550000, 0x3fffffffff]` || HighMem    ||
+// || `[0x0fffffa000, 0x1555555fff]` || HighShadow ||
+// || `[0x0effffa000, 0x0fffff9fff]` || ShadowGap  ||
+// || `[0x0d55550000, 0x0effff9fff]` || LowShadow  ||
+// || `[0x0000000000, 0x0d5554ffff]` || LowMem     ||
+//
 // Default Linux/AArch64 (39-bit VMA) mapping:
 // || `[0x2000000000, 0x7fffffffff]` || highmem    ||
 // || `[0x1400000000, 0x1fffffffff]` || highshadow ||
 // || `[0x1200000000, 0x13ffffffff]` || shadowgap  ||
 // || `[0x1000000000, 0x11ffffffff]` || lowshadow  ||
 // || `[0x0000000000, 0x0fffffffff]` || lowmem     ||
-//
-// RISC-V has only 38 bits for task size
-// Low mem size is set with kRiscv64_ShadowOffset64 in
-// compiler-rt/lib/asan/asan_allocator.h and in
-// llvm/lib/Transforms/Instrumentation/AddressSanitizer.cpp with
-// kRiscv64_ShadowOffset64, High mem top border is set with
-// GetMaxVirtualAddress() in
-// compiler-rt/lib/sanitizer_common/sanitizer_linux.cpp
-// Default Linux/RISCV64 Sv39/Sv48 mapping:
-// || `[0x000820000000, 0x003fffffffff]` || HighMem    ||
-// || `[0x000124000000, 0x00081fffffff]` || HighShadow ||
-// || `[0x000024000000, 0x000123ffffff]` || ShadowGap  ||
-// || `[0x000020000000, 0x000023ffffff]` || LowShadow  ||
-// || `[0x000000000000, 0x00001fffffff]` || LowMem     ||
 //
 // Default Linux/AArch64 (42-bit VMA) mapping:
 // || `[0x10000000000, 0x3ffffffffff]` || highmem    ||
@@ -175,7 +168,7 @@ static const u64 kDefaultShadowOffset64 = 1ULL << 44;
 static const u64 kDefaultShort64bitShadowOffset =
     0x7FFFFFFF & (~0xFFFULL << kDefaultShadowScale);  // < 2G.
 static const u64 kAArch64_ShadowOffset64 = 1ULL << 36;
-static const u64 kRiscv64_ShadowOffset64 = 0x20000000;
+static const u64 kRiscv64_ShadowOffset64 = 0xd55550000;
 static const u64 kMIPS32_ShadowOffset32 = 0x0aaa0000;
 static const u64 kMIPS64_ShadowOffset64 = 1ULL << 37;
 static const u64 kPPC64_ShadowOffset64 = 1ULL << 44;

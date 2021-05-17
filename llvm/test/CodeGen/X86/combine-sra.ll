@@ -207,9 +207,8 @@ define <4 x i32> @combine_vec_ashr_trunc_lshr(<4 x i64> %x) {
 ;
 ; AVX2-SLOW-LABEL: combine_vec_ashr_trunc_lshr:
 ; AVX2-SLOW:       # %bb.0:
-; AVX2-SLOW-NEXT:    vpsrlq $32, %ymm0, %ymm0
-; AVX2-SLOW-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; AVX2-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
 ; AVX2-SLOW-NEXT:    vpsravd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-SLOW-NEXT:    vzeroupper
 ; AVX2-SLOW-NEXT:    retq
@@ -225,6 +224,34 @@ define <4 x i32> @combine_vec_ashr_trunc_lshr(<4 x i64> %x) {
   %2 = trunc <4 x i64> %1 to <4 x i32>
   %3 = ashr <4 x i32> %2, <i32 0, i32 1, i32 2, i32 3>
   ret <4 x i32> %3
+}
+
+define <16 x i8> @combine_vec_ashr_trunc_lshr_splat(<16 x i32> %x) {
+; SSE-LABEL: combine_vec_ashr_trunc_lshr_splat:
+; SSE:       # %bb.0:
+; SSE-NEXT:    psrad $26, %xmm3
+; SSE-NEXT:    psrad $26, %xmm2
+; SSE-NEXT:    packssdw %xmm3, %xmm2
+; SSE-NEXT:    psrad $26, %xmm1
+; SSE-NEXT:    psrad $26, %xmm0
+; SSE-NEXT:    packssdw %xmm1, %xmm0
+; SSE-NEXT:    packsswb %xmm2, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_ashr_trunc_lshr_splat:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsrad $26, %ymm1, %ymm1
+; AVX-NEXT:    vpsrad $26, %ymm0, %ymm0
+; AVX-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
+; AVX-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+  %1 = lshr <16 x i32> %x, <i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24>
+  %2 = trunc <16 x i32> %1 to <16 x i8>
+  %3 = ashr <16 x i8> %2, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+  ret <16 x i8> %3
 }
 
 ; fold (sra (trunc (sra x, c1)), c2) -> (trunc (sra x, c1 + c2))
@@ -253,7 +280,7 @@ define <4 x i32> @combine_vec_ashr_trunc_ashr(<4 x i64> %x) {
 ;
 ; AVX2-FAST-LABEL: combine_vec_ashr_trunc_ashr:
 ; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm1 = <1,3,5,7,u,u,u,u>
+; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,3,5,7]
 ; AVX2-FAST-NEXT:    vpermd %ymm0, %ymm1, %ymm0
 ; AVX2-FAST-NEXT:    vpsravd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-FAST-NEXT:    vzeroupper
@@ -262,6 +289,27 @@ define <4 x i32> @combine_vec_ashr_trunc_ashr(<4 x i64> %x) {
   %2 = trunc <4 x i64> %1 to <4 x i32>
   %3 = ashr <4 x i32> %2, <i32 0, i32 1, i32 2, i32 3>
   ret <4 x i32> %3
+}
+
+define <8 x i16> @combine_vec_ashr_trunc_ashr_splat(<8 x i32> %x) {
+; SSE-LABEL: combine_vec_ashr_trunc_ashr_splat:
+; SSE:       # %bb.0:
+; SSE-NEXT:    psrad $19, %xmm1
+; SSE-NEXT:    psrad $19, %xmm0
+; SSE-NEXT:    packssdw %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_ashr_trunc_ashr_splat:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsrad $19, %ymm0, %ymm0
+; AVX-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+  %1 = ashr <8 x i32> %x, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+  %2 = trunc <8 x i32> %1 to <8 x i16>
+  %3 = ashr <8 x i16> %2, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+  ret <8 x i16> %3
 }
 
 ; If the sign bit is known to be zero, switch this to a SRL.

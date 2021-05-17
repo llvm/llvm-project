@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -48,11 +49,8 @@ Thumb2InstrInfo::Thumb2InstrInfo(const ARMSubtarget &STI)
     : ARMBaseInstrInfo(STI) {}
 
 /// Return the noop instruction to use for a noop.
-void Thumb2InstrInfo::getNoop(MCInst &NopInst) const {
-  NopInst.setOpcode(ARM::tHINT);
-  NopInst.addOperand(MCOperand::createImm(0));
-  NopInst.addOperand(MCOperand::createImm(ARMCC::AL));
-  NopInst.addOperand(MCOperand::createReg(0));
+MCInst Thumb2InstrInfo::getNop() const {
+  return MCInstBuilder(ARM::tHINT).addImm(0).addImm(ARMCC::AL).addReg(0);
 }
 
 unsigned Thumb2InstrInfo::getUnindexedOpcode(unsigned Opc) const {

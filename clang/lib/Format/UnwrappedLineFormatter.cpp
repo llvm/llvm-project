@@ -101,8 +101,13 @@ private:
     if (RootToken.isAccessSpecifier(false) ||
         RootToken.isObjCAccessSpecifier() ||
         (RootToken.isOneOf(Keywords.kw_signals, Keywords.kw_qsignals) &&
-         RootToken.Next && RootToken.Next->is(tok::colon)))
-      return Style.AccessModifierOffset;
+         RootToken.Next && RootToken.Next->is(tok::colon))) {
+      // The AccessModifierOffset may be overriden by IndentAccessModifiers,
+      // in which case we take a negative value of the IndentWidth to simulate
+      // the upper indent level.
+      return Style.IndentAccessModifiers ? -Style.IndentWidth
+                                         : Style.AccessModifierOffset;
+    }
     return 0;
   }
 
@@ -248,6 +253,11 @@ private:
         return !Style.BraceWrapping.SplitEmptyRecord && EmptyBlock
                    ? tryMergeSimpleBlock(I, E, Limit)
                    : 0;
+
+      if (Tok && Tok->is(tok::kw_template) &&
+          Style.BraceWrapping.SplitEmptyRecord && EmptyBlock) {
+        return 0;
+      }
     }
 
     // FIXME: TheLine->Level != 0 might or might not be the right check to do.
@@ -355,6 +365,30 @@ private:
     if (TheLine->First->is(tok::l_brace) && I != AnnotatedLines.begin() &&
         I[-1]->First->isOneOf(tok::kw_case, tok::kw_default))
       return 0;
+
+    // Don't merge an empty template class or struct if SplitEmptyRecords
+    // is defined.
+    if (Style.BraceWrapping.SplitEmptyRecord &&
+        TheLine->Last->is(tok::l_brace) && I != AnnotatedLines.begin() &&
+        I[-1]->Last) {
+      const FormatToken *Previous = I[-1]->Last;
+      if (Previous) {
+        if (Previous->is(tok::comment))
+          Previous = Previous->getPreviousNonComment();
+        if (Previous) {
+          if (Previous->is(tok::greater) && !I[-1]->InPPDirective)
+            return 0;
+          if (Previous->is(tok::identifier)) {
+            const FormatToken *PreviousPrevious =
+                Previous->getPreviousNonComment();
+            if (PreviousPrevious &&
+                PreviousPrevious->isOneOf(tok::kw_class, tok::kw_struct))
+              return 0;
+          }
+        }
+      }
+    }
+
     // Try to merge a block with left brace wrapped that wasn't yet covered
     if (TheLine->Last->is(tok::l_brace)) {
       return !Style.BraceWrapping.AfterFunction ||
@@ -387,7 +421,17 @@ private:
       }
       return MergedLines;
     }
-    if (TheLine->First->is(tok::kw_if)) {
+    auto IsElseLine = [&TheLine]() -> bool {
+      const FormatToken *First = TheLine->First;
+      if (First->is(tok::kw_else))
+        return true;
+
+      return First->is(tok::r_brace) && First->Next &&
+             First->Next->is(tok::kw_else);
+    };
+    if (TheLine->First->is(tok::kw_if) ||
+        (IsElseLine() && (Style.AllowShortIfStatementsOnASingleLine ==
+                          FormatStyle::SIS_AllIfsAndElse))) {
       return Style.AllowShortIfStatementsOnASingleLine
                  ? tryMergeSimpleControlStatement(I, E, Limit)
                  : 0;
@@ -437,7 +481,8 @@ private:
       return 0;
     Limit = limitConsideringMacros(I + 1, E, Limit);
     AnnotatedLine &Line = **I;
-    if (!Line.First->is(tok::kw_do) && Line.Last->isNot(tok::r_paren))
+    if (!Line.First->is(tok::kw_do) && !Line.First->is(tok::kw_else) &&
+        !Line.Last->is(tok::kw_else) && Line.Last->isNot(tok::r_paren))
       return 0;
     // Only merge do while if do is the only statement on the line.
     if (Line.First->is(tok::kw_do) && !Line.Last->is(tok::kw_do))
@@ -448,7 +493,8 @@ private:
                              TT_LineComment))
       return 0;
     // Only inline simple if's (no nested if or else), unless specified
-    if (Style.AllowShortIfStatementsOnASingleLine != FormatStyle::SIS_Always) {
+    if (Style.AllowShortIfStatementsOnASingleLine ==
+        FormatStyle::SIS_WithoutElse) {
       if (I + 2 != E && Line.startsWith(tok::kw_if) &&
           I[2]->First->is(tok::kw_else))
         return 0;
@@ -1216,42 +1262,65 @@ void UnwrappedLineFormatter::formatFirstToken(
       !startsExternCBlock(*PreviousLine))
     Newlines = 1;
 
-  // Insert extra new line before access specifiers.
-  if (PreviousLine && PreviousLine->Last->isOneOf(tok::semi, tok::r_brace) &&
-      RootToken.isAccessSpecifier() && RootToken.NewlinesBefore == 1)
-    ++Newlines;
+  // Insert or remove empty line before access specifiers.
+  if (PreviousLine && RootToken.isAccessSpecifier()) {
+    switch (Style.EmptyLineBeforeAccessModifier) {
+    case FormatStyle::ELBAMS_Never:
+      if (Newlines > 1)
+        Newlines = 1;
+      break;
+    case FormatStyle::ELBAMS_Leave:
+      Newlines = std::max(RootToken.NewlinesBefore, 1u);
+      break;
+    case FormatStyle::ELBAMS_LogicalBlock:
+      if (PreviousLine->Last->isOneOf(tok::semi, tok::r_brace) && Newlines <= 1)
+        Newlines = 2;
+      if (PreviousLine->First->isAccessSpecifier())
+        Newlines = 1; // Previous is an access modifier remove all new lines.
+      break;
+    case FormatStyle::ELBAMS_Always: {
+      const FormatToken *previousToken;
+      if (PreviousLine->Last->is(tok::comment))
+        previousToken = PreviousLine->Last->getPreviousNonComment();
+      else
+        previousToken = PreviousLine->Last;
+      if ((!previousToken || !previousToken->is(tok::l_brace)) && Newlines <= 1)
+        Newlines = 2;
+    } break;
+    }
+  }
 
-  // Remove empty lines after access specifiers.
+  // Insert or remove empty line after access specifiers.
   if (PreviousLine && PreviousLine->First->isAccessSpecifier() &&
-      (!PreviousLine->InPPDirective || !RootToken.HasUnescapedNewline))
-    Newlines = std::min(1u, Newlines);
+      (!PreviousLine->InPPDirective || !RootToken.HasUnescapedNewline)) {
+    // EmptyLineBeforeAccessModifier is handling the case when two access
+    // modifiers follow each other.
+    if (!RootToken.isAccessSpecifier()) {
+      switch (Style.EmptyLineAfterAccessModifier) {
+      case FormatStyle::ELAAMS_Never:
+        Newlines = 1;
+        break;
+      case FormatStyle::ELAAMS_Leave:
+        Newlines = std::max(Newlines, 1u);
+        break;
+      case FormatStyle::ELAAMS_Always:
+        if (RootToken.is(tok::r_brace)) // Do not add at end of class.
+          Newlines = 1u;
+        else
+          Newlines = std::max(Newlines, 2u);
+        break;
+      }
+    }
+  }
 
   if (Newlines)
     Indent = NewlineIndent;
 
-  // If in Whitemsmiths mode, indent start and end of blocks
-  if (Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths) {
-    if (RootToken.isOneOf(tok::l_brace, tok::r_brace, tok::kw_case,
-                          tok::kw_default))
-      Indent += Style.IndentWidth;
-  }
-
   // Preprocessor directives get indented before the hash only if specified
-  if (Line.Type == LT_PreprocessorDirective ||
-      Line.Type == LT_ImportStatement) {
-    switch (Style.IndentPPDirectives) {
-    case FormatStyle::PPDIS_AfterHash:
-      Indent = 0;
-      break;
-    case FormatStyle::PPDIS_None:
-    case FormatStyle::PPDIS_BeforeHash: {
-      // If we want to indent pragmas.
-      bool isPragmaLine = RootToken.startsSequence(tok::hash, tok::pp_pragma);
-      if (!Style.IndentPragmas && isPragmaLine)
-        Indent = 0;
-    } break;
-    }
-  }
+  if (Style.IndentPPDirectives != FormatStyle::PPDIS_BeforeHash &&
+      (Line.Type == LT_PreprocessorDirective ||
+       Line.Type == LT_ImportStatement))
+    Indent = 0;
 
   Whitespaces->replaceWhitespace(RootToken, Newlines, Indent, Indent,
                                  /*IsAligned=*/false,

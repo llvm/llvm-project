@@ -2,10 +2,10 @@
 ; Check that we reserve an emergency spill slot, even if we added an extra
 ; CSR spill for the values used by the swiftself parameter.
 ; CHECK-LABEL: func:
-; CHECK: str [[REG:x[0-9]+]], [sp, #8]
+; CHECK: str [[REG:x[0-9]+]], [sp]
 ; CHECK: add [[REG]], sp, #248
 ; CHECK: str xzr, [{{\s*}}[[REG]], #32760]
-; CHECK: ldr [[REG]], [sp, #8]
+; CHECK: ldr [[REG]], [sp]
 target triple = "arm64-apple-ios"
 
 @ptr8 = external global i8*

@@ -714,16 +714,14 @@ void WinEHPrepare::demotePHIsOnFunclets(Function &F,
                                         bool DemoteCatchSwitchPHIOnly) {
   // Strip PHI nodes off of EH pads.
   SmallVector<PHINode *, 16> PHINodes;
-  for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE;) {
-    BasicBlock *BB = &*FI++;
-    if (!BB->isEHPad())
+  for (BasicBlock &BB : make_early_inc_range(F)) {
+    if (!BB.isEHPad())
       continue;
-    if (DemoteCatchSwitchPHIOnly && !isa<CatchSwitchInst>(BB->getFirstNonPHI()))
+    if (DemoteCatchSwitchPHIOnly && !isa<CatchSwitchInst>(BB.getFirstNonPHI()))
       continue;
 
-    for (BasicBlock::iterator BI = BB->begin(), BE = BB->end(); BI != BE;) {
-      Instruction *I = &*BI++;
-      auto *PN = dyn_cast<PHINode>(I);
+    for (Instruction &I : make_early_inc_range(BB)) {
+      auto *PN = dyn_cast<PHINode>(&I);
       // Stop at the first non-PHI.
       if (!PN)
         break;
@@ -1025,11 +1023,10 @@ void WinEHPrepare::removeImplausibleInstructions(Function &F) {
 void WinEHPrepare::cleanupPreparedFunclets(Function &F) {
   // Clean-up some of the mess we made by removing useles PHI nodes, trivial
   // branches, etc.
-  for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE;) {
-    BasicBlock *BB = &*FI++;
-    SimplifyInstructionsInBlock(BB);
-    ConstantFoldTerminator(BB, /*DeleteDeadConditions=*/true);
-    MergeBlockIntoPredecessor(BB);
+  for (BasicBlock &BB : llvm::make_early_inc_range(F)) {
+    SimplifyInstructionsInBlock(&BB);
+    ConstantFoldTerminator(&BB, /*DeleteDeadConditions=*/true);
+    MergeBlockIntoPredecessor(&BB);
   }
 
   // We might have some unreachable blocks after cleaning up some impossible
@@ -1109,9 +1106,7 @@ AllocaInst *WinEHPrepare::insertPHILoads(PHINode *PN, Function &F) {
   // Otherwise, we have a PHI on a terminator EHPad, and we give up and insert
   // loads of the slot before every use.
   DenseMap<BasicBlock *, Value *> Loads;
-  for (Value::use_iterator UI = PN->use_begin(), UE = PN->use_end();
-       UI != UE;) {
-    Use &U = *UI++;
+  for (Use &U : llvm::make_early_inc_range(PN->uses())) {
     auto *UsingInst = cast<Instruction>(U.getUser());
     if (isa<PHINode>(UsingInst) && UsingInst->getParent()->isEHPad()) {
       // Use is on an EH pad phi.  Leave it alone; we'll insert loads and

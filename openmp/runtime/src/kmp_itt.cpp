@@ -63,9 +63,9 @@ void __kmp_itt_reset() {
 
 void __kmp_itt_initialize() {
 
-// ITTNotify library is loaded and initialized at first call to any ittnotify
-// function, so we do not need to explicitly load it any more. Just report OMP
-// RTL version to ITTNotify.
+  // ITTNotify library is loaded and initialized at first call to any ittnotify
+  // function, so we do not need to explicitly load it any more. Just report OMP
+  // RTL version to ITTNotify.
 
 #if USE_ITT_NOTIFY
   // Backup a clean global state
@@ -153,7 +153,9 @@ extern "C" void __itt_error_handler(__itt_error_code err, va_list args) {
       __kmp_str_free(&err_code.str);
     }
   } break;
-  default: { KMP_WARNING(IttUnknownError, err); }
+  default: {
+    KMP_WARNING(IttUnknownError, err);
+  }
   }
 } // __itt_error_handler
 

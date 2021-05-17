@@ -50,6 +50,8 @@ Sections:
         Value: 0x0
   - Name:    .dynsym
     Type:    SHT_DYNSYM
+  - Type: SectionHeaderTable
+    NoHeaders: true
 DynamicSymbols:
   - Name: foo
 ProgramHeaders:
@@ -59,5 +61,3 @@ ProgramHeaders:
   - Type:     PT_DYNAMIC
     FirstSec: .dynamic
     LastSec:  .dynamic
-SectionHeaderTable:
-  NoHeaders: true

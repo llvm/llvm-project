@@ -212,8 +212,7 @@ float fun_default FUN(1)
 #endif
                                             float y();
 class ON {
-  // Settings for top level class initializer revert to command line
-  // source pragma's do not pertain.
+  // Settings for top level class initializer use program source setting.
   float z = 2 + y() * 7;
 //CHECK-LABEL: define {{.*}} void @_ZN2ONC2Ev{{.*}}
 #if DEFAULT
@@ -224,11 +223,10 @@ class ON {
 //CHECK-DEBSTRICT: call float {{.*}}llvm.fmuladd
 #endif
 #if NOHONOR
-//CHECK-NOHONOR: call nnan ninf float @llvm.fmuladd{{.*}}
+//CHECK-NOHONOR: call float {{.*}}llvm.fmuladd
 #endif
 #if FAST
-//CHECK-FAST: fmul fast float
-//CHECK-FAST: fadd fast float
+//CHECK-FAST: float {{.*}}llvm.fmuladd{{.*}}
 #endif
 };
 ON on;
@@ -236,18 +234,28 @@ ON on;
 class OFF {
   float w = 2 + y() * 7;
 //CHECK-LABEL: define {{.*}} void @_ZN3OFFC2Ev{{.*}}
-#if DEFAULT
-//CHECK-DDEFAULT: call float {{.*}}llvm.fmuladd
-#endif
-#if EBSTRICT
-//CHECK-DEBSTRICT: call float {{.*}}llvm.fmuladd
-#endif
-#if NOHONOR
-//CHECK-NOHONOR: call nnan ninf float @llvm.fmuladd{{.*}}
-#endif
-#if FAST
-//CHECK-FAST: fmul fast float
-//CHECK-FAST: fadd fast float
-#endif
+//CHECK: call float {{.*}}llvm.fmuladd
 };
 OFF off;
+
+#pragma clang fp reassociate(on)
+struct MyComplex {
+  float xx;
+  float yy;
+  MyComplex(float x, float y) {
+    xx = x;
+    yy = y;
+  }
+  MyComplex() {}
+  const MyComplex operator+(const MyComplex other) const {
+//CHECK-LABEL: define {{.*}} @_ZNK9MyComplexplES_
+//CHECK: fadd reassoc float
+//CHECK: fadd reassoc float
+    return MyComplex(xx + other.xx, yy + other.yy);
+  }
+};
+MyComplex useAdd() {
+  MyComplex a (1, 3);
+  MyComplex b (2, 4);
+   return a + b;
+}

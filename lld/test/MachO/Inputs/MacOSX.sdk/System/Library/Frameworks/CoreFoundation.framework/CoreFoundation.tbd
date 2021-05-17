@@ -11,3 +11,4 @@ exports:
     objc-classes:  [ NSObject ]
     objc-ivars:    [ NSConstantArray._count ]
     objc-eh-types: [ NSException ]
+...

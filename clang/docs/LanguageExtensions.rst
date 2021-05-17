@@ -132,7 +132,7 @@ macro returns a nonzero value based on the year and month in which the attribute
 was voted into the working draft. See `WG21 SD-6
 <https://isocpp.org/std/standing-documents/sd-6-sg10-feature-test-recommendations>`_
 for the list of values returned for standards-based attributes. If the attribute
-is not supported by the current compliation target, this macro evaluates to 0.
+is not supported by the current compilation target, this macro evaluates to 0.
 It can be used like this:
 
 .. code-block:: c++
@@ -383,6 +383,18 @@ Builtin Macros
   Defined to a string that captures the Clang marketing version, including the
   Subversion tag or revision number, e.g., "``1.5 (trunk 102332)``".
 
+``__clang_literal_encoding__``
+  Defined to a narrow string literal that represents the current encoding of
+  narrow string literals, e.g., ``"hello"``. This macro typically expands to
+  "UTF-8" (but may change in the future if the
+  ``-fexec-charset="Encoding-Name"`` option is implemented.)
+
+``__clang_wide_literal_encoding__``
+  Defined to a narrow string literal that represents the current encoding of
+  wide string literals, e.g., ``L"hello"``. This macro typically expands to
+  "UTF-16" or "UTF-32" (but may change in the future if the
+  ``-fwide-exec-charset="Encoding-Name"`` option is implemented.)
+
 .. _langext-vectors:
 
 Vectors and Extended Vectors
@@ -524,6 +536,7 @@ targets pending ABI standardization:
 
 * 32-bit ARM
 * 64-bit ARM (AArch64)
+* AMDGPU
 * SPIR
 
 ``_Float16`` will be supported on more targets as they define ABIs for it.
@@ -541,7 +554,7 @@ The behavior of ``__fp16`` is specified by the ARM C Language Extensions (`ACLE 
 Clang uses the ``binary16`` format from IEEE 754-2008 for ``__fp16``, not the ARM
 alternative format.
 
-``_Float16`` is an extended floating-point type.  This means that, just like arithmetic on
+``_Float16`` is an interchange floating-point type.  This means that, just like arithmetic on
 ``float`` or ``double``, arithmetic on ``_Float16`` operands is formally performed in the
 ``_Float16`` type, so that e.g. the result of adding two ``_Float16`` values has type
 ``_Float16``.  The behavior of ``_Float16`` is specified by ISO/IEC TS 18661-3:2015
@@ -1193,7 +1206,9 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_sealed`` (Microsoft):
   Synonym for ``__is_final``.
 * ``__is_signed`` (C++, Embarcadero):
-  Returns false for enumeration types, and returns true for floating-point types. Note, before Clang 10, returned true for enumeration types if the underlying type was signed, and returned false for floating-point types.
+  Returns false for enumeration types, and returns true for floating-point
+  types. Note, before Clang 10, returned true for enumeration types if the
+  underlying type was signed, and returned false for floating-point types.
 * ``__is_standard_layout`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_trivial`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_trivially_assignable`` (C++, GNU, Microsoft)
@@ -1201,10 +1216,9 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_trivially_copyable`` (C++, GNU, Microsoft)
 * ``__is_trivially_destructible`` (C++, MSVC 2013)
 * ``__is_union`` (C++, GNU, Microsoft, Embarcadero)
-* ``__is_unsigned`` (C++, Embarcadero)
-  Note that this currently returns true for enumeration types if the underlying
-  type is unsigned, in violation of the requirements for ``std::is_unsigned``.
-  This behavior is likely to change in a future version of Clang.
+* ``__is_unsigned`` (C++, Embarcadero):
+  Returns false for enumeration types. Note, before Clang 13, returned true for
+  enumeration types if the underlying type was unsigned.
 * ``__is_void`` (C++, Embarcadero)
 * ``__is_volatile`` (C++, Embarcadero)
 * ``__reference_binds_to_temporary(T, U)`` (Clang):  Determines whether a
@@ -1783,7 +1797,7 @@ Extension Specification, section 1.2
 
 This is not conformant behavior and it can only be used portably when the
 functions with variadic prototypes do not get generated in binary e.g. the
-variadic prototype is used to spesify a function type with any number of
+variadic prototype is used to specify a function type with any number of
 arguments in metaprogramming algorithms in C++ for OpenCL.
 
 This extensions can also be used when the kernel code is intended for targets
@@ -1798,6 +1812,71 @@ supporting the variadic arguments e.g. majority of CPU targets.
 
   #pragma OPENCL EXTENSION __cl_clang_variadic_functions : disable
   void bar(int a, ...); // error - variadic prototype is not allowed
+
+``__cl_clang_non_portable_kernel_param_types``
+----------------------------------------------
+
+With this extension it is possible to enable the use of some restricted types
+in kernel parameters specified in `C++ for OpenCL v1.0 s2.4
+<https://www.khronos.org/opencl/assets/CXX_for_OpenCL.html#kernel_function>`_.
+The restrictions can be relaxed using regular OpenCL extension pragma mechanism
+detailed in `the OpenCL Extension Specification, section 1.2
+<https://www.khronos.org/registry/OpenCL/specs/3.0-unified/html/OpenCL_Ext.html#extensions-overview>`_.
+
+This is not a conformant behavior and it can only be used when the
+kernel arguments are not accessed on the host side or the data layout/size
+between the host and device is known to be compatible.
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  // Plain Old Data type.
+  struct Pod {
+    int a;
+    int b;
+  };
+
+  // Not POD type because of the constructor.
+  // Standard layout type because there is only one access control.
+  struct OnlySL {
+    int a;
+    int b;
+    NotPod() : a(0), b(0) {}
+  };
+
+  // Not standard layout type because of two different access controls.
+  struct NotSL {
+    int a;
+  private:
+    int b;
+  }
+
+  kernel void kernel_main(
+    Pod a,
+  #pragma OPENCL EXTENSION __cl_clang_non_portable_kernel_param_types : enable
+    OnlySL b,
+    global NotSL *c,
+  #pragma OPENCL EXTENSION __cl_clang_non_portable_kernel_param_types : disable
+    global OnlySL *d,
+  );
+
+Legacy 1.x atomics with generic address space
+---------------------------------------------
+
+Clang allows use of atomic functions from the OpenCL 1.x standards
+with the generic address space pointer in C++ for OpenCL mode.
+
+This is a non-portable feature and might not be supported by all
+targets.
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  void foo(__generic volatile unsigned int* a) {
+    atomic_add(a, 1);
+  }
 
 Builtin Functions
 =================
@@ -2494,7 +2573,7 @@ guarantees not to call any external functions. See LLVM IR `llvm.memcpy.inline
 <https://llvm.org/docs/LangRef.html#llvm-memcpy-inline-intrinsic>`_ intrinsic 
 for more information.
 
-This is useful to implement a custom version of ``memcpy``, implemement a
+This is useful to implement a custom version of ``memcpy``, implement a
 ``libc`` memcpy or work around the absence of a ``libc``.
 
 Note that the `size` argument must be a compile time constant.

@@ -87,12 +87,12 @@ namespace {
 /// function return values and call parameters).
 struct ARMOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
   ARMOutgoingValueHandler(MachineIRBuilder &MIRBuilder,
-                          MachineRegisterInfo &MRI, MachineInstrBuilder &MIB,
-                          CCAssignFn *AssignFn)
-      : OutgoingValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB) {}
+                          MachineRegisterInfo &MRI, MachineInstrBuilder &MIB)
+      : OutgoingValueHandler(MIRBuilder, MRI), MIB(MIB) {}
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
-                           MachinePointerInfo &MPO) override {
+                           MachinePointerInfo &MPO,
+                           ISD::ArgFlagsTy Flags) override {
     assert((Size == 1 || Size == 2 || Size == 4 || Size == 8) &&
            "Unsupported size");
 
@@ -168,68 +168,10 @@ struct ARMOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
     return 1;
   }
 
-  bool assignArg(unsigned ValNo, MVT ValVT, MVT LocVT,
-                 CCValAssign::LocInfo LocInfo,
-                 const CallLowering::ArgInfo &Info, ISD::ArgFlagsTy Flags,
-                 CCState &State) override {
-    if (AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State))
-      return true;
-
-    StackSize =
-        std::max(StackSize, static_cast<uint64_t>(State.getNextStackOffset()));
-    return false;
-  }
-
-  MachineInstrBuilder &MIB;
-  uint64_t StackSize = 0;
+  MachineInstrBuilder MIB;
 };
 
 } // end anonymous namespace
-
-void ARMCallLowering::splitToValueTypes(const ArgInfo &OrigArg,
-                                        SmallVectorImpl<ArgInfo> &SplitArgs,
-                                        MachineFunction &MF) const {
-  const ARMTargetLowering &TLI = *getTLI<ARMTargetLowering>();
-  LLVMContext &Ctx = OrigArg.Ty->getContext();
-  const DataLayout &DL = MF.getDataLayout();
-  const Function &F = MF.getFunction();
-
-  SmallVector<EVT, 4> SplitVTs;
-  ComputeValueVTs(TLI, DL, OrigArg.Ty, SplitVTs, nullptr, nullptr, 0);
-  assert(OrigArg.Regs.size() == SplitVTs.size() && "Regs / types mismatch");
-
-  if (SplitVTs.size() == 1) {
-    // Even if there is no splitting to do, we still want to replace the
-    // original type (e.g. pointer type -> integer).
-    auto Flags = OrigArg.Flags[0];
-    Flags.setOrigAlign(DL.getABITypeAlign(OrigArg.Ty));
-    SplitArgs.emplace_back(OrigArg.Regs[0], SplitVTs[0].getTypeForEVT(Ctx),
-                           Flags, OrigArg.IsFixed);
-    return;
-  }
-
-  // Create one ArgInfo for each virtual register.
-  for (unsigned i = 0, e = SplitVTs.size(); i != e; ++i) {
-    EVT SplitVT = SplitVTs[i];
-    Type *SplitTy = SplitVT.getTypeForEVT(Ctx);
-    auto Flags = OrigArg.Flags[0];
-
-    Flags.setOrigAlign(DL.getABITypeAlign(SplitTy));
-
-    bool NeedsConsecutiveRegisters =
-        TLI.functionArgumentNeedsConsecutiveRegisters(
-            SplitTy, F.getCallingConv(), F.isVarArg());
-    if (NeedsConsecutiveRegisters) {
-      Flags.setInConsecutiveRegs();
-      if (i == e - 1)
-        Flags.setInConsecutiveRegsLast();
-    }
-
-    // FIXME: We also want to split SplitTy further.
-    Register PartReg = OrigArg.Regs[i];
-    SplitArgs.emplace_back(PartReg, SplitTy, Flags, OrigArg.IsFixed);
-  }
-}
 
 /// Lower the return value for the already existing \p Ret. This assumes that
 /// \p MIRBuilder's insertion point is correct.
@@ -243,7 +185,7 @@ bool ARMCallLowering::lowerReturnVal(MachineIRBuilder &MIRBuilder,
   auto &MF = MIRBuilder.getMF();
   const auto &F = MF.getFunction();
 
-  auto DL = MF.getDataLayout();
+  const auto &DL = MF.getDataLayout();
   auto &TLI = *getTLI<ARMTargetLowering>();
   if (!isSupportedType(DL, TLI, Val->getType()))
     return false;
@@ -252,14 +194,16 @@ bool ARMCallLowering::lowerReturnVal(MachineIRBuilder &MIRBuilder,
   setArgFlags(OrigRetInfo, AttributeList::ReturnIndex, DL, F);
 
   SmallVector<ArgInfo, 4> SplitRetInfos;
-  splitToValueTypes(OrigRetInfo, SplitRetInfos, MF);
+  splitToValueTypes(OrigRetInfo, SplitRetInfos, DL, F.getCallingConv());
 
   CCAssignFn *AssignFn =
       TLI.CCAssignFnForReturn(F.getCallingConv(), F.isVarArg());
 
-  ARMOutgoingValueHandler RetHandler(MIRBuilder, MF.getRegInfo(), Ret,
-                                     AssignFn);
-  return handleAssignments(MIRBuilder, SplitRetInfos, RetHandler);
+  OutgoingValueAssigner RetAssigner(AssignFn);
+  ARMOutgoingValueHandler RetHandler(MIRBuilder, MF.getRegInfo(), Ret);
+  return determineAndHandleAssignments(RetHandler, RetAssigner, SplitRetInfos,
+                                       MIRBuilder, F.getCallingConv(),
+                                       F.isVarArg());
 }
 
 bool ARMCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
@@ -284,17 +228,22 @@ namespace {
 /// formal arguments and call return values).
 struct ARMIncomingValueHandler : public CallLowering::IncomingValueHandler {
   ARMIncomingValueHandler(MachineIRBuilder &MIRBuilder,
-                          MachineRegisterInfo &MRI, CCAssignFn AssignFn)
-      : IncomingValueHandler(MIRBuilder, MRI, AssignFn) {}
+                          MachineRegisterInfo &MRI)
+      : IncomingValueHandler(MIRBuilder, MRI) {}
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
-                           MachinePointerInfo &MPO) override {
+                           MachinePointerInfo &MPO,
+                           ISD::ArgFlagsTy Flags) override {
     assert((Size == 1 || Size == 2 || Size == 4 || Size == 8) &&
            "Unsupported size");
 
     auto &MFI = MIRBuilder.getMF().getFrameInfo();
 
-    int FI = MFI.CreateFixedObject(Size, Offset, true);
+    // Byval is assumed to be writable memory, but other stack passed arguments
+    // are not.
+    const bool IsImmutable = !Flags.isByVal();
+
+    int FI = MFI.CreateFixedObject(Size, Offset, IsImmutable);
     MPO = MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
 
     return MIRBuilder.buildFrameIndex(LLT::pointer(MPO.getAddrSpace(), 32), FI)
@@ -398,9 +347,8 @@ struct ARMIncomingValueHandler : public CallLowering::IncomingValueHandler {
 };
 
 struct FormalArgHandler : public ARMIncomingValueHandler {
-  FormalArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
-                   CCAssignFn AssignFn)
-      : ARMIncomingValueHandler(MIRBuilder, MRI, AssignFn) {}
+  FormalArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
+      : ARMIncomingValueHandler(MIRBuilder, MRI) {}
 
   void markPhysRegUsed(unsigned PhysReg) override {
     MIRBuilder.getMRI()->addLiveIn(PhysReg);
@@ -429,7 +377,7 @@ bool ARMCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
   auto &MF = MIRBuilder.getMF();
   auto &MBB = MIRBuilder.getMBB();
-  auto DL = MF.getDataLayout();
+  const auto &DL = MF.getDataLayout();
 
   for (auto &Arg : F.args()) {
     if (!isSupportedType(DL, TLI, Arg.getType()))
@@ -441,8 +389,8 @@ bool ARMCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   CCAssignFn *AssignFn =
       TLI.CCAssignFnForCall(F.getCallingConv(), F.isVarArg());
 
-  FormalArgHandler ArgHandler(MIRBuilder, MIRBuilder.getMF().getRegInfo(),
-                              AssignFn);
+  OutgoingValueAssigner ArgAssigner(AssignFn);
+  FormalArgHandler ArgHandler(MIRBuilder, MIRBuilder.getMF().getRegInfo());
 
   SmallVector<ArgInfo, 8> SplitArgInfos;
   unsigned Idx = 0;
@@ -450,7 +398,7 @@ bool ARMCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     ArgInfo OrigArgInfo(VRegs[Idx], Arg.getType());
 
     setArgFlags(OrigArgInfo, Idx + AttributeList::FirstArgIndex, DL, F);
-    splitToValueTypes(OrigArgInfo, SplitArgInfos, MF);
+    splitToValueTypes(OrigArgInfo, SplitArgInfos, DL, F.getCallingConv());
 
     Idx++;
   }
@@ -458,7 +406,9 @@ bool ARMCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   if (!MBB.empty())
     MIRBuilder.setInstr(*MBB.begin());
 
-  if (!handleAssignments(MIRBuilder, SplitArgInfos, ArgHandler))
+  if (!determineAndHandleAssignments(ArgHandler, ArgAssigner, SplitArgInfos,
+                                     MIRBuilder, F.getCallingConv(),
+                                     F.isVarArg()))
     return false;
 
   // Move back to the end of the basic block.
@@ -470,8 +420,8 @@ namespace {
 
 struct CallReturnHandler : public ARMIncomingValueHandler {
   CallReturnHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
-                    MachineInstrBuilder MIB, CCAssignFn *AssignFn)
-      : ARMIncomingValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB) {}
+                    MachineInstrBuilder MIB)
+      : ARMIncomingValueHandler(MIRBuilder, MRI), MIB(MIB) {}
 
   void markPhysRegUsed(unsigned PhysReg) override {
     MIB.addDef(PhysReg, RegState::Implicit);
@@ -546,12 +496,14 @@ bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder, CallLoweringInfo &
     if (Arg.Flags[0].isByVal())
       return false;
 
-    splitToValueTypes(Arg, ArgInfos, MF);
+    splitToValueTypes(Arg, ArgInfos, DL, Info.CallConv);
   }
 
   auto ArgAssignFn = TLI.CCAssignFnForCall(Info.CallConv, Info.IsVarArg);
-  ARMOutgoingValueHandler ArgHandler(MIRBuilder, MRI, MIB, ArgAssignFn);
-  if (!handleAssignments(MIRBuilder, ArgInfos, ArgHandler))
+  OutgoingValueAssigner ArgAssigner(ArgAssignFn);
+  ARMOutgoingValueHandler ArgHandler(MIRBuilder, MRI, MIB);
+  if (!determineAndHandleAssignments(ArgHandler, ArgAssigner, ArgInfos,
+                                     MIRBuilder, Info.CallConv, Info.IsVarArg))
     return false;
 
   // Now we can add the actual call instruction to the correct basic block.
@@ -562,19 +514,24 @@ bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder, CallLoweringInfo &
       return false;
 
     ArgInfos.clear();
-    splitToValueTypes(Info.OrigRet, ArgInfos, MF);
+    splitToValueTypes(Info.OrigRet, ArgInfos, DL, Info.CallConv);
     auto RetAssignFn = TLI.CCAssignFnForReturn(Info.CallConv, Info.IsVarArg);
-    CallReturnHandler RetHandler(MIRBuilder, MRI, MIB, RetAssignFn);
-    if (!handleAssignments(MIRBuilder, ArgInfos, RetHandler))
+    OutgoingValueAssigner Assigner(RetAssignFn);
+    CallReturnHandler RetHandler(MIRBuilder, MRI, MIB);
+    if (!determineAndHandleAssignments(RetHandler, Assigner, ArgInfos,
+                                       MIRBuilder, Info.CallConv,
+                                       Info.IsVarArg))
       return false;
   }
 
   // We now know the size of the stack - update the ADJCALLSTACKDOWN
   // accordingly.
-  CallSeqStart.addImm(ArgHandler.StackSize).addImm(0).add(predOps(ARMCC::AL));
+  CallSeqStart.addImm(ArgAssigner.StackOffset)
+      .addImm(0)
+      .add(predOps(ARMCC::AL));
 
   MIRBuilder.buildInstr(ARM::ADJCALLSTACKUP)
-      .addImm(ArgHandler.StackSize)
+      .addImm(ArgAssigner.StackOffset)
       .addImm(0)
       .add(predOps(ARMCC::AL));
 

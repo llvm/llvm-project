@@ -1,3 +1,16 @@
+import("//llvm/utils/gn/build/toolchain/compiler.gni")
+
+supported_toolchains = [ "//llvm/utils/gn/build/toolchain:stage2_unix" ]
+if (android_ndk_path != "") {
+  supported_toolchains += [
+    "//llvm/utils/gn/build/toolchain:stage2_android_aarch64",
+    "//llvm/utils/gn/build/toolchain:stage2_android_arm",
+  ]
+}
+
 group("libunwind") {
-  deps = [ "//libunwind/src(//llvm/utils/gn/build/toolchain:stage2_unix)" ]
+  deps = []
+  foreach(toolchain, supported_toolchains) {
+    deps += [ "//libunwind/src($toolchain)" ]
+  }
 }

@@ -5,13 +5,13 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+/// \file
 /// Interface for Targets to specify which operations are combined how and when.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_GLOBALISEL_COMBINER_INFO_H
-#define LLVM_CODEGEN_GLOBALISEL_COMBINER_INFO_H
+#ifndef LLVM_CODEGEN_GLOBALISEL_COMBINERINFO_H
+#define LLVM_CODEGEN_GLOBALISEL_COMBINERINFO_H
 
 #include <cassert>
 namespace llvm {

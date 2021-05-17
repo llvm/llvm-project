@@ -28,7 +28,7 @@
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/WithColor.h"
-#include "llvm/TextAPI/MachO/Architecture.h"
+#include "llvm/TextAPI/Architecture.h"
 
 using namespace llvm;
 using namespace llvm::object;

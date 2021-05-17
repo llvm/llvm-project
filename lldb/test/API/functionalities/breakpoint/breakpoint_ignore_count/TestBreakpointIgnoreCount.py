@@ -120,7 +120,7 @@ class BreakpointIgnoreCountTestCase(TestBase):
 
         # Set the ignore count on the breakpoint location.
         location.SetIgnoreCount(2)
-        self.assertTrue(location.GetIgnoreCount() == 2,
+        self.assertEqual(location.GetIgnoreCount(), 2,
                         "SetIgnoreCount() works correctly")
 
         # Now launch the process, and do not stop at entry point.
@@ -145,6 +145,6 @@ class BreakpointIgnoreCountTestCase(TestBase):
                         STOPPED_DUE_TO_BREAKPOINT_IGNORE_COUNT)
 
         # The hit count for the breakpoint should be 3.
-        self.assertTrue(breakpoint.GetHitCount() == 3)
+        self.assertEqual(breakpoint.GetHitCount(), 3)
 
         process.Continue()

@@ -36,7 +36,7 @@ class TestObjCDirectDispatchStepping(TestBase):
         for idx in range(2,16):
             thread.StepInto()
             func_name = thread.GetFrameAtIndex(0).GetFunctionName()
-            self.assertTrue("OverridesALot" in func_name, "%d'th step did not match name: %s"%(idx, func_name))
+            self.assertIn("OverridesALot", func_name, "%d'th step did not match name: %s"%(idx, func_name))
             stop_threads = lldbutil.continue_to_breakpoint(process, stop_bkpt)
             self.assertEqual(len(stop_threads), 1)
             self.assertEqual(stop_threads[0], thread)

@@ -86,7 +86,7 @@ define void @test8(<8 x double>* nocapture %Sink, <8 x i16>* nocapture readonly 
 ; CHECK-BE-NEXT:    lxvx v3, 0, r4
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI0_1@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI0_1@toc@l
-; CHECK-BE-NEXT:    vperm v3, v2, v4, v3
+; CHECK-BE-NEXT:    vperm v3, v4, v2, v3
 ; CHECK-BE-NEXT:    xvcvuxddp vs0, v3
 ; CHECK-BE-NEXT:    lxvx v3, 0, r4
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI0_2@toc@ha
@@ -162,7 +162,7 @@ define void @test4(<4 x double>* nocapture %Sink, <4 x i16>* nocapture readonly 
 ; CHECK-BE-NEXT:    lxvx v3, 0, r4
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI1_1@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI1_1@toc@l
-; CHECK-BE-NEXT:    vperm v3, v2, v4, v3
+; CHECK-BE-NEXT:    vperm v3, v4, v2, v3
 ; CHECK-BE-NEXT:    xvcvuxddp vs0, v3
 ; CHECK-BE-NEXT:    lxvx v3, 0, r4
 ; CHECK-BE-NEXT:    vperm v2, v4, v2, v3
@@ -210,7 +210,7 @@ define void @test2(<2 x double>* nocapture %Sink, <2 x i16>* nocapture readonly 
 ; CHECK-BE-NEXT:    xxlxor v4, v4, v4
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI2_0@toc@l
 ; CHECK-BE-NEXT:    lxvx v3, 0, r4
-; CHECK-BE-NEXT:    vperm v2, v2, v4, v3
+; CHECK-BE-NEXT:    vperm v2, v4, v2, v3
 ; CHECK-BE-NEXT:    xvcvuxddp vs0, v2
 ; CHECK-BE-NEXT:    stxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    blr

@@ -3,7 +3,7 @@
 // RUN:     {key: readability-identifier-naming.MemberCase, value: CamelCase}, \
 // RUN:     {key: readability-identifier-naming.ParameterCase, value: CamelCase}, \
 // RUN:     {key: readability-identifier-naming.MethodCase, value: camelBack}, \
-// RUN:     {key: readability-identifier-naming.AggressiveDependentMemberLookup, value: 1} \
+// RUN:     {key: readability-identifier-naming.AggressiveDependentMemberLookup, value: true} \
 // RUN:  ]}' -- -fno-delayed-template-parsing
 
 int set_up(int);

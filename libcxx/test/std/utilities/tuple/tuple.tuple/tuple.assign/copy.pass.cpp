@@ -34,8 +34,19 @@ struct MoveAssignable {
   MoveAssignable& operator=(MoveAssignable const&) = delete;
   MoveAssignable& operator=(MoveAssignable&&) = default;
 };
+struct NothrowCopyAssignable {
+  NothrowCopyAssignable& operator=(NothrowCopyAssignable const&) noexcept { return *this; }
+};
+struct PotentiallyThrowingCopyAssignable {
+  PotentiallyThrowingCopyAssignable& operator=(PotentiallyThrowingCopyAssignable const&) { return *this; }
+};
 
-int main(int, char**)
+struct CopyAssignableInt {
+  CopyAssignableInt& operator=(int&) { return *this; }
+};
+
+TEST_CONSTEXPR_CXX20
+bool test()
 {
     {
         typedef std::tuple<> T;
@@ -59,15 +70,6 @@ int main(int, char**)
         assert(std::get<1>(t) == 'a');
     }
     {
-        typedef std::tuple<int, char, std::string> T;
-        const T t0(2, 'a', "some text");
-        T t;
-        t = t0;
-        assert(std::get<0>(t) == 2);
-        assert(std::get<1>(t) == 'a');
-        assert(std::get<2>(t) == "some text");
-    }
-    {
         // test reference assignment.
         using T = std::tuple<int&, int&&>;
         int x = 42;
@@ -81,6 +83,27 @@ int main(int, char**)
         assert(&std::get<0>(t) == &x);
         assert(std::get<1>(t) == y2);
         assert(&std::get<1>(t) == &y);
+    }
+
+    return true;
+}
+
+int main(int, char**)
+{
+    test();
+#if TEST_STD_VER >= 20
+    static_assert(test());
+#endif
+
+    {
+        // cannot be constexpr because of std::string
+        typedef std::tuple<int, char, std::string> T;
+        const T t0(2, 'a', "some text");
+        T t;
+        t = t0;
+        assert(std::get<0>(t) == 2);
+        assert(std::get<1>(t) == 'a');
+        assert(std::get<2>(t) == "some text");
     }
     {
         // test that the implicitly generated copy assignment operator
@@ -100,6 +123,31 @@ int main(int, char**)
         using T = std::tuple<int, MoveAssignable>;
         static_assert(!std::is_copy_assignable<T>::value, "");
     }
+    {
+        using T = std::tuple<int, int, int>;
+        using P = std::pair<int, int>;
+        static_assert(!std::is_assignable<T&, P>::value, "");
+    }
+    {
+        // test const requirement
+        using T = std::tuple<CopyAssignableInt, CopyAssignableInt>;
+        using P = std::pair<int, int>;
+        static_assert(!std::is_assignable<T&, P const>::value, "");
+    }
+    {
+        using T = std::tuple<int, MoveAssignable>;
+        using P = std::pair<int, MoveAssignable>;
+        static_assert(!std::is_assignable<T&, P&>::value, "");
+    }
+    {
+        using T = std::tuple<NothrowCopyAssignable, int>;
+        static_assert(std::is_nothrow_copy_assignable<T>::value, "");
+    }
+    {
+        using T = std::tuple<PotentiallyThrowingCopyAssignable, int>;
+        static_assert(std::is_copy_assignable<T>::value, "");
+        static_assert(!std::is_nothrow_copy_assignable<T>::value, "");
+    }
 
-  return 0;
+    return 0;
 }

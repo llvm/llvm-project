@@ -68,13 +68,7 @@ define float @minloopattr(float* nocapture readonly %arg) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 65536
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp fast olt <4 x float> [[TMP5]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select fast <4 x i1> [[RDX_MINMAX_CMP]], <4 x float> [[TMP5]], <4 x float> [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[RDX_MINMAX_SELECT]], <4 x float> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = fcmp fast olt <4 x float> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select fast <4 x i1> [[RDX_MINMAX_CMP2]], <4 x float> [[RDX_MINMAX_SELECT]], <4 x float> [[RDX_SHUF1]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[RDX_MINMAX_SELECT3]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[TMP5]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 65536, 65536
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[OUT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -154,4 +148,74 @@ out:                                              ; preds = %loop
   ret float %t6
 }
 
-attributes #0 = { "no-nans-fp-math"="true" }
+; This test is checking that we don't vectorize when only one of the required attributes is set.
+; Note that this test should not vectorize even after switching to IR-level FMF.
+define float @minloopmissingnsz(float* nocapture readonly %arg) #1 {
+; CHECK-LABEL: @minloopmissingnsz(
+; CHECK-NEXT:  top:
+; CHECK-NEXT:    [[T:%.*]] = load float, float* [[ARG:%.*]], align 4
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[T1:%.*]] = phi i64 [ [[T7:%.*]], [[LOOP]] ], [ 1, [[TOP:%.*]] ]
+; CHECK-NEXT:    [[T2:%.*]] = phi float [ [[T6:%.*]], [[LOOP]] ], [ [[T]], [[TOP]] ]
+; CHECK-NEXT:    [[T3:%.*]] = getelementptr float, float* [[ARG]], i64 [[T1]]
+; CHECK-NEXT:    [[T4:%.*]] = load float, float* [[T3]], align 4
+; CHECK-NEXT:    [[T5:%.*]] = fcmp olt float [[T2]], [[T4]]
+; CHECK-NEXT:    [[T6]] = select i1 [[T5]], float [[T2]], float [[T4]]
+; CHECK-NEXT:    [[T7]] = add i64 [[T1]], 1
+; CHECK-NEXT:    [[T8:%.*]] = icmp eq i64 [[T7]], 65537
+; CHECK-NEXT:    br i1 [[T8]], label [[OUT:%.*]], label [[LOOP]]
+; CHECK:       out:
+; CHECK-NEXT:    [[T6_LCSSA:%.*]] = phi float [ [[T6]], [[LOOP]] ]
+; CHECK-NEXT:    ret float [[T6_LCSSA]]
+;
+top:
+  %t = load float, float* %arg
+  br label %loop
+
+loop:                                             ; preds = %loop, %top
+  %t1 = phi i64 [ %t7, %loop ], [ 1, %top ]
+  %t2 = phi float [ %t6, %loop ], [ %t, %top ]
+  %t3 = getelementptr float, float* %arg, i64 %t1
+  %t4 = load float, float* %t3, align 4
+  %t5 = fcmp olt float %t2, %t4
+  %t6 = select i1 %t5, float %t2, float %t4
+  %t7 = add i64 %t1, 1
+  %t8 = icmp eq i64 %t7, 65537
+  br i1 %t8, label %out, label %loop
+
+out:                                              ; preds = %loop
+  ret float %t6
+}
+
+; This would assert on FMF propagation.
+
+define void @not_a_min_max() {
+; CHECK-LABEL: @not_a_min_max(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[F9_S0_V0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[T14:%.*]] = icmp eq i32 [[F9_S0_V0]], 5
+; CHECK-NEXT:    [[T15:%.*]] = select reassoc nnan ninf nsz contract afn i1 [[T14]], float 0x36A0000000000000, float 0.000000e+00
+; CHECK-NEXT:    [[ADD]] = add nuw nsw i32 [[F9_S0_V0]], 1
+; CHECK-NEXT:    br i1 false, label [[END:%.*]], label [[LOOP]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %f9.s0.v0 = phi i32 [ 0, %entry ], [ %add, %loop ]
+  %t14 = icmp eq i32 %f9.s0.v0, 5
+  %t15 = select reassoc nnan ninf nsz contract afn i1 %t14, float 0x36A0000000000000, float 0.0
+  %add = add nuw nsw i32 %f9.s0.v0, 1
+  br i1 false, label %end, label %loop
+
+end:
+  ret void
+}
+
+attributes #0 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" }
+attributes #1 = { "no-nans-fp-math"="true" }

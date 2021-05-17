@@ -24,7 +24,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/Optional.h"
-#include <utility>
 
 namespace clang {
 namespace ento {

@@ -11,7 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ExecutionEngine/Orc/OrcError.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
 #include "llvm/Support/thread.h"
 #include <map>
 #include <mutex>
@@ -766,4 +766,4 @@ public:
 } // end namespace orc
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_ORC_RPC_RPCSERIALIZATION_H
+#endif // LLVM_EXECUTIONENGINE_ORC_SHARED_SERIALIZATION_H

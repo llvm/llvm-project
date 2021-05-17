@@ -402,8 +402,12 @@ static bool format(StringRef FileName) {
     return true;
   }
 
-  if (SortIncludes.getNumOccurrences() != 0)
-    FormatStyle->SortIncludes = SortIncludes;
+  if (SortIncludes.getNumOccurrences() != 0) {
+    if (SortIncludes)
+      FormatStyle->SortIncludes = FormatStyle::SI_CaseSensitive;
+    else
+      FormatStyle->SortIncludes = FormatStyle::SI_Never;
+  }
   unsigned CursorPosition = Cursor;
   Replacements Replaces = sortIncludes(*FormatStyle, Code->getBuffer(), Ranges,
                                        AssumedFileName, &CursorPosition);

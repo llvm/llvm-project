@@ -116,12 +116,15 @@ body:             |
     RET undef $lr, implicit killed $w0
 
 ---
-# Internal function, not address-taken in this module, so no BTI needed.
+# Internal function, not address-taken in this module, however the compiler
+# cannot 100% ensure that later parts of the toolchain won't add indirect
+# jumps. E.g. a linker adding a thunk to extend the range of a direct jump.
+# Therefore, even this case needs a BTI.
 name:            simple_internal
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: simple_internal
-    ; CHECK-NOT: HINT
+    ; CHECK: HINT 34
     ; CHECK: RET
     $w0 = ORRWrs $wzr, $wzr, 0
     RET undef $lr, implicit killed $w0

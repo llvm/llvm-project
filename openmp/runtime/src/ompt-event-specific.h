@@ -79,8 +79,7 @@
 
 #define ompt_callback_mutex_released_implemented ompt_event_MAY_ALWAYS_OPTIONAL
 
-#define ompt_callback_dependences_implemented                             \
-  ompt_event_MAY_ALWAYS_OPTIONAL
+#define ompt_callback_dependences_implemented ompt_event_MAY_ALWAYS_OPTIONAL
 #define ompt_callback_task_dependence_implemented ompt_event_MAY_ALWAYS_OPTIONAL
 
 #define ompt_callback_work_implemented ompt_event_MAY_ALWAYS_OPTIONAL
@@ -107,6 +106,6 @@
 
 #define ompt_callback_dispatch_implemented ompt_event_UNIMPLEMENTED
 
-#define ompt_callback_error_implemented ompt_event_UNIMPLEMENTED
+#define ompt_callback_error_implemented ompt_event_MAY_ALWAYS_OPTIONAL
 
 #endif

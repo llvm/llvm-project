@@ -359,7 +359,7 @@ define void @rot(%i8vec3pack* nocapture sret(%i8vec3pack) %result, %i8vec3pack* 
 ; X86-NEXT:    movw $257, (%ecx) # imm = 0x101
 ; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    psrlw $1, %xmm0
-; X86-NEXT:    pand {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    pextrb $2, %xmm0, 2(%eax)
 ; X86-NEXT:    pextrw $0, %xmm0, (%eax)
 ; X86-NEXT:    retl $4

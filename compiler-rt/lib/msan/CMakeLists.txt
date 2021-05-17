@@ -80,8 +80,8 @@ foreach(arch ${MSAN_SUPPORTED_ARCH})
   endif()
 endforeach()
 
-add_compiler_rt_resource_file(msan_blacklist msan_blacklist.txt msan)
-list(APPEND MSAN_RUNTIME_LIBRARIES msan_blacklist)
+add_compiler_rt_resource_file(msan_ignorelist msan_ignorelist.txt msan)
+list(APPEND MSAN_RUNTIME_LIBRARIES msan_ignorelist)
 
 if(COMPILER_RT_INCLUDE_TESTS)
   add_subdirectory(tests)

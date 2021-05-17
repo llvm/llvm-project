@@ -29,19 +29,19 @@ define internal i32 @j(i32* %m) {
   ret i32 %v
 }
 
-define internal i32 @inalloca(i32* inalloca %p) {
+define internal i32 @inalloca(i32* inalloca(i32) %p) {
 ; CHECK-LABEL: define internal fastcc i32 @inalloca(i32* %p)
   %rv = load i32, i32* %p
   ret i32 %rv
 }
 
-define i32 @inalloca2_caller(i32* inalloca %p) {
-  %rv = musttail call i32 @inalloca2(i32* inalloca %p)
+define i32 @inalloca2_caller(i32* inalloca(i32) %p) {
+  %rv = musttail call i32 @inalloca2(i32* inalloca(i32) %p)
   ret i32 %rv
 }
-define internal i32 @inalloca2(i32* inalloca %p) {
+define internal i32 @inalloca2(i32* inalloca(i32) %p) {
 ; Because of the musttail caller, this inalloca cannot be dropped.
-; CHECK-LABEL: define internal i32 @inalloca2(i32* inalloca %p)
+; CHECK-LABEL: define internal i32 @inalloca2(i32* inalloca(i32) %p)
   %rv = load i32, i32* %p
   ret i32 %rv
 }
@@ -59,7 +59,7 @@ define void @call_things() {
   call coldcc i32 @h(i32* %m)
   call i32 @j(i32* %m)
   %args = alloca inalloca i32
-  call i32 @inalloca(i32* inalloca %args)
+  call i32 @inalloca(i32* inalloca(i32) %args)
   %c = call token @llvm.call.preallocated.setup(i32 1)
   %N = call i8* @llvm.call.preallocated.arg(token %c, i32 0) preallocated(i32)
   %n = bitcast i8* %N to i32*

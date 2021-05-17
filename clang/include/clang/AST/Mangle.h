@@ -89,12 +89,32 @@ public:
     return Result.first->second;
   }
 
+  uint64_t getAnonymousStructIdForDebugInfo(const NamedDecl *D) {
+    llvm::DenseMap<const NamedDecl *, uint64_t>::iterator Result =
+        AnonStructIds.find(D);
+    // The decl should already be inserted, but return 0 in case it is not.
+    if (Result == AnonStructIds.end())
+      return 0;
+    return Result->second;
+  }
+
+  virtual std::string getLambdaString(const CXXRecordDecl *Lambda) = 0;
+
   /// @name Mangler Entry Points
   /// @{
 
   bool shouldMangleDeclName(const NamedDecl *D);
   virtual bool shouldMangleCXXName(const NamedDecl *D) = 0;
   virtual bool shouldMangleStringLiteral(const StringLiteral *SL) = 0;
+
+  virtual bool isDeviceMangleContext() const { return false; }
+  virtual void setDeviceMangleContext(bool) {}
+
+  virtual bool isUniqueInternalLinkageDecl(const NamedDecl *ND) {
+    return false;
+  }
+
+  virtual void needsUniqueInternalLinkageNames() { }
 
   // FIXME: consider replacing raw_ostream & with something like SmallString &.
   void mangleName(GlobalDecl GD, raw_ostream &);

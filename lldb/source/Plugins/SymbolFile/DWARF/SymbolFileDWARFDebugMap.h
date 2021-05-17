@@ -97,11 +97,10 @@ public:
   uint32_t ResolveSymbolContext(const lldb_private::Address &so_addr,
                                 lldb::SymbolContextItem resolve_scope,
                                 lldb_private::SymbolContext &sc) override;
-  uint32_t
-  ResolveSymbolContext(const lldb_private::FileSpec &file_spec, uint32_t line,
-                       bool check_inlines,
-                       lldb::SymbolContextItem resolve_scope,
-                       lldb_private::SymbolContextList &sc_list) override;
+  uint32_t ResolveSymbolContext(
+      const lldb_private::SourceLocationSpec &src_location_spec,
+      lldb::SymbolContextItem resolve_scope,
+      lldb_private::SymbolContextList &sc_list) override;
   void
   FindGlobalVariables(lldb_private::ConstString name,
                       const lldb_private::CompilerDeclContext &parent_decl_ctx,

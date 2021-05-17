@@ -14,11 +14,11 @@
 
 ; TOVGPR: v_writelane_b32 [[SPILL_VREG:v[0-9]+]], [[M0_COPY]], [[M0_LANE:[0-9]+]]
 
+; TOVMEM: s_mov_b64 [[COPY_EXEC:s\[[0-9]+:[0-9]+\]]], exec
+; TOVMEM: s_mov_b64 exec, 1
 ; TOVMEM: v_writelane_b32 [[SPILL_VREG:v[0-9]+]], [[M0_COPY]], 0
-; TOVMEM: s_mov_b32 [[COPY_EXEC_LO:s[0-9]+]], exec_lo
-; TOVMEM: s_mov_b32 exec_lo, 1
 ; TOVMEM: buffer_store_dword [[SPILL_VREG]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:4 ; 4-byte Folded Spill
-; TOVMEM: s_mov_b32 exec_lo, [[COPY_EXEC_LO]]
+; TOVMEM: s_mov_b64 exec, [[COPY_EXEC]]
 
 ; GCN: s_cbranch_scc1 [[ENDIF:BB[0-9]+_[0-9]+]]
 

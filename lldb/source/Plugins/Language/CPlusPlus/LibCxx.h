@@ -105,10 +105,6 @@ public:
 
 private:
   ValueObject *m_cntrl;
-  lldb::ValueObjectSP m_count_sp;
-  lldb::ValueObjectSP m_weak_count_sp;
-  uint8_t m_ptr_size;
-  lldb::ByteOrder m_byte_order;
 };
 
 class LibcxxUniquePtrSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
@@ -128,7 +124,7 @@ public:
   ~LibcxxUniquePtrSyntheticFrontEnd() override;
 
 private:
-  lldb::ValueObjectSP m_compressed_pair_sp;
+  lldb::ValueObjectSP m_value_ptr_sp;
 };
 
 SyntheticChildrenFrontEnd *

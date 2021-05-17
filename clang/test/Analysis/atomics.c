@@ -93,3 +93,11 @@ void test_atomic_compare_exchange_weak(struct RefCountedStruct *s) {
   clang_analyzer_eval(s->refCount == 3); // expected-warning {{UNKNOWN}}
   clang_analyzer_eval(expected == 2); // expected-warning {{UNKNOWN}}
 }
+
+// PR49422
+void test_atomic_compare(int input) {
+  _Atomic(int) x = input;
+  if (x > 0) {
+    // no crash
+  }
+}

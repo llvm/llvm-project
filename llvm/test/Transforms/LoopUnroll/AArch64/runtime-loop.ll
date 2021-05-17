@@ -1,5 +1,7 @@
 ; RUN: opt < %s -S -loop-unroll -mtriple aarch64 -mcpu=cortex-a57 -unroll-runtime-epilog=true  | FileCheck %s -check-prefix=EPILOG
 ; RUN: opt < %s -S -loop-unroll -mtriple aarch64 -mcpu=cortex-a57 -unroll-runtime-epilog=false | FileCheck %s -check-prefix=PROLOG
+; RUN: opt < %s -S -loop-unroll -mtriple aarch64 -mcpu=cortex-r82 -unroll-runtime-epilog=true  | FileCheck %s -check-prefix=EPILOG
+; RUN: opt < %s -S -loop-unroll -mtriple aarch64 -mcpu=cortex-r82 -unroll-runtime-epilog=false | FileCheck %s -check-prefix=PROLOG
 
 ; Tests for unrolling loops with run-time trip counts
 

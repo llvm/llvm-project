@@ -31,8 +31,8 @@ define void @has_inalloca() uwtable sanitize_address {
 entry:
   %t = alloca inalloca i32
   store i32 42, i32* %t
-  call void @pass_inalloca(i32* inalloca %t)
+  call void @pass_inalloca(i32* inalloca(i32) %t)
   ret void
 }
 
-declare void @pass_inalloca(i32* inalloca)
+declare void @pass_inalloca(i32* inalloca(i32))

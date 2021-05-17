@@ -21,8 +21,8 @@ _start:
 addl    $_GLOBAL_OFFSET_TABLE_, %eax
 calll   f@PLT
 
-// CHECK:     Name: _GLOBAL_OFFSET_TABLE_ (1)
-// CHECK-NEXT:     Value: 0x325C
+// CHECK:     Name: _GLOBAL_OFFSET_TABLE_
+// CHECK-NEXT:     Value:
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Local (0x0)
 // CHECK-NEXT:     Type: None (0x0)

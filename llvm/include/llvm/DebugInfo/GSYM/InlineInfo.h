@@ -179,4 +179,4 @@ raw_ostream &operator<<(raw_ostream &OS, const InlineInfo &FI);
 } // namespace gsym
 } // namespace llvm
 
-#endif // #ifndef LLVM_DEBUGINFO_GSYM_INLINEINFO_H
+#endif // LLVM_DEBUGINFO_GSYM_INLINEINFO_H

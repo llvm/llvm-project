@@ -1,2 +1,2 @@
 # RUN: not llvm-objdump -h %p/Inputs/WASM/missing-version.wasm 2>&1 | FileCheck %s
-# CHECK: {{.*}}: Missing version number
+# CHECK: {{.*}}: missing version number

@@ -270,3 +270,17 @@ func @undo_child_created_before_parent() {
   // expected-remark@+1 {{op 'std.return' is not legalizable}}
   return
 }
+
+
+// -----
+
+
+// Check that a conversion pattern on `test.blackhole` can mark the producer
+// for deletion.
+// CHECK-LABEL: @blackhole
+func @blackhole() {
+  %input = "test.blackhole_producer"() : () -> (i32)
+  "test.blackhole"(%input) : (i32) -> ()
+  // expected-remark@+1 {{op 'std.return' is not legalizable}}
+  return
+}

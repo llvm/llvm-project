@@ -256,8 +256,6 @@ void Args::SetCommandString(llvm::StringRef command) {
   m_argv.push_back(nullptr);
 }
 
-size_t Args::GetArgumentCount() const { return m_entries.size(); }
-
 const char *Args::GetArgumentAtIndex(size_t idx) const {
   if (idx < m_argv.size())
     return m_argv[idx];

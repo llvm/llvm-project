@@ -1,6 +1,15 @@
 # RUN: not llvm-mc -triple=riscv64 --mattr=+experimental-v --mattr=+f %s 2>&1 \
 # RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
 
+vsetivli a2, 32, e8,m1
+# CHECK-ERROR: immediate must be an integer in the range [0, 31]
+
+vsetivli a2, zero, e8,m1
+# CHECK-ERROR: immediate must be an integer in the range [0, 31]
+
+vsetivli a2, 5, e31
+# CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+
 vsetvli a2, a0, e31
 # CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
@@ -44,6 +53,15 @@ vsetvli a2, a0, e8,m1,tu,mut
 # CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetvli a2, a0, e8,m1,tut,mu
+# CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+
+vsetvli a2, a0, e8
+# CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+
+vsetvli a2, a0, e8,m1
+# CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+
+vsetvli a2, a0, e8,m1,ta
 # CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vadd.vv v1, v3, v2, v4.t
@@ -132,78 +150,6 @@ vslide1up.vx v0, v2, a0, v0.t
 vslide1up.vx v2, v2, a0
 # CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
 # CHECK-ERROR-LABEL: vslide1up.vx v2, v2, a0
-
-vnsrl.wv v2, v2, v4
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vnsrl.wv v2, v2, v4
-
-vnsrl.wx v2, v2, a0
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vnsrl.wx v2, v2, a0
-
-vnsrl.wi v2, v2, 31
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vnsrl.wi v2, v2, 31
-
-vnsra.wv v2, v2, v4
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vnsra.wv v2, v2, v4
-
-vnsra.wx v2, v2, a0
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vnsra.wx v2, v2, a0
-
-vnsra.wi v2, v2, 31
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vnsra.wi v2, v2, 31
-
-vnclipu.wv v2, v2, v4
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vnclipu.wv v2, v2, v4
-
-vnclipu.wx v2, v2, a0
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vnclipu.wx v2, v2, a0
-
-vnclipu.wi v2, v2, 31
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vnclipu.wi v2, v2, 31
-
-vnclip.wv v2, v2, v4
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vnclip.wv v2, v2, v4
-
-vnclip.wx v2, v2, a0
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vnclip.wx v2, v2, a0
-
-vnclip.wi v2, v2, 31
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vnclip.wi v2, v2, 31
-
-vfncvt.xu.f.w v2, v2
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vfncvt.xu.f.w v2, v2
-
-vfncvt.x.f.w v2, v2
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vfncvt.x.f.w v2, v2
-
-vfncvt.f.xu.w v2, v2
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vfncvt.f.xu.w v2, v2
-
-vfncvt.f.x.w v2, v2
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vfncvt.f.x.w v2, v2
-
-vfncvt.f.f.w v2, v2
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vfncvt.f.f.w v2, v2
-
-vfncvt.rod.f.f.w v2, v2
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vfncvt.rod.f.f.w v2, v2
 
 vrgather.vv v0, v2, v4, v0.t
 # CHECK-ERROR: The destination vector register group cannot overlap the mask register.
@@ -589,14 +535,6 @@ vadc.vvm v0, v2, v4, v0
 # CHECK-ERROR: The destination vector register group cannot be V0.
 # CHECK-ERROR-LABEL: vadc.vvm v0, v2, v4, v0
 
-vmadc.vvm v2, v2, v4, v0
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vmadc.vvm v2, v2, v4, v0
-
-vmadc.vvm v4, v2, v4, v0
-# CHECK-ERROR: The destination vector register group cannot overlap the source vector register group.
-# CHECK-ERROR-LABEL: vmadc.vvm v4, v2, v4, v0
-
 vadd.vv v0, v2, v4, v0.t
 # CHECK-ERROR: The destination vector register group cannot overlap the mask register.
 # CHECK-ERROR-LABEL: vadd.vv v0, v2, v4, v0.t
@@ -612,10 +550,6 @@ vadd.vi v0, v2, 1, v0.t
 vmsge.vx v0, v4, a0, v0.t
 # CHECK-ERROR: too few operands for instruction
 # CHECK-ERROR-LABEL: vmsge.vx v0, v4, a0, v0.t
-
-vmsge.vx v8, v4, a0, v0.t, v2
-# CHECK-ERROR: invalid operand for instruction
-# CHECK-ERROR-LABEL: vmsge.vx v8, v4, a0, v0.t, v2
 
 vmerge.vim v0, v1, 1, v0
 # CHECK-ERROR: The destination vector register group cannot be V0.
@@ -652,3 +586,89 @@ vzext.vf2 v0, v1, v0.t
 vid.v v0, v0.t
 # CHECK-ERROR: The destination vector register group cannot overlap the mask register.
 # CHECK-ERROR-LABEL: vid.v v0, v0.t
+
+vnsrl.wv v0, v4, v20, v0.t
+# CHECK-ERROR: The destination vector register group cannot overlap the mask register.
+# CHECK-ERROR-LABEL: vnsrl.wv v0, v4, v20, v0.t
+
+vfncvt.xu.f.w v0, v4, v0.t
+# CHECK-ERROR: The destination vector register group cannot overlap the mask register.
+# CHECK-ERROR-LABEL: vfncvt.xu.f.w v0, v4, v0.t
+
+vl2re8.v v1, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl4re8.v v1, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl4re8.v v2, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl4re8.v v3, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl8re8.v v1, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl8re8.v v2, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl8re8.v v3, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl8re8.v v4, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl8re8.v v5, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl8re8.v v6, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl8re8.v v7, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs2r.v v1, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs4r.v v1, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs4r.v v2, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs4r.v v3, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs8r.v v1, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs8r.v v2, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs8r.v v3, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs8r.v v4, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs8r.v v5, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs8r.v v6, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs8r.v v7, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vmsge.vx v2, v4, a0, v0.t, v0
+# CHECK-ERROR: invalid operand for instruction
+
+vmsgeu.vx v2, v4, a0, v0.t, v0
+# CHECK-ERROR: invalid operand for instruction
+
+vmsge.vx v2, v4, a0, v0.t, v2
+# CHECK-ERROR: The temporary vector register cannot be the same as the destination register.
+
+vmsgeu.vx v2, v4, a0, v0.t, v2
+# CHECK-ERROR: The temporary vector register cannot be the same as the destination register.

@@ -1,19 +1,18 @@
 ; Test for a subtle bug when computing analyses during inlining and mutating
 ; the SCC structure. Without care, this can fail to invalidate analyses.
 ;
-; RUN: opt < %s -passes='cgscc(inline,function(verify<domtree>))' -debug-pass-manager -S 2>&1 | FileCheck %s
+; RUN: opt < %s -aa-pipeline= -passes='cgscc(inline,function(verify<domtree>))' -debug-pass-manager -S 2>&1 | FileCheck %s
 
 ; First we check that the passes run in the way we expect. Otherwise this test
 ; may stop testing anything.
 ;
-; CHECK-LABEL: Starting llvm::Module pass manager run.
 ; CHECK: Running pass: InlinerPass on (test1_f, test1_g, test1_h)
 ; CHECK: Running analysis: DominatorTreeAnalysis on test1_f
-; CHECK: Running analysis: DominatorTreeAnalysis on test1_g
 ; CHECK: Invalidating analysis: DominatorTreeAnalysis on test1_f
 ; CHECK: Invalidating analysis: LoopAnalysis on test1_f
 ; CHECK: Invalidating analysis: BranchProbabilityAnalysis on test1_f
 ; CHECK: Invalidating analysis: BlockFrequencyAnalysis on test1_f
+; CHECK: Running analysis: DominatorTreeAnalysis on test1_g
 ; CHECK: Invalidating analysis: DominatorTreeAnalysis on test1_g
 ; CHECK: Invalidating analysis: LoopAnalysis on test1_g
 ; CHECK: Invalidating analysis: BranchProbabilityAnalysis on test1_g
@@ -23,18 +22,13 @@
 ; CHECK: Invalidating analysis: BranchProbabilityAnalysis on test1_h
 ; CHECK: Invalidating analysis: BlockFrequencyAnalysis on test1_h
 ; CHECK-NOT: Invalidating analysis:
-; CHECK: Starting llvm::Function pass manager run.
-; CHECK-NEXT: Running pass: DominatorTreeVerifierPass on test1_g
+; CHECK: Running pass: DominatorTreeVerifierPass on test1_g
 ; CHECK-NEXT: Running analysis: DominatorTreeAnalysis on test1_g
-; CHECK-NEXT: Finished llvm::Function pass manager run.
 ; CHECK-NOT: Invalidating analysis:
-; CHECK: Starting llvm::Function pass manager run.
-; CHECK-NEXT: Running pass: DominatorTreeVerifierPass on test1_h
+; CHECK: Running pass: DominatorTreeVerifierPass on test1_h
 ; CHECK-NEXT: Running analysis: DominatorTreeAnalysis on test1_h
-; CHECK-NEXT: Finished llvm::Function pass manager run.
 ; CHECK-NOT: Invalidating analysis:
 ; CHECK: Running pass: DominatorTreeVerifierPass on test1_f
-; CHECK-NEXT: Running analysis: DominatorTreeAnalysis on test1_f
 
 ; An external function used to control branches.
 declare i1 @flag()

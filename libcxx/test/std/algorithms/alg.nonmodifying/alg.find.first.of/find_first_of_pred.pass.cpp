@@ -46,31 +46,31 @@ int main(int, char**)
     const unsigned sa = sizeof(ia)/sizeof(ia[0]);
     int ib[] = {1, 3, 5, 7};
     const unsigned sb = sizeof(ib)/sizeof(ib[0]);
-    assert(std::find_first_of(input_iterator<const int*>(ia),
-                              input_iterator<const int*>(ia + sa),
+    assert(std::find_first_of(cpp17_input_iterator<const int*>(ia),
+                              cpp17_input_iterator<const int*>(ia + sa),
                               forward_iterator<const int*>(ib),
                               forward_iterator<const int*>(ib + sb),
                               std::equal_to<int>()) ==
-                              input_iterator<const int*>(ia+1));
+                              cpp17_input_iterator<const int*>(ia+1));
     int ic[] = {7};
-    assert(std::find_first_of(input_iterator<const int*>(ia),
-                              input_iterator<const int*>(ia + sa),
+    assert(std::find_first_of(cpp17_input_iterator<const int*>(ia),
+                              cpp17_input_iterator<const int*>(ia + sa),
                               forward_iterator<const int*>(ic),
                               forward_iterator<const int*>(ic + 1),
                               std::equal_to<int>()) ==
-                              input_iterator<const int*>(ia+sa));
-    assert(std::find_first_of(input_iterator<const int*>(ia),
-                              input_iterator<const int*>(ia + sa),
+                              cpp17_input_iterator<const int*>(ia+sa));
+    assert(std::find_first_of(cpp17_input_iterator<const int*>(ia),
+                              cpp17_input_iterator<const int*>(ia + sa),
                               forward_iterator<const int*>(ic),
                               forward_iterator<const int*>(ic),
                               std::equal_to<int>()) ==
-                              input_iterator<const int*>(ia+sa));
-    assert(std::find_first_of(input_iterator<const int*>(ia),
-                              input_iterator<const int*>(ia),
+                              cpp17_input_iterator<const int*>(ia+sa));
+    assert(std::find_first_of(cpp17_input_iterator<const int*>(ia),
+                              cpp17_input_iterator<const int*>(ia),
                               forward_iterator<const int*>(ic),
                               forward_iterator<const int*>(ic+1),
                               std::equal_to<int>()) ==
-                              input_iterator<const int*>(ia));
+                              cpp17_input_iterator<const int*>(ia));
 
 #if TEST_STD_VER > 17
     static_assert(test_constexpr());

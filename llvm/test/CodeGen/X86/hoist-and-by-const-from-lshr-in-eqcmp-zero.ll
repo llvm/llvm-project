@@ -499,7 +499,7 @@ define <4 x i1> @vec_4xi32_splat_eq(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pxor %xmm2, %xmm2
 ; X86-SSE2-NEXT:    pslld $23, %xmm1
-; X86-SSE2-NEXT:    paddd {{\.LCPI.*}}, %xmm1
+; X86-SSE2-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
 ; X86-SSE2-NEXT:    pmuludq %xmm1, %xmm0
@@ -508,7 +508,7 @@ define <4 x i1> @vec_4xi32_splat_eq(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-SSE2-NEXT:    pmuludq %xmm3, %xmm1
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; X86-SSE2-NEXT:    pand {{\.LCPI.*}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    pcmpeqd %xmm2, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
@@ -586,7 +586,7 @@ define <4 x i1> @vec_4xi32_nonsplat_undef0_eq(<4 x i32> %x, <4 x i32> %y) nounwi
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pxor %xmm2, %xmm2
 ; X86-SSE2-NEXT:    pslld $23, %xmm1
-; X86-SSE2-NEXT:    paddd {{\.LCPI.*}}, %xmm1
+; X86-SSE2-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
 ; X86-SSE2-NEXT:    pmuludq %xmm1, %xmm0
@@ -595,7 +595,7 @@ define <4 x i1> @vec_4xi32_nonsplat_undef0_eq(<4 x i32> %x, <4 x i32> %y) nounwi
 ; X86-SSE2-NEXT:    pmuludq %xmm3, %xmm1
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; X86-SSE2-NEXT:    pand {{\.LCPI.*}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    pcmpeqd %xmm2, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
@@ -762,7 +762,7 @@ define i1 @scalar_i32_x_is_const2_eq(i32 %y) nounwind {
 ; X86-BMI1-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-BMI1-NEXT:    movl $1, %eax
 ; X86-BMI1-NEXT:    shrl %cl, %eax
-; X86-BMI1-NEXT:    testb %al, %al
+; X86-BMI1-NEXT:    testl %eax, %eax
 ; X86-BMI1-NEXT:    sete %al
 ; X86-BMI1-NEXT:    retl
 ;
@@ -771,7 +771,7 @@ define i1 @scalar_i32_x_is_const2_eq(i32 %y) nounwind {
 ; X86-BMI2-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-BMI2-NEXT:    movl $1, %ecx
 ; X86-BMI2-NEXT:    shrxl %eax, %ecx, %eax
-; X86-BMI2-NEXT:    testb %al, %al
+; X86-BMI2-NEXT:    testl %eax, %eax
 ; X86-BMI2-NEXT:    sete %al
 ; X86-BMI2-NEXT:    retl
 ;
@@ -781,7 +781,7 @@ define i1 @scalar_i32_x_is_const2_eq(i32 %y) nounwind {
 ; X64-BMI1-NEXT:    movl $1, %eax
 ; X64-BMI1-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-BMI1-NEXT:    shrl %cl, %eax
-; X64-BMI1-NEXT:    testb %al, %al
+; X64-BMI1-NEXT:    testl %eax, %eax
 ; X64-BMI1-NEXT:    sete %al
 ; X64-BMI1-NEXT:    retq
 ;
@@ -789,7 +789,7 @@ define i1 @scalar_i32_x_is_const2_eq(i32 %y) nounwind {
 ; X64-BMI2:       # %bb.0:
 ; X64-BMI2-NEXT:    movl $1, %eax
 ; X64-BMI2-NEXT:    shrxl %edi, %eax, %eax
-; X64-BMI2-NEXT:    testb %al, %al
+; X64-BMI2-NEXT:    testl %eax, %eax
 ; X64-BMI2-NEXT:    sete %al
 ; X64-BMI2-NEXT:    retq
   %t0 = lshr i32 1, %y

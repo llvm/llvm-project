@@ -14,11 +14,12 @@
 ; GCN-DAG: v_cmp_lt_f32_e32 vcc,
 ; GCN: s_and_b64 [[AND:s\[[0-9]+:[0-9]+\]]], vcc, [[OTHERCC]]
 ; GCN: s_and_saveexec_b64 [[SAVED:s\[[0-9]+:[0-9]+\]]], [[AND]]
+; GCN-NEXT: s_cbranch_execz BB0_{{[0-9]+}}
 
 ; GCN-NEXT: ; %bb.{{[0-9]+}}: ; %bb4
 ; GCN: ds_write_b32
 
-; GCN: ; %bb.{{[0-9]+}}:
+; GCN: BB0_{{[0-9]+}}: ; %UnifiedReturnBlock
 ; GCN-NEXT: s_endpgm
 ; GCN-NEXT: .Lfunc_end
 define amdgpu_ps void @ham(float %arg, float %arg1) #0 {

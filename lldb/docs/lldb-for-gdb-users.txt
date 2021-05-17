@@ -162,7 +162,7 @@ Current breakpoints:
   1.1: where = Sketch`-[SKTGraphicView alignLeftEdges:] + 33 at /Projects/Sketch/SKTGraphicView.m:1405, address = 0x0000000100010d5b, resolved, hit count = 0 
 
 Note that each "logical" breakpoint can have multiple "locations".
-The logical breakpoint has an integer id, and it's locations have an
+The logical breakpoint has an integer id, and its locations have an
 id within their parent breakpoint (the two are joined by a ".",
 e.g. 1.1 in the example above.)  
 

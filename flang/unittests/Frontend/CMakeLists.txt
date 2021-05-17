@@ -1,6 +1,5 @@
 add_flang_unittest(FlangFrontendTests
   CompilerInstanceTest.cpp
-  InputOutputTest.cpp
   FrontendActionTest.cpp
 )
 
@@ -10,4 +9,6 @@ target_link_libraries(FlangFrontendTests
   flangFrontend
   flangFrontendTool
   FortranParser
+  FortranSemantics
+  FortranCommon
 )

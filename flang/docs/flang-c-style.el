@@ -9,7 +9,7 @@
 ;; Define a cc-mode style for editing C++ codes in Flang.
 ;;
 ;; Inspired from LLVM style in
-;;    https://github.com/llvm-mirror/llvm/blob/master/utils/emacs/emacs.el
+;;    https://github.com/llvm/llvm-project/blob/main/llvm/utils/emacs/emacs.el
 ;;
 
 (c-add-style "flang"

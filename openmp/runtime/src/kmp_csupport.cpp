@@ -88,7 +88,7 @@ If the runtime has ony been entered at the outermost level from a
 single (necessarily non-OpenMP<sup>*</sup>) thread, then the thread number is
 that which would be returned by omp_get_thread_num() in the outermost
 active parallel construct. (Or zero if there is no active parallel
-construct, since the master thread is necessarily thread zero).
+construct, since the primary thread is necessarily thread zero).
 
 If multiple non-OpenMP threads all enter an OpenMP construct then this
 will be a unique thread identifier among all the threads created by
@@ -316,7 +316,7 @@ void __kmpc_fork_call(ident_t *loc, kmp_int32 argc, kmpc_micro microtask, ...) {
                     ,
                     fork_context_intel
 #endif
-                    );
+    );
 
     va_end(ap);
   }
@@ -349,6 +349,33 @@ void __kmpc_push_num_teams(ident_t *loc, kmp_int32 global_tid,
             global_tid, num_teams, num_threads));
   __kmp_assert_valid_gtid(global_tid);
   __kmp_push_num_teams(loc, global_tid, num_teams, num_threads);
+}
+
+/*!
+@ingroup PARALLEL
+@param loc source location information
+@param global_tid global thread number
+@param num_teams_lo lower bound on number of teams requested for the teams
+construct
+@param num_teams_up upper bound on number of teams requested for the teams
+construct
+@param num_threads number of threads per team requested for the teams construct
+
+Set the number of teams to be used by the teams construct. The number of initial
+teams cretaed will be greater than or equal to the lower bound and less than or
+equal to the upper bound.
+This call is only required if the teams construct has a `num_teams` clause
+or a `thread_limit` clause (or both).
+*/
+void __kmpc_push_num_teams_51(ident_t *loc, kmp_int32 global_tid,
+                              kmp_int32 num_teams_lb, kmp_int32 num_teams_ub,
+                              kmp_int32 num_threads) {
+  KA_TRACE(20, ("__kmpc_push_num_teams_51: enter T#%d num_teams_lb=%d"
+                " num_teams_ub=%d num_threads=%d\n",
+                global_tid, num_teams_lb, num_teams_ub, num_threads));
+  __kmp_assert_valid_gtid(global_tid);
+  __kmp_push_num_teams_51(loc, global_tid, num_teams_lb, num_teams_ub,
+                          num_threads);
 }
 
 /*!
@@ -411,7 +438,7 @@ void __kmpc_fork_teams(ident_t *loc, kmp_int32 argc, kmpc_micro microtask,
                   ,
                   fork_context_intel
 #endif
-                  );
+  );
 
   // Pop current CG root off list
   KMP_DEBUG_ASSERT(this_thr->th.th_cg_roots);
@@ -567,7 +594,7 @@ void __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
   --serial_team->t.t_serialized;
   if (serial_team->t.t_serialized == 0) {
 
-/* return to the parallel section */
+    /* return to the parallel section */
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
     if (__kmp_inherit_fp_control && serial_team->t.t_fp_control_saved) {
@@ -817,6 +844,92 @@ void __kmpc_end_master(ident_t *loc, kmp_int32 global_tid) {
   if (__kmp_env_consistency_check) {
     if (KMP_MASTER_GTID(global_tid))
       __kmp_pop_sync(global_tid, ct_master, loc);
+  }
+}
+
+/*!
+@ingroup WORK_SHARING
+@param loc  source location information.
+@param global_tid  global thread number.
+@param filter result of evaluating filter clause on thread global_tid, or zero
+if no filter clause present
+@return 1 if this thread should execute the <tt>masked</tt> block, 0 otherwise.
+*/
+kmp_int32 __kmpc_masked(ident_t *loc, kmp_int32 global_tid, kmp_int32 filter) {
+  int status = 0;
+  int tid;
+  KC_TRACE(10, ("__kmpc_masked: called T#%d\n", global_tid));
+  __kmp_assert_valid_gtid(global_tid);
+
+  if (!TCR_4(__kmp_init_parallel))
+    __kmp_parallel_initialize();
+
+  __kmp_resume_if_soft_paused();
+
+  tid = __kmp_tid_from_gtid(global_tid);
+  if (tid == filter) {
+    KMP_COUNT_BLOCK(OMP_MASKED);
+    KMP_PUSH_PARTITIONED_TIMER(OMP_masked);
+    status = 1;
+  }
+
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  if (status) {
+    if (ompt_enabled.ompt_callback_masked) {
+      kmp_info_t *this_thr = __kmp_threads[global_tid];
+      kmp_team_t *team = this_thr->th.th_team;
+      ompt_callbacks.ompt_callback(ompt_callback_masked)(
+          ompt_scope_begin, &(team->t.ompt_team_info.parallel_data),
+          &(team->t.t_implicit_task_taskdata[tid].ompt_task_info.task_data),
+          OMPT_GET_RETURN_ADDRESS(0));
+    }
+  }
+#endif
+
+  if (__kmp_env_consistency_check) {
+#if KMP_USE_DYNAMIC_LOCK
+    if (status)
+      __kmp_push_sync(global_tid, ct_masked, loc, NULL, 0);
+    else
+      __kmp_check_sync(global_tid, ct_masked, loc, NULL, 0);
+#else
+    if (status)
+      __kmp_push_sync(global_tid, ct_masked, loc, NULL);
+    else
+      __kmp_check_sync(global_tid, ct_masked, loc, NULL);
+#endif
+  }
+
+  return status;
+}
+
+/*!
+@ingroup WORK_SHARING
+@param loc  source location information.
+@param global_tid  global thread number .
+
+Mark the end of a <tt>masked</tt> region. This should only be called by the
+thread that executes the <tt>masked</tt> region.
+*/
+void __kmpc_end_masked(ident_t *loc, kmp_int32 global_tid) {
+  KC_TRACE(10, ("__kmpc_end_masked: called T#%d\n", global_tid));
+  __kmp_assert_valid_gtid(global_tid);
+  KMP_POP_PARTITIONED_TIMER();
+
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  kmp_info_t *this_thr = __kmp_threads[global_tid];
+  kmp_team_t *team = this_thr->th.th_team;
+  if (ompt_enabled.ompt_callback_masked) {
+    int tid = __kmp_tid_from_gtid(global_tid);
+    ompt_callbacks.ompt_callback(ompt_callback_masked)(
+        ompt_scope_end, &(team->t.ompt_team_info.parallel_data),
+        &(team->t.t_implicit_task_taskdata[tid].ompt_task_info.task_data),
+        OMPT_GET_RETURN_ADDRESS(0));
+  }
+#endif
+
+  if (__kmp_env_consistency_check) {
+    __kmp_pop_sync(global_tid, ct_masked, loc);
   }
 }
 
@@ -1175,10 +1288,10 @@ void __kmpc_critical(ident_t *loc, kmp_int32 global_tid,
   if (__kmp_env_consistency_check)
     __kmp_push_sync(global_tid, ct_critical, loc, lck);
 
-// since the critical directive binds to all threads, not just the current
-// team we have to check this even if we are in a serialized team.
-// also, even if we are the uber thread, we still have to conduct the lock,
-// as we have to contend with sibling threads.
+    // since the critical directive binds to all threads, not just the current
+    // team we have to check this even if we are in a serialized team.
+    // also, even if we are the uber thread, we still have to conduct the lock,
+    // as we have to contend with sibling threads.
 
 #if USE_ITT_BUILD
   __kmp_itt_critical_acquiring(lck);
@@ -1961,8 +2074,10 @@ void kmpc_set_defaults(char const *str) {
 void kmpc_set_disp_num_buffers(int arg) {
   // ignore after initialization because some teams have already
   // allocated dispatch buffers
-  if (__kmp_init_serial == 0 && arg > 0)
+  if (__kmp_init_serial == FALSE && arg >= KMP_MIN_DISP_NUM_BUFF &&
+      arg <= KMP_MAX_DISP_NUM_BUFF) {
     __kmp_dispatch_num_buffers = arg;
+  }
 }
 
 int kmpc_set_affinity_mask_proc(int proc, void **mask) {
@@ -2083,21 +2198,21 @@ void __kmpc_copyprivate(ident_t *loc, kmp_int32 gtid, size_t cpy_size,
   if (!didit)
     (*cpy_func)(cpy_data, *data_ptr);
 
-// Consider next barrier a user-visible barrier for barrier region boundaries
-// Nesting checks are already handled by the single construct checks
+  // Consider next barrier a user-visible barrier for barrier region boundaries
+  // Nesting checks are already handled by the single construct checks
   {
 #if OMPT_SUPPORT
     OMPT_STORE_RETURN_ADDRESS(gtid);
 #endif
 #if USE_ITT_NOTIFY
-  __kmp_threads[gtid]->th.th_ident = loc; // TODO: check if it is needed (e.g.
+    __kmp_threads[gtid]->th.th_ident = loc; // TODO: check if it is needed (e.g.
 // tasks can overwrite the location)
 #endif
-  __kmp_barrier(bs_plain_barrier, gtid, FALSE, 0, NULL, NULL);
+    __kmp_barrier(bs_plain_barrier, gtid, FALSE, 0, NULL, NULL);
 #if OMPT_SUPPORT && OMPT_OPTIONAL
-  if (ompt_enabled.enabled) {
-    ompt_frame->enter_frame = ompt_data_none;
-  }
+    if (ompt_enabled.enabled) {
+      ompt_frame->enter_frame = ompt_data_none;
+    }
 #endif
   }
 }
@@ -2642,7 +2757,7 @@ void __kmpc_set_nest_lock(ident_t *loc, kmp_int32 gtid, void **user_lock) {
 #endif
   int acquire_status =
       KMP_D_LOCK_FUNC(user_lock, set)((kmp_dyna_lock_t *)user_lock, gtid);
-  (void) acquire_status;
+  (void)acquire_status;
 #if USE_ITT_BUILD
   __kmp_itt_lock_acquired((kmp_user_lock_p)user_lock);
 #endif
@@ -2835,7 +2950,7 @@ void __kmpc_unset_nest_lock(ident_t *loc, kmp_int32 gtid, void **user_lock) {
 #endif
   int release_status =
       KMP_D_LOCK_FUNC(user_lock, unset)((kmp_dyna_lock_t *)user_lock, gtid);
-  (void) release_status;
+  (void)release_status;
 
 #if OMPT_SUPPORT && OMPT_OPTIONAL
   // This is the case, if called from omp_init_lock_with_hint:
@@ -3055,7 +3170,7 @@ int __kmpc_test_lock(ident_t *loc, kmp_int32 gtid, void **user_lock) {
 
   return (rc ? FTN_TRUE : FTN_FALSE);
 
-/* Can't use serial interval since not block structured */
+  /* Can't use serial interval since not block structured */
 
 #endif // KMP_USE_DYNAMIC_LOCK
 }
@@ -3173,7 +3288,7 @@ int __kmpc_test_nest_lock(ident_t *loc, kmp_int32 gtid, void **user_lock) {
 #endif
   return rc;
 
-/* Can't use serial interval since not block structured */
+  /* Can't use serial interval since not block structured */
 
 #endif // KMP_USE_DYNAMIC_LOCK
 }
@@ -3346,7 +3461,7 @@ __kmp_restore_swapped_teams(kmp_info_t *th, kmp_team_t *team, int task_state) {
 @param reduce_func callback function providing reduction operation on two
 operands and returning result of reduction in lhs_data
 @param lck pointer to the unique lock data structure
-@result 1 for the master thread, 0 for all other team threads, 2 for all team
+@result 1 for the primary thread, 0 for all other team threads, 2 for all team
 threads if atomic reduction needed
 
 The nowait version is used for a reduce clause with the nowait argument.
@@ -3442,11 +3557,11 @@ __kmpc_reduce_nowait(ident_t *loc, kmp_int32 global_tid, kmp_int32 num_vars,
                                    tree_reduce_block)) {
 
 // AT: performance issue: a real barrier here
-// AT:     (if master goes slow, other threads are blocked here waiting for the
-// master to come and release them)
-// AT:     (it's not what a customer might expect specifying NOWAIT clause)
-// AT:     (specifying NOWAIT won't result in improvement of performance, it'll
-// be confusing to a customer)
+// AT: (if primary thread is slow, other threads are blocked here waiting for
+//      the primary thread to come and release them)
+// AT: (it's not what a customer might expect specifying NOWAIT clause)
+// AT: (specifying NOWAIT won't result in improvement of performance, it'll
+//      be confusing to a customer)
 // AT: another implementation of *barrier_gather*nowait() (or some other design)
 // might go faster and be more in line with sense of NOWAIT
 // AT: TO DO: do epcc test and compare times
@@ -3480,7 +3595,7 @@ __kmpc_reduce_nowait(ident_t *loc, kmp_int32 global_tid, kmp_int32 num_vars,
     }
 #endif
 
-    // all other workers except master should do this pop here
+    // all other workers except primary thread should do this pop here
     //     ( none of other workers will get to __kmpc_end_reduce_nowait() )
     if (__kmp_env_consistency_check) {
       if (retval == 0) {
@@ -3538,7 +3653,7 @@ void __kmpc_end_reduce_nowait(ident_t *loc, kmp_int32 global_tid,
 
   } else if (packed_reduction_method == atomic_reduce_block) {
 
-    // neither master nor other workers should get here
+    // neither primary thread nor other workers should get here
     //     (code gen does not generate this call in case 2: atomic reduce block)
     // actually it's better to remove this elseif at all;
     // after removal this value will checked by the 'else' and will assert
@@ -3546,7 +3661,7 @@ void __kmpc_end_reduce_nowait(ident_t *loc, kmp_int32 global_tid,
   } else if (TEST_REDUCTION_METHOD(packed_reduction_method,
                                    tree_reduce_block)) {
 
-    // only master gets here
+    // only primary thread gets here
     // OMPT: tree reduction is annotated in the barrier code
 
   } else {
@@ -3576,7 +3691,7 @@ void __kmpc_end_reduce_nowait(ident_t *loc, kmp_int32 global_tid,
 @param reduce_func callback function providing reduction operation on two
 operands and returning result of reduction in lhs_data
 @param lck pointer to the unique lock data structure
-@result 1 for the master thread, 0 for all other team threads, 2 for all team
+@result 1 for the primary thread, 0 for all other team threads, 2 for all team
 threads if atomic reduction needed
 
 A blocking reduce that includes an implicit barrier.
@@ -3670,10 +3785,10 @@ kmp_int32 __kmpc_reduce(ident_t *loc, kmp_int32 global_tid, kmp_int32 num_vars,
     }
 #endif
 
-    // all other workers except master should do this pop here
-    // ( none of other workers except master will enter __kmpc_end_reduce() )
+    // all other workers except primary thread should do this pop here
+    // (none of other workers except primary will enter __kmpc_end_reduce())
     if (__kmp_env_consistency_check) {
-      if (retval == 0) { // 0: all other workers; 1: master
+      if (retval == 0) { // 0: all other workers; 1: primary thread
         __kmp_pop_sync(global_tid, ct_reduce, loc);
       }
     }
@@ -3799,7 +3914,7 @@ void __kmpc_end_reduce(ident_t *loc, kmp_int32 global_tid,
   } else if (TEST_REDUCTION_METHOD(packed_reduction_method,
                                    tree_reduce_block)) {
 
-    // only master executes here (master releases all other workers)
+    // only primary thread executes here (primary releases all other workers)
     __kmp_end_split_barrier(UNPACK_REDUCTION_BARRIER(packed_reduction_method),
                             global_tid);
 
@@ -4241,4 +4356,36 @@ int __kmpc_pause_resource(kmp_pause_status_t level) {
     return 1; // Can't pause if runtime is not initialized
   }
   return __kmp_pause_resource(level);
+}
+
+void __kmpc_error(ident_t *loc, int severity, const char *message) {
+  if (!__kmp_init_serial)
+    __kmp_serial_initialize();
+
+  KMP_ASSERT(severity == severity_warning || severity == severity_fatal);
+
+#if OMPT_SUPPORT
+  if (ompt_enabled.enabled && ompt_enabled.ompt_callback_error) {
+    ompt_callbacks.ompt_callback(ompt_callback_error)(
+        (ompt_severity_t)severity, message, KMP_STRLEN(message),
+        OMPT_GET_RETURN_ADDRESS(0));
+  }
+#endif // OMPT_SUPPORT
+
+  char *src_loc;
+  if (loc && loc->psource) {
+    kmp_str_loc_t str_loc = __kmp_str_loc_init(loc->psource, false);
+    src_loc =
+        __kmp_str_format("%s:%s:%s", str_loc.file, str_loc.line, str_loc.col);
+    __kmp_str_loc_free(&str_loc);
+  } else {
+    src_loc = __kmp_str_format("unknown");
+  }
+
+  if (severity == severity_warning)
+    KMP_WARNING(UserDirectedWarning, src_loc, message);
+  else
+    KMP_FATAL(UserDirectedError, src_loc, message);
+
+  __kmp_str_free(&src_loc);
 }

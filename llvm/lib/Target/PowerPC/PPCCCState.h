@@ -10,6 +10,7 @@
 #define PPCCCSTATE_H
 
 #include "PPCISelLowering.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 
@@ -36,6 +37,37 @@ public:
   bool WasOriginalArgPPCF128(unsigned ValNo) { return OriginalArgWasPPCF128[ValNo]; }
   void clearWasPPCF128() { OriginalArgWasPPCF128.clear(); }
 };
-}
+
+class AIXCCState : public CCState {
+private:
+  BitVector IsFixed;
+
+public:
+  AIXCCState(CallingConv::ID CC, bool IsVarArg, MachineFunction &MF,
+             SmallVectorImpl<CCValAssign> &Locs, LLVMContext &C)
+      : CCState(CC, IsVarArg, MF, Locs, C) {}
+
+  void AnalyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
+                              CCAssignFn Fn) {
+    // All formal arguments are fixed.
+    IsFixed.resize(Ins.size(), true);
+    CCState::AnalyzeFormalArguments(Ins, Fn);
+  }
+
+  void AnalyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Outs,
+                           CCAssignFn Fn) {
+    // Record whether the call operand was a fixed argument.
+    IsFixed.resize(Outs.size(), false);
+    for (unsigned ValNo = 0, E = Outs.size(); ValNo != E; ++ValNo)
+      if (Outs[ValNo].IsFixed)
+        IsFixed.set(ValNo);
+
+    CCState::AnalyzeCallOperands(Outs, Fn);
+  }
+
+  bool isFixed(unsigned ValNo) const { return IsFixed.test(ValNo); }
+};
+
+} // end namespace llvm
 
 #endif

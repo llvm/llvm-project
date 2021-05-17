@@ -9,8 +9,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_INSTRORDERFILE_H
-#define LLVM_TRANSFORMS_INSTRORDERFILE_H
+#ifndef LLVM_TRANSFORMS_INSTRUMENTATION_INSTRORDERFILE_H
+#define LLVM_TRANSFORMS_INSTRUMENTATION_INSTRORDERFILE_H
 
 #include "llvm/IR/PassManager.h"
 
@@ -25,4 +25,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_TRANSFORMS_INSTRORDERFILE_H
+#endif // LLVM_TRANSFORMS_INSTRUMENTATION_INSTRORDERFILE_H

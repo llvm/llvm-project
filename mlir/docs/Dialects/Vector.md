@@ -116,10 +116,10 @@ vector.transfer_write %f1, %A[%i0, %i1, %i2, %i3]
 
 The list of Vector is currently undergoing evolutions and is best kept
 track of by following the evolution of the
-[VectorOps.td](https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/Vector/VectorOps.td)
+[VectorOps.td](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Dialect/Vector/VectorOps.td)
 ODS file (markdown documentation is automatically generated locally when
 building and populates the [Vector
-doc](https://github.com/llvm/llvm-project/blob/master/mlir/docs/Dialects/Vector.md)). Recent
+doc](https://github.com/llvm/llvm-project/blob/main/mlir/docs/Dialects/Vector.md)). Recent
 extensions are driven by concrete use cases of interest. A notable such use
 case is the `vector.contract` op which applies principles of the StructuredOps
 abstraction to `vector` types.
@@ -149,7 +149,7 @@ or the [VectorOuterProductOp
 lowering](https://github.com/tensorflow/mlir/commit/957b1ca9680b4aacabb3a480fbc4ebd2506334b8)).
 
 Simple [conversion
-tests](https://github.com/llvm/llvm-project/blob/master/mlir/test/Conversion/VectorToLLVM/vector-to-llvm.mlir)
+tests](https://github.com/llvm/llvm-project/blob/main/mlir/test/Conversion/VectorToLLVM/vector-to-llvm.mlir)
 are available for the `LLVM` target starting from the Virtual Vector Level.
 
 ## Rationale
@@ -225,7 +225,7 @@ granularity.
 Irrespective of the existence of an auto-vectorizer, one can build a notional
 vector language based on the VectorOps dialect and build end-to-end models
 with expressing `vector`s in the IR directly and simple
-pattern-rewrites. [EDSC](https://github.com/llvm/llvm-project/blob/master/mlir/docs/EDSC.md)s
+pattern-rewrites. [EDSC](https://github.com/llvm/llvm-project/blob/main/mlir/docs/EDSC.md)s
 provide a simple way of driving such a notional language directly in C++.
 
 ## Bikeshed Naming Discussion

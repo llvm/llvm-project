@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple=x86_64-unknown-unknown -frecovery-ast -frecovery-ast-type -o - %s -fsyntax-only -verify
+// RUN: %clang_cc1 -triple=x86_64-unknown-unknown -frecovery-ast -frecovery-ast-type -o - %s -std=gnu++17 -fsyntax-only -verify
 
 namespace test0 {
 struct Indestructible {
@@ -26,7 +26,7 @@ namespace test2 {
 void foo(); // expected-note 3{{requires 0 arguments}}
 void func() {
   // verify that "field has incomplete type" diagnostic is suppressed.
-  typeof(foo(42)) var; // expected-error {{no matching function}}
+  typeof(foo(42)) var; // expected-error {{no matching function}} \
 
   // FIXME: suppress the "cannot initialize a variable" diagnostic.
   int a = foo(1); // expected-error {{no matching function}} \
@@ -116,3 +116,23 @@ int f(); // expected-note {{candidate}}
 template<typename T> const int k = f(T()); // expected-error {{no matching function}}
 static_assert(k<int> == 1, ""); // expected-note {{instantiation of}}
 }
+
+namespace test11 {
+// Verify we do not assert()-fail here.
+template <class T> void foo(T &t);
+template <typename T>
+void bar(T t) {
+  foo(t);
+}
+
+template <typename T = void *>
+struct S { // expected-note {{candidate}}
+  S(T t);  // expected-note {{candidate}}
+  ~S();
+};
+template <typename T> S(T t) -> S<void *>;
+
+void baz() {
+  bar(S(123)); // expected-error {{no matching conversion}}
+}
+} // namespace test11

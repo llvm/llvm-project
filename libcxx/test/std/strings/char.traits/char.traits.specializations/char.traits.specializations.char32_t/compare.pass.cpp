@@ -56,7 +56,7 @@ int main(int, char**)
 #if TEST_STD_VER > 14
     static_assert(test_constexpr(), "" );
 #endif
-#endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
+#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
 
   return 0;
 }

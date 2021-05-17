@@ -4,4 +4,4 @@ define token @f() {
 entry:
   ret token undef
 }
-; CHECK: Functions returns a token but isn't an intrinsic
+; CHECK: Function returns a token but isn't an intrinsic

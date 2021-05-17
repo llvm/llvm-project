@@ -18,7 +18,7 @@
 
 // This test enables an exception and verifies that raising that exception
 // triggers SIGFPE.
-TEST(ExceptionStatusTest, RaiseAndCrash) {
+TEST(LlvmLibcExceptionStatusTest, RaiseAndCrash) {
   // TODO: Install a floating point exception handler and verify that the
   // the expected exception was raised. One will have to longjmp back from
   // that exception handler, so such a testing can be done after we have
@@ -26,6 +26,12 @@ TEST(ExceptionStatusTest, RaiseAndCrash) {
 
   int excepts[] = {FE_DIVBYZERO, FE_INVALID, FE_INEXACT, FE_OVERFLOW,
                    FE_UNDERFLOW};
+
+  // We '|' the individual exception flags instead of using FE_ALL_EXCEPT
+  // as it can include non-standard extensions. Note that we should be able
+  // to compile this file with headers from other libcs as well.
+  constexpr int allExcepts =
+      FE_DIVBYZERO | FE_INVALID | FE_INEXACT | FE_OVERFLOW | FE_UNDERFLOW;
 
   for (int e : excepts) {
     ASSERT_DEATH(
@@ -36,7 +42,7 @@ TEST(ExceptionStatusTest, RaiseAndCrash) {
           // Raising all exceptions except |e| should not call the
           // SIGFPE handler. They should set the exception flag though,
           // so we verify that.
-          int others = FE_ALL_EXCEPT & ~e;
+          int others = allExcepts & ~e;
           ASSERT_EQ(__llvm_libc::feraiseexcept(others), 0);
           ASSERT_EQ(__llvm_libc::fetestexcept(others), others);
 
@@ -45,6 +51,6 @@ TEST(ExceptionStatusTest, RaiseAndCrash) {
           // exception.
           __llvm_libc::feraiseexcept(e);
         },
-        SIGFPE);
+        WITH_SIGNAL(SIGFPE));
   }
 }

@@ -744,9 +744,14 @@ public:
   ///
   /// This value is used for lazy creation of default constructors.
   bool needsImplicitDefaultConstructor() const {
-    return !data().UserDeclaredConstructor &&
-           !(data().DeclaredSpecialMembers & SMF_DefaultConstructor) &&
-           (!isLambda() || lambdaIsDefaultConstructibleAndAssignable());
+    return (!data().UserDeclaredConstructor &&
+            !(data().DeclaredSpecialMembers & SMF_DefaultConstructor) &&
+            (!isLambda() || lambdaIsDefaultConstructibleAndAssignable())) ||
+           // FIXME: Proposed fix to core wording issue: if a class inherits
+           // a default constructor and doesn't explicitly declare one, one
+           // is declared implicitly.
+           (data().HasInheritedDefaultConstructor &&
+            !(data().DeclaredSpecialMembers & SMF_DefaultConstructor));
   }
 
   /// Determine whether this class has any user-declared constructors.
@@ -1730,6 +1735,12 @@ public:
     getLambdaData().HasKnownInternalLinkage = HasKnownInternalLinkage;
   }
 
+  /// Set the device side mangling number.
+  void setDeviceLambdaManglingNumber(unsigned Num) const;
+
+  /// Retrieve the device side mangling number.
+  unsigned getDeviceLambdaManglingNumber() const;
+
   /// Returns the inheritance model used for this record.
   MSInheritanceModel getMSInheritanceModel() const;
 
@@ -2155,6 +2166,10 @@ class CXXCtorInitializer final {
   llvm::PointerUnion<TypeSourceInfo *, FieldDecl *, IndirectFieldDecl *>
       Initializee;
 
+  /// The argument used to initialize the base or member, which may
+  /// end up constructing an object (when multiple arguments are involved).
+  Stmt *Init;
+
   /// The source location for the field name or, for a base initializer
   /// pack expansion, the location of the ellipsis.
   ///
@@ -2162,10 +2177,6 @@ class CXXCtorInitializer final {
   /// constructor, it will still include the type's source location as the
   /// Initializee points to the CXXConstructorDecl (to allow loop detection).
   SourceLocation MemberOrEllipsisLocation;
-
-  /// The argument used to initialize the base or member, which may
-  /// end up constructing an object (when multiple arguments are involved).
-  Stmt *Init;
 
   /// Location of the left paren of the ctor-initializer.
   SourceLocation LParenLoc;
@@ -2256,7 +2267,8 @@ public:
 
   // For a pack expansion, returns the location of the ellipsis.
   SourceLocation getEllipsisLoc() const {
-    assert(isPackExpansion() && "Initializer is not a pack expansion");
+    if (!isPackExpansion())
+      return {};
     return MemberOrEllipsisLocation;
   }
 
@@ -2413,12 +2425,12 @@ class CXXConstructorDecl final
                      : ExplicitSpecKind::ResolvedFalse);
   }
 
-  enum TraillingAllocKind {
+  enum TrailingAllocKind {
     TAKInheritsConstructor = 1,
     TAKHasTailExplicit = 1 << 1,
   };
 
-  uint64_t getTraillingAllocKind() const {
+  uint64_t getTrailingAllocKind() const {
     return numTrailingObjects(OverloadToken<InheritedConstructor>()) |
            (numTrailingObjects(OverloadToken<ExplicitSpecifier>()) << 1);
   }

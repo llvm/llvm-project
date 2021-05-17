@@ -185,10 +185,14 @@ body: |
     ; CHECK: [[BITCAST:%[0-9]+]]:sgpr(s32) = G_BITCAST [[COPY]](<2 x s16>)
     ; CHECK: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 16
     ; CHECK: [[LSHR:%[0-9]+]]:sgpr(s32) = G_LSHR [[BITCAST]], [[C]](s32)
+    ; CHECK: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 65535
+    ; CHECK: [[AND:%[0-9]+]]:sgpr(s32) = G_AND [[BITCAST]], [[C1]]
     ; CHECK: [[BITCAST1:%[0-9]+]]:sgpr(s32) = G_BITCAST [[COPY1]](<2 x s16>)
-    ; CHECK: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 16
-    ; CHECK: [[LSHR1:%[0-9]+]]:sgpr(s32) = G_LSHR [[BITCAST1]], [[C1]](s32)
-    ; CHECK: [[LSHR2:%[0-9]+]]:sgpr(s32) = G_LSHR [[BITCAST]], [[BITCAST1]](s32)
+    ; CHECK: [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 16
+    ; CHECK: [[LSHR1:%[0-9]+]]:sgpr(s32) = G_LSHR [[BITCAST1]], [[C2]](s32)
+    ; CHECK: [[C3:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 65535
+    ; CHECK: [[AND1:%[0-9]+]]:sgpr(s32) = G_AND [[BITCAST1]], [[C3]]
+    ; CHECK: [[LSHR2:%[0-9]+]]:sgpr(s32) = G_LSHR [[AND]], [[AND1]](s32)
     ; CHECK: [[LSHR3:%[0-9]+]]:sgpr(s32) = G_LSHR [[LSHR]], [[LSHR1]](s32)
     ; CHECK: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[LSHR2]](s32), [[LSHR3]](s32)
     ; CHECK: S_ENDPGM 0, implicit [[BUILD_VECTOR_TRUNC]](<2 x s16>)

@@ -98,7 +98,7 @@ protected:
 
 class ImportSection : public SyntheticSection {
 public:
-  ImportSection();
+  ImportSection() : SyntheticSection(llvm::wasm::WASM_SEC_IMPORT) {}
   bool isNeeded() const override { return getNumImports() > 0; }
   void writeBody() override;
   void addImport(Symbol *sym);
@@ -150,16 +150,8 @@ class TableSection : public SyntheticSection {
 public:
   TableSection() : SyntheticSection(llvm::wasm::WASM_SEC_TABLE) {}
 
-  bool isNeeded() const override {
-    // The linker currently always writes an indirect function table to the
-    // output, so unless the indirect function table is imported, we need a
-    // table section.  FIXME: Treat __indirect_function_table as a normal
-    // symbol, and only residualize a table section as needed.
-    if (!config->importTable)
-      return true;
-    return inputTables.size() > 0;
-  }
-
+  bool isNeeded() const override { return inputTables.size() > 0; };
+  void assignIndexes() override;
   void writeBody() override;
   void addTable(InputTable *table);
 
@@ -200,6 +192,11 @@ public:
 class GlobalSection : public SyntheticSection {
 public:
   GlobalSection() : SyntheticSection(llvm::wasm::WASM_SEC_GLOBAL) {}
+
+  static bool classof(const OutputSection *sec) {
+    return sec->type == llvm::wasm::WASM_SEC_GLOBAL;
+  }
+
   uint32_t numGlobals() const {
     assert(isSealed);
     return inputGlobals.size() + dataAddressGlobals.size() +

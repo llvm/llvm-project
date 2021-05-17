@@ -14,5 +14,13 @@ int main(int argc, char const *argv[]) {
   PointType pt = { 11,22, {0}};
   for (int i=0; i<BUFFER_SIZE; ++i)
     pt.buffer[i] = i;
-  return s_global - g_global - pt.y; // breakpoint 1
+  int x = s_global - g_global - pt.y; // breakpoint 1
+  {
+    int x = 42;
+    {
+      int x = 72;
+      s_global = x; // breakpoint 2
+    }
+  }
+  return 0; // breakpoint 3
 }

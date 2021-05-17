@@ -68,7 +68,7 @@ def lldltocache : P<"lldltocache",
 def lldltocachepolicy : P<"lldltocachepolicy",
     "Pruning policy for the ThinLTO cache">;
 def lldsavetemps : F<"lldsavetemps">,
-    HelpText<"Save temporary files instead of deleting them">;
+    HelpText<"Save intermediate LTO compilation results">;
 def machine : P<"machine", "Specify target platform">;
 def merge   : P<"merge", "Combine sections">;
 def mllvm   : P<"mllvm", "Options to pass to LLVM">;
@@ -239,6 +239,10 @@ def thinlto_prefix_replace: P<
 def lto_obj_path : P<
     "lto-obj-path",
     "output native object for merged LTO unit to this path">;
+def lto_cs_profile_generate: F<"lto-cs-profile-generate">,
+    HelpText<"Perform context sensitive PGO instrumentation">;
+def lto_cs_profile_file : P<"lto-cs-profile-file",
+    "Context sensitive profile file path">;
 def dash_dash_version : Flag<["--"], "version">,
   HelpText<"Display the version number and exit">;
 def threads

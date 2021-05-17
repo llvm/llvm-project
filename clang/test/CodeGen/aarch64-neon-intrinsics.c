@@ -18155,7 +18155,7 @@ float64x1_t test_vcvt_n_f64_u64(uint64x1_t a) {
 
 // CHECK-LABEL: @test_vrndn_f64(
 // CHECK:   [[TMP0:%.*]] = bitcast <1 x double> %a to <8 x i8>
-// CHECK:   [[VRNDN1_I:%.*]] = call <1 x double> @llvm.aarch64.neon.frintn.v1f64(<1 x double> %a)
+// CHECK:   [[VRNDN1_I:%.*]] = call <1 x double> @llvm.roundeven.v1f64(<1 x double> %a)
 // CHECK:   ret <1 x double> [[VRNDN1_I]]
 float64x1_t test_vrndn_f64(float64x1_t a) {
   return vrndn_f64(a);

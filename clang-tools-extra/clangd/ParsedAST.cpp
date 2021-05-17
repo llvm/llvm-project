@@ -12,8 +12,11 @@
 #include "../clang-tidy/ClangTidyModuleRegistry.h"
 #include "AST.h"
 #include "Compiler.h"
+#include "Config.h"
 #include "Diagnostics.h"
+#include "FeatureModule.h"
 #include "Headers.h"
+#include "HeuristicResolver.h"
 #include "IncludeFixer.h"
 #include "Preamble.h"
 #include "SourceCode.h"
@@ -24,6 +27,7 @@
 #include "support/Trace.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -260,12 +264,26 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   // breaks many features. Disable it for the main-file (not preamble).
   CI->getLangOpts()->DelayedTemplateParsing = false;
 
+  std::vector<std::unique_ptr<FeatureModule::ASTListener>> ASTListeners;
+  if (Inputs.FeatureModules) {
+    for (auto &M : *Inputs.FeatureModules) {
+      if (auto Listener = M.astListeners())
+        ASTListeners.emplace_back(std::move(Listener));
+    }
+  }
   StoreDiags ASTDiags;
+  ASTDiags.setDiagCallback(
+      [&ASTListeners](const clang::Diagnostic &D, clangd::Diag &Diag) {
+        llvm::for_each(ASTListeners,
+                       [&](const auto &L) { L->sawDiagnostic(D, Diag); });
+      });
 
   llvm::Optional<PreamblePatch> Patch;
+  bool PreserveDiags = true;
   if (Preamble) {
     Patch = PreamblePatch::create(Filename, Inputs, *Preamble);
     Patch->apply(*CI);
+    PreserveDiags = Patch->preserveDiagnostics();
   }
   auto Clang = prepareCompilerInstance(
       std::move(CI), PreamblePCH,
@@ -315,12 +333,18 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
       Check->registerMatchers(&CTFinder);
     }
 
-    if (!CTChecks.empty()) {
-      ASTDiags.setLevelAdjuster([&CTContext](DiagnosticsEngine::Level DiagLevel,
-                                             const clang::Diagnostic &Info) {
+    const Config &Cfg = Config::current();
+    ASTDiags.setLevelAdjuster([&](DiagnosticsEngine::Level DiagLevel,
+                                  const clang::Diagnostic &Info) {
+      if (Cfg.Diagnostics.SuppressAll ||
+          isBuiltinDiagnosticSuppressed(Info.getID(), Cfg.Diagnostics.Suppress))
+        return DiagnosticsEngine::Ignored;
+      if (!CTChecks.empty()) {
         std::string CheckName = CTContext->getCheckName(Info.getID());
         bool IsClangTidyDiag = !CheckName.empty();
         if (IsClangTidyDiag) {
+          if (Cfg.Diagnostics.Suppress.contains(CheckName))
+            return DiagnosticsEngine::Ignored;
           // Check for suppression comment. Skip the check for diagnostics not
           // in the main file, because we don't want that function to query the
           // source buffer for preamble files. For the same reason, we ask
@@ -342,17 +366,16 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
             return DiagnosticsEngine::Error;
           }
         }
-        return DiagLevel;
-      });
-    }
+      }
+      return DiagLevel;
+    });
   }
 
   // Add IncludeFixer which can recover diagnostics caused by missing includes
   // (e.g. incomplete type) and attach include insertion fixes to diagnostics.
   llvm::Optional<IncludeFixer> FixIncludes;
   auto BuildDir = VFS->getCurrentWorkingDirectory();
-  if (Inputs.Opts.SuggestMissingIncludes && Inputs.Index &&
-      !BuildDir.getError()) {
+  if (Inputs.Index && !BuildDir.getError()) {
     auto Style = getFormatStyleForFile(Filename, Inputs.Contents, *Inputs.TFS);
     auto Inserter = std::make_shared<IncludeInserter>(
         Filename, Inputs.Contents, Style, BuildDir.get(),
@@ -415,6 +438,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   // tokens from running the preprocessor inside the checks (only
   // modernize-use-trailing-return-type does that today).
   syntax::TokenBuffer Tokens = std::move(CollectTokens).consume();
+  // Makes SelectionTree build much faster.
+  Tokens.indexExpandedTokens();
   std::vector<Decl *> ParsedDecls = Action->takeTopLevelDecls();
   // AST traversals should exclude the preamble, to avoid performance cliffs.
   Clang->getASTContext().setTraversalScope(ParsedDecls);
@@ -435,14 +460,20 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   // CompilerInstance won't run this callback, do it directly.
   ASTDiags.EndSourceFile();
 
-  std::vector<Diag> Diags = CompilerInvocationDiags;
-  // Add diagnostics from the preamble, if any.
-  if (Preamble)
-    Diags.insert(Diags.end(), Preamble->Diags.begin(), Preamble->Diags.end());
-  // Finally, add diagnostics coming from the AST.
-  {
-    std::vector<Diag> D = ASTDiags.take(CTContext.getPointer());
-    Diags.insert(Diags.end(), D.begin(), D.end());
+  llvm::Optional<std::vector<Diag>> Diags;
+  // FIXME: Also skip generation of diagnostics alltogether to speed up ast
+  // builds when we are patching a stale preamble.
+  if (PreserveDiags) {
+    Diags = CompilerInvocationDiags;
+    // Add diagnostics from the preamble, if any.
+    if (Preamble)
+      Diags->insert(Diags->end(), Preamble->Diags.begin(),
+                    Preamble->Diags.end());
+    // Finally, add diagnostics coming from the AST.
+    {
+      std::vector<Diag> D = ASTDiags.take(CTContext.getPointer());
+      Diags->insert(Diags->end(), D.begin(), D.end());
+    }
   }
   return ParsedAST(Inputs.Version, std::move(Preamble), std::move(Clang),
                    std::move(Action), std::move(Tokens), std::move(Macros),
@@ -487,14 +518,12 @@ llvm::ArrayRef<Decl *> ParsedAST::getLocalTopLevelDecls() {
 
 const MainFileMacros &ParsedAST::getMacros() const { return Macros; }
 
-const std::vector<Diag> &ParsedAST::getDiagnostics() const { return Diags; }
-
 std::size_t ParsedAST::getUsedBytes() const {
   auto &AST = getASTContext();
   // FIXME(ibiryukov): we do not account for the dynamically allocated part of
   // Message and Fixes inside each diagnostic.
-  std::size_t Total =
-      clangd::getUsedBytes(LocalTopLevelDecls) + clangd::getUsedBytes(Diags);
+  std::size_t Total = clangd::getUsedBytes(LocalTopLevelDecls) +
+                      (Diags ? clangd::getUsedBytes(*Diags) : 0);
 
   // FIXME: the rest of the function is almost a direct copy-paste from
   // libclang's clang_getCXTUResourceUsage. We could share the implementation.
@@ -535,13 +564,14 @@ ParsedAST::ParsedAST(llvm::StringRef Version,
                      std::unique_ptr<FrontendAction> Action,
                      syntax::TokenBuffer Tokens, MainFileMacros Macros,
                      std::vector<Decl *> LocalTopLevelDecls,
-                     std::vector<Diag> Diags, IncludeStructure Includes,
-                     CanonicalIncludes CanonIncludes)
+                     llvm::Optional<std::vector<Diag>> Diags,
+                     IncludeStructure Includes, CanonicalIncludes CanonIncludes)
     : Version(Version), Preamble(std::move(Preamble)), Clang(std::move(Clang)),
       Action(std::move(Action)), Tokens(std::move(Tokens)),
       Macros(std::move(Macros)), Diags(std::move(Diags)),
       LocalTopLevelDecls(std::move(LocalTopLevelDecls)),
       Includes(std::move(Includes)), CanonIncludes(std::move(CanonIncludes)) {
+  Resolver = std::make_unique<HeuristicResolver>(getASTContext());
   assert(this->Clang);
   assert(this->Action);
 }

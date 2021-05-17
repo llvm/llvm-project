@@ -42,7 +42,7 @@ class Option(object):
   def __str__(self):
     s = '**%s** (``%s``)\n%s' % (self.name, self.type,
                                  doxygen2rst(indent(self.comment, 2)))
-    if self.enum:
+    if self.enum and self.enum.values:
       s += indent('\n\nPossible values:\n\n%s\n' % self.enum, 2)
     if self.nested_struct:
       s += indent('\n\nNested configuration flags:\n\n%s\n' %self.nested_struct,
@@ -104,13 +104,18 @@ class EnumValue(object):
         doxygen2rst(indent(self.comment, 2)))
 
 def clean_comment_line(line):
-  match = re.match(r'^/// \\code(\{.(\w+)\})?$', line)
+  match = re.match(r'^/// (?P<indent> +)?\\code(\{.(?P<lang>\w+)\})?$', line)
   if match:
-    lang = match.groups()[1]
+    indent = match.group('indent')
+    if not indent:
+      indent = ''
+    lang = match.group('lang')
     if not lang:
       lang = 'c++'
-    return '\n.. code-block:: %s\n\n' % lang
-  if line == '/// \\endcode':
+    return '\n%s.. code-block:: %s\n\n' % (indent, lang)
+
+  endcode_match = re.match(r'^/// +\\endcode$', line)
+  if endcode_match:
     return ''
   return line[4:] + '\n'
 
@@ -184,7 +189,9 @@ def read_options(header):
         state = State.InStruct
         enums[enum.name] = enum
       else:
-        raise Exception('Invalid format, expected enum field comment or };')
+        # Enum member without documentation. Must be documented where the enum
+        # is used.
+        pass
     elif state == State.InEnumMemberComment:
       if line.startswith('///'):
         comment += clean_comment_line(line)

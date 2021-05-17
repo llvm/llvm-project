@@ -201,13 +201,24 @@ void OpMethod::writeDeclTo(raw_ostream &os) const {
   os.indent(2);
   if (isStatic())
     os << "static ";
+  if (properties & MP_Constexpr)
+    os << "constexpr ";
   methodSignature.writeDeclTo(os);
-  os << ";";
+  if (!isInline())
+    os << ";";
+  else {
+    os << " {\n";
+    methodBody.writeTo(os);
+    os << "}";
+  }
 }
 
 void OpMethod::writeDefTo(raw_ostream &os, StringRef namePrefix) const {
   // Do not write definition if the method is decl only.
   if (properties & MP_Declaration)
+    return;
+  // Do not generate separate definition for inline method
+  if (isInline())
     return;
   methodSignature.writeDefTo(os, namePrefix);
   os << " {\n";

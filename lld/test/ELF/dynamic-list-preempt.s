@@ -30,6 +30,15 @@
 # DYNSYMS-NEXT:     Section: Undefined
 # DYNSYMS-NEXT:   }
 # DYNSYMS-NEXT:   Symbol {
+# DYNSYMS-NEXT:     Name: foo
+# DYNSYMS-NEXT:     Value:
+# DYNSYMS-NEXT:     Size:
+# DYNSYMS-NEXT:     Binding: Global
+# DYNSYMS-NEXT:     Type:
+# DYNSYMS-NEXT:     Other:
+# DYNSYMS-NEXT:     Section:
+# DYNSYMS-NEXT:   }
+# DYNSYMS-NEXT:   Symbol {
 # DYNSYMS-NEXT:     Name: bar
 # DYNSYMS-NEXT:     Value:
 # DYNSYMS-NEXT:     Size:
@@ -40,15 +49,6 @@
 # DYNSYMS-NEXT:   }
 # DYNSYMS-NEXT:   Symbol {
 # DYNSYMS-NEXT:     Name: ext
-# DYNSYMS-NEXT:     Value:
-# DYNSYMS-NEXT:     Size:
-# DYNSYMS-NEXT:     Binding: Global
-# DYNSYMS-NEXT:     Type:
-# DYNSYMS-NEXT:     Other:
-# DYNSYMS-NEXT:     Section:
-# DYNSYMS-NEXT:   }
-# DYNSYMS-NEXT:   Symbol {
-# DYNSYMS-NEXT:     Name: foo
 # DYNSYMS-NEXT:     Value:
 # DYNSYMS-NEXT:     Size:
 # DYNSYMS-NEXT:     Binding: Global

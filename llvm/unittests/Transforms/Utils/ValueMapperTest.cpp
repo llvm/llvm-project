@@ -124,7 +124,7 @@ TEST(ValueMapperTest, mapMDNodeDistinct) {
   {
     // The node should be moved.
     ValueToValueMapTy VM;
-    EXPECT_EQ(D, ValueMapper(VM, RF_MoveDistinctMDs).mapMDNode(*D));
+    EXPECT_EQ(D, ValueMapper(VM, RF_ReuseAndMutateDistinctMDs).mapMDNode(*D));
   }
 }
 
@@ -139,7 +139,7 @@ TEST(ValueMapperTest, mapMDNodeDistinctOperands) {
   VM.MD()[Old].reset(New);
 
   // Make sure operands are updated.
-  EXPECT_EQ(D, ValueMapper(VM, RF_MoveDistinctMDs).mapMDNode(*D));
+  EXPECT_EQ(D, ValueMapper(VM, RF_ReuseAndMutateDistinctMDs).mapMDNode(*D));
   EXPECT_EQ(New, D->getOperand(0));
 }
 

@@ -17,11 +17,12 @@
 
 #if !defined(LLVM_PASS_H) || defined(LLVM_PASSANALYSISSUPPORT_H)
 #error "Do not include <PassAnalysisSupport.h>; include <Pass.h> instead"
-#endif 
+#endif
 
 #ifndef LLVM_PASSANALYSISSUPPORT_H
 #define LLVM_PASSANALYSISSUPPORT_H
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
 #include <tuple>
@@ -58,6 +59,11 @@ private:
   SmallVector<AnalysisID, 0> Used;
   bool PreservesAll = false;
 
+  void pushUnique(VectorType &Set, AnalysisID ID) {
+    if (!llvm::is_contained(Set, ID))
+      Set.push_back(ID);
+  }
+
 public:
   AnalysisUsage() = default;
 
@@ -80,17 +86,17 @@ public:
   ///@{
   /// Add the specified ID to the set of analyses preserved by this pass.
   AnalysisUsage &addPreservedID(const void *ID) {
-    Preserved.push_back(ID);
+    pushUnique(Preserved, ID);
     return *this;
   }
   AnalysisUsage &addPreservedID(char &ID) {
-    Preserved.push_back(&ID);
+    pushUnique(Preserved, &ID);
     return *this;
   }
   /// Add the specified Pass class to the set of analyses preserved by this pass.
   template<class PassClass>
   AnalysisUsage &addPreserved() {
-    Preserved.push_back(&PassClass::ID);
+    pushUnique(Preserved, &PassClass::ID);
     return *this;
   }
   ///@}
@@ -99,17 +105,17 @@ public:
   /// Add the specified ID to the set of analyses used by this pass if they are
   /// available..
   AnalysisUsage &addUsedIfAvailableID(const void *ID) {
-    Used.push_back(ID);
+    pushUnique(Used, ID);
     return *this;
   }
   AnalysisUsage &addUsedIfAvailableID(char &ID) {
-    Used.push_back(&ID);
+    pushUnique(Used, &ID);
     return *this;
   }
   /// Add the specified Pass class to the set of analyses used by this pass.
   template<class PassClass>
   AnalysisUsage &addUsedIfAvailable() {
-    Used.push_back(&PassClass::ID);
+    pushUnique(Used, &PassClass::ID);
     return *this;
   }
   ///@}

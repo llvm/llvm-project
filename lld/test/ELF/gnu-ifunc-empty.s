@@ -10,8 +10,8 @@
 // CHECK: Name  Type     Address          Off
 // CHECK: .text PROGBITS 0000000000201120 000120
 // CHECK:    Value         Size Type   Bind   Vis    Ndx Name
-// CHECK: 0000000000200000    0 NOTYPE LOCAL  HIDDEN   1 __rela_iplt_end
 // CHECK: 0000000000200000    0 NOTYPE LOCAL  HIDDEN   1 __rela_iplt_start
+// CHECK: 0000000000200000    0 NOTYPE LOCAL  HIDDEN   1 __rela_iplt_end
 
 .globl _start
 _start:

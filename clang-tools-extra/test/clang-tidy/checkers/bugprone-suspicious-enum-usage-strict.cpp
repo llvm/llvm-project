@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-suspicious-enum-usage %t -- -config="{CheckOptions: [{key: bugprone-suspicious-enum-usage.StrictMode, value: 1}]}" --
+// RUN: %check_clang_tidy %s bugprone-suspicious-enum-usage %t -- -config="{CheckOptions: [{key: bugprone-suspicious-enum-usage.StrictMode, value: true}]}" --
 
 enum A {
   A = 1,

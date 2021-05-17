@@ -269,7 +269,7 @@ AliasResult CFLSteensAAResult::query(const MemoryLocation &LocA,
   auto *ValB = const_cast<Value *>(LocB.Ptr);
 
   if (!ValA->getType()->isPointerTy() || !ValB->getType()->isPointerTy())
-    return NoAlias;
+    return AliasResult::NoAlias;
 
   Function *Fn = nullptr;
   Function *MaybeFnA = const_cast<Function *>(parentFunctionOfValue(ValA));
@@ -280,7 +280,7 @@ AliasResult CFLSteensAAResult::query(const MemoryLocation &LocA,
     LLVM_DEBUG(
         dbgs()
         << "CFLSteensAA: could not extract parent function information.\n");
-    return MayAlias;
+    return AliasResult::MayAlias;
   }
 
   if (MaybeFnA) {
@@ -298,11 +298,11 @@ AliasResult CFLSteensAAResult::query(const MemoryLocation &LocA,
   auto &Sets = MaybeInfo->getStratifiedSets();
   auto MaybeA = Sets.find(InstantiatedValue{ValA, 0});
   if (!MaybeA.hasValue())
-    return MayAlias;
+    return AliasResult::MayAlias;
 
   auto MaybeB = Sets.find(InstantiatedValue{ValB, 0});
   if (!MaybeB.hasValue())
-    return MayAlias;
+    return AliasResult::MayAlias;
 
   auto SetA = *MaybeA;
   auto SetB = *MaybeB;
@@ -320,14 +320,14 @@ AliasResult CFLSteensAAResult::query(const MemoryLocation &LocA,
   // - AttrEscaped do not alias globals/arguments, but they may alias
   // AttrUnknown values
   if (SetA.Index == SetB.Index)
-    return MayAlias;
+    return AliasResult::MayAlias;
   if (AttrsA.none() || AttrsB.none())
-    return NoAlias;
+    return AliasResult::NoAlias;
   if (hasUnknownOrCallerAttr(AttrsA) || hasUnknownOrCallerAttr(AttrsB))
-    return MayAlias;
+    return AliasResult::MayAlias;
   if (isGlobalOrArgAttr(AttrsA) && isGlobalOrArgAttr(AttrsB))
-    return MayAlias;
-  return NoAlias;
+    return AliasResult::MayAlias;
+  return AliasResult::NoAlias;
 }
 
 AnalysisKey CFLSteensAA::Key;

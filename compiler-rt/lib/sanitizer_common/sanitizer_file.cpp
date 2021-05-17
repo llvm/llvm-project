@@ -58,6 +58,9 @@ void ReportFile::ReopenIfNecessary() {
   } else {
     internal_snprintf(full_path, kMaxPathLength, "%s.%zu", path_prefix, pid);
   }
+  if (common_flags()->log_suffix) {
+    internal_strlcat(full_path, common_flags()->log_suffix, kMaxPathLength);
+  }
   error_t err;
   fd = OpenFile(full_path, WrOnly, &err);
   if (fd == kInvalidFd) {

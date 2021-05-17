@@ -10,10 +10,14 @@
 
 #include "src/math/fmaf.h"
 
-using FmaTest = FmaTestTemplate<float>;
+using LlvmLibcFmaTest = FmaTestTemplate<float>;
 
-TEST_F(FmaTest, SpecialNumbers) { testSpecialNumbers(&__llvm_libc::fmaf); }
+TEST_F(LlvmLibcFmaTest, SpecialNumbers) {
+  testSpecialNumbers(&__llvm_libc::fmaf);
+}
 
-TEST_F(FmaTest, SubnormalRange) { testSubnormalRange(&__llvm_libc::fmaf); }
+TEST_F(LlvmLibcFmaTest, SubnormalRange) {
+  testSubnormalRange(&__llvm_libc::fmaf);
+}
 
-TEST_F(FmaTest, NormalRange) { testNormalRange(&__llvm_libc::fmaf); }
+TEST_F(LlvmLibcFmaTest, NormalRange) { testNormalRange(&__llvm_libc::fmaf); }

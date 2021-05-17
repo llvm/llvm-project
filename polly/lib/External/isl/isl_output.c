@@ -1988,16 +1988,25 @@ static __isl_give isl_printer *qpolynomial_fold_print(
 	__isl_keep isl_qpolynomial_fold *fold, __isl_take isl_printer *p)
 {
 	int i;
+	isl_qpolynomial_list *list;
+	isl_size n;
 
+	list = isl_qpolynomial_fold_peek_list(fold);
+	n = isl_qpolynomial_list_size(list);
+	if (n < 0)
+		return isl_printer_free(p);
 	if (fold->type == isl_fold_min)
 		p = isl_printer_print_str(p, "min");
 	else if (fold->type == isl_fold_max)
 		p = isl_printer_print_str(p, "max");
 	p = isl_printer_print_str(p, "(");
-	for (i = 0; i < fold->n; ++i) {
+	for (i = 0; i < n; ++i) {
+		isl_qpolynomial *qp;
+
 		if (i)
 			p = isl_printer_print_str(p, ", ");
-		p = print_qpolynomial(p, fold->qp[i]);
+		qp = isl_qpolynomial_list_peek(list, i);
+		p = print_qpolynomial(p, qp);
 	}
 	p = isl_printer_print_str(p, ")");
 	return p;
@@ -2337,17 +2346,26 @@ static __isl_give isl_printer *print_qpolynomial_fold_c(
 	__isl_keep isl_qpolynomial_fold *fold)
 {
 	int i;
+	isl_qpolynomial_list *list;
+	isl_size n;
 
-	for (i = 0; i < fold->n - 1; ++i)
+	list = isl_qpolynomial_fold_peek_list(fold);
+	n = isl_qpolynomial_list_size(list);
+	if (n < 0)
+		return isl_printer_free(p);
+	for (i = 0; i < n - 1; ++i)
 		if (fold->type == isl_fold_min)
 			p = isl_printer_print_str(p, "min(");
 		else if (fold->type == isl_fold_max)
 			p = isl_printer_print_str(p, "max(");
 
-	for (i = 0; i < fold->n; ++i) {
+	for (i = 0; i < n; ++i) {
+		isl_qpolynomial *qp;
+
 		if (i)
 			p = isl_printer_print_str(p, ", ");
-		p = print_qpolynomial_c(p, space, fold->qp[i]);
+		qp = isl_qpolynomial_list_peek(list, i);
+		p = print_qpolynomial_c(p, space, qp);
 		if (i)
 			p = isl_printer_print_str(p, ")");
 	}

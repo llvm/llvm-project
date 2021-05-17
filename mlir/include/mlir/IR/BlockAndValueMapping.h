@@ -76,6 +76,14 @@ public:
   /// Clears all mappings held by the mapper.
   void clear() { valueMap.clear(); }
 
+  /// Returns a new mapper containing the inverse mapping.
+  BlockAndValueMapping getInverse() const {
+    BlockAndValueMapping result;
+    for (const auto &pair : valueMap)
+      result.valueMap.try_emplace(pair.second, pair.first);
+    return result;
+  }
+
 private:
   /// Utility lookupOrValue that looks up an existing key or returns the
   /// provided value.

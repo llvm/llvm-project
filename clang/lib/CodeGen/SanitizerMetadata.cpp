@@ -1,4 +1,4 @@
-//===--- SanitizerMetadata.cpp - Blacklist for sanitizers -----------------===//
+//===--- SanitizerMetadata.cpp - Ignored entities for sanitizers ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -34,15 +34,15 @@ void SanitizerMetadata::reportGlobalToASan(llvm::GlobalVariable *GV,
                                            bool IsExcluded) {
   if (!isAsanHwasanOrMemTag(CGM.getLangOpts().Sanitize))
     return;
-  IsDynInit &= !CGM.isInSanitizerBlacklist(GV, Loc, Ty, "init");
-  IsExcluded |= CGM.isInSanitizerBlacklist(GV, Loc, Ty);
+  IsDynInit &= !CGM.isInNoSanitizeList(GV, Loc, Ty, "init");
+  IsExcluded |= CGM.isInNoSanitizeList(GV, Loc, Ty);
 
   llvm::Metadata *LocDescr = nullptr;
   llvm::Metadata *GlobalName = nullptr;
   llvm::LLVMContext &VMContext = CGM.getLLVMContext();
   if (!IsExcluded) {
-    // Don't generate source location and global name if it is blacklisted -
-    // it won't be instrumented anyway.
+    // Don't generate source location and global name if it is on
+    // the NoSanitizeList - it won't be instrumented anyway.
     LocDescr = getLocationMetadata(Loc);
     if (!Name.empty())
       GlobalName = llvm::MDString::get(VMContext, Name);

@@ -48,19 +48,20 @@ define void @f2_1() "patchable-function-entry"="1" "patchable-function-prefix"="
 }
 
 ;; -fpatchable-function-entry=1 -mbranch-protection=bti
-;; For M=0, don't create .Lpatch0 if the initial instruction is not BTI,
-;; even if other basic blocks may have BTI.
+;; We add BTI c even when the function has internal linkage
 define internal void @f1i(i64 %v) "patchable-function-entry"="1" "branch-target-enforcement"="true" {
 ; CHECK-LABEL: f1i:
 ; CHECK-NEXT: .Lfunc_begin3:
 ; CHECK:      // %bb.0:
+; CHECK-NEXT:  hint #34
+; CHECK-NEXT:  .Lpatch1:
 ; CHECK-NEXT:  nop
 ;; Other basic blocks have BTI, but they don't affect our decision to not create .Lpatch0
 ; CHECK:      .LBB{{.+}} // %sw.bb1
 ; CHECK-NEXT:  hint #36
 ; CHECK:      .section __patchable_function_entries,"awo",@progbits,f1i{{$}}
 ; CHECK-NEXT: .p2align 3
-; CHECK-NEXT: .xword .Lfunc_begin3
+; CHECK-NEXT: .xword .Lpatch1
 entry:
   switch i64 %v, label %sw.bb0 [
     i64 1, label %sw.bb1

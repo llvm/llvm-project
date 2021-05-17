@@ -59,6 +59,9 @@ static cl::opt<unsigned> SVEVectorBitsMin(
              "with zero meaning no minimum size is assumed."),
     cl::init(0), cl::Hidden);
 
+static cl::opt<bool> UseAA("aarch64-use-aa", cl::init(true),
+                           cl::desc("Enable the use of AA during codegen."));
+
 AArch64Subtarget &
 AArch64Subtarget::initializeSubtargetDependencies(StringRef FS,
                                                   StringRef CPUString) {
@@ -86,9 +89,8 @@ void AArch64Subtarget::initializeProperties() {
   case CortexA35:
     break;
   case CortexA53:
-    PrefFunctionLogAlignment = 3;
-    break;
   case CortexA55:
+    PrefFunctionLogAlignment = 4;
     break;
   case CortexA57:
     MaxInterleaveFactor = 4;
@@ -122,6 +124,7 @@ void AArch64Subtarget::initializeProperties() {
   case AppleA11:
   case AppleA12:
   case AppleA13:
+  case AppleA14:
     CacheLineSize = 64;
     PrefetchDistance = 280;
     MinPrefetchStride = 2048;
@@ -379,3 +382,5 @@ bool AArch64Subtarget::useSVEForFixedLengthVectors() const {
   // Prefer NEON unless larger SVE registers are available.
   return hasSVE() && getMinSVEVectorSizeInBits() >= 256;
 }
+
+bool AArch64Subtarget::useAA() const { return UseAA; }

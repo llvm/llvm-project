@@ -298,7 +298,7 @@ public:
   ///
   /// This pointer points into a memory buffer, where the on-disk hash
   /// table for identifiers actually lives.
-  const char *IdentifierTableData = nullptr;
+  const unsigned char *IdentifierTableData = nullptr;
 
   /// A pointer to an on-disk hash table of opaque type
   /// IdentifierHashTable.

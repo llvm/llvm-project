@@ -25,7 +25,6 @@
 ; NEW-PM-NOT: Running analysis: AssumptionAnalysis on test
 ; NEW-PM-NOT: Running analysis: TargetLibraryAnalysis on test
 ; NEW-PM-NOT: Running analysis: TargetIRAnalysis on test
-; NEW-PM: Finished llvm::Function pass manager run.
 
 
 define i32 @test() {

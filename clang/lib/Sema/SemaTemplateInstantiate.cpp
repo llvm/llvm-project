@@ -805,9 +805,10 @@ void Sema::PrintInstantiationStack() {
       SmallString<128> TemplateArgsStr;
       llvm::raw_svector_ostream OS(TemplateArgsStr);
       cast<NamedDecl>(Active->Entity)->printName(OS);
-      if (!isa<FunctionDecl>(Active->Entity))
+      if (!isa<FunctionDecl>(Active->Entity)) {
         printTemplateArgumentList(OS, Active->template_arguments(),
                                   getPrintingPolicy());
+      }
       Diags.Report(Active->PointOfInstantiation, DiagID) << OS.str()
         << Active->InstantiationRange;
       break;
@@ -1595,7 +1596,9 @@ TemplateInstantiator::TransformSubstNonTypeTemplateParmPackExpr(
 ExprResult
 TemplateInstantiator::TransformSubstNonTypeTemplateParmExpr(
                                           SubstNonTypeTemplateParmExpr *E) {
-  ExprResult SubstReplacement = TransformExpr(E->getReplacement());
+  ExprResult SubstReplacement = E->getReplacement();
+  if (!isa<ConstantExpr>(SubstReplacement.get()))
+    SubstReplacement = TransformExpr(E->getReplacement());
   if (SubstReplacement.isInvalid())
     return true;
   QualType SubstType = TransformType(E->getParameterType(getSema().Context));
@@ -2383,10 +2386,10 @@ ParmVarDecl *Sema::SubstParmVarDecl(ParmVarDecl *OldParm,
         }
         if (AttachTypeConstraint(
                 TC->getNestedNameSpecifierLoc(), TC->getConceptNameInfo(),
-                TC->getNamedConcept(), &InstArgs, Inst,
+                TC->getNamedConcept(), TemplArgInfo ? &InstArgs : nullptr, Inst,
                 TTP->isParameterPack()
                     ? cast<CXXFoldExpr>(TC->getImmediatelyDeclaredConstraint())
-                        ->getEllipsisLoc()
+                          ->getEllipsisLoc()
                     : SourceLocation()))
           return nullptr;
       }
@@ -2794,7 +2797,8 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
 
     Attr *NewAttr =
       instantiateTemplateAttribute(I->TmplAttr, Context, *this, TemplateArgs);
-    I->NewDecl->addAttr(NewAttr);
+    if (NewAttr)
+      I->NewDecl->addAttr(NewAttr);
     LocalInstantiationScope::deleteScopes(I->Scope,
                                           Instantiator.getStartingScope());
   }
@@ -3417,7 +3421,8 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
             Instantiation->getTemplateInstantiationPattern();
         DeclContext::lookup_result Lookup =
             ClassPattern->lookup(Field->getDeclName());
-        FieldDecl *Pattern = cast<FieldDecl>(Lookup.front());
+        FieldDecl *Pattern = Lookup.find_first<FieldDecl>();
+        assert(Pattern);
         InstantiateInClassInitializer(PointOfInstantiation, Field, Pattern,
                                       TemplateArgs);
       }

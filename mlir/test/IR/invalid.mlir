@@ -24,10 +24,6 @@ func @illegalmemrefelementtype(memref<?xtensor<i8>>) -> () // expected-error {{i
 func @illegalunrankedmemrefelementtype(memref<*xtensor<i8>>) -> () // expected-error {{invalid memref element type}}
 
 // -----
-
-func @indexvector(vector<4 x index>) -> () // expected-error {{vector elements must be int or float type}}
-
-// -----
 // Test no map in memref type.
 func @memrefs(memref<2x4xi8, >) // expected-error {{expected list element}}
 
@@ -36,8 +32,8 @@ func @memrefs(memref<2x4xi8, >) // expected-error {{expected list element}}
 func @memrefs(memref<2x4xi8, #map7>) // expected-error {{undefined symbol alias id 'map7'}}
 
 // -----
-// Test non affine map in memref type.
-func @memrefs(memref<2x4xi8, i8>) // expected-error {{expected affine map in memref type}}
+// Test unsupported memory space.
+func @memrefs(memref<2x4xi8, i8>) // expected-error {{unsupported memory space Attribute}}
 
 // -----
 // Test non-existent map in map composition of memref type.
@@ -104,6 +100,12 @@ func @memref_zero_stride(memref<42x42xi8, offset: ?, strides: [0, ?]>) // expect
 
 // -----
 
+func @tensor_encoding_mismatch(%arg0: tensor<8xi32, "enc">) -> (tensor<8xi32>) { // expected-note {{prior use here}}
+  return %arg0: tensor<8xi32> // expected-error {{use of value '%arg0' expects different type than prior uses: 'tensor<8xi32>' vs 'tensor<8xi32, "enc">'}}
+}
+
+// -----
+
 func @bad_branch() {
 ^bb12:
   br ^missing  // expected-error {{reference to an undefined block}}
@@ -120,7 +122,7 @@ func @block_redef() {
 
 // -----
 
-func @no_terminator() {   // expected-error {{block with no terminator}}
+func @no_terminator() {   // expected-error {{empty block: expect at least a terminator}}
 ^bb40:
   return
 ^bb41:
@@ -387,7 +389,7 @@ func @succ_arg_type_mismatch() {
 
 // Test no nested vector.
 func @vectors(vector<1 x vector<1xi32>>, vector<2x4xf32>)
-// expected-error@-1 {{vector elements must be int or float type}}
+// expected-error@-1 {{vector elements must be int/index/float type}}
 
 // -----
 
@@ -766,21 +768,14 @@ func @elementsattr_malformed_opaque() -> () {
 
 func @elementsattr_malformed_opaque1() -> () {
 ^bb0:
-  "foo"(){bar = opaque<"", "0xQZz123"> : tensor<1xi8>} : () -> () // expected-error {{expected string containing hex digits starting with `0x`}}
+  "foo"(){bar = opaque<"_", "0xQZz123"> : tensor<1xi8>} : () -> () // expected-error {{expected string containing hex digits starting with `0x`}}
 }
 
 // -----
 
 func @elementsattr_malformed_opaque2() -> () {
 ^bb0:
-  "foo"(){bar = opaque<"", "00abc"> : tensor<1xi8>} : () -> () // expected-error {{expected string containing hex digits starting with `0x`}}
-}
-
-// -----
-
-func @elementsattr_malformed_opaque3() -> () {
-^bb0:
-  "foo"(){bar = opaque<"t", "0xabc"> : tensor<1xi8>} : () -> () // expected-error {{no registered dialect with namespace 't'}}
+  "foo"(){bar = opaque<"_", "00abc"> : tensor<1xi8>} : () -> () // expected-error {{expected string containing hex digits starting with `0x`}}
 }
 
 // -----
@@ -821,7 +816,7 @@ func @f(f32) {
 func @f(%m : memref<?x?xf32>) {
   affine.for %i0 = 0 to 42 {
     // expected-note@+1 {{previously referenced here}}
-    %x = load %m[%i0, %i1] : memref<?x?xf32>
+    %x = memref.load %m[%i0, %i1] : memref<?x?xf32>
   }
   // expected-error@+1 {{region entry argument '%i1' is already in use}}
   affine.for %i1 = 0 to 42 {
@@ -881,7 +876,7 @@ func @type_alias_unknown(!unknown_alias) -> () { // expected-error {{undefined s
 func @complex_loops() {
   affine.for %i1 = 1 to 100 {
   // expected-error @+1 {{expected '"' in string literal}}
-  "opaqueIntTensor"(){bar = opaque<"", "0x686]> : tensor<2x1x4xi32>} : () -> ()
+  "opaqueIntTensor"(){bar = opaque<"_", "0x686]> : tensor<2x1x4xi32>} : () -> ()
 
 // -----
 
@@ -1198,7 +1193,7 @@ func @hexadecimal_float_literal_overflow() {
 // -----
 
 func @decimal_float_literal() {
-  // expected-error @+2 {{unexpected decimal integer literal for a float attribute}}
+  // expected-error @+2 {{unexpected decimal integer literal for a floating point value}}
   // expected-note @+1 {{add a trailing dot to make the literal a float}}
   "foo"() {value = 42 : f32} : () -> ()
 }
@@ -1251,7 +1246,7 @@ func @hexadecimal_float_too_wide_for_type_in_tensor() {
 
 // Check that we report an error when a value is too wide to be parsed.
 func @hexadecimal_float_too_wide_in_tensor() {
-  // expected-error @+1 {{hexadecimal float constant out of range for attribute}}
+  // expected-error @+1 {{hexadecimal float constant out of range for type}}
   "foo"() {bar = dense<0x7FFFFFF0000000000000> : tensor<2xf32>} : () -> ()
 }
 

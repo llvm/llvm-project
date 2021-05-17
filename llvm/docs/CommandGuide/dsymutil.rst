@@ -50,6 +50,11 @@ OPTIONS
 
  Print this help output.
 
+.. option:: --keep-function-for-static
+
+ Make a static variable keep the enclosing function even if it would have been
+ omitted otherwise.
+
 .. option:: --minimize, -z
 
  When used when creating a dSYM file, this option will suppress the emission of

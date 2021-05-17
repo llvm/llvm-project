@@ -198,6 +198,28 @@ void loop_with_counter_collapse() {
     }
   }
 }
+
+// CHECK-LABEL: loop_with_counter_collapse4
+void loop_with_counter_collapse4() {
+
+  // Check bounds calculation when collapse > 2
+  // CHECK: store i32 0, i32* [[I_TMP:%.+]],
+  // CHECK: [[VAL:%.+]] = load i32, i32* [[I_TMP]],
+  // CHECK: store i32 [[VAL]], i32* [[K_LB_MIN:%.+]],
+  // CHECK: store i32 6, i32* [[I_TMP]],
+  // CHECK: [[VAL:%.+]] = load i32, i32* [[I_TMP]],
+  // CHECK: store i32 [[VAL]], i32* [[K_LB_MAX:%.+]],
+  #pragma omp for collapse(4)
+  for (int i = 0; i < 7; i++) {
+    for (int j = 0; j < 11; j++) {
+      for (int k = i; k < 7; k++) {
+        for (int l = 0; l < 11; l++) {
+        }
+      }
+    }
+  }
+}
+
 // CHECK-LABEL: define {{.*void}} @{{.*}}without_schedule_clause{{.*}}(float* {{.+}}, float* {{.+}}, float* {{.+}}, float* {{.+}})
 void without_schedule_clause(float *a, float *b, float *c, float *d) {
 // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num([[IDENT_T_TY]]* [[DEFAULT_LOC:[@%].+]])

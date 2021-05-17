@@ -18,11 +18,11 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include <cassert>
 
 namespace llvm {
 
-class CallInst;
 class SelectionDAGBuilder;
 
 /// This class tracks both per-statepoint and per-selectiondag information.
@@ -63,7 +63,7 @@ public:
   /// Record the fact that we expect to encounter a given gc_relocate
   /// before the next statepoint.  If we don't see it, we'll report
   /// an assertion.
-  void scheduleRelocCall(const CallInst &RelocCall) {
+  void scheduleRelocCall(const GCRelocateInst &RelocCall) {
     // We are not interested in lowering dead instructions.
     if (!RelocCall.use_empty())
       PendingGCRelocateCalls.push_back(&RelocCall);
@@ -72,7 +72,7 @@ public:
   /// Remove this gc_relocate from the list we're expecting to see
   /// before the next statepoint.  If we weren't expecting to see
   /// it, we'll report an assertion.
-  void relocCallVisited(const CallInst &RelocCall) {
+  void relocCallVisited(const GCRelocateInst &RelocCall) {
     // We are not interested in lowering dead instructions.
     if (RelocCall.use_empty())
       return;
@@ -118,7 +118,7 @@ private:
   unsigned NextSlotToAllocate = 0;
 
   /// Keep track of pending gcrelocate calls for consistency check
-  SmallVector<const CallInst *, 10> PendingGCRelocateCalls;
+  SmallVector<const GCRelocateInst *, 10> PendingGCRelocateCalls;
 };
 
 } // end namespace llvm

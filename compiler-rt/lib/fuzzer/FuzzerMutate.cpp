@@ -61,14 +61,20 @@ MutationDispatcher::MutationDispatcher(Random &Rand,
 }
 
 static char RandCh(Random &Rand) {
-  if (Rand.RandBool()) return Rand(256);
+  if (Rand.RandBool())
+    return static_cast<char>(Rand(256));
   const char Special[] = "!*'();:@&=+$,/?%#[]012Az-`~.\xff\x00";
   return Special[Rand(sizeof(Special) - 1)];
 }
 
 size_t MutationDispatcher::Mutate_Custom(uint8_t *Data, size_t Size,
                                          size_t MaxSize) {
-  return EF->LLVMFuzzerCustomMutator(Data, Size, MaxSize, Rand.Rand());
+  if (EF->__msan_unpoison)
+    EF->__msan_unpoison(Data, Size);
+  if (EF->__msan_unpoison_param)
+    EF->__msan_unpoison_param(4);
+  return EF->LLVMFuzzerCustomMutator(Data, Size, MaxSize,
+                                     Rand.Rand<unsigned int>());
 }
 
 size_t MutationDispatcher::Mutate_CustomCrossOver(uint8_t *Data, size_t Size,
@@ -81,8 +87,18 @@ size_t MutationDispatcher::Mutate_CustomCrossOver(uint8_t *Data, size_t Size,
     return 0;
   CustomCrossOverInPlaceHere.resize(MaxSize);
   auto &U = CustomCrossOverInPlaceHere;
+
+  if (EF->__msan_unpoison) {
+    EF->__msan_unpoison(Data, Size);
+    EF->__msan_unpoison(Other.data(), Other.size());
+    EF->__msan_unpoison(U.data(), U.size());
+  }
+  if (EF->__msan_unpoison_param)
+    EF->__msan_unpoison_param(7);
   size_t NewSize = EF->LLVMFuzzerCustomCrossOver(
-      Data, Size, Other.data(), Other.size(), U.data(), U.size(), Rand.Rand());
+      Data, Size, Other.data(), Other.size(), U.data(), U.size(),
+      Rand.Rand<unsigned int>());
+
   if (!NewSize)
     return 0;
   assert(NewSize <= MaxSize && "CustomCrossOver returned overisized unit");
@@ -135,7 +151,8 @@ size_t MutationDispatcher::Mutate_InsertRepeatedBytes(uint8_t *Data,
   // Insert new values at Data[Idx].
   memmove(Data + Idx + N, Data + Idx, Size - Idx);
   // Give preference to 0x00 and 0xff.
-  uint8_t Byte = Rand.RandBool() ? Rand(256) : (Rand.RandBool() ? 0 : 255);
+  uint8_t Byte = static_cast<uint8_t>(
+      Rand.RandBool() ? Rand(256) : (Rand.RandBool() ? 0 : 255));
   for (size_t i = 0; i < N; i++)
     Data[Idx + i] = Byte;
   return Size + N;
@@ -178,7 +195,8 @@ size_t MutationDispatcher::ApplyDictionaryEntry(uint8_t *Data, size_t Size,
     Size += W.size();
   } else {  // Overwrite some bytes with W.
     if (W.size() > Size) return 0;
-    size_t Idx = UsePositionHint ? DE.GetPositionHint() : Rand(Size - W.size());
+    size_t Idx =
+        UsePositionHint ? DE.GetPositionHint() : Rand(Size + 1 - W.size());
     memcpy(Data + Idx, W.data(), W.size());
   }
   return Size;
@@ -227,8 +245,8 @@ DictionaryEntry MutationDispatcher::MakeDictionaryEntryFromCMP(
     T Arg1, T Arg2, const uint8_t *Data, size_t Size) {
   if (Rand.RandBool()) Arg1 = Bswap(Arg1);
   if (Rand.RandBool()) Arg2 = Bswap(Arg2);
-  T Arg1Mutation = Arg1 + Rand(-1, 1);
-  T Arg2Mutation = Arg2 + Rand(-1, 1);
+  T Arg1Mutation = static_cast<T>(Arg1 + Rand(-1, 1));
+  T Arg2Mutation = static_cast<T>(Arg2 + Rand(-1, 1));
   return MakeDictionaryEntryFromCMP(&Arg1, &Arg2, &Arg1Mutation, &Arg2Mutation,
                                     sizeof(Arg1), Data, Size);
 }
@@ -245,23 +263,23 @@ size_t MutationDispatcher::Mutate_AddWordFromTORC(
   DictionaryEntry DE;
   switch (Rand(4)) {
   case 0: {
-    auto X = TPC.TORC8.Get(Rand.Rand());
+    auto X = TPC.TORC8.Get(Rand.Rand<size_t>());
     DE = MakeDictionaryEntryFromCMP(X.A, X.B, Data, Size);
   } break;
   case 1: {
-    auto X = TPC.TORC4.Get(Rand.Rand());
+    auto X = TPC.TORC4.Get(Rand.Rand<size_t>());
     if ((X.A >> 16) == 0 && (X.B >> 16) == 0 && Rand.RandBool())
       DE = MakeDictionaryEntryFromCMP((uint16_t)X.A, (uint16_t)X.B, Data, Size);
     else
       DE = MakeDictionaryEntryFromCMP(X.A, X.B, Data, Size);
   } break;
   case 2: {
-    auto X = TPC.TORCW.Get(Rand.Rand());
+    auto X = TPC.TORCW.Get(Rand.Rand<size_t>());
     DE = MakeDictionaryEntryFromCMP(X.A, X.B, Data, Size);
   } break;
   case 3: if (Options.UseMemmem) {
-    auto X = TPC.MMT.Get(Rand.Rand());
-    DE = DictionaryEntry(X);
+      auto X = TPC.MMT.Get(Rand.Rand<size_t>());
+      DE = DictionaryEntry(X);
   } break;
   default:
     assert(0);
@@ -387,12 +405,12 @@ size_t ChangeBinaryInteger(uint8_t *Data, size_t Size, Random &Rand) {
   assert(Off + sizeof(T) <= Size);
   T Val;
   if (Off < 64 && !Rand(4)) {
-    Val = Size;
+    Val = static_cast<T>(Size);
     if (Rand.RandBool())
       Val = Bswap(Val);
   } else {
     memcpy(&Val, Data + Off, sizeof(Val));
-    T Add = Rand(21);
+    T Add = static_cast<T>(Rand(21));
     Add -= 10;
     if (Rand.RandBool())
       Val = Bswap(T(Bswap(Val) + Add)); // Add assuming different endiannes.
@@ -462,7 +480,7 @@ void MutationDispatcher::RecordSuccessfulMutationSequence() {
     assert(DE->GetW().size());
     // Linear search is fine here as this happens seldom.
     if (!PersistentAutoDictionary.ContainsWord(DE->GetW()))
-      PersistentAutoDictionary.push_back({DE->GetW(), 1});
+      PersistentAutoDictionary.push_back(*DE);
   }
 }
 

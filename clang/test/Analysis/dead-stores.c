@@ -635,3 +635,44 @@ void testVolatile() {
   volatile int v;
   v = 0; // no warning
 }
+
+struct Foo {
+  int x;
+  int y;
+};
+
+struct Foo rdar34122265_getFoo(void);
+
+int rdar34122265_test(int input) {
+  // This is allowed for defensive programming.
+  struct Foo foo = {0, 0};
+  if (input > 0) {
+    foo = rdar34122265_getFoo();
+  } else {
+    return 0;
+  }
+  return foo.x + foo.y;
+}
+
+void rdar34122265_test_cast() {
+  // This is allowed for defensive programming.
+  struct Foo foo = {0, 0};
+  (void)foo;
+}
+
+struct Bar {
+  struct Foo x, y;
+};
+
+struct Bar rdar34122265_getBar(void);
+
+int rdar34122265_test_nested(int input) {
+  // This is allowed for defensive programming.
+  struct Bar bar = {{0, 0}, {0, 0}};
+  if (input > 0) {
+    bar = rdar34122265_getBar();
+  } else {
+    return 0;
+  }
+  return bar.x.x + bar.y.y;
+}

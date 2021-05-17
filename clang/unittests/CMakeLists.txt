@@ -29,11 +29,13 @@ add_subdirectory(ASTMatchers)
 add_subdirectory(AST)
 add_subdirectory(CrossTU)
 add_subdirectory(Tooling)
+add_subdirectory(Introspection)
 add_subdirectory(Format)
 add_subdirectory(Frontend)
 add_subdirectory(Rewrite)
 add_subdirectory(Sema)
 add_subdirectory(CodeGen)
+add_subdirectory(Interpreter)
 # FIXME: libclang unit tests are disabled on Windows due
 # to failures, mostly in libclang.VirtualFileOverlay_*.
 if(NOT WIN32 AND CLANG_TOOL_LIBCLANG_BUILD) 

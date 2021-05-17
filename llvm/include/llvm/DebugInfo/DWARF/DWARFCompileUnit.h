@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARFCOMPILEUNIT_H
-#define LLVM_DEBUGINFO_DWARFCOMPILEUNIT_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFCOMPILEUNIT_H
+#define LLVM_DEBUGINFO_DWARF_DWARFCOMPILEUNIT_H
 
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
@@ -35,4 +35,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_DWARFCOMPILEUNIT_H
+#endif // LLVM_DEBUGINFO_DWARF_DWARFCOMPILEUNIT_H

@@ -754,8 +754,7 @@ Optional<SinkingInstructionCandidate> GVNSink::analyzeInstructionForSinking(
   Cand.NumMemoryInsts = MemoryInstNum;
   Cand.NumBlocks = ActivePreds.size();
   Cand.NumPHIs = NeededPHIs.size();
-  for (auto *C : ActivePreds)
-    Cand.Blocks.push_back(C);
+  append_range(Cand.Blocks, ActivePreds);
 
   return Cand;
 }

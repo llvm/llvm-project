@@ -23,11 +23,11 @@ class RemQuoTestTemplate : public __llvm_libc::testing::Test {
   using FPBits = __llvm_libc::fputil::FPBits<T>;
   using UIntType = typename FPBits::UIntType;
 
-  const T zero = __llvm_libc::fputil::FPBits<T>::zero();
-  const T negZero = __llvm_libc::fputil::FPBits<T>::negZero();
-  const T inf = __llvm_libc::fputil::FPBits<T>::inf();
-  const T negInf = __llvm_libc::fputil::FPBits<T>::negInf();
-  const T nan = __llvm_libc::fputil::FPBits<T>::buildNaN(1);
+  const T zero = T(__llvm_libc::fputil::FPBits<T>::zero());
+  const T negZero = T(__llvm_libc::fputil::FPBits<T>::negZero());
+  const T inf = T(__llvm_libc::fputil::FPBits<T>::inf());
+  const T negInf = T(__llvm_libc::fputil::FPBits<T>::negInf());
+  const T nan = T(__llvm_libc::fputil::FPBits<T>::buildNaN(1));
 
 public:
   typedef T (*RemQuoFunc)(T, T, int *);
@@ -101,7 +101,7 @@ public:
     for (UIntType v = FPBits::minSubnormal, w = FPBits::maxSubnormal;
          v <= FPBits::maxSubnormal && w >= FPBits::minSubnormal;
          v += step, w -= step) {
-      T x = FPBits(v), y = FPBits(w);
+      T x = T(FPBits(v)), y = T(FPBits(w));
       mpfr::BinaryOutput<T> result;
       mpfr::BinaryInput<T> input{x, y};
       result.f = func(x, y, &result.i);
@@ -115,7 +115,7 @@ public:
     for (UIntType v = FPBits::minNormal, w = FPBits::maxNormal;
          v <= FPBits::maxNormal && w >= FPBits::minNormal;
          v += step, w -= step) {
-      T x = FPBits(v), y = FPBits(w);
+      T x = T(FPBits(v)), y = T(FPBits(w));
       mpfr::BinaryOutput<T> result;
       mpfr::BinaryInput<T> input{x, y};
       result.f = func(x, y, &result.i);
@@ -133,12 +133,12 @@ public:
 };
 
 #define LIST_REMQUO_TESTS(T, func)                                             \
-  using RemQuoTest = RemQuoTestTemplate<T>;                                    \
-  TEST_F(RemQuoTest, SpecialNumbers) { testSpecialNumbers(&func); }            \
-  TEST_F(RemQuoTest, EqualNumeratorAndDenominator) {                           \
+  using LlvmLibcRemQuoTest = RemQuoTestTemplate<T>;                            \
+  TEST_F(LlvmLibcRemQuoTest, SpecialNumbers) { testSpecialNumbers(&func); }    \
+  TEST_F(LlvmLibcRemQuoTest, EqualNumeratorAndDenominator) {                   \
     testEqualNumeratorAndDenominator(&func);                                   \
   }                                                                            \
-  TEST_F(RemQuoTest, SubnormalRange) { testSubnormalRange(&func); }            \
-  TEST_F(RemQuoTest, NormalRange) { testNormalRange(&func); }
+  TEST_F(LlvmLibcRemQuoTest, SubnormalRange) { testSubnormalRange(&func); }    \
+  TEST_F(LlvmLibcRemQuoTest, NormalRange) { testNormalRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_REMQUOTEST_H

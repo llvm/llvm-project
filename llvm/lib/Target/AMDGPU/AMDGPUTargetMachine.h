@@ -14,7 +14,8 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUTARGETMACHINE_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUTARGETMACHINE_H
 
-#include "AMDGPUSubtarget.h"
+#include "GCNSubtarget.h"
+#include "R600Subtarget.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
@@ -34,6 +35,7 @@ public:
   static bool EnableLateStructurizeCFG;
   static bool EnableFunctionCalls;
   static bool EnableFixedFunctionABI;
+  static bool EnableLowerModuleLDS;
 
   AMDGPUTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                       StringRef FS, TargetOptions Options,
@@ -50,8 +52,7 @@ public:
 
   void adjustPassManager(PassManagerBuilder &) override;
 
-  void registerPassBuilderCallbacks(PassBuilder &PB,
-                                    bool DebugPassManager) override;
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
   void registerDefaultAliasAnalyses(AAManager &) override;
 
   /// Get the integer value of a null pointer in the given address space.

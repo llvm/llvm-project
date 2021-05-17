@@ -68,6 +68,11 @@ public:
   /// This pipeline consists of Fetch, Dispatch, Execute, and Retire stages.
   std::unique_ptr<Pipeline> createDefaultPipeline(const PipelineOptions &Opts,
                                                   SourceMgr &SrcMgr);
+
+  /// Construct a basic pipeline for simulating an in-order pipeline.
+  /// This pipeline consists of Fetch, InOrderIssue, and Retire stages.
+  std::unique_ptr<Pipeline> createInOrderPipeline(const PipelineOptions &Opts,
+                                                  SourceMgr &SrcMgr);
 };
 
 } // namespace mca

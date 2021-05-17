@@ -23,14 +23,15 @@ namespace tblgen {
 // Simple RAII helper for defining ifdef-undef-endif scopes.
 class IfDefScope {
 public:
-  IfDefScope(llvm::StringRef name, llvm::raw_ostream &os) : name(name), os(os) {
+  IfDefScope(llvm::StringRef name, llvm::raw_ostream &os)
+      : name(name.str()), os(os) {
     os << "#ifdef " << name << "\n"
        << "#undef " << name << "\n\n";
   }
   ~IfDefScope() { os << "\n#endif  // " << name << "\n\n"; }
 
 private:
-  llvm::StringRef name;
+  std::string name;
   llvm::raw_ostream &os;
 };
 
@@ -40,9 +41,10 @@ public:
   NamespaceEmitter(raw_ostream &os, const Dialect &dialect) : os(os) {
     if (!dialect)
       return;
-    llvm::SplitString(dialect.getCppNamespace(), namespaces, "::");
-    for (StringRef ns : namespaces)
-      os << "namespace " << ns << " {\n";
+    emitNamespaceStarts(os, dialect.getCppNamespace());
+  }
+  NamespaceEmitter(raw_ostream &os, StringRef cppNamespace) : os(os) {
+    emitNamespaceStarts(os, cppNamespace);
   }
 
   ~NamespaceEmitter() {
@@ -51,6 +53,11 @@ public:
   }
 
 private:
+  void emitNamespaceStarts(raw_ostream &os, StringRef cppNamespace) {
+    llvm::SplitString(cppNamespace, namespaces, "::");
+    for (StringRef ns : namespaces)
+      os << "namespace " << ns << " {\n";
+  }
   raw_ostream &os;
   SmallVector<StringRef, 2> namespaces;
 };

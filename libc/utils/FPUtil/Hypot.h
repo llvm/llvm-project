@@ -125,7 +125,7 @@ static inline T hypot(T x, T y) {
   FPBits_t x_bits(x), y_bits(y);
 
   if (x_bits.isInf() || y_bits.isInf()) {
-    return FPBits_t::inf();
+    return T(FPBits_t::inf());
   }
   if (x_bits.isNaN()) {
     return x;
@@ -139,26 +139,27 @@ static inline T hypot(T x, T y) {
   DUIntType a_mant_sq, b_mant_sq;
   bool sticky_bits;
 
-  if ((x_bits.exponent >= y_bits.exponent + MantissaWidth<T>::value + 2) ||
+  if ((x_bits.encoding.exponent >=
+       y_bits.encoding.exponent + MantissaWidth<T>::value + 2) ||
       (y == 0)) {
     return abs(x);
-  } else if ((y_bits.exponent >=
-              x_bits.exponent + MantissaWidth<T>::value + 2) ||
+  } else if ((y_bits.encoding.exponent >=
+              x_bits.encoding.exponent + MantissaWidth<T>::value + 2) ||
              (x == 0)) {
-    y_bits.sign = 0;
+    y_bits.encoding.sign = 0;
     return abs(y);
   }
 
   if (x >= y) {
-    a_exp = x_bits.exponent;
-    a_mant = x_bits.mantissa;
-    b_exp = y_bits.exponent;
-    b_mant = y_bits.mantissa;
+    a_exp = x_bits.encoding.exponent;
+    a_mant = x_bits.encoding.mantissa;
+    b_exp = y_bits.encoding.exponent;
+    b_mant = y_bits.encoding.mantissa;
   } else {
-    a_exp = y_bits.exponent;
-    a_mant = y_bits.mantissa;
-    b_exp = x_bits.exponent;
-    b_mant = x_bits.mantissa;
+    a_exp = y_bits.encoding.exponent;
+    a_mant = y_bits.encoding.mantissa;
+    b_exp = x_bits.encoding.exponent;
+    b_mant = x_bits.encoding.mantissa;
   }
 
   out_exp = a_exp;
@@ -207,7 +208,7 @@ static inline T hypot(T x, T y) {
       sum >>= 2;
       ++out_exp;
       if (out_exp >= FPBits_t::maxExponent) {
-        return FPBits_t::inf();
+        return T(FPBits_t::inf());
       }
     } else {
       // For denormal result, we simply move the leading bit of the result to
@@ -253,7 +254,7 @@ static inline T hypot(T x, T y) {
     Y -= one >> 1;
     ++out_exp;
     if (out_exp >= FPBits_t::maxExponent) {
-      return FPBits_t::inf();
+      return T(FPBits_t::inf());
     }
   }
 

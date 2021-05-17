@@ -124,4 +124,3 @@ continue:
 exit:
   ret i32 -1
 }
-

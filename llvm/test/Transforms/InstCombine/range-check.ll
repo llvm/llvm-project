@@ -20,8 +20,10 @@ define i1 @test_and1(i32 %x, i32 %n) {
 define i1 @test_and1_logical(i32 %x, i32 %n) {
 ; CHECK-LABEL: @test_and1_logical(
 ; CHECK-NEXT:    [[NN:%.*]] = and i32 [[N:%.*]], 2147483647
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[NN]], [[X:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[A:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[B:%.*]] = icmp sgt i32 [[NN]], [[X]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i1 [[B]], i1 false
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %nn = and i32 %n, 2147483647
   %a = icmp sge i32 %x, 0
@@ -46,8 +48,10 @@ define i1 @test_and2(i32 %x, i32 %n) {
 define i1 @test_and2_logical(i32 %x, i32 %n) {
 ; CHECK-LABEL: @test_and2_logical(
 ; CHECK-NEXT:    [[NN:%.*]] = and i32 [[N:%.*]], 2147483647
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp uge i32 [[NN]], [[X:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[A:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[B:%.*]] = icmp sge i32 [[NN]], [[X]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i1 [[B]], i1 false
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %nn = and i32 %n, 2147483647
   %a = icmp sgt i32 %x, -1
@@ -124,8 +128,10 @@ define i1 @test_or1(i32 %x, i32 %n) {
 define i1 @test_or1_logical(i32 %x, i32 %n) {
 ; CHECK-LABEL: @test_or1_logical(
 ; CHECK-NEXT:    [[NN:%.*]] = and i32 [[N:%.*]], 2147483647
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i32 [[NN]], [[X:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[A:%.*]] = icmp slt i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[B:%.*]] = icmp sle i32 [[NN]], [[X]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i1 true, i1 [[B]]
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %nn = and i32 %n, 2147483647
   %a = icmp slt i32 %x, 0
@@ -150,8 +156,10 @@ define i1 @test_or2(i32 %x, i32 %n) {
 define i1 @test_or2_logical(i32 %x, i32 %n) {
 ; CHECK-LABEL: @test_or2_logical(
 ; CHECK-NEXT:    [[NN:%.*]] = and i32 [[N:%.*]], 2147483647
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[NN]], [[X:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[A:%.*]] = icmp slt i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[B:%.*]] = icmp slt i32 [[NN]], [[X]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i1 true, i1 [[B]]
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %nn = and i32 %n, 2147483647
   %a = icmp sle i32 %x, -1
@@ -290,7 +298,7 @@ define i1 @negative3_logical(i32 %x, i32 %y, i32 %n) {
 ; CHECK-NEXT:    [[NN:%.*]] = and i32 [[N:%.*]], 2147483647
 ; CHECK-NEXT:    [[A:%.*]] = icmp sgt i32 [[NN]], [[X:%.*]]
 ; CHECK-NEXT:    [[B:%.*]] = icmp sgt i32 [[Y:%.*]], -1
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i1 [[B]], i1 false
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %nn = and i32 %n, 2147483647

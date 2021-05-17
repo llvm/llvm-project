@@ -39,17 +39,14 @@ namespace clang {
       assert(Ident__VA_ARGS__->isPoisoned() && "__VA_ARGS__ should be poisoned "
                                               "outside an ISO C/C++ variadic "
                                               "macro definition!");
-      assert(
-          !Ident__VA_OPT__ ||
-          (Ident__VA_OPT__->isPoisoned() && "__VA_OPT__ should be poisoned!"));
+      assert(Ident__VA_OPT__->isPoisoned() && "__VA_OPT__ should be poisoned!");
     }
 
     /// Client code should call this function just before the Preprocessor is
     /// about to Lex tokens from the definition of a variadic (ISO C/C++) macro.
     void enterScope() {
       Ident__VA_ARGS__->setIsPoisoned(false);
-      if (Ident__VA_OPT__)
-        Ident__VA_OPT__->setIsPoisoned(false);
+      Ident__VA_OPT__->setIsPoisoned(false);
     }
 
     /// Client code should call this function as soon as the Preprocessor has
@@ -58,8 +55,7 @@ namespace clang {
     /// (might be explicitly called, and then reinvoked via the destructor).
     void exitScope() {
       Ident__VA_ARGS__->setIsPoisoned(true);
-      if (Ident__VA_OPT__)
-        Ident__VA_OPT__->setIsPoisoned(true);
+      Ident__VA_OPT__->setIsPoisoned(true);
     }
 
     ~VariadicMacroScopeGuard() { exitScope(); }

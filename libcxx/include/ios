@@ -1037,4 +1037,4 @@ defaultfloat(ios_base& __str)
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_IOS
+#endif // _LIBCPP_IOS

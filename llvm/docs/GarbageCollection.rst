@@ -87,7 +87,7 @@ Conservative garbage collection often does not require any special support from
 either the language or the compiler: it can handle non-type-safe programming
 languages (such as C/C++) and does not require any special information from the
 compiler.  The `Boehm collector
-<http://www.hpl.hp.com/personal/Hans_Boehm/gc/>`__ is an example of a
+<https://hboehm.info/gc/>`__ is an example of a
 state-of-the-art conservative collector.
 
 Accurate garbage collection requires the ability to identify all pointers in the

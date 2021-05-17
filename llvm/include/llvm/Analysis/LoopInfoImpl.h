@@ -17,6 +17,7 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
 
@@ -380,8 +381,8 @@ void LoopBase<BlockT, LoopT>::verifyLoopNest(
 }
 
 template <class BlockT, class LoopT>
-void LoopBase<BlockT, LoopT>::print(raw_ostream &OS, unsigned Depth,
-                                    bool Verbose) const {
+void LoopBase<BlockT, LoopT>::print(raw_ostream &OS, bool Verbose,
+                                    bool PrintNested, unsigned Depth) const {
   OS.indent(Depth * 2);
   if (static_cast<const LoopT *>(this)->isAnnotatedParallel())
     OS << "Parallel ";
@@ -406,10 +407,13 @@ void LoopBase<BlockT, LoopT>::print(raw_ostream &OS, unsigned Depth,
     if (Verbose)
       BB->print(OS);
   }
-  OS << "\n";
 
-  for (iterator I = begin(), E = end(); I != E; ++I)
-    (*I)->print(OS, Depth + 2);
+  if (PrintNested) {
+    OS << "\n";
+
+    for (iterator I = begin(), E = end(); I != E; ++I)
+      (*I)->print(OS, /*Verbose*/ false, PrintNested, Depth + 2);
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -673,12 +677,10 @@ static void compareLoops(const LoopT *L, const LoopT *OtherL,
          "Mismatched basic blocks in the loops!");
 
   const SmallPtrSetImpl<const BlockT *> &BlocksSet = L->getBlocksSet();
-  const SmallPtrSetImpl<const BlockT *> &OtherBlocksSet = L->getBlocksSet();
+  const SmallPtrSetImpl<const BlockT *> &OtherBlocksSet =
+      OtherL->getBlocksSet();
   assert(BlocksSet.size() == OtherBlocksSet.size() &&
-         llvm::all_of(BlocksSet,
-                      [&OtherBlocksSet](const BlockT *BB) {
-                        return OtherBlocksSet.count(BB);
-                      }) &&
+         llvm::set_is_subset(BlocksSet, OtherBlocksSet) &&
          "Mismatched basic blocks in BlocksSets!");
 }
 #endif

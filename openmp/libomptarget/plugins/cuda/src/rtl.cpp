@@ -17,6 +17,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "Debug.h"
@@ -114,9 +115,9 @@ int memcpyDtoD(const void *SrcPtr, void *DstPtr, int64_t Size,
       cuMemcpyDtoDAsync((CUdeviceptr)DstPtr, (CUdeviceptr)SrcPtr, Size, Stream);
 
   if (Err != CUDA_SUCCESS) {
-    REPORT("Error when copying data from device to device. Pointers: src "
-           "= " DPxMOD ", dst = " DPxMOD ", size = %" PRId64 "\n",
-           DPxPTR(SrcPtr), DPxPTR(DstPtr), Size);
+    DP("Error when copying data from device to device. Pointers: src "
+       "= " DPxMOD ", dst = " DPxMOD ", size = %" PRId64 "\n",
+       DPxPTR(SrcPtr), DPxPTR(DstPtr), Size);
     CUDA_ERR_STRING(Err);
     return OFFLOAD_FAIL;
   }
@@ -229,7 +230,7 @@ public:
     const std::lock_guard<std::mutex> Lock(*StreamMtx[DeviceId]);
     int &Id = NextStreamId[DeviceId];
     // No CUstream left in the pool, we need to request from CUDA RT
-    if (Id == StreamPool[DeviceId].size()) {
+    if (Id == static_cast<int>(StreamPool[DeviceId].size())) {
       // By default we double the stream pool every time
       resizeStreamPool(DeviceId, Id * 2);
     }
@@ -263,7 +264,7 @@ public:
     resizeStreamPool(DeviceId, EnvNumInitialStreams);
 
     // Check the size of stream pool
-    if (StreamPool[DeviceId].size() != EnvNumInitialStreams)
+    if (static_cast<int>(StreamPool[DeviceId].size()) != EnvNumInitialStreams)
       return false;
 
     // Check whether each stream is valid
@@ -297,12 +298,13 @@ class DeviceRTLTy {
   class CUDADeviceAllocatorTy : public DeviceAllocatorTy {
     const int DeviceId;
     const std::vector<DeviceDataTy> &DeviceData;
+    std::unordered_map<void *, TargetAllocTy> HostPinnedAllocs;
 
   public:
     CUDADeviceAllocatorTy(int DeviceId, std::vector<DeviceDataTy> &DeviceData)
         : DeviceId(DeviceId), DeviceData(DeviceData) {}
 
-    void *allocate(size_t Size, void *) override {
+    void *allocate(size_t Size, void *, TargetAllocTy Kind) override {
       if (Size == 0)
         return nullptr;
 
@@ -310,12 +312,34 @@ class DeviceRTLTy {
       if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n"))
         return nullptr;
 
-      CUdeviceptr DevicePtr;
-      Err = cuMemAlloc(&DevicePtr, Size);
-      if (!checkResult(Err, "Error returned from cuMemAlloc\n"))
-        return nullptr;
+      void *MemAlloc = nullptr;
+      switch (Kind) {
+      case TARGET_ALLOC_DEFAULT:
+      case TARGET_ALLOC_DEVICE:
+        CUdeviceptr DevicePtr;
+        Err = cuMemAlloc(&DevicePtr, Size);
+        MemAlloc = (void *)DevicePtr;
+        if (!checkResult(Err, "Error returned from cuMemAlloc\n"))
+          return nullptr;
+        break;
+      case TARGET_ALLOC_HOST:
+        void *HostPtr;
+        Err = cuMemAllocHost(&HostPtr, Size);
+        MemAlloc = HostPtr;
+        if (!checkResult(Err, "Error returned from cuMemAllocHost\n"))
+          return nullptr;
+        HostPinnedAllocs[MemAlloc] = Kind;
+        break;
+      case TARGET_ALLOC_SHARED:
+        CUdeviceptr SharedPtr;
+        Err = cuMemAllocManaged(&SharedPtr, Size, CU_MEM_ATTACH_GLOBAL);
+        MemAlloc = (void *)SharedPtr;
+        if (!checkResult(Err, "Error returned from cuMemAllocManaged\n"))
+          return nullptr;
+        break;
+      }
 
-      return (void *)DevicePtr;
+      return MemAlloc;
     }
 
     int free(void *TgtPtr) override {
@@ -323,9 +347,25 @@ class DeviceRTLTy {
       if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n"))
         return OFFLOAD_FAIL;
 
-      Err = cuMemFree((CUdeviceptr)TgtPtr);
-      if (!checkResult(Err, "Error returned from cuMemFree\n"))
-        return OFFLOAD_FAIL;
+      // Host pinned memory must be freed differently.
+      TargetAllocTy Kind =
+          (HostPinnedAllocs.find(TgtPtr) == HostPinnedAllocs.end())
+              ? TARGET_ALLOC_DEFAULT
+              : TARGET_ALLOC_HOST;
+      switch (Kind) {
+      case TARGET_ALLOC_DEFAULT:
+      case TARGET_ALLOC_DEVICE:
+      case TARGET_ALLOC_SHARED:
+        Err = cuMemFree((CUdeviceptr)TgtPtr);
+        if (!checkResult(Err, "Error returned from cuMemFree\n"))
+          return OFFLOAD_FAIL;
+        break;
+      case TARGET_ALLOC_HOST:
+        Err = cuMemFreeHost(TgtPtr);
+        if (!checkResult(Err, "Error returned from cuMemFreeHost\n"))
+          return OFFLOAD_FAIL;
+        break;
+      }
 
       return OFFLOAD_SUCCESS;
     }
@@ -380,13 +420,13 @@ class DeviceRTLTy {
     E.Table.EntriesBegin = E.Table.EntriesEnd = nullptr;
   }
 
-  CUstream getStream(const int DeviceId, __tgt_async_info *AsyncInfoPtr) const {
-    assert(AsyncInfoPtr && "AsyncInfoPtr is nullptr");
+  CUstream getStream(const int DeviceId, __tgt_async_info *AsyncInfo) const {
+    assert(AsyncInfo && "AsyncInfo is nullptr");
 
-    if (!AsyncInfoPtr->Queue)
-      AsyncInfoPtr->Queue = StreamManager->getStream(DeviceId);
+    if (!AsyncInfo->Queue)
+      AsyncInfo->Queue = StreamManager->getStream(DeviceId);
 
-    return reinterpret_cast<CUstream>(AsyncInfoPtr->Queue);
+    return reinterpret_cast<CUstream>(AsyncInfo->Queue);
   }
 
 public:
@@ -401,6 +441,11 @@ public:
     DP("Start initializing CUDA\n");
 
     CUresult Err = cuInit(0);
+    if (Err == CUDA_ERROR_INVALID_HANDLE) {
+      // Can't call cuGetErrorString if dlsym failed
+      DP("Failed to load CUDA shared library\n");
+      return;
+    }
     if (!checkResult(Err, "Error returned from cuInit\n")) {
       return;
     }
@@ -580,7 +625,7 @@ public:
       DeviceData[DeviceId].BlocksPerGrid = EnvTeamLimit;
     }
 
-    INFO(DeviceId,
+    INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
          "Device supports up to %d CUDA blocks and %d threads with a "
          "warp size of %d\n",
          DeviceData[DeviceId].BlocksPerGrid,
@@ -799,28 +844,41 @@ public:
     return getOffloadEntriesTable(DeviceId);
   }
 
-  void *dataAlloc(const int DeviceId, const int64_t Size) {
-    if (UseMemoryManager)
-      return MemoryManagers[DeviceId]->allocate(Size, nullptr);
+  void *dataAlloc(const int DeviceId, const int64_t Size,
+                  const TargetAllocTy Kind) {
+    switch (Kind) {
+    case TARGET_ALLOC_DEFAULT:
+    case TARGET_ALLOC_DEVICE:
+      if (UseMemoryManager)
+        return MemoryManagers[DeviceId]->allocate(Size, nullptr);
+      else
+        return DeviceAllocators[DeviceId].allocate(Size, nullptr, Kind);
+    case TARGET_ALLOC_HOST:
+    case TARGET_ALLOC_SHARED:
+      return DeviceAllocators[DeviceId].allocate(Size, nullptr, Kind);
+    }
 
-    return DeviceAllocators[DeviceId].allocate(Size, nullptr);
+    REPORT("Invalid target data allocation kind or requested allocator not "
+           "implemented yet\n");
+
+    return nullptr;
   }
 
   int dataSubmit(const int DeviceId, const void *TgtPtr, const void *HstPtr,
-                 const int64_t Size, __tgt_async_info *AsyncInfoPtr) const {
-    assert(AsyncInfoPtr && "AsyncInfoPtr is nullptr");
+                 const int64_t Size, __tgt_async_info *AsyncInfo) const {
+    assert(AsyncInfo && "AsyncInfo is nullptr");
 
     CUresult Err = cuCtxSetCurrent(DeviceData[DeviceId].Context);
     if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n"))
       return OFFLOAD_FAIL;
 
-    CUstream Stream = getStream(DeviceId, AsyncInfoPtr);
+    CUstream Stream = getStream(DeviceId, AsyncInfo);
 
     Err = cuMemcpyHtoDAsync((CUdeviceptr)TgtPtr, HstPtr, Size, Stream);
     if (Err != CUDA_SUCCESS) {
-      REPORT("Error when copying data from host to device. Pointers: host "
-             "= " DPxMOD ", device = " DPxMOD ", size = %" PRId64 "\n",
-             DPxPTR(HstPtr), DPxPTR(TgtPtr), Size);
+      DP("Error when copying data from host to device. Pointers: host "
+         "= " DPxMOD ", device = " DPxMOD ", size = %" PRId64 "\n",
+         DPxPTR(HstPtr), DPxPTR(TgtPtr), Size);
       CUDA_ERR_STRING(Err);
       return OFFLOAD_FAIL;
     }
@@ -829,20 +887,20 @@ public:
   }
 
   int dataRetrieve(const int DeviceId, void *HstPtr, const void *TgtPtr,
-                   const int64_t Size, __tgt_async_info *AsyncInfoPtr) const {
-    assert(AsyncInfoPtr && "AsyncInfoPtr is nullptr");
+                   const int64_t Size, __tgt_async_info *AsyncInfo) const {
+    assert(AsyncInfo && "AsyncInfo is nullptr");
 
     CUresult Err = cuCtxSetCurrent(DeviceData[DeviceId].Context);
     if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n"))
       return OFFLOAD_FAIL;
 
-    CUstream Stream = getStream(DeviceId, AsyncInfoPtr);
+    CUstream Stream = getStream(DeviceId, AsyncInfo);
 
     Err = cuMemcpyDtoHAsync(HstPtr, (CUdeviceptr)TgtPtr, Size, Stream);
     if (Err != CUDA_SUCCESS) {
-      REPORT("Error when copying data from device to host. Pointers: host "
-             "= " DPxMOD ", device = " DPxMOD ", size = %" PRId64 "\n",
-             DPxPTR(HstPtr), DPxPTR(TgtPtr), Size);
+      DP("Error when copying data from device to host. Pointers: host "
+         "= " DPxMOD ", device = " DPxMOD ", size = %" PRId64 "\n",
+         DPxPTR(HstPtr), DPxPTR(TgtPtr), Size);
       CUDA_ERR_STRING(Err);
       return OFFLOAD_FAIL;
     }
@@ -851,14 +909,14 @@ public:
   }
 
   int dataExchange(int SrcDevId, const void *SrcPtr, int DstDevId, void *DstPtr,
-                   int64_t Size, __tgt_async_info *AsyncInfoPtr) const {
-    assert(AsyncInfoPtr && "AsyncInfoPtr is nullptr");
+                   int64_t Size, __tgt_async_info *AsyncInfo) const {
+    assert(AsyncInfo && "AsyncInfo is nullptr");
 
     CUresult Err = cuCtxSetCurrent(DeviceData[SrcDevId].Context);
     if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n"))
       return OFFLOAD_FAIL;
 
-    CUstream Stream = getStream(SrcDevId, AsyncInfoPtr);
+    CUstream Stream = getStream(SrcDevId, AsyncInfo);
 
     // If they are two devices, we try peer to peer copy first
     if (SrcDevId != DstDevId) {
@@ -892,10 +950,9 @@ public:
       if (Err == CUDA_SUCCESS)
         return OFFLOAD_SUCCESS;
 
-      REPORT("Error returned from cuMemcpyPeerAsync. src_ptr = " DPxMOD
-             ", src_id =%" PRId32 ", dst_ptr = " DPxMOD ", dst_id =%" PRId32
-             "\n",
-             DPxPTR(SrcPtr), SrcDevId, DPxPTR(DstPtr), DstDevId);
+      DP("Error returned from cuMemcpyPeerAsync. src_ptr = " DPxMOD
+         ", src_id =%" PRId32 ", dst_ptr = " DPxMOD ", dst_id =%" PRId32 "\n",
+         DPxPTR(SrcPtr), SrcDevId, DPxPTR(DstPtr), DstDevId);
       CUDA_ERR_STRING(Err);
     }
 
@@ -1004,7 +1061,7 @@ public:
       CudaBlocksPerGrid = TeamNum;
     }
 
-    INFO(DeviceId,
+    INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
          "Launching kernel %s with %d blocks and %d threads in %s "
          "mode\n",
          (getOffloadEntry(DeviceId, TgtEntryPtr))
@@ -1027,25 +1084,24 @@ public:
     return OFFLOAD_SUCCESS;
   }
 
-  int synchronize(const int DeviceId, __tgt_async_info *AsyncInfoPtr) const {
-    CUstream Stream = reinterpret_cast<CUstream>(AsyncInfoPtr->Queue);
+  int synchronize(const int DeviceId, __tgt_async_info *AsyncInfo) const {
+    CUstream Stream = reinterpret_cast<CUstream>(AsyncInfo->Queue);
     CUresult Err = cuStreamSynchronize(Stream);
-    if (Err != CUDA_SUCCESS) {
-      REPORT("Error when synchronizing stream. stream = " DPxMOD
-             ", async info ptr = " DPxMOD "\n",
-             DPxPTR(Stream), DPxPTR(AsyncInfoPtr));
-      CUDA_ERR_STRING(Err);
-      return OFFLOAD_FAIL;
-    }
 
     // Once the stream is synchronized, return it to stream pool and reset
-    // async_info. This is to make sure the synchronization only works for its
+    // AsyncInfo. This is to make sure the synchronization only works for its
     // own tasks.
-    StreamManager->returnStream(
-        DeviceId, reinterpret_cast<CUstream>(AsyncInfoPtr->Queue));
-    AsyncInfoPtr->Queue = nullptr;
+    StreamManager->returnStream(DeviceId,
+                                reinterpret_cast<CUstream>(AsyncInfo->Queue));
+    AsyncInfo->Queue = nullptr;
 
-    return OFFLOAD_SUCCESS;
+    if (Err != CUDA_SUCCESS) {
+      DP("Error when synchronizing stream. stream = " DPxMOD
+         ", async info ptr = " DPxMOD "\n",
+         DPxPTR(Stream), DPxPTR(AsyncInfo));
+      CUDA_ERR_STRING(Err);
+    }
+    return (Err == CUDA_SUCCESS) ? OFFLOAD_SUCCESS : OFFLOAD_FAIL;
   }
 };
 
@@ -1090,23 +1146,24 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
   return DeviceRTL.loadBinary(device_id, image);
 }
 
-void *__tgt_rtl_data_alloc(int32_t device_id, int64_t size, void *) {
+void *__tgt_rtl_data_alloc(int32_t device_id, int64_t size, void *,
+                           int32_t kind) {
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
 
-  return DeviceRTL.dataAlloc(device_id, size);
+  return DeviceRTL.dataAlloc(device_id, size, (TargetAllocTy)kind);
 }
 
 int32_t __tgt_rtl_data_submit(int32_t device_id, void *tgt_ptr, void *hst_ptr,
                               int64_t size) {
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
 
-  __tgt_async_info async_info;
+  __tgt_async_info AsyncInfo;
   const int32_t rc = __tgt_rtl_data_submit_async(device_id, tgt_ptr, hst_ptr,
-                                                 size, &async_info);
+                                                 size, &AsyncInfo);
   if (rc != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  return __tgt_rtl_synchronize(device_id, &async_info);
+  return __tgt_rtl_synchronize(device_id, &AsyncInfo);
 }
 
 int32_t __tgt_rtl_data_submit_async(int32_t device_id, void *tgt_ptr,
@@ -1123,13 +1180,13 @@ int32_t __tgt_rtl_data_retrieve(int32_t device_id, void *hst_ptr, void *tgt_ptr,
                                 int64_t size) {
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
 
-  __tgt_async_info async_info;
+  __tgt_async_info AsyncInfo;
   const int32_t rc = __tgt_rtl_data_retrieve_async(device_id, hst_ptr, tgt_ptr,
-                                                   size, &async_info);
+                                                   size, &AsyncInfo);
   if (rc != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  return __tgt_rtl_synchronize(device_id, &async_info);
+  return __tgt_rtl_synchronize(device_id, &AsyncInfo);
 }
 
 int32_t __tgt_rtl_data_retrieve_async(int32_t device_id, void *hst_ptr,
@@ -1145,13 +1202,13 @@ int32_t __tgt_rtl_data_retrieve_async(int32_t device_id, void *hst_ptr,
 int32_t __tgt_rtl_data_exchange_async(int32_t src_dev_id, void *src_ptr,
                                       int dst_dev_id, void *dst_ptr,
                                       int64_t size,
-                                      __tgt_async_info *async_info_ptr) {
+                                      __tgt_async_info *AsyncInfo) {
   assert(DeviceRTL.isValidDeviceId(src_dev_id) && "src_dev_id is invalid");
   assert(DeviceRTL.isValidDeviceId(dst_dev_id) && "dst_dev_id is invalid");
-  assert(async_info_ptr && "async_info_ptr is nullptr");
+  assert(AsyncInfo && "AsyncInfo is nullptr");
 
   return DeviceRTL.dataExchange(src_dev_id, src_ptr, dst_dev_id, dst_ptr, size,
-                                async_info_ptr);
+                                AsyncInfo);
 }
 
 int32_t __tgt_rtl_data_exchange(int32_t src_dev_id, void *src_ptr,
@@ -1160,13 +1217,13 @@ int32_t __tgt_rtl_data_exchange(int32_t src_dev_id, void *src_ptr,
   assert(DeviceRTL.isValidDeviceId(src_dev_id) && "src_dev_id is invalid");
   assert(DeviceRTL.isValidDeviceId(dst_dev_id) && "dst_dev_id is invalid");
 
-  __tgt_async_info async_info;
+  __tgt_async_info AsyncInfo;
   const int32_t rc = __tgt_rtl_data_exchange_async(
-      src_dev_id, src_ptr, dst_dev_id, dst_ptr, size, &async_info);
+      src_dev_id, src_ptr, dst_dev_id, dst_ptr, size, &AsyncInfo);
   if (rc != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  return __tgt_rtl_synchronize(src_dev_id, &async_info);
+  return __tgt_rtl_synchronize(src_dev_id, &AsyncInfo);
 }
 
 int32_t __tgt_rtl_data_delete(int32_t device_id, void *tgt_ptr) {
@@ -1183,14 +1240,14 @@ int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
                                          uint64_t loop_tripcount) {
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
 
-  __tgt_async_info async_info;
+  __tgt_async_info AsyncInfo;
   const int32_t rc = __tgt_rtl_run_target_team_region_async(
       device_id, tgt_entry_ptr, tgt_args, tgt_offsets, arg_num, team_num,
-      thread_limit, loop_tripcount, &async_info);
+      thread_limit, loop_tripcount, &AsyncInfo);
   if (rc != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  return __tgt_rtl_synchronize(device_id, &async_info);
+  return __tgt_rtl_synchronize(device_id, &AsyncInfo);
 }
 
 int32_t __tgt_rtl_run_target_team_region_async(
@@ -1210,13 +1267,13 @@ int32_t __tgt_rtl_run_target_region(int32_t device_id, void *tgt_entry_ptr,
                                     int32_t arg_num) {
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
 
-  __tgt_async_info async_info;
+  __tgt_async_info AsyncInfo;
   const int32_t rc = __tgt_rtl_run_target_region_async(
-      device_id, tgt_entry_ptr, tgt_args, tgt_offsets, arg_num, &async_info);
+      device_id, tgt_entry_ptr, tgt_args, tgt_offsets, arg_num, &AsyncInfo);
   if (rc != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  return __tgt_rtl_synchronize(device_id, &async_info);
+  return __tgt_rtl_synchronize(device_id, &AsyncInfo);
 }
 
 int32_t __tgt_rtl_run_target_region_async(int32_t device_id,
@@ -1239,6 +1296,11 @@ int32_t __tgt_rtl_synchronize(int32_t device_id,
   assert(async_info_ptr->Queue && "async_info_ptr->Queue is nullptr");
 
   return DeviceRTL.synchronize(device_id, async_info_ptr);
+}
+
+void __tgt_rtl_set_info_flag(uint32_t NewInfoLevel) {
+  std::atomic<uint32_t> &InfoLevel = getInfoLevelInternal();
+  InfoLevel.store(NewInfoLevel);
 }
 
 #ifdef __cplusplus

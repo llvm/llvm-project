@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_REMARKS_REMARK_PARSER_H
-#define LLVM_REMARKS_REMARK_PARSER_H
+#ifndef LLVM_REMARKS_REMARKPARSER_H
+#define LLVM_REMARKS_REMARKPARSER_H
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -90,4 +90,4 @@ createRemarkParserFromMeta(Format ParserFormat, StringRef Buf,
 } // end namespace remarks
 } // end namespace llvm
 
-#endif /* LLVM_REMARKS_REMARK_PARSER_H */
+#endif // LLVM_REMARKS_REMARKPARSER_H

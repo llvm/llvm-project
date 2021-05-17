@@ -11,3 +11,5 @@ entry:
 
 ; CHECK-DAG: section ".SCOV{{\$}}CM",
 ; CHECK-DAG: section ".SCOVP{{\$}}M",
+; CHECK:     @__start___sancov_cntrs = external hidden global i8
+; CHECK:     @__stop___sancov_cntrs = external hidden global i8

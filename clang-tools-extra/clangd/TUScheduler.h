@@ -151,11 +151,11 @@ public:
   /// in this callback (obtained via ParsedAST::getLocalTopLevelDecls) to obtain
   /// optimal performance.
   ///
-  /// When information about the file (diagnostics, syntax highlighting) is
+  /// When information about the file (e.g. diagnostics) is
   /// published to clients, this should be wrapped in Publish, e.g.
   ///   void onMainAST(...) {
-  ///     Highlights = computeHighlights();
-  ///     Publish([&] { notifyHighlights(Path, Highlights); });
+  ///     Diags = renderDiagnostics();
+  ///     Publish([&] { notifyDiagnostics(Path, Diags); });
   ///   }
   /// This guarantees that clients will see results in the correct sequence if
   /// the file is concurrently closed and/or reopened. (The lambda passed to
@@ -196,10 +196,6 @@ public:
     /// Determines when to keep idle ASTs in memory for future use.
     ASTRetentionPolicy RetentionPolicy;
 
-    /// Whether to run PreamblePeer asynchronously.
-    /// No-op if AsyncThreadsCount is 0.
-    bool AsyncPreambleBuilds = true;
-
     /// Used to create a context that wraps each single operation.
     /// Typically to inject per-file configuration.
     /// If the path is empty, context sholud be "generic".
@@ -239,13 +235,17 @@ public:
   /// if requested with WantDiags::Auto or WantDiags::Yes.
   void remove(PathRef File);
 
-  /// Returns a snapshot of all file buffer contents, per last update().
-  llvm::StringMap<std::string> getAllFileContents() const;
-
   /// Schedule an async task with no dependencies.
   /// Path may be empty (it is used only to set the Context).
   void run(llvm::StringRef Name, llvm::StringRef Path,
            llvm::unique_function<void()> Action);
+
+  /// Similar to run, except the task is expected to be quick.
+  /// This function will not honor AsyncThreadsCount (except
+  /// if threading is disabled with AsyncThreadsCount=0)
+  /// It is intended to run quick tasks that need to run ASAP
+  void runQuick(llvm::StringRef Name, llvm::StringRef Path,
+                llvm::unique_function<void()> Action);
 
   /// Defines how a runWithAST action is implicitly cancelled by other actions.
   enum ASTActionInvalidation {
@@ -307,6 +307,8 @@ public:
   /// Responsible for retaining and rebuilding idle ASTs. An implementation is
   /// an LRU cache.
   class ASTCache;
+  /// Tracks headers included by open files, to get known-good compile commands.
+  class HeaderIncluderCache;
 
   // The file being built/processed in the current thread. This is a hack in
   // order to get the file name into the index implementations. Do not depend on
@@ -319,12 +321,17 @@ public:
   void profile(MemoryTree &MT) const;
 
 private:
+  void runWithSemaphore(llvm::StringRef Name, llvm::StringRef Path,
+                        llvm::unique_function<void()> Action, Semaphore &Sem);
+
   const GlobalCompilationDatabase &CDB;
   Options Opts;
   std::unique_ptr<ParsingCallbacks> Callbacks; // not nullptr
   Semaphore Barrier;
+  Semaphore QuickRunBarrier;
   llvm::StringMap<std::unique_ptr<FileData>> Files;
   std::unique_ptr<ASTCache> IdleASTs;
+  std::unique_ptr<HeaderIncluderCache> HeaderIncluders;
   // None when running tasks synchronously and non-None when running tasks
   // asynchronously.
   llvm::Optional<AsyncTaskRunner> PreambleTasks;

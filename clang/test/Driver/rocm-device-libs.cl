@@ -78,46 +78,46 @@
 // RUN:   -x cl -mcpu=gfx803                     \
 // RUN:   -cl-unsafe-math-optimizations \
 // RUN:   --rocm-path=%S/Inputs/rocm \
-// RUN:   %s \
-// RUN: 2>&1 | FileCheck  --check-prefixes=COMMON,COMMON-UNSAFE,GFX803,WAVE64 %s
+// RUN:   %s 2>&1 | \
+// RUN:   FileCheck  --check-prefixes=COMMON,GFX803,WAVE64 %s
 
 // RUN: %clang -### -target amdgcn-amd-amdhsa    \
 // RUN:   -x cl -mcpu=gfx1010                    \
 // RUN:   --rocm-path=%S/Inputs/rocm \
-// RUN:   %s \
-// RUN: 2>&1 | FileCheck  --check-prefixes=COMMMON,GFX1010,WAVE32 %s
+// RUN:   %s 2>&1 | \
+// RUN:   FileCheck  --check-prefix=WAVE32 %s
 
 // RUN: %clang -### -target amdgcn-amd-amdhsa    \
 // RUN:   -x cl -mcpu=gfx1011                    \
 // RUN:   --rocm-path=%S/Inputs/rocm \
-// RUN:   %s \
-// RUN: 2>&1 | FileCheck  --check-prefixes=COMMMON,GFX1011,WAVE32 %s
+// RUN:   %s 2>&1 | \
+// RUN:   FileCheck  --check-prefix=WAVE32 %s
 
 // RUN: %clang -### -target amdgcn-amd-amdhsa    \
 // RUN:   -x cl -mcpu=gfx1012                    \
 // RUN:   --rocm-path=%S/Inputs/rocm \
-// RUN:   %s \
-// RUN: 2>&1 | FileCheck  --check-prefixes=COMMMON,GFX1012,WAVE32 %s
+// RUN:   %s 2>&1 | \
+// RUN:   FileCheck  --check-prefix=WAVE32 %s
 
 
 // RUN: %clang -### -target amdgcn-amd-amdhsa    \
 // RUN:   -x cl -mcpu=gfx1010 -mwavefrontsize64  \
 // RUN:   --rocm-path=%S/Inputs/rocm \
-// RUN:   %s \
-// RUN: 2>&1 | FileCheck  --check-prefixes=COMMMON,GFX1010,WAVE64 %s
+// RUN:   %s 2>&1 | \
+// RUN:   FileCheck  --check-prefix=WAVE64 %s
 
 // RUN: %clang -### -target amdgcn-amd-amdhsa    \
 // RUN:   -x cl -mcpu=gfx1010 -mwavefrontsize64 -mno-wavefrontsize64  \
 // RUN:   --rocm-path=%S/Inputs/rocm \
-// RUN:   %s \
-// RUN: 2>&1 | FileCheck  --check-prefixes=COMMMON,GFX1010,WAVE32 %s
+// RUN:   %s 2>&1 | \
+// RUN:   FileCheck  --check-prefix=WAVE32 %s
 
 // Ignore -mno-wavefrontsize64 without wave32 support
 // RUN: %clang -### -target amdgcn-amd-amdhsa       \
 // RUN:   -x cl -mcpu=gfx803  -mno-wavefrontsize64  \
 // RUN:   --rocm-path=%S/Inputs/rocm    \
-// RUN:   %s \
-// RUN: 2>&1 | FileCheck  --check-prefixes=COMMMON,GFX803,WAVE64 %s
+// RUN:   %s 2>&1 | \
+// RUN:   FileCheck  --check-prefixes=GFX803,WAVE64 %s
 
 
 

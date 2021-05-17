@@ -20,6 +20,7 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -300,6 +301,7 @@ protected:
     IK_CondOpInit,
     IK_FoldOpInit,
     IK_IsAOpInit,
+    IK_AnonymousNameInit,
     IK_StringInit,
     IK_VarInit,
     IK_VarListElementInit,
@@ -575,6 +577,36 @@ public:
   }
 };
 
+/// "anonymous_n" - Represent an anonymous record name
+class AnonymousNameInit : public TypedInit {
+  unsigned Value;
+
+  explicit AnonymousNameInit(unsigned V)
+      : TypedInit(IK_AnonymousNameInit, StringRecTy::get()), Value(V) {}
+
+public:
+  AnonymousNameInit(const AnonymousNameInit &) = delete;
+  AnonymousNameInit &operator=(const AnonymousNameInit &) = delete;
+
+  static bool classof(const Init *I) {
+    return I->getKind() == IK_AnonymousNameInit;
+  }
+
+  static AnonymousNameInit *get(unsigned);
+
+  unsigned getValue() const { return Value; }
+
+  StringInit *getNameInit() const;
+
+  std::string getAsString() const override;
+
+  Init *resolveReferences(Resolver &R) const override;
+
+  Init *getBit(unsigned Bit) const override {
+    llvm_unreachable("Illegal bit reference off string");
+  }
+};
+
 /// "foo" - Represent an initialization by a string value.
 class StringInit : public TypedInit {
 public:
@@ -676,6 +708,7 @@ public:
   ///
   Init *resolveReferences(Resolver &R) const override;
 
+  bool isComplete() const override;
   bool isConcrete() const override;
   std::string getAsString() const override;
 
@@ -829,7 +862,7 @@ public:
 /// !op (X, Y, Z) - Combine two inits.
 class TernOpInit : public OpInit, public FoldingSetNode {
 public:
-  enum TernaryOp : uint8_t { SUBST, FOREACH, FILTER, IF, DAG, SUBSTR };
+  enum TernaryOp : uint8_t { SUBST, FOREACH, FILTER, IF, DAG, SUBSTR, FIND };
 
 private:
   Init *LHS, *MHS, *RHS;
@@ -1437,6 +1470,19 @@ inline raw_ostream &operator<<(raw_ostream &OS, const RecordVal &RV) {
 }
 
 class Record {
+public:
+  struct AssertionInfo {
+    SMLoc Loc;
+    Init *Condition;
+    Init *Message;
+
+    // User-defined constructor to support std::make_unique(). It can be
+    // removed in C++20 when braced initialization is supported.
+    AssertionInfo(SMLoc Loc, Init *Condition, Init *Message)
+        : Loc(Loc), Condition(Condition), Message(Message) {}
+  };
+
+private:
   static unsigned LastID;
 
   Init *Name;
@@ -1445,8 +1491,7 @@ class Record {
   SmallVector<SMLoc, 4> Locs;
   SmallVector<Init *, 0> TemplateArgs;
   SmallVector<RecordVal, 0> Values;
-  // Vector of [source location, condition Init, message Init].
-  SmallVector<std::tuple<SMLoc, Init *, Init *>, 0> Assertions;
+  SmallVector<AssertionInfo, 0> Assertions;
 
   // All superclasses in the inheritance forest in post-order (yes, it
   // must be a forest; diamond-shaped inheritance is not allowed).
@@ -1484,7 +1529,7 @@ public:
   // original record. All other fields can be copied normally.
   Record(const Record &O)
     : Name(O.Name), Locs(O.Locs), TemplateArgs(O.TemplateArgs),
-      Values(O.Values), SuperClasses(O.SuperClasses),
+      Values(O.Values), Assertions(O.Assertions), SuperClasses(O.SuperClasses),
       TrackedRecords(O.TrackedRecords), ID(LastID++),
       IsAnonymous(O.IsAnonymous), IsClass(O.IsClass) { }
 
@@ -1521,9 +1566,7 @@ public:
 
   ArrayRef<RecordVal> getValues() const { return Values; }
 
-  ArrayRef<std::tuple<SMLoc, Init *, Init *>> getAssertions() const {
-    return Assertions;
-  }
+  ArrayRef<AssertionInfo> getAssertions() const { return Assertions; }
 
   ArrayRef<std::pair<Record *, SMRange>>  getSuperClasses() const {
     return SuperClasses;
@@ -1536,9 +1579,7 @@ public:
   void getDirectSuperClasses(SmallVectorImpl<Record *> &Classes) const;
 
   bool isTemplateArg(Init *Name) const {
-    for (Init *TA : TemplateArgs)
-      if (TA == Name) return true;
-    return false;
+    return llvm::is_contained(TemplateArgs, Name);
   }
 
   const RecordVal *getValue(const Init *Name) const {
@@ -1583,8 +1624,14 @@ public:
   }
 
   void addAssertion(SMLoc Loc, Init *Condition, Init *Message) {
-    Assertions.push_back(std::make_tuple(Loc, Condition, Message));
+    Assertions.push_back(AssertionInfo(Loc, Condition, Message));
   }
+
+  void appendAssertions(const Record *Rec) {
+    Assertions.append(Rec->Assertions);
+  }
+
+  void checkRecordAssertions();
 
   bool isSubClassOf(const Record *R) const {
     for (const auto &SCPair : SuperClasses)
@@ -1617,7 +1664,7 @@ public:
   ///
   /// This is a final resolve: any error messages, e.g. due to undefined
   /// !cast references, are generated now.
-  void resolveReferences();
+  void resolveReferences(Init *NewName = nullptr);
 
   /// Apply the resolver to the name of the record as well as to the
   /// initializers of all fields of the record except SkipVal.
@@ -1866,8 +1913,6 @@ struct LessRecordFieldName {
 };
 
 struct LessRecordRegister {
-  static bool ascii_isdigit(char x) { return x >= '0' && x <= '9'; }
-
   struct RecordParts {
     SmallVector<std::pair< bool, StringRef>, 4> Parts;
 
@@ -1878,18 +1923,18 @@ struct LessRecordRegister {
       size_t Len = 0;
       const char *Start = Rec.data();
       const char *Curr = Start;
-      bool isDigitPart = ascii_isdigit(Curr[0]);
+      bool IsDigitPart = isDigit(Curr[0]);
       for (size_t I = 0, E = Rec.size(); I != E; ++I, ++Len) {
-        bool isDigit = ascii_isdigit(Curr[I]);
-        if (isDigit != isDigitPart) {
-          Parts.push_back(std::make_pair(isDigitPart, StringRef(Start, Len)));
+        bool IsDigit = isDigit(Curr[I]);
+        if (IsDigit != IsDigitPart) {
+          Parts.push_back(std::make_pair(IsDigitPart, StringRef(Start, Len)));
           Len = 0;
           Start = &Curr[I];
-          isDigitPart = ascii_isdigit(Curr[I]);
+          IsDigitPart = isDigit(Curr[I]);
         }
       }
       // Push the last part.
-      Parts.push_back(std::make_pair(isDigitPart, StringRef(Start, Len)));
+      Parts.push_back(std::make_pair(IsDigitPart, StringRef(Start, Len)));
     }
 
     size_t size() { return Parts.size(); }
@@ -1996,6 +2041,12 @@ public:
 
   void set(Init *Key, Init *Value) { Map[Key] = {Value, false}; }
 
+  bool isComplete(Init *VarName) const {
+    auto It = Map.find(VarName);
+    assert(It != Map.end() && "key must be present in map");
+    return It->second.V->isComplete();
+  }
+
   Init *resolve(Init *VarName) override;
 };
 
@@ -2003,9 +2054,12 @@ public:
 class RecordResolver final : public Resolver {
   DenseMap<Init *, Init *> Cache;
   SmallVector<Init *, 4> Stack;
+  Init *Name = nullptr;
 
 public:
   explicit RecordResolver(Record &R) : Resolver(&R) {}
+
+  void setName(Init *NewName) { Name = NewName; }
 
   Init *resolve(Init *VarName) override;
 

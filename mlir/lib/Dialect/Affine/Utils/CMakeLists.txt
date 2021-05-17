@@ -6,5 +6,6 @@ add_mlir_dialect_library(MLIRAffineUtils
 
   LINK_LIBS PUBLIC
   MLIRAffine
+  MLIRAnalysis
   MLIRTransformUtils
   )

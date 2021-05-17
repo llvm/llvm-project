@@ -11,14 +11,14 @@
 
 // This test requires the dylib support introduced in D68480,
 // which hasn't shipped yet.
-// XFAIL: with_system_cxx_lib=macosx
-// XFAIL: with_system_cxx_lib=macosx10.15
-// XFAIL: with_system_cxx_lib=macosx10.14
-// XFAIL: with_system_cxx_lib=macosx10.13
-// XFAIL: with_system_cxx_lib=macosx10.12
-// XFAIL: with_system_cxx_lib=macosx10.11
-// XFAIL: with_system_cxx_lib=macosx10.10
-// XFAIL: with_system_cxx_lib=macosx10.9
+// XFAIL: use_system_cxx_lib && x86_64-apple
+// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.15
+// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.14
+// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.13
+// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.12
+// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.11
+// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.10
+// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.9
 
 // <barrier>
 

@@ -18,13 +18,13 @@
 using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
 using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
 
-TEST(Sigaction, Invalid) {
+TEST(LlvmLibcSigaction, Invalid) {
   // -1 is a much larger signal that NSIG, so this should fail.
   EXPECT_THAT(__llvm_libc::sigaction(-1, nullptr, nullptr), Fails(EINVAL));
 }
 
 // SIGKILL cannot have its action changed, but it can be examined.
-TEST(Sigaction, Sigkill) {
+TEST(LlvmLibcSigaction, Sigkill) {
   struct __sigaction action;
   EXPECT_THAT(__llvm_libc::sigaction(SIGKILL, nullptr, &action), Succeeds());
   EXPECT_THAT(__llvm_libc::sigaction(SIGKILL, &action, nullptr), Fails(EINVAL));
@@ -33,7 +33,7 @@ TEST(Sigaction, Sigkill) {
 static int sigusr1Count;
 static bool correctSignal;
 
-TEST(Sigaction, CustomAction) {
+TEST(LlvmLibcSigaction, CustomAction) {
   // Zero this incase tests get run multiple times in the future.
   sigusr1Count = 0;
 
@@ -53,10 +53,10 @@ TEST(Sigaction, CustomAction) {
   action.sa_handler = SIG_DFL;
   EXPECT_THAT(__llvm_libc::sigaction(SIGUSR1, &action, nullptr), Succeeds());
 
-  EXPECT_DEATH([] { __llvm_libc::raise(SIGUSR1); }, SIGUSR1);
+  EXPECT_DEATH([] { __llvm_libc::raise(SIGUSR1); }, WITH_SIGNAL(SIGUSR1));
 }
 
-TEST(Sigaction, Ignore) {
+TEST(LlvmLibcSigaction, Ignore) {
   struct __sigaction action;
   EXPECT_THAT(__llvm_libc::sigaction(SIGUSR1, nullptr, &action), Succeeds());
   action.sa_handler = SIG_IGN;

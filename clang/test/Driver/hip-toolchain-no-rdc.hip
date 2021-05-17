@@ -34,7 +34,7 @@
 // Compile device code in a.cu to code object for gfx803.
 //
 
-// CHECK: [[CLANG:".*clang.*"]] "-cc1" "-mllvm" "--amdhsa-code-object-version={{[0-9]+}}" "-triple" "amdgcn-amd-amdhsa"
+// CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-emit-obj"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
@@ -57,7 +57,7 @@
 // Compile device code in a.cu to code object for gfx900.
 //
 
-// CHECK: [[CLANG:".*clang.*"]] "-cc1" "-mllvm" "--amdhsa-code-object-version={{[0-9]+}}" "-triple" "amdgcn-amd-amdhsa"
+// CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-emit-obj"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
@@ -82,7 +82,7 @@
 
 // CHECK: [[BUNDLER:".*clang-offload-bundler"]] "-type=o"
 // CHECK-SAME: "-bundle-align=4096"
-// CHECK-SAME: "-targets={{.*}},hip-amdgcn-amd-amdhsa--gfx803,hip-amdgcn-amd-amdhsa--gfx900"
+// CHECK-SAME: "-targets={{.*}},hipv4-amdgcn-amd-amdhsa--gfx803,hipv4-amdgcn-amd-amdhsa--gfx900"
 // CHECK-SAME: "-inputs={{.*}},[[IMG_DEV_A_803]],[[IMG_DEV_A_900]]" "-outputs=[[BUNDLE_A:.*hipfb]]"
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "x86_64-unknown-linux-gnu"
@@ -97,7 +97,7 @@
 // Compile device code in b.hip to code object for gfx803.
 //
 
-// CHECK: [[CLANG:".*clang.*"]] "-cc1" "-mllvm" "--amdhsa-code-object-version={{[0-9]+}}" "-triple" "amdgcn-amd-amdhsa"
+// CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-emit-obj"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip"
@@ -120,7 +120,7 @@
 // Compile device code in b.hip to code object for gfx900.
 //
 
-// CHECK: [[CLANG:".*clang.*"]] "-cc1" "-mllvm" "--amdhsa-code-object-version={{[0-9]+}}" "-triple" "amdgcn-amd-amdhsa"
+// CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-emit-obj"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip"
@@ -145,7 +145,7 @@
 
 // CHECK: [[BUNDLER:".*clang-offload-bundler"]] "-type=o"
 // CHECK-SAME: "-bundle-align=4096"
-// CHECK-SAME: "-targets={{.*}},hip-amdgcn-amd-amdhsa--gfx803,hip-amdgcn-amd-amdhsa--gfx900"
+// CHECK-SAME: "-targets={{.*}},hipv4-amdgcn-amd-amdhsa--gfx803,hipv4-amdgcn-amd-amdhsa--gfx900"
 // CHECK-SAME: "-inputs={{.*}},[[IMG_DEV_B_803]],[[IMG_DEV_B_900]]" "-outputs=[[BUNDLE_A:.*hipfb]]"
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "x86_64-unknown-linux-gnu"

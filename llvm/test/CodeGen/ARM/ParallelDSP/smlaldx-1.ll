@@ -1,6 +1,6 @@
 ; RUN: opt -mtriple=thumbv8m.main -mcpu=cortex-m33 -arm-parallel-dsp %s -S -o - | FileCheck %s
-; RUN: opt -mtriple=arm-arm-eabi -mcpu=cortex-m0 < %s -arm-parallel-dsp -S | FileCheck %s --check-prefix=CHECK-UNSUPPORTED
-; RUN: opt -mtriple=arm-arm-eabi -mcpu=cortex-m33 -mattr=-dsp < %s -arm-parallel-dsp -S | FileCheck %s --check-prefix=CHECK-UNSUPPORTED
+; RUN: opt -mtriple=arm-none-none-eabi -mcpu=cortex-m0 < %s -arm-parallel-dsp -S | FileCheck %s --check-prefix=CHECK-UNSUPPORTED
+; RUN: opt -mtriple=arm-none-none-eabi -mcpu=cortex-m33 -mattr=-dsp < %s -arm-parallel-dsp -S | FileCheck %s --check-prefix=CHECK-UNSUPPORTED
 
 define i64 @smlaldx(i16* nocapture readonly %pIn1, i16* nocapture readonly %pIn2, i32 %j, i32 %limit) {
 

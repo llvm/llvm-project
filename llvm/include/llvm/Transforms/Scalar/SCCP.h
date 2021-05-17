@@ -27,6 +27,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Transforms/Utils/PredicateInfo.h"
+#include "llvm/Transforms/Utils/SCCPSolver.h"
 
 namespace llvm {
 
@@ -36,13 +37,6 @@ class PostDominatorTree;
 class SCCPPass : public PassInfoMixin<SCCPPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-};
-
-/// Helper struct for bundling up the analysis results per function for IPSCCP.
-struct AnalysisResultsForFn {
-  std::unique_ptr<PredicateInfo> PredInfo;
-  DominatorTree *DT;
-  PostDominatorTree *PDT;
 };
 
 bool runIPSCCP(Module &M, const DataLayout &DL,

@@ -54,6 +54,8 @@ struct ExpressionFormat {
 private:
   Kind Value;
   unsigned Precision = 0;
+  /// printf-like "alternate form" selected.
+  bool AlternateForm = false;
 
 public:
   /// Evaluates a format to true if it can be used in a match.
@@ -63,7 +65,7 @@ public:
   /// their kinds and precision are the same.
   bool operator==(const ExpressionFormat &Other) const {
     return Value != Kind::NoFormat && Value == Other.Value &&
-           Precision == Other.Precision;
+           Precision == Other.Precision && AlternateForm == Other.AlternateForm;
   }
 
   bool operator!=(const ExpressionFormat &Other) const {
@@ -81,6 +83,8 @@ public:
   explicit ExpressionFormat(Kind Value) : Value(Value), Precision(0){};
   explicit ExpressionFormat(Kind Value, unsigned Precision)
       : Value(Value), Precision(Precision){};
+  explicit ExpressionFormat(Kind Value, unsigned Precision, bool AlternateForm)
+      : Value(Value), Precision(Precision), AlternateForm(AlternateForm){};
 
   /// \returns a wildcard regular expression string that matches any value in
   /// the format represented by this instance and no other value, or an error
@@ -225,8 +229,7 @@ public:
 
   /// Print name of variable associated with this error.
   void log(raw_ostream &OS) const override {
-    OS << "\"";
-    OS.write_escaped(VarName) << "\"";
+    OS << "undefined variable: " << VarName;
   }
 };
 
@@ -533,11 +536,13 @@ private:
 class ErrorDiagnostic : public ErrorInfo<ErrorDiagnostic> {
 private:
   SMDiagnostic Diagnostic;
+  SMRange Range;
 
 public:
   static char ID;
 
-  ErrorDiagnostic(SMDiagnostic &&Diag) : Diagnostic(Diag) {}
+  ErrorDiagnostic(SMDiagnostic &&Diag, SMRange Range)
+      : Diagnostic(Diag), Range(Range) {}
 
   std::error_code convertToErrorCode() const override {
     return inconvertibleErrorCode();
@@ -546,13 +551,19 @@ public:
   /// Print diagnostic associated with this error when printing the error.
   void log(raw_ostream &OS) const override { Diagnostic.print(nullptr, OS); }
 
-  static Error get(const SourceMgr &SM, SMLoc Loc, const Twine &ErrMsg) {
+  StringRef getMessage() const { return Diagnostic.getMessage(); }
+  SMRange getRange() const { return Range; }
+
+  static Error get(const SourceMgr &SM, SMLoc Loc, const Twine &ErrMsg,
+                   SMRange Range = None) {
     return make_error<ErrorDiagnostic>(
-        SM.GetMessage(Loc, SourceMgr::DK_Error, ErrMsg));
+        SM.GetMessage(Loc, SourceMgr::DK_Error, ErrMsg), Range);
   }
 
   static Error get(const SourceMgr &SM, StringRef Buffer, const Twine &ErrMsg) {
-    return get(SM, SMLoc::getFromPointer(Buffer.data()), ErrMsg);
+    SMLoc Start = SMLoc::getFromPointer(Buffer.data());
+    SMLoc End = SMLoc::getFromPointer(Buffer.data() + Buffer.size());
+    return get(SM, Start, ErrMsg, SMRange(Start, End));
   }
 };
 
@@ -567,6 +578,36 @@ public:
   /// Print diagnostic associated with this error when printing the error.
   void log(raw_ostream &OS) const override {
     OS << "String not found in input";
+  }
+};
+
+/// An error that has already been reported.
+///
+/// This class is designed to support a function whose callers may need to know
+/// whether the function encountered and reported an error but never need to
+/// know the nature of that error.  For example, the function has a return type
+/// of \c Error and always returns either \c ErrorReported or \c ErrorSuccess.
+/// That interface is similar to that of a function returning bool to indicate
+/// an error except, in the former case, (1) there is no confusion over polarity
+/// and (2) the caller must either check the result or explicitly ignore it with
+/// a call like \c consumeError.
+class ErrorReported final : public ErrorInfo<ErrorReported> {
+public:
+  static char ID;
+
+  std::error_code convertToErrorCode() const override {
+    return inconvertibleErrorCode();
+  }
+
+  /// Print diagnostic associated with this error when printing the error.
+  void log(raw_ostream &OS) const override {
+    OS << "error previously reported";
+  }
+
+  static inline Error reportedOrSuccess(bool HasErrorReported) {
+    if (HasErrorReported)
+      return make_error<ErrorReported>();
+    return Error::success();
   }
 };
 
@@ -690,11 +731,22 @@ public:
   /// \returns true in case of an error, false otherwise.
   bool parsePattern(StringRef PatternStr, StringRef Prefix, SourceMgr &SM,
                     const FileCheckRequest &Req);
-  /// Matches the pattern string against the input buffer \p Buffer
+  struct Match {
+    size_t Pos;
+    size_t Len;
+  };
+  struct MatchResult {
+    Optional<Match> TheMatch;
+    Error TheError;
+    MatchResult(size_t MatchPos, size_t MatchLen, Error E)
+        : TheMatch(Match{MatchPos, MatchLen}), TheError(std::move(E)) {}
+    MatchResult(Match M, Error E) : TheMatch(M), TheError(std::move(E)) {}
+    MatchResult(Error E) : TheError(std::move(E)) {}
+  };
+  /// Matches the pattern string against the input buffer \p Buffer.
   ///
-  /// \returns the position that is matched or an error indicating why matching
-  /// failed. If there is a match, updates \p MatchLen with the size of the
-  /// matched string.
+  /// \returns either (1) an error resulting in no match or (2) a match possibly
+  /// with an error encountered while processing the match.
   ///
   /// The GlobalVariableTable StringMap in the FileCheckPatternContext class
   /// instance provides the current values of FileCheck string variables and is
@@ -702,10 +754,8 @@ public:
   /// GlobalNumericVariableTable StringMap in the same class provides the
   /// current values of FileCheck numeric variables and is updated if this
   /// match defines new numeric values.
-  Expected<size_t> match(StringRef Buffer, size_t &MatchLen,
-                         const SourceMgr &SM) const;
-  /// Prints the value of successful substitutions or the name of the undefined
-  /// string or numeric variables preventing a successful substitution.
+  MatchResult match(StringRef Buffer, const SourceMgr &SM) const;
+  /// Prints the value of successful substitutions.
   void printSubstitutions(const SourceMgr &SM, StringRef Buffer,
                           SMRange MatchRange, FileCheckDiag::MatchType MatchTy,
                           std::vector<FileCheckDiag> *Diags) const;

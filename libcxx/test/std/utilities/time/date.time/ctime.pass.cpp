@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 #include <ctime>
 #include <type_traits>
 

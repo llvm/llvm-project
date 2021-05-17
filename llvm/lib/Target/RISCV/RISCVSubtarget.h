@@ -40,6 +40,7 @@ class RISCVSubtarget : public RISCVGenSubtargetInfo {
   bool HasStdExtD = false;
   bool HasStdExtC = false;
   bool HasStdExtB = false;
+  bool HasStdExtZba = false;
   bool HasStdExtZbb = false;
   bool HasStdExtZbc = false;
   bool HasStdExtZbe = false;
@@ -106,6 +107,7 @@ public:
   bool hasStdExtD() const { return HasStdExtD; }
   bool hasStdExtC() const { return HasStdExtC; }
   bool hasStdExtB() const { return HasStdExtB; }
+  bool hasStdExtZba() const { return HasStdExtZba; }
   bool hasStdExtZbb() const { return HasStdExtZbb; }
   bool hasStdExtZbc() const { return HasStdExtZbc; }
   bool hasStdExtZbe() const { return HasStdExtZbe; }
@@ -145,6 +147,14 @@ public:
   InstructionSelector *getInstructionSelector() const override;
   const LegalizerInfo *getLegalizerInfo() const override;
   const RegisterBankInfo *getRegBankInfo() const override;
+
+  // Return the known range for the bit length of RVV data registers. A value
+  // of 0 means nothing is known about that particular limit beyond what's
+  // implied by the architecture.
+  unsigned getMaxRVVVectorSizeInBits() const;
+  unsigned getMinRVVVectorSizeInBits() const;
+  unsigned getMaxLMULForFixedLengthVectors() const;
+  bool useRVVForFixedLengthVectors() const;
 };
 } // End llvm namespace
 

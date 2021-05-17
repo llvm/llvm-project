@@ -1,6 +1,6 @@
 ; RUN: opt < %s -instcombine -S | FileCheck %s
 
-declare double @acos(double)
+declare double @acos(double) willreturn
 
 ; Check that functions without any function attributes are simplified.
 

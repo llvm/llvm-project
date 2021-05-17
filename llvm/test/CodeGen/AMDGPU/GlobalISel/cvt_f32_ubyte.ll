@@ -1220,9 +1220,8 @@ define float @v_test_uitofp_i64_byte_to_f32(i64 %arg0) {
 ; SI-NEXT:    v_ffbh_u32_e32 v3, 0
 ; SI-NEXT:    v_cmp_eq_u32_e64 vcc, 0, 0
 ; SI-NEXT:    v_cndmask_b32_e32 v2, v3, v2, vcc
-; SI-NEXT:    v_mov_b32_e32 v3, 0xbe
 ; SI-NEXT:    v_mov_b32_e32 v1, 0
-; SI-NEXT:    v_sub_i32_e32 v4, vcc, v3, v2
+; SI-NEXT:    v_sub_i32_e32 v4, vcc, 0xbe, v2
 ; SI-NEXT:    v_lshl_b64 v[2:3], v[0:1], v2
 ; SI-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
 ; SI-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v3
@@ -1251,9 +1250,8 @@ define float @v_test_uitofp_i64_byte_to_f32(i64 %arg0) {
 ; VI-NEXT:    v_ffbh_u32_e32 v3, 0
 ; VI-NEXT:    v_cmp_eq_u32_e64 vcc, 0, 0
 ; VI-NEXT:    v_cndmask_b32_e32 v2, v3, v2, vcc
-; VI-NEXT:    v_mov_b32_e32 v3, 0xbe
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
-; VI-NEXT:    v_sub_u32_e32 v4, vcc, v3, v2
+; VI-NEXT:    v_sub_u32_e32 v4, vcc, 0xbe, v2
 ; VI-NEXT:    v_lshlrev_b64 v[2:3], v2, v[0:1]
 ; VI-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
 ; VI-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v3

@@ -49,7 +49,8 @@ void ARMElfTargetObjectFile::Initialize(MCContext &Ctx,
     // Since we cannot modify flags for an existing section, we create a new
     // section with the right flags, and use 0 as the unique ID for
     // execute-only text
-    TextSection = Ctx.getELFSection(".text", Type, Flags, 0, "", 0U, nullptr);
+    TextSection =
+        Ctx.getELFSection(".text", Type, Flags, 0, "", false, 0U, nullptr);
   }
 }
 

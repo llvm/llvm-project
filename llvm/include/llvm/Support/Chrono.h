@@ -72,9 +72,21 @@ struct format_provider<sys::TimePoint<>> {
                      StringRef Style);
 };
 
+namespace detail {
+template <typename Period> struct unit { static const char value[]; };
+template <typename Period> const char unit<Period>::value[] = "";
+
+template <> struct unit<std::ratio<3600>> { static const char value[]; };
+template <> struct unit<std::ratio<60>> { static const char value[]; };
+template <> struct unit<std::ratio<1>> { static const char value[]; };
+template <> struct unit<std::milli> { static const char value[]; };
+template <> struct unit<std::micro> { static const char value[]; };
+template <> struct unit<std::nano> { static const char value[]; };
+} // namespace detail
+
 /// Implementation of format_provider<T> for duration types.
 ///
-/// The options string of a duration  type has the grammar:
+/// The options string of a duration type has the grammar:
 ///
 ///   duration_options  ::= [unit][show_unit [number_options]]
 ///   unit              ::= `h`|`m`|`s`|`ms|`us`|`ns`
@@ -95,18 +107,6 @@ struct format_provider<sys::TimePoint<>> {
 ///  If the unit of the duration type is not one of the units specified above,
 ///  it is still possible to format it, provided you explicitly request a
 ///  display unit or you request that the unit is not displayed.
-
-namespace detail {
-template <typename Period> struct unit { static const char value[]; };
-template <typename Period> const char unit<Period>::value[] = "";
-
-template <> struct unit<std::ratio<3600>> { static const char value[]; };
-template <> struct unit<std::ratio<60>> { static const char value[]; };
-template <> struct unit<std::ratio<1>> { static const char value[]; };
-template <> struct unit<std::milli> { static const char value[]; };
-template <> struct unit<std::micro> { static const char value[]; };
-template <> struct unit<std::nano> { static const char value[]; };
-} // namespace detail
 
 template <typename Rep, typename Period>
 struct format_provider<std::chrono::duration<Rep, Period>> {

@@ -33,7 +33,7 @@ static void extractGVsFromModule(std::vector<Chunk> ChunksToKeep,
   std::vector<WeakVH> InstToRemove;
   for (auto &GV : Program->globals())
     if (!GVsToKeep.count(&GV)) {
-      for (auto U : GV.users())
+      for (auto *U : GV.users())
         if (auto *Inst = dyn_cast<Instruction>(U))
           InstToRemove.push_back(Inst);
 

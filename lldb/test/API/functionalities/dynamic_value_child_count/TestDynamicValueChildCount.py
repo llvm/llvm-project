@@ -75,6 +75,6 @@ class DynamicValueChildCountTestCase(TestBase):
         self.runCmd("continue")
         self.assertNotEqual(b.GetNumChildren(), 0, "b now has 1 child")
         self.runCmd("continue")
-        self.assertTrue(
-            b.GetNumChildren() == 0,
+        self.assertEqual(
+            b.GetNumChildren(), 0,
             "b didn't go back to 0 children")

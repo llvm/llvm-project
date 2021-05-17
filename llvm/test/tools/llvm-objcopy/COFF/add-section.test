@@ -59,9 +59,9 @@
 
 ## Test that llvm-objcopy produces an error if the file with section contents
 ## to be added does not exist.
-# RUN: not llvm-objcopy --add-section=.another.section=%t2 %t %t3 2>&1 | FileCheck -DFILE1=%t -DFILE2=%t2 %s --check-prefixes=ERR1
+# RUN: not llvm-objcopy --add-section=.another.section=%t2 %t %t3 2>&1 | FileCheck -DFILE1=%t -DFILE2=%t2 -DMSG=%errc_ENOENT %s --check-prefixes=ERR1
 
-# ERR1: error: '[[FILE1]]': '[[FILE2]]': {{[Nn]}}o such file or directory
+# ERR1: error: '[[FILE1]]': '[[FILE2]]': [[MSG]]
 
 ## Another negative test for invalid --add-sections command line argument.
 # RUN: not llvm-objcopy --add-section=.another.section %t %t3 2>&1 | FileCheck %s --check-prefixes=ERR2

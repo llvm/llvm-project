@@ -1,4 +1,4 @@
-! RUN: %f18 -E %s 2>&1 | FileCheck %s
+! RUN: %flang -E %s 2>&1 | FileCheck %s
 ! CHECK: if(777.eq.777)then
 * KLM rescan
       integer, parameter :: KWM = 666, KWM2 = 667

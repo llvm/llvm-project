@@ -54,6 +54,18 @@ unsigned getNestingDepth(Operation *op);
 void getSequentialLoops(AffineForOp forOp,
                         llvm::SmallDenseSet<Value, 8> *sequentialLoops);
 
+/// Enumerates different result statuses of slice computation by
+/// `computeSliceUnion`
+// TODO: Identify and add different kinds of failures during slice computation.
+struct SliceComputationResult {
+  enum ResultEnum {
+    Success,
+    IncorrectSliceFailure, // Slice is computed, but it is incorrect.
+    GenericFailure,        // Unable to compute src loop computation slice.
+  } value;
+  SliceComputationResult(ResultEnum v) : value(v) {}
+};
+
 /// ComputationSliceState aggregates loop IVs, loop bound AffineMaps and their
 /// associated operands for a set of loops within a loop nest (typically the
 /// set of loops surrounding a store operation). Loop bound AffineMaps which
@@ -80,13 +92,50 @@ struct ComputationSliceState {
   // Returns failure if we cannot add loop bounds because of unsupported cases.
   LogicalResult getAsConstraints(FlatAffineConstraints *cst);
 
+  /// Adds to 'cst' constraints which represent the original loop bounds on
+  /// 'ivs' in 'this'. This corresponds to the original domain of the loop nest
+  /// from which the slice is being computed. Returns failure if we cannot add
+  /// loop bounds because of unsupported cases.
+  LogicalResult getSourceAsConstraints(FlatAffineConstraints &cst);
+
   // Clears all bounds and operands in slice state.
   void clearBounds();
 
-  /// Return true if the computation slice is empty.
+  /// Returns true if the computation slice is empty.
   bool isEmpty() const { return ivs.empty(); }
 
+  /// Returns true if the computation slice encloses all the iterations of the
+  /// sliced loop nest. Returns false if it does not. Returns llvm::None if it
+  /// cannot determine if the slice is maximal or not.
+  // TODO: Cache 'isMaximal' so that we don't recompute it when the slice
+  // information hasn't changed.
+  Optional<bool> isMaximal() const;
+
+  /// Checks the validity of the slice computed. This is done using the
+  /// following steps:
+  /// 1. Get the new domain of the slice that would be created if fusion
+  /// succeeds. This domain gets constructed with source loop IVS and
+  /// destination loop IVS as dimensions.
+  /// 2. Project out the dimensions of the destination loop from the domain
+  /// above calculated in step(1) to express it purely in terms of the source
+  /// loop IVs.
+  /// 3. Calculate a set difference between the iterations of the new domain and
+  /// the original domain of the source loop.
+  /// If this difference is empty, the slice is declared to be valid. Otherwise,
+  /// return false as it implies that the effective fusion results in at least
+  /// one iteration of the slice that was not originally in the source's domain.
+  /// If the validity cannot be determined, returns llvm:None.
+  Optional<bool> isSliceValid();
+
   void dump() const;
+
+private:
+  /// Fast check to determine if the computation slice is maximal. Returns true
+  /// if each slice dimension maps to an existing dst dimension and both the src
+  /// and the dst loops for those dimensions have the same bounds. Returns false
+  /// if both the src and the dst loops don't have the same bounds. Returns
+  /// llvm::None if none of the above can be proven.
+  Optional<bool> isSliceMaximalFastCheck() const;
 };
 
 /// Computes the computation slice loop bounds for one loop nest as affine maps
@@ -136,21 +185,21 @@ void getComputationSliceState(Operation *depSourceOp, Operation *depSinkOp,
                               ComputationSliceState *sliceState);
 
 /// Computes in 'sliceUnion' the union of all slice bounds computed at
-/// 'loopDepth' between all dependent pairs of ops in 'opsA' and 'opsB'.
-/// The parameter 'numCommonLoops' is the number of loops common to the
-/// operations in 'opsA' and 'opsB'.
-/// If 'isBackwardSlice' is true, computes slice bounds for loop nest
-/// surrounding ops in 'opsA', as a function of IVs and symbols of loop nest
-/// surrounding ops in 'opsB' at 'loopDepth'.
-/// If 'isBackwardSlice' is false, computes slice bounds for loop nest
-/// surrounding ops in 'opsB', as a function of IVs and symbols of loop nest
-/// surrounding ops in 'opsA' at 'loopDepth'.
-/// Returns 'success' if union was computed, 'failure' otherwise.
+/// 'loopDepth' between all dependent pairs of ops in 'opsA' and 'opsB', and
+/// then verifies if it is valid. The parameter 'numCommonLoops' is the number
+/// of loops common to the operations in 'opsA' and 'opsB'. If 'isBackwardSlice'
+/// is true, computes slice bounds for loop nest surrounding ops in 'opsA', as a
+/// function of IVs and symbols of loop nest surrounding ops in 'opsB' at
+/// 'loopDepth'. If 'isBackwardSlice' is false, computes slice bounds for loop
+/// nest surrounding ops in 'opsB', as a function of IVs and symbols of loop
+/// nest surrounding ops in 'opsA' at 'loopDepth'. Returns
+/// 'SliceComputationResult::Success' if union was computed correctly, an
+/// appropriate 'failure' otherwise.
 // TODO: Change this API to take 'forOpA'/'forOpB'.
-LogicalResult computeSliceUnion(ArrayRef<Operation *> opsA,
-                                ArrayRef<Operation *> opsB, unsigned loopDepth,
-                                unsigned numCommonLoops, bool isBackwardSlice,
-                                ComputationSliceState *sliceUnion);
+SliceComputationResult
+computeSliceUnion(ArrayRef<Operation *> opsA, ArrayRef<Operation *> opsB,
+                  unsigned loopDepth, unsigned numCommonLoops,
+                  bool isBackwardSlice, ComputationSliceState *sliceUnion);
 
 /// Creates a clone of the computation contained in the loop nest surrounding
 /// 'srcOpInst', slices the iteration space of src loop based on slice bounds
@@ -304,9 +353,6 @@ unsigned getNumCommonSurroundingLoops(Operation &A, Operation &B);
 /// in bytes; if the memory space is unspecified, considers all memory spaces.
 Optional<int64_t> getMemoryFootprintBytes(AffineForOp forOp,
                                           int memorySpace = -1);
-
-/// Returns true if `forOp' is a parallel loop.
-bool isLoopParallel(AffineForOp forOp);
 
 /// Simplify the integer set by simplifying the underlying affine expressions by
 /// flattening and some simple inference. Also, drop any duplicate constraints.

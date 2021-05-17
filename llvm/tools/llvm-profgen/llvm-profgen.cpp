@@ -29,6 +29,8 @@ static cl::list<std::string>
                     llvm::cl::MiscFlags::CommaSeparated,
                     cl::desc("Path of profiled binary files"));
 
+extern cl::opt<bool> ShowDisassemblyOnly;
+
 using namespace llvm;
 using namespace sampleprof;
 
@@ -43,7 +45,9 @@ int main(int argc, const char *argv[]) {
   cl::ParseCommandLineOptions(argc, argv, "llvm SPGO profile generator\n");
 
   // Load binaries and parse perf events and samples
-  PerfReader Reader(BinaryFilenames);
+  PerfReader Reader(BinaryFilenames, PerfTraceFilenames);
+  if (ShowDisassemblyOnly)
+    return EXIT_SUCCESS;
   Reader.parsePerfTraces(PerfTraceFilenames);
 
   std::unique_ptr<ProfileGenerator> Generator = ProfileGenerator::create(

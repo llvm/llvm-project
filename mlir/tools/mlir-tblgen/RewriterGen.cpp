@@ -251,16 +251,11 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
 
   // TODO(suderman): iterate through arguments, determine their types, output
   // names.
-  SmallVector<std::string, 8> capture(8);
-  if (tree.getNumArgs() > 8) {
-    PrintFatalError(loc,
-                    "unsupported NativeCodeCall matcher argument numbers: " +
-                        Twine(tree.getNumArgs()));
-  }
+  SmallVector<std::string, 8> capture;
 
   raw_indented_ostream::DelimitedScope scope(os);
 
-  os << "if(!" << opName << ") return failure();\n";
+  os << "if(!" << opName << ") return ::mlir::failure();\n";
   for (int i = 0, e = tree.getNumArgs(); i != e; ++i) {
     std::string argName = formatv("arg{0}_{1}", depth, i);
     if (DagNode argTree = tree.getArgAsNestedDag(i)) {
@@ -269,12 +264,12 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
       auto leaf = tree.getArgAsLeaf(i);
       if (leaf.isAttrMatcher() || leaf.isConstantAttr()) {
         os << "Attribute " << argName << ";\n";
-      } else if (leaf.isOperandMatcher()) {
-        os << "Operation " << argName << ";\n";
+      } else {
+        os << "Value " << argName << ";\n";
       }
     }
 
-    capture[i] = std::move(argName);
+    capture.push_back(std::move(argName));
   }
 
   bool hasLocationDirective;
@@ -282,11 +277,15 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
   std::tie(hasLocationDirective, locToUse) = getLocation(tree);
 
   auto fmt = tree.getNativeCodeTemplate();
-  auto nativeCodeCall = std::string(tgfmt(
-      fmt, &fmtCtx.addSubst("_loc", locToUse), opName, capture[0], capture[1],
-      capture[2], capture[3], capture[4], capture[5], capture[6], capture[7]));
+  if (fmt.count("$_self") != 1) {
+    PrintFatalError(loc, "NativeCodeCall must have $_self as argument for "
+                         "passing the defining Operation");
+  }
 
-  os << "if (failed(" << nativeCodeCall << ")) return failure();\n";
+  auto nativeCodeCall = std::string(tgfmt(
+      fmt, &fmtCtx.addSubst("_loc", locToUse).withSelf(opName.str()), capture));
+
+  os << "if (failed(" << nativeCodeCall << ")) return ::mlir::failure();\n";
 
   for (int i = 0, e = tree.getNumArgs(); i != e; ++i) {
     auto name = tree.getArgName(i);
@@ -307,9 +306,18 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
     }
 
     DagLeaf leaf = tree.getArgAsLeaf(i);
+
+    // The parameter for native function doesn't bind any constraints.
+    if (leaf.isUnspecified())
+      continue;
+
     auto constraint = leaf.getAsConstraint();
 
-    auto self = formatv("{0}", argName);
+    std::string self;
+    if (leaf.isAttrMatcher() || leaf.isConstantAttr())
+      self = argName;
+    else
+      self = formatv("{0}.getType()", argName);
     emitMatchCheck(
         opName,
         tgfmt(constraint.getConditionTemplate(), &fmtCtx.withSelf(self)),
@@ -336,7 +344,7 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
   // Skip the operand matching at depth 0 as the pattern rewriter already does.
   if (depth != 0) {
     // Skip if there is no defining operation (e.g., arguments to function).
-    os << formatv("if (!{0}) return failure();\n", castedName);
+    os << formatv("if (!{0}) return ::mlir::failure();\n", castedName);
   }
   if (tree.getNumArgs() != op.getNumArgs()) {
     PrintFatalError(loc, formatv("op '{0}' argument number mismatch: {1} in "
@@ -367,6 +375,7 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
       os << "{\n";
 
       // Attributes don't count for getODSOperands.
+      // TODO: Operand is a Value, check if we should remove `getDefiningOp()`.
       os.indent() << formatv(
           "auto *{0} = "
           "(*{1}.getODSOperands({2}).begin()).getDefiningOp();\n",
@@ -631,8 +640,8 @@ void PatternEmitter::emit(StringRef rewriteName) {
                 make_range(locs.rbegin(), locs.rend()));
   os << formatv(R"(struct {0} : public ::mlir::RewritePattern {
   {0}(::mlir::MLIRContext *context)
-      : ::mlir::RewritePattern("{1}", {{)",
-                rewriteName, rootName);
+      : ::mlir::RewritePattern("{1}", {2}, context, {{)",
+                rewriteName, rootName, pattern.getBenefit());
   // Sort result operators by name.
   llvm::SmallVector<const Operator *, 4> sortedResultOps(resultOps.begin(),
                                                          resultOps.end());
@@ -642,7 +651,7 @@ void PatternEmitter::emit(StringRef rewriteName) {
   llvm::interleaveComma(sortedResultOps, os, [&](const Operator *op) {
     os << '"' << op->getOperationName() << '"';
   });
-  os << formatv(R"(}, {0}, context) {{})", pattern.getBenefit()) << "\n";
+  os << "}) {}\n";
 
   // Emit matchAndRewrite() function.
   {
@@ -842,8 +851,7 @@ std::string PatternEmitter::handleLocationDirective(DagNode tree) {
   if (tree.getNumArgs() == 1) {
     DagLeaf leaf = tree.getArgAsLeaf(0);
     if (leaf.isStringAttr())
-      return formatv("::mlir::NameLoc::get(rewriter.getIdentifier(\"{0}\"), "
-                     "rewriter.getContext())",
+      return formatv("::mlir::NameLoc::get(rewriter.getIdentifier(\"{0}\"))",
                      leaf.getStringAttr())
           .str();
     return lookUpArgLoc(0);
@@ -916,29 +924,32 @@ std::string PatternEmitter::handleReplaceWithNativeCodeCall(DagNode tree,
   LLVM_DEBUG(llvm::dbgs() << '\n');
 
   auto fmt = tree.getNativeCodeTemplate();
-  // TODO: replace formatv arguments with the exact specified args.
-  SmallVector<std::string, 8> attrs(8);
-  if (tree.getNumArgs() > 8) {
-    PrintFatalError(loc,
-                    "unsupported NativeCodeCall replace argument numbers: " +
-                        Twine(tree.getNumArgs()));
-  }
+
+  SmallVector<std::string, 16> attrs;
+
   bool hasLocationDirective;
   std::string locToUse;
   std::tie(hasLocationDirective, locToUse) = getLocation(tree);
 
   for (int i = 0, e = tree.getNumArgs() - hasLocationDirective; i != e; ++i) {
     if (tree.isNestedDagArg(i)) {
-      attrs[i] = handleResultPattern(tree.getArgAsNestedDag(i), i, depth + 1);
+      attrs.push_back(
+          handleResultPattern(tree.getArgAsNestedDag(i), i, depth + 1));
     } else {
-      attrs[i] = handleOpArgument(tree.getArgAsLeaf(i), tree.getArgName(i));
+      attrs.push_back(
+          handleOpArgument(tree.getArgAsLeaf(i), tree.getArgName(i)));
     }
     LLVM_DEBUG(llvm::dbgs() << "NativeCodeCall argument #" << i
                             << " replacement: " << attrs[i] << "\n");
   }
-  return std::string(tgfmt(fmt, &fmtCtx.addSubst("_loc", locToUse), attrs[0],
-                           attrs[1], attrs[2], attrs[3], attrs[4], attrs[5],
-                           attrs[6], attrs[7]));
+
+  std::string symbol = tgfmt(fmt, &fmtCtx.addSubst("_loc", locToUse), attrs);
+  if (!tree.getSymbol().empty()) {
+    os << formatv("auto {0} = {1};\n", tree.getSymbol(), symbol);
+    symbol = tree.getSymbol().str();
+  }
+
+  return symbol;
 }
 
 int PatternEmitter::getNodeValueCount(DagNode node) {
@@ -1299,10 +1310,10 @@ static void emitRewriters(const RecordKeeper &recordKeeper, raw_ostream &os) {
   }
 
   // Emit function to add the generated matchers to the pattern list.
-  os << "void LLVM_ATTRIBUTE_UNUSED populateWithGenerated(::mlir::MLIRContext "
-        "*context, ::mlir::OwningRewritePatternList &patterns) {\n";
+  os << "void LLVM_ATTRIBUTE_UNUSED populateWithGenerated("
+        "::mlir::RewritePatternSet &patterns) {\n";
   for (const auto &name : rewriterNames) {
-    os << "  patterns.insert<" << name << ">(context);\n";
+    os << "  patterns.add<" << name << ">(patterns.getContext());\n";
   }
   os << "}\n";
 }

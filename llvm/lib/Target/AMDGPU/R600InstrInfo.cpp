@@ -13,8 +13,9 @@
 
 #include "R600InstrInfo.h"
 #include "AMDGPU.h"
-#include "AMDGPUSubtarget.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "R600Defines.h"
+#include "R600Subtarget.h"
 #include "llvm/ADT/SmallSet.h"
 
 using namespace llvm;

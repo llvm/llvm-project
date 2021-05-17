@@ -9,12 +9,25 @@ body:             |
   bb.0:
     %0:vgpr_32 = V_MOV_B32_e32 123, implicit $exec
     %1:sreg_32_xm0 = V_READFIRSTLANE_B32 %0, implicit $exec
+    S_NOP 0, implicit %1
+...
+
+# GCN-LABEL: name: fold-imm-readfirstlane-dbgvalue{{$}}
+# GCN: %1:sreg_32_xm0 = S_MOV_B32 123
+# GCN: DBG_VALUE $noreg, 0, 0
+---
+name: fold-imm-readfirstlane-dbgvalue
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:vgpr_32 = V_MOV_B32_e32 123, implicit $exec
+    %1:sreg_32_xm0 = V_READFIRSTLANE_B32 %0, implicit $exec
+    DBG_VALUE %0, 0, 0
+    S_NOP 0, implicit %1
 ...
 
 # GCN-LABEL: name: fold-imm-readfirstlane-readfirstlane{{$}}
-# GCN: %0:vgpr_32 = V_MOV_B32_e32 123, implicit $exec
 # GCN: %1:sreg_32_xm0 = S_MOV_B32 123
-# GCN: %2:vgpr_32 = V_MOV_B32_e32 123, implicit $exec
 # GCN: %3:sreg_32_xm0 = COPY %1
 
 ---
@@ -26,13 +39,12 @@ body:             |
     %1:sreg_32_xm0 = V_READFIRSTLANE_B32 %0, implicit $exec
     %2:vgpr_32 = COPY %1
     %3:sreg_32_xm0 = V_READFIRSTLANE_B32 %2, implicit $exec
-
+    S_NOP 0, implicit %3
 ...
 
 
 # GCN-LABEL: name: fold-copy-readfirstlane{{$}}
 # GCN: %0:sreg_32_xm0 = COPY $sgpr10
-# GCN: %1:vgpr_32 = COPY %0
 # GCN: %2:sreg_32_xm0 = COPY %0
 ---
 name: fold-copy-readfirstlane
@@ -43,7 +55,7 @@ body:             |
     %0:sreg_32_xm0 = COPY $sgpr10
     %1:vgpr_32 = COPY %0
     %2:sreg_32_xm0 = V_READFIRSTLANE_B32 %1, implicit $exec
-
+    S_NOP 0, implicit %2
 ...
 
 # GCN-LABEL: name: no-fold-copy-readfirstlane-physreg0{{$}}
@@ -233,6 +245,7 @@ body:             |
     liveins: $vgpr0, $sgpr0_sgpr1
     %0:vgpr_32 = V_MOV_B32_e32 123, implicit $exec
     %1:sreg_32_xm0 = V_READLANE_B32 %0, 0, implicit $exec
+    S_NOP 0, implicit %1
 ...
 
 # GCN-LABEL: name: fold-imm-readlane-src1{{$}}
@@ -268,6 +281,7 @@ body:             |
     %2:vreg_64 = REG_SEQUENCE %0:vgpr_32, %subreg.sub0, killed %1:vgpr_32, %subreg.sub1
     %3:sgpr_32 = V_READFIRSTLANE_B32 %2.sub0:vreg_64, implicit $exec
     %4:sgpr_32 = V_READFIRSTLANE_B32 %2.sub1:vreg_64, implicit $exec
+    S_NOP 0, implicit %3, implicit %4
 ...
 
 # Constant for subreg1
@@ -289,6 +303,7 @@ body:             |
     %2:vreg_64 = REG_SEQUENCE %1:vgpr_32, %subreg.sub0, killed %0:vgpr_32, %subreg.sub1
     %3:sgpr_32 = V_READFIRSTLANE_B32 %2.sub0:vreg_64, implicit $exec
     %4:sgpr_32 = V_READFIRSTLANE_B32 %2.sub1:vreg_64, implicit $exec
+    S_NOP 0, implicit %3, implicit %4
 ...
 
 # Different constant regs for each subreg
@@ -308,6 +323,7 @@ body:             |
     %2:vreg_64 = REG_SEQUENCE %0:vgpr_32, %subreg.sub0, killed %1:vgpr_32, %subreg.sub1
     %3:sgpr_32 = V_READFIRSTLANE_B32 %2.sub0:vreg_64, implicit $exec
     %4:sgpr_32 = V_READFIRSTLANE_B32 %2.sub1:vreg_64, implicit $exec
+    S_NOP 0, implicit %3, implicit %4
 ...
 
 # Same constant reg for each subreg, so there are multiple constant uses
@@ -327,6 +343,7 @@ body:             |
     %2:vreg_64 = REG_SEQUENCE %0:vgpr_32, %subreg.sub0, killed %1:vgpr_32, %subreg.sub1
     %3:sgpr_32 = V_READFIRSTLANE_B32 %2.sub0:vreg_64, implicit $exec
     %4:sgpr_32 = V_READFIRSTLANE_B32 %2.sub1:vreg_64, implicit $exec
+    S_NOP 0, implicit %3, implicit %4
 ...
 
 # FIXME: This should fold

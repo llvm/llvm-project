@@ -588,7 +588,7 @@ define i64 @fp80_to_uint64(x86_fp80 %x) #0 {
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    fldt 8(%ebp)
-; X86-NEXT:    flds {{\.LCPI.*}}
+; X86-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}
 ; X86-NEXT:    fcom %st(1)
 ; X86-NEXT:    wait
 ; X86-NEXT:    fnstsw %ax
@@ -905,7 +905,7 @@ define x86_fp80 @uint64_to_fp80(i64 %x) #0 {
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    shrl $31, %ecx
 ; X86-NEXT:    fildll (%esp)
-; X86-NEXT:    fadds {{\.LCPI.*}}(,%ecx,4)
+; X86-NEXT:    fadds {{\.LCPI[0-9]+_[0-9]+}}(,%ecx,4)
 ; X86-NEXT:    wait
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -919,7 +919,7 @@ define x86_fp80 @uint64_to_fp80(i64 %x) #0 {
 ; X64-NEXT:    testq %rdi, %rdi
 ; X64-NEXT:    sets %al
 ; X64-NEXT:    fildll -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fadds {{\.LCPI.*}}(,%rax,4)
+; X64-NEXT:    fadds {{\.LCPI[0-9]+_[0-9]+}}(,%rax,4)
 ; X64-NEXT:    wait
 ; X64-NEXT:    retq
   %result = call x86_fp80 @llvm.experimental.constrained.uitofp.f80.i64(i64 %x,

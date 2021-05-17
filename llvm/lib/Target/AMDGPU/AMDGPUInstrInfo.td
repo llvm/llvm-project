@@ -213,6 +213,8 @@ def AMDGPUcvt_f32_ubyte2 : SDNode<"AMDGPUISD::CVT_F32_UBYTE2",
 def AMDGPUcvt_f32_ubyte3 : SDNode<"AMDGPUISD::CVT_F32_UBYTE3",
   SDTIntToFPOp, []>;
 
+def AMDGPUcvt_pk_i16_i32 : SDNode<"AMDGPUISD::CVT_PK_I16_I32",
+  AMDGPUIntPackOp, []>;
 
 // urecip - This operation is a helper for integer division, it returns the
 // result of 1 / a as a fractional unsigned integer.
@@ -311,7 +313,7 @@ def AMDGPUfdot2_impl : SDNode<"AMDGPUISD::FDOT2",
                                        SDTCisInt<4>]>,
                   []>;
 
-def AMDGPUperm : SDNode<"AMDGPUISD::PERM", AMDGPUDTIntTernaryOp, []>;
+def AMDGPUperm_impl : SDNode<"AMDGPUISD::PERM", AMDGPUDTIntTernaryOp, []>;
 
 // SI+ export
 def AMDGPUExportOp : SDTypeProfile<0, 8, [
@@ -461,3 +463,7 @@ def AMDGPUfdot2 : PatFrags<(ops node:$src0, node:$src1, node:$src2, node:$clamp)
 def AMDGPUdiv_fmas : PatFrags<(ops node:$src0, node:$src1, node:$src2, node:$vcc),
   [(int_amdgcn_div_fmas node:$src0, node:$src1, node:$src2, node:$vcc),
    (AMDGPUdiv_fmas_impl node:$src0, node:$src1, node:$src2, node:$vcc)]>;
+
+def AMDGPUperm : PatFrags<(ops node:$src0, node:$src1, node:$src2),
+  [(int_amdgcn_perm node:$src0, node:$src1, node:$src2),
+   (AMDGPUperm_impl node:$src0, node:$src1, node:$src2)]>;

@@ -264,7 +264,7 @@ bb3:
 define i32 @test9_logical(i32 %a, i32 %b, i1 %cond2) {
 ; CHECK-LABEL: @test9_logical(
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[COND]], [[COND2:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[COND]], i1 [[COND2:%.*]], i1 false
 ; CHECK-NEXT:    br i1 [[AND]], label [[BB1:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br i1 false, label [[BB3]], label [[BB2:%.*]]
@@ -326,7 +326,7 @@ bb3:
 define i32 @test10_logical(i32 %a, i32 %b, i1 %cond2) {
 ; CHECK-LABEL: @test10_logical(
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[COND]], [[COND2:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[COND]], i1 [[COND2:%.*]], i1 false
 ; CHECK-NEXT:    br i1 [[AND]], label [[BB3:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[SUB1:%.*]] = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 [[A]], i32 [[B]])
@@ -390,7 +390,7 @@ bb3:
 define i32 @test11_logical(i32 %a, i32 %b, i1 %cond2) {
 ; CHECK-LABEL: @test11_logical(
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[COND]], [[COND2:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[COND]], i1 true, i1 [[COND2:%.*]]
 ; CHECK-NEXT:    br i1 [[OR]], label [[BB1:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[SUB1:%.*]] = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 [[A]], i32 [[B]])
@@ -454,7 +454,7 @@ bb3:
 define i32 @test12_logical(i32 %a, i32 %b, i1 %cond2) {
 ; CHECK-LABEL: @test12_logical(
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[COND]], [[COND2:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[COND]], i1 true, i1 [[COND2:%.*]]
 ; CHECK-NEXT:    br i1 [[OR]], label [[BB3:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[SUB1:%.*]] = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 [[A]], i32 [[B]])

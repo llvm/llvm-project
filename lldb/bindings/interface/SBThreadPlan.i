@@ -18,8 +18,8 @@ namespace lldb {
 %feature("docstring",
 "Represents a plan for the execution control of a given thread.
 
-See also SBThread and SBFrame."
-) SBThread;
+See also :py:class:`SBThread` and :py:class:`SBFrame`."
+) SBThreadPlan;
 
 class SBThreadPlan
 {
@@ -73,6 +73,9 @@ public:
     eStopReasonSignal        1     unix signal number
     eStopReasonException     N     exception data
     eStopReasonExec          0
+    eStopReasonFork          1     pid of the child process
+    eStopReasonVFork         1     pid of the child process
+    eStopReasonVForkDone     0
     eStopReasonPlanComplete  0") GetStopReasonDataAtIndex;
     uint64_t
     GetStopReasonDataAtIndex(uint32_t idx);
@@ -95,7 +98,7 @@ public:
     %feature("docstring", "Return whether this plan will ask to stop other threads when it runs.") GetStopOthers;
     bool
     GetStopOthers();
-  
+
     %feature("docstring", "Set whether this plan will ask to stop other threads when it runs.")	GetStopOthers;
     void
     SetStopOthers(bool stop_others);

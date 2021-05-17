@@ -98,6 +98,17 @@ define <8 x i32> @test_unpackhi_hsub_v8i32(<8 x i32> %0, <8 x i32> %1, <8 x i32>
   ret <8 x i32> %7
 }
 
+define <4 x double> @PR49971(<4 x double> %0) {
+; CHECK-LABEL: PR49971:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vbroadcastsd %xmm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %2 = tail call <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> %0, <4 x double> %0)
+  %3 = shufflevector <4 x double> %2, <4 x double> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+  ret <4 x double> %3
+}
+
 declare <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float>, <8 x float>)
 declare <8 x float> @llvm.x86.avx.hsub.ps.256(<8 x float>, <8 x float>)
 declare <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double>, <4 x double>)

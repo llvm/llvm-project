@@ -126,17 +126,6 @@ define void @nonpow2_vector_add_fewerelements() {
   ret void
 }
 
-; Currently can't handle dealing with a split type (s128 -> 2 x s64) on the stack yet.
-declare void @use_s128(i128 %a, i128 %b)
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to lower arguments: i32 (i32, i128, i32, i32, i32, i128, i32)* (in function: fn1)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for fn1
-; FALLBACK-WITH-REPORT-OUT-LABEL: fn1:
-define i32 @fn1(i32 %p1, i128 %p2, i32 %p3, i32 %p4, i32 %p5, i128 %p6, i32 %p7) {
-entry:
-  call void @use_s128(i128 %p2, i128 %p6)
-  ret i32 0
-}
-
 ; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: cannot select: RET_ReallyLR implicit $x0 (in function: strict_align_feature)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for strict_align_feature
 ; FALLBACK-WITH-REPORT-OUT-LABEL: strict_align_feature

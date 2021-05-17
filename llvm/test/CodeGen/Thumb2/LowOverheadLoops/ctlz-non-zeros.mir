@@ -171,7 +171,6 @@ body:             |
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   liveins: $r0, $r1, $r2, $r3
   ; CHECK:   renamable $lr = t2LDRi12 $sp, 8, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.0, align 8)
-  ; CHECK:   $lr = t2DLS killed renamable $lr
   ; CHECK:   $r4 = tMOVr killed $lr, 14 /* CC::al */, $noreg
   ; CHECK: bb.2.loop.body:
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
@@ -279,7 +278,6 @@ body:             |
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   liveins: $r0, $r1, $r2, $r3, $r4
   ; CHECK:   renamable $lr = t2LDRi12 $sp, 8, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.0, align 8)
-  ; CHECK:   $lr = t2DLS killed renamable $lr
   ; CHECK:   $r12 = tMOVr killed $lr, 14 /* CC::al */, $noreg
   ; CHECK: bb.2.loop.body:
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
@@ -386,7 +384,6 @@ body:             |
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   liveins: $r0, $r1, $r2, $r3, $r4
   ; CHECK:   renamable $lr = t2LDRi12 $sp, 8, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.0, align 8)
-  ; CHECK:   $lr = t2DLS killed renamable $lr
   ; CHECK:   $r12 = tMOVr killed $lr, 14 /* CC::al */, $noreg
   ; CHECK: bb.2.loop.body:
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)

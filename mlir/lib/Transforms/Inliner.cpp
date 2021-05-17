@@ -414,7 +414,7 @@ struct Inliner : public InlinerInterface {
 static bool shouldInline(ResolvedCall &resolvedCall) {
   // Don't allow inlining terminator calls. We currently don't support this
   // case.
-  if (resolvedCall.call->isKnownTerminator())
+  if (resolvedCall.call->hasTrait<OpTrait::IsTerminator>())
     return false;
 
   // Don't allow inlining if the target is an ancestor of the call. This
@@ -654,7 +654,7 @@ LogicalResult InlinerPass::optimizeSCC(CallGraph &cg, CGUseList &useList,
     // We also won't apply simplifications to nodes that can't have passes
     // scheduled on them.
     auto *region = node->getCallableRegion();
-    if (!region->getParentOp()->isKnownIsolatedFromAbove())
+    if (!region->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
       continue;
     nodesToVisit.push_back(node);
   }
@@ -665,7 +665,7 @@ LogicalResult InlinerPass::optimizeSCC(CallGraph &cg, CGUseList &useList,
   // NOTE: This is simple now, because we don't enable optimizing nodes within
   // children. When we remove this restriction, this logic will need to be
   // reworked.
-  if (context->isMultithreadingEnabled()) {
+  if (context->isMultithreadingEnabled() && nodesToVisit.size() > 1) {
     if (failed(optimizeSCCAsync(nodesToVisit, context)))
       return failure();
 
@@ -687,9 +687,11 @@ LogicalResult
 InlinerPass::optimizeSCCAsync(MutableArrayRef<CallGraphNode *> nodesToVisit,
                               MLIRContext *context) {
   // Ensure that there are enough pipeline maps for the optimizer to run in
-  // parallel.
+  // parallel. Note: The number of pass managers here needs to remain constant
+  // to prevent issues with pass instrumentations that rely on having the same
+  // pass manager for the main thread.
   size_t numThreads = llvm::hardware_concurrency().compute_thread_count();
-  if (opPipelines.size() != numThreads) {
+  if (opPipelines.size() < numThreads) {
     // Reserve before resizing so that we can use a reference to the first
     // element.
     opPipelines.reserve(numThreads);
@@ -706,14 +708,11 @@ InlinerPass::optimizeSCCAsync(MutableArrayRef<CallGraphNode *> nodesToVisit,
 
   // Optimize the nodes of the SCC in parallel.
   ParallelDiagnosticHandler optimizerHandler(context);
-  return llvm::parallelTransformReduce(
-      llvm::seq<size_t>(0, numThreads), success(),
-      [](LogicalResult lhs, LogicalResult rhs) {
-        return success(succeeded(lhs) && succeeded(rhs));
-      },
-      [&](size_t index) {
-        LogicalResult result = success();
-        for (auto e = nodesToVisit.size(); nodeIt < e && succeeded(result);) {
+  std::atomic<bool> passFailed(false);
+  llvm::parallelForEach(
+      opPipelines.begin(), std::next(opPipelines.begin(), numThreads),
+      [&](llvm::StringMap<OpPassManager> &pipelines) {
+        for (auto e = nodesToVisit.size(); !passFailed && nodeIt < e;) {
           // Get the next available operation index.
           unsigned nextID = nodeIt++;
           if (nextID >= e)
@@ -722,11 +721,17 @@ InlinerPass::optimizeSCCAsync(MutableArrayRef<CallGraphNode *> nodesToVisit,
           // Set the order for this thread so that diagnostics will be
           // properly ordered, and reset after optimization has finished.
           optimizerHandler.setOrderIDForThread(nextID);
-          result = optimizeCallable(nodesToVisit[nextID], opPipelines[index]);
+          LogicalResult pipelineResult =
+              optimizeCallable(nodesToVisit[nextID], pipelines);
           optimizerHandler.eraseOrderIDForThread();
+
+          if (failed(pipelineResult)) {
+            passFailed = true;
+            break;
+          }
         }
-        return result;
       });
+  return failure(passFailed);
 }
 
 LogicalResult
@@ -755,7 +760,7 @@ LogicalResult InlinerPass::initializeOptions(StringRef options) {
   if (!defaultPipelineStr.empty()) {
     std::string defaultPipelineCopy = defaultPipelineStr;
     defaultPipeline = [=](OpPassManager &pm) {
-      parsePassPipeline(defaultPipelineCopy, pm);
+      (void)parsePassPipeline(defaultPipelineCopy, pm);
     };
   } else if (defaultPipelineStr.getNumOccurrences()) {
     defaultPipeline = nullptr;

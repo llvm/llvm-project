@@ -219,7 +219,7 @@ public:
     PreallocatedArgOffsets[Id].assign(AO.begin(), AO.end());
   }
 
-  const ArrayRef<size_t> getPreallocatedArgOffsets(const size_t Id) {
+  ArrayRef<size_t> getPreallocatedArgOffsets(const size_t Id) {
     assert(!PreallocatedArgOffsets[Id].empty() && "arg offsets not set");
     return PreallocatedArgOffsets[Id];
   }

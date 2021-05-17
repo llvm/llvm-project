@@ -10,6 +10,9 @@ import abc
 import imp
 import os
 import sys
+from pathlib import PurePath
+from collections import namedtuple
+from collections import defaultdict
 
 from dex.debugger.DebuggerBase import DebuggerBase
 from dex.dextIR import FrameIR, LocIR, StepIR, StopReason, ValueIR
@@ -28,6 +31,11 @@ def _load_com_module():
         raise LoadDebuggerException(e, sys.exc_info())
 
 
+# VSBreakpoint(path: PurePath, line: int, col: int, cond: str).  This is enough
+# info to identify breakpoint equivalence in visual studio based on the
+# properties we set through dexter currently.
+VSBreakpoint = namedtuple('VSBreakpoint', 'path, line, col, cond')
+
 class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abstract-method
 
     # Constants for results of Debugger.CurrentMode
@@ -42,6 +50,21 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
         self._solution = None
         self._fn_step = None
         self._fn_go = None
+        # The next available unique breakpoint id. Use self._get_next_id().
+        self._next_bp_id = 0
+        # VisualStudio appears to common identical breakpoints. That is, if you
+        # ask for a breakpoint that already exists the Breakpoints list will
+        # not grow. DebuggerBase requires all breakpoints have a unique id,
+        # even for duplicates, so we'll need to do some bookkeeping.  Map
+        # {VSBreakpoint: list(id)} where id is the unique dexter-side id for
+        # the requested breakpoint.
+        self._vs_to_dex_ids = defaultdict(list)
+        # Map {id: VSBreakpoint} where id is unique and VSBreakpoint identifies
+        # a breakpoint in Visual Studio. There may be many ids mapped to a
+        # single VSBreakpoint. Use self._vs_to_dex_ids to find (dexter)
+        # breakpoints mapped to the same visual studio breakpoint.
+        self._dex_id_to_vs = {}
+
         super(VisualStudio, self).__init__(*args)
 
     def _custom_init(self):
@@ -110,21 +133,88 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
     def clear_breakpoints(self):
         for bp in self._debugger.Breakpoints:
             bp.Delete()
+        self._vs_to_dex_ids.clear()
+        self._dex_id_to_vs.clear()
 
     def _add_breakpoint(self, file_, line):
-        self._debugger.Breakpoints.Add('', file_, line)
+        return self._add_conditional_breakpoint(file_, line, '')
+
+    def _get_next_id(self):
+        # "Generate" a new unique id for the breakpoint.
+        id = self._next_bp_id
+        self._next_bp_id += 1
+        return id
 
     def _add_conditional_breakpoint(self, file_, line, condition):
-        column = 1
-        self._debugger.Breakpoints.Add('', file_, line, column, condition)
+        col = 1
+        vsbp = VSBreakpoint(PurePath(file_), line, col, condition)
+        new_id = self._get_next_id()
 
-    def _delete_conditional_breakpoint(self, file_, line, condition):
+        # Do we have an exact matching breakpoint already?
+        if vsbp in self._vs_to_dex_ids:
+            self._vs_to_dex_ids[vsbp].append(new_id)
+            self._dex_id_to_vs[new_id] = vsbp
+            return new_id
+
+        # Breakpoint doesn't exist already. Add it now.
+        count_before = self._debugger.Breakpoints.Count
+        self._debugger.Breakpoints.Add('', file_, line, col, condition)
+        # Our internal representation of VS says that the breakpoint doesn't
+        # already exist so we do not expect this operation to fail here.
+        assert count_before < self._debugger.Breakpoints.Count
+        # We've added a new breakpoint, record its id.
+        self._vs_to_dex_ids[vsbp].append(new_id)
+        self._dex_id_to_vs[new_id] = vsbp
+        return new_id
+
+    def get_triggered_breakpoint_ids(self):
+        """Returns a set of opaque ids for just-triggered breakpoints.
+        """
+        bps_hit = self._debugger.AllBreakpointsLastHit
+        bp_id_list = []
+        # Intuitively, AllBreakpointsLastHit breakpoints are the last hit
+        # _bound_ breakpoints. A bound breakpoint's parent holds the info of
+        # the breakpoint the user requested. Our internal state tracks the user
+        # requested breakpoints so we look at the Parent of these triggered
+        # breakpoints to determine which have been hit.
+        for bp in bps_hit:
+            # All bound breakpoints should have the user-defined breakpoint as
+            # a parent.
+            assert bp.Parent
+            vsbp = VSBreakpoint(PurePath(bp.Parent.File), bp.Parent.FileLine,
+                                bp.Parent.FileColumn, bp.Parent.Condition)
+            try:
+                ids = self._vs_to_dex_ids[vsbp]
+            except KeyError:
+                pass
+            else:
+                bp_id_list += ids
+        return set(bp_id_list)
+
+    def delete_breakpoint(self, id):
+        """Delete a breakpoint by id.
+
+        Raises a KeyError if no breakpoint with this id exists.
+        """
+        vsbp = self._dex_id_to_vs[id]
+
+        # Remove our id from the associated list of dex ids.
+        self._vs_to_dex_ids[vsbp].remove(id)
+        del self._dex_id_to_vs[id]
+
+        # Bail if there are other uses of this vsbp.
+        if len(self._vs_to_dex_ids[vsbp]) > 0:
+            return
+        # Otherwise find and delete it.
         for bp in self._debugger.Breakpoints:
-            for bound_bp in bp.Children:
-                if (bound_bp.File == file_ and bound_bp.FileLine == line and
-                    bound_bp.Condition == condition):
-                    bp.Delete()
-                    break
+            # We're looking at the user-set breakpoints so there shouild be no
+            # Parent.
+            assert bp.Parent == None
+            this_vsbp = VSBreakpoint(PurePath(bp.File), bp.FileLine,
+                                     bp.FileColumn, bp.Condition)
+            if vsbp == this_vsbp:
+                bp.Delete()
+                break
 
     def launch(self):
         self._fn_go()

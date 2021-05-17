@@ -29,7 +29,14 @@ class PatternRewriter;
 namespace shape {
 
 /// Alias type for extent tensors.
-RankedTensorType getExtentTensorType(MLIRContext *ctx);
+RankedTensorType getExtentTensorType(MLIRContext *ctx,
+                                     int64_t rank = ShapedType::kDynamicSize);
+
+// Check if a type is an extent tensor, e.g., tensor<?xindex>.
+bool isExtentTensorType(Type);
+
+// Given an input shape Value, try to obtain the shape's values.
+LogicalResult getShapeVec(Value input, SmallVectorImpl<int64_t> &shapeValues);
 
 /// The shape descriptor type represents rank and dimension sizes.
 class ShapeType : public Type::TypeBase<ShapeType, Type, TypeStorage> {

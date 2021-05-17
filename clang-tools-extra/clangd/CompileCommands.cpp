@@ -96,9 +96,9 @@ std::string detectClangPath() {
     if (auto PathCC = llvm::sys::findProgramByName(Name))
       return resolve(std::move(*PathCC));
   // Fallback: a nonexistent 'clang' binary next to clangd.
-  static int Dummy;
+  static int StaticForMainAddr;
   std::string ClangdExecutable =
-      llvm::sys::fs::getMainExecutable("clangd", (void *)&Dummy);
+      llvm::sys::fs::getMainExecutable("clangd", (void *)&StaticForMainAddr);
   SmallString<128> ClangPath;
   ClangPath = llvm::sys::path::parent_path(ClangdExecutable);
   llvm::sys::path::append(ClangPath, "clang");
@@ -120,8 +120,9 @@ const llvm::Optional<std::string> detectSysroot() {
 }
 
 std::string detectStandardResourceDir() {
-  static int Dummy; // Just an address in this process.
-  return CompilerInvocation::GetResourcesPath("clangd", (void *)&Dummy);
+  static int StaticForMainAddr; // Just an address in this process.
+  return CompilerInvocation::GetResourcesPath("clangd",
+                                              (void *)&StaticForMainAddr);
 }
 
 // The path passed to argv[0] is important:
@@ -501,6 +502,33 @@ void ArgStripper::process(std::vector<std::string> &Args) const {
     ++Read;
   }
   Args.resize(Write);
+}
+
+
+std::string printArgv(llvm::ArrayRef<llvm::StringRef> Args) {
+  std::string Buf;
+  llvm::raw_string_ostream OS(Buf);
+  bool Sep = false;
+  for (llvm::StringRef Arg : Args) {
+    if (Sep)
+      OS << ' ';
+    Sep = true;
+    if (llvm::all_of(Arg, llvm::isPrint) &&
+        Arg.find_first_of(" \t\n\"\\") == llvm::StringRef::npos) {
+      OS << Arg;
+      continue;
+    }
+    OS << '"';
+    OS.write_escaped(Arg, /*UseHexEscapes=*/true);
+    OS << '"';
+  }
+  return std::move(OS.str());
+}
+
+std::string printArgv(llvm::ArrayRef<std::string> Args) {
+  std::vector<llvm::StringRef> Refs(Args.size());
+  llvm::copy(Args, Refs.begin());
+  return printArgv(Refs);
 }
 
 } // namespace clangd

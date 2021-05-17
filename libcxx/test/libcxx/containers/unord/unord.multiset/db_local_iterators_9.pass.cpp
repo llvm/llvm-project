@@ -26,9 +26,12 @@
 int main(int, char**) {
     typedef int T;
     typedef std::unordered_multiset<T, std::hash<T>, std::equal_to<T>, min_allocator<T>> C;
-    C c(1);
-    C::local_iterator i = c.begin(0);
+    C c({42});
+    C::size_type b = c.bucket(42);
+    C::local_iterator i = c.begin(b);
+    assert(i != c.end(b));
     ++i;
+    assert(i == c.end(b));
     ++i;
     assert(false);
 

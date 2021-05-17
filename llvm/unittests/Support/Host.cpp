@@ -282,6 +282,32 @@ CPU revision    : 0
 )";
 
   EXPECT_EQ(sys::detail::getHostCPUNameForARM(CarmelProcCpuInfo), "carmel");
+
+  // Snapdragon mixed implementer quirk
+  const std::string Snapdragon865ProcCPUInfo = R"(
+processor       : 0
+BogoMIPS        : 38.40
+Features        : fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm lrcpc dcpop asimddp
+CPU implementer : 0x51
+CPU architecture: 8
+CPU variant     : 0xd
+CPU part        : 0x805
+CPU revision    : 14
+processor       : 1
+processor       : 2
+processor       : 3
+processor       : 4
+processor       : 5
+processor       : 6
+BogoMIPS        : 38.40
+Features        : fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm lrcpc dcpop asimddp
+CPU implementer : 0x41
+CPU architecture: 8
+CPU variant     : 0x1
+CPU part        : 0xd0d
+CPU revision    : 0
+)";
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(Snapdragon865ProcCPUInfo), "cortex-a77");
 }
 
 #if defined(__APPLE__) || defined(_AIX)
@@ -404,5 +430,34 @@ TEST_F(HostTest, AIXVersionDetect) {
   TargetTriple.getOSVersion(TargetMajor, TargetMinor, TargetMicro);
   ASSERT_EQ(std::tie(SystemMajor, SystemMinor),
             std::tie(TargetMajor, TargetMinor));
+}
+
+TEST_F(HostTest, AIXHostCPUDetect) {
+  // Return a value based on the current processor implementation mode.
+  const char *ExePath = "/usr/sbin/getsystype";
+  StringRef argv[] = {ExePath, "-i"};
+  std::unique_ptr<char[]> Buffer;
+  off_t Size;
+  ASSERT_EQ(runAndGetCommandOutput(ExePath, argv, Buffer, Size), true);
+  StringRef CPU(Buffer.get(), Size);
+  StringRef MCPU = StringSwitch<const char *>(CPU)
+                       .Case("POWER 4\n", "pwr4")
+                       .Case("POWER 5\n", "pwr5")
+                       .Case("POWER 6\n", "pwr6")
+                       .Case("POWER 7\n", "pwr7")
+                       .Case("POWER 8\n", "pwr8")
+                       .Case("POWER 9\n", "pwr9")
+                       .Case("POWER 10\n", "pwr10")
+                       .Default("unknown");
+
+  StringRef HostCPU = sys::getHostCPUName();
+
+  // Just do the comparison on the base implementation mode.
+  if (HostCPU == "970")
+    HostCPU = StringRef("pwr4");
+  else
+    HostCPU = HostCPU.rtrim('x');
+
+  EXPECT_EQ(HostCPU, MCPU);
 }
 #endif

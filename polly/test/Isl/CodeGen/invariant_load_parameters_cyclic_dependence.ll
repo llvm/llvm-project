@@ -5,7 +5,7 @@
 ; SCOP-NEXT:    [p_0, tmp4] -> {  :  }
 ; SCOP-NEXT:    Invalid Context:
 ; SCOP-NEXT:    [p_0, tmp4] -> {  : p_0 > 0 and tmp4 < 0 }
-; SCOP-NEXT:    p0: (%N * %M)
+; SCOP:         p0: (%N * %M)
 ; SCOP-NEXT:    p1: %tmp4
 ;
 ; CHECK:      polly.preload.merge:

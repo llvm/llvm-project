@@ -30,8 +30,8 @@ class PluginPythonOSPlugin(TestBase):
         registers = frame.GetRegisters().GetValueAtIndex(0)
         reg_value = thread.GetThreadID() + 1
         for reg in registers:
-            self.assertTrue(
-                reg.GetValueAsUnsigned() == reg_value,
+            self.assertEqual(
+                reg.GetValueAsUnsigned(), reg_value,
                 "Verify the registers contains the correct value")
             reg_value = reg_value + 1
 
@@ -171,11 +171,11 @@ class PluginPythonOSPlugin(TestBase):
             "Make sure we get a frame from thread 0x111111111")
         line_entry = frame.GetLineEntry()
 
-        self.assertTrue(
-            line_entry.GetFileSpec().GetFilename() == 'main.c',
+        self.assertEqual(
+            line_entry.GetFileSpec().GetFilename(), 'main.c',
             "Make sure we stopped on line 5 in main.c")
-        self.assertTrue(
-            line_entry.GetLine() == 5,
+        self.assertEqual(
+            line_entry.GetLine(), 5,
             "Make sure we stopped on line 5 in main.c")
 
         # Now single step thread 0x111111111 and make sure it does what we need
@@ -188,8 +188,8 @@ class PluginPythonOSPlugin(TestBase):
             "Make sure we get a frame from thread 0x111111111")
         line_entry = frame.GetLineEntry()
 
-        self.assertTrue(
-            line_entry.GetFileSpec().GetFilename() == 'main.c',
+        self.assertEqual(
+            line_entry.GetFileSpec().GetFilename(), 'main.c',
             "Make sure we stepped from line 5 to line 6 in main.c")
         self.assertEquals(line_entry.GetLine(), 6,
                         "Make sure we stepped from line 5 to line 6 in main.c")

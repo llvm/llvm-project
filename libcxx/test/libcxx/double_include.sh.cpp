@@ -87,8 +87,11 @@
 #include <exception>
 #include <execution>
 #include <fenv.h>
-#include <filesystem>
+#ifndef _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY
+#    include <filesystem>
+#endif
 #include <float.h>
+#include <format>
 #include <forward_list>
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
 #    include <fstream>
@@ -140,6 +143,7 @@
 #endif
 #include <queue>
 #include <random>
+#include <ranges>
 #include <ratio>
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
 #    include <regex>
@@ -199,7 +203,9 @@
 #        include <experimental/coroutine>
 #    endif
 #    include <experimental/deque>
-#    include <experimental/filesystem>
+#    ifndef _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY
+#        include <experimental/filesystem>
+#    endif
 #    include <experimental/forward_list>
 #    include <experimental/functional>
 #    include <experimental/iterator>

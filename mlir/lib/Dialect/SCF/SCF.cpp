@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/MathExtras.h"
@@ -172,7 +174,7 @@ static void print(OpAsmPrinter &p, ForOp op) {
   p.printRegion(op.region(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/op.hasIterOperands());
-  p.printOptionalAttrDict(op.getAttrs());
+  p.printOptionalAttrDict(op->getAttrs());
 }
 
 static ParseResult parseForOp(OpAsmParser &parser, OperationState &result) {
@@ -253,7 +255,7 @@ ForOp mlir::scf::getForInductionVarOwner(Value val) {
 }
 
 /// Return operands used when entering the region at 'index'. These operands
-/// correspond to the loop iterator operands, i.e., those exclusing the
+/// correspond to the loop iterator operands, i.e., those excluding the
 /// induction variable. LoopOp only has one region, so 0 is the only valid value
 /// for `index`.
 OperandRange ForOp::getSuccessorEntryOperands(unsigned index) {
@@ -407,9 +409,16 @@ static void replaceOpWithRegion(PatternRewriter &rewriter, Operation *op,
 }
 
 namespace {
-// Fold away ForOp iter arguments that are also yielded by the op.
-// These arguments must be defined outside of the ForOp region and can just be
-// forwarded after simplifying the op inits, yields and returns.
+// Fold away ForOp iter arguments when:
+// 1) The op yields the iter arguments.
+// 2) The iter arguments have no use and the corresponding outer region
+// iterators (inputs) are yielded.
+// 3) The iter arguments have no use and the corresponding (operation) results
+// have no use.
+//
+// These arguments must be defined outside of
+// the ForOp region and can just be forwarded after simplifying the op inits,
+// yields and returns.
 //
 // The implementation uses `mergeBlockBefore` to steal the content of the
 // original ForOp and avoid cloning.
@@ -438,10 +447,19 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
     newResultValues.reserve(forOp.getNumResults());
     for (auto it : llvm::zip(forOp.getIterOperands(),   // iter from outside
                              forOp.getRegionIterArgs(), // iter inside region
+                             forOp.getResults(),        // op results
                              yieldOp.getOperands()      // iter yield
                              )) {
-      // Forwarded is `true` when the region `iter` argument is yielded.
-      bool forwarded = (std::get<1>(it) == std::get<2>(it));
+      // Forwarded is `true` when:
+      // 1) The region `iter` argument is yielded.
+      // 2) The region `iter` argument has no use, and the corresponding iter
+      // operand (input) is yielded.
+      // 3) The region `iter` argument has no use, and the corresponding op
+      // result has no use.
+      bool forwarded = ((std::get<1>(it) == std::get<3>(it)) ||
+                        (std::get<1>(it).use_empty() &&
+                         (std::get<0>(it) == std::get<3>(it) ||
+                          std::get<2>(it).use_empty())));
       keepMask.push_back(!forwarded);
       canonicalize |= forwarded;
       if (forwarded) {
@@ -450,7 +468,7 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
         continue;
       }
       newIterArgs.push_back(std::get<0>(it));
-      newYieldValues.push_back(std::get<2>(it));
+      newYieldValues.push_back(std::get<3>(it));
       newBlockTransferArgs.push_back(Value()); // placeholder with null value
       newResultValues.push_back(Value());      // placeholder with null value
     }
@@ -482,7 +500,7 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
            "unexpected argument size mismatch");
 
     // No results case: the scf::ForOp builder already created a zero
-    // reult terminator. Merge before this terminator and just get rid of the
+    // result terminator. Merge before this terminator and just get rid of the
     // original terminator that has been merged in.
     if (newIterArgs.empty()) {
       auto newYieldOp = cast<scf::YieldOp>(newBlock.getTerminator());
@@ -547,7 +565,7 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
 
     // If the loop is known to have 1 iteration, inline its body and remove the
     // loop.
-    llvm::APInt stepValue = lb.getValue().cast<IntegerAttr>().getValue();
+    llvm::APInt stepValue = step.getValue().cast<IntegerAttr>().getValue();
     if ((lbValue + stepValue).sge(ubValue)) {
       SmallVector<Value, 4> blockArgs;
       blockArgs.reserve(op.getNumIterOperands() + 1);
@@ -560,11 +578,270 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
     return failure();
   }
 };
+
+/// Perform a replacement of one iter OpOperand of an scf.for to the
+/// `replacement` value which is expected to be the source of a tensor.cast.
+/// tensor.cast ops are inserted inside the block to account for the type cast.
+static ForOp replaceTensorCastForOpIterArg(PatternRewriter &rewriter,
+                                           OpOperand &operand,
+                                           Value replacement) {
+  Type oldType = operand.get().getType(), newType = replacement.getType();
+  assert(oldType.isa<RankedTensorType>() && newType.isa<RankedTensorType>() &&
+         "expected ranked tensor types");
+
+  // 1. Create new iter operands, exactly 1 is replaced.
+  ForOp forOp = cast<ForOp>(operand.getOwner());
+  assert(operand.getOperandNumber() >= forOp.getNumControlOperands() &&
+         "expected an iter OpOperand");
+  if (operand.get().getType() == replacement.getType())
+    return forOp;
+  SmallVector<Value> newIterOperands;
+  for (OpOperand &opOperand : forOp.getIterOpOperands()) {
+    if (opOperand.getOperandNumber() == operand.getOperandNumber()) {
+      newIterOperands.push_back(replacement);
+      continue;
+    }
+    newIterOperands.push_back(opOperand.get());
+  }
+
+  // 2. Create the new forOp shell.
+  scf::ForOp newForOp = rewriter.create<scf::ForOp>(
+      forOp.getLoc(), forOp.lowerBound(), forOp.upperBound(), forOp.step(),
+      newIterOperands);
+  Block &newBlock = newForOp.region().front();
+  SmallVector<Value, 4> newBlockTransferArgs(newBlock.getArguments().begin(),
+                                             newBlock.getArguments().end());
+
+  // 3. Inject an incoming cast op at the beginning of the block for the bbArg
+  // corresponding to the `replacement` value.
+  OpBuilder::InsertionGuard g(rewriter);
+  rewriter.setInsertionPoint(&newBlock, newBlock.begin());
+  BlockArgument newRegionIterArg = newForOp.getRegionIterArgForOpOperand(
+      newForOp->getOpOperand(operand.getOperandNumber()));
+  Value castIn = rewriter.create<tensor::CastOp>(newForOp.getLoc(), oldType,
+                                                 newRegionIterArg);
+  newBlockTransferArgs[newRegionIterArg.getArgNumber()] = castIn;
+
+  // 4. Steal the old block ops, mapping to the newBlockTransferArgs.
+  Block &oldBlock = forOp.region().front();
+  rewriter.mergeBlocks(&oldBlock, &newBlock, newBlockTransferArgs);
+
+  // 5. Inject an outgoing cast op at the end of the block and yield it instead.
+  auto clonedYieldOp = cast<scf::YieldOp>(newBlock.getTerminator());
+  rewriter.setInsertionPoint(clonedYieldOp);
+  unsigned yieldIdx =
+      newRegionIterArg.getArgNumber() - forOp.getNumInductionVars();
+  Value castOut = rewriter.create<tensor::CastOp>(
+      newForOp.getLoc(), newType, clonedYieldOp.getOperand(yieldIdx));
+  SmallVector<Value> newYieldOperands = clonedYieldOp.getOperands();
+  newYieldOperands[yieldIdx] = castOut;
+  rewriter.create<scf::YieldOp>(newForOp.getLoc(), newYieldOperands);
+  rewriter.eraseOp(clonedYieldOp);
+
+  // 6. Inject an outgoing cast op after the forOp.
+  rewriter.setInsertionPointAfter(newForOp);
+  SmallVector<Value> newResults = newForOp.getResults();
+  newResults[yieldIdx] = rewriter.create<tensor::CastOp>(
+      newForOp.getLoc(), oldType, newResults[yieldIdx]);
+
+  return newForOp;
+}
+
+/// Fold scf.for iter_arg/result pairs that go through incoming/ougoing
+/// a tensor.cast op pair so as to pull the tensor.cast inside the scf.for:
+///
+/// ```
+///   %0 = tensor.cast %t0 : tensor<32x1024xf32> to tensor<?x?xf32>
+///   %1 = scf.for %i = %c0 to %c1024 step %c32 iter_args(%iter_t0 = %0)
+///      -> (tensor<?x?xf32>) {
+///     %2 = call @do(%iter_t0) : (tensor<?x?xf32>) -> tensor<?x?xf32>
+///     scf.yield %2 : tensor<?x?xf32>
+///   }
+///   %2 = tensor.cast %1 : tensor<?x?xf32> to tensor<32x1024xf32>
+///   use_of(%2)
+/// ```
+///
+/// folds into:
+///
+/// ```
+///   %0 = scf.for %arg2 = %c0 to %c1024 step %c32 iter_args(%arg3 = %arg0)
+///       -> (tensor<32x1024xf32>) {
+///     %2 = tensor.cast %arg3 : tensor<32x1024xf32> to tensor<?x?xf32>
+///     %3 = call @do(%2) : (tensor<?x?xf32>) -> tensor<?x?xf32>
+///     %4 = tensor.cast %3 : tensor<?x?xf32> to tensor<32x1024xf32>
+///     scf.yield %4 : tensor<32x1024xf32>
+///   }
+///   use_of(%0)
+/// ```
+struct ForOpTensorCastFolder : public OpRewritePattern<ForOp> {
+  using OpRewritePattern<ForOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ForOp op,
+                                PatternRewriter &rewriter) const override {
+    for (auto it : llvm::zip(op.getIterOpOperands(), op.getResults())) {
+      OpOperand &iterOpOperand = std::get<0>(it);
+      auto incomingCast = iterOpOperand.get().getDefiningOp<tensor::CastOp>();
+      if (!incomingCast)
+        continue;
+      if (!std::get<1>(it).hasOneUse())
+        continue;
+      auto outgoingCastOp =
+          dyn_cast<tensor::CastOp>(*std::get<1>(it).user_begin());
+      if (!outgoingCastOp)
+        continue;
+
+      // Must be a tensor.cast op pair with matching types.
+      if (outgoingCastOp.getResult().getType() !=
+          incomingCast.source().getType())
+        continue;
+
+      // Create a new ForOp with that iter operand replaced.
+      auto newForOp = replaceTensorCastForOpIterArg(rewriter, iterOpOperand,
+                                                    incomingCast.source());
+
+      // Insert outgoing cast and use it to replace the corresponding result.
+      rewriter.setInsertionPointAfter(newForOp);
+      SmallVector<Value> replacements = newForOp.getResults();
+      unsigned returnIdx =
+          iterOpOperand.getOperandNumber() - op.getNumControlOperands();
+      replacements[returnIdx] = rewriter.create<tensor::CastOp>(
+          op.getLoc(), incomingCast.dest().getType(), replacements[returnIdx]);
+      rewriter.replaceOp(op, replacements);
+      return success();
+    }
+    return failure();
+  }
+};
+
+/// Canonicalize the iter_args of an scf::ForOp that involve a tensor_load and
+/// for which only the last loop iteration is actually visible outside of the
+/// loop. The canonicalization looks for a pattern such as:
+/// ```
+///    %t0 = ... : tensor_type
+///    %0 = scf.for ... iter_args(%bb0 : %t0) -> (tensor_type) {
+///      ...
+///      // %m is either buffer_cast(%bb00) or defined above the loop
+///      %m... : memref_type
+///      ... // uses of %m with potential inplace updates
+///      %new_tensor = tensor_load %m : memref_type
+///      ...
+///      scf.yield %new_tensor : tensor_type
+///    }
+/// ```
+///
+/// `%bb0` may have either 0 or 1 use. If it has 1 use it must be exactly a
+/// `%m = buffer_cast %bb0` op that feeds into the yielded `tensor_load`
+/// op.
+///
+/// If no aliasing write to the memref `%m`, from which `%new_tensor`is loaded,
+/// occurs between tensor_load and yield then the value %0 visible outside of
+/// the loop is the last `tensor_load` produced in the loop.
+///
+/// For now, we approximate the absence of aliasing by only supporting the case
+/// when the tensor_load is the operation immediately preceding the yield.
+///
+/// The canonicalization rewrites the pattern as:
+/// ```
+///    // %m is either a buffer_cast or defined above
+///    %m... : memref_type
+///    scf.for ... iter_args(%bb0 : %t0) -> (tensor_type) {
+///      ... // uses of %m with potential inplace updates
+///      scf.yield %bb0: tensor_type
+///    }
+///    %0 = tensor_load %m : memref_type
+/// ```
+///
+/// A later bbArg canonicalization will further rewrite as:
+/// ```
+///    // %m is either a buffer_cast or defined above
+///    %m... : memref_type
+///    scf.for ... { // no iter_args
+///      ... // uses of %m with potential inplace updates
+///    }
+///    %0 = tensor_load %m : memref_type
+/// ```
+struct LastTensorLoadCanonicalization : public OpRewritePattern<ForOp> {
+  using OpRewritePattern<ForOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ForOp forOp,
+                                PatternRewriter &rewriter) const override {
+    assert(std::next(forOp.region().begin()) == forOp.region().end() &&
+           "unexpected multiple blocks");
+
+    Location loc = forOp.getLoc();
+    DenseMap<Value, Value> replacements;
+    for (BlockArgument bbArg : forOp.getRegionIterArgs()) {
+      unsigned idx = bbArg.getArgNumber() - /*numIv=*/1;
+      auto yieldOp = cast<scf::YieldOp>(forOp.region().front().getTerminator());
+      Value yieldVal = yieldOp->getOperand(idx);
+      auto tensorLoadOp = yieldVal.getDefiningOp<memref::TensorLoadOp>();
+      bool isTensor = bbArg.getType().isa<TensorType>();
+
+      memref::BufferCastOp bufferCastOp;
+      // Either bbArg has no use or it has a single buffer_cast use.
+      if (bbArg.hasOneUse())
+        bufferCastOp =
+            dyn_cast<memref::BufferCastOp>(*bbArg.getUsers().begin());
+      if (!isTensor || !tensorLoadOp || (!bbArg.use_empty() && !bufferCastOp))
+        continue;
+      // If bufferCastOp is present, it must feed into the `tensorLoadOp`.
+      if (bufferCastOp && tensorLoadOp.memref() != bufferCastOp)
+        continue;
+      // TODO: Any aliasing write of tensorLoadOp.memref() nested under `forOp`
+      // must be before `tensorLoadOp` in the block so that the lastWrite
+      // property is not subject to additional side-effects.
+      // For now, we only support the case when tensorLoadOp appears immediately
+      // before the terminator.
+      if (tensorLoadOp->getNextNode() != yieldOp)
+        continue;
+
+      // Clone the optional bufferCastOp before forOp.
+      if (bufferCastOp) {
+        rewriter.setInsertionPoint(forOp);
+        rewriter.replaceOpWithNewOp<memref::BufferCastOp>(
+            bufferCastOp, bufferCastOp.memref().getType(),
+            bufferCastOp.tensor());
+      }
+
+      // Clone the tensorLoad after forOp.
+      rewriter.setInsertionPointAfter(forOp);
+      Value newTensorLoad =
+          rewriter.create<memref::TensorLoadOp>(loc, tensorLoadOp.memref());
+      Value forOpResult = forOp.getResult(bbArg.getArgNumber() - /*iv=*/1);
+      replacements.insert(std::make_pair(forOpResult, newTensorLoad));
+
+      // Make the terminator just yield the bbArg, the old tensorLoadOp + the
+      // old bbArg (that is now directly yielded) will canonicalize away.
+      rewriter.startRootUpdate(yieldOp);
+      yieldOp.setOperand(idx, bbArg);
+      rewriter.finalizeRootUpdate(yieldOp);
+    }
+    if (replacements.empty())
+      return failure();
+
+    // We want to replace a subset of the results of `forOp`. rewriter.replaceOp
+    // replaces the whole op and erase it unconditionally. This is wrong for
+    // `forOp` as it generally contains ops with side effects.
+    // Instead, use `rewriter.replaceOpWithIf`.
+    SmallVector<Value> newResults;
+    newResults.reserve(forOp.getNumResults());
+    for (Value v : forOp.getResults()) {
+      auto it = replacements.find(v);
+      newResults.push_back((it != replacements.end()) ? it->second : v);
+    }
+    unsigned idx = 0;
+    rewriter.replaceOpWithIf(forOp, newResults, [&](OpOperand &op) {
+      return op.get() != newResults[idx++];
+    });
+    return success();
+  }
+};
 } // namespace
 
-void ForOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void ForOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
-  results.insert<ForOpIterArgsFolder, SimplifyTrivialLoops>(context);
+  results.add<ForOpIterArgsFolder, SimplifyTrivialLoops,
+              LastTensorLoadCanonicalization, ForOpTensorCastFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -679,7 +956,7 @@ static void print(OpAsmPrinter &p, IfOp op) {
                   /*printBlockTerminators=*/printBlockTerminators);
   }
 
-  p.printOptionalAttrDict(op.getAttrs());
+  p.printOptionalAttrDict(op->getAttrs());
 }
 
 /// Given the region at `index`, or the parent operation if `index` is None,
@@ -708,7 +985,9 @@ void IfOp::getSuccessorRegions(Optional<unsigned> index,
   } else {
     // If the condition isn't constant, both regions may be executed.
     regions.push_back(RegionSuccessor(&thenRegion()));
-    regions.push_back(RegionSuccessor(elseRegion));
+    // If the else region does not exist, it is not a viable successor.
+    if (elseRegion)
+      regions.push_back(RegionSuccessor(elseRegion));
     return;
   }
 
@@ -790,12 +1069,321 @@ struct RemoveStaticCondition : public OpRewritePattern<IfOp> {
     return success();
   }
 };
+
+struct ConvertTrivialIfToSelect : public OpRewritePattern<IfOp> {
+  using OpRewritePattern<IfOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(IfOp op,
+                                PatternRewriter &rewriter) const override {
+    if (op->getNumResults() == 0)
+      return failure();
+
+    if (!llvm::hasSingleElement(op.thenRegion().front()) ||
+        !llvm::hasSingleElement(op.elseRegion().front()))
+      return failure();
+
+    auto cond = op.condition();
+    auto thenYieldArgs =
+        cast<scf::YieldOp>(op.thenRegion().front().getTerminator())
+            .getOperands();
+    auto elseYieldArgs =
+        cast<scf::YieldOp>(op.elseRegion().front().getTerminator())
+            .getOperands();
+    SmallVector<Value> results(op->getNumResults());
+    assert(thenYieldArgs.size() == results.size());
+    assert(elseYieldArgs.size() == results.size());
+    for (auto it : llvm::enumerate(llvm::zip(thenYieldArgs, elseYieldArgs))) {
+      Value trueVal = std::get<0>(it.value());
+      Value falseVal = std::get<1>(it.value());
+      if (trueVal == falseVal)
+        results[it.index()] = trueVal;
+      else
+        results[it.index()] =
+            rewriter.create<SelectOp>(op.getLoc(), cond, trueVal, falseVal);
+    }
+
+    rewriter.replaceOp(op, results);
+    return success();
+  }
+};
+
+/// Allow the true region of an if to assume the condition is true
+/// and vice versa. For example:
+///
+///   scf.if %cmp {
+///      print(%cmp)
+///   }
+///
+///  becomes
+///
+///   scf.if %cmp {
+///      print(true)
+///   }
+///
+struct ConditionPropagation : public OpRewritePattern<IfOp> {
+  using OpRewritePattern<IfOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(IfOp op,
+                                PatternRewriter &rewriter) const override {
+    // Early exit if the condition is constant since replacing a constant
+    // in the body with another constant isn't a simplification.
+    if (op.condition().getDefiningOp<ConstantOp>())
+      return failure();
+
+    bool changed = false;
+    mlir::Type i1Ty = rewriter.getI1Type();
+
+    // These variables serve to prevent creating duplicate constants
+    // and hold constant true or false values.
+    Value constantTrue = nullptr;
+    Value constantFalse = nullptr;
+
+    for (OpOperand &use :
+         llvm::make_early_inc_range(op.condition().getUses())) {
+      if (op.thenRegion().isAncestor(use.getOwner()->getParentRegion())) {
+        changed = true;
+
+        if (!constantTrue)
+          constantTrue = rewriter.create<mlir::ConstantOp>(
+              op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 1));
+
+        rewriter.updateRootInPlace(use.getOwner(),
+                                   [&]() { use.set(constantTrue); });
+      } else if (op.elseRegion().isAncestor(
+                     use.getOwner()->getParentRegion())) {
+        changed = true;
+
+        if (!constantFalse)
+          constantFalse = rewriter.create<mlir::ConstantOp>(
+              op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 0));
+
+        rewriter.updateRootInPlace(use.getOwner(),
+                                   [&]() { use.set(constantFalse); });
+      }
+    }
+
+    return success(changed);
+  }
+};
+
+/// Remove any statements from an if that are equivalent to the condition
+/// or its negation. For example:
+///
+///    %res:2 = scf.if %cmp {
+///       yield something(), true
+///    } else {
+///       yield something2(), false
+///    }
+///    print(%res#1)
+///
+///  becomes
+///    %res = scf.if %cmp {
+///       yield something()
+///    } else {
+///       yield something2()
+///    }
+///    print(%cmp)
+///
+/// Additionally if both branches yield the same value, replace all uses
+/// of the result with the yielded value.
+///
+///    %res:2 = scf.if %cmp {
+///       yield something(), %arg1
+///    } else {
+///       yield something2(), %arg1
+///    }
+///    print(%res#1)
+///
+///  becomes
+///    %res = scf.if %cmp {
+///       yield something()
+///    } else {
+///       yield something2()
+///    }
+///    print(%arg1)
+///
+struct ReplaceIfYieldWithConditionOrValue : public OpRewritePattern<IfOp> {
+  using OpRewritePattern<IfOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(IfOp op,
+                                PatternRewriter &rewriter) const override {
+    // Early exit if there are no results that could be replaced.
+    if (op.getNumResults() == 0)
+      return failure();
+
+    auto trueYield = cast<scf::YieldOp>(op.thenRegion().back().getTerminator());
+    auto falseYield =
+        cast<scf::YieldOp>(op.elseRegion().back().getTerminator());
+
+    rewriter.setInsertionPoint(op->getBlock(),
+                               op.getOperation()->getIterator());
+    bool changed = false;
+    Type i1Ty = rewriter.getI1Type();
+    for (auto tup :
+         llvm::zip(trueYield.results(), falseYield.results(), op.results())) {
+      Value trueResult, falseResult, opResult;
+      std::tie(trueResult, falseResult, opResult) = tup;
+
+      if (trueResult == falseResult) {
+        if (!opResult.use_empty()) {
+          opResult.replaceAllUsesWith(trueResult);
+          changed = true;
+        }
+        continue;
+      }
+
+      auto trueYield = trueResult.getDefiningOp<ConstantOp>();
+      if (!trueYield)
+        continue;
+
+      if (!trueYield.getType().isInteger(1))
+        continue;
+
+      auto falseYield = falseResult.getDefiningOp<ConstantOp>();
+      if (!falseYield)
+        continue;
+
+      bool trueVal = trueYield.getValue().cast<BoolAttr>().getValue();
+      bool falseVal = falseYield.getValue().cast<BoolAttr>().getValue();
+      if (!trueVal && falseVal) {
+        if (!opResult.use_empty()) {
+          Value notCond = rewriter.create<XOrOp>(
+              op.getLoc(), op.condition(),
+              rewriter.create<mlir::ConstantOp>(
+                  op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 1)));
+          opResult.replaceAllUsesWith(notCond);
+          changed = true;
+        }
+      }
+      if (trueVal && !falseVal) {
+        if (!opResult.use_empty()) {
+          opResult.replaceAllUsesWith(op.condition());
+          changed = true;
+        }
+      }
+    }
+    return success(changed);
+  }
+};
+
+/// Merge any consecutive scf.if's with the same condition.
+///
+///    scf.if %cond {
+///       firstCodeTrue();...
+///    } else {
+///       firstCodeFalse();...
+///    }
+///    %res = scf.if %cond {
+///       secondCodeTrue();...
+///    } else {
+///       secondCodeFalse();...
+///    }
+///
+///  becomes
+///    %res = scf.if %cmp {
+///       firstCodeTrue();...
+///       secondCodeTrue();...
+///    } else {
+///       firstCodeFalse();...
+///       secondCodeFalse();...
+///    }
+struct CombineIfs : public OpRewritePattern<IfOp> {
+  using OpRewritePattern<IfOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(IfOp nextIf,
+                                PatternRewriter &rewriter) const override {
+    Block *parent = nextIf->getBlock();
+    if (nextIf == &parent->front())
+      return failure();
+
+    auto prevIf = dyn_cast<IfOp>(nextIf->getPrevNode());
+    if (!prevIf)
+      return failure();
+
+    if (nextIf.condition() != prevIf.condition())
+      return failure();
+
+    // Don't permit merging if a result of the first if is used
+    // within the second.
+    if (llvm::any_of(prevIf->getUsers(),
+                     [&](Operation *user) { return nextIf->isAncestor(user); }))
+      return failure();
+
+    SmallVector<Type> mergedTypes(prevIf.getResultTypes());
+    llvm::append_range(mergedTypes, nextIf.getResultTypes());
+
+    IfOp combinedIf = rewriter.create<IfOp>(
+        nextIf.getLoc(), mergedTypes, nextIf.condition(), /*hasElse=*/false);
+    rewriter.eraseBlock(&combinedIf.thenRegion().back());
+
+    YieldOp thenYield = prevIf.thenYield();
+    YieldOp thenYield2 = nextIf.thenYield();
+
+    combinedIf.thenRegion().getBlocks().splice(
+        combinedIf.thenRegion().getBlocks().begin(),
+        prevIf.thenRegion().getBlocks());
+
+    rewriter.mergeBlocks(nextIf.thenBlock(), combinedIf.thenBlock());
+    rewriter.setInsertionPointToEnd(combinedIf.thenBlock());
+
+    SmallVector<Value> mergedYields(thenYield.getOperands());
+    llvm::append_range(mergedYields, thenYield2.getOperands());
+    rewriter.create<YieldOp>(thenYield2.getLoc(), mergedYields);
+    rewriter.eraseOp(thenYield);
+    rewriter.eraseOp(thenYield2);
+
+    combinedIf.elseRegion().getBlocks().splice(
+        combinedIf.elseRegion().getBlocks().begin(),
+        prevIf.elseRegion().getBlocks());
+
+    if (!nextIf.elseRegion().empty()) {
+      if (combinedIf.elseRegion().empty()) {
+        combinedIf.elseRegion().getBlocks().splice(
+            combinedIf.elseRegion().getBlocks().begin(),
+            nextIf.elseRegion().getBlocks());
+      } else {
+        YieldOp elseYield = combinedIf.elseYield();
+        YieldOp elseYield2 = nextIf.elseYield();
+        rewriter.mergeBlocks(nextIf.elseBlock(), combinedIf.elseBlock());
+
+        rewriter.setInsertionPointToEnd(combinedIf.elseBlock());
+
+        SmallVector<Value> mergedElseYields(elseYield.getOperands());
+        llvm::append_range(mergedElseYields, elseYield2.getOperands());
+
+        rewriter.create<YieldOp>(elseYield2.getLoc(), mergedElseYields);
+        rewriter.eraseOp(elseYield);
+        rewriter.eraseOp(elseYield2);
+      }
+    }
+
+    SmallVector<Value> prevValues;
+    SmallVector<Value> nextValues;
+    for (auto pair : llvm::enumerate(combinedIf.getResults())) {
+      if (pair.index() < prevIf.getNumResults())
+        prevValues.push_back(pair.value());
+      else
+        nextValues.push_back(pair.value());
+    }
+    rewriter.replaceOp(prevIf, prevValues);
+    rewriter.replaceOp(nextIf, nextValues);
+    return success();
+  }
+};
+
 } // namespace
 
-void IfOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void IfOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                        MLIRContext *context) {
-  results.insert<RemoveUnusedResults, RemoveStaticCondition>(context);
+  results.add<RemoveUnusedResults, RemoveStaticCondition,
+              ConvertTrivialIfToSelect, ConditionPropagation,
+              ReplaceIfYieldWithConditionOrValue, CombineIfs>(context);
 }
+
+Block *IfOp::thenBlock() { return &thenRegion().back(); }
+YieldOp IfOp::thenYield() { return cast<YieldOp>(&thenBlock()->back()); }
+Block *IfOp::elseBlock() { return &elseRegion().back(); }
+YieldOp IfOp::elseYield() { return cast<YieldOp>(&elseBlock()->back()); }
 
 //===----------------------------------------------------------------------===//
 // ParallelOp
@@ -994,7 +1582,7 @@ static void print(OpAsmPrinter &p, ParallelOp op) {
   p.printOptionalArrowTypeList(op.getResultTypes());
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
   p.printOptionalAttrDict(
-      op.getAttrs(), /*elidedAttrs=*/ParallelOp::getOperandSegmentSizeAttr());
+      op->getAttrs(), /*elidedAttrs=*/ParallelOp::getOperandSegmentSizeAttr());
 }
 
 Region &ParallelOp::getLoopBody() { return region(); }
@@ -1057,10 +1645,36 @@ struct CollapseSingleIterationLoops : public OpRewritePattern<ParallelOp> {
         newSteps.push_back(step);
       }
     }
-    // Exit if all or none of the loop dimensions perform a single iteration.
-    if (newLowerBounds.size() == 0 ||
-        newLowerBounds.size() == op.lowerBound().size())
+    // Exit if none of the loop dimensions perform a single iteration.
+    if (newLowerBounds.size() == op.lowerBound().size())
       return failure();
+
+    if (newLowerBounds.empty()) {
+      // All of the loop dimensions perform a single iteration. Inline
+      // loop body and nested ReduceOp's
+      SmallVector<Value> results;
+      results.reserve(op.initVals().size());
+      for (auto &bodyOp : op.getLoopBody().front().without_terminator()) {
+        auto reduce = dyn_cast<ReduceOp>(bodyOp);
+        if (!reduce) {
+          rewriter.clone(bodyOp, mapping);
+          continue;
+        }
+        Block &reduceBlock = reduce.reductionOperator().front();
+        auto initValIndex = results.size();
+        mapping.map(reduceBlock.getArgument(0), op.initVals()[initValIndex]);
+        mapping.map(reduceBlock.getArgument(1),
+                    mapping.lookupOrDefault(reduce.operand()));
+        for (auto &reduceBodyOp : reduceBlock.without_terminator())
+          rewriter.clone(reduceBodyOp, mapping);
+
+        auto result = mapping.lookupOrDefault(
+            cast<ReduceReturnOp>(reduceBlock.getTerminator()).result());
+        results.push_back(result);
+      }
+      rewriter.replaceOp(op, results);
+      return success();
+    }
     // Replace the parallel loop by lower-dimensional parallel loop.
     auto newOp =
         rewriter.create<ParallelOp>(op.getLoc(), newLowerBounds, newUpperBounds,
@@ -1093,10 +1707,9 @@ struct RemoveEmptyParallelLoops : public OpRewritePattern<ParallelOp> {
 
 } // namespace
 
-void ParallelOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void ParallelOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                              MLIRContext *context) {
-  results.insert<CollapseSingleIterationLoops, RemoveEmptyParallelLoops>(
-      context);
+  results.add<CollapseSingleIterationLoops, RemoveEmptyParallelLoops>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1191,6 +1804,14 @@ OperandRange WhileOp::getSuccessorEntryOperands(unsigned index) {
   return inits();
 }
 
+ConditionOp WhileOp::getConditionOp() {
+  return cast<ConditionOp>(before().front().getTerminator());
+}
+
+Block::BlockArgListType WhileOp::getAfterArguments() {
+  return after().front().getArguments();
+}
+
 void WhileOp::getSuccessorRegions(Optional<unsigned> index,
                                   ArrayRef<Attribute> operands,
                                   SmallVectorImpl<RegionSuccessor> &regions) {
@@ -1264,7 +1885,7 @@ static void print(OpAsmPrinter &p, scf::WhileOp op) {
   p.printRegion(op.before(), /*printEntryBlockArgs=*/false);
   p << " do";
   p.printRegion(op.after());
-  p.printOptionalAttrDictWithKeyword(op.getAttrs());
+  p.printOptionalAttrDictWithKeyword(op->getAttrs());
 }
 
 /// Verifies that two ranges of types match, i.e. have the same number of
@@ -1332,27 +1953,60 @@ static LogicalResult verify(scf::WhileOp op) {
   return success(afterTerminator != nullptr);
 }
 
-//===----------------------------------------------------------------------===//
-// YieldOp
-//===----------------------------------------------------------------------===//
+namespace {
+/// Replace uses of the condition within the do block with true, since otherwise
+/// the block would not be evaluated.
+///
+/// scf.while (..) : (i1, ...) -> ... {
+///  %condition = call @evaluate_condition() : () -> i1
+///  scf.condition(%condition) %condition : i1, ...
+/// } do {
+/// ^bb0(%arg0: i1, ...):
+///    use(%arg0)
+///    ...
+///
+/// becomes
+/// scf.while (..) : (i1, ...) -> ... {
+///  %condition = call @evaluate_condition() : () -> i1
+///  scf.condition(%condition) %condition : i1, ...
+/// } do {
+/// ^bb0(%arg0: i1, ...):
+///    use(%true)
+///    ...
+struct WhileConditionTruth : public OpRewritePattern<WhileOp> {
+  using OpRewritePattern<WhileOp>::OpRewritePattern;
 
-static ParseResult parseYieldOp(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::OperandType, 4> operands;
-  SmallVector<Type, 4> types;
-  llvm::SMLoc loc = parser.getCurrentLocation();
-  // Parse variadic operands list, their types, and resolve operands to SSA
-  // values.
-  if (parser.parseOperandList(operands) ||
-      parser.parseOptionalColonTypeList(types) ||
-      parser.resolveOperands(operands, types, loc, result.operands))
-    return failure();
-  return success();
-}
+  LogicalResult matchAndRewrite(WhileOp op,
+                                PatternRewriter &rewriter) const override {
+    auto term = op.getConditionOp();
 
-static void print(OpAsmPrinter &p, scf::YieldOp op) {
-  p << op.getOperationName();
-  if (op.getNumOperands() != 0)
-    p << ' ' << op.getOperands() << " : " << op.getOperandTypes();
+    // These variables serve to prevent creating duplicate constants
+    // and hold constant true or false values.
+    Value constantTrue = nullptr;
+
+    bool replaced = false;
+    for (auto yieldedAndBlockArgs :
+         llvm::zip(term.args(), op.getAfterArguments())) {
+      if (std::get<0>(yieldedAndBlockArgs) == term.condition()) {
+        if (!std::get<1>(yieldedAndBlockArgs).use_empty()) {
+          if (!constantTrue)
+            constantTrue = rewriter.create<mlir::ConstantOp>(
+                op.getLoc(), term.condition().getType(),
+                rewriter.getBoolAttr(true));
+
+          std::get<1>(yieldedAndBlockArgs).replaceAllUsesWith(constantTrue);
+          replaced = true;
+        }
+      }
+    }
+    return success(replaced);
+  }
+};
+} // namespace
+
+void WhileOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                          MLIRContext *context) {
+  results.insert<WhileConditionTruth>(context);
 }
 
 //===----------------------------------------------------------------------===//

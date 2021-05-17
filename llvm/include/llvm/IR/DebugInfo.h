@@ -19,14 +19,32 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 
 namespace llvm {
 
+class DbgDeclareInst;
+class DbgValueInst;
 class DbgVariableIntrinsic;
 class Instruction;
 class Module;
+
+/// Finds all intrinsics declaring local variables as living in the memory that
+/// 'V' points to. This may include a mix of dbg.declare and
+/// dbg.addr intrinsics.
+TinyPtrVector<DbgVariableIntrinsic *> FindDbgAddrUses(Value *V);
+
+/// Like \c FindDbgAddrUses, but only returns dbg.declare intrinsics, not
+/// dbg.addr.
+TinyPtrVector<DbgDeclareInst *> FindDbgDeclareUses(Value *V);
+
+/// Finds the llvm.dbg.value intrinsics describing a value.
+void findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues, Value *V);
+
+/// Finds the debug info intrinsics describing a value.
+void findDbgUsers(SmallVectorImpl<DbgVariableIntrinsic *> &DbgInsts, Value *V);
 
 /// Find subprogram that is enclosing this scope.
 DISubprogram *getDISubprogram(const MDNode *Scope);
@@ -81,6 +99,9 @@ public:
   /// Process debug info location.
   void processLocation(const Module &M, const DILocation *Loc);
 
+  /// Process subprogram.
+  void processSubprogram(DISubprogram *SP);
+
   /// Clear all lists.
   void reset();
 
@@ -89,7 +110,6 @@ private:
 
   void processCompileUnit(DICompileUnit *CU);
   void processScope(DIScope *Scope);
-  void processSubprogram(DISubprogram *SP);
   void processType(DIType *DT);
   bool addCompileUnit(DICompileUnit *CU);
   bool addGlobalVariable(DIGlobalVariableExpression *DIG);

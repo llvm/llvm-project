@@ -37,9 +37,10 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 ; unless max(vscale)=2 it's unsafe to vectorize. For SVE max(vscale)=16, check
 ; fixed-width vectorization is used instead.
 
-; CHECK-DBG: LV: Max legal vector width too small, scalable vectorization unfeasible. Using fixed-width vectorization instead.
-; CHECK-DBG: remark: <unknown>:0:0: Max legal vector width too small, scalable vectorization unfeasible. Using fixed-width vectorization instead.
-; CHECK-DBG: LV: The max safe VF is: 8.
+; CHECK-DBG: LV: Checking a loop in "test1"
+; CHECK-DBG: LV: Max legal vector width too small, scalable vectorization unfeasible.
+; CHECK-DBG: remark: <unknown>:0:0: Max legal vector width too small, scalable vectorization unfeasible.
+; CHECK-DBG: LV: The max safe fixed VF is: 8.
 ; CHECK-DBG: LV: Selecting VF: 4.
 ; CHECK-LABEL: @test1
 ; CHECK: <4 x i32>
@@ -80,9 +81,10 @@ exit:
 ;   }
 ; }
 
-; CHECK-DBG: LV: Max legal vector width too small, scalable vectorization unfeasible. Using fixed-width vectorization instead.
-; CHECK-DBG: LV: The max safe VF is: 4.
-; CHECK-DBG: LV: User VF=8 is unsafe, clamping to max safe VF=4.
+; CHECK-DBG: LV: Checking a loop in "test2"
+; CHECK-DBG: LV: Max legal vector width too small, scalable vectorization unfeasible.
+; CHECK-DBG: LV: The max safe fixed VF is: 4.
+; CHECK-DBG: LV: User VF=vscale x 8 is unsafe. Ignoring scalable UserVF.
 ; CHECK-DBG: LV: Selecting VF: 4.
 ; CHECK-LABEL: @test2
 ; CHECK: <4 x i32>
@@ -129,7 +131,7 @@ exit:
 ; Max fixed VF=32, Max scalable VF=2, safe to vectorize.
 
 ; CHECK-DBG-LABEL: LV: Checking a loop in "test3"
-; CHECK-DBG: LV: The max safe VF is: vscale x 2.
+; CHECK-DBG: LV: The max safe scalable VF is: vscale x 2.
 ; CHECK-DBG: LV: Using user VF vscale x 2.
 ; CHECK-LABEL: @test3
 ; CHECK: <vscale x 2 x i32>
@@ -161,7 +163,8 @@ exit:
 
 ; test4
 ;
-; Scalable vectorization feasible, but the VF is unsafe. Should clamp.
+; Scalable vectorization feasible, but the given VF is unsafe. Should ignore
+; the hint and leave it to the vectorizer to pick a more suitable VF.
 ;
 ; Specifies a vector of <vscale x 4 x i32>, i.e. maximum of 64 x i32 with 4
 ; words per 128-bits (packed).
@@ -173,15 +176,16 @@ exit:
 ;   }
 ; }
 ;
-; Max fixed VF=32, Max scalable VF=2, unsafe to vectorize. Should clamp to 2.
+; Max fixed VF=32, Max scalable VF=2, unsafe to vectorize.
 
 ; CHECK-DBG-LABEL: LV: Checking a loop in "test4"
-; CHECK-DBG: LV: The max safe VF is: vscale x 2.
-; CHECK-DBG: LV: User VF=vscale x 4 is unsafe, clamping to max safe VF=vscale x 2.
-; CHECK-DBG: remark: <unknown>:0:0: User-specified vectorization factor vscale x 4 is unsafe, clamping to maximum safe vectorization factor vscale x 2
-; CHECK-DBG: LV: Using max VF vscale x 2
+; CHECK-DBG: LV: The max safe scalable VF is: vscale x 2.
+; CHECK-DBG: LV: User VF=vscale x 4 is unsafe. Ignoring scalable UserVF.
+; CHECK-DBG: remark: <unknown>:0:0: User-specified vectorization factor vscale x 4 is unsafe. Ignoring the hint to let the compiler pick a suitable VF.
+; CHECK-DBG: Found feasible scalable VF = vscale x 2
+; CHECK-DBG: LV: Selecting VF: 4.
 ; CHECK-LABEL: @test4
-; CHECK: <vscale x 2 x i32>
+; CHECK: <4 x i32>
 define void @test4(i32* %a, i32* %b) {
 entry:
   br label %loop
@@ -225,7 +229,7 @@ exit:
 ; Max fixed VF=128, Max scalable VF=8, safe to vectorize.
 
 ; CHECK-DBG-LABEL: LV: Checking a loop in "test5"
-; CHECK-DBG: LV: The max safe VF is: vscale x 8.
+; CHECK-DBG: LV: The max safe scalable VF is: vscale x 8.
 ; CHECK-DBG: LV: Using user VF vscale x 4
 ; CHECK-LABEL: @test5
 ; CHECK: <vscale x 4 x i32>
@@ -257,7 +261,8 @@ exit:
 
 ; test6
 ;
-; Scalable vectorization feasible, but the VF is unsafe. Should clamp.
+; Scalable vectorization feasible, but the VF is unsafe. Should ignore
+; the hint and leave it to the vectorizer to pick a more suitable VF.
 ;
 ; Specifies a vector of <vscale x 16 x i32>, i.e. maximum of 256 x i32.
 ;
@@ -268,15 +273,16 @@ exit:
 ;   }
 ; }
 ;
-; Max fixed VF=128, Max scalable VF=8, unsafe to vectorize. Should clamp to 8.
+; Max fixed VF=128, Max scalable VF=8, unsafe to vectorize.
 
 ; CHECK-DBG-LABEL: LV: Checking a loop in "test6"
-; CHECK-DBG: LV: The max safe VF is: vscale x 8.
-; CHECK-DBG: LV: User VF=vscale x 16 is unsafe, clamping to max safe VF=vscale x 8.
-; CHECK-DBG: remark: <unknown>:0:0: User-specified vectorization factor vscale x 16 is unsafe, clamping to maximum safe vectorization factor vscale x 8
-; CHECK-DBG: LV: Using max VF vscale x 8
+; CHECK-DBG: LV: The max safe scalable VF is: vscale x 8.
+; CHECK-DBG: LV: User VF=vscale x 16 is unsafe. Ignoring scalable UserVF.
+; CHECK-DBG: remark: <unknown>:0:0: User-specified vectorization factor vscale x 16 is unsafe. Ignoring the hint to let the compiler pick a suitable VF.
+; CHECK-DBG: LV: Found feasible scalable VF = vscale x 4
+; CHECK-DBG: Selecting VF: 4.
 ; CHECK-LABEL: @test6
-; CHECK: <vscale x 8 x i32>
+; CHECK: <4 x i32>
 define void @test6(i32* %a, i32* %b) {
 entry:
   br label %loop
@@ -304,8 +310,9 @@ exit:
 !17 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
 
 ; CHECK-NO-SVE-LABEL: LV: Checking a loop in "test_no_sve"
-; CHECK-NO-SVE: LV: Ignoring VF=vscale x 4 because target does not support scalable vectors.
-; CHECK-NO-SVE: remark: <unknown>:0:0: Ignoring VF=vscale x 4 because target does not support scalable vectors.
+; CHECK-NO-SVE: LV: Disabling scalable vectorization, because target does not support scalable vectors.
+; CHECK-NO-SVE: remark: <unknown>:0:0: Disabling scalable vectorization, because target does not support scalable vectors.
+; CHECK-NO-SVE: LV: User VF=vscale x 4 is unsafe. Ignoring scalable UserVF.
 ; CHECK-NO-SVE: LV: Selecting VF: 4.
 ; CHECK-NO-SVE: <4 x i32>
 ; CHECK-NO-SVE-NOT: <vscale x 4 x i32>
@@ -337,8 +344,8 @@ exit:
 ; supported but max vscale is undefined.
 ;
 ; CHECK-NO-MAX-VSCALE-LABEL: LV: Checking a loop in "test_no_max_vscale"
-; CHECK-NO-MAX-VSCALE: LV: Max legal vector width too small, scalable vectorization unfeasible. Using fixed-width vectorization instead.
-; CEHCK-NO-MAX-VSCALE: The max safe VF is: 4.
+; CEHCK-NO-MAX-VSCALE: The max safe fixed VF is: 4.
+; CHECK-NO-MAX-VSCALE: LV: User VF=vscale x 4 is unsafe. Ignoring scalable UserVF.
 ; CHECK-NO-MAX-VSCALE: LV: Selecting VF: 4.
 ; CHECK-NO-MAX-VSCALE: <4 x i32>
 define void @test_no_max_vscale(i32* %a, i32* %b) {

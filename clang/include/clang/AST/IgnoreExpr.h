@@ -41,7 +41,7 @@ template <typename... FnTys> Expr *IgnoreExprNodes(Expr *E, FnTys &&... Fns) {
 
 template <typename... FnTys>
 const Expr *IgnoreExprNodes(const Expr *E, FnTys &&...Fns) {
-  return const_cast<Expr *>(IgnoreExprNodes(E, std::forward<FnTys>(Fns)...));
+  return IgnoreExprNodes(const_cast<Expr *>(E), std::forward<FnTys>(Fns)...);
 }
 
 inline Expr *IgnoreImplicitCastsSingleStep(Expr *E) {
@@ -118,6 +118,18 @@ inline Expr *IgnoreImplicitSingleStep(Expr *E) {
   if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(E))
     return BTE->getSubExpr();
 
+  return E;
+}
+
+inline Expr *IgnoreElidableImplicitConstructorSingleStep(Expr *E) {
+  auto *CCE = dyn_cast<CXXConstructExpr>(E);
+  if (CCE && CCE->isElidable() && !isa<CXXTemporaryObjectExpr>(CCE)) {
+    unsigned NumArgs = CCE->getNumArgs();
+    if ((NumArgs == 1 ||
+         (NumArgs > 1 && CCE->getArg(1)->isDefaultArgument())) &&
+        !CCE->getArg(0)->isDefaultArgument() && !CCE->isListInitialization())
+      return CCE->getArg(0);
+  }
   return E;
 }
 

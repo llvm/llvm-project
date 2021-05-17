@@ -29,6 +29,7 @@ import logging
 import os
 import platform
 import re
+import shutil
 import signal
 import subprocess
 import sys
@@ -272,21 +273,13 @@ def parseOptionsAndInitTestdirs():
     elif platform_system == 'Darwin':
         configuration.dsymutil = seven.get_command_output(
             'xcrun -find -toolchain default dsymutil')
-
-
-    # The lldb-dotest script produced by the CMake build passes in a path to a
-    # working FileCheck and yaml2obj binary. So does one specific Xcode
-    # project target. However, when invoking dotest.py directly, a valid
-    # --filecheck and --yaml2obj option needs to be given.
-    if args.filecheck:
-        configuration.filecheck = os.path.abspath(args.filecheck)
-
-    if args.yaml2obj:
-        configuration.yaml2obj = os.path.abspath(args.yaml2obj)
+    if args.llvm_tools_dir:
+        configuration.filecheck = shutil.which("FileCheck", path=args.llvm_tools_dir)
+        configuration.yaml2obj = shutil.which("yaml2obj", path=args.llvm_tools_dir)
 
     if not configuration.get_filecheck_path():
         logging.warning('No valid FileCheck executable; some tests may fail...')
-        logging.warning('(Double-check the --filecheck argument to dotest.py)')
+        logging.warning('(Double-check the --llvm-tools-dir argument to dotest.py)')
 
     if args.channels:
         lldbtest_config.channels = args.channels
@@ -372,12 +365,6 @@ def parseOptionsAndInitTestdirs():
                     '%s is not a valid executable to test; aborting...',
                     args.executable)
             sys.exit(-1)
-
-    if args.server and args.out_of_tree_debugserver:
-        logging.warning('Both --server and --out-of-tree-debugserver are set')
-
-    if args.server and not args.out_of_tree_debugserver:
-        os.environ['LLDB_DEBUGSERVER_PATH'] = args.server
 
     if args.excluded:
         for excl_file in args.excluded:
@@ -761,8 +748,6 @@ def canRunLibcxxTests():
         return True, "libc++ always present"
 
     if platform == "linux":
-        if os.path.isdir("/usr/include/c++/v1"):
-            return True, "Headers found, let's hope they work"
         with tempfile.NamedTemporaryFile() as f:
             cmd = [configuration.compiler, "-xc++", "-stdlib=libc++", "-o", f.name, "-"]
             p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
@@ -779,7 +764,8 @@ def checkLibcxxSupport():
         return # libc++ supported
     if "libc++" in configuration.categories_list:
         return # libc++ category explicitly requested, let it run.
-    print("Libc++ tests will not be run because: " + reason)
+    if configuration.verbose:
+        print("libc++ tests will not be run because: " + reason)
     configuration.skip_categories.append("libc++")
 
 def canRunLibstdcxxTests():
@@ -798,7 +784,8 @@ def checkLibstdcxxSupport():
         return # libstdcxx supported
     if "libstdcxx" in configuration.categories_list:
         return # libstdcxx category explicitly requested, let it run.
-    print("libstdcxx tests will not be run because: " + reason)
+    if configuration.verbose:
+        print("libstdcxx tests will not be run because: " + reason)
     configuration.skip_categories.append("libstdcxx")
 
 def canRunWatchpointTests():
@@ -816,6 +803,10 @@ def canRunWatchpointTests():
         except subprocess.CalledProcessError:
             pass
         return False, "security.models.extensions.user_set_dbregs disabled"
+    elif platform == "freebsd" and configuration.arch == "aarch64":
+        import lldb
+        if lldb.SBPlatform.GetHostPlatform().GetOSMajorVersion() < 13:
+            return False, "Watchpoint support on arm64 requires FreeBSD 13.0"
     return True, "watchpoint support available"
 
 def checkWatchpointSupport():
@@ -824,14 +815,16 @@ def checkWatchpointSupport():
         return # watchpoints supported
     if "watchpoint" in configuration.categories_list:
         return # watchpoint category explicitly requested, let it run.
-    print("watchpoint tests will not be run because: " + reason)
+    if configuration.verbose:
+        print("watchpoint tests will not be run because: " + reason)
     configuration.skip_categories.append("watchpoint")
 
 def checkObjcSupport():
     from lldbsuite.test import lldbplatformutil
 
     if not lldbplatformutil.platformIsDarwin():
-        print("objc tests will be skipped because of unsupported platform")
+        if configuration.verbose:
+            print("objc tests will be skipped because of unsupported platform")
         configuration.skip_categories.append("objc")
 
 def checkDebugInfoSupport():
@@ -839,16 +832,12 @@ def checkDebugInfoSupport():
 
     platform = lldb.selected_platform.GetTriple().split('-')[2]
     compiler = configuration.compiler
-    skipped = []
     for cat in test_categories.debug_info_categories:
         if cat in configuration.categories_list:
             continue # Category explicitly requested, let it run.
         if test_categories.is_supported_on_platform(cat, platform, compiler):
             continue
         configuration.skip_categories.append(cat)
-        skipped.append(cat)
-    if skipped:
-        print("Skipping following debug info categories:", skipped)
 
 def checkDebugServerSupport():
     from lldbsuite.test import lldbplatformutil
@@ -860,12 +849,23 @@ def checkDebugServerSupport():
         if lldb.remote_platform:
             # <rdar://problem/34539270>
             configuration.skip_categories.append("debugserver")
-            print(skip_msg%"debugserver");
+            if configuration.verbose:
+                print(skip_msg%"debugserver");
     else:
         configuration.skip_categories.append("debugserver")
         if lldb.remote_platform and lldbplatformutil.getPlatform() == "windows":
             configuration.skip_categories.append("llgs")
-            print(skip_msg%"lldb-server");
+            if configuration.verbose:
+                print(skip_msg%"lldb-server");
+
+
+def checkForkVForkSupport():
+    from lldbsuite.test import lldbplatformutil
+
+    platform = lldbplatformutil.getPlatform()
+    if platform not in ["freebsd", "linux", "netbsd"]:
+        configuration.skip_categories.append("fork")
+
 
 def run_suite():
     # On MacOS X, check to make sure that domain for com.apple.DebugSymbols defaults
@@ -963,6 +963,9 @@ def run_suite():
     checkDebugInfoSupport()
     checkDebugServerSupport()
     checkObjcSupport()
+    checkForkVForkSupport()
+
+    print("Skipping the following test categories: {}".format(configuration.skip_categories))
 
     for testdir in configuration.testdirs:
         for (dirpath, dirnames, filenames) in os.walk(testdir):

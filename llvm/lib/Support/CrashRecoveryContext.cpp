@@ -82,7 +82,7 @@ public:
     // this occurs when using SEH on Windows with MSVC or clang-cl.
   }
 };
-}
+} // namespace
 
 static ManagedStatic<std::mutex> gCrashRecoveryContextMutex;
 static bool gCrashRecoveryEnabled = false;
@@ -485,7 +485,7 @@ struct RunSafelyOnThreadInfo {
   bool UseBackgroundPriority;
   bool Result;
 };
-}
+} // namespace
 
 static void RunSafelyOnThread_Dispatch(void *UserData) {
   RunSafelyOnThreadInfo *Info =

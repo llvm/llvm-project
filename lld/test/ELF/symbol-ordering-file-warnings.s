@@ -97,13 +97,13 @@
 # WARN-NOT:    warning:
 # SAMESYM:     warning: {{.*}}.txt: duplicate ordered symbol: _start
 # WARN-NOT:    warning:
-# SYNTHETIC:   warning: <internal>: unable to order synthetic symbol: _GLOBAL_OFFSET_TABLE_
+# SHARED:      warning: {{.*}}.so: unable to order shared symbol: shared
 # WARN-NOT:    warning:
 # DISCARD:     warning: {{.*}}1.o: unable to order discarded symbol: discard
 # WARN-NOT:    warning:
 # GC:          warning: {{.*}}1.o: unable to order discarded symbol: gc
 # WARN-NOT:    warning:
-# SHARED:      warning: {{.*}}.so: unable to order shared symbol: shared
+# SYNTHETIC:   warning: <internal>: unable to order synthetic symbol: _GLOBAL_OFFSET_TABLE_
 # WARN-NOT:    warning:
 # UNDEFINED:   warning: {{.*}}3.o: unable to order undefined symbol: undefined
 # WARN-NOT:    warning:
@@ -118,11 +118,17 @@
 # MULTI:       warning: {{.*}}2.o: unable to order absolute symbol: multi
 # WARN-NOT:    warning:
 
+.section .text._start,"ax",@progbits
+.global _start
+_start:
+  movq  %rax, absolute
+  callq shared
+
 absolute = 0x1234
 
-.section .text.gc,"ax",@progbits
-.global gc
-gc:
+.section .text.comdat,"axG",@progbits,comdat,comdat
+.weak comdat
+comdat:
   nop
 
 .section .text.discard,"ax",@progbits
@@ -130,21 +136,15 @@ gc:
 discard:
   nop
 
-.section .text.comdat,"axG",@progbits,comdat,comdat
-.weak comdat
-comdat:
+.section .text.gc,"ax",@progbits
+.global gc
+gc:
   nop
 
 .section .text.glob_or_wk,"ax",@progbits
 .weak glob_or_wk
 glob_or_wk:
   nop
-
-.section .text._start,"ax",@progbits
-.global _start
-_start:
-  movq  %rax, absolute
-  callq shared
 
 .section .text.icf1,"ax",@progbits
 .global icf1

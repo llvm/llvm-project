@@ -8,6 +8,9 @@
 
 namespace lldb {
 
+%feature("docstring",
+"Allows sending/receiving data."
+) SBCommunication;
 class SBCommunication
 {
 public:

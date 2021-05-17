@@ -244,9 +244,10 @@ parseSetSectionAlignment(StringRef FlagValue) {
         "bad format for --set-section-alignment: missing section name");
   uint64_t NewAlign;
   if (Split.second.getAsInteger(0, NewAlign))
-    return createStringError(errc::invalid_argument,
-                             "invalid alignment for --set-section-alignment: '%s'",
-                             Split.second.str().c_str());
+    return createStringError(
+        errc::invalid_argument,
+        "invalid alignment for --set-section-alignment: '%s'",
+        Split.second.str().c_str());
   return std::make_pair(Split.first, NewAlign);
 }
 
@@ -607,13 +608,6 @@ parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
     Config.GnuDebugLinkCRC32 =
         llvm::crc32(arrayRefFromStringRef(Debug->getBuffer()));
   }
-  Config.BuildIdLinkDir = InputArgs.getLastArgValue(OBJCOPY_build_id_link_dir);
-  if (InputArgs.hasArg(OBJCOPY_build_id_link_input))
-    Config.BuildIdLinkInput =
-        InputArgs.getLastArgValue(OBJCOPY_build_id_link_input);
-  if (InputArgs.hasArg(OBJCOPY_build_id_link_output))
-    Config.BuildIdLinkOutput =
-        InputArgs.getLastArgValue(OBJCOPY_build_id_link_output);
   Config.SplitDWO = InputArgs.getLastArgValue(OBJCOPY_split_dwo);
   Config.SymbolsPrefix = InputArgs.getLastArgValue(OBJCOPY_prefix_symbols);
   Config.AllocSectionsPrefix =
@@ -706,8 +700,14 @@ parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
           "bad format for --add-section: missing file name");
     Config.AddSection.push_back(ArgValue);
   }
-  for (auto Arg : InputArgs.filtered(OBJCOPY_dump_section))
-    Config.DumpSection.push_back(Arg->getValue());
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_dump_section)) {
+    StringRef Value(Arg->getValue());
+    if (Value.split('=').second.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "bad format for --dump-section, expected section=file");
+    Config.DumpSection.push_back(Value);
+  }
   Config.StripAll = InputArgs.hasArg(OBJCOPY_strip_all);
   Config.StripAllGNU = InputArgs.hasArg(OBJCOPY_strip_all_gnu);
   Config.StripDebug = InputArgs.hasArg(OBJCOPY_strip_debug);
@@ -727,6 +727,7 @@ parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
             : DiscardType::Locals;
   Config.OnlyKeepDebug = InputArgs.hasArg(OBJCOPY_only_keep_debug);
   Config.KeepFileSymbols = InputArgs.hasArg(OBJCOPY_keep_file_symbols);
+  Config.KeepUndefined = InputArgs.hasArg(OBJCOPY_keep_undefined);
   Config.DecompressDebugSections =
       InputArgs.hasArg(OBJCOPY_decompress_debug_sections);
   if (Config.DiscardMode == DiscardType::All) {
@@ -1104,6 +1105,7 @@ parseStripOptions(ArrayRef<const char *> ArgsArr,
   Config.StripSwiftSymbols = InputArgs.hasArg(STRIP_strip_swift_symbols);
   Config.OnlyKeepDebug = InputArgs.hasArg(STRIP_only_keep_debug);
   Config.KeepFileSymbols = InputArgs.hasArg(STRIP_keep_file_symbols);
+  Config.KeepUndefined = InputArgs.hasArg(STRIP_keep_undefined);
 
   for (auto Arg : InputArgs.filtered(STRIP_keep_section))
     if (Error E = Config.KeepSection.addMatcher(NameOrPattern::create(

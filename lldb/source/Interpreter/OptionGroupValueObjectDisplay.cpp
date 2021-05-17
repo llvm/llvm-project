@@ -19,10 +19,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-OptionGroupValueObjectDisplay::OptionGroupValueObjectDisplay() {}
-
-OptionGroupValueObjectDisplay::~OptionGroupValueObjectDisplay() {}
-
 static const OptionDefinition g_option_table[] = {
     {LLDB_OPT_SET_1, false, "dynamic-type", 'd',
      OptionParser::eRequiredArgument, nullptr, GetDynamicValueTypes(), 0,

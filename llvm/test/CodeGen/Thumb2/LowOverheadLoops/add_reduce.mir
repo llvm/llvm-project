@@ -209,7 +209,7 @@ body:             |
     renamable $r12 = t2LDRi12 $sp, 48, 14, $noreg :: (load 4 from %fixed-stack.0, align 8)
     renamable $r5 = t2ADDri renamable $r12, 3, 14, $noreg, $noreg
     renamable $r7, dead $cpsr = tLSRri killed renamable $r5, 2, 14, $noreg
-    t2WhileLoopStart renamable $r7, %bb.3, implicit-def dead $cpsr
+    $lr = t2WhileLoopStartLR renamable $r7, %bb.3, implicit-def dead $cpsr
     tB %bb.1, 14, $noreg
 
   bb.1.for.body.lr.ph:

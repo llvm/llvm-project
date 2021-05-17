@@ -398,7 +398,7 @@ TEST(TypeHierarchy, RecursiveHierarchyUnbounded) {
 
   // The compiler should produce a diagnostic for hitting the
   // template instantiation depth.
-  ASSERT_TRUE(!AST.getDiagnostics().empty());
+  ASSERT_TRUE(!AST.getDiagnostics()->empty());
 
   // Make sure getTypeHierarchy() doesn't get into an infinite recursion.
   // The parent is reported as "S" because "S<0>" is an invalid instantiation.

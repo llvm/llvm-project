@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "COFFObjcopy.h"
-#include "Buffer.h"
 #include "CopyConfig.h"
 #include "Object.h"
 #include "Reader.h"
@@ -249,18 +248,16 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
     if (Error E = addGnuDebugLink(Obj, Config.AddGnuDebugLink))
       return E;
 
-  if (Config.AllowBrokenLinks || !Config.BuildIdLinkDir.empty() ||
-      Config.BuildIdLinkInput || Config.BuildIdLinkOutput ||
-      !Config.SplitDWO.empty() || !Config.SymbolsPrefix.empty() ||
-      !Config.AllocSectionsPrefix.empty() || !Config.DumpSection.empty() ||
-      !Config.KeepSection.empty() || Config.NewSymbolVisibility ||
-      !Config.SymbolsToGlobalize.empty() || !Config.SymbolsToKeep.empty() ||
-      !Config.SymbolsToLocalize.empty() || !Config.SymbolsToWeaken.empty() ||
-      !Config.SymbolsToKeepGlobal.empty() || !Config.SectionsToRename.empty() ||
-      !Config.SetSectionAlignment.empty() || Config.ExtractDWO ||
-      Config.LocalizeHidden || Config.PreserveDates || Config.StripDWO ||
-      Config.StripNonAlloc || Config.StripSections ||
-      Config.StripSwiftSymbols || Config.Weaken ||
+  if (Config.AllowBrokenLinks || !Config.SplitDWO.empty() ||
+      !Config.SymbolsPrefix.empty() || !Config.AllocSectionsPrefix.empty() ||
+      !Config.DumpSection.empty() || !Config.KeepSection.empty() ||
+      Config.NewSymbolVisibility || !Config.SymbolsToGlobalize.empty() ||
+      !Config.SymbolsToKeep.empty() || !Config.SymbolsToLocalize.empty() ||
+      !Config.SymbolsToWeaken.empty() || !Config.SymbolsToKeepGlobal.empty() ||
+      !Config.SectionsToRename.empty() || !Config.SetSectionAlignment.empty() ||
+      Config.ExtractDWO || Config.LocalizeHidden || Config.PreserveDates ||
+      Config.StripDWO || Config.StripNonAlloc || Config.StripSections ||
+      Config.StripSwiftSymbols || Config.KeepUndefined || Config.Weaken ||
       Config.DecompressDebugSections ||
       Config.DiscardMode == DiscardType::Locals ||
       !Config.SymbolsToAdd.empty() || Config.EntryExpr) {
@@ -272,7 +269,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
 }
 
 Error executeObjcopyOnBinary(const CopyConfig &Config, COFFObjectFile &In,
-                             Buffer &Out) {
+                             raw_ostream &Out) {
   COFFReader Reader(In);
   Expected<std::unique_ptr<Object>> ObjOrErr = Reader.create();
   if (!ObjOrErr)

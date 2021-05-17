@@ -1,0 +1,13 @@
+# REQUIRES: native && dbregs-set
+# UNSUPPORTED: system-windows
+# RUN: %clangxx_host -g %p/Inputs/fork.cpp -DTEST_FORK=fork -o %t
+# RUN: %lldb -b -s %s %t | FileCheck %s
+process launch -s
+watchpoint set variable -w write g_val
+# CHECK: Watchpoint created:
+continue
+# CHECK-NOT: function run in parent
+# CHECK: stop reason = watchpoint
+continue
+# CHECK: function run in parent
+# CHECK: child exited: 0

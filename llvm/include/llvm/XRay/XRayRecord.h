@@ -11,8 +11,8 @@
 // xray project.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_XRAY_XRAY_RECORD_H
-#define LLVM_XRAY_XRAY_RECORD_H
+#ifndef LLVM_XRAY_XRAYRECORD_H
+#define LLVM_XRAY_XRAYRECORD_H
 
 #include <cstdint>
 #include <vector>
@@ -101,4 +101,4 @@ struct XRayRecord {
 } // namespace xray
 } // namespace llvm
 
-#endif // LLVM_XRAY_XRAY_RECORD_H
+#endif // LLVM_XRAY_XRAYRECORD_H

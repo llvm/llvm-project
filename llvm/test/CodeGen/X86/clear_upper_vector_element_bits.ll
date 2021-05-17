@@ -665,11 +665,7 @@ define <16 x i16> @_clearupper16xi16b(<16 x i16>) nounwind {
 ;
 ; AVX-LABEL: _clearupper16xi16b:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm1 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm2
-; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; AVX-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %x8 = bitcast <16 x i16> %0 to <32 x i8>
   %r0  = insertelement <32 x i8> %x8,  i8 zeroinitializer, i32 1

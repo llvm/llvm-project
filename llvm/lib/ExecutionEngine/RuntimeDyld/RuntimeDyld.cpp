@@ -146,8 +146,8 @@ void RuntimeDyldImpl::resolveLocalRelocations() {
     // The Section here (Sections[i]) refers to the section in which the
     // symbol for the relocation is located.  The SectionID in the relocation
     // entry provides the section to which the relocation will be applied.
-    int Idx = it->first;
-    uint64_t Addr = Sections[Idx].getLoadAddress();
+    unsigned Idx = it->first;
+    uint64_t Addr = getSectionLoadAddress(Idx);
     LLVM_DEBUG(dbgs() << "Resolving relocations Section #" << Idx << "\t"
                       << format("%p", (uintptr_t)Addr) << "\n");
     resolveRelocationList(it->second, Addr);
@@ -1077,7 +1077,8 @@ void RuntimeDyldImpl::resolveRelocationList(const RelocationList &Relocs,
   for (unsigned i = 0, e = Relocs.size(); i != e; ++i) {
     const RelocationEntry &RE = Relocs[i];
     // Ignore relocations for sections that were not loaded
-    if (Sections[RE.SectionID].getAddress() == nullptr)
+    if (RE.SectionID != AbsoluteSymbolSection &&
+        Sections[RE.SectionID].getAddress() == nullptr)
       continue;
     resolveRelocation(RE, Value);
   }
@@ -1085,16 +1086,13 @@ void RuntimeDyldImpl::resolveRelocationList(const RelocationList &Relocs,
 
 void RuntimeDyldImpl::applyExternalSymbolRelocations(
     const StringMap<JITEvaluatedSymbol> ExternalSymbolMap) {
-  while (!ExternalSymbolRelocations.empty()) {
-
-    StringMap<RelocationList>::iterator i = ExternalSymbolRelocations.begin();
-
-    StringRef Name = i->first();
+  for (auto &RelocKV : ExternalSymbolRelocations) {
+    StringRef Name = RelocKV.first();
+    RelocationList &Relocs = RelocKV.second;
     if (Name.size() == 0) {
       // This is an absolute symbol, use an address of zero.
       LLVM_DEBUG(dbgs() << "Resolving absolute relocations."
                         << "\n");
-      RelocationList &Relocs = i->second;
       resolveRelocationList(Relocs, 0);
     } else {
       uint64_t Addr = 0;
@@ -1105,13 +1103,6 @@ void RuntimeDyldImpl::applyExternalSymbolRelocations(
         assert(RRI != ExternalSymbolMap.end() && "No result for symbol");
         Addr = RRI->second.getAddress();
         Flags = RRI->second.getFlags();
-        // The call to getSymbolAddress may have caused additional modules to
-        // be loaded, which may have added new entries to the
-        // ExternalSymbolRelocations map.  Consquently, we need to update our
-        // iterator.  This is also why retrieval of the relocation list
-        // associated with this symbol is deferred until below this point.
-        // New entries may have been added to the relocation list.
-        i = ExternalSymbolRelocations.find(Name);
       } else {
         // We found the symbol in our global table.  It was probably in a
         // Module that we loaded previously.
@@ -1137,15 +1128,11 @@ void RuntimeDyldImpl::applyExternalSymbolRelocations(
 
         LLVM_DEBUG(dbgs() << "Resolving relocations Name: " << Name << "\t"
                           << format("0x%lx", Addr) << "\n");
-        // This list may have been updated when we called getSymbolAddress, so
-        // don't change this code to get the list earlier.
-        RelocationList &Relocs = i->second;
         resolveRelocationList(Relocs, Addr);
       }
     }
-
-    ExternalSymbolRelocations.erase(i);
   }
+  ExternalSymbolRelocations.clear();
 }
 
 Error RuntimeDyldImpl::resolveExternalSymbols() {

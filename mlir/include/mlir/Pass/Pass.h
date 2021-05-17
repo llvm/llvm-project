@@ -139,15 +139,26 @@ public:
 
     /// Assign the statistic to the given value.
     Statistic &operator=(unsigned value);
-
-  private:
-    /// Hide some of the details of llvm::Statistic that we don't use.
-    using llvm::Statistic::getDebugType;
   };
 
   /// Returns the main statistics for this pass instance.
   ArrayRef<Statistic *> getStatistics() const { return statistics; }
   MutableArrayRef<Statistic *> getStatistics() { return statistics; }
+
+  /// Returns the thread sibling of this pass.
+  ///
+  /// If this pass was cloned by the pass manager for the sake of
+  /// multi-threading, this function returns the original pass it was cloned
+  /// from. This is useful for diagnostic purposes to distinguish passes that
+  /// were replicated for threading purposes from passes instantiated by the
+  /// user. Used to collapse passes in timing statistics.
+  const Pass *getThreadingSibling() const { return threadingSibling; }
+
+  /// Returns the thread sibling of this pass, or the pass itself it has no
+  /// sibling. See `getThreadingSibling()` for details.
+  const Pass *getThreadingSiblingOrThis() const {
+    return threadingSibling ? threadingSibling : this;
+  }
 
 protected:
   explicit Pass(TypeID passID, Optional<StringRef> opName = llvm::None)
@@ -170,7 +181,9 @@ protected:
   /// should not rely on any state accessible during the execution of a pass.
   /// For example, `getContext`/`getOperation`/`getAnalysis`/etc. should not be
   /// invoked within this hook.
-  virtual void initialize(MLIRContext *context) {}
+  /// Returns a LogicalResult to indicate failure, in which case the pass
+  /// pipeline won't execute.
+  virtual LogicalResult initialize(MLIRContext *context) { return success(); }
 
   /// Schedule an arbitrary pass pipeline on the provided operation.
   /// This can be invoke any time in a pass to dynamic schedule more passes.
@@ -293,6 +306,10 @@ private:
 
   /// The pass options registered to this pass instance.
   detail::PassOptions passOptions;
+
+  /// A pointer to the pass this pass was cloned from, if the clone was made by
+  /// the pass manager for the sake of multi-threading.
+  const Pass *threadingSibling = nullptr;
 
   /// Allow access to 'clone'.
   friend class OpPassManager;

@@ -19,6 +19,11 @@ void registerDialect(DialectRegistry &registry);
 namespace linalg {
 class LinalgDialect;
 } // end namespace linalg
+
+namespace memref {
+class MemRefDialect;
+} // end namespace memref
+
 namespace vector {
 class VectorDialect;
 } // end namespace vector

@@ -22,8 +22,8 @@ namespace cppcoreguidelines {
 namespace {
 
 bool isCapsOnly(StringRef Name) {
-  return std::all_of(Name.begin(), Name.end(), [](const char c) {
-    if (std::isupper(c) || std::isdigit(c) || c == '_')
+  return std::all_of(Name.begin(), Name.end(), [](const char C) {
+    if (std::isupper(C) || std::isdigit(C) || C == '_')
       return true;
     return false;
   });
@@ -47,6 +47,8 @@ public:
       return;
 
     StringRef MacroName = MacroNameTok.getIdentifierInfo()->getName();
+    if (MacroName == "__GCC_HAVE_DWARF2_CFI_ASM")
+      return;
     if (!CheckCapsOnly && !RegExp.match(MacroName))
       Check->warnMacro(MD, MacroName);
 

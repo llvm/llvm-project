@@ -32,6 +32,19 @@
 // CHECK:   Fc as_c = F0;
 // CHECK: }
 
+// CHECK: def anonymous_0 {
+// CHECK:   G g = anonymous_0;
+// CHECK: }
+// CHECK: def anonymous_1 {
+// CHECK:   G g = anonymous_1;
+// CHECK: }
+// CHECK: def anonymous_2 {
+// CHECK:   G g = anonymous_2;
+// CHECK: }
+// CHECK: def anonymous_5 {
+// CHECK:   G g = anonymous_5;
+// CHECK: }
+
 def ops;
 
 class A<dag d> {
@@ -96,3 +109,18 @@ def F0 : Fa, Fb<F0>, Fc<F0>;
 def F0x {
   Fc as_c = F0;
 }
+
+// anonymous record self-reference in foreach and multiclass
+class G {
+  G g = !cast<G>(NAME);
+}
+
+foreach _ = [1, 2] in
+  def : G;
+
+multiclass H {
+  def : G;
+}
+
+defm : H;
+defm : H;

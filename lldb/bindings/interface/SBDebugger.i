@@ -12,108 +12,108 @@ namespace lldb {
 "SBDebugger is the primordial object that creates SBTargets and provides
 access to them.  It also manages the overall debugging experiences.
 
-For example (from example/disasm.py),
+For example (from example/disasm.py),::
 
-import lldb
-import os
-import sys
+    import lldb
+    import os
+    import sys
 
-def disassemble_instructions (insts):
-    for i in insts:
-        print i
+    def disassemble_instructions (insts):
+        for i in insts:
+            print i
 
-...
+    ...
 
-# Create a new debugger instance
-debugger = lldb.SBDebugger.Create()
+    # Create a new debugger instance
+    debugger = lldb.SBDebugger.Create()
 
-# When we step or continue, don't return from the function until the process
-# stops. We do this by setting the async mode to false.
-debugger.SetAsync (False)
+    # When we step or continue, don't return from the function until the process
+    # stops. We do this by setting the async mode to false.
+    debugger.SetAsync (False)
 
-# Create a target from a file and arch
-print('Creating a target for \'%s\'' % exe)
+    # Create a target from a file and arch
+    print('Creating a target for \'%s\'' % exe)
 
-target = debugger.CreateTargetWithFileAndArch (exe, lldb.LLDB_ARCH_DEFAULT)
+    target = debugger.CreateTargetWithFileAndArch (exe, lldb.LLDB_ARCH_DEFAULT)
 
-if target:
-    # If the target is valid set a breakpoint at main
-    main_bp = target.BreakpointCreateByName (fname, target.GetExecutable().GetFilename());
+    if target:
+        # If the target is valid set a breakpoint at main
+        main_bp = target.BreakpointCreateByName (fname, target.GetExecutable().GetFilename());
 
-    print main_bp
+        print main_bp
 
-    # Launch the process. Since we specified synchronous mode, we won't return
-    # from this function until we hit the breakpoint at main
-    process = target.LaunchSimple (None, None, os.getcwd())
+        # Launch the process. Since we specified synchronous mode, we won't return
+        # from this function until we hit the breakpoint at main
+        process = target.LaunchSimple (None, None, os.getcwd())
 
-    # Make sure the launch went ok
-    if process:
-        # Print some simple process info
-        state = process.GetState ()
-        print process
-        if state == lldb.eStateStopped:
-            # Get the first thread
-            thread = process.GetThreadAtIndex (0)
-            if thread:
-                # Print some simple thread info
-                print thread
-                # Get the first frame
-                frame = thread.GetFrameAtIndex (0)
-                if frame:
-                    # Print some simple frame info
-                    print frame
-                    function = frame.GetFunction()
-                    # See if we have debug info (a function)
-                    if function:
-                        # We do have a function, print some info for the function
-                        print function
-                        # Now get all instructions for this function and print them
-                        insts = function.GetInstructions(target)
-                        disassemble_instructions (insts)
-                    else:
-                        # See if we have a symbol in the symbol table for where we stopped
-                        symbol = frame.GetSymbol();
-                        if symbol:
-                            # We do have a symbol, print some info for the symbol
-                            print symbol
-                            # Now get all instructions for this symbol and print them
-                            insts = symbol.GetInstructions(target)
+        # Make sure the launch went ok
+        if process:
+            # Print some simple process info
+            state = process.GetState ()
+            print process
+            if state == lldb.eStateStopped:
+                # Get the first thread
+                thread = process.GetThreadAtIndex (0)
+                if thread:
+                    # Print some simple thread info
+                    print thread
+                    # Get the first frame
+                    frame = thread.GetFrameAtIndex (0)
+                    if frame:
+                        # Print some simple frame info
+                        print frame
+                        function = frame.GetFunction()
+                        # See if we have debug info (a function)
+                        if function:
+                            # We do have a function, print some info for the function
+                            print function
+                            # Now get all instructions for this function and print them
+                            insts = function.GetInstructions(target)
                             disassemble_instructions (insts)
+                        else:
+                            # See if we have a symbol in the symbol table for where we stopped
+                            symbol = frame.GetSymbol();
+                            if symbol:
+                                # We do have a symbol, print some info for the symbol
+                                print symbol
+                                # Now get all instructions for this symbol and print them
+                                insts = symbol.GetInstructions(target)
+                                disassemble_instructions (insts)
 
-                    registerList = frame.GetRegisters()
-                    print('Frame registers (size of register set = %d):' % registerList.GetSize())
-                    for value in registerList:
-                        #print value
-                        print('%s (number of children = %d):' % (value.GetName(), value.GetNumChildren()))
-                        for child in value:
-                            print('Name: ', child.GetName(), ' Value: ', child.GetValue())
+                        registerList = frame.GetRegisters()
+                        print('Frame registers (size of register set = %d):' % registerList.GetSize())
+                        for value in registerList:
+                            #print value
+                            print('%s (number of children = %d):' % (value.GetName(), value.GetNumChildren()))
+                            for child in value:
+                                print('Name: ', child.GetName(), ' Value: ', child.GetValue())
 
-            print('Hit the breakpoint at main, enter to continue and wait for program to exit or \'Ctrl-D\'/\'quit\' to terminate the program')
-            next = sys.stdin.readline()
-            if not next or next.rstrip('\n') == 'quit':
-                print('Terminating the inferior process...')
-                process.Kill()
+                print('Hit the breakpoint at main, enter to continue and wait for program to exit or \'Ctrl-D\'/\'quit\' to terminate the program')
+                next = sys.stdin.readline()
+                if not next or next.rstrip('\\n') == 'quit':
+                    print('Terminating the inferior process...')
+                    process.Kill()
+                else:
+                    # Now continue to the program exit
+                    process.Continue()
+                    # When we return from the above function we will hopefully be at the
+                    # program exit. Print out some process info
+                    print process
+            elif state == lldb.eStateExited:
+                print('Didn\'t hit the breakpoint at main, program has exited...')
             else:
-                # Now continue to the program exit
-                process.Continue()
-                # When we return from the above function we will hopefully be at the
-                # program exit. Print out some process info
-                print process
-        elif state == lldb.eStateExited:
-            print('Didn\'t hit the breakpoint at main, program has exited...')
-        else:
-            print('Unexpected process state: %s, killing process...' % debugger.StateAsCString (state))
-            process.Kill()
+                print('Unexpected process state: %s, killing process...' % debugger.StateAsCString (state))
+                process.Kill()
 
 Sometimes you need to create an empty target that will get filled in later.  The most common use for this
 is to attach to a process by name or pid where you don't know the executable up front.  The most convenient way
-to do this is:
+to do this is: ::
 
-target = debugger.CreateTarget('')
-error = lldb.SBError()
-process = target.AttachToProcessWithName(debugger.GetListener(), 'PROCESS_NAME', False, error)
+    target = debugger.CreateTarget('')
+    error = lldb.SBError()
+    process = target.AttachToProcessWithName(debugger.GetListener(), 'PROCESS_NAME', False, error)
 
-or the equivalent arguments for AttachToProcessWithID.") SBDebugger;
+or the equivalent arguments for :py:class:`SBTarget.AttachToProcessWithID` .") SBDebugger;
 class SBDebugger
 {
 public:
@@ -498,12 +498,12 @@ A tuple with the number of errors encountered by the interpreter, a boolean
 indicating whether quitting the interpreter was requested and another boolean
 set to True in case of a crash.
 
-Example:
+Example: ::
 
-# Start an interactive lldb session from a script (with a valid debugger object
-# created beforehand):
-n_errors, quit_requested, has_crashed = debugger.RunCommandInterpreter(True,
-    False, lldb.SBCommandInterpreterRunOptions(), 0, False, False)") RunCommandInterpreter;
+    # Start an interactive lldb session from a script (with a valid debugger object
+    # created beforehand):
+    n_errors, quit_requested, has_crashed = debugger.RunCommandInterpreter(True,
+        False, lldb.SBCommandInterpreterRunOptions(), 0, False, False)") RunCommandInterpreter;
     %apply int& INOUT { int& num_errors };
     %apply bool& INOUT { bool& quit_requested };
     %apply bool& INOUT { bool& stopped_for_crash };

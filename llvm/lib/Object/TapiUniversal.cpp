@@ -14,7 +14,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/TextAPI/MachO/TextAPIReader.h"
+#include "llvm/TextAPI/TextAPIReader.h"
 
 using namespace llvm;
 using namespace MachO;

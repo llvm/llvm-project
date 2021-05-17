@@ -277,8 +277,8 @@ void BCECmpBlock::split(BasicBlock *NewParent, AliasAnalysis &AA) const {
   for (Instruction &Inst : *BB) {
     if (BlockInsts.count(&Inst))
       continue;
-      assert(canSinkBCECmpInst(&Inst, BlockInsts, AA) &&
-             "Split unsplittable block");
+    assert(canSinkBCECmpInst(&Inst, BlockInsts, AA) &&
+           "Split unsplittable block");
     // This is a non-BCE-cmp-block instruction. And it can be separated
     // from the BCE-cmp-block instruction.
     OtherInsts.push_back(&Inst);
@@ -440,8 +440,7 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi,
   // Now look inside blocks to check for BCE comparisons.
   std::vector<BCECmpBlock> Comparisons;
   BaseIdentifier BaseId;
-  for (size_t BlockIdx = 0; BlockIdx < Blocks.size(); ++BlockIdx) {
-    BasicBlock *const Block = Blocks[BlockIdx];
+  for (BasicBlock *const Block : Blocks) {
     assert(Block && "invalid block");
     BCECmpBlock Comparison = visitCmpBlock(Phi.getIncomingValueForBlock(Block),
                                            Block, Phi.getParent(), BaseId);
@@ -733,8 +732,7 @@ bool BCECmpChain::simplify(const TargetLibraryInfo &TLI, AliasAnalysis &AA,
 
   // If the old cmp chain was the function entry, we need to update the function
   // entry.
-  const bool ChainEntryIsFnEntry =
-      (EntryBlock_ == &EntryBlock_->getParent()->getEntryBlock());
+  const bool ChainEntryIsFnEntry = EntryBlock_->isEntryBlock();
   if (ChainEntryIsFnEntry && DTU.hasDomTree()) {
     LLVM_DEBUG(dbgs() << "Changing function entry from "
                       << EntryBlock_->getName() << " to "

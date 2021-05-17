@@ -485,8 +485,7 @@ define i32 @sext_of_not_cmp_i32(i32 %x) {
 ;
 ; RV64I-LABEL: sext_of_not_cmp_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    addi a0, a0, -7
 ; RV64I-NEXT:    snez a0, a0
 ; RV64I-NEXT:    neg a0, a0
@@ -530,8 +529,7 @@ define i32 @dec_of_zexted_cmp_i32(i32 %x) {
 ;
 ; RV64I-LABEL: dec_of_zexted_cmp_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    addi a0, a0, -7
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    addi a0, a0, -1

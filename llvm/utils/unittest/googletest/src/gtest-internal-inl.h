@@ -27,23 +27,12 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-// Utility functions and classes used by the Google C++ testing framework.
-//
-// Author: wan@google.com (Zhanyong Wan)
-//
+// Utility functions and classes used by the Google C++ testing framework.//
 // This file contains purely Google Test's internal implementation.  Please
 // DO NOT #INCLUDE IT IN A USER PROGRAM.
 
 #ifndef GTEST_SRC_GTEST_INTERNAL_INL_H_
 #define GTEST_SRC_GTEST_INTERNAL_INL_H_
-
-// GTEST_IMPLEMENTATION_ is defined to 1 iff the current translation unit is
-// part of Google Test's implementation; otherwise it's undefined.
-#if !GTEST_IMPLEMENTATION_
-// If this file is included from the user's code, just say no.
-# error "gtest-internal-inl.h is part of Google Test's internal implementation."
-# error "It must not be included except by Google Test itself."
-#endif  // GTEST_IMPLEMENTATION_
 
 #ifndef _WIN32_WCE
 # include <errno.h>
@@ -53,6 +42,7 @@
 #include <string.h>  // For memmove.
 
 #include <algorithm>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -67,8 +57,11 @@
 # include <windows.h>  // NOLINT
 #endif  // GTEST_OS_WINDOWS
 
-#include "gtest/gtest.h"  // NOLINT
+#include "gtest/gtest.h"
 #include "gtest/gtest-spi.h"
+
+GTEST_DISABLE_MSC_WARNINGS_PUSH_(4251 \
+/* class A needs to have dll-interface to be used by clients of class B */)
 
 namespace testing {
 
@@ -94,6 +87,7 @@ const char kFilterFlag[] = "filter";
 const char kListTestsFlag[] = "list_tests";
 const char kOutputFlag[] = "output";
 const char kPrintTimeFlag[] = "print_time";
+const char kPrintUTF8Flag[] = "print_utf8";
 const char kRandomSeedFlag[] = "random_seed";
 const char kRepeatFlag[] = "repeat";
 const char kShuffleFlag[] = "shuffle";
@@ -105,14 +99,14 @@ const char kFlagfileFlag[] = "flagfile";
 // A valid random seed must be in [1, kMaxRandomSeed].
 const int kMaxRandomSeed = 99999;
 
-// g_help_flag is true iff the --help flag or an equivalent form is
-// specified on the command line.
+// g_help_flag is true if and only if the --help flag or an equivalent form
+// is specified on the command line.
 GTEST_API_ extern bool g_help_flag;
 
 // Returns the current time in milliseconds.
 GTEST_API_ TimeInMillis GetTimeInMillis();
 
-// Returns true iff Google Test should use colors in the output.
+// Returns true if and only if Google Test should use colors in the output.
 GTEST_API_ bool ShouldUseColor(bool stdout_is_tty);
 
 // Formats the given time in milliseconds as seconds.
@@ -174,6 +168,7 @@ class GTestFlagSaver {
     list_tests_ = GTEST_FLAG(list_tests);
     output_ = GTEST_FLAG(output);
     print_time_ = GTEST_FLAG(print_time);
+    print_utf8_ = GTEST_FLAG(print_utf8);
     random_seed_ = GTEST_FLAG(random_seed);
     repeat_ = GTEST_FLAG(repeat);
     shuffle_ = GTEST_FLAG(shuffle);
@@ -195,6 +190,7 @@ class GTestFlagSaver {
     GTEST_FLAG(list_tests) = list_tests_;
     GTEST_FLAG(output) = output_;
     GTEST_FLAG(print_time) = print_time_;
+    GTEST_FLAG(print_utf8) = print_utf8_;
     GTEST_FLAG(random_seed) = random_seed_;
     GTEST_FLAG(repeat) = repeat_;
     GTEST_FLAG(shuffle) = shuffle_;
@@ -216,6 +212,7 @@ class GTestFlagSaver {
   bool list_tests_;
   std::string output_;
   bool print_time_;
+  bool print_utf8_;
   internal::Int32 random_seed_;
   internal::Int32 repeat_;
   bool shuffle_;
@@ -234,7 +231,7 @@ GTEST_API_ std::string CodePointToUtf8(UInt32 code_point);
 
 // Converts a wide string to a narrow string in UTF-8 encoding.
 // The wide string is assumed to have the following encoding:
-//   UTF-16 if sizeof(wchar_t) == 2 (on Windows, Cygwin, Symbian OS)
+//   UTF-16 if sizeof(wchar_t) == 2 (on Windows, Cygwin)
 //   UTF-32 if sizeof(wchar_t) == 4 (on Linux)
 // Parameter str points to a null-terminated wide string.
 // Parameter num_chars may additionally limit the number
@@ -269,8 +266,8 @@ GTEST_API_ bool ShouldShard(const char* total_shards_str,
 GTEST_API_ Int32 Int32FromEnvOrDie(const char* env_var, Int32 default_val);
 
 // Given the total number of shards, the shard index, and the test id,
-// returns true iff the test should be run on this shard. The test id is
-// some arbitrary but unique non-negative integer assigned to each test
+// returns true if and only if the test should be run on this shard. The test id
+// is some arbitrary but unique non-negative integer assigned to each test
 // method. Assumes that 0 <= shard_index < total_shards.
 GTEST_API_ bool ShouldRunTestOnShard(
     int total_shards, int shard_index, int test_id);
@@ -301,7 +298,8 @@ void ForEach(const Container& c, Functor functor) {
 // in range [0, v.size()).
 template <typename E>
 inline E GetElementOr(const std::vector<E>& v, int i, E default_value) {
-  return (i < 0 || i >= static_cast<int>(v.size())) ? default_value : v[i];
+  return (i < 0 || i >= static_cast<int>(v.size())) ? default_value
+                                                    : v[static_cast<size_t>(i)];
 }
 
 // Performs an in-place shuffle of a range of the vector's elements.
@@ -323,8 +321,11 @@ void ShuffleRange(internal::Random* random, int begin, int end,
   // http://en.wikipedia.org/wiki/Fisher-Yates_shuffle
   for (int range_width = end - begin; range_width >= 2; range_width--) {
     const int last_in_range = begin + range_width - 1;
-    const int selected = begin + random->Generate(range_width);
-    std::swap((*v)[selected], (*v)[last_in_range]);
+    const int selected =
+        begin +
+        static_cast<int>(random->Generate(static_cast<UInt32>(range_width)));
+    std::swap((*v)[static_cast<size_t>(selected)],
+              (*v)[static_cast<size_t>(last_in_range)]);
   }
 }
 
@@ -351,7 +352,7 @@ class TestPropertyKeyIs {
   // TestPropertyKeyIs has NO default constructor.
   explicit TestPropertyKeyIs(const std::string& key) : key_(key) {}
 
-  // Returns true iff the test name of test property matches on key_.
+  // Returns true if and only if the test name of test property matches on key_.
   bool operator()(const TestProperty& test_property) const {
     return test_property.key() == key_;
   }
@@ -384,17 +385,17 @@ class GTEST_API_ UnitTestOptions {
 
   // Functions for processing the gtest_filter flag.
 
-  // Returns true iff the wildcard pattern matches the string.  The
-  // first ':' or '\0' character in pattern marks the end of it.
+  // Returns true if and only if the wildcard pattern matches the string.
+  // The first ':' or '\0' character in pattern marks the end of it.
   //
   // This recursive algorithm isn't very efficient, but is clear and
   // works well enough for matching test names, which are short.
   static bool PatternMatchesString(const char *pattern, const char *str);
 
-  // Returns true iff the user-specified filter matches the test case
-  // name and the test name.
-  static bool FilterMatchesTest(const std::string &test_case_name,
-                                const std::string &test_name);
+  // Returns true if and only if the user-specified filter matches the test
+  // suite name and the test name.
+  static bool FilterMatchesTest(const std::string& test_suite_name,
+                                const std::string& test_name);
 
 #if GTEST_OS_WINDOWS
   // Function for supporting the gtest_catch_exception flag.
@@ -426,7 +427,7 @@ class OsStackTraceGetterInterface {
   //                in the trace.
   //   skip_count - the number of top frames to be skipped; doesn't count
   //                against max_depth.
-  virtual string CurrentStackTrace(int max_depth, int skip_count) = 0;
+  virtual std::string CurrentStackTrace(int max_depth, int skip_count) = 0;
 
   // UponLeavingGTest() should be called immediately before Google Test calls
   // user code. It saves some information about the current stack that
@@ -446,10 +447,20 @@ class OsStackTraceGetter : public OsStackTraceGetterInterface {
  public:
   OsStackTraceGetter() {}
 
-  virtual string CurrentStackTrace(int max_depth, int skip_count);
-  virtual void UponLeavingGTest();
+  std::string CurrentStackTrace(int max_depth, int skip_count) override;
+  void UponLeavingGTest() override;
 
  private:
+#if GTEST_HAS_ABSL
+  Mutex mutex_;  // Protects all internal state.
+
+  // We save the stack frame below the frame that calls user code.
+  // We do this because the address of the frame immediately below
+  // the user code changes between the call to UponLeavingGTest()
+  // and any calls to the stack trace code from within the user code.
+  void* caller_frame_ = nullptr;
+#endif  // GTEST_HAS_ABSL
+
   GTEST_DISALLOW_COPY_AND_ASSIGN_(OsStackTraceGetter);
 };
 
@@ -468,7 +479,7 @@ class DefaultGlobalTestPartResultReporter
   explicit DefaultGlobalTestPartResultReporter(UnitTestImpl* unit_test);
   // Implements the TestPartResultReporterInterface. Reports the test part
   // result in the current test.
-  virtual void ReportTestPartResult(const TestPartResult& result);
+  void ReportTestPartResult(const TestPartResult& result) override;
 
  private:
   UnitTestImpl* const unit_test_;
@@ -484,7 +495,7 @@ class DefaultPerThreadTestPartResultReporter
   explicit DefaultPerThreadTestPartResultReporter(UnitTestImpl* unit_test);
   // Implements the TestPartResultReporterInterface. The implementation just
   // delegates to the current global test part result reporter of *unit_test_.
-  virtual void ReportTestPartResult(const TestPartResult& result);
+  void ReportTestPartResult(const TestPartResult& result) override;
 
  private:
   UnitTestImpl* const unit_test_;
@@ -522,21 +533,24 @@ class GTEST_API_ UnitTestImpl {
   void SetTestPartResultReporterForCurrentThread(
       TestPartResultReporterInterface* reporter);
 
-  // Gets the number of successful test cases.
-  int successful_test_case_count() const;
+  // Gets the number of successful test suites.
+  int successful_test_suite_count() const;
 
-  // Gets the number of failed test cases.
-  int failed_test_case_count() const;
+  // Gets the number of failed test suites.
+  int failed_test_suite_count() const;
 
-  // Gets the number of all test cases.
-  int total_test_case_count() const;
+  // Gets the number of all test suites.
+  int total_test_suite_count() const;
 
-  // Gets the number of all test cases that contain at least one test
+  // Gets the number of all test suites that contain at least one test
   // that should run.
-  int test_case_to_run_count() const;
+  int test_suite_to_run_count() const;
 
   // Gets the number of successful tests.
   int successful_test_count() const;
+
+  // Gets the number of skipped tests.
+  int skipped_test_count() const;
 
   // Gets the number of failed tests.
   int failed_test_count() const;
@@ -563,27 +577,33 @@ class GTEST_API_ UnitTestImpl {
   // Gets the elapsed time, in milliseconds.
   TimeInMillis elapsed_time() const { return elapsed_time_; }
 
-  // Returns true iff the unit test passed (i.e. all test cases passed).
+  // Returns true if and only if the unit test passed (i.e. all test suites
+  // passed).
   bool Passed() const { return !Failed(); }
 
-  // Returns true iff the unit test failed (i.e. some test case failed
-  // or something outside of all tests failed).
+  // Returns true if and only if the unit test failed (i.e. some test suite
+  // failed or something outside of all tests failed).
   bool Failed() const {
-    return failed_test_case_count() > 0 || ad_hoc_test_result()->Failed();
+    return failed_test_suite_count() > 0 || ad_hoc_test_result()->Failed();
   }
 
-  // Gets the i-th test case among all the test cases. i can range from 0 to
-  // total_test_case_count() - 1. If i is not in that range, returns NULL.
-  const TestCase* GetTestCase(int i) const {
-    const int index = GetElementOr(test_case_indices_, i, -1);
-    return index < 0 ? NULL : test_cases_[i];
+  // Gets the i-th test suite among all the test suites. i can range from 0 to
+  // total_test_suite_count() - 1. If i is not in that range, returns NULL.
+  const TestSuite* GetTestSuite(int i) const {
+    const int index = GetElementOr(test_suite_indices_, i, -1);
+    return index < 0 ? nullptr : test_suites_[static_cast<size_t>(i)];
   }
 
-  // Gets the i-th test case among all the test cases. i can range from 0 to
-  // total_test_case_count() - 1. If i is not in that range, returns NULL.
-  TestCase* GetMutableTestCase(int i) {
-    const int index = GetElementOr(test_case_indices_, i, -1);
-    return index < 0 ? NULL : test_cases_[index];
+  //  Legacy API is deprecated but still available
+#ifndef GTEST_REMOVE_LEGACY_TEST_CASEAPI_
+  const TestCase* GetTestCase(int i) const { return GetTestSuite(i); }
+#endif  //  GTEST_REMOVE_LEGACY_TEST_CASEAPI_
+
+  // Gets the i-th test suite among all the test suites. i can range from 0 to
+  // total_test_suite_count() - 1. If i is not in that range, returns NULL.
+  TestSuite* GetMutableSuiteCase(int i) {
+    const int index = GetElementOr(test_suite_indices_, i, -1);
+    return index < 0 ? nullptr : test_suites_[static_cast<size_t>(index)];
   }
 
   // Provides access to the event listener list.
@@ -620,30 +640,38 @@ class GTEST_API_ UnitTestImpl {
   // trace but Bar() and CurrentOsStackTraceExceptTop() won't.
   std::string CurrentOsStackTraceExceptTop(int skip_count) GTEST_NO_INLINE_;
 
-  // Finds and returns a TestCase with the given name.  If one doesn't
+  // Finds and returns a TestSuite with the given name.  If one doesn't
   // exist, creates one and returns it.
   //
   // Arguments:
   //
-  //   test_case_name: name of the test case
+  //   test_suite_name: name of the test suite
   //   type_param:     the name of the test's type parameter, or NULL if
   //                   this is not a typed or a type-parameterized test.
-  //   set_up_tc:      pointer to the function that sets up the test case
-  //   tear_down_tc:   pointer to the function that tears down the test case
-  TestCase* GetTestCase(const char* test_case_name,
-                        const char* type_param,
-                        Test::SetUpTestCaseFunc set_up_tc,
-                        Test::TearDownTestCaseFunc tear_down_tc);
+  //   set_up_tc:      pointer to the function that sets up the test suite
+  //   tear_down_tc:   pointer to the function that tears down the test suite
+  TestSuite* GetTestSuite(const char* test_suite_name, const char* type_param,
+                          internal::SetUpTestSuiteFunc set_up_tc,
+                          internal::TearDownTestSuiteFunc tear_down_tc);
+
+//  Legacy API is deprecated but still available
+#ifndef GTEST_REMOVE_LEGACY_TEST_CASEAPI_
+  TestCase* GetTestCase(const char* test_case_name, const char* type_param,
+                        internal::SetUpTestSuiteFunc set_up_tc,
+                        internal::TearDownTestSuiteFunc tear_down_tc) {
+    return GetTestSuite(test_case_name, type_param, set_up_tc, tear_down_tc);
+  }
+#endif  //  GTEST_REMOVE_LEGACY_TEST_CASEAPI_
 
   // Adds a TestInfo to the unit test.
   //
   // Arguments:
   //
-  //   set_up_tc:    pointer to the function that sets up the test case
-  //   tear_down_tc: pointer to the function that tears down the test case
+  //   set_up_tc:    pointer to the function that sets up the test suite
+  //   tear_down_tc: pointer to the function that tears down the test suite
   //   test_info:    the TestInfo object
-  void AddTestInfo(Test::SetUpTestCaseFunc set_up_tc,
-                   Test::TearDownTestCaseFunc tear_down_tc,
+  void AddTestInfo(internal::SetUpTestSuiteFunc set_up_tc,
+                   internal::TearDownTestSuiteFunc tear_down_tc,
                    TestInfo* test_info) {
     // In order to support thread-safe death tests, we need to
     // remember the original working directory when the test program
@@ -658,23 +686,20 @@ class GTEST_API_ UnitTestImpl {
           << "Failed to get the current working directory.";
     }
 
-    GetTestCase(test_info->test_case_name(),
-                test_info->type_param(),
-                set_up_tc,
-                tear_down_tc)->AddTestInfo(test_info);
+    GetTestSuite(test_info->test_suite_name(), test_info->type_param(),
+                 set_up_tc, tear_down_tc)
+        ->AddTestInfo(test_info);
   }
 
-#if GTEST_HAS_PARAM_TEST
-  // Returns ParameterizedTestCaseRegistry object used to keep track of
+  // Returns ParameterizedTestSuiteRegistry object used to keep track of
   // value-parameterized tests and instantiate and register them.
-  internal::ParameterizedTestCaseRegistry& parameterized_test_registry() {
+  internal::ParameterizedTestSuiteRegistry& parameterized_test_registry() {
     return parameterized_test_registry_;
   }
-#endif  // GTEST_HAS_PARAM_TEST
 
-  // Sets the TestCase object for the test that's currently running.
-  void set_current_test_case(TestCase* a_current_test_case) {
-    current_test_case_ = a_current_test_case;
+  // Sets the TestSuite object for the test that's currently running.
+  void set_current_test_suite(TestSuite* a_current_test_suite) {
+    current_test_suite_ = a_current_test_suite;
   }
 
   // Sets the TestInfo object for the test that's currently running.  If
@@ -685,7 +710,7 @@ class GTEST_API_ UnitTestImpl {
   }
 
   // Registers all parameterized tests defined using TEST_P and
-  // INSTANTIATE_TEST_CASE_P, creating regular tests for each test/parameter
+  // INSTANTIATE_TEST_SUITE_P, creating regular tests for each test/parameter
   // combination. This method can be called more then once; it has guards
   // protecting from registering the tests more then once.  If
   // value-parameterized tests are disabled, RegisterParameterizedTests is
@@ -700,7 +725,7 @@ class GTEST_API_ UnitTestImpl {
 
   // Clears the results of all tests, except the ad hoc tests.
   void ClearNonAdHocTestResult() {
-    ForEach(test_cases_, TestCase::ClearTestCaseResult);
+    ForEach(test_suites_, TestSuite::ClearTestSuiteResult);
   }
 
   // Clears the results of ad-hoc test assertions.
@@ -709,7 +734,7 @@ class GTEST_API_ UnitTestImpl {
   }
 
   // Adds a TestProperty to the current TestResult object when invoked in a
-  // context of a test or a test case, or to the global property set. If the
+  // context of a test or a test suite, or to the global property set. If the
   // result already contains a property with the same key, the value will be
   // updated.
   void RecordProperty(const TestProperty& test_property);
@@ -721,7 +746,7 @@ class GTEST_API_ UnitTestImpl {
 
   // Matches the full name of each test against the user-specified
   // filter to decide whether the test should run, then records the
-  // result in each TestCase and TestInfo object.
+  // result in each TestSuite and TestInfo object.
   // If shard_tests == HONOR_SHARDING_PROTOCOL, further filters tests
   // based on sharding variables in the environment.
   // Returns the number of tests that should run.
@@ -730,7 +755,7 @@ class GTEST_API_ UnitTestImpl {
   // Prints the names of the tests matching the user-specified filter flag.
   void ListTestsMatchingFilter();
 
-  const TestCase* current_test_case() const { return current_test_case_; }
+  const TestSuite* current_test_suite() const { return current_test_suite_; }
   TestInfo* current_test_info() { return current_test_info_; }
   const TestInfo* current_test_info() const { return current_test_info_; }
 
@@ -791,11 +816,11 @@ class GTEST_API_ UnitTestImpl {
   // Gets the random number generator.
   internal::Random* random() { return &random_; }
 
-  // Shuffles all test cases, and the tests within each test case,
+  // Shuffles all test suites, and the tests within each test suite,
   // making sure that death tests are still run first.
   void ShuffleTests();
 
-  // Restores the test cases and tests to their order before the first shuffle.
+  // Restores the test suites and tests to their order before the first shuffle.
   void UnshuffleTests();
 
   // Returns the value of GTEST_FLAG(catch_exceptions) at the moment
@@ -835,33 +860,31 @@ class GTEST_API_ UnitTestImpl {
   // before/after the tests are run.
   std::vector<Environment*> environments_;
 
-  // The vector of TestCases in their original order.  It owns the
+  // The vector of TestSuites in their original order.  It owns the
   // elements in the vector.
-  std::vector<TestCase*> test_cases_;
+  std::vector<TestSuite*> test_suites_;
 
-  // Provides a level of indirection for the test case list to allow
-  // easy shuffling and restoring the test case order.  The i-th
-  // element of this vector is the index of the i-th test case in the
+  // Provides a level of indirection for the test suite list to allow
+  // easy shuffling and restoring the test suite order.  The i-th
+  // element of this vector is the index of the i-th test suite in the
   // shuffled order.
-  std::vector<int> test_case_indices_;
+  std::vector<int> test_suite_indices_;
 
-#if GTEST_HAS_PARAM_TEST
   // ParameterizedTestRegistry object used to register value-parameterized
   // tests.
-  internal::ParameterizedTestCaseRegistry parameterized_test_registry_;
+  internal::ParameterizedTestSuiteRegistry parameterized_test_registry_;
 
   // Indicates whether RegisterParameterizedTests() has been called already.
   bool parameterized_tests_registered_;
-#endif  // GTEST_HAS_PARAM_TEST
 
-  // Index of the last death test case registered.  Initially -1.
-  int last_death_test_case_;
+  // Index of the last death test suite registered.  Initially -1.
+  int last_death_test_suite_;
 
-  // This points to the TestCase for the currently running test.  It
-  // changes as Google Test goes through one test case after another.
+  // This points to the TestSuite for the currently running test.  It
+  // changes as Google Test goes through one test suite after another.
   // When no test is running, this is set to NULL and Google Test
   // stores assertion results in ad_hoc_test_result_.  Initially NULL.
-  TestCase* current_test_case_;
+  TestSuite* current_test_suite_;
 
   // This points to the TestInfo for the currently running test.  It
   // changes as Google Test goes through one test after another.  When
@@ -889,7 +912,7 @@ class GTEST_API_ UnitTestImpl {
   // desired.
   OsStackTraceGetterInterface* os_stack_trace_getter_;
 
-  // True iff PostFlagParsingInit() has been called.
+  // True if and only if PostFlagParsingInit() has been called.
   bool post_flag_parse_init_performed_;
 
   // The random number seed used at the beginning of the test run.
@@ -908,8 +931,8 @@ class GTEST_API_ UnitTestImpl {
 #if GTEST_HAS_DEATH_TEST
   // The decomposed components of the gtest_internal_run_death_test flag,
   // parsed when RUN_ALL_TESTS is called.
-  internal::scoped_ptr<InternalRunDeathTestFlag> internal_run_death_test_flag_;
-  internal::scoped_ptr<internal::DeathTestFactory> death_test_factory_;
+  std::unique_ptr<InternalRunDeathTestFlag> internal_run_death_test_flag_;
+  std::unique_ptr<internal::DeathTestFactory> death_test_factory_;
 #endif  // GTEST_HAS_DEATH_TEST
 
   // A per-thread stack of traces created by the SCOPED_TRACE() macro.
@@ -992,8 +1015,6 @@ bool ParseNaturalNumber(const ::std::string& str, Integer* number) {
 
   const bool parse_success = *end == '\0' && errno == 0;
 
-  // TODO(vladl@google.com): Convert this to compile time assertion when it is
-  // available.
   GTEST_CHECK_(sizeof(Integer) <= sizeof(parsed));
 
   const Integer result = static_cast<Integer>(parsed);
@@ -1032,7 +1053,7 @@ class TestResultAccessor {
 #if GTEST_CAN_STREAM_RESULTS_
 
 // Streams test results to the given port on the given host machine.
-class GTEST_API_ StreamingListener : public EmptyTestEventListener {
+class StreamingListener : public EmptyTestEventListener {
  public:
   // Abstract base class for writing strings to a socket.
   class AbstractSocketWriter {
@@ -1040,37 +1061,35 @@ class GTEST_API_ StreamingListener : public EmptyTestEventListener {
     virtual ~AbstractSocketWriter() {}
 
     // Sends a string to the socket.
-    virtual void Send(const string& message) = 0;
+    virtual void Send(const std::string& message) = 0;
 
     // Closes the socket.
     virtual void CloseConnection() {}
 
     // Sends a string and a newline to the socket.
-    void SendLn(const string& message) {
-      Send(message + "\n");
-    }
+    void SendLn(const std::string& message) { Send(message + "\n"); }
   };
 
   // Concrete class for actually writing strings to a socket.
   class SocketWriter : public AbstractSocketWriter {
    public:
-    SocketWriter(const string& host, const string& port)
+    SocketWriter(const std::string& host, const std::string& port)
         : sockfd_(-1), host_name_(host), port_num_(port) {
       MakeConnection();
     }
 
-    virtual ~SocketWriter() {
+    ~SocketWriter() override {
       if (sockfd_ != -1)
         CloseConnection();
     }
 
     // Sends a string to the socket.
-    virtual void Send(const string& message) {
+    void Send(const std::string& message) override {
       GTEST_CHECK_(sockfd_ != -1)
           << "Send() can be called only when there is a connection.";
 
-      const int len = static_cast<int>(message.length());
-      if (write(sockfd_, message.c_str(), len) != len) {
+      const auto len = static_cast<size_t>(message.length());
+      if (write(sockfd_, message.c_str(), len) != static_cast<ssize_t>(len)) {
         GTEST_LOG_(WARNING)
             << "stream_result_to: failed to stream to "
             << host_name_ << ":" << port_num_;
@@ -1082,7 +1101,7 @@ class GTEST_API_ StreamingListener : public EmptyTestEventListener {
     void MakeConnection();
 
     // Closes the socket.
-    void CloseConnection() {
+    void CloseConnection() override {
       GTEST_CHECK_(sockfd_ != -1)
           << "CloseConnection() can be called only when there is a connection.";
 
@@ -1091,26 +1110,28 @@ class GTEST_API_ StreamingListener : public EmptyTestEventListener {
     }
 
     int sockfd_;  // socket file descriptor
-    const string host_name_;
-    const string port_num_;
+    const std::string host_name_;
+    const std::string port_num_;
 
     GTEST_DISALLOW_COPY_AND_ASSIGN_(SocketWriter);
   };  // class SocketWriter
 
   // Escapes '=', '&', '%', and '\n' characters in str as "%xx".
-  static string UrlEncode(const char* str);
+  static std::string UrlEncode(const char* str);
 
-  StreamingListener(const string& host, const string& port)
-      : socket_writer_(new SocketWriter(host, port)) { Start(); }
+  StreamingListener(const std::string& host, const std::string& port)
+      : socket_writer_(new SocketWriter(host, port)) {
+    Start();
+  }
 
   explicit StreamingListener(AbstractSocketWriter* socket_writer)
       : socket_writer_(socket_writer) { Start(); }
 
-  void OnTestProgramStart(const UnitTest& /* unit_test */) {
+  void OnTestProgramStart(const UnitTest& /* unit_test */) override {
     SendLn("event=TestProgramStart");
   }
 
-  void OnTestProgramEnd(const UnitTest& unit_test) {
+  void OnTestProgramEnd(const UnitTest& unit_test) override {
     // Note that Google Test current only report elapsed time for each
     // test iteration, not for the entire test program.
     SendLn("event=TestProgramEnd&passed=" + FormatBool(unit_test.Passed()));
@@ -1119,42 +1140,47 @@ class GTEST_API_ StreamingListener : public EmptyTestEventListener {
     socket_writer_->CloseConnection();
   }
 
-  void OnTestIterationStart(const UnitTest& /* unit_test */, int iteration) {
+  void OnTestIterationStart(const UnitTest& /* unit_test */,
+                            int iteration) override {
     SendLn("event=TestIterationStart&iteration=" +
            StreamableToString(iteration));
   }
 
-  void OnTestIterationEnd(const UnitTest& unit_test, int /* iteration */) {
+  void OnTestIterationEnd(const UnitTest& unit_test,
+                          int /* iteration */) override {
     SendLn("event=TestIterationEnd&passed=" +
            FormatBool(unit_test.Passed()) + "&elapsed_time=" +
            StreamableToString(unit_test.elapsed_time()) + "ms");
   }
 
-  void OnTestCaseStart(const TestCase& test_case) {
+  // Note that "event=TestCaseStart" is a wire format and has to remain
+  // "case" for compatibilty
+  void OnTestCaseStart(const TestCase& test_case) override {
     SendLn(std::string("event=TestCaseStart&name=") + test_case.name());
   }
 
-  void OnTestCaseEnd(const TestCase& test_case) {
-    SendLn("event=TestCaseEnd&passed=" + FormatBool(test_case.Passed())
-           + "&elapsed_time=" + StreamableToString(test_case.elapsed_time())
-           + "ms");
+  // Note that "event=TestCaseEnd" is a wire format and has to remain
+  // "case" for compatibilty
+  void OnTestCaseEnd(const TestCase& test_case) override {
+    SendLn("event=TestCaseEnd&passed=" + FormatBool(test_case.Passed()) +
+           "&elapsed_time=" + StreamableToString(test_case.elapsed_time()) +
+           "ms");
   }
 
-  void OnTestStart(const TestInfo& test_info) {
+  void OnTestStart(const TestInfo& test_info) override {
     SendLn(std::string("event=TestStart&name=") + test_info.name());
   }
 
-  void OnTestEnd(const TestInfo& test_info) {
+  void OnTestEnd(const TestInfo& test_info) override {
     SendLn("event=TestEnd&passed=" +
            FormatBool((test_info.result())->Passed()) +
            "&elapsed_time=" +
            StreamableToString((test_info.result())->elapsed_time()) + "ms");
   }
 
-  void OnTestPartResult(const TestPartResult& test_part_result) {
+  void OnTestPartResult(const TestPartResult& test_part_result) override {
     const char* file_name = test_part_result.file_name();
-    if (file_name == NULL)
-      file_name = "";
+    if (file_name == nullptr) file_name = "";
     SendLn("event=TestPartResult&file=" + UrlEncode(file_name) +
            "&line=" + StreamableToString(test_part_result.line_number()) +
            "&message=" + UrlEncode(test_part_result.message()));
@@ -1162,15 +1188,15 @@ class GTEST_API_ StreamingListener : public EmptyTestEventListener {
 
  private:
   // Sends the given message and a newline to the socket.
-  void SendLn(const string& message) { socket_writer_->SendLn(message); }
+  void SendLn(const std::string& message) { socket_writer_->SendLn(message); }
 
   // Called at the start of streaming to notify the receiver what
   // protocol we are using.
   void Start() { SendLn("gtest_streaming_protocol_version=1.0"); }
 
-  string FormatBool(bool value) { return value ? "1" : "0"; }
+  std::string FormatBool(bool value) { return value ? "1" : "0"; }
 
-  const scoped_ptr<AbstractSocketWriter> socket_writer_;
+  const std::unique_ptr<AbstractSocketWriter> socket_writer_;
 
   GTEST_DISALLOW_COPY_AND_ASSIGN_(StreamingListener);
 };  // class StreamingListener
@@ -1179,5 +1205,7 @@ class GTEST_API_ StreamingListener : public EmptyTestEventListener {
 
 }  // namespace internal
 }  // namespace testing
+
+GTEST_DISABLE_MSC_WARNINGS_POP_()  //  4251
 
 #endif  // GTEST_SRC_GTEST_INTERNAL_INL_H_

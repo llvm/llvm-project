@@ -15,6 +15,7 @@
 #include "AVRMCInstLower.h"
 #include "AVRSubtarget.h"
 #include "MCTargetDesc/AVRInstPrinter.h"
+#include "MCTargetDesc/AVRMCExpr.h"
 #include "TargetInfo/AVRTargetInfo.h"
 
 #include "llvm/CodeGen/AsmPrinter.h"
@@ -52,6 +53,8 @@ public:
                              const char *ExtraCode, raw_ostream &O) override;
 
   void emitInstruction(const MachineInstr *MI) override;
+
+  const MCExpr *lowerConstant(const Constant *CV) override;
 
 private:
   const MCRegisterInfo &MRI;
@@ -174,6 +177,20 @@ void AVRAsmPrinter::emitInstruction(const MachineInstr *MI) {
   MCInst I;
   MCInstLowering.lowerInstruction(*MI, I);
   EmitToStreamer(*OutStreamer, I);
+}
+
+const MCExpr *AVRAsmPrinter::lowerConstant(const Constant *CV) {
+  MCContext &Ctx = OutContext;
+
+  if (const GlobalValue *GV = dyn_cast<GlobalValue>(CV)) {
+    bool IsProgMem = GV->getAddressSpace() == AVR::ProgramMemory;
+    if (IsProgMem) {
+      const MCExpr *Expr = MCSymbolRefExpr::create(getSymbol(GV), Ctx);
+      return AVRMCExpr::create(AVRMCExpr::VK_AVR_PM, Expr, false, Ctx);
+    }
+  }
+
+  return AsmPrinter::lowerConstant(CV);
 }
 
 } // end of namespace llvm

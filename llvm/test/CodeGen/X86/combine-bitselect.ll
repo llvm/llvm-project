@@ -253,29 +253,17 @@ define <2 x i64> @bitselect_v2i64_broadcast_rrm(<2 x i64> %a0, <2 x i64> %a1, i6
 ;
 ; XOP-LABEL: bitselect_v2i64_broadcast_rrm:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; XOP-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[0,1,0,1]
-; XOP-NEXT:    vandps %xmm2, %xmm0, %xmm0
-; XOP-NEXT:    vandnps %xmm1, %xmm2, %xmm1
-; XOP-NEXT:    vorps %xmm1, %xmm0, %xmm0
+; XOP-NEXT:    vmovddup {{.*#+}} xmm2 = mem[0,0]
+; XOP-NEXT:    vpcmov %xmm2, %xmm1, %xmm0, %xmm0
 ; XOP-NEXT:    retq
 ;
-; AVX1-LABEL: bitselect_v2i64_broadcast_rrm:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[0,1,0,1]
-; AVX1-NEXT:    vandps %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vandnps %xmm1, %xmm2, %xmm1
-; AVX1-NEXT:    vorps %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: bitselect_v2i64_broadcast_rrm:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovddup {{.*#+}} xmm2 = mem[0,0]
-; AVX2-NEXT:    vandps %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vandnps %xmm1, %xmm2, %xmm1
-; AVX2-NEXT:    vorps %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    retq
+; AVX-LABEL: bitselect_v2i64_broadcast_rrm:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovddup {{.*#+}} xmm2 = mem[0,0]
+; AVX-NEXT:    vandps %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vandnps %xmm1, %xmm2, %xmm1
+; AVX-NEXT:    vorps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
 ;
 ; AVX512F-LABEL: bitselect_v2i64_broadcast_rrm:
 ; AVX512F:       # %bb.0:
@@ -517,26 +505,18 @@ define <4 x i64> @bitselect_v4i64_broadcast_rrr(<4 x i64> %a0, <4 x i64> %a1, i6
 ; XOP-LABEL: bitselect_v4i64_broadcast_rrr:
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vmovq %rdi, %xmm2
-; XOP-NEXT:    vmovq %rdi, %xmm3
-; XOP-NEXT:    vmovddup {{.*#+}} xmm2 = xmm2[0,0]
+; XOP-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,1,0,1]
 ; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm2, %ymm2
-; XOP-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[0,1,0,1]
-; XOP-NEXT:    vinsertf128 $1, %xmm3, %ymm3, %ymm3
-; XOP-NEXT:    vandps %ymm2, %ymm0, %ymm0
-; XOP-NEXT:    vandnps %ymm1, %ymm3, %ymm1
-; XOP-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; XOP-NEXT:    vpcmov %ymm2, %ymm1, %ymm0, %ymm0
 ; XOP-NEXT:    retq
 ;
 ; AVX1-LABEL: bitselect_v4i64_broadcast_rrr:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovq %rdi, %xmm2
-; AVX1-NEXT:    vmovq %rdi, %xmm3
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = xmm2[0,0]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm2, %ymm2
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[0,1,0,1]
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm3, %ymm3
 ; AVX1-NEXT:    vandps %ymm2, %ymm0, %ymm0
-; AVX1-NEXT:    vandnps %ymm1, %ymm3, %ymm1
+; AVX1-NEXT:    vandnps %ymm1, %ymm2, %ymm1
 ; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
@@ -893,32 +873,22 @@ define <8 x i64> @bitselect_v8i64_broadcast_rrr(<8 x i64> %a0, <8 x i64> %a1, i6
 ; XOP-LABEL: bitselect_v8i64_broadcast_rrr:
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vmovq %rdi, %xmm4
-; XOP-NEXT:    vmovq %rdi, %xmm5
-; XOP-NEXT:    vmovddup {{.*#+}} xmm4 = xmm4[0,0]
+; XOP-NEXT:    vpshufd {{.*#+}} xmm4 = xmm4[0,1,0,1]
 ; XOP-NEXT:    vinsertf128 $1, %xmm4, %ymm4, %ymm4
-; XOP-NEXT:    vpshufd {{.*#+}} xmm5 = xmm5[0,1,0,1]
-; XOP-NEXT:    vinsertf128 $1, %xmm5, %ymm5, %ymm5
-; XOP-NEXT:    vandps %ymm4, %ymm1, %ymm1
-; XOP-NEXT:    vandps %ymm4, %ymm0, %ymm0
-; XOP-NEXT:    vandnps %ymm3, %ymm5, %ymm3
-; XOP-NEXT:    vorps %ymm3, %ymm1, %ymm1
-; XOP-NEXT:    vandnps %ymm2, %ymm5, %ymm2
-; XOP-NEXT:    vorps %ymm2, %ymm0, %ymm0
+; XOP-NEXT:    vpcmov %ymm4, %ymm2, %ymm0, %ymm0
+; XOP-NEXT:    vpcmov %ymm4, %ymm3, %ymm1, %ymm1
 ; XOP-NEXT:    retq
 ;
 ; AVX1-LABEL: bitselect_v8i64_broadcast_rrr:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovq %rdi, %xmm4
-; AVX1-NEXT:    vmovq %rdi, %xmm5
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm4 = xmm4[0,0]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm4[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm4, %ymm4
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm5[0,1,0,1]
-; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm5, %ymm5
 ; AVX1-NEXT:    vandps %ymm4, %ymm1, %ymm1
 ; AVX1-NEXT:    vandps %ymm4, %ymm0, %ymm0
-; AVX1-NEXT:    vandnps %ymm3, %ymm5, %ymm3
+; AVX1-NEXT:    vandnps %ymm3, %ymm4, %ymm3
 ; AVX1-NEXT:    vorps %ymm3, %ymm1, %ymm1
-; AVX1-NEXT:    vandnps %ymm2, %ymm5, %ymm2
+; AVX1-NEXT:    vandnps %ymm2, %ymm4, %ymm2
 ; AVX1-NEXT:    vorps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;

@@ -77,8 +77,10 @@ void TimelineView::onEvent(const HWInstructionEvent &Event) {
            "Instruction cannot be ready if it hasn't been dispatched yet!");
     WTEntry.CyclesSpentInSQWhileReady +=
         TVEntry.CycleIssued - TVEntry.CycleReady;
-    WTEntry.CyclesSpentAfterWBAndBeforeRetire +=
-        (CurrentCycle - 1) - TVEntry.CycleExecuted;
+    if (CurrentCycle > TVEntry.CycleExecuted) {
+      WTEntry.CyclesSpentAfterWBAndBeforeRetire +=
+          (CurrentCycle - 1) - TVEntry.CycleExecuted;
+    }
     break;
   }
   case HWInstructionEvent::Ready:
@@ -243,7 +245,8 @@ void TimelineView::printTimelineViewEntry(formatted_raw_ostream &OS,
 
   for (unsigned I = Entry.CycleExecuted + 1, E = Entry.CycleRetired; I < E; ++I)
     OS << TimelineView::DisplayChar::RetireLag;
-  OS << TimelineView::DisplayChar::Retired;
+  if (Entry.CycleExecuted < Entry.CycleRetired)
+    OS << TimelineView::DisplayChar::Retired;
 
   // Skip other columns.
   for (unsigned I = Entry.CycleRetired + 1, E = LastCycle; I <= E; ++I)
@@ -296,6 +299,20 @@ void TimelineView::printTimeline(raw_ostream &OS) const {
       ++IID;
     }
   }
+}
+
+json::Value TimelineView::toJSON() const {
+  json::Array TimelineInfo;
+
+  for (const TimelineViewEntry &TLE : Timeline) {
+    TimelineInfo.push_back(
+        json::Object({{"CycleDispatched", TLE.CycleDispatched},
+                      {"CycleReady", TLE.CycleReady},
+                      {"CycleIssued", TLE.CycleIssued},
+                      {"CycleExecuted", TLE.CycleExecuted},
+                      {"CycleRetired", TLE.CycleRetired}}));
+  }
+  return json::Object({{"TimelineInfo", std::move(TimelineInfo)}});
 }
 } // namespace mca
 } // namespace llvm

@@ -8,6 +8,9 @@
 
 namespace lldb {
 
+%feature("docstring",
+"Represents a processor trace."
+) SBTrace;
 class LLDB_API SBTrace {
 public:
   SBTrace();

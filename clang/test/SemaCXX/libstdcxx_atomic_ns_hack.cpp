@@ -7,29 +7,28 @@
 // namespace to be converted from non-inline to inline in this one specific
 // case.
 
+// the last 4.6 release was 2013, so the hack is removed.  This checks __atomic
+// is not special.
 #ifdef BE_THE_HEADER
 
 #pragma clang system_header
 
 namespace std {
-  namespace __atomic0 {
-    typedef int foobar;
-  }
-  namespace __atomic1 {
-    typedef void foobar;
-  }
+namespace __atomic0 { // expected-note {{previous definition}}
+typedef int foobar;
+} // namespace __atomic0
+namespace __atomic1 {
+typedef void foobar;
+} // namespace __atomic1
 
-  inline namespace __atomic0 {}
-}
+inline namespace __atomic0 {} // expected-error {{cannot be reopened as inline}}
+} // namespace std
 
 #else
 
 #define BE_THE_HEADER
 #include "libstdcxx_atomic_ns_hack.cpp"
 
-std::foobar fb;
-
-using T = void; // expected-note {{here}}
-using T = std::foobar; // expected-error {{different types ('std::foobar' (aka 'int') vs 'void')}}
+std::foobar fb; // expected-error {{no type named 'foobar' in namespace}}
 
 #endif

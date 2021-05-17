@@ -109,15 +109,15 @@ enum {
 
 struct StaticDiagInfoRec {
   uint16_t DiagID;
-  unsigned DefaultSeverity : 3;
-  unsigned Class : 3;
-  unsigned SFINAE : 2;
-  unsigned WarnNoWerror : 1;
-  unsigned WarnShowInSystemHeader : 1;
-  unsigned Deferrable : 1;
-  unsigned Category : 6;
+  uint8_t DefaultSeverity : 3;
+  uint8_t Class : 3;
+  uint8_t SFINAE : 2;
+  uint8_t Category : 6;
+  uint8_t WarnNoWerror : 1;
+  uint8_t WarnShowInSystemHeader : 1;
 
-  uint16_t OptionGroupIndex;
+  uint16_t OptionGroupIndex : 15;
+  uint16_t Deferrable : 1;
 
   uint16_t DescriptionLen;
 
@@ -168,20 +168,20 @@ VALIDATE_DIAG_SIZE(REFACTORING)
 #undef STRINGIFY_NAME
 
 const StaticDiagInfoRec StaticDiagInfo[] = {
+// clang-format off
 #define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
-             SHOWINSYSHEADER, DEFERRABLE, CATEGORY)                         \
+             SHOWINSYSHEADER, DEFERRABLE, CATEGORY)                            \
   {                                                                            \
       diag::ENUM,                                                              \
       DEFAULT_SEVERITY,                                                        \
       CLASS,                                                                   \
       DiagnosticIDs::SFINAE,                                                   \
+      CATEGORY,                                                                \
       NOWERROR,                                                                \
       SHOWINSYSHEADER,                                                         \
-	  DEFERRABLE,                                                          \
-      CATEGORY,                                                                \
       GROUP,                                                                   \
+	    DEFERRABLE,                                                              \
       STR_SIZE(DESC, uint16_t)},
-// clang-format off
 #include "clang/Basic/DiagnosticCommonKinds.inc"
 #include "clang/Basic/DiagnosticDriverKinds.inc"
 #include "clang/Basic/DiagnosticFrontendKinds.inc"
@@ -194,7 +194,7 @@ const StaticDiagInfoRec StaticDiagInfo[] = {
 #include "clang/Basic/DiagnosticSemaKinds.inc"
 #include "clang/Basic/DiagnosticAnalysisKinds.inc"
 #include "clang/Basic/DiagnosticRefactoringKinds.inc"
-  // clang-format on
+// clang-format on
 #undef DIAG
 };
 

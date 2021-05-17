@@ -319,6 +319,7 @@ void DIEHash::hashAttribute(const DIEValue &Value, dwarf::Tag Tag) {
   case DIEValue::isLabel:
   case DIEValue::isBaseTypeRef:
   case DIEValue::isDelta:
+  case DIEValue::isAddrOffset:
     llvm_unreachable("Add support for additional value types.");
   }
 }

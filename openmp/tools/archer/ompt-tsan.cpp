@@ -624,7 +624,6 @@ static void ompt_tsan_sync_region(ompt_sync_region_t kind,
     case ompt_sync_region_reduction:
       // should never be reached
       break;
-
     }
     if (endpoint == ompt_scope_begin)
       break;
@@ -683,7 +682,6 @@ static void ompt_tsan_sync_region(ompt_sync_region_t kind,
       // Should not occur according to OpenMP 5.1
       // Tested in OMPT tests
       break;
-
     }
     break;
   }

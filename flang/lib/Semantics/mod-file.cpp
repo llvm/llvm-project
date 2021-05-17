@@ -54,8 +54,8 @@ static void PutEntity(
 static void PutInit(llvm::raw_ostream &, const Symbol &, const MaybeExpr &);
 static void PutInit(llvm::raw_ostream &, const MaybeIntExpr &);
 static void PutBound(llvm::raw_ostream &, const Bound &);
-static llvm::raw_ostream &PutAttrs(llvm::raw_ostream &, Attrs,
-    const MaybeExpr & = std::nullopt, std::string before = ","s,
+llvm::raw_ostream &PutAttrs(llvm::raw_ostream &, Attrs,
+    const std::string * = nullptr, std::string before = ","s,
     std::string after = ""s);
 
 static llvm::raw_ostream &PutAttr(llvm::raw_ostream &, Attr);
@@ -81,8 +81,8 @@ private:
   const Scope &scope_;
   bool isInterface_{false};
   SymbolVector need_; // symbols that are needed
-  SymbolSet needSet_; // symbols already in need_
-  SymbolSet useSet_; // use-associations that might be needed
+  UnorderedSymbolSet needSet_; // symbols already in need_
+  UnorderedSymbolSet useSet_; // use-associations that might be needed
   std::set<SourceName> imports_; // imports from host that are needed
 
   void DoSymbol(const Symbol &);
@@ -346,7 +346,7 @@ void ModFileWriter::PutSubprogram(const Symbol &symbol) {
   if (isInterface) {
     os << (isAbstract ? "abstract " : "") << "interface\n";
   }
-  PutAttrs(os, prefixAttrs, std::nullopt, ""s, " "s);
+  PutAttrs(os, prefixAttrs, nullptr, ""s, " "s);
   os << (details.isFunction() ? "function " : "subroutine ");
   os << symbol.name() << '(';
   int n = 0;
@@ -498,7 +498,8 @@ void CollectSymbols(
   for (const auto &pair : scope.commonBlocks()) {
     sorted.push_back(*pair.second);
   }
-  std::sort(sorted.end() - commonSize, sorted.end());
+  std::sort(
+      sorted.end() - commonSize, sorted.end(), SymbolSourcePositionCompare{});
 }
 
 void PutEntity(llvm::raw_ostream &os, const Symbol &symbol) {
@@ -560,6 +561,9 @@ void PutObjectEntity(llvm::raw_ostream &os, const Symbol &symbol) {
 void PutProcEntity(llvm::raw_ostream &os, const Symbol &symbol) {
   if (symbol.attrs().test(Attr::INTRINSIC)) {
     os << "intrinsic::" << symbol.name() << '\n';
+    if (symbol.attrs().test(Attr::PRIVATE)) {
+      os << "private::" << symbol.name() << '\n';
+    }
     return;
   }
   const auto &details{symbol.get<ProcEntityDetails>()};
@@ -635,26 +639,18 @@ void PutBound(llvm::raw_ostream &os, const Bound &x) {
 void PutEntity(llvm::raw_ostream &os, const Symbol &symbol,
     std::function<void()> writeType, Attrs attrs) {
   writeType();
-  MaybeExpr bindName;
-  std::visit(common::visitors{
-                 [&](const SubprogramDetails &x) { bindName = x.bindName(); },
-                 [&](const ObjectEntityDetails &x) { bindName = x.bindName(); },
-                 [&](const ProcEntityDetails &x) { bindName = x.bindName(); },
-                 [&](const auto &) {},
-             },
-      symbol.details());
-  PutAttrs(os, attrs, bindName);
+  PutAttrs(os, attrs, symbol.GetBindName());
   os << "::" << symbol.name();
 }
 
 // Put out each attribute to os, surrounded by `before` and `after` and
 // mapped to lower case.
 llvm::raw_ostream &PutAttrs(llvm::raw_ostream &os, Attrs attrs,
-    const MaybeExpr &bindName, std::string before, std::string after) {
+    const std::string *bindName, std::string before, std::string after) {
   attrs.set(Attr::PUBLIC, false); // no need to write PUBLIC
   attrs.set(Attr::EXTERNAL, false); // no need to write EXTERNAL
   if (bindName) {
-    bindName->AsFortran(os << before << "bind(c, name=") << ')' << after;
+    os << before << "bind(c, name=\"" << *bindName << "\")" << after;
     attrs.set(Attr::BIND_C, false);
   }
   for (std::size_t i{0}; i < Attr_enumSize; ++i) {
@@ -861,13 +857,13 @@ Scope *ModFileReader::Read(const SourceName &name, Scope *ancestor) {
 parser::Message &ModFileReader::Say(const SourceName &name,
     const std::string &ancestor, parser::MessageFixedText &&msg,
     const std::string &arg) {
-  return context_
-      .Say(name,
-          ancestor.empty()
-              ? "Error reading module file for module '%s'"_err_en_US
-              : "Error reading module file for submodule '%s' of module '%s'"_err_en_US,
-          name, ancestor)
-      .Attach(name, std::move(msg), arg);
+  return context_.Say(name, "Cannot read module file for %s: %s"_err_en_US,
+      parser::MessageFormattedText{ancestor.empty()
+              ? "module '%s'"_en_US
+              : "submodule '%s' of module '%s'"_en_US,
+          name, ancestor}
+          .MoveString(),
+      parser::MessageFormattedText{std::move(msg), arg}.MoveString());
 }
 
 // program was read from a .mod file for a submodule; return the name of the

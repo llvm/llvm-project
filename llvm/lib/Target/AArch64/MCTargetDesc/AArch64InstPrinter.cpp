@@ -1152,7 +1152,7 @@ void AArch64InstPrinter::printPSBHintOp(const MCInst *MI, unsigned OpNum,
 void AArch64InstPrinter::printBTIHintOp(const MCInst *MI, unsigned OpNum,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
-  unsigned btihintop = (MI->getOperand(OpNum).getImm() ^ 32) >> 1;
+  unsigned btihintop = MI->getOperand(OpNum).getImm() ^ 32;
   auto BTI = AArch64BTIHint::lookupBTIByEncoding(btihintop);
   if (BTI)
     O << BTI->Name;
@@ -1164,8 +1164,8 @@ void AArch64InstPrinter::printFPImmOperand(const MCInst *MI, unsigned OpNum,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
-  float FPImm =
-      MO.isFPImm() ? MO.getFPImm() : AArch64_AM::getFPImmFloat(MO.getImm());
+  float FPImm = MO.isDFPImm() ? bit_cast<double>(MO.getDFPImm())
+                              : AArch64_AM::getFPImmFloat(MO.getImm());
 
   // 8 decimal places are enough to perfectly represent permitted floats.
   O << format("#%.8f", FPImm);

@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -mtriple=arm-arm-eabi -mcpu=cortex-m33 < %s -arm-parallel-dsp -S -stats 2>&1 | FileCheck %s
+; RUN: opt -mtriple=arm-none-none-eabi -mcpu=cortex-m33 < %s -arm-parallel-dsp -S -stats 2>&1 | FileCheck %s
 ;
 ; A more complicated chain: 4 mul operations, so we expect 2 smlad calls.
 ;

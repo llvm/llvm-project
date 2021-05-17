@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -E %s -pedantic -std=c++2a | FileCheck -strict-whitespace %s
+// RUN: %clang_cc1 -E %s -pedantic -std=c++20 | FileCheck -strict-whitespace %s
+// RUN: %clang_cc1 -E %s -pedantic -std=c++11 | FileCheck -strict-whitespace %s
+// RUN: %clang_cc1 -E -x c %s -pedantic -std=c99 | FileCheck -strict-whitespace %s
 
 #define LPAREN ( 
 #define RPAREN ) 

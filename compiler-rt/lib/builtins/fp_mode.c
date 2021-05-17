@@ -15,9 +15,7 @@
 #include "fp_mode.h"
 
 // IEEE-754 default rounding (to nearest, ties to even).
-FE_ROUND_MODE __fe_getround() {
-  return FE_TONEAREST;
-}
+CRT_FE_ROUND_MODE __fe_getround() { return CRT_FE_TONEAREST; }
 
 int __fe_raise_inexact() {
   return 0;

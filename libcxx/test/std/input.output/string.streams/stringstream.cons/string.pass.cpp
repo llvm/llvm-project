@@ -57,7 +57,7 @@ int main(int, char**)
         ss << i << ' ' << 123;
         assert(ss.str() == L"456 1236 ");
     }
-    { // This is https://bugs.llvm.org/show_bug.cgi?id=33727
+    { // This is https://llvm.org/PR33727
         typedef std::basic_string   <char, std::char_traits<char>, NoDefaultAllocator<char> > S;
         typedef std::basic_stringbuf<char, std::char_traits<char>, NoDefaultAllocator<char> > SB;
 

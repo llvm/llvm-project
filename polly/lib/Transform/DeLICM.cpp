@@ -868,6 +868,11 @@ private:
 
     // { DomainRead[] -> DomainWrite[] }
     auto PerPHIWrites = computePerPHI(SAI);
+    if (!PerPHIWrites) {
+      LLVM_DEBUG(
+          dbgs() << "    Reject because cannot determine incoming values\n");
+      return false;
+    }
 
     // { DomainWrite[] -> Element[] }
     auto WritesTarget = PerPHIWrites.apply_domain(PHITarget).reverse();
@@ -1175,9 +1180,6 @@ private:
     OS.indent(Indent) << "}\n";
   }
 
-  /// Return whether at least one transformation been applied.
-  bool isModified() const { return NumberOfTargetsMapped > 0; }
-
 public:
   DeLICMImpl(Scop *S, LoopInfo *LI) : ZoneAlgorithm("polly-delicm", S, LI) {}
 
@@ -1347,35 +1349,81 @@ public:
     }
     printAccesses(OS, Indent);
   }
+
+  /// Return whether at least one transformation been applied.
+  bool isModified() const { return NumberOfTargetsMapped > 0; }
 };
 
-class DeLICM : public ScopPass {
+static std::unique_ptr<DeLICMImpl> collapseToUnused(Scop &S, LoopInfo &LI) {
+  std::unique_ptr<DeLICMImpl> Impl = std::make_unique<DeLICMImpl>(&S, &LI);
+
+  if (!Impl->computeZone()) {
+    LLVM_DEBUG(dbgs() << "Abort because cannot reliably compute lifetimes\n");
+    return Impl;
+  }
+
+  LLVM_DEBUG(dbgs() << "Collapsing scalars to unused array elements...\n");
+  Impl->greedyCollapse();
+
+  LLVM_DEBUG(dbgs() << "\nFinal Scop:\n");
+  LLVM_DEBUG(dbgs() << S);
+
+  return Impl;
+}
+
+static std::unique_ptr<DeLICMImpl> runDeLICM(Scop &S, LoopInfo &LI) {
+  std::unique_ptr<DeLICMImpl> Impl = collapseToUnused(S, LI);
+
+  Scop::ScopStatistics ScopStats = S.getStatistics();
+  NumValueWrites += ScopStats.NumValueWrites;
+  NumValueWritesInLoops += ScopStats.NumValueWritesInLoops;
+  NumPHIWrites += ScopStats.NumPHIWrites;
+  NumPHIWritesInLoops += ScopStats.NumPHIWritesInLoops;
+  NumSingletonWrites += ScopStats.NumSingletonWrites;
+  NumSingletonWritesInLoops += ScopStats.NumSingletonWritesInLoops;
+
+  return Impl;
+}
+
+static PreservedAnalyses runDeLICMUsingNPM(Scop &S, ScopAnalysisManager &SAM,
+                                           ScopStandardAnalysisResults &SAR,
+                                           SPMUpdater &U, raw_ostream *OS) {
+  LoopInfo &LI = SAR.LI;
+  std::unique_ptr<DeLICMImpl> Impl = runDeLICM(S, LI);
+
+  if (OS) {
+    *OS << "Printing analysis 'Polly - DeLICM/DePRE' for region: '"
+        << S.getName() << "' in function '" << S.getFunction().getName()
+        << "':\n";
+    if (Impl) {
+      assert(Impl->getScop() == &S);
+
+      *OS << "DeLICM result:\n";
+      Impl->print(*OS);
+    }
+  }
+
+  if (!Impl->isModified())
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserveSet<AllAnalysesOn<Module>>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  PA.preserveSet<AllAnalysesOn<Loop>>();
+  return PA;
+}
+
+class DeLICMWrapperPass : public ScopPass {
 private:
-  DeLICM(const DeLICM &) = delete;
-  const DeLICM &operator=(const DeLICM &) = delete;
+  DeLICMWrapperPass(const DeLICMWrapperPass &) = delete;
+  const DeLICMWrapperPass &operator=(const DeLICMWrapperPass &) = delete;
 
   /// The pass implementation, also holding per-scop data.
   std::unique_ptr<DeLICMImpl> Impl;
 
-  void collapseToUnused(Scop &S) {
-    auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    Impl = std::make_unique<DeLICMImpl>(&S, &LI);
-
-    if (!Impl->computeZone()) {
-      LLVM_DEBUG(dbgs() << "Abort because cannot reliably compute lifetimes\n");
-      return;
-    }
-
-    LLVM_DEBUG(dbgs() << "Collapsing scalars to unused array elements...\n");
-    Impl->greedyCollapse();
-
-    LLVM_DEBUG(dbgs() << "\nFinal Scop:\n");
-    LLVM_DEBUG(dbgs() << S);
-  }
-
 public:
   static char ID;
-  explicit DeLICM() : ScopPass(ID) {}
+  explicit DeLICMWrapperPass() : ScopPass(ID) {}
 
   virtual void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequiredTransitive<ScopInfoRegionPass>();
@@ -1387,17 +1435,10 @@ public:
     // Free resources for previous scop's computation, if not yet done.
     releaseMemory();
 
-    collapseToUnused(S);
+    auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    Impl = runDeLICM(S, LI);
 
-    auto ScopStats = S.getStatistics();
-    NumValueWrites += ScopStats.NumValueWrites;
-    NumValueWritesInLoops += ScopStats.NumValueWritesInLoops;
-    NumPHIWrites += ScopStats.NumPHIWrites;
-    NumPHIWritesInLoops += ScopStats.NumPHIWritesInLoops;
-    NumSingletonWrites += ScopStats.NumSingletonWrites;
-    NumSingletonWritesInLoops += ScopStats.NumSingletonWritesInLoops;
-
-    return false;
+    return Impl->isModified();
   }
 
   virtual void printScop(raw_ostream &OS, Scop &S) const override {
@@ -1412,17 +1453,30 @@ public:
   virtual void releaseMemory() override { Impl.reset(); }
 };
 
-char DeLICM::ID;
+char DeLICMWrapperPass::ID;
 } // anonymous namespace
 
-Pass *polly::createDeLICMPass() { return new DeLICM(); }
+Pass *polly::createDeLICMWrapperPass() { return new DeLICMWrapperPass(); }
 
-INITIALIZE_PASS_BEGIN(DeLICM, "polly-delicm", "Polly - DeLICM/DePRE", false,
-                      false)
+INITIALIZE_PASS_BEGIN(DeLICMWrapperPass, "polly-delicm", "Polly - DeLICM/DePRE",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(ScopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_END(DeLICM, "polly-delicm", "Polly - DeLICM/DePRE", false,
-                    false)
+INITIALIZE_PASS_END(DeLICMWrapperPass, "polly-delicm", "Polly - DeLICM/DePRE",
+                    false, false)
+
+llvm::PreservedAnalyses DeLICMPass::run(Scop &S, ScopAnalysisManager &SAM,
+                                        ScopStandardAnalysisResults &SAR,
+                                        SPMUpdater &U) {
+  return runDeLICMUsingNPM(S, SAM, SAR, U, nullptr);
+}
+
+llvm::PreservedAnalyses DeLICMPrinterPass::run(Scop &S,
+                                               ScopAnalysisManager &SAM,
+                                               ScopStandardAnalysisResults &SAR,
+                                               SPMUpdater &U) {
+  return runDeLICMUsingNPM(S, SAM, SAR, U, &OS);
+}
 
 bool polly::isConflicting(
     isl::union_set ExistingOccupied, isl::union_set ExistingUnused,

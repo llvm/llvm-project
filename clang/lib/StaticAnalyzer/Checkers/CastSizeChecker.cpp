@@ -17,7 +17,7 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 
 using namespace clang;
 using namespace ento;
@@ -112,7 +112,7 @@ void CastSizeChecker::checkPreStmt(const CastExpr *CE,CheckerContext &C) const {
 
   SValBuilder &svalBuilder = C.getSValBuilder();
 
-  DefinedOrUnknownSVal Size = getDynamicSize(state, SR, svalBuilder);
+  DefinedOrUnknownSVal Size = getDynamicExtent(state, SR, svalBuilder);
   const llvm::APSInt *SizeInt = svalBuilder.getKnownValue(state, Size);
   if (!SizeInt)
     return;

@@ -14,6 +14,7 @@
 // still get built as part of the 'std' module, which breaks the build.
 // UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: libcpp-has-no-localization
+// UNSUPPORTED: libcpp-has-no-filesystem-library
 
 // REQUIRES: modules-support
 // ADDITIONAL_COMPILE_FLAGS: -fmodules

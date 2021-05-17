@@ -14,15 +14,15 @@ body:             |
     $v20 = IMPLICIT_DEF
     BLR8 implicit undef $lr8, implicit undef $rm
 
+# Use mtvsrdd to save two GPRs in a single instruction
 # CHECK-LABEL: name:            test1BB
 # CHECK: body:             |
 # CHECK:      liveins: $x14, $x15, $x16, $v20
-# CHECK: $f1 = MTVSRD killed $x14
-# CHECK-NEXT: $f2 = MTVSRD killed $x15
-# CHECK-NEXT: $f3 = MTVSRD killed $x16
-# CHECK: $x16 = MFVSRD killed $f3
-# CHECK-NEXT: $x15 = MFVSRD killed $f2
-# CHECK-NEXT: $x14 = MFVSRD killed $f1
+# CHECK: $v0 = MTVSRDD killed $x14, killed $x15
+# CHECK-NEXT: $vf1 = MTVSRD killed $x16
+# CHECK: $x16 = MFVSRD killed $vf1
+# CHECK-NEXT: $x15 = MFVSRLD $v0
+# CHECK-NEXT: $x14 = MFVSRD killed $vf0
 ...
 
 ---
@@ -55,15 +55,14 @@ body:             |
 ## clobbered before restored in the epilogue.
 # CHECK-LABEL: name:            test2BB
 # CHECK: body:             |
-# CHECK:        $f0 = MTVSRD killed $x14
-# CHECK-NEXT:   $f1 = MTVSRD killed $x15
-# CHECK-NEXT:   $f2 = MTVSRD killed $x16
+# CHECK:        $v0 = MTVSRDD killed $x14, killed $x15
+# CHECK-NEXT:   $vf1 = MTVSRD killed $x16
 # CHECK:      bb.2:
 # CHECK-NEXT:   successors: %bb.3
-# CHECK-NEXT:   liveins: $f0, $f1, $f2
+# CHECK-NEXT:   liveins: $v0, $v1
 # CHECK:      bb.3:
-# CHECK-NEXT:   liveins: $f0, $f1, $f2
-# CHECK:        $x16 = MFVSRD killed $f2
-# CHECK-NEXT:   $x15 = MFVSRD killed $f1
-# CHECK-NEXT:   $x14 = MFVSRD killed $f0
+# CHECK-NEXT:   liveins: $v0, $v1
+# CHECK:        $x16 = MFVSRD killed $vf1
+# CHECK-NEXT:   $x15 = MFVSRLD $v0
+# CHECK-NEXT:   $x14 = MFVSRD killed $vf0
 ...

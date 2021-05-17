@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_X86TARGETPARSERCOMMON_H
-#define LLVM_SUPPORT_X86TARGETPARSERCOMMON_H
+#ifndef LLVM_SUPPORT_X86TARGETPARSER_H
+#define LLVM_SUPPORT_X86TARGETPARSER_H
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -98,6 +98,7 @@ enum CPUKind {
   CK_Cooperlake,
   CK_Cannonlake,
   CK_IcelakeClient,
+  CK_Rocketlake,
   CK_IcelakeServer,
   CK_Tigerlake,
   CK_SapphireRapids,

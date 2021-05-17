@@ -1119,10 +1119,9 @@ bool MCAssembler::relaxDwarfLineAddr(MCAsmLayout &Layout,
   } else {
     uint32_t Offset;
     uint32_t Size;
-    bool SetDelta = MCDwarfLineAddr::FixedEncode(Context,
-                                                 getDWARFLinetableParams(),
-                                                 LineDelta, AddrDelta,
-                                                 OSE, &Offset, &Size);
+    bool SetDelta;
+    std::tie(Offset, Size, SetDelta) =
+        MCDwarfLineAddr::fixedEncode(Context, LineDelta, AddrDelta, OSE);
     // Add Fixups for address delta or new address.
     const MCExpr *FixupExpr;
     if (SetDelta) {

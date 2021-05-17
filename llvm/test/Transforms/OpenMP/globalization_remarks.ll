@@ -1,4 +1,4 @@
-; RUN: opt -passes=openmpopt -pass-remarks-analysis=openmp-opt -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=openmp-opt -pass-remarks-analysis=openmp-opt -disable-output < %s 2>&1 | FileCheck %s
 ; ModuleID = 'declare_target_codegen_globalization.cpp'
 source_filename = "declare_target_codegen_globalization.cpp"
 target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"

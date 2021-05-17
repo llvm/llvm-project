@@ -1,49 +1,49 @@
 ; RUN: opt < %s -instsimplify -S | FileCheck %s
 ; RUN: opt < %s -instsimplify -disable-simplify-libcalls -S | FileCheck %s --check-prefix=FNOBUILTIN
 
-declare double @acos(double) readnone nounwind
-declare double @asin(double) readnone nounwind
-declare double @atan(double) readnone nounwind
-declare double @atan2(double, double) readnone nounwind
-declare double @ceil(double) readnone nounwind
-declare double @cos(double) readnone nounwind
-declare double @cosh(double) readnone nounwind
-declare double @exp(double) readnone nounwind
-declare double @exp2(double) readnone nounwind
-declare double @fabs(double) readnone nounwind
-declare double @floor(double) readnone nounwind
-declare double @fmod(double, double) readnone nounwind
-declare double @log(double) readnone nounwind
-declare double @log10(double) readnone nounwind
-declare double @pow(double, double) readnone nounwind
-declare double @round(double) readnone nounwind
-declare double @sin(double) readnone nounwind
-declare double @sinh(double) readnone nounwind
-declare double @sqrt(double) readnone nounwind
-declare double @tan(double) readnone nounwind
-declare double @tanh(double) readnone nounwind
+declare double @acos(double) readnone nounwind willreturn
+declare double @asin(double) readnone nounwind willreturn
+declare double @atan(double) readnone nounwind willreturn
+declare double @atan2(double, double) readnone nounwind willreturn
+declare double @ceil(double) readnone nounwind willreturn
+declare double @cos(double) readnone nounwind willreturn
+declare double @cosh(double) readnone nounwind willreturn
+declare double @exp(double) readnone nounwind willreturn
+declare double @exp2(double) readnone nounwind willreturn
+declare double @fabs(double) readnone nounwind willreturn
+declare double @floor(double) readnone nounwind willreturn
+declare double @fmod(double, double) readnone nounwind willreturn
+declare double @log(double) readnone nounwind willreturn
+declare double @log10(double) readnone nounwind willreturn
+declare double @pow(double, double) readnone nounwind willreturn
+declare double @round(double) readnone nounwind willreturn
+declare double @sin(double) readnone nounwind willreturn
+declare double @sinh(double) readnone nounwind willreturn
+declare double @sqrt(double) readnone nounwind willreturn
+declare double @tan(double) readnone nounwind willreturn
+declare double @tanh(double) readnone nounwind willreturn
 
-declare float @acosf(float) readnone nounwind
-declare float @asinf(float) readnone nounwind
-declare float @atanf(float) readnone nounwind
-declare float @atan2f(float, float) readnone nounwind
-declare float @ceilf(float) readnone nounwind
-declare float @cosf(float) readnone nounwind
-declare float @coshf(float) readnone nounwind
-declare float @expf(float) readnone nounwind
-declare float @exp2f(float) readnone nounwind
-declare float @fabsf(float) readnone nounwind
-declare float @floorf(float) readnone nounwind
-declare float @fmodf(float, float) readnone nounwind
-declare float @logf(float) readnone nounwind
-declare float @log10f(float) readnone nounwind
-declare float @powf(float, float) readnone nounwind
-declare float @roundf(float) readnone nounwind
-declare float @sinf(float) readnone nounwind
-declare float @sinhf(float) readnone nounwind
-declare float @sqrtf(float) readnone nounwind
-declare float @tanf(float) readnone nounwind
-declare float @tanhf(float) readnone nounwind
+declare float @acosf(float) readnone nounwind willreturn
+declare float @asinf(float) readnone nounwind willreturn
+declare float @atanf(float) readnone nounwind willreturn
+declare float @atan2f(float, float) readnone nounwind willreturn
+declare float @ceilf(float) readnone nounwind willreturn
+declare float @cosf(float) readnone nounwind willreturn
+declare float @coshf(float) readnone nounwind willreturn
+declare float @expf(float) readnone nounwind willreturn
+declare float @exp2f(float) readnone nounwind willreturn
+declare float @fabsf(float) readnone nounwind willreturn
+declare float @floorf(float) readnone nounwind willreturn
+declare float @fmodf(float, float) readnone nounwind willreturn
+declare float @logf(float) readnone nounwind willreturn
+declare float @log10f(float) readnone nounwind willreturn
+declare float @powf(float, float) readnone nounwind willreturn
+declare float @roundf(float) readnone nounwind willreturn
+declare float @sinf(float) readnone nounwind willreturn
+declare float @sinhf(float) readnone nounwind willreturn
+declare float @sqrtf(float) readnone nounwind willreturn
+declare float @tanf(float) readnone nounwind willreturn
+declare float @tanhf(float) readnone nounwind willreturn
 
 define double @T() {
 ; CHECK-LABEL: @T(

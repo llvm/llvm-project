@@ -18,7 +18,7 @@ namespace lldb_private {
 class ThreadPlanStepInstruction : public ThreadPlan {
 public:
   ThreadPlanStepInstruction(Thread &thread, bool step_over, bool stop_others,
-                            Vote stop_vote, Vote run_vote);
+                            Vote report_stop_vote, Vote report_run_vote);
 
   ~ThreadPlanStepInstruction() override;
 

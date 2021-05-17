@@ -13,6 +13,7 @@
 #include "mlir/Translation.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Dialect.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Parser.h"
 #include "mlir/Support/FileUtilities.h"
@@ -97,7 +98,9 @@ TranslateFromMLIRRegistration::TranslateFromMLIRRegistration(
   registerTranslation(name, [function, dialectRegistration](
                                 llvm::SourceMgr &sourceMgr, raw_ostream &output,
                                 MLIRContext *context) {
-    dialectRegistration(context->getDialectRegistry());
+    DialectRegistry registry;
+    dialectRegistration(registry);
+    context->appendDialectRegistry(registry);
     auto module = OwningModuleRef(parseSourceFile(sourceMgr, context));
     if (!module)
       return failure();
@@ -189,7 +192,7 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
     // failed (in most cases, it is expected to fail). Instead, we check if the
     // diagnostics were produced as expected.
     SourceMgrDiagnosticVerifierHandler sourceMgrHandler(sourceMgr, &context);
-    (*translationRequested)(sourceMgr, os, &context);
+    (void)(*translationRequested)(sourceMgr, os, &context);
     return sourceMgrHandler.verify();
   };
 

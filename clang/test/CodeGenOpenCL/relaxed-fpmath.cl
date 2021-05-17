@@ -29,11 +29,11 @@ float spscalardiv(float a, float b) {
 }
 // CHECK: attributes
 
-// NORMAL: "less-precise-fpmad"="false"
-// NORMAL: "no-infs-fp-math"="false"
-// NORMAL: "no-nans-fp-math"="false"
-// NORMAL: "no-signed-zeros-fp-math"="false"
-// NORMAL: "unsafe-fp-math"="false"
+// NORMAL-NOT: "less-precise-fpmad"
+// NORMAL-NOT: "no-infs-fp-math"
+// NORMAL-NOT: "no-nans-fp-math"
+// NORMAL-NOT: "no-signed-zeros-fp-math"
+// NORMAL-NOT: "unsafe-fp-math"
 
 // FAST: "less-precise-fpmad"="true"
 // FAST: "no-infs-fp-math"="true"
@@ -41,29 +41,29 @@ float spscalardiv(float a, float b) {
 // FAST: "no-signed-zeros-fp-math"="true"
 // FAST: "unsafe-fp-math"="true"
 
-// FINITE: "less-precise-fpmad"="false"
+// FINITE-NOT: "less-precise-fpmad"
 // FINITE: "no-infs-fp-math"="true"
 // FINITE: "no-nans-fp-math"="true"
-// FINITE: "no-signed-zeros-fp-math"="false"
-// FINITE: "unsafe-fp-math"="false"
+// FINITE-NOT: "no-signed-zeros-fp-math"
+// FINITE-NOT: "unsafe-fp-math"
 
 // UNSAFE: "less-precise-fpmad"="true"
-// UNSAFE: "no-infs-fp-math"="false"
-// UNSAFE: "no-nans-fp-math"="false"
+// UNSAFE-NOT: "no-infs-fp-math"
+// UNSAFE-NOT: "no-nans-fp-math"
 // UNSAFE: "no-signed-zeros-fp-math"="true"
 // UNSAFE: "unsafe-fp-math"="true"
 
 // MAD: "less-precise-fpmad"="true"
-// MAD: "no-infs-fp-math"="false"
-// MAD: "no-nans-fp-math"="false"
-// MAD: "no-signed-zeros-fp-math"="false"
-// MAD: "unsafe-fp-math"="false"
+// MAD-NOT: "no-infs-fp-math"
+// MAD-NOT: "no-nans-fp-math"
+// MAD-NOT: "no-signed-zeros-fp-math"
+// MAD-NOT: "unsafe-fp-math"
 
-// NOSIGNED: "less-precise-fpmad"="false"
-// NOSIGNED: "no-infs-fp-math"="false"
-// NOSIGNED: "no-nans-fp-math"="false"
+// NOSIGNED-NOT: "less-precise-fpmad"
+// NOSIGNED-NOT: "no-infs-fp-math"
+// NOSIGNED-NOT: "no-nans-fp-math"
 // NOSIGNED: "no-signed-zeros-fp-math"="true"
-// NOSIGNED: "unsafe-fp-math"="false"
+// NOSIGNED-NOT: "unsafe-fp-math"
 
 #else
 // Undefine this to avoid putting it in the PCH.

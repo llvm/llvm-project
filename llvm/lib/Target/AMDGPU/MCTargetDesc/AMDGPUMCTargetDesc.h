@@ -31,7 +31,7 @@ class Target;
 class Triple;
 class raw_pwrite_stream;
 
-enum AMDGPUDwarfFlavour { Wave64 = 0, Wave32 = 1 };
+enum AMDGPUDwarfFlavour : unsigned { Wave64 = 0, Wave32 = 1 };
 
 MCRegisterInfo *createGCNMCRegisterInfo(AMDGPUDwarfFlavour DwarfFlavour);
 

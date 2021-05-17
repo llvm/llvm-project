@@ -13,6 +13,7 @@
 // const charT* do_is(const charT* low, const charT* high, mask* vec) const;
 
 // REQUIRES: locale.en_US.UTF-8
+// XFAIL: LIBCXX-WINDOWS-FIXME
 
 #include <locale>
 #include <string>

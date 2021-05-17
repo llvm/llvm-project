@@ -290,6 +290,7 @@ class declaration(object):
         self.col = col
 
 class value_iter(object):
+    '''Allows iterating over the children of an :py:class:`SBValue`.'''
     def __iter__(self):
         return self
 
@@ -311,10 +312,10 @@ class value_iter(object):
         self.length = self.sbvalue.GetNumChildren()
 
 class value(object):
-    '''A class designed to wrap :py:class:`SBValue` objects so the resulting object
-    can be used as a variable would be in code. So if you have a Point structure
-    variable in your code in the current frame named "pt", you can initialize an instance
-    of this class with it: ::
+    '''Wraps :py:class:`SBValue` objects so the resulting object can be used as a variable would be in code.
+
+    So if you have a Point structure variable in your code in the current frame named "pt",
+    you can initialize an instance of this class with it: ::
 
         pt = lldb.value(lldb.frame.FindVariable("pt"))
         print pt

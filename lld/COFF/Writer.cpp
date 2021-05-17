@@ -231,7 +231,7 @@ private:
                               ArrayRef<SectionChunk *> symIdxChunks,
                               std::vector<Symbol *> &symbols);
   void maybeAddRVATable(SymbolRVASet tableSymbols, StringRef tableSym,
-                        StringRef countSym);
+                        StringRef countSym, bool hasFlag=false);
   void setSectionPermissions();
   void writeSections();
   void writeBuildId();
@@ -1078,6 +1078,10 @@ void Writer::createExportTable() {
     edataStart = edataSec->chunks.front();
     edataEnd = edataSec->chunks.back();
   }
+  // Warn on exported deleting destructor.
+  for (auto e : config->exports)
+    if (e.sym && e.sym->getName().startswith("??_G"))
+      warn("export of deleting dtor: " + toString(*e.sym));
 }
 
 void Writer::removeUnusedSections() {
@@ -1635,17 +1639,20 @@ void Writer::createGuardCFTables() {
   SymbolRVASet giatsRVASet;
   std::vector<Symbol *> giatsSymbols;
   SymbolRVASet longJmpTargets;
+  SymbolRVASet ehContTargets;
   for (ObjFile *file : ObjFile::instances) {
     // If the object was compiled with /guard:cf, the address taken symbols
-    // are in .gfids$y sections, and the longjmp targets are in .gljmp$y
-    // sections. If the object was not compiled with /guard:cf, we assume there
-    // were no setjmp targets, and that all code symbols with relocations are
-    // possibly address-taken.
+    // are in .gfids$y sections, the longjmp targets are in .gljmp$y sections,
+    // and ehcont targets are in .gehcont$y sections. If the object was not
+    // compiled with /guard:cf, we assume there were no setjmp and ehcont
+    // targets, and that all code symbols with relocations are possibly
+    // address-taken.
     if (file->hasGuardCF()) {
       markSymbolsForRVATable(file, file->getGuardFidChunks(), addressTakenSyms);
       markSymbolsForRVATable(file, file->getGuardIATChunks(), giatsRVASet);
       getSymbolsFromSections(file, file->getGuardIATChunks(), giatsSymbols);
       markSymbolsForRVATable(file, file->getGuardLJmpChunks(), longJmpTargets);
+      markSymbolsForRVATable(file, file->getGuardEHContChunks(), ehContTargets);
     } else {
       markSymbolsWithRelocations(file, addressTakenSyms);
     }
@@ -1682,16 +1689,23 @@ void Writer::createGuardCFTables() {
                    "__guard_iat_count");
 
   // Add the longjmp target table unless the user told us not to.
-  if (config->guardCF == GuardCFLevel::Full)
+  if (config->guardCF & GuardCFLevel::LongJmp)
     maybeAddRVATable(std::move(longJmpTargets), "__guard_longjmp_table",
                      "__guard_longjmp_count");
+
+  // Add the ehcont target table unless the user told us not to.
+  if (config->guardCF & GuardCFLevel::EHCont)
+    maybeAddRVATable(std::move(ehContTargets), "__guard_eh_cont_table",
+                     "__guard_eh_cont_count", true);
 
   // Set __guard_flags, which will be used in the load config to indicate that
   // /guard:cf was enabled.
   uint32_t guardFlags = uint32_t(coff_guard_flags::CFInstrumented) |
                         uint32_t(coff_guard_flags::HasFidTable);
-  if (config->guardCF == GuardCFLevel::Full)
+  if (config->guardCF & GuardCFLevel::LongJmp)
     guardFlags |= uint32_t(coff_guard_flags::HasLongJmpTable);
+  if (config->guardCF & GuardCFLevel::EHCont)
+    guardFlags |= uint32_t(coff_guard_flags::HasEHContTable);
   Symbol *flagSym = symtab->findUnderscore("__guard_flags");
   cast<DefinedAbsolute>(flagSym)->setVA(guardFlags);
 }
@@ -1753,17 +1767,21 @@ void Writer::markSymbolsForRVATable(ObjFile *file,
 // tableChunk so that we can emit base relocations for it and resolve section
 // relative relocations.
 void Writer::maybeAddRVATable(SymbolRVASet tableSymbols, StringRef tableSym,
-                              StringRef countSym) {
+                              StringRef countSym, bool hasFlag) {
   if (tableSymbols.empty())
     return;
 
-  RVATableChunk *tableChunk = make<RVATableChunk>(std::move(tableSymbols));
+  NonSectionChunk *tableChunk;
+  if (hasFlag)
+    tableChunk = make<RVAFlagTableChunk>(std::move(tableSymbols));
+  else
+    tableChunk = make<RVATableChunk>(std::move(tableSymbols));
   rdataSec->addChunk(tableChunk);
 
   Symbol *t = symtab->findUnderscore(tableSym);
   Symbol *c = symtab->findUnderscore(countSym);
   replaceSymbol<DefinedSynthetic>(t, t->getName(), tableChunk);
-  cast<DefinedAbsolute>(c)->setVA(tableChunk->getSize() / 4);
+  cast<DefinedAbsolute>(c)->setVA(tableChunk->getSize() / (hasFlag ? 5 : 4));
 }
 
 // MinGW specific. Gather all relocations that are imported from a DLL even

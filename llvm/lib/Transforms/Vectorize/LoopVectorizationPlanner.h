@@ -25,15 +25,18 @@
 #define LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZATIONPLANNER_H
 
 #include "VPlan.h"
-#include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 
 namespace llvm {
 
+class LoopInfo;
 class LoopVectorizationLegality;
 class LoopVectorizationCostModel;
 class PredicatedScalarEvolution;
+class LoopVectorizationRequirements;
+class LoopVectorizeHints;
+class OptimizationRemarkEmitter;
+class TargetTransformInfo;
+class TargetLibraryInfo;
 class VPRecipeBuilder;
 
 /// VPlan-based builder utility analogous to IRBuilder.
@@ -142,6 +145,10 @@ public:
     return createInstruction(Instruction::BinaryOps::Or, {LHS, RHS});
   }
 
+  VPValue *createSelect(VPValue *Cond, VPValue *TrueVal, VPValue *FalseVal) {
+    return createNaryOp(Instruction::Select, {Cond, TrueVal, FalseVal});
+  }
+
   //===--------------------------------------------------------------------===//
   // RAII helpers.
   //===--------------------------------------------------------------------===//
@@ -174,7 +181,10 @@ struct VectorizationFactor {
   // Vector width with best cost
   ElementCount Width;
   // Cost of the loop with that width
-  unsigned Cost;
+  InstructionCost Cost;
+
+  VectorizationFactor(ElementCount Width, InstructionCost Cost)
+      : Width(Width), Cost(Cost) {}
 
   // Width 1 means no vectorization, cost 0 means uncomputed cost.
   static VectorizationFactor Disabled() {
@@ -216,19 +226,13 @@ class LoopVectorizationPlanner {
 
   PredicatedScalarEvolution &PSE;
 
+  const LoopVectorizeHints &Hints;
+
+  LoopVectorizationRequirements &Requirements;
+
+  OptimizationRemarkEmitter *ORE;
+
   SmallVector<VPlanPtr, 4> VPlans;
-
-  /// This class is used to enable the VPlan to invoke a method of ILV. This is
-  /// needed until the method is refactored out of ILV and becomes reusable.
-  struct VPCallbackILV : public VPCallback {
-    InnerLoopVectorizer &ILV;
-
-    VPCallbackILV(InnerLoopVectorizer &ILV) : ILV(ILV) {}
-
-    Value *getOrCreateVectorValues(Value *V, unsigned Part) override;
-    Value *getOrCreateScalarValue(Value *V,
-                                  const VPIteration &Instance) override;
-  };
 
   /// A builder used to construct the current plan.
   VPBuilder Builder;
@@ -245,9 +249,12 @@ public:
                            LoopVectorizationLegality *Legal,
                            LoopVectorizationCostModel &CM,
                            InterleavedAccessInfo &IAI,
-                           PredicatedScalarEvolution &PSE)
+                           PredicatedScalarEvolution &PSE,
+                           const LoopVectorizeHints &Hints,
+                           LoopVectorizationRequirements &Requirements,
+                           OptimizationRemarkEmitter *ORE)
       : OrigLoop(L), LI(LI), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM), IAI(IAI),
-        PSE(PSE) {}
+        PSE(PSE), Hints(Hints), Requirements(Requirements), ORE(ORE) {}
 
   /// Plan how to best vectorize, return the best VF and its cost, or None if
   /// vectorization and interleaving should be avoided up front.
@@ -264,10 +271,9 @@ public:
   /// best selected VPlan.
   void executePlan(InnerLoopVectorizer &LB, DominatorTree *DT);
 
-  void printPlans(raw_ostream &O) {
-    for (const auto &Plan : VPlans)
-      O << *Plan;
-  }
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  void printPlans(raw_ostream &O);
+#endif
 
   /// Look through the existing plans and return true if we have one with all
   /// the vectorization factors in question.

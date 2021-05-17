@@ -31,14 +31,12 @@ define dso_local signext i32 @greater_qp() {
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    addis r3, r2, a_qp@toc@ha
 ; CHECK-P8-NEXT:    addis r4, r2, b_qp@toc@ha
-; CHECK-P8-NEXT:    addis r5, r2, a_qp@toc@ha
-; CHECK-P8-NEXT:    addi r6, r5, a_qp@toc@l
-; CHECK-P8-NEXT:    addi r7, r4, b_qp@toc@l
-; CHECK-P8-NEXT:    ld r3, a_qp@toc@l(r5)
-; CHECK-P8-NEXT:    ld r5, b_qp@toc@l(r4)
-; CHECK-P8-NEXT:    ld r4, 8(r6)
-; CHECK-P8-NEXT:    ld r6, 8(r7)
+; CHECK-P8-NEXT:    addi r3, r3, a_qp@toc@l
+; CHECK-P8-NEXT:    addi r4, r4, b_qp@toc@l
+; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lvx v3, 0, r4
 ; CHECK-P8-NEXT:    bl __gtkf2
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    extsw r3, r3
@@ -79,14 +77,12 @@ define dso_local signext i32 @less_qp() {
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    addis r3, r2, a_qp@toc@ha
 ; CHECK-P8-NEXT:    addis r4, r2, b_qp@toc@ha
-; CHECK-P8-NEXT:    addis r5, r2, a_qp@toc@ha
-; CHECK-P8-NEXT:    addi r6, r5, a_qp@toc@l
-; CHECK-P8-NEXT:    addi r7, r4, b_qp@toc@l
-; CHECK-P8-NEXT:    ld r3, a_qp@toc@l(r5)
-; CHECK-P8-NEXT:    ld r5, b_qp@toc@l(r4)
-; CHECK-P8-NEXT:    ld r4, 8(r6)
-; CHECK-P8-NEXT:    ld r6, 8(r7)
+; CHECK-P8-NEXT:    addi r3, r3, a_qp@toc@l
+; CHECK-P8-NEXT:    addi r4, r4, b_qp@toc@l
+; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lvx v3, 0, r4
 ; CHECK-P8-NEXT:    bl __ltkf2
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    rlwinm r3, r3, 1, 31, 31
@@ -125,14 +121,12 @@ define dso_local signext i32 @greater_eq_qp() {
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    addis r3, r2, a_qp@toc@ha
 ; CHECK-P8-NEXT:    addis r4, r2, b_qp@toc@ha
-; CHECK-P8-NEXT:    addis r5, r2, a_qp@toc@ha
-; CHECK-P8-NEXT:    addi r6, r5, a_qp@toc@l
-; CHECK-P8-NEXT:    addi r7, r4, b_qp@toc@l
-; CHECK-P8-NEXT:    ld r3, a_qp@toc@l(r5)
-; CHECK-P8-NEXT:    ld r5, b_qp@toc@l(r4)
-; CHECK-P8-NEXT:    ld r4, 8(r6)
-; CHECK-P8-NEXT:    ld r6, 8(r7)
+; CHECK-P8-NEXT:    addi r3, r3, a_qp@toc@l
+; CHECK-P8-NEXT:    addi r4, r4, b_qp@toc@l
+; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lvx v3, 0, r4
 ; CHECK-P8-NEXT:    bl __gekf2
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    rlwinm r3, r3, 1, 31, 31
@@ -172,14 +166,12 @@ define dso_local signext i32 @less_eq_qp() {
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    addis r3, r2, a_qp@toc@ha
 ; CHECK-P8-NEXT:    addis r4, r2, b_qp@toc@ha
-; CHECK-P8-NEXT:    addis r5, r2, a_qp@toc@ha
-; CHECK-P8-NEXT:    addi r6, r5, a_qp@toc@l
-; CHECK-P8-NEXT:    addi r7, r4, b_qp@toc@l
-; CHECK-P8-NEXT:    ld r3, a_qp@toc@l(r5)
-; CHECK-P8-NEXT:    ld r5, b_qp@toc@l(r4)
-; CHECK-P8-NEXT:    ld r4, 8(r6)
-; CHECK-P8-NEXT:    ld r6, 8(r7)
+; CHECK-P8-NEXT:    addi r3, r3, a_qp@toc@l
+; CHECK-P8-NEXT:    addi r4, r4, b_qp@toc@l
+; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lvx v3, 0, r4
 ; CHECK-P8-NEXT:    bl __lekf2
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    extsw r3, r3
@@ -221,14 +213,12 @@ define dso_local signext i32 @equal_qp() {
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    addis r3, r2, a_qp@toc@ha
 ; CHECK-P8-NEXT:    addis r4, r2, b_qp@toc@ha
-; CHECK-P8-NEXT:    addis r5, r2, a_qp@toc@ha
-; CHECK-P8-NEXT:    addi r6, r5, a_qp@toc@l
-; CHECK-P8-NEXT:    addi r7, r4, b_qp@toc@l
-; CHECK-P8-NEXT:    ld r3, a_qp@toc@l(r5)
-; CHECK-P8-NEXT:    ld r5, b_qp@toc@l(r4)
-; CHECK-P8-NEXT:    ld r4, 8(r6)
-; CHECK-P8-NEXT:    ld r6, 8(r7)
+; CHECK-P8-NEXT:    addi r3, r3, a_qp@toc@l
+; CHECK-P8-NEXT:    addi r4, r4, b_qp@toc@l
+; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lvx v3, 0, r4
 ; CHECK-P8-NEXT:    bl __eqkf2
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    cntlzw r3, r3
@@ -267,14 +257,12 @@ define dso_local signext i32 @not_greater_qp() {
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    addis r3, r2, a_qp@toc@ha
 ; CHECK-P8-NEXT:    addis r4, r2, b_qp@toc@ha
-; CHECK-P8-NEXT:    addis r5, r2, a_qp@toc@ha
-; CHECK-P8-NEXT:    addi r6, r5, a_qp@toc@l
-; CHECK-P8-NEXT:    addi r7, r4, b_qp@toc@l
-; CHECK-P8-NEXT:    ld r3, a_qp@toc@l(r5)
-; CHECK-P8-NEXT:    ld r5, b_qp@toc@l(r4)
-; CHECK-P8-NEXT:    ld r4, 8(r6)
-; CHECK-P8-NEXT:    ld r6, 8(r7)
+; CHECK-P8-NEXT:    addi r3, r3, a_qp@toc@l
+; CHECK-P8-NEXT:    addi r4, r4, b_qp@toc@l
+; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lvx v3, 0, r4
 ; CHECK-P8-NEXT:    bl __gtkf2
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    extsw r3, r3
@@ -316,14 +304,12 @@ define dso_local signext i32 @not_less_qp() {
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    addis r3, r2, a_qp@toc@ha
 ; CHECK-P8-NEXT:    addis r4, r2, b_qp@toc@ha
-; CHECK-P8-NEXT:    addis r5, r2, a_qp@toc@ha
-; CHECK-P8-NEXT:    addi r6, r5, a_qp@toc@l
-; CHECK-P8-NEXT:    addi r7, r4, b_qp@toc@l
-; CHECK-P8-NEXT:    ld r3, a_qp@toc@l(r5)
-; CHECK-P8-NEXT:    ld r5, b_qp@toc@l(r4)
-; CHECK-P8-NEXT:    ld r4, 8(r6)
-; CHECK-P8-NEXT:    ld r6, 8(r7)
+; CHECK-P8-NEXT:    addi r3, r3, a_qp@toc@l
+; CHECK-P8-NEXT:    addi r4, r4, b_qp@toc@l
+; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lvx v3, 0, r4
 ; CHECK-P8-NEXT:    bl __ltkf2
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    rlwinm r3, r3, 1, 31, 31
@@ -364,14 +350,12 @@ define dso_local signext i32 @not_greater_eq_qp() {
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    addis r3, r2, a_qp@toc@ha
 ; CHECK-P8-NEXT:    addis r4, r2, b_qp@toc@ha
-; CHECK-P8-NEXT:    addis r5, r2, a_qp@toc@ha
-; CHECK-P8-NEXT:    addi r6, r5, a_qp@toc@l
-; CHECK-P8-NEXT:    addi r7, r4, b_qp@toc@l
-; CHECK-P8-NEXT:    ld r3, a_qp@toc@l(r5)
-; CHECK-P8-NEXT:    ld r5, b_qp@toc@l(r4)
-; CHECK-P8-NEXT:    ld r4, 8(r6)
-; CHECK-P8-NEXT:    ld r6, 8(r7)
+; CHECK-P8-NEXT:    addi r3, r3, a_qp@toc@l
+; CHECK-P8-NEXT:    addi r4, r4, b_qp@toc@l
+; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lvx v3, 0, r4
 ; CHECK-P8-NEXT:    bl __gekf2
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    rlwinm r3, r3, 1, 31, 31
@@ -411,14 +395,12 @@ define dso_local signext i32 @not_less_eq_qp() {
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    addis r3, r2, a_qp@toc@ha
 ; CHECK-P8-NEXT:    addis r4, r2, b_qp@toc@ha
-; CHECK-P8-NEXT:    addis r5, r2, a_qp@toc@ha
-; CHECK-P8-NEXT:    addi r6, r5, a_qp@toc@l
-; CHECK-P8-NEXT:    addi r7, r4, b_qp@toc@l
-; CHECK-P8-NEXT:    ld r3, a_qp@toc@l(r5)
-; CHECK-P8-NEXT:    ld r5, b_qp@toc@l(r4)
-; CHECK-P8-NEXT:    ld r4, 8(r6)
-; CHECK-P8-NEXT:    ld r6, 8(r7)
+; CHECK-P8-NEXT:    addi r3, r3, a_qp@toc@l
+; CHECK-P8-NEXT:    addi r4, r4, b_qp@toc@l
+; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lvx v3, 0, r4
 ; CHECK-P8-NEXT:    bl __lekf2
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    extsw r3, r3
@@ -459,14 +441,12 @@ define dso_local signext i32 @not_equal_qp() {
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    addis r3, r2, a_qp@toc@ha
 ; CHECK-P8-NEXT:    addis r4, r2, b_qp@toc@ha
-; CHECK-P8-NEXT:    addis r5, r2, a_qp@toc@ha
-; CHECK-P8-NEXT:    addi r6, r5, a_qp@toc@l
-; CHECK-P8-NEXT:    addi r7, r4, b_qp@toc@l
-; CHECK-P8-NEXT:    ld r3, a_qp@toc@l(r5)
-; CHECK-P8-NEXT:    ld r5, b_qp@toc@l(r4)
-; CHECK-P8-NEXT:    ld r4, 8(r6)
-; CHECK-P8-NEXT:    ld r6, 8(r7)
+; CHECK-P8-NEXT:    addi r3, r3, a_qp@toc@l
+; CHECK-P8-NEXT:    addi r4, r4, b_qp@toc@l
+; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lvx v3, 0, r4
 ; CHECK-P8-NEXT:    bl __nekf2
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    cntlzw r3, r3
@@ -503,41 +483,38 @@ define fp128 @greater_sel_qp() {
 ; CHECK-P8-LABEL: greater_sel_qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    .cfi_offset r27, -40
-; CHECK-P8-NEXT:    .cfi_offset r28, -32
-; CHECK-P8-NEXT:    .cfi_offset r29, -24
-; CHECK-P8-NEXT:    .cfi_offset r30, -16
-; CHECK-P8-NEXT:    std r27, -40(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -80(r1)
-; CHECK-P8-NEXT:    addis r3, r2, b_qp@toc@ha
-; CHECK-P8-NEXT:    addis r4, r2, a_qp@toc@ha
-; CHECK-P8-NEXT:    ld r30, a_qp@toc@l(r4)
-; CHECK-P8-NEXT:    addi r4, r4, a_qp@toc@l
-; CHECK-P8-NEXT:    ld r29, b_qp@toc@l(r3)
-; CHECK-P8-NEXT:    addi r3, r3, b_qp@toc@l
-; CHECK-P8-NEXT:    ld r28, 8(r4)
-; CHECK-P8-NEXT:    ld r27, 8(r3)
-; CHECK-P8-NEXT:    mr r3, r30
-; CHECK-P8-NEXT:    mr r5, r29
-; CHECK-P8-NEXT:    mr r4, r28
-; CHECK-P8-NEXT:    mr r6, r27
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset v30, -32
+; CHECK-P8-NEXT:    .cfi_offset v31, -16
+; CHECK-P8-NEXT:    li r3, 48
+; CHECK-P8-NEXT:    addis r4, r2, b_qp@toc@ha
+; CHECK-P8-NEXT:    stvx v30, r1, r3 # 16-byte Folded Spill
+; CHECK-P8-NEXT:    li r3, 64
+; CHECK-P8-NEXT:    addi r4, r4, b_qp@toc@l
+; CHECK-P8-NEXT:    stvx v31, r1, r3 # 16-byte Folded Spill
+; CHECK-P8-NEXT:    addis r3, r2, a_qp@toc@ha
+; CHECK-P8-NEXT:    lvx v30, 0, r4
+; CHECK-P8-NEXT:    addi r3, r3, a_qp@toc@l
+; CHECK-P8-NEXT:    lvx v31, 0, r3
+; CHECK-P8-NEXT:    vmr v3, v30
+; CHECK-P8-NEXT:    vmr v2, v31
 ; CHECK-P8-NEXT:    bl __gtkf2
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    cmpwi r3, 0
-; CHECK-P8-NEXT:    iselgt r3, r30, r29
-; CHECK-P8-NEXT:    iselgt r4, r28, r27
+; CHECK-P8-NEXT:    bgt cr0, .LBB10_2
+; CHECK-P8-NEXT:  # %bb.1: # %entry
+; CHECK-P8-NEXT:    vmr v31, v30
+; CHECK-P8-NEXT:  .LBB10_2: # %entry
+; CHECK-P8-NEXT:    li r3, 64
+; CHECK-P8-NEXT:    vmr v2, v31
+; CHECK-P8-NEXT:    lvx v31, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    li r3, 48
+; CHECK-P8-NEXT:    lvx v30, r1, r3 # 16-byte Folded Reload
 ; CHECK-P8-NEXT:    addi r1, r1, 80
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
-; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r27, -40(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
@@ -567,41 +544,38 @@ define fp128 @less_sel_qp() {
 ; CHECK-P8-LABEL: less_sel_qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    .cfi_offset r27, -40
-; CHECK-P8-NEXT:    .cfi_offset r28, -32
-; CHECK-P8-NEXT:    .cfi_offset r29, -24
-; CHECK-P8-NEXT:    .cfi_offset r30, -16
-; CHECK-P8-NEXT:    std r27, -40(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -80(r1)
-; CHECK-P8-NEXT:    addis r3, r2, b_qp@toc@ha
-; CHECK-P8-NEXT:    addis r4, r2, a_qp@toc@ha
-; CHECK-P8-NEXT:    ld r30, a_qp@toc@l(r4)
-; CHECK-P8-NEXT:    addi r4, r4, a_qp@toc@l
-; CHECK-P8-NEXT:    ld r29, b_qp@toc@l(r3)
-; CHECK-P8-NEXT:    addi r3, r3, b_qp@toc@l
-; CHECK-P8-NEXT:    ld r28, 8(r4)
-; CHECK-P8-NEXT:    ld r27, 8(r3)
-; CHECK-P8-NEXT:    mr r3, r30
-; CHECK-P8-NEXT:    mr r5, r29
-; CHECK-P8-NEXT:    mr r4, r28
-; CHECK-P8-NEXT:    mr r6, r27
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset v30, -32
+; CHECK-P8-NEXT:    .cfi_offset v31, -16
+; CHECK-P8-NEXT:    li r3, 48
+; CHECK-P8-NEXT:    addis r4, r2, b_qp@toc@ha
+; CHECK-P8-NEXT:    stvx v30, r1, r3 # 16-byte Folded Spill
+; CHECK-P8-NEXT:    li r3, 64
+; CHECK-P8-NEXT:    addi r4, r4, b_qp@toc@l
+; CHECK-P8-NEXT:    stvx v31, r1, r3 # 16-byte Folded Spill
+; CHECK-P8-NEXT:    addis r3, r2, a_qp@toc@ha
+; CHECK-P8-NEXT:    lvx v30, 0, r4
+; CHECK-P8-NEXT:    addi r3, r3, a_qp@toc@l
+; CHECK-P8-NEXT:    lvx v31, 0, r3
+; CHECK-P8-NEXT:    vmr v3, v30
+; CHECK-P8-NEXT:    vmr v2, v31
 ; CHECK-P8-NEXT:    bl __ltkf2
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    cmpwi r3, 0
-; CHECK-P8-NEXT:    isellt r3, r30, r29
-; CHECK-P8-NEXT:    isellt r4, r28, r27
+; CHECK-P8-NEXT:    blt cr0, .LBB11_2
+; CHECK-P8-NEXT:  # %bb.1: # %entry
+; CHECK-P8-NEXT:    vmr v31, v30
+; CHECK-P8-NEXT:  .LBB11_2: # %entry
+; CHECK-P8-NEXT:    li r3, 64
+; CHECK-P8-NEXT:    vmr v2, v31
+; CHECK-P8-NEXT:    lvx v31, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    li r3, 48
+; CHECK-P8-NEXT:    lvx v30, r1, r3 # 16-byte Folded Reload
 ; CHECK-P8-NEXT:    addi r1, r1, 80
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
-; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r27, -40(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
@@ -632,41 +606,38 @@ define fp128 @greater_eq_sel_qp() {
 ; CHECK-P8-LABEL: greater_eq_sel_qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    .cfi_offset r27, -40
-; CHECK-P8-NEXT:    .cfi_offset r28, -32
-; CHECK-P8-NEXT:    .cfi_offset r29, -24
-; CHECK-P8-NEXT:    .cfi_offset r30, -16
-; CHECK-P8-NEXT:    std r27, -40(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -80(r1)
-; CHECK-P8-NEXT:    addis r3, r2, b_qp@toc@ha
-; CHECK-P8-NEXT:    addis r4, r2, a_qp@toc@ha
-; CHECK-P8-NEXT:    ld r30, a_qp@toc@l(r4)
-; CHECK-P8-NEXT:    addi r4, r4, a_qp@toc@l
-; CHECK-P8-NEXT:    ld r29, b_qp@toc@l(r3)
-; CHECK-P8-NEXT:    addi r3, r3, b_qp@toc@l
-; CHECK-P8-NEXT:    ld r28, 8(r4)
-; CHECK-P8-NEXT:    ld r27, 8(r3)
-; CHECK-P8-NEXT:    mr r3, r30
-; CHECK-P8-NEXT:    mr r5, r29
-; CHECK-P8-NEXT:    mr r4, r28
-; CHECK-P8-NEXT:    mr r6, r27
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset v30, -32
+; CHECK-P8-NEXT:    .cfi_offset v31, -16
+; CHECK-P8-NEXT:    li r3, 48
+; CHECK-P8-NEXT:    addis r4, r2, b_qp@toc@ha
+; CHECK-P8-NEXT:    stvx v30, r1, r3 # 16-byte Folded Spill
+; CHECK-P8-NEXT:    li r3, 64
+; CHECK-P8-NEXT:    addi r4, r4, b_qp@toc@l
+; CHECK-P8-NEXT:    stvx v31, r1, r3 # 16-byte Folded Spill
+; CHECK-P8-NEXT:    addis r3, r2, a_qp@toc@ha
+; CHECK-P8-NEXT:    lvx v30, 0, r4
+; CHECK-P8-NEXT:    addi r3, r3, a_qp@toc@l
+; CHECK-P8-NEXT:    lvx v31, 0, r3
+; CHECK-P8-NEXT:    vmr v3, v30
+; CHECK-P8-NEXT:    vmr v2, v31
 ; CHECK-P8-NEXT:    bl __gekf2
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    cmpwi r3, -1
-; CHECK-P8-NEXT:    iselgt r3, r30, r29
-; CHECK-P8-NEXT:    iselgt r4, r28, r27
+; CHECK-P8-NEXT:    bgt cr0, .LBB12_2
+; CHECK-P8-NEXT:  # %bb.1: # %entry
+; CHECK-P8-NEXT:    vmr v31, v30
+; CHECK-P8-NEXT:  .LBB12_2: # %entry
+; CHECK-P8-NEXT:    li r3, 64
+; CHECK-P8-NEXT:    vmr v2, v31
+; CHECK-P8-NEXT:    lvx v31, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    li r3, 48
+; CHECK-P8-NEXT:    lvx v30, r1, r3 # 16-byte Folded Reload
 ; CHECK-P8-NEXT:    addi r1, r1, 80
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
-; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r27, -40(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
@@ -697,41 +668,38 @@ define fp128 @less_eq_sel_qp() {
 ; CHECK-P8-LABEL: less_eq_sel_qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    .cfi_offset r27, -40
-; CHECK-P8-NEXT:    .cfi_offset r28, -32
-; CHECK-P8-NEXT:    .cfi_offset r29, -24
-; CHECK-P8-NEXT:    .cfi_offset r30, -16
-; CHECK-P8-NEXT:    std r27, -40(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -80(r1)
-; CHECK-P8-NEXT:    addis r3, r2, b_qp@toc@ha
-; CHECK-P8-NEXT:    addis r4, r2, a_qp@toc@ha
-; CHECK-P8-NEXT:    ld r30, a_qp@toc@l(r4)
-; CHECK-P8-NEXT:    addi r4, r4, a_qp@toc@l
-; CHECK-P8-NEXT:    ld r29, b_qp@toc@l(r3)
-; CHECK-P8-NEXT:    addi r3, r3, b_qp@toc@l
-; CHECK-P8-NEXT:    ld r28, 8(r4)
-; CHECK-P8-NEXT:    ld r27, 8(r3)
-; CHECK-P8-NEXT:    mr r3, r30
-; CHECK-P8-NEXT:    mr r5, r29
-; CHECK-P8-NEXT:    mr r4, r28
-; CHECK-P8-NEXT:    mr r6, r27
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset v30, -32
+; CHECK-P8-NEXT:    .cfi_offset v31, -16
+; CHECK-P8-NEXT:    li r3, 48
+; CHECK-P8-NEXT:    addis r4, r2, b_qp@toc@ha
+; CHECK-P8-NEXT:    stvx v30, r1, r3 # 16-byte Folded Spill
+; CHECK-P8-NEXT:    li r3, 64
+; CHECK-P8-NEXT:    addi r4, r4, b_qp@toc@l
+; CHECK-P8-NEXT:    stvx v31, r1, r3 # 16-byte Folded Spill
+; CHECK-P8-NEXT:    addis r3, r2, a_qp@toc@ha
+; CHECK-P8-NEXT:    lvx v30, 0, r4
+; CHECK-P8-NEXT:    addi r3, r3, a_qp@toc@l
+; CHECK-P8-NEXT:    lvx v31, 0, r3
+; CHECK-P8-NEXT:    vmr v3, v30
+; CHECK-P8-NEXT:    vmr v2, v31
 ; CHECK-P8-NEXT:    bl __lekf2
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    cmpwi r3, 1
-; CHECK-P8-NEXT:    isellt r3, r30, r29
-; CHECK-P8-NEXT:    isellt r4, r28, r27
+; CHECK-P8-NEXT:    blt cr0, .LBB13_2
+; CHECK-P8-NEXT:  # %bb.1: # %entry
+; CHECK-P8-NEXT:    vmr v31, v30
+; CHECK-P8-NEXT:  .LBB13_2: # %entry
+; CHECK-P8-NEXT:    li r3, 64
+; CHECK-P8-NEXT:    vmr v2, v31
+; CHECK-P8-NEXT:    lvx v31, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    li r3, 48
+; CHECK-P8-NEXT:    lvx v30, r1, r3 # 16-byte Folded Reload
 ; CHECK-P8-NEXT:    addi r1, r1, 80
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
-; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r27, -40(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
@@ -761,41 +729,38 @@ define fp128 @equal_sel_qp() {
 ; CHECK-P8-LABEL: equal_sel_qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    .cfi_offset r27, -40
-; CHECK-P8-NEXT:    .cfi_offset r28, -32
-; CHECK-P8-NEXT:    .cfi_offset r29, -24
-; CHECK-P8-NEXT:    .cfi_offset r30, -16
-; CHECK-P8-NEXT:    std r27, -40(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -80(r1)
-; CHECK-P8-NEXT:    addis r3, r2, b_qp@toc@ha
-; CHECK-P8-NEXT:    addis r4, r2, a_qp@toc@ha
-; CHECK-P8-NEXT:    ld r30, a_qp@toc@l(r4)
-; CHECK-P8-NEXT:    addi r4, r4, a_qp@toc@l
-; CHECK-P8-NEXT:    ld r29, b_qp@toc@l(r3)
-; CHECK-P8-NEXT:    addi r3, r3, b_qp@toc@l
-; CHECK-P8-NEXT:    ld r28, 8(r4)
-; CHECK-P8-NEXT:    ld r27, 8(r3)
-; CHECK-P8-NEXT:    mr r3, r30
-; CHECK-P8-NEXT:    mr r5, r29
-; CHECK-P8-NEXT:    mr r4, r28
-; CHECK-P8-NEXT:    mr r6, r27
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset v30, -32
+; CHECK-P8-NEXT:    .cfi_offset v31, -16
+; CHECK-P8-NEXT:    li r3, 48
+; CHECK-P8-NEXT:    addis r4, r2, b_qp@toc@ha
+; CHECK-P8-NEXT:    stvx v30, r1, r3 # 16-byte Folded Spill
+; CHECK-P8-NEXT:    li r3, 64
+; CHECK-P8-NEXT:    addi r4, r4, b_qp@toc@l
+; CHECK-P8-NEXT:    stvx v31, r1, r3 # 16-byte Folded Spill
+; CHECK-P8-NEXT:    addis r3, r2, a_qp@toc@ha
+; CHECK-P8-NEXT:    lvx v30, 0, r4
+; CHECK-P8-NEXT:    addi r3, r3, a_qp@toc@l
+; CHECK-P8-NEXT:    lvx v31, 0, r3
+; CHECK-P8-NEXT:    vmr v3, v30
+; CHECK-P8-NEXT:    vmr v2, v31
 ; CHECK-P8-NEXT:    bl __eqkf2
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    cmplwi r3, 0
-; CHECK-P8-NEXT:    iseleq r3, r30, r29
-; CHECK-P8-NEXT:    iseleq r4, r28, r27
+; CHECK-P8-NEXT:    beq cr0, .LBB14_2
+; CHECK-P8-NEXT:  # %bb.1: # %entry
+; CHECK-P8-NEXT:    vmr v31, v30
+; CHECK-P8-NEXT:  .LBB14_2: # %entry
+; CHECK-P8-NEXT:    li r3, 64
+; CHECK-P8-NEXT:    vmr v2, v31
+; CHECK-P8-NEXT:    lvx v31, r1, r3 # 16-byte Folded Reload
+; CHECK-P8-NEXT:    li r3, 48
+; CHECK-P8-NEXT:    lvx v30, r1, r3 # 16-byte Folded Reload
 ; CHECK-P8-NEXT:    addi r1, r1, 80
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
-; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
-; CHECK-P8-NEXT:    ld r27, -40(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:

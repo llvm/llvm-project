@@ -69,7 +69,3 @@ Status OptionValueLanguage::SetValueFromString(llvm::StringRef value,
   }
   return error;
 }
-
-lldb::OptionValueSP OptionValueLanguage::DeepCopy() const {
-  return OptionValueSP(new OptionValueLanguage(*this));
-}

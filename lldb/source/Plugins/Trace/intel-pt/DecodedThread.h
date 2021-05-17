@@ -15,6 +15,7 @@
 #include "llvm/Support/Error.h"
 
 #include "lldb/Target/Trace.h"
+#include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
 
 #include "intel-pt.h"
 
@@ -110,6 +111,10 @@ public:
   DecodedThread(std::vector<IntelPTInstruction> &&instructions)
       : m_instructions(std::move(instructions)), m_position(GetLastPosition()) {
   }
+
+  /// Constructor with a single error signaling a complete failure of the
+  /// decoding process.
+  DecodedThread(llvm::Error error);
 
   /// Get the instructions from the decoded trace. Some of them might indicate
   /// errors (i.e. gaps) in the trace.

@@ -57,7 +57,7 @@ public:
     constexpr UIntType step = UIntType(-1) / count;
     for (UIntType i = 0, v = 0, w = UIntType(-1); i <= count;
          ++i, v += step, w -= step) {
-      T x = FPBits(v), y = FPBits(w);
+      T x = T(FPBits(v)), y = T(FPBits(w));
       if (isnan(x) || isinf(x))
         continue;
       if (isnan(y) || isinf(y))
@@ -74,9 +74,9 @@ public:
 private:
   // constexpr does not work on FPBits yet, so we cannot have these constants as
   // static.
-  const T nan = __llvm_libc::fputil::FPBits<T>::buildNaN(1);
-  const T inf = __llvm_libc::fputil::FPBits<T>::inf();
-  const T negInf = __llvm_libc::fputil::FPBits<T>::negInf();
-  const T zero = __llvm_libc::fputil::FPBits<T>::zero();
-  const T negZero = __llvm_libc::fputil::FPBits<T>::negZero();
+  const T nan = T(__llvm_libc::fputil::FPBits<T>::buildNaN(1));
+  const T inf = T(__llvm_libc::fputil::FPBits<T>::inf());
+  const T negInf = T(__llvm_libc::fputil::FPBits<T>::negInf());
+  const T zero = T(__llvm_libc::fputil::FPBits<T>::zero());
+  const T negZero = T(__llvm_libc::fputil::FPBits<T>::negZero());
 };

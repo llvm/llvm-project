@@ -198,26 +198,14 @@ void AsmPrinter::emitDwarfLengthOrOffset(uint64_t Value) const {
   OutStreamer->emitIntValue(Value, getDwarfOffsetByteSize());
 }
 
-void AsmPrinter::maybeEmitDwarf64Mark() const {
-  if (!isDwarf64())
-    return;
-  OutStreamer->AddComment("DWARF64 Mark");
-  OutStreamer->emitInt32(dwarf::DW_LENGTH_DWARF64);
-}
-
 void AsmPrinter::emitDwarfUnitLength(uint64_t Length,
                                      const Twine &Comment) const {
-  assert(isDwarf64() || Length <= dwarf::DW_LENGTH_lo_reserved);
-  maybeEmitDwarf64Mark();
-  OutStreamer->AddComment(Comment);
-  OutStreamer->emitIntValue(Length, getDwarfOffsetByteSize());
+  OutStreamer->emitDwarfUnitLength(Length, Comment);
 }
 
-void AsmPrinter::emitDwarfUnitLength(const MCSymbol *Hi, const MCSymbol *Lo,
-                                     const Twine &Comment) const {
-  maybeEmitDwarf64Mark();
-  OutStreamer->AddComment(Comment);
-  OutStreamer->emitAbsoluteSymbolDiff(Hi, Lo, getDwarfOffsetByteSize());
+MCSymbol *AsmPrinter::emitDwarfUnitLength(const Twine &Prefix,
+                                          const Twine &Comment) const {
+  return OutStreamer->emitDwarfUnitLength(Prefix, Comment);
 }
 
 void AsmPrinter::emitCallSiteOffset(const MCSymbol *Hi, const MCSymbol *Lo,

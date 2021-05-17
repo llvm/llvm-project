@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %S/test_errors.sh %s %t %flang_fc1
 ! 15.5.1 procedure reference constraints and restrictions
 
 subroutine s01(elem, subr)
@@ -19,11 +19,9 @@ subroutine s01(elem, subr)
   call subr(cos) ! not an error
   !ERROR: Non-intrinsic ELEMENTAL procedure 'elem' may not be passed as an actual argument
   call subr(elem) ! C1533
-  !ERROR: Actual argument associated with procedure dummy argument 'dummy=' is not a procedure
-  !ERROR: Actual argument associated with non-POINTER procedure dummy argument 'dummy=' must be a procedure (and not a procedure pointer)
+  !ERROR: Actual argument associated with procedure dummy argument 'dummy=' is a null pointer
   call subr(null())
-  !ERROR: Actual argument associated with procedure dummy argument 'dummy=' is not a procedure
-  !ERROR: Actual argument associated with non-POINTER procedure dummy argument 'dummy=' must be a procedure (and not a procedure pointer)
+  !ERROR: Actual argument associated with procedure dummy argument 'dummy=' is typeless
   call subr(B"1010")
 end subroutine
 

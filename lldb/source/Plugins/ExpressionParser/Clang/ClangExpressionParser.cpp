@@ -343,6 +343,7 @@ static void SetupDefaultClangDiagnostics(CompilerInstance &compiler) {
   const std::vector<const char *> groupsToIgnore = {
       "unused-value",
       "odr",
+      "unused-getter-return-value",
   };
   for (const char *group : groupsToIgnore) {
     compiler.getDiagnostics().setSeverityForGroup(
@@ -513,7 +514,7 @@ ClangExpressionParser::ClangExpressionParser(
     LLDB_LOGF(log, "Using SIMD alignment: %d",
               target_info->getSimdDefaultAlign());
     LLDB_LOGF(log, "Target datalayout string: '%s'",
-              target_info->getDataLayout().getStringRepresentation().c_str());
+              target_info->getDataLayoutString());
     LLDB_LOGF(log, "Target ABI: '%s'", target_info->getABI().str().c_str());
     LLDB_LOGF(log, "Target vector alignment: %d",
               target_info->getMaxVectorAlign());
@@ -1073,8 +1074,8 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
       if (file.Write(expr_text, bytes_written).Success()) {
         if (bytes_written == expr_text_len) {
           file.Close();
-          if (auto fileEntry =
-                  m_compiler->getFileManager().getFile(result_path)) {
+          if (auto fileEntry = m_compiler->getFileManager().getOptionalFileRef(
+                  result_path)) {
             source_mgr.setMainFileID(source_mgr.createFileID(
                 *fileEntry,
                 SourceLocation(), SrcMgr::C_User));

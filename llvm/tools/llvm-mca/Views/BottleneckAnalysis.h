@@ -80,14 +80,14 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_BOTTLENECK_ANALYSIS_H
 #define LLVM_TOOLS_LLVM_MCA_BOTTLENECK_ANALYSIS_H
 
-#include "Views/View.h"
+#include "Views/InstructionView.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 namespace mca {
@@ -332,6 +332,8 @@ public:
   void onEvent(const HWInstructionEvent &Event) override;
 
   void printView(raw_ostream &OS) const override;
+  StringRef getNameAsString() const override { return "BottleneckAnalysis"; }
+  json::Value toJSON() const override { return "not implemented"; }
 
 #ifndef NDEBUG
   void dump(raw_ostream &OS, MCInstPrinter &MCIP) const { DG.dump(OS, MCIP); }

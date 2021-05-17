@@ -1,4 +1,4 @@
-; RUN: opt -pgo-kind=pgo-instr-gen-pipeline -aa-pipeline=default -passes="default<O3>" -enable-nontrivial-unswitch -S < %s | FileCheck %s
+; RUN: opt -pgo-kind=pgo-instr-gen-pipeline -passes="default<O3>" -enable-nontrivial-unswitch -S < %s | FileCheck %s
 ; REQUIRES: asserts
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

@@ -501,7 +501,7 @@ define <16 x i16> @merge_16i16_i16_0uu3zzuuuuuzCuEF(i16* %ptr) nounwind uwtable 
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    vmovups (%eax), %ymm0
-; X86-AVX-NEXT:    vandps {{\.LCPI.*}}, %ymm0, %ymm0
+; X86-AVX-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-AVX-NEXT:    retl
   %ptr0 = getelementptr inbounds i16, i16* %ptr, i64 0
   %ptr3 = getelementptr inbounds i16, i16* %ptr, i64 3

@@ -386,6 +386,13 @@ __declspec(dllimport) inline void FunctionWithNormalVar() { static int x = 42; }
 USE(FunctionWithTLSVar)
 USE(FunctionWithNormalVar)
 
+// always_inline and __force_inline take precedence.
+__declspec(dllimport) inline int ReferencingNonImportedFuncAlwaysInline() __attribute__((always_inline)) { return NonImportedFunc(); }
+USE(ReferencingNonImportedFuncAlwaysInline)
+// MO1-DAG: define available_externally dllimport i32 @"?ReferencingNonImportedFuncAlwaysInline@@YAHXZ"
+__declspec(dllimport) __forceinline int ReferencingNonImportedFuncForceInline() { return NonImportedFunc(); }
+USE(ReferencingNonImportedFuncForceInline)
+// MO1-DAG: define available_externally dllimport i32 @"?ReferencingNonImportedFuncForceInline@@YAHXZ"
 
 //===----------------------------------------------------------------------===//
 // Function templates

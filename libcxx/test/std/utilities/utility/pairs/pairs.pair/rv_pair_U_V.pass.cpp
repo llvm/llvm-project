@@ -65,6 +65,17 @@ struct ImplicitT {
   int value;
 };
 
+struct NotCopyOrMoveConstructible {
+  NotCopyOrMoveConstructible() = default;
+  NotCopyOrMoveConstructible(NotCopyOrMoveConstructible const&) = delete;
+  NotCopyOrMoveConstructible(NotCopyOrMoveConstructible&&) = delete;
+};
+
+struct NonCopyConstructible {
+    NonCopyConstructible(NonCopyConstructible const&) = delete;
+    NonCopyConstructible(NonCopyConstructible&&) = default;
+};
+
 int main(int, char**)
 {
     {
@@ -160,6 +171,41 @@ int main(int, char**)
         test_pair_rv<ExplicitTypes::ConvertingType, ExplicitTypes::ConvertingType const&, true, false>();
         test_pair_rv<ExplicitTypes::ConvertingType, ExplicitTypes::ConvertingType&, true, false>();
         test_pair_rv<ExplicitTypes::ConvertingType, ExplicitTypes::ConvertingType&&, true, false>();
+    }
+    {
+        // When constructing a pair containing a reference, we only bind the
+        // reference, so it doesn't matter whether the type is or isn't
+        // copy/move constructible.
+        {
+            using P1 = std::pair<NotCopyOrMoveConstructible&, long>;
+            using P2 = std::pair<NotCopyOrMoveConstructible&, int>;
+            static_assert(std::is_constructible<P1, P2&&>::value, "");
+
+            NotCopyOrMoveConstructible obj;
+            P2 p2{obj, 3};
+            P1 p1(std::move(p2));
+            assert(&p1.first == &obj);
+            assert(&p2.first == &obj);
+        }
+        {
+            using P1 = std::pair<NotCopyOrMoveConstructible&&, long>;
+            using P2 = std::pair<NotCopyOrMoveConstructible&&, int>;
+            static_assert(std::is_constructible<P1, P2&&>::value, "");
+
+            NotCopyOrMoveConstructible obj;
+            P2 p2{std::move(obj), 3};
+            P1 p1(std::move(p2));
+            assert(&p1.first == &obj);
+            assert(&p2.first == &obj);
+        }
+    }
+    {
+        // Make sure we can't move-construct from a pair containing a reference
+        // if that type isn't copy-constructible (since otherwise we'd be stealing
+        // the object through the reference).
+        using P1 = std::pair<NonCopyConstructible, long>;
+        using P2 = std::pair<NonCopyConstructible&, int>;
+        static_assert(!std::is_constructible<P1, P2&&>::value, "");
     }
 #if TEST_STD_VER > 11
     { // explicit constexpr test

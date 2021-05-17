@@ -23,4 +23,4 @@ struct LowerWidenableConditionPass : PassInfoMixin<LowerWidenableConditionPass> 
 
 }
 
-#endif //LLVM_TRANSFORMS_SCALAR_LOWERWIDENABLECONDITION_H
+#endif // LLVM_TRANSFORMS_SCALAR_LOWERWIDENABLECONDITION_H

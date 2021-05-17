@@ -392,6 +392,6 @@ entry:
   ret i16 %cast
 }
 
-attributes #0 = { nounwind readnone }
+attributes #0 = { nounwind readnone willreturn }
 attributes #1 = { nounwind }
 

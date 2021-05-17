@@ -13,7 +13,7 @@
 
 // streamsize xsputn(const char_type* s, streamsize n);
 
-// Test https://bugs.llvm.org/show_bug.cgi?id=14074. The bug is really inside
+// Test https://llvm.org/PR14074. The bug is really inside
 // basic_streambuf, but I can't seem to reproduce without going through one
 // of its derived classes.
 

@@ -40,9 +40,7 @@ tablegen("RISCVGenSubtargetInfo") {
 # by other targets. .inc files only used by .cpp files in this directory
 # should be in deps on the static_library instead.
 group("tablegen") {
-  visibility = [
-    ":MCTargetDesc",
-  ]
+  visibility = [ ":MCTargetDesc" ]
   public_deps = [
     ":RISCVGenInstrInfo",
     ":RISCVGenRegisterInfo",

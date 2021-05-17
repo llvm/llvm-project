@@ -67,6 +67,9 @@ lor.end:
   ret void
 }
 
+; TODO: cmp3 could be reduced to A != B, but we miss that
+; while avoiding an infinite loop with min/max canonicalization.
+
 define void @idom_sign_bit_check_edge_dominates_select(i64 %a, i64 %b) {
 ; CHECK-LABEL: @idom_sign_bit_check_edge_dominates_select(
 ; CHECK-NEXT:  entry:
@@ -75,8 +78,10 @@ define void @idom_sign_bit_check_edge_dominates_select(i64 %a, i64 %b) {
 ; CHECK:       land.lhs.true:
 ; CHECK-NEXT:    br label [[LOR_END:%.*]]
 ; CHECK:       lor.rhs:
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i64 [[A]], [[B:%.*]]
-; CHECK-NEXT:    br i1 [[CMP3]], label [[LOR_END]], label [[LAND_RHS:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i64 [[A]], 5
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP2]], i64 [[A]], i64 5
+; CHECK-NEXT:    [[CMP3_NOT:%.*]] = icmp eq i64 [[SELECT]], [[B:%.*]]
+; CHECK-NEXT:    br i1 [[CMP3_NOT]], label [[LOR_END]], label [[LAND_RHS:%.*]]
 ; CHECK:       land.rhs:
 ; CHECK-NEXT:    br label [[LOR_END]]
 ; CHECK:       lor.end:
@@ -130,14 +135,19 @@ lor.end:
   ret void
 }
 
+; TODO: cmp2 could be reduced to A != B, but we miss that
+; while avoiding an infinite loop with min/max canonicalization.
+
 define void @idom_not_zbranch(i32 %a, i32 %b) {
 ; CHECK-LABEL: @idom_not_zbranch(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[A]], [[B:%.*]]
-; CHECK-NEXT:    br i1 [[CMP2]], label [[RETURN]], label [[IF_THEN3:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A]], 0
+; CHECK-NEXT:    [[A_:%.*]] = select i1 [[CMP1]], i32 [[A]], i32 0
+; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp eq i32 [[A_]], [[B:%.*]]
+; CHECK-NEXT:    br i1 [[CMP2_NOT]], label [[RETURN]], label [[IF_THEN3:%.*]]
 ; CHECK:       if.then3:
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
@@ -348,3 +358,62 @@ f:
   ret i1 %cmp2
 }
 
+; This used to infinite loop because of a conflict
+; with min/max canonicalization.
+
+define i32 @PR48900(i32 %i, i1* %p) {
+; CHECK-LABEL: @PR48900(
+; CHECK-NEXT:    [[MAXCMP:%.*]] = icmp ugt i32 [[I:%.*]], 1
+; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[MAXCMP]], i32 [[I]], i32 1
+; CHECK-NEXT:    [[I4:%.*]] = icmp sgt i32 [[UMAX]], 0
+; CHECK-NEXT:    br i1 [[I4]], label [[TRUELABEL:%.*]], label [[FALSELABEL:%.*]]
+; CHECK:       truelabel:
+; CHECK-NEXT:    [[MINCMP:%.*]] = icmp ult i32 [[UMAX]], 2
+; CHECK-NEXT:    [[SMIN:%.*]] = select i1 [[MINCMP]], i32 [[UMAX]], i32 2
+; CHECK-NEXT:    ret i32 [[SMIN]]
+; CHECK:       falselabel:
+; CHECK-NEXT:    ret i32 0
+;
+  %maxcmp = icmp ugt i32 %i, 1
+  %umax = select i1 %maxcmp, i32 %i, i32 1
+  %i4 = icmp sgt i32 %umax, 0
+  br i1 %i4, label %truelabel, label %falselabel
+
+truelabel:
+  %mincmp = icmp ult i32 %umax, 2
+  %smin = select i1 %mincmp, i32 %umax, i32 2
+  ret i32 %smin
+
+falselabel:
+  ret i32 0
+}
+
+; This used to infinite loop because of a conflict
+; with min/max canonicalization.
+
+define i8 @PR48900_alt(i8 %i, i1* %p) {
+; CHECK-LABEL: @PR48900_alt(
+; CHECK-NEXT:    [[MAXCMP:%.*]] = icmp sgt i8 [[I:%.*]], -127
+; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[MAXCMP]], i8 [[I]], i8 -127
+; CHECK-NEXT:    [[I4:%.*]] = icmp ugt i8 [[SMAX]], -128
+; CHECK-NEXT:    br i1 [[I4]], label [[TRUELABEL:%.*]], label [[FALSELABEL:%.*]]
+; CHECK:       truelabel:
+; CHECK-NEXT:    [[MINCMP:%.*]] = icmp slt i8 [[SMAX]], -126
+; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[MINCMP]], i8 [[SMAX]], i8 -126
+; CHECK-NEXT:    ret i8 [[UMIN]]
+; CHECK:       falselabel:
+; CHECK-NEXT:    ret i8 0
+;
+  %maxcmp = icmp sgt i8 %i, -127
+  %smax = select i1 %maxcmp, i8 %i, i8 -127
+  %i4 = icmp ugt i8 %smax, 128
+  br i1 %i4, label %truelabel, label %falselabel
+
+truelabel:
+  %mincmp = icmp slt i8 %smax, -126
+  %umin = select i1 %mincmp, i8 %smax, i8 -126
+  ret i8 %umin
+
+falselabel:
+  ret i8 0
+}

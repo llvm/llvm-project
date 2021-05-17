@@ -680,12 +680,21 @@ Optional<MCFixupKind> X86AsmBackend::getFixupKind(StringRef Name) const {
 #define ELF_RELOC(X, Y) .Case(#X, Y)
 #include "llvm/BinaryFormat/ELFRelocs/x86_64.def"
 #undef ELF_RELOC
+                 .Case("BFD_RELOC_NONE", ELF::R_X86_64_NONE)
+                 .Case("BFD_RELOC_8", ELF::R_X86_64_8)
+                 .Case("BFD_RELOC_16", ELF::R_X86_64_16)
+                 .Case("BFD_RELOC_32", ELF::R_X86_64_32)
+                 .Case("BFD_RELOC_64", ELF::R_X86_64_64)
                  .Default(-1u);
     } else {
       Type = llvm::StringSwitch<unsigned>(Name)
 #define ELF_RELOC(X, Y) .Case(#X, Y)
 #include "llvm/BinaryFormat/ELFRelocs/i386.def"
 #undef ELF_RELOC
+                 .Case("BFD_RELOC_NONE", ELF::R_386_NONE)
+                 .Case("BFD_RELOC_8", ELF::R_386_8)
+                 .Case("BFD_RELOC_16", ELF::R_386_16)
+                 .Case("BFD_RELOC_32", ELF::R_386_32)
                  .Default(-1u);
     }
     if (Type == -1u)
@@ -1073,6 +1082,8 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
 }
 
 unsigned X86AsmBackend::getMaximumNopSize() const {
+  if (STI.hasFeature(X86::Mode16Bit))
+    return 4;
   if (!STI.hasFeature(X86::FeatureNOPL) && !STI.hasFeature(X86::Mode64Bit))
     return 1;
   if (STI.getFeatureBits()[X86::FeatureFast7ByteNOP])
@@ -1091,28 +1102,43 @@ unsigned X86AsmBackend::getMaximumNopSize() const {
 /// bytes.
 /// \return - true on success, false on failure
 bool X86AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
-  static const char Nops[10][11] = {
-    // nop
-    "\x90",
-    // xchg %ax,%ax
-    "\x66\x90",
-    // nopl (%[re]ax)
-    "\x0f\x1f\x00",
-    // nopl 0(%[re]ax)
-    "\x0f\x1f\x40\x00",
-    // nopl 0(%[re]ax,%[re]ax,1)
-    "\x0f\x1f\x44\x00\x00",
-    // nopw 0(%[re]ax,%[re]ax,1)
-    "\x66\x0f\x1f\x44\x00\x00",
-    // nopl 0L(%[re]ax)
-    "\x0f\x1f\x80\x00\x00\x00\x00",
-    // nopl 0L(%[re]ax,%[re]ax,1)
-    "\x0f\x1f\x84\x00\x00\x00\x00\x00",
-    // nopw 0L(%[re]ax,%[re]ax,1)
-    "\x66\x0f\x1f\x84\x00\x00\x00\x00\x00",
-    // nopw %cs:0L(%[re]ax,%[re]ax,1)
-    "\x66\x2e\x0f\x1f\x84\x00\x00\x00\x00\x00",
+  static const char Nops32Bit[10][11] = {
+      // nop
+      "\x90",
+      // xchg %ax,%ax
+      "\x66\x90",
+      // nopl (%[re]ax)
+      "\x0f\x1f\x00",
+      // nopl 0(%[re]ax)
+      "\x0f\x1f\x40\x00",
+      // nopl 0(%[re]ax,%[re]ax,1)
+      "\x0f\x1f\x44\x00\x00",
+      // nopw 0(%[re]ax,%[re]ax,1)
+      "\x66\x0f\x1f\x44\x00\x00",
+      // nopl 0L(%[re]ax)
+      "\x0f\x1f\x80\x00\x00\x00\x00",
+      // nopl 0L(%[re]ax,%[re]ax,1)
+      "\x0f\x1f\x84\x00\x00\x00\x00\x00",
+      // nopw 0L(%[re]ax,%[re]ax,1)
+      "\x66\x0f\x1f\x84\x00\x00\x00\x00\x00",
+      // nopw %cs:0L(%[re]ax,%[re]ax,1)
+      "\x66\x2e\x0f\x1f\x84\x00\x00\x00\x00\x00",
   };
+
+  // 16-bit mode uses different nop patterns than 32-bit.
+  static const char Nops16Bit[4][11] = {
+      // nop
+      "\x90",
+      // xchg %eax,%eax
+      "\x66\x90",
+      // lea 0(%si),%si
+      "\x8d\x74\x00",
+      // lea 0w(%si),%si
+      "\x8d\xb4\x00\x00",
+  };
+
+  const char(*Nops)[11] =
+      STI.getFeatureBits()[X86::Mode16Bit] ? Nops16Bit : Nops32Bit;
 
   uint64_t MaxNopLength = (uint64_t)getMaximumNopSize();
 

@@ -54,6 +54,8 @@ enum PGOKind {
 enum CSPGOKind { NoCSPGO, CSInstrGen, CSInstrUse };
 }
 
+void printPasses(raw_ostream &OS);
+
 /// Driver function to run the new pass manager over a module.
 ///
 /// This function only exists factored away from opt.cpp in order to prevent

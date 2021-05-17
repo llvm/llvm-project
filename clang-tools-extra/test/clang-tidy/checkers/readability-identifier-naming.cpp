@@ -68,7 +68,7 @@
 // RUN:     {key: readability-identifier-naming.MacroDefinitionCase, value: UPPER_CASE}, \
 // RUN:     {key: readability-identifier-naming.TypeAliasCase, value: camel_Snake_Back}, \
 // RUN:     {key: readability-identifier-naming.TypeAliasSuffix, value: '_t'}, \
-// RUN:     {key: readability-identifier-naming.IgnoreFailedSplit, value: 0}, \
+// RUN:     {key: readability-identifier-naming.IgnoreFailedSplit, value: false}, \
 // RUN:     {key: readability-identifier-naming.GlobalPointerCase, value: CamelCase}, \
 // RUN:     {key: readability-identifier-naming.GlobalPointerSuffix, value: '_Ptr'}, \
 // RUN:     {key: readability-identifier-naming.GlobalConstantPointerCase, value: UPPER_CASE}, \
@@ -147,6 +147,10 @@ int global3;
 #define ADD_TO_SELF(m) (m) + (m)
 int g_twice_global3 = ADD_TO_SELF(global3);
 // CHECK-FIXES: {{^}}int g_twice_global3 = ADD_TO_SELF(g_global3);{{$}}
+
+int g_Global4;
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for global variable 'g_Global4'
+// CHECK-FIXES: {{^}}int g_global4;{{$}}
 
 enum my_enumeration {
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: invalid case style for enum 'my_enumeration'
@@ -544,6 +548,9 @@ unsigned const MyConstGlobal_array[] = {1,2,3};
 // CHECK-FIXES: {{^}}unsigned const MY_CONST_GLOBAL_ARRAY[] = {1,2,3};{{$}}
 
 int * MyGlobal_Ptr;// -> ok
+int * my_second_global_Ptr;
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for global pointer 'my_second_global_Ptr'
+// CHECK-FIXES: {{^}}int * MySecondGlobal_Ptr;{{$}}
 int * const MyConstantGlobalPointer = nullptr;
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: invalid case style for global constant pointer 'MyConstantGlobalPointer'
 // CHECK-FIXES: {{^}}int * const MY_CONSTANT_GLOBAL_POINTER_Ptr = nullptr;{{$}}

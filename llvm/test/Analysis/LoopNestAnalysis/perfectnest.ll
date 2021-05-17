@@ -322,3 +322,148 @@ for.end7:
   %x.addr.0.lcssa = phi i32 [ %split7, %for.cond.for.end7_crit_edge ], [ %x, %entry ]
   ret i32 %x.addr.0.lcssa
 }
+
+; Test a perfect loop nest of the form:
+;   for (int i = 0; i < nx; ++i)
+;     if (i < ny) { // guard branch for the j-loop
+;       for (int j=i; j < ny; j+=1)
+;         y[j][i] = x[i][j] + j;
+;     }
+define double @perf_nest_guard_branch(i32** %y, i32** %x, i32 signext %nx, i32 signext %ny) {
+; CHECK-LABEL: IsPerfect=true, Depth=1, OutermostLoop: test6Loop2, Loops: ( test6Loop2 )
+; CHECK-LABEL: IsPerfect=true, Depth=2, OutermostLoop: test6Loop1, Loops: ( test6Loop1 test6Loop2 )
+entry:
+  %cmp2 = icmp slt i32 0, %nx
+  br i1 %cmp2, label %test6Loop1.lr.ph, label %for.end13
+
+test6Loop1.lr.ph:                                   ; preds = %entry
+  br label %test6Loop1
+
+test6Loop1:                                         ; preds = %test6Loop1.lr.ph, %for.inc11
+  %i.0 = phi i32 [ 0, %test6Loop1.lr.ph ], [ %inc12, %for.inc11 ]
+  %cmp1 = icmp slt i32 %i.0, %ny
+  br i1 %cmp1, label %test6Loop2.lr.ph, label %if.end
+
+test6Loop2.lr.ph:                                  ; preds = %if.then
+  br label %test6Loop2
+
+test6Loop2:                                        ; preds = %test6Loop2.lr.ph, %for.inc
+  %j.0 = phi i32 [ %i.0, %test6Loop2.lr.ph ], [ %inc, %for.inc ]
+  %idxprom = sext i32 %i.0 to i64
+  %arrayidx = getelementptr inbounds i32*, i32** %x, i64 %idxprom
+  %0 = load i32*, i32** %arrayidx, align 8
+  %idxprom5 = sext i32 %j.0 to i64
+  %arrayidx6 = getelementptr inbounds i32, i32* %0, i64 %idxprom5
+  %1 = load i32, i32* %arrayidx6, align 4
+  %add = add nsw i32 %1, %j.0
+  %idxprom7 = sext i32 %j.0 to i64
+  %arrayidx8 = getelementptr inbounds i32*, i32** %y, i64 %idxprom7
+  %2 = load i32*, i32** %arrayidx8, align 8
+  %idxprom9 = sext i32 %i.0 to i64
+  %arrayidx10 = getelementptr inbounds i32, i32* %2, i64 %idxprom9
+  store i32 %add, i32* %arrayidx10, align 4
+  br label %for.inc
+
+for.inc:                                          ; preds = %test6Loop2
+  %inc = add nsw i32 %j.0, 1
+  %cmp3 = icmp slt i32 %inc, %ny
+  br i1 %cmp3, label %test6Loop2, label %for.cond2.for.end_crit_edge
+
+for.cond2.for.end_crit_edge:                      ; preds = %for.inc
+  br label %for.end
+
+for.end:                                          ; preds = %for.cond2.for.end_crit_edge, %if.then
+  br label %if.end
+
+if.end:                                           ; preds = %for.end, %test6Loop1
+  br label %for.inc11
+
+for.inc11:                                        ; preds = %if.end
+  %inc12 = add nsw i32 %i.0, 1
+  %cmp = icmp slt i32 %inc12, %nx
+  br i1 %cmp, label %test6Loop1, label %for.cond.for.end13_crit_edge
+
+for.cond.for.end13_crit_edge:                     ; preds = %for.inc11
+  br label %for.end13
+
+for.end13:                                        ; preds = %for.cond.for.end13_crit_edge, %entry
+  %arrayidx14 = getelementptr inbounds i32*, i32** %y, i64 0
+  %3 = load i32*, i32** %arrayidx14, align 8
+  %arrayidx15 = getelementptr inbounds i32, i32* %3, i64 0
+  %4 = load i32, i32* %arrayidx15, align 4
+  %conv = sitofp i32 %4 to double
+  ret double %conv
+}
+
+; Test a perfect loop nest of the form:
+;   for (int i = 0; i < nx; ++i)
+;     if (i < ny) { // guard branch for the j-loop
+;       for (int j=i; j < ny; j+=1)
+;         y[j][i] = x[i][j] + j;
+;     }
+
+define double @test6(i32** %y, i32** %x, i32 signext %nx, i32 signext %ny) {
+; CHECK-LABEL: IsPerfect=true, Depth=1, OutermostLoop: test6Loop2, Loops: ( test6Loop2 )
+; CHECK-LABEL: IsPerfect=true, Depth=2, OutermostLoop: test6Loop1, Loops: ( test6Loop1 test6Loop2 )
+entry:
+  %cmp2 = icmp slt i32 0, %nx
+  br i1 %cmp2, label %test6Loop1.lr.ph, label %for.end13
+
+test6Loop1.lr.ph:                                   ; preds = %entry
+  br label %test6Loop1
+
+test6Loop1:                                         ; preds = %test6Loop1.lr.ph, %for.inc11
+  %i.0 = phi i32 [ 0, %test6Loop1.lr.ph ], [ %inc12, %for.inc11 ]
+  %cmp1 = icmp slt i32 %i.0, %ny
+  br i1 %cmp1, label %test6Loop2.lr.ph, label %if.end
+
+test6Loop2.lr.ph:                                  ; preds = %if.then
+  br label %test6Loop2
+
+test6Loop2:                                        ; preds = %test6Loop2.lr.ph, %for.inc
+  %j.0 = phi i32 [ %i.0, %test6Loop2.lr.ph ], [ %inc, %for.inc ]
+  %idxprom = sext i32 %i.0 to i64
+  %arrayidx = getelementptr inbounds i32*, i32** %x, i64 %idxprom
+  %0 = load i32*, i32** %arrayidx, align 8
+  %idxprom5 = sext i32 %j.0 to i64
+  %arrayidx6 = getelementptr inbounds i32, i32* %0, i64 %idxprom5
+  %1 = load i32, i32* %arrayidx6, align 4
+  %add = add nsw i32 %1, %j.0
+  %idxprom7 = sext i32 %j.0 to i64
+  %arrayidx8 = getelementptr inbounds i32*, i32** %y, i64 %idxprom7
+  %2 = load i32*, i32** %arrayidx8, align 8
+  %idxprom9 = sext i32 %i.0 to i64
+  %arrayidx10 = getelementptr inbounds i32, i32* %2, i64 %idxprom9
+  store i32 %add, i32* %arrayidx10, align 4
+  br label %for.inc
+
+for.inc:                                          ; preds = %test6Loop2
+  %inc = add nsw i32 %j.0, 1
+  %cmp3 = icmp slt i32 %inc, %ny
+  br i1 %cmp3, label %test6Loop2, label %for.cond2.for.end_crit_edge
+
+for.cond2.for.end_crit_edge:                      ; preds = %for.inc
+  br label %for.end
+
+for.end:                                          ; preds = %for.cond2.for.end_crit_edge, %if.then
+  br label %if.end
+
+if.end:                                           ; preds = %for.end, %test6Loop1
+  br label %for.inc11
+
+for.inc11:                                        ; preds = %if.end
+  %inc12 = add nsw i32 %i.0, 1
+  %cmp = icmp slt i32 %inc12, %nx
+  br i1 %cmp, label %test6Loop1, label %for.cond.for.end13_crit_edge
+
+for.cond.for.end13_crit_edge:                     ; preds = %for.inc11
+  br label %for.end13
+
+for.end13:                                        ; preds = %for.cond.for.end13_crit_edge, %entry
+  %arrayidx14 = getelementptr inbounds i32*, i32** %y, i64 0
+  %3 = load i32*, i32** %arrayidx14, align 8
+  %arrayidx15 = getelementptr inbounds i32, i32* %3, i64 0
+  %4 = load i32, i32* %arrayidx15, align 4
+  %conv = sitofp i32 %4 to double
+  ret double %conv
+}

@@ -628,6 +628,50 @@ main_body:
   ret float %out
 }
 
+define amdgpu_ps void @atomic_cmpswap_i32_1d_no_return(<8 x i32> inreg %rsrc, i32 %cmp, i32 %swap, i32 %s) {
+; GFX6-LABEL: atomic_cmpswap_i32_1d_no_return:
+; GFX6:       ; %bb.0: ; %main_body
+; GFX6-NEXT:    s_mov_b32 s0, s2
+; GFX6-NEXT:    s_mov_b32 s1, s3
+; GFX6-NEXT:    s_mov_b32 s2, s4
+; GFX6-NEXT:    s_mov_b32 s3, s5
+; GFX6-NEXT:    s_mov_b32 s4, s6
+; GFX6-NEXT:    s_mov_b32 s5, s7
+; GFX6-NEXT:    s_mov_b32 s6, s8
+; GFX6-NEXT:    s_mov_b32 s7, s9
+; GFX6-NEXT:    image_atomic_cmpswap v[0:1], v2, s[0:7] dmask:0x3 unorm glc
+; GFX6-NEXT:    s_endpgm
+;
+; GFX8-LABEL: atomic_cmpswap_i32_1d_no_return:
+; GFX8:       ; %bb.0: ; %main_body
+; GFX8-NEXT:    s_mov_b32 s0, s2
+; GFX8-NEXT:    s_mov_b32 s1, s3
+; GFX8-NEXT:    s_mov_b32 s2, s4
+; GFX8-NEXT:    s_mov_b32 s3, s5
+; GFX8-NEXT:    s_mov_b32 s4, s6
+; GFX8-NEXT:    s_mov_b32 s5, s7
+; GFX8-NEXT:    s_mov_b32 s6, s8
+; GFX8-NEXT:    s_mov_b32 s7, s9
+; GFX8-NEXT:    image_atomic_cmpswap v[0:1], v2, s[0:7] dmask:0x3 unorm glc
+; GFX8-NEXT:    s_endpgm
+;
+; GFX10-LABEL: atomic_cmpswap_i32_1d_no_return:
+; GFX10:       ; %bb.0: ; %main_body
+; GFX10-NEXT:    s_mov_b32 s0, s2
+; GFX10-NEXT:    s_mov_b32 s1, s3
+; GFX10-NEXT:    s_mov_b32 s2, s4
+; GFX10-NEXT:    s_mov_b32 s3, s5
+; GFX10-NEXT:    s_mov_b32 s4, s6
+; GFX10-NEXT:    s_mov_b32 s5, s7
+; GFX10-NEXT:    s_mov_b32 s6, s8
+; GFX10-NEXT:    s_mov_b32 s7, s9
+; GFX10-NEXT:    image_atomic_cmpswap v[0:1], v2, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D unorm glc
+; GFX10-NEXT:    s_endpgm
+main_body:
+  %v = call i32 @llvm.amdgcn.image.atomic.cmpswap.1d.i32.i32(i32 %cmp, i32 %swap, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
+  ret void
+}
+
 define amdgpu_ps float @atomic_add_i32_2d(<8 x i32> inreg %rsrc, i32 %data, i32 %s, i32 %t) {
 ; GFX6-LABEL: atomic_add_i32_2d:
 ; GFX6:       ; %bb.0: ; %main_body
@@ -1634,6 +1678,50 @@ main_body:
   %v = call i64 @llvm.amdgcn.image.atomic.cmpswap.1d.i64.i32(i64 %cmp, i64 %swap, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   %out = bitcast i64 %v to <2 x float>
   ret <2 x float> %out
+}
+
+define amdgpu_ps void @atomic_cmpswap_i64_1d_no_return(<8 x i32> inreg %rsrc, i64 %cmp, i64 %swap, i32 %s) {
+; GFX6-LABEL: atomic_cmpswap_i64_1d_no_return:
+; GFX6:       ; %bb.0: ; %main_body
+; GFX6-NEXT:    s_mov_b32 s0, s2
+; GFX6-NEXT:    s_mov_b32 s1, s3
+; GFX6-NEXT:    s_mov_b32 s2, s4
+; GFX6-NEXT:    s_mov_b32 s3, s5
+; GFX6-NEXT:    s_mov_b32 s4, s6
+; GFX6-NEXT:    s_mov_b32 s5, s7
+; GFX6-NEXT:    s_mov_b32 s6, s8
+; GFX6-NEXT:    s_mov_b32 s7, s9
+; GFX6-NEXT:    image_atomic_cmpswap v[0:3], v4, s[0:7] dmask:0xf unorm glc
+; GFX6-NEXT:    s_endpgm
+;
+; GFX8-LABEL: atomic_cmpswap_i64_1d_no_return:
+; GFX8:       ; %bb.0: ; %main_body
+; GFX8-NEXT:    s_mov_b32 s0, s2
+; GFX8-NEXT:    s_mov_b32 s1, s3
+; GFX8-NEXT:    s_mov_b32 s2, s4
+; GFX8-NEXT:    s_mov_b32 s3, s5
+; GFX8-NEXT:    s_mov_b32 s4, s6
+; GFX8-NEXT:    s_mov_b32 s5, s7
+; GFX8-NEXT:    s_mov_b32 s6, s8
+; GFX8-NEXT:    s_mov_b32 s7, s9
+; GFX8-NEXT:    image_atomic_cmpswap v[0:3], v4, s[0:7] dmask:0xf unorm glc
+; GFX8-NEXT:    s_endpgm
+;
+; GFX10-LABEL: atomic_cmpswap_i64_1d_no_return:
+; GFX10:       ; %bb.0: ; %main_body
+; GFX10-NEXT:    s_mov_b32 s0, s2
+; GFX10-NEXT:    s_mov_b32 s1, s3
+; GFX10-NEXT:    s_mov_b32 s2, s4
+; GFX10-NEXT:    s_mov_b32 s3, s5
+; GFX10-NEXT:    s_mov_b32 s4, s6
+; GFX10-NEXT:    s_mov_b32 s5, s7
+; GFX10-NEXT:    s_mov_b32 s6, s8
+; GFX10-NEXT:    s_mov_b32 s7, s9
+; GFX10-NEXT:    image_atomic_cmpswap v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm glc
+; GFX10-NEXT:    s_endpgm
+main_body:
+  %v = call i64 @llvm.amdgcn.image.atomic.cmpswap.1d.i64.i32(i64 %cmp, i64 %swap, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
+  ret void
 }
 
 define amdgpu_ps <2 x float> @atomic_add_i64_2d(<8 x i32> inreg %rsrc, i64 %data, i32 %s, i32 %t) {

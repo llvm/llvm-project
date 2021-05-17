@@ -28,7 +28,6 @@ public:
                                   SDValue Chain, SDValue Op1, SDValue Op2,
                                   MachinePointerInfo DstPtrInfo,
                                   bool ZeroData) const override;
-  bool generateFMAsInMachineCombiner(CodeGenOpt::Level OptLevel) const override;
 };
 }
 

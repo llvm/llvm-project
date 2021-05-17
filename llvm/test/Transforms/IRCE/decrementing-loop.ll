@@ -29,10 +29,8 @@ define void @decrementing_loop(i32 *%arr, i32 *%a_len_ptr, i32 %n) {
   ret void
 
 ; CHECK: loop.preheader:
-; CHECK:   [[len_hiclamp_cmp:[^ ]+]] = icmp slt i32 %len, %n
-; CHECK:   [[len_hiclamp:[^ ]+]] = select i1 [[len_hiclamp_cmp]], i32 %len, i32 %n
-; CHECK:   [[not_exit_preloop_at_cmp:[^ ]+]] = icmp sgt i32 [[len_hiclamp]], 0
-; CHECK:   [[not_exit_preloop_at:[^ ]+]] = select i1 [[not_exit_preloop_at_cmp]], i32 [[len_hiclamp]], i32 0
+; CHECK:   [[len_hiclamp:[^ ]+]] = call i32 @llvm.smin.i32(i32 %len, i32 %n)
+; CHECK:   [[not_exit_preloop_at:[^ ]+]] = call i32 @llvm.smax.i32(i32 [[len_hiclamp]], i32 0)
 ; CHECK:   %exit.preloop.at = add nsw i32 [[not_exit_preloop_at]], -1
 }
 
@@ -212,16 +210,17 @@ exit:
   ret void
 }
 
+; TODO: we need to be more careful when trying to look through phi nodes in
+; cycles, because the condition to prove may reference the previous value of
+; the phi. So we currently fail to optimize this case.
 ; Check that we can figure out that IV is non-negative via implication through
 ; two Phi nodes, one being AddRec.
 define void @test_05(i32* %a, i32* %a_len_ptr, i1 %cond) {
 
 ; CHECK-LABEL: test_05
-; CHECK:       mainloop:
-; CHECK-NEXT:    br label %loop
-; CHECK:       loop:
-; CHECK:         br i1 true, label %in.bounds, label %out.of.bounds
-; CHECK:       loop.preloop:
+; CHECK: entry:
+; CHECK:   br label %merge
+; CHECK-NOT: mainloop
 
  entry:
   %len.a = load i32, i32* %a_len_ptr, !range !0

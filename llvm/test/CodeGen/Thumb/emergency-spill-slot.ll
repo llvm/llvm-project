@@ -253,10 +253,10 @@ define void @aligned_emergency_spill(i32 %n, i32 %n2, i32 %n3, i32 %n4, [31 x i3
 ; CHECK-NEXT:    adds r1, #1
 ; CHECK-NEXT:    @APP
 ; CHECK-NEXT:    @NO_APP
-; CHECK-NEXT:    str r0, [sp, #12]
+; CHECK-NEXT:    str r0, [sp]
 ; CHECK-NEXT:    ldr r0, .LCPI5_0
 ; CHECK-NEXT:    str r5, [r0, r7]
-; CHECK-NEXT:    ldr r0, [sp, #12]
+; CHECK-NEXT:    ldr r0, [sp]
 ; CHECK-NEXT:    @APP
 ; CHECK-NEXT:    @NO_APP
 ; CHECK-NEXT:    subs r4, r7, #7

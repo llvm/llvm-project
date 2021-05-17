@@ -159,9 +159,9 @@ Parser::ParseExpressionWithLeadingExtension(SourceLocation ExtLoc) {
 /// Parse an expr that doesn't include (top-level) commas.
 ExprResult Parser::ParseAssignmentExpression(TypeCastState isTypeCast) {
   if (Tok.is(tok::code_completion)) {
+    cutOffParsing();
     Actions.CodeCompleteExpression(getCurScope(),
                                    PreferredType.get(Tok.getLocation()));
-    cutOffParsing();
     return ExprError();
   }
 
@@ -1156,9 +1156,9 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
       ConsumeToken();
 
       if (Tok.is(tok::code_completion) && &II != Ident_super) {
+        cutOffParsing();
         Actions.CodeCompleteObjCClassPropertyRefExpr(
             getCurScope(), II, ILoc, ExprStatementTokLoc == ILoc);
-        cutOffParsing();
         return ExprError();
       }
       // Allow either an identifier or the keyword 'class' (in C++).
@@ -1724,9 +1724,9 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     Res = ParseBlockLiteralExpression();
     break;
   case tok::code_completion: {
+    cutOffParsing();
     Actions.CodeCompleteExpression(getCurScope(),
                                    PreferredType.get(Tok.getLocation()));
-    cutOffParsing();
     return ExprError();
   }
   case tok::l_square:
@@ -1807,7 +1807,9 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   // These can be followed by postfix-expr pieces.
   PreferredType = SavedType;
   Res = ParsePostfixExpressionSuffix(Res);
-  if (getLangOpts().OpenCL)
+  if (getLangOpts().OpenCL &&
+      !getActions().getOpenCLOptions().isAvailableOption(
+          "__cl_clang_function_pointers", getLangOpts()))
     if (Expr *PostfixExpr = Res.get()) {
       QualType Ty = PostfixExpr->getType();
       if (!Ty.isNull() && Ty->isFunctionType()) {
@@ -1854,9 +1856,9 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       if (InMessageExpression)
         return LHS;
 
+      cutOffParsing();
       Actions.CodeCompletePostfixExpression(
           getCurScope(), LHS, PreferredType.get(Tok.getLocation()));
-      cutOffParsing();
       return ExprError();
 
     case tok::identifier:
@@ -2138,12 +2140,12 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
           CorrectedBase = Base;
 
         // Code completion for a member access expression.
+        cutOffParsing();
         Actions.CodeCompleteMemberReferenceExpr(
             getCurScope(), Base, CorrectedBase, OpLoc, OpKind == tok::arrow,
             Base && ExprStatementTokLoc == Base->getBeginLoc(),
             PreferredType.get(Tok.getLocation()));
 
-        cutOffParsing();
         return ExprError();
       }
 
@@ -2776,10 +2778,10 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
   CastTy = nullptr;
 
   if (Tok.is(tok::code_completion)) {
+    cutOffParsing();
     Actions.CodeCompleteExpression(
         getCurScope(), PreferredType.get(Tok.getLocation()),
         /*IsParenthesized=*/ExprType >= CompoundLiteral);
-    cutOffParsing();
     return ExprError();
   }
 
@@ -3410,8 +3412,9 @@ Parser::ParseSimpleExpressionList(SmallVectorImpl<Expr*> &Exprs,
 /// \endverbatim
 void Parser::ParseBlockId(SourceLocation CaretLoc) {
   if (Tok.is(tok::code_completion)) {
+    cutOffParsing();
     Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Type);
-    return cutOffParsing();
+    return;
   }
 
   // Parse the specifier-qualifier-list piece.
@@ -3596,8 +3599,8 @@ Optional<AvailabilitySpec> Parser::ParseAvailabilitySpec() {
   } else {
     // Parse the platform name.
     if (Tok.is(tok::code_completion)) {
-      Actions.CodeCompleteAvailabilityPlatformName();
       cutOffParsing();
+      Actions.CodeCompleteAvailabilityPlatformName();
       return None;
     }
     if (Tok.isNot(tok::identifier)) {

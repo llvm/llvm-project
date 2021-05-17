@@ -76,9 +76,15 @@ void SwapIndex::relations(
   return snapshot()->relations(R, CB);
 }
 
-llvm::unique_function<bool(llvm::StringRef) const>
+llvm::unique_function<IndexContents(llvm::StringRef) const>
 SwapIndex::indexedFiles() const {
-  return snapshot()->indexedFiles();
+  // The index snapshot should outlive this method return value.
+  auto SnapShot = snapshot();
+  auto IndexedFiles = SnapShot->indexedFiles();
+  return [KeepAlive{std::move(SnapShot)},
+          IndexContainsFile{std::move(IndexedFiles)}](llvm::StringRef File) {
+    return IndexContainsFile(File);
+  };
 }
 
 size_t SwapIndex::estimateMemoryUsage() const {

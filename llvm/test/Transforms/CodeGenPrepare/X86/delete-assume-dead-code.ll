@@ -5,11 +5,6 @@ define i32 @test1(i8* %d) nounwind {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[L:%.*]] = load i8, i8* [[D:%.*]], align 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[L]], 0
-; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[IF_END:%.*]]
-; CHECK:       if.end:
-; CHECK-NEXT:    br label [[EXIT]]
-; CHECK:       exit:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i8 [[L]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
@@ -21,7 +16,7 @@ entry:
 
 if.end:
   %gep = getelementptr i8, i8* %d, i32 42
-  %call = call i64 @foo(i8* %gep) nounwind readonly
+  %call = call i64 @foo(i8* %gep) nounwind readonly willreturn
   %cmp2 = icmp ne i64 %call, 0
   call void @llvm.assume(i1 %cmp2)
   br label %exit
@@ -31,5 +26,5 @@ exit:
   ret i32 %conv
 }
 
-declare i64 @foo(i8*) nounwind readonly
+declare i64 @foo(i8*) nounwind readonly willreturn
 declare void @llvm.assume(i1 noundef) nounwind willreturn

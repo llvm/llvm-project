@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-assert-side-effect %t -- -config="{CheckOptions: [{key: bugprone-assert-side-effect.CheckFunctionCalls, value: 1}, {key: bugprone-assert-side-effect.AssertMacros, value: 'assert,assert2,my_assert,convoluted_assert,msvc_assert'}]}" -- -fexceptions
+// RUN: %check_clang_tidy %s bugprone-assert-side-effect %t -- -config="{CheckOptions: [{key: bugprone-assert-side-effect.CheckFunctionCalls, value: true}, {key: bugprone-assert-side-effect.AssertMacros, value: 'assert,assert2,my_assert,convoluted_assert,msvc_assert'}]}" -- -fexceptions
 
 //===--- assert definition block ------------------------------------------===//
 int abort() { return 0; }
@@ -68,47 +68,47 @@ int main() {
   assert(X == 1);
 
   assert(X = 1);
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: found assert() with side effect [bugprone-assert-side-effect]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: side effect in assert() condition discarded in release builds [bugprone-assert-side-effect]
   my_assert(X = 1);
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: found my_assert() with side effect
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: side effect in my_assert() condition discarded in release builds
   convoluted_assert(X = 1);
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: found convoluted_assert() with side effect
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: side effect in convoluted_assert() condition discarded in release builds
   not_my_assert(X = 1);
 
   assert(++X);
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: found assert() with side effect
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: side effect in assert() condition discarded in release builds
   assert(!B);
 
   assert(B || true);
 
   assert(freeFunction());
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: found assert() with side effect
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: side effect in assert() condition discarded in release builds
 
   MyClass mc;
   assert(mc.badFunc(0, 1));
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: found assert() with side effect
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: side effect in assert() condition discarded in release builds
   assert(mc.goodFunc(0, 1));
 
   MyClass mc2;
   assert(mc2 = mc);
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: found assert() with side effect
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: side effect in assert() condition discarded in release builds
 
   assert(-mc > 0);
 
   MyClass *mcp;
   assert(mcp = new MyClass);
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: found assert() with side effect
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: side effect in assert() condition discarded in release builds
 
   assert((delete mcp, false));
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: found assert() with side effect
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: side effect in assert() condition discarded in release builds
 
   assert((throw 1, false));
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: found assert() with side effect
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: side effect in assert() condition discarded in release builds
 
   assert2(1 == 2 - 1);
 
   msvc_assert(mc2 = mc);
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: found msvc_assert() with side effect
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: side effect in msvc_assert() condition discarded in release builds
 
   return 0;
 }

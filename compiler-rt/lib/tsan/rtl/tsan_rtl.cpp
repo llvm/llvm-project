@@ -11,17 +11,19 @@
 // Main file (entry points) for the TSan run-time.
 //===----------------------------------------------------------------------===//
 
+#include "tsan_rtl.h"
+
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_file.h"
 #include "sanitizer_common/sanitizer_libc.h"
-#include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
+#include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
 #include "tsan_defs.h"
-#include "tsan_platform.h"
-#include "tsan_rtl.h"
+#include "tsan_interface.h"
 #include "tsan_mman.h"
+#include "tsan_platform.h"
 #include "tsan_suppressions.h"
 #include "tsan_symbolize.h"
 #include "ubsan/ubsan_init.h"
@@ -56,12 +58,23 @@ Context *ctx;
 bool OnFinalize(bool failed);
 void OnInitialize();
 #else
+#include <dlfcn.h>
 SANITIZER_WEAK_CXX_DEFAULT_IMPL
 bool OnFinalize(bool failed) {
+#if !SANITIZER_GO
+  if (auto *ptr = dlsym(RTLD_DEFAULT, "__tsan_on_finalize"))
+    return reinterpret_cast<decltype(&__tsan_on_finalize)>(ptr)(failed);
+#endif
   return failed;
 }
 SANITIZER_WEAK_CXX_DEFAULT_IMPL
-void OnInitialize() {}
+void OnInitialize() {
+#if !SANITIZER_GO
+  if (auto *ptr = dlsym(RTLD_DEFAULT, "__tsan_on_initialize")) {
+    return reinterpret_cast<decltype(&__tsan_on_initialize)>(ptr)();
+  }
+#endif
+}
 #endif
 
 static char thread_registry_placeholder[sizeof(ThreadRegistry)];
@@ -77,12 +90,19 @@ static ThreadContextBase *CreateThreadContext(u32 tid) {
   new((void*)hdr) Trace();
   // We are going to use only a small part of the trace with the default
   // value of history_size. However, the constructor writes to the whole trace.
-  // Unmap the unused part.
+  // Release the unused part.
   uptr hdr_end = hdr + sizeof(Trace);
   hdr_end -= sizeof(TraceHeader) * (kTraceParts - TraceParts());
   hdr_end = RoundUp(hdr_end, GetPageSizeCached());
-  if (hdr_end < hdr + sizeof(Trace))
-    UnmapOrDie((void*)hdr_end, hdr + sizeof(Trace) - hdr_end);
+  if (hdr_end < hdr + sizeof(Trace)) {
+    ReleaseMemoryPagesToOS(hdr_end, hdr + sizeof(Trace));
+    uptr unused = hdr + sizeof(Trace) - hdr_end;
+    if (hdr_end != (uptr)MmapFixedNoAccess(hdr_end, unused)) {
+      Report("ThreadSanitizer: failed to mprotect(%p, %p)\n",
+          hdr_end, unused);
+      CHECK("unable to mprotect" && 0);
+    }
+  }
   void *mem = internal_alloc(MBlockThreadContex, sizeof(ThreadContext));
   return new(mem) ThreadContext(tid);
 }
@@ -94,42 +114,45 @@ static const u32 kThreadQuarantineSize = 64;
 #endif
 
 Context::Context()
-  : initialized()
-  , report_mtx(MutexTypeReport, StatMtxReport)
-  , nreported()
-  , nmissed_expected()
-  , thread_registry(new(thread_registry_placeholder) ThreadRegistry(
-      CreateThreadContext, kMaxTid, kThreadQuarantineSize, kMaxTidReuse))
-  , racy_mtx(MutexTypeRacy, StatMtxRacy)
-  , racy_stacks()
-  , racy_addresses()
-  , fired_suppressions_mtx(MutexTypeFired, StatMtxFired)
-  , clock_alloc("clock allocator") {
+    : initialized(),
+      report_mtx(MutexTypeReport, StatMtxReport),
+      nreported(),
+      nmissed_expected(),
+      thread_registry(new (thread_registry_placeholder) ThreadRegistry(
+          CreateThreadContext, kMaxTid, kThreadQuarantineSize, kMaxTidReuse)),
+      racy_mtx(MutexTypeRacy, StatMtxRacy),
+      racy_stacks(),
+      racy_addresses(),
+      fired_suppressions_mtx(MutexTypeFired, StatMtxFired),
+      clock_alloc(LINKER_INITIALIZED, "clock allocator") {
   fired_suppressions.reserve(8);
 }
 
 // The objects are allocated in TLS, so one may rely on zero-initialization.
-ThreadState::ThreadState(Context *ctx, int tid, int unique_id, u64 epoch,
-                         unsigned reuse_count,
-                         uptr stk_addr, uptr stk_size,
+ThreadState::ThreadState(Context *ctx, u32 tid, int unique_id, u64 epoch,
+                         unsigned reuse_count, uptr stk_addr, uptr stk_size,
                          uptr tls_addr, uptr tls_size)
-  : fast_state(tid, epoch)
-  // Do not touch these, rely on zero initialization,
-  // they may be accessed before the ctor.
-  // , ignore_reads_and_writes()
-  // , ignore_interceptors()
-  , clock(tid, reuse_count)
+    : fast_state(tid, epoch)
+      // Do not touch these, rely on zero initialization,
+      // they may be accessed before the ctor.
+      // , ignore_reads_and_writes()
+      // , ignore_interceptors()
+      ,
+      clock(tid, reuse_count)
 #if !SANITIZER_GO
-  , jmp_bufs()
+      ,
+      jmp_bufs()
 #endif
-  , tid(tid)
-  , unique_id(unique_id)
-  , stk_addr(stk_addr)
-  , stk_size(stk_size)
-  , tls_addr(tls_addr)
-  , tls_size(tls_size)
+      ,
+      tid(tid),
+      unique_id(unique_id),
+      stk_addr(stk_addr),
+      stk_size(stk_size),
+      tls_addr(tls_addr),
+      tls_size(tls_size)
 #if !SANITIZER_GO
-  , last_sleep_clock(tid)
+      ,
+      last_sleep_clock(tid)
 #endif
 {
 }
@@ -160,12 +183,12 @@ static void *BackgroundThread(void *arg) {
     } else if (internal_strcmp(flags()->profile_memory, "stderr") == 0) {
       mprof_fd = 2;
     } else {
-      InternalScopedString filename(kMaxPathLength);
+      InternalScopedString filename;
       filename.append("%s.%d", flags()->profile_memory, (int)internal_getpid());
       fd_t fd = OpenFile(filename.data(), WrOnly);
       if (fd == kInvalidFd) {
         Printf("ThreadSanitizer: failed to open memory profile file '%s'\n",
-            &filename[0]);
+               filename.data());
       } else {
         mprof_fd = fd;
       }
@@ -351,6 +374,18 @@ static void TsanOnDeadlySignal(int signo, void *siginfo, void *context) {
 }
 #endif
 
+void CheckUnwind() {
+  // There is high probability that interceptors will check-fail as well,
+  // on the other hand there is no sense in processing interceptors
+  // since we are going to die soon.
+  ScopedIgnoreInterceptors ignore;
+#if !SANITIZER_GO
+  cur_thread()->ignore_sync++;
+  cur_thread()->ignore_reads_and_writes++;
+#endif
+  PrintCurrentStackSlow(StackTrace::GetCurrentPc());
+}
+
 void Initialize(ThreadState *thr) {
   // Thread safe because done before all threads exist.
   static bool is_initialized = false;
@@ -361,7 +396,7 @@ void Initialize(ThreadState *thr) {
   ScopedIgnoreInterceptors ignore;
   SanitizerToolName = "ThreadSanitizer";
   // Install tool-specific callbacks in sanitizer_common.
-  SetCheckFailedCallback(TsanCheckFailed);
+  SetCheckUnwindCallback(CheckUnwind);
 
   ctx = new(ctx_placeholder) Context;
   const char *env_name = SANITIZER_GO ? "GORACE" : "TSAN_OPTIONS";
@@ -499,23 +534,27 @@ int Finalize(ThreadState *thr) {
 void ForkBefore(ThreadState *thr, uptr pc) {
   ctx->thread_registry->Lock();
   ctx->report_mtx.Lock();
-  // Ignore memory accesses in the pthread_atfork callbacks.
-  // If any of them triggers a data race we will deadlock
-  // on the report_mtx.
-  // We could ignore interceptors and sync operations as well,
+  // Suppress all reports in the pthread_atfork callbacks.
+  // Reports will deadlock on the report_mtx.
+  // We could ignore sync operations as well,
   // but so far it's unclear if it will do more good or harm.
   // Unnecessarily ignoring things can lead to false positives later.
-  ThreadIgnoreBegin(thr, pc);
+  thr->suppress_reports++;
+  // On OS X, REAL(fork) can call intercepted functions (OSSpinLockLock), and
+  // we'll assert in CheckNoLocks() unless we ignore interceptors.
+  thr->ignore_interceptors++;
 }
 
 void ForkParentAfter(ThreadState *thr, uptr pc) {
-  ThreadIgnoreEnd(thr, pc);  // Begin is in ForkBefore.
+  thr->suppress_reports--;  // Enabled in ForkBefore.
+  thr->ignore_interceptors--;
   ctx->report_mtx.Unlock();
   ctx->thread_registry->Unlock();
 }
 
 void ForkChildAfter(ThreadState *thr, uptr pc) {
-  ThreadIgnoreEnd(thr, pc);  // Begin is in ForkBefore.
+  thr->suppress_reports--;  // Enabled in ForkBefore.
+  thr->ignore_interceptors--;
   ctx->report_mtx.Unlock();
   ctx->thread_registry->Unlock();
 

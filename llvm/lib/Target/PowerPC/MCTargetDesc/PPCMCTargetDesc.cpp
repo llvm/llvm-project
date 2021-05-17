@@ -15,6 +15,7 @@
 #include "MCTargetDesc/PPCMCAsmInfo.h"
 #include "PPCELFStreamer.h"
 #include "PPCTargetStreamer.h"
+#include "PPCXCOFFStreamer.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
@@ -112,13 +113,21 @@ static MCAsmInfo *createPPCMCAsmInfo(const MCRegisterInfo &MRI,
   return MAI;
 }
 
-static MCStreamer *createPPCMCStreamer(const Triple &T, MCContext &Context,
-                                       std::unique_ptr<MCAsmBackend> &&MAB,
-                                       std::unique_ptr<MCObjectWriter> &&OW,
-                                       std::unique_ptr<MCCodeEmitter> &&Emitter,
-                                       bool RelaxAll) {
+static MCStreamer *
+createPPCELFStreamer(const Triple &T, MCContext &Context,
+                     std::unique_ptr<MCAsmBackend> &&MAB,
+                     std::unique_ptr<MCObjectWriter> &&OW,
+                     std::unique_ptr<MCCodeEmitter> &&Emitter, bool RelaxAll) {
   return createPPCELFStreamer(Context, std::move(MAB), std::move(OW),
                               std::move(Emitter));
+}
+
+static MCStreamer *createPPCXCOFFStreamer(
+    const Triple &T, MCContext &Context, std::unique_ptr<MCAsmBackend> &&MAB,
+    std::unique_ptr<MCObjectWriter> &&OW,
+    std::unique_ptr<MCCodeEmitter> &&Emitter, bool RelaxAll) {
+  return createPPCXCOFFStreamer(Context, std::move(MAB), std::move(OW),
+                                std::move(Emitter));
 }
 
 namespace {
@@ -130,12 +139,22 @@ public:
   PPCTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS)
       : PPCTargetStreamer(S), OS(OS) {}
 
-  void emitTCEntry(const MCSymbol &S) override {
+  void emitTCEntry(const MCSymbol &S,
+                   MCSymbolRefExpr::VariantKind Kind) override {
     if (const MCSymbolXCOFF *XSym = dyn_cast<MCSymbolXCOFF>(&S)) {
       MCSymbolXCOFF *TCSym =
           cast<MCSectionXCOFF>(Streamer.getCurrentSectionOnly())
               ->getQualNameSymbol();
-      OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << '\n';
+      // If the variant kind is VK_PPC_AIX_TLSGDM the entry represents the
+      // region handle for the symbol, we add the relocation specifier @m.
+      // If the variant kind is VK_PPC_AIX_TLSGD the entry represents the
+      // variable offset for the symbol, we add the relocation specifier @gd.
+      if (Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGD ||
+          Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGDM)
+        OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << "@"
+           << MCSymbolRefExpr::getVariantKindName(Kind) << '\n';
+      else
+        OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << '\n';
 
       if (TCSym->hasRename())
         Streamer.emitXCOFFRenameDirective(TCSym, TCSym->getSymbolTableName());
@@ -172,7 +191,8 @@ public:
     return static_cast<MCELFStreamer &>(Streamer);
   }
 
-  void emitTCEntry(const MCSymbol &S) override {
+  void emitTCEntry(const MCSymbol &S,
+                   MCSymbolRefExpr::VariantKind Kind) override {
     // Creates a R_PPC64_TOC relocation
     Streamer.emitValueToAlignment(8);
     Streamer.emitSymbolValue(&S, 8);
@@ -276,7 +296,8 @@ class PPCTargetMachOStreamer : public PPCTargetStreamer {
 public:
   PPCTargetMachOStreamer(MCStreamer &S) : PPCTargetStreamer(S) {}
 
-  void emitTCEntry(const MCSymbol &S) override {
+  void emitTCEntry(const MCSymbol &S,
+                   MCSymbolRefExpr::VariantKind Kind) override {
     llvm_unreachable("Unknown pseudo-op: .tc");
   }
 
@@ -298,11 +319,13 @@ class PPCTargetXCOFFStreamer : public PPCTargetStreamer {
 public:
   PPCTargetXCOFFStreamer(MCStreamer &S) : PPCTargetStreamer(S) {}
 
-  void emitTCEntry(const MCSymbol &S) override {
+  void emitTCEntry(const MCSymbol &S,
+                   MCSymbolRefExpr::VariantKind Kind) override {
     const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
     const unsigned PointerSize = MAI->getCodePointerSize();
     Streamer.emitValueToAlignment(PointerSize);
-    Streamer.emitSymbolValue(&S, PointerSize);
+    Streamer.emitValue(MCSymbolRefExpr::create(&S, Kind, Streamer.getContext()),
+                       PointerSize);
   }
 
   void emitMachine(StringRef CPU) override {
@@ -367,7 +390,10 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTargetMC() {
     TargetRegistry::RegisterMCAsmBackend(*T, createPPCAsmBackend);
 
     // Register the elf streamer.
-    TargetRegistry::RegisterELFStreamer(*T, createPPCMCStreamer);
+    TargetRegistry::RegisterELFStreamer(*T, createPPCELFStreamer);
+
+    // Register the XCOFF streamer.
+    TargetRegistry::RegisterXCOFFStreamer(*T, createPPCXCOFFStreamer);
 
     // Register the object target streamer.
     TargetRegistry::RegisterObjectTargetStreamer(*T,

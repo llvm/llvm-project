@@ -127,7 +127,7 @@ isSimpleEnoughValueToCommit(Constant *C,
 /// another pointer type, we punt.  We basically just support direct accesses to
 /// globals and GEP's of globals.  This should be kept up to date with
 /// CommitValueTo.
-static bool isSimpleEnoughPointerToCommit(Constant *C) {
+static bool isSimpleEnoughPointerToCommit(Constant *C, const DataLayout &DL) {
   // Conservatively, avoid aggregate types. This is because we don't
   // want to worry about them partially overlapping other stores.
   if (!cast<PointerType>(C->getType())->getElementType()->isSingleValueType())
@@ -157,13 +157,14 @@ static bool isSimpleEnoughPointerToCommit(Constant *C) {
       if (!CE->isGEPWithNoNotionalOverIndexing())
         return false;
 
-      return ConstantFoldLoadThroughGEPConstantExpr(GV->getInitializer(), CE);
-
-    // A constantexpr bitcast from a pointer to another pointer is a no-op,
-    // and we know how to evaluate it by moving the bitcast from the pointer
-    // operand to the value operand.
+      return ConstantFoldLoadThroughGEPConstantExpr(
+          GV->getInitializer(), CE,
+          cast<GEPOperator>(CE)->getResultElementType(), DL);
     } else if (CE->getOpcode() == Instruction::BitCast &&
                isa<GlobalVariable>(CE->getOperand(0))) {
+      // A constantexpr bitcast from a pointer to another pointer is a no-op,
+      // and we know how to evaluate it by moving the bitcast from the pointer
+      // operand to the value operand.
       // Do not allow weak/*_odr/linkonce/dllimport/dllexport linkage or
       // external globals.
       return cast<GlobalVariable>(CE->getOperand(0))->hasUniqueInitializer();
@@ -207,7 +208,7 @@ static Constant *getInitializer(Constant *C) {
 
 /// Return the value that would be computed by a load from P after the stores
 /// reflected by 'memory' have been performed.  If we can't decide, return null.
-Constant *Evaluator::ComputeLoadResult(Constant *P) {
+Constant *Evaluator::ComputeLoadResult(Constant *P, Type *Ty) {
   // If this memory location has been recently stored, use the stored value: it
   // is the most up-to-date.
   auto findMemLoc = [this](Constant *Ptr) { return MutatedMemory.lookup(Ptr); };
@@ -227,7 +228,7 @@ Constant *Evaluator::ComputeLoadResult(Constant *P) {
     // Handle a constantexpr getelementptr.
     case Instruction::GetElementPtr:
       if (auto *I = getInitializer(CE->getOperand(0)))
-        return ConstantFoldLoadThroughGEPConstantExpr(I, CE);
+        return ConstantFoldLoadThroughGEPConstantExpr(I, CE, Ty, DL);
       break;
     // Handle a constantexpr bitcast.
     case Instruction::BitCast:
@@ -318,9 +319,10 @@ Constant *Evaluator::castCallResultIfNeeded(Value *CallExpr, Constant *RV) {
 
 /// Evaluate all instructions in block BB, returning true if successful, false
 /// if we can't evaluate it.  NewBB returns the next BB that control flows into,
-/// or null upon return.
-bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
-                              BasicBlock *&NextBB) {
+/// or null upon return. StrippedPointerCastsForAliasAnalysis is set to true if
+/// we looked through pointer casts to evaluate something.
+bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
+                              bool &StrippedPointerCastsForAliasAnalysis) {
   // This is the main evaluation loop.
   while (true) {
     Constant *InstResult = nullptr;
@@ -339,7 +341,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
         Ptr = FoldedPtr;
         LLVM_DEBUG(dbgs() << "; To: " << *Ptr << "\n");
       }
-      if (!isSimpleEnoughPointerToCommit(Ptr)) {
+      if (!isSimpleEnoughPointerToCommit(Ptr, DL)) {
         // If this is too complex for us to commit, reject it.
         LLVM_DEBUG(
             dbgs() << "Pointer is too complex for us to evaluate store.");
@@ -428,9 +430,8 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
     } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(CurInst)) {
       Constant *P = getVal(GEP->getOperand(0));
       SmallVector<Constant*, 8> GEPOps;
-      for (User::op_iterator i = GEP->op_begin() + 1, e = GEP->op_end();
-           i != e; ++i)
-        GEPOps.push_back(getVal(*i));
+      for (Use &Op : llvm::drop_begin(GEP->operands()))
+        GEPOps.push_back(getVal(Op));
       InstResult =
           ConstantExpr::getGetElementPtr(GEP->getSourceElementType(), P, GEPOps,
                                          cast<GEPOperator>(GEP)->isInBounds());
@@ -450,7 +451,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
                              "folding: "
                           << *Ptr << "\n");
       }
-      InstResult = ComputeLoadResult(Ptr);
+      InstResult = ComputeLoadResult(Ptr, LI->getType());
       if (!InstResult) {
         LLVM_DEBUG(
             dbgs() << "Failed to compute load result. Can not evaluate load."
@@ -496,7 +497,8 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
           }
           Constant *Ptr = getVal(MSI->getDest());
           Constant *Val = getVal(MSI->getValue());
-          Constant *DestVal = ComputeLoadResult(getVal(Ptr));
+          Constant *DestVal =
+              ComputeLoadResult(getVal(Ptr), MSI->getValue()->getType());
           if (Val->isNullValue() && DestVal && DestVal->isNullValue()) {
             // This memset is a no-op.
             LLVM_DEBUG(dbgs() << "Ignoring no-op memset.\n");
@@ -551,56 +553,74 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
           LLVM_DEBUG(dbgs() << "Skipping pseudoprobe intrinsic.\n");
           ++CurInst;
           continue;
-        }
-
-        LLVM_DEBUG(dbgs() << "Unknown intrinsic. Can not evaluate.\n");
-        return false;
-      }
-
-      // Resolve function pointers.
-      SmallVector<Constant *, 8> Formals;
-      Function *Callee = getCalleeWithFormalArgs(CB, Formals);
-      if (!Callee || Callee->isInterposable()) {
-        LLVM_DEBUG(dbgs() << "Can not resolve function pointer.\n");
-        return false;  // Cannot resolve.
-      }
-
-      if (Callee->isDeclaration()) {
-        // If this is a function we can constant fold, do it.
-        if (Constant *C = ConstantFoldCall(&CB, Callee, Formals, TLI)) {
-          InstResult = castCallResultIfNeeded(CB.getCalledOperand(), C);
-          if (!InstResult)
+        } else {
+          Value *Stripped = CurInst->stripPointerCastsForAliasAnalysis();
+          // Only attempt to getVal() if we've actually managed to strip
+          // anything away, or else we'll call getVal() on the current
+          // instruction.
+          if (Stripped != &*CurInst) {
+            InstResult = getVal(Stripped);
+          }
+          if (InstResult) {
+            LLVM_DEBUG(dbgs()
+                       << "Stripped pointer casts for alias analysis for "
+                          "intrinsic call.\n");
+            StrippedPointerCastsForAliasAnalysis = true;
+            InstResult = ConstantExpr::getBitCast(InstResult, II->getType());
+          } else {
+            LLVM_DEBUG(dbgs() << "Unknown intrinsic. Cannot evaluate.\n");
             return false;
-          LLVM_DEBUG(dbgs() << "Constant folded function call. Result: "
-                            << *InstResult << "\n");
-        } else {
-          LLVM_DEBUG(dbgs() << "Can not constant fold function call.\n");
-          return false;
+          }
         }
-      } else {
-        if (Callee->getFunctionType()->isVarArg()) {
-          LLVM_DEBUG(dbgs() << "Can not constant fold vararg function call.\n");
-          return false;
+      }
+
+      if (!InstResult) {
+        // Resolve function pointers.
+        SmallVector<Constant *, 8> Formals;
+        Function *Callee = getCalleeWithFormalArgs(CB, Formals);
+        if (!Callee || Callee->isInterposable()) {
+          LLVM_DEBUG(dbgs() << "Can not resolve function pointer.\n");
+          return false; // Cannot resolve.
         }
 
-        Constant *RetVal = nullptr;
-        // Execute the call, if successful, use the return value.
-        ValueStack.emplace_back();
-        if (!EvaluateFunction(Callee, RetVal, Formals)) {
-          LLVM_DEBUG(dbgs() << "Failed to evaluate function.\n");
-          return false;
-        }
-        ValueStack.pop_back();
-        InstResult = castCallResultIfNeeded(CB.getCalledOperand(), RetVal);
-        if (RetVal && !InstResult)
-          return false;
-
-        if (InstResult) {
-          LLVM_DEBUG(dbgs() << "Successfully evaluated function. Result: "
-                            << *InstResult << "\n\n");
+        if (Callee->isDeclaration()) {
+          // If this is a function we can constant fold, do it.
+          if (Constant *C = ConstantFoldCall(&CB, Callee, Formals, TLI)) {
+            InstResult = castCallResultIfNeeded(CB.getCalledOperand(), C);
+            if (!InstResult)
+              return false;
+            LLVM_DEBUG(dbgs() << "Constant folded function call. Result: "
+                              << *InstResult << "\n");
+          } else {
+            LLVM_DEBUG(dbgs() << "Can not constant fold function call.\n");
+            return false;
+          }
         } else {
-          LLVM_DEBUG(dbgs()
-                     << "Successfully evaluated function. Result: 0\n\n");
+          if (Callee->getFunctionType()->isVarArg()) {
+            LLVM_DEBUG(dbgs()
+                       << "Can not constant fold vararg function call.\n");
+            return false;
+          }
+
+          Constant *RetVal = nullptr;
+          // Execute the call, if successful, use the return value.
+          ValueStack.emplace_back();
+          if (!EvaluateFunction(Callee, RetVal, Formals)) {
+            LLVM_DEBUG(dbgs() << "Failed to evaluate function.\n");
+            return false;
+          }
+          ValueStack.pop_back();
+          InstResult = castCallResultIfNeeded(CB.getCalledOperand(), RetVal);
+          if (RetVal && !InstResult)
+            return false;
+
+          if (InstResult) {
+            LLVM_DEBUG(dbgs() << "Successfully evaluated function. Result: "
+                              << *InstResult << "\n\n");
+          } else {
+            LLVM_DEBUG(dbgs()
+                       << "Successfully evaluated function. Result: 0\n\n");
+          }
         }
       }
     } else if (CurInst->isTerminator()) {
@@ -695,15 +715,27 @@ bool Evaluator::EvaluateFunction(Function *F, Constant *&RetVal,
     BasicBlock *NextBB = nullptr; // Initialized to avoid compiler warnings.
     LLVM_DEBUG(dbgs() << "Trying to evaluate BB: " << *CurBB << "\n");
 
-    if (!EvaluateBlock(CurInst, NextBB))
+    bool StrippedPointerCastsForAliasAnalysis = false;
+
+    if (!EvaluateBlock(CurInst, NextBB, StrippedPointerCastsForAliasAnalysis))
       return false;
 
     if (!NextBB) {
       // Successfully running until there's no next block means that we found
       // the return.  Fill it the return value and pop the call stack.
       ReturnInst *RI = cast<ReturnInst>(CurBB->getTerminator());
-      if (RI->getNumOperands())
+      if (RI->getNumOperands()) {
+        // The Evaluator can look through pointer casts as long as alias
+        // analysis holds because it's just a simple interpreter and doesn't
+        // skip memory accesses due to invariant group metadata, but we can't
+        // let users of Evaluator use a value that's been gleaned looking
+        // through stripping pointer casts.
+        if (StrippedPointerCastsForAliasAnalysis &&
+            !RI->getReturnValue()->getType()->isVoidTy()) {
+          return false;
+        }
         RetVal = getVal(RI->getOperand(0));
+      }
       CallStack.pop_back();
       return true;
     }

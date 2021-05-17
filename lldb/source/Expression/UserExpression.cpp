@@ -187,7 +187,12 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
     }
   }
 
-  if (process == nullptr || !process->CanJIT())
+  // Explicitly force the IR interpreter to evaluate the expression when the
+  // there is no process that supports running the expression for us. Don't
+  // change the execution policy if we have the special top-level policy that
+  // doesn't contain any expression and there is nothing to interpret.
+  if (execution_policy != eExecutionPolicyTopLevel &&
+      (process == nullptr || !process->CanJIT()))
     execution_policy = eExecutionPolicyNever;
 
   // We need to set the expression execution thread here, turns out parse can
@@ -297,19 +302,19 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
     }
 
     if (!parse_success) {
-      if (!fixed_expression->empty() && target->GetEnableNotifyAboutFixIts()) {
-        error.SetExpressionErrorWithFormat(
-            execution_results,
-            "expression failed to parse, fixed expression suggested:\n  %s",
-            fixed_expression->c_str());
-      } else {
-        if (!diagnostic_manager.Diagnostics().size())
-          error.SetExpressionError(execution_results,
-                                   "expression failed to parse, unknown error");
+      std::string msg;
+      {
+        llvm::raw_string_ostream os(msg);
+        os << "expression failed to parse:\n";
+        if (!diagnostic_manager.Diagnostics().empty())
+          os << diagnostic_manager.GetString();
         else
-          error.SetExpressionError(execution_results,
-                                   diagnostic_manager.GetString().c_str());
+          os << "unknown error";
+        if (target->GetEnableNotifyAboutFixIts() && fixed_expression &&
+            !fixed_expression->empty())
+          os << "\nfixed expression suggested:\n  " << *fixed_expression;
       }
+      error.SetExpressionError(execution_results, msg.c_str());
     }
   }
 
@@ -362,7 +367,7 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
 
           LLDB_LOG(log,
                    "== [UserExpression::Evaluate] Execution completed "
-                   "normally with result %s ==",
+                   "normally with result {0} ==",
                    result_valobj_sp->GetValueAsCString());
         } else {
           LLDB_LOG(log, "== [UserExpression::Evaluate] Execution completed "

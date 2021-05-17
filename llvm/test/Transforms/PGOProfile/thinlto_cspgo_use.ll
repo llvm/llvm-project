@@ -8,6 +8,7 @@
 ; RUN:   -r=%t1.bc,bar,l \
 ; RUN:   -r=%t1.bc,main,plx \
 ; RUN:   -r=%t2.bc,bar,pl \
+; RUN:   -r=%t2.bc,clobber,pl \
 ; RUN:   -r=%t2.bc,odd,pl \
 ; RUN:   -r=%t2.bc,even,pl
 ; RUN: llvm-dis %t.1.4.opt.bc -o - | FileCheck %s --check-prefix=CSUSE

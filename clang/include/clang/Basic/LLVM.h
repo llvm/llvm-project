@@ -22,6 +22,9 @@
 // None.h includes an enumerator that is desired & cannot be forward declared
 // without a definition of NoneType.
 #include "llvm/ADT/None.h"
+// Add this header as a workaround to prevent `too few template arguments for
+// class template 'SmallVector'` building error with build compilers like XL.
+#include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
   // ADT's.

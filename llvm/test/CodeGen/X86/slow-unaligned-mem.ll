@@ -48,6 +48,7 @@
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=bdver4        2>&1 | FileCheck %s --check-prefix=FAST
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=znver1        2>&1 | FileCheck %s --check-prefix=FAST
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=znver2        2>&1 | FileCheck %s --check-prefix=FAST
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=znver3        2>&1 | FileCheck %s --check-prefix=FAST
 
 ; Other chips with slow unaligned memory accesses
 

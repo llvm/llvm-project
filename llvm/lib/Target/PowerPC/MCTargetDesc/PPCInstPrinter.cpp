@@ -514,6 +514,15 @@ void PPCInstPrinter::printMemRegImm(const MCInst *MI, unsigned OpNo,
   O << ')';
 }
 
+void PPCInstPrinter::printMemRegImmHash(const MCInst *MI, unsigned OpNo,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  O << MI->getOperand(OpNo).getImm();
+  O << '(';
+  printOperand(MI, OpNo + 1, STI, O);
+  O << ')';
+}
+
 void PPCInstPrinter::printMemRegImm34PCRel(const MCInst *MI, unsigned OpNo,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {

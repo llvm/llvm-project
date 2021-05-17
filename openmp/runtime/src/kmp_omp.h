@@ -123,7 +123,7 @@ typedef struct {
 
   /* team structure information */
   kmp_int32 t_sizeof_struct;
-  offset_and_size_t t_master_tid; // tid of master in parent team
+  offset_and_size_t t_master_tid; // tid of primary thread in parent team
   offset_and_size_t t_ident; // location of parallel region
   offset_and_size_t t_parent; // parent team
   offset_and_size_t t_nproc; // # team threads
@@ -136,7 +136,7 @@ typedef struct {
   offset_and_size_t t_cancel_request;
   offset_and_size_t t_bar;
   offset_and_size_t
-      t_b_master_arrived; // increased by 1 when master arrives to a barrier
+      t_b_master_arrived; // incremented when primary thread reaches barrier
   offset_and_size_t
       t_b_team_arrived; // increased by one when all the threads arrived
 

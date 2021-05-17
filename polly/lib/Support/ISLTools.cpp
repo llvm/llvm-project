@@ -157,10 +157,9 @@ isl::set polly::singleton(isl::union_set USet, isl::space ExpectedSpace) {
   return Result;
 }
 
-unsigned polly::getNumScatterDims(const isl::union_map &Schedule) {
-  unsigned Dims = 0;
+isl_size polly::getNumScatterDims(const isl::union_map &Schedule) {
+  isl_size Dims = 0;
   for (isl::map Map : Schedule.get_map_list()) {
-    // Map.dim would return UINT_MAX.
     if (!Map)
       continue;
 
@@ -668,11 +667,11 @@ static int structureCompare(const isl::space &ASpace, const isl::space &BSpace,
   }
 
   std::string AName;
-  if (ASpace.has_tuple_name(isl::dim::set))
+  if (!ASpace.is_params() && ASpace.has_tuple_name(isl::dim::set))
     AName = ASpace.get_tuple_name(isl::dim::set);
 
   std::string BName;
-  if (BSpace.has_tuple_name(isl::dim::set))
+  if (!BSpace.is_params() && BSpace.has_tuple_name(isl::dim::set))
     BName = BSpace.get_tuple_name(isl::dim::set);
 
   int NameCompare = AName.compare(BName);

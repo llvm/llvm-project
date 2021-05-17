@@ -69,7 +69,7 @@ def : Pat<(X86callseq_start timm:$amt1, timm:$amt2),
 let SchedRW = [WriteSystem] in {
 
 // x86-64 va_start lowering magic.
-let usesCustomInserter = 1, Defs = [EFLAGS] in {
+let hasSideEffects = 1, Defs = [EFLAGS] in {
 def VASTART_SAVE_XMM_REGS : I<0, Pseudo,
                               (outs),
                               (ins GR8:$al,
@@ -80,7 +80,9 @@ def VASTART_SAVE_XMM_REGS : I<0, Pseudo,
                                                          timm:$regsavefi,
                                                          timm:$offset),
                                (implicit EFLAGS)]>;
+}
 
+let usesCustomInserter = 1, Defs = [EFLAGS] in {
 // The VAARG_64 and VAARG_X32 pseudo-instructions take the address of the
 // va_list, and place the address of the next argument into a register.
 let Defs = [EFLAGS] in {
@@ -930,10 +932,10 @@ def MWAITX :
 defm LCMPXCHG : LCMPXCHG_BinOp<0xB0, 0xB1, MRMDestMem, "cmpxchg", X86cas>;
 
 // Atomic exchange and add
-multiclass ATOMIC_LOAD_BINOP<bits<8> opc8, bits<8> opc, string mnemonic,
-                             string frag> {
-  let Constraints = "$val = $dst", Defs = [EFLAGS], isCodeGenOnly = 1,
-      SchedRW = [WriteALURMW] in {
+multiclass ATOMIC_RMW_BINOP<bits<8> opc8, bits<8> opc, string mnemonic,
+                            string frag> {
+  let Constraints = "$val = $dst", Defs = [EFLAGS], mayLoad = 1, mayStore = 1,
+      isCodeGenOnly = 1, SchedRW = [WriteALURMW] in {
     def NAME#8  : I<opc8, MRMSrcMem, (outs GR8:$dst),
                     (ins GR8:$val, i8mem:$ptr),
                     !strconcat(mnemonic, "{b}\t{$val, $ptr|$ptr, $val}"),
@@ -962,7 +964,7 @@ multiclass ATOMIC_LOAD_BINOP<bits<8> opc8, bits<8> opc, string mnemonic,
   }
 }
 
-defm LXADD : ATOMIC_LOAD_BINOP<0xc0, 0xc1, "xadd", "atomic_load_add">, TB, LOCK;
+defm LXADD : ATOMIC_RMW_BINOP<0xc0, 0xc1, "xadd", "atomic_load_add">, TB, LOCK;
 
 /* The following multiclass tries to make sure that in code like
  *    x.store (immediate op x.load(acquire), release)

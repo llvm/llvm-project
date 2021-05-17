@@ -1,7 +1,5 @@
-# This test applies to POSIX.
-# UNSUPPORTED: system-windows
-
 # FIXME: ShellExpandArguments is unimplemented on the following targets.
+# UNSUPPORTED: system-windows
 # UNSUPPORTED: system-linux
 # XFAIL: system-freebsd
 # XFAIL: system-netbsd

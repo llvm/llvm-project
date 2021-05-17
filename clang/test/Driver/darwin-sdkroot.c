@@ -43,7 +43,7 @@
 //
 // RUN: rm -rf %t/SDKs/iPhoneOS8.0.0.sdk
 // RUN: mkdir -p %t/SDKs/iPhoneOS8.0.0.sdk
-// RUN: env SDKROOT=%t/SDKs/iPhoneOS8.0.0.sdk %clang -target arm64-apple-darwin -mlinker-version=400 --sysroot="" %s -### 2>&1 \
+// RUN: env SDKROOT=%t/SDKs/iPhoneOS8.0.0.sdk %clang -fuse-ld= -target arm64-apple-darwin -mlinker-version=400 --sysroot="" %s -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-IPHONE %s
 //
 // CHECK-IPHONE: clang
@@ -55,7 +55,7 @@
 //
 // RUN: rm -rf %t/SDKs/iPhoneSimulator8.0.sdk
 // RUN: mkdir -p %t/SDKs/iPhoneSimulator8.0.sdk
-// RUN: env SDKROOT=%t/SDKs/iPhoneSimulator8.0.sdk %clang -target x86_64-apple-darwin -mlinker-version=400 --sysroot="" %s -### 2>&1 \
+// RUN: env SDKROOT=%t/SDKs/iPhoneSimulator8.0.sdk %clang -fuse-ld= -target x86_64-apple-darwin -mlinker-version=400 --sysroot="" %s -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-SIMULATOR %s
 //
 // CHECK-SIMULATOR: clang
@@ -66,7 +66,7 @@
 //
 // RUN: rm -rf %t/SDKs/MacOSX10.10.0.sdk
 // RUN: mkdir -p %t/SDKs/MacOSX10.10.0.sdk
-// RUN: env SDKROOT=%t/SDKs/MacOSX10.10.0.sdk %clang -target x86_64-apple-darwin -mlinker-version=400 --sysroot="" %s -### 2>&1 \
+// RUN: env SDKROOT=%t/SDKs/MacOSX10.10.0.sdk %clang -fuse-ld= -target x86_64-apple-darwin -mlinker-version=400 --sysroot="" %s -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-MACOSX %s
 //
 // CHECK-MACOSX: clang

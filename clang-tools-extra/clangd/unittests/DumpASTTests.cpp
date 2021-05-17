@@ -16,7 +16,11 @@
 namespace clang {
 namespace clangd {
 namespace {
+using testing::Contains;
+using testing::Not;
 using testing::SizeIs;
+
+MATCHER_P(WithDetail, str, "") { return arg.detail == str; }
 
 TEST(DumpASTTests, BasicInfo) {
   std::pair</*Code=*/std::string, /*Expected=*/std::string> Cases[] = {
@@ -155,6 +159,20 @@ TEST(DumpASTTests, Range) {
   EXPECT_EQ(Node.range, Case.range("var"));
   ASSERT_THAT(Node.children, SizeIs(1)) << "Expected one child typeloc";
   EXPECT_EQ(Node.children.front().range, Case.range("type"));
+}
+
+TEST(DumpASTTests, NoRange) {
+  auto TU = TestTU::withHeaderCode("void funcFromHeader();");
+  TU.Code = "int varFromSource;";
+  ParsedAST AST = TU.build();
+  auto Node = dumpAST(
+      DynTypedNode::create(*AST.getASTContext().getTranslationUnitDecl()),
+      AST.getTokens(), AST.getASTContext());
+  ASSERT_THAT(Node.children, Contains(WithDetail("varFromSource")));
+  ASSERT_THAT(Node.children, Not(Contains(WithDetail("funcFromHeader"))));
+  EXPECT_THAT(Node.arcana, testing::StartsWith("TranslationUnitDecl "));
+  ASSERT_FALSE(Node.range.hasValue())
+      << "Expected no range for translation unit";
 }
 
 TEST(DumpASTTests, Arcana) {

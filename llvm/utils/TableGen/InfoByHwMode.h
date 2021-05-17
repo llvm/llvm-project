@@ -15,10 +15,10 @@
 #define LLVM_UTILS_TABLEGEN_INFOBYHWMODE_H
 
 #include "CodeGenHwModes.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/MachineValueType.h"
 
 #include <map>
-#include <set>
 #include <string>
 #include <vector>
 
@@ -37,10 +37,10 @@ enum : unsigned {
 };
 
 template <typename InfoT>
-std::vector<unsigned> union_modes(const InfoByHwMode<InfoT> &A,
-                                  const InfoByHwMode<InfoT> &B) {
-  std::vector<unsigned> V;
-  std::set<unsigned> U;
+void union_modes(const InfoByHwMode<InfoT> &A,
+                 const InfoByHwMode<InfoT> &B,
+                 SmallVectorImpl<unsigned> &Modes) {
+  SmallSet<unsigned, 4> U;
   for (const auto &P : A)
     U.insert(P.first);
   for (const auto &P : B)
@@ -49,12 +49,11 @@ std::vector<unsigned> union_modes(const InfoByHwMode<InfoT> &A,
   bool HasDefault = false;
   for (unsigned M : U)
     if (M != DefaultMode)
-      V.push_back(M);
+      Modes.push_back(M);
     else
       HasDefault = true;
   if (HasDefault)
-    V.push_back(DefaultMode);
-  return V;
+    Modes.push_back(DefaultMode);
 }
 
 template <typename InfoT>
@@ -114,6 +113,7 @@ struct InfoByHwMode {
     Map.insert(std::make_pair(DefaultMode, I));
   }
 
+protected:
   MapType Map;
 };
 
@@ -178,6 +178,10 @@ struct RegSizeInfoByHwMode : public InfoByHwMode<RegSizeInfo> {
   bool hasStricterSpillThan(const RegSizeInfoByHwMode &I) const;
 
   void writeToStream(raw_ostream &OS) const;
+
+  void insertRegSizeForMode(unsigned Mode, RegSizeInfo Info) {
+    Map.insert(std::make_pair(Mode, Info));
+  }
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const ValueTypeByHwMode &T);

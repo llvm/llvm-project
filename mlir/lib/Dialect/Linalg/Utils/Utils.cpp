@@ -18,17 +18,77 @@
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/SCF/EDSC/Builders.h"
 #include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/AffineExpr.h"
+#include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopUtils.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "linalg-utils"
 
 using namespace mlir;
+using namespace mlir::edsc;
+using namespace mlir::edsc::intrinsics;
 using namespace mlir::linalg;
 using namespace mlir::scf;
+
+static bool isZero(Value v) {
+  if (auto cst = v.getDefiningOp<ConstantIndexOp>())
+    return cst.getValue() == 0;
+  return false;
+}
+
+namespace {
+
+// Helper visitor to determine whether an AffineExpr is tiled.
+// This is achieved by traversing every AffineDimExpr with position `pos` and
+// checking whether the corresponding `tileSizes[pos]` is non-zero.
+// This also enforces only positive coefficients occur in multiplications.
+//
+// Example:
+//   `d0 + 2 * d1 + d3` is tiled by [0, 0, 0, 2] but not by [0, 0, 2, 0]
+//
+struct TileCheck : public AffineExprVisitor<TileCheck> {
+  TileCheck(ValueRange tileSizes) : isTiled(false), tileSizes(tileSizes) {}
+
+  void visitDimExpr(AffineDimExpr expr) {
+    isTiled |= !isZero(tileSizes[expr.getPosition()]);
+  }
+  void visitAffineBinaryOpExpr(AffineBinaryOpExpr expr) {
+    visit(expr.getLHS());
+    visit(expr.getRHS());
+    if (expr.getKind() == mlir::AffineExprKind::Mul)
+      assert(expr.getRHS().cast<AffineConstantExpr>().getValue() > 0 &&
+             "nonpositive multiplying coefficient");
+  }
+  bool isTiled;
+  ValueRange tileSizes;
+};
+
+} // namespace
+
+static bool isTiled(AffineExpr expr, ValueRange tileSizes) {
+  if (!expr)
+    return false;
+  TileCheck t(tileSizes);
+  t.visit(expr);
+  return t.isTiled;
+}
+
+// Checks whether the `map  varies with respect to a non-zero `tileSize`.
+static bool isTiled(AffineMap map, ValueRange tileSizes) {
+  if (!map)
+    return false;
+  for (unsigned r = 0; r < map.getNumResults(); ++r)
+    if (isTiled(map.getResult(r), tileSizes))
+      return true;
+  return false;
+}
 
 Optional<RegionMatcher::BinaryOpKind>
 RegionMatcher::matchAsScalarBinaryOp(GenericOp op) {
@@ -82,6 +142,7 @@ bool mlir::linalg::isWindowIteratorType(Attribute attr) {
 template struct mlir::linalg::GenerateLoopNest<scf::ForOp>;
 template struct mlir::linalg::GenerateLoopNest<scf::ParallelOp>;
 template struct mlir::linalg::GenerateLoopNest<AffineForOp>;
+template struct mlir::linalg::GenerateLoopNest<TiledLoopOp>;
 
 /// Given a list of subview ranges, extract individual values for lower, upper
 /// bounds and steps and put them into the corresponding vectors.
@@ -98,48 +159,85 @@ static void unpackRanges(ArrayRef<Range> ranges, SmallVectorImpl<Value> &lbs,
 namespace mlir {
 namespace linalg {
 
-SmallVector<int64_t, 8> getStaticShape(LinalgOp linalgOp) {
-  SmallVector<int64_t, 8> res;
-  for (Value v : linalgOp.getShapedOperands()) {
-    auto shape = v.getType().cast<ShapedType>().getShape();
-    res.append(shape.begin(), shape.end());
+/// If `size` comes from an AffineMinOp and one of the values of AffineMinOp
+/// is a constant then return a new value set to the smallest such constant.
+/// Otherwise returngetSmallestBoundingIndex nullptr.
+IntegerAttr getSmallestBoundingIndex(Value size) {
+  Optional<int64_t> boundingConst = {};
+  if (auto affineMinOp = size.getDefiningOp<AffineMinOp>()) {
+    for (auto e : affineMinOp.getAffineMap().getResults())
+      if (auto cst = e.dyn_cast<AffineConstantExpr>())
+        boundingConst = boundingConst
+                            ? std::min(boundingConst.getValue(), cst.getValue())
+                            : cst.getValue();
+  } else if (auto constIndexOp = size.getDefiningOp<ConstantOp>()) {
+    if (constIndexOp.getType().isa<IndexType>())
+      boundingConst = constIndexOp.value().cast<IntegerAttr>().getInt();
+  } else if (auto affineApplyOp = size.getDefiningOp<AffineApplyOp>()) {
+    if (auto cExpr = affineApplyOp.getAffineMap()
+                         .getResult(0)
+                         .dyn_cast<AffineConstantExpr>())
+      boundingConst = cExpr.getValue();
+  } else if (auto dimOp = size.getDefiningOp<memref::DimOp>()) {
+    auto shape = dimOp.memrefOrTensor().getType().dyn_cast<ShapedType>();
+    if (auto constOp = dimOp.index().getDefiningOp<ConstantOp>()) {
+      if (auto indexAttr = constOp.value().dyn_cast<IntegerAttr>()) {
+        auto dimIndex = indexAttr.getInt();
+        if (!shape.isDynamicDim(dimIndex)) {
+          boundingConst = shape.getShape()[dimIndex];
+        }
+      }
+    }
   }
-  return res;
-}
-
-Optional<SmallVector<int64_t, 4>> getStaticLoopRanges(LinalgOp linalgOp) {
-  SmallVector<int64_t, 8> viewSizes = getStaticShape(linalgOp);
-  AffineMap invertedMap = linalgOp.getShapesToLoopsMap();
-  if (!invertedMap)
-    return {};
-  return invertedMap.compose(viewSizes);
+  if (boundingConst && *boundingConst >= 0)
+    return Builder(size.getContext()).getIndexAttr(*boundingConst);
+  return nullptr;
 }
 
 /// Specialization to build an scf "for" nest.
 template <>
 void GenerateLoopNest<scf::ForOp>::doit(
-    ArrayRef<Range> loopRanges, ValueRange iterArgInitValues,
+    ArrayRef<Range> loopRanges, LinalgOp linalgOp,
     ArrayRef<Attribute> iteratorTypes,
     function_ref<scf::ValueVector(ValueRange, ValueRange)> bodyBuilderFn,
     Optional<LinalgLoopDistributionOptions> distributionOptions) {
+  auto iterArgInitValues = linalgOp.getOutputTensors();
   // Create procInfo so it dominates loops, if appropriate.
   OpBuilder &builder = edsc::ScopedContext::getBuilderRef();
   Location loc = edsc::ScopedContext::getLocation();
-  SmallVector<ProcInfo, 2> procInfo;
-  if (distributionOptions.hasValue())
-    procInfo = distributionOptions->procInfo(builder, loc, loopRanges);
+
+  SmallVector<ProcInfo, 4> procInfo;
+  SmallVector<DistributionMethod, 0> distributionMethod;
+  if (distributionOptions.hasValue()) {
+    // Collect loop ranges for parallel dimensions.
+    SmallVector<Range, 2> parallelLoopRanges;
+    for (auto iteratorType : enumerate(iteratorTypes))
+      if (isParallelIteratorType(iteratorType.value()))
+        parallelLoopRanges.push_back(loopRanges[iteratorType.index()]);
+
+    // Get their distribution schemes.
+    distributionMethod = distributionOptions->distributionMethod;
+    if (distributionMethod.size() < parallelLoopRanges.size())
+      parallelLoopRanges.resize(distributionMethod.size());
+    procInfo = distributionOptions->procInfo(builder, loc, parallelLoopRanges);
+  }
 
   SmallVector<Value, 4> lbs, ubs, steps;
   unpackRanges(loopRanges, lbs, ubs, steps);
   LoopNest loopNest =
       edsc::loopNestBuilder(lbs, ubs, steps, iterArgInitValues, bodyBuilderFn);
 
-  if (!distributionOptions.hasValue() || loopNest.loops.empty())
+  if (!distributionOptions || loopNest.loops.empty())
     return;
 
-  // Only supports cyclic distribution for now.
-  for (auto it : llvm::zip(loopNest.loops, procInfo,
-                           distributionOptions->distributionMethod))
+  // Filter out scf.for loops that were created out of parallel dimensions.
+  SmallVector<scf::ForOp, 4> loops;
+  for (auto iteratorType : enumerate(iteratorTypes))
+    if (isParallelIteratorType(iteratorType.value()))
+      loops.push_back(loopNest.loops[iteratorType.index()]);
+
+  // Distribute - only supports cyclic distribution for now.
+  for (auto it : llvm::zip(loops, procInfo, distributionMethod))
     if (std::get<2>(it) == DistributionMethod::Cyclic)
       mapLoopToProcessorIds(std::get<0>(it), std::get<1>(it).procId,
                             std::get<1>(it).nprocs);
@@ -148,10 +246,11 @@ void GenerateLoopNest<scf::ForOp>::doit(
 /// Specialization to build affine "for" nest.
 template <>
 void GenerateLoopNest<AffineForOp>::doit(
-    ArrayRef<Range> loopRanges, ValueRange iterArgInitValues,
+    ArrayRef<Range> loopRanges, LinalgOp linalgOp,
     ArrayRef<Attribute> iteratorTypes,
     function_ref<scf::ValueVector(ValueRange, ValueRange)> bodyBuilderFn,
     Optional<LinalgLoopDistributionOptions>) {
+  auto iterArgInitValues = linalgOp.getOutputTensors();
   assert(iterArgInitValues.empty() && "unexpected AffineForOp init values");
   SmallVector<Value, 4> lbs, ubs, steps;
   unpackRanges(loopRanges, lbs, ubs, steps);
@@ -172,11 +271,48 @@ void GenerateLoopNest<AffineForOp>::doit(
                               bodyBuilderWithoutIterArgsFn);
 }
 
+/// Specialization to build an linalg.tiled_loop
+template <>
+void GenerateLoopNest<TiledLoopOp>::doit(
+    ArrayRef<Range> loopRanges, LinalgOp linalgOp,
+    ArrayRef<Attribute> iteratorTypes,
+    function_ref<scf::ValueVector(ValueRange, ValueRange)> bodyBuilderFn,
+    Optional<LinalgLoopDistributionOptions>) {
+  OpBuilder &builder = edsc::ScopedContext::getBuilderRef();
+  Location loc = edsc::ScopedContext::getLocation();
+  SmallVector<ProcInfo, 2> procInfo;
+
+  SmallVector<Value, 4> lbs, ubs, steps;
+  unpackRanges(loopRanges, lbs, ubs, steps);
+
+  auto wrappedBuilderFn = [&](OpBuilder &nestedBuilder, Location nestedLoc,
+                              ValueRange ivs, ValueRange inputs,
+                              ValueRange outputs) {
+    ScopedContext context(nestedBuilder, nestedLoc);
+    scf::ValueVector results = bodyBuilderFn(ivs, linalgOp.getOutputTensors());
+    nestedBuilder.create<linalg::YieldOp>(nestedLoc, results);
+  };
+
+  auto tiledLoop = builder.create<TiledLoopOp>(
+      loc, lbs, ubs, steps, linalgOp.getInputs(), linalgOp.getOutputs(),
+      builder.getArrayAttr(iteratorTypes), wrappedBuilderFn);
+
+  // Replace inputs/outputs with the corresponding region args.
+  auto isInsideTiledLoop = [&](OpOperand &operand) {
+    return operand.getOwner()->getBlock() == tiledLoop.getBody();
+  };
+  for (auto it :
+       llvm::zip(linalgOp.getInputs(), tiledLoop.getRegionInputArgs()))
+    std::get<0>(it).replaceUsesWithIf(std::get<1>(it), isInsideTiledLoop);
+  for (auto it :
+       llvm::zip(linalgOp.getOutputs(), tiledLoop.getRegionOutputArgs()))
+    std::get<0>(it).replaceUsesWithIf(std::get<1>(it), isInsideTiledLoop);
+}
+
 /// Update the `lb`, `ub` and `step` to get per processor `lb`, `ub` and `step`.
-static void updateBoundsForCyclicDistribution(OpBuilder &builder, Location loc,
-                                              Value procId, Value nprocs,
-                                              Value &lb, Value &ub,
-                                              Value &step) {
+void updateBoundsForCyclicDistribution(OpBuilder &builder, Location loc,
+                                       Value procId, Value nprocs, Value &lb,
+                                       Value &ub, Value &step) {
   using edsc::op::operator+;
   using edsc::op::operator*;
   lb = lb + (procId * step);
@@ -306,10 +442,11 @@ generateParallelLoopNest(ValueRange lbs, ValueRange ubs, ValueRange steps,
 /// Specialization for generating a mix of parallel and sequential scf loops.
 template <>
 void GenerateLoopNest<scf::ParallelOp>::doit(
-    ArrayRef<Range> loopRanges, ValueRange iterArgInitValues,
+    ArrayRef<Range> loopRanges, LinalgOp linalgOp,
     ArrayRef<Attribute> iteratorTypes,
     function_ref<scf::ValueVector(ValueRange, ValueRange)> bodyBuilderFn,
     Optional<LinalgLoopDistributionOptions> distributionOptions) {
+  auto iterArgInitValues = linalgOp.getOutputTensors();
   assert(iterArgInitValues.empty() && "unexpected ParallelOp init values");
   // This function may be passed more iterator types than ranges.
   assert(iteratorTypes.size() >= loopRanges.size() &&
@@ -364,6 +501,118 @@ void GenerateLoopNest<scf::ParallelOp>::doit(
                            distributionMethod);
 
   assert(ivs.size() == iteratorTypes.size() && "did not generate enough loops");
+}
+
+SmallVector<Value, 4> makeTiledShapes(OpBuilder &builder, Location loc,
+                                      LinalgOp linalgOp,
+                                      ArrayRef<Value> tiledOperands,
+                                      ValueRange ivs, ValueRange tileSizes,
+                                      ArrayRef<Value> sizeBounds) {
+  assert(ivs.size() == static_cast<size_t>(llvm::count_if(
+                           llvm::make_range(tileSizes.begin(), tileSizes.end()),
+                           [](Value v) { return !isZero(v); })) &&
+         "expected as many ivs as non-zero sizes");
+
+  using namespace edsc::op;
+
+  // Construct (potentially temporary) mins and maxes on which to apply maps
+  // that define tile subshapes.
+  SmallVector<Value, 8> lbs, subShapeSizes;
+  for (unsigned idx = 0, idxIvs = 0, e = tileSizes.size(); idx < e; ++idx) {
+    LLVM_DEBUG(llvm::dbgs() << "makeTiledShapes: for loop#" << idx << "\n");
+    bool isTiled = !isZero(tileSizes[idx]);
+    lbs.push_back(isTiled ? ivs[idxIvs++] : (Value)std_constant_index(0));
+    // Before composing, we need to make range a closed interval.
+    Value size = isTiled ? tileSizes[idx] : sizeBounds[idx];
+    subShapeSizes.push_back(size - std_constant_index(1));
+    LLVM_DEBUG(llvm::dbgs() << "lb: " << lbs.back() << "\n");
+    LLVM_DEBUG(llvm::dbgs() << "size: " << subShapeSizes.back() << "\n");
+  }
+
+  MLIRContext *context = builder.getContext();
+  SmallVector<Value, 4> tiledShapes;
+  tiledShapes.reserve(tiledOperands.size());
+  for (auto en : llvm::enumerate(tiledOperands)) {
+    Value shapedOp = en.value();
+    LLVM_DEBUG(llvm::dbgs() << "makeTiledShapes: for operand " << shapedOp);
+    ShapedType shapedType = shapedOp.getType().cast<ShapedType>();
+    unsigned rank = shapedType.getRank();
+    AffineMap map = linalgOp.getIndexingMap(en.index());
+    // If the shape is not tiled, we can use it as is.
+    if (!isTiled(map, tileSizes)) {
+      tiledShapes.push_back(shapedOp);
+      LLVM_DEBUG(llvm::dbgs()
+                 << ": not tiled: use shape: " << shapedType << "\n");
+      continue;
+    }
+    LLVM_DEBUG(llvm::dbgs() << ": tiled: figure out subshape...\n");
+
+    // Construct a new subview / subtensor for the tile.
+    SmallVector<OpFoldResult, 4> offsets, sizes, strides;
+    offsets.reserve(rank);
+    sizes.reserve(rank);
+    strides.reserve(rank);
+    for (unsigned r = 0; r < rank; ++r) {
+      LLVM_DEBUG(llvm::dbgs() << "makeTiledShapes: for dim#" << r);
+      if (!isTiled(map.getSubMap({r}), tileSizes)) {
+        offsets.push_back(builder.getIndexAttr(0));
+        Value dim = memref_dim(shapedOp, r).value;
+        sizes.push_back(dim);
+        strides.push_back(builder.getIndexAttr(1));
+        LLVM_DEBUG(llvm::dbgs() << ": not tiled: use size: " << dim << "\n");
+        continue;
+      }
+      LLVM_DEBUG(llvm::dbgs() << ": tiled: figure out subsize...\n");
+
+      // Tiling creates a new slice at the proper index, the slice step is 1
+      // (i.e. the op does not subsample, stepping occurs in the loop).
+      auto m = map.getSubMap({r});
+      LLVM_DEBUG(llvm::dbgs() << "makeTiledShapes: submap: " << map << "\n");
+      auto offset = applyMapToValues(builder, loc, m, lbs).front();
+      offsets.push_back(offset);
+      auto closedIntSize =
+          applyMapToValues(builder, loc, m, subShapeSizes).front();
+      // Resulting size needs to be made half open interval again.
+      auto size = closedIntSize + std_constant_index(1);
+      LLVM_DEBUG(llvm::dbgs() << "makeTiledShapes: raw size: " << size << "\n");
+
+      // The size of the subview / subtensor should be trimmed to avoid
+      // out-of-bounds accesses, unless we statically know the subshape size
+      // divides the shape size evenly.
+      int64_t shapeSize = shapedType.getDimSize(r);
+      auto sizeCst = size.getDefiningOp<ConstantIndexOp>();
+      if (ShapedType::isDynamic(shapeSize) || !sizeCst ||
+          (shapeSize % sizeCst.getValue()) != 0) {
+        LLVM_DEBUG(llvm::dbgs() << "makeTiledShapes: shapeSize=" << shapeSize
+                                << ", size: " << size
+                                << ": make sure in bound with affine.min\n");
+        AffineExpr dim0, dim1, dim2;
+        bindDims(context, dim0, dim1, dim2);
+        // Compute min(size, dim - offset) to avoid out-of-bounds accesses.
+        auto minMap = AffineMap::get(
+            /*dimCount=*/3, /*symbolCount=*/0, {dim0, dim1 - dim2}, context);
+        Value d = memref_dim(shapedOp, r);
+        SmallVector<Value, 4> operands{size, d, offset};
+        fullyComposeAffineMapAndOperands(&minMap, &operands);
+        size = affine_min(builder.getIndexType(), minMap, operands);
+      }
+
+      sizes.push_back(size);
+      LLVM_DEBUG(llvm::dbgs()
+                 << "makeTiledShapes: new offset: " << offset << "\n");
+      LLVM_DEBUG(llvm::dbgs() << "makeTiledShapes: new size: " << size << "\n");
+      strides.push_back(builder.getIndexAttr(1));
+    }
+
+    if (shapedType.isa<MemRefType>())
+      tiledShapes.push_back(builder.create<memref::SubViewOp>(
+          loc, shapedOp, offsets, sizes, strides));
+    else
+      tiledShapes.push_back(
+          builder.create<SubTensorOp>(loc, shapedOp, offsets, sizes, strides));
+  }
+
+  return tiledShapes;
 }
 
 } // namespace linalg

@@ -22,7 +22,7 @@ class Function;
 class Loop;
 class LPMUpdater;
 
-/// Loop unroll pass that only does full loop unrolling.
+/// Loop unroll pass that only does full loop unrolling and peeling.
 class LoopFullUnrollPass : public PassInfoMixin<LoopFullUnrollPass> {
   const int OptLevel;
 

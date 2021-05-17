@@ -7,8 +7,8 @@ define float @test1(i32 %x) nounwind readnone {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    orpd {{\.LCPI.*}}, %xmm0
-; CHECK-NEXT:    subsd {{\.LCPI.*}}, %xmm0
+; CHECK-NEXT:    orpd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; CHECK-NEXT:    subsd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; CHECK-NEXT:    cvtsd2ss %xmm0, %xmm0
 ; CHECK-NEXT:    movss %xmm0, (%esp)
 ; CHECK-NEXT:    flds (%esp)
@@ -26,8 +26,8 @@ define float @test2(<4 x i32> %x) nounwind readnone ssp {
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
-; CHECK-NEXT:    orps {{\.LCPI.*}}, %xmm1
-; CHECK-NEXT:    subsd {{\.LCPI.*}}, %xmm1
+; CHECK-NEXT:    orps {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
+; CHECK-NEXT:    subsd {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    cvtsd2ss %xmm1, %xmm0
 ; CHECK-NEXT:    movss %xmm0, (%esp)

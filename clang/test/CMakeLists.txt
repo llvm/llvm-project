@@ -68,6 +68,7 @@ list(APPEND CLANG_TEST_DEPS
   clang-import-test
   clang-rename
   clang-refactor
+  clang-repl
   clang-diff
   clang-scan-deps
   diagtool
@@ -120,10 +121,12 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-objcopy
     llvm-objdump
     llvm-profdata
+    llvm-rc
     llvm-readelf
     llvm-readobj
     llvm-strip
     llvm-symbolizer
+    llvm-windres
     opt
     split-file
     yaml2obj

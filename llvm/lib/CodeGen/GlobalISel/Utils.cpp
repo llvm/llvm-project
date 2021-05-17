@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
+#include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -48,7 +49,7 @@ Register llvm::constrainOperandRegClass(
     const MachineFunction &MF, const TargetRegisterInfo &TRI,
     MachineRegisterInfo &MRI, const TargetInstrInfo &TII,
     const RegisterBankInfo &RBI, MachineInstr &InsertPt,
-    const TargetRegisterClass &RegClass, const MachineOperand &RegMO) {
+    const TargetRegisterClass &RegClass, MachineOperand &RegMO) {
   Register Reg = RegMO.getReg();
   // Assume physical registers are properly constrained.
   assert(Register::isVirtualRegister(Reg) && "PhysReg not implemented");
@@ -69,6 +70,13 @@ Register llvm::constrainOperandRegClass(
               TII.get(TargetOpcode::COPY), Reg)
           .addReg(ConstrainedReg);
     }
+    if (GISelChangeObserver *Observer = MF.getObserver()) {
+      Observer->changingInstr(*RegMO.getParent());
+    }
+    RegMO.setReg(ConstrainedReg);
+    if (GISelChangeObserver *Observer = MF.getObserver()) {
+      Observer->changedInstr(*RegMO.getParent());
+    }
   } else {
     if (GISelChangeObserver *Observer = MF.getObserver()) {
       if (!RegMO.isDef()) {
@@ -86,7 +94,7 @@ Register llvm::constrainOperandRegClass(
     const MachineFunction &MF, const TargetRegisterInfo &TRI,
     MachineRegisterInfo &MRI, const TargetInstrInfo &TII,
     const RegisterBankInfo &RBI, MachineInstr &InsertPt, const MCInstrDesc &II,
-    const MachineOperand &RegMO, unsigned OpIdx) {
+    MachineOperand &RegMO, unsigned OpIdx) {
   Register Reg = RegMO.getReg();
   // Assume physical registers are properly constrained.
   assert(Register::isVirtualRegister(Reg) && "PhysReg not implemented");
@@ -156,8 +164,7 @@ bool llvm::constrainSelectedInstRegOperands(MachineInstr &I,
     // If the operand is a vreg, we should constrain its regclass, and only
     // insert COPYs if that's impossible.
     // constrainOperandRegClass does that for us.
-    MO.setReg(constrainOperandRegClass(MF, TRI, MRI, TII, RBI, I, I.getDesc(),
-                                       MO, OpI));
+    constrainOperandRegClass(MF, TRI, MRI, TII, RBI, I, I.getDesc(), MO, OpI);
 
     // Tie uses to defs as indicated in MCInstrDesc if this hasn't already been
     // done.
@@ -192,6 +199,10 @@ bool llvm::isTriviallyDead(const MachineInstr &MI,
 
   // Don't delete frame allocation labels.
   if (MI.getOpcode() == TargetOpcode::LOCAL_ESCAPE)
+    return false;
+  // LIFETIME markers should be preserved even if they seem dead.
+  if (MI.getOpcode() == TargetOpcode::LIFETIME_START ||
+      MI.getOpcode() == TargetOpcode::LIFETIME_END)
     return false;
 
   // If we can move an instruction, we can remove it.  Otherwise, it has
@@ -277,7 +288,7 @@ Optional<int64_t> llvm::getConstantVRegSExtVal(Register VReg,
 
 Optional<ValueAndVReg> llvm::getConstantVRegValWithLookThrough(
     Register VReg, const MachineRegisterInfo &MRI, bool LookThroughInstrs,
-    bool HandleFConstant) {
+    bool HandleFConstant, bool LookThroughAnyExt) {
   SmallVector<std::pair<unsigned, unsigned>, 4> SeenOpcodes;
   MachineInstr *MI;
   auto IsConstantOpcode = [HandleFConstant](unsigned Opcode) {
@@ -304,6 +315,10 @@ Optional<ValueAndVReg> llvm::getConstantVRegValWithLookThrough(
   while ((MI = MRI.getVRegDef(VReg)) && !IsConstantOpcode(MI->getOpcode()) &&
          LookThroughInstrs) {
     switch (MI->getOpcode()) {
+    case TargetOpcode::G_ANYEXT:
+      if (!LookThroughAnyExt)
+        return None;
+      LLVM_FALLTHROUGH;
     case TargetOpcode::G_TRUNC:
     case TargetOpcode::G_SEXT:
     case TargetOpcode::G_ZEXT:
@@ -337,6 +352,7 @@ Optional<ValueAndVReg> llvm::getConstantVRegValWithLookThrough(
     case TargetOpcode::G_TRUNC:
       Val = Val.trunc(OpcodeAndSize.second);
       break;
+    case TargetOpcode::G_ANYEXT:
     case TargetOpcode::G_SEXT:
       Val = Val.sext(OpcodeAndSize.second);
       break;
@@ -347,6 +363,14 @@ Optional<ValueAndVReg> llvm::getConstantVRegValWithLookThrough(
   }
 
   return ValueAndVReg{Val, VReg};
+}
+
+const ConstantInt *llvm::getConstantIntVRegVal(Register VReg,
+                                               const MachineRegisterInfo &MRI) {
+  MachineInstr *MI = MRI.getVRegDef(VReg);
+  if (MI->getOpcode() != TargetOpcode::G_CONSTANT)
+    return nullptr;
+  return MI->getOperand(1).getCImm();
 }
 
 const ConstantFP *
@@ -364,13 +388,15 @@ llvm::getDefSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI) {
   auto DstTy = MRI.getType(DefMI->getOperand(0).getReg());
   if (!DstTy.isValid())
     return None;
-  while (DefMI->getOpcode() == TargetOpcode::COPY) {
+  unsigned Opc = DefMI->getOpcode();
+  while (Opc == TargetOpcode::COPY || isPreISelGenericOptimizationHint(Opc)) {
     Register SrcReg = DefMI->getOperand(1).getReg();
     auto SrcTy = MRI.getType(SrcReg);
     if (!SrcTy.isValid())
       break;
     DefMI = MRI.getVRegDef(SrcReg);
     DefSrcReg = SrcReg;
+    Opc = DefMI->getOpcode();
   }
   return DefinitionAndSourceRegister{DefMI, DefSrcReg};
 }
@@ -463,6 +489,60 @@ Optional<APInt> llvm::ConstantFoldBinOp(unsigned Opcode, const Register Op1,
   return None;
 }
 
+Optional<APFloat> llvm::ConstantFoldFPBinOp(unsigned Opcode, const Register Op1,
+                                            const Register Op2,
+                                            const MachineRegisterInfo &MRI) {
+  const ConstantFP *Op2Cst = getConstantFPVRegVal(Op2, MRI);
+  if (!Op2Cst)
+    return None;
+
+  const ConstantFP *Op1Cst = getConstantFPVRegVal(Op1, MRI);
+  if (!Op1Cst)
+    return None;
+
+  APFloat C1 = Op1Cst->getValueAPF();
+  const APFloat &C2 = Op2Cst->getValueAPF();
+  switch (Opcode) {
+  case TargetOpcode::G_FADD:
+    C1.add(C2, APFloat::rmNearestTiesToEven);
+    return C1;
+  case TargetOpcode::G_FSUB:
+    C1.subtract(C2, APFloat::rmNearestTiesToEven);
+    return C1;
+  case TargetOpcode::G_FMUL:
+    C1.multiply(C2, APFloat::rmNearestTiesToEven);
+    return C1;
+  case TargetOpcode::G_FDIV:
+    C1.divide(C2, APFloat::rmNearestTiesToEven);
+    return C1;
+  case TargetOpcode::G_FREM:
+    C1.mod(C2);
+    return C1;
+  case TargetOpcode::G_FCOPYSIGN:
+    C1.copySign(C2);
+    return C1;
+  case TargetOpcode::G_FMINNUM:
+    return minnum(C1, C2);
+  case TargetOpcode::G_FMAXNUM:
+    return maxnum(C1, C2);
+  case TargetOpcode::G_FMINIMUM:
+    return minimum(C1, C2);
+  case TargetOpcode::G_FMAXIMUM:
+    return maximum(C1, C2);
+  case TargetOpcode::G_FMINNUM_IEEE:
+  case TargetOpcode::G_FMAXNUM_IEEE:
+    // FIXME: These operations were unfortunately named. fminnum/fmaxnum do not
+    // follow the IEEE behavior for signaling nans and follow libm's fmin/fmax,
+    // and currently there isn't a nice wrapper in APFloat for the version with
+    // correct snan handling.
+    break;
+  default:
+    break;
+  }
+
+  return None;
+}
+
 bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
                            bool SNaN) {
   const MachineInstr *DefMI = MRI.getVRegDef(Val);
@@ -472,6 +552,42 @@ bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
   const TargetMachine& TM = DefMI->getMF()->getTarget();
   if (DefMI->getFlag(MachineInstr::FmNoNans) || TM.Options.NoNaNsFPMath)
     return true;
+
+  // If the value is a constant, we can obviously see if it is a NaN or not.
+  if (const ConstantFP *FPVal = getConstantFPVRegVal(Val, MRI)) {
+    return !FPVal->getValueAPF().isNaN() ||
+           (SNaN && !FPVal->getValueAPF().isSignaling());
+  }
+
+  if (DefMI->getOpcode() == TargetOpcode::G_BUILD_VECTOR) {
+    for (const auto &Op : DefMI->uses())
+      if (!isKnownNeverNaN(Op.getReg(), MRI, SNaN))
+        return false;
+    return true;
+  }
+
+  switch (DefMI->getOpcode()) {
+  default:
+    break;
+  case TargetOpcode::G_FMINNUM_IEEE:
+  case TargetOpcode::G_FMAXNUM_IEEE: {
+    if (SNaN)
+      return true;
+    // This can return a NaN if either operand is an sNaN, or if both operands
+    // are NaN.
+    return (isKnownNeverNaN(DefMI->getOperand(1).getReg(), MRI) &&
+            isKnownNeverSNaN(DefMI->getOperand(2).getReg(), MRI)) ||
+           (isKnownNeverSNaN(DefMI->getOperand(1).getReg(), MRI) &&
+            isKnownNeverNaN(DefMI->getOperand(2).getReg(), MRI));
+  }
+  case TargetOpcode::G_FMINNUM:
+  case TargetOpcode::G_FMAXNUM: {
+    // Only one needs to be known not-nan, since it will be returned if the
+    // other ends up being one.
+    return isKnownNeverNaN(DefMI->getOperand(1).getReg(), MRI, SNaN) ||
+           isKnownNeverNaN(DefMI->getOperand(2).getReg(), MRI, SNaN);
+  }
+  }
 
   if (SNaN) {
     // FP operations quiet. For now, just handle the ones inserted during
@@ -496,6 +612,11 @@ Align llvm::inferAlignFromPtrInfo(MachineFunction &MF,
     MachineFrameInfo &MFI = MF.getFrameInfo();
     return commonAlignment(MFI.getObjectAlign(FSPV->getFrameIndex()),
                            MPO.Offset);
+  }
+
+  if (const Value *V = MPO.V.dyn_cast<const Value *>()) {
+    const Module *M = MF.getFunction().getParent();
+    return V->getPointerAlignment(M->getDataLayout());
   }
 
   return Align(1);
@@ -588,11 +709,32 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
 
     break;
   }
+  case TargetOpcode::G_BUILD_VECTOR: {
+    // TODO: Probably should have a recursion depth guard since you could have
+    // bitcasted vector elements.
+    for (unsigned I = 1, E = MI.getNumOperands(); I != E; ++I) {
+      if (!isKnownToBeAPowerOfTwo(MI.getOperand(I).getReg(), MRI, KB))
+        return false;
+    }
+
+    return true;
+  }
+  case TargetOpcode::G_BUILD_VECTOR_TRUNC: {
+    // Only handle constants since we would need to know if number of leading
+    // zeros is greater than the truncation amount.
+    const unsigned BitWidth = Ty.getScalarSizeInBits();
+    for (unsigned I = 1, E = MI.getNumOperands(); I != E; ++I) {
+      auto Const = getConstantVRegVal(MI.getOperand(I).getReg(), MRI);
+      if (!Const || !Const->zextOrTrunc(BitWidth).isPowerOf2())
+        return false;
+    }
+
+    return true;
+  }
   default:
     break;
   }
 
-  // TODO: Are all operands of a build vector constant powers of two?
   if (!KB)
     return false;
 
@@ -778,6 +920,52 @@ bool llvm::isBuildVectorAllOnes(const MachineInstr &MI,
   return isBuildVectorConstantSplat(MI, MRI, -1);
 }
 
+Optional<RegOrConstant> llvm::getVectorSplat(const MachineInstr &MI,
+                                             const MachineRegisterInfo &MRI) {
+  unsigned Opc = MI.getOpcode();
+  if (!isBuildVectorOp(Opc))
+    return None;
+  if (auto Splat = getBuildVectorConstantSplat(MI, MRI))
+    return RegOrConstant(*Splat);
+  auto Reg = MI.getOperand(1).getReg();
+  if (any_of(make_range(MI.operands_begin() + 2, MI.operands_end()),
+             [&Reg](const MachineOperand &Op) { return Op.getReg() != Reg; }))
+    return None;
+  return RegOrConstant(Reg);
+}
+
+bool llvm::matchUnaryPredicate(
+    const MachineRegisterInfo &MRI, Register Reg,
+    std::function<bool(const Constant *ConstVal)> Match, bool AllowUndefs) {
+
+  const MachineInstr *Def = getDefIgnoringCopies(Reg, MRI);
+  if (AllowUndefs && Def->getOpcode() == TargetOpcode::G_IMPLICIT_DEF)
+    return Match(nullptr);
+
+  // TODO: Also handle fconstant
+  if (Def->getOpcode() == TargetOpcode::G_CONSTANT)
+    return Match(Def->getOperand(1).getCImm());
+
+  if (Def->getOpcode() != TargetOpcode::G_BUILD_VECTOR)
+    return false;
+
+  for (unsigned I = 1, E = Def->getNumOperands(); I != E; ++I) {
+    Register SrcElt = Def->getOperand(I).getReg();
+    const MachineInstr *SrcDef = getDefIgnoringCopies(SrcElt, MRI);
+    if (AllowUndefs && SrcDef->getOpcode() == TargetOpcode::G_IMPLICIT_DEF) {
+      if (!Match(nullptr))
+        return false;
+      continue;
+    }
+
+    if (SrcDef->getOpcode() != TargetOpcode::G_CONSTANT ||
+        !Match(SrcDef->getOperand(1).getCImm()))
+      return false;
+  }
+
+  return true;
+}
+
 bool llvm::isConstTrueVal(const TargetLowering &TLI, int64_t Val, bool IsVector,
                           bool IsFP) {
   switch (TLI.getBooleanContents(IsVector, IsFP)) {
@@ -801,4 +989,20 @@ int64_t llvm::getICmpTrueVal(const TargetLowering &TLI, bool IsVector,
     return -1;
   }
   llvm_unreachable("Invalid boolean contents");
+}
+
+bool llvm::shouldOptForSize(const MachineBasicBlock &MBB,
+                            ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI) {
+  const auto &F = MBB.getParent()->getFunction();
+  return F.hasOptSize() || F.hasMinSize() ||
+         llvm::shouldOptimizeForSize(MBB.getBasicBlock(), PSI, BFI);
+}
+
+unsigned llvm::getIntrinsicID(const MachineInstr &MI) {
+#ifndef NDEBUG
+  unsigned Opc = MI.getOpcode();
+  assert(Opc == TargetOpcode::G_INTRINSIC ||
+         Opc == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS);
+#endif
+  return MI.getOperand(MI.getNumExplicitDefs()).getIntrinsicID();
 }

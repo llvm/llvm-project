@@ -70,6 +70,7 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include <algorithm>
 #include <iterator>
+#include <limits>
 
 // We log detailed candidate here if you run with -debug-only=codecomplete.
 #define DEBUG_TYPE "CodeComplete"
@@ -451,18 +452,52 @@ private:
   std::string summarizeSnippet() const {
     if (IsUsingDeclaration)
       return "";
-    // Suppress function argument snippets if args are already present.
-    if ((Completion.Kind == CompletionItemKind::Function ||
-         Completion.Kind == CompletionItemKind::Method ||
-         Completion.Kind == CompletionItemKind::Constructor) &&
-        NextTokenKind == tok::l_paren)
-      return "";
     auto *Snippet = onlyValue<&BundledEntry::SnippetSuffix>();
     if (!Snippet)
       // All bundles are function calls.
       // FIXME(ibiryukov): sometimes add template arguments to a snippet, e.g.
       // we need to complete 'forward<$1>($0)'.
       return "($0)";
+    // Suppress function argument snippets cursor is followed by left
+    // parenthesis (and potentially arguments) or if there are potentially
+    // template arguments. There are cases where it would be wrong (e.g. next
+    // '<' token is a comparison rather than template argument list start) but
+    // it is less common and suppressing snippet provides better UX.
+    if (Completion.Kind == CompletionItemKind::Function ||
+        Completion.Kind == CompletionItemKind::Method ||
+        Completion.Kind == CompletionItemKind::Constructor) {
+      // If there is a potential template argument list, drop snippet and just
+      // complete symbol name. Ideally, this could generate an edit that would
+      // paste function arguments after template argument list but it would be
+      // complicated. Example:
+      //
+      // fu^<int> -> function<int>
+      if (NextTokenKind == tok::less && Snippet->front() == '<')
+        return "";
+      // Potentially followed by argument list.
+      if (NextTokenKind == tok::l_paren) {
+        // If snippet contains template arguments we will emit them and drop
+        // function arguments. Example:
+        //
+        // fu^(42) -> function<int>(42);
+        if (Snippet->front() == '<') {
+          // Find matching '>'. Snippet->find('>') will not work in cases like
+          // template <typename T=std::vector<int>>. Hence, iterate through
+          // the snippet until the angle bracket balance reaches zero.
+          int Balance = 0;
+          size_t I = 0;
+          do {
+            if (Snippet->at(I) == '>')
+              --Balance;
+            else if (Snippet->at(I) == '<')
+              ++Balance;
+            ++I;
+          } while (Balance > 0);
+          return Snippet->substr(0, I);
+        }
+        return "";
+      }
+    }
     if (EnableFunctionArgSnippets)
       return *Snippet;
 
@@ -1070,14 +1105,19 @@ void loadMainFilePreambleMacros(const Preprocessor &PP,
   ExternalPreprocessorSource *PreambleMacros = PP.getExternalSource();
   // As we have the names of the macros, we can look up their IdentifierInfo
   // and then use this to load just the macros we want.
+  const auto &ITable = PP.getIdentifierTable();
   IdentifierInfoLookup *PreambleIdentifiers =
-      PP.getIdentifierTable().getExternalIdentifierLookup();
+      ITable.getExternalIdentifierLookup();
+
   if (!PreambleIdentifiers || !PreambleMacros)
     return;
-  for (const auto &MacroName : Preamble.Macros.Names)
+  for (const auto &MacroName : Preamble.Macros.Names) {
+    if (ITable.find(MacroName.getKey()) != ITable.end())
+      continue;
     if (auto *II = PreambleIdentifiers->get(MacroName.getKey()))
       if (II->isOutOfDate())
         PreambleMacros->updateOutOfDateIdentifier(*II);
+  }
 }
 
 // Invokes Sema code completion on a file.
@@ -1122,7 +1162,9 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   // skip all includes in this case; these completions are really simple.
   PreambleBounds PreambleRegion =
       ComputePreambleBounds(*CI->getLangOpts(), *ContentsBuffer, 0);
-  bool CompletingInPreamble = PreambleRegion.Size > Input.Offset;
+  bool CompletingInPreamble = Input.Offset < PreambleRegion.Size ||
+                              (!PreambleRegion.PreambleEndsAtStartOfLine &&
+                               Input.Offset == PreambleRegion.Size);
   if (Input.Patch)
     Input.Patch->apply(*CI);
   // NOTE: we must call BeginSourceFile after prepareCompilerInstance. Otherwise
@@ -1655,9 +1697,10 @@ private:
           evaluateSymbolAndRelevance(Scores.Quality, Scores.Relevance);
       // NameMatch is in fact a multiplier on total score, so rescoring is
       // sound.
-      Scores.ExcludingName = Relevance.NameMatch
-                                 ? Scores.Total / Relevance.NameMatch
-                                 : Scores.Quality;
+      Scores.ExcludingName =
+          Relevance.NameMatch > std::numeric_limits<float>::epsilon()
+              ? Scores.Total / Relevance.NameMatch
+              : Scores.Quality;
       return Scores;
 
     case RM::DecisionForest:
@@ -1685,6 +1728,7 @@ private:
     if (PreferredType)
       Relevance.HadContextType = true;
     Relevance.ContextWords = &ContextWords;
+    Relevance.MainFileSignals = Opts.MainFileSignals;
 
     auto &First = Bundle.front();
     if (auto FuzzyScore = fuzzyScore(First))

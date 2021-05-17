@@ -138,8 +138,8 @@ llvm::StringRef getTimeFactoryForScale(DurationScale Scale) {
 }
 
 /// Returns the Time factory function name for a given `Scale`.
-llvm::StringRef getTimeInverseForScale(DurationScale scale) {
-  switch (scale) {
+llvm::StringRef getTimeInverseForScale(DurationScale Scale) {
+  switch (Scale) {
   case DurationScale::Hours:
     return "absl::ToUnixHours";
   case DurationScale::Minutes:

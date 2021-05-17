@@ -22,7 +22,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -92,6 +91,7 @@ struct DsymutilOptions {
   bool InputIsYAMLDebugMap = false;
   bool PaperTrailWarnings = false;
   bool Verify = false;
+  bool ForceKeepFunctionForStatic = false;
   std::string SymbolMap;
   std::string OutputFile;
   std::string Toolchain;
@@ -201,11 +201,13 @@ static Expected<AccelTableKind> getAccelTableKind(opt::InputArgList &Args) {
       return AccelTableKind::Apple;
     if (S == "Dwarf")
       return AccelTableKind::Dwarf;
+    if (S == "Pub")
+      return AccelTableKind::Pub;
     if (S == "Default")
       return AccelTableKind::Default;
     return make_error<StringError>(
         "invalid accelerator type specified: '" + S +
-            "'. Support values are 'Apple', 'Dwarf' and 'Default'.",
+            "'. Support values are 'Apple', 'Dwarf', 'Pub' and 'Default'.",
         inconvertibleErrorCode());
   }
   return AccelTableKind::Default;
@@ -223,13 +225,14 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   Options.PaperTrailWarnings = Args.hasArg(OPT_papertrail);
   Options.Verify = Args.hasArg(OPT_verify);
 
-  Options.LinkOpts.Minimize = Args.hasArg(OPT_minimize);
   Options.LinkOpts.NoODR = Args.hasArg(OPT_no_odr);
   Options.LinkOpts.NoOutput = Args.hasArg(OPT_no_output);
   Options.LinkOpts.NoTimestamp = Args.hasArg(OPT_no_swiftmodule_timestamp);
   Options.LinkOpts.Update = Args.hasArg(OPT_update);
   Options.LinkOpts.Verbose = Args.hasArg(OPT_verbose);
   Options.LinkOpts.Statistics = Args.hasArg(OPT_statistics);
+  Options.LinkOpts.KeepFunctionForStatic =
+      Args.hasArg(OPT_keep_func_for_static);
 
   if (opt::Arg *ReproducerPath = Args.getLastArg(OPT_use_reproducer)) {
     Options.ReproMode = ReproducerMode::Use;
@@ -313,7 +316,7 @@ static Error createPlistFile(StringRef Bin, StringRef BundleRoot,
   SmallString<128> InfoPlist(BundleRoot);
   sys::path::append(InfoPlist, "Contents/Info.plist");
   std::error_code EC;
-  raw_fd_ostream PL(InfoPlist, EC, sys::fs::OF_Text);
+  raw_fd_ostream PL(InfoPlist, EC, sys::fs::OF_TextWithCRLF);
   if (EC)
     return make_error<StringError>(
         "cannot create Plist: " + toString(errorCodeToError(EC)), EC);

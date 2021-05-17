@@ -63,9 +63,14 @@
 // };
 //
 // template <typename KeyT, typename ValT, unsigned N, typename Traits>
-// class IntervalMap::const_iterator :
-//   public std::iterator<std::bidirectional_iterator_tag, ValT> {
+// class IntervalMap::const_iterator {
 // public:
+//   using iterator_category = std::bidirectional_iterator_tag;
+//   using value_type = ValT;
+//   using difference_type = std::ptrdiff_t;
+//   using pointer = value_type *;
+//   using reference = value_type &;
+//
 //   bool operator==(const const_iterator &) const;
 //   bool operator!=(const const_iterator &) const;
 //   bool valid() const;
@@ -1289,12 +1294,17 @@ clear() {
 //===----------------------------------------------------------------------===//
 
 template <typename KeyT, typename ValT, unsigned N, typename Traits>
-class IntervalMap<KeyT, ValT, N, Traits>::const_iterator :
-  public std::iterator<std::bidirectional_iterator_tag, ValT> {
-
-protected:
+class IntervalMap<KeyT, ValT, N, Traits>::const_iterator {
   friend class IntervalMap;
 
+public:
+  using iterator_category = std::bidirectional_iterator_tag;
+  using value_type = ValT;
+  using difference_type = std::ptrdiff_t;
+  using pointer = value_type *;
+  using reference = value_type &;
+
+protected:
   // The map referred to.
   IntervalMap *map = nullptr;
 

@@ -115,7 +115,7 @@ static const RegisterSet g_reg_sets_ppc64le[k_num_register_sets] = {
 
 std::unique_ptr<NativeRegisterContextLinux>
 NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
-    const ArchSpec &target_arch, NativeThreadProtocol &native_thread) {
+    const ArchSpec &target_arch, NativeThreadLinux &native_thread) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::ppc64le:
     return std::make_unique<NativeRegisterContextLinux_ppc64le>(target_arch,
@@ -128,7 +128,8 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
 NativeRegisterContextLinux_ppc64le::NativeRegisterContextLinux_ppc64le(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
     : NativeRegisterContextRegisterInfo(
-          native_thread, new RegisterInfoPOSIX_ppc64le(target_arch)) {
+          native_thread, new RegisterInfoPOSIX_ppc64le(target_arch)),
+      NativeRegisterContextLinux(native_thread) {
   if (target_arch.GetMachine() != llvm::Triple::ppc64le) {
     llvm_unreachable("Unhandled target architecture.");
   }

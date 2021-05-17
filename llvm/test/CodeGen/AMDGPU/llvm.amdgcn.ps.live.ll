@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}test1:
 ; CHECK: s_mov_b64 s[0:1], exec

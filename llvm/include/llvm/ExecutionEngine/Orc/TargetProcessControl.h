@@ -90,6 +90,14 @@ public:
     }
   };
 
+  /// A pair of a dylib and a set of symbols to be looked up.
+  struct LookupRequest {
+    LookupRequest(tpctypes::DylibHandle Handle, const SymbolLookupSet &Symbols)
+        : Handle(Handle), Symbols(Symbols) {}
+    tpctypes::DylibHandle Handle;
+    const SymbolLookupSet &Symbols;
+  };
+
   virtual ~TargetProcessControl();
 
   /// Intern a symbol name in the SymbolStringPool.
@@ -123,7 +131,7 @@ public:
   /// symbol is not found then it be assigned a '0' value in the result.
   /// that correspond to the lookup order.
   virtual Expected<std::vector<tpctypes::LookupResult>>
-  lookupSymbols(ArrayRef<tpctypes::LookupRequest> Request) = 0;
+  lookupSymbols(ArrayRef<LookupRequest> Request) = 0;
 
   /// Run function with a main-like signature.
   virtual Expected<int32_t> runAsMain(JITTargetAddress MainFnAddr,
@@ -172,7 +180,7 @@ public:
   Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override;
 
   Expected<std::vector<tpctypes::LookupResult>>
-  lookupSymbols(ArrayRef<tpctypes::LookupRequest> Request) override;
+  lookupSymbols(ArrayRef<LookupRequest> Request) override;
 
   Expected<int32_t> runAsMain(JITTargetAddress MainFnAddr,
                               ArrayRef<std::string> Args) override;

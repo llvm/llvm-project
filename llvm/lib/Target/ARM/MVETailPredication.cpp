@@ -156,7 +156,7 @@ bool MVETailPredication::runOnLoop(Loop *L, LPPassManager&) {
 
       Intrinsic::ID ID = Call->getIntrinsicID();
       if (ID == Intrinsic::start_loop_iterations ||
-          ID == Intrinsic::test_set_loop_iterations)
+          ID == Intrinsic::test_start_loop_iterations)
         return cast<IntrinsicInst>(&I);
     }
     return nullptr;
@@ -205,6 +205,10 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
     EnableTailPredication == TailPredication::ForceEnabled;
 
   Value *ElemCount = ActiveLaneMask->getOperand(1);
+  bool Changed = false;
+  if (!L->makeLoopInvariant(ElemCount, Changed))
+    return false;
+
   auto *EC= SE->getSCEV(ElemCount);
   auto *TC = SE->getSCEV(TripCount);
   int VectorWidth =

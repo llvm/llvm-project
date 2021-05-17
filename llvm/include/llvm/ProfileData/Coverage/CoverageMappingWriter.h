@@ -27,10 +27,10 @@ namespace coverage {
 /// Writer of the filenames section for the instrumentation
 /// based code coverage.
 class CoverageFilenamesSectionWriter {
-  ArrayRef<StringRef> Filenames;
+  ArrayRef<std::string> Filenames;
 
 public:
-  CoverageFilenamesSectionWriter(ArrayRef<StringRef> Filenames);
+  CoverageFilenamesSectionWriter(ArrayRef<std::string> Filenames);
 
   /// Write encoded filenames to the given output stream. If \p Compress is
   /// true, attempt to compress the filenames.

@@ -171,12 +171,22 @@ struct basic_string_view {
   const T *begin() const;
 };
 
+template<class _Mystr> struct iter {
+    iter& operator-=(int);
+
+    iter operator-(int _Off) const {
+        iter _Tmp = *this;
+        return _Tmp -= _Off;
+    }
+};
+
 template<typename T>
 struct basic_string {
   basic_string();
   basic_string(const T *);
   const T *c_str() const;
   operator basic_string_view<T> () const;
+  using const_iterator = iter<T>;
 };
 
 
@@ -454,4 +464,9 @@ MyIntPointer handleDerivedToBaseCast2(MyOwnerIntPointer ptr) {
 std::vector<int>::iterator noFalsePositiveWithVectorOfPointers() {
   std::vector<std::vector<int>::iterator> iters;
   return iters.at(0);
+}
+
+void testForBug49342()
+{
+  auto it = std::iter<char>{} - 2; // Used to be false positive.
 }

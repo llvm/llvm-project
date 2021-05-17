@@ -6,41 +6,109 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "gwp_asan/guarded_pool_allocator.h"
 #include "gwp_asan/tests/harness.h"
-#include "gwp_asan/utilities.h"
 
-#include <vector>
-
-TEST(AlignmentTest, PowerOfTwo) {
-  std::vector<std::pair<size_t, size_t>> AskedSizeToAlignedSize = {
-      {1, 1},   {2, 2},   {3, 4},       {4, 4},       {5, 8},   {7, 8},
-      {8, 8},   {9, 16},  {15, 16},     {16, 16},     {17, 32}, {31, 32},
-      {32, 32}, {33, 48}, {4095, 4096}, {4096, 4096},
-  };
-
-  for (const auto &KV : AskedSizeToAlignedSize) {
-    EXPECT_EQ(KV.second,
-              gwp_asan::rightAlignedAllocationSize(
-                  KV.first, gwp_asan::AlignmentStrategy::POWER_OF_TWO));
+class AlignmentTestGPA : public gwp_asan::GuardedPoolAllocator {
+public:
+  static size_t getRequiredBackingSize(size_t Size, size_t Alignment,
+                                       size_t PageSize) {
+    return GuardedPoolAllocator::getRequiredBackingSize(Size, Alignment,
+                                                        PageSize);
   }
+  static uintptr_t alignUp(uintptr_t Ptr, size_t Alignment) {
+    return GuardedPoolAllocator::alignUp(Ptr, Alignment);
+  }
+  static uintptr_t alignDown(uintptr_t Ptr, size_t Alignment) {
+    return GuardedPoolAllocator::alignDown(Ptr, Alignment);
+  }
+};
+
+// Global assumptions for these tests:
+//   1. Page size is 0x1000.
+//   2. All tests assume a slot is multipage, between 0x4000 - 0x8000. While we
+//      don't use multipage slots right now, this tests more boundary conditions
+//      and allows us to add this feature at a later date without rewriting the
+//      alignment functionality.
+// These aren't actual requirements of the allocator - but just simplifies the
+// numerics of the testing.
+TEST(AlignmentTest, LeftAlignedAllocs) {
+  // Alignment < Page Size.
+  EXPECT_EQ(0x4000, AlignmentTestGPA::alignUp(
+                        /* Ptr */ 0x4000, /* Alignment */ 0x1));
+  // Alignment == Page Size.
+  EXPECT_EQ(0x4000, AlignmentTestGPA::alignUp(
+                        /* Ptr */ 0x4000, /* Alignment */ 0x1000));
+  // Alignment > Page Size.
+  EXPECT_EQ(0x4000, AlignmentTestGPA::alignUp(
+                        /* Ptr */ 0x4000, /* Alignment */ 0x4000));
 }
 
-TEST(AlignmentTest, AlignBionic) {
-  std::vector<std::pair<size_t, size_t>> AskedSizeToAlignedSize = {
-      {1, 8},   {2, 8},   {3, 8},       {4, 8},       {5, 8},   {7, 8},
-      {8, 8},   {9, 16},  {15, 16},     {16, 16},     {17, 24}, {31, 32},
-      {32, 32}, {33, 40}, {4095, 4096}, {4096, 4096},
-  };
+TEST(AlignmentTest, SingleByteAllocs) {
+  // Alignment < Page Size.
+  EXPECT_EQ(0x1,
+            AlignmentTestGPA::getRequiredBackingSize(
+                /* Size */ 0x1, /* Alignment */ 0x1, /* PageSize */ 0x1000));
+  EXPECT_EQ(0x7fff, AlignmentTestGPA::alignDown(
+                        /* Ptr */ 0x8000 - 0x1, /* Alignment */ 0x1));
 
-  for (const auto &KV : AskedSizeToAlignedSize) {
-    EXPECT_EQ(KV.second, gwp_asan::rightAlignedAllocationSize(
-                             KV.first, gwp_asan::AlignmentStrategy::BIONIC));
-  }
+  // Alignment == Page Size.
+  EXPECT_EQ(0x1,
+            AlignmentTestGPA::getRequiredBackingSize(
+                /* Size */ 0x1, /* Alignment */ 0x1000, /* PageSize */ 0x1000));
+  EXPECT_EQ(0x7000, AlignmentTestGPA::alignDown(
+                        /* Ptr */ 0x8000 - 0x1, /* Alignment */ 0x1000));
+
+  // Alignment > Page Size.
+  EXPECT_EQ(0x3001,
+            AlignmentTestGPA::getRequiredBackingSize(
+                /* Size */ 0x1, /* Alignment */ 0x4000, /* PageSize */ 0x1000));
+  EXPECT_EQ(0x4000, AlignmentTestGPA::alignDown(
+                        /* Ptr */ 0x8000 - 0x1, /* Alignment */ 0x4000));
 }
 
-TEST(AlignmentTest, PerfectAlignment) {
-  for (size_t i = 1; i <= 4096; ++i) {
-    EXPECT_EQ(i, gwp_asan::rightAlignedAllocationSize(
-                     i, gwp_asan::AlignmentStrategy::PERFECT));
-  }
+TEST(AlignmentTest, PageSizedAllocs) {
+  // Alignment < Page Size.
+  EXPECT_EQ(0x1000,
+            AlignmentTestGPA::getRequiredBackingSize(
+                /* Size */ 0x1000, /* Alignment */ 0x1, /* PageSize */ 0x1000));
+  EXPECT_EQ(0x7000, AlignmentTestGPA::alignDown(
+                        /* Ptr */ 0x8000 - 0x1000, /* Alignment */ 0x1));
+
+  // Alignment == Page Size.
+  EXPECT_EQ(0x1000, AlignmentTestGPA::getRequiredBackingSize(
+                        /* Size */ 0x1000, /* Alignment */ 0x1000,
+                        /* PageSize */ 0x1000));
+  EXPECT_EQ(0x7000, AlignmentTestGPA::alignDown(
+                        /* Ptr */ 0x8000 - 0x1000, /* Alignment */ 0x1000));
+
+  // Alignment > Page Size.
+  EXPECT_EQ(0x4000, AlignmentTestGPA::getRequiredBackingSize(
+                        /* Size */ 0x1000, /* Alignment */ 0x4000,
+                        /* PageSize */ 0x1000));
+  EXPECT_EQ(0x4000, AlignmentTestGPA::alignDown(
+                        /* Ptr */ 0x8000 - 0x1000, /* Alignment */ 0x4000));
+}
+
+TEST(AlignmentTest, MoreThanPageAllocs) {
+  // Alignment < Page Size.
+  EXPECT_EQ(0x2fff,
+            AlignmentTestGPA::getRequiredBackingSize(
+                /* Size */ 0x2fff, /* Alignment */ 0x1, /* PageSize */ 0x1000));
+  EXPECT_EQ(0x5001, AlignmentTestGPA::alignDown(
+                        /* Ptr */ 0x8000 - 0x2fff, /* Alignment */ 0x1));
+
+  // Alignment == Page Size.
+  EXPECT_EQ(0x2fff, AlignmentTestGPA::getRequiredBackingSize(
+                        /* Size */ 0x2fff, /* Alignment */ 0x1000,
+                        /* PageSize */ 0x1000));
+  EXPECT_EQ(0x5000, AlignmentTestGPA::alignDown(
+                        /* Ptr */ 0x8000 - 0x2fff, /* Alignment */ 0x1000));
+
+  // Alignment > Page Size.
+  EXPECT_EQ(0x5fff, AlignmentTestGPA::getRequiredBackingSize(
+                        /* Size */ 0x2fff, /* Alignment */ 0x4000,
+                        /* PageSize */ 0x1000));
+  EXPECT_EQ(0x4000, AlignmentTestGPA::alignDown(
+                        /* Ptr */ 0x8000 - 0x2fff, /* Alignment */ 0x4000));
 }

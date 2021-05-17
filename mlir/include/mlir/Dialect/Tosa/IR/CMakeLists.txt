@@ -1,5 +1,5 @@
 add_mlir_dialect(TosaOps tosa)
-add_mlir_doc(TosaOps -gen-op-doc TosaOps Dialects/)
+add_mlir_doc(TosaOps TosaOps Dialects/ -gen-op-doc)
 add_mlir_interface(TosaInterfaces)
 
 set(LLVM_TARGET_DEFINITIONS TosaOps.td)

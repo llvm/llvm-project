@@ -76,9 +76,8 @@ public:
 
   CXXBasePath() = default;
 
-  /// The set of declarations found inside this base class
-  /// subobject.
-  DeclContext::lookup_result Decls;
+  /// The declarations found inside this base class subobject.
+  DeclContext::lookup_iterator Decls;
 
   void clear() {
     SmallVectorImpl<CXXBasePathElement>::clear();

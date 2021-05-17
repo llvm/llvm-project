@@ -20,7 +20,7 @@ class TestClangModuleAppUpdate(TestBase):
                     """)
         with open(self.getBuildArtifact("f.h"), "w") as f:
             f.write("""
-                    @import Foundation;
+                    @import ObjectiveC;
                     @interface Foo : NSObject {
                        int i;
                     }

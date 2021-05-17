@@ -161,6 +161,15 @@ class CGDebugInfo {
   llvm::DenseMap<const Decl *, llvm::TypedTrackingMDRef<llvm::DIDerivedType>>
       StaticDataMemberCache;
 
+  using ParamDecl2StmtTy = llvm::DenseMap<const ParmVarDecl *, const Stmt *>;
+  using Param2DILocTy =
+      llvm::DenseMap<const ParmVarDecl *, llvm::DILocalVariable *>;
+
+  /// The key is coroutine real parameters, value is coroutine move parameters.
+  ParamDecl2StmtTy CoroutineParameterMappings;
+  /// The key is coroutine real parameters, value is DIVariable in LLVM IR.
+  Param2DILocTy ParamDbgMappings;
+
   /// Helper functions for getOrCreateType.
   /// @{
   /// Currently the checksum of an interface includes the number of
@@ -463,8 +472,10 @@ public:
 
   /// Emit call to \c llvm.dbg.declare for an argument variable
   /// declaration.
-  void EmitDeclareOfArgVariable(const VarDecl *Decl, llvm::Value *AI,
-                                unsigned ArgNo, CGBuilderTy &Builder);
+  llvm::DILocalVariable *EmitDeclareOfArgVariable(const VarDecl *Decl,
+                                                  llvm::Value *AI,
+                                                  unsigned ArgNo,
+                                                  CGBuilderTy &Builder);
 
   /// Emit call to \c llvm.dbg.declare for the block-literal argument
   /// to a block invocation function.
@@ -532,6 +543,11 @@ public:
   llvm::DIMacroFile *CreateTempMacroFile(llvm::DIMacroFile *Parent,
                                          SourceLocation LineLoc,
                                          SourceLocation FileLoc);
+
+  Param2DILocTy &getParamDbgMappings() { return ParamDbgMappings; }
+  ParamDecl2StmtTy &getCoroutineParameterMappings() {
+    return CoroutineParameterMappings;
+  }
 
 private:
   /// Emit call to llvm.dbg.declare for a variable declaration.

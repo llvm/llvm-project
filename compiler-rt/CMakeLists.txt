@@ -5,10 +5,6 @@
 
 cmake_minimum_required(VERSION 3.13.4)
 
-if(POLICY CMP0075)
-  cmake_policy(SET CMP0075 NEW)
-endif()
-
 # Check if compiler-rt is built as a standalone project.
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR COMPILER_RT_STANDALONE_BUILD)
   project(CompilerRT C CXX ASM)
@@ -49,6 +45,8 @@ option(COMPILER_RT_BUILD_MEMPROF "Build memory profiling runtime" ON)
 mark_as_advanced(COMPILER_RT_BUILD_MEMPROF)
 option(COMPILER_RT_BUILD_XRAY_NO_PREINIT "Build xray with no preinit patching" OFF)
 mark_as_advanced(COMPILER_RT_BUILD_XRAY_NO_PREINIT)
+option(COMPILER_RT_BUILD_ORC "Build ORC runtime" ON)
+mark_as_advanced(COMPILER_RT_BUILD_ORC)
 
 set(COMPILER_RT_ASAN_SHADOW_SCALE ""
     CACHE STRING "Override the shadow scale to be used in ASan runtime")
@@ -177,7 +175,7 @@ endif()
 
 option(SANITIZER_ALLOW_CXXABI "Allow use of C++ ABI details in ubsan" ON)
 
-set(SANITIZE_CAN_USE_CXXABI OFF)
+set(SANITIZER_CAN_USE_CXXABI OFF)
 if (cxxabi_supported AND SANITIZER_ALLOW_CXXABI)
   set(SANITIZER_CAN_USE_CXXABI ON)
 endif()
@@ -618,7 +616,7 @@ if(COMPILER_RT_INCLUDE_TESTS)
   add_subdirectory(unittests)
   add_subdirectory(test)
   # Don't build llvm-lit for runtimes-build, it will clean up map_config.
-  if (COMPILER_RT_STANDALONE_BUILD AND NOT RUNTIMES_BUILD)
+  if (COMPILER_RT_STANDALONE_BUILD AND NOT LLVM_RUNTIMES_BUILD)
     # If we have a valid source tree, generate llvm-lit into the bin directory.
     # The user can still choose to have the check targets *use* a different lit
     # by specifying -DLLVM_EXTERNAL_LIT, but we generate it regardless.

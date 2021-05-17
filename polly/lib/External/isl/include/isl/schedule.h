@@ -144,6 +144,7 @@ isl_bool isl_schedule_plain_is_equal(__isl_keep isl_schedule *schedule1,
 __isl_export
 __isl_give isl_schedule_node *isl_schedule_get_root(
 	__isl_keep isl_schedule *schedule);
+__isl_export
 __isl_give isl_union_set *isl_schedule_get_domain(
 	__isl_keep isl_schedule *schedule);
 

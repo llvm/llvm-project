@@ -72,7 +72,7 @@ struct C {
     int a;
     // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:5, col:9> col:9 a 'int'
   } b;
-  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-12]]:3, line:[[@LINE-1]]:5> col:5 b 'struct (anonymous struct at {{.*}}:[[@LINE-12]]:3)':'C::(anonymous struct at {{.*}}:[[@LINE-12]]:3)'
+  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-12]]:3, line:[[@LINE-1]]:5> col:5 b 'struct (unnamed struct at {{.*}}:[[@LINE-12]]:3)':'C::(unnamed struct at {{.*}}:[[@LINE-12]]:3)'
 
   union {
     // CHECK-NEXT: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, line:[[@LINE+12]]:3> line:[[@LINE-1]]:3 union definition
@@ -204,7 +204,7 @@ union G {
   } b;
   // FIXME: note that it talks about 'struct G' below; the same happens in
   // other cases with union G as well.
-  // CHECK: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-15]]:3, line:[[@LINE-3]]:5> col:5 b 'struct (anonymous struct at {{.*}}:[[@LINE-15]]:3)':'G::(anonymous struct at {{.*}}:[[@LINE-15]]:3)'
+  // CHECK: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-15]]:3, line:[[@LINE-3]]:5> col:5 b 'struct (unnamed struct at {{.*}}:[[@LINE-15]]:3)':'G::(unnamed struct at {{.*}}:[[@LINE-15]]:3)'
 
   union {
     // CHECK-NEXT: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, line:[[@LINE+13]]:3> line:[[@LINE-1]]:3 union definition

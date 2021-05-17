@@ -58,16 +58,26 @@ define amdgpu_ps void @global_store_saddr_i8_zext_vgpr_offset_neg2048(i8 addrspa
 
 ; Base pointer is uniform, but also in VGPRs
 define amdgpu_ps void @global_store_saddr_uniform_ptr_in_vgprs(i32 %voffset, i8 %data) {
-; GCN-LABEL: global_store_saddr_uniform_ptr_in_vgprs:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_mov_b32_e32 v2, 0
-; GCN-NEXT:    ds_read_b64 v[2:3], v2
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_readfirstlane_b32 s0, v2
-; GCN-NEXT:    v_readfirstlane_b32 s1, v3
-; GCN-NEXT:    s_nop 4
-; GCN-NEXT:    global_store_byte v0, v1, s[0:1]
-; GCN-NEXT:    s_endpgm
+; GFX9-LABEL: global_store_saddr_uniform_ptr_in_vgprs:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_mov_b32_e32 v2, 0
+; GFX9-NEXT:    ds_read_b64 v[2:3], v2
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX9-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX9-NEXT:    s_nop 4
+; GFX9-NEXT:    global_store_byte v0, v1, s[0:1]
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: global_store_saddr_uniform_ptr_in_vgprs:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_mov_b32_e32 v2, 0
+; GFX10-NEXT:    ds_read_b64 v[2:3], v2
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX10-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX10-NEXT:    global_store_byte v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %sbase = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(3)* @ptr.in.lds
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
@@ -77,16 +87,26 @@ define amdgpu_ps void @global_store_saddr_uniform_ptr_in_vgprs(i32 %voffset, i8 
 
 ; Base pointer is uniform, but also in VGPRs, with imm offset
 define amdgpu_ps void @global_store_saddr_uniform_ptr_in_vgprs_immoffset(i32 %voffset, i8 %data) {
-; GCN-LABEL: global_store_saddr_uniform_ptr_in_vgprs_immoffset:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_mov_b32_e32 v2, 0
-; GCN-NEXT:    ds_read_b64 v[2:3], v2
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_readfirstlane_b32 s0, v2
-; GCN-NEXT:    v_readfirstlane_b32 s1, v3
-; GCN-NEXT:    s_nop 4
-; GCN-NEXT:    global_store_byte v0, v1, s[0:1] offset:-120
-; GCN-NEXT:    s_endpgm
+; GFX9-LABEL: global_store_saddr_uniform_ptr_in_vgprs_immoffset:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_mov_b32_e32 v2, 0
+; GFX9-NEXT:    ds_read_b64 v[2:3], v2
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX9-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX9-NEXT:    s_nop 4
+; GFX9-NEXT:    global_store_byte v0, v1, s[0:1] offset:-120
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: global_store_saddr_uniform_ptr_in_vgprs_immoffset:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_mov_b32_e32 v2, 0
+; GFX10-NEXT:    ds_read_b64 v[2:3], v2
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX10-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX10-NEXT:    global_store_byte v0, v1, s[0:1] offset:-120
+; GFX10-NEXT:    s_endpgm
   %sbase = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(3)* @ptr.in.lds
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset

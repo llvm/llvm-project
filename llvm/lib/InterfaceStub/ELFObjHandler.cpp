@@ -303,7 +303,10 @@ private:
     SymTab.Shdr.sh_flags = SHF_ALLOC;
     SymTab.Shdr.sh_addr = SymTab.Addr;
     SymTab.Shdr.sh_offset = SymTab.Offset;
-    SymTab.Shdr.sh_info = SymTab.Size / sizeof(Elf_Sym) > 1 ? 1 : 0;
+    // Only non-local symbols are included in the tbe file, so .dynsym only
+    // contains 1 local symbol (the undefined symbol at index 0). The sh_info
+    // should always be 1.
+    SymTab.Shdr.sh_info = 1;
     SymTab.Shdr.sh_size = SymTab.Size;
     SymTab.Shdr.sh_name = this->ShStrTab.Content.getOffset(SymTab.Name);
     SymTab.Shdr.sh_addralign = SymTab.Align;
@@ -438,62 +441,6 @@ static Error populateDynamic(DynamicEntries &Dyn,
   }
 
   return Error::success();
-}
-
-/// This function finds the number of dynamic symbols using a GNU hash table.
-///
-/// @param Table The GNU hash table for .dynsym.
-template <class ELFT>
-static uint64_t getDynSymtabSize(const typename ELFT::GnuHash &Table) {
-  using Elf_Word = typename ELFT::Word;
-  if (Table.nbuckets == 0)
-    return Table.symndx + 1;
-  uint64_t LastSymIdx = 0;
-  uint64_t BucketVal = 0;
-  // Find the index of the first symbol in the last chain.
-  for (Elf_Word Val : Table.buckets()) {
-    BucketVal = std::max(BucketVal, (uint64_t)Val);
-  }
-  LastSymIdx += BucketVal;
-  const Elf_Word *It =
-      reinterpret_cast<const Elf_Word *>(Table.values(BucketVal).end());
-  // Locate the end of the chain to find the last symbol index.
-  while ((*It & 1) == 0) {
-    LastSymIdx++;
-    It++;
-  }
-  return LastSymIdx + 1;
-}
-
-/// This function determines the number of dynamic symbols.
-/// Without access to section headers, the number of symbols must be determined
-/// by parsing dynamic hash tables.
-///
-/// @param Dyn Entries with the locations of hash tables.
-/// @param ElfFile The ElfFile that the section contents reside in.
-template <class ELFT>
-static Expected<uint64_t> getNumSyms(DynamicEntries &Dyn,
-                                     const ELFFile<ELFT> &ElfFile) {
-  using Elf_Hash = typename ELFT::Hash;
-  using Elf_GnuHash = typename ELFT::GnuHash;
-  // Search GNU hash table to try to find the upper bound of dynsym.
-  if (Dyn.GnuHash.hasValue()) {
-    Expected<const uint8_t *> TablePtr = ElfFile.toMappedAddr(*Dyn.GnuHash);
-    if (!TablePtr)
-      return TablePtr.takeError();
-    const Elf_GnuHash *Table =
-        reinterpret_cast<const Elf_GnuHash *>(TablePtr.get());
-    return getDynSymtabSize<ELFT>(*Table);
-  }
-  // Search SYSV hash table to try to find the upper bound of dynsym.
-  if (Dyn.ElfHash.hasValue()) {
-    Expected<const uint8_t *> TablePtr = ElfFile.toMappedAddr(*Dyn.ElfHash);
-    if (!TablePtr)
-      return TablePtr.takeError();
-    const Elf_Hash *Table = reinterpret_cast<const Elf_Hash *>(TablePtr.get());
-    return Table->nchain;
-  }
-  return 0;
 }
 
 /// This function extracts symbol type from a symbol's st_info member and
@@ -637,7 +584,7 @@ buildStub(const ELFObjectFile<ELFT> &ElfObj) {
   }
 
   // Populate Symbols from .dynsym table and dynamic string table.
-  Expected<uint64_t> SymCount = getNumSyms(DynEnt, ElfFile);
+  Expected<uint64_t> SymCount = ElfFile.getDynSymtabSize();
   if (!SymCount)
     return SymCount.takeError();
   if (*SymCount > 0) {

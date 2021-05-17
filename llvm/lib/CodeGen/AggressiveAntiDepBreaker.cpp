@@ -153,9 +153,8 @@ void AggressiveAntiDepBreaker::StartBlock(MachineBasicBlock *BB) {
   std::vector<unsigned> &DefIndices = State->GetDefIndices();
 
   // Examine the live-in regs of all successors.
-  for (MachineBasicBlock::succ_iterator SI = BB->succ_begin(),
-         SE = BB->succ_end(); SI != SE; ++SI)
-    for (const auto &LI : (*SI)->liveins()) {
+  for (MachineBasicBlock *Succ : BB->successors())
+    for (const auto &LI : Succ->liveins()) {
       for (MCRegAliasIterator AI(LI.PhysReg, TRI, true); AI.isValid(); ++AI) {
         unsigned Reg = *AI;
         State->UnionGroups(Reg, 0);
@@ -259,11 +258,10 @@ void AggressiveAntiDepBreaker::GetPassthruRegs(
 /// in SU that we want to consider for breaking.
 static void AntiDepEdges(const SUnit *SU, std::vector<const SDep *> &Edges) {
   SmallSet<unsigned, 4> RegSet;
-  for (SUnit::const_pred_iterator P = SU->Preds.begin(), PE = SU->Preds.end();
-       P != PE; ++P) {
-    if ((P->getKind() == SDep::Anti) || (P->getKind() == SDep::Output)) {
-      if (RegSet.insert(P->getReg()).second)
-        Edges.push_back(&*P);
+  for (const SDep &Pred : SU->Preds) {
+    if ((Pred.getKind() == SDep::Anti) || (Pred.getKind() == SDep::Output)) {
+      if (RegSet.insert(Pred.getReg()).second)
+        Edges.push_back(&Pred);
     }
   }
 }
@@ -275,17 +273,16 @@ static const SUnit *CriticalPathStep(const SUnit *SU) {
   unsigned NextDepth = 0;
   // Find the predecessor edge with the greatest depth.
   if (SU) {
-    for (SUnit::const_pred_iterator P = SU->Preds.begin(), PE = SU->Preds.end();
-         P != PE; ++P) {
-      const SUnit *PredSU = P->getSUnit();
-      unsigned PredLatency = P->getLatency();
+    for (const SDep &Pred : SU->Preds) {
+      const SUnit *PredSU = Pred.getSUnit();
+      unsigned PredLatency = Pred.getLatency();
       unsigned PredTotalLatency = PredSU->getDepth() + PredLatency;
       // In the case of a latency tie, prefer an anti-dependency edge over
       // other types of edges.
       if (NextDepth < PredTotalLatency ||
-          (NextDepth == PredTotalLatency && P->getKind() == SDep::Anti)) {
+          (NextDepth == PredTotalLatency && Pred.getKind() == SDep::Anti)) {
         NextDepth = PredTotalLatency;
-        Next = &*P;
+        Next = &Pred;
       }
     }
   }
@@ -886,25 +883,24 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
           // Also, if there are dependencies on other SUnits with the
           // same register as the anti-dependency, don't attempt to
           // break it.
-          for (SUnit::const_pred_iterator P = PathSU->Preds.begin(),
-                 PE = PathSU->Preds.end(); P != PE; ++P) {
-            if (P->getSUnit() == NextSU ?
-                (P->getKind() != SDep::Anti || P->getReg() != AntiDepReg) :
-                (P->getKind() == SDep::Data && P->getReg() == AntiDepReg)) {
+          for (const SDep &Pred : PathSU->Preds) {
+            if (Pred.getSUnit() == NextSU ? (Pred.getKind() != SDep::Anti ||
+                                             Pred.getReg() != AntiDepReg)
+                                          : (Pred.getKind() == SDep::Data &&
+                                             Pred.getReg() == AntiDepReg)) {
               AntiDepReg = 0;
               break;
             }
           }
-          for (SUnit::const_pred_iterator P = PathSU->Preds.begin(),
-                 PE = PathSU->Preds.end(); P != PE; ++P) {
-            if ((P->getSUnit() == NextSU) && (P->getKind() != SDep::Anti) &&
-                (P->getKind() != SDep::Output)) {
+          for (const SDep &Pred : PathSU->Preds) {
+            if ((Pred.getSUnit() == NextSU) && (Pred.getKind() != SDep::Anti) &&
+                (Pred.getKind() != SDep::Output)) {
               LLVM_DEBUG(dbgs() << " (real dependency)\n");
               AntiDepReg = 0;
               break;
-            } else if ((P->getSUnit() != NextSU) &&
-                       (P->getKind() == SDep::Data) &&
-                       (P->getReg() == AntiDepReg)) {
+            } else if ((Pred.getSUnit() != NextSU) &&
+                       (Pred.getKind() == SDep::Data) &&
+                       (Pred.getReg() == AntiDepReg)) {
               LLVM_DEBUG(dbgs() << " (other dependency)\n");
               AntiDepReg = 0;
               break;
@@ -956,10 +952,9 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
                             << printReg(AntiDepReg, TRI) << ":");
 
           // Handle each group register...
-          for (std::map<unsigned, unsigned>::iterator
-                 S = RenameMap.begin(), E = RenameMap.end(); S != E; ++S) {
-            unsigned CurrReg = S->first;
-            unsigned NewReg = S->second;
+          for (const auto &P : RenameMap) {
+            unsigned CurrReg = P.first;
+            unsigned NewReg = P.second;
 
             LLVM_DEBUG(dbgs() << " " << printReg(CurrReg, TRI) << "->"
                               << printReg(NewReg, TRI) << "("

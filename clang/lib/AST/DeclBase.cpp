@@ -230,11 +230,11 @@ bool Decl::isTemplateDecl() const {
 TemplateDecl *Decl::getDescribedTemplate() const {
   if (auto *FD = dyn_cast<FunctionDecl>(this))
     return FD->getDescribedFunctionTemplate();
-  else if (auto *RD = dyn_cast<CXXRecordDecl>(this))
+  if (auto *RD = dyn_cast<CXXRecordDecl>(this))
     return RD->getDescribedClassTemplate();
-  else if (auto *VD = dyn_cast<VarDecl>(this))
+  if (auto *VD = dyn_cast<VarDecl>(this))
     return VD->getDescribedVarTemplate();
-  else if (auto *AD = dyn_cast<TypeAliasDecl>(this))
+  if (auto *AD = dyn_cast<TypeAliasDecl>(this))
     return AD->getDescribedAliasTemplate();
 
   return nullptr;
@@ -695,24 +695,23 @@ bool Decl::canBeWeakImported(bool &IsDefinition) const {
       return false;
     }
     return true;
-
+  }
   // Functions, if they aren't definitions.
-  } else if (const auto *FD = dyn_cast<FunctionDecl>(this)) {
+  if (const auto *FD = dyn_cast<FunctionDecl>(this)) {
     if (FD->hasBody()) {
       IsDefinition = true;
       return false;
     }
     return true;
 
+  }
   // Objective-C classes, if this is the non-fragile runtime.
-  } else if (isa<ObjCInterfaceDecl>(this) &&
+  if (isa<ObjCInterfaceDecl>(this) &&
              getASTContext().getLangOpts().ObjCRuntime.hasWeakClassImport()) {
     return true;
-
-  // Nothing else.
-  } else {
-    return false;
   }
+  // Nothing else.
+  return false;
 }
 
 bool Decl::isWeakImported() const {
@@ -971,21 +970,19 @@ bool Decl::AccessDeclContextSanity() const {
   // 5. it's invalid
   // 6. it's a C++0x static_assert.
   // 7. it's a block literal declaration
-  if (isa<TranslationUnitDecl>(this) ||
-      isa<TemplateTypeParmDecl>(this) ||
-      isa<NonTypeTemplateParmDecl>(this) ||
-      !getDeclContext() ||
-      !isa<CXXRecordDecl>(getDeclContext()) ||
-      isInvalidDecl() ||
-      isa<StaticAssertDecl>(this) ||
-      isa<BlockDecl>(this) ||
+  // 8. it's a temporary with lifetime extended due to being default value.
+  if (isa<TranslationUnitDecl>(this) || isa<TemplateTypeParmDecl>(this) ||
+      isa<NonTypeTemplateParmDecl>(this) || !getDeclContext() ||
+      !isa<CXXRecordDecl>(getDeclContext()) || isInvalidDecl() ||
+      isa<StaticAssertDecl>(this) || isa<BlockDecl>(this) ||
       // FIXME: a ParmVarDecl can have ClassTemplateSpecialization
       // as DeclContext (?).
       isa<ParmVarDecl>(this) ||
       // FIXME: a ClassTemplateSpecialization or CXXRecordDecl can have
       // AS_none as access specifier.
       isa<CXXRecordDecl>(this) ||
-      isa<ClassScopeFunctionSpecializationDecl>(this))
+      isa<ClassScopeFunctionSpecializationDecl>(this) ||
+      isa<LifetimeExtendedTemporaryDecl>(this))
     return true;
 
   assert(Access != AS_none &&
@@ -1029,16 +1026,16 @@ template <class T> static Decl *getNonClosureContext(T *D) {
         MD->getParent()->isLambda())
       return getNonClosureContext(MD->getParent()->getParent());
     return MD;
-  } else if (auto *FD = dyn_cast<FunctionDecl>(D))
+  }
+  if (auto *FD = dyn_cast<FunctionDecl>(D))
     return FD;
-  else if (auto *MD = dyn_cast<ObjCMethodDecl>(D))
+  if (auto *MD = dyn_cast<ObjCMethodDecl>(D))
     return MD;
-  else if (auto *BD = dyn_cast<BlockDecl>(D))
+  if (auto *BD = dyn_cast<BlockDecl>(D))
     return getNonClosureContext(BD->getParent());
-  else if (auto *CD = dyn_cast<CapturedDecl>(D))
+  if (auto *CD = dyn_cast<CapturedDecl>(D))
     return getNonClosureContext(CD->getParent());
-  else
-    return nullptr;
+  return nullptr;
 }
 
 Decl *Decl::getNonClosureContext() {
@@ -1173,10 +1170,8 @@ bool DeclContext::isDependentContext() const {
 bool DeclContext::isTransparentContext() const {
   if (getDeclKind() == Decl::Enum)
     return !cast<EnumDecl>(this)->isScoped();
-  else if (getDeclKind() == Decl::LinkageSpec || getDeclKind() == Decl::Export)
-    return true;
 
-  return false;
+  return getDeclKind() == Decl::LinkageSpec || getDeclKind() == Decl::Export;
 }
 
 static bool isLinkageSpecContext(const DeclContext *DC,
@@ -1399,39 +1394,7 @@ ExternalASTSource::SetExternalVisibleDeclsForName(const DeclContext *DC,
     DC->reconcileExternalVisibleStorage();
 
   StoredDeclsList &List = (*Map)[Name];
-
-  // Clear out any old external visible declarations, to avoid quadratic
-  // performance in the redeclaration checks below.
-  List.removeExternalDecls();
-
-  if (!List.isNull()) {
-    // We have both existing declarations and new declarations for this name.
-    // Some of the declarations may simply replace existing ones. Handle those
-    // first.
-    llvm::SmallVector<unsigned, 8> Skip;
-    for (unsigned I = 0, N = Decls.size(); I != N; ++I)
-      if (List.HandleRedeclaration(Decls[I], /*IsKnownNewer*/false))
-        Skip.push_back(I);
-    Skip.push_back(Decls.size());
-
-    // Add in any new declarations.
-    unsigned SkipPos = 0;
-    for (unsigned I = 0, N = Decls.size(); I != N; ++I) {
-      if (I == Skip[SkipPos])
-        ++SkipPos;
-      else
-        List.AddSubsequentDecl(Decls[I]);
-    }
-  } else {
-    // Convert the array to a StoredDeclsList.
-    for (auto *D : Decls) {
-      if (List.isNull())
-        List.setOnlyValue(D);
-      else
-        List.AddSubsequentDecl(D);
-    }
-  }
-
+  List.replaceExternalDecls(Decls);
   return List.getLookupResult();
 }
 
@@ -1543,10 +1506,7 @@ void DeclContext::removeDecl(Decl *D) {
       if (Map) {
         StoredDeclsMap::iterator Pos = Map->find(ND->getDeclName());
         assert(Pos != Map->end() && "no lookup entry for decl");
-        // Remove the decl only if it is contained.
-        StoredDeclsList::DeclsTy *Vec = Pos->second.getAsVector();
-        if ((Vec && is_contained(*Vec, ND)) || Pos->second.getAsDecl() == ND)
-          Pos->second.remove(ND);
+        Pos->second.remove(ND);
       }
     } while (DC->isTransparentContext() && (DC = DC->getParent()));
   }
@@ -1662,8 +1622,6 @@ void DeclContext::buildLookupImpl(DeclContext *DCtx, bool Internal) {
         buildLookupImpl(InnerCtx, Internal);
   }
 }
-
-NamedDecl *const DeclContextLookupResult::SingleElementDummyList = nullptr;
 
 DeclContext::lookup_result
 DeclContext::lookup(DeclarationName Name) const {
@@ -1940,23 +1898,11 @@ void DeclContext::makeDeclVisibleInContextImpl(NamedDecl *D, bool Internal) {
     // In this case, we never try to replace an existing declaration; we'll
     // handle that when we finalize the list of declarations for this name.
     DeclNameEntries.setHasExternalDecls();
-    DeclNameEntries.AddSubsequentDecl(D);
+    DeclNameEntries.prependDeclNoReplace(D);
     return;
   }
 
-  if (DeclNameEntries.isNull()) {
-    DeclNameEntries.setOnlyValue(D);
-    return;
-  }
-
-  if (DeclNameEntries.HandleRedeclaration(D, /*IsKnownNewer*/!Internal)) {
-    // This declaration has replaced an existing one for which
-    // declarationReplaces returns true.
-    return;
-  }
-
-  // Put this declaration into the appropriate slot.
-  DeclNameEntries.AddSubsequentDecl(D);
+  DeclNameEntries.addOrReplaceDecl(D);
 }
 
 UsingDirectiveDecl *DeclContext::udir_iterator::operator*() const {

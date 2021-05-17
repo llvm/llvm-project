@@ -834,6 +834,8 @@ public:
 
   lldb::addr_t GetStackRedZoneSize();
 
+  bool IsLoaded(const lldb::SBModule &module) const;
+
   lldb::SBLaunchInfo GetLaunchInfo() const;
 
   void SetLaunchInfo(const lldb::SBLaunchInfo &launch_info);

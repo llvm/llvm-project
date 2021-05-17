@@ -117,4 +117,4 @@ using ::toupper;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_CCTYPE
+#endif // _LIBCPP_CCTYPE

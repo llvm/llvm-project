@@ -8,10 +8,6 @@ endif()
 
 cmake_minimum_required(VERSION 3.13.4)
 
-if (POLICY CMP0042)
-  cmake_policy(SET CMP0042 NEW) # Set MACOSX_RPATH=YES by default
-endif()
-
 # Add path for custom modules
 set(CMAKE_MODULE_PATH
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
@@ -28,7 +24,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBUNWIND_STANDALONE_B
   project(libunwind LANGUAGES C CXX ASM)
 
   set(PACKAGE_NAME libunwind)
-  set(PACKAGE_VERSION 12.0.0git)
+  set(PACKAGE_VERSION 13.0.0git)
   set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
   set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
 
@@ -67,6 +63,7 @@ option(LIBUNWIND_ENABLE_THREADS "Build libunwind with threading support." ON)
 option(LIBUNWIND_WEAK_PTHREAD_LIB "Use weak references to refer to pthread functions." OFF)
 option(LIBUNWIND_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
 option(LIBUNWIND_INCLUDE_DOCS "Build the libunwind documentation." ${LLVM_INCLUDE_DOCS})
+option(LIBUNWIND_INCLUDE_TESTS "Build the libunwind tests." ${LLVM_INCLUDE_TESTS})
 option(LIBUNWIND_IS_BAREMETAL "Build libunwind for baremetal targets." OFF)
 option(LIBUNWIND_USE_FRAME_HEADER_CACHE "Cache frame headers for unwinding. Requires locking dl_iterate_phdr." OFF)
 option(LIBUNWIND_REMEMBER_HEAP_ALLOC "Use heap instead of the stack for .cfi_remember_state." OFF)
@@ -105,7 +102,7 @@ elseif(LIBUNWIND_BUILD_32_BITS)
   message(FATAL_ERROR "LIBUNWIND_BUILD_32_BITS=ON is not supported on this platform.")
 endif()
 
-option(LIBUNWIND_HERMETIC_STATIC_LIBRARY
+option(LIBUNWIND_HIDE_SYMBOLS
   "Do not export any symbols from the static library." OFF)
 
 #===============================================================================
@@ -118,8 +115,8 @@ set(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH})
 
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
-  set(LIBUNWIND_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}/c++)
-  set(LIBUNWIND_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE}/c++)
+  set(LIBUNWIND_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
+  set(LIBUNWIND_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE})
   if(LIBCXX_LIBDIR_SUBDIR)
     string(APPEND LIBUNWIND_LIBRARY_DIR /${LIBUNWIND_LIBDIR_SUBDIR})
     string(APPEND LIBUNWIND_INSTALL_LIBRARY_DIR /${LIBUNWIND_LIBDIR_SUBDIR})
@@ -135,8 +132,6 @@ endif()
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBUNWIND_LIBRARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBUNWIND_LIBRARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBUNWIND_LIBRARY_DIR})
-
-set(LIBUNWIND_INSTALL_PREFIX "" CACHE STRING "Define libunwind destination prefix.")
 
 set(LIBUNWIND_C_FLAGS "")
 set(LIBUNWIND_CXX_FLAGS "")
@@ -324,7 +319,7 @@ endif()
 
 # Disable DLL annotations on Windows for static builds.
 if (WIN32 AND LIBUNWIND_ENABLE_STATIC AND NOT LIBUNWIND_ENABLE_SHARED)
-  add_definitions(-D_LIBUNWIND_DISABLE_VISIBILITY_ANNOTATIONS)
+  add_definitions(-D_LIBUNWIND_HIDE_SYMBOLS)
 endif()
 
 if (LIBUNWIND_HAS_COMMENT_LIB_PRAGMA)
@@ -348,6 +343,6 @@ if (LIBUNWIND_INCLUDE_DOCS)
   add_subdirectory(docs)
 endif()
 
-if (EXISTS ${LLVM_CMAKE_PATH})
+if (LIBUNWIND_INCLUDE_TESTS AND EXISTS ${LLVM_CMAKE_PATH})
   add_subdirectory(test)
 endif()

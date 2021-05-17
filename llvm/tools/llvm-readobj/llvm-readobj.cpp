@@ -72,7 +72,7 @@ namespace opts {
           cl::desc("Equivalent to setting: --file-headers, --program-headers, "
                    "--section-headers"));
   cl::alias HeadersShort("e", cl::desc("Alias for --headers"),
-     cl::aliasopt(Headers));
+                         cl::aliasopt(Headers), cl::NotHidden);
 
   // --wide, -W
   cl::opt<bool>
@@ -131,7 +131,8 @@ namespace opts {
 
   // --notes, -n
   cl::opt<bool> Notes("notes", cl::desc("Display the ELF notes in the file"));
-  cl::alias NotesShort("n", cl::desc("Alias for --notes"), cl::aliasopt(Notes));
+  cl::alias NotesShort("n", cl::desc("Alias for --notes"), cl::aliasopt(Notes),
+                       cl::NotHidden);
 
   // --dyn-relocations
   cl::opt<bool> DynRelocs("dyn-relocations",
@@ -166,9 +167,8 @@ namespace opts {
   // --unwind, -u
   cl::opt<bool> UnwindInfo("unwind",
     cl::desc("Display unwind information"));
-  cl::alias UnwindInfoShort("u",
-    cl::desc("Alias for --unwind"),
-    cl::aliasopt(UnwindInfo));
+  cl::alias UnwindInfoShort("u", cl::desc("Alias for --unwind"),
+                            cl::aliasopt(UnwindInfo), cl::NotHidden);
 
   // --dynamic-table, --dynamic, -d
   cl::opt<bool> DynamicTable("dynamic-table",
@@ -196,7 +196,8 @@ namespace opts {
       cl::desc("Display the specified section(s) as a list of strings"),
       cl::ZeroOrMore);
   cl::alias StringDumpShort("p", cl::desc("Alias for --string-dump"),
-                            cl::aliasopt(StringDump), cl::Prefix);
+                            cl::aliasopt(StringDump), cl::Prefix,
+                            cl::NotHidden);
 
   // --hex-dump, -x
   cl::list<std::string>
@@ -204,7 +205,7 @@ namespace opts {
               cl::desc("Display the specified section(s) as hexadecimal bytes"),
               cl::ZeroOrMore);
   cl::alias HexDumpShort("x", cl::desc("Alias for --hex-dump"),
-                         cl::aliasopt(HexDump), cl::Prefix);
+                         cl::aliasopt(HexDump), cl::Prefix, cl::NotHidden);
 
   // --demangle, -C
   cl::opt<bool> Demangle("demangle",
@@ -340,7 +341,7 @@ namespace opts {
       VersionInfo("version-info",
                   cl::desc("Display ELF version sections (if present)"));
   cl::alias VersionInfoShort("V", cl::desc("Alias for -version-info"),
-                             cl::aliasopt(VersionInfo));
+                             cl::aliasopt(VersionInfo), cl::NotHidden);
 
   // --elf-section-groups, --section-groups, -g
   cl::opt<bool> SectionGroups("elf-section-groups",
@@ -349,14 +350,14 @@ namespace opts {
                                cl::desc("Alias for -elf-sections-groups"),
                                cl::aliasopt(SectionGroups));
   cl::alias SectionGroupsShort("g", cl::desc("Alias for -elf-sections-groups"),
-                               cl::aliasopt(SectionGroups));
+                               cl::aliasopt(SectionGroups), cl::NotHidden);
 
   // --elf-hash-histogram, --histogram, -I
   cl::opt<bool> HashHistogram(
       "elf-hash-histogram",
       cl::desc("Display bucket list histogram for hash sections"));
   cl::alias HashHistogramShort("I", cl::desc("Alias for -elf-hash-histogram"),
-                               cl::aliasopt(HashHistogram));
+                               cl::aliasopt(HashHistogram), cl::NotHidden);
   cl::alias HistogramAlias("histogram",
                            cl::desc("Alias for --elf-hash-histogram"),
                            cl::aliasopt(HashHistogram));
@@ -366,6 +367,10 @@ namespace opts {
                           cl::desc("Display callgraph profile section"));
   cl::alias ELFCGProfile("elf-cg-profile", cl::desc("Alias for --cg-profile"),
                          cl::aliasopt(CGProfile));
+
+  // --bb-addr-map
+  cl::opt<bool> BBAddrMap("bb-addr-map",
+                          cl::desc("Display the BB address map section"));
 
   // -addrsig
   cl::opt<bool> Addrsig("addrsig",
@@ -542,6 +547,8 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
       Dumper->printHashHistograms();
     if (opts::CGProfile)
       Dumper->printCGProfile();
+    if (opts::BBAddrMap)
+      Dumper->printBBAddrMaps();
     if (opts::Addrsig)
       Dumper->printAddrsig();
     if (opts::Notes)
@@ -646,28 +653,43 @@ static void dumpWindowsResourceFile(WindowsResource *WinRes,
 
 /// Opens \a File and dumps it.
 static void dumpInput(StringRef File, ScopedPrinter &Writer) {
-  // Attempt to open the binary.
-  Expected<OwningBinary<Binary>> BinaryOrErr =
-      createBinary(File, /*Context=*/nullptr, /*InitContent=*/false);
+  ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
+      MemoryBuffer::getFileOrSTDIN(File, /*IsText=*/false,
+                                   /*RequiresNullTerminator=*/false);
+  if (std::error_code EC = FileOrErr.getError())
+    return reportError(errorCodeToError(EC), File);
+
+  std::unique_ptr<MemoryBuffer> &Buffer = FileOrErr.get();
+  file_magic Type = identify_magic(Buffer->getBuffer());
+  if (Type == file_magic::bitcode) {
+    reportWarning(createStringError(errc::invalid_argument,
+                                    "bitcode files are not supported"),
+                  File);
+    return;
+  }
+
+  Expected<std::unique_ptr<Binary>> BinaryOrErr = createBinary(
+      Buffer->getMemBufferRef(), /*Context=*/nullptr, /*InitContent=*/false);
   if (!BinaryOrErr)
     reportError(BinaryOrErr.takeError(), File);
-  Binary &Binary = *BinaryOrErr.get().getBinary();
 
-  if (Archive *Arc = dyn_cast<Archive>(&Binary))
+  std::unique_ptr<Binary> Bin = std::move(*BinaryOrErr);
+  if (Archive *Arc = dyn_cast<Archive>(Bin.get()))
     dumpArchive(Arc, Writer);
   else if (MachOUniversalBinary *UBinary =
-               dyn_cast<MachOUniversalBinary>(&Binary))
+               dyn_cast<MachOUniversalBinary>(Bin.get()))
     dumpMachOUniversalBinary(UBinary, Writer);
-  else if (ObjectFile *Obj = dyn_cast<ObjectFile>(&Binary))
+  else if (ObjectFile *Obj = dyn_cast<ObjectFile>(Bin.get()))
     dumpObject(*Obj, Writer);
-  else if (COFFImportFile *Import = dyn_cast<COFFImportFile>(&Binary))
+  else if (COFFImportFile *Import = dyn_cast<COFFImportFile>(Bin.get()))
     dumpCOFFImportFile(Import, Writer);
-  else if (WindowsResource *WinRes = dyn_cast<WindowsResource>(&Binary))
+  else if (WindowsResource *WinRes = dyn_cast<WindowsResource>(Bin.get()))
     dumpWindowsResourceFile(WinRes, Writer);
   else
     llvm_unreachable("unrecognized file type");
 
-  CVTypes.Binaries.push_back(std::move(*BinaryOrErr));
+  CVTypes.Binaries.push_back(
+      OwningBinary<Binary>(std::move(Bin), std::move(Buffer)));
 }
 
 /// Registers aliases that should only be allowed by readobj.

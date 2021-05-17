@@ -16,22 +16,18 @@
 ; RUN: 	   -passes=simplify-cfg -print-after-all -filter-print-funcs=foo -print-module-scope \
 ; RUN:	   | FileCheck %s -check-prefix=FOO
 
-; CFG:      IR Dump After {{Simplify the CFG|SimplifyCFGPass}}
-; CFG-SAME:   function: foo
+; CFG:      IR Dump After {{Simplify the CFG|SimplifyCFGPass}} {{.*}}foo
 ; CFG-NEXT: ModuleID =
 ; CFG: define void @foo
 ; CFG: define void @bar
 ; CFG: declare void @baz
-; CFG: IR Dump After
-; CFG-SAME:   function: bar
+; CFG: IR Dump After {{.*}}bar
 ; CFG-NEXT: ModuleID =
 ; CFG: define void @foo
 ; CFG: define void @bar
 ; CFG: declare void @baz
 
-; FOO:      IR Dump After {{Simplify the CFG|SimplifyCFGPass}}
-; FOO-NOT:    function: bar
-; FOO-SAME:   function: foo
+; FOO:      IR Dump After {{Simplify the CFG|SimplifyCFGPass}} {{.*foo}}
 ; FOO-NEXT: ModuleID =
 ; FOO:   Function Attrs: nounwind ssp
 ; FOO: define void @foo

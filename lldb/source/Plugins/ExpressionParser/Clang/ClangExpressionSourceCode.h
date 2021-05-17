@@ -27,17 +27,19 @@ public:
   /// the user expression.
   static const llvm::StringRef g_prefix_file_name;
   static const char *g_expression_prefix;
+  static const char *g_expression_suffix;
 
   /// The possible ways an expression can be wrapped.
   enum class WrapKind {
     /// Wrapped in a non-static member function of a C++ class.
     CppMemberFunction,
+    /// Wrapped in a static member function of a C++ class.
+    CppStaticMemberFunction,
     /// Wrapped in an instance Objective-C method.
     ObjCInstanceMethod,
     /// Wrapped in a static Objective-C method.
     ObjCStaticMethod,
     /// Wrapped in a non-member function.
-    /// Note that this is also used for static member functions of a C++ class.
     Function
   };
 

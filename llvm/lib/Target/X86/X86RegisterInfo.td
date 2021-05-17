@@ -61,7 +61,7 @@ def CH : X86Reg<"ch", 5>;
 def BH : X86Reg<"bh", 7>;
 
 // X86-64 only, requires REX.
-let CostPerUse = 1 in {
+let CostPerUse = [1] in {
 def SIL  : X86Reg<"sil",   6>;
 def DIL  : X86Reg<"dil",   7>;
 def BPL  : X86Reg<"bpl",   5>;
@@ -126,7 +126,7 @@ def SP : X86Reg<"sp", 4, [SPL,SPH]>;
 def IP : X86Reg<"ip", 0>;
 
 // X86-64 only, requires REX.
-let SubRegIndices = [sub_8bit, sub_8bit_hi_phony], CostPerUse = 1,
+let SubRegIndices = [sub_8bit, sub_8bit_hi_phony], CostPerUse = [1],
     CoveredBySubRegs = 1 in {
 def R8W  : X86Reg<"r8w",   8, [R8B,R8BH]>;
 def R9W  : X86Reg<"r9w",   9, [R9B,R9BH]>;
@@ -152,7 +152,7 @@ def EIP : X86Reg<"eip", 0, [IP, HIP]>, DwarfRegNum<[-2, 8, 8]>;
 }
 
 // X86-64 only, requires REX
-let SubRegIndices = [sub_16bit, sub_16bit_hi], CostPerUse = 1,
+let SubRegIndices = [sub_16bit, sub_16bit_hi], CostPerUse = [1],
     CoveredBySubRegs = 1 in {
 def R8D  : X86Reg<"r8d",   8, [R8W,R8WH]>;
 def R9D  : X86Reg<"r9d",   9, [R9W,R9WH]>;
@@ -176,7 +176,7 @@ def RBP : X86Reg<"rbp", 5, [EBP]>, DwarfRegNum<[6, -2, -2]>;
 def RSP : X86Reg<"rsp", 4, [ESP]>, DwarfRegNum<[7, -2, -2]>;
 
 // These also require REX.
-let CostPerUse = 1 in {
+let CostPerUse = [1] in {
 def R8  : X86Reg<"r8",   8, [R8D]>,  DwarfRegNum<[ 8, -2, -2]>;
 def R9  : X86Reg<"r9",   9, [R9D]>,  DwarfRegNum<[ 9, -2, -2]>;
 def R10 : X86Reg<"r10", 10, [R10D]>, DwarfRegNum<[10, -2, -2]>;
@@ -219,7 +219,7 @@ def XMM6: X86Reg<"xmm6", 6>, DwarfRegNum<[23, 27, 27]>;
 def XMM7: X86Reg<"xmm7", 7>, DwarfRegNum<[24, 28, 28]>;
 
 // X86-64 only
-let CostPerUse = 1 in {
+let CostPerUse = [1] in {
 def XMM8:  X86Reg<"xmm8",   8>, DwarfRegNum<[25, -2, -2]>;
 def XMM9:  X86Reg<"xmm9",   9>, DwarfRegNum<[26, -2, -2]>;
 def XMM10: X86Reg<"xmm10", 10>, DwarfRegNum<[27, -2, -2]>;
@@ -639,8 +639,3 @@ def BNDR : RegisterClass<"X86", [v2i64], 128, (sequence "BND%u", 0, 3)>;
 let CopyCost = -1 in // Don't allow copying of tile registers
 def TILE : RegisterClass<"X86", [x86amx], 8192,
                          (sequence "TMM%u", 0, 7)> {let Size = 8192;}
-def TILECFG : RegisterClass<"X86", [untyped], 512, (add TMMCFG)> {
-  let CopyCost = -1;  // Don't allow copying of tile config registers.
-  let isAllocatable = 1;
-  let Size = 512;
-}

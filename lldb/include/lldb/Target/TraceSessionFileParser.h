@@ -11,7 +11,7 @@
 
 #include "llvm/Support/JSON.h"
 
-#include "lldb/Target/ThreadTrace.h"
+#include "lldb/Target/ThreadPostMortemTrace.h"
 
 namespace lldb_private {
 
@@ -68,7 +68,7 @@ public:
   /// Helper struct holding the objects created when parsing a process
   struct ParsedProcess {
     lldb::TargetSP target_sp;
-    std::vector<ThreadTraceSP> threads;
+    std::vector<lldb::ThreadPostMortemTraceSP> threads;
   };
 
   TraceSessionFileParser(Debugger &debugger, llvm::StringRef session_file_dir,
@@ -103,8 +103,8 @@ protected:
   /// modifies the given file_spec.
   void NormalizePath(lldb_private::FileSpec &file_spec);
 
-  ThreadTraceSP ParseThread(lldb::ProcessSP &process_sp,
-                            const JSONThread &thread);
+  lldb::ThreadPostMortemTraceSP ParseThread(lldb::ProcessSP &process_sp,
+                                            const JSONThread &thread);
 
   llvm::Expected<ParsedProcess> ParseProcess(const JSONProcess &process);
 

@@ -11,6 +11,7 @@
 #include <sstream>
 
 #include "CommandObjectThreadUtil.h"
+#include "CommandObjectTrace.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Host/OptionParser.h"
@@ -1978,75 +1979,34 @@ public:
 
 // CommandObjectTraceStart
 
-/// This class works by delegating the logic to the actual trace plug-in that
-/// can support the current process.
-class CommandObjectTraceStart : public CommandObjectProxy {
+class CommandObjectTraceStart : public CommandObjectTraceProxy {
 public:
   CommandObjectTraceStart(CommandInterpreter &interpreter)
-      : CommandObjectProxy(interpreter, "thread trace start",
-                           "Start tracing threads with the corresponding trace "
-                           "plug-in for the current process.",
-                           "thread trace start [<trace-options>]") {}
+      : CommandObjectTraceProxy(
+            /*live_debug_session_only*/ true, interpreter, "thread trace start",
+            "Start tracing threads with the corresponding trace "
+            "plug-in for the current process.",
+            "thread trace start [<trace-options>]") {}
 
 protected:
-  llvm::Expected<CommandObjectSP> DoGetProxyCommandObject() {
-    ProcessSP process_sp = m_interpreter.GetExecutionContext().GetProcessSP();
-
-    if (!process_sp)
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "Process not available.");
-    if (!process_sp->IsAlive())
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "Process must be launched.");
-
-    llvm::Expected<TraceTypeInfo> trace_type =
-        process_sp->GetSupportedTraceType();
-
-    if (!trace_type)
-      return llvm::createStringError(
-          llvm::inconvertibleErrorCode(), "Tracing is not supported. %s",
-          llvm::toString(trace_type.takeError()).c_str());
-
-    CommandObjectSP delegate_sp =
-        PluginManager::GetTraceStartCommand(trace_type->name, m_interpreter);
-    if (!delegate_sp)
-      return llvm::createStringError(
-          llvm::inconvertibleErrorCode(),
-          "No trace plug-in matches the specified type: \"%s\"",
-          trace_type->name.c_str());
-    return delegate_sp;
+  lldb::CommandObjectSP GetDelegateCommand(Trace &trace) override {
+    return trace.GetThreadTraceStartCommand(m_interpreter);
   }
-
-  CommandObject *GetProxyCommandObject() override {
-    if (llvm::Expected<CommandObjectSP> delegate = DoGetProxyCommandObject()) {
-      m_delegate_sp = *delegate;
-      m_delegate_error.clear();
-      return m_delegate_sp.get();
-    } else {
-      m_delegate_sp.reset();
-      m_delegate_error = llvm::toString(delegate.takeError());
-      return nullptr;
-    }
-  }
-
-private:
-  llvm::StringRef GetUnsupportedError() override { return m_delegate_error; }
-
-  CommandObjectSP m_delegate_sp;
-  std::string m_delegate_error;
 };
 
 // CommandObjectTraceStop
 
-class CommandObjectTraceStop : public CommandObjectIterateOverThreads {
+class CommandObjectTraceStop : public CommandObjectMultipleThreads {
 public:
   CommandObjectTraceStop(CommandInterpreter &interpreter)
-      : CommandObjectIterateOverThreads(
+      : CommandObjectMultipleThreads(
             interpreter, "thread trace stop",
-            "Stop tracing threads. "
+            "Stop tracing threads, including the ones traced with the "
+            "\"process trace start\" command."
             "Defaults to the current thread. Thread indices can be "
-            "specified as arguments.\n Use the thread-index \"all\" to trace "
-            "all threads.",
+            "specified as arguments.\n Use the thread-index \"all\" to stop "
+            "tracing "
+            "for all existing threads.",
             "thread trace stop [<thread-index> <thread-index> ...]",
             eCommandRequiresProcess | eCommandTryTargetAPILock |
                 eCommandProcessMustBeLaunched | eCommandProcessMustBePaused |
@@ -2054,20 +2014,18 @@ public:
 
   ~CommandObjectTraceStop() override = default;
 
-  bool HandleOneThread(lldb::tid_t tid, CommandReturnObject &result) override {
-    const Thread &thread =
-        *m_exe_ctx.GetProcessPtr()->GetThreadList().FindThreadByID(tid);
-    Trace &trace = *m_exe_ctx.GetTargetSP()->GetTrace();
+  bool DoExecuteOnThreads(Args &command, CommandReturnObject &result,
+                          const std::vector<lldb::tid_t> &tids) override {
+    ProcessSP process_sp = m_exe_ctx.GetProcessSP();
 
-    if (llvm::Error err = trace.StopTracingThread(thread)) {
-      result.AppendErrorWithFormat("Failed stopping thread %" PRIu64 ": %s\n",
-                                   tid, toString(std::move(err)).c_str());
-      result.SetStatus(eReturnStatusFailed);
-    }
+    TraceSP trace_sp = process_sp->GetTarget().GetTrace();
 
-    // We don't return false on errors to try to stop as many threads as
-    // possible.
-    return true;
+    if (llvm::Error err = trace_sp->StopThreads(tids))
+      result.SetError(toString(std::move(err)));
+    else
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+
+    return result.Succeeded();
   }
 };
 

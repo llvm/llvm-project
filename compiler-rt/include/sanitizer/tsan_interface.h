@@ -67,6 +67,12 @@ static const unsigned __tsan_mutex_recursive_lock   = 1 << 6;
 // the corresponding __tsan_mutex_post_lock annotation.
 static const unsigned __tsan_mutex_recursive_unlock = 1 << 7;
 
+// Convenient composed constants.
+static const unsigned __tsan_mutex_try_read_lock =
+    __tsan_mutex_read_lock | __tsan_mutex_try_lock;
+static const unsigned __tsan_mutex_try_read_lock_failed =
+    __tsan_mutex_try_read_lock | __tsan_mutex_try_lock_failed;
+
 // Annotate creation of a mutex.
 // Supported flags: mutex creation flags.
 void __tsan_mutex_create(void *addr, unsigned flags);
@@ -141,7 +147,7 @@ void __tsan_external_write(void *addr, void *caller_pc, void *tag);
 //     and freed by __tsan_destroy_fiber.
 //   - TSAN context of current fiber or thread can be obtained
 //     by calling __tsan_get_current_fiber.
-//   - __tsan_switch_to_fiber should be called immediatly before switch
+//   - __tsan_switch_to_fiber should be called immediately before switch
 //     to fiber, such as call of swapcontext.
 //   - Fiber name can be set by __tsan_set_fiber_name.
 void *__tsan_get_current_fiber(void);
@@ -153,6 +159,15 @@ void __tsan_set_fiber_name(void *fiber, const char *name);
 // Flags for __tsan_switch_to_fiber:
 // Do not establish a happens-before relation between fibers
 static const unsigned __tsan_switch_to_fiber_no_sync = 1 << 0;
+
+// User-provided callback invoked on TSan initialization.
+void __tsan_on_initialize();
+
+// User-provided callback invoked on TSan shutdown.
+// `failed` - Nonzero if TSan did detect issues, zero otherwise.
+// Return `0` if TSan should exit as if no issues were detected.  Return nonzero
+// if TSan should exit as if issues were detected.
+int __tsan_on_finalize(int failed);
 
 #ifdef __cplusplus
 }  // extern "C"

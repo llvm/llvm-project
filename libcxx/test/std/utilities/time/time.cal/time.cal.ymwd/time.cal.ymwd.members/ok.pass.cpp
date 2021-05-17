@@ -11,7 +11,7 @@
 // class year_month_weekday;
 
 // constexpr bool ok() const noexcept;
-//  Returns: If any of y_­.ok(), m_­.ok(), or wdi_­.ok() is false, returns false.
+//  Returns: If any of y_.ok(), m_.ok(), or wdi_.ok() is false, returns false.
 //           Otherwise, if *this represents a valid date, returns true.
 //           Otherwise, returns false.
 

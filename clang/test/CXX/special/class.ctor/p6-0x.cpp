@@ -94,3 +94,34 @@ namespace UnionCtors {
     friend constexpr E::E() noexcept; // expected-error {{follows non-constexpr declaration}}
   };
 }
+
+namespace PR48763 {
+  // FIXME: We implement a speculative wording fix here: if a class inherits a
+  // default constructor and doesn't declare one itself, we declare an default
+  // constructor implicitly. This allows us to meanignfully reason about
+  // whether that default constructor is constexpr, trivial, and so on.
+  struct A { constexpr A() {} };
+  struct B : A {
+    using A::A;
+    constexpr B(int) {}
+  };
+  struct C { B b; };
+  constexpr C c;
+
+  struct D { int n; };
+  struct E : D { using D::D; E(int); };
+  static_assert(E().n == 0, "");
+  static_assert(E{}.n == 0, "");
+
+  struct F { E e; };
+  static_assert(F().e.n == 0, "");
+  static_assert(F{}.e.n == 0, "");
+
+  union U { E e; };
+  U u; // OK, trivial default constructor
+
+  struct G { G(); };
+  struct H : D { using D::D; H(int); G g; };
+  union V { H h; }; // expected-note {{field 'h' has a non-trivial default constructor}}
+  V v; // expected-error {{deleted}}
+}

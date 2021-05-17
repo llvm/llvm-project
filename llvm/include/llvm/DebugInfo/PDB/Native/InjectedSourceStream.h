@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_PDBINJECTEDSOURCESTREAM_H
-#define LLVM_DEBUGINFO_PDB_RAW_PDBINJECTEDSOURCESTREAM_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_INJECTEDSOURCESTREAM_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_INJECTEDSOURCESTREAM_H
 
 #include "llvm/DebugInfo/PDB/Native/HashTable.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
@@ -18,7 +18,6 @@ namespace msf {
 class MappedBlockStream;
 }
 namespace pdb {
-class PDBFile;
 class PDBStringTable;
 
 class InjectedSourceStream {

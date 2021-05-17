@@ -73,7 +73,7 @@ public:
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
                     AAQueryInfo &AAQI) {
     if (LocA.Ptr == LocB.Ptr)
-      return MustAlias;
+      return AliasResult::MustAlias;
 
     // Comparisons between global variables and other constants should be
     // handled by BasicAA.
@@ -84,7 +84,7 @@ public:
       return AAResultBase::alias(LocA, LocB, AAQI);
 
     AliasResult QueryResult = query(LocA, LocB);
-    if (QueryResult == MayAlias)
+    if (QueryResult == AliasResult::MayAlias)
       return AAResultBase::alias(LocA, LocB, AAQI);
 
     return QueryResult;

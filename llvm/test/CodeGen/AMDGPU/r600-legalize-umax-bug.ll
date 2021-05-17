@@ -18,7 +18,7 @@ define amdgpu_kernel void @test(i64 addrspace(1)* %out) {
 ; CHECK-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ; CHECK-NEXT:     MOV * T0.W, KC0[2].Y,
 ; CHECK-NEXT:    ALU clause starting at 11:
-; CHECK-NEXT:     MAX_UINT T0.X, T0.X, literal.x,
+; CHECK-NEXT:     MOV T0.X, literal.x,
 ; CHECK-NEXT:     MOV T0.Y, 0.0,
 ; CHECK-NEXT:     LSHR * T1.X, T0.W, literal.y,
 ; CHECK-NEXT:    4(5.605194e-45), 2(2.802597e-45)

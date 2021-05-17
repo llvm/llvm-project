@@ -185,13 +185,20 @@ Instruction *ConstantHoistingPass::findMatInsertPt(Instruction *Inst,
   // We can't insert directly before a phi node or an eh pad. Insert before
   // the terminator of the incoming or dominating block.
   assert(Entry != Inst->getParent() && "PHI or landing pad in entry block!");
-  if (Idx != ~0U && isa<PHINode>(Inst))
-    return cast<PHINode>(Inst)->getIncomingBlock(Idx)->getTerminator();
+  BasicBlock *InsertionBlock = nullptr;
+  if (Idx != ~0U && isa<PHINode>(Inst)) {
+    InsertionBlock = cast<PHINode>(Inst)->getIncomingBlock(Idx);
+    if (!InsertionBlock->isEHPad()) {
+      return InsertionBlock->getTerminator();
+    }
+  } else {
+    InsertionBlock = Inst->getParent();
+  }
 
   // This must be an EH pad. Iterate over immediate dominators until we find a
   // non-EH pad. We need to skip over catchswitch blocks, which are both EH pads
   // and terminators.
-  auto IDom = DT->getNode(Inst->getParent())->getIDom();
+  auto *IDom = DT->getNode(InsertionBlock)->getIDom();
   while (IDom->getBlock()->isEHPad()) {
     assert(Entry != IDom->getBlock() && "eh pad in entry block");
     IDom = IDom->getIDom();
@@ -358,7 +365,7 @@ SetVector<Instruction *> ConstantHoistingPass::findConstantInsertionPoint(
 void ConstantHoistingPass::collectConstantCandidates(
     ConstCandMapType &ConstCandMap, Instruction *Inst, unsigned Idx,
     ConstantInt *ConstInt) {
-  unsigned Cost;
+  InstructionCost Cost;
   // Ask the target about the cost of materializing the constant for the given
   // instruction and operand index.
   if (auto IntrInst = dyn_cast<IntrinsicInst>(Inst))
@@ -380,7 +387,7 @@ void ConstantHoistingPass::collectConstantCandidates(
       ConstIntCandVec.push_back(ConstantCandidate(ConstInt));
       Itr->second = ConstIntCandVec.size() - 1;
     }
-    ConstIntCandVec[Itr->second].addUser(Inst, Idx, Cost);
+    ConstIntCandVec[Itr->second].addUser(Inst, Idx, *Cost.getValue());
     LLVM_DEBUG(if (isa<ConstantInt>(Inst->getOperand(Idx))) dbgs()
                    << "Collect constant " << *ConstInt << " from " << *Inst
                    << " with cost " << Cost << '\n';
@@ -418,7 +425,7 @@ void ConstantHoistingPass::collectConstantCandidates(
   // usually lowered to a load from constant pool. Such operation is unlikely
   // to be cheaper than compute it by <Base + Offset>, which can be lowered to
   // an ADD instruction or folded into Load/Store instruction.
-  int Cost =
+  InstructionCost Cost =
       TTI->getIntImmCostInst(Instruction::Add, 1, Offset, PtrIntTy,
                              TargetTransformInfo::TCK_SizeAndLatency, Inst);
   ConstCandVecType &ExprCandVec = ConstGEPCandMap[BaseGV];
@@ -432,7 +439,7 @@ void ConstantHoistingPass::collectConstantCandidates(
         ConstExpr));
     Itr->second = ExprCandVec.size() - 1;
   }
-  ExprCandVec[Itr->second].addUser(Inst, Idx, Cost);
+  ExprCandVec[Itr->second].addUser(Inst, Idx, *Cost.getValue());
 }
 
 /// Check the operand for instruction Inst at index Idx.
@@ -574,11 +581,11 @@ ConstantHoistingPass::maximizeConstantsInRange(ConstCandVecType::iterator S,
   }
 
   LLVM_DEBUG(dbgs() << "== Maximize constants in range ==\n");
-  int MaxCost = -1;
+  InstructionCost MaxCost = -1;
   for (auto ConstCand = S; ConstCand != E; ++ConstCand) {
     auto Value = ConstCand->ConstInt->getValue();
     Type *Ty = ConstCand->ConstInt->getType();
-    int Cost = 0;
+    InstructionCost Cost = 0;
     NumUses += ConstCand->Uses.size();
     LLVM_DEBUG(dbgs() << "= Constant: " << ConstCand->ConstInt->getValue()
                       << "\n");
@@ -595,8 +602,8 @@ ConstantHoistingPass::maximizeConstantsInRange(ConstCandVecType::iterator S,
                                    C2->ConstInt->getValue(),
                                    ConstCand->ConstInt->getValue());
         if (Diff) {
-          const int ImmCosts =
-            TTI->getIntImmCodeSizeCost(Opcode, OpndIdx, Diff.getValue(), Ty);
+          const InstructionCost ImmCosts =
+              TTI->getIntImmCodeSizeCost(Opcode, OpndIdx, Diff.getValue(), Ty);
           Cost -= ImmCosts;
           LLVM_DEBUG(dbgs() << "Offset " << Diff.getValue() << " "
                             << "has penalty: " << ImmCosts << "\n"

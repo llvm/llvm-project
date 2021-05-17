@@ -20,7 +20,7 @@ using __llvm_libc::fputil::valueFromBits;
 using BitPatterns = __llvm_libc::fputil::BitPatterns<double>;
 using Properties = __llvm_libc::fputil::FloatProperties<double>;
 
-TEST(LogbTest, SpecialNumbers) {
+TEST(LlvmLibcLogbTest, SpecialNumbers) {
   EXPECT_EQ(
       BitPatterns::aQuietNaN,
       valueAsBits(__llvm_libc::logb(valueFromBits(BitPatterns::aQuietNaN))));
@@ -46,7 +46,7 @@ TEST(LogbTest, SpecialNumbers) {
                                      valueFromBits(BitPatterns::negZero))));
 }
 
-TEST(LogbTest, PowersOfTwo) {
+TEST(LlvmLibcLogbTest, PowersOfTwo) {
   EXPECT_EQ(valueAsBits(0.0), valueAsBits(__llvm_libc::logb(1.0)));
   EXPECT_EQ(valueAsBits(0.0), valueAsBits(__llvm_libc::logb(-1.0)));
 
@@ -66,7 +66,7 @@ TEST(LogbTest, PowersOfTwo) {
   EXPECT_EQ(valueAsBits(5.0), valueAsBits(__llvm_libc::logb(-32.0)));
 }
 
-TEST(LogbTest, SomeIntegers) {
+TEST(LlvmLibcLogbTest, SomeIntegers) {
   EXPECT_EQ(valueAsBits(1.0), valueAsBits(__llvm_libc::logb(3.0)));
   EXPECT_EQ(valueAsBits(1.0), valueAsBits(__llvm_libc::logb(-3.0)));
 
@@ -83,7 +83,7 @@ TEST(LogbTest, SomeIntegers) {
   EXPECT_EQ(valueAsBits(5.0), valueAsBits(__llvm_libc::logb(-55.0)));
 }
 
-TEST(LogbTest, InDoubleRange) {
+TEST(LlvmLibcLogbTest, InDoubleRange) {
   using BitsType = Properties::BitsType;
   constexpr BitsType count = 10000000;
   constexpr BitsType step = UINT64_MAX / count;

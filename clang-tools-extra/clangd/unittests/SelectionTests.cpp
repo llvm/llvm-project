@@ -261,6 +261,27 @@ TEST(SelectionTest, CommonAncestor) {
           )cpp",
           "StringLiteral", // Not DeclRefExpr to operator()!
       },
+      {
+          R"cpp(
+            struct Foo {};
+            struct Bar : [[v^ir^tual private Foo]] {};
+          )cpp",
+          "CXXBaseSpecifier",
+      },
+      {
+          R"cpp(
+            struct Foo {};
+            struct Bar : private [[Fo^o]] {};
+          )cpp",
+          "RecordTypeLoc",
+      },
+      {
+          R"cpp(
+            struct Foo {};
+            struct Bar : [[Fo^o]] {};
+          )cpp",
+          "RecordTypeLoc",
+      },
 
       // Point selections.
       {"void foo() { [[^foo]](); }", "DeclRefExpr"},
@@ -441,9 +462,6 @@ TEST(SelectionTest, CommonAncestor) {
     TestTU TU;
     TU.Code = std::string(Test.code());
 
-    // FIXME: Auto-completion in a template requires disabling delayed template
-    // parsing.
-    TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
     TU.ExtraArgs.push_back("-xobjective-c++");
 
     auto AST = TU.build();
@@ -563,7 +581,7 @@ TEST(SelectionTest, PathologicalPreprocessor) {
   auto TU = TestTU::withCode(Test.code());
   TU.AdditionalFiles["Expand.inc"] = "MACRO\n";
   auto AST = TU.build();
-  EXPECT_THAT(AST.getDiagnostics(), ::testing::IsEmpty());
+  EXPECT_THAT(*AST.getDiagnostics(), ::testing::IsEmpty());
   auto T = makeSelectionTree(Case, AST);
 
   EXPECT_EQ("BreakStmt", T.commonAncestor()->kind());

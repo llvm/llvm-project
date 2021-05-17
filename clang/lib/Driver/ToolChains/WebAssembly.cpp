@@ -26,9 +26,9 @@ using namespace llvm::opt;
 
 /// Following the conventions in https://wiki.debian.org/Multiarch/Tuples,
 /// we remove the vendor field to form the multiarch triple.
-static std::string getMultiarchTriple(const Driver &D,
-                                      const llvm::Triple &TargetTriple,
-                                      StringRef SysRoot) {
+std::string WebAssembly::getMultiarchTriple(const Driver &D,
+                                            const llvm::Triple &TargetTriple,
+                                            StringRef SysRoot) const {
     return (TargetTriple.getArchName() + "-" +
             TargetTriple.getOSAndEnvironmentName()).str();
 }
@@ -77,6 +77,16 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   const char *Crt1 = "crt1.o";
   const char *Entry = NULL;
+
+  // If crt1-command.o exists, it supports new-style commands, so use it.
+  // Otherwise, use the old crt1.o. This is a temporary transition measure.
+  // Once WASI libc no longer needs to support LLVM versions which lack
+  // support for new-style command, it can make crt1.o the same as
+  // crt1-command.o. And once LLVM no longer needs to support WASI libc
+  // versions before that, it can switch to using crt1-command.o.
+  if (ToolChain.GetFilePath("crt1-command.o") != "crt1-command.o")
+    Crt1 = "crt1-command.o";
+
   if (const Arg *A = Args.getLastArg(options::OPT_mexec_model_EQ)) {
     StringRef CM = A->getValue();
     if (CM == "command") {
@@ -272,12 +282,6 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
       getDriver().Diag(diag::err_drv_argument_not_allowed_with)
           << "-fwasm-exceptions"
           << "-mno-exception-handling";
-    // '-fwasm-exceptions' is not compatible with '-mno-reference-types'
-    if (DriverArgs.hasFlag(options::OPT_mno_reference_types,
-                           options::OPT_mexception_handing, false))
-      getDriver().Diag(diag::err_drv_argument_not_allowed_with)
-          << "-fwasm-exceptions"
-          << "-mno-reference-types";
     // '-fwasm-exceptions' is not compatible with
     // '-mllvm -enable-emscripten-cxx-exceptions'
     for (const Arg *A : DriverArgs.filtered(options::OPT_mllvm)) {
@@ -286,11 +290,39 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
             << "-fwasm-exceptions"
             << "-mllvm -enable-emscripten-cxx-exceptions";
     }
-    // '-fwasm-exceptions' implies exception-handling and reference-types
+    // '-fwasm-exceptions' implies exception-handling feature
     CC1Args.push_back("-target-feature");
     CC1Args.push_back("+exception-handling");
-    CC1Args.push_back("-target-feature");
-    CC1Args.push_back("+reference-types");
+  }
+
+  for (const Arg *A : DriverArgs.filtered(options::OPT_mllvm)) {
+    StringRef Opt = A->getValue(0);
+    if (Opt.startswith("-emscripten-cxx-exceptions-allowed")) {
+      // '-mllvm -emscripten-cxx-exceptions-allowed' should be used with
+      // '-mllvm -enable-emscripten-cxx-exceptions'
+      bool EmExceptionArgExists = false;
+      for (const Arg *A : DriverArgs.filtered(options::OPT_mllvm)) {
+        if (StringRef(A->getValue(0)) == "-enable-emscripten-cxx-exceptions") {
+          EmExceptionArgExists = true;
+          break;
+        }
+      }
+      if (!EmExceptionArgExists)
+        getDriver().Diag(diag::err_drv_argument_only_allowed_with)
+            << "-mllvm -emscripten-cxx-exceptions-allowed"
+            << "-mllvm -enable-emscripten-cxx-exceptions";
+
+      // Prevent functions specified in -emscripten-cxx-exceptions-allowed list
+      // from being inlined before reaching the wasm backend.
+      StringRef FuncNamesStr = Opt.split('=').second;
+      SmallVector<StringRef, 4> FuncNames;
+      FuncNamesStr.split(FuncNames, ',');
+      for (auto Name : FuncNames) {
+        CC1Args.push_back("-mllvm");
+        CC1Args.push_back(DriverArgs.MakeArgString("--force-attribute=" + Name +
+                                                   ":noinline"));
+      }
+    }
   }
 }
 

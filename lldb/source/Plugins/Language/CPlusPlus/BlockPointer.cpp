@@ -74,14 +74,12 @@ public:
     const CompilerType reserved_type =
         clang_ast_context->GetBasicType(lldb::eBasicTypeInt);
     const char *const FuncPtr_name("__FuncPtr");
-    const CompilerType FuncPtr_type =
-        clang_ast_importer->CopyType(*clang_ast_context, function_pointer_type);
 
     m_block_struct_type = clang_ast_context->CreateStructForIdentifier(
         ConstString(), {{isa_name, isa_type},
                         {flags_name, flags_type},
                         {reserved_name, reserved_type},
-                        {FuncPtr_name, FuncPtr_type}});
+                        {FuncPtr_name, function_pointer_type}});
   }
 
   ~BlockPointerSyntheticFrontEnd() override = default;

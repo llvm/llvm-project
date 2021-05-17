@@ -37,16 +37,24 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t *Data, size_t Size) {
     StackDepot[i] = StackDepotBytes[i];
   }
 
-  std::string RegionInfoBytes = FDP.ConsumeRemainingBytesAsString();
+  std::string RegionInfoBytes =
+      FDP.ConsumeRandomLengthString(FDP.remaining_bytes());
   std::vector<char> RegionInfo(AllocatorT::getRegionInfoArraySize(), 0);
   for (size_t i = 0; i < RegionInfoBytes.length() && i < RegionInfo.size();
        ++i) {
     RegionInfo[i] = RegionInfoBytes[i];
   }
 
+  std::string RingBufferBytes = FDP.ConsumeRemainingBytesAsString();
+  std::vector<char> RingBuffer(AllocatorT::getRingBufferSize(), 0);
+  for (size_t i = 0; i < RingBufferBytes.length() && i < RingBuffer.size();
+       ++i) {
+    RingBuffer[i] = RingBufferBytes[i];
+  }
+
   scudo_error_info ErrorInfo;
   AllocatorT::getErrorInfo(&ErrorInfo, FaultAddr, StackDepot.data(),
-                           RegionInfo.data(), Memory, MemoryTags, MemoryAddr,
-                           MemorySize);
+                           RegionInfo.data(), RingBuffer.data(), Memory,
+                           MemoryTags, MemoryAddr, MemorySize);
   return 0;
 }

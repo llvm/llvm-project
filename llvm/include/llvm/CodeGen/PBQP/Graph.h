@@ -671,4 +671,4 @@ namespace PBQP {
 } // end namespace PBQP
 } // end namespace llvm
 
-#endif // LLVM_CODEGEN_PBQP_GRAPH_HPP
+#endif // LLVM_CODEGEN_PBQP_GRAPH_H

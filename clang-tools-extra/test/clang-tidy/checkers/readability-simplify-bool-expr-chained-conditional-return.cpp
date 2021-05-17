@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-simplify-boolean-expr %t -- -config="{CheckOptions: [{key: "readability-simplify-boolean-expr.ChainedConditionalReturn", value: 1}]}" --
+// RUN: %check_clang_tidy %s readability-simplify-boolean-expr %t -- -config="{CheckOptions: [{key: "readability-simplify-boolean-expr.ChainedConditionalReturn", value: true}]}" --
 
 bool chained_conditional_compound_return(int i) {
   if (i < 0) {

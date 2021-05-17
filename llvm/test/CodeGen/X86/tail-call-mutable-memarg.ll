@@ -24,7 +24,7 @@ entry:
 ; CHECK:         calll   _tail_std@4
 ; CHECK:         retl    $4
 
-define x86_thiscallcc void @inalloca(i32* %this, i32* inalloca %args) {
+define x86_thiscallcc void @inalloca(i32* %this, i32* inalloca(i32) %args) {
 entry:
   %val = load i32, i32* %args
   store i32 0, i32* %args

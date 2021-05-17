@@ -38,7 +38,6 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GCMetadataPrinter.h"
-#include "llvm/CodeGen/GCStrategy.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -68,6 +67,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GCStrategy.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalIFunc.h"
 #include "llvm/IR/GlobalIndirectSymbol.h"
@@ -110,6 +110,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
@@ -296,8 +297,11 @@ bool AsmPrinter::doInitialization(Module &M) {
   // don't, this at least helps the user find where a global came from.
   if (MAI->hasSingleParameterDotFile()) {
     // .file "foo.c"
-    OutStreamer->emitFileDirective(
-        llvm::sys::path::filename(M.getSourceFileName()));
+    if (MAI->hasBasenameOnlyForFileDirective())
+      OutStreamer->emitFileDirective(
+          llvm::sys::path::filename(M.getSourceFileName()));
+    else
+      OutStreamer->emitFileDirective(M.getSourceFileName());
   }
 
   GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
@@ -347,31 +351,33 @@ bool AsmPrinter::doInitialization(Module &M) {
   }
 
   switch (MAI->getExceptionHandlingType()) {
+  case ExceptionHandling::None:
+    // We may want to emit CFI for debug.
+    LLVM_FALLTHROUGH;
   case ExceptionHandling::SjLj:
   case ExceptionHandling::DwarfCFI:
   case ExceptionHandling::ARM:
-    isCFIMoveForDebugging = true;
-    if (MAI->getExceptionHandlingType() != ExceptionHandling::DwarfCFI)
-      break;
-    for (auto &F: M.getFunctionList()) {
-      // If the module contains any function with unwind data,
-      // .eh_frame has to be emitted.
-      // Ignore functions that won't get emitted.
-      if (!F.isDeclarationForLinker() && F.needsUnwindTableEntry()) {
-        isCFIMoveForDebugging = false;
+    for (auto &F : M.getFunctionList()) {
+      if (getFunctionCFISectionType(F) != CFISection::None)
+        ModuleCFISection = getFunctionCFISectionType(F);
+      // If any function needsUnwindTableEntry(), it needs .eh_frame and hence
+      // the module needs .eh_frame. If we have found that case, we are done.
+      if (ModuleCFISection == CFISection::EH)
         break;
-      }
     }
+    assert(MAI->getExceptionHandlingType() == ExceptionHandling::DwarfCFI ||
+           ModuleCFISection != CFISection::EH);
     break;
   default:
-    isCFIMoveForDebugging = false;
     break;
   }
 
   EHStreamer *ES = nullptr;
   switch (MAI->getExceptionHandlingType()) {
   case ExceptionHandling::None:
-    break;
+    if (!needsCFIForDebug())
+      break;
+    LLVM_FALLTHROUGH;
   case ExceptionHandling::SjLj:
   case ExceptionHandling::DwarfCFI:
     ES = new DwarfCFIException(this);
@@ -709,7 +715,12 @@ void AsmPrinter::emitFunctionHeader() {
   emitConstantPool();
 
   // Print the 'header' of function.
-  MF->setSection(getObjFileLowering().SectionForGlobal(&F, TM));
+  // If basic block sections are desired, explicitly request a unique section
+  // for this function's entry block.
+  if (MF->front().isBeginSection())
+    MF->setSection(getObjFileLowering().getUniqueSectionForFunction(F, TM));
+  else
+    MF->setSection(getObjFileLowering().SectionForGlobal(&F, TM));
   OutStreamer->SwitchSection(MF->getSection());
 
   if (!MAI->hasVisibilityOnlyWithLinkage())
@@ -786,6 +797,16 @@ void AsmPrinter::emitFunctionHeader() {
   // their wild and crazy things as required.
   emitFunctionEntryLabel();
 
+  // If the function had address-taken blocks that got deleted, then we have
+  // references to the dangling symbols.  Emit them at the start of the function
+  // so that we don't get references to undefined symbols.
+  std::vector<MCSymbol*> DeadBlockSyms;
+  MMI->takeDeletedSymbolsForFunction(&F, DeadBlockSyms);
+  for (unsigned i = 0, e = DeadBlockSyms.size(); i != e; ++i) {
+    OutStreamer->AddComment("Address taken block that was later removed");
+    OutStreamer->emitLabel(DeadBlockSyms[i]);
+  }
+
   if (CurrentFnBegin) {
     if (MAI->useAssignmentForEHBegin()) {
       MCSymbol *CurPos = OutContext.createTempSymbol();
@@ -819,9 +840,6 @@ void AsmPrinter::emitFunctionEntryLabel() {
   if (CurrentFnSym->isVariable())
     report_fatal_error("'" + Twine(CurrentFnSym->getName()) +
                        "' is a protected alias");
-  if (CurrentFnSym->isDefined())
-    report_fatal_error("'" + Twine(CurrentFnSym->getName()) +
-                       "' label emitted multiple times to assembly file");
 
   OutStreamer->emitLabel(CurrentFnSym);
 
@@ -900,7 +918,7 @@ static void emitKill(const MachineInstr *MI, AsmPrinter &AP) {
 /// means the target will need to handle MI in EmitInstruction.
 static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
   // This code handles only the 4-operand target-independent form.
-  if (MI->getNumOperands() != 4)
+  if (MI->isNonListDebugValue() && MI->getNumOperands() != 4)
     return false;
 
   SmallString<128> Str;
@@ -916,19 +934,12 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
   OS << V->getName();
   OS << " <- ";
 
-  // The second operand is only an offset if it's an immediate.
-  bool MemLoc = MI->isIndirectDebugValue();
-  auto Offset = StackOffset::getFixed(MemLoc ? MI->getOperand(1).getImm() : 0);
   const DIExpression *Expr = MI->getDebugExpression();
   if (Expr->getNumElements()) {
     OS << '[';
-    bool NeedSep = false;
+    ListSeparator LS;
     for (auto Op : Expr->expr_ops()) {
-      if (NeedSep)
-        OS << ", ";
-      else
-        NeedSep = true;
-      OS << dwarf::OperationEncodingString(Op.getOp());
+      OS << LS << dwarf::OperationEncodingString(Op.getOp());
       for (unsigned I = 0; I < Op.getNumArgs(); ++I)
         OS << ' ' << Op.getArg(I);
     }
@@ -936,55 +947,70 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
   }
 
   // Register or immediate value. Register 0 means undef.
-  if (MI->getDebugOperand(0).isFPImm()) {
-    APFloat APF = APFloat(MI->getDebugOperand(0).getFPImm()->getValueAPF());
-    if (MI->getDebugOperand(0).getFPImm()->getType()->isFloatTy()) {
-      OS << (double)APF.convertToFloat();
-    } else if (MI->getDebugOperand(0).getFPImm()->getType()->isDoubleTy()) {
-      OS << APF.convertToDouble();
-    } else {
-      // There is no good way to print long double.  Convert a copy to
-      // double.  Ah well, it's only a comment.
-      bool ignored;
-      APF.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
-                  &ignored);
-      OS << "(long double) " << APF.convertToDouble();
+  for (const MachineOperand &Op : MI->debug_operands()) {
+    if (&Op != MI->debug_operands().begin())
+      OS << ", ";
+    switch (Op.getType()) {
+    case MachineOperand::MO_FPImmediate: {
+      APFloat APF = APFloat(Op.getFPImm()->getValueAPF());
+      if (Op.getFPImm()->getType()->isFloatTy()) {
+        OS << (double)APF.convertToFloat();
+      } else if (Op.getFPImm()->getType()->isDoubleTy()) {
+        OS << APF.convertToDouble();
+      } else {
+        // There is no good way to print long double.  Convert a copy to
+        // double.  Ah well, it's only a comment.
+        bool ignored;
+        APF.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
+                    &ignored);
+        OS << "(long double) " << APF.convertToDouble();
+      }
+      break;
     }
-  } else if (MI->getDebugOperand(0).isImm()) {
-    OS << MI->getDebugOperand(0).getImm();
-  } else if (MI->getDebugOperand(0).isCImm()) {
-    MI->getDebugOperand(0).getCImm()->getValue().print(OS, false /*isSigned*/);
-  } else if (MI->getDebugOperand(0).isTargetIndex()) {
-    auto Op = MI->getDebugOperand(0);
-    OS << "!target-index(" << Op.getIndex() << "," << Op.getOffset() << ")";
-    // NOTE: Want this comment at start of line, don't emit with AddComment.
-    AP.OutStreamer->emitRawComment(OS.str());
-    return true;
-  } else {
-    Register Reg;
-    if (MI->getDebugOperand(0).isReg()) {
-      Reg = MI->getDebugOperand(0).getReg();
-    } else {
-      assert(MI->getDebugOperand(0).isFI() && "Unknown operand type");
-      const TargetFrameLowering *TFI = AP.MF->getSubtarget().getFrameLowering();
-      Offset += TFI->getFrameIndexReference(
-          *AP.MF, MI->getDebugOperand(0).getIndex(), Reg);
-      MemLoc = true;
+    case MachineOperand::MO_Immediate: {
+      OS << Op.getImm();
+      break;
     }
-    if (Reg == 0) {
-      // Suppress offset, it is not meaningful here.
-      OS << "undef";
+    case MachineOperand::MO_CImmediate: {
+      Op.getCImm()->getValue().print(OS, false /*isSigned*/);
+      break;
+    }
+    case MachineOperand::MO_TargetIndex: {
+      OS << "!target-index(" << Op.getIndex() << "," << Op.getOffset() << ")";
       // NOTE: Want this comment at start of line, don't emit with AddComment.
       AP.OutStreamer->emitRawComment(OS.str());
-      return true;
+      break;
     }
-    if (MemLoc)
-      OS << '[';
-    OS << printReg(Reg, AP.MF->getSubtarget().getRegisterInfo());
+    case MachineOperand::MO_Register:
+    case MachineOperand::MO_FrameIndex: {
+      Register Reg;
+      Optional<StackOffset> Offset;
+      if (Op.isReg()) {
+        Reg = Op.getReg();
+      } else {
+        const TargetFrameLowering *TFI =
+            AP.MF->getSubtarget().getFrameLowering();
+        Offset = TFI->getFrameIndexReference(*AP.MF, Op.getIndex(), Reg);
+      }
+      if (!Reg) {
+        // Suppress offset, it is not meaningful here.
+        OS << "undef";
+        break;
+      }
+      // The second operand is only an offset if it's an immediate.
+      if (MI->isIndirectDebugValue())
+        Offset = StackOffset::getFixed(MI->getDebugOffset().getImm());
+      if (Offset)
+        OS << '[';
+      OS << printReg(Reg, AP.MF->getSubtarget().getRegisterInfo());
+      if (Offset)
+        OS << '+' << Offset->getFixed() << ']';
+      break;
+    }
+    default:
+      llvm_unreachable("Unknown operand type");
+    }
   }
-
-  if (MemLoc)
-    OS << '+' << Offset.getFixed() << ']';
 
   // NOTE: Want this comment at start of line, don't emit with AddComment.
   AP.OutStreamer->emitRawComment(OS.str());
@@ -1016,28 +1042,44 @@ static bool emitDebugLabelComment(const MachineInstr *MI, AsmPrinter &AP) {
   return true;
 }
 
-AsmPrinter::CFIMoveType AsmPrinter::needsCFIMoves() const {
+AsmPrinter::CFISection
+AsmPrinter::getFunctionCFISectionType(const Function &F) const {
+  // Ignore functions that won't get emitted.
+  if (F.isDeclarationForLinker())
+    return CFISection::None;
+
   if (MAI->getExceptionHandlingType() == ExceptionHandling::DwarfCFI &&
-      MF->getFunction().needsUnwindTableEntry())
-    return CFI_M_EH;
+      F.needsUnwindTableEntry())
+    return CFISection::EH;
 
-  if (MMI->hasDebugInfo() || MF->getTarget().Options.ForceDwarfFrameSection)
-    return CFI_M_Debug;
+  if (MMI->hasDebugInfo() || TM.Options.ForceDwarfFrameSection)
+    return CFISection::Debug;
 
-  return CFI_M_None;
+  return CFISection::None;
+}
+
+AsmPrinter::CFISection
+AsmPrinter::getFunctionCFISectionType(const MachineFunction &MF) const {
+  return getFunctionCFISectionType(MF.getFunction());
 }
 
 bool AsmPrinter::needsSEHMoves() {
   return MAI->usesWindowsCFI() && MF->getFunction().needsUnwindTableEntry();
 }
 
+bool AsmPrinter::needsCFIForDebug() const {
+  return MAI->getExceptionHandlingType() == ExceptionHandling::None &&
+         MAI->doesUseCFIForDebug() && ModuleCFISection == CFISection::Debug;
+}
+
 void AsmPrinter::emitCFIInstruction(const MachineInstr &MI) {
   ExceptionHandling ExceptionHandlingType = MAI->getExceptionHandlingType();
-  if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
+  if (!needsCFIForDebug() &&
+      ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
       ExceptionHandlingType != ExceptionHandling::ARM)
     return;
 
-  if (needsCFIMoves() == CFI_M_None)
+  if (getFunctionCFISectionType(*MF) == CFISection::None)
     return;
 
   // If there is no "real" instruction following this CFI instruction, skip
@@ -1068,17 +1110,19 @@ void AsmPrinter::emitFrameAlloc(const MachineInstr &MI) {
 
 /// Returns the BB metadata to be emitted in the .llvm_bb_addr_map section for a
 /// given basic block. This can be used to capture more precise profile
-/// information. We use the last 3 bits (LSBs) to ecnode the following
+/// information. We use the last 4 bits (LSBs) to encode the following
 /// information:
 ///  * (1): set if return block (ret or tail call).
 ///  * (2): set if ends with a tail call.
 ///  * (3): set if exception handling (EH) landing pad.
+///  * (4): set if the block can fall through to its next.
 /// The remaining bits are zero.
 static unsigned getBBAddrMapMetadata(const MachineBasicBlock &MBB) {
   const TargetInstrInfo *TII = MBB.getParent()->getSubtarget().getInstrInfo();
   return ((unsigned)MBB.isReturnBlock()) |
          ((!MBB.empty() && TII->isTailCall(MBB.back())) << 1) |
-         (MBB.isEHPad() << 2);
+         (MBB.isEHPad() << 2) |
+         (const_cast<MachineBasicBlock &>(MBB).canFallThrough() << 3);
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
@@ -1139,6 +1183,37 @@ void AsmPrinter::emitStackSizeSection(const MachineFunction &MF) {
   OutStreamer->emitULEB128IntValue(StackSize);
 
   OutStreamer->PopSection();
+}
+
+void AsmPrinter::emitStackUsage(const MachineFunction &MF) {
+  const std::string &OutputFilename = MF.getTarget().Options.StackUsageOutput;
+
+  // OutputFilename empty implies -fstack-usage is not passed.
+  if (OutputFilename.empty())
+    return;
+
+  const MachineFrameInfo &FrameInfo = MF.getFrameInfo();
+  uint64_t StackSize = FrameInfo.getStackSize();
+
+  if (StackUsageStream == nullptr) {
+    std::error_code EC;
+    StackUsageStream =
+        std::make_unique<raw_fd_ostream>(OutputFilename, EC, sys::fs::OF_Text);
+    if (EC) {
+      errs() << "Could not open file: " << EC.message();
+      return;
+    }
+  }
+
+  *StackUsageStream << MF.getFunction().getParent()->getName();
+  if (const DISubprogram *DSP = MF.getFunction().getSubprogram())
+    *StackUsageStream << ':' << DSP->getLine();
+
+  *StackUsageStream << ':' << MF.getName() << '\t' << StackSize << '\t';
+  if (FrameInfo.hasVarSizedObjects())
+    *StackUsageStream << "dynamic\n";
+  else
+    *StackUsageStream << "static\n";
 }
 
 static bool needFuncLabelsForEHOrDebugInfo(const MachineFunction &MF) {
@@ -1227,6 +1302,7 @@ void AsmPrinter::emitFunctionBody() {
         emitInlineAsm(&MI);
         break;
       case TargetOpcode::DBG_VALUE:
+      case TargetOpcode::DBG_VALUE_LIST:
         if (isVerbose()) {
           if (!emitDebugValueComment(&MI, *this))
             emitInstruction(&MI);
@@ -1352,8 +1428,7 @@ void AsmPrinter::emitFunctionBody() {
   const Triple &TT = TM.getTargetTriple();
   if (!HasAnyRealCode && (MAI->hasSubsectionsViaSymbols() ||
                           (TT.isOSWindows() && TT.isOSBinFormatCOFF()))) {
-    MCInst Noop;
-    MF->getSubtarget().getInstrInfo()->getNoop(Noop);
+    MCInst Noop = MF->getSubtarget().getInstrInfo()->getNop();
 
     // Targets can opt-out of emitting the noop here by leaving the opcode
     // unspecified.
@@ -1418,12 +1493,15 @@ void AsmPrinter::emitFunctionBody() {
   }
 
   // Emit section containing BB address offsets and their metadata, when
-  // BB labels are requested for this function.
-  if (MF->hasBBLabels())
+  // BB labels are requested for this function. Skip empty functions.
+  if (MF->hasBBLabels() && HasAnyRealCode)
     emitBBAddrMapSection(*MF);
 
   // Emit section containing stack size metadata.
   emitStackSizeSection(*MF);
+
+  // Emit .su file containing function stack size information.
+  emitStackUsage(*MF);
 
   emitPatchableFunctionEntries();
 
@@ -1814,11 +1892,12 @@ bool AsmPrinter::doFinalization(Module &M) {
   if (TM.Options.EmitAddrsig) {
     // Emit address-significance attributes for all globals.
     OutStreamer->emitAddrsig();
-    for (const GlobalValue &GV : M.global_values())
-      if (!GV.use_empty() && !GV.isThreadLocal() &&
-          !GV.hasDLLImportStorageClass() && !GV.getName().startswith("llvm.") &&
-          !GV.hasAtLeastLocalUnnamedAddr())
+    for (const GlobalValue &GV : M.global_values()) {
+      if (!GV.use_empty() && !GV.isTransitiveUsedByMetadataOnly() &&
+          !GV.isThreadLocal() && !GV.hasDLLImportStorageClass() &&
+          !GV.getName().startswith("llvm.") && !GV.hasAtLeastLocalUnnamedAddr())
         OutStreamer->emitAddrsigSym(getSymbol(&GV));
+    }
   }
 
   // Emit symbol partition specifications (ELF only).
@@ -1831,7 +1910,7 @@ bool AsmPrinter::doFinalization(Module &M) {
 
       OutStreamer->SwitchSection(
           OutContext.getELFSection(".llvm_sympart", ELF::SHT_LLVM_SYMPART, 0, 0,
-                                   "", ++UniqueID, nullptr));
+                                   "", false, ++UniqueID, nullptr));
       OutStreamer->emitBytes(GV.getPartition());
       OutStreamer->emitZeros(1);
       OutStreamer->emitValue(
@@ -2992,8 +3071,7 @@ void AsmPrinter::printOffset(int64_t Offset, raw_ostream &OS) const {
 }
 
 void AsmPrinter::emitNops(unsigned N) {
-  MCInst Nop;
-  MF->getSubtarget().getInstrInfo()->getNoop(Nop);
+  MCInst Nop = MF->getSubtarget().getInstrInfo()->getNop();
   for (; N; --N)
     EmitToStreamer(*OutStreamer, Nop);
 }
@@ -3201,6 +3279,11 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
     }
   }
 
+  if (MBB.isEHCatchretTarget() &&
+      MAI->getExceptionHandlingType() == ExceptionHandling::WinEH) {
+    OutStreamer->emitLabel(MBB.getEHCatchretSymbol());
+  }
+
   // With BB sections, each basic block must handle CFI information on its own
   // if it begins a section (Entry block is handled separately by
   // AsmPrinterHandler::beginFunction).
@@ -3378,13 +3461,13 @@ void AsmPrinter::emitXRayTable() {
       GroupName = F.getComdat()->getName();
     }
     InstMap = OutContext.getELFSection("xray_instr_map", ELF::SHT_PROGBITS,
-                                       Flags, 0, GroupName,
+                                       Flags, 0, GroupName, F.hasComdat(),
                                        MCSection::NonUniqueID, LinkedToSym);
 
     if (!TM.Options.XRayOmitFunctionIndex)
       FnSledIndex = OutContext.getELFSection(
           "xray_fn_idx", ELF::SHT_PROGBITS, Flags | ELF::SHF_WRITE, 0,
-          GroupName, MCSection::NonUniqueID, LinkedToSym);
+          GroupName, F.hasComdat(), MCSection::NonUniqueID, LinkedToSym);
   } else if (MF->getSubtarget().getTargetTriple().isOSBinFormatMachO()) {
     InstMap = OutContext.getMachOSection("__DATA", "xray_instr_map", 0,
                                          SectionKind::getReadOnlyWithRel());
@@ -3468,9 +3551,9 @@ void AsmPrinter::emitPatchableFunctionEntries() {
     const MCSymbolELF *LinkedToSym = nullptr;
     StringRef GroupName;
 
-    // GNU as < 2.35 did not support section flag 'o'. Use SHF_LINK_ORDER only
-    // if we are using the integrated assembler.
-    if (MAI->useIntegratedAssembler()) {
+    // GNU as < 2.35 did not support section flag 'o'. GNU ld < 2.36 did not
+    // support mixed SHF_LINK_ORDER and non-SHF_LINK_ORDER sections.
+    if (MAI->useIntegratedAssembler() || MAI->binutilsIsAtLeast(2, 36)) {
       Flags |= ELF::SHF_LINK_ORDER;
       if (F.hasComdat()) {
         Flags |= ELF::SHF_GROUP;
@@ -3480,7 +3563,7 @@ void AsmPrinter::emitPatchableFunctionEntries() {
     }
     OutStreamer->SwitchSection(OutContext.getELFSection(
         "__patchable_function_entries", ELF::SHT_PROGBITS, Flags, 0, GroupName,
-        MCSection::NonUniqueID, LinkedToSym));
+        F.hasComdat(), MCSection::NonUniqueID, LinkedToSym));
     emitAlignment(Align(PointerSize));
     OutStreamer->emitSymbolValue(CurrentPatchableFunctionEntrySym, PointerSize);
   }

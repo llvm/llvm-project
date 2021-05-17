@@ -15,6 +15,7 @@
 #ifndef LLVM_SUPPORT_AMDGPUMETADATA_H
 #define LLVM_SUPPORT_AMDGPUMETADATA_H
 
+#include "llvm/ADT/StringRef.h"
 #include <cstdint>
 #include <string>
 #include <system_error>
@@ -28,10 +29,20 @@ namespace AMDGPU {
 //===----------------------------------------------------------------------===//
 namespace HSAMD {
 
-/// HSA metadata major version.
-constexpr uint32_t VersionMajor = 1;
-/// HSA metadata minor version.
-constexpr uint32_t VersionMinor = 0;
+/// HSA metadata major version for code object V2.
+constexpr uint32_t VersionMajorV2 = 1;
+/// HSA metadata minor version for code object V2.
+constexpr uint32_t VersionMinorV2 = 0;
+
+/// HSA metadata major version for code object V3.
+constexpr uint32_t VersionMajorV3 = 1;
+/// HSA metadata minor version for code object V3.
+constexpr uint32_t VersionMinorV3 = 0;
+
+/// HSA metadata major version for code object V4.
+constexpr uint32_t VersionMajorV4 = 1;
+/// HSA metadata minor version for code object V4.
+constexpr uint32_t VersionMinorV4 = 1;
 
 /// HSA metadata beginning assembler directive.
 constexpr char AssemblerDirectiveBegin[] = ".amd_amdgpu_hsa_metadata";
@@ -430,7 +441,7 @@ struct Metadata final {
 };
 
 /// Converts \p String to \p HSAMetadata.
-std::error_code fromString(std::string String, Metadata &HSAMetadata);
+std::error_code fromString(StringRef String, Metadata &HSAMetadata);
 
 /// Converts \p HSAMetadata to \p String.
 std::error_code toString(Metadata HSAMetadata, std::string &String);

@@ -9,6 +9,6 @@
 # RUN: llvm-ar rc %t/permission.b %t/1.txt
 # RUN: chmod 100 %t/permission.b
 # RUN: not llvm-ar p %t/permission.b 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=NO-PERMISSION -DARCHIVE=%t/permission.b
+# RUN:   FileCheck %s --check-prefix=NO-PERMISSION -DARCHIVE=%t/permission.b -DMSG=%errc_EACCES
 
-# NO-PERMISSION: error: unable to open '[[ARCHIVE]]': {{[pP]}}ermission denied
+# NO-PERMISSION: error: unable to open '[[ARCHIVE]]': [[MSG]]

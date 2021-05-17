@@ -10,7 +10,6 @@
 ; CHECK-NEXT:   FunctionPass Manager
 ; CHECK-NEXT:     Module Verifier
 ; CHECK-EXT:     Good Bye World Pass
-; CHECK-NEXT:     Instrument function entry/exit with calls to e.g. mcount() (pre inlining)
 ; CHECK-NEXT: Pass Arguments:
 ; CHECK-NEXT: Target Library Information
 ; CHECK-NEXT: Target Transform Information

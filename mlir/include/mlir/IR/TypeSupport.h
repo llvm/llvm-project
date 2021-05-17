@@ -39,6 +39,15 @@ public:
     return AbstractType(dialect, T::getInterfaceMap(), T::getTypeID());
   }
 
+  /// This method is used by Dialect objects to register types with
+  /// custom TypeIDs.
+  /// The use of this method is in general discouraged in favor of
+  /// 'get<CustomType>(dialect)';
+  static AbstractType get(Dialect &dialect, detail::InterfaceMap &&interfaceMap,
+                          TypeID typeID) {
+    return AbstractType(dialect, std::move(interfaceMap), typeID);
+  }
+
   /// Return the dialect this type was registered to.
   Dialect &getDialect() const { return const_cast<Dialect &>(dialect); }
 

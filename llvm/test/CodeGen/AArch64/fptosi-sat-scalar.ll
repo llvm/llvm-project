@@ -20,7 +20,7 @@ define i1 @test_signed_i1_f32(float %f) nounwind {
 ; CHECK-LABEL: test_signed_i1_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov s1, #-1.00000000
-; CHECK-NEXT:    fmov s2, wzr
+; CHECK-NEXT:    movi d2, #0000000000000000
 ; CHECK-NEXT:    fmaxnm s1, s0, s1
 ; CHECK-NEXT:    fminnm s1, s1, s2
 ; CHECK-NEXT:    fcvtzs w8, s1
@@ -243,7 +243,7 @@ define i1 @test_signed_i1_f64(double %f) nounwind {
 ; CHECK-LABEL: test_signed_i1_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov d1, #-1.00000000
-; CHECK-NEXT:    fmov d2, xzr
+; CHECK-NEXT:    movi d2, #0000000000000000
 ; CHECK-NEXT:    fmaxnm d1, d0, d1
 ; CHECK-NEXT:    fminnm d1, d1, d2
 ; CHECK-NEXT:    fcvtzs w8, d1
@@ -462,7 +462,7 @@ define i1 @test_signed_i1_f16(half %f) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvt s0, h0
 ; CHECK-NEXT:    fmov s1, #-1.00000000
-; CHECK-NEXT:    fmov s2, wzr
+; CHECK-NEXT:    movi d2, #0000000000000000
 ; CHECK-NEXT:    fmaxnm s1, s0, s1
 ; CHECK-NEXT:    fminnm s1, s1, s2
 ; CHECK-NEXT:    fcvtzs w8, s1

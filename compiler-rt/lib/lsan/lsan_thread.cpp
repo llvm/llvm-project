@@ -94,7 +94,7 @@ void ThreadJoin(u32 tid) {
 }
 
 void EnsureMainThreadIDIsCorrect() {
-  if (GetCurrentThread() == 0)
+  if (GetCurrentThread() == kMainTid)
     CurrentThreadContext()->os_id = GetTid();
 }
 

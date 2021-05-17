@@ -1566,6 +1566,15 @@ bool ARMExpandPseudo::ExpandCMP_SWAP(MachineBasicBlock &MBB,
   Register DesiredReg = MI.getOperand(3).getReg();
   Register NewReg = MI.getOperand(4).getReg();
 
+  if (IsThumb) {
+    assert(STI->hasV8MBaselineOps() &&
+           "CMP_SWAP not expected to be custom expanded for Thumb1");
+    assert((UxtOp == 0 || UxtOp == ARM::tUXTB || UxtOp == ARM::tUXTH) &&
+           "ARMv8-M.baseline does not have t2UXTB/t2UXTH");
+    assert(ARM::tGPRRegClass.contains(DesiredReg) &&
+           "DesiredReg used for UXT op must be tGPR");
+  }
+
   MachineFunction *MF = MBB.getParent();
   auto LoadCmpBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
   auto StoreBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
@@ -2234,7 +2243,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
                                   *TII);
         }
         // If there's dynamic realignment, adjust for it.
-        if (RI.needsStackRealignment(MF)) {
+        if (RI.hasStackRealignment(MF)) {
           MachineFrameInfo &MFI = MF.getFrameInfo();
           Align MaxAlign = MFI.getMaxAlign();
           assert (!AFI->isThumb1OnlyFunction());
@@ -2251,7 +2260,6 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
               .add(predOps(ARMCC::AL))
               .add(condCodeOp());
         }
-
       }
       MI.eraseFromParent();
       return true;
@@ -2780,20 +2788,23 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     case ARM::VTBX3Pseudo: ExpandVTBL(MBBI, ARM::VTBX3, true); return true;
     case ARM::VTBX4Pseudo: ExpandVTBL(MBBI, ARM::VTBX4, true); return true;
 
+    case ARM::tCMP_SWAP_8:
+      assert(STI->isThumb());
+      return ExpandCMP_SWAP(MBB, MBBI, ARM::t2LDREXB, ARM::t2STREXB, ARM::tUXTB,
+                            NextMBBI);
+    case ARM::tCMP_SWAP_16:
+      assert(STI->isThumb());
+      return ExpandCMP_SWAP(MBB, MBBI, ARM::t2LDREXH, ARM::t2STREXH, ARM::tUXTH,
+                            NextMBBI);
+
     case ARM::CMP_SWAP_8:
-      if (STI->isThumb())
-        return ExpandCMP_SWAP(MBB, MBBI, ARM::t2LDREXB, ARM::t2STREXB,
-                              ARM::tUXTB, NextMBBI);
-      else
-        return ExpandCMP_SWAP(MBB, MBBI, ARM::LDREXB, ARM::STREXB,
-                              ARM::UXTB, NextMBBI);
+      assert(!STI->isThumb());
+      return ExpandCMP_SWAP(MBB, MBBI, ARM::LDREXB, ARM::STREXB, ARM::UXTB,
+                            NextMBBI);
     case ARM::CMP_SWAP_16:
-      if (STI->isThumb())
-        return ExpandCMP_SWAP(MBB, MBBI, ARM::t2LDREXH, ARM::t2STREXH,
-                              ARM::tUXTH, NextMBBI);
-      else
-        return ExpandCMP_SWAP(MBB, MBBI, ARM::LDREXH, ARM::STREXH,
-                              ARM::UXTH, NextMBBI);
+      assert(!STI->isThumb());
+      return ExpandCMP_SWAP(MBB, MBBI, ARM::LDREXH, ARM::STREXH, ARM::UXTH,
+                            NextMBBI);
     case ARM::CMP_SWAP_32:
       if (STI->isThumb())
         return ExpandCMP_SWAP(MBB, MBBI, ARM::t2LDREX, ARM::t2STREX, 0,

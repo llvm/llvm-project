@@ -296,27 +296,31 @@ MaybeExtentExpr GetExtent(const NamedEntity &base, int dimension) {
   CHECK(dimension >= 0);
   const Symbol &symbol{ResolveAssociations(base.GetLastSymbol())};
   if (const auto *details{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
-    if (IsImpliedShape(symbol)) {
-      Shape shape{GetShape(symbol).value()};
-      return std::move(shape.at(dimension));
-    }
-    int j{0};
-    for (const auto &shapeSpec : details->shape()) {
-      if (j++ == dimension) {
-        if (shapeSpec.ubound().isExplicit()) {
-          if (const auto &ubound{shapeSpec.ubound().GetExplicit()}) {
-            if (const auto &lbound{shapeSpec.lbound().GetExplicit()}) {
-              return common::Clone(ubound.value()) -
-                  common::Clone(lbound.value()) + ExtentExpr{1};
-            } else {
-              return ubound.value();
+    if (IsImpliedShape(symbol) && details->init()) {
+      if (auto shape{GetShape(symbol)}) {
+        if (dimension < static_cast<int>(shape->size())) {
+          return std::move(shape->at(dimension));
+        }
+      }
+    } else {
+      int j{0};
+      for (const auto &shapeSpec : details->shape()) {
+        if (j++ == dimension) {
+          if (shapeSpec.ubound().isExplicit()) {
+            if (const auto &ubound{shapeSpec.ubound().GetExplicit()}) {
+              if (const auto &lbound{shapeSpec.lbound().GetExplicit()}) {
+                return common::Clone(ubound.value()) -
+                    common::Clone(lbound.value()) + ExtentExpr{1};
+              } else {
+                return ubound.value();
+              }
             }
+          } else if (details->IsAssumedSize() && j == symbol.Rank()) {
+            return std::nullopt;
+          } else if (semantics::IsDescriptor(symbol)) {
+            return ExtentExpr{DescriptorInquiry{NamedEntity{base},
+                DescriptorInquiry::Field::Extent, dimension}};
           }
-        } else if (details->IsAssumedSize() && j == symbol.Rank()) {
-          return std::nullopt;
-        } else if (semantics::IsDescriptor(symbol)) {
-          return ExtentExpr{DescriptorInquiry{
-              NamedEntity{base}, DescriptorInquiry::Field::Extent, dimension}};
         }
       }
     }
@@ -373,7 +377,7 @@ MaybeExtentExpr GetExtent(FoldingContext &context, const Subscript &subscript,
 MaybeExtentExpr ComputeUpperBound(
     ExtentExpr &&lower, MaybeExtentExpr &&extent) {
   if (extent) {
-    return std::move(*extent) - std::move(lower) + ExtentExpr{1};
+    return std::move(*extent) + std::move(lower) - ExtentExpr{1};
   } else {
     return std::nullopt;
   }
@@ -449,7 +453,7 @@ auto GetShapeHelper::operator()(const Symbol &symbol) const -> Result {
   return std::visit(
       common::visitors{
           [&](const semantics::ObjectEntityDetails &object) {
-            if (IsImpliedShape(symbol)) {
+            if (IsImpliedShape(symbol) && object.init()) {
               return (*this)(object.init());
             } else {
               int n{object.shape().Rank()};
@@ -575,8 +579,7 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
     } else if (intrinsic->name == "all" || intrinsic->name == "any" ||
         intrinsic->name == "count" || intrinsic->name == "iall" ||
         intrinsic->name == "iany" || intrinsic->name == "iparity" ||
-        intrinsic->name == "maxloc" || intrinsic->name == "maxval" ||
-        intrinsic->name == "minloc" || intrinsic->name == "minval" ||
+        intrinsic->name == "maxval" || intrinsic->name == "minval" ||
         intrinsic->name == "norm2" || intrinsic->name == "parity" ||
         intrinsic->name == "product" || intrinsic->name == "sum") {
       // Reduction with DIM=
@@ -591,6 +594,25 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
               arrayShape->erase(arrayShape->begin() + (*dim - 1));
               return std::move(*arrayShape);
             }
+          }
+        }
+      }
+    } else if (intrinsic->name == "maxloc" || intrinsic->name == "minloc") {
+      // TODO: FINDLOC
+      if (call.arguments().size() >= 2) {
+        if (auto arrayShape{
+                (*this)(UnwrapExpr<Expr<SomeType>>(call.arguments().at(0)))}) {
+          auto rank{static_cast<int>(arrayShape->size())};
+          if (const auto *dimArg{
+                  UnwrapExpr<Expr<SomeType>>(call.arguments()[1])}) {
+            auto dim{ToInt64(*dimArg)};
+            if (dim && *dim >= 1 && *dim <= rank) {
+              arrayShape->erase(arrayShape->begin() + (*dim - 1));
+              return std::move(*arrayShape);
+            }
+          } else {
+            // xxxLOC(no DIM=) result is vector(1:RANK(ARRAY=))
+            return Shape{ExtentExpr{rank}};
           }
         }
       }
@@ -702,7 +724,7 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
               auto sourceBytes{
                   sourceTypeAndShape->MeasureSizeInBytes(*context_)};
               auto moldElementBytes{
-                  moldTypeAndShape->type().MeasureSizeInBytes(*context_, true)};
+                  moldTypeAndShape->MeasureElementSizeInBytes(*context_, true)};
               if (sourceBytes && moldElementBytes) {
                 ExtentExpr extent{Fold(*context_,
                     (std::move(*sourceBytes) +
@@ -722,6 +744,10 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
             return shape;
           }
         }
+      }
+    } else if (intrinsic->name == "unpack") {
+      if (call.arguments().size() >= 2) {
+        return (*this)(call.arguments()[1]); // MASK=
       }
     } else if (intrinsic->characteristics.value().attrs.test(characteristics::
                        Procedure::Attr::NullPointer)) { // NULL(MOLD=)
@@ -788,4 +814,5 @@ bool IncrementSubscripts(
   }
   return false;
 }
+
 } // namespace Fortran::evaluate

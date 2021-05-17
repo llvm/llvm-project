@@ -73,7 +73,6 @@ class RegionCodeGenTy final {
   CodeGenTy Callback;
   mutable PrePostActionTy *PrePostAction;
   RegionCodeGenTy() = delete;
-  RegionCodeGenTy &operator=(const RegionCodeGenTy &) = delete;
   template <typename Callable>
   static void CallbackFn(intptr_t CodeGen, CodeGenFunction &CGF,
                          PrePostActionTy &Action) {
@@ -254,8 +253,8 @@ public:
   public:
     UntiedTaskLocalDeclsRAII(
         CodeGenFunction &CGF,
-        const llvm::DenseMap<CanonicalDeclPtr<const VarDecl>,
-                             std::pair<Address, Address>> &LocalVars);
+        const llvm::MapVector<CanonicalDeclPtr<const VarDecl>,
+                              std::pair<Address, Address>> &LocalVars);
     ~UntiedTaskLocalDeclsRAII();
   };
 
@@ -724,8 +723,8 @@ private:
   llvm::SmallVector<NontemporalDeclsSet, 4> NontemporalDeclsStack;
 
   using UntiedLocalVarsAddressesMap =
-      llvm::DenseMap<CanonicalDeclPtr<const VarDecl>,
-                     std::pair<Address, Address>>;
+      llvm::MapVector<CanonicalDeclPtr<const VarDecl>,
+                      std::pair<Address, Address>>;
   llvm::SmallVector<UntiedLocalVarsAddressesMap, 4> UntiedLocalVarsStack;
 
   /// Stack for list of addresses of declarations in current context marked as
@@ -824,7 +823,8 @@ private:
   void emitUDMapperArrayInitOrDel(CodeGenFunction &MapperCGF,
                                   llvm::Value *Handle, llvm::Value *BasePtr,
                                   llvm::Value *Ptr, llvm::Value *Size,
-                                  llvm::Value *MapType, CharUnits ElementSize,
+                                  llvm::Value *MapType, llvm::Value *MapName,
+                                  CharUnits ElementSize,
                                   llvm::BasicBlock *ExitBB, bool IsInit);
 
   struct TaskResultTy {
@@ -1010,6 +1010,14 @@ public:
   virtual void emitMasterRegion(CodeGenFunction &CGF,
                                 const RegionCodeGenTy &MasterOpGen,
                                 SourceLocation Loc);
+
+  /// Emits a masked region.
+  /// \param MaskedOpGen Generator for the statement associated with the given
+  /// masked region.
+  virtual void emitMaskedRegion(CodeGenFunction &CGF,
+                                const RegionCodeGenTy &MaskedOpGen,
+                                SourceLocation Loc,
+                                const Expr *Filter = nullptr);
 
   /// Emits code for a taskyield directive.
   virtual void emitTaskyieldCall(CodeGenFunction &CGF, SourceLocation Loc);
@@ -1982,6 +1990,17 @@ public:
   void emitMasterRegion(CodeGenFunction &CGF,
                         const RegionCodeGenTy &MasterOpGen,
                         SourceLocation Loc) override;
+
+  /// Emits a masked region.
+  /// \param MaskedOpGen Generator for the statement associated with the given
+  /// masked region.
+  void emitMaskedRegion(CodeGenFunction &CGF,
+                        const RegionCodeGenTy &MaskedOpGen, SourceLocation Loc,
+                        const Expr *Filter = nullptr) override;
+
+  /// Emits a masked region.
+  /// \param MaskedOpGen Generator for the statement associated with the given
+  /// masked region.
 
   /// Emits code for a taskyield directive.
   void emitTaskyieldCall(CodeGenFunction &CGF, SourceLocation Loc) override;

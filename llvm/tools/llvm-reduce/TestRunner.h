@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLVMREDUCE_TESTRUNNER_H
-#define LLVM_TOOLS_LLVMREDUCE_TESTRUNNER_H
+#ifndef LLVM_TOOLS_LLVM_REDUCE_TESTRUNNER_H
+#define LLVM_TOOLS_LLVM_REDUCE_TESTRUNNER_H
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/IR/Module.h"

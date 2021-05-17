@@ -72,7 +72,7 @@ define amdgpu_ps <4 x float> @sample_l_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GFX10-NEXT:    s_mov_b32 s1, s3
 ; GFX10-NEXT:    s_mov_b32 s2, s4
 ; GFX10-NEXT:    s_mov_b32 s3, s5
-; GFX10-NEXT:    v_and_or_b32 v0, v0, 0xffff, v1
+; GFX10-NEXT:    v_and_or_b32 v0, 0xffff, v0, v1
 ; GFX10-NEXT:    s_mov_b32 s4, s6
 ; GFX10-NEXT:    s_mov_b32 s5, s7
 ; GFX10-NEXT:    s_mov_b32 s6, s8
@@ -121,7 +121,7 @@ define amdgpu_ps <4 x float> @sample_c_l_1d(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10-NEXT:    s_mov_b32 s10, s12
 ; GFX10-NEXT:    s_lshl_b32 s12, s0, 16
 ; GFX10-NEXT:    s_mov_b32 s1, s3
-; GFX10-NEXT:    v_and_or_b32 v1, v1, 0xffff, s12
+; GFX10-NEXT:    v_and_or_b32 v1, 0xffff, v1, s12
 ; GFX10-NEXT:    s_mov_b32 s3, s5
 ; GFX10-NEXT:    s_mov_b32 s5, s7
 ; GFX10-NEXT:    s_mov_b32 s7, s9
@@ -164,7 +164,7 @@ define amdgpu_ps <4 x float> @sample_c_l_2d(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10-NEXT:    s_mov_b32 s1, s3
 ; GFX10-NEXT:    s_mov_b32 s2, s4
 ; GFX10-NEXT:    s_mov_b32 s3, s5
-; GFX10-NEXT:    v_and_or_b32 v1, v1, 0xffff, v2
+; GFX10-NEXT:    v_and_or_b32 v1, 0xffff, v1, v2
 ; GFX10-NEXT:    s_mov_b32 s4, s6
 ; GFX10-NEXT:    s_mov_b32 s5, s7
 ; GFX10-NEXT:    s_mov_b32 s6, s8
@@ -213,7 +213,7 @@ define amdgpu_ps <4 x float> @sample_l_o_1d(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10-NEXT:    s_mov_b32 s10, s12
 ; GFX10-NEXT:    s_lshl_b32 s12, s0, 16
 ; GFX10-NEXT:    s_mov_b32 s1, s3
-; GFX10-NEXT:    v_and_or_b32 v1, v1, 0xffff, s12
+; GFX10-NEXT:    v_and_or_b32 v1, 0xffff, v1, s12
 ; GFX10-NEXT:    s_mov_b32 s3, s5
 ; GFX10-NEXT:    s_mov_b32 s5, s7
 ; GFX10-NEXT:    s_mov_b32 s7, s9
@@ -256,7 +256,7 @@ define amdgpu_ps <4 x float> @sample_l_o_2d(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10-NEXT:    s_mov_b32 s1, s3
 ; GFX10-NEXT:    s_mov_b32 s2, s4
 ; GFX10-NEXT:    s_mov_b32 s3, s5
-; GFX10-NEXT:    v_and_or_b32 v1, v1, 0xffff, v2
+; GFX10-NEXT:    v_and_or_b32 v1, 0xffff, v1, v2
 ; GFX10-NEXT:    s_mov_b32 s4, s6
 ; GFX10-NEXT:    s_mov_b32 s5, s7
 ; GFX10-NEXT:    s_mov_b32 s6, s8
@@ -305,7 +305,7 @@ define amdgpu_ps <4 x float> @sample_c_l_o_1d(<8 x i32> inreg %rsrc, <4 x i32> i
 ; GFX10-NEXT:    s_mov_b32 s10, s12
 ; GFX10-NEXT:    s_lshl_b32 s12, s0, 16
 ; GFX10-NEXT:    s_mov_b32 s1, s3
-; GFX10-NEXT:    v_and_or_b32 v2, v2, 0xffff, s12
+; GFX10-NEXT:    v_and_or_b32 v2, 0xffff, v2, s12
 ; GFX10-NEXT:    s_mov_b32 s3, s5
 ; GFX10-NEXT:    s_mov_b32 s5, s7
 ; GFX10-NEXT:    s_mov_b32 s7, s9
@@ -348,7 +348,7 @@ define amdgpu_ps <4 x float> @sample_c_l_o_2d(<8 x i32> inreg %rsrc, <4 x i32> i
 ; GFX10-NEXT:    s_mov_b32 s1, s3
 ; GFX10-NEXT:    s_mov_b32 s2, s4
 ; GFX10-NEXT:    s_mov_b32 s3, s5
-; GFX10-NEXT:    v_and_or_b32 v2, v2, 0xffff, v3
+; GFX10-NEXT:    v_and_or_b32 v2, 0xffff, v2, v3
 ; GFX10-NEXT:    s_mov_b32 s4, s6
 ; GFX10-NEXT:    s_mov_b32 s5, s7
 ; GFX10-NEXT:    s_mov_b32 s6, s8
@@ -394,7 +394,7 @@ define amdgpu_ps <4 x float> @gather4_l_2d(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GFX10-NEXT:    s_mov_b32 s1, s3
 ; GFX10-NEXT:    s_mov_b32 s2, s4
 ; GFX10-NEXT:    s_mov_b32 s3, s5
-; GFX10-NEXT:    v_and_or_b32 v0, v0, 0xffff, v1
+; GFX10-NEXT:    v_and_or_b32 v0, 0xffff, v0, v1
 ; GFX10-NEXT:    s_mov_b32 s4, s6
 ; GFX10-NEXT:    s_mov_b32 s5, s7
 ; GFX10-NEXT:    s_mov_b32 s6, s8
@@ -440,7 +440,7 @@ define amdgpu_ps <4 x float> @gather4_c_l_2d(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GFX10-NEXT:    s_mov_b32 s1, s3
 ; GFX10-NEXT:    s_mov_b32 s2, s4
 ; GFX10-NEXT:    s_mov_b32 s3, s5
-; GFX10-NEXT:    v_and_or_b32 v1, v1, 0xffff, v2
+; GFX10-NEXT:    v_and_or_b32 v1, 0xffff, v1, v2
 ; GFX10-NEXT:    s_mov_b32 s4, s6
 ; GFX10-NEXT:    s_mov_b32 s5, s7
 ; GFX10-NEXT:    s_mov_b32 s6, s8
@@ -486,7 +486,7 @@ define amdgpu_ps <4 x float> @gather4_l_o_2d(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GFX10-NEXT:    s_mov_b32 s1, s3
 ; GFX10-NEXT:    s_mov_b32 s2, s4
 ; GFX10-NEXT:    s_mov_b32 s3, s5
-; GFX10-NEXT:    v_and_or_b32 v1, v1, 0xffff, v2
+; GFX10-NEXT:    v_and_or_b32 v1, 0xffff, v1, v2
 ; GFX10-NEXT:    s_mov_b32 s4, s6
 ; GFX10-NEXT:    s_mov_b32 s5, s7
 ; GFX10-NEXT:    s_mov_b32 s6, s8
@@ -532,7 +532,7 @@ define amdgpu_ps <4 x float> @gather4_c_l_o_2d(<8 x i32> inreg %rsrc, <4 x i32> 
 ; GFX10-NEXT:    s_mov_b32 s1, s3
 ; GFX10-NEXT:    s_mov_b32 s2, s4
 ; GFX10-NEXT:    s_mov_b32 s3, s5
-; GFX10-NEXT:    v_and_or_b32 v2, v2, 0xffff, v3
+; GFX10-NEXT:    v_and_or_b32 v2, 0xffff, v2, v3
 ; GFX10-NEXT:    s_mov_b32 s4, s6
 ; GFX10-NEXT:    s_mov_b32 s5, s7
 ; GFX10-NEXT:    s_mov_b32 s6, s8

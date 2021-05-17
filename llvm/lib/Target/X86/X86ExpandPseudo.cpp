@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/Passes.h" // For IDs of passes that are preserved.
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "x86-pseudo"
@@ -64,6 +65,18 @@ private:
 
   bool ExpandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
   bool ExpandMBB(MachineBasicBlock &MBB);
+
+  /// This function expands pseudos which affects control flow.
+  /// It is done in separate pass to simplify blocks navigation in main
+  /// pass(calling ExpandMBB).
+  bool ExpandPseudosWhichAffectControlFlow(MachineFunction &MF);
+
+  /// Expand X86::VASTART_SAVE_XMM_REGS into set of xmm copying instructions,
+  /// placed into separate block guarded by check for al register(for SystemV
+  /// abi).
+  void ExpandVastartSaveXmmRegs(
+      MachineBasicBlock *MBB,
+      MachineBasicBlock::iterator VAStartPseudoInstr) const;
 };
 char X86ExpandPseudo::ID = 0;
 
@@ -82,7 +95,7 @@ void X86ExpandPseudo::ExpandICallBranchFunnel(
   ++InsPt;
 
   std::vector<std::pair<MachineBasicBlock *, unsigned>> TargetMBBs;
-  DebugLoc DL = JTInst->getDebugLoc();
+  const DebugLoc &DL = JTInst->getDebugLoc();
   MachineOperand Selector = JTInst->getOperand(0);
   const GlobalValue *CombinedGlobal = JTInst->getOperand(1).getGlobal();
 
@@ -180,7 +193,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MBBI) {
   MachineInstr &MI = *MBBI;
   unsigned Opcode = MI.getOpcode();
-  DebugLoc DL = MBBI->getDebugLoc();
+  const DebugLoc &DL = MBBI->getDebugLoc();
   switch (Opcode) {
   default:
     return false;
@@ -303,8 +316,12 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     int64_t StackAdj = MBBI->getOperand(0).getImm();
     X86FL->emitSPUpdate(MBB, MBBI, DL, StackAdj, true);
     // Replace pseudo with machine iret
-    BuildMI(MBB, MBBI, DL,
-            TII->get(STI->is64Bit() ? X86::IRET64 : X86::IRET32));
+    unsigned RetOp = STI->is64Bit() ? X86::IRET64 : X86::IRET32;
+    // Use UIRET if UINTR is present (except for building kernel)
+    if (STI->is64Bit() && STI->hasUINTR() &&
+        MBB.getParent()->getTarget().getCodeModel() != CodeModel::Kernel)
+      RetOp = X86::UIRET;
+    BuildMI(MBB, MBBI, DL, TII->get(RetOp));
     MBB.erase(MBBI);
     return true;
   }
@@ -461,47 +478,160 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   case TargetOpcode::ICALL_BRANCH_FUNNEL:
     ExpandICallBranchFunnel(&MBB, MBBI);
     return true;
-  case X86::PLDTILECFG: {
-    MI.RemoveOperand(0);
+  case X86::PLDTILECFGV: {
     MI.setDesc(TII->get(X86::LDTILECFG));
     return true;
   }
-  case X86::PSTTILECFG: {
-    MI.RemoveOperand(MI.getNumOperands() - 1); // Remove $tmmcfg
-    MI.setDesc(TII->get(X86::STTILECFG));
-    return true;
-  }
   case X86::PTILELOADDV: {
-    MI.RemoveOperand(8); // Remove $tmmcfg
     for (unsigned i = 2; i > 0; --i)
       MI.RemoveOperand(i);
     MI.setDesc(TII->get(X86::TILELOADD));
     return true;
   }
-  case X86::PTDPBSSDV: {
-    MI.RemoveOperand(7); // Remove $tmmcfg
+  case X86::PTDPBSSDV:
+  case X86::PTDPBSUDV:
+  case X86::PTDPBUSDV:
+  case X86::PTDPBUUDV:
+  case X86::PTDPBF16PSV: {
     MI.untieRegOperand(4);
     for (unsigned i = 3; i > 0; --i)
       MI.RemoveOperand(i);
-    MI.setDesc(TII->get(X86::TDPBSSD));
+    unsigned Opc;
+    switch (Opcode) {
+    case X86::PTDPBSSDV:   Opc = X86::TDPBSSD; break;
+    case X86::PTDPBSUDV:   Opc = X86::TDPBSUD; break;
+    case X86::PTDPBUSDV:   Opc = X86::TDPBUSD; break;
+    case X86::PTDPBUUDV:   Opc = X86::TDPBUUD; break;
+    case X86::PTDPBF16PSV: Opc = X86::TDPBF16PS; break;
+    default: llvm_unreachable("Impossible Opcode!");
+    }
+    MI.setDesc(TII->get(Opc));
     MI.tieOperands(0, 1);
     return true;
   }
   case X86::PTILESTOREDV: {
-    MI.RemoveOperand(8); // Remove $tmmcfg
     for (int i = 1; i >= 0; --i)
       MI.RemoveOperand(i);
     MI.setDesc(TII->get(X86::TILESTORED));
     return true;
   }
   case X86::PTILEZEROV: {
-    for (int i = 3; i > 0; --i) // Remove row, col, $tmmcfg
+    for (int i = 2; i > 0; --i) // Remove row, col
       MI.RemoveOperand(i);
     MI.setDesc(TII->get(X86::TILEZERO));
     return true;
   }
   }
   llvm_unreachable("Previous switch has a fallthrough?");
+}
+
+// This function creates additional block for storing varargs guarded
+// registers. It adds check for %al into entry block, to skip
+// GuardedRegsBlk if xmm registers should not be stored.
+//
+//     EntryBlk[VAStartPseudoInstr]     EntryBlk
+//        |                              |     .
+//        |                              |        .
+//        |                              |   GuardedRegsBlk
+//        |                      =>      |        .
+//        |                              |     .
+//        |                             TailBlk
+//        |                              |
+//        |                              |
+//
+void X86ExpandPseudo::ExpandVastartSaveXmmRegs(
+    MachineBasicBlock *EntryBlk,
+    MachineBasicBlock::iterator VAStartPseudoInstr) const {
+  assert(VAStartPseudoInstr->getOpcode() == X86::VASTART_SAVE_XMM_REGS);
+
+  MachineFunction *Func = EntryBlk->getParent();
+  const TargetInstrInfo *TII = STI->getInstrInfo();
+  const DebugLoc &DL = VAStartPseudoInstr->getDebugLoc();
+  Register CountReg = VAStartPseudoInstr->getOperand(0).getReg();
+
+  // Calculate liveins for newly created blocks.
+  LivePhysRegs LiveRegs(*STI->getRegisterInfo());
+  SmallVector<std::pair<MCPhysReg, const MachineOperand *>, 8> Clobbers;
+
+  LiveRegs.addLiveIns(*EntryBlk);
+  for (MachineInstr &MI : EntryBlk->instrs()) {
+    if (MI.getOpcode() == VAStartPseudoInstr->getOpcode())
+      break;
+
+    LiveRegs.stepForward(MI, Clobbers);
+  }
+
+  // Create the new basic blocks. One block contains all the XMM stores,
+  // and another block is the final destination regardless of whether any
+  // stores were performed.
+  const BasicBlock *LLVMBlk = EntryBlk->getBasicBlock();
+  MachineFunction::iterator EntryBlkIter = ++EntryBlk->getIterator();
+  MachineBasicBlock *GuardedRegsBlk = Func->CreateMachineBasicBlock(LLVMBlk);
+  MachineBasicBlock *TailBlk = Func->CreateMachineBasicBlock(LLVMBlk);
+  Func->insert(EntryBlkIter, GuardedRegsBlk);
+  Func->insert(EntryBlkIter, TailBlk);
+
+  // Transfer the remainder of EntryBlk and its successor edges to TailBlk.
+  TailBlk->splice(TailBlk->begin(), EntryBlk,
+                  std::next(MachineBasicBlock::iterator(VAStartPseudoInstr)),
+                  EntryBlk->end());
+  TailBlk->transferSuccessorsAndUpdatePHIs(EntryBlk);
+
+  int64_t FrameIndex = VAStartPseudoInstr->getOperand(1).getImm();
+  Register BaseReg;
+  uint64_t FrameOffset =
+      X86FL->getFrameIndexReference(*Func, FrameIndex, BaseReg).getFixed();
+  uint64_t VarArgsRegsOffset = VAStartPseudoInstr->getOperand(2).getImm();
+
+  // TODO: add support for YMM and ZMM here.
+  unsigned MOVOpc = STI->hasAVX() ? X86::VMOVAPSmr : X86::MOVAPSmr;
+
+  // In the XMM save block, save all the XMM argument registers.
+  for (int64_t OpndIdx = 3, RegIdx = 0;
+       OpndIdx < VAStartPseudoInstr->getNumOperands() - 1;
+       OpndIdx++, RegIdx++) {
+
+    int64_t Offset = FrameOffset + VarArgsRegsOffset + RegIdx * 16;
+
+    MachineMemOperand *MMO = Func->getMachineMemOperand(
+        MachinePointerInfo::getFixedStack(*Func, FrameIndex, Offset),
+        MachineMemOperand::MOStore,
+        /*Size=*/16, Align(16));
+
+    BuildMI(GuardedRegsBlk, DL, TII->get(MOVOpc))
+        .addReg(BaseReg)
+        .addImm(/*Scale=*/1)
+        .addReg(/*IndexReg=*/0)
+        .addImm(/*Disp=*/Offset)
+        .addReg(/*Segment=*/0)
+        .addReg(VAStartPseudoInstr->getOperand(OpndIdx).getReg())
+        .addMemOperand(MMO);
+    assert(Register::isPhysicalRegister(
+        VAStartPseudoInstr->getOperand(OpndIdx).getReg()));
+  }
+
+  // The original block will now fall through to the GuardedRegsBlk.
+  EntryBlk->addSuccessor(GuardedRegsBlk);
+  // The GuardedRegsBlk will fall through to the TailBlk.
+  GuardedRegsBlk->addSuccessor(TailBlk);
+
+  if (!STI->isCallingConvWin64(Func->getFunction().getCallingConv())) {
+    // If %al is 0, branch around the XMM save block.
+    BuildMI(EntryBlk, DL, TII->get(X86::TEST8rr))
+        .addReg(CountReg)
+        .addReg(CountReg);
+    BuildMI(EntryBlk, DL, TII->get(X86::JCC_1))
+        .addMBB(TailBlk)
+        .addImm(X86::COND_E);
+    EntryBlk->addSuccessor(TailBlk);
+  }
+
+  // Add liveins to the created block.
+  addLiveIns(*GuardedRegsBlk, LiveRegs);
+  addLiveIns(*TailBlk, LiveRegs);
+
+  // Delete the pseudo.
+  VAStartPseudoInstr->eraseFromParent();
 }
 
 /// Expand all pseudo instructions contained in \p MBB.
@@ -520,6 +650,20 @@ bool X86ExpandPseudo::ExpandMBB(MachineBasicBlock &MBB) {
   return Modified;
 }
 
+bool X86ExpandPseudo::ExpandPseudosWhichAffectControlFlow(MachineFunction &MF) {
+  // Currently pseudo which affects control flow is only
+  // X86::VASTART_SAVE_XMM_REGS which is located in Entry block.
+  // So we do not need to evaluate other blocks.
+  for (MachineInstr &Instr : MF.front().instrs()) {
+    if (Instr.getOpcode() == X86::VASTART_SAVE_XMM_REGS) {
+      ExpandVastartSaveXmmRegs(&(MF.front()), Instr);
+      return true;
+    }
+  }
+
+  return false;
+}
+
 bool X86ExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   STI = &static_cast<const X86Subtarget &>(MF.getSubtarget());
   TII = STI->getInstrInfo();
@@ -527,7 +671,8 @@ bool X86ExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   X86FI = MF.getInfo<X86MachineFunctionInfo>();
   X86FL = STI->getFrameLowering();
 
-  bool Modified = false;
+  bool Modified = ExpandPseudosWhichAffectControlFlow(MF);
+
   for (MachineBasicBlock &MBB : MF)
     Modified |= ExpandMBB(MBB);
   return Modified;

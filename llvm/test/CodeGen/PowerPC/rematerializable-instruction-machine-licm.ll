@@ -375,9 +375,9 @@ define zeroext i32 @test1(i64 %0, i64* %1) {
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    ld 12, 384(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    lwz 4, 396(1) # 4-byte Folded Reload
-; CHECK-NEXT:    addi 4, 4, 1
 ; CHECK-NEXT:    std 3, 0(12)
 ; CHECK-NEXT:    ld 12, 376(1) # 8-byte Folded Reload
+; CHECK-NEXT:    addi 4, 4, 1
 ; CHECK-NEXT:    std 3, 0(12)
 ; CHECK-NEXT:    ld 12, 368(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    std 3, 0(12)

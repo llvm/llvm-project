@@ -5,20 +5,25 @@ include(CheckCXXCompilerFlag)
 # Build Google Benchmark for libc++
 #==============================================================================
 
+set(CMAKE_FOLDER "${CMAKE_FOLDER}/Benchmarks")
+
 set(BENCHMARK_LIBCXX_COMPILE_FLAGS
     -Wno-unused-command-line-argument
     -nostdinc++
-    -isystem ${LIBCXX_SOURCE_DIR}/include
+    -isystem "${LIBCXX_GENERATED_INCLUDE_DIR}"
     -L${LIBCXX_LIBRARY_DIR}
     -Wl,-rpath,${LIBCXX_LIBRARY_DIR}
     ${SANITIZER_FLAGS}
     )
+if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+  list(APPEND BENCHMARK_LIBCXX_COMPILE_FLAGS
+    -isystem "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}")
+endif()
 if (DEFINED LIBCXX_CXX_ABI_LIBRARY_PATH)
   list(APPEND BENCHMARK_LIBCXX_COMPILE_FLAGS
           -L${LIBCXX_CXX_ABI_LIBRARY_PATH}
           -Wl,-rpath,${LIBCXX_CXX_ABI_LIBRARY_PATH})
 endif()
-list(APPEND BENCHMARK_LIBCXX_COMPILE_FLAGS -include "${LIBCXX_BINARY_DIR}/__config_site")
 split_list(BENCHMARK_LIBCXX_COMPILE_FLAGS)
 
 ExternalProject_Add(google-benchmark-libcxx

@@ -22,6 +22,7 @@
 #include "FoldInitTypeCheck.h"
 #include "ForwardDeclarationNamespaceCheck.h"
 #include "ForwardingReferenceOverloadCheck.h"
+#include "ImplicitWideningOfMultiplicationResultCheck.h"
 #include "InaccurateEraseCheck.h"
 #include "IncorrectRoundingsCheck.h"
 #include "InfiniteLoopCheck.h"
@@ -60,6 +61,7 @@
 #include "TooSmallLoopVariableCheck.h"
 #include "UndefinedMemoryManipulationCheck.h"
 #include "UndelegatedConstructorCheck.h"
+#include "UnhandledExceptionAtNewCheck.h"
 #include "UnhandledSelfAssignmentCheck.h"
 #include "UnusedRaiiCheck.h"
 #include "UnusedReturnValueCheck.h"
@@ -97,6 +99,8 @@ public:
         "bugprone-forward-declaration-namespace");
     CheckFactories.registerCheck<ForwardingReferenceOverloadCheck>(
         "bugprone-forwarding-reference-overload");
+    CheckFactories.registerCheck<ImplicitWideningOfMultiplicationResultCheck>(
+        "bugprone-implicit-widening-of-multiplication-result");
     CheckFactories.registerCheck<InaccurateEraseCheck>(
         "bugprone-inaccurate-erase");
     CheckFactories.registerCheck<IncorrectRoundingsCheck>(
@@ -175,6 +179,8 @@ public:
         "bugprone-undelegated-constructor");
     CheckFactories.registerCheck<UnhandledSelfAssignmentCheck>(
         "bugprone-unhandled-self-assignment");
+    CheckFactories.registerCheck<UnhandledExceptionAtNewCheck>(
+        "bugprone-unhandled-exception-at-new");
     CheckFactories.registerCheck<UnusedRaiiCheck>(
         "bugprone-unused-raii");
     CheckFactories.registerCheck<UnusedReturnValueCheck>(

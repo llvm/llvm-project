@@ -17,12 +17,12 @@
 ; CHECK-GVN: testLaunderInvariantGroupIsNotEscapeSource
 define i8 @testLaunderInvariantGroupIsNotEscapeSource() {
 ; CHECK-DAG: MustAlias: %struct.A* %a, i8* %a.bitcast
-; CHECK-DAG: PartialAlias: %struct.A* %a, i8* %n
+; CHECK-DAG: PartialAlias (off {{[0-9]+}}): %struct.A* %a, i8* %n
 ; CHECK-DAG: NoAlias: i8* %a.bitcast, i8* %n
 ; CHECK-DAG: MustAlias: %struct.A* %a, i8* %a.laundered
 ; CHECK-DAG: MustAlias: i8* %a.bitcast, i8* %a.laundered
 ; CHECK-DAG: NoAlias: i8* %a.laundered, i8* %n
-; CHECK-DAG: PartialAlias: %struct.A* %a, i8* %n.laundered
+; CHECK-DAG: PartialAlias (off {{[0-9]+}}): %struct.A* %a, i8* %n.laundered
 ; CHECK-DAG: NoAlias: i8* %a.bitcast, i8* %n.laundered
 ; CHECK-DAG: MustAlias: i8* %n, i8* %n.laundered
 ; CHECK-DAG: NoAlias: i8* %a.laundered, i8* %n.laundered

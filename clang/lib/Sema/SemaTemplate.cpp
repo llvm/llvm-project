@@ -1105,8 +1105,17 @@ bool Sema::ActOnTypeConstraint(const CXXScopeSpec &SS,
                                TemplateIdAnnotation *TypeConstr,
                                TemplateTypeParmDecl *ConstrainedParameter,
                                SourceLocation EllipsisLoc) {
-  ConceptDecl *CD =
-      cast<ConceptDecl>(TypeConstr->Template.get().getAsTemplateDecl());
+  return BuildTypeConstraint(SS, TypeConstr, ConstrainedParameter, EllipsisLoc,
+                             false);
+}
+
+bool Sema::BuildTypeConstraint(const CXXScopeSpec &SS,
+                               TemplateIdAnnotation *TypeConstr,
+                               TemplateTypeParmDecl *ConstrainedParameter,
+                               SourceLocation EllipsisLoc,
+                               bool AllowUnexpandedPack) {
+  TemplateName TN = TypeConstr->Template.get();
+  ConceptDecl *CD = cast<ConceptDecl>(TN.getAsTemplateDecl());
 
   // C++2a [temp.param]p4:
   //     [...] The concept designated by a type-constraint shall be a type
@@ -1126,15 +1135,24 @@ bool Sema::ActOnTypeConstraint(const CXXScopeSpec &SS,
     return true;
   }
 
+  DeclarationNameInfo ConceptName(DeclarationName(TypeConstr->Name),
+                                  TypeConstr->TemplateNameLoc);
+
   TemplateArgumentListInfo TemplateArgs;
   if (TypeConstr->LAngleLoc.isValid()) {
     TemplateArgs =
         makeTemplateArgumentListInfo(*this, *TypeConstr);
+
+    if (EllipsisLoc.isInvalid() && !AllowUnexpandedPack) {
+      for (TemplateArgumentLoc Arg : TemplateArgs.arguments()) {
+        if (DiagnoseUnexpandedParameterPack(Arg, UPPC_TypeConstraint))
+          return true;
+      }
+    }
   }
   return AttachTypeConstraint(
       SS.isSet() ? SS.getWithLocInContext(Context) : NestedNameSpecifierLoc(),
-      DeclarationNameInfo(DeclarationName(TypeConstr->Name),
-                          TypeConstr->TemplateNameLoc), CD,
+      ConceptName, CD,
       TypeConstr->LAngleLoc.isValid() ? &TemplateArgs : nullptr,
       ConstrainedParameter, EllipsisLoc);
 }
@@ -1676,6 +1694,9 @@ Sema::ActOnTemplateParameterList(unsigned Depth,
                                  Expr *RequiresClause) {
   if (ExportLoc.isValid())
     Diag(ExportLoc, diag::warn_template_export_unsupported);
+
+  for (NamedDecl *P : Params)
+    warnOnReservedIdentifier(P);
 
   return TemplateParameterList::Create(
       Context, TemplateLoc, LAngleLoc,
@@ -2492,6 +2513,12 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
     // Class-scope explicit specializations (MS extension) do not result in
     // deduction guides.
     if (!CD || (!FTD && CD->isFunctionTemplateSpecialization()))
+      continue;
+
+    // Cannot make a deduction guide when unparsed arguments are present.
+    if (std::any_of(CD->param_begin(), CD->param_end(), [](ParmVarDecl *P) {
+          return !P || P->hasUnparsedDefaultArg();
+        }))
       continue;
 
     Transform.transformConstructor(FTD, CD);
@@ -3561,7 +3588,9 @@ public:
       OS << VD->getName();
       if (const auto *IV = dyn_cast<VarTemplateSpecializationDecl>(VD)) {
         // This is a template variable, print the expanded template arguments.
-        printTemplateArgumentList(OS, IV->getTemplateArgs().asArray(), Policy);
+        printTemplateArgumentList(
+            OS, IV->getTemplateArgs().asArray(), Policy,
+            IV->getSpecializedTemplate()->getTemplateParameters());
       }
       return true;
     }
@@ -10899,7 +10928,9 @@ Sema::getTemplateArgumentBindingsText(const TemplateParameterList *Params,
     }
 
     Out << " = ";
-    Args[I].print(getPrintingPolicy(), Out);
+    Args[I].print(
+        getPrintingPolicy(), Out,
+        TemplateParameterList::shouldIncludeTypeForArgument(Params, I));
   }
 
   Out << ']';

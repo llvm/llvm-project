@@ -10,9 +10,9 @@
 // invoked by the user in an OpenMP region
 //
 //===----------------------------------------------------------------------===//
+#pragma omp declare target
 
 #include "common/omptarget.h"
-#include "common/target_atomic.h"
 #include "target_impl.h"
 
 EXTERN double omp_get_wtick(void) {
@@ -316,11 +316,6 @@ EXTERN int omp_get_team_num() {
   return rc;
 }
 
-EXTERN int omp_is_initial_device(void) {
-  PRINT0(LD_IO, "call omp_is_initial_device() returns 0\n");
-  return 0; // 0 by def on device
-}
-
 // Unspecified on the device.
 EXTERN int omp_get_initial_device(void) {
   PRINT0(LD_IO, "call omp_get_initial_device() returns 0\n");
@@ -362,3 +357,5 @@ EXTERN int omp_test_lock(omp_lock_t *lock) {
   PRINT(LD_IO, "call omp_test_lock() return %d\n", rc);
   return rc;
 }
+
+#pragma omp end declare target

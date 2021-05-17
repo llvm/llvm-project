@@ -17,6 +17,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>
 #include <cstdint>
@@ -66,6 +67,8 @@ public:
   /// Find the summary entry for a desired percentile of counts.
   static const ProfileSummaryEntry &
   getEntryForPercentile(SummaryEntryVector &DS, uint64_t Percentile);
+  static uint64_t getHotCountThreshold(SummaryEntryVector &DS);
+  static uint64_t getColdCountThreshold(SummaryEntryVector &DS);
 };
 
 class InstrProfSummaryBuilder final : public ProfileSummaryBuilder {
@@ -89,6 +92,8 @@ public:
 
   void addRecord(const sampleprof::FunctionSamples &FS,
                  bool isCallsiteSample = false);
+  std::unique_ptr<ProfileSummary> computeSummaryForProfiles(
+      const StringMap<sampleprof::FunctionSamples> &Profiles);
   std::unique_ptr<ProfileSummary> getSummary();
 };
 

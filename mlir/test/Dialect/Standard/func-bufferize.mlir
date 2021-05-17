@@ -2,8 +2,8 @@
 
 // CHECK-LABEL:   func @identity(
 // CHECK-SAME:                   %[[ARG:.*]]: memref<f32>) -> memref<f32> {
-// CHECK:           %[[TENSOR:.*]] = tensor_load %[[ARG]] : memref<f32>
-// CHECK:           %[[MEMREF:.*]] = tensor_to_memref %[[TENSOR]] : memref<f32>
+// CHECK:           %[[TENSOR:.*]] = memref.tensor_load %[[ARG]] : memref<f32>
+// CHECK:           %[[MEMREF:.*]] = memref.buffer_cast %[[TENSOR]] : memref<f32>
 // CHECK:           return %[[MEMREF]] : memref<f32>
 func @identity(%arg0: tensor<f32>) -> tensor<f32> {
   return %arg0 : tensor<f32>
@@ -11,12 +11,12 @@ func @identity(%arg0: tensor<f32>) -> tensor<f32> {
 
 // CHECK-LABEL:   func @block_arguments(
 // CHECK-SAME:        %[[ARG:.*]]: memref<f32>) -> memref<f32> {
-// CHECK:           %[[T1:.*]] = tensor_load %[[ARG]] : memref<f32>
-// CHECK:           %[[M1:.*]] = tensor_to_memref %[[T1]] : memref<f32>
+// CHECK:           %[[T1:.*]] = memref.tensor_load %[[ARG]] : memref<f32>
+// CHECK:           %[[M1:.*]] = memref.buffer_cast %[[T1]] : memref<f32>
 // CHECK:           br ^bb1(%[[M1]] : memref<f32>)
 // CHECK:         ^bb1(%[[BBARG:.*]]: memref<f32>):
-// CHECK:           %[[T2:.*]] = tensor_load %[[BBARG]] : memref<f32>
-// CHECK:           %[[M2:.*]] = tensor_to_memref %[[T2]] : memref<f32>
+// CHECK:           %[[T2:.*]] = memref.tensor_load %[[BBARG]] : memref<f32>
+// CHECK:           %[[M2:.*]] = memref.buffer_cast %[[T2]] : memref<f32>
 // CHECK:           return %[[M2]] : memref<f32>
 func @block_arguments(%arg0: tensor<f32>) -> tensor<f32> {
   br ^bb1(%arg0: tensor<f32>)
@@ -35,8 +35,8 @@ func @call_source() -> tensor<f32> {
 }
 // CHECK-LABEL:   func @call_sink(
 // CHECK-SAME:                    %[[ARG:.*]]: memref<f32>) {
-// CHECK:           %[[TENSOR:.*]] = tensor_load %[[ARG]] : memref<f32>
-// CHECK:           %[[MEMREF:.*]] = tensor_to_memref %[[TENSOR]] : memref<f32>
+// CHECK:           %[[TENSOR:.*]] = memref.tensor_load %[[ARG]] : memref<f32>
+// CHECK:           %[[MEMREF:.*]] = memref.buffer_cast %[[TENSOR]] : memref<f32>
 // CHECK:           call @sink(%[[MEMREF]]) : (memref<f32>) -> ()
 // CHECK:           return
 func private @sink(tensor<f32>)
@@ -47,7 +47,7 @@ func @call_sink(%arg0: tensor<f32>) {
 
 // CHECK-LABEL:   func @unconverted_op_in_body() -> memref<f32> {
 // CHECK:           %[[TENSOR:.*]] = "test.source"() : () -> tensor<f32>
-// CHECK:           %[[MEMREF:.*]] = tensor_to_memref %[[TENSOR]] : memref<f32>
+// CHECK:           %[[MEMREF:.*]] = memref.buffer_cast %[[TENSOR]] : memref<f32>
 // CHECK:           return %[[MEMREF]] : memref<f32>
 func @unconverted_op_in_body() -> tensor<f32> {
   %0 = "test.source"() : () -> tensor<f32>
@@ -66,4 +66,26 @@ func @unable_to_update_terminator(%arg0: tensor<f32>) -> tensor<f32> {
     "test.terminator"() : () -> ()
   ^bb2(%bbarg1: tensor<f32>):
     return %bbarg1 : tensor<f32>
+}
+
+// -----
+
+// There was a bug in func-bufferize pass which caused terminators without
+// ReturnLike and BranchOpInterface traits (e.g. scf.condition) to always
+// fail to legalize even if bufferization doesn't needed.
+// Check the pass succedeed.
+// CHECK: bufferize_while
+// CHECK: scf.while
+// CHECK: scf.condition
+func @bufferize_while(%arg0: i64, %arg1: i64) -> i64 {
+  %c2_i64 = constant 2 : i64
+  %0:2 = scf.while (%arg2 = %arg0) : (i64) -> (i64, i64) {
+    %1 = cmpi slt, %arg2, %arg1 : i64
+    scf.condition(%1) %arg2, %arg2 : i64, i64
+  } do {
+  ^bb0(%arg2: i64, %arg3: i64):
+    %1 = muli %arg3, %c2_i64 : i64
+    scf.yield %1 : i64
+  }
+  return %0#1 : i64
 }

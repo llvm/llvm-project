@@ -114,7 +114,8 @@ private:
   public:
     InitScraperPlugin(MachOPlatform &MP) : MP(MP) {}
 
-    void modifyPassConfig(MaterializationResponsibility &MR, const Triple &TT,
+    void modifyPassConfig(MaterializationResponsibility &MR,
+                          jitlink::LinkGraph &G,
                           jitlink::PassConfiguration &Config) override;
 
     LocalDependenciesMap getSyntheticSymbolLocalDependencies(

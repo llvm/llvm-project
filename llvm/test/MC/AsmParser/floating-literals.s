@@ -86,9 +86,9 @@
 .double 1E-1
 
 
-#CHECK-ERROR: unexpected token in '.double' directive
+# CHECK-ERROR: :[[#@LINE+1]]:12: error: unexpected token
 .double 1e1e
-# CHECK-ERROR: Invalid sign in float literal
+# CHECK-ERROR: :[[#@LINE+1]]:9: error: invalid sign in float literal
 .double 2.+1
 
 # CHECK: .long 1310177520

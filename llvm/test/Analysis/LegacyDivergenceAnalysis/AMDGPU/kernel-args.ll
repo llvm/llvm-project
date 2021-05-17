@@ -1,4 +1,4 @@
-; RUN: opt %s -mtriple amdgcn-- -amdgpu-use-legacy-divergence-analysis -analyze -divergence | FileCheck %s
+; RUN: opt %s -mtriple amdgcn-- -amdgpu-use-legacy-divergence-analysis -enable-new-pm=0 -analyze -divergence | FileCheck %s
 
 ; CHECK-LABEL: Printing analysis 'Legacy Divergence Analysis' for function 'test_amdgpu_ps':
 ; CHECK: DIVERGENT:  [4 x <16 x i8>] addrspace(4)* %arg0

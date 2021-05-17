@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_IPO_OPENMP_OPT_H
-#define LLVM_TRANSFORMS_IPO_OPENMP_OPT_H
+#ifndef LLVM_TRANSFORMS_IPO_OPENMPOPT_H
+#define LLVM_TRANSFORMS_IPO_OPENMPOPT_H
 
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LazyCallGraph.h"
@@ -67,10 +67,18 @@ class OpenMPOptPass : public PassInfoMixin<OpenMPOptPass> {
   omp::OpenMPInModule OMPInModule;
 
 public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+class OpenMPOptCGSCCPass : public PassInfoMixin<OpenMPOptCGSCCPass> {
+  /// Helper to remember if the module contains OpenMP (runtime calls).
+  omp::OpenMPInModule OMPInModule;
+
+public:
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &UR);
 };
 
 } // end namespace llvm
 
-#endif // LLVM_TRANSFORMS_IPO_OPENMP_OPT_H
+#endif // LLVM_TRANSFORMS_IPO_OPENMPOPT_H

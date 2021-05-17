@@ -112,9 +112,7 @@ static void createRetPHINode(Instruction *OrigInst, Instruction *NewInst,
 
   Builder.SetInsertPoint(&MergeBlock->front());
   PHINode *Phi = Builder.CreatePHI(OrigInst->getType(), 0);
-  SmallVector<User *, 16> UsersToUpdate;
-  for (User *U : OrigInst->users())
-    UsersToUpdate.push_back(U);
+  SmallVector<User *, 16> UsersToUpdate(OrigInst->users());
   for (User *U : UsersToUpdate)
     U->replaceUsesOfWith(OrigInst, Phi);
   Phi->addIncoming(OrigInst, OrigInst->getParent());

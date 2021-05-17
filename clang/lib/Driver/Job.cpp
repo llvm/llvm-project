@@ -414,50 +414,6 @@ void CC1Command::setEnvironment(llvm::ArrayRef<const char *> NewEnvironment) {
       "The CC1Command doesn't support changing the environment vars!");
 }
 
-FallbackCommand::FallbackCommand(const Action &Source_, const Tool &Creator_,
-                                 ResponseFileSupport ResponseSupport,
-                                 const char *Executable_,
-                                 const llvm::opt::ArgStringList &Arguments_,
-                                 ArrayRef<InputInfo> Inputs,
-                                 ArrayRef<InputInfo> Outputs,
-                                 std::unique_ptr<Command> Fallback_)
-    : Command(Source_, Creator_, ResponseSupport, Executable_, Arguments_,
-              Inputs, Outputs),
-      Fallback(std::move(Fallback_)) {}
-
-void FallbackCommand::Print(raw_ostream &OS, const char *Terminator,
-                            bool Quote, CrashReportInfo *CrashInfo) const {
-  Command::Print(OS, "", Quote, CrashInfo);
-  OS << " ||";
-  Fallback->Print(OS, Terminator, Quote, CrashInfo);
-}
-
-static bool ShouldFallback(int ExitCode) {
-  // FIXME: We really just want to fall back for internal errors, such
-  // as when some symbol cannot be mangled, when we should be able to
-  // parse something but can't, etc.
-  return ExitCode != 0;
-}
-
-int FallbackCommand::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
-                             std::string *ErrMsg, bool *ExecutionFailed) const {
-  int PrimaryStatus = Command::Execute(Redirects, ErrMsg, ExecutionFailed);
-  if (!ShouldFallback(PrimaryStatus))
-    return PrimaryStatus;
-
-  // Clear ExecutionFailed and ErrMsg before falling back.
-  if (ErrMsg)
-    ErrMsg->clear();
-  if (ExecutionFailed)
-    *ExecutionFailed = false;
-
-  const Driver &D = getCreator().getToolChain().getDriver();
-  D.Diag(diag::warn_drv_invoking_fallback) << Fallback->getExecutable();
-
-  int SecondaryStatus = Fallback->Execute(Redirects, ErrMsg, ExecutionFailed);
-  return SecondaryStatus;
-}
-
 ForceSuccessCommand::ForceSuccessCommand(
     const Action &Source_, const Tool &Creator_,
     ResponseFileSupport ResponseSupport, const char *Executable_,

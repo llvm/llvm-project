@@ -154,7 +154,7 @@ def ForOp : SCF_Op<"for",
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilderDAG<(ins "Value":$lowerBound, "Value":$upperBound, "Value":$step,
+    OpBuilder<(ins "Value":$lowerBound, "Value":$upperBound, "Value":$step,
       CArg<"ValueRange", "llvm::None">:$iterArgs,
       CArg<"function_ref<void(OpBuilder &, Location, Value, ValueRange)>",
            "nullptr">)>
@@ -166,19 +166,25 @@ def ForOp : SCF_Op<"for",
 
     Value getInductionVar() { return getBody()->getArgument(0); }
     Block::BlockArgListType getRegionIterArgs() {
-      return getBody()->getArguments().drop_front();
+      return getBody()->getArguments().drop_front(getNumInductionVars());
     }
     Operation::operand_range getIterOperands() {
       return getOperands().drop_front(getNumControlOperands());
+    }
+    MutableArrayRef<OpOperand> getIterOpOperands() {
+      return
+        getOperation()->getOpOperands().drop_front(getNumControlOperands());
     }
 
     void setLowerBound(Value bound) { getOperation()->setOperand(0, bound); }
     void setUpperBound(Value bound) { getOperation()->setOperand(1, bound); }
     void setStep(Value step) { getOperation()->setOperand(2, step); }
 
+    /// Number of induction variables, always 1 for scf::ForOp.
+    unsigned getNumInductionVars() { return 1; }
     /// Number of region arguments for loop-carried values
     unsigned getNumRegionIterArgs() {
-      return getBody()->getNumArguments() - 1;
+      return getBody()->getNumArguments() - getNumInductionVars();
     }
     /// Number of operands controlling the loop: lb, ub, step
     unsigned getNumControlOperands() { return 3; }
@@ -189,6 +195,24 @@ def ForOp : SCF_Op<"for",
     /// Get Number of loop-carried values
     unsigned getNumIterOperands() {
       return getOperation()->getNumOperands() - getNumControlOperands();
+    }
+    /// Get the region iter arg that corresponds to an OpOperand.
+    BlockArgument getRegionIterArgForOpOperand(OpOperand &opOperand) {
+      assert(opOperand.getOperandNumber() >= getNumControlOperands() &&
+             "expected an iter args operand");
+      assert(opOperand.getOwner() == getOperation() &&
+             "opOperand does not belong to this scf::ForOp operation");
+      return getRegionIterArgs()[
+        opOperand.getOperandNumber() - getNumControlOperands()];
+    }
+    /// Get the OpOperand& that corresponds to a region iter arg.
+    OpOperand &getOpOperandForRegionIterArg(BlockArgument bbArg) {
+      assert(bbArg.getArgNumber() >= getNumInductionVars() &&
+             "expected a bbArg that is not an induction variable");
+      assert(bbArg.getOwner()->getParentOp() == getOperation() &&
+             "bbArg does not belong to the scf::ForOp body");
+      return getOperation()->getOpOperand(
+        getNumControlOperands() + bbArg.getArgNumber() - getNumInductionVars());
     }
 
     /// Return operands used when entering the region at 'index'. These operands
@@ -261,15 +285,15 @@ def IfOp : SCF_Op<"if",
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilderDAG<(ins "Value":$cond, "bool":$withElseRegion)>,
-    OpBuilderDAG<(ins "TypeRange":$resultTypes, "Value":$cond,
+    OpBuilder<(ins "Value":$cond, "bool":$withElseRegion)>,
+    OpBuilder<(ins "TypeRange":$resultTypes, "Value":$cond,
       "bool":$withElseRegion)>,
-    OpBuilderDAG<(ins "TypeRange":$resultTypes, "Value":$cond,
+    OpBuilder<(ins "TypeRange":$resultTypes, "Value":$cond,
       CArg<"function_ref<void(OpBuilder &, Location)>",
            "buildTerminatedBody">:$thenBuilder,
       CArg<"function_ref<void(OpBuilder &, Location)>",
            "nullptr">:$elseBuilder)>,
-    OpBuilderDAG<(ins "Value":$cond,
+    OpBuilder<(ins "Value":$cond,
       CArg<"function_ref<void(OpBuilder &, Location)>",
            "buildTerminatedBody">:$thenBuilder,
       CArg<"function_ref<void(OpBuilder &, Location)>",
@@ -287,6 +311,10 @@ def IfOp : SCF_Op<"if",
       return results().empty() ? OpBuilder::atBlockTerminator(body, listener)
                                : OpBuilder::atBlockEnd(body, listener);
     }
+    Block* thenBlock();
+    YieldOp thenYield();
+    Block* elseBlock();
+    YieldOp elseYield();
   }];
 
   let hasCanonicalizer = 1;
@@ -352,11 +380,11 @@ def ParallelOp : SCF_Op<"parallel",
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilderDAG<(ins "ValueRange":$lowerBounds, "ValueRange":$upperBounds,
+    OpBuilder<(ins "ValueRange":$lowerBounds, "ValueRange":$upperBounds,
       "ValueRange":$steps, "ValueRange":$initVals,
       CArg<"function_ref<void (OpBuilder &, Location, ValueRange, ValueRange)>",
            "nullptr">:$bodyBuilderFn)>,
-    OpBuilderDAG<(ins "ValueRange":$lowerBounds, "ValueRange":$upperBounds,
+    OpBuilder<(ins "ValueRange":$lowerBounds, "ValueRange":$upperBounds,
       "ValueRange":$steps,
       CArg<"function_ref<void (OpBuilder &, Location, ValueRange)>",
            "nullptr">:$bodyBuilderFn)>,
@@ -412,7 +440,7 @@ def ReduceOp : SCF_Op<"reduce", [HasParent<"ParallelOp">]> {
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilderDAG<(ins "Value":$operand,
+    OpBuilder<(ins "Value":$operand,
       CArg<"function_ref<void (OpBuilder &, Location, Value, Value)>",
            "nullptr">:$bodyBuilderFn)>
   ];
@@ -562,7 +590,11 @@ def WhileOp : SCF_Op<"while",
 
   let extraClassDeclaration = [{
     OperandRange getSuccessorEntryOperands(unsigned index);
+    ConditionOp getConditionOp();
+    Block::BlockArgListType getAfterArguments();
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 def YieldOp : SCF_Op<"yield", [NoSideEffect, ReturnLike, Terminator,
@@ -582,7 +614,11 @@ def YieldOp : SCF_Op<"yield", [NoSideEffect, ReturnLike, Terminator,
   }];
 
   let arguments = (ins Variadic<AnyType>:$results);
-  let builders = [OpBuilderDAG<(ins), [{ /* nothing to do */ }]>];
+  let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
+
+  let assemblyFormat =
+      [{  attr-dict ($results^ `:` type($results))? }];
+
   // Override default verifier (defined in SCF_Op), no custom verification
   // needed.
   let verifier = ?;

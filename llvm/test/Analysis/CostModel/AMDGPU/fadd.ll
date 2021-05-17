@@ -2,6 +2,7 @@
 ; RUN: opt -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mattr=-half-rate-64-ops < %s | FileCheck -check-prefixes=SLOWF64,SLOWF16,ALL %s
 ; RUN: opt -cost-model -cost-kind=code-size -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900  -mattr=+half-rate-64-ops < %s | FileCheck -check-prefixes=FASTF16,SIZEALL,ALL %s
 ; RUN: opt -cost-model -cost-kind=code-size -analyze -mtriple=amdgcn-unknown-amdhsa -mattr=-half-rate-64-ops < %s | FileCheck -check-prefixes=SLOWF16,SIZEALL,ALL %s
+; RUN: opt -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx90a  -mattr=+half-rate-64-ops < %s | FileCheck -check-prefixes=GFX90A-FASTF64,FASTF16,PACKEDF32,ALL %s
 
 ; ALL-LABEL: 'fadd_f32'
 ; ALL: estimated cost of 1 for {{.*}} fadd float
@@ -13,7 +14,8 @@ define amdgpu_kernel void @fadd_f32(float addrspace(1)* %out, float addrspace(1)
 }
 
 ; ALL-LABEL: 'fadd_v2f32'
-; ALL: estimated cost of 2 for {{.*}} fadd <2 x float>
+; NOPACKEDF32: estimated cost of 2 for {{.*}} fadd <2 x float>
+; PACKEDF32: estimated cost of 1 for {{.*}} fadd <2 x float>
 define amdgpu_kernel void @fadd_v2f32(<2 x float> addrspace(1)* %out, <2 x float> addrspace(1)* %vaddr, <2 x float> %b) #0 {
   %vec = load <2 x float>, <2 x float> addrspace(1)* %vaddr
   %add = fadd <2 x float> %vec, %b
@@ -22,7 +24,10 @@ define amdgpu_kernel void @fadd_v2f32(<2 x float> addrspace(1)* %out, <2 x float
 }
 
 ; ALL-LABEL: 'fadd_v3f32'
-; ALL: estimated cost of 3 for {{.*}} fadd <3 x float>
+; Allow for 4 when v3f32 is illegal and TargetLowering thinks it needs widening,
+; and 3 when it is legal.
+; NOPACKEDF32: estimated cost of {{[34]}} for {{.*}} fadd <3 x float>
+; PACKEDF32: estimated cost of 2 for {{.*}} fadd <3 x float>
 define amdgpu_kernel void @fadd_v3f32(<3 x float> addrspace(1)* %out, <3 x float> addrspace(1)* %vaddr, <3 x float> %b) #0 {
   %vec = load <3 x float>, <3 x float> addrspace(1)* %vaddr
   %add = fadd <3 x float> %vec, %b
@@ -31,7 +36,10 @@ define amdgpu_kernel void @fadd_v3f32(<3 x float> addrspace(1)* %out, <3 x float
 }
 
 ; ALL-LABEL: 'fadd_v5f32'
-; ALL: estimated cost of 5 for {{.*}} fadd <5 x float>
+; Allow for 8 when v5f32 is illegal and TargetLowering thinks it needs widening,
+; and 5 when it is legal.
+; NOPACKEDF32: estimated cost of {{[58]}} for {{.*}} fadd <5 x float>
+; PACKEDF32: estimated cost of 3 for {{.*}} fadd <5 x float>
 define amdgpu_kernel void @fadd_v5f32(<5 x float> addrspace(1)* %out, <5 x float> addrspace(1)* %vaddr, <5 x float> %b) #0 {
   %vec = load <5 x float>, <5 x float> addrspace(1)* %vaddr
   %add = fadd <5 x float> %vec, %b
@@ -40,6 +48,7 @@ define amdgpu_kernel void @fadd_v5f32(<5 x float> addrspace(1)* %out, <5 x float
 }
 
 ; ALL-LABEL: 'fadd_f64'
+; GFX90A-FASTF64: estimated cost of 1 for {{.*}} fadd double
 ; FASTF64: estimated cost of 2 for {{.*}} fadd double
 ; SLOWF64: estimated cost of 4 for {{.*}} fadd double
 ; SIZEALL: estimated cost of 2 for {{.*}} fadd double
@@ -51,6 +60,7 @@ define amdgpu_kernel void @fadd_f64(double addrspace(1)* %out, double addrspace(
 }
 
 ; ALL-LABEL: 'fadd_v2f64'
+; GFX90A-FASTF64: estimated cost of 2 for {{.*}} fadd <2 x double>
 ; FASTF64: estimated cost of 4 for {{.*}} fadd <2 x double>
 ; SLOWF64: estimated cost of 8 for {{.*}} fadd <2 x double>
 ; SIZEALL: estimated cost of 4 for {{.*}} fadd <2 x double>
@@ -62,6 +72,7 @@ define amdgpu_kernel void @fadd_v2f64(<2 x double> addrspace(1)* %out, <2 x doub
 }
 
 ; ALL-LABEL: 'fadd_v3f64'
+; GFX90A-FASTF64: estimated cost of 3 for {{.*}} fadd <3 x double>
 ; FASTF64: estimated cost of 6 for {{.*}} fadd <3 x double>
 ; SLOWF64: estimated cost of 12 for {{.*}} fadd <3 x double>
 ; SIZEALL: estimated cost of 6 for {{.*}} fadd <3 x double>

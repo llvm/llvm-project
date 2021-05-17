@@ -6,6 +6,7 @@
 # CHECK-LABEL: SYMBOL TABLE:
 # CHECK-DAG:   000000000000dead g       *ABS* _foo
 # CHECK-DAG:   000000000000beef g       *ABS* _weakfoo
+# CHECK-DAG:   000000000000cafe l       *ABS* _localfoo
 
 # CHECK-LABEL: Exports trie:
 # CHECK-DAG:   0x0000DEAD  _foo [absolute]
@@ -15,10 +16,8 @@
 .weak_definition _weakfoo
 _foo = 0xdead
 _weakfoo = 0xbeef
+_localfoo = 0xcafe
 
 .text
 _main:
   ret
-
-## TODO: once we support emitting local symbols in the symtab, test local
-## absolute symbols too

@@ -18,6 +18,7 @@
 #include "clang/Analysis/ConstructionContext.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -689,16 +690,30 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
 
     // See if we need to conjure a heap pointer instead of
     // a regular unknown pointer.
-    bool IsHeapPointer = false;
-    if (const auto *CNE = dyn_cast<CXXNewExpr>(E))
-      if (CNE->getOperatorNew()->isReplaceableGlobalAllocationFunction()) {
-        // FIXME: Delegate this to evalCall in MallocChecker?
-        IsHeapPointer = true;
+    const auto *CNE = dyn_cast<CXXNewExpr>(E);
+    if (CNE && CNE->getOperatorNew()->isReplaceableGlobalAllocationFunction()) {
+      R = svalBuilder.getConjuredHeapSymbolVal(E, LCtx, Count);
+      const MemRegion *MR = R.getAsRegion()->StripCasts();
+
+      // Store the extent of the allocated object(s).
+      SVal ElementCount;
+      if (const Expr *SizeExpr = CNE->getArraySize().getValueOr(nullptr)) {
+        ElementCount = State->getSVal(SizeExpr, LCtx);
+      } else {
+        ElementCount = svalBuilder.makeIntVal(1, /*IsUnsigned=*/true);
       }
 
-    R = IsHeapPointer ? svalBuilder.getConjuredHeapSymbolVal(E, LCtx, Count)
-                      : svalBuilder.conjureSymbolVal(nullptr, E, LCtx, ResultTy,
-                                                     Count);
+      SVal ElementSize = getElementExtent(CNE->getAllocatedType(), svalBuilder);
+
+      SVal Size =
+          svalBuilder.evalBinOp(State, BO_Mul, ElementCount, ElementSize,
+                                svalBuilder.getArrayIndexType());
+
+      State = setDynamicExtent(State, MR, Size.castAs<DefinedOrUnknownSVal>(),
+                               svalBuilder);
+    } else {
+      R = svalBuilder.conjureSymbolVal(nullptr, E, LCtx, ResultTy, Count);
+    }
   }
   return State->BindExpr(E, LCtx, R);
 }

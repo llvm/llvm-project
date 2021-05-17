@@ -13,6 +13,7 @@
 #include "Parser.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/TensorEncoding.h"
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -219,33 +220,19 @@ Type Parser::parseMemRefType() {
     return nullptr;
 
   // Check that memref is formed from allowed types.
-  if (!elementType.isIntOrIndexOrFloat() &&
-      !elementType.isa<VectorType, ComplexType>())
+  if (!BaseMemRefType::isValidElementType(elementType))
     return emitError(typeLoc, "invalid memref element type"), nullptr;
 
   // Parse semi-affine-map-composition.
   SmallVector<AffineMap, 2> affineMapComposition;
-  Optional<unsigned> memorySpace;
+  Attribute memorySpace;
   unsigned numDims = dimensions.size();
 
   auto parseElt = [&]() -> ParseResult {
-    // Check for the memory space.
-    if (getToken().is(Token::integer)) {
-      if (memorySpace)
-        return emitError("multiple memory spaces specified in memref type");
-      memorySpace = getToken().getUnsignedIntegerValue();
-      if (!memorySpace.hasValue())
-        return emitError("invalid memory space in memref type");
-      consumeToken(Token::integer);
-      return success();
-    }
-    if (isUnranked)
-      return emitError("cannot have affine map for unranked memref type");
-    if (memorySpace)
-      return emitError("expected memory space to be last in memref type");
-
     AffineMap map;
     llvm::SMLoc mapLoc = getToken().getLoc();
+
+    // Check for AffineMap as offset/strides.
     if (getToken().is(Token::kw_offset)) {
       int64_t offset;
       SmallVector<int64_t, 4> strides;
@@ -254,15 +241,25 @@ Type Parser::parseMemRefType() {
       // Construct strided affine map.
       map = makeStridedLinearLayoutMap(strides, offset, state.context);
     } else {
-      // Parse an affine map attribute.
-      auto affineMap = parseAttribute();
-      if (!affineMap)
+      // Either it is AffineMapAttr or memory space attribute.
+      Attribute attr = parseAttribute();
+      if (!attr)
         return failure();
-      auto affineMapAttr = affineMap.dyn_cast<AffineMapAttr>();
-      if (!affineMapAttr)
-        return emitError("expected affine map in memref type");
-      map = affineMapAttr.getValue();
+
+      if (AffineMapAttr affineMapAttr = attr.dyn_cast<AffineMapAttr>()) {
+        map = affineMapAttr.getValue();
+      } else if (memorySpace) {
+        return emitError("multiple memory spaces specified in memref type");
+      } else {
+        memorySpace = attr;
+        return success();
+      }
     }
+
+    if (isUnranked)
+      return emitError("cannot have affine map for unranked memref type");
+    if (memorySpace)
+      return emitError("expected memory space to be last in memref type");
 
     if (map.getNumDims() != numDims) {
       size_t i = affineMapComposition.size();
@@ -286,11 +283,15 @@ Type Parser::parseMemRefType() {
     }
   }
 
-  if (isUnranked)
-    return UnrankedMemRefType::get(elementType, memorySpace.getValueOr(0));
+  if (isUnranked) {
+    return UnrankedMemRefType::getChecked(
+        [&]() -> InFlightDiagnostic { return emitError(); }, elementType,
+        memorySpace);
+  }
 
-  return MemRefType::get(dimensions, elementType, affineMapComposition,
-                         memorySpace.getValueOr(0));
+  return MemRefType::getChecked(
+      [&]() -> InFlightDiagnostic { return emitError(); }, dimensions,
+      elementType, affineMapComposition, memorySpace);
 }
 
 /// Parse any type except the function type.
@@ -409,14 +410,29 @@ Type Parser::parseTensorType() {
   // Parse the element type.
   auto elementTypeLoc = getToken().getLoc();
   auto elementType = parseType();
+
+  // Parse an optional encoding attribute.
+  Attribute encoding;
+  if (consumeIf(Token::comma)) {
+    encoding = parseAttribute();
+    if (auto v = encoding.dyn_cast_or_null<VerifiableTensorEncoding>()) {
+      if (failed(v.verifyEncoding(dimensions, elementType,
+                                  [&] { return emitError(); })))
+        return nullptr;
+    }
+  }
+
   if (!elementType || parseToken(Token::greater, "expected '>' in tensor type"))
     return nullptr;
   if (!TensorType::isValidElementType(elementType))
     return emitError(elementTypeLoc, "invalid tensor element type"), nullptr;
 
-  if (isUnranked)
+  if (isUnranked) {
+    if (encoding)
+      return emitError("cannot apply encoding to unranked tensor"), nullptr;
     return UnrankedTensorType::get(elementType);
-  return RankedTensorType::get(dimensions, elementType);
+  }
+  return RankedTensorType::get(dimensions, elementType, encoding);
 }
 
 /// Parse a tuple type.
@@ -472,7 +488,7 @@ VectorType Parser::parseVectorType() {
   if (!elementType || parseToken(Token::greater, "expected '>' in vector type"))
     return nullptr;
   if (!VectorType::isValidElementType(elementType))
-    return emitError(typeLoc, "vector elements must be int or float type"),
+    return emitError(typeLoc, "vector elements must be int/index/float type"),
            nullptr;
 
   return VectorType::get(dimensions, elementType);

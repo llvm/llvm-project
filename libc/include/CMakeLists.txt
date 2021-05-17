@@ -119,6 +119,7 @@ add_gen_header(
   DEF_FILE unistd.h.def
   GEN_HDR unistd.h
   DEPENDS
+    .libc_posix_types
     .llvm_libc_common_h
 )
 

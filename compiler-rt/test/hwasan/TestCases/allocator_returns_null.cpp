@@ -48,42 +48,40 @@
 #include <limits>
 #include <new>
 
-#include "utils.h"
-
 int main(int argc, char **argv) {
   assert(argc == 2);
   const char *action = argv[1];
-  untag_fprintf(stderr, "%s:\n", action);
+  fprintf(stderr, "%s:\n", action);
 
   static const size_t kMaxAllowedMallocSizePlusOne = (1UL << 40) + 1;
 
   void *x = nullptr;
-  if (!untag_strcmp(action, "malloc")) {
+  if (!strcmp(action, "malloc")) {
     x = malloc(kMaxAllowedMallocSizePlusOne);
-  } else if (!untag_strcmp(action, "calloc")) {
+  } else if (!strcmp(action, "calloc")) {
     x = calloc((kMaxAllowedMallocSizePlusOne / 4) + 1, 4);
-  } else if (!untag_strcmp(action, "calloc-overflow")) {
+  } else if (!strcmp(action, "calloc-overflow")) {
     volatile size_t kMaxSizeT = std::numeric_limits<size_t>::max();
     size_t kArraySize = 4096;
     volatile size_t kArraySize2 = kMaxSizeT / kArraySize + 10;
     x = calloc(kArraySize, kArraySize2);
-  } else if (!untag_strcmp(action, "realloc")) {
+  } else if (!strcmp(action, "realloc")) {
     x = realloc(0, kMaxAllowedMallocSizePlusOne);
-  } else if (!untag_strcmp(action, "realloc-after-malloc")) {
+  } else if (!strcmp(action, "realloc-after-malloc")) {
     char *t = (char*)malloc(100);
     *t = 42;
     x = realloc(t, kMaxAllowedMallocSizePlusOne);
     assert(*t == 42);
     free(t);
-  } else if (!untag_strcmp(action, "new")) {
+  } else if (!strcmp(action, "new")) {
     x = operator new(kMaxAllowedMallocSizePlusOne);
-  } else if (!untag_strcmp(action, "new-nothrow")) {
+  } else if (!strcmp(action, "new-nothrow")) {
     x = operator new(kMaxAllowedMallocSizePlusOne, std::nothrow);
   } else {
     assert(0);
   }
 
-  untag_fprintf(stderr, "errno: %d\n", errno);
+  fprintf(stderr, "errno: %d\n", errno);
 
   free(x);
 

@@ -103,7 +103,7 @@ uintptr_t __gwp_asan_get_allocation_address(
 
 size_t __gwp_asan_get_allocation_size(
     const gwp_asan::AllocationMetadata *AllocationMeta) {
-  return AllocationMeta->Size;
+  return AllocationMeta->RequestedSize;
 }
 
 uint64_t __gwp_asan_get_allocation_thread_id(

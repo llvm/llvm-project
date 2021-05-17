@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -64,7 +65,7 @@ remainsLegalAfterInline(Value value, Region *src, Region *dest,
   // op won't be top-level anymore after inlining.
   Attribute operandCst;
   return matchPattern(value.getDefiningOp(), m_Constant(&operandCst)) ||
-         value.getDefiningOp<DimOp>();
+         value.getDefiningOp<memref::DimOp>();
 }
 
 /// Checks if all values known to be legal affine dimensions or symbols in `src`
@@ -295,7 +296,7 @@ bool mlir::isValidDim(Value value, Region *region) {
     return applyOp.isValidDim(region);
   // The dim op is okay if its operand memref/tensor is defined at the top
   // level.
-  if (auto dimOp = dyn_cast<DimOp>(op))
+  if (auto dimOp = dyn_cast<memref::DimOp>(op))
     return isTopLevelValue(dimOp.memrefOrTensor());
   return false;
 }
@@ -317,9 +318,8 @@ static bool isMemRefSizeValidSymbol(AnyMemRefDefOp memrefDefOp, unsigned index,
 }
 
 /// Returns true if the result of the dim op is a valid symbol for `region`.
-static bool isDimOpValidSymbol(DimOp dimOp, Region *region) {
-  // The dim op is okay if its operand memref/tensor is defined at the top
-  // level.
+static bool isDimOpValidSymbol(memref::DimOp dimOp, Region *region) {
+  // The dim op is okay if its operand memref is defined at the top level.
   if (isTopLevelValue(dimOp.memrefOrTensor()))
     return true;
 
@@ -328,14 +328,14 @@ static bool isDimOpValidSymbol(DimOp dimOp, Region *region) {
   if (dimOp.memrefOrTensor().isa<BlockArgument>())
     return false;
 
-  // The dim op is also okay if its operand memref/tensor is a view/subview
-  // whose corresponding size is a valid symbol.
+  // The dim op is also okay if its operand memref is a view/subview whose
+  // corresponding size is a valid symbol.
   Optional<int64_t> index = dimOp.getConstantIndex();
   assert(index.hasValue() &&
          "expect only `dim` operations with a constant index");
   int64_t i = index.getValue();
   return TypeSwitch<Operation *, bool>(dimOp.memrefOrTensor().getDefiningOp())
-      .Case<ViewOp, SubViewOp, AllocOp>(
+      .Case<memref::ViewOp, memref::SubViewOp, memref::AllocOp>(
           [&](auto op) { return isMemRefSizeValidSymbol(op, i, region); })
       .Default([](Operation *) { return false; });
 }
@@ -387,7 +387,8 @@ bool mlir::isValidSymbol(Value value, Region *region) {
   if (!defOp) {
     // A block argument that is not a top-level value is a valid symbol if it
     // dominates region's parent op.
-    if (region && !region->getParentOp()->isKnownIsolatedFromAbove())
+    Operation *regionOp = region ? region->getParentOp() : nullptr;
+    if (regionOp && !regionOp->hasTrait<OpTrait::IsIsolatedFromAbove>())
       if (auto *parentOpRegion = region->getParentOp()->getParentRegion())
         return isValidSymbol(value, parentOpRegion);
     return false;
@@ -403,11 +404,12 @@ bool mlir::isValidSymbol(Value value, Region *region) {
     return applyOp.isValidSymbol(region);
 
   // Dim op results could be valid symbols at any level.
-  if (auto dimOp = dyn_cast<DimOp>(defOp))
+  if (auto dimOp = dyn_cast<memref::DimOp>(defOp))
     return isDimOpValidSymbol(dimOp, region);
 
   // Check for values dominating `region`'s parent op.
-  if (region && !region->getParentOp()->isKnownIsolatedFromAbove())
+  Operation *regionOp = region ? region->getParentOp() : nullptr;
+  if (regionOp && !regionOp->hasTrait<OpTrait::IsIsolatedFromAbove>())
     if (auto *parentRegion = region->getParentOp()->getParentRegion())
       return isValidSymbol(value, parentRegion);
 
@@ -504,7 +506,7 @@ static void print(OpAsmPrinter &p, AffineApplyOp op) {
   p << AffineApplyOp::getOperationName() << " " << op.mapAttr();
   printDimAndSymbolList(op.operand_begin(), op.operand_end(),
                         op.getAffineMap().getNumDims(), p);
-  p.printOptionalAttrDict(op.getAttrs(), /*elidedAttrs=*/{"map"});
+  p.printOptionalAttrDict(op->getAttrs(), /*elidedAttrs=*/{"map"});
 }
 
 static LogicalResult verify(AffineApplyOp op) {
@@ -570,264 +572,119 @@ OpFoldResult AffineApplyOp::fold(ArrayRef<Attribute> operands) {
   return result[0];
 }
 
-AffineDimExpr AffineApplyNormalizer::renumberOneDim(Value v) {
-  DenseMap<Value, unsigned>::iterator iterPos;
-  bool inserted = false;
-  std::tie(iterPos, inserted) =
-      dimValueToPosition.insert(std::make_pair(v, dimValueToPosition.size()));
-  if (inserted) {
-    reorderedDims.push_back(v);
-  }
-  return getAffineDimExpr(iterPos->second, v.getContext())
-      .cast<AffineDimExpr>();
+/// Replace all occurrences of AffineExpr at position `pos` in `map` by the
+/// defining AffineApplyOp expression and operands.
+/// When `dimOrSymbolPosition < dims.size()`, AffineDimExpr@[pos] is replaced.
+/// When `dimOrSymbolPosition >= dims.size()`,
+/// AffineSymbolExpr@[pos - dims.size()] is replaced.
+/// Mutate `map`,`dims` and `syms` in place as follows:
+///   1. `dims` and `syms` are only appended to.
+///   2. `map` dim and symbols are gradually shifted to higer positions.
+///   3. Old `dim` and `sym` entries are replaced by nullptr
+/// This avoids the need for any bookkeeping.
+static LogicalResult replaceDimOrSym(AffineMap *map,
+                                     unsigned dimOrSymbolPosition,
+                                     SmallVectorImpl<Value> &dims,
+                                     SmallVectorImpl<Value> &syms) {
+  bool isDimReplacement = (dimOrSymbolPosition < dims.size());
+  unsigned pos = isDimReplacement ? dimOrSymbolPosition
+                                  : dimOrSymbolPosition - dims.size();
+  Value &v = isDimReplacement ? dims[pos] : syms[pos];
+  if (!v)
+    return failure();
+
+  auto affineApply = v.getDefiningOp<AffineApplyOp>();
+  if (!affineApply)
+    return failure();
+
+  // At this point we will perform a replacement of `v`, set the entry in `dim`
+  // or `sym` to nullptr immediately.
+  v = nullptr;
+
+  // Compute the map, dims and symbols coming from the AffineApplyOp.
+  AffineMap composeMap = affineApply.getAffineMap();
+  assert(composeMap.getNumResults() == 1 && "affine.apply with >1 results");
+  AffineExpr composeExpr =
+      composeMap.shiftDims(dims.size()).shiftSymbols(syms.size()).getResult(0);
+  ValueRange composeDims =
+      affineApply.getMapOperands().take_front(composeMap.getNumDims());
+  ValueRange composeSyms =
+      affineApply.getMapOperands().take_back(composeMap.getNumSymbols());
+
+  // Perform the replacement and append the dims and symbols where relevant.
+  MLIRContext *ctx = map->getContext();
+  AffineExpr toReplace = isDimReplacement ? getAffineDimExpr(pos, ctx)
+                                          : getAffineSymbolExpr(pos, ctx);
+  *map = map->replace(toReplace, composeExpr, dims.size(), syms.size());
+  dims.append(composeDims.begin(), composeDims.end());
+  syms.append(composeSyms.begin(), composeSyms.end());
+
+  return success();
 }
 
-AffineMap AffineApplyNormalizer::renumber(const AffineApplyNormalizer &other) {
-  SmallVector<AffineExpr, 8> dimRemapping;
-  for (auto v : other.reorderedDims) {
-    auto kvp = other.dimValueToPosition.find(v);
-    if (dimRemapping.size() <= kvp->second)
-      dimRemapping.resize(kvp->second + 1);
-    dimRemapping[kvp->second] = renumberOneDim(kvp->first);
-  }
-  unsigned numSymbols = concatenatedSymbols.size();
-  unsigned numOtherSymbols = other.concatenatedSymbols.size();
-  SmallVector<AffineExpr, 8> symRemapping(numOtherSymbols);
-  for (unsigned idx = 0; idx < numOtherSymbols; ++idx) {
-    symRemapping[idx] =
-        getAffineSymbolExpr(idx + numSymbols, other.affineMap.getContext());
-  }
-  concatenatedSymbols.insert(concatenatedSymbols.end(),
-                             other.concatenatedSymbols.begin(),
-                             other.concatenatedSymbols.end());
-  auto map = other.affineMap;
-  return map.replaceDimsAndSymbols(dimRemapping, symRemapping,
-                                   reorderedDims.size(),
-                                   concatenatedSymbols.size());
-}
-
-// Gather the positions of the operands that are produced by an AffineApplyOp.
-static llvm::SetVector<unsigned>
-indicesFromAffineApplyOp(ArrayRef<Value> operands) {
-  llvm::SetVector<unsigned> res;
-  for (auto en : llvm::enumerate(operands))
-    if (isa_and_nonnull<AffineApplyOp>(en.value().getDefiningOp()))
-      res.insert(en.index());
-  return res;
-}
-
-// Support the special case of a symbol coming from an AffineApplyOp that needs
-// to be composed into the current AffineApplyOp.
-// This case is handled by rewriting all such symbols into dims for the purpose
-// of allowing mathematical AffineMap composition.
-// Returns an AffineMap where symbols that come from an AffineApplyOp have been
-// rewritten as dims and are ordered after the original dims.
-// TODO: This promotion makes AffineMap lose track of which
-// symbols are represented as dims. This loss is static but can still be
-// recovered dynamically (with `isValidSymbol`). Still this is annoying for the
-// semi-affine map case. A dynamic canonicalization of all dims that are valid
-// symbols (a.k.a `canonicalizePromotedSymbols`) into symbols helps and even
-// results in better simplifications and foldings. But we should evaluate
-// whether this behavior is what we really want after using more.
-static AffineMap promoteComposedSymbolsAsDims(AffineMap map,
-                                              ArrayRef<Value> symbols) {
-  if (symbols.empty()) {
-    return map;
-  }
-
-  // Extract the symbol positions that come from an AffineApplyOp and
-  // needs to be rewritten as dims.
-  auto symPositions = indicesFromAffineApplyOp(symbols);
-  if (symPositions.empty()) {
-    return map;
-  }
-
-  // Create the new map by replacing each symbol at pos by the next new dim.
-  unsigned numDims = map.getNumDims();
-  unsigned numSymbols = map.getNumSymbols();
-  unsigned numNewDims = 0;
-  unsigned numNewSymbols = 0;
-  SmallVector<AffineExpr, 8> symReplacements(numSymbols);
-  for (unsigned i = 0; i < numSymbols; ++i) {
-    symReplacements[i] =
-        symPositions.count(i) > 0
-            ? getAffineDimExpr(numDims + numNewDims++, map.getContext())
-            : getAffineSymbolExpr(numNewSymbols++, map.getContext());
-  }
-  assert(numSymbols >= numNewDims);
-  AffineMap newMap = map.replaceDimsAndSymbols(
-      {}, symReplacements, numDims + numNewDims, numNewSymbols);
-
-  return newMap;
-}
-
-/// The AffineNormalizer composes AffineApplyOp recursively. Its purpose is to
-/// keep a correspondence between the mathematical `map` and the `operands` of
-/// a given AffineApplyOp. This correspondence is maintained by iterating over
-/// the operands and forming an `auxiliaryMap` that can be composed
-/// mathematically with `map`. To keep this correspondence in cases where
-/// symbols are produced by affine.apply operations, we perform a local rewrite
-/// of symbols as dims.
-///
-/// Rationale for locally rewriting symbols as dims:
-/// ================================================
-/// The mathematical composition of AffineMap must always concatenate symbols
-/// because it does not have enough information to do otherwise. For example,
-/// composing `(d0)[s0] -> (d0 + s0)` with itself must produce
-/// `(d0)[s0, s1] -> (d0 + s0 + s1)`.
-///
-/// The result is only equivalent to `(d0)[s0] -> (d0 + 2 * s0)` when
-/// applied to the same mlir::Value for both s0 and s1.
-/// As a consequence mathematical composition of AffineMap always concatenates
-/// symbols.
-///
-/// When AffineMaps are used in AffineApplyOp however, they may specify
-/// composition via symbols, which is ambiguous mathematically. This corner case
-/// is handled by locally rewriting such symbols that come from AffineApplyOp
-/// into dims and composing through dims.
-/// TODO: Composition via symbols comes at a significant code
-/// complexity. Alternatively we should investigate whether we want to
-/// explicitly disallow symbols coming from affine.apply and instead force the
-/// user to compose symbols beforehand. The annoyances may be small (i.e. 1 or 2
-/// extra API calls for such uses, which haven't popped up until now) and the
-/// benefit potentially big: simpler and more maintainable code for a
-/// non-trivial, recursive, procedure.
-AffineApplyNormalizer::AffineApplyNormalizer(AffineMap map,
-                                             ArrayRef<Value> operands)
-    : AffineApplyNormalizer() {
-  static_assert(kMaxAffineApplyDepth > 0, "kMaxAffineApplyDepth must be > 0");
-  assert(map.getNumInputs() == operands.size() &&
-         "number of operands does not match the number of map inputs");
-
-  LLVM_DEBUG(map.print(dbgs() << "\nInput map: "));
-
-  // Promote symbols that come from an AffineApplyOp to dims by rewriting the
-  // map to always refer to:
-  //   (dims, symbols coming from AffineApplyOp, other symbols).
-  // The order of operands can remain unchanged.
-  // This is a simplification that relies on 2 ordering properties:
-  //   1. rewritten symbols always appear after the original dims in the map;
-  //   2. operands are traversed in order and either dispatched to:
-  //      a. auxiliaryExprs (dims and symbols rewritten as dims);
-  //      b. concatenatedSymbols (all other symbols)
-  // This allows operand order to remain unchanged.
-  unsigned numDimsBeforeRewrite = map.getNumDims();
-  map = promoteComposedSymbolsAsDims(map,
-                                     operands.take_back(map.getNumSymbols()));
-
-  LLVM_DEBUG(map.print(dbgs() << "\nRewritten map: "));
-
-  SmallVector<AffineExpr, 8> auxiliaryExprs;
-  bool furtherCompose = (affineApplyDepth() <= kMaxAffineApplyDepth);
-  // We fully spell out the 2 cases below. In this particular instance a little
-  // code duplication greatly improves readability.
-  // Note that the first branch would disappear if we only supported full
-  // composition (i.e. infinite kMaxAffineApplyDepth).
-  if (!furtherCompose) {
-    // 1. Only dispatch dims or symbols.
-    for (auto en : llvm::enumerate(operands)) {
-      auto t = en.value();
-      assert(t.getType().isIndex());
-      bool isDim = (en.index() < map.getNumDims());
-      if (isDim) {
-        // a. The mathematical composition of AffineMap composes dims.
-        auxiliaryExprs.push_back(renumberOneDim(t));
-      } else {
-        // b. The mathematical composition of AffineMap concatenates symbols.
-        //    We do the same for symbol operands.
-        concatenatedSymbols.push_back(t);
-      }
-    }
-  } else {
-    assert(numDimsBeforeRewrite <= operands.size());
-    // 2. Compose AffineApplyOps and dispatch dims or symbols.
-    for (unsigned i = 0, e = operands.size(); i < e; ++i) {
-      auto t = operands[i];
-      auto affineApply = t.getDefiningOp<AffineApplyOp>();
-      if (affineApply) {
-        // a. Compose affine.apply operations.
-        LLVM_DEBUG(affineApply->print(
-            dbgs() << "\nCompose AffineApplyOp recursively: "));
-        AffineMap affineApplyMap = affineApply.getAffineMap();
-        SmallVector<Value, 8> affineApplyOperands(
-            affineApply.getOperands().begin(), affineApply.getOperands().end());
-        AffineApplyNormalizer normalizer(affineApplyMap, affineApplyOperands);
-
-        LLVM_DEBUG(normalizer.affineMap.print(
-            dbgs() << "\nRenumber into current normalizer: "));
-
-        auto renumberedMap = renumber(normalizer);
-
-        LLVM_DEBUG(
-            renumberedMap.print(dbgs() << "\nRecursive composition yields: "));
-
-        auxiliaryExprs.push_back(renumberedMap.getResult(0));
-      } else {
-        if (i < numDimsBeforeRewrite) {
-          // b. The mathematical composition of AffineMap composes dims.
-          auxiliaryExprs.push_back(renumberOneDim(t));
-        } else {
-          // c. The mathematical composition of AffineMap concatenates symbols.
-          //    Note that the map composition will put symbols already present
-          //    in the map before any symbols coming from the auxiliary map, so
-          //    we insert them before any symbols that are due to renumbering,
-          //    and after the proper symbols we have seen already.
-          concatenatedSymbols.insert(
-              std::next(concatenatedSymbols.begin(), numProperSymbols++), t);
-        }
-      }
-    }
-  }
-
-  // Early exit if `map` is already composed.
-  if (auxiliaryExprs.empty()) {
-    affineMap = map;
+/// Iterate over `operands` and fold away all those produced by an AffineApplyOp
+/// iteratively. Perform canonicalization of map and operands as well as
+/// AffineMap simplification. `map` and `operands` are mutated in place.
+static void composeAffineMapAndOperands(AffineMap *map,
+                                        SmallVectorImpl<Value> *operands) {
+  if (map->getNumResults() == 0) {
+    canonicalizeMapAndOperands(map, operands);
+    *map = simplifyAffineMap(*map);
     return;
   }
 
-  assert(concatenatedSymbols.size() >= map.getNumSymbols() &&
-         "Unexpected number of concatenated symbols");
-  auto numDims = dimValueToPosition.size();
-  auto numSymbols = concatenatedSymbols.size() - map.getNumSymbols();
-  auto auxiliaryMap =
-      AffineMap::get(numDims, numSymbols, auxiliaryExprs, map.getContext());
+  MLIRContext *ctx = map->getContext();
+  SmallVector<Value, 4> dims(operands->begin(),
+                             operands->begin() + map->getNumDims());
+  SmallVector<Value, 4> syms(operands->begin() + map->getNumDims(),
+                             operands->end());
 
-  LLVM_DEBUG(map.print(dbgs() << "\nCompose map: "));
-  LLVM_DEBUG(auxiliaryMap.print(dbgs() << "\nWith map: "));
-  LLVM_DEBUG(map.compose(auxiliaryMap).print(dbgs() << "\nResult: "));
+  // Iterate over dims and symbols coming from AffineApplyOp and replace until
+  // exhaustion. This iteratively mutates `map`, `dims` and `syms`. Both `dims`
+  // and `syms` can only increase by construction.
+  // The implementation uses a `while` loop to support the case of symbols
+  // that may be constructed from dims ;this may be overkill.
+  while (true) {
+    bool changed = false;
+    for (unsigned pos = 0; pos != dims.size() + syms.size(); ++pos)
+      if ((changed |= succeeded(replaceDimOrSym(map, pos, dims, syms))))
+        break;
+    if (!changed)
+      break;
+  }
 
-  // TODO: Disabling simplification results in major speed gains.
-  // Another option is to cache the results as it is expected a lot of redundant
-  // work is performed in practice.
-  affineMap = simplifyAffineMap(map.compose(auxiliaryMap));
+  // Clear operands so we can fill them anew.
+  operands->clear();
 
-  LLVM_DEBUG(affineMap.print(dbgs() << "\nSimplified result: "));
-  LLVM_DEBUG(dbgs() << "\n");
-}
+  // At this point we may have introduced null operands, prune them out before
+  // canonicalizing map and operands.
+  unsigned nDims = 0, nSyms = 0;
+  SmallVector<AffineExpr, 4> dimReplacements, symReplacements;
+  dimReplacements.reserve(dims.size());
+  symReplacements.reserve(syms.size());
+  for (auto *container : {&dims, &syms}) {
+    bool isDim = (container == &dims);
+    auto &repls = isDim ? dimReplacements : symReplacements;
+    for (auto en : llvm::enumerate(*container)) {
+      Value v = en.value();
+      if (!v) {
+        assert(isDim ? !map->isFunctionOfDim(en.index())
+                     : !map->isFunctionOfSymbol(en.index()) &&
+                           "map is function of unexpected expr@pos");
+        repls.push_back(getAffineConstantExpr(0, ctx));
+        continue;
+      }
+      repls.push_back(isDim ? getAffineDimExpr(nDims++, ctx)
+                            : getAffineSymbolExpr(nSyms++, ctx));
+      operands->push_back(v);
+    }
+  }
+  *map = map->replaceDimsAndSymbols(dimReplacements, symReplacements, nDims,
+                                    nSyms);
 
-void AffineApplyNormalizer::normalize(AffineMap *otherMap,
-                                      SmallVectorImpl<Value> *otherOperands) {
-  AffineApplyNormalizer other(*otherMap, *otherOperands);
-  *otherMap = renumber(other);
-
-  otherOperands->reserve(reorderedDims.size() + concatenatedSymbols.size());
-  otherOperands->assign(reorderedDims.begin(), reorderedDims.end());
-  otherOperands->append(concatenatedSymbols.begin(), concatenatedSymbols.end());
-}
-
-/// Implements `map` and `operands` composition and simplification to support
-/// `makeComposedAffineApply`. This can be called to achieve the same effects
-/// on `map` and `operands` without creating an AffineApplyOp that needs to be
-/// immediately deleted.
-static void composeAffineMapAndOperands(AffineMap *map,
-                                        SmallVectorImpl<Value> *operands) {
-  AffineApplyNormalizer normalizer(*map, *operands);
-  auto normalizedMap = normalizer.getAffineMap();
-  auto normalizedOperands = normalizer.getOperands();
-  canonicalizeMapAndOperands(&normalizedMap, &normalizedOperands);
-  *map = normalizedMap;
-  *operands = normalizedOperands;
-  assert(*map);
+  // Canonicalize and simplify before returning.
+  canonicalizeMapAndOperands(map, operands);
+  *map = simplifyAffineMap(*map);
 }
 
 void mlir::fullyComposeAffineMapAndOperands(AffineMap *map,
@@ -996,15 +853,18 @@ struct SimplifyAffineOp : public OpRewritePattern<AffineOpTy> {
 
   LogicalResult matchAndRewrite(AffineOpTy affineOp,
                                 PatternRewriter &rewriter) const override {
-    static_assert(llvm::is_one_of<AffineOpTy, AffineLoadOp, AffinePrefetchOp,
-                                  AffineStoreOp, AffineApplyOp, AffineMinOp,
-                                  AffineMaxOp>::value,
-                  "affine load/store/apply/prefetch/min/max op expected");
+    static_assert(
+        llvm::is_one_of<AffineOpTy, AffineLoadOp, AffinePrefetchOp,
+                        AffineStoreOp, AffineApplyOp, AffineMinOp, AffineMaxOp,
+                        AffineVectorStoreOp, AffineVectorLoadOp>::value,
+        "affine load/store/vectorstore/vectorload/apply/prefetch/min/max op "
+        "expected");
     auto map = affineOp.getAffineMap();
     AffineMap oldMap = map;
     auto oldOperands = affineOp.getMapOperands();
     SmallVector<Value, 8> resultOperands(oldOperands);
     composeAffineMapAndOperands(&map, &resultOperands);
+    canonicalizeMapAndOperands(&map, &resultOperands);
     if (map == oldMap && std::equal(oldOperands.begin(), oldOperands.end(),
                                     resultOperands.begin()))
       return failure();
@@ -1038,6 +898,22 @@ void SimplifyAffineOp<AffineStoreOp>::replaceAffineOp(
   rewriter.replaceOpWithNewOp<AffineStoreOp>(
       store, store.getValueToStore(), store.getMemRef(), map, mapOperands);
 }
+template <>
+void SimplifyAffineOp<AffineVectorLoadOp>::replaceAffineOp(
+    PatternRewriter &rewriter, AffineVectorLoadOp vectorload, AffineMap map,
+    ArrayRef<Value> mapOperands) const {
+  rewriter.replaceOpWithNewOp<AffineVectorLoadOp>(
+      vectorload, vectorload.getVectorType(), vectorload.getMemRef(), map,
+      mapOperands);
+}
+template <>
+void SimplifyAffineOp<AffineVectorStoreOp>::replaceAffineOp(
+    PatternRewriter &rewriter, AffineVectorStoreOp vectorstore, AffineMap map,
+    ArrayRef<Value> mapOperands) const {
+  rewriter.replaceOpWithNewOp<AffineVectorStoreOp>(
+      vectorstore, vectorstore.getValueToStore(), vectorstore.getMemRef(), map,
+      mapOperands);
+}
 
 // Generic version for ops that don't have extra operands.
 template <typename AffineOpTy>
@@ -1048,9 +924,9 @@ void SimplifyAffineOp<AffineOpTy>::replaceAffineOp(
 }
 } // end anonymous namespace.
 
-void AffineApplyOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<SimplifyAffineOp<AffineApplyOp>>(context);
+void AffineApplyOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                MLIRContext *context) {
+  results.add<SimplifyAffineOp<AffineApplyOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1058,12 +934,12 @@ void AffineApplyOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 
 /// This is a common class used for patterns of the form
-/// "someop(memrefcast) -> someop".  It folds the source of any memref_cast
+/// "someop(memrefcast) -> someop".  It folds the source of any memref.cast
 /// into the root operation directly.
 static LogicalResult foldMemRefCast(Operation *op) {
   bool folded = false;
   for (OpOperand &operand : op->getOpOperands()) {
-    auto cast = operand.get().getDefiningOp<MemRefCastOp>();
+    auto cast = operand.get().getDefiningOp<memref::CastOp>();
     if (cast && !cast.getOperand().getType().isa<UnrankedMemRefType>()) {
       operand.set(cast.getOperand());
       folded = true;
@@ -1202,10 +1078,6 @@ LogicalResult AffineDmaStartOp::verify() {
   if (!getOperand(getTagMemRefOperandIndex()).getType().isa<MemRefType>())
     return emitOpError("expected DMA tag to be of memref type");
 
-  // DMAs from different memory spaces supported.
-  if (getSrcMemorySpace() == getDstMemorySpace()) {
-    return emitOpError("DMA should be between different memory spaces");
-  }
   unsigned numInputsAllMaps = getSrcMap().getNumInputs() +
                               getDstMap().getNumInputs() +
                               getTagMap().getNumInputs();
@@ -1659,7 +1531,7 @@ static void print(OpAsmPrinter &p, AffineForOp op) {
 
   p.printRegion(op.region(),
                 /*printEntryBlockArgs=*/false, printBlockTerminators);
-  p.printOptionalAttrDict(op.getAttrs(),
+  p.printOptionalAttrDict(op->getAttrs(),
                           /*elidedAttrs=*/{op.getLowerBoundAttrName(),
                                            op.getUpperBoundAttrName(),
                                            op.getStepAttrName()});
@@ -1721,9 +1593,11 @@ static LogicalResult canonicalizeLoopBounds(AffineForOp forOp) {
   auto prevLbMap = lbMap;
   auto prevUbMap = ubMap;
 
+  composeAffineMapAndOperands(&lbMap, &lbOperands);
   canonicalizeMapAndOperands(&lbMap, &lbOperands);
   lbMap = removeDuplicateExprs(lbMap);
 
+  composeAffineMapAndOperands(&ubMap, &ubOperands);
   canonicalizeMapAndOperands(&ubMap, &ubOperands);
   ubMap = removeDuplicateExprs(ubMap);
 
@@ -1754,9 +1628,9 @@ struct AffineForEmptyLoopFolder : public OpRewritePattern<AffineForOp> {
 };
 } // end anonymous namespace
 
-void AffineForOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void AffineForOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.insert<AffineForEmptyLoopFolder>(context);
+  results.add<AffineForEmptyLoopFolder>(context);
 }
 
 LogicalResult AffineForOp::fold(ArrayRef<Attribute> operands,
@@ -2112,7 +1986,7 @@ static void print(OpAsmPrinter &p, AffineIfOp op) {
   }
 
   // Print the attribute list.
-  p.printOptionalAttrDict(op.getAttrs(),
+  p.printOptionalAttrDict(op->getAttrs(),
                           /*elidedAttrs=*/op.getConditionAttrName());
 }
 
@@ -2176,9 +2050,9 @@ LogicalResult AffineIfOp::fold(ArrayRef<Attribute>,
   return failure();
 }
 
-void AffineIfOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void AffineIfOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                              MLIRContext *context) {
-  results.insert<SimplifyDeadElse>(context);
+  results.add<SimplifyDeadElse>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2243,7 +2117,8 @@ static void print(OpAsmPrinter &p, AffineLoadOp op) {
           op->getAttrOfType<AffineMapAttr>(op.getMapAttrName()))
     p.printAffineMapOfSSAIds(mapAttr, op.getMapOperands());
   p << ']';
-  p.printOptionalAttrDict(op.getAttrs(), /*elidedAttrs=*/{op.getMapAttrName()});
+  p.printOptionalAttrDict(op->getAttrs(),
+                          /*elidedAttrs=*/{op.getMapAttrName()});
   p << " : " << op.getMemRefType();
 }
 
@@ -2291,9 +2166,9 @@ LogicalResult verify(AffineLoadOp op) {
   return success();
 }
 
-void AffineLoadOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<SimplifyAffineOp<AffineLoadOp>>(context);
+void AffineLoadOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                               MLIRContext *context) {
+  results.add<SimplifyAffineOp<AffineLoadOp>>(context);
 }
 
 OpFoldResult AffineLoadOp::fold(ArrayRef<Attribute> cstOperands) {
@@ -2359,7 +2234,8 @@ static void print(OpAsmPrinter &p, AffineStoreOp op) {
           op->getAttrOfType<AffineMapAttr>(op.getMapAttrName()))
     p.printAffineMapOfSSAIds(mapAttr, op.getMapOperands());
   p << ']';
-  p.printOptionalAttrDict(op.getAttrs(), /*elidedAttrs=*/{op.getMapAttrName()});
+  p.printOptionalAttrDict(op->getAttrs(),
+                          /*elidedAttrs=*/{op.getMapAttrName()});
   p << " : " << op.getMemRefType();
 }
 
@@ -2380,9 +2256,9 @@ LogicalResult verify(AffineStoreOp op) {
   return success();
 }
 
-void AffineStoreOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<SimplifyAffineOp<AffineStoreOp>>(context);
+void AffineStoreOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                MLIRContext *context) {
+  results.add<SimplifyAffineOp<AffineStoreOp>>(context);
 }
 
 LogicalResult AffineStoreOp::fold(ArrayRef<Attribute> cstOperands,
@@ -2395,7 +2271,8 @@ LogicalResult AffineStoreOp::fold(ArrayRef<Attribute> cstOperands,
 // AffineMinMaxOpBase
 //===----------------------------------------------------------------------===//
 
-template <typename T> static LogicalResult verifyAffineMinMaxOp(T op) {
+template <typename T>
+static LogicalResult verifyAffineMinMaxOp(T op) {
   // Verify that operand count matches affine map dimension and symbol count.
   if (op.getNumOperands() != op.map().getNumDims() + op.map().getNumSymbols())
     return op.emitOpError(
@@ -2403,7 +2280,8 @@ template <typename T> static LogicalResult verifyAffineMinMaxOp(T op) {
   return success();
 }
 
-template <typename T> static void printAffineMinMaxOp(OpAsmPrinter &p, T op) {
+template <typename T>
+static void printAffineMinMaxOp(OpAsmPrinter &p, T op) {
   p << op.getOperationName() << ' ' << op->getAttr(T::getMapAttrName());
   auto operands = op.getOperands();
   unsigned numDims = op.map().getNumDims();
@@ -2411,7 +2289,7 @@ template <typename T> static void printAffineMinMaxOp(OpAsmPrinter &p, T op) {
 
   if (operands.size() != numDims)
     p << '[' << operands.drop_front(numDims) << ']';
-  p.printOptionalAttrDict(op.getAttrs(),
+  p.printOptionalAttrDict(op->getAttrs(),
                           /*elidedAttrs=*/{T::getMapAttrName()});
 }
 
@@ -2466,6 +2344,130 @@ static OpFoldResult foldMinMaxOp(T op, ArrayRef<Attribute> operands) {
   return IntegerAttr::get(IndexType::get(op.getContext()), *resultIt);
 }
 
+/// Remove duplicated expressions in affine min/max ops.
+template <typename T>
+struct DeduplicateAffineMinMaxExpressions : public OpRewritePattern<T> {
+  using OpRewritePattern<T>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(T affineOp,
+                                PatternRewriter &rewriter) const override {
+    AffineMap oldMap = affineOp.getAffineMap();
+
+    SmallVector<AffineExpr, 4> newExprs;
+    for (AffineExpr expr : oldMap.getResults()) {
+      // This is a linear scan over newExprs, but it should be fine given that
+      // we typically just have a few expressions per op.
+      if (!llvm::is_contained(newExprs, expr))
+        newExprs.push_back(expr);
+    }
+
+    if (newExprs.size() == oldMap.getNumResults())
+      return failure();
+
+    auto newMap = AffineMap::get(oldMap.getNumDims(), oldMap.getNumSymbols(),
+                                 newExprs, rewriter.getContext());
+    rewriter.replaceOpWithNewOp<T>(affineOp, newMap, affineOp.getMapOperands());
+
+    return success();
+  }
+};
+
+/// Merge an affine min/max op to its consumers if its consumer is also an
+/// affine min/max op.
+///
+/// This pattern requires the producer affine min/max op is bound to a
+/// dimension/symbol that is used as a standalone expression in the consumer
+/// affine op's map.
+///
+/// For example, a pattern like the following:
+///
+///   %0 = affine.min affine_map<()[s0] -> (s0 + 16, s0 * 8)> ()[%sym1]
+///   %1 = affine.min affine_map<(d0)[s0] -> (s0 + 4, d0)> (%0)[%sym2]
+///
+/// Can be turned into:
+///
+///   %1 = affine.min affine_map<
+///          ()[s0, s1] -> (s0 + 4, s1 + 16, s1 * 8)> ()[%sym2, %sym1]
+template <typename T>
+struct MergeAffineMinMaxOp : public OpRewritePattern<T> {
+  using OpRewritePattern<T>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(T affineOp,
+                                PatternRewriter &rewriter) const override {
+    AffineMap oldMap = affineOp.getAffineMap();
+    ValueRange dimOperands =
+        affineOp.getMapOperands().take_front(oldMap.getNumDims());
+    ValueRange symOperands =
+        affineOp.getMapOperands().take_back(oldMap.getNumSymbols());
+
+    auto newDimOperands = llvm::to_vector<8>(dimOperands);
+    auto newSymOperands = llvm::to_vector<8>(symOperands);
+    SmallVector<AffineExpr, 4> newExprs;
+    SmallVector<T, 4> producerOps;
+
+    // Go over each expression to see whether it's a single dimension/symbol
+    // with the corresponding operand which is the result of another affine
+    // min/max op. If So it can be merged into this affine op.
+    for (AffineExpr expr : oldMap.getResults()) {
+      if (auto symExpr = expr.dyn_cast<AffineSymbolExpr>()) {
+        Value symValue = symOperands[symExpr.getPosition()];
+        if (auto producerOp = symValue.getDefiningOp<T>()) {
+          producerOps.push_back(producerOp);
+          continue;
+        }
+      } else if (auto dimExpr = expr.dyn_cast<AffineDimExpr>()) {
+        Value dimValue = dimOperands[dimExpr.getPosition()];
+        if (auto producerOp = dimValue.getDefiningOp<T>()) {
+          producerOps.push_back(producerOp);
+          continue;
+        }
+      }
+      // For the above cases we will remove the expression by merging the
+      // producer affine min/max's affine expressions. Otherwise we need to
+      // keep the existing expression.
+      newExprs.push_back(expr);
+    }
+
+    if (producerOps.empty())
+      return failure();
+
+    unsigned numUsedDims = oldMap.getNumDims();
+    unsigned numUsedSyms = oldMap.getNumSymbols();
+
+    // Now go over all producer affine ops and merge their expressions.
+    for (T producerOp : producerOps) {
+      AffineMap producerMap = producerOp.getAffineMap();
+      unsigned numProducerDims = producerMap.getNumDims();
+      unsigned numProducerSyms = producerMap.getNumSymbols();
+
+      // Collect all dimension/symbol values.
+      ValueRange dimValues =
+          producerOp.getMapOperands().take_front(numProducerDims);
+      ValueRange symValues =
+          producerOp.getMapOperands().take_back(numProducerSyms);
+      newDimOperands.append(dimValues.begin(), dimValues.end());
+      newSymOperands.append(symValues.begin(), symValues.end());
+
+      // For expressions we need to shift to avoid overlap.
+      for (AffineExpr expr : producerMap.getResults()) {
+        newExprs.push_back(expr.shiftDims(numProducerDims, numUsedDims)
+                               .shiftSymbols(numProducerSyms, numUsedSyms));
+      }
+
+      numUsedDims += numProducerDims;
+      numUsedSyms += numProducerSyms;
+    }
+
+    auto newMap = AffineMap::get(numUsedDims, numUsedSyms, newExprs,
+                                 rewriter.getContext());
+    auto newOperands =
+        llvm::to_vector<8>(llvm::concat<Value>(newDimOperands, newSymOperands));
+    rewriter.replaceOpWithNewOp<T>(affineOp, newMap, newOperands);
+
+    return success();
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // AffineMinOp
 //===----------------------------------------------------------------------===//
@@ -2477,9 +2479,11 @@ OpFoldResult AffineMinOp::fold(ArrayRef<Attribute> operands) {
   return foldMinMaxOp(*this, operands);
 }
 
-void AffineMinOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
-  patterns.insert<SimplifyAffineOp<AffineMinOp>>(context);
+void AffineMinOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                              MLIRContext *context) {
+  patterns.add<DeduplicateAffineMinMaxExpressions<AffineMinOp>,
+               MergeAffineMinMaxOp<AffineMinOp>, SimplifyAffineOp<AffineMinOp>>(
+      context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2493,9 +2497,11 @@ OpFoldResult AffineMaxOp::fold(ArrayRef<Attribute> operands) {
   return foldMinMaxOp(*this, operands);
 }
 
-void AffineMaxOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
-  patterns.insert<SimplifyAffineOp<AffineMaxOp>>(context);
+void AffineMaxOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                              MLIRContext *context) {
+  patterns.add<DeduplicateAffineMinMaxExpressions<AffineMaxOp>,
+               MergeAffineMinMaxOp<AffineMaxOp>, SimplifyAffineOp<AffineMaxOp>>(
+      context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2565,7 +2571,7 @@ static void print(OpAsmPrinter &p, AffinePrefetchOp op) {
     << "locality<" << op.localityHint() << ">, "
     << (op.isDataCache() ? "data" : "instr");
   p.printOptionalAttrDict(
-      op.getAttrs(),
+      op->getAttrs(),
       /*elidedAttrs=*/{op.getMapAttrName(), op.getLocalityHintAttrName(),
                        op.getIsDataCacheAttrName(), op.getIsWriteAttrName()});
   p << " : " << op.getMemRefType();
@@ -2593,10 +2599,10 @@ static LogicalResult verify(AffinePrefetchOp op) {
   return success();
 }
 
-void AffinePrefetchOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
+void AffinePrefetchOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                   MLIRContext *context) {
   // prefetch(memrefcast) -> prefetch
-  results.insert<SimplifyAffineOp<AffinePrefetchOp>>(context);
+  results.add<SimplifyAffineOp<AffinePrefetchOp>>(context);
 }
 
 LogicalResult AffinePrefetchOp::fold(ArrayRef<Attribute> cstOperands,
@@ -2613,45 +2619,46 @@ void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
                              TypeRange resultTypes,
                              ArrayRef<AtomicRMWKind> reductions,
                              ArrayRef<int64_t> ranges) {
-  SmallVector<AffineExpr, 8> lbExprs(ranges.size(),
-                                     builder.getAffineConstantExpr(0));
-  auto lbMap = AffineMap::get(0, 0, lbExprs, builder.getContext());
-  SmallVector<AffineExpr, 8> ubExprs;
-  for (int64_t range : ranges)
-    ubExprs.push_back(builder.getAffineConstantExpr(range));
-  auto ubMap = AffineMap::get(0, 0, ubExprs, builder.getContext());
-  build(builder, result, resultTypes, reductions, lbMap, /*lbArgs=*/{}, ubMap,
-        /*ubArgs=*/{});
+  SmallVector<AffineMap> lbs(ranges.size(), builder.getConstantAffineMap(0));
+  auto ubs = llvm::to_vector<4>(llvm::map_range(ranges, [&](int64_t value) {
+    return builder.getConstantAffineMap(value);
+  }));
+  SmallVector<int64_t> steps(ranges.size(), 1);
+  build(builder, result, resultTypes, reductions, lbs, /*lbArgs=*/{}, ubs,
+        /*ubArgs=*/{}, steps);
 }
 
 void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
                              TypeRange resultTypes,
                              ArrayRef<AtomicRMWKind> reductions,
-                             AffineMap lbMap, ValueRange lbArgs,
-                             AffineMap ubMap, ValueRange ubArgs) {
-  auto numDims = lbMap.getNumResults();
-  // Verify that the dimensionality of both maps are the same.
-  assert(numDims == ubMap.getNumResults() &&
-         "num dims and num results mismatch");
-  // Make default step sizes of 1.
-  SmallVector<int64_t, 8> steps(numDims, 1);
-  build(builder, result, resultTypes, reductions, lbMap, lbArgs, ubMap, ubArgs,
-        steps);
-}
-
-void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
-                             TypeRange resultTypes,
-                             ArrayRef<AtomicRMWKind> reductions,
-                             AffineMap lbMap, ValueRange lbArgs,
-                             AffineMap ubMap, ValueRange ubArgs,
+                             ArrayRef<AffineMap> lbMaps, ValueRange lbArgs,
+                             ArrayRef<AffineMap> ubMaps, ValueRange ubArgs,
                              ArrayRef<int64_t> steps) {
-  auto numDims = lbMap.getNumResults();
-  // Verify that the dimensionality of the maps matches the number of steps.
-  assert(numDims == ubMap.getNumResults() &&
-         "num dims and num results mismatch");
-  assert(numDims == steps.size() && "num dims and num steps mismatch");
+  assert(!lbMaps.empty() && "expected the lower bound map to be non-empty");
+  assert(!ubMaps.empty() && "expected the upper bound map to be non-empty");
+  assert(llvm::all_of(lbMaps,
+                      [lbMaps](AffineMap m) {
+                        return m.getNumDims() == lbMaps[0].getNumDims() &&
+                               m.getNumSymbols() == lbMaps[0].getNumSymbols();
+                      }) &&
+         "expected all lower bounds maps to have the same number of dimensions "
+         "and symbols");
+  assert(llvm::all_of(ubMaps,
+                      [ubMaps](AffineMap m) {
+                        return m.getNumDims() == ubMaps[0].getNumDims() &&
+                               m.getNumSymbols() == ubMaps[0].getNumSymbols();
+                      }) &&
+         "expected all upper bounds maps to have the same number of dimensions "
+         "and symbols");
+  assert(lbMaps[0].getNumInputs() == lbArgs.size() &&
+         "expected lower bound maps to have as many inputs as lower bound "
+         "operands");
+  assert(ubMaps[0].getNumInputs() == ubArgs.size() &&
+         "expected upper bound maps to have as many inputs as upper bound "
+         "operands");
 
   result.addTypes(resultTypes);
+
   // Convert the reductions to integer attributes.
   SmallVector<Attribute, 4> reductionAttrs;
   for (AtomicRMWKind reduction : reductions)
@@ -2659,16 +2666,42 @@ void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
         builder.getI64IntegerAttr(static_cast<int64_t>(reduction)));
   result.addAttribute(getReductionsAttrName(),
                       builder.getArrayAttr(reductionAttrs));
+
+  // Concatenates maps defined in the same input space (same dimensions and
+  // symbols), assumes there is at least one map.
+  auto concatMapsSameInput = [](ArrayRef<AffineMap> maps,
+                                SmallVectorImpl<int32_t> &groups) {
+    SmallVector<AffineExpr> exprs;
+    groups.reserve(groups.size() + maps.size());
+    exprs.reserve(maps.size());
+    for (AffineMap m : maps) {
+      llvm::append_range(exprs, m.getResults());
+      groups.push_back(m.getNumResults());
+    }
+    assert(!maps.empty() && "expected a non-empty list of maps");
+    return AffineMap::get(maps[0].getNumDims(), maps[0].getNumSymbols(), exprs,
+                          maps[0].getContext());
+  };
+
+  // Set up the bounds.
+  SmallVector<int32_t> lbGroups, ubGroups;
+  AffineMap lbMap = concatMapsSameInput(lbMaps, lbGroups);
+  AffineMap ubMap = concatMapsSameInput(ubMaps, ubGroups);
   result.addAttribute(getLowerBoundsMapAttrName(), AffineMapAttr::get(lbMap));
+  result.addAttribute(getLowerBoundsGroupsAttrName(),
+                      builder.getI32VectorAttr(lbGroups));
   result.addAttribute(getUpperBoundsMapAttrName(), AffineMapAttr::get(ubMap));
+  result.addAttribute(getUpperBoundsGroupsAttrName(),
+                      builder.getI32VectorAttr(ubGroups));
   result.addAttribute(getStepsAttrName(), builder.getI64ArrayAttr(steps));
   result.addOperands(lbArgs);
   result.addOperands(ubArgs);
+
   // Create a region and a block for the body.
   auto *bodyRegion = result.addRegion();
   auto *body = new Block();
   // Add all the block arguments.
-  for (unsigned i = 0; i < numDims; ++i)
+  for (unsigned i = 0, e = steps.size(); i < e; ++i)
     body->addArgument(IndexType::get(builder.getContext()));
   bodyRegion->push_back(body);
   if (resultTypes.empty())
@@ -2697,6 +2730,22 @@ AffineParallelOp::operand_range AffineParallelOp::getUpperBoundsOperands() {
   return getOperands().drop_front(lowerBoundsMap().getNumInputs());
 }
 
+AffineMap AffineParallelOp::getLowerBoundMap(unsigned pos) {
+  unsigned start = 0;
+  for (unsigned i = 0; i < pos; ++i)
+    start += lowerBoundsGroups().getValue<int32_t>(i);
+  return lowerBoundsMap().getSliceMap(
+      start, lowerBoundsGroups().getValue<int32_t>(pos));
+}
+
+AffineMap AffineParallelOp::getUpperBoundMap(unsigned pos) {
+  unsigned start = 0;
+  for (unsigned i = 0; i < pos; ++i)
+    start += upperBoundsGroups().getValue<int32_t>(i);
+  return upperBoundsMap().getSliceMap(
+      start, upperBoundsGroups().getValue<int32_t>(pos));
+}
+
 AffineValueMap AffineParallelOp::getLowerBoundsValueMap() {
   return AffineValueMap(lowerBoundsMap(), getLowerBoundsOperands());
 }
@@ -2705,17 +2754,15 @@ AffineValueMap AffineParallelOp::getUpperBoundsValueMap() {
   return AffineValueMap(upperBoundsMap(), getUpperBoundsOperands());
 }
 
-AffineValueMap AffineParallelOp::getRangesValueMap() {
-  AffineValueMap out;
-  AffineValueMap::difference(getUpperBoundsValueMap(), getLowerBoundsValueMap(),
-                             &out);
-  return out;
-}
-
 Optional<SmallVector<int64_t, 8>> AffineParallelOp::getConstantRanges() {
+  if (hasMinMaxBounds())
+    return llvm::None;
+
   // Try to convert all the ranges to constant expressions.
   SmallVector<int64_t, 8> out;
-  AffineValueMap rangesValueMap = getRangesValueMap();
+  AffineValueMap rangesValueMap;
+  AffineValueMap::difference(getUpperBoundsValueMap(), getLowerBoundsValueMap(),
+                             &rangesValueMap);
   out.reserve(rangesValueMap.getNumResults());
   for (unsigned i = 0, e = rangesValueMap.getNumResults(); i < e; ++i) {
     auto expr = rangesValueMap.getResult(i);
@@ -2789,12 +2836,32 @@ void AffineParallelOp::setSteps(ArrayRef<int64_t> newSteps) {
 
 static LogicalResult verify(AffineParallelOp op) {
   auto numDims = op.getNumDims();
-  if (op.lowerBoundsMap().getNumResults() != numDims ||
-      op.upperBoundsMap().getNumResults() != numDims ||
+  if (op.lowerBoundsGroups().getNumElements() != numDims ||
+      op.upperBoundsGroups().getNumElements() != numDims ||
       op.steps().size() != numDims ||
-      op.getBody()->getNumArguments() != numDims)
-    return op.emitOpError("region argument count and num results of upper "
-                          "bounds, lower bounds, and steps must all match");
+      op.getBody()->getNumArguments() != numDims) {
+    return op.emitOpError()
+           << "the number of region arguments ("
+           << op.getBody()->getNumArguments()
+           << ") and the number of map groups for lower ("
+           << op.lowerBoundsGroups().getNumElements() << ") and upper bound ("
+           << op.upperBoundsGroups().getNumElements()
+           << "), and the number of steps (" << op.steps().size()
+           << ") must all match";
+  }
+
+  unsigned expectedNumLBResults = 0;
+  for (APInt v : op.lowerBoundsGroups())
+    expectedNumLBResults += v.getZExtValue();
+  if (expectedNumLBResults != op.lowerBoundsMap().getNumResults())
+    return op.emitOpError() << "expected lower bounds map to have "
+                            << expectedNumLBResults << " results";
+  unsigned expectedNumUBResults = 0;
+  for (APInt v : op.upperBoundsGroups())
+    expectedNumUBResults += v.getZExtValue();
+  if (expectedNumUBResults != op.upperBoundsMap().getNumResults())
+    return op.emitOpError() << "expected upper bounds map to have "
+                            << expectedNumUBResults << " results";
 
   if (op.reductions().size() != op.getNumResults())
     return op.emitOpError("a reduction must be specified for each output");
@@ -2853,13 +2920,44 @@ LogicalResult AffineParallelOp::fold(ArrayRef<Attribute> operands,
   return canonicalizeLoopBounds(*this);
 }
 
+/// Prints a lower(upper) bound of an affine parallel loop with max(min)
+/// conditions in it. `mapAttr` is a flat list of affine expressions and `group`
+/// identifies which of the those expressions form max/min groups. `operands`
+/// are the SSA values of dimensions and symbols and `keyword` is either "min"
+/// or "max".
+static void printMinMaxBound(OpAsmPrinter &p, AffineMapAttr mapAttr,
+                             DenseIntElementsAttr group, ValueRange operands,
+                             StringRef keyword) {
+  AffineMap map = mapAttr.getValue();
+  unsigned numDims = map.getNumDims();
+  ValueRange dimOperands = operands.take_front(numDims);
+  ValueRange symOperands = operands.drop_front(numDims);
+  unsigned start = 0;
+  for (llvm::APInt groupSize : group) {
+    if (start != 0)
+      p << ", ";
+
+    unsigned size = groupSize.getZExtValue();
+    if (size == 1) {
+      p.printAffineExprOfSSAIds(map.getResult(start), dimOperands, symOperands);
+      ++start;
+    } else {
+      p << keyword << '(';
+      AffineMap submap = map.getSliceMap(start, size);
+      p.printAffineMapOfSSAIds(AffineMapAttr::get(submap), operands);
+      p << ')';
+      start += size;
+    }
+  }
+}
+
 static void print(OpAsmPrinter &p, AffineParallelOp op) {
   p << op.getOperationName() << " (" << op.getBody()->getArguments() << ") = (";
-  p.printAffineMapOfSSAIds(op.lowerBoundsMapAttr(),
-                           op.getLowerBoundsOperands());
+  printMinMaxBound(p, op.lowerBoundsMapAttr(), op.lowerBoundsGroupsAttr(),
+                   op.getLowerBoundsOperands(), "max");
   p << ") to (";
-  p.printAffineMapOfSSAIds(op.upperBoundsMapAttr(),
-                           op.getUpperBoundsOperands());
+  printMinMaxBound(p, op.upperBoundsMapAttr(), op.upperBoundsGroupsAttr(),
+                   op.getUpperBoundsOperands(), "min");
   p << ')';
   SmallVector<int64_t, 8> steps = op.getSteps();
   bool elideSteps = llvm::all_of(steps, [](int64_t step) { return step == 1; });
@@ -2881,42 +2979,174 @@ static void print(OpAsmPrinter &p, AffineParallelOp op) {
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/op.getNumResults());
   p.printOptionalAttrDict(
-      op.getAttrs(),
+      op->getAttrs(),
       /*elidedAttrs=*/{AffineParallelOp::getReductionsAttrName(),
                        AffineParallelOp::getLowerBoundsMapAttrName(),
+                       AffineParallelOp::getLowerBoundsGroupsAttrName(),
                        AffineParallelOp::getUpperBoundsMapAttrName(),
+                       AffineParallelOp::getUpperBoundsGroupsAttrName(),
                        AffineParallelOp::getStepsAttrName()});
 }
 
+/// Given a list of lists of parsed operands, populates `uniqueOperands` with
+/// unique operands. Also populates `replacements with affine expressions of
+/// `kind` that can be used to update affine maps previously accepting a
+/// `operands` to accept `uniqueOperands` instead.
+static void deduplicateAndResolveOperands(
+    OpAsmParser &parser,
+    ArrayRef<SmallVector<OpAsmParser::OperandType>> operands,
+    SmallVectorImpl<Value> &uniqueOperands,
+    SmallVectorImpl<AffineExpr> &replacements, AffineExprKind kind) {
+  assert((kind == AffineExprKind::DimId || kind == AffineExprKind::SymbolId) &&
+         "expected operands to be dim or symbol expression");
+
+  Type indexType = parser.getBuilder().getIndexType();
+  for (const auto &list : operands) {
+    SmallVector<Value> valueOperands;
+    parser.resolveOperands(list, indexType, valueOperands);
+    for (Value operand : valueOperands) {
+      unsigned pos = std::distance(uniqueOperands.begin(),
+                                   llvm::find(uniqueOperands, operand));
+      if (pos == uniqueOperands.size())
+        uniqueOperands.push_back(operand);
+      replacements.push_back(
+          kind == AffineExprKind::DimId
+              ? getAffineDimExpr(pos, parser.getBuilder().getContext())
+              : getAffineSymbolExpr(pos, parser.getBuilder().getContext()));
+    }
+  }
+}
+
+namespace {
+enum class MinMaxKind { Min, Max };
+} // namespace
+
+/// Parses an affine map that can contain a min/max for groups of its results,
+/// e.g., max(expr-1, expr-2), expr-3, max(expr-4, expr-5, expr-6). Populates
+/// `result` attributes with the map (flat list of expressions) and the grouping
+/// (list of integers that specify how many expressions to put into each
+/// min/max) attributes. Deduplicates repeated operands.
+///
+/// parallel-bound       ::= `(` parallel-group-list `)`
+/// parallel-group-list  ::= parallel-group (`,` parallel-group-list)?
+/// parallel-group       ::= simple-group | min-max-group
+/// simple-group         ::= expr-of-ssa-ids
+/// min-max-group        ::= ( `min` | `max` ) `(` expr-of-ssa-ids-list `)`
+/// expr-of-ssa-ids-list ::= expr-of-ssa-ids (`,` expr-of-ssa-id-list)?
+///
+/// Examples:
+///   (%0, min(%1 + %2, %3), %4, min(%5 floordiv 32, %6))
+///   (%0, max(%1 - 2 * %2))
+static ParseResult parseAffineMapWithMinMax(OpAsmParser &parser,
+                                            OperationState &result,
+                                            MinMaxKind kind) {
+  constexpr llvm::StringLiteral tmpAttrName = "__pseudo_bound_map";
+
+  StringRef mapName = kind == MinMaxKind::Min
+                          ? AffineParallelOp::getUpperBoundsMapAttrName()
+                          : AffineParallelOp::getLowerBoundsMapAttrName();
+  StringRef groupsName = kind == MinMaxKind::Min
+                             ? AffineParallelOp::getUpperBoundsGroupsAttrName()
+                             : AffineParallelOp::getLowerBoundsGroupsAttrName();
+
+  if (failed(parser.parseLParen()))
+    return failure();
+
+  if (succeeded(parser.parseOptionalRParen())) {
+    result.addAttribute(
+        mapName, AffineMapAttr::get(parser.getBuilder().getEmptyAffineMap()));
+    result.addAttribute(groupsName, parser.getBuilder().getI32VectorAttr({}));
+    return success();
+  }
+
+  SmallVector<AffineExpr> flatExprs;
+  SmallVector<SmallVector<OpAsmParser::OperandType>> flatDimOperands;
+  SmallVector<SmallVector<OpAsmParser::OperandType>> flatSymOperands;
+  SmallVector<int32_t> numMapsPerGroup;
+  SmallVector<OpAsmParser::OperandType> mapOperands;
+  do {
+    if (succeeded(parser.parseOptionalKeyword(
+            kind == MinMaxKind::Min ? "min" : "max"))) {
+      mapOperands.clear();
+      AffineMapAttr map;
+      if (failed(parser.parseAffineMapOfSSAIds(mapOperands, map, tmpAttrName,
+                                               result.attributes,
+                                               OpAsmParser::Delimiter::Paren)))
+        return failure();
+      result.attributes.erase(tmpAttrName);
+      llvm::append_range(flatExprs, map.getValue().getResults());
+      auto operandsRef = llvm::makeArrayRef(mapOperands);
+      auto dimsRef = operandsRef.take_front(map.getValue().getNumDims());
+      SmallVector<OpAsmParser::OperandType> dims(dimsRef.begin(),
+                                                 dimsRef.end());
+      auto symsRef = operandsRef.drop_front(map.getValue().getNumDims());
+      SmallVector<OpAsmParser::OperandType> syms(symsRef.begin(),
+                                                 symsRef.end());
+      flatDimOperands.append(map.getValue().getNumResults(), dims);
+      flatSymOperands.append(map.getValue().getNumResults(), syms);
+      numMapsPerGroup.push_back(map.getValue().getNumResults());
+    } else {
+      if (failed(parser.parseAffineExprOfSSAIds(flatDimOperands.emplace_back(),
+                                                flatSymOperands.emplace_back(),
+                                                flatExprs.emplace_back())))
+        return failure();
+      numMapsPerGroup.push_back(1);
+    }
+  } while (succeeded(parser.parseOptionalComma()));
+
+  if (failed(parser.parseRParen()))
+    return failure();
+
+  unsigned totalNumDims = 0;
+  unsigned totalNumSyms = 0;
+  for (unsigned i = 0, e = flatExprs.size(); i < e; ++i) {
+    unsigned numDims = flatDimOperands[i].size();
+    unsigned numSyms = flatSymOperands[i].size();
+    flatExprs[i] = flatExprs[i]
+                       .shiftDims(numDims, totalNumDims)
+                       .shiftSymbols(numSyms, totalNumSyms);
+    totalNumDims += numDims;
+    totalNumSyms += numSyms;
+  }
+
+  // Deduplicate map operands.
+  SmallVector<Value> dimOperands, symOperands;
+  SmallVector<AffineExpr> dimRplacements, symRepacements;
+  deduplicateAndResolveOperands(parser, flatDimOperands, dimOperands,
+                                dimRplacements, AffineExprKind::DimId);
+  deduplicateAndResolveOperands(parser, flatSymOperands, symOperands,
+                                symRepacements, AffineExprKind::SymbolId);
+
+  result.operands.append(dimOperands.begin(), dimOperands.end());
+  result.operands.append(symOperands.begin(), symOperands.end());
+
+  Builder &builder = parser.getBuilder();
+  auto flatMap = AffineMap::get(totalNumDims, totalNumSyms, flatExprs,
+                                parser.getBuilder().getContext());
+  flatMap = flatMap.replaceDimsAndSymbols(
+      dimRplacements, symRepacements, dimOperands.size(), symOperands.size());
+
+  result.addAttribute(mapName, AffineMapAttr::get(flatMap));
+  result.addAttribute(groupsName, builder.getI32VectorAttr(numMapsPerGroup));
+  return success();
+}
+
 //
-// operation ::= `affine.parallel` `(` ssa-ids `)` `=` `(` map-of-ssa-ids `)`
-//               `to` `(` map-of-ssa-ids `)` steps? region attr-dict?
+// operation ::= `affine.parallel` `(` ssa-ids `)` `=` parallel-bound
+//               `to` parallel-bound steps? region attr-dict?
 // steps     ::= `steps` `(` integer-literals `)`
 //
 static ParseResult parseAffineParallelOp(OpAsmParser &parser,
                                          OperationState &result) {
   auto &builder = parser.getBuilder();
   auto indexType = builder.getIndexType();
-  AffineMapAttr lowerBoundsAttr, upperBoundsAttr;
   SmallVector<OpAsmParser::OperandType, 4> ivs;
-  SmallVector<OpAsmParser::OperandType, 4> lowerBoundsMapOperands;
-  SmallVector<OpAsmParser::OperandType, 4> upperBoundsMapOperands;
   if (parser.parseRegionArgumentList(ivs, /*requiredOperandCount=*/-1,
                                      OpAsmParser::Delimiter::Paren) ||
       parser.parseEqual() ||
-      parser.parseAffineMapOfSSAIds(
-          lowerBoundsMapOperands, lowerBoundsAttr,
-          AffineParallelOp::getLowerBoundsMapAttrName(), result.attributes,
-          OpAsmParser::Delimiter::Paren) ||
-      parser.resolveOperands(lowerBoundsMapOperands, indexType,
-                             result.operands) ||
+      parseAffineMapWithMinMax(parser, result, MinMaxKind::Max) ||
       parser.parseKeyword("to") ||
-      parser.parseAffineMapOfSSAIds(
-          upperBoundsMapOperands, upperBoundsAttr,
-          AffineParallelOp::getUpperBoundsMapAttrName(), result.attributes,
-          OpAsmParser::Delimiter::Paren) ||
-      parser.resolveOperands(upperBoundsMapOperands, indexType,
-                             result.operands))
+      parseAffineMapWithMinMax(parser, result, MinMaxKind::Min))
     return failure();
 
   AffineMapAttr stepsMapAttr;
@@ -3052,6 +3282,11 @@ void AffineVectorLoadOp::build(OpBuilder &builder, OperationState &result,
   build(builder, result, resultType, memref, map, indices);
 }
 
+void AffineVectorLoadOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                     MLIRContext *context) {
+  results.add<SimplifyAffineOp<AffineVectorLoadOp>>(context);
+}
+
 static ParseResult parseAffineVectorLoadOp(OpAsmParser &parser,
                                            OperationState &result) {
   auto &builder = parser.getBuilder();
@@ -3081,7 +3316,8 @@ static void print(OpAsmPrinter &p, AffineVectorLoadOp op) {
           op->getAttrOfType<AffineMapAttr>(op.getMapAttrName()))
     p.printAffineMapOfSSAIds(mapAttr, op.getMapOperands());
   p << ']';
-  p.printOptionalAttrDict(op.getAttrs(), /*elidedAttrs=*/{op.getMapAttrName()});
+  p.printOptionalAttrDict(op->getAttrs(),
+                          /*elidedAttrs=*/{op.getMapAttrName()});
   p << " : " << op.getMemRefType() << ", " << op.getType();
 }
 
@@ -3137,6 +3373,10 @@ void AffineVectorStoreOp::build(OpBuilder &builder, OperationState &result,
       rank ? builder.getMultiDimIdentityMap(rank) : builder.getEmptyAffineMap();
   build(builder, result, valueToStore, memref, map, indices);
 }
+void AffineVectorStoreOp::getCanonicalizationPatterns(
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<SimplifyAffineOp<AffineVectorStoreOp>>(context);
+}
 
 static ParseResult parseAffineVectorStoreOp(OpAsmParser &parser,
                                             OperationState &result) {
@@ -3169,7 +3409,8 @@ static void print(OpAsmPrinter &p, AffineVectorStoreOp op) {
           op->getAttrOfType<AffineMapAttr>(op.getMapAttrName()))
     p.printAffineMapOfSSAIds(mapAttr, op.getMapOperands());
   p << ']';
-  p.printOptionalAttrDict(op.getAttrs(), /*elidedAttrs=*/{op.getMapAttrName()});
+  p.printOptionalAttrDict(op->getAttrs(),
+                          /*elidedAttrs=*/{op.getMapAttrName()});
   p << " : " << op.getMemRefType() << ", " << op.getValueToStore().getType();
 }
 

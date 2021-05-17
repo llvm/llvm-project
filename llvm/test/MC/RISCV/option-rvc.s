@@ -36,7 +36,7 @@ addi s0, sp, 1020
 # CHECK: .option rvc
 .option rvc
 # CHECK-BYTES: 2e 85
-# CHECK-ALIAS: add a0, zero, a1
+# CHECK-ALIAS: mv a0, a1
 # CHECK-INST: c.mv a0, a1
 # CHECK: # encoding:  [0x2e,0x85]
 addi a0, a1, 0
@@ -64,7 +64,7 @@ addi s0, sp, 1020
 # CHECK: .option rvc
 .option rvc
 # CHECK-BYTES: 2e 85
-# CHECK-ALIAS: add a0, zero, a1
+# CHECK-ALIAS: mv a0, a1
 # CHECK-INST: c.mv a0, a1
 # CHECK: # encoding:  [0x2e,0x85]
 addi a0, a1, 0

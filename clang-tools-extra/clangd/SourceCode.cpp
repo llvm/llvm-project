@@ -599,7 +599,7 @@ lex(llvm::StringRef Code, const LangOptions &LangOpts,
         Action) {
   // FIXME: InMemoryFileAdapter crashes unless the buffer is null terminated!
   std::string NullTerminatedCode = Code.str();
-  SourceManagerForFile FileSM("dummy.cpp", NullTerminatedCode);
+  SourceManagerForFile FileSM("mock_file_name.cpp", NullTerminatedCode);
   auto &SM = FileSM.get();
   for (const auto &Tok : syntax::tokenize(SM.getMainFileID(), SM, LangOpts))
     Action(Tok, SM);
@@ -1050,6 +1050,49 @@ llvm::Error reformatEdit(Edit &E, const format::FormatStyle &Style) {
     E.Replacements = std::move(*NewEdits);
   else
     return NewEdits.takeError();
+  return llvm::Error::success();
+}
+
+llvm::Error applyChange(std::string &Contents,
+                        const TextDocumentContentChangeEvent &Change) {
+  if (!Change.range) {
+    Contents = Change.text;
+    return llvm::Error::success();
+  }
+
+  const Position &Start = Change.range->start;
+  llvm::Expected<size_t> StartIndex = positionToOffset(Contents, Start, false);
+  if (!StartIndex)
+    return StartIndex.takeError();
+
+  const Position &End = Change.range->end;
+  llvm::Expected<size_t> EndIndex = positionToOffset(Contents, End, false);
+  if (!EndIndex)
+    return EndIndex.takeError();
+
+  if (*EndIndex < *StartIndex)
+    return error(llvm::errc::invalid_argument,
+                 "Range's end position ({0}) is before start position ({1})",
+                 End, Start);
+
+  // Since the range length between two LSP positions is dependent on the
+  // contents of the buffer we compute the range length between the start and
+  // end position ourselves and compare it to the range length of the LSP
+  // message to verify the buffers of the client and server are in sync.
+
+  // EndIndex and StartIndex are in bytes, but Change.rangeLength is in UTF-16
+  // code units.
+  ssize_t ComputedRangeLength =
+      lspLength(Contents.substr(*StartIndex, *EndIndex - *StartIndex));
+
+  if (Change.rangeLength && ComputedRangeLength != *Change.rangeLength)
+    return error(llvm::errc::invalid_argument,
+                 "Change's rangeLength ({0}) doesn't match the "
+                 "computed range length ({1}).",
+                 *Change.rangeLength, ComputedRangeLength);
+
+  Contents.replace(*StartIndex, *EndIndex - *StartIndex, Change.text);
+
   return llvm::Error::success();
 }
 

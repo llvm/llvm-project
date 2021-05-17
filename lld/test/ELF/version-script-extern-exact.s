@@ -6,16 +6,16 @@
 # RUN: llvm-readobj --dyn-syms %t.so | FileCheck %s --check-prefix=NOMATCH
 
 # NOMATCH:     DynamicSymbols [
-# NOMATCH-NOT:   _Z3aaaPf@@FOO
 # NOMATCH-NOT:   _Z3aaaPi@@FOO
+# NOMATCH-NOT:   _Z3aaaPf@@FOO
 # NOMATCH:     ]
 
 # RUN: echo "FOO { global: extern \"C++\" { \"aaa*\"; aaa*; }; };" > %t2.script
 # RUN: ld.lld --version-script %t2.script -shared %t.o -o %t2.so
 # RUN: llvm-readobj --dyn-syms %t2.so | FileCheck %s --check-prefix=MATCH
 # MATCH:   DynamicSymbols [
-# MATCH:     _Z3aaaPf@@FOO
 # MATCH:     _Z3aaaPi@@FOO
+# MATCH:     _Z3aaaPf@@FOO
 # MATCH:   ]
 
 .text

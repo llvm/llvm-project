@@ -330,8 +330,7 @@ public:
 
   /// Allow the target to modify the pass pipeline with New Pass Manager
   /// (similar to adjustPassManager for Legacy Pass manager).
-  virtual void registerPassBuilderCallbacks(PassBuilder &,
-                                            bool DebugPassManager) {}
+  virtual void registerPassBuilderCallbacks(PassBuilder &) {}
 
   /// Allow the target to register alias analyses with the AAManager for use
   /// with the new pass manager. Only affects the "default" AAManager.
@@ -376,6 +375,8 @@ public:
   /// The integer bit size to use for SjLj based exception handling.
   static constexpr unsigned DefaultSjLjDataSize = 32;
   virtual unsigned getSjLjDataSize() const { return DefaultSjLjDataSize; }
+
+  static std::pair<int, int> parseBinutilsVersion(StringRef Version);
 };
 
 /// This class describes a target machine that is implemented with the LLVM

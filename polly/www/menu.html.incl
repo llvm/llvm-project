@@ -34,7 +34,7 @@ Optimizations</span></h2>
     <a href="http://lab.llvm.org:8080/coverage/coverage-reports/polly/index.html">Code Coverage</a>
     <a href="http://llvm.org/reports/scan-build/">Static analysis</a>
     <a href="/doxygen/">Doxygen</a>
-    <a href="https://github.com/llvm/llvm-project/tree/master/polly">Source @ GitHub</a>
+    <a href="https://github.com/llvm/llvm-project/tree/main/polly">Source @ GitHub</a>
   </div>
 
   <div class="submenu">

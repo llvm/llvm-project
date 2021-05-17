@@ -1,18 +1,9 @@
-// RUN: %libomptarget-compile-aarch64-unknown-linux-gnu -fopenmp-version=51
-// RUN: %libomptarget-run-aarch64-unknown-linux-gnu 2>&1 \
-// RUN: | %fcheck-aarch64-unknown-linux-gnu
+// RUN: %libomptarget-compile-generic -fopenmp-version=51
+// RUN: %libomptarget-run-generic 2>&1 \
+// RUN: | %fcheck-generic
 
-// RUN: %libomptarget-compile-powerpc64-ibm-linux-gnu -fopenmp-version=51
-// RUN: %libomptarget-run-powerpc64-ibm-linux-gnu 2>&1 \
-// RUN: | %fcheck-powerpc64-ibm-linux-gnu
+// REQUIRES: unified_shared_memory
 
-// RUN: %libomptarget-compile-powerpc64le-ibm-linux-gnu -fopenmp-version=51
-// RUN: %libomptarget-run-powerpc64le-ibm-linux-gnu 2>&1 \
-// RUN: | %fcheck-powerpc64le-ibm-linux-gnu
-
-// RUN: %libomptarget-compile-x86_64-pc-linux-gnu -fopenmp-version=51
-// RUN: %libomptarget-run-x86_64-pc-linux-gnu 2>&1 \
-// RUN: | %fcheck-x86_64-pc-linux-gnu
 
 #include <stdio.h>
 

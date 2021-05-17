@@ -17,6 +17,7 @@
 #include "mlir/IR/OperationSupport.h"
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <cstddef>
@@ -172,8 +173,8 @@ static void printParallelOp(OpAsmPrinter &p, ParallelOp op) {
 }
 
 /// Emit an error if the same clause is present more than once on an operation.
-static ParseResult allowedOnce(OpAsmParser &parser, llvm::StringRef clause,
-                               llvm::StringRef operation) {
+static ParseResult allowedOnce(OpAsmParser &parser, StringRef clause,
+                               StringRef operation) {
   return parser.emitError(parser.getNameLoc())
          << " at most one " << clause << " clause can appear on the "
          << operation << " operation";
@@ -213,7 +214,7 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
   SmallVector<OpAsmParser::OperandType, 4> allocators;
   SmallVector<Type, 4> allocatorTypes;
   std::array<int, 8> segments{0, 0, 0, 0, 0, 0, 0, 0};
-  llvm::StringRef keyword;
+  StringRef keyword;
   bool defaultVal = false;
   bool procBind = false;
 
@@ -225,11 +226,11 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
   const int copyinClausePos = 5;
   const int allocateClausePos = 6;
   const int allocatorPos = 7;
-  const llvm::StringRef opName = result.name.getStringRef();
+  const StringRef opName = result.name.getStringRef();
 
   while (succeeded(parser.parseOptionalKeyword(&keyword))) {
     if (keyword == "if") {
-      // Fail if there was already another if condition
+      // Fail if there was already another if condition.
       if (segments[ifClausePos])
         return allowedOnce(parser, "if", opName);
       if (parser.parseLParen() || parser.parseOperand(ifCond.first) ||
@@ -237,7 +238,7 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
         return failure();
       segments[ifClausePos] = 1;
     } else if (keyword == "num_threads") {
-      // fail if there was already another num_threads clause
+      // Fail if there was already another num_threads clause.
       if (segments[numThreadsClausePos])
         return allowedOnce(parser, "num_threads", opName);
       if (parser.parseLParen() || parser.parseOperand(numThreads.first) ||
@@ -245,35 +246,35 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
         return failure();
       segments[numThreadsClausePos] = 1;
     } else if (keyword == "private") {
-      // fail if there was already another private clause
+      // Fail if there was already another private clause.
       if (segments[privateClausePos])
         return allowedOnce(parser, "private", opName);
       if (parseOperandAndTypeList(parser, privates, privateTypes))
         return failure();
       segments[privateClausePos] = privates.size();
     } else if (keyword == "firstprivate") {
-      // fail if there was already another firstprivate clause
+      // Fail if there was already another firstprivate clause.
       if (segments[firstprivateClausePos])
         return allowedOnce(parser, "firstprivate", opName);
       if (parseOperandAndTypeList(parser, firstprivates, firstprivateTypes))
         return failure();
       segments[firstprivateClausePos] = firstprivates.size();
     } else if (keyword == "shared") {
-      // fail if there was already another shared clause
+      // Fail if there was already another shared clause.
       if (segments[sharedClausePos])
         return allowedOnce(parser, "shared", opName);
       if (parseOperandAndTypeList(parser, shareds, sharedTypes))
         return failure();
       segments[sharedClausePos] = shareds.size();
     } else if (keyword == "copyin") {
-      // fail if there was already another copyin clause
+      // Fail if there was already another copyin clause.
       if (segments[copyinClausePos])
         return allowedOnce(parser, "copyin", opName);
       if (parseOperandAndTypeList(parser, copyins, copyinTypes))
         return failure();
       segments[copyinClausePos] = copyins.size();
     } else if (keyword == "allocate") {
-      // fail if there was already another allocate clause
+      // Fail if there was already another allocate clause.
       if (segments[allocateClausePos])
         return allowedOnce(parser, "allocate", opName);
       if (parseAllocateAndAllocator(parser, allocates, allocateTypes,
@@ -282,27 +283,27 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
       segments[allocateClausePos] = allocates.size();
       segments[allocatorPos] = allocators.size();
     } else if (keyword == "default") {
-      // fail if there was already another default clause
+      // Fail if there was already another default clause.
       if (defaultVal)
         return allowedOnce(parser, "default", opName);
       defaultVal = true;
-      llvm::StringRef defval;
+      StringRef defval;
       if (parser.parseLParen() || parser.parseKeyword(&defval) ||
           parser.parseRParen())
         return failure();
-      llvm::SmallString<16> attrval;
+      SmallString<16> attrval;
       // The def prefix is required for the attribute as "private" is a keyword
-      // in C++
+      // in C++.
       attrval += "def";
       attrval += defval;
       auto attr = parser.getBuilder().getStringAttr(attrval);
       result.addAttribute("default_val", attr);
     } else if (keyword == "proc_bind") {
-      // fail if there was already another proc_bind clause
+      // Fail if there was already another proc_bind clause.
       if (procBind)
         return allowedOnce(parser, "proc_bind", opName);
       procBind = true;
-      llvm::StringRef bind;
+      StringRef bind;
       if (parser.parseLParen() || parser.parseKeyword(&bind) ||
           parser.parseRParen())
         return failure();
@@ -315,48 +316,48 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
     }
   }
 
-  // Add if parameter
+  // Add if parameter.
   if (segments[ifClausePos] &&
       parser.resolveOperand(ifCond.first, ifCond.second, result.operands))
     return failure();
 
-  // Add num_threads parameter
+  // Add num_threads parameter.
   if (segments[numThreadsClausePos] &&
       parser.resolveOperand(numThreads.first, numThreads.second,
                             result.operands))
     return failure();
 
-  // Add private parameters
+  // Add private parameters.
   if (segments[privateClausePos] &&
       parser.resolveOperands(privates, privateTypes, privates[0].location,
                              result.operands))
     return failure();
 
-  // Add firstprivate parameters
+  // Add firstprivate parameters.
   if (segments[firstprivateClausePos] &&
       parser.resolveOperands(firstprivates, firstprivateTypes,
                              firstprivates[0].location, result.operands))
     return failure();
 
-  // Add shared parameters
+  // Add shared parameters.
   if (segments[sharedClausePos] &&
       parser.resolveOperands(shareds, sharedTypes, shareds[0].location,
                              result.operands))
     return failure();
 
-  // Add copyin parameters
+  // Add copyin parameters.
   if (segments[copyinClausePos] &&
       parser.resolveOperands(copyins, copyinTypes, copyins[0].location,
                              result.operands))
     return failure();
 
-  // Add allocate parameters
+  // Add allocate parameters.
   if (segments[allocateClausePos] &&
       parser.resolveOperands(allocates, allocateTypes, allocates[0].location,
                              result.operands))
     return failure();
 
-  // Add allocator parameters
+  // Add allocator parameters.
   if (segments[allocatorPos] &&
       parser.resolveOperands(allocators, allocatorTypes, allocators[0].location,
                              result.operands))
@@ -373,6 +374,335 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
   return success();
 }
 
+/// linear ::= `linear` `(` linear-list `)`
+/// linear-list := linear-val | linear-val linear-list
+/// linear-val := ssa-id-and-type `=` ssa-id-and-type
+static ParseResult
+parseLinearClause(OpAsmParser &parser,
+                  SmallVectorImpl<OpAsmParser::OperandType> &vars,
+                  SmallVectorImpl<Type> &types,
+                  SmallVectorImpl<OpAsmParser::OperandType> &stepVars) {
+  if (parser.parseLParen())
+    return failure();
+
+  do {
+    OpAsmParser::OperandType var;
+    Type type;
+    OpAsmParser::OperandType stepVar;
+    if (parser.parseOperand(var) || parser.parseEqual() ||
+        parser.parseOperand(stepVar) || parser.parseColonType(type))
+      return failure();
+
+    vars.push_back(var);
+    types.push_back(type);
+    stepVars.push_back(stepVar);
+  } while (succeeded(parser.parseOptionalComma()));
+
+  if (parser.parseRParen())
+    return failure();
+
+  return success();
+}
+
+/// schedule ::= `schedule` `(` sched-list `)`
+/// sched-list ::= sched-val | sched-val sched-list
+/// sched-val ::= sched-with-chunk | sched-wo-chunk
+/// sched-with-chunk ::= sched-with-chunk-types (`=` ssa-id-and-type)?
+/// sched-with-chunk-types ::= `static` | `dynamic` | `guided`
+/// sched-wo-chunk ::=  `auto` | `runtime`
+static ParseResult
+parseScheduleClause(OpAsmParser &parser, SmallString<8> &schedule,
+                    Optional<OpAsmParser::OperandType> &chunkSize) {
+  if (parser.parseLParen())
+    return failure();
+
+  StringRef keyword;
+  if (parser.parseKeyword(&keyword))
+    return failure();
+
+  schedule = keyword;
+  if (keyword == "static" || keyword == "dynamic" || keyword == "guided") {
+    if (succeeded(parser.parseOptionalEqual())) {
+      chunkSize = OpAsmParser::OperandType{};
+      if (parser.parseOperand(*chunkSize))
+        return failure();
+    } else {
+      chunkSize = llvm::NoneType::None;
+    }
+  } else if (keyword == "auto" || keyword == "runtime") {
+    chunkSize = llvm::NoneType::None;
+  } else {
+    return parser.emitError(parser.getNameLoc()) << " expected schedule kind";
+  }
+
+  if (parser.parseRParen())
+    return failure();
+
+  return success();
+}
+
+/// Parses an OpenMP Workshare Loop operation
+///
+/// operation ::= `omp.wsloop` loop-control clause-list
+/// loop-control ::= `(` ssa-id-list `)` `:` type `=`  loop-bounds
+/// loop-bounds := `(` ssa-id-list `)` to `(` ssa-id-list `)` steps
+/// steps := `step` `(`ssa-id-list`)`
+/// clause-list ::= clause | empty | clause-list
+/// clause ::= private | firstprivate | lastprivate | linear | schedule |
+//             collapse | nowait | ordered | order | inclusive
+/// private ::= `private` `(` ssa-id-and-type-list `)`
+/// firstprivate ::= `firstprivate` `(` ssa-id-and-type-list `)`
+/// lastprivate ::= `lastprivate` `(` ssa-id-and-type-list `)`
+/// linear ::= `linear` `(` linear-list `)`
+/// schedule ::= `schedule` `(` sched-list `)`
+/// collapse ::= `collapse` `(` ssa-id-and-type `)`
+/// nowait ::= `nowait`
+/// ordered ::= `ordered` `(` ssa-id-and-type `)`
+/// order ::= `order` `(` `concurrent` `)`
+/// inclusive ::= `inclusive`
+///
+static ParseResult parseWsLoopOp(OpAsmParser &parser, OperationState &result) {
+  Type loopVarType;
+  int numIVs;
+
+  // Parse an opening `(` followed by induction variables followed by `)`
+  SmallVector<OpAsmParser::OperandType> ivs;
+  if (parser.parseRegionArgumentList(ivs, /*requiredOperandCount=*/-1,
+                                     OpAsmParser::Delimiter::Paren))
+    return failure();
+
+  numIVs = static_cast<int>(ivs.size());
+
+  if (parser.parseColonType(loopVarType))
+    return failure();
+
+  // Parse loop bounds.
+  SmallVector<OpAsmParser::OperandType> lower;
+  if (parser.parseEqual() ||
+      parser.parseOperandList(lower, numIVs, OpAsmParser::Delimiter::Paren) ||
+      parser.resolveOperands(lower, loopVarType, result.operands))
+    return failure();
+
+  SmallVector<OpAsmParser::OperandType> upper;
+  if (parser.parseKeyword("to") ||
+      parser.parseOperandList(upper, numIVs, OpAsmParser::Delimiter::Paren) ||
+      parser.resolveOperands(upper, loopVarType, result.operands))
+    return failure();
+
+  // Parse step values.
+  SmallVector<OpAsmParser::OperandType> steps;
+  if (parser.parseKeyword("step") ||
+      parser.parseOperandList(steps, numIVs, OpAsmParser::Delimiter::Paren) ||
+      parser.resolveOperands(steps, loopVarType, result.operands))
+    return failure();
+
+  SmallVector<OpAsmParser::OperandType> privates;
+  SmallVector<Type> privateTypes;
+  SmallVector<OpAsmParser::OperandType> firstprivates;
+  SmallVector<Type> firstprivateTypes;
+  SmallVector<OpAsmParser::OperandType> lastprivates;
+  SmallVector<Type> lastprivateTypes;
+  SmallVector<OpAsmParser::OperandType> linears;
+  SmallVector<Type> linearTypes;
+  SmallVector<OpAsmParser::OperandType> linearSteps;
+  SmallString<8> schedule;
+  Optional<OpAsmParser::OperandType> scheduleChunkSize;
+  std::array<int, 9> segments{numIVs, numIVs, numIVs, 0, 0, 0, 0, 0, 0};
+
+  const StringRef opName = result.name.getStringRef();
+  StringRef keyword;
+
+  enum SegmentPos {
+    lbPos = 0,
+    ubPos,
+    stepPos,
+    privateClausePos,
+    firstprivateClausePos,
+    lastprivateClausePos,
+    linearClausePos,
+    linearStepPos,
+    scheduleClausePos,
+  };
+
+  while (succeeded(parser.parseOptionalKeyword(&keyword))) {
+    if (keyword == "private") {
+      if (segments[privateClausePos])
+        return allowedOnce(parser, "private", opName);
+      if (parseOperandAndTypeList(parser, privates, privateTypes))
+        return failure();
+      segments[privateClausePos] = privates.size();
+    } else if (keyword == "firstprivate") {
+      // fail if there was already another firstprivate clause
+      if (segments[firstprivateClausePos])
+        return allowedOnce(parser, "firstprivate", opName);
+      if (parseOperandAndTypeList(parser, firstprivates, firstprivateTypes))
+        return failure();
+      segments[firstprivateClausePos] = firstprivates.size();
+    } else if (keyword == "lastprivate") {
+      // fail if there was already another shared clause
+      if (segments[lastprivateClausePos])
+        return allowedOnce(parser, "lastprivate", opName);
+      if (parseOperandAndTypeList(parser, lastprivates, lastprivateTypes))
+        return failure();
+      segments[lastprivateClausePos] = lastprivates.size();
+    } else if (keyword == "linear") {
+      // fail if there was already another linear clause
+      if (segments[linearClausePos])
+        return allowedOnce(parser, "linear", opName);
+      if (parseLinearClause(parser, linears, linearTypes, linearSteps))
+        return failure();
+      segments[linearClausePos] = linears.size();
+      segments[linearStepPos] = linearSteps.size();
+    } else if (keyword == "schedule") {
+      if (!schedule.empty())
+        return allowedOnce(parser, "schedule", opName);
+      if (parseScheduleClause(parser, schedule, scheduleChunkSize))
+        return failure();
+      if (scheduleChunkSize) {
+        segments[scheduleClausePos] = 1;
+      }
+    } else if (keyword == "collapse") {
+      auto type = parser.getBuilder().getI64Type();
+      mlir::IntegerAttr attr;
+      if (parser.parseLParen() || parser.parseAttribute(attr, type) ||
+          parser.parseRParen())
+        return failure();
+      result.addAttribute("collapse_val", attr);
+    } else if (keyword == "nowait") {
+      auto attr = UnitAttr::get(parser.getBuilder().getContext());
+      result.addAttribute("nowait", attr);
+    } else if (keyword == "ordered") {
+      mlir::IntegerAttr attr;
+      if (succeeded(parser.parseOptionalLParen())) {
+        auto type = parser.getBuilder().getI64Type();
+        if (parser.parseAttribute(attr, type))
+          return failure();
+        if (parser.parseRParen())
+          return failure();
+      } else {
+        // Use 0 to represent no ordered parameter was specified
+        attr = parser.getBuilder().getI64IntegerAttr(0);
+      }
+      result.addAttribute("ordered_val", attr);
+    } else if (keyword == "order") {
+      StringRef order;
+      if (parser.parseLParen() || parser.parseKeyword(&order) ||
+          parser.parseRParen())
+        return failure();
+      auto attr = parser.getBuilder().getStringAttr(order);
+      result.addAttribute("order", attr);
+    } else if (keyword == "inclusive") {
+      auto attr = UnitAttr::get(parser.getBuilder().getContext());
+      result.addAttribute("inclusive", attr);
+    }
+  }
+
+  if (segments[privateClausePos]) {
+    parser.resolveOperands(privates, privateTypes, privates[0].location,
+                           result.operands);
+  }
+
+  if (segments[firstprivateClausePos]) {
+    parser.resolveOperands(firstprivates, firstprivateTypes,
+                           firstprivates[0].location, result.operands);
+  }
+
+  if (segments[lastprivateClausePos]) {
+    parser.resolveOperands(lastprivates, lastprivateTypes,
+                           lastprivates[0].location, result.operands);
+  }
+
+  if (segments[linearClausePos]) {
+    parser.resolveOperands(linears, linearTypes, linears[0].location,
+                           result.operands);
+    auto linearStepType = parser.getBuilder().getI32Type();
+    SmallVector<Type> linearStepTypes(linearSteps.size(), linearStepType);
+    parser.resolveOperands(linearSteps, linearStepTypes,
+                           linearSteps[0].location, result.operands);
+  }
+
+  if (!schedule.empty()) {
+    schedule[0] = llvm::toUpper(schedule[0]);
+    auto attr = parser.getBuilder().getStringAttr(schedule);
+    result.addAttribute("schedule_val", attr);
+    if (scheduleChunkSize) {
+      auto chunkSizeType = parser.getBuilder().getI32Type();
+      parser.resolveOperand(*scheduleChunkSize, chunkSizeType, result.operands);
+    }
+  }
+
+  result.addAttribute("operand_segment_sizes",
+                      parser.getBuilder().getI32VectorAttr(segments));
+
+  // Now parse the body.
+  Region *body = result.addRegion();
+  SmallVector<Type> ivTypes(numIVs, loopVarType);
+  if (parser.parseRegion(*body, ivs, ivTypes))
+    return failure();
+  return success();
+}
+
+static void printWsLoopOp(OpAsmPrinter &p, WsLoopOp op) {
+  auto args = op.getRegion().front().getArguments();
+  p << op.getOperationName() << " (" << args << ") : " << args[0].getType()
+    << " = (" << op.lowerBound() << ") to (" << op.upperBound() << ") step ("
+    << op.step() << ")";
+
+  // Print private, firstprivate, shared and copyin parameters
+  auto printDataVars = [&p](StringRef name, OperandRange vars) {
+    if (vars.empty())
+      return;
+
+    p << " " << name << "(";
+    llvm::interleaveComma(
+        vars, p, [&](const Value &v) { p << v << " : " << v.getType(); });
+    p << ")";
+  };
+  printDataVars("private", op.private_vars());
+  printDataVars("firstprivate", op.firstprivate_vars());
+  printDataVars("lastprivate", op.lastprivate_vars());
+
+  auto linearVars = op.linear_vars();
+  auto linearVarsSize = linearVars.size();
+  if (linearVarsSize) {
+    p << " "
+      << "linear"
+      << "(";
+    for (unsigned i = 0; i < linearVarsSize; ++i) {
+      std::string separator = i == linearVarsSize - 1 ? ")" : ", ";
+      p << linearVars[i];
+      if (op.linear_step_vars().size() > i)
+        p << " = " << op.linear_step_vars()[i];
+      p << " : " << linearVars[i].getType() << separator;
+    }
+  }
+
+  if (auto sched = op.schedule_val()) {
+    auto schedLower = sched->lower();
+    p << " schedule(" << schedLower;
+    if (auto chunk = op.schedule_chunk_var()) {
+      p << " = " << chunk;
+    }
+    p << ")";
+  }
+
+  if (auto collapse = op.collapse_val())
+    p << " collapse(" << collapse << ")";
+
+  if (op.nowait())
+    p << " nowait";
+
+  if (auto ordered = op.ordered_val()) {
+    p << " ordered(" << ordered << ")";
+  }
+
+  if (op.inclusive()) {
+    p << " inclusive";
+  }
+
+  p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
+}
+
 //===----------------------------------------------------------------------===//
 // WsLoopOp
 //===----------------------------------------------------------------------===//
@@ -386,9 +716,71 @@ void WsLoopOp::build(OpBuilder &builder, OperationState &state,
         /*linear_vars=*/ValueRange(), /*linear_step_vars=*/ValueRange(),
         /*schedule_val=*/nullptr, /*schedule_chunk_var=*/nullptr,
         /*collapse_val=*/nullptr,
-        /*nowait=*/false, /*ordered_val=*/nullptr, /*order_val=*/nullptr,
-        /*inclusive=*/false);
+        /*nowait=*/nullptr, /*ordered_val=*/nullptr, /*order_val=*/nullptr,
+        /*inclusive=*/nullptr, /*buildBody=*/false);
   state.addAttributes(attributes);
+}
+
+void WsLoopOp::build(OpBuilder &, OperationState &state, TypeRange resultTypes,
+                     ValueRange operands, ArrayRef<NamedAttribute> attributes) {
+  state.addOperands(operands);
+  state.addAttributes(attributes);
+  (void)state.addRegion();
+  assert(resultTypes.size() == 0u && "mismatched number of return types");
+  state.addTypes(resultTypes);
+}
+
+void WsLoopOp::build(OpBuilder &builder, OperationState &result,
+                     TypeRange typeRange, ValueRange lowerBounds,
+                     ValueRange upperBounds, ValueRange steps,
+                     ValueRange privateVars, ValueRange firstprivateVars,
+                     ValueRange lastprivateVars, ValueRange linearVars,
+                     ValueRange linearStepVars, StringAttr scheduleVal,
+                     Value scheduleChunkVar, IntegerAttr collapseVal,
+                     UnitAttr nowait, IntegerAttr orderedVal,
+                     StringAttr orderVal, UnitAttr inclusive, bool buildBody) {
+  result.addOperands(lowerBounds);
+  result.addOperands(upperBounds);
+  result.addOperands(steps);
+  result.addOperands(privateVars);
+  result.addOperands(firstprivateVars);
+  result.addOperands(linearVars);
+  result.addOperands(linearStepVars);
+  if (scheduleChunkVar)
+    result.addOperands(scheduleChunkVar);
+
+  if (scheduleVal)
+    result.addAttribute("schedule_val", scheduleVal);
+  if (collapseVal)
+    result.addAttribute("collapse_val", collapseVal);
+  if (nowait)
+    result.addAttribute("nowait", nowait);
+  if (orderedVal)
+    result.addAttribute("ordered_val", orderedVal);
+  if (orderVal)
+    result.addAttribute("order", orderVal);
+  if (inclusive)
+    result.addAttribute("inclusive", inclusive);
+  result.addAttribute(
+      WsLoopOp::getOperandSegmentSizeAttr(),
+      builder.getI32VectorAttr(
+          {static_cast<int32_t>(lowerBounds.size()),
+           static_cast<int32_t>(upperBounds.size()),
+           static_cast<int32_t>(steps.size()),
+           static_cast<int32_t>(privateVars.size()),
+           static_cast<int32_t>(firstprivateVars.size()),
+           static_cast<int32_t>(lastprivateVars.size()),
+           static_cast<int32_t>(linearVars.size()),
+           static_cast<int32_t>(linearStepVars.size()),
+           static_cast<int32_t>(scheduleChunkVar != nullptr ? 1 : 0)}));
+
+  Region *bodyRegion = result.addRegion();
+  if (buildBody) {
+    OpBuilder::InsertionGuard guard(builder);
+    unsigned numIVs = steps.size();
+    SmallVector<Type, 8> argTypes(numIVs, steps.getType().front());
+    builder.createBlock(bodyRegion, {}, argTypes);
+  }
 }
 
 #define GET_OP_CLASSES

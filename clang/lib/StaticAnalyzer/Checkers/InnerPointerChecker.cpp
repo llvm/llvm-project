@@ -34,9 +34,9 @@ namespace {
 class InnerPointerChecker
     : public Checker<check::DeadSymbols, check::PostCall> {
 
-  CallDescription AppendFn, AssignFn, ClearFn, CStrFn, DataFn, EraseFn,
-      InsertFn, PopBackFn, PushBackFn, ReplaceFn, ReserveFn, ResizeFn,
-      ShrinkToFitFn, SwapFn;
+  CallDescription AppendFn, AssignFn, AddressofFn, ClearFn, CStrFn, DataFn,
+      DataMemberFn, EraseFn, InsertFn, PopBackFn, PushBackFn, ReplaceFn,
+      ReserveFn, ResizeFn, ShrinkToFitFn, SwapFn;
 
 public:
   class InnerPointerBRVisitor : public BugReporterVisitor {
@@ -73,9 +73,10 @@ public:
   InnerPointerChecker()
       : AppendFn({"std", "basic_string", "append"}),
         AssignFn({"std", "basic_string", "assign"}),
+        AddressofFn({"std", "addressof"}),
         ClearFn({"std", "basic_string", "clear"}),
-        CStrFn({"std", "basic_string", "c_str"}),
-        DataFn({"std", "basic_string", "data"}),
+        CStrFn({"std", "basic_string", "c_str"}), DataFn({"std", "data"}, 1),
+        DataMemberFn({"std", "basic_string", "data"}),
         EraseFn({"std", "basic_string", "erase"}),
         InsertFn({"std", "basic_string", "insert"}),
         PopBackFn({"std", "basic_string", "pop_back"}),
@@ -89,6 +90,9 @@ public:
   /// Check whether the called member function potentially invalidates
   /// pointers referring to the container object's inner buffer.
   bool isInvalidatingMemberFunction(const CallEvent &Call) const;
+
+  /// Check whether the called function returns a raw inner pointer.
+  bool isInnerPointerAccessFunction(const CallEvent &Call) const;
 
   /// Mark pointer symbols associated with the given memory region released
   /// in the program state.
@@ -128,6 +132,12 @@ bool InnerPointerChecker::isInvalidatingMemberFunction(
           Call.isCalled(ReplaceFn) || Call.isCalled(ReserveFn) ||
           Call.isCalled(ResizeFn) || Call.isCalled(ShrinkToFitFn) ||
           Call.isCalled(SwapFn));
+}
+
+bool InnerPointerChecker::isInnerPointerAccessFunction(
+    const CallEvent &Call) const {
+  return (Call.isCalled(CStrFn) || Call.isCalled(DataFn) ||
+          Call.isCalled(DataMemberFn));
 }
 
 void InnerPointerChecker::markPtrSymbolsReleased(const CallEvent &Call,
@@ -172,6 +182,11 @@ void InnerPointerChecker::checkFunctionArguments(const CallEvent &Call,
       if (!ArgRegion)
         continue;
 
+      // std::addressof function accepts a non-const reference as an argument,
+      // but doesn't modify it.
+      if (Call.isCalled(AddressofFn))
+        continue;
+
       markPtrSymbolsReleased(Call, State, ArgRegion, C);
     }
   }
@@ -195,36 +210,49 @@ void InnerPointerChecker::checkPostCall(const CallEvent &Call,
                                         CheckerContext &C) const {
   ProgramStateRef State = C.getState();
 
+  // TODO: Do we need these to be typed?
+  const TypedValueRegion *ObjRegion = nullptr;
+
   if (const auto *ICall = dyn_cast<CXXInstanceCall>(&Call)) {
-    // TODO: Do we need these to be typed?
-    const auto *ObjRegion = dyn_cast_or_null<TypedValueRegion>(
+    ObjRegion = dyn_cast_or_null<TypedValueRegion>(
         ICall->getCXXThisVal().getAsRegion());
-    if (!ObjRegion)
-      return;
-
-    if (Call.isCalled(CStrFn) || Call.isCalled(DataFn)) {
-      SVal RawPtr = Call.getReturnValue();
-      if (SymbolRef Sym = RawPtr.getAsSymbol(/*IncludeBaseRegions=*/true)) {
-        // Start tracking this raw pointer by adding it to the set of symbols
-        // associated with this container object in the program state map.
-
-        PtrSet::Factory &F = State->getStateManager().get_context<PtrSet>();
-        const PtrSet *SetPtr = State->get<RawPtrMap>(ObjRegion);
-        PtrSet Set = SetPtr ? *SetPtr : F.getEmptySet();
-        assert(C.wasInlined || !Set.contains(Sym));
-        Set = F.add(Set, Sym);
-
-        State = State->set<RawPtrMap>(ObjRegion, Set);
-        C.addTransition(State);
-      }
-      return;
-    }
 
     // Check [string.require] / second point.
     if (isInvalidatingMemberFunction(Call)) {
       markPtrSymbolsReleased(Call, State, ObjRegion, C);
       return;
     }
+  }
+
+  if (isInnerPointerAccessFunction(Call)) {
+
+    if (isa<SimpleFunctionCall>(Call)) {
+      // NOTE: As of now, we only have one free access function: std::data.
+      //       If we add more functions like this in the list, hardcoded
+      //       argument index should be changed.
+      ObjRegion =
+          dyn_cast_or_null<TypedValueRegion>(Call.getArgSVal(0).getAsRegion());
+    }
+
+    if (!ObjRegion)
+      return;
+
+    SVal RawPtr = Call.getReturnValue();
+    if (SymbolRef Sym = RawPtr.getAsSymbol(/*IncludeBaseRegions=*/true)) {
+      // Start tracking this raw pointer by adding it to the set of symbols
+      // associated with this container object in the program state map.
+
+      PtrSet::Factory &F = State->getStateManager().get_context<PtrSet>();
+      const PtrSet *SetPtr = State->get<RawPtrMap>(ObjRegion);
+      PtrSet Set = SetPtr ? *SetPtr : F.getEmptySet();
+      assert(C.wasInlined || !Set.contains(Sym));
+      Set = F.add(Set, Sym);
+
+      State = State->set<RawPtrMap>(ObjRegion, Set);
+      C.addTransition(State);
+    }
+
+    return;
   }
 
   // Check [string.require] / first point.

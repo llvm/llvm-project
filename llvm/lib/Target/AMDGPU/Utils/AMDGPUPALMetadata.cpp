@@ -41,7 +41,7 @@ void AMDGPUPALMetadata::readFromIR(Module &M) {
     }
     return;
   }
-  BlobType = ELF::NT_AMD_AMDGPU_PAL_METADATA;
+  BlobType = ELF::NT_AMD_PAL_METADATA;
   NamedMD = M.getNamedMetadata("amdgpu.pal.metadata");
   if (!NamedMD || !NamedMD->getNumOperands()) {
     // Emit msgpack metadata by default
@@ -69,7 +69,7 @@ void AMDGPUPALMetadata::readFromIR(Module &M) {
 // Metadata.
 bool AMDGPUPALMetadata::setFromBlob(unsigned Type, StringRef Blob) {
   BlobType = Type;
-  if (Type == ELF::NT_AMD_AMDGPU_PAL_METADATA)
+  if (Type == ELF::NT_AMD_PAL_METADATA)
     return setFromLegacyBlob(Blob);
   return setFromMsgPackBlob(Blob);
 }
@@ -592,6 +592,41 @@ static const char *getRegisterName(unsigned RegNum) {
       {0xa2c1, "VGT_STRMOUT_VTX_STRIDE_3"},
       {0xa316, "VGT_VERTEX_REUSE_BLOCK_CNTL"},
 
+      {0x2e28, "COMPUTE_PGM_RSRC3"},
+      {0x2e2a, "COMPUTE_SHADER_CHKSUM"},
+      {0x2e24, "COMPUTE_USER_ACCUM_0"},
+      {0x2e25, "COMPUTE_USER_ACCUM_1"},
+      {0x2e26, "COMPUTE_USER_ACCUM_2"},
+      {0x2e27, "COMPUTE_USER_ACCUM_3"},
+      {0xa1ff, "GE_MAX_OUTPUT_PER_SUBGROUP"},
+      {0xa2d3, "GE_NGG_SUBGRP_CNTL"},
+      {0xc25f, "GE_STEREO_CNTL"},
+      {0xc262, "GE_USER_VGPR_EN"},
+      {0xc258, "IA_MULTI_VGT_PARAM_PIPED"},
+      {0xa210, "PA_STEREO_CNTL"},
+      {0xa1c2, "SPI_SHADER_IDX_FORMAT"},
+      {0x2c80, "SPI_SHADER_PGM_CHKSUM_GS"},
+      {0x2d00, "SPI_SHADER_PGM_CHKSUM_HS"},
+      {0x2c06, "SPI_SHADER_PGM_CHKSUM_PS"},
+      {0x2c45, "SPI_SHADER_PGM_CHKSUM_VS"},
+      {0x2c88, "SPI_SHADER_PGM_LO_GS"},
+      {0x2cb2, "SPI_SHADER_USER_ACCUM_ESGS_0"},
+      {0x2cb3, "SPI_SHADER_USER_ACCUM_ESGS_1"},
+      {0x2cb4, "SPI_SHADER_USER_ACCUM_ESGS_2"},
+      {0x2cb5, "SPI_SHADER_USER_ACCUM_ESGS_3"},
+      {0x2d32, "SPI_SHADER_USER_ACCUM_LSHS_0"},
+      {0x2d33, "SPI_SHADER_USER_ACCUM_LSHS_1"},
+      {0x2d34, "SPI_SHADER_USER_ACCUM_LSHS_2"},
+      {0x2d35, "SPI_SHADER_USER_ACCUM_LSHS_3"},
+      {0x2c32, "SPI_SHADER_USER_ACCUM_PS_0"},
+      {0x2c33, "SPI_SHADER_USER_ACCUM_PS_1"},
+      {0x2c34, "SPI_SHADER_USER_ACCUM_PS_2"},
+      {0x2c35, "SPI_SHADER_USER_ACCUM_PS_3"},
+      {0x2c72, "SPI_SHADER_USER_ACCUM_VS_0"},
+      {0x2c73, "SPI_SHADER_USER_ACCUM_VS_1"},
+      {0x2c74, "SPI_SHADER_USER_ACCUM_VS_2"},
+      {0x2c75, "SPI_SHADER_USER_ACCUM_VS_3"},
+
       {0, nullptr}};
   auto Entry = RegInfoTable;
   for (; Entry->Num && Entry->Num != RegNum; ++Entry)
@@ -653,7 +688,7 @@ void AMDGPUPALMetadata::toString(std::string &String) {
 // a .note record of the specified AMD type. Returns an empty blob if
 // there is no PAL metadata,
 void AMDGPUPALMetadata::toBlob(unsigned Type, std::string &Blob) {
-  if (Type == ELF::NT_AMD_AMDGPU_PAL_METADATA)
+  if (Type == ELF::NT_AMD_PAL_METADATA)
     toLegacyBlob(Blob);
   else if (Type)
     toMsgPackBlob(Blob);
@@ -790,7 +825,7 @@ const char *AMDGPUPALMetadata::getVendor() const {
 }
 
 // Get .note record type of metadata blob to be emitted:
-// ELF::NT_AMD_AMDGPU_PAL_METADATA (legacy key=val format), or
+// ELF::NT_AMD_PAL_METADATA (legacy key=val format), or
 // ELF::NT_AMDGPU_METADATA (MsgPack format), or
 // 0 (no PAL metadata).
 unsigned AMDGPUPALMetadata::getType() const {
@@ -799,12 +834,12 @@ unsigned AMDGPUPALMetadata::getType() const {
 
 // Return whether the blob type is legacy PAL metadata.
 bool AMDGPUPALMetadata::isLegacy() const {
-  return BlobType == ELF::NT_AMD_AMDGPU_PAL_METADATA;
+  return BlobType == ELF::NT_AMD_PAL_METADATA;
 }
 
 // Set legacy PAL metadata format.
 void AMDGPUPALMetadata::setLegacy() {
-  BlobType = ELF::NT_AMD_AMDGPU_PAL_METADATA;
+  BlobType = ELF::NT_AMD_PAL_METADATA;
 }
 
 // Erase all PAL metadata.

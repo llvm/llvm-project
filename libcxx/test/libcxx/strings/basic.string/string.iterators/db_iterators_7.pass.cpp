@@ -22,28 +22,15 @@
 #include <cstdlib>
 
 #include "test_macros.h"
-#include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
-    typedef std::string C;
-    C c(1, '\0');
-    C::iterator i = c.begin();
-    ++i;
-    assert(i == c.end());
-    ++i;
-    assert(false);
-    }
-#if TEST_STD_VER >= 11
-    {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> C;
-    C c(1, '\0');
-    C::iterator i = c.begin();
-    ++i;
-    assert(i == c.end());
-    ++i;
-    assert(false);
-    }
-#endif
+int main(int, char**) {
+  typedef std::string C;
+  C c(1, '\0');
+  C::iterator i = c.begin();
+  ++i;
+  assert(i == c.end());
+  ++i;
+  assert(false);
+
+  return 0;
 }

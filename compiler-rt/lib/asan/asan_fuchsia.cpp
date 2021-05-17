@@ -81,7 +81,7 @@ void AsanTSDInit(void (*destructor)(void *tsd)) {
 void PlatformTSDDtor(void *tsd) { UNREACHABLE(__func__); }
 
 static inline size_t AsanThreadMmapSize() {
-  return RoundUpTo(sizeof(AsanThread), PAGE_SIZE);
+  return RoundUpTo(sizeof(AsanThread), _zx_system_get_page_size());
 }
 
 struct AsanThread::InitOptions {

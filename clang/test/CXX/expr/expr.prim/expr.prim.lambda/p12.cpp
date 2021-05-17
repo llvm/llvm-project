@@ -42,7 +42,7 @@ void immediately_enclosing(int i) { // expected-note{{'i' declared here}}
     [i] {}();
   }();
 
-  []() { // expected-note{{lambda expression begins here}}
+  []() {      // expected-note{{lambda expression begins here}} expected-note 2 {{capture 'i' by}} expected-note 2 {{default capture by}}
     [i] {}(); // expected-error{{variable 'i' cannot be implicitly captured in a lambda with no capture-default specified}}
   }();
 }
@@ -64,7 +64,7 @@ void f1(int i) { // expected-note{{declared here}}
     void work(int n) { // expected-note{{declared here}}
       int m = n*n;
       int j = 40; // expected-note{{declared here}}
-      auto m3 = [this,m] { // expected-note 3{{lambda expression begins here}}
+      auto m3 = [this, m] { // expected-note 3{{lambda expression begins here}} expected-note 2 {{capture 'i' by}} expected-note 2 {{capture 'j' by}} expected-note 2 {{capture 'n' by}}
         auto m4 = [&,j] { // expected-error{{variable 'j' cannot be implicitly captured in a lambda with no capture-default specified}}
           int x = n; // expected-error{{variable 'n' cannot be implicitly captured in a lambda with no capture-default specified}}
           x += m;

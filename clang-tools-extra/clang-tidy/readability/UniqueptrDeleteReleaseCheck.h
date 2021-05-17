@@ -22,10 +22,16 @@ namespace readability {
 /// http://clang.llvm.org/extra/clang-tidy/checks/readability-uniqueptr-delete-release.html
 class UniqueptrDeleteReleaseCheck : public ClangTidyCheck {
 public:
-  UniqueptrDeleteReleaseCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  UniqueptrDeleteReleaseCheck(StringRef Name, ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+  llvm::Optional<TraversalKind> getCheckTraversalKind() const override {
+    return TK_IgnoreUnlessSpelledInSource;
+  }
+
+private:
+  const bool PreferResetCall;
 };
 
 } // namespace readability

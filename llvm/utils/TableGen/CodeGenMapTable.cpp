@@ -318,11 +318,10 @@ Record *MapTableEmitter::getInstrForColumn(Record *KeyInstr,
   ListInit *ColFields = InstrMapDesc.getColFields();
   Record *MatchInstr = nullptr;
 
-  for (unsigned i = 0, e = RelatedInstrVec.size(); i < e; i++) {
+  for (llvm::Record *CurInstr : RelatedInstrVec) {
     bool MatchFound = true;
-    Record *CurInstr = RelatedInstrVec[i];
     for (unsigned j = 0, endCF = ColFields->size();
-        (j < endCF) && MatchFound; j++) {
+         (j < endCF) && MatchFound; j++) {
       Init *ColFieldJ = ColFields->getElement(j);
       Init *CurInstrInit = CurInstr->getValue(ColFieldJ)->getValue();
       std::string CurInstrVal = CurInstrInit->getAsUnquotedString();
@@ -342,8 +341,9 @@ Record *MapTableEmitter::getInstrForColumn(Record *KeyInstr,
         }
 
         PrintFatalError("Multiple matches found for `" + KeyInstr->getName() +
-              "', for the relation `" + InstrMapDesc.getName() + "', row fields [" +
-              KeyValueStr + "], column `" + CurValueCol->getAsString() + "'");
+                        "', for the relation `" + InstrMapDesc.getName() +
+                        "', row fields [" + KeyValueStr + "], column `" +
+                        CurValueCol->getAsString() + "'");
       }
       MatchInstr = CurInstr;
     }

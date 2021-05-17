@@ -82,24 +82,23 @@ namespace {
       // be conservative and simple.
 
       // Visit the GlobalVariables.
-      for (Module::global_iterator I = M.global_begin(), E = M.global_end();
-           I != E; ++I) {
-        bool Delete =
-            deleteStuff == (bool)Named.count(&*I) && !I->isDeclaration() &&
-            (!I->isConstant() || !keepConstInit);
+      for (GlobalVariable &GV : M.globals()) {
+        bool Delete = deleteStuff == (bool)Named.count(&GV) &&
+                      !GV.isDeclaration() &&
+                      (!GV.isConstant() || !keepConstInit);
         if (!Delete) {
-          if (I->hasAvailableExternallyLinkage())
+          if (GV.hasAvailableExternallyLinkage())
             continue;
-          if (I->getName() == "llvm.global_ctors")
+          if (GV.getName() == "llvm.global_ctors")
             continue;
         }
 
-        makeVisible(*I, Delete);
+        makeVisible(GV, Delete);
 
         if (Delete) {
           // Make this a declaration and drop it's comdat.
-          I->setInitializer(nullptr);
-          I->setComdat(nullptr);
+          GV.setInitializer(nullptr);
+          GV.setComdat(nullptr);
         }
       }
 

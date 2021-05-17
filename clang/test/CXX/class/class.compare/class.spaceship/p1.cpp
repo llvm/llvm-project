@@ -78,9 +78,9 @@ namespace Deletedness {
   };
 
   // expected-note@#base {{deleted comparison function for base class 'C'}}
-  // expected-note@#base {{no viable comparison function for base class 'D1'}}
+  // expected-note@#base {{no viable three-way comparison function for base class 'D1'}}
   // expected-note@#base {{three-way comparison cannot be synthesized because there is no viable function for '<' comparison}}
-  // expected-note@#base {{no viable comparison function for base class 'D2'}}
+  // expected-note@#base {{no viable three-way comparison function for base class 'D2'}}
   // expected-note@#base {{three-way comparison cannot be synthesized because there is no viable function for '==' comparison}}
   // expected-note@#base {{deleted comparison function for base class 'E'}}
   // expected-note@#base {{implied comparison for base class 'F' is ambiguous}}
@@ -110,9 +110,9 @@ namespace Deletedness {
   }
 
   // expected-note@#arr {{deleted comparison function for member 'arr'}}
-  // expected-note@#arr {{no viable comparison function for member 'arr'}}
+  // expected-note@#arr {{no viable three-way comparison function for member 'arr'}}
   // expected-note@#arr {{three-way comparison cannot be synthesized because there is no viable function for '<' comparison}}
-  // expected-note@#arr {{no viable comparison function for member 'arr'}}
+  // expected-note@#arr {{no viable three-way comparison function for member 'arr'}}
   // expected-note@#arr {{three-way comparison cannot be synthesized because there is no viable function for '==' comparison}}
   // expected-note@#arr {{deleted comparison function for member 'arr'}}
   // expected-note@#arr {{implied comparison for member 'arr' is ambiguous}}

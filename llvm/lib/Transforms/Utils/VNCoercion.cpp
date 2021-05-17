@@ -189,14 +189,6 @@ static int analyzeLoadFromClobberingWrite(Type *LoadTy, Value *LoadPtr,
   if (StoreBase != LoadBase)
     return -1;
 
-  // If the load and store are to the exact same address, they should have been
-  // a must alias.  AA must have gotten confused.
-  // FIXME: Study to see if/when this happens.  One case is forwarding a memset
-  // to a load from the base of the memset.
-
-  // If the load and store don't overlap at all, the store doesn't provide
-  // anything to the load.  In this case, they really don't alias at all, AA
-  // must have gotten confused.
   uint64_t LoadSize = DL.getTypeSizeInBits(LoadTy).getFixedSize();
 
   if ((WriteSizeInBits & 7) | (LoadSize & 7))
@@ -204,21 +196,24 @@ static int analyzeLoadFromClobberingWrite(Type *LoadTy, Value *LoadPtr,
   uint64_t StoreSize = WriteSizeInBits / 8; // Convert to bytes.
   LoadSize /= 8;
 
-  bool isAAFailure = false;
-  if (StoreOffset < LoadOffset)
-    isAAFailure = StoreOffset + int64_t(StoreSize) <= LoadOffset;
-  else
-    isAAFailure = LoadOffset + int64_t(LoadSize) <= StoreOffset;
-
-  if (isAAFailure)
-    return -1;
-
   // If the Load isn't completely contained within the stored bits, we don't
   // have all the bits to feed it.  We could do something crazy in the future
   // (issue a smaller load then merge the bits in) but this seems unlikely to be
   // valuable.
   if (StoreOffset > LoadOffset ||
       StoreOffset + StoreSize < LoadOffset + LoadSize)
+    return -1;
+
+  // If the load and store are to the exact same address, they should have been
+  // a must alias.  AA must have gotten confused.
+  // FIXME: Study to see if/when this happens.  One case is forwarding a memset
+  // to a load from the base of the memset.
+
+  // If the load and store don't overlap at all, the store doesn't provide
+  // anything to the load.  In this case, they really don't alias at all, AA
+  // must have gotten confused.  The if statement above ensure the condition
+  // that StoreOffset <= LoadOffset.
+  if (StoreOffset + int64_t(StoreSize) <= LoadOffset)
     return -1;
 
   // Okay, we can do this transformation.  Return the number of bytes into the

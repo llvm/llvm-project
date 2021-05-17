@@ -1,11 +1,15 @@
+## Check that a malformed NT_GNU_ABI_TAG note can be dumped without crashing.
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-readelf --notes %t | FileCheck %s --check-prefix=GNU
 # RUN: llvm-readobj --elf-output-style LLVM --notes %t | FileCheck %s --check-prefix=LLVM
+## GNU binutils does not print the raw description data when encountering an
+## invalid NT_GNU_ABI_TAG, but in LLVM style we print it.
 
 # GNU:      Displaying notes found in: .note.ABI-tag
 # GNU-NEXT:   Owner                 Data size       Description
 # GNU-NEXT:   GNU                   0x00000004      NT_GNU_ABI_TAG (ABI version tag)
 # GNU-NEXT:     <corrupt GNU_ABI_TAG>
+# GNU-EMPTY:
 
 # LLVM:      Notes [
 # LLVM-NEXT:   NoteSection {
@@ -17,6 +21,9 @@
 # LLVM-NEXT:       Data size: 0x4
 # LLVM-NEXT:       Type: NT_GNU_ABI_TAG (ABI version tag)
 # LLVM-NEXT:       ABI: <corrupt GNU_ABI_TAG>
+# LLVM-NEXT:       Description data (
+# LLVM-NEXT:         0000: 00000000 |....|
+# LLVM-NEXT:       )
 # LLVM-NEXT:     }
 # LLVM-NEXT:   }
 # LLVM-NEXT: ]

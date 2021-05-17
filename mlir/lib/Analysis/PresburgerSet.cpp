@@ -170,6 +170,8 @@ static void subtractRecursively(FlatAffineConstraints &b, Simplex &simplex,
     return;
   }
   const FlatAffineConstraints &sI = s.getFlatAffineConstraints(i);
+  assert(sI.getNumLocalIds() == 0 &&
+         "Subtracting sets with divisions is not yet supported!");
   unsigned initialSnapshot = simplex.getSnapshot();
   unsigned offset = simplex.numConstraints();
   simplex.intersectFlatAffineConstraints(sI);
@@ -254,6 +256,8 @@ static void subtractRecursively(FlatAffineConstraints &b, Simplex &simplex,
 PresburgerSet PresburgerSet::getSetDifference(FlatAffineConstraints fac,
                                               const PresburgerSet &set) {
   assertDimensionsCompatible(fac, set);
+  assert(fac.getNumLocalIds() == 0 &&
+         "Subtracting sets with divisions is not yet supported!");
   if (fac.isEmptyByGCDTest())
     return PresburgerSet::getEmptySet(fac.getNumDimIds(),
                                       fac.getNumSymbolIds());
@@ -281,10 +285,22 @@ PresburgerSet PresburgerSet::subtract(const PresburgerSet &set) const {
   return result;
 }
 
+/// Two sets S and T are equal iff S contains T and T contains S.
+/// By "S contains T", we mean that S is a superset of or equal to T.
+///
+/// S contains T iff T \ S is empty, since if T \ S contains a
+/// point then this is a point that is contained in T but not S.
+///
+/// Therefore, S is equal to T iff S \ T and T \ S are both empty.
+bool PresburgerSet::isEqual(const PresburgerSet &set) const {
+  assertDimensionsCompatible(set, *this);
+  return this->subtract(set).isIntegerEmpty() &&
+         set.subtract(*this).isIntegerEmpty();
+}
+
 /// Return true if all the sets in the union are known to be integer empty,
 /// false otherwise.
 bool PresburgerSet::isIntegerEmpty() const {
-  assert(nSym == 0 && "isIntegerEmpty is intended for non-symbolic sets");
   // The set is empty iff all of the disjuncts are empty.
   for (const FlatAffineConstraints &fac : flatAffineConstraints) {
     if (!fac.isIntegerEmpty())
@@ -294,7 +310,6 @@ bool PresburgerSet::isIntegerEmpty() const {
 }
 
 bool PresburgerSet::findIntegerSample(SmallVectorImpl<int64_t> &sample) {
-  assert(nSym == 0 && "findIntegerSample is intended for non-symbolic sets");
   // A sample exists iff any of the disjuncts contains a sample.
   for (const FlatAffineConstraints &fac : flatAffineConstraints) {
     if (Optional<SmallVector<int64_t, 8>> opt = fac.findIntegerSample()) {

@@ -171,8 +171,10 @@ public:
   /// @param Expr The ast expression of type isl_ast_op_access
   ///             for which we generate LLVM-IR.
   ///
-  /// @return The llvm::Value* containing the result of the computation.
-  llvm::Value *createAccessAddress(__isl_take isl_ast_expr *Expr);
+  /// @return A pair of the llvm::Value* containing the result of the
+  ///         computation and the llvm::Type* it points to.
+  std::pair<llvm::Value *, llvm::Type *>
+  createAccessAddress(__isl_take isl_ast_expr *Expr);
 
   /// Check if an @p Expr contains integer constants larger than 64 bit.
   ///

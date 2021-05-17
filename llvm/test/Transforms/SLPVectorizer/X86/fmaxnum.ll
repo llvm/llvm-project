@@ -343,14 +343,10 @@ define float @reduction_v4f32_fast(float* %p) {
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds float, float* [[P:%.*]], i64 1
 ; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds float, float* [[P]], i64 2
 ; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds float, float* [[P]], i64 3
-; CHECK-NEXT:    [[T0:%.*]] = load float, float* [[P]], align 4
-; CHECK-NEXT:    [[T1:%.*]] = load float, float* [[G1]], align 4
-; CHECK-NEXT:    [[T2:%.*]] = load float, float* [[G2]], align 4
-; CHECK-NEXT:    [[T3:%.*]] = load float, float* [[G3]], align 4
-; CHECK-NEXT:    [[M1:%.*]] = tail call fast float @llvm.maxnum.f32(float [[T1]], float [[T0]])
-; CHECK-NEXT:    [[M2:%.*]] = tail call fast float @llvm.maxnum.f32(float [[T2]], float [[M1]])
-; CHECK-NEXT:    [[M3:%.*]] = tail call fast float @llvm.maxnum.f32(float [[T3]], float [[M2]])
-; CHECK-NEXT:    ret float [[M3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P]] to <4 x float>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[TMP2]])
+; CHECK-NEXT:    ret float [[TMP3]]
 ;
   %g1 = getelementptr inbounds float, float* %p, i64 1
   %g2 = getelementptr inbounds float, float* %p, i64 2
@@ -370,14 +366,10 @@ define float @reduction_v4f32_nnan(float* %p) {
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds float, float* [[P:%.*]], i64 1
 ; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds float, float* [[P]], i64 2
 ; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds float, float* [[P]], i64 3
-; CHECK-NEXT:    [[T0:%.*]] = load float, float* [[P]], align 4
-; CHECK-NEXT:    [[T1:%.*]] = load float, float* [[G1]], align 4
-; CHECK-NEXT:    [[T2:%.*]] = load float, float* [[G2]], align 4
-; CHECK-NEXT:    [[T3:%.*]] = load float, float* [[G3]], align 4
-; CHECK-NEXT:    [[M1:%.*]] = tail call nnan float @llvm.maxnum.f32(float [[T1]], float [[T0]])
-; CHECK-NEXT:    [[M2:%.*]] = tail call nnan float @llvm.maxnum.f32(float [[T2]], float [[M1]])
-; CHECK-NEXT:    [[M3:%.*]] = tail call nnan float @llvm.maxnum.f32(float [[T3]], float [[M2]])
-; CHECK-NEXT:    ret float [[M3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P]] to <4 x float>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = call nnan float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[TMP2]])
+; CHECK-NEXT:    ret float [[TMP3]]
 ;
   %g1 = getelementptr inbounds float, float* %p, i64 1
   %g2 = getelementptr inbounds float, float* %p, i64 2
@@ -392,6 +384,35 @@ define float @reduction_v4f32_nnan(float* %p) {
   ret float %m3
 }
 
+; Negative test - must have nnan.
+
+define float @reduction_v4f32_not_fast(float* %p) {
+; CHECK-LABEL: @reduction_v4f32_not_fast(
+; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds float, float* [[P:%.*]], i64 1
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds float, float* [[P]], i64 2
+; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds float, float* [[P]], i64 3
+; CHECK-NEXT:    [[T0:%.*]] = load float, float* [[P]], align 4
+; CHECK-NEXT:    [[T1:%.*]] = load float, float* [[G1]], align 4
+; CHECK-NEXT:    [[T2:%.*]] = load float, float* [[G2]], align 4
+; CHECK-NEXT:    [[T3:%.*]] = load float, float* [[G3]], align 4
+; CHECK-NEXT:    [[M1:%.*]] = tail call float @llvm.maxnum.f32(float [[T1]], float [[T0]])
+; CHECK-NEXT:    [[M2:%.*]] = tail call float @llvm.maxnum.f32(float [[T2]], float [[M1]])
+; CHECK-NEXT:    [[M3:%.*]] = tail call float @llvm.maxnum.f32(float [[T3]], float [[M2]])
+; CHECK-NEXT:    ret float [[M3]]
+;
+  %g1 = getelementptr inbounds float, float* %p, i64 1
+  %g2 = getelementptr inbounds float, float* %p, i64 2
+  %g3 = getelementptr inbounds float, float* %p, i64 3
+  %t0 = load float, float* %p, align 4
+  %t1 = load float, float* %g1, align 4
+  %t2 = load float, float* %g2, align 4
+  %t3 = load float, float* %g3, align 4
+  %m1 = tail call float @llvm.maxnum.f32(float %t1, float %t0)
+  %m2 = tail call float @llvm.maxnum.f32(float %t2, float %m1)
+  %m3 = tail call float @llvm.maxnum.f32(float %t3, float %m2)
+  ret float %m3
+}
+
 define float @reduction_v8f32_fast(float* %p) {
 ; CHECK-LABEL: @reduction_v8f32_fast(
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds float, float* [[P:%.*]], i64 1
@@ -401,22 +422,10 @@ define float @reduction_v8f32_fast(float* %p) {
 ; CHECK-NEXT:    [[G5:%.*]] = getelementptr inbounds float, float* [[P]], i64 5
 ; CHECK-NEXT:    [[G6:%.*]] = getelementptr inbounds float, float* [[P]], i64 6
 ; CHECK-NEXT:    [[G7:%.*]] = getelementptr inbounds float, float* [[P]], i64 7
-; CHECK-NEXT:    [[T0:%.*]] = load float, float* [[P]], align 4
-; CHECK-NEXT:    [[T1:%.*]] = load float, float* [[G1]], align 4
-; CHECK-NEXT:    [[T2:%.*]] = load float, float* [[G2]], align 4
-; CHECK-NEXT:    [[T3:%.*]] = load float, float* [[G3]], align 4
-; CHECK-NEXT:    [[T4:%.*]] = load float, float* [[G4]], align 4
-; CHECK-NEXT:    [[T5:%.*]] = load float, float* [[G5]], align 4
-; CHECK-NEXT:    [[T6:%.*]] = load float, float* [[G6]], align 4
-; CHECK-NEXT:    [[T7:%.*]] = load float, float* [[G7]], align 4
-; CHECK-NEXT:    [[M1:%.*]] = tail call fast float @llvm.maxnum.f32(float [[T1]], float [[T0]])
-; CHECK-NEXT:    [[M2:%.*]] = tail call fast float @llvm.maxnum.f32(float [[T2]], float [[M1]])
-; CHECK-NEXT:    [[M3:%.*]] = tail call fast float @llvm.maxnum.f32(float [[T3]], float [[M2]])
-; CHECK-NEXT:    [[M4:%.*]] = tail call fast float @llvm.maxnum.f32(float [[T4]], float [[M3]])
-; CHECK-NEXT:    [[M5:%.*]] = tail call fast float @llvm.maxnum.f32(float [[M4]], float [[T6]])
-; CHECK-NEXT:    [[M6:%.*]] = tail call fast float @llvm.maxnum.f32(float [[M5]], float [[T5]])
-; CHECK-NEXT:    [[M7:%.*]] = tail call fast float @llvm.maxnum.f32(float [[M6]], float [[T7]])
-; CHECK-NEXT:    ret float [[M7]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P]] to <8 x float>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x float>, <8 x float>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.vector.reduce.fmax.v8f32(<8 x float> [[TMP2]])
+; CHECK-NEXT:    ret float [[TMP3]]
 ;
   %g1 = getelementptr inbounds float, float* %p, i64 1
   %g2 = getelementptr inbounds float, float* %p, i64 2
@@ -463,14 +472,10 @@ define double @reduction_v4f64_fast(double* %p) {
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds double, double* [[P:%.*]], i64 1
 ; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds double, double* [[P]], i64 2
 ; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds double, double* [[P]], i64 3
-; CHECK-NEXT:    [[T0:%.*]] = load double, double* [[P]], align 4
-; CHECK-NEXT:    [[T1:%.*]] = load double, double* [[G1]], align 4
-; CHECK-NEXT:    [[T2:%.*]] = load double, double* [[G2]], align 4
-; CHECK-NEXT:    [[T3:%.*]] = load double, double* [[G3]], align 4
-; CHECK-NEXT:    [[M1:%.*]] = tail call fast double @llvm.maxnum.f64(double [[T1]], double [[T0]])
-; CHECK-NEXT:    [[M2:%.*]] = tail call fast double @llvm.maxnum.f64(double [[T2]], double [[M1]])
-; CHECK-NEXT:    [[M3:%.*]] = tail call fast double @llvm.maxnum.f64(double [[T3]], double [[M2]])
-; CHECK-NEXT:    ret double [[M3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* [[P]] to <4 x double>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x double>, <4 x double>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast double @llvm.vector.reduce.fmax.v4f64(<4 x double> [[TMP2]])
+; CHECK-NEXT:    ret double [[TMP3]]
 ;
   %g1 = getelementptr inbounds double, double* %p, i64 1
   %g2 = getelementptr inbounds double, double* %p, i64 2
@@ -482,6 +487,35 @@ define double @reduction_v4f64_fast(double* %p) {
   %m1 = tail call fast double @llvm.maxnum.f64(double %t1, double %t0)
   %m2 = tail call fast double @llvm.maxnum.f64(double %t2, double %m1)
   %m3 = tail call fast double @llvm.maxnum.f64(double %t3, double %m2)
+  ret double %m3
+}
+
+; Negative test - must have nnan.
+
+define double @reduction_v4f64_wrong_fmf(double* %p) {
+; CHECK-LABEL: @reduction_v4f64_wrong_fmf(
+; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds double, double* [[P:%.*]], i64 1
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds double, double* [[P]], i64 2
+; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds double, double* [[P]], i64 3
+; CHECK-NEXT:    [[T0:%.*]] = load double, double* [[P]], align 4
+; CHECK-NEXT:    [[T1:%.*]] = load double, double* [[G1]], align 4
+; CHECK-NEXT:    [[T2:%.*]] = load double, double* [[G2]], align 4
+; CHECK-NEXT:    [[T3:%.*]] = load double, double* [[G3]], align 4
+; CHECK-NEXT:    [[M1:%.*]] = tail call ninf nsz double @llvm.maxnum.f64(double [[T1]], double [[T0]])
+; CHECK-NEXT:    [[M2:%.*]] = tail call ninf nsz double @llvm.maxnum.f64(double [[T2]], double [[M1]])
+; CHECK-NEXT:    [[M3:%.*]] = tail call ninf nsz double @llvm.maxnum.f64(double [[T3]], double [[M2]])
+; CHECK-NEXT:    ret double [[M3]]
+;
+  %g1 = getelementptr inbounds double, double* %p, i64 1
+  %g2 = getelementptr inbounds double, double* %p, i64 2
+  %g3 = getelementptr inbounds double, double* %p, i64 3
+  %t0 = load double, double* %p, align 4
+  %t1 = load double, double* %g1, align 4
+  %t2 = load double, double* %g2, align 4
+  %t3 = load double, double* %g3, align 4
+  %m1 = tail call ninf nsz double @llvm.maxnum.f64(double %t1, double %t0)
+  %m2 = tail call ninf nsz double @llvm.maxnum.f64(double %t2, double %m1)
+  %m3 = tail call ninf nsz double @llvm.maxnum.f64(double %t3, double %m2)
   ret double %m3
 }
 

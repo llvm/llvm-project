@@ -16,8 +16,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK: icmp sgt <2 x i32>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: icmp sgt <2 x i32>
-; CHECK: select <2 x i1>
+; CHECK: call i32 @llvm.vector.reduce.smax.v2i32
 
 define i32 @max_red(i32 %max) {
 entry:
@@ -45,8 +44,7 @@ for.end:
 ; CHECK: icmp slt <2 x i32>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: icmp sgt <2 x i32>
-; CHECK: select <2 x i1>
+; CHECK: call i32 @llvm.vector.reduce.smax.v2i32
 
 define i32 @max_red_inverse_select(i32 %max) {
 entry:
@@ -73,8 +71,7 @@ for.end:
 ; CHECK: icmp slt <2 x i32>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: icmp slt <2 x i32>
-; CHECK: select <2 x i1>
+; CHECK: call i32 @llvm.vector.reduce.smin.v2i32
 
 define i32 @min_red(i32 %max) {
 entry:
@@ -102,8 +99,7 @@ for.end:
 ; CHECK: icmp sgt <2 x i32>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: icmp slt <2 x i32>
-; CHECK: select <2 x i1>
+; CHECK: call i32 @llvm.vector.reduce.smin.v2i32
 
 define i32 @min_red_inverse_select(i32 %max) {
 entry:
@@ -132,8 +128,7 @@ for.end:
 ; CHECK: icmp ugt <2 x i32>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: icmp ugt <2 x i32>
-; CHECK: select <2 x i1>
+; CHECK: call i32 @llvm.vector.reduce.umax.v2i32
 
 define i32 @umax_red(i32 %max) {
 entry:
@@ -161,8 +156,7 @@ for.end:
 ; CHECK: icmp ult <2 x i32>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: icmp ugt <2 x i32>
-; CHECK: select <2 x i1>
+; CHECK: call i32 @llvm.vector.reduce.umax.v2i32
 
 define i32 @umax_red_inverse_select(i32 %max) {
 entry:
@@ -189,8 +183,7 @@ for.end:
 ; CHECK: icmp ult <2 x i32>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: icmp ult <2 x i32>
-; CHECK: select <2 x i1>
+; CHECK: call i32 @llvm.vector.reduce.umin.v2i32
 
 define i32 @umin_red(i32 %max) {
 entry:
@@ -218,8 +211,7 @@ for.end:
 ; CHECK: icmp ugt <2 x i32>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: icmp ult <2 x i32>
-; CHECK: select <2 x i1>
+; CHECK: call i32 @llvm.vector.reduce.umin.v2i32
 
 define i32 @umin_red_inverse_select(i32 %max) {
 entry:
@@ -247,8 +239,7 @@ for.end:
 ; CHECK: icmp sge <2 x i32>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: icmp slt <2 x i32>
-; CHECK: select <2 x i1>
+; CHECK: call i32 @llvm.vector.reduce.smin.v2i32
 
 define i32 @sge_min_red(i32 %max) {
 entry:
@@ -276,8 +267,7 @@ for.end:
 ; CHECK: icmp sle <2 x i32>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: icmp sgt <2 x i32>
-; CHECK: select <2 x i1>
+; CHECK: call i32 @llvm.vector.reduce.smax.v2i32
 
 define i32 @sle_min_red(i32 %max) {
 entry:
@@ -305,8 +295,7 @@ for.end:
 ; CHECK: icmp uge <2 x i32>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: icmp ult <2 x i32>
-; CHECK: select <2 x i1>
+; CHECK: call i32 @llvm.vector.reduce.umin.v2i32
 
 define i32 @uge_min_red(i32 %max) {
 entry:
@@ -334,8 +323,7 @@ for.end:
 ; CHECK: icmp ule <2 x i32>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: icmp ugt <2 x i32>
-; CHECK: select <2 x i1>
+; CHECK: call i32 @llvm.vector.reduce.umax.v2i32
 
 define i32 @ule_min_red(i32 %max) {
 entry:
@@ -415,8 +403,7 @@ for.end:
 ; CHECK: fcmp fast ogt <2 x float>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: fcmp fast ogt <2 x float>
-; CHECK: select fast <2 x i1>
+; CHECK: call fast float @llvm.vector.reduce.fmax.v2f32
 
 define float @max_red_float(float %max) #0 {
 entry:
@@ -441,8 +428,7 @@ for.end:
 ; CHECK: fcmp fast oge <2 x float>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: fcmp fast ogt <2 x float>
-; CHECK: select fast <2 x i1>
+; CHECK: call fast float @llvm.vector.reduce.fmax.v2f32
 
 define float @max_red_float_ge(float %max) #0 {
 entry:
@@ -467,8 +453,7 @@ for.end:
 ; CHECK: fcmp fast olt <2 x float>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: fcmp fast ogt <2 x float>
-; CHECK: select fast <2 x i1>
+; CHECK: call fast float @llvm.vector.reduce.fmax.v2f32
 
 define float @inverted_max_red_float(float %max) #0 {
 entry:
@@ -493,8 +478,7 @@ for.end:
 ; CHECK: fcmp fast ole <2 x float>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: fcmp fast ogt <2 x float>
-; CHECK: select fast <2 x i1>
+; CHECK: call fast float @llvm.vector.reduce.fmax.v2f32
 
 define float @inverted_max_red_float_le(float %max) #0 {
 entry:
@@ -519,8 +503,7 @@ for.end:
 ; CHECK: fcmp fast ugt <2 x float>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: fcmp fast ogt <2 x float>
-; CHECK: select fast <2 x i1>
+; CHECK: call fast float @llvm.vector.reduce.fmax.v2f32
 
 define float @unordered_max_red_float(float %max) #0 {
 entry:
@@ -545,8 +528,7 @@ for.end:
 ; CHECK: fcmp fast uge <2 x float>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: fcmp fast ogt <2 x float>
-; CHECK: select fast <2 x i1>
+; CHECK: call fast float @llvm.vector.reduce.fmax.v2f32
 
 define float @unordered_max_red_float_ge(float %max) #0 {
 entry:
@@ -571,8 +553,7 @@ for.end:
 ; CHECK: fcmp fast ult <2 x float>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: fcmp fast ogt <2 x float>
-; CHECK: select fast <2 x i1>
+; CHECK: call fast float @llvm.vector.reduce.fmax.v2f32
 
 define float @inverted_unordered_max_red_float(float %max) #0 {
 entry:
@@ -597,8 +578,7 @@ for.end:
 ; CHECK: fcmp fast ule <2 x float>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: fcmp fast ogt <2 x float>
-; CHECK: select fast <2 x i1>
+; CHECK: call fast float @llvm.vector.reduce.fmax.v2f32
 
 define float @inverted_unordered_max_red_float_le(float %max) #0 {
 entry:
@@ -626,8 +606,7 @@ for.end:
 ; CHECK: fcmp fast olt <2 x float>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: fcmp fast olt <2 x float>
-; CHECK: select fast <2 x i1>
+; CHECK: call fast float @llvm.vector.reduce.fmin.v2f32
 
 define float @min_red_float(float %min) #0 {
 entry:
@@ -652,8 +631,7 @@ for.end:
 ; CHECK: fcmp fast ole <2 x float>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: fcmp fast olt <2 x float>
-; CHECK: select fast <2 x i1>
+; CHECK: call fast float @llvm.vector.reduce.fmin.v2f32
 
 define float @min_red_float_le(float %min) #0 {
 entry:
@@ -678,8 +656,7 @@ for.end:
 ; CHECK: fcmp fast ogt <2 x float>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: fcmp fast olt <2 x float>
-; CHECK: select fast <2 x i1>
+; CHECK: call fast float @llvm.vector.reduce.fmin.v2f32
 
 define float @inverted_min_red_float(float %min) #0 {
 entry:
@@ -704,8 +681,7 @@ for.end:
 ; CHECK: fcmp fast oge <2 x float>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: fcmp fast olt <2 x float>
-; CHECK: select fast <2 x i1>
+; CHECK: call fast float @llvm.vector.reduce.fmin.v2f32
 
 define float @inverted_min_red_float_ge(float %min) #0 {
 entry:
@@ -730,8 +706,7 @@ for.end:
 ; CHECK: fcmp fast ult <2 x float>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: fcmp fast olt <2 x float>
-; CHECK: select fast <2 x i1>
+; CHECK: call fast float @llvm.vector.reduce.fmin.v2f32
 
 define float @unordered_min_red_float(float %min) #0 {
 entry:
@@ -756,8 +731,7 @@ for.end:
 ; CHECK: fcmp fast ule <2 x float>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: fcmp fast olt <2 x float>
-; CHECK: select fast <2 x i1>
+; CHECK: call fast float @llvm.vector.reduce.fmin.v2f32
 
 define float @unordered_min_red_float_le(float %min) #0 {
 entry:
@@ -782,8 +756,7 @@ for.end:
 ; CHECK: fcmp fast ugt <2 x float>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: fcmp fast olt <2 x float>
-; CHECK: select fast <2 x i1>
+; CHECK: call fast float @llvm.vector.reduce.fmin.v2f32
 
 define float @inverted_unordered_min_red_float(float %min) #0 {
 entry:
@@ -808,8 +781,7 @@ for.end:
 ; CHECK: fcmp fast uge <2 x float>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: fcmp fast olt <2 x float>
-; CHECK: select fast <2 x i1>
+; CHECK: call fast float @llvm.vector.reduce.fmin.v2f32
 
 define float @inverted_unordered_min_red_float_ge(float %min) #0 {
 entry:
@@ -835,8 +807,7 @@ for.end:
 ; CHECK: fcmp fast olt <2 x double>
 ; CHECK: select <2 x i1>
 ; CHECK: middle.block
-; CHECK: fcmp fast olt <2 x double>
-; CHECK: select fast <2 x i1>
+; CHECK: call fast double @llvm.vector.reduce.fmin.v2f64
 
 define double @min_red_double(double %min) #0 {
 entry:
@@ -881,5 +852,31 @@ for.end:
   ret float %max.red.0
 }
 
+; As above, with the no-signed-zeros-fp-math attribute missing
+; CHECK-LABEL: @max_red_float_nsz(
+; CHECK-NOT: <2 x float>
 
-attributes #0 = { "no-nans-fp-math"="true" }
+define float @max_red_float_nsz(float %max) #1 {
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %max.red.08 = phi float [ %max, %entry ], [ %max.red.0, %for.body ]
+  %arrayidx = getelementptr inbounds [1024 x float], [1024 x float]* @fA, i64 0, i64 %indvars.iv
+  %0 = load float, float* %arrayidx, align 4
+  %cmp3 = fcmp fast ogt float %0, %max.red.08
+  %max.red.0 = select i1 %cmp3, float %0, float %max.red.08
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1024
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret float %max.red.0
+}
+
+; Make sure any check-not directives are not triggered by function declarations.
+; CHECK: declare
+
+attributes #0 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" }
+attributes #1 = { "no-nans-fp-math"="true" }

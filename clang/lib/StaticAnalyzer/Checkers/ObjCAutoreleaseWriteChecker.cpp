@@ -8,7 +8,7 @@
 //
 // This file defines ObjCAutoreleaseWriteChecker which warns against writes
 // into autoreleased out parameters which cause crashes.
-// An example of a problematic write is a write to {@code error} in the example
+// An example of a problematic write is a write to @c error in the example
 // below:
 //
 // - (BOOL) mymethod:(NSError *__autoreleasing *)error list:(NSArray*) list {

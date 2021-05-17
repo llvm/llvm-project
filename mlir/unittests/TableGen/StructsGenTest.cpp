@@ -67,7 +67,7 @@ TEST(StructsGenTest, ClassofExtraFalse) {
   newValues.push_back(wrongAttr);
 
   // Make a new DictionaryAttr and validate.
-  auto badDictionary = mlir::DictionaryAttr::get(newValues, &context);
+  auto badDictionary = mlir::DictionaryAttr::get(&context, newValues);
   ASSERT_FALSE(test::TestStruct::classof(badDictionary));
 }
 
@@ -88,7 +88,7 @@ TEST(StructsGenTest, ClassofBadNameFalse) {
   auto wrongAttr = mlir::NamedAttribute(wrongId, expectedValues[0].second);
   newValues.push_back(wrongAttr);
 
-  auto badDictionary = mlir::DictionaryAttr::get(newValues, &context);
+  auto badDictionary = mlir::DictionaryAttr::get(&context, newValues);
   ASSERT_FALSE(test::TestStruct::classof(badDictionary));
 }
 
@@ -113,7 +113,7 @@ TEST(StructsGenTest, ClassofBadTypeFalse) {
   auto wrongAttr = mlir::NamedAttribute(id, elementsAttr);
   newValues.push_back(wrongAttr);
 
-  auto badDictionary = mlir::DictionaryAttr::get(newValues, &context);
+  auto badDictionary = mlir::DictionaryAttr::get(&context, newValues);
   ASSERT_FALSE(test::TestStruct::classof(badDictionary));
 }
 
@@ -130,7 +130,7 @@ TEST(StructsGenTest, ClassofMissingFalse) {
       expectedValues.begin() + 1, expectedValues.end());
 
   // Make a new DictionaryAttr and validate it is not a validate TestStruct.
-  auto badDictionary = mlir::DictionaryAttr::get(newValues, &context);
+  auto badDictionary = mlir::DictionaryAttr::get(&context, newValues);
   ASSERT_FALSE(test::TestStruct::classof(badDictionary));
 }
 

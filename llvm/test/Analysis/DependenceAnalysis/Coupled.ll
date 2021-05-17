@@ -90,7 +90,7 @@ entry:
 
 ; CHECK-LABEL: couple2
 ; CHECK: da analyze - none!
-; CHECK: da analyze - flow [<]!
+; CHECK: da analyze - flow [*|<]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -250,7 +250,7 @@ entry:
 
 ; CHECK-LABEL: couple6
 ; CHECK: da analyze - none!
-; CHECK: da analyze - flow [<]!
+; CHECK: da analyze - flow [=|<]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -438,7 +438,8 @@ entry:
 
 ; CHECK-LABEL: couple11
 ; CHECK: da analyze - none!
-; CHECK: da analyze - flow [>]!
+; CHECK: da analyze - flow [=|<] splitable!
+; CHECK: da analyze - split level = 1, iteration = 9!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -476,7 +477,8 @@ entry:
 
 ; CHECK-LABEL: couple12
 ; CHECK: da analyze - none!
-; CHECK: da analyze - flow [>]!
+; CHECK: da analyze - flow [<] splitable!
+; CHECK: da analyze - split level = 1, iteration = 11!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -551,7 +553,7 @@ entry:
 
 ; CHECK-LABEL: couple14
 ; CHECK: da analyze - none!
-; CHECK: da analyze - flow [<]!
+; CHECK: da analyze - flow [=|<]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!

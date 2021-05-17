@@ -407,7 +407,7 @@ public:
 // document.
 static uint16_t lo(uint64_t v) { return v; }
 static uint16_t hi(uint64_t v) { return v >> 16; }
-static uint16_t ha(uint64_t v) { return (v + 0x8000) >> 16; }
+static uint64_t ha(uint64_t v) { return (v + 0x8000) >> 16; }
 static uint16_t higher(uint64_t v) { return v >> 32; }
 static uint16_t highera(uint64_t v) { return (v + 0x8000) >> 32; }
 static uint16_t highest(uint64_t v) { return v >> 48; }
@@ -920,7 +920,15 @@ void PPC64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
       // that comes before it will already have computed the address of the
       // symbol.
       if (secondaryOp == 266) {
-        write32(loc - 1, NOP);
+        // Check if the add uses the same result register as the input register.
+        uint32_t rt = (tlsInstr & 0x03E00000) >> 21; // bits 6-10
+        uint32_t ra = (tlsInstr & 0x001F0000) >> 16; // bits 11-15
+        if (ra == rt) {
+          write32(loc - 1, NOP);
+        } else {
+          // mr rt, ra
+          write32(loc - 1, 0x7C000378 | (rt << 16) | (ra << 21) | (ra << 11));
+        }
       } else {
         uint32_t dFormOp = getPPCDFormOp(secondaryOp);
         if (dFormOp == 0)
@@ -948,6 +956,7 @@ RelExpr PPC64::getRelExpr(RelType type, const Symbol &s,
   case R_PPC64_ADDR16_DS:
   case R_PPC64_ADDR16_HA:
   case R_PPC64_ADDR16_HI:
+  case R_PPC64_ADDR16_HIGH:
   case R_PPC64_ADDR16_HIGHER:
   case R_PPC64_ADDR16_HIGHERA:
   case R_PPC64_ADDR16_HIGHEST:
@@ -1219,12 +1228,18 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_PPC64_TPREL16_HA:
     if (config->tocOptimize && shouldTocOptimize && ha(val) == 0)
       writeFromHalf16(loc, NOP);
-    else
+    else {
+      checkInt(loc, val + 0x8000, 32, rel);
       write16(loc, ha(val));
+    }
     break;
   case R_PPC64_ADDR16_HI:
   case R_PPC64_REL16_HI:
   case R_PPC64_TPREL16_HI:
+    checkInt(loc, val, 32, rel);
+    write16(loc, hi(val));
+    break;
+  case R_PPC64_ADDR16_HIGH:
     write16(loc, hi(val));
     break;
   case R_PPC64_ADDR16_HIGHER:

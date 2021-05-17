@@ -9,9 +9,9 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/weak1.s -o %t/weak1.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/weak2.s -o %t/weak2.o
 
-# RUN: %lld -lSystem -o %t/obj12 -L%t %t/weak1.o %t/weak2.o %t/test.o
+# RUN: %lld -lSystem -o %t/obj12 %t/weak1.o %t/weak2.o %t/test.o
 # RUN: llvm-objdump --syms %t/obj12 | FileCheck %s --check-prefix=WEAK1
-# RUN: %lld -lSystem -o %t/obj21 -L%t %t/weak2.o %t/weak1.o %t/test.o
+# RUN: %lld -lSystem -o %t/obj21 %t/weak2.o %t/weak1.o %t/test.o
 # RUN: llvm-objdump --syms %t/obj21 | FileCheck %s --check-prefix=WEAK2
 
 # WEAK1: O __TEXT,weak1 _foo

@@ -29,6 +29,11 @@
 #include <isl_config.h>
 
 #undef EL_BASE
+#define EL_BASE qpolynomial
+
+#include <isl_list_templ.c>
+
+#undef EL_BASE
 #define EL_BASE pw_qpolynomial
 
 #include <isl_list_templ.c>
@@ -4384,16 +4389,17 @@ __isl_give isl_qpolynomial *isl_qpolynomial_morph_domain(
 	int i;
 	int n_sub;
 	isl_ctx *ctx;
+	isl_space *space;
 	isl_poly **subs;
 	isl_mat *mat, *diag;
 
 	qp = isl_qpolynomial_cow(qp);
-	if (!qp || !morph)
+
+	space = isl_qpolynomial_peek_domain_space(qp);
+	if (isl_morph_check_applies(morph, space) < 0)
 		goto error;
 
-	ctx = qp->dim->ctx;
-	isl_assert(ctx, isl_space_is_equal(qp->dim, morph->dom->dim), goto error);
-
+	ctx = isl_qpolynomial_get_ctx(qp);
 	n_sub = morph->inv->n_row - 1;
 	if (morph->inv->n_row != morph->inv->n_col)
 		n_sub += qp->div->n_row;

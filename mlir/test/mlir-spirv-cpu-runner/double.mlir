@@ -20,12 +20,12 @@ module attributes {
       %i4 = constant 4 : index
       %i5 = constant 5 : index
 
-      %x0 = load %arg0[%i0] : memref<6xi32>
-      %x1 = load %arg0[%i1] : memref<6xi32>
-      %x2 = load %arg0[%i2] : memref<6xi32>
-      %x3 = load %arg0[%i3] : memref<6xi32>
-      %x4 = load %arg0[%i4] : memref<6xi32>
-      %x5 = load %arg0[%i5] : memref<6xi32>
+      %x0 = memref.load %arg0[%i0] : memref<6xi32>
+      %x1 = memref.load %arg0[%i1] : memref<6xi32>
+      %x2 = memref.load %arg0[%i2] : memref<6xi32>
+      %x3 = memref.load %arg0[%i3] : memref<6xi32>
+      %x4 = memref.load %arg0[%i4] : memref<6xi32>
+      %x5 = memref.load %arg0[%i5] : memref<6xi32>
 
       %y0 = muli %x0, %factor : i32
       %y1 = muli %x1, %factor : i32
@@ -34,22 +34,22 @@ module attributes {
       %y4 = muli %x4, %factor : i32
       %y5 = muli %x5, %factor : i32
 
-      store %y0, %arg1[%i0] : memref<6xi32>
-      store %y1, %arg1[%i1] : memref<6xi32>
-      store %y2, %arg1[%i2] : memref<6xi32>
-      store %y3, %arg1[%i3] : memref<6xi32>
-      store %y4, %arg1[%i4] : memref<6xi32>
-      store %y5, %arg1[%i5] : memref<6xi32>
+      memref.store %y0, %arg1[%i0] : memref<6xi32>
+      memref.store %y1, %arg1[%i1] : memref<6xi32>
+      memref.store %y2, %arg1[%i2] : memref<6xi32>
+      memref.store %y3, %arg1[%i3] : memref<6xi32>
+      memref.store %y4, %arg1[%i4] : memref<6xi32>
+      memref.store %y5, %arg1[%i5] : memref<6xi32>
       gpu.return
     }
   }
   func @main() {
-    %input = alloc() : memref<6xi32>
-    %output = alloc() : memref<6xi32>
+    %input = memref.alloc() : memref<6xi32>
+    %output = memref.alloc() : memref<6xi32>
     %four = constant 4 : i32
     %zero = constant 0 : i32
-    %input_casted = memref_cast %input : memref<6xi32> to memref<?xi32>
-    %output_casted = memref_cast %output : memref<6xi32> to memref<?xi32>
+    %input_casted = memref.cast %input : memref<6xi32> to memref<?xi32>
+    %output_casted = memref.cast %output : memref<6xi32> to memref<?xi32>
     call @fillI32Buffer(%input_casted, %four) : (memref<?xi32>, i32) -> ()
     call @fillI32Buffer(%output_casted, %zero) : (memref<?xi32>, i32) -> ()
 
@@ -57,7 +57,7 @@ module attributes {
     gpu.launch_func @kernels::@double
         blocks in (%one, %one, %one) threads in (%one, %one, %one)
         args(%input : memref<6xi32>, %output : memref<6xi32>)
-    %result = memref_cast %output : memref<6xi32> to memref<*xi32>
+    %result = memref.cast %output : memref<6xi32> to memref<*xi32>
     call @print_memref_i32(%result) : (memref<*xi32>) -> ()
     return
   }

@@ -23,9 +23,9 @@ $any = comdat any
 ; CHECK: $foo = comdat largest
 ; CHECK: $any = comdat any
 
+; CHECK: @foo = global i64 43, comdat{{$}}
 ; CHECK: @qux = global i64 12, comdat{{$}}
 ; CHECK: @any = global i64 6, comdat{{$}}
-; CHECK: @foo = global i64 43, comdat{{$}}
 ; CHECK-NOT: @in_unselected_group = global i32 13, comdat $qux
 
 ; CHECK: define i32 @baz() comdat($qux)

@@ -8,7 +8,7 @@
 // RUN: | FileCheck %s
 
 struct FOO {
-  static const int vec_align_bytes = 32;
+  static const int vec_align_bytes = 16;
   void foo() {
     double a alignas(vec_align_bytes);
     ;
@@ -17,7 +17,7 @@ struct FOO {
 
 // CHECK:      |   `-AlignedAttr {{.*}} <col:14> alignas
 // CHECK-NEXT:      |     `-ConstantExpr {{.*}} <col:22> 'int'
-// CHECK-NEXT:      |       |-value: Int 32
+// CHECK-NEXT:      |       |-value: Int 16
 // CHECK-NEXT:      |       `-ImplicitCastExpr {{.*}} <col:22> 'int' <LValueToRValue>
 // CHECK-NEXT:      |         `-DeclRefExpr {{.*}} <col:22> 'const int' lvalue Var {{.*}} 'vec_align_bytes' 'const int' non_odr_use_constant
 // CHECK-NEXT:      `-NullStmt {{.*}} <line:14:5>

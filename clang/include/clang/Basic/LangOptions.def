@@ -98,6 +98,8 @@ BENIGN_LANGOPT(ObjCDefaultSynthProperties , 1, 0,
                "Objective-C auto-synthesized properties")
 BENIGN_LANGOPT(EncodeExtendedBlockSig , 1, 0,
                "Encoding extended block type signature")
+BENIGN_LANGOPT(EncodeCXXClassTemplateSpec , 1, 0,
+               "Fully encode c++ class template specialization")
 BENIGN_LANGOPT(ObjCInferRelatedResultType , 1, 1,
                "Objective-C related result type inference")
 LANGOPT(AppExt , 1, 0, "Objective-C App Extension")
@@ -107,6 +109,7 @@ LANGOPT(Bool              , 1, 0, "bool, true, and false keywords")
 LANGOPT(Half              , 1, 0, "half keyword")
 LANGOPT(WChar             , 1, CPlusPlus, "wchar_t keyword")
 LANGOPT(Char8             , 1, 0, "char8_t keyword")
+LANGOPT(IEEE128           , 1, 0, "__ieee128 keyword")
 LANGOPT(DeclSpecKeyword   , 1, 0, "__declspec keyword")
 BENIGN_LANGOPT(DollarIdents   , 1, 1, "'$' in identifiers")
 BENIGN_LANGOPT(AsmPreprocessor, 1, 0, "preprocessor in asm mode")
@@ -215,6 +218,8 @@ LANGOPT(OpenCL            , 1, 0, "OpenCL")
 LANGOPT(OpenCLVersion     , 32, 0, "OpenCL C version")
 LANGOPT(OpenCLCPlusPlus   , 1, 0, "C++ for OpenCL")
 LANGOPT(OpenCLCPlusPlusVersion     , 32, 0, "C++ for OpenCL version")
+LANGOPT(OpenCLGenericAddressSpace, 1, 0, "OpenCL generic keyword")
+LANGOPT(OpenCLPipe               , 1, 0, "OpenCL pipe keyword")
 LANGOPT(NativeHalfType    , 1, 0, "Native half type support")
 LANGOPT(NativeHalfArgsAndReturns, 1, 0, "Native half args and returns")
 LANGOPT(HalfArgsAndReturns, 1, 0, "half args and returns")
@@ -240,12 +245,12 @@ LANGOPT(CUDAHostDeviceConstexpr, 1, 1, "treating unattributed constexpr function
 LANGOPT(CUDADeviceApproxTranscendentals, 1, 0, "using approximate transcendental functions")
 LANGOPT(GPURelocatableDeviceCode, 1, 0, "generate relocatable device code")
 LANGOPT(GPUAllowDeviceInit, 1, 0, "allowing device side global init functions for HIP")
-LANGOPT(GPUMaxThreadsPerBlock, 32, 256, "default max threads per block for kernel launch bounds for HIP")
+LANGOPT(GPUMaxThreadsPerBlock, 32, 1024, "default max threads per block for kernel launch bounds for HIP")
 LANGOPT(GPUDeferDiag, 1, 0, "defer host/device related diagnostic messages for CUDA/HIP")
 LANGOPT(GPUExcludeWrongSideOverloads, 1, 0, "always exclude wrong side overloads in overloading resolution for CUDA/HIP")
 
-LANGOPT(SYCL              , 1, 0, "SYCL")
 LANGOPT(SYCLIsDevice      , 1, 0, "Generate code for SYCL device")
+LANGOPT(SYCLIsHost        , 1, 0, "SYCL host compilation")
 ENUM_LANGOPT(SYCLVersion  , SYCLMajorVersion, 1, SYCL_None, "Version of the SYCL standard used")
 
 LANGOPT(HIPUseNewLaunchAPI, 1, 0, "Use new kernel launching API for HIP")
@@ -263,6 +268,7 @@ BENIGN_LANGOPT(DumpRecordLayoutsSimple , 1, 0, "dumping the layout of IRgen'd re
 BENIGN_LANGOPT(DumpVTableLayouts , 1, 0, "dumping the layouts of emitted vtables")
 LANGOPT(NoConstantCFStrings , 1, 0, "no constant CoreFoundation strings")
 BENIGN_LANGOPT(InlineVisibilityHidden , 1, 0, "hidden visibility for inline C++ methods")
+BENIGN_LANGOPT(IgnoreXCOFFVisibility, 1, 0, "All the visibility attributes that are specified in the source code are ignored in aix XCOFF.")
 BENIGN_LANGOPT(VisibilityInlinesHiddenStaticLocalVar, 1, 0,
                "hidden visibility for static local variables in inline C++ "
                "methods when -fvisibility-inlines hidden is enabled")
@@ -292,6 +298,8 @@ LANGOPT(ObjCSubscriptingLegacyRuntime         , 1, 0, "Subscripting support in l
 BENIGN_LANGOPT(CompatibilityQualifiedIdBlockParamTypeChecking, 1, 0,
                "compatibility mode for type checking block parameters "
                "involving qualified id types")
+LANGOPT(ObjCDisableDirectMethodsForTesting, 1, 0,
+        "Disable recognition of objc_direct methods")
 LANGOPT(CFProtectionBranch , 1, 0, "Control-Flow Branch Protection enabled")
 LANGOPT(FakeAddressSpaceMap , 1, 0, "OpenCL fake address space map")
 ENUM_LANGOPT(AddressSpaceMapMangling , AddrSpaceMapMangling, 2, ASMM_Target, "OpenCL address space map mangling mode")

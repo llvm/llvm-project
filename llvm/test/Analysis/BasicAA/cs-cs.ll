@@ -389,7 +389,7 @@ entry:
 
 ; CHECK:      attributes #0 = { argmemonly nofree nosync nounwind willreturn writeonly }
 ; CHECK-NEXT: attributes #1 = { argmemonly nofree nosync nounwind willreturn }
-; CHECK-NEXT: attributes #2 = { argmemonly nounwind willreturn }
+; CHECK-NEXT: attributes #2 = { argmemonly nosync nounwind willreturn }
 ; CHECK-NEXT: attributes #3 = { noinline nounwind readonly }
 ; CHECK-NEXT: attributes #4 = { noinline nounwind writeonly }
 ; CHECK-NEXT: attributes #5 = { nounwind ssp }

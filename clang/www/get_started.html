@@ -51,6 +51,17 @@ follows:</p>
   <ul>
     <li>Change directory to where you want the llvm directory placed.</li>
     <li><tt>git clone https://github.com/llvm/llvm-project.git</tt></li>
+    <li>The above command is very slow. It can be made faster by creating a shallow clone. Shallow clone saves storage and speeds up the checkout time. This is done by using the command:
+      <ul>
+        <li><tt>git clone --depth=1 https://github.com/llvm/llvm-project.git (using this only the latest version of llvm can be built)</tt></li>
+        <li>For normal users looking to just compile, this command works fine. But if someone later becomes a contributor, since they can't push code from a shallow clone, it needs to be converted into a full clone:
+          <ul>
+            <li><tt>cd llvm-project</tt></li>
+            <li><tt>git fetch --unshallow</tt></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
   </ul>
   </li>
   <li>Build LLVM and Clang:
@@ -137,7 +148,7 @@ Visual Studio:</p>
   </li>
   <li>Run CMake to generate the Visual Studio solution and project files:
   <ul>
-    <li><tt>cd ..\..</tt>  (back to where you started)</li>
+    <li><tt>cd llvm-project</tt></li>
     <li><tt>mkdir build</tt> (for building without polluting the source dir)</li>
     <li><tt>cd build</tt></li>
     <li>

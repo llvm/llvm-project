@@ -119,6 +119,7 @@ body:             |
   ; CHECK: bb.1.for.body.preheader:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   liveins: $r0, $r1, $r2, $r3
+  ; CHECK:   dead $lr = tMOVr $r3, 14 /* CC::al */, $noreg
   ; CHECK:   $lr = tMOVr killed $r3, 14 /* CC::al */, $noreg
   ; CHECK:   tB %bb.2, 14 /* CC::al */, $noreg
   ; CHECK: bb.2.for.end:
@@ -127,7 +128,7 @@ body:             |
   ; CHECK:   renamable $r1, dead $cpsr = tADDi8 killed renamable $r1, 4, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r2, dead $cpsr = tADDi8 killed renamable $r2, 4, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r0, dead $cpsr = tADDi8 killed renamable $r0, 4, 14 /* CC::al */, $noreg
-  ; CHECK:   $lr = t2SUBri killed renamable $lr, 1, 14 /* CC::al */, $noreg, def $cpsr
+  ; CHECK:   renamable $lr = t2SUBri killed renamable $lr, 1, 14 /* CC::al */, $noreg, def $cpsr
   ; CHECK:   tBcc %bb.3, 1 /* CC::ne */, killed $cpsr
   ; CHECK:   t2B %bb.5, 14 /* CC::al */, $noreg
   ; CHECK: bb.3.for.body:

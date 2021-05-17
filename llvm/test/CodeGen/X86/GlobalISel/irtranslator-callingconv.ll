@@ -10,28 +10,36 @@ define i8 @test_i8_args_8(i8 %arg1, i8 %arg2, i8 %arg3, i8 %arg4, i8 %arg5, i8 %
   ; X86-LABEL: name: test_i8_args_8
   ; X86: bb.1.entry:
   ; X86:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.7
-  ; X86:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 1 from %fixed-stack.7, align 16)
+  ; X86:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 1 from %fixed-stack.7, align 16)
+  ; X86:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[LOAD]](s32)
   ; X86:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; X86:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 1 from %fixed-stack.6, align 4)
+  ; X86:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 1 from %fixed-stack.6, align 4)
+  ; X86:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[LOAD1]](s32)
   ; X86:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; X86:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX2]](p0) :: (invariant load 1 from %fixed-stack.5, align 8)
+  ; X86:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p0) :: (invariant load 1 from %fixed-stack.5, align 8)
+  ; X86:   [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[LOAD2]](s32)
   ; X86:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; X86:   [[LOAD3:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX3]](p0) :: (invariant load 1 from %fixed-stack.4, align 4)
+  ; X86:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p0) :: (invariant load 1 from %fixed-stack.4, align 4)
+  ; X86:   [[TRUNC3:%[0-9]+]]:_(s8) = G_TRUNC [[LOAD3]](s32)
   ; X86:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; X86:   [[LOAD4:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX4]](p0) :: (invariant load 1 from %fixed-stack.3, align 16)
+  ; X86:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX4]](p0) :: (invariant load 1 from %fixed-stack.3, align 16)
+  ; X86:   [[TRUNC4:%[0-9]+]]:_(s8) = G_TRUNC [[LOAD4]](s32)
   ; X86:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; X86:   [[LOAD5:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX5]](p0) :: (invariant load 1 from %fixed-stack.2, align 4)
+  ; X86:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX5]](p0) :: (invariant load 1 from %fixed-stack.2, align 4)
+  ; X86:   [[TRUNC5:%[0-9]+]]:_(s8) = G_TRUNC [[LOAD5]](s32)
   ; X86:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; X86:   [[LOAD6:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX6]](p0) :: (invariant load 1 from %fixed-stack.1, align 8)
+  ; X86:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX6]](p0) :: (invariant load 1 from %fixed-stack.1, align 8)
+  ; X86:   [[TRUNC6:%[0-9]+]]:_(s8) = G_TRUNC [[LOAD6]](s32)
   ; X86:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; X86:   [[LOAD7:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX7]](p0) :: (invariant load 1 from %fixed-stack.0, align 4)
+  ; X86:   [[LOAD7:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX7]](p0) :: (invariant load 1 from %fixed-stack.0, align 4)
+  ; X86:   [[TRUNC7:%[0-9]+]]:_(s8) = G_TRUNC [[LOAD7]](s32)
   ; X86:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a1_8bit
   ; X86:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a7_8bit
   ; X86:   [[GV2:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a8_8bit
-  ; X86:   G_STORE [[LOAD]](s8), [[GV]](p0) :: (store 1 into @a1_8bit)
-  ; X86:   G_STORE [[LOAD6]](s8), [[GV1]](p0) :: (store 1 into @a7_8bit)
-  ; X86:   G_STORE [[LOAD7]](s8), [[GV2]](p0) :: (store 1 into @a8_8bit)
-  ; X86:   $al = COPY [[LOAD]](s8)
+  ; X86:   G_STORE [[TRUNC]](s8), [[GV]](p0) :: (store 1 into @a1_8bit)
+  ; X86:   G_STORE [[TRUNC6]](s8), [[GV1]](p0) :: (store 1 into @a7_8bit)
+  ; X86:   G_STORE [[TRUNC7]](s8), [[GV2]](p0) :: (store 1 into @a8_8bit)
+  ; X86:   $al = COPY [[TRUNC]](s8)
   ; X86:   RET 0, implicit $al
   ; X64-LABEL: name: test_i8_args_8
   ; X64: bb.1.entry:
@@ -49,15 +57,17 @@ define i8 @test_i8_args_8(i8 %arg1, i8 %arg2, i8 %arg3, i8 %arg4, i8 %arg5, i8 %
   ; X64:   [[COPY5:%[0-9]+]]:_(s32) = COPY $r9d
   ; X64:   [[TRUNC5:%[0-9]+]]:_(s8) = G_TRUNC [[COPY5]](s32)
   ; X64:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; X64:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 1 from %fixed-stack.1, align 16)
+  ; X64:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 1 from %fixed-stack.1, align 16)
+  ; X64:   [[TRUNC6:%[0-9]+]]:_(s8) = G_TRUNC [[LOAD]](s32)
   ; X64:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; X64:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 1 from %fixed-stack.0, align 8)
+  ; X64:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 1 from %fixed-stack.0, align 8)
+  ; X64:   [[TRUNC7:%[0-9]+]]:_(s8) = G_TRUNC [[LOAD1]](s32)
   ; X64:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a1_8bit
   ; X64:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a7_8bit
   ; X64:   [[GV2:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a8_8bit
   ; X64:   G_STORE [[TRUNC]](s8), [[GV]](p0) :: (store 1 into @a1_8bit)
-  ; X64:   G_STORE [[LOAD]](s8), [[GV1]](p0) :: (store 1 into @a7_8bit)
-  ; X64:   G_STORE [[LOAD1]](s8), [[GV2]](p0) :: (store 1 into @a8_8bit)
+  ; X64:   G_STORE [[TRUNC6]](s8), [[GV1]](p0) :: (store 1 into @a7_8bit)
+  ; X64:   G_STORE [[TRUNC7]](s8), [[GV2]](p0) :: (store 1 into @a8_8bit)
   ; X64:   $al = COPY [[TRUNC]](s8)
   ; X64:   RET 0, implicit $al
 entry:
@@ -138,41 +148,41 @@ define i64 @test_i64_args_8(i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4, i64 %arg
   ; X86:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.15, align 16)
   ; X86:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.14
   ; X86:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 4 from %fixed-stack.14)
+  ; X86:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD]](s32), [[LOAD1]](s32)
   ; X86:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.13
   ; X86:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p0) :: (invariant load 4 from %fixed-stack.13, align 8)
   ; X86:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.12
   ; X86:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p0) :: (invariant load 4 from %fixed-stack.12)
+  ; X86:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD2]](s32), [[LOAD3]](s32)
   ; X86:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.11
   ; X86:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX4]](p0) :: (invariant load 4 from %fixed-stack.11, align 16)
   ; X86:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.10
   ; X86:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX5]](p0) :: (invariant load 4 from %fixed-stack.10)
+  ; X86:   [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD4]](s32), [[LOAD5]](s32)
   ; X86:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.9
   ; X86:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX6]](p0) :: (invariant load 4 from %fixed-stack.9, align 8)
   ; X86:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.8
   ; X86:   [[LOAD7:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX7]](p0) :: (invariant load 4 from %fixed-stack.8)
+  ; X86:   [[MV3:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD6]](s32), [[LOAD7]](s32)
   ; X86:   [[FRAME_INDEX8:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.7
   ; X86:   [[LOAD8:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX8]](p0) :: (invariant load 4 from %fixed-stack.7, align 16)
   ; X86:   [[FRAME_INDEX9:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
   ; X86:   [[LOAD9:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX9]](p0) :: (invariant load 4 from %fixed-stack.6)
+  ; X86:   [[MV4:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD8]](s32), [[LOAD9]](s32)
   ; X86:   [[FRAME_INDEX10:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
   ; X86:   [[LOAD10:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX10]](p0) :: (invariant load 4 from %fixed-stack.5, align 8)
   ; X86:   [[FRAME_INDEX11:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
   ; X86:   [[LOAD11:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX11]](p0) :: (invariant load 4 from %fixed-stack.4)
+  ; X86:   [[MV5:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD10]](s32), [[LOAD11]](s32)
   ; X86:   [[FRAME_INDEX12:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
   ; X86:   [[LOAD12:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX12]](p0) :: (invariant load 4 from %fixed-stack.3, align 16)
   ; X86:   [[FRAME_INDEX13:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
   ; X86:   [[LOAD13:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX13]](p0) :: (invariant load 4 from %fixed-stack.2)
+  ; X86:   [[MV6:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD12]](s32), [[LOAD13]](s32)
   ; X86:   [[FRAME_INDEX14:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
   ; X86:   [[LOAD14:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX14]](p0) :: (invariant load 4 from %fixed-stack.1, align 8)
   ; X86:   [[FRAME_INDEX15:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; X86:   [[LOAD15:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX15]](p0) :: (invariant load 4 from %fixed-stack.0)
-  ; X86:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD]](s32), [[LOAD1]](s32)
-  ; X86:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD2]](s32), [[LOAD3]](s32)
-  ; X86:   [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD4]](s32), [[LOAD5]](s32)
-  ; X86:   [[MV3:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD6]](s32), [[LOAD7]](s32)
-  ; X86:   [[MV4:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD8]](s32), [[LOAD9]](s32)
-  ; X86:   [[MV5:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD10]](s32), [[LOAD11]](s32)
-  ; X86:   [[MV6:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD12]](s32), [[LOAD13]](s32)
   ; X86:   [[MV7:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD14]](s32), [[LOAD15]](s32)
   ; X86:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a1_64bit
   ; X86:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a7_64bit
@@ -219,18 +229,14 @@ define float @test_float_args(float %arg1, float %arg2) {
   ; X86:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.1, align 16)
   ; X86:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; X86:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 4 from %fixed-stack.0)
-  ; X86:   [[ANYEXT:%[0-9]+]]:_(s80) = G_ANYEXT [[LOAD1]](s32)
-  ; X86:   $fp0 = COPY [[ANYEXT]](s80)
+  ; X86:   $fp0 = COPY [[LOAD1]](s32)
   ; X86:   RET 0, implicit $fp0
   ; X64-LABEL: name: test_float_args
   ; X64: bb.1 (%ir-block.0):
   ; X64:   liveins: $xmm0, $xmm1
-  ; X64:   [[COPY:%[0-9]+]]:_(s128) = COPY $xmm0
-  ; X64:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s128)
-  ; X64:   [[COPY1:%[0-9]+]]:_(s128) = COPY $xmm1
-  ; X64:   [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s128)
-  ; X64:   [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT [[TRUNC1]](s32)
-  ; X64:   $xmm0 = COPY [[ANYEXT]](s128)
+  ; X64:   [[COPY:%[0-9]+]]:_(s32) = COPY $xmm0
+  ; X64:   [[COPY1:%[0-9]+]]:_(s32) = COPY $xmm1
+  ; X64:   $xmm0 = COPY [[COPY1]](s32)
   ; X64:   RET 0, implicit $xmm0
   ret float %arg2
 }
@@ -242,18 +248,14 @@ define double @test_double_args(double %arg1, double %arg2) {
   ; X86:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 8 from %fixed-stack.1, align 16)
   ; X86:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; X86:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 8 from %fixed-stack.0)
-  ; X86:   [[ANYEXT:%[0-9]+]]:_(s80) = G_ANYEXT [[LOAD1]](s64)
-  ; X86:   $fp0 = COPY [[ANYEXT]](s80)
+  ; X86:   $fp0 = COPY [[LOAD1]](s64)
   ; X86:   RET 0, implicit $fp0
   ; X64-LABEL: name: test_double_args
   ; X64: bb.1 (%ir-block.0):
   ; X64:   liveins: $xmm0, $xmm1
-  ; X64:   [[COPY:%[0-9]+]]:_(s128) = COPY $xmm0
-  ; X64:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[COPY]](s128)
-  ; X64:   [[COPY1:%[0-9]+]]:_(s128) = COPY $xmm1
-  ; X64:   [[TRUNC1:%[0-9]+]]:_(s64) = G_TRUNC [[COPY1]](s128)
-  ; X64:   [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT [[TRUNC1]](s64)
-  ; X64:   $xmm0 = COPY [[ANYEXT]](s128)
+  ; X64:   [[COPY:%[0-9]+]]:_(s64) = COPY $xmm0
+  ; X64:   [[COPY1:%[0-9]+]]:_(s64) = COPY $xmm1
+  ; X64:   $xmm0 = COPY [[COPY1]](s64)
   ; X64:   RET 0, implicit $xmm0
   ret double %arg2
 }
@@ -487,10 +489,10 @@ define <8 x i32> @test_split_return_callee(<8 x i32> %arg1, <8 x i32> %arg2) {
   ; X86:   liveins: $xmm0, $xmm1, $xmm2
   ; X86:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $xmm0
   ; X86:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $xmm1
+  ; X86:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[COPY]](<4 x s32>), [[COPY1]](<4 x s32>)
   ; X86:   [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $xmm2
   ; X86:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; X86:   [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 16 from %fixed-stack.0)
-  ; X86:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[COPY]](<4 x s32>), [[COPY1]](<4 x s32>)
   ; X86:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[COPY2]](<4 x s32>), [[LOAD]](<4 x s32>)
   ; X86:   ADJCALLSTACKDOWN32 0, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X86:   [[UV:%[0-9]+]]:_(<4 x s32>), [[UV1:%[0-9]+]]:_(<4 x s32>) = G_UNMERGE_VALUES [[CONCAT_VECTORS1]](<8 x s32>)
@@ -511,9 +513,9 @@ define <8 x i32> @test_split_return_callee(<8 x i32> %arg1, <8 x i32> %arg2) {
   ; X64:   liveins: $xmm0, $xmm1, $xmm2, $xmm3
   ; X64:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $xmm0
   ; X64:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $xmm1
+  ; X64:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[COPY]](<4 x s32>), [[COPY1]](<4 x s32>)
   ; X64:   [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $xmm2
   ; X64:   [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY $xmm3
-  ; X64:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[COPY]](<4 x s32>), [[COPY1]](<4 x s32>)
   ; X64:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[COPY2]](<4 x s32>), [[COPY3]](<4 x s32>)
   ; X64:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
   ; X64:   [[UV:%[0-9]+]]:_(<4 x s32>), [[UV1:%[0-9]+]]:_(<4 x s32>) = G_UNMERGE_VALUES [[CONCAT_VECTORS1]](<8 x s32>)
@@ -686,8 +688,7 @@ define void @test_variadic_call_2(i8** %addr_ptr, double* %val_ptr) {
   ; X64:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[COPY1]](p0) :: (load 8 from %ir.val_ptr)
   ; X64:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
   ; X64:   $rdi = COPY [[LOAD]](p0)
-  ; X64:   [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT [[LOAD1]](s64)
-  ; X64:   $xmm0 = COPY [[ANYEXT]](s128)
+  ; X64:   $xmm0 = COPY [[LOAD1]](s64)
   ; X64:   $al = MOV8ri 1
   ; X64:   CALL64pcrel32 @variadic_callee, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $xmm0, implicit $al
   ; X64:   ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp

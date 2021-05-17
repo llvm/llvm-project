@@ -5,10 +5,10 @@
 name: LateScavengingSlotRealignment
 # CHECK-LABEL: name: LateScavengingSlotRealignment
 # CHECK: bb.0:
-# CHECK:      STRXui killed $[[SCRATCH:x[0-9]+]], $sp, 3
+# CHECK:      STRXui killed $[[SCRATCH:x[0-9]+]], $sp, 0
 # CHECK-NEXT: $[[SCRATCH]] = ADDXri $sp, 40, 0
 # CHECK-NEXT: STRXui $x0, killed $[[SCRATCH]], 4095
-# CHECK-NEXT: $[[SCRATCH]] = LDRXui $sp, 3
+# CHECK-NEXT: $[[SCRATCH]] = LDRXui $sp, 0
 # CHECK: bb.1:
 tracksRegLiveness: true
 frameInfo:

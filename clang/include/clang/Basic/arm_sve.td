@@ -668,16 +668,16 @@ let ArchGuard = "defined(__ARM_FEATURE_SVE_BF16)" in {
 // Prefetches
 
 // Prefetch (Scalar base)
-def SVPRFB : MInst<"svprfb", "vPcJ", "c", [IsPrefetch], MemEltTyInt8,  "aarch64_sve_prf">;
-def SVPRFH : MInst<"svprfh", "vPcJ", "s", [IsPrefetch], MemEltTyInt16, "aarch64_sve_prf">;
-def SVPRFW : MInst<"svprfw", "vPcJ", "i", [IsPrefetch], MemEltTyInt32, "aarch64_sve_prf">;
-def SVPRFD : MInst<"svprfd", "vPcJ", "l", [IsPrefetch], MemEltTyInt64, "aarch64_sve_prf">;
+def SVPRFB : MInst<"svprfb", "vPQJ", "c", [IsPrefetch], MemEltTyInt8,  "aarch64_sve_prf">;
+def SVPRFH : MInst<"svprfh", "vPQJ", "s", [IsPrefetch], MemEltTyInt16, "aarch64_sve_prf">;
+def SVPRFW : MInst<"svprfw", "vPQJ", "i", [IsPrefetch], MemEltTyInt32, "aarch64_sve_prf">;
+def SVPRFD : MInst<"svprfd", "vPQJ", "l", [IsPrefetch], MemEltTyInt64, "aarch64_sve_prf">;
 
 // Prefetch (Scalar base, VL displacement)
-def SVPRFB_VNUM : MInst<"svprfb_vnum", "vPclJ", "c", [IsPrefetch], MemEltTyInt8,  "aarch64_sve_prf">;
-def SVPRFH_VNUM : MInst<"svprfh_vnum", "vPclJ", "s", [IsPrefetch], MemEltTyInt16, "aarch64_sve_prf">;
-def SVPRFW_VNUM : MInst<"svprfw_vnum", "vPclJ", "i", [IsPrefetch], MemEltTyInt32, "aarch64_sve_prf">;
-def SVPRFD_VNUM : MInst<"svprfd_vnum", "vPclJ", "l", [IsPrefetch], MemEltTyInt64, "aarch64_sve_prf">;
+def SVPRFB_VNUM : MInst<"svprfb_vnum", "vPQlJ", "c", [IsPrefetch], MemEltTyInt8,  "aarch64_sve_prf">;
+def SVPRFH_VNUM : MInst<"svprfh_vnum", "vPQlJ", "s", [IsPrefetch], MemEltTyInt16, "aarch64_sve_prf">;
+def SVPRFW_VNUM : MInst<"svprfw_vnum", "vPQlJ", "i", [IsPrefetch], MemEltTyInt32, "aarch64_sve_prf">;
+def SVPRFD_VNUM : MInst<"svprfd_vnum", "vPQlJ", "l", [IsPrefetch], MemEltTyInt64, "aarch64_sve_prf">;
 
 // Prefetch (Vector bases)
 def SVPRFB_GATHER_BASES : MInst<"svprfb_gather[_{2}base]", "vPdJ", "UiUl", [IsGatherPrefetch], MemEltTyInt8,  "aarch64_sve_prfb_gather_scalar_offset">;
@@ -2073,7 +2073,7 @@ def SVSM4E    : SInst<"svsm4e[_{d}]",    "ddd", "Ui", MergeNone, "aarch64_sve_sm
 def SVSM4EKEY : SInst<"svsm4ekey[_{d}]", "ddd", "Ui", MergeNone, "aarch64_sve_sm4ekey", [IsOverloadNone]>;
 }
 
-let ArchGuard = "__ARM_FEATURE_SVE2_BITPERM" in {
+let ArchGuard = "defined (__ARM_FEATURE_SVE2_BITPERM)" in {
 def SVBDEP   : SInst<"svbdep[_{d}]",   "ddd", "UcUsUiUl", MergeNone, "aarch64_sve_bdep_x">;
 def SVBDEP_N : SInst<"svbdep[_n_{d}]", "dda", "UcUsUiUl", MergeNone, "aarch64_sve_bdep_x">;
 def SVBEXT   : SInst<"svbext[_{d}]",   "ddd", "UcUsUiUl", MergeNone, "aarch64_sve_bext_x">;

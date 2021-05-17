@@ -196,6 +196,9 @@
 // ARM:#define __arm 1
 // ARM:#define __arm__ 1
 
+// RUN: %clang_cc1 -E -dM -triple=armv7-apple-ios7.0 -x c++ < /dev/null | FileCheck -match-full-lines -check-prefix ARM-DARWIN-CXX %s
+// ARM-DARWIN-CXX: #define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL
+
 // RUN: %clang_cc1 -dM -ffreestanding -triple arm-none-none -target-abi apcs-gnu -E /dev/null -o - | FileCheck -match-full-lines -check-prefix ARM-APCS-GNU %s
 // ARM-APCS-GNU: #define __INTPTR_TYPE__ int
 // ARM-APCS-GNU: #define __PTRDIFF_TYPE__ int

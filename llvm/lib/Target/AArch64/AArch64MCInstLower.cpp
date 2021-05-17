@@ -39,7 +39,7 @@ AArch64MCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
   unsigned TargetFlags = MO.getTargetFlags();
   const Triple &TheTriple = Printer.TM.getTargetTriple();
   if (!TheTriple.isOSBinFormatCOFF())
-    return Printer.getSymbol(GV);
+    return Printer.getSymbolPreferLocal(*GV);
 
   assert(TheTriple.isOSWindows() &&
          "Windows is the only supported COFF target");

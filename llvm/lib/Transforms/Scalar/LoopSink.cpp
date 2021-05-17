@@ -31,6 +31,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopSink.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AliasSetTracker.h"
@@ -191,7 +192,7 @@ static bool sinkInstruction(
   for (auto &U : I.uses()) {
     Instruction *UI = cast<Instruction>(U.getUser());
     // We cannot sink I to PHI-uses.
-    if (dyn_cast<PHINode>(UI))
+    if (isa<PHINode>(UI))
       return false;
     // We cannot sink I if it has uses outside of the loop.
     if (!L.contains(LI.getLoopFor(UI->getParent())))
@@ -212,11 +213,9 @@ static bool sinkInstruction(
     return false;
 
   // Return if any of the candidate blocks to sink into is non-cold.
-  if (BBsToSinkInto.size() > 1) {
-    for (auto *BB : BBsToSinkInto)
-      if (!LoopBlockNumber.count(BB))
-        return false;
-  }
+  if (BBsToSinkInto.size() > 1 &&
+      !llvm::set_is_subset(BBsToSinkInto, LoopBlockNumber))
+    return false;
 
   // Copy the final BBs into a vector and sort them using the total ordering
   // of the loop block numbers as iterating the set doesn't give a useful

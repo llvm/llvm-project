@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-pro-type-member-init %t -- -config="{CheckOptions: [{key: "cppcoreguidelines-pro-type-member-init.UseAssignment", value: 1}]}" -- -fsigned-char
+// RUN: %check_clang_tidy %s cppcoreguidelines-pro-type-member-init %t -- -config="{CheckOptions: [{key: "cppcoreguidelines-pro-type-member-init.UseAssignment", value: true}]}" -- -fsigned-char
 
 struct T {
   int i;

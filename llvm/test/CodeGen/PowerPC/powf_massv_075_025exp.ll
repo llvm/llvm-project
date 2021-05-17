@@ -19,7 +19,7 @@ vector.body:
   %wide.load = load <4 x float>, <4 x float>* %0, align 4
   %1 = bitcast float* %next.gep31 to <4 x float>*
   %wide.load33 = load <4 x float>, <4 x float>* %1, align 4
-  %2 = call ninf afn nsz <4 x float> @__powf4_massv(<4 x float> %wide.load, <4 x float> %wide.load33)
+  %2 = call ninf afn nsz <4 x float> @__powf4_P8(<4 x float> %wide.load, <4 x float> %wide.load33)
   %3 = bitcast float* %next.gep to <4 x float>*
   store <4 x float> %2, <4 x float>* %3, align 4
   %index.next = add i64 %index, 4
@@ -45,7 +45,7 @@ vector.body:
   %next.gep19 = getelementptr float, float* %x, i64 %index
   %0 = bitcast float* %next.gep19 to <4 x float>*
   %wide.load = load <4 x float>, <4 x float>* %0, align 4
-  %1 = call ninf afn nsz <4 x float> @__powf4_massv(<4 x float> %wide.load, <4 x float> <float 0x3FE851EB80000000, float 0x3FE851EB80000000, float 0x3FE851EB80000000, float 0x3FE851EB80000000>)
+  %1 = call ninf afn nsz <4 x float> @__powf4_P8(<4 x float> %wide.load, <4 x float> <float 0x3FE851EB80000000, float 0x3FE851EB80000000, float 0x3FE851EB80000000, float 0x3FE851EB80000000>)
   %2 = bitcast float* %next.gep to <4 x float>*
   store <4 x float> %1, <4 x float>* %2, align 4
   %index.next = add i64 %index, 4
@@ -71,7 +71,7 @@ vector.body:
   %next.gep19 = getelementptr float, float* %x, i64 %index
   %0 = bitcast float* %next.gep19 to <4 x float>*
   %wide.load = load <4 x float>, <4 x float>* %0, align 4
-  %1 = call ninf afn nsz <4 x float> @__powf4_massv(<4 x float> %wide.load, <4 x float> <float 0x3FE861EB80000000, float 0x3FE871EB80000000, float 0x3FE851EB80000000, float 0x3FE851EB80000000>)
+  %1 = call ninf afn nsz <4 x float> @__powf4_P8(<4 x float> %wide.load, <4 x float> <float 0x3FE861EB80000000, float 0x3FE871EB80000000, float 0x3FE851EB80000000, float 0x3FE851EB80000000>)
   %2 = bitcast float* %next.gep to <4 x float>*
   store <4 x float> %1, <4 x float>* %2, align 4
   %index.next = add i64 %index, 4
@@ -97,7 +97,7 @@ vector.body:
   %next.gep19 = getelementptr float, float* %x, i64 %index
   %0 = bitcast float* %next.gep19 to <4 x float>*
   %wide.load = load <4 x float>, <4 x float>* %0, align 4
-  %1 = call ninf afn nsz <4 x float> @__powf4_massv(<4 x float> %wide.load, <4 x float> <float 7.500000e-01, float 7.500000e-01, float 7.500000e-01, float 0x3FE851EB80000000>)
+  %1 = call ninf afn nsz <4 x float> @__powf4_P8(<4 x float> %wide.load, <4 x float> <float 7.500000e-01, float 7.500000e-01, float 7.500000e-01, float 0x3FE851EB80000000>)
   %2 = bitcast float* %next.gep to <4 x float>*
   store <4 x float> %1, <4 x float>* %2, align 4
   %index.next = add i64 %index, 4
@@ -123,7 +123,7 @@ vector.body:
   %next.gep19 = getelementptr float, float* %x, i64 %index
   %0 = bitcast float* %next.gep19 to <4 x float>*
   %wide.load = load <4 x float>, <4 x float>* %0, align 4
-  %1 = call ninf afn nsz <4 x float> @__powf4_massv(<4 x float> %wide.load, <4 x float> <float 0x3FE851EB80000000, float 2.500000e-01, float 0x3FE851EB80000000, float 2.500000e-01>)
+  %1 = call ninf afn nsz <4 x float> @__powf4_P8(<4 x float> %wide.load, <4 x float> <float 0x3FE851EB80000000, float 2.500000e-01, float 0x3FE851EB80000000, float 2.500000e-01>)
   %2 = bitcast float* %next.gep to <4 x float>*
   store <4 x float> %1, <4 x float>* %2, align 4
   %index.next = add i64 %index, 4
@@ -149,7 +149,7 @@ vector.body:
   %next.gep19 = getelementptr float, float* %x, i64 %index
   %0 = bitcast float* %next.gep19 to <4 x float>*
   %wide.load = load <4 x float>, <4 x float>* %0, align 4
-  %1 = call ninf afn <4 x float> @__powf4_massv(<4 x float> %wide.load, <4 x float> <float 7.500000e-01, float 7.500000e-01, float 7.500000e-01, float 7.500000e-01>)
+  %1 = call ninf afn <4 x float> @__powf4_P8(<4 x float> %wide.load, <4 x float> <float 7.500000e-01, float 7.500000e-01, float 7.500000e-01, float 7.500000e-01>)
   %2 = bitcast float* %next.gep to <4 x float>*
   store <4 x float> %1, <4 x float>* %2, align 4
   %index.next = add i64 %index, 4
@@ -175,7 +175,7 @@ vector.body:
   %next.gep19 = getelementptr float, float* %x, i64 %index
   %0 = bitcast float* %next.gep19 to <4 x float>*
   %wide.load = load <4 x float>, <4 x float>* %0, align 4
-  %1 = call ninf afn nsz <4 x float> @__powf4_massv(<4 x float> %wide.load, <4 x float> <float 2.500000e-01, float 2.500000e-01, float 2.500000e-01, float 2.500000e-01>)
+  %1 = call ninf afn nsz <4 x float> @__powf4_P8(<4 x float> %wide.load, <4 x float> <float 2.500000e-01, float 2.500000e-01, float 2.500000e-01, float 2.500000e-01>)
   %2 = bitcast float* %next.gep to <4 x float>*
   store <4 x float> %1, <4 x float>* %2, align 4
   %index.next = add i64 %index, 4
@@ -202,7 +202,7 @@ vector.body:
   %next.gep19 = getelementptr float, float* %x, i64 %index
   %0 = bitcast float* %next.gep19 to <4 x float>*
   %wide.load = load <4 x float>, <4 x float>* %0, align 4
-  %1 = call <4 x float> @__powf4_massv(<4 x float> %wide.load, <4 x float> <float 7.500000e-01, float 7.500000e-01, float 7.500000e-01, float 7.500000e-01>)
+  %1 = call <4 x float> @__powf4_P8(<4 x float> %wide.load, <4 x float> <float 7.500000e-01, float 7.500000e-01, float 7.500000e-01, float 7.500000e-01>)
   %2 = bitcast float* %next.gep to <4 x float>*
   store <4 x float> %1, <4 x float>* %2, align 4
   %index.next = add i64 %index, 4
@@ -229,7 +229,7 @@ vector.body:
   %next.gep19 = getelementptr float, float* %x, i64 %index
   %0 = bitcast float* %next.gep19 to <4 x float>*
   %wide.load = load <4 x float>, <4 x float>* %0, align 4
-  %1 = call <4 x float> @__powf4_massv(<4 x float> %wide.load, <4 x float> <float 2.500000e-01, float 2.500000e-01, float 2.500000e-01, float 2.500000e-01>)
+  %1 = call <4 x float> @__powf4_P8(<4 x float> %wide.load, <4 x float> <float 2.500000e-01, float 2.500000e-01, float 2.500000e-01, float 2.500000e-01>)
   %2 = bitcast float* %next.gep to <4 x float>*
   store <4 x float> %1, <4 x float>* %2, align 4
   %index.next = add i64 %index, 4
@@ -241,4 +241,4 @@ for.end:
 }
 
 ; Function Attrs: nounwind readnone speculatable willreturn
-declare <4 x float> @__powf4_massv(<4 x float>, <4 x float>)
+declare <4 x float> @__powf4_P8(<4 x float>, <4 x float>)

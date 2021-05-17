@@ -180,7 +180,7 @@ bool HexagonStoreWidening::instrAliased(InstrGroup &Stores,
       return true;
 
     MemoryLocation SL(SMO.getValue(), SMO.getSize(), SMO.getAAInfo());
-    if (AA->alias(L, SL))
+    if (!AA->isNoAlias(L, SL))
       return true;
   }
 

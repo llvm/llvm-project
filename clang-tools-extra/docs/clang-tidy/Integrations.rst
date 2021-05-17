@@ -82,7 +82,7 @@ possible with the `Clang Tools`_ analyzer.
 .. _ReSharper C++: https://www.jetbrains.com/help/resharper/Clang_Tidy_Integration.html
 .. _Visual Assist: https://docs.wholetomato.com/default.asp?W761
 .. _Clang Power Tools: https://marketplace.visualstudio.com/items?itemName=caphyon.ClangPowerTools
-.. _clang-tidy-vs: https://github.com/llvm/llvm-project/tree/master/clang-tools-extra/clang-tidy-vs
+.. _clang-tidy-vs: https://github.com/llvm/llvm-project/tree/main/clang-tools-extra/clang-tidy-vs
 
 `MS Visual Studio`_ has a native clang-tidy-vs_ plugin and also can integrate
 :program:`clang-tidy` by means of three other tools. The `ReSharper C++`_

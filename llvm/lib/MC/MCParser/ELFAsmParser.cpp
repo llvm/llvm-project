@@ -157,7 +157,7 @@ private:
   unsigned parseSunStyleSectionFlags();
   bool maybeParseSectionType(StringRef &TypeName);
   bool parseMergeSize(int64_t &Size);
-  bool parseGroup(StringRef &GroupName);
+  bool parseGroup(StringRef &GroupName, bool &IsComdat);
   bool parseLinkedToSym(MCSymbolELF *&LinkedToSym);
   bool maybeParseUniqueID(int64_t &UniqueID);
 };
@@ -181,6 +181,12 @@ bool ELFAsmParser::ParseDirectiveSymbolAttribute(StringRef Directive, SMLoc) {
 
       if (getParser().parseIdentifier(Name))
         return TokError("expected identifier in directive");
+
+      if (getParser().discardLTOSymbol(Name)) {
+        if (getLexer().is(AsmToken::EndOfStatement))
+          break;
+        continue;
+      }
 
       MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
 
@@ -326,6 +332,9 @@ static unsigned parseSectionFlags(StringRef flagsStr, bool *UseLastGroup) {
     case 'G':
       flags |= ELF::SHF_GROUP;
       break;
+    case 'R':
+      flags |= ELF::SHF_GNU_RETAIN;
+      break;
     case '?':
       *UseLastGroup = true;
       break;
@@ -421,7 +430,7 @@ bool ELFAsmParser::parseMergeSize(int64_t &Size) {
   return false;
 }
 
-bool ELFAsmParser::parseGroup(StringRef &GroupName) {
+bool ELFAsmParser::parseGroup(StringRef &GroupName, bool &IsComdat) {
   MCAsmLexer &L = getLexer();
   if (L.isNot(AsmToken::Comma))
     return TokError("expected group name");
@@ -439,6 +448,9 @@ bool ELFAsmParser::parseGroup(StringRef &GroupName) {
       return TokError("invalid linkage");
     if (Linkage != "comdat")
       return TokError("Linkage must be 'comdat'");
+    IsComdat = true;
+  } else {
+    IsComdat = false;
   }
   return false;
 }
@@ -499,7 +511,9 @@ bool ELFAsmParser::ParseSectionArguments(bool IsPush, SMLoc loc) {
   StringRef TypeName;
   int64_t Size = 0;
   StringRef GroupName;
+  bool IsComdat = false;
   unsigned Flags = 0;
+  unsigned extraFlags = 0;
   const MCExpr *Subsection = nullptr;
   bool UseLastGroup = false;
   MCSymbolELF *LinkedToSym = nullptr;
@@ -531,8 +545,6 @@ bool ELFAsmParser::ParseSectionArguments(bool IsPush, SMLoc loc) {
         goto EndStmt;
       Lex();
     }
-
-    unsigned extraFlags;
 
     if (getLexer().isNot(AsmToken::String)) {
       if (!getContext().getAsmInfo()->usesSunStyleELFSectionSwitchSyntax()
@@ -572,7 +584,7 @@ bool ELFAsmParser::ParseSectionArguments(bool IsPush, SMLoc loc) {
       if (parseMergeSize(Size))
         return true;
     if (Group)
-      if (parseGroup(GroupName))
+      if (parseGroup(GroupName, IsComdat))
         return true;
     if (Flags & ELF::SHF_LINK_ORDER)
       if (parseLinkedToSym(LinkedToSym))
@@ -638,12 +650,14 @@ EndStmt:
             cast_or_null<MCSectionELF>(CurrentSection.first))
       if (const MCSymbol *Group = Section->getGroup()) {
         GroupName = Group->getName();
+        IsComdat = Section->isComdat();
         Flags |= ELF::SHF_GROUP;
       }
   }
 
-  MCSectionELF *Section = getContext().getELFSection(
-      SectionName, Type, Flags, Size, GroupName, UniqueID, LinkedToSym);
+  MCSectionELF *Section =
+      getContext().getELFSection(SectionName, Type, Flags, Size, GroupName,
+                                 IsComdat, UniqueID, LinkedToSym);
   getStreamer().SwitchSection(Section, Subsection);
   // x86-64 psABI names SHT_X86_64_UNWIND as the canonical type for .eh_frame,
   // but GNU as emits SHT_PROGBITS .eh_frame for .cfi_* directives. Don't error
@@ -655,10 +669,11 @@ EndStmt:
   // Check that flags are used consistently. However, the GNU assembler permits
   // to leave out in subsequent uses of the same sections; for compatibility,
   // do likewise.
-  if ((Flags || Size || !TypeName.empty()) && Section->getFlags() != Flags)
+  if ((extraFlags || Size || !TypeName.empty()) && Section->getFlags() != Flags)
     Error(loc, "changed section flags for " + SectionName + ", expected: 0x" +
                    utohexstr(Section->getFlags()));
-  if ((Flags || Size || !TypeName.empty()) && Section->getEntrySize() != Size)
+  if ((extraFlags || Size || !TypeName.empty()) &&
+      Section->getEntrySize() != Size)
     Error(loc, "changed section entsize for " + SectionName +
                    ", expected: " + Twine(Section->getEntrySize()));
 
@@ -781,8 +796,8 @@ bool ELFAsmParser::ParseDirectiveIdent(StringRef, SMLoc) {
 /// ParseDirectiveSymver
 ///  ::= .symver foo, bar2@zed
 bool ELFAsmParser::ParseDirectiveSymver(StringRef, SMLoc) {
-  StringRef Name;
-  if (getParser().parseIdentifier(Name))
+  StringRef OriginalName, Name, Action;
+  if (getParser().parseIdentifier(OriginalName))
     return TokError("expected identifier in directive");
 
   if (getLexer().isNot(AsmToken::Comma))
@@ -797,15 +812,21 @@ bool ELFAsmParser::ParseDirectiveSymver(StringRef, SMLoc) {
   Lex();
   getLexer().setAllowAtInIdentifier(AllowAtInIdentifier);
 
-  StringRef AliasName;
-  if (getParser().parseIdentifier(AliasName))
+  if (getParser().parseIdentifier(Name))
     return TokError("expected identifier in directive");
 
-  if (AliasName.find('@') == StringRef::npos)
+  if (Name.find('@') == StringRef::npos)
     return TokError("expected a '@' in the name");
+  bool KeepOriginalSym = !Name.contains("@@@");
+  if (parseOptionalToken(AsmToken::Comma)) {
+    if (getParser().parseIdentifier(Action) || Action != "remove")
+      return TokError("expected 'remove'");
+    KeepOriginalSym = false;
+  }
+  (void)parseOptionalToken(AsmToken::EndOfStatement);
 
-  MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
-  getStreamer().emitELFSymverDirective(AliasName, Sym);
+  getStreamer().emitELFSymverDirective(
+      getContext().getOrCreateSymbol(OriginalName), Name, KeepOriginalSym);
   return false;
 }
 

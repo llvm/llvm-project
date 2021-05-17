@@ -67,11 +67,13 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPULowerIntrinsics.cpp
   AMDGPULowerKernelArguments.cpp
   AMDGPULowerKernelAttributes.cpp
+  AMDGPULowerModuleLDSPass.cpp
   AMDGPUMachineCFGStructurizer.cpp
   AMDGPUMachineFunction.cpp
   AMDGPUMachineModuleInfo.cpp
   AMDGPUMacroFusion.cpp
   AMDGPUMCInstLower.cpp
+  AMDGPUMIRFormatter.cpp
   AMDGPUOpenCLEnqueuedBlockLowering.cpp
   AMDGPUPostLegalizerCombiner.cpp
   AMDGPUPreLegalizerCombiner.cpp
@@ -86,7 +88,6 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUTargetTransformInfo.cpp
   AMDGPUUnifyDivergentExitNodes.cpp
   AMDGPUUnifyMetadata.cpp
-  AMDGPUInline.cpp
   AMDGPUPerfHintAnalysis.cpp
   AMDILCFGStructurizer.cpp
   AMDGPUPrintfRuntimeBinding.cpp
@@ -109,7 +110,6 @@ add_llvm_target(AMDGPUCodeGen
   R600OptimizeVectorRegisters.cpp
   R600Packetizer.cpp
   R600RegisterInfo.cpp
-  SIAddIMGInit.cpp
   SIAnnotateControlFlow.cpp
   SIFixSGPRCopies.cpp
   SIFixVGPRCopies.cpp
@@ -118,7 +118,7 @@ add_llvm_target(AMDGPUCodeGen
   SIFormMemoryClauses.cpp
   SIFrameLowering.cpp
   SIInsertHardClauses.cpp
-  SIInsertSkips.cpp
+  SILateBranchLowering.cpp
   SIInsertWaitcnts.cpp
   SIInstrInfo.cpp
   SIISelLowering.cpp
@@ -136,11 +136,9 @@ add_llvm_target(AMDGPUCodeGen
   SIPreEmitPeephole.cpp
   SIProgramInfo.cpp
   SIRegisterInfo.cpp
-  SIRemoveShortExecBranches.cpp
   SIShrinkInstructions.cpp
   SIWholeQuadMode.cpp
   GCNILPSched.cpp
-  GCNRegBankReassign.cpp
   GCNNSAReassign.cpp
   GCNDPPCombine.cpp
   SIModeRegister.cpp

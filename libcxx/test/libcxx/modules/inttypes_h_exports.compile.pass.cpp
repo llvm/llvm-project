@@ -14,6 +14,7 @@
 // still get built as part of the 'std' module, which breaks the build.
 // UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: libcpp-has-no-localization
+// UNSUPPORTED: libcpp-has-no-filesystem-library
 
 // Test that intypes.h re-exports stdint.h
 

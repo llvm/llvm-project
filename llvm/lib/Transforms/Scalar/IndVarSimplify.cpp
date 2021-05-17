@@ -875,7 +875,8 @@ static bool isLoopCounter(PHINode* Phi, Loop *L,
 
   int LatchIdx = Phi->getBasicBlockIndex(L->getLoopLatch());
   Value *IncV = Phi->getIncomingValue(LatchIdx);
-  return (getLoopPhiForCounter(IncV, L) == Phi);
+  return (getLoopPhiForCounter(IncV, L) == Phi &&
+          isa<SCEVAddRecExpr>(SE->getSCEV(IncV)));
 }
 
 /// Search the loop header for a loop counter (anadd rec w/step of one)
@@ -1564,9 +1565,6 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   if (!LoopPredication)
     return false;
 
-  if (!SE->hasLoopInvariantBackedgeTakenCount(L))
-    return false;
-
   // Note: ExactBTC is the exact backedge taken count *iff* the loop exits
   // through *explicit* control flow.  We have to eliminate the possibility of
   // implicit exits (see below) before we know it's truly exact.
@@ -1605,8 +1603,8 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
       return true;
 
     const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
-    assert(!isa<SCEVCouldNotCompute>(ExactBTC) && "implied by having exact trip count");
-    if (!SE->isLoopInvariant(ExitCount, L) ||
+    if (isa<SCEVCouldNotCompute>(ExitCount) ||
+        !SE->isLoopInvariant(ExitCount, L) ||
         !isSafeToExpand(ExitCount, *SE))
       return true;
 
@@ -1670,7 +1668,7 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   for (BasicBlock *BB : L->blocks())
     for (auto &I : *BB)
       // TODO:isGuaranteedToTransfer
-      if (I.mayHaveSideEffects() || I.mayThrow())
+      if (I.mayHaveSideEffects())
         return false;
 
   bool Changed = false;

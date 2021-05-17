@@ -1,18 +1,8 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
-tablegen("ACCImpl") {
-  visibility = [ ":OpenACC" ]
-  args = [ "-gen-directive-impl" ]
-  td_file = "//llvm/include/llvm/Frontend/OpenACC/ACC.td"
-  output_name = "ACC.cpp"
-}
-
 static_library("OpenACC") {
   output_name = "LLVMFrontendOpenACC"
-  deps = [
-    ":ACCImpl",
-    "//llvm/lib/Support",
-  ]
+  deps = [ "//llvm/lib/Support" ]
   public_deps = [ "//llvm/include/llvm/Frontend/OpenACC:acc_gen" ]
-  sources = get_target_outputs(":ACCImpl")
+  sources = [ "ACC.cpp" ]
 }

@@ -436,6 +436,7 @@ defm : X86WriteResPairUnsupported<WriteFVarBlendZ>;
 defm : X86WriteResPairUnsupported<WriteFShuffle256>;
 defm : X86WriteResPairUnsupported<WriteFVarShuffle256>;
 defm : X86WriteResPairUnsupported<WriteShuffle256>;
+defm : X86WriteResPairUnsupported<WriteVPMOV256>;
 defm : X86WriteResPairUnsupported<WriteVarShuffle256>;
 defm : SLMWriteResPair<WriteVarVecShift,  [SLM_FPC_RSV0],  1>;
 defm : X86WriteResPairUnsupported<WriteVarVecShiftY>;

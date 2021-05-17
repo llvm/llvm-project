@@ -5,7 +5,7 @@
 // RUN: %env_lsan_opts= %run %t 2>&1
 // RUN: %env_lsan_opts= not %run %t foo 2>&1 | FileCheck %s
 // Missing 'getcontext' and 'makecontext' on Android.
-// UNSUPPORTED: arm,powerpc64,android
+// UNSUPPORTED: arm,aarch64,powerpc64,android
 
 #include "sanitizer_common/sanitizer_ucontext.h"
 #include <stdio.h>

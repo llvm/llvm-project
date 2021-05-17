@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_FILE_COLLECTOR_H
-#define LLVM_SUPPORT_FILE_COLLECTOR_H
+#ifndef LLVM_SUPPORT_FILECOLLECTOR_H
+#define LLVM_SUPPORT_FILECOLLECTOR_H
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -69,6 +69,27 @@ protected:
 /// as relative paths inside of the Root.
 class FileCollector : public FileCollectorBase {
 public:
+  /// Helper utility that encapsulates the logic for canonicalizing a virtual
+  /// path and a path to copy from.
+  class PathCanonicalizer {
+  public:
+    struct PathStorage {
+      SmallString<256> CopyFrom;
+      SmallString<256> VirtualPath;
+    };
+
+    /// Canonicalize a pair of virtual and real paths.
+    PathStorage canonicalize(StringRef SrcPath);
+
+  private:
+    /// Replace with a (mostly) real path, or don't modify. Resolves symlinks
+    /// in the directory, using \a CachedDirs to avoid redundant lookups, but
+    /// leaves the filename as a possible symlink.
+    void updateWithRealPath(SmallVectorImpl<char> &Path);
+
+    StringMap<std::string> CachedDirs;
+  };
+
   /// \p Root is the directory where collected files are will be stored.
   /// \p OverlayRoot is VFS mapping root.
   /// \p Root directory gets created in copyFiles unless it already exists.
@@ -92,8 +113,6 @@ public:
 
 private:
   friend FileCollectorFileSystem;
-
-  bool getRealPath(StringRef SrcPath, SmallVectorImpl<char> &Result);
 
   void addFileToMapping(StringRef VirtualPath, StringRef RealPath) {
     if (sys::fs::is_directory(VirtualPath))
@@ -119,10 +138,10 @@ protected:
   /// The yaml mapping writer.
   vfs::YAMLVFSWriter VFSWriter;
 
-  /// Caches RealPath calls when resolving symlinks.
-  StringMap<std::string> SymlinkMap;
+  /// Helper utility for canonicalizing paths.
+  PathCanonicalizer Canonicalizer;
 };
 
 } // end namespace llvm
 
-#endif // LLVM_SUPPORT_FILE_COLLECTOR_H
+#endif // LLVM_SUPPORT_FILECOLLECTOR_H

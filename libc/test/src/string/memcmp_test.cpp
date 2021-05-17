@@ -9,25 +9,25 @@
 #include "src/string/memcmp.h"
 #include "utils/UnitTest/Test.h"
 
-TEST(MemcmpTest, CmpZeroByte) {
+TEST(LlvmLibcMemcmpTest, CmpZeroByte) {
   const char *lhs = "ab";
   const char *rhs = "bc";
   EXPECT_EQ(__llvm_libc::memcmp(lhs, rhs, 0), 0);
 }
 
-TEST(MemcmpTest, LhsRhsAreTheSame) {
+TEST(LlvmLibcMemcmpTest, LhsRhsAreTheSame) {
   const char *lhs = "ab";
   const char *rhs = "ab";
   EXPECT_EQ(__llvm_libc::memcmp(lhs, rhs, 2), 0);
 }
 
-TEST(MemcmpTest, LhsBeforeRhsLexically) {
+TEST(LlvmLibcMemcmpTest, LhsBeforeRhsLexically) {
   const char *lhs = "ab";
   const char *rhs = "ac";
   EXPECT_EQ(__llvm_libc::memcmp(lhs, rhs, 2), -1);
 }
 
-TEST(MemcmpTest, LhsAfterRhsLexically) {
+TEST(LlvmLibcMemcmpTest, LhsAfterRhsLexically) {
   const char *lhs = "ac";
   const char *rhs = "ab";
   EXPECT_EQ(__llvm_libc::memcmp(lhs, rhs, 2), 1);

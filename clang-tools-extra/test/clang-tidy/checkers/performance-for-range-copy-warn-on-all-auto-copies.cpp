@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s performance-for-range-copy %t -- \
-// RUN:     -config="{CheckOptions: [{key: "performance-for-range-copy.WarnOnAllAutoCopies", value: 1}]}"
+// RUN:     -config="{CheckOptions: [{key: "performance-for-range-copy.WarnOnAllAutoCopies", value: true}]}"
 
 template <typename T>
 struct Iterator {

@@ -3,7 +3,7 @@
 struct [[nodiscard]] S1 { // ok
   int i;
 };
-struct [[nodiscard nodiscard]] S2 { // expected-error {{attribute 'nodiscard' cannot appear multiple times in an attribute specifier}}
+struct [[nodiscard, nodiscard]] S2 { // ok
   int i;
 };
 struct [[nodiscard("Wrong")]] S3 { // FIXME: may need an extension warning.

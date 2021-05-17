@@ -7,7 +7,6 @@
 ; RUN:     -passes='cgscc(inline,function(correlated-propagation))' \
 ; RUN:     | FileCheck %s
 ;
-; CHECK-LABEL: Starting llvm::Module pass manager run.
 ; CHECK: Running pass: InlinerPass on (callee)
 ; CHECK: Running pass: CorrelatedValuePropagationPass on callee
 ; CHECK: Running analysis: LazyValueAnalysis

@@ -12,7 +12,8 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadList.h"
-#include "lldb/Target/ThreadTrace.h"
+#include "lldb/Target/ThreadPostMortemTrace.h"
+#include "lldb/Utility/TraceOptions.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -24,7 +25,7 @@ StringRef TraceIntelPTSessionFileParser::GetSchema() {
   if (schema.empty()) {
     schema = TraceSessionFileParser::BuildSchema(R"({
     "type": "intel-pt",
-    "pt_cpu": {
+    "cpuInfo": {
       "vendor": "intel" | "unknown",
       "family": integer,
       "model": integer,
@@ -35,21 +36,22 @@ StringRef TraceIntelPTSessionFileParser::GetSchema() {
   return schema;
 }
 
-pt_cpu TraceIntelPTSessionFileParser::ParsePTCPU(const JSONPTCPU &pt_cpu) {
-  return {pt_cpu.vendor.compare("intel") == 0 ? pcv_intel : pcv_unknown,
-          static_cast<uint16_t>(pt_cpu.family),
-          static_cast<uint8_t>(pt_cpu.model),
-          static_cast<uint8_t>(pt_cpu.stepping)};
+pt_cpu TraceIntelPTSessionFileParser::ParsePTCPU(
+    const JSONTraceIntelPTCPUInfo &cpu_info) {
+  return {cpu_info.vendor.compare("intel") == 0 ? pcv_intel : pcv_unknown,
+          static_cast<uint16_t>(cpu_info.family),
+          static_cast<uint8_t>(cpu_info.model),
+          static_cast<uint8_t>(cpu_info.stepping)};
 }
 
 TraceSP TraceIntelPTSessionFileParser::CreateTraceIntelPTInstance(
-    const pt_cpu &pt_cpu, std::vector<ParsedProcess> &parsed_processes) {
-  std::vector<ThreadTraceSP> threads;
+    const pt_cpu &cpu_info, std::vector<ParsedProcess> &parsed_processes) {
+  std::vector<ThreadPostMortemTraceSP> threads;
   for (const ParsedProcess &parsed_process : parsed_processes)
     threads.insert(threads.end(), parsed_process.threads.begin(),
                    parsed_process.threads.end());
 
-  TraceSP trace_instance(new TraceIntelPT(pt_cpu, threads));
+  TraceSP trace_instance(new TraceIntelPT(cpu_info, threads));
   for (const ParsedProcess &parsed_process : parsed_processes)
     parsed_process.target_sp->SetTrace(trace_instance);
 
@@ -64,7 +66,7 @@ Expected<TraceSP> TraceIntelPTSessionFileParser::Parse() {
 
   if (Expected<std::vector<ParsedProcess>> parsed_processes =
           ParseCommonSessionFile(session))
-    return CreateTraceIntelPTInstance(ParsePTCPU(session.trace.pt_cpu),
+    return CreateTraceIntelPTInstance(ParsePTCPU(session.trace.cpuInfo),
                                       *parsed_processes);
   else
     return parsed_processes.takeError();
@@ -73,24 +75,33 @@ Expected<TraceSP> TraceIntelPTSessionFileParser::Parse() {
 namespace llvm {
 namespace json {
 
-bool fromJSON(const Value &value,
-              TraceIntelPTSessionFileParser::JSONPTCPU &pt_cpu, Path path) {
-  ObjectMapper o(value, path);
-  return o && o.map("vendor", pt_cpu.vendor) &&
-         o.map("family", pt_cpu.family) && o.map("model", pt_cpu.model) &&
-         o.map("stepping", pt_cpu.stepping);
-}
-
 bool fromJSON(
     const Value &value,
     TraceIntelPTSessionFileParser::JSONTraceIntelPTSettings &plugin_settings,
     Path path) {
   ObjectMapper o(value, path);
-  return o && o.map("pt_cpu", plugin_settings.pt_cpu) &&
+  return o && o.map("cpuInfo", plugin_settings.cpuInfo) &&
          fromJSON(
              value,
              (TraceSessionFileParser::JSONTracePluginSettings &)plugin_settings,
              path);
+}
+
+bool fromJSON(const json::Value &value,
+              TraceIntelPTSessionFileParser::JSONTraceIntelPTCPUInfo &cpu_info,
+              Path path) {
+  ObjectMapper o(value, path);
+  return o && o.map("vendor", cpu_info.vendor) &&
+         o.map("family", cpu_info.family) && o.map("model", cpu_info.model) &&
+         o.map("stepping", cpu_info.stepping);
+}
+
+Value toJSON(
+    const TraceIntelPTSessionFileParser::JSONTraceIntelPTCPUInfo &cpu_info) {
+  return Value(Object{{"family", cpu_info.family},
+                      {"model", cpu_info.model},
+                      {"stepping", cpu_info.stepping},
+                      {"vendor", cpu_info.vendor}});
 }
 
 } // namespace json

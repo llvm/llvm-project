@@ -9,7 +9,7 @@
 #include "src/string/strcat.h"
 #include "utils/UnitTest/Test.h"
 
-TEST(StrCatTest, EmptyDest) {
+TEST(LlvmLibcStrCatTest, EmptyDest) {
   const char *abc = "abc";
   char dest[4];
 
@@ -21,7 +21,7 @@ TEST(StrCatTest, EmptyDest) {
   ASSERT_STREQ(dest, abc);
 }
 
-TEST(StrCatTest, NonEmptyDest) {
+TEST(LlvmLibcStrCatTest, NonEmptyDest) {
   const char *abc = "abc";
   char dest[7];
 

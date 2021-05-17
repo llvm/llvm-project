@@ -86,7 +86,7 @@ Here are the steps you can follow to do so:
    `zorg <https://github.com/llvm/llvm-zorg>`_. Use the typical LLVM 
    `workflow <https://llvm.org/docs/Contributing.html#how-to-submit-a-patch>`_.
 
-   * workers are added to ``buildbot/osuosl/master/config/slaves.py``
+   * workers are added to ``buildbot/osuosl/master/config/workers.py``
    * builders are added to ``buildbot/osuosl/master/config/builders.py``
 
    Please make sure your builder name and its builddir are unique through the

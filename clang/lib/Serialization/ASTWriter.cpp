@@ -95,6 +95,7 @@
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/OnDiskHashTable.h"
 #include "llvm/Support/Path.h"
@@ -1615,6 +1616,15 @@ static unsigned CreateSLocExpansionAbbrev(llvm::BitstreamWriter &Stream) {
   return Stream.EmitAbbrev(std::move(Abbrev));
 }
 
+/// Emit key length and data length as ULEB-encoded data, and return them as a
+/// pair.
+static std::pair<unsigned, unsigned>
+emitULEBKeyDataLength(unsigned KeyLen, unsigned DataLen, raw_ostream &Out) {
+  llvm::encodeULEB128(KeyLen, Out);
+  llvm::encodeULEB128(DataLen, Out);
+  return std::make_pair(KeyLen, DataLen);
+}
+
 namespace {
 
   // Trait used for the on-disk hash table of header search information.
@@ -1657,19 +1667,14 @@ namespace {
 
     std::pair<unsigned, unsigned>
     EmitKeyDataLength(raw_ostream& Out, key_type_ref key, data_type_ref Data) {
-      using namespace llvm::support;
-
-      endian::Writer LE(Out, little);
       unsigned KeyLen = key.Filename.size() + 1 + 8 + 8;
-      LE.write<uint16_t>(KeyLen);
       unsigned DataLen = 1 + 2 + 4 + 4;
       for (auto ModInfo : Data.KnownHeaders)
         if (Writer.getLocalOrImportedSubmoduleID(ModInfo.getModule()))
           DataLen += 4;
       if (Data.Unresolved.getPointer())
         DataLen += 4;
-      LE.write<uint8_t>(DataLen);
-      return std::make_pair(KeyLen, DataLen);
+      return emitULEBKeyDataLength(KeyLen, DataLen, Out);
     }
 
     void EmitKey(raw_ostream& Out, key_type_ref key, unsigned KeyLen) {
@@ -3008,11 +3013,7 @@ public:
   std::pair<unsigned, unsigned>
     EmitKeyDataLength(raw_ostream& Out, Selector Sel,
                       data_type_ref Methods) {
-    using namespace llvm::support;
-
-    endian::Writer LE(Out, little);
     unsigned KeyLen = 2 + (Sel.getNumArgs()? Sel.getNumArgs() * 4 : 4);
-    LE.write<uint16_t>(KeyLen);
     unsigned DataLen = 4 + 2 + 2; // 2 bytes for each of the method counts
     for (const ObjCMethodList *Method = &Methods.Instance; Method;
          Method = Method->getNext())
@@ -3022,8 +3023,7 @@ public:
          Method = Method->getNext())
       if (Method->getMethod())
         DataLen += 4;
-    LE.write<uint16_t>(DataLen);
-    return std::make_pair(KeyLen, DataLen);
+    return emitULEBKeyDataLength(KeyLen, DataLen, Out);
   }
 
   void EmitKey(raw_ostream& Out, Selector Sel, unsigned) {
@@ -3320,6 +3320,15 @@ public:
 
   std::pair<unsigned, unsigned>
   EmitKeyDataLength(raw_ostream& Out, IdentifierInfo* II, IdentID ID) {
+    // Record the location of the identifier data. This is used when generating
+    // the mapping from persistent IDs to strings.
+    Writer.SetIdentifierOffset(II, Out.tell());
+
+    // Emit the offset of the key/data length information to the interesting
+    // identifiers table if necessary.
+    if (InterestingIdentifierOffsets && isInterestingIdentifier(II))
+      InterestingIdentifierOffsets->push_back(Out.tell());
+
     unsigned KeyLen = II->getLength() + 1;
     unsigned DataLen = 4; // 4 bytes for the persistent ID << 1
     auto MacroOffset = Writer.getMacroDirectivesOffset(II);
@@ -3336,31 +3345,11 @@ public:
           DataLen += 4;
       }
     }
-
-    using namespace llvm::support;
-
-    endian::Writer LE(Out, little);
-
-    assert((uint16_t)DataLen == DataLen && (uint16_t)KeyLen == KeyLen);
-    LE.write<uint16_t>(DataLen);
-    // We emit the key length after the data length so that every
-    // string is preceded by a 16-bit length. This matches the PTH
-    // format for storing identifiers.
-    LE.write<uint16_t>(KeyLen);
-    return std::make_pair(KeyLen, DataLen);
+    return emitULEBKeyDataLength(KeyLen, DataLen, Out);
   }
 
   void EmitKey(raw_ostream& Out, const IdentifierInfo* II,
                unsigned KeyLen) {
-    // Record the location of the key data.  This is used when generating
-    // the mapping from persistent IDs to strings.
-    Writer.SetIdentifierOffset(II, Out.tell());
-
-    // Emit the offset of the key/data length information to the interesting
-    // identifiers table if necessary.
-    if (InterestingIdentifierOffsets && isInterestingIdentifier(II))
-      InterestingIdentifierOffsets->push_back(Out.tell() - 4);
-
     Out.write(II->getNameStart(), KeyLen);
   }
 
@@ -3573,9 +3562,6 @@ public:
   std::pair<unsigned, unsigned> EmitKeyDataLength(raw_ostream &Out,
                                                   DeclarationNameKey Name,
                                                   data_type_ref Lookup) {
-    using namespace llvm::support;
-
-    endian::Writer LE(Out, little);
     unsigned KeyLen = 1;
     switch (Name.getKind()) {
     case DeclarationName::Identifier:
@@ -3595,15 +3581,11 @@ public:
     case DeclarationName::CXXUsingDirective:
       break;
     }
-    LE.write<uint16_t>(KeyLen);
 
     // 4 bytes for each DeclID.
     unsigned DataLen = 4 * (Lookup.second - Lookup.first);
-    assert(uint16_t(DataLen) == DataLen &&
-           "too many decls for serialized lookup result");
-    LE.write<uint16_t>(DataLen);
 
-    return std::make_pair(KeyLen, DataLen);
+    return emitULEBKeyDataLength(KeyLen, DataLen, Out);
   }
 
   void EmitKey(raw_ostream &Out, DeclarationNameKey Name, unsigned) {
@@ -3976,8 +3958,10 @@ void ASTWriter::WriteOpenCLExtensions(Sema &SemaRef) {
     auto V = I.getValue();
     Record.push_back(V.Supported ? 1 : 0);
     Record.push_back(V.Enabled ? 1 : 0);
+    Record.push_back(V.WithPragma ? 1 : 0);
     Record.push_back(V.Avail);
     Record.push_back(V.Core);
+    Record.push_back(V.Opt);
   }
   Stream.EmitRecord(OPENCL_EXTENSIONS, Record);
 }
@@ -5412,19 +5396,15 @@ void ASTRecordWriter::AddDeclarationNameLoc(const DeclarationNameLoc &DNLoc,
   case DeclarationName::CXXConstructorName:
   case DeclarationName::CXXDestructorName:
   case DeclarationName::CXXConversionFunctionName:
-    AddTypeSourceInfo(DNLoc.NamedType.TInfo);
+    AddTypeSourceInfo(DNLoc.getNamedTypeInfo());
     break;
 
   case DeclarationName::CXXOperatorName:
-    AddSourceLocation(SourceLocation::getFromRawEncoding(
-        DNLoc.CXXOperatorName.BeginOpNameLoc));
-    AddSourceLocation(
-        SourceLocation::getFromRawEncoding(DNLoc.CXXOperatorName.EndOpNameLoc));
+    AddSourceRange(DNLoc.getCXXOperatorNameRange());
     break;
 
   case DeclarationName::CXXLiteralOperatorName:
-    AddSourceLocation(SourceLocation::getFromRawEncoding(
-        DNLoc.CXXLiteralOperatorName.OpNameLoc));
+    AddSourceLocation(DNLoc.getCXXLiteralOperatorNameLoc());
     break;
 
   case DeclarationName::Identifier:
@@ -5666,6 +5646,7 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
     Record->push_back(Lambda.NumExplicitCaptures);
     Record->push_back(Lambda.HasKnownInternalLinkage);
     Record->push_back(Lambda.ManglingNumber);
+    Record->push_back(D->getDeviceLambdaManglingNumber());
     AddDeclRef(D->getLambdaContextDecl());
     AddTypeSourceInfo(Lambda.MethodTyInfo);
     for (unsigned I = 0, N = Lambda.NumCaptures; I != N; ++I) {
@@ -6140,6 +6121,13 @@ void OMPClauseWriter::VisitOMPSimdlenClause(OMPSimdlenClause *C) {
   Record.AddSourceLocation(C->getLParenLoc());
 }
 
+void OMPClauseWriter::VisitOMPSizesClause(OMPSizesClause *C) {
+  Record.push_back(C->getNumSizes());
+  for (Expr *Size : C->getSizesRefs())
+    Record.AddStmt(Size);
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
 void OMPClauseWriter::VisitOMPAllocatorClause(OMPAllocatorClause *C) {
   Record.AddStmt(C->getAllocator());
   Record.AddSourceLocation(C->getLParenLoc());
@@ -6227,7 +6215,45 @@ void OMPClauseWriter::VisitOMPSIMDClause(OMPSIMDClause *) {}
 
 void OMPClauseWriter::VisitOMPNogroupClause(OMPNogroupClause *) {}
 
-void OMPClauseWriter::VisitOMPDestroyClause(OMPDestroyClause *) {}
+void OMPClauseWriter::VisitOMPInitClause(OMPInitClause *C) {
+  Record.push_back(C->varlist_size());
+  for (Expr *VE : C->varlists())
+    Record.AddStmt(VE);
+  Record.writeBool(C->getIsTarget());
+  Record.writeBool(C->getIsTargetSync());
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getVarLoc());
+}
+
+void OMPClauseWriter::VisitOMPUseClause(OMPUseClause *C) {
+  Record.AddStmt(C->getInteropVar());
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getVarLoc());
+}
+
+void OMPClauseWriter::VisitOMPDestroyClause(OMPDestroyClause *C) {
+  Record.AddStmt(C->getInteropVar());
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getVarLoc());
+}
+
+void OMPClauseWriter::VisitOMPNovariantsClause(OMPNovariantsClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  Record.AddStmt(C->getCondition());
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
+void OMPClauseWriter::VisitOMPNocontextClause(OMPNocontextClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  Record.AddStmt(C->getCondition());
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
+void OMPClauseWriter::VisitOMPFilterClause(OMPFilterClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  Record.AddStmt(C->getThreadID());
+  Record.AddSourceLocation(C->getLParenLoc());
+}
 
 void OMPClauseWriter::VisitOMPPrivateClause(OMPPrivateClause *C) {
   Record.push_back(C->varlist_size());

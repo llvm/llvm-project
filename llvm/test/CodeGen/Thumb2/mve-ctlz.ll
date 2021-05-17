@@ -4,26 +4,24 @@
 define arm_aapcs_vfpcc <2 x i64> @ctlz_2i64_0_t(<2 x i64> %src){
 ; CHECK-LABEL: ctlz_2i64_0_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r0, s3
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    cset r1, ne
-; CHECK-NEXT:    lsls r1, r1, #31
-; CHECK-NEXT:    vmov r1, s2
-; CHECK-NEXT:    clz r1, r1
-; CHECK-NEXT:    add.w r1, r1, #32
+; CHECK-NEXT:    vmov r0, r1, d1
+; CHECK-NEXT:    clz r0, r0
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    cset r2, ne
+; CHECK-NEXT:    adds r0, #32
+; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    clzne r1, r0
-; CHECK-NEXT:    vmov r0, s1
-; CHECK-NEXT:    vmov s6, r1
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    cset r1, ne
-; CHECK-NEXT:    lsls r1, r1, #31
-; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    clz r1, r1
-; CHECK-NEXT:    add.w r1, r1, #32
+; CHECK-NEXT:    clzne r0, r1
+; CHECK-NEXT:    vmov s6, r0
+; CHECK-NEXT:    vmov r0, r1, d0
+; CHECK-NEXT:    clz r0, r0
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    cset r2, ne
+; CHECK-NEXT:    adds r0, #32
+; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    clzne r1, r0
-; CHECK-NEXT:    vmov s4, r1
+; CHECK-NEXT:    clzne r0, r1
+; CHECK-NEXT:    vmov s4, r0
 ; CHECK-NEXT:    vldr s5, .LCPI0_0
 ; CHECK-NEXT:    vmov.f32 s7, s5
 ; CHECK-NEXT:    vmov q0, q1
@@ -70,26 +68,24 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @ctlz_2i64_1_t(<2 x i64> %src){
 ; CHECK-LABEL: ctlz_2i64_1_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r0, s3
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    cset r1, ne
-; CHECK-NEXT:    lsls r1, r1, #31
-; CHECK-NEXT:    vmov r1, s2
-; CHECK-NEXT:    clz r1, r1
-; CHECK-NEXT:    add.w r1, r1, #32
+; CHECK-NEXT:    vmov r0, r1, d1
+; CHECK-NEXT:    clz r0, r0
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    cset r2, ne
+; CHECK-NEXT:    adds r0, #32
+; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    clzne r1, r0
-; CHECK-NEXT:    vmov r0, s1
-; CHECK-NEXT:    vmov s6, r1
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    cset r1, ne
-; CHECK-NEXT:    lsls r1, r1, #31
-; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    clz r1, r1
-; CHECK-NEXT:    add.w r1, r1, #32
+; CHECK-NEXT:    clzne r0, r1
+; CHECK-NEXT:    vmov s6, r0
+; CHECK-NEXT:    vmov r0, r1, d0
+; CHECK-NEXT:    clz r0, r0
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    cset r2, ne
+; CHECK-NEXT:    adds r0, #32
+; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    clzne r1, r0
-; CHECK-NEXT:    vmov s4, r1
+; CHECK-NEXT:    clzne r0, r1
+; CHECK-NEXT:    vmov s4, r0
 ; CHECK-NEXT:    vldr s5, .LCPI4_0
 ; CHECK-NEXT:    vmov.f32 s7, s5
 ; CHECK-NEXT:    vmov q0, q1

@@ -97,7 +97,7 @@ set(LIBCXX_SYSROOT                          "${DEFAULT_SYSROOT}" CACHE STRING ""
 set(LIBCXX_ENABLE_SHARED                    OFF CACHE BOOL "")
 set(LIBCXX_CXX_ABI                          "libcxxabi" CACHE STRING "")
 set(LIBCXX_CXX_ABI_INCLUDE_PATHS            "${LLVM_PROJECT_DIR}/libcxxabi/include" CACHE PATH "")
-set(LIBCXX_CXX_ABI_LIBRARY_PATH             "${CMAKE_BINARY_DIR}/lib/${LIBCXX_TARGET_TRIPLE}/c++" CACHE PATH "")
+set(LIBCXX_CXX_ABI_LIBRARY_PATH             "${CMAKE_BINARY_DIR}/lib/${LIBCXX_TARGET_TRIPLE}" CACHE PATH "")
 set(LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS    ON CACHE BOOL "")
 
 # Set up RPATH for the target runtime/builtin libraries.

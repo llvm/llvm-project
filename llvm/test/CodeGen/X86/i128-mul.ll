@@ -162,9 +162,9 @@ define i64 @mul1(i64 %n, i64* nocapture %z, i64* nocapture %x, i64 %y) nounwind 
 ; X86-NOBMI-NEXT:    movl (%esp), %edi # 4-byte Reload
 ; X86-NOBMI-NEXT:    adcl $0, %edi
 ; X86-NOBMI-NEXT:    movl %ebp, %esi
-; X86-NOBMI-NEXT:    xorl %ebx, %esi
+; X86-NOBMI-NEXT:    xorl {{[0-9]+}}(%esp), %esi
 ; X86-NOBMI-NEXT:    movl %edi, (%esp) # 4-byte Spill
-; X86-NOBMI-NEXT:    xorl {{[0-9]+}}(%esp), %edi
+; X86-NOBMI-NEXT:    xorl %ebx, %edi
 ; X86-NOBMI-NEXT:    orl %esi, %edi
 ; X86-NOBMI-NEXT:    jne .LBB1_2
 ; X86-NOBMI-NEXT:  .LBB1_3: # %for.end

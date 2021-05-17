@@ -1,4 +1,4 @@
-!RUN: %S/test_errors.sh %s %t %f18 -fopenmp
+!RUN: %S/test_errors.sh %s %t %flang -fopenmp
 ! OpenMP Version 4.5
 ! 2.15.3.3 parallel private Clause
 program omp_parallel_private
@@ -17,7 +17,7 @@ program omp_parallel_private
     arr(i) = 0.0
   end do
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear in a PRIVATE or SHARED clause.
+  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear in a PRIVATE or SHARED clause or on the ALLOCATE directive.
   !$omp parallel private(arr,intx,my_var%array(1))
   do i = 1, 10
     c(i) = a(i) + b(i) + k

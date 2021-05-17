@@ -32,7 +32,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUSubtarget.h"
+#include "GCNSubtarget.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
 
 using namespace llvm;
@@ -62,36 +63,44 @@ enum HardClauseType {
   HARDCLAUSE_ILLEGAL,
 };
 
-HardClauseType getHardClauseType(const MachineInstr &MI) {
-  // On current architectures we only get a benefit from clausing loads.
-  if (MI.mayLoad()) {
-    if (SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSegmentSpecificFLAT(MI))
-      return HARDCLAUSE_VMEM;
-    if (SIInstrInfo::isFLAT(MI))
-      return HARDCLAUSE_FLAT;
-    // TODO: LDS
-    if (SIInstrInfo::isSMRD(MI))
-      return HARDCLAUSE_SMEM;
-  }
-
-  // Don't form VALU clauses. It's not clear what benefit they give, if any.
-
-  // In practice s_nop is the only internal instruction we're likely to see.
-  // It's safe to treat the rest as illegal.
-  if (MI.getOpcode() == AMDGPU::S_NOP)
-    return HARDCLAUSE_INTERNAL;
-  return HARDCLAUSE_ILLEGAL;
-}
-
 class SIInsertHardClauses : public MachineFunctionPass {
 public:
   static char ID;
+  const GCNSubtarget *ST = nullptr;
 
   SIInsertHardClauses() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  HardClauseType getHardClauseType(const MachineInstr &MI) {
+
+    // On current architectures we only get a benefit from clausing loads.
+    if (MI.mayLoad()) {
+      if (SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSegmentSpecificFLAT(MI)) {
+        if (ST->hasNSAClauseBug()) {
+          const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
+          if (Info && Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA)
+            return HARDCLAUSE_ILLEGAL;
+        }
+        return HARDCLAUSE_VMEM;
+      }
+      if (SIInstrInfo::isFLAT(MI))
+        return HARDCLAUSE_FLAT;
+      // TODO: LDS
+      if (SIInstrInfo::isSMRD(MI))
+        return HARDCLAUSE_SMEM;
+    }
+
+    // Don't form VALU clauses. It's not clear what benefit they give, if any.
+
+    // In practice s_nop is the only internal instruction we're likely to see.
+    // It's safe to treat the rest as illegal.
+    if (MI.getOpcode() == AMDGPU::S_NOP)
+      return HARDCLAUSE_INTERNAL;
+    return HARDCLAUSE_ILLEGAL;
   }
 
   // Track information about a clause as we discover it.
@@ -131,12 +140,12 @@ public:
     if (skipFunction(MF.getFunction()))
       return false;
 
-    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-    if (!ST.hasHardClauses())
+    ST = &MF.getSubtarget<GCNSubtarget>();
+    if (!ST->hasHardClauses())
       return false;
 
-    const SIInstrInfo *SII = ST.getInstrInfo();
-    const TargetRegisterInfo *TRI = ST.getRegisterInfo();
+    const SIInstrInfo *SII = ST->getInstrInfo();
+    const TargetRegisterInfo *TRI = ST->getRegisterInfo();
 
     bool Changed = false;
     for (auto &MBB : MF) {

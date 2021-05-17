@@ -54,8 +54,8 @@ Sections:
 # RELOC-NEXT:     - Index:           0
 # RELOC-NEXT:       Kind:            SECTION
 # RELOC-NEXT:       Flags:           [ BINDING_LOCAL ]
-# RELOC-NEXT:       Section:         2
+# RELOC-NEXT:       Section:         1
 # RELOC-NEXT:     - Index:           1
 # RELOC-NEXT:       Kind:            SECTION
 # RELOC-NEXT:       Flags:           [ BINDING_LOCAL ]
-# RELOC-NEXT:       Section:         3
+# RELOC-NEXT:       Section:         2

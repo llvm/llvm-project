@@ -1,10 +1,10 @@
 // RUN: touch %t.o
 
-// RUN: %clang -target x86_64-apple-macos10.13 -fuse-ld= \
+// RUN: %clang -target x86_64-apple-macos10.13 -fuse-ld=lld.darwinold \
 // RUN:   -isysroot %S/Inputs/MacOSX10.14.sdk -mlinker-version=0 \
 // RUN:   -### %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=LINKER-OLD %s
-// RUN: %clang -target x86_64-apple-macos10.13 -fuse-ld=lld.darwinnew \
+// RUN: %clang -target x86_64-apple-macos10.13 -fuse-ld=lld \
 // RUN:   -isysroot %S/Inputs/MacOSX10.14.sdk -mlinker-version=0 \
 // RUN:   -### %t.o -B%S/Inputs/lld 2>&1 \
 // RUN:   | FileCheck --check-prefix=LINKER-NEW %s
@@ -21,7 +21,7 @@
 // RUN:   -isysroot %S/Inputs/MacOSX10.14.sdk -mlinker-version=400 \
 // RUN:   -### %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=ARM64_OLD %s
-// RUN: %clang -target arm64-apple-macos10.13 -fuse-ld=lld.darwinnew \
+// RUN: %clang -target arm64-apple-macos10.13 -fuse-ld=lld \
 // RUN:   -isysroot %S/Inputs/MacOSX10.14.sdk -mlinker-version=400 \
 // RUN:   -### %t.o -B%S/Inputs/lld 2>&1 \
 // RUN:   | FileCheck --check-prefix=ARM64_NEW %s
@@ -48,4 +48,7 @@
 // RUN: %clang -target x86_64-apple-macos10.13 -mlinker-version=520 \
 // RUN:   -### %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=NOSDK %s
-// NOSDK: "-platform_version" "macos" "10.13.0" "0.0.0"
+// RUN: %clang -target x86_64-apple-darwin17 -mlinker-version=520 \
+// RUN:   -### %t.o 2>&1 \
+// RUN:   | FileCheck --check-prefix=NOSDK %s
+// NOSDK: "-platform_version" "macos" "10.13.0" "10.13.0"

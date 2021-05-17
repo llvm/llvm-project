@@ -12,8 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "R600RegisterInfo.h"
-#include "AMDGPUSubtarget.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "R600Defines.h"
+#include "R600Subtarget.h"
 
 using namespace llvm;
 

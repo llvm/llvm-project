@@ -27,11 +27,12 @@ using namespace llvm;
 namespace {
 using testing::AnyNumber;
 using testing::AtLeast;
+using testing::DoAll;
 using testing::DoDefault;
-using testing::Not;
-using testing::Return;
 using testing::Expectation;
 using testing::Invoke;
+using testing::Not;
+using testing::Return;
 using testing::WithArgs;
 using testing::_;
 
@@ -465,9 +466,9 @@ protected:
                   "exit:\n"
                   "  ret void\n"
                   "}\n")),
-        CallbacksHandle(), PB(false, nullptr, PipelineTuningOptions(), None,
-                              &CallbacksHandle.Callbacks),
-        PM(true), LAM(true), FAM(true), CGAM(true), AM(true) {
+        CallbacksHandle(),
+        PB(nullptr, PipelineTuningOptions(), None, &CallbacksHandle.Callbacks),
+        PM(), LAM(), FAM(), CGAM(), AM() {
 
     EXPECT_TRUE(&CallbacksHandle.Callbacks ==
                 PB.getPassInstrumentationCallbacks());
@@ -1278,8 +1279,7 @@ TEST_F(LoopCallbacksTest, PassUtilities) {
 TEST_F(ModuleCallbacksTest, ParseTopLevelPipeline) {
   PB.registerParseTopLevelPipelineCallback(
       [this](ModulePassManager &MPM,
-             ArrayRef<PassBuilder::PipelineElement> Pipeline,
-             bool DebugLogging) {
+             ArrayRef<PassBuilder::PipelineElement> Pipeline) {
         auto &FirstName = Pipeline.front().Name;
         auto &InnerPipeline = Pipeline.front().InnerPipeline;
         if (FirstName == "another-pipeline") {

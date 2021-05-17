@@ -127,6 +127,10 @@ function(add_libc_unittest target_name)
       ${LIBC_BUILD_DIR}
       ${LIBC_BUILD_DIR}/include
   )
+  target_compile_options(
+    ${fq_target_name}
+    PRIVATE ${LIBC_COMPILE_OPTIONS_DEFAULT}
+  )
   if(LIBC_UNITTEST_COMPILE_OPTIONS)
     target_compile_options(
       ${fq_target_name}
@@ -161,8 +165,13 @@ endfunction(add_libc_unittest)
 
 function(add_libc_testsuite suite_name)
   add_custom_target(${suite_name})
-  add_dependencies(check-libc ${suite_name})
+  add_dependencies(check-llvmlibc ${suite_name})
 endfunction(add_libc_testsuite)
+
+function(add_libc_exhaustive_testsuite suite_name)
+  add_custom_target(${suite_name})
+  add_dependencies(exhaustive-check-libc ${suite_name})
+endfunction(add_libc_exhaustive_testsuite)
 
 # Rule to add a fuzzer test.
 # Usage

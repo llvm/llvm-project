@@ -15,6 +15,7 @@
 #include "support/Trace.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticLex.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -325,10 +326,36 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
 
   trace::Span Tracer("BuildPreamble");
   SPAN_ATTACH(Tracer, "File", FileName);
+  std::vector<std::unique_ptr<FeatureModule::ASTListener>> ASTListeners;
+  if (Inputs.FeatureModules) {
+    for (auto &M : *Inputs.FeatureModules) {
+      if (auto Listener = M.astListeners())
+        ASTListeners.emplace_back(std::move(Listener));
+    }
+  }
   StoreDiags PreambleDiagnostics;
+  PreambleDiagnostics.setDiagCallback(
+      [&ASTListeners](const clang::Diagnostic &D, clangd::Diag &Diag) {
+        llvm::for_each(ASTListeners,
+                       [&](const auto &L) { L->sawDiagnostic(D, Diag); });
+      });
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> PreambleDiagsEngine =
       CompilerInstance::createDiagnostics(&CI.getDiagnosticOpts(),
                                           &PreambleDiagnostics, false);
+  PreambleDiagnostics.setLevelAdjuster(
+      [&](DiagnosticsEngine::Level DiagLevel, const clang::Diagnostic &Info) {
+        switch (Info.getID()) {
+        case diag::warn_no_newline_eof:
+        case diag::warn_cxx98_compat_no_newline_eof:
+        case diag::ext_no_newline_eof:
+          // If the preamble doesn't span the whole file, drop the no newline at
+          // eof warnings.
+          return Bounds.Size != ContentsBuffer->getBufferSize()
+                     ? DiagnosticsEngine::Level::Ignored
+                     : DiagLevel;
+        }
+        return DiagLevel;
+      });
 
   // Skip function bodies when building the preamble to speed up building
   // the preamble and make it smaller.
@@ -378,8 +405,7 @@ bool isPreambleCompatible(const PreambleData &Preamble,
   auto VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
   return compileCommandsAreEqual(Inputs.CompileCommand,
                                  Preamble.CompileCommand) &&
-         Preamble.Preamble.CanReuse(CI, ContentsBuffer.get(), Bounds,
-                                    VFS.get());
+         Preamble.Preamble.CanReuse(CI, *ContentsBuffer, Bounds, *VFS);
 }
 
 void escapeBackslashAndQuotes(llvm::StringRef Text, llvm::raw_ostream &OS) {

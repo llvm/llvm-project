@@ -3,9 +3,10 @@
 
 # CHECK:      Type Bind   Vis                     Ndx Name
 # CHECK:      FUNC GLOBAL DEFAULT [<other: 0x60>]   2 foo
-# CHECK-NEXT: FUNC WEAK   DEFAULT [<other: 0x60>]   2 foo@FBSD_1.1
+# CHECK-NEXT: FUNC WEAK   DEFAULT [<other: 0x60>]   2 __impl_foo
 # CHECK-NEXT: FUNC GLOBAL DEFAULT [<other: 0x60>]   2 func
 # CHECK-NEXT: FUNC WEAK   DEFAULT [<other: 0x60>]   2 weak_func
+# CHECK:      FUNC WEAK   DEFAULT [<other: 0x60>]   2 foo@FBSD_1.1
 
 .text
 .abiversion 2

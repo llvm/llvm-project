@@ -118,7 +118,7 @@ void DebugCounter::push_back(const std::string &Val) {
 void DebugCounter::print(raw_ostream &OS) const {
   SmallVector<StringRef, 16> CounterNames(RegisteredCounters.begin(),
                                           RegisteredCounters.end());
-  sort(CounterNames.begin(), CounterNames.end());
+  sort(CounterNames);
 
   auto &Us = instance();
   OS << "Counters and values:\n";

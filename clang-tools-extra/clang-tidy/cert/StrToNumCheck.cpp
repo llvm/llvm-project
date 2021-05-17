@@ -8,8 +8,8 @@
 
 #include "StrToNumCheck.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/AST/FormatString.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <cassert>
 
@@ -48,7 +48,7 @@ enum class ConversionKind {
   ToLongDouble
 };
 
-ConversionKind ClassifyConversionFunc(const FunctionDecl *FD) {
+ConversionKind classifyConversionFunc(const FunctionDecl *FD) {
   return llvm::StringSwitch<ConversionKind>(FD->getName())
       .Cases("atoi", "atol", ConversionKind::ToInt)
       .Case("atoll", ConversionKind::ToLongInt)
@@ -56,7 +56,7 @@ ConversionKind ClassifyConversionFunc(const FunctionDecl *FD) {
       .Default(ConversionKind::None);
 }
 
-ConversionKind ClassifyFormatString(StringRef Fmt, const LangOptions &LO,
+ConversionKind classifyFormatString(StringRef Fmt, const LangOptions &LO,
                                     const TargetInfo &TI) {
   // Scan the format string for the first problematic format specifier, then
   // report that as the conversion type. This will miss additional conversion
@@ -66,8 +66,8 @@ ConversionKind ClassifyFormatString(StringRef Fmt, const LangOptions &LO,
     ConversionKind CK;
 
     bool HandleScanfSpecifier(const analyze_scanf::ScanfSpecifier &FS,
-                              const char *startSpecifier,
-                              unsigned specifierLen) override {
+                              const char *StartSpecifier,
+                              unsigned SpecifierLen) override {
       // If we just consume the argument without assignment, we don't care
       // about it having conversion errors.
       if (!FS.consumesDataArgument())
@@ -130,7 +130,7 @@ ConversionKind ClassifyFormatString(StringRef Fmt, const LangOptions &LO,
   return H.get();
 }
 
-StringRef ClassifyConversionType(ConversionKind K) {
+StringRef classifyConversionType(ConversionKind K) {
   switch (K) {
   case ConversionKind::None:
     llvm_unreachable("Unexpected conversion kind");
@@ -150,7 +150,7 @@ StringRef ClassifyConversionType(ConversionKind K) {
   llvm_unreachable("Unknown conversion kind");
 }
 
-StringRef ClassifyReplacement(ConversionKind K) {
+StringRef classifyReplacement(ConversionKind K) {
   switch (K) {
   case ConversionKind::None:
     llvm_unreachable("Unexpected conversion kind");
@@ -186,7 +186,7 @@ void StrToNumCheck::check(const MatchFinder::MatchResult &Result) {
           Result.Nodes.getNodeAs<FunctionDecl>("converter")) {
     // Converter functions are always incorrect to use.
     FuncDecl = ConverterFunc;
-    Conversion = ClassifyConversionFunc(ConverterFunc);
+    Conversion = classifyConversionFunc(ConverterFunc);
   } else if (const auto *FFD =
                  Result.Nodes.getNodeAs<FunctionDecl>("formatted")) {
     StringRef FmtStr;
@@ -213,7 +213,7 @@ void StrToNumCheck::check(const MatchFinder::MatchResult &Result) {
 
     // Formatted input functions need further checking of the format string to
     // determine whether a problematic conversion may be happening.
-    Conversion = ClassifyFormatString(FmtStr, getLangOpts(),
+    Conversion = classifyFormatString(FmtStr, getLangOpts(),
                                       Result.Context->getTargetInfo());
     if (Conversion != ConversionKind::None)
       FuncDecl = FFD;
@@ -225,8 +225,8 @@ void StrToNumCheck::check(const MatchFinder::MatchResult &Result) {
   diag(Call->getExprLoc(),
        "%0 used to convert a string to %1, but function will not report "
        "conversion errors; consider using '%2' instead")
-      << FuncDecl << ClassifyConversionType(Conversion)
-      << ClassifyReplacement(Conversion);
+      << FuncDecl << classifyConversionType(Conversion)
+      << classifyReplacement(Conversion);
 }
 
 } // namespace cert

@@ -56,9 +56,9 @@ static uint64_t allOnes(unsigned int Count) {
 void SystemZInstrInfo::anchor() {}
 
 SystemZInstrInfo::SystemZInstrInfo(SystemZSubtarget &sti)
-  : SystemZGenInstrInfo(SystemZ::ADJCALLSTACKDOWN, SystemZ::ADJCALLSTACKUP),
-    RI(), STI(sti) {
-}
+    : SystemZGenInstrInfo(SystemZ::ADJCALLSTACKDOWN, SystemZ::ADJCALLSTACKUP),
+      RI(sti.getSpecialRegisters()->getReturnFunctionAddressRegister()),
+      STI(sti) {}
 
 // MI is a 128-bit load or store.  Split it into two 64-bit loads or stores,
 // each having the opcode given by NewOpcode.
@@ -120,7 +120,7 @@ void SystemZInstrInfo::splitAdjDynAlloc(MachineBasicBlock::iterator MI) const {
   MachineOperand &OffsetMO = MI->getOperand(2);
 
   uint64_t Offset = (MFFrame.getMaxCallFrameSize() +
-                     SystemZMC::CallFrameSize +
+                     SystemZMC::ELFCallFrameSize +
                      OffsetMO.getImm());
   unsigned NewOpcode = getOpcodeForOffset(SystemZ::LA, Offset);
   assert(NewOpcode && "No support for huge argument lists yet");

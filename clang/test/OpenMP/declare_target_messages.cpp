@@ -17,13 +17,16 @@ __thread int t; // expected-note {{defined as threadprivate or thread local}}
 void f();
 #pragma omp end declare target shared(a) // expected-warning {{extra tokens at the end of '#pragma omp end declare target' are ignored}}
 
-#pragma omp declare target map(a) // omp45-error {{unexpected 'map' clause, only 'to' or 'link' clauses expected}} omp5-error {{unexpected 'map' clause, only 'to', 'link' or 'device_type' clauses expected}}
+#pragma omp declare target map(a) // expected-error {{expected at least one 'to' or 'link' clause}} omp45-error {{unexpected 'map' clause, only 'to' or 'link' clauses expected}} omp5-error {{unexpected 'map' clause, only 'to', 'link' or 'device_type' clauses expected}}
 
 #pragma omp declare target to(foo1) // expected-error {{use of undeclared identifier 'foo1'}}
 
 #pragma omp declare target link(foo2) // expected-error {{use of undeclared identifier 'foo2'}}
 
-#pragma omp declare target to(f) device_type(any) device_type(any) device_type(host) // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} omp5-warning 2 {{more than one 'device_type' clause is specified}} omp5-error {{'device_type(host)' does not match previously specified 'device_type(any)' for the same declaration}}
+#pragma omp declare target to(f) device_type(host) // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} dev5-note {{marked as 'device_type(host)' here}}
+
+void q();
+#pragma omp declare target to(q) device_type(any) device_type(any) device_type(host) // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} omp5-warning {{more than one 'device_type' clause is specified}}
 
 void c();
 
@@ -118,7 +121,8 @@ void foo(int p) {
   g = object.method();
   g += object.method1();
   g += object1.method() + p;
-  f();
+  f(); // dev5-error {{function with 'device_type(host)' is not available on device}}
+  q();
   c();
 }
 #pragma omp declare target
@@ -150,10 +154,10 @@ int main (int argc, char **argv) {
 }
 
 namespace {
-#pragma omp declare target // expected-note {{to match this '#pragma omp declare target'}}
+#pragma omp declare target
   int x;
-} //  expected-error {{expected '#pragma omp end declare target'}}
-#pragma omp end declare target // expected-error {{unexpected OpenMP directive '#pragma omp end declare target'}}
+}
+#pragma omp end declare target
 
 #pragma omp declare target link(S) // expected-error {{'S' used in declare target directive is not a variable or a function name}}
 
@@ -187,4 +191,10 @@ void any6() {host1();}
 void any7() {device();} // host5-error {{function with 'device_type(nohost)' is not available on host}}
 void any8() {any2();}
 
-#pragma omp declare target // expected-error {{expected '#pragma omp end declare target'}} expected-note {{to match this '#pragma omp declare target'}}
+int MultiDevTy;
+#pragma omp declare target to(MultiDevTy) device_type(any)    // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}}
+#pragma omp declare target to(MultiDevTy) device_type(host)   // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} omp5-error {{'device_type(host)' does not match previously specified 'device_type(any)' for the same declaration}}
+#pragma omp declare target to(MultiDevTy) device_type(nohost) // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} omp5-error {{'device_type(nohost)' does not match previously specified 'device_type(any)' for the same declaration}}
+
+// TODO: Issue an error message error {{expected '#pragma omp end declare target'}} note {{to match this '#pragma omp declare target'}}
+#pragma omp declare target

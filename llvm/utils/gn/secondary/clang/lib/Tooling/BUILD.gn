@@ -1,7 +1,21 @@
+# FIXME: The cmake build runs DumpTool:clang-ast-dump to generate a json
+# file and feeds it into this step in non-debug builds or if an option is set.
+action("node_introspection_inc") {
+  script = "DumpTool/generate_cxx_src_locs.py"
+  outputs = [ "$target_gen_dir/clang/Tooling/NodeIntrospection.inc" ]
+  sources = [ "EmptyNodeIntrospection.inc.in" ]
+  args = [
+    "--use-empty-implementation=1",
+    "--empty-implementation=" + rebase_path(sources[0], root_build_dir),
+    "--output-file=" + rebase_path(outputs[0], root_build_dir),
+  ]
+}
+
 static_library("Tooling") {
   output_name = "clangTooling"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
+    ":node_introspection_inc",
     "//clang/include/clang/Driver:Options",
     "//clang/lib/AST",
     "//clang/lib/ASTMatchers",
@@ -13,6 +27,7 @@ static_library("Tooling") {
     "//clang/lib/Rewrite",
     "//clang/lib/Tooling/Core",
   ]
+  include_dirs = [ target_gen_dir ]
   sources = [
     "AllTUsExecution.cpp",
     "ArgumentsAdjusters.cpp",
@@ -25,6 +40,7 @@ static_library("Tooling") {
     "GuessTargetAndModeCompilationDatabase.cpp",
     "InterpolatingCompilationDatabase.cpp",
     "JSONCompilationDatabase.cpp",
+    "NodeIntrospection.cpp",
     "Refactoring.cpp",
     "RefactoringCallbacks.cpp",
     "StandaloneExecution.cpp",

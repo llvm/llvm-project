@@ -3,6 +3,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbgdbserverutils import get_debugserver_exe
 
 import os
 import platform
@@ -28,7 +29,7 @@ class PlatformSDKTestCase(TestBase):
     TIMEOUT = 2
 
     def no_debugserver(self):
-        if os.getenv('LLDB_DEBUGSERVER_PATH') is None:
+        if get_debugserver_exe() is None:
             return 'no debugserver'
         return None
 
@@ -88,7 +89,7 @@ class PlatformSDKTestCase(TestBase):
         shutil.move(exe, exe_sdk_path)
 
         # Attach to it with debugserver.
-        debugserver = os.getenv('LLDB_DEBUGSERVER_PATH')
+        debugserver = get_debugserver_exe()
         debugserver_args = [
             'localhost:{}'.format(self.PORT), '--attach={}'.format(pid)
         ]

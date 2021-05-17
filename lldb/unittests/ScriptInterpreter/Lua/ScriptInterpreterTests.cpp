@@ -43,12 +43,6 @@ public:
 };
 } // namespace
 
-TEST_F(ScriptInterpreterTest, Plugin) {
-  EXPECT_EQ(ScriptInterpreterLua::GetPluginNameStatic(), "script-lua");
-  EXPECT_EQ(ScriptInterpreterLua::GetPluginDescriptionStatic(),
-            "Lua script interpreter");
-}
-
 TEST_F(ScriptInterpreterTest, ExecuteOneLine) {
   DebuggerSP debugger_sp = Debugger::CreateInstance();
   ASSERT_TRUE(debugger_sp);

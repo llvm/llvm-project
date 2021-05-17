@@ -14,9 +14,9 @@
 # CHECK-NEXT: foo1
 # CHECK-NEXT: foo11
 
-.globl _start, foo1, foo11, foo2, boo1
+.globl _start, boo1, foo1, foo11, foo2
+_start:
 foo1:
 foo11:
 foo2:
 boo1:
-_start:

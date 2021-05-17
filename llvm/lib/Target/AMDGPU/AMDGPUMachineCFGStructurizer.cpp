@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUSubtarget.h"
+#include "GCNSubtarget.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
@@ -1419,11 +1419,7 @@ void AMDGPUMachineCFGStructurizer::extractKilledPHIs(MachineBasicBlock *MBB) {
 
 static bool isPHIRegionIndex(SmallVector<unsigned, 2> PHIRegionIndices,
                              unsigned Index) {
-  for (auto i : PHIRegionIndices) {
-    if (i == Index)
-      return true;
-  }
-  return false;
+  return llvm::is_contained(PHIRegionIndices, Index);
 }
 
 bool AMDGPUMachineCFGStructurizer::shrinkPHI(MachineInstr &PHI,

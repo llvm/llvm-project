@@ -21,31 +21,45 @@
 
 namespace mlir {
 
+//===----------------------------------------------------------------------===//
+// Type Converter
+//===----------------------------------------------------------------------===//
+
 /// Type conversion from builtin types to SPIR-V types for shader interface.
-///
-/// Non-32-bit scalar types require special hardware support that may not exist
-/// on all GPUs. This is reflected in SPIR-V as that non-32-bit scalar types
-/// require special capabilities or extensions. Right now if a scalar type of a
-/// certain bitwidth is not supported in the target environment, we use 32-bit
-/// ones unconditionally. This requires the runtime to also feed in data with
-/// a matched bitwidth and layout for interface types. The runtime can do that
-/// by inspecting the SPIR-V module.
 ///
 /// For memref types, this converter additionally performs type wrapping to
 /// satisfy shader interface requirements: shader interface types must be
 /// pointers to structs.
-///
-/// TODO: We might want to introduce a way to control how unsupported bitwidth
-/// are handled and explicitly fail if wanted.
 class SPIRVTypeConverter : public TypeConverter {
 public:
-  explicit SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr);
+  struct Options {
+    /// Whether to emulate non-32-bit scalar types with 32-bit scalar types if
+    /// no native support.
+    ///
+    /// Non-32-bit scalar types require special hardware support that may not
+    /// exist on all GPUs. This is reflected in SPIR-V as that non-32-bit scalar
+    /// types require special capabilities or extensions. This option controls
+    /// whether to use 32-bit types to emulate, if a scalar type of a certain
+    /// bitwidth is not supported in the target environment. This requires the
+    /// runtime to also feed in data with a matched bitwidth and layout for
+    /// interface types. The runtime can do that by inspecting the SPIR-V
+    /// module.
+    ///
+    /// If the original scalar type has less than 32-bit, a multiple of its
+    /// values will be packed into one 32-bit value to be memory efficient.
+    bool emulateNon32BitScalarTypes;
 
-  /// Gets the number of bytes used for a type when converted to SPIR-V
-  /// type. Note that it doesnt account for whether the type is legal for a
-  /// SPIR-V target (described by spirv::TargetEnvAttr). Returns None on
-  /// failure.
-  static Optional<int64_t> getConvertedTypeNumBytes(Type);
+    /// The number of bits to store a boolean value. It is eight bits by
+    /// default.
+    unsigned boolNumBits;
+
+    // Note: we need this instead of inline initializers becuase of
+    // https://bugs.llvm.org/show_bug.cgi?id=36684
+    Options() : emulateNon32BitScalarTypes(true), boolNumBits(8) {}
+  };
+
+  explicit SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr,
+                              Options options = {});
 
   /// Gets the SPIR-V correspondence for the standard index type.
   static Type getIndexType(MLIRContext *context);
@@ -59,29 +73,30 @@ public:
   static Optional<spirv::StorageClass>
   getStorageClassForMemorySpace(unsigned space);
 
+  /// Returns the options controlling the SPIR-V type converter.
+  const Options &getOptions() const;
+
 private:
   spirv::TargetEnv targetEnv;
+  Options options;
 };
 
-/// Appends to a pattern list additional patterns for translating the builtin
-/// `func` op to the SPIR-V dialect. These patterns do not handle shader
-/// interface/ABI; they convert function parameters to be of SPIR-V allowed
-/// types.
-void populateBuiltinFuncToSPIRVPatterns(MLIRContext *context,
-                                        SPIRVTypeConverter &typeConverter,
-                                        OwningRewritePatternList &patterns);
+//===----------------------------------------------------------------------===//
+// Conversion Target
+//===----------------------------------------------------------------------===//
 
-namespace spirv {
-class AccessChainOp;
-class FuncOp;
-
+// The default SPIR-V conversion target.
+//
+// It takes a SPIR-V target environment and controls operation legality based on
+// the their availability in the target environment.
 class SPIRVConversionTarget : public ConversionTarget {
 public:
   /// Creates a SPIR-V conversion target for the given target environment.
-  static std::unique_ptr<SPIRVConversionTarget> get(TargetEnvAttr targetAttr);
+  static std::unique_ptr<SPIRVConversionTarget>
+  get(spirv::TargetEnvAttr targetAttr);
 
 private:
-  explicit SPIRVConversionTarget(TargetEnvAttr targetAttr);
+  explicit SPIRVConversionTarget(spirv::TargetEnvAttr targetAttr);
 
   // Be explicit that instance of this class cannot be copied or moved: there
   // are lambdas capturing fields of the instance.
@@ -94,15 +109,41 @@ private:
   /// environment.
   bool isLegalOp(Operation *op);
 
-  TargetEnv targetEnv;
+  spirv::TargetEnv targetEnv;
 };
+
+//===----------------------------------------------------------------------===//
+// Patterns and Utility Functions
+//===----------------------------------------------------------------------===//
+
+/// Appends to a pattern list additional patterns for translating the builtin
+/// `func` op to the SPIR-V dialect. These patterns do not handle shader
+/// interface/ABI; they convert function parameters to be of SPIR-V allowed
+/// types.
+void populateBuiltinFuncToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+                                        RewritePatternSet &patterns);
+
+namespace spirv {
+class AccessChainOp;
 
 /// Returns the value for the given `builtin` variable. This function gets or
 /// inserts the global variable associated for the builtin within the nearest
-/// enclosing op that has a symbol table. Returns null Value if such an
-/// enclosing op cannot be found.
+/// symbol table enclosing `op`. Returns null Value on error.
 Value getBuiltinVariableValue(Operation *op, BuiltIn builtin,
                               OpBuilder &builder);
+
+/// Gets the value at the given `offset` of the push constant storage with a
+/// total of `elementCount` 32-bit integers. A global variable will be created
+/// in the nearest symbol table enclosing `op` for the push constant storage if
+/// not existing. Load ops will be created via the given `builder` to load
+/// values from the push constant. Returns null Value on error.
+Value getPushConstantValue(Operation *op, unsigned elementCount,
+                           unsigned offset, OpBuilder &builder);
+
+/// Generates IR to perform index linearization with the given `indices` and
+/// their corresponding `strides`, adding an initial `offset`.
+Value linearizeIndex(ValueRange indices, ArrayRef<int64_t> strides,
+                     int64_t offset, Location loc, OpBuilder &builder);
 
 /// Performs the index computation to get to the element at `indices` of the
 /// memory pointed to by `basePtr`, using the layout map of `baseType`.
@@ -114,11 +155,6 @@ spirv::AccessChainOp getElementPtr(SPIRVTypeConverter &typeConverter,
                                    ValueRange indices, Location loc,
                                    OpBuilder &builder);
 
-/// Sets the InterfaceVarABIAttr and EntryPointABIAttr for a function and its
-/// arguments.
-LogicalResult setABIAttrs(spirv::FuncOp funcOp,
-                          EntryPointABIAttr entryPointInfo,
-                          ArrayRef<InterfaceVarABIAttr> argABIInfo);
 } // namespace spirv
 } // namespace mlir
 

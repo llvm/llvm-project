@@ -1,7 +1,9 @@
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objdump -p %t | FileCheck --strict-whitespace %s
 
-# CHECK:      Version definitions:
+# CHECK:      Dynamic Section:
+# CHECK-EMPTY:
+# CHECK-NEXT: Version definitions:
 # CHECK-NEXT: 1 0x01 0x075bcd15 foo
 # CHECK-NEXT: 2 0x02 0x3ade68b1 VERSION_1
 # CHECK-NEXT: 	                VERSION_2 
@@ -18,9 +20,7 @@ Sections:
     Type:            SHT_GNU_verdef
     Flags:           [ SHF_ALLOC ]
     Address:         0x0000000000000230
-    Link:            .dynstr
     AddressAlign:    0x0000000000000004
-    Info:            0x0000000000000003
     Entries:
       - Version:         1
         Flags:           1

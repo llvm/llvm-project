@@ -54,7 +54,7 @@ public:
   };
 
 private:
-  /// ValNo - This is the value number begin assigned (e.g. an argument number).
+  /// ValNo - This is the value number being assigned (e.g. an argument number).
   unsigned ValNo;
 
   /// Loc is either a stack offset or a register number.
@@ -228,7 +228,7 @@ private:
   //
   // Supposed use-case for this collection:
   // 1. Initially ByValRegs is empty, InRegsParamsProcessed is 0.
-  // 2. HandleByVal fillups ByValRegs.
+  // 2. HandleByVal fills up ByValRegs.
   // 3. Argument analysis (LowerFormatArguments, for example). After
   // some byval argument was analyzed, InRegsParamsProcessed is increased.
   struct ByValInfo {
@@ -431,23 +431,7 @@ public:
     return Result;
   }
 
-  // FIXME: Deprecate this function when transition to Align is over.
-  LLVM_ATTRIBUTE_DEPRECATED(unsigned AllocateStack(unsigned Size,
-                                                   unsigned Alignment),
-                            "Use the version that takes Align instead.") {
-    return AllocateStack(Size, Align(Alignment));
-  }
-
   void ensureMaxAlignment(Align Alignment);
-
-  /// Version of AllocateStack with extra register to be shadowed.
-  LLVM_ATTRIBUTE_DEPRECATED(unsigned AllocateStack(unsigned Size,
-                                                   unsigned Alignment,
-                                                   unsigned ShadowReg),
-                            "Use the version that takes Align instead.") {
-    MarkAllocated(ShadowReg);
-    return AllocateStack(Size, Align(Alignment));
-  }
 
   /// Version of AllocateStack with list of extra registers to be shadowed.
   /// Note that, unlike AllocateReg, this shadows ALL of the shadow registers.
@@ -469,7 +453,7 @@ public:
   // in registers.
   unsigned getInRegsParamsCount() const { return ByValRegs.size(); }
 
-  // Returns count of byval in-regs arguments proceed.
+  // Returns count of byval in-regs arguments processed.
   unsigned getInRegsParamsProcessed() const { return InRegsParamsProcessed; }
 
   // Get information about N-th byval parameter that is stored in registers.

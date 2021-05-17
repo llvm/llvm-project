@@ -15,6 +15,7 @@
 #include "mlir/Dialect/SCF/Passes.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/SCF/Transforms.h"
+#include "mlir/Dialect/SCF/Utils.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 
 using namespace mlir;
@@ -36,7 +37,8 @@ using namespace mlir::scf;
 /// %i0 + j0 and %i1 + %j1.
 //
 /// The old loop is replaced with the new one.
-void mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes) {
+std::pair<ParallelOp, ParallelOp>
+mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes) {
   OpBuilder b(op);
   auto zero = b.create<ConstantIndexOp>(op.getLoc(), 0);
   SmallVector<Value, 2> tileSizeConstants;
@@ -119,34 +121,11 @@ void mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes) {
     Value inner_index = std::get<0>(ivs);
     AddIOp newIndex =
         b.create<AddIOp>(op.getLoc(), std::get<0>(ivs), std::get<1>(ivs));
-    inner_index.replaceAllUsesExcept(
-        newIndex, SmallPtrSet<Operation *, 1>{newIndex.getOperation()});
+    inner_index.replaceAllUsesExcept(newIndex, newIndex);
   }
 
   op.erase();
-}
-
-/// Get a list of most nested parallel loops.
-static bool getInnermostPloops(Operation *rootOp,
-                               SmallVectorImpl<ParallelOp> &result) {
-  assert(rootOp != nullptr && "Root operation must not be a nullptr.");
-  bool rootEnclosesPloops = false;
-  for (Region &region : rootOp->getRegions()) {
-    for (Block &block : region.getBlocks()) {
-      for (Operation &op : block) {
-        bool enclosesPloops = getInnermostPloops(&op, result);
-        rootEnclosesPloops |= enclosesPloops;
-        if (auto ploop = dyn_cast<ParallelOp>(op)) {
-          rootEnclosesPloops = true;
-
-          // Collect ploop if it is an innermost one.
-          if (!enclosesPloops)
-            result.push_back(ploop);
-        }
-      }
-    }
-  }
-  return rootEnclosesPloops;
+  return std::make_pair(outerLoop, innerLoop);
 }
 
 namespace {
@@ -159,7 +138,7 @@ struct ParallelLoopTiling
 
   void runOnFunction() override {
     SmallVector<ParallelOp, 2> innermostPloops;
-    getInnermostPloops(getFunction().getOperation(), innermostPloops);
+    getInnermostParallelLoops(getFunction().getOperation(), innermostPloops);
     for (ParallelOp ploop : innermostPloops) {
       // FIXME: Add reduction support.
       if (ploop.getNumReductions() == 0)

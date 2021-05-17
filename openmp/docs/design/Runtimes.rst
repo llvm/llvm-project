@@ -48,7 +48,10 @@ similar to Clang's ``-ftime-trace`` option. This generates a JSON file based on
 `Speedscope App`_. Building this feature depends on the `LLVM Support Library`_
 for time trace output. Using this library is enabled by default when building
 using the CMake option ``OPENMP_ENABLE_LIBOMPTARGET_PROFILING``. The output will
-be saved to the filename specified by the environment variable.
+be saved to the filename specified by the environment variable. For multi-threaded
+applications, profiling in ``libomp`` is also needed. Setting the CMake option
+``OPENMP_ENABLE_LIBOMP_PROFILING=ON`` to enable the feature. Note that this will
+turn ``libomp`` into a C++ library.
 
 .. _`Chrome Tracing`: https://www.chromium.org/developers/how-tos/trace-event-profiling-tool
 
@@ -84,6 +87,7 @@ with `-g` for full debug information. A full list of flags supported by
     * Indicate when a mapped address already exists in the device mapping table:
       ``0x02``
     * Dump the contents of the device pointer map at kernel exit: ``0x04``
+    * Indicate when an entry is changed in the device mapping table: ``0x08``
     * Print OpenMP kernel information from device plugins: ``0x10``
 
 Any combination of these flags can be used by setting the appropriate bits. For
@@ -137,6 +141,10 @@ provide the following output from the runtime library.
     Info: Entering OpenMP data region at zaxpy.cpp:14:1 with 2 arguments:
     Info: to(X[0:N])[16384] 
     Info: tofrom(Y[0:N])[16384] 
+    Info: Creating new map entry with HstPtrBegin=0x00007fff963f4000,
+          TgtPtrBegin=0x00007fff963f4000, Size=16384, Name=X[0:N]
+    Info: Creating new map entry with HstPtrBegin=0x00007fff963f8000,
+          TgtPtrBegin=0x00007fff963f00000, Size=16384, Name=Y[0:N]
     Info: OpenMP Host-Device pointer mappings after block at zaxpy.cpp:14:1:
     Info: Host Ptr           Target Ptr         Size (B) RefCount Declaration
     Info: 0x00007fff963f4000 0x00007fd225004000 16384    1        Y[0:N] at zaxpy.cpp:13:17
@@ -148,10 +156,14 @@ provide the following output from the runtime library.
     Info: use_address(X)[0] (implicit)
     Info: Mapping exists (implicit) with HstPtrBegin=0x00007ffe37d8be80, 
           TgtPtrBegin=0x00007f90ff004000, Size=0, updated RefCount=2, Name=Y
+    Info: Creating new map entry with HstPtrBegin=0x00007fff963f33ff0,
+          TgtPtrBegin=0x00007fd225003ff0, Size=16, Name=D
     Info: Mapping exists (implicit) with HstPtrBegin=0x00007ffe37d8fe80, 
           TgtPtrBegin=0x00007f90ff000000, Size=0, updated RefCount=2, Name=X
     Info: Launching kernel __omp_offloading_fd02_c2c4ac1a__Z5daxpyPNSt3__17complexIdEES2_S1_m_l6
           with 8 blocks and 128 threads in SPMD mode
+    Info: Removing map entry with HstPtrBegin=0x00007fff963f33ff0,
+          TgtPtrBegin=0x00007fd225003ff0, Size=16, Name=D
     Info: OpenMP Host-Device pointer mappings after block at zaxpy.cpp:6:1:
     Info: Host Ptr           Target Ptr         Size (B) RefCount Declaration
     Info: 0x00007fff963f4000 0x00007fd225004000 16384    1        Y[0:N] at zaxpy.cpp:13:17
@@ -159,6 +171,10 @@ provide the following output from the runtime library.
     Info: Exiting OpenMP data region at zaxpy.cpp:14:1 with 2 arguments:
     Info: to(X[0:N])[16384] 
     Info: tofrom(Y[0:N])[16384] 
+    Info: Removing map entry with HstPtrBegin=0x00007fff963f4000,
+          TgtPtrBegin=0x00007fff963f4000, Size=16384, Name=X[0:N]
+    Info: Removing map entry with HstPtrBegin=0x00007fff963f8000,
+          TgtPtrBegin=0x00007fff963f00000, Size=16384, Name=Y[0:N]
 
 From this information, we can see the OpenMP kernel being launched on the CUDA
 device with enough threads and blocks for all ``1024`` iterations of the loop in
@@ -172,6 +188,24 @@ device's table, no new entries are created. Additionally, the default mapping
 shows that ``D`` will be copied back from the device once the OpenMP device
 kernel region ends even though it isn't written to. Finally, at the end of the
 OpenMP data region the entries for ``X`` and ``Y`` are removed from the table.
+
+The information level can be controlled at runtime using an internal
+libomptarget library call ``__tgt_set_info_flag``. This allows for different
+levels of information to be enabled or disabled for certain regions of code.
+Using this requires declaring the function signature as an external function so
+it can be linked with the runtime library.
+
+.. code-block:: c++
+
+    extern "C" void __tgt_set_info_flag(uint32_t);
+
+    extern foo();
+
+    int main() {
+      __tgt_set_info_flag(0x10);
+    #pragma omp target
+      foo();
+    }
 
 .. _libopenmptarget_errors:
 
@@ -217,7 +251,6 @@ going wrong.
 
 .. code-block:: text
 
-    CUDA error: Error when copying data from device to host.
     CUDA error: an illegal memory access was encountered 
     Libomptarget error: Copying data from device failed.
     Libomptarget error: Call to targetDataEnd failed, abort target.
@@ -272,6 +305,62 @@ LLVM/OpenMP Target Host Runtime Plugins (``libomptarget.rtl.XXXX``)
 -------------------------------------------------------------------
 
 .. _device_runtime:
+
+
+.. _remote_offloading_plugin:
+
+Remote Offloading Plugin:
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The remote offloading plugin permits the execution of OpenMP target regions
+on devices in remote hosts in addition to the devices connected to the local
+host. All target devices on the remote host will be exposed to the
+application as if they were local devices, that is, the remote host CPU or
+its GPUs can be offloaded to with the appropriate device number. If the
+server is running on the same host, each device may be identified twice:
+once through the device plugins and once through the device plugins that the
+server application has access to.
+
+This plugin consists of ``libomptarget.rtl.rpc.so`` and
+``openmp-offloading-server`` which should be running on the (remote) host. The
+server application does not have to be running on a remote host, and can
+instead be used on the same host in order to debug memory mapping during offloading.
+These are implemented via gRPC/protobuf so these libraries are required to
+build and use this plugin. The server must also have access to the necessary
+target-specific plugins in order to perform the offloading.
+
+Due to the experimental nature of this plugin, the CMake variable
+``LIBOMPTARGET_ENABLE_EXPERIMENTAL_REMOTE_PLUGIN`` must be set in order to
+build this plugin. For example, the rpc plugin is not designed to be
+thread-safe, the server cannot concurrently handle offloading from multiple
+applications at once (it is synchronous) and will terminate after a single
+execution. Note that ``openmp-offloading-server`` is unable to
+remote offload onto a remote host itself and will error out if this is attempted.
+
+Remote offloading is configured via environment variables at runtime of the OpenMP application:
+    * ``LIBOMPTARGET_RPC_ADDRESS=<Address>:<Port>``
+    * ``LIBOMPTARGET_RPC_ALLOCATOR_MAX=<NumBytes>``
+    * ``LIBOMPTARGET_BLOCK_SIZE=<NumBytes>``
+    * ``LIBOMPTARGET_RPC_LATENCY=<Seconds>``
+
+LIBOMPTARGET_RPC_ADDRESS
+""""""""""""""""""""""""
+The address and port at which the server is running. This needs to be set for
+the server and the application, the default is ``0.0.0.0:50051``. A single
+OpenMP executable can offload onto multiple remote hosts by setting this to
+comma-seperated values of the addresses.
+
+LIBOMPTARGET_RPC_ALLOCATOR_MAX
+""""""""""""""""""""""""""""""
+After allocating this size, the protobuf allocator will clear. This can be set for both endpoints.
+
+LIBOMPTARGET_BLOCK_SIZE
+"""""""""""""""""""""""
+This is the maximum size of a single message while streaming data transfers between the two endpoints and can be set for both endpoints.
+
+LIBOMPTARGET_RPC_LATENCY
+""""""""""""""""""""""""
+This is the maximum amount of time the client will wait for a response from the server.
 
 LLVM/OpenMP Target Device Runtime (``libomptarget-ARCH-SUBARCH.bc``)
 --------------------------------------------------------------------

@@ -118,10 +118,12 @@ class Parser : public CodeCompletionHandler {
   /// Ident_super - IdentifierInfo for "super", to support fast
   /// comparison.
   IdentifierInfo *Ident_super;
-  /// Ident_vector, Ident_bool - cached IdentifierInfos for "vector" and
-  /// "bool" fast comparison.  Only present if AltiVec or ZVector are enabled.
+  /// Ident_vector, Ident_bool, Ident_Bool - cached IdentifierInfos for "vector"
+  /// and "bool" fast comparison.  Only present if AltiVec or ZVector are
+  /// enabled.
   IdentifierInfo *Ident_vector;
   IdentifierInfo *Ident_bool;
+  IdentifierInfo *Ident_Bool;
   /// Ident_pixel - cached IdentifierInfos for "pixel" fast comparison.
   /// Only present if AltiVec enabled.
   IdentifierInfo *Ident_pixel;
@@ -879,6 +881,7 @@ private:
 
     if (Tok.getIdentifierInfo() != Ident_vector &&
         Tok.getIdentifierInfo() != Ident_bool &&
+        Tok.getIdentifierInfo() != Ident_Bool &&
         (!getLangOpts().AltiVec || Tok.getIdentifierInfo() != Ident_pixel))
       return false;
 
@@ -941,8 +944,8 @@ private:
     bool isActive;
 
   public:
-    explicit TentativeParsingAction(Parser& p) : P(p) {
-      PrevPreferredType = P.PreferredType;
+    explicit TentativeParsingAction(Parser &p)
+        : P(p), PrevPreferredType(P.PreferredType) {
       PrevTok = P.Tok;
       PrevTentativelyDeclaredIdentifierCount =
           P.TentativelyDeclaredIdentifiers.size();
@@ -1572,27 +1575,6 @@ private:
 
   //===--------------------------------------------------------------------===//
   // C99 6.9: External Definitions.
-  struct ParsedAttributesWithRange : ParsedAttributes {
-    ParsedAttributesWithRange(AttributeFactory &factory)
-      : ParsedAttributes(factory) {}
-
-    void clear() {
-      ParsedAttributes::clear();
-      Range = SourceRange();
-    }
-
-    SourceRange Range;
-  };
-  struct ParsedAttributesViewWithRange : ParsedAttributesView {
-    ParsedAttributesViewWithRange() : ParsedAttributesView() {}
-    void clearListOnly() {
-      ParsedAttributesView::clearListOnly();
-      Range = SourceRange();
-    }
-
-    SourceRange Range;
-  };
-
   DeclGroupPtrTy ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
                                           ParsingDeclSpec *DS = nullptr);
   bool isDeclarationAfterDeclarator();
@@ -1991,7 +1973,8 @@ private:
   Sema::ConditionResult ParseCXXCondition(StmtResult *InitStmt,
                                           SourceLocation Loc,
                                           Sema::ConditionKind CK,
-                                          ForRangeInfo *FRI = nullptr);
+                                          ForRangeInfo *FRI = nullptr,
+                                          bool EnterForConditionScope = false);
 
   //===--------------------------------------------------------------------===//
   // C++ Coroutines
@@ -2018,8 +2001,11 @@ private:
   }
   bool MayBeDesignationStart();
   ExprResult ParseBraceInitializer();
-  ExprResult ParseInitializerWithPotentialDesignator(
-      llvm::function_ref<void(const Designation &)> CodeCompleteCB);
+  struct DesignatorCompletionInfo {
+    SmallVectorImpl<Expr *> &InitExprs;
+    QualType PreferredBaseType;
+  };
+  ExprResult ParseInitializerWithPotentialDesignator(DesignatorCompletionInfo);
 
   //===--------------------------------------------------------------------===//
   // clang Expressions
@@ -2635,7 +2621,8 @@ private:
   // which standard permits but we don't supported yet, for example, attributes
   // appertain to decl specifiers.
   void ProhibitCXX11Attributes(ParsedAttributesWithRange &Attrs,
-                               unsigned DiagID);
+                               unsigned DiagID,
+                               bool DiagnoseEmptyAttrs = false);
 
   /// Skip C++11 and C2x attributes and return the end location of the
   /// last one.
@@ -2656,6 +2643,61 @@ private:
                            IdentifierInfo *ScopeName, SourceLocation ScopeLoc,
                            ParsedAttr::Syntax Syntax);
 
+  enum ParseAttrKindMask {
+    PAKM_GNU = 1 << 0,
+    PAKM_Declspec = 1 << 1,
+    PAKM_CXX11 = 1 << 2,
+  };
+
+  /// \brief Parse attributes based on what syntaxes are desired, allowing for
+  /// the order to vary. e.g. with PAKM_GNU | PAKM_Declspec:
+  /// __attribute__((...)) __declspec(...) __attribute__((...)))
+  /// Note that Microsoft attributes (spelled with single square brackets) are
+  /// not supported by this because of parsing ambiguities with other
+  /// constructs.
+  ///
+  /// There are some attribute parse orderings that should not be allowed in
+  /// arbitrary order. e.g.,
+  ///
+  ///   [[]] __attribute__(()) int i; // OK
+  ///   __attribute__(()) [[]] int i; // Not OK
+  ///
+  /// Such situations should use the specific attribute parsing functionality.
+  void ParseAttributes(unsigned WhichAttrKinds,
+                       ParsedAttributesWithRange &Attrs,
+                       SourceLocation *End = nullptr,
+                       LateParsedAttrList *LateAttrs = nullptr);
+  void ParseAttributes(unsigned WhichAttrKinds, ParsedAttributes &Attrs,
+                       SourceLocation *End = nullptr,
+                       LateParsedAttrList *LateAttrs = nullptr) {
+    ParsedAttributesWithRange AttrsWithRange(AttrFactory);
+    ParseAttributes(WhichAttrKinds, AttrsWithRange, End, LateAttrs);
+    Attrs.takeAllFrom(AttrsWithRange);
+  }
+  /// \brief Possibly parse attributes based on what syntaxes are desired,
+  /// allowing for the order to vary.
+  bool MaybeParseAttributes(unsigned WhichAttrKinds,
+                            ParsedAttributesWithRange &Attrs,
+                            SourceLocation *End = nullptr,
+                            LateParsedAttrList *LateAttrs = nullptr) {
+    if (Tok.isOneOf(tok::kw___attribute, tok::kw___declspec) ||
+        (standardAttributesAllowed() && isCXX11AttributeSpecifier())) {
+      ParseAttributes(WhichAttrKinds, Attrs, End, LateAttrs);
+      return true;
+    }
+    return false;
+  }
+  bool MaybeParseAttributes(unsigned WhichAttrKinds, ParsedAttributes &Attrs,
+                            SourceLocation *End = nullptr,
+                            LateParsedAttrList *LateAttrs = nullptr) {
+    if (Tok.isOneOf(tok::kw___attribute, tok::kw___declspec) ||
+        (standardAttributesAllowed() && isCXX11AttributeSpecifier())) {
+      ParseAttributes(WhichAttrKinds, Attrs, End, LateAttrs);
+      return true;
+    }
+    return false;
+  }
+
   void MaybeParseGNUAttributes(Declarator &D,
                                LateParsedAttrList *LateAttrs = nullptr) {
     if (Tok.is(tok::kw___attribute)) {
@@ -2665,14 +2707,50 @@ private:
       D.takeAttributes(attrs, endLoc);
     }
   }
-  void MaybeParseGNUAttributes(ParsedAttributes &attrs,
-                               SourceLocation *endLoc = nullptr,
+
+  /// Parses GNU-style attributes and returns them without source range
+  /// information.
+  ///
+  /// This API is discouraged. Use the version that takes a
+  /// ParsedAttributesWithRange instead.
+  bool MaybeParseGNUAttributes(ParsedAttributes &Attrs,
+                               SourceLocation *EndLoc = nullptr,
                                LateParsedAttrList *LateAttrs = nullptr) {
-    if (Tok.is(tok::kw___attribute))
-      ParseGNUAttributes(attrs, endLoc, LateAttrs);
+    if (Tok.is(tok::kw___attribute)) {
+      ParsedAttributesWithRange AttrsWithRange(AttrFactory);
+      ParseGNUAttributes(Attrs, EndLoc, LateAttrs);
+      Attrs.takeAllFrom(AttrsWithRange);
+      return true;
+    }
+    return false;
   }
-  void ParseGNUAttributes(ParsedAttributes &attrs,
-                          SourceLocation *endLoc = nullptr,
+
+  bool MaybeParseGNUAttributes(ParsedAttributesWithRange &Attrs,
+                               SourceLocation *EndLoc = nullptr,
+                               LateParsedAttrList *LateAttrs = nullptr) {
+    if (Tok.is(tok::kw___attribute)) {
+      ParseGNUAttributes(Attrs, EndLoc, LateAttrs);
+      return true;
+    }
+    return false;
+  }
+
+  /// Parses GNU-style attributes and returns them without source range
+  /// information.
+  ///
+  /// This API is discouraged. Use the version that takes a
+  /// ParsedAttributesWithRange instead.
+  void ParseGNUAttributes(ParsedAttributes &Attrs,
+                          SourceLocation *EndLoc = nullptr,
+                          LateParsedAttrList *LateAttrs = nullptr,
+                          Declarator *D = nullptr) {
+    ParsedAttributesWithRange AttrsWithRange(AttrFactory);
+    ParseGNUAttributes(AttrsWithRange, EndLoc, LateAttrs, D);
+    Attrs.takeAllFrom(AttrsWithRange);
+  }
+
+  void ParseGNUAttributes(ParsedAttributesWithRange &Attrs,
+                          SourceLocation *EndLoc = nullptr,
                           LateParsedAttrList *LateAttrs = nullptr,
                           Declarator *D = nullptr);
   void ParseGNUAttributeArgs(IdentifierInfo *AttrName,
@@ -2706,12 +2784,15 @@ private:
     }
     return false;
   }
-  void MaybeParseCXX11Attributes(ParsedAttributesWithRange &attrs,
+  bool MaybeParseCXX11Attributes(ParsedAttributesWithRange &attrs,
                                  SourceLocation *endLoc = nullptr,
                                  bool OuterMightBeMessageSend = false) {
     if (standardAttributesAllowed() &&
-      isCXX11AttributeSpecifier(false, OuterMightBeMessageSend))
+        isCXX11AttributeSpecifier(false, OuterMightBeMessageSend)) {
       ParseCXX11Attributes(attrs, endLoc);
+      return true;
+    }
+    return false;
   }
 
   void ParseCXX11AttributeSpecifier(ParsedAttributes &attrs,
@@ -2736,11 +2817,14 @@ private:
   void ParseMicrosoftUuidAttributeArgs(ParsedAttributes &Attrs);
   void ParseMicrosoftAttributes(ParsedAttributes &attrs,
                                 SourceLocation *endLoc = nullptr);
-  void MaybeParseMicrosoftDeclSpecs(ParsedAttributes &Attrs,
+  bool MaybeParseMicrosoftDeclSpecs(ParsedAttributes &Attrs,
                                     SourceLocation *End = nullptr) {
     const auto &LO = getLangOpts();
-    if (LO.DeclSpecKeyword && Tok.is(tok::kw___declspec))
+    if (LO.DeclSpecKeyword && Tok.is(tok::kw___declspec)) {
       ParseMicrosoftDeclSpecs(Attrs, End);
+      return true;
+    }
+    return false;
   }
   void ParseMicrosoftDeclSpecs(ParsedAttributes &Attrs,
                                SourceLocation *End = nullptr);
@@ -2754,17 +2838,6 @@ private:
   void ParseBorlandTypeAttributes(ParsedAttributes &attrs);
   void ParseOpenCLKernelAttributes(ParsedAttributes &attrs);
   void ParseOpenCLQualifiers(ParsedAttributes &Attrs);
-  /// Parses opencl_unroll_hint attribute if language is OpenCL v2.0
-  /// or higher.
-  /// \return false if error happens.
-  bool MaybeParseOpenCLUnrollHintAttribute(ParsedAttributes &Attrs) {
-    if (getLangOpts().OpenCL)
-      return ParseOpenCLUnrollHintAttribute(Attrs);
-    return true;
-  }
-  /// Parses opencl_unroll_hint attribute.
-  /// \return false if error happens.
-  bool ParseOpenCLUnrollHintAttribute(ParsedAttributes &Attrs);
   void ParseNullabilityTypeSpecifiers(ParsedAttributes &attrs);
 
   VersionTuple ParseVersionTuple(SourceRange &Range);
@@ -3111,10 +3184,12 @@ private:
   /// Parse 'omp end assumes' directive.
   void ParseOpenMPEndAssumesDirective(SourceLocation Loc);
 
-  /// Parse clauses for '#pragma omp declare target'.
-  DeclGroupPtrTy ParseOMPDeclareTargetClauses();
+  /// Parse clauses for '#pragma omp [begin] declare target'.
+  void ParseOMPDeclareTargetClauses(Sema::DeclareTargetContextInfo &DTCI);
+
   /// Parse '#pragma omp end declare target'.
-  void ParseOMPEndDeclareTargetDirective(OpenMPDirectiveKind DKind,
+  void ParseOMPEndDeclareTargetDirective(OpenMPDirectiveKind BeginDKind,
+                                         OpenMPDirectiveKind EndDKind,
                                          SourceLocation Loc);
 
   /// Skip tokens until a `annot_pragma_openmp_end` was found. Emit a warning if
@@ -3206,6 +3281,10 @@ private:
   OMPClause *ParseOpenMPSingleExprWithArgClause(OpenMPDirectiveKind DKind,
                                                 OpenMPClauseKind Kind,
                                                 bool ParseOnly);
+
+  /// Parses the 'sizes' clause of a '#pragma omp tile' directive.
+  OMPClause *ParseOpenMPSizesClause();
+
   /// Parses clause without any additional arguments.
   ///
   /// \param Kind Kind of current clause.
@@ -3231,6 +3310,14 @@ private:
   /// Expected format:
   /// '(' { <allocator> [ '(' <allocator_traits> ')' ] }+ ')'
   OMPClause *ParseOpenMPUsesAllocatorClause(OpenMPDirectiveKind DKind);
+
+  /// Parses clause with an interop variable of kind \a Kind.
+  ///
+  /// \param Kind Kind of current clause.
+  /// \param ParseOnly true to skip the clause's semantic actions and return
+  /// nullptr.
+  //
+  OMPClause *ParseOpenMPInteropClause(OpenMPClauseKind Kind, bool ParseOnly);
 
 public:
   /// Parses simple expression in parens for single-expression clauses of OpenMP

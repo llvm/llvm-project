@@ -42,7 +42,6 @@ void testRunPassOnModule() {
   // Run the print-op-stats pass on the top-level module:
   // CHECK-LABEL: Operations encountered:
   // CHECK: func              , 1
-  // CHECK: module_terminator , 1
   // CHECK: std.addi          , 1
   // CHECK: std.return        , 1
   {
@@ -84,7 +83,6 @@ void testRunPassOnNestedModule() {
 
   // Run the print-op-stats pass on functions under the top-level module:
   // CHECK-LABEL: Operations encountered:
-  // CHECK-NOT: module_terminator
   // CHECK: func              , 1
   // CHECK: std.addi          , 1
   // CHECK: std.return        , 1
@@ -101,7 +99,6 @@ void testRunPassOnNestedModule() {
   }
   // Run the print-op-stats pass on functions under the nested module:
   // CHECK-LABEL: Operations encountered:
-  // CHECK-NOT: module_terminator
   // CHECK: func              , 1
   // CHECK: std.addf          , 1
   // CHECK: std.return        , 1

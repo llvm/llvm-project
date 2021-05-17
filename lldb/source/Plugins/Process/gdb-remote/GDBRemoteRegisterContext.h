@@ -39,6 +39,7 @@ public:
   ~GDBRemoteDynamicRegisterInfo() override = default;
 
   void HardcodeARMRegisters(bool from_scratch);
+  bool UpdateARM64SVERegistersInfos(uint64_t vg);
 };
 
 class GDBRemoteRegisterContext : public RegisterContext {
@@ -76,6 +77,8 @@ public:
 
   uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
                                                uint32_t num) override;
+
+  bool AArch64SVEReconfigure();
 
 protected:
   friend class ThreadGDBRemote;
@@ -115,6 +118,7 @@ protected:
   DataExtractor m_reg_data;
   bool m_read_all_at_once;
   bool m_write_all_at_once;
+  bool m_gpacket_cached;
 
 private:
   // Helper function for ReadRegisterBytes().

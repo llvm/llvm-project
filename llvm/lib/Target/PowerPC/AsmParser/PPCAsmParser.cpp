@@ -11,7 +11,6 @@
 #include "PPCTargetStreamer.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -360,6 +359,15 @@ public:
   bool isS16ImmX4() const { return Kind == Expression ||
                                    (Kind == Immediate && isInt<16>(getImm()) &&
                                     (getImm() & 3) == 0); }
+
+  bool isHashImmX8() const {
+    // The Hash Imm form is used for instructions that check or store a hash.
+    // These instructions have a small immediate range that spans between
+    // -8 and -512.
+    return (Kind == Immediate && getImm() <= -8 && getImm() >= -512 &&
+            (getImm() & 7) == 0);
+  }
+
   bool isS16ImmX16() const { return Kind == Expression ||
                                     (Kind == Immediate && isInt<16>(getImm()) &&
                                      (getImm() & 15) == 0); }
@@ -1131,29 +1139,6 @@ void PPCAsmParser::ProcessInstruction(MCInst &Inst,
       assert(Inst.getNumOperands() == 2 && "Expecting two operands");
       Inst.setOpcode(PPC::MFSPR);
     }
-    break;
-  }
-  case PPC::CP_COPYx:
-  case PPC::CP_COPY_FIRST: {
-    MCInst TmpInst;
-    TmpInst.setOpcode(PPC::CP_COPY);
-    TmpInst.addOperand(Inst.getOperand(0));
-    TmpInst.addOperand(Inst.getOperand(1));
-    TmpInst.addOperand(MCOperand::createImm(Opcode == PPC::CP_COPYx ? 0 : 1));
-
-    Inst = TmpInst;
-    break;
-  }
-  case PPC::CP_PASTEx :
-  case PPC::CP_PASTE_LAST: {
-    MCInst TmpInst;
-    TmpInst.setOpcode(Opcode == PPC::CP_PASTEx ? PPC::CP_PASTE
-                                               : PPC::CP_PASTE_rec);
-    TmpInst.addOperand(Inst.getOperand(0));
-    TmpInst.addOperand(Inst.getOperand(1));
-    TmpInst.addOperand(MCOperand::createImm(Opcode == PPC::CP_PASTEx ? 0 : 1));
-
-    Inst = TmpInst;
     break;
   }
   }

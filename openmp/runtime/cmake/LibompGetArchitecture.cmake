@@ -71,13 +71,15 @@ function(libomp_get_architecture return_arch)
 endfunction()
 
 function(libomp_is_aarch64_a64fx return_is_aarch64_a64fx)
-  file(READ "/proc/cpuinfo" cpu_info_content)
-  string(REGEX MATCH "CPU implementer[ \t]*: 0x46\n" cpu_implementer ${cpu_info_content})
-  string(REGEX MATCH "CPU architecture[ \t]*: 8\n" cpu_architecture ${cpu_info_content})
-
   set(is_aarch64_a64fx FALSE)
-  if (cpu_architecture AND cpu_implementer)
-    set(is_aarch64_a64fx TRUE)
+  if (EXISTS "/proc/cpuinfo")
+    file(READ "/proc/cpuinfo" cpu_info_content)
+    string(REGEX MATCH "CPU implementer[ \t]*: 0x46\n" cpu_implementer ${cpu_info_content})
+    string(REGEX MATCH "CPU architecture[ \t]*: 8\n" cpu_architecture ${cpu_info_content})
+
+    if (cpu_architecture AND cpu_implementer)
+      set(is_aarch64_a64fx TRUE)
+    endif()
   endif()
 
   set(${return_is_aarch64_a64fx} "${is_aarch64_a64fx}" PARENT_SCOPE)

@@ -275,9 +275,6 @@ entry:
 ; Test that two stack objects are not stored in the same register
 ; The second stack object should be in T3.X
 ; FUNC-LABEL: {{^}}no_overlap:
-; R600-CHECK: MOV
-; R600-CHECK: [[CHAN:[XYZW]]]+
-; R600-NOT: [[CHAN]]+
 ;
 ; A total of 5 bytes should be allocated and used.
 ; SI: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:4 ;

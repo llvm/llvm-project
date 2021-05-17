@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_DBIMODULEDESCRIPTORBUILDER_H
-#define LLVM_DEBUGINFO_PDB_RAW_DBIMODULEDESCRIPTORBUILDER_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_DBIMODULEDESCRIPTORBUILDER_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_DBIMODULEDESCRIPTORBUILDER_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
@@ -159,4 +159,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_PDB_RAW_DBIMODULEDESCRIPTORBUILDER_H
+#endif // LLVM_DEBUGINFO_PDB_NATIVE_DBIMODULEDESCRIPTORBUILDER_H

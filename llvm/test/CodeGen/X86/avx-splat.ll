@@ -34,7 +34,7 @@ define <4 x i64> @funcC(i64 %q) nounwind uwtable readnone ssp {
 ; X64-LABEL: funcC:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vmovq %rdi, %xmm0
-; X64-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X64-NEXT:    retq
 entry:
@@ -157,8 +157,8 @@ entry:
 define <8 x float> @funcH(<8 x float> %a) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: funcH:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,1,1,1,5,5,5,5]
 ; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,2,3]
+; CHECK-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,1,1,1,5,5,5,5]
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
   %shuffle = shufflevector <8 x float> %a, <8 x float> undef, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>

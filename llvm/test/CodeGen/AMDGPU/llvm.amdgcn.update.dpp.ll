@@ -17,7 +17,7 @@ define amdgpu_kernel void @dpp_test(i32 addrspace(1)* %out, i32 %in1, i32 %in2) 
 ; GCN:  v_mov_b32_e32 [[DST:v[0-9]+]], s{{[0-9]+}}
 ; GCN:  v_mov_b32_e32 [[SRC:v[0-9]+]], s{{[0-9]+}}
 ; GFX8: s_nop 1
-; GCN:  v_mov_b32_dpp [[DST]], [[SRC]] quad_perm:[2,0,0,0] row_mask:0x1 bank_mask:0x1 bound_ctrl:0{{$}}
+; GCN:  v_mov_b32_dpp [[DST]], [[SRC]] quad_perm:[2,0,0,0] row_mask:0x1 bank_mask:0x1 bound_ctrl:1{{$}}
 define amdgpu_kernel void @dpp_test_bc(i32 addrspace(1)* %out, i32 %in1, i32 %in2) {
   %tmp0 = call i32 @llvm.amdgcn.update.dpp.i32(i32 %in1, i32 %in2, i32 2, i32 1, i32 1, i1 1) #0
   store i32 %tmp0, i32 addrspace(1)* %out

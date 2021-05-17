@@ -14,7 +14,7 @@
 #ifndef MLIR_REWRITE_PATTERNAPPLICATOR_H
 #define MLIR_REWRITE_PATTERNAPPLICATOR_H
 
-#include "mlir/Rewrite/FrozenRewritePatternList.h"
+#include "mlir/Rewrite/FrozenRewritePatternSet.h"
 
 namespace mlir {
 class PatternRewriter;
@@ -33,7 +33,7 @@ public:
   /// `impossibleToMatch`.
   using CostModel = function_ref<PatternBenefit(const Pattern &)>;
 
-  explicit PatternApplicator(const FrozenRewritePatternList &frozenPatternList);
+  explicit PatternApplicator(const FrozenRewritePatternSet &frozenPatternList);
   ~PatternApplicator();
 
   /// Attempt to match and rewrite the given op with any pattern, allowing a
@@ -65,7 +65,7 @@ public:
 
 private:
   /// The list that owns the patterns used within this applicator.
-  const FrozenRewritePatternList &frozenPatternList;
+  const FrozenRewritePatternSet &frozenPatternList;
   /// The set of patterns to match for each operation, stable sorted by benefit.
   DenseMap<OperationName, SmallVector<const RewritePattern *, 2>> patterns;
   /// The set of patterns that may match against any operation type, stable

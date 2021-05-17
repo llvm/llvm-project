@@ -159,8 +159,9 @@ EmulateInstructionMIPS::EmulateInstructionMIPS(
       target->createMCSubtargetInfo(triple.getTriple(), cpu, features));
   assert(m_asm_info.get() && m_subtype_info.get());
 
-  m_context = std::make_unique<llvm::MCContext>(m_asm_info.get(),
-                                                m_reg_info.get(), nullptr);
+  m_context = std::make_unique<llvm::MCContext>(
+      triple, m_asm_info.get(), m_reg_info.get(), /*MOFI=*/nullptr,
+      m_subtype_info.get());
   assert(m_context.get());
 
   m_disasm.reset(target->createMCDisassembler(*m_subtype_info, *m_context));
@@ -1018,8 +1019,9 @@ bool EmulateInstructionMIPS::SetInstruction(const Opcode &insn_opcode,
 
       const size_t bytes_read =
           target->ReadMemory(next_addr, /* Address of next instruction */
-                             true,      /* prefer_file_cache */
-                             buf, sizeof(uint32_t), error, &load_addr);
+                             buf, sizeof(uint32_t), error, 
+                             false,  /* force_live_memory */
+                             &load_addr);
 
       if (bytes_read == 0)
         return true;

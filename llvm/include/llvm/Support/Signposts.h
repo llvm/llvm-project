@@ -18,6 +18,7 @@
 #define LLVM_SUPPORT_SIGNPOSTS_H
 
 #include "llvm/ADT/StringRef.h"
+#include <memory>
 
 namespace llvm {
 class SignpostEmitterImpl;
@@ -25,7 +26,7 @@ class SignpostEmitterImpl;
 /// Manages the emission of signposts into the recording method supported by
 /// the OS.
 class SignpostEmitter {
-  SignpostEmitterImpl *Impl;
+  std::unique_ptr<SignpostEmitterImpl> Impl;
 
 public:
   SignpostEmitter();
@@ -41,4 +42,4 @@ public:
 
 } // end namespace llvm
 
-#endif // ifndef LLVM_SUPPORT_SIGNPOSTS_H
+#endif // LLVM_SUPPORT_SIGNPOSTS_H

@@ -215,6 +215,22 @@ public:
     return B.CreateMul(LHS, RHS);
   }
 
+  /// Divide matrix \p LHS by scalar \p RHS. If the operands are integers, \p
+  /// IsUnsigned indicates whether UDiv or SDiv should be used.
+  Value *CreateScalarDiv(Value *LHS, Value *RHS, bool IsUnsigned) {
+    assert(LHS->getType()->isVectorTy() && !RHS->getType()->isVectorTy());
+    assert(!isa<ScalableVectorType>(LHS->getType()) &&
+           "LHS Assumed to be fixed width");
+    RHS =
+        B.CreateVectorSplat(cast<VectorType>(LHS->getType())->getElementCount(),
+                            RHS, "scalar.splat");
+    return cast<VectorType>(LHS->getType())
+                   ->getElementType()
+                   ->isFloatingPointTy()
+               ? B.CreateFDiv(LHS, RHS)
+               : (IsUnsigned ? B.CreateUDiv(LHS, RHS) : B.CreateSDiv(LHS, RHS));
+  }
+
   /// Extracts the element at (\p RowIdx, \p ColumnIdx) from \p Matrix.
   Value *CreateExtractElement(Value *Matrix, Value *RowIdx, Value *ColumnIdx,
                               unsigned NumRows, Twine const &Name = "") {

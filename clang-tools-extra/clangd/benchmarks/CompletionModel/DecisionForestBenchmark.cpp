@@ -21,7 +21,7 @@ namespace clang {
 namespace clangd {
 namespace {
 std::vector<Example> generateRandomDataset(int NumExamples) {
-  auto FlipCoin = [&](float Probability) {
+  auto FlipCoin = [&](double Probability) {
     return rand() % 1000 <= Probability * 1000;
   };
   auto RandInt = [&](int Max) { return rand() % Max; };
@@ -38,25 +38,24 @@ std::vector<Example> generateRandomDataset(int NumExamples) {
     E.setIsImplementationDetail(FlipCoin(0.3)); // Boolean.
     E.setNumReferences(RandInt(10000));         // Can be large integer.
     E.setSymbolCategory(RandInt(10));           // 10 Symbol Category.
-
+    E.setNumNameInContext(RandInt(20));         // 0 to ContextWords->size().
+    E.setFractionNameInContext(RandFloat(1.0)); // Float in range [0,1].
     E.setIsNameInContext(FlipCoin(0.5)); // Boolean.
-    E.setIsForbidden(FlipCoin(0.1));     // Boolean.
     E.setIsInBaseClass(FlipCoin(0.3));   // Boolean.
-    E.setFileProximityDistance(
+    E.setFileProximityDistanceCost(
         FlipCoin(0.1) ? 999999 // Sometimes file distance is not available.
                       : RandInt(20));
     E.setSemaFileProximityScore(RandFloat(1)); // Float in range [0,1].
-    E.setSymbolScopeDistance(
+    E.setSymbolScopeDistanceCost(
         FlipCoin(0.1) ? 999999 // Sometimes scope distance is not available.
                       : RandInt(20));
     E.setSemaSaysInScope(FlipCoin(0.5));      // Boolean.
     E.setScope(RandInt(4));                   // 4 Scopes.
-    E.setContextKind(RandInt(32));            // 32 Context kinds.
+    E.setContextKind(RandInt(36));            // 36 Context kinds.
     E.setIsInstanceMember(FlipCoin(0.5));     // Boolean.
     E.setHadContextType(FlipCoin(0.6));       // Boolean.
     E.setHadSymbolType(FlipCoin(0.6));        // Boolean.
     E.setTypeMatchesPreferred(FlipCoin(0.5)); // Boolean.
-    E.setFilterLength(RandInt(15));
     Examples.push_back(E);
   }
   return Examples;

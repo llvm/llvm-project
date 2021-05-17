@@ -33,8 +33,8 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         self.assertTrue(output and len(output) > 0,
                         "expect program output")
         lines = output.splitlines()
-        self.assertTrue(program in lines[0],
-                        "make sure program path is in first argument")
+        self.assertIn(program, lines[0],
+                      "make sure program path is in first argument")
 
     @skipIfWindows
     @skipIfRemote
@@ -104,9 +104,9 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
             if line.startswith('cwd = \"'):
                 quote_path = '"%s"' % (program_parent_dir)
                 found = True
-                self.assertTrue(quote_path in line,
-                                "working directory '%s' not in '%s'" % (
-                                    program_parent_dir, line))
+                self.assertIn(quote_path, line,
+                              "working directory '%s' not in '%s'" % (
+                                  program_parent_dir, line))
         self.assertTrue(found, "verified program working directory")
 
     @skipIfWindows
@@ -202,9 +202,9 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         for line in lines:
             quote_path = '"%s"' % (program)
             if line.startswith("arg[1] ="):
-                self.assertTrue(quote_path in line,
-                                'verify "%s" expanded to "%s"' % (
-                                    glob, program))
+                self.assertIn(quote_path, line,
+                              'verify "%s" expanded to "%s"' % (
+                                  glob, program))
 
     @skipIfWindows
     @skipIfRemote
@@ -228,9 +228,9 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         for line in lines:
             quote_path = '"%s"' % (glob)
             if line.startswith("arg[1] ="):
-                self.assertTrue(quote_path in line,
-                                'verify "%s" stayed to "%s"' % (
-                                    glob, glob))
+                self.assertIn(quote_path, line,
+                              'verify "%s" stayed to "%s"' % (
+                                  glob, glob))
 
     @skipIfWindows
     @skipIfRemote
@@ -255,8 +255,8 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         # Make sure arguments we specified are correct
         for (i, arg) in enumerate(args):
             quoted_arg = '"%s"' % (arg)
-            self.assertTrue(quoted_arg in lines[i],
-                            'arg[%i] "%s" not in "%s"' % (i+1, quoted_arg, lines[i]))
+            self.assertIn(quoted_arg, lines[i],
+                          'arg[%i] "%s" not in "%s"' % (i+1, quoted_arg, lines[i]))
 
     @skipIfWindows
     @skipIfRemote
@@ -293,6 +293,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @skipIf(archs=["arm", "aarch64"]) # failed run https://lab.llvm.org/buildbot/#/builders/96/builds/6933
     def test_commands(self):
         '''
             Tests the "initCommands", "preRunCommands", "stopCommands",
@@ -313,12 +314,14 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         program = self.getBuildArtifact("a.out")
         initCommands = ['target list', 'platform list']
         preRunCommands = ['image list a.out', 'image dump sections a.out']
+        postRunCommands = ['help trace', 'help process trace']
         stopCommands = ['frame variable', 'bt']
         exitCommands = ['expr 2+3', 'expr 3+4']
         terminateCommands = ['expr 4+2']
         self.build_and_launch(program,
                               initCommands=initCommands,
                               preRunCommands=preRunCommands,
+                              postRunCommands=postRunCommands,
                               stopCommands=stopCommands,
                               exitCommands=exitCommands,
                               terminateCommands=terminateCommands)
@@ -330,6 +333,8 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         self.verify_commands('initCommands', output, initCommands)
         # Verify all "preRunCommands" were found in console output
         self.verify_commands('preRunCommands', output, preRunCommands)
+        # Verify all "postRunCommands" were found in console output
+        self.verify_commands('postRunCommands', output, postRunCommands)
 
         source = 'main.c'
         first_line = line_number(source, '// breakpoint 1')
@@ -440,7 +445,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         '''
         self.build_and_create_debug_adaptor()
         program = self.getBuildArtifact("a.out")
-        
+
         terminateCommands = ['expr 4+2']
         self.launch(program=program,
                     terminateCommands=terminateCommands)
@@ -450,3 +455,65 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         self.vscode.request_disconnect(terminateDebuggee=True)
         output = self.collect_console(duration=1.0)
         self.verify_commands('terminateCommands', output, terminateCommands)
+
+
+    @skipIfWindows
+    @skipIfRemote
+    @skipIf(oslist=["linux"])
+    def test_progress_events(self):
+        '''
+            Tests the progress events to ensure we are receiving them.
+        '''
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+        # Set a breakpoint at 'main'. This will cause all of the symbol tables
+        # for all modules in LLDB to be parsed and we should get a progress
+        # event for each shared library.
+        breakpoint_ids = self.set_function_breakpoints(['main'])
+        self.continue_to_breakpoints(breakpoint_ids)
+        # Make sure we at least got some progress events
+        self.assertTrue(len(self.vscode.progress_events) > 0)
+        # Track all 'progressStart' events by saving all 'progressId' values.
+        progressStart_ids = set()
+        # Track all 'progressEnd' events by saving all 'progressId' values.
+        progressEnd_ids = set()
+        # We will watch for events whose title starts with
+        # 'Parsing symbol table for ' and we will save the remainder of the
+        # line which will contain the shared library basename. Since we set a
+        # breakpoint by name for 'main', we will expect to see progress events
+        # for all shared libraries that say that the symbol table is being
+        # parsed.
+        symtab_progress_shlibs = set()
+        # Get a list of modules in the current target so we can verify that
+        # we do in fact get a progress event for each shared library.
+        target_shlibs = self.vscode.get_modules()
+
+        # Iterate over all progress events and save all start and end IDs, and
+        # remember any shared libraries that got symbol table parsing progress
+        # events.
+        # Sleep for 5 seconds to make sure progress_events gets populated
+        time.sleep(5)
+        for progress_event in self.vscode.progress_events:
+            event_type = progress_event['event']
+            if event_type == 'progressStart':
+                progressStart_ids.add(progress_event['body']['progressId'])
+                title = progress_event['body']['title']
+                if title.startswith('Parsing symbol table for '):
+                    symtab_progress_shlibs.add(title[25:])
+            if event_type == 'progressEnd':
+                progressEnd_ids.add(progress_event['body']['progressId'])
+        # Make sure for each 'progressStart' event, we got a matching
+        # 'progressEnd' event.
+        self.assertTrue(progressStart_ids == progressEnd_ids,
+                        ('Make sure we got a "progressEnd" for each '
+                         '"progressStart" event that we have.'))
+
+        ignored_libraries = {"[vdso]"}
+
+        # Verify we got a symbol table parsing progress event for each shared
+        # library in our target.
+        for target_shlib_basename in target_shlibs.keys():
+            if target_shlib_basename in ignored_libraries:
+                continue
+            self.assertIn(target_shlib_basename, symtab_progress_shlibs,
+                            'Make sure we got a symbol table progress event for "%s"' % (target_shlib_basename))

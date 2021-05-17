@@ -1,4 +1,4 @@
-! RUN: not %f18 -funparse-with-symbols %s 2>&1 | FileCheck %s
+! RUN: not %flang_fc1 -fdebug-unparse-with-symbols %s 2>&1 | FileCheck %s
 ! CHECK: '60' not a FORMAT
 ! CHECK: data transfer use of '60'
 

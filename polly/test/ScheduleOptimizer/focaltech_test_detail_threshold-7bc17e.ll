@@ -1,4 +1,5 @@
 ; RUN: opt %loadPolly -polly-opt-isl -polly-opt-fusion=max -polly-vectorizer=stripmine -polly-invariant-load-hoisting -polly-optimized-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly "-passes=scop(print<polly-opt-isl>)" -polly-opt-fusion=max -polly-vectorizer=stripmine -polly-invariant-load-hoisting -disable-output < %s | FileCheck %s
 ;
 ; llvm.org/PR46578
 ;
@@ -61,22 +62,22 @@ cleanup:                                          ; preds = %for.cond, %entry
 
 ; CHECK-LABEL: Printing analysis 'Polly - Optimize schedule of SCoP' for region: 'for.cond => cleanup' in function 'func':
 ; CHECK: Calculated schedule:
-; CHECK: domain: "[call15] -> { Stmt_for_body23[i0, i1] : 0 <= i0 <= 59 and 0 <= i1 <= 59; Stmt_for_body30[i0, i1] : 0 <= i0 <= 59 and 0 <= i1 <= 59 }"
+; CHECK: domain: "[call15] -> { Stmt_for_body30[i0, i1] : 0 <= i0 <= 59 and 0 <= i1 <= 59; Stmt_for_body23[i0, i1] : 0 <= i0 <= 59 and 0 <= i1 <= 59 }"
 ; CHECK: child:
 ; CHECK:   mark: "1st level tiling - Tiles"
 ; CHECK:   child:
-; CHECK:     schedule: "[call15] -> [{ Stmt_for_body23[i0, i1] -> [(floor((i0 + i1)/32))]; Stmt_for_body30[i0, i1] -> [(floor((call15 + i1)/32))] }, { Stmt_for_body23[i0, i1] -> [(floor((i0)/32))]; Stmt_for_body30[i0, i1] -> [(floor((i0)/32))] }]"
+; CHECK:     schedule: "[call15] -> [{ Stmt_for_body30[i0, i1] -> [(floor((i1)/32))]; Stmt_for_body23[i0, i1] -> [(floor((i1)/32))] }, { Stmt_for_body30[i0, i1] -> [(floor((i0)/32))]; Stmt_for_body23[i0, i1] -> [(floor((i0)/32))] }]"
 ; CHECK:     permutable: 1
 ; CHECK:     coincident: [ 1, 0 ]
 ; CHECK:     child:
 ; CHECK:       mark: "1st level tiling - Points"
 ; CHECK:       child:
-; CHECK:         schedule: "[call15] -> [{ Stmt_for_body23[i0, i1] -> [(floor((i0 + i1)/4) - 8*floor((i0 + i1)/32))]; Stmt_for_body30[i0, i1] -> [(floor((call15 + i1)/4) - 8*floor((call15 + i1)/32))] }]"
+; CHECK:         schedule: "[call15] -> [{ Stmt_for_body30[i0, i1] -> [(floor((i1)/4) - 8*floor((i1)/32))]; Stmt_for_body23[i0, i1] -> [(floor((i1)/4) - 8*floor((i1)/32))] }]"
 ; CHECK:         permutable: 1
 ; CHECK:         coincident: [ 1 ]
-; CHECK:         options: "[call15] -> { atomic[0]; isolate{{\[\[}}i0, i1] -> [i2]] : 0 <= i1 <= 1 and 0 <= i2 <= 7 and call15 - 32i0 <= 4i2 <= 56 + call15 - 32i0 and (call15 >= 120 or i2 < -8i0 + 8i1); isolate{{\[\[}}i0, 0] -> [i2]] : 0 <= i2 <= 7 and ((call15 >= 120 and -8i0 <= i2 <= 21 - 8i0) or (call15 >= 92 and i2 <= 28 - 8i0 and 4i2 >= call15 - 32i0) or (call15 <= 91 and -8i0 <= i2 <= 21 - 8i0) or (92 <= call15 <= 119 and -8i0 <= i2 <= 21 - 8i0) or (call15 <= 91 and 22 - 8i0 <= i2 <= 28 - 8i0 and 4i2 <= 56 + call15 - 32i0) or (call15 <= 119 and i2 >= 29 - 8i0 and call15 - 32i0 <= 4i2 <= 56 + call15 - 32i0)); isolate{{\[\[}}i0, 1] -> [i2]] : i2 >= 0 and 8 - 8i0 <= i2 <= 7 and ((call15 >= 120 and i2 <= 28 - 8i0) or (call15 <= 119 and i2 >= 29 - 8i0 and 4i2 <= 56 + call15 - 32i0) or (call15 <= 119 and i2 <= 28 - 8i0)) }"
+; CHECK:         options: "[call15] -> { atomic[0]; isolate{{\[\[}}i0, i1] -> [i2]] : i0 >= 0 and 0 <= i1 <= 1 and 0 <= i2 <= 14 - 8i0 and i2 <= 7 }"
 ; CHECK:         child:
-; CHECK:           schedule: "[call15] -> [{ Stmt_for_body23[i0, i1] -> [((i0) mod 32)]; Stmt_for_body30[i0, i1] -> [((i0) mod 32)] }]"
+; CHECK:           schedule: "[call15] -> [{ Stmt_for_body30[i0, i1] -> [((i0) mod 32)]; Stmt_for_body23[i0, i1] -> [((i0) mod 32)] }]"
 ; CHECK:           permutable: 1
 ; CHECK:           child:
 ; CHECK:             mark: "SIMD"
@@ -84,11 +85,11 @@ cleanup:                                          ; preds = %for.cond, %entry
 ; CHECK:               sequence:
 ; CHECK:               - filter: "[call15] -> { Stmt_for_body23[i0, i1] }"
 ; CHECK:                 child:
-; CHECK:                   schedule: "[call15] -> [{ Stmt_for_body23[i0, i1] -> [((i0 + i1) mod 4)]; Stmt_for_body30[i0, i1] -> [((call15 + i1) mod 4)] }]"
+; CHECK:                   schedule: "[call15] -> [{ Stmt_for_body30[i0, i1] -> [((i1) mod 4)]; Stmt_for_body23[i0, i1] -> [((i1) mod 4)] }]"
 ; CHECK:                   permutable: 1
 ; CHECK:                   coincident: [ 1 ]
 ; CHECK:               - filter: "[call15] -> { Stmt_for_body30[i0, i1] }"
 ; CHECK:                 child:
-; CHECK:                   schedule: "[call15] -> [{ Stmt_for_body23[i0, i1] -> [((i0 + i1) mod 4)]; Stmt_for_body30[i0, i1] -> [((call15 + i1) mod 4)] }]"
+; CHECK:                   schedule: "[call15] -> [{ Stmt_for_body30[i0, i1] -> [((i1) mod 4)]; Stmt_for_body23[i0, i1] -> [((i1) mod 4)] }]"
 ; CHECK:                   permutable: 1
 ; CHECK:                   coincident: [ 1 ]

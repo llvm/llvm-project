@@ -90,7 +90,8 @@ public:
     return false;
   }
 
-  bool parseSectionFlags(StringRef FlagStr, bool &Passive, bool &Group) {
+  uint32_t parseSectionFlags(StringRef FlagStr, bool &Passive, bool &Group) {
+    uint32_t flags = 0;
     for (char C : FlagStr) {
       switch (C) {
       case 'p':
@@ -99,12 +100,17 @@ public:
       case 'G':
         Group = true;
         break;
+      case 'T':
+        flags |= wasm::WASM_SEG_FLAG_TLS;
+        break;
+      case 'S':
+        flags |= wasm::WASM_SEG_FLAG_STRINGS;
+        break;
       default:
-        return Parser->Error(getTok().getLoc(),
-                             StringRef("Unexepcted section flag: ") + FlagStr);
+        return -1U;
       }
     }
-    return false;
+    return flags;
   }
 
   bool parseGroup(StringRef &GroupName) {
@@ -128,7 +134,7 @@ public:
     return false;
   }
 
-  bool parseSectionDirective(StringRef, SMLoc) {
+  bool parseSectionDirective(StringRef, SMLoc loc) {
     StringRef Name;
     if (Parser->parseIdentifier(Name))
       return TokError("expected identifier in directive");
@@ -151,16 +157,15 @@ public:
                     // TargetLoweringObjectFileWasm
                     .StartsWith(".init_array", SectionKind::getData())
                     .StartsWith(".debug_", SectionKind::getMetadata())
-                    .Default(Optional<SectionKind>());
-    if (!Kind.hasValue())
-      return Parser->Error(Lexer->getLoc(), "unknown section kind: " + Name);
-
+                    .Default(SectionKind::getData());
 
     // Update section flags if present in this .section directive
     bool Passive = false;
     bool Group = false;
-    if (parseSectionFlags(getTok().getStringContents(), Passive, Group))
-      return true;
+    uint32_t Flags =
+        parseSectionFlags(getTok().getStringContents(), Passive, Group);
+    if (Flags == -1U)
+      return TokError("unknown flag");
 
     Lex();
 
@@ -176,13 +181,19 @@ public:
 
     // TODO: Parse UniqueID
     MCSectionWasm *WS = getContext().getWasmSection(
-        Name, Kind.getValue(), GroupName, MCContext::GenericSectionID);
+        Name, Kind.getValue(), Flags, GroupName, MCContext::GenericSectionID);
+
+    if (WS->getSegmentFlags() != Flags)
+      Parser->Error(loc, "changed section flags for " + Name +
+                             ", expected: 0x" +
+                             utohexstr(WS->getSegmentFlags()));
+
     if (Passive) {
       if (!WS->isWasmData())
-        return Parser->Error(getTok().getLoc(),
-                             "Only data sections can be passive");
+        return Parser->Error(loc, "Only data sections can be passive");
       WS->setPassive();
     }
+
     getStreamer().SwitchSection(WS);
     return false;
   }

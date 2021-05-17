@@ -19,7 +19,7 @@ namespace mca {
 
 void PipelinePrinter::printReport(llvm::raw_ostream &OS) const {
   for (const auto &V : Views)
-    V->printView(OS);
+    V->printView(OutputKind, OS);
 }
 } // namespace mca.
 } // namespace llvm

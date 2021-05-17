@@ -4,7 +4,7 @@
 define x86_fp80 @test2() nounwind  {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    flds {{\.LCPI.*}}
+; CHECK-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    retl
 entry:
 	ret x86_fp80 0xK3FFFC000000000000000

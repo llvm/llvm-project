@@ -271,6 +271,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("heap-alloc-marker", MIToken::kw_heap_alloc_marker)
       .Case("bbsections", MIToken::kw_bbsections)
       .Case("unknown-size", MIToken::kw_unknown_size)
+      .Case("unknown-address", MIToken::kw_unknown_address)
       .Default(MIToken::Identifier);
 }
 

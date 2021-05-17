@@ -15,6 +15,8 @@
 using namespace clang;
 using namespace clang::serialization;
 
+char TestModuleFileExtension::ID = 0;
+
 TestModuleFileExtension::Writer::~Writer() { }
 
 void TestModuleFileExtension::Writer::writeExtensionContents(
@@ -126,4 +128,12 @@ TestModuleFileExtension::createExtensionReader(
 
   return std::unique_ptr<ModuleFileExtensionReader>(
                                                     new TestModuleFileExtension::Reader(this, Stream));
+}
+
+std::string TestModuleFileExtension::str() const {
+  std::string Buffer;
+  llvm::raw_string_ostream OS(Buffer);
+  OS << BlockName << ":" << MajorVersion << ":" << MinorVersion << ":" << Hashed
+     << ":" << UserInfo;
+  return OS.str();
 }

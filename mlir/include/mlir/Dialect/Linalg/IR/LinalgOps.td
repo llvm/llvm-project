@@ -15,6 +15,8 @@
 
 include "mlir/Dialect/Linalg/IR/LinalgBase.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
 
@@ -32,7 +34,10 @@ class Linalg_Op<string mnemonic, list<OpTrait> traits = []> :
   let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
-def Linalg_InitTensorOp : Linalg_Op<"init_tensor", [NoSideEffect]> {
+def Linalg_InitTensorOp : Linalg_Op<"init_tensor",
+    [NoSideEffect,
+     DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+         ["reifyReturnTypeShapesPerResultDim"]>]> {
   let summary = "operation to define a tensor of particular value";
 
   let description = [{
@@ -44,6 +49,11 @@ def Linalg_InitTensorOp : Linalg_Op<"init_tensor", [NoSideEffect]> {
     (ins Variadic<Index>:$sizes, I64ArrayAttr:$static_sizes);
 
   let results = (outs AnyTensor:$result);
+
+  let assemblyFormat = [{
+    custom<OperandsOrIntegersSizesList>($sizes, $static_sizes) attr-dict
+    `:` type($result)
+  }];
 
   let verifier = [{ return ::verify(*this); }];
 
@@ -95,26 +105,180 @@ def Linalg_InitTensorOp : Linalg_Op<"init_tensor", [NoSideEffect]> {
   }];
 
   let builders = [
-    OpBuilderDAG<(ins "ValueRange":$shape,
+    OpBuilder<(ins "ValueRange":$shape,
                   "ArrayRef<int64_t>":$staticShape, "Type":$elementType),
     [{
       build($_builder, $_state,
             InitTensorOp::inferResultType(staticShape, elementType),
             shape, $_builder.getI64ArrayAttr(staticShape));
     }]>,
-    OpBuilderDAG<(ins "ValueRange":$shape, "Type":$elementType),
+    OpBuilder<(ins "ValueRange":$shape, "Type":$elementType),
     [{
       SmallVector<int64_t, 4> staticShape(
         shape.size(), ShapedType::kDynamicSize);
       build($_builder, $_state, shape, staticShape, elementType);
     }]>,
-    OpBuilderDAG<(ins "ArrayRef<int64_t>":$staticShape, "Type":$elementType),
+    OpBuilder<(ins "ArrayRef<int64_t>":$staticShape, "Type":$elementType),
     [{
       build($_builder, $_state, ValueRange{}, staticShape, elementType);
-    }]>
+    }]>,
+    OpBuilder<(ins "ArrayRef<OpFoldResult>":$sizes, "Type":$elementType,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
   ];
 
   let hasCanonicalizer = 1;
+}
+
+def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
+    [AttrSizedOperandSegments,
+     DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+         ["reifyReturnTypeShapesPerResultDim"]>,
+     NoSideEffect]> {
+  let summary = "tensor pad operation";
+  let description = [{
+    `linalg.pad_tensor` is an operation that pads the `source` tensor
+    with given `low` and `high` padding config.
+
+    The PadTensor operation supports the following arguments:
+
+    * source: the "base" tensor on which to pad.
+    * low: A list contains the padding along the start of each
+           dimension, i.e `low`.
+    * high: A list contains the padding along the end of each
+           dimension, i.e. `high`.
+
+    The result tensor dimensions are `low` + `dim` + `high` along that
+    dimension. The number of elements of `low` and `high` must match
+    the rank of the input tensor (which is also the rank of the output
+    tensor). They can be either a constant or a dynamic value.
+
+    The region of the `pad_tensor` operation returns the value to use
+    for the padding. The arguments of the region represent the index
+    of the source being accessed. There should be as many arguments as
+    the rank of the `source` tensor. The value `yield`-ed by the
+    region is used as the value of the view at the given position.
+
+    Example 1:
+
+    ```mlir
+      %pad_value = ... : f32
+      %0 = linalg.pad_tensor %0 low[1, 2] high[2, 3] {
+      ^bb0(%arg0 : index, %arg1 : index):
+        linalg.yield %pad_value : f32
+      } : tensor<?x?xf32> to tensor<?x?xf32>
+    ```
+
+    Example 2:
+
+    ```mlir
+      %pad_value = ... : f32
+      %0 = linalg.pad_tensor %arg0 low[2, %arg1, 3, 3] high[3, 3, %arg1, 2] {
+      ^bb0(%arg2: index, %arg3: index, %arg4: index, %arg5: index):
+          linalg.yield %pad_value : f32
+      } : tensor<1x2x2x?xf32> to tensor<6x?x?x?xf32>
+    ```
+
+    Example 3:
+
+    ```mlir
+      %pad_value = ... : f32
+      %0 = linalg.pad_tensor %arg0 low[0, 0] high[%ub0, %ub1] {
+      ^bb0(%arg1: index, %arg2: index):
+        linalg.yield %pad_value : f32
+      } : tensor<2x3xf32> to tensor<?x?xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    AnyTensor:$source,
+    Variadic<Index>:$low,
+    Variadic<Index>:$high,
+    I64ArrayAttr:$static_low,
+    I64ArrayAttr:$static_high);
+
+  let regions = (region SizedRegion<1>:$region);
+
+  let results = (outs AnyTensor:$result);
+
+  let assemblyFormat = [{
+    $source `low` `` custom<OperandsOrIntegersSizesList>($low, $static_low)
+    `high` `` custom<OperandsOrIntegersSizesList>($high, $static_high)
+    $region attr-dict `:` type($source) `to` type($result)
+  }];
+
+  let extraClassDeclaration = [{
+    static StringRef getStaticLowAttrName() {
+      return "static_low";
+    }
+
+    static StringRef getStaticHighAttrName() {
+      return "static_high";
+    }
+
+    RankedTensorType getSourceType() {
+      return source().getType().cast<RankedTensorType>();
+    }
+    RankedTensorType getResultType() {
+      return getResult().getType().cast<RankedTensorType>();
+    }
+
+    // Infer the shape of the result tensor given the static shapes
+    // and element type of the result tensor.
+    static RankedTensorType inferResultType(RankedTensorType sourceType,
+                                ArrayRef<int64_t> staticLow,
+                                ArrayRef<int64_t> staticHigh);
+
+    // Return a PadTensorOp that pads `source` to `type` size where the static
+    // sizes are assumed to be greater than the dynamic sizes. The op performs
+    // "high" padding (i.e. it adds trailing padding values until the desired
+    // size is met).
+    static linalg::PadTensorOp createPadHighOp(
+        Type type, Value source, Value pad, Location loc, OpBuilder & builder);
+
+    // Return a PadTensorOp that pads `source to `type` size with `pad` value.
+    // I.e., a block will be created and the `pad` value will be yielded
+    // directly. If the type passed is nullptr, it is inferred.
+    static linalg::PadTensorOp createPadScalarOp(
+        Type type, Value source, Value pad, ArrayRef<OpFoldResult> low,
+        ArrayRef<OpFoldResult> high, Location loc, OpBuilder & builder);
+
+    // Return a vector of all the static or dynamic values (low/high padding) of
+    // the op.
+    inline SmallVector<OpFoldResult> getMixedPadImpl(ArrayAttr staticAttrs,
+                                                     ValueRange values) {
+      SmallVector<OpFoldResult> res;
+      unsigned numDynamic = 0;
+      unsigned count = staticAttrs.size();
+      for (unsigned idx = 0; idx < count; ++idx) {
+        if (ShapedType::isDynamic(staticAttrs[idx].cast<IntegerAttr>().getInt()))
+          res.push_back(values[numDynamic++]);
+        else
+          res.push_back(staticAttrs[idx]);
+      }
+      return res;
+    }
+    SmallVector<OpFoldResult> getMixedLowPad() {
+      return getMixedPadImpl(static_low(), low());
+    }
+    SmallVector<OpFoldResult> getMixedHighPad() {
+      return getMixedPadImpl(static_high(), high());
+    }
+  }];
+
+  let builders = [
+    // Build a PadTensorOp with mixed static and dynamic entries.
+    OpBuilder<(ins "Value":$source, "ArrayRef<int64_t>":$staticLow,
+      "ArrayRef<int64_t>":$staticHigh, "ValueRange":$low, "ValueRange":$high,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build a PadTensorOp with all dynamic entries.
+    OpBuilder<(ins "Value":$source, "ValueRange":$low, "ValueRange":$high,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build a PadTensorOp with mixed static and dynamic entries and custom
+    // result type. If the type passed is nullptr, it is inferred.
+    OpBuilder<(ins "Type":$resultType, "Value":$source,
+      "ArrayRef<OpFoldResult>":$low, "ArrayRef<OpFoldResult>":$high,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
+  ];
 }
 
 def Linalg_RangeOp :
@@ -134,7 +298,7 @@ def Linalg_RangeOp :
     ````
   }];
   let builders = [
-    OpBuilderDAG<(ins "Value":$min, "Value":$max, "Value":$step),
+    OpBuilder<(ins "Value":$min, "Value":$max, "Value":$step),
     [{
       auto rangeType = RangeType::get($_builder.getContext());
       build($_builder, $_state, rangeType, min, max, step);
@@ -150,56 +314,55 @@ class Linalg_ReshapeLikeOp<string mnemonic, list<OpTrait> traits = []> :
   let builders = [
     // Builders for a contracting reshape whose result type is computed from
     // `src` and `reassociation`.
-    OpBuilderDAG<(ins "Value":$src,
-      "ArrayRef<ReassociationExprs>":$reassociation,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
-    OpBuilderDAG<(ins "Value":$src,
+    OpBuilder<(ins "Value":$src,
       "ArrayRef<ReassociationIndices>":$reassociation,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    OpBuilder<(ins "Value":$src,
+      "ArrayRef<ReassociationExprs>":$reassociation,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
     [{
       auto reassociationMaps =
-          convertReassociationIndicesToMaps($_builder, reassociation);
+          convertReassociationMapsToIndices($_builder, reassociation);
       build($_builder, $_state, src, reassociationMaps, attrs);
     }]>,
 
     // Builders for a reshape whose result type is passed explicitly. This may
     // be either a contracting or expanding reshape.
-    OpBuilderDAG<(ins "Type":$resultType, "Value":$src,
-      "ArrayRef<ReassociationExprs>":$reassociation,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
-    OpBuilderDAG<(ins "Type":$resultType, "Value":$src,
+    OpBuilder<(ins "Type":$resultType, "Value":$src,
       "ArrayRef<ReassociationIndices>":$reassociation,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    OpBuilder<(ins "Type":$resultType, "Value":$src,
+      "ArrayRef<ReassociationExprs>":$reassociation,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
     [{
       auto reassociationMaps =
-          convertReassociationIndicesToMaps($_builder, reassociation);
+          convertReassociationMapsToIndices($_builder, reassociation);
       build($_builder, $_state, resultType, src, reassociationMaps, attrs);
     }]>
   ];
 
   code commonExtraClassDeclaration = [{
     static StringRef getReassociationAttrName() { return "reassociation"; }
-    SmallVector<AffineMap, 4> getReassociationMaps() {
-      return llvm::to_vector<4>(llvm::map_range(reassociation(), [
-      ](Attribute a) { return a.cast<AffineMapAttr>().getValue(); }));
-    }
-    SmallVector<ReassociationExprs, 4> getReassociationExprs() {
-      return
-        llvm::to_vector<4>(llvm::map_range(reassociation(),
-	  [](Attribute a) {
-	    return llvm::to_vector<2>(
-	      a.cast<AffineMapAttr>().getValue().getResults());
-	  }));
-    }
-  }];
-  let assemblyFormat = [{
-    $src $reassociation attr-dict `:` type($src) `into` type(results)
+    SmallVector<AffineMap, 4> getReassociationMaps();
+    SmallVector<ReassociationExprs, 4> getReassociationExprs();
+    SmallVector<ReassociationIndices, 4> getReassociationIndices() {
+      SmallVector<ReassociationIndices, 4> reassociationIndices;
+      for (auto attr : reassociation())
+        reassociationIndices.push_back(llvm::to_vector<2>(
+            llvm::map_range(attr.cast<ArrayAttr>(), [&](Attribute indexAttr) {
+              return indexAttr.cast<IntegerAttr>().getInt();
+            })));
+      return reassociationIndices;
+    };
   }];
 }
 
+def IndexListArrayAttr :
+  TypedArrayAttrBase<I64ArrayAttr, "Array of 64-bit integer array attributes">;
+
 def Linalg_ReshapeOp : Linalg_ReshapeLikeOp<"reshape",
     [DeclareOpInterfaceMethods<ViewLikeOpInterface>]>,
-    Arguments<(ins AnyStridedMemRef:$src, AffineMapArrayAttr:$reassociation)>,
+    Arguments<(ins AnyStridedMemRef:$src, IndexListArrayAttr:$reassociation)>,
     Results<(outs AnyStridedMemRef:$result)> {
   let summary = "linalg.reshape produces a new view into the operand view";
   let description = [{
@@ -209,9 +372,7 @@ def Linalg_ReshapeOp : Linalg_ReshapeLikeOp<"reshape",
     and copies.
 
     A reassociation is defined as a continuous grouping of dimensions and is
-    represented with an affine map array attribute. In the future,
-    non-continuous groupings may be allowed (i.e. permutations, reindexings
-    etc).
+    represented with an array of I64ArrayAttr attribute.
 
     For now, it is assumed that either:
       1. a reassociation produces and consumes contiguous MemRefType or,
@@ -237,13 +398,13 @@ def Linalg_ReshapeOp : Linalg_ReshapeLikeOp<"reshape",
 
     ```mlir
     // Dimension collapse (i, j) -> i' and k -> k'
-    %1 = linalg.reshape %0 [(i, j, k) -> (i, j), (i, j, k) -> (k)] :
+    %1 = linalg.reshape %0 [[0, 1], [2]] :
       memref<?x?x?xf32, stride_spec> into memref<?x?xf32, stride_spec_2>
     ```
 
     ```mlir
     // Dimension expansion i -> (i', j') and (k) -> (k')
-    %1 = linalg.reshape %0 [(i, j, k) -> (i, j), (i, j, k) -> (k)] :
+    %1 = linalg.reshape %0 [[0, 1], [2]] :
       memref<?x?xf32, stride_spec> into memref<?x?x?xf32, stride_spec_2>
     ```
   }];
@@ -253,11 +414,16 @@ def Linalg_ReshapeOp : Linalg_ReshapeLikeOp<"reshape",
   }];
   let hasFolder = 1;
   let hasCanonicalizer = 1;
+  let printer = [{ return ::print(p, *this); }];
+  let parser = [{ return ::parseReshapeLikeOp(parser, result); }];
 }
 
-def Linalg_TensorReshapeOp : Linalg_ReshapeLikeOp<"tensor_reshape">,
+def Linalg_TensorReshapeOp : Linalg_ReshapeLikeOp<
+    "tensor_reshape",
+    [DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+      ["reifyReturnTypeShapesPerResultDim"]>]>,
     Arguments<(ins AnyTensor:$src,
-                   AffineMapArrayAttr:$reassociation)>,
+                   IndexListArrayAttr:$reassociation)>,
     Results<(outs AnyTensor:$result)> {
   let summary = "linalg.tensor_reshape produces a new reshaped tensor.";
   let description = [{
@@ -265,9 +431,7 @@ def Linalg_TensorReshapeOp : Linalg_ReshapeLikeOp<"tensor_reshape">,
     reassociation of the original `src`.
 
     A reassociation is defined as a continuous grouping of dimensions and is
-    represented with an affine map array attribute. In the future,
-    non-continuous groupings may be allowed (i.e. permutations, reindexings
-    etc).
+    represented with an array of I64ArrayAttr attribute.
 
     A reshape may either collapse or expand dimensions, depending on the
     relationship between source and target tensor ranks. The verification rule
@@ -286,14 +450,14 @@ def Linalg_TensorReshapeOp : Linalg_ReshapeLikeOp<"tensor_reshape">,
 
     ```mlir
     // Dimension collapse (i, j) -> i' and k -> k'
-    %b = linalg.tensor_reshape %a [(i, j, k) -> (i, j), (i, j, k) -> (k)] :
-      tensor<?x?x?xf32> into tensor<?x?xf32>
+    %b = linalg.tensor_reshape %a [[0, 1], [2]]
+        : tensor<?x?x?xf32> into tensor<?x?xf32>
     ```
 
     ```mlir
     // Dimension expansion i -> (i', j') and (k) -> (k')
-    %b = linalg.tensor_reshape %a [(i, j, k) -> (i, j), (i, j, k) -> (k)] :
-      tensor<?x?xf32> into tensor<?x?x?xf32>
+    %b = linalg.tensor_reshape %a [[0, 1], [2]]
+        : tensor<?x?xf32> into tensor<?x?x?xf32>
     ```
   }];
   let extraClassDeclaration = commonExtraClassDeclaration # [{
@@ -306,78 +470,8 @@ def Linalg_TensorReshapeOp : Linalg_ReshapeLikeOp<"tensor_reshape">,
   }];
   let hasFolder = 1;
   let hasCanonicalizer = 1;
-}
-
-def Linalg_SliceOp : Linalg_Op<"slice", [
-      DeclareOpInterfaceMethods<ViewLikeOpInterface>, NoSideEffect]>,
-    Arguments<(ins AnyStridedMemRef:$view,
-                   Variadic<AnyTypeOf<[Range, Index]>>:$indexings)>,
-    Results<(outs AnyStridedMemRef)> {
-  let summary = "Produce a rank-reduced `subview` of a base `view`.";
-  let description = [{
-    The `linalg.slice` op allows defining a subregion of a smaller rank than the
-    operand `view` within the underlying buffer.
-
-    A `linalg.slice` op takes a view and a variadic number of indexings and
-    produces a `view` of the same elemental type. An indexing is either:
-      1. a `linalg.range`, in which case it does not reduce the rank of the
-         parent `view` along the corresponding dimension.
-      2. an `index`, in which case it reduces the rank of the parent view by
-         one.
-
-    If an indexing extends past the size of the `view`, this is undefined
-    behavior. Ideally the `linalg.slice` operation would automatically truncate
-    it to be within bounds but there are tradeoffs involved now that `std.view`
-    is a standard op.
-
-    Examples:
-
-      1. rank-preserving `slice`:
-
-      ```mlir
-      %4 = linalg.slice %0[%1, %2] : memref<?x?xf32, stride_spec>,
-        !linalg.range, !linalg.range, memref<?x?xf32, stride_spec>
-      ```
-
-      2. rank-reducing `slice` (from 2-D to 1-D):
-
-      ```mlir
-      %4 = linalg.slice %0[%1, %2] : memref<?x?xf32, stride_spec>,
-        index, !linalg.range, memref<?x?xf32, stride_spec>
-      ```
-
-      3. rank-reducing `slice` (from 2-D to 0-D):
-
-      ```mlir
-      %4 = linalg.slice %0[%1, %2] : memref<?x?xf32, stride_spec>,
-        index, index, memref<?x?xf32, stride_spec>
-      ```
-  }];
-
-  let builders = [OpBuilderDAG<(ins "Value":$base, "ValueRange":$indexings)>];
-
-  let extraClassDeclaration = [{
-    enum { FirstIndexingOperand = 1 };
-    unsigned getRank() { return getShapedType().getRank(); }
-    Type getElementType() { return getShapedType().getElementType(); }
-    ShapedType getShapedType() { return getType().cast<ShapedType>(); }
-    unsigned getBaseViewRank() { return getBaseViewType().getRank(); }
-    ShapedType getBaseViewType() { return view().getType().cast<ShapedType>();}
-
-    // Get the underlying indexing at a given rank.
-    Value indexing(unsigned rank) { return *(indexings().begin() + rank); }
-
-    // Get the subset of indexings that are of RangeType.
-    SmallVector<Value, 8> getRanges() {
-      SmallVector<Value, 8> res;
-      for (auto operand : indexings())
-        if (!operand.getType().isa<IndexType>())
-          res.push_back(operand);
-      return res;
-    }
-  }];
-
-  let hasFolder = 1;
+  let printer = [{ return ::print(p, *this); }];
+  let parser = [{ return ::parseReshapeLikeOp(parser, result); }];
 }
 
 def Linalg_YieldOp : Linalg_Op<"yield", [NoSideEffect, ReturnLike, Terminator]>,
@@ -394,6 +488,208 @@ def Linalg_YieldOp : Linalg_Op<"yield", [NoSideEffect, ReturnLike, Terminator]>,
     linalg.yield %f0, %f1 : f32, f32
     ```
   }];
+  let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
+}
+
+def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
+     AttrSizedOperandSegments,
+     DeclareOpInterfaceMethods<LoopLikeOpInterface>,
+     RecursiveSideEffects,
+     SingleBlockImplicitTerminator<"linalg::YieldOp">
+    ]> {
+  let summary = "Linalg tiled loop operation";
+  let description = [{
+    This is a loop-like operation with additional properties. The arguments
+    also include the input and the output tensors or memrefs and the attributes
+    to specify the iterator types.
+
+    Parsing TiledLoopOp will set all elements of the `iterator_types` attribute
+    to "parallel" type, when it is absent from the custom format.
+
+    Tensor-based version:
+
+    The body region of the loop contains `subtensor` operations applied to
+    every tensor argument of TiledLoopOp.
+
+    The body region must contain exactly one block that terminates with
+    `linalg.yield` with the operands resulting from `subtensor_insert`
+    operations.
+
+    Example:
+
+    ```mlir
+    %0 = linalg.tiled_loop (%i) = (%c0) to (%c24) step (%c4)
+        ins(%lhs, %rhs : tensor<24x64xi8>, tensor<24x64xi8>)
+        outs(%out : tensor<24x64xi8>)
+        iterators("parallel") {
+      %lhs_sub = subtensor %lhs[%i, 0] [%c4, %c64] [1, 1]
+          : tensor<24x64xi8> to tensor<?x?xi8>
+      %rhs_sub = subtensor %rhs[%i, 0] [%c4, %c64] [1, 1]
+          : tensor<24x64xi8> to tensor<?x?xi8>
+      %out_sub = subtensor %out[%i, 0] [%c4, %c64] [1, 1]
+          : tensor<24x64xi8> to tensor<?x?xi8>
+
+      %result_sub = linalg.generic ...
+
+      %result = subtensor_insert %result_sub into %out[%i, 0][%c4, %c64][1, 1]
+        : tensor<?x?xi8> into tensor<24x64xi8>
+      linalg.yield %result : tensor<24x64xi8>
+    }
+    ```
+
+    MemRef-based version:
+
+    The body region of the loop contains `subview` operations applied to
+    every memref argument of TiledLoopOp.
+
+    The body region must contain exactly one block that terminates with
+    `linalg.yield` with no operands.
+
+    Example:
+
+    ```mlir
+    linalg.tiled_loop (%i) = (%c0) to (%c24) step (%c4)
+        ins(%lhs, %rhs : memref<24x64xi8>, memref<24x64xi8>)
+        outs(%out : memref<24x64xi8>)
+        iterators("parallel") {
+      %lhs_sub = subview %lhs[%i, 0] [%c4, %c64] [1, 1]
+          : memref<24x64xi8> to memref<?x?xi8>
+      %rhs_sub = subview %rhs[%i, 0] [%c4, %c64] [1, 1]
+          : memref<24x64xi8> to memref<?x?xi8>
+      %out_sub = subview %out[%i, 0] [%c4, %c64] [1, 1]
+          : memref<24x64xi8> to memref<?x?xi8>
+
+      %result_sub = linalg.generic ...
+      linalg.yield
+    }
+    ```
+  }];
+
+  let arguments = (ins Variadic<Index>:$lowerBound,
+                       Variadic<Index>:$upperBound,
+                       Variadic<Index>:$step,
+                       Variadic<LinalgOperand>:$inputs,
+                       Variadic<LinalgOperand>:$outputs,
+                       ArrayAttr:$iterator_types);
+  let results = (outs Variadic<AnyRankedTensor>:$results);
+  let regions = (region SizedRegion<1>:$region);
+
+  let builders = [
+    OpBuilder<(ins "ValueRange":$lowerBounds, "ValueRange":$upperBounds,
+      "ValueRange":$steps, "ValueRange":$inputs, "ValueRange":$outputs,
+      "ArrayAttr":$iteratorTypes,
+      CArg<"function_ref<void (OpBuilder &, Location, /*ivs=*/ValueRange,"
+        "/*inputs=*/ValueRange, /*outputs=*/ValueRange)>",
+        "nullptr">:$bodyBuilderFn)>,
+  ];
+
+  let extraClassDeclaration = [{
+    /// Number of operands controlling the loop: lbs, ubs, steps
+    unsigned getNumControlOperands() { return 3 * getNumLoops(); }
+
+    ValueRange getInductionVars() {
+      return getBody()->getArguments().take_front(getNumLoops());
+    }
+    ValueRange getRegionInputArgs() {
+      return getBody()->getArguments().slice(getNumLoops(), inputs().size());
+    }
+    ValueRange getRegionOutputArgs() {
+      return getBody()->getArguments().take_back(outputs().size());
+    }
+
+
+    void setLowerBounds(ValueRange lowerBounds) {
+      unsigned numLoops = getNumLoops();
+      assert(lowerBounds.size() == numLoops &&
+             "expected lower bounds for every loop dimension");
+      for (unsigned i = 0; i < numLoops; ++i)
+        setOperand(i, lowerBounds[i]);
+    }
+
+    void setUpperBounds(ValueRange upperBounds) {
+      unsigned numLoops = getNumLoops();
+      assert(upperBounds.size() == numLoops &&
+             "expected upper bounds for every loop dimension");
+      for (unsigned i = 0, pos = numLoops; i < numLoops; ++i, ++pos)
+        setOperand(pos, upperBounds[i]);
+    }
+
+    void setSteps(ValueRange steps) {
+      unsigned numLoops = getNumLoops();
+      assert(steps.size() == numLoops &&
+             "expected upper bounds for every loop dimension");
+      for (unsigned i = 0, pos = 2 * numLoops; i < numLoops; ++i, ++pos)
+        setOperand(pos, steps[i]);
+    }
+
+   /// Result that corresponds to the `outputs` argument of tensor type.
+   OpResult getTiedOpResult(OpOperand& opOperand) {
+      // No result can correspond to a memref argument.
+      if (opOperand.get().getType().isa<MemRefType>()) return OpResult();
+
+      // Check whether the operand index is in bounds of `outputs()` arg.
+      int operandIndex = opOperand.getOperandNumber();
+      int outputIndexStart =
+          getNumControlOperands() + inputs().size();
+      int outputIndexEnd = outputIndexStart + outputs().size();
+      if (operandIndex < outputIndexStart || operandIndex >= outputIndexEnd)
+        return OpResult();
+
+      // Count tensor arguments in `outputs` to compute the result index.
+      int tensorId = -1;
+      for (int i = outputIndexStart; i <= operandIndex; ++i)
+        tensorId += getOperand(i).getType().isa<RankedTensorType>();
+      return getOperation()->getResult(tensorId);
+    }
+
+    unsigned getNumLoops() { return step().size(); }
+  }];
+
+  let hasCanonicalizer = 1;
+  let hasFolder = 1;
+}
+
+def Linalg_IndexOp : Linalg_Op<"index", [NoSideEffect]>,
+    Arguments<(ins Confined<I64Attr, [IntMinValue<0>]>:$dim)>,
+    Results<(outs Index:$result)> {
+  let summary = "linalg index operation";
+  let description = [{
+    The `linalg.index` operation returns the iteration index of the immediately
+    enclosing linalg structured operation for the iteration dimension `dim`. The
+    `dim` attribute specifies the position of the accessed dimension in the
+    indexing map domain.
+
+    Example:
+
+    ```mlir
+    #map = affine_map<(i, j) -> (i, j)>
+    linalg.generic {indexing_maps = [#map, #map],
+                    iterator_types = ["parallel", "parallel"]}
+      outs(%I, %J : memref<?x?xindex>, memref<?x?xindex>) {
+      ^bb0(%arg0 : index, %arg1 : index):
+      // Access the outer iteration dimension i
+      %i = linalg.index 0 : index
+      // Access the inner iteration dimension j
+      %j = linalg.index 1 : index
+      linalg.yield %i, %j : index, index
+    }
+    ```
+
+    This may lower to IR resembling:
+
+    ```mlir
+    %0 = dim %I, %c0 : memref<?x?xindex>
+    %1 = dim %I, %c1 : memref<?x?xindex>
+    scf.for %i = %c0 to %0 step %c1 {
+      scf.for %j = %c0 to %1 step %c1 {
+        store %i, %I[%i, %j] : memref<?x?xindex>
+        store %j, %J[%i, %j] : memref<?x?xindex>
+      }
+    }
+    ```
+  }];
+
+  let assemblyFormat = [{ $dim attr-dict `:` type($result) }];
 }
 
 #endif // LINALG_OPS

@@ -202,7 +202,7 @@ public:
   };
 
 private:
-  mutable std::unique_ptr<BugType> BT;
+  BugType BT{this, "Use-after-move", categories::CXXMoveSemantics};
 
   // Check if the given form of potential misuse of a given object
   // should be reported. If so, get it reported. The callback from which
@@ -393,11 +393,6 @@ ExplodedNode *MoveChecker::reportBug(const MemRegion *Region,
                                      MisuseKind MK) const {
   if (ExplodedNode *N = misuseCausesCrash(MK) ? C.generateErrorNode()
                                               : C.generateNonFatalErrorNode()) {
-
-    if (!BT)
-      BT.reset(new BugType(this, "Use-after-move",
-                           "C++ move semantics"));
-
     // Uniqueing report to the same object.
     PathDiagnosticLocation LocUsedForUniqueing;
     const ExplodedNode *MoveNode = getMoveLocation(N, Region, C);
@@ -431,7 +426,7 @@ ExplodedNode *MoveChecker::reportBug(const MemRegion *Region,
     }
 
     auto R = std::make_unique<PathSensitiveBugReport>(
-        *BT, OS.str(), N, LocUsedForUniqueing,
+        BT, OS.str(), N, LocUsedForUniqueing,
         MoveNode->getLocationContext()->getDecl());
     R->addVisitor(std::make_unique<MovedBugVisitor>(*this, Region, RD, MK));
     C.emitReport(std::move(R));

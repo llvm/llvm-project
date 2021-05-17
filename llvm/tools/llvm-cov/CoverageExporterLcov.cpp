@@ -91,8 +91,7 @@ collectNestedBranches(const coverage::CoverageMapping &Coverage,
     auto NestedExpansions = ExpansionCoverage.getExpansions();
     auto NestedExBranches = collectNestedBranches(Coverage, NestedExpansions,
                                                   ViewDepth + 1, SrcLine);
-    Branches.insert(Branches.end(), NestedExBranches.begin(),
-                    NestedExBranches.end());
+    append_range(Branches, NestedExBranches);
 
     // Add branches from this level of expansion.
     auto ExBranches = ExpansionCoverage.getBranches();
@@ -123,11 +122,11 @@ void renderBranchExecutionCounts(raw_ostream &OS,
       collectNestedBranches(Coverage, FileCoverage.getExpansions());
 
   // Append Expansion Branches to Source Branches.
-  Branches.insert(Branches.end(), ExBranches.begin(), ExBranches.end());
+  append_range(Branches, ExBranches);
 
   // Sort branches based on line number to ensure branches corresponding to the
   // same source line are counted together.
-  std::sort(Branches.begin(), Branches.end(), sortLine);
+  llvm::sort(Branches, sortLine);
 
   auto NextBranch = Branches.begin();
   auto EndBranch = Branches.end();

@@ -409,6 +409,9 @@ inline void Trap() {
     (void)enable_fp;                      \
   } while (0)
 
+constexpr u32 kInvalidTid = -1;
+constexpr u32 kMainTid = 0;
+
 }  // namespace __sanitizer
 
 namespace __asan {

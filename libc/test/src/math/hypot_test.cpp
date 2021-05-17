@@ -10,10 +10,14 @@
 
 #include "src/math/hypot.h"
 
-using HypotTest = HypotTestTemplate<double>;
+using LlvmLibcHypotTest = HypotTestTemplate<double>;
 
-TEST_F(HypotTest, SpecialNumbers) { testSpecialNumbers(&__llvm_libc::hypot); }
+TEST_F(LlvmLibcHypotTest, SpecialNumbers) {
+  testSpecialNumbers(&__llvm_libc::hypot);
+}
 
-TEST_F(HypotTest, SubnormalRange) { testSubnormalRange(&__llvm_libc::hypot); }
+TEST_F(LlvmLibcHypotTest, SubnormalRange) {
+  testSubnormalRange(&__llvm_libc::hypot);
+}
 
-TEST_F(HypotTest, NormalRange) { testNormalRange(&__llvm_libc::hypot); }
+TEST_F(LlvmLibcHypotTest, NormalRange) { testNormalRange(&__llvm_libc::hypot); }

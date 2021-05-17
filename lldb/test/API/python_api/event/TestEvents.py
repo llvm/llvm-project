@@ -26,7 +26,6 @@ class EventAPITestCase(TestBase):
         self.line = line_number(
             'main.c', '// Find the line number of function "c" here.')
 
-    @add_test_categories(['pyapi'])
     @expectedFailureAll(
         oslist=["linux"],
         bugnumber="llvm.org/pr23730 Flaky, fails ~1/10 cases")
@@ -62,8 +61,8 @@ class EventAPITestCase(TestBase):
                                 False,     # Stop at entry
                                 error)     # error
 
-        self.assertTrue(
-            process.GetState() == lldb.eStateStopped,
+        self.assertEqual(
+            process.GetState(), lldb.eStateStopped,
             PROCESS_STOPPED)
 
         # Create an empty event object.
@@ -119,7 +118,6 @@ class EventAPITestCase(TestBase):
 
         # Shouldn't we be testing against some kind of expectation here?
 
-    @add_test_categories(['pyapi'])
     @expectedFlakeyLinux("llvm.org/pr23730")  # Flaky, fails ~1/100 cases
     @skipIfWindows # This is flakey on Windows AND when it fails, it hangs: llvm.org/pr38373
     @skipIfNetBSD
@@ -197,7 +195,6 @@ class EventAPITestCase(TestBase):
         self.assertTrue(event,
                         "My listening thread successfully received an event")
 
-    @add_test_categories(['pyapi'])
     @expectedFailureAll(
         oslist=["linux"],
         bugnumber="llvm.org/pr23617 Flaky, fails ~1/10 cases")
@@ -315,5 +312,5 @@ class EventAPITestCase(TestBase):
         my_thread.join()
 
         # The final judgement. :-)
-        self.assertTrue(self.state == 'stopped',
+        self.assertEqual(self.state, 'stopped',
                         "Both expected state changed events received")

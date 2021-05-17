@@ -212,11 +212,9 @@ Sections:
     Content: ""
   - Name: gnu_verdef
     Type: SHT_GNU_verdef
-    Info: 0
     Entries:
   - Name: gnu_verneed
     Type: SHT_GNU_verneed
-    Info: 0
     Dependencies:
   - Name: unknown
     Type: 0x1000

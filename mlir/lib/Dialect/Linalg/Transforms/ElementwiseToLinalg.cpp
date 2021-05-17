@@ -10,6 +10,7 @@
 
 #include "PassDetail.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/StandardOps/Utils/Utils.h"
@@ -18,7 +19,7 @@
 using namespace mlir;
 
 static bool isElementwiseMappableOpOnRankedTensors(Operation *op) {
-  if (!op->hasTrait<OpTrait::ElementwiseMappable>())
+  if (!OpTrait::hasElementwiseMappableTraits(op))
     return false;
 
   // TODO: The conversion pattern can be made to work for `any_of` here, but
@@ -75,8 +76,8 @@ getOrCreateOperandsMatchingResultTypes(OpBuilder &b, Operation *op) {
 
 namespace {
 struct ConvertAnyElementwiseMappableOpOnRankedTensors : public RewritePattern {
-  ConvertAnyElementwiseMappableOpOnRankedTensors()
-      : RewritePattern(/*benefit=*/1, MatchAnyOpTypeTag()) {}
+  ConvertAnyElementwiseMappableOpOnRankedTensors(MLIRContext *context)
+      : RewritePattern(MatchAnyOpTypeTag(), /*benefit=*/1, context) {}
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const final {
     if (!isElementwiseMappableOpOnRankedTensors(op))
@@ -115,9 +116,10 @@ struct ConvertAnyElementwiseMappableOpOnRankedTensors : public RewritePattern {
 };
 } // namespace
 
-void mlir::populateElementwiseToLinalgConversionPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *) {
-  patterns.insert<ConvertAnyElementwiseMappableOpOnRankedTensors>();
+void mlir::linalg::populateElementwiseToLinalgConversionPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<ConvertAnyElementwiseMappableOpOnRankedTensors>(
+      patterns.getContext());
 }
 
 namespace {
@@ -128,9 +130,9 @@ class ConvertElementwiseToLinalgPass
     auto func = getOperation();
     auto *context = &getContext();
     ConversionTarget target(*context);
-    OwningRewritePatternList patterns;
+    RewritePatternSet patterns(context);
 
-    populateElementwiseToLinalgConversionPatterns(patterns, context);
+    mlir::linalg::populateElementwiseToLinalgConversionPatterns(patterns);
     target.markUnknownOpDynamicallyLegal([](Operation *op) {
       return !isElementwiseMappableOpOnRankedTensors(op);
     });

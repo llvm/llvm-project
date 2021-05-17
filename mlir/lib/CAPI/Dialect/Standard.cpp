@@ -10,4 +10,4 @@
 #include "mlir/CAPI/Registration.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 
-MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Standard, std, mlir::StandardOpsDialect);
+MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Standard, std, mlir::StandardOpsDialect)

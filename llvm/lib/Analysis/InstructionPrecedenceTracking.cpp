@@ -111,6 +111,13 @@ void InstructionPrecedenceTracking::removeInstruction(const Instruction *Inst) {
     FirstSpecialInsts.erase(Inst->getParent());
 }
 
+void InstructionPrecedenceTracking::removeUsersOf(const Instruction *Inst) {
+  for (const auto *U : Inst->users()) {
+    if (const auto *UI = dyn_cast<Instruction>(U))
+      removeInstruction(UI);
+  }
+}
+
 void InstructionPrecedenceTracking::clear() {
   FirstSpecialInsts.clear();
 #ifndef NDEBUG

@@ -16,7 +16,7 @@ define <16 x i8> @elt0_v16i8(i8 %x) {
 ; X86-SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-SSE2-NEXT:    movaps {{.*#+}} xmm0 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; X86-SSE2-NEXT:    andnps %xmm1, %xmm0
-; X86-SSE2-NEXT:    orps {{\.LCPI.*}}, %xmm0
+; X86-SSE2-NEXT:    orps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: elt0_v16i8:
@@ -393,7 +393,7 @@ define <8 x i64> @elt5_v8i64(i64 %x) {
 ; X86-AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX1-NEXT:    vmovaps {{.*#+}} xmm1 = [4,0,0,0]
 ; X86-AVX1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; X86-AVX1-NEXT:    vinsertf128 $1, {{\.LCPI.*}}, %ymm0, %ymm1
+; X86-AVX1-NEXT:    vinsertf128 $1, {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm1
 ; X86-AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [42,0,1,0,2,0,3,0]
 ; X86-AVX1-NEXT:    retl
 ;
@@ -410,7 +410,7 @@ define <8 x i64> @elt5_v8i64(i64 %x) {
 ; X86-AVX2-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX2-NEXT:    vmovaps {{.*#+}} xmm1 = [4,0,0,0]
 ; X86-AVX2-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; X86-AVX2-NEXT:    vinsertf128 $1, {{\.LCPI.*}}, %ymm0, %ymm1
+; X86-AVX2-NEXT:    vinsertf128 $1, {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm1
 ; X86-AVX2-NEXT:    vmovaps {{.*#+}} ymm0 = [42,0,1,0,2,0,3,0]
 ; X86-AVX2-NEXT:    retl
 ;
@@ -428,7 +428,7 @@ define <8 x i64> @elt5_v8i64(i64 %x) {
 ; X86-AVX512F-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; X86-AVX512F-NEXT:    vmovaps {{.*#+}} xmm2 = [4,0,0,0]
 ; X86-AVX512F-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; X86-AVX512F-NEXT:    vinsertf128 $1, {{\.LCPI.*}}, %ymm1, %ymm1
+; X86-AVX512F-NEXT:    vinsertf128 $1, {{\.LCPI[0-9]+_[0-9]+}}, %ymm1, %ymm1
 ; X86-AVX512F-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; X86-AVX512F-NEXT:    retl
 ;

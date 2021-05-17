@@ -26,6 +26,7 @@ enum class AccelTableKind {
   Apple,   ///< .apple_names, .apple_namespaces, .apple_types, .apple_objc.
   Dwarf,   ///< DWARF v5 .debug_names.
   Default, ///< Dwarf for DWARF5 or later, Apple otherwise.
+  Pub,     ///< .debug_pubnames, .debug_pubtypes
 };
 
 /// Partial address range. Besides an offset, only the
@@ -61,32 +62,33 @@ public:
   virtual bool areRelocationsResolved() const = 0;
 
   /// Checks that there are valid relocations against a .debug_info
-  /// section. Reset current relocation pointer if neccessary.
-  virtual bool hasValidRelocs(bool ResetRelocsPtr = true) = 0;
+  /// section.
+  virtual bool hasValidRelocs() = 0;
 
   /// Checks that the specified DIE has a DW_AT_Location attribute
-  /// that references into a live code section. This function
-  /// must be called with DIE offsets in strictly ascending order.
+  /// that references into a live code section.
+  ///
+  /// \returns true and sets Info.InDebugMap if it is the case.
   virtual bool hasLiveMemoryLocation(const DWARFDie &DIE,
                                      CompileUnit::DIEInfo &Info) = 0;
 
   /// Checks that the specified DIE has a DW_AT_Low_pc attribute
-  /// that references into a live code section. This function
-  /// must be called with DIE offsets in strictly ascending order.
+  /// that references into a live code section.
+  ///
+  /// \returns true and sets Info.InDebugMap if it is the case.
   virtual bool hasLiveAddressRange(const DWARFDie &DIE,
                                    CompileUnit::DIEInfo &Info) = 0;
 
   /// Apply the valid relocations to the buffer \p Data, taking into
   /// account that Data is at \p BaseOffset in the debug_info section.
   ///
-  /// This function must be called with monotonic \p BaseOffset values.
-  ///
   /// \returns true whether any reloc has been applied.
   virtual bool applyValidRelocs(MutableArrayRef<char> Data, uint64_t BaseOffset,
                                 bool IsLittleEndian) = 0;
 
   /// Relocate the given address offset if a valid relocation exists.
-  virtual llvm::Expected<uint64_t> relocateIndexedAddr(uint64_t Offset) = 0;
+  virtual llvm::Expected<uint64_t> relocateIndexedAddr(uint64_t StartOffset,
+                                                       uint64_t EndOffset) = 0;
 
   /// Returns all valid functions address ranges(i.e., those ranges
   /// which points to sections with code).
@@ -278,6 +280,11 @@ public:
 
   /// update existing DWARF info(for the linked binary).
   void setUpdate(bool Update) { Options.Update = Update; }
+
+  /// Set whether to keep the enclosing function for a static variable.
+  void setKeepFunctionForStatic(bool KeepFunctionForStatic) {
+    Options.KeepFunctionForStatic = KeepFunctionForStatic;
+  }
 
   /// Use specified number of threads for parallel files linking.
   void setNumThreads(unsigned NumThreads) { Options.Threads = NumThreads; }
@@ -707,6 +714,7 @@ private:
   void emitAcceleratorEntriesForUnit(CompileUnit &Unit);
   void emitDwarfAcceleratorEntriesForUnit(CompileUnit &Unit);
   void emitAppleAcceleratorEntriesForUnit(CompileUnit &Unit);
+  void emitPubAcceleratorEntriesForUnit(CompileUnit &Unit);
 
   /// Patch the frame info for an object file and emit it.
   void patchFrameInfoForObject(const DWARFFile &, RangesTy &Ranges,
@@ -778,6 +786,10 @@ private:
 
     /// Update
     bool Update = false;
+
+    /// Whether we want a static variable to force us to keep its enclosing
+    /// function.
+    bool KeepFunctionForStatic = false;
 
     /// Number of threads.
     unsigned Threads = 1;

@@ -276,6 +276,12 @@ TEST_F(FormatTestJS, UnderstandsJavaScriptOperators) {
   // ES6 spread operator.
   verifyFormat("someFunction(...a);");
   verifyFormat("var x = [1, ...a, 2];");
+
+  // "- -1" is legal JS syntax, but must not collapse into "--".
+  verifyFormat("- -1;", " - -1;");
+  verifyFormat("-- -1;", " -- -1;");
+  verifyFormat("+ +1;", " + +1;");
+  verifyFormat("++ +1;", " ++ +1;");
 }
 
 TEST_F(FormatTestJS, UnderstandsAmpAmp) {
@@ -2581,6 +2587,21 @@ TEST_F(FormatTestJS, DeclaredFields) {
                "  declare pub: string;\n"
                "  declare private priv: string;\n"
                "}\n");
+}
+
+TEST_F(FormatTestJS, NoBreakAfterAsserts) {
+  verifyFormat(
+      "interface Assertable<State extends {}> {\n"
+      "  assert<ExportedState extends {}, DependencyState extends State = "
+      "State>(\n"
+      "      callback: Callback<ExportedState, DependencyState>):\n"
+      "      asserts this is ExtendedState<DependencyState&ExportedState>;\n"
+      "}\n",
+      "interface Assertable<State extends {}> {\n"
+      "  assert<ExportedState extends {}, DependencyState extends State = "
+      "State>(callback: Callback<ExportedState, DependencyState>): asserts "
+      "this is ExtendedState<DependencyState&ExportedState>;\n"
+      "}\n");
 }
 
 } // namespace format

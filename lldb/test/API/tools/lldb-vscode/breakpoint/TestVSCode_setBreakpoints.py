@@ -21,11 +21,10 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
         lldbvscode_testcase.VSCodeTestCaseBase.setUp(self)
 
         self.main_basename = 'main-copy.cpp'
-        self.main_path = self.getBuildArtifact(self.main_basename)
+        self.main_path = os.path.realpath(self.getBuildArtifact(self.main_basename))
 
     @skipIfWindows
     @skipIfRemote
-    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48421")
     def test_source_map(self):
         self.build_and_create_debug_adaptor()
 
@@ -90,7 +89,6 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
-    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48421")
     def test_set_and_clear(self):
         '''Tests setting and clearing source file and line breakpoints.
            This packet is a bit tricky on the debug adaptor side since there
@@ -127,7 +125,7 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
                 self.assertTrue(line, lines[index])
                 # Store the "id" of the breakpoint that was set for later
                 line_to_id[line] = breakpoint['id']
-                self.assertTrue(line in lines, "line expected in lines array")
+                self.assertIn(line, lines, "line expected in lines array")
                 self.assertTrue(breakpoint['verified'],
                                 "expect breakpoint verified")
 
@@ -153,7 +151,7 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
                 # making sure the breakpoint ID didn't change
                 self.assertEquals(line_to_id[line], breakpoint['id'],
                                 "verify previous breakpoints stayed the same")
-                self.assertTrue(line in lines, "line expected in lines array")
+                self.assertIn(line, lines, "line expected in lines array")
                 self.assertTrue(breakpoint['verified'],
                                 "expect breakpoint still verified")
 
@@ -172,7 +170,7 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
                 # making sure the breakpoint ID didn't change
                 self.assertEquals(line_to_id[line], breakpoint['id'],
                                 "verify previous breakpoints stayed the same")
-                self.assertTrue(line in lines, "line expected in lines array")
+                self.assertIn(line, lines, "line expected in lines array")
                 self.assertTrue(breakpoint['verified'],
                                 "expect breakpoint still verified")
 
@@ -202,7 +200,7 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
                             "expect %u source breakpoints" % (len(lines)))
             for breakpoint in breakpoints:
                 line = breakpoint['line']
-                self.assertTrue(line in lines, "line expected in lines array")
+                self.assertIn(line, lines, "line expected in lines array")
                 self.assertTrue(breakpoint['verified'],
                                 "expect breakpoint still verified")
 
@@ -217,13 +215,12 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
                             "expect %u source breakpoints" % (len(lines)))
             for breakpoint in breakpoints:
                 line = breakpoint['line']
-                self.assertTrue(line in lines, "line expected in lines array")
+                self.assertIn(line, lines, "line expected in lines array")
                 self.assertTrue(breakpoint['verified'],
                                 "expect breakpoint still verified")
 
     @skipIfWindows
     @skipIfRemote
-    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48421")
     def test_clear_breakpoints_unset_breakpoints(self):
         '''Test clearing breakpoints like test_set_and_clear, but clear
            breakpoints by omitting the breakpoints array instead of sending an
@@ -248,7 +245,7 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
             self.assertTrue(line, lines[index])
             # Store the "id" of the breakpoint that was set for later
             line_to_id[line] = breakpoint['id']
-            self.assertTrue(line in lines, "line expected in lines array")
+            self.assertIn(line, lines, "line expected in lines array")
             self.assertTrue(breakpoint['verified'],
                             "expect breakpoint verified")
 
@@ -266,7 +263,6 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
-    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48421")
     def test_functionality(self):
         '''Tests hitting breakpoints and the functionality of a single
            breakpoint, like 'conditions' and 'hitCondition' settings.'''

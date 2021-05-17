@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains tests for PresburgerSet. Each test works by computing
-// an operation (union, intersection, subtract, or complement) on two sets
-// and checking, for a set of points, that the resulting set contains the point
-// iff the result is supposed to contain it.
+// This file contains tests for PresburgerSet. The tests for union,
+// intersection, subtract, and complement work by computing the operation on
+// two sets and checking, for a set of points, that the resulting set contains
+// the point iff the result is supposed to contain it. The test for isEqual just
+// checks if the result for two sets matches the expected result.
 //
 //===----------------------------------------------------------------------===//
 
@@ -34,7 +35,7 @@ static void testUnionAtPoints(PresburgerSet s, PresburgerSet t,
 }
 
 /// Compute the intersection of s and t, and check that each of the given points
-/// belongs to the intersection iff it belongs to both of s and t.
+/// belongs to the intersection iff it belongs to both s and t.
 static void testIntersectAtPoints(PresburgerSet s, PresburgerSet t,
                                   ArrayRef<SmallVector<int64_t, 4>> points) {
   PresburgerSet intersection = s.intersect(t);
@@ -519,6 +520,75 @@ TEST(SetTest, Complement) {
        {2, 10},
        {2, 11},
        {1, 10}});
+}
+
+TEST(SetTest, isEqual) {
+  // set = [2, 8] U [10, 20].
+  PresburgerSet universe = PresburgerSet::getUniverse(1);
+  PresburgerSet emptySet = PresburgerSet::getEmptySet(1);
+  PresburgerSet set =
+      makeSetFromFACs(1, {
+                             makeFACFromIneqs(1, {{1, -2},    // x >= 2.
+                                                  {-1, 8}}),  // x <= 8.
+                             makeFACFromIneqs(1, {{1, -10},   // x >= 10.
+                                                  {-1, 20}}), // x <= 20.
+                         });
+
+  // universe != emptySet.
+  EXPECT_FALSE(universe.isEqual(emptySet));
+  // emptySet != universe.
+  EXPECT_FALSE(emptySet.isEqual(universe));
+  // emptySet == emptySet.
+  EXPECT_TRUE(emptySet.isEqual(emptySet));
+  // universe == universe.
+  EXPECT_TRUE(universe.isEqual(universe));
+
+  // universe U emptySet == universe.
+  EXPECT_TRUE(universe.unionSet(emptySet).isEqual(universe));
+  // universe U universe == universe.
+  EXPECT_TRUE(universe.unionSet(universe).isEqual(universe));
+  // emptySet U emptySet == emptySet.
+  EXPECT_TRUE(emptySet.unionSet(emptySet).isEqual(emptySet));
+  // universe U emptySet != emptySet.
+  EXPECT_FALSE(universe.unionSet(emptySet).isEqual(emptySet));
+  // universe U universe != emptySet.
+  EXPECT_FALSE(universe.unionSet(universe).isEqual(emptySet));
+  // emptySet U emptySet != universe.
+  EXPECT_FALSE(emptySet.unionSet(emptySet).isEqual(universe));
+
+  // set \ set == emptySet.
+  EXPECT_TRUE(set.subtract(set).isEqual(emptySet));
+  // set == set.
+  EXPECT_TRUE(set.isEqual(set));
+  // set U (universe \ set) == universe.
+  EXPECT_TRUE(set.unionSet(set.complement()).isEqual(universe));
+  // set U (universe \ set) != set.
+  EXPECT_FALSE(set.unionSet(set.complement()).isEqual(set));
+  // set != set U (universe \ set).
+  EXPECT_FALSE(set.isEqual(set.unionSet(set.complement())));
+
+  // square is one unit taller than rect.
+  PresburgerSet square =
+      makeSetFromFACs(2, {makeFACFromIneqs(2, {
+                                                  {1, 0, -2}, // x >= 2.
+                                                  {0, 1, -2}, // y >= 2.
+                                                  {-1, 0, 9}, // x <= 9.
+                                                  {0, -1, 9}  // y <= 9.
+                                              })});
+  PresburgerSet rect =
+      makeSetFromFACs(2, {makeFACFromIneqs(2, {
+                                                  {1, 0, -2}, // x >= 2.
+                                                  {0, 1, -2}, // y >= 2.
+                                                  {-1, 0, 9}, // x <= 9.
+                                                  {0, -1, 8}  // y <= 8.
+                                              })});
+  EXPECT_FALSE(square.isEqual(rect));
+  PresburgerSet universeRect = square.unionSet(square.complement());
+  PresburgerSet universeSquare = rect.unionSet(rect.complement());
+  EXPECT_TRUE(universeRect.isEqual(universeSquare));
+  EXPECT_FALSE(universeRect.isEqual(rect));
+  EXPECT_FALSE(universeSquare.isEqual(square));
+  EXPECT_FALSE(rect.complement().isEqual(square.complement()));
 }
 
 } // namespace mlir

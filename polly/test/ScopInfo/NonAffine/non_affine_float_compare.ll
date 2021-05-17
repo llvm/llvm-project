@@ -18,7 +18,7 @@
 ; CHECK-NEXT: {  :  }
 ; CHECK-NEXT: Invalid Context:
 ; CHECK-NEXT: {  : false }
-; CHECK-NEXT: Arrays {
+; CHECK:      Arrays {
 ; CHECK-NEXT:     float MemRef_A[*]; // Element size 4
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Arrays (Bounds as pw_affs) {

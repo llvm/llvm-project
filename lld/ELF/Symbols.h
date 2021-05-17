@@ -132,9 +132,11 @@ public:
   // doesn't know the final contents of the symbol.
   uint8_t canInline : 1;
 
-  // Used by Undefined and SharedSymbol to track if there has been at least one
-  // undefined reference to the symbol. The binding may change to STB_WEAK if
-  // the first undefined reference from a non-shared object is weak.
+  // Used to track if there has been at least one undefined reference to the
+  // symbol. For Undefined and SharedSymbol, the binding may change to STB_WEAK
+  // if the first undefined reference from a non-shared object is weak.
+  //
+  // This is also used to retain __wrap_foo when foo is referenced.
   uint8_t referenced : 1;
 
   // True if this symbol is specified by --trace-symbol option.
@@ -221,13 +223,13 @@ public:
   // non-lazy object causes a runtime error.
   void fetch() const;
 
-private:
   static bool isExportDynamic(Kind k, uint8_t visibility) {
     if (k == SharedKind)
       return visibility == llvm::ELF::STV_DEFAULT;
     return config->shared || config->exportDynamic;
   }
 
+private:
   void resolveUndefined(const Undefined &other);
   void resolveCommon(const CommonSymbol &other);
   void resolveDefined(const Defined &other);

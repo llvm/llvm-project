@@ -21,6 +21,9 @@
 #OS X specific files.
 .DS_store
 
+# Ignore the user specified CMake presets in subproject directories.
+/*/CMakeUserPresets.json
+
 # Nested build directory
 /build*
 
@@ -63,6 +66,8 @@ pythonenv*
 /clang/utils/analyzer/projects/*/PatchedSource
 /clang/utils/analyzer/projects/*/ScanBuildResults
 /clang/utils/analyzer/projects/*/RefScanBuildResults
+# automodapi puts generated documentation files here.
+/lldb/docs/python_api/
 
 cmake-build-debug
 cmake-build-release

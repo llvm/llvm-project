@@ -14,8 +14,10 @@ brew install sphinx-doc python3 ninja cmake clang-format buildkite/buildkite/bui
 
 CFG_DIR="$(brew --prefix)/etc/buildkite-agent"
 
+version="$(sw_vers -productVersion | sed -E 's/([0-9]+).([0-9]+).[0-9]+/\1.\2/')"
+
 # Setup the tags of the agent
-echo 'tags="queue=libcxx-macos-builders"' >> "${CFG_DIR}/buildkite-agent.cfg"
+echo 'tags="queue=libcxx-builders-macos,queue=libcxx-builders-macos${version}"' >> "${CFG_DIR}/buildkite-agent.cfg"
 
 # Setup the BuildKite Agent token
 sed -i '' "s/xxx/${BUILDKITE_AGENT_TOKEN}/g" "${CFG_DIR}/buildkite-agent.cfg"

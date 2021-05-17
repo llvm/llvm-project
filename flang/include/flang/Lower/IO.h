@@ -43,7 +43,7 @@ namespace pft {
 struct Evaluation;
 using LabelEvalMap = llvm::DenseMap<Fortran::parser::Label, Evaluation *>;
 using SymbolRef = Fortran::common::Reference<const Fortran::semantics::Symbol>;
-using LabelSet = llvm::SmallSet<Fortran::parser::Label, 5>;
+using LabelSet = llvm::SmallSet<Fortran::parser::Label, 4>;
 using SymbolLabelMap = llvm::DenseMap<SymbolRef, LabelSet>;
 } // namespace pft
 

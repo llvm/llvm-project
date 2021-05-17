@@ -269,8 +269,10 @@ void Sema::ActOnPragmaOptionsAlign(PragmaOptionsAlignKind Kind,
   AlignPackStack.Act(PragmaLoc, Action, StringRef(), Info);
 }
 
-void Sema::ActOnPragmaClangSection(SourceLocation PragmaLoc, PragmaClangSectionAction Action,
-                                   PragmaClangSectionKind SecKind, StringRef SecName) {
+void Sema::ActOnPragmaClangSection(SourceLocation PragmaLoc,
+                                   PragmaClangSectionAction Action,
+                                   PragmaClangSectionKind SecKind,
+                                   StringRef SecName) {
   PragmaClangSection *CSec;
   int SectionFlags = ASTContext::PSF_Read;
   switch (SecKind) {
@@ -297,6 +299,13 @@ void Sema::ActOnPragmaClangSection(SourceLocation PragmaLoc, PragmaClangSectionA
   }
 
   if (Action == PragmaClangSectionAction::PCSA_Clear) {
+    CSec->Valid = false;
+    return;
+  }
+
+  if (llvm::Error E = isValidSectionSpecifier(SecName)) {
+    Diag(PragmaLoc, diag::err_pragma_section_invalid_for_target)
+        << toString(std::move(E));
     CSec->Valid = false;
     return;
   }
@@ -867,12 +876,33 @@ void Sema::ActOnPragmaAttributeAttribute(
     }
     Rules.clear();
   } else {
-    for (const auto &Rule : StrictSubjectMatchRuleSet) {
-      if (Rules.erase(Rule.first)) {
+    // Each rule in Rules must be a strict subset of the attribute's
+    // SubjectMatch rules.  I.e. we're allowed to use
+    // `apply_to=variables(is_global)` on an attrubute with SubjectList<[Var]>,
+    // but should not allow `apply_to=variables` on an attribute which has
+    // `SubjectList<[GlobalVar]>`.
+    for (const auto &StrictRule : StrictSubjectMatchRuleSet) {
+      // First, check for exact match.
+      if (Rules.erase(StrictRule.first)) {
         // Add the rule to the set of attribute receivers only if it's supported
         // in the current language mode.
-        if (Rule.second)
-          SubjectMatchRules.push_back(Rule.first);
+        if (StrictRule.second)
+          SubjectMatchRules.push_back(StrictRule.first);
+      }
+    }
+    // Check remaining rules for subset matches.
+    auto RulesToCheck = Rules;
+    for (const auto &Rule : RulesToCheck) {
+      attr::SubjectMatchRule MatchRule = attr::SubjectMatchRule(Rule.first);
+      if (auto ParentRule = getParentAttrMatcherRule(MatchRule)) {
+        if (llvm::any_of(StrictSubjectMatchRuleSet,
+                         [ParentRule](const auto &StrictRule) {
+                           return StrictRule.first == *ParentRule &&
+                                  StrictRule.second; // IsEnabled
+                         })) {
+          SubjectMatchRules.push_back(MatchRule);
+          Rules.erase(MatchRule);
+        }
       }
     }
   }
@@ -1179,4 +1209,56 @@ void Sema::PopPragmaVisibility(bool IsNamespaceEnd, SourceLocation EndLoc) {
   // To simplify the implementation, never keep around an empty stack.
   if (Stack->empty())
     FreeVisContext();
+}
+
+template <typename Ty>
+static bool checkCommonAttributeFeatures(Sema& S, const Ty *Node,
+                                         const ParsedAttr& A) {
+  // Several attributes carry different semantics than the parsing requires, so
+  // those are opted out of the common argument checks.
+  //
+  // We also bail on unknown and ignored attributes because those are handled
+  // as part of the target-specific handling logic.
+  if (A.getKind() == ParsedAttr::UnknownAttribute)
+    return false;
+  // Check whether the attribute requires specific language extensions to be
+  // enabled.
+  if (!A.diagnoseLangOpts(S))
+    return true;
+  // Check whether the attribute appertains to the given subject.
+  if (!A.diagnoseAppertainsTo(S, Node))
+    return true;
+  // Check whether the attribute is mutually exclusive with other attributes
+  // that have already been applied to the declaration.
+  if (!A.diagnoseMutualExclusion(S, Node))
+    return true;
+  // Check whether the attribute exists in the target architecture.
+  if (S.CheckAttrTarget(A))
+    return true;
+
+  if (A.hasCustomParsing())
+    return false;
+
+  if (A.getMinArgs() == A.getMaxArgs()) {
+    // If there are no optional arguments, then checking for the argument count
+    // is trivial.
+    if (!A.checkExactlyNumArgs(S, A.getMinArgs()))
+      return true;
+  } else {
+    // There are optional arguments, so checking is slightly more involved.
+    if (A.getMinArgs() && !A.checkAtLeastNumArgs(S, A.getMinArgs()))
+      return true;
+    else if (!A.hasVariadicArg() && A.getMaxArgs() &&
+             !A.checkAtMostNumArgs(S, A.getMaxArgs()))
+      return true;
+  }
+
+  return false;
+}
+
+bool Sema::checkCommonAttributeFeatures(const Decl *D, const ParsedAttr &A) {
+  return ::checkCommonAttributeFeatures(*this, D, A);
+}
+bool Sema::checkCommonAttributeFeatures(const Stmt *S, const ParsedAttr &A) {
+  return ::checkCommonAttributeFeatures(*this, S, A);
 }

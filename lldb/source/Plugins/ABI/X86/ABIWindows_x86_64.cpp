@@ -408,7 +408,7 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectSimple(
 
   const uint32_t type_flags = return_compiler_type.GetTypeInfo();
   if (type_flags & eTypeIsScalar) {
-    value.SetValueType(Value::eValueTypeScalar);
+    value.SetValueType(Value::ValueType::Scalar);
 
     bool success = false;
     if (type_flags & eTypeIsInteger) {
@@ -494,7 +494,7 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectSimple(
     value.GetScalar() =
         (uint64_t)thread.GetRegisterContext()->ReadRegisterAsUnsigned(rax_id,
                                                                       0);
-    value.SetValueType(Value::eValueTypeScalar);
+    value.SetValueType(Value::ValueType::Scalar);
     return_valobj_sp = ValueObjectConstResult::Create(
         thread.GetStackFrameAtIndex(0).get(), value, ConstString(""));
   } else if (type_flags & eTypeIsVector) {
@@ -767,6 +767,7 @@ bool ABIWindows_x86_64::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
   const int32_t ptr_size = 8;
   row->GetCFAValue().SetIsRegisterPlusOffset(dwarf_rbp, 2 * ptr_size);
   row->SetOffset(0);
+  row->SetUnspecifiedRegistersAreUndefined(true);
 
   row->SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
   row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);

@@ -204,6 +204,6 @@ inline namespace InlineNS {}
 // CHECK: StructDecl=:84:3 (Definition) [type=X::(anonymous struct at {{.*}}print-type.cpp:84:3)] [typekind=Record] [isPOD=1] [nbFields=1] [isAnon=1]
 // CHECK: ClassDecl=:85:3 (Definition) [type=X::(anonymous class at {{.*}}print-type.cpp:85:3)] [typekind=Record] [isPOD=1] [nbFields=1] [isAnon=1]
 // CHECK: UnionDecl=:86:3 (Definition) [type=X::(anonymous union at {{.*}}print-type.cpp:86:3)] [typekind=Record] [isPOD=1] [nbFields=2] [isAnon=1]
-// CHECK: EnumDecl=:87:3 (Definition) [type=X::(anonymous enum at {{.*}}print-type.cpp:87:3)] [typekind=Enum] [isPOD=1] [isAnon=1]
+// CHECK: EnumDecl=:87:3 (Definition) [type=X::(unnamed enum at {{.*}}print-type.cpp:87:3)] [typekind=Enum] [isPOD=1] [isAnon=1]
 // CHECK: Namespace=:90:11 (Definition) [type=] [typekind=Invalid] [isPOD=0] [isAnon=1]
 // CHECK: Namespace=InlineNS:94:18 (Definition) [type=] [typekind=Invalid] [isPOD=0] [isAnonRecDecl=0] [isInlineNamespace=1]

@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 
@@ -25,12 +26,6 @@ using namespace mlir::linalg;
 static SmallVector<Type, 4> extractOperandTypes(Operation *op) {
   SmallVector<Type, 4> result;
   result.reserve(op->getNumOperands());
-  if (auto indexedGenericOp = dyn_cast<IndexedGenericOp>(op)) {
-    auto *ctx = op->getContext();
-    auto numLoops = indexedGenericOp.getNumLoops();
-    result.reserve(op->getNumOperands() + numLoops);
-    result.assign(numLoops, IndexType::get(ctx));
-  }
   for (auto type : op->getOperandTypes()) {
     // The underlying descriptor type (e.g. LLVM) does not have layout
     // information. Canonicalizing the type at the level of std when going into
@@ -93,22 +88,28 @@ createTypeCanonicalizedMemRefOperands(OpBuilder &b, Location loc,
       continue;
     }
     Value cast =
-        b.create<MemRefCastOp>(loc, eraseStridedLayout(memrefType), op);
+        b.create<memref::CastOp>(loc, eraseStridedLayout(memrefType), op);
     res.push_back(cast);
   }
   return res;
 }
 
 LogicalResult mlir::linalg::LinalgOpToLibraryCallRewrite::matchAndRewrite(
-    Operation *op, PatternRewriter &rewriter) const {
+    LinalgOp op, PatternRewriter &rewriter) const {
   // Only LinalgOp for which there is no specialized pattern go through this.
-  if (!isa<LinalgOp>(op) || isa<CopyOp>(op) || isa<IndexedGenericOp>(op))
+  if (isa<CopyOp>(op))
+    return failure();
+
+  // Canonicalize indexed generic operations before library call conversion.
+  if (isa<IndexedGenericOp>(op))
     return failure();
 
   auto libraryCallName = getLibraryCallSymbolRef(op, rewriter);
   if (!libraryCallName)
     return failure();
 
+  // TODO: Add support for more complex library call signatures that include
+  // indices or captured values.
   rewriter.replaceOpWithNewOp<mlir::CallOp>(
       op, libraryCallName.getValue(), TypeRange(),
       createTypeCanonicalizedMemRefOperands(rewriter, op->getLoc(),
@@ -143,57 +144,37 @@ LogicalResult mlir::linalg::CopyTransposeRewrite::matchAndRewrite(
   // If either inputPerm or outputPerm are non-identities, insert transposes.
   auto inputPerm = op.inputPermutation();
   if (inputPerm.hasValue() && !inputPerm->isIdentity())
-    in = rewriter.create<TransposeOp>(op.getLoc(), in,
-                                      AffineMapAttr::get(*inputPerm));
+    in = rewriter.create<memref::TransposeOp>(op.getLoc(), in,
+                                              AffineMapAttr::get(*inputPerm));
   auto outputPerm = op.outputPermutation();
   if (outputPerm.hasValue() && !outputPerm->isIdentity())
-    out = rewriter.create<TransposeOp>(op.getLoc(), out,
-                                       AffineMapAttr::get(*outputPerm));
+    out = rewriter.create<memref::TransposeOp>(op.getLoc(), out,
+                                               AffineMapAttr::get(*outputPerm));
 
   // If nothing was transposed, fail and let the conversion kick in.
   if (in == op.input() && out == op.output())
     return failure();
 
-  rewriter.replaceOpWithNewOp<CopyOp>(op, in, out);
-  return success();
-}
-
-LogicalResult
-mlir::linalg::IndexedGenericOpToLibraryCallRewrite::matchAndRewrite(
-    IndexedGenericOp op, PatternRewriter &rewriter) const {
   auto libraryCallName = getLibraryCallSymbolRef(op, rewriter);
   if (!libraryCallName)
     return failure();
 
-  // TODO: Use induction variables values instead of zeros, when
-  // IndexedGenericOp is tiled.
-  auto zero = rewriter.create<mlir::ConstantOp>(
-      op.getLoc(), rewriter.getIntegerAttr(rewriter.getIndexType(), 0));
-  auto indexedGenericOp = cast<IndexedGenericOp>(op);
-  auto numLoops = indexedGenericOp.getNumLoops();
-  SmallVector<Value, 4> operands;
-  operands.reserve(numLoops + op.getNumOperands());
-  for (unsigned i = 0; i < numLoops; ++i)
-    operands.push_back(zero);
-  for (auto operand : op.getOperands())
-    operands.push_back(operand);
   rewriter.replaceOpWithNewOp<mlir::CallOp>(
       op, libraryCallName.getValue(), TypeRange(),
-      createTypeCanonicalizedMemRefOperands(rewriter, op.getLoc(), operands));
+      createTypeCanonicalizedMemRefOperands(rewriter, op.getLoc(), {in, out}));
   return success();
 }
 
 /// Populate the given list with patterns that convert from Linalg to Standard.
 void mlir::linalg::populateLinalgToStandardConversionPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *ctx) {
+    RewritePatternSet &patterns) {
   // TODO: ConvOp conversion needs to export a descriptor with relevant
   // attribute values such as kernel striding and dilation.
   // clang-format off
-  patterns.insert<
+  patterns.add<
       CopyOpToLibraryCallRewrite,
       CopyTransposeRewrite,
-      IndexedGenericOpToLibraryCallRewrite>(ctx);
-  patterns.insert<LinalgOpToLibraryCallRewrite>();
+      LinalgOpToLibraryCallRewrite>(patterns.getContext());
   // clang-format on
 }
 
@@ -207,11 +188,12 @@ struct ConvertLinalgToStandardPass
 void ConvertLinalgToStandardPass::runOnOperation() {
   auto module = getOperation();
   ConversionTarget target(getContext());
-  target.addLegalDialect<AffineDialect, scf::SCFDialect, StandardOpsDialect>();
-  target.addLegalOp<ModuleOp, FuncOp, ModuleTerminatorOp, ReturnOp>();
+  target.addLegalDialect<AffineDialect, memref::MemRefDialect, scf::SCFDialect,
+                         StandardOpsDialect>();
+  target.addLegalOp<ModuleOp, FuncOp, ReturnOp>();
   target.addLegalOp<linalg::ReshapeOp, linalg::RangeOp>();
-  OwningRewritePatternList patterns;
-  populateLinalgToStandardConversionPatterns(patterns, &getContext());
+  RewritePatternSet patterns(&getContext());
+  populateLinalgToStandardConversionPatterns(patterns);
   if (failed(applyFullConversion(module, target, std::move(patterns))))
     signalPassFailure();
 }

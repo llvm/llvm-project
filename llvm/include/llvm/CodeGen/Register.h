@@ -162,4 +162,4 @@ template<> struct DenseMapInfo<Register> {
 
 }
 
-#endif // ifndef LLVM_CODEGEN_REGISTER_H
+#endif // LLVM_CODEGEN_REGISTER_H

@@ -1,13 +1,10 @@
-; RUN: opt -loop-accesses -analyze -enable-new-pm=0 %s | FileCheck %s
-; RUN: opt -passes='print-access-info' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -loop-accesses -analyze -enable-new-pm=0 %s
+; RUN: opt -passes='print-access-info' -disable-output < %s
 
-; This regression test is defending against a TypeSize warning 'assumption that
-; TypeSize is not scalable'. This warning cropped up in
-; RuntimePointerChecking::insert when performing loop load elimination because
-; this function was previously unaware of scalable types.
-
-; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
-; CHECK-NOT: warning:
+; This regression test is defending against a use of the wrong interface
+; of TypeSize (implicit conversion to a scalar). This issue cropped up
+; in RuntimePointerChecking::insert when performing loop load elimination
+; because this function was previously unaware of scalable types.
 
 define void @runtime_pointer_checking_insert_typesize(<vscale x 4 x i32>* %a,
                                                       <vscale x 4 x i32>* %b) {

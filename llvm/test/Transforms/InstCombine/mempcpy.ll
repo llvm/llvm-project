@@ -45,12 +45,23 @@ define i8* @memcpy_small_const_n(i8* %d, i8* nocapture readonly %s) {
 
 define i8* @memcpy_big_const_n(i8* %d, i8* nocapture readonly %s) {
 ; CHECK-LABEL: @memcpy_big_const_n(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 dereferenceable(1024) [[D:%.*]], i8* nonnull align 1 dereferenceable(1024) [[S:%.*]], i64 1024, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 1 dereferenceable(1024) [[D:%.*]], i8* noundef nonnull align 1 dereferenceable(1024) [[S:%.*]], i64 1024, i1 false)
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, i8* [[D]], i64 1024
 ; CHECK-NEXT:    ret i8* [[TMP1]]
 ;
   %r = tail call i8* @mempcpy(i8* %d, i8* %s, i64 1024)
   ret i8* %r
+}
+
+; The original call may have attributes that can not propagate to memcpy.
+
+define i32 @PR48810() {
+; CHECK-LABEL: @PR48810(
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 undef, i8* align 536870912 null, i64 undef, i1 false)
+; CHECK-NEXT:    ret i32 undef
+;
+  %r = call dereferenceable(1) i8* @mempcpy(i8* undef, i8* null, i64 undef)
+  ret i32 undef
 }
 
 declare i8* @mempcpy(i8*, i8* nocapture readonly, i64)

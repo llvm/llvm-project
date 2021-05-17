@@ -68,23 +68,41 @@ TEST_CASE(test_is_empty_file)
 TEST_CASE(test_is_empty_fails)
 {
     scoped_test_env env;
+#ifdef _WIN32
+    // Windows doesn't support setting perms::none to trigger failures
+    // reading directories; test using a special inaccessible directory
+    // instead.
+    const path p = GetWindowsInaccessibleDir();
+    if (p.empty())
+        TEST_UNSUPPORTED();
+#else
     const path dir = env.create_dir("dir");
-    const path dir2 = env.create_dir("dir/dir2");
+    const path p = env.create_dir("dir/dir2");
     permissions(dir, perms::none);
+#endif
 
     std::error_code ec;
-    TEST_CHECK(is_empty(dir2, ec) == false);
+    TEST_CHECK(is_empty(p, ec) == false);
     TEST_CHECK(ec);
 
-    TEST_CHECK_THROW(filesystem_error, is_empty(dir2));
+    TEST_CHECK_THROW(filesystem_error, is_empty(p));
 }
 
 TEST_CASE(test_directory_access_denied)
 {
     scoped_test_env env;
+#ifdef _WIN32
+    // Windows doesn't support setting perms::none to trigger failures
+    // reading directories; test using a special inaccessible directory
+    // instead.
+    const path dir = GetWindowsInaccessibleDir();
+    if (dir.empty())
+        TEST_UNSUPPORTED();
+#else
     const path dir = env.create_dir("dir");
     const path file1 = env.create_file("dir/file", 42);
     permissions(dir, perms::none);
+#endif
 
     std::error_code ec = GetTestEC();
     TEST_CHECK(is_empty(dir, ec) == false);
@@ -95,6 +113,7 @@ TEST_CASE(test_directory_access_denied)
 }
 
 
+#ifndef _WIN32
 TEST_CASE(test_fifo_fails)
 {
     scoped_test_env env;
@@ -107,5 +126,6 @@ TEST_CASE(test_fifo_fails)
 
     TEST_CHECK_THROW(filesystem_error, is_empty(fifo));
 }
+#endif
 
 TEST_SUITE_END()

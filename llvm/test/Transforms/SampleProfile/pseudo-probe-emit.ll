@@ -11,32 +11,36 @@
 
 ;; Check the generation of pseudoprobe intrinsic call.
 
+@a = dso_local global i32 0, align 4
+
 define void @foo(i32 %x) !dbg !3 {
 bb0:
   %cmp = icmp eq i32 %x, 0
-; CHECK-IL: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 1, i32 0), !dbg ![[#FAKELINE:]]
+; CHECK-IL: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 1, i32 0, i64 -1), !dbg ![[#FAKELINE:]]
 ; CHECK-MIR: PSEUDO_PROBE [[#GUID:]], 1, 0, 0
 ; CHECK-ASM: .pseudoprobe	[[#GUID:]] 1 0 0
   br i1 %cmp, label %bb1, label %bb2
 
 bb1:
-; CHECK-IL: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 2, i32 0), !dbg ![[#FAKELINE]]
+; CHECK-IL: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 2, i32 0, i64 -1), !dbg ![[#FAKELINE]]
 ; CHECK-MIR: PSEUDO_PROBE [[#GUID]], 3, 0, 0
 ; CHECK-MIR: PSEUDO_PROBE [[#GUID]], 4, 0, 0
 ; CHECK-ASM: .pseudoprobe	[[#GUID]] 3 0 0
 ; CHECK-ASM: .pseudoprobe	[[#GUID]] 4 0 0
+  store i32 6, i32* @a, align 4
   br label %bb3
 
 bb2:
-; CHECK-IL: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 3, i32 0), !dbg ![[#FAKELINE]]
+; CHECK-IL: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 3, i32 0, i64 -1), !dbg ![[#FAKELINE]]
 ; CHECK-MIR: PSEUDO_PROBE [[#GUID]], 2, 0, 0
 ; CHECK-MIR: PSEUDO_PROBE [[#GUID]], 4, 0, 0
 ; CHECK-ASM: .pseudoprobe	[[#GUID]] 2 0 0
 ; CHECK-ASM: .pseudoprobe	[[#GUID]] 4 0 0
+  store i32 8, i32* @a, align 4
   br label %bb3
 
 bb3:
-; CHECK-IL: call void @llvm.pseudoprobe(i64 [[#GUID]], i64 4, i32 0), !dbg ![[#REALLINE:]]
+; CHECK-IL: call void @llvm.pseudoprobe(i64 [[#GUID]], i64 4, i32 0, i64 -1), !dbg ![[#REALLINE:]]
   ret void, !dbg !12
 }
 
@@ -44,7 +48,7 @@ declare void @bar(i32 %x)
 
 define internal void @foo2(void (i32)* %f) !dbg !4 {
 entry:
-; CHECK-IL: call void @llvm.pseudoprobe(i64 [[#GUID2:]], i64 1, i32 0)
+; CHECK-IL: call void @llvm.pseudoprobe(i64 [[#GUID2:]], i64 1, i32 0, i64 -1)
 ; CHECK-MIR: PSEUDO_PROBE [[#GUID2:]], 1, 0, 0
 ; CHECK-ASM: .pseudoprobe	[[#GUID2:]] 1 0 0
 ; Check pseudo_probe metadata attached to the indirect call instruction.
@@ -64,13 +68,13 @@ entry:
 ; CHECK-IL: ![[#FAKELINE]] = !DILocation(line: 0, scope: ![[#FOO]])
 ; CHECK-IL: ![[#REALLINE]] = !DILocation(line: 2, scope: ![[#FOO]])
 ; CHECK-IL: ![[#PROBE0]] = !DILocation(line: 2, column: 20, scope: ![[#SCOPE0:]])
-;; A discriminator of 67108887 which is 0x4000017 in hexdecimal, stands for a direct call probe
+;; A discriminator of 67108887 which is 0x7200017 in hexdecimal, stands for a direct call probe
 ;; with an index of 2.
-; CHECK-IL: ![[#SCOPE0]] = !DILexicalBlockFile(scope: ![[#]], file: ![[#]], discriminator: 67108887)
+; CHECK-IL: ![[#SCOPE0]] = !DILexicalBlockFile(scope: ![[#]], file: ![[#]], discriminator: 119537687)
 ; CHECK-IL: ![[#PROBE1]] = !DILocation(line: 0, scope: ![[#SCOPE1:]])
-;; A discriminator of 134217759 which is 0x800001f in hexdecimal, stands for a direct call probe
+;; A discriminator of 186646559 which is 0xb20001f in hexdecimal, stands for a direct call probe
 ;; with an index of 3.
-; CHECK-IL: ![[#SCOPE1]] = !DILexicalBlockFile(scope: ![[#]], file: ![[#]], discriminator: 134217759)
+; CHECK-IL: ![[#SCOPE1]] = !DILexicalBlockFile(scope: ![[#]], file: ![[#]], discriminator: 186646559)
 
 ; Check the generation of .pseudo_probe_desc section
 ; CHECK-ASM: .section .pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_foo,comdat

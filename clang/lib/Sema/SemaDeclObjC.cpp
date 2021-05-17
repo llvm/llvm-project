@@ -4407,10 +4407,12 @@ private:
 
 void Sema::CheckObjCMethodDirectOverrides(ObjCMethodDecl *method,
                                           ObjCMethodDecl *overridden) {
-  if (const auto *attr = overridden->getAttr<ObjCDirectAttr>()) {
+  if (overridden->isDirectMethod()) {
+    const auto *attr = overridden->getAttr<ObjCDirectAttr>();
     Diag(method->getLocation(), diag::err_objc_override_direct_method);
     Diag(attr->getLocation(), diag::note_previous_declaration);
-  } else if (const auto *attr = method->getAttr<ObjCDirectAttr>()) {
+  } else if (method->isDirectMethod()) {
+    const auto *attr = method->getAttr<ObjCDirectAttr>();
     Diag(attr->getLocation(), diag::err_objc_direct_on_override)
         << isa<ObjCProtocolDecl>(overridden->getDeclContext());
     Diag(overridden->getLocation(), diag::note_previous_declaration);
@@ -4856,7 +4858,8 @@ Decl *Sema::ActOnMethodDeclaration(
     // the canonical declaration.
     if (!ObjCMethod->isDirectMethod()) {
       const ObjCMethodDecl *CanonicalMD = ObjCMethod->getCanonicalDecl();
-      if (const auto *attr = CanonicalMD->getAttr<ObjCDirectAttr>()) {
+      if (CanonicalMD->isDirectMethod()) {
+        const auto *attr = CanonicalMD->getAttr<ObjCDirectAttr>();
         ObjCMethod->addAttr(
             ObjCDirectAttr::CreateImplicit(Context, attr->getLocation()));
       }
@@ -4901,14 +4904,16 @@ Decl *Sema::ActOnMethodDeclaration(
             Diag(IMD->getLocation(), diag::note_previous_declaration);
           };
 
-          if (const auto *attr = ObjCMethod->getAttr<ObjCDirectAttr>()) {
+          if (ObjCMethod->isDirectMethod()) {
+            const auto *attr = ObjCMethod->getAttr<ObjCDirectAttr>();
             if (ObjCMethod->getCanonicalDecl() != IMD) {
               diagContainerMismatch();
             } else if (!IMD->isDirectMethod()) {
               Diag(attr->getLocation(), diag::err_objc_direct_missing_on_decl);
               Diag(IMD->getLocation(), diag::note_previous_declaration);
             }
-          } else if (const auto *attr = IMD->getAttr<ObjCDirectAttr>()) {
+          } else if (IMD->isDirectMethod()) {
+            const auto *attr = IMD->getAttr<ObjCDirectAttr>();
             if (ObjCMethod->getCanonicalDecl() != IMD) {
               diagContainerMismatch();
             } else {

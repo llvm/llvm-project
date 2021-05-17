@@ -17,9 +17,7 @@
 
 namespace Fortran::runtime {
 
-Descriptor::Descriptor(const Descriptor &that) {
-  std::memcpy(this, &that, that.SizeInBytes());
-}
+Descriptor::Descriptor(const Descriptor &that) { *this = that; }
 
 Descriptor::~Descriptor() {
   if (raw_.attribute != CFI_attribute_pointer) {
@@ -27,13 +25,32 @@ Descriptor::~Descriptor() {
   }
 }
 
+Descriptor &Descriptor::operator=(const Descriptor &that) {
+  std::memcpy(this, &that, that.SizeInBytes());
+  return *this;
+}
+
 void Descriptor::Establish(TypeCode t, std::size_t elementBytes, void *p,
     int rank, const SubscriptValue *extent, ISO::CFI_attribute_t attribute,
     bool addendum) {
   Terminator terminator{__FILE__, __LINE__};
+  // Subtle: the standard CFI_establish() function doesn't allow a zero
+  // elem_len argument in cases where elem_len is not ignored; and when it
+  // returns an error code (CFI_INVALID_ELEM_LEN in this case), it must not
+  // modify the descriptor.  That design makes sense, maybe, for actual
+  // C interoperability, but we need to work around it here.  A zero
+  // incoming element length is replaced by 4 so that it will be valid
+  // for all CHARACTER kinds.
+  std::size_t workaroundElemLen{elementBytes ? elementBytes : 4};
   RUNTIME_CHECK(terminator,
-      ISO::CFI_establish(&raw_, p, attribute, t.raw(), elementBytes, rank,
+      ISO::CFI_establish(&raw_, p, attribute, t.raw(), workaroundElemLen, rank,
           extent) == CFI_SUCCESS);
+  if (elementBytes == 0) {
+    raw_.elem_len = 0;
+    for (int j{0}; j < rank; ++j) {
+      GetDimension(j).SetByteStride(0);
+    }
+  }
   raw_.f18Addendum = addendum;
   DescriptorAddendum *a{Addendum()};
   RUNTIME_CHECK(terminator, addendum == (a != nullptr));
@@ -210,12 +227,30 @@ bool Descriptor::SubscriptsForZeroBasedElementNumber(SubscriptValue *subscript,
   for (int j{raw_.rank - 1}; j >= 0; --j) {
     int k{permutation ? permutation[j] : j};
     const Dimension &dim{GetDimension(k)};
-    std::size_t quotient{j ? elementNumber / dimCoefficient[j] : 0};
-    subscript[k] =
-        dim.LowerBound() + elementNumber - dimCoefficient[j] * quotient;
-    elementNumber = quotient;
+    std::size_t quotient{elementNumber / dimCoefficient[j]};
+    subscript[k] = quotient + dim.LowerBound();
+    elementNumber -= quotient * dimCoefficient[j];
   }
   return true;
+}
+
+bool Descriptor::EstablishPointerSection(const Descriptor &source,
+    const SubscriptValue *lower, const SubscriptValue *upper,
+    const SubscriptValue *stride) {
+  *this = source;
+  raw_.attribute = CFI_attribute_pointer;
+  int newRank{raw_.rank};
+  for (int j{0}; j < raw_.rank; ++j) {
+    if (!stride || stride[j] == 0) {
+      if (newRank > 0) {
+        --newRank;
+      } else {
+        return false;
+      }
+    }
+  }
+  raw_.rank = newRank;
+  return CFI_section(&raw_, &source.raw_, lower, upper, stride) == CFI_SUCCESS;
 }
 
 void Descriptor::Check() const {
@@ -242,6 +277,17 @@ void Descriptor::Dump(FILE *f) const {
   if (const DescriptorAddendum * addendum{Addendum()}) {
     addendum->Dump(f);
   }
+}
+
+DescriptorAddendum &DescriptorAddendum::operator=(
+    const DescriptorAddendum &that) {
+  derivedType_ = that.derivedType_;
+  flags_ = that.flags_;
+  auto lenParms{that.LenParameters()};
+  for (std::size_t j{0}; j < lenParms; ++j) {
+    len_[j] = that.len_[j];
+  }
+  return *this;
 }
 
 std::size_t DescriptorAddendum::SizeInBytes() const {

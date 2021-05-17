@@ -2,17 +2,9 @@
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck -check-prefix=MUBUF %s
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx1010 -amdgpu-enable-flat-scratch -verify-machineinstrs | FileCheck -check-prefix=FLATSCR %s
 
-; FIXME: The MUBUF loads in this test output are incorrect, their SOffset
-; should use the frame offset register, not the ABI stack pointer register. We
-; rely on the frame index argument of MUBUF stack accesses to survive until PEI
-; so we can fix up the SOffset to use the correct frame register in
-; eliminateFrameIndex. Some things like LocalStackSlotAllocation can lift the
-; frame index up into something (e.g. `v_add_nc_u32`) that we cannot fold back
-; into the MUBUF instruction, and so we end up emitting an incorrect offset.
-; Fixing this may involve adding stack access pseudos so that we don't have to
-; speculatively refer to the ABI stack pointer register at all.
-
-; An assert was hit when frame offset register was used to address FrameIndex.
+; During instruction selection, we use immediate const zero for soffset in
+; MUBUF stack accesses and let eliminateFrameIndex to fix up this field to use
+; the correct frame register whenever required.
 define amdgpu_kernel void @kernel_background_evaluate(float addrspace(5)* %kg, <4 x i32> addrspace(1)* %input, <4 x float> addrspace(1)* %output, i32 %i) {
 ; MUBUF-LABEL: kernel_background_evaluate:
 ; MUBUF:       ; %bb.0: ; %entry
@@ -75,7 +67,6 @@ define amdgpu_kernel void @kernel_background_evaluate(float addrspace(5)* %kg, <
 ; FLATSCR-NEXT:    s_cbranch_execz BB0_2
 ; FLATSCR-NEXT:  ; %bb.1: ; %if.then4.i
 ; FLATSCR-NEXT:    s_movk_i32 vcc_lo, 0x4000
-; FLATSCR-NEXT:    s_nop 1
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], off, vcc_lo offset:4
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    v_add_nc_u32_e32 v0, v1, v0

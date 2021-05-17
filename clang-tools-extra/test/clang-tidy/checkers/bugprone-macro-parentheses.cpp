@@ -10,6 +10,10 @@
 // CHECK-MESSAGES: :[[@LINE-1]]:44: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
 #define BAD5(X)           A*B=(C*)X+2
 // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
+#define BAD6(x)           goto *x;
+// CHECK-MESSAGES: :[[@LINE-1]]:33: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
+#define BAD7(x, y)        if (x) goto y; else x;
+// CHECK-MESSAGES: :[[@LINE-1]]:47: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
 
 #define GOOD1             1
 #define GOOD2             (1+2)
@@ -44,6 +48,8 @@
 #define GOOD31(X)         A*X=2
 #define GOOD32(X)         std::vector<X>
 #define GOOD33(x)         if (!a__##x) a_##x = &f(#x)
+#define GOOD34(x, y)      if (x) goto y;
+#define GOOD35(x, y)      if (x) goto *(y);
 
 // These are allowed for now..
 #define MAYBE1            *12.34

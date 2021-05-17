@@ -12,6 +12,7 @@
 
 #include "clang/Basic/Sanitizers.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 
 using namespace clang;
@@ -34,6 +35,14 @@ SanitizerMask clang::parseSanitizerValue(StringRef Value, bool AllowGroups) {
   return ParsedKind;
 }
 
+void clang::serializeSanitizerSet(SanitizerSet Set,
+                                  SmallVectorImpl<StringRef> &Values) {
+#define SANITIZER(NAME, ID)                                                    \
+  if (Set.has(SanitizerKind::ID))                                              \
+    Values.push_back(NAME);
+#include "clang/Basic/Sanitizers.def"
+}
+
 SanitizerMask clang::expandSanitizerGroups(SanitizerMask Kinds) {
 #define SANITIZER(NAME, ID)
 #define SANITIZER_GROUP(NAME, ID, ALIAS)                                       \
@@ -51,4 +60,24 @@ namespace clang {
 llvm::hash_code hash_value(const clang::SanitizerMask &Arg) {
   return Arg.hash_value();
 }
+
+StringRef AsanDtorKindToString(llvm::AsanDtorKind kind) {
+  switch (kind) {
+  case llvm::AsanDtorKind::None:
+    return "none";
+  case llvm::AsanDtorKind::Global:
+    return "global";
+  case llvm::AsanDtorKind::Invalid:
+    return "invalid";
+  }
+  return "invalid";
+}
+
+llvm::AsanDtorKind AsanDtorKindFromString(StringRef kindStr) {
+  return llvm::StringSwitch<llvm::AsanDtorKind>(kindStr)
+      .Case("none", llvm::AsanDtorKind::None)
+      .Case("global", llvm::AsanDtorKind::Global)
+      .Default(llvm::AsanDtorKind::Invalid);
+}
+
 } // namespace clang

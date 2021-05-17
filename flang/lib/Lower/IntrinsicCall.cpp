@@ -439,7 +439,7 @@ private:
     // - or use evaluate/type.h
     if (auto r{t.dyn_cast<fir::RealType>()})
       return r.getFKind() * 4;
-    if (auto cplx{t.dyn_cast<fir::CplxType>()})
+    if (auto cplx{t.dyn_cast<fir::ComplexType>()})
       return cplx.getFKind() * 4;
     llvm_unreachable("not a floating-point type");
   }
@@ -459,8 +459,8 @@ private:
                  ? Conversion::Narrow
                  : Conversion::Extend;
     }
-    if (auto fromCplxTy{from.dyn_cast<fir::CplxType>()}) {
-      if (auto toCplxTy{to.dyn_cast<fir::CplxType>()}) {
+    if (auto fromCplxTy{from.dyn_cast<fir::ComplexType>()}) {
+      if (auto toCplxTy{to.dyn_cast<fir::ComplexType>()}) {
         return getFloatingPointWidth(fromCplxTy) >
                        getFloatingPointWidth(toCplxTy)
                    ? Conversion::Narrow
@@ -1039,7 +1039,7 @@ mlir::Value IntrinsicLibrary::genDim(mlir::Type resultType,
   }
   assert(fir::isa_real(resultType) && "Only expects real and integer in DIM");
   auto zero = builder.createRealZeroConstant(loc, resultType);
-  auto diff = builder.create<fir::SubfOp>(loc, args[0], args[1]);
+  auto diff = builder.create<mlir::SubFOp>(loc, args[0], args[1]);
   auto cmp =
       builder.create<fir::CmpfOp>(loc, mlir::CmpFPredicate::OGT, diff, zero);
   return builder.create<mlir::SelectOp>(loc, cmp, diff, zero);
@@ -1053,7 +1053,7 @@ mlir::Value IntrinsicLibrary::genDprod(mlir::Type resultType,
          "Result must be double precision in DPROD");
   auto a = builder.createConvert(loc, resultType, args[0]);
   auto b = builder.createConvert(loc, resultType, args[1]);
-  return builder.create<fir::MulfOp>(loc, a, b);
+  return builder.create<mlir::MulFOp>(loc, a, b);
 }
 
 // FLOOR
@@ -1085,7 +1085,7 @@ mlir::Value IntrinsicLibrary::genIchar(mlir::Type resultType,
   Fortran::lower::CharacterExprHelper helper{builder, loc};
   auto dataAndLen = helper.createUnboxChar(arg);
   auto charType = fir::CharacterType::get(
-      builder.getContext(), helper.getCharacterKind(arg.getType()));
+      builder.getContext(), helper.getCharacterKind(arg.getType()), 1);
   auto refType = builder.getRefType(charType);
   auto charAddr = builder.createConvert(loc, refType, dataAndLen.first);
   auto charVal = builder.create<fir::LoadOp>(loc, charType, charAddr);

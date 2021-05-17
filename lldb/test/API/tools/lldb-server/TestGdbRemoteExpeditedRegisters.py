@@ -54,7 +54,7 @@ class TestGdbRemoteExpeditedRegisters(
         self.assertIsNotNone(reg_info)
 
         # Ensure the expedited registers contained it.
-        self.assertTrue(reg_info["lldb_register_index"] in expedited_registers)
+        self.assertIn(reg_info["lldb_register_index"], expedited_registers)
         self.trace("{} reg_info:{}".format(generic_register_name, reg_info))
 
     def test_stop_notification_contains_any_registers(self):
@@ -121,5 +121,5 @@ class TestGdbRemoteExpeditedRegisters(
         self.assertIsNotNone(reg_info)
 
         # Ensure the expedited registers contained it.
-        self.assertTrue(reg_info["lldb_register_index"] in expedited_registers)
+        self.assertIn(reg_info["lldb_register_index"], expedited_registers)
         self.trace("{} reg_info:{}".format('vg', reg_info))

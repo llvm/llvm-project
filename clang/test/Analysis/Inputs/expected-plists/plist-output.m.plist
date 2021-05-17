@@ -2169,7 +2169,7 @@
     </dict>
    </array>
    <key>description</key><string>Value stored to &apos;foo&apos; during its initialization is never read</string>
-   <key>category</key><string>Dead store</string>
+   <key>category</key><string>Unused code</string>
    <key>type</key><string>Dead initialization</string>
    <key>check_name</key><string>deadcode.DeadStores</string>
    <!-- This hash is experimental and going to change! -->
@@ -5654,7 +5654,7 @@
     </dict>
    </array>
    <key>description</key><string>Value stored to &apos;x&apos; is never read</string>
-   <key>category</key><string>Dead store</string>
+   <key>category</key><string>Unused code</string>
    <key>type</key><string>Dead increment</string>
    <key>check_name</key><string>deadcode.DeadStores</string>
    <!-- This hash is experimental and going to change! -->

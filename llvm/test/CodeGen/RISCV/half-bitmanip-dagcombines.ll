@@ -81,26 +81,13 @@ declare half @llvm.copysign.f16(half, half)
 define half @fcopysign_fneg(half %a, half %b) nounwind {
 ; RV32I-LABEL: fcopysign_fneg:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s0, a1
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
-; RV32I-NEXT:    call __gnu_h2f_ieee@plt
-; RV32I-NEXT:    not a1, s0
-; RV32I-NEXT:    lui a2, 524288
+; RV32I-NEXT:    not a1, a1
+; RV32I-NEXT:    lui a2, 1048568
+; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    lui a2, 8
 ; RV32I-NEXT:    addi a2, a2, -1
 ; RV32I-NEXT:    and a0, a0, a2
-; RV32I-NEXT:    lui a2, 8
-; RV32I-NEXT:    and a1, a1, a2
-; RV32I-NEXT:    slli a1, a1, 16
 ; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    call __gnu_f2h_ieee@plt
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
 ; RV32IZFH-LABEL: fcopysign_fneg:
@@ -110,26 +97,13 @@ define half @fcopysign_fneg(half %a, half %b) nounwind {
 ;
 ; RV64I-LABEL: fcopysign_fneg:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    mv s0, a1
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
-; RV64I-NEXT:    call __gnu_h2f_ieee@plt
-; RV64I-NEXT:    not a1, s0
-; RV64I-NEXT:    lui a2, 524288
-; RV64I-NEXT:    addiw a2, a2, -1
-; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    not a1, a1
 ; RV64I-NEXT:    lui a2, 1048568
 ; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    slli a1, a1, 16
+; RV64I-NEXT:    lui a2, 8
+; RV64I-NEXT:    addiw a2, a2, -1
+; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    call __gnu_f2h_ieee@plt
-; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
 ; RV64IZFH-LABEL: fcopysign_fneg:

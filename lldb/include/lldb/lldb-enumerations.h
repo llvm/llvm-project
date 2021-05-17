@@ -160,7 +160,7 @@ enum Format {
   eFormatBytes,
   eFormatBytesWithASCII,
   eFormatChar,
-  eFormatCharPrintable, ///< Only printable characters, space if not printable
+  eFormatCharPrintable, ///< Only printable characters, '.' if not printable
   eFormatComplex,       ///< Floating point complex type
   eFormatComplexFloat = eFormatComplex,
   eFormatCString, ///< NULL terminated C strings
@@ -247,7 +247,11 @@ enum StopReason {
   eStopReasonExec, ///< Program was re-exec'ed
   eStopReasonPlanComplete,
   eStopReasonThreadExiting,
-  eStopReasonInstrumentation
+  eStopReasonInstrumentation,
+  eStopReasonProcessorTrace,
+  eStopReasonFork,
+  eStopReasonVFork,
+  eStopReasonVForkDone,
 };
 
 /// Command Return Status Types.
@@ -970,7 +974,7 @@ enum GdbSignal {
   eGdbSignalBreakpoint = 0x96
 };
 
-/// Used with SBHost::GetPath (lldb::PathType) to find files that are
+/// Used with SBHostOS::GetLLDBPath (lldb::PathType) to find files that are
 /// related to LLDB on the current host machine. Most files are
 /// relative to LLDB or are in known locations.
 enum PathType {

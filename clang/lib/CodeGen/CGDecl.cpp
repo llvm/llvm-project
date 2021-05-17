@@ -441,8 +441,10 @@ void CodeGenFunction::EmitStaticVarDecl(const VarDecl &D,
   if (const SectionAttr *SA = D.getAttr<SectionAttr>())
     var->setSection(SA->getName());
 
-  if (D.hasAttr<UsedAttr>())
+  if (D.hasAttr<RetainAttr>())
     CGM.addUsedGlobal(var);
+  else if (D.hasAttr<UsedAttr>())
+    CGM.addUsedOrCompilerUsedGlobal(var);
 
   // We may have to cast the constant because of the initializer
   // mismatch above.
@@ -548,6 +550,7 @@ namespace {
   struct CallStackRestore final : EHScopeStack::Cleanup {
     Address Stack;
     CallStackRestore(Address Stack) : Stack(Stack) {}
+    bool isRedundantBeforeReturn() override { return true; }
     void Emit(CodeGenFunction &CGF, Flags flags) override {
       llvm::Value *V = CGF.Builder.CreateLoad(Stack);
       llvm::Function *F = CGF.CGM.getIntrinsic(llvm::Intrinsic::stackrestore);
@@ -769,9 +772,10 @@ void CodeGenFunction::EmitScalarInit(const Expr *init, const ValueDecl *D,
 
   // If we're emitting a value with lifetime, we have to do the
   // initialization *before* we leave the cleanup scopes.
-  if (const ExprWithCleanups *EWC = dyn_cast<ExprWithCleanups>(init))
-    init = EWC->getSubExpr();
-  CodeGenFunction::RunCleanupsScope Scope(*this);
+  if (auto *EWC = dyn_cast<ExprWithCleanups>(init)) {
+    CodeGenFunction::RunCleanupsScope Scope(*this);
+    return EmitScalarInit(EWC->getSubExpr(), D, lvalue, capturedByInit);
+  }
 
   // We have to maintain the illusion that the variable is
   // zero-initialized.  If the variable might be accessed in its
@@ -1119,7 +1123,7 @@ Address CodeGenModule::createUnnamedGlobalFrom(const VarDecl &D,
     bool isConstant = true;
     llvm::GlobalVariable *InsertBefore = nullptr;
     unsigned AS =
-        getContext().getTargetAddressSpace(getStringLiteralAddressSpace());
+        getContext().getTargetAddressSpace(GetGlobalConstantAddressSpace());
     std::string Name;
     if (D.hasGlobalStorage())
       Name = getMangledName(&D).str() + ".const";
@@ -1765,8 +1769,8 @@ void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
     llvm::Value *BaseSizeInChars =
         llvm::ConstantInt::get(IntPtrTy, EltSize.getQuantity());
     Address Begin = Builder.CreateElementBitCast(Loc, Int8Ty, "vla.begin");
-    llvm::Value *End =
-        Builder.CreateInBoundsGEP(Begin.getPointer(), SizeVal, "vla.end");
+    llvm::Value *End = Builder.CreateInBoundsGEP(
+        Begin.getElementType(), Begin.getPointer(), SizeVal, "vla.end");
     llvm::BasicBlock *OriginBB = Builder.GetInsertBlock();
     EmitBlock(LoopBB);
     llvm::PHINode *Cur = Builder.CreatePHI(Begin.getType(), 2, "vla.cur");
@@ -2194,7 +2198,8 @@ void CodeGenFunction::emitDestroy(Address addr, QualType type,
   }
 
   llvm::Value *begin = addr.getPointer();
-  llvm::Value *end = Builder.CreateInBoundsGEP(begin, length);
+  llvm::Value *end =
+      Builder.CreateInBoundsGEP(addr.getElementType(), begin, length);
   emitArrayDestroy(begin, end, type, elementAlign, destroyer,
                    checkZeroLength, useEHCleanupForArray);
 }
@@ -2566,7 +2571,10 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
   // Emit debug info for param declarations in non-thunk functions.
   if (CGDebugInfo *DI = getDebugInfo()) {
     if (CGM.getCodeGenOpts().hasReducedDebugInfo() && !CurFuncIsThunk) {
-      DI->EmitDeclareOfArgVariable(&D, DeclPtr.getPointer(), ArgNo, Builder);
+      llvm::DILocalVariable *DILocalVar = DI->EmitDeclareOfArgVariable(
+          &D, DeclPtr.getPointer(), ArgNo, Builder);
+      if (const auto *Var = dyn_cast_or_null<ParmVarDecl>(&D))
+        DI->getParamDbgMappings().insert({Var, DILocalVar});
     }
   }
 
@@ -2604,4 +2612,58 @@ void CodeGenModule::EmitOMPDeclareMapper(const OMPDeclareMapperDecl *D,
 
 void CodeGenModule::EmitOMPRequiresDecl(const OMPRequiresDecl *D) {
   getOpenMPRuntime().processRequiresDirective(D);
+}
+
+void CodeGenModule::EmitOMPAllocateDecl(const OMPAllocateDecl *D) {
+  for (const Expr *E : D->varlists()) {
+    const auto *DE = cast<DeclRefExpr>(E);
+    const auto *VD = cast<VarDecl>(DE->getDecl());
+
+    // Skip all but globals.
+    if (!VD->hasGlobalStorage())
+      continue;
+
+    // Check if the global has been materialized yet or not. If not, we are done
+    // as any later generation will utilize the OMPAllocateDeclAttr. However, if
+    // we already emitted the global we might have done so before the
+    // OMPAllocateDeclAttr was attached, leading to the wrong address space
+    // (potentially). While not pretty, common practise is to remove the old IR
+    // global and generate a new one, so we do that here too. Uses are replaced
+    // properly.
+    StringRef MangledName = getMangledName(VD);
+    llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
+    if (!Entry)
+      continue;
+
+    // We can also keep the existing global if the address space is what we
+    // expect it to be, if not, it is replaced.
+    QualType ASTTy = VD->getType();
+    clang::LangAS GVAS = GetGlobalVarAddressSpace(VD);
+    auto TargetAS = getContext().getTargetAddressSpace(GVAS);
+    if (Entry->getType()->getAddressSpace() == TargetAS)
+      continue;
+
+    // Make a new global with the correct type / address space.
+    llvm::Type *Ty = getTypes().ConvertTypeForMem(ASTTy);
+    llvm::PointerType *PTy = llvm::PointerType::get(Ty, TargetAS);
+
+    // Replace all uses of the old global with a cast. Since we mutate the type
+    // in place we neeed an intermediate that takes the spot of the old entry
+    // until we can create the cast.
+    llvm::GlobalVariable *DummyGV = new llvm::GlobalVariable(
+        getModule(), Entry->getValueType(), false,
+        llvm::GlobalValue::CommonLinkage, nullptr, "dummy", nullptr,
+        llvm::GlobalVariable::NotThreadLocal, Entry->getAddressSpace());
+    Entry->replaceAllUsesWith(DummyGV);
+
+    Entry->mutateType(PTy);
+    llvm::Constant *NewPtrForOldDecl =
+        llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+            Entry, DummyGV->getType());
+
+    // Now we have a casted version of the changed global, the dummy can be
+    // replaced and deleted.
+    DummyGV->replaceAllUsesWith(NewPtrForOldDecl);
+    DummyGV->eraseFromParent();
+  }
 }

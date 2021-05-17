@@ -5,9 +5,11 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_library(clangTidyAlteraModule
   AlteraTidyModule.cpp
+  IdDependentBackwardBranchCheck.cpp
   KernelNameRestrictionCheck.cpp
   SingleWorkItemBarrierCheck.cpp
   StructPackAlignCheck.cpp
+  UnrollLoopsCheck.cpp
 
   LINK_LIBS
   clangTidy

@@ -119,7 +119,7 @@ extern ompt_callbacks_active_t ompt_enabled;
 #endif
 
 #ifdef __cplusplus
-};
+}
 #endif
 
 #endif

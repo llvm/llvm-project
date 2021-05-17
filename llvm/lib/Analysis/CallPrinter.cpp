@@ -62,17 +62,17 @@ public:
       : M(M), CG(CG), LookupBFI(LookupBFI) {
     MaxFreq = 0;
 
-    for (auto F = M->getFunctionList().begin(); F != M->getFunctionList().end(); ++F) {
+    for (Function &F : M->getFunctionList()) {
       uint64_t localSumFreq = 0;
       SmallSet<Function *, 16> Callers;
-      for (User *U : (*F).users())
+      for (User *U : F.users())
         if (isa<CallInst>(U))
           Callers.insert(cast<Instruction>(U)->getFunction());
-      for (auto iter = Callers.begin() ; iter != Callers.end() ; ++iter)
-        localSumFreq += getNumOfCalls((**iter), *F);
+      for (Function *Caller : Callers)
+        localSumFreq += getNumOfCalls(*Caller, F);
       if (localSumFreq >= MaxFreq)
         MaxFreq = localSumFreq;
-      Freq[&*F] = localSumFreq;
+      Freq[&F] = localSumFreq;
     }
     if (!CallMultiGraph)
       removeParallelEdges();
@@ -274,7 +274,7 @@ bool CallGraphDOTPrinter::runOnModule(Module &M) {
   errs() << "Writing '" << Filename << "'...";
 
   std::error_code EC;
-  raw_fd_ostream File(Filename, EC, sys::fs::F_Text);
+  raw_fd_ostream File(Filename, EC, sys::fs::OF_Text);
 
   CallGraph CG(M);
   CallGraphDOTInfo CFGInfo(&M, &CG, LookupBFI);

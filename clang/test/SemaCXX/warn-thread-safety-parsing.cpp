@@ -1295,6 +1295,11 @@ struct SLDerived2 : public SLTemplateClass<int> {
     // expected-warning{{'unlock_function' attribute without capability arguments refers to 'this', but 'SLDerived2' isn't annotated with 'capability' or 'scoped_lockable' attribute}}
 };
 
+struct SLDerived3 : public SLTemplateDerived<int> {
+  ~SLDerived3() UNLOCK_FUNCTION(); // \
+    // expected-warning{{'unlock_function' attribute without capability arguments refers to 'this', but 'SLDerived3' isn't annotated with 'capability' or 'scoped_lockable' attribute}}
+};
+
 //-----------------------------------------------------
 // Parsing of member variables and function parameters
 //------------------------------------------------------

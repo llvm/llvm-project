@@ -77,3 +77,23 @@ void testConsistencyCustomCopy(CustomCopyWrapper *w) {
 
   clang_analyzer_eval(w.inner.value == 42); // expected-warning{{TRUE}}
 }
+
+@protocol NoDirectPropertyDecl
+@property IntWrapperStruct inner;
+@end
+@interface NoDirectPropertyDecl <NoDirectPropertyDecl>
+@end
+@implementation NoDirectPropertyDecl
+@synthesize inner;
+@end
+
+// rdar://67416721
+void testNoDirectPropertyDecl(NoDirectPropertyDecl *w) {
+  clang_analyzer_eval(w.inner.value == w.inner.value); // expected-warning{{TRUE}}
+
+  int origValue = w.inner.value;
+  if (origValue != 42)
+    return;
+
+  clang_analyzer_eval(w.inner.value == 42); // expected-warning{{TRUE}}
+}

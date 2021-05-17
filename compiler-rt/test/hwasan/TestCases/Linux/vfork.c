@@ -2,6 +2,7 @@
 // RUN: %clang_hwasan -O0 %s -o %t && %run %t 2>&1
 
 // REQUIRES: aarch64-target-arch || x86_64-target-arch
+// REQUIRES: pointer-tagging
 
 #include <assert.h>
 #include <sys/types.h>

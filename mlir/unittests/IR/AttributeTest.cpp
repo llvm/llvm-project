@@ -150,16 +150,18 @@ TEST(DenseSplatTest, BF16Splat) {
 
 TEST(DenseSplatTest, StringSplat) {
   MLIRContext context;
+  context.allowUnregisteredDialects();
   Type stringType =
-      OpaqueType::get(&context, Identifier::get("test", &context), "string");
+      OpaqueType::get(Identifier::get("test", &context), "string");
   StringRef value = "test-string";
   testSplat(stringType, value);
 }
 
 TEST(DenseSplatTest, StringAttrSplat) {
   MLIRContext context;
+  context.allowUnregisteredDialects();
   Type stringType =
-      OpaqueType::get(&context, Identifier::get("test", &context), "string");
+      OpaqueType::get(Identifier::get("test", &context), "string");
   Attribute stringAttr = StringAttr::get("test-string", stringType);
   testSplat(stringType, stringAttr);
 }
@@ -190,6 +192,17 @@ TEST(DenseComplexTest, ComplexAPIntSplat) {
   ComplexType complexType = ComplexType::get(IntegerType::get(&context, 64));
   std::complex<APInt> value(APInt(64, 10), APInt(64, 15));
   testSplat(complexType, value);
+}
+
+TEST(DenseScalarTest, ExtractZeroRankElement) {
+  MLIRContext context;
+  const int elementValue = 12;
+  IntegerType intTy = IntegerType::get(&context, 32);
+  Attribute value = IntegerAttr::get(intTy, elementValue);
+  RankedTensorType shape = RankedTensorType::get({}, intTy);
+
+  auto attr = DenseElementsAttr::get(shape, llvm::makeArrayRef({elementValue}));
+  EXPECT_TRUE(attr.getValue({0}) == value);
 }
 
 } // end namespace

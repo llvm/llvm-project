@@ -338,13 +338,12 @@ CheckExtVectorComponent(Sema &S, QualType baseType, ExprValueKind &VK,
       compStr++;
     } while (*compStr && (Idx = vecType->getPointAccessorIdx(*compStr)) != -1);
 
-    // Emit a warning if an rgba selector is used earlier than OpenCL 2.2
+    // Emit a warning if an rgba selector is used earlier than OpenCL C 3.0.
     if (HasRGBA || (*compStr && IsRGBA(*compStr))) {
-      if (S.getLangOpts().OpenCL && S.getLangOpts().OpenCLVersion < 220) {
+      if (S.getLangOpts().OpenCL && S.getLangOpts().OpenCLVersion < 300) {
         const char *DiagBegin = HasRGBA ? CompName->getNameStart() : compStr;
         S.Diag(OpLoc, diag::ext_opencl_ext_vector_type_rgba_selector)
-          << StringRef(DiagBegin, 1)
-          << S.getLangOpts().OpenCLVersion << SourceRange(CompLoc);
+            << StringRef(DiagBegin, 1) << SourceRange(CompLoc);
       }
     }
   } else {
@@ -761,7 +760,7 @@ Sema::BuildMemberReferenceExpr(Expr *Base, QualType BaseType,
   if (!Base) {
     TypoExpr *TE = nullptr;
     QualType RecordTy = BaseType;
-    if (IsArrow) RecordTy = RecordTy->getAs<PointerType>()->getPointeeType();
+    if (IsArrow) RecordTy = RecordTy->castAs<PointerType>()->getPointeeType();
     if (LookupMemberExprInRecord(
             *this, R, nullptr, RecordTy->getAs<RecordType>(), OpLoc, IsArrow,
             SS, TemplateArgs != nullptr, TemplateKWLoc, TE))
@@ -1791,7 +1790,7 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
     VK = VK_LValue;
   } else {
     QualType BaseType = BaseExpr->getType();
-    if (IsArrow) BaseType = BaseType->getAs<PointerType>()->getPointeeType();
+    if (IsArrow) BaseType = BaseType->castAs<PointerType>()->getPointeeType();
 
     Qualifiers BaseQuals = BaseType.getQualifiers();
 

@@ -284,6 +284,9 @@ public:
   /// isSized - Return true if this is a sized type.
   bool isSized(SmallPtrSetImpl<Type *> *Visited = nullptr) const;
 
+  /// Returns true if this struct contains a scalable vector.
+  bool containsScalableVectorType() const;
+
   /// Return true if this is a named struct that has a non-empty name.
   bool hasName() const { return SymbolTableEntry != nullptr; }
 
@@ -315,7 +318,7 @@ public:
 
   element_iterator element_begin() const { return ContainedTys; }
   element_iterator element_end() const { return &ContainedTys[NumContainedTys];}
-  ArrayRef<Type *> const elements() const {
+  ArrayRef<Type *> elements() const {
     return makeArrayRef(element_begin(), element_end());
   }
 
@@ -418,15 +421,6 @@ public:
   VectorType(const VectorType &) = delete;
   VectorType &operator=(const VectorType &) = delete;
 
-  /// Get the number of elements in this vector. It does not make sense to call
-  /// this function on a scalable vector, and this will be moved into
-  /// FixedVectorType in a future commit
-  LLVM_ATTRIBUTE_DEPRECATED(
-      inline unsigned getNumElements() const,
-      "Calling this function via a base VectorType is deprecated. Either call "
-      "getElementCount() and handle the case where Scalable is true or cast to "
-      "FixedVectorType.");
-
   Type *getElementType() const { return ContainedType; }
 
   /// This static method is the primary way to construct an VectorType.
@@ -528,21 +522,6 @@ public:
            T->getTypeID() == ScalableVectorTyID;
   }
 };
-
-unsigned VectorType::getNumElements() const {
-  ElementCount EC = getElementCount();
-#ifdef STRICT_FIXED_SIZE_VECTORS
-  assert(!EC.isScalable() &&
-         "Request for fixed number of elements from scalable vector");
-#else
-  if (EC.isScalable())
-    WithColor::warning()
-        << "The code that requested the fixed number of elements has made the "
-           "assumption that this vector is not scalable. This assumption was "
-           "not correct, and this may lead to broken code\n";
-#endif
-  return EC.getKnownMinValue();
-}
 
 /// Class to represent fixed width SIMD vectors
 class FixedVectorType : public VectorType {
@@ -654,6 +633,7 @@ inline ElementCount VectorType::getElementCount() const {
 /// Class to represent pointers.
 class PointerType : public Type {
   explicit PointerType(Type *ElType, unsigned AddrSpace);
+  explicit PointerType(LLVMContext &C, unsigned AddrSpace);
 
   Type *PointeeTy;
 
@@ -664,14 +644,28 @@ public:
   /// This constructs a pointer to an object of the specified type in a numbered
   /// address space.
   static PointerType *get(Type *ElementType, unsigned AddressSpace);
+  /// This constructs an opaque pointer to an object in a numbered address
+  /// space.
+  static PointerType *get(LLVMContext &C, unsigned AddressSpace);
 
   /// This constructs a pointer to an object of the specified type in the
-  /// generic address space (address space zero).
+  /// default address space (address space zero).
   static PointerType *getUnqual(Type *ElementType) {
     return PointerType::get(ElementType, 0);
   }
 
-  Type *getElementType() const { return PointeeTy; }
+  /// This constructs an opaque pointer to an object in the
+  /// default address space (address space zero).
+  static PointerType *getUnqual(LLVMContext &C) {
+    return PointerType::get(C, 0);
+  }
+
+  Type *getElementType() const {
+    assert(!isOpaque() && "Attempting to get element type of opaque pointer");
+    return PointeeTy;
+  }
+
+  bool isOpaque() const { return !PointeeTy; }
 
   /// Return true if the specified type is valid as a element type.
   static bool isValidElementType(Type *ElemTy);
@@ -698,14 +692,17 @@ Type *Type::getExtendedType() const {
   return cast<IntegerType>(this)->getExtendedType();
 }
 
+Type *Type::getWithNewType(Type *EltTy) const {
+  if (auto *VTy = dyn_cast<VectorType>(this))
+    return VectorType::get(EltTy, VTy->getElementCount());
+  return EltTy;
+}
+
 Type *Type::getWithNewBitWidth(unsigned NewBitWidth) const {
   assert(
       isIntOrIntVectorTy() &&
       "Original type expected to be a vector of integers or a scalar integer.");
-  Type *NewType = getIntNTy(getContext(), NewBitWidth);
-  if (auto *VTy = dyn_cast<VectorType>(this))
-    NewType = VectorType::get(NewType, VTy->getElementCount());
-  return NewType;
+  return getWithNewType(getIntNTy(getContext(), NewBitWidth));
 }
 
 unsigned Type::getPointerAddressSpace() const {

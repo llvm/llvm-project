@@ -11,4 +11,4 @@ Sections:
       - Name:        C++
         Version:     C++17
 ...
-# CHECK:  Producers section contains repeated producer
+# CHECK: producers section contains repeated producer

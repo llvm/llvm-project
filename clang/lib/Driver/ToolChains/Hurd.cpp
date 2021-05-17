@@ -170,11 +170,13 @@ void Hurd::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
   AddMultilibIncludeArgs(DriverArgs, CC1Args);
 
-  if (getTriple().getArch() == llvm::Triple::x86) {
-    std::string Path = SysRoot + "/usr/include/i386-gnu";
-    if (D.getVFS().exists(Path))
-      addExternCSystemInclude(DriverArgs, CC1Args, Path);
-  }
+  // On systems using multiarch, add /usr/include/$triple before
+  // /usr/include.
+  std::string MultiarchIncludeDir = getMultiarchTriple(D, getTriple(), SysRoot);
+  if (!MultiarchIncludeDir.empty() &&
+      D.getVFS().exists(SysRoot + "/usr/include/" + MultiarchIncludeDir))
+    addExternCSystemInclude(DriverArgs, CC1Args,
+                            SysRoot + "/usr/include/" + MultiarchIncludeDir);
 
   // Add an include of '/include' directly. This isn't provided by default by
   // system GCCs, but is often used with cross-compiling GCCs, and harmless to
@@ -182,6 +184,21 @@ void Hurd::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   addExternCSystemInclude(DriverArgs, CC1Args, SysRoot + "/include");
 
   addExternCSystemInclude(DriverArgs, CC1Args, SysRoot + "/usr/include");
+}
+
+void Hurd::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
+                                    llvm::opt::ArgStringList &CC1Args) const {
+  // We need a detected GCC installation on Linux to provide libstdc++'s
+  // headers in odd Linuxish places.
+  if (!GCCInstallation.isValid())
+    return;
+
+  StringRef TripleStr = GCCInstallation.getTriple().str();
+  StringRef DebianMultiarch =
+      GCCInstallation.getTriple().getArch() == llvm::Triple::x86 ? "i386-gnu"
+                                                                 : TripleStr;
+
+  addGCCLibStdCxxIncludePaths(DriverArgs, CC1Args, DebianMultiarch);
 }
 
 void Hurd::addExtraOpts(llvm::opt::ArgStringList &CmdArgs) const {

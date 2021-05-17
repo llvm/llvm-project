@@ -79,7 +79,7 @@ define amdgpu_ps <4 x float> @sample_1d_tfe(<8 x i32> inreg %rsrc, <4 x i32> inr
 ;
 ; GFX10-LABEL: sample_1d_tfe:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    s_mov_b32 s28, exec_lo ; encoding: [0x7e,0x03,0x9c,0xbe]
+; GFX10-NEXT:    s_mov_b32 s14, exec_lo ; encoding: [0x7e,0x03,0x8e,0xbe]
 ; GFX10-NEXT:    s_wqm_b32 exec_lo, exec_lo ; encoding: [0x7e,0x09,0xfe,0xbe]
 ; GFX10-NEXT:    v_mov_b32_e32 v6, 0 ; encoding: [0x80,0x02,0x0c,0x7e]
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v0 ; encoding: [0x00,0x03,0x0a,0x7e]
@@ -92,7 +92,7 @@ define amdgpu_ps <4 x float> @sample_1d_tfe(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10-NEXT:    v_mov_b32_e32 v2, v8 ; encoding: [0x08,0x03,0x04,0x7e]
 ; GFX10-NEXT:    v_mov_b32_e32 v3, v9 ; encoding: [0x09,0x03,0x06,0x7e]
 ; GFX10-NEXT:    v_mov_b32_e32 v4, v10 ; encoding: [0x0a,0x03,0x08,0x7e]
-; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s28 ; encoding: [0x7e,0x1c,0x7e,0x87]
+; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s14 ; encoding: [0x7e,0x0e,0x7e,0x87]
 ; GFX10-NEXT:    image_sample v[0:4], v5, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D tfe ; encoding: [0x00,0x0f,0x81,0xf0,0x05,0x00,0x40,0x00]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    global_store_dword v6, v4, s[12:13] ; encoding: [0x00,0x80,0x70,0xdc,0x06,0x04,0x0c,0x00]
@@ -499,7 +499,7 @@ define amdgpu_ps <4 x float> @sample_1d_lwe(<8 x i32> inreg %rsrc, <4 x i32> inr
 ;
 ; GFX10-LABEL: sample_1d_lwe:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    s_mov_b32 s28, exec_lo ; encoding: [0x7e,0x03,0x9c,0xbe]
+; GFX10-NEXT:    s_mov_b32 s14, exec_lo ; encoding: [0x7e,0x03,0x8e,0xbe]
 ; GFX10-NEXT:    s_wqm_b32 exec_lo, exec_lo ; encoding: [0x7e,0x09,0xfe,0xbe]
 ; GFX10-NEXT:    v_mov_b32_e32 v6, 0 ; encoding: [0x80,0x02,0x0c,0x7e]
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v0 ; encoding: [0x00,0x03,0x0a,0x7e]
@@ -512,7 +512,7 @@ define amdgpu_ps <4 x float> @sample_1d_lwe(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10-NEXT:    v_mov_b32_e32 v2, v8 ; encoding: [0x08,0x03,0x04,0x7e]
 ; GFX10-NEXT:    v_mov_b32_e32 v3, v9 ; encoding: [0x09,0x03,0x06,0x7e]
 ; GFX10-NEXT:    v_mov_b32_e32 v4, v10 ; encoding: [0x0a,0x03,0x08,0x7e]
-; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s28 ; encoding: [0x7e,0x1c,0x7e,0x87]
+; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s14 ; encoding: [0x7e,0x0e,0x7e,0x87]
 ; GFX10-NEXT:    image_sample v[0:4], v5, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D lwe ; encoding: [0x00,0x0f,0x82,0xf0,0x05,0x00,0x40,0x00]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    global_store_dword v6, v4, s[12:13] ; encoding: [0x00,0x80,0x70,0xdc,0x06,0x04,0x0c,0x00]

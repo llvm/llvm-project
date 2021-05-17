@@ -19,6 +19,7 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "lld/Common/Arrays.h"
 #include "lld/Common/Filesystem.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
@@ -1291,22 +1292,39 @@ findOrphanPos(std::vector<BaseCommand *>::iterator b,
 
 // Adds random priorities to sections not already in the map.
 static void maybeShuffle(DenseMap<const InputSectionBase *, int> &order) {
-  if (!config->shuffleSectionSeed)
+  if (config->shuffleSections.empty())
     return;
 
-  std::vector<int> priorities(inputSections.size() - order.size());
+  std::vector<InputSectionBase *> matched, sections = inputSections;
+  matched.reserve(sections.size());
+  for (const auto &patAndSeed : config->shuffleSections) {
+    matched.clear();
+    for (InputSectionBase *sec : sections)
+      if (patAndSeed.first.match(sec->name))
+        matched.push_back(sec);
+    const uint32_t seed = patAndSeed.second;
+    if (seed == UINT32_MAX) {
+      // If --shuffle-sections <section-glob>=-1, reverse the section order. The
+      // section order is stable even if the number of sections changes. This is
+      // useful to catch issues like static initialization order fiasco
+      // reliably.
+      std::reverse(matched.begin(), matched.end());
+    } else {
+      std::mt19937 g(seed ? seed : std::random_device()());
+      llvm::shuffle(matched.begin(), matched.end(), g);
+    }
+    size_t i = 0;
+    for (InputSectionBase *&sec : sections)
+      if (patAndSeed.first.match(sec->name))
+        sec = matched[i++];
+  }
+
   // Existing priorities are < 0, so use priorities >= 0 for the missing
   // sections.
-  int curPrio = 0;
-  for (int &prio : priorities)
-    prio = curPrio++;
-  uint32_t seed = *config->shuffleSectionSeed;
-  std::mt19937 g(seed ? seed : std::random_device()());
-  llvm::shuffle(priorities.begin(), priorities.end(), g);
-  int prioIndex = 0;
-  for (InputSectionBase *sec : inputSections) {
-    if (order.try_emplace(sec, priorities[prioIndex]).second)
-      ++prioIndex;
+  int prio = 0;
+  for (InputSectionBase *sec : sections) {
+    if (order.try_emplace(sec, prio).second)
+      ++prio;
   }
 }
 
@@ -1446,8 +1464,8 @@ static void sortSection(OutputSection *sec,
     return;
 
   // IRelative relocations that usually live in the .rel[a].dyn section should
-  // be proccessed last by the dynamic loader. To achieve that we add synthetic
-  // sections in the required order from the begining so that the in.relaIplt
+  // be processed last by the dynamic loader. To achieve that we add synthetic
+  // sections in the required order from the beginning so that the in.relaIplt
   // section is placed last in an output section. Here we just do not apply
   // sorting for an output section which holds the in.relaIplt section.
   if (in.relaIplt->getParent() == sec)
@@ -1769,7 +1787,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
              Twine(os->alignment) + ")");
 }
 
-// If Input Sections have been shrinked (basic block sections) then
+// If Input Sections have been shrunk (basic block sections) then
 // update symbol values and sizes associated with these sections.  With basic
 // block sections, input sections can shrink when the jump instructions at
 // the end of the section are relaxed.
@@ -1988,6 +2006,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     in.iplt->addSymbols();
 
   if (config->unresolvedSymbolsInShlib != UnresolvedPolicy::Ignore) {
+    auto diagnose =
+        config->unresolvedSymbolsInShlib == UnresolvedPolicy::ReportError
+            ? errorOrWarn
+            : warn;
     // Error on undefined symbols in a shared object, if all of its DT_NEEDED
     // entries are seen. These cases would otherwise lead to runtime errors
     // reported by the dynamic linker.
@@ -1995,23 +2017,18 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // ld.bfd traces all DT_NEEDED to emulate the logic of the dynamic linker to
     // catch more cases. That is too much for us. Our approach resembles the one
     // used in ld.gold, achieves a good balance to be useful but not too smart.
-    for (SharedFile *file : sharedFiles)
-      file->allNeededIsKnown =
+    for (SharedFile *file : sharedFiles) {
+      bool allNeededIsKnown =
           llvm::all_of(file->dtNeeded, [&](StringRef needed) {
             return symtab->soNames.count(needed);
           });
-
-    for (Symbol *sym : symtab->symbols())
-      if (sym->isUndefined() && !sym->isWeak())
-        if (auto *f = dyn_cast_or_null<SharedFile>(sym->file))
-          if (f->allNeededIsKnown) {
-            auto diagnose = config->unresolvedSymbolsInShlib ==
-                                    UnresolvedPolicy::ReportError
-                                ? errorOrWarn
-                                : warn;
-            diagnose(toString(f) + ": undefined reference to " +
-                     toString(*sym) + " [--no-allow-shlib-undefined]");
-          }
+      if (!allNeededIsKnown)
+        continue;
+      for (Symbol *sym : file->requiredSymbols)
+        if (sym->isUndefined() && !sym->isWeak())
+          diagnose(toString(file) + ": undefined reference to " +
+                   toString(*sym) + " [--no-allow-shlib-undefined]");
+    }
   }
 
   {
@@ -2872,7 +2889,13 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
 template <class ELFT> void Writer<ELFT>::openFile() {
   uint64_t maxSize = config->is64 ? INT64_MAX : UINT32_MAX;
   if (fileSize != size_t(fileSize) || maxSize < fileSize) {
-    error("output file too large: " + Twine(fileSize) + " bytes");
+    std::string msg;
+    raw_string_ostream s(msg);
+    s << "output file too large: " << Twine(fileSize) << " bytes\n"
+      << "section sizes:\n";
+    for (OutputSection *os : outputSections)
+      s << os->name << ' ' << os->size << "\n";
+    error(s.str());
     return;
   }
 
@@ -2947,19 +2970,6 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
   for (OutputSection *sec : outputSections)
     if (sec->type != SHT_REL && sec->type != SHT_RELA)
       sec->writeTo<ELFT>(Out::bufferStart + sec->offset);
-}
-
-// Split one uint8 array into small pieces of uint8 arrays.
-static std::vector<ArrayRef<uint8_t>> split(ArrayRef<uint8_t> arr,
-                                            size_t chunkSize) {
-  std::vector<ArrayRef<uint8_t>> ret;
-  while (arr.size() > chunkSize) {
-    ret.push_back(arr.take_front(chunkSize));
-    arr = arr.drop_front(chunkSize);
-  }
-  if (!arr.empty())
-    ret.push_back(arr);
-  return ret;
 }
 
 // Computes a hash value of Data using a given hash function.

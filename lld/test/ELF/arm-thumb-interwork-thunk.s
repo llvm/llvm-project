@@ -12,13 +12,11 @@
 // RUN:       .got.plt 0x18b4 : {  }  } " > %t.script
 // RUN: ld.lld --script %t.script %t -o %t2
 // RUN: llvm-objdump -d --triple=thumbv7a-none-linux-gnueabi %t2 | FileCheck --check-prefix=CHECK-THUMB --check-prefix=CHECK-ABS-THUMB %s
-// RUN: llvm-objdump -d --triple=armv7a-none-linux-gnueabi %t2 | FileCheck --check-prefix=CHECK-ARM --check-prefix=CHECK-ABS-ARM %s
+// RUN: llvm-objdump -d --triple=armv7a-none-linux-gnueabi %t2 | FileCheck --check-prefix=CHECK-ARM --check-prefix=CHECK-ARM-ABS-ARM %s
 // RUN: ld.lld --script %t.script %t -pie -o %t3
 // RUN: ld.lld --script %t.script %t --shared -o %t4
 // RUN: llvm-objdump -d --triple=thumbv7a-none-linux-gnueabi %t3 | FileCheck --check-prefix=CHECK-THUMB --check-prefix=CHECK-PI-THUMB %s
 // RUN: llvm-objdump -d --triple=armv7a-none-linux-gnueabi %t3 | FileCheck --check-prefix=CHECK-ARM --check-prefix=CHECK-PI-ARM %s
-// RUN: llvm-objdump -d --triple=thumbv7a-none-linux-gnueabi %t4 | FileCheck --check-prefix=CHECK-THUMB --check-prefix=CHECK-PI-PLT-THUMB %s
-// RUN: llvm-objdump -d --triple=armv7a-none-linux-gnueabi %t4 | FileCheck --check-prefix=CHECK-ARM --check-prefix=CHECK-PI-PLT-ARM %s
 // RUN: llvm-readobj -S -r %t4 | FileCheck -check-prefix=CHECK-DSO-REL %s
 
 // Test ARM Thumb Interworking
@@ -81,7 +79,7 @@ arm_caller:
  bx lr
 // CHECK-ARM-ABS-ARM: Disassembly of section .arm_caller:
 // CHECK-ARM-ABS-ARM-EMPTY:
-// CHECK-ARM-ABS-ARM-NEXT: arm_caller:
+// CHECK-ARM-ABS-ARM-NEXT: <arm_caller>:
 // CHECK-ARM-ABS-ARM-NEXT:     1300:       3e ff ff fa     blx     #-776 <thumb_callee1>
 // CHECK-ARM-ABS-ARM-NEXT:     1304:       3d ff ff fa     blx     #-780 <thumb_callee1>
 // CHECK-ARM-ABS-ARM-NEXT:     1308:       06 00 00 ea     b       #24 <__ARMv7ABSLongThunk_thumb_callee1>
@@ -92,18 +90,18 @@ arm_caller:
 // CHECK-ARM-ABS-ARM-NEXT:     131c:       b7 00 00 0a     beq     #732 <arm_callee2>
 // CHECK-ARM-ABS-ARM-NEXT:     1320:       b7 00 00 1a     bne     #732 <arm_callee3>
 // CHECK-ARM-ABS-ARM-NEXT:     1324:       1e ff 2f e1     bx      lr
-// CHECK-ARM-ABS-ARM: __ARMv7ABSLongThunk_thumb_callee1:
+// CHECK-ARM-ABS-ARM:      <__ARMv7ABSLongThunk_thumb_callee1>:
 // 0x1001 = thumb_callee1
 // CHECK-ARM-ABS-ARM-NEXT:     1328:       01 c0 01 e3     movw    r12, #4097
 // CHECK-ARM-ABS-ARM-NEXT:     132c:       00 c0 40 e3     movt    r12, #0
 // CHECK-ARM-ABS-ARM-NEXT:     1330:       1c ff 2f e1     bx      r12
 // 0x1501 = thumb_callee2
-// CHECK-ARM-ABS-ARM: __ARMv7ABSLongThunk_thumb_callee2:
+// CHECK-ARM-ABS-ARM:      <__ARMv7ABSLongThunk_thumb_callee2>:
 // CHECK-ARM-ABS-ARM-NEXT:     1334:       01 c5 01 e3     movw    r12, #5377
 // CHECK-ARM-ABS-ARM-NEXT:     1338:       00 c0 40 e3     movt    r12, #0
 // CHECK-ARM-ABS-ARM-NEXT:     133c:       1c ff 2f e1     bx      r12
 // 0x1503 = thumb_callee3
-// CHECK-ARM-ABS-ARM: __ARMv7ABSLongThunk_thumb_callee3:
+// CHECK-ARM-ABS-ARM:      <__ARMv7ABSLongThunk_thumb_callee3>:
 // CHECK-ARM-ABS-ARM-NEXT:     1340:       03 c5 01 e3     movw    r12, #5379
 // CHECK-ARM-ABS-ARM-NEXT:     1344:       00 c0 40 e3     movt    r12, #0
 // CHECK-ARM-ABS-ARM-NEXT:     1348:       1c ff 2f e1     bx      r12

@@ -287,7 +287,7 @@ public:
 #else
   AssertingVH() : ThePtr(nullptr) {}
   AssertingVH(ValueTy *P) : ThePtr(GetAsValue(P)) {}
-  AssertingVH(const AssertingVH<ValueTy> &) = default;
+  AssertingVH(const AssertingVH &) = default;
 #endif
 
   operator ValueTy*() const {
@@ -442,9 +442,9 @@ public:
 /// PoisoningVH's as it moves. This is required because in non-assert mode this
 /// class turns into a trivial wrapper around a pointer.
 template <typename ValueTy>
-class PoisoningVH
+class PoisoningVH final
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    final : public CallbackVH
+    : public CallbackVH
 #endif
 {
   friend struct DenseMapInfo<PoisoningVH<ValueTy>>;

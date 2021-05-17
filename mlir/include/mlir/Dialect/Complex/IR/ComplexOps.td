@@ -20,11 +20,9 @@ class Complex_Op<string mnemonic, list<OpTrait> traits = []>
 // floating-point element type. These operations take two operands and return
 // one result, all of which must be complex numbers of the same type.
 class ComplexArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
-    Complex_Op<mnemonic,
-       !listconcat(traits, [NoSideEffect,
-                            SameOperandsAndResultType,
-                            DeclareOpInterfaceMethods<VectorUnrollOpInterface>,
-                            ElementwiseMappable])> {
+    Complex_Op<mnemonic, traits # [NoSideEffect, SameOperandsAndResultType,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface>] #
+    ElementwiseMappable.traits> {
   let arguments = (ins Complex<AnyFloat>:$lhs, Complex<AnyFloat>:$rhs);
   let results = (outs Complex<AnyFloat>:$result);
   let assemblyFormat = "$lhs `,` $rhs  attr-dict `:` type($result)";
@@ -43,9 +41,35 @@ def AddOp : ComplexArithmeticOp<"add"> {
     Example:
 
     ```mlir
-    %a = add %b, %c : complex<f32>
+    %a = complex.add %b, %c : complex<f32>
     ```
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// AbsOp
+//===----------------------------------------------------------------------===//
+
+def AbsOp : Complex_Op<"abs",
+    [NoSideEffect,
+     TypesMatchWith<"complex element type matches result type",
+                    "complex", "result",
+                    "$_self.cast<ComplexType>().getElementType()">]> {
+  let summary = "computes absolute value of a complex number";
+  let description = [{
+    The `abs` op takes a single complex number and computes its absolute value.
+
+    Example:
+
+    ```mlir
+    %a = complex.abs %b : complex<f32>
+    ```
+  }];
+
+  let arguments = (ins Complex<AnyFloat>:$complex);
+  let results = (outs AnyFloat:$result);
+
+  let assemblyFormat = "$complex attr-dict `:` type($complex)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -70,7 +94,7 @@ def CreateOp : Complex_Op<"create",
     Example:
 
     ```mlir
-    %a = create_complex %b, %c : complex<f32>
+    %a = complex.create %b, %c : complex<f32>
     ```
   }];
 
@@ -78,6 +102,22 @@ def CreateOp : Complex_Op<"create",
   let results = (outs Complex<AnyFloat>:$complex);
 
   let assemblyFormat = "$real `,` $imaginary attr-dict `:` type($complex)";
+}
+
+//===----------------------------------------------------------------------===//
+// DivOp
+//===----------------------------------------------------------------------===//
+
+def DivOp : ComplexArithmeticOp<"div"> {
+  let summary = "complex division";
+  let description = [{
+    The `div` operation takes two complex numbers and returns result of their
+    division:
+
+    ```mlir
+    %a = complex.div %b, %c : complex<f32>
+    ```
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -96,7 +136,7 @@ def ImOp : Complex_Op<"im",
     Example:
 
     ```mlir
-    %a = im %b : complex<f32>
+    %a = complex.im %b : complex<f32>
     ```
   }];
 
@@ -104,6 +144,21 @@ def ImOp : Complex_Op<"im",
   let results = (outs AnyFloat:$imaginary);
 
   let assemblyFormat = "$complex attr-dict `:` type($complex)";
+}
+
+//===----------------------------------------------------------------------===//
+// MulOp
+//===----------------------------------------------------------------------===//
+
+def MulOp : ComplexArithmeticOp<"mul"> {
+  let summary = "complex multiplication";
+  let description = [{
+    The `mul` operation takes two complex numbers and returns their product:
+
+    ```mlir
+    %a = complex.mul %b, %c : complex<f32>
+    ```
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -122,7 +177,7 @@ def ReOp : Complex_Op<"re",
     Example:
 
     ```mlir
-    %a = re %b : complex<f32>
+    %a = complex.re %b : complex<f32>
     ```
   }];
 
@@ -145,7 +200,7 @@ def SubOp : ComplexArithmeticOp<"sub"> {
     Example:
 
     ```mlir
-    %a = sub %b, %c : complex<f32>
+    %a = complex.sub %b, %c : complex<f32>
     ```
   }];
 }

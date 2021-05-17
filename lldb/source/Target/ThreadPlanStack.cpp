@@ -124,20 +124,6 @@ void ThreadPlanStack::ThreadDestroyed(Thread *thread) {
   }
 }
 
-void ThreadPlanStack::EnableTracer(bool value, bool single_stepping) {
-  for (ThreadPlanSP plan : m_plans) {
-    if (plan->GetThreadPlanTracer()) {
-      plan->GetThreadPlanTracer()->EnableTracing(value);
-      plan->GetThreadPlanTracer()->EnableSingleStep(single_stepping);
-    }
-  }
-}
-
-void ThreadPlanStack::SetTracer(lldb::ThreadPlanTracerSP &tracer_sp) {
-  for (ThreadPlanSP plan : m_plans)
-    plan->SetThreadPlanTracer(tracer_sp);
-}
-
 void ThreadPlanStack::PushPlan(lldb::ThreadPlanSP new_plan_sp) {
   // If the thread plan doesn't already have a tracer, give it its parent's
   // tracer:
@@ -369,22 +355,14 @@ ThreadPlan *ThreadPlanStack::GetInnermostExpression() const {
   return nullptr;
 }
 
+void ThreadPlanStack::ClearThreadCache() {
+  for (lldb::ThreadPlanSP thread_plan_sp : m_plans)
+    thread_plan_sp->ClearThreadCache();
+}
+
 void ThreadPlanStack::WillResume() {
   m_completed_plans.clear();
   m_discarded_plans.clear();
-}
-
-const ThreadPlanStack::PlanStack &
-ThreadPlanStack::GetStackOfKind(ThreadPlanStack::StackKind kind) const {
-  switch (kind) {
-  case ePlans:
-    return m_plans;
-  case eCompletedPlans:
-    return m_completed_plans;
-  case eDiscardedPlans:
-    return m_discarded_plans;
-  }
-  llvm_unreachable("Invalid StackKind value");
 }
 
 void ThreadPlanStackMap::Update(ThreadList &current_threads,
@@ -397,7 +375,7 @@ void ThreadPlanStackMap::Update(ThreadList &current_threads,
       lldb::tid_t cur_tid = thread->GetID();
       if (!Find(cur_tid)) {
         AddThread(*thread.get());
-        thread->QueueFundamentalPlan(true);
+        thread->QueueBasePlan(true);
       }
     }
   }

@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=arm-arm-eabi -mcpu=cortex-m33 < %s -arm-parallel-dsp -S | FileCheck %s
+; RUN: opt -mtriple=arm-none-none-eabi -mcpu=cortex-m33 < %s -arm-parallel-dsp -S | FileCheck %s
 ;
 ; The loads are volatile loads: check that the rewrite isn't triggered.
 ;

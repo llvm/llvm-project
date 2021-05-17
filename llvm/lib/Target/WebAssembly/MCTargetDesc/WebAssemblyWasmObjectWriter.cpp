@@ -34,8 +34,8 @@ public:
   explicit WebAssemblyWasmObjectWriter(bool Is64Bit, bool IsEmscripten);
 
 private:
-  unsigned getRelocType(const MCValue &Target,
-                        const MCFixup &Fixup) const override;
+  unsigned getRelocType(const MCValue &Target, const MCFixup &Fixup,
+                        bool IsLocRel) const override;
 };
 } // end anonymous namespace
 
@@ -63,7 +63,8 @@ static const MCSection *getFixupSection(const MCExpr *Expr) {
 }
 
 unsigned WebAssemblyWasmObjectWriter::getRelocType(const MCValue &Target,
-                                                   const MCFixup &Fixup) const {
+                                                   const MCFixup &Fixup,
+                                                   bool IsLocRel) const {
   const MCSymbolRefExpr *RefA = Target.getSymA();
   assert(RefA);
   auto& SymA = cast<MCSymbolWasm>(RefA->getSymbol());
@@ -122,7 +123,8 @@ unsigned WebAssemblyWasmObjectWriter::getRelocType(const MCValue &Target,
       else if (!Section->isWasmData())
         return wasm::R_WASM_SECTION_OFFSET_I32;
     }
-    return wasm::R_WASM_MEMORY_ADDR_I32;
+    return IsLocRel ? wasm::R_WASM_MEMORY_ADDR_LOCREL_I32
+                    : wasm::R_WASM_MEMORY_ADDR_I32;
   case FK_Data_8:
     if (SymA.isFunction())
       return wasm::R_WASM_TABLE_INDEX_I64;

@@ -284,13 +284,12 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
     return XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING;
   }
 
-  s32 Result = XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING;
-  if (!atomic_compare_exchange_strong(&LogFlushStatus, &Result,
-                                      XRayLogFlushStatus::XRAY_LOG_FLUSHING,
-                                      memory_order_release)) {
+  if (atomic_exchange(&LogFlushStatus, XRayLogFlushStatus::XRAY_LOG_FLUSHING,
+                      memory_order_release) ==
+      XRayLogFlushStatus::XRAY_LOG_FLUSHING) {
     if (Verbosity())
-      Report("Not flushing log, implementation is still finalizing.\n");
-    return static_cast<XRayLogFlushStatus>(Result);
+      Report("Not flushing log, implementation is still flushing.\n");
+    return XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING;
   }
 
   if (BQ == nullptr) {

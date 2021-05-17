@@ -183,7 +183,8 @@ TEST(MetadataTest, DeleteInstUsedByDbgValue) {
 
   // Delete %b. The dbg.value should now point to undef.
   I.eraseFromParent();
-  EXPECT_TRUE(isa<UndefValue>(DVIs[0]->getValue()));
+  EXPECT_EQ(DVIs[0]->getNumVariableLocationOps(), 1u);
+  EXPECT_TRUE(isa<UndefValue>(DVIs[0]->getValue(0)));
 }
 
 TEST(DIBuilder, CreateFortranArrayTypeWithAttributes) {
@@ -227,6 +228,20 @@ TEST(DIBuilder, CreateFortranArrayTypeWithAttributes) {
 
   // Avoid memory leak.
   DIVariable::deleteTemporary(DataLocation);
+}
+
+TEST(DIBuilder, CreateSetType) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M(new Module("MyModule", Ctx));
+  DIBuilder DIB(*M);
+  DIScope *Scope = DISubprogram::getDistinct(
+      Ctx, nullptr, "", "", nullptr, 0, nullptr, 0, nullptr, 0, 0,
+      DINode::FlagZero, DISubprogram::SPFlagZero, nullptr);
+  DIType *Type = DIB.createBasicType("Int", 64, dwarf::DW_ATE_signed);
+  DIFile *F = DIB.createFile("main.c", "/");
+
+  DIDerivedType *SetType = DIB.createSetType(Scope, "set1", F, 1, 64, 64, Type);
+  EXPECT_TRUE(isa_and_nonnull<DIDerivedType>(SetType));
 }
 
 } // end namespace

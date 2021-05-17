@@ -69,7 +69,7 @@ add_llvm_target(HexagonCodeGen
   RDFDeadCode.cpp
 
   LINK_COMPONENTS
-   Analysis
+  Analysis
   AsmPrinter
   CodeGen
   Core

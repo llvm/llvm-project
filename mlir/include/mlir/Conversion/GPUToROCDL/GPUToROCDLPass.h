@@ -13,8 +13,9 @@
 
 namespace mlir {
 class LLVMTypeConverter;
-class OwningRewritePatternList;
 class ConversionTarget;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
 template <typename OpT>
 class OperationPass;
@@ -25,7 +26,7 @@ class GPUModuleOp;
 
 /// Collect a set of patterns to convert from the GPU dialect to ROCDL.
 void populateGpuToROCDLConversionPatterns(LLVMTypeConverter &converter,
-                                          OwningRewritePatternList &patterns);
+                                          RewritePatternSet &patterns);
 
 /// Configure target to convert from the GPU dialect to ROCDL.
 void configureGpuToROCDLConversionLegality(ConversionTarget &target);

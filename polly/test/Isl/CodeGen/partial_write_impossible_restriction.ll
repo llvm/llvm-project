@@ -7,7 +7,7 @@
 ;
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
-define void @partial_write_impossible_restriction() {
+define void @partial_write_impossible_restriction(i32* %.pn) {
 entry:
   br i1 undef, label %invoke.cont258, label %cond.true.i.i.i.i1007
 
@@ -15,7 +15,6 @@ cond.true.i.i.i.i1007:
   br label %invoke.cont258
 
 invoke.cont258:
-  %.pn = phi i32* [ null, %cond.true.i.i.i.i1007 ], [ null, %entry ]
   br label %invoke.cont274
 
 invoke.cont274:                                   ; preds = %invoke.cont258
@@ -49,11 +48,11 @@ if.then.i.i1141.loopexit:                         ; preds = %cond.end
 
 
 ; CHECK-LABEL: polly.stmt.cond.false:
-; CHECK:         %polly.access..pn2 = getelementptr i32, i32* %.pn, i64 %polly.indvar
-; CHECK:         store i32 %cond.in.sroa.speculate.load.cond.false_p_scalar_, i32* %polly.access..pn2, align 4, !alias.scope !0, !noalias !2
+; CHECK:         %polly.access..pn{{[0-9]*}} = getelementptr i32, i32* %.pn, i64 %polly.indvar
+; CHECK:         store i32 %cond.in.sroa.speculate.load.cond.false_p_scalar_, i32* %polly.access..pn{{[0-9]*}}, align 4, !alias.scope !0, !noalias !2
 ; CHECK:         br label %polly.merge
 
-; CHECK-LABEL: polly.stmt.cond.false11:
-; CHECK:         %polly.access..pn14 = getelementptr i32, i32* %.pn, i64 0
-; CHECK:         store i32 %cond.in.sroa.speculate.load.cond.false_p_scalar_13, i32* %polly.access..pn14, align 4, !alias.scope !0, !noalias !2
-; CHECK:         br label %polly.stmt.cond.end15
+; CHECK-LABEL: polly.stmt.cond.false{{[0-9]*}}:
+; CHECK:         %polly.access..pn{{[0-9]*}} = getelementptr i32, i32* %.pn, i64 0
+; CHECK:         store i32 %cond.in.sroa.speculate.load.cond.false_p_scalar_{{[0-9]*}}, i32* %polly.access..pn{{[0-9]*}}, align 4, !alias.scope !0, !noalias !2
+; CHECK:         br label %polly.stmt.cond.end{{[0-9]*}}

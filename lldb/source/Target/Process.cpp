@@ -83,16 +83,10 @@ using namespace std::chrono;
 #define DISABLE_MEM_CACHE_DEFAULT true
 #endif
 
-class ProcessOptionValueProperties : public OptionValueProperties {
+class ProcessOptionValueProperties
+    : public Cloneable<ProcessOptionValueProperties, OptionValueProperties> {
 public:
-  ProcessOptionValueProperties(ConstString name)
-      : OptionValueProperties(name) {}
-
-  // This constructor is used when creating ProcessOptionValueProperties when
-  // it is part of a new lldb_private::Process instance. It will copy all
-  // current global property values as needed
-  ProcessOptionValueProperties(ProcessProperties *global_properties)
-      : OptionValueProperties(*global_properties->GetValueProperties()) {}
+  ProcessOptionValueProperties(ConstString name) : Cloneable(name) {}
 
   const Property *GetPropertyAtIndex(const ExecutionContext *exe_ctx,
                                      bool will_modify,
@@ -131,10 +125,12 @@ enum {
 #include "TargetPropertiesEnum.inc"
 };
 
-class ProcessExperimentalOptionValueProperties : public OptionValueProperties {
+class ProcessExperimentalOptionValueProperties
+    : public Cloneable<ProcessExperimentalOptionValueProperties,
+                       OptionValueProperties> {
 public:
   ProcessExperimentalOptionValueProperties()
-      : OptionValueProperties(
+      : Cloneable(
             ConstString(Properties::GetExperimentalSettingsName())) {}
 };
 
@@ -157,8 +153,8 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
         ConstString("thread"), ConstString("Settings specific to threads."),
         true, Thread::GetGlobalProperties()->GetValueProperties());
   } else {
-    m_collection_sp = std::make_shared<ProcessOptionValueProperties>(
-        Process::GetGlobalProperties().get());
+    m_collection_sp =
+        OptionValueProperties::CreateLocalCopy(*Process::GetGlobalProperties());
     m_collection_sp->SetValueChangedCallback(
         ePropertyPythonOSPluginPath,
         [this] { m_process->LoadOperatingSystemPlugin(true); });
@@ -204,6 +200,16 @@ FileSpec ProcessProperties::GetPythonOSPluginPath() const {
   return m_collection_sp->GetPropertyAtIndexAsFileSpec(nullptr, idx);
 }
 
+uint32_t ProcessProperties::GetVirtualAddressableBits() const {
+  const uint32_t idx = ePropertyVirtualAddressableBits;
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(
+      nullptr, idx, g_process_properties[idx].default_uint_value);
+}
+
+void ProcessProperties::SetVirtualAddressableBits(uint32_t bits) {
+  const uint32_t idx = ePropertyVirtualAddressableBits;
+  m_collection_sp->SetPropertyAtIndexAsUInt64(nullptr, idx, bits);
+}
 void ProcessProperties::SetPythonOSPluginPath(const FileSpec &file) {
   const uint32_t idx = ePropertyPythonOSPluginPath;
   m_collection_sp->SetPropertyAtIndexAsFileSpec(nullptr, idx, file);
@@ -242,6 +248,18 @@ void ProcessProperties::SetStopOnSharedLibraryEvents(bool stop) {
   m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, stop);
 }
 
+bool ProcessProperties::GetDisableLangRuntimeUnwindPlans() const {
+  const uint32_t idx = ePropertyDisableLangRuntimeUnwindPlans;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_process_properties[idx].default_uint_value != 0);
+}
+
+void ProcessProperties::SetDisableLangRuntimeUnwindPlans(bool disable) {
+  const uint32_t idx = ePropertyDisableLangRuntimeUnwindPlans;
+  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, disable);
+  m_process->Flush();
+}
+
 bool ProcessProperties::GetDetachKeepsStopped() const {
   const uint32_t idx = ePropertyDetachKeepsStopped;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
@@ -278,6 +296,13 @@ std::chrono::seconds ProcessProperties::GetUtilityExpressionTimeout() const {
   return std::chrono::seconds(value);
 }
 
+std::chrono::seconds ProcessProperties::GetInterruptTimeout() const {
+  const uint32_t idx = ePropertyInterruptTimeout;
+  uint64_t value = m_collection_sp->GetPropertyAtIndexAsUInt64(
+      nullptr, idx, g_process_properties[idx].default_uint_value);
+  return std::chrono::seconds(value);
+}
+
 bool ProcessProperties::GetSteppingRunsAllThreads() const {
   const uint32_t idx = ePropertySteppingRunsAllThreads;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
@@ -305,175 +330,6 @@ void ProcessProperties::SetOSPluginReportsAllThreads(bool does_report) {
   if (exp_values)
     exp_values->SetPropertyAtIndexAsBoolean(
         nullptr, ePropertyOSPluginReportsAllThreads, does_report);
-}
-
-Status ProcessLaunchCommandOptions::SetOptionValue(
-    uint32_t option_idx, llvm::StringRef option_arg,
-    ExecutionContext *execution_context) {
-  Status error;
-  const int short_option = m_getopt_table[option_idx].val;
-
-  switch (short_option) {
-  case 's': // Stop at program entry point
-    launch_info.GetFlags().Set(eLaunchFlagStopAtEntry);
-    break;
-
-  case 'i': // STDIN for read only
-  {
-    FileAction action;
-    if (action.Open(STDIN_FILENO, FileSpec(option_arg), true, false))
-      launch_info.AppendFileAction(action);
-    break;
-  }
-
-  case 'o': // Open STDOUT for write only
-  {
-    FileAction action;
-    if (action.Open(STDOUT_FILENO, FileSpec(option_arg), false, true))
-      launch_info.AppendFileAction(action);
-    break;
-  }
-
-  case 'e': // STDERR for write only
-  {
-    FileAction action;
-    if (action.Open(STDERR_FILENO, FileSpec(option_arg), false, true))
-      launch_info.AppendFileAction(action);
-    break;
-  }
-
-  case 'p': // Process plug-in name
-    launch_info.SetProcessPluginName(option_arg);
-    break;
-
-  case 'n': // Disable STDIO
-  {
-    FileAction action;
-    const FileSpec dev_null(FileSystem::DEV_NULL);
-    if (action.Open(STDIN_FILENO, dev_null, true, false))
-      launch_info.AppendFileAction(action);
-    if (action.Open(STDOUT_FILENO, dev_null, false, true))
-      launch_info.AppendFileAction(action);
-    if (action.Open(STDERR_FILENO, dev_null, false, true))
-      launch_info.AppendFileAction(action);
-    break;
-  }
-
-  case 'w':
-    launch_info.SetWorkingDirectory(FileSpec(option_arg));
-    break;
-
-  case 't': // Open process in new terminal window
-    launch_info.GetFlags().Set(eLaunchFlagLaunchInTTY);
-    break;
-
-  case 'a': {
-    TargetSP target_sp =
-        execution_context ? execution_context->GetTargetSP() : TargetSP();
-    PlatformSP platform_sp =
-        target_sp ? target_sp->GetPlatform() : PlatformSP();
-    launch_info.GetArchitecture() =
-        Platform::GetAugmentedArchSpec(platform_sp.get(), option_arg);
-  } break;
-
-  case 'A': // Disable ASLR.
-  {
-    bool success;
-    const bool disable_aslr_arg =
-        OptionArgParser::ToBoolean(option_arg, true, &success);
-    if (success)
-      disable_aslr = disable_aslr_arg ? eLazyBoolYes : eLazyBoolNo;
-    else
-      error.SetErrorStringWithFormat(
-          "Invalid boolean value for disable-aslr option: '%s'",
-          option_arg.empty() ? "<null>" : option_arg.str().c_str());
-    break;
-  }
-
-  case 'X': // shell expand args.
-  {
-    bool success;
-    const bool expand_args =
-        OptionArgParser::ToBoolean(option_arg, true, &success);
-    if (success)
-      launch_info.SetShellExpandArguments(expand_args);
-    else
-      error.SetErrorStringWithFormat(
-          "Invalid boolean value for shell-expand-args option: '%s'",
-          option_arg.empty() ? "<null>" : option_arg.str().c_str());
-    break;
-  }
-
-  case 'c':
-    if (!option_arg.empty())
-      launch_info.SetShell(FileSpec(option_arg));
-    else
-      launch_info.SetShell(HostInfo::GetDefaultShell());
-    break;
-
-  case 'v':
-    launch_info.GetEnvironment().insert(option_arg);
-    break;
-
-  default:
-    error.SetErrorStringWithFormat("unrecognized short option character '%c'",
-                                   short_option);
-    break;
-  }
-  return error;
-}
-
-static constexpr OptionDefinition g_process_launch_options[] = {
-    {LLDB_OPT_SET_ALL, false, "stop-at-entry", 's', OptionParser::eNoArgument,
-     nullptr, {}, 0, eArgTypeNone,
-     "Stop at the entry point of the program when launching a process."},
-    {LLDB_OPT_SET_ALL, false, "disable-aslr", 'A',
-     OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeBoolean,
-     "Set whether to disable address space layout randomization when launching "
-     "a process."},
-    {LLDB_OPT_SET_ALL, false, "plugin", 'p', OptionParser::eRequiredArgument,
-     nullptr, {}, 0, eArgTypePlugin,
-     "Name of the process plugin you want to use."},
-    {LLDB_OPT_SET_ALL, false, "working-dir", 'w',
-     OptionParser::eRequiredArgument, nullptr, {}, 0,
-     eArgTypeDirectoryName,
-     "Set the current working directory to <path> when running the inferior."},
-    {LLDB_OPT_SET_ALL, false, "arch", 'a', OptionParser::eRequiredArgument,
-     nullptr, {}, 0, eArgTypeArchitecture,
-     "Set the architecture for the process to launch when ambiguous."},
-    {LLDB_OPT_SET_ALL, false, "environment", 'v',
-     OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeNone,
-     "Specify an environment variable name/value string (--environment "
-     "NAME=VALUE). Can be specified multiple times for subsequent environment "
-     "entries."},
-    {LLDB_OPT_SET_1 | LLDB_OPT_SET_2 | LLDB_OPT_SET_3, false, "shell", 'c',
-     OptionParser::eOptionalArgument, nullptr, {}, 0, eArgTypeFilename,
-     "Run the process in a shell (not supported on all platforms)."},
-
-    {LLDB_OPT_SET_1, false, "stdin", 'i', OptionParser::eRequiredArgument,
-     nullptr, {}, 0, eArgTypeFilename,
-     "Redirect stdin for the process to <filename>."},
-    {LLDB_OPT_SET_1, false, "stdout", 'o', OptionParser::eRequiredArgument,
-     nullptr, {}, 0, eArgTypeFilename,
-     "Redirect stdout for the process to <filename>."},
-    {LLDB_OPT_SET_1, false, "stderr", 'e', OptionParser::eRequiredArgument,
-     nullptr, {}, 0, eArgTypeFilename,
-     "Redirect stderr for the process to <filename>."},
-
-    {LLDB_OPT_SET_2, false, "tty", 't', OptionParser::eNoArgument, nullptr,
-     {}, 0, eArgTypeNone,
-     "Start the process in a terminal (not supported on all platforms)."},
-
-    {LLDB_OPT_SET_3, false, "no-stdio", 'n', OptionParser::eNoArgument, nullptr,
-     {}, 0, eArgTypeNone,
-     "Do not set up for terminal I/O to go to running process."},
-    {LLDB_OPT_SET_4, false, "shell-expand-args", 'X',
-     OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeBoolean,
-     "Set whether to shell expand arguments to the process when launching."},
-};
-
-llvm::ArrayRef<OptionDefinition> ProcessLaunchCommandOptions::GetDefinitions() {
-  return llvm::makeArrayRef(g_process_launch_options);
 }
 
 ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,
@@ -973,8 +829,12 @@ bool Process::HandleProcessStateChangedEvent(const EventSP &event_sp,
             case eStopReasonWatchpoint:
             case eStopReasonException:
             case eStopReasonExec:
+            case eStopReasonFork:
+            case eStopReasonVFork:
+            case eStopReasonVForkDone:
             case eStopReasonThreadExiting:
             case eStopReasonInstrumentation:
+            case eStopReasonProcessorTrace:
               if (!other_thread)
                 other_thread = thread;
               break;
@@ -1248,6 +1108,12 @@ bool Process::SetProcessExitStatus(
   return false;
 }
 
+bool Process::UpdateThreadList(ThreadList &old_thread_list,
+                               ThreadList &new_thread_list) {
+  m_thread_plans.ClearThreadCache();
+  return DoUpdateThreadList(old_thread_list, new_thread_list);
+}
+
 void Process::UpdateThreadListIfNeeded() {
   const uint32_t stop_id = GetStopID();
   if (m_thread_list.GetSize(false) == 0 ||
@@ -1474,8 +1340,8 @@ Status Process::ResumeSynchronous(Stream *stream) {
 
   Status error = PrivateResume();
   if (error.Success()) {
-    StateType state =
-        WaitForProcessToStop(llvm::None, nullptr, true, listener_sp, stream);
+    StateType state = WaitForProcessToStop(GetInterruptTimeout(), nullptr, true,
+                                           listener_sp, stream);
     const bool must_be_alive =
         false; // eStateExited is ok, so this must be false
     if (!StateIsStoppedState(state, must_be_alive))
@@ -1519,8 +1385,8 @@ void Process::SetPrivateState(StateType new_state) {
   if (m_finalizing)
     return;
 
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_STATE |
-                                                  LIBLLDB_LOG_PROCESS));
+  Log *log(lldb_private::GetLogIfAnyCategoriesSet(
+      LIBLLDB_LOG_STATE | LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_UNWIND));
   bool state_changed = false;
 
   LLDB_LOGF(log, "Process::SetPrivateState (%s)", StateAsCString(new_state));
@@ -3019,8 +2885,10 @@ void Process::CompleteAttach() {
       ProcessInstanceInfo process_info;
       GetProcessInfo(process_info);
       const ArchSpec &process_arch = process_info.GetArchitecture();
+      const ArchSpec &target_arch = GetTarget().GetArchitecture();
       if (process_arch.IsValid() &&
-          !GetTarget().GetArchitecture().IsExactMatch(process_arch)) {
+          target_arch.IsCompatibleMatch(process_arch) &&
+          !target_arch.IsExactMatch(process_arch)) {
         GetTarget().SetArchitecture(process_arch);
         LLDB_LOGF(log,
                   "Process::%s switching architecture to %s based on info "
@@ -3213,9 +3081,10 @@ Status Process::Halt(bool clear_thread_plans, bool use_run_lock) {
     return Status();
   }
 
-  // Wait for 10 second for the process to stop.
-  StateType state = WaitForProcessToStop(
-      seconds(10), &event_sp, true, halt_listener_sp, nullptr, use_run_lock);
+  // Wait for the process halt timeout seconds for the process to stop.
+  StateType state =
+      WaitForProcessToStop(GetInterruptTimeout(), &event_sp, true,
+                           halt_listener_sp, nullptr, use_run_lock);
   RestoreProcessEvents();
 
   if (state == eStateInvalid || !event_sp) {
@@ -3246,8 +3115,8 @@ Status Process::StopForDestroyOrDetach(lldb::EventSP &exit_event_sp) {
     SendAsyncInterrupt();
 
     // Consume the interrupt event.
-    StateType state =
-        WaitForProcessToStop(seconds(10), &exit_event_sp, true, listener_sp);
+    StateType state = WaitForProcessToStop(GetInterruptTimeout(),
+                                           &exit_event_sp, true, listener_sp);
 
     RestoreProcessEvents();
 
@@ -3537,14 +3406,14 @@ bool Process::ShouldBroadcastEvent(Event *event_ptr) {
         should_resume = !m_thread_list.ShouldStop(event_ptr);
 
       if (was_restarted || should_resume || m_resume_requested) {
-        Vote stop_vote = m_thread_list.ShouldReportStop(event_ptr);
+        Vote report_stop_vote = m_thread_list.ShouldReportStop(event_ptr);
         LLDB_LOGF(log,
                   "Process::ShouldBroadcastEvent: should_resume: %i state: "
-                  "%s was_restarted: %i stop_vote: %d.",
+                  "%s was_restarted: %i report_stop_vote: %d.",
                   should_resume, StateAsCString(state), was_restarted,
-                  stop_vote);
+                  report_stop_vote);
 
-        switch (stop_vote) {
+        switch (report_stop_vote) {
         case eVoteYes:
           return_value = true;
           break;
@@ -5699,6 +5568,26 @@ void Process::Flush() {
   m_queue_list_stop_id = 0;
 }
 
+lldb::addr_t Process::GetCodeAddressMask() {
+  if (m_code_address_mask == 0) {
+    if (uint32_t number_of_addressable_bits = GetVirtualAddressableBits()) {
+      lldb::addr_t address_mask = ~((1ULL << number_of_addressable_bits) - 1);
+      SetCodeAddressMask(address_mask);
+    }
+  }
+  return m_code_address_mask;
+}
+
+lldb::addr_t Process::GetDataAddressMask() {
+  if (m_data_address_mask == 0) {
+    if (uint32_t number_of_addressable_bits = GetVirtualAddressableBits()) {
+      lldb::addr_t address_mask = ~((1ULL << number_of_addressable_bits) - 1);
+      SetDataAddressMask(address_mask);
+    }
+  }
+  return m_data_address_mask;
+}
+
 void Process::DidExec() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
   LLDB_LOGF(log, "Process::%s()", __FUNCTION__);
@@ -5754,6 +5643,8 @@ addr_t Process::ResolveIndirectFunction(const Address *address, Status &error) {
           symbol ? symbol->GetName().AsCString() : "<UNKNOWN>");
       function_addr = LLDB_INVALID_ADDRESS;
     } else {
+      if (ABISP abi_sp = GetABI())
+        function_addr = abi_sp->FixCodeAddress(function_addr);
       m_resolved_indirect_addresses.insert(
           std::pair<addr_t, addr_t>(addr, function_addr));
     }
@@ -5847,12 +5738,12 @@ void Process::PrintWarningUnsupportedLanguage(const SymbolContext &sc) {
   LanguageType language = sc.GetLanguage();
   if (language == eLanguageTypeUnknown)
     return;
-  auto type_system_or_err = sc.module_sp->GetTypeSystemForLanguage(language);
-  if (auto err = type_system_or_err.takeError()) {
-    llvm::consumeError(std::move(err));
+  LanguageSet plugins =
+      PluginManager::GetAllTypeSystemSupportedLanguagesForTypes();
+  if (!plugins[language]) {
     PrintWarning(Process::Warnings::eWarningsUnsupportedLanguage,
                  sc.module_sp.get(),
-                 "This version of LLDB has no plugin for the %s language. "
+                 "This version of LLDB has no plugin for the language \"%s\". "
                  "Inspection of frame variables will be limited.\n",
                  Language::GetNameForLanguageType(language));
   }
@@ -5932,10 +5823,8 @@ Process::AdvanceAddressToNextBranchInstruction(Address default_stop_addr,
 
   const char *plugin_name = nullptr;
   const char *flavor = nullptr;
-  const bool prefer_file_cache = true;
   disassembler_sp = Disassembler::DisassembleRange(
-      target.GetArchitecture(), plugin_name, flavor, GetTarget(), range_bounds,
-      prefer_file_cache);
+      target.GetArchitecture(), plugin_name, flavor, GetTarget(), range_bounds);
   if (disassembler_sp)
     insn_list = &disassembler_sp->GetInstructionList();
 
@@ -6125,7 +6014,7 @@ UtilityFunction *Process::GetLoadImageUtilityFunction(
   return m_dlopen_utility_func_up.get();
 }
 
-llvm::Expected<TraceTypeInfo> Process::GetSupportedTraceType() {
+llvm::Expected<TraceSupportedResponse> Process::TraceSupported() {
   if (!IsLiveDebugSession())
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Can't trace a non-live process.");

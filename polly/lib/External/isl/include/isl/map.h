@@ -203,12 +203,6 @@ __isl_give isl_basic_map *isl_basic_map_upper_bound_si(
 	__isl_take isl_basic_map *bmap,
 	enum isl_dim_type type, unsigned pos, int value);
 __isl_overload
-__isl_give isl_map *isl_map_lower_bound_multi_val(__isl_take isl_map *map,
-	__isl_take isl_multi_val *lower);
-__isl_overload
-__isl_give isl_map *isl_map_upper_bound_multi_val(__isl_take isl_map *map,
-	__isl_take isl_multi_val *upper);
-__isl_overload
 __isl_give isl_map *isl_map_lower_bound_multi_pw_aff(__isl_take isl_map *map,
 	__isl_take isl_multi_pw_aff *lower);
 __isl_overload
@@ -327,10 +321,16 @@ __isl_export
 __isl_give isl_map *isl_map_intersect_range(
 		__isl_take isl_map *map,
 		__isl_take isl_set *set);
+__isl_export
+__isl_give isl_map *isl_map_intersect_domain_factor_domain(
+	__isl_take isl_map *map, __isl_take isl_map *factor);
+__isl_export
 __isl_give isl_map *isl_map_intersect_domain_factor_range(
 	__isl_take isl_map *map, __isl_take isl_map *factor);
+__isl_export
 __isl_give isl_map *isl_map_intersect_range_factor_domain(
 	__isl_take isl_map *map, __isl_take isl_map *factor);
+__isl_export
 __isl_give isl_map *isl_map_intersect_range_factor_range(
 	__isl_take isl_map *map, __isl_take isl_map *factor);
 __isl_export
@@ -358,6 +358,7 @@ __isl_give isl_map *isl_map_preimage_domain_multi_pw_aff(
 	__isl_take isl_map *map, __isl_take isl_multi_pw_aff *mpa);
 __isl_give isl_basic_map *isl_basic_map_product(
 	__isl_take isl_basic_map *bmap1, __isl_take isl_basic_map *bmap2);
+__isl_export
 __isl_give isl_map *isl_map_product(__isl_take isl_map *map1,
 	__isl_take isl_map *map2);
 __isl_give isl_basic_map *isl_basic_map_domain_product(
@@ -498,6 +499,8 @@ __isl_give isl_map *isl_map_order_gt(__isl_take isl_map *map,
 	enum isl_dim_type type1, int pos1, enum isl_dim_type type2, int pos2);
 
 __isl_export
+__isl_give isl_map *isl_set_translation(__isl_take isl_set *deltas);
+__isl_export
 __isl_give isl_map *isl_set_identity(__isl_take isl_set *set);
 
 __isl_export
@@ -593,6 +596,7 @@ isl_bool isl_map_has_equal_space(__isl_keep isl_map *map1,
 isl_bool isl_basic_map_can_zip(__isl_keep isl_basic_map *bmap);
 isl_bool isl_map_can_zip(__isl_keep isl_map *map);
 __isl_give isl_basic_map *isl_basic_map_zip(__isl_take isl_basic_map *bmap);
+__isl_export
 __isl_give isl_map *isl_map_zip(__isl_take isl_map *map);
 
 isl_bool isl_basic_map_can_curry(__isl_keep isl_basic_map *bmap);

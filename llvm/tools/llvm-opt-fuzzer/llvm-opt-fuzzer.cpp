@@ -51,6 +51,7 @@ std::unique_ptr<IRMutator> createOptMutator() {
           InjectorIRStrategy::getDefaultOps()));
   Strategies.push_back(
       std::make_unique<InstDeleterIRStrategy>());
+  Strategies.push_back(std::make_unique<InstModificationIRStrategy>());
 
   return std::make_unique<IRMutator>(std::move(Types), std::move(Strategies));
 }
@@ -135,7 +136,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   // Create pass pipeline
   //
 
-  PassBuilder PB(false, TM.get());
+  PassBuilder PB(TM.get());
 
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
@@ -242,7 +243,7 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(
     exit(1);
   }
 
-  PassBuilder PB(false, TM.get());
+  PassBuilder PB(TM.get());
   ModulePassManager MPM;
   if (auto Err = PB.parsePassPipeline(MPM, PassPipeline)) {
     errs() << *argv[0] << ": " << toString(std::move(Err)) << "\n";

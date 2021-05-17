@@ -1,5 +1,5 @@
 ========================================
-Clang 12.0.0 (In-Progress) Release Notes
+Clang 13.0.0 (In-Progress) Release Notes
 ========================================
 
 .. contents::
@@ -10,7 +10,7 @@ Written by the `LLVM Team <https://llvm.org/>`_
 
 .. warning::
 
-   These are in-progress notes for the upcoming Clang 12 release.
+   These are in-progress notes for the upcoming Clang 13 release.
    Release notes for previous releases can be found on
    `the Download Page <https://releases.llvm.org/download.html>`_.
 
@@ -18,7 +18,7 @@ Introduction
 ============
 
 This document contains the release notes for the Clang C/C++/Objective-C
-frontend, part of the LLVM Compiler Infrastructure, release 12.0.0. Here we
+frontend, part of the LLVM Compiler Infrastructure, release 13.0.0. Here we
 describe the status of Clang in some detail, including major
 improvements from the previous release and new feature work. For the
 general LLVM release notes, see `the LLVM
@@ -35,7 +35,7 @@ main Clang web page, this document applies to the *next* release, not
 the current one. To see the release notes for a specific release, please
 see the `releases page <https://llvm.org/releases/>`_.
 
-What's New in Clang 12.0.0?
+What's New in Clang 13.0.0?
 ===========================
 
 Some of the major new features and improvements to Clang are listed
@@ -46,7 +46,13 @@ sections with improvements to Clang's support for those languages.
 Major New Features
 ------------------
 
-- ...
+- Guaranteed tail calls are now supported with statement attributes
+  ``[[clang::musttail]]`` in C++ and ``__attribute__((musttail))`` in C. The
+  attribute is applied to a return statement (not a function declaration),
+  and an error is emitted if a tail call cannot be guaranteed, for example if
+  the function signatures of caller and callee are not compatible. Guaranteed
+  tail calls enable a class of algorithms that would otherwise use an
+  arbitrary amount of stack space.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -56,80 +62,44 @@ Improvements to Clang's diagnostics
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
-- The builtin intrinsics ``__builtin_bitreverse8``, ``__builtin_bitreverse16``,
-  ``__builtin_bitreverse32`` and ``__builtin_bitreverse64`` may now be used
-  within constant expressions.
-
-- The builtin intrinsics ``__builtin_rotateleft8``, ``__builtin_rotateleft16``,
-  ``__builtin_rotateleft32`` and ``__builtin_rotateleft64`` may now be used
-  within constant expressions.
-
-- The builtin intrinsics ``__builtin_rotateright8``, ``__builtin_rotateright16``,
-  ``__builtin_rotateright32`` and ``__builtin_rotateright64`` may now be used
-  within constant expressions.
+- ...
 
 New Compiler Flags
 ------------------
 
-- ...
+- ``-Wreserved-identifier`` emits warning when user code uses reserved
+  identifiers.
 
-- -fpch-codegen and -fpch-debuginfo generate shared code and/or debuginfo
-  for contents of a precompiled header in a separate object file. This object
-  file needs to be linked in, but its contents do not need to be generated
-  for other objects using the precompiled header. This should usually save
-  compile time. If not using clang-cl, the separate object file needs to
-  be created explicitly from the precompiled header.
-  Example of use:
-
-  .. code-block:: console
-
-    $ clang++ -x c++-header header.h -o header.pch -fpch-codegen -fpch-debuginfo
-    $ clang++ -c header.pch -o shared.o
-    $ clang++ -c source.cpp -o source.o -include-pch header.pch
-    $ clang++ -o binary source.o shared.o
-
-  - Using -fpch-instantiate-templates when generating the precompiled header
-    usually increases the amount of code/debuginfo that can be shared.
-  - In some cases, especially when building with optimizations enabled, using
-    -fpch-codegen may generate so much code in the shared object that compiling
-    it may be a net loss in build time.
-  - Since headers may bring in private symbols of other libraries, it may be
-    sometimes necessary to discard unused symbols (such as by adding
-    -Wl,--gc-sections on ELF platforms to the linking command, and possibly
-    adding -fdata-sections -ffunction-sections to the command generating
-    the shared object).
+- ``-fstack-usage`` generates an extra .su file per input source file. The .su
+  file contains frame size information for each function defined in the source
+  file.
 
 Deprecated Compiler Flags
 -------------------------
-
-The following options are deprecated and ignored. They will be removed in
-future versions of Clang.
 
 - ...
 
 Modified Compiler Flags
 -----------------------
 
-- On ELF, ``-gz`` now defaults to ``-gz=zlib`` with the integrated assembler.
-  It produces ``SHF_COMPRESSED`` style compression of debug information. GNU
-  binutils 2.26 or newer, or lld is required to link produced object files. Use
-  ``-gz=zlib-gnu`` to get the old behavior.
-- Now that `this` pointers are tagged with `nonnull` and `dereferenceable(N)`,
-  `-fno-delete-null-pointer-checks` has gained the power to remove the
-  `nonnull` attribute on `this` for configurations that need it to be nullable.
-- ``-gsplit-dwarf`` no longer implies ``-g2``.
-- ``-fasynchronous-unwind-tables`` is now the default on Linux AArch64/PowerPC.
-  This behavior matches newer GCC.
-  (`D91760 <https://reviews.llvm.org/D91760>`_)
-  (`D92054 <https://reviews.llvm.org/D92054>`_)
+- -Wshadow now also checks for shadowed structured bindings
+- ``-B <prefix>`` (when ``<prefix>`` is a directory) was overloaded to additionally
+  detect GCC installations under ``<prefix>`` (``lib{,32,64}/gcc{,-cross}/$triple``).
+  This behavior was incompatible with GCC, caused interop issues with
+  ``--gcc-toolchain``, and was thus dropped. Specify ``--gcc-toolchain=<dir>``
+  instead. ``-B``'s other GCC-compatible semantics are preserved:
+  ``$prefix/$triple-$file`` and ``$prefix$file`` are searched for executables,
+  libraries, includes, and data files used by the compiler.
 
 Removed Compiler Flags
 -------------------------
 
-The following options no longer exist.
+- The clang-cl ``/fallback`` flag, which made clang-cl invoke Microsoft Visual
+  C++ on files it couldn't compile itself, has been removed.
 
-- clang-cl's ``/Zd`` flag no longer exist. But ``-gline-tables-only`` still
-  exists and does the same thing.
+- ``-Wreturn-std-move-in-c++11``, which checked whether an entity is affected by
+  `CWG1579 <https://wg21.link/CWG1579>`_ to become implicitly movable, has been
+  removed.
 
 New Pragmas in Clang
 --------------------
@@ -139,9 +109,7 @@ New Pragmas in Clang
 Attribute Changes in Clang
 --------------------------
 
-- Added support for the C++20 likelihood attributes ``[[likely]]`` and
-  ``[[unlikely]]``. As an extension they can be used in C++11 and newer.
-  This extension is enabled by default.
+- ...
 
 Windows Support
 ---------------
@@ -154,9 +122,16 @@ C Language Changes in Clang
 C++ Language Changes in Clang
 -----------------------------
 
+- The oldest supported GNU libstdc++ is now 4.8.3 (released 2014-05-22).
+  Clang workarounds for bugs in earlier versions have been removed.
+
 - ...
 
-C++1z Feature Support
+C++20 Feature Support
+^^^^^^^^^^^^^^^^^^^^^
+...
+
+C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 ...
 
@@ -184,49 +159,12 @@ CUDA Support in Clang
 X86 Support in Clang
 --------------------
 
-- The x86 intrinsics ``_mm_popcnt_u32``, ``_mm_popcnt_u64``, ``_popcnt32``,
-  ``_popcnt64``, ``__popcntd`` and ``__popcntq``  may now be used within
-  constant expressions.
-
-- The x86 intrinsics ``_bit_scan_forward``, ``__bsfd`` and ``__bsfq`` may now
-  be used within constant expressions.
-
-- The x86 intrinsics ``_bit_scan_reverse``, ``__bsrd`` and ``__bsrq`` may now
-  be used within constant expressions.
-
-- The x86 intrinsics ``__bswap``, ``__bswapd``, ``__bswap64`` and ``__bswapq``
-  may now be used within constant expressions.
-
-- The x86 intrinsics ``_castf32_u32``, ``_castf64_u64``, ``_castu32_f32`` and
-  ``_castu64_f64`` may now be used within constant expressions.
-
-- The x86 intrinsics ``__rolb``, ``__rolw``, ``__rold``, ``__rolq`, ``_rotl``,
-  ``_rotwl`` and ``_lrotl`` may now be used within constant expressions.
-
-- The x86 intrinsics ``__rorb``, ``__rorw``, ``__rord``, ``__rorq`, ``_rotr``,
-  ``_rotwr`` and ``_lrotr`` may now be used within constant expressions.
-
-- Support for ``-march=alderlake``, ``-march=sapphirerapids`` and
-  ``-march=znver3`` was added.
-
-- Support for ``-march=x86-64-v[234]`` has been added.
-  See :doc:`UsersManual` for details about these micro-architecture levels.
-
-- The -mtune command line option is no longer ignored for X86. This can be used
-  to request microarchitectural optimizations independent on -march. -march=<cpu>
-  implies -mtune=<cpu>. -mtune=generic is the default with no -march or -mtune
-  specified.
-
-- Support for ``HRESET`` instructions has been added.
-
-- Support for ``UINTR`` instructions has been added.
-
-- Support for ``AVXVNNI`` instructions has been added.
+- ...
 
 Internal API Changes
 --------------------
 
-These are major API changes that have happened since the 11.0.0 release of
+These are major API changes that have happened since the 12.0.0 release of
 Clang. If upgrading an external codebase that uses Clang as a library,
 this section should help get you past the largest hurdles of upgrading.
 
@@ -235,67 +173,83 @@ this section should help get you past the largest hurdles of upgrading.
 Build System Changes
 --------------------
 
-These are major changes to the build system that have happened since the 11.0.0
+These are major changes to the build system that have happened since the 12.0.0
 release of Clang. Users of the build system should adjust accordingly.
+
+- The option ``LIBCLANG_INCLUDE_CLANG_TOOLS_EXTRA`` no longer exists. There were
+  two releases with that flag forced off, and no uses were added that forced it
+  on. The recommended replacement is clangd.
 
 - ...
 
 AST Matchers
 ------------
 
-- The behavior of TK_IgnoreUnlessSpelledInSource with the traverse() matcher
-  has been changed to no longer match on template instantiations or on
-  implicit nodes which are not spelled in the source.
-
-- The TK_IgnoreImplicitCastsAndParentheses traversal kind was removed. It
-  is recommended to use TK_IgnoreUnlessSpelledInSource instead.
-
-- The behavior of the forEach() matcher was changed to not internally ignore
-  implicit and parenthesis nodes.
+- ...
 
 clang-format
 ------------
 
-- Option ``BitFieldColonSpacing`` has been added that decides how
-  space should be added around identifier, colon and bit-width in
-  bitfield definitions.
+- Option ``SpacesInLineCommentPrefix`` has been added to control the
+  number of spaces in a line comments prefix.
+
+- Option ``SortIncludes`` has been updated from a ``bool`` to an
+  ``enum`` with backwards compatibility. In addition to the previous
+  ``true``/``false`` states (now ``CaseSensitive``/``Never``), a third
+  state has been added (``CaseInsensitive``) which causes an alphabetical sort
+  with case used as a tie-breaker.
 
   .. code-block:: c++
 
-    // Both (default)
-    struct F {
-      unsigned dscp : 6;
-      unsigned ecn  : 2; // AlignConsecutiveBitFields=true
-    };
-    // None
-    struct F {
-      unsigned dscp:6;
-      unsigned ecn :2;
-    };
-    // Before
-    struct F {
-      unsigned dscp :6;
-      unsigned ecn  :2;
-    };
-    // After
-    struct F {
-      unsigned dscp: 6;
-      unsigned ecn : 2;
-    };
+    // Never (previously false)
+    #include "B/A.h"
+    #include "A/B.h"
+    #include "a/b.h"
+    #include "A/b.h"
+    #include "B/a.h"
 
+    // CaseSensitive (previously true)
+    #include "A/B.h"
+    #include "A/b.h"
+    #include "B/A.h"
+    #include "B/a.h"
+    #include "a/b.h"
 
-- Experimental Support in clang-format for concepts has been improved, to
-  aid this the follow options have been added
+    // CaseInsensitive
+    #include "A/B.h"
+    #include "A/b.h"
+    #include "a/b.h"
+    #include "B/A.h"
+    #include "B/a.h"
 
-- Option ``IndentRequires`` has been added to indent the ``requires`` keyword
-  in templates.
-- Option ``BreakBeforeConceptDeclarations`` has been added to aid the formatting of concepts.
+- ``BasedOnStyle: InheritParentConfig`` allows to use the ``.clang-format`` of
+  the parent directories to overwrite only parts of it.
 
-- Option ``IndentPragmas`` has been added to allow #pragma to indented with the current scope level. This is especially useful when using #pragma to mark OpenMP sections of code.
+- Option ``IndentAccessModifiers`` has been added to be able to give access
+  modifiers their own indentation level inside records.
 
-- Option ``SpaceBeforeCaseColon`` has been added to add a space before the
-  colon in a case or default statement.
+- Option ``ShortNamespaceLines`` has been added to give better control
+  over ``FixNamespaceComments`` when determining a namespace length.
 
+- Support for Whitesmiths has been improved, with fixes for ``namespace`` blocks
+  and ``case`` blocks and labels.
+
+- Option ``EmptyLineAfterAccessModifier`` has been added to remove, force or keep
+  new lines after access modifiers.
+
+- Checks for newlines in option ``EmptyLineBeforeAccessModifier`` are now based
+  on the formatted new lines and not on the new lines in the file. (Fixes
+  https://llvm.org/PR41870.)
+
+- Option ``SpacesInAngles`` has been improved, it now accepts ``Leave`` value
+  that allows to keep spaces where they are already present.
+
+- Option ``AllowShortIfStatementsOnASingleLine`` has been improved, it now
+  accepts ``AllIfsAndElse`` value that allows to put "else if" and "else" short
+  statements on a single line. (Fixes https://llvm.org/PR50019.)
+
+- ``git-clang-format`` no longer formats changes to symbolic links. (Fixes
+  https://llvm.org/PR46992.)
 
 libclang
 --------

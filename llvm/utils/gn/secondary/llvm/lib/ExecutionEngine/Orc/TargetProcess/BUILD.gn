@@ -5,6 +5,7 @@ static_library("TargetProcess") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "JITLoaderGDB.cpp",
     "RegisterEHFrames.cpp",
     "TargetExecutionUtils.cpp",
   ]

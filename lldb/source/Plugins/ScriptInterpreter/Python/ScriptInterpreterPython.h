@@ -13,6 +13,8 @@
 
 #if LLDB_ENABLE_PYTHON
 
+#include "ScriptedProcessPythonInterface.h"
+
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/StructuredDataImpl.h"
@@ -51,6 +53,7 @@ public:
   static lldb_private::ConstString GetPluginNameStatic();
   static const char *GetPluginDescriptionStatic();
   static FileSpec GetPythonDir();
+  static void SharedLibraryDirectoryHelper(FileSpec &this_file);
 
 protected:
   static void ComputePythonDirForApple(llvm::SmallVectorImpl<char> &path);

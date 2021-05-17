@@ -193,7 +193,7 @@ for.end:                                          ; preds = %if.end, %entry
 define void @test7(i64 %start, i64* %inc_ptr) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INC:%.*]] = load i64, i64* [[INC_PTR:%.*]], !range !0
+; CHECK-NEXT:    [[INC:%.*]] = load i64, i64* [[INC_PTR:%.*]], align 8, [[RNG0:!range !.*]]
 ; CHECK-NEXT:    [[OK:%.*]] = icmp sge i64 [[INC]], 0
 ; CHECK-NEXT:    br i1 [[OK]], label [[LOOP_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       loop.preheader:
@@ -311,14 +311,13 @@ for.end:                                          ; preds = %if.end, %entry
 define void @test3_neg(i64 %start) {
 ; CHECK-LABEL: @test3_neg(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[START:%.*]], -1
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i64 [[START]], i64 -1
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[SMAX]], 1
+; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[START:%.*]], i64 -1)
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[SMAX]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[START]], [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[TMP1]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -339,9 +338,8 @@ for.end:                                          ; preds = %if.end, %entry
 define void @test4_neg(i64 %start) {
 ; CHECK-LABEL: @test4_neg(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[START:%.*]], 0
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i64 [[START]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i64 [[SMAX]], 1
+; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[START:%.*]], i64 0)
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i64 [[SMAX]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[START]], [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
@@ -350,7 +348,7 @@ define void @test4_neg(i64 %start) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BACKEDGE]], label [[FOR_END:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[TMP1]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[LOOP]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -405,7 +403,7 @@ for.end:                                          ; preds = %if.end, %entry
 define void @test8(i64 %start, i64* %inc_ptr) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INC:%.*]] = load i64, i64* [[INC_PTR:%.*]], !range !1
+; CHECK-NEXT:    [[INC:%.*]] = load i64, i64* [[INC_PTR:%.*]], align 8, [[RNG1:!range !.*]]
 ; CHECK-NEXT:    [[OK:%.*]] = icmp sge i64 [[INC]], 0
 ; CHECK-NEXT:    br i1 [[OK]], label [[LOOP_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       loop.preheader:
@@ -525,7 +523,7 @@ exit:
 define void @test11(i64* %inc_ptr) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INC:%.*]] = load i64, i64* [[INC_PTR:%.*]], !range !0
+; CHECK-NEXT:    [[INC:%.*]] = load i64, i64* [[INC_PTR:%.*]], align 8, [[RNG0]]
 ; CHECK-NEXT:    [[NE_COND:%.*]] = icmp ne i64 [[INC]], 0
 ; CHECK-NEXT:    br i1 [[NE_COND]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.preheader:
@@ -576,7 +574,7 @@ exit:
 define void @test12(i64* %inc_ptr) {
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INC:%.*]] = load i64, i64* [[INC_PTR:%.*]], !range !0
+; CHECK-NEXT:    [[INC:%.*]] = load i64, i64* [[INC_PTR:%.*]], align 8, [[RNG0]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[INC]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]

@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
+! RUN: %S/test_errors.sh %s %t %flang_fc1 -fopenmp
 
 ! Check OpenMP 5.0 - 2.17.8 flush Construct
 ! Restriction -

@@ -82,6 +82,7 @@ const char *AuxVector::GetEntryName(EntryType type) const {
     case ENTRY_NAME(AUXV_AT_SECURE);         break;
     case ENTRY_NAME(AUXV_AT_BASE_PLATFORM);  break;
     case ENTRY_NAME(AUXV_AT_RANDOM);         break;
+    case ENTRY_NAME(AUXV_AT_HWCAP2);         break;
     case ENTRY_NAME(AUXV_AT_EXECFN);         break;
     case ENTRY_NAME(AUXV_AT_SYSINFO);        break;
     case ENTRY_NAME(AUXV_AT_SYSINFO_EHDR);   break;

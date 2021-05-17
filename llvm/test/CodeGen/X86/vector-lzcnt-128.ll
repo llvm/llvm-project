@@ -236,7 +236,7 @@ define <2 x i64> @testv2i64(<2 x i64> %in) nounwind {
 ; X32-SSE-NEXT:    pshufb %xmm0, %xmm3
 ; X32-SSE-NEXT:    movdqa %xmm0, %xmm1
 ; X32-SSE-NEXT:    psrlw $4, %xmm1
-; X32-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm1
+; X32-SSE-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X32-SSE-NEXT:    pxor %xmm4, %xmm4
 ; X32-SSE-NEXT:    pshufb %xmm1, %xmm2
 ; X32-SSE-NEXT:    pcmpeqb %xmm4, %xmm1
@@ -489,7 +489,7 @@ define <2 x i64> @testv2i64u(<2 x i64> %in) nounwind {
 ; X32-SSE-NEXT:    pshufb %xmm0, %xmm3
 ; X32-SSE-NEXT:    movdqa %xmm0, %xmm1
 ; X32-SSE-NEXT:    psrlw $4, %xmm1
-; X32-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm1
+; X32-SSE-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X32-SSE-NEXT:    pxor %xmm4, %xmm4
 ; X32-SSE-NEXT:    pshufb %xmm1, %xmm2
 ; X32-SSE-NEXT:    pcmpeqb %xmm4, %xmm1
@@ -724,7 +724,7 @@ define <4 x i32> @testv4i32(<4 x i32> %in) nounwind {
 ; X32-SSE-NEXT:    pshufb %xmm0, %xmm3
 ; X32-SSE-NEXT:    movdqa %xmm0, %xmm1
 ; X32-SSE-NEXT:    psrlw $4, %xmm1
-; X32-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm1
+; X32-SSE-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X32-SSE-NEXT:    pxor %xmm4, %xmm4
 ; X32-SSE-NEXT:    pshufb %xmm1, %xmm2
 ; X32-SSE-NEXT:    pcmpeqb %xmm4, %xmm1
@@ -953,7 +953,7 @@ define <4 x i32> @testv4i32u(<4 x i32> %in) nounwind {
 ; X32-SSE-NEXT:    pshufb %xmm0, %xmm3
 ; X32-SSE-NEXT:    movdqa %xmm0, %xmm1
 ; X32-SSE-NEXT:    psrlw $4, %xmm1
-; X32-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm1
+; X32-SSE-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X32-SSE-NEXT:    pxor %xmm4, %xmm4
 ; X32-SSE-NEXT:    pshufb %xmm1, %xmm2
 ; X32-SSE-NEXT:    pcmpeqb %xmm4, %xmm1
@@ -1153,7 +1153,7 @@ define <8 x i16> @testv8i16(<8 x i16> %in) nounwind {
 ; X32-SSE-NEXT:    pshufb %xmm0, %xmm3
 ; X32-SSE-NEXT:    movdqa %xmm0, %xmm1
 ; X32-SSE-NEXT:    psrlw $4, %xmm1
-; X32-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm1
+; X32-SSE-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X32-SSE-NEXT:    pxor %xmm4, %xmm4
 ; X32-SSE-NEXT:    pshufb %xmm1, %xmm2
 ; X32-SSE-NEXT:    pcmpeqb %xmm4, %xmm1
@@ -1346,7 +1346,7 @@ define <8 x i16> @testv8i16u(<8 x i16> %in) nounwind {
 ; X32-SSE-NEXT:    pshufb %xmm0, %xmm3
 ; X32-SSE-NEXT:    movdqa %xmm0, %xmm1
 ; X32-SSE-NEXT:    psrlw $4, %xmm1
-; X32-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm1
+; X32-SSE-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X32-SSE-NEXT:    pxor %xmm4, %xmm4
 ; X32-SSE-NEXT:    pshufb %xmm1, %xmm2
 ; X32-SSE-NEXT:    pcmpeqb %xmm4, %xmm1
@@ -1501,7 +1501,7 @@ define <16 x i8> @testv16i8(<16 x i8> %in) nounwind {
 ; X32-SSE-NEXT:    movdqa %xmm1, %xmm2
 ; X32-SSE-NEXT:    pshufb %xmm0, %xmm2
 ; X32-SSE-NEXT:    psrlw $4, %xmm0
-; X32-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm0
+; X32-SSE-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X32-SSE-NEXT:    pxor %xmm3, %xmm3
 ; X32-SSE-NEXT:    pcmpeqb %xmm0, %xmm3
 ; X32-SSE-NEXT:    pand %xmm2, %xmm3
@@ -1651,7 +1651,7 @@ define <16 x i8> @testv16i8u(<16 x i8> %in) nounwind {
 ; X32-SSE-NEXT:    movdqa %xmm1, %xmm2
 ; X32-SSE-NEXT:    pshufb %xmm0, %xmm2
 ; X32-SSE-NEXT:    psrlw $4, %xmm0
-; X32-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm0
+; X32-SSE-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X32-SSE-NEXT:    pxor %xmm3, %xmm3
 ; X32-SSE-NEXT:    pcmpeqb %xmm0, %xmm3
 ; X32-SSE-NEXT:    pand %xmm2, %xmm3

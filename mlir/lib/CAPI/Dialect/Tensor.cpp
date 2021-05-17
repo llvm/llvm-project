@@ -11,4 +11,4 @@
 #include "mlir/CAPI/Registration.h"
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Tensor, tensor,
-                                      mlir::tensor::TensorDialect);
+                                      mlir::tensor::TensorDialect)

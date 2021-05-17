@@ -11,6 +11,7 @@
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/OpDefinition.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringMap.h"
 
 namespace mlir {
@@ -189,17 +190,17 @@ public:
   /// 'from'. This does not traverse into any nested symbol tables. If there are
   /// any unknown operations that may potentially be symbol tables, no uses are
   /// replaced and failure is returned.
-  LLVM_NODISCARD static LogicalResult replaceAllSymbolUses(StringRef oldSymbol,
-                                                           StringRef newSymbol,
-                                                           Operation *from);
-  LLVM_NODISCARD static LogicalResult
-  replaceAllSymbolUses(Operation *oldSymbol, StringRef newSymbolName,
-                       Operation *from);
-  LLVM_NODISCARD static LogicalResult
-  replaceAllSymbolUses(StringRef oldSymbol, StringRef newSymbol, Region *from);
-  LLVM_NODISCARD static LogicalResult
-  replaceAllSymbolUses(Operation *oldSymbol, StringRef newSymbolName,
-                       Region *from);
+  static LogicalResult replaceAllSymbolUses(StringRef oldSymbol,
+                                            StringRef newSymbol,
+                                            Operation *from);
+  static LogicalResult replaceAllSymbolUses(Operation *oldSymbol,
+                                            StringRef newSymbolName,
+                                            Operation *from);
+  static LogicalResult replaceAllSymbolUses(StringRef oldSymbol,
+                                            StringRef newSymbol, Region *from);
+  static LogicalResult replaceAllSymbolUses(Operation *oldSymbol,
+                                            StringRef newSymbolName,
+                                            Region *from);
 
 private:
   Operation *symbolTableOp;
@@ -261,6 +262,43 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
+// SymbolUserMap
+//===----------------------------------------------------------------------===//
+
+/// This class represents a map of symbols to users, and provides efficient
+/// implementations of symbol queries related to users; such as collecting the
+/// users of a symbol, replacing all uses, etc.
+class SymbolUserMap {
+public:
+  /// Build a user map for all of the symbols defined in regions nested under
+  /// 'symbolTableOp'. A reference to the provided symbol table collection is
+  /// kept by the user map to ensure efficient lookups, thus the lifetime should
+  /// extend beyond that of this map.
+  SymbolUserMap(SymbolTableCollection &symbolTable, Operation *symbolTableOp);
+
+  /// Return the users of the provided symbol operation.
+  ArrayRef<Operation *> getUsers(Operation *symbol) const {
+    auto it = symbolToUsers.find(symbol);
+    return it != symbolToUsers.end() ? it->second.getArrayRef() : llvm::None;
+  }
+
+  /// Return true if the given symbol has no uses.
+  bool use_empty(Operation *symbol) const {
+    return !symbolToUsers.count(symbol);
+  }
+
+  /// Replace all of the uses of the given symbol with `newSymbolName`.
+  void replaceAllUsesWith(Operation *symbol, StringRef newSymbolName);
+
+private:
+  /// A reference to the symbol table used to construct this map.
+  SymbolTableCollection &symbolTable;
+
+  /// A map of symbol operations to symbol users.
+  DenseMap<Operation *, SetVector<Operation *>> symbolToUsers;
+};
+
+//===----------------------------------------------------------------------===//
 // SymbolTable Trait Types
 //===----------------------------------------------------------------------===//
 
@@ -296,8 +334,7 @@ public:
   Operation *lookupSymbol(SymbolRefAttr symbol) {
     return mlir::SymbolTable::lookupSymbolIn(this->getOperation(), symbol);
   }
-  template <typename T>
-  T lookupSymbol(SymbolRefAttr symbol) {
+  template <typename T> T lookupSymbol(SymbolRefAttr symbol) {
     return dyn_cast_or_null<T>(lookupSymbol(symbol));
   }
 };

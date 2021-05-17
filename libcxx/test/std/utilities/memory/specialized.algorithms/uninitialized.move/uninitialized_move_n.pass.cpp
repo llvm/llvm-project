@@ -79,7 +79,7 @@ void test_ctor_throws()
 
 void test_counted()
 {
-    using It = input_iterator<int*>;
+    using It = cpp17_input_iterator<int*>;
     using FIt = forward_iterator<Counted*>;
     const int N = 5;
     int values[N] = {1, 2, 3, 4, 5};

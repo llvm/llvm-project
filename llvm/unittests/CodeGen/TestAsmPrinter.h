@@ -38,6 +38,7 @@ public:
 
   // The following are mock methods to be used in tests.
 
+  MOCK_METHOD2(emitLabel, void(MCSymbol *Symbol, SMLoc Loc));
   MOCK_METHOD2(emitIntValue, void(uint64_t Value, unsigned Size));
   MOCK_METHOD3(emitValueImpl,
                void(const MCExpr *Value, unsigned Size, SMLoc Loc));

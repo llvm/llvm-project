@@ -188,16 +188,22 @@ __attribute__((device)) void test_order32() {
   // CHECK-LABEL: test_order32
   __attribute__((shared)) __UINT32_TYPE__ val;
 
-  // CHECK: %1 = call i32 @llvm.amdgcn.atomic.inc.i32.p0i32(i32* addrspacecast (i32 addrspace(3)* @_ZZ12test_order32vE3val to i32*), i32 %0, i32 4, i32 2, i1 false)
+  // CHECK: call i32 @llvm.amdgcn.atomic.inc.i32.p0i32(i32* addrspacecast (i32 addrspace(3)* @_ZZ12test_order32vE3val to i32*), i32 {{.*}}, i32 2, i32 2, i1 false)
+  val = __builtin_amdgcn_atomic_inc32(&val, val, __ATOMIC_RELAXED, "workgroup");
+
+  // CHECK: call i32 @llvm.amdgcn.atomic.inc.i32.p0i32(i32* addrspacecast (i32 addrspace(3)* @_ZZ12test_order32vE3val to i32*), i32 {{.*}}, i32 4, i32 2, i1 false)
+  val = __builtin_amdgcn_atomic_inc32(&val, val, __ATOMIC_CONSUME, "workgroup");
+
+  // CHECK: call i32 @llvm.amdgcn.atomic.inc.i32.p0i32(i32* addrspacecast (i32 addrspace(3)* @_ZZ12test_order32vE3val to i32*), i32 {{.*}}, i32 4, i32 2, i1 false)
   val = __builtin_amdgcn_atomic_inc32(&val, val, __ATOMIC_ACQUIRE, "workgroup");
 
-  // CHECK: %3 = call i32 @llvm.amdgcn.atomic.dec.i32.p0i32(i32* addrspacecast (i32 addrspace(3)* @_ZZ12test_order32vE3val to i32*), i32 %2, i32 5, i32 2, i1 false)
+  // CHECK: call i32 @llvm.amdgcn.atomic.dec.i32.p0i32(i32* addrspacecast (i32 addrspace(3)* @_ZZ12test_order32vE3val to i32*), i32 {{.*}}, i32 5, i32 2, i1 false)
   val = __builtin_amdgcn_atomic_dec32(&val, val, __ATOMIC_RELEASE, "workgroup");
 
-  // CHECK: %5 = call i32 @llvm.amdgcn.atomic.dec.i32.p0i32(i32* addrspacecast (i32 addrspace(3)* @_ZZ12test_order32vE3val to i32*), i32 %4, i32 6, i32 2, i1 false)
+  // CHECK: call i32 @llvm.amdgcn.atomic.dec.i32.p0i32(i32* addrspacecast (i32 addrspace(3)* @_ZZ12test_order32vE3val to i32*), i32 {{.*}}, i32 6, i32 2, i1 false)
   val = __builtin_amdgcn_atomic_dec32(&val, val, __ATOMIC_ACQ_REL, "workgroup");
 
-  // CHECK: %7 = call i32 @llvm.amdgcn.atomic.dec.i32.p0i32(i32* addrspacecast (i32 addrspace(3)* @_ZZ12test_order32vE3val to i32*), i32 %6, i32 7, i32 2, i1 false)
+  // CHECK: call i32 @llvm.amdgcn.atomic.dec.i32.p0i32(i32* addrspacecast (i32 addrspace(3)* @_ZZ12test_order32vE3val to i32*), i32 {{.*}}, i32 7, i32 2, i1 false)
   val = __builtin_amdgcn_atomic_dec32(&val, val, __ATOMIC_SEQ_CST, "workgroup");
 }
 
@@ -205,16 +211,22 @@ __attribute__((device)) void test_order64() {
   // CHECK-LABEL: test_order64
   __attribute__((shared)) __UINT64_TYPE__ val;
 
-  // CHECK: %1 = call i64 @llvm.amdgcn.atomic.inc.i64.p0i64(i64* addrspacecast (i64 addrspace(3)* @_ZZ12test_order64vE3val to i64*), i64 %0, i32 4, i32 2, i1 false)
+  // CHECK: call i64 @llvm.amdgcn.atomic.inc.i64.p0i64(i64* addrspacecast (i64 addrspace(3)* @_ZZ12test_order64vE3val to i64*), i64 {{.*}}, i32 2, i32 2, i1 false)
+  val = __builtin_amdgcn_atomic_inc64(&val, val, __ATOMIC_RELAXED, "workgroup");
+
+  // CHECK: call i64 @llvm.amdgcn.atomic.dec.i64.p0i64(i64* addrspacecast (i64 addrspace(3)* @_ZZ12test_order64vE3val to i64*), i64 {{.*}}, i32 4, i32 2, i1 false)
+  val = __builtin_amdgcn_atomic_dec64(&val, val, __ATOMIC_CONSUME, "workgroup");
+
+  // CHECK: call i64 @llvm.amdgcn.atomic.inc.i64.p0i64(i64* addrspacecast (i64 addrspace(3)* @_ZZ12test_order64vE3val to i64*), i64 {{.*}}, i32 4, i32 2, i1 false)
   val = __builtin_amdgcn_atomic_inc64(&val, val, __ATOMIC_ACQUIRE, "workgroup");
 
-  // CHECK: %3 = call i64 @llvm.amdgcn.atomic.dec.i64.p0i64(i64* addrspacecast (i64 addrspace(3)* @_ZZ12test_order64vE3val to i64*), i64 %2, i32 5, i32 2, i1 false)
+  // CHECK: call i64 @llvm.amdgcn.atomic.dec.i64.p0i64(i64* addrspacecast (i64 addrspace(3)* @_ZZ12test_order64vE3val to i64*), i64 {{.*}}, i32 5, i32 2, i1 false)
   val = __builtin_amdgcn_atomic_dec64(&val, val, __ATOMIC_RELEASE, "workgroup");
 
-  // CHECK: %5 = call i64 @llvm.amdgcn.atomic.dec.i64.p0i64(i64* addrspacecast (i64 addrspace(3)* @_ZZ12test_order64vE3val to i64*), i64 %4, i32 6, i32 2, i1 false)
+  // CHECK: call i64 @llvm.amdgcn.atomic.dec.i64.p0i64(i64* addrspacecast (i64 addrspace(3)* @_ZZ12test_order64vE3val to i64*), i64 {{.*}}, i32 6, i32 2, i1 false)
   val = __builtin_amdgcn_atomic_dec64(&val, val, __ATOMIC_ACQ_REL, "workgroup");
 
-  // CHECK: %7 = call i64 @llvm.amdgcn.atomic.dec.i64.p0i64(i64* addrspacecast (i64 addrspace(3)* @_ZZ12test_order64vE3val to i64*), i64 %6, i32 7, i32 2, i1 false)
+  // CHECK: call i64 @llvm.amdgcn.atomic.dec.i64.p0i64(i64* addrspacecast (i64 addrspace(3)* @_ZZ12test_order64vE3val to i64*), i64 {{.*}}, i32 7, i32 2, i1 false)
   val = __builtin_amdgcn_atomic_dec64(&val, val, __ATOMIC_SEQ_CST, "workgroup");
 }
 

@@ -20,6 +20,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -1437,4 +1438,12 @@ TEST(DeclPrinter, TestObjCCategoryImplInvalidInterface) {
       "@implementation I (Extension) @end",
       namedDecl(hasName("Extension")).bind("id"),
       "@implementation <<error-type>>(Extension)\n@end", /*AllowError=*/true));
+}
+
+TEST(DeclPrinter, VarDeclWithInitializer) {
+  ASSERT_TRUE(PrintedDeclCXX17Matches(
+      "int a = 0x15;", namedDecl(hasName("a")).bind("id"), "int a = 21"));
+  ASSERT_TRUE(PrintedDeclCXX17Matches(
+      "int a = 0x15;", namedDecl(hasName("a")).bind("id"), "int a = 0x15",
+      [](PrintingPolicy &Policy) { Policy.ConstantsAsWritten = true; }));
 }

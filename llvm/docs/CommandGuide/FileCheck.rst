@@ -773,8 +773,11 @@ The syntax to capture a numeric value is
 * ``<NUMVAR>:`` is an optional definition of variable ``<NUMVAR>`` from the
   captured value.
 
-The syntax of ``<fmtspec>`` is: ``.<precision><conversion specifier>`` where:
+The syntax of ``<fmtspec>`` is: ``#.<precision><conversion specifier>`` where:
 
+* ``#`` is an optional flag available for hex values (see
+  ``<conversion specifier>`` below) which requires the value matched to be
+  prefixed by ``0x``.
 * ``.<precision>`` is an optional printf-style precision specifier in which
   ``<precision>`` indicates the minimum number of digits that the value matched
   must have, expecting leading zeros if needed.

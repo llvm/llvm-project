@@ -10,10 +10,12 @@
 #include "ConfigFragment.h"
 #include "ConfigTesting.h"
 #include "Protocol.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -60,10 +62,11 @@ CompileFlags:
 Index:
   Background: Skip
 ---
-ClangTidy: 
-  CheckOptions: 
-    IgnoreMacros: true
-    example-check.ExampleOption: 0
+Diagnostics:
+  ClangTidy:
+    CheckOptions:
+      IgnoreMacros: true
+      example-check.ExampleOption: 0
   )yaml";
   auto Results = Fragment::parseYAML(YAML, "config.yaml", Diags.callback());
   EXPECT_THAT(Diags.Diagnostics, IsEmpty());
@@ -77,7 +80,7 @@ ClangTidy:
 
   ASSERT_TRUE(Results[2].Index.Background);
   EXPECT_EQ("Skip", *Results[2].Index.Background.getValue());
-  EXPECT_THAT(Results[3].ClangTidy.CheckOptions,
+  EXPECT_THAT(Results[3].Diagnostics.ClangTidy.CheckOptions,
               ElementsAre(PairVal("IgnoreMacros", "true"),
                           PairVal("example-check.ExampleOption", "0")));
 }
@@ -98,7 +101,7 @@ If:
             YAML.range());
 }
 
-TEST(ParseYAML, Diagnostics) {
+TEST(ParseYAML, ConfigDiagnostics) {
   CapturedDiags Diags;
   Annotations YAML(R"yaml(
 If:
@@ -144,6 +147,23 @@ horrible
   ASSERT_THAT(Results, IsEmpty());
 }
 
+TEST(ParseYAML, ExternalBlockNone) {
+  CapturedDiags Diags;
+  Annotations YAML(R"yaml(
+Index:
+  External: None
+  )yaml");
+  auto Results =
+      Fragment::parseYAML(YAML.code(), "config.yaml", Diags.callback());
+  ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+  ASSERT_EQ(Results.size(), 1u);
+  ASSERT_TRUE(Results[0].Index.External);
+  EXPECT_FALSE(Results[0].Index.External.getValue()->File.hasValue());
+  EXPECT_FALSE(Results[0].Index.External.getValue()->MountPoint.hasValue());
+  EXPECT_FALSE(Results[0].Index.External.getValue()->Server.hasValue());
+  EXPECT_THAT(*Results[0].Index.External.getValue()->IsNone, testing::Eq(true));
+}
+
 TEST(ParseYAML, ExternalBlock) {
   CapturedDiags Diags;
   Annotations YAML(R"yaml(
@@ -163,6 +183,35 @@ Index:
   EXPECT_THAT(*Results[0].Index.External.getValue()->Server, Val("bar"));
 }
 
+TEST(ParseYAML, AllScopes) {
+  CapturedDiags Diags;
+  Annotations YAML(R"yaml(
+Completion:
+  AllScopes: True
+  )yaml");
+  auto Results =
+      Fragment::parseYAML(YAML.code(), "config.yaml", Diags.callback());
+  ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+  ASSERT_EQ(Results.size(), 1u);
+  EXPECT_THAT(Results[0].Completion.AllScopes, llvm::ValueIs(Val(true)));
+}
+
+TEST(ParseYAML, AllScopesWarn) {
+  CapturedDiags Diags;
+  Annotations YAML(R"yaml(
+Completion:
+  AllScopes: $diagrange[[Truex]]
+  )yaml");
+  auto Results =
+      Fragment::parseYAML(YAML.code(), "config.yaml", Diags.callback());
+  EXPECT_THAT(Diags.Diagnostics,
+              ElementsAre(AllOf(DiagMessage("AllScopes should be a boolean"),
+                                DiagKind(llvm::SourceMgr::DK_Warning),
+                                DiagPos(YAML.range("diagrange").start),
+                                DiagRange(YAML.range("diagrange")))));
+  ASSERT_EQ(Results.size(), 1u);
+  EXPECT_THAT(Results[0].Completion.AllScopes, testing::Eq(llvm::None));
+}
 } // namespace
 } // namespace config
 } // namespace clangd

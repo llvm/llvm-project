@@ -18,7 +18,7 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 
-typedef input_iterator<const char*> I;
+typedef cpp17_input_iterator<const char*> I;
 
 typedef std::time_get<char, I> F;
 

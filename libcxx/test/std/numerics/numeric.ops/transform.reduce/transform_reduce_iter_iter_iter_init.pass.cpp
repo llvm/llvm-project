@@ -83,22 +83,22 @@ test()
     test_return_type<char, double>();
 
 //  All the iterator categories
-    test<input_iterator        <const int*>, input_iterator        <const unsigned int*> >();
-    test<input_iterator        <const int*>, forward_iterator      <const unsigned int*> >();
-    test<input_iterator        <const int*>, bidirectional_iterator<const unsigned int*> >();
-    test<input_iterator        <const int*>, random_access_iterator<const unsigned int*> >();
+    test<cpp17_input_iterator        <const int*>, cpp17_input_iterator        <const unsigned int*> >();
+    test<cpp17_input_iterator        <const int*>, forward_iterator      <const unsigned int*> >();
+    test<cpp17_input_iterator        <const int*>, bidirectional_iterator<const unsigned int*> >();
+    test<cpp17_input_iterator        <const int*>, random_access_iterator<const unsigned int*> >();
 
-    test<forward_iterator      <const int*>, input_iterator        <const unsigned int*> >();
+    test<forward_iterator      <const int*>, cpp17_input_iterator        <const unsigned int*> >();
     test<forward_iterator      <const int*>, forward_iterator      <const unsigned int*> >();
     test<forward_iterator      <const int*>, bidirectional_iterator<const unsigned int*> >();
     test<forward_iterator      <const int*>, random_access_iterator<const unsigned int*> >();
 
-    test<bidirectional_iterator<const int*>, input_iterator        <const unsigned int*> >();
+    test<bidirectional_iterator<const int*>, cpp17_input_iterator        <const unsigned int*> >();
     test<bidirectional_iterator<const int*>, forward_iterator      <const unsigned int*> >();
     test<bidirectional_iterator<const int*>, bidirectional_iterator<const unsigned int*> >();
     test<bidirectional_iterator<const int*>, random_access_iterator<const unsigned int*> >();
 
-    test<random_access_iterator<const int*>, input_iterator        <const unsigned int*> >();
+    test<random_access_iterator<const int*>, cpp17_input_iterator        <const unsigned int*> >();
     test<random_access_iterator<const int*>, forward_iterator      <const unsigned int*> >();
     test<random_access_iterator<const int*>, bidirectional_iterator<const unsigned int*> >();
     test<random_access_iterator<const int*>, random_access_iterator<const unsigned int*> >();

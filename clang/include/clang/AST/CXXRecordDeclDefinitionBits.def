@@ -131,6 +131,10 @@ FIELD(HasUninitializedFields, 1, NO_MERGE)
 /// constructors from a base class.
 FIELD(HasInheritedConstructor, 1, NO_MERGE)
 
+/// True if there are any member using-declarations that inherit
+/// default constructors from a base class.
+FIELD(HasInheritedDefaultConstructor, 1, NO_MERGE)
+
 /// True if there are any member using-declarations named
 /// 'operator='.
 FIELD(HasInheritedAssignment, 1, NO_MERGE)

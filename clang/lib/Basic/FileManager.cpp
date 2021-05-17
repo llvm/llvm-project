@@ -384,9 +384,12 @@ FileEntryRef FileManager::getVirtualFileRef(StringRef Filename, off_t Size,
 
   // Now that all ancestors of Filename are in the cache, the
   // following call is guaranteed to find the DirectoryEntry from the
-  // cache.
-  auto DirInfo = expectedToOptional(
-      getDirectoryFromFile(*this, Filename, /*CacheFailure=*/true));
+  // cache. A virtual file can also have an empty filename, that could come
+  // from a source location preprocessor directive with an empty filename as
+  // an example, so we need to pretend it has a name to ensure a valid directory
+  // entry can be returned.
+  auto DirInfo = expectedToOptional(getDirectoryFromFile(
+      *this, Filename.empty() ? "." : Filename, /*CacheFailure=*/true));
   assert(DirInfo &&
          "The directory of a virtual file should already be in the cache.");
 

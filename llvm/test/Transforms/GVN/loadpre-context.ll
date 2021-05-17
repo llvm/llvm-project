@@ -14,7 +14,7 @@ define i32 @loadpre_critical_edge(i32* align 8 dereferenceable_or_null(48) %arg,
 ; CHECK:       header:
 ; CHECK-NEXT:    [[V:%.*]] = phi i32 [ [[V_PRE]], [[ENTRY_HEADER_CRIT_EDGE]] ], [ [[SUM:%.*]], [[HEADER]] ]
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY_HEADER_CRIT_EDGE]] ], [ [[IV_NEXT:%.*]], [[HEADER]] ]
-; CHECK-NEXT:    [[NEW_V:%.*]] = call i32 @ro_foo(i32 [[IV]])
+; CHECK-NEXT:    [[NEW_V:%.*]] = call i32 @ro_foo(i32 [[IV]]) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    [[SUM]] = add i32 [[NEW_V]], [[V]]
 ; CHECK-NEXT:    store i32 [[SUM]], i32* [[ARG]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
@@ -59,7 +59,7 @@ define i32 @loadpre_basic(i32* align 8 dereferenceable_or_null(48) %arg, i32 %N)
 ; CHECK:       header:
 ; CHECK-NEXT:    [[V:%.*]] = phi i32 [ [[V_PRE]], [[PREHEADER]] ], [ [[SUM:%.*]], [[HEADER]] ]
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[PREHEADER]] ], [ [[IV_NEXT:%.*]], [[HEADER]] ]
-; CHECK-NEXT:    [[NEW_V:%.*]] = call i32 @ro_foo(i32 [[IV]])
+; CHECK-NEXT:    [[NEW_V:%.*]] = call i32 @ro_foo(i32 [[IV]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[SUM]] = add i32 [[NEW_V]], [[V]]
 ; CHECK-NEXT:    store i32 [[SUM]], i32* [[ARG]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
@@ -107,7 +107,7 @@ define i32 @loadpre_maybe_null(i32* align 8 dereferenceable_or_null(48) %arg, i3
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[PREHEADER]] ], [ [[IV_NEXT:%.*]], [[HEADER]] ]
-; CHECK-NEXT:    [[NEW_V:%.*]] = call i32 @ro_foo(i32 [[IV]])
+; CHECK-NEXT:    [[NEW_V:%.*]] = call i32 @ro_foo(i32 [[IV]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[ARG]], align 4
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[NEW_V]], [[V]]
 ; CHECK-NEXT:    store i32 [[SUM]], i32* [[ARG]], align 4

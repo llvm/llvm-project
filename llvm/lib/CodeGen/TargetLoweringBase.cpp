@@ -45,7 +45,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -113,17 +112,6 @@ static bool darwinHasSinCos(const Triple &TT) {
   // Any other darwin such as WatchOS/TvOS is new enough.
   return true;
 }
-
-// Although this default value is arbitrary, it is not random. It is assumed
-// that a condition that evaluates the same way by a higher percentage than this
-// is best represented as control flow. Therefore, the default value N should be
-// set such that the win from N% correct executions is greater than the loss
-// from (100 - N)% mispredicted executions for the majority of intended targets.
-static cl::opt<int> MinPercentageForPredictableBranch(
-    "min-predictable-branch", cl::init(99),
-    cl::desc("Minimum percentage (0-100) that a condition must be either true "
-             "or false to assume that the condition is predictable"),
-    cl::Hidden);
 
 void TargetLoweringBase::InitLibcalls(const Triple &TT) {
 #define HANDLE_LIBCALL(code, name) \
@@ -849,6 +837,9 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::VECREDUCE_FMIN, VT, Expand);
     setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Expand);
     setOperationAction(ISD::VECREDUCE_SEQ_FMUL, VT, Expand);
+
+    // Named vector shuffles default to expand.
+    setOperationAction(ISD::VECTOR_SPLICE, VT, Expand);
   }
 
   // Most targets ignore the @llvm.prefetch intrinsic.
@@ -985,9 +976,6 @@ TargetLoweringBase::getTypeConversion(LLVMContext &Context, EVT VT) const {
   if (NumElts.isScalar())
     return LegalizeKind(TypeScalarizeVector, EltVT);
 
-  if (VT.getVectorElementCount() == ElementCount::getScalable(1))
-    report_fatal_error("Cannot legalize this vector");
-
   // Try to widen vector elements until the element type is a power of two and
   // promote it to a legal type later on, for example:
   // <3 x i8> -> <4 x i8> -> <4 x i32>
@@ -1005,9 +993,12 @@ TargetLoweringBase::getTypeConversion(LLVMContext &Context, EVT VT) const {
 
     // If type is to be expanded, split the vector.
     //  <4 x i140> -> <2 x i140>
-    if (LK.first == TypeExpandInteger)
+    if (LK.first == TypeExpandInteger) {
+      if (VT.getVectorElementCount() == ElementCount::getScalable(1))
+        report_fatal_error("Cannot legalize this scalable vector");
       return LegalizeKind(TypeSplitVector,
                           VT.getHalfNumVectorElementsVT(Context));
+    }
 
     // Promote the integer element types until a legal vector type is found
     // or until the element integer type is too big. If a legal type was not
@@ -1065,6 +1056,9 @@ TargetLoweringBase::getTypeConversion(LLVMContext &Context, EVT VT) const {
     EVT NVT = VT.getPow2VectorType(Context);
     return LegalizeKind(TypeWidenVector, NVT);
   }
+
+  if (VT.getVectorElementCount() == ElementCount::getScalable(1))
+    report_fatal_error("Cannot legalize this vector");
 
   // Vectors with illegal element types are expanded.
   EVT NVT = EVT::getVectorVT(Context, EltVT,
@@ -1224,36 +1218,6 @@ TargetLoweringBase::emitPatchPoint(MachineInstr &InitialMI,
   }
   MBB->insert(MachineBasicBlock::iterator(MI), MIB);
   MI->eraseFromParent();
-  return MBB;
-}
-
-MachineBasicBlock *
-TargetLoweringBase::emitXRayCustomEvent(MachineInstr &MI,
-                                        MachineBasicBlock *MBB) const {
-  assert(MI.getOpcode() == TargetOpcode::PATCHABLE_EVENT_CALL &&
-         "Called emitXRayCustomEvent on the wrong MI!");
-  auto &MF = *MI.getMF();
-  auto MIB = BuildMI(MF, MI.getDebugLoc(), MI.getDesc());
-  for (unsigned OpIdx = 0; OpIdx != MI.getNumOperands(); ++OpIdx)
-    MIB.add(MI.getOperand(OpIdx));
-
-  MBB->insert(MachineBasicBlock::iterator(MI), MIB);
-  MI.eraseFromParent();
-  return MBB;
-}
-
-MachineBasicBlock *
-TargetLoweringBase::emitXRayTypedEvent(MachineInstr &MI,
-                                       MachineBasicBlock *MBB) const {
-  assert(MI.getOpcode() == TargetOpcode::PATCHABLE_TYPED_EVENT_CALL &&
-         "Called emitXRayTypedEvent on the wrong MI!");
-  auto &MF = *MI.getMF();
-  auto MIB = BuildMI(MF, MI.getDebugLoc(), MI.getDesc());
-  for (unsigned OpIdx = 0; OpIdx != MI.getNumOperands(); ++OpIdx)
-    MIB.add(MI.getOperand(OpIdx));
-
-  MBB->insert(MachineBasicBlock::iterator(MI), MIB);
-  MI.eraseFromParent();
   return MBB;
 }
 
@@ -1536,10 +1500,10 @@ MVT::SimpleValueType TargetLoweringBase::getCmpLibcallReturnType() const {
 /// This method returns the number of registers needed, and the VT for each
 /// register.  It also returns the VT and quantity of the intermediate values
 /// before they are promoted/expanded.
-unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context, EVT VT,
-                                                EVT &IntermediateVT,
-                                                unsigned &NumIntermediates,
-                                                MVT &RegisterVT) const {
+unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context,
+                                                    EVT VT, EVT &IntermediateVT,
+                                                    unsigned &NumIntermediates,
+                                                    MVT &RegisterVT) const {
   ElementCount EltCnt = VT.getVectorElementCount();
 
   // If there is a wider vector type with the same element type as this one,
@@ -1548,7 +1512,7 @@ unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context, EVT VT
   // This handles things like <2 x float> -> <4 x float> and
   // <4 x i1> -> <4 x i32>.
   LegalizeTypeAction TA = getTypeAction(Context, VT);
-  if (EltCnt.getKnownMinValue() != 1 &&
+  if (!EltCnt.isScalar() &&
       (TA == TypeWidenVector || TA == TypePromoteInteger)) {
     EVT RegisterEVT = getTypeToTransformTo(Context, VT);
     if (isTypeLegal(RegisterEVT)) {
@@ -1728,8 +1692,7 @@ bool TargetLoweringBase::allowsMemoryAccessForAlignment(
   }
 
   // This is a misaligned access.
-  return allowsMisalignedMemoryAccesses(VT, AddrSpace, Alignment.value(), Flags,
-                                        Fast);
+  return allowsMisalignedMemoryAccesses(VT, AddrSpace, Alignment, Flags, Fast);
 }
 
 bool TargetLoweringBase::allowsMemoryAccessForAlignment(
@@ -1756,8 +1719,12 @@ bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
                             MMO.getFlags(), Fast);
 }
 
-BranchProbability TargetLoweringBase::getPredictableBranchThreshold() const {
-  return BranchProbability(MinPercentageForPredictableBranch, 100);
+bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
+                                            const DataLayout &DL, LLT Ty,
+                                            const MachineMemOperand &MMO,
+                                            bool *Fast) const {
+  return allowsMemoryAccess(Context, DL, getMVTForLLT(Ty), MMO.getAddrSpace(),
+                            MMO.getAlign(), MMO.getFlags(), Fast);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1843,13 +1810,13 @@ int TargetLoweringBase::InstructionOpcodeToISD(unsigned Opcode) const {
   llvm_unreachable("Unknown instruction type encountered!");
 }
 
-std::pair<int, MVT>
+std::pair<InstructionCost, MVT>
 TargetLoweringBase::getTypeLegalizationCost(const DataLayout &DL,
                                             Type *Ty) const {
   LLVMContext &C = Ty->getContext();
   EVT MTy = getValueType(DL, Ty);
 
-  int Cost = 1;
+  InstructionCost Cost = 1;
   // We keep legalizing the type until we find a legal kind. We assume that
   // the only operation that costs anything is the split. After splitting
   // we need to handle two types.
@@ -2069,7 +2036,7 @@ static bool parseRefinementStep(StringRef In, size_t &Position,
   // step parameter.
   if (RefStepString.size() == 1) {
     char RefStepChar = RefStepString[0];
-    if (RefStepChar >= '0' && RefStepChar <= '9') {
+    if (isDigit(RefStepChar)) {
       Value = RefStepChar - '0';
       return true;
     }

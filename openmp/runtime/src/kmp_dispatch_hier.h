@@ -496,7 +496,7 @@ private:
     T hier_id = (T)current->get_hier_id();
     // Attempt to grab next iteration range for this level
     if (previous_id == 0) {
-      KD_TRACE(1, ("kmp_hier_t.next_recurse(): T#%d (%d) is master of unit\n",
+      KD_TRACE(1, ("kmp_hier_t.next_recurse(): T#%d (%d) is primary of unit\n",
                    gtid, hier_level));
       kmp_int32 contains_last;
       T my_lb, my_ub;
@@ -590,7 +590,7 @@ private:
       }
       if (p_last)
         *p_last = contains_last;
-    } // if master thread of this unit
+    } // if primary thread of this unit
     if (hier_level > 0 || !__kmp_dispatch_hand_threading) {
       KD_TRACE(10,
                ("kmp_hier_t.next_recurse(): T#%d (%d) going into barrier.\n",
@@ -740,7 +740,7 @@ public:
                 gtid));
       if (unit_id == 0) {
         // For hand threading, the sh buffer on the lowest level is only ever
-        // modified and read by the master thread on that level.  Because of
+        // modified and read by the primary thread on that level.  Because of
         // this, we can always use the first sh buffer.
         auto sh = &(parent->hier_barrier.sh[0]);
         KMP_DEBUG_ASSERT(sh);
@@ -784,7 +784,7 @@ public:
           }
         }
         parent->set_next_hand_thread(*p_lb, *p_ub, *p_st, status, tdata->index);
-      } // if master thread of lowest unit level
+      } // if primary thread of lowest unit level
       parent->barrier(pr->get_hier_id(), tdata);
       if (unit_id != 0) {
         *p_lb = parent->get_curr_lb(tdata->index);
@@ -975,7 +975,7 @@ void __kmp_dispatch_init_hierarchy(ident_t *loc, int n,
   KMP_DEBUG_ASSERT(sh);
   pr->flags.use_hier = TRUE;
   pr->u.p.tc = 0;
-  // Have master allocate the hierarchy
+  // Have primary thread allocate the hierarchy
   if (__kmp_tid_from_gtid(gtid) == 0) {
     KD_TRACE(10, ("__kmp_dispatch_init_hierarchy: T#%d pr:%p sh:%p allocating "
                   "hierarchy\n",
@@ -1071,7 +1071,7 @@ void __kmp_dispatch_init_hierarchy(ident_t *loc, int n,
       break;
     int index = __kmp_dispatch_get_index(tid, hier->get_type(i));
     kmp_hier_top_unit_t<T> *my_unit = hier->get_unit(i, index);
-    // Only master threads of this unit within the hierarchy do initialization
+    // Only primary threads of this unit within the hierarchy do initialization
     KD_TRACE(10, ("__kmp_dispatch_init_hierarchy: T#%d (%d) prev_id is 0\n",
                   gtid, i));
     my_unit->reset_shared_barrier();

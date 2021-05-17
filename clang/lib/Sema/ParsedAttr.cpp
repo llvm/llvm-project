@@ -159,6 +159,14 @@ bool ParsedAttr::diagnoseAppertainsTo(Sema &S, const Decl *D) const {
   return getInfo().diagAppertainsToDecl(S, *this, D);
 }
 
+bool ParsedAttr::diagnoseAppertainsTo(Sema &S, const Stmt *St) const {
+  return getInfo().diagAppertainsToStmt(S, *this, St);
+}
+
+bool ParsedAttr::diagnoseMutualExclusion(Sema &S, const Decl *D) const {
+  return getInfo().diagMutualExclusion(S, *this, D);
+}
+
 bool ParsedAttr::appliesToDecl(const Decl *D,
                                attr::SubjectMatchRule MatchRule) const {
   return checkAttributeMatchRuleAppliesTo(D, MatchRule);
@@ -203,4 +211,36 @@ bool ParsedAttr::hasVariadicArg() const {
   // legitimately bumps up against that maximum, we can use another bit to track
   // whether it's truly variadic or not.
   return getInfo().OptArgs == 15;
+}
+
+static unsigned getNumAttributeArgs(const ParsedAttr &AL) {
+  // FIXME: Include the type in the argument list.
+  return AL.getNumArgs() + AL.hasParsedType();
+}
+
+template <typename Compare>
+static bool checkAttributeNumArgsImpl(Sema &S, const ParsedAttr &AL,
+                                      unsigned Num, unsigned Diag,
+                                      Compare Comp) {
+  if (Comp(getNumAttributeArgs(AL), Num)) {
+    S.Diag(AL.getLoc(), Diag) << AL << Num;
+    return false;
+  }
+  return true;
+}
+
+bool ParsedAttr::checkExactlyNumArgs(Sema &S, unsigned Num) const {
+  return checkAttributeNumArgsImpl(S, *this, Num,
+                                   diag::err_attribute_wrong_number_arguments,
+                                   std::not_equal_to<unsigned>());
+}
+bool ParsedAttr::checkAtLeastNumArgs(Sema &S, unsigned Num) const {
+  return checkAttributeNumArgsImpl(S, *this, Num,
+                                   diag::err_attribute_too_few_arguments,
+                                   std::less<unsigned>());
+}
+bool ParsedAttr::checkAtMostNumArgs(Sema &S, unsigned Num) const {
+  return checkAttributeNumArgsImpl(S, *this, Num,
+                                   diag::err_attribute_too_many_arguments,
+                                   std::greater<unsigned>());
 }

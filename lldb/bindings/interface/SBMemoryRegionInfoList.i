@@ -8,6 +8,9 @@
 
 namespace lldb {
 
+%feature("docstring",
+"Represents a list of :py:class:`SBMemoryRegionInfo`."
+) SBMemoryRegionInfoList;
 class SBMemoryRegionInfoList
 {
 public:

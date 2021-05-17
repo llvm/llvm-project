@@ -5,125 +5,118 @@
 define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; PPC64-LABEL: muloti_test:
 ; PPC64:       # %bb.0: # %start
-; PPC64-NEXT:    mulhdu. 8, 3, 6
-; PPC64-NEXT:    mcrf 1, 0
-; PPC64-NEXT:    mulld 8, 5, 4
-; PPC64-NEXT:    cmpdi 3, 0
-; PPC64-NEXT:    mulld 3, 3, 6
-; PPC64-NEXT:    cmpdi 5, 5, 0
-; PPC64-NEXT:    add 3, 3, 8
-; PPC64-NEXT:    crnor 20, 22, 2
-; PPC64-NEXT:    mulhdu 8, 4, 6
-; PPC64-NEXT:    cmpldi 3, 0
-; PPC64-NEXT:    add 3, 8, 3
-; PPC64-NEXT:    cmpld 6, 3, 8
-; PPC64-NEXT:    crandc 21, 24, 2
-; PPC64-NEXT:    crorc 20, 20, 6
-; PPC64-NEXT:    mulhdu. 5, 5, 4
-; PPC64-NEXT:    crorc 20, 20, 2
-; PPC64-NEXT:    li 7, 1
-; PPC64-NEXT:    crnor 20, 20, 21
+; PPC64-NEXT:    addic 8, 5, -1
+; PPC64-NEXT:    mulhdu 9, 5, 4
+; PPC64-NEXT:    mulld 10, 5, 4
+; PPC64-NEXT:    subfe 5, 8, 5
+; PPC64-NEXT:    mulld 8, 3, 6
+; PPC64-NEXT:    add 8, 8, 10
+; PPC64-NEXT:    addic 10, 3, -1
+; PPC64-NEXT:    mulhdu 7, 3, 6
+; PPC64-NEXT:    subfe 3, 10, 3
+; PPC64-NEXT:    and 5, 3, 5
+; PPC64-NEXT:    addic 3, 7, -1
+; PPC64-NEXT:    subfe 7, 3, 7
+; PPC64-NEXT:    or 5, 5, 7
+; PPC64-NEXT:    mulhdu 10, 4, 6
+; PPC64-NEXT:    addic 7, 9, -1
+; PPC64-NEXT:    add 3, 10, 8
+; PPC64-NEXT:    subfe 7, 7, 9
+; PPC64-NEXT:    or 5, 5, 7
+; PPC64-NEXT:    subc 7, 3, 10
+; PPC64-NEXT:    subfe 7, 3, 3
+; PPC64-NEXT:    neg 7, 7
+; PPC64-NEXT:    or 5, 5, 7
 ; PPC64-NEXT:    mulld 4, 4, 6
-; PPC64-NEXT:    bc 12, 20, .LBB0_2
-; PPC64-NEXT:  # %bb.1: # %start
-; PPC64-NEXT:    ori 5, 7, 0
-; PPC64-NEXT:    blr
-; PPC64-NEXT:  .LBB0_2: # %start
-; PPC64-NEXT:    li 5, 0
 ; PPC64-NEXT:    blr
 ;
 ; PPC32-LABEL: muloti_test:
 ; PPC32:       # %bb.0: # %start
 ; PPC32-NEXT:    mflr 0
 ; PPC32-NEXT:    stw 0, 4(1)
-; PPC32-NEXT:    stwu 1, -80(1)
-; PPC32-NEXT:    stw 26, 56(1) # 4-byte Folded Spill
+; PPC32-NEXT:    stwu 1, -64(1)
+; PPC32-NEXT:    stw 24, 32(1) # 4-byte Folded Spill
 ; PPC32-NEXT:    mfcr 12
-; PPC32-NEXT:    stw 27, 60(1) # 4-byte Folded Spill
-; PPC32-NEXT:    mr 27, 4
-; PPC32-NEXT:    stw 29, 68(1) # 4-byte Folded Spill
-; PPC32-NEXT:    mr 29, 7
-; PPC32-NEXT:    stw 30, 72(1) # 4-byte Folded Spill
-; PPC32-NEXT:    mr 30, 8
-; PPC32-NEXT:    mr 26, 3
+; PPC32-NEXT:    stw 26, 40(1) # 4-byte Folded Spill
+; PPC32-NEXT:    mr 26, 7
+; PPC32-NEXT:    stw 28, 48(1) # 4-byte Folded Spill
+; PPC32-NEXT:    mr 28, 4
+; PPC32-NEXT:    stw 29, 52(1) # 4-byte Folded Spill
+; PPC32-NEXT:    mr 29, 8
+; PPC32-NEXT:    mr 24, 3
 ; PPC32-NEXT:    li 3, 0
 ; PPC32-NEXT:    li 4, 0
 ; PPC32-NEXT:    li 7, 0
 ; PPC32-NEXT:    li 8, 0
-; PPC32-NEXT:    stw 20, 32(1) # 4-byte Folded Spill
-; PPC32-NEXT:    stw 21, 36(1) # 4-byte Folded Spill
-; PPC32-NEXT:    stw 22, 40(1) # 4-byte Folded Spill
-; PPC32-NEXT:    stw 23, 44(1) # 4-byte Folded Spill
-; PPC32-NEXT:    mr 23, 6
-; PPC32-NEXT:    stw 24, 48(1) # 4-byte Folded Spill
-; PPC32-NEXT:    mr 24, 5
-; PPC32-NEXT:    stw 25, 52(1) # 4-byte Folded Spill
-; PPC32-NEXT:    mr 25, 10
-; PPC32-NEXT:    stw 28, 64(1) # 4-byte Folded Spill
-; PPC32-NEXT:    mr 28, 9
-; PPC32-NEXT:    stw 12, 28(1)
+; PPC32-NEXT:    stw 23, 28(1) # 4-byte Folded Spill
+; PPC32-NEXT:    mr 23, 5
+; PPC32-NEXT:    stw 25, 36(1) # 4-byte Folded Spill
+; PPC32-NEXT:    mr 25, 9
+; PPC32-NEXT:    stw 27, 44(1) # 4-byte Folded Spill
+; PPC32-NEXT:    mr 27, 6
+; PPC32-NEXT:    stw 30, 56(1) # 4-byte Folded Spill
+; PPC32-NEXT:    mr 30, 10
+; PPC32-NEXT:    stw 12, 24(1)
 ; PPC32-NEXT:    bl __multi3
-; PPC32-NEXT:    mr 7, 4
-; PPC32-NEXT:    mullw 4, 24, 30
-; PPC32-NEXT:    cmpwi 5, 24, 0
-; PPC32-NEXT:    cmpwi 6, 26, 0
-; PPC32-NEXT:    cmpwi 7, 28, 0
-; PPC32-NEXT:    crnor 9, 30, 26
-; PPC32-NEXT:    mullw 8, 29, 23
-; PPC32-NEXT:    add 21, 8, 4
-; PPC32-NEXT:    mullw 11, 28, 27
-; PPC32-NEXT:    mullw 12, 26, 25
-; PPC32-NEXT:    add 11, 12, 11
-; PPC32-NEXT:    cmplwi 7, 11, 0
-; PPC32-NEXT:    mulhwu 9, 30, 23
-; PPC32-NEXT:    add 12, 9, 21
-; PPC32-NEXT:    cmplw 6, 12, 9
-; PPC32-NEXT:    mulhwu 10, 27, 25
-; PPC32-NEXT:    mullw 0, 30, 23
-; PPC32-NEXT:    mullw 22, 27, 25
-; PPC32-NEXT:    addc 4, 22, 0
-; PPC32-NEXT:    add 0, 10, 11
-; PPC32-NEXT:    adde 8, 0, 12
-; PPC32-NEXT:    addc 4, 7, 4
-; PPC32-NEXT:    adde 8, 3, 8
-; PPC32-NEXT:    xor 22, 4, 7
-; PPC32-NEXT:    xor 20, 8, 3
-; PPC32-NEXT:    or. 22, 22, 20
-; PPC32-NEXT:    mcrf 1, 0
-; PPC32-NEXT:    cmpwi 29, 0
-; PPC32-NEXT:    crnor 8, 22, 2
-; PPC32-NEXT:    mulhwu. 23, 29, 23
+; PPC32-NEXT:    mulhwu. 9, 26, 27
+; PPC32-NEXT:    mfcr 9 # cr0
+; PPC32-NEXT:    cmpwi 2, 26, 0
+; PPC32-NEXT:    stw 9, 20(1)
+; PPC32-NEXT:    cmpwi 3, 23, 0
+; PPC32-NEXT:    crnor 12, 14, 10
+; PPC32-NEXT:    cmpwi 4, 24, 0
+; PPC32-NEXT:    mulhwu. 9, 23, 29
 ; PPC32-NEXT:    mcrf 5, 0
-; PPC32-NEXT:    cmplwi 21, 0
-; PPC32-NEXT:    crandc 10, 24, 2
-; PPC32-NEXT:    cmplw 3, 0, 10
-; PPC32-NEXT:    crandc 11, 12, 30
+; PPC32-NEXT:    cmpwi 1, 25, 0
+; PPC32-NEXT:    crnor 4, 6, 18
 ; PPC32-NEXT:    mulhwu. 9, 24, 30
 ; PPC32-NEXT:    mcrf 6, 0
-; PPC32-NEXT:    cmplw 4, 7
-; PPC32-NEXT:    cmplw 7, 8, 3
-; PPC32-NEXT:    crand 12, 30, 0
-; PPC32-NEXT:    crandc 13, 28, 30
-; PPC32-NEXT:    mulhwu. 3, 26, 25
+; PPC32-NEXT:    mulhwu. 0, 25, 28
 ; PPC32-NEXT:    mcrf 7, 0
-; PPC32-NEXT:    cror 0, 12, 13
-; PPC32-NEXT:    crandc 12, 0, 6
-; PPC32-NEXT:    crorc 20, 8, 22
-; PPC32-NEXT:    crorc 20, 20, 26
-; PPC32-NEXT:    mulhwu. 3, 28, 27
-; PPC32-NEXT:    mcrf 1, 0
-; PPC32-NEXT:    crorc 25, 9, 30
-; PPC32-NEXT:    or. 3, 27, 26
-; PPC32-NEXT:    cror 24, 20, 10
-; PPC32-NEXT:    mcrf 5, 0
-; PPC32-NEXT:    crorc 25, 25, 6
-; PPC32-NEXT:    or. 3, 30, 29
-; PPC32-NEXT:    cror 25, 25, 11
-; PPC32-NEXT:    crnor 20, 2, 22
-; PPC32-NEXT:    lwz 12, 28(1)
-; PPC32-NEXT:    cror 20, 20, 25
-; PPC32-NEXT:    cror 20, 20, 24
-; PPC32-NEXT:    crnor 20, 20, 12
+; PPC32-NEXT:    or. 0, 28, 24
+; PPC32-NEXT:    mcrf 2, 0
+; PPC32-NEXT:    or. 0, 29, 26
+; PPC32-NEXT:    crnor 5, 2, 10
+; PPC32-NEXT:    mullw 10, 26, 27
+; PPC32-NEXT:    lwz 26, 20(1)
+; PPC32-NEXT:    mullw 9, 23, 29
+; PPC32-NEXT:    add 9, 10, 9
+; PPC32-NEXT:    mtcrf 128, 26 # cr0
+; PPC32-NEXT:    crorc 6, 12, 2
+; PPC32-NEXT:    crorc 20, 6, 22
+; PPC32-NEXT:    mulhwu 7, 29, 27
+; PPC32-NEXT:    add 9, 7, 9
+; PPC32-NEXT:    cmplw 9, 7
+; PPC32-NEXT:    crorc 21, 4, 26
+; PPC32-NEXT:    cror 20, 20, 0
+; PPC32-NEXT:    crorc 21, 21, 30
+; PPC32-NEXT:    mullw 11, 25, 28
+; PPC32-NEXT:    mullw 12, 24, 30
+; PPC32-NEXT:    add 10, 12, 11
+; PPC32-NEXT:    lwz 12, 24(1)
+; PPC32-NEXT:    lwz 26, 40(1) # 4-byte Folded Reload
+; PPC32-NEXT:    mulhwu 8, 28, 30
+; PPC32-NEXT:    add 10, 8, 10
+; PPC32-NEXT:    cmplw 10, 8
+; PPC32-NEXT:    cror 21, 21, 0
+; PPC32-NEXT:    cror 21, 5, 21
+; PPC32-NEXT:    cror 20, 21, 20
+; PPC32-NEXT:    mullw 0, 29, 27
+; PPC32-NEXT:    mtcrf 32, 12 # cr2
+; PPC32-NEXT:    mtcrf 16, 12 # cr3
+; PPC32-NEXT:    mtcrf 8, 12 # cr4
+; PPC32-NEXT:    lwz 29, 52(1) # 4-byte Folded Reload
+; PPC32-NEXT:    mullw 7, 28, 30
+; PPC32-NEXT:    addc 7, 7, 0
+; PPC32-NEXT:    adde 11, 10, 9
+; PPC32-NEXT:    addc 9, 4, 7
+; PPC32-NEXT:    adde 8, 3, 11
+; PPC32-NEXT:    cmplw 6, 9, 4
+; PPC32-NEXT:    cmplw 8, 3
+; PPC32-NEXT:    crand 22, 2, 24
+; PPC32-NEXT:    crandc 23, 0, 2
+; PPC32-NEXT:    cror 22, 22, 23
+; PPC32-NEXT:    crnor 20, 20, 22
 ; PPC32-NEXT:    li 3, 1
 ; PPC32-NEXT:    bc 12, 20, .LBB0_2
 ; PPC32-NEXT:  # %bb.1: # %start
@@ -133,21 +126,15 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; PPC32-NEXT:    li 7, 0
 ; PPC32-NEXT:  .LBB0_3: # %start
 ; PPC32-NEXT:    mr 3, 8
-; PPC32-NEXT:    mtcrf 32, 12 # cr2
-; PPC32-NEXT:    mtcrf 16, 12 # cr3
-; PPC32-NEXT:    lwz 30, 72(1) # 4-byte Folded Reload
-; PPC32-NEXT:    lwz 29, 68(1) # 4-byte Folded Reload
-; PPC32-NEXT:    lwz 28, 64(1) # 4-byte Folded Reload
-; PPC32-NEXT:    lwz 27, 60(1) # 4-byte Folded Reload
-; PPC32-NEXT:    lwz 26, 56(1) # 4-byte Folded Reload
-; PPC32-NEXT:    lwz 25, 52(1) # 4-byte Folded Reload
-; PPC32-NEXT:    lwz 24, 48(1) # 4-byte Folded Reload
-; PPC32-NEXT:    lwz 23, 44(1) # 4-byte Folded Reload
-; PPC32-NEXT:    lwz 22, 40(1) # 4-byte Folded Reload
-; PPC32-NEXT:    lwz 21, 36(1) # 4-byte Folded Reload
-; PPC32-NEXT:    lwz 20, 32(1) # 4-byte Folded Reload
-; PPC32-NEXT:    lwz 0, 84(1)
-; PPC32-NEXT:    addi 1, 1, 80
+; PPC32-NEXT:    mr 4, 9
+; PPC32-NEXT:    lwz 30, 56(1) # 4-byte Folded Reload
+; PPC32-NEXT:    lwz 28, 48(1) # 4-byte Folded Reload
+; PPC32-NEXT:    lwz 27, 44(1) # 4-byte Folded Reload
+; PPC32-NEXT:    lwz 25, 36(1) # 4-byte Folded Reload
+; PPC32-NEXT:    lwz 24, 32(1) # 4-byte Folded Reload
+; PPC32-NEXT:    lwz 23, 28(1) # 4-byte Folded Reload
+; PPC32-NEXT:    lwz 0, 68(1)
+; PPC32-NEXT:    addi 1, 1, 64
 ; PPC32-NEXT:    mtlr 0
 ; PPC32-NEXT:    blr
 start:

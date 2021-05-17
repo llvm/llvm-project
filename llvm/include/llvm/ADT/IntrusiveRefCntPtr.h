@@ -171,18 +171,15 @@ public:
   IntrusiveRefCntPtr(const IntrusiveRefCntPtr &S) : Obj(S.Obj) { retain(); }
   IntrusiveRefCntPtr(IntrusiveRefCntPtr &&S) : Obj(S.Obj) { S.Obj = nullptr; }
 
-  template <class X>
-  IntrusiveRefCntPtr(IntrusiveRefCntPtr<X> &&S) : Obj(S.get()) {
+  template <class X,
+            std::enable_if_t<std::is_convertible<X *, T *>::value, bool> = true>
+  IntrusiveRefCntPtr(IntrusiveRefCntPtr<X> S) : Obj(S.get()) {
     S.Obj = nullptr;
   }
 
-  template <class X>
+  template <class X,
+            std::enable_if_t<std::is_convertible<X *, T *>::value, bool> = true>
   IntrusiveRefCntPtr(std::unique_ptr<X> S) : Obj(S.release()) {
-    retain();
-  }
-
-  template <class X>
-  IntrusiveRefCntPtr(const IntrusiveRefCntPtr<X> &S) : Obj(S.get()) {
     retain();
   }
 
@@ -258,7 +255,7 @@ inline bool operator!=(T *A, const IntrusiveRefCntPtr<U> &B) {
 }
 
 template <class T>
-bool operator==(std::nullptr_t A, const IntrusiveRefCntPtr<T> &B) {
+bool operator==(std::nullptr_t, const IntrusiveRefCntPtr<T> &B) {
   return !B;
 }
 

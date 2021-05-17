@@ -9,6 +9,7 @@
 #include "DWARFDebugAranges.h"
 #include "DWARFDebugArangeSet.h"
 #include "DWARFUnit.h"
+#include "LogChannelDWARF.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
 
@@ -31,31 +32,40 @@ public:
 };
 
 // Extract
-llvm::Error
-DWARFDebugAranges::extract(const DWARFDataExtractor &debug_aranges_data) {
+void DWARFDebugAranges::extract(const DWARFDataExtractor &debug_aranges_data) {
   lldb::offset_t offset = 0;
 
   DWARFDebugArangeSet set;
   Range range;
   while (debug_aranges_data.ValidOffset(offset)) {
-    llvm::Error error = set.extract(debug_aranges_data, &offset);
-    if (error)
-      return error;
+    const lldb::offset_t set_offset = offset;
+    if (llvm::Error error = set.extract(debug_aranges_data, &offset)) {
+      Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO);
+      LLDB_LOG_ERROR(log, std::move(error),
+                     "DWARFDebugAranges::extract failed to extract "
+                     ".debug_aranges set at offset %#" PRIx64,
+                     set_offset);
+    } else {
+      const uint32_t num_descriptors = set.NumDescriptors();
+      if (num_descriptors > 0) {
+        const dw_offset_t cu_offset = set.GetHeader().cu_offset;
 
-    const uint32_t num_descriptors = set.NumDescriptors();
-    if (num_descriptors > 0) {
-      const dw_offset_t cu_offset = set.GetHeader().cu_offset;
-
-      for (uint32_t i = 0; i < num_descriptors; ++i) {
-        const DWARFDebugArangeSet::Descriptor &descriptor =
-            set.GetDescriptorRef(i);
-        m_aranges.Append(RangeToDIE::Entry(descriptor.address,
-                                           descriptor.length, cu_offset));
+        for (uint32_t i = 0; i < num_descriptors; ++i) {
+          const DWARFDebugArangeSet::Descriptor &descriptor =
+              set.GetDescriptorRef(i);
+          m_aranges.Append(RangeToDIE::Entry(descriptor.address,
+                                             descriptor.length, cu_offset));
+        }
       }
     }
+    // Always use the previous DWARFDebugArangeSet's information to calculate
+    // the offset of the next DWARFDebugArangeSet in case we entouncter an
+    // error in the current DWARFDebugArangeSet and our offset position is
+    // still in the middle of the data. If we do this, we can parse all valid
+    // DWARFDebugArangeSet objects without returning invalid errors.
+    offset = set.GetNextOffset();
     set.Clear();
   }
-  return llvm::ErrorSuccess();
 }
 
 void DWARFDebugAranges::Dump(Log *log) const {

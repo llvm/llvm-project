@@ -138,7 +138,7 @@ static Value *getStrlenWithNull(IRBuilder<> &Builder, Value *Str) {
   PtrPhi->addIncoming(PtrNext, While);
 
   // Condition for the while loop.
-  auto Data = Builder.CreateLoad(PtrPhi);
+  auto Data = Builder.CreateLoad(Builder.getInt8Ty(), PtrPhi);
   auto Cmp = Builder.CreateICmpEQ(Data, CharZero);
   Builder.CreateCondBr(Cmp, WhileDone, While);
 

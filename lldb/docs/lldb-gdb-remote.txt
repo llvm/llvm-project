@@ -235,22 +235,23 @@ send packet: QListThreadsInStopReply
 read packet: OK
 
 //----------------------------------------------------------------------
-// jLLDBTraceSupportedType
+// jLLDBTraceSupported
 //
 // BRIEF
 //  Get the processor tracing type supported by the gdb-server for the current
 //  inferior. Responses might be different depending on the architecture and
 //  capabilities of the underlying OS.
 //
-//  The return packet is a JSON object with the following schema
+//  OUTPUT SCHEMA
+//   {
+//     "name": <string>,
+//         Tracing technology name, e.g. intel-pt, arm-coresight.
+//     "description": <string>,
+//         Description for this technology.
+//   }
 //
-//  {
-//    "name": <tracing technology name, e.g. intel-pt, arm-coresight>
-//    "description": <description string for this technology>
-//  }
-//
-//  If no tracing technology is supported for the inferior, or no process is
-//  running, then an error should be returned.
+//   If no tracing technology is supported for the inferior, or no process is
+//   running, then an error message is returned.
 //
 // NOTE
 //  This packet is used by Trace plug-ins (see lldb_private::Trace.h) to
@@ -258,176 +259,217 @@ read packet: OK
 //  of the tracing technology returned by this packet.
 //----------------------------------------------------------------------
 
-send packet: jLLDBTraceSupportedType
-read packet: {"name": <name>, "description", <description>}/E<error code>;AAAAAAAAA
+send packet: jLLDBTraceSupported
+read packet: {"name":<name>, "description":<description>}/E<error code>;AAAAAAAAA
 
 //----------------------------------------------------------------------
-// jTraceStart:
-//
-// This packet is deprecated.
+// jLLDBTraceStart
 //
 // BRIEF
-//  Packet for starting trace of type lldb::TraceType. The following
-//  parameters should be appended to the packet formatted as a JSON
-//  dictionary, where the schematic for the JSON dictionary in terms of
-//  the recognized Keys is given below in the table.
-//  Different tracing types could require different custom parameters.
-//  Such custom tracing parameters if needed should be collectively
-//  specified in a JSON dictionary and the dictionary can be appended
-//  to this packet (as Value corresponding to "params"). Since sending
-//  JSON data over gdb-remote protocol has certain limitations, binary
-//  escaping convention should be used.
+//  Start tracing a process or its threads using a provided tracing technology.
+//  The input and output are specified as JSON objects. In case of success, an OK
+//  response is returned, or an error otherwise.
 //
-//  Following is the list of parameters -
+// PROCESS TRACING
+//  This traces existing and future threads of the current process. An error is
+//  returned if the process is already being traced.
 //
-//  Key             Value (Integer)                         (O)Optional/
-//                  (except params which should be a        (M)Mandatory
-//                  JSON dictionary)
-//  ==========      ====================================================
+// THREAD TRACING
+//  This traces specific threads.
 //
-//  type            The type of trace to start (see          M
-//                  lldb-enumerations for TraceType)
+// INPUT SCHEMA
+//  {
+//    "type": <string>,
+//        Tracing technology name, e.g. intel-pt, arm-coresight.
 //
-//  buffersize      The size of the buffer to allocate       M
-//                  for trace gathering.
+//    /* thread tracing only */
+//    "tids": [<decimal integer>],
+//        Individual threads to trace.
 //
-//  threadid        The id of the thread to start tracing    O
-//                  on.
+//    ... other parameters specific to the provided tracing type
+//  }
 //
-//  metabuffersize  The size of buffer to hold meta data     O
-//                  used for decoding the trace data.
+// NOTES
+//  - If "tids" is not provided, then the operation is "process tracing",
+//    otherwise it's "thread tracing".
+//  - Each tracing technology can have different levels of support for "thread
+//    tracing" and "process tracing".
 //
-//  params          Any parameters that are specific to      O
-//                  certain trace technologies should be
-//                  collectively specified as a JSON
-//                  dictionary
-//  ==========      ====================================================
+// INTEL-PT
+//  intel-pt supports both "thread tracing" and "process tracing".
 //
-//  Each tracing instance is identified by a trace id which is returned
-//  as the reply to this packet. In case the tracing failed to begin an
-//  error code along with a hex encoded ASCII message is returned
-//  instead.
+//  "Process tracing" is implemented by tracing each thread individually, but
+//  managed by the same "process trace" instance.
+//  Each actual thread trace, either from "process tracing" or "thread tracing",
+//  is stored in an in-memory circular buffer, which keeps the most recent data.
+//
+//  Additional params in the input schema:
+//   {
+//     "threadBufferSize": <decimal integer>,
+//         Trace buffer size per thread in bytes. It must be a power of 2
+//         greater than or equal to 4096 (2^12) bytes.
+//
+//     /* process tracing only */
+//     "processBufferSizeLimit": <decimal integer>,
+//         Maximum total buffer size per process in bytes.
+//         This limit applies to the sum of the sizes of all trace buffers for
+//         the current process, excluding the ones started with "thread tracing".
+//
+//         Whenever a thread is attempted to be traced due to "process tracing"
+//         and the limit would be reached, the process is stopped with a
+//         "tracing" reason along with a meaningful description, so that the
+//         user can retrace the process if needed.
+//   }
+//
+//  Notes:
+//   - Modifying the parameters of an existing trace is not supported. The user
+//     needs to stop the trace and start a new one.
+//   - If "process tracing" is attempted and there are individual threads
+//     already being traced with "thread tracing", these traces are left
+//     unaffected and the threads not traced twice.
+//   - If "thread tracing" is attempted on a thread already being traced with
+//     either "thread tracing" or "process tracing", it fails.
 //----------------------------------------------------------------------
 
-send packet: jTraceStart:{"type":<type>,"buffersize":<buffersize>}]
-read packet: <trace id>/E<error code>;AAAAAAAAA
+Process tracing:
+send packet: jLLDBTraceStart:{"type":<type>,...other params}]
+read packet: OK/E<error code>;AAAAAAAAA
+
+Thread tracing:
+send packet: jLLDBTraceStart:{"type":<type>,"tids":<tids>,...other params}]
+read packet: OK/E<error code>;AAAAAAAAA
 
 //----------------------------------------------------------------------
-// jTraceStop:
-//
-// This packet is deprecated.
+// jLLDBTraceStop
 //
 // BRIEF
-//  Stop tracing instance with trace id <trace id>, of course trace
-//  needs to be started before. The following parameters should be
-//  formatted as a JSON dictionary to the packet. Since sending
-//  JSON data over gdb-remote protocol has certain limitations, binary
-//  escaping convention should be used.
+//  Stop tracing a process or its threads using a provided tracing technology.
+//  The input and output are specified as JSON objects. In case of success, an OK
+//  response is returned, or an error otherwise.
 //
-//  Following is the list of parameters -
+// PROCESS TRACE STOPPING
+//  Stopping a process trace doesn't stop the active traces initiated with
+//  "thread tracing".
 //
-//  Key             Value (Integer)                         (O)Optional/
-//                                                          (M)Mandatory
-//  ==========      ====================================================
+// THREAD TRACE STOPPING
+//  This is a best effort request, which tries to stop as many traces as
+//  possible.
 //
-//  traceid         The trace id of the tracing instance    M
+// INPUT SCHEMA
+//  The schema for the input is
 //
-//  threadid        The id of the thread to stop tracing    O
-//                  on. Since <trace id> could map to
-//                  multiple trace instances (in case it
-//                  maps to the complete process), the
-//                  threadid of a particular thread could
-//                  be appended as "threadid:<thread id>;"
-//                  to stop tracing on that thread.
-//  ==========      ====================================================
+//  {
+//    "type": <string>
+//       Tracing technology name, e.g. intel-pt, arm-coresight.
 //
-//  An OK response is sent in case of success else an error code along
-//  with a hex encoded ASCII message is returned.
+//    /* thread trace stopping only */
+//    "tids":  [<decimal integer>]
+//       Individual thread traces to stop.
+//  }
+//
+// NOTES
+//  - If "tids" is not provided, then the operation is "process trace stopping".
+//
+// INTEL PT
+//  Stopping a specific thread trace started with "process tracing" is allowed.
 //----------------------------------------------------------------------
 
-send packet: jTraceStop:{"traceid":<trace id>}]
-read packet: <OK response>/E<error code>;AAAAAAAAA
+Process trace stopping:
+send packet: jLLDBTraceStop:{"type":<type>}]
+read packet: OK/E<error code>;AAAAAAAAA
+
+Thread trace stopping:
+send packet: jLLDBTraceStop:{"type":<type>,"tids":<tids>}]
+read packet: OK/E<error code>;AAAAAAAAA
 
 //----------------------------------------------------------------------
-// jTraceBufferRead:
-//
-// This packet is deprecated.
+// jLLDBTraceGetState
 //
 // BRIEF
-//  Packet for reading the trace for tracing instance <trace id>, i.e the
-//  id obtained from StartTrace API. The following parameters should be
-//  formatted as a JSON dictionary to the packet. Since sending
-//  JSON data over gdb-remote protocol has certain limitations, binary
-//  escaping convention should be used.
+//  Get the current state of the process and its threads being traced by
+//  a given trace technology. The response is a JSON object with custom
+//  information depending on the trace technology. In case of errors, an
+//  error message is returned.
 //
-//  Following is the list of parameters -
+// INPUT SCHEMA
+//  {
+//     "type": <string>
+//        Tracing technology name, e.g. intel-pt, arm-coresight.
+//  }
 //
-//  Key             Value (Integer)                         (O)Optional/
-//                                                          (M)Mandatory
-//  ==========      ====================================================
-//  traceid         The trace id of the tracing instance    M
+// OUTPUT SCHEMA
+//  {
+//    "tracedThreads": [{
+//      "tid": <decimal integer>,
+//      "binaryData": [
+//        {
+//          "kind": <string>,
+//              Identifier for some binary data related to this thread to
+//              fetch with the jLLDBTraceGetBinaryData packet.
+//          "size": <decimal integer>,
+//              Size in bytes of this thread data.
+//        },
+//      ]
+//    }],
+//    "processBinaryData": [
+//      {
+//        "kind": <string>,
+//            Identifier for some binary data related to this process to
+//            fetch with the jLLDBTraceGetBinaryData packet.
+//        "size": <decimal integer>,
+//            Size in bytes of this thread data.
+//      },
+//    }]
+//  }
 //
-//  offset          The offset to start reading the data    M
-//                  from.
+// NOTES
+//   - "traceThreads" includes all thread traced by both "process tracing" and
+//     "thread tracing".
 //
-//  buffersize      The size of the data intended to read.  M
+// INTEL PT
 //
-//  threadid        The id of the thread to retrieve data   O
-//                  from.
-//  ==========      ====================================================
-//
-//  The trace data is sent as raw binary data if the read was successful
-//  else an error code along with a hex encoded ASCII message is sent.
+//  Binary data kinds:
+//    - threadTraceBuffer: trace buffer for a thread.
+//    - cpuInfo: contents of the /proc/cpuinfo file.
 //----------------------------------------------------------------------
 
-send packet: jTraceBufferRead:{"traceid":<trace id>,"offset":<byteoffset>,"buffersize":<byte_count>}]
-read packet: <binary trace data>/E<error code>;AAAAAAAAA
+send packet: jLLDBTraceGetState:{"type":<type>}]
+read packet: {...object}/E<error code>;AAAAAAAAA
 
 //----------------------------------------------------------------------
-// jTraceMetaRead:
-//
-// This packet is deprecated.
+// jLLDBTraceGetBinaryData
 //
 // BRIEF
-//  Similar Packet as above except it reads meta data.
+//  Get binary data given a trace technology and a data identifier.
+//  The input is specified as a JSON object and the response has the same format
+//  as the "binary memory read" (aka "x") packet. In case of failures, an error
+//  message is returned.
+//
+// SCHEMA
+//  The schema for the input is
+//
+//  {
+//   "type": <string>,
+//       Tracing technology name, e.g. intel-pt, arm-coresight.
+//   "kind": <string>,
+//       Identifier for the data.
+//   "tid"?: <Optional decimal>,
+//       Tid in decimal if the data belongs to a thread.
+//   "offset": <decimal>,
+//       Offset of the data in bytes.
+//   "size": <decimal>,
+//      Number of bytes in to read starting from the offset.
+//  }
+//
+// INTEL PT
+//
+//  Binary data kinds:
+//    - threadTraceBuffer: trace buffer for a thread.
+//    - cpuInfo: contents of the /proc/cpuinfo file.
 //----------------------------------------------------------------------
 
-/----------------------------------------------------------------------
-// jTraceConfigRead:
-//
-// This packet is deprecated.
-//
-// BRIEF
-//  Request the trace configuration for the tracing instance with id
-//  <trace id>.
-//
-//  Following is the list of parameters -
-//
-//  Key             Value (Integer)                         (O)Optional/
-//                                                          (M)Mandatory
-//  ==========      ====================================================
-//  traceid         The trace id of the tracing instance    M
-//
-//  threadid        The id of the thread to obtain trace    O
-//                  configuration from. Since <trace id>
-//                  could map to multiple trace instances
-//                  (in case it maps to the complete
-//                  process), the threadid of a particular
-//                  thread could be appended as
-//                  "threadid:<thread id>;" to obtain the
-//                  trace configuration of that thread.
-//  ==========      ====================================================
-//
-//  In the response packet the trace configuration is sent as text,
-//  formatted as a JSON dictionary. Since sending JSON data over
-//  gdb-remote protocol has certain limitations, binary escaping
-//  convention is used.
-//  In case the trace instance with the <trace id> was not found, an
-//  error code along with a hex encoded ASCII message is returned.
-//----------------------------------------------------------------------
-
-send packet: jTraceConfigRead:{"traceid":<trace id>}
-read packet: {"conf1":<conf1>,"conf2":<conf2>,"params":{"paramName":paramValue}]}];/E<error code>;AAAAAAAAA
+send packet: jLLDBTraceGetBinaryData:{"type":<type>,"kind":<query>,"tid":<tid>,"offset":<offset>,"size":<size>}]
+read packet: <binary data>/E<error code>;AAAAAAAAA
 
 //----------------------------------------------------------------------
 // "qRegisterInfo<hex-reg-id>"

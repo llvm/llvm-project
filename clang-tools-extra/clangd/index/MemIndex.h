@@ -48,12 +48,14 @@ public:
   template <typename SymbolRange, typename RefRange, typename RelationRange,
             typename FileRange, typename Payload>
   MemIndex(SymbolRange &&Symbols, RefRange &&Refs, RelationRange &&Relations,
-           FileRange &&Files, Payload &&BackingData, size_t BackingDataSize)
+           FileRange &&Files, IndexContents IdxContents, Payload &&BackingData,
+           size_t BackingDataSize)
       : MemIndex(std::forward<SymbolRange>(Symbols),
                  std::forward<RefRange>(Refs),
                  std::forward<RelationRange>(Relations),
                  std::forward<Payload>(BackingData), BackingDataSize) {
     this->Files = std::forward<FileRange>(Files);
+    this->IdxContents = IdxContents;
   }
 
   /// Builds an index from slabs. The index takes ownership of the data.
@@ -74,7 +76,7 @@ public:
                  llvm::function_ref<void(const SymbolID &, const Symbol &)>
                      Callback) const override;
 
-  llvm::unique_function<bool(llvm::StringRef) const>
+  llvm::unique_function<IndexContents(llvm::StringRef) const>
   indexedFiles() const override;
 
   size_t estimateMemoryUsage() const override;
@@ -90,6 +92,8 @@ private:
   llvm::DenseMap<std::pair<SymbolID, uint8_t>, std::vector<SymbolID>> Relations;
   // Set of files which were used during this index build.
   llvm::StringSet<> Files;
+  // Contents of the index (symbols, references, etc.)
+  IndexContents IdxContents;
   std::shared_ptr<void> KeepAlive; // poor man's move-only std::any
   // Size of memory retained by KeepAlive.
   size_t BackingDataSize = 0;

@@ -113,10 +113,8 @@ void SuspiciousStringCompareCheck::registerMatchers(MatchFinder *Finder) {
     // Detect suspicious calls to string compare:
     //     'if (strcmp())'  ->  'if (strcmp() != 0)'
     Finder->addMatcher(
-        stmt(anyOf(ifStmt(hasCondition(StringCompareCallExpr)),
-                   whileStmt(hasCondition(StringCompareCallExpr)),
-                   doStmt(hasCondition(StringCompareCallExpr)),
-                   forStmt(hasCondition(StringCompareCallExpr)),
+        stmt(anyOf(mapAnyOf(ifStmt, whileStmt, doStmt, forStmt)
+                       .with(hasCondition(StringCompareCallExpr)),
                    binaryOperator(hasAnyOperatorName("&&", "||"),
                                   hasEitherOperand(StringCompareCallExpr))))
             .bind("missing-comparison"),

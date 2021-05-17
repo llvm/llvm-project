@@ -32,7 +32,7 @@ class raw_ostream;
 
 } // End llvm namespace
 
-/// List of target independent CodeGen pass IDs.
+// List of target independent CodeGen pass IDs.
 namespace llvm {
   FunctionPass *createAtomicExpandPass();
 
@@ -86,7 +86,7 @@ namespace llvm {
   /// MachineDominators - This pass is a machine dominators analysis pass.
   extern char &MachineDominatorsID;
 
-/// MachineDominanaceFrontier - This pass is a machine dominators analysis pass.
+  /// MachineDominanaceFrontier - This pass is a machine dominators analysis.
   extern char &MachineDominanceFrontierID;
 
   /// MachineRegionInfo - This pass computes SESE regions for machine functions.
@@ -150,6 +150,7 @@ namespace llvm {
   /// VirtRegRewriter pass. Rewrite virtual registers to physical registers as
   /// assigned in VirtRegMap.
   extern char &VirtRegRewriterID;
+  FunctionPass *createVirtRegRewriter(bool ClearVirtRegs = true);
 
   /// UnreachableMachineBlockElimination - This pass removes unreachable
   /// machine basic blocks.
@@ -448,6 +449,15 @@ namespace llvm {
   /// shuffles.
   FunctionPass *createExpandReductionsPass();
 
+  // This pass replaces intrinsics operating on vector operands with calls to
+  // the corresponding function in a vector library (e.g., SVML, libmvec).
+  FunctionPass *createReplaceWithVeclibLegacyPass();
+
+  /// This pass expands the vector predication intrinsics into unpredicated
+  /// instructions with selects or just the explicit vector length into the
+  /// predicate mask.
+  FunctionPass *createExpandVectorPredicationPass();
+
   // This pass expands memcmp() to load/stores.
   FunctionPass *createExpandMemCmpPass();
 
@@ -463,6 +473,10 @@ namespace llvm {
   /// Creates CFGuard longjmp target identification pass.
   /// \see CFGuardLongjmp.cpp
   FunctionPass *createCFGuardLongjmpPass();
+
+  /// Creates EHContGuard catchret target identification pass.
+  /// \see EHContGuardCatchret.cpp
+  FunctionPass *createEHContGuardCatchretPass();
 
   /// Create Hardware Loop pass. \see HardwareLoops.cpp
   FunctionPass *createHardwareLoopsPass();
@@ -489,9 +503,16 @@ namespace llvm {
   /// caller saved registers with stack slots.
   extern char &FixupStatepointCallerSavedID;
 
-  /// The pass transform load/store <256 x i32> to AMX load/store intrinsics
+  /// The pass transforms load/store <256 x i32> to AMX load/store intrinsics
   /// or split the data to two <128 x i32>.
   FunctionPass *createX86LowerAMXTypePass();
+
+  /// The pass insert tile config intrinsics for AMX fast register allocation.
+  FunctionPass *createX86PreAMXConfigPass();
+
+  /// The pass transforms amx intrinsics to scalar operation if the function has
+  /// optnone attribute or it is O0.
+  FunctionPass *createX86LowerAMXIntrinsicsPass();
 } // End llvm namespace
 
 #endif

@@ -47,7 +47,7 @@ body:             |
     ADJCALLSTACKDOWN 0, 0
     %10:gr64bit = LGFR %0
     $r2d = COPY %10
-    CallBRASL @foo, killed $r2d, csr_systemz, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc
+    CallBRASL @foo, killed $r2d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc
     ADJCALLSTACKUP 0, 0
     J %bb.1
 

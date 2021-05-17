@@ -1,4 +1,6 @@
 ; RUN: llc -filetype=obj %s -o - | llvm-dwarfdump - | FileCheck %s
+; RUN: llc -filetype=obj --split-dwarf-file=%t.dwo --split-dwarf-output=%t.dwo %s -o %t.o
+; RUN: llvm-dwarfdump %t.dwo | FileCheck %s -check-prefix=SPLIT
 
 ; CHECK: .debug_info contents:
 ; CHECK-NEXT: 0x00000000: Compile Unit: length = 0x0000006e, format = DWARF32, version = 0x0004, abbr_offset = 0x0000, addr_size = 0x04 (next unit at 0x00000072)
@@ -54,6 +56,60 @@
 ; CHECK-NEXT:                DW_AT_external		(true)
 
 ; CHECK: 0x00000071:   NULL
+
+
+; SPLIT:      .debug_info.dwo contents:
+; SPLIT-NEXT: 0x00000000: Compile Unit: length = 0x0000004c, format = DWARF32, version = 0x0004, abbr_offset = 0x0000, addr_size = 0x04 (next unit at 0x00000050)
+
+; SPLIT:      0x0000000b: DW_TAG_compile_unit
+; SPLIT-NEXT:               DW_AT_producer    ("clang version 6.0.0 (trunk 315924) (llvm/trunk 315960)")
+; SPLIT-NEXT:               DW_AT_language    (DW_LANG_C99)
+; SPLIT-NEXT:               DW_AT_name        ("test.c")
+; SPLIT-NEXT:               DW_AT_GNU_dwo_name        ("{{.*}}dwarfdump.ll.tmp.dwo")
+; SPLIT-NEXT:               DW_AT_GNU_dwo_id  (0xad3151f12153fa17)
+
+; SPLIT:      0x00000019:   DW_TAG_variable
+; SPLIT-NEXT:                 DW_AT_name      ("foo")
+; SPLIT-NEXT:                 DW_AT_type      (0x00000024 "int*")
+; SPLIT-NEXT:                 DW_AT_external  (true)
+; SPLIT-NEXT:                 DW_AT_decl_file (0x01)
+; SPLIT-NEXT:                 DW_AT_decl_line (4)
+; SPLIT-NEXT:                 DW_AT_location  (DW_OP_GNU_addr_index 0x0)
+
+; SPLIT:      0x00000024:   DW_TAG_pointer_type
+; SPLIT-NEXT:                 DW_AT_type      (0x00000029 "int")
+
+; SPLIT:      0x00000029:   DW_TAG_base_type
+; SPLIT-NEXT:                 DW_AT_name      ("int")
+; SPLIT-NEXT:                 DW_AT_encoding  (DW_ATE_signed)
+; SPLIT-NEXT:                 DW_AT_byte_size (0x04)
+
+; SPLIT:      0x0000002d:   DW_TAG_variable
+; SPLIT-NEXT:                 DW_AT_name      ("ptr2")
+; SPLIT-NEXT:                 DW_AT_type      (0x00000038 "void()*")
+; SPLIT-NEXT:                 DW_AT_external  (true)
+; SPLIT-NEXT:                 DW_AT_decl_file (0x01)
+; SPLIT-NEXT:                 DW_AT_decl_line (5)
+; SPLIT-NEXT:                 DW_AT_location  (DW_OP_GNU_addr_index 0x1)
+
+; SPLIT:      0x00000038:   DW_TAG_pointer_type
+; SPLIT-NEXT:                 DW_AT_type      (0x0000003d "void()")
+
+; SPLIT:      0x0000003d:   DW_TAG_subroutine_type
+; SPLIT-NEXT:                 DW_AT_prototyped        (true)
+
+; SPLIT:      0x0000003e:   DW_TAG_subprogram
+; SPLIT-NEXT:                 DW_AT_low_pc    (indexed (00000002) address = <unresolved>)
+; SPLIT-NEXT:                 DW_AT_high_pc   (0x00000002)
+; SPLIT-NEXT:                 DW_AT_frame_base        (DW_OP_WASM_location 0x3 0x0, DW_OP_stack_value)
+; SPLIT-NEXT:                 DW_AT_name      ("f2")
+; SPLIT-NEXT:                 DW_AT_decl_file (0x01)
+; SPLIT-NEXT:                 DW_AT_decl_line (2)
+; SPLIT-NEXT:                 DW_AT_prototyped        (true)
+; SPLIT-NEXT:                 DW_AT_external  (true)
+
+; SPLIT:      0x0000004f:   NULL
+
 
 target triple = "wasm32-unknown-unknown"
 

@@ -18,7 +18,7 @@
 // SIMD-ONLY1-NOT: {{__kmpc|__tgt}}
 #ifdef CK1
 
-// CK1: [[MTYPE00:@.+]] = {{.*}}constant [1 x i64] [i64 99]
+// CK1: [[MTYPE00:@.+]] = {{.*}}constant [1 x i64] [i64 67]
 // CK1: [[MTYPE01:@.+]] = {{.*}}constant [1 x i64] [i64 288]
 // CK1: [[MTYPE02:@.+]] = {{.*}}constant [1 x i64] [i64 288]
 
@@ -29,7 +29,7 @@ void add_one(float *b, int dm)
   // CK1:     store float* [[B_ADDR:%.+]], float** [[CBP]]
   // CK1:     call void @__tgt_target_data_begin{{.+}}[[MTYPE00]]
   // CK1:     [[VAL:%.+]] = load float*, float** [[CBP]],
-  // CK1-NOT: store float* [[VAL]], float** [[DECL]],
+  // CK1-NOT: store float* [[VAL]], float** {{%.+}},
   // CK1:     store float* [[VAL]], float** [[PVT:%.+]],
   // CK1:     [[TT:%.+]] = load float*, float** [[PVT]],
   // CK1:     call i32 @__tgt_target{{.+}}[[MTYPE01]]

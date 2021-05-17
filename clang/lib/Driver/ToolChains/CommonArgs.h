@@ -138,13 +138,22 @@ void addMultilibFlag(bool Enabled, const char *const Flag,
 void addX86AlignBranchArgs(const Driver &D, const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs, bool IsLTO);
 
-unsigned getOrCheckAMDGPUCodeObjectVersion(const Driver &D,
-                                           const llvm::opt::ArgList &Args,
-                                           bool Diagnose = false);
+void checkAMDGPUCodeObjectVersion(const Driver &D,
+                                  const llvm::opt::ArgList &Args);
+
+unsigned getAMDGPUCodeObjectVersion(const Driver &D,
+                                    const llvm::opt::ArgList &Args);
+
+bool haveAMDGPUCodeObjectVersionArgument(const Driver &D,
+                                         const llvm::opt::ArgList &Args);
 
 void addMachineOutlinerArgs(const Driver &D, const llvm::opt::ArgList &Args,
                             llvm::opt::ArgStringList &CmdArgs,
                             const llvm::Triple &Triple, bool IsLTO);
+
+void addOpenMPDeviceRTL(const Driver &D, const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args,
+                        StringRef BitcodeSuffix, const llvm::Triple &Triple);
 } // end namespace tools
 } // end namespace driver
 } // end namespace clang

@@ -11,7 +11,7 @@
 },
 {
   "directory": "DIR",
-  "command": "clang -E DIR/regular_cdb_input.cpp -IInputs -o adena.o",
+  "command": "clang -E -IInputs -o adena.o -- DIR/regular_cdb_input.cpp",
   "file": "DIR/regular_cdb_input.cpp"
 }
 ]

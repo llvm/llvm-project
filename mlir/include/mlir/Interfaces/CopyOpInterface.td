@@ -24,12 +24,12 @@ def CopyOpInterface : OpInterface<"CopyOpInterface"> {
   let methods = [
     InterfaceMethod<
       /*desc=*/"Returns the source value for this copy operation",
-      /*retTy=*/"Value",
+      /*retTy=*/"::mlir::Value",
       /*methodName=*/"getSource"
     >,
     InterfaceMethod<
       /*desc=*/"Returns the target value for this copy operation",
-      /*retTy=*/"Value",
+      /*retTy=*/"::mlir::Value",
       /*methodName=*/"getTarget"
     >
   ];

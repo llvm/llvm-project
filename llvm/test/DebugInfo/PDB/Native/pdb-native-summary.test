@@ -6,6 +6,6 @@
 ; `-native` option produces identical output.
 
 ; EMPTY:  Size: 102400 bytes
-; EMPTY:  Guid: {0B355641-86A0-A249-896F-9988FAE52FF0}
+; EMPTY:  Guid: {4156350B-A086-49A2-896F-9988FAE52FF0}
 ; EMPTY:  Age: 1
 ; EMPTY:  Attributes: HasPrivateSymbols

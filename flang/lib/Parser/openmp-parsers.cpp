@@ -155,8 +155,8 @@ TYPE_PARSER(
 TYPE_PARSER(
     "ACQUIRE" >> construct<OmpClause>(construct<OmpClause::Acquire>()) ||
     "ACQ_REL" >> construct<OmpClause>(construct<OmpClause::AcqRel>()) ||
-    "ALIGNED" >>
-        construct<OmpClause>(parenthesized(Parser<OmpAlignedClause>{})) ||
+    "ALIGNED" >> construct<OmpClause>(construct<OmpClause::Aligned>(
+                     parenthesized(Parser<OmpAlignedClause>{}))) ||
     "ALLOCATE" >> construct<OmpClause>(construct<OmpClause::Allocate>(
                       parenthesized(Parser<OmpAllocateClause>{}))) ||
     "ALLOCATOR" >> construct<OmpClause>(construct<OmpClause::Allocator>(
@@ -169,10 +169,10 @@ TYPE_PARSER(
                          (parenthesized(Parser<OmpObjectList>{})))) ||
     "DEFAULT"_id >> construct<OmpClause>(construct<OmpClause::Default>(
                         parenthesized(Parser<OmpDefaultClause>{}))) ||
-    "DEFAULTMAP" >>
-        construct<OmpClause>(parenthesized(Parser<OmpDefaultmapClause>{})) ||
-    "DEPEND" >>
-        construct<OmpClause>(parenthesized(Parser<OmpDependClause>{})) ||
+    "DEFAULTMAP" >> construct<OmpClause>(construct<OmpClause::Defaultmap>(
+                        parenthesized(Parser<OmpDefaultmapClause>{}))) ||
+    "DEPEND" >> construct<OmpClause>(construct<OmpClause::Depend>(
+                    parenthesized(Parser<OmpDependClause>{}))) ||
     "DEVICE" >> construct<OmpClause>(construct<OmpClause::Device>(
                     parenthesized(scalarIntExpr))) ||
     "DIST_SCHEDULE" >>
@@ -188,17 +188,19 @@ TYPE_PARSER(
                        parenthesized(scalarIntExpr))) ||
     "HINT" >> construct<OmpClause>(
                   construct<OmpClause::Hint>(parenthesized(constantExpr))) ||
-    "IF" >> construct<OmpClause>(parenthesized(Parser<OmpIfClause>{})) ||
+    "IF" >> construct<OmpClause>(construct<OmpClause::If>(
+                parenthesized(Parser<OmpIfClause>{}))) ||
     "INBRANCH" >> construct<OmpClause>(construct<OmpClause::Inbranch>()) ||
     "IS_DEVICE_PTR" >> construct<OmpClause>(construct<OmpClause::IsDevicePtr>(
                            parenthesized(nonemptyList(name)))) ||
     "LASTPRIVATE" >> construct<OmpClause>(construct<OmpClause::Lastprivate>(
                          parenthesized(Parser<OmpObjectList>{}))) ||
-    "LINEAR" >>
-        construct<OmpClause>(parenthesized(Parser<OmpLinearClause>{})) ||
+    "LINEAR" >> construct<OmpClause>(construct<OmpClause::Linear>(
+                    parenthesized(Parser<OmpLinearClause>{}))) ||
     "LINK" >> construct<OmpClause>(construct<OmpClause::Link>(
                   parenthesized(Parser<OmpObjectList>{}))) ||
-    "MAP" >> construct<OmpClause>(parenthesized(Parser<OmpMapClause>{})) ||
+    "MAP" >> construct<OmpClause>(construct<OmpClause::Map>(
+                 parenthesized(Parser<OmpMapClause>{}))) ||
     "MERGEABLE" >> construct<OmpClause>(construct<OmpClause::Mergeable>()) ||
     "NOGROUP" >> construct<OmpClause>(construct<OmpClause::Nogroup>()) ||
     "NOTINBRANCH" >>
@@ -227,8 +229,8 @@ TYPE_PARSER(
     "RELEASE" >> construct<OmpClause>(construct<OmpClause::Release>()) ||
     "SAFELEN" >> construct<OmpClause>(construct<OmpClause::Safelen>(
                      parenthesized(scalarIntConstantExpr))) ||
-    "SCHEDULE" >>
-        construct<OmpClause>(parenthesized(Parser<OmpScheduleClause>{})) ||
+    "SCHEDULE" >> construct<OmpClause>(construct<OmpClause::Schedule>(
+                      parenthesized(Parser<OmpScheduleClause>{}))) ||
     "SEQ_CST" >> construct<OmpClause>(construct<OmpClause::SeqCst>()) ||
     "SHARED" >> construct<OmpClause>(construct<OmpClause::Shared>(
                     parenthesized(Parser<OmpObjectList>{}))) ||

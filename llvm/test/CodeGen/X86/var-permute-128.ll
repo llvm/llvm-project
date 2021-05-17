@@ -1101,3 +1101,125 @@ define <16 x i8> @var_shuffle_v16i8_from_v32i8_v16i8(<32 x i8> %v, <16 x i8> %in
   %ret15 = insertelement <16 x i8> %ret14, i8 %v15, i32 15
   ret <16 x i8> %ret15
 }
+
+define void @indices_convert() {
+; SSE3-LABEL: indices_convert:
+; SSE3:       # %bb.0: # %bb
+; SSE3-NEXT:    movdqa (%rax), %xmm0
+; SSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; SSE3-NEXT:    movd %xmm1, %eax
+; SSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
+; SSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
+; SSE3-NEXT:    andl $3, %eax
+; SSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; SSE3-NEXT:    movd %xmm1, %ecx
+; SSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
+; SSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
+; SSE3-NEXT:    andl $3, %ecx
+; SSE3-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE3-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE3-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; SSE3-NEXT:    movups %xmm1, (%rax)
+; SSE3-NEXT:    retq
+;
+; SSSE3-LABEL: indices_convert:
+; SSSE3:       # %bb.0: # %bb
+; SSSE3-NEXT:    movdqa (%rax), %xmm0
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; SSSE3-NEXT:    movd %xmm1, %eax
+; SSSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    andl $3, %eax
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; SSSE3-NEXT:    movd %xmm1, %ecx
+; SSSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    andl $3, %ecx
+; SSSE3-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSSE3-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSSE3-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; SSSE3-NEXT:    movups %xmm1, (%rax)
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: indices_convert:
+; SSE41:       # %bb.0: # %bb
+; SSE41-NEXT:    movaps (%rax), %xmm0
+; SSE41-NEXT:    extractps $2, %xmm0, %eax
+; SSE41-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    andl $3, %eax
+; SSE41-NEXT:    extractps $3, %xmm0, %ecx
+; SSE41-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    andl $3, %ecx
+; SSE41-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE41-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE41-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; SSE41-NEXT:    movups %xmm1, (%rax)
+; SSE41-NEXT:    retq
+;
+; XOP-LABEL: indices_convert:
+; XOP:       # %bb.0: # %bb
+; XOP-NEXT:    vpshufd {{.*#+}} xmm0 = mem[2,3,2,3]
+; XOP-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; XOP-NEXT:    vmovapd (%rax), %xmm1
+; XOP-NEXT:    vpaddq %xmm0, %xmm0, %xmm0
+; XOP-NEXT:    vpermil2pd $0, %xmm0, %xmm1, %xmm1, %xmm0
+; XOP-NEXT:    vmovupd %xmm0, (%rax)
+; XOP-NEXT:    retq
+;
+; AVX1-LABEL: indices_convert:
+; AVX1:       # %bb.0: # %bb
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = mem[2,3,2,3]
+; AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vmovapd (%rax), %xmm1
+; AVX1-NEXT:    vpaddq %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vpermilpd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vmovupd %xmm0, (%rax)
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: indices_convert:
+; AVX2:       # %bb.0: # %bb
+; AVX2-NEXT:    vpbroadcastq (%rax), %xmm0
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [7,7,7,7]
+; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpaddq %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vmovapd (%rax), %xmm1
+; AVX2-NEXT:    vpermilpd %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vmovupd %xmm0, (%rax)
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: indices_convert:
+; AVX512:       # %bb.0: # %bb
+; AVX512-NEXT:    vmovaps (%rax), %ymm0
+; AVX512-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm2 = [7,7,7,7]
+; AVX512-NEXT:    vandps %xmm2, %xmm1, %xmm1
+; AVX512-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
+; AVX512-NEXT:    vmovups %xmm0, (%rax)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+;
+; AVX512VL-LABEL: indices_convert:
+; AVX512VL:       # %bb.0: # %bb
+; AVX512VL-NEXT:    vpbroadcastq (%rax), %xmm0
+; AVX512VL-NEXT:    vpandd {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpermq (%rax), %ymm0, %ymm0
+; AVX512VL-NEXT:    vmovdqu %xmm0, (%rax)
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
+bb:
+  %0 = load <4 x i64>, <4 x i64>* undef, align 32
+  %1 = bitcast <4 x i64> %0 to <8 x i32>
+  %2 = shufflevector <8 x i32> %1, <8 x i32> undef, <2 x i32> <i32 2, i32 12>
+  %3 = and <2 x i32> %2, <i32 7, i32 7>
+  %4 = extractelement <2 x i32> %3, i32 0
+  %vecext.i8.1 = extractelement <4 x i64> %0, i32 %4
+  %5 = extractelement <2 x i32> %3, i32 1
+  %vecext.i8.2 = extractelement <4 x i64> %0, i32 %5
+  %6 = insertelement <2 x i64> poison, i64 %vecext.i8.1, i32 0
+  %7 = insertelement <2 x i64> %6, i64 %vecext.i8.2, i32 1
+  %8 = select <2 x i1> undef, <2 x i64> undef, <2 x i64> %7
+  store <2 x i64> %8, <2 x i64>* undef, align 8
+  ret void
+}

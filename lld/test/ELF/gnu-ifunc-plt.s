@@ -80,9 +80,9 @@
 // Test that --shuffle-sections does not affect the order of relocations and that
 // we still place IRELATIVE relocations last. Check both random seed (0) and an
 // arbitrary seed that was known to break the order of relocations previously (3).
-// RUN: ld.lld --shuffle-sections=3 %t.so %t.o -o %tout2
+// RUN: ld.lld --shuffle-sections='*=3' %t.so %t.o -o %tout2
 // RUN: llvm-readobj --relocations %tout2 | FileCheck %s --check-prefix=SHUFFLE
-// RUN: ld.lld --shuffle-sections=0 %t.so %t.o -o %tout3
+// RUN: ld.lld --shuffle-sections='*=0' %t.so %t.o -o %tout3
 // RUN: llvm-readobj --relocations %tout3 | FileCheck %s --check-prefix=SHUFFLE
 
 // SHUFFLE:      Section {{.*}} .rela.dyn {

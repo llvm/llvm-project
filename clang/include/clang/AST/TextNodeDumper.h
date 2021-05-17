@@ -69,10 +69,8 @@ public:
       return;
     }
 
-    // We need to capture an owning-string in the lambda because the lambda
-    // is invoked in a deferred manner.
-    std::string LabelStr(Label);
-    auto DumpWithIndent = [this, DoAddChild, LabelStr](bool IsLastChild) {
+    auto DumpWithIndent = [this, DoAddChild,
+                           Label(Label.str())](bool IsLastChild) {
       // Print out the appropriate tree structure and work out the prefix for
       // children of this node. For instance:
       //
@@ -89,8 +87,8 @@ public:
         OS << '\n';
         ColorScope Color(OS, ShowColors, IndentColor);
         OS << Prefix << (IsLastChild ? '`' : '|') << '-';
-        if (!LabelStr.empty())
-          OS << LabelStr << ": ";
+        if (!Label.empty())
+          OS << Label << ": ";
 
         this->Prefix.push_back(IsLastChild ? ' ' : '|');
         this->Prefix.push_back(' ');

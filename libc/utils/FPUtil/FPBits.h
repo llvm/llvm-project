@@ -57,7 +57,7 @@ template <> struct FPUIntType<long double> { using Type = __uint128_t; };
 // floating numbers. On x86 platforms however, the 'long double' type maps to
 // an x87 floating point format. This format is an IEEE 754 extension format.
 // It is handled as an explicit specialization of this class.
-template <typename T> struct __attribute__((packed)) FPBits {
+template <typename T> union FPBits {
   static_assert(cpp::IsFloatingPointType<T>::Value,
                 "FPBits instantiated with invalid type.");
 
@@ -66,9 +66,18 @@ template <typename T> struct __attribute__((packed)) FPBits {
   // type is provided for such reinterpretations.
   using UIntType = typename FPUIntType<T>::Type;
 
-  UIntType mantissa : MantissaWidth<T>::value;
-  uint16_t exponent : ExponentWidth<T>::value;
-  uint8_t sign : 1;
+  struct __attribute__((packed)) {
+    UIntType mantissa : MantissaWidth<T>::value;
+    uint16_t exponent : ExponentWidth<T>::value;
+    uint8_t sign : 1;
+  } encoding;
+  UIntType integer;
+  T val;
+
+  static_assert(sizeof(encoding) == sizeof(UIntType),
+                "Encoding and integral representation have different sizes.");
+  static_assert(sizeof(integer) == sizeof(UIntType),
+                "Integral representation and value type have different sizes.");
 
   static constexpr int exponentBias = (1 << (ExponentWidth<T>::value - 1)) - 1;
   static constexpr int maxExponent = (1 << ExponentWidth<T>::value) - 1;
@@ -84,61 +93,57 @@ template <typename T> struct __attribute__((packed)) FPBits {
   // We don't want accidental type promotions/conversions so we require exact
   // type match.
   template <typename XType,
-            cpp::EnableIfType<cpp::IsSame<T, XType>::Value ||
-                                  (cpp::IsIntegral<XType>::Value &&
-                                   (sizeof(XType) == sizeof(UIntType))),
-                              int> = 0>
-  explicit FPBits(XType x) {
-    *this = *reinterpret_cast<FPBits<T> *>(&x);
+            cpp::EnableIfType<cpp::IsSame<T, XType>::Value, int> = 0>
+  explicit FPBits(XType x) : val(x) {}
+
+  template <typename XType,
+            cpp::EnableIfType<cpp::IsSame<XType, UIntType>::Value, int> = 0>
+  explicit FPBits(XType x) : integer(x) {}
+
+  FPBits() : integer(0) {}
+
+  explicit operator T() { return val; }
+
+  UIntType uintval() const { return integer; }
+
+  int getExponent() const { return int(encoding.exponent) - exponentBias; }
+
+  bool isZero() const {
+    return encoding.mantissa == 0 && encoding.exponent == 0;
   }
 
-  operator T() { return *reinterpret_cast<T *>(this); }
-
-  int getExponent() const { return int(exponent) - exponentBias; }
-
-  bool isZero() const { return mantissa == 0 && exponent == 0; }
-
-  bool isInf() const { return mantissa == 0 && exponent == maxExponent; }
-
-  bool isNaN() const { return exponent == maxExponent && mantissa != 0; }
-
-  bool isInfOrNaN() const { return exponent == maxExponent; }
-
-  // Methods below this are used by tests.
-  // The to and from integer bits converters are only used in tests. Hence,
-  // the potential software implementations of UIntType will not slow real
-  // code.
-
-  UIntType bitsAsUInt() const {
-    return *reinterpret_cast<const UIntType *>(this);
+  bool isInf() const {
+    return encoding.mantissa == 0 && encoding.exponent == maxExponent;
   }
 
-  static FPBits<T> zero() { return FPBits(T(0.0)); }
+  bool isNaN() const {
+    return encoding.exponent == maxExponent && encoding.mantissa != 0;
+  }
+
+  bool isInfOrNaN() const { return encoding.exponent == maxExponent; }
+
+  static FPBits<T> zero() { return FPBits(); }
 
   static FPBits<T> negZero() {
-    FPBits<T> bits(T(0.0));
-    bits.sign = 1;
-    return bits;
+    return FPBits(UIntType(1) << (sizeof(UIntType) * 8 - 1));
   }
 
   static FPBits<T> inf() {
-    FPBits<T> bits(T(0.0));
-    bits.exponent = maxExponent;
+    FPBits<T> bits;
+    bits.encoding.exponent = maxExponent;
     return bits;
   }
 
   static FPBits<T> negInf() {
-    FPBits<T> bits(T(0.0));
-    bits.exponent = maxExponent;
-    bits.sign = 1;
+    FPBits<T> bits = inf();
+    bits.encoding.sign = 1;
     return bits;
   }
 
   static T buildNaN(UIntType v) {
-    FPBits<T> bits(T(0.0));
-    bits.exponent = maxExponent;
-    bits.mantissa = v;
-    return bits;
+    FPBits<T> bits = inf();
+    bits.encoding.mantissa = v;
+    return T(bits);
   }
 };
 

@@ -62,7 +62,7 @@ public:
   llvm::StringMap<bool> FeatureMap;
 
   /// Supported OpenCL extensions and optional core features.
-  OpenCLOptions SupportedOpenCLOptions;
+  llvm::StringMap<bool> OpenCLFeaturesMap;
 
   /// The list of OpenCL extensions to enable or disable, as written on
   /// the command line.

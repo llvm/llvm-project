@@ -192,7 +192,7 @@ void WasmDumper::printSectionHeaders() {
       ListScope Group(W, "Memories");
       for (const wasm::WasmLimits &Memory : Obj->memories()) {
         DictScope Group(W, "Memory");
-        W.printNumber("InitialPages", Memory.Initial);
+        W.printNumber("MinPages", Memory.Minimum);
         if (Memory.Flags & wasm::WASM_LIMITS_FLAG_HAS_MAX) {
           W.printNumber("MaxPages", WasmSec.Offset);
         }

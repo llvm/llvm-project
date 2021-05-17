@@ -58,7 +58,7 @@ int main(int, char**)
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
     test<char16_t>();
     test<char32_t>();
-#endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
+#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
     test<short>();
     test<unsigned short>();
     test<int>();

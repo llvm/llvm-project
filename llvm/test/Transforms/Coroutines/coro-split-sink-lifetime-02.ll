@@ -57,9 +57,7 @@ exit:
 
 ; CHECK-LABEL: @a.resume(
 ; CHECK:    %[[VAL:testval.+]] = getelementptr inbounds %a.Frame
-; CHECK-NOT:     %testval = alloca i32, align 4
-; CHECK-NOT:     %[[CAST:.+]] = bitcast i32* %testval to i8*
-; CHECK-NOT:     call void @llvm.lifetime.start.p0i8(i64 4, i8* %[[CAST]])
+; CHECK-NOT:     call void @llvm.lifetime.start.p0i8(i64 4, i8* %{{.*}})
 ; CHECK:         %test = load i32, i32* %[[VAL]]
 ; CHECK-NOT:     %test = load i32, i32* %testval
 

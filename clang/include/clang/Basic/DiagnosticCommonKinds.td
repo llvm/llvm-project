@@ -187,6 +187,17 @@ def ext_cxx11_longlong : Extension<
 def warn_cxx98_compat_longlong : Warning<
   "'long long' is incompatible with C++98">,
   InGroup<CXX98CompatPedantic>, DefaultIgnore;
+def ext_cxx2b_size_t_suffix : ExtWarn<
+  "'size_t' suffix for literals is a C++2b extension">,
+  InGroup<CXX2b>;
+def warn_cxx20_compat_size_t_suffix : Warning<
+  "'size_t' suffix for literals is incompatible with C++ standards before "
+  "C++2b">, InGroup<CXXPre2bCompat>, DefaultIgnore;
+def err_cxx2b_size_t_suffix: Error<
+  "'size_t' suffix for literals is a C++2b feature">;
+def err_size_t_literal_too_large: Error<
+  "%select{signed |}0'size_t' literal is out of range of possible "
+  "%select{signed |}0'size_t' values">;
 def err_integer_literal_too_large : Error<
   "integer literal is too large to be represented in any %select{signed |}0"
   "integer type">;
@@ -336,6 +347,8 @@ def warn_ignored_hip_only_option : Warning<
 // OpenMP
 def err_omp_more_one_clause : Error<
   "directive '#pragma omp %0' cannot contain more than one '%1' clause%select{| with '%3' name modifier| with 'source' dependence}2">;
+def err_omp_required_clause : Error<
+  "directive '#pragma omp %0' requires the '%1' clause">;
 
 // Static Analyzer Core
 def err_unknown_analyzer_checker_or_package : Error<
@@ -347,4 +360,8 @@ def note_suggest_disabling_all_checkers : Note<
 def warn_poison_system_directories : Warning <
   "include location '%0' is unsafe for cross-compilation">,
   InGroup<DiagGroup<"poison-system-directories">>, DefaultIgnore;
+
+def warn_opencl_unsupported_core_feature : Warning<
+  "%0 is a core feature in %select{OpenCL C|C++ for OpenCL}1 version %2 but not supported on this target">,
+  InGroup<OpenCLCoreFeaturesDiagGroup>, DefaultIgnore;
 }

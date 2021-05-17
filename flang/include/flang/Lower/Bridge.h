@@ -22,10 +22,6 @@
 #include "flang/Optimizer/Support/KindMapping.h"
 #include "mlir/IR/BuiltinOps.h"
 
-namespace fir {
-struct NameUniquer;
-}
-
 namespace Fortran {
 namespace common {
 class IntrinsicTypeDefaultKinds;
@@ -92,7 +88,7 @@ public:
   void parseSourceFile(llvm::SourceMgr &);
 
   /// Cross the bridge from the Fortran parse-tree, etc. to MLIR dialects
-  void lower(const Fortran::parser::Program &program, fir::NameUniquer &uniquer,
+  void lower(const Fortran::parser::Program &program,
              const Fortran::semantics::SemanticsContext &semanticsContext);
 
 private:

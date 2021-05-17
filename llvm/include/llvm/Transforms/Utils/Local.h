@@ -16,9 +16,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Analysis/Utils/Local.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -177,7 +175,7 @@ extern cl::opt<bool> RequireAndPreserveDomTree;
 bool simplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
                  DomTreeUpdater *DTU = nullptr,
                  const SimplifyCFGOptions &Options = {},
-                 SmallPtrSetImpl<BasicBlock *> *LoopHeaders = nullptr);
+                 ArrayRef<WeakVH> LoopHeaders = {});
 
 /// This function is used to flatten a CFG. For example, it uses parallel-and
 /// and parallel-or mode to collapse if-conditions and merge if-regions with
@@ -265,21 +263,6 @@ bool LowerDbgDeclare(Function &F);
 void insertDebugValuesForPHIs(BasicBlock *BB,
                               SmallVectorImpl<PHINode *> &InsertedPHIs);
 
-/// Finds all intrinsics declaring local variables as living in the memory that
-/// 'V' points to. This may include a mix of dbg.declare and
-/// dbg.addr intrinsics.
-TinyPtrVector<DbgVariableIntrinsic *> FindDbgAddrUses(Value *V);
-
-/// Like \c FindDbgAddrUses, but only returns dbg.declare intrinsics, not
-/// dbg.addr.
-TinyPtrVector<DbgDeclareInst *> FindDbgDeclareUses(Value *V);
-
-/// Finds the llvm.dbg.value intrinsics describing a value.
-void findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues, Value *V);
-
-/// Finds the debug info intrinsics describing a value.
-void findDbgUsers(SmallVectorImpl<DbgVariableIntrinsic *> &DbgInsts, Value *V);
-
 /// Replaces llvm.dbg.declare instruction when the address it
 /// describes is replaced with a new value. If Deref is true, an
 /// additional DW_OP_deref is prepended to the expression. If Offset
@@ -312,9 +295,10 @@ void salvageDebugInfoForDbgValues(Instruction &I,
 /// Given an instruction \p I and DIExpression \p DIExpr operating on it, write
 /// the effects of \p I into the returned DIExpression, or return nullptr if
 /// it cannot be salvaged. \p StackVal: whether DW_OP_stack_value should be
-/// appended to the expression.
+/// appended to the expression. \p LocNo: the index of the location operand to
+/// which \p I applies, should be 0 for debug info without a DIArgList.
 DIExpression *salvageDebugInfoImpl(Instruction &I, DIExpression *DIExpr,
-                                   bool StackVal);
+                                   bool StackVal, unsigned LocNo);
 
 /// Point debug users of \p From to \p To or salvage them. Use this function
 /// only when replacing all uses of \p From with \p To, with a guarantee that
@@ -353,7 +337,8 @@ unsigned changeToUnreachable(Instruction *I, bool UseLLVMTrap,
 /// InvokeInst is a terminator instruction.  Returns the newly split basic
 /// block.
 BasicBlock *changeToInvokeAndSplitBasicBlock(CallInst *CI,
-                                             BasicBlock *UnwindEdge);
+                                             BasicBlock *UnwindEdge,
+                                             DomTreeUpdater *DTU = nullptr);
 
 /// Replace 'BB's terminator with one that does not have an unwind successor
 /// block. Rewrites `invoke` to `call`, etc. Updates any PHIs in unwind
@@ -486,6 +471,15 @@ bool canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx);
 
 /// Invert the given true/false value, possibly reusing an existing copy.
 Value *invertCondition(Value *Condition);
+
+
+//===----------------------------------------------------------------------===//
+//  Assorted
+//
+
+/// If we can infer one attribute from another on the declaration of a
+/// function, explicitly materialize the maximal set in the IR.
+bool inferAttributesFromOthers(Function &F);
 
 } // end namespace llvm
 

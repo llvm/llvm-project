@@ -67,7 +67,7 @@ public:
   AnalyzerDiagnosticConsumer(ClangTidyContext &Context) : Context(Context) {}
 
   void FlushDiagnosticsImpl(std::vector<const ento::PathDiagnostic *> &Diags,
-                            FilesMade *filesMade) override {
+                            FilesMade *FilesMade) override {
     for (const ento::PathDiagnostic *PD : Diags) {
       SmallString<64> CheckName(AnalyzerCheckNamePrefix);
       CheckName += PD->getCheckerName();
@@ -95,7 +95,7 @@ private:
 
 class ErrorReporter {
 public:
-  ErrorReporter(ClangTidyContext &Context, bool ApplyFixes,
+  ErrorReporter(ClangTidyContext &Context, FixBehaviour ApplyFixes,
                 llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS)
       : Files(FileSystemOptions(), std::move(BaseFS)),
         DiagOpts(new DiagnosticOptions()),
@@ -132,9 +132,12 @@ public:
       }
       auto Diag = Diags.Report(Loc, Diags.getCustomDiagID(Level, "%0 [%1]"))
                   << Message.Message << Name;
+      for (const FileByteRange &FBR : Error.Message.Ranges)
+        Diag << getRange(FBR);
       // FIXME: explore options to support interactive fix selection.
-      const llvm::StringMap<Replacements> *ChosenFix = selectFirstFix(Error);
-      if (ApplyFixes && ChosenFix) {
+      const llvm::StringMap<Replacements> *ChosenFix;
+      if (ApplyFixes != FB_NoFix &&
+          (ChosenFix = getFixIt(Error, ApplyFixes == FB_FixNotes))) {
         for (const auto &FileAndReplacements : *ChosenFix) {
           for (const auto &Repl : FileAndReplacements.second) {
             ++TotalFixes;
@@ -186,8 +189,8 @@ public:
       reportNote(Note);
   }
 
-  void Finish() {
-    if (ApplyFixes && TotalFixes > 0) {
+  void finish() {
+    if (TotalFixes > 0) {
       Rewriter Rewrite(SourceMgr, LangOpts);
       for (const auto &FileAndReplacements : FileReplacements) {
         StringRef File = FileAndReplacements.first();
@@ -256,17 +259,13 @@ private:
       for (const auto &Repl : FileAndReplacements.second) {
         if (!Repl.isApplicable())
           continue;
-        SmallString<128> FixAbsoluteFilePath = Repl.getFilePath();
-        Files.makeAbsolutePath(FixAbsoluteFilePath);
-        SourceLocation FixLoc =
-            getLocation(FixAbsoluteFilePath, Repl.getOffset());
-        SourceLocation FixEndLoc = FixLoc.getLocWithOffset(Repl.getLength());
-        // Retrieve the source range for applicable fixes. Macro definitions
-        // on the command line have locations in a virtual buffer and don't
-        // have valid file paths and are therefore not applicable.
-        CharSourceRange Range =
-            CharSourceRange::getCharRange(SourceRange(FixLoc, FixEndLoc));
-        Diag << FixItHint::CreateReplacement(Range, Repl.getReplacementText());
+        FileByteRange FBR;
+        FBR.FilePath = Repl.getFilePath().str();
+        FBR.FileOffset = Repl.getOffset();
+        FBR.Length = Repl.getLength();
+
+        Diag << FixItHint::CreateReplacement(getRange(FBR),
+                                             Repl.getReplacementText());
       }
     }
   }
@@ -276,7 +275,20 @@ private:
     auto Diag =
         Diags.Report(Loc, Diags.getCustomDiagID(DiagnosticsEngine::Note, "%0"))
         << Message.Message;
+    for (const FileByteRange &FBR : Message.Ranges)
+      Diag << getRange(FBR);
     reportFix(Diag, Message.Fix);
+  }
+
+  CharSourceRange getRange(const FileByteRange &Range) {
+    SmallString<128> AbsoluteFilePath{Range.FilePath};
+    Files.makeAbsolutePath(AbsoluteFilePath);
+    SourceLocation BeginLoc = getLocation(AbsoluteFilePath, Range.FileOffset);
+    SourceLocation EndLoc = BeginLoc.getLocWithOffset(Range.Length);
+    // Retrieve the source range for applicable highlights and fixes. Macro
+    // definition on the command line have locations in a virtual buffer and
+    // don't have valid file paths and are therefore not applicable.
+    return CharSourceRange::getCharRange(BeginLoc, EndLoc);
   }
 
   FileManager Files;
@@ -287,7 +299,7 @@ private:
   SourceManager SourceMgr;
   llvm::StringMap<Replacements> FileReplacements;
   ClangTidyContext &Context;
-  bool ApplyFixes;
+  FixBehaviour ApplyFixes;
   unsigned TotalFixes;
   unsigned AppliedFixes;
   unsigned WarningsAsErrors;
@@ -392,6 +404,10 @@ ClangTidyASTConsumerFactory::CreateASTConsumer(
   std::vector<std::unique_ptr<ClangTidyCheck>> Checks =
       CheckFactories->createChecks(&Context);
 
+  llvm::erase_if(Checks, [&](std::unique_ptr<ClangTidyCheck> &Check) {
+    return !Check->isLanguageVersionSupported(Context.getLangOpts());
+  });
+
   ast_matchers::MatchFinder::MatchFinderOptions FinderOptions;
 
   std::unique_ptr<ClangTidyProfiling> Profiling;
@@ -415,8 +431,6 @@ ClangTidyASTConsumerFactory::CreateASTConsumer(
   }
 
   for (auto &Check : Checks) {
-    if (!Check->isLanguageVersionSupported(Context.getLangOpts()))
-      continue;
     Check->registerMatchers(&*Finder);
     Check->registerPPCallbacks(*SM, PP, ModuleExpanderPP);
   }
@@ -500,7 +514,8 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
              const CompilationDatabase &Compilations,
              ArrayRef<std::string> InputFiles,
              llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> BaseFS,
-             bool EnableCheckProfile, llvm::StringRef StoreCheckProfile) {
+             bool ApplyAnyFix, bool EnableCheckProfile,
+             llvm::StringRef StoreCheckProfile) {
   ClangTool Tool(Compilations, InputFiles,
                  std::make_shared<PCHContainerOperations>(), BaseFS);
 
@@ -527,7 +542,7 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
   Context.setEnableProfiling(EnableCheckProfile);
   Context.setProfileStoragePrefix(StoreCheckProfile);
 
-  ClangTidyDiagnosticConsumer DiagConsumer(Context);
+  ClangTidyDiagnosticConsumer DiagConsumer(Context, nullptr, true, ApplyAnyFix);
   DiagnosticsEngine DE(new DiagnosticIDs(), new DiagnosticOptions(),
                        &DiagConsumer, /*ShouldOwnClient=*/false);
   Context.setDiagnosticsEngine(&DE);
@@ -574,7 +589,7 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
 }
 
 void handleErrors(llvm::ArrayRef<ClangTidyError> Errors,
-                  ClangTidyContext &Context, bool Fix,
+                  ClangTidyContext &Context, FixBehaviour Fix,
                   unsigned &WarningsAsErrorsCount,
                   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS) {
   ErrorReporter Reporter(Context, Fix, std::move(BaseFS));
@@ -596,7 +611,7 @@ void handleErrors(llvm::ArrayRef<ClangTidyError> Errors,
     // Return to the initial directory to correctly resolve next Error.
     FileSystem.setCurrentWorkingDirectory(InitialWorkingDir.get());
   }
-  Reporter.Finish();
+  Reporter.finish();
   WarningsAsErrorsCount += Reporter.getWarningsAsErrorsCount();
 }
 

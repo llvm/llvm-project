@@ -7,5 +7,5 @@
 // RUN: %clang_cc1 -fsanitize=address -fsanitize-address-globals-dead-stripping -fno-integrated-as -emit-llvm -o - -triple x86_64-linux %s | FileCheck %s --check-prefix=WITHOUT-GC
 // RUN: %clang_cc1 -fsanitize=address -fdata-sections -emit-llvm -o - -triple x86_64-linux %s | FileCheck %s --check-prefix=WITHOUT-GC
 
-// WITH-GC: define internal void @asan.module_ctor() comdat {
-// WITHOUT-GC: define internal void @asan.module_ctor() {
+// WITH-GC: define internal void @asan.module_ctor() #[[#]] comdat {
+// WITHOUT-GC: define internal void @asan.module_ctor() #[[#]] {

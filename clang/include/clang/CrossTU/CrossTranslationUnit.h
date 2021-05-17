@@ -15,6 +15,7 @@
 #define LLVM_CLANG_CROSSTU_CROSSTRANSLATIONUNIT_H
 
 #include "clang/AST/ASTImporterSharedState.h"
+#include "clang/Analysis/MacroExpansionContext.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
@@ -182,21 +183,18 @@ public:
   /// Emit diagnostics for the user for potential configuration errors.
   void emitCrossTUDiagnostics(const IndexError &IE);
 
-  /// Determine the original source location in the original TU for an
-  /// imported source location.
+  /// Returns the MacroExpansionContext for the imported TU to which the given
+  /// source-location corresponds.
   /// \p ToLoc Source location in the imported-to AST.
-  /// \return Source location in the imported-from AST and the corresponding
-  /// ASTUnit object (the AST was loaded from a file using an internal ASTUnit
-  /// object that is returned here).
-  /// If any error happens (ToLoc is a non-imported source location) empty is
-  /// returned.
-  llvm::Optional<std::pair<SourceLocation /*FromLoc*/, ASTUnit *>>
-  getImportedFromSourceLocation(const clang::SourceLocation &ToLoc) const;
+  /// \note If any error happens such as \p ToLoc is a non-imported
+  ///       source-location, empty is returned.
+  /// \note Macro expansion tracking for imported TUs is not implemented yet.
+  ///       It returns empty unconditionally.
+  llvm::Optional<clang::MacroExpansionContext>
+  getMacroExpansionContextForSourceLocation(
+      const clang::SourceLocation &ToLoc) const;
 
 private:
-  using ImportedFileIDMap =
-      llvm::DenseMap<FileID, std::pair<FileID, ASTUnit *>>;
-
   void lazyInitImporterSharedSt(TranslationUnitDecl *ToTU);
   ASTImporter &getOrCreateASTImporter(ASTUnit *Unit);
   template <typename T>
@@ -217,14 +215,6 @@ private:
 
   ASTContext &Context;
   std::shared_ptr<ASTImporterSharedState> ImporterSharedSt;
-  /// Map of imported FileID's (in "To" context) to FileID in "From" context
-  /// and the ASTUnit for the From context.
-  /// This map is used by getImportedFromSourceLocation to lookup a FileID and
-  /// its Preprocessor when knowing only the FileID in the 'To' context. The
-  /// FileID could be imported by any of multiple 'From' ASTImporter objects.
-  /// we do not want to loop over all ASTImporter's to find the one that
-  /// imported the FileID.
-  ImportedFileIDMap ImportedFileIDs;
 
   using LoadResultTy = llvm::Expected<std::unique_ptr<ASTUnit>>;
 

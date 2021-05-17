@@ -260,7 +260,7 @@ void MyriadToolChain::addLibStdCxxIncludePaths(
   const Multilib &Multilib = GCCInstallation.getMultilib();
   addLibStdCXXIncludePaths(
       LibDir.str() + "/../" + TripleStr.str() + "/include/c++/" + Version.Text,
-      "", TripleStr, "", "", Multilib.includeSuffix(), DriverArgs, CC1Args);
+      TripleStr, Multilib.includeSuffix(), DriverArgs, CC1Args);
 }
 
 // MyriadToolChain handles several triples:

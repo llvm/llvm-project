@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline='func(canonicalize)' -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline='func(canonicalize)' -split-input-file -allow-unregistered-dialect | FileCheck %s
 
 // -----
 
@@ -255,13 +255,27 @@ func @transpose_3D_sequence(%arg : vector<4x3x2xf32>) -> vector<4x3x2xf32> {
 func @cast_transfers(%A: memref<4x8xf32>) -> (vector<4x8xf32>) {
   %c0 = constant 0 : index
   %f0 = constant 0.0 : f32
-  %0 = memref_cast %A : memref<4x8xf32> to memref<?x?xf32>
+  %0 = memref.cast %A : memref<4x8xf32> to memref<?x?xf32>
 
-  // CHECK: vector.transfer_read %{{.*}} {masked = [false, false]} : memref<4x8xf32>, vector<4x8xf32>
+  // CHECK: vector.transfer_read %{{.*}} {in_bounds = [true, true]} : memref<4x8xf32>, vector<4x8xf32>
   %1 = vector.transfer_read %0[%c0, %c0], %f0 : memref<?x?xf32>, vector<4x8xf32>
 
-  // CHECK: vector.transfer_write %{{.*}} {masked = [false, false]} : vector<4x8xf32>, memref<4x8xf32>
+  // CHECK: vector.transfer_write %{{.*}} {in_bounds = [true, true]} : vector<4x8xf32>, memref<4x8xf32>
   vector.transfer_write %1, %0[%c0, %c0] : vector<4x8xf32>, memref<?x?xf32>
+  return %1 : vector<4x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: cast_transfers
+func @cast_transfers(%A: tensor<4x8xf32>) -> (vector<4x8xf32>) {
+  %c0 = constant 0 : index
+  %f0 = constant 0.0 : f32
+  %0 = tensor.cast %A : tensor<4x8xf32> to tensor<?x?xf32>
+
+  // CHECK: vector.transfer_read %{{.*}} {in_bounds = [true, true]} : tensor<4x8xf32>, vector<4x8xf32>
+  %1 = vector.transfer_read %0[%c0, %c0], %f0 : tensor<?x?xf32>, vector<4x8xf32>
+
   return %1 : vector<4x8xf32>
 }
 
@@ -490,16 +504,18 @@ func @fold_extract_broadcast_negative(%a : f32) -> vector<4xf32> {
 //       CHECK:   %[[R0:.*]] = vector.extract %[[A0]][1, 0, 1, 1] : vector<5x1x3x2xf32>
 //       CHECK:   %[[R1:.*]] = vector.extract %[[A0]][1, 0, 2] : vector<5x1x3x2xf32>
 //       CHECK:   %[[R2:.*]] = vector.extract %[[A1]][7] : vector<8x4x2xf32>
-//       CHECK:   return %[[R0]], %[[R1]], %[[R2]] : f32, vector<2xf32>, vector<4x2xf32>
+//       CHECK:   return %[[R0]], %[[R1]], %[[R2]], %[[A1]] : f32, vector<2xf32>, vector<4x2xf32>, vector<8x4x2xf32>
 func @fold_extract_shapecast(%arg0 : vector<5x1x3x2xf32>,
                              %arg1 : vector<8x4x2xf32>)
-  -> (f32, vector<2xf32>, vector<4x2xf32>) {
+  -> (f32, vector<2xf32>, vector<4x2xf32>, vector<8x4x2xf32>) {
   %0 = vector.shape_cast %arg0 : vector<5x1x3x2xf32> to vector<15x2xf32>
   %1 = vector.shape_cast %arg1 : vector<8x4x2xf32> to vector<4x2x4x2xf32>
+  %2 = vector.shape_cast %arg1 : vector<8x4x2xf32> to vector<1x8x4x2xf32>
   %r1 = vector.extract %0[4, 1] : vector<15x2xf32>
   %r2 = vector.extract %0[5] : vector<15x2xf32>
   %r3 = vector.extract %1[3, 1] : vector<4x2x4x2xf32>
-  return %r1, %r2, %r3 : f32, vector<2xf32>, vector<4x2xf32>
+  %r4 = vector.extract %2[0] : vector<1x8x4x2xf32>
+  return %r1, %r2, %r3, %r4 : f32, vector<2xf32>, vector<4x2xf32>, vector<8x4x2xf32>
 }
 
 // -----
@@ -523,20 +539,20 @@ func @fold_vector_transfers(%A: memref<?x8xf32>) -> (vector<4x8xf32>, vector<4x9
   %c0 = constant 0 : index
   %f0 = constant 0.0 : f32
 
-  // CHECK: vector.transfer_read %{{.*}} {masked = [true, false]}
+  // CHECK: vector.transfer_read %{{.*}} {in_bounds = [false, true]}
   %1 = vector.transfer_read %A[%c0, %c0], %f0 : memref<?x8xf32>, vector<4x8xf32>
 
-  // CHECK: vector.transfer_write %{{.*}} {masked = [true, false]}
+  // CHECK: vector.transfer_write %{{.*}} {in_bounds = [false, true]}
   vector.transfer_write %1, %A[%c0, %c0] : vector<4x8xf32>, memref<?x8xf32>
 
-  // Both dims masked, attribute is elided.
+  // Both dims may be out-of-bounds, attribute is elided.
   // CHECK: vector.transfer_read %{{.*}}
-  // CHECK-NOT: masked
+  // CHECK-NOT: in_bounds
   %2 = vector.transfer_read %A[%c0, %c0], %f0 : memref<?x8xf32>, vector<4x9xf32>
 
-  // Both dims masked, attribute is elided.
+  // Both dims may be out-of-bounds, attribute is elided.
   // CHECK: vector.transfer_write %{{.*}}
-  // CHECK-NOT: masked
+  // CHECK-NOT: in_bounds
   vector.transfer_write %2, %A[%c0, %c0] : vector<4x9xf32>, memref<?x8xf32>
 
   // CHECK: return
@@ -554,6 +570,20 @@ func @bitcast_folding(%I1: vector<4x8xf32>, %I2: vector<2xi32>) -> (vector<4x8xf
   %1 = vector.bitcast %I2 : vector<2xi32> to vector<4xi16>
   %2 = vector.bitcast %1 : vector<4xi16> to vector<2xi32>
   return %0, %2 : vector<4x8xf32>, vector<2xi32>
+}
+
+// CHECK-LABEL: func @bitcast_f16_to_f32
+//              bit pattern: 0x40004000
+//       CHECK-DAG: %[[CST1:.+]] = constant dense<2.00390625> : vector<4xf32>
+//              bit pattern: 0x00000000
+//       CHECK-DAG: %[[CST0:.+]] = constant dense<0.000000e+00> : vector<4xf32>
+//       CHECK: return %[[CST0]], %[[CST1]]
+func @bitcast_f16_to_f32() -> (vector<4xf32>, vector<4xf32>) {
+  %cst0 = constant dense<0.0> : vector<8xf16> // bit pattern: 0x0000
+  %cst1 = constant dense<2.0> : vector<8xf16> // bit pattern: 0x4000
+  %cast0 = vector.bitcast %cst0: vector<8xf16> to vector<4xf32>
+  %cast1 = vector.bitcast %cst1: vector<8xf16> to vector<4xf32>
+  return %cast0, %cast1: vector<4xf32>, vector<4xf32>
 }
 
 // -----
@@ -584,8 +614,8 @@ func @broadcast_folding2() -> vector<4x16xi32> {
 // -----
 
 // CHECK-LABEL: shape_cast_constant
-//       CHECK: %[[CST0:.*]] = constant dense<2.000000e+00> : vector<20x2xf32>
-//       CHECK: %[[CST1:.*]] = constant dense<1> : vector<3x4x2xi32>
+//       CHECK-DAG: %[[CST1:.*]] = constant dense<1> : vector<3x4x2xi32>
+//       CHECK-DAG: %[[CST0:.*]] = constant dense<2.000000e+00> : vector<20x2xf32>
 //       CHECK: return %[[CST0]], %[[CST1]] : vector<20x2xf32>, vector<3x4x2xi32>
 func @shape_cast_constant() -> (vector<20x2xf32>, vector<3x4x2xi32>) {
   %cst = constant dense<2.000000e+00> : vector<5x4x2xf32>
@@ -598,8 +628,8 @@ func @shape_cast_constant() -> (vector<20x2xf32>, vector<3x4x2xi32>) {
 // -----
 
 // CHECK-LABEL: extract_strided_constant
-//       CHECK: %[[CST0:.*]] = constant dense<2.000000e+00> : vector<12x2xf32>
-//       CHECK: %[[CST1:.*]] = constant dense<1> : vector<2x13x3xi32>
+//       CHECK-DAG: %[[CST1:.*]] = constant dense<1> : vector<2x13x3xi32>
+//       CHECK-DAG: %[[CST0:.*]] = constant dense<2.000000e+00> : vector<12x2xf32>
 //       CHECK: return %[[CST0]], %[[CST1]] : vector<12x2xf32>, vector<2x13x3xi32>
 func @extract_strided_constant() -> (vector<12x2xf32>, vector<2x13x3xi32>) {
   %cst = constant dense<2.000000e+00> : vector<29x7xf32>
@@ -690,9 +720,231 @@ func @dead_load(%base: memref<?xf32>, %indices: vector<16xi32>,
   %c0 = constant 0 : index
   %0 = vector.maskedload %base[%c0], %mask, %passthru :
     memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
-  %1 = vector.gather %base[%indices], %mask, %passthru :
+  %1 = vector.gather %base[%c0][%indices], %mask, %passthru :
     memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
   %2 = vector.expandload %base[%c0], %mask, %passthru :
     memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
   return
+}
+
+// -----
+
+#contraction_accesses0 = [
+  affine_map<(i, j, k) -> (i, k)>,
+  affine_map<(i, j, k) -> (k, j)>,
+  affine_map<(i, j, k) -> (i, j)>
+]
+#contraction_trait0 = {
+  indexing_maps = #contraction_accesses0,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+// CHECK-LABEL: func @contractions
+//  CHECK-SAME:   %[[A:[0-9a-zA-Z]+]]: vector<2x3xf32>
+//  CHECK-SAME:   %[[B:[0-9a-zA-Z]+]]: vector<3x4xf32>
+//  CHECK-SAME:   %[[C:[0-9a-zA-Z]+]]: vector<2x4xf32>
+//  CHECK-SAME:   %[[A_I8:[0-9a-zA-Z]+]]: vector<2x3xi8>
+//  CHECK-SAME:   %[[B_I8:[0-9a-zA-Z]+]]: vector<3x4xi8>
+//  CHECK-SAME:   %[[C_I8:[0-9a-zA-Z]+]]: vector<2x4xi8>
+func @contractions(%a: vector<2x3xf32>, %b: vector<3x4xf32>, %c: vector<2x4xf32>,
+                   %a_i8: vector<2x3xi8>, %b_i8: vector<3x4xi8>, %c_i8: vector<2x4xi8>)
+  -> (vector<2x4xf32>, vector<2x4xi8>)
+{
+  // CHECK-NOT: constant
+  %vf_0 = constant dense <0.0>: vector<2x4xf32>
+  // CHECK-NOT: addf
+  //     CHECK: %[[D:.*]] = vector.contract {{.*}} %[[A]], %[[B]], %[[C]]
+  %0 = vector.contract #contraction_trait0 %a, %b, %vf_0:
+    vector<2x3xf32>, vector<3x4xf32> into vector<2x4xf32>
+  // CHECK-NOT: addf
+  %1 = addf %0, %c: vector<2x4xf32>
+
+  // CHECK-NOT: constant
+  %vi8_0 = constant dense <0>: vector<2x4xi8>
+  // CHECK-NOT: addi
+  //     CHECK: %[[D_I8:.*]] = vector.contract {{.*}} %[[A_I8]], %[[B_I8]], %[[C_I8]]
+  %i8_0 = vector.contract #contraction_trait0 %a_i8, %b_i8, %vi8_0:
+    vector<2x3xi8>, vector<3x4xi8> into vector<2x4xi8>
+  // CHECK-NOT: addi
+  %i8_1 = addi %i8_0, %c_i8: vector<2x4xi8>
+
+  // CHECK: return %[[D]], %[[D_I8]]
+  return %1, %i8_1: vector<2x4xf32>, vector<2x4xi8>
+}
+
+// -----
+
+// CHECK-LABEL: func @transfer_folding_1
+//  CHECK-SAME:   %[[T0:[0-9a-zA-Z]+]]: tensor<2x3x4xf32>
+//  CHECK-SAME:   %[[T1:[0-9a-zA-Z]+]]: tensor<2x3x4xf32>
+func @transfer_folding_1(%t0: tensor<2x3x4xf32>, %t1: tensor<2x3x4xf32>)
+  -> (tensor<2x3x4xf32>, tensor<2x3x4xf32>, tensor<2x3x4xf32>)
+{
+  %c0 = constant 0 : index
+  %pad = constant 0.0 : f32
+  %v = vector.transfer_read %t0[%c0, %c0, %c0], %pad {in_bounds = [true, true, true]} :
+    tensor<2x3x4xf32>, vector<2x3x4xf32>
+
+  %r0 = vector.transfer_write %v, %t1[%c0, %c0, %c0] {in_bounds = [true, true, true]} :
+    vector<2x3x4xf32>, tensor<2x3x4xf32>
+
+  %t2 = "test.constant"() { value = dense<6.0> : tensor<2x3x4xf32>} : () -> (tensor<2x3x4xf32>)
+  %r1 = vector.transfer_write %v, %t2[%c0, %c0, %c0] {in_bounds = [true, true, true]} :
+    vector<2x3x4xf32>, tensor<2x3x4xf32>
+
+
+  // CHECK-NEXT: some_op_that_may_have_side_effects
+  %t3 = "some_op_that_may_have_side_effects"() : () -> (tensor<2x3x4xf32>)
+  %r2 = vector.transfer_write %v, %t0[%c0, %c0, %c0] {in_bounds = [true, true, true]} :
+    vector<2x3x4xf32>, tensor<2x3x4xf32>
+
+  // CHECK-NEXT: return %[[T0]], %[[T0]], %[[T0]]
+  return %r0, %r1, %r2: tensor<2x3x4xf32>, tensor<2x3x4xf32>, tensor<2x3x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @store_after_load_tensor
+//  CHECK-SAME: (%[[ARG:.*]]: tensor<4x4xf32>)
+//   CHECK-NOT:   vector.transfer_read
+//   CHECK-NOT:   vector.transfer_write
+//       CHECK:   return %[[ARG]] : tensor<4x4xf32>
+func @store_after_load_tensor(%arg0 : tensor<4x4xf32>) -> tensor<4x4xf32> {
+  %c1 = constant 1 : index
+  %c0 = constant 0 : index
+  %cf0 = constant 0.0 : f32
+  %0 = vector.transfer_read %arg0[%c1, %c0], %cf0 :
+    tensor<4x4xf32>, vector<1x4xf32>
+  %w0 = vector.transfer_write %0, %arg0[%c1, %c0] :
+    vector<1x4xf32>, tensor<4x4xf32>
+  return %w0 : tensor<4x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @store_after_load_tensor_negative
+//       CHECK:   vector.transfer_read
+//       CHECK:   vector.transfer_write
+//       CHECK:   return
+func @store_after_load_tensor_negative(%arg0 : tensor<4x4xf32>) -> tensor<4x4xf32> {
+  %c1 = constant 1 : index
+  %c0 = constant 0 : index
+  %cf0 = constant 0.0 : f32
+  %0 = vector.transfer_read %arg0[%c1, %c0], %cf0 :
+    tensor<4x4xf32>, vector<1x4xf32>
+  %w0 = vector.transfer_write %0, %arg0[%c0, %c0] :
+    vector<1x4xf32>, tensor<4x4xf32>
+  return %w0 : tensor<4x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @store_to_load_tensor
+//  CHECK-SAME: (%[[ARG:.*]]: tensor<4x4xf32>, %[[V0:.*]]: vector<1x4xf32>, %[[V1:.*]]: vector<1x4xf32>)
+//   CHECK-NOT:   vector.transfer_write
+//   CHECK-NOT:   vector.transfer_read
+//       CHECK:   return %[[V0]] : vector<1x4xf32>
+func @store_to_load_tensor(%arg0 : tensor<4x4xf32>,
+  %v0 : vector<1x4xf32>, %v1 : vector<1x4xf32>) -> vector<1x4xf32> {
+  %c1 = constant 1 : index
+  %c2 = constant 2 : index
+  %c0 = constant 0 : index
+  %cf0 = constant 0.0 : f32
+  %w0 = vector.transfer_write %v0, %arg0[%c1, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, tensor<4x4xf32>
+  %w1 = vector.transfer_write %v1, %w0[%c2, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, tensor<4x4xf32>
+  %0 = vector.transfer_read %w1[%c1, %c0], %cf0 {in_bounds = [true, true]} :
+    tensor<4x4xf32>, vector<1x4xf32>
+  return %0 : vector<1x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @store_to_load_negative_tensor
+//       CHECK:   vector.transfer_write
+//       CHECK:   vector.transfer_write
+//       CHECK:   %[[V:.*]] = vector.transfer_read
+//       CHECK:   return %[[V]] : vector<1x4xf32>
+func @store_to_load_negative_tensor(%arg0 : tensor<4x4xf32>,
+  %v0 : vector<1x4xf32>, %v1 : vector<1x4xf32>, %i : index) -> vector<1x4xf32> {
+  %c1 = constant 1 : index
+  %c2 = constant 2 : index
+  %c0 = constant 0 : index
+  %cf0 = constant 0.0 : f32
+  %w0 = vector.transfer_write %v0, %arg0[%c1, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, tensor<4x4xf32>
+  %w1 = vector.transfer_write %v0, %w0[%i, %i] {in_bounds = [true, true]} :
+    vector<1x4xf32>, tensor<4x4xf32>
+  %0 = vector.transfer_read %w1[%c1, %c0], %cf0 {in_bounds = [true, true]} :
+    tensor<4x4xf32>, vector<1x4xf32>
+  return %0 : vector<1x4xf32>
+}
+
+// -----
+
+
+// CHECK-LABEL: func @dead_store_tensor
+//   CHECK-DAG:      %[[C0:.*]] = constant 0 : index
+//   CHECK-DAG:      %[[C1:.*]] = constant 1 : index
+//   CHECK-DAG:      %[[C2:.*]] = constant 2 : index
+//   CHECK-NOT:   vector.transfer_write {{.*}}, {{.*}}[%[[C1]], %[[C0]]
+//       CHECK:   vector.transfer_write {{.*}}, {{.*}}[%[[C2]], %[[C0]]
+//       CHECK:   %[[VTW:.*]] = vector.transfer_write {{.*}}, {{.*}}[%[[C1]], %[[C0]]
+//       CHECK:   return %[[VTW]] : tensor<4x4xf32>
+func @dead_store_tensor(%arg0 : tensor<4x4xf32>,
+  %v0 : vector<1x4xf32>, %v1 : vector<1x4xf32>, %i : index) -> tensor<4x4xf32> {
+  %c1 = constant 1 : index
+  %c2 = constant 2 : index
+  %c0 = constant 0 : index
+  %cf0 = constant 0.0 : f32
+  %w0 = vector.transfer_write %v0, %arg0[%c1, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, tensor<4x4xf32>
+  %w1 = vector.transfer_write %v0, %w0[%c2, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, tensor<4x4xf32>
+  %w2 = vector.transfer_write %v1, %w1[%c1, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, tensor<4x4xf32>
+  return %w2 : tensor<4x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @dead_store_tensor_negative
+//   CHECK-DAG:      %[[C0:.*]] = constant 0 : index
+//   CHECK-DAG:      %[[C1:.*]] = constant 1 : index
+//       CHECK:   vector.transfer_write
+//       CHECK:   vector.transfer_write
+//       CHECK:   vector.transfer_read
+//       CHECK:   %[[VTW:.*]] = vector.transfer_write {{.*}}, {{.*}}[%[[C1]], %[[C0]]]
+//       CHECK:   return %[[VTW]] : tensor<4x4xf32>
+func @dead_store_tensor_negative(%arg0 : tensor<4x4xf32>,
+  %v0 : vector<1x4xf32>, %v1 : vector<1x4xf32>, %i : index) -> tensor<4x4xf32> {
+  %c1 = constant 1 : index
+  %c2 = constant 2 : index
+  %c0 = constant 0 : index
+  %cf0 = constant 0.0 : f32
+  %w0 = vector.transfer_write %v0, %arg0[%c1, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, tensor<4x4xf32>
+  %w1 = vector.transfer_write %v0, %w0[%c2, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, tensor<4x4xf32>
+  %0 = vector.transfer_read %w1[%i, %i], %cf0 {in_bounds = [true, true]} :
+    tensor<4x4xf32>, vector<1x4xf32>
+  %x = addf %0, %0 : vector<1x4xf32>
+  %w2 = vector.transfer_write %x, %w0[%c1, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, tensor<4x4xf32>
+  return %w2 : tensor<4x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @insert_extract_to_shapecast
+//  CHECK-SAME: (%[[ARG0:.*]]: vector<1x1x4xf32>, %[[ARG1:.*]]: vector<4xf32>)
+//       CHECK:   %[[V0:.*]] = vector.shape_cast %[[ARG0]] : vector<1x1x4xf32> to vector<4xf32>
+//       CHECK:   %[[V1:.*]] = vector.shape_cast %[[ARG1]] : vector<4xf32> to vector<1x1x4xf32>
+//       CHECK:   return %[[V0]], %[[V1]] : vector<4xf32>, vector<1x1x4xf32>
+func @insert_extract_to_shapecast(%arg0 : vector<1x1x4xf32>,
+  %arg1 : vector<4xf32>) -> (vector<4xf32>, vector<1x1x4xf32>) {
+  %0 = vector.extract %arg0[0, 0] : vector<1x1x4xf32>
+  %1 = vector.insert %arg1, %arg0 [0, 0] : vector<4xf32> into vector<1x1x4xf32>
+  return %0, %1 : vector<4xf32>, vector<1x1x4xf32>
 }

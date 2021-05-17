@@ -33,6 +33,8 @@ public:
 
 class LLDB_API SBDebugger {
 public:
+  FLAGS_ANONYMOUS_ENUM(){eBroadcastBitProgress = (1 << 0)};
+
   SBDebugger();
 
   SBDebugger(const lldb::SBDebugger &rhs);
@@ -40,6 +42,42 @@ public:
   SBDebugger(const lldb::DebuggerSP &debugger_sp);
 
   ~SBDebugger();
+
+  static const char *GetBroadcasterClass();
+
+  lldb::SBBroadcaster GetBroadcaster();
+
+  /// Get progress data from a SBEvent whose type is eBroadcastBitProgress.
+  ///
+  /// \param [in] event
+  ///   The event to extract the progress information from.
+  ///
+  /// \param [out] progress_id
+  ///   The unique integer identifier for the progress to report.
+  ///
+  /// \param [out] completed
+  ///   The amount of work completed. If \a completed is zero, then this event
+  ///   is a progress started event. If \a completed is equal to \a total, then
+  ///   this event is a progress end event. Otherwise completed indicates the
+  ///   current progress update.
+  ///
+  /// \param [out] total
+  ///   The total amount of work units that need to be completed. If this value
+  ///   is UINT64_MAX, then an indeterminate progress indicator should be
+  ///   displayed.
+  ///
+  /// \param [out] is_debugger_specific
+  ///   Set to true if this progress is specific to this debugger only. Many
+  ///   progress events are not specific to a debugger instance, like any
+  ///   progress events for loading information in modules since LLDB has a
+  ///   global module cache that all debuggers use.
+  ///
+  /// \return The message for the progress. If the returned value is NULL, then
+  ///   \a event was not a eBroadcastBitProgress event.
+  static const char *GetProgressFromEvent(const lldb::SBEvent &event,
+                                          uint64_t &progress_id,
+                                          uint64_t &completed, uint64_t &total,
+                                          bool &is_debugger_specific);
 
   lldb::SBDebugger &operator=(const lldb::SBDebugger &rhs);
 

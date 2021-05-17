@@ -28,6 +28,10 @@ class PPCFrameLowering: public TargetFrameLowering {
   const unsigned BasePointerSaveOffset;
   const unsigned CRSaveOffset;
 
+  // Map each group of one or two GPRs to corresponding VSR for spilling.
+  // TODO: Use local table in methods to avoid this mutable member.
+  mutable DenseMap<unsigned, std::pair<Register, Register>> VSRContainingGPRs;
+
   /**
    * Find register[s] that can be used in function prologue and epilogue
    *

@@ -31,10 +31,10 @@
 //   Ralf Karrenberg and Sebastian Hack
 //   CC '12
 //
-// This DivergenceAnalysis implementation is generic in the sense that it does
+// This implementation is generic in the sense that it does
 // not itself identify original sources of divergence.
 // Instead specialized adapter classes, (LoopDivergenceAnalysis) for loops and
-// (GPUDivergenceAnalysis) for GPU programs, identify the sources of divergence
+// (DivergenceAnalysis) for functions, identify the sources of divergence
 // (e.g., special variables that hold the thread ID or the iteration variable).
 //
 // The generic implementation propagates divergence to variables that are data
@@ -61,7 +61,7 @@
 // The sync dependence detection (which branch induces divergence in which join
 // points) is implemented in the SyncDependenceAnalysis.
 //
-// The current DivergenceAnalysis implementation has the following limitations:
+// The current implementation has the following limitations:
 // 1. intra-procedural. It conservatively considers the arguments of a
 //    non-kernel-entry function and the return value of a function call as
 //    divergent.
@@ -73,6 +73,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/DivergenceAnalysis.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/PostDominators.h"
@@ -87,16 +88,15 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "divergence-analysis"
+#define DEBUG_TYPE "divergence"
 
-// class DivergenceAnalysis
-DivergenceAnalysis::DivergenceAnalysis(
+DivergenceAnalysisImpl::DivergenceAnalysisImpl(
     const Function &F, const Loop *RegionLoop, const DominatorTree &DT,
     const LoopInfo &LI, SyncDependenceAnalysis &SDA, bool IsLCSSAForm)
     : F(F), RegionLoop(RegionLoop), DT(DT), LI(LI), SDA(SDA),
       IsLCSSAForm(IsLCSSAForm) {}
 
-bool DivergenceAnalysis::markDivergent(const Value &DivVal) {
+bool DivergenceAnalysisImpl::markDivergent(const Value &DivVal) {
   if (isAlwaysUniform(DivVal))
     return false;
   assert(isa<Instruction>(DivVal) || isa<Argument>(DivVal));
@@ -104,12 +104,12 @@ bool DivergenceAnalysis::markDivergent(const Value &DivVal) {
   return DivergentValues.insert(&DivVal).second;
 }
 
-void DivergenceAnalysis::addUniformOverride(const Value &UniVal) {
+void DivergenceAnalysisImpl::addUniformOverride(const Value &UniVal) {
   UniformOverrides.insert(&UniVal);
 }
 
-bool DivergenceAnalysis::isTemporalDivergent(const BasicBlock &ObservingBlock,
-                                             const Value &Val) const {
+bool DivergenceAnalysisImpl::isTemporalDivergent(
+    const BasicBlock &ObservingBlock, const Value &Val) const {
   const auto *Inst = dyn_cast<const Instruction>(&Val);
   if (!Inst)
     return false;
@@ -125,15 +125,15 @@ bool DivergenceAnalysis::isTemporalDivergent(const BasicBlock &ObservingBlock,
   return false;
 }
 
-bool DivergenceAnalysis::inRegion(const Instruction &I) const {
+bool DivergenceAnalysisImpl::inRegion(const Instruction &I) const {
   return I.getParent() && inRegion(*I.getParent());
 }
 
-bool DivergenceAnalysis::inRegion(const BasicBlock &BB) const {
+bool DivergenceAnalysisImpl::inRegion(const BasicBlock &BB) const {
   return (!RegionLoop && BB.getParent() == &F) || RegionLoop->contains(&BB);
 }
 
-void DivergenceAnalysis::pushUsers(const Value &V) {
+void DivergenceAnalysisImpl::pushUsers(const Value &V) {
   const auto *I = dyn_cast<const Instruction>(&V);
 
   if (I && I->isTerminator()) {
@@ -166,8 +166,8 @@ static const Instruction *getIfCarriedInstruction(const Use &U,
   return I;
 }
 
-void DivergenceAnalysis::analyzeTemporalDivergence(const Instruction &I,
-                                                   const Loop &OuterDivLoop) {
+void DivergenceAnalysisImpl::analyzeTemporalDivergence(
+    const Instruction &I, const Loop &OuterDivLoop) {
   if (isAlwaysUniform(I))
     return;
   if (isDivergent(I))
@@ -188,8 +188,8 @@ void DivergenceAnalysis::analyzeTemporalDivergence(const Instruction &I,
 
 // marks all users of loop-carried values of the loop headed by LoopHeader as
 // divergent
-void DivergenceAnalysis::analyzeLoopExitDivergence(const BasicBlock &DivExit,
-                                                   const Loop &OuterDivLoop) {
+void DivergenceAnalysisImpl::analyzeLoopExitDivergence(
+    const BasicBlock &DivExit, const Loop &OuterDivLoop) {
   // All users are in immediate exit blocks
   if (IsLCSSAForm) {
     for (const auto &Phi : DivExit.phis()) {
@@ -209,8 +209,7 @@ void DivergenceAnalysis::analyzeLoopExitDivergence(const BasicBlock &DivExit,
   Visited.insert(&DivExit);
 
   do {
-    auto *UserBlock = TaintStack.back();
-    TaintStack.pop_back();
+    auto *UserBlock = TaintStack.pop_back_val();
 
     // don't spread divergence beyond the region
     if (!inRegion(*UserBlock))
@@ -243,8 +242,8 @@ void DivergenceAnalysis::analyzeLoopExitDivergence(const BasicBlock &DivExit,
   } while (!TaintStack.empty());
 }
 
-void DivergenceAnalysis::propagateLoopExitDivergence(const BasicBlock &DivExit,
-                                                     const Loop &InnerDivLoop) {
+void DivergenceAnalysisImpl::propagateLoopExitDivergence(
+    const BasicBlock &DivExit, const Loop &InnerDivLoop) {
   LLVM_DEBUG(dbgs() << "\tpropLoopExitDiv " << DivExit.getName() << "\n");
 
   // Find outer-most loop that does not contain \p DivExit
@@ -266,7 +265,7 @@ void DivergenceAnalysis::propagateLoopExitDivergence(const BasicBlock &DivExit,
 
 // this is a divergent join point - mark all phi nodes as divergent and push
 // them onto the stack.
-void DivergenceAnalysis::taintAndPushPhiNodes(const BasicBlock &JoinBlock) {
+void DivergenceAnalysisImpl::taintAndPushPhiNodes(const BasicBlock &JoinBlock) {
   LLVM_DEBUG(dbgs() << "taintAndPushPhiNodes in " << JoinBlock.getName()
                     << "\n");
 
@@ -288,7 +287,7 @@ void DivergenceAnalysis::taintAndPushPhiNodes(const BasicBlock &JoinBlock) {
   }
 }
 
-void DivergenceAnalysis::analyzeControlDivergence(const Instruction &Term) {
+void DivergenceAnalysisImpl::analyzeControlDivergence(const Instruction &Term) {
   LLVM_DEBUG(dbgs() << "analyzeControlDiv " << Term.getParent()->getName()
                     << "\n");
 
@@ -311,7 +310,7 @@ void DivergenceAnalysis::analyzeControlDivergence(const Instruction &Term) {
   }
 }
 
-void DivergenceAnalysis::compute() {
+void DivergenceAnalysisImpl::compute() {
   // Initialize worklist.
   auto DivValuesCopy = DivergentValues;
   for (const auto *DivVal : DivValuesCopy) {
@@ -331,63 +330,81 @@ void DivergenceAnalysis::compute() {
   }
 }
 
-bool DivergenceAnalysis::isAlwaysUniform(const Value &V) const {
+bool DivergenceAnalysisImpl::isAlwaysUniform(const Value &V) const {
   return UniformOverrides.contains(&V);
 }
 
-bool DivergenceAnalysis::isDivergent(const Value &V) const {
+bool DivergenceAnalysisImpl::isDivergent(const Value &V) const {
   return DivergentValues.contains(&V);
 }
 
-bool DivergenceAnalysis::isDivergentUse(const Use &U) const {
+bool DivergenceAnalysisImpl::isDivergentUse(const Use &U) const {
   Value &V = *U.get();
   Instruction &I = *cast<Instruction>(U.getUser());
   return isDivergent(V) || isTemporalDivergent(*I.getParent(), V);
 }
 
-void DivergenceAnalysis::print(raw_ostream &OS, const Module *) const {
-  if (DivergentValues.empty())
-    return;
-  // iterate instructions using instructions() to ensure a deterministic order.
-  for (auto &I : instructions(F)) {
-    if (isDivergent(I))
-      OS << "DIVERGENT:" << I << '\n';
+DivergenceInfo::DivergenceInfo(Function &F, const DominatorTree &DT,
+                               const PostDominatorTree &PDT, const LoopInfo &LI,
+                               const TargetTransformInfo &TTI,
+                               bool KnownReducible)
+    : F(F), ContainsIrreducible(false) {
+  if (!KnownReducible) {
+    using RPOTraversal = ReversePostOrderTraversal<const Function *>;
+    RPOTraversal FuncRPOT(&F);
+    if (containsIrreducibleCFG<const BasicBlock *, const RPOTraversal,
+                               const LoopInfo>(FuncRPOT, LI)) {
+      ContainsIrreducible = true;
+      return;
+    }
   }
-}
-
-// class GPUDivergenceAnalysis
-GPUDivergenceAnalysis::GPUDivergenceAnalysis(Function &F,
-                                             const DominatorTree &DT,
-                                             const PostDominatorTree &PDT,
-                                             const LoopInfo &LI,
-                                             const TargetTransformInfo &TTI)
-    : SDA(DT, PDT, LI), DA(F, nullptr, DT, LI, SDA, /* LCSSA */ false) {
+  SDA = std::make_unique<SyncDependenceAnalysis>(DT, PDT, LI);
+  DA = std::make_unique<DivergenceAnalysisImpl>(F, nullptr, DT, LI, *SDA,
+                                                /* LCSSA */ false);
   for (auto &I : instructions(F)) {
     if (TTI.isSourceOfDivergence(&I)) {
-      DA.markDivergent(I);
+      DA->markDivergent(I);
     } else if (TTI.isAlwaysUniform(&I)) {
-      DA.addUniformOverride(I);
+      DA->addUniformOverride(I);
     }
   }
   for (auto &Arg : F.args()) {
     if (TTI.isSourceOfDivergence(&Arg)) {
-      DA.markDivergent(Arg);
+      DA->markDivergent(Arg);
     }
   }
 
-  DA.compute();
+  DA->compute();
 }
 
-bool GPUDivergenceAnalysis::isDivergent(const Value &val) const {
-  return DA.isDivergent(val);
+AnalysisKey DivergenceAnalysis::Key;
+
+DivergenceAnalysis::Result
+DivergenceAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  auto &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
+  auto &LI = AM.getResult<LoopAnalysis>(F);
+  auto &TTI = AM.getResult<TargetIRAnalysis>(F);
+
+  return DivergenceInfo(F, DT, PDT, LI, TTI, /* KnownReducible = */ false);
 }
 
-bool GPUDivergenceAnalysis::isDivergentUse(const Use &use) const {
-  return DA.isDivergentUse(use);
-}
-
-void GPUDivergenceAnalysis::print(raw_ostream &OS, const Module *mod) const {
-  OS << "Divergence of kernel " << DA.getFunction().getName() << " {\n";
-  DA.print(OS, mod);
-  OS << "}\n";
+PreservedAnalyses
+DivergenceAnalysisPrinterPass::run(Function &F, FunctionAnalysisManager &FAM) {
+  auto &DI = FAM.getResult<DivergenceAnalysis>(F);
+  OS << "'Divergence Analysis' for function '" << F.getName() << "':\n";
+  if (DI.hasDivergence()) {
+    for (auto &Arg : F.args()) {
+      OS << (DI.isDivergent(Arg) ? "DIVERGENT: " : "           ");
+      OS << Arg << "\n";
+    }
+    for (const BasicBlock &BB : F) {
+      OS << "\n           " << BB.getName() << ":\n";
+      for (auto &I : BB.instructionsWithoutDebug()) {
+        OS << (DI.isDivergent(I) ? "DIVERGENT:     " : "               ");
+        OS << I << "\n";
+      }
+    }
+  }
+  return PreservedAnalyses::all();
 }

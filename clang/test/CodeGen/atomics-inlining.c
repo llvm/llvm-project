@@ -49,60 +49,60 @@ void test1(void) {
 // ARM: call{{.*}} void @__atomic_store(i32 100, i8* getelementptr inbounds ([100 x i8], [100 x i8]* @a1, i32 0, i32 0), i8* getelementptr inbounds ([100 x i8], [100 x i8]* @a2, i32 0, i32 0)
 
 // PPC32-LABEL: define{{.*}} void @test1
-// PPC32: = load atomic i8, i8* @c1 seq_cst
-// PPC32: store atomic i8 {{.*}}, i8* @c1 seq_cst
-// PPC32: = load atomic i16, i16* @s1 seq_cst
-// PPC32: store atomic i16 {{.*}}, i16* @s1 seq_cst
-// PPC32: = load atomic i32, i32* @i1 seq_cst
-// PPC32: store atomic i32 {{.*}}, i32* @i1 seq_cst
+// PPC32: = load atomic i8, i8* @c1 seq_cst, align 1
+// PPC32: store atomic i8 {{.*}}, i8* @c1 seq_cst, align 1
+// PPC32: = load atomic i16, i16* @s1 seq_cst, align 2
+// PPC32: store atomic i16 {{.*}}, i16* @s1 seq_cst, align 2
+// PPC32: = load atomic i32, i32* @i1 seq_cst, align 4
+// PPC32: store atomic i32 {{.*}}, i32* @i1 seq_cst, align 4
 // PPC32: = call i64 @__atomic_load_8(i8* bitcast (i64* @ll1 to i8*)
 // PPC32: call void @__atomic_store_8(i8* bitcast (i64* @ll1 to i8*), i64
 // PPC32: call void @__atomic_load(i32 100, i8* getelementptr inbounds ([100 x i8], [100 x i8]* @a1, i32 0, i32 0), i8* getelementptr inbounds ([100 x i8], [100 x i8]* @a2, i32 0, i32 0)
 // PPC32: call void @__atomic_store(i32 100, i8* getelementptr inbounds ([100 x i8], [100 x i8]* @a1, i32 0, i32 0), i8* getelementptr inbounds ([100 x i8], [100 x i8]* @a2, i32 0, i32 0)
 
 // PPC64-LABEL: define{{.*}} void @test1
-// PPC64: = load atomic i8, i8* @c1 seq_cst
-// PPC64: store atomic i8 {{.*}}, i8* @c1 seq_cst
-// PPC64: = load atomic i16, i16* @s1 seq_cst
-// PPC64: store atomic i16 {{.*}}, i16* @s1 seq_cst
-// PPC64: = load atomic i32, i32* @i1 seq_cst
-// PPC64: store atomic i32 {{.*}}, i32* @i1 seq_cst
-// PPC64: = load atomic i64, i64* @ll1 seq_cst
-// PPC64: store atomic i64 {{.*}}, i64* @ll1 seq_cst
+// PPC64: = load atomic i8, i8* @c1 seq_cst, align 1
+// PPC64: store atomic i8 {{.*}}, i8* @c1 seq_cst, align 1
+// PPC64: = load atomic i16, i16* @s1 seq_cst, align 2
+// PPC64: store atomic i16 {{.*}}, i16* @s1 seq_cst, align 2
+// PPC64: = load atomic i32, i32* @i1 seq_cst, align 4
+// PPC64: store atomic i32 {{.*}}, i32* @i1 seq_cst, align 4
+// PPC64: = load atomic i64, i64* @ll1 seq_cst, align 8
+// PPC64: store atomic i64 {{.*}}, i64* @ll1 seq_cst, align 8
 // PPC64: call void @__atomic_load(i64 100, i8* getelementptr inbounds ([100 x i8], [100 x i8]* @a1, i32 0, i32 0), i8* getelementptr inbounds ([100 x i8], [100 x i8]* @a2, i32 0, i32 0)
 // PPC64: call void @__atomic_store(i64 100, i8* getelementptr inbounds ([100 x i8], [100 x i8]* @a1, i32 0, i32 0), i8* getelementptr inbounds ([100 x i8], [100 x i8]* @a2, i32 0, i32 0)
 
 // MIPS32-LABEL: define{{.*}} void @test1
-// MIPS32: = load atomic i8, i8* @c1 seq_cst
-// MIPS32: store atomic i8 {{.*}}, i8* @c1 seq_cst
-// MIPS32: = load atomic i16, i16* @s1 seq_cst
-// MIPS32: store atomic i16 {{.*}}, i16* @s1 seq_cst
-// MIPS32: = load atomic i32, i32* @i1 seq_cst
-// MIPS32: store atomic i32 {{.*}}, i32* @i1 seq_cst
+// MIPS32: = load atomic i8, i8* @c1 seq_cst, align 1
+// MIPS32: store atomic i8 {{.*}}, i8* @c1 seq_cst, align 1
+// MIPS32: = load atomic i16, i16* @s1 seq_cst, align 2
+// MIPS32: store atomic i16 {{.*}}, i16* @s1 seq_cst, align 2
+// MIPS32: = load atomic i32, i32* @i1 seq_cst, align 4
+// MIPS32: store atomic i32 {{.*}}, i32* @i1 seq_cst, align 4
 // MIPS32: call i64 @__atomic_load_8(i8* bitcast (i64* @ll1 to i8*)
 // MIPS32: call void @__atomic_store_8(i8* bitcast (i64* @ll1 to i8*), i64
 // MIPS32: call void @__atomic_load(i32 signext 100, i8* getelementptr inbounds ([100 x i8], [100 x i8]* @a1, i32 0, i32 0), i8* getelementptr inbounds ([100 x i8], [100 x i8]* @a2, i32 0, i32 0)
 // MIPS32: call void @__atomic_store(i32 signext 100, i8* getelementptr inbounds ([100 x i8], [100 x i8]* @a1, i32 0, i32 0), i8* getelementptr inbounds ([100 x i8], [100 x i8]* @a2, i32 0, i32 0)
 
 // MIPS64-LABEL: define{{.*}} void @test1
-// MIPS64: = load atomic i8, i8* @c1 seq_cst
-// MIPS64: store atomic i8 {{.*}}, i8* @c1 seq_cst
-// MIPS64: = load atomic i16, i16* @s1 seq_cst
-// MIPS64: store atomic i16 {{.*}}, i16* @s1 seq_cst
-// MIPS64: = load atomic i32, i32* @i1 seq_cst
-// MIPS64: store atomic i32 {{.*}}, i32* @i1 seq_cst
-// MIPS64: = load atomic i64, i64* @ll1 seq_cst
-// MIPS64: store atomic i64 {{.*}}, i64* @ll1 seq_cst
+// MIPS64: = load atomic i8, i8* @c1 seq_cst, align 1
+// MIPS64: store atomic i8 {{.*}}, i8* @c1 seq_cst, align 1
+// MIPS64: = load atomic i16, i16* @s1 seq_cst, align 2
+// MIPS64: store atomic i16 {{.*}}, i16* @s1 seq_cst, align 2
+// MIPS64: = load atomic i32, i32* @i1 seq_cst, align 4
+// MIPS64: store atomic i32 {{.*}}, i32* @i1 seq_cst, align 4
+// MIPS64: = load atomic i64, i64* @ll1 seq_cst, align 8
+// MIPS64: store atomic i64 {{.*}}, i64* @ll1 seq_cst, align 8
 // MIPS64: call void @__atomic_load(i64 zeroext 100, i8* getelementptr inbounds ([100 x i8], [100 x i8]* @a1, i32 0, i32 0)
 // MIPS64: call void @__atomic_store(i64 zeroext 100, i8* getelementptr inbounds ([100 x i8], [100 x i8]* @a1, i32 0, i32 0), i8* getelementptr inbounds ([100 x i8], [100 x i8]* @a2, i32 0, i32 0)
 
 // SPARC-LABEL: define{{.*}} void @test1
-// SPARC: = load atomic i8, i8* @c1 seq_cst
-// SPARC: store atomic i8 {{.*}}, i8* @c1 seq_cst
-// SPARC: = load atomic i16, i16* @s1 seq_cst
-// SPARC: store atomic i16 {{.*}}, i16* @s1 seq_cst
-// SPARC: = load atomic i32, i32* @i1 seq_cst
-// SPARC: store atomic i32 {{.*}}, i32* @i1 seq_cst
+// SPARC: = load atomic i8, i8* @c1 seq_cst, align 1
+// SPARC: store atomic i8 {{.*}}, i8* @c1 seq_cst, align 1
+// SPARC: = load atomic i16, i16* @s1 seq_cst, align 2
+// SPARC: store atomic i16 {{.*}}, i16* @s1 seq_cst, align 2
+// SPARC: = load atomic i32, i32* @i1 seq_cst, align 4
+// SPARC: store atomic i32 {{.*}}, i32* @i1 seq_cst, align 4
 // SPARCV8: call i64 @__atomic_load_8(i8* bitcast (i64* @ll1 to i8*)
 // SPARCV8: call void @__atomic_store_8(i8* bitcast (i64* @ll1 to i8*), i64
 // SPARCV9: load atomic i64, i64* @ll1 seq_cst, align 8

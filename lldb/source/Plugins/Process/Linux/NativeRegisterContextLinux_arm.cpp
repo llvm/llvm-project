@@ -47,7 +47,7 @@ using namespace lldb_private::process_linux;
 
 std::unique_ptr<NativeRegisterContextLinux>
 NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
-    const ArchSpec &target_arch, NativeThreadProtocol &native_thread) {
+    const ArchSpec &target_arch, NativeThreadLinux &native_thread) {
   return std::make_unique<NativeRegisterContextLinux_arm>(target_arch,
                                                            native_thread);
 }
@@ -56,8 +56,9 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
 
 NativeRegisterContextLinux_arm::NativeRegisterContextLinux_arm(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
-    : NativeRegisterContextRegisterInfo(
-          native_thread, new RegisterInfoPOSIX_arm(target_arch)) {
+    : NativeRegisterContextRegisterInfo(native_thread,
+                                        new RegisterInfoPOSIX_arm(target_arch)),
+      NativeRegisterContextLinux(native_thread) {
   assert(target_arch.GetMachine() == llvm::Triple::arm);
 
   ::memset(&m_fpr, 0, sizeof(m_fpr));

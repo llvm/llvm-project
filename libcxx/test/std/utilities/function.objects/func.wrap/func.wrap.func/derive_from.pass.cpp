@@ -10,7 +10,7 @@
 
 // <functional>
 
-// See https://bugs.llvm.org/show_bug.cgi?id=20002
+// See https://llvm.org/PR20002
 
 #include <functional>
 #include <type_traits>

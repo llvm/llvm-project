@@ -90,13 +90,17 @@ public:
   /// type identification.
   enum {
     VPValueSC,
+    VPVBlendSC,
     VPVInstructionSC,
     VPVMemoryInstructionSC,
+    VPVPredInstPHI,
     VPVReductionSC,
     VPVReplicateSC,
     VPVWidenSC,
     VPVWidenCallSC,
     VPVWidenGEPSC,
+    VPVWidenIntOrFpIndcutionSC,
+    VPVWidenPHISC,
     VPVWidenSelectSC,
   };
 
@@ -112,11 +116,13 @@ public:
   /// for any other purpose, as the values may change as LLVM evolves.
   unsigned getVPValueID() const { return SubclassID; }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printAsOperand(raw_ostream &OS, VPSlotTracker &Tracker) const;
   void print(raw_ostream &OS, VPSlotTracker &Tracker) const;
 
   /// Dump the value to stderr (for debugging).
   void dump() const;
+#endif
 
   unsigned getNumUsers() const { return Users.size(); }
   void addUser(VPUser &User) { Users.push_back(&User); }
@@ -188,8 +194,10 @@ class VPUser {
   SmallVector<VPValue *, 2> Operands;
 
 protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the operands to \p O.
   void printOperands(raw_ostream &O, VPSlotTracker &SlotTracker) const;
+#endif
 
 public:
   VPUser() {}
@@ -227,6 +235,11 @@ public:
     Operands[I]->removeUser(*this);
     Operands[I] = New;
     New->addUser(*this);
+  }
+
+  void removeLastOperand() {
+    VPValue *Op = Operands.pop_back_val();
+    Op->removeUser(*this);
   }
 
   typedef SmallVectorImpl<VPValue *>::iterator operand_iterator;
@@ -315,8 +328,21 @@ public:
     }
   }
 
+  /// Returns the only VPValue defined by the VPDef. Can only be called for
+  /// VPDefs with a single defined value.
+  VPValue *getVPSingleValue() {
+    assert(DefinedValues.size() == 1 && "must have exactly one defined value");
+    assert(DefinedValues[0] && "defined value must be non-null");
+    return DefinedValues[0];
+  }
+  const VPValue *getVPSingleValue() const {
+    assert(DefinedValues.size() == 1 && "must have exactly one defined value");
+    assert(DefinedValues[0] && "defined value must be non-null");
+    return DefinedValues[0];
+  }
+
   /// Returns the VPValue with index \p I defined by the VPDef.
-  VPValue *getVPValue(unsigned I = 0) {
+  VPValue *getVPValue(unsigned I) {
     assert(DefinedValues[I] && "defined value must be non-null");
     return DefinedValues[I];
   }
@@ -338,12 +364,14 @@ public:
   /// for any other purpose, as the values may change as LLVM evolves.
   unsigned getVPDefID() const { return SubclassID; }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Dump the VPDef to stderr (for debugging).
   void dump() const;
 
   /// Each concrete VPDef prints itself.
   virtual void print(raw_ostream &O, const Twine &Indent,
                      VPSlotTracker &SlotTracker) const = 0;
+#endif
 };
 
 class VPlan;
@@ -357,11 +385,7 @@ class VPSlotTracker {
   DenseMap<const VPValue *, unsigned> Slots;
   unsigned NextSlot = 0;
 
-  void assignSlots(const VPBlockBase *VPBB);
-  void assignSlots(const VPRegionBlock *Region);
-  void assignSlots(const VPBasicBlock *VPBB);
   void assignSlot(const VPValue *V);
-
   void assignSlots(const VPlan &Plan);
 
 public:

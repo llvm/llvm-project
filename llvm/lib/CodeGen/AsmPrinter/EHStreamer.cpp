@@ -83,10 +83,9 @@ void EHStreamer::computeActionsTable(
   FilterOffsets.reserve(FilterIds.size());
   int Offset = -1;
 
-  for (std::vector<unsigned>::const_iterator
-         I = FilterIds.begin(), E = FilterIds.end(); I != E; ++I) {
+  for (unsigned FilterId : FilterIds) {
     FilterOffsets.push_back(Offset);
-    Offset -= getULEB128Size(*I);
+    Offset -= getULEB128Size(FilterId);
   }
 
   FirstActions.reserve(LandingPads.size());
@@ -95,9 +94,7 @@ void EHStreamer::computeActionsTable(
   unsigned SizeActions = 0; // Total size of all action entries for a function
   const LandingPadInfo *PrevLPI = nullptr;
 
-  for (SmallVectorImpl<const LandingPadInfo *>::const_iterator
-         I = LandingPads.begin(), E = LandingPads.end(); I != E; ++I) {
-    const LandingPadInfo *LPI = *I;
+  for (const LandingPadInfo *LPI : LandingPads) {
     const std::vector<int> &TypeIds = LPI->TypeIds;
     unsigned NumShared = PrevLPI ? sharedTypeIDs(LPI, PrevLPI) : 0;
     unsigned SizeSiteActions = 0; // Total size of all entries for a landingpad
@@ -420,8 +417,8 @@ MCSymbol *EHStreamer::emitExceptionTable() {
   bool HaveTTData = !TypeInfos.empty() || !FilterIds.empty();
 
   // Type infos.
-  MCSection *LSDASection =
-      Asm->getObjFileLowering().getSectionForLSDA(MF->getFunction(), Asm->TM);
+  MCSection *LSDASection = Asm->getObjFileLowering().getSectionForLSDA(
+      MF->getFunction(), *Asm->CurrentFnSym, Asm->TM);
   unsigned TTypeEncoding;
 
   if (!HaveTTData) {
@@ -757,10 +754,7 @@ MCSymbol *EHStreamer::emitExceptionTable() {
 
   // Emit the Action Table.
   int Entry = 0;
-  for (SmallVectorImpl<ActionEntry>::const_iterator
-         I = Actions.begin(), E = Actions.end(); I != E; ++I) {
-    const ActionEntry &Action = *I;
-
+  for (const ActionEntry &Action : Actions) {
     if (VerboseAsm) {
       // Emit comments that decode the action table.
       Asm->OutStreamer->AddComment(">> Action Record " + Twine(++Entry) + " <<");

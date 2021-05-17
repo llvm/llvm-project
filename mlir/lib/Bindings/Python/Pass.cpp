@@ -8,7 +8,7 @@
 
 #include "Pass.h"
 
-#include "IRModules.h"
+#include "IRModule.h"
 #include "mlir-c/Bindings/Python/Interop.h"
 #include "mlir-c/Pass.h"
 
@@ -68,6 +68,18 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyPassManager::createFromCapsule)
       .def("_testing_release", &PyPassManager::release,
            "Releases (leaks) the backing pass manager (testing)")
+      .def(
+          "enable_ir_printing",
+          [](PyPassManager &passManager) {
+            mlirPassManagerEnableIRPrinting(passManager.get());
+          },
+          "Enable print-ir-after-all.")
+      .def(
+          "enable_verifier",
+          [](PyPassManager &passManager, bool enable) {
+            mlirPassManagerEnableVerifier(passManager.get(), enable);
+          },
+          "Enable / disable verify-each.")
       .def_static(
           "parse",
           [](const std::string pipeline, DefaultingPyMlirContext context) {

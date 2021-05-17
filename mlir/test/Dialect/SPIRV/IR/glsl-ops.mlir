@@ -345,3 +345,121 @@ func @fclamp(%arg0 : i32, %min : i32, %max : i32) -> () {
   %2 = spv.GLSL.SClamp %arg0, %min, %max : i32
   return
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.GLSL.Fma
+//===----------------------------------------------------------------------===//
+
+func @fma(%a : f32, %b : f32, %c : f32) -> () {
+  // CHECK: spv.GLSL.Fma {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : f32
+  %2 = spv.GLSL.Fma %a, %b, %c : f32
+  return
+}
+
+// -----
+
+func @fma(%a : vector<3xf32>, %b : vector<3xf32>, %c : vector<3xf32>) -> () {
+  // CHECK: spv.GLSL.Fma {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : vector<3xf32>
+  %2 = spv.GLSL.Fma %a, %b, %c : vector<3xf32>
+  return
+}
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.GLSL.FrexpStruct
+//===----------------------------------------------------------------------===//
+
+func @frexp_struct(%arg0 : f32) -> () {
+  // CHECK: spv.GLSL.FrexpStruct {{%.*}} : f32 -> !spv.struct<(f32, i32)>
+  %2 = spv.GLSL.FrexpStruct %arg0 : f32 -> !spv.struct<(f32, i32)>
+  return
+}
+
+func @frexp_struct_64(%arg0 : f64) -> () {
+  // CHECK: spv.GLSL.FrexpStruct {{%.*}} : f64 -> !spv.struct<(f64, i32)>
+  %2 = spv.GLSL.FrexpStruct %arg0 : f64 -> !spv.struct<(f64, i32)>
+  return
+}
+
+func @frexp_struct_vec(%arg0 : vector<3xf32>) -> () {
+  // CHECK: spv.GLSL.FrexpStruct {{%.*}} : vector<3xf32> -> !spv.struct<(vector<3xf32>, vector<3xi32>)>
+  %2 = spv.GLSL.FrexpStruct %arg0 : vector<3xf32> -> !spv.struct<(vector<3xf32>, vector<3xi32>)>
+  return
+}
+
+// -----
+
+func @frexp_struct_mismatch_type(%arg0 : f32) -> () {
+  // expected-error @+1 {{member zero of the resulting struct type must be the same type as the operand}}
+  %2 = spv.GLSL.FrexpStruct %arg0 : f32 -> !spv.struct<(vector<3xf32>, i32)>
+  return
+}
+
+// -----
+
+func @frexp_struct_wrong_type(%arg0 : i32) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
+  %2 = spv.GLSL.FrexpStruct %arg0 : i32 -> !spv.struct<(i32, i32)>
+  return
+}
+
+// -----
+
+func @frexp_struct_mismatch_num_components(%arg0 : vector<3xf32>) -> () {
+  // expected-error @+1 {{member one of the resulting struct type must have the same number of components as the operand type}}
+  %2 = spv.GLSL.FrexpStruct %arg0 : vector<3xf32> -> !spv.struct<(vector<3xf32>, vector<2xi32>)>
+  return
+}
+
+// -----
+
+func @frexp_struct_not_i32(%arg0 : f32) -> () {
+  // expected-error @+1 {{member one of the resulting struct type must be a scalar or vector of 32 bit integer type}}
+  %2 = spv.GLSL.FrexpStruct %arg0 : f32 -> !spv.struct<(f32, i64)>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.GLSL.Ldexp
+//===----------------------------------------------------------------------===//
+
+func @ldexp(%arg0 : f32, %arg1 : i32) -> () {
+  // CHECK: {{%.*}} = spv.GLSL.Ldexp {{%.*}} : f32, {{%.*}} : i32 -> f32
+  %0 = spv.GLSL.Ldexp %arg0 : f32, %arg1 : i32 -> f32
+  return
+}
+
+// -----
+func @ldexp_vec(%arg0 : vector<3xf32>, %arg1 : vector<3xi32>) -> () {
+  // CHECK: {{%.*}} = spv.GLSL.Ldexp {{%.*}} : vector<3xf32>, {{%.*}} : vector<3xi32> -> vector<3xf32>
+  %0 = spv.GLSL.Ldexp %arg0 : vector<3xf32>, %arg1 : vector<3xi32> -> vector<3xf32>
+  return
+}
+
+// -----
+
+func @ldexp_wrong_type_scalar(%arg0 : f32, %arg1 : vector<2xi32>) -> () {
+  // expected-error @+1 {{operands must both be scalars or vectors}}
+  %0 = spv.GLSL.Ldexp %arg0 : f32, %arg1 : vector<2xi32> -> f32
+  return
+}
+
+// -----
+
+func @ldexp_wrong_type_vec_1(%arg0 : vector<3xf32>, %arg1 : i32) -> () {
+  // expected-error @+1 {{operands must both be scalars or vectors}}
+  %0 = spv.GLSL.Ldexp %arg0 : vector<3xf32>, %arg1 : i32 -> vector<3xf32>
+  return
+}
+
+// -----
+
+func @ldexp_wrong_type_vec_2(%arg0 : vector<3xf32>, %arg1 : vector<2xi32>) -> () {
+  // expected-error @+1 {{operands must have the same number of elements}}
+  %0 = spv.GLSL.Ldexp %arg0 : vector<3xf32>, %arg1 : vector<2xi32> -> vector<3xf32>
+  return
+}

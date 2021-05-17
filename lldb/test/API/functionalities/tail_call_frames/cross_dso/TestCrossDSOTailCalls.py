@@ -61,5 +61,5 @@ class TestCrossDSOTailCalls(TestBase):
         ]
         for idx, (name, is_artificial) in enumerate(expected_frames):
             frame = thread.GetFrameAtIndex(idx)
-            self.assertTrue(name in frame.GetDisplayFunctionName())
+            self.assertIn(name, frame.GetDisplayFunctionName())
             self.assertEqual(frame.IsArtificial(), is_artificial)

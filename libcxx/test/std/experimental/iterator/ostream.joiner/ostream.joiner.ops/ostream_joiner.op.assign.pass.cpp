@@ -75,8 +75,8 @@ int main(int, char**) {
 
     test('X', chars, chars+10, "0X1X2X3X4X5X6X7X8X9");
     test('x',  ints,  ints+10, "10x11x12x13x14x15x16x17x18x19");
-    test('X', input_iterator<const char*>(chars),         input_iterator<const char*>(chars+10),         "0X1X2X3X4X5X6X7X8X9");
-    test('x', input_iterator<const int*>(ints),           input_iterator<const int*>(ints+10),           "10x11x12x13x14x15x16x17x18x19");
+    test('X', cpp17_input_iterator<const char*>(chars),         cpp17_input_iterator<const char*>(chars+10),         "0X1X2X3X4X5X6X7X8X9");
+    test('x', cpp17_input_iterator<const int*>(ints),           cpp17_input_iterator<const int*>(ints+10),           "10x11x12x13x14x15x16x17x18x19");
     test('X', forward_iterator<const char*>(chars),       forward_iterator<const char*>(chars+10),       "0X1X2X3X4X5X6X7X8X9");
     test('x', forward_iterator<const int*>(ints),         forward_iterator<const int*>(ints+10),         "10x11x12x13x14x15x16x17x18x19");
     test('X', random_access_iterator<const char*>(chars), random_access_iterator<const char*>(chars+10), "0X1X2X3X4X5X6X7X8X9");
@@ -101,8 +101,8 @@ int main(int, char**) {
     const int  ints [] = { 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 };
     test(L'X', chars, chars+10, L"0X1X2X3X4X5X6X7X8X9");
     test(L'x',  ints,  ints+10, L"10x11x12x13x14x15x16x17x18x19");
-    test(L'X', input_iterator<const wchar_t*>(chars),         input_iterator<const wchar_t*>(chars+10),         L"0X1X2X3X4X5X6X7X8X9");
-    test(L'x', input_iterator<const int*>(ints),              input_iterator<const int*>(ints+10),              L"10x11x12x13x14x15x16x17x18x19");
+    test(L'X', cpp17_input_iterator<const wchar_t*>(chars),         cpp17_input_iterator<const wchar_t*>(chars+10),         L"0X1X2X3X4X5X6X7X8X9");
+    test(L'x', cpp17_input_iterator<const int*>(ints),              cpp17_input_iterator<const int*>(ints+10),              L"10x11x12x13x14x15x16x17x18x19");
     test(L'X', forward_iterator<const wchar_t*>(chars),       forward_iterator<const wchar_t*>(chars+10),       L"0X1X2X3X4X5X6X7X8X9");
     test(L'x', forward_iterator<const int*>(ints),            forward_iterator<const int*>(ints+10),            L"10x11x12x13x14x15x16x17x18x19");
     test(L'X', random_access_iterator<const wchar_t*>(chars), random_access_iterator<const wchar_t*>(chars+10), L"0X1X2X3X4X5X6X7X8X9");

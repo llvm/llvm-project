@@ -1,3 +1,4 @@
+include(LLVMDistributionSupport)
 include(LLVMProcessSources)
 include(LLVM-Config)
 include(DetermineGCCCompatible)
@@ -236,13 +237,13 @@ function(add_link_opts target_name)
       elseif(${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
         # Support for ld -z discard-unused=sections was only added in
         # Solaris 11.4.
-        include(CheckLinkerFlag)
-        check_linker_flag("-Wl,-z,discard-unused=sections" LINKER_SUPPORTS_Z_DISCARD_UNUSED)
+        include(LLVMCheckLinkerFlag)
+        llvm_check_linker_flag(CXX "-Wl,-z,discard-unused=sections" LINKER_SUPPORTS_Z_DISCARD_UNUSED)
         if (LINKER_SUPPORTS_Z_DISCARD_UNUSED)
           set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                        LINK_FLAGS " -Wl,-z,discard-unused=sections")
         endif()
-      elseif(NOT WIN32 AND NOT CMAKE_SYSTEM_NAME MATCHES "OpenBSD|AIX|OS390")
+      elseif(NOT MSVC AND NOT CMAKE_SYSTEM_NAME MATCHES "OpenBSD|AIX|OS390")
         # TODO Revisit this later on z/OS.
         set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                      LINK_FLAGS " -Wl,--gc-sections")
@@ -595,11 +596,9 @@ function(llvm_add_library name)
       set(api_name ${output_name}-${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX})
       set_target_properties(${name} PROPERTIES OUTPUT_NAME ${library_name})
       llvm_install_library_symlink(${api_name} ${library_name} SHARED
-        COMPONENT ${name}
-        ALWAYS_GENERATE)
+        COMPONENT ${name})
       llvm_install_library_symlink(${output_name} ${library_name} SHARED
-        COMPONENT ${name}
-        ALWAYS_GENERATE)
+        COMPONENT ${name})
     endif()
   endif()
 
@@ -793,15 +792,13 @@ macro(add_llvm_library name)
     set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS_BUILDTREE_ONLY ${name})
   else()
     if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ARG_INSTALL_WITH_TOOLCHAIN)
-
-      set(export_to_llvmexports)
-      if(${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
-          (in_llvm_libs AND "llvm-libraries" IN_LIST LLVM_DISTRIBUTION_COMPONENTS) OR
-          NOT LLVM_DISTRIBUTION_COMPONENTS)
-        set(export_to_llvmexports EXPORT LLVMExports)
-        set_property(GLOBAL PROPERTY LLVM_HAS_EXPORTS True)
+      if(in_llvm_libs)
+        set(umbrella UMBRELLA llvm-libraries)
+      else()
+        set(umbrella)
       endif()
 
+      get_target_export_arg(${name} LLVM export_to_llvmexports ${umbrella})
       install(TARGETS ${name}
               ${export_to_llvmexports}
               LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX} COMPONENT ${name}
@@ -1210,13 +1207,7 @@ macro(add_llvm_tool name)
 
   if ( ${name} IN_LIST LLVM_TOOLCHAIN_TOOLS OR NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     if( LLVM_BUILD_TOOLS )
-      set(export_to_llvmexports)
-      if(${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
-          NOT LLVM_DISTRIBUTION_COMPONENTS)
-        set(export_to_llvmexports EXPORT LLVMExports)
-        set_property(GLOBAL PROPERTY LLVM_HAS_EXPORTS True)
-      endif()
-
+      get_target_export_arg(${name} LLVM export_to_llvmexports)
       install(TARGETS ${name}
               ${export_to_llvmexports}
               RUNTIME DESTINATION ${LLVM_TOOLS_INSTALL_DIR}
@@ -1269,13 +1260,7 @@ macro(add_llvm_utility name)
   set_target_properties(${name} PROPERTIES FOLDER "Utils")
   if ( ${name} IN_LIST LLVM_TOOLCHAIN_UTILITIES OR NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     if (LLVM_INSTALL_UTILS AND LLVM_BUILD_UTILS)
-      set(export_to_llvmexports)
-      if (${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
-          NOT LLVM_DISTRIBUTION_COMPONENTS)
-        set(export_to_llvmexports EXPORT LLVMExports)
-        set_property(GLOBAL PROPERTY LLVM_HAS_EXPORTS True)
-      endif()
-
+      get_target_export_arg(${name} LLVM export_to_llvmexports)
       install(TARGETS ${name}
               ${export_to_llvmexports}
               RUNTIME DESTINATION ${LLVM_UTILS_INSTALL_DIR}
@@ -1453,6 +1438,18 @@ function(add_unittest test_suite test_name)
 
   list(APPEND LLVM_LINK_COMPONENTS Support) # gtest needs it for raw_ostream
   add_llvm_executable(${test_name} IGNORE_EXTERNALIZE_DEBUGINFO NO_INSTALL_RPATH ${ARGN})
+
+  # The runtime benefits of ThinLTO don't outweight the compile time costs for tests.
+  if(uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
+    if((UNIX OR MINGW) AND LLVM_USE_LINKER STREQUAL "lld")
+      set_property(TARGET ${test_name} APPEND_STRING PROPERTY
+                    LINK_FLAGS " -Wl,--lto-O0")
+    elseif(LINKER_IS_LLD_LINK)
+      set_property(TARGET ${test_name} APPEND_STRING PROPERTY
+                    LINK_FLAGS " /opt:lldlto=0")
+    endif()
+  endif()
+
   set(outdir ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR})
   set_output_directory(${test_name} BINARY_DIR ${outdir} LIBRARY_DIR ${outdir})
   # libpthreads overrides some standard library symbols, so main
@@ -1588,11 +1585,11 @@ function(configure_lit_site_cfg site_in site_out)
 
   set_llvm_build_mode()
 
-  # They below might not be the build tree but provided binary tree.
+  # The below might not be the build tree but provided binary tree.
   set(LLVM_SOURCE_DIR ${LLVM_MAIN_SRC_DIR})
   set(LLVM_BINARY_DIR ${LLVM_BINARY_DIR})
   string(REPLACE "${CMAKE_CFG_INTDIR}" "${LLVM_BUILD_MODE}" LLVM_TOOLS_DIR "${LLVM_TOOLS_BINARY_DIR}")
-  string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLVM_LIBS_DIR  "${LLVM_LIBRARY_DIR}")
+  string(REPLACE "${CMAKE_CFG_INTDIR}" "${LLVM_BUILD_MODE}" LLVM_LIBS_DIR  "${LLVM_LIBRARY_DIR}")
 
   # SHLIBDIR points the build tree.
   string(REPLACE "${CMAKE_CFG_INTDIR}" "${LLVM_BUILD_MODE}" SHLIBDIR "${LLVM_SHLIB_OUTPUT_INTDIR}")
@@ -1838,7 +1835,7 @@ function(add_lit_testsuites project directory)
 endfunction()
 
 function(llvm_install_library_symlink name dest type)
-  cmake_parse_arguments(ARG "ALWAYS_GENERATE" "COMPONENT" "" ${ARGN})
+  cmake_parse_arguments(ARG "" "COMPONENT" "" ${ARGN})
   foreach(path ${CMAKE_MODULE_PATH})
     if(EXISTS ${path}/LLVMInstallSymlink.cmake)
       set(INSTALL_SYMLINK ${path}/LLVMInstallSymlink.cmake)
@@ -1863,12 +1860,6 @@ function(llvm_install_library_symlink name dest type)
           CODE "install_symlink(${full_name} ${full_dest} ${output_dir})"
           COMPONENT ${component})
 
-  if (NOT LLVM_ENABLE_IDE AND NOT ARG_ALWAYS_GENERATE)
-    add_llvm_install_targets(install-${name}
-                             DEPENDS ${name} ${dest}
-                             COMPONENT ${name}
-                             SYMLINK ${dest})
-  endif()
 endfunction()
 
 function(llvm_install_symlink name dest)
@@ -2101,6 +2092,12 @@ function(llvm_setup_rpath name)
   if (APPLE)
     set(_install_name_dir INSTALL_NAME_DIR "@rpath")
     set(_install_rpath "@loader_path/../lib${LLVM_LIBDIR_SUFFIX}" ${extra_libdir})
+  elseif(${CMAKE_SYSTEM_NAME} MATCHES "AIX" AND BUILD_SHARED_LIBS)
+    # $ORIGIN is not interpreted at link time by aix ld.
+    # Since BUILD_SHARED_LIBS is only recommended for use by developers,
+    # hardcode the rpath to build/install lib dir first in this mode.
+    # FIXME: update this when there is better solution.
+    set(_install_rpath "${LLVM_LIBRARY_OUTPUT_INTDIR}" "${CMAKE_INSTALL_PREFIX}/lib${LLVM_LIBDIR_SUFFIX}" ${extra_libdir})
   elseif(UNIX)
     set(_install_rpath "\$ORIGIN/../lib${LLVM_LIBDIR_SUFFIX}" ${extra_libdir})
     if(${CMAKE_SYSTEM_NAME} MATCHES "(FreeBSD|DragonFly)")

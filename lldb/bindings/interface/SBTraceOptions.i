@@ -8,6 +8,11 @@
 
 namespace lldb {
 
+%feature("docstring",
+"Represents the possible options when doing processor tracing.
+
+See :py:class:`SBProcess.StartTrace`."
+) SBTraceOptions;
 class LLDB_API SBTraceOptions {
 public:
   SBTraceOptions();

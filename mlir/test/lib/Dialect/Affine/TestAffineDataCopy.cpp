@@ -13,6 +13,7 @@
 
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/LoopUtils.h"
@@ -31,6 +32,9 @@ struct TestAffineDataCopy
   TestAffineDataCopy() = default;
   TestAffineDataCopy(const TestAffineDataCopy &pass){};
 
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<memref::MemRefDialect>();
+  }
   void runOnFunction() override;
 
 private:
@@ -72,6 +76,8 @@ void TestAffineDataCopy::runOnFunction() {
       }
     }
   }
+  if (!load)
+    return;
 
   AffineCopyOptions copyOptions = {/*generateDma=*/false,
                                    /*slowMemorySpace=*/0,
@@ -84,30 +90,31 @@ void TestAffineDataCopy::runOnFunction() {
   } else if (clTestGenerateCopyForMemRegion) {
     CopyGenerateResult result;
     MemRefRegion region(loopNest.getLoc());
-    region.compute(load, /*loopDepth=*/0);
-    generateCopyForMemRegion(region, loopNest, copyOptions, result);
+    (void)region.compute(load, /*loopDepth=*/0);
+    (void)generateCopyForMemRegion(region, loopNest, copyOptions, result);
   }
 
   // Promote any single iteration loops in the copy nests and simplify
   // load/stores.
   SmallVector<Operation *, 4> copyOps;
-  for (auto nest : copyNests)
+  for (Operation *nest : copyNests) {
     // With a post order walk, the erasure of loops does not affect
     // continuation of the walk or the collection of load/store ops.
     nest->walk([&](Operation *op) {
       if (auto forOp = dyn_cast<AffineForOp>(op))
-        promoteIfSingleIteration(forOp);
+        (void)promoteIfSingleIteration(forOp);
       else if (auto loadOp = dyn_cast<AffineLoadOp>(op))
         copyOps.push_back(loadOp);
       else if (auto storeOp = dyn_cast<AffineStoreOp>(op))
         copyOps.push_back(storeOp);
     });
+  }
 
   // Promoting single iteration loops could lead to simplification of
   // generated load's/store's, and the latter could anyway also be
   // canonicalized.
-  OwningRewritePatternList patterns;
-  for (auto op : copyOps) {
+  RewritePatternSet patterns(&getContext());
+  for (Operation *op : copyOps) {
     patterns.clear();
     if (isa<AffineLoadOp>(op)) {
       AffineLoadOp::getCanonicalizationPatterns(patterns, &getContext());
@@ -115,7 +122,7 @@ void TestAffineDataCopy::runOnFunction() {
       assert(isa<AffineStoreOp>(op) && "expected affine store op");
       AffineStoreOp::getCanonicalizationPatterns(patterns, &getContext());
     }
-    applyOpPatternsAndFold(op, std::move(patterns));
+    (void)applyOpPatternsAndFold(op, std::move(patterns));
   }
 }
 

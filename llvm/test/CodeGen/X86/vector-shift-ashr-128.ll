@@ -653,9 +653,9 @@ define <2 x i64> @splatvar_shift_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; XOPAVX2-LABEL: splatvar_shift_v2i64:
 ; XOPAVX2:       # %bb.0:
+; XOPAVX2-NEXT:    vpbroadcastq %xmm1, %xmm1
 ; XOPAVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; XOPAVX2-NEXT:    vpsubq %xmm1, %xmm2, %xmm1
-; XOPAVX2-NEXT:    vpbroadcastq %xmm1, %xmm1
 ; XOPAVX2-NEXT:    vpshaq %xmm1, %xmm0, %xmm0
 ; XOPAVX2-NEXT:    retq
 ;
@@ -848,16 +848,16 @@ define <16 x i8> @splatvar_shift_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; XOPAVX1-LABEL: splatvar_shift_v16i8:
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; XOPAVX1-NEXT:    vpsubb %xmm1, %xmm2, %xmm1
 ; XOPAVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; XOPAVX1-NEXT:    vpsubb %xmm1, %xmm2, %xmm1
 ; XOPAVX1-NEXT:    vpshab %xmm1, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    retq
 ;
 ; XOPAVX2-LABEL: splatvar_shift_v16i8:
 ; XOPAVX2:       # %bb.0:
+; XOPAVX2-NEXT:    vpbroadcastb %xmm1, %xmm1
 ; XOPAVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; XOPAVX2-NEXT:    vpsubb %xmm1, %xmm2, %xmm1
-; XOPAVX2-NEXT:    vpbroadcastb %xmm1, %xmm1
 ; XOPAVX2-NEXT:    vpshab %xmm1, %xmm0, %xmm0
 ; XOPAVX2-NEXT:    retq
 ;
@@ -1255,11 +1255,11 @@ define <16 x i8> @constant_shift_v16i8(<16 x i8> %a) nounwind {
 ; X86-SSE-NEXT:    movdqa %xmm0, %xmm1
 ; X86-SSE-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm0[8],xmm1[9],xmm0[9],xmm1[10],xmm0[10],xmm1[11],xmm0[11],xmm1[12],xmm0[12],xmm1[13],xmm0[13],xmm1[14],xmm0[14],xmm1[15],xmm0[15]
 ; X86-SSE-NEXT:    psraw $8, %xmm1
-; X86-SSE-NEXT:    pmullw {{\.LCPI.*}}, %xmm1
+; X86-SSE-NEXT:    pmullw {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE-NEXT:    psrlw $8, %xmm1
 ; X86-SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X86-SSE-NEXT:    psraw $8, %xmm0
-; X86-SSE-NEXT:    pmullw {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    pmullw {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    psrlw $8, %xmm0
 ; X86-SSE-NEXT:    packuswb %xmm1, %xmm0
 ; X86-SSE-NEXT:    retl
@@ -1447,7 +1447,7 @@ define <16 x i8> @splatconstant_shift_v16i8(<16 x i8> %a) nounwind {
 ; X86-SSE-LABEL: splatconstant_shift_v16i8:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    psrlw $3, %xmm0
-; X86-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
 ; X86-SSE-NEXT:    pxor %xmm1, %xmm0
 ; X86-SSE-NEXT:    psubb %xmm1, %xmm0

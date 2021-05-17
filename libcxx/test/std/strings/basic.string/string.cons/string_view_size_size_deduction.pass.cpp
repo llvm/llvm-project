@@ -39,7 +39,7 @@
 
 #include "test_macros.h"
 #include "test_allocator.h"
-#include "../input_iterator.h"
+#include "../cpp17_input_iterator.h"
 #include "min_allocator.h"
 
 int main(int, char**)

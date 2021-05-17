@@ -176,8 +176,12 @@ static bool findLoopComponents(
   LLVM_DEBUG(dbgs() << "Found limit: "; Limit->dump());
 
   assert(InductionPHI->getNumIncomingValues() == 2);
-  assert(InductionPHI->getIncomingValueForBlock(Latch) == Increment &&
-         "PHI value is not increment inst");
+
+  if (InductionPHI->getIncomingValueForBlock(Latch) != Increment) {
+    LLVM_DEBUG(
+        dbgs() << "Incoming value from latch is not the increment inst\n");
+    return false;
+  }
 
   auto *CI = dyn_cast<ConstantInt>(
       InductionPHI->getIncomingValueForBlock(L->getLoopPreheader()));
@@ -190,8 +194,7 @@ static bool findLoopComponents(
   return true;
 }
 
-static bool checkPHIs(struct FlattenInfo &FI,
-                      const TargetTransformInfo *TTI) {
+static bool checkPHIs(FlattenInfo &FI, const TargetTransformInfo *TTI) {
   // All PHIs in the inner and outer headers must either be:
   // - The induction PHI, which we are going to rewrite as one induction in
   //   the new loop. This is already checked by findLoopComponents.
@@ -272,7 +275,7 @@ static bool checkPHIs(struct FlattenInfo &FI,
 }
 
 static bool
-checkOuterLoopInsts(struct FlattenInfo &FI,
+checkOuterLoopInsts(FlattenInfo &FI,
                     SmallPtrSetImpl<Instruction *> &IterationInstructions,
                     const TargetTransformInfo *TTI) {
   // Check for instructions in the outer but not inner loop. If any of these
@@ -280,7 +283,7 @@ checkOuterLoopInsts(struct FlattenInfo &FI,
   // a significant amount of code here which can't be optimised out that it's
   // not profitable (as these instructions would get executed for each
   // iteration of the inner loop).
-  unsigned RepeatedInstrCost = 0;
+  InstructionCost RepeatedInstrCost = 0;
   for (auto *B : FI.OuterLoop->getBlocks()) {
     if (FI.InnerLoop->contains(B))
       continue;
@@ -310,7 +313,8 @@ checkOuterLoopInsts(struct FlattenInfo &FI,
       if (match(&I, m_c_Mul(m_Specific(FI.OuterInductionPHI),
                             m_Specific(FI.InnerLimit))))
         continue;
-      int Cost = TTI->getUserCost(&I, TargetTransformInfo::TCK_SizeAndLatency);
+      InstructionCost Cost =
+          TTI->getUserCost(&I, TargetTransformInfo::TCK_SizeAndLatency);
       LLVM_DEBUG(dbgs() << "Cost " << Cost << ": "; I.dump());
       RepeatedInstrCost += Cost;
     }
@@ -329,7 +333,7 @@ checkOuterLoopInsts(struct FlattenInfo &FI,
   return true;
 }
 
-static bool checkIVUsers(struct FlattenInfo &FI) {
+static bool checkIVUsers(FlattenInfo &FI) {
   // We require all uses of both induction variables to match this pattern:
   //
   //   (OuterPHI * InnerLimit) + InnerPHI
@@ -425,8 +429,8 @@ static bool checkIVUsers(struct FlattenInfo &FI) {
 
 // Return an OverflowResult dependant on if overflow of the multiplication of
 // InnerLimit and OuterLimit can be assumed not to happen.
-static OverflowResult checkOverflow(struct FlattenInfo &FI,
-                                    DominatorTree *DT, AssumptionCache *AC) {
+static OverflowResult checkOverflow(FlattenInfo &FI, DominatorTree *DT,
+                                    AssumptionCache *AC) {
   Function *F = FI.OuterLoop->getHeader()->getParent();
   const DataLayout &DL = F->getParent()->getDataLayout();
 
@@ -464,9 +468,9 @@ static OverflowResult checkOverflow(struct FlattenInfo &FI,
   return OverflowResult::MayOverflow;
 }
 
-static bool CanFlattenLoopPair(struct FlattenInfo &FI, DominatorTree *DT,
-                               LoopInfo *LI, ScalarEvolution *SE,
-                               AssumptionCache *AC, const TargetTransformInfo *TTI) {
+static bool CanFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
+                               ScalarEvolution *SE, AssumptionCache *AC,
+                               const TargetTransformInfo *TTI) {
   SmallPtrSet<Instruction *, 8> IterationInstructions;
   if (!findLoopComponents(FI.InnerLoop, IterationInstructions, FI.InnerInductionPHI,
                           FI.InnerLimit, FI.InnerIncrement, FI.InnerBranch, SE))
@@ -508,9 +512,8 @@ static bool CanFlattenLoopPair(struct FlattenInfo &FI, DominatorTree *DT,
   return true;
 }
 
-static bool DoFlattenLoopPair(struct FlattenInfo &FI, DominatorTree *DT,
-                              LoopInfo *LI, ScalarEvolution *SE,
-                              AssumptionCache *AC,
+static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
+                              ScalarEvolution *SE, AssumptionCache *AC,
                               const TargetTransformInfo *TTI) {
   Function *F = FI.OuterLoop->getHeader()->getParent();
   LLVM_DEBUG(dbgs() << "Checks all passed, doing the transformation\n");
@@ -571,9 +574,9 @@ static bool DoFlattenLoopPair(struct FlattenInfo &FI, DominatorTree *DT,
   return true;
 }
 
-static bool CanWidenIV(struct FlattenInfo &FI, DominatorTree *DT,
-                       LoopInfo *LI, ScalarEvolution *SE,
-                       AssumptionCache *AC, const TargetTransformInfo *TTI) {
+static bool CanWidenIV(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
+                       ScalarEvolution *SE, AssumptionCache *AC,
+                       const TargetTransformInfo *TTI) {
   if (!WidenIV) {
     LLVM_DEBUG(dbgs() << "Widening the IVs is disabled\n");
     return false;
@@ -602,28 +605,27 @@ static bool CanWidenIV(struct FlattenInfo &FI, DominatorTree *DT,
   SmallVector<WeakTrackingVH, 4> DeadInsts;
   WideIVs.push_back( {FI.InnerInductionPHI, MaxLegalType, false });
   WideIVs.push_back( {FI.OuterInductionPHI, MaxLegalType, false });
-  unsigned ElimExt;
-  unsigned Widened;
+  unsigned ElimExt = 0;
+  unsigned Widened = 0;
 
-  for (unsigned i = 0; i < WideIVs.size(); i++) {
-    PHINode *WidePhi = createWideIV(WideIVs[i], LI, SE, Rewriter, DT, DeadInsts,
+  for (const auto &WideIV : WideIVs) {
+    PHINode *WidePhi = createWideIV(WideIV, LI, SE, Rewriter, DT, DeadInsts,
                                     ElimExt, Widened, true /* HasGuards */,
                                     true /* UsePostIncrementRanges */);
     if (!WidePhi)
       return false;
     LLVM_DEBUG(dbgs() << "Created wide phi: "; WidePhi->dump());
-    LLVM_DEBUG(dbgs() << "Deleting old phi: "; WideIVs[i].NarrowIV->dump());
-    RecursivelyDeleteDeadPHINode(WideIVs[i].NarrowIV);
+    LLVM_DEBUG(dbgs() << "Deleting old phi: "; WideIV.NarrowIV->dump());
+    RecursivelyDeleteDeadPHINode(WideIV.NarrowIV);
   }
   // After widening, rediscover all the loop components.
-  assert(Widened && "Widenend IV expected");
+  assert(Widened && "Widened IV expected");
   FI.Widened = true;
   return CanFlattenLoopPair(FI, DT, LI, SE, AC, TTI);
 }
 
-static bool FlattenLoopPair(struct FlattenInfo &FI, DominatorTree *DT,
-                            LoopInfo *LI, ScalarEvolution *SE,
-                            AssumptionCache *AC,
+static bool FlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
+                            ScalarEvolution *SE, AssumptionCache *AC,
                             const TargetTransformInfo *TTI) {
   LLVM_DEBUG(
       dbgs() << "Loop flattening running on outer loop "
@@ -663,7 +665,7 @@ bool Flatten(DominatorTree *DT, LoopInfo *LI, ScalarEvolution *SE,
     auto *OuterLoop = InnerLoop->getParentLoop();
     if (!OuterLoop)
       continue;
-    struct FlattenInfo FI(OuterLoop, InnerLoop);
+    FlattenInfo FI(OuterLoop, InnerLoop);
     Changed |= FlattenLoopPair(FI, DT, LI, SE, AC, TTI);
   }
   return Changed;
@@ -677,12 +679,26 @@ PreservedAnalyses LoopFlattenPass::run(Function &F,
   auto *AC = &AM.getResult<AssumptionAnalysis>(F);
   auto *TTI = &AM.getResult<TargetIRAnalysis>(F);
 
-  if (!Flatten(DT, LI, SE, AC, TTI))
+  bool Changed = false;
+
+  // The loop flattening pass requires loops to be
+  // in simplified form, and also needs LCSSA. Running
+  // this pass will simplify all loops that contain inner loops,
+  // regardless of whether anything ends up being flattened.
+  for (const auto &L : *LI) {
+    if (L->isInnermost())
+      continue;
+    Changed |=
+        simplifyLoop(L, DT, LI, SE, AC, nullptr, false /* PreserveLCSSA */);
+    Changed |= formLCSSARecursively(*L, *DT, LI, SE);
+  }
+
+  Changed |= Flatten(DT, LI, SE, AC, TTI);
+
+  if (!Changed)
     return PreservedAnalyses::all();
 
-  PreservedAnalyses PA;
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
+  return PreservedAnalyses::none();
 }
 
 namespace {

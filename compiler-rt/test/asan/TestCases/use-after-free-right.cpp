@@ -1,7 +1,7 @@
-// RUN: %clangxx_asan -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-%os --check-prefix=CHECK
-// RUN: %clangxx_asan -O1 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-%os --check-prefix=CHECK
-// RUN: %clangxx_asan -O2 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-%os --check-prefix=CHECK
-// RUN: %clangxx_asan -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-%os --check-prefix=CHECK
+// RUN: %clangxx_asan -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_asan -O1 %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_asan -O2 %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_asan -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s
 // REQUIRES: stable-runtime
 
 // Test use-after-free report in the case when access is at the right border of
@@ -18,18 +18,10 @@ int main() {
   // CHECK: {{    #0 0x.* in main .*use-after-free-right.cpp:}}[[@LINE-4]]
   // CHECK: {{0x.* is located 0 bytes inside of 1-byte region .0x.*,0x.*}}
   // CHECK: {{freed by thread T0 here:}}
-
-  // CHECK-Linux: {{    #0 0x.* in .*free}}
-  // CHECK-Linux: {{    #1 0x.* in main .*use-after-free-right.cpp:}}[[@LINE-10]]
-
-  // CHECK-Darwin: {{    #0 0x.* in wrap_free}}
-  // CHECK-Darwin: {{    #1 0x.* in main .*use-after-free-right.cpp:}}[[@LINE-13]]
+  // CHECK: {{    #0 0x.* in .*free}}
+  // CHECK: {{    #1 0x.* in main .*use-after-free-right.cpp:}}[[@LINE-9]]
 
   // CHECK: {{previously allocated by thread T0 here:}}
-
-  // CHECK-Linux: {{    #0 0x.* in .*malloc}}
-  // CHECK-Linux: {{    #1 0x.* in main .*use-after-free-right.cpp:}}[[@LINE-19]]
-
-  // CHECK-Darwin: {{    #0 0x.* in wrap_malloc.*}}
-  // CHECK-Darwin: {{    #1 0x.* in main .*use-after-free-right.cpp:}}[[@LINE-22]]
+  // CHECK: {{    #0 0x.* in .*malloc}}
+  // CHECK: {{    #1 0x.* in main .*use-after-free-right.cpp:}}[[@LINE-14]]
 }

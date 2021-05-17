@@ -452,7 +452,10 @@ ProcessInfo llvm::sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
   if (ProcStat) {
     std::chrono::microseconds UserT = toDuration(Info.ru_utime);
     std::chrono::microseconds KernelT = toDuration(Info.ru_stime);
-    uint64_t PeakMemory = static_cast<uint64_t>(Info.ru_maxrss);
+    uint64_t PeakMemory = 0;
+#ifndef __HAIKU__
+    PeakMemory = static_cast<uint64_t>(Info.ru_maxrss);
+#endif
     *ProcStat = ProcessStatistics{UserT + KernelT, UserT, PeakMemory};
   }
 
@@ -490,6 +493,18 @@ ProcessInfo llvm::sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
   return WaitResult;
 }
 
+std::error_code llvm::sys::ChangeStdinMode(fs::OpenFlags Flags){
+  if (!(Flags & fs::OF_Text))
+    return ChangeStdinToBinary();
+  return std::error_code();
+}
+
+std::error_code llvm::sys::ChangeStdoutMode(fs::OpenFlags Flags){
+  if (!(Flags & fs::OF_Text))
+    return ChangeStdoutToBinary();
+  return std::error_code();
+}
+
 std::error_code llvm::sys::ChangeStdinToBinary() {
   // Do nothing, as Unix doesn't differentiate between text and binary.
   return std::error_code();
@@ -504,7 +519,7 @@ std::error_code
 llvm::sys::writeFileWithEncoding(StringRef FileName, StringRef Contents,
                                  WindowsEncodingMethod Encoding /*unused*/) {
   std::error_code EC;
-  llvm::raw_fd_ostream OS(FileName, EC, llvm::sys::fs::OpenFlags::OF_Text);
+  llvm::raw_fd_ostream OS(FileName, EC, llvm::sys::fs::OpenFlags::OF_TextWithCRLF);
 
   if (EC)
     return EC;

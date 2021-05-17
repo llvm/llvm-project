@@ -1821,7 +1821,8 @@ bool Sema::CheckMessageArgumentTypes(
     ParmVarDecl *param = Method->parameters()[i];
     assert(argExpr && "CheckMessageArgumentTypes(): missing expression");
 
-    if (param->hasAttr<NoEscapeAttr>())
+    if (param->hasAttr<NoEscapeAttr>() &&
+        param->getType()->isBlockPointerType())
       if (auto *BE = dyn_cast<BlockExpr>(
               argExpr->IgnoreParenNoopCasts(Context)))
         BE->getBlockDecl()->setDoesNotEscape();
@@ -3847,9 +3848,12 @@ static inline T *getObjCBridgeAttr(const TypedefType *TD) {
   QualType QT = TDNDecl->getUnderlyingType();
   if (QT->isPointerType()) {
     QT = QT->getPointeeType();
-    if (const RecordType *RT = QT->getAs<RecordType>())
-      if (RecordDecl *RD = RT->getDecl()->getMostRecentDecl())
-        return RD->getAttr<T>();
+    if (const RecordType *RT = QT->getAs<RecordType>()) {
+      for (auto *Redecl : RT->getDecl()->getMostRecentDecl()->redecls()) {
+        if (auto *attr = Redecl->getAttr<T>())
+          return attr;
+      }
+    }
   }
   return nullptr;
 }

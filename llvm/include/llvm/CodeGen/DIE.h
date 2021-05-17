@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_CODEGEN_ASMPRINTER_DIE_H
-#define LLVM_LIB_CODEGEN_ASMPRINTER_DIE_H
+#ifndef LLVM_CODEGEN_DIE_H
+#define LLVM_CODEGEN_DIE_H
 
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -346,6 +346,22 @@ public:
 };
 
 //===--------------------------------------------------------------------===//
+/// A BaseTypeRef DIE.
+class DIEAddrOffset {
+  DIEInteger Addr;
+  DIEDelta Offset;
+
+public:
+  explicit DIEAddrOffset(uint64_t Idx, const MCSymbol *Hi, const MCSymbol *Lo)
+      : Addr(Idx), Offset(Hi, Lo) {}
+
+  void emitValue(const AsmPrinter *AP, dwarf::Form Form) const;
+  unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
+
+  void print(raw_ostream &O) const;
+};
+
+//===--------------------------------------------------------------------===//
 /// A debug information entry value. Some of these roughly correlate
 /// to DWARF attribute classes.
 class DIEBlock;
@@ -368,9 +384,10 @@ private:
   ///
   /// All values that aren't standard layout (or are larger than 8 bytes)
   /// should be stored by reference instead of by value.
-  using ValTy = AlignedCharArrayUnion<DIEInteger, DIEString, DIEExpr, DIELabel,
-                                      DIEDelta *, DIEEntry, DIEBlock *,
-                                      DIELoc *, DIELocList, DIEBaseTypeRef *>;
+  using ValTy =
+      AlignedCharArrayUnion<DIEInteger, DIEString, DIEExpr, DIELabel,
+                            DIEDelta *, DIEEntry, DIEBlock *, DIELoc *,
+                            DIELocList, DIEBaseTypeRef *, DIEAddrOffset *>;
 
   static_assert(sizeof(ValTy) <= sizeof(uint64_t) ||
                     sizeof(ValTy) <= sizeof(void *),
@@ -972,4 +989,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_LIB_CODEGEN_ASMPRINTER_DIE_H
+#endif // LLVM_CODEGEN_DIE_H

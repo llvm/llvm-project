@@ -6,7 +6,7 @@ define <2 x i64> @shl1(<4 x i32> %r, <4 x i32> %a) nounwind readnone ssp {
 ; X86-LABEL: shl1:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pslld $23, %xmm1
-; X86-NEXT:    paddd {{\.LCPI.*}}, %xmm1
+; X86-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-NEXT:    cvttps2dq %xmm1, %xmm1
 ; X86-NEXT:    pmulld %xmm1, %xmm0
 ; X86-NEXT:    retl
@@ -31,12 +31,12 @@ define <2 x i64> @shl2(<16 x i8> %r, <16 x i8> %a) nounwind readnone ssp {
 ; X86-NEXT:    psllw $5, %xmm1
 ; X86-NEXT:    movdqa %xmm0, %xmm3
 ; X86-NEXT:    psllw $4, %xmm3
-; X86-NEXT:    pand {{\.LCPI.*}}, %xmm3
+; X86-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm3
 ; X86-NEXT:    movdqa %xmm1, %xmm0
 ; X86-NEXT:    pblendvb %xmm0, %xmm3, %xmm2
 ; X86-NEXT:    movdqa %xmm2, %xmm3
 ; X86-NEXT:    psllw $2, %xmm3
-; X86-NEXT:    pand {{\.LCPI.*}}, %xmm3
+; X86-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm3
 ; X86-NEXT:    paddb %xmm1, %xmm1
 ; X86-NEXT:    movdqa %xmm1, %xmm0
 ; X86-NEXT:    pblendvb %xmm0, %xmm3, %xmm2

@@ -31,8 +31,12 @@ using namespace llvm;
 //- Infer Attributes ---------------------------------------------------------//
 
 STATISTIC(NumReadNone, "Number of functions inferred as readnone");
+STATISTIC(NumInaccessibleMemOnly,
+          "Number of functions inferred as inaccessiblememonly");
 STATISTIC(NumReadOnly, "Number of functions inferred as readonly");
 STATISTIC(NumArgMemOnly, "Number of functions inferred as argmemonly");
+STATISTIC(NumInaccessibleMemOrArgMemOnly,
+          "Number of functions inferred as inaccessiblemem_or_argmemonly");
 STATISTIC(NumNoUnwind, "Number of functions inferred as nounwind");
 STATISTIC(NumNoCapture, "Number of arguments inferred as nocapture");
 STATISTIC(NumWriteOnlyArg, "Number of arguments inferred as writeonly");
@@ -40,14 +44,22 @@ STATISTIC(NumSExtArg, "Number of arguments inferred as signext");
 STATISTIC(NumReadOnlyArg, "Number of arguments inferred as readonly");
 STATISTIC(NumNoAlias, "Number of function returns inferred as noalias");
 STATISTIC(NumNoUndef, "Number of function returns inferred as noundef returns");
-STATISTIC(NumNonNull, "Number of function returns inferred as nonnull returns");
 STATISTIC(NumReturnedArg, "Number of arguments inferred as returned");
+STATISTIC(NumWillReturn, "Number of functions inferred as willreturn");
 
 static bool setDoesNotAccessMemory(Function &F) {
   if (F.doesNotAccessMemory())
     return false;
   F.setDoesNotAccessMemory();
   ++NumReadNone;
+  return true;
+}
+
+static bool setOnlyAccessesInaccessibleMemory(Function &F) {
+  if (F.onlyAccessesInaccessibleMemory())
+    return false;
+  F.setOnlyAccessesInaccessibleMemory();
+  ++NumInaccessibleMemOnly;
   return true;
 }
 
@@ -64,6 +76,14 @@ static bool setOnlyAccessesArgMemory(Function &F) {
     return false;
   F.setOnlyAccessesArgMemory();
   ++NumArgMemOnly;
+  return true;
+}
+
+static bool setOnlyAccessesInaccessibleMemOrArgMem(Function &F) {
+  if (F.onlyAccessesInaccessibleMemOrArgMem())
+    return false;
+  F.setOnlyAccessesInaccessibleMemOrArgMem();
+  ++NumInaccessibleMemOrArgMemOnly;
   return true;
 }
 
@@ -145,18 +165,16 @@ static bool setArgsNoUndef(Function &F) {
   return Changed;
 }
 
-static bool setRetAndArgsNoUndef(Function &F) {
-  return setRetNoUndef(F) | setArgsNoUndef(F);
+static bool setArgNoUndef(Function &F, unsigned ArgNo) {
+  if (F.hasParamAttribute(ArgNo, Attribute::NoUndef))
+    return false;
+  F.addParamAttr(ArgNo, Attribute::NoUndef);
+  ++NumNoUndef;
+  return true;
 }
 
-static bool setRetNonNull(Function &F) {
-  assert(F.getReturnType()->isPointerTy() &&
-         "nonnull applies only to pointers");
-  if (F.hasAttribute(AttributeList::ReturnIndex, Attribute::NonNull))
-    return false;
-  F.addAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
-  ++NumNonNull;
-  return true;
+static bool setRetAndArgsNoUndef(Function &F) {
+  return setRetNoUndef(F) | setArgsNoUndef(F);
 }
 
 static bool setReturnedArg(Function &F, unsigned ArgNo) {
@@ -178,6 +196,14 @@ static bool setDoesNotFreeMemory(Function &F) {
   if (F.hasFnAttribute(Attribute::NoFree))
     return false;
   F.addFnAttr(Attribute::NoFree);
+  return true;
+}
+
+static bool setWillReturn(Function &F) {
+  if (F.hasFnAttribute(Attribute::WillReturn))
+    return false;
+  F.addFnAttr(Attribute::WillReturn);
+  ++NumWillReturn;
   return true;
 }
 
@@ -208,6 +234,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setOnlyReadsMemory(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setOnlyAccessesArgMemory(F);
+    Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 0);
     return Changed;
   case LibFunc_strchr:
@@ -215,6 +242,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setOnlyAccessesArgMemory(F);
     Changed |= setOnlyReadsMemory(F);
     Changed |= setDoesNotThrow(F);
+    Changed |= setWillReturn(F);
     return Changed;
   case LibFunc_strtol:
   case LibFunc_strtod:
@@ -224,19 +252,30 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
   case LibFunc_strtold:
   case LibFunc_strtoull:
     Changed |= setDoesNotThrow(F);
+    Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 0);
     return Changed;
-  case LibFunc_strcpy:
-  case LibFunc_strncpy:
   case LibFunc_strcat:
   case LibFunc_strncat:
+    Changed |= setOnlyAccessesArgMemory(F);
+    Changed |= setDoesNotThrow(F);
+    Changed |= setWillReturn(F);
+    Changed |= setReturnedArg(F, 0);
+    Changed |= setDoesNotCapture(F, 1);
+    Changed |= setOnlyReadsMemory(F, 1);
+    Changed |= setDoesNotAlias(F, 0);
+    Changed |= setDoesNotAlias(F, 1);
+    return Changed;
+  case LibFunc_strcpy:
+  case LibFunc_strncpy:
     Changed |= setReturnedArg(F, 0);
     LLVM_FALLTHROUGH;
   case LibFunc_stpcpy:
   case LibFunc_stpncpy:
     Changed |= setOnlyAccessesArgMemory(F);
     Changed |= setDoesNotThrow(F);
+    Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyWritesMemory(F, 0);
     Changed |= setOnlyReadsMemory(F, 1);
@@ -245,6 +284,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     return Changed;
   case LibFunc_strxfrm:
     Changed |= setDoesNotThrow(F);
+    Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
@@ -255,6 +295,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
   case LibFunc_strcspn:     // 0,1
     Changed |= setDoesNotThrow(F);
     Changed |= setOnlyAccessesArgMemory(F);
+    Changed |= setWillReturn(F);
     Changed |= setOnlyReadsMemory(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
@@ -266,6 +307,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     // global memory.
     Changed |= setOnlyReadsMemory(F);
     Changed |= setDoesNotThrow(F);
+    Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     return Changed;
@@ -274,11 +316,13 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setOnlyAccessesArgMemory(F);
     Changed |= setOnlyReadsMemory(F);
     Changed |= setDoesNotThrow(F);
+    Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 1);
     return Changed;
   case LibFunc_strtok:
   case LibFunc_strtok_r:
     Changed |= setDoesNotThrow(F);
+    Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
@@ -294,10 +338,14 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 0);
     return Changed;
-  case LibFunc_strdup:
   case LibFunc_strndup:
+    Changed |= setArgNoUndef(F, 1);
+    LLVM_FALLTHROUGH;
+  case LibFunc_strdup:
+    Changed |= setOnlyAccessesInaccessibleMemOrArgMem(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setRetDoesNotAlias(F);
+    Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setOnlyReadsMemory(F, 0);
     return Changed;
@@ -338,6 +386,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
   case LibFunc_setitimer:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
+    Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyReadsMemory(F, 1);
@@ -349,14 +398,18 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setOnlyReadsMemory(F, 0);
     return Changed;
   case LibFunc_malloc:
-    Changed |= setRetNoUndef(F);
+  case LibFunc_vec_malloc:
+    Changed |= setOnlyAccessesInaccessibleMemory(F);
+    Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setRetDoesNotAlias(F);
+    Changed |= setWillReturn(F);
     return Changed;
   case LibFunc_memcmp:
     Changed |= setOnlyAccessesArgMemory(F);
     Changed |= setOnlyReadsMemory(F);
     Changed |= setDoesNotThrow(F);
+    Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     return Changed;
@@ -365,16 +418,19 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setDoesNotThrow(F);
     Changed |= setOnlyAccessesArgMemory(F);
     Changed |= setOnlyReadsMemory(F);
+    Changed |= setWillReturn(F);
     return Changed;
   case LibFunc_modf:
   case LibFunc_modff:
   case LibFunc_modfl:
     Changed |= setDoesNotThrow(F);
+    Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 1);
     return Changed;
   case LibFunc_memcpy:
     Changed |= setDoesNotThrow(F);
     Changed |= setOnlyAccessesArgMemory(F);
+    Changed |= setWillReturn(F);
     Changed |= setDoesNotAlias(F, 0);
     Changed |= setReturnedArg(F, 0);
     Changed |= setOnlyWritesMemory(F, 0);
@@ -385,6 +441,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
   case LibFunc_memmove:
     Changed |= setDoesNotThrow(F);
     Changed |= setOnlyAccessesArgMemory(F);
+    Changed |= setWillReturn(F);
     Changed |= setReturnedArg(F, 0);
     Changed |= setOnlyWritesMemory(F, 0);
     Changed |= setDoesNotCapture(F, 1);
@@ -394,6 +451,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
   case LibFunc_memccpy:
     Changed |= setDoesNotThrow(F);
     Changed |= setOnlyAccessesArgMemory(F);
+    Changed |= setWillReturn(F);
     Changed |= setDoesNotAlias(F, 0);
     Changed |= setOnlyWritesMemory(F, 0);
     Changed |= setDoesNotAlias(F, 1);
@@ -404,7 +462,11 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setDoesNotThrow(F);
     return Changed;
   case LibFunc_memalign:
+    Changed |= setOnlyAccessesInaccessibleMemory(F);
+    Changed |= setRetNoUndef(F);
+    Changed |= setDoesNotThrow(F);
     Changed |= setRetDoesNotAlias(F);
+    Changed |= setWillReturn(F);
     return Changed;
   case LibFunc_mkdir:
     Changed |= setRetAndArgsNoUndef(F);
@@ -415,16 +477,23 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
   case LibFunc_mktime:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
+    Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 0);
     return Changed;
   case LibFunc_realloc:
+  case LibFunc_vec_realloc:
+    Changed |= setOnlyAccessesInaccessibleMemOrArgMem(F);
     Changed |= setRetNoUndef(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setRetDoesNotAlias(F);
+    Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 0);
+    Changed |= setArgNoUndef(F, 1);
     return Changed;
   case LibFunc_reallocf:
     Changed |= setRetNoUndef(F);
+    Changed |= setWillReturn(F);
+    Changed |= setArgNoUndef(F, 1);
     return Changed;
   case LibFunc_read:
     // May throw; "read" is a valid pthread cancellation point.
@@ -466,13 +535,16 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
   case LibFunc_aligned_alloc:
-    Changed |= setRetNoUndef(F);
+    Changed |= setOnlyAccessesInaccessibleMemory(F);
+    Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setRetDoesNotAlias(F);
+    Changed |= setWillReturn(F);
     return Changed;
   case LibFunc_bcopy:
     Changed |= setDoesNotThrow(F);
     Changed |= setOnlyAccessesArgMemory(F);
+    Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setOnlyReadsMemory(F, 0);
     Changed |= setOnlyWritesMemory(F, 1);
@@ -482,19 +554,23 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setDoesNotThrow(F);
     Changed |= setOnlyAccessesArgMemory(F);
     Changed |= setOnlyReadsMemory(F);
+    Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     return Changed;
   case LibFunc_bzero:
     Changed |= setDoesNotThrow(F);
     Changed |= setOnlyAccessesArgMemory(F);
+    Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setOnlyWritesMemory(F, 0);
     return Changed;
   case LibFunc_calloc:
-    Changed |= setRetNoUndef(F);
+  case LibFunc_vec_calloc:
+    Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setRetDoesNotAlias(F);
+    Changed |= setWillReturn(F);
     return Changed;
   case LibFunc_chmod:
   case LibFunc_chown:
@@ -516,6 +592,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
   case LibFunc_atoll:
     Changed |= setDoesNotThrow(F);
     Changed |= setOnlyReadsMemory(F);
+    Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 0);
     return Changed;
   case LibFunc_access:
@@ -546,8 +623,11 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setDoesNotCapture(F, 0);
     return Changed;
   case LibFunc_free:
+  case LibFunc_vec_free:
+    Changed |= setOnlyAccessesInaccessibleMemOrArgMem(F);
     Changed |= setArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
+    Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 0);
     return Changed;
   case LibFunc_fseek:
@@ -584,6 +664,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
   case LibFunc_frexpf:
   case LibFunc_frexpl:
     Changed |= setDoesNotThrow(F);
+    Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 1);
     return Changed;
   case LibFunc_fstatvfs:
@@ -769,9 +850,11 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
   case LibFunc_valloc:
-    Changed |= setRetNoUndef(F);
+    Changed |= setOnlyAccessesInaccessibleMemory(F);
+    Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setRetDoesNotAlias(F);
+    Changed |= setWillReturn(F);
     return Changed;
   case LibFunc_vprintf:
     Changed |= setRetAndArgsNoUndef(F);
@@ -843,10 +926,13 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotCapture(F, 3);
     return Changed;
-  case LibFunc_dunder_strdup:
   case LibFunc_dunder_strndup:
+    Changed |= setArgNoUndef(F, 1);
+    LLVM_FALLTHROUGH;
+  case LibFunc_dunder_strdup:
     Changed |= setDoesNotThrow(F);
     Changed |= setRetDoesNotAlias(F);
+    Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setOnlyReadsMemory(F, 0);
     return Changed;
@@ -929,19 +1015,6 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     return Changed;
-  case LibFunc_Znwj: // new(unsigned int)
-  case LibFunc_Znwm: // new(unsigned long)
-  case LibFunc_Znaj: // new[](unsigned int)
-  case LibFunc_Znam: // new[](unsigned long)
-  case LibFunc_msvc_new_int: // new(unsigned int)
-  case LibFunc_msvc_new_longlong: // new(unsigned long long)
-  case LibFunc_msvc_new_array_int: // new[](unsigned int)
-  case LibFunc_msvc_new_array_longlong: // new[](unsigned long long)
-    // Operator new always returns a nonnull noalias pointer
-    Changed |= setRetNoUndef(F);
-    Changed |= setRetNonNull(F);
-    Changed |= setRetDoesNotAlias(F);
-    return Changed;
   // TODO: add LibFunc entries for:
   // case LibFunc_memset_pattern4:
   // case LibFunc_memset_pattern8:
@@ -951,6 +1024,12 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setOnlyWritesMemory(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
+    return Changed;
+  case LibFunc_memset:
+    Changed |= setOnlyAccessesArgMemory(F);
+    Changed |= setWillReturn(F);
+    Changed |= setDoesNotThrow(F);
+    Changed |= setOnlyWritesMemory(F, 0);
     return Changed;
   // int __nvvm_reflect(const char *)
   case LibFunc_nvvm_reflect:
@@ -962,6 +1041,134 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
   case LibFunc_ldexpf:
   case LibFunc_ldexpl:
     Changed |= setSignExtendedArg(F, 1);
+    Changed |= setWillReturn(F);
+    return Changed;
+  case LibFunc_abs:
+  case LibFunc_acos:
+  case LibFunc_acosf:
+  case LibFunc_acosh:
+  case LibFunc_acoshf:
+  case LibFunc_acoshl:
+  case LibFunc_acosl:
+  case LibFunc_asin:
+  case LibFunc_asinf:
+  case LibFunc_asinh:
+  case LibFunc_asinhf:
+  case LibFunc_asinhl:
+  case LibFunc_asinl:
+  case LibFunc_atan:
+  case LibFunc_atan2:
+  case LibFunc_atan2f:
+  case LibFunc_atan2l:
+  case LibFunc_atanf:
+  case LibFunc_atanh:
+  case LibFunc_atanhf:
+  case LibFunc_atanhl:
+  case LibFunc_atanl:
+  case LibFunc_cbrt:
+  case LibFunc_cbrtf:
+  case LibFunc_cbrtl:
+  case LibFunc_ceil:
+  case LibFunc_ceilf:
+  case LibFunc_ceill:
+  case LibFunc_copysign:
+  case LibFunc_copysignf:
+  case LibFunc_copysignl:
+  case LibFunc_cos:
+  case LibFunc_cosh:
+  case LibFunc_coshf:
+  case LibFunc_coshl:
+  case LibFunc_cosf:
+  case LibFunc_cosl:
+  case LibFunc_cospi:
+  case LibFunc_cospif:
+  case LibFunc_exp:
+  case LibFunc_expf:
+  case LibFunc_expl:
+  case LibFunc_exp2:
+  case LibFunc_exp2f:
+  case LibFunc_exp2l:
+  case LibFunc_expm1:
+  case LibFunc_expm1f:
+  case LibFunc_expm1l:
+  case LibFunc_fabs:
+  case LibFunc_fabsf:
+  case LibFunc_fabsl:
+  case LibFunc_ffs:
+  case LibFunc_ffsl:
+  case LibFunc_ffsll:
+  case LibFunc_floor:
+  case LibFunc_floorf:
+  case LibFunc_floorl:
+  case LibFunc_fls:
+  case LibFunc_flsl:
+  case LibFunc_flsll:
+  case LibFunc_fmax:
+  case LibFunc_fmaxf:
+  case LibFunc_fmaxl:
+  case LibFunc_fmin:
+  case LibFunc_fminf:
+  case LibFunc_fminl:
+  case LibFunc_fmod:
+  case LibFunc_fmodf:
+  case LibFunc_fmodl:
+  case LibFunc_isascii:
+  case LibFunc_isdigit:
+  case LibFunc_labs:
+  case LibFunc_llabs:
+  case LibFunc_log:
+  case LibFunc_log10:
+  case LibFunc_log10f:
+  case LibFunc_log10l:
+  case LibFunc_log1p:
+  case LibFunc_log1pf:
+  case LibFunc_log1pl:
+  case LibFunc_log2:
+  case LibFunc_log2f:
+  case LibFunc_log2l:
+  case LibFunc_logb:
+  case LibFunc_logbf:
+  case LibFunc_logbl:
+  case LibFunc_logf:
+  case LibFunc_logl:
+  case LibFunc_nearbyint:
+  case LibFunc_nearbyintf:
+  case LibFunc_nearbyintl:
+  case LibFunc_pow:
+  case LibFunc_powf:
+  case LibFunc_powl:
+  case LibFunc_rint:
+  case LibFunc_rintf:
+  case LibFunc_rintl:
+  case LibFunc_round:
+  case LibFunc_roundf:
+  case LibFunc_roundl:
+  case LibFunc_sin:
+  case LibFunc_sincospif_stret:
+  case LibFunc_sinf:
+  case LibFunc_sinh:
+  case LibFunc_sinhf:
+  case LibFunc_sinhl:
+  case LibFunc_sinl:
+  case LibFunc_sinpi:
+  case LibFunc_sinpif:
+  case LibFunc_sqrt:
+  case LibFunc_sqrtf:
+  case LibFunc_sqrtl:
+  case LibFunc_strnlen:
+  case LibFunc_tan:
+  case LibFunc_tanf:
+  case LibFunc_tanh:
+  case LibFunc_tanhf:
+  case LibFunc_tanhl:
+  case LibFunc_tanl:
+  case LibFunc_toascii:
+  case LibFunc_trunc:
+  case LibFunc_truncf:
+  case LibFunc_truncl:
+    Changed |= setDoesNotThrow(F);
+    Changed |= setDoesNotFreeMemory(F);
+    Changed |= setWillReturn(F);
     return Changed;
   default:
     // FIXME: It'd be really nice to cover all the library functions we're

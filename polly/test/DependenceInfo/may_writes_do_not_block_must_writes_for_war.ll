@@ -8,7 +8,7 @@
 ; (S0(Read) -> S2(Must-Write)).
 ;
 ; CHECK: WAR dependences:
-; CHECK-NEXT:     { Stmt_S0[i0] -> Stmt_S2[i0] : 0 < i0 <= 2; Stmt_S0[i0] -> Stmt_if_end__TO__S2[i0] : 0 < i0 <= 2 }
+; CHECK-NEXT:     { Stmt_S0[i0] -> Stmt_if_end__TO__S2[i0] : 0 < i0 <= 2; Stmt_S0[i0] -> Stmt_S2[i0] : 0 < i0 <= 2 }
 ;
 ;
 ;    static const int N = 3000;

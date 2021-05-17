@@ -51,7 +51,7 @@
 # RUN: echo "OUTPUT_FORMAT(x y z)" > %t8
 # RUN: not ld.lld %t8 no-such-file 2>&1 | FileCheck -check-prefix=ERR8 %s
 # RUN: not ld.lld -m elf_amd64 %t8 no-such-file 2>&1 | FileCheck -check-prefix=ERR8 %s
-# ERR8: unknown output format name: x
+# ERR8: , expected, but got y
 # ERR8: cannot open no-such-file:
 
 # RUN: echo "OUTPUT_FORMAT(elf64-x86-64 y z)" > %t9

@@ -108,10 +108,15 @@ set(TSAN_HEADERS
   rtl/tsan_symbolize.h
   rtl/tsan_sync.h
   rtl/tsan_trace.h
-  rtl/tsan_update_shadow_word_inl.h)
+  rtl/tsan_update_shadow_word_inl.h
+  )
 
 set(TSAN_RUNTIME_LIBRARIES)
 add_compiler_rt_component(tsan)
+
+if("${CMAKE_C_FLAGS}" MATCHES "-Wno-(error=)?unused-command-line-argument")
+  set(EXTRA_CFLAGS "-Wno-error=unused-command-line-argument ${EXTRA_CFLAGS}")
+endif()
 
 if(APPLE)
   # Ideally we would check the SDK version for the actual platform we are
@@ -122,7 +127,10 @@ if(APPLE)
     message(FATAL_ERROR "Building the TSan runtime requires at least macOS SDK 10.12 (or aligned SDK on other platforms)")
   endif()
 
-  add_asm_sources(TSAN_ASM_SOURCES rtl/tsan_rtl_amd64.S rtl/tsan_rtl_aarch64.S)
+  add_asm_sources(TSAN_ASM_SOURCES
+    rtl/tsan_rtl_amd64.S
+    rtl/tsan_rtl_aarch64.S
+    )
 
   set(TSAN_LINK_LIBS ${SANITIZER_COMMON_LINK_LIBS})
 
@@ -156,6 +164,7 @@ if(APPLE)
   set(BUILDGO_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/go/buildgo.sh)
   add_custom_target(GotsanRuntimeCheck
     COMMAND env "CC=${CMAKE_C_COMPILER} ${OSX_SYSROOT_FLAG}"
+            EXTRA_CFLAGS=${EXTRA_CFLAGS}
             IN_TMPDIR=1 SILENT=1 ${BUILDGO_SCRIPT}
     DEPENDS tsan ${BUILDGO_SCRIPT}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/go
@@ -165,40 +174,51 @@ if(APPLE)
 else()
   foreach(arch ${TSAN_SUPPORTED_ARCH})
     if(arch STREQUAL "x86_64")
-      add_asm_sources(TSAN_ASM_SOURCES rtl/tsan_rtl_amd64.S)
+      add_asm_sources(TSAN_ASM_SOURCES
+        rtl/tsan_rtl_amd64.S
+        )
       # Sanity check for Go runtime.
       set(BUILDGO_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/go/buildgo.sh)
       add_custom_target(GotsanRuntimeCheck
         COMMAND env "CC=${CMAKE_C_COMPILER} ${CMAKE_C_COMPILER_ARG1}"
+                EXTRA_CFLAGS=${EXTRA_CFLAGS}
                 IN_TMPDIR=1 SILENT=1 ${BUILDGO_SCRIPT}
         DEPENDS clang_rt.tsan-${arch} ${BUILDGO_SCRIPT}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/go
         COMMENT "Checking TSan Go runtime..."
         VERBATIM)
     elseif(arch STREQUAL "aarch64")
-      add_asm_sources(TSAN_ASM_SOURCES rtl/tsan_rtl_aarch64.S)
+      add_asm_sources(TSAN_ASM_SOURCES
+        rtl/tsan_rtl_aarch64.S
+        )
       # Sanity check for Go runtime.
       set(BUILDGO_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/go/buildgo.sh)
       add_custom_target(GotsanRuntimeCheck
 	COMMAND env "CC=${CMAKE_C_COMPILER} ${CMAKE_C_COMPILER_ARG1}"
+		EXTRA_CFLAGS=${EXTRA_CFLAGS} 
 		IN_TMPDIR=1 SILENT=1 ${BUILDGO_SCRIPT}
 	DEPENDS clang_rt.tsan-${arch} ${BUILDGO_SCRIPT}
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/go
 	COMMENT "Checking TSan Go runtime..."
 	VERBATIM)
     elseif(arch MATCHES "powerpc64|powerpc64le")
-      add_asm_sources(TSAN_ASM_SOURCES rtl/tsan_rtl_ppc64.S)
+      add_asm_sources(TSAN_ASM_SOURCES
+        rtl/tsan_rtl_ppc64.S
+        )
       # Sanity check for Go runtime.
       set(BUILDGO_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/go/buildgo.sh)
       add_custom_target(GotsanRuntimeCheck
 	COMMAND env "CC=${CMAKE_C_COMPILER} ${CMAKE_C_COMPILER_ARG1}"
+		EXTRA_CFLAGS=${EXTRA_CFLAGS} 
 		IN_TMPDIR=1 SILENT=1 ${BUILDGO_SCRIPT}
 	DEPENDS clang_rt.tsan-${arch} ${BUILDGO_SCRIPT}
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/go
 	COMMENT "Checking TSan Go runtime..."
 	VERBATIM)
     elseif(arch MATCHES "mips64|mips64le")
-      add_asm_sources(TSAN_ASM_SOURCES rtl/tsan_rtl_mips64.S)
+      add_asm_sources(TSAN_ASM_SOURCES
+        rtl/tsan_rtl_mips64.S
+        )
     else()
       set(TSAN_ASM_SOURCES)
     endif()

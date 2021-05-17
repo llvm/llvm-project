@@ -35,7 +35,7 @@ void do_insert_const_lvalue_test()
     assert(r->second == 3);
 
     const VT v2(3.5, 4);
-    r = c.insert(c.end(), v2);
+    r = c.insert(r, v2);
     assert(c.size() == 2);
     assert(r->first == 3.5);
     assert(r->second == 4);

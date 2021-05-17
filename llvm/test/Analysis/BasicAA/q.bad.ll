@@ -178,3 +178,11 @@ define void @constantOffsetHeuristic_i8_i8(i8* %mem, i8 %val) {
   %c = bitcast i8* %c.8 to i32*
   ret void
 }
+
+; CHECK-LABEL: different_large_bitwidths
+; MayAlias: i64* %p1, i64* %p2
+define void @different_large_bitwidths(i8* %a, i64 %i, i128 %j) {
+  %p1 = getelementptr i8, i8* %a, i64 %i
+  %p2 = getelementptr i8, i8* %a, i128 %j
+  ret void
+}

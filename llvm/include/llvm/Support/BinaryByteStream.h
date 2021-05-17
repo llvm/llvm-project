@@ -270,4 +270,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_SUPPORT_BYTESTREAM_H
+#endif // LLVM_SUPPORT_BINARYBYTESTREAM_H

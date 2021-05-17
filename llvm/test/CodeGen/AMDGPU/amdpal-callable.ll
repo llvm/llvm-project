@@ -2,6 +2,9 @@
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SDAG -enable-var-scope %s
 ; RUN: llc -global-isel -mtriple=amdgcn--amdpal -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GISEL -enable-var-scope %s
 
+; Make sure this interacts well with -amdgpu-fixed-function-abi
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 -amdgpu-fixed-function-abi -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SDAG -enable-var-scope %s
+
 declare float @extern_func(float) #0
 declare float @extern_func_many_args(<64 x float>) #0
 
@@ -146,7 +149,7 @@ attributes #0 = { nounwind }
 ; GCN-NEXT:  - .registers:
 ; SDAG-NEXT:      0x2e12 (COMPUTE_PGM_RSRC1): 0xaf01ca{{$}}
 ; SDAG-NEXT:      0x2e13 (COMPUTE_PGM_RSRC2): 0x8001{{$}}
-; GISEL-NEXT:      0x2e12 (COMPUTE_PGM_RSRC1): 0xaf01cf{{$}}
+; GISEL-NEXT:      0x2e12 (COMPUTE_PGM_RSRC1): 0xaf01ce{{$}}
 ; GISEL-NEXT:      0x2e13 (COMPUTE_PGM_RSRC2): 0x8001{{$}}
 ; GCN-NEXT:    .shader_functions:
 ; GCN-NEXT:      dynamic_stack:
@@ -163,7 +166,7 @@ attributes #0 = { nounwind }
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x10{{$}}
 ; GCN-NEXT:      no_stack_extern_call_many_args:
 ; SDAG-NEXT:        .stack_frame_size_in_bytes: 0x90{{$}}
-; GISEL-NEXT:        .stack_frame_size_in_bytes: 0xd0{{$}}
+; GISEL-NEXT:        .stack_frame_size_in_bytes: 0x90{{$}}
 ; GCN-NEXT:      no_stack_indirect_call:
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x10{{$}}
 ; GCN-NEXT:      simple_lds:

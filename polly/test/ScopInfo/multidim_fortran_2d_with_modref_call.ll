@@ -22,7 +22,7 @@
 ; CHECK-NEXT:    [tmp14, p_1] -> {  :  }
 ; CHECK-NEXT:    Invalid Context:
 ; CHECK-NEXT:    [tmp14, p_1] -> { : tmp14 > 0 and (p_1 <= -1152921504606846977 or tmp14 >= 1152921504606846977 or p_1 >= 1152921504606846977 - tmp14) }
-; CHECK-NEXT:    p0: %tmp14
+; CHECK:         p0: %tmp14
 ; CHECK-NEXT:    p1: {0,+,(0 smax %tmp)}<%bb12>
 ; CHECK-NEXT:    Arrays {
 ; CHECK-NEXT:        i64 MemRef_arg1[*]; // Element size 8
@@ -74,7 +74,7 @@
 ; NONAFFINE-NEXT:    [tmp9, tmp14] -> {  :  }
 ; NONAFFINE-NEXT:    Invalid Context:
 ; NONAFFINE-NEXT:    [tmp9, tmp14] -> {  : false }
-; NONAFFINE-NEXT:    p0: %tmp9
+; NONAFFINE:         p0: %tmp9
 ; NONAFFINE-NEXT:    p1: %tmp14
 ; NONAFFINE-NEXT:    Arrays {
 ; NONAFFINE-NEXT:        i64 MemRef_arg[*]; // Element size 8

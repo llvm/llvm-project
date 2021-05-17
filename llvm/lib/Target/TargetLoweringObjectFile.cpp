@@ -44,7 +44,7 @@ void TargetLoweringObjectFile::Initialize(MCContext &ctx,
   // `Initialize` can be called more than once.
   delete Mang;
   Mang = new Mangler();
-  InitMCObjectFileInfo(TM.getTargetTriple(), TM.isPositionIndependent(), ctx,
+  initMCObjectFileInfo(ctx, TM.isPositionIndependent(),
                        TM.getCodeModel() == CodeModel::Large);
 
   // Reset various EH DWARF encodings.
@@ -217,8 +217,14 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
 
   // Handle thread-local data first.
   if (GVar->isThreadLocal()) {
-    if (isSuitableForBSS(GVar) && !TM.Options.NoZerosInBSS)
+    if (isSuitableForBSS(GVar) && !TM.Options.NoZerosInBSS) {
+      // Zero-initialized TLS variables with local linkage always get classified
+      // as ThreadBSSLocal.
+      if (GVar->hasLocalLinkage()) {
+        return SectionKind::getThreadBSSLocal();
+      }
       return SectionKind::getThreadBSS();
+    }
     return SectionKind::getThreadData();
   }
 
@@ -290,7 +296,8 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
       // consideration when it tries to merge entries in the section.
       Reloc::Model ReloModel = TM.getRelocationModel();
       if (ReloModel == Reloc::Static || ReloModel == Reloc::ROPI ||
-          ReloModel == Reloc::RWPI || ReloModel == Reloc::ROPI_RWPI)
+          ReloModel == Reloc::RWPI || ReloModel == Reloc::ROPI_RWPI ||
+          !C->needsDynamicRelocation())
         return SectionKind::getReadOnly();
 
       // Otherwise, the dynamic linker needs to fix it up, put it in the
@@ -377,6 +384,11 @@ MCSection *TargetLoweringObjectFile::getSectionForConstant(
 MCSection *TargetLoweringObjectFile::getSectionForMachineBasicBlock(
     const Function &F, const MachineBasicBlock &MBB,
     const TargetMachine &TM) const {
+  return nullptr;
+}
+
+MCSection *TargetLoweringObjectFile::getUniqueSectionForFunction(
+    const Function &F, const TargetMachine &TM) const {
   return nullptr;
 }
 

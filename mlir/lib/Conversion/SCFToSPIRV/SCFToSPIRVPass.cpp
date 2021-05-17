@@ -33,14 +33,14 @@ void SCFToSPIRVPass::runOnOperation() {
 
   auto targetAttr = spirv::lookupTargetEnvOrDefault(module);
   std::unique_ptr<ConversionTarget> target =
-      spirv::SPIRVConversionTarget::get(targetAttr);
+      SPIRVConversionTarget::get(targetAttr);
 
   SPIRVTypeConverter typeConverter(targetAttr);
   ScfToSPIRVContext scfContext;
-  OwningRewritePatternList patterns;
-  populateSCFToSPIRVPatterns(context, typeConverter, scfContext, patterns);
-  populateStandardToSPIRVPatterns(context, typeConverter, patterns);
-  populateBuiltinFuncToSPIRVPatterns(context, typeConverter, patterns);
+  RewritePatternSet patterns(context);
+  populateSCFToSPIRVPatterns(typeConverter, scfContext, patterns);
+  populateStandardToSPIRVPatterns(typeConverter, patterns);
+  populateBuiltinFuncToSPIRVPatterns(typeConverter, patterns);
 
   if (failed(applyPartialConversion(module, *target, std::move(patterns))))
     return signalPassFailure();

@@ -96,6 +96,9 @@ DataExtractor getRegset(llvm::ArrayRef<CoreNote> Notes,
                         llvm::ArrayRef<RegsetDesc> RegsetDescs);
 
 constexpr RegsetDesc FPR_Desc[] = {
+    // FreeBSD/i386 core NT_FPREGSET is x87 FSAVE result but the XSAVE dump
+    // starts with FXSAVE struct, so use that instead if available.
+    {llvm::Triple::FreeBSD, llvm::Triple::x86, llvm::ELF::NT_X86_XSTATE},
     {llvm::Triple::FreeBSD, llvm::Triple::UnknownArch, llvm::ELF::NT_FPREGSET},
     // In a i386 core file NT_FPREGSET is present, but it's not the result
     // of the FXSAVE instruction like in 64 bit files.
@@ -109,6 +112,10 @@ constexpr RegsetDesc FPR_Desc[] = {
 
 constexpr RegsetDesc AARCH64_SVE_Desc[] = {
     {llvm::Triple::Linux, llvm::Triple::aarch64, llvm::ELF::NT_ARM_SVE},
+};
+
+constexpr RegsetDesc AARCH64_PAC_Desc[] = {
+    {llvm::Triple::Linux, llvm::Triple::aarch64, llvm::ELF::NT_ARM_PAC_MASK},
 };
 
 constexpr RegsetDesc PPC_VMX_Desc[] = {

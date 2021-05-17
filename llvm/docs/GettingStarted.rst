@@ -38,6 +38,10 @@ This is an example workflow and configuration to get and build the LLVM source:
    * ``git clone https://github.com/llvm/llvm-project.git``
    * Or, on windows, ``git clone --config core.autocrlf=false
      https://github.com/llvm/llvm-project.git``
+   * To save storage and speed-up the checkout time, you may want to do a 
+     `shallow clone <https://git-scm.com/docs/git-clone#Documentation/git-clone.txt---depthltdepthgt>`_. 
+     For example, to get the latest revision of the LLVM project, use 
+     ``git clone --depth 1 https://github.com/llvm/llvm-project.git``
 
 #. Configure and build LLVM and Clang:
 
@@ -557,31 +561,6 @@ commit XYZ". Leave this at the end of the commit message, but add some details
 before it as to why the commit is being reverted. A brief explanation and/or
 links to bots that demonstrate the problem are sufficient.
 
-Checkout via SVN (deprecated)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The SVN repository is no longer updated, but it is still available for now. If
-you need to check the code out of SVN rather than git for some reason, you can
-do it like so:
-
-* ``cd where-you-want-llvm-to-live``
-* Read-Only: ``svn co https://llvm.org/svn/llvm-project/llvm/trunk llvm``
-* Read-Write: ``svn co https://user@llvm.org/svn/llvm-project/llvm/trunk llvm``
-
-This will create an '``llvm``' directory in the current directory and fully
-populate it with the LLVM source code, Makefiles, test directories, and local
-copies of documentation files.
-
-If you want to get a specific release (as opposed to the most recent revision),
-you can check it out from the '``tags``' directory (instead of '``trunk``'). The
-following releases are located in the following subdirectories of the '``tags``'
-directory:
-
-* Release 3.5.0 and later: **RELEASE_350/final** and so on
-* Release 2.9 through 3.4: **RELEASE_29/final** and so on
-* Release 1.1 through 2.8: **RELEASE_11** and so on
-* Release 1.0: **RELEASE_1**
-
 Local LLVM Configuration
 ------------------------
 
@@ -621,9 +600,9 @@ used by people developing LLVM.
 |                         | The default list is defined as                     |
 |                         | ``LLVM_ALL_TARGETS``, and can be set to include    |
 |                         | out-of-tree targets. The default value includes:   |
-|                         | ``AArch64, AMDGPU, ARM, BPF, Hexagon, Mips,        |
-|                         | MSP430, NVPTX, PowerPC, Sparc, SystemZ, X86,       |
-|                         | XCore``.                                           |
+|                         | ``AArch64, AMDGPU, ARM, AVR, BPF, Hexagon, Lanai,  |
+|                         | Mips, MSP430, NVPTX, PowerPC, RISCV, Sparc,        |
+|                         | SystemZ, WebAssembly, X86, XCore``.                |
 |                         |                                                    |
 +-------------------------+----------------------------------------------------+
 | LLVM_ENABLE_DOXYGEN     | Build doxygen-based documentation from the source  |
@@ -835,10 +814,36 @@ One useful source of information about the LLVM source base is the LLVM `doxygen
 `<https://llvm.org/doxygen/>`_.  The following is a brief introduction to code
 layout:
 
+``llvm/cmake``
+--------------
+Genereates system build files.
+
+``llvm/cmake/modules``
+  Build configuration for llvm user defined options. Checks compiler version and 
+  linker flags.
+
+``llvm/cmake/platforms``
+  Toolchain configuration for Android NDK, iOS systems and non-Windows hosts to
+  target MSVC.
+
 ``llvm/examples``
 -----------------
 
-Simple examples using the LLVM IR and JIT.
+- Some simple examples showing how to use LLVM as a compiler for a custom 
+  language - including lowering, optimization, and code generation.
+
+- Kaleidoscope Tutorial: Kaleidoscope language tutorial run through the 
+  implementation of a nice little compiler for a non-trivial language 
+  including a hand-written lexer, parser, AST, as well as code generation 
+  support using LLVM- both static (ahead of time) and various approaches to 
+  Just In Time (JIT) compilation. 
+  `Kaleidoscope Tutorial for complete beginner 
+  <https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/index.html>`_.
+
+- BuildingAJIT: Examples of the `BuildingAJIT tutorial 
+  <https://llvm.org/docs/tutorial/BuildingAJIT1.html>`_ that shows how LLVM’s 
+  ORC JIT APIs interact with other parts of LLVM. It also, teaches how to 
+  recombine them to build a custom JIT that is suited to your use-case.
 
 ``llvm/include``
 ----------------
@@ -916,6 +921,14 @@ share code among the `tools`_.
 
   Source code that corresponding to the header files in ``llvm/include/ADT/``
   and ``llvm/include/Support/``.
+
+``llvm/bindings``
+----------------------
+
+Contains bindings for the LLVM compiler infrastructure to allow
+programs written in languages other than C or C++ to take advantage of the LLVM
+infrastructure.
+LLVM project provides language bindings for Go, OCaml and Python.
 
 ``llvm/projects``
 -----------------

@@ -360,6 +360,7 @@ kmpc_set_defaults                           224
         __kmpc_team_static_init_4u          256
         __kmpc_team_static_init_8           257
         __kmpc_team_static_init_8u          258
+        __kmpc_push_num_teams_51            284
 %endif
 
 %ifndef stub
@@ -389,6 +390,9 @@ kmpc_set_disp_num_buffers                   267
         __kmpc_taskred_init                 277
         __kmpc_taskred_modifier_init        278
         __kmpc_omp_target_task_alloc        279
+        __kmpc_error                        281
+        __kmpc_masked                       282
+        __kmpc_end_masked                   283
 %endif
 
 # User API entry points that have both lower- and upper- case versions for Fortran.
@@ -537,6 +541,10 @@ kmp_set_disp_num_buffers                    890
     omp_pause_resource_all                  757
     omp_get_supported_active_levels         758
     omp_fulfill_event                       759
+    omp_set_num_teams                       802
+    omp_get_max_teams                       803
+    omp_set_teams_thread_limit              804
+    omp_get_teams_thread_limit              805
     omp_display_env                         733
     omp_calloc                              776
     omp_realloc                             777
@@ -550,12 +558,20 @@ kmp_set_disp_num_buffers                    890
     omp_cgroup_mem_alloc                   DATA
     omp_pteam_mem_alloc                    DATA
     omp_thread_mem_alloc                   DATA
+    # Preview of target memory support
+    llvm_omp_target_host_mem_alloc         DATA
+    llvm_omp_target_shared_mem_alloc       DATA
+    llvm_omp_target_device_mem_alloc       DATA
 
     omp_default_mem_space                  DATA
     omp_large_cap_mem_space                DATA
     omp_const_mem_space                    DATA
     omp_high_bw_mem_space                  DATA
     omp_low_lat_mem_space                  DATA
+    # Preview of target memory support
+    llvm_omp_target_host_mem_space         DATA
+    llvm_omp_target_shared_mem_space       DATA
+    llvm_omp_target_device_mem_space       DATA
 
 %ifndef stub
     # Ordinals between 900 and 999 are reserved
@@ -776,7 +792,9 @@ kmp_set_disp_num_buffers                    890
 
     %endif
 
+    # These are specific to x86 and x64
     %ifndef arch_64
+    %ifndef arch_aarch64
 
         # ATOMIC extensions for OpenMP 3.1 spec (x86 and x64 only)
 
@@ -1180,6 +1198,7 @@ kmp_set_disp_num_buffers                    890
             __kmpc_atomic_float10_div_cpt_rev_fp
             %endif
 
+    %endif   # arch_aarch64
     %endif   # arch_64
 
     %ifdef HAVE_QUAD

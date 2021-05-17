@@ -184,8 +184,9 @@ define void @mubuf_clause(<4 x i32> addrspace(5)* noalias nocapture readonly %ar
 ; GCN-NEXT:    buffer_load_dword v15, v0, s[0:3], 0 offen offset:48
 ; GCN-NEXT:    buffer_load_dword v16, v0, s[0:3], 0 offen offset:52
 ; GCN-NEXT:    buffer_load_dword v17, v0, s[0:3], 0 offen offset:56
-; GCN-NEXT:    v_add_u32_e32 v1, v1, v2
+; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen offset:60
+; GCN-NEXT:    v_add_u32_e32 v1, v1, v2
 ; GCN-NEXT:    s_waitcnt vmcnt(12)
 ; GCN-NEXT:    buffer_store_dword v6, v1, s[0:3], 0 offen offset:12
 ; GCN-NEXT:    buffer_store_dword v5, v1, s[0:3], 0 offen offset:8
@@ -329,12 +330,12 @@ define void @load_global_d16_hi(i16 addrspace(1)* %in, i16 %reg, <2 x i16> addrs
 ; GCN-SCRATCH:       ; %bb.0: ; %entry
 ; GCN-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
-; GCN-SCRATCH-NEXT:    v_mov_b32_e32 v6, v2
+; GCN-SCRATCH-NEXT:    v_mov_b32_e32 v5, v2
 ; GCN-SCRATCH-NEXT:    s_clause 0x1
-; GCN-SCRATCH-NEXT:    global_load_short_d16_hi v6, v[0:1], off
+; GCN-SCRATCH-NEXT:    global_load_short_d16_hi v5, v[0:1], off
 ; GCN-SCRATCH-NEXT:    global_load_short_d16_hi v2, v[0:1], off offset:64
 ; GCN-SCRATCH-NEXT:    s_waitcnt vmcnt(1)
-; GCN-SCRATCH-NEXT:    global_store_dword v[3:4], v6, off
+; GCN-SCRATCH-NEXT:    global_store_dword v[3:4], v5, off
 ; GCN-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SCRATCH-NEXT:    global_store_dword v[3:4], v2, off offset:128
 ; GCN-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -372,12 +373,12 @@ define void @load_global_d16_lo(i16 addrspace(1)* %in, i32 %reg, <2 x i16> addrs
 ; GCN-SCRATCH:       ; %bb.0: ; %entry
 ; GCN-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
-; GCN-SCRATCH-NEXT:    v_mov_b32_e32 v6, v2
+; GCN-SCRATCH-NEXT:    v_mov_b32_e32 v5, v2
 ; GCN-SCRATCH-NEXT:    s_clause 0x1
-; GCN-SCRATCH-NEXT:    global_load_short_d16 v6, v[0:1], off
+; GCN-SCRATCH-NEXT:    global_load_short_d16 v5, v[0:1], off
 ; GCN-SCRATCH-NEXT:    global_load_short_d16 v2, v[0:1], off offset:64
 ; GCN-SCRATCH-NEXT:    s_waitcnt vmcnt(1)
-; GCN-SCRATCH-NEXT:    global_store_dword v[3:4], v6, off
+; GCN-SCRATCH-NEXT:    global_store_dword v[3:4], v5, off
 ; GCN-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SCRATCH-NEXT:    global_store_dword v[3:4], v2, off offset:128
 ; GCN-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0

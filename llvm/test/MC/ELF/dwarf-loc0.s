@@ -1,8 +1,10 @@
 # REQUIRES: default_triple
-# RUN: llvm-mc -dwarf-version 5 %s -filetype=obj -o - | llvm-dwarfdump -debug-line - | FileCheck %s
+# RUN: llvm-mc -dwarf-version 5 --defsym FILE0=1 %s -filetype=obj -o - | llvm-dwarfdump -debug-line - | FileCheck %s
 # RUN: not llvm-mc -dwarf-version 4 %s -filetype=asm -o - 2>&1 | FileCheck %s -check-prefix=ERR
 # Show that ".loc 0" works in DWARF v5, gets an error for earlier versions.
+.ifdef FILE0
         .file 0 "root.cpp"
+.endif
         .file 1 "header.h"
 	.loc  0 10 0
         .byte 0

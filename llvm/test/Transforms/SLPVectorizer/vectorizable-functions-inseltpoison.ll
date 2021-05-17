@@ -9,15 +9,7 @@ define <4 x float> @memread_4x(<4 x float>* %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, <4 x float>* [[A:%.*]], align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @vmemread(<4 x float> [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP5]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
 entry:
   %0 = load <4 x float>, <4 x float>* %a, align 16
@@ -44,16 +36,16 @@ define <4 x float> @memwrite_4x(<4 x float>* %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, <4 x float>* [[A:%.*]], align 16
 ; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @memwrite(float [[VECEXT]]) [[ATTR1:#.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @memwrite(float [[VECEXT]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
 ; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @memwrite(float [[VECEXT_1]]) [[ATTR1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @memwrite(float [[VECEXT_1]]) #[[ATTR1]]
 ; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
 ; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @memwrite(float [[VECEXT_2]]) [[ATTR1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @memwrite(float [[VECEXT_2]]) #[[ATTR1]]
 ; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
 ; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @memwrite(float [[VECEXT_3]]) [[ATTR1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @memwrite(float [[VECEXT_3]]) #[[ATTR1]]
 ; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
 ; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
 ;

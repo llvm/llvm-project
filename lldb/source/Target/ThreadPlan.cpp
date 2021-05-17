@@ -20,9 +20,9 @@ using namespace lldb_private;
 
 // ThreadPlan constructor
 ThreadPlan::ThreadPlan(ThreadPlanKind kind, const char *name, Thread &thread,
-                       Vote stop_vote, Vote run_vote)
+                       Vote report_stop_vote, Vote report_run_vote)
     : m_process(*thread.GetProcess().get()), m_tid(thread.GetID()),
-      m_stop_vote(stop_vote), m_run_vote(run_vote),
+      m_report_stop_vote(report_stop_vote), m_report_run_vote(report_run_vote),
       m_takes_iteration_count(false), m_could_not_resolve_hw_bp(false),
       m_thread(&thread), m_kind(kind), m_name(name), m_plan_complete_mutex(),
       m_cached_plan_explains_stop(eLazyBoolCalculate), m_plan_complete(false),
@@ -50,7 +50,7 @@ Thread &ThreadPlan::GetThread() {
 bool ThreadPlan::PlanExplainsStop(Event *event_ptr) {
   if (m_cached_plan_explains_stop == eLazyBoolCalculate) {
     bool actual_value = DoPlanExplainsStop(event_ptr);
-    m_cached_plan_explains_stop = actual_value ? eLazyBoolYes : eLazyBoolNo;
+    CachePlanExplainsStop(actual_value);
     return actual_value;
   } else {
     return m_cached_plan_explains_stop == eLazyBoolYes;
@@ -78,7 +78,7 @@ bool ThreadPlan::MischiefManaged() {
 Vote ThreadPlan::ShouldReportStop(Event *event_ptr) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
 
-  if (m_stop_vote == eVoteNoOpinion) {
+  if (m_report_stop_vote == eVoteNoOpinion) {
     ThreadPlan *prev_plan = GetPreviousPlan();
     if (prev_plan) {
       Vote prev_vote = prev_plan->ShouldReportStop(event_ptr);
@@ -86,18 +86,20 @@ Vote ThreadPlan::ShouldReportStop(Event *event_ptr) {
       return prev_vote;
     }
   }
-  LLDB_LOG(log, "Returning vote: {0}", m_stop_vote);
-  return m_stop_vote;
+  LLDB_LOG(log, "Returning vote: {0}", m_report_stop_vote);
+  return m_report_stop_vote;
 }
 
 Vote ThreadPlan::ShouldReportRun(Event *event_ptr) {
-  if (m_run_vote == eVoteNoOpinion) {
+  if (m_report_run_vote == eVoteNoOpinion) {
     ThreadPlan *prev_plan = GetPreviousPlan();
     if (prev_plan)
       return prev_plan->ShouldReportRun(event_ptr);
   }
-  return m_run_vote;
+  return m_report_run_vote;
 }
+
+void ThreadPlan::ClearThreadCache() { m_thread = nullptr; }
 
 bool ThreadPlan::StopOthers() {
   ThreadPlan *prev_plan;
@@ -134,7 +136,7 @@ bool ThreadPlan::WillResume(StateType resume_state, bool current_plan) {
     }
   }
   bool success = DoWillResume(resume_state, current_plan);
-  m_thread = nullptr; // We don't cache the thread pointer over resumes.  This
+  ClearThreadCache(); // We don't cache the thread pointer over resumes.  This
                       // Thread might go away, and another Thread represent
                       // the same underlying object on a later stop.
   return success;
@@ -154,8 +156,7 @@ bool ThreadPlan::OkayToDiscard() {
 }
 
 lldb::StateType ThreadPlan::RunState() {
-  if (m_tracer_sp && m_tracer_sp->TracingEnabled() &&
-      m_tracer_sp->SingleStepEnabled())
+  if (m_tracer_sp && m_tracer_sp->TracingEnabled())
     return eStateStepping;
   else
     return GetPlanRunState();

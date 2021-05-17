@@ -44,6 +44,12 @@ bool isHsaAbiVersion2(const MCSubtargetInfo *STI);
 /// \returns True if HSA OS ABI Version identification is 3,
 /// false otherwise.
 bool isHsaAbiVersion3(const MCSubtargetInfo *STI);
+/// \returns True if HSA OS ABI Version identification is 4,
+/// false otherwise.
+bool isHsaAbiVersion4(const MCSubtargetInfo *STI);
+/// \returns True if HSA OS ABI Version identification is 3 or 4,
+/// false otherwise.
+bool isHsaAbiVersion3Or4(const MCSubtargetInfo *STI);
 
 struct GcnBufferFormatInfo {
   unsigned Format;
@@ -69,8 +75,87 @@ enum {
   TRAP_NUM_SGPRS = 16
 };
 
-/// Streams isa version string for given subtarget \p STI into \p Stream.
-void streamIsaVersion(const MCSubtargetInfo *STI, raw_ostream &Stream);
+enum class TargetIDSetting {
+  Unsupported,
+  Any,
+  Off,
+  On
+};
+
+class AMDGPUTargetID {
+private:
+  const MCSubtargetInfo &STI;
+  TargetIDSetting XnackSetting;
+  TargetIDSetting SramEccSetting;
+
+public:
+  explicit AMDGPUTargetID(const MCSubtargetInfo &STI);
+  ~AMDGPUTargetID() = default;
+
+  /// \return True if the current xnack setting is not "Unsupported".
+  bool isXnackSupported() const {
+    return XnackSetting != TargetIDSetting::Unsupported;
+  }
+
+  /// \returns True if the current xnack setting is "On" or "Any".
+  bool isXnackOnOrAny() const {
+    return XnackSetting == TargetIDSetting::On ||
+        XnackSetting == TargetIDSetting::Any;
+  }
+
+  /// \returns True if current xnack setting is "On" or "Off",
+  /// false otherwise.
+  bool isXnackOnOrOff() const {
+    return getXnackSetting() == TargetIDSetting::On ||
+        getXnackSetting() == TargetIDSetting::Off;
+  }
+
+  /// \returns The current xnack TargetIDSetting, possible options are
+  /// "Unsupported", "Any", "Off", and "On".
+  TargetIDSetting getXnackSetting() const {
+    return XnackSetting;
+  }
+
+  /// Sets xnack setting to \p NewXnackSetting.
+  void setXnackSetting(TargetIDSetting NewXnackSetting) {
+    XnackSetting = NewXnackSetting;
+  }
+
+  /// \return True if the current sramecc setting is not "Unsupported".
+  bool isSramEccSupported() const {
+    return SramEccSetting != TargetIDSetting::Unsupported;
+  }
+
+  /// \returns True if the current sramecc setting is "On" or "Any".
+  bool isSramEccOnOrAny() const {
+  return SramEccSetting == TargetIDSetting::On ||
+      SramEccSetting == TargetIDSetting::Any;
+  }
+
+  /// \returns True if current sramecc setting is "On" or "Off",
+  /// false otherwise.
+  bool isSramEccOnOrOff() const {
+    return getSramEccSetting() == TargetIDSetting::On ||
+        getSramEccSetting() == TargetIDSetting::Off;
+  }
+
+  /// \returns The current sramecc TargetIDSetting, possible options are
+  /// "Unsupported", "Any", "Off", and "On".
+  TargetIDSetting getSramEccSetting() const {
+    return SramEccSetting;
+  }
+
+  /// Sets sramecc setting to \p NewSramEccSetting.
+  void setSramEccSetting(TargetIDSetting NewSramEccSetting) {
+    SramEccSetting = NewSramEccSetting;
+  }
+
+  void setTargetIDFromFeaturesString(StringRef FS);
+  void setTargetIDFromTargetIDStream(StringRef TargetID);
+
+  /// \returns String representation of an object.
+  std::string toString() const;
+};
 
 /// \returns Wavefront size for given subtarget \p STI.
 unsigned getWavefrontSize(const MCSubtargetInfo *STI);
@@ -206,6 +291,7 @@ struct MIMGBaseOpcodeInfo {
   bool Coordinates;
   bool LodOrClampOrMip;
   bool HasD16;
+  bool MSAA;
 };
 
 LLVM_READONLY
@@ -215,6 +301,7 @@ struct MIMGDimInfo {
   MIMGDim Dim;
   uint8_t NumCoords;
   uint8_t NumGradients;
+  bool MSAA;
   bool DA;
   uint8_t Encoding;
   const char *AsmSuffix;
@@ -259,6 +346,11 @@ int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
 
 LLVM_READONLY
 int getMaskedMIMGOp(unsigned Opc, unsigned NewChannels);
+
+LLVM_READONLY
+unsigned getAddrSizeMIMGOp(const MIMGBaseOpcodeInfo *BaseOpcode,
+                           const MIMGDimInfo *Dim, bool IsA16,
+                           bool IsG16Supported);
 
 struct MIMGInfo {
   uint16_t Opcode;
@@ -308,7 +400,19 @@ LLVM_READONLY
 bool getMUBUFHasSoffset(unsigned Opc);
 
 LLVM_READONLY
+bool getMUBUFIsBufferInv(unsigned Opc);
+
+LLVM_READONLY
 bool getSMEMIsBuffer(unsigned Opc);
+
+LLVM_READONLY
+bool getVOP1IsSingle(unsigned Opc);
+
+LLVM_READONLY
+bool getVOP2IsSingle(unsigned Opc);
+
+LLVM_READONLY
+bool getVOP3IsSingle(unsigned Opc);
 
 LLVM_READONLY
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
@@ -379,6 +483,14 @@ struct Waitcnt {
 
   bool hasWait() const {
     return VmCnt != ~0u || ExpCnt != ~0u || LgkmCnt != ~0u || VsCnt != ~0u;
+  }
+
+  bool hasWaitExceptVsCnt() const {
+    return VmCnt != ~0u || ExpCnt != ~0u || LgkmCnt != ~0u;
+  }
+
+  bool hasWaitVsCnt() const {
+    return VsCnt != ~0u;
   }
 
   bool dominates(const Waitcnt &Other) const {
@@ -486,6 +598,18 @@ void decodeHwreg(unsigned Val, unsigned &Id, unsigned &Offset, unsigned &Width);
 
 } // namespace Hwreg
 
+namespace Exp {
+
+bool getTgtName(unsigned Id, StringRef &Name, int &Index);
+
+LLVM_READONLY
+unsigned getTgtId(const StringRef Name);
+
+LLVM_READNONE
+bool isSupportedTgtId(unsigned Id, const MCSubtargetInfo &STI);
+
+} // namespace Exp
+
 namespace MTBUFFormat {
 
 LLVM_READNONE
@@ -537,10 +661,12 @@ LLVM_READNONE
 bool isValidMsgId(int64_t MsgId, const MCSubtargetInfo &STI, bool Strict = true);
 
 LLVM_READNONE
-bool isValidMsgOp(int64_t MsgId, int64_t OpId, bool Strict = true);
+bool isValidMsgOp(int64_t MsgId, int64_t OpId, const MCSubtargetInfo &STI,
+                  bool Strict = true);
 
 LLVM_READNONE
-bool isValidMsgStream(int64_t MsgId, int64_t OpId, int64_t StreamId, bool Strict = true);
+bool isValidMsgStream(int64_t MsgId, int64_t OpId, int64_t StreamId,
+                      const MCSubtargetInfo &STI, bool Strict = true);
 
 LLVM_READNONE
 bool msgRequiresOp(int64_t MsgId);
@@ -613,6 +739,8 @@ bool isGFX10Plus(const MCSubtargetInfo &STI);
 bool isGCN3Encoding(const MCSubtargetInfo &STI);
 bool isGFX10_BEncoding(const MCSubtargetInfo &STI);
 bool hasGFX10_3Insts(const MCSubtargetInfo &STI);
+bool isGFX90A(const MCSubtargetInfo &STI);
+bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI);
 
 /// Is Reg - scalar register
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI);
@@ -656,12 +784,17 @@ inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
   case AMDGPU::OPERAND_REG_INLINE_C_FP32:
   case AMDGPU::OPERAND_REG_INLINE_AC_INT32:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP32:
+  case AMDGPU::OPERAND_REG_IMM_V2INT32:
+  case AMDGPU::OPERAND_REG_IMM_V2FP32:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2INT32:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2FP32:
     return 4;
 
   case AMDGPU::OPERAND_REG_IMM_INT64:
   case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
+  case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
     return 8;
 
   case AMDGPU::OPERAND_REG_IMM_INT16:
@@ -756,6 +889,11 @@ bool isLegalSMRDImmOffset(const MCSubtargetInfo &ST, int64_t ByteOffset);
 bool splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset, uint32_t &ImmOffset,
                       const GCNSubtarget *Subtarget,
                       Align Alignment = Align(4));
+
+LLVM_READNONE
+inline bool isLegal64BitDPPControl(unsigned DC) {
+  return DC >= DPP::ROW_NEWBCAST_FIRST && DC <= DPP::ROW_NEWBCAST_LAST;
+}
 
 /// \returns true if the intrinsic is divergent
 bool isIntrinsicSourceOfDivergence(unsigned IntrID);
@@ -861,6 +999,10 @@ struct SIModeRegisterDefaults {
 };
 
 } // end namespace AMDGPU
+
+raw_ostream &operator<<(raw_ostream &OS,
+                        const AMDGPU::IsaInfo::TargetIDSetting S);
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUBASEINFO_H

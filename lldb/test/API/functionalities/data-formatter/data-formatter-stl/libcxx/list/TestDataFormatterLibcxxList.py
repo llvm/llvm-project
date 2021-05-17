@@ -212,9 +212,9 @@ class LibcxxListDataFormatterTestCase(TestBase):
 
         self.runCmd("continue")
 
-        self.assertTrue(
-            countingList.GetChildAtIndex(0).GetValueAsUnsigned(0) == 3141,
+        self.assertEqual(
+            countingList.GetChildAtIndex(0).GetValueAsUnsigned(0), 3141,
             "uniqued list[0] == 3141")
-        self.assertTrue(
-            countingList.GetChildAtIndex(1).GetValueAsUnsigned(0) == 3142,
+        self.assertEqual(
+            countingList.GetChildAtIndex(1).GetValueAsUnsigned(0), 3142,
             "uniqued list[1] == 3142")

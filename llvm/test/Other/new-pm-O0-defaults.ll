@@ -7,40 +7,43 @@
 ; Any invalidation that shows up here is a bug, unless we started modifying
 ; the IR, in which case we need to make it immutable harder.
 
-; RUN: opt -disable-verify -debug-pass-manager \
+; RUN: opt -disable-verify -verify-cfg-preserved=0 -debug-pass-manager \
 ; RUN:     -passes='default<O0>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-DEFAULT
-; RUN: opt -disable-verify -debug-pass-manager -enable-matrix \
+; RUN: opt -disable-verify -verify-cfg-preserved=0 -debug-pass-manager -enable-matrix \
 ; RUN:     -passes='default<O0>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-DEFAULT,CHECK-MATRIX
-; RUN: opt -disable-verify -debug-pass-manager \
+; RUN: opt -disable-verify -verify-cfg-preserved=0 -debug-pass-manager \
 ; RUN:     -passes='thinlto-pre-link<O0>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-DEFAULT,CHECK-PRE-LINK
-; RUN: opt -disable-verify -debug-pass-manager \
+; RUN: opt -disable-verify -verify-cfg-preserved=0 -debug-pass-manager \
 ; RUN:     -passes='lto-pre-link<O0>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-DEFAULT,CHECK-PRE-LINK
-; RUN: opt -disable-verify -debug-pass-manager \
+; RUN: opt -disable-verify -verify-cfg-preserved=0 -debug-pass-manager \
 ; RUN:     -passes='thinlto<O0>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-THINLTO
-; RUN: opt -disable-verify -debug-pass-manager \
+; RUN: opt -disable-verify -verify-cfg-preserved=0 -debug-pass-manager \
 ; RUN:     -passes='lto<O0>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-LTO
 
-; CHECK: Starting llvm::Module pass manager run.
-; CHECK-DEFAULT-NEXT: Running pass: AlwaysInlinerPass
+; CHECK-DEFAULT: Running pass: AlwaysInlinerPass
 ; CHECK-DEFAULT-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-DEFAULT-NEXT: Running analysis: ProfileSummaryAnalysis
-; CHECK-MATRIX-NEXT: Running pass: LowerMatrixIntrinsicsPass
+; CHECK-MATRIX: Running pass: LowerMatrixIntrinsicsPass
 ; CHECK-MATRIX-NEXT: Running analysis: TargetIRAnalysis
-; CHECK-PRE-LINK-NEXT: Running pass: CanonicalizeAliasesPass
+; CHECK-PRE-LINK: Running pass: CanonicalizeAliasesPass
 ; CHECK-PRE-LINK-NEXT: Running pass: NameAnonGlobalPass
-; CHECK-THINLTO-NEXT: Running pass: Annotation2MetadataPass
-; CHECK-LTO-NEXT: Running pass: Annotation2MetadataPass
+; CHECK-THINLTO: Running pass: Annotation2MetadataPass
+; CHECK-THINLTO-NEXT: Running pass: LowerTypeTestsPass
+; CHECK-THINLTO-NEXT: Running pass: EliminateAvailableExternallyPass
+; CHECK-THINLTO-NEXT: Running pass: GlobalDCEPass
+; CHECK-LTO: Running pass: Annotation2MetadataPass
 ; CHECK-LTO-NEXT: Running pass: WholeProgramDevirtPass
 ; CHECK-LTO-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-LTO-NEXT: Running pass: LowerTypeTestsPass
 ; CHECK-LTO-NEXT: Running pass: LowerTypeTestsPass
 ; CHECK-LTO-NEXT: Running pass: AnnotationRemarksPass
+; CHECK-LTO-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-NEXT: Running pass: PrintModulePass
 
 ; Make sure we get the IR back out without changes when we print the module.
@@ -57,7 +60,6 @@
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: }
 ;
-; CHECK-NEXT: Finished llvm::Module pass manager run.
 
 declare void @bar() local_unnamed_addr
 

@@ -68,7 +68,7 @@ sections:
     Types:
       - Kind:            LF_TYPESERVER2
         TypeServer2:
-          Guid:            '{8DABD2A0-28FF-CB43-9BAF-175B77B76414}'
+          Guid:            '{A0D2AB8D-FF28-43CB-9BAF-175B77B76414}'
           Age:             1
           Name:            'c:\some_invalid_path_AABB98765\pdb-diff-cl.pdb'
   - Name:            '.text$mn'

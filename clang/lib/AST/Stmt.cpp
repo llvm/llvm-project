@@ -989,10 +989,18 @@ bool IfStmt::isObjCAvailabilityCheck() const {
   return isa<ObjCAvailabilityCheckExpr>(getCond());
 }
 
-Optional<const Stmt*> IfStmt::getNondiscardedCase(const ASTContext &Ctx) const {
+Optional<Stmt *> IfStmt::getNondiscardedCase(const ASTContext &Ctx) {
   if (!isConstexpr() || getCond()->isValueDependent())
     return None;
   return !getCond()->EvaluateKnownConstInt(Ctx) ? getElse() : getThen();
+}
+
+Optional<const Stmt *>
+IfStmt::getNondiscardedCase(const ASTContext &Ctx) const {
+  if (Optional<Stmt *> Result =
+          const_cast<IfStmt *>(this)->getNondiscardedCase(Ctx))
+    return *Result;
+  return None;
 }
 
 ForStmt::ForStmt(const ASTContext &C, Stmt *Init, Expr *Cond, VarDecl *condVar,
@@ -1266,13 +1274,6 @@ CapturedStmt::Capture::Capture(SourceLocation Loc, VariableCaptureKind Kind,
     break;
   case VCK_ByCopy:
     assert(Var && "capturing by copy must have a variable!");
-    assert(
-        (Var->getType()->isScalarType() || (Var->getType()->isReferenceType() &&
-                                            Var->getType()
-                                                ->castAs<ReferenceType>()
-                                                ->getPointeeType()
-                                                ->isScalarType())) &&
-        "captures by copy are expected to have a scalar type!");
     break;
   case VCK_VLAType:
     assert(!Var &&

@@ -49,11 +49,11 @@
 // GC:        Symbol {
 // GC-NEXT:     Name: sdn
 // GC:        Symbol {
-// GC-NEXT:     Name: _start
-// GC:        Symbol {
 // GC-NEXT:     Name: abs
 // GC:        Symbol {
 // GC-NEXT:     Name: common
+// GC:        Symbol {
+// GC-NEXT:     Name: _start
 // GC-NOT:    Symbol {
 
 .macro gen_sections4 x

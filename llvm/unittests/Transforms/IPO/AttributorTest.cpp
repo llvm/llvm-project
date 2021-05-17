@@ -21,6 +21,23 @@
 
 namespace llvm {
 
+TEST_F(AttributorTestBase, IRPPositionCallBaseContext) {
+  const char *ModuleString = R"(
+    define i32 @foo(i32 %a) {
+    entry:
+      ret i32 %a
+    }
+  )";
+
+  parseModule(ModuleString);
+
+  Function *F = M->getFunction("foo");
+  IRPosition Pos =
+      IRPosition::function(*F, (const llvm::CallBase *)(uintptr_t)0xDEADBEEF);
+  EXPECT_TRUE(Pos.hasCallBaseContext());
+  EXPECT_FALSE(Pos.stripCallBaseContext().hasCallBaseContext());
+}
+
 TEST_F(AttributorTestBase, TestCast) {
   const char *ModuleString = R"(
     define i32 @foo(i32 %a, i32 %b) {

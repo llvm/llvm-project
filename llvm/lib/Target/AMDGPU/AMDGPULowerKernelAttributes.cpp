@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUTargetMachine.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -68,7 +67,7 @@ static bool processUse(CallInst *CI) {
   const bool HasReqdWorkGroupSize = MD && MD->getNumOperands() == 3;
 
   const bool HasUniformWorkGroupSize =
-    F->getFnAttribute("uniform-work-group-size").getValueAsString() == "true";
+    F->getFnAttribute("uniform-work-group-size").getValueAsBool();
 
   if (!HasReqdWorkGroupSize && !HasUniformWorkGroupSize)
     return false;

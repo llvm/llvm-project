@@ -270,7 +270,7 @@ protected:
 static const char *g_synth_addreader_instructions =
     "Enter your Python command(s). Type 'DONE' to end.\n"
     "You must define a Python class with these methods:\n"
-    "    def __init__(self, valobj, dict):\n"
+    "    def __init__(self, valobj, internal_dict):\n"
     "    def num_children(self):\n"
     "    def get_child_at_index(self, index):\n"
     "    def get_child_index(self, name):\n"

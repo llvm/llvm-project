@@ -12,7 +12,6 @@
 
 #include <algorithm>
 #include <functional>
-#include <sstream>
 
 using namespace clang::ast_matchers;
 
@@ -295,8 +294,7 @@ void InconsistentDeclarationParameterNameCheck::storeOptions(
 
 void InconsistentDeclarationParameterNameCheck::registerMatchers(
     MatchFinder *Finder) {
-  Finder->addMatcher(functionDecl(unless(isImplicit()), hasOtherDeclarations())
-                         .bind("functionDecl"),
+  Finder->addMatcher(functionDecl(hasOtherDeclarations()).bind("functionDecl"),
                      this);
 }
 

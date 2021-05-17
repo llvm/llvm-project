@@ -66,8 +66,8 @@ CallBase *getInlinableCS(Instruction &I) {
 MLInlineAdvisor::MLInlineAdvisor(Module &M, ModuleAnalysisManager &MAM,
                                  std::unique_ptr<MLModelRunner> Runner)
     : InlineAdvisor(
-          MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
-      M(M), ModelRunner(std::move(Runner)), CG(new CallGraph(M)),
+          M, MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
+      ModelRunner(std::move(Runner)), CG(new CallGraph(M)),
       InitialIRSize(getModuleIRSize()), CurrentIRSize(InitialIRSize) {
   assert(ModelRunner);
 
@@ -134,7 +134,11 @@ void MLInlineAdvisor::onSuccessfulInlining(const MLInlineAdvice &Advice,
   Function *Callee = Advice.getCallee();
 
   // The caller features aren't valid anymore.
-  FAM.invalidate<FunctionPropertiesAnalysis>(*Caller);
+  {
+    PreservedAnalyses PA = PreservedAnalyses::all();
+    PA.abandon<FunctionPropertiesAnalysis>();
+    FAM.invalidate(*Caller, PA);
+  }
   int64_t IRSizeAfter =
       getIRSize(*Caller) + (CalleeWasDeleted ? 0 : Advice.CalleeIRSize);
   CurrentIRSize += IRSizeAfter - (Advice.CallerIRSize + Advice.CalleeIRSize);

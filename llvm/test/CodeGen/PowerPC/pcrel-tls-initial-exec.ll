@@ -43,7 +43,7 @@ define i32 @InitialExecValueLoad() {
 ; CHECK-O-NEXT:    20 00 80 4e                  	blr
 
 ; CHECK-SYM-LABEL: Symbol table '.symtab' contains 6 entries
-; CHECK-SYM:         5: 0000000000000000     0 TLS     GLOBAL DEFAULT  UND x
+; CHECK-SYM:         0000000000000000     0 TLS     GLOBAL DEFAULT  UND x
 entry:
   %0 = load i32, i32* @x, align 4
   ret i32 %0

@@ -25,7 +25,7 @@ long double testinc(_Atomic long double *addr) {
   // CHECK: [[NEW_INT_ADDR:%.+]] = bitcast x86_fp80* [[NEW_VALUE_ADDR]] to i128*
   // CHECK: [[NEW_INT:%.+]] = load i128, i128* [[NEW_INT_ADDR]], align 16
   // CHECK: [[OBJ_INT_ADDR:%.+]] = bitcast x86_fp80* [[ADDR]] to i128*
-  // CHECK: [[RES:%.+]] = cmpxchg i128* [[OBJ_INT_ADDR]], i128 [[OLD_INT]], i128 [[NEW_INT]] seq_cst seq_cst
+  // CHECK: [[RES:%.+]] = cmpxchg i128* [[OBJ_INT_ADDR]], i128 [[OLD_INT]], i128 [[NEW_INT]] seq_cst seq_cst, align 16
   // CHECK: [[OLD_VALUE:%.+]] = extractvalue { i128, i1 } [[RES]], 0
   // CHECK: [[FAIL_SUCCESS:%.+]] = extractvalue { i128, i1 } [[RES]], 1
   // CHECK: [[OLD_VALUE_RES_INT_PTR:%.+]] = bitcast x86_fp80* [[OLD_VALUE_RES_PTR:%.+]] to i128*
@@ -87,7 +87,7 @@ long double testdec(_Atomic long double *addr) {
   // CHECK: [[NEW_INT_ADDR:%.+]] = bitcast x86_fp80* [[NEW_VALUE_ADDR]] to i128*
   // CHECK: [[NEW_INT:%.+]] = load i128, i128* [[NEW_INT_ADDR]], align 16
   // CHECK: [[OBJ_INT_ADDR:%.+]] = bitcast x86_fp80* [[ADDR]] to i128*
-  // CHECK: [[RES:%.+]] = cmpxchg i128* [[OBJ_INT_ADDR]], i128 [[OLD_INT]], i128 [[NEW_INT]] seq_cst seq_cst
+  // CHECK: [[RES:%.+]] = cmpxchg i128* [[OBJ_INT_ADDR]], i128 [[OLD_INT]], i128 [[NEW_INT]] seq_cst seq_cst, align 16
   // CHECK: [[OLD_VALUE:%.+]] = extractvalue { i128, i1 } [[RES]], 0
   // CHECK: [[FAIL_SUCCESS:%.+]] = extractvalue { i128, i1 } [[RES]], 1
   // CHECK: [[OLD_VALUE_RES_INT_PTR:%.+]] = bitcast x86_fp80* [[OLD_VALUE_RES_PTR:%.+]] to i128*
@@ -150,7 +150,7 @@ long double testcompassign(_Atomic long double *addr) {
   // CHECK: [[NEW_INT_ADDR:%.+]] = bitcast x86_fp80* [[NEW_VALUE_ADDR]] to i128*
   // CHECK: [[NEW_INT:%.+]] = load i128, i128* [[NEW_INT_ADDR]], align 16
   // CHECK: [[OBJ_INT_ADDR:%.+]] = bitcast x86_fp80* [[ADDR]] to i128*
-  // CHECK: [[RES:%.+]] = cmpxchg i128* [[OBJ_INT_ADDR]], i128 [[OLD_INT]], i128 [[NEW_INT]] seq_cst seq_cst
+  // CHECK: [[RES:%.+]] = cmpxchg i128* [[OBJ_INT_ADDR]], i128 [[OLD_INT]], i128 [[NEW_INT]] seq_cst seq_cst, align 16
   // CHECK: [[OLD_VALUE:%.+]] = extractvalue { i128, i1 } [[RES]], 0
   // CHECK: [[FAIL_SUCCESS:%.+]] = extractvalue { i128, i1 } [[RES]], 1
   // CHECK: [[OLD_VALUE_RES_INT_PTR:%.+]] = bitcast x86_fp80* [[OLD_VALUE_RES_PTR:%.+]] to i128*
@@ -260,7 +260,7 @@ long double test_volatile_inc(volatile _Atomic long double *addr) {
   // CHECK: [[NEW_INT_ADDR:%.+]] = bitcast x86_fp80* [[NEW_VALUE_ADDR]] to i128*
   // CHECK: [[NEW_INT:%.+]] = load i128, i128* [[NEW_INT_ADDR]], align 16
   // CHECK: [[OBJ_INT_ADDR:%.+]] = bitcast x86_fp80* [[ADDR]] to i128*
-  // CHECK: [[RES:%.+]] = cmpxchg volatile i128* [[OBJ_INT_ADDR]], i128 [[OLD_INT]], i128 [[NEW_INT]] seq_cst seq_cst
+  // CHECK: [[RES:%.+]] = cmpxchg volatile i128* [[OBJ_INT_ADDR]], i128 [[OLD_INT]], i128 [[NEW_INT]] seq_cst seq_cst, align 16
   // CHECK: [[OLD_VALUE:%.+]] = extractvalue { i128, i1 } [[RES]], 0
   // CHECK: [[FAIL_SUCCESS:%.+]] = extractvalue { i128, i1 } [[RES]], 1
   // CHECK: [[OLD_VALUE_RES_INT_PTR:%.+]] = bitcast x86_fp80* [[OLD_VALUE_RES_PTR:%.+]] to i128*
@@ -321,7 +321,7 @@ long double test_volatile_dec(volatile _Atomic long double *addr) {
   // CHECK: [[NEW_INT_ADDR:%.+]] = bitcast x86_fp80* [[NEW_VALUE_ADDR]] to i128*
   // CHECK: [[NEW_INT:%.+]] = load i128, i128* [[NEW_INT_ADDR]], align 16
   // CHECK: [[OBJ_INT_ADDR:%.+]] = bitcast x86_fp80* [[ADDR]] to i128*
-  // CHECK: [[RES:%.+]] = cmpxchg volatile i128* [[OBJ_INT_ADDR]], i128 [[OLD_INT]], i128 [[NEW_INT]] seq_cst seq_cst
+  // CHECK: [[RES:%.+]] = cmpxchg volatile i128* [[OBJ_INT_ADDR]], i128 [[OLD_INT]], i128 [[NEW_INT]] seq_cst seq_cst, align 16
   // CHECK: [[OLD_VALUE:%.+]] = extractvalue { i128, i1 } [[RES]], 0
   // CHECK: [[FAIL_SUCCESS:%.+]] = extractvalue { i128, i1 } [[RES]], 1
   // CHECK: [[OLD_VALUE_RES_INT_PTR:%.+]] = bitcast x86_fp80* [[OLD_VALUE_RES_PTR:%.+]] to i128*
@@ -383,7 +383,7 @@ long double test_volatile_compassign(volatile _Atomic long double *addr) {
   // CHECK: [[NEW_INT_ADDR:%.+]] = bitcast x86_fp80* [[NEW_VALUE_ADDR]] to i128*
   // CHECK: [[NEW_INT:%.+]] = load i128, i128* [[NEW_INT_ADDR]], align 16
   // CHECK: [[OBJ_INT_ADDR:%.+]] = bitcast x86_fp80* [[ADDR]] to i128*
-  // CHECK: [[RES:%.+]] = cmpxchg volatile i128* [[OBJ_INT_ADDR]], i128 [[OLD_INT]], i128 [[NEW_INT]] seq_cst seq_cst
+  // CHECK: [[RES:%.+]] = cmpxchg volatile i128* [[OBJ_INT_ADDR]], i128 [[OLD_INT]], i128 [[NEW_INT]] seq_cst seq_cst, align 16
   // CHECK: [[OLD_VALUE:%.+]] = extractvalue { i128, i1 } [[RES]], 0
   // CHECK: [[FAIL_SUCCESS:%.+]] = extractvalue { i128, i1 } [[RES]], 1
   // CHECK: [[OLD_VALUE_RES_INT_PTR:%.+]] = bitcast x86_fp80* [[OLD_VALUE_RES_PTR:%.+]] to i128*

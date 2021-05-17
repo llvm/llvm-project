@@ -17,9 +17,9 @@
 ; RUN: llvm-readelf --symbols %t3.o.1 | FileCheck %s --check-prefix=SYMBOLS
 
 ; Check that 'foo' and 'bar' produced as undefined.
-; SYMBOLS: NOTYPE  GLOBAL DEFAULT  UND bar
-; SYMBOLS: NOTYPE  GLOBAL DEFAULT  UND foo
 ; SYMBOLS: FUNC    GLOBAL DEFAULT    2 zed
+; SYMBOLS: NOTYPE  GLOBAL DEFAULT  UND foo
+; SYMBOLS: NOTYPE  GLOBAL DEFAULT  UND bar
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

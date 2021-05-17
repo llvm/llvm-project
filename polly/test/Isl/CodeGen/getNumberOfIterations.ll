@@ -8,9 +8,9 @@
 ; CHECK: polly.stmt.if.then:                               ; preds = %polly.loop_header
 ; CHECK:   %p_conv = sitofp i64 %polly.indvar to float
 ; CHECK:   %scevgep = getelementptr float, float* %A, i64 %polly.indvar
-; CHECK:   %_p_scalar_ = load float, float* %scevgep, align 4, !alias.scope !0, !noalias !2, !llvm.mem.parallel_loop_access !3
+; CHECK:   %_p_scalar_ = load float, float* %scevgep, align 4, !alias.scope !0, !noalias !2, !llvm.access.group !3
 ; CHECK:   %p_add = fadd float %p_conv, %_p_scalar_
-; CHECK:   store float %p_add, float* %scevgep, align 4, !alias.scope !0, !noalias !2, !llvm.mem.parallel_loop_access !3
+; CHECK:   store float %p_add, float* %scevgep, align 4, !alias.scope !0, !noalias !2, !llvm.access.group !3
 
 define void @foo(float* %A, i64 %N) #0 {
 entry:

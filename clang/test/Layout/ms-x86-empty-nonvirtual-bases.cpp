@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fno-rtti -emit-llvm-only -triple i686-pc-win32 -fms-extensions -fdump-record-layouts -fsyntax-only %s 2>/dev/null \
-// RUN:            | FileCheck %s
+// RUN:            | FileCheck %s --strict-whitespace
 // RUN: %clang_cc1 -fno-rtti -emit-llvm-only -triple x86_64-pc-win32 -fms-extensions -fdump-record-layouts -fsyntax-only %s 2>/dev/null \
-// RUN:            | FileCheck %s
+// RUN:            | FileCheck %s --strict-whitespace
 
 extern "C" int printf(const char *fmt, ...);
 
@@ -22,9 +22,7 @@ struct A : B0 {
 	A() : a(0xf000000A) {printf("X : %p\n", this);}
 };
 
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct A
+// CHECK-LABEL:   0 | struct A{{$}}
 // CHECK-NEXT:    0 |   struct B0 (base) (empty)
 // CHECK-NEXT:    0 |   int a
 // CHECK-NEXT:      | [sizeof=8, align=8
@@ -36,8 +34,7 @@ struct B : B0 {
 	B() : a(0xf000000B) {printf("X : %p\n", this);}
 };
 
-// CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct B
+// CHECK-LABEL:   0 | struct B{{$}}
 // CHECK-NEXT:    0 |   struct B0 (base) (empty)
 // CHECK-NEXT:    0 |   struct B0 b0 (empty)
 // CHECK:         8 |   int a
@@ -49,12 +46,7 @@ struct C : B0, B1, B2, B3, B4 {
 	C() : a(0xf000000C) {printf("X : %p\n", this);}
 };
 
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct C
+// CHECK-LABEL:   0 | struct C{{$}}
 // CHECK-NEXT:    0 |   struct B0 (base) (empty)
 // CHECK-NEXT:    8 |   struct B1 (base) (empty)
 // CHECK-NEXT:   16 |   struct B2 (base) (empty)
@@ -74,11 +66,7 @@ struct D {
 	D() : a(0xf000000D) {printf("X : %p\n", this);}
 };
 
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct D
+// CHECK-LABEL:   0 | struct D{{$}}
 // CHECK-NEXT:    0 |   struct B0 b0 (empty)
 // CHECK:         8 |   struct C0 c0
 // CHECK-NEXT:    8 |     int a
@@ -96,8 +84,7 @@ struct E : B0, C0, C1, C2, B1 {
 	E() : a(0xf000000E) {printf("X : %p\n", this);}
 };
 
-// CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct E
+// CHECK-LABEL:   0 | struct E{{$}}
 // CHECK-NEXT:    0 |   struct B0 (base) (empty)
 // CHECK-NEXT:    0 |   struct C0 (base)
 // CHECK-NEXT:    0 |     int a
@@ -115,8 +102,7 @@ struct F : C0, B0, B1, C1 {
 	F() : a(0xf000000F) {printf("X : %p\n", this);}
 };
 
-// CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct F
+// CHECK-LABEL:   0 | struct F{{$}}
 // CHECK-NEXT:    0 |   struct C0 (base)
 // CHECK-NEXT:    0 |     int a
 // CHECK-NEXT:    8 |   struct B0 (base) (empty)
@@ -132,8 +118,7 @@ struct G : B0, B1, B2, B3, B4 {
 	G() : a(0xf0000011) {printf("X : %p\n", this);}
 };
 
-// CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct G
+// CHECK-LABEL:   0 | struct G{{$}}
 // CHECK-NEXT:    0 |   struct B0 (base) (empty)
 // CHECK-NEXT:    8 |   struct B1 (base) (empty)
 // CHECK-NEXT:   16 |   struct B2 (base) (empty)
@@ -148,8 +133,7 @@ struct __declspec(align(32)) H : B0, B1, B2, B3, B4 {
 	H() : a(0xf0000011) {printf("X : %p\n", this);}
 };
 
-// CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct H
+// CHECK-LABEL:   0 | struct H{{$}}
 // CHECK-NEXT:    0 |   struct B0 (base) (empty)
 // CHECK-NEXT:    8 |   struct B1 (base) (empty)
 // CHECK-NEXT:   16 |   struct B2 (base) (empty)
@@ -163,8 +147,7 @@ struct I {
   int i0[0];
 };
 
-// CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct I
+// CHECK-LABEL:   0 | struct I{{$}}
 // CHECK-NEXT:    0 |   int [0] i0
 // CHECK-NEXT:      | [sizeof={{1|4}}, align=4,
 // CHECK-NEXT:      |  nvsize=0, nvalign=4]
@@ -173,8 +156,7 @@ struct J : I {
   int j;
 };
 
-// CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:   0 | struct J
+// CHECK-LABEL:  0 | struct J{{$}}
 // CHECK-NEXT:   0 |   struct I (base)
 // CHECK-NEXT:   0 |     int [0] i0
 // CHECK-NEXT:   0 |   int j

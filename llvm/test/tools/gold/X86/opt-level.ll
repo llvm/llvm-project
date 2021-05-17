@@ -4,7 +4,7 @@
 ; RUN:    -plugin-opt=O0 -r -o %t.o %t.bc
 ; RUN: llvm-dis < %t.o.0.4.opt.bc -o - | FileCheck --check-prefix=CHECK-O0 %s
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext -plugin-opt=save-temps \
-; RUN:    -m elf_x86_64 \
+; RUN:    -m elf_x86_64 --plugin-opt=legacy-pass-manager \
 ; RUN:    -plugin-opt=O1 -r -o %t.o %t.bc
 ; RUN: llvm-dis < %t.o.0.4.opt.bc -o - | FileCheck --check-prefix=CHECK-O1 --check-prefix=CHECK-O1-OLDPM %s
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext -plugin-opt=save-temps \

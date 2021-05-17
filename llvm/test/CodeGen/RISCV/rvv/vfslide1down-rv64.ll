@@ -11,7 +11,7 @@ define <vscale x 1 x half> @intrinsic_vfslide1down_vf_nxv1f16_nxv1f16_f16(<vscal
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.h.x ft0, a0
 ; CHECK-NEXT:    vsetvli a0, a1, e16,mf4,ta,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v16, ft0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, ft0
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x half> @llvm.riscv.vfslide1down.nxv1f16.f16(
@@ -34,7 +34,7 @@ define <vscale x 1 x half> @intrinsic_vfslide1down_mask_vf_nxv1f16_nxv1f16_f16(<
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.h.x ft0, a0
 ; CHECK-NEXT:    vsetvli a0, a1, e16,mf4,tu,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v17, ft0, v0.t
+; CHECK-NEXT:    vfslide1down.vf v8, v9, ft0, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x half> @llvm.riscv.vfslide1down.mask.nxv1f16.f16(
@@ -57,7 +57,7 @@ define <vscale x 2 x half> @intrinsic_vfslide1down_vf_nxv2f16_nxv2f16_f16(<vscal
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.h.x ft0, a0
 ; CHECK-NEXT:    vsetvli a0, a1, e16,mf2,ta,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v16, ft0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, ft0
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x half> @llvm.riscv.vfslide1down.nxv2f16.f16(
@@ -80,7 +80,7 @@ define <vscale x 2 x half> @intrinsic_vfslide1down_mask_vf_nxv2f16_nxv2f16_f16(<
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.h.x ft0, a0
 ; CHECK-NEXT:    vsetvli a0, a1, e16,mf2,tu,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v17, ft0, v0.t
+; CHECK-NEXT:    vfslide1down.vf v8, v9, ft0, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x half> @llvm.riscv.vfslide1down.mask.nxv2f16.f16(
@@ -103,7 +103,7 @@ define <vscale x 4 x half> @intrinsic_vfslide1down_vf_nxv4f16_nxv4f16_f16(<vscal
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.h.x ft0, a0
 ; CHECK-NEXT:    vsetvli a0, a1, e16,m1,ta,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v16, ft0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, ft0
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x half> @llvm.riscv.vfslide1down.nxv4f16.f16(
@@ -126,7 +126,7 @@ define <vscale x 4 x half> @intrinsic_vfslide1down_mask_vf_nxv4f16_nxv4f16_f16(<
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.h.x ft0, a0
 ; CHECK-NEXT:    vsetvli a0, a1, e16,m1,tu,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v17, ft0, v0.t
+; CHECK-NEXT:    vfslide1down.vf v8, v9, ft0, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x half> @llvm.riscv.vfslide1down.mask.nxv4f16.f16(
@@ -149,7 +149,7 @@ define <vscale x 8 x half> @intrinsic_vfslide1down_vf_nxv8f16_nxv8f16_f16(<vscal
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.h.x ft0, a0
 ; CHECK-NEXT:    vsetvli a0, a1, e16,m2,ta,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v16, ft0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, ft0
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x half> @llvm.riscv.vfslide1down.nxv8f16.f16(
@@ -172,7 +172,7 @@ define <vscale x 8 x half> @intrinsic_vfslide1down_mask_vf_nxv8f16_nxv8f16_f16(<
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.h.x ft0, a0
 ; CHECK-NEXT:    vsetvli a0, a1, e16,m2,tu,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v18, ft0, v0.t
+; CHECK-NEXT:    vfslide1down.vf v8, v10, ft0, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x half> @llvm.riscv.vfslide1down.mask.nxv8f16.f16(
@@ -195,7 +195,7 @@ define <vscale x 16 x half> @intrinsic_vfslide1down_vf_nxv16f16_nxv16f16_f16(<vs
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.h.x ft0, a0
 ; CHECK-NEXT:    vsetvli a0, a1, e16,m4,ta,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v16, ft0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, ft0
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 16 x half> @llvm.riscv.vfslide1down.nxv16f16.f16(
@@ -218,7 +218,7 @@ define <vscale x 16 x half> @intrinsic_vfslide1down_mask_vf_nxv16f16_nxv16f16_f1
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.h.x ft0, a0
 ; CHECK-NEXT:    vsetvli a0, a1, e16,m4,tu,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v20, ft0, v0.t
+; CHECK-NEXT:    vfslide1down.vf v8, v12, ft0, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 16 x half> @llvm.riscv.vfslide1down.mask.nxv16f16.f16(
@@ -241,7 +241,7 @@ define <vscale x 32 x half> @intrinsic_vfslide1down_vf_nxv32f16_nxv32f16_f16(<vs
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.h.x ft0, a0
 ; CHECK-NEXT:    vsetvli a0, a1, e16,m8,ta,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v16, ft0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, ft0
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 32 x half> @llvm.riscv.vfslide1down.nxv32f16.f16(
@@ -262,11 +262,9 @@ declare <vscale x 32 x half> @llvm.riscv.vfslide1down.mask.nxv32f16.f16(
 define <vscale x 32 x half> @intrinsic_vfslide1down_mask_vf_nxv32f16_nxv32f16_f16(<vscale x 32 x half> %0, <vscale x 32 x half> %1, half %2, <vscale x 32 x i1> %3, i64 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfslide1down_mask_vf_nxv32f16_nxv32f16_f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e16,m8,ta,mu
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    fmv.h.x ft0, a1
-; CHECK-NEXT:    vsetvli a0, a2, e16,m8,tu,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v8, ft0, v0.t
+; CHECK-NEXT:    fmv.h.x ft0, a0
+; CHECK-NEXT:    vsetvli a0, a1, e16,m8,tu,mu
+; CHECK-NEXT:    vfslide1down.vf v8, v16, ft0, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 32 x half> @llvm.riscv.vfslide1down.mask.nxv32f16.f16(
@@ -289,7 +287,7 @@ define <vscale x 1 x float> @intrinsic_vfslide1down_vf_nxv1f32_nxv1f32_f32(<vsca
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    vsetvli a0, a1, e32,mf2,ta,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v16, ft0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, ft0
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vfslide1down.nxv1f32.f32(
@@ -312,7 +310,7 @@ define <vscale x 1 x float> @intrinsic_vfslide1down_mask_vf_nxv1f32_nxv1f32_f32(
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    vsetvli a0, a1, e32,mf2,tu,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v17, ft0, v0.t
+; CHECK-NEXT:    vfslide1down.vf v8, v9, ft0, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vfslide1down.mask.nxv1f32.f32(
@@ -335,7 +333,7 @@ define <vscale x 2 x float> @intrinsic_vfslide1down_vf_nxv2f32_nxv2f32_f32(<vsca
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    vsetvli a0, a1, e32,m1,ta,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v16, ft0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, ft0
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x float> @llvm.riscv.vfslide1down.nxv2f32.f32(
@@ -358,7 +356,7 @@ define <vscale x 2 x float> @intrinsic_vfslide1down_mask_vf_nxv2f32_nxv2f32_f32(
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    vsetvli a0, a1, e32,m1,tu,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v17, ft0, v0.t
+; CHECK-NEXT:    vfslide1down.vf v8, v9, ft0, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x float> @llvm.riscv.vfslide1down.mask.nxv2f32.f32(
@@ -381,7 +379,7 @@ define <vscale x 4 x float> @intrinsic_vfslide1down_vf_nxv4f32_nxv4f32_f32(<vsca
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    vsetvli a0, a1, e32,m2,ta,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v16, ft0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, ft0
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x float> @llvm.riscv.vfslide1down.nxv4f32.f32(
@@ -404,7 +402,7 @@ define <vscale x 4 x float> @intrinsic_vfslide1down_mask_vf_nxv4f32_nxv4f32_f32(
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    vsetvli a0, a1, e32,m2,tu,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v18, ft0, v0.t
+; CHECK-NEXT:    vfslide1down.vf v8, v10, ft0, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x float> @llvm.riscv.vfslide1down.mask.nxv4f32.f32(
@@ -427,7 +425,7 @@ define <vscale x 8 x float> @intrinsic_vfslide1down_vf_nxv8f32_nxv8f32_f32(<vsca
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    vsetvli a0, a1, e32,m4,ta,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v16, ft0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, ft0
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x float> @llvm.riscv.vfslide1down.nxv8f32.f32(
@@ -450,7 +448,7 @@ define <vscale x 8 x float> @intrinsic_vfslide1down_mask_vf_nxv8f32_nxv8f32_f32(
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    vsetvli a0, a1, e32,m4,tu,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v20, ft0, v0.t
+; CHECK-NEXT:    vfslide1down.vf v8, v12, ft0, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x float> @llvm.riscv.vfslide1down.mask.nxv8f32.f32(
@@ -473,7 +471,7 @@ define <vscale x 16 x float> @intrinsic_vfslide1down_vf_nxv16f32_nxv16f32_f32(<v
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    vsetvli a0, a1, e32,m8,ta,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v16, ft0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, ft0
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 16 x float> @llvm.riscv.vfslide1down.nxv16f32.f32(
@@ -494,11 +492,9 @@ declare <vscale x 16 x float> @llvm.riscv.vfslide1down.mask.nxv16f32.f32(
 define <vscale x 16 x float> @intrinsic_vfslide1down_mask_vf_nxv16f32_nxv16f32_f32(<vscale x 16 x float> %0, <vscale x 16 x float> %1, float %2, <vscale x 16 x i1> %3, i64 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfslide1down_mask_vf_nxv16f32_nxv16f32_f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e32,m8,ta,mu
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    fmv.w.x ft0, a1
-; CHECK-NEXT:    vsetvli a0, a2, e32,m8,tu,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v8, ft0, v0.t
+; CHECK-NEXT:    fmv.w.x ft0, a0
+; CHECK-NEXT:    vsetvli a0, a1, e32,m8,tu,mu
+; CHECK-NEXT:    vfslide1down.vf v8, v16, ft0, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 16 x float> @llvm.riscv.vfslide1down.mask.nxv16f32.f32(
@@ -521,7 +517,7 @@ define <vscale x 1 x double> @intrinsic_vfslide1down_vf_nxv1f64_nxv1f64_f64(<vsc
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.d.x ft0, a0
 ; CHECK-NEXT:    vsetvli a0, a1, e64,m1,ta,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v16, ft0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, ft0
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x double> @llvm.riscv.vfslide1down.nxv1f64.f64(
@@ -544,7 +540,7 @@ define <vscale x 1 x double> @intrinsic_vfslide1down_mask_vf_nxv1f64_nxv1f64_f64
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.d.x ft0, a0
 ; CHECK-NEXT:    vsetvli a0, a1, e64,m1,tu,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v17, ft0, v0.t
+; CHECK-NEXT:    vfslide1down.vf v8, v9, ft0, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 1 x double> @llvm.riscv.vfslide1down.mask.nxv1f64.f64(
@@ -567,7 +563,7 @@ define <vscale x 2 x double> @intrinsic_vfslide1down_vf_nxv2f64_nxv2f64_f64(<vsc
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.d.x ft0, a0
 ; CHECK-NEXT:    vsetvli a0, a1, e64,m2,ta,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v16, ft0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, ft0
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x double> @llvm.riscv.vfslide1down.nxv2f64.f64(
@@ -590,7 +586,7 @@ define <vscale x 2 x double> @intrinsic_vfslide1down_mask_vf_nxv2f64_nxv2f64_f64
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.d.x ft0, a0
 ; CHECK-NEXT:    vsetvli a0, a1, e64,m2,tu,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v18, ft0, v0.t
+; CHECK-NEXT:    vfslide1down.vf v8, v10, ft0, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 2 x double> @llvm.riscv.vfslide1down.mask.nxv2f64.f64(
@@ -613,7 +609,7 @@ define <vscale x 4 x double> @intrinsic_vfslide1down_vf_nxv4f64_nxv4f64_f64(<vsc
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.d.x ft0, a0
 ; CHECK-NEXT:    vsetvli a0, a1, e64,m4,ta,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v16, ft0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, ft0
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x double> @llvm.riscv.vfslide1down.nxv4f64.f64(
@@ -636,7 +632,7 @@ define <vscale x 4 x double> @intrinsic_vfslide1down_mask_vf_nxv4f64_nxv4f64_f64
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.d.x ft0, a0
 ; CHECK-NEXT:    vsetvli a0, a1, e64,m4,tu,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v20, ft0, v0.t
+; CHECK-NEXT:    vfslide1down.vf v8, v12, ft0, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 4 x double> @llvm.riscv.vfslide1down.mask.nxv4f64.f64(
@@ -659,7 +655,7 @@ define <vscale x 8 x double> @intrinsic_vfslide1down_vf_nxv8f64_nxv8f64_f64(<vsc
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.d.x ft0, a0
 ; CHECK-NEXT:    vsetvli a0, a1, e64,m8,ta,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v16, ft0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, ft0
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x double> @llvm.riscv.vfslide1down.nxv8f64.f64(
@@ -680,11 +676,9 @@ declare <vscale x 8 x double> @llvm.riscv.vfslide1down.mask.nxv8f64.f64(
 define <vscale x 8 x double> @intrinsic_vfslide1down_mask_vf_nxv8f64_nxv8f64_f64(<vscale x 8 x double> %0, <vscale x 8 x double> %1, double %2, <vscale x 8 x i1> %3, i64 %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfslide1down_mask_vf_nxv8f64_nxv8f64_f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e64,m8,ta,mu
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    fmv.d.x ft0, a1
-; CHECK-NEXT:    vsetvli a0, a2, e64,m8,tu,mu
-; CHECK-NEXT:    vfslide1down.vf v16, v8, ft0, v0.t
+; CHECK-NEXT:    fmv.d.x ft0, a0
+; CHECK-NEXT:    vsetvli a0, a1, e64,m8,tu,mu
+; CHECK-NEXT:    vfslide1down.vf v8, v16, ft0, v0.t
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %a = call <vscale x 8 x double> @llvm.riscv.vfslide1down.mask.nxv8f64.f64(

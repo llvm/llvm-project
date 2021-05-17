@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %S/test_errors.sh %s %t %flang_fc1
 function f1(x, y)
   integer x
   !ERROR: SAVE attribute may not be applied to dummy argument 'x'

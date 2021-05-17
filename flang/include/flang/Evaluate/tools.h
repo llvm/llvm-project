@@ -115,13 +115,18 @@ common::IfNoLvalue<Expr<SomeType>, A> AsGenericExpr(A &&x) {
   }
 }
 
+inline Expr<SomeType> AsGenericExpr(Expr<SomeType> &&x) { return std::move(x); }
+
+// These overloads wrap DataRefs and simple whole variables up into
+// generic expressions if they have a known type.
+std::optional<Expr<SomeType>> AsGenericExpr(DataRef &&);
+std::optional<Expr<SomeType>> AsGenericExpr(const Symbol &);
+
 template <typename A>
 common::IfNoLvalue<Expr<SomeKind<ResultType<A>::category>>, A> AsCategoryExpr(
     A &&x) {
   return Expr<SomeKind<ResultType<A>::category>>{AsExpr(std::move(x))};
 }
-
-inline Expr<SomeType> AsGenericExpr(Expr<SomeType> &&x) { return std::move(x); }
 
 Expr<SomeType> Parenthesize(Expr<SomeType> &&);
 
@@ -182,6 +187,52 @@ template <typename A, typename B> A *UnwrapExpr(std::optional<B> &x) {
   }
 }
 
+// A variant of UnwrapExpr above that also skips through (parentheses)
+// and conversions of kinds within a category.  Useful for extracting LEN
+// type parameter inquiries, at least.
+template <typename A, typename B>
+auto UnwrapConvertedExpr(B &x) -> common::Constify<A, B> * {
+  using Ty = std::decay_t<B>;
+  if constexpr (std::is_same_v<A, Ty>) {
+    return &x;
+  } else if constexpr (std::is_same_v<Ty, ActualArgument>) {
+    if (auto *expr{x.UnwrapExpr()}) {
+      return UnwrapConvertedExpr<A>(*expr);
+    }
+  } else if constexpr (std::is_same_v<Ty, Expr<SomeType>>) {
+    return std::visit([](auto &x) { return UnwrapConvertedExpr<A>(x); }, x.u);
+  } else if constexpr (!common::HasMember<A, TypelessExpression>) {
+    using Result = ResultType<A>;
+    if constexpr (std::is_same_v<Ty, Expr<Result>> ||
+        std::is_same_v<Ty, Expr<SomeKind<Result::category>>>) {
+      return std::visit([](auto &x) { return UnwrapConvertedExpr<A>(x); }, x.u);
+    } else if constexpr (std::is_same_v<Ty, Parentheses<Result>> ||
+        std::is_same_v<Ty, Convert<Result, Result::category>>) {
+      return std::visit(
+          [](auto &x) { return UnwrapConvertedExpr<A>(x); }, x.left().u);
+    }
+  }
+  return nullptr;
+}
+
+// When an expression is a "bare" LEN= derived type parameter inquiry,
+// possibly wrapped in integer kind conversions &/or parentheses, return
+// a pointer to the Symbol with TypeParamDetails.
+template <typename A> const Symbol *ExtractBareLenParameter(const A &expr) {
+  if (const auto *typeParam{
+          evaluate::UnwrapConvertedExpr<evaluate::TypeParamInquiry>(expr)}) {
+    if (!typeParam->base()) {
+      const Symbol &symbol{typeParam->parameter()};
+      if (const auto *tpd{symbol.detailsIf<semantics::TypeParamDetails>()}) {
+        if (tpd->attr() == common::TypeParamAttr::Len) {
+          return &symbol;
+        }
+      }
+    }
+  }
+  return nullptr;
+}
+
 // If an expression simply wraps a DataRef, extract and return it.
 // The Boolean argument controls the handling of Substring
 // references: when true (not default), it extracts the base DataRef
@@ -235,11 +286,14 @@ std::optional<DataRef> ExtractSubstringBase(const Substring &);
 
 // Predicate: is an expression is an array element reference?
 template <typename T>
-bool IsArrayElement(const Expr<T> &expr, bool intoSubstring = false) {
+bool IsArrayElement(const Expr<T> &expr, bool intoSubstring = true,
+    bool skipComponents = false) {
   if (auto dataRef{ExtractDataRef(expr, intoSubstring)}) {
     const DataRef *ref{&*dataRef};
-    while (const Component * component{std::get_if<Component>(&ref->u)}) {
-      ref = &component->base();
+    if (skipComponents) {
+      while (const Component * component{std::get_if<Component>(&ref->u)}) {
+        ref = &component->base();
+      }
     }
     if (const auto *coarrayRef{std::get_if<CoarrayRef>(&ref->u)}) {
       return !coarrayRef->subscript().empty();
@@ -327,6 +381,22 @@ template <typename A> const Symbol *UnwrapWholeSymbolDataRef(const A &x) {
   return nullptr;
 }
 
+// If an expression is a whole symbol or a whole component desginator,
+// extract and return that symbol, else null.
+template <typename A>
+const Symbol *UnwrapWholeSymbolOrComponentDataRef(const A &x) {
+  if (auto dataRef{ExtractDataRef(x)}) {
+    if (const SymbolRef * p{std::get_if<SymbolRef>(&dataRef->u)}) {
+      return &p->get();
+    } else if (const Component * c{std::get_if<Component>(&dataRef->u)}) {
+      if (c->base().Rank() == 0) {
+        return &c->GetLastSymbol();
+      }
+    }
+  }
+  return nullptr;
+}
+
 // GetFirstSymbol(A%B%C[I]%D) -> A
 template <typename A> const Symbol *GetFirstSymbol(const A &x) {
   if (auto dataRef{ExtractDataRef(x, true)}) {
@@ -335,6 +405,9 @@ template <typename A> const Symbol *GetFirstSymbol(const A &x) {
     return nullptr;
   }
 }
+
+// GetLastPointerSymbol(A%PTR1%B%PTR2%C) -> PTR2
+const Symbol *GetLastPointerSymbol(const evaluate::DataRef &);
 
 // Creation of conversion expressions can be done to either a known
 // specific intrinsic type with ConvertToType<T>(x) or by converting
@@ -708,7 +781,8 @@ common::IfNoLvalue<std::optional<Expr<SomeType>>, WRAPPED> TypedWrapper(
 
 // GetLastSymbol() returns the rightmost symbol in an object or procedure
 // designator (which has perhaps been wrapped in an Expr<>), or a null pointer
-// when none is found.
+// when none is found.  It will return an ASSOCIATE construct entity's symbol
+// rather than descending into its expression.
 struct GetLastSymbolHelper
     : public AnyTraverse<GetLastSymbolHelper, std::optional<const Symbol *>> {
   using Result = std::optional<const Symbol *>;
@@ -784,8 +858,9 @@ template <typename A> bool IsAllocatableOrPointer(const A &x) {
 // Procedure and pointer detection predicates
 bool IsProcedure(const Expr<SomeType> &);
 bool IsFunction(const Expr<SomeType> &);
-bool IsProcedurePointer(const Expr<SomeType> &);
+bool IsProcedurePointerTarget(const Expr<SomeType> &);
 bool IsNullPointer(const Expr<SomeType> &);
+bool IsObjectPointer(const Expr<SomeType> &, FoldingContext &);
 
 // Extracts the chain of symbols from a designator, which has perhaps been
 // wrapped in an Expr<>, removing all of the (co)subscripts.  The
@@ -816,10 +891,12 @@ template <typename A> SymbolVector GetSymbolVector(const A &x) {
 const Symbol *GetLastTarget(const SymbolVector &);
 
 // Collects all of the Symbols in an expression
-template <typename A> semantics::SymbolSet CollectSymbols(const A &);
-extern template semantics::SymbolSet CollectSymbols(const Expr<SomeType> &);
-extern template semantics::SymbolSet CollectSymbols(const Expr<SomeInteger> &);
-extern template semantics::SymbolSet CollectSymbols(
+template <typename A> semantics::UnorderedSymbolSet CollectSymbols(const A &);
+extern template semantics::UnorderedSymbolSet CollectSymbols(
+    const Expr<SomeType> &);
+extern template semantics::UnorderedSymbolSet CollectSymbols(
+    const Expr<SomeInteger> &);
+extern template semantics::UnorderedSymbolSet CollectSymbols(
     const Expr<SubscriptInteger> &);
 
 // Predicate: does a variable contain a vector-valued subscript (not a triplet)?
@@ -888,8 +965,8 @@ public:
     }
     return expanded;
   }
-  template <typename T> Constant<T> Expand(Parentheses<T> &&x) {
-    return Expand(std::move(x)); // Constant<> can be parenthesized
+  template <typename T> Expr<T> Expand(Parentheses<T> &&x) {
+    return Expand(std::move(x.left())); // Constant<> can be parenthesized
   }
   template <typename T> Expr<T> Expand(Expr<T> &&x) {
     return std::visit([&](auto &&x) { return Expr<T>{Expand(std::move(x))}; },
@@ -910,12 +987,13 @@ class Scope;
 // These functions are used in Evaluate so they are defined here rather than in
 // Semantics to avoid a link-time dependency on Semantics.
 // All of these apply GetUltimate() or ResolveAssociations() to their arguments.
-
 bool IsVariableName(const Symbol &);
 bool IsPureProcedure(const Symbol &);
 bool IsPureProcedure(const Scope &);
 bool IsFunction(const Symbol &);
+bool IsFunction(const Scope &);
 bool IsProcedure(const Symbol &);
+bool IsProcedure(const Scope &);
 bool IsProcedurePointer(const Symbol &);
 bool IsSaved(const Symbol &); // saved implicitly or explicitly
 bool IsDummy(const Symbol &);
@@ -938,7 +1016,14 @@ const Symbol &GetAssociationRoot(const Symbol &);
 const Symbol *FindCommonBlockContaining(const Symbol &);
 int CountLenParameters(const DerivedTypeSpec &);
 int CountNonConstantLenParameters(const DerivedTypeSpec &);
+
+// 15.5.2.4(4), type compatibility for dummy and actual arguments.
+// Also used for assignment compatibility checking
+bool AreTypeParamCompatible(
+    const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
+
 const Symbol &GetUsedModule(const UseDetails &);
+const Symbol *FindFunctionResult(const Symbol &);
 
 } // namespace Fortran::semantics
 

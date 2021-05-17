@@ -158,6 +158,18 @@ vsbc.vvm v8, v4, v20, v0
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 57 04 4a 48 <unknown>
 
+vsbc.vvm v4, v4, v20, v0
+# CHECK-INST: vsbc.vvm v4, v4, v20, v0
+# CHECK-ENCODING: [0x57,0x02,0x4a,0x48]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 57 02 4a 48 <unknown>
+
+vsbc.vvm v8, v4, v8, v0
+# CHECK-INST: vsbc.vvm v8, v4, v8, v0
+# CHECK-ENCODING: [0x57,0x04,0x44,0x48]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 57 04 44 48 <unknown>
+
 vsbc.vxm v8, v4, a0, v0
 # CHECK-INST: vsbc.vxm v8, v4, a0, v0
 # CHECK-ENCODING: [0x57,0x44,0x45,0x48]
@@ -169,6 +181,18 @@ vmsbc.vvm v8, v4, v20, v0
 # CHECK-ENCODING: [0x57,0x04,0x4a,0x4c]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 57 04 4a 4c <unknown>
+
+vmsbc.vvm v4, v4, v20, v0
+# CHECK-INST: vmsbc.vvm v4, v4, v20, v0
+# CHECK-ENCODING: [0x57,0x02,0x4a,0x4c]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 57 02 4a 4c <unknown>
+
+vmsbc.vvm v8, v4, v8, v0
+# CHECK-INST: vmsbc.vvm v8, v4, v8, v0
+# CHECK-ENCODING: [0x57,0x04,0x44,0x4c]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 57 04 44 4c <unknown>
 
 vmsbc.vxm v8, v4, a0, v0
 # CHECK-INST: vmsbc.vxm v8, v4, a0, v0

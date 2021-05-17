@@ -35,7 +35,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !8
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !8
   %exitcond = icmp eq i32 %lftr.wideiv, %n, !dbg !8
-  br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body, !dbg !8, !llvm.loop !17
+  br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body, !dbg !8
 }
 
 ; Function Attrs: nounwind readonly ssp uwtable
@@ -92,8 +92,6 @@ attributes #0 = { nounwind }
 !14 = !{!"Simple C/C++ TBAA"}
 !15 = !DILocation(line: 6, column: 19, scope: !4)
 !16 = !DILocation(line: 6, column: 11, scope: !4)
-!17 = distinct !{!17, !18}
-!18 = !{!"llvm.loop.unroll.disable"}
 !19 = !DILocation(line: 16, column: 20, scope: !20)
 !20 = distinct !DISubprogram(name: "cond_sum_loop_hint", scope: !5, file: !5, line: 12, type: !6, isLocal: false, isDefinition: true, scopeLine: 12, flags: DIFlagPrototyped, isOptimized: true, unit: !28, retainedNodes: !7)
 !21 = !DILocation(line: 16, column: 3, scope: !20)
@@ -101,7 +99,7 @@ attributes #0 = { nounwind }
 !23 = !DILocation(line: 20, column: 3, scope: !20)
 !24 = !DILocation(line: 17, column: 19, scope: !20)
 !25 = !DILocation(line: 17, column: 11, scope: !20)
-!26 = distinct !{!26, !27, !18}
+!26 = distinct !{!26, !27}
 !27 = !{!"llvm.loop.vectorize.enable", i1 true}
 !28 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang",
                              file: !5,

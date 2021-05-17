@@ -2,7 +2,9 @@ add_llvm_component_library(LLVMRISCVDisassembler
   RISCVDisassembler.cpp
 
   LINK_COMPONENTS
+  MC
   MCDisassembler
+  RISCVDesc
   RISCVInfo
   Support
 

@@ -213,8 +213,9 @@ bool ARM::getFPUFeatures(unsigned FPUKind, std::vector<StringRef> &Features) {
     const char *PlusName, *MinusName;
     NeonSupportLevel MinSupportLevel;
   } NeonFeatureInfoList[] = {
-    {"+neon", "-neon", NeonSupportLevel::Neon},
-    {"+crypto", "-crypto", NeonSupportLevel::Crypto},
+      {"+neon", "-neon", NeonSupportLevel::Neon},
+      {"+sha2", "-sha2", NeonSupportLevel::Crypto},
+      {"+aes", "-aes", NeonSupportLevel::Crypto},
   };
 
   for (const auto &Info: NeonFeatureInfoList) {

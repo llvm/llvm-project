@@ -1,8 +1,11 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -fsyntax-only -Wbind-to-temporary-copy -verify %s 
-// RUN: %clang_cc1 -triple %itanium_abi_triple -fsyntax-only -Wbind-to-temporary-copy -verify -std=c++98 %s
-// RUN: %clang_cc1 -triple %itanium_abi_triple -fsyntax-only -Wbind-to-temporary-copy -verify -std=c++11 %s
+// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify=expected          -triple %itanium_abi_triple -Wbind-to-temporary-copy %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected          -triple %itanium_abi_triple -Wbind-to-temporary-copy %s
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx98_14 -triple %itanium_abi_triple -Wbind-to-temporary-copy %s
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify=expected,cxx98_14 -triple %itanium_abi_triple -Wbind-to-temporary-copy %s
+// RUN: %clang_cc1 -std=c++98 -fsyntax-only -verify=expected,cxx98_14 -triple %itanium_abi_triple -Wbind-to-temporary-copy %s
+// RUN: %clang_cc1            -fsyntax-only -verify=expected,cxx98_14 -triple %itanium_abi_triple -Wbind-to-temporary-copy %s
 
-class X { 
+class X {
 public:
   operator bool();
   operator int() const;
@@ -31,11 +34,11 @@ public:
   // expected-error{{conversion function cannot have any parameters}}
 
   operator bool(int a = 4, int b = 6) const; // expected-error{{conversion function cannot have any parameters}}
-  
-  
+
+
   operator float(...) const;  // expected-error{{conversion function cannot be variadic}}
-  
-  
+
+
   operator func_type(); // expected-error{{conversion function cannot convert to a function type}}
   operator array_type(); // expected-error{{conversion function cannot convert to an array type}}
 };
@@ -44,10 +47,10 @@ public:
 typedef int INT;
 typedef INT* INT_PTR;
 
-class Z { 
+class Z {
   operator int(); // expected-note {{previous declaration is here}}
   operator int**(); // expected-note {{previous declaration is here}}
-  
+
   operator INT();  // expected-error{{conversion function cannot be redeclared}}
   operator INT_PTR*(); // expected-error{{conversion function cannot be redeclared}}
 };
@@ -103,12 +106,12 @@ void f(const C& c) {
 }
 
 // Test. Conversion in base class is visible in derived class.
-class XB { 
+class XB {
 public:
   operator int(); // expected-note {{candidate function}}
 };
 
-class Yb : public XB { 
+class Yb : public XB {
 public:
   operator char(); // expected-note {{candidate function}}
 };
@@ -123,12 +126,12 @@ void f(Yb& a) {
 class AutoPtrRef { };
 
 class AutoPtr {
-  AutoPtr(AutoPtr &); // expected-note{{declared private here}}
-  
+  AutoPtr(AutoPtr &); // cxx98_14-note{{declared private here}}
+
 public:
   AutoPtr();
   AutoPtr(AutoPtrRef);
-  
+
   operator AutoPtrRef();
 };
 
@@ -136,11 +139,11 @@ AutoPtr make_auto_ptr();
 
 AutoPtr test_auto_ptr(bool Cond) {
   AutoPtr p1( make_auto_ptr() );
-  
+
   AutoPtr p;
   if (Cond)
-    return p; // expected-error{{calling a private constructor}}
-  
+    return p; // cxx98_14-error{{calling a private constructor}}
+
   return AutoPtr();
 }
 
@@ -149,16 +152,16 @@ struct A1 {
   ~A1();
 
 private:
-  A1(const A1&); // expected-note 2 {{declared private here}}
+  A1(const A1&); // cxx98_14-note 2 {{declared private here}}
 };
 
 A1 f() {
   // FIXME: redundant diagnostics!
-  return "Hello"; // expected-error {{calling a private constructor}}
+  return "Hello"; // cxx98_14-error {{calling a private constructor}}
 #if __cplusplus <= 199711L
   // expected-warning@-2 {{an accessible copy constructor}}
 #else
-  // expected-warning@-4 {{copying parameter of type 'A1' when binding a reference to a temporary would invoke an inaccessible constructor in C++98}}
+  // cxx98_14-warning@-4 {{copying parameter of type 'A1' when binding a reference to a temporary would invoke an inaccessible constructor in C++98}}
 #endif
 }
 
@@ -185,7 +188,7 @@ namespace source_locations {
     const A<float, int> &caf2 = E();
   }
 
-  // Check 
+  // Check
   template<typename T>
   struct E2 {
     operator T
@@ -212,7 +215,7 @@ namespace crazy_declarators {
 }
 
 namespace smart_ptr {
-  class Y { 
+  class Y {
     class YRef { };
 
     Y(Y&);
@@ -246,7 +249,7 @@ struct Any {
 };
 
 struct Other {
-  Other(const Other &); 
+  Other(const Other &);
   Other();
 };
 
@@ -289,7 +292,7 @@ namespace PR7055 {
   struct Y {
     Y(X);
   };
-  
+
   Y f2(foo());
 }
 
@@ -339,7 +342,7 @@ namespace rdar8018274 {
 
   struct Derived2 : Base { };
 
-  struct SuperDerived : Derived1, Derived2 { 
+  struct SuperDerived : Derived1, Derived2 {
     using Derived1::operator int;
   };
 
@@ -359,7 +362,7 @@ namespace rdar8018274 {
     operator int();
   };
 
-  struct Derived23 : Base2, Base3 { 
+  struct Derived23 : Base2, Base3 {
     using Base2::operator int;
   };
 
@@ -404,7 +407,7 @@ namespace PR9336 {
   {
     template<class Container>
     operator Container()
-    { 
+    {
       Container ar;
       T* i;
       ar[0]=*i;

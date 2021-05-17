@@ -6,8 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Features.inc"
 #include "Index.pb.h"
+#include "MonitoringService.grpc.pb.h"
+#include "MonitoringService.pb.h"
 #include "Service.grpc.pb.h"
+#include "Service.pb.h"
 #include "index/Index.h"
 #include "index/Serialization.h"
 #include "index/Symbol.h"
@@ -34,6 +38,10 @@
 #include <grpc++/health_check_service_interface.h>
 #include <memory>
 #include <thread>
+
+#if ENABLE_GRPC_REFLECTION
+#include <grpc++/ext/proto_server_reflection_plugin.h>
+#endif
 
 namespace clang {
 namespace clangd {
@@ -80,6 +88,17 @@ llvm::cl::opt<std::string> ServerAddress(
     "server-address", llvm::cl::init("0.0.0.0:50051"),
     llvm::cl::desc("Address of the invoked server. Defaults to 0.0.0.0:50051"));
 
+llvm::cl::opt<size_t> IdleTimeoutSeconds(
+    "idle-timeout", llvm::cl::init(8 * 60),
+    llvm::cl::desc("Maximum time a channel may stay idle until server closes "
+                   "the connection, in seconds. Defaults to 480."));
+
+llvm::cl::opt<size_t> LimitResults(
+    "limit-results", llvm::cl::init(10000),
+    llvm::cl::desc("Maximum number of results to stream as a response to "
+                   "single request. Limit is to keep the server from being "
+                   "DOS'd. Defaults to 10000."));
+
 static Key<grpc::ServerContext *> CurrentRequest;
 
 class RemoteIndexServer final : public v1::SymbolIndex::Service {
@@ -110,7 +129,12 @@ private:
     }
     unsigned Sent = 0;
     unsigned FailedToSend = 0;
+    bool HasMore = false;
     Index.lookup(*Req, [&](const clangd::Symbol &Item) {
+      if (Sent >= LimitResults) {
+        HasMore = true;
+        return;
+      }
       auto SerializedItem = ProtobufMarshaller->toProtobuf(Item);
       if (!SerializedItem) {
         elog("Unable to convert Symbol to protobuf: {0}",
@@ -124,8 +148,10 @@ private:
       Reply->Write(NextMessage);
       ++Sent;
     });
+    if (HasMore)
+      log("[public] Limiting result size for Lookup request.");
     LookupReply LastMessage;
-    LastMessage.mutable_final_result()->set_has_more(true);
+    LastMessage.mutable_final_result()->set_has_more(HasMore);
     logResponse(LastMessage);
     Reply->Write(LastMessage);
     SPAN_ATTACH(Tracer, "Sent", Sent);
@@ -146,6 +172,11 @@ private:
       elog("Can not parse FuzzyFindRequest from protobuf: {0}",
            Req.takeError());
       return grpc::Status::CANCELLED;
+    }
+    if (!Req->Limit || *Req->Limit > LimitResults) {
+      log("[public] Limiting result size for FuzzyFind request from {0} to {1}",
+          Req->Limit, LimitResults);
+      Req->Limit = LimitResults;
     }
     unsigned Sent = 0;
     unsigned FailedToSend = 0;
@@ -183,6 +214,11 @@ private:
     if (!Req) {
       elog("Can not parse RefsRequest from protobuf: {0}", Req.takeError());
       return grpc::Status::CANCELLED;
+    }
+    if (!Req->Limit || *Req->Limit > LimitResults) {
+      log("[public] Limiting result size for Refs request from {0} to {1}.",
+          Req->Limit, LimitResults);
+      Req->Limit = LimitResults;
     }
     unsigned Sent = 0;
     unsigned FailedToSend = 0;
@@ -222,6 +258,12 @@ private:
       elog("Can not parse RelationsRequest from protobuf: {0}",
            Req.takeError());
       return grpc::Status::CANCELLED;
+    }
+    if (!Req->Limit || *Req->Limit > LimitResults) {
+      log("[public] Limiting result size for Relations request from {0} to "
+          "{1}.",
+          Req->Limit, LimitResults);
+      Req->Limit = LimitResults;
     }
     unsigned Sent = 0;
     unsigned FailedToSend = 0;
@@ -278,11 +320,46 @@ private:
   clangd::SymbolIndex &Index;
 };
 
+class Monitor final : public v1::Monitor::Service {
+public:
+  Monitor(llvm::sys::TimePoint<> IndexAge)
+      : StartTime(std::chrono::system_clock::now()), IndexBuildTime(IndexAge) {}
+
+  void updateIndex(llvm::sys::TimePoint<> UpdateTime) {
+    IndexBuildTime.exchange(UpdateTime);
+  }
+
+private:
+  // FIXME(kirillbobyrev): Most fields should be populated when the index
+  // reloads (probably in adjacent metadata.txt file next to loaded .idx) but
+  // they aren't right now.
+  grpc::Status MonitoringInfo(grpc::ServerContext *Context,
+                              const v1::MonitoringInfoRequest *Request,
+                              v1::MonitoringInfoReply *Reply) override {
+    Reply->set_uptime_seconds(std::chrono::duration_cast<std::chrono::seconds>(
+                                  std::chrono::system_clock::now() - StartTime)
+                                  .count());
+    // FIXME(kirillbobyrev): We are currently making use of the last
+    // modification time of the index artifact to deduce its age. This is wrong
+    // as it doesn't account for the indexing delay. Propagate some metadata
+    // with the index artifacts to indicate time of the commit we indexed.
+    Reply->set_index_age_seconds(
+        std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::system_clock::now() - IndexBuildTime.load())
+            .count());
+    return grpc::Status::OK;
+  }
+
+  const llvm::sys::TimePoint<> StartTime;
+  std::atomic<llvm::sys::TimePoint<>> IndexBuildTime;
+};
+
 // Detect changes in \p IndexPath file and load new versions of the index
 // whenever they become available.
 void hotReload(clangd::SwapIndex &Index, llvm::StringRef IndexPath,
                llvm::vfs::Status &LastStatus,
-               llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> &FS) {
+               llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> &FS,
+               Monitor &Monitor) {
   auto Status = FS->status(IndexPath);
   // Requested file is same as loaded index: no reload is needed.
   if (!Status || (Status->getLastModificationTime() ==
@@ -299,19 +376,26 @@ void hotReload(clangd::SwapIndex &Index, llvm::StringRef IndexPath,
     return;
   }
   Index.reset(std::move(NewIndex));
+  Monitor.updateIndex(Status->getLastModificationTime());
   log("New index version loaded. Last modification time: {0}, size: {1} bytes.",
       Status->getLastModificationTime(), Status->getSize());
 }
 
 void runServerAndWait(clangd::SymbolIndex &Index, llvm::StringRef ServerAddress,
-                      llvm::StringRef IndexPath) {
+                      llvm::StringRef IndexPath, Monitor &Monitor) {
   RemoteIndexServer Service(Index, IndexRoot);
 
   grpc::EnableDefaultHealthCheckService(true);
+#if ENABLE_GRPC_REFLECTION
+  grpc::reflection::InitProtoReflectionServerBuilderPlugin();
+#endif
   grpc::ServerBuilder Builder;
   Builder.AddListeningPort(ServerAddress.str(),
                            grpc::InsecureServerCredentials());
+  Builder.AddChannelArgument(GRPC_ARG_MAX_CONNECTION_IDLE_MS,
+                             IdleTimeoutSeconds * 1000);
   Builder.RegisterService(&Service);
+  Builder.RegisterService(&Monitor);
   std::unique_ptr<grpc::Server> Server(Builder.BuildAndStart());
   log("Server listening on {0}", ServerAddress);
 
@@ -410,16 +494,18 @@ int main(int argc, char *argv[]) {
   }
   clang::clangd::SwapIndex Index(std::move(SymIndex));
 
-  std::thread HotReloadThread([&Index, &Status, &FS]() {
+  Monitor Monitor(Status->getLastModificationTime());
+
+  std::thread HotReloadThread([&Index, &Status, &FS, &Monitor]() {
     llvm::vfs::Status LastStatus = *Status;
     static constexpr auto RefreshFrequency = std::chrono::seconds(30);
     while (!clang::clangd::shutdownRequested()) {
-      hotReload(Index, llvm::StringRef(IndexPath), LastStatus, FS);
+      hotReload(Index, llvm::StringRef(IndexPath), LastStatus, FS, Monitor);
       std::this_thread::sleep_for(RefreshFrequency);
     }
   });
 
-  runServerAndWait(Index, ServerAddress, IndexPath);
+  runServerAndWait(Index, ServerAddress, IndexPath, Monitor);
 
   HotReloadThread.join();
 }

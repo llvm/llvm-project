@@ -809,9 +809,10 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
                               PP.getIdentifierTable(), PP.getSelectorTable(),
                               PP.getBuiltinInfo());
 
-  bool disableValid = false;
+  DisableValidationForModuleKind disableValid =
+      DisableValidationForModuleKind::None;
   if (::getenv("LIBCLANG_DISABLE_PCH_VALIDATION"))
-    disableValid = true;
+    disableValid = DisableValidationForModuleKind::All;
   AST->Reader = new ASTReader(
       PP, *AST->ModuleCache, AST->Ctx.get(), PCHContainerRdr, {},
       /*isysroot=*/"",
@@ -1149,16 +1150,8 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
   Clang->setDiagnostics(&getDiagnostics());
 
   // Create the target instance.
-  Clang->setTarget(TargetInfo::CreateTargetInfo(
-      Clang->getDiagnostics(), Clang->getInvocation().TargetOpts));
-  if (!Clang->hasTarget())
+  if (!Clang->createTarget())
     return true;
-
-  // Inform the target of the language options.
-  //
-  // FIXME: We shouldn't need to do this, the target should be immutable once
-  // created. This complexity should be lifted elsewhere.
-  Clang->getTarget().adjust(Clang->getLangOpts());
 
   assert(Clang->getFrontendOpts().Inputs.size() == 1 &&
          "Invocation must have exactly one source file!");
@@ -1316,8 +1309,8 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
     return nullptr;
 
   if (Preamble) {
-    if (Preamble->CanReuse(PreambleInvocationIn, MainFileBuffer.get(), Bounds,
-                           VFS.get())) {
+    if (Preamble->CanReuse(PreambleInvocationIn, *MainFileBuffer, Bounds,
+                           *VFS)) {
       // Okay! We can re-use the precompiled preamble.
 
       // Set the state of the diagnostic object to mimic its state
@@ -1567,16 +1560,8 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
   Clang->setDiagnostics(&AST->getDiagnostics());
 
   // Create the target instance.
-  Clang->setTarget(TargetInfo::CreateTargetInfo(
-      Clang->getDiagnostics(), Clang->getInvocation().TargetOpts));
-  if (!Clang->hasTarget())
+  if (!Clang->createTarget())
     return nullptr;
-
-  // Inform the target of the language options.
-  //
-  // FIXME: We shouldn't need to do this, the target should be immutable once
-  // created. This complexity should be lifted elsewhere.
-  Clang->getTarget().adjust(Clang->getLangOpts());
 
   assert(Clang->getFrontendOpts().Inputs.size() == 1 &&
          "Invocation must have exactly one source file!");
@@ -2193,18 +2178,10 @@ void ASTUnit::CodeComplete(
   ProcessWarningOptions(Diag, Inv.getDiagnosticOpts());
 
   // Create the target instance.
-  Clang->setTarget(TargetInfo::CreateTargetInfo(
-      Clang->getDiagnostics(), Clang->getInvocation().TargetOpts));
-  if (!Clang->hasTarget()) {
+  if (!Clang->createTarget()) {
     Clang->setInvocation(nullptr);
     return;
   }
-
-  // Inform the target of the language options.
-  //
-  // FIXME: We shouldn't need to do this, the target should be immutable once
-  // created. This complexity should be lifted elsewhere.
-  Clang->getTarget().adjust(Clang->getLangOpts());
 
   assert(Clang->getFrontendOpts().Inputs.size() == 1 &&
          "Invocation must have exactly one source file!");

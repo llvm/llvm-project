@@ -11,3 +11,5 @@ entry:
 
 ; CHECK-DAG: section ".SCOV{{\$}}BM",
 ; CHECK-DAG: section ".SCOVP{{\$}}M",
+; CHECK:     @__start___sancov_bools = external hidden global i1
+; CHECK:     @__stop___sancov_bools = external hidden global i1

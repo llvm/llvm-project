@@ -18,3 +18,5 @@ greviw t0, t1, -1 # CHECK: :[[@LINE]]:16: error: immediate must be an integer in
 shflw t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
 # Too few operands
 unshflw t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
+# Too few operands
+xperm.w t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction

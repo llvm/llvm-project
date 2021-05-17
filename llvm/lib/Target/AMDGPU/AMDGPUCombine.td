@@ -37,25 +37,54 @@ def cvt_f32_ubyteN : GICombineRule<
          [{ return PostLegalizerHelper.matchCvtF32UByteN(*${cvt_f32_ubyteN}, ${matchinfo}); }]),
   (apply [{ PostLegalizerHelper.applyCvtF32UByteN(*${cvt_f32_ubyteN}, ${matchinfo}); }])>;
 
+def clamp_i64_to_i16_matchdata : GIDefMatchData<"AMDGPUPreLegalizerCombinerHelper::ClampI64ToI16MatchInfo">;
+
+def clamp_i64_to_i16 : GICombineRule<
+  (defs root:$clamp_i64_to_i16, clamp_i64_to_i16_matchdata:$matchinfo),
+  (match (wip_match_opcode G_TRUNC):$clamp_i64_to_i16,
+      [{ return PreLegalizerHelper.matchClampI64ToI16(*${clamp_i64_to_i16}, MRI, *MF, ${matchinfo}); }]),
+  (apply [{ PreLegalizerHelper.applyClampI64ToI16(*${clamp_i64_to_i16}, ${matchinfo}); }])>;
+
+def med3_matchdata : GIDefMatchData<"AMDGPURegBankCombinerHelper::Med3MatchInfo">;
+
+def int_minmax_to_med3 : GICombineRule<
+  (defs root:$min_or_max, med3_matchdata:$matchinfo),
+  (match (wip_match_opcode G_SMAX,
+                           G_SMIN,
+                           G_UMAX,
+                           G_UMIN):$min_or_max,
+         [{ return RegBankHelper.matchIntMinMaxToMed3(*${min_or_max}, ${matchinfo}); }]),
+  (apply [{ RegBankHelper.applyMed3(*${min_or_max}, ${matchinfo}); }])>;
+
+def remove_fcanonicalize_matchinfo : GIDefMatchData<"Register">;
+
+def remove_fcanonicalize : GICombineRule<
+  (defs root:$fcanonicalize, remove_fcanonicalize_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_FCANONICALIZE):$fcanonicalize,
+         [{ return PostLegalizerHelper.matchRemoveFcanonicalize(*${fcanonicalize}, ${matchinfo}); }]),
+  (apply [{ Helper.replaceSingleDefInstWithReg(*${fcanonicalize}, ${matchinfo}); }])>;
+
 // Combines which should only apply on SI/VI
 def gfx6gfx7_combines : GICombineGroup<[fcmp_select_to_fmin_fmax_legacy]>;
 
-
 def AMDGPUPreLegalizerCombinerHelper: GICombinerHelper<
-  "AMDGPUGenPreLegalizerCombinerHelper", [all_combines]> {
+  "AMDGPUGenPreLegalizerCombinerHelper", [all_combines, clamp_i64_to_i16]> {
   let DisableRuleOption = "amdgpuprelegalizercombiner-disable-rule";
+  let StateClass = "AMDGPUPreLegalizerCombinerHelperState";
 }
 
 def AMDGPUPostLegalizerCombinerHelper: GICombinerHelper<
   "AMDGPUGenPostLegalizerCombinerHelper",
   [all_combines, gfx6gfx7_combines,
-   uchar_to_float, cvt_f32_ubyteN]> {
+   uchar_to_float, cvt_f32_ubyteN, remove_fcanonicalize]> {
   let DisableRuleOption = "amdgpupostlegalizercombiner-disable-rule";
   let StateClass = "AMDGPUPostLegalizerCombinerHelperState";
   let AdditionalArguments = [];
 }
 
 def AMDGPURegBankCombinerHelper : GICombinerHelper<
-  "AMDGPUGenRegBankCombinerHelper", []> {
+  "AMDGPUGenRegBankCombinerHelper", [zext_trunc_fold, int_minmax_to_med3]> {
   let DisableRuleOption = "amdgpuregbankcombiner-disable-rule";
+  let StateClass = "AMDGPURegBankCombinerHelperState";
+  let AdditionalArguments = [];
 }

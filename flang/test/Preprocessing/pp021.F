@@ -1,4 +1,4 @@
-! RUN: %f18 -E %s 2>&1 | FileCheck %s
+! RUN: %flang -E %s 2>&1 | FileCheck %s
 ! CHECK: ch='KWM'
 ! CHECK: if(ch.eq.'KWM')then
 * KWM NOT expanded in 'literal'

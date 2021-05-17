@@ -984,15 +984,15 @@ nub_bool_t MachTask::DeallocateMemory(nub_addr_t addr) {
   allocation_collection::iterator pos, end = m_allocations.end();
   for (pos = m_allocations.begin(); pos != end; pos++) {
     if ((*pos).first == addr) {
+      size_t size = (*pos).second;
       m_allocations.erase(pos);
 #define ALWAYS_ZOMBIE_ALLOCATIONS 0
       if (ALWAYS_ZOMBIE_ALLOCATIONS ||
           getenv("DEBUGSERVER_ZOMBIE_ALLOCATIONS")) {
-        ::mach_vm_protect(task, (*pos).first, (*pos).second, 0, VM_PROT_NONE);
+        ::mach_vm_protect(task, addr, size, 0, VM_PROT_NONE);
         return true;
       } else
-        return ::mach_vm_deallocate(task, (*pos).first, (*pos).second) ==
-               KERN_SUCCESS;
+        return ::mach_vm_deallocate(task, addr, size) == KERN_SUCCESS;
     }
   }
   return false;

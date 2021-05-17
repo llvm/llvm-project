@@ -9,5 +9,5 @@ define void @f() {
 ; CHECK-NOT: @llvm.global_dtors
 ; CHECK: @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 1, void ()* @asan.module_ctor, i8* bitcast (void ()* @asan.module_ctor to i8*) }]
 ; CHECK-NOT: @llvm.global_dtors
-; CHECK: define internal void @asan.module_ctor() comdat
+; CHECK: define internal void @asan.module_ctor() #[[#]] comdat
 ; CHECK-NOT: @llvm.global_dtors

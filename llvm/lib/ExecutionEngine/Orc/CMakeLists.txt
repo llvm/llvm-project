@@ -2,6 +2,7 @@ add_llvm_component_library(LLVMOrcJIT
   CompileOnDemandLayer.cpp
   CompileUtils.cpp
   Core.cpp
+  DebugObjectManagerPlugin.cpp
   DebugUtils.cpp
   ExecutionUtils.cpp
   IndirectionUtils.cpp
@@ -22,6 +23,7 @@ add_llvm_component_library(LLVMOrcJIT
   SpeculateAnalyses.cpp
   TargetProcessControl.cpp
   ThreadSafeModule.cpp
+  TPCDebugObjectRegistrar.cpp
   TPCDynamicLibrarySearchGenerator.cpp
   TPCEHFrameRegistrar.cpp
   TPCIndirectionUtils.cpp

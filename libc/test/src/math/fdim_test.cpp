@@ -14,14 +14,16 @@
 #include "utils/UnitTest/Test.h"
 #include <math.h>
 
-using FDimTest = FDimTestTemplate<double>;
+using LlvmLibcFDimTest = FDimTestTemplate<double>;
 
-TEST_F(FDimTest, NaNArg_fdim) { testNaNArg(&__llvm_libc::fdim); }
+TEST_F(LlvmLibcFDimTest, NaNArg_fdim) { testNaNArg(&__llvm_libc::fdim); }
 
-TEST_F(FDimTest, InfArg_fdim) { testInfArg(&__llvm_libc::fdim); }
+TEST_F(LlvmLibcFDimTest, InfArg_fdim) { testInfArg(&__llvm_libc::fdim); }
 
-TEST_F(FDimTest, NegInfArg_fdim) { testNegInfArg(&__llvm_libc::fdim); }
+TEST_F(LlvmLibcFDimTest, NegInfArg_fdim) { testNegInfArg(&__llvm_libc::fdim); }
 
-TEST_F(FDimTest, BothZero_fdim) { testBothZero(&__llvm_libc::fdim); }
+TEST_F(LlvmLibcFDimTest, BothZero_fdim) { testBothZero(&__llvm_libc::fdim); }
 
-TEST_F(FDimTest, InDoubleRange_fdim) { testInRange(&__llvm_libc::fdim); }
+TEST_F(LlvmLibcFDimTest, InDoubleRange_fdim) {
+  testInRange(&__llvm_libc::fdim);
+}

@@ -26,6 +26,10 @@ namespace scf {
 class SCFDialect;
 } // end namespace scf
 
+namespace memref {
+class MemRefDialect;
+} // end namespace memref
+
 namespace vector {
 class VectorDialect;
 } // end namespace vector

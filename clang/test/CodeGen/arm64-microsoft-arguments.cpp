@@ -104,8 +104,8 @@ S5 f5() {
 
 // Pass and return an object with a non-trivial explicitly defaulted constructor
 // (passed directly, returned directly)
-// CHECK: define {{.*}} i64 @"?f6@@YA?AUS6@@XZ"()
-// CHECK: call i64 {{.*}}func6{{.*}}(i64 {{.*}})
+// CHECK: define {{.*}} i8 @"?f6@@YA?AUS6@@XZ"()
+// CHECK: call i8 {{.*}}func6{{.*}}(i64 {{.*}})
 struct S6a {
   S6a();
 };
@@ -123,8 +123,8 @@ S6 f6() {
 
 // Pass and return an object with a non-trivial implicitly defaulted constructor
 // (passed directly, returned directly)
-// CHECK: define {{.*}} i64 @"?f7@@YA?AUS7@@XZ"()
-// CHECK: call i64 {{.*}}func7{{.*}}(i64 {{.*}})
+// CHECK: define {{.*}} i8 @"?f7@@YA?AUS7@@XZ"()
+// CHECK: call i8 {{.*}}func7{{.*}}(i64 {{.*}})
 struct S7 {
   S6a x;
 };

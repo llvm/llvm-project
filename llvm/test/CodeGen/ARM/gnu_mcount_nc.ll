@@ -18,6 +18,7 @@ define dso_local void @callee() #0 {
 ; CHECK-THUMB-FAST-ISEL-NEXT:   bl      __gnu_mcount_nc
 ; CHECK-THUMB-GLOBAL-ISEL:      push    {lr}
 ; CHECK-THUMB-GLOBAL-ISEL-NEXT: bl      __gnu_mcount_nc
+  call void @llvm.arm.gnu.eabi.mcount()
   ret void
 }
 
@@ -34,8 +35,12 @@ define dso_local void @caller() #0 {
 ; CHECK-THUMB-FAST-ISEL-NEXT:   bl      __gnu_mcount_nc
 ; CHECK-THUMB-GLOBAL-ISEL:      push    {lr}
 ; CHECK-THUMB-GLOBAL-ISEL-NEXT: bl      __gnu_mcount_nc
+  call void @llvm.arm.gnu.eabi.mcount()
   call void @callee()
   ret void
 }
 
-attributes #0 = { nofree nounwind "instrument-function-entry-inlined"="llvm.arm.gnu.eabi.mcount" }
+declare void @llvm.arm.gnu.eabi.mcount() #1
+
+attributes #0 = { nofree nounwind }
+attributes #1 = { nounwind }

@@ -33,6 +33,17 @@
 #define NT_ARM_SVE 0x405 /* ARM Scalable Vector Extension */
 #endif
 
+#ifndef NT_ARM_PAC_MASK
+#define NT_ARM_PAC_MASK 0x406 /* Pointer authentication code masks */
+#endif
+
+#ifndef NT_ARM_TAGGED_ADDR_CTRL
+#define NT_ARM_TAGGED_ADDR_CTRL 0x409 /* Tagged address control register */
+#endif
+
+#define HWCAP_PACA (1 << 30)
+#define HWCAP2_MTE (1 << 18)
+
 #define REG_CONTEXT_SIZE (GetGPRSize() + GetFPRSize())
 
 using namespace lldb;
@@ -41,28 +52,63 @@ using namespace lldb_private::process_linux;
 
 std::unique_ptr<NativeRegisterContextLinux>
 NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
-    const ArchSpec &target_arch, NativeThreadProtocol &native_thread) {
+    const ArchSpec &target_arch, NativeThreadLinux &native_thread) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::arm:
     return std::make_unique<NativeRegisterContextLinux_arm>(target_arch,
                                                              native_thread);
-  case llvm::Triple::aarch64:
-    return std::make_unique<NativeRegisterContextLinux_arm64>(target_arch,
-                                                               native_thread);
+  case llvm::Triple::aarch64: {
+    // Configure register sets supported by this AArch64 target.
+    // Read SVE header to check for SVE support.
+    struct user_sve_header sve_header;
+    struct iovec ioVec;
+    ioVec.iov_base = &sve_header;
+    ioVec.iov_len = sizeof(sve_header);
+    unsigned int regset = NT_ARM_SVE;
+
+    Flags opt_regsets;
+    if (NativeProcessLinux::PtraceWrapper(PTRACE_GETREGSET,
+                                          native_thread.GetID(), &regset,
+                                          &ioVec, sizeof(sve_header))
+            .Success())
+      opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskSVE);
+
+    NativeProcessLinux &process = native_thread.GetProcess();
+
+    llvm::Optional<uint64_t> auxv_at_hwcap =
+        process.GetAuxValue(AuxVector::AUXV_AT_HWCAP);
+    if (auxv_at_hwcap && (*auxv_at_hwcap & HWCAP_PACA))
+      opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskPAuth);
+
+    llvm::Optional<uint64_t> auxv_at_hwcap2 =
+        process.GetAuxValue(AuxVector::AUXV_AT_HWCAP2);
+    if (auxv_at_hwcap2 && (*auxv_at_hwcap2 & HWCAP2_MTE))
+      opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskMTE);
+
+    auto register_info_up =
+        std::make_unique<RegisterInfoPOSIX_arm64>(target_arch, opt_regsets);
+    return std::make_unique<NativeRegisterContextLinux_arm64>(
+        target_arch, native_thread, std::move(register_info_up));
+  }
   default:
     llvm_unreachable("have no register context for architecture");
   }
 }
 
 NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
-    const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
-    : NativeRegisterContextRegisterInfo(
-          native_thread, new RegisterInfoPOSIX_arm64(target_arch)) {
+    const ArchSpec &target_arch, NativeThreadProtocol &native_thread,
+    std::unique_ptr<RegisterInfoPOSIX_arm64> register_info_up)
+    : NativeRegisterContextRegisterInfo(native_thread,
+                                        register_info_up.release()),
+      NativeRegisterContextLinux(native_thread) {
   ::memset(&m_fpr, 0, sizeof(m_fpr));
   ::memset(&m_gpr_arm64, 0, sizeof(m_gpr_arm64));
   ::memset(&m_hwp_regs, 0, sizeof(m_hwp_regs));
-  ::memset(&m_hbr_regs, 0, sizeof(m_hbr_regs));
+  ::memset(&m_hbp_regs, 0, sizeof(m_hbp_regs));
   ::memset(&m_sve_header, 0, sizeof(m_sve_header));
+  ::memset(&m_pac_mask, 0, sizeof(m_pac_mask));
+
+  m_mte_ctrl_reg = 0;
 
   // 16 is just a maximum value, query hardware for actual watchpoint count
   m_max_hwp_supported = 16;
@@ -74,9 +120,13 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
   m_fpu_is_valid = false;
   m_sve_buffer_is_valid = false;
   m_sve_header_is_valid = false;
+  m_pac_mask_is_valid = false;
+  m_mte_ctrl_is_valid = false;
 
-  // SVE is not enabled until we query user_sve_header
-  m_sve_state = SVEState::Unknown;
+  if (GetRegisterInfo().IsSVEEnabled())
+    m_sve_state = SVEState::Unknown;
+  else
+    m_sve_state = SVEState::Disabled;
 }
 
 RegisterInfoPOSIX_arm64 &
@@ -208,6 +258,22 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
         src = (uint8_t *)GetSVEBuffer() + offset;
       }
     }
+  } else if (IsPAuth(reg)) {
+    error = ReadPAuthMask();
+    if (error.Fail())
+      return error;
+
+    offset = reg_info->byte_offset - GetRegisterInfo().GetPAuthOffset();
+    assert(offset < GetPACMaskSize());
+    src = (uint8_t *)GetPACMask() + offset;
+  } else if (IsMTE(reg)) {
+    error = ReadMTEControl();
+    if (error.Fail())
+      return error;
+
+    offset = reg_info->byte_offset - GetRegisterInfo().GetMTEOffset();
+    assert(offset < GetMTEControlSize());
+    src = (uint8_t *)GetMTEControl() + offset;
   } else
     return Status("failed - register wasn't recognized to be a GPR or an FPR, "
                   "write strategy unknown");
@@ -299,13 +365,30 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
     if (m_sve_state == SVEState::Disabled || m_sve_state == SVEState::Unknown)
       return Status("SVE disabled or not supported");
     else {
-      if (GetRegisterInfo().IsSVERegVG(reg))
-        return Status("SVE state change operation not supported");
-
       // Target has SVE enabled, we will read and cache SVE ptrace data
       error = ReadAllSVE();
       if (error.Fail())
         return error;
+
+      if (GetRegisterInfo().IsSVERegVG(reg)) {
+        uint64_t vg_value = reg_value.GetAsUInt64();
+
+        if (sve_vl_valid(vg_value * 8)) {
+          if (m_sve_header_is_valid && vg_value == GetSVERegVG())
+            return error;
+
+          SetSVERegVG(vg_value);
+
+          error = WriteSVEHeader();
+          if (error.Success())
+            ConfigureRegisterContext();
+
+          if (m_sve_header_is_valid && vg_value == GetSVERegVG())
+            return error;
+        }
+
+        return Status("SVE vector length update failed.");
+      }
 
       // If target supports SVE but currently in FPSIMD mode.
       if (m_sve_state == SVEState::FPSIMD) {
@@ -349,6 +432,17 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
         return WriteAllSVE();
       }
     }
+  } else if (IsMTE(reg)) {
+    error = ReadMTEControl();
+    if (error.Fail())
+      return error;
+
+    offset = reg_info->byte_offset - GetRegisterInfo().GetMTEOffset();
+    assert(offset < GetMTEControlSize());
+    dst = (uint8_t *)GetMTEControl() + offset;
+    ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
+
+    return WriteMTEControl();
   }
 
   return Status("Failed to write register value");
@@ -434,436 +528,20 @@ bool NativeRegisterContextLinux_arm64::IsFPR(unsigned reg) const {
 }
 
 bool NativeRegisterContextLinux_arm64::IsSVE(unsigned reg) const {
-  if (GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg) ==
-      RegisterInfoPOSIX_arm64::SVERegSet)
-    return true;
-  return false;
+  return GetRegisterInfo().IsSVEReg(reg);
 }
 
-uint32_t NativeRegisterContextLinux_arm64::NumSupportedHardwareBreakpoints() {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_BREAKPOINTS));
-
-  LLDB_LOGF(log, "NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
-
-  Status error;
-
-  // Read hardware breakpoint and watchpoint information.
-  error = ReadHardwareDebugInfo();
-
-  if (error.Fail())
-    return 0;
-
-  return m_max_hbp_supported;
+bool NativeRegisterContextLinux_arm64::IsPAuth(unsigned reg) const {
+  return GetRegisterInfo().IsPAuthReg(reg);
 }
 
-uint32_t
-NativeRegisterContextLinux_arm64::SetHardwareBreakpoint(lldb::addr_t addr,
-                                                        size_t size) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_BREAKPOINTS));
-  LLDB_LOG(log, "addr: {0:x}, size: {1:x}", addr, size);
-
-  // Read hardware breakpoint and watchpoint information.
-  Status error = ReadHardwareDebugInfo();
-
-  if (error.Fail())
-    return LLDB_INVALID_INDEX32;
-
-  uint32_t control_value = 0, bp_index = 0;
-
-  // Check if size has a valid hardware breakpoint length.
-  if (size != 4)
-    return LLDB_INVALID_INDEX32; // Invalid size for a AArch64 hardware
-                                 // breakpoint
-
-  // Check 4-byte alignment for hardware breakpoint target address.
-  if (addr & 0x03)
-    return LLDB_INVALID_INDEX32; // Invalid address, should be 4-byte aligned.
-
-  // Setup control value
-  control_value = 0;
-  control_value |= ((1 << size) - 1) << 5;
-  control_value |= (2 << 1) | 1;
-
-  // Iterate over stored breakpoints and find a free bp_index
-  bp_index = LLDB_INVALID_INDEX32;
-  for (uint32_t i = 0; i < m_max_hbp_supported; i++) {
-    if ((m_hbr_regs[i].control & 1) == 0) {
-      bp_index = i; // Mark last free slot
-    } else if (m_hbr_regs[i].address == addr) {
-      return LLDB_INVALID_INDEX32; // We do not support duplicate breakpoints.
-    }
-  }
-
-  if (bp_index == LLDB_INVALID_INDEX32)
-    return LLDB_INVALID_INDEX32;
-
-  // Update breakpoint in local cache
-  m_hbr_regs[bp_index].real_addr = addr;
-  m_hbr_regs[bp_index].address = addr;
-  m_hbr_regs[bp_index].control = control_value;
-
-  // PTRACE call to set corresponding hardware breakpoint register.
-  error = WriteHardwareDebugRegs(eDREGTypeBREAK);
-
-  if (error.Fail()) {
-    m_hbr_regs[bp_index].address = 0;
-    m_hbr_regs[bp_index].control &= ~1;
-
-    return LLDB_INVALID_INDEX32;
-  }
-
-  return bp_index;
+bool NativeRegisterContextLinux_arm64::IsMTE(unsigned reg) const {
+  return GetRegisterInfo().IsMTEReg(reg);
 }
 
-bool NativeRegisterContextLinux_arm64::ClearHardwareBreakpoint(
-    uint32_t hw_idx) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_BREAKPOINTS));
-  LLDB_LOG(log, "hw_idx: {0}", hw_idx);
-
-  // Read hardware breakpoint and watchpoint information.
-  Status error = ReadHardwareDebugInfo();
-
-  if (error.Fail())
-    return false;
-
-  if (hw_idx >= m_max_hbp_supported)
-    return false;
-
-  // Create a backup we can revert to in case of failure.
-  lldb::addr_t tempAddr = m_hbr_regs[hw_idx].address;
-  uint32_t tempControl = m_hbr_regs[hw_idx].control;
-
-  m_hbr_regs[hw_idx].control &= ~1;
-  m_hbr_regs[hw_idx].address = 0;
-
-  // PTRACE call to clear corresponding hardware breakpoint register.
-  error = WriteHardwareDebugRegs(eDREGTypeBREAK);
-
-  if (error.Fail()) {
-    m_hbr_regs[hw_idx].control = tempControl;
-    m_hbr_regs[hw_idx].address = tempAddr;
-
-    return false;
-  }
-
-  return true;
-}
-
-Status NativeRegisterContextLinux_arm64::GetHardwareBreakHitIndex(
-    uint32_t &bp_index, lldb::addr_t trap_addr) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_BREAKPOINTS));
-
-  LLDB_LOGF(log, "NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
-
-  lldb::addr_t break_addr;
-
-  for (bp_index = 0; bp_index < m_max_hbp_supported; ++bp_index) {
-    break_addr = m_hbr_regs[bp_index].address;
-
-    if ((m_hbr_regs[bp_index].control & 0x1) && (trap_addr == break_addr)) {
-      m_hbr_regs[bp_index].hit_addr = trap_addr;
-      return Status();
-    }
-  }
-
-  bp_index = LLDB_INVALID_INDEX32;
-  return Status();
-}
-
-Status NativeRegisterContextLinux_arm64::ClearAllHardwareBreakpoints() {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_BREAKPOINTS));
-
-  LLDB_LOGF(log, "NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
-
-  Status error;
-
-  // Read hardware breakpoint and watchpoint information.
-  error = ReadHardwareDebugInfo();
-
-  if (error.Fail())
-    return error;
-
-  lldb::addr_t tempAddr = 0;
-  uint32_t tempControl = 0;
-
-  for (uint32_t i = 0; i < m_max_hbp_supported; i++) {
-    if (m_hbr_regs[i].control & 0x01) {
-      // Create a backup we can revert to in case of failure.
-      tempAddr = m_hbr_regs[i].address;
-      tempControl = m_hbr_regs[i].control;
-
-      // Clear watchpoints in local cache
-      m_hbr_regs[i].control &= ~1;
-      m_hbr_regs[i].address = 0;
-
-      // Ptrace call to update hardware debug registers
-      error = WriteHardwareDebugRegs(eDREGTypeBREAK);
-
-      if (error.Fail()) {
-        m_hbr_regs[i].control = tempControl;
-        m_hbr_regs[i].address = tempAddr;
-
-        return error;
-      }
-    }
-  }
-
-  return Status();
-}
-
-uint32_t NativeRegisterContextLinux_arm64::NumSupportedHardwareWatchpoints() {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
-
-  // Read hardware breakpoint and watchpoint information.
-  Status error = ReadHardwareDebugInfo();
-
-  if (error.Fail())
-    return 0;
-
-  LLDB_LOG(log, "{0}", m_max_hwp_supported);
-  return m_max_hwp_supported;
-}
-
-uint32_t NativeRegisterContextLinux_arm64::SetHardwareWatchpoint(
-    lldb::addr_t addr, size_t size, uint32_t watch_flags) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
-  LLDB_LOG(log, "addr: {0:x}, size: {1:x} watch_flags: {2:x}", addr, size,
-           watch_flags);
-
-  // Read hardware breakpoint and watchpoint information.
-  Status error = ReadHardwareDebugInfo();
-
-  if (error.Fail())
-    return LLDB_INVALID_INDEX32;
-
-  uint32_t control_value = 0, wp_index = 0;
-  lldb::addr_t real_addr = addr;
-
-  // Check if we are setting watchpoint other than read/write/access Also
-  // update watchpoint flag to match AArch64 write-read bit configuration.
-  switch (watch_flags) {
-  case 1:
-    watch_flags = 2;
-    break;
-  case 2:
-    watch_flags = 1;
-    break;
-  case 3:
-    break;
-  default:
-    return LLDB_INVALID_INDEX32;
-  }
-
-  // Check if size has a valid hardware watchpoint length.
-  if (size != 1 && size != 2 && size != 4 && size != 8)
-    return LLDB_INVALID_INDEX32;
-
-  // Check 8-byte alignment for hardware watchpoint target address. Below is a
-  // hack to recalculate address and size in order to make sure we can watch
-  // non 8-byte aligned addresses as well.
-  if (addr & 0x07) {
-    uint8_t watch_mask = (addr & 0x07) + size;
-
-    if (watch_mask > 0x08)
-      return LLDB_INVALID_INDEX32;
-    else if (watch_mask <= 0x02)
-      size = 2;
-    else if (watch_mask <= 0x04)
-      size = 4;
-    else
-      size = 8;
-
-    addr = addr & (~0x07);
-  }
-
-  // Setup control value
-  control_value = watch_flags << 3;
-  control_value |= ((1 << size) - 1) << 5;
-  control_value |= (2 << 1) | 1;
-
-  // Iterate over stored watchpoints and find a free wp_index
-  wp_index = LLDB_INVALID_INDEX32;
-  for (uint32_t i = 0; i < m_max_hwp_supported; i++) {
-    if ((m_hwp_regs[i].control & 1) == 0) {
-      wp_index = i; // Mark last free slot
-    } else if (m_hwp_regs[i].address == addr) {
-      return LLDB_INVALID_INDEX32; // We do not support duplicate watchpoints.
-    }
-  }
-
-  if (wp_index == LLDB_INVALID_INDEX32)
-    return LLDB_INVALID_INDEX32;
-
-  // Update watchpoint in local cache
-  m_hwp_regs[wp_index].real_addr = real_addr;
-  m_hwp_regs[wp_index].address = addr;
-  m_hwp_regs[wp_index].control = control_value;
-
-  // PTRACE call to set corresponding watchpoint register.
-  error = WriteHardwareDebugRegs(eDREGTypeWATCH);
-
-  if (error.Fail()) {
-    m_hwp_regs[wp_index].address = 0;
-    m_hwp_regs[wp_index].control &= ~1;
-
-    return LLDB_INVALID_INDEX32;
-  }
-
-  return wp_index;
-}
-
-bool NativeRegisterContextLinux_arm64::ClearHardwareWatchpoint(
-    uint32_t wp_index) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
-  LLDB_LOG(log, "wp_index: {0}", wp_index);
-
-  // Read hardware breakpoint and watchpoint information.
-  Status error = ReadHardwareDebugInfo();
-
-  if (error.Fail())
-    return false;
-
-  if (wp_index >= m_max_hwp_supported)
-    return false;
-
-  // Create a backup we can revert to in case of failure.
-  lldb::addr_t tempAddr = m_hwp_regs[wp_index].address;
-  uint32_t tempControl = m_hwp_regs[wp_index].control;
-
-  // Update watchpoint in local cache
-  m_hwp_regs[wp_index].control &= ~1;
-  m_hwp_regs[wp_index].address = 0;
-
-  // Ptrace call to update hardware debug registers
-  error = WriteHardwareDebugRegs(eDREGTypeWATCH);
-
-  if (error.Fail()) {
-    m_hwp_regs[wp_index].control = tempControl;
-    m_hwp_regs[wp_index].address = tempAddr;
-
-    return false;
-  }
-
-  return true;
-}
-
-Status NativeRegisterContextLinux_arm64::ClearAllHardwareWatchpoints() {
-  // Read hardware breakpoint and watchpoint information.
-  Status error = ReadHardwareDebugInfo();
-
-  if (error.Fail())
-    return error;
-
-  lldb::addr_t tempAddr = 0;
-  uint32_t tempControl = 0;
-
-  for (uint32_t i = 0; i < m_max_hwp_supported; i++) {
-    if (m_hwp_regs[i].control & 0x01) {
-      // Create a backup we can revert to in case of failure.
-      tempAddr = m_hwp_regs[i].address;
-      tempControl = m_hwp_regs[i].control;
-
-      // Clear watchpoints in local cache
-      m_hwp_regs[i].control &= ~1;
-      m_hwp_regs[i].address = 0;
-
-      // Ptrace call to update hardware debug registers
-      error = WriteHardwareDebugRegs(eDREGTypeWATCH);
-
-      if (error.Fail()) {
-        m_hwp_regs[i].control = tempControl;
-        m_hwp_regs[i].address = tempAddr;
-
-        return error;
-      }
-    }
-  }
-
-  return Status();
-}
-
-uint32_t
-NativeRegisterContextLinux_arm64::GetWatchpointSize(uint32_t wp_index) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
-  LLDB_LOG(log, "wp_index: {0}", wp_index);
-
-  switch ((m_hwp_regs[wp_index].control >> 5) & 0xff) {
-  case 0x01:
-    return 1;
-  case 0x03:
-    return 2;
-  case 0x0f:
-    return 4;
-  case 0xff:
-    return 8;
-  default:
-    return 0;
-  }
-}
-bool NativeRegisterContextLinux_arm64::WatchpointIsEnabled(uint32_t wp_index) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
-  LLDB_LOG(log, "wp_index: {0}", wp_index);
-
-  if ((m_hwp_regs[wp_index].control & 0x1) == 0x1)
-    return true;
-  else
-    return false;
-}
-
-Status NativeRegisterContextLinux_arm64::GetWatchpointHitIndex(
-    uint32_t &wp_index, lldb::addr_t trap_addr) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
-  LLDB_LOG(log, "wp_index: {0}, trap_addr: {1:x}", wp_index, trap_addr);
-
-  uint32_t watch_size;
-  lldb::addr_t watch_addr;
-
-  for (wp_index = 0; wp_index < m_max_hwp_supported; ++wp_index) {
-    watch_size = GetWatchpointSize(wp_index);
-    watch_addr = m_hwp_regs[wp_index].address;
-
-    if (WatchpointIsEnabled(wp_index) && trap_addr >= watch_addr &&
-        trap_addr < watch_addr + watch_size) {
-      m_hwp_regs[wp_index].hit_addr = trap_addr;
-      return Status();
-    }
-  }
-
-  wp_index = LLDB_INVALID_INDEX32;
-  return Status();
-}
-
-lldb::addr_t
-NativeRegisterContextLinux_arm64::GetWatchpointAddress(uint32_t wp_index) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
-  LLDB_LOG(log, "wp_index: {0}", wp_index);
-
-  if (wp_index >= m_max_hwp_supported)
-    return LLDB_INVALID_ADDRESS;
-
-  if (WatchpointIsEnabled(wp_index))
-    return m_hwp_regs[wp_index].real_addr;
-  else
-    return LLDB_INVALID_ADDRESS;
-}
-
-lldb::addr_t
-NativeRegisterContextLinux_arm64::GetWatchpointHitAddress(uint32_t wp_index) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
-  LLDB_LOG(log, "wp_index: {0}", wp_index);
-
-  if (wp_index >= m_max_hwp_supported)
-    return LLDB_INVALID_ADDRESS;
-
-  if (WatchpointIsEnabled(wp_index))
-    return m_hwp_regs[wp_index].hit_addr;
-  else
-    return LLDB_INVALID_ADDRESS;
-}
-
-Status NativeRegisterContextLinux_arm64::ReadHardwareDebugInfo() {
+llvm::Error NativeRegisterContextLinux_arm64::ReadHardwareDebugInfo() {
   if (!m_refresh_hwdebug_info) {
-    return Status();
+    return llvm::Error::success();
   }
 
   ::pid_t tid = m_thread.GetID();
@@ -879,7 +557,7 @@ Status NativeRegisterContextLinux_arm64::ReadHardwareDebugInfo() {
                                             &ioVec, ioVec.iov_len);
 
   if (error.Fail())
-    return error;
+    return error.ToError();
 
   m_max_hwp_supported = dreg_state.dbg_info & 0xff;
 
@@ -888,24 +566,26 @@ Status NativeRegisterContextLinux_arm64::ReadHardwareDebugInfo() {
                                             &ioVec, ioVec.iov_len);
 
   if (error.Fail())
-    return error;
+    return error.ToError();
 
   m_max_hbp_supported = dreg_state.dbg_info & 0xff;
   m_refresh_hwdebug_info = false;
 
-  return error;
+  return llvm::Error::success();
 }
 
-Status NativeRegisterContextLinux_arm64::WriteHardwareDebugRegs(int hwbType) {
+llvm::Error
+NativeRegisterContextLinux_arm64::WriteHardwareDebugRegs(DREGType hwbType) {
   struct iovec ioVec;
   struct user_hwdebug_state dreg_state;
-  Status error;
+  int regset;
 
   memset(&dreg_state, 0, sizeof(dreg_state));
   ioVec.iov_base = &dreg_state;
 
-  if (hwbType == eDREGTypeWATCH) {
-    hwbType = NT_ARM_HW_WATCH;
+  switch (hwbType) {
+  case eDREGTypeWATCH:
+    regset = NT_ARM_HW_WATCH;
     ioVec.iov_len = sizeof(dreg_state.dbg_info) + sizeof(dreg_state.pad) +
                     (sizeof(dreg_state.dbg_regs[0]) * m_max_hwp_supported);
 
@@ -913,19 +593,22 @@ Status NativeRegisterContextLinux_arm64::WriteHardwareDebugRegs(int hwbType) {
       dreg_state.dbg_regs[i].addr = m_hwp_regs[i].address;
       dreg_state.dbg_regs[i].ctrl = m_hwp_regs[i].control;
     }
-  } else {
-    hwbType = NT_ARM_HW_BREAK;
+    break;
+  case eDREGTypeBREAK:
+    regset = NT_ARM_HW_BREAK;
     ioVec.iov_len = sizeof(dreg_state.dbg_info) + sizeof(dreg_state.pad) +
                     (sizeof(dreg_state.dbg_regs[0]) * m_max_hbp_supported);
 
     for (uint32_t i = 0; i < m_max_hbp_supported; i++) {
-      dreg_state.dbg_regs[i].addr = m_hbr_regs[i].address;
-      dreg_state.dbg_regs[i].ctrl = m_hbr_regs[i].control;
+      dreg_state.dbg_regs[i].addr = m_hbp_regs[i].address;
+      dreg_state.dbg_regs[i].ctrl = m_hbp_regs[i].control;
     }
+    break;
   }
 
   return NativeProcessLinux::PtraceWrapper(PTRACE_SETREGSET, m_thread.GetID(),
-                                           &hwbType, &ioVec, ioVec.iov_len);
+                                           &regset, &ioVec, ioVec.iov_len)
+      .ToError();
 }
 
 Status NativeRegisterContextLinux_arm64::ReadGPR() {
@@ -997,6 +680,8 @@ void NativeRegisterContextLinux_arm64::InvalidateAllRegisters() {
   m_fpu_is_valid = false;
   m_sve_buffer_is_valid = false;
   m_sve_header_is_valid = false;
+  m_pac_mask_is_valid = false;
+  m_mte_ctrl_is_valid = false;
 
   // Update SVE registers in case there is change in configuration.
   ConfigureRegisterContext();
@@ -1014,7 +699,26 @@ Status NativeRegisterContextLinux_arm64::ReadSVEHeader() {
 
   error = ReadRegisterSet(&ioVec, GetSVEHeaderSize(), NT_ARM_SVE);
 
-  m_sve_header_is_valid = true;
+  if (error.Success())
+    m_sve_header_is_valid = true;
+
+  return error;
+}
+
+Status NativeRegisterContextLinux_arm64::ReadPAuthMask() {
+  Status error;
+
+  if (m_pac_mask_is_valid)
+    return error;
+
+  struct iovec ioVec;
+  ioVec.iov_base = GetPACMask();
+  ioVec.iov_len = GetPACMaskSize();
+
+  error = ReadRegisterSet(&ioVec, GetPACMaskSize(), NT_ARM_PAC_MASK);
+
+  if (error.Success())
+    m_pac_mask_is_valid = true;
 
   return error;
 }
@@ -1074,24 +778,62 @@ Status NativeRegisterContextLinux_arm64::WriteAllSVE() {
   return WriteRegisterSet(&ioVec, GetSVEBufferSize(), NT_ARM_SVE);
 }
 
+Status NativeRegisterContextLinux_arm64::ReadMTEControl() {
+  Status error;
+
+  if (m_mte_ctrl_is_valid)
+    return error;
+
+  struct iovec ioVec;
+  ioVec.iov_base = GetMTEControl();
+  ioVec.iov_len = GetMTEControlSize();
+
+  error = ReadRegisterSet(&ioVec, GetMTEControlSize(), NT_ARM_TAGGED_ADDR_CTRL);
+
+  if (error.Success())
+    m_mte_ctrl_is_valid = true;
+
+  return error;
+}
+
+Status NativeRegisterContextLinux_arm64::WriteMTEControl() {
+  Status error;
+
+  error = ReadMTEControl();
+  if (error.Fail())
+    return error;
+
+  struct iovec ioVec;
+  ioVec.iov_base = GetMTEControl();
+  ioVec.iov_len = GetMTEControlSize();
+
+  m_mte_ctrl_is_valid = false;
+
+  return WriteRegisterSet(&ioVec, GetMTEControlSize(), NT_ARM_TAGGED_ADDR_CTRL);
+}
+
 void NativeRegisterContextLinux_arm64::ConfigureRegisterContext() {
-  // Read SVE configuration data and configure register infos.
+  // ConfigureRegisterContext gets called from InvalidateAllRegisters
+  // on every stop and configures SVE vector length.
+  // If m_sve_state is set to SVEState::Disabled on first stop, code below will
+  // be deemed non operational for the lifetime of current process.
   if (!m_sve_header_is_valid && m_sve_state != SVEState::Disabled) {
     Status error = ReadSVEHeader();
-    if (!error.Success() && m_sve_state == SVEState::Unknown) {
-      m_sve_state = SVEState::Disabled;
-      GetRegisterInfo().ConfigureVectorRegisterInfos(
-          RegisterInfoPOSIX_arm64::eVectorQuadwordAArch64);
-    } else {
+    if (error.Success()) {
+      // If SVE is enabled thread can switch between SVEState::FPSIMD and
+      // SVEState::Full on every stop.
       if ((m_sve_header.flags & SVE_PT_REGS_MASK) == SVE_PT_REGS_FPSIMD)
         m_sve_state = SVEState::FPSIMD;
       else if ((m_sve_header.flags & SVE_PT_REGS_MASK) == SVE_PT_REGS_SVE)
         m_sve_state = SVEState::Full;
 
+      // On every stop we configure SVE vector length by calling
+      // ConfigureVectorLength regardless of current SVEState of this thread.
       uint32_t vq = RegisterInfoPOSIX_arm64::eVectorQuadwordAArch64SVE;
       if (sve_vl_valid(m_sve_header.vl))
         vq = sve_vq_from_vl(m_sve_header.vl);
-      GetRegisterInfo().ConfigureVectorRegisterInfos(vq);
+
+      GetRegisterInfo().ConfigureVectorLength(vq);
       m_sve_ptrace_payload.resize(SVE_PT_SIZE(vq, SVE_PT_REGS_SVE));
     }
   }

@@ -8,6 +8,7 @@ executable("clang-check") {
     "//clang/lib/Frontend/Rewrite",
     "//clang/lib/StaticAnalyzer/Frontend",
     "//clang/lib/Tooling",
+    "//clang/lib/Tooling/Syntax",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/Target:TargetsToBuild",

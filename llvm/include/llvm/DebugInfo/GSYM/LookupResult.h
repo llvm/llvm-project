@@ -60,4 +60,4 @@ raw_ostream &operator<<(raw_ostream &OS, const LookupResult &R);
 } // namespace gsym
 } // namespace llvm
 
-#endif // #ifndef LLVM_DEBUGINFO_GSYM_LOOKUPRESULT_H
+#endif // LLVM_DEBUGINFO_GSYM_LOOKUPRESULT_H

@@ -69,6 +69,10 @@ def CC_AArch64_AAPCS : CallingConv<[
   // A SwiftError is passed in X21.
   CCIfSwiftError<CCIfType<[i64], CCAssignToRegWithShadow<[X21], [W21]>>>,
 
+  // Pass SwiftAsync in an otherwise callee saved register so that it will be
+  // preserved for normal function calls.
+  CCIfSwiftAsync<CCIfType<[i64], CCAssignToRegWithShadow<[X22], [W22]>>>,
+
   CCIfConsecutiveRegs<CCCustom<"CC_AArch64_Custom_Block">>,
 
   CCIfType<[nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv2f16, nxv4f16, nxv8f16,
@@ -166,7 +170,8 @@ def RetCC_AArch64_AAPCS : CallingConv<[
 // Vararg functions on windows pass floats in integer registers
 let Entry = 1 in
 def CC_AArch64_Win64_VarArg : CallingConv<[
-  CCIfType<[f16, bf16, f32], CCPromoteToType<f64>>,
+  CCIfType<[f16, bf16], CCBitConvertToType<i16>>,
+  CCIfType<[f32], CCBitConvertToType<i32>>,
   CCIfType<[f64], CCBitConvertToType<i64>>,
   CCDelegateTo<CC_AArch64_AAPCS>
 ]>;
@@ -201,6 +206,10 @@ def CC_AArch64_DarwinPCS : CallingConv<[
 
   // A SwiftError is passed in X21.
   CCIfSwiftError<CCIfType<[i64], CCAssignToRegWithShadow<[X21], [W21]>>>,
+
+  // Pass SwiftAsync in an otherwise callee saved register so that it will be
+  // preserved for normal function calls.
+  CCIfSwiftAsync<CCIfType<[i64], CCAssignToRegWithShadow<[X22], [W22]>>>,
 
   CCIfConsecutiveRegs<CCCustom<"CC_AArch64_Custom_Block">>,
 

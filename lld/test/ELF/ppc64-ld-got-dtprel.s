@@ -22,14 +22,15 @@
 # RELOCS-NEXT:   R_PPC64_GOT_DTPREL16_DS j 0x0
 # RELOCS-NEXT: }
 
-## ha(i@got@dtprel) = (&.got[0] - (.got+0x8000) + 0x8000 >> 16) & 0xffff = 0
-## lo(i@got@dtprel) = &.got[0] - (.got+0x8000) & 0xffff = -32768
-## hi(j@got@dtprel) = (&.got[1] - (.got+0x8000) >> 16) & 0xffff = -1
-## j@got@dtprel = &.got[1] - (.got+0x8000) = -32760
+## Start with .got[1] as .got[0] is .TOC.
+## ha(i@got@dtprel) = (&.got[1] - (.got+0x8000) >> 16) & 0xffff = 0
+## lo(i@got@dtprel) = &.got[1] - (.got+0x8000) & 0xffff = -32760
+## hi(j@got@dtprel) = (&.got[2] - .got >> 16) & 0xffff = -1
+## j@got@dtprel = &.got[2] - (.got+0x8000) = -32752
 # CHECK:      addis 3, 2, 0
-# CHECK-NEXT: ld 3, -32768(3)
+# CHECK-NEXT: ld 3, -32760(3)
 # CHECK-NEXT: addis 3, 2, -1
-# CHECK-NEXT: addi 3, 2, -32760
+# CHECK-NEXT: addi 3, 2, -32752
 
   addis 3, 2, i@got@dtprel@ha
   ld 3, i@got@dtprel@l(3)

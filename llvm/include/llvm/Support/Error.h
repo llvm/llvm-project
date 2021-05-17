@@ -592,7 +592,7 @@ private:
   }
 
   template <class T1, class T2>
-  static bool compareThisIfSameType(const T1 &a, const T2 &b) {
+  static bool compareThisIfSameType(const T1 &, const T2 &) {
     return false;
   }
 

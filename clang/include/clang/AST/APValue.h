@@ -537,10 +537,12 @@ public:
   }
   APValue &getStructBase(unsigned i) {
     assert(isStruct() && "Invalid accessor");
+    assert(i < getStructNumBases() && "base class index OOB");
     return ((StructData *)(char *)&Data)->Elts[i];
   }
   APValue &getStructField(unsigned i) {
     assert(isStruct() && "Invalid accessor");
+    assert(i < getStructNumFields() && "field index OOB");
     return ((StructData *)(char *)&Data)->Elts[getStructNumBases() + i];
   }
   const APValue &getStructBase(unsigned i) const {

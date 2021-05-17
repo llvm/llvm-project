@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only
 // RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -DCHECK_SAMPLER_VALUE -Wspir-compat -triple amdgcn--amdhsa
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -DCHECK_SAMPLER_VALUE -triple spir-unknown-unknown
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -DCHECK_SAMPLER_VALUE -Wspir-compat -triple spir-unknown-unknown
 // RUN: %clang_cc1 %s -cl-std=CL2.0 -verify -pedantic -fsyntax-only
 // RUN: %clang_cc1 %s -cl-std=CL2.0 -verify -pedantic -fsyntax-only -DCHECK_SAMPLER_VALUE -Wspir-compat -triple amdgcn--amdhsa
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -verify -pedantic -fsyntax-only -DCHECK_SAMPLER_VALUE -triple spir-unknown-unknown
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -verify -pedantic -fsyntax-only -DCHECK_SAMPLER_VALUE -Wspir-compat -triple spir-unknown-unknown
 
 #define CLK_ADDRESS_CLAMP_TO_EDGE       2
 #define CLK_NORMALIZED_COORDS_TRUE      1
@@ -48,9 +48,6 @@ constant struct sampler_s {
 sampler_t bad(void); //expected-error{{declaring function return value of type 'sampler_t' is not allowed}}
 
 sampler_t global_nonconst_smp = 0; // expected-error {{global sampler requires a const or constant address space qualifier}}
-#ifdef CHECK_SAMPLER_VALUE
-// expected-warning@-2{{sampler initializer has invalid Filter Mode bits}}
-#endif
 
 const sampler_t glb_smp10 = CLK_ADDRESS_CLAMP_TO_EDGE | CLK_NORMALIZED_COORDS_TRUE | CLK_FILTER_LINEAR;
 const constant sampler_t glb_smp11 = CLK_ADDRESS_CLAMP_TO_EDGE | CLK_NORMALIZED_COORDS_TRUE | CLK_FILTER_LINEAR;

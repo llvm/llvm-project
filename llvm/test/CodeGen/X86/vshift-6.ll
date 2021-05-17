@@ -42,7 +42,7 @@ define <16 x i8> @do_not_crash(i8*, i32*, i64*, i32, i64, i8) {
 ; X86-NEXT:    pxor %xmm0, %xmm0
 ; X86-NEXT:    pcmpgtb %xmm1, %xmm0
 ; X86-NEXT:    pxor %xmm0, %xmm2
-; X86-NEXT:    pand {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    por %xmm2, %xmm0
 ; X86-NEXT:    paddb %xmm1, %xmm1
 ; X86-NEXT:    pxor %xmm2, %xmm2
@@ -51,7 +51,7 @@ define <16 x i8> @do_not_crash(i8*, i32*, i64*, i32, i64, i8) {
 ; X86-NEXT:    pandn %xmm0, %xmm4
 ; X86-NEXT:    psllw $2, %xmm0
 ; X86-NEXT:    pand %xmm2, %xmm0
-; X86-NEXT:    pand {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    por %xmm4, %xmm0
 ; X86-NEXT:    paddb %xmm1, %xmm1
 ; X86-NEXT:    pcmpgtb %xmm1, %xmm3

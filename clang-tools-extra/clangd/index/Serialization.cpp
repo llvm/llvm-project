@@ -118,7 +118,7 @@ public:
   template <typename T> LLVM_NODISCARD bool consumeSize(T &Container) {
     auto Size = consumeVar();
     // Conservatively assume each element is at least one byte.
-    if (Size > (End - Begin)) {
+    if (Size > (size_t)(End - Begin)) {
       Err = true;
       return false;
     }
@@ -452,7 +452,7 @@ readCompileCommand(Reader CmdReader, llvm::ArrayRef<llvm::StringRef> Strings) {
 // The current versioning scheme is simple - non-current versions are rejected.
 // If you make a breaking change, bump this version number to invalidate stored
 // data. Later we may want to support some backward compatibility.
-constexpr static uint32_t Version = 15;
+constexpr static uint32_t Version = 16;
 
 llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data) {
   auto RIFF = riff::readFile(Data);

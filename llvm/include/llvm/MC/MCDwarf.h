@@ -25,6 +25,7 @@
 #include <cassert>
 #include <cstdint>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -172,7 +173,7 @@ public:
   // This is called when an instruction is assembled into the specified
   // section and if there is information from the last .loc directive that
   // has yet to have a line entry made for it is made.
-  static void Make(MCObjectStreamer *MCOS, MCSection *Section);
+  static void make(MCStreamer *MCOS, MCSection *Section);
 };
 
 /// Instances of this class represent the line information for a compile
@@ -310,10 +311,10 @@ class MCDwarfLineTable {
 
 public:
   // This emits the Dwarf file and the line tables for all Compile Units.
-  static void Emit(MCObjectStreamer *MCOS, MCDwarfLineTableParams Params);
+  static void emit(MCStreamer *MCOS, MCDwarfLineTableParams Params);
 
   // This emits the Dwarf file and the line tables for a given Compile Unit.
-  void EmitCU(MCObjectStreamer *MCOS, MCDwarfLineTableParams Params,
+  void emitCU(MCStreamer *MCOS, MCDwarfLineTableParams Params,
               Optional<MCDwarfLineStr> &LineStr) const;
 
   Expected<unsigned> tryGetFile(StringRef &Directory, StringRef &FileName,
@@ -387,11 +388,11 @@ public:
                      int64_t LineDelta, uint64_t AddrDelta, raw_ostream &OS);
 
   /// Utility function to encode a Dwarf pair of LineDelta and AddrDeltas using
-  /// fixed length operands.
-  static bool FixedEncode(MCContext &Context,
-                          MCDwarfLineTableParams Params,
-                          int64_t LineDelta, uint64_t AddrDelta,
-                          raw_ostream &OS, uint32_t *Offset, uint32_t *Size);
+  /// fixed length operands. Returns (Offset, Size, SetDelta).
+  static std::tuple<uint32_t, uint32_t, bool> fixedEncode(MCContext &Context,
+                                                          int64_t LineDelta,
+                                                          uint64_t AddrDelta,
+                                                          raw_ostream &OS);
 
   /// Utility function to emit the encoding to a streamer.
   static void Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,

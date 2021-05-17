@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs -run-pass si-insert-skips,post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: hazard_vcmpx_smov_exec_lo
 # GCN:      $sgpr0 = S_MOV_B32 $exec_lo
@@ -11,7 +11,7 @@ body:            |
     successors: %bb.1
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $sgpr0 = S_MOV_B32 $exec_lo
-    SI_KILL_F32_COND_IMM_TERMINATOR $vgpr0, 0, 3, implicit-def $exec, implicit-def $vcc, implicit-def $scc, implicit $exec
+    V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
@@ -29,7 +29,7 @@ body:            |
     successors: %bb.1
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $sgpr0_sgpr1 = S_MOV_B64 $exec
-    SI_KILL_F32_COND_IMM_TERMINATOR $vgpr0, 0, 3, implicit-def $exec, implicit-def $vcc, implicit-def $scc, implicit $exec
+    V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
@@ -45,7 +45,7 @@ body:            |
   bb.0:
     successors: %bb.1
     $vgpr0 = V_MOV_B32_e32 $exec_lo, implicit $exec
-    SI_KILL_F32_COND_IMM_TERMINATOR $vgpr0, 0, 3, implicit-def $exec, implicit-def $vcc, implicit-def $scc, implicit $exec
+    V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
@@ -61,7 +61,7 @@ body:            |
   bb.0:
     successors: %bb.1
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    SI_KILL_F32_COND_IMM_TERMINATOR $vgpr0, 0, 3, implicit-def $exec, implicit-def $vcc, implicit-def $scc, implicit $exec
+    V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
@@ -80,7 +80,7 @@ body:            |
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $sgpr0 = S_MOV_B32 $exec_lo
     $vgpr0 = V_ADDC_U32_e32 0, $vgpr0, implicit-def $vcc, implicit $vcc, implicit $exec
-    SI_KILL_F32_COND_IMM_TERMINATOR $vgpr0, 0, 3, implicit-def $exec, implicit-def $vcc, implicit-def $scc, implicit $exec
+    V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
@@ -99,7 +99,7 @@ body:            |
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $sgpr0 = S_MOV_B32 $exec_lo
     $sgpr0_sgpr1 = V_CMP_EQ_U32_e64 $vgpr0, 0, implicit $exec
-    SI_KILL_F32_COND_IMM_TERMINATOR $vgpr0, 0, 3, implicit-def $exec, implicit-def $vcc, implicit-def $scc, implicit $exec
+    V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
@@ -118,7 +118,7 @@ body:            |
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $sgpr0 = S_MOV_B32 $exec_lo
     S_WAITCNT_DEPCTR 65534
-    SI_KILL_F32_COND_IMM_TERMINATOR $vgpr0, 0, 3, implicit-def $exec, implicit-def $vcc, implicit-def $scc, implicit $exec
+    V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
@@ -137,7 +137,7 @@ body:            |
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $sgpr0 = S_MOV_B32 $exec_lo
     S_WAITCNT_DEPCTR 65535
-    SI_KILL_F32_COND_IMM_TERMINATOR $vgpr0, 0, 3, implicit-def $exec, implicit-def $vcc, implicit-def $scc, implicit $exec
+    V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
@@ -156,7 +156,7 @@ body:            |
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $sgpr0 = S_MOV_B32 $exec_lo
     S_WAITCNT_DEPCTR 61438
-    SI_KILL_F32_COND_IMM_TERMINATOR $vgpr0, 0, 3, implicit-def $exec, implicit-def $vcc, implicit-def $scc, implicit $exec
+    V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:

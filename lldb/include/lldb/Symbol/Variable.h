@@ -9,9 +9,9 @@
 #ifndef LLDB_SYMBOL_VARIABLE_H
 #define LLDB_SYMBOL_VARIABLE_H
 
+#include "lldb/Core/Declaration.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Expression/DWARFExpression.h"
-#include "lldb/Symbol/Declaration.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/UserID.h"

@@ -168,6 +168,7 @@ public:
   bool empty() const;
   std::size_t size() const;
 
+  const Scalar<Result> &values() const { return values_; }
   ConstantSubscript LEN() const { return length_; }
 
   std::optional<Scalar<Result>> GetScalarValue() const {
@@ -195,8 +196,11 @@ private:
 };
 
 class StructureConstructor;
-using StructureConstructorValues =
-    std::map<SymbolRef, common::CopyableIndirection<Expr<SomeType>>>;
+struct ComponentCompare {
+  bool operator()(SymbolRef x, SymbolRef y) const;
+};
+using StructureConstructorValues = std::map<SymbolRef,
+    common::CopyableIndirection<Expr<SomeType>>, ComponentCompare>;
 
 template <>
 class Constant<SomeDerived>

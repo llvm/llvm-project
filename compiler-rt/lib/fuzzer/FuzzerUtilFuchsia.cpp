@@ -515,7 +515,7 @@ int ExecuteCommand(const Command &Cmd) {
     return rc;
   }
 
-  return Info.return_code;
+  return static_cast<int>(Info.return_code);
 }
 
 bool ExecuteCommand(const Command &BaseCmd, std::string *CmdOutput) {

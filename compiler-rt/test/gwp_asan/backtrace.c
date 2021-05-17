@@ -1,6 +1,11 @@
 // REQUIRES: gwp_asan
-// RUN: %clang_gwp_asan %s -g -o %t
+// RUN: %clang_gwp_asan -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer %s -g -o %t
 // RUN: %expect_crash %t 2>&1 | FileCheck %s
+
+// Ensure we don't crash when using the unwinder when frame pointers are
+// disabled.
+// RUN: %clang_gwp_asan -fomit-frame-pointer -momit-leaf-frame-pointer %s -g -o %t
+// RUN: %expect_crash %t
 
 #include <stdlib.h>
 

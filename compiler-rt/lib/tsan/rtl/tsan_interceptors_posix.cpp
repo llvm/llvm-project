@@ -81,6 +81,8 @@ extern "C" int pthread_attr_init(void *attr);
 extern "C" int pthread_attr_destroy(void *attr);
 DECLARE_REAL(int, pthread_attr_getdetachstate, void *, void *)
 extern "C" int pthread_attr_setstacksize(void *attr, uptr stacksize);
+extern "C" int pthread_atfork(void (*prepare)(void), void (*parent)(void),
+                              void (*child)(void));
 extern "C" int pthread_key_create(unsigned *key, void (*destructor)(void* v));
 extern "C" int pthread_setspecific(unsigned key, const void *v);
 DECLARE_REAL(int, pthread_mutexattr_gettype, void *, void *)
@@ -655,8 +657,11 @@ TSAN_INTERCEPTOR(void*, malloc, uptr size) {
   return p;
 }
 
+// In glibc<2.25, dynamic TLS blocks are allocated by __libc_memalign. Intercept
+// __libc_memalign so that (1) we can detect races (2) free will not be called
+// on libc internally allocated blocks.
 TSAN_INTERCEPTOR(void*, __libc_memalign, uptr align, uptr sz) {
-  SCOPED_TSAN_INTERCEPTOR(__libc_memalign, align, sz);
+  SCOPED_INTERCEPTOR_RAW(__libc_memalign, align, sz);
   return user_memalign(thr, pc, align, sz);
 }
 
@@ -769,6 +774,11 @@ static void *mmap_interceptor(ThreadState *thr, uptr pc, Mmap real_mmap,
   if (!fix_mmap_addr(&addr, sz, flags)) return MAP_FAILED;
   void *res = real_mmap(addr, sz, prot, flags, fd, off);
   if (res != MAP_FAILED) {
+    if (!IsAppMem((uptr)res) || !IsAppMem((uptr)res + sz - 1)) {
+      Report("ThreadSanitizer: mmap at bad address: addr=%p size=%p res=%p\n",
+             addr, (void*)sz, res);
+      Die();
+    }
     if (fd > 0) FdAccess(thr, pc, fd);
     MemoryRangeImitateWriteOrResetRange(thr, pc, (uptr)res, sz);
   }
@@ -1968,7 +1978,8 @@ static void CallUserSignalHandler(ThreadState *thr, bool sync, bool acquire,
   // because in async signal processing case (when handler is called directly
   // from rtl_generic_sighandler) we have not yet received the reraised
   // signal; and it looks too fragile to intercept all ways to reraise a signal.
-  if (flags()->report_bugs && !sync && sig != SIGTERM && errno != 99) {
+  if (ShouldReport(thr, ReportTypeErrnoInSignal) && !sync && sig != SIGTERM &&
+      errno != 99) {
     VarSizeStackTrace stack;
     // StackTrace::GetNestInstructionPc(pc) is used because return address is
     // expected, OutputReport() will undo this.
@@ -2138,26 +2149,32 @@ TSAN_INTERCEPTOR(int, fork, int fake) {
   if (in_symbolizer())
     return REAL(fork)(fake);
   SCOPED_INTERCEPTOR_RAW(fork, fake);
+  return REAL(fork)(fake);
+}
+
+void atfork_prepare() {
+  if (in_symbolizer())
+    return;
+  ThreadState *thr = cur_thread();
+  const uptr pc = StackTrace::GetCurrentPc();
   ForkBefore(thr, pc);
-  int pid;
-  {
-    // On OS X, REAL(fork) can call intercepted functions (OSSpinLockLock), and
-    // we'll assert in CheckNoLocks() unless we ignore interceptors.
-    ScopedIgnoreInterceptors ignore;
-    pid = REAL(fork)(fake);
-  }
-  if (pid == 0) {
-    // child
-    ForkChildAfter(thr, pc);
-    FdOnFork(thr, pc);
-  } else if (pid > 0) {
-    // parent
-    ForkParentAfter(thr, pc);
-  } else {
-    // error
-    ForkParentAfter(thr, pc);
-  }
-  return pid;
+}
+
+void atfork_parent() {
+  if (in_symbolizer())
+    return;
+  ThreadState *thr = cur_thread();
+  const uptr pc = StackTrace::GetCurrentPc();
+  ForkParentAfter(thr, pc);
+}
+
+void atfork_child() {
+  if (in_symbolizer())
+    return;
+  ThreadState *thr = cur_thread();
+  const uptr pc = StackTrace::GetCurrentPc();
+  ForkChildAfter(thr, pc);
+  FdOnFork(thr, pc);
 }
 
 TSAN_INTERCEPTOR(int, vfork, int fake) {
@@ -2258,6 +2275,8 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
 #define COMMON_INTERCEPT_FUNCTION(name) INTERCEPT_FUNCTION(name)
 #define COMMON_INTERCEPT_FUNCTION_VER(name, ver)                          \
   INTERCEPT_FUNCTION_VER(name, ver)
+#define COMMON_INTERCEPT_FUNCTION_VER_UNVERSIONED_FALLBACK(name, ver) \
+  (INTERCEPT_FUNCTION_VER(name, ver) || INTERCEPT_FUNCTION(name))
 
 #define COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, size)                    \
   MemoryAccessRange(((TsanInterceptorContext *)ctx)->thr,                 \
@@ -2508,13 +2527,10 @@ static USED void syscall_fd_release(uptr pc, int fd) {
   FdRelease(thr, pc, fd);
 }
 
-static void syscall_pre_fork(uptr pc) {
-  TSAN_SYSCALL();
-  ForkBefore(thr, pc);
-}
+static void syscall_pre_fork(uptr pc) { ForkBefore(cur_thread(), pc); }
 
 static void syscall_post_fork(uptr pc, int pid) {
-  TSAN_SYSCALL();
+  ThreadState *thr = cur_thread();
   if (pid == 0) {
     // child
     ForkChildAfter(thr, pc);
@@ -2828,6 +2844,10 @@ void InitializeInterceptors() {
 
   if (REAL(__cxa_atexit)(&finalize, 0, 0)) {
     Printf("ThreadSanitizer: failed to setup atexit callback\n");
+    Die();
+  }
+  if (pthread_atfork(atfork_prepare, atfork_parent, atfork_child)) {
+    Printf("ThreadSanitizer: failed to setup atfork callbacks\n");
     Die();
   }
 

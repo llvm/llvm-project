@@ -40,30 +40,13 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <algorithm>
+#include <set>
+#include <string>
 #include <vector>
 
 namespace clang {
 namespace clangd {
-
-namespace {
-
-// Collects contexts visited during a Sema name lookup.
-class VisitedContextCollector : public VisibleDeclConsumer {
-public:
-  void EnteredContext(DeclContext *Ctx) override { Visited.push_back(Ctx); }
-
-  void FoundDecl(NamedDecl *ND, NamedDecl *Hiding, DeclContext *Ctx,
-                 bool InBaseClass) override {}
-
-  std::vector<DeclContext *> takeVisitedContexts() {
-    return std::move(Visited);
-  }
-
-private:
-  std::vector<DeclContext *> Visited;
-};
-
-} // namespace
 
 std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
                                    const clang::Diagnostic &Info) const {
@@ -78,6 +61,7 @@ std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
   case diag::err_sizeof_alignof_incomplete_or_sizeless_type:
   case diag::err_for_range_incomplete_type:
   case diag::err_func_def_incomplete_result:
+  case diag::err_field_incomplete_or_sizeless:
     // Incomplete type diagnostics should have a QualType argument for the
     // incomplete type.
     for (unsigned Idx = 0; Idx < Info.getNumArgs(); ++Idx) {
@@ -100,6 +84,8 @@ std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
   case diag::err_undeclared_var_use_suggest:
   case diag::err_no_member: // Could be no member in namespace.
   case diag::err_no_member_suggest:
+  case diag::err_no_member_template:
+  case diag::err_no_member_template_suggest:
     if (LastUnresolvedName) {
       // Try to fix unresolved name caused by missing declaration.
       // E.g.
@@ -310,17 +296,26 @@ llvm::Optional<CheapUnresolvedName> extractUnresolvedNameCheaply(
 std::vector<std::string>
 collectAccessibleScopes(Sema &Sem, const DeclarationNameInfo &Typo, Scope *S,
                         Sema::LookupNameKind LookupKind) {
+  // Collects contexts visited during a Sema name lookup.
+  struct VisitedContextCollector : public VisibleDeclConsumer {
+    VisitedContextCollector(std::vector<std::string> &Out) : Out(Out) {}
+    void EnteredContext(DeclContext *Ctx) override {
+      if (llvm::isa<NamespaceDecl>(Ctx))
+        Out.push_back(printNamespaceScope(*Ctx));
+    }
+    void FoundDecl(NamedDecl *ND, NamedDecl *Hiding, DeclContext *Ctx,
+                   bool InBaseClass) override {}
+    std::vector<std::string> &Out;
+  };
+
   std::vector<std::string> Scopes;
-  VisitedContextCollector Collector;
+  Scopes.push_back("");
+  VisitedContextCollector Collector(Scopes);
   Sem.LookupVisibleDecls(S, LookupKind, Collector,
                          /*IncludeGlobalScope=*/false,
                          /*LoadExternal=*/false);
-
-  Scopes.push_back("");
-  for (const auto *Ctx : Collector.takeVisitedContexts()) {
-    if (isa<NamespaceDecl>(Ctx))
-      Scopes.push_back(printNamespaceScope(*Ctx));
-  }
+  std::sort(Scopes.begin(), Scopes.end());
+  Scopes.erase(std::unique(Scopes.begin(), Scopes.end()), Scopes.end());
   return Scopes;
 }
 

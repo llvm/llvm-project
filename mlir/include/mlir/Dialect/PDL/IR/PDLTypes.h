@@ -19,6 +19,18 @@
 // PDL Dialect Types
 //===----------------------------------------------------------------------===//
 
+namespace mlir {
+namespace pdl {
+/// This class represents the base class of all PDL types.
+class PDLType : public Type {
+public:
+  using Type::Type;
+
+  static bool classof(Type type);
+};
+} // namespace pdl
+} // namespace mlir
+
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/PDL/IR/PDLOpsTypes.h.inc"
 

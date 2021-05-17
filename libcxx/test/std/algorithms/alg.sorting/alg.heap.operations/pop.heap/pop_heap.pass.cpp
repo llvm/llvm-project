@@ -10,49 +10,59 @@
 
 // template<RandomAccessIterator Iter>
 //   requires ShuffleIterator<Iter> && LessThanComparable<Iter::value_type>
-//   void
+//   constexpr void  // constexpr in C++20
 //   pop_heap(Iter first, Iter last);
 
 #include <algorithm>
-#include <random>
 #include <cassert>
+#include <functional>
 
 #include "test_macros.h"
 #include "test_iterators.h"
+#include "MoveOnly.h"
 
-std::mt19937 randomness;
-
-void test(int N)
+template<class T, class Iter>
+TEST_CONSTEXPR_CXX20 bool test()
 {
-    int* ia = new int [N];
-    for (int i = 0; i < N; ++i)
-        ia[i] = i;
-    std::shuffle(ia, ia+N, randomness);
-    std::make_heap(ia, ia+N);
-    for (int i = N; i > 0; --i)
-    {
-        std::pop_heap(ia, ia+i);
-        assert(std::is_heap(ia, ia+i-1));
+    T orig[15] = {9,6,9,5,5, 8,9,1,1,3, 5,3,4,7,2};
+    T work[15] = {9,6,9,5,5, 8,9,1,1,3, 5,3,4,7,2};
+    assert(std::is_heap(orig, orig+15));
+    for (int i = 15; i >= 1; --i) {
+        std::pop_heap(Iter(work), Iter(work+i));
+        assert(std::is_heap(work, work+i-1));
+        assert(std::max_element(work, work+i-1) == work);
+        assert(std::is_permutation(work, work+15, orig));
     }
-    std::pop_heap(ia, ia);
+    assert(std::is_sorted(work, work+15));
 
-
-    typedef random_access_iterator<int *> RI;
-    std::shuffle(RI(ia), RI(ia+N), randomness);
-    std::make_heap(RI(ia), RI(ia+N));
-    for (int i = N; i > 0; --i)
     {
-        std::pop_heap(RI(ia), RI(ia+i));
-        assert(std::is_heap(RI(ia), RI(ia+i-1)));
+        T input[] = {5, 4, 1, 2, 3};
+        assert(std::is_heap(input, input + 5));
+        std::pop_heap(Iter(input), Iter(input + 5)); assert(input[4] == 5);
+        std::pop_heap(Iter(input), Iter(input + 4)); assert(input[3] == 4);
+        std::pop_heap(Iter(input), Iter(input + 3)); assert(input[2] == 3);
+        std::pop_heap(Iter(input), Iter(input + 2)); assert(input[1] == 2);
+        std::pop_heap(Iter(input), Iter(input + 1)); assert(input[0] == 1);
     }
-    std::pop_heap(RI(ia), RI(ia));
-
-    delete [] ia;
+    return true;
 }
 
 int main(int, char**)
 {
-    test(1000);
+    test<int, random_access_iterator<int*> >();
+    test<int, int*>();
 
-  return 0;
+#if TEST_STD_VER >= 11
+    test<MoveOnly, random_access_iterator<MoveOnly*>>();
+    test<MoveOnly, MoveOnly*>();
+#endif
+
+#if TEST_STD_VER >= 20
+    static_assert(test<int, random_access_iterator<int*>>());
+    static_assert(test<int, int*>());
+    static_assert(test<MoveOnly, random_access_iterator<MoveOnly*>>());
+    static_assert(test<MoveOnly, MoveOnly*>());
+#endif
+
+    return 0;
 }

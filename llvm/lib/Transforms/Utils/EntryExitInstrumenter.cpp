@@ -9,6 +9,7 @@
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
@@ -17,6 +18,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils.h"
+
 using namespace llvm;
 
 static void insertCall(Function &CurFn, StringRef Func,
@@ -123,6 +125,7 @@ struct EntryExitInstrumenter : public FunctionPass {
   }
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addPreserved<GlobalsAAWrapperPass>();
+    AU.addPreserved<DominatorTreeWrapperPass>();
   }
   bool runOnFunction(Function &F) override { return ::runOnFunction(F, false); }
 };
@@ -136,20 +139,34 @@ struct PostInlineEntryExitInstrumenter : public FunctionPass {
   }
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addPreserved<GlobalsAAWrapperPass>();
+    AU.addPreserved<DominatorTreeWrapperPass>();
   }
   bool runOnFunction(Function &F) override { return ::runOnFunction(F, true); }
 };
 char PostInlineEntryExitInstrumenter::ID = 0;
 }
 
-INITIALIZE_PASS(
+INITIALIZE_PASS_BEGIN(
     EntryExitInstrumenter, "ee-instrument",
     "Instrument function entry/exit with calls to e.g. mcount() (pre inlining)",
     false, false)
-INITIALIZE_PASS(PostInlineEntryExitInstrumenter, "post-inline-ee-instrument",
-                "Instrument function entry/exit with calls to e.g. mcount() "
-                "(post inlining)",
-                false, false)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_END(
+    EntryExitInstrumenter, "ee-instrument",
+    "Instrument function entry/exit with calls to e.g. mcount() (pre inlining)",
+    false, false)
+
+INITIALIZE_PASS_BEGIN(
+    PostInlineEntryExitInstrumenter, "post-inline-ee-instrument",
+    "Instrument function entry/exit with calls to e.g. mcount() "
+    "(post inlining)",
+    false, false)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_END(
+    PostInlineEntryExitInstrumenter, "post-inline-ee-instrument",
+    "Instrument function entry/exit with calls to e.g. mcount() "
+    "(post inlining)",
+    false, false)
 
 FunctionPass *llvm::createEntryExitInstrumenterPass() {
   return new EntryExitInstrumenter();

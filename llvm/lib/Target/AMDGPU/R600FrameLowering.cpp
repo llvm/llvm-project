@@ -7,7 +7,7 @@
 //==-----------------------------------------------------------------------===//
 
 #include "R600FrameLowering.h"
-#include "AMDGPUSubtarget.h"
+#include "R600Subtarget.h"
 
 using namespace llvm;
 

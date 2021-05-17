@@ -48,9 +48,9 @@
  */
 enum stats_flags_e {
   noTotal = 1 << 0, //!< do not show a TOTAL_aggregation for this statistic
-  onlyInMaster = 1 << 1, //!< statistic is valid only for master
+  onlyInMaster = 1 << 1, //!< statistic is valid only for primary thread
   noUnits = 1 << 2, //!< statistic doesn't need units printed next to it
-  notInMaster = 1 << 3, //!< statistic is valid only for non-master threads
+  notInMaster = 1 << 3, //!< statistic is valid only for non-primary threads
   logEvent = 1 << 4 //!< statistic can be logged on the event timeline when
   //! KMP_STATS_EVENTS is on (valid only for timers)
 };
@@ -103,6 +103,7 @@ enum stats_state_e {
   macro(OMP_CRITICAL, 0, arg)                                                  \
   macro(OMP_SINGLE, 0, arg)                                                    \
   macro(OMP_MASTER, 0, arg)                                                    \
+  macro(OMP_MASKED, 0, arg)                                                    \
   macro(OMP_TEAMS, 0, arg)                                                     \
   macro(OMP_set_lock, 0, arg)                                                  \
   macro(OMP_test_lock, 0, arg)                                                 \
@@ -150,6 +151,7 @@ enum stats_state_e {
   macro (OMP_critical_wait, 0, arg)                                            \
   macro (OMP_single, 0, arg)                                                   \
   macro (OMP_master, 0, arg)                                                   \
+  macro (OMP_masked, 0, arg)                                                   \
   macro (OMP_task_immediate, 0, arg)                                           \
   macro (OMP_task_taskwait, 0, arg)                                            \
   macro (OMP_task_taskyield, 0, arg)                                           \
@@ -180,8 +182,8 @@ enum stats_state_e {
 // clang-format on
 
 // OMP_worker_thread_life -- Time from thread becoming an OpenMP thread (either
-//                           initializing OpenMP or being created by a master)
-//                           until the thread is destroyed
+//                           initializing OpenMP or being created by a primary
+//                           thread) until the thread is destroyed
 // OMP_parallel           -- Time thread spends executing work directly
 //                           within a #pragma omp parallel
 // OMP_parallel_overhead  -- Time thread spends setting up a parallel region
@@ -198,6 +200,7 @@ enum stats_state_e {
 //                           a critical section
 // OMP_single             -- Time spent executing a "single" region
 // OMP_master             -- Time spent executing a "master" region
+// OMP_masked             -- Time spent executing a "masked" region
 // OMP_task_immediate     -- Time spent executing non-deferred tasks
 // OMP_task_taskwait      -- Time spent executing tasks inside a taskwait
 //                           construct
@@ -289,7 +292,7 @@ enum stats_state_e {
  * same as that of a timer above.
  *
  * @ingroup STATS_GATHERING
-*/
+ */
 #define KMP_FOREACH_EXPLICIT_TIMER(macro, arg) KMP_FOREACH_TIMER(macro, arg)
 
 #define ENUMERATE(name, ignore, prefix) prefix##name,
@@ -710,7 +713,7 @@ public:
     to the bar width in the timeline graph.
 
     Every thread will have a thread local pointer to its node in
-    the list.  The sentinel node is used by the master thread to
+    the list.  The sentinel node is used by the primary thread to
     store "dummy" statistics before __kmp_create_worker() is called.
 **************************************************************** */
 class kmp_stats_list {
@@ -884,7 +887,7 @@ extern kmp_stats_output_module __kmp_stats_output;
  * a timer statistics.
  *
  * @ingroup STATS_GATHERING
-*/
+ */
 #define KMP_COUNT_VALUE(name, value)                                           \
   __kmp_stats_thread_ptr->getTimer(TIMER_##name)->addSample((double)value)
 
@@ -897,7 +900,7 @@ extern kmp_stats_output_module __kmp_stats_output;
  * counter for the executing thread.
  *
  * @ingroup STATS_GATHERING
-*/
+ */
 #define KMP_COUNT_BLOCK(name)                                                  \
   __kmp_stats_thread_ptr->getCounter(COUNTER_##name)->increment()
 
@@ -917,7 +920,7 @@ extern kmp_stats_output_module __kmp_stats_output;
  * macro is called.
  *
  * @ingroup STATS_GATHERING
-*/
+ */
 #define KMP_OUTPUT_STATS(heading_string) __kmp_output_stats(heading_string)
 
 /*!
@@ -926,7 +929,7 @@ extern kmp_stats_output_module __kmp_stats_output;
  * @param name timer which you want this thread to begin with
  *
  * @ingroup STATS_GATHERING
-*/
+ */
 #define KMP_INIT_PARTITIONED_TIMERS(name)                                      \
   __kmp_stats_thread_ptr->getPartitionedTimers()->init(explicitTimer(          \
       __kmp_stats_thread_ptr->getTimer(TIMER_##name), TIMER_##name))
@@ -963,7 +966,7 @@ extern kmp_stats_output_module __kmp_stats_output;
  * \details Reset all stats for all threads.
  *
  * @ingroup STATS_GATHERING
-*/
+ */
 #define KMP_RESET_STATS() __kmp_reset_stats()
 
 #if (KMP_DEVELOPER_STATS)

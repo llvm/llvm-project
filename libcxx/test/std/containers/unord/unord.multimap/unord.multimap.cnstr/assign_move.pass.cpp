@@ -122,7 +122,9 @@ int main(int, char**)
             test_compare<std::equal_to<int> >(3),
             A(10)
            );
+        C::iterator it0 = c0.begin();
         c = std::move(c0);
+        assert(it0 == c.begin()); // Iterators remain valid
         LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 6);
         typedef std::pair<C::const_iterator, C::const_iterator> Eq;
@@ -182,7 +184,9 @@ int main(int, char**)
             test_compare<std::equal_to<int> >(3),
             A(4)
            );
+        C::iterator it0 = c0.begin();
         c = std::move(c0);
+        assert(it0 == c.begin()); // Iterators remain valid
         LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 6);
         typedef std::pair<C::const_iterator, C::const_iterator> Eq;
@@ -242,7 +246,9 @@ int main(int, char**)
             test_compare<std::equal_to<int> >(3),
             A()
            );
+        C::iterator it0 = c0.begin();
         c = std::move(c0);
+        assert(it0 == c.begin()); // Iterators remain valid
         LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 6);
         typedef std::pair<C::const_iterator, C::const_iterator> Eq;

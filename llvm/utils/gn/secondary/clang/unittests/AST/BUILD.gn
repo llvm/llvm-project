@@ -18,6 +18,7 @@ unittest("ASTTests") {
     "ASTImporterFixtures.cpp",
     "ASTImporterGenericRedeclTest.cpp",
     "ASTImporterODRStrategiesTest.cpp",
+    "ASTImporterObjCTest.cpp",
     "ASTImporterTest.cpp",
     "ASTImporterVisibilityTest.cpp",
     "ASTTraverserTest.cpp",

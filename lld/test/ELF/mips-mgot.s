@@ -15,10 +15,10 @@
 # RUN: llvm-readobj -r --dyn-syms -A %t.so | FileCheck -check-prefix=GOT %s
 
 # CHECK: SYMBOL TABLE:
-# CHECK:           00000000 l    O .tdata          00000000 loc0
+# CHECK:           00000000 l      .tdata          00000000 loc0
 # CHECK: [[FOO0:[0-9a-f]+]] g      .text           00000000 foo0
-# CHECK:           00000000 g    O .tdata          00000000 tls0
-# CHECK:           00000004 g    O .tdata          00000000 tls1
+# CHECK:           00000000 g      .tdata          00000000 tls0
+# CHECK:           00000004 g      .tdata          00000000 tls1
 # CHECK: [[FOO2:[0-9a-f]+]] g      .text           00000000 foo2
 
 # CHECK:      Contents of section .got:

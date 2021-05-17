@@ -220,9 +220,9 @@ private:
   bool isValidFunctionIndex(uint32_t Index) const;
   bool isDefinedFunctionIndex(uint32_t Index) const;
   bool isValidGlobalIndex(uint32_t Index) const;
-  bool isValidTableIndex(uint32_t Index) const;
+  bool isValidTableNumber(uint32_t Index) const;
   bool isDefinedGlobalIndex(uint32_t Index) const;
-  bool isDefinedTableIndex(uint32_t Index) const;
+  bool isDefinedTableNumber(uint32_t Index) const;
   bool isValidEventIndex(uint32_t Index) const;
   bool isDefinedEventIndex(uint32_t Index) const;
   bool isValidFunctionSymbol(uint32_t Index) const;

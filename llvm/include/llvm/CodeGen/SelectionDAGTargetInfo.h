@@ -155,12 +155,6 @@ public:
     return SDValue();
   }
 
-  // Return true when the decision to generate FMA's (or FMS, FMLA etc) rather
-  // than FMUL and ADD is delegated to the machine combiner.
-  virtual bool generateFMAsInMachineCombiner(CodeGenOpt::Level OptLevel) const {
-    return false;
-  }
-
   // Return true if the DAG Combiner should disable generic combines.
   virtual bool disableGenericCombines(CodeGenOpt::Level OptLevel) const {
     return false;

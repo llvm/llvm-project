@@ -220,5 +220,4 @@ void RangedConstraintManager::computeAdjustment(SymbolRef &Sym,
 }
 
 } // end of namespace ento
-
 } // end of namespace clang

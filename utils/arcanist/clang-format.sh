@@ -14,7 +14,7 @@ set -euo pipefail
 # switch to warning or error if you want to prompt the user.
 if ! hash clang-format >/dev/null; then
   echo "advice"
-  echo "clang-format not found in user's PATH; not linting file."
+  echo "clang-format not found in user’s local PATH; not linting file."
   echo "===="
   exit 0
 fi

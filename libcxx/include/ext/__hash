@@ -130,4 +130,4 @@ template <> struct _LIBCPP_TEMPLATE_VIS hash<unsigned long>
 };
 }
 
-#endif  // _LIBCPP_EXT_HASH
+#endif // _LIBCPP_EXT_HASH

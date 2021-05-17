@@ -24,7 +24,7 @@
 
 #include "platform_support.h" // locale name macros
 
-typedef std::time_get_byname<wchar_t, input_iterator<const wchar_t*> > F;
+typedef std::time_get_byname<wchar_t, cpp17_input_iterator<const wchar_t*> > F;
 
 class my_facet
     : public F

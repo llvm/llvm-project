@@ -424,12 +424,21 @@ def err_bool_redeclaration : Error<
 def warn_cxx98_compat_static_assert : Warning<
   "static_assert declarations are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
-def ext_static_assert_no_message : ExtWarn<
-  "static_assert with no message is a C++17 extension">, InGroup<CXX17>;
+def ext_ms_static_assert : ExtWarn<
+  "use of 'static_assert' without inclusion of <assert.h> is a Microsoft "
+  "extension">, InGroup<MicrosoftStaticAssert>;
+def ext_cxx_static_assert_no_message : ExtWarn<
+  "'static_assert' with no message is a C++17 extension">, InGroup<CXX17>;
+def ext_c_static_assert_no_message : ExtWarn<
+  "'_Static_assert' with no message is a C2x extension">, InGroup<C2x>;
 def warn_cxx14_compat_static_assert_no_message : Warning<
-  "static_assert with no message is incompatible with C++ standards before "
+  "'static_assert' with no message is incompatible with C++ standards before "
   "C++17">,
   DefaultIgnore, InGroup<CXXPre17Compat>;
+def warn_c17_compat_static_assert_no_message : Warning<
+  "'_Static_assert' with no message is incompatible with C standards before "
+  "C2x">,
+  DefaultIgnore, InGroup<CPre2xCompat>;
 def err_function_definition_not_allowed : Error<
   "function definition is not allowed here">;
 def err_expected_end_of_enumerator : Error<
@@ -675,8 +684,6 @@ def err_attribute_requires_arguments : Error<
   "parentheses must be omitted if %0 attribute's argument list is empty">;
 def err_cxx11_attribute_forbids_ellipsis : Error<
   "attribute %0 cannot be used as an attribute pack">;
-def err_cxx11_attribute_repeated : Error<
-  "attribute %0 cannot appear multiple times in an attribute specifier">;
 def warn_cxx14_compat_using_attribute_ns : Warning<
   "default scope specifier for attributes is incompatible with C++ standards "
   "before C++17">, InGroup<CXXPre17Compat>, DefaultIgnore;
@@ -940,9 +947,6 @@ def err_expected_lambda_body : Error<"expected body of lambda expression">;
 def warn_cxx98_compat_lambda : Warning<
   "lambda expressions are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
-def err_lambda_missing_parens : Error<
-  "lambda requires '()' before %select{'mutable'|return type|"
-  "attribute specifier|'constexpr'|'consteval'|'requires' clause}0">;
 def err_lambda_decl_specifier_repeated : Error<
   "%select{'mutable'|'constexpr'|'consteval'}0 cannot appear multiple times in a lambda declarator">;
 def err_lambda_capture_misplaced_ellipsis : Error<
@@ -952,6 +956,16 @@ def err_lambda_capture_multiple_ellipses : Error<
   "multiple ellipses in pack capture">;
 def err_capture_default_first : Error<
   "capture default must be first">;
+def ext_decl_attrs_on_lambda : ExtWarn<
+  "an attribute specifier sequence in this position is a C++2b extension">,
+  InGroup<CXX2b>;
+def ext_lambda_missing_parens : ExtWarn<
+  "lambda without a parameter clause is a C++2b extension">,
+  InGroup<CXX2b>;
+def warn_cxx20_compat_decl_attrs_on_lambda : Warning<
+  "an attribute specifier sequence in this position is incompatible with C++ "
+  "standards before C++2b">, InGroup<CXXPre2bCompat>, DefaultIgnore;
+
 // C++17 lambda expressions
 def err_expected_star_this_capture : Error<
   "expected 'this' following '*' in lambda capture list">;
@@ -1220,9 +1234,6 @@ def note_pragma_attribute_namespace_on_attribute : Note<
   "omit the namespace to add attributes to the most-recently"
   " pushed attribute group">;
 
-def err_opencl_unroll_hint_on_non_loop : Error<
-  "OpenCL only supports 'opencl_unroll_hint' attribute on for, while, and do statements">;
-
 // OpenCL EXTENSION pragma (OpenCL 1.1 [9.1])
 def warn_pragma_expected_colon : Warning<
   "missing ':' after %0 - ignoring">, InGroup<IgnoredPragmas>;
@@ -1235,7 +1246,8 @@ def warn_pragma_unknown_extension : Warning<
 def warn_pragma_unsupported_extension : Warning<
   "unsupported OpenCL extension %0 - ignoring">, InGroup<IgnoredPragmas>;
 def warn_pragma_extension_is_core : Warning<
-  "OpenCL extension %0 is core feature or supported optional core feature - ignoring">, InGroup<DiagGroup<"pedantic-core-features">>, DefaultIgnore;
+  "OpenCL extension %0 is core feature or supported optional core feature - ignoring">,
+  InGroup<OpenCLCoreFeaturesDiagGroup>, DefaultIgnore;
 
 // OpenCL errors.
 def err_opencl_taking_function_address_parser : Error<
@@ -1302,7 +1314,15 @@ def warn_omp_unknown_assumption_clause_without_args
 def note_omp_assumption_clause_continue_here
     : Note<"the ignored tokens spans until here">;
 def err_omp_declare_target_unexpected_clause: Error<
-  "unexpected '%0' clause, only %select{'to' or 'link'|'to', 'link' or 'device_type'}1 clauses expected">;
+  "unexpected '%0' clause, only %select{'device_type'|'to' or 'link'|'to', 'link' or 'device_type'}1 clauses expected">;
+def err_omp_begin_declare_target_unexpected_implicit_to_clause: Error<
+  "unexpected '(', only 'to', 'link' or 'device_type' clauses expected for 'begin declare target' directive">;
+def err_omp_declare_target_unexpected_clause_after_implicit_to: Error<
+  "unexpected clause after an implicit 'to' clause">;
+def err_omp_declare_target_missing_to_or_link_clause: Error<
+  "expected at least one 'to' or 'link' clause">;
+def err_omp_declare_target_multiple : Error<
+  "%0 appears multiple times in clauses on the same declare target directive">;
 def err_omp_expected_clause: Error<
   "expected at least one clause on '#pragma omp %0' directive">;
 def err_omp_mapper_illegal_identifier : Error<
@@ -1387,6 +1407,13 @@ def err_omp_variant_ctx_second_match_extension : Error<
   "only a single match extension allowed per OpenMP context selector">;
 def err_omp_invalid_dsa: Error<
   "data-sharing attribute '%0' in '%1' clause requires OpenMP version %2 or above">;
+def err_omp_expected_punc_after_interop_mod : Error<
+  "expected ',' after interop modifier">;
+def err_omp_expected_interop_type : Error<
+  "expected interop type: 'target' and/or 'targetsync'">;
+def warn_omp_more_one_interop_type
+  : Warning<"interop type '%0' cannot be specified more than once">,
+    InGroup<OpenMPClauses>;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<

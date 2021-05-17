@@ -17,7 +17,6 @@
 #include "clang/Basic/LangOptions.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetParser.h"
 #include <cstdlib>
@@ -67,9 +66,12 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   // From the glibc documentation, on GNU systems, malloc guarantees 16-byte
   // alignment on 64-bit systems and 8-byte alignment on 32-bit systems. See
   // https://www.gnu.org/software/libc/manual/html_node/Malloc-Examples.html.
-  // This alignment guarantee also applies to Windows and Android.
+  // This alignment guarantee also applies to Windows and Android. On Darwin,
+  // the alignment is 16 bytes on both 64-bit and 32-bit systems.
   if (T.isGNUEnvironment() || T.isWindowsMSVCEnvironment() || T.isAndroid())
     NewAlign = Triple.isArch64Bit() ? 128 : Triple.isArch32Bit() ? 64 : 0;
+  else if (T.isOSDarwin())
+    NewAlign = 128;
   else
     NewAlign = 0; // Infer from basic type alignment.
   HalfWidth = 16;
@@ -101,20 +103,24 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   UseSignedCharForObjCBool = true;
   UseBitFieldTypeAlignment = true;
   UseZeroLengthBitfieldAlignment = false;
+  UseLeadingZeroLengthBitfield = true;
   UseExplicitBitFieldAlignment = true;
   ZeroLengthBitfieldBoundary = 0;
+  MaxAlignedAttribute = 0;
   HalfFormat = &llvm::APFloat::IEEEhalf();
   FloatFormat = &llvm::APFloat::IEEEsingle();
   DoubleFormat = &llvm::APFloat::IEEEdouble();
   LongDoubleFormat = &llvm::APFloat::IEEEdouble();
   Float128Format = &llvm::APFloat::IEEEquad();
   MCountName = "mcount";
+  UserLabelPrefix = "_";
   RegParmMax = 0;
   SSERegParmMax = 0;
   HasAlignMac68kSupport = false;
   HasBuiltinMSVaList = false;
   IsRenderScriptTarget = false;
   HasAArch64SVETypes = false;
+  HasRISCVVTypes = false;
   AllowAMDGPUUnsafeFPAtomics = false;
   ARMCDECoprocMask = 0;
 
@@ -143,8 +149,9 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
 // Out of line virtual dtor for TargetInfo.
 TargetInfo::~TargetInfo() {}
 
-void TargetInfo::resetDataLayout(StringRef DL) {
-  DataLayout.reset(new llvm::DataLayout(DL));
+void TargetInfo::resetDataLayout(StringRef DL, const char *ULP) {
+  DataLayoutString = DL.str();
+  UserLabelPrefix = ULP;
 }
 
 bool
@@ -472,8 +479,8 @@ static StringRef removeGCCRegisterPrefix(StringRef Name) {
 /// a valid clobber in an inline asm statement. This is used by
 /// Sema.
 bool TargetInfo::isValidClobber(StringRef Name) const {
-  return (isValidGCCRegisterName(Name) ||
-          Name == "memory" || Name == "cc");
+  return (isValidGCCRegisterName(Name) || Name == "memory" || Name == "cc" ||
+          Name == "unwind");
 }
 
 /// isValidGCCRegisterName - Returns whether the passed in string

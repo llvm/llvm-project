@@ -12,6 +12,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/PPCallbacks.h"
@@ -28,16 +29,9 @@ namespace dependencies {
 
 class DependencyConsumer;
 
-/// This is used to refer to a specific module.
-///
-/// See \c ModuleDeps for details about what these members mean.
-struct ClangModuleDep {
-  std::string ModuleName;
-  std::string ContextHash;
-};
-
-struct ModuleDeps {
-  /// The name of the module. This may include `:` for C++20 module partitons,
+/// This is used to identify a specific module.
+struct ModuleID {
+  /// The name of the module. This may include `:` for C++20 module partitions,
   /// or a header-name for C++20 header units.
   std::string ModuleName;
 
@@ -48,6 +42,14 @@ struct ModuleDeps {
   /// Modules with the same name but a different \c ContextHash should be
   /// treated as separate modules for the purpose of a build.
   std::string ContextHash;
+};
+
+struct ModuleDeps {
+  /// The identifier of the module.
+  ModuleID ID;
+
+  /// Whether this is a "system" module.
+  bool IsSystem;
 
   /// The path to the modulemap file which defines this module.
   ///
@@ -62,50 +64,57 @@ struct ModuleDeps {
   /// on, not including transitive dependencies.
   llvm::StringSet<> FileDeps;
 
-  /// A list of modules this module directly depends on, not including
-  /// transitive dependencies.
+  /// A list of module identifiers this module directly depends on, not
+  /// including transitive dependencies.
   ///
   /// This may include modules with a different context hash when it can be
   /// determined that the differences are benign for this compilation.
-  std::vector<ClangModuleDep> ClangModuleDeps;
-
-  /// A partial command line that can be used to build this module.
-  ///
-  /// Call \c getFullCommandLine() to get a command line suitable for passing to
-  /// clang.
-  std::vector<std::string> NonPathCommandLine;
+  std::vector<ModuleID> ClangModuleDeps;
 
   // Used to track which modules that were discovered were directly imported by
   // the primary TU.
   bool ImportedByMainFile = false;
 
-  /// Gets the full command line suitable for passing to clang.
+  /// The compiler invocation associated with the translation unit that imports
+  /// this module.
+  std::shared_ptr<CompilerInvocation> Invocation;
+
+  /// Gets the canonical command line suitable for passing to clang.
   ///
-  /// \param LookupPCMPath this function is called to fill in `-fmodule-file=`
-  ///                      flags and for the `-o` flag. It needs to return a
-  ///                      path for where the PCM for the given module is to
+  /// \param LookupPCMPath This function is called to fill in "-fmodule-file="
+  ///                      arguments and the "-o" argument. It needs to return
+  ///                      a path for where the PCM for the given module is to
   ///                      be located.
-  /// \param LookupModuleDeps this fucntion is called to collect the full
+  /// \param LookupModuleDeps This function is called to collect the full
   ///                         transitive set of dependencies for this
-  ///                         compilation.
-  std::vector<std::string> getFullCommandLine(
-      std::function<StringRef(ClangModuleDep)> LookupPCMPath,
-      std::function<const ModuleDeps &(ClangModuleDep)> LookupModuleDeps) const;
+  ///                         compilation and fill in "-fmodule-map-file="
+  ///                         arguments.
+  std::vector<std::string> getCanonicalCommandLine(
+      std::function<StringRef(ModuleID)> LookupPCMPath,
+      std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps) const;
+
+  /// Gets the canonical command line suitable for passing to clang, excluding
+  /// arguments containing modules-related paths: "-fmodule-file=", "-o",
+  /// "-fmodule-map-file=".
+  std::vector<std::string> getCanonicalCommandLineWithoutModulePaths() const;
 };
 
 namespace detail {
-/// Append the `-fmodule-file=` and `-fmodule-map-file=` arguments for the
-/// modules in \c Modules transitively, along with other needed arguments to
-/// use explicitly built modules.
-void appendCommonModuleArguments(
-    llvm::ArrayRef<ClangModuleDep> Modules,
-    std::function<StringRef(ClangModuleDep)> LookupPCMPath,
-    std::function<const ModuleDeps &(ClangModuleDep)> LookupModuleDeps,
-    std::vector<std::string> &Result);
+/// Collect the paths of PCM and module map files for the modules in \c Modules
+/// transitively.
+void collectPCMAndModuleMapPaths(
+    llvm::ArrayRef<ModuleID> Modules,
+    std::function<StringRef(ModuleID)> LookupPCMPath,
+    std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps,
+    std::vector<std::string> &PCMPaths, std::vector<std::string> &ModMapPaths);
 } // namespace detail
 
 class ModuleDepCollector;
 
+/// Callback that records textual includes and direct modular includes/imports
+/// during preprocessing. At the end of the main file, it also collects
+/// transitive modular dependencies and passes everything to the
+/// \c DependencyConsumer of the parent \c ModuleDepCollector.
 class ModuleDepCollectorPP final : public PPCallbacks {
 public:
   ModuleDepCollectorPP(CompilerInstance &I, ModuleDepCollector &MDC)
@@ -126,11 +135,18 @@ public:
   void EndOfMainFile() override;
 
 private:
+  /// The compiler instance for the current translation unit.
   CompilerInstance &Instance;
+  /// The parent dependency collector.
   ModuleDepCollector &MDC;
-  llvm::DenseSet<const Module *> DirectDeps;
+  /// Working set of direct modular dependencies.
+  llvm::DenseSet<const Module *> DirectModularDeps;
 
   void handleImport(const Module *Imported);
+
+  /// Traverses the previously collected direct modular dependencies to discover
+  /// transitive modular dependencies and fills the parent \c ModuleDepCollector
+  /// with both.
   void handleTopLevelModule(const Module *M);
   void addAllSubmoduleDeps(const Module *M, ModuleDeps &MD,
                            llvm::DenseSet<const Module *> &AddedModules);
@@ -138,6 +154,8 @@ private:
                     llvm::DenseSet<const Module *> &AddedModules);
 };
 
+/// Collects modular and non-modular dependencies of the main file by attaching
+/// \c ModuleDepCollectorPP to the preprocessor.
 class ModuleDepCollector final : public DependencyCollector {
 public:
   ModuleDepCollector(std::unique_ptr<DependencyOutputOptions> Opts,
@@ -149,12 +167,20 @@ public:
 private:
   friend ModuleDepCollectorPP;
 
+  /// The compiler instance for the current translation unit.
   CompilerInstance &Instance;
+  /// The consumer of collected dependency information.
   DependencyConsumer &Consumer;
+  /// Path to the main source file.
   std::string MainFile;
+  /// The module hash identifying the compilation conditions.
   std::string ContextHash;
-  std::vector<std::string> MainDeps;
-  std::unordered_map<std::string, ModuleDeps> Deps;
+  /// Non-modular file dependencies. This includes the main source file and
+  /// textually included header files.
+  std::vector<std::string> FileDeps;
+  /// Direct and transitive modular dependencies of the main source file.
+  std::unordered_map<std::string, ModuleDeps> ModularDeps;
+  /// Options that control the dependency output generation.
   std::unique_ptr<DependencyOutputOptions> Opts;
 };
 

@@ -6,7 +6,7 @@
 
 ; RUN: printf ".type  my_kernel.kd, @object \nmy_kernel.kd:\n.size my_kernel.kd, 64\n" > %t1.sym_info
 ; RUN: llvm-objdump --disassemble-symbols=my_kernel.kd %t.o \
-; RUN: | tail -n +9 > %t1.sym_content
+; RUN: | tail -n +8 > %t1.sym_content
 ; RUN: cat %t1.sym_info %t1.sym_content > %t1.s
 
 ; RUN: llvm-mc %t1.s --triple=amdgcn-amd-amdhsa -mcpu=gfx908 -filetype=obj -o %t-re-assemble.o
@@ -19,11 +19,12 @@
 my_kernel.kd:
   .long 0x00000000           ;; group_segment_fixed_size
   .long 0x00000000           ;; private_segment_fixed_size
-  .quad 0x00FF000000000000   ;; reserved bytes.
+  .long 0x00000000           ;; kernarg_segment_size.
+  .long 0x00000000           ;; reserved bytes.
   .quad 0x0000000000000000   ;; kernel_code_entry_byte_offset, any value works.
 
   ;; 20 reserved bytes.
-  .quad 0x0000000000000000
+  .quad 0x00FF000000000000   ;; reserved bytes.
   .quad 0x0000000000000000
   .long 0x00000000
 

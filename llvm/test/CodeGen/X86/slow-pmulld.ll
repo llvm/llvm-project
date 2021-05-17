@@ -21,7 +21,7 @@ define <4 x i32> @test_mul_v4i32_v4i8(<4 x i8> %A) {
 ; CHECK32-LABEL: test_mul_v4i32_v4i8:
 ; CHECK32:       # %bb.0:
 ; CHECK32-NEXT:    pmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; CHECK32-NEXT:    pmaddwd {{\.LCPI.*}}, %xmm0
+; CHECK32-NEXT:    pmaddwd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; CHECK32-NEXT:    retl
 ;
 ; CHECK64-LABEL: test_mul_v4i32_v4i8:
@@ -33,7 +33,7 @@ define <4 x i32> @test_mul_v4i32_v4i8(<4 x i8> %A) {
 ; SSE4-32-LABEL: test_mul_v4i32_v4i8:
 ; SSE4-32:       # %bb.0:
 ; SSE4-32-NEXT:    pmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; SSE4-32-NEXT:    pmaddwd {{\.LCPI.*}}, %xmm0
+; SSE4-32-NEXT:    pmaddwd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; SSE4-32-NEXT:    retl
 ;
 ; SSE4-64-LABEL: test_mul_v4i32_v4i8:
@@ -45,7 +45,7 @@ define <4 x i32> @test_mul_v4i32_v4i8(<4 x i8> %A) {
 ; AVX2-32-LABEL: test_mul_v4i32_v4i8:
 ; AVX2-32:       # %bb.0:
 ; AVX2-32-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; AVX2-32-NEXT:    vpmaddwd {{\.LCPI.*}}, %xmm0, %xmm0
+; AVX2-32-NEXT:    vpmaddwd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; AVX2-32-NEXT:    retl
 ;
 ; AVX2-64-LABEL: test_mul_v4i32_v4i8:
@@ -57,7 +57,7 @@ define <4 x i32> @test_mul_v4i32_v4i8(<4 x i8> %A) {
 ; AVX512DQ-32-LABEL: test_mul_v4i32_v4i8:
 ; AVX512DQ-32:       # %bb.0:
 ; AVX512DQ-32-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; AVX512DQ-32-NEXT:    vpmaddwd {{\.LCPI.*}}, %xmm0, %xmm0
+; AVX512DQ-32-NEXT:    vpmaddwd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; AVX512DQ-32-NEXT:    retl
 ;
 ; AVX512DQ-64-LABEL: test_mul_v4i32_v4i8:
@@ -69,7 +69,7 @@ define <4 x i32> @test_mul_v4i32_v4i8(<4 x i8> %A) {
 ; AVX512BW-32-LABEL: test_mul_v4i32_v4i8:
 ; AVX512BW-32:       # %bb.0:
 ; AVX512BW-32-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; AVX512BW-32-NEXT:    vpmaddwd {{\.LCPI.*}}, %xmm0, %xmm0
+; AVX512BW-32-NEXT:    vpmaddwd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; AVX512BW-32-NEXT:    retl
 ;
 ; AVX512BW-64-LABEL: test_mul_v4i32_v4i8:
@@ -168,7 +168,7 @@ define <8 x i32> @test_mul_v8i32_v8i8(<8 x i8> %A) {
 ; AVX2-32-LABEL: test_mul_v8i32_v8i8:
 ; AVX2-32:       # %bb.0:
 ; AVX2-32-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
-; AVX2-32-NEXT:    vpmaddwd {{\.LCPI.*}}, %ymm0, %ymm0
+; AVX2-32-NEXT:    vpmaddwd {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; AVX2-32-NEXT:    retl
 ;
 ; AVX2-64-LABEL: test_mul_v8i32_v8i8:
@@ -180,7 +180,7 @@ define <8 x i32> @test_mul_v8i32_v8i8(<8 x i8> %A) {
 ; AVX512DQ-32-LABEL: test_mul_v8i32_v8i8:
 ; AVX512DQ-32:       # %bb.0:
 ; AVX512DQ-32-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
-; AVX512DQ-32-NEXT:    vpmaddwd {{\.LCPI.*}}, %ymm0, %ymm0
+; AVX512DQ-32-NEXT:    vpmaddwd {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; AVX512DQ-32-NEXT:    retl
 ;
 ; AVX512DQ-64-LABEL: test_mul_v8i32_v8i8:
@@ -192,7 +192,7 @@ define <8 x i32> @test_mul_v8i32_v8i8(<8 x i8> %A) {
 ; AVX512BW-32-LABEL: test_mul_v8i32_v8i8:
 ; AVX512BW-32:       # %bb.0:
 ; AVX512BW-32-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
-; AVX512BW-32-NEXT:    vpmaddwd {{\.LCPI.*}}, %ymm0, %ymm0
+; AVX512BW-32-NEXT:    vpmaddwd {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; AVX512BW-32-NEXT:    retl
 ;
 ; AVX512BW-64-LABEL: test_mul_v8i32_v8i8:
@@ -359,7 +359,7 @@ define <16 x i32> @test_mul_v16i32_v16i8(<16 x i8> %A) {
 ; AVX512DQ-32-LABEL: test_mul_v16i32_v16i8:
 ; AVX512DQ-32:       # %bb.0:
 ; AVX512DQ-32-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
-; AVX512DQ-32-NEXT:    vpmulld {{\.LCPI.*}}{1to16}, %zmm0, %zmm0
+; AVX512DQ-32-NEXT:    vpmulld {{\.LCPI[0-9]+_[0-9]+}}{1to16}, %zmm0, %zmm0
 ; AVX512DQ-32-NEXT:    retl
 ;
 ; AVX512DQ-64-LABEL: test_mul_v16i32_v16i8:
@@ -371,7 +371,7 @@ define <16 x i32> @test_mul_v16i32_v16i8(<16 x i8> %A) {
 ; AVX512BW-32-LABEL: test_mul_v16i32_v16i8:
 ; AVX512BW-32:       # %bb.0:
 ; AVX512BW-32-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
-; AVX512BW-32-NEXT:    vpmaddwd {{\.LCPI.*}}, %zmm0, %zmm0
+; AVX512BW-32-NEXT:    vpmaddwd {{\.LCPI[0-9]+_[0-9]+}}, %zmm0, %zmm0
 ; AVX512BW-32-NEXT:    retl
 ;
 ; AVX512BW-64-LABEL: test_mul_v16i32_v16i8:
@@ -383,7 +383,7 @@ define <16 x i32> @test_mul_v16i32_v16i8(<16 x i8> %A) {
 ; KNL-32-LABEL: test_mul_v16i32_v16i8:
 ; KNL-32:       # %bb.0:
 ; KNL-32-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
-; KNL-32-NEXT:    vpmulld {{\.LCPI.*}}{1to16}, %zmm0, %zmm0
+; KNL-32-NEXT:    vpmulld {{\.LCPI[0-9]+_[0-9]+}}{1to16}, %zmm0, %zmm0
 ; KNL-32-NEXT:    retl
 ;
 ; KNL-64-LABEL: test_mul_v16i32_v16i8:
@@ -418,7 +418,7 @@ define <4 x i32> @test_mul_v4i32_v4i16(<4 x i16> %A) {
 ; SSE4-32-LABEL: test_mul_v4i32_v4i16:
 ; SSE4-32:       # %bb.0:
 ; SSE4-32-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SSE4-32-NEXT:    pmulld {{\.LCPI.*}}, %xmm0
+; SSE4-32-NEXT:    pmulld {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; SSE4-32-NEXT:    retl
 ;
 ; SSE4-64-LABEL: test_mul_v4i32_v4i16:
@@ -666,7 +666,7 @@ define <16 x i32> @test_mul_v16i32_v16i16(<16 x i16> %A) {
 ; AVX512-32-LABEL: test_mul_v16i32_v16i16:
 ; AVX512-32:       # %bb.0:
 ; AVX512-32-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
-; AVX512-32-NEXT:    vpmulld {{\.LCPI.*}}{1to16}, %zmm0, %zmm0
+; AVX512-32-NEXT:    vpmulld {{\.LCPI[0-9]+_[0-9]+}}{1to16}, %zmm0, %zmm0
 ; AVX512-32-NEXT:    retl
 ;
 ; AVX512-64-LABEL: test_mul_v16i32_v16i16:
@@ -687,7 +687,7 @@ define <4 x i32> @test_mul_v4i32_v4i8_minsize(<4 x i8> %A) minsize {
 ; CHECK32-LABEL: test_mul_v4i32_v4i8_minsize:
 ; CHECK32:       # %bb.0:
 ; CHECK32-NEXT:    pmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; CHECK32-NEXT:    pmaddwd {{\.LCPI.*}}, %xmm0
+; CHECK32-NEXT:    pmaddwd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; CHECK32-NEXT:    retl
 ;
 ; CHECK64-LABEL: test_mul_v4i32_v4i8_minsize:
@@ -699,7 +699,7 @@ define <4 x i32> @test_mul_v4i32_v4i8_minsize(<4 x i8> %A) minsize {
 ; SSE4-32-LABEL: test_mul_v4i32_v4i8_minsize:
 ; SSE4-32:       # %bb.0:
 ; SSE4-32-NEXT:    pmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; SSE4-32-NEXT:    pmaddwd {{\.LCPI.*}}, %xmm0
+; SSE4-32-NEXT:    pmaddwd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; SSE4-32-NEXT:    retl
 ;
 ; SSE4-64-LABEL: test_mul_v4i32_v4i8_minsize:
@@ -711,7 +711,7 @@ define <4 x i32> @test_mul_v4i32_v4i8_minsize(<4 x i8> %A) minsize {
 ; AVX2-32-LABEL: test_mul_v4i32_v4i8_minsize:
 ; AVX2-32:       # %bb.0:
 ; AVX2-32-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; AVX2-32-NEXT:    vpmaddwd {{\.LCPI.*}}, %xmm0, %xmm0
+; AVX2-32-NEXT:    vpmaddwd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; AVX2-32-NEXT:    retl
 ;
 ; AVX2-64-LABEL: test_mul_v4i32_v4i8_minsize:
@@ -723,7 +723,7 @@ define <4 x i32> @test_mul_v4i32_v4i8_minsize(<4 x i8> %A) minsize {
 ; AVX512DQ-32-LABEL: test_mul_v4i32_v4i8_minsize:
 ; AVX512DQ-32:       # %bb.0:
 ; AVX512DQ-32-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; AVX512DQ-32-NEXT:    vpmaddwd {{\.LCPI.*}}, %xmm0, %xmm0
+; AVX512DQ-32-NEXT:    vpmaddwd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; AVX512DQ-32-NEXT:    retl
 ;
 ; AVX512DQ-64-LABEL: test_mul_v4i32_v4i8_minsize:
@@ -735,7 +735,7 @@ define <4 x i32> @test_mul_v4i32_v4i8_minsize(<4 x i8> %A) minsize {
 ; AVX512BW-32-LABEL: test_mul_v4i32_v4i8_minsize:
 ; AVX512BW-32:       # %bb.0:
 ; AVX512BW-32-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; AVX512BW-32-NEXT:    vpmaddwd {{\.LCPI.*}}, %xmm0, %xmm0
+; AVX512BW-32-NEXT:    vpmaddwd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; AVX512BW-32-NEXT:    retl
 ;
 ; AVX512BW-64-LABEL: test_mul_v4i32_v4i8_minsize:
@@ -826,7 +826,7 @@ define <8 x i32> @test_mul_v8i32_v8i8_minsize(<8 x i8> %A) minsize {
 ; AVX2-32-LABEL: test_mul_v8i32_v8i8_minsize:
 ; AVX2-32:       # %bb.0:
 ; AVX2-32-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
-; AVX2-32-NEXT:    vpmaddwd {{\.LCPI.*}}, %ymm0, %ymm0
+; AVX2-32-NEXT:    vpmaddwd {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; AVX2-32-NEXT:    retl
 ;
 ; AVX2-64-LABEL: test_mul_v8i32_v8i8_minsize:
@@ -838,7 +838,7 @@ define <8 x i32> @test_mul_v8i32_v8i8_minsize(<8 x i8> %A) minsize {
 ; AVX512DQ-32-LABEL: test_mul_v8i32_v8i8_minsize:
 ; AVX512DQ-32:       # %bb.0:
 ; AVX512DQ-32-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
-; AVX512DQ-32-NEXT:    vpmaddwd {{\.LCPI.*}}, %ymm0, %ymm0
+; AVX512DQ-32-NEXT:    vpmaddwd {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; AVX512DQ-32-NEXT:    retl
 ;
 ; AVX512DQ-64-LABEL: test_mul_v8i32_v8i8_minsize:
@@ -850,7 +850,7 @@ define <8 x i32> @test_mul_v8i32_v8i8_minsize(<8 x i8> %A) minsize {
 ; AVX512BW-32-LABEL: test_mul_v8i32_v8i8_minsize:
 ; AVX512BW-32:       # %bb.0:
 ; AVX512BW-32-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
-; AVX512BW-32-NEXT:    vpmaddwd {{\.LCPI.*}}, %ymm0, %ymm0
+; AVX512BW-32-NEXT:    vpmaddwd {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; AVX512BW-32-NEXT:    retl
 ;
 ; AVX512BW-64-LABEL: test_mul_v8i32_v8i8_minsize:
@@ -997,7 +997,7 @@ define <16 x i32> @test_mul_v16i32_v16i8_minsize(<16 x i8> %A) minsize {
 ; AVX512DQ-32-LABEL: test_mul_v16i32_v16i8_minsize:
 ; AVX512DQ-32:       # %bb.0:
 ; AVX512DQ-32-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
-; AVX512DQ-32-NEXT:    vpmulld {{\.LCPI.*}}{1to16}, %zmm0, %zmm0
+; AVX512DQ-32-NEXT:    vpmulld {{\.LCPI[0-9]+_[0-9]+}}{1to16}, %zmm0, %zmm0
 ; AVX512DQ-32-NEXT:    retl
 ;
 ; AVX512DQ-64-LABEL: test_mul_v16i32_v16i8_minsize:
@@ -1009,7 +1009,7 @@ define <16 x i32> @test_mul_v16i32_v16i8_minsize(<16 x i8> %A) minsize {
 ; AVX512BW-32-LABEL: test_mul_v16i32_v16i8_minsize:
 ; AVX512BW-32:       # %bb.0:
 ; AVX512BW-32-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
-; AVX512BW-32-NEXT:    vpmaddwd {{\.LCPI.*}}, %zmm0, %zmm0
+; AVX512BW-32-NEXT:    vpmaddwd {{\.LCPI[0-9]+_[0-9]+}}, %zmm0, %zmm0
 ; AVX512BW-32-NEXT:    retl
 ;
 ; AVX512BW-64-LABEL: test_mul_v16i32_v16i8_minsize:
@@ -1021,7 +1021,7 @@ define <16 x i32> @test_mul_v16i32_v16i8_minsize(<16 x i8> %A) minsize {
 ; KNL-32-LABEL: test_mul_v16i32_v16i8_minsize:
 ; KNL-32:       # %bb.0:
 ; KNL-32-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
-; KNL-32-NEXT:    vpmulld {{\.LCPI.*}}{1to16}, %zmm0, %zmm0
+; KNL-32-NEXT:    vpmulld {{\.LCPI[0-9]+_[0-9]+}}{1to16}, %zmm0, %zmm0
 ; KNL-32-NEXT:    retl
 ;
 ; KNL-64-LABEL: test_mul_v16i32_v16i8_minsize:
@@ -1038,7 +1038,7 @@ define <4 x i32> @test_mul_v4i32_v4i16_minsize(<4 x i16> %A) minsize {
 ; CHECK32-LABEL: test_mul_v4i32_v4i16_minsize:
 ; CHECK32:       # %bb.0:
 ; CHECK32-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; CHECK32-NEXT:    pmulld {{\.LCPI.*}}, %xmm0
+; CHECK32-NEXT:    pmulld {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; CHECK32-NEXT:    retl
 ;
 ; CHECK64-LABEL: test_mul_v4i32_v4i16_minsize:
@@ -1050,7 +1050,7 @@ define <4 x i32> @test_mul_v4i32_v4i16_minsize(<4 x i16> %A) minsize {
 ; SSE4-32-LABEL: test_mul_v4i32_v4i16_minsize:
 ; SSE4-32:       # %bb.0:
 ; SSE4-32-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SSE4-32-NEXT:    pmulld {{\.LCPI.*}}, %xmm0
+; SSE4-32-NEXT:    pmulld {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; SSE4-32-NEXT:    retl
 ;
 ; SSE4-64-LABEL: test_mul_v4i32_v4i16_minsize:
@@ -1260,7 +1260,7 @@ define <16 x i32> @test_mul_v16i32_v16i16_minsize(<16 x i16> %A) minsize {
 ; AVX512-32-LABEL: test_mul_v16i32_v16i16_minsize:
 ; AVX512-32:       # %bb.0:
 ; AVX512-32-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
-; AVX512-32-NEXT:    vpmulld {{\.LCPI.*}}{1to16}, %zmm0, %zmm0
+; AVX512-32-NEXT:    vpmulld {{\.LCPI[0-9]+_[0-9]+}}{1to16}, %zmm0, %zmm0
 ; AVX512-32-NEXT:    retl
 ;
 ; AVX512-64-LABEL: test_mul_v16i32_v16i16_minsize:

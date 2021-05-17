@@ -17,8 +17,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Format.h"
-#include "llvm/TextAPI/MachO/InterfaceFile.h"
-#include "llvm/TextAPI/MachO/TextAPIReader.h"
+#include "llvm/TextAPI/InterfaceFile.h"
+#include "llvm/TextAPI/TextAPIReader.h"
 #include <unordered_map>
 
 namespace lld {

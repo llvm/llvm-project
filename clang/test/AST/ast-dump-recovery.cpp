@@ -296,14 +296,3 @@ void InvalidCondition() {
   // CHECK-NEXT: `-IntegerLiteral {{.*}} 'int' 2
   invalid() ? 1 : 2;
 }
-
-void abcc();
-void TypoCorrection() {
-  // RecoveryExpr is always dependent-type in this case in order to suppress
-  // following diagnostics.
-  // CHECK:      RecoveryExpr {{.*}} '<dependent type>'
-  // CHECK-NEXT: `-CallExpr {{.*}} 'void'
-  // CHECK-NEXT:   `-ImplicitCastExpr
-  // CHECK-NEXT:     `-DeclRefExpr {{.*}} 'abcc'
-  abc();
-}

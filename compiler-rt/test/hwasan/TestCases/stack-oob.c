@@ -9,6 +9,9 @@
 
 // REQUIRES: stable-runtime
 
+// Stack aliasing is not implemented on x86.
+// XFAIL: x86_64
+
 #include <stdlib.h>
 #include <sanitizer/hwasan_interface.h>
 
@@ -22,7 +25,7 @@ int f() {
 int main() {
   f();
   // CHECK: READ of size 1 at
-  // CHECK: #0 {{.*}} in f{{.*}}stack-oob.c:19
+  // CHECK: #0 {{.*}} in f{{.*}}stack-oob.c:[[@LINE-6]]
 
   // CHECK: is located in stack of threa
 

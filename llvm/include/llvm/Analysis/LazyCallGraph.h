@@ -115,8 +115,6 @@ public:
   class EdgeSequence;
   class SCC;
   class RefSCC;
-  class edge_iterator;
-  class call_edge_iterator;
 
   /// A class used to represent edges in the call graph.
   ///

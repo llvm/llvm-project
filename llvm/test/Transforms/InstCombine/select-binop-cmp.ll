@@ -551,10 +551,12 @@ define i32 @select_xor_icmp_bad_6(i32 %x, i32 %y, i32 %z) {
   ret i32 %C
 }
 
+; Value equivalence substitution is all-or-nothing, so needs a scalar compare.
+
 define <2 x i8> @select_xor_icmp_vec_bad(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
 ; CHECK-LABEL: @select_xor_icmp_vec_bad(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 5, i8 3>
-; CHECK-NEXT:    [[B:%.*]] = xor <2 x i8> [[Z:%.*]], <i8 5, i8 3>
+; CHECK-NEXT:    [[B:%.*]] = xor <2 x i8> [[X]], [[Z:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[A]], <2 x i8> [[B]], <2 x i8> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[C]]
 ;
@@ -562,6 +564,21 @@ define <2 x i8> @select_xor_icmp_vec_bad(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) 
   %B = xor <2 x i8>  %x, %z
   %C = select <2 x i1>  %A, <2 x i8>  %B, <2 x i8>  %y
   ret <2 x i8>  %C
+}
+
+; Value equivalence substitution is all-or-nothing, so needs a scalar compare.
+
+define <2 x i32> @vec_select_no_equivalence(<2 x i32> %x) {
+; CHECK-LABEL: @vec_select_no_equivalence(
+; CHECK-NEXT:    [[X10:%.*]] = shufflevector <2 x i32> [[X:%.*]], <2 x i32> undef, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq <2 x i32> [[X]], zeroinitializer
+; CHECK-NEXT:    [[S:%.*]] = select <2 x i1> [[COND]], <2 x i32> [[X10]], <2 x i32> [[X]]
+; CHECK-NEXT:    ret <2 x i32> [[S]]
+;
+  %x10 = shufflevector <2 x i32> %x, <2 x i32> undef, <2 x i32> <i32 1, i32 0>
+  %cond = icmp eq <2 x i32> %x, zeroinitializer
+  %s = select <2 x i1> %cond, <2 x i32> %x10, <2 x i32> %x
+  ret <2 x i32> %s
 }
 
 ; Folding this would only be legal if we sanitized undef to 0.
@@ -1061,7 +1078,7 @@ define i32 @select_ashr_icmp_bad(i32 %x, i32 %y, i32 %z) {
 define i32 @select_udiv_icmp_bad(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_udiv_icmp_bad(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 3
-; CHECK-NEXT:    [[B:%.*]] = udiv i32 [[Z:%.*]], 3
+; CHECK-NEXT:    [[B:%.*]] = udiv i32 [[Z:%.*]], [[X]]
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -1074,7 +1091,7 @@ define i32 @select_udiv_icmp_bad(i32 %x, i32 %y, i32 %z) {
 define i32 @select_sdiv_icmp_bad(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_sdiv_icmp_bad(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 3
-; CHECK-NEXT:    [[B:%.*]] = sdiv i32 [[Z:%.*]], 3
+; CHECK-NEXT:    [[B:%.*]] = sdiv i32 [[Z:%.*]], [[X]]
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -1127,19 +1144,6 @@ define i32 @select_replace_fold(i32 %x, i32 %y, i32 %z) {
   ret i32 %s
 }
 
-; Case where %x can be replaced by 0 in multiple operands of the same instr.
-define i32 @select_replace_multiple_ops(i32 %x, i32 %y) {
-; CHECK-LABEL: @select_replace_multiple_ops(
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @dummy_call(i32 0, i32 0, i32 0)
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[CALL]], i32 [[Y:%.*]]
-; CHECK-NEXT:    ret i32 [[S]]
-;
-  %c = icmp eq i32 %x, 0
-  %call = call i32 @dummy_call(i32 %x, i32 %x, i32 %x)
-  %s = select i1 %c, i32 %call, i32 %y
-  ret i32 %s
-}
 
 ; Case where the use of %x is in a nested instruction.
 ; FIXME: We only perform replacements one level up right now.
@@ -1189,9 +1193,125 @@ define <2 x i32> @select_replace_undef(<2 x i32> %x, <2 x i32> %y) {
   ret <2 x i32> %s
 }
 
+; We can replace the call arguments, as the call is speculatable.
+define i32 @select_replace_call_speculatable(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_replace_call_speculatable(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @call_speculatable(i32 0, i32 0)
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[CALL]], i32 [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %c = icmp eq i32 %x, 0
+  %call = call i32 @call_speculatable(i32 %x, i32 %x)
+  %s = select i1 %c, i32 %call, i32 %y
+  ret i32 %s
+}
+
+; We can't replace the call arguments, as the call is not speculatable. We
+; may end up changing side-effects or causing undefined behavior.
+define i32 @select_replace_call_non_speculatable(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_replace_call_non_speculatable(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @call_non_speculatable(i32 [[X]], i32 [[X]])
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[CALL]], i32 [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %c = icmp eq i32 %x, 0
+  %call = call i32 @call_non_speculatable(i32 %x, i32 %x)
+  %s = select i1 %c, i32 %call, i32 %y
+  ret i32 %s
+}
+
+; We can replace %x by 2 here, because division by two cannot cause UB.
+; FIXME: As we check speculation prior to replacement, we don't catch this.
+define i32 @select_replace_sdiv_speculatable(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_replace_sdiv_speculatable(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[DIV]], i32 [[Y]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %c = icmp eq i32 %x, 2
+  %div = sdiv i32 %y, %x
+  %s = select i1 %c, i32 %div, i32 %y
+  ret i32 %s
+}
+
+; We cannot replace %x by -1, because division by -1 can cause UB.
+define i32 @select_replace_sdiv_non_speculatable(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_replace_sdiv_non_speculatable(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[DIV]], i32 [[Y]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %c = icmp eq i32 %x, -1
+  %div = sdiv i32 %y, %x
+  %s = select i1 %c, i32 %div, i32 %y
+  ret i32 %s
+}
+
+; We can replace %x by 2 here, because division by two cannot cause UB.
+; FIXME: As we check speculation prior to replacement, we don't catch this.
+define i32 @select_replace_udiv_speculatable(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_replace_udiv_speculatable(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[DIV]], i32 [[Y]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %c = icmp eq i32 %x, 2
+  %div = udiv i32 %y, %x
+  %s = select i1 %c, i32 %div, i32 %y
+  ret i32 %s
+}
+
+; We can't replace %x by 0 here, because that would cause UB. However,
+; replacing the udiv result by poisong is fine.
+define i32 @select_replace_udiv_non_speculatable(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_replace_udiv_non_speculatable(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 poison, i32 [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %c = icmp eq i32 %x, 0
+  %div = udiv i32 %y, %x
+  %s = select i1 %c, i32 %div, i32 %y
+  ret i32 %s
+}
+
+; We can't replace %i in the phi node here, because it refers to %i from
+; the previous loop iteration, not the current one.
+define void @select_replace_phi(i32 %x) {
+; CHECK-LABEL: @select_replace_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I_PREV:%.*]] = phi i32 [ -1, [[ENTRY]] ], [ [[I]], [[LOOP]] ]
+; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[I]], 0
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[I_PREV]], i32 2
+; CHECK-NEXT:    call void @use_i32(i32 [[S]])
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+  %i.prev = phi i32 [ -1, %entry], [ %i, %loop ]
+  %i.next = add i32 %i, 1
+  %c = icmp eq i32 %i, 0
+  %s = select i1 %c, i32 %i.prev, i32 2
+  call void @use_i32(i32 %s)
+  br label %loop
+}
+
 @g = global i32 0
 declare i32 @llvm.fshr.i32(i32, i32, i32)
-declare i32 @dummy_call(i32, i32, i32)
+declare i32 @call_speculatable(i32, i32) speculatable
+declare i32 @call_non_speculatable(i32, i32)
 declare void @use_i32(i32)
 
 !0 = !{!"branch_weights", i32 2, i32 10}

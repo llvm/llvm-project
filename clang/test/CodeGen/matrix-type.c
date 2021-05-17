@@ -4,6 +4,10 @@
 #error Expected extension 'matrix_types' to be enabled
 #endif
 
+#if !__has_extension(matrix_types_scalar_division)
+#error Expected extension 'matrix_types_scalar_division' to be enabled
+#endif
+
 typedef double dx5x5_t __attribute__((matrix_type(5, 5)));
 
 // CHECK: %struct.Matrix = type { i8, [12 x float], float }

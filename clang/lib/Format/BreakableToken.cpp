@@ -25,7 +25,7 @@
 namespace clang {
 namespace format {
 
-static const char *const Blanks = " \t\v\f\r";
+static constexpr StringRef Blanks = " \t\v\f\r";
 static bool IsBlank(char C) {
   switch (C) {
   case ' ':
@@ -41,25 +41,27 @@ static bool IsBlank(char C) {
 
 static StringRef getLineCommentIndentPrefix(StringRef Comment,
                                             const FormatStyle &Style) {
-  static const char *const KnownCStylePrefixes[] = {"///<", "//!<", "///",
-                                                    "//",   "//!",  "//:"};
-  static const char *const KnownTextProtoPrefixes[] = {"//", "#", "##", "###",
-                                                       "####"};
-  ArrayRef<const char *> KnownPrefixes(KnownCStylePrefixes);
+  static constexpr StringRef KnownCStylePrefixes[] = {"///<", "//!<", "///",
+                                                      "//!",  "//:",  "//"};
+  static constexpr StringRef KnownTextProtoPrefixes[] = {"####", "###", "##",
+                                                         "//", "#"};
+  ArrayRef<StringRef> KnownPrefixes(KnownCStylePrefixes);
   if (Style.Language == FormatStyle::LK_TextProto)
     KnownPrefixes = KnownTextProtoPrefixes;
 
-  StringRef LongestPrefix;
+  assert(std::is_sorted(KnownPrefixes.begin(), KnownPrefixes.end(),
+                        [](StringRef Lhs, StringRef Rhs) noexcept {
+                          return Lhs.size() > Rhs.size();
+                        }));
+
   for (StringRef KnownPrefix : KnownPrefixes) {
     if (Comment.startswith(KnownPrefix)) {
-      size_t PrefixLength = KnownPrefix.size();
-      while (PrefixLength < Comment.size() && Comment[PrefixLength] == ' ')
-        ++PrefixLength;
-      if (PrefixLength > LongestPrefix.size())
-        LongestPrefix = Comment.substr(0, PrefixLength);
+      const auto PrefixLength =
+          Comment.find_first_not_of(' ', KnownPrefix.size());
+      return Comment.substr(0, PrefixLength);
     }
   }
-  return LongestPrefix;
+  return {};
 }
 
 static BreakableToken::Split
@@ -749,13 +751,15 @@ bool BreakableBlockComment::mayReflow(
 }
 
 BreakableLineCommentSection::BreakableLineCommentSection(
-    const FormatToken &Token, unsigned StartColumn,
-    unsigned OriginalStartColumn, bool FirstInLine, bool InPPDirective,
+    const FormatToken &Token, unsigned StartColumn, bool InPPDirective,
     encoding::Encoding Encoding, const FormatStyle &Style)
     : BreakableComment(Token, StartColumn, InPPDirective, Encoding, Style) {
   assert(Tok.is(TT_LineComment) &&
          "line comment section must start with a line comment");
   FormatToken *LineTok = nullptr;
+  // How many spaces we changed in the first line of the section, this will be
+  // applied in all following lines
+  int FirstLineSpaceChange = 0;
   for (const FormatToken *CurrentTok = &Tok;
        CurrentTok && CurrentTok->is(TT_LineComment);
        CurrentTok = CurrentTok->Next) {
@@ -767,44 +771,72 @@ BreakableLineCommentSection::BreakableLineCommentSection(
     TokenText.split(Lines, "\n");
     Content.resize(Lines.size());
     ContentColumn.resize(Lines.size());
-    OriginalContentColumn.resize(Lines.size());
+    PrefixSpaceChange.resize(Lines.size());
     Tokens.resize(Lines.size());
     Prefix.resize(Lines.size());
     OriginalPrefix.resize(Lines.size());
     for (size_t i = FirstLineIndex, e = Lines.size(); i < e; ++i) {
       Lines[i] = Lines[i].ltrim(Blanks);
       StringRef IndentPrefix = getLineCommentIndentPrefix(Lines[i], Style);
-      assert((TokenText.startswith("//") || TokenText.startswith("#")) &&
-             "unsupported line comment prefix, '//' and '#' are supported");
-      OriginalPrefix[i] = Prefix[i] = IndentPrefix;
-      if (Lines[i].size() > Prefix[i].size() &&
-          isAlphanumeric(Lines[i][Prefix[i].size()])) {
-        if (Prefix[i] == "//")
-          Prefix[i] = "// ";
-        else if (Prefix[i] == "///")
-          Prefix[i] = "/// ";
-        else if (Prefix[i] == "//!")
-          Prefix[i] = "//! ";
-        else if (Prefix[i] == "///<")
-          Prefix[i] = "///< ";
-        else if (Prefix[i] == "//!<")
-          Prefix[i] = "//!< ";
-        else if (Prefix[i] == "#")
-          Prefix[i] = "# ";
-        else if (Prefix[i] == "##")
-          Prefix[i] = "## ";
-        else if (Prefix[i] == "###")
-          Prefix[i] = "### ";
-        else if (Prefix[i] == "####")
-          Prefix[i] = "#### ";
+      OriginalPrefix[i] = IndentPrefix;
+      const unsigned SpacesInPrefix =
+          std::count(IndentPrefix.begin(), IndentPrefix.end(), ' ');
+
+      // On the first line of the comment section we calculate how many spaces
+      // are to be added or removed, all lines after that just get only the
+      // change and we will not look at the maximum anymore. Additionally to the
+      // actual first line, we calculate that when the non space Prefix changes,
+      // e.g. from "///" to "//".
+      if (i == 0 || OriginalPrefix[i].rtrim(Blanks) !=
+                        OriginalPrefix[i - 1].rtrim(Blanks)) {
+        if (SpacesInPrefix < Style.SpacesInLineCommentPrefix.Minimum &&
+            Lines[i].size() > IndentPrefix.size() &&
+            isAlphanumeric(Lines[i][IndentPrefix.size()])) {
+          FirstLineSpaceChange =
+              Style.SpacesInLineCommentPrefix.Minimum - SpacesInPrefix;
+        } else if (SpacesInPrefix > Style.SpacesInLineCommentPrefix.Maximum) {
+          FirstLineSpaceChange =
+              Style.SpacesInLineCommentPrefix.Maximum - SpacesInPrefix;
+        } else {
+          FirstLineSpaceChange = 0;
+        }
+      }
+
+      if (Lines[i].size() != IndentPrefix.size()) {
+        PrefixSpaceChange[i] = FirstLineSpaceChange;
+
+        if (SpacesInPrefix + PrefixSpaceChange[i] <
+            Style.SpacesInLineCommentPrefix.Minimum) {
+          PrefixSpaceChange[i] += Style.SpacesInLineCommentPrefix.Minimum -
+                                  (SpacesInPrefix + PrefixSpaceChange[i]);
+        }
+
+        assert(Lines[i].size() > IndentPrefix.size());
+        const auto FirstNonSpace = Lines[i][IndentPrefix.size()];
+        const auto AllowsSpaceChange =
+            SpacesInPrefix != 0 ||
+            (isAlphanumeric(FirstNonSpace) ||
+             (FirstNonSpace == '}' && FirstLineSpaceChange != 0));
+
+        if (PrefixSpaceChange[i] > 0 && AllowsSpaceChange) {
+          Prefix[i] = IndentPrefix.str();
+          Prefix[i].append(PrefixSpaceChange[i], ' ');
+        } else if (PrefixSpaceChange[i] < 0 && AllowsSpaceChange) {
+          Prefix[i] = IndentPrefix
+                          .drop_back(std::min<std::size_t>(
+                              -PrefixSpaceChange[i], SpacesInPrefix))
+                          .str();
+        } else {
+          Prefix[i] = IndentPrefix.str();
+        }
+      } else {
+        // If the IndentPrefix is the whole line, there is no content and we
+        // drop just all space
+        Prefix[i] = IndentPrefix.drop_back(SpacesInPrefix).str();
       }
 
       Tokens[i] = LineTok;
       Content[i] = Lines[i].substr(IndentPrefix.size());
-      OriginalContentColumn[i] =
-          StartColumn + encoding::columnWidthWithTabs(OriginalPrefix[i],
-                                                      StartColumn,
-                                                      Style.TabWidth, Encoding);
       ContentColumn[i] =
           StartColumn + encoding::columnWidthWithTabs(Prefix[i], StartColumn,
                                                       Style.TabWidth, Encoding);
@@ -847,10 +879,9 @@ BreakableLineCommentSection::getRangeLength(unsigned LineIndex, unsigned Offset,
       Encoding);
 }
 
-unsigned BreakableLineCommentSection::getContentStartColumn(unsigned LineIndex,
-                                                            bool Break) const {
-  if (Break)
-    return OriginalContentColumn[LineIndex];
+unsigned
+BreakableLineCommentSection::getContentStartColumn(unsigned LineIndex,
+                                                   bool /*Break*/) const {
   return ContentColumn[LineIndex];
 }
 
@@ -863,16 +894,10 @@ void BreakableLineCommentSection::insertBreak(
   unsigned BreakOffsetInToken =
       Text.data() - tokenAt(LineIndex).TokenText.data() + Split.first;
   unsigned CharsToRemove = Split.second;
-  // Compute the size of the new indent, including the size of the new prefix of
-  // the newly broken line.
-  unsigned IndentAtLineBreak = OriginalContentColumn[LineIndex] +
-                               Prefix[LineIndex].size() -
-                               OriginalPrefix[LineIndex].size();
-  assert(IndentAtLineBreak >= Prefix[LineIndex].size());
   Whitespaces.replaceWhitespaceInToken(
       tokenAt(LineIndex), BreakOffsetInToken, CharsToRemove, "",
       Prefix[LineIndex], InPPDirective, /*Newlines=*/1,
-      /*Spaces=*/IndentAtLineBreak - Prefix[LineIndex].size());
+      /*Spaces=*/ContentColumn[LineIndex] - Prefix[LineIndex].size());
 }
 
 BreakableComment::Split BreakableLineCommentSection::getReflowSplit(
@@ -970,14 +995,12 @@ void BreakableLineCommentSection::adaptStartOfLine(
   }
   if (OriginalPrefix[LineIndex] != Prefix[LineIndex]) {
     // Adjust the prefix if necessary.
-
-    // Take care of the space possibly introduced after a decoration.
-    assert(Prefix[LineIndex] == (OriginalPrefix[LineIndex] + " ").str() &&
-           "Expecting a line comment prefix to differ from original by at most "
-           "a space");
+    const auto SpacesToRemove = -std::min(PrefixSpaceChange[LineIndex], 0);
+    const auto SpacesToAdd = std::max(PrefixSpaceChange[LineIndex], 0);
     Whitespaces.replaceWhitespaceInToken(
-        tokenAt(LineIndex), OriginalPrefix[LineIndex].size(), 0, "", "",
-        /*InPPDirective=*/false, /*Newlines=*/0, /*Spaces=*/1);
+        tokenAt(LineIndex), OriginalPrefix[LineIndex].size() - SpacesToRemove,
+        /*ReplaceChars=*/SpacesToRemove, "", "", /*InPPDirective=*/false,
+        /*Newlines=*/0, /*Spaces=*/SpacesToAdd);
   }
 }
 

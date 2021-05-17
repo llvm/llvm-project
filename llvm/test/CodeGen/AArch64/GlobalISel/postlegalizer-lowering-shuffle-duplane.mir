@@ -118,3 +118,43 @@ body:             |
     RET_ReallyLR implicit $q0
 
 ...
+---
+name:            v2s32_duplane32
+alignment:       4
+legalized:       true
+tracksRegLiveness: true
+liveins:
+  - { reg: '$d0' }
+  - { reg: '$x0' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.1:
+    liveins: $d0, $d1
+
+    ; CHECK-LABEL: name: v2s32_duplane32
+    ; CHECK: liveins: $d0, $d1
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d1
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s32>) = G_CONCAT_VECTORS [[COPY]](<2 x s32>), [[DEF]](<2 x s32>)
+    ; CHECK: [[DUPLANE32_:%[0-9]+]]:_(<2 x s32>) = G_DUPLANE32 [[CONCAT_VECTORS]], [[C]](s64)
+    ; CHECK: $d0 = COPY [[DUPLANE32_]](<2 x s32>)
+    ; CHECK: RET_ReallyLR implicit $d0
+    ; SELECTED-LABEL: name: v2s32_duplane32
+    ; SELECTED: liveins: $d0, $d1
+    ; SELECTED: [[COPY:%[0-9]+]]:fpr64 = COPY $d1
+    ; SELECTED: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; SELECTED: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.dsub
+    ; SELECTED: [[DUPv2i32lane:%[0-9]+]]:fpr64 = DUPv2i32lane [[INSERT_SUBREG]], 0
+    ; SELECTED: $d0 = COPY [[DUPv2i32lane]]
+    ; SELECTED: RET_ReallyLR implicit $d0
+    %0:_(<2 x s32>) = COPY $d0
+    %1:_(<2 x s32>) = COPY $d1
+    %2:_(<2 x s32>) = G_IMPLICIT_DEF
+    %3:_(<2 x s32>) = G_SHUFFLE_VECTOR %1(<2 x s32>), %2, shufflemask(0, 0)
+    $d0 = COPY %3(<2 x s32>)
+    RET_ReallyLR implicit $d0
+
+...

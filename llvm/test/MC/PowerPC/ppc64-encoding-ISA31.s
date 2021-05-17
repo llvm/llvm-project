@@ -963,3 +963,39 @@
 # CHECK-BE: xvcvbf16spn 33, 34                    # encoding: [0xf0,0x30,0x17,0x6f]
 # CHECK-LE: xvcvbf16spn 33, 34                    # encoding: [0x6f,0x17,0x30,0xf0]
             xvcvbf16spn 33, 34
+# CHECK-BE: hashst 5, -8(1)                       # encoding: [0x7f,0xe1,0x2d,0xa5]
+# CHECK-LE: hashst 5, -8(1)                       # encoding: [0xa5,0x2d,0xe1,0x7f]
+            hashst 5, -8(1)
+# CHECK-BE: hashst 0, -8(30)                      # encoding: [0x7f,0xfe,0x05,0xa5]
+# CHECK-LE: hashst 0, -8(30)                      # encoding: [0xa5,0x05,0xfe,0x7f]
+            hashst 0, -8(30)
+# CHECK-BE: hashst 5, -512(1)                     # encoding: [0x7c,0x01,0x2d,0xa4]
+# CHECK-LE: hashst 5, -512(1)                     # encoding: [0xa4,0x2d,0x01,0x7c]
+            hashst 5, -512(1)
+# CHECK-BE: hashchk 5, -8(1)                      # encoding: [0x7f,0xe1,0x2d,0xe5]
+# CHECK-LE: hashchk 5, -8(1)                      # encoding: [0xe5,0x2d,0xe1,0x7f]
+            hashchk 5, -8(1)
+# CHECK-BE: hashchk 0, -8(30)                     # encoding: [0x7f,0xfe,0x05,0xe5]
+# CHECK-LE: hashchk 0, -8(30)                     # encoding: [0xe5,0x05,0xfe,0x7f]
+            hashchk 0, -8(30)
+# CHECK-BE: hashchk 5, -512(1)                    # encoding: [0x7c,0x01,0x2d,0xe4]
+# CHECK-LE: hashchk 5, -512(1)                    # encoding: [0xe4,0x2d,0x01,0x7c]
+            hashchk 5, -512(1)
+# CHECK-BE: hashstp 5, -8(1)                      # encoding: [0x7f,0xe1,0x2d,0x25]
+# CHECK-LE: hashstp 5, -8(1)                      # encoding: [0x25,0x2d,0xe1,0x7f]
+            hashstp 5, -8(1)
+# CHECK-BE: hashstp 0, -8(30)                     # encoding: [0x7f,0xfe,0x05,0x25]
+# CHECK-LE: hashstp 0, -8(30)                     # encoding: [0x25,0x05,0xfe,0x7f]
+            hashstp 0, -8(30)
+# CHECK-BE: hashstp 5, -512(1)                    # encoding: [0x7c,0x01,0x2d,0x24]
+# CHECK-LE: hashstp 5, -512(1)                    # encoding: [0x24,0x2d,0x01,0x7c]
+            hashstp 5, -512(1)
+# CHECK-BE: hashchkp 5, -8(1)                     # encoding: [0x7f,0xe1,0x2d,0x65]
+# CHECK-LE: hashchkp 5, -8(1)                     # encoding: [0x65,0x2d,0xe1,0x7f]
+            hashchkp 5, -8(1)
+# CHECK-BE: hashchkp 0, -8(30)                    # encoding: [0x7f,0xfe,0x05,0x65]
+# CHECK-LE: hashchkp 0, -8(30)                    # encoding: [0x65,0x05,0xfe,0x7f]
+            hashchkp 0, -8(30)
+# CHECK-BE: hashchkp 5, -512(1)                   # encoding: [0x7c,0x01,0x2d,0x64]
+# CHECK-LE: hashchkp 5, -512(1)                   # encoding: [0x64,0x2d,0x01,0x7c]
+            hashchkp 5, -512(1)

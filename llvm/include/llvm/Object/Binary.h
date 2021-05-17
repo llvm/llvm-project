@@ -147,7 +147,8 @@ public:
 
   bool isLittleEndian() const {
     return !(TypeID == ID_ELF32B || TypeID == ID_ELF64B ||
-             TypeID == ID_MachO32B || TypeID == ID_MachO64B);
+             TypeID == ID_MachO32B || TypeID == ID_MachO64B ||
+             TypeID == ID_XCOFF32 || TypeID == ID_XCOFF64);
   }
 
   bool isWinRes() const { return TypeID == ID_WinRes; }

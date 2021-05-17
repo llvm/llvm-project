@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-///
+/// \file
 /// Description: ImmutableGraph is a fast DAG implementation that cannot be
 /// modified, except by creating a new ImmutableGraph. ImmutableGraph is
 /// implemented as two arrays: one containing nodes, and one containing edges.

@@ -173,7 +173,7 @@ static std::string GetPatFromTreePatternNode(const TreePatternNode *N) {
   return str;
 }
 
-static size_t GetVBRSize(unsigned Val) {
+static unsigned GetVBRSize(unsigned Val) {
   if (Val <= 127) return 1;
 
   unsigned NumBytes = 0;
@@ -186,7 +186,7 @@ static size_t GetVBRSize(unsigned Val) {
 
 /// EmitVBRValue - Emit the specified value as a VBR, returning the number of
 /// bytes emitted.
-static uint64_t EmitVBRValue(uint64_t Val, raw_ostream &OS) {
+static unsigned EmitVBRValue(uint64_t Val, raw_ostream &OS) {
   if (Val <= 127) {
     OS << Val << ", ";
     return 1;
@@ -204,6 +204,18 @@ static uint64_t EmitVBRValue(uint64_t Val, raw_ostream &OS) {
     OS << "/*" << InVal << "*/";
   OS << ", ";
   return NumBytes+1;
+}
+
+/// Emit the specified signed value as a VBR. To improve compression we encode
+/// positive numbers shifted left by 1 and negative numbers negated and shifted
+/// left by 1 with bit 0 set.
+static unsigned EmitSignedVBRValue(uint64_t Val, raw_ostream &OS) {
+  if ((int64_t)Val >= 0)
+    Val = Val << 1;
+  else
+    Val = (-Val << 1) | 1;
+
+  return EmitVBRValue(Val, OS);
 }
 
 // This is expensive and slow.
@@ -255,7 +267,7 @@ SizeMatcher(Matcher *N, raw_ostream &OS) {
     assert(SM->getNext() == nullptr && "Scope matcher should not have next");
     unsigned Size = 1; // Count the kind.
     for (unsigned i = 0, e = SM->getNumChildren(); i != e; ++i) {
-      const size_t ChildSize = SizeMatcherList(SM->getChild(i), OS);
+      const unsigned ChildSize = SizeMatcherList(SM->getChild(i), OS);
       assert(ChildSize != 0 && "Matcher cannot have child of size 0");
       SM->getChild(i)->setSize(ChildSize);
       Size += GetVBRSize(ChildSize) + ChildSize; // Count VBR and child size.
@@ -283,7 +295,7 @@ SizeMatcher(Matcher *N, raw_ostream &OS) {
         Child = cast<SwitchTypeMatcher>(N)->getCaseMatcher(i);
         ++Size; // Count the child's type.
       }
-      const size_t ChildSize = SizeMatcherList(Child, OS);
+      const unsigned ChildSize = SizeMatcherList(Child, OS);
       assert(ChildSize != 0 && "Matcher cannot have child of size 0");
       Child->setSize(ChildSize);
       Size += GetVBRSize(ChildSize) + ChildSize; // Count VBR and child size.
@@ -381,9 +393,8 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
           OS.indent(Indent);
       }
 
-      size_t ChildSize = SM->getChild(i)->getSize();
-      size_t VBRSize = GetVBRSize(ChildSize);
-      EmitVBRValue(ChildSize, OS);
+      unsigned ChildSize = SM->getChild(i)->getSize();
+      unsigned VBRSize = EmitVBRValue(ChildSize, OS);
       if (!OmitComments) {
         OS << "/*->" << CurrentIdx + VBRSize + ChildSize << "*/";
         if (i == 0)
@@ -534,7 +545,7 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
                      "/*SwitchOpcode*/ " : "/*SwitchType*/ ");
       }
 
-      size_t ChildSize = Child->getSize();
+      unsigned ChildSize = Child->getSize();
       CurrentIdx += EmitVBRValue(ChildSize, OS) + IdxSize;
       if (const SwitchOpcodeMatcher *SOM = dyn_cast<SwitchOpcodeMatcher>(N))
         OS << "TARGET_VAL(" << SOM->getCaseOpcode(i).getEnumName() << "),";
@@ -580,15 +591,16 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
 
   case Matcher::CheckInteger: {
     OS << "OPC_CheckInteger, ";
-    unsigned Bytes=1+EmitVBRValue(cast<CheckIntegerMatcher>(N)->getValue(), OS);
+    unsigned Bytes =
+        1 + EmitSignedVBRValue(cast<CheckIntegerMatcher>(N)->getValue(), OS);
     OS << '\n';
     return Bytes;
   }
   case Matcher::CheckChildInteger: {
     OS << "OPC_CheckChild" << cast<CheckChildIntegerMatcher>(N)->getChildNo()
        << "Integer, ";
-    unsigned Bytes=1+EmitVBRValue(cast<CheckChildIntegerMatcher>(N)->getValue(),
-                                  OS);
+    unsigned Bytes = 1 + EmitSignedVBRValue(
+                             cast<CheckChildIntegerMatcher>(N)->getValue(), OS);
     OS << '\n';
     return Bytes;
   }
@@ -656,16 +668,16 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
     int64_t Val = cast<EmitIntegerMatcher>(N)->getValue();
     OS << "OPC_EmitInteger, "
        << getEnumName(cast<EmitIntegerMatcher>(N)->getVT()) << ", ";
-    unsigned Bytes = 2+EmitVBRValue(Val, OS);
+    unsigned Bytes = 2 + EmitSignedVBRValue(Val, OS);
     OS << '\n';
     return Bytes;
   }
   case Matcher::EmitStringInteger: {
     const std::string &Val = cast<EmitStringIntegerMatcher>(N)->getValue();
     // These should always fit into 7 bits.
-    OS << "OPC_EmitInteger, "
-      << getEnumName(cast<EmitStringIntegerMatcher>(N)->getVT()) << ", "
-      << Val << ",\n";
+    OS << "OPC_EmitStringInteger, "
+       << getEnumName(cast<EmitStringIntegerMatcher>(N)->getVT()) << ", " << Val
+       << ",\n";
     return 3;
   }
 
@@ -886,14 +898,13 @@ void MatcherTableEmitter::EmitNodePredicatesFunction(
   for (unsigned i = 0, e = Preds.size(); i != e; ++i) {
     // Emit the predicate code corresponding to this pattern.
     const TreePredicateFn PredFn = Preds[i];
-
     assert(!PredFn.isAlwaysTrue() && "No code in this predicate");
-    OS << "  case " << i << ": {\n";
-    for (auto *SimilarPred :
-             NodePredicatesByCodeToRun[PredFn.getCodeToRunOnSDNode()])
-      OS << "    // " << TreePredicateFn(SimilarPred).getFnName() <<'\n';
+    std::string PredFnCodeStr = PredFn.getCodeToRunOnSDNode();
 
-    OS << PredFn.getCodeToRunOnSDNode() << "\n  }\n";
+    OS << "  case " << i << ": {\n";
+    for (auto *SimilarPred : NodePredicatesByCodeToRun[PredFnCodeStr])
+      OS << "    // " << TreePredicateFn(SimilarPred).getFnName() << '\n';
+    OS << PredFnCodeStr << "\n  }\n";
   }
   OS << "  }\n";
   OS << "}\n";

@@ -49,6 +49,7 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/MachineValueType.h"
 #include <algorithm>
 #include <cassert>
@@ -283,17 +284,18 @@ public:
     bool IsPreallocated : 1;
     bool IsReturned : 1;
     bool IsSwiftSelf : 1;
+    bool IsSwiftAsync : 1;
     bool IsSwiftError : 1;
     bool IsCFGuardTarget : 1;
     MaybeAlign Alignment = None;
-    Type *ByValType = nullptr;
-    Type *PreallocatedType = nullptr;
+    // Type for byval, inalloca, or preallocated.
+    Type *IndirectType = nullptr;
 
     ArgListEntry()
         : IsSExt(false), IsZExt(false), IsInReg(false), IsSRet(false),
           IsNest(false), IsByVal(false), IsByRef(false), IsInAlloca(false),
           IsPreallocated(false), IsReturned(false), IsSwiftSelf(false),
-          IsSwiftError(false), IsCFGuardTarget(false) {}
+          IsSwiftAsync(false), IsSwiftError(false), IsCFGuardTarget(false) {}
 
     void setAttributes(const CallBase *Call, unsigned ArgIdx);
   };
@@ -527,10 +529,6 @@ public:
   virtual bool fallBackToDAGISel(const Instruction &Inst) const {
     return false;
   }
-
-  /// If a branch or a select condition is skewed in one direction by more than
-  /// this factor, it is very likely to be predicted correctly.
-  virtual BranchProbability getPredictableBranchThreshold() const;
 
   /// Return true if the following transform is beneficial:
   /// fold (conv (load x)) -> (load (conv*)x)
@@ -785,7 +783,7 @@ public:
     return false;
   }
 
-  /// Return true if target always beneficiates from combining into FMA for a
+  /// Return true if target always benefits from combining into FMA for a
   /// given value type. This must typically return false on targets where FMA
   /// takes more cycles to execute than FADD.
   virtual bool enableAggressiveFMAFusion(EVT VT) const {
@@ -1148,7 +1146,7 @@ public:
 
   /// Return true if lowering to a jump table is allowed.
   virtual bool areJTsAllowed(const Function *Fn) const {
-    if (Fn->getFnAttribute("no-jump-tables").getValueAsString() == "true")
+    if (Fn->getFnAttribute("no-jump-tables").getValueAsBool())
       return false;
 
     return isOperationLegalOrCustom(ISD::BR_JT, MVT::Other) ||
@@ -1317,6 +1315,10 @@ public:
            (getIndexedMaskedStoreAction(IdxMode, VT.getSimpleVT()) == Legal ||
             getIndexedMaskedStoreAction(IdxMode, VT.getSimpleVT()) == Custom);
   }
+
+  /// Returns true if the index type for a masked gather/scatter requires
+  /// extending
+  virtual bool shouldExtendGSIndex(EVT VT, EVT &EltTy) const { return false; }
 
   // Returns true if VT is a legal index type for masked gathers/scatters
   // on this target
@@ -1607,7 +1609,7 @@ public:
   /// helps to ensure that such replacements don't generate code that causes an
   /// alignment error (trap) on the target machine.
   virtual bool allowsMisalignedMemoryAccesses(
-      EVT, unsigned AddrSpace = 0, unsigned Align = 1,
+      EVT, unsigned AddrSpace = 0, Align Alignment = Align(1),
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       bool * /*Fast*/ = nullptr) const {
     return false;
@@ -1655,6 +1657,11 @@ public:
   /// final parameter returns if the access is also fast (as defined by the
   /// target).
   bool allowsMemoryAccess(LLVMContext &Context, const DataLayout &DL, EVT VT,
+                          const MachineMemOperand &MMO,
+                          bool *Fast = nullptr) const;
+
+  /// LLT handling variant.
+  bool allowsMemoryAccess(LLVMContext &Context, const DataLayout &DL, LLT Ty,
                           const MachineMemOperand &MMO,
                           bool *Fast = nullptr) const;
 
@@ -1809,8 +1816,8 @@ public:
   int InstructionOpcodeToISD(unsigned Opcode) const;
 
   /// Estimate the cost of type-legalization and the legalized type.
-  std::pair<int, MVT> getTypeLegalizationCost(const DataLayout &DL,
-                                              Type *Ty) const;
+  std::pair<InstructionCost, MVT> getTypeLegalizationCost(const DataLayout &DL,
+                                                          Type *Ty) const;
 
   /// @}
 
@@ -2342,8 +2349,9 @@ public:
   /// If the AM is not supported, it returns a negative value.
   /// TODO: Handle pre/postinc as well.
   /// TODO: Remove default argument
-  virtual int getScalingFactorCost(const DataLayout &DL, const AddrMode &AM,
-                                   Type *Ty, unsigned AS = 0) const {
+  virtual InstructionCost getScalingFactorCost(const DataLayout &DL,
+                                               const AddrMode &AM, Type *Ty,
+                                               unsigned AS = 0) const {
     // Default: assume that any scaling factor used in a legal AM is free.
     if (isLegalAddressingMode(DL, AM, Ty, AS))
       return 0;
@@ -2449,6 +2457,8 @@ public:
     case ISD::UDIV:
     case ISD::SREM:
     case ISD::UREM:
+    case ISD::SSUBSAT:
+    case ISD::USUBSAT:
     case ISD::FSUB:
     case ISD::FDIV:
     case ISD::FREM:
@@ -2702,6 +2712,13 @@ public:
     return isOperationLegal(ISD::FMAD, N->getValueType(0));
   }
 
+  // Return true when the decision to generate FMA's (or FMS, FMLA etc) rather
+  // than FMUL and ADD is delegated to the machine combiner.
+  virtual bool generateFMAsInMachineCombiner(EVT VT,
+                                             CodeGenOpt::Level OptLevel) const {
+    return false;
+  }
+
   /// Return true if it's profitable to narrow operations of type VT1 to
   /// VT2. e.g. on x86, it's profitable to narrow from i32 to i8 but not from
   /// i32 to i16.
@@ -2779,6 +2796,10 @@ public:
   virtual bool shouldAvoidTransformToShift(EVT VT, unsigned Amount) const {
     return false;
   }
+
+  /// Does this target require the clearing of high-order bits in a register
+  /// passed to the fp16 to fp conversion library function.
+  virtual bool shouldKeepZExtForFP16Conv() const { return false; }
 
   //===--------------------------------------------------------------------===//
   // Runtime Library hooks
@@ -3111,16 +3132,6 @@ protected:
   /// sequence of memory operands that is recognized by PrologEpilogInserter.
   MachineBasicBlock *emitPatchPoint(MachineInstr &MI,
                                     MachineBasicBlock *MBB) const;
-
-  /// Replace/modify the XRay custom event operands with target-dependent
-  /// details.
-  MachineBasicBlock *emitXRayCustomEvent(MachineInstr &MI,
-                                         MachineBasicBlock *MBB) const;
-
-  /// Replace/modify the XRay typed event operands with target-dependent
-  /// details.
-  MachineBasicBlock *emitXRayTypedEvent(MachineInstr &MI,
-                                        MachineBasicBlock *MBB) const;
 
   bool IsStrictFPEnabled;
 };
@@ -4194,6 +4205,10 @@ public:
   virtual unsigned getInlineAsmMemConstraint(StringRef ConstraintCode) const {
     if (ConstraintCode == "m")
       return InlineAsm::Constraint_m;
+    if (ConstraintCode == "o")
+      return InlineAsm::Constraint_o;
+    if (ConstraintCode == "X")
+      return InlineAsm::Constraint_X;
     return InlineAsm::Constraint_Unknown;
   }
 
@@ -4282,9 +4297,7 @@ public:
   /// comparison may check if the operand is NAN, INF, zero, normal, etc. The
   /// result should be used as the condition operand for a select or branch.
   virtual SDValue getSqrtInputTest(SDValue Operand, SelectionDAG &DAG,
-                                   const DenormalMode &Mode) const {
-    return SDValue();
-  }
+                                   const DenormalMode &Mode) const;
 
   /// Return a target-dependent result if the input operand is not suitable for
   /// use with a square root estimate calculation.
@@ -4341,6 +4354,13 @@ public:
   /// \returns True, if the expansion was successful, false otherwise
   bool expandROT(SDNode *N, bool AllowVectorOps, SDValue &Result,
                  SelectionDAG &DAG) const;
+
+  /// Expand shift-by-parts.
+  /// \param N Node to expand
+  /// \param Lo lower-output-part after conversion
+  /// \param Hi upper-output-part after conversion
+  void expandShiftParts(SDNode *N, SDValue &Lo, SDValue &Hi,
+                        SelectionDAG &DAG) const;
 
   /// Expand float(f32) to SINT(i64) conversion
   /// \param N Node to expand
@@ -4402,6 +4422,18 @@ public:
   /// \returns True, if the expansion was successful, false otherwise
   bool expandABS(SDNode *N, SDValue &Result, SelectionDAG &DAG,
                  bool IsNegative = false) const;
+
+  /// Expand BSWAP nodes. Expands scalar/vector BSWAP nodes with i16/i32/i64
+  /// scalar types. Returns SDValue() if expand fails.
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandBSWAP(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand BITREVERSE nodes. Expands scalar/vector BITREVERSE nodes.
+  /// Returns SDValue() if expand fails.
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandBITREVERSE(SDNode *N, SelectionDAG &DAG) const;
 
   /// Turn load of vector type into a load of the individual elements.
   /// \param LD load to expand
@@ -4490,6 +4522,33 @@ public:
   /// Expand an SREM or UREM using SDIV/UDIV or SDIVREM/UDIVREM, if legal.
   /// Returns true if the expansion was successful.
   bool expandREM(SDNode *Node, SDValue &Result, SelectionDAG &DAG) const;
+
+  /// Method for building the DAG expansion of ISD::VECTOR_SPLICE. This
+  /// method accepts vectors as its arguments.
+  SDValue expandVectorSplice(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Legalize a SETCC with given LHS and RHS and condition code CC on the
+  /// current target.
+  ///
+  /// If the SETCC has been legalized using AND / OR, then the legalized node
+  /// will be stored in LHS. RHS and CC will be set to SDValue(). NeedInvert
+  /// will be set to false.
+  ///
+  /// If the SETCC has been legalized by using getSetCCSwappedOperands(),
+  /// then the values of LHS and RHS will be swapped, CC will be set to the
+  /// new condition, and NeedInvert will be set to false.
+  ///
+  /// If the SETCC has been legalized using the inverse condcode, then LHS and
+  /// RHS will be unchanged, CC will set to the inverted condcode, and
+  /// NeedInvert will be set to true. The caller must invert the result of the
+  /// SETCC with SelectionDAG::getLogicalNOT() or take equivalent action to swap
+  /// the effect of a true/false result.
+  ///
+  /// \returns true if the SetCC has been legalized, false if it hasn't.
+  bool LegalizeSetCCCondCode(SelectionDAG &DAG, EVT VT, SDValue &LHS,
+                             SDValue &RHS, SDValue &CC, bool &NeedInvert,
+                             const SDLoc &dl, SDValue &Chain,
+                             bool IsSignaling = false) const;
 
   //===--------------------------------------------------------------------===//
   // Instruction Emitting Hooks

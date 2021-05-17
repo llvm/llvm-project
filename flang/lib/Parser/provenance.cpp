@@ -91,7 +91,10 @@ void OffsetToProvenanceMappings::Put(const OffsetToProvenanceMappings &that) {
 }
 
 ProvenanceRange OffsetToProvenanceMappings::Map(std::size_t at) const {
-  //  CHECK(!provenanceMap_.empty());
+  if (provenanceMap_.empty()) {
+    CHECK(at == 0);
+    return {};
+  }
   std::size_t low{0}, count{provenanceMap_.size()};
   while (count > 1) {
     std::size_t mid{low + (count >> 1)};
@@ -156,20 +159,28 @@ const char &AllSources::operator[](Provenance at) const {
   return origin[origin.covers.MemberOffset(at)];
 }
 
-void AllSources::PushSearchPathDirectory(std::string directory) {
+void AllSources::AppendSearchPathDirectory(std::string directory) {
   // gfortran and ifort append to current path, PGI prepends
   searchPath_.push_back(directory);
 }
 
-std::string AllSources::PopSearchPathDirectory() {
-  std::string directory{searchPath_.back()};
-  searchPath_.pop_back();
-  return directory;
-}
-
-const SourceFile *AllSources::Open(std::string path, llvm::raw_ostream &error) {
+const SourceFile *AllSources::Open(std::string path, llvm::raw_ostream &error,
+    std::optional<std::string> &&prependPath) {
   std::unique_ptr<SourceFile> source{std::make_unique<SourceFile>(encoding_)};
-  if (source->Open(LocateSourceFile(path, searchPath_), error)) {
+  if (prependPath) {
+    // Set to "." for the initial source file; set to the directory name
+    // of the including file for #include "quoted-file" directives &
+    // INCLUDE statements.
+    searchPath_.emplace_front(std::move(*prependPath));
+  }
+  std::optional<std::string> found{LocateSourceFile(path, searchPath_)};
+  if (prependPath) {
+    searchPath_.pop_front();
+  }
+  if (!found) {
+    error << "Source file '" << path << "' was not found";
+    return nullptr;
+  } else if (source->Open(*found, error)) {
     return ownedSourceFiles_.emplace_back(std::move(source)).get();
   } else {
     return nullptr;
@@ -434,11 +445,13 @@ std::optional<CharBlock> CookedSource::GetCharBlock(
 
 std::size_t CookedSource::BufferedBytes() const { return buffer_.bytes(); }
 
-void CookedSource::Marshal(AllSources &allSources) {
+void CookedSource::Marshal(AllCookedSources &allCookedSources) {
   CHECK(provenanceMap_.SizeInBytes() == buffer_.bytes());
-  provenanceMap_.Put(allSources.AddCompilerInsertion("(after end of source)"));
+  provenanceMap_.Put(allCookedSources.allSources().AddCompilerInsertion(
+      "(after end of source)"));
   data_ = buffer_.Marshal();
   buffer_.clear();
+  allCookedSources.Register(*this);
 }
 
 void CookedSource::CompileProvenanceRangeToOffsetMappings(
@@ -526,6 +539,16 @@ CookedSource &AllCookedSources::NewCookedSource() {
   return cooked_.emplace_back();
 }
 
+const CookedSource *AllCookedSources::Find(CharBlock x) const {
+  auto pair{index_.equal_range(x)};
+  for (auto iter{pair.first}; iter != pair.second; ++iter) {
+    if (iter->second.AsCharBlock().Contains(x)) {
+      return &iter->second;
+    }
+  }
+  return nullptr;
+}
+
 std::optional<ProvenanceRange> AllCookedSources::GetProvenanceRange(
     CharBlock cb) const {
   if (const CookedSource * c{Find(cb)}) {
@@ -579,6 +602,28 @@ void AllCookedSources::Dump(llvm::raw_ostream &o) const {
   for (const auto &c : cooked_) {
     c.Dump(o);
   }
+}
+
+bool AllCookedSources::Precedes(CharBlock x, CharBlock y) const {
+  if (const CookedSource * xSource{Find(x)}) {
+    if (xSource->AsCharBlock().Contains(y)) {
+      return x.begin() < y.begin();
+    } else if (const CookedSource * ySource{Find(y)}) {
+      return xSource->number() < ySource->number();
+    } else {
+      return true; // by fiat, all cooked source < anything outside
+    }
+  } else if (Find(y)) {
+    return false;
+  } else {
+    // Both names are compiler-created (SaveTempName).
+    return x < y;
+  }
+}
+
+void AllCookedSources::Register(CookedSource &cooked) {
+  index_.emplace(cooked.AsCharBlock(), cooked);
+  cooked.set_number(static_cast<int>(index_.size()));
 }
 
 } // namespace Fortran::parser

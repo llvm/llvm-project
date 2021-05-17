@@ -1125,7 +1125,9 @@ void TypePrinter::printAutoBefore(const AutoType *T, raw_ostream &OS) {
     printBefore(T->getDeducedType(), OS);
   } else {
     if (T->isConstrained()) {
-      OS << T->getTypeConstraintConcept()->getName();
+      // FIXME: Track a TypeConstraint as type sugar, so that we can print the
+      // type as it was written.
+      T->getTypeConstraintConcept()->getDeclName().print(OS, Policy);
       auto Args = T->getTypeConstraintArguments();
       if (!Args.empty())
         printTemplateArgumentList(
@@ -1235,8 +1237,7 @@ void TypePrinter::AppendScope(DeclContext *DC, raw_ostream &OS,
     // Only suppress an inline namespace if the name has the same lookup
     // results in the enclosing namespace.
     if (Policy.SuppressInlineNamespace && NS->isInline() && NameInScope &&
-        DC->getParent()->lookup(NameInScope).size() ==
-            DC->lookup(NameInScope).size())
+        NS->isRedundantInlineQualifierFor(NameInScope))
       return AppendScope(DC->getParent(), OS, NameInScope);
 
     AppendScope(DC->getParent(), OS, NS->getDeclName());
@@ -1304,8 +1305,10 @@ void TypePrinter::printTag(TagDecl *D, raw_ostream &OS) {
     if (isa<CXXRecordDecl>(D) && cast<CXXRecordDecl>(D)->isLambda()) {
       OS << "lambda";
       HasKindDecoration = true;
-    } else {
+    } else if ((isa<RecordDecl>(D) && cast<RecordDecl>(D)->isAnonymousStructOrUnion())) {
       OS << "anonymous";
+    } else {
+      OS << "unnamed";
     }
 
     if (Policy.AnonymousTagLocations) {
@@ -1842,16 +1845,17 @@ static const TemplateArgument &getArgument(const TemplateArgumentLoc &A) {
 }
 
 static void printArgument(const TemplateArgument &A, const PrintingPolicy &PP,
-                          llvm::raw_ostream &OS) {
-  A.print(PP, OS);
+                          llvm::raw_ostream &OS, bool IncludeType) {
+  A.print(PP, OS, IncludeType);
 }
 
 static void printArgument(const TemplateArgumentLoc &A,
-                          const PrintingPolicy &PP, llvm::raw_ostream &OS) {
+                          const PrintingPolicy &PP, llvm::raw_ostream &OS,
+                          bool IncludeType) {
   const TemplateArgument::ArgKind &Kind = A.getArgument().getKind();
   if (Kind == TemplateArgument::ArgKind::Type)
     return A.getTypeSourceInfo()->getType().print(OS, PP);
-  return A.getArgument().print(PP, OS);
+  return A.getArgument().print(PP, OS, IncludeType);
 }
 
 static bool isSubstitutedTemplateArgument(ASTContext &Ctx, TemplateArgument Arg,
@@ -1988,13 +1992,14 @@ static bool isSubstitutedDefaultArgument(ASTContext &Ctx, TemplateArgument Arg,
   return false;
 }
 
-template<typename TA>
+template <typename TA>
 static void printTo(raw_ostream &OS, ArrayRef<TA> Args,
                     const PrintingPolicy &Policy, bool SkipBrackets,
-                    const TemplateParameterList *TPL) {
+                    const TemplateParameterList *TPL, bool IsPack,
+                    unsigned ParmIndex) {
   // Drop trailing template arguments that match default arguments.
   if (TPL && Policy.SuppressDefaultTemplateArgs &&
-      !Policy.PrintCanonicalTypes && !Args.empty() &&
+      !Policy.PrintCanonicalTypes && !Args.empty() && !IsPack &&
       Args.size() <= TPL->size()) {
     ASTContext &Ctx = TPL->getParam(0)->getASTContext();
     llvm::SmallVector<TemplateArgument, 8> OrigArgs;
@@ -2021,12 +2026,15 @@ static void printTo(raw_ostream &OS, ArrayRef<TA> Args,
     if (Argument.getKind() == TemplateArgument::Pack) {
       if (Argument.pack_size() && !FirstArg)
         OS << Comma;
-      printTo(ArgOS, Argument.getPackAsArray(), Policy, true, nullptr);
+      printTo(ArgOS, Argument.getPackAsArray(), Policy, true, TPL,
+              /*IsPack*/ true, ParmIndex);
     } else {
       if (!FirstArg)
         OS << Comma;
       // Tries to print the argument with location info if exists.
-      printArgument(Arg, Policy, ArgOS);
+      printArgument(
+          Arg, Policy, ArgOS,
+          TemplateParameterList::shouldIncludeTypeForArgument(TPL, ParmIndex));
     }
     StringRef ArgString = ArgOS.str();
 
@@ -2043,6 +2051,10 @@ static void printTo(raw_ostream &OS, ArrayRef<TA> Args,
     NeedSpace = Policy.SplitTemplateClosers && !ArgString.empty() &&
                 ArgString.back() == '>';
     FirstArg = false;
+
+    // Use same template parameter for all elements of Pack
+    if (!IsPack)
+      ParmIndex++;
   }
 
   if (NeedSpace)
@@ -2063,14 +2075,14 @@ void clang::printTemplateArgumentList(raw_ostream &OS,
                                       ArrayRef<TemplateArgument> Args,
                                       const PrintingPolicy &Policy,
                                       const TemplateParameterList *TPL) {
-  printTo(OS, Args, Policy, false, TPL);
+  printTo(OS, Args, Policy, false, TPL, /*isPack*/ false, /*parmIndex*/ 0);
 }
 
 void clang::printTemplateArgumentList(raw_ostream &OS,
                                       ArrayRef<TemplateArgumentLoc> Args,
                                       const PrintingPolicy &Policy,
                                       const TemplateParameterList *TPL) {
-  printTo(OS, Args, Policy, false, TPL);
+  printTo(OS, Args, Policy, false, TPL, /*isPack*/ false, /*parmIndex*/ 0);
 }
 
 std::string Qualifiers::getAsString() const {
@@ -2110,10 +2122,13 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
   case LangAS::Default:
     return "";
   case LangAS::opencl_global:
+  case LangAS::sycl_global:
     return "__global";
   case LangAS::opencl_local:
+  case LangAS::sycl_local:
     return "__local";
   case LangAS::opencl_private:
+  case LangAS::sycl_private:
     return "__private";
   case LangAS::opencl_constant:
     return "__constant";

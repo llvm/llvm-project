@@ -22,6 +22,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/CopyOpInterface.h"
+#include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Support/LLVM.h"
@@ -42,10 +43,6 @@ class PoolingSumOp;
 using LoopRangeBuilder =
     std::function<SmallVector<Range, 4>(OpBuilder &, Location)>;
 
-/// Returns the values obtained by applying `map` to the list of values.
-SmallVector<Value, 4> applyMapToValues(OpBuilder &b, Location loc,
-                                       AffineMap map, ValueRange values);
-
 /// Provide a very simple inference procedure to build the loop ranges from the
 /// op and its operands. This only works with permutation affine maps and
 /// patterns of the form `(m, n)[s] -> (m + n - s floordiv 2)`.
@@ -58,6 +55,12 @@ LoopRangeBuilder defaultLoopRangesBuilder(LinalgOp op);
 using ReassociationIndices = SmallVector<int64_t, 2>;
 using ReassociationIndicesRef = ArrayRef<int64_t>;
 using ReassociationExprs = SmallVector<AffineExpr, 2>;
+
+/// Return the reassociations maps to use to reshape given the source type and
+/// the target type when possible. Return llvm::None when this computation
+/// failed.
+Optional<SmallVector<ReassociationIndices>>
+getReassociationIndicesForReshape(ShapedType sourceType, ShapedType targetType);
 
 /// Returns the name mangled library call name to disambiguate between different
 /// overloads at the C level. The name mangling scheme is basic and uses MLIR
@@ -122,7 +125,7 @@ namespace linalg {
 class IndexedGenericOp;
 } // namespace linalg
 } // namespace mlir
-#include "mlir/Dialect/Linalg/IR/LinalgStructuredOpsInterfaces.h.inc"
+#include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h.inc"

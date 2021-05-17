@@ -54,7 +54,7 @@ tls1:
 # CHECK-NEXT:         Mutable:         false
 # CHECK-NEXT:         InitExpr:
 # CHECK-NEXT:           Opcode:          I32_CONST
-# CHECK-NEXT:           Value:           1028
+# CHECK-NEXT:           Value:           1024
 # CHECK-NEXT:   - Type:            EXPORT
 
 #      CHECK:  - Type:            DATA
@@ -65,11 +65,11 @@ tls1:
 # CHECK-NEXT:        Offset:
 # CHECK-NEXT:          Opcode:          I32_CONST
 # CHECK-NEXT:          Value:           1024
-# CHECK-NEXT:        Content:         2A000000
+# CHECK-NEXT:        Content:         2B000000
 # .tdata
 # CHECK-NEXT:      - SectionOffset:   17
 # CHECK-NEXT:        InitFlags:       0
 # CHECK-NEXT:        Offset:
 # CHECK-NEXT:          Opcode:          I32_CONST
 # CHECK-NEXT:          Value:           1028
-# CHECK-NEXT:        Content:         2B000000
+# CHECK-NEXT:        Content:         2A000000

@@ -297,12 +297,11 @@ char ARMConstantIslands::ID = 0;
 void ARMConstantIslands::verify() {
 #ifndef NDEBUG
   BBInfoVector &BBInfo = BBUtils->getBBInfo();
-  assert(std::is_sorted(MF->begin(), MF->end(),
-                        [&BBInfo](const MachineBasicBlock &LHS,
+  assert(is_sorted(*MF, [&BBInfo](const MachineBasicBlock &LHS,
                                   const MachineBasicBlock &RHS) {
-                          return BBInfo[LHS.getNumber()].postOffset() <
-                                 BBInfo[RHS.getNumber()].postOffset();
-                        }));
+    return BBInfo[LHS.getNumber()].postOffset() <
+           BBInfo[RHS.getNumber()].postOffset();
+  }));
   LLVM_DEBUG(dbgs() << "Verifying " << CPUsers.size() << " CP users.\n");
   for (unsigned i = 0, e = CPUsers.size(); i != e; ++i) {
     CPUser &U = CPUsers[i];
@@ -851,7 +850,9 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
           case ARM::LDRcp:
           case ARM::t2LDRpci:
           case ARM::t2LDRHpci:
+          case ARM::t2LDRSHpci:
           case ARM::t2LDRBpci:
+          case ARM::t2LDRSBpci:
             Bits = 12;  // +-offset_12
             NegOk = true;
             break;
@@ -1985,7 +1986,8 @@ bool ARMConstantIslands::optimizeThumb2Branches() {
     LLVM_DEBUG(dbgs() << "Fold: " << *Cmp.MI << " and: " << *Br.MI);
     MachineInstr *NewBR =
         BuildMI(*MBB, Br.MI, Br.MI->getDebugLoc(), TII->get(Cmp.NewOpc))
-            .addReg(Reg, getKillRegState(RegKilled))
+            .addReg(Reg, getKillRegState(RegKilled) |
+                             getRegState(Cmp.MI->getOperand(0)))
             .addMBB(DestBB, Br.MI->getOperand(0).getTargetFlags());
 
     Cmp.MI->eraseFromParent();

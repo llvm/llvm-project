@@ -381,8 +381,8 @@ static bool needsPlt(RelExpr expr) {
 // TLS variables uses GOT differently than the regular variables.
 static bool needsGot(RelExpr expr) {
   return oneof<R_GOT, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOT_OFF,
-               R_MIPS_GOT_OFF32, R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTPLT>(
-      expr);
+               R_MIPS_GOT_OFF32, R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTPLT,
+               R_AARCH64_GOT_PAGE>(expr);
 }
 
 // True if this expression is of the form Sym - X, where X is a position in the
@@ -411,7 +411,8 @@ static bool isStaticLinkTimeConstant(RelExpr e, RelType type, const Symbol &sym,
             R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC, R_GOTPLTONLY_PC,
             R_PLT_PC, R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC, R_PPC32_PLTREL,
             R_PPC64_CALL_PLT, R_PPC64_RELAX_TOC, R_RISCV_ADD, R_TLSDESC_CALL,
-            R_TLSDESC_PC, R_AARCH64_TLSDESC_PAGE, R_TLSLD_HINT, R_TLSIE_HINT>(
+            R_TLSDESC_PC, R_AARCH64_TLSDESC_PAGE, R_TLSLD_HINT, R_TLSIE_HINT,
+            R_AARCH64_GOT_PAGE>(
           e))
     return true;
 
@@ -762,7 +763,7 @@ static const Symbol *getAlternativeSpelling(const Undefined &sym,
 
     // Build a map of local defined symbols.
     for (const Symbol *s : sym.file->getSymbols())
-      if (s->isLocal() && s->isDefined())
+      if (s->isLocal() && s->isDefined() && !s->getName().empty())
         map.try_emplace(s->getName(), s);
   }
 
@@ -1096,7 +1097,7 @@ static void addGotEntry(Symbol &sym) {
 
   // Otherwise, we emit a dynamic relocation to .rel[a].dyn so that
   // the GOT slot will be fixed at load-time.
-  if (!sym.isTls() && !sym.isPreemptible && config->isPic && !isAbsolute(sym)) {
+  if (!sym.isTls() && !sym.isPreemptible && config->isPic) {
     addRelativeReloc(in.got, off, &sym, 0, R_ABS, target->symbolicRel);
     return;
   }
@@ -1315,16 +1316,6 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
   // Ignore R_*_NONE and other marker relocations.
   if (expr == R_NONE)
     return;
-
-  if (sym.isGnuIFunc() && !config->zText && config->warnIfuncTextrel) {
-    warn("using ifunc symbols when text relocations are allowed may produce "
-         "a binary that will segfault, if the object file is linked with "
-         "old version of glibc (glibc 2.28 and earlier). If this applies to "
-         "you, consider recompiling the object files without -fPIC and "
-         "without -Wl,-z,notext option. Use -no-warn-ifunc-textrel to "
-         "turn off this warning." +
-         getLocation(sec, sym, offset));
-  }
 
   // Read an addend.
   int64_t addend = computeAddend<ELFT>(rel, end, sec, expr, sym.isLocal());
@@ -1585,6 +1576,13 @@ static void scanRelocs(InputSectionBase &sec, ArrayRef<RelTy> rels) {
   if (config->emachine == EM_PPC64)
     checkPPC64TLSRelax<RelTy>(sec, rels);
 
+  // For EhInputSection, OffsetGetter expects the relocations to be sorted by
+  // r_offset. In rare cases (.eh_frame pieces are reordered by a linker
+  // script), the relocations may be unordered.
+  SmallVector<RelTy, 0> storage;
+  if (isa<EhInputSection>(sec))
+    rels = sortRels(rels, storage);
+
   for (auto i = rels.begin(), end = rels.end(); i != end;)
     scanReloc<ELFT>(sec, getOffset, i, rels.begin(), end);
 
@@ -1772,14 +1770,17 @@ void ThunkCreator::mergeThunks(ArrayRef<OutputSection *> outputSections) {
 // Find or create a ThunkSection within the InputSectionDescription (ISD) that
 // is in range of Src. An ISD maps to a range of InputSections described by a
 // linker script section pattern such as { .text .text.* }.
-ThunkSection *ThunkCreator::getISDThunkSec(OutputSection *os, InputSection *isec,
+ThunkSection *ThunkCreator::getISDThunkSec(OutputSection *os,
+                                           InputSection *isec,
                                            InputSectionDescription *isd,
-                                           uint32_t type, uint64_t src) {
+                                           const Relocation &rel,
+                                           uint64_t src) {
   for (std::pair<ThunkSection *, uint32_t> tp : isd->thunkSections) {
     ThunkSection *ts = tp.first;
-    uint64_t tsBase = os->addr + ts->outSecOff;
-    uint64_t tsLimit = tsBase + ts->getSize();
-    if (target->inBranchRange(type, src, (src > tsLimit) ? tsBase : tsLimit))
+    uint64_t tsBase = os->addr + ts->outSecOff + rel.addend;
+    uint64_t tsLimit = tsBase + ts->getSize() + rel.addend;
+    if (target->inBranchRange(rel.type, src,
+                              (src > tsLimit) ? tsBase : tsLimit))
       return ts;
   }
 
@@ -1789,9 +1790,11 @@ ThunkSection *ThunkCreator::getISDThunkSec(OutputSection *os, InputSection *isec
   // possible. Error if InputSection is so large we cannot place ThunkSection
   // anywhere in Range.
   uint64_t thunkSecOff = isec->outSecOff;
-  if (!target->inBranchRange(type, src, os->addr + thunkSecOff)) {
+  if (!target->inBranchRange(rel.type, src,
+                             os->addr + thunkSecOff + rel.addend)) {
     thunkSecOff = isec->outSecOff + isec->getSize();
-    if (!target->inBranchRange(type, src, os->addr + thunkSecOff))
+    if (!target->inBranchRange(rel.type, src,
+                               os->addr + thunkSecOff + rel.addend))
       fatal("InputSection too large for range extension thunk " +
             isec->getObjMsg(src - (os->addr + isec->outSecOff)));
   }
@@ -1942,7 +1945,11 @@ static int64_t getPCBias(RelType type) {
 std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
                                                 Relocation &rel, uint64_t src) {
   std::vector<Thunk *> *thunkVec = nullptr;
-  int64_t addend = rel.addend + getPCBias(rel.type);
+  // Arm and Thumb have a PC Bias of 8 and 4 respectively, this is cancelled
+  // out in the relocation addend. We compensate for the PC bias so that
+  // an Arm and Thumb relocation to the same destination get the same keyAddend,
+  // which is usually 0.
+  int64_t keyAddend = rel.addend + getPCBias(rel.type);
 
   // We use a ((section, offset), addend) pair to find the thunk position if
   // possible so that we create only one thunk for aliased symbols or ICFed
@@ -1952,17 +1959,16 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
   if (auto *d = dyn_cast<Defined>(rel.sym))
     if (!d->isInPlt() && d->section)
       thunkVec = &thunkedSymbolsBySectionAndAddend[{
-          {d->section->repl, d->value}, addend}];
+          {d->section->repl, d->value}, keyAddend}];
   if (!thunkVec)
-    thunkVec = &thunkedSymbols[{rel.sym, addend}];
+    thunkVec = &thunkedSymbols[{rel.sym, keyAddend}];
 
   // Check existing Thunks for Sym to see if they can be reused
   for (Thunk *t : *thunkVec)
     if (isThunkSectionCompatible(isec, t->getThunkTargetSym()->section) &&
         t->isCompatibleWith(*isec, rel) &&
         target->inBranchRange(rel.type, src,
-                              t->getThunkTargetSym()->getVA(rel.addend) +
-                                  getPCBias(rel.type)))
+                              t->getThunkTargetSym()->getVA(rel.addend)))
       return std::make_pair(t, false);
 
   // No existing compatible Thunk in range, create a new one
@@ -1977,8 +1983,7 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
 // relocation back to its original non-Thunk target.
 bool ThunkCreator::normalizeExistingThunk(Relocation &rel, uint64_t src) {
   if (Thunk *t = thunks.lookup(rel.sym)) {
-    if (target->inBranchRange(rel.type, src,
-                              rel.sym->getVA(rel.addend) + getPCBias(rel.type)))
+    if (target->inBranchRange(rel.type, src, rel.sym->getVA(rel.addend)))
       return true;
     rel.sym = &t->destination;
     rel.addend = t->addend;
@@ -2050,7 +2055,7 @@ bool ThunkCreator::createThunks(ArrayRef<OutputSection *> outputSections) {
               if (auto *tis = t->getTargetInputSection())
                 ts = getISThunkSec(tis);
               else
-                ts = getISDThunkSec(os, isec, isd, rel.type, src);
+                ts = getISDThunkSec(os, isec, isd, rel, src);
               ts->addThunk(t);
               thunks[t->getThunkTargetSym()] = t;
             }

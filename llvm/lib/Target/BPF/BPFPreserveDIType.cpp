@@ -85,8 +85,17 @@ static bool BPFPreserveDITypeImpl(Function &F) {
     } else {
       Reloc = BPFCoreSharedInfo::BTF_TYPE_ID_REMOTE;
       DIType *Ty = cast<DIType>(MD);
+      while (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
+        unsigned Tag = DTy->getTag();
+        if (Tag != dwarf::DW_TAG_const_type &&
+            Tag != dwarf::DW_TAG_volatile_type)
+          break;
+        Ty = DTy->getBaseType();
+      }
+
       if (Ty->getName().empty())
         report_fatal_error("Empty type name for BTF_TYPE_ID_REMOTE reloc");
+      MD = Ty;
     }
 
     BasicBlock *BB = Call->getParent();

@@ -1,8 +1,7 @@
 ; RUN: llc < %s -enable-emscripten-cxx-exceptions | FileCheck %s --check-prefix=EH
 ; RUN: llc < %s -enable-emscripten-sjlj | FileCheck %s --check-prefix=SJLJ
 ; RUN: llc < %s | FileCheck %s --check-prefix=NONE
-; RUN: not --crash llc < %s -enable-emscripten-cxx-exceptions -mtriple=wasm64-unknown-unknown 2>&1 | FileCheck %s --check-prefix=WASM64-EH
-; RUN: not --crash llc < %s -enable-emscripten-sjlj -mtriple=wasm64-unknown-unknown 2>&1 | FileCheck %s --check-prefix=WASM64-SJLJ
+; RUN: not --crash llc < %s -enable-emscripten-cxx-exceptions -exception-model=wasm 2>&1 | FileCheck %s --check-prefix=WASM-EH-EM-EH
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -102,5 +101,4 @@ attributes #2 = { nounwind }
 ; SJLJ-NOT: .import_module  emscripten_longjmp_jmpbuf
 ; SJLJ-NOT: .import_name  emscripten_longjmp_jmpbuf
 
-; WASM64-EH: LLVM ERROR: Emscripten EH/SjLj is not supported with wasm64 yet
-; WASM64-SJLJ: LLVM ERROR: Emscripten EH/SjLj is not supported with wasm64 yet
+; WASM-EH-EM-EH: LLVM ERROR: -exception-model=wasm not allowed with -enable-emscripten-cxx-exceptions

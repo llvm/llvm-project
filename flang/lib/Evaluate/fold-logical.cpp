@@ -89,9 +89,9 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
             [&fptr](const Scalar<LargestInt> &i, const Scalar<LargestInt> &j) {
               return Scalar<T>{std::invoke(fptr, i, j)};
             }));
-  } else if (name == "isnan") {
+  } else if (name == "isnan" || name == "__builtin_ieee_is_nan") {
     // A warning about an invalid argument is discarded from converting
-    // the argument of isnan().
+    // the argument of isnan() / IEEE_IS_NAN().
     auto restorer{context.messages().DiscardMessages()};
     using DefaultReal = Type<TypeCategory::Real, 4>;
     return FoldElementalIntrinsic<T, DefaultReal>(context, std::move(funcRef),
@@ -106,8 +106,24 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
         }
       }
     }
+  } else if (name == "logical") {
+    if (auto *expr{UnwrapExpr<Expr<SomeLogical>>(args[0])}) {
+      return Fold(context, ConvertToType<T>(std::move(*expr)));
+    }
   } else if (name == "merge") {
     return FoldMerge<T>(context, std::move(funcRef));
+  } else if (name == "__builtin_ieee_support_datatype" ||
+      name == "__builtin_ieee_support_denormal" ||
+      name == "__builtin_ieee_support_divide" ||
+      name == "__builtin_ieee_support_divide" ||
+      name == "__builtin_ieee_support_inf" ||
+      name == "__builtin_ieee_support_io" ||
+      name == "__builtin_ieee_support_nan" ||
+      name == "__builtin_ieee_support_sqrt" ||
+      name == "__builtin_ieee_support_standard" ||
+      name == "__builtin_ieee_support_subnormal" ||
+      name == "__builtin_ieee_support_underflow_control") {
+    return Expr<T>{true};
   }
   // TODO: btest, cshift, dot_product, eoshift, is_iostat_end,
   // is_iostat_eor, lge, lgt, lle, llt, logical, matmul, out_of_range,

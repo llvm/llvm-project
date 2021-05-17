@@ -28,6 +28,13 @@ fun:dfsan_set_write_callback=uninstrumented
 fun:dfsan_set_write_callback=custom
 fun:dfsan_flush=uninstrumented
 fun:dfsan_flush=discard
+fun:dfsan_print_origin_trace=uninstrumented
+fun:dfsan_print_origin_trace=discard
+fun:dfsan_get_origin=uninstrumented
+fun:dfsan_get_origin=custom
+fun:dfsan_get_init_origin=uninstrumented
+fun:dfsan_get_init_origin=discard
+
 
 ###############################################################################
 # glibc
@@ -214,6 +221,7 @@ fun:ctime_r=custom
 fun:inet_pton=custom
 fun:localtime_r=custom
 fun:memcpy=custom
+fun:memmove=custom
 fun:memset=custom
 fun:strcpy=custom
 fun:strdup=custom
@@ -223,6 +231,7 @@ fun:strtol=custom
 fun:strtoll=custom
 fun:strtoul=custom
 fun:strtoull=custom
+fun:strcat=custom
 
 # Functions that produce an output that is computed from the input, but is not
 # necessarily data dependent.
@@ -252,6 +261,7 @@ fun:sched_getaffinity=custom
 fun:select=custom
 fun:sigemptyset=custom
 fun:sigaction=custom
+fun:signal=custom
 fun:gettimeofday=custom
 
 # sprintf-like
@@ -261,6 +271,9 @@ fun:snprintf=custom
 # TODO: custom
 fun:asprintf=discard
 fun:qsort=discard
+
+# fork
+fun:fork=custom
 
 ###############################################################################
 # pthread
@@ -389,3 +402,5 @@ fun:__sanitizer_cov_pcs_init=discard
 # Ignores the dfsan wrappers.
 fun:__dfsw_*=uninstrumented
 fun:__dfsw_*=discard
+fun:__dfso_*=uninstrumented
+fun:__dfso_*=discard

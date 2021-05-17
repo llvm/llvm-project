@@ -8,6 +8,7 @@
 
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -451,13 +452,9 @@ public:
     else
       OS << " ; (mustexec in: ";
 
-    bool first = true;
-    for (const Loop *L : Loops) {
-      if (!first)
-        OS << ", ";
-      first = false;
-      OS << L->getHeader()->getName();
-    }
+    ListSeparator LS;
+    for (const Loop *L : Loops)
+      OS << LS << L->getHeader()->getName();
     OS << ")";
   }
 };
@@ -631,8 +628,7 @@ MustBeExecutedContextExplorer::findForwardJoinPoint(const BasicBlock *InitBB) {
       if (!TransfersExecution)
         return nullptr;
 
-      for (const BasicBlock *AdjacentBB : successors(ToBB))
-        Worklist.push_back(AdjacentBB);
+      append_range(Worklist, successors(ToBB));
     }
   }
 

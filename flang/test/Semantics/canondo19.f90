@@ -1,7 +1,7 @@
 ! Check that if there is a label or a name on an label-do-stmt,
 ! then it is not lost when rewriting it to an non-label-do-stmt.
 
-! RUN: %f18 -funparse-with-symbols -Mstandard %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -fdebug-unparse-with-symbols -pedantic %s 2>&1 | FileCheck %s
 
 ! CHECK: end do
 ! CHECK: 2 do

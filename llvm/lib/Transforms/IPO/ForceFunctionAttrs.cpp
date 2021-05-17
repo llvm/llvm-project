@@ -73,6 +73,7 @@ static Attribute::AttrKind parseAttrKind(StringRef Kind) {
       .Case("sspstrong", Attribute::StackProtectStrong)
       .Case("strictfp", Attribute::StrictFP)
       .Case("uwtable", Attribute::UWTable)
+      .Case("vscale_range", Attribute::VScaleRange)
       .Default(Attribute::None);
 }
 

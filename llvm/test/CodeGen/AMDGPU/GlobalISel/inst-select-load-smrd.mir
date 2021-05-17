@@ -17,12 +17,12 @@ regBankSelected: true
 # GCN: [[PTR:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
 
 # Immediate offset:
-# SICI: S_LOAD_DWORD_IMM [[PTR]], 1, 0, 0
-# VI:   S_LOAD_DWORD_IMM [[PTR]], 4, 0, 0
+# SICI: S_LOAD_DWORD_IMM [[PTR]], 1, 0
+# VI:   S_LOAD_DWORD_IMM [[PTR]], 4, 0
 
 # Max immediate offset for SI
-# SICI: S_LOAD_DWORD_IMM [[PTR]], 255, 0, 0
-# VI:   S_LOAD_DWORD_IMM [[PTR]], 1020, 0, 0
+# SICI: S_LOAD_DWORD_IMM [[PTR]], 255, 0
+# VI:   S_LOAD_DWORD_IMM [[PTR]], 1020, 0
 
 # Immediate overflow for SI
 # SI: [[K1024:%[0-9]+]]:sreg_32 = S_MOV_B32 1024
@@ -52,8 +52,8 @@ regBankSelected: true
 # SIVI-DAG: [[PTR_HI:%[0-9]+]]:sreg_32 = COPY [[PTR]].sub1
 # SIVI: [[ADD_PTR_HI:%[0-9]+]]:sreg_32 = S_ADDC_U32 [[PTR_HI]], [[K_SUB1]]
 # SIVI: [[ADD_PTR:%[0-9]+]]:sreg_64_xexec = REG_SEQUENCE [[ADD_PTR_LO]], %subreg.sub0, [[ADD_PTR_HI]], %subreg.sub1
-# SIVI: S_LOAD_DWORD_IMM [[ADD_PTR]], 0, 0, 0
-# CI: S_LOAD_DWORD_IMM_ci [[PTR]], 4294967295, 0, 0
+# SIVI: S_LOAD_DWORD_IMM [[ADD_PTR]], 0, 0
+# CI: S_LOAD_DWORD_IMM_ci [[PTR]], 4294967295, 0
 
 # Immediate overflow for CI
 # GCN: [[K_LO:%[0-9]+]]:sreg_32 = S_MOV_B32 0
@@ -66,7 +66,7 @@ regBankSelected: true
 # GCN-DAG: [[PTR_HI:%[0-9]+]]:sreg_32 = COPY [[PTR]].sub1
 # GCN: [[ADD_PTR_HI:%[0-9]+]]:sreg_32 = S_ADDC_U32 [[PTR_HI]], [[K_SUB1]]
 # GCN: [[ADD_PTR:%[0-9]+]]:sreg_64_xexec = REG_SEQUENCE [[ADD_PTR_LO]], %subreg.sub0, [[ADD_PTR_HI]], %subreg.sub1
-# GCN: S_LOAD_DWORD_IMM [[ADD_PTR]], 0, 0, 0
+# GCN: S_LOAD_DWORD_IMM [[ADD_PTR]], 0, 0
 
 # Max 32-bit byte offset
 # SIVI: [[K4294967292:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967292
@@ -84,8 +84,8 @@ regBankSelected: true
 # SIVI-DAG: [[PTR_HI:%[0-9]+]]:sreg_32 = COPY [[PTR]].sub1
 # SIVI: [[ADD_PTR_HI:%[0-9]+]]:sreg_32 = S_ADDC_U32 [[PTR_HI]], [[K_SUB1]]
 # SIVI: [[ADD_PTR:%[0-9]+]]:sreg_64_xexec = REG_SEQUENCE [[ADD_PTR_LO]], %subreg.sub0, [[ADD_PTR_HI]], %subreg.sub1
-# SIVI: S_LOAD_DWORD_IMM [[ADD_PTR]], 0, 0, 0
-# CI: S_LOAD_DWORD_IMM_ci [[PTR]], 1073741824, 0, 0
+# SIVI: S_LOAD_DWORD_IMM [[ADD_PTR]], 0, 0
+# CI: S_LOAD_DWORD_IMM_ci [[PTR]], 1073741824, 0
 
 # Pointer loads
 # GCN: [[AS0:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0
@@ -192,8 +192,8 @@ body: |
 # GCN-LABEL: name: constant_address_positive{{$}}
 # GCN: %0:sreg_64 = S_MOV_B64 44
 
-# VI: %3:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 64, 0, 0 :: (dereferenceable invariant load 4, addrspace 4)
-# SICI: %3:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 16, 0, 0 :: (dereferenceable invariant load 4, addrspace 4)
+# VI: %3:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 64, 0 :: (dereferenceable invariant load 4, addrspace 4)
+# SICI: %3:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 16, 0 :: (dereferenceable invariant load 4, addrspace 4)
 
 ---
 

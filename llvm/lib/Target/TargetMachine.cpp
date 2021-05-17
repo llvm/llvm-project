@@ -56,7 +56,7 @@ bool TargetMachine::isPositionIndependent() const {
 void TargetMachine::resetTargetOptions(const Function &F) const {
 #define RESET_OPTION(X, Y)                                              \
   do {                                                                  \
-    Options.X = (F.getFnAttribute(Y).getValueAsString() == "true");     \
+    Options.X = F.getFnAttribute(Y).getValueAsBool();     \
   } while (0)
 
   RESET_OPTION(UnsafeFPMath, "unsafe-fp-math");
@@ -232,4 +232,13 @@ TargetIRAnalysis TargetMachine::getTargetIRAnalysis() {
   // dependency.
   return TargetIRAnalysis(
       [this](const Function &F) { return this->getTargetTransformInfo(F); });
+}
+
+std::pair<int, int> TargetMachine::parseBinutilsVersion(StringRef Version) {
+  if (Version == "none")
+    return {INT_MAX, INT_MAX}; // Make binutilsIsAtLeast() return true.
+  std::pair<int, int> Ret;
+  if (!Version.consumeInteger(10, Ret.first) && Version.consume_front("."))
+    Version.consumeInteger(10, Ret.second);
+  return Ret;
 }

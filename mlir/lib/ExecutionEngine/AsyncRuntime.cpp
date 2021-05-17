@@ -136,13 +136,14 @@ struct AsyncToken : public RefCounted {
   // asynchronously executed task. If the caller immediately will drop its
   // reference we must ensure that the token will be alive until the
   // asynchronous operation is completed.
-  AsyncToken(AsyncRuntime *runtime) : RefCounted(runtime, /*count=*/2) {}
+  AsyncToken(AsyncRuntime *runtime)
+      : RefCounted(runtime, /*count=*/2), ready(false) {}
 
-  // Internal state below guarded by a mutex.
+  std::atomic<bool> ready;
+
+  // Pending awaiters are guarded by a mutex.
   std::mutex mu;
   std::condition_variable cv;
-
-  bool ready = false;
   std::vector<std::function<void()>> awaiters;
 };
 
@@ -152,17 +153,17 @@ struct AsyncToken : public RefCounted {
 struct AsyncValue : public RefCounted {
   // AsyncValue similar to an AsyncToken created with a reference count of 2.
   AsyncValue(AsyncRuntime *runtime, int32_t size)
-      : RefCounted(runtime, /*count=*/2), storage(size) {}
+      : RefCounted(runtime, /*count=*/2), ready(false), storage(size) {}
 
-  // Internal state below guarded by a mutex.
-  std::mutex mu;
-  std::condition_variable cv;
-
-  bool ready = false;
-  std::vector<std::function<void()>> awaiters;
+  std::atomic<bool> ready;
 
   // Use vector of bytes to store async value payload.
   std::vector<int8_t> storage;
+
+  // Pending awaiters are guarded by a mutex.
+  std::mutex mu;
+  std::condition_variable cv;
+  std::vector<std::function<void()>> awaiters;
 };
 
 // Async group provides a mechanism to group together multiple async tokens or
@@ -175,15 +176,12 @@ struct AsyncGroup : public RefCounted {
   std::atomic<int> pendingTokens;
   std::atomic<int> rank;
 
-  // Internal state below guarded by a mutex.
+  // Pending awaiters are guarded by a mutex.
   std::mutex mu;
   std::condition_variable cv;
-
   std::vector<std::function<void()>> awaiters;
 };
 
-} // namespace runtime
-} // namespace mlir
 
 // Adds references to reference counted runtime object.
 extern "C" void mlirAsyncRuntimeAddRef(RefCountedObjPtr ptr, int32_t count) {
@@ -291,13 +289,13 @@ extern "C" void mlirAsyncRuntimeEmplaceValue(AsyncValue *value) {
 extern "C" void mlirAsyncRuntimeAwaitToken(AsyncToken *token) {
   std::unique_lock<std::mutex> lock(token->mu);
   if (!token->ready)
-    token->cv.wait(lock, [token] { return token->ready; });
+    token->cv.wait(lock, [token] { return token->ready.load(); });
 }
 
 extern "C" void mlirAsyncRuntimeAwaitValue(AsyncValue *value) {
   std::unique_lock<std::mutex> lock(value->mu);
   if (!value->ready)
-    value->cv.wait(lock, [value] { return value->ready; });
+    value->cv.wait(lock, [value] { return value->ready.load(); });
 }
 
 extern "C" void mlirAsyncRuntimeAwaitAllInGroup(AsyncGroup *group) {
@@ -319,34 +317,40 @@ extern "C" void mlirAsyncRuntimeExecute(CoroHandle handle, CoroResume resume) {
 extern "C" void mlirAsyncRuntimeAwaitTokenAndExecute(AsyncToken *token,
                                                      CoroHandle handle,
                                                      CoroResume resume) {
-  std::unique_lock<std::mutex> lock(token->mu);
   auto execute = [handle, resume]() { (*resume)(handle); };
-  if (token->ready)
+  std::unique_lock<std::mutex> lock(token->mu);
+  if (token->ready) {
+    lock.unlock();
     execute();
-  else
+  } else {
     token->awaiters.push_back([execute]() { execute(); });
+  }
 }
 
 extern "C" void mlirAsyncRuntimeAwaitValueAndExecute(AsyncValue *value,
                                                      CoroHandle handle,
                                                      CoroResume resume) {
-  std::unique_lock<std::mutex> lock(value->mu);
   auto execute = [handle, resume]() { (*resume)(handle); };
-  if (value->ready)
+  std::unique_lock<std::mutex> lock(value->mu);
+  if (value->ready) {
+    lock.unlock();
     execute();
-  else
+  } else {
     value->awaiters.push_back([execute]() { execute(); });
+  }
 }
 
 extern "C" void mlirAsyncRuntimeAwaitAllInGroupAndExecute(AsyncGroup *group,
                                                           CoroHandle handle,
                                                           CoroResume resume) {
-  std::unique_lock<std::mutex> lock(group->mu);
   auto execute = [handle, resume]() { (*resume)(handle); };
-  if (group->pendingTokens == 0)
+  std::unique_lock<std::mutex> lock(group->mu);
+  if (group->pendingTokens == 0) {
+    lock.unlock();
     execute();
-  else
+  } else {
     group->awaiters.push_back([execute]() { execute(); });
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -363,10 +367,20 @@ extern "C" void mlirAsyncRuntimePrintCurrentThreadId() {
 //===----------------------------------------------------------------------===//
 
 // Export symbols for the MLIR runner integration. All other symbols are hidden.
-#ifndef _WIN32
+#ifdef _WIN32
+#define API __declspec(dllexport)
+#else
 #define API __attribute__((visibility("default")))
+#endif
 
-extern "C" API void __mlir_runner_init(llvm::StringMap<void *> &exportSymbols) {
+// Visual Studio had a bug that fails to compile nested generic lambdas
+// inside an `extern "C"` function.
+//   https://developercommunity.visualstudio.com/content/problem/475494/clexe-error-with-lambda-inside-function-templates.html
+// The bug is fixed in VS2019 16.1. Separating the declaration and definition is
+// a work around for older versions of Visual Studio.
+extern "C" API void __mlir_runner_init(llvm::StringMap<void *> &exportSymbols);
+
+void __mlir_runner_init(llvm::StringMap<void *> &exportSymbols) {
   auto exportSymbol = [&](llvm::StringRef name, auto ptr) {
     assert(exportSymbols.count(name) == 0 && "symbol already exists");
     exportSymbols[name] = reinterpret_cast<void *>(ptr);
@@ -410,6 +424,7 @@ extern "C" API void __mlir_runner_init(llvm::StringMap<void *> &exportSymbols) {
 
 extern "C" API void __mlir_runner_destroy() { resetDefaultAsyncRuntime(); }
 
-#endif // _WIN32
+} // namespace runtime
+} // namespace mlir
 
 #endif // MLIR_ASYNCRUNTIME_DEFINE_FUNCTIONS

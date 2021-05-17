@@ -62,6 +62,26 @@ define half @test_fmul(half %a, half %b) #0 {
   ret half %r
 }
 
+; CHECK-CVT-LABEL: test_fmadd:
+; CHECK-CVT-NEXT: fcvt s1, h1
+; CHECK-CVT-NEXT: fcvt s0, h0
+; CHECK-CVT-NEXT: fmul s0, s0, s1
+; CHECK-CVT-NEXT: fcvt h0, s0
+; CHECK-CVT-NEXT: fcvt s0, h0
+; CHECK-CVT-NEXT: fcvt s1, h2
+; CHECK-CVT-NEXT: fadd s0, s0, s1
+; CHECK-CVT-NEXT: fcvt h0, s0
+; CHECK-CVT-NEXT: ret
+
+; CHECK-FP16-LABEL: test_fmadd:
+; CHECK-FP16-NEXT: fmadd h0, h0, h1, h2
+; CHECK-FP16-NEXT: ret
+
+define half @test_fmadd(half %a, half %b, half %c) #0 {
+  %mul = fmul fast half %a, %b
+  %r = fadd fast half %mul, %c
+  ret half %r
+}
 ; CHECK-CVT-LABEL: test_fdiv:
 ; CHECK-CVT-NEXT: fcvt s1, h1
 ; CHECK-CVT-NEXT: fcvt s0, h0
@@ -169,8 +189,6 @@ define half @test_select(half %a, half %b, i1 zeroext %c) #0 {
 ; CHECK-CVT-DAG: fcvt s1, h1
 ; CHECK-CVT-DAG: fcvt s0, h0
 ; CHECK-CVT-DAG: fcmp s2, s3
-; CHECK-CVT-DAG: cset [[CC:w[0-9]+]], ne
-; CHECK-CVT-DAG: cmp [[CC]], #0
 ; CHECK-CVT-NEXT: fcsel s0, s0, s1, ne
 ; CHECK-CVT-NEXT: fcvt h0, s0
 ; CHECK-CVT-NEXT: ret
@@ -208,8 +226,6 @@ define float @test_select_cc_f32_f16(float %a, float %b, half %c, half %d) #0 {
 ; CHECK-CVT-DAG:  fcvt s0, h0
 ; CHECK-CVT-DAG:  fcvt s1, h1
 ; CHECK-CVT-DAG:  fcmp s2, s3
-; CHECK-CVT-DAG:  cset w8, ne
-; CHECK-CVT-NEXT: cmp w8, #0
 ; CHECK-CVT-NEXT: fcsel s0, s0, s1, ne
 ; CHECK-CVT-NEXT: fcvt h0, s0
 ; CHECK-CVT-NEXT: ret
@@ -776,6 +792,7 @@ declare half @llvm.trunc.f16(half %a) #0
 declare half @llvm.rint.f16(half %a) #0
 declare half @llvm.nearbyint.f16(half %a) #0
 declare half @llvm.round.f16(half %a) #0
+declare half @llvm.roundeven.f16(half %a) #0
 declare half @llvm.fmuladd.f16(half %a, half %b, half %c) #0
 declare half @llvm.aarch64.neon.frecpe.f16(half %a) #0
 declare half @llvm.aarch64.neon.frecpx.f16(half %a) #0
@@ -1293,6 +1310,32 @@ define half @test_round(half %a) #0 {
   ret half %r
 }
 
+; CHECK-CVT-LABEL: test_roundeven:
+; CHECK-CVT-NEXT: fcvt [[FLOAT32:s[0-9]+]], h0
+; CHECK-CVT-NEXT: frintn [[INT32:s[0-9]+]], [[FLOAT32]]
+; CHECK-CVT-NEXT: fcvt h0, [[INT32]]
+; CHECK-CVT-NEXT: ret
+
+; GISEL-CVT-LABEL: test_roundeven:
+; GISEL-CVT-NEXT: fcvt [[FLOAT32:s[0-9]+]], h0
+; GISEL-CVT-NEXT: frintn [[INT32:s[0-9]+]], [[FLOAT32]]
+; GISEL-CVT-NEXT: fcvt h0, [[INT32]]
+; GISEL-CVT-NEXT: ret
+
+
+; CHECK-FP16-LABEL: test_roundeven:
+; CHECK-FP16-NEXT: frintn h0, h0
+; CHECK-FP16-NEXT: ret
+
+; GISEL-FP16-LABEL: test_roundeven:
+; GISEL-FP16-NEXT: frintn h0, h0
+; GISEL-FP16-NEXT: ret
+
+define half @test_roundeven(half %a) #0 {
+  %r = call half @llvm.roundeven.f16(half %a)
+  ret half %r
+}
+
 ; CHECK-CVT-LABEL: test_fmuladd:
 ; CHECK-CVT-NEXT: fcvt s1, h1
 ; CHECK-CVT-NEXT: fcvt s0, h0
@@ -1305,8 +1348,7 @@ define half @test_round(half %a) #0 {
 ; CHECK-CVT-NEXT: ret
 
 ; CHECK-FP16-LABEL: test_fmuladd:
-; CHECK-FP16-NEXT: fmul h0, h0, h1
-; CHECK-FP16-NEXT: fadd h0, h0, h2
+; CHECK-FP16-NEXT: fmadd h0, h0, h1, h2
 ; CHECK-FP16-NEXT: ret
 
 define half @test_fmuladd(half %a, half %b, half %c) #0 {

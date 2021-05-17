@@ -1,4 +1,5 @@
 ; RUN: opt %loadPolly -polly-optree -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly "-passes=scop(print<polly-optree>)" -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Rematerialize a load.
 ;

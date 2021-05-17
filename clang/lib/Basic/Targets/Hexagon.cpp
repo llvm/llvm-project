@@ -65,6 +65,9 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
   } else if (CPU == "hexagonv67t") {
     Builder.defineMacro("__HEXAGON_V67T__");
     Builder.defineMacro("__HEXAGON_ARCH__", "67");
+  } else if (CPU == "hexagonv68") {
+    Builder.defineMacro("__HEXAGON_V68__");
+    Builder.defineMacro("__HEXAGON_ARCH__", "68");
   }
 
   if (hasFeature("hvx-length64b")) {
@@ -133,7 +136,7 @@ const char *const HexagonTargetInfo::GCCRegNames[] = {
     "r9",  "r10", "r11", "r12", "r13", "r14", "r15", "r16", "r17",
     "r18", "r19", "r20", "r21", "r22", "r23", "r24", "r25", "r26",
     "r27", "r28", "r29", "r30", "r31", "p0",  "p1",  "p2",  "p3",
-    "sa0", "lc0", "sa1", "lc1", "m0",  "m1",  "usr", "ugp",
+    "sa0", "lc0", "sa1", "lc1", "m0",  "m1",  "usr", "ugp", "cs0", "cs1",
     "r1:0", "r3:2", "r5:4", "r7:6", "r9:8", "r11:10", "r13:12", "r15:14",
     "r17:16", "r19:18", "r21:20", "r23:22", "r25:24", "r27:26", "r29:28",
     "r31:30"
@@ -188,6 +191,7 @@ static constexpr CPUSuffix Suffixes[] = {
     {{"hexagonv60"}, {"60"}}, {{"hexagonv62"},  {"62"}},
     {{"hexagonv65"}, {"65"}}, {{"hexagonv66"},  {"66"}},
     {{"hexagonv67"}, {"67"}}, {{"hexagonv67t"}, {"67t"}},
+    {{"hexagonv68"}, {"68"}},
 };
 
 const char *HexagonTargetInfo::getHexagonCPUSuffix(StringRef Name) {

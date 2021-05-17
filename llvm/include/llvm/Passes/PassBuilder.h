@@ -19,6 +19,7 @@
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/Inliner.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
@@ -127,9 +128,6 @@ public:
   /// Tuning option to enable/disable function merging. Its default value is
   /// false.
   bool MergeFunctions;
-
-  /// Uniquefy function linkage name. Its default value is false.
-  bool UniqueLinkageNames;
 };
 
 /// This class provides access to building LLVM's passes.
@@ -139,7 +137,6 @@ public:
 /// of the built-in passes, and those may reference these members during
 /// construction.
 class PassBuilder {
-  bool DebugLogging;
   TargetMachine *TM;
   PipelineTuningOptions PTO;
   Optional<PGOOptions> PGOOpt;
@@ -269,7 +266,7 @@ public:
     unsigned getSizeLevel() const { return SizeLevel; }
   };
 
-  explicit PassBuilder(bool DebugLogging = false, TargetMachine *TM = nullptr,
+  explicit PassBuilder(TargetMachine *TM = nullptr,
                        PipelineTuningOptions PTO = PipelineTuningOptions(),
                        Optional<PGOOptions> PGOOpt = None,
                        PassInstrumentationCallbacks *PIC = nullptr);
@@ -532,6 +529,9 @@ public:
   /// Returns true if the pass name is the name of a (non-alias) analysis pass.
   bool isAnalysisPassName(StringRef PassName);
 
+  /// Print pass names.
+  void printPassNames(raw_ostream &OS);
+
   /// Register a callback for a default optimizer pipeline extension
   /// point
   ///
@@ -687,8 +687,8 @@ public:
   /// text, this Callback should be used to determine the appropriate stack of
   /// PassManagers and populate the passed ModulePassManager.
   void registerParseTopLevelPipelineCallback(
-      const std::function<bool(ModulePassManager &, ArrayRef<PipelineElement>,
-                               bool DebugLogging)> &C);
+      const std::function<bool(ModulePassManager &, ArrayRef<PipelineElement>)>
+          &C);
 
   /// Add PGOInstrumenation passes for O0 only.
   void addPGOInstrPassesForO0(ModulePassManager &MPM, bool RunProfileGen,
@@ -708,6 +708,9 @@ private:
                                         ThinOrFullLTOPhase Phase);
 
   void addRequiredLTOPreLinkPasses(ModulePassManager &MPM);
+
+  void addVectorPasses(OptimizationLevel Level, FunctionPassManager &FPM,
+                       bool IsLTO);
 
   static Optional<std::vector<PipelineElement>>
   parsePipelineText(StringRef Text);
@@ -759,9 +762,8 @@ private:
                                  ArrayRef<PipelineElement>)>,
               2>
       ModulePipelineParsingCallbacks;
-  SmallVector<std::function<bool(ModulePassManager &, ArrayRef<PipelineElement>,
-                                 bool DebugLogging)>,
-              2>
+  SmallVector<
+      std::function<bool(ModulePassManager &, ArrayRef<PipelineElement>)>, 2>
       TopLevelPipelineParsingCallbacks;
   // CGSCC callbacks
   SmallVector<std::function<void(CGSCCAnalysisManager &)>, 2>

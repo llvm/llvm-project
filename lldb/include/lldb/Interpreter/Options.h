@@ -254,8 +254,7 @@ public:
 
 class OptionGroupOptions : public Options {
 public:
-  OptionGroupOptions()
-      : Options(), m_option_defs(), m_option_infos(), m_did_finalize(false) {}
+  OptionGroupOptions() : m_did_finalize(false) {}
 
   ~OptionGroupOptions() override = default;
 

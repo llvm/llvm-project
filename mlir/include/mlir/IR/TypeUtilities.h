@@ -55,6 +55,17 @@ LogicalResult verifyCompatibleShape(ArrayRef<int64_t> shape1,
 /// does not matter.
 LogicalResult verifyCompatibleShape(Type type1, Type type2);
 
+/// Returns success if the given two arrays have the same number of elements and
+/// each pair wise entries have compatible shape.
+LogicalResult verifyCompatibleShapes(TypeRange types1, TypeRange types2);
+
+/// Returns success if all given types have compatible shapes. That is, they are
+/// all scalars (not shaped), or they are all shaped types and any ranked shapes
+/// have compatible dimensions. The element type does not matter.
+LogicalResult verifyCompatibleShapes(TypeRange types);
+
+/// Dimensions are compatible if all non-dynamic dims are equal.
+LogicalResult verifyCompatibleDims(ArrayRef<int64_t> dims);
 //===----------------------------------------------------------------------===//
 // Utility Iterators
 //===----------------------------------------------------------------------===//

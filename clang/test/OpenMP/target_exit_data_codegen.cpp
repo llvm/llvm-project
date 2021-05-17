@@ -36,19 +36,19 @@ double gc[100];
 // CK1-64: [[KMP_PRIVATES_T]] = type { [1 x i8*], [1 x i8*], [1 x i64] }
 
 // CK1: [[SIZE00:@.+]] = {{.+}}constant [1 x i64] [i64 800]
-// CK1: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 34]
+// CK1: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 2]
 
 // CK1: [[SIZE02:@.+]] = {{.+}}constant [1 x i64] [i64 4]
-// CK1: [[MTYPE02:@.+]] = {{.+}}constant [1 x i64] [i64 32]
+// CK1: [[MTYPE02:@.+]] = {{.+}}constant [1 x i64] zeroinitializer
 
-// CK1: [[MTYPE03:@.+]] = {{.+}}constant [1 x i64] [i64 38]
+// CK1: [[MTYPE03:@.+]] = {{.+}}constant [1 x i64] [i64 6]
 
 // CK1: [[SIZE04:@.+]] = {{.+}}constant [2 x i64] [i64 sdiv exact (i64 sub (i64 ptrtoint (double** getelementptr (double*, double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1), i32 1) to i64), i64 ptrtoint (double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1) to i64)), i64 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)), i64 24]
-// CK1: [[MTYPE04:@.+]] = {{.+}}constant [2 x i64] [i64 32, i64 281474976710672]
+// CK1: [[MTYPE04:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976710672]
 
-// CK1: [[MTYPE05:@.+]] = {{.+}}constant [1 x i64] [i64 1058]
+// CK1: [[MTYPE05:@.+]] = {{.+}}constant [1 x i64] [i64 1026]
 
-// CK1: [[MTYPE06:@.+]] = {{.+}}constant [1 x i64] [i64 1062]
+// CK1: [[MTYPE06:@.+]] = {{.+}}constant [1 x i64] [i64 1030]
 
 // CK1-LABEL: _Z3fooi
 void foo(int arg) {
@@ -229,7 +229,8 @@ void foo(int arg) {
 // CK1-DAG: [[BPADDR]] = load [1 x i8*]*, [1 x i8*]** [[FPBPADDR:%[^,]+]], align
 // CK1-DAG: [[PADDR]] = load [1 x i8*]*, [1 x i8*]** [[FPPADDR:%[^,]+]], align
 // CK1-DAG: [[SZADDR]] = load [1 x i64]*, [1 x i64]** [[FPSZADDR:%[^,]+]], align
-// CK1-DAG: call void (i8*, ...) %{{.+}}(i8* %{{[^,]+}}, [1 x i8*]** [[FPBPADDR]], [1 x i8*]** [[FPPADDR]], [1 x i64]** [[FPSZADDR]])
+// CK1-DAG: [[FN:%.+]] = bitcast void (i8*, ...)* {{%.*}} to void (i8*,
+// CK1-DAG: call void [[FN]](i8* %{{[^,]+}}, [1 x i8*]** [[FPBPADDR]], [1 x i8*]** [[FPPADDR]], [1 x i64]** [[FPSZADDR]])
 // CK1:     ret i32 0
 // CK1:     }
 
@@ -265,7 +266,7 @@ struct ST {
   }
 };
 
-// CK2: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 32, i64 281474976710676]
+// CK2: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976710676]
 
 // CK2-LABEL: _Z3bari
 int bar(int arg){
@@ -369,7 +370,7 @@ struct STT {
   }
 };
 
-// CK4: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 32, i64 281474976711700]
+// CK4: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976711700]
 
 // CK4-LABEL: _Z3bari
 int bar(int arg){

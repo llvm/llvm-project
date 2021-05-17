@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// https://llvm.org/PR41018
+// XFAIL: windows-dll
+
 // <locale>
 
 // template <class charT, class Traits, class Allocator>

@@ -8,101 +8,60 @@
 
 // <algorithm>
 
-// template<RandomAccessIterator Iter, StrictWeakOrder<auto, Iter::value_type> Compare>
-//   requires ShuffleIterator<Iter> && CopyConstructible<Compare>
-//   void
+// template<RandomAccessIterator Iter>
+//   requires ShuffleIterator<Iter> && LessThanComparable<Iter::value_type>
+//   constexpr void  // constexpr in C++20
 //   make_heap(Iter first, Iter last, Compare comp);
 
 #include <algorithm>
-#include <functional>
-#include <memory>
-#include <random>
 #include <cassert>
+#include <functional>
 
 #include "test_macros.h"
-#include "counting_predicates.h"
 #include "test_iterators.h"
+#include "MoveOnly.h"
 
-struct indirect_less
+template<class T, class Iter>
+TEST_CONSTEXPR_CXX20 bool test()
 {
-    template <class P>
-    bool operator()(const P& x, const P& y)
-        {return *x < *y;}
-};
-
-std::mt19937 randomness;
-
-void test(int N)
-{
-    int* ia = new int [N];
-    {
-    for (int i = 0; i < N; ++i)
-        ia[i] = i;
-    std::shuffle(ia, ia+N, randomness);
-    std::make_heap(ia, ia+N, std::greater<int>());
-    assert(std::is_heap(ia, ia+N, std::greater<int>()));
-
-    std::shuffle(ia, ia+N, randomness);
-    std::make_heap(random_access_iterator<int *>(ia),
-                   random_access_iterator<int *>(ia+N), std::greater<int>());
-    assert(std::is_heap(ia, ia+N, std::greater<int>()));
+    int orig[15] = {3,1,4,1,5, 9,2,6,5,3, 5,8,9,7,9};
+    T work[15] = {3,1,4,1,5, 9,2,6,5,3, 5,8,9,7,9};
+    for (int n = 0; n < 15; ++n) {
+        std::make_heap(Iter(work), Iter(work+n), std::greater<T>());
+        assert(std::is_heap(work, work+n, std::greater<T>()));
+        assert(std::is_permutation(work, work+n, orig));
+        std::copy(orig, orig+n, work);
     }
 
-//  Ascending
     {
-    binary_counting_predicate<std::greater<int>, int, int> pred ((std::greater<int>()));
-    for (int i = 0; i < N; ++i)
-        ia[i] = i;
-    std::make_heap(ia, ia+N, std::ref(pred));
-    assert(pred.count() <= 3u*N);
-    assert(std::is_heap(ia, ia+N, pred));
+        T input[] = {3, 4, 1, 2, 5};
+        std::make_heap(Iter(input), Iter(input + 5), std::greater<T>());
+        assert(std::is_heap(input, input + 5, std::greater<T>()));
+        std::pop_heap(input, input + 5, std::greater<T>()); assert(input[4] == 1);
+        std::pop_heap(input, input + 4, std::greater<T>()); assert(input[3] == 2);
+        std::pop_heap(input, input + 3, std::greater<T>()); assert(input[2] == 3);
+        std::pop_heap(input, input + 2, std::greater<T>()); assert(input[1] == 4);
+        std::pop_heap(input, input + 1, std::greater<T>()); assert(input[0] == 5);
     }
-
-//  Descending
-    {
-    binary_counting_predicate<std::greater<int>, int, int> pred ((std::greater<int>()));
-    for (int i = 0; i < N; ++i)
-        ia[N-1-i] = i;
-    std::make_heap(ia, ia+N, std::ref(pred));
-    assert(pred.count() <= 3u*N);
-    assert(std::is_heap(ia, ia+N, pred));
-    }
-
-//  Random
-    {
-    binary_counting_predicate<std::greater<int>, int, int> pred ((std::greater<int>()));
-    std::shuffle(ia, ia+N, randomness);
-    std::make_heap(ia, ia+N, std::ref(pred));
-    assert(pred.count() <= 3u*N);
-    assert(std::is_heap(ia, ia+N, pred));
-    }
-
-    delete [] ia;
+    return true;
 }
 
 int main(int, char**)
 {
-    test(0);
-    test(1);
-    test(2);
-    test(3);
-    test(10);
-    test(1000);
-    test(10000);
-    test(100000);
+    test<int, random_access_iterator<int*> >();
+    test<int, int*>();
 
 #if TEST_STD_VER >= 11
-    {
-    const int N = 1000;
-    std::unique_ptr<int>* ia = new std::unique_ptr<int> [N];
-    for (int i = 0; i < N; ++i)
-        ia[i].reset(new int(i));
-    std::shuffle(ia, ia+N, randomness);
-    std::make_heap(ia, ia+N, indirect_less());
-    assert(std::is_heap(ia, ia+N, indirect_less()));
-    delete [] ia;
-    }
+    test<MoveOnly, random_access_iterator<MoveOnly*>>();
+    test<MoveOnly, MoveOnly*>();
 #endif
 
-  return 0;
+#if TEST_STD_VER >= 20
+    static_assert(test<int, random_access_iterator<int*>>());
+    static_assert(test<int, int*>());
+    static_assert(test<MoveOnly, random_access_iterator<MoveOnly*>>());
+    static_assert(test<MoveOnly, MoveOnly*>());
+#endif
+
+    return 0;
 }

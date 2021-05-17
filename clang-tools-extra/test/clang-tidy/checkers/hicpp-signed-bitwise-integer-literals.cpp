@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s hicpp-signed-bitwise %t -- \
-// RUN:   -config="{CheckOptions: [{key: hicpp-signed-bitwise.IgnorePositiveIntegerLiterals, value: 1 }]}" \
+// RUN:   -config="{CheckOptions: [{key: hicpp-signed-bitwise.IgnorePositiveIntegerLiterals, value: true }]}" \
 // RUN: -- -std=c++11
 
 void examples() {

@@ -13,8 +13,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
-#include <fstream>
-#include <streambuf>
 #include <string>
 
 const char *IndexFilename;
@@ -34,9 +32,15 @@ std::unique_ptr<SymbolIndex> buildDex() {
 
 // Reads JSON array of serialized FuzzyFindRequest's from user-provided file.
 std::vector<FuzzyFindRequest> extractQueriesFromLogs() {
-  std::ifstream InputStream(RequestsFilename);
-  std::string Log((std::istreambuf_iterator<char>(InputStream)),
-                  std::istreambuf_iterator<char>());
+
+  auto Buffer = llvm::MemoryBuffer::getFile(RequestsFilename);
+  if (!Buffer) {
+    llvm::errs() << "Error cannot open JSON request file:" << RequestsFilename
+                 << ": " << Buffer.getError().message() << "\n";
+    exit(1);
+  }
+
+  StringRef Log = Buffer.get()->getBuffer();
 
   std::vector<FuzzyFindRequest> Requests;
   auto JSONArray = llvm::json::parse(Log);

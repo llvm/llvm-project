@@ -1,3 +1,6 @@
+//-------------------------- Predicate definitions ---------------------------//
+def IsPPC32 : Predicate<"!Subtarget->isPPC64()">;
+
 // Mask immediates for MMA instructions (2, 4 and 8 bits).
 def Msk2Imm : ImmLeaf<i32, [{ return isUInt<2>(Imm); }]>;
 def Msk4Imm : ImmLeaf<i32, [{ return isUInt<4>(Imm); }]>;
@@ -18,13 +21,16 @@ def SDT_PPCPairBuild : SDTypeProfile<1, 2, [
   SDTCisVT<0, v256i1>, SDTCisVT<1, v4i32>, SDTCisVT<2, v4i32>
 ]>;
 def SDT_PPCAccExtractVsx : SDTypeProfile<1, 2, [
-  SDTCisVT<0, v4i32>, SDTCisVT<1, v512i1>, SDTCisInt<2>
+  SDTCisVT<0, v4i32>, SDTCisVT<1, v512i1>, SDTCisPtrTy<2>
 ]>;
 def SDT_PPCPairExtractVsx : SDTypeProfile<1, 2, [
-  SDTCisVT<0, v4i32>, SDTCisVT<1, v256i1>, SDTCisInt<2>
+  SDTCisVT<0, v4i32>, SDTCisVT<1, v256i1>, SDTCisPtrTy<2>
 ]>;
 def SDT_PPCxxmfacc : SDTypeProfile<1, 1, [
   SDTCisVT<0, v512i1>, SDTCisVT<1, v512i1>
+]>;
+def SDT_PPCVecInsertElt : SDTypeProfile<1, 3, [
+  SDTCisVec<0>, SDTCisVec<1>, SDTCisInt<3>
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -39,6 +45,7 @@ def PPCAccExtractVsx : SDNode<"PPCISD::EXTRACT_VSX_REG", SDT_PPCAccExtractVsx,
 def PPCPairExtractVsx : SDNode<"PPCISD::EXTRACT_VSX_REG", SDT_PPCPairExtractVsx,
                         []>;
 def PPCxxmfacc : SDNode<"PPCISD::XXMFACC", SDT_PPCxxmfacc, []>;
+def PPCvecinsertelt : SDNode<"PPCISD::VECINSERT", SDT_PPCVecInsertElt, []>;
 
 //===----------------------------------------------------------------------===//
 
@@ -1604,13 +1611,13 @@ let Predicates = [MMA] in {
                                               v16i8:$vs3, v16i8:$vs2)),
             (XXMTACC Concats.VecsToVecQuad)>;
   def : Pat<(v512i1 (PPCxxmfacc v512i1:$AS)), (XXMFACC acc:$AS)>;
-  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 0))),
+  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, 0)),
             Extracts.Vec0>;
-  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 1))),
+  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, 1)),
             Extracts.Vec1>;
-  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 2))),
+  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, 2)),
             Extracts.Vec2>;
-  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 3))),
+  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, 3)),
             Extracts.Vec3>;
 }
 
@@ -1619,9 +1626,9 @@ let Predicates = [PairedVectorMemops] in {
             Concats.VecsToVecPair0>;
   def : Pat<(v256i1 (int_ppc_vsx_assemble_pair v16i8:$vs1, v16i8:$vs0)),
             Concats.VecsToVecPair0>;
-  def : Pat<(v4i32 (PPCPairExtractVsx vsrpevenrc:$v, (i64 0))),
+  def : Pat<(v4i32 (PPCPairExtractVsx vsrpevenrc:$v, 0)),
             (v4i32 (EXTRACT_SUBREG $v, sub_vsx0))>;
-  def : Pat<(v4i32 (PPCPairExtractVsx vsrpevenrc:$v, (i64 1))),
+  def : Pat<(v4i32 (PPCPairExtractVsx vsrpevenrc:$v, 1)),
             (v4i32 (EXTRACT_SUBREG $v, sub_vsx1))>;
 }
 
@@ -1687,6 +1694,10 @@ let Predicates = [PairedVectorMemops] in {
 // be removed.
 let Predicates = [PCRelativeMemops], AddedComplexity = 500 in {
   // Load i32
+  def : Pat<(i32 (zextloadi1  (PPCmatpcreladdr pcreladdr:$ga))),
+            (PLBZpc $ga, 0)>;
+  def : Pat<(i32 (extloadi1  (PPCmatpcreladdr pcreladdr:$ga))),
+            (PLBZpc $ga, 0)>;
   def : Pat<(i32 (zextloadi8  (PPCmatpcreladdr pcreladdr:$ga))),
             (PLBZpc $ga, 0)>;
   def : Pat<(i32 (extloadi8   (PPCmatpcreladdr pcreladdr:$ga))),
@@ -1708,6 +1719,10 @@ let Predicates = [PCRelativeMemops], AddedComplexity = 500 in {
             (PSTWpc $RS, $ga, 0)>;
 
   // Load i64
+  def : Pat<(i64 (zextloadi1  (PPCmatpcreladdr pcreladdr:$ga))),
+            (PLBZ8pc $ga, 0)>;
+  def : Pat<(i64 (extloadi1  (PPCmatpcreladdr pcreladdr:$ga))),
+            (PLBZ8pc $ga, 0)>;
   def : Pat<(i64 (zextloadi8  (PPCmatpcreladdr pcreladdr:$ga))),
             (PLBZ8pc $ga, 0)>;
   def : Pat<(i64 (extloadi8   (PPCmatpcreladdr pcreladdr:$ga))),
@@ -1855,14 +1870,6 @@ let Predicates = [PrefixInstrs] in {
                                       "xxspltidp $XT, $IMM32", IIC_VecGeneral,
                                       [(set v2f64:$XT,
                                             (PPCxxspltidp i32:$IMM32))]>;
-  def XXSPLTI32DX :
-      8RR_DForm_IMM32_XT6_IX<32, 0, (outs vsrc:$XT),
-                             (ins vsrc:$XTi, u1imm:$IX, i32imm:$IMM32),
-                             "xxsplti32dx $XT, $IX, $IMM32", IIC_VecGeneral,
-                             [(set v2i64:$XT,
-                                   (PPCxxsplti32dx v2i64:$XTi, i32:$IX,
-                                                   i32:$IMM32))]>,
-                             RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">;
   def XXPERMX :
     8RR_XX4Form_IMM3_XTABC6<34, 0, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB,
                             vsrc:$XC, u3imm:$UIM),
@@ -1884,6 +1891,19 @@ let Predicates = [PrefixInstrs] in {
     8RR_XX4Form_XTABC6<33, 3, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB,
                        vsrc:$XC), "xxblendvd $XT, $XA, $XB, $XC",
                        IIC_VecGeneral, []>;
+}
+
+// XXSPLI32DX needs extra flags to make sure the compiler does not attempt
+// to spill part of the instruction when the values are similar.
+let isReMaterializable = 1, isMoveImm = 1, Predicates = [PrefixInstrs] in {
+  def XXSPLTI32DX :
+      8RR_DForm_IMM32_XT6_IX<32, 0, (outs vsrc:$XT),
+                             (ins vsrc:$XTi, u1imm:$IX, i32imm:$IMM32),
+                             "xxsplti32dx $XT, $IX, $IMM32", IIC_VecGeneral,
+                             [(set v2i64:$XT,
+                                   (PPCxxsplti32dx v2i64:$XTi, i32:$IX,
+                                                   i32:$IMM32))]>,
+                             RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">;
 }
 
 let Predicates = [IsISA3_1] in {
@@ -2417,9 +2437,9 @@ multiclass P10ReverseSetBool<dag pattern, dag result> {
             (SETBCR8 result)>;
 }
 
-multiclass IntSetP10RevSetBool<SDNode SetCC, ValueType Ty, ImmLeaf ZExtTy,
-                               ImmLeaf SExtTy, PatLeaf Cmpi, PatLeaf Cmpli,
-                               PatLeaf Cmp, PatLeaf Cmpl> {
+multiclass IntSetP10RevSetBool<SDNode SetCC, ValueType Ty, PatLeaf ZExtTy,
+                               ImmLeaf SExtTy, I Cmpi, I Cmpli,
+                               I Cmp, I Cmpl> {
   defm : P10ReverseSetBool<(i1 (SetCC Ty:$s1, Ty:$s2, SETUGE)),
                            (EXTRACT_SUBREG (Cmpl $s1, $s2), sub_lt)>;
   defm : P10ReverseSetBool<(i1 (SetCC Ty:$s1, Ty:$s2, SETGE)),
@@ -2445,7 +2465,7 @@ multiclass IntSetP10RevSetBool<SDNode SetCC, ValueType Ty, ImmLeaf ZExtTy,
                            (EXTRACT_SUBREG (Cmpli $s1, imm:$imm), sub_eq)>;
 }
 
-multiclass FSetP10RevSetBool<SDNode SetCC, ValueType Ty, PatLeaf FCmp> {
+multiclass FSetP10RevSetBool<SDNode SetCC, ValueType Ty, I FCmp> {
   defm : P10ReverseSetBool<(i1 (SetCC Ty:$s1, Ty:$s2, SETUGE)),
                            (EXTRACT_SUBREG (FCmp $s1, $s2), sub_lt)>;
   defm : P10ReverseSetBool<(i1 (SetCC Ty:$s1, Ty:$s2, SETGE)),
@@ -2522,17 +2542,20 @@ let Predicates = [IsISA3_1] in {
   def : Pat<(i32 (int_ppc_vsx_xvtlsbb v16i8:$XB, 0)),
             (EXTRACT_SUBREG (XVTLSBB (COPY_TO_REGCLASS $XB, VSRC)), sub_eq)>;
 
-  def : Pat <(v1i128 (PPClxvrzx xoaddr:$src, 8)),
-             (v1i128 (COPY_TO_REGCLASS (LXVRBX xoaddr:$src), VRRC))>;
-  def : Pat <(v1i128 (PPClxvrzx xoaddr:$src, 16)),
-             (v1i128 (COPY_TO_REGCLASS (LXVRHX xoaddr:$src), VRRC))>;
-  def : Pat <(v1i128 (PPClxvrzx xoaddr:$src, 32)),
-             (v1i128 (COPY_TO_REGCLASS (LXVRWX xoaddr:$src), VRRC))>;
-  def : Pat <(v1i128 (PPClxvrzx xoaddr:$src, 64)),
-             (v1i128 (COPY_TO_REGCLASS (LXVRDX xoaddr:$src), VRRC))>;
+  def : Pat <(v1i128 (PPClxvrzx ForceXForm:$src, 8)),
+             (v1i128 (COPY_TO_REGCLASS (LXVRBX ForceXForm:$src), VRRC))>;
+  def : Pat <(v1i128 (PPClxvrzx ForceXForm:$src, 16)),
+             (v1i128 (COPY_TO_REGCLASS (LXVRHX ForceXForm:$src), VRRC))>;
+  def : Pat <(v1i128 (PPClxvrzx ForceXForm:$src, 32)),
+             (v1i128 (COPY_TO_REGCLASS (LXVRWX ForceXForm:$src), VRRC))>;
+  def : Pat <(v1i128 (PPClxvrzx ForceXForm:$src, 64)),
+             (v1i128 (COPY_TO_REGCLASS (LXVRDX ForceXForm:$src), VRRC))>;
 
   def : Pat<(v1i128 (rotl v1i128:$vA, v1i128:$vB)),
             (v1i128 (VRLQ v1i128:$vA, v1i128:$vB))>;
+
+  def : Pat <(v2i64 (PPCxxsplti32dx v2i64:$XT, i32:$XI, i32:$IMM32)),
+             (v2i64 (XXSPLTI32DX v2i64:$XT, i32:$XI, i32:$IMM32))>;
 }
 
 let Predicates = [IsISA3_1, HasVSX] in {
@@ -2544,18 +2567,23 @@ let Predicates = [IsISA3_1, HasVSX] in {
 
 let AddedComplexity = 400, Predicates = [IsISA3_1, IsLittleEndian] in {
   // Store element 0 of a VSX register to memory
-  def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$src, 0)), xoaddr:$dst),
-            (STXVRBX (COPY_TO_REGCLASS v16i8:$src, VSRC), xoaddr:$dst)>;
-  def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$src, 0)), xoaddr:$dst),
-            (STXVRHX (COPY_TO_REGCLASS v8i16:$src, VSRC), xoaddr:$dst)>;
-  def : Pat<(store (i32 (extractelt v4i32:$src, 0)), xoaddr:$dst),
-            (STXVRWX $src, xoaddr:$dst)>;
-  def : Pat<(store (f32 (extractelt v4f32:$src, 0)), xoaddr:$dst),
-            (STXVRWX $src, xoaddr:$dst)>;
-  def : Pat<(store (i64 (extractelt v2i64:$src, 0)), xoaddr:$dst),
-            (STXVRDX $src, xoaddr:$dst)>;
-  def : Pat<(store (f64 (extractelt v2f64:$src, 0)), xoaddr:$dst),
-            (STXVRDX $src, xoaddr:$dst)>;
+  def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$src, 0)), ForceXForm:$dst),
+            (STXVRBX (COPY_TO_REGCLASS v16i8:$src, VSRC), ForceXForm:$dst)>;
+  def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$src, 0)), ForceXForm:$dst),
+            (STXVRHX (COPY_TO_REGCLASS v8i16:$src, VSRC), ForceXForm:$dst)>;
+  def : Pat<(store (i32 (extractelt v4i32:$src, 0)), ForceXForm:$dst),
+            (STXVRWX $src, ForceXForm:$dst)>;
+  def : Pat<(store (f32 (extractelt v4f32:$src, 0)), ForceXForm:$dst),
+            (STXVRWX $src, ForceXForm:$dst)>;
+  def : Pat<(store (i64 (extractelt v2i64:$src, 0)), ForceXForm:$dst),
+            (STXVRDX $src, ForceXForm:$dst)>;
+  def : Pat<(store (f64 (extractelt v2f64:$src, 0)), ForceXForm:$dst),
+            (STXVRDX $src, ForceXForm:$dst)>;
+  // Load element 0 of a VSX register to memory
+  def : Pat<(v8i16 (scalar_to_vector (i32 (extloadi16 ForceXForm:$src)))),
+            (v8i16 (COPY_TO_REGCLASS (LXVRHX ForceXForm:$src), VSRC))>;
+  def : Pat<(v16i8 (scalar_to_vector (i32 (extloadi8 ForceXForm:$src)))),
+            (v16i8 (COPY_TO_REGCLASS (LXVRBX ForceXForm:$src), VSRC))>;
  }
 
 // FIXME: The swap is overkill when the shift amount is a constant.
@@ -2603,6 +2631,19 @@ let AddedComplexity = 400, Predicates = [PrefixInstrs] in {
            (COPY_TO_REGCLASS (XXSPLTIDP (getFPAs32BitInt fpimm:$A)),
                              VSFRC)>;
 
+// To replace constant pool with XXSPLTI32DX for scalars.
+def : Pat<(f32 nzFPImmAsi64:$A),
+          (COPY_TO_REGCLASS (XXSPLTI32DX (XXSPLTI32DX(IMPLICIT_DEF), 0,
+                                        (getFPAs64BitIntHi $A)),
+                                        1, (getFPAs64BitIntLo $A)),
+                            VSSRC)>;
+
+def : Pat<(f64 nzFPImmAsi64:$A),
+          (COPY_TO_REGCLASS (XXSPLTI32DX (XXSPLTI32DX (IMPLICIT_DEF), 0,
+                                        (getFPAs64BitIntHi $A)),
+                                        1, (getFPAs64BitIntLo $A)),
+                            VSFRC)>;
+
   // Anonymous patterns for XXEVAL
   // AND
   // and(A, B, C)
@@ -2612,37 +2653,36 @@ let AddedComplexity = 400, Predicates = [PrefixInstrs] in {
   // and(A, or(B, C))
   def : xxevalPattern<(and v4i32:$vA, (or v4i32:$vB, v4i32:$vC)), 7>;
   // and(A, nor(B, C))
-  def : xxevalPattern<(and v4i32:$vA, (vnot_ppc (or v4i32:$vB, v4i32:$vC))),
-                       8>;
+  def : xxevalPattern<(and v4i32:$vA, (vnot (or v4i32:$vB, v4i32:$vC))), 8>;
   // and(A, eqv(B, C))
-  def : xxevalPattern<(and v4i32:$vA, (vnot_ppc (xor v4i32:$vB, v4i32:$vC))),
-                       9>;
+  def : xxevalPattern<(and v4i32:$vA, (vnot (xor v4i32:$vB, v4i32:$vC))), 9>;
   // and(A, nand(B, C))
-  def : xxevalPattern<(and v4i32:$vA, (vnot_ppc (and v4i32:$vB, v4i32:$vC))),
-                       14>;
+  def : xxevalPattern<(and v4i32:$vA, (vnot (and v4i32:$vB, v4i32:$vC))), 14>;
 
   // NAND
   // nand(A, B, C)
-  def : xxevalPattern<(vnot_ppc (and v4i32:$vA, (and v4i32:$vB, v4i32:$vC))),
+  def : xxevalPattern<(vnot (and v4i32:$vA, (and v4i32:$vB, v4i32:$vC))),
                        !sub(255, 1)>;
   // nand(A, xor(B, C))
-  def : xxevalPattern<(vnot_ppc (and v4i32:$vA, (xor v4i32:$vB, v4i32:$vC))),
+  def : xxevalPattern<(vnot (and v4i32:$vA, (xor v4i32:$vB, v4i32:$vC))),
                        !sub(255, 6)>;
   // nand(A, or(B, C))
-  def : xxevalPattern<(vnot_ppc (and v4i32:$vA, (or v4i32:$vB, v4i32:$vC))),
+  def : xxevalPattern<(vnot (and v4i32:$vA, (or v4i32:$vB, v4i32:$vC))),
                        !sub(255, 7)>;
   // nand(A, nor(B, C))
-  def : xxevalPattern<(or (vnot_ppc v4i32:$vA), (or v4i32:$vB, v4i32:$vC)),
+  def : xxevalPattern<(or (vnot v4i32:$vA), (or v4i32:$vB, v4i32:$vC)),
                        !sub(255, 8)>;
   // nand(A, eqv(B, C))
-  def : xxevalPattern<(or (vnot_ppc v4i32:$vA), (xor v4i32:$vB, v4i32:$vC)),
+  def : xxevalPattern<(or (vnot v4i32:$vA), (xor v4i32:$vB, v4i32:$vC)),
                        !sub(255, 9)>;
   // nand(A, nand(B, C))
-  def : xxevalPattern<(or (vnot_ppc v4i32:$vA), (and v4i32:$vB, v4i32:$vC)),
+  def : xxevalPattern<(or (vnot v4i32:$vA), (and v4i32:$vB, v4i32:$vC)),
                        !sub(255, 14)>;
 }
 
 let Predicates = [PrefixInstrs] in {
+  def : Pat<(i32 imm34:$imm), (PLI (getImmAs64BitInt imm:$imm))>;
+  def : Pat<(i64 imm34:$imm), (PLI8 (getImmAs64BitInt imm:$imm))>;
   def : Pat<(v16i8 (int_ppc_vsx_xxpermx v16i8:$A, v16i8:$B, v16i8:$C, timm:$D)),
             (COPY_TO_REGCLASS (XXPERMX (COPY_TO_REGCLASS $A, VSRC),
                                        (COPY_TO_REGCLASS $B, VSRC),
@@ -2663,3 +2703,136 @@ let Predicates = [PrefixInstrs] in {
             (XXBLENDVD $A, $B, $C)>;
 }
 
+def InsertEltShift {
+  dag Sub32Left0 = (EXTRACT_SUBREG $rB, sub_32);
+  dag Sub32Left1 = (RLWINM (EXTRACT_SUBREG $rB, sub_32), 1, 0, 30);
+  dag Sub32Left2 = (RLWINM (EXTRACT_SUBREG $rB, sub_32), 2, 0, 29);
+  dag Left3 = (RLWINM8 $rB, 3, 0, 28);
+}
+
+let Predicates = [IsISA3_1, HasVSX, IsLittleEndian] in {
+  // Indexed vector insert element
+  def : Pat<(v16i8 (PPCvecinsertelt v16i8:$vDi, i32:$rA, i64:$rB)),
+            (VINSBRX $vDi, InsertEltShift.Sub32Left0, $rA)>;
+  def : Pat<(v8i16 (PPCvecinsertelt v8i16:$vDi, i32:$rA, i64:$rB)),
+            (VINSHRX $vDi, InsertEltShift.Sub32Left1, $rA)>;
+  def : Pat<(v4i32 (PPCvecinsertelt v4i32:$vDi, i32:$rA, i64:$rB)),
+            (VINSWRX $vDi, InsertEltShift.Sub32Left2, $rA)>;
+  def : Pat<(v2i64 (PPCvecinsertelt v2i64:$vDi, i64:$rA, i64:$rB)),
+            (VINSDRX $vDi, InsertEltShift.Left3, $rA)>;
+
+  def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi,  f32:$A, i64:$rB)),
+            (VINSWRX $vDi, InsertEltShift.Sub32Left2, Bitcast.FltToInt)>;
+  def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi, (f32 (load iaddr:$rA)), i64:$rB)),
+            (VINSWRX $vDi, InsertEltShift.Sub32Left2, (LWZ memri:$rA))>;
+  def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi, (f32 (load iaddrX34:$rA)), i64:$rB)),
+            (VINSWRX $vDi, InsertEltShift.Sub32Left2, (PLWZ memri34:$rA))>;
+  def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi, (f32 (load xaddr:$rA)), i64:$rB)),
+            (VINSWRX $vDi, InsertEltShift.Sub32Left2, (LWZX memrr:$rA))>;
+
+  def : Pat<(v2f64 (PPCvecinsertelt v2f64:$vDi,  f64:$A, i64:$rB)),
+            (VINSDRX $vDi, InsertEltShift.Left3, Bitcast.DblToLong)>;
+  def : Pat<(v2f64 (PPCvecinsertelt v2f64:$vDi, (f64 (load iaddrX4:$rA)), i64:$rB)),
+            (VINSDRX $vDi, InsertEltShift.Left3, (LD memrix:$rA))>;
+  def : Pat<(v2f64 (PPCvecinsertelt v2f64:$vDi, (f64 (load iaddrX34:$rA)), i64:$rB)),
+            (VINSDRX $vDi, InsertEltShift.Left3, (PLD memri34:$rA))>;
+  def : Pat<(v2f64 (PPCvecinsertelt v2f64:$vDi, (f64 (load xaddrX4:$rA)), i64:$rB)),
+            (VINSDRX $vDi, InsertEltShift.Left3, (LDX memrr:$rA))>;
+
+  // Immediate vector insert element
+  foreach i = [0, 1, 2, 3] in {
+    def : Pat<(v4i32 (PPCvecinsertelt v4i32:$vDi, i32:$rA, (i64 i))),
+              (VINSW $vDi, !mul(!sub(3, i), 4), $rA)>;
+    def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi, (f32 (load iaddr:$rA)), (i64 i))),
+              (VINSW $vDi, !mul(!sub(3, i), 4), (LWZ memri:$rA))>;
+    def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi, (f32 (load iaddrX34:$rA)), (i64 i))),
+              (VINSW $vDi, !mul(!sub(3, i), 4), (PLWZ memri34:$rA))>;
+    def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi, (f32 (load xaddr:$rA)), (i64 i))),
+              (VINSW $vDi, !mul(!sub(3, i), 4), (LWZX memrr:$rA))>;
+  }
+  foreach i = [0, 1] in
+    def : Pat<(v2i64 (PPCvecinsertelt v2i64:$vDi, i64:$rA, (i64 i))),
+              (VINSD $vDi, !mul(!sub(1, i), 8), $rA)>;
+}
+
+let Predicates = [IsISA3_1, HasVSX, IsBigEndian, IsPPC32] in {
+  // Indexed vector insert element
+  def : Pat<(v16i8 (PPCvecinsertelt v16i8:$vDi, i32:$rA, i32:$rB)),
+            (VINSBLX $vDi, $rB, $rA)>;
+  def : Pat<(v8i16 (PPCvecinsertelt v8i16:$vDi, i32:$rA, i32:$rB)),
+            (VINSHLX $vDi, $rB, $rA)>;
+  def : Pat<(v4i32 (PPCvecinsertelt v4i32:$vDi, i32:$rA, i32:$rB)),
+            (VINSWLX $vDi, $rB, $rA)>;
+
+  def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi,  f32:$A, i32:$rB)),
+            (VINSWLX $vDi, $rB, Bitcast.FltToInt)>;
+  def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi, (f32 (load iaddr:$rA)),
+                                    i32:$rB)),
+            (VINSWLX $vDi, $rB, (LWZ memri:$rA))>;
+  def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi, (f32 (load iaddrX34:$rA)),
+                                    i32:$rB)),
+            (VINSWLX $vDi, $rB, (PLWZ memri34:$rA))>;
+  def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi, (f32 (load xaddr:$rA)),
+                                    i32:$rB)),
+            (VINSWLX $vDi, $rB, (LWZX memrr:$rA))>;
+
+  // Immediate vector insert element
+  foreach i = [0, 1, 2, 3] in {
+    def : Pat<(v4i32 (PPCvecinsertelt v4i32:$vDi, i32:$rA, (i32 i))),
+              (VINSW $vDi, !mul(i, 4), $rA)>;
+    def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi, (f32 (load iaddr:$rA)),
+                                     (i32 i))),
+              (VINSW $vDi, !mul(i, 4), (LWZ memri:$rA))>;
+    def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi, (f32 (load iaddrX34:$rA)),
+                                     (i32 i))),
+              (VINSW $vDi, !mul(i, 4), (PLWZ memri34:$rA))>;
+    def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi, (f32 (load xaddr:$rA)),
+                                     (i32 i))),
+              (VINSW $vDi, !mul(i, 4), (LWZX memrr:$rA))>;
+  }
+}
+
+let Predicates = [IsISA3_1, HasVSX, IsBigEndian, IsPPC64] in {
+  // Indexed vector insert element
+  def : Pat<(v16i8 (PPCvecinsertelt v16i8:$vDi, i32:$rA, i64:$rB)),
+            (VINSBLX $vDi, InsertEltShift.Sub32Left0, $rA)>;
+  def : Pat<(v8i16 (PPCvecinsertelt v8i16:$vDi, i32:$rA, i64:$rB)),
+            (VINSHLX $vDi, InsertEltShift.Sub32Left1, $rA)>;
+  def : Pat<(v4i32 (PPCvecinsertelt v4i32:$vDi, i32:$rA, i64:$rB)),
+            (VINSWLX $vDi, InsertEltShift.Sub32Left2, $rA)>;
+  def : Pat<(v2i64 (PPCvecinsertelt v2i64:$vDi, i64:$rA, i64:$rB)),
+            (VINSDLX $vDi, InsertEltShift.Left3, $rA)>;
+
+  def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi,  f32:$A, i64:$rB)),
+            (VINSWLX $vDi, InsertEltShift.Sub32Left2, Bitcast.FltToInt)>;
+  def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi, (f32 (load iaddr:$rA)), i64:$rB)),
+            (VINSWLX $vDi, InsertEltShift.Sub32Left2, (LWZ memri:$rA))>;
+  def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi, (f32 (load iaddrX34:$rA)), i64:$rB)),
+            (VINSWLX $vDi, InsertEltShift.Sub32Left2, (PLWZ memri34:$rA))>;
+  def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi, (f32 (load xaddr:$rA)), i64:$rB)),
+            (VINSWLX $vDi, InsertEltShift.Sub32Left2, (LWZX memrr:$rA))>;
+
+  def : Pat<(v2f64 (PPCvecinsertelt v2f64:$vDi,  f64:$A, i64:$rB)),
+            (VINSDLX $vDi, InsertEltShift.Left3, Bitcast.DblToLong)>;
+  def : Pat<(v2f64 (PPCvecinsertelt v2f64:$vDi, (f64 (load iaddrX4:$rA)), i64:$rB)),
+            (VINSDLX $vDi, InsertEltShift.Left3, (LD memrix:$rA))>;
+  def : Pat<(v2f64 (PPCvecinsertelt v2f64:$vDi, (f64 (load iaddrX34:$rA)), i64:$rB)),
+            (VINSDLX $vDi, InsertEltShift.Left3, (PLD memri34:$rA))>;
+  def : Pat<(v2f64 (PPCvecinsertelt v2f64:$vDi, (f64 (load xaddrX4:$rA)), i64:$rB)),
+            (VINSDLX $vDi, InsertEltShift.Left3, (LDX memrr:$rA))>;
+
+  // Immediate vector insert element
+  foreach i = [0, 1, 2, 3] in {
+    def : Pat<(v4i32 (PPCvecinsertelt v4i32:$vDi, i32:$rA, (i64 i))),
+              (VINSW $vDi, !mul(i, 4), $rA)>;
+    def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi, (f32 (load iaddr:$rA)), (i64 i))),
+              (VINSW $vDi, !mul(i, 4), (LWZ memri:$rA))>;
+    def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi, (f32 (load iaddrX34:$rA)), (i64 i))),
+              (VINSW $vDi, !mul(i, 4), (PLWZ memri34:$rA))>;
+    def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi, (f32 (load xaddr:$rA)), (i64 i))),
+              (VINSW $vDi, !mul(i, 4), (LWZX memrr:$rA))>;
+  }
+  foreach i = [0, 1] in
+    def : Pat<(v2i64 (PPCvecinsertelt v2i64:$vDi, i64:$rA, (i64 i))),
+              (VINSD $vDi, !mul(i, 8), $rA)>;
+}

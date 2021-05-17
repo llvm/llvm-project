@@ -107,13 +107,13 @@ void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
     // fromFDE being true means this is referenced by a FDE in a .eh_frame
     // piece. The relocation points to the described function or to a LSDA. We
     // only need to keep the LSDA live, so ignore anything that points to
-    // executable sections. If the LSDA is in a section group, we ignore the
-    // relocation as well because (a) if the associated text section is live,
-    // the LSDA will be retained due to section group rules (b) if the
-    // associated text section should be discarded, marking the LSDA will
-    // unnecessarily retain the text section.
-    if (!(fromFDE &&
-          ((relSec->flags & SHF_EXECINSTR) || relSec->nextInSectionGroup)))
+    // executable sections. If the LSDA is in a section group or has the
+    // SHF_LINK_ORDER flag, we ignore the relocation as well because (a) if the
+    // associated text section is live, the LSDA will be retained due to section
+    // group/SHF_LINK_ORDER rules (b) if the associated text section should be
+    // discarded, marking the LSDA will unnecessarily retain the text section.
+    if (!(fromFDE && ((relSec->flags & (SHF_EXECINSTR | SHF_LINK_ORDER)) ||
+                      relSec->nextInSectionGroup)))
       enqueue(relSec, offset);
     return;
   }
@@ -261,12 +261,20 @@ template <class ELFT> void MarkLive<ELFT>::run() {
         scanEhFrameSection(*eh, eh->template rels<ELFT>());
     }
 
+    if (sec->flags & SHF_GNU_RETAIN) {
+      enqueue(sec, 0);
+      continue;
+    }
     if (sec->flags & SHF_LINK_ORDER)
       continue;
 
     if (isReserved(sec) || script->shouldKeep(sec)) {
       enqueue(sec, 0);
-    } else if (isValidCIdentifier(sec->name)) {
+    } else if ((!config->zStartStopGC || sec->name.startswith("__libc_")) &&
+               isValidCIdentifier(sec->name)) {
+      // As a workaround for glibc libc.a before 2.34
+      // (https://sourceware.org/PR27492), retain __libc_atexit and similar
+      // sections regardless of zStartStopGC.
       cNamedSections[saver.save("__start_" + sec->name)].push_back(sec);
       cNamedSections[saver.save("__stop_" + sec->name)].push_back(sec);
     }

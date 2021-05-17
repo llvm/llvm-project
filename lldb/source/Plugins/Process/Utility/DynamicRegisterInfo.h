@@ -60,11 +60,17 @@ public:
   uint32_t ConvertRegisterKindToRegisterNumber(uint32_t kind,
                                                uint32_t num) const;
 
+  const lldb_private::RegisterInfo *GetRegisterInfo(uint32_t kind,
+                                                    uint32_t num) const;
+
   void Dump() const;
 
   void Clear();
 
   bool IsReconfigurable();
+
+  const lldb_private::RegisterInfo *
+  GetRegisterInfo(llvm::StringRef reg_name) const;
 
 protected:
   // Classes that inherit from DynamicRegisterInfo can see and modify these
@@ -76,9 +82,6 @@ protected:
   typedef std::map<uint32_t, reg_num_collection> reg_to_regs_map;
   typedef std::vector<uint8_t> dwarf_opcode;
   typedef std::map<uint32_t, dwarf_opcode> dynamic_reg_size_map;
-
-  const lldb_private::RegisterInfo *
-  GetRegisterInfo(llvm::StringRef reg_name) const;
 
   void MoveFrom(DynamicRegisterInfo &&info);
 

@@ -41,6 +41,7 @@
 #include "llvm/Analysis/ObjCARCAliasAnalysis.h"
 #include "llvm/Analysis/ObjCARCAnalysisUtils.h"
 #include "llvm/Analysis/ObjCARCInstKind.h"
+#include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
@@ -483,6 +484,7 @@ namespace {
   /// The main ARC optimization pass.
 class ObjCARCOpt {
   bool Changed;
+  bool CFGChanged;
   ProvenanceAnalysis PA;
 
   /// A cache of references to runtime entry point constants.
@@ -492,8 +494,7 @@ class ObjCARCOpt {
   /// MDKind identifiers.
   ARCMDKindCache MDKindCache;
 
-  /// A flag indicating whether this optimization pass should run.
-  bool Run;
+  BundledRetainClaimRVs *BundledInsts = nullptr;
 
   /// A flag indicating whether the optimization that removes or moves
   /// retain/release pairs should be performed.
@@ -573,6 +574,7 @@ class ObjCARCOpt {
     void init(Module &M);
     bool run(Function &F, AAResults &AA);
     void releaseMemory();
+    bool hasCFGChanged() const { return CFGChanged; }
 };
 
 /// The main ARC optimization pass.
@@ -610,8 +612,6 @@ Pass *llvm::createObjCARCOptPass() { return new ObjCARCOptLegacyPass(); }
 void ObjCARCOptLegacyPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<ObjCARCAAWrapperPass>();
   AU.addRequired<AAResultsWrapperPass>();
-  // ARC optimization doesn't currently split critical edges.
-  AU.setPreservesCFG();
 }
 
 /// Turn objc_retainAutoreleasedReturnValue into objc_retain if the operand is
@@ -640,6 +640,9 @@ ObjCARCOpt::OptimizeRetainRVCall(Function &F, Instruction *RetainRV) {
     }
   }
 
+  assert(!BundledInsts->contains(RetainRV) &&
+         "a bundled retainRV's argument should be a call");
+
   // Turn it to a plain objc_retain.
   Changed = true;
   ++NumPeeps;
@@ -661,6 +664,9 @@ bool ObjCARCOpt::OptimizeInlinedAutoreleaseRVCall(
     Function &F, DenseMap<BasicBlock *, ColorVector> &BlockColors,
     Instruction *Inst, const Value *&Arg, ARCInstKind Class,
     Instruction *AutoreleaseRV, const Value *&AutoreleaseRVArg) {
+  if (BundledInsts->contains(Inst))
+    return false;
+
   // Must be in the same basic block.
   assert(Inst->getParent() == AutoreleaseRV->getParent());
 
@@ -844,6 +850,12 @@ void ObjCARCOpt::OptimizeIndividualCalls(Function &F) {
   for (inst_iterator I = inst_begin(&F), E = inst_end(&F); I != E; ) {
     Instruction *Inst = &*I++;
 
+    if (auto *CI = dyn_cast<CallInst>(Inst))
+      if (objcarc::hasAttachedCallOpBundle(CI)) {
+        BundledInsts->insertRVCall(&*I, CI);
+        Changed = true;
+      }
+
     ARCInstKind Class = GetBasicARCInstKind(Inst);
 
     // Skip this loop if this instruction isn't itself an ARC intrinsic.
@@ -921,6 +933,11 @@ void ObjCARCOpt::OptimizeIndividualCallImpl(
 
   // We can delete this call if it takes an inert value.
   SmallPtrSet<Value *, 1> VisitedPhis;
+
+  if (BundledInsts->contains(Inst)) {
+    UsedInThisFunction |= 1 << unsigned(Class);
+    return;
+  }
 
   if (IsNoopOnGlobal(Class))
     if (isInertARCValue(Inst->getOperand(0), VisitedPhis)) {
@@ -1212,7 +1229,6 @@ static void CheckForUseCFGHazard(const Sequence SuccSSeq,
     SomeSuccHasSame = true;
     break;
   case S_Stop:
-  case S_Release:
   case S_MovableRelease:
     if (!S.IsKnownSafe() && !SuccSRRIKnownSafe)
       AllSuccsHaveSame = false;
@@ -1240,7 +1256,6 @@ static void CheckForCanReleaseCFGHazard(const Sequence SuccSSeq,
     SomeSuccHasSame = true;
     break;
   case S_Stop:
-  case S_Release:
   case S_MovableRelease:
   case S_Use:
     if (!S.IsKnownSafe() && !SuccSRRIKnownSafe)
@@ -1326,7 +1341,6 @@ ObjCARCOpt::CheckForCFGHazards(const BasicBlock *BB,
       case S_Retain:
       case S_None:
       case S_Stop:
-      case S_Release:
       case S_MovableRelease:
         break;
       }
@@ -1542,7 +1556,7 @@ ObjCARCOpt::VisitInstructionTopDown(Instruction *Inst,
     if (Ptr == Arg)
       continue; // Handled above.
     TopDownPtrState &S = MI->second;
-    if (S.HandlePotentialAlterRefCount(Inst, Ptr, PA, Class))
+    if (S.HandlePotentialAlterRefCount(Inst, Ptr, PA, Class, *BundledInsts))
       continue;
 
     S.HandlePotentialUse(Inst, Ptr, PA, Class);
@@ -2087,7 +2101,7 @@ void ObjCARCOpt::OptimizeWeakCalls(Function &F) {
         Value *Arg = Call->getArgOperand(0);
         Value *EarlierArg = EarlierCall->getArgOperand(0);
         switch (PA.getAA()->alias(Arg, EarlierArg)) {
-        case MustAlias:
+        case AliasResult::MustAlias:
           Changed = true;
           // If the load has a builtin retain, insert a plain retain for it.
           if (Class == ARCInstKind::LoadWeakRetained) {
@@ -2099,10 +2113,10 @@ void ObjCARCOpt::OptimizeWeakCalls(Function &F) {
           Call->replaceAllUsesWith(EarlierCall);
           Call->eraseFromParent();
           goto clobbered;
-        case MayAlias:
-        case PartialAlias:
+        case AliasResult::MayAlias:
+        case AliasResult::PartialAlias:
           goto clobbered;
-        case NoAlias:
+        case AliasResult::NoAlias:
           break;
         }
         break;
@@ -2116,7 +2130,7 @@ void ObjCARCOpt::OptimizeWeakCalls(Function &F) {
         Value *Arg = Call->getArgOperand(0);
         Value *EarlierArg = EarlierCall->getArgOperand(0);
         switch (PA.getAA()->alias(Arg, EarlierArg)) {
-        case MustAlias:
+        case AliasResult::MustAlias:
           Changed = true;
           // If the load has a builtin retain, insert a plain retain for it.
           if (Class == ARCInstKind::LoadWeakRetained) {
@@ -2128,10 +2142,10 @@ void ObjCARCOpt::OptimizeWeakCalls(Function &F) {
           Call->replaceAllUsesWith(EarlierCall->getArgOperand(1));
           Call->eraseFromParent();
           goto clobbered;
-        case MayAlias:
-        case PartialAlias:
+        case AliasResult::MayAlias:
+        case AliasResult::PartialAlias:
           goto clobbered;
-        case NoAlias:
+        case AliasResult::NoAlias:
           break;
         }
         break;
@@ -2343,7 +2357,7 @@ void ObjCARCOpt::OptimizeReturns(Function &F) {
     ++NumRets;
     LLVM_DEBUG(dbgs() << "Erasing: " << *Retain << "\nErasing: " << *Autorelease
                       << "\n");
-    EraseInstruction(Retain);
+    BundledInsts->eraseInst(Retain);
     EraseInstruction(Autorelease);
   }
 }
@@ -2376,11 +2390,6 @@ void ObjCARCOpt::init(Module &M) {
   if (!EnableARCOpts)
     return;
 
-  // If nothing in the Module uses ARC, don't do anything.
-  Run = ModuleHasARC(M);
-  if (!Run)
-    return;
-
   // Intuitively, objc_retain and others are nocapture, however in practice
   // they are not, because they return their argument value. And objc_release
   // calls finalizers which can have arbitrary side effects.
@@ -2394,15 +2403,17 @@ bool ObjCARCOpt::run(Function &F, AAResults &AA) {
   if (!EnableARCOpts)
     return false;
 
-  // If nothing in the Module uses ARC, don't do anything.
-  if (!Run)
-    return false;
-
-  Changed = false;
+  Changed = CFGChanged = false;
+  BundledRetainClaimRVs BRV(EP, false);
+  BundledInsts = &BRV;
 
   LLVM_DEBUG(dbgs() << "<<< ObjCARCOpt: Visiting Function: " << F.getName()
                     << " >>>"
                        "\n");
+
+  std::pair<bool, bool> R = BundledInsts->insertAfterInvokes(F, nullptr);
+  Changed |= R.first;
+  CFGChanged |= R.second;
 
   PA.setAA(&AA);
 
@@ -2468,9 +2479,11 @@ PreservedAnalyses ObjCARCOptPass::run(Function &F,
   OCAO.init(*F.getParent());
 
   bool Changed = OCAO.run(F, AM.getResult<AAManager>(F));
+  bool CFGChanged = OCAO.hasCFGChanged();
   if (Changed) {
     PreservedAnalyses PA;
-    PA.preserveSet<CFGAnalyses>();
+    if (!CFGChanged)
+      PA.preserveSet<CFGAnalyses>();
     return PA;
   }
   return PreservedAnalyses::all();

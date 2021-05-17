@@ -8,17 +8,24 @@
 
 // <queue>
 
-// queue();
+// explicit queue(Container&& = Container()); // before C++20
+// queue() : queue(Container()) {}            // C++20
+// explicit queue(Container&&);               // before C++20
 
 #include <queue>
 #include <cassert>
 
 #include "test_macros.h"
 #include "test_allocator.h"
+#if TEST_STD_VER >= 11
+#include "test_convertible.h"
+#endif
 
 int main(int, char**)
 {
-    std::queue<int, std::vector<int, limited_allocator<int, 10> > > q;
+    typedef std::vector<int, limited_allocator<int, 10> > Container;
+    typedef std::queue<int, Container> Q;
+    Q q;
     assert(q.size() == 0);
     q.push(1);
     q.push(2);
@@ -26,5 +33,10 @@ int main(int, char**)
     assert(q.front() == 1);
     assert(q.back() == 2);
 
-  return 0;
+#if TEST_STD_VER >= 11
+    // It should be explicit, so not convertible before C++20.
+    static_assert(test_convertible<Q>(), "");
+#endif
+
+    return 0;
 }

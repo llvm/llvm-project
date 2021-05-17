@@ -218,7 +218,7 @@ define i32 @e() {
 ; CHECK-NEXT:    vadd.i32 q2, q2, q1
 ; CHECK-NEXT:    cmp r0, #8
 ; CHECK-NEXT:    cset r1, eq
-; CHECK-NEXT:    tst.w r1, #1
+; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    csetm r1, ne
 ; CHECK-NEXT:    subs.w r2, r0, #8
 ; CHECK-NEXT:    vdup.32 q3, r1

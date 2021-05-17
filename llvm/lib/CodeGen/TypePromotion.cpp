@@ -952,7 +952,8 @@ bool TypePromotion::runOnFunction(Function &F) {
   const TargetLowering *TLI = SubtargetInfo->getTargetLowering();
   const TargetTransformInfo &TII =
     getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  RegisterBitWidth = TII.getRegisterBitWidth(false);
+  RegisterBitWidth =
+      TII.getRegisterBitWidth(TargetTransformInfo::RGK_Scalar).getFixedSize();
   Ctx = &F.getParent()->getContext();
 
   // Search up from icmps to try to promote their operands.

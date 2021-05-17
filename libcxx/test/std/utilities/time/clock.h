@@ -22,4 +22,4 @@ class Clock
     static time_point now();
 };
 
-#endif  // CLOCK_H
+#endif // CLOCK_H

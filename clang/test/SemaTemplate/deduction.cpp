@@ -604,3 +604,14 @@ namespace merge_size_only_deductions {
   int b = f(X<char [1], char [2]>(), Y<1, 2>(), X<id<int>, id<int>>());
 #endif
 }
+
+namespace PR49724 {
+  struct A;
+  template<int A::*> class X {};
+  template<int A::*P> void f(X<P>);
+  void g(X<nullptr> x) { f(x); }
+
+  template<void (A::*)()> class Y {};
+  template<void (A::*P)()> void f(Y<P>);
+  void g(Y<nullptr> y) { f(y); }
+}

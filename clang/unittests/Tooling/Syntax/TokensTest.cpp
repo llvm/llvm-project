@@ -106,6 +106,7 @@ public:
       void EndSourceFileAction() override {
         assert(Collector && "BeginSourceFileAction was never called");
         Result = std::move(*Collector).consume();
+        Result.indexExpandedTokens();
       }
 
       std::unique_ptr<ASTConsumer>
@@ -1037,4 +1038,13 @@ TEST_F(TokenBufferTest, ExpandedBySpelled) {
               IsEmpty());
 }
 
+TEST_F(TokenCollectorTest, Pragmas) {
+  // Tokens coming from concatenations.
+  recordTokens(R"cpp(
+    void foo() {
+      #pragma unroll 4
+      for(int i=0;i<4;++i);
+    }
+  )cpp");
+}
 } // namespace

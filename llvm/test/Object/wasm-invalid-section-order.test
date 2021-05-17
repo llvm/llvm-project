@@ -1,5 +1,5 @@
 # RUN: not obj2yaml %p/Inputs/WASM/invalid-section-order.wasm 2>&1 | FileCheck %s
-# CHECK: {{.*}}: Out of order section type: 10
+# CHECK: {{.*}}: out of order section type: 10
 
 # Inputs/WASM/invalid-section-order.wasm is generated from this ll file, by
 # modifying WasmObjectWriter to incorrectly write the data section before the

@@ -61,66 +61,61 @@ static const char LoopNameIterator[] = "forLoopIterator";
 static const char LoopNameReverseIterator[] = "forLoopReverseIterator";
 static const char LoopNamePseudoArray[] = "forLoopPseudoArray";
 static const char ConditionBoundName[] = "conditionBound";
-static const char ConditionVarName[] = "conditionVar";
-static const char IncrementVarName[] = "incrementVar";
 static const char InitVarName[] = "initVar";
 static const char BeginCallName[] = "beginCall";
 static const char EndCallName[] = "endCall";
-static const char ConditionEndVarName[] = "conditionEndVar";
 static const char EndVarName[] = "endVar";
 static const char DerefByValueResultName[] = "derefByValueResult";
 static const char DerefByRefResultName[] = "derefByRefResult";
-// shared matchers
-static const TypeMatcher AnyType() { return anything(); }
 
-static const StatementMatcher IntegerComparisonMatcher() {
+static const StatementMatcher integerComparisonMatcher() {
   return expr(ignoringParenImpCasts(
-      declRefExpr(to(varDecl(hasType(isInteger())).bind(ConditionVarName)))));
+      declRefExpr(to(varDecl(equalsBoundNode(InitVarName))))));
 }
 
-static const DeclarationMatcher InitToZeroMatcher() {
+static const DeclarationMatcher initToZeroMatcher() {
   return varDecl(
              hasInitializer(ignoringParenImpCasts(integerLiteral(equals(0)))))
       .bind(InitVarName);
 }
 
-static const StatementMatcher IncrementVarMatcher() {
-  return declRefExpr(to(varDecl(hasType(isInteger())).bind(IncrementVarName)));
+static const StatementMatcher incrementVarMatcher() {
+  return declRefExpr(to(varDecl(equalsBoundNode(InitVarName))));
+}
+
+static StatementMatcher
+arrayConditionMatcher(internal::Matcher<Expr> LimitExpr) {
+  return binaryOperator(
+      anyOf(allOf(hasOperatorName("<"), hasLHS(integerComparisonMatcher()),
+                  hasRHS(LimitExpr)),
+            allOf(hasOperatorName(">"), hasLHS(LimitExpr),
+                  hasRHS(integerComparisonMatcher())),
+            allOf(hasOperatorName("!="),
+                  hasOperands(integerComparisonMatcher(), LimitExpr))));
 }
 
 /// The matcher for loops over arrays.
-///
-/// In this general example, assuming 'j' and 'k' are of integral type:
 /// \code
-///   for (int i = 0; j < 3 + 2; ++k) { ... }
+///   for (int i = 0; i < 3 + 2; ++i) { ... }
 /// \endcode
 /// The following string identifiers are bound to these parts of the AST:
-///   ConditionVarName: 'j' (as a VarDecl)
 ///   ConditionBoundName: '3 + 2' (as an Expr)
 ///   InitVarName: 'i' (as a VarDecl)
-///   IncrementVarName: 'k' (as a VarDecl)
 ///   LoopName: The entire for loop (as a ForStmt)
 ///
 /// Client code will need to make sure that:
-///   - The three index variables identified by the matcher are the same
-///     VarDecl.
 ///   - The index variable is only used as an array index.
 ///   - All arrays indexed by the loop are the same.
 StatementMatcher makeArrayLoopMatcher() {
   StatementMatcher ArrayBoundMatcher =
       expr(hasType(isInteger())).bind(ConditionBoundName);
 
-  return forStmt(
-             unless(isInTemplateInstantiation()),
-             hasLoopInit(declStmt(hasSingleDecl(InitToZeroMatcher()))),
-             hasCondition(anyOf(
-                 binaryOperator(hasOperatorName("<"),
-                                hasLHS(IntegerComparisonMatcher()),
-                                hasRHS(ArrayBoundMatcher)),
-                 binaryOperator(hasOperatorName(">"), hasLHS(ArrayBoundMatcher),
-                                hasRHS(IntegerComparisonMatcher())))),
-             hasIncrement(unaryOperator(hasOperatorName("++"),
-                                        hasUnaryOperand(IncrementVarMatcher()))))
+  return forStmt(unless(isInTemplateInstantiation()),
+                 hasLoopInit(declStmt(hasSingleDecl(initToZeroMatcher()))),
+                 hasCondition(arrayConditionMatcher(ArrayBoundMatcher)),
+                 hasIncrement(
+                     unaryOperator(hasOperatorName("++"),
+                                   hasUnaryOperand(incrementVarMatcher()))))
       .bind(LoopNameArray);
 }
 
@@ -130,27 +125,22 @@ StatementMatcher makeArrayLoopMatcher() {
 /// catch loops of the following textual forms (regardless of whether the
 /// iterator type is actually a pointer type or a class type):
 ///
-/// Assuming f, g, and h are of type containerType::iterator,
 /// \code
 ///   for (containerType::iterator it = container.begin(),
-///        e = createIterator(); f != g; ++h) { ... }
+///        e = createIterator(); it != e; ++it) { ... }
 ///   for (containerType::iterator it = container.begin();
-///        f != anotherContainer.end(); ++h) { ... }
+///        it != anotherContainer.end(); ++it) { ... }
 /// \endcode
 /// The following string identifiers are bound to the parts of the AST:
 ///   InitVarName: 'it' (as a VarDecl)
-///   ConditionVarName: 'f' (as a VarDecl)
 ///   LoopName: The entire for loop (as a ForStmt)
 ///   In the first example only:
 ///     EndVarName: 'e' (as a VarDecl)
-///     ConditionEndVarName: 'g' (as a VarDecl)
 ///   In the second example only:
 ///     EndCallName: 'container.end()' (as a CXXMemberCallExpr)
 ///
 /// Client code will need to make sure that:
-///   - The iterator variables 'it', 'f', and 'h' are the same.
 ///   - The two containers on which 'begin' and 'end' are called are the same.
-///   - If the end iterator variable 'g' is defined, it is the same as 'f'.
 StatementMatcher makeIteratorLoopMatcher(bool IsReverse) {
 
   auto BeginNameMatcher = IsReverse ? hasAnyName("rbegin", "crbegin")
@@ -179,18 +169,13 @@ StatementMatcher makeIteratorLoopMatcher(bool IsReverse) {
 
   StatementMatcher IteratorBoundMatcher =
       expr(anyOf(ignoringParenImpCasts(
-                     declRefExpr(to(varDecl().bind(ConditionEndVarName)))),
+                     declRefExpr(to(varDecl(equalsBoundNode(EndVarName))))),
                  ignoringParenImpCasts(expr(EndCallMatcher).bind(EndCallName)),
                  materializeTemporaryExpr(ignoringParenImpCasts(
                      expr(EndCallMatcher).bind(EndCallName)))));
 
-  StatementMatcher IteratorComparisonMatcher = expr(
-      ignoringParenImpCasts(declRefExpr(to(varDecl().bind(ConditionVarName)))));
-
-  auto OverloadedNEQMatcher = ignoringImplicit(
-      cxxOperatorCallExpr(hasOverloadedOperatorName("!="), argumentCountIs(2),
-                          hasArgument(0, IteratorComparisonMatcher),
-                          hasArgument(1, IteratorBoundMatcher)));
+  StatementMatcher IteratorComparisonMatcher = expr(ignoringParenImpCasts(
+      declRefExpr(to(varDecl(equalsBoundNode(InitVarName))))));
 
   // This matcher tests that a declaration is a CXXRecordDecl that has an
   // overloaded operator*(). If the operator*() returns by value instead of by
@@ -215,24 +200,18 @@ StatementMatcher makeIteratorLoopMatcher(bool IsReverse) {
                                         containsDeclaration(0, InitDeclMatcher),
                                         containsDeclaration(1, EndDeclMatcher)),
                                declStmt(hasSingleDecl(InitDeclMatcher)))),
-             hasCondition(
-                 anyOf(binaryOperator(hasOperatorName("!="),
-                                      hasLHS(IteratorComparisonMatcher),
-                                      hasRHS(IteratorBoundMatcher)),
-                       binaryOperator(hasOperatorName("!="),
-                                      hasLHS(IteratorBoundMatcher),
-                                      hasRHS(IteratorComparisonMatcher)),
-                       OverloadedNEQMatcher)),
+             hasCondition(ignoringImplicit(binaryOperation(
+                 hasOperatorName("!="), hasOperands(IteratorComparisonMatcher,
+                                                    IteratorBoundMatcher)))),
              hasIncrement(anyOf(
                  unaryOperator(hasOperatorName("++"),
                                hasUnaryOperand(declRefExpr(
-                                   to(varDecl(hasType(pointsTo(AnyType())))
-                                          .bind(IncrementVarName))))),
+                                   to(varDecl(equalsBoundNode(InitVarName)))))),
                  cxxOperatorCallExpr(
                      hasOverloadedOperatorName("++"),
-                     hasArgument(
-                         0, declRefExpr(to(varDecl(TestDerefReturnsByValue)
-                                               .bind(IncrementVarName))))))))
+                     hasArgument(0, declRefExpr(to(
+                                        varDecl(equalsBoundNode(InitVarName),
+                                                TestDerefReturnsByValue))))))))
       .bind(IsReverse ? LoopNameReverseIterator : LoopNameIterator);
 }
 
@@ -242,27 +221,22 @@ StatementMatcher makeIteratorLoopMatcher(bool IsReverse) {
 /// loops of the following textual forms (regardless of whether the
 /// iterator type is actually a pointer type or a class type):
 ///
-/// Assuming f, g, and h are of type containerType::iterator,
 /// \code
-///   for (int i = 0, j = container.size(); f < g; ++h) { ... }
-///   for (int i = 0; f < container.size(); ++h) { ... }
+///   for (int i = 0, j = container.size(); i < j; ++i) { ... }
+///   for (int i = 0; i < container.size(); ++i) { ... }
 /// \endcode
 /// The following string identifiers are bound to the parts of the AST:
 ///   InitVarName: 'i' (as a VarDecl)
-///   ConditionVarName: 'f' (as a VarDecl)
 ///   LoopName: The entire for loop (as a ForStmt)
 ///   In the first example only:
 ///     EndVarName: 'j' (as a VarDecl)
-///     ConditionEndVarName: 'g' (as a VarDecl)
 ///   In the second example only:
 ///     EndCallName: 'container.size()' (as a CXXMemberCallExpr)
 ///
 /// Client code will need to make sure that:
-///   - The index variables 'i', 'f', and 'h' are the same.
 ///   - The containers on which 'size()' is called is the container indexed.
 ///   - The index variable is only used in overloaded operator[] or
 ///     container.at().
-///   - If the end iterator variable 'g' is defined, it is the same as 'j'.
 ///   - The container's iterators would not be invalidated during the loop.
 StatementMatcher makePseudoArrayLoopMatcher() {
   // Test that the incoming type has a record declaration that has methods
@@ -305,25 +279,20 @@ StatementMatcher makePseudoArrayLoopMatcher() {
       varDecl(hasInitializer(EndInitMatcher)).bind(EndVarName);
 
   StatementMatcher IndexBoundMatcher =
-      expr(anyOf(ignoringParenImpCasts(declRefExpr(to(
-                     varDecl(hasType(isInteger())).bind(ConditionEndVarName)))),
+      expr(anyOf(ignoringParenImpCasts(
+                     declRefExpr(to(varDecl(equalsBoundNode(EndVarName))))),
                  EndInitMatcher));
 
-  return forStmt(
-             unless(isInTemplateInstantiation()),
-             hasLoopInit(
-                 anyOf(declStmt(declCountIs(2),
-                                containsDeclaration(0, InitToZeroMatcher()),
-                                containsDeclaration(1, EndDeclMatcher)),
-                       declStmt(hasSingleDecl(InitToZeroMatcher())))),
-             hasCondition(anyOf(
-                 binaryOperator(hasOperatorName("<"),
-                                hasLHS(IntegerComparisonMatcher()),
-                                hasRHS(IndexBoundMatcher)),
-                 binaryOperator(hasOperatorName(">"), hasLHS(IndexBoundMatcher),
-                                hasRHS(IntegerComparisonMatcher())))),
-             hasIncrement(unaryOperator(hasOperatorName("++"),
-                                        hasUnaryOperand(IncrementVarMatcher()))))
+  return forStmt(unless(isInTemplateInstantiation()),
+                 hasLoopInit(
+                     anyOf(declStmt(declCountIs(2),
+                                    containsDeclaration(0, initToZeroMatcher()),
+                                    containsDeclaration(1, EndDeclMatcher)),
+                           declStmt(hasSingleDecl(initToZeroMatcher())))),
+                 hasCondition(arrayConditionMatcher(IndexBoundMatcher)),
+                 hasIncrement(
+                     unaryOperator(hasOperatorName("++"),
+                                   hasUnaryOperand(incrementVarMatcher()))))
       .bind(LoopNamePseudoArray);
 }
 
@@ -720,10 +689,11 @@ StringRef LoopConvertCheck::getContainerString(ASTContext *Context,
   if (isa<CXXThisExpr>(ContainerExpr)) {
     ContainerString = "this";
   } else {
-    // For CXXOperatorCallExpr (e.g. vector_ptr->size()), its first argument is
-    // the class object (vector_ptr) we are targeting.
+    // For CXXOperatorCallExpr such as vector_ptr->size() we want the class
+    // object vector_ptr, but for vector[2] we need the whole expression.
     if (const auto* E = dyn_cast<CXXOperatorCallExpr>(ContainerExpr))
-      ContainerExpr = E->getArg(0);
+      if (E->getOperator() != OO_Subscript)
+        ContainerExpr = E->getArg(0);
     ContainerString =
         getStringFromRange(Context->getSourceManager(), Context->getLangOpts(),
                            ContainerExpr->getSourceRange());
@@ -836,15 +806,7 @@ bool LoopConvertCheck::isConvertible(ASTContext *Context,
     return false;
 
   // Check that we have exactly one index variable and at most one end variable.
-  const auto *LoopVar = Nodes.getNodeAs<VarDecl>(IncrementVarName);
-  const auto *CondVar = Nodes.getNodeAs<VarDecl>(ConditionVarName);
   const auto *InitVar = Nodes.getNodeAs<VarDecl>(InitVarName);
-  if (!areSameVariable(LoopVar, CondVar) || !areSameVariable(LoopVar, InitVar))
-    return false;
-  const auto *EndVar = Nodes.getNodeAs<VarDecl>(EndVarName);
-  const auto *ConditionEndVar = Nodes.getNodeAs<VarDecl>(ConditionEndVarName);
-  if (EndVar && !areSameVariable(EndVar, ConditionEndVar))
-    return false;
 
   // FIXME: Try to put most of this logic inside a matcher.
   if (FixerKind == LFK_Iterator || FixerKind == LFK_ReverseIterator) {
@@ -897,7 +859,7 @@ void LoopConvertCheck::check(const MatchFinder::MatchResult &Result) {
   if (!isConvertible(Context, Nodes, Loop, FixerKind))
     return;
 
-  const auto *LoopVar = Nodes.getNodeAs<VarDecl>(IncrementVarName);
+  const auto *LoopVar = Nodes.getNodeAs<VarDecl>(InitVarName);
   const auto *EndVar = Nodes.getNodeAs<VarDecl>(EndVarName);
 
   // If the loop calls end()/size() after each iteration, lower our confidence

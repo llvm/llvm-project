@@ -22,19 +22,10 @@ namespace dependencies{
 
 /// The full dependencies and module graph for a specific input.
 struct FullDependencies {
-  /// The name of the C++20 module this translation unit exports. This may
-  /// include `:` for C++20 module partitons.
+  /// The identifier of the C++20 module this translation unit exports.
   ///
-  /// If the translation unit is not a module then this will be empty.
-  std::string ExportedModuleName;
-
-  /// The context hash represents the set of compiler options that may make one
-  /// version of a module incompatible with another. This includes things like
-  /// language mode, predefined macros, header search paths, etc...
-  ///
-  /// Modules with the same name but a different \c ContextHash should be
-  /// treated as separate modules for the purpose of a build.
-  std::string ContextHash;
+  /// If the translation unit is not a module then \c ID.ModuleName is empty.
+  ModuleID ID;
 
   /// A collection of absolute paths to files that this translation unit
   /// directly depends on, not including transitive dependencies.
@@ -45,28 +36,27 @@ struct FullDependencies {
   ///
   /// This may include modules with a different context hash when it can be
   /// determined that the differences are benign for this compilation.
-  std::vector<ClangModuleDep> ClangModuleDeps;
+  std::vector<ModuleID> ClangModuleDeps;
 
-  /// A partial addtional set of command line arguments that can be used to
-  /// build this translation unit.
+  /// Get additional arguments suitable for appending to the original Clang
+  /// command line.
   ///
-  /// Call \c getFullAdditionalCommandLine() to get a command line suitable for
-  /// appending to the original command line to pass to clang.
-  std::vector<std::string> AdditionalNonPathCommandLine;
-
-  /// Gets the full addtional command line suitable for appending to the
-  /// original command line to pass to clang.
-  ///
-  /// \param LookupPCMPath this function is called to fill in `-fmodule-file=`
-  ///                      flags and for the `-o` flag. It needs to return a
-  ///                      path for where the PCM for the given module is to
+  /// \param LookupPCMPath This function is called to fill in "-fmodule-file="
+  ///                      arguments and the "-o" argument. It needs to return
+  ///                      a path for where the PCM for the given module is to
   ///                      be located.
-  /// \param LookupModuleDeps this fucntion is called to collect the full
+  /// \param LookupModuleDeps This function is called to collect the full
   ///                         transitive set of dependencies for this
-  ///                         compilation.
-  std::vector<std::string> getAdditionalCommandLine(
-      std::function<StringRef(ClangModuleDep)> LookupPCMPath,
-      std::function<const ModuleDeps &(ClangModuleDep)> LookupModuleDeps) const;
+  ///                         compilation and fill in "-fmodule-map-file="
+  ///                         arguments.
+  std::vector<std::string> getAdditionalArgs(
+      std::function<StringRef(ModuleID)> LookupPCMPath,
+      std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps) const;
+
+  /// Get additional arguments suitable for appending to the original Clang
+  /// command line, excluding arguments containing modules-related paths:
+  /// "-fmodule-file=", "-fmodule-map-file=".
+  std::vector<std::string> getAdditionalArgsWithoutModulePaths() const;
 };
 
 struct FullDependenciesResult {
@@ -91,15 +81,14 @@ public:
   getDependencyFile(const tooling::CompilationDatabase &Compilations,
                     StringRef CWD);
 
-  /// Collect the full module depenedency graph for the input, ignoring any
+  /// Collect the full module dependency graph for the input, ignoring any
   /// modules which have already been seen.
   ///
-  /// \param AlreadySeen this is used to not report modules that have previously
-  ///                    been reported. Use the same `llvm::StringSet<>` for all
-  ///                    calls to `getFullDependencies` for a single
-  ///                    `DependencyScanningTool` for a single build. Use a
-  ///                    different one for different tools, and clear it between
-  ///                    builds.
+  /// \param AlreadySeen This stores modules which have previously been
+  ///                    reported. Use the same instance for all calls to this
+  ///                    function for a single \c DependencyScanningTool in a
+  ///                    single build. Use a different one for different tools,
+  ///                    and clear it between builds.
   ///
   /// \returns a \c StringError with the diagnostic output if clang errors
   /// occurred, \c FullDependencies otherwise.

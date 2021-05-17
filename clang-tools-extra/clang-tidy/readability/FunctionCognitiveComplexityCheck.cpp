@@ -213,6 +213,9 @@ class FunctionASTVisitor final
     : public RecursiveASTVisitor<FunctionASTVisitor> {
   using Base = RecursiveASTVisitor<FunctionASTVisitor>;
 
+  // If set to true, macros are ignored during analysis.
+  const bool IgnoreMacros;
+
   // The current nesting level (increased by Criteria::IncrementNesting).
   unsigned short CurrentNestingLevel = 0;
 
@@ -223,14 +226,17 @@ class FunctionASTVisitor final
   std::stack<OBO, SmallVector<OBO, 4>> BinaryOperatorsStack;
 
 public:
-  bool TraverseStmtWithIncreasedNestingLevel(Stmt *Node) {
+  explicit FunctionASTVisitor(const bool IgnoreMacros)
+      : IgnoreMacros(IgnoreMacros) {}
+
+  bool traverseStmtWithIncreasedNestingLevel(Stmt *Node) {
     ++CurrentNestingLevel;
     bool ShouldContinue = Base::TraverseStmt(Node);
     --CurrentNestingLevel;
     return ShouldContinue;
   }
 
-  bool TraverseDeclWithIncreasedNestingLevel(Decl *Node) {
+  bool traverseDeclWithIncreasedNestingLevel(Decl *Node) {
     ++CurrentNestingLevel;
     bool ShouldContinue = Base::TraverseDecl(Node);
     --CurrentNestingLevel;
@@ -272,15 +278,15 @@ public:
       if (!TraverseStmt(Node->getCond()))
         return false;
     } else {
-      if (!TraverseStmtWithIncreasedNestingLevel(Node->getInit()))
+      if (!traverseStmtWithIncreasedNestingLevel(Node->getInit()))
         return false;
 
-      if (!TraverseStmtWithIncreasedNestingLevel(Node->getCond()))
+      if (!traverseStmtWithIncreasedNestingLevel(Node->getCond()))
         return false;
     }
 
     // "Then" always increases nesting level.
-    if (!TraverseStmtWithIncreasedNestingLevel(Node->getThen()))
+    if (!traverseStmtWithIncreasedNestingLevel(Node->getThen()))
       return false;
 
     if (!Node->getElse())
@@ -305,7 +311,7 @@ public:
     }
 
     // "Else" always increases nesting level.
-    return TraverseStmtWithIncreasedNestingLevel(Node->getElse());
+    return traverseStmtWithIncreasedNestingLevel(Node->getElse());
   }
 
 // The currently-being-processed stack entry, which is always the top.
@@ -363,6 +369,9 @@ public:
   bool TraverseStmt(Stmt *Node) {
     if (!Node)
       return Base::TraverseStmt(Node);
+
+    if (IgnoreMacros && Node->getBeginLoc().isMacroID())
+      return true;
 
     // Three following switch()'es have huge duplication, but it is better to
     // keep them separate, to simplify comparing them with the Specification.
@@ -447,7 +456,7 @@ public:
     if (!(Reasons & CognitiveComplexity::Criteria::IncrementNesting))
       return Base::TraverseStmt(Node);
 
-    return TraverseStmtWithIncreasedNestingLevel(Node);
+    return traverseStmtWithIncreasedNestingLevel(Node);
   }
 
   // The parameter MainAnalyzedFunction is needed to differentiate between the
@@ -481,7 +490,7 @@ public:
     CC.account(Node->getBeginLoc(), CurrentNestingLevel,
                CognitiveComplexity::Criteria::IncrementNesting);
 
-    return TraverseDeclWithIncreasedNestingLevel(Node);
+    return traverseDeclWithIncreasedNestingLevel(Node);
   }
 
   CognitiveComplexity CC;
@@ -492,37 +501,57 @@ public:
 FunctionCognitiveComplexityCheck::FunctionCognitiveComplexityCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      Threshold(Options.get("Threshold", CognitiveComplexity::DefaultLimit)) {}
+      Threshold(Options.get("Threshold", CognitiveComplexity::DefaultLimit)),
+      DescribeBasicIncrements(Options.get("DescribeBasicIncrements", true)),
+      IgnoreMacros(Options.get("IgnoreMacros", false)) {}
 
 void FunctionCognitiveComplexityCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "Threshold", Threshold);
+  Options.store(Opts, "DescribeBasicIncrements", DescribeBasicIncrements);
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
 }
 
 void FunctionCognitiveComplexityCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       functionDecl(isDefinition(),
-                   unless(anyOf(isDefaulted(), isDeleted(), isImplicit(),
-                                isInstantiated(), isWeak())))
+                   unless(anyOf(isDefaulted(), isDeleted(), isWeak())))
           .bind("func"),
       this);
+  Finder->addMatcher(lambdaExpr().bind("lambda"), this);
 }
 
 void FunctionCognitiveComplexityCheck::check(
     const MatchFinder::MatchResult &Result) {
-  const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>("func");
-  assert(Func->hasBody() && "The matchers should only match the functions that "
-                            "have user-provided body.");
 
-  FunctionASTVisitor Visitor;
-  Visitor.TraverseDecl(const_cast<FunctionDecl *>(Func), true);
+  FunctionASTVisitor Visitor(IgnoreMacros);
+  SourceLocation Loc;
+
+  const auto *TheDecl = Result.Nodes.getNodeAs<FunctionDecl>("func");
+  const auto *TheLambdaExpr = Result.Nodes.getNodeAs<LambdaExpr>("lambda");
+  if (TheDecl) {
+    assert(TheDecl->hasBody() &&
+           "The matchers should only match the functions that "
+           "have user-provided body.");
+    Loc = TheDecl->getLocation();
+    Visitor.TraverseDecl(const_cast<FunctionDecl *>(TheDecl), true);
+  } else {
+    Loc = TheLambdaExpr->getBeginLoc();
+    Visitor.TraverseLambdaExpr(const_cast<LambdaExpr *>(TheLambdaExpr));
+  }
 
   if (Visitor.CC.Total <= Threshold)
     return;
 
-  diag(Func->getLocation(),
-       "function %0 has cognitive complexity of %1 (threshold %2)")
-      << Func << Visitor.CC.Total << Threshold;
+  if (TheDecl)
+    diag(Loc, "function %0 has cognitive complexity of %1 (threshold %2)")
+        << TheDecl << Visitor.CC.Total << Threshold;
+  else
+    diag(Loc, "lambda has cognitive complexity of %0 (threshold %1)")
+        << Visitor.CC.Total << Threshold;
+
+  if (!DescribeBasicIncrements)
+    return;
 
   // Output all the basic increments of complexity.
   for (const auto &Detail : Visitor.CC.Details) {

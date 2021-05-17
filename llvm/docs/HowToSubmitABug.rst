@@ -12,13 +12,12 @@ getting it fixed quickly.
 
 🔒 If you believe that the bug is security related, please follow :ref:`report-security-issue`. 🔒
 
-Basically you have to do two things at a minimum.  First, decide whether
-the bug `crashes the compiler`_ (or an LLVM pass), or if the
-compiler is `miscompiling`_ the program (i.e., the
-compiler successfully produces an executable, but it doesn't run right).
-Based on what type of bug it is, follow the instructions in the linked
-section to narrow down the bug so that the person who fixes it will be able
-to find the problem more easily.
+Basically you have to do two things at a minimum. First, decide whether the
+bug `crashes the compiler`_ or if the compiler is `miscompiling`_ the program
+(i.e., the compiler successfully produces an executable, but it doesn't run
+right). Based on what type of bug it is, follow the instructions in the
+linked section to narrow down the bug so that the person who fixes it will be
+able to find the problem more easily.
 
 Once you have a reduced test-case, go to `the LLVM Bug Tracking System
 <https://bugs.llvm.org/enter_bug.cgi>`_ and fill out the form with the
@@ -44,74 +43,94 @@ is to figure out if it is crashing in the Clang front-end or if it is one of
 the LLVM libraries (e.g. the optimizer or code generator) that has
 problems.
 
-To figure out which component is crashing (the front-end, optimizer or code
-generator), run the ``clang`` command line as you were when the crash
-occurred, but with the following extra command line options:
+To figure out which component is crashing (the front-end, middle-end
+optimizer, or backend code generator), run the ``clang`` command line as you
+were when the crash occurred, but with the following extra command line
+options:
 
-* ``-O0 -emit-llvm``: If ``clang`` still crashes when passed these
-  options (which disable the optimizer and code generator), then the crash
-  is in the front-end.  Jump ahead to the section on :ref:`front-end bugs
-  <front-end>`.
+* ``-emit-llvm -Xclang -disable-llvm-passes``: If ``clang`` still crashes when
+  passed these options (which disable the optimizer and code generator), then
+  the crash is in the front-end. Jump ahead to :ref:`front-end bugs
+  <frontend-crash>`.
 
 * ``-emit-llvm``: If ``clang`` crashes with this option (which disables
-  the code generator), you found an optimizer bug.  Jump ahead to
-  `compile-time optimization bugs`_.
+  the code generator), you found a middle-end optimizer bug. Jump ahead to
+  :ref:`middle-end bugs <middleend-crash>`.
 
-* Otherwise, you have a code generator crash. Jump ahead to `code
-  generator bugs`_.
+* Otherwise, you have a backend code generator crash. Jump ahead to :ref:`code
+  generator bugs <backend-crash>`.
 
-.. _front-end bug:
-.. _front-end:
+.. _frontend-crash:
 
 Front-end bugs
 --------------
 
-If the problem is in the front-end, you should re-run the same ``clang``
-command that resulted in the crash, but add the ``-save-temps`` option.
-The compiler will crash again, but it will leave behind a ``foo.i`` file
-(containing preprocessed C source code) and possibly ``foo.s`` for each
-compiled ``foo.c`` file. Send us the ``foo.i`` file, along with the options
-you passed to ``clang``, and a brief description of the error it caused.
+On a ``clang`` crash, the compiler will dump a preprocessed file and a script
+to replay the ``clang`` command. For example, you should see something like
 
-The `delta <http://delta.tigris.org/>`_ tool helps to reduce the
-preprocessed file down to the smallest amount of code that still replicates
-the problem. You're encouraged to use delta to reduce the code to make the
-developers' lives easier. `This website
-<http://gcc.gnu.org/wiki/A_guide_to_testcase_reduction>`_ has instructions
-on the best way to use delta.
+.. code-block:: text
 
-.. _compile-time optimization bugs:
+   PLEASE ATTACH THE FOLLOWING FILES TO THE BUG REPORT:
+   Preprocessed source(s) and associated run script(s) are located at:
+   clang: note: diagnostic msg: /tmp/foo-xxxxxx.c
+   clang: note: diagnostic msg: /tmp/foo-xxxxxx.sh
 
-Compile-time optimization bugs
-------------------------------
+The `creduce <https://github.com/csmith-project/creduce>`_ tool helps to
+reduce the preprocessed file down to the smallest amount of code that still
+replicates the problem. You're encouraged to use creduce to reduce the code
+to make the developers' lives easier. The
+``clang/utils/creduce-clang-crash.py`` script can be used on the files
+that clang dumps to help with automating creating a test to check for the
+compiler crash.
+
+`cvise <https://github.com/marxin/cvise>`_ is an alternative to ``creduce``.
+
+.. _middleend-crash:
+
+Middle-end optimization bugs
+----------------------------
 
 If you find that a bug crashes in the optimizer, compile your test-case to a
 ``.bc`` file by passing "``-emit-llvm -O1 -Xclang -disable-llvm-passes -c -o
-foo.bc``".  Then run:
+foo.bc``". The ``-O1`` is important because ``-O0`` adds the ``optnone``
+function attribute to all functions and many passes don't run on ``optnone``
+functions. Then run:
 
 .. code-block:: bash
 
-   opt -O3 -debug-pass=Arguments foo.bc -disable-output
+   opt -O3 foo.bc -disable-output
 
-This command should do two things: it should print out a list of passes, and
-then it should crash in the same way as clang.  If it doesn't crash, please
-follow the instructions for a `front-end bug`_.
+If this doesn't crash, please follow the instructions for a :ref:`front-end
+bug <frontend-crash>`.
 
 If this does crash, then you should be able to debug this with the following
-bugpoint command:
+:doc:`bugpoint <Bugpoint>` command:
 
 .. code-block:: bash
 
-   bugpoint foo.bc <list of passes printed by opt>
+   bugpoint foo.bc -O3
 
-Please run this, then file a bug with the instructions and reduced .bc
-files that bugpoint emits.  If something goes wrong with bugpoint, please
-submit the "foo.bc" file and the list of passes printed by ``opt``.
+Run this, then file a bug with the instructions and reduced .bc
+files that bugpoint emits.
 
-.. _code generator bugs:
+If bugpoint doesn't reproduce the crash, ``llvm-reduce`` is an alternative
+way to reduce LLVM IR. Create a script that repros the crash and run:
 
-Code generator bugs
--------------------
+.. code-block:: bash
+
+   llvm-reduce --test=path/to/script foo.bc
+
+which should produce reduced IR that reproduces the crash. Be warned the
+``llvm-reduce`` is still fairly immature and may crash.
+
+If none of the above work, you can get the IR before a crash by running the
+``opt`` command with the ``--print-before-all --print-module-scope`` flags to
+dump the IR before every pass. Be warned that this is very verbose.
+
+.. _backend-crash:
+
+Backend code generator bugs
+---------------------------
 
 If you find a bug that crashes clang in the code generator, compile your
 source file to a .bc file by passing "``-emit-llvm -c -o foo.bc``" to
@@ -122,10 +141,10 @@ foo.bc, one of the following commands should fail:
 #. ``llc foo.bc -relocation-model=pic``
 #. ``llc foo.bc -relocation-model=static``
 
-If none of these crash, please follow the instructions for a `front-end
-bug`_.  If one of these do crash, you should be able to reduce this with
-one of the following bugpoint command lines (use the one corresponding to
-the command above that failed):
+If none of these crash, please follow the instructions for a :ref:`front-end
+bug<frontend-crash>`. If one of these do crash, you should be able to reduce
+this with one of the following :doc:`bugpoint <Bugpoint>` command lines (use
+the one corresponding to the command above that failed):
 
 #. ``bugpoint -run-llc foo.bc``
 #. ``bugpoint -run-llc foo.bc --tool-args -relocation-model=pic``
@@ -140,14 +159,15 @@ the "foo.bc" file and the option that llc crashes with.
 Miscompilations
 ===============
 
-If clang successfully produces an executable, but that executable
-doesn't run right, this is either a bug in the code or a bug in the
-compiler.  The first thing to check is to make sure it is not using
-undefined behavior (e.g. reading a variable before it is defined). In
-particular, check to see if the program `valgrind
-<http://valgrind.org/>`_'s clean, passes purify, or some other memory
-checker tool. Many of the "LLVM bugs" that we have chased down ended up
-being bugs in the program being compiled, not LLVM.
+If clang successfully produces an executable, but that executable doesn't run
+right, this is either a bug in the code or a bug in the compiler. The first
+thing to check is to make sure it is not using undefined behavior (e.g.
+reading a variable before it is defined). In particular, check to see if the
+program is clean under various `sanitizers
+<https://github.com/google/sanitizers>`_ (e.g. ``clang
+-fsanitize=undefined,address``) and `valgrind <http://valgrind.org/>`_. Many
+"LLVM bugs" that we have chased down ended up being bugs in the program being
+compiled, not LLVM.
 
 Once you determine that the program itself is not buggy, you should choose
 which code generator you wish to compile the program with (e.g. LLC or the JIT)
@@ -161,6 +181,9 @@ bugpoint will try to narrow down your list of passes to the one pass that
 causes an error, and simplify the bitcode file as much as it can to assist
 you. It will print a message letting you know how to reproduce the
 resulting error.
+
+The :doc:`OptBisect <OptBisect>` page shows an alternative method for finding
+incorrect optimization passes.
 
 Incorrect code generation
 =========================

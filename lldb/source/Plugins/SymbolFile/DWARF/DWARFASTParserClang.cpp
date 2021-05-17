@@ -1226,6 +1226,7 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
       }
 
       if (!function_decl) {
+        char *name_buf = nullptr;
         llvm::StringRef name = attrs.name.GetStringRef();
 
         // We currently generate function templates with template parameters in
@@ -1233,8 +1234,10 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
         // we want to strip these from the name when creating the AST.
         if (attrs.mangled_name) {
           llvm::ItaniumPartialDemangler D;
-          if (!D.partialDemangle(attrs.mangled_name))
-            name = D.getFunctionBaseName(nullptr, nullptr);
+          if (!D.partialDemangle(attrs.mangled_name)) {
+            name_buf = D.getFunctionBaseName(nullptr, nullptr);
+            name = name_buf;
+          }
         }
 
         // We just have a function that isn't part of a class
@@ -1243,6 +1246,7 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
                                       : containing_decl_ctx,
             GetOwningClangModule(die), name, clang_type, attrs.storage,
             attrs.is_inline);
+        std::free(name_buf);
 
         if (has_template_params) {
           TypeSystemClang::TemplateParameterInfos template_param_infos;
@@ -1357,7 +1361,7 @@ TypeSP DWARFASTParserClang::ParsePointerToMemberType(
       dwarf->ResolveTypeUID(attrs.containing_type.Reference(), true);
 
   CompilerType pointee_clang_type = pointee_type->GetForwardCompilerType();
-  CompilerType class_clang_type = class_type->GetLayoutCompilerType();
+  CompilerType class_clang_type = class_type->GetForwardCompilerType();
 
   CompilerType clang_type = TypeSystemClang::CreateMemberPointerType(
       class_clang_type, pointee_clang_type);
@@ -2201,7 +2205,8 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
             case DW_AT_description:
             default:
             case DW_AT_decl_file:
-              decl.SetFile(die.GetCU()->GetFile(form_value.Unsigned()));
+              decl.SetFile(attributes.CompileUnitAtIndex(i)->GetFile(
+                  form_value.Unsigned()));
               break;
             case DW_AT_decl_line:
               decl.SetLine(form_value.Unsigned());
@@ -2533,7 +2538,7 @@ void DWARFASTParserClang::ParseSingleMember(
       if (accessibility == eAccessNone)
         accessibility = eAccessPublic;
       TypeSystemClang::AddVariableToRecordType(
-          class_clang_type, name, var_type->GetLayoutCompilerType(),
+          class_clang_type, name, var_type->GetForwardCompilerType(),
           accessibility);
     }
     return;

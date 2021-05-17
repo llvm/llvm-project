@@ -35,7 +35,7 @@ define void @test(<6 x double> * %A, <6 x double> * %B, <9 x double>* %C, i1 %co
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca <6 x double>, align 64
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <6 x double>* [[TMP2]] to i8*
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <6 x double>* [[A]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 64 dereferenceable(48) [[TMP3]], i8* nonnull align 8 dereferenceable(48) [[TMP4]], i64 48, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 64 dereferenceable(48) [[TMP3]], i8* noundef nonnull align 8 dereferenceable(48) [[TMP4]], i64 48, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS]]
 ; CHECK:       no_alias:
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi <6 x double>* [ [[A]], [[ENTRY:%.*]] ], [ [[A]], [[ALIAS_CONT]] ], [ [[TMP2]], [[COPY]] ]
@@ -52,7 +52,7 @@ define void @test(<6 x double> * %A, <6 x double> * %B, <9 x double>* %C, i1 %co
 ; CHECK-NEXT:    [[TMP8:%.*]] = alloca <6 x double>, align 64
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <6 x double>* [[TMP8]] to i8*
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <6 x double>* [[B]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 64 dereferenceable(48) [[TMP9]], i8* nonnull align 8 dereferenceable(48) [[TMP10]], i64 48, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 64 dereferenceable(48) [[TMP9]], i8* noundef nonnull align 8 dereferenceable(48) [[TMP10]], i64 48, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS3]]
 ; CHECK:       no_alias3:
 ; CHECK-NEXT:    [[TMP11:%.*]] = phi <6 x double>* [ [[B]], [[NO_ALIAS]] ], [ [[B]], [[ALIAS_CONT1]] ], [ [[TMP8]], [[COPY2]] ]
@@ -172,7 +172,7 @@ define void @test(<6 x double> * %A, <6 x double> * %B, <9 x double>* %C, i1 %co
 ; CHECK-NEXT:    [[TMP38:%.*]] = alloca <6 x double>, align 64
 ; CHECK-NEXT:    [[TMP39:%.*]] = bitcast <6 x double>* [[TMP38]] to i8*
 ; CHECK-NEXT:    [[TMP40:%.*]] = bitcast <6 x double>* [[A]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 64 dereferenceable(48) [[TMP39]], i8* nonnull align 8 dereferenceable(48) [[TMP40]], i64 48, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 64 dereferenceable(48) [[TMP39]], i8* noundef nonnull align 8 dereferenceable(48) [[TMP40]], i64 48, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS93]]
 ; CHECK:       no_alias93:
 ; CHECK-NEXT:    [[TMP41:%.*]] = phi <6 x double>* [ [[A]], [[END]] ], [ [[A]], [[ALIAS_CONT91]] ], [ [[TMP38]], [[COPY92]] ]
@@ -189,7 +189,7 @@ define void @test(<6 x double> * %A, <6 x double> * %B, <9 x double>* %C, i1 %co
 ; CHECK-NEXT:    [[TMP44:%.*]] = alloca <6 x double>, align 64
 ; CHECK-NEXT:    [[TMP45:%.*]] = bitcast <6 x double>* [[TMP44]] to i8*
 ; CHECK-NEXT:    [[TMP46:%.*]] = bitcast <6 x double>* [[B]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 64 dereferenceable(48) [[TMP45]], i8* nonnull align 8 dereferenceable(48) [[TMP46]], i64 48, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 64 dereferenceable(48) [[TMP45]], i8* noundef nonnull align 8 dereferenceable(48) [[TMP46]], i64 48, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS100]]
 ; CHECK:       no_alias100:
 ; CHECK-NEXT:    [[TMP47:%.*]] = phi <6 x double>* [ [[B]], [[NO_ALIAS93]] ], [ [[B]], [[ALIAS_CONT98]] ], [ [[TMP44]], [[COPY99]] ]

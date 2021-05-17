@@ -904,8 +904,9 @@ DisassemblerLLVMC::MCDisasmInstance::Create(const char *triple, const char *cpu,
   if (!asm_info_up)
     return Instance();
 
-  std::unique_ptr<llvm::MCContext> context_up(
-      new llvm::MCContext(asm_info_up.get(), reg_info_up.get(), nullptr));
+  std::unique_ptr<llvm::MCContext> context_up(new llvm::MCContext(
+      llvm::Triple(triple), asm_info_up.get(), reg_info_up.get(),
+      /*MOFI=*/nullptr, subtarget_info_up.get()));
   if (!context_up)
     return Instance();
 

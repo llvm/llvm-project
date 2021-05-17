@@ -30,6 +30,9 @@ Optional<MCFixupKind> RISCVAsmBackend::getFixupKind(StringRef Name) const {
 #define ELF_RELOC(X, Y) .Case(#X, Y)
 #include "llvm/BinaryFormat/ELFRelocs/RISCV.def"
 #undef ELF_RELOC
+               .Case("BFD_RELOC_NONE", ELF::R_RISCV_NONE)
+               .Case("BFD_RELOC_32", ELF::R_RISCV_32)
+               .Case("BFD_RELOC_64", ELF::R_RISCV_64)
                .Default(-1u);
     if (Type != -1u)
       return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);

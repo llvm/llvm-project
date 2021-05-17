@@ -44,6 +44,13 @@ table.mapping td.content {
   padding-bottom: 15px;
 }
 
+/* Workaround for a Safari bug that would otherwise make table cells less wide
+than the containing text. This just sets it back to the default browser
+property.*/
+td {
+  -webkit-hyphens: manual !important;
+}
+
 div.sphinxsidebar .caption {
   font-family: Helvetica, Verdana, sans-serif;
   font-size: 10pt;

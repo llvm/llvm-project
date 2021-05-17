@@ -22,12 +22,12 @@ using namespace lldb_private;
 // only usefully complete in the file name part of it so it should be good
 // enough.
 OptionValueFileColonLine::OptionValueFileColonLine()
-    : OptionValue(), m_file_spec(), m_line_number(LLDB_INVALID_LINE_NUMBER),
+    : m_line_number(LLDB_INVALID_LINE_NUMBER),
       m_column_number(LLDB_INVALID_COLUMN_NUMBER),
       m_completion_mask(CommandCompletions::eSourceFileCompletion) {}
 
 OptionValueFileColonLine::OptionValueFileColonLine(llvm::StringRef input)
-    : OptionValue(), m_file_spec(), m_line_number(LLDB_INVALID_LINE_NUMBER),
+    : m_line_number(LLDB_INVALID_LINE_NUMBER),
       m_column_number(LLDB_INVALID_COLUMN_NUMBER),
       m_completion_mask(CommandCompletions::eSourceFileCompletion) {
   SetValueFromString(input, eVarSetOperationAssign);
@@ -132,10 +132,6 @@ Status OptionValueFileColonLine::SetValueFromString(llvm::StringRef value,
     break;
   }
   return error;
-}
-
-lldb::OptionValueSP OptionValueFileColonLine::DeepCopy() const {
-  return OptionValueSP(new OptionValueFileColonLine(*this));
 }
 
 void OptionValueFileColonLine::AutoComplete(CommandInterpreter &interpreter,

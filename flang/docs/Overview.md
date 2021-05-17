@@ -46,7 +46,7 @@ See: [Preprocessing.md](Preprocessing.md).
 **Entry point:** `parser::Parsing::Parse`
 
 **Command:**
-  - `f18 -fdebug-dump-parse-tree -fparse-only src.f90` dumps the parse tree
+  - `f18 -fdebug-dump-parse-tree -fsyntax-only src.f90` dumps the parse tree
   - `f18 -funparse src.f90` converts the parse tree to normalized Fortran
 
 ## Validate Labels and Canonicalize Do Statements
@@ -74,7 +74,7 @@ See: [Preprocessing.md](Preprocessing.md).
 
 **Entry points:** `semantics::ResolveNames`, `semantics::RewriteParseTree`
 
-**Command:** `f18 -fdebug-dump-symbols -fparse-only src.f90` dumps the
+**Command:** `f18 -fdebug-dump-symbols -fsyntax-only src.f90` dumps the
   tree of scopes and symbols in each scope
 
 ## Check DO CONCURRENT Constraints

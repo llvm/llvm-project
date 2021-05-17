@@ -59,6 +59,13 @@ dwo_LT_5b:
         .byte 0x0e  # DW_FORM_strp
         .byte 0x00  # EOM(1)
         .byte 0x00  # EOM(2)
+        .byte 0x04  # Abbrev code
+        .byte 0x3c  # DW_TAG_partial_unit
+        .byte 0x00  # DW_CHILDREN_no
+        .byte 0x03  # DW_AT_name
+        .byte 0x0e  # DW_FORM_strp
+        .byte 0x00  # EOM(1)
+        .byte 0x00  # EOM(2)
         .byte 0x00  # EOM(3)
 
 # And a .dwo copy for the .dwo sections.
@@ -127,6 +134,22 @@ CU_5_end:
 
 # CHECK: 0x00000019: Compile Unit: length = 0x00000016, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x00000033)
 # CHECK: 0x00000025: DW_TAG_compile_unit
+
+# DWARF v5 CU header (Unit Type = DW_UT_partial).
+        .long  CU_5_partial_end-CU_5_partial_version  # Length of Unit
+CU_5_partial_version:
+        .short 5               # DWARF version number
+        .byte 3                # DWARF Unit Type
+        .byte 8                # Address Size (in bytes)
+        .long .debug_abbrev    # Offset Into Abbrev. Section
+# The partial-unit DIE, with DW_AT_name
+        .byte 4
+        .long str_CU_5
+        .byte 0 # NULL
+CU_5_partial_end:
+
+# CHECK: 0x00000033: Compile Unit: length = 0x0000000e, format = DWARF32, version = 0x0005, unit_type = DW_UT_partial, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x00000045)
+# CHECK: 0x0000003f: DW_TAG_partial_unit
 
         .section .debug_info.dwo,"e",@progbits
 # CHECK-LABEL: .debug_info.dwo

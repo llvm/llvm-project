@@ -1500,6 +1500,12 @@ Instruction *InstCombinerImpl::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
     if (Cmp.isEquality() || (IsSignBit && hasBranchUse(Cmp)))
       return nullptr;
 
+    // Avoid an infinite loop with min/max canonicalization.
+    // TODO: This will be unnecessary if we canonicalize to min/max intrinsics.
+    if (Cmp.hasOneUse() &&
+        match(Cmp.user_back(), m_MaxOrMin(m_Value(), m_Value())))
+      return nullptr;
+
     if (const APInt *EqC = Intersection.getSingleElement())
       return new ICmpInst(ICmpInst::ICMP_EQ, X, Builder.getInt(*EqC));
     if (const APInt *NeC = Difference.getSingleElement())
@@ -1523,11 +1529,11 @@ Instruction *InstCombinerImpl::foldICmpTruncConstant(ICmpInst &Cmp,
                           ConstantInt::get(V->getType(), 1));
   }
 
+  unsigned DstBits = Trunc->getType()->getScalarSizeInBits(),
+           SrcBits = X->getType()->getScalarSizeInBits();
   if (Cmp.isEquality() && Trunc->hasOneUse()) {
     // Simplify icmp eq (trunc x to i8), 42 -> icmp eq x, 42|highbits if all
     // of the high bits truncated out of x are known.
-    unsigned DstBits = Trunc->getType()->getScalarSizeInBits(),
-             SrcBits = X->getType()->getScalarSizeInBits();
     KnownBits Known = computeKnownBits(X, 0, &Cmp);
 
     // If all the high bits are known, we can do this xform.
@@ -1537,6 +1543,22 @@ Instruction *InstCombinerImpl::foldICmpTruncConstant(ICmpInst &Cmp,
       NewRHS |= Known.One & APInt::getHighBitsSet(SrcBits, SrcBits - DstBits);
       return new ICmpInst(Pred, X, ConstantInt::get(X->getType(), NewRHS));
     }
+  }
+
+  // Look through truncated right-shift of the sign-bit for a sign-bit check:
+  // trunc iN (ShOp >> ShAmtC) to i[N - ShAmtC] < 0  --> ShOp <  0
+  // trunc iN (ShOp >> ShAmtC) to i[N - ShAmtC] > -1 --> ShOp > -1
+  Value *ShOp;
+  const APInt *ShAmtC;
+  bool TrueIfSigned;
+  if (isSignBitCheck(Pred, C, TrueIfSigned) &&
+      match(X, m_Shr(m_Value(ShOp), m_APInt(ShAmtC))) &&
+      DstBits == SrcBits - ShAmtC->getZExtValue()) {
+    return TrueIfSigned
+               ? new ICmpInst(ICmpInst::ICMP_SLT, ShOp,
+                              ConstantInt::getNullValue(X->getType()))
+               : new ICmpInst(ICmpInst::ICMP_SGT, ShOp,
+                              ConstantInt::getAllOnesValue(X->getType()));
   }
 
   return nullptr;
@@ -3901,11 +3923,15 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
           APInt AP2Abs = C2->getValue().abs();
           if (AP1Abs.uge(AP2Abs)) {
             ConstantInt *C3 = Builder.getInt(AP1 - AP2);
-            Value *NewAdd = Builder.CreateNSWAdd(A, C3);
+            bool HasNUW = BO0->hasNoUnsignedWrap() && C3->getValue().ule(AP1);
+            bool HasNSW = BO0->hasNoSignedWrap();
+            Value *NewAdd = Builder.CreateAdd(A, C3, "", HasNUW, HasNSW);
             return new ICmpInst(Pred, NewAdd, C);
           } else {
             ConstantInt *C3 = Builder.getInt(AP2 - AP1);
-            Value *NewAdd = Builder.CreateNSWAdd(C, C3);
+            bool HasNUW = BO1->hasNoUnsignedWrap() && C3->getValue().ule(AP2);
+            bool HasNSW = BO1->hasNoSignedWrap();
+            Value *NewAdd = Builder.CreateAdd(C, C3, "", HasNUW, HasNSW);
             return new ICmpInst(Pred, A, NewAdd);
           }
         }
@@ -5328,26 +5354,8 @@ CmpInst *InstCombinerImpl::canonicalizeICmpPredicate(CmpInst &I) {
   I.setPredicate(CmpInst::getInversePredicate(Pred));
   I.setName(I.getName() + ".not");
 
-  // And now let's adjust every user.
-  for (User *U : I.users()) {
-    switch (cast<Instruction>(U)->getOpcode()) {
-    case Instruction::Select: {
-      auto *SI = cast<SelectInst>(U);
-      SI->swapValues();
-      SI->swapProfMetadata();
-      break;
-    }
-    case Instruction::Br:
-      cast<BranchInst>(U)->swapSuccessors(); // swaps prof metadata too
-      break;
-    case Instruction::Xor:
-      replaceInstUsesWith(cast<Instruction>(*U), &I);
-      break;
-    default:
-      llvm_unreachable("Got unexpected user - out of sync with "
-                       "canFreelyInvertAllUsersOf() ?");
-    }
-  }
+  // And, adapt users.
+  freelyInvertAllUsersOf(&I);
 
   return &I;
 }
@@ -6282,6 +6290,26 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
         Constant *NewC = ConstantFP::get(X->getType(), TruncC);
         return new FCmpInst(Pred, X, NewC, "", &I);
       }
+    }
+  }
+
+  // Convert a sign-bit test of an FP value into a cast and integer compare.
+  // TODO: Simplify if the copysign constant is 0.0 or NaN.
+  // TODO: Handle non-zero compare constants.
+  // TODO: Handle other predicates.
+  const APFloat *C;
+  if (match(Op0, m_OneUse(m_Intrinsic<Intrinsic::copysign>(m_APFloat(C),
+                                                           m_Value(X)))) &&
+      match(Op1, m_AnyZeroFP()) && !C->isZero() && !C->isNaN()) {
+    Type *IntType = Builder.getIntNTy(X->getType()->getScalarSizeInBits());
+    if (auto *VecTy = dyn_cast<VectorType>(OpType))
+      IntType = VectorType::get(IntType, VecTy->getElementCount());
+
+    // copysign(non-zero constant, X) < 0.0 --> (bitcast X) < 0
+    if (Pred == FCmpInst::FCMP_OLT) {
+      Value *IntX = Builder.CreateBitCast(X, IntType);
+      return new ICmpInst(ICmpInst::ICMP_SLT, IntX,
+                          ConstantInt::getNullValue(IntType));
     }
   }
 

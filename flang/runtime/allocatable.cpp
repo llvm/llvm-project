@@ -40,8 +40,8 @@ void RTNAME(AllocatableAssign)(Descriptor &to, const Descriptor & /*from*/) {
 }
 
 int RTNAME(MoveAlloc)(Descriptor &to, const Descriptor & /*from*/,
-    bool /*hasStat*/, Descriptor * /*errMsg*/, const char * /*sourceFile*/,
-    int /*sourceLine*/) {
+    bool /*hasStat*/, const Descriptor * /*errMsg*/,
+    const char * /*sourceFile*/, int /*sourceLine*/) {
   INTERNAL_CHECK(false); // MoveAlloc is not yet implemented
   return StatOk;
 }
@@ -54,7 +54,7 @@ void RTNAME(AllocatableSetBounds)(Descriptor &descriptor, int zeroBasedDim,
 }
 
 int RTNAME(AllocatableAllocate)(Descriptor &descriptor, bool hasStat,
-    Descriptor *errMsg, const char *sourceFile, int sourceLine) {
+    const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   if (!descriptor.IsAllocatable()) {
     return ReturnError(terminator, StatInvalidDescriptor, errMsg, hasStat);
@@ -66,7 +66,7 @@ int RTNAME(AllocatableAllocate)(Descriptor &descriptor, bool hasStat,
 }
 
 int RTNAME(AllocatableDeallocate)(Descriptor &descriptor, bool hasStat,
-    Descriptor *errMsg, const char *sourceFile, int sourceLine) {
+    const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   if (!descriptor.IsAllocatable()) {
     return ReturnError(terminator, StatInvalidDescriptor, errMsg, hasStat);

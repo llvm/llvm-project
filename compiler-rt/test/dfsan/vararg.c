@@ -4,6 +4,8 @@
 // RUN: %clang_dfsan -mllvm -dfsan-args-abi %s -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s
 // RUN: %run %t foo
+//
+// REQUIRES: x86_64-target-arch
 
 #include <stdio.h>
 

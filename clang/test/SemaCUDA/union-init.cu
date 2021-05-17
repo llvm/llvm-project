@@ -31,9 +31,9 @@ union D {
 
 __device__ B b;
 __device__ C c;
-// expected-error@-1 {{dynamic initialization is not supported for __device__, __constant__, and __shared__ variables.}}
+// expected-error@-1 {{dynamic initialization is not supported for __device__, __constant__, __shared__, and __managed__ variables.}}
 __device__ D d;
-// expected-error@-1 {{dynamic initialization is not supported for __device__, __constant__, and __shared__ variables.}}
+// expected-error@-1 {{dynamic initialization is not supported for __device__, __constant__, __shared__, and __managed__ variables.}}
 
 __device__ void foo() {
   __shared__ B b;

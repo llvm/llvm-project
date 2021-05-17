@@ -126,7 +126,7 @@ Diagnostic &Diagnostic::operator<<(OperationName val) {
 Diagnostic &Diagnostic::operator<<(Operation &val) {
   std::string str;
   llvm::raw_string_ostream os(str);
-  os << val;
+  val.print(os, OpPrintingFlags().useLocalScope().elideLargeElementsAttrs());
   return *this << os.str();
 }
 
@@ -366,21 +366,15 @@ struct SourceMgrDiagnosticHandlerImpl {
 
 /// Return a processable FileLineColLoc from the given location.
 static Optional<FileLineColLoc> getFileLineColLoc(Location loc) {
-  if (auto nameLoc = loc.dyn_cast<NameLoc>())
-    return getFileLineColLoc(loc.cast<NameLoc>().getChildLoc());
-  if (auto fileLoc = loc.dyn_cast<FileLineColLoc>())
-    return fileLoc;
-  if (auto callLoc = loc.dyn_cast<CallSiteLoc>())
-    return getFileLineColLoc(loc.cast<CallSiteLoc>().getCallee());
-  if (auto fusedLoc = loc.dyn_cast<FusedLoc>()) {
-    for (auto subLoc : loc.cast<FusedLoc>().getLocations()) {
-      if (auto callLoc = getFileLineColLoc(subLoc)) {
-        return callLoc;
-      }
+  Optional<FileLineColLoc> firstFileLoc;
+  loc->walk([&](Location loc) {
+    if (FileLineColLoc fileLoc = loc.dyn_cast<FileLineColLoc>()) {
+      firstFileLoc = fileLoc;
+      return WalkResult::interrupt();
     }
-    return llvm::None;
-  }
-  return llvm::None;
+    return WalkResult::advance();
+  });
+  return firstFileLoc;
 }
 
 /// Return a processable CallSiteLoc from the given location.

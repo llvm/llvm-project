@@ -46,7 +46,7 @@ namespace llvm {
 class LoopVectorizeHints {
   enum HintKind {
     HK_WIDTH,
-    HK_UNROLL,
+    HK_INTERLEAVE,
     HK_FORCE,
     HK_ISVECTORIZED,
     HK_PREDICATE,
@@ -111,7 +111,15 @@ public:
   ElementCount getWidth() const {
     return ElementCount::get(Width.Value, isScalable());
   }
-  unsigned getInterleave() const { return Interleave.Value; }
+  unsigned getInterleave() const {
+    if (Interleave.Value)
+      return Interleave.Value;
+    // If interleaving is not explicitly set, assume that if we do not want
+    // unrolling, we also don't want any interleaving.
+    if (llvm::hasUnrollTransformation(TheLoop) & TM_Disable)
+      return 1;
+    return 0;
+  }
   unsigned getIsVectorized() const { return IsVectorized.Value; }
   unsigned getPredicate() const { return Predicate.Value; }
   enum ForceKind getForce() const {
@@ -177,24 +185,27 @@ private:
 /// followed by a non-expert user.
 class LoopVectorizationRequirements {
 public:
-  LoopVectorizationRequirements(OptimizationRemarkEmitter &ORE) : ORE(ORE) {}
-
-  void addUnsafeAlgebraInst(Instruction *I) {
-    // First unsafe algebra instruction.
-    if (!UnsafeAlgebraInst)
-      UnsafeAlgebraInst = I;
+  /// Track the 1st floating-point instruction that can not be reassociated.
+  void addExactFPMathInst(Instruction *I) {
+    if (I && !ExactFPMathInst)
+      ExactFPMathInst = I;
   }
 
   void addRuntimePointerChecks(unsigned Num) { NumRuntimePointerChecks = Num; }
 
-  bool doesNotMeet(Function *F, Loop *L, const LoopVectorizeHints &Hints);
+
+  Instruction *getExactFPInst() { return ExactFPMathInst; }
+  bool canVectorizeFPMath(const LoopVectorizeHints &Hints) const {
+    return !ExactFPMathInst || Hints.allowReordering();
+  }
+
+  unsigned getNumRuntimePointerChecks() const {
+    return NumRuntimePointerChecks;
+  }
 
 private:
   unsigned NumRuntimePointerChecks = 0;
-  Instruction *UnsafeAlgebraInst = nullptr;
-
-  /// Interface to emit optimization remarks.
-  OptimizationRemarkEmitter &ORE;
+  Instruction *ExactFPMathInst = nullptr;
 };
 
 /// LoopVectorizationLegality checks if it is legal to vectorize a loop, and
@@ -288,7 +299,7 @@ public:
 
   /// Return true if the block BB needs to be predicated in order for the loop
   /// to be vectorized.
-  bool blockNeedsPredication(BasicBlock *BB);
+  bool blockNeedsPredication(BasicBlock *BB) const;
 
   /// Check if this pointer is consecutive when vectorizing. This happens
   /// when the last index of the GEP is the induction variable, or that the
@@ -300,7 +311,7 @@ public:
   /// -1 - Address is consecutive, and decreasing.
   /// NOTE: This method must only be used before modifying the original scalar
   /// loop. Do not use after invoking 'createVectorizedLoopSkeleton' (PR34965).
-  int isConsecutivePtr(Value *Ptr);
+  int isConsecutivePtr(Value *Ptr) const;
 
   /// Returns true if the value V is uniform within the loop.
   bool isUniform(Value *V);
@@ -339,13 +350,12 @@ public:
 
   /// Returns true if vector representation of the instruction \p I
   /// requires mask.
-  bool isMaskRequired(const Instruction *I) { return MaskedOp.contains(I); }
+  bool isMaskRequired(const Instruction *I) const {
+    return MaskedOp.contains(I);
+  }
 
   unsigned getNumStores() const { return LAI->getNumStores(); }
   unsigned getNumLoads() const { return LAI->getNumLoads(); }
-
-  // Returns true if the NoNaN attribute is set on the function.
-  bool hasFunNoNaNAttr() const { return HasFunNoNaNAttr; }
 
   /// Returns all assume calls in predicated blocks. They need to be dropped
   /// when flattening the CFG.
@@ -421,7 +431,7 @@ private:
 
   /// If an access has a symbolic strides, this maps the pointer value to
   /// the stride symbol.
-  const ValueToValueMap *getSymbolicStrides() {
+  const ValueToValueMap *getSymbolicStrides() const {
     // FIXME: Currently, the set of symbolic strides is sometimes queried before
     // it's collected.  This happens from canVectorizeWithIfConvert, when the
     // pointer is checked to reference consecutive elements suitable for a
@@ -494,9 +504,6 @@ private:
   /// Allowed outside users. This holds the variables that can be accessed from
   /// outside the loop.
   SmallPtrSet<Value *, 4> AllowedExit;
-
-  /// Can we assume the absence of NaNs.
-  bool HasFunNoNaNAttr = false;
 
   /// Vectorization requirements that will go through late-evaluation.
   LoopVectorizationRequirements *Requirements;

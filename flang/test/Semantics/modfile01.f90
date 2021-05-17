@@ -1,4 +1,4 @@
-! RUN: %S/test_modfile.sh %s %t %f18
+! RUN: %S/test_modfile.sh %s %t %flang_fc1
 ! Check correct modfile generation for type with private component.
 module m
   integer :: i

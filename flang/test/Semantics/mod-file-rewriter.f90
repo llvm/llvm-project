@@ -1,8 +1,8 @@
 ! RUN: rm -fr %t && mkdir %t && cd %t
-! RUN: %f18 -fparse-only -fdebug-module-writer %s 2>&1 | FileCheck %s --check-prefix CHECK_CHANGED
-! RUN: %f18 -fparse-only -fdebug-module-writer %s 2>&1 | FileCheck %s --check-prefix CHECK_UNCHANGED
-! RUN: %f18 -fparse-only -fdebug-module-writer %p/Inputs/mod-file-unchanged.f90 2>&1 | FileCheck %s --check-prefix CHECK_UNCHANGED
-! RUN: %f18 -fparse-only -fdebug-module-writer %p/Inputs/mod-file-changed.f90 2>&1 | FileCheck %s --check-prefix CHECK_CHANGED
+! RUN: %flang_fc1 -fsyntax-only -fdebug-module-writer %s 2>&1 | FileCheck %s --check-prefix CHECK_CHANGED
+! RUN: %flang_fc1 -fsyntax-only -fdebug-module-writer %s 2>&1 | FileCheck %s --check-prefix CHECK_UNCHANGED
+! RUN: %flang_fc1 -fsyntax-only -fdebug-module-writer %p/Inputs/mod-file-unchanged.f90 2>&1 | FileCheck %s --check-prefix CHECK_UNCHANGED
+! RUN: %flang_fc1 -fsyntax-only -fdebug-module-writer %p/Inputs/mod-file-changed.f90 2>&1 | FileCheck %s --check-prefix CHECK_CHANGED
 
 module m
   real :: x(10)

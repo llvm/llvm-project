@@ -91,26 +91,6 @@ public:
       *Success = NewFD && NewFD->hasBody() && !OrigFDHasBody;
 
       if (NewFD) {
-        // Check GetImportedFromSourceLocation.
-        llvm::Optional<std::pair<SourceLocation, ASTUnit *>> SLocResult =
-            CTU.getImportedFromSourceLocation(NewFD->getLocation());
-        EXPECT_TRUE(SLocResult);
-        if (SLocResult) {
-          SourceLocation OrigSLoc = (*SLocResult).first;
-          ASTUnit *OrigUnit = (*SLocResult).second;
-          // OrigUnit is created internally by CTU (is not the
-          // ASTWithDefinition).
-          TranslationUnitDecl *OrigTU =
-              OrigUnit->getASTContext().getTranslationUnitDecl();
-          const FunctionDecl *FDWithDefinition = FindFInTU(OrigTU);
-          EXPECT_TRUE(FDWithDefinition);
-          if (FDWithDefinition) {
-            EXPECT_EQ(FDWithDefinition->getName(), "f");
-            EXPECT_TRUE(FDWithDefinition->isThisDeclarationADefinition());
-            EXPECT_EQ(OrigSLoc, FDWithDefinition->getLocation());
-          }
-        }
-
         // Check parent map.
         const DynTypedNodeList ParentsAfterImport =
             Ctx.getParentMapContext().getParents<Decl>(*FD);

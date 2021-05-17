@@ -2,7 +2,7 @@
 ; RUN: llc < %s -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s
 
 ; CHECK-LABEL: {{^}}flt_f64:
-; CHECK: v_cmp_nge_f64_e32 vcc, {{s[[0-9]+:[0-9]+], v[[0-9]+:[0-9]+]}}
+; CHECK: v_cmp_nge_f64_e32 vcc, {{s\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @flt_f64(i32 addrspace(1)* %out, double addrspace(1)* %in1,
                      double addrspace(1)* %in2) {
    %r0 = load double, double addrspace(1)* %in1
@@ -14,7 +14,7 @@ define amdgpu_kernel void @flt_f64(i32 addrspace(1)* %out, double addrspace(1)* 
 }
 
 ; CHECK-LABEL: {{^}}fle_f64:
-; CHECK: v_cmp_ngt_f64_e32 vcc, {{s[[0-9]+:[0-9]+], v[[0-9]+:[0-9]+]}}
+; CHECK: v_cmp_ngt_f64_e32 vcc, {{s\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @fle_f64(i32 addrspace(1)* %out, double addrspace(1)* %in1,
                      double addrspace(1)* %in2) {
    %r0 = load double, double addrspace(1)* %in1
@@ -26,7 +26,7 @@ define amdgpu_kernel void @fle_f64(i32 addrspace(1)* %out, double addrspace(1)* 
 }
 
 ; CHECK-LABEL: {{^}}fgt_f64:
-; CHECK: v_cmp_nle_f64_e32 vcc, {{s[[0-9]+:[0-9]+], v[[0-9]+:[0-9]+]}}
+; CHECK: v_cmp_nle_f64_e32 vcc, {{s\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @fgt_f64(i32 addrspace(1)* %out, double addrspace(1)* %in1,
                      double addrspace(1)* %in2) {
    %r0 = load double, double addrspace(1)* %in1
@@ -38,7 +38,7 @@ define amdgpu_kernel void @fgt_f64(i32 addrspace(1)* %out, double addrspace(1)* 
 }
 
 ; CHECK-LABEL: {{^}}fge_f64:
-; CHECK: v_cmp_nlt_f64_e32 vcc, {{s[[0-9]+:[0-9]+], v[[0-9]+:[0-9]+]}}
+; CHECK: v_cmp_nlt_f64_e32 vcc, {{s\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @fge_f64(i32 addrspace(1)* %out, double addrspace(1)* %in1,
                      double addrspace(1)* %in2) {
    %r0 = load double, double addrspace(1)* %in1
@@ -50,7 +50,7 @@ define amdgpu_kernel void @fge_f64(i32 addrspace(1)* %out, double addrspace(1)* 
 }
 
 ; CHECK-LABEL: {{^}}fne_f64:
-; CHECK: v_cmp_neq_f64_e32 vcc, {{s[[0-9]+:[0-9]+], v[[0-9]+:[0-9]+]}}
+; CHECK: v_cmp_neq_f64_e32 vcc, {{s\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @fne_f64(double addrspace(1)* %out, double addrspace(1)* %in1,
                      double addrspace(1)* %in2) {
    %r0 = load double, double addrspace(1)* %in1
@@ -62,7 +62,7 @@ define amdgpu_kernel void @fne_f64(double addrspace(1)* %out, double addrspace(1
 }
 
 ; CHECK-LABEL: {{^}}feq_f64:
-; CHECK: v_cmp_nlg_f64_e32 vcc, {{s[[0-9]+:[0-9]+], v[[0-9]+:[0-9]+]}}
+; CHECK: v_cmp_nlg_f64_e32 vcc, {{s\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @feq_f64(double addrspace(1)* %out, double addrspace(1)* %in1,
                      double addrspace(1)* %in2) {
    %r0 = load double, double addrspace(1)* %in1

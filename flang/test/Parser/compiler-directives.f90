@@ -1,4 +1,4 @@
-! RUN: %f18 -funparse %s 2>&1
+! RUN: %flang_fc1 -fdebug-unparse %s 2>&1
 
 ! Test that compiler directives can appear in various places.
 

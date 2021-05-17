@@ -10,6 +10,7 @@
 ; CHECK-NEXT:      Dominator Tree Construction
 ; CHECK-NEXT:      Natural Loop Information
 ; CHECK-NEXT:      MVE gather/scatter lowering
+; CHECK-NEXT:      MVE lane interleaving
 ; CHECK-NEXT:      Module Verifier
 ; CHECK-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:      Canonicalize natural loops
@@ -29,17 +30,16 @@
 ; CHECK-NEXT:      Shadow Stack GC Lowering
 ; CHECK-NEXT:      Lower constant intrinsics
 ; CHECK-NEXT:      Remove unreachable blocks from the CFG
-; CHECK-NEXT:      Dominator Tree Construction
 ; CHECK-NEXT:      Natural Loop Information
 ; CHECK-NEXT:      Post-Dominator Tree Construction
 ; CHECK-NEXT:      Branch Probability Analysis
 ; CHECK-NEXT:      Block Frequency Analysis
 ; CHECK-NEXT:      Constant Hoisting
+; CHECK-NEXT:      Replace intrinsics with calls to vector library
 ; CHECK-NEXT:      Partially inline calls to library functions
-; CHECK-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
+; CHECK-NEXT:      Expand vector predication intrinsics
 ; CHECK-NEXT:      Scalarize Masked Memory Intrinsics
 ; CHECK-NEXT:      Expand reduction intrinsics
-; CHECK-NEXT:      Dominator Tree Construction
 ; CHECK-NEXT:      Natural Loop Information
 ; CHECK-NEXT:      Scalar Evolution Analysis
 ; CHECK-NEXT:      Basic Alias Analysis (stateless AA impl)
@@ -55,7 +55,6 @@
 ; CHECK-NEXT:      Dominator Tree Construction
 ; CHECK-NEXT:      Exception handling preparation
 ; CHECK-NEXT:      Merge internal globals
-; CHECK-NEXT:      Dominator Tree Construction
 ; CHECK-NEXT:      Natural Loop Information
 ; CHECK-NEXT:      Scalar Evolution Analysis
 ; CHECK-NEXT:      Lazy Branch Probability Analysis
@@ -68,7 +67,6 @@
 ; CHECK-NEXT:      Safe Stack instrumentation pass
 ; CHECK-NEXT:      Insert stack protectors
 ; CHECK-NEXT:      Module Verifier
-; CHECK-NEXT:      Dominator Tree Construction
 ; CHECK-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:      Function Alias Analysis Results
 ; CHECK-NEXT:      Natural Loop Information

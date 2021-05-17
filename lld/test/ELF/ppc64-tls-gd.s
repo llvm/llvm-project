@@ -16,28 +16,29 @@
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=IE %s
 
 # GD-REL:      .rela.dyn {
-# GD-REL-NEXT:   0x20548 R_PPC64_DTPMOD64 a 0x0
-# GD-REL-NEXT:   0x20550 R_PPC64_DTPREL64 a 0x0
-# GD-REL-NEXT:   0x20558 R_PPC64_DTPMOD64 b 0x0
-# GD-REL-NEXT:   0x20560 R_PPC64_DTPREL64 b 0x0
-# GD-REL-NEXT:   0x20568 R_PPC64_DTPMOD64 c 0x0
-# GD-REL-NEXT:   0x20570 R_PPC64_DTPREL64 c 0x0
+# GD-REL-NEXT:   0x20550 R_PPC64_DTPMOD64 a 0x0
+# GD-REL-NEXT:   0x20558 R_PPC64_DTPREL64 a 0x0
+# GD-REL-NEXT:   0x20560 R_PPC64_DTPMOD64 b 0x0
+# GD-REL-NEXT:   0x20568 R_PPC64_DTPREL64 b 0x0
+# GD-REL-NEXT:   0x20570 R_PPC64_DTPMOD64 c 0x0
+# GD-REL-NEXT:   0x20578 R_PPC64_DTPREL64 c 0x0
 # GD-REL-NEXT: }
 
-## &DTPMOD(a) - .TOC. = &.got[0] - (.got+0x8000) = -32768
+## Start with .got[1] as .got[0] is the .TOC.
+## &DTPMOD(a) - .TOC. = &.got[1] - (.got+0x8000) = -32760
 # GD:      addis 3, 2, 0
-# GD-NEXT: addi 3, 3, -32768
+# GD-NEXT: addi 3, 3, -32760
 # GD-NEXT: bl 0x10400
 # GD-NEXT: ld 2, 24(1)
 
-## &DTPMOD(b) - .TOC. = &.got[2] - (.got+0x8000) = -32752
+## &DTPMOD(b) - .TOC. = &.got[3] - (.got+0x8000) = -32744
 # GD-NEXT: addis 3, 2, 0
-# GD-NEXT: addi 3, 3, -32752
+# GD-NEXT: addi 3, 3, -32744
 # GD-NEXT: bl 0x10400
 # GD-NEXT: ld 2, 24(1)
 
-## &DTPMOD(b) - .TOC. = &.got[4] - (.got+0x8000) = -32736
-# GD-NEXT: li 3, -32736
+## &DTPMOD(b) - .TOC. = &.got[5] - (.got+0x8000) = -32728
+# GD-NEXT: li 3, -32728
 # GD-NEXT: bl 0x10400
 # GD-NEXT: ld 2, 24(1)
 
@@ -59,8 +60,8 @@
 # LE-NEXT: addi 3, 3, -28656
 
 # IE-REL:      .rela.dyn {
-# IE-REL-NEXT:   0x10020418 R_PPC64_TPREL64 b 0x0
-# IE-REL-NEXT:   0x10020420 R_PPC64_TPREL64 c 0x0
+# IE-REL-NEXT:   0x10020420 R_PPC64_TPREL64 b 0x0
+# IE-REL-NEXT:   0x10020428 R_PPC64_TPREL64 c 0x0
 # IE-REL-NEXT: }
 
 ## a is relaxed to use LE.
@@ -69,15 +70,15 @@
 # IE-NEXT: addis 3, 13, 0
 # IE-NEXT: nop
 # IE-NEXT: addi 3, 3, -28664
-## &DTPMOD(b) - .TOC. = &.got[0] - (.got+0x8000) = -32768
+## &DTPMOD(b) - .TOC. = &.got[1] - (.got+0x8000) = -32760
 # IE-NEXT: addis 3, 2, 0
-# IE-NEXT: ld 3, -32768(3)
+# IE-NEXT: ld 3, -32760(3)
 # IE-NEXT: nop
 # IE-NEXT: add 3, 3, 13
-## &DTPMOD(c) - .TOC. = &.got[1] - (.got+0x8000) = -32760
+## &DTPMOD(c) - .TOC. = &.got[2] - (.got+0x8000) = -32752
 ## r0 is wrong. R_PPC64_GOT_TLS16 cannot be relaxed to IE but the behavior is
 ## consistent with ld.bfd
-# IE-NEXT: ld 3, -32760(0)
+# IE-NEXT: ld 3, -32752(0)
 # IE-NEXT: nop
 # IE-NEXT: add 3, 3, 13
 

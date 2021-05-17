@@ -110,6 +110,7 @@ public:
 
   WasmSymbolType getWasmType() const;
   bool isExported() const;
+  bool isExportedExplicit() const;
 
   // Indicates that the symbol is used in an __attribute__((used)) directive
   // or similar.
@@ -278,9 +279,9 @@ class DefinedData : public DataSymbol {
 public:
   // Constructor for regular data symbols originating from input files.
   DefinedData(StringRef name, uint32_t flags, InputFile *f,
-              InputSegment *segment, uint64_t offset, uint64_t size)
+              InputSegment *segment, uint64_t value, uint64_t size)
       : DataSymbol(name, DefinedDataKind, flags, f), segment(segment),
-        offset(offset), size(size) {}
+        value(value), size(size) {}
 
   // Constructor for linker synthetic data symbols.
   DefinedData(StringRef name, uint32_t flags)
@@ -289,8 +290,8 @@ public:
   static bool classof(const Symbol *s) { return s->kind() == DefinedDataKind; }
 
   // Returns the output virtual address of a defined data symbol.
-  uint64_t getVirtualAddress() const;
-  void setVirtualAddress(uint64_t va);
+  uint64_t getVA() const;
+  void setVA(uint64_t va);
 
   // Returns the offset of a defined data symbol within its OutputSegment.
   uint64_t getOutputSegmentOffset() const;
@@ -298,7 +299,7 @@ public:
   uint64_t getSize() const { return size; }
 
   InputSegment *segment = nullptr;
-  uint32_t offset = 0;
+  uint64_t value = 0;
 
 protected:
   uint64_t size = 0;
@@ -568,6 +569,11 @@ struct WasmSym {
   // Used in PIC code for offset of global data
   static UndefinedGlobal *memoryBase;
   static DefinedData *definedMemoryBase;
+
+  // __indirect_function_table
+  // Used as an address space for function pointers, with each function that is
+  // used as a function pointer being allocated a slot.
+  static TableSymbol *indirectFunctionTable;
 };
 
 // A buffer class that is large enough to hold any Symbol-derived

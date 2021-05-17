@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARFACCELERATORTABLE_H
-#define LLVM_DEBUGINFO_DWARFACCELERATORTABLE_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFACCELERATORTABLE_H
+#define LLVM_DEBUGINFO_DWARF_DWARFACCELERATORTABLE_H
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -140,7 +140,7 @@ public:
     friend class ValueIterator;
   };
 
-  class ValueIterator : public std::iterator<std::input_iterator_tag, Entry> {
+  class ValueIterator {
     const AppleAcceleratorTable *AccelTable = nullptr;
     Entry Current;           ///< The current entry.
     uint64_t DataOffset = 0; ///< Offset into the section.
@@ -149,7 +149,14 @@ public:
 
     /// Advance the iterator.
     void Next();
+
   public:
+    using iterator_category = std::input_iterator_tag;
+    using value_type = Entry;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
     /// Construct a new iterator for the entries at \p DataOffset.
     ValueIterator(const AppleAcceleratorTable &AccelTable, uint64_t DataOffset);
     /// End marker.
@@ -466,8 +473,15 @@ public:
     friend class DWARFDebugNames;
   };
 
-  class ValueIterator : public std::iterator<std::input_iterator_tag, Entry> {
+  class ValueIterator {
+  public:
+    using iterator_category = std::input_iterator_tag;
+    using value_type = Entry;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
 
+  private:
     /// The Name Index we are currently iterating through. The implementation
     /// relies on the fact that this can also be used as an iterator into the
     /// "NameIndices" vector in the Accelerator section.
@@ -595,4 +609,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_DWARFACCELERATORTABLE_H
+#endif // LLVM_DEBUGINFO_DWARF_DWARFACCELERATORTABLE_H

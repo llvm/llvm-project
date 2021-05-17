@@ -54,8 +54,8 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   EXPECT_EQ(&*Plan, VecBB->getPlan());
 
   auto Iter = VecBB->begin();
-  VPInstruction *Phi = dyn_cast<VPInstruction>(&*Iter++);
-  EXPECT_EQ(Instruction::PHI, Phi->getOpcode());
+  VPWidenPHIRecipe *Phi = dyn_cast<VPWidenPHIRecipe>(&*Iter++);
+  EXPECT_NE(nullptr, Phi);
 
   VPInstruction *Idx = dyn_cast<VPInstruction>(&*Iter++);
   EXPECT_EQ(Instruction::GetElementPtr, Idx->getOpcode());
@@ -89,11 +89,13 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   EXPECT_EQ(IndvarAdd, ICmp->getOperand(0));
   EXPECT_EQ(VecBB->getCondBit(), ICmp);
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   // Add an external value to check we do not print the list of external values,
   // as this is not required with the new printing.
   Plan->addVPValue(&*F->arg_begin());
   std::string FullDump;
-  raw_string_ostream(FullDump) << *Plan;
+  raw_string_ostream OS(FullDump);
+  Plan->printDOT(OS);
   const char *ExpectedStr = R"(digraph VPlan {
 graph [labelloc=t, fontsize=30; label="Vectorization Plan"]
 node [shape=rect, fontname=Courier, fontsize=30]
@@ -103,35 +105,39 @@ compound=true
     fontname=Courier
     label="\<x1\> TopRegion"
     N1 [label =
-      "entry:\n"
+      "entry:\l" +
+      "Successor(s): for.body\l"
     ]
     N1 -> N2 [ label=""]
     N2 [label =
-      "for.body:\n" +
-        "EMIT ir<%indvars.iv> = phi ir<0> ir<%indvars.iv.next>\l" +
-        "EMIT ir<%arr.idx> = getelementptr ir<%A> ir<%indvars.iv>\l" +
-        "EMIT ir<%l1> = load ir<%arr.idx>\l" +
-        "EMIT ir<%res> = add ir<%l1> ir<10>\l" +
-        "EMIT store ir<%res> ir<%arr.idx>\l" +
-        "EMIT ir<%indvars.iv.next> = add ir<%indvars.iv> ir<1>\l" +
-        "EMIT ir<%exitcond> = icmp ir<%indvars.iv.next> ir<%N>\l" +
-         "CondBit: ir<%exitcond> (for.body)\l"
+      "for.body:\l" +
+      "  WIDEN-PHI ir\<%indvars.iv\> = phi ir\<0\>, ir\<%indvars.iv.next\>\l" +
+      "  EMIT ir\<%arr.idx\> = getelementptr ir\<%A\> ir\<%indvars.iv\>\l" +
+      "  EMIT ir\<%l1\> = load ir\<%arr.idx\>\l" +
+      "  EMIT ir\<%res\> = add ir\<%l1\> ir\<10\>\l" +
+      "  EMIT store ir\<%res\> ir\<%arr.idx\>\l" +
+      "  EMIT ir\<%indvars.iv.next\> = add ir\<%indvars.iv\> ir\<1\>\l" +
+      "  EMIT ir\<%exitcond\> = icmp ir\<%indvars.iv.next\> ir\<%N\>\l" +
+      "Successor(s): for.body, for.end\l" +
+      "CondBit: ir\<%exitcond\> (for.body)\l"
     ]
     N2 -> N2 [ label="T"]
     N2 -> N3 [ label="F"]
     N3 [label =
-      "for.end:\n" +
-        "EMIT ret\l"
+      "for.end:\l" +
+      "  EMIT ret\l" +
+      "No successors\l"
     ]
   }
 }
 )";
   EXPECT_EQ(ExpectedStr, FullDump);
+#endif
 
   LoopVectorizationLegality::InductionList Inductions;
   SmallPtrSet<Instruction *, 1> DeadInstructions;
   VPlanTransforms::VPInstructionsToVPRecipes(LI->getLoopFor(LoopHeader), Plan,
-                                             Inductions, DeadInstructions);
+                                             Inductions, DeadInstructions, *SE);
 }
 
 TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
@@ -161,7 +167,7 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   LoopVectorizationLegality::InductionList Inductions;
   SmallPtrSet<Instruction *, 1> DeadInstructions;
   VPlanTransforms::VPInstructionsToVPRecipes(LI->getLoopFor(LoopHeader), Plan,
-                                             Inductions, DeadInstructions);
+                                             Inductions, DeadInstructions, *SE);
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());

@@ -146,6 +146,13 @@ struct StackAddressDescription {
 bool GetStackAddressInformation(uptr addr, uptr access_size,
                                 StackAddressDescription *descr);
 
+struct WildAddressDescription {
+  uptr addr;
+  uptr access_size;
+
+  void Print() const;
+};
+
 struct GlobalAddressDescription {
   uptr addr;
   // Assume address is close to at most four globals.
@@ -193,7 +200,7 @@ class AddressDescription {
       HeapAddressDescription heap;
       StackAddressDescription stack;
       GlobalAddressDescription global;
-      uptr addr;
+      WildAddressDescription wild;
     };
   };
 
@@ -211,7 +218,7 @@ class AddressDescription {
   uptr Address() const {
     switch (data.kind) {
       case kAddressKindWild:
-        return data.addr;
+        return data.wild.addr;
       case kAddressKindShadow:
         return data.shadow.addr;
       case kAddressKindHeap:
@@ -226,7 +233,7 @@ class AddressDescription {
   void Print(const char *bug_descr = nullptr) const {
     switch (data.kind) {
       case kAddressKindWild:
-        Printf("Address %p is a wild pointer.\n", data.addr);
+        data.wild.Print();
         return;
       case kAddressKindShadow:
         return data.shadow.Print();

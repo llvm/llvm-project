@@ -10,7 +10,7 @@
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: _local
 # CHECK-NEXT:     Type: Section (0xE)
-# CHECK-NEXT:     Section: __data (0x4)
+# CHECK-NEXT:     Section: __data
 # CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
 # CHECK-NEXT:     Flags [ (0x0)
 # CHECK-NEXT:     ]
@@ -19,7 +19,7 @@
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: __dyld_private
 # CHECK-NEXT:     Type: Section (0xE)
-# CHECK-NEXT:     Section: __data (0x4)
+# CHECK-NEXT:     Section: __data
 # CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
 # CHECK-NEXT:     Flags [ (0x0)
 # CHECK-NEXT:     ]
@@ -30,16 +30,6 @@
 # CHECK-NEXT:     Extern
 # CHECK-NEXT:     Type: Section (0xE)
 # CHECK-NEXT:     Section: __text (0x1)
-# CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
-# CHECK-NEXT:     Flags [ (0x0)
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Value: 0x1{{[0-9a-f]*}}
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: _external
-# CHECK-NEXT:     Extern
-# CHECK-NEXT:     Type: Section (0xE)
-# CHECK-NEXT:     Section: __data (0x4)
 # CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
 # CHECK-NEXT:     Flags [ (0x0)
 # CHECK-NEXT:     ]
@@ -57,12 +47,33 @@
 # CHECK-NEXT:     Value: 0x1{{[0-9a-f]*}}
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: _external
+# CHECK-NEXT:     Extern
+# CHECK-NEXT:     Type: Section (0xE)
+# CHECK-NEXT:     Section: __data
+# CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
+# CHECK-NEXT:     Flags [ (0x0)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Value: 0x1{{[0-9a-f]*}}
+# CHECK-NEXT:   }
+# CHECK-NEXT:  Symbol {
+# CHECK-NEXT:    Name: __mh_execute_header (81)
+# CHECK-NEXT:    Extern
+# CHECK-NEXT:    Type: Section (0xE)
+# CHECK-NEXT:    Section: __text (0x1)
+# CHECK-NEXT:    RefType: UndefinedNonLazy (0x0)
+# CHECK-NEXT:    Flags [ (0x0)
+# CHECK-NEXT:    ]
+# CHECK-NEXT:    Value: 0x100000000
+# CHECK-NEXT:  }
+# CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: dyld_stub_binder
 # CHECK-NEXT:     Extern
 # CHECK-NEXT:     Type: Undef (0x0)
 # CHECK-NEXT:     Section:  (0x0)
 # CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
 # CHECK-NEXT:     Flags [ (0x100)
+# CHECK-NEXT:       SymbolResolver (0x100)
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     Value: 0x0
 # CHECK-NEXT:   }
@@ -82,8 +93,8 @@
 # CHECK-NEXT:   ilocalsym: 0
 # CHECK-NEXT:   nlocalsym: 2
 # CHECK-NEXT:   iextdefsym: 2
-# CHECK-NEXT:   nextdefsym: 3
-# CHECK-NEXT:   iundefsym: 5
+# CHECK-NEXT:   nextdefsym: 4
+# CHECK-NEXT:   iundefsym: 6
 # CHECK-NEXT:   nundefsym: 2
 
 ## Verify that the first entry in the StringTable is a space, and that

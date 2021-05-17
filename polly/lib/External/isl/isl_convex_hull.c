@@ -2618,6 +2618,7 @@ __isl_give isl_basic_map *isl_basic_map_plain_unshifted_simple_hull(
 
 	bmap1 = isl_basic_map_drop_constraints_involving_unknown_divs(bmap1);
 	bmap2 = isl_basic_map_drop_constraints_involving_unknown_divs(bmap2);
+	bmap1 = isl_basic_map_order_divs(bmap1);
 	bmap2 = isl_basic_map_align_divs(bmap2, bmap1);
 	bmap1 = isl_basic_map_align_divs(bmap1, bmap2);
 	bmap1 = isl_basic_map_sort_constraints(bmap1);

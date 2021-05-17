@@ -574,10 +574,8 @@ static int getFD(StringRef Filename, std::error_code &EC,
   // the owner of stdout and may set the "binary" flag globally based on Flags.
   if (Filename == "-") {
     EC = std::error_code();
-    // If user requested binary then put stdout into binary mode if
-    // possible.
-    if (!(Flags & sys::fs::OF_Text))
-      sys::ChangeStdoutToBinary();
+    // Change stdout's text/binary mode based on the Flags.
+    sys::ChangeStdoutMode(Flags);
     return STDOUT_FILENO;
   }
 
@@ -987,3 +985,33 @@ void raw_null_ostream::pwrite_impl(const char *Ptr, size_t Size,
 void raw_pwrite_stream::anchor() {}
 
 void buffer_ostream::anchor() {}
+
+void buffer_unique_ostream::anchor() {}
+
+Error llvm::writeToOutput(StringRef OutputFileName,
+                          std::function<Error(raw_ostream &)> Write) {
+  if (OutputFileName == "-")
+    return Write(outs());
+
+  if (OutputFileName == "/dev/null") {
+    raw_null_ostream Out;
+    return Write(Out);
+  }
+
+  unsigned Mode = sys::fs::all_read | sys::fs::all_write | sys::fs::all_exe;
+  Expected<sys::fs::TempFile> Temp =
+      sys::fs::TempFile::create(OutputFileName + ".temp-stream-%%%%%%", Mode);
+  if (!Temp)
+    return createFileError(OutputFileName, Temp.takeError());
+
+  raw_fd_ostream Out(Temp->FD, false);
+
+  if (Error E = Write(Out)) {
+    if (Error DiscardError = Temp->discard())
+      return joinErrors(std::move(E), std::move(DiscardError));
+    return E;
+  }
+  Out.flush();
+
+  return Temp->keep(OutputFileName);
+}

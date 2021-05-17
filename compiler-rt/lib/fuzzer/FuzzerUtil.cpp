@@ -111,7 +111,7 @@ bool ParseOneDictionaryEntry(const std::string &Str, Unit *U) {
         char Hex[] = "0xAA";
         Hex[2] = Str[Pos + 2];
         Hex[3] = Str[Pos + 3];
-        U->push_back(strtol(Hex, nullptr, 16));
+        U->push_back(static_cast<uint8_t>(strtol(Hex, nullptr, 16)));
         Pos += 3;
         continue;
       }
@@ -226,10 +226,11 @@ unsigned NumberOfCpuCores() {
   return N;
 }
 
-size_t SimpleFastHash(const uint8_t *Data, size_t Size) {
-  size_t Res = 0;
+uint64_t SimpleFastHash(const void *Data, size_t Size, uint64_t Initial) {
+  uint64_t Res = Initial;
+  const uint8_t *Bytes = static_cast<const uint8_t *>(Data);
   for (size_t i = 0; i < Size; i++)
-    Res = Res * 11 + Data[i];
+    Res = Res * 11 + Bytes[i];
   return Res;
 }
 

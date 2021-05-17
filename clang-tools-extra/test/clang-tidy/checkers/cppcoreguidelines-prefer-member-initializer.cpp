@@ -488,3 +488,60 @@ Outside::Outside() {
     // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'x' should be initialized in a member initializer of the constructor [cppcoreguidelines-prefer-member-initializer]
     // CHECK-FIXES: {{^\ *$}}
 }
+
+struct SafeDependancy {
+  int m;
+  int n;
+  SafeDependancy(int M) : m(M) {
+    // CHECK-FIXES: SafeDependancy(int M) : m(M), n(m) {
+    n = m;
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'n' should be initialized in a member initializer of the constructor
+  }
+  // We match against direct field dependancy as well as descendant field
+  // dependancy, ensure both are accounted for.
+  SafeDependancy(short M) : m(M) {
+    // CHECK-FIXES: SafeDependancy(short M) : m(M), n(m + 1) {
+    n = m + 1;
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'n' should be initialized in a member initializer of the constructor
+  }
+};
+
+struct BadDependancy {
+  int m;
+  int n;
+  BadDependancy(int N) : n(N) {
+    m = n;
+  }
+  BadDependancy(short N) : n(N) {
+    m = n + 1;
+  }
+};
+
+struct InitFromVarDecl {
+  int m;
+  InitFromVarDecl() {
+    // Can't apply this fix as n is declared in the body of the constructor.
+    int n = 3;
+    m = n;
+  }
+};
+
+struct AlreadyHasInit {
+  int m = 4;
+  AlreadyHasInit() {
+    m = 3;
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'm' should be initialized in a member initializer of the constructor
+  }
+};
+
+#define ASSIGN_IN_MACRO(FIELD, VALUE) FIELD = (VALUE);
+
+struct MacroCantFix {
+  int n; // NoFix
+  // CHECK-FIXES: int n; // NoFix
+  MacroCantFix() {
+    ASSIGN_IN_MACRO(n, 0)
+    // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: 'n' should be initialized in a member initializer of the constructor
+    // CHECK-FIXES: ASSIGN_IN_MACRO(n, 0)
+  }
+};

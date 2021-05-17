@@ -10,14 +10,14 @@
 ; RUN: FileCheck %s -check-prefix=YAML-MISS < %t.yaml
 
 ;; test 'auto' threshold
-; RUN: opt < %s --disable-output --enable-new-pm \
+; RUN: opt < %s --disable-output --enable-new-pm --inline-enable-cost-benefit-analysis=0 \
 ; RUN: --passes='module(print-profile-summary,cgscc(inline))' \
 ; RUN: --pass-remarks-output=%t.hot.yaml --pass-remarks-filter='inline' \
 ; RUN: --pass-remarks-with-hotness --pass-remarks-hotness-threshold=auto 2>&1 | FileCheck %s
 ; RUN: FileCheck %s -check-prefix=YAML-PASS < %t.hot.yaml
 ; RUN: not FileCheck %s -check-prefix=YAML-MISS < %t.hot.yaml
 
-; RUN: opt < %s --disable-output --enable-new-pm \
+; RUN: opt < %s --disable-output --enable-new-pm --inline-enable-cost-benefit-analysis=0  \
 ; RUN: --passes='module(print-profile-summary,cgscc(inline))' \
 ; RUN: --pass-remarks=inline --pass-remarks-missed=inline --pass-remarks-analysis=inline \
 ; RUN: --pass-remarks-with-hotness --pass-remarks-hotness-threshold=auto 2>&1 | FileCheck %s -check-prefix=CHECK-RPASS
@@ -82,4 +82,3 @@ entry:
 !12 = !{i32 10000, i64 100, i32 1}
 !13 = !{i32 999000, i64 100, i32 1}
 !14 = !{i32 999999, i64 1, i32 2}
-

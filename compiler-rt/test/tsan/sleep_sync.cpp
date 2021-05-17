@@ -3,7 +3,7 @@
 
 int X = 0;
 
-void MySleep() {
+__attribute__((noinline)) void MySleep() {
   sleep(1);  // the sleep that must appear in the report
 }
 

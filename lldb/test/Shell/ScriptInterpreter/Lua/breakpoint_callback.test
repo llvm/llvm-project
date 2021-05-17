@@ -10,4 +10,4 @@ run
 # CHECK: 123
 breakpoint command add -s lua
 789_nil
-# CHECK: unexpected symbol near '789'
+# CHECK: {{unexpected symbol near '789'|malformed number near '789_'}}

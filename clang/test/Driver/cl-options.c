@@ -56,13 +56,16 @@
 // fpstrict-NOT: -menable-unsafe-fp-math
 // fpstrict-NOT: -ffast-math
 
+// RUN: %clang_cl /fsanitize=address -### -- %s 2>&1 | FileCheck -check-prefix=fsanitize_address %s
+// fsanitize_address: -fsanitize=address
+
 // RUN: %clang_cl -### /FA -fprofile-instr-generate -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-INSTR-GENERATE %s
 // RUN: %clang_cl -### /FA -fprofile-instr-generate=/tmp/somefile.profraw -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-INSTR-GENERATE-FILE %s
-// CHECK-PROFILE-INSTR-GENERATE: "-fprofile-instrument=clang" "--dependent-lib=clang_rt.profile-{{[^"]*}}.lib"
+// CHECK-PROFILE-INSTR-GENERATE: "-fprofile-instrument=clang" "--dependent-lib=clang_rt.profile{{[^"]*}}.lib"
 // CHECK-PROFILE-INSTR-GENERATE-FILE: "-fprofile-instrument-path=/tmp/somefile.profraw"
 
 // RUN: %clang_cl -### /FA -fprofile-generate -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-GENERATE %s
-// CHECK-PROFILE-GENERATE: "-fprofile-instrument=llvm" "--dependent-lib=clang_rt.profile-{{[^"]*}}.lib"
+// CHECK-PROFILE-GENERATE: "-fprofile-instrument=llvm" "--dependent-lib=clang_rt.profile{{[^"]*}}.lib"
 
 // RUN: %clang_cl -### /FA -fprofile-instr-generate -fprofile-instr-use -- %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MIX-GEN-USE %s
 // RUN: %clang_cl -### /FA -fprofile-instr-generate -fprofile-instr-use=file -- %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MIX-GEN-USE %s
@@ -118,7 +121,8 @@
 // RUN: %clang_cl /imsvcmyincludedir -### -- %s 2>&1 | FileCheck -check-prefix=SLASH_imsvc %s
 // RUN: %clang_cl /imsvc myincludedir -### -- %s 2>&1 | FileCheck -check-prefix=SLASH_imsvc %s
 // Clang's resource header directory should be first:
-// SLASH_imsvc: "-internal-isystem" "{{[^"]*}}lib{{(64)?/|\\\\}}clang{{[^"]*}}include"
+// SLASH_imsvc: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// SLASH_imsvc: "-internal-isystem" "[[RESOURCE_DIR]]{{[/\\]+}}include"
 // SLASH_imsvc: "-internal-isystem" "myincludedir"
 
 // RUN: %clang_cl /J -### -- %s 2>&1 | FileCheck -check-prefix=J %s
@@ -298,6 +302,10 @@
 // RUN: %clang_cl /d1PP -### -- %s 2>&1 | FileCheck -check-prefix=d1PP %s
 // d1PP: -dD
 
+// RUN: %clang_cl --target=i686-pc-windows-msvc /c /QIntel-jcc-erratum -### -- %s 2>&1 | FileCheck -check-prefix=jcceratum %s
+// jcceratum: "-mllvm" "-x86-branches-within-32B-boundaries"
+
+
 // We forward any unrecognized -W diagnostic options to cc1.
 // RUN: %clang_cl -Wunused-pragmas -### -- %s 2>&1 | FileCheck -check-prefix=WJoined %s
 // WJoined: "-cc1"
@@ -336,6 +344,9 @@
 // CHECK-CHAR8_T: "-fchar8_t"
 // RUN: %clang_cl -c -### /Zc:char8_t- -- %s 2>&1 | FileCheck -check-prefix CHECK-CHAR8_T_ %s
 // CHECK-CHAR8_T_: "-fno-char8_t"
+
+// RUN: %clang_cl -c -### /std:c11 -- %s 2>&1 | FileCheck -check-prefix CHECK-C11 %s
+// CHECK-C11: -std=c11
 
 // For some warning ids, we can map from MSVC warning to Clang warning.
 // RUN: %clang_cl -wd4005 -wd4100 -wd4910 -wd4996 -### -- %s 2>&1 | FileCheck -check-prefix=Wno %s
@@ -417,6 +428,10 @@
 // RUN:     /clr:pure \
 // RUN:     /d2FH4 \
 // RUN:     /docname \
+// RUN:     /experimental:module \
+// RUN:     /experimental:preprocessor \
+// RUN:     /exportHeader /headerName:foo \
+// RUN:     /headerUnit foo.h=foo.ifc /headerUnit:quote foo.h=foo.ifc /headerUnit:angle foo.h=foo.ifc \
 // RUN:     /EHsc \
 // RUN:     /F 42 \
 // RUN:     /FA \
@@ -425,6 +440,8 @@
 // RUN:     /FAs \
 // RUN:     /FAu \
 // RUN:     /favor:blend \
+// RUN:     /fsanitize-address-use-after-return \
+// RUN:     /fno-sanitize-address-vcasan-lib \
 // RUN:     /Fifoo \
 // RUN:     /Fmfoo \
 // RUN:     /FpDebug\main.pch \
@@ -463,7 +480,6 @@
 // RUN:     /openmp:experimental \
 // RUN:     /Qfast_transcendentals \
 // RUN:     /QIfist \
-// RUN:     /QIntel-jcc-erratum \
 // RUN:     /Qimprecise_fwaits \
 // RUN:     /Qpar \
 // RUN:     /Qpar-report:1 \
@@ -472,6 +488,10 @@
 // RUN:     /Qspectre-load \
 // RUN:     /Qspectre-load-cf \
 // RUN:     /Qvec-report:2 \
+// RUN:     /reference foo=foo.ifc /reference foo.ifc \
+// RUN:     /sourceDependencies foo.json \
+// RUN:     /sourceDependencies:directives foo.json \
+// RUN:     /translateInclude \
 // RUN:     /u \
 // RUN:     /V \
 // RUN:     /volatile:ms \
@@ -527,8 +547,6 @@
 // NoDllExportInlines: "-fno-dllexport-inlines"
 // RUN: %clang_cl /Zc:dllexportInlines /c -### -- %s 2>&1 | FileCheck -check-prefix=DllExportInlines %s
 // DllExportInlines-NOT: "-fno-dllexport-inlines"
-// RUN: %clang_cl /fallback /Zc:dllexportInlines- /c -### -- %s 2>&1 | FileCheck -check-prefix=DllExportInlinesFallback %s
-// DllExportInlinesFallback: error: option '/Zc:dllexportInlines-' is ABI-changing and not compatible with '/fallback'
 
 // RUN: %clang_cl /Zi /c -### -- %s 2>&1 | FileCheck -check-prefix=Zi %s
 // Zi: "-gcodeview"
@@ -613,6 +631,13 @@
 // RUN: %clang_cl /guard:nochecks -### -- %s 2>&1 | FileCheck -check-prefix=CFGUARDNOCHECKSINVALID %s
 // CFGUARDNOCHECKSINVALID: invalid value 'nochecks' in '/guard:'
 
+// RUN: %clang_cl  -### -- %s 2>&1 | FileCheck -check-prefix=NOEHCONTGUARD %s
+// RUN: %clang_cl /guard:ehcont- -### -- %s 2>&1 | FileCheck -check-prefix=NOEHCONTGUARD %s
+// NOEHCONTGUARD-NOT: -ehcontguard
+
+// RUN: %clang_cl /guard:ehcont -### -- %s 2>&1 | FileCheck -check-prefix=EHCONTGUARD %s
+// EHCONTGUARD: -ehcontguard
+
 // RUN: %clang_cl /guard:foo -### -- %s 2>&1 | FileCheck -check-prefix=CFGUARDINVALID %s
 // CFGUARDINVALID: invalid value 'foo' in '/guard:'
 
@@ -635,9 +660,12 @@
 // RUN:     -fno-diagnostics-color \
 // RUN:     -fdebug-compilation-dir . \
 // RUN:     -fdebug-compilation-dir=. \
+// RUN:     -ffile-compilation-dir=. \
 // RUN:     -fdiagnostics-parseable-fixits \
 // RUN:     -fdiagnostics-absolute-paths \
 // RUN:     -ferror-limit=10 \
+// RUN:     -fident \
+// RUN:     -fno-ident \
 // RUN:     -fmsc-version=1800 \
 // RUN:     -fno-strict-aliasing \
 // RUN:     -fstrict-aliasing \
@@ -696,8 +724,16 @@
 // VCTOOLSDIR: "-triple" "{{[a-zA-Z0-9_-]*}}-pc-windows-msvc19.11.0"
 
 // Validate that built-in include paths are based on the supplied path
-// RUN: %clang_cl -vctoolsdir "/fake" -### -- %s 2>&1 | FileCheck %s --check-prefix FAKEDIR
+// RUN: %clang_cl --target=aarch64-pc-windows-msvc -vctoolsdir "/fake" -winsdkdir "/foo" -winsdkversion 10.0.12345.0 -### -- %s 2>&1 | FileCheck %s --check-prefix FAKEDIR
 // FAKEDIR: "-internal-isystem" "/fake{{/|\\\\}}include"
 // FAKEDIR: "-internal-isystem" "/fake{{/|\\\\}}atlmfc{{/|\\\\}}include"
+// FAKEDIR: "-internal-isystem" "/foo{{/|\\\\}}Include{{/|\\\\}}10.0.12345.0{{/|\\\\}}ucrt"
+// FAKEDIR: "-internal-isystem" "/foo{{/|\\\\}}Include{{/|\\\\}}10.0.12345.0{{/|\\\\}}shared"
+// FAKEDIR: "-internal-isystem" "/foo{{/|\\\\}}Include{{/|\\\\}}10.0.12345.0{{/|\\\\}}um"
+// FAKEDIR: "-internal-isystem" "/foo{{/|\\\\}}Include{{/|\\\\}}10.0.12345.0{{/|\\\\}}winrt"
+// FAKEDIR: "-libpath:/fake{{/|\\\\}}lib{{/|\\\\}}
+// FAKEDIR: "-libpath:/fake{{/|\\\\}}atlmfc{{/|\\\\}}lib{{/|\\\\}}
+// FAKEDIR: "-libpath:/foo{{/|\\\\}}Lib{{/|\\\\}}10.0.12345.0{{/|\\\\}}ucrt
+// FAKEDIR: "-libpath:/foo{{/|\\\\}}Lib{{/|\\\\}}10.0.12345.0{{/|\\\\}}um
 
 void f() { }

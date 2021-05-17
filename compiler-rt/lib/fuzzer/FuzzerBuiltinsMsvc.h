@@ -52,12 +52,6 @@ inline uint32_t Clzll(uint64_t X) {
   return 64;
 }
 
-inline uint32_t Clz(uint32_t X) {
-  unsigned long LeadZeroIdx = 0;
-  if (_BitScanReverse(&LeadZeroIdx, X)) return 31 - LeadZeroIdx;
-  return 32;
-}
-
 inline int Popcountll(unsigned long long X) {
 #if !defined(_M_ARM) && !defined(_M_X64)
   return __popcnt(X) + __popcnt(X >> 32);

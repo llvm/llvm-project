@@ -33,8 +33,8 @@ public:
     return W->getFormat() == Triple::Wasm;
   }
 
-  virtual unsigned getRelocType(const MCValue &Target,
-                                const MCFixup &Fixup) const = 0;
+  virtual unsigned getRelocType(const MCValue &Target, const MCFixup &Fixup,
+                                bool IsLocRel) const = 0;
 
   /// \name Accessors
   /// @{

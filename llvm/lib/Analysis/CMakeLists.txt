@@ -1,11 +1,15 @@
 if (DEFINED LLVM_HAVE_TF_AOT OR DEFINED LLVM_HAVE_TF_API)
   if (DEFINED LLVM_HAVE_TF_AOT)
+    set(LLVM_INLINER_MODEL_PATH "models/inliner" 
+      CACHE STRING 
+      "ML-driven inliner policy location (path to saved model)")
     include(TensorFlowCompile)
-    tfcompile(models/inliner serve action InlinerSizeModel llvm::InlinerSizeModel)
+    tfcompile(${LLVM_INLINER_MODEL_PATH} serve action InlinerSizeModel llvm::InlinerSizeModel)
     list(APPEND GeneratedMLSources
-      $<TARGET_OBJECTS:tf_xla_runtime_objects>
-      ${GENERATED_OBJS}
+      ${GENERATED_HEADERS}
     )
+    LIST(APPEND MLDeps tf_xla_runtime)
+    LIST(APPEND MLLinkDeps tf_xla_runtime ${GENERATED_OBJS})
   endif()
 
   if (DEFINED LLVM_HAVE_TF_API)
@@ -58,6 +62,7 @@ add_llvm_component_library(LLVMAnalysis
   IRSimilarityIdentifier.cpp
   IVDescriptors.cpp
   IVUsers.cpp
+  ImportedFunctionsInliningStatistics.cpp
   IndirectCallPromotionAnalysis.cpp
   InlineCost.cpp
   InlineAdvisor.cpp
@@ -96,6 +101,7 @@ add_llvm_component_library(LLVMAnalysis
   ObjCARCAnalysisUtils.cpp
   ObjCARCInstKind.cpp
   OptimizationRemarkEmitter.cpp
+  OverflowInstAnalysis.cpp
   PHITransAddr.cpp
   PhiValues.cpp
   PostDominators.cpp
@@ -133,6 +139,7 @@ add_llvm_component_library(LLVMAnalysis
 
   DEPENDS
   intrinsics_gen
+  ${MLDeps}
 
   LINK_LIBS
   ${MLLinkDeps}

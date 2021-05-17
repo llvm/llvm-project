@@ -14,4 +14,4 @@ class Copyable
 public:
 };
 
-#endif  // COPYABLE_H
+#endif // COPYABLE_H

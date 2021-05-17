@@ -387,18 +387,18 @@ def : PSB<"csync", 0x11>;
 // BTI instruction options.
 //===----------------------------------------------------------------------===//
 
-class BTI<string name, bits<2> encoding> : SearchableTable {
+class BTI<string name, bits<3> encoding> : SearchableTable {
   let SearchableFields = ["Name", "Encoding"];
   let EnumValueField = "Encoding";
 
   string Name = name;
-  bits<2> Encoding;
+  bits<3> Encoding;
   let Encoding = encoding;
 }
 
-def : BTI<"c",  0b01>;
-def : BTI<"j",  0b10>;
-def : BTI<"jc", 0b11>;
+def : BTI<"c",  0b010>;
+def : BTI<"j",  0b100>;
+def : BTI<"jc", 0b110>;
 
 //===----------------------------------------------------------------------===//
 // TLBI (translation lookaside buffer invalidate) instruction options.

@@ -13,6 +13,8 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/Interfaces/CastInterfaces.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 //===----------------------------------------------------------------------===//
@@ -58,6 +60,10 @@ namespace tensor {
 ///   %2 = consumer %0 ... : tensor<8x16xf32> ...
 /// ```
 bool canFoldIntoConsumerOp(CastOp castOp);
+
+/// Performs folding of any operand of `op` if it comes from a tensor::CastOp
+/// that can be folded.
+LogicalResult foldTensorCast(Operation *op);
 
 } // namespace tensor
 } // namespace mlir

@@ -56,7 +56,6 @@ define void @f() {
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i8* [ [[TMP1]], %vector.memcheck ], [ [[TMP1]], %loop.preheader ], [ [[TMP1]], %middle.block ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 500, %middle.block ], [ 0, %loop.preheader ], [ 0, %vector.memcheck ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ;

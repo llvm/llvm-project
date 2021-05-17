@@ -56,38 +56,6 @@ static bool ignoreCallingConv(LibFunc Func) {
          Func == LibFunc_llabs || Func == LibFunc_strlen;
 }
 
-static bool isCallingConvCCompatible(CallInst *CI) {
-  switch(CI->getCallingConv()) {
-  default:
-    return false;
-  case llvm::CallingConv::C:
-    return true;
-  case llvm::CallingConv::ARM_APCS:
-  case llvm::CallingConv::ARM_AAPCS:
-  case llvm::CallingConv::ARM_AAPCS_VFP: {
-
-    // The iOS ABI diverges from the standard in some cases, so for now don't
-    // try to simplify those calls.
-    if (Triple(CI->getModule()->getTargetTriple()).isiOS())
-      return false;
-
-    auto *FuncTy = CI->getFunctionType();
-
-    if (!FuncTy->getReturnType()->isPointerTy() &&
-        !FuncTy->getReturnType()->isIntegerTy() &&
-        !FuncTy->getReturnType()->isVoidTy())
-      return false;
-
-    for (auto Param : FuncTy->params()) {
-      if (!Param->isPointerTy() && !Param->isIntegerTy())
-        return false;
-    }
-    return true;
-  }
-  }
-  return false;
-}
-
 /// Return true if it is only used in equality comparisons with With.
 static bool isOnlyUsedInEqualityComparison(Value *V, Value *With) {
   for (User *U : V->users()) {
@@ -190,13 +158,16 @@ static void annotateDereferenceableBytes(CallInst *CI,
   }
 }
 
-static void annotateNonNullBasedOnAccess(CallInst *CI,
+static void annotateNonNullNoUndefBasedOnAccess(CallInst *CI,
                                          ArrayRef<unsigned> ArgNos) {
   Function *F = CI->getCaller();
   if (!F)
     return;
 
   for (unsigned ArgNo : ArgNos) {
+    if (!CI->paramHasAttr(ArgNo, Attribute::NoUndef))
+      CI->addParamAttr(ArgNo, Attribute::NoUndef);
+
     if (CI->paramHasAttr(ArgNo, Attribute::NonNull))
       continue;
     unsigned AS = CI->getArgOperand(ArgNo)->getType()->getPointerAddressSpace();
@@ -211,10 +182,10 @@ static void annotateNonNullBasedOnAccess(CallInst *CI,
 static void annotateNonNullAndDereferenceable(CallInst *CI, ArrayRef<unsigned> ArgNos,
                                Value *Size, const DataLayout &DL) {
   if (ConstantInt *LenC = dyn_cast<ConstantInt>(Size)) {
-    annotateNonNullBasedOnAccess(CI, ArgNos);
+    annotateNonNullNoUndefBasedOnAccess(CI, ArgNos);
     annotateDereferenceableBytes(CI, ArgNos, LenC->getZExtValue());
   } else if (isKnownNonZero(Size, DL)) {
-    annotateNonNullBasedOnAccess(CI, ArgNos);
+    annotateNonNullNoUndefBasedOnAccess(CI, ArgNos);
     const APInt *X, *Y;
     uint64_t DerefMin = 1;
     if (match(Size, m_Select(m_Value(), m_APInt(X), m_APInt(Y)))) {
@@ -232,7 +203,7 @@ Value *LibCallSimplifier::optimizeStrCat(CallInst *CI, IRBuilderBase &B) {
   // Extract some information from the instruction
   Value *Dst = CI->getArgOperand(0);
   Value *Src = CI->getArgOperand(1);
-  annotateNonNullBasedOnAccess(CI, {0, 1});
+  annotateNonNullNoUndefBasedOnAccess(CI, {0, 1});
 
   // See if we can get the length of the input string.
   uint64_t Len = GetStringLength(Src);
@@ -276,9 +247,9 @@ Value *LibCallSimplifier::optimizeStrNCat(CallInst *CI, IRBuilderBase &B) {
   Value *Src = CI->getArgOperand(1);
   Value *Size = CI->getArgOperand(2);
   uint64_t Len;
-  annotateNonNullBasedOnAccess(CI, 0);
+  annotateNonNullNoUndefBasedOnAccess(CI, 0);
   if (isKnownNonZero(Size, DL))
-    annotateNonNullBasedOnAccess(CI, 1);
+    annotateNonNullNoUndefBasedOnAccess(CI, 1);
 
   // We don't do anything if length is not constant.
   ConstantInt *LengthArg = dyn_cast<ConstantInt>(Size);
@@ -317,7 +288,7 @@ Value *LibCallSimplifier::optimizeStrChr(CallInst *CI, IRBuilderBase &B) {
   Function *Callee = CI->getCalledFunction();
   FunctionType *FT = Callee->getFunctionType();
   Value *SrcStr = CI->getArgOperand(0);
-  annotateNonNullBasedOnAccess(CI, 0);
+  annotateNonNullNoUndefBasedOnAccess(CI, 0);
 
   // If the second operand is non-constant, see if we can compute the length
   // of the input string and turn this into memchr.
@@ -361,7 +332,7 @@ Value *LibCallSimplifier::optimizeStrChr(CallInst *CI, IRBuilderBase &B) {
 Value *LibCallSimplifier::optimizeStrRChr(CallInst *CI, IRBuilderBase &B) {
   Value *SrcStr = CI->getArgOperand(0);
   ConstantInt *CharC = dyn_cast<ConstantInt>(CI->getArgOperand(1));
-  annotateNonNullBasedOnAccess(CI, 0);
+  annotateNonNullNoUndefBasedOnAccess(CI, 0);
 
   // Cannot fold anything if we're not looking for a constant.
   if (!CharC)
@@ -437,7 +408,7 @@ Value *LibCallSimplifier::optimizeStrCmp(CallInst *CI, IRBuilderBase &B) {
           TLI);
   }
 
-  annotateNonNullBasedOnAccess(CI, {0, 1});
+  annotateNonNullNoUndefBasedOnAccess(CI, {0, 1});
   return nullptr;
 }
 
@@ -449,7 +420,7 @@ Value *LibCallSimplifier::optimizeStrNCmp(CallInst *CI, IRBuilderBase &B) {
     return ConstantInt::get(CI->getType(), 0);
 
   if (isKnownNonZero(Size, DL))
-    annotateNonNullBasedOnAccess(CI, {0, 1});
+    annotateNonNullNoUndefBasedOnAccess(CI, {0, 1});
   // Get the length argument if it is constant.
   uint64_t Length;
   if (ConstantInt *LengthArg = dyn_cast<ConstantInt>(Size))
@@ -527,7 +498,7 @@ Value *LibCallSimplifier::optimizeStrCpy(CallInst *CI, IRBuilderBase &B) {
   if (Dst == Src) // strcpy(x,x)  -> x
     return Src;
   
-  annotateNonNullBasedOnAccess(CI, {0, 1});
+  annotateNonNullNoUndefBasedOnAccess(CI, {0, 1});
   // See if we can get the length of the input string.
   uint64_t Len = GetStringLength(Src);
   if (Len)
@@ -541,6 +512,8 @@ Value *LibCallSimplifier::optimizeStrCpy(CallInst *CI, IRBuilderBase &B) {
       B.CreateMemCpy(Dst, Align(1), Src, Align(1),
                      ConstantInt::get(DL.getIntPtrType(CI->getContext()), Len));
   NewCI->setAttributes(CI->getAttributes());
+  NewCI->removeAttributes(AttributeList::ReturnIndex,
+                          AttributeFuncs::typeIncompatible(NewCI->getType()));
   return Dst;
 }
 
@@ -568,6 +541,8 @@ Value *LibCallSimplifier::optimizeStpCpy(CallInst *CI, IRBuilderBase &B) {
   // copy for us.  Make a memcpy to copy the nul byte with align = 1.
   CallInst *NewCI = B.CreateMemCpy(Dst, Align(1), Src, Align(1), LenV);
   NewCI->setAttributes(CI->getAttributes());
+  NewCI->removeAttributes(AttributeList::ReturnIndex,
+                          AttributeFuncs::typeIncompatible(NewCI->getType()));
   return DstEnd;
 }
 
@@ -576,9 +551,9 @@ Value *LibCallSimplifier::optimizeStrNCpy(CallInst *CI, IRBuilderBase &B) {
   Value *Dst = CI->getArgOperand(0);
   Value *Src = CI->getArgOperand(1);
   Value *Size = CI->getArgOperand(2);
-  annotateNonNullBasedOnAccess(CI, 0);
+  annotateNonNullNoUndefBasedOnAccess(CI, 0);
   if (isKnownNonZero(Size, DL))
-    annotateNonNullBasedOnAccess(CI, 1);
+    annotateNonNullNoUndefBasedOnAccess(CI, 1);
 
   uint64_t Len;
   if (ConstantInt *LengthArg = dyn_cast<ConstantInt>(Size))
@@ -600,8 +575,10 @@ Value *LibCallSimplifier::optimizeStrNCpy(CallInst *CI, IRBuilderBase &B) {
   }
 
   if (SrcLen == 0) {
-    // strncpy(x, "", y) -> memset(align 1 x, '\0', y)
-    CallInst *NewCI = B.CreateMemSet(Dst, B.getInt8('\0'), Size, Align(1));
+    // strncpy(x, "", y) -> memset(x, '\0', y)
+    Align MemSetAlign =
+        CI->getAttributes().getParamAttributes(0).getAlignment().valueOrOne();
+    CallInst *NewCI = B.CreateMemSet(Dst, B.getInt8('\0'), Size, MemSetAlign);
     AttrBuilder ArgAttrs(CI->getAttributes().getParamAttributes(0));
     NewCI->setAttributes(NewCI->getAttributes().addParamAttributes(
         CI->getContext(), 0, ArgAttrs));
@@ -627,6 +604,8 @@ Value *LibCallSimplifier::optimizeStrNCpy(CallInst *CI, IRBuilderBase &B) {
   CallInst *NewCI = B.CreateMemCpy(Dst, Align(1), Src, Align(1),
                                    ConstantInt::get(DL.getIntPtrType(PT), Len));
   NewCI->setAttributes(CI->getAttributes());
+  NewCI->removeAttributes(AttributeList::ReturnIndex,
+                          AttributeFuncs::typeIncompatible(NewCI->getType()));
   return Dst;
 }
 
@@ -722,7 +701,7 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
 Value *LibCallSimplifier::optimizeStrLen(CallInst *CI, IRBuilderBase &B) {
   if (Value *V = optimizeStringLength(CI, B, 8))
     return V;
-  annotateNonNullBasedOnAccess(CI, 0);
+  annotateNonNullNoUndefBasedOnAccess(CI, 0);
   return nullptr;
 }
 
@@ -833,8 +812,8 @@ Value *LibCallSimplifier::optimizeStrStr(CallInst *CI, IRBuilderBase &B) {
                                  StrLen, B, DL, TLI);
     if (!StrNCmp)
       return nullptr;
-    for (auto UI = CI->user_begin(), UE = CI->user_end(); UI != UE;) {
-      ICmpInst *Old = cast<ICmpInst>(*UI++);
+    for (User *U : llvm::make_early_inc_range(CI->users())) {
+      ICmpInst *Old = cast<ICmpInst>(U);
       Value *Cmp =
           B.CreateICmp(Old->getPredicate(), StrNCmp,
                        ConstantInt::getNullValue(StrNCmp->getType()), "cmp");
@@ -872,13 +851,13 @@ Value *LibCallSimplifier::optimizeStrStr(CallInst *CI, IRBuilderBase &B) {
     return StrChr ? B.CreateBitCast(StrChr, CI->getType()) : nullptr;
   }
 
-  annotateNonNullBasedOnAccess(CI, {0, 1});
+  annotateNonNullNoUndefBasedOnAccess(CI, {0, 1});
   return nullptr;
 }
 
 Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
   if (isKnownNonZero(CI->getOperand(2), DL))
-    annotateNonNullBasedOnAccess(CI, 0);
+    annotateNonNullNoUndefBasedOnAccess(CI, 0);
   return nullptr;
 }
 
@@ -1102,6 +1081,8 @@ Value *LibCallSimplifier::optimizeMemCpy(CallInst *CI, IRBuilderBase &B) {
   CallInst *NewCI = B.CreateMemCpy(CI->getArgOperand(0), Align(1),
                                    CI->getArgOperand(1), Align(1), Size);
   NewCI->setAttributes(CI->getAttributes());
+  NewCI->removeAttributes(AttributeList::ReturnIndex,
+                          AttributeFuncs::typeIncompatible(NewCI->getType()));
   return CI->getArgOperand(0);
 }
 
@@ -1150,7 +1131,12 @@ Value *LibCallSimplifier::optimizeMemPCpy(CallInst *CI, IRBuilderBase &B) {
   // mempcpy(x, y, n) -> llvm.memcpy(align 1 x, align 1 y, n), x + n
   CallInst *NewCI =
       B.CreateMemCpy(Dst, Align(1), CI->getArgOperand(1), Align(1), N);
+  // Propagate attributes, but memcpy has no return value, so make sure that
+  // any return attributes are compliant.
+  // TODO: Attach return value attributes to the 1st operand to preserve them?
   NewCI->setAttributes(CI->getAttributes());
+  NewCI->removeAttributes(AttributeList::ReturnIndex,
+                          AttributeFuncs::typeIncompatible(NewCI->getType()));
   return B.CreateInBoundsGEP(B.getInt8Ty(), Dst, N);
 }
 
@@ -1164,6 +1150,8 @@ Value *LibCallSimplifier::optimizeMemMove(CallInst *CI, IRBuilderBase &B) {
   CallInst *NewCI = B.CreateMemMove(CI->getArgOperand(0), Align(1),
                                     CI->getArgOperand(1), Align(1), Size);
   NewCI->setAttributes(CI->getAttributes());
+  NewCI->removeAttributes(AttributeList::ReturnIndex,
+                          AttributeFuncs::typeIncompatible(NewCI->getType()));
   return CI->getArgOperand(0);
 }
 
@@ -1224,6 +1212,8 @@ Value *LibCallSimplifier::optimizeMemSet(CallInst *CI, IRBuilderBase &B) {
   Value *Val = B.CreateIntCast(CI->getArgOperand(1), B.getInt8Ty(), false);
   CallInst *NewCI = B.CreateMemSet(CI->getArgOperand(0), Val, Size, Align(1));
   NewCI->setAttributes(CI->getAttributes());
+  NewCI->removeAttributes(AttributeList::ReturnIndex,
+                          AttributeFuncs::typeIncompatible(NewCI->getType()));
   return CI->getArgOperand(0);
 }
 
@@ -1684,20 +1674,12 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
   StringRef Name = Callee->getName();
   Type *Ty = Pow->getType();
   Module *M = Pow->getModule();
-  Value *Shrunk = nullptr;
   bool AllowApprox = Pow->hasApproxFunc();
   bool Ignored;
 
   // Propagate the math semantics from the call to any created instructions.
   IRBuilderBase::FastMathFlagGuard Guard(B);
   B.setFastMathFlags(Pow->getFastMathFlags());
-
-  // Shrink pow() to powf() if the arguments are single precision,
-  // unless the result is expected to be double precision.
-  if (UnsafeFPShrink && Name == TLI->getName(LibFunc_pow) &&
-      hasFloatVersion(Name))
-    Shrunk = optimizeBinaryDoubleFP(Pow, B, true);
-
   // Evaluate special cases related to the base.
 
   // pow(1.0, x) -> 1.0
@@ -1798,7 +1780,15 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
       return createPowWithIntegerExponent(Base, ExpoI, M, B);
   }
 
-  return Shrunk;
+  // Shrink pow() to powf() if the arguments are single precision,
+  // unless the result is expected to be double precision.
+  if (UnsafeFPShrink && Name == TLI->getName(LibFunc_pow) &&
+      hasFloatVersion(Name)) {
+    if (Value *Shrunk = optimizeBinaryDoubleFP(Pow, B, true))
+      return Shrunk;
+  }
+
+  return nullptr;
 }
 
 Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilderBase &B) {
@@ -2182,7 +2172,7 @@ Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, IRBuilderBase &B) {
     classifyArgUse(U, F, IsFloat, SinCalls, CosCalls, SinCosCalls);
 
   // It's only worthwhile if both sinpi and cospi are actually used.
-  if (SinCosCalls.empty() && (SinCalls.empty() || CosCalls.empty()))
+  if (SinCalls.empty() || CosCalls.empty())
     return nullptr;
 
   Value *Sin, *Cos, *SinCos;
@@ -2208,7 +2198,7 @@ void LibCallSimplifier::classifyArgUse(
     SmallVectorImpl<CallInst *> &SinCosCalls) {
   CallInst *CI = dyn_cast<CallInst>(Val);
 
-  if (!CI)
+  if (!CI || CI->use_empty())
     return;
 
   // Don't consider calls in other functions.
@@ -2387,18 +2377,28 @@ Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilderBase &B) {
   if (FormatStr.size() == 1 || FormatStr == "%%")
     return emitPutChar(B.getInt32(FormatStr[0]), B, TLI);
 
-  // printf("%s", "a") --> putchar('a')
+  // Try to remove call or emit putchar/puts.
   if (FormatStr == "%s" && CI->getNumArgOperands() > 1) {
-    StringRef ChrStr;
-    if (!getConstantStringInfo(CI->getOperand(1), ChrStr))
+    StringRef OperandStr;
+    if (!getConstantStringInfo(CI->getOperand(1), OperandStr))
       return nullptr;
-    if (ChrStr.size() != 1)
-      return nullptr;
-    return emitPutChar(B.getInt32(ChrStr[0]), B, TLI);
+    // printf("%s", "") --> NOP
+    if (OperandStr.empty())
+      return (Value *)CI;
+    // printf("%s", "a") --> putchar('a')
+    if (OperandStr.size() == 1)
+      return emitPutChar(B.getInt32(OperandStr[0]), B, TLI);
+    // printf("%s", str"\n") --> puts(str)
+    if (OperandStr.back() == '\n') {
+      OperandStr = OperandStr.drop_back();
+      Value *GV = B.CreateGlobalString(OperandStr, "str");
+      return emitPutS(GV, B, TLI);
+    }
+    return nullptr;
   }
 
   // printf("foo\n") --> puts("foo")
-  if (FormatStr[FormatStr.size() - 1] == '\n' &&
+  if (FormatStr.back() == '\n' &&
       FormatStr.find('%') == StringRef::npos) { // No format characters.
     // Create a string literal with no \n on it.  We expect the constant merge
     // pass to be run after this pass, to merge duplicate strings.
@@ -2453,7 +2453,7 @@ Value *LibCallSimplifier::optimizePrintF(CallInst *CI, IRBuilderBase &B) {
     return New;
   }
 
-  annotateNonNullBasedOnAccess(CI, 0);
+  annotateNonNullNoUndefBasedOnAccess(CI, 0);
   return nullptr;
 }
 
@@ -2575,7 +2575,7 @@ Value *LibCallSimplifier::optimizeSPrintF(CallInst *CI, IRBuilderBase &B) {
     return New;
   }
 
-  annotateNonNullBasedOnAccess(CI, {0, 1});
+  annotateNonNullNoUndefBasedOnAccess(CI, {0, 1});
   return nullptr;
 }
 
@@ -2664,7 +2664,7 @@ Value *LibCallSimplifier::optimizeSnPrintF(CallInst *CI, IRBuilderBase &B) {
   }
 
   if (isKnownNonZero(CI->getOperand(1), DL))
-    annotateNonNullBasedOnAccess(CI, 0);
+    annotateNonNullNoUndefBasedOnAccess(CI, 0);
   return nullptr;
 }
 
@@ -2807,7 +2807,7 @@ Value *LibCallSimplifier::optimizeFPuts(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizePuts(CallInst *CI, IRBuilderBase &B) {
-  annotateNonNullBasedOnAccess(CI, 0);
+  annotateNonNullNoUndefBasedOnAccess(CI, 0);
   if (!CI->use_empty())
     return nullptr;
 
@@ -2842,9 +2842,10 @@ Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
   // Check for string/memory library functions.
   if (TLI->getLibFunc(*Callee, Func) && TLI->has(Func)) {
     // Make sure we never change the calling convention.
-    assert((ignoreCallingConv(Func) ||
-            isCallingConvCCompatible(CI)) &&
-      "Optimizing string/memory libcall would change the calling convention");
+    assert(
+        (ignoreCallingConv(Func) ||
+         TargetLibraryInfoImpl::isCallingConvCCompatible(CI)) &&
+        "Optimizing string/memory libcall would change the calling convention");
     switch (Func) {
     case LibFunc_strcat:
       return optimizeStrCat(CI, Builder);
@@ -3028,7 +3029,7 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
 
   LibFunc Func;
   Function *Callee = CI->getCalledFunction();
-  bool isCallingConvC = isCallingConvCCompatible(CI);
+  bool IsCallingConvC = TargetLibraryInfoImpl::isCallingConvCCompatible(CI);
 
   SmallVector<OperandBundleDef, 2> OpBundles;
   CI->getOperandBundlesAsDefs(OpBundles);
@@ -3046,7 +3047,7 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
 
   // First, check for intrinsics.
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI)) {
-    if (!isCallingConvC)
+    if (!IsCallingConvC)
       return nullptr;
     // The FP intrinsics have corresponding constrained versions so we don't
     // need to check for the StrictFP attribute here.
@@ -3099,7 +3100,7 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
   // Then check for known library functions.
   if (TLI->getLibFunc(*Callee, Func) && TLI->has(Func)) {
     // We never change the calling convention.
-    if (!ignoreCallingConv(Func) && !isCallingConvC)
+    if (!ignoreCallingConv(Func) && !IsCallingConvC)
       return nullptr;
     if (Value *V = optimizeStringMemoryLibCall(CI, Builder))
       return V;
@@ -3261,6 +3262,8 @@ Value *FortifiedLibCallSimplifier::optimizeMemCpyChk(CallInst *CI,
         B.CreateMemCpy(CI->getArgOperand(0), Align(1), CI->getArgOperand(1),
                        Align(1), CI->getArgOperand(2));
     NewCI->setAttributes(CI->getAttributes());
+    NewCI->removeAttributes(AttributeList::ReturnIndex,
+                            AttributeFuncs::typeIncompatible(NewCI->getType()));
     return CI->getArgOperand(0);
   }
   return nullptr;
@@ -3273,6 +3276,8 @@ Value *FortifiedLibCallSimplifier::optimizeMemMoveChk(CallInst *CI,
         B.CreateMemMove(CI->getArgOperand(0), Align(1), CI->getArgOperand(1),
                         Align(1), CI->getArgOperand(2));
     NewCI->setAttributes(CI->getAttributes());
+    NewCI->removeAttributes(AttributeList::ReturnIndex,
+                            AttributeFuncs::typeIncompatible(NewCI->getType()));
     return CI->getArgOperand(0);
   }
   return nullptr;
@@ -3287,6 +3292,8 @@ Value *FortifiedLibCallSimplifier::optimizeMemSetChk(CallInst *CI,
     CallInst *NewCI = B.CreateMemSet(CI->getArgOperand(0), Val,
                                      CI->getArgOperand(2), Align(1));
     NewCI->setAttributes(CI->getAttributes());
+    NewCI->removeAttributes(AttributeList::ReturnIndex,
+                            AttributeFuncs::typeIncompatible(NewCI->getType()));
     return CI->getArgOperand(0);
   }
   return nullptr;
@@ -3300,6 +3307,9 @@ Value *FortifiedLibCallSimplifier::optimizeMemPCpyChk(CallInst *CI,
                                   CI->getArgOperand(2), B, DL, TLI)) {
       CallInst *NewCI = cast<CallInst>(Call);
       NewCI->setAttributes(CI->getAttributes());
+      NewCI->removeAttributes(
+          AttributeList::ReturnIndex,
+          AttributeFuncs::typeIncompatible(NewCI->getType()));
       return NewCI;
     }
   return nullptr;
@@ -3474,7 +3484,7 @@ Value *FortifiedLibCallSimplifier::optimizeCall(CallInst *CI,
 
   LibFunc Func;
   Function *Callee = CI->getCalledFunction();
-  bool isCallingConvC = isCallingConvCCompatible(CI);
+  bool IsCallingConvC = TargetLibraryInfoImpl::isCallingConvCCompatible(CI);
 
   SmallVector<OperandBundleDef, 2> OpBundles;
   CI->getOperandBundlesAsDefs(OpBundles);
@@ -3488,7 +3498,7 @@ Value *FortifiedLibCallSimplifier::optimizeCall(CallInst *CI,
     return nullptr;
 
   // We never change the calling convention.
-  if (!ignoreCallingConv(Func) && !isCallingConvC)
+  if (!ignoreCallingConv(Func) && !IsCallingConvC)
     return nullptr;
 
   switch (Func) {

@@ -22,3 +22,5 @@ def ArchV66: SubtargetFeature<"v66", "HexagonArchVersion", "Hexagon::ArchEnum::V
 def HasV66 : Predicate<"HST->hasV66Ops()">, AssemblerPredicate<(all_of ArchV66)>;
 def ArchV67: SubtargetFeature<"v67", "HexagonArchVersion", "Hexagon::ArchEnum::V67", "Enable Hexagon V67 architecture">;
 def HasV67 : Predicate<"HST->hasV67Ops()">, AssemblerPredicate<(all_of ArchV67)>;
+def ArchV68: SubtargetFeature<"v68", "HexagonArchVersion", "Hexagon::ArchEnum::V68", "Enable Hexagon V68 architecture">;
+def HasV68 : Predicate<"HST->hasV68Ops()">, AssemblerPredicate<(all_of ArchV68)>;

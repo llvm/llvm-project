@@ -321,6 +321,14 @@ static bool EvaluateValue(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
         PP.Diag(PeekTok, diag::ext_c99_longlong);
     }
 
+    // 'z/uz' literals are a C++2b feature.
+    if (Literal.isSizeT)
+      PP.Diag(PeekTok, PP.getLangOpts().CPlusPlus
+                           ? PP.getLangOpts().CPlusPlus2b
+                                 ? diag::warn_cxx20_compat_size_t_suffix
+                                 : diag::ext_cxx2b_size_t_suffix
+                           : diag::err_cxx2b_size_t_suffix);
+
     // Parse the integer literal into Result.
     if (Literal.GetIntegerValue(Result.Val)) {
       // Overflow parsing integer literal.

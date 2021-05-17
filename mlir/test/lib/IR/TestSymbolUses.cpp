@@ -90,16 +90,20 @@ struct SymbolUsesPass
 struct SymbolReplacementPass
     : public PassWrapper<SymbolReplacementPass, OperationPass<ModuleOp>> {
   void runOnOperation() override {
-    auto module = getOperation();
+    ModuleOp module = getOperation();
 
-    // Walk nested functions and modules.
+    // Don't try to replace if we can't collect symbol uses.
+    if (!SymbolTable::getSymbolUses(&module.getBodyRegion()))
+      return;
+
+    SymbolTableCollection symbolTable;
+    SymbolUserMap symbolUsers(symbolTable, module);
     module.getBodyRegion().walk([&](Operation *nestedOp) {
       StringAttr newName = nestedOp->getAttrOfType<StringAttr>("sym.new_name");
       if (!newName)
         return;
-      if (succeeded(SymbolTable::replaceAllSymbolUses(
-              nestedOp, newName.getValue(), &module.getBodyRegion())))
-        SymbolTable::setSymbolName(nestedOp, newName.getValue());
+      symbolUsers.replaceAllUsesWith(nestedOp, newName.getValue());
+      SymbolTable::setSymbolName(nestedOp, newName.getValue());
     });
   }
 };

@@ -468,8 +468,9 @@ nub_process_t DNBProcessAttach(nub_process_t attach_pid,
 
         snprintf(fdstr, sizeof(fdstr), "--fd=%d", communication_fd);
         snprintf(pidstr, sizeof(pidstr), "--attach=%d", attach_pid);
-        execl(translated_debugserver, "--native-regs", "--setsid", fdstr,
-              "--handoff-attach-from-native", pidstr, (char *)0);
+        execl(translated_debugserver, translated_debugserver, "--native-regs",
+              "--setsid", fdstr, "--handoff-attach-from-native", pidstr,
+              (char *)0);
         DNBLogThreadedIf(LOG_PROCESS, "Failed to launch debugserver for "
                          "translated process: ", errno, strerror(errno));
         __builtin_trap();
@@ -1810,4 +1811,12 @@ nub_bool_t DNBSetArchitecture(const char *arch) {
                                               CPU_SUBTYPE_ARM_ALL);
   }
   return false;
+}
+
+bool DNBDebugserverIsTranslated() {
+  int ret = 0;
+  size_t size = sizeof(ret);
+  if (sysctlbyname("sysctl.proc_translated", &ret, &size, NULL, 0) == -1)
+    return false;
+  return ret == 1;
 }

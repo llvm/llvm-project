@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %S/test_errors.sh %s %t %flang_fc1
 ! Check that a basic arithmetic if compiles.
 
 if ( A ) 100, 200, 300

@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %S/test_errors.sh %s %t %flang_fc1
 ! 9.4.5
 subroutine s1
   type :: t(k, l)
@@ -8,7 +8,7 @@ subroutine s1
   type(t(1, 2)) :: x
   !ERROR: Assignment to constant 'x%k' is not allowed
   x%k = 4
-  !ERROR: Left-hand side of assignment is not modifiable
+  !ERROR: Assignment to constant 'x%l' is not allowed
   x%l = 3
 end
 
@@ -126,7 +126,7 @@ real function f9() result(r)
   f9 = 1.0
 end
 
-!ERROR: No explicit type declared for 'n'
+!ERROR: No explicit type declared for dummy argument 'n'
 subroutine s10(a, n)
   implicit none
   real a(n)
@@ -141,3 +141,34 @@ subroutine s11
   !ERROR: Subroutine name is not allowed here
   a = s11
 end
+
+subroutine s12()
+  type dType(l1, k1, l2, k2)
+    integer, len :: l1
+    integer, kind :: k1
+    integer, len :: l2
+    integer, kind :: k2
+  end type
+
+  contains
+    subroutine sub(arg1, arg2, arg3)
+      integer :: arg1
+      type(dType(arg1, 2, *, 4)) :: arg2
+      type(dType(*, 2, arg1, 4)) :: arg3
+      type(dType(1, 2, 3, 4)) :: local1
+      type(dType(1, 2, 3, 4)) :: local2
+      type(dType(1, 2, arg1, 4)) :: local3
+      type(dType(9, 2, 3, 4)) :: local4
+      type(dType(1, 9, 3, 4)) :: local5
+
+      arg2 = arg3
+      arg2 = local1
+      arg3 = local1
+      local1 = local2
+      local2 = local3
+      !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches operand types TYPE(dtype(k1=2_4,k2=4_4,l1=1_4,l2=3_4)) and TYPE(dtype(k1=2_4,k2=4_4,l1=9_4,l2=3_4))
+      local1 = local4 ! mismatched constant KIND type parameter
+      !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches operand types TYPE(dtype(k1=2_4,k2=4_4,l1=1_4,l2=3_4)) and TYPE(dtype(k1=9_4,k2=4_4,l1=1_4,l2=3_4))
+      local1 = local5 ! mismatched constant LEN type parameter
+    end subroutine sub
+end subroutine s12

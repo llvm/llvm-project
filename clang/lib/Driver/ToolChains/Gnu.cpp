@@ -254,6 +254,8 @@ static const char *getLDMOption(const llvm::Triple &T, const ArgList &Args) {
   case llvm::Triple::armeb:
   case llvm::Triple::thumbeb:
     return isArmBigEndian(T, Args) ? "armelfb_linux_eabi" : "armelf_linux_eabi";
+  case llvm::Triple::m68k:
+    return "m68kelf";
   case llvm::Triple::ppc:
     if (T.isOSLinux())
       return "elf32ppclinux";
@@ -1907,9 +1909,7 @@ void Generic_GCC::GCCInstallationDetector::init(
                            CandidateBiarchTripleAliases);
 
   // Compute the set of prefixes for our search.
-  SmallVector<std::string, 8> Prefixes(D.PrefixDirs.begin(),
-                                       D.PrefixDirs.end());
-
+  SmallVector<std::string, 8> Prefixes;
   StringRef GCCToolchainDir = getGCCToolchainDir(Args, D.SysRoot);
   if (GCCToolchainDir != "") {
     if (GCCToolchainDir.back() == '/')
@@ -1932,13 +1932,10 @@ void Generic_GCC::GCCInstallationDetector::init(
       // Typically /usr.
       AddDefaultGCCPrefixes(TargetTriple, Prefixes, D.SysRoot);
     }
-  }
 
-  // Try to respect gcc-config on Gentoo. However, do that only
-  // if --gcc-toolchain is not provided or equal to the Gentoo install
-  // in /usr. This avoids accidentally enforcing the system GCC version
-  // when using a custom toolchain.
-  if (GCCToolchainDir == "" || GCCToolchainDir == D.SysRoot + "/usr") {
+    // Try to respect gcc-config on Gentoo if --gcc-toolchain is not provided.
+    // This avoids accidentally enforcing the system GCC version when using a
+    // custom toolchain.
     SmallVector<StringRef, 16> GentooTestTriples;
     // Try to match an exact triple as target triple first.
     // e.g. crossdev -S x86_64-gentoo-linux-gnu will install gcc libs for
@@ -1958,7 +1955,8 @@ void Generic_GCC::GCCInstallationDetector::init(
 
   // Loop over the various components which exist and select the best GCC
   // installation available. GCC installs are ranked by version number.
-  Version = GCCVersion::Parse("0.0.0");
+  const GCCVersion VersionZero = GCCVersion::Parse("0.0.0");
+  Version = VersionZero;
   for (const std::string &Prefix : Prefixes) {
     auto &VFS = D.getVFS();
     if (!VFS.exists(Prefix))
@@ -1991,6 +1989,10 @@ void Generic_GCC::GCCInstallationDetector::init(
         ScanLibDirForGCCTriple(TargetTriple, Args, LibDir, Candidate, true,
                                GCCDirExists, GCCCrossDirExists);
     }
+
+    // Skip other prefixes once a GCC installation is found.
+    if (Version > VersionZero)
+      break;
   }
 }
 
@@ -2104,15 +2106,21 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
       "x86_64-manbo-linux-gnu", "x86_64-linux-gnu",
       "x86_64-slackware-linux", "x86_64-unknown-linux",
       "x86_64-amazon-linux",    "x86_64-linux-android"};
-  static const char *const X32LibDirs[] = {"/libx32"};
+  static const char *const X32Triples[] = {"x86_64-linux-gnux32",
+                                           "x86_64-pc-linux-gnux32"};
+  static const char *const X32LibDirs[] = {"/libx32", "/lib"};
   static const char *const X86LibDirs[] = {"/lib32", "/lib"};
   static const char *const X86Triples[] = {
-      "i686-linux-gnu",       "i686-pc-linux-gnu",     "i486-linux-gnu",
-      "i386-linux-gnu",       "i386-redhat-linux6E",   "i686-redhat-linux",
-      "i586-redhat-linux",    "i386-redhat-linux",     "i586-suse-linux",
-      "i486-slackware-linux", "i686-montavista-linux", "i586-linux-gnu",
-      "i686-linux-android",   "i386-gnu",              "i486-gnu",
-      "i586-gnu",             "i686-gnu"};
+      "i586-linux-gnu",     "i686-linux-gnu",
+      "i686-pc-linux-gnu",  "i386-redhat-linux6E",
+      "i686-redhat-linux",  "i386-redhat-linux",
+      "i586-suse-linux",    "i686-montavista-linux",
+      "i686-linux-android", "i686-gnu",
+  };
+
+  static const char *const M68kLibDirs[] = {"/lib"};
+  static const char *const M68kTriples[] = {
+      "m68k-linux-gnu", "m68k-unknown-linux-gnu", "m68k-suse-linux"};
 
   static const char *const MIPSLibDirs[] = {"/lib"};
   static const char *const MIPSTriples[] = {
@@ -2331,17 +2339,19 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     TripleAliases.append(begin(AVRTriples), end(AVRTriples));
     break;
   case llvm::Triple::x86_64:
-    LibDirs.append(begin(X86_64LibDirs), end(X86_64LibDirs));
-    TripleAliases.append(begin(X86_64Triples), end(X86_64Triples));
-    // x32 is always available when x86_64 is available, so adding it as
-    // secondary arch with x86_64 triples
     if (TargetTriple.getEnvironment() == llvm::Triple::GNUX32) {
-      BiarchLibDirs.append(begin(X32LibDirs), end(X32LibDirs));
+      LibDirs.append(begin(X32LibDirs), end(X32LibDirs));
+      TripleAliases.append(begin(X32Triples), end(X32Triples));
+      BiarchLibDirs.append(begin(X86_64LibDirs), end(X86_64LibDirs));
       BiarchTripleAliases.append(begin(X86_64Triples), end(X86_64Triples));
     } else {
-      BiarchLibDirs.append(begin(X86LibDirs), end(X86LibDirs));
-      BiarchTripleAliases.append(begin(X86Triples), end(X86Triples));
+      LibDirs.append(begin(X86_64LibDirs), end(X86_64LibDirs));
+      TripleAliases.append(begin(X86_64Triples), end(X86_64Triples));
+      BiarchLibDirs.append(begin(X32LibDirs), end(X32LibDirs));
+      BiarchTripleAliases.append(begin(X32Triples), end(X32Triples));
     }
+    BiarchLibDirs.append(begin(X86LibDirs), end(X86LibDirs));
+    BiarchTripleAliases.append(begin(X86Triples), end(X86Triples));
     break;
   case llvm::Triple::x86:
     LibDirs.append(begin(X86LibDirs), end(X86LibDirs));
@@ -2351,7 +2361,13 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
       TripleAliases.append(begin(X86Triples), end(X86Triples));
       BiarchLibDirs.append(begin(X86_64LibDirs), end(X86_64LibDirs));
       BiarchTripleAliases.append(begin(X86_64Triples), end(X86_64Triples));
+      BiarchLibDirs.append(begin(X32LibDirs), end(X32LibDirs));
+      BiarchTripleAliases.append(begin(X32Triples), end(X32Triples));
     }
+    break;
+  case llvm::Triple::m68k:
+    LibDirs.append(begin(M68kLibDirs), end(M68kLibDirs));
+    TripleAliases.append(begin(M68kTriples), end(M68kTriples));
     break;
   case llvm::Triple::mips:
     LibDirs.append(begin(MIPSLibDirs), end(MIPSLibDirs));
@@ -2496,7 +2512,6 @@ void Generic_GCC::GCCInstallationDetector::ScanLibDirForGCCTriple(
     const llvm::Triple &TargetTriple, const ArgList &Args,
     const std::string &LibDir, StringRef CandidateTriple,
     bool NeedsBiarchSuffix, bool GCCDirExists, bool GCCCrossDirExists) {
-  llvm::Triple::ArchType TargetArch = TargetTriple.getArch();
   // Locations relative to the system lib directory where GCC's triple-specific
   // directories might reside.
   struct GCCLibSuffix {
@@ -2520,24 +2535,7 @@ void Generic_GCC::GCCInstallationDetector::ScanLibDirForGCCTriple(
       // files in that location, not just GCC installation data.
       {CandidateTriple.str(), "..",
        TargetTriple.getVendor() == llvm::Triple::Freescale ||
-       TargetTriple.getVendor() == llvm::Triple::OpenEmbedded},
-
-      // Natively multiarch systems sometimes put the GCC triple-specific
-      // directory within their multiarch lib directory, resulting in the
-      // triple appearing twice.
-      {CandidateTriple.str() + "/gcc/" + CandidateTriple.str(), "../../..",
-       TargetTriple.getOS() != llvm::Triple::Solaris},
-
-      // Deal with cases (on Ubuntu) where the system architecture could be i386
-      // but the GCC target architecture could be (say) i686.
-      // FIXME: It may be worthwhile to generalize this and look for a second
-      // triple.
-      {"i386-linux-gnu/gcc/" + CandidateTriple.str(), "../../..",
-       (TargetArch == llvm::Triple::x86 &&
-        TargetTriple.getOS() != llvm::Triple::Solaris)},
-      {"i386-gnu/gcc/" + CandidateTriple.str(), "../../..",
-       (TargetArch == llvm::Triple::x86 &&
-        TargetTriple.getOS() != llvm::Triple::Solaris)}};
+           TargetTriple.getVendor() == llvm::Triple::OpenEmbedded}};
 
   for (auto &Suffix : Suffixes) {
     if (!Suffix.Active)
@@ -2760,6 +2758,7 @@ bool Generic_GCC::IsIntegratedAssemblerDefault() const {
   case llvm::Triple::mips64:
   case llvm::Triple::mips64el:
   case llvm::Triple::msp430:
+  case llvm::Triple::m68k:
     return true;
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel:
@@ -2771,15 +2770,6 @@ bool Generic_GCC::IsIntegratedAssemblerDefault() const {
   default:
     return false;
   }
-}
-
-static void addMultilibsFilePaths(const Driver &D, const MultilibSet &Multilibs,
-                                  const Multilib &Multilib,
-                                  StringRef InstallPath,
-                                  ToolChain::path_list &Paths) {
-  if (const auto &PathsCallback = Multilibs.filePathsCallback())
-    for (const auto &Path : PathsCallback(Multilib))
-      addPathIfExists(D, InstallPath + Path, Paths);
 }
 
 void Generic_GCC::PushPPaths(ToolChain::path_list &PPaths) {
@@ -2808,12 +2798,13 @@ void Generic_GCC::AddMultilibPaths(const Driver &D,
     const std::string &LibPath =
         std::string(GCCInstallation.getParentLibPath());
 
-    // Add toolchain / multilib specific file paths.
-    addMultilibsFilePaths(D, Multilibs, SelectedMultilib,
-                          GCCInstallation.getInstallPath(), Paths);
-
     // Sourcery CodeBench MIPS toolchain holds some libraries under
     // a biarch-like suffix of the GCC installation.
+    if (const auto &PathsCallback = Multilibs.filePathsCallback())
+      for (const auto &Path : PathsCallback(SelectedMultilib))
+        addPathIfExists(D, GCCInstallation.getInstallPath() + Path, Paths);
+
+    // Add lib/gcc/$triple/$version, with an optional /multilib suffix.
     addPathIfExists(
         D, GCCInstallation.getInstallPath() + SelectedMultilib.gccSuffix(),
         Paths);
@@ -2850,10 +2841,8 @@ void Generic_GCC::AddMultilibPaths(const Driver &D,
     // the cross. Note that GCC does include some of these directories in some
     // configurations but this seems somewhere between questionable and simply
     // a bug.
-    if (StringRef(LibPath).startswith(SysRoot)) {
-      addPathIfExists(D, LibPath + "/" + MultiarchTriple, Paths);
+    if (StringRef(LibPath).startswith(SysRoot))
       addPathIfExists(D, LibPath + "/../" + OSLibDir, Paths);
-    }
   }
 }
 
@@ -2861,24 +2850,7 @@ void Generic_GCC::AddMultiarchPaths(const Driver &D,
                                     const std::string &SysRoot,
                                     const std::string &OSLibDir,
                                     path_list &Paths) {
-  // Try walking via the GCC triple path in case of biarch or multiarch GCC
-  // installations with strange symlinks.
   if (GCCInstallation.isValid()) {
-    addPathIfExists(D,
-                    SysRoot + "/usr/lib/" + GCCInstallation.getTriple().str() +
-                        "/../../" + OSLibDir,
-                    Paths);
-
-    // Add the 'other' biarch variant path
-    Multilib BiarchSibling;
-    if (GCCInstallation.getBiarchSibling(BiarchSibling)) {
-      addPathIfExists(
-          D, GCCInstallation.getInstallPath() + BiarchSibling.gccSuffix(),
-                      Paths);
-    }
-
-    // See comments above on the multilib variant for details of why this is
-    // included even from outside the sysroot.
     const std::string &LibPath =
         std::string(GCCInstallation.getParentLibPath());
     const llvm::Triple &GCCTriple = GCCInstallation.getTriple();
@@ -2886,31 +2858,32 @@ void Generic_GCC::AddMultiarchPaths(const Driver &D,
     addPathIfExists(
         D, LibPath + "/../" + GCCTriple.str() + "/lib" + Multilib.osSuffix(),
                     Paths);
-
-    // See comments above on the multilib variant for details of why this is
-    // only included from within the sysroot.
-    if (StringRef(LibPath).startswith(SysRoot))
-      addPathIfExists(D, LibPath, Paths);
   }
 }
 
 void Generic_GCC::AddMultilibIncludeArgs(const ArgList &DriverArgs,
                                          ArgStringList &CC1Args) const {
   // Add include directories specific to the selected multilib set and multilib.
-  if (GCCInstallation.isValid()) {
-    const auto &Callback = Multilibs.includeDirsCallback();
-    if (Callback) {
-      for (const auto &Path : Callback(GCCInstallation.getMultilib()))
-        addExternCSystemIncludeIfExists(
-            DriverArgs, CC1Args, GCCInstallation.getInstallPath() + Path);
-    }
+  if (!GCCInstallation.isValid())
+    return;
+  // gcc TOOL_INCLUDE_DIR.
+  const llvm::Triple &GCCTriple = GCCInstallation.getTriple();
+  std::string LibPath(GCCInstallation.getParentLibPath());
+  addSystemInclude(DriverArgs, CC1Args,
+                   Twine(LibPath) + "/../" + GCCTriple.str() + "/include");
+
+  const auto &Callback = Multilibs.includeDirsCallback();
+  if (Callback) {
+    for (const auto &Path : Callback(GCCInstallation.getMultilib()))
+      addExternCSystemIncludeIfExists(DriverArgs, CC1Args,
+                                      GCCInstallation.getInstallPath() + Path);
   }
 }
 
 void Generic_GCC::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
                                                ArgStringList &CC1Args) const {
-  if (DriverArgs.hasArg(options::OPT_nostdlibinc) ||
-      DriverArgs.hasArg(options::OPT_nostdincxx))
+  if (DriverArgs.hasArg(options::OPT_nostdinc, options::OPT_nostdincxx,
+                        options::OPT_nostdlibinc))
     return;
 
   switch (GetCXXStdlibType(DriverArgs)) {
@@ -2924,90 +2897,84 @@ void Generic_GCC::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   }
 }
 
-static std::string DetectLibcxxIncludePath(llvm::vfs::FileSystem &vfs,
-                                           StringRef base) {
-  std::error_code EC;
-  int MaxVersion = 0;
-  std::string MaxVersionString;
-  for (llvm::vfs::directory_iterator LI = vfs.dir_begin(base, EC), LE;
-       !EC && LI != LE; LI = LI.increment(EC)) {
-    StringRef VersionText = llvm::sys::path::filename(LI->path());
-    int Version;
-    if (VersionText[0] == 'v' &&
-        !VersionText.slice(1, StringRef::npos).getAsInteger(10, Version)) {
-      if (Version > MaxVersion) {
-        MaxVersion = Version;
-        MaxVersionString = std::string(VersionText);
-      }
-    }
-  }
-  return MaxVersion ? (base + "/" + MaxVersionString).str() : "";
-}
-
 void
 Generic_GCC::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                    llvm::opt::ArgStringList &CC1Args) const {
+  const Driver &D = getDriver();
+  std::string SysRoot = computeSysRoot();
+  std::string Target = getTripleString();
+
   auto AddIncludePath = [&](std::string Path) {
-    std::string IncludePath = DetectLibcxxIncludePath(getVFS(), Path);
-    if (IncludePath.empty() || !getVFS().exists(IncludePath))
+    std::string Version = detectLibcxxVersion(Path);
+    if (Version.empty())
       return false;
-    addSystemInclude(DriverArgs, CC1Args, IncludePath);
+
+    // First add the per-target include path if it exists.
+    std::string TargetDir = Path + "/" + Target + "/c++/" + Version;
+    if (D.getVFS().exists(TargetDir))
+      addSystemInclude(DriverArgs, CC1Args, TargetDir);
+
+    // Second add the generic one.
+    addSystemInclude(DriverArgs, CC1Args, Path + "/c++/" + Version);
     return true;
   };
+
   // Android never uses the libc++ headers installed alongside the toolchain,
   // which are generally incompatible with the NDK libraries anyway.
   if (!getTriple().isAndroid())
-    if (AddIncludePath(getDriver().Dir + "/../include/c++"))
+    if (AddIncludePath(getDriver().Dir + "/../include"))
       return;
   // If this is a development, non-installed, clang, libcxx will
   // not be found at ../include/c++ but it likely to be found at
   // one of the following two locations:
-  std::string SysRoot = computeSysRoot();
-  if (AddIncludePath(SysRoot + "/usr/local/include/c++"))
+  if (AddIncludePath(SysRoot + "/usr/local/include"))
     return;
-  if (AddIncludePath(SysRoot + "/usr/include/c++"))
+  if (AddIncludePath(SysRoot + "/usr/include"))
     return;
 }
 
-/// Helper to add the variant paths of a libstdc++ installation.
-bool Generic_GCC::addLibStdCXXIncludePaths(
-    Twine Base, Twine Suffix, StringRef GCCTriple, StringRef GCCMultiarchTriple,
-    StringRef TargetMultiarchTriple, Twine IncludeSuffix,
-    const ArgList &DriverArgs, ArgStringList &CC1Args) const {
-  if (!getVFS().exists(Base + Suffix))
+bool Generic_GCC::addLibStdCXXIncludePaths(Twine IncludeDir, StringRef Triple,
+                                           Twine IncludeSuffix,
+                                           const llvm::opt::ArgList &DriverArgs,
+                                           llvm::opt::ArgStringList &CC1Args,
+                                           bool DetectDebian) const {
+  if (!getVFS().exists(IncludeDir))
     return false;
 
-  addSystemInclude(DriverArgs, CC1Args, Base + Suffix);
-
-  // The vanilla GCC layout of libstdc++ headers uses a triple subdirectory. If
-  // that path exists or we have neither a GCC nor target multiarch triple, use
-  // this vanilla search path.
-  if ((GCCMultiarchTriple.empty() && TargetMultiarchTriple.empty()) ||
-      getVFS().exists(Base + Suffix + "/" + GCCTriple + IncludeSuffix)) {
-    addSystemInclude(DriverArgs, CC1Args,
-                     Base + Suffix + "/" + GCCTriple + IncludeSuffix);
-  } else {
-    // Otherwise try to use multiarch naming schemes which have normalized the
-    // triples and put the triple before the suffix.
-    //
-    // GCC surprisingly uses *both* the GCC triple with a multilib suffix and
-    // the target triple, so we support that here.
-    addSystemInclude(DriverArgs, CC1Args,
-                     Base + "/" + GCCMultiarchTriple + Suffix + IncludeSuffix);
-    addSystemInclude(DriverArgs, CC1Args,
-                     Base + "/" + TargetMultiarchTriple + Suffix);
+  // GPLUSPLUS_INCLUDE_DIR
+  addSystemInclude(DriverArgs, CC1Args, IncludeDir);
+  // GPLUSPLUS_TOOL_INCLUDE_DIR. If Triple is not empty, add a target-dependent
+  // include directory.
+  if (!Triple.empty()) {
+    if (DetectDebian) {
+      // Debian native gcc has an awful patch g++-multiarch-incdir.diff which
+      // uses include/x86_64-linux-gnu/c++/10$IncludeSuffix instead of
+      // include/c++/10/x86_64-linux-gnu$IncludeSuffix.
+      std::string Dir = IncludeDir.str();
+      StringRef Include =
+          llvm::sys::path::parent_path(llvm::sys::path::parent_path(Dir));
+      std::string Path =
+          (Include + "/" + Triple + Dir.substr(Include.size()) + IncludeSuffix)
+              .str();
+      if (getVFS().exists(Path))
+        addSystemInclude(DriverArgs, CC1Args, Path);
+      else
+        addSystemInclude(DriverArgs, CC1Args,
+                         IncludeDir + "/" + Triple + IncludeSuffix);
+    } else {
+      addSystemInclude(DriverArgs, CC1Args,
+                       IncludeDir + "/" + Triple + IncludeSuffix);
+    }
   }
-
-  addSystemInclude(DriverArgs, CC1Args, Base + Suffix + "/backward");
+  // GPLUSPLUS_BACKWARD_INCLUDE_DIR
+  addSystemInclude(DriverArgs, CC1Args, IncludeDir + "/backward");
   return true;
 }
 
-bool
-Generic_GCC::addGCCLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
-                                         llvm::opt::ArgStringList &CC1Args) const {
-  // Use GCCInstallation to know where libstdc++ headers are installed.
-  if (!GCCInstallation.isValid())
-    return false;
+bool Generic_GCC::addGCCLibStdCxxIncludePaths(
+    const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
+    StringRef DebianMultiarch) const {
+  assert(GCCInstallation.isValid());
 
   // By default, look for the C++ headers in an include directory adjacent to
   // the lib directory of the GCC installation. Note that this is expect to be
@@ -3016,17 +2983,18 @@ Generic_GCC::addGCCLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
   StringRef InstallDir = GCCInstallation.getInstallPath();
   StringRef TripleStr = GCCInstallation.getTriple().str();
   const Multilib &Multilib = GCCInstallation.getMultilib();
-  const std::string GCCMultiarchTriple = getMultiarchTriple(
-      getDriver(), GCCInstallation.getTriple(), getDriver().SysRoot);
-  const std::string TargetMultiarchTriple =
-      getMultiarchTriple(getDriver(), getTriple(), getDriver().SysRoot);
   const GCCVersion &Version = GCCInstallation.getVersion();
 
-  // The primary search for libstdc++ supports multiarch variants.
-  if (addLibStdCXXIncludePaths(LibDir.str() + "/../include",
-                               "/c++/" + Version.Text, TripleStr,
-                               GCCMultiarchTriple, TargetMultiarchTriple,
-                               Multilib.includeSuffix(), DriverArgs, CC1Args))
+  // Try /../$triple/include/c++/$version then /../include/c++/$version.
+  if (addLibStdCXXIncludePaths(
+          LibDir.str() + "/../" + TripleStr + "/include/c++/" + Version.Text,
+          TripleStr, Multilib.includeSuffix(), DriverArgs, CC1Args))
+    return true;
+
+  // Detect Debian g++-multiarch-incdir.diff.
+  if (addLibStdCXXIncludePaths(LibDir.str() + "/../include/c++/" + Version.Text,
+                               DebianMultiarch, Multilib.includeSuffix(),
+                               DriverArgs, CC1Args, /*Debian=*/true))
     return true;
 
   // Otherwise, fall back on a bunch of options which don't use multiarch
@@ -3041,9 +3009,7 @@ Generic_GCC::addGCCLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
   };
 
   for (const auto &IncludePath : LibStdCXXIncludePathCandidates) {
-    if (addLibStdCXXIncludePaths(IncludePath, /*Suffix*/ "", TripleStr,
-                                 /*GCCMultiarchTriple*/ "",
-                                 /*TargetMultiarchTriple*/ "",
+    if (addLibStdCXXIncludePaths(IncludePath, TripleStr,
                                  Multilib.includeSuffix(), DriverArgs, CC1Args))
       return true;
   }
@@ -3053,7 +3019,10 @@ Generic_GCC::addGCCLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
 void
 Generic_GCC::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                       llvm::opt::ArgStringList &CC1Args) const {
-  addGCCLibStdCxxIncludePaths(DriverArgs, CC1Args);
+  if (GCCInstallation.isValid()) {
+    addGCCLibStdCxxIncludePaths(DriverArgs, CC1Args,
+                                GCCInstallation.getTriple().str());
+  }
 }
 
 llvm::opt::DerivedArgList *

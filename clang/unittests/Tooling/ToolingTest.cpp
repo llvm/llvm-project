@@ -221,6 +221,43 @@ TEST(ToolInvocation, TestVirtualModulesCompilation) {
   EXPECT_TRUE(Invocation.run());
 }
 
+struct DiagnosticConsumerExpectingSourceManager : public DiagnosticConsumer {
+  bool SawSourceManager;
+
+  DiagnosticConsumerExpectingSourceManager() : SawSourceManager(false) {}
+
+  void HandleDiagnostic(clang::DiagnosticsEngine::Level,
+                        const clang::Diagnostic &info) override {
+    SawSourceManager = info.hasSourceManager();
+  }
+};
+
+TEST(ToolInvocation, DiagConsumerExpectingSourceManager) {
+  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
+      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
+  OverlayFileSystem->pushOverlay(InMemoryFileSystem);
+  llvm::IntrusiveRefCntPtr<FileManager> Files(
+      new FileManager(FileSystemOptions(), OverlayFileSystem));
+  std::vector<std::string> Args;
+  Args.push_back("tool-executable");
+  // Note: intentional error; user probably meant -ferror-limit=0.
+  Args.push_back("-ferror-limit=-1");
+  Args.push_back("-fsyntax-only");
+  Args.push_back("test.cpp");
+  clang::tooling::ToolInvocation Invocation(
+      Args, std::make_unique<SyntaxOnlyAction>(), Files.get());
+  InMemoryFileSystem->addFile(
+      "test.cpp", 0, llvm::MemoryBuffer::getMemBuffer("int main() {}\n"));
+
+  DiagnosticConsumerExpectingSourceManager Consumer;
+  Invocation.setDiagnosticConsumer(&Consumer);
+
+  EXPECT_TRUE(Invocation.run());
+  EXPECT_TRUE(Consumer.SawSourceManager);
+}
+
 struct VerifyEndCallback : public SourceFileCallbacks {
   VerifyEndCallback() : BeginCalled(0), EndCalled(0), Matched(false) {}
   bool handleBeginSource(CompilerInstance &CI) override {

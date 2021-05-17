@@ -19,6 +19,8 @@ class BSDArchivesTestCase(TestBase):
         self.line = line_number(
             'a.c', '// Set file and line breakpoint inside a().')
 
+    # Doesn't depend on any specific debug information.
+    @no_debug_info_test
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24527.  Makefile.rules doesn't know how to build static libs on Windows")

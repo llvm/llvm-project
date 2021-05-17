@@ -2,7 +2,7 @@ RUN: rm -rf %t
 RUN: mkdir -p %t/dsymdest
 RUN: cat %p/../Inputs/basic.macho.x86_64 > %t/basic.macho.x86_64
 
-RUN: dsymutil -oso-prepend-path=%p/.. %t/basic.macho.x86_64
+RUN: dsymutil -accelerator=Pub -oso-prepend-path=%p/.. %t/basic.macho.x86_64
 
 Check that the object file in the bundle exists and is sane:
 RUN: llvm-dwarfdump -a %t/basic.macho.x86_64.dSYM/Contents/Resources/DWARF/basic.macho.x86_64 | FileCheck %S/basic-linking-x86.test

@@ -55,9 +55,9 @@ private:
   bool shouldOverrideWithSymbolTable(FunctionNameKind FNKind,
                                      bool UseSymbolTable) const;
 
-  bool getNameFromSymbolTable(object::SymbolRef::Type Type, uint64_t Address,
-                              std::string &Name, uint64_t &Addr,
-                              uint64_t &Size) const;
+  bool getNameFromSymbolTable(uint64_t Address, std::string &Name,
+                              uint64_t &Addr, uint64_t &Size,
+                              std::string &FileName) const;
   // For big-endian PowerPC64 ELF, OpdAddress is the address of the .opd
   // (function descriptor) section and OpdExtractor refers to its contents.
   Error addSymbol(const object::SymbolRef &Symbol, uint64_t SymbolSize,
@@ -78,12 +78,18 @@ private:
     // the following symbol.
     uint64_t Size;
 
+    StringRef Name;
+    // Non-zero if this is an ELF local symbol. See the comment in
+    // getNameFromSymbolTable.
+    uint32_t ELFLocalSymIdx;
+
     bool operator<(const SymbolDesc &RHS) const {
       return Addr != RHS.Addr ? Addr < RHS.Addr : Size < RHS.Size;
     }
   };
-  std::vector<std::pair<SymbolDesc, StringRef>> Functions;
-  std::vector<std::pair<SymbolDesc, StringRef>> Objects;
+  std::vector<SymbolDesc> Symbols;
+  // (index, filename) pairs of ELF STT_FILE symbols.
+  std::vector<std::pair<uint32_t, StringRef>> FileSymbols;
 
   SymbolizableObjectFile(const object::ObjectFile *Obj,
                          std::unique_ptr<DIContext> DICtx,

@@ -200,9 +200,7 @@ struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
   TypeSetByHwMode(ArrayRef<ValueTypeByHwMode> VTList);
 
   SetType &getOrCreate(unsigned Mode) {
-    if (hasMode(Mode))
-      return get(Mode);
-    return Map.insert({Mode,SetType()}).first->second;
+    return Map[Mode];
   }
 
   bool isValueTypeByHwMode(bool AllowEmpty) const;
@@ -1049,89 +1047,43 @@ public:
   TreePatternNodePtr getResultPattern() const { return ResultPattern; }
 };
 
-/// This class represents a condition that has to be satisfied for a pattern
-/// to be tried. It is a generalization of a class "Pattern" from Target.td:
-/// in addition to the Target.td's predicates, this class can also represent
-/// conditions associated with HW modes. Both types will eventually become
-/// strings containing C++ code to be executed, the difference is in how
-/// these strings are generated.
-class Predicate {
-public:
-  Predicate(Record *R, bool C = true) : Def(R), IfCond(C), IsHwMode(false) {
-    assert(R->isSubClassOf("Predicate") &&
-           "Predicate objects should only be created for records derived"
-           "from Predicate class");
-  }
-  Predicate(StringRef FS, bool C = true) : Def(nullptr), Features(FS.str()),
-    IfCond(C), IsHwMode(true) {}
-
-  /// Return a string which contains the C++ condition code that will serve
-  /// as a predicate during instruction selection.
-  std::string getCondString() const {
-    // The string will excute in a subclass of SelectionDAGISel.
-    // Cast to std::string explicitly to avoid ambiguity with StringRef.
-    std::string C = IsHwMode
-                        ? std::string("MF->getSubtarget().checkFeatures(\"" +
-                                      Features + "\")")
-                        : std::string(Def->getValueAsString("CondString"));
-    if (C.empty())
-      return "";
-    return IfCond ? C : "!("+C+')';
-  }
-
-  bool operator==(const Predicate &P) const {
-    return IfCond == P.IfCond && IsHwMode == P.IsHwMode && Def == P.Def;
-  }
-  bool operator<(const Predicate &P) const {
-    if (IsHwMode != P.IsHwMode)
-      return IsHwMode < P.IsHwMode;
-    assert(!Def == !P.Def && "Inconsistency between Def and IsHwMode");
-    if (IfCond != P.IfCond)
-      return IfCond < P.IfCond;
-    if (Def)
-      return LessRecord()(Def, P.Def);
-    return Features < P.Features;
-  }
-  Record *Def;            ///< Predicate definition from .td file, null for
-                          ///< HW modes.
-  std::string Features;   ///< Feature string for HW mode.
-  bool IfCond;            ///< The boolean value that the condition has to
-                          ///< evaluate to for this predicate to be true.
-  bool IsHwMode;          ///< Does this predicate correspond to a HW mode?
-};
-
 /// PatternToMatch - Used by CodeGenDAGPatterns to keep tab of patterns
 /// processed to produce isel.
 class PatternToMatch {
-public:
-  PatternToMatch(Record *srcrecord, std::vector<Predicate> preds,
-                 TreePatternNodePtr src, TreePatternNodePtr dst,
-                 std::vector<Record *> dstregs, int complexity,
-                 unsigned uid, unsigned setmode = 0)
-      : SrcRecord(srcrecord), SrcPattern(src), DstPattern(dst),
-        Predicates(std::move(preds)), Dstregs(std::move(dstregs)),
-        AddedComplexity(complexity), ID(uid), ForceMode(setmode) {}
-
   Record          *SrcRecord;   // Originating Record for the pattern.
+  ListInit        *Predicates;  // Top level predicate conditions to match.
   TreePatternNodePtr SrcPattern;      // Source pattern to match.
   TreePatternNodePtr DstPattern;      // Resulting pattern.
-  std::vector<Predicate> Predicates;  // Top level predicate conditions
-                                      // to match.
   std::vector<Record*> Dstregs; // Physical register defs being matched.
+  std::string      HwModeFeatures;
   int              AddedComplexity; // Add to matching pattern complexity.
   unsigned         ID;          // Unique ID for the record.
   unsigned         ForceMode;   // Force this mode in type inference when set.
 
+public:
+  PatternToMatch(Record *srcrecord, ListInit *preds, TreePatternNodePtr src,
+                 TreePatternNodePtr dst, std::vector<Record *> dstregs,
+                 int complexity, unsigned uid, unsigned setmode = 0,
+                 const Twine &hwmodefeatures = "")
+      : SrcRecord(srcrecord), Predicates(preds), SrcPattern(src),
+        DstPattern(dst), Dstregs(std::move(dstregs)),
+        HwModeFeatures(hwmodefeatures.str()), AddedComplexity(complexity),
+        ID(uid), ForceMode(setmode) {}
+
   Record          *getSrcRecord()  const { return SrcRecord; }
+  ListInit        *getPredicates() const { return Predicates; }
   TreePatternNode *getSrcPattern() const { return SrcPattern.get(); }
   TreePatternNodePtr getSrcPatternShared() const { return SrcPattern; }
   TreePatternNode *getDstPattern() const { return DstPattern.get(); }
   TreePatternNodePtr getDstPatternShared() const { return DstPattern; }
   const std::vector<Record*> &getDstRegs() const { return Dstregs; }
+  StringRef   getHwModeFeatures() const { return HwModeFeatures; }
   int         getAddedComplexity() const { return AddedComplexity; }
-  const std::vector<Predicate> &getPredicates() const { return Predicates; }
+  unsigned getID() const { return ID; }
+  unsigned getForceMode() const { return ForceMode; }
 
   std::string getPredicateCheck() const;
+  void getPredicateRecords(SmallVectorImpl<Record *> &PredicateRecs) const;
 
   /// Compute the complexity metric for the input pattern.  This roughly
   /// corresponds to the number of nodes that are covered.
@@ -1288,8 +1240,6 @@ private:
   void InferInstructionFlags();
   void GenerateVariants();
   void VerifyInstructionFlags();
-
-  std::vector<Predicate> makePredList(ListInit *L);
 
   void ParseOnePattern(Record *TheDef,
                        TreePattern &Pattern, TreePattern &Result,

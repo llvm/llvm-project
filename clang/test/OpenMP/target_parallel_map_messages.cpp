@@ -152,25 +152,25 @@ T tmain(T argc) {
   foo();
 #pragma omp target parallel map(h) // expected-error {{threadprivate variables are not allowed in 'map' clause}}
   foo();
-#pragma omp target parallel map(k), map(k) // expected-error 2 {{variable already marked as mapped in current construct}} expected-note 2 {{used here}}
+#pragma omp target parallel map(k), map(k) // lt50-error 2 {{variable already marked as mapped in current construct}} lt50-note 2 {{used here}}
   foo();
-#pragma omp target parallel map(k), map(k[:5]) // expected-error 2 {{pointer cannot be mapped along with a section derived from itself}} expected-note 2 {{used here}}
+#pragma omp target parallel map(k), map(k[:5]) // lt50-error 2 {{pointer cannot be mapped along with a section derived from itself}} lt50-note 2 {{used here}}
   foo();
 #pragma omp target parallel map(da)
   foo();
 #pragma omp target parallel map(da[:4])
   foo();
-#pragma omp target data map(k, j, l) // expected-note 2 {{used here}}
-#pragma omp target parallel map(k[:4]) // expected-error 2 {{pointer cannot be mapped along with a section derived from itself}}
+#pragma omp target data map(k, j, l)   // lt50-note 2 {{used here}}
+#pragma omp target parallel map(k[:4]) // lt50-error 2 {{pointer cannot be mapped along with a section derived from itself}}
   foo();
 #pragma omp target parallel map(j)
   foo();
-#pragma omp target parallel map(l) map(l[:5]) // expected-error 2 {{variable already marked as mapped in current construct}} expected-note 2 {{used here}}
+#pragma omp target parallel map(l) map(l[:5]) // lt50-error 2 {{variable already marked as mapped in current construct}} lt50-note 2 {{used here}}
   foo();
-#pragma omp target data map(k[:4], j, l[:5]) // expected-note 2 {{used here}}
-{
-#pragma omp target parallel map(k) // expected-error 2 {{pointer cannot be mapped along with a section derived from itself}}
-  foo();
+#pragma omp target data map(k[:4], j, l[:5]) // lt50-note 2 {{used here}}
+  {
+#pragma omp target parallel map(k) // lt50-error 2 {{pointer cannot be mapped along with a section derived from itself}}
+    foo();
 #pragma omp target parallel map(j)
   foo();
 #pragma omp target parallel map(l)
@@ -267,25 +267,25 @@ int main(int argc, char **argv) {
   foo();
 #pragma omp target parallel map(h) // expected-error {{threadprivate variables are not allowed in 'map' clause}}
   foo();
-#pragma omp target parallel map(k), map(k) // expected-error {{variable already marked as mapped in current construct}} expected-note {{used here}}
+#pragma omp target parallel map(k), map(k) // lt50-error {{variable already marked as mapped in current construct}} lt50-note {{used here}}
   foo();
-#pragma omp target parallel map(k), map(k[:5]) // expected-error {{pointer cannot be mapped along with a section derived from itself}} expected-note {{used here}}
+#pragma omp target parallel map(k), map(k[:5]) // lt50-error {{pointer cannot be mapped along with a section derived from itself}} lt50-note {{used here}}
   foo();
 #pragma omp target parallel map(da)
   foo();
 #pragma omp target parallel map(da[:4])
   foo();
-#pragma omp target data map(k, j, l) // expected-note {{used here}}
-#pragma omp target parallel map(k[:4]) // expected-error {{pointer cannot be mapped along with a section derived from itself}}
+#pragma omp target data map(k, j, l)   // lt50-note {{used here}}
+#pragma omp target parallel map(k[:4]) // lt50-error {{pointer cannot be mapped along with a section derived from itself}}
   foo();
 #pragma omp target parallel map(j)
   foo();
-#pragma omp target parallel map(l) map(l[:5]) // expected-error 1 {{variable already marked as mapped in current construct}} expected-note 1 {{used here}}
+#pragma omp target parallel map(l) map(l[:5]) // lt50-error {{variable already marked as mapped in current construct}} lt50-note {{used here}}
   foo();
-#pragma omp target data map(k[:4], j, l[:5]) // expected-note 1 {{used here}}
-{
-#pragma omp target parallel map(k) // expected-error {{pointer cannot be mapped along with a section derived from itself}}
-  foo();
+#pragma omp target data map(k[:4], j, l[:5]) // lt50-note {{used here}}
+  {
+#pragma omp target parallel map(k) // lt50-error {{pointer cannot be mapped along with a section derived from itself}}
+    foo();
 #pragma omp target parallel map(j)
   foo();
 #pragma omp target parallel map(l)

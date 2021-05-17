@@ -88,6 +88,7 @@ public:
                          llvm::ArrayRef<unsigned> Buffers) override;
 
   void printView(llvm::raw_ostream &OS) const override;
+  StringRef getNameAsString() const override { return "SchedulerStatistics"; }
 };
 } // namespace mca
 } // namespace llvm

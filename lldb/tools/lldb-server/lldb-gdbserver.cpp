@@ -40,7 +40,7 @@
 #if defined(__linux__)
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #elif defined(__FreeBSD__)
-#include "Plugins/Process/FreeBSDRemote/NativeProcessFreeBSD.h"
+#include "Plugins/Process/FreeBSD/NativeProcessFreeBSD.h"
 #elif defined(__NetBSD__)
 #include "Plugins/Process/NetBSD/NativeProcessNetBSD.h"
 #elif defined(_WIN32)

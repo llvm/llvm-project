@@ -101,10 +101,10 @@ public:
     ClangTidyOptions::OptionMap &Opts = Options.CheckOptions;
 
     Opts["cppcoreguidelines-non-private-member-variables-in-classes."
-         "IgnoreClassesWithAllMemberVariablesBeingPublic"] = "1";
+         "IgnoreClassesWithAllMemberVariablesBeingPublic"] = "true";
 
     Opts["cppcoreguidelines-explicit-virtual-functions."
-         "IgnoreDestructors"] = "1";
+         "IgnoreDestructors"] = "true";
 
     return Options;
   }

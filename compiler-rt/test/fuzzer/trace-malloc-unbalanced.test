@@ -8,10 +8,10 @@ RUN: %cpp_compiler %S/TraceMallocTest.cpp -o %t-TraceMallocTest
 
 # Specify python because we can't use the shebang line on Windows.
 RUN: %run %t-TraceMallocTest -seed=1 -trace_malloc=1 -runs=200 2>&1 | \
-RUN:    python %libfuzzer_src/scripts/unbalanced_allocs.py --skip=5 | FileCheck %s
+RUN:    %python %libfuzzer_src/scripts/unbalanced_allocs.py --skip=5 | FileCheck %s
 
 RUN: %run %t-TraceMallocTest -seed=1 -trace_malloc=2 -runs=200 2>&1 | \
-RUN:    python %libfuzzer_src/scripts/unbalanced_allocs.py --skip=5 | FileCheck %s --check-prefixes=CHECK,CHECK2
+RUN:    %python %libfuzzer_src/scripts/unbalanced_allocs.py --skip=5 | FileCheck %s --check-prefixes=CHECK,CHECK2
 
 CHECK: MallocFreeTracer: START
 # Behavior of the format string "%p" is implementation defined. Account for the

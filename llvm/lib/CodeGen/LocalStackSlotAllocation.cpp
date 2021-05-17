@@ -176,9 +176,7 @@ void LocalStackSlotPass::AssignProtectedObjSet(
     const StackObjSet &UnassignedObjs, SmallSet<int, 16> &ProtectedObjs,
     MachineFrameInfo &MFI, bool StackGrowsDown, int64_t &Offset,
     Align &MaxAlign) {
-  for (StackObjSet::const_iterator I = UnassignedObjs.begin(),
-        E = UnassignedObjs.end(); I != E; ++I) {
-    int i = *I;
+  for (int i : UnassignedObjs) {
     AdjustStackOffset(MFI, i, Offset, StackGrowsDown, MaxAlign);
     ProtectedObjs.insert(i);
   }
@@ -416,15 +414,16 @@ bool LocalStackSlotPass::insertFrameReferenceRegisters(MachineFunction &Fn) {
       const TargetRegisterClass *RC = TRI->getPointerRegClass(*MF);
       BaseReg = Fn.getRegInfo().createVirtualRegister(RC);
 
-      LLVM_DEBUG(dbgs() << "  Materializing base register " << BaseReg
+      LLVM_DEBUG(dbgs() << "  Materializing base register"
                         << " at frame local offset "
-                        << LocalOffset + InstrOffset << "\n");
+                        << LocalOffset + InstrOffset);
 
       // Tell the target to insert the instruction to initialize
       // the base register.
       //            MachineBasicBlock::iterator InsertionPt = Entry->begin();
-      TRI->materializeFrameBaseRegister(Entry, BaseReg, FrameIdx,
-                                        InstrOffset);
+      BaseReg = TRI->materializeFrameBaseRegister(Entry, FrameIdx, InstrOffset);
+
+      LLVM_DEBUG(dbgs() << " into " << printReg(BaseReg, TRI) << '\n');
 
       // The base register already includes any offset specified
       // by the instruction, so account for that so it doesn't get

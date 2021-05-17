@@ -19,34 +19,34 @@ define arm_aapcs_vfpcc void @spill_multivector(<4 x i32>* %p) {
 ; CHECK-NEXT:    vld21.32 {q0, q1}, [r5]!
 ; CHECK-NEXT:    adds r0, #64
 ; CHECK-NEXT:    vstmia lr, {d0, d1, d2, d3} @ 32-byte Spill
-; CHECK-NEXT:    add.w lr, sp, #32
 ; CHECK-NEXT:    vld20.32 {q0, q1}, [r0]
+; CHECK-NEXT:    add.w lr, sp, #32
 ; CHECK-NEXT:    vld21.32 {q0, q1}, [r0]
 ; CHECK-NEXT:    add.w r0, r4, #128
 ; CHECK-NEXT:    vstmia lr, {d0, d1, d2, d3} @ 32-byte Spill
 ; CHECK-NEXT:    vld20.32 {q0, q1}, [r0]
 ; CHECK-NEXT:    vld21.32 {q0, q1}, [r0]
 ; CHECK-NEXT:    add.w r0, r4, #192
-; CHECK-NEXT:    vstmia sp, {d0, d1, d2, d3} @ 32-byte Spill
 ; CHECK-NEXT:    vld20.32 {q6, q7}, [r0]
+; CHECK-NEXT:    vstmia sp, {d0, d1, d2, d3} @ 32-byte Spill
 ; CHECK-NEXT:    vld21.32 {q6, q7}, [r0]
 ; CHECK-NEXT:    add.w r0, r4, #256
 ; CHECK-NEXT:    vld20.32 {q4, q5}, [r0]
 ; CHECK-NEXT:    vld21.32 {q4, q5}, [r0]
 ; CHECK-NEXT:    bl external_function
 ; CHECK-NEXT:    vldmia sp, {d2, d3, d4, d5} @ 32-byte Reload
-; CHECK-NEXT:    add r0, sp, #32
+; CHECK-NEXT:    add.w lr, sp, #32
 ; CHECK-NEXT:    vstrw.32 q2, [r4, #80]
 ; CHECK-NEXT:    vstrw.32 q5, [r4, #144]
 ; CHECK-NEXT:    vstrw.32 q4, [r4, #128]
 ; CHECK-NEXT:    vstrw.32 q7, [r4, #112]
 ; CHECK-NEXT:    vstrw.32 q1, [r4, #64]
-; CHECK-NEXT:    vldmia r0, {d2, d3, d4, d5} @ 32-byte Reload
-; CHECK-NEXT:    add r0, sp, #64
+; CHECK-NEXT:    vldmia lr, {d2, d3, d4, d5} @ 32-byte Reload
+; CHECK-NEXT:    add.w lr, sp, #64
 ; CHECK-NEXT:    vstrw.32 q2, [r4, #48]
 ; CHECK-NEXT:    vstrw.32 q6, [r4, #96]
 ; CHECK-NEXT:    vstrw.32 q1, [r5]
-; CHECK-NEXT:    vldmia r0, {d2, d3, d4, d5} @ 32-byte Reload
+; CHECK-NEXT:    vldmia lr, {d2, d3, d4, d5} @ 32-byte Reload
 ; CHECK-NEXT:    vstrw.32 q2, [r4, #16]
 ; CHECK-NEXT:    vstrw.32 q1, [r4]
 ; CHECK-NEXT:    add sp, #112

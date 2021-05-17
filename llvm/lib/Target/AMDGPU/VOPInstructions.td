@@ -140,7 +140,13 @@ class VOP3P_Pseudo <string opName, VOPProfile P, list<dag> pattern = []> :
   let VOP3P = 1;
 }
 
+class VOP_Real<VOP_Pseudo ps> {
+  Instruction Opcode = !cast<Instruction>(NAME);
+  bit IsSingle = ps.Pfl.IsSingle;
+}
+
 class VOP3_Real <VOP_Pseudo ps, int EncodingFamily> :
+  VOP_Real <ps>,
   InstSI <ps.OutOperandList, ps.InOperandList, ps.Mnemonic # ps.AsmOperands, []>,
   SIMCInstr <ps.PseudoInstr, EncodingFamily> {
 
@@ -162,6 +168,7 @@ class VOP3_Real <VOP_Pseudo ps, int EncodingFamily> :
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
+  let SchedRW              = ps.SchedRW;
 
   VOPProfile Pfl = ps.Pfl;
 }
@@ -317,7 +324,7 @@ class VOP3Pe <bits<7> op, VOPProfile P> : Enc64 {
   let Inst{12} = !if(!and(P.HasSrc1, P.HasOpSel), src1_modifiers{2}, 0); // op_sel(1)
   let Inst{13} = !if(!and(P.HasSrc2, P.HasOpSel), src2_modifiers{2}, 0); // op_sel(2)
 
-  let Inst{14} = !if(!and(P.HasSrc2, P.HasOpSel), src2_modifiers{3}, 0); // op_sel_hi(2)
+  let Inst{14} = !if(!and(P.HasSrc2, P.HasOpSel), src2_modifiers{3}, ?); // op_sel_hi(2)
 
   let Inst{15} = !if(P.HasClamp, clamp{0}, 0);
 
@@ -326,14 +333,14 @@ class VOP3Pe <bits<7> op, VOPProfile P> : Enc64 {
   let Inst{40-32} = !if(P.HasSrc0, src0, 0);
   let Inst{49-41} = !if(P.HasSrc1, src1, 0);
   let Inst{58-50} = !if(P.HasSrc2, src2, 0);
-  let Inst{59}    = !if(!and(P.HasSrc0, P.HasOpSel), src0_modifiers{3}, 0); // op_sel_hi(0)
-  let Inst{60}    = !if(!and(P.HasSrc1, P.HasOpSel), src1_modifiers{3}, 0); // op_sel_hi(1)
+  let Inst{59}    = !if(!and(P.HasSrc0, P.HasOpSel), src0_modifiers{3}, ?); // op_sel_hi(0)
+  let Inst{60}    = !if(!and(P.HasSrc1, P.HasOpSel), src1_modifiers{3}, ?); // op_sel_hi(1)
   let Inst{61}    = !if(P.HasSrc0Mods, src0_modifiers{0}, 0); // neg (lo)
   let Inst{62}    = !if(P.HasSrc1Mods, src1_modifiers{0}, 0); // neg (lo)
   let Inst{63}    = !if(P.HasSrc2Mods, src2_modifiers{0}, 0); // neg (lo)
 }
 
-class VOP3Pe_MAI <bits<7> op, VOPProfile P> : Enc64 {
+class VOP3Pe_MAI <bits<7> op, VOPProfile P, bit acc_cd = 0> : Enc64 {
   bits<8> vdst;
   bits<10> src0;
   bits<10> src1;
@@ -341,14 +348,13 @@ class VOP3Pe_MAI <bits<7> op, VOPProfile P> : Enc64 {
   bits<3> blgp;
   bits<3> cbsz;
   bits<4> abid;
-  bits<1> clamp;
 
   let Inst{7-0} = vdst;
 
   let Inst{10-8}  = !if(P.HasSrc1, cbsz, 0);
   let Inst{14-11} = !if(P.HasSrc1, abid, 0);
 
-  let Inst{15} = !if(P.HasClamp, clamp{0}, 0);
+  let Inst{15} = acc_cd;
 
   let Inst{22-16} = op;
   let Inst{31-23} = 0x1a7; //encoding
@@ -411,8 +417,8 @@ class VOP_SDWAe<VOPProfile P> : Enc64 {
   bits<1> clamp;
 
   let Inst{39-32} = !if(P.HasSrc0, src0{7-0}, 0);
-  let Inst{42-40} = !if(P.EmitDst, dst_sel{2-0}, 0);
-  let Inst{44-43} = !if(P.EmitDst, dst_unused{1-0}, 0);
+  let Inst{42-40} = !if(P.EmitDstSel, dst_sel{2-0}, 0);
+  let Inst{44-43} = !if(P.EmitDstSel, dst_unused{1-0}, 0);
   let Inst{45}    = !if(P.HasSDWAClamp, clamp{0}, 0);
   let Inst{50-48} = !if(P.HasSrc0, src0_sel{2-0}, 0);
   let Inst{51}    = !if(P.HasSrc0IntMods, src0_modifiers{0}, 0);
@@ -462,8 +468,8 @@ class VOP_SDWA9Ae<VOPProfile P> : VOP_SDWA9e<P> {
   bits<1> clamp;
   bits<2> omod;
 
-  let Inst{42-40} = !if(P.EmitDst, dst_sel{2-0}, 0);
-  let Inst{44-43} = !if(P.EmitDst, dst_unused{1-0}, 0);
+  let Inst{42-40} = !if(P.EmitDstSel, dst_sel{2-0}, 0);
+  let Inst{44-43} = !if(P.EmitDstSel, dst_unused{1-0}, 0);
   let Inst{45}    = !if(P.HasSDWAClamp, clamp{0}, 0);
   let Inst{47-46} = !if(P.HasSDWAOMod, omod{1-0}, 0);
 }
@@ -520,7 +526,6 @@ class VOP_SDWA_Real <VOP_SDWA_Pseudo ps> :
 
   let Defs = ps.Defs;
   let Uses = ps.Uses;
-  let SchedRW = ps.SchedRW;
   let hasSideEffects = ps.hasSideEffects;
 
   let Constraints     = ps.Constraints;
@@ -536,6 +541,7 @@ class VOP_SDWA_Real <VOP_SDWA_Pseudo ps> :
   let Constraints          = ps.Constraints;
   let DisableEncoding      = ps.DisableEncoding;
   let TSFlags              = ps.TSFlags;
+  let SchedRW              = ps.SchedRW;
 }
 
 class Base_VOP_SDWA9_Real <VOP_SDWA_Pseudo ps> :
@@ -564,6 +570,7 @@ class Base_VOP_SDWA9_Real <VOP_SDWA_Pseudo ps> :
   let Constraints          = ps.Constraints;
   let DisableEncoding      = ps.DisableEncoding;
   let TSFlags              = ps.TSFlags;
+  let SchedRW              = ps.SchedRW;
 }
 
 class VOP_SDWA9_Real <VOP_SDWA_Pseudo ps> :
@@ -628,8 +635,8 @@ class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
   string AsmOperands = P.AsmDPP;
 
   let AsmMatchConverter = !if(P.HasModifiers, "cvtDPP", "");
-  let SubtargetPredicate = HasDPP;
-  let AssemblerPredicate = HasDPP;
+  let SubtargetPredicate = !if(P.HasExt64BitDPP, Has64BitDPP, HasDPP);
+  let AssemblerPredicate = !if(P.HasExt64BitDPP, Has64BitDPP, HasDPP);
   let AsmVariantName = !if(P.HasExtDPP, AMDGPUAsmVariants.DPP,
                                         AMDGPUAsmVariants.Disable);
   let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $vdst", "");
@@ -665,6 +672,7 @@ class VOP_DPP_Real <VOP_DPP_Pseudo ps, int EncodingFamily> :
   let Constraints          = ps.Constraints;
   let DisableEncoding      = ps.DisableEncoding;
   let TSFlags              = ps.TSFlags;
+  let SchedRW              = ps.SchedRW;
 }
 
 class VOP_DPP <string OpName, VOPProfile P, bit IsDPP16,
@@ -683,8 +691,8 @@ class VOP_DPP <string OpName, VOPProfile P, bit IsDPP16,
   let Size = 8;
 
   let AsmMatchConverter = !if(P.HasModifiers, "cvtDPP", "");
-  let SubtargetPredicate = HasDPP;
-  let AssemblerPredicate = HasDPP;
+  let SubtargetPredicate = !if(P.HasExt64BitDPP, Has64BitDPP, HasDPP);
+  let AssemblerPredicate = !if(P.HasExt64BitDPP, Has64BitDPP, HasDPP);
   let AsmVariantName = !if(P.HasExtDPP, AMDGPUAsmVariants.DPP,
                                         AMDGPUAsmVariants.Disable);
   let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $vdst", "");
@@ -795,3 +803,17 @@ include "VOP1Instructions.td"
 include "VOP2Instructions.td"
 include "VOP3Instructions.td"
 include "VOP3PInstructions.td"
+
+
+class VOPInfoTable <string Format> : GenericTable {
+  let FilterClass = Format # "_Real";
+  let CppTypeName = "VOPInfo";
+  let Fields = ["Opcode", "IsSingle"];
+
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "get" # Format # "OpcodeHelper";
+}
+
+def VOP1InfoTable : VOPInfoTable<"VOP1">;
+def VOP2InfoTable : VOPInfoTable<"VOP2">;
+def VOP3InfoTable : VOPInfoTable<"VOP3">;

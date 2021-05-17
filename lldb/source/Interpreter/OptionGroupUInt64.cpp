@@ -32,8 +32,6 @@ OptionGroupUInt64::OptionGroupUInt64(uint32_t usage_mask, bool required,
   m_option_definition.usage_text = usage_text;
 }
 
-OptionGroupUInt64::~OptionGroupUInt64() {}
-
 Status OptionGroupUInt64::SetOptionValue(uint32_t option_idx,
                                          llvm::StringRef option_arg,
                                          ExecutionContext *execution_context) {

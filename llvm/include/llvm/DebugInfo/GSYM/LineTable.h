@@ -230,4 +230,4 @@ raw_ostream &operator<<(raw_ostream &OS, const gsym::LineTable &LT);
 } // namespace gsym
 } // namespace llvm
 
-#endif // #ifndef LLVM_DEBUGINFO_GSYM_LINETABLE_H
+#endif // LLVM_DEBUGINFO_GSYM_LINETABLE_H

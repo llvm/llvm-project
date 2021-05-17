@@ -1,5 +1,5 @@
 ====================================================
-Extra Clang Tools 12.0.0 (In-Progress) Release Notes
+Extra Clang Tools 13.0.0 (In-Progress) Release Notes
 ====================================================
 
 .. contents::
@@ -10,7 +10,7 @@ Written by the `LLVM Team <https://llvm.org/>`_
 
 .. warning::
 
-   These are in-progress notes for the upcoming Extra Clang Tools 12 release.
+   These are in-progress notes for the upcoming Extra Clang Tools 13 release.
    Release notes for previous releases can be found on
    `the Download Page <https://releases.llvm.org/download.html>`_.
 
@@ -18,7 +18,7 @@ Introduction
 ============
 
 This document contains the release notes for the Extra Clang Tools, part of the
-Clang release 12.0.0. Here we describe the status of the Extra Clang Tools in
+Clang release 13.0.0. Here we describe the status of the Extra Clang Tools in
 some detail, including major improvements from the previous release and new
 feature work. All LLVM releases may be downloaded from the `LLVM releases web
 site <https://llvm.org/releases/>`_.
@@ -32,7 +32,7 @@ main Clang web page, this document applies to the *next* release, not
 the current one. To see the release notes for a specific release, please
 see the `releases page <https://llvm.org/releases/>`_.
 
-What's New in Extra Clang Tools 12.0.0?
+What's New in Extra Clang Tools 13.0.0?
 =======================================
 
 Some of the major new features and improvements to Extra Clang Tools are listed
@@ -47,17 +47,7 @@ Major New Features
 Improvements to clangd
 ----------------------
 
-- clangd's memory usage is significantly reduced on most Linux systems.
-  In particular, memory usage should not increase dramatically over time.
-
-  The standard allocator on most systems is glibc's ptmalloc2, and it creates
-  disproportionately large heaps when handling clangd's allocation patterns.
-  By default, clangd will now periodically call ``malloc_trim`` to release free
-  pages on glibc systems.
-
-  Users of other allocators (such as ``jemalloc`` or ``tcmalloc``) on glibc
-  systems can disable this using ``--malloc_trim=0`` or the CMake flag
-  ``-DCLANGD_MALLOC_TRIM=0``.
+The improvements are...
 
 Improvements to clang-doc
 -------------------------
@@ -67,7 +57,7 @@ The improvements are...
 Improvements to clang-query
 ---------------------------
 
-- The IgnoreImplicitCastsAndParentheses traversal mode has been removed.
+The improvements are...
 
 Improvements to clang-rename
 ----------------------------
@@ -77,49 +67,46 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
-- Checks that allow configuring names of headers to include now support wrapping
-  the include in angle brackets to create a system include. For example,
-  :doc:`cppcoreguidelines-init-variables
-  <clang-tidy/checks/cppcoreguidelines-init-variables>` and
-  :doc:`modernize-make-unique <clang-tidy/checks/modernize-make-unique>`.
+- The `run-clang-tidy.py` helper script is now installed in `bin/` as
+  `run-clang-tidy`. It was previously installed in `share/clang/`.
 
-- CheckOptions that take boolean values now support all spellings supported in 
-  the `YAML format <https://yaml.org/type/bool.html>`_.
+- Added command line option `--fix-notes` to apply fixes found in notes
+  attached to warnings. These are typically cases where we are less confident
+  the fix will have the desired effect.
 
-New modules
-^^^^^^^^^^^
-
-- New ``altera`` module.
-
-  Includes checks related to OpenCL for FPGA coding guidelines, based on the
-  `Altera SDK for OpenCL: Best Practices Guide
-  <https://www.altera.com/en_US/pdfs/literature/hb/opencl-sdk/aocl_optimization_guide.pdf>`_.
-
-- New ``concurrency`` module.
-
-  Includes checks related to concurrent programming (e.g. threads, fibers,
-  coroutines, etc.).
+- libToolingCore and Clang-Tidy was refactored and now checks can produce
+  highlights (`^~~~~` under fragments of the source code) in diagnostics.
+  Existing and new checks in the future can be expected to start implementing
+  this functionality.
+  This change only affects the visual rendering of diagnostics, and does not
+  alter the behavior of generated fixes.
 
 New checks
 ^^^^^^^^^^
 
-- New :doc:`altera-kernel-name-restriction
-  <clang-tidy/checks/altera-kernel-name-restriction>` check.
+- New :doc:`bugprone-implicit-widening-of-multiplication-result
+  <clang-tidy/checks/bugprone-implicit-widening-of-multiplication-result>` check.
 
-  Finds kernel files and include directives whose filename is `kernel.cl`,
-  `Verilog.cl`, or `VHDL.cl`.
+  Diagnoses instances of an implicit widening of multiplication result.
 
-- New :doc:`altera-single-work-item-barrier
-  <clang-tidy/checks/altera-single-work-item-barrier>` check.
+- New :doc:`concurrency-thread-canceltype-asynchronous
+  <clang-tidy/checks/concurrency-thread-canceltype-asynchronous>` check.
 
-  Finds OpenCL kernel functions that call a barrier function but do not call
-  an ID function.
+  Finds ``pthread_setcanceltype`` function calls where a thread's cancellation
+  type is set to asynchronous.
 
-- New :doc:`altera-struct-pack-align
-  <clang-tidy/checks/altera-struct-pack-align>` check.
+- New :doc:`altera-id-dependent-backward-branch
+  <clang-tidy/checks/altera-id-dependent-backward-branch>` check.
 
-  Finds structs that are inefficiently packed or aligned, and recommends
-  packing and/or aligning of said structs as needed.
+  Finds ID-dependent variables and fields that are used within loops. This
+  causes branches to occur inside the loops, and thus leads to performance
+  degradation.
+
+- New :doc:`altera-unroll-loops
+  <clang-tidy/checks/altera-unroll-loops>` check.
+
+  Finds inner loops that have not been unrolled, as well as fully unrolled
+  loops with unknown loops bounds or a large number of iterations.
 
 - New :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines-prefer-member-initializer>` check.
@@ -127,73 +114,42 @@ New checks
   Finds member initializations in the constructor body which can be placed into
   the initialization list instead.
 
-- New :doc:`bugprone-misplaced-pointer-arithmetic-in-alloc
-  <clang-tidy/checks/bugprone-misplaced-pointer-arithmetic-in-alloc>` check.
+- New :doc:`bugprone-unhandled-exception-at-new
+  <clang-tidy/checks/bugprone-unhandled-exception-at-new>` check.
 
-- New :doc:`bugprone-redundant-branch-condition
-  <clang-tidy/checks/bugprone-redundant-branch-condition>` check.
+  Finds calls to ``new`` with missing exception handler for ``std::bad_alloc``.
 
-  Finds condition variables in nested ``if`` statements that were also checked
-  in the outer ``if`` statement and were not changed.
+New check aliases
+^^^^^^^^^^^^^^^^^
 
-- New :doc:`concurrency-mt-unsafe <clang-tidy/checks/concurrency-mt-unsafe>`
-  check.
-
-  Finds thread-unsafe functions usage. Currently knows about POSIX and
-  Glibc function sets.
-
-- New :doc:`bugprone-signal-handler
-  <clang-tidy/checks/bugprone-signal-handler>` check.
-
-  Finds functions registered as signal handlers that call non asynchronous-safe
-  functions.
-
-- New :doc:`cert-sig30-c
-  <clang-tidy/checks/cert-sig30-c>` check.
-
-  Alias to the :doc:`bugprone-signal-handler
-  <clang-tidy/checks/bugprone-signal-handler>` check.
-
-- New :doc:`performance-no-int-to-ptr
-  <clang-tidy/checks/performance-no-int-to-ptr>` check.
-
-  Diagnoses every integer to pointer cast.
-
-- New :doc:`readability-function-cognitive-complexity
-  <clang-tidy/checks/readability-function-cognitive-complexity>` check.
-
-  Flags functions with Cognitive Complexity metric exceeding the configured limit.
+- New alias :doc:`cert-pos47-c
+  <clang-tidy/checks/cert-pos47-c>` to
+  :doc:`concurrency-thread-canceltype-asynchronous
+  <clang-tidy/checks/concurrency-thread-canceltype-asynchronous>` was added.
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- Improved :doc:`modernize-loop-convert
-  <clang-tidy/checks/modernize-loop-convert>` check.
+- Improved :doc:`bugprone-signal-handler
+  <clang-tidy/checks/bugprone-signal-handler>` check.
 
-  Now able to transform iterator loops using ``rbegin`` and ``rend`` methods.
+  Added an option to choose the set of allowed functions.
 
-- Improved :doc:`readability-identifier-naming
-  <clang-tidy/checks/readability-identifier-naming>` check.
+- Improved :doc:`readability-uniqueptr-delete-release
+  <clang-tidy/checks/readability-uniqueptr-delete-release>` check.
 
-  Added an option `GetConfigPerFile` to support including files which use
-  different naming styles.
+  Added an option to choose whether to refactor by calling the ``reset`` member
+  function or assignment to ``nullptr``.
+  Added support for pointers to ``std::unique_ptr``.
 
-  Now renames overridden virtual methods if the method they override has a
-  style violation.
+Removed checks
+^^^^^^^^^^^^^^
+
+- The readability-deleted-default check has been removed.
   
-  Added support for specifying the style of scoped ``enum`` constants. If 
-  unspecified, will fall back to the style for regular ``enum`` constants.
-
-  Added an option `IgnoredRegexp` per identifier type to suppress identifier
-  naming checks for names matching a regular expression.
-
-- Removed `google-runtime-references` check because the rule it checks does
-  not exist in the Google Style Guide anymore.
-
-- Improved :doc:`readability-redundant-string-init
-  <clang-tidy/checks/readability-redundant-string-init>` check.
-
-  Added `std::basic_string_view` to default list of ``string``-like types.
+  The clang warning `Wdefaulted-function-deleted
+  <https://clang.llvm.org/docs/DiagnosticsReference.html#wdefaulted-function-deleted>`_
+  will diagnose the same issues and is enabled by default.
 
 Improvements to include-fixer
 -----------------------------

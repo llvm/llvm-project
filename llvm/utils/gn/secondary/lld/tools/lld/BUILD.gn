@@ -5,6 +5,7 @@ symlinks = [
   "ld.lld",
   "ld64.lld",
   "ld64.lld.darwinnew",
+  "ld64.lld.darwinold",
   "wasm-ld",
 ]
 foreach(target, symlinks) {
@@ -33,6 +34,7 @@ executable("lld") {
     "//lld/lib/Driver",
     "//lld/wasm",
     "//llvm/lib/Support",
+    "//llvm/utils/gn/build/libs/xar",
   ]
   sources = [ "lld.cpp" ]
 }

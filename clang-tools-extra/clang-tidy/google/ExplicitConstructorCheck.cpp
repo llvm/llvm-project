@@ -35,7 +35,7 @@ void ExplicitConstructorCheck::registerMatchers(MatchFinder *Finder) {
 
 // Looks for the token matching the predicate and returns the range of the found
 // token including trailing whitespace.
-static SourceRange FindToken(const SourceManager &Sources,
+static SourceRange findToken(const SourceManager &Sources,
                              const LangOptions &LangOpts,
                              SourceLocation StartLoc, SourceLocation EndLoc,
                              bool (*Pred)(const Token &)) {
@@ -103,17 +103,17 @@ void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
       Ctor->getMinRequiredArguments() > 1)
     return;
 
-  bool takesInitializerList = isStdInitializerList(
+  bool TakesInitializerList = isStdInitializerList(
       Ctor->getParamDecl(0)->getType().getNonReferenceType());
   if (Ctor->isExplicit() &&
-      (Ctor->isCopyOrMoveConstructor() || takesInitializerList)) {
-    auto isKWExplicit = [](const Token &Tok) {
+      (Ctor->isCopyOrMoveConstructor() || TakesInitializerList)) {
+    auto IsKwExplicit = [](const Token &Tok) {
       return Tok.is(tok::raw_identifier) &&
              Tok.getRawIdentifier() == "explicit";
     };
     SourceRange ExplicitTokenRange =
-        FindToken(*Result.SourceManager, getLangOpts(),
-                  Ctor->getOuterLocStart(), Ctor->getEndLoc(), isKWExplicit);
+        findToken(*Result.SourceManager, getLangOpts(),
+                  Ctor->getOuterLocStart(), Ctor->getEndLoc(), IsKwExplicit);
     StringRef ConstructorDescription;
     if (Ctor->isMoveConstructor())
       ConstructorDescription = "move";
@@ -133,7 +133,7 @@ void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (Ctor->isExplicit() || Ctor->isCopyOrMoveConstructor() ||
-      takesInitializerList)
+      TakesInitializerList)
     return;
 
   bool SingleArgument =

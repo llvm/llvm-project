@@ -135,7 +135,7 @@ define <4 x double> @demandedelts_vpermil2pd256_as_shufpd(<4 x double> %a0, <4 x
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
 ; X86-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],mem[0]
-; X86-NEXT:    vinsertf128 $1, {{\.LCPI.*}}, %ymm2, %ymm2
+; X86-NEXT:    vinsertf128 $1, {{\.LCPI[0-9]+_[0-9]+}}, %ymm2, %ymm2
 ; X86-NEXT:    vpermil2pd $0, %ymm2, %ymm1, %ymm0, %ymm0
 ; X86-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,1,2,3]
 ; X86-NEXT:    retl
@@ -174,7 +174,7 @@ define <16 x i8> @combine_vpperm_zero(<16 x i8> %a0, <16 x i8> %a1) {
 define <16 x i8> @combine_vpperm_identity_bitcast(<16 x i8> %a0, <16 x i8> %a1) {
 ; X86-LABEL: combine_vpperm_identity_bitcast:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpaddq {{\.LCPI.*}}, %xmm0, %xmm0
+; X86-NEXT:    vpaddq {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_vpperm_identity_bitcast:

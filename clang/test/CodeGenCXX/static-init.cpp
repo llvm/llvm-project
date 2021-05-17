@@ -109,14 +109,14 @@ namespace test2 {
     static int x = foo();
   }
   // CHECK-LABEL: define{{.*}} void @_ZN5test21BC2Ev
-  // CHECK:   load atomic i8, i8* bitcast (i64* @_ZGVZN5test21BC1EvE1x to i8*) acquire,
+  // CHECK:   load atomic i8, i8* bitcast (i64* @_ZGVZN5test21BC1EvE1x to i8*) acquire, align 8
   // CHECK:   call i32 @__cxa_guard_acquire(i64* @_ZGVZN5test21BC1EvE1x)
   // CHECK:   [[T0:%.*]] = call i32 @_ZN5test23fooEv()
   // CHECK:   store i32 [[T0]], i32* @_ZZN5test21BC1EvE1x,
   // CHECK:   call void @__cxa_guard_release(i64* @_ZGVZN5test21BC1EvE1x)
 
   // CHECK-LABEL: define{{.*}} void @_ZN5test21BC1Ev
-  // CHECK:   load atomic i8, i8* bitcast (i64* @_ZGVZN5test21BC1EvE1x to i8*) acquire,
+  // CHECK:   load atomic i8, i8* bitcast (i64* @_ZGVZN5test21BC1EvE1x to i8*) acquire, align 8
   // CHECK:   call i32 @__cxa_guard_acquire(i64* @_ZGVZN5test21BC1EvE1x)
   // CHECK:   [[T0:%.*]] = call i32 @_ZN5test23fooEv()
   // CHECK:   store i32 [[T0]], i32* @_ZZN5test21BC1EvE1x,
@@ -128,7 +128,7 @@ namespace test2 {
     static int y = foo();
   }
   // CHECK-LABEL: define{{.*}} void @_ZN5test21BD2Ev(
-  // CHECK:   load atomic i8, i8* bitcast (i64* @_ZGVZN5test21BD1EvE1y to i8*) acquire,
+  // CHECK:   load atomic i8, i8* bitcast (i64* @_ZGVZN5test21BD1EvE1y to i8*) acquire, align 8
   // CHECK:   call i32 @__cxa_guard_acquire(i64* @_ZGVZN5test21BD1EvE1y)
   // CHECK:   [[T0:%.*]] = call i32 @_ZN5test23fooEv()
   // CHECK:   store i32 [[T0]], i32* @_ZZN5test21BD1EvE1y,

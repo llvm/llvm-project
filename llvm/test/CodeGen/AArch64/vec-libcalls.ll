@@ -29,6 +29,7 @@ declare <3 x float> @llvm.log2.v3f32(<3 x float>)
 declare <3 x float> @llvm.nearbyint.v3f32(<3 x float>)
 declare <3 x float> @llvm.rint.v3f32(<3 x float>)
 declare <3 x float> @llvm.round.v3f32(<3 x float>)
+declare <3 x float> @llvm.roundeven.v3f32(<3 x float>)
 declare <3 x float> @llvm.sqrt.v3f32(<3 x float>)
 declare <3 x float> @llvm.trunc.v3f32(<3 x float>)
 
@@ -475,6 +476,15 @@ define <3 x float> @round_v3f32(<3 x float> %x) nounwind {
 ; CHECK-NEXT:    frinta v0.4s, v0.4s
 ; CHECK-NEXT:    ret
   %r = call <3 x float> @llvm.round.v3f32(<3 x float> %x)
+  ret <3 x float> %r
+}
+
+define <3 x float> @roundeven_v3f32(<3 x float> %x) nounwind {
+; CHECK-LABEL: roundeven_v3f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    frintn v0.4s, v0.4s
+; CHECK-NEXT:    ret
+  %r = call <3 x float> @llvm.roundeven.v3f32(<3 x float> %x)
   ret <3 x float> %r
 }
 

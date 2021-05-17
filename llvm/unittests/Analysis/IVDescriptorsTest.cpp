@@ -94,8 +94,7 @@ for.end:
         } while (!Inst_inc);
         assert(Inst_inc->getName() == "inc");
         EXPECT_EQ(IndDesc.getInductionBinOp(), Inst_inc);
-        EXPECT_FALSE(IndDesc.hasUnsafeAlgebra());
-        EXPECT_EQ(IndDesc.getUnsafeAlgebraInst(), nullptr);
+        EXPECT_EQ(IndDesc.getExactFPMathInst(), nullptr);
       });
 }
 

@@ -44,6 +44,7 @@ MODULE_ALIAS_ANALYSIS("globals-aa", GlobalsAA())
 MODULE_PASS("always-inline", AlwaysInlinerPass())
 MODULE_PASS("attributor", AttributorPass())
 MODULE_PASS("annotation2metadata", Annotation2MetadataPass())
+MODULE_PASS("openmp-opt", OpenMPOptPass())
 MODULE_PASS("called-value-propagation", CalledValuePropagationPass())
 MODULE_PASS("canonicalize-aliases", CanonicalizeAliasesPass())
 MODULE_PASS("cg-profile", CGProfilePass())
@@ -63,8 +64,7 @@ MODULE_PASS("khwasan", HWAddressSanitizerPass(true, true))
 MODULE_PASS("inferattrs", InferFunctionAttrsPass())
 MODULE_PASS("inliner-wrapper", ModuleInlinerWrapperPass())
 MODULE_PASS("inliner-wrapper-no-mandatory-first", ModuleInlinerWrapperPass(
-  getInlineParams(), 
-  DebugLogging, 
+  getInlineParams(),
   false))
 MODULE_PASS("insert-gcov-profiling", GCOVProfilerPass())
 MODULE_PASS("instrorderfile", InstrOrderFilePass())
@@ -93,6 +93,7 @@ MODULE_PASS("print-lcg-dot", LazyCallGraphDOTPrinterPass(dbgs()))
 MODULE_PASS("print-must-be-executed-contexts", MustBeExecutedContextPrinterPass(dbgs()))
 MODULE_PASS("print-stack-safety", StackSafetyGlobalPrinterPass(dbgs()))
 MODULE_PASS("print<module-debuginfo>", ModuleDebugInfoPrinterPass(dbgs()))
+MODULE_PASS("rel-lookup-table-converter", RelLookupTableConverterPass())
 MODULE_PASS("rewrite-statepoints-for-gc", RewriteStatepointsForGC())
 MODULE_PASS("rewrite-symbols", RewriteSymbolPass())
 MODULE_PASS("rpo-function-attrs", ReversePostOrderFunctionAttrsPass())
@@ -108,7 +109,6 @@ MODULE_PASS("strip-debug-declare", StripDebugDeclarePass())
 MODULE_PASS("strip-nondebug", StripNonDebugSymbolsPass())
 MODULE_PASS("strip-nonlinetable-debuginfo", StripNonLineTableDebugInfoPass())
 MODULE_PASS("synthetic-counts-propagation", SyntheticCountsPropagation())
-MODULE_PASS("unique-internal-linkage-names", UniqueInternalLinkageNamesPass())
 MODULE_PASS("verify", VerifierPass())
 MODULE_PASS("wholeprogramdevirt", WholeProgramDevirtPass())
 MODULE_PASS("dfsan", DataFlowSanitizerPass())
@@ -119,6 +119,7 @@ MODULE_PASS("kasan-module", ModuleAddressSanitizerPass(/*CompileKernel=*/true, f
 MODULE_PASS("sancov-module", ModuleSanitizerCoveragePass())
 MODULE_PASS("memprof-module", ModuleMemProfilerPass())
 MODULE_PASS("poison-checking", PoisonCheckingPass())
+MODULE_PASS("pseudo-probe-update", PseudoProbeUpdatePass())
 #undef MODULE_PASS
 
 #ifndef CGSCC_ANALYSIS
@@ -137,7 +138,7 @@ CGSCC_PASS("invalidate<all>", InvalidateAllAnalysesPass())
 CGSCC_PASS("function-attrs", PostOrderFunctionAttrsPass())
 CGSCC_PASS("attributor-cgscc", AttributorCGSCCPass())
 CGSCC_PASS("inline", InlinerPass())
-CGSCC_PASS("openmpopt", OpenMPOptPass())
+CGSCC_PASS("openmp-opt-cgscc", OpenMPOptCGSCCPass())
 CGSCC_PASS("coro-split", CoroSplitPass())
 CGSCC_PASS("no-op-cgscc", NoOpCGSCCPass())
 #undef CGSCC_PASS
@@ -171,6 +172,8 @@ FUNCTION_ANALYSIS("targetir",
                   TM ? TM->getTargetIRAnalysis() : TargetIRAnalysis())
 FUNCTION_ANALYSIS("verify", VerifierAnalysis())
 FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
+FUNCTION_ANALYSIS("divergence", DivergenceAnalysis())
+FUNCTION_ANALYSIS("func-status", FunctionStatusAnalysis())
 
 #ifndef FUNCTION_ALIAS_ANALYSIS
 #define FUNCTION_ALIAS_ANALYSIS(NAME, CREATE_PASS)                             \
@@ -273,6 +276,7 @@ FUNCTION_PASS("print<assumptions>", AssumptionPrinterPass(dbgs()))
 FUNCTION_PASS("print<block-freq>", BlockFrequencyPrinterPass(dbgs()))
 FUNCTION_PASS("print<branch-prob>", BranchProbabilityPrinterPass(dbgs()))
 FUNCTION_PASS("print<da>", DependenceAnalysisPrinterPass(dbgs()))
+FUNCTION_PASS("print<divergence>", DivergenceAnalysisPrinterPass(dbgs()))
 FUNCTION_PASS("print<domtree>", DominatorTreePrinterPass(dbgs()))
 FUNCTION_PASS("print<postdomtree>", PostDominatorTreePrinterPass(dbgs()))
 FUNCTION_PASS("print<delinearization>", DelinearizationPrinterPass(dbgs()))
@@ -280,7 +284,7 @@ FUNCTION_PASS("print<demanded-bits>", DemandedBitsPrinterPass(dbgs()))
 FUNCTION_PASS("print<domfrontier>", DominanceFrontierPrinterPass(dbgs()))
 FUNCTION_PASS("print<func-properties>", FunctionPropertiesPrinterPass(dbgs()))
 FUNCTION_PASS("print<inline-cost>", InlineCostAnnotationPrinterPass(dbgs()))
-FUNCTION_PASS("print<inliner-size-estimator>", 
+FUNCTION_PASS("print<inliner-size-estimator>",
   InlineSizeEstimatorAnalysisPrinterPass(dbgs()))
 FUNCTION_PASS("print<loops>", LoopPrinterPass(dbgs()))
 FUNCTION_PASS("print<memoryssa>", MemorySSAPrinterPass(dbgs()))

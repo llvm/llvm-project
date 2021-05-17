@@ -92,8 +92,8 @@ class SendSignalTestCase(TestBase):
         self.assertTrue(
             thread.GetStopReasonDataCount() >= 1,
             "There was data in the event.")
-        self.assertTrue(
-            thread.GetStopReasonDataAtIndex(0) == lldbutil.get_signal_number('SIGUSR1'),
+        self.assertEqual(
+            thread.GetStopReasonDataAtIndex(0), lldbutil.get_signal_number('SIGUSR1'),
             "The stop signal was SIGUSR1")
 
     def match_state(self, process_listener, expected_state):

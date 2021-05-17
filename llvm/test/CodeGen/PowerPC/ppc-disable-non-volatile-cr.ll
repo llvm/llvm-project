@@ -8,8 +8,8 @@
 define dso_local signext i32 @DisableNonVolatileCR(i32 signext %a, i32 signext %b) {
 ; CHECK-DISABLE-LABEL: DisableNonVolatileCR:
 ; CHECK-DISABLE:       # %bb.0: # %entry
-; CHECK-DISABLE-NOT:    mfocrf [[REG1:r[0-9]+]]
-; CHECK-DISABLE-NOT:    stw [[REG1]]
+; CHECK-DISABLE-NOT:    mfocrf {{r[0-9]+}}
+; CHECK-DISABLE-NOT:    stw {{r[0-9]+}}
 ; CHECK-DISABLE:        stdu r1
 ; CHECK-DISABLE-DAG:    mfocrf [[REG2:r[0-9]+]]
 ; CHECK-DISABLE-DAG:    stw [[REG2]]
@@ -20,8 +20,8 @@ define dso_local signext i32 @DisableNonVolatileCR(i32 signext %a, i32 signext %
 ; CHECK-ENABLE-DAG:    mfocrf [[REG1:r[0-9]+]]
 ; CHECK-ENABLE-DAG:    stw [[REG1]]
 ; CHECK-ENABLE:        stdu r1
-; CHECK-ENABLE-NOT:    mfocrf [[REG2:r[0-9]+]]
-; CHECK-ENABLE-NOT:    stw [[REG2]]
+; CHECK-ENABLE-NOT:    mfocrf {{r[0-9]+}}
+; CHECK-ENABLE-NOT:    stw {{r[0-9]+}}
 ; CHECK-ENABLE:        # %bb.1: # %if.then
 
 entry:

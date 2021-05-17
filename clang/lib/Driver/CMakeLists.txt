@@ -26,6 +26,7 @@ add_clang_library(clangDriver
   ToolChain.cpp
   ToolChains/Arch/AArch64.cpp
   ToolChains/Arch/ARM.cpp
+  ToolChains/Arch/M68k.cpp
   ToolChains/Arch/Mips.cpp
   ToolChains/Arch/PPC.cpp
   ToolChains/Arch/RISCV.cpp
@@ -36,6 +37,7 @@ add_clang_library(clangDriver
   ToolChains/AIX.cpp
   ToolChains/Ananas.cpp
   ToolChains/AMDGPU.cpp
+  ToolChains/AMDGPUOpenMP.cpp
   ToolChains/AVR.cpp
   ToolChains/BareMetal.cpp
   ToolChains/Clang.cpp

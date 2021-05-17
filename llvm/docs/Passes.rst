@@ -336,7 +336,7 @@ graph at only two spots.  Furthermore, a hierarchical region tree is built.
 ``-scalar-evolution``: Scalar Evolution Analysis
 ------------------------------------------------
 
-The ``ScalarEvolution`` analysis can be used to analyze and catagorize scalar
+The ``ScalarEvolution`` analysis can be used to analyze and categorize scalar
 expressions in loops.  It specializes in recognizing general induction
 variables, representing them with the abstract and opaque ``SCEV`` class.
 Given this analysis, trip counts of loops and other important properties can be
@@ -973,6 +973,11 @@ corresponding to the reverse post order traversal of current function (starting
 at 2), which effectively gives values in deep loops higher rank than values not
 in loops.
 
+``-rel-lookup-table-converter``: Relative lookup table converter
+----------------------------------------------------------------
+
+This pass converts lookup tables to PIC-friendly relative lookup tables.
+
 ``-reg2mem``: Demote all values to stack slots
 ----------------------------------------------
 
@@ -1114,7 +1119,7 @@ algorithm:
    return returns something else (like constant 0), and can still be TRE'd.  It
    can be TRE'd if *all other* return instructions in the function return the
    exact same value.
-#. If it can prove that callees do not access theier caller stack frame, they
+#. If it can prove that callees do not access their caller stack frame, they
    are marked as eligible for tail call elimination (by the code generator).
 
 Utility Passes

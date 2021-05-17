@@ -158,6 +158,7 @@ private:
   void replaceCoroSuspends();
   void replaceCoroEnds();
   void replaceSwiftErrorOps();
+  void salvageDebugInfo();
   void handleFinalSuspend();
 };
 
@@ -453,11 +454,23 @@ void CoroCloner::handleFinalSuspend() {
   }
 }
 
+static FunctionType *
+getFunctionTypeFromAsyncSuspend(AnyCoroSuspendInst *Suspend) {
+  auto *AsyncSuspend = cast<CoroSuspendAsyncInst>(Suspend);
+  auto *StructTy = cast<StructType>(AsyncSuspend->getType());
+  auto &Context = Suspend->getParent()->getParent()->getContext();
+  auto *VoidTy = Type::getVoidTy(Context);
+  return FunctionType::get(VoidTy, StructTy->elements(), false);
+}
+
 static Function *createCloneDeclaration(Function &OrigF, coro::Shape &Shape,
                                         const Twine &Suffix,
-                                        Module::iterator InsertBefore) {
+                                        Module::iterator InsertBefore,
+                                        AnyCoroSuspendInst *ActiveSuspend) {
   Module *M = OrigF.getParent();
-  auto *FnTy = Shape.getResumeFunctionType();
+  auto *FnTy = (Shape.ABI != coro::ABI::Async)
+                   ? Shape.getResumeFunctionType()
+                   : getFunctionTypeFromAsyncSuspend(ActiveSuspend);
 
   Function *NewF =
       Function::Create(FnTy, GlobalValue::LinkageTypes::InternalLinkage,
@@ -571,6 +584,8 @@ void CoroCloner::replaceCoroEnds() {
 
 static void replaceSwiftErrorOps(Function &F, coro::Shape &Shape,
                                  ValueToValueMapTy *VMap) {
+  if (Shape.ABI == coro::ABI::Async && Shape.CoroSuspends.empty())
+    return;
   Value *CachedSlot = nullptr;
   auto getSwiftErrorSlot = [&](Type *ValueTy) -> Value * {
     if (CachedSlot) {
@@ -631,6 +646,37 @@ void CoroCloner::replaceSwiftErrorOps() {
   ::replaceSwiftErrorOps(*NewF, Shape, &VMap);
 }
 
+void CoroCloner::salvageDebugInfo() {
+  SmallVector<DbgVariableIntrinsic *, 8> Worklist;
+  SmallDenseMap<llvm::Value *, llvm::AllocaInst *, 4> DbgPtrAllocaCache;
+  for (auto &BB : *NewF)
+    for (auto &I : BB)
+      if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
+        Worklist.push_back(DVI);
+  for (DbgVariableIntrinsic *DVI : Worklist)
+    coro::salvageDebugInfo(DbgPtrAllocaCache, DVI, Shape.ReuseFrameSlot);
+
+  // Remove all salvaged dbg.declare intrinsics that became
+  // either unreachable or stale due to the CoroSplit transformation.
+  auto IsUnreachableBlock = [&](BasicBlock *BB) {
+    return BB->hasNPredecessors(0) && BB != &NewF->getEntryBlock();
+  };
+  for (DbgVariableIntrinsic *DVI : Worklist) {
+    if (IsUnreachableBlock(DVI->getParent()))
+      DVI->eraseFromParent();
+    else if (dyn_cast_or_null<AllocaInst>(DVI->getVariableLocationOp(0))) {
+      // Count all non-debuginfo uses in reachable blocks.
+      unsigned Uses = 0;
+      for (auto *User : DVI->getVariableLocationOp(0)->users())
+        if (auto *I = dyn_cast<Instruction>(User))
+          if (!isa<AllocaInst>(I) && !IsUnreachableBlock(I->getParent()))
+            ++Uses;
+      if (!Uses)
+        DVI->eraseFromParent();
+    }
+  }
+}
+
 void CoroCloner::replaceEntryBlock() {
   // In the original function, the AllocaSpillBlock is a block immediately
   // following the allocation of the frame object which defines GEPs for
@@ -683,15 +729,17 @@ void CoroCloner::replaceEntryBlock() {
   }
   }
 
-  // Any alloca that's still being used but not reachable from the new entry
-  // needs to be moved to the new entry.
+  // Any static alloca that's still being used but not reachable from the new
+  // entry needs to be moved to the new entry.
   Function *F = OldEntry->getParent();
   DominatorTree DT{*F};
   for (auto IT = inst_begin(F), End = inst_end(F); IT != End;) {
     Instruction &I = *IT++;
-    if (!isa<AllocaInst>(&I) || I.use_empty())
+    auto *Alloca = dyn_cast<AllocaInst>(&I);
+    if (!Alloca || I.use_empty())
       continue;
-    if (DT.isReachableFromEntry(I.getParent()))
+    if (DT.isReachableFromEntry(I.getParent()) ||
+        !isa<ConstantInt>(Alloca->getArraySize()))
       continue;
     I.moveBefore(*Entry, Entry->getFirstInsertionPt());
   }
@@ -711,10 +759,12 @@ Value *CoroCloner::deriveNewFramePointer() {
   // with the active suspend. The frame is located as a tail to the async
   // context header.
   case coro::ABI::Async: {
-    auto *CalleeContext = NewF->getArg(Shape.AsyncLowering.ContextArgNo);
+    auto *ActiveAsyncSuspend = cast<CoroSuspendAsyncInst>(ActiveSuspend);
+    auto *CalleeContext =
+        NewF->getArg(ActiveAsyncSuspend->getStorageArgumentIndex());
     auto *FramePtrTy = Shape.FrameTy->getPointerTo();
-    auto *ProjectionFunc = cast<CoroSuspendAsyncInst>(ActiveSuspend)
-                               ->getAsyncContextProjectionFunction();
+    auto *ProjectionFunc =
+        ActiveAsyncSuspend->getAsyncContextProjectionFunction();
     auto DbgLoc =
         cast<CoroSuspendAsyncInst>(VMap[ActiveSuspend])->getDebugLoc();
     // Calling i8* (i8*)
@@ -771,7 +821,7 @@ void CoroCloner::create() {
   // Create the new function if we don't already have one.
   if (!NewF) {
     NewF = createCloneDeclaration(OrigF, Shape, Suffix,
-                                  OrigF.getParent()->end());
+                                  OrigF.getParent()->end(), ActiveSuspend);
   }
 
   // Replace all args with undefs. The buildCoroutineFrame algorithm already
@@ -794,14 +844,37 @@ void CoroCloner::create() {
   auto savedLinkage = NewF->getLinkage();
   NewF->setLinkage(llvm::GlobalValue::ExternalLinkage);
 
-  CloneFunctionInto(NewF, &OrigF, VMap, /*ModuleLevelChanges=*/true, Returns);
+  CloneFunctionInto(NewF, &OrigF, VMap,
+                    CloneFunctionChangeType::LocalChangesOnly, Returns);
+
+  auto &Context = NewF->getContext();
+
+  // For async functions / continuations, adjust the scope line of the
+  // clone to the line number of the suspend point. The scope line is
+  // associated with all pre-prologue instructions. This avoids a jump
+  // in the linetable from the function declaration to the suspend point.
+  if (DISubprogram *SP = NewF->getSubprogram()) {
+    assert(SP != OrigF.getSubprogram() && SP->isDistinct());
+    if (ActiveSuspend)
+      if (auto DL = ActiveSuspend->getDebugLoc())
+        SP->setScopeLine(DL->getLine());
+    // Update the linkage name to reflect the modified symbol name. It
+    // is necessary to update the linkage name in Swift, since the
+    // mangling changes for resume functions. It might also be the
+    // right thing to do in C++, but due to a limitation in LLVM's
+    // AsmPrinter we can only do this if the function doesn't have an
+    // abstract specification, since the DWARF backend expects the
+    // abstract specification to contain the linkage name and asserts
+    // that they are identical.
+    if (!SP->getDeclaration() && SP->getUnit() &&
+        SP->getUnit()->getSourceLanguage() == dwarf::DW_LANG_Swift)
+      SP->replaceLinkageName(MDString::get(Context, NewF->getName()));
+  }
 
   NewF->setLinkage(savedLinkage);
   NewF->setVisibility(savedVisibility);
   NewF->setUnnamedAddr(savedUnnamedAddr);
   NewF->setDLLStorageClass(savedDLLStorageClass);
-
-  auto &Context = NewF->getContext();
 
   // Replace the attributes of the new function:
   auto OrigAttrs = NewF->getAttributes();
@@ -817,8 +890,13 @@ void CoroCloner::create() {
     addFramePointerAttrs(NewAttrs, Context, 0,
                          Shape.FrameSize, Shape.FrameAlign);
     break;
-  case coro::ABI::Async:
+  case coro::ABI::Async: {
+    // Transfer the original function's attributes.
+    auto FnAttrs = OrigF.getAttributes().getFnAttributes();
+    NewAttrs =
+        NewAttrs.addAttributes(Context, AttributeList::FunctionIndex, FnAttrs);
     break;
+  }
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce:
     // If we have a continuation prototype, just use its attributes,
@@ -903,6 +981,9 @@ void CoroCloner::create() {
 
   // Remove coro.end intrinsics.
   replaceCoroEnds();
+
+  // Salvage debug info that points into the coroutine frame.
+  salvageDebugInfo();
 
   // Eliminate coro.free from the clones, replacing it with 'null' in cleanup,
   // to suppress deallocation code.
@@ -1208,6 +1289,7 @@ static void handleNoSuspendCoroutine(coro::Shape &Shape) {
     } else {
       CoroBegin->replaceAllUsesWith(CoroBegin->getMem());
     }
+
     break;
   }
   case coro::ABI::Async:
@@ -1416,7 +1498,8 @@ static void replaceAsyncResumeFunction(CoroSuspendAsyncInst *Suspend,
   auto *Val = Builder.CreateBitOrPointerCast(Continuation, Int8PtrTy);
   ResumeIntrinsic->replaceAllUsesWith(Val);
   ResumeIntrinsic->eraseFromParent();
-  Suspend->setOperand(0, UndefValue::get(Int8PtrTy));
+  Suspend->setOperand(CoroSuspendAsyncInst::ResumeFunctionArg,
+                      UndefValue::get(Int8PtrTy));
 }
 
 /// Coerce the arguments in \p FnArgs according to \p FnTy in \p CallArgs.
@@ -1491,8 +1574,8 @@ static void splitAsyncCoroutine(Function &F, coro::Shape &Shape,
     auto *Suspend = cast<CoroSuspendAsyncInst>(Shape.CoroSuspends[Idx]);
 
     // Create the clone declaration.
-    auto *Continuation =
-        createCloneDeclaration(F, Shape, ".resume." + Twine(Idx), NextF);
+    auto *Continuation = createCloneDeclaration(
+        F, Shape, ".resume." + Twine(Idx), NextF, Suspend);
     Clones.push_back(Continuation);
 
     // Insert a branch to a new return block immediately before the suspend
@@ -1511,7 +1594,8 @@ static void splitAsyncCoroutine(Function &F, coro::Shape &Shape,
     // Insert the call to the tail call function and inline it.
     auto *Fn = Suspend->getMustTailCallFunction();
     SmallVector<Value *, 8> Args(Suspend->args());
-    auto FnArgs = ArrayRef<Value *>(Args).drop_front(3);
+    auto FnArgs = ArrayRef<Value *>(Args).drop_front(
+        CoroSuspendAsyncInst::MustTailCallFuncArg + 1);
     auto *TailCall =
         coro::createMustTailCall(Suspend->getDebugLoc(), Fn, FnArgs, Builder);
     Builder.CreateRetVoid();
@@ -1592,7 +1676,7 @@ static void splitRetconCoroutine(Function &F, coro::Shape &Shape,
 
     // Create the clone declaration.
     auto Continuation =
-      createCloneDeclaration(F, Shape, ".resume." + Twine(i), NextF);
+        createCloneDeclaration(F, Shape, ".resume." + Twine(i), NextF, nullptr);
     Clones.push_back(Continuation);
 
     // Insert a branch to the unified return block immediately before
@@ -1761,7 +1845,8 @@ static void updateCallGraphAfterCoroutineSplit(
     case coro::ABI::RetconOnce:
       // Each clone in the Async/Retcon lowering references of the other clones.
       // Let the LazyCallGraph know about all of them at once.
-      CG.addSplitRefRecursiveFunctions(N.getFunction(), Clones);
+      if (!Clones.empty())
+        CG.addSplitRefRecursiveFunctions(N.getFunction(), Clones);
       break;
     }
 

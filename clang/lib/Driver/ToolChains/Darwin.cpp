@@ -74,12 +74,12 @@ void darwin::setTripleTypeForMachOArchName(llvm::Triple &T, StringRef Str) {
   const llvm::Triple::ArchType Arch = getArchTypeForMachOArchName(Str);
   llvm::ARM::ArchKind ArchKind = llvm::ARM::parseArch(Str);
   T.setArch(Arch);
-
-  if (Str == "x86_64h" || Str == "arm64e")
+  if (Arch != llvm::Triple::UnknownArch)
     T.setArchName(Str);
-  else if (ArchKind == llvm::ARM::ArchKind::ARMV6M ||
-           ArchKind == llvm::ARM::ArchKind::ARMV7M ||
-           ArchKind == llvm::ARM::ArchKind::ARMV7EM) {
+
+  if (ArchKind == llvm::ARM::ArchKind::ARMV6M ||
+      ArchKind == llvm::ARM::ArchKind::ARMV7M ||
+      ArchKind == llvm::ARM::ArchKind::ARMV7EM) {
     T.setOS(llvm::Triple::UnknownOS);
     T.setObjectFormat(llvm::Triple::MachO);
   }
@@ -373,6 +373,18 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
       D.Diag(diag::err_drv_bitcode_unsupported_on_toolchain);
   }
 
+  // If GlobalISel is enabled, pass it through to LLVM.
+  if (Arg *A = Args.getLastArg(options::OPT_fglobal_isel,
+                               options::OPT_fno_global_isel)) {
+    if (A->getOption().matches(options::OPT_fglobal_isel)) {
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("-global-isel");
+      // Disable abort and fall back to SDAG silently.
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("-global-isel-abort=0");
+    }
+  }
+
   Args.AddLastArg(CmdArgs, options::OPT_prebind);
   Args.AddLastArg(CmdArgs, options::OPT_noprebind);
   Args.AddLastArg(CmdArgs, options::OPT_nofixprebinding);
@@ -417,7 +429,7 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
   Args.AddAllArgs(CmdArgs, options::OPT_sectalign);
   Args.AddAllArgs(CmdArgs, options::OPT_sectobjectsymbols);
   Args.AddAllArgs(CmdArgs, options::OPT_segcreate);
-  Args.AddLastArg(CmdArgs, options::OPT_whyload);
+  Args.AddLastArg(CmdArgs, options::OPT_why_load);
   Args.AddLastArg(CmdArgs, options::OPT_whatsloaded);
   Args.AddAllArgs(CmdArgs, options::OPT_dylinker__install__name);
   Args.AddLastArg(CmdArgs, options::OPT_dylinker);
@@ -1628,6 +1640,15 @@ getDeploymentTargetFromEnvironmentVariables(const Driver &TheDriver,
   return None;
 }
 
+/// Returns the SDK name without the optional prefix that ends with a '.' or an
+/// empty string otherwise.
+static StringRef dropSDKNamePrefix(StringRef SDKName) {
+  size_t PrefixPos = SDKName.find('.');
+  if (PrefixPos == StringRef::npos)
+    return "";
+  return SDKName.substr(PrefixPos + 1);
+}
+
 /// Tries to infer the deployment target from the SDK specified by -isysroot
 /// (or SDKROOT). Uses the version specified in the SDKSettings.json file if
 /// it's available.
@@ -1657,22 +1678,29 @@ inferDeploymentTargetFromSDK(DerivedArgList &Args,
   if (Version.empty())
     return None;
 
-  if (SDK.startswith("iPhoneOS") || SDK.startswith("iPhoneSimulator"))
-    return DarwinPlatform::createFromSDK(
-        Darwin::IPhoneOS, Version,
-        /*IsSimulator=*/SDK.startswith("iPhoneSimulator"));
-  else if (SDK.startswith("MacOSX"))
-    return DarwinPlatform::createFromSDK(Darwin::MacOS,
-                                         getSystemOrSDKMacOSVersion(Version));
-  else if (SDK.startswith("WatchOS") || SDK.startswith("WatchSimulator"))
-    return DarwinPlatform::createFromSDK(
-        Darwin::WatchOS, Version,
-        /*IsSimulator=*/SDK.startswith("WatchSimulator"));
-  else if (SDK.startswith("AppleTVOS") || SDK.startswith("AppleTVSimulator"))
-    return DarwinPlatform::createFromSDK(
-        Darwin::TvOS, Version,
-        /*IsSimulator=*/SDK.startswith("AppleTVSimulator"));
-  return None;
+  auto CreatePlatformFromSDKName =
+      [&](StringRef SDK) -> Optional<DarwinPlatform> {
+    if (SDK.startswith("iPhoneOS") || SDK.startswith("iPhoneSimulator"))
+      return DarwinPlatform::createFromSDK(
+          Darwin::IPhoneOS, Version,
+          /*IsSimulator=*/SDK.startswith("iPhoneSimulator"));
+    else if (SDK.startswith("MacOSX"))
+      return DarwinPlatform::createFromSDK(Darwin::MacOS,
+                                           getSystemOrSDKMacOSVersion(Version));
+    else if (SDK.startswith("WatchOS") || SDK.startswith("WatchSimulator"))
+      return DarwinPlatform::createFromSDK(
+          Darwin::WatchOS, Version,
+          /*IsSimulator=*/SDK.startswith("WatchSimulator"));
+    else if (SDK.startswith("AppleTVOS") || SDK.startswith("AppleTVSimulator"))
+      return DarwinPlatform::createFromSDK(
+          Darwin::TvOS, Version,
+          /*IsSimulator=*/SDK.startswith("AppleTVSimulator"));
+    return None;
+  };
+  if (auto Result = CreatePlatformFromSDKName(SDK))
+    return Result;
+  // The SDK can be an SDK variant with a name like `<prefix>.<platform>`.
+  return CreatePlatformFromSDKName(dropSDKNamePrefix(SDK));
 }
 
 std::string getOSVersion(llvm::Triple::OSType OS, const llvm::Triple &Triple,
@@ -1928,7 +1956,8 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
     if (SDK.size() > 0) {
       size_t StartVer = SDK.find_first_of("0123456789");
       StringRef SDKName = SDK.slice(0, StartVer);
-      if (!SDKName.startswith(getPlatformFamily()))
+      if (!SDKName.startswith(getPlatformFamily()) &&
+          !dropSDKNamePrefix(SDKName).startswith(getPlatformFamily()))
         getDriver().Diag(diag::warn_incompatible_sysroot)
             << SDKName << getPlatformFamily();
     }
@@ -2642,8 +2671,16 @@ void Darwin::addPlatformVersionArgs(const llvm::opt::ArgList &Args,
     VersionTuple SDKVersion = SDKInfo->getVersion().withoutBuild();
     CmdArgs.push_back(Args.MakeArgString(SDKVersion.getAsString()));
   } else {
-    // Use a blank SDK version if it's not present.
-    CmdArgs.push_back("0.0.0");
+    // Use an SDK version that's matching the deployment target if the SDK
+    // version is missing. This is preferred over an empty SDK version (0.0.0)
+    // as the system's runtime might expect the linked binary to contain a
+    // valid SDK version in order for the binary to work correctly. It's
+    // reasonable to use the deployment target version as a proxy for the
+    // SDK version because older SDKs don't guarantee support for deployment
+    // targets newer than the SDK versions, so that rules out using some
+    // predetermined older SDK version, which leaves the deployment target
+    // version as the only reasonable choice.
+    CmdArgs.push_back(Args.MakeArgString(TargetVersion.getAsString()));
   }
 }
 

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// \brief
+/// \file
 /// This file contains the declaration of the GlobalIFunc class, which
 /// represents a single indirect function in the IR. Indirect function uses
 /// ELF symbol type extension to mark that the address of a declaration should

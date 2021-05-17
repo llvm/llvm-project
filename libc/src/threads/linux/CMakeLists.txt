@@ -3,9 +3,9 @@ add_gen_header(
   DEF_FILE thread_start_args.h.def
   GEN_HDR thread_start_args.h
   PARAMS
-    thread_start_args=${LIBC_TARGET_MACHINE}/thread_start_args.h.in
+    thread_start_args=${LIBC_TARGET_ARCHITECTURE}/thread_start_args.h.in
   DATA_FILES
-    ${LIBC_TARGET_MACHINE}/thread_start_args.h.in
+    ${LIBC_TARGET_ARCHITECTURE}/thread_start_args.h.in
 )
 
 add_entrypoint_object(

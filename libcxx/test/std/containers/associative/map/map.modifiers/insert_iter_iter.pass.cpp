@@ -38,7 +38,7 @@ int main(int, char**)
             P(3, 2),
         };
         M m;
-        m.insert(input_iterator<P*>(ar), input_iterator<P*>(ar + sizeof(ar)/sizeof(ar[0])));
+        m.insert(cpp17_input_iterator<P*>(ar), cpp17_input_iterator<P*>(ar + sizeof(ar)/sizeof(ar[0])));
         assert(m.size() == 3);
         assert(m.begin()->first == 1);
         assert(m.begin()->second == 1);
@@ -64,7 +64,7 @@ int main(int, char**)
             P(3, 2),
         };
         M m;
-        m.insert(input_iterator<P*>(ar), input_iterator<P*>(ar + sizeof(ar)/sizeof(ar[0])));
+        m.insert(cpp17_input_iterator<P*>(ar), cpp17_input_iterator<P*>(ar + sizeof(ar)/sizeof(ar[0])));
         assert(m.size() == 3);
         assert(m.begin()->first == 1);
         assert(m.begin()->second == 1);

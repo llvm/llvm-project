@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: apple-clang-9, apple-clang-10, apple-clang-11, apple-clang-12.0.0
 
 // <compare>
 
@@ -51,45 +52,18 @@ void test_signatures() {
 #endif
 }
 
-constexpr bool test_conversion() {
-  static_assert(std::is_convertible<const std::strong_ordering&,
-      std::weak_equality>::value, "");
-  { // value == 0
-    auto V = std::strong_ordering::equivalent;
-    std::weak_equality WV = V;
-    assert(WV == 0);
-  }
-  std::strong_ordering WeakTestCases[] = {
-      std::strong_ordering::less,
-      std::strong_ordering::greater,
-  };
-  for (auto V : WeakTestCases)
-  { // value != 0
-    std::weak_equality WV = V;
-    assert(WV != 0);
-  }
-  static_assert(std::is_convertible<const std::strong_ordering&,
-      std::strong_equality>::value, "");
-  { // value == 0
-    auto V = std::strong_ordering::equivalent;
-    std::strong_equality WV = V;
-    assert(WV == 0);
-  }
-  { // value == 0
-    auto V = std::strong_ordering::equal;
-    std::strong_equality WV = V;
-    assert(WV == 0);
-  }
-  std::strong_ordering StrongTestCases[] = {
-      std::strong_ordering::less,
-      std::strong_ordering::greater,
-  };
-  for (auto V : StrongTestCases)
-  { // value != 0
-    std::strong_equality WV = V;
-    assert(WV != 0);
-  }
+constexpr void test_equality() {
+#ifndef TEST_HAS_NO_SPACESHIP_OPERATOR
+  auto& StrongEq = std::strong_ordering::equal;
+  auto& PartialEq = std::partial_ordering::equivalent;
+  assert(StrongEq == PartialEq);
 
+  auto& WeakEq = std::weak_ordering::equivalent;
+  assert(StrongEq == WeakEq);
+#endif
+}
+
+constexpr bool test_conversion() {
   static_assert(std::is_convertible<const std::strong_ordering&,
       std::partial_ordering>::value, "");
   { // value == 0
@@ -212,6 +186,8 @@ constexpr bool test_constexpr() {
     static_assert(std::strong_ordering::greater ==
                   std::strong_ordering::greater);
   }
+
+  test_equality();
 #endif
 
   return true;
@@ -220,6 +196,7 @@ constexpr bool test_constexpr() {
 int main(int, char**) {
   test_static_members();
   test_signatures();
+  test_equality();
   static_assert(test_conversion(), "conversion test failed");
   static_assert(test_constexpr(), "constexpr test failed");
 

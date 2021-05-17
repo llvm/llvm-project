@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %S/test_errors.sh %s %t %flang_fc1
 module m
   integer :: foo
   !Note: PGI, Intel, and GNU allow this; NAG and Sun do not

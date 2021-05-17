@@ -70,15 +70,24 @@ TEST_CASE(test_exist_not_found)
 TEST_CASE(test_is_character_file_fails)
 {
     scoped_test_env env;
+#ifdef _WIN32
+    // Windows doesn't support setting perms::none to trigger failures
+    // reading directories; test using a special inaccessible directory
+    // instead.
+    const path p = GetWindowsInaccessibleDir();
+    if (p.empty())
+        TEST_UNSUPPORTED();
+#else
     const path dir = env.create_dir("dir");
-    const path file = env.create_file("dir/file", 42);
+    const path p = env.create_file("dir/file", 42);
     permissions(dir, perms::none);
+#endif
 
     std::error_code ec;
-    TEST_CHECK(is_character_file(file, ec) == false);
+    TEST_CHECK(is_character_file(p, ec) == false);
     TEST_CHECK(ec);
 
-    TEST_CHECK_THROW(filesystem_error, is_character_file(file));
+    TEST_CHECK_THROW(filesystem_error, is_character_file(p));
 }
 
 TEST_SUITE_END()

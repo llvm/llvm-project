@@ -200,14 +200,14 @@ define void @test_guard_ule_12_step2(i32* nocapture %a, i64 %N) {
 ; CHECK-LABEL: 'test_guard_ule_12_step2'
 ; CHECK-NEXT:  Classifying expressions for: @test_guard_ule_12_step2
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
-; CHECK-NEXT:    --> {0,+,2}<nuw><nsw><%loop> U: [0,-9223372036854775808) S: [0,9223372036854775807) Exits: (2 * (%N /u 2))<nuw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,2}<nuw><nsw><%loop> U: [0,13) S: [0,13) Exits: (2 * (%N /u 2))<nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %a, i64 %iv
 ; CHECK-NEXT:    --> {%a,+,8}<nuw><%loop> U: full-set S: full-set Exits: ((8 * (%N /u 2)) + %a) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 2
-; CHECK-NEXT:    --> {2,+,2}<nuw><%loop> U: [2,-1) S: [-9223372036854775808,9223372036854775807) Exits: (2 + (2 * (%N /u 2))<nuw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {2,+,2}<nuw><nsw><%loop> U: [2,15) S: [2,15) Exits: (2 + (2 * (%N /u 2))<nuw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_ule_12_step2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%N /u 2)
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is 9223372036854775807
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 6
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%N /u 2)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -447,6 +447,342 @@ exit:
   ret void
 }
 
+define void @test_guard_ne_ult(i32* nocapture readonly %data, i64 %count) {
+; CHECK-LABEL: 'test_guard_ne_ult'
+; CHECK-NEXT:  Classifying expressions for: @test_guard_ne_ult
+; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %guardbb ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,4) S: [0,4) Exits: (-1 + %count) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %data, i64 %iv
+; CHECK-NEXT:    --> {%data,+,4}<nuw><%loop> U: full-set S: full-set Exits: (-4 + (4 * %count) + %data) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,5) S: [1,5) Exits: %count LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_guard_ne_ult
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %cmp.ne = icmp ne i64 %count, 0
+  br i1 %cmp.ne, label %guardbb, label %exit
+
+guardbb:
+  %cmp.ult = icmp ult i64 %count, 5
+  br i1 %cmp.ult, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %guardbb ]
+  %idx = getelementptr inbounds i32, i32* %data, i64 %iv
+  store i32 1, i32* %idx, align 4
+  %iv.next = add nuw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %count
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_guard_if_and_enter(i32* nocapture readonly %data, i64 %count) {
+; CHECK-LABEL: 'test_guard_if_and_enter'
+; CHECK-NEXT:  Classifying expressions for: @test_guard_if_and_enter
+; CHECK-NEXT:    %cmp.and = and i1 %cmp.ult, %cmp.ne
+; CHECK-NEXT:    --> %cmp.and U: full-set S: full-set
+; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,4) S: [0,4) Exits: (-1 + %count) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %data, i64 %iv
+; CHECK-NEXT:    --> {%data,+,4}<nuw><%loop> U: full-set S: full-set Exits: (-4 + (4 * %count) + %data) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,5) S: [1,5) Exits: %count LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_guard_if_and_enter
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %cmp.ult = icmp ult i64 %count, 5
+  %cmp.ne = icmp ne i64 %count, 0
+  %cmp.and = and i1 %cmp.ult, %cmp.ne
+  br i1 %cmp.and, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+  %idx = getelementptr inbounds i32, i32* %data, i64 %iv
+  store i32 1, i32* %idx, align 4
+  %iv.next = add nuw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %count
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_guard_if_and_skip(i32* nocapture readonly %data, i64 %count) {
+; CHECK-LABEL: 'test_guard_if_and_skip'
+; CHECK-NEXT:  Classifying expressions for: @test_guard_if_and_skip
+; CHECK-NEXT:    %cmp.and = and i1 %cmp.ult, %cmp.ne
+; CHECK-NEXT:    --> %cmp.and U: full-set S: full-set
+; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (-1 + %count) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %data, i64 %iv
+; CHECK-NEXT:    --> {%data,+,4}<%loop> U: full-set S: full-set Exits: (-4 + (4 * %count) + %data) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: %count LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_guard_if_and_skip
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %cmp.ult = icmp ult i64 %count, 5
+  %cmp.ne = icmp ne i64 %count, 0
+  %cmp.and = and i1 %cmp.ult, %cmp.ne
+  br i1 %cmp.and, label %exit, label %loop
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+  %idx = getelementptr inbounds i32, i32* %data, i64 %iv
+  store i32 1, i32* %idx, align 4
+  %iv.next = add nuw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %count
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_guard_if_and_and(i32* nocapture readonly %data, i64 %count, i1 %c) {
+; CHECK-LABEL: 'test_guard_if_and_and'
+; CHECK-NEXT:  Classifying expressions for: @test_guard_if_and_and
+; CHECK-NEXT:    %cmp.and1 = and i1 %c, %cmp.ne
+; CHECK-NEXT:    --> %cmp.and1 U: full-set S: full-set
+; CHECK-NEXT:    %cmp.and = and i1 %cmp.ult, %cmp.and1
+; CHECK-NEXT:    --> %cmp.and U: full-set S: full-set
+; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,4) S: [0,4) Exits: (-1 + %count) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %data, i64 %iv
+; CHECK-NEXT:    --> {%data,+,4}<nuw><%loop> U: full-set S: full-set Exits: (-4 + (4 * %count) + %data) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,5) S: [1,5) Exits: %count LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_guard_if_and_and
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %cmp.ult = icmp ult i64 %count, 5
+  %cmp.ne = icmp ne i64 %count, 0
+  %cmp.and1 = and i1 %c, %cmp.ne
+  %cmp.and = and i1 %cmp.ult, %cmp.and1
+  br i1 %cmp.and, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+  %idx = getelementptr inbounds i32, i32* %data, i64 %iv
+  store i32 1, i32* %idx, align 4
+  %iv.next = add nuw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %count
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_guard_if_and_or(i32* nocapture readonly %data, i64 %count, i1 %c) {
+; CHECK-LABEL: 'test_guard_if_and_or'
+; CHECK-NEXT:  Classifying expressions for: @test_guard_if_and_or
+; CHECK-NEXT:    %cmp.or = or i1 %c, %cmp.ne
+; CHECK-NEXT:    --> %cmp.or U: full-set S: full-set
+; CHECK-NEXT:    %cmp.and = and i1 %cmp.ult, %cmp.or
+; CHECK-NEXT:    --> %cmp.and U: full-set S: full-set
+; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (-1 + %count) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %data, i64 %iv
+; CHECK-NEXT:    --> {%data,+,4}<%loop> U: full-set S: full-set Exits: (-4 + (4 * %count) + %data) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: %count LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_guard_if_and_or
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %cmp.ult = icmp ult i64 %count, 5
+  %cmp.ne = icmp ne i64 %count, 0
+  %cmp.or = or i1 %c, %cmp.ne
+  %cmp.and = and i1 %cmp.ult, %cmp.or
+  br i1 %cmp.and, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+  %idx = getelementptr inbounds i32, i32* %data, i64 %iv
+  store i32 1, i32* %idx, align 4
+  %iv.next = add nuw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %count
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_guard_if_or_skip(i32* nocapture readonly %data, i64 %count) {
+; CHECK-LABEL: 'test_guard_if_or_skip'
+; CHECK-NEXT:  Classifying expressions for: @test_guard_if_or_skip
+; CHECK-NEXT:    %cmp.or = or i1 %cmp.uge, %cmp.eq
+; CHECK-NEXT:    --> %cmp.or U: full-set S: full-set
+; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,4) S: [0,4) Exits: (-1 + %count) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %data, i64 %iv
+; CHECK-NEXT:    --> {%data,+,4}<nuw><%loop> U: full-set S: full-set Exits: (-4 + (4 * %count) + %data) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,5) S: [1,5) Exits: %count LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_guard_if_or_skip
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %cmp.uge = icmp uge i64 %count, 5
+  %cmp.eq = icmp eq i64 %count, 0
+  %cmp.or = or i1 %cmp.uge, %cmp.eq
+  br i1 %cmp.or, label %exit, label %loop
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+  %idx = getelementptr inbounds i32, i32* %data, i64 %iv
+  store i32 1, i32* %idx, align 4
+  %iv.next = add nuw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %count
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_guard_if_or_enter(i32* nocapture readonly %data, i64 %count) {
+; CHECK-LABEL: 'test_guard_if_or_enter'
+; CHECK-NEXT:  Classifying expressions for: @test_guard_if_or_enter
+; CHECK-NEXT:    %cmp.or = or i1 %cmp.uge, %cmp.eq
+; CHECK-NEXT:    --> %cmp.or U: full-set S: full-set
+; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (-1 + %count) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %data, i64 %iv
+; CHECK-NEXT:    --> {%data,+,4}<%loop> U: full-set S: full-set Exits: (-4 + (4 * %count) + %data) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: %count LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_guard_if_or_enter
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %cmp.uge = icmp uge i64 %count, 5
+  %cmp.eq = icmp eq i64 %count, 0
+  %cmp.or = or i1 %cmp.uge, %cmp.eq
+  br i1 %cmp.or, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+  %idx = getelementptr inbounds i32, i32* %data, i64 %iv
+  store i32 1, i32* %idx, align 4
+  %iv.next = add nuw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %count
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_guard_if_or_or(i32* nocapture readonly %data, i64 %count, i1 %c) {
+; CHECK-LABEL: 'test_guard_if_or_or'
+; CHECK-NEXT:  Classifying expressions for: @test_guard_if_or_or
+; CHECK-NEXT:    %cmp.or1 = or i1 %c, %cmp.eq
+; CHECK-NEXT:    --> %cmp.or1 U: full-set S: full-set
+; CHECK-NEXT:    %cmp.or = or i1 %cmp.uge, %cmp.or1
+; CHECK-NEXT:    --> %cmp.or U: full-set S: full-set
+; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,4) S: [0,4) Exits: (-1 + %count) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %data, i64 %iv
+; CHECK-NEXT:    --> {%data,+,4}<nuw><%loop> U: full-set S: full-set Exits: (-4 + (4 * %count) + %data) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,5) S: [1,5) Exits: %count LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_guard_if_or_or
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %cmp.uge = icmp uge i64 %count, 5
+  %cmp.eq = icmp eq i64 %count, 0
+  %cmp.or1 = or i1 %c, %cmp.eq
+  %cmp.or = or i1 %cmp.uge, %cmp.or1
+  br i1 %cmp.or, label %exit, label %loop
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+  %idx = getelementptr inbounds i32, i32* %data, i64 %iv
+  store i32 1, i32* %idx, align 4
+  %iv.next = add nuw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %count
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_guard_if_or_and(i32* nocapture readonly %data, i64 %count, i1 %c) {
+; CHECK-LABEL: 'test_guard_if_or_and'
+; CHECK-NEXT:  Classifying expressions for: @test_guard_if_or_and
+; CHECK-NEXT:    %cmp.and = and i1 %c, %cmp.eq
+; CHECK-NEXT:    --> %cmp.and U: full-set S: full-set
+; CHECK-NEXT:    %cmp.or = or i1 %cmp.uge, %cmp.and
+; CHECK-NEXT:    --> %cmp.or U: full-set S: full-set
+; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (-1 + %count) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %data, i64 %iv
+; CHECK-NEXT:    --> {%data,+,4}<%loop> U: full-set S: full-set Exits: (-4 + (4 * %count) + %data) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: %count LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_guard_if_or_and
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %cmp.uge = icmp uge i64 %count, 5
+  %cmp.eq = icmp eq i64 %count, 0
+  %cmp.and = and i1 %c, %cmp.eq
+  %cmp.or = or i1 %cmp.uge, %cmp.and
+  br i1 %cmp.or, label %exit, label %loop
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+  %idx = getelementptr inbounds i32, i32* %data, i64 %iv
+  store i32 1, i32* %idx, align 4
+  %iv.next = add nuw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %count
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 ; Test case for PR47247. Both the guard condition and the assume limit the
 ; max backedge-taken count.
 
@@ -487,9 +823,9 @@ exit:
 ; Function Attrs: nounwind willreturn
 declare void @llvm.assume(i1 noundef)
 
-define void @guard_pessimizes_analysis(i1 %c, i32 %N) {
-; CHECK-LABEL: 'guard_pessimizes_analysis'
-; CHECK-NEXT:  Classifying expressions for: @guard_pessimizes_analysis
+define void @guard_pessimizes_analysis_step1(i1 %c, i32 %N) {
+; CHECK-LABEL: 'guard_pessimizes_analysis_step1'
+; CHECK-NEXT:  Classifying expressions for: @guard_pessimizes_analysis_step1
 ; CHECK-NEXT:    %init = phi i32 [ 2, %entry ], [ 3, %bb1 ]
 ; CHECK-NEXT:    --> %init U: [2,4) S: [2,4)
 ; CHECK-NEXT:    %iv = phi i32 [ %iv.next, %loop ], [ %init, %loop.ph ]
@@ -527,21 +863,58 @@ exit:
   ret void
 }
 
+define void @guard_pessimizes_analysis_step2(i1 %c, i32 %N) {
+; CHECK-LABEL: guard_pessimizes_analysis_step2
+; CHECK-NEXT: Classifying expressions for: @guard_pessimizes_analysis_step2
+; CHECK-NEXT:   %init = phi i32 [ 2, %entry ], [ 3, %bb1 ]
+; CHECK-NEXT:   -->  %init U: [2,4) S: [2,4)
+; CHECK-NEXT:   %iv = phi i32 [ %iv.next, %loop ], [ %init, %loop.ph ]
+; CHECK-NEXT:   -->  {%init,+,2}<nuw><nsw><%loop> U: [2,10) S: [2,10)		Exits: ((2 * ((8 + (-1 * %init)<nsw>)<nsw> /u 2))<nuw><nsw> + %init) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:   %iv.next = add nuw nsw i32 %iv, 2
+ ; CHECK-NEXT:  -->  {(2 + %init)<nuw><nsw>,+,2}<nuw><nsw><%loop> U: [4,12) S: [4,12)		Exits: (2 + (2 * ((8 + (-1 * %init)<nsw>)<nsw> /u 2))<nuw><nsw> + %init)		LoopDispositions: { %loop: Computable }
+; CHECK-NEXT: Determining loop execution counts for: @guard_pessimizes_analysis_step2
+; CHECK-NEXT: Loop %loop: backedge-taken count is ((8 + (-1 * %init)<nsw>)<nsw> /u 2)
+; CHECK-NEXT: Loop %loop: max backedge-taken count is 3
+; CHECK-NEXT: Loop %loop: Predicated backedge-taken count is ((8 + (-1 * %init)<nsw>)<nsw> /u 2)
+; CHECK:      Loop %loop: Trip multiple is 1
+entry:
+  br i1 %c, label %bb1, label %guard
+
+bb1:
+  br label %guard
+
+guard:
+  %init = phi i32 [ 2, %entry ], [ 3, %bb1 ]
+  %c.1 = icmp ult i32 %init, %N
+  br i1 %c.1, label %loop.ph, label %exit
+
+loop.ph:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %iv.next, %loop ], [ %init, %loop.ph ]
+  %iv.next = add nuw nsw i32 %iv, 2
+  %exitcond = icmp eq i32 %iv.next, 10
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
 define void @crash(i8* %ptr) {
 ; CHECK-LABEL: 'crash'
 ; CHECK-NEXT:  Classifying expressions for: @crash
 ; CHECK-NEXT:    %text.addr.5 = phi i8* [ %incdec.ptr112, %while.cond111 ], [ null, %while.body ]
-; CHECK-NEXT:    --> {0,+,-1}<nw><%while.cond111> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %while.cond111: Computable, %while.body: Variant }
+; CHECK-NEXT:    --> {null,+,-1}<nw><%while.cond111> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %while.cond111: Computable, %while.body: Variant }
 ; CHECK-NEXT:    %incdec.ptr112 = getelementptr inbounds i8, i8* %text.addr.5, i64 -1
-; CHECK-NEXT:    --> {-1,+,-1}<nw><%while.cond111> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %while.cond111: Computable, %while.body: Variant }
+; CHECK-NEXT:    --> {(-1 + null)<nuw><nsw>,+,-1}<nw><%while.cond111> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %while.cond111: Computable, %while.body: Variant }
 ; CHECK-NEXT:    %lastout.2271 = phi i8* [ %incdec.ptr126, %while.body125 ], [ %ptr, %while.end117 ]
-; CHECK-NEXT:    --> {%ptr,+,1}<nuw><%while.body125> U: full-set S: full-set Exits: {-2,+,-1}<nw><%while.cond111> LoopDispositions: { %while.body125: Computable }
+; CHECK-NEXT:    --> {%ptr,+,1}<nuw><%while.body125> U: full-set S: full-set Exits: {(-2 + null)<nuw><nsw>,+,-1}<nw><%while.cond111> LoopDispositions: { %while.body125: Computable }
 ; CHECK-NEXT:    %incdec.ptr126 = getelementptr inbounds i8, i8* %lastout.2271, i64 1
-; CHECK-NEXT:    --> {(1 + %ptr)<nuw>,+,1}<nuw><%while.body125> U: [1,0) S: [1,0) Exits: {-1,+,-1}<nw><%while.cond111> LoopDispositions: { %while.body125: Computable }
+; CHECK-NEXT:    --> {(1 + %ptr)<nuw>,+,1}<nuw><%while.body125> U: [1,0) S: [1,0) Exits: {(-1 + null)<nuw><nsw>,+,-1}<nw><%while.cond111> LoopDispositions: { %while.body125: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @crash
-; CHECK-NEXT:  Loop %while.body125: backedge-taken count is {(-2 + (-1 * %ptr)),+,-1}<nw><%while.cond111>
-; CHECK-NEXT:  Loop %while.body125: max backedge-taken count is -1
-; CHECK-NEXT:  Loop %while.body125: Predicated backedge-taken count is {(-2 + (-1 * %ptr)),+,-1}<nw><%while.cond111>
+; CHECK-NEXT:  Loop %while.body125: backedge-taken count is {(-2 + (-1 * %ptr) + null),+,-1}<nw><%while.cond111>
+; CHECK-NEXT:  Loop %while.body125: max backedge-taken count is -2
+; CHECK-NEXT:  Loop %while.body125: Predicated backedge-taken count is {(-2 + (-1 * %ptr) + null),+,-1}<nw><%while.cond111>
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %while.body125: Trip multiple is 1
 ; CHECK-NEXT:  Loop %while.cond111: Unpredictable backedge-taken count.
@@ -577,5 +950,157 @@ while.body125:
   br i1 %exitcond.not, label %while.end129, label %while.body125
 
 while.end129:                                     ; preds = %while.body125
+  ret void
+}
+
+define void @test_guard_uge(i32 %blockSize) {
+; CHECK-LABEL: 'test_guard_uge'
+; CHECK-NEXT:  Classifying expressions for: @test_guard_uge
+; CHECK-NEXT:    %shr = lshr i32 %blockSize, 2
+; CHECK-NEXT:    --> (%blockSize /u 4) U: [0,1073741824) S: [0,1073741824)
+; CHECK-NEXT:    %iv = phi i32 [ %dec, %while.body ], [ %shr, %while.body.preheader ]
+; CHECK-NEXT:    --> {(%blockSize /u 4),+,-1}<%while.body> U: [-1073741822,1073741824) S: [-1073741822,1073741824) Exits: 1 LoopDispositions: { %while.body: Computable }
+; CHECK-NEXT:    %dec = add i32 %iv, -1
+; CHECK-NEXT:    --> {(-1 + (%blockSize /u 4))<nsw>,+,-1}<%while.body> U: [-1073741823,1073741823) S: [-1073741823,1073741823) Exits: 0 LoopDispositions: { %while.body: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_guard_uge
+; CHECK-NEXT:  Loop %while.body: backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
+; CHECK-NEXT:  Loop %while.body: max backedge-taken count is 1073741822
+; CHECK-NEXT:  Loop %while.body: Predicated backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %while.body: Trip multiple is 1
+;
+  %shr = lshr i32 %blockSize, 2
+  %guard = icmp uge i32 %blockSize, 4
+  br i1 %guard, label %while.body.preheader, label %while.end
+
+while.body.preheader:
+  br label %while.body
+
+while.body:
+  %iv = phi i32 [ %dec, %while.body ], [ %shr, %while.body.preheader ]
+  %dec = add i32 %iv, -1
+  %cmp.not = icmp eq i32 %dec, 0
+  br i1 %cmp.not, label %while.end.loopexit, label %while.body
+
+while.end.loopexit:
+  br label %while.end
+
+while.end:
+  ret void
+}
+
+define void @test_guard_ugt(i32 %blockSize) {
+; CHECK-LABEL: 'test_guard_ugt'
+; CHECK-NEXT:  Classifying expressions for: @test_guard_ugt
+; CHECK-NEXT:    %shr = lshr i32 %blockSize, 2
+; CHECK-NEXT:    --> (%blockSize /u 4) U: [0,1073741824) S: [0,1073741824)
+; CHECK-NEXT:    %iv = phi i32 [ %dec, %while.body ], [ %shr, %while.body.preheader ]
+; CHECK-NEXT:    --> {(%blockSize /u 4),+,-1}<%while.body> U: [-1073741822,1073741824) S: [-1073741822,1073741824) Exits: 1 LoopDispositions: { %while.body: Computable }
+; CHECK-NEXT:    %dec = add i32 %iv, -1
+; CHECK-NEXT:    --> {(-1 + (%blockSize /u 4))<nsw>,+,-1}<%while.body> U: [-1073741823,1073741823) S: [-1073741823,1073741823) Exits: 0 LoopDispositions: { %while.body: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_guard_ugt
+; CHECK-NEXT:  Loop %while.body: backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
+; CHECK-NEXT:  Loop %while.body: max backedge-taken count is 1073741822
+; CHECK-NEXT:  Loop %while.body: Predicated backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %while.body: Trip multiple is 1
+;
+  %shr = lshr i32 %blockSize, 2
+  %guard = icmp ugt i32 %blockSize, 3
+  br i1 %guard, label %while.body.preheader, label %while.end
+
+while.body.preheader:
+  br label %while.body
+
+while.body:
+  %iv = phi i32 [ %dec, %while.body ], [ %shr, %while.body.preheader ]
+  %dec = add i32 %iv, -1
+  %cmp.not = icmp eq i32 %dec, 0
+  br i1 %cmp.not, label %while.end.loopexit, label %while.body
+
+while.end.loopexit:
+  br label %while.end
+
+while.end:
+  ret void
+}
+
+define void @test_guard_uge_and_ule(i32 %blockSize) {
+; CHECK-LABEL: 'test_guard_uge_and_ule'
+; CHECK-NEXT:  Classifying expressions for: @test_guard_uge_and_ule
+; CHECK-NEXT:    %shr = lshr i32 %blockSize, 2
+; CHECK-NEXT:    --> (%blockSize /u 4) U: [0,1073741824) S: [0,1073741824)
+; CHECK-NEXT:    %iv = phi i32 [ %dec, %while.body ], [ %shr, %while.body.preheader ]
+; CHECK-NEXT:    --> {(%blockSize /u 4),+,-1}<%while.body> U: [-255,1073741824) S: [-255,1073741824) Exits: 1 LoopDispositions: { %while.body: Computable }
+; CHECK-NEXT:    %dec = add i32 %iv, -1
+; CHECK-NEXT:    --> {(-1 + (%blockSize /u 4))<nsw>,+,-1}<%while.body> U: [-256,1073741823) S: [-256,1073741823) Exits: 0 LoopDispositions: { %while.body: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_guard_uge_and_ule
+; CHECK-NEXT:  Loop %while.body: backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
+; CHECK-NEXT:  Loop %while.body: max backedge-taken count is 255
+; CHECK-NEXT:  Loop %while.body: Predicated backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %while.body: Trip multiple is 1
+;
+  %shr = lshr i32 %blockSize, 2
+  %guard1 = icmp uge i32 %blockSize, 4
+  br i1 %guard1, label %while.guard, label %while.end
+
+while.guard:
+  %guard2 = icmp ule i32 %blockSize, 1024
+  br i1 %guard2, label %while.body.preheader, label %while.end
+
+while.body.preheader:
+  br label %while.body
+
+while.body:
+  %iv = phi i32 [ %dec, %while.body ], [ %shr, %while.body.preheader ]
+  %dec = add i32 %iv, -1
+  %cmp.not = icmp eq i32 %dec, 0
+  br i1 %cmp.not, label %while.end.loopexit, label %while.body
+
+while.end.loopexit:
+  br label %while.end
+
+while.end:
+  ret void
+}
+
+define void @test_guard_ugt_and_ult(i32 %blockSize) {
+; CHECK-LABEL: 'test_guard_ugt_and_ult'
+; CHECK-NEXT:  Classifying expressions for: @test_guard_ugt_and_ult
+; CHECK-NEXT:    %shr = lshr i32 %blockSize, 2
+; CHECK-NEXT:    --> (%blockSize /u 4) U: [0,1073741824) S: [0,1073741824)
+; CHECK-NEXT:    %iv = phi i32 [ %dec, %while.body ], [ %shr, %while.body.preheader ]
+; CHECK-NEXT:    --> {(%blockSize /u 4),+,-1}<%while.body> U: [-255,1073741824) S: [-255,1073741824) Exits: 1 LoopDispositions: { %while.body: Computable }
+; CHECK-NEXT:    %dec = add i32 %iv, -1
+; CHECK-NEXT:    --> {(-1 + (%blockSize /u 4))<nsw>,+,-1}<%while.body> U: [-256,1073741823) S: [-256,1073741823) Exits: 0 LoopDispositions: { %while.body: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_guard_ugt_and_ult
+; CHECK-NEXT:  Loop %while.body: backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
+; CHECK-NEXT:  Loop %while.body: max backedge-taken count is 255
+; CHECK-NEXT:  Loop %while.body: Predicated backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %while.body: Trip multiple is 1
+;
+  %shr = lshr i32 %blockSize, 2
+  %guard1 = icmp ugt i32 %blockSize, 3
+  br i1 %guard1, label %while.guard, label %while.end
+
+while.guard:
+  %guard2 = icmp ult i32 %blockSize, 1025
+  br i1 %guard2, label %while.body.preheader, label %while.end
+
+while.body.preheader:
+  br label %while.body
+
+while.body:
+  %iv = phi i32 [ %dec, %while.body ], [ %shr, %while.body.preheader ]
+  %dec = add i32 %iv, -1
+  %cmp.not = icmp eq i32 %dec, 0
+  br i1 %cmp.not, label %while.end.loopexit, label %while.body
+
+while.end.loopexit:
+  br label %while.end
+
+while.end:
   ret void
 }

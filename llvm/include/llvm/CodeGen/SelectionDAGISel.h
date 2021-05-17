@@ -149,6 +149,7 @@ public:
     OPC_CheckFoldableChainNode,
 
     OPC_EmitInteger,
+    OPC_EmitStringInteger,
     OPC_EmitRegister,
     OPC_EmitRegister2,
     OPC_EmitConvertToTarget,

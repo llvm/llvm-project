@@ -156,9 +156,9 @@ define void @caller_s128(i128 *%ptr) {
   ; CHECK:   [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY]](p0) :: (load 16 from %ir.ptr)
   ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK:   [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[LOAD]](s128)
-  ; CHECK:   [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[LOAD]](s128)
   ; CHECK:   $x0 = COPY [[UV]](s64)
   ; CHECK:   $x1 = COPY [[UV1]](s64)
+  ; CHECK:   [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[LOAD]](s128)
   ; CHECK:   $x2 = COPY [[UV2]](s64)
   ; CHECK:   $x3 = COPY [[UV3]](s64)
   ; CHECK:   $x4 = COPY [[COPY]](p0)
@@ -224,3 +224,63 @@ entry:
   ret i32 %conv
 }
 
+define void @arg_v2i64(<2 x i64> %arg) {
+  ; CHECK-LABEL: name: arg_v2i64
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $q0
+  ; CHECK:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+  ; CHECK:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
+  ; CHECK:   G_STORE [[COPY]](<2 x s64>), [[DEF]](p0) :: (store 16 into `<2 x i64>* undef`)
+  ; CHECK:   RET_ReallyLR
+  store <2 x i64> %arg, <2 x i64>* undef
+  ret void
+}
+
+define void @arg_v8i64(<8 x i64> %arg) {
+  ; CHECK-LABEL: name: arg_v8i64
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $q0, $q1, $q2, $q3
+  ; CHECK:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
+  ; CHECK:   [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $q2
+  ; CHECK:   [[COPY3:%[0-9]+]]:_(<2 x s64>) = COPY $q3
+  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s64>) = G_CONCAT_VECTORS [[COPY]](<2 x s64>), [[COPY1]](<2 x s64>), [[COPY2]](<2 x s64>), [[COPY3]](<2 x s64>)
+  ; CHECK:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
+  ; CHECK:   G_STORE [[CONCAT_VECTORS]](<8 x s64>), [[DEF]](p0) :: (store 64 into `<8 x i64>* undef`)
+  ; CHECK:   RET_ReallyLR
+  store <8 x i64> %arg, <8 x i64>* undef
+  ret void
+}
+
+define void @arg_v4f32(<4 x float> %arg) {
+  ; CHECK-LABEL: name: arg_v4f32
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $q0
+  ; CHECK:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+  ; CHECK:   [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY]](<2 x s64>)
+  ; CHECK:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
+  ; CHECK:   G_STORE [[BITCAST]](<4 x s32>), [[DEF]](p0) :: (store 16 into `<4 x float>* undef`)
+  ; CHECK:   RET_ReallyLR
+  store <4 x float> %arg, <4 x float>* undef
+  ret void
+}
+
+define void @ret_arg_v16f32(<16 x float> %arg) {
+  ; CHECK-LABEL: name: ret_arg_v16f32
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $q0, $q1, $q2, $q3
+  ; CHECK:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
+  ; CHECK:   [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $q2
+  ; CHECK:   [[COPY3:%[0-9]+]]:_(<2 x s64>) = COPY $q3
+  ; CHECK:   [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY]](<2 x s64>)
+  ; CHECK:   [[BITCAST1:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY1]](<2 x s64>)
+  ; CHECK:   [[BITCAST2:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY2]](<2 x s64>)
+  ; CHECK:   [[BITCAST3:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY3]](<2 x s64>)
+  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<16 x s32>) = G_CONCAT_VECTORS [[BITCAST]](<4 x s32>), [[BITCAST1]](<4 x s32>), [[BITCAST2]](<4 x s32>), [[BITCAST3]](<4 x s32>)
+  ; CHECK:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
+  ; CHECK:   G_STORE [[CONCAT_VECTORS]](<16 x s32>), [[DEF]](p0) :: (store 64 into `<16 x float>* undef`)
+  ; CHECK:   RET_ReallyLR
+  store <16 x float> %arg, <16 x float>* undef
+  ret void
+}

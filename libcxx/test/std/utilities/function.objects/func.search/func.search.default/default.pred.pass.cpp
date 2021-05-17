@@ -53,8 +53,8 @@ void do_search(Iter1 b1, Iter1 e1, Iter2 b2, Iter2 e2, Iter1 result) {
     int count = 0;
     std::default_searcher<Iter2, count_equal> s{b2, e2, count_equal{&count}};
     assert(result == std::search(b1, e1, s));
-    int d1 = std::distance(b1, e1);
-    int d2 = std::distance(b2, e2);
+    auto d1 = std::distance(b1, e1);
+    auto d2 = std::distance(b2, e2);
     assert((count >= 1) || (d2 == 0) || (d1 < d2));
     assert((d1 < d2) || count <= d1 * (d1 - d2 + 1));
 }

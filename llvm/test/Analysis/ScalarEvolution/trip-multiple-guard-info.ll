@@ -9,7 +9,7 @@ define void @test_trip_multiple_4(i32 %num) {
 ; CHECK:       Loop %for.body: backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:  Loop %for.body: max backedge-taken count is -2
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
-; CHECK:       Loop %for.body: Trip multiple is 1
+; CHECK:       Loop %for.body: Trip multiple is 4
 ;
 entry:
   %u = urem i32 %num, 4
@@ -49,6 +49,28 @@ for.body:
   %inc = add nuw nsw i32 %i.010, 1
   %cmp2 = icmp ult i32 %inc, %num
   br i1 %cmp2, label %for.body, label %exit
+
+exit:
+  ret void
+}
+
+define void @test_trunc_operand_larger_than_urem_expr(i64 %N) {
+; CHECK-LABEL: @test_trunc_operand_larger_than_urem_expr
+; CHECK:       Loop %for.body: backedge-taken count is (-1 + %N)
+; CHECK-NEXT:  Loop %for.body: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %N)
+;
+entry:
+  %conv = trunc i64 %N to i32
+  %and = and i32 %conv, 1
+  %cmp.pre = icmp eq i32 %and, 0
+  br i1 %cmp.pre, label %for.body, label %exit
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %cmp.1 = icmp ne i64 %iv.next, %N
+  br i1 %cmp.1, label %for.body, label %exit
 
 exit:
   ret void

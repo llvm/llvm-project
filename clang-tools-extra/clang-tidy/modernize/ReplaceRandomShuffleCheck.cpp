@@ -71,15 +71,14 @@ void ReplaceRandomShuffleCheck::check(const MatchFinder::MatchResult &Result) {
           MatchedArgumentThree->getSourceRange(),
           "std::mt19937(std::random_device()())");
       return DiagL;
-    } else {
-      auto DiagL = diag(MatchedCallExpr->getBeginLoc(),
-                        "'std::random_shuffle' has been removed in C++17; use "
-                        "'std::shuffle' instead");
-      DiagL << FixItHint::CreateInsertion(
-          MatchedCallExpr->getRParenLoc(),
-          ", std::mt19937(std::random_device()())");
-      return DiagL;
     }
+    auto DiagL = diag(MatchedCallExpr->getBeginLoc(),
+                      "'std::random_shuffle' has been removed in C++17; use "
+                      "'std::shuffle' instead");
+    DiagL << FixItHint::CreateInsertion(
+        MatchedCallExpr->getRParenLoc(),
+        ", std::mt19937(std::random_device()())");
+    return DiagL;
   }();
 
   std::string NewName = "shuffle";

@@ -2725,6 +2725,8 @@ a specified dimension on a given domain can be created using
 	__isl_give isl_aff *isl_aff_var_on_domain(
 		__isl_take isl_local_space *ls,
 		enum isl_dim_type type, unsigned pos);
+	__isl_give isl_aff *isl_aff_nan_on_domain_space(
+		__isl_take isl_space *space);
 	__isl_give isl_aff *isl_aff_nan_on_domain(
 		__isl_take isl_local_space *ls);
 
@@ -3417,10 +3419,15 @@ then create a piecewise expression over a universe domain.
 	__isl_give isl_pw_aff *isl_pw_aff_var_on_domain(
 		__isl_take isl_local_space *ls,
 		enum isl_dim_type type, unsigned pos);
+	__isl_give isl_pw_aff *isl_pw_aff_nan_on_domain_space(
+		__isl_take isl_space *space);
 	__isl_give isl_pw_aff *isl_pw_aff_nan_on_domain(
 		__isl_take isl_local_space *ls);
 	__isl_give isl_pw_multi_aff *isl_pw_multi_aff_zero(
 		__isl_take isl_space *space);
+	__isl_give isl_pw_multi_aff *
+	isl_pw_multi_aff_identity_on_domain_space(
+		__isl_take isl_space *space)
 	__isl_give isl_pw_multi_aff *isl_pw_multi_aff_identity(
 		__isl_take isl_space *space);
 	__isl_give isl_pw_multi_aff *isl_pw_multi_aff_domain_map(
@@ -4017,6 +4024,10 @@ Objects can be read from input using the following functions.
 	#include <isl/polynomial.h>
 	__isl_give isl_union_pw_qpolynomial *
 	isl_union_pw_qpolynomial_read_from_str(
+		isl_ctx *ctx, const char *str);
+
+	__isl_give isl_pw_qpolynomial_fold *
+	isl_pw_qpolynomial_fold_read_from_str(
 		isl_ctx *ctx, const char *str);
 
 For sets and relations,
@@ -5595,12 +5606,6 @@ dimension has the fixed given value.
 		__isl_take isl_map *map,
 		enum isl_dim_type type, unsigned pos,
 		__isl_take isl_val *value);
-	__isl_give isl_map *isl_map_lower_bound_multi_val(
-		__isl_take isl_map *map,
-		__isl_take isl_multi_val *lower);
-	__isl_give isl_map *isl_map_upper_bound_multi_val(
-		__isl_take isl_map *map,
-		__isl_take isl_multi_val *upper);
 	__isl_give isl_map *isl_map_lower_bound_multi_pw_aff(
 		__isl_take isl_map *map,
 		__isl_take isl_multi_pw_aff *lower);
@@ -5614,6 +5619,9 @@ symbolic constant expression.
 For functions taking a multi expression,
 this applies to all set dimensions.
 Those that bound a map, bound the range of that map.
+If the multi expression is zero-dimensional but has an explicit domain,
+then the (parameter) domain of the set or map is intersected
+with this explicit domain.
 
 	__isl_give isl_set *isl_set_equate(__isl_take isl_set *set,
 		enum isl_dim_type type1, int pos1,
@@ -5774,6 +5782,16 @@ between image elements and corresponding domain elements in the input.
 
 The functions above construct a (basic, regular or union) relation
 that maps (a wrapped version of) the input relation to its delta set.
+
+=item * Translation
+
+	#include <isl/map.h>
+	__isl_give isl_map *isl_set_translation(
+		__isl_take isl_set *deltas);
+
+This function performs essentially the opposite operation
+of C<isl_map_deltas>.  In particular, it returns pairs
+of elements in the same space that have a difference in C<deltas>.
 
 =item * Coalescing
 
@@ -6959,6 +6977,10 @@ the same (number of) parameters.
 		__isl_take isl_map *map1,
 		__isl_take isl_map *map2);
 	__isl_give isl_map *
+	isl_map_intersect_domain_factor_domain(
+		__isl_take isl_map *map,
+		__isl_take isl_map *factor);
+	__isl_give isl_map *
 	isl_map_intersect_domain_factor_range(
 		__isl_take isl_map *map,
 		__isl_take isl_map *factor);
@@ -7008,6 +7030,10 @@ the same (number of) parameters.
 	__isl_give isl_union_map *isl_union_map_intersect(
 		__isl_take isl_union_map *umap1,
 		__isl_take isl_union_map *umap2);
+	__isl_give isl_union_map *
+	isl_union_map_intersect_domain_factor_domain(
+		__isl_take isl_union_map *umap,
+		__isl_take isl_union_map *factor);
 	__isl_give isl_union_map *
 	isl_union_map_intersect_domain_factor_range(
 		__isl_take isl_union_map *umap,
@@ -7539,9 +7565,19 @@ piecewise quasipolynomial reduction.
 		__isl_take isl_union_map *umap,
 		__isl_take isl_union_pw_multi_aff *upma);
 
+	#include <isl/aff.h>
+	__isl_give isl_pw_multi_aff *
+	isl_pw_multi_aff_preimage_domain_wrapped_domain_pw_multi_aff(
+		__isl_take isl_pw_multi_aff *pma1,
+		__isl_take isl_pw_multi_aff *pma2);
+	__isl_give isl_union_pw_multi_aff *
+	isl_union_pw_multi_aff_preimage_domain_wrapped_domain_union_pw_multi_aff(
+		__isl_take isl_union_pw_multi_aff *upma1,
+		__isl_take isl_union_pw_multi_aff *upma2);
+
 These functions compute the preimage of the given set or map domain/range under
 the given function.  In other words, the expression is plugged
-into the set description or into the domain/range of the map.
+into the set description or into the domain/range of the map or function.
 
 =item * Pullback
 
@@ -7765,12 +7801,20 @@ where the function values satisfy the given relation.
 		__isl_take isl_union_map *umap,
 		__isl_take isl_multi_union_pw_aff *mupa);
 	__isl_give isl_union_map *
+	isl_union_map_lex_le_at_multi_union_pw_aff(
+		__isl_take isl_union_map *umap,
+		__isl_take isl_multi_union_pw_aff *mupa);
+	__isl_give isl_union_map *
 	isl_union_map_lex_gt_at_multi_union_pw_aff(
+		__isl_take isl_union_map *umap,
+		__isl_take isl_multi_union_pw_aff *mupa);
+	__isl_give isl_union_map *
+	isl_union_map_lex_ge_at_multi_union_pw_aff(
 		__isl_take isl_union_map *umap,
 		__isl_take isl_multi_union_pw_aff *mupa);
 
 These functions select the subset of elements in the union map
-that have an equal or lexicographically smaller function value.
+that have an equal or lexicographically smaller or greater function value.
 
 =item * Cartesian Product
 
@@ -8886,7 +8930,7 @@ Lists are defined over several element types, including
 C<isl_val>, C<isl_id>, C<isl_aff>, C<isl_pw_aff>, C<isl_pw_multi_aff>,
 C<isl_union_pw_aff>,
 C<isl_union_pw_multi_aff>,
-C<isl_pw_qpolynomial>, C<isl_pw_qpolynomial_fold>,
+C<isl_qpolynomial>, C<isl_pw_qpolynomial>, C<isl_pw_qpolynomial_fold>,
 C<isl_constraint>,
 C<isl_basic_set>, C<isl_set>, C<isl_basic_map>, C<isl_map>, C<isl_union_set>,
 C<isl_union_map>, C<isl_ast_expr> and C<isl_ast_node>.

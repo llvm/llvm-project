@@ -8,7 +8,7 @@ tablegen("ACC") {
 
 tablegen("ACCcpp") {
   visibility = [ ":acc_gen" ]
-  args = [ "-gen-directive-gen" ]
+  args = [ "-gen-directive-impl" ]
   output_name = "ACC.inc"
   td_file = "ACC.td"
 }

@@ -25,7 +25,9 @@ class Instruction;
 class LoadInst;
 class Loop;
 class MDNode;
+class MemoryLocation;
 class ScalarEvolution;
+class TargetLibraryInfo;
 
 /// Return true if this is always a dereferenceable pointer. If the context
 /// instruction is specified perform context-sensitive analysis and return true
@@ -33,7 +35,8 @@ class ScalarEvolution;
 bool isDereferenceablePointer(const Value *V, Type *Ty,
                               const DataLayout &DL,
                               const Instruction *CtxI = nullptr,
-                              const DominatorTree *DT = nullptr);
+                              const DominatorTree *DT = nullptr,
+                              const TargetLibraryInfo *TLI = nullptr);
 
 /// Returns true if V is always a dereferenceable pointer with alignment
 /// greater or equal than requested. If the context instruction is specified
@@ -43,7 +46,8 @@ bool isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
                                         MaybeAlign Alignment,
                                         const DataLayout &DL,
                                         const Instruction *CtxI = nullptr,
-                                        const DominatorTree *DT = nullptr);
+                                        const DominatorTree *DT = nullptr,
+                                        const TargetLibraryInfo *TLI = nullptr);
 
 /// Returns true if V is always dereferenceable for Size byte with alignment
 /// greater or equal than requested. If the context instruction is specified
@@ -52,7 +56,8 @@ bool isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
 bool isDereferenceableAndAlignedPointer(const Value *V, Align Alignment,
                                         const APInt &Size, const DataLayout &DL,
                                         const Instruction *CtxI = nullptr,
-                                        const DominatorTree *DT = nullptr);
+                                        const DominatorTree *DT = nullptr,
+                                        const TargetLibraryInfo *TLI = nullptr);
 
 /// Return true if we know that executing a load from this value cannot trap.
 ///
@@ -65,7 +70,8 @@ bool isDereferenceableAndAlignedPointer(const Value *V, Align Alignment,
 bool isSafeToLoadUnconditionally(Value *V, Align Alignment, APInt &Size,
                                  const DataLayout &DL,
                                  Instruction *ScanFrom = nullptr,
-                                 const DominatorTree *DT = nullptr);
+                                 const DominatorTree *DT = nullptr,
+                                 const TargetLibraryInfo *TLI = nullptr);
 
 /// Return true if we can prove that the given load (which is assumed to be
 /// within the specified loop) would access only dereferenceable memory, and
@@ -89,7 +95,8 @@ bool isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
 bool isSafeToLoadUnconditionally(Value *V, Type *Ty, Align Alignment,
                                  const DataLayout &DL,
                                  Instruction *ScanFrom = nullptr,
-                                 const DominatorTree *DT = nullptr);
+                                 const DominatorTree *DT = nullptr,
+                                 const TargetLibraryInfo *TLI = nullptr);
 
 /// The default number of maximum instructions to scan in the block, used by
 /// FindAvailableLoadedValue().
@@ -127,6 +134,13 @@ Value *FindAvailableLoadedValue(LoadInst *Load,
                                 bool *IsLoadCSE = nullptr,
                                 unsigned *NumScanedInst = nullptr);
 
+/// This overload provides a more efficient implementation of
+/// FindAvailableLoadedValue() for the case where we are not interested in
+/// finding the closest clobbering instruction if no available load is found.
+/// This overload cannot be used to scan across multiple blocks.
+Value *FindAvailableLoadedValue(LoadInst *Load, AAResults &AA, bool *IsLoadCSE,
+                                unsigned MaxInstsToScan = DefMaxInstsToScan);
+
 /// Scan backwards to see if we have the value of the given pointer available
 /// locally within a small number of instructions.
 ///
@@ -134,7 +148,7 @@ Value *FindAvailableLoadedValue(LoadInst *Load,
 /// this function, if ScanFrom points at the beginning of the block, it's safe
 /// to continue scanning the predecessors.
 ///
-/// \param Ptr The pointer we want the load and store to originate from.
+/// \param Loc The location we want the load and store to originate from.
 /// \param AccessTy The access type of the pointer.
 /// \param AtLeastAtomic Are we looking for at-least an atomic load/store ? In
 /// case it is false, we can return an atomic or non-atomic load or store. In
@@ -150,8 +164,8 @@ Value *FindAvailableLoadedValue(LoadInst *Load,
 /// location in memory, as opposed to the value operand of a store.
 ///
 /// \returns The found value, or nullptr if no value is found.
-Value *FindAvailablePtrLoadStore(Value *Ptr, Type *AccessTy, bool AtLeastAtomic,
-                                 BasicBlock *ScanBB,
+Value *findAvailablePtrLoadStore(const MemoryLocation &Loc, Type *AccessTy,
+                                 bool AtLeastAtomic, BasicBlock *ScanBB,
                                  BasicBlock::iterator &ScanFrom,
                                  unsigned MaxInstsToScan, AAResults *AA,
                                  bool *IsLoadCSE, unsigned *NumScanedInst);

@@ -1,6 +1,6 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc-unknown-linux-gnu < %s | FileCheck %s
 
-; CHECK: .section  .bss,"aw",@nobits
+; CHECK: .section  .bss.X,"awR",@nobits
 ; CHECK: .weak X
 ; CHECK-LABEL: X:
 ; CHECK: .long 0

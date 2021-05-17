@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
+! RUN: %S/test_errors.sh %s %t %flang_fc1 -fopenmp
 ! Check OpenMP Allocate directive
 use omp_lib
 

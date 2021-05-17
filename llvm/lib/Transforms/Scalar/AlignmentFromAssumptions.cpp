@@ -141,7 +141,7 @@ static Align getNewAlignment(const SCEV *AASCEV, const SCEV *AlignSCEV,
 
   // What we really want to know is the overall offset to the aligned
   // address. This address is displaced by the provided offset.
-  DiffSCEV = SE->getMinusSCEV(DiffSCEV, OffSCEV);
+  DiffSCEV = SE->getAddExpr(DiffSCEV, OffSCEV);
 
   LLVM_DEBUG(dbgs() << "AFI: alignment of " << *Ptr << " relative to "
                     << *AlignSCEV << " and offset " << *OffSCEV

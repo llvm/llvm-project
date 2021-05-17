@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Analysis/MacroExpansionContext.h"
 #include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/Version.h"
@@ -48,7 +49,8 @@ public:
 void ento::createSarifDiagnosticConsumer(
     PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
     const std::string &Output, const Preprocessor &PP,
-    const cross_tu::CrossTranslationUnitContext &CTU) {
+    const cross_tu::CrossTranslationUnitContext &CTU,
+    const MacroExpansionContext &MacroExpansions) {
 
   // TODO: Emit an error here.
   if (Output.empty())
@@ -56,7 +58,7 @@ void ento::createSarifDiagnosticConsumer(
 
   C.push_back(new SarifDiagnostics(Output, PP.getLangOpts()));
   createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, Output, PP,
-                                          CTU);
+                                          CTU, MacroExpansions);
 }
 
 static StringRef getFileName(const FileEntry &FE) {
@@ -385,7 +387,7 @@ void SarifDiagnostics::FlushDiagnosticsImpl(
   // file can become large very quickly, so decoding into JSON to append a run
   // may be an expensive operation.
   std::error_code EC;
-  llvm::raw_fd_ostream OS(OutputFile, EC, llvm::sys::fs::OF_Text);
+  llvm::raw_fd_ostream OS(OutputFile, EC, llvm::sys::fs::OF_TextWithCRLF);
   if (EC) {
     llvm::errs() << "warning: could not create file: " << EC.message() << '\n';
     return;

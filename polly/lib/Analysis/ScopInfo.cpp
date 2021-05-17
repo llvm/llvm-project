@@ -30,6 +30,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -117,6 +118,10 @@ int const polly::MaxDisjunctsInDomain = 20;
 // disjuncts. This parameter is there to avoid exponential growth in the
 // number of disjunct when adding non-convex sets to the context.
 static int const MaxDisjunctsInContext = 4;
+
+// Be a bit more generous for the defined behavior context which is used less
+// often.
+static int const MaxDisjunktsInDefinedBehaviourContext = 8;
 
 static cl::opt<bool> PollyRemarksMinimal(
     "polly-remarks-minimal",
@@ -480,10 +485,10 @@ void MemoryAccess::updateDimensionality() {
   isl::map Map = isl::map::from_domain_and_range(
       isl::set::universe(AccessSpace), isl::set::universe(ArraySpace));
 
-  for (unsigned i = 0; i < DimsMissing; i++)
+  for (auto i : seq<isl_size>(0, DimsMissing))
     Map = Map.fix_si(isl::dim::out, i, 0);
 
-  for (unsigned i = DimsMissing; i < DimsArray; i++)
+  for (auto i : seq<isl_size>(DimsMissing, DimsArray))
     Map = Map.equate(isl::dim::in, i - DimsMissing, isl::dim::out, i);
 
   AccessRelation = AccessRelation.apply_range(Map);
@@ -524,7 +529,7 @@ void MemoryAccess::updateDimensionality() {
            "Loaded element size should be multiple of canonical element size");
     isl::map Map = isl::map::from_domain_and_range(
         isl::set::universe(ArraySpace), isl::set::universe(ArraySpace));
-    for (unsigned i = 0; i < DimsArray - 1; i++)
+    for (auto i : seq<isl_size>(0, DimsArray - 1))
       Map = Map.equate(isl::dim::in, i, isl::dim::out, i);
 
     isl::constraint C;
@@ -1041,7 +1046,7 @@ bool MemoryAccess::isStrideX(isl::map Schedule, int StrideWidth) const {
 
   Stride = getStride(Schedule);
   StrideX = isl::set::universe(Stride.get_space());
-  for (unsigned i = 0; i < StrideX.dim(isl::dim::set) - 1; i++)
+  for (auto i : seq<isl_size>(0, StrideX.dim(isl::dim::set) - 1))
     StrideX = StrideX.fix_si(isl::dim::set, i, 0);
   StrideX = StrideX.fix_si(isl::dim::set, StrideX.dim(isl::dim::set) - 1,
                            StrideWidth);
@@ -1077,12 +1082,11 @@ void MemoryAccess::setNewAccessRelation(isl::map NewAccess) {
   if (isRead()) {
     // Check whether there is an access for every statement instance.
     isl::set StmtDomain = getStatement()->getDomain();
-    StmtDomain =
-        StmtDomain.intersect_params(getStatement()->getParent()->getContext());
-    StmtDomain = subtractParams(
-        StmtDomain, getStatement()->getParent()->getInvalidContext());
+    isl::set DefinedContext =
+        getStatement()->getParent()->getBestKnownDefinedBehaviorContext();
+    StmtDomain = StmtDomain.intersect_params(DefinedContext);
     isl::set NewDomain = NewAccess.domain();
-    assert(StmtDomain.is_subset(NewDomain) &&
+    assert(!StmtDomain.is_subset(NewDomain).is_false() &&
            "Partial READ accesses not supported");
   }
 
@@ -1104,11 +1108,12 @@ void MemoryAccess::setNewAccessRelation(isl::map NewAccess) {
 
   // Check whether access dimensions correspond to number of dimensions of the
   // accesses array.
-  auto Dims = SAI->getNumberOfDimensions();
+  isl_size Dims = SAI->getNumberOfDimensions();
   assert(NewAccessSpace.dim(isl::dim::set) == Dims &&
          "Access dims must match array dims");
 #endif
 
+  NewAccess = NewAccess.gist_params(getStatement()->getParent()->getContext());
   NewAccess = NewAccess.gist_domain(getStatement()->getDomain());
   NewAccessRelation = NewAccess;
 }
@@ -1560,6 +1565,7 @@ void Scop::buildContext() {
   Context = isl::set::universe(Space);
   InvalidContext = isl::set::empty(Space);
   AssumedContext = isl::set::universe(Space);
+  DefinedBehaviorContext = isl::set::universe(Space);
 }
 
 void Scop::addParameterBounds() {
@@ -1568,6 +1574,7 @@ void Scop::addParameterBounds() {
     ConstantRange SRange = SE->getSignedRange(Parameter);
     Context = addRangeBoundsToSet(Context, SRange, PDim++, isl::dim::param);
   }
+  intersectDefinedBehavior(Context, AS_ASSUMPTION);
 }
 
 static std::vector<isl::id> getFortranArrayIds(Scop::array_range Arrays) {
@@ -1681,6 +1688,8 @@ void Scop::simplifyContexts() {
   //   only executed for the case m >= 0, it is sufficient to assume p >= 0.
   AssumedContext = simplifyAssumptionContext(AssumedContext, *this);
   InvalidContext = InvalidContext.align_params(getParamSpace());
+  simplify(DefinedBehaviorContext);
+  DefinedBehaviorContext = DefinedBehaviorContext.align_params(getParamSpace());
 }
 
 isl::set Scop::getDomainConditions(const ScopStmt *Stmt) const {
@@ -1976,28 +1985,15 @@ bool Scop::isProfitable(bool ScalarsAreUnprofitable) const {
 }
 
 bool Scop::hasFeasibleRuntimeContext() const {
-  auto PositiveContext = getAssumedContext();
-  auto NegativeContext = getInvalidContext();
-  PositiveContext = addNonEmptyDomainConstraints(PositiveContext);
-  // addNonEmptyDomainConstraints returns null if ScopStmts have a null domain
-  if (!PositiveContext)
+  if (Stmts.empty())
     return false;
 
-  bool IsFeasible = !(PositiveContext.is_empty() ||
-                      PositiveContext.is_subset(NegativeContext));
-  if (!IsFeasible)
-    return false;
-
-  auto DomainContext = getDomains().params();
-  IsFeasible = !DomainContext.is_subset(NegativeContext);
-  IsFeasible &= !getContext().is_subset(NegativeContext);
-
-  return IsFeasible;
-}
-
-isl::set Scop::addNonEmptyDomainConstraints(isl::set C) const {
-  isl::set DomainContext = getDomains().params();
-  return C.intersect_params(DomainContext);
+  isl::set PositiveContext = getAssumedContext();
+  isl::set NegativeContext = getInvalidContext();
+  PositiveContext = PositiveContext.intersect_params(Context);
+  PositiveContext = PositiveContext.intersect_params(getDomains().params());
+  return PositiveContext.is_empty().is_false() &&
+         PositiveContext.is_subset(NegativeContext).is_false();
 }
 
 MemoryAccess *Scop::lookupBasePtrAccess(MemoryAccess *MA) {
@@ -2121,9 +2117,14 @@ bool Scop::trackAssumption(AssumptionKind Kind, isl::set Set, DebugLoc Loc,
 }
 
 void Scop::addAssumption(AssumptionKind Kind, isl::set Set, DebugLoc Loc,
-                         AssumptionSign Sign, BasicBlock *BB) {
+                         AssumptionSign Sign, BasicBlock *BB,
+                         bool RequiresRTC) {
   // Simplify the assumptions/restrictions first.
   Set = Set.gist_params(getContext());
+  intersectDefinedBehavior(Set, Sign);
+
+  if (!RequiresRTC)
+    return;
 
   if (!trackAssumption(Kind, Set, Loc, Sign, BB))
     return;
@@ -2132,6 +2133,26 @@ void Scop::addAssumption(AssumptionKind Kind, isl::set Set, DebugLoc Loc,
     AssumedContext = AssumedContext.intersect(Set).coalesce();
   else
     InvalidContext = InvalidContext.unite(Set).coalesce();
+}
+
+void Scop::intersectDefinedBehavior(isl::set Set, AssumptionSign Sign) {
+  if (!DefinedBehaviorContext)
+    return;
+
+  if (Sign == AS_ASSUMPTION)
+    DefinedBehaviorContext = DefinedBehaviorContext.intersect(Set);
+  else
+    DefinedBehaviorContext = DefinedBehaviorContext.subtract(Set);
+
+  // Limit the complexity of the context. If complexity is exceeded, simplify
+  // the set and check again.
+  if (DefinedBehaviorContext.n_basic_set() >
+      MaxDisjunktsInDefinedBehaviourContext) {
+    simplify(DefinedBehaviorContext);
+    if (DefinedBehaviorContext.n_basic_set() >
+        MaxDisjunktsInDefinedBehaviourContext)
+      DefinedBehaviorContext = nullptr;
+  }
 }
 
 void Scop::invalidate(AssumptionKind Kind, DebugLoc Loc, BasicBlock *BB) {
@@ -2150,6 +2171,12 @@ void Scop::printContext(raw_ostream &OS) const {
 
   OS.indent(4) << "Invalid Context:\n";
   OS.indent(4) << InvalidContext << "\n";
+
+  OS.indent(4) << "Defined Behavior Context:\n";
+  if (DefinedBehaviorContext)
+    OS.indent(4) << DefinedBehaviorContext << "\n";
+  else
+    OS.indent(4) << "<unavailable>\n";
 
   unsigned Dim = 0;
   for (const SCEV *Parameter : Parameters)

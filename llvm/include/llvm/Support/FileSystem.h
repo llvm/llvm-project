@@ -411,6 +411,21 @@ std::error_code copy_file(const Twine &From, int ToFD);
 ///          platform-specific error_code.
 std::error_code resize_file(int FD, uint64_t Size);
 
+/// Resize \p FD to \p Size before mapping \a mapped_file_region::readwrite. On
+/// non-Windows, this calls \a resize_file(). On Windows, this is a no-op,
+/// since the subsequent mapping (via \c CreateFileMapping) automatically
+/// extends the file.
+inline std::error_code resize_file_before_mapping_readwrite(int FD,
+                                                            uint64_t Size) {
+#ifdef _WIN32
+  (void)FD;
+  (void)Size;
+  return std::error_code();
+#else
+  return resize_file(FD, Size);
+#endif
+}
+
 /// Compute an MD5 hash of a file's contents.
 ///
 /// @param FD Input file descriptor.
@@ -742,24 +757,34 @@ enum OpenFlags : unsigned {
   OF_None = 0,
   F_None = 0, // For compatibility
 
-  /// The file should be opened in text mode on platforms that make this
-  /// distinction.
+  /// The file should be opened in text mode on platforms like z/OS that make
+  /// this distinction.
   OF_Text = 1,
   F_Text = 1, // For compatibility
 
+  /// The file should use a carriage linefeed '\r\n'. This flag should only be
+  /// used with OF_Text. Only makes a difference on Windows.
+  OF_CRLF = 2,
+
+  /// The file should be opened in text mode and use a carriage linefeed '\r\n'.
+  /// This flag has the same functionality as OF_Text on z/OS but adds a
+  /// carriage linefeed on Windows.
+  OF_TextWithCRLF = OF_Text | OF_CRLF,
+
   /// The file should be opened in append mode.
-  OF_Append = 2,
-  F_Append = 2, // For compatibility
+  OF_Append = 4,
+  F_Append = 4, // For compatibility
 
   /// Delete the file on close. Only makes a difference on windows.
-  OF_Delete = 4,
+  OF_Delete = 8,
 
   /// When a child process is launched, this file should remain open in the
   /// child process.
-  OF_ChildInherit = 8,
+  OF_ChildInherit = 16,
 
-  /// Force files Atime to be updated on access. Only makes a difference on windows.
-  OF_UpdateAtime = 16,
+  /// Force files Atime to be updated on access. Only makes a difference on
+  /// Windows.
+  OF_UpdateAtime = 32,
 };
 
 /// Create a potentially unique file name but does not create it.
@@ -802,10 +827,13 @@ void createUniquePath(const Twine &Model, SmallVectorImpl<char> &ResultPath,
 /// @param Model Name to base unique path off of.
 /// @param ResultFD Set to the opened file's file descriptor.
 /// @param ResultPath Set to the opened file's absolute path.
+/// @param Flags Set to the opened file's flags.
+/// @param Mode Set to the opened file's permissions.
 /// @returns errc::success if Result{FD,Path} have been successfully set,
 ///          otherwise a platform-specific error_code.
 std::error_code createUniqueFile(const Twine &Model, int &ResultFD,
                                  SmallVectorImpl<char> &ResultPath,
+                                 OpenFlags Flags = OF_None,
                                  unsigned Mode = all_read | all_write);
 
 /// Simpler version for clients that don't want an open file. An empty
@@ -862,12 +890,14 @@ public:
 /// running the assembler.
 std::error_code createTemporaryFile(const Twine &Prefix, StringRef Suffix,
                                     int &ResultFD,
-                                    SmallVectorImpl<char> &ResultPath);
+                                    SmallVectorImpl<char> &ResultPath,
+                                    OpenFlags Flags = OF_None);
 
 /// Simpler version for clients that don't want an open file. An empty
 /// file will still be created.
 std::error_code createTemporaryFile(const Twine &Prefix, StringRef Suffix,
-                                    SmallVectorImpl<char> &ResultPath);
+                                    SmallVectorImpl<char> &ResultPath,
+                                    OpenFlags Flags = OF_None);
 
 std::error_code createUniqueDirectory(const Twine &Prefix,
                                       SmallVectorImpl<char> &ResultPath);
@@ -1159,6 +1189,16 @@ std::error_code unlockFile(int FD);
 /// means that the filesystem may have failed to perform some buffered writes.
 std::error_code closeFile(file_t &F);
 
+#ifdef LLVM_ON_UNIX
+/// @brief Change ownership of a file.
+///
+/// @param Owner The owner of the file to change to.
+/// @param Group The group of the file to change to.
+/// @returns errc::success if successfully updated file ownership, otherwise an
+///          error code is returned.
+std::error_code changeFileOwnership(int FD, uint32_t Owner, uint32_t Group);
+#endif
+
 /// RAII class that facilitates file locking.
 class FileLocker {
   int FD; ///< Locked file handle.
@@ -1213,25 +1253,57 @@ public:
 
 private:
   /// Platform-specific mapping state.
-  size_t Size;
-  void *Mapping;
+  size_t Size = 0;
+  void *Mapping = nullptr;
 #ifdef _WIN32
-  sys::fs::file_t FileHandle;
+  sys::fs::file_t FileHandle = nullptr;
 #endif
-  mapmode Mode;
+  mapmode Mode = readonly;
+
+  void copyFrom(const mapped_file_region &Copied) {
+    Size = Copied.Size;
+    Mapping = Copied.Mapping;
+#ifdef _WIN32
+    FileHandle = Copied.FileHandle;
+#endif
+    Mode = Copied.Mode;
+  }
+
+  void moveFromImpl(mapped_file_region &Moved) {
+    copyFrom(Moved);
+    Moved.copyFrom(mapped_file_region());
+  }
+
+  void unmapImpl();
 
   std::error_code init(sys::fs::file_t FD, uint64_t Offset, mapmode Mode);
 
 public:
-  mapped_file_region() = delete;
-  mapped_file_region(mapped_file_region&) = delete;
-  mapped_file_region &operator =(mapped_file_region&) = delete;
+  mapped_file_region() = default;
+  mapped_file_region(mapped_file_region &&Moved) { moveFromImpl(Moved); }
+  mapped_file_region &operator=(mapped_file_region &&Moved) {
+    unmap();
+    moveFromImpl(Moved);
+    return *this;
+  }
+
+  mapped_file_region(const mapped_file_region &) = delete;
+  mapped_file_region &operator=(const mapped_file_region &) = delete;
 
   /// \param fd An open file descriptor to map. Does not take ownership of fd.
   mapped_file_region(sys::fs::file_t fd, mapmode mode, size_t length, uint64_t offset,
                      std::error_code &ec);
 
-  ~mapped_file_region();
+  ~mapped_file_region() { unmapImpl(); }
+
+  /// Check if this is a valid mapping.
+  explicit operator bool() const { return Mapping; }
+
+  /// Unmap.
+  void unmap() {
+    unmapImpl();
+    copyFrom(mapped_file_region());
+  }
 
   size_t size() const;
   char *data() const;

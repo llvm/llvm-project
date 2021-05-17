@@ -19,9 +19,10 @@ namespace mlir {
 
 class ConversionTarget;
 class MLIRContext;
-class OwningRewritePatternList;
 class Region;
 class TypeConverter;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
 namespace scf {
 
@@ -44,7 +45,11 @@ void naivelyFuseParallelOps(Region &region);
 ///                                           min(tileSize[1], %arg3-%j1))
 ///                                        step (%arg4, %arg5)
 /// The old loop is replaced with the new one.
-void tileParallelLoop(ParallelOp op, llvm::ArrayRef<int64_t> tileSizes);
+///
+/// The function returns the resulting ParallelOps, i.e. {outer_loop_op,
+/// inner_loop_op}.
+std::pair<ParallelOp, ParallelOp>
+tileParallelLoop(ParallelOp op, llvm::ArrayRef<int64_t> tileSizes);
 
 /// Populates patterns for SCF structural type conversions and sets up the
 /// provided ConversionTarget with the appropriate legality configuration for
@@ -56,8 +61,8 @@ void tileParallelLoop(ParallelOp op, llvm::ArrayRef<int64_t> tileSizes);
 /// corresponding scf.yield ops need to update their types accordingly to the
 /// TypeConverter, but otherwise don't care what type conversions are happening.
 void populateSCFStructuralTypeConversionsAndLegality(
-    MLIRContext *context, TypeConverter &typeConverter,
-    OwningRewritePatternList &patterns, ConversionTarget &target);
+    TypeConverter &typeConverter, RewritePatternSet &patterns,
+    ConversionTarget &target);
 
 } // namespace scf
 } // namespace mlir

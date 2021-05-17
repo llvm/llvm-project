@@ -592,8 +592,14 @@ static bool isSafeAndProfitableToSinkLoad(LoadInst *L) {
   BasicBlock::iterator BBI = L->getIterator(), E = L->getParent()->end();
 
   for (++BBI; BBI != E; ++BBI)
-    if (BBI->mayWriteToMemory())
+    if (BBI->mayWriteToMemory()) {
+      // Calls that only access inaccessible memory do not block sinking the
+      // load.
+      if (auto *CB = dyn_cast<CallBase>(BBI))
+        if (CB->onlyAccessesInaccessibleMemory())
+          continue;
       return false;
+    }
 
   // Check for non-address taken alloca.  If not address-taken already, it isn't
   // profitable to do this xform.
@@ -1309,6 +1315,24 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
       PN.getIncomingValue(0)->hasOneUser())
     if (Instruction *Result = foldPHIArgOpIntoPHI(PN))
       return Result;
+
+  // If the incoming values are pointer casts of the same original value,
+  // replace the phi with a single cast.
+  if (PN.getType()->isPointerTy()) {
+    Value *IV0 = PN.getIncomingValue(0);
+    Value *IV0Stripped = IV0->stripPointerCasts();
+    // Set to keep track of values known to be equal to IV0Stripped after
+    // stripping pointer casts.
+    SmallPtrSet<Value *, 4> CheckedIVs;
+    CheckedIVs.insert(IV0);
+    if (IV0 != IV0Stripped &&
+        all_of(PN.incoming_values(), [&CheckedIVs, IV0Stripped](Value *IV) {
+          return !CheckedIVs.insert(IV).second ||
+                 IV0Stripped == IV->stripPointerCasts();
+        })) {
+      return CastInst::CreatePointerCast(IV0Stripped, PN.getType());
+    }
+  }
 
   // If this is a trivial cycle in the PHI node graph, remove it.  Basically, if
   // this PHI only has a single use (a PHI), and if that PHI only has one use (a

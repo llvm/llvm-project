@@ -19,7 +19,7 @@
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>/dev/null \
 // RUN:     -target arm-linux-androideabi21 \
 // RUN:     -mthumb \
-// RUN:     -B%S/Inputs/basic_android_ndk_tree \
+// RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:     -print-multi-directory \
 // RUN:   | FileCheck --match-full-lines --check-prefix=CHECK-ARM-MULTILIBS %s

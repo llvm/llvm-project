@@ -1060,10 +1060,6 @@ void MachineMemOperand::refineAlignment(const MachineMemOperand *MMO) {
   }
 }
 
-/// getAlignment - Return the minimum known alignment in bytes of the
-/// actual memory reference.
-uint64_t MachineMemOperand::getAlignment() const { return getAlign().value(); }
-
 /// getAlign - Return the minimum known alignment in bytes of the
 /// actual memory reference.
 Align MachineMemOperand::getAlign() const {
@@ -1160,6 +1156,11 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
       break;
     }
     }
+  } else if (getOpaqueValue() == nullptr && getOffset() != 0) {
+    OS << ((isLoad() && isStore()) ? " on "
+           : isLoad()              ? " from "
+                                   : " into ")
+       << "unknown-address";
   }
   MachineOperand::printOperandOffset(OS, getOffset());
   if (getAlign() != getSize())

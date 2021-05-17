@@ -98,8 +98,6 @@ const bool kCollectHistory = false;
 const bool kCollectHistory = true;
 #endif
 
-const u16 kInvalidTid = kMaxTid + 1;
-
 // The following "build consistency" machinery ensures that all source files
 // are built in the same configuration. Inconsistent builds lead to
 // hard to debug crashes.

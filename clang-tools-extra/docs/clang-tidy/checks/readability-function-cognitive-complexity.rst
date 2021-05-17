@@ -17,6 +17,20 @@ Options
    Flag functions with Cognitive Complexity exceeding this number.
    The default is `25`.
 
+.. option:: DescribeBasicIncrements
+
+   If set to `true`, then for each function exceeding the complexity threshold
+   the check will issue additional diagnostics on every piece of code (loop,
+   `if` statement, etc.) which contributes to that complexity. See also the
+   examples below. Default is `true`.
+
+.. option:: IgnoreMacros
+
+   If set to `true`, the check will ignore code inside macros. Note, that also
+   any macro arguments are ignored, even if they should count to the complexity.
+   As this might change in the future, this option isn't guaranteed to be
+   forward-compatible. Default is `false`.
+
 Building blocks
 ---------------
 
@@ -134,6 +148,11 @@ Full example. This function has Cognitive Complexity of `3`.
 
     return 0;
   }
+
+In the last example, the check will flag `function3` if the option Threshold is
+set to `2` or smaller. If the option DescribeBasicIncrements is set to `true`,
+it will additionally flag the two `if` statements with the amounts by which they
+increase to the complexity of the function and the current nesting level.
 
 Limitations
 -----------

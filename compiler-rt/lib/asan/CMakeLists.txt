@@ -327,7 +327,7 @@ else()
   endforeach()
 endif()
 
-add_compiler_rt_resource_file(asan_blacklist asan_blacklist.txt asan)
+add_compiler_rt_resource_file(asan_ignorelist asan_ignorelist.txt asan)
 
 add_subdirectory(scripts)
 

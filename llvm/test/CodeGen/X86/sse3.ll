@@ -397,7 +397,7 @@ define <4 x i32> @t17() nounwind {
 ; X86-LABEL: t17:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pshufd {{.*#+}} xmm0 = mem[0,1,0,1]
-; X86-NEXT:    pand {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t17:

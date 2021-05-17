@@ -33,6 +33,7 @@ using namespace llvm;
 
 AsmLexer::AsmLexer(const MCAsmInfo &MAI) : MAI(MAI) {
   AllowAtInIdentifier = !StringRef(MAI.getCommentString()).startswith("@");
+  LexMotorolaIntegers = MAI.shouldUseMotorolaIntegers();
 }
 
 AsmLexer::~AsmLexer() = default;
@@ -79,7 +80,7 @@ AsmToken AsmLexer::LexFloatLiteral() {
     ++CurPtr;
 
   if (*CurPtr == '-' || *CurPtr == '+')
-    return ReturnError(CurPtr, "Invalid sign in float literal");
+    return ReturnError(CurPtr, "invalid sign in float literal");
 
   // Check for exponent
   if ((*CurPtr == 'e' || *CurPtr == 'E')) {
@@ -143,10 +144,10 @@ AsmToken AsmLexer::LexHexFloatLiteral(bool NoIntDigits) {
   return AsmToken(AsmToken::Real, StringRef(TokStart, CurPtr - TokStart));
 }
 
-/// LexIdentifier: [a-zA-Z_.][a-zA-Z0-9_$.@?]*
-static bool IsIdentifierChar(char c, bool AllowAt) {
-  return isAlnum(c) || c == '_' || c == '$' || c == '.' ||
-         (c == '@' && AllowAt) || c == '?';
+/// LexIdentifier: [a-zA-Z_$.@?][a-zA-Z0-9_$.@#?]*
+static bool isIdentifierChar(char C, bool AllowAt, bool AllowHash) {
+  return isAlnum(C) || C == '_' || C == '$' || C == '.' || C == '?' ||
+         (AllowAt && C == '@') || (AllowHash && C == '#');
 }
 
 AsmToken AsmLexer::LexIdentifier() {
@@ -156,12 +157,13 @@ AsmToken AsmLexer::LexIdentifier() {
     while (isDigit(*CurPtr))
       ++CurPtr;
 
-    if (!IsIdentifierChar(*CurPtr, AllowAtInIdentifier) ||
+    if (!isIdentifierChar(*CurPtr, AllowAtInIdentifier,
+                          AllowHashInIdentifier) ||
         *CurPtr == 'e' || *CurPtr == 'E')
       return LexFloatLiteral();
   }
 
-  while (IsIdentifierChar(*CurPtr, AllowAtInIdentifier))
+  while (isIdentifierChar(*CurPtr, AllowAtInIdentifier, AllowHashInIdentifier))
     ++CurPtr;
 
   // Handle . as a special case.
@@ -173,7 +175,13 @@ AsmToken AsmLexer::LexIdentifier() {
 
 /// LexSlash: Slash: /
 ///           C-Style Comment: /* ... */
+///           C-style Comment: // ...
 AsmToken AsmLexer::LexSlash() {
+  if (!MAI.shouldAllowAdditionalComments()) {
+    IsAtStartOfStatement = false;
+    return AsmToken(AsmToken::Slash, StringRef(TokStart, 1));
+  }
+
   switch (*CurPtr) {
   case '*':
     IsAtStartOfStatement = false;
@@ -421,27 +429,59 @@ AsmToken AsmLexer::LexDigit() {
     return intToken(Result, Value);
   }
 
+  // Motorola hex integers: $[0-9a-fA-F]+
+  if (LexMotorolaIntegers && CurPtr[-1] == '$') {
+    const char *NumStart = CurPtr;
+    while (isHexDigit(CurPtr[0]))
+      ++CurPtr;
+
+    APInt Result(128, 0);
+    if (StringRef(NumStart, CurPtr - NumStart).getAsInteger(16, Result))
+      return ReturnError(TokStart, "invalid hexadecimal number");
+
+    return intToken(StringRef(TokStart, CurPtr - TokStart), Result);
+  }
+
+  // Motorola binary integers: %[01]+
+  if (LexMotorolaIntegers && CurPtr[-1] == '%') {
+    const char *NumStart = CurPtr;
+    while (*CurPtr == '0' || *CurPtr == '1')
+      ++CurPtr;
+
+    APInt Result(128, 0);
+    if (StringRef(NumStart, CurPtr - NumStart).getAsInteger(2, Result))
+      return ReturnError(TokStart, "invalid binary number");
+
+    return intToken(StringRef(TokStart, CurPtr - TokStart), Result);
+  }
+
   // Decimal integer: [1-9][0-9]*
-  if (CurPtr[-1] != '0' || CurPtr[0] == '.') {
+  // HLASM-flavour decimal integer: [0-9][0-9]*
+  // FIXME: Later on, support for fb for HLASM has to be added in
+  // as they probably would be needed for asm goto
+  if (LexHLASMIntegers || CurPtr[-1] != '0' || CurPtr[0] == '.') {
     unsigned Radix = doHexLookAhead(CurPtr, 10, LexMasmIntegers);
-    bool isHex = Radix == 16;
-    // Check for floating point literals.
-    if (!isHex && (*CurPtr == '.' || *CurPtr == 'e' || *CurPtr == 'E')) {
-      if (*CurPtr == '.')
-        ++CurPtr;
-      return LexFloatLiteral();
+
+    if (!LexHLASMIntegers) {
+      bool IsHex = Radix == 16;
+      // Check for floating point literals.
+      if (!IsHex && (*CurPtr == '.' || *CurPtr == 'e' || *CurPtr == 'E')) {
+        if (*CurPtr == '.')
+          ++CurPtr;
+        return LexFloatLiteral();
+      }
     }
 
     StringRef Result(TokStart, CurPtr - TokStart);
 
     APInt Value(128, 0, true);
-    if (Result.getAsInteger(Radix, Value)) {
+    if (Result.getAsInteger(Radix, Value))
       return ReturnError(TokStart, "invalid " + radixName(Radix) + " number");
-    }
 
-    // The darwin/x86 (and x86-64) assembler accepts and ignores type
-    // suffices on integer literals.
-    SkipIgnoredIntegerSuffix(CurPtr);
+    if (!LexHLASMIntegers)
+      // The darwin/x86 (and x86-64) assembler accepts and ignores type
+      // suffices on integer literals.
+      SkipIgnoredIntegerSuffix(CurPtr);
 
     return intToken(Result, Value);
   }
@@ -527,6 +567,9 @@ AsmToken AsmLexer::LexDigit() {
 AsmToken AsmLexer::LexSingleQuote() {
   int CurChar = getNextChar();
 
+  if (LexHLASMStrings)
+    return ReturnError(TokStart, "invalid usage of character literals");
+
   if (LexMasmStrings) {
     while (CurChar != EOF) {
       if (CurChar != '\'') {
@@ -569,6 +612,8 @@ AsmToken AsmLexer::LexSingleQuote() {
       case 't': Value = '\t'; break;
       case 'n': Value = '\n'; break;
       case 'b': Value = '\b'; break;
+      case 'f': Value = '\f'; break;
+      case 'r': Value = '\r'; break;
     }
   } else
     Value = TokStart[1];
@@ -579,6 +624,9 @@ AsmToken AsmLexer::LexSingleQuote() {
 /// LexQuote: String: "..."
 AsmToken AsmLexer::LexQuote() {
   int CurChar = getNextChar();
+  if (LexHLASMStrings)
+    return ReturnError(TokStart, "invalid usage of string literals");
+
   if (LexMasmStrings) {
     while (CurChar != EOF) {
       if (CurChar != '"') {
@@ -659,6 +707,9 @@ size_t AsmLexer::peekTokens(MutableArrayRef<AsmToken> Buf,
 }
 
 bool AsmLexer::isAtStartOfComment(const char *Ptr) {
+  if (MAI.getRestrictCommentStringToStartOfStatement() && !IsAtStartOfStatement)
+    return false;
+
   StringRef CommentString = MAI.getCommentString();
 
   if (CommentString.size() == 1)
@@ -696,7 +747,9 @@ AsmToken AsmLexer::LexToken() {
       UnLex(TokenBuf[0]);
       return AsmToken(AsmToken::HashDirective, s);
     }
-    return LexLineComment();
+
+    if (MAI.shouldAllowAdditionalComments())
+      return LexLineComment();
   }
 
   if (isAtStartOfComment(TokStart))
@@ -722,16 +775,10 @@ AsmToken AsmLexer::LexToken() {
   IsAtStartOfStatement = false;
   switch (CurChar) {
   default:
-    if (MAI.doesAllowSymbolAtNameStart()) {
-      // Handle Microsoft-style identifier: [a-zA-Z_$.@?][a-zA-Z0-9_$.@?]*
-      if (!isDigit(CurChar) &&
-          IsIdentifierChar(CurChar, MAI.doesAllowAtInName()))
-        return LexIdentifier();
-    } else {
-      // Handle identifier: [a-zA-Z_.][a-zA-Z0-9_$.@]*
-      if (isalpha(CurChar) || CurChar == '_' || CurChar == '.')
-        return LexIdentifier();
-    }
+    // Handle identifier: [a-zA-Z_.?][a-zA-Z0-9_$.@#?]*
+    if (isalpha(CurChar) || CurChar == '_' || CurChar == '.' ||
+        (MAI.doesAllowQuestionAtStartOfIdentifier() && CurChar == '?'))
+      return LexIdentifier();
 
     // Unknown character, emit an error.
     return ReturnError(TokStart, "invalid character in input");
@@ -775,8 +822,18 @@ AsmToken AsmLexer::LexToken() {
   case '}': return AsmToken(AsmToken::RCurly, StringRef(TokStart, 1));
   case '*': return AsmToken(AsmToken::Star, StringRef(TokStart, 1));
   case ',': return AsmToken(AsmToken::Comma, StringRef(TokStart, 1));
-  case '$': return AsmToken(AsmToken::Dollar, StringRef(TokStart, 1));
-  case '@': return AsmToken(AsmToken::At, StringRef(TokStart, 1));
+  case '$': {
+    if (LexMotorolaIntegers && isHexDigit(*CurPtr))
+      return LexDigit();
+    if (MAI.doesAllowDollarAtStartOfIdentifier())
+      return LexIdentifier();
+    return AsmToken(AsmToken::Dollar, StringRef(TokStart, 1));
+  }
+  case '@': {
+    if (MAI.doesAllowAtAtStartOfIdentifier())
+      return LexIdentifier();
+    return AsmToken(AsmToken::At, StringRef(TokStart, 1));
+  }
   case '\\': return AsmToken(AsmToken::BackSlash, StringRef(TokStart, 1));
   case '=':
     if (*CurPtr == '=') {
@@ -810,6 +867,10 @@ AsmToken AsmLexer::LexToken() {
     }
     return AsmToken(AsmToken::Exclaim, StringRef(TokStart, 1));
   case '%':
+    if (LexMotorolaIntegers && (*CurPtr == '0' || *CurPtr == '1')) {
+      return LexDigit();
+    }
+
     if (MAI.hasMipsExpressions()) {
       AsmToken::TokenKind Operator;
       unsigned OperatorLength;
@@ -852,7 +913,11 @@ AsmToken AsmLexer::LexToken() {
   case '/':
     IsAtStartOfStatement = OldIsAtStartOfStatement;
     return LexSlash();
-  case '#': return AsmToken(AsmToken::Hash, StringRef(TokStart, 1));
+  case '#': {
+    if (MAI.doesAllowHashAtStartOfIdentifier())
+      return LexIdentifier();
+    return AsmToken(AsmToken::Hash, StringRef(TokStart, 1));
+  }
   case '\'': return LexSingleQuote();
   case '"': return LexQuote();
   case '0': case '1': case '2': case '3': case '4':

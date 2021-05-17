@@ -1437,3 +1437,13 @@ constexpr bool destroy_at_test() {
   return true;
 }
 static_assert(destroy_at_test());
+
+namespace PR48582 {
+  struct S {
+    void *p = this;
+    constexpr S() {}
+    constexpr S(const S&) {}
+  };
+  constexpr bool b = [a = S(), b = S()] { return a.p == b.p; }();
+  static_assert(!b);
+}

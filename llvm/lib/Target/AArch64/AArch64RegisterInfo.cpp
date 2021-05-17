@@ -382,7 +382,7 @@ bool AArch64RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   // stack needs to be dynamically re-aligned, the base pointer is the only
   // reliable way to reference the locals.
   if (MFI.hasVarSizedObjects() || MF.hasEHFunclets()) {
-    if (needsStackRealignment(MF))
+    if (hasStackRealignment(MF))
       return true;
 
     if (MF.getSubtarget<AArch64Subtarget>().hasSVE()) {
@@ -437,7 +437,7 @@ AArch64RegisterInfo::useFPForScavengingIndex(const MachineFunction &MF) const {
   assert((!MF.getSubtarget<AArch64Subtarget>().hasSVE() ||
           AFI->hasCalculatedStackSizeSVE()) &&
          "Expected SVE area to be calculated by this point");
-  return TFI.hasFP(MF) && !needsStackRealignment(MF) && !AFI->getStackSizeSVE();
+  return TFI.hasFP(MF) && !hasStackRealignment(MF) && !AFI->getStackSizeSVE();
 }
 
 bool AArch64RegisterInfo::requiresFrameIndexScavenging(
@@ -531,10 +531,10 @@ bool AArch64RegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
 
 /// Insert defining instruction(s) for BaseReg to be a pointer to FrameIdx
 /// at the beginning of the basic block.
-void AArch64RegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
-                                                       Register BaseReg,
-                                                       int FrameIdx,
-                                                       int64_t Offset) const {
+Register
+AArch64RegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
+                                                  int FrameIdx,
+                                                  int64_t Offset) const {
   MachineBasicBlock::iterator Ins = MBB->begin();
   DebugLoc DL; // Defaults to "unknown"
   if (Ins != MBB->end())
@@ -544,6 +544,7 @@ void AArch64RegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
       MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
   const MCInstrDesc &MCID = TII->get(AArch64::ADDXri);
   MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
+  Register BaseReg = MRI.createVirtualRegister(&AArch64::GPR64spRegClass);
   MRI.constrainRegClass(BaseReg, TII->getRegClass(MCID, 0, this, MF));
   unsigned Shifter = AArch64_AM::getShifterImm(AArch64_AM::LSL, 0);
 
@@ -551,6 +552,8 @@ void AArch64RegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
       .addFrameIndex(FrameIdx)
       .addImm(Offset)
       .addImm(Shifter);
+
+  return BaseReg;
 }
 
 void AArch64RegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
@@ -758,7 +761,7 @@ unsigned AArch64RegisterInfo::getLocalAddressRegister(
   const auto &MFI = MF.getFrameInfo();
   if (!MF.hasEHFunclets() && !MFI.hasVarSizedObjects())
     return AArch64::SP;
-  else if (needsStackRealignment(MF))
+  else if (hasStackRealignment(MF))
     return getBaseRegister();
   return getFrameRegister(MF);
 }

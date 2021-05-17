@@ -83,18 +83,13 @@ define i32 @test_srem_odd_bit31(i32 %X) nounwind {
 define i16 @test_srem_even(i16 %X) nounwind {
 ; CHECK-LABEL: test_srem_even:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w9, #9363
-; CHECK-NEXT:    sxth w8, w0
-; CHECK-NEXT:    movk w9, #37449, lsl #16
-; CHECK-NEXT:    smull x9, w8, w9
-; CHECK-NEXT:    lsr x9, x9, #32
-; CHECK-NEXT:    add w8, w9, w8
-; CHECK-NEXT:    asr w9, w8, #3
-; CHECK-NEXT:    add w8, w9, w8, lsr #31
-; CHECK-NEXT:    mov w9, #14
-; CHECK-NEXT:    msub w8, w8, w9, w0
-; CHECK-NEXT:    tst w8, #0xffff
-; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    mov w8, #28087
+; CHECK-NEXT:    mov w9, #4680
+; CHECK-NEXT:    madd w8, w0, w8, w9
+; CHECK-NEXT:    lsl w10, w8, #15
+; CHECK-NEXT:    bfxil w10, w8, #1, #15
+; CHECK-NEXT:    cmp w9, w10, uxth
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
   %srem = srem i16 %X, 14
   %cmp = icmp ne i16 %srem, 0
@@ -274,10 +269,7 @@ define i32 @test_srem_int_min(i32 %X) nounwind {
 define i32 @test_srem_allones(i32 %X) nounwind {
 ; CHECK-LABEL: test_srem_allones:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp w0, #0 // =0
-; CHECK-NEXT:    csel w8, w0, w0, lt
-; CHECK-NEXT:    cmp w0, w8
-; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    mov w0, #1
 ; CHECK-NEXT:    ret
   %srem = srem i32 %X, 4294967295
   %cmp = icmp eq i32 %srem, 0

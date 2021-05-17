@@ -1,7 +1,9 @@
 add_mlir_unittest(MLIRIRTests
   AttributeTest.cpp
   DialectTest.cpp
+  MemRefTypeTest.cpp
   OperationSupportTest.cpp
+  ShapedTypeTest.cpp
 )
 target_link_libraries(MLIRIRTests
   PRIVATE

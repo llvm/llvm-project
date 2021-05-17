@@ -15,8 +15,8 @@
 # RUN: echo "SECTIONS { zed = foo; }" > %t2.script
 # RUN: ld.lld -o %t2.exe --script %t2.script %tar.a %t.o
 # RUN: llvm-readobj --symbols %t2.exe | FileCheck %s --check-prefix=SYMS
-# SYMS: bar
 # SYMS: foo
+# SYMS: bar
 
 .text
 .globl foo

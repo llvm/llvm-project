@@ -11,3 +11,7 @@ LR &lrlr = c;
 LR &&rrlr = c;
 RR &lrrr = c;
 RR &&rrrr = 'c';
+
+struct S {
+  const int &x = 1; // LifetimeExtendedTemporary inside struct
+};

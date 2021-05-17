@@ -170,7 +170,7 @@ void __kmp_i18n_dump_catalog(kmp_str_buf_t *buffer);
 #endif // KMP_DEBUG
 
 #ifdef __cplusplus
-}; // extern "C"
+} // extern "C"
 #endif // __cplusplus
 
 #endif // KMP_I18N_H

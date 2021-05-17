@@ -136,7 +136,7 @@ template <> struct MappingTraits<TypeIdSummary> {
 };
 
 struct FunctionSummaryYaml {
-  unsigned Linkage;
+  unsigned Linkage, Visibility;
   bool NotEligibleToImport, Live, IsLocal, CanAutoHide;
   std::vector<uint64_t> Refs;
   std::vector<uint64_t> TypeTests;
@@ -178,6 +178,7 @@ namespace yaml {
 template <> struct MappingTraits<FunctionSummaryYaml> {
   static void mapping(IO &io, FunctionSummaryYaml& summary) {
     io.mapOptional("Linkage", summary.Linkage);
+    io.mapOptional("Visibility", summary.Visibility);
     io.mapOptional("NotEligibleToImport", summary.NotEligibleToImport);
     io.mapOptional("Live", summary.Live);
     io.mapOptional("Local", summary.IsLocal);
@@ -224,6 +225,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
       Elem.SummaryList.push_back(std::make_unique<FunctionSummary>(
           GlobalValueSummary::GVFlags(
               static_cast<GlobalValue::LinkageTypes>(FSum.Linkage),
+              static_cast<GlobalValue::VisibilityTypes>(FSum.Visibility),
               FSum.NotEligibleToImport, FSum.Live, FSum.IsLocal,
               FSum.CanAutoHide),
           /*NumInsts=*/0, FunctionSummary::FFlags{}, /*EntryCount=*/0, Refs,
@@ -244,7 +246,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
           for (auto &VI : FSum->refs())
             Refs.push_back(VI.getGUID());
           FSums.push_back(FunctionSummaryYaml{
-              FSum->flags().Linkage,
+              FSum->flags().Linkage, FSum->flags().Visibility,
               static_cast<bool>(FSum->flags().NotEligibleToImport),
               static_cast<bool>(FSum->flags().Live),
               static_cast<bool>(FSum->flags().DSOLocal),

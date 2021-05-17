@@ -18,8 +18,8 @@ template <typename T>
 class OperationPass;
 
 /// Populate the given list with patterns that convert from Complex to LLVM.
-void populateComplexToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns);
+void populateComplexToLLVMConversionPatterns(LLVMTypeConverter &converter,
+                                             RewritePatternSet &patterns);
 
 /// Create a pass to convert Complex operations to the LLVMIR dialect.
 std::unique_ptr<OperationPass<ModuleOp>> createConvertComplexToLLVMPass();

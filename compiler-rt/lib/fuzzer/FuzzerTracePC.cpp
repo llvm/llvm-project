@@ -106,6 +106,15 @@ void TracePC::PrintModuleInfo() {
   }
   if (size_t NumExtraCounters = ExtraCountersEnd() - ExtraCountersBegin())
     Printf("INFO: %zd Extra Counters\n", NumExtraCounters);
+
+  size_t MaxFeatures = CollectFeatures([](uint32_t) {});
+  if (MaxFeatures > std::numeric_limits<uint32_t>::max())
+    Printf("WARNING: The coverage PC tables may produce up to %zu features.\n"
+           "This exceeds the maximum 32-bit value. Some features may be\n"
+           "ignored, and fuzzing may become less precise. If possible,\n"
+           "consider refactoring the fuzzer into several smaller fuzzers\n"
+           "linked against only a portion of the current target.\n",
+           MaxFeatures);
 }
 
 ATTRIBUTE_NO_SANITIZE_ALL
@@ -356,7 +365,7 @@ void TracePC::AddValueForMemcmp(void *caller_pc, const void *s1, const void *s2,
   uint8_t HammingDistance = 0;
   for (; I < Len; I++) {
     if (B1[I] != B2[I] || (StopAtZero && B1[I] == 0)) {
-      HammingDistance = Popcountll(B1[I] ^ B2[I]);
+      HammingDistance = static_cast<uint8_t>(Popcountll(B1[I] ^ B2[I]));
       break;
     }
   }

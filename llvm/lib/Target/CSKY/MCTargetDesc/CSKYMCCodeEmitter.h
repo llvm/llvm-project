@@ -13,6 +13,8 @@
 #ifndef LLVM_LIB_TARGET_CSKY_MCTARGETDESC_CSKYMCCODEEMITTER_H
 #define LLVM_LIB_TARGET_CSKY_MCTARGETDESC_CSKYMCCODEEMITTER_H
 
+#include "CSKYMCExpr.h"
+#include "MCTargetDesc/CSKYFixupKinds.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 
@@ -54,6 +56,78 @@ public:
   unsigned getOImmOpValue(const MCInst &MI, unsigned Idx,
                           SmallVectorImpl<MCFixup> &Fixups,
                           const MCSubtargetInfo &STI) const;
+
+  unsigned getImmShiftOpValue(const MCInst &MI, unsigned Idx,
+                              SmallVectorImpl<MCFixup> &Fixups,
+                              const MCSubtargetInfo &STI) const {
+    const MCOperand &MO = MI.getOperand(Idx);
+    assert(MO.isImm() && "Unexpected MO type.");
+    return 1 << MO.getImm();
+  }
+
+  MCFixupKind getTargetFixup(const MCExpr *Expr) const;
+
+  template <llvm::CSKY::Fixups FIXUP>
+  unsigned getBranchSymbolOpValue(const MCInst &MI, unsigned Idx,
+                                  SmallVectorImpl<MCFixup> &Fixups,
+                                  const MCSubtargetInfo &STI) const {
+    const MCOperand &MO = MI.getOperand(Idx);
+
+    if (MO.isImm())
+      return MO.getImm() >> 1;
+
+    assert(MO.isExpr() && "Unexpected MO type.");
+
+    MCFixupKind Kind = MCFixupKind(FIXUP);
+    if (MO.getExpr()->getKind() == MCExpr::Target)
+      Kind = getTargetFixup(MO.getExpr());
+
+    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind, MI.getLoc()));
+    return 0;
+  }
+
+  template <llvm::CSKY::Fixups FIXUP>
+  unsigned getConstpoolSymbolOpValue(const MCInst &MI, unsigned Idx,
+                                     SmallVectorImpl<MCFixup> &Fixups,
+                                     const MCSubtargetInfo &STI) const {
+    const MCOperand &MO = MI.getOperand(Idx);
+    assert(MO.isExpr() && "Unexpected MO type.");
+
+    MCFixupKind Kind = MCFixupKind(FIXUP);
+    if (MO.getExpr()->getKind() == MCExpr::Target)
+      Kind = getTargetFixup(MO.getExpr());
+
+    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind, MI.getLoc()));
+    return 0;
+  }
+
+  unsigned getCallSymbolOpValue(const MCInst &MI, unsigned Idx,
+                                SmallVectorImpl<MCFixup> &Fixups,
+                                const MCSubtargetInfo &STI) const {
+    const MCOperand &MO = MI.getOperand(Idx);
+    assert(MO.isExpr() && "Unexpected MO type.");
+
+    MCFixupKind Kind = MCFixupKind(CSKY::fixup_csky_pcrel_imm26_scale2);
+    if (MO.getExpr()->getKind() == MCExpr::Target)
+      Kind = getTargetFixup(MO.getExpr());
+
+    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind, MI.getLoc()));
+    return 0;
+  }
+
+  unsigned getBareSymbolOpValue(const MCInst &MI, unsigned Idx,
+                                SmallVectorImpl<MCFixup> &Fixups,
+                                const MCSubtargetInfo &STI) const {
+    const MCOperand &MO = MI.getOperand(Idx);
+    assert(MO.isExpr() && "Unexpected MO type.");
+
+    MCFixupKind Kind = MCFixupKind(CSKY::fixup_csky_pcrel_imm18_scale2);
+    if (MO.getExpr()->getKind() == MCExpr::Target)
+      Kind = getTargetFixup(MO.getExpr());
+
+    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind, MI.getLoc()));
+    return 0;
+  }
 };
 
 } // namespace llvm

@@ -9,15 +9,7 @@ define <4 x float> @simple_select(<4 x float> %a, <4 x float> %b, <4 x i32> %c) 
 ; CHECK-LABEL: @simple_select(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[C:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[A:%.*]], <4 x float> [[B:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
-; CHECK-NEXT:    [[RA:%.*]] = insertelement <4 x float> undef, float [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP2]], i32 1
-; CHECK-NEXT:    [[RB:%.*]] = insertelement <4 x float> [[RA]], float [[TMP4]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP2]], i32 2
-; CHECK-NEXT:    [[RC:%.*]] = insertelement <4 x float> [[RB]], float [[TMP5]], i32 2
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP2]], i32 3
-; CHECK-NEXT:    [[RD:%.*]] = insertelement <4 x float> [[RC]], float [[TMP6]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[RD]]
+; CHECK-NEXT:    ret <4 x float> [[TMP2]]
 ;
   %c0 = extractelement <4 x i32> %c, i32 0
   %c1 = extractelement <4 x i32> %c, i32 1
@@ -44,6 +36,61 @@ define <4 x float> @simple_select(<4 x float> %a, <4 x float> %b, <4 x i32> %c) 
   %rc = insertelement <4 x float> %rb, float %s2, i32 2
   %rd = insertelement <4 x float> %rc, float %s3, i32 3
   ret <4 x float> %rd
+}
+
+define <8 x float> @simple_select2(<4 x float> %a, <4 x float> %b, <4 x i32> %c) #0 {
+; CHECK-LABEL: @simple_select2(
+; CHECK-NEXT:    [[C0:%.*]] = extractelement <4 x i32> [[C:%.*]], i32 0
+; CHECK-NEXT:    [[C1:%.*]] = extractelement <4 x i32> [[C]], i32 1
+; CHECK-NEXT:    [[C2:%.*]] = extractelement <4 x i32> [[C]], i32 2
+; CHECK-NEXT:    [[C3:%.*]] = extractelement <4 x i32> [[C]], i32 3
+; CHECK-NEXT:    [[A0:%.*]] = extractelement <4 x float> [[A:%.*]], i32 0
+; CHECK-NEXT:    [[A1:%.*]] = extractelement <4 x float> [[A]], i32 1
+; CHECK-NEXT:    [[A2:%.*]] = extractelement <4 x float> [[A]], i32 2
+; CHECK-NEXT:    [[A3:%.*]] = extractelement <4 x float> [[A]], i32 3
+; CHECK-NEXT:    [[B0:%.*]] = extractelement <4 x float> [[B:%.*]], i32 0
+; CHECK-NEXT:    [[B1:%.*]] = extractelement <4 x float> [[B]], i32 1
+; CHECK-NEXT:    [[B2:%.*]] = extractelement <4 x float> [[B]], i32 2
+; CHECK-NEXT:    [[B3:%.*]] = extractelement <4 x float> [[B]], i32 3
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp ne i32 [[C0]], 0
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[C1]], 0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[C2]], 0
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[C3]], 0
+; CHECK-NEXT:    [[S0:%.*]] = select i1 [[CMP0]], float [[A0]], float [[B0]]
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[CMP1]], float [[A1]], float [[B1]]
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[CMP2]], float [[A2]], float [[B2]]
+; CHECK-NEXT:    [[S3:%.*]] = select i1 [[CMP3]], float [[A3]], float [[B3]]
+; CHECK-NEXT:    [[RA:%.*]] = insertelement <8 x float> undef, float [[S0]], i32 0
+; CHECK-NEXT:    [[RB:%.*]] = insertelement <8 x float> [[RA]], float [[S1]], i32 2
+; CHECK-NEXT:    [[RC:%.*]] = insertelement <8 x float> [[RB]], float [[S2]], i32 4
+; CHECK-NEXT:    [[RD:%.*]] = insertelement <8 x float> [[RC]], float [[S3]], i32 7
+; CHECK-NEXT:    ret <8 x float> [[RD]]
+;
+  %c0 = extractelement <4 x i32> %c, i32 0
+  %c1 = extractelement <4 x i32> %c, i32 1
+  %c2 = extractelement <4 x i32> %c, i32 2
+  %c3 = extractelement <4 x i32> %c, i32 3
+  %a0 = extractelement <4 x float> %a, i32 0
+  %a1 = extractelement <4 x float> %a, i32 1
+  %a2 = extractelement <4 x float> %a, i32 2
+  %a3 = extractelement <4 x float> %a, i32 3
+  %b0 = extractelement <4 x float> %b, i32 0
+  %b1 = extractelement <4 x float> %b, i32 1
+  %b2 = extractelement <4 x float> %b, i32 2
+  %b3 = extractelement <4 x float> %b, i32 3
+  %cmp0 = icmp ne i32 %c0, 0
+  %cmp1 = icmp ne i32 %c1, 0
+  %cmp2 = icmp ne i32 %c2, 0
+  %cmp3 = icmp ne i32 %c3, 0
+  %s0 = select i1 %cmp0, float %a0, float %b0
+  %s1 = select i1 %cmp1, float %a1, float %b1
+  %s2 = select i1 %cmp2, float %a2, float %b2
+  %s3 = select i1 %cmp3, float %a3, float %b3
+  %ra = insertelement <8 x float> undef, float %s0, i32 0
+  %rb = insertelement <8 x float> %ra, float %s1, i32 2
+  %rc = insertelement <8 x float> %rb, float %s2, i32 4
+  %rd = insertelement <8 x float> %rc, float %s3, i32 7
+  ret <8 x float> %rd
 }
 
 declare void @llvm.assume(i1) nounwind
@@ -131,15 +178,7 @@ define <4 x float> @simple_select_insert_out_of_order(<4 x float> %a, <4 x float
 ; CHECK-NEXT:    [[SHUFFLE2:%.*]] = shufflevector <4 x float> [[B:%.*]], <4 x float> poison, <4 x i32> <i32 2, i32 1, i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[SHUFFLE]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[SHUFFLE1]], <4 x float> [[SHUFFLE2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i32 2
-; CHECK-NEXT:    [[RA:%.*]] = insertelement <4 x float> undef, float [[TMP3]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP2]], i32 1
-; CHECK-NEXT:    [[RB:%.*]] = insertelement <4 x float> [[RA]], float [[TMP4]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
-; CHECK-NEXT:    [[RC:%.*]] = insertelement <4 x float> [[RB]], float [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP2]], i32 3
-; CHECK-NEXT:    [[RD:%.*]] = insertelement <4 x float> [[RC]], float [[TMP6]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[RD]]
+; CHECK-NEXT:    ret <4 x float> [[TMP2]]
 ;
   %c0 = extractelement <4 x i32> %c, i32 0
   %c1 = extractelement <4 x i32> %c, i32 1
@@ -176,16 +215,8 @@ define <4 x float> @simple_select_users(<4 x float> %a, <4 x float> %b, <4 x i32
 ; CHECK-LABEL: @simple_select_users(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[C:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[A:%.*]], <4 x float> [[B:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
-; CHECK-NEXT:    [[RA:%.*]] = insertelement <4 x float> undef, float [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP2]], i32 1
-; CHECK-NEXT:    [[RB:%.*]] = insertelement <4 x float> [[RA]], float [[TMP4]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP2]], i32 2
-; CHECK-NEXT:    [[RC:%.*]] = insertelement <4 x float> [[RB]], float [[TMP5]], i32 2
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP2]], i32 3
-; CHECK-NEXT:    [[RD:%.*]] = insertelement <4 x float> [[RC]], float [[TMP6]], i32 3
-; CHECK-NEXT:    call void @v4f32_user(<4 x float> [[RD]]) [[ATTR0:#.*]]
-; CHECK-NEXT:    ret <4 x float> [[RD]]
+; CHECK-NEXT:    call void @v4f32_user(<4 x float> [[TMP2]]) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    ret <4 x float> [[TMP2]]
 ;
   %c0 = extractelement <4 x i32> %c, i32 0
   %c1 = extractelement <4 x i32> %c, i32 1
@@ -246,15 +277,11 @@ define <4 x float> @simple_select_no_users(<4 x float> %a, <4 x float> %b, <4 x 
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x float> poison, float [[B2]], i32 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x float> [[TMP14]], float [[B3]], i32 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = select <2 x i1> [[TMP6]], <2 x float> [[TMP13]], <2 x float> [[TMP15]]
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x float> [[TMP11]], i32 0
-; CHECK-NEXT:    [[RA:%.*]] = insertelement <4 x float> undef, float [[TMP17]], i32 0
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x float> [[TMP11]], i32 1
-; CHECK-NEXT:    [[RB:%.*]] = insertelement <4 x float> [[RA]], float [[TMP18]], i32 1
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x float> [[TMP16]], i32 0
-; CHECK-NEXT:    [[RC:%.*]] = insertelement <4 x float> undef, float [[TMP19]], i32 2
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <2 x float> [[TMP16]], i32 1
-; CHECK-NEXT:    [[RD:%.*]] = insertelement <4 x float> [[RC]], float [[TMP20]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[RD]]
+; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <2 x float> [[TMP11]], <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[RB2:%.*]] = shufflevector <4 x float> undef, <4 x float> [[TMP17]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <2 x float> [[TMP16]], <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[RD1:%.*]] = shufflevector <4 x float> undef, <4 x float> [[TMP18]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    ret <4 x float> [[RD1]]
 ;
   %c0 = extractelement <4 x i32> %c, i32 0
   %c1 = extractelement <4 x i32> %c, i32 1
@@ -312,11 +339,7 @@ define <2 x float> @simple_select_v2(<2 x float> %a, <2 x float> %b, <2 x i32> %
 ; CHECK-LABEL: @simple_select_v2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i32> [[C:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[TMP1]], <2 x float> [[A:%.*]], <2 x float> [[B:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
-; CHECK-NEXT:    [[RA:%.*]] = insertelement <2 x float> undef, float [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
-; CHECK-NEXT:    [[RB:%.*]] = insertelement <2 x float> [[RA]], float [[TMP4]], i32 1
-; CHECK-NEXT:    ret <2 x float> [[RB]]
+; CHECK-NEXT:    ret <2 x float> [[TMP2]]
 ;
   %c0 = extractelement <2 x i32> %c, i32 0
   %c1 = extractelement <2 x i32> %c, i32 1
@@ -384,15 +407,7 @@ define <4 x float> @simple_select_partial_vector(<4 x float> %a, <4 x float> %b,
 define <4 x float> @reschedule_extract(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @reschedule_extract(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd <4 x float> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <4 x float> undef, float [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <4 x float> [[V0]], float [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
-; CHECK-NEXT:    [[V2:%.*]] = insertelement <4 x float> [[V1]], float [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
-; CHECK-NEXT:    [[V3:%.*]] = insertelement <4 x float> [[V2]], float [[TMP5]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[V3]]
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %a0 = extractelement <4 x float> %a, i32 0
   %b0 = extractelement <4 x float> %b, i32 0
@@ -418,15 +433,7 @@ define <4 x float> @reschedule_extract(<4 x float> %a, <4 x float> %b) {
 define <4 x float> @take_credit(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @take_credit(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd <4 x float> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <4 x float> undef, float [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <4 x float> [[V0]], float [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
-; CHECK-NEXT:    [[V2:%.*]] = insertelement <4 x float> [[V1]], float [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
-; CHECK-NEXT:    [[V3:%.*]] = insertelement <4 x float> [[V2]], float [[TMP5]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[V3]]
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %a0 = extractelement <4 x float> %a, i32 0
   %b0 = extractelement <4 x float> %b, i32 0
@@ -456,15 +463,7 @@ define <4 x double> @multi_tree(double %w, double %x, double %y, double %z) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[W:%.*]], i32 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x double> [[TMP4]], <double 3.000000e+00, double 2.000000e+00, double 1.000000e+00, double 0.000000e+00>
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <4 x double> [[TMP5]], <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x double> [[TMP6]], i32 3
-; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x double> undef, double [[TMP7]], i32 3
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x double> [[TMP6]], i32 2
-; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x double> [[I1]], double [[TMP8]], i32 2
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x double> [[TMP6]], i32 1
-; CHECK-NEXT:    [[I3:%.*]] = insertelement <4 x double> [[I2]], double [[TMP9]], i32 1
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x double> [[TMP6]], i32 0
-; CHECK-NEXT:    [[I4:%.*]] = insertelement <4 x double> [[I3]], double [[TMP10]], i32 0
-; CHECK-NEXT:    ret <4 x double> [[I4]]
+; CHECK-NEXT:    ret <4 x double> [[TMP6]]
 ;
   %t0 = fadd double %w , 0.000000e+00
   %t1 = fadd double %x , 1.000000e+00
@@ -484,23 +483,7 @@ define <4 x double> @multi_tree(double %w, double %x, double %y, double %z) {
 define <8 x float> @_vadd256(<8 x float> %a, <8 x float> %b) local_unnamed_addr #0 {
 ; CHECK-LABEL: @_vadd256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd <8 x float> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x float> undef, float [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x float> [[TMP1]], i32 1
-; CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <8 x float> [[VECINIT_I]], float [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x float> [[TMP1]], i32 2
-; CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <8 x float> [[VECINIT1_I]], float [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x float> [[TMP1]], i32 3
-; CHECK-NEXT:    [[VECINIT3_I:%.*]] = insertelement <8 x float> [[VECINIT2_I]], float [[TMP5]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x float> [[TMP1]], i32 4
-; CHECK-NEXT:    [[VECINIT4_I:%.*]] = insertelement <8 x float> [[VECINIT3_I]], float [[TMP6]], i32 4
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x float> [[TMP1]], i32 5
-; CHECK-NEXT:    [[VECINIT5_I:%.*]] = insertelement <8 x float> [[VECINIT4_I]], float [[TMP7]], i32 5
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x float> [[TMP1]], i32 6
-; CHECK-NEXT:    [[VECINIT6_I:%.*]] = insertelement <8 x float> [[VECINIT5_I]], float [[TMP8]], i32 6
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x float> [[TMP1]], i32 7
-; CHECK-NEXT:    [[VECINIT7_I:%.*]] = insertelement <8 x float> [[VECINIT6_I]], float [[TMP9]], i32 7
-; CHECK-NEXT:    ret <8 x float> [[VECINIT7_I]]
+; CHECK-NEXT:    ret <8 x float> [[TMP1]]
 ;
   %vecext = extractelement <8 x float> %a, i32 0
   %vecext1 = extractelement <8 x float> %b, i32 0

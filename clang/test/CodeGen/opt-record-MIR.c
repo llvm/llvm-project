@@ -19,7 +19,7 @@ void foo(float *p, int i) {
   }
 }
 
-// REMARK: opt-record-MIR.c:{{[1-9][0-9]*}}:{{[1-9][0-9]*}}: remark: {{.}} spills {{.}} reloads generated in loop
+// REMARK: opt-record-MIR.c:{{[1-9][0-9]*}}:{{[1-9][0-9]*}}: remark: {{[0-9]*}} spills {{[0-9\.e+-]*}} total spills cost {{[0-9]*}} reloads {{[0-9\.e+-]*}} total reloads cost generated in loop
 // NO_REMARK-NOT: remark:
 
 // YAML: --- !Missed

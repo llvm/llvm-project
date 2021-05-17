@@ -39,8 +39,6 @@ else()
     set(OPENMP_TEST_C_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang.exe)
     set(OPENMP_TEST_CXX_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++.exe)
   endif()
-
-  list(APPEND LIBOMPTARGET_LLVM_INCLUDE_DIRS ${LLVM_MAIN_INCLUDE_DIR} ${LLVM_BINARY_DIR}/include)
 endif()
 
 # Check and set up common compiler flags.
@@ -55,11 +53,6 @@ set(OPENMP_TEST_FLAGS "" CACHE STRING
 set(OPENMP_TEST_OPENMP_FLAGS ${OPENMP_TEST_COMPILER_OPENMP_FLAGS} CACHE STRING
   "OpenMP compiler flag to use for testing OpenMP runtime libraries.")
 
-
-# Build host runtime library.
-add_subdirectory(runtime)
-
-
 set(ENABLE_LIBOMPTARGET ON)
 # Currently libomptarget cannot be compiled on Windows or MacOS X.
 # Since the device plugins are only supported on Linux anyway,
@@ -68,24 +61,16 @@ if (APPLE OR WIN32 OR NOT OPENMP_HAVE_STD_CPP14_FLAG)
   set(ENABLE_LIBOMPTARGET OFF)
 endif()
 
-# Attempt to locate LLVM source, required by libomptarget
-if (NOT LIBOMPTARGET_LLVM_INCLUDE_DIRS)
-  if (LLVM_MAIN_INCLUDE_DIR)
-    list(APPEND LIBOMPTARGET_LLVM_INCLUDE_DIRS ${LLVM_MAIN_INCLUDE_DIR})
-  elseif (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../llvm/include)
-    list(APPEND LIBOMPTARGET_LLVM_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../llvm/include)
-  endif()
-endif()
-
-if (NOT LIBOMPTARGET_LLVM_INCLUDE_DIRS)
-  message(STATUS "Missing definition for LIBOMPTARGET_LLVM_INCLUDE_DIRS, disabling libomptarget")
-  set(ENABLE_LIBOMPTARGET OFF)
-endif()
-
 option(OPENMP_ENABLE_LIBOMPTARGET "Enable building libomptarget for offloading."
        ${ENABLE_LIBOMPTARGET})
 option(OPENMP_ENABLE_LIBOMPTARGET_PROFILING "Enable time profiling for libomptarget."
        ${ENABLE_LIBOMPTARGET})
+option(OPENMP_ENABLE_LIBOMP_PROFILING "Enable time profiling for libomp." OFF)
+
+# Build host runtime library, after LIBOMPTARGET variables are set since they are needed
+# to enable time profiling support in the OpenMP runtime.
+add_subdirectory(runtime)
+
 if (OPENMP_ENABLE_LIBOMPTARGET)
   # Check that the library can actually be built.
   if (APPLE OR WIN32)

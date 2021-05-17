@@ -100,6 +100,8 @@ private:
 ArraySpec AnalyzeArraySpec(SemanticsContext &, const parser::ArraySpec &);
 ArraySpec AnalyzeArraySpec(
     SemanticsContext &, const parser::ComponentArraySpec &);
+ArraySpec AnalyzeDeferredShapeSpecList(
+    SemanticsContext &, const parser::DeferredShapeSpecList &);
 ArraySpec AnalyzeCoarraySpec(
     SemanticsContext &context, const parser::CoarraySpec &);
 

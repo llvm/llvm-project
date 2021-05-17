@@ -270,7 +270,7 @@ namespace test17 {
   // Note: there is no J...E here, because we can't form a pack argument, and
   // the 5u and 6u are mangled with the original type 'j' (unsigned int) not
   // with the resolved type 'i' (signed int).
-  // CHECK: define {{.*}} @_ZN6test171hILi4EJLi1ELi2ELi3EEEEvNS_1XIXspT0_EXLj5EEXT_EXLj6EEEE
+  // CHECK: define {{.*}} @_ZN6test171hILi4EJLi1ELi2ELi3EEEEvNS_1XIXspT0_ELj5EXT_ELj6EEE
   template<int D, int ...C> void h(X<C..., 5u, D, 6u>) {}
   void i() { h<4, 1, 2, 3>({}); }
 
@@ -323,7 +323,7 @@ namespace partially_dependent_template_args {
     // callee is unresolved, the rest mangle the converted argument Lj0E
     // because the callee is resolved.
     void h() {
-      // CHECK: @_ZN33partially_dependent_template_args5test22g1INS0_1XEEEvDTcl1fIXLi0EEEcvT__EEE
+      // CHECK: @_ZN33partially_dependent_template_args5test22g1INS0_1XEEEvDTcl1fILi0EEcvT__EEE
       g1<X>({});
       // CHECK: @_ZN33partially_dependent_template_args5test22g2IiEEvDTplclL_ZNS0_1fILj0EEEiNS0_1XEEilEEcvT__EE
       g2<int>({});
@@ -341,4 +341,24 @@ namespace fixed_size_parameter_pack {
   };
   template<int ...Ns> void f(A<unsigned, char, long long>::B<0, Ns...>);
   void g() { f<1, 2>({}); }
+}
+
+namespace type_qualifier {
+  template<typename T> using int_t = int;
+  template<typename T> void f(decltype(int_t<T*>() + 1)) {}
+  // FIXME: This mangling doesn't work: we need to mangle the
+  // instantiation-dependent 'int_t' operand.
+  // CHECK: @_ZN14type_qualifier1fIPiEEvDTplcvi_ELi1EE
+  template void f<int*>(int);
+
+  // Note that this template has different constraints but would mangle the
+  // same:
+  //template<typename T> void f(decltype(int_t<typename T::type>() + 1)) {}
+
+  struct impl { using type = void; };
+  template<typename T> using alias = impl;
+  template<typename T> void g(decltype(alias<T*>::type(), 1)) {}
+  // FIXME: Similarly we need to mangle the `T*` in here.
+  // CHECK: @_ZN14type_qualifier1gIPiEEvDTcmcvv_ELi1EE
+  template void g<int*>(int);
 }

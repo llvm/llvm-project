@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CommandObjectPlatform.h"
+#include "CommandOptionsProcessLaunch.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -1008,11 +1009,14 @@ public:
                             "Launch a new process on a remote platform.",
                             "platform process launch program",
                             eCommandRequiresTarget | eCommandTryTargetAPILock),
-        m_options() {}
+        m_options(), m_all_options() {
+    m_all_options.Append(&m_options);
+    m_all_options.Finalize();
+  }
 
   ~CommandObjectPlatformProcessLaunch() override = default;
 
-  Options *GetOptions() override { return &m_options; }
+  Options *GetOptions() override { return &m_all_options; }
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
@@ -1083,7 +1087,8 @@ protected:
     return result.Succeeded();
   }
 
-  ProcessLaunchCommandOptions m_options;
+  CommandOptionsProcessLaunch m_options;
+  OptionGroupOptions m_all_options;
 };
 
 // "platform process list"

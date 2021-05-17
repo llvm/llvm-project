@@ -185,7 +185,7 @@ void LoopTiling::runOnFunction() {
     if (separate) {
       auto intraTileLoops =
           MutableArrayRef<AffineForOp>(tiledNest).drop_front(band.size());
-      separateFullTiles(intraTileLoops);
+      (void)separateFullTiles(intraTileLoops);
     }
   }
 }

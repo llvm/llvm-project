@@ -1420,6 +1420,18 @@ TLI_DEFINE_STRING_INTERNAL("utimes")
 /// void *valloc(size_t size);
 TLI_DEFINE_ENUM_INTERNAL(valloc)
 TLI_DEFINE_STRING_INTERNAL("valloc")
+/// void *vec_calloc(size_t count, size_t size);
+TLI_DEFINE_ENUM_INTERNAL(vec_calloc)
+TLI_DEFINE_STRING_INTERNAL("vec_calloc")
+/// void vec_free(void *ptr);
+TLI_DEFINE_ENUM_INTERNAL(vec_free)
+TLI_DEFINE_STRING_INTERNAL("vec_free")
+/// void *vec_malloc(size_t size);
+TLI_DEFINE_ENUM_INTERNAL(vec_malloc)
+TLI_DEFINE_STRING_INTERNAL("vec_malloc")
+/// void *vec_realloc(void *ptr, size_t size);
+TLI_DEFINE_ENUM_INTERNAL(vec_realloc)
+TLI_DEFINE_STRING_INTERNAL("vec_realloc")
 /// int vfprintf(FILE *stream, const char *format, va_list ap);
 TLI_DEFINE_ENUM_INTERNAL(vfprintf)
 TLI_DEFINE_STRING_INTERNAL("vfprintf")

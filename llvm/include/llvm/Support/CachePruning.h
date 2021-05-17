@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_CACHE_PRUNING_H
-#define LLVM_SUPPORT_CACHE_PRUNING_H
+#ifndef LLVM_SUPPORT_CACHEPRUNING_H
+#define LLVM_SUPPORT_CACHEPRUNING_H
 
 #include "llvm/ADT/Optional.h"
 #include <chrono>

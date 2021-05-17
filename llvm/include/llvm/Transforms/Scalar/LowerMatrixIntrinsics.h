@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_SCALAR_LOWERMATRIXINTRINSICSPASS_H
-#define LLVM_TRANSFORMS_SCALAR_LOWERMATRIXINTRINSICSPASS_H
+#ifndef LLVM_TRANSFORMS_SCALAR_LOWERMATRIXINTRINSICS_H
+#define LLVM_TRANSFORMS_SCALAR_LOWERMATRIXINTRINSICS_H
 
 #include "llvm/IR/PassManager.h"
 

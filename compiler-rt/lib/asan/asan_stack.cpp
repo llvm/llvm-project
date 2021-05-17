@@ -74,7 +74,8 @@ void __sanitizer::BufferedStackTrace::UnwindImpl(
   if (SANITIZER_MIPS && t &&
       !IsValidFrame(bp, t->stack_top(), t->stack_bottom()))
     return;
-  Unwind(max_depth, pc, bp, context, 0, 0, false);
+  Unwind(max_depth, pc, bp, context, t ? t->stack_top() : 0,
+         t ? t->stack_bottom() : 0, false);
 }
 
 // ------------------ Interface -------------- {{{1

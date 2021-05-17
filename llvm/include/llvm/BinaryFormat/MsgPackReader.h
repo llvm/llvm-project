@@ -30,8 +30,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_MSGPACKREADER_H
-#define LLVM_SUPPORT_MSGPACKREADER_H
+#ifndef LLVM_BINARYFORMAT_MSGPACKREADER_H
+#define LLVM_BINARYFORMAT_MSGPACKREADER_H
 
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -146,4 +146,4 @@ private:
 } // end namespace msgpack
 } // end namespace llvm
 
-#endif // LLVM_SUPPORT_MSGPACKREADER_H
+#endif // LLVM_BINARYFORMAT_MSGPACKREADER_H

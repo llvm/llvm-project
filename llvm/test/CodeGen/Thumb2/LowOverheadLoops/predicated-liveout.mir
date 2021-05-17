@@ -117,7 +117,7 @@ body:             |
     frame-setup CFI_INSTRUCTION offset $r7, -8
     renamable $r3, dead $cpsr = tADDi3 renamable $r2, 7, 14, $noreg
     renamable $lr = t2LSRri killed renamable $r3, 3, 14, $noreg, $noreg
-    t2WhileLoopStart renamable $lr, %bb.4, implicit-def dead $cpsr
+    $lr = t2WhileLoopStartLR renamable $lr, %bb.4, implicit-def dead $cpsr
     tB %bb.1, 14, $noreg
 
   bb.1.for.body.preheader:

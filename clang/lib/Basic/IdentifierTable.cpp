@@ -227,6 +227,9 @@ void IdentifierTable::AddKeywords(const LangOptions &LangOpts) {
   if (LangOpts.DeclSpecKeyword)
     AddKeyword("__declspec", tok::kw___declspec, KEYALL, LangOpts, *this);
 
+  if (LangOpts.IEEE128)
+    AddKeyword("__ieee128", tok::kw___float128, KEYALL, LangOpts, *this);
+
   // Add the 'import' contextual keyword.
   get("import").setModulesImport(true);
 }
@@ -268,6 +271,39 @@ bool IdentifierInfo::isCPlusPlusKeyword(const LangOptions &LangOpts) const {
   LangOptsNoCPP.CPlusPlus11 = false;
   LangOptsNoCPP.CPlusPlus20 = false;
   return !isKeyword(LangOptsNoCPP);
+}
+
+ReservedIdentifierStatus
+IdentifierInfo::isReserved(const LangOptions &LangOpts) const {
+  StringRef Name = getName();
+
+  // '_' is a reserved identifier, but its use is so common (e.g. to store
+  // ignored values) that we don't warn on it.
+  if (Name.size() <= 1)
+    return ReservedIdentifierStatus::NotReserved;
+
+  // [lex.name] p3
+  if (Name[0] == '_') {
+
+    // Each name that begins with an underscore followed by an uppercase letter
+    // or another underscore is reserved.
+    if (Name[1] == '_')
+      return ReservedIdentifierStatus::StartsWithDoubleUnderscore;
+
+    if ('A' <= Name[1] && Name[1] <= 'Z')
+      return ReservedIdentifierStatus::
+          StartsWithUnderscoreFollowedByCapitalLetter;
+
+    // This is a bit misleading: it actually means it's only reserved if we're
+    // at global scope because it starts with an underscore.
+    return ReservedIdentifierStatus::StartsWithUnderscoreAtGlobalScope;
+  }
+
+  // Each name that contains a double underscore (__) is reserved.
+  if (LangOpts.CPlusPlus && Name.contains("__"))
+    return ReservedIdentifierStatus::ContainsDoubleUnderscore;
+
+  return ReservedIdentifierStatus::NotReserved;
 }
 
 tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {

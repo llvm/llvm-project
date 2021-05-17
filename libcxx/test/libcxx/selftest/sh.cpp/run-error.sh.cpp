@@ -10,4 +10,4 @@
 
 // Make sure the test DOES NOT pass if it fails to run
 
-// RUN: exit 1
+// RUN: false

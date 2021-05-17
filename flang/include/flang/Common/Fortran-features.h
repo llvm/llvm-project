@@ -29,7 +29,8 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     AdditionalFormats, BigIntLiterals, RealDoControls,
     EquivalenceNumericWithCharacter, AdditionalIntrinsics, AnonymousParents,
     OldLabelDoEndStatements, LogicalIntegerAssignment, EmptySourceFile,
-    ProgramReturn, ImplicitNoneTypeNever, ImplicitNoneTypeAlways)
+    ProgramReturn, ImplicitNoneTypeNever, ImplicitNoneTypeAlways,
+    ForwardRefDummyImplicitNone, OpenAccessAppend)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 
@@ -47,6 +48,7 @@ public:
     disable_.set(LanguageFeature::BackslashEscapes);
     disable_.set(LanguageFeature::LogicalAbbreviations);
     disable_.set(LanguageFeature::XOROperator);
+    disable_.set(LanguageFeature::OldStyleParameter);
   }
   LanguageFeatureControl(const LanguageFeatureControl &) = default;
   void Enable(LanguageFeature f, bool yes = true) { disable_.set(f, !yes); }

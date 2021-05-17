@@ -10,9 +10,9 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/Symbol/ClangTestUtils.h"
+#include "lldb/Core/Declaration.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Symbol/Declaration.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ExprCXX.h"
@@ -741,3 +741,15 @@ TEST(TestScratchTypeSystemClang, InferSubASTFromLangOpts) {
       ScratchTypeSystemClang::IsolatedASTKind::CppModules,
       ScratchTypeSystemClang::InferIsolatedASTKindFromLangOpts(lang_opts));
 }
+
+TEST_F(TestTypeSystemClang, GetExeModuleWhenMissingSymbolFile) {
+  CompilerType compiler_type = m_ast->GetBasicTypeFromAST(lldb::eBasicTypeInt);
+  lldb_private::Type t(0, nullptr, ConstString("MyType"), llvm::None, nullptr,
+                       0, {}, {}, compiler_type,
+                       lldb_private::Type::ResolveState::Full);
+  // Test that getting the execution module when no type system is present
+  // is handled gracefully.
+  ModuleSP module = t.GetExeModule();
+  EXPECT_EQ(module.get(), nullptr);
+}
+

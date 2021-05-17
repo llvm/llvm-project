@@ -716,9 +716,8 @@ void LoopReroll::DAGRootTracker::collectInLoopUserSet(
       }
 
     // We also want to collect single-user "feeder" values.
-    for (User::op_iterator OI = I->op_begin(),
-         OIE = I->op_end(); OI != OIE; ++OI) {
-      if (Instruction *Op = dyn_cast<Instruction>(*OI))
+    for (Use &U : I->operands()) {
+      if (Instruction *Op = dyn_cast<Instruction>(U))
         if (Op->hasOneUse() && L->contains(Op) && !Exclude.count(Op) &&
             !Final.count(Op))
           Queue.push_back(Op);
@@ -1081,6 +1080,12 @@ bool LoopReroll::DAGRootTracker::collectUsedInstructions(SmallInstructionSet &Po
   DenseSet<Instruction*> V;
   collectInLoopUserSet(LoopIncs, Exclude, PossibleRedSet, V);
   for (auto *I : V) {
+    if (I->mayHaveSideEffects()) {
+      LLVM_DEBUG(dbgs() << "LRR: Aborting - "
+                        << "An instruction which does not belong to any root "
+                        << "sets must not have side effects: " << *I);
+      return false;
+    }
     Uses[I].set(IL_All);
   }
 

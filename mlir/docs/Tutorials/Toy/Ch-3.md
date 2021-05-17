@@ -114,8 +114,8 @@ pattern with the canonicalization framework.
 ```c++
 // Register our patterns for rewrite by the Canonicalization framework.
 void TransposeOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<SimplifyRedundantTranspose>(context);
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<SimplifyRedundantTranspose>(context);
 }
 ```
 

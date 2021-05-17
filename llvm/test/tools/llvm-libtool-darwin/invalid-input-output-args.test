@@ -26,9 +26,9 @@
 
 ## Input file not found:
 # RUN: not llvm-libtool-darwin -static -o %t.lib %t.missing 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=NO-FILE -DFILE=%t.missing
+# RUN:   FileCheck %s --check-prefix=NO-FILE -DFILE=%t.missing -DMSG=%errc_ENOENT
 
-# NO-FILE: error: '[[FILE]]': {{[nN]}}o such file or directory
+# NO-FILE: error: '[[FILE]]': [[MSG]]
 
 ## Input file is not an object file:
 # RUN: touch %t.invalid

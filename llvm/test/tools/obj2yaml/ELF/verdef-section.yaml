@@ -1,4 +1,6 @@
 ## Check how we dump SHT_GNU_verdef sections.
+## Check we don't dump the `Info` field when its value is equal
+## to the number of version definitions.
 
 # RUN: yaml2obj %s -o %t
 # RUN: obj2yaml %t | FileCheck %s
@@ -9,7 +11,7 @@
 # CHECK-NEXT:    Address:      0x230
 # CHECK-NEXT:    Link:         .dynstr
 # CHECK-NEXT:    AddressAlign: 0x4
-# CHECK-NEXT:    Info:         0x4
+# INFO-NEXT:     Info:         0x4
 # CHECK-NEXT:    Entries:
 # CHECK-NEXT:      - Names:
 # CHECK-NEXT:          - VERSION_0
@@ -37,9 +39,8 @@ Sections:
     Type:            SHT_GNU_verdef
     Flags:           [ SHF_ALLOC ]
     Address:         0x230
-    Link:            .dynstr
     AddressAlign:    0x4
-    Info:            0x4
+    Info:            [[INFO=<none>]]
     Entries:
 ## An entry that has all fields explicitly set to their default values.
 ## Used to check that we don't dump them.
@@ -65,6 +66,12 @@ Sections:
           - VERSION_4
 ## Needed to emit the .dynstr section.
 DynamicSymbols: []
+
+## Check we dump the `Info` field when its value is not equal
+## to the number of version definitions.
+
+# RUN: yaml2obj %s -DINFO=0x4 -o %t.info
+# RUN: obj2yaml %t.info | FileCheck %s --check-prefixes=CHECK,INFO
 
 ## Document that we are not able to dump a version definition which
 ## has a version revision (vd_version) that is not equal to 1.

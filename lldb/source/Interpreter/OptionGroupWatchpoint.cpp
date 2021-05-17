@@ -74,10 +74,6 @@ bool OptionGroupWatchpoint::IsWatchSizeSupported(uint32_t watch_size) {
   return false;
 }
 
-OptionGroupWatchpoint::OptionGroupWatchpoint() : OptionGroup() {}
-
-OptionGroupWatchpoint::~OptionGroupWatchpoint() {}
-
 Status
 OptionGroupWatchpoint::SetOptionValue(uint32_t option_idx,
                                       llvm::StringRef option_arg,

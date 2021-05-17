@@ -7,14 +7,16 @@
 
 ; Make sure we are handling hazards correctly.
 ; SGPR: buffer_load_dword [[VHI:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], 0 offset:4
-; SGPR-NEXT: s_mov_b64 exec, s[0:1]
 ; SGPR-NEXT: s_waitcnt vmcnt(0)
 ; SGPR-NEXT: v_readlane_b32 s{{[0-9]+}}, [[VHI]], 0
 ; SGPR-NEXT: v_readlane_b32 s{{[0-9]+}}, [[VHI]], 1
 ; SGPR-NEXT: v_readlane_b32 s{{[0-9]+}}, [[VHI]], 2
 ; SGPR-NEXT: v_readlane_b32 s[[HI:[0-9]+]], [[VHI]], 3
-; SGPR-NEXT: s_nop 4
-; SGPR-NEXT: buffer_store_dword v0, off, s[0:[[HI]]{{\]}}, 0
+; SGPR-NEXT: buffer_load_dword [[VHI]], off, s[96:99], 0
+; SGPR-NEXT: s_waitcnt vmcnt(0)
+; SGPR-NEXT: s_mov_b64 exec, s[4:5]
+; SGPR-NEXT: s_nop 1
+; SGPR-NEXT: buffer_store_dword v0, off, s[0:3], 0
 
 ; ALL: s_endpgm
 define amdgpu_kernel void @test(i32 addrspace(1)* %out, i32 %in) {

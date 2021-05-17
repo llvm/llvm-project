@@ -63,7 +63,7 @@ everything to the LLVM dialect.
 ```c++
   mlir::ConversionTarget target(getContext());
   target.addLegalDialect<mlir::LLVMDialect>();
-  target.addLegalOp<mlir::ModuleOp, mlir::ModuleTerminatorOp>();
+  target.addLegalOp<mlir::ModuleOp>();
 ```
 
 ### Type Converter
@@ -90,14 +90,14 @@ into LLVM dialect. These patterns allow for lowering the IR in multiple stages
 by relying on [transitive lowering](../../../getting_started/Glossary.md#transitive-lowering).
 
 ```c++
-  mlir::OwningRewritePatternList patterns;
+  mlir::RewritePatternSet patterns(&getContext());
   mlir::populateAffineToStdConversionPatterns(patterns, &getContext());
   mlir::populateLoopToStdConversionPatterns(patterns, &getContext());
   mlir::populateStdToLLVMConversionPatterns(typeConverter, patterns);
 
   // The only remaining operation, to lower from the `toy` dialect, is the
   // PrintOp.
-  patterns.insert<PrintOpLowering>(&getContext());
+  patterns.add<PrintOpLowering>(&getContext());
 ```
 
 ### Full Lowering

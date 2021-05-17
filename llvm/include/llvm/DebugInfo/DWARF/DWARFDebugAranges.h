@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARFDEBUGARANGES_H
-#define LLVM_DEBUGINFO_DWARFDEBUGARANGES_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFDEBUGARANGES_H
+#define LLVM_DEBUGINFO_DWARF_DWARFDEBUGARANGES_H
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
@@ -81,4 +81,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_DWARFDEBUGARANGES_H
+#endif // LLVM_DEBUGINFO_DWARF_DWARFDEBUGARANGES_H

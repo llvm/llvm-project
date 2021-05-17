@@ -47,5 +47,14 @@ int main(int, char**)
         assert(std::get<1>(t1)->id_ == 3);
     }
 
+#if TEST_STD_VER > 11
+    {
+        using pair_t = std::pair<int, char>;
+        constexpr std::tuple<long, long> t(pair_t(0, 'a'));
+        static_assert(std::get<0>(t) == 0, "");
+        static_assert(std::get<1>(t) == 'a', "");
+    }
+#endif
+
   return 0;
 }

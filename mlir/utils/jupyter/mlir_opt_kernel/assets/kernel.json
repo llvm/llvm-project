@@ -1,0 +1,15 @@
+{
+    "argv": [
+        "python3", "-m", "mlir_opt_kernel", "-f", "{connection_file}"
+    ],
+    "display_name": "MlirOpt",
+    "language": "mlir",
+    "codemirror_mode": "mlir",
+    "language_info": {
+        "name": "mlir",
+        "codemirror_mode": "mlir",
+        "mimetype": "text/x-mlir",
+        "file_extension": ".mlir",
+        "pygments_lexer": "text"
+    }
+}

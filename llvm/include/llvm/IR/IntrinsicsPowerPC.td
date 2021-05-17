@@ -1239,6 +1239,12 @@ def int_ppc_vsx_xvcvdpsxws :
 def int_ppc_vsx_xvcvdpuxws :
       PowerPC_VSX_Intrinsic<"xvcvdpuxws", [llvm_v4i32_ty],
                             [llvm_v2f64_ty], [IntrNoMem]>;
+def int_ppc_vsx_xvcvspsxds :
+      PowerPC_VSX_Intrinsic<"xvcvspsxds", [llvm_v2i64_ty],
+                            [llvm_v4f32_ty], [IntrNoMem]>;
+def int_ppc_vsx_xvcvspuxds :
+      PowerPC_VSX_Intrinsic<"xvcvspuxds", [llvm_v2i64_ty],
+                            [llvm_v4f32_ty], [IntrNoMem]>;
 def int_ppc_vsx_xvcvsxwdp :
       PowerPC_VSX_Intrinsic<"xvcvsxwdp", [llvm_v2f64_ty],
                             [llvm_v4i32_ty], [IntrNoMem]>;

@@ -110,10 +110,10 @@ kind of Python variable will it be? The answers are to use the LLDB API
 functions, provided as part of the LLDB Python module. Running Python
 from inside LLDB, LLDB will automatically give us our current frame
 object as a Python variable, "lldb.frame". This variable has the type
-"SBFrame" (see the LLDB API for more information about SBFrame
+`SBFrame` (see the LLDB API for more information about `SBFrame`
 objects). One of the things we can do with a frame object, is to ask it
 to find and return its local variable. We will call the API function
-"FindVariable" on the lldb.frame object to give us our dictionary
+`SBFrame.FindVariable` on the lldb.frame object to give us our dictionary
 variable as a Python variable:
 
 ::
@@ -125,11 +125,11 @@ current frame to find the variable named "dictionary" and return it. We then
 store the returned value in the Python variable named "root". This answers the
 question of HOW to get the variable, but it still doesn't explain WHAT actually
 gets put into "root". If you examine the LLDB API, you will find that the
-SBFrame method "FindVariable" returns an object of type SBValue. SBValue
+`SBFrame` method "FindVariable" returns an object of type `SBValue`. `SBValue`
 objects are used, among other things, to wrap up program variables and values.
-There are many useful methods defined in the SBValue class to allow you to get
+There are many useful methods defined in the `SBValue` class to allow you to get
 information or children values out of SBValues. For complete information, see
-the header file SBValue.h. The SBValue methods that we use in our DFS function
+the header file SBValue.h. The `SBValue` methods that we use in our DFS function
 are ``GetChildMemberWithName()``, ``GetSummary()``, and ``GetValue()``.
 
 

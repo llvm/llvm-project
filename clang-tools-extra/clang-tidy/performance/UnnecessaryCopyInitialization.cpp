@@ -127,7 +127,7 @@ UnnecessaryCopyInitialization::UnnecessaryCopyInitialization(
           utils::options::parseStringList(Options.get("AllowedTypes", ""))) {}
 
 void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
-  auto localVarCopiedFrom = [this](const internal::Matcher<Expr> &CopyCtorArg) {
+  auto LocalVarCopiedFrom = [this](const internal::Matcher<Expr> &CopyCtorArg) {
     return compoundStmt(
                forEachDescendant(
                    declStmt(
@@ -153,11 +153,11 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
         .bind("blockStmt");
   };
 
-  Finder->addMatcher(localVarCopiedFrom(anyOf(isConstRefReturningFunctionCall(),
+  Finder->addMatcher(LocalVarCopiedFrom(anyOf(isConstRefReturningFunctionCall(),
                                               isConstRefReturningMethodCall())),
                      this);
 
-  Finder->addMatcher(localVarCopiedFrom(declRefExpr(
+  Finder->addMatcher(LocalVarCopiedFrom(declRefExpr(
                          to(varDecl(hasLocalStorage()).bind(OldVarDeclId)))),
                      this);
 }
@@ -181,8 +181,8 @@ void UnnecessaryCopyInitialization::check(
   // A constructor that looks like T(const T& t, bool arg = false) counts as a
   // copy only when it is called with default arguments for the arguments after
   // the first.
-  for (unsigned int i = 1; i < CtorCall->getNumArgs(); ++i)
-    if (!CtorCall->getArg(i)->isDefaultArgument())
+  for (unsigned int I = 1; I < CtorCall->getNumArgs(); ++I)
+    if (!CtorCall->getArg(I)->isDefaultArgument())
       return;
 
   if (OldVar == nullptr) {
@@ -206,13 +206,10 @@ void UnnecessaryCopyInitialization::handleCopyFromMethodReturn(
 
   auto Diagnostic =
       diag(Var.getLocation(),
-           IsConstQualified ? "the const qualified variable %0 is "
-                              "copy-constructed from a const reference; "
-                              "consider making it a const reference"
-                            : "the variable %0 is copy-constructed from a "
-                              "const reference but is only used as const "
-                              "reference; consider making it a const reference")
-      << &Var;
+           "the %select{|const qualified }0variable %1 is copy-constructed "
+           "from a const reference%select{ but is only used as const "
+           "reference|}0; consider making it a const reference")
+      << IsConstQualified << &Var;
   if (IssueFix)
     recordFixes(Var, Context, Diagnostic);
 }

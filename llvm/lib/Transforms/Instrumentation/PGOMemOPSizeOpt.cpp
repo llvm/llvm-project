@@ -46,6 +46,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -224,7 +225,7 @@ public:
                TargetLibraryInfo &TLI)
       : Func(Func), BFI(BFI), ORE(ORE), DT(DT), TLI(TLI), Changed(false) {
     ValueDataArray =
-        std::make_unique<InstrProfValueData[]>(MemOPMaxVersion + 2);
+        std::make_unique<InstrProfValueData[]>(INSTR_PROF_NUM_BUCKETS);
   }
   bool isChanged() const { return Changed; }
   void perform() {
@@ -245,7 +246,7 @@ public:
   void visitMemIntrinsic(MemIntrinsic &MI) {
     Value *Length = MI.getLength();
     // Not perform on constant length calls.
-    if (dyn_cast<ConstantInt>(Length))
+    if (isa<ConstantInt>(Length))
       return;
     WorkList.push_back(MemOp(&MI));
   }
@@ -297,9 +298,9 @@ bool MemOPSizeOpt::perform(MemOp MO) {
   if (!MemOPOptMemcmpBcmp && (MO.isMemcmp(TLI) || MO.isBcmp(TLI)))
     return false;
 
-  uint32_t NumVals, MaxNumPromotions = MemOPMaxVersion + 2;
+  uint32_t NumVals, MaxNumVals = INSTR_PROF_NUM_BUCKETS;
   uint64_t TotalCount;
-  if (!getValueProfDataFromInst(*MO.I, IPVK_MemOPSize, MaxNumPromotions,
+  if (!getValueProfDataFromInst(*MO.I, IPVK_MemOPSize, MaxNumVals,
                                 ValueDataArray.get(), NumVals, TotalCount))
     return false;
 
@@ -338,21 +339,37 @@ bool MemOPSizeOpt::perform(MemOp MO) {
   SmallVector<uint64_t, 16> CaseCounts;
   uint64_t MaxCount = 0;
   unsigned Version = 0;
+  int64_t LastV = -1;
   // Default case is in the front -- save the slot here.
   CaseCounts.push_back(0);
-  for (auto &VD : VDs) {
+  SmallVector<InstrProfValueData, 24> RemainingVDs;
+  for (auto I = VDs.begin(), E = VDs.end(); I != E; ++I) {
+    auto &VD = *I;
     int64_t V = VD.Value;
     uint64_t C = VD.Count;
     if (MemOPScaleCount)
       C = getScaledCount(C, ActualCount, SavedTotalCount);
 
-    if (!InstrProfIsSingleValRange(V) || V > MemOpMaxOptSize)
+    if (!InstrProfIsSingleValRange(V) || V > MemOpMaxOptSize) {
+      RemainingVDs.push_back(VD);
       continue;
+    }
 
     // ValueCounts are sorted on the count. Break at the first un-profitable
     // value.
-    if (!isProfitable(C, RemainCount))
+    if (!isProfitable(C, RemainCount)) {
+      RemainingVDs.insert(RemainingVDs.end(), I, E);
       break;
+    }
+
+    if (V == LastV) {
+      LLVM_DEBUG(dbgs() << "Invalid Profile Data in Function " << Func.getName()
+                        << ": Two consecutive, identical values in MemOp value"
+                           "counts.\n");
+      return false;
+    }
+
+    LastV = V;
 
     SizeIds.push_back(V);
     CaseCounts.push_back(C);
@@ -364,8 +381,10 @@ bool MemOPSizeOpt::perform(MemOp MO) {
     assert(SavedRemainCount >= VD.Count);
     SavedRemainCount -= VD.Count;
 
-    if (++Version > MemOPMaxVersion && MemOPMaxVersion != 0)
+    if (++Version >= MemOPMaxVersion && MemOPMaxVersion != 0) {
+      RemainingVDs.insert(RemainingVDs.end(), I + 1, E);
       break;
+    }
   }
 
   if (Version == 0)
@@ -430,10 +449,12 @@ bool MemOPSizeOpt::perform(MemOp MO) {
   // Clear the value profile data.
   MO.I->setMetadata(LLVMContext::MD_prof, nullptr);
   // If all promoted, we don't need the MD.prof metadata.
-  if (SavedRemainCount > 0 || Version != NumVals)
+  if (SavedRemainCount > 0 || Version != NumVals) {
     // Otherwise we need update with the un-promoted records back.
-    annotateValueSite(*Func.getParent(), *MO.I, VDs.slice(Version),
-                      SavedRemainCount, IPVK_MemOPSize, NumVals);
+    ArrayRef<InstrProfValueData> RemVDs(RemainingVDs);
+    annotateValueSite(*Func.getParent(), *MO.I, RemVDs, SavedRemainCount,
+                      IPVK_MemOPSize, NumVals);
+  }
 
   LLVM_DEBUG(dbgs() << "\n\n== Basic Block After==\n");
 

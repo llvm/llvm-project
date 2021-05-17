@@ -26,7 +26,6 @@ body: |
   ; CHECK:   [[LI8_6:%[0-9]+]]:g8rc = LI8 7
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   [[ADDI8_1:%[0-9]+]]:g8rc = ADDI8 [[ADDI8_]], 1
   ; CHECK:   [[LD:%[0-9]+]]:g8rc = LD 0, [[ADDI8_]] :: (load 8)
   ; CHECK:   [[LDX:%[0-9]+]]:g8rc = LDX [[ADDI8_]], [[LI8_]] :: (load 8)
   ; CHECK:   [[LDX1:%[0-9]+]]:g8rc = LDX [[ADDI8_]], [[LI8_3]] :: (load 8)
@@ -34,9 +33,10 @@ body: |
   ; CHECK:   [[LDX2:%[0-9]+]]:g8rc = LDX [[ADDI8_]], [[LI8_4]] :: (load 8)
   ; CHECK:   [[LDX3:%[0-9]+]]:g8rc = LDX [[ADDI8_]], [[LI8_5]] :: (load 8)
   ; CHECK:   [[LDX4:%[0-9]+]]:g8rc = LDX [[ADDI8_]], [[LI8_6]] :: (load 8)
-  ; CHECK:   [[LDX5:%[0-9]+]]:g8rc = LDX [[ADDI8_]], [[LI8_2]] :: (load 8)
-  ; CHECK:   [[MULLD:%[0-9]+]]:g8rc = MULLD [[LDX]], [[LD]]
   ; CHECK:   [[LD2:%[0-9]+]]:g8rc = LD 8, [[ADDI8_]] :: (load 8)
+  ; CHECK:   [[MULLD:%[0-9]+]]:g8rc = MULLD [[LDX]], [[LD]]
+  ; CHECK:   [[LDX5:%[0-9]+]]:g8rc = LDX [[ADDI8_]], [[LI8_2]] :: (load 8)
+  ; CHECK:   [[ADDI8_1:%[0-9]+]]:g8rc = ADDI8 [[ADDI8_]], 1
   ; CHECK:   [[MULLD1:%[0-9]+]]:g8rc = MULLD [[MULLD]], [[LDX5]]
   ; CHECK:   [[MULLD2:%[0-9]+]]:g8rc = MULLD [[MULLD1]], [[LDX1]]
   ; CHECK:   [[MULLD3:%[0-9]+]]:g8rc = MULLD [[MULLD2]], [[LD1]]

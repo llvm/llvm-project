@@ -4602,7 +4602,7 @@ Python Based Stop Hooks:
   
   When the stop hook is added, the class is initialized by calling:
   
-    def __init__(self, target, extra_args, dict):
+    def __init__(self, target, extra_args, internal_dict):
     
     target: The target that the stop hook is being added to.
     extra_args: An SBStructuredData Dictionary filled with the -key -value 

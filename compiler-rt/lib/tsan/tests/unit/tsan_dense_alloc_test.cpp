@@ -21,28 +21,29 @@
 namespace __tsan {
 
 TEST(DenseSlabAlloc, Basic) {
-  typedef DenseSlabAlloc<int, 128, 128> Alloc;
+  typedef u64 T;
+  typedef DenseSlabAlloc<T, 128, 128> Alloc;
   typedef Alloc::Cache Cache;
   typedef Alloc::IndexT IndexT;
-  const int N = 1000;
+  const T N = 1000;
 
-  Alloc alloc;
+  Alloc alloc("test");
   Cache cache;
   alloc.InitCache(&cache);
 
   IndexT blocks[N];
   for (int ntry = 0; ntry < 3; ntry++) {
-    for (int i = 0; i < N; i++) {
+    for (T i = 0; i < N; i++) {
       IndexT idx = alloc.Alloc(&cache);
       blocks[i] = idx;
       EXPECT_NE(idx, 0U);
-      int *v = alloc.Map(idx);
+      T *v = alloc.Map(idx);
       *v = i;
     }
 
-    for (int i = 0; i < N; i++) {
+    for (T i = 0; i < N; i++) {
       IndexT idx = blocks[i];
-      int *v = alloc.Map(idx);
+      T *v = alloc.Map(idx);
       EXPECT_EQ(*v, i);
       alloc.Free(&cache, idx);
     }

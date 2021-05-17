@@ -123,7 +123,8 @@ Sema::CUDAFunctionTarget Sema::IdentifyCUDATarget(const FunctionDecl *D,
     return CFT_Device;
   } else if (hasAttr<CUDAHostAttr>(D, IgnoreImplicitHDAttr)) {
     return CFT_Host;
-  } else if (D->isImplicit() && !IgnoreImplicitHDAttr) {
+  } else if ((D->isImplicit() || !D->isUserProvided()) &&
+             !IgnoreImplicitHDAttr) {
     // Some implicit declarations (like intrinsic functions) are not marked.
     // Set the most lenient target on them for maximal flexibility.
     return CFT_HostDevice;
@@ -529,9 +530,12 @@ void Sema::checkAllowedCUDAInitializer(VarDecl *VD) {
     if (!AllowedInit &&
         (VD->hasAttr<CUDADeviceAttr>() || VD->hasAttr<CUDAConstantAttr>())) {
       auto *Init = VD->getInit();
+      // isConstantInitializer cannot be called with dependent value, therefore
+      // we skip checking dependent value here. This is OK since
+      // checkAllowedCUDAInitializer is called again when the template is
+      // instantiated.
       AllowedInit =
-          ((VD->getType()->isDependentType() || Init->isValueDependent()) &&
-           VD->isConstexpr()) ||
+          VD->getType()->isDependentType() || Init->isValueDependent() ||
           Init->isConstantInitializer(Context,
                                       VD->getType()->isReferenceType());
     }

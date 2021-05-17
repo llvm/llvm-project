@@ -15,6 +15,7 @@
 
 #include "RISCVRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/IR/DiagnosticInfo.h"
 
 #define GET_INSTRINFO_HEADER
 #include "RISCVGenInstrInfo.inc"
@@ -27,6 +28,8 @@ class RISCVInstrInfo : public RISCVGenInstrInfo {
 
 public:
   explicit RISCVInstrInfo(RISCVSubtarget &STI);
+
+  MCInst getNop() const override;
 
   unsigned isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
@@ -133,9 +136,35 @@ public:
   insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
                      const outliner::Candidate &C) const override;
+
+  bool findCommutedOpIndices(const MachineInstr &MI, unsigned &SrcOpIdx1,
+                             unsigned &SrcOpIdx2) const override;
+  MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
+                                       unsigned OpIdx1,
+                                       unsigned OpIdx2) const override;
+
+  Register getVLENFactoredAmount(MachineFunction &MF, MachineBasicBlock &MBB,
+                                 MachineBasicBlock::iterator II,
+                                 const DebugLoc &DL, int64_t Amount) const;
+
+  Optional<std::pair<unsigned, unsigned>>
+  isRVVSpillForZvlsseg(unsigned Opcode) const;
+
 protected:
   const RISCVSubtarget &STI;
 };
+
+namespace RISCVVPseudosTable {
+
+struct PseudoInfo {
+  uint16_t Pseudo;
+  uint16_t BaseInstr;
+};
+
+#define GET_RISCVVPseudosTable_DECL
+#include "RISCVGenSearchableTables.inc"
+
+} // end namespace RISCVVPseudosTable
 
 } // end namespace llvm
 #endif

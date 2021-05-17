@@ -3,14 +3,21 @@ include_directories(..)
 # Runtime library sources and build flags.
 set(DFSAN_RTL_SOURCES
   dfsan.cpp
+  dfsan_allocator.cpp
+  dfsan_chained_origin_depot.cpp
   dfsan_custom.cpp
   dfsan_interceptors.cpp
+  dfsan_thread.cpp
   )
 
 set(DFSAN_RTL_HEADERS
   dfsan.h
+  dfsan_allocator.h
+  dfsan_chained_origin_depot.h
   dfsan_flags.inc
+  dfsan_flags.h
   dfsan_platform.h
+  dfsan_thread.h
   )
 
 set(DFSAN_COMMON_CFLAGS ${SANITIZER_COMMON_CFLAGS})

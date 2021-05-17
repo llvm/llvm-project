@@ -10,14 +10,15 @@
 
 // <queue>
 
-// explicit priority_queue(const Compare& comp, container_type&& c);
+// explicit priority_queue(const Compare& comp, Container&& c); // before C++20
+// priority_queue(const Compare& comp, Container&& c);          // C++20
 
 #include <queue>
 #include <cassert>
 
 #include "test_macros.h"
 #include "MoveOnly.h"
-
+#include "test_convertible.h"
 
 template <class C>
 C
@@ -29,12 +30,16 @@ make(int n)
     return c;
 }
 
-
 int main(int, char**)
 {
-    std::priority_queue<MoveOnly> q(std::less<MoveOnly>(), make<std::vector<MoveOnly> >(5));
+    typedef std::vector<MoveOnly> Container;
+    typedef std::less<MoveOnly> Compare;
+    typedef std::priority_queue<MoveOnly> Q;
+    Q q(Compare(), make<Container>(5));
     assert(q.size() == 5);
     assert(q.top() == MoveOnly(4));
 
-  return 0;
+    static_assert(test_convertible<Q, const Compare&, Container&&>(), "");
+
+    return 0;
 }

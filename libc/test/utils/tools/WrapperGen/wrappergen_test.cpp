@@ -67,7 +67,9 @@ protected:
   }
 };
 
-TEST_F(WrapperGenTest, RunWrapperGenAndGetNoErrors) {
+using LlvmLibcWrapperGenTest = WrapperGenTest;
+
+TEST_F(LlvmLibcWrapperGenTest, RunWrapperGenAndGetNoErrors) {
   llvm::Optional<llvm::StringRef> Redirects[] = {
       llvm::None, llvm::StringRef(STDOutFile.get().TmpName),
       llvm::StringRef(STDErrFile.get().TmpName)};
@@ -89,7 +91,7 @@ TEST_F(WrapperGenTest, RunWrapperGenAndGetNoErrors) {
   ASSERT_EQ(STDErrOutput, "");
 }
 
-TEST_F(WrapperGenTest, RunWrapperGenOnStrlen) {
+TEST_F(LlvmLibcWrapperGenTest, RunWrapperGenOnStrlen) {
   llvm::Optional<llvm::StringRef> Redirects[] = {
       llvm::None, llvm::StringRef(STDOutFile.get().TmpName),
       llvm::StringRef(STDErrFile.get().TmpName)};
@@ -124,7 +126,7 @@ TEST_F(WrapperGenTest, RunWrapperGenOnStrlen) {
   // would break this test.
 }
 
-TEST_F(WrapperGenTest, GenAliasForStrlen) {
+TEST_F(LlvmLibcWrapperGenTest, GenAliasForStrlen) {
   llvm::Optional<llvm::StringRef> Redirects[] = {
       llvm::None, llvm::StringRef(STDOutFile.get().TmpName),
       llvm::StringRef(STDErrFile.get().TmpName)};
@@ -160,7 +162,7 @@ TEST_F(WrapperGenTest, GenAliasForStrlen) {
   // would break this test.
 }
 
-TEST_F(WrapperGenTest, DeclStrlenAliasUsingMangledNameFile) {
+TEST_F(LlvmLibcWrapperGenTest, DeclStrlenAliasUsingMangledNameFile) {
   llvm::Optional<llvm::StringRef> Redirects[] = {
       llvm::None, llvm::StringRef(STDOutFile.get().TmpName),
       llvm::StringRef(STDErrFile.get().TmpName)};
@@ -212,7 +214,8 @@ TEST_F(WrapperGenTest, DeclStrlenAliasUsingMangledNameFile) {
 // return errors
 /////////////////////////////////////////////////////////////////////
 
-TEST_F(WrapperGenTest, RunWrapperGenOnStrlenWithMangledNameAndMangledNameFile) {
+TEST_F(LlvmLibcWrapperGenTest,
+       RunWrapperGenOnStrlenWithMangledNameAndMangledNameFile) {
   llvm::Optional<llvm::StringRef> Redirects[] = {
       llvm::None, llvm::StringRef(STDOutFile.get().TmpName),
       llvm::StringRef(STDErrFile.get().TmpName)};
@@ -246,7 +249,7 @@ TEST_F(WrapperGenTest, RunWrapperGenOnStrlenWithMangledNameAndMangledNameFile) {
   ASSERT_EQ(STDOutOutput, "");
 }
 
-TEST_F(WrapperGenTest, RunWrapperGenOnBadFuncName) {
+TEST_F(LlvmLibcWrapperGenTest, RunWrapperGenOnBadFuncName) {
   llvm::Optional<llvm::StringRef> Redirects[] = {
       llvm::None, llvm::StringRef(STDOutFile.get().TmpName),
       llvm::StringRef(STDErrFile.get().TmpName)};
@@ -278,7 +281,7 @@ TEST_F(WrapperGenTest, RunWrapperGenOnBadFuncName) {
   ASSERT_EQ(STDOutOutput, "");
 }
 
-TEST_F(WrapperGenTest, RunWrapperGenOnStrlenWithBadMangledNameFile) {
+TEST_F(LlvmLibcWrapperGenTest, RunWrapperGenOnStrlenWithBadMangledNameFile) {
   llvm::Optional<llvm::StringRef> Redirects[] = {
       llvm::None, llvm::StringRef(STDOutFile.get().TmpName),
       llvm::StringRef(STDErrFile.get().TmpName)};
@@ -312,7 +315,7 @@ TEST_F(WrapperGenTest, RunWrapperGenOnStrlenWithBadMangledNameFile) {
   ASSERT_EQ(STDOutOutput, "");
 }
 
-TEST_F(WrapperGenTest, RunWithMangledNameFileMissingLLVMLibcName) {
+TEST_F(LlvmLibcWrapperGenTest, RunWithMangledNameFileMissingLLVMLibcName) {
   llvm::Optional<llvm::StringRef> Redirects[] = {
       llvm::None, llvm::StringRef(STDOutFile.get().TmpName),
       llvm::StringRef(STDErrFile.get().TmpName)};

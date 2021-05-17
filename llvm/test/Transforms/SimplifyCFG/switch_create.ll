@@ -33,10 +33,10 @@ F:              ; preds = %0
 
 define void @test1_select(i32 %V) {
 ; CHECK-LABEL: @test1_select(
-; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[V:%.*]], 4
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[V]], 17
-; CHECK-NEXT:    [[CN:%.*]] = select i1 [[C1]], i1 true, i1 [[C2]]
-; CHECK-NEXT:    br i1 [[CN]], label [[T:%.*]], label [[F:%.*]]
+; CHECK-NEXT:    switch i32 [[V:%.*]], label [[F:%.*]] [
+; CHECK-NEXT:    i32 17, label [[T:%.*]]
+; CHECK-NEXT:    i32 4, label [[T]]
+; CHECK-NEXT:    ]
 ; CHECK:       T:
 ; CHECK-NEXT:    call void @foo1()
 ; CHECK-NEXT:    ret void
@@ -135,10 +135,10 @@ F:              ; preds = %0
 
 define void @test2_select(i32 %V) {
 ; CHECK-LABEL: @test2_select(
-; CHECK-NEXT:    [[C1:%.*]] = icmp ne i32 [[V:%.*]], 4
-; CHECK-NEXT:    [[C2:%.*]] = icmp ne i32 [[V]], 17
-; CHECK-NEXT:    [[CN:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false
-; CHECK-NEXT:    br i1 [[CN]], label [[T:%.*]], label [[F:%.*]]
+; CHECK-NEXT:    switch i32 [[V:%.*]], label [[T:%.*]] [
+; CHECK-NEXT:    i32 17, label [[F:%.*]]
+; CHECK-NEXT:    i32 4, label [[F]]
+; CHECK-NEXT:    ]
 ; CHECK:       T:
 ; CHECK-NEXT:    call void @foo1()
 ; CHECK-NEXT:    ret void
@@ -303,7 +303,7 @@ define void @test7(i8 zeroext %c, i32 %x) nounwind ssp noredzone {
 ; CHECK-NEXT:    i8 97, label [[IF_THEN]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @foo1() [[ATTR2:#.*]]
+; CHECK-NEXT:    tail call void @foo1() #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
@@ -339,7 +339,7 @@ define i32 @test8(i8 zeroext %c, i32 %x, i1 %C) nounwind ssp noredzone {
 ; CHECK-NEXT:    ]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[A:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 42, [[SWITCH_EARLY_TEST]] ], [ 42, [[N]] ], [ 42, [[SWITCH_EARLY_TEST]] ]
-; CHECK-NEXT:    tail call void @foo1() [[ATTR2]]
+; CHECK-NEXT:    tail call void @foo1() #[[ATTR2]]
 ; CHECK-NEXT:    ret i32 [[A]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret i32 0
@@ -446,10 +446,11 @@ define i32 @test10(i32 %mode, i1 %Cond) {
 ; CHECK-NEXT:    i32 0, label [[F]]
 ; CHECK-NEXT:    ]
 ; CHECK:       T:
-; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ 123, [[SWITCH_EARLY_TEST]] ], [ 324, [[F]] ]
-; CHECK-NEXT:    ret i32 [[MERGE]]
+; CHECK-NEXT:    call void @foo1()
+; CHECK-NEXT:    ret i32 123
 ; CHECK:       F:
-; CHECK-NEXT:    br label [[T]]
+; CHECK-NEXT:    call void @foo2()
+; CHECK-NEXT:    ret i32 324
 ;
   %A = icmp ne i32 %mode, 0
   %B = icmp ne i32 %mode, 51
@@ -457,21 +458,28 @@ define i32 @test10(i32 %mode, i1 %Cond) {
   %D = and i1 %C, %Cond
   br i1 %D, label %T, label %F
 T:
+  call void @foo1()
   ret i32 123
 F:
+  call void @foo2()
   ret i32 324
 
 }
 
 define i32 @test10_select(i32 %mode, i1 %Cond) {
 ; CHECK-LABEL: @test10_select(
-; CHECK-NEXT:  T:
-; CHECK-NEXT:    [[A:%.*]] = icmp ne i32 [[MODE:%.*]], 0
-; CHECK-NEXT:    [[B:%.*]] = icmp ne i32 [[MODE]], 51
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i1 [[B]], i1 false
-; CHECK-NEXT:    [[D:%.*]] = select i1 [[C]], i1 [[COND:%.*]], i1 false
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[D]], i32 123, i32 324
-; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[SWITCH_EARLY_TEST:%.*]], label [[F:%.*]]
+; CHECK:       switch.early.test:
+; CHECK-NEXT:    switch i32 [[MODE:%.*]], label [[T:%.*]] [
+; CHECK-NEXT:    i32 51, label [[F]]
+; CHECK-NEXT:    i32 0, label [[F]]
+; CHECK-NEXT:    ]
+; CHECK:       T:
+; CHECK-NEXT:    call void @foo1()
+; CHECK-NEXT:    ret i32 123
+; CHECK:       F:
+; CHECK-NEXT:    call void @foo2()
+; CHECK-NEXT:    ret i32 324
 ;
   %A = icmp ne i32 %mode, 0
   %B = icmp ne i32 %mode, 51
@@ -479,8 +487,10 @@ define i32 @test10_select(i32 %mode, i1 %Cond) {
   %D = select i1 %C, i1 %Cond, i1 false
   br i1 %D, label %T, label %F
 T:
+  call void @foo1()
   ret i32 123
 F:
+  call void @foo2()
   ret i32 324
 
 }
@@ -488,13 +498,18 @@ F:
 ; TODO: %Cond doesn't need freeze
 define i32 @test10_select_and(i32 %mode, i1 %Cond) {
 ; CHECK-LABEL: @test10_select_and(
-; CHECK-NEXT:  T:
-; CHECK-NEXT:    [[A:%.*]] = icmp ne i32 [[MODE:%.*]], 0
-; CHECK-NEXT:    [[B:%.*]] = icmp ne i32 [[MODE]], 51
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i1 [[B]], i1 false
-; CHECK-NEXT:    [[D:%.*]] = and i1 [[C]], [[COND:%.*]]
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[D]], i32 123, i32 324
-; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[SWITCH_EARLY_TEST:%.*]], label [[F:%.*]]
+; CHECK:       switch.early.test:
+; CHECK-NEXT:    switch i32 [[MODE:%.*]], label [[T:%.*]] [
+; CHECK-NEXT:    i32 51, label [[F]]
+; CHECK-NEXT:    i32 0, label [[F]]
+; CHECK-NEXT:    ]
+; CHECK:       T:
+; CHECK-NEXT:    call void @foo1()
+; CHECK-NEXT:    ret i32 123
+; CHECK:       F:
+; CHECK-NEXT:    call void @foo2()
+; CHECK-NEXT:    ret i32 324
 ;
   %A = icmp ne i32 %mode, 0
   %B = icmp ne i32 %mode, 51
@@ -502,21 +517,28 @@ define i32 @test10_select_and(i32 %mode, i1 %Cond) {
   %D = and i1 %C, %Cond
   br i1 %D, label %T, label %F
 T:
+  call void @foo1()
   ret i32 123
 F:
+  call void @foo2()
   ret i32 324
 
 }
 
 define i32 @test10_select_nofreeze(i32 %mode, i1 noundef %Cond) {
 ; CHECK-LABEL: @test10_select_nofreeze(
-; CHECK-NEXT:  T:
-; CHECK-NEXT:    [[A:%.*]] = icmp ne i32 [[MODE:%.*]], 0
-; CHECK-NEXT:    [[B:%.*]] = icmp ne i32 [[MODE]], 51
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i1 [[B]], i1 false
-; CHECK-NEXT:    [[D:%.*]] = select i1 [[C]], i1 [[COND:%.*]], i1 false
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[D]], i32 123, i32 324
-; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[SWITCH_EARLY_TEST:%.*]], label [[F:%.*]]
+; CHECK:       switch.early.test:
+; CHECK-NEXT:    switch i32 [[MODE:%.*]], label [[T:%.*]] [
+; CHECK-NEXT:    i32 51, label [[F]]
+; CHECK-NEXT:    i32 0, label [[F]]
+; CHECK-NEXT:    ]
+; CHECK:       T:
+; CHECK-NEXT:    call void @foo1()
+; CHECK-NEXT:    ret i32 123
+; CHECK:       F:
+; CHECK-NEXT:    call void @foo2()
+; CHECK-NEXT:    ret i32 324
 ;
   %A = icmp ne i32 %mode, 0
   %B = icmp ne i32 %mode, 51
@@ -524,8 +546,10 @@ define i32 @test10_select_nofreeze(i32 %mode, i1 noundef %Cond) {
   %D = select i1 %C, i1 %Cond, i1 false
   br i1 %D, label %T, label %F
 T:
+  call void @foo1()
   ret i32 123
 F:
+  call void @foo2()
   ret i32 324
 
 }
@@ -582,8 +606,8 @@ return:                                           ; preds = %if.end, %if.then
 define void @test12() nounwind {
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DOTOLD:%.*]] = icmp eq i32 undef, undef
-; CHECK-NEXT:    br i1 [[DOTOLD]], label [[BB55_US_US:%.*]], label [[MALFORMED:%.*]]
+; CHECK-NEXT:    [[A_OLD:%.*]] = icmp eq i32 undef, undef
+; CHECK-NEXT:    br i1 [[A_OLD]], label [[BB55_US_US:%.*]], label [[MALFORMED:%.*]]
 ; CHECK:       bb55.us.us:
 ; CHECK-NEXT:    [[B:%.*]] = icmp ugt i32 undef, undef
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 undef, undef
@@ -623,7 +647,7 @@ define void @test13(i32 %x) nounwind ssp noredzone {
 ; CHECK-NEXT:    i32 0, label [[IF_THEN]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.then:
-; CHECK-NEXT:    call void @foo1() [[ATTR3:#.*]]
+; CHECK-NEXT:    call void @foo1() #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
@@ -665,7 +689,7 @@ define void @test14(i32 %x) nounwind ssp noredzone {
 ; CHECK-NEXT:    i32 0, label [[IF_THEN]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.then:
-; CHECK-NEXT:    call void @foo1() [[ATTR3]]
+; CHECK-NEXT:    call void @foo1() #[[ATTR3]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
@@ -903,11 +927,11 @@ else:
 
 define void @test19_select(i32 %arg) {
 ; CHECK-LABEL: @test19_select(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ARG:%.*]], -2
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[AND]], 12
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[ARG]], 32
-; CHECK-NEXT:    [[PRED:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP2]]
-; CHECK-NEXT:    br i1 [[PRED]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    switch i32 [[ARG:%.*]], label [[ELSE:%.*]] [
+; CHECK-NEXT:    i32 32, label [[IF:%.*]]
+; CHECK-NEXT:    i32 13, label [[IF]]
+; CHECK-NEXT:    i32 12, label [[IF]]
+; CHECK-NEXT:    ]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @foo1()
 ; CHECK-NEXT:    ret void

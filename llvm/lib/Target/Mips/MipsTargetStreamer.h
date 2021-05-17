@@ -19,6 +19,8 @@
 
 namespace llvm {
 
+class formatted_raw_ostream;
+
 class MipsTargetStreamer : public MCTargetStreamer {
 public:
   MipsTargetStreamer(MCStreamer &S);

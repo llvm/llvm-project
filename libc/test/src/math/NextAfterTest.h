@@ -29,11 +29,11 @@ class NextAfterTestTemplate : public __llvm_libc::testing::Test {
   static constexpr int bitWidthOfType = sizeof(T) * 8;
 #endif
 
-  const T zero = FPBits::zero();
-  const T negZero = FPBits::negZero();
-  const T inf = FPBits::inf();
-  const T negInf = FPBits::negInf();
-  const T nan = FPBits::buildNaN(1);
+  const T zero = T(FPBits::zero());
+  const T negZero = T(FPBits::negZero());
+  const T inf = T(FPBits::inf());
+  const T negInf = T(FPBits::negInf());
+  const T nan = T(FPBits::buildNaN(1));
   const UIntType minSubnormal = FPBits::minSubnormal;
   const UIntType maxSubnormal = FPBits::maxSubnormal;
   const UIntType minNormal = FPBits::minNormal;
@@ -163,31 +163,37 @@ public:
     result = func(x, 0);
     FPBits xBits = FPBits(x);
     FPBits resultBits = FPBits(result);
-    ASSERT_EQ(resultBits.exponent, uint16_t(xBits.exponent - 1));
-    ASSERT_EQ(resultBits.mantissa, (UIntType(1) << MantissaWidth::value) - 1);
+    ASSERT_EQ(resultBits.encoding.exponent,
+              uint16_t(xBits.encoding.exponent - 1));
+    ASSERT_EQ(resultBits.encoding.mantissa,
+              (UIntType(1) << MantissaWidth::value) - 1);
 
     result = func(x, T(33.0));
     resultBits = FPBits(result);
-    ASSERT_EQ(resultBits.exponent, xBits.exponent);
-    ASSERT_EQ(resultBits.mantissa, xBits.mantissa + UIntType(1));
+    ASSERT_EQ(resultBits.encoding.exponent, xBits.encoding.exponent);
+    ASSERT_EQ(resultBits.encoding.mantissa,
+              xBits.encoding.mantissa + UIntType(1));
 
     x = -x;
 
     result = func(x, 0);
     resultBits = FPBits(result);
-    ASSERT_EQ(resultBits.exponent, uint16_t(xBits.exponent - 1));
-    ASSERT_EQ(resultBits.mantissa, (UIntType(1) << MantissaWidth::value) - 1);
+    ASSERT_EQ(resultBits.encoding.exponent,
+              uint16_t(xBits.encoding.exponent - 1));
+    ASSERT_EQ(resultBits.encoding.mantissa,
+              (UIntType(1) << MantissaWidth::value) - 1);
 
     result = func(x, T(-33.0));
     resultBits = FPBits(result);
-    ASSERT_EQ(resultBits.exponent, xBits.exponent);
-    ASSERT_EQ(resultBits.mantissa, xBits.mantissa + UIntType(1));
+    ASSERT_EQ(resultBits.encoding.exponent, xBits.encoding.exponent);
+    ASSERT_EQ(resultBits.encoding.mantissa,
+              xBits.encoding.mantissa + UIntType(1));
   }
 };
 
 #define LIST_NEXTAFTER_TESTS(T, func)                                          \
-  using NextAfterTest = NextAfterTestTemplate<T>;                              \
-  TEST_F(NextAfterTest, TestNaN) { testNaN(&func); }                           \
-  TEST_F(NextAfterTest, TestBoundaries) { testBoundaries(&func); }
+  using LlvmLibcNextAfterTest = NextAfterTestTemplate<T>;                      \
+  TEST_F(LlvmLibcNextAfterTest, TestNaN) { testNaN(&func); }                   \
+  TEST_F(LlvmLibcNextAfterTest, TestBoundaries) { testBoundaries(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_NEXTAFTERTEST_H

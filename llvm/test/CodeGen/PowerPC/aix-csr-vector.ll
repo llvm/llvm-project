@@ -1,308 +1,201 @@
-; RUN: llc -mtriple=powerpc-unknown-aix-xcoff -vec-extabi -verify-machineinstrs -mcpu=pwr7 \
+; RUN: llc -mtriple=powerpc-unknown-aix-xcoff -verify-machineinstrs -mcpu=pwr7 \
 ; RUN:     -mattr=+altivec -stop-after=prologepilog < %s | \
 ; RUN:   FileCheck --check-prefix=MIR32 %s
 
-; RUN: llc -mtriple=powerpc-unknown-aix-xcoff -vec-extabi -verify-machineinstrs \
+; RUN: llc -mtriple=powerpc-unknown-aix-xcoff -verify-machineinstrs \
 ; RUN:     -mcpu=pwr7 -mattr=+altivec < %s | \
 ; RUN:   FileCheck --check-prefix=ASM32 %s
 
-; RUN: llc -mtriple=powerpc64-unknown-aix-xcoff -vec-extabi -verify-machineinstrs \
+; RUN: llc -mtriple=powerpc64-unknown-aix-xcoff -verify-machineinstrs \
 ; RUN:     -mcpu=pwr7 -mattr=+altivec -stop-after=prologepilog < %s | \
 ; RUN:   FileCheck --check-prefix=MIR64 %s
 
-; RUN: llc -mtriple=powerpc64-unknown-aix-xcoff -vec-extabi -verify-machineinstrs \
+; RUN: llc -mtriple=powerpc64-unknown-aix-xcoff -verify-machineinstrs \
 ; RUN:     -mcpu=pwr7 -mattr=+altivec < %s | \
 ; RUN:   FileCheck --check-prefix=ASM64 %s
 
-
 define dso_local void @vec_regs() {
-entry:
-  call void asm sideeffect "", "~{v13},~{v20},~{v26},~{v31}"()
-  ret void
+  entry:
+    call void asm sideeffect "", "~{v13},~{v20},~{v26},~{v31}"()
+      ret void
 }
 
-; MIR32:         name:            vec_regs
+; MIR32-LABEL:   name:            vec_regs
 
-; MIR32-LABEL:   fixedStack:
-; MIR32-NEXT:    - { id: 0, type: spill-slot, offset: -16, size: 16, alignment: 16, stack-id: default,
-; MIR32-NEXT:        callee-saved-register: '$v31', callee-saved-restored: true, debug-info-variable: '',
-; MIR32-NEXT:        debug-info-expression: '', debug-info-location: '' }
-; MIR32-NEXT:    - { id: 1, type: spill-slot, offset: -96, size: 16, alignment: 16, stack-id: default,
-; MIR32-NEXT:        callee-saved-register: '$v26', callee-saved-restored: true, debug-info-variable: '',
-; MIR32-NEXT:        debug-info-expression: '', debug-info-location: '' }
-; MIR32-NEXT:    - { id: 2, type: spill-slot, offset: -192, size: 16, alignment: 16, stack-id: default,
-; MIR32-NEXT:        callee-saved-register: '$v20', callee-saved-restored: true, debug-info-variable: '',
-; MIR32-NEXT:        debug-info-expression: '', debug-info-location: '' }
-; MIR32-NEXT:    stack:
-
-; MIR32:         liveins: $v20, $v26, $v31
-
-; MIR32-DAG:     STXVD2X killed $v20, $r1, killed $r{{[0-9]+}} :: (store 16 into %fixed-stack.2)
-; MIR32-DAG:     STXVD2X killed $v26, $r1, killed $r{{[0-9]+}} :: (store 16 into %fixed-stack.1)
-; MIR32-DAG:     STXVD2X killed $v31, $r1, killed $r{{[0-9]+}} :: (store 16 into %fixed-stack.0)
-
-; MIR32:         INLINEASM
-
-; MIR32-DAG:     $v20 = LXVD2X $r1, killed $r{{[0-9]+}} :: (load 16 from %fixed-stack.2)
-; MIR32-DAG:     $v26 = LXVD2X $r1, killed $r{{[0-9]+}} :: (load 16 from %fixed-stack.1)
-; MIR32-DAG:     $v31 = LXVD2X $r1, killed $r{{[0-9]+}} :: (load 16 from %fixed-stack.0)
+; MIR32:         fixedStack:      []
+; MIR32-NOT:     STXVD2X killed $v20
+; MIR32-NOT:     STXVD2X killed $v26
+; MIR32-NOT:     STXVD2X killed $v31
+; MIR32-LABEL:   INLINEASM
+; MIR32-NOT:     $v20 = LXVD2X
+; MIR32-NOT:     $v26 = LXVD2X
+; MIR32-NOT:     $v31 = LXVD2X
 ; MIR32:         BLR implicit $lr, implicit $rm
 
-; MIR64:         name:            vec_regs
+; MIR64-LABEL:   name:            vec_regs
 
-; MIR64-LABEL:   fixedStack:
-; MIR64-NEXT:    - { id: 0, type: spill-slot, offset: -16, size: 16, alignment: 16, stack-id: default,
-; MIR64-NEXT:        callee-saved-register: '$v31', callee-saved-restored: true, debug-info-variable: '',
-; MIR64-NEXT:        debug-info-expression: '', debug-info-location: '' }
-; MIR64-NEXT:    - { id: 1, type: spill-slot, offset: -96, size: 16, alignment: 16, stack-id: default,
-; MIR64-NEXT:        callee-saved-register: '$v26', callee-saved-restored: true, debug-info-variable: '',
-; MIR64-NEXT:        debug-info-expression: '', debug-info-location: '' }
-; MIR64-NEXT:    - { id: 2, type: spill-slot, offset: -192, size: 16, alignment: 16, stack-id: default,
-; MIR64-NEXT:        callee-saved-register: '$v20', callee-saved-restored: true, debug-info-variable: '',
-; MIR64-NEXT:        debug-info-expression: '', debug-info-location: '' }
-; MIR64-NEXT:    stack:
-
-; MIR64:         liveins: $v20, $v26, $v31
-
-; MIR64-DAG:     STXVD2X killed $v20, $x1, killed $x{{[0-9]+}} :: (store 16 into %fixed-stack.2)
-; MIR64-DAG:     STXVD2X killed $v26, $x1, killed $x{{[0-9]+}} :: (store 16 into %fixed-stack.1)
-; MIR64-DAG:     STXVD2X killed $v31, $x1, killed $x{{[0-9]+}} :: (store 16 into %fixed-stack.0)
-
-; MIR64:         INLINEASM
-
-; MIR64-DAG:     $v20 = LXVD2X $x1, killed $x{{[0-9]+}} :: (load 16 from %fixed-stack.2)
-; MIR64-DAG:     $v26 = LXVD2X $x1, killed $x{{[0-9]+}} :: (load 16 from %fixed-stack.1)
-; MIR64-DAG:     $v31 = LXVD2X $x1, killed $x{{[0-9]+}} :: (load 16 from %fixed-stack.0)
+; MIR64:         fixedStack:      []
+; MIR64-NOT:     STXVD2X killed $v20
+; MIR64-NOT:     STXVD2X killed $v26
+; MIR64-NOT:     STXVD2X killed $v31
+; MIR64-LABEL:   INLINEASM
+; MIR64-NOT:     $v20 = LXVD2X
+; MIR64-NOT:     $v26 = LXVD2X
+; MIR64-NOT:     $v31 = LXVD2X
 ; MIR64:         BLR8 implicit $lr8, implicit $rm
-
 
 ; ASM32-LABEL:   .vec_regs:
 
-; ASM32:         li {{[0-9]+}}, -192
-; ASM32-DAG:     stxvd2x 52, 1, {{[0-9]+}}               # 16-byte Folded Spill
-; ASM32-DAG:     li {{[0-9]+}}, -96
-; ASM32-DAG:     stxvd2x 58, 1, {{[0-9]+}}               # 16-byte Folded Spill
-; ASM32-DAG:     li {{[0-9]+}}, -16
-; ASM32-DAG:     stxvd2x 63, 1, {{[0-9]+}}               # 16-byte Folded Spill
-; ASM32:         #APP
+; ASM32-NOT:     20
+; ASM32-NOT:     26
+; ASM32-NOT:     31
+; ASM32-DAG:     #APP
 ; ASM32-DAG:     #NO_APP
-; ASM32-DAG:     lxvd2x 63, 1, {{[0-9]+}}       # 16-byte Folded Reload
-; ASM32-DAG:     li {{[0-9]+}}, -96
-; ASM32-DAG:     lxvd2x 58, 1, {{[0-9]+}}       # 16-byte Folded Reload
-; ASM32-DAG:     li {{[0-9]+}}, -192
-; ASM32-DAG:     lxvd2x 52, 1, {{[0-9]+}}       # 16-byte Folded Reload
 ; ASM32:         blr
 
 ; ASM64-LABEL:   .vec_regs:
 
-; ASM64-DAG:     li {{[0-9]+}}, -192
-; ASM64-DAG:     stxvd2x 52, 1, {{[0-9]+}}               # 16-byte Folded Spill
-; ASM64-DAG:     li {{[0-9]+}}, -96
-; ASM64-DAG:     stxvd2x 58, 1, {{[0-9]+}}               # 16-byte Folded Spill
-; ASM64-DAG:     li {{[0-9]+}}, -16
-; ASM64-DAG:     stxvd2x {{[0-9]+}}, 1, {{[0-9]+}}      # 16-byte Folded Spill
+; ASM64-NOT:     20
+; ASM64-NOT:     26
+; ASM64-NOT:     31
 ; ASM64-DAG:     #APP
 ; ASM64-DAG:     #NO_APP
-; ASM64-DAG:     lxvd2x {{[0-9]+}}, 1, {{[0-9]+}}       # 16-byte Folded Reload
-; ASM64-DAG:     li {{[0-9]+}}, -96
-; ASM64-DAG:     lxvd2x 58, 1, {{[0-9]+}}                # 16-byte Folded Reload
-; ASM64-DAG:     li {{[0-9]+}}, -192
-; ASM64-DAG:     lxvd2x 52, 1, {{[0-9]+}}                # 16-byte Folded Reload
-; ASM64-DAG:     blr
+; ASM64:         blr
 
 define dso_local void @fprs_gprs_vecregs() {
-  call void asm sideeffect "", "~{r14},~{r25},~{r31},~{f14},~{f21},~{f31},~{v20},~{v26},~{v31}"()
-  ret void
+    call void asm sideeffect "", "~{r14},~{r25},~{r31},~{f14},~{f21},~{f31},~{v20},~{v26},~{v31}"()
+      ret void
 }
 
-; MIR32:         name:            fprs_gprs_vecregs
+; MIR32-LABEL:   name:            fprs_gprs_vecregs
 
-; MIR32-LABEL:   fixedStack:
-; MIR32-NEXT:    - { id: 0, type: spill-slot, offset: -240, size: 16, alignment: 16, stack-id: default,
-; MIR32-NEXT:        callee-saved-register: '$v31', callee-saved-restored: true, debug-info-variable: '',
-; MIR32-NEXT:        debug-info-expression: '', debug-info-location: '' }
-; MIR32-NEXT:    - { id: 1, type: spill-slot, offset: -320, size: 16, alignment: 16, stack-id: default,
-; MIR32-NEXT:        callee-saved-register: '$v26', callee-saved-restored: true, debug-info-variable: '',
-; MIR32-NEXT:        debug-info-expression: '', debug-info-location: '' }
-; MIR32-NEXT:    - { id: 2, type: spill-slot, offset: -416, size: 16, alignment: 16, stack-id: default,
-; MIR32-NEXT:        callee-saved-register: '$v20', callee-saved-restored: true, debug-info-variable: '',
-; MIR32-NEXT:        debug-info-expression: '', debug-info-location: '' }
-; MIR32-NEXT:    - { id: 3, type: spill-slot, offset: -8, size: 8, alignment: 8, stack-id: default,
-; MIR32-NEXT:        callee-saved-register: '$f31', callee-saved-restored: true, debug-info-variable: '',
-; MIR32-NEXT:        debug-info-expression: '', debug-info-location: '' }
-; MIR32-NEXT:    - { id: 4, type: spill-slot, offset: -88, size: 8, alignment: 8, stack-id: default,
-; MIR32-NEXT:        callee-saved-register: '$f21', callee-saved-restored: true, debug-info-variable: '',
-; MIR32-NEXT:        debug-info-expression: '', debug-info-location: '' }
-; MIR32-NEXT:    - { id: 5, type: spill-slot, offset: -144, size: 8, alignment: 16, stack-id: default,
-; MIR32-NEXT:        callee-saved-register: '$f14', callee-saved-restored: true, debug-info-variable: '',
-; MIR32-NEXT:        debug-info-expression: '', debug-info-location: '' }
-; MIR32-NEXT:    - { id: 6, type: spill-slot, offset: -148, size: 4, alignment: 4, stack-id: default,
-; MIR32-NEXT:        callee-saved-register: '$r31', callee-saved-restored: true, debug-info-variable: '',
-; MIR32-NEXT:        debug-info-expression: '', debug-info-location: '' }
-; MIR32-NEXT:    - { id: 7, type: spill-slot, offset: -172, size: 4, alignment: 4, stack-id: default,
-; MIR32-NEXT:        callee-saved-register: '$r25', callee-saved-restored: true, debug-info-variable: '',
-; MIR32-NEXT:        debug-info-expression: '', debug-info-location: '' }
-; MIR32-NEXT:    - { id: 8, type: spill-slot, offset: -216, size: 4, alignment: 8, stack-id: default,
-; MIR32-NEXT:        callee-saved-register: '$r14', callee-saved-restored: true, debug-info-variable: '',
-; MIR32-NEXT:        debug-info-expression: '', debug-info-location: '' }
-; MIR32-NEXT:    stack:
+; MIR32:         fixedStack:
 
-; MIR32:         liveins: $r14, $r25, $r31, $f14, $f21, $f31, $v20, $v26, $v31
+; MIR32:         liveins: $r14, $r25, $r31, $f14, $f21, $f31
 
-; MIR32-DAG:     STW killed $r14, 232, $r1 :: (store 4 into %fixed-stack.8, align 8)
-; MIR32-DAG:     STW killed $r25, 276, $r1 :: (store 4 into %fixed-stack.7)
-; MIR32-DAG:     STW killed $r31, 300, $r1 :: (store 4 into %fixed-stack.6)
-; MIR32-DAG:     STFD killed $f14, 304, $r1 :: (store 8 into %fixed-stack.5, align 16)
-; MIR32-DAG:     STFD killed $f21, 360, $r1 :: (store 8 into %fixed-stack.4)
-; MIR32-DAG:     STFD killed $f31, 440, $r1 :: (store 8 into %fixed-stack.3)
-; MIR32-DAG:     $r{{[0-9]+}} = LI 32
-; MIR32-DAG:     STXVD2X killed $v20, $r1, killed $r{{[0-9]+}} :: (store 16 into %fixed-stack.2)
-; MIR32-DAG:     $r{{[0-9]+}} = LI 128
-; MIR32-DAG:     STXVD2X killed $v26, $r1, killed $r{{[0-9]+}} :: (store 16 into %fixed-stack.1)
-; MIR32-DAG:     $r{{[0-9]+}} = LI 208
-; MIR32-DAG:     STXVD2X killed $v31, $r1, killed $r{{[0-9]+}} :: (store 16 into %fixed-stack.0)
-; MIR32-DAG:     $r1 = STWU $r1, -448, $r1
+; MIR32-NOT:     STXVD2X killed $v20
+; MIR32-NOT:     STXVD2X killed $v26
+; MIR32-NOT:     STXVD2X killed $v31
+; MIR32-DAG:     STW killed $r14, -216, $r1 :: (store 4 into %fixed-stack.5, align 8)
+; MIR32-DAG:     STW killed $r25, -172, $r1 :: (store 4 into %fixed-stack.4)
+; MIR32-DAG:     STW killed $r31, -148, $r1 :: (store 4 into %fixed-stack.3)
+; MIR32-DAG:     STFD killed $f14, -144, $r1 :: (store 8 into %fixed-stack.2, align 16)
+; MIR32-DAG:     STFD killed $f21, -88, $r1 :: (store 8 into %fixed-stack.1)
+; MIR32-DAG:     STFD killed $f31, -8, $r1 :: (store 8 into %fixed-stack.0)
 
-; MIR32:         INLINEASM
+; MIR32-LABEL:   INLINEASM
 
-; MIR32-DAG:     $r14 = LWZ 232, $r1 :: (load 4 from %fixed-stack.8, align 8)
-; MIR32-DAG:     $r25 = LWZ 276, $r1 :: (load 4 from %fixed-stack.7)
-; MIR32-DAG:     $r31 = LWZ 300, $r1 :: (load 4 from %fixed-stack.6)
-; MIR32-DAG:     $f14 = LFD 304, $r1 :: (load 8 from %fixed-stack.5, align 16)
-; MIR32-DAG:     $f21 = LFD 360, $r1 :: (load 8 from %fixed-stack.4)
-; MIR32-DAG:     $f31 = LFD 440, $r1 :: (load 8 from %fixed-stack.3)
-; MIR32-DAG:     $v20 = LXVD2X $r1, killed $r{{[0-9]+}} :: (load 16 from %fixed-stack.2)
-; MIR32-DAG:     $r{{[0-9]+}} = LI 32
-; MIR32-DAG:     $v26 = LXVD2X $r1, killed $r{{[0-9]+}} :: (load 16 from %fixed-stack.1)
-; MIR32-DAG:     $r{{[0-9]+}} = LI 128
-; MIR32-DAG:     $v31 = LXVD2X $r1, killed $r{{[0-9]+}} :: (load 16 from %fixed-stack.0)
-; MIR32-DAG:     $r{{[0-9]+}} = LI 208
-; MIR32-DAG:     $r1 = ADDI $r1, 448
+; MIR32-NOT:     $v20 = LXVD2X
+; MIR32-NOT:     $v26 = LXVD2X
+; MIR32-NOT:     $v31 = LXVD2X
+; MIR32-DAG:     $r14 = LWZ -216, $r1 :: (load 4 from %fixed-stack.5, align 8)
+; MIR32-DAG:     $r25 = LWZ -172, $r1 :: (load 4 from %fixed-stack.4)
+; MIR32-DAG:     $r31 = LWZ -148, $r1 :: (load 4 from %fixed-stack.3)
+; MIR32-DAG:     $f14 = LFD -144, $r1 :: (load 8 from %fixed-stack.2, align 16)
+; MIR32-DAG:     $f21 = LFD -88, $r1 :: (load 8 from %fixed-stack.1)
+; MIR32-DAG:     $f31 = LFD -8, $r1 :: (load 8 from %fixed-stack.0)
 ; MIR32-DAG:     BLR implicit $lr, implicit $rm
 
-; MIR64:         name:            fprs_gprs_vecregs
+; MIR64-LABEL:   name:            fprs_gprs_vecregs
 
-; MIR64-LABEL:   fixedStack:
-; MIR64-NEXT:    - { id: 0, type: spill-slot, offset: -304, size: 16, alignment: 16, stack-id: default,
-; MIR64-NEXT:        callee-saved-register: '$v31', callee-saved-restored: true, debug-info-variable: '',
-; MIR64-NEXT:        debug-info-expression: '', debug-info-location: '' }
-; MIR64-NEXT:    - { id: 1, type: spill-slot, offset: -384, size: 16, alignment: 16, stack-id: default,
-; MIR64-NEXT:        callee-saved-register: '$v26', callee-saved-restored: true, debug-info-variable: '',
-; MIR64-NEXT:        debug-info-expression: '', debug-info-location: '' }
-; MIR64-NEXT:    - { id: 2, type: spill-slot, offset: -480, size: 16, alignment: 16, stack-id: default,
-; MIR64-NEXT:        callee-saved-register: '$v20', callee-saved-restored: true, debug-info-variable: '',
-; MIR64-NEXT:        debug-info-expression: '', debug-info-location: '' }
-; MIR64-NEXT:    - { id: 3, type: spill-slot, offset: -8, size: 8, alignment: 8, stack-id: default,
-; MIR64-NEXT:        callee-saved-register: '$f31', callee-saved-restored: true, debug-info-variable: '',
-; MIR64-NEXT:        debug-info-expression: '', debug-info-location: '' }
-; MIR64-NEXT:    - { id: 4, type: spill-slot, offset: -88, size: 8, alignment: 8, stack-id: default,
-; MIR64-NEXT:        callee-saved-register: '$f21', callee-saved-restored: true, debug-info-variable: '',
-; MIR64-NEXT:        debug-info-expression: '', debug-info-location: '' }
-; MIR64-NEXT:    - { id: 5, type: spill-slot, offset: -144, size: 8, alignment: 16, stack-id: default,
-; MIR64-NEXT:        callee-saved-register: '$f14', callee-saved-restored: true, debug-info-variable: '',
-; MIR64-NEXT:        debug-info-expression: '', debug-info-location: '' }
-; MIR64-NEXT:    - { id: 6, type: spill-slot, offset: -152, size: 8, alignment: 8, stack-id: default,
-; MIR64-NEXT:        callee-saved-register: '$x31', callee-saved-restored: true, debug-info-variable: '',
-; MIR64-NEXT:        debug-info-expression: '', debug-info-location: '' }
-; MIR64-NEXT:    - { id: 7, type: spill-slot, offset: -200, size: 8, alignment: 8, stack-id: default,
-; MIR64-NEXT:        callee-saved-register: '$x25', callee-saved-restored: true, debug-info-variable: '',
-; MIR64-NEXT:        debug-info-expression: '', debug-info-location: '' }
-; MIR64-NEXT:    - { id: 8, type: spill-slot, offset: -288, size: 8, alignment: 16, stack-id: default,
-; MIR64-NEXT:        callee-saved-register: '$x14', callee-saved-restored: true, debug-info-variable: '',
-; MIR64-NEXT:        debug-info-expression: '', debug-info-location: '' }
-; MIR64-NEXT:    stack:
+; MIR64:         fixedStack:
 
-; MIR64:         liveins: $x14, $x25, $x31, $f14, $f21, $f31, $v20, $v26, $v31
+; MIR64:         liveins: $x14, $x25, $x31, $f14, $f21, $f31
 
-; MIR64-DAG:     $x1 = STDU $x1, -544, $x1
-; MIR64-DAG:     STD killed $x14, 256, $x1 :: (store 8 into %fixed-stack.8, align 16)
-; MIR64-DAG:     STD killed $x25, 344, $x1 :: (store 8 into %fixed-stack.7)
-; MIR64-DAG:     STD killed $x31, 392, $x1 :: (store 8 into %fixed-stack.6)
-; MIR64-DAG:     STFD killed $f14, 400, $x1 :: (store 8 into %fixed-stack.5, align 16)
-; MIR64-DAG:     STFD killed $f21, 456, $x1 :: (store 8 into %fixed-stack.4)
-; MIR64-DAG:     STFD killed $f31, 536, $x1 :: (store 8 into %fixed-stack.3)
-; MIR64-DAG:     $x{{[0-9]+}} = LI8 64
-; MIR64-DAG:     STXVD2X killed $v20, $x1, killed $x{{[0-9]+}} :: (store 16 into %fixed-stack.2)
-; MIR64-DAG:     $x{{[0-9]+}} = LI8 160
-; MIR64-DAG:     STXVD2X killed $v26, $x1, killed $x{{[0-9]+}} :: (store 16 into %fixed-stack.1)
-; MIR64-DAG:     $x{{[0-9]+}} = LI8 240
-; MIR64-DAG:     STXVD2X killed $v31, $x1, killed $x{{[0-9]+}} :: (store 16 into %fixed-stack.0)
+; MIR64-NOT:     STXVD2X killed $v20
+; MIR64-NOT:     STXVD2X killed $v26
+; MIR64-NOT:     STXVD2X killed $v31
+; MIR64-DAG:     STD killed $x14, -288, $x1 :: (store 8 into %fixed-stack.5, align 16)
+; MIR64-DAG:     STD killed $x25, -200, $x1 :: (store 8 into %fixed-stack.4)
+; MIR64-DAG:     STD killed $x31, -152, $x1 :: (store 8 into %fixed-stack.3)
+; MIR64-DAG:     STFD killed $f14, -144, $x1 :: (store 8 into %fixed-stack.2, align 16)
+; MIR64-DAG:     STFD killed $f21, -88, $x1 :: (store 8 into %fixed-stack.1)
+; MIR64-DAG:     STFD killed $f31, -8, $x1 :: (store 8 into %fixed-stack.0)
 
-; MIR64:         INLINEASM
+; MIR64-LABEL:   INLINEASM
 
-; MIR64-DAG:     $x14 = LD 256, $x1 :: (load 8 from %fixed-stack.8, align 16)
-; MIR64-DAG:     $x25 = LD 344, $x1 :: (load 8 from %fixed-stack.7)
-; MIR64-DAG:     $x31 = LD 392, $x1 :: (load 8 from %fixed-stack.6)
-; MIR64-DAG:     $f14 = LFD 400, $x1 :: (load 8 from %fixed-stack.5, align 16)
-; MIR64-DAG:     $f21 = LFD 456, $x1 :: (load 8 from %fixed-stack.4)
-; MIR64-DAG:     $f31 = LFD 536, $x1 :: (load 8 from %fixed-stack.3)
-; MIR64-DAG:     $v20 = LXVD2X $x1, killed $x{{[0-9]+}} :: (load 16 from %fixed-stack.2)
-; MIR64-DAG:     $x{{[0-9]+}} = LI8 64
-; MIR64-DAG:     $v26 = LXVD2X $x1, killed $x{{[0-9]+}} :: (load 16 from %fixed-stack.1)
-; MIR64-DAG:     $x{{[0-9]+}} = LI8 160
-; MIR64-DAG:     $v31 = LXVD2X $x1, killed $x{{[0-9]+}} :: (load 16 from %fixed-stack.0)
-; MIR64-DAG:     $x{{[0-9]+}} = LI8 240
-; MIR64-DAG:     $x1 = ADDI8 $x1, 544
-; MIR64-DAG:     BLR8 implicit $lr8, implicit $rm
+; MIR64-NOT:     $v20 = LXVD2X
+; MIR64-NOT:     $v26 = LXVD2X
+; MIR64-NOT:     $v31 = LXVD2X
+; MIR64-DAG:     $x14 = LD -288, $x1 :: (load 8 from %fixed-stack.5, align 16)
+; MIR64-DAG:     $x25 = LD -200, $x1 :: (load 8 from %fixed-stack.4)
+; MIR64-DAG:     $x31 = LD -152, $x1 :: (load 8 from %fixed-stack.3)
+; MIR64-DAG:     $f14 = LFD -144, $x1 :: (load 8 from %fixed-stack.2, align 16)
+; MIR64-DAG:     $f21 = LFD -88, $x1 :: (load 8 from %fixed-stack.1)
+; MIR64-DAG:     $f31 = LFD -8, $x1 :: (load 8 from %fixed-stack.0)
+; MIR64:         BLR8 implicit $lr8, implicit $rm
+
+;; We don't have -ppc-full-reg-names on AIX so can't reliably check-not for
+;; only vector registers numbers in this case.
 
 ; ASM32-LABEL:   .fprs_gprs_vecregs:
 
-; ASM32:         stwu 1, -448(1)
-; ASM32-DAG:     li {{[0-9]+}}, 32
-; ASM32-DAG:     stw 14, 232(1)                          # 4-byte Folded Spill
-; ASM32-DAG:     stfd 14, 304(1)                         # 8-byte Folded Spill
-; ASM32-DAG:     stxvd2x 52, 1, {{[0-9]+}}               # 16-byte Folded Spill
-; ASM32-DAG:     li {{[0-9]+}}, 128
-; ASM32-DAG:     stw 25, 276(1)                          # 4-byte Folded Spill
-; ASM32-DAG:     stxvd2x 58, 1, {{[0-9]+}}               # 16-byte Folded Spill
-; ASM32-DAG:     li {{[0-9]+}}, 208
-; ASM32-DAG:     stw 31, 300(1)                          # 4-byte Folded Spill
-; ASM32-DAG:     stfd 21, 360(1)                         # 8-byte Folded Spill
-; ASM32-DAG:     stfd 31, 440(1)                         # 8-byte Folded Spill
-; ASM32-DAG:     stxvd2x 63, 1, {{[0-9]+}}               # 16-byte Folded Spill
+; ASM32-DAG:     stw 14, -216(1)                         # 4-byte Folded Spill
+; ASM32-DAG:     stw 25, -172(1)                         # 4-byte Folded Spill
+; ASM32-DAG:     stw 31, -148(1)                         # 4-byte Folded Spill
+; ASM32-DAG:     stfd 14, -144(1)                        # 8-byte Folded Spill
+; ASM32-DAG:     stfd 21, -88(1)                         # 8-byte Folded Spill
+; ASM32-DAG:     stfd 31, -8(1)                          # 8-byte Folded Spill
 ; ASM32-DAG:     #APP
 ; ASM32-DAG:     #NO_APP
-; ASM32-DAG:     lxvd2x 63, 1, {{[0-9]+}}                # 16-byte Folded Reload
-; ASM32-DAG:     li {{[0-9]+}}, 128
-; ASM32-DAG:     lfd 31, 440(1)                          # 8-byte Folded Reload
-; ASM32-DAG:     lxvd2x 58, 1, {{[0-9]+}}                # 16-byte Folded Reload
-; ASM32-DAG:     li {{[0-9]+}}, 32
-; ASM32-DAG:     lfd 21, 360(1)                          # 8-byte Folded Reload
-; ASM32-DAG:     lxvd2x 52, 1, {{[0-9]+}}                # 16-byte Folded Reload
-; ASM32-DAG:     lfd 14, 304(1)                          # 8-byte Folded Reload
-; ASM32-DAG:     lwz 31, 300(1)                          # 4-byte Folded Reload
-; ASM32-DAG:     lwz 25, 276(1)                          # 4-byte Folded Reload
-; ASM32-DAG:     lwz 14, 232(1)                          # 4-byte Folded Reload
-; ASM32-DAG:     addi 1, 1, 448
+; ASM32-DAG:     lfd 31, -8(1)                           # 8-byte Folded Reload
+; ASM32-DAG:     lfd 21, -88(1)                          # 8-byte Folded Reload
+; ASM32-DAG:     lfd 14, -144(1)                         # 8-byte Folded Reload
+; ASM32-DAG:     lwz 31, -148(1)                         # 4-byte Folded Reload
+; ASM32-DAG:     lwz 25, -172(1)                         # 4-byte Folded Reload
+; ASM32-DAG:     lwz 14, -216(1)                         # 4-byte Folded Reload
 ; ASM32:         blr
 
 ; ASM64-LABEL    .fprs_gprs_vecregs:
 
-; ASM64:         stdu 1, -544(1)
-; ASM64-DAG:     li {{[0-9]+}}, 64
-; ASM64-DAG:     std 14, 256(1)                          # 8-byte Folded Spill
-; ASM64-DAG:     stfd 14, 400(1)                         # 8-byte Folded Spill
-; ASM64-DAG:     stxvd2x 52, 1, {{[0-9]+}}               # 16-byte Folded Spill
-; ASM64-DAG:     li {{[0-9]+}}, 160
-; ASM64-DAG:     std 25, 344(1)                          # 8-byte Folded Spill
-; ASM64-DAG:     stxvd2x 58, 1, {{[0-9]+}}               # 16-byte Folded Spill
-; ASM64-DAG:     li {{[0-9]+}}, 240
-; ASM64-DAG:     std 31, 392(1)                          # 8-byte Folded Spill
-; ASM64-DAG:     stfd 21, 456(1)                         # 8-byte Folded Spill
-; ASM64-DAG:     stfd 31, 536(1)                         # 8-byte Folded Spill
-; ASM64-DAG:     stxvd2x 63, 1, {{[0-9]+}}               # 16-byte Folded Spill
+; ASM64-DAG:     std 14, -288(1)                         # 8-byte Folded Spill
+; ASM64-DAG:     std 25, -200(1)                         # 8-byte Folded Spill
+; ASM64-DAG:     std 31, -152(1)                         # 8-byte Folded Spill
+; ASM64-DAG:     stfd 14, -144(1)                        # 8-byte Folded Spill
+; ASM64-DAG:     stfd 21, -88(1)                         # 8-byte Folded Spill
+; ASM64-DAG:     stfd 31, -8(1)                          # 8-byte Folded Spill
 ; ASM64-DAG:     #APP
 ; ASM64-DAG:     #NO_APP
-; ASM64-DAG:     lxvd2x 63, 1, {{[0-9]+}}                # 16-byte Folded Reload
-; ASM64-DAG:     li {{[0-9]+}}, 160
-; ASM64-DAG:     lfd 31, 536(1)                          # 8-byte Folded Reload
-; ASM64-DAG:     lxvd2x 58, 1, {{[0-9]+}}                # 16-byte Folded Reload
-; ASM64-DAG:     li {{[0-9]+}}, 64
-; ASM64-DAG:     lfd 21, 456(1)                          # 8-byte Folded Reload
-; ASM64-DAG:     lxvd2x 52, 1, {{[0-9]+}}                # 16-byte Folded Reload
-; ASM64-DAG:     lfd 14, 400(1)                          # 8-byte Folded Reload
-; ASM64-DAG:     ld 31, 392(1)                           # 8-byte Folded Reload
-; ASM64-DAG:     ld 25, 344(1)                           # 8-byte Folded Reload
-; ASM64-DAG:     ld 14, 256(1)                           # 8-byte Folded Reload
-; ASM64-DAG:     addi 1, 1, 544
+; ASM64-DAG:     lfd 31, -8(1)                           # 8-byte Folded Reload
+; ASM64-DAG:     lfd 21, -88(1)                          # 8-byte Folded Reload
+; ASM64-DAG:     lfd 14, -144(1)                         # 8-byte Folded Reload
+; ASM64-DAG:     ld 31, -152(1)                          # 8-byte Folded Reload
+; ASM64-DAG:     ld 25, -200(1)                          # 8-byte Folded Reload
+; ASM64-DAG:     ld 14, -288(1)                          # 8-byte Folded Reload
 ; ASM64:         blr
+
+define dso_local void @all_fprs_and_vecregs() {
+    call void asm sideeffect "", "~{f0},~{f1},~{f2},~{f3},~{f4},~{f5},~{f6},~{f7},~{f8},~{f9},~{f10},~{f12},~{f13},~{f14},~{f15},~{f16},~{f17},~{f18},~{f19},~{f20},~{f21},~{f22},~{f23},~{f24},~{f25},~{f26},~{f27},~{f28},~{f29},~{f30},~{f31},~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6}~{v7},~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19}"()
+      ret void
+}
+
+;; Check that reserved vectors are not used.
+; MIR32-LABEL:   all_fprs_and_vecregs
+
+; MIR32-NOT:     $v20
+; MIR32-NOT:     $v21
+; MIR32-NOT:     $v22
+; MIR32-NOT:     $v23
+; MIR32-NOT:     $v24
+; MIR32-NOT:     $v25
+; MIR32-NOT:     $v26
+; MIR32-NOT:     $v27
+; MIR32-NOT:     $v28
+; MIR32-NOT:     $v29
+; MIR32-NOT:     $v30
+; MIR32-NOT:     $v31
+
+; MIR64-LABEL:   all_fprs_and_vecregs
+
+; MIR64-NOT:     $v20
+; MIR64-NOT:     $v21
+; MIR64-NOT:     $v22
+; MIR64-NOT:     $v23
+; MIR64-NOT:     $v24
+; MIR64-NOT:     $v25
+; MIR64-NOT:     $v26
+; MIR64-NOT:     $v27
+; MIR64-NOT:     $v28
+; MIR64-NOT:     $v29
+; MIR64-NOT:     $v30
+; MIR64-NOT:     $v31

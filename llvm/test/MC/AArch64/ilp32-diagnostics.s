@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple aarch64-none-linux-gnu -target-abi=ilp32 \
+// RUN: not llvm-mc -triple aarch64-none-linux-gnu_ilp32 \
 // RUN:  < %s 2> %t2 -filetype=obj >/dev/null
 // RUN: FileCheck --check-prefix=CHECK-ERROR %s < %t2
 

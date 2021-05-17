@@ -91,6 +91,7 @@ body:             |
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
+  ; CHECK:   dead $lr = tMOVr $r0, 14 /* CC::al */, $noreg
   ; CHECK:   $lr = t2DLS killed $r0
   ; CHECK:   renamable $r0, dead $cpsr = tSUBi3 killed renamable $r1, 4, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r1, dead $cpsr = tSUBi3 killed renamable $r2, 4, 14 /* CC::al */, $noreg

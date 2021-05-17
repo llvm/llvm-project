@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -verify -std=c++11 %s
 
-[[carries_dependency, carries_dependency]] int m1(); // expected-error {{attribute 'carries_dependency' cannot appear multiple times in an attribute specifier}}
+[[carries_dependency, carries_dependency]] int m1(); // ok
 [[carries_dependency]] [[carries_dependency]] int m2(); // ok
 [[carries_dependency()]] int m3(); // expected-error {{attribute 'carries_dependency' cannot have an argument list}}
 

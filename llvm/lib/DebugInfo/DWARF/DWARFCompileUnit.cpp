@@ -26,7 +26,8 @@ void DWARFCompileUnit::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
   if (!getAbbreviations())
     OS << " (invalid)";
   OS << ", addr_size = " << format("0x%02x", getAddressByteSize());
-  if (getVersion() >= 5 && getUnitType() != dwarf::DW_UT_compile)
+  if (getVersion() >= 5 && (getUnitType() == dwarf::DW_UT_skeleton ||
+                            getUnitType() == dwarf::DW_UT_split_compile))
     OS << ", DWO_id = " << format("0x%016" PRIx64, *getDWOId());
   OS << " (next unit at " << format("0x%08" PRIx64, getNextUnitOffset())
      << ")\n";

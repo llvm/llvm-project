@@ -156,7 +156,7 @@ static int gsiRecordCmp(StringRef S1, StringRef S2) {
   size_t RS = S2.size();
   // Shorter strings always compare less than longer strings.
   if (LS != RS)
-    return LS - RS;
+    return (LS > RS) - (LS < RS);
 
   // If either string contains non ascii characters, memcmp them.
   if (LLVM_UNLIKELY(!isAsciiString(S1) || !isAsciiString(S2)))

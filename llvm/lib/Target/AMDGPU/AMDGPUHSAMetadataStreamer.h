@@ -15,6 +15,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUHSAMETADATASTREAMER_H
 #define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUHSAMETADATASTREAMER_H
 
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/BinaryFormat/MsgPackDocument.h"
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/Alignment.h"
@@ -40,7 +41,8 @@ public:
 
   virtual bool emitTo(AMDGPUTargetStreamer &TargetStreamer) = 0;
 
-  virtual void begin(const Module &Mod) = 0;
+  virtual void begin(const Module &Mod,
+                     const IsaInfo::AMDGPUTargetID &TargetID) = 0;
 
   virtual void end() = 0;
 
@@ -48,8 +50,9 @@ public:
                           const SIProgramInfo &ProgramInfo) = 0;
 };
 
-class MetadataStreamerV3 final : public MetadataStreamer {
-private:
+// TODO: Rename MetadataStreamerV3 -> MetadataStreamerMsgPackV3.
+class MetadataStreamerV3 : public MetadataStreamer {
+protected:
   std::unique_ptr<msgpack::Document> HSAMetadataDoc =
       std::make_unique<msgpack::Document>();
 
@@ -108,7 +111,8 @@ public:
 
   bool emitTo(AMDGPUTargetStreamer &TargetStreamer) override;
 
-  void begin(const Module &Mod) override;
+  void begin(const Module &Mod,
+             const IsaInfo::AMDGPUTargetID &TargetID) override;
 
   void end() override;
 
@@ -116,6 +120,21 @@ public:
                   const SIProgramInfo &ProgramInfo) override;
 };
 
+// TODO: Rename MetadataStreamerV4 -> MetadataStreamerMsgPackV4.
+class MetadataStreamerV4 final : public MetadataStreamerV3 {
+  void emitVersion();
+
+  void emitTargetID(const IsaInfo::AMDGPUTargetID &TargetID);
+
+public:
+  MetadataStreamerV4() = default;
+  ~MetadataStreamerV4() = default;
+
+  void begin(const Module &Mod,
+             const IsaInfo::AMDGPUTargetID &TargetID) override;
+};
+
+// TODO: Rename MetadataStreamerV2 -> MetadataStreamerYamlV2.
 class MetadataStreamerV2 final : public MetadataStreamer {
 private:
   Metadata HSAMetadata;
@@ -172,7 +191,8 @@ public:
 
   bool emitTo(AMDGPUTargetStreamer &TargetStreamer) override;
 
-  void begin(const Module &Mod) override;
+  void begin(const Module &Mod,
+             const IsaInfo::AMDGPUTargetID &TargetID) override;
 
   void end() override;
 

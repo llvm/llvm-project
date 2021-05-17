@@ -9,7 +9,7 @@
 ; CHECK-NEXT: WAW dependences:
 ; CHECK-NEXT:     {  }
 ; CHECK-NEXT: Reduction dependences:
-; CHECK-NEXT:     { Stmt_if_then[i0] -> Stmt_if_then[1 + i0] : 0 <= i0 <= 510; Stmt_if_else[i0] -> Stmt_if_else[1 + i0] : 512 <= i0 <= 1022 }
+; CHECK-NEXT:     { Stmt_if_else[i0] -> Stmt_if_else[1 + i0] : 512 <= i0 <= 1022; Stmt_if_then[i0] -> Stmt_if_then[1 + i0] : 0 <= i0 <= 510 }
 ;
 ; void f(int *restrict sum, int *restrict prod) {
 ;   for (int i = 0; i < 1024; i++)

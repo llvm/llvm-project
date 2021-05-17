@@ -71,13 +71,18 @@ struct HostInfoBaseFields {
   llvm::once_flag m_lldb_global_tmp_dir_once;
   FileSpec m_lldb_global_tmp_dir;
 };
+} // namespace
 
-HostInfoBaseFields *g_fields = nullptr;
+static HostInfoBaseFields *g_fields = nullptr;
+static HostInfoBase::SharedLibraryDirectoryHelper *g_shlib_dir_helper = nullptr;
+
+void HostInfoBase::Initialize(SharedLibraryDirectoryHelper *helper) {
+  g_shlib_dir_helper = helper;
+  g_fields = new HostInfoBaseFields();
 }
 
-void HostInfoBase::Initialize() { g_fields = new HostInfoBaseFields(); }
-
 void HostInfoBase::Terminate() {
+  g_shlib_dir_helper = nullptr;
   delete g_fields;
   g_fields = nullptr;
 }
@@ -249,9 +254,8 @@ bool HostInfoBase::ComputeSharedLibraryDirectory(FileSpec &file_spec) {
       reinterpret_cast<void *>(
           HostInfoBase::ComputeSharedLibraryDirectory)));
 
-  // This is necessary because when running the testsuite the shlib might be a
-  // symbolic link inside the Python resource dir.
-  FileSystem::Instance().ResolveSymbolicLink(lldb_file_spec, lldb_file_spec);
+  if (g_shlib_dir_helper)
+    g_shlib_dir_helper(lldb_file_spec);
 
   // Remove the filename so that this FileSpec only represents the directory.
   file_spec.GetDirectory() = lldb_file_spec.GetDirectory();

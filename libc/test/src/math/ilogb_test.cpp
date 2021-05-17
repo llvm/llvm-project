@@ -15,22 +15,22 @@
 #include "utils/UnitTest/Test.h"
 #include <math.h>
 
-TEST_F(ILogbTest, SpecialNumbers_ilogb) {
+TEST_F(LlvmLibcILogbTest, SpecialNumbers_ilogb) {
   testSpecialNumbers<double>(&__llvm_libc::ilogb);
 }
 
-TEST_F(ILogbTest, PowersOfTwo_ilogb) {
+TEST_F(LlvmLibcILogbTest, PowersOfTwo_ilogb) {
   testPowersOfTwo<double>(&__llvm_libc::ilogb);
 }
 
-TEST_F(ILogbTest, SomeIntegers_ilogb) {
+TEST_F(LlvmLibcILogbTest, SomeIntegers_ilogb) {
   testSomeIntegers<double>(&__llvm_libc::ilogb);
 }
 
-TEST_F(ILogbTest, SubnormalRange_ilogb) {
+TEST_F(LlvmLibcILogbTest, SubnormalRange_ilogb) {
   testSubnormalRange<double>(&__llvm_libc::ilogb);
 }
 
-TEST_F(ILogbTest, NormalRange_ilogb) {
+TEST_F(LlvmLibcILogbTest, NormalRange_ilogb) {
   testNormalRange<double>(&__llvm_libc::ilogb);
 }

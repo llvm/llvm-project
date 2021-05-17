@@ -147,12 +147,12 @@ def FeatureZCRegMove : SubtargetFeature<"zcm", "HasZeroCycleRegMove", "true",
 def FeatureZCZeroingGP : SubtargetFeature<"zcz-gp", "HasZeroCycleZeroingGP", "true",
                                         "Has zero-cycle zeroing instructions for generic registers">;
 
-def FeatureZCZeroingFP : SubtargetFeature<"zcz-fp", "HasZeroCycleZeroingFP", "true",
-                                        "Has zero-cycle zeroing instructions for FP registers">;
+def FeatureNoZCZeroingFP : SubtargetFeature<"no-zcz-fp", "HasZeroCycleZeroingFP", "false",
+                                        "Has no zero-cycle zeroing instructions for FP registers">;
 
 def FeatureZCZeroing : SubtargetFeature<"zcz", "HasZeroCycleZeroing", "true",
                                         "Has zero-cycle zeroing instructions",
-                                        [FeatureZCZeroingGP, FeatureZCZeroingFP]>;
+                                        [FeatureZCZeroingGP]>;
 
 /// ... but the floating-point version doesn't quite work in rare cases on older
 /// CPUs.
@@ -173,9 +173,6 @@ foreach i = {1-7,9-15,18,20-28,30} in
 foreach i = {8-15,18} in
     def FeatureCallSavedX#i : SubtargetFeature<"call-saved-x"#i,
          "CustomCallSavedXRegs["#i#"]", "true", "Make X"#i#" callee saved.">;
-
-def FeatureUseAA : SubtargetFeature<"use-aa", "UseAA", "true",
-                                    "Use alias analysis during codegen">;
 
 def FeatureBalanceFPOps : SubtargetFeature<"balance-fp-ops", "BalanceFPOps",
     "true",
@@ -217,6 +214,10 @@ def FeatureArithmeticBccFusion : SubtargetFeature<
 def FeatureArithmeticCbzFusion : SubtargetFeature<
     "arith-cbz-fusion", "HasArithmeticCbzFusion", "true",
     "CPU fuses arithmetic + cbz/cbnz operations">;
+
+def FeatureCmpBccFusion : SubtargetFeature<
+    "cmp-bcc-fusion", "HasCmpBccFusion", "true",
+    "CPU fuses cmp+bcc operations">;
 
 def FeatureFuseAddress : SubtargetFeature<
     "fuse-address", "HasFuseAddress", "true",
@@ -577,7 +578,6 @@ def ProcA53     : SubtargetFeature<"a53", "ARMProcFamily", "CortexA53",
                                    FeatureNEON,
                                    FeaturePerfMon,
                                    FeaturePostRAScheduler,
-                                   FeatureUseAA
                                    ]>;
 
 def ProcA55     : SubtargetFeature<"a55", "ARMProcFamily", "CortexA55",
@@ -590,7 +590,8 @@ def ProcA55     : SubtargetFeature<"a55", "ARMProcFamily", "CortexA55",
                                    FeatureFullFP16,
                                    FeatureDotProd,
                                    FeatureRCPC,
-                                   FeaturePerfMon
+                                   FeaturePerfMon,
+                                   FeaturePostRAScheduler,
                                    ]>;
 
 def ProcA57     : SubtargetFeature<"a57", "ARMProcFamily", "CortexA57",
@@ -615,6 +616,9 @@ def ProcA65     : SubtargetFeature<"a65", "ARMProcFamily", "CortexA65",
                                    FeatureDotProd,
                                    FeatureFPARMv8,
                                    FeatureFullFP16,
+                                   FeatureFuseAddress,
+                                   FeatureFuseAES,
+                                   FeatureFuseLiterals,
                                    FeatureNEON,
                                    FeatureRAS,
                                    FeatureRCPC,
@@ -627,6 +631,7 @@ def ProcA72     : SubtargetFeature<"a72", "ARMProcFamily", "CortexA72",
                                    FeatureCrypto,
                                    FeatureFPARMv8,
                                    FeatureFuseAES,
+                                   FeatureFuseLiterals,
                                    FeatureNEON,
                                    FeaturePerfMon
                                    ]>;
@@ -658,6 +663,7 @@ def ProcA76     : SubtargetFeature<"a76", "ARMProcFamily", "CortexA76",
                                    "Cortex-A76 ARM processors", [
                                     HasV8_2aOps,
                                     FeatureFPARMv8,
+                                    FeatureFuseAES,
                                     FeatureNEON,
                                     FeatureRCPC,
                                     FeatureCrypto,
@@ -669,7 +675,9 @@ def ProcA76     : SubtargetFeature<"a76", "ARMProcFamily", "CortexA76",
 def ProcA77     : SubtargetFeature<"a77", "ARMProcFamily", "CortexA77",
                                    "Cortex-A77 ARM processors", [
                                     HasV8_2aOps,
+                                    FeatureCmpBccFusion,
                                     FeatureFPARMv8,
+                                    FeatureFuseAES,
                                     FeatureNEON, FeatureRCPC,
                                     FeatureCrypto,
                                     FeatureFullFP16,
@@ -680,6 +688,7 @@ def ProcA78 : SubtargetFeature<"cortex-a78", "ARMProcFamily",
                                "CortexA78",
                                "Cortex-A78 ARM processors", [
                                HasV8_2aOps,
+                               FeatureCmpBccFusion,
                                FeatureCrypto,
                                FeatureFPARMv8,
                                FeatureFuseAES,
@@ -696,6 +705,7 @@ def ProcA78C : SubtargetFeature<"cortex-a78c", "ARMProcFamily",
                                 "CortexA78C",
                                 "Cortex-A78C ARM processors", [
                                 HasV8_2aOps,
+                                FeatureCmpBccFusion,
                                 FeatureCrypto,
                                 FeatureDotProd,
                                 FeatureFlagM,
@@ -715,7 +725,6 @@ def ProcR82 : SubtargetFeature<"cortex-r82", "ARMProcFamily",
                                "CortexR82",
                                "Cortex-R82 ARM Processors", [
                                FeaturePostRAScheduler,
-                               // TODO: crypto and FuseAES
                                // All other features are implied by v8_0r ops:
                                HasV8_0rOps,
                                ]>;
@@ -723,6 +732,7 @@ def ProcR82 : SubtargetFeature<"cortex-r82", "ARMProcFamily",
 def ProcX1 : SubtargetFeature<"cortex-x1", "ARMProcFamily", "CortexX1",
                                   "Cortex-X1 ARM processors", [
                                   HasV8_2aOps,
+                                  FeatureCmpBccFusion,
                                   FeatureCrypto,
                                   FeatureFPARMv8,
                                   FeatureFuseAES,
@@ -854,6 +864,38 @@ def ProcAppleA13 : SubtargetFeature<"apple-a13", "ARMProcFamily", "AppleA13",
                                      HasV8_4aOps
                                      ]>;
 
+def ProcAppleA14 : SubtargetFeature<"apple-a14", "ARMProcFamily", "AppleA14",
+                                     "Apple A14", [
+                                     FeatureAggressiveFMA,
+                                     FeatureAlternateSExtLoadCVTF32Pattern,
+                                     FeatureAltFPCmp,
+                                     FeatureArithmeticBccFusion,
+                                     FeatureArithmeticCbzFusion,
+                                     FeatureCrypto,
+                                     FeatureDisableLatencySchedHeuristic,
+                                     FeatureFPARMv8,
+                                     FeatureFRInt3264,
+                                     FeatureFuseAddress,
+                                     FeatureFuseAES,
+                                     FeatureFuseArithmeticLogic,
+                                     FeatureFuseCCSelect,
+                                     FeatureFuseCryptoEOR,
+                                     FeatureFuseLiterals,
+                                     FeatureNEON,
+                                     FeaturePerfMon,
+                                     FeatureSpecRestrict,
+                                     FeatureSSBS,
+                                     FeatureSB,
+                                     FeaturePredRes,
+                                     FeatureCacheDeepPersist,
+                                     FeatureZCRegMove,
+                                     FeatureZCZeroing,
+                                     FeatureFullFP16,
+                                     FeatureFP16FML,
+                                     FeatureSHA3,
+                                     HasV8_4aOps
+                                     ]>;
+
 def ProcExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                     "Samsung Exynos-M3 processors",
                                     [FeatureCRC,
@@ -867,8 +909,7 @@ def ProcExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                      FeatureLSLFast,
                                      FeaturePerfMon,
                                      FeaturePostRAScheduler,
-                                     FeaturePredictableSelectIsExpensive,
-                                     FeatureZCZeroingFP]>;
+                                     FeaturePredictableSelectIsExpensive]>;
 
 def ProcExynosM4 : SubtargetFeature<"exynosm4", "ARMProcFamily", "ExynosM3",
                                     "Samsung Exynos-M4 processors",
@@ -931,6 +972,8 @@ def ProcNeoverseE1 : SubtargetFeature<"neoversee1", "ARMProcFamily",
                                       FeatureNEON,
                                       FeatureRCPC,
                                       FeatureSSBS,
+                                      FeaturePostRAScheduler,
+                                      FeatureFuseAES,
                                       ]>;
 
 def ProcNeoverseN1 : SubtargetFeature<"neoversen1", "ARMProcFamily",
@@ -945,6 +988,8 @@ def ProcNeoverseN1 : SubtargetFeature<"neoversen1", "ARMProcFamily",
                                       FeatureRCPC,
                                       FeatureSPE,
                                       FeatureSSBS,
+                                      FeaturePostRAScheduler,
+                                      FeatureFuseAES,
                                       ]>;
 
 def ProcNeoverseN2 : SubtargetFeature<"neoversen2", "ARMProcFamily",
@@ -957,7 +1002,11 @@ def ProcNeoverseN2 : SubtargetFeature<"neoversen2", "ARMProcFamily",
                                       FeatureMTE,
                                       FeatureSVE2,
                                       FeatureSVE2BitPerm,
-                                      FeatureTRBE]>;
+                                      FeatureTRBE,
+                                      FeaturePostRAScheduler,
+                                      FeatureCrypto,
+                                      FeatureFuseAES,
+                                      ]>;
 
 def ProcNeoverseV1 : SubtargetFeature<"neoversev1", "ARMProcFamily",
                                       "NeoverseV1",
@@ -1020,7 +1069,6 @@ def ProcThunderX3T110  : SubtargetFeature<"thunderx3t110", "ARMProcFamily",
                                           FeaturePredictableSelectIsExpensive,
                                           FeatureLSE,
                                           FeaturePAuth,
-                                          FeatureUseAA,
                                           FeatureBalanceFPOps,
                                           FeaturePerfMon,
                                           FeatureStrictAlign,
@@ -1147,13 +1195,17 @@ def : ProcessorModel<"apple-a10", CycloneModel, [ProcAppleA10]>;
 def : ProcessorModel<"apple-a11", CycloneModel, [ProcAppleA11]>;
 def : ProcessorModel<"apple-a12", CycloneModel, [ProcAppleA12]>;
 def : ProcessorModel<"apple-a13", CycloneModel, [ProcAppleA13]>;
+def : ProcessorModel<"apple-a14", CycloneModel, [ProcAppleA14]>;
+
+// Mac CPUs
+def : ProcessorModel<"apple-m1", CycloneModel, [ProcAppleA14]>;
 
 // watch CPUs.
 def : ProcessorModel<"apple-s4", CycloneModel, [ProcAppleA12]>;
 def : ProcessorModel<"apple-s5", CycloneModel, [ProcAppleA12]>;
 
 // Alias for the latest Apple processor model supported by LLVM.
-def : ProcessorModel<"apple-latest", CycloneModel, [ProcAppleA13]>;
+def : ProcessorModel<"apple-latest", CycloneModel, [ProcAppleA14]>;
 
 // Fujitsu A64FX
 def : ProcessorModel<"a64fx", A64FXModel, [ProcA64FX]>;

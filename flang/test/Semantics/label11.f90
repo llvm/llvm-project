@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %S/test_errors.sh %s %t %flang_fc1
 ! C739 If END TYPE is followed by a type-name, the type-name shall be the
 ! same as that in the corresponding derived-type-stmt.
 ! C1401 The program-name shall not be included in the end-program-stmt unless

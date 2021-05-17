@@ -105,6 +105,7 @@ int main(int, char**)
             test_compare<std::equal_to<int> >(3),
             A(10)
            );
+        C::iterator it0 = c0.begin();
         c = std::move(c0);
         LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 4);
@@ -121,6 +122,7 @@ int main(int, char**)
         assert(fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
         assert(c.max_load_factor() == 1);
         assert(c0.size() == 0);
+        assert(it0 == c.begin()); // Iterators remain valid
     }
     {
         typedef other_allocator<std::pair<const int, std::string> > A;
@@ -151,6 +153,7 @@ int main(int, char**)
             test_compare<std::equal_to<int> >(3),
             A(4)
            );
+        C::iterator it0 = c0.begin();
         c = std::move(c0);
         LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 4);
@@ -167,6 +170,7 @@ int main(int, char**)
         assert(fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
         assert(c.max_load_factor() == 1);
         assert(c0.size() == 0);
+        assert(it0 == c.begin()); // Iterators remain valid
     }
     {
         typedef min_allocator<std::pair<const int, std::string> > A;
@@ -197,6 +201,7 @@ int main(int, char**)
             test_compare<std::equal_to<int> >(3),
             A()
            );
+        C::iterator it0 = c0.begin();
         c = std::move(c0);
         LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 4);
@@ -213,6 +218,7 @@ int main(int, char**)
         assert(fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
         assert(c.max_load_factor() == 1);
         assert(c0.size() == 0);
+        assert(it0 == c.begin()); // Iterators remain valid
     }
 
   return 0;

@@ -644,7 +644,6 @@ Sections:
     Type:    SHT_GNU_versym
     EntSize: 0x0000000000000003
     Entries: [ ]
-    Link:    .dynsym
 ## Needed to trigger creation of .dynsym.
 DynamicSymbols:
   - Name:    foo

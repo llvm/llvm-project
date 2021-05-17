@@ -39,7 +39,7 @@ YamlRecorder::Create(const FileSpec &filename) {
 void VersionProvider::Keep() {
   FileSpec file = GetRoot().CopyByAppendingPathComponent(Info::file);
   std::error_code ec;
-  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_Text);
+  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_TextWithCRLF);
   if (ec)
     return;
   os << m_version << "\n";
@@ -108,7 +108,7 @@ void ProcessInfoProvider::Keep() {
 
   FileSpec file = GetRoot().CopyByAppendingPathComponent(Info::file);
   std::error_code ec;
-  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_Text);
+  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_TextWithCRLF);
   if (ec)
     return;
   llvm::yaml::Output yout(os);
@@ -153,7 +153,7 @@ void SymbolFileProvider::AddSymbolFile(const UUID *uuid,
 void SymbolFileProvider::Keep() {
   FileSpec file = this->GetRoot().CopyByAppendingPathComponent(Info::file);
   std::error_code ec;
-  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_Text);
+  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_TextWithCRLF);
   if (ec)
     return;
 

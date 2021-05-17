@@ -25,7 +25,7 @@ int main(int, char**)
         typedef int T;
         typedef std::forward_list<T> C;
         typedef C::iterator I;
-        typedef input_iterator<const T*> J;
+        typedef cpp17_input_iterator<const T*> J;
         C c;
         const T t[] = {0, 1, 2, 3, 4};
         I i = c.insert_after(c.cbefore_begin(), J(t), J(t));
@@ -53,7 +53,7 @@ int main(int, char**)
         typedef int T;
         typedef std::forward_list<T, min_allocator<T>> C;
         typedef C::iterator I;
-        typedef input_iterator<const T*> J;
+        typedef cpp17_input_iterator<const T*> J;
         C c;
         const T t[] = {0, 1, 2, 3, 4};
         I i = c.insert_after(c.cbefore_begin(), J(t), J(t));

@@ -16,7 +16,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPUMachineFunction.h"
-#include "AMDGPUSubtarget.h"
+#include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -1257,8 +1257,9 @@ SDValue AMDGPUTargetLowering::LowerOperation(SDValue Op,
   case ISD::SINT_TO_FP: return LowerSINT_TO_FP(Op, DAG);
   case ISD::UINT_TO_FP: return LowerUINT_TO_FP(Op, DAG);
   case ISD::FP_TO_FP16: return LowerFP_TO_FP16(Op, DAG);
-  case ISD::FP_TO_SINT: return LowerFP_TO_SINT(Op, DAG);
-  case ISD::FP_TO_UINT: return LowerFP_TO_UINT(Op, DAG);
+  case ISD::FP_TO_SINT:
+  case ISD::FP_TO_UINT:
+    return LowerFP_TO_INT(Op, DAG);
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_UNDEF:
   case ISD::CTLZ:
@@ -2707,44 +2708,37 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) con
   return DAG.getZExtOrTrunc(V, DL, Op.getValueType());
 }
 
-SDValue AMDGPUTargetLowering::LowerFP_TO_SINT(SDValue Op,
-                                              SelectionDAG &DAG) const {
+SDValue AMDGPUTargetLowering::LowerFP_TO_INT(SDValue Op,
+                                             SelectionDAG &DAG) const {
   SDValue Src = Op.getOperand(0);
-
-  // TODO: Factor out code common with LowerFP_TO_UINT.
-
+  unsigned OpOpcode = Op.getOpcode();
   EVT SrcVT = Src.getValueType();
+  EVT DestVT = Op.getValueType();
+
+  // Will be selected natively
+  if (SrcVT == MVT::f16 && DestVT == MVT::i16)
+    return Op;
+
+  // Promote i16 to i32
+  if (DestVT == MVT::i16 && (SrcVT == MVT::f32 || SrcVT == MVT::f64)) {
+    SDLoc DL(Op);
+
+    SDValue FpToInt32 = DAG.getNode(OpOpcode, DL, MVT::i32, Src);
+    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FpToInt32);
+  }
+
   if (SrcVT == MVT::f16 ||
       (SrcVT == MVT::f32 && Src.getOpcode() == ISD::FP16_TO_FP)) {
     SDLoc DL(Op);
 
-    SDValue FpToInt32 = DAG.getNode(Op.getOpcode(), DL, MVT::i32, Src);
-    return DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, FpToInt32);
+    SDValue FpToInt32 = DAG.getNode(OpOpcode, DL, MVT::i32, Src);
+    unsigned Ext =
+        OpOpcode == ISD::FP_TO_SINT ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+    return DAG.getNode(Ext, DL, MVT::i64, FpToInt32);
   }
 
-  if (Op.getValueType() == MVT::i64 && Src.getValueType() == MVT::f64)
-    return LowerFP64_TO_INT(Op, DAG, true);
-
-  return SDValue();
-}
-
-SDValue AMDGPUTargetLowering::LowerFP_TO_UINT(SDValue Op,
-                                              SelectionDAG &DAG) const {
-  SDValue Src = Op.getOperand(0);
-
-  // TODO: Factor out code common with LowerFP_TO_SINT.
-
-  EVT SrcVT = Src.getValueType();
-  if (SrcVT == MVT::f16 ||
-      (SrcVT == MVT::f32 && Src.getOpcode() == ISD::FP16_TO_FP)) {
-    SDLoc DL(Op);
-
-    SDValue FpToUInt32 = DAG.getNode(Op.getOpcode(), DL, MVT::i32, Src);
-    return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, FpToUInt32);
-  }
-
-  if (Op.getValueType() == MVT::i64 && Src.getValueType() == MVT::f64)
-    return LowerFP64_TO_INT(Op, DAG, false);
+  if (DestVT == MVT::i64 && SrcVT == MVT::f64)
+    return LowerFP64_TO_INT(Op, DAG, OpOpcode == ISD::FP_TO_SINT);
 
   return SDValue();
 }
@@ -2787,8 +2781,8 @@ static bool isI24(SDValue Op, SelectionDAG &DAG) {
     AMDGPUTargetLowering::numBitsSigned(Op, DAG) < 24;
 }
 
-static SDValue simplifyI24(SDNode *Node24,
-                           TargetLowering::DAGCombinerInfo &DCI) {
+static SDValue simplifyMul24(SDNode *Node24,
+                             TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   bool IsIntrin = Node24->getOpcode() == ISD::INTRINSIC_WO_CHAIN;
@@ -2890,9 +2884,8 @@ SDValue AMDGPUTargetLowering::performLoadCombine(SDNode *N,
     // Expand unaligned loads earlier than legalization. Due to visitation order
     // problems during legalization, the emitted instructions to pack and unpack
     // the bytes again are not eliminated in the case of an unaligned copy.
-    if (!allowsMisalignedMemoryAccesses(VT, AS, Alignment.value(),
-                                        LN->getMemOperand()->getFlags(),
-                                        &IsFast)) {
+    if (!allowsMisalignedMemoryAccesses(
+            VT, AS, Alignment, LN->getMemOperand()->getFlags(), &IsFast)) {
       SDValue Ops[2];
 
       if (VT.isVector())
@@ -2946,9 +2939,8 @@ SDValue AMDGPUTargetLowering::performStoreCombine(SDNode *N,
     // order problems during legalization, the emitted instructions to pack and
     // unpack the bytes again are not eliminated in the case of an unaligned
     // copy.
-    if (!allowsMisalignedMemoryAccesses(VT, AS, Alignment.value(),
-                                        SN->getMemOperand()->getFlags(),
-                                        &IsFast)) {
+    if (!allowsMisalignedMemoryAccesses(
+            VT, AS, Alignment, SN->getMemOperand()->getFlags(), &IsFast)) {
       if (VT.isVector())
         return scalarizeVectorStore(SN, DAG);
 
@@ -3010,7 +3002,7 @@ SDValue AMDGPUTargetLowering::performIntrinsicWOChainCombine(
   switch (IID) {
   case Intrinsic::amdgcn_mul_i24:
   case Intrinsic::amdgcn_mul_u24:
-    return simplifyI24(N, DCI);
+    return simplifyMul24(N, DCI);
   case Intrinsic::amdgcn_fract:
   case Intrinsic::amdgcn_rsq:
   case Intrinsic::amdgcn_rcp_legacy:
@@ -3311,6 +3303,13 @@ static SDValue getMul24(SelectionDAG &DAG, const SDLoc &SL,
 SDValue AMDGPUTargetLowering::performMulCombine(SDNode *N,
                                                 DAGCombinerInfo &DCI) const {
   EVT VT = N->getValueType(0);
+
+  // Don't generate 24-bit multiplies on values that are in SGPRs, since
+  // we only have a 32-bit scalar multiply (avoid values being moved to VGPRs
+  // unnecessarily). isDivergent() is used as an approximation of whether the
+  // value is in an SGPR.
+  if (!N->isDivergent())
+    return SDValue();
 
   unsigned Size = VT.getSizeInBits();
   if (VT.isVector() || Size > 64)
@@ -3985,11 +3984,8 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
   case AMDGPUISD::MUL_I24:
   case AMDGPUISD::MUL_U24:
   case AMDGPUISD::MULHI_I24:
-  case AMDGPUISD::MULHI_U24: {
-    if (SDValue V = simplifyI24(N, DCI))
-      return V;
-    return SDValue();
-  }
+  case AMDGPUISD::MULHI_U24:
+    return simplifyMul24(N, DCI);
   case ISD::SELECT:
     return performSelectCombine(N, DCI);
   case ISD::FNEG:
@@ -4350,6 +4346,8 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(BUFFER_ATOMIC_CMPSWAP)
   NODE_NAME_CASE(BUFFER_ATOMIC_CSUB)
   NODE_NAME_CASE(BUFFER_ATOMIC_FADD)
+  NODE_NAME_CASE(BUFFER_ATOMIC_FMIN)
+  NODE_NAME_CASE(BUFFER_ATOMIC_FMAX)
 
   case AMDGPUISD::LAST_AMDGPU_ISD_NUMBER: break;
   }

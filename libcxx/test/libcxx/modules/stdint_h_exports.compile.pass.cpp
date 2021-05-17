@@ -10,11 +10,14 @@
 // still get built as part of the 'std' module, which breaks the build.
 // UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: libcpp-has-no-localization
+// UNSUPPORTED: libcpp-has-no-filesystem-library
 
 // Test that int8_t and the like are exported from stdint.h, not inttypes.h
 
 // REQUIRES: modules-support
 // ADDITIONAL_COMPILE_FLAGS: -fmodules
+
+// XFAIL: LIBCXX-WINDOWS-FIXME
 
 #include <stdint.h>
 

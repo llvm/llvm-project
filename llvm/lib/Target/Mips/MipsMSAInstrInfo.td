@@ -365,18 +365,14 @@ def vsplat_imm_eq_1 : PatLeaf<(build_vector), [{
 }]>;
 
 def vbclr_b : PatFrag<(ops node:$ws, node:$wt),
-                      (and node:$ws, (xor (shl vsplat_imm_eq_1, node:$wt),
-                                          immAllOnesV))>;
+                      (and node:$ws, (vnot (shl vsplat_imm_eq_1, node:$wt)))>;
 def vbclr_h : PatFrag<(ops node:$ws, node:$wt),
-                      (and node:$ws, (xor (shl vsplat_imm_eq_1, node:$wt),
-                                          immAllOnesV))>;
+                      (and node:$ws, (vnot (shl vsplat_imm_eq_1, node:$wt)))>;
 def vbclr_w : PatFrag<(ops node:$ws, node:$wt),
-                      (and node:$ws, (xor (shl vsplat_imm_eq_1, node:$wt),
-                                          immAllOnesV))>;
+                      (and node:$ws, (vnot (shl vsplat_imm_eq_1, node:$wt)))>;
 def vbclr_d : PatFrag<(ops node:$ws, node:$wt),
-                      (and node:$ws, (xor (shl (v2i64 vsplati64_imm_eq_1),
-                                               node:$wt),
-                                          (bitconvert (v4i32 immAllOnesV))))>;
+                      (and node:$ws, (vnot (shl (v2i64 vsplati64_imm_eq_1),
+                                               node:$wt)))>;
 
 def vbneg_b : PatFrag<(ops node:$ws, node:$wt),
                       (xor node:$ws, (shl vsplat_imm_eq_1, node:$wt))>;
@@ -3884,21 +3880,17 @@ defm : MSAShiftPats<sra, "SRA">;
 defm : MSABitPats<xor, "BNEG">;
 defm : MSABitPats<or, "BSET">;
 
-def : MSAPat<(and v16i8:$ws, (xor (shl vsplat_imm_eq_1,
-                                       (vsplati8imm7 v16i8:$wt)),
-                                  immAllOnesV)),
+def : MSAPat<(and v16i8:$ws, (vnot (shl vsplat_imm_eq_1,
+                                        (vsplati8imm7 v16i8:$wt)))),
              (v16i8 (BCLR_B v16i8:$ws, v16i8:$wt))>;
-def : MSAPat<(and v8i16:$ws, (xor (shl vsplat_imm_eq_1,
-                                       (vsplati16imm15 v8i16:$wt)),
-                             immAllOnesV)),
+def : MSAPat<(and v8i16:$ws, (vnot (shl vsplat_imm_eq_1,
+                                        (vsplati16imm15 v8i16:$wt)))),
              (v8i16 (BCLR_H v8i16:$ws, v8i16:$wt))>;
-def : MSAPat<(and v4i32:$ws, (xor (shl vsplat_imm_eq_1,
-                                       (vsplati32imm31 v4i32:$wt)),
-                             immAllOnesV)),
+def : MSAPat<(and v4i32:$ws, (vnot (shl vsplat_imm_eq_1,
+                                        (vsplati32imm31 v4i32:$wt)))),
              (v4i32 (BCLR_W v4i32:$ws, v4i32:$wt))>;
-def : MSAPat<(and v2i64:$ws, (xor (shl (v2i64 vsplati64_imm_eq_1),
-                                       (vsplati64imm63 v2i64:$wt)),
-                                  (bitconvert (v4i32 immAllOnesV)))),
+def : MSAPat<(and v2i64:$ws, (vnot (shl (v2i64 vsplati64_imm_eq_1),
+                                        (vsplati64imm63 v2i64:$wt)))),
              (v2i64 (BCLR_D v2i64:$ws, v2i64:$wt))>;
 
 // Vector extraction with fixed index.

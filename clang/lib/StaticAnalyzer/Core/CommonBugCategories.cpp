@@ -20,7 +20,9 @@ const char *const MemoryRefCount =
 const char *const MemoryError = "Memory error";
 const char *const UnixAPI = "Unix API";
 const char *const CXXObjectLifecycle = "C++ object lifecycle";
+const char *const CXXMoveSemantics = "C++ move semantics";
 const char *const SecurityError = "Security error";
+const char *const UnusedCode = "Unused code";
 } // namespace categories
 } // namespace ento
 } // namespace clang

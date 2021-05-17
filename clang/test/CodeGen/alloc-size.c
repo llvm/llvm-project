@@ -366,3 +366,128 @@ void test13() {
   // CHECK: store i32 128,
   gi = OBJECT_SIZE_BUILTIN(alloc_uchar(128), 0);
 }
+
+void *(*malloc_function_pointer)(int)__attribute__((alloc_size(1)));
+void *(*calloc_function_pointer)(int, int)__attribute__((alloc_size(1, 2)));
+
+// CHECK-LABEL: @test_fn_pointer
+void test_fn_pointer() {
+  void *const vp = malloc_function_pointer(100);
+  // CHECK: store i32 100
+  gi = __builtin_object_size(vp, 0);
+  // CHECK: store i32 100
+  gi = __builtin_object_size(vp, 1);
+  // CHECK: store i32 100
+  gi = __builtin_object_size(vp, 2);
+  // CHECK: store i32 100
+  gi = __builtin_object_size(vp, 3);
+
+  void *const arr = calloc_function_pointer(100, 5);
+  // CHECK: store i32 500
+  gi = __builtin_object_size(arr, 0);
+  // CHECK: store i32 500
+  gi = __builtin_object_size(arr, 1);
+  // CHECK: store i32 500
+  gi = __builtin_object_size(arr, 2);
+  // CHECK: store i32 500
+  gi = __builtin_object_size(arr, 3);
+
+  // CHECK: store i32 100
+  gi = __builtin_object_size(malloc_function_pointer(100), 0);
+  // CHECK: store i32 100
+  gi = __builtin_object_size(malloc_function_pointer(100), 1);
+  // CHECK: store i32 100
+  gi = __builtin_object_size(malloc_function_pointer(100), 2);
+  // CHECK: store i32 100
+  gi = __builtin_object_size(malloc_function_pointer(100), 3);
+
+  // CHECK: store i32 500
+  gi = __builtin_object_size(calloc_function_pointer(100, 5), 0);
+  // CHECK: store i32 500
+  gi = __builtin_object_size(calloc_function_pointer(100, 5), 1);
+  // CHECK: store i32 500
+  gi = __builtin_object_size(calloc_function_pointer(100, 5), 2);
+  // CHECK: store i32 500
+  gi = __builtin_object_size(calloc_function_pointer(100, 5), 3);
+
+  void *const zeroPtr = malloc_function_pointer(0);
+  // CHECK: store i32 0
+  gi = __builtin_object_size(zeroPtr, 0);
+  // CHECK: store i32 0
+  gi = __builtin_object_size(malloc_function_pointer(0), 0);
+
+  void *const zeroArr1 = calloc_function_pointer(0, 1);
+  void *const zeroArr2 = calloc_function_pointer(1, 0);
+  // CHECK: store i32 0
+  gi = __builtin_object_size(zeroArr1, 0);
+  // CHECK: store i32 0
+  gi = __builtin_object_size(zeroArr2, 0);
+  // CHECK: store i32 0
+  gi = __builtin_object_size(calloc_function_pointer(1, 0), 0);
+  // CHECK: store i32 0
+  gi = __builtin_object_size(calloc_function_pointer(0, 1), 0);
+}
+
+typedef void *(__attribute__((warn_unused_result, alloc_size(1))) * my_malloc_function_pointer_type)(int);
+typedef void *(__attribute__((alloc_size(1, 2))) * my_calloc_function_pointer_type)(int, int);
+extern my_malloc_function_pointer_type malloc_function_pointer_with_typedef;
+extern my_calloc_function_pointer_type calloc_function_pointer_with_typedef;
+
+// CHECK-LABEL: @test_fn_pointer_typedef
+void test_fn_pointer_typedef() {
+  malloc_function_pointer_with_typedef(100);
+  void *const vp = malloc_function_pointer_with_typedef(100);
+  // CHECK: store i32 100
+  gi = __builtin_object_size(vp, 0);
+  // CHECK: store i32 100
+  gi = __builtin_object_size(vp, 1);
+  // CHECK: store i32 100
+  gi = __builtin_object_size(vp, 2);
+  // CHECK: store i32 100
+  gi = __builtin_object_size(vp, 3);
+
+  void *const arr = calloc_function_pointer_with_typedef(100, 5);
+  // CHECK: store i32 500
+  gi = __builtin_object_size(arr, 0);
+  // CHECK: store i32 500
+  gi = __builtin_object_size(arr, 1);
+  // CHECK: store i32 500
+  gi = __builtin_object_size(arr, 2);
+  // CHECK: store i32 500
+  gi = __builtin_object_size(arr, 3);
+
+  // CHECK: store i32 100
+  gi = __builtin_object_size(malloc_function_pointer_with_typedef(100), 0);
+  // CHECK: store i32 100
+  gi = __builtin_object_size(malloc_function_pointer_with_typedef(100), 1);
+  // CHECK: store i32 100
+  gi = __builtin_object_size(malloc_function_pointer_with_typedef(100), 2);
+  // CHECK: store i32 100
+  gi = __builtin_object_size(malloc_function_pointer_with_typedef(100), 3);
+
+  // CHECK: store i32 500
+  gi = __builtin_object_size(calloc_function_pointer_with_typedef(100, 5), 0);
+  // CHECK: store i32 500
+  gi = __builtin_object_size(calloc_function_pointer_with_typedef(100, 5), 1);
+  // CHECK: store i32 500
+  gi = __builtin_object_size(calloc_function_pointer_with_typedef(100, 5), 2);
+  // CHECK: store i32 500
+  gi = __builtin_object_size(calloc_function_pointer_with_typedef(100, 5), 3);
+
+  void *const zeroPtr = malloc_function_pointer_with_typedef(0);
+  // CHECK: store i32 0
+  gi = __builtin_object_size(zeroPtr, 0);
+  // CHECK: store i32 0
+  gi = __builtin_object_size(malloc_function_pointer_with_typedef(0), 0);
+
+  void *const zeroArr1 = calloc_function_pointer_with_typedef(0, 1);
+  void *const zeroArr2 = calloc_function_pointer_with_typedef(1, 0);
+  // CHECK: store i32 0
+  gi = __builtin_object_size(zeroArr1, 0);
+  // CHECK: store i32 0
+  gi = __builtin_object_size(zeroArr2, 0);
+  // CHECK: store i32 0
+  gi = __builtin_object_size(calloc_function_pointer_with_typedef(1, 0), 0);
+  // CHECK: store i32 0
+  gi = __builtin_object_size(calloc_function_pointer_with_typedef(0, 1), 0);
+}

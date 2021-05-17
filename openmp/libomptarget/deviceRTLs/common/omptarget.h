@@ -14,11 +14,12 @@
 #ifndef OMPTARGET_H
 #define OMPTARGET_H
 
-#include "target_impl.h"
-#include "common/debug.h"     // debug
-#include "interface.h" // interfaces with omp, compiler, and user
+#include "common/allocator.h"
+#include "common/debug.h" // debug
 #include "common/state-queue.h"
 #include "common/support.h"
+#include "interface.h" // interfaces with omp, compiler, and user
+#include "target_impl.h"
 
 #define OMPTARGET_NVPTX_VERSION 1.1
 
@@ -39,7 +40,7 @@ class omptarget_nvptx_SharedArgs {
 public:
   // All these methods must be called by the master thread only.
   INLINE void Init() {
-    args  = buffer;
+    args = buffer;
     nArgs = MAX_SHARED_ARGS;
   }
   INLINE void DeInit() {
@@ -61,6 +62,7 @@ public:
   }
   // Called by all threads.
   INLINE void **GetArgs() const { return args; };
+
 private:
   // buffer of pre-allocated arguments.
   void *buffer[MAX_SHARED_ARGS];
@@ -71,8 +73,7 @@ private:
   uint32_t nArgs;
 };
 
-extern DEVICE SHARED omptarget_nvptx_SharedArgs
-    omptarget_nvptx_globalArgs;
+extern omptarget_nvptx_SharedArgs EXTERN_SHARED(omptarget_nvptx_globalArgs);
 
 // Worker slot type which is initialized with the default worker slot
 // size of 4*32 bytes.
@@ -90,11 +91,11 @@ struct __kmpc_data_sharing_slot {
 struct DataSharingStateTy {
   __kmpc_data_sharing_slot *SlotPtr[DS_Max_Warp_Number];
   void *StackPtr[DS_Max_Warp_Number];
-  void * volatile FramePtr[DS_Max_Warp_Number];
+  void *volatile FramePtr[DS_Max_Warp_Number];
   __kmpc_impl_lanemask_t ActiveThreads[DS_Max_Warp_Number];
 };
 
-extern DEVICE SHARED DataSharingStateTy DataSharingState;
+extern DataSharingStateTy EXTERN_SHARED(DataSharingState);
 
 ////////////////////////////////////////////////////////////////////////////////
 // task ICV and (implicit & explicit) task state
@@ -273,9 +274,9 @@ private:
 /// Memory manager for statically allocated memory.
 class omptarget_nvptx_SimpleMemoryManager {
 private:
-  ALIGN(128) struct MemDataTy {
+  struct MemDataTy {
     volatile unsigned keys[OMP_STATE_COUNT];
-  } MemData[MAX_SM];
+  } MemData[MAX_SM] ALIGN(128);
 
   INLINE static uint32_t hash(unsigned key) {
     return key & (OMP_STATE_COUNT - 1);
@@ -292,20 +293,23 @@ public:
 // global data tables
 ////////////////////////////////////////////////////////////////////////////////
 
-extern DEVICE omptarget_nvptx_SimpleMemoryManager
-    omptarget_nvptx_simpleMemoryManager;
-extern DEVICE SHARED uint32_t usedMemIdx;
-extern DEVICE SHARED uint32_t usedSlotIdx;
-extern DEVICE SHARED uint8_t
-    parallelLevel[MAX_THREADS_PER_TEAM / WARPSIZE];
-extern DEVICE SHARED uint16_t threadLimit;
-extern DEVICE SHARED uint16_t threadsInTeam;
-extern DEVICE SHARED uint16_t nThreads;
-extern DEVICE SHARED
-    omptarget_nvptx_ThreadPrivateContext *omptarget_nvptx_threadPrivateContext;
+extern omptarget_nvptx_SimpleMemoryManager omptarget_nvptx_simpleMemoryManager;
+extern uint32_t EXTERN_SHARED(usedMemIdx);
+extern uint32_t EXTERN_SHARED(usedSlotIdx);
+#if _OPENMP
+extern uint8_t parallelLevel[MAX_THREADS_PER_TEAM / WARPSIZE];
+#pragma omp allocate(parallelLevel) allocator(omp_pteam_mem_alloc)
+#else
+extern uint8_t EXTERN_SHARED(parallelLevel)[MAX_THREADS_PER_TEAM / WARPSIZE];
+#endif
+extern uint16_t EXTERN_SHARED(threadLimit);
+extern uint16_t EXTERN_SHARED(threadsInTeam);
+extern uint16_t EXTERN_SHARED(nThreads);
+extern omptarget_nvptx_ThreadPrivateContext *
+    EXTERN_SHARED(omptarget_nvptx_threadPrivateContext);
 
-extern DEVICE SHARED uint32_t execution_param;
-extern DEVICE SHARED void *ReductionScratchpadPtr;
+extern uint32_t EXTERN_SHARED(execution_param);
+extern void *EXTERN_SHARED(ReductionScratchpadPtr);
 
 ////////////////////////////////////////////////////////////////////////////////
 // work function (outlined parallel/simd functions) and arguments.
@@ -313,8 +317,7 @@ extern DEVICE SHARED void *ReductionScratchpadPtr;
 ////////////////////////////////////////////////////////////////////////////////
 
 typedef void *omptarget_nvptx_WorkFn;
-extern volatile DEVICE SHARED omptarget_nvptx_WorkFn
-    omptarget_nvptx_workFn;
+extern volatile omptarget_nvptx_WorkFn EXTERN_SHARED(omptarget_nvptx_workFn);
 
 ////////////////////////////////////////////////////////////////////////////////
 // get private data structures
@@ -329,6 +332,11 @@ INLINE omptarget_nvptx_TaskDescr *getMyTopTaskDescriptor(int globalThreadId);
 ////////////////////////////////////////////////////////////////////////////////
 // inlined implementation
 ////////////////////////////////////////////////////////////////////////////////
+
+INLINE uint32_t __kmpc_impl_ffs(uint32_t x) { return __builtin_ffs(x); }
+INLINE uint32_t __kmpc_impl_popc(uint32_t x) { return __builtin_popcount(x); }
+INLINE uint32_t __kmpc_impl_ffs(uint64_t x) { return __builtin_ffsl(x); }
+INLINE uint32_t __kmpc_impl_popc(uint64_t x) { return __builtin_popcountl(x); }
 
 #include "common/omptargeti.h"
 

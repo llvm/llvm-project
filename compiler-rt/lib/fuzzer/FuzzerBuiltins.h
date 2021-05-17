@@ -26,7 +26,6 @@ inline uint32_t Bswap(uint32_t x) { return __builtin_bswap32(x); }
 inline uint64_t Bswap(uint64_t x) { return __builtin_bswap64(x); }
 
 inline uint32_t Clzll(unsigned long long X) { return __builtin_clzll(X); }
-inline uint32_t Clz(unsigned long long X) { return __builtin_clz(X); }
 inline int Popcountll(unsigned long long X) { return __builtin_popcountll(X); }
 
 }  // namespace fuzzer

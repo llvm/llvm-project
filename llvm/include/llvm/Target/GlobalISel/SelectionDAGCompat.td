@@ -50,6 +50,7 @@ def : GINodeEquiv<G_BITCAST, bitconvert>;
 // G_INTTOPTR - SelectionDAG has no equivalent.
 // G_PTRTOINT - SelectionDAG has no equivalent.
 def : GINodeEquiv<G_CONSTANT, imm>;
+// timm must not be materialized and therefore has no GlobalISel equivalent
 def : GINodeEquiv<G_FCONSTANT, fpimm>;
 def : GINodeEquiv<G_IMPLICIT_DEF, undef>;
 def : GINodeEquiv<G_FRAME_INDEX, frameindex>;
@@ -141,6 +142,8 @@ def : GINodeEquiv<G_FMAXNUM, fmaxnum>;
 def : GINodeEquiv<G_FMINNUM_IEEE, fminnum_ieee>;
 def : GINodeEquiv<G_FMAXNUM_IEEE, fmaxnum_ieee>;
 def : GINodeEquiv<G_READCYCLECOUNTER, readcyclecounter>;
+def : GINodeEquiv<G_ROTR, rotr>;
+def : GINodeEquiv<G_ROTL, rotl>;
 
 def : GINodeEquiv<G_STRICT_FADD, strict_fadd>;
 def : GINodeEquiv<G_STRICT_FSUB, strict_fsub>;

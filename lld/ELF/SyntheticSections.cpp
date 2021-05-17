@@ -646,11 +646,7 @@ void EhFrameSection::writeTo(uint8_t *buf) {
 GotSection::GotSection()
     : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS, config->wordsize,
                        ".got") {
-  // If ElfSym::globalOffsetTable is relative to .got and is referenced,
-  // increase numEntries by the number of entries used to emit
-  // ElfSym::globalOffsetTable.
-  if (ElfSym::globalOffsetTable && !target->gotBaseSymInGotPlt)
-    numEntries += target->gotHeaderEntriesNum;
+  numEntries = target->gotHeaderEntriesNum;
 }
 
 void GotSection::addEntry(Symbol &sym) {
@@ -686,13 +682,17 @@ uint64_t GotSection::getGlobalDynOffset(const Symbol &b) const {
 }
 
 void GotSection::finalizeContents() {
-  size = numEntries * config->wordsize;
+  if (config->emachine == EM_PPC64 &&
+      numEntries <= target->gotHeaderEntriesNum && !ElfSym::globalOffsetTable)
+    size = 0;
+  else
+    size = numEntries * config->wordsize;
 }
 
 bool GotSection::isNeeded() const {
-  // We need to emit a GOT even if it's empty if there's a relocation that is
-  // relative to GOT(such as GOTOFFREL).
-  return numEntries || hasGotOffRel;
+  // Needed if the GOT symbol is used or the number of entries is more than just
+  // the header. A GOT with just the header may not be needed.
+  return hasGotOffRel || numEntries > target->gotHeaderEntriesNum;
 }
 
 void GotSection::writeTo(uint8_t *buf) {
@@ -985,14 +985,17 @@ void MipsGotSection::build() {
     for (std::pair<Symbol *, size_t> &p : got.tls) {
       Symbol *s = p.first;
       uint64_t offset = p.second * config->wordsize;
-      if (s->isPreemptible)
+      // When building a shared library we still need a dynamic relocation
+      // for the TP-relative offset as we don't know how much other data will
+      // be allocated before us in the static TLS block.
+      if (s->isPreemptible || config->shared)
         mainPart->relaDyn->addReloc(target->tlsGotRel, this, offset, s);
     }
     for (std::pair<Symbol *, size_t> &p : got.dynTlsSymbols) {
       Symbol *s = p.first;
       uint64_t offset = p.second * config->wordsize;
       if (s == nullptr) {
-        if (!config->isPic)
+        if (!config->shared)
           continue;
         mainPart->relaDyn->addReloc(target->tlsModuleIndexRel, this, offset, s);
       } else {
@@ -1000,7 +1003,7 @@ void MipsGotSection::build() {
         // for the module index. Therefore only checking for
         // S->isPreemptible is not sufficient (this happens e.g. for
         // thread-locals that have been marked as local through a linker script)
-        if (!s->isPreemptible && !config->isPic)
+        if (!s->isPreemptible && !config->shared)
           continue;
         mainPart->relaDyn->addReloc(target->tlsModuleIndexRel, this, offset, s);
         // However, we can skip writing the TLS offset reloc for non-preemptible
@@ -1093,7 +1096,7 @@ void MipsGotSection::writeTo(uint8_t *buf) {
     // If TLS entry has a corresponding dynamic relocations, leave it
     // initialized by zero. Write down adjusted TLS symbol's values otherwise.
     // To calculate the adjustments use offsets for thread-local storage.
-    // https://www.linux-mips.org/wiki/NPTL
+    // http://web.archive.org/web/20190324223224/https://www.linux-mips.org/wiki/NPTL
     for (const std::pair<GotEntry, size_t> &p : g.local16)
       write(p.second, p.first.first, p.first.second);
     // Write VA to the primary GOT only. For secondary GOTs that
@@ -1104,15 +1107,16 @@ void MipsGotSection::writeTo(uint8_t *buf) {
     for (const std::pair<Symbol *, size_t> &p : g.relocs)
       write(p.second, p.first, 0);
     for (const std::pair<Symbol *, size_t> &p : g.tls)
-      write(p.second, p.first, p.first->isPreemptible ? 0 : -0x7000);
+      write(p.second, p.first,
+            p.first->isPreemptible || config->shared ? 0 : -0x7000);
     for (const std::pair<Symbol *, size_t> &p : g.dynTlsSymbols) {
-      if (p.first == nullptr && !config->isPic)
+      if (p.first == nullptr && !config->shared)
         write(p.second, nullptr, 1);
       else if (p.first && !p.first->isPreemptible) {
-        // If we are emitting PIC code with relocations we mustn't write
+        // If we are emitting a shared libary with relocations we mustn't write
         // anything to the GOT here. When using Elf_Rel relocations the value
         // one will be treated as an addend and will cause crashes at runtime
-        if (!config->isPic)
+        if (!config->shared)
           write(p.second, nullptr, 1);
         write(p.second + 1, p.first, -0x8000);
       }
@@ -3110,7 +3114,10 @@ size_t VersionTableSection::getSize() const {
 void VersionTableSection::writeTo(uint8_t *buf) {
   buf += 2;
   for (const SymbolTableEntry &s : getPartition().dynSymTab->getSymbols()) {
-    write16(buf, s.sym->versionId);
+    // Use the original versionId for an unfetched lazy symbol (undefined weak),
+    // which must be VER_NDX_GLOBAL (an undefined versioned symbol is an error).
+    write16(buf, s.sym->isLazy() ? static_cast<uint16_t>(VER_NDX_GLOBAL)
+                                 : s.sym->versionId);
     buf += 2;
   }
 }

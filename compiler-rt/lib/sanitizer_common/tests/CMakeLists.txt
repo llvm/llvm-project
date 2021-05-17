@@ -13,6 +13,7 @@ set(SANITIZER_UNITTESTS
   sanitizer_atomic_test.cpp
   sanitizer_bitvector_test.cpp
   sanitizer_bvgraph_test.cpp
+  sanitizer_chained_origin_depot_test.cpp
   sanitizer_common_test.cpp
   sanitizer_deadlock_detector_test.cpp
   sanitizer_flags_test.cpp
@@ -160,6 +161,7 @@ macro(add_sanitizer_tests_for_arch arch)
     # Test that the libc-independent part of sanitizer_common is indeed
     # independent of libc, by linking this binary without libc (here) and
     # executing it (unit test in sanitizer_nolibc_test.cpp).
+    get_target_flags_for_arch(${arch} TARGET_FLAGS)
     clang_compile(sanitizer_nolibc_test_main.${arch}.o
                   sanitizer_nolibc_test_main.cpp
                   CFLAGS ${SANITIZER_TEST_CFLAGS_COMMON} ${TARGET_FLAGS}

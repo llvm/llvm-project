@@ -5,7 +5,7 @@
 define <8 x i64> @avx512_funnel_shift_q_512(<8 x i64> %a0, <8 x i64> %a1) {
 ; X86-LABEL: avx512_funnel_shift_q_512:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpshldvq {{\.LCPI.*}}, %zmm1, %zmm0
+; X86-NEXT:    vpshldvq {{\.LCPI[0-9]+_[0-9]+}}, %zmm1, %zmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: avx512_funnel_shift_q_512:
@@ -32,7 +32,7 @@ define <8 x i64> @avx512_funnel_shift_q_512_splat(<8 x i64> %a0, <8 x i64> %a1) 
 define <16 x i32> @avx512_funnel_shift_d_512(<16 x i32> %a0, <16 x i32> %a1) {
 ; X86-LABEL: avx512_funnel_shift_d_512:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpshldvd {{\.LCPI.*}}, %zmm1, %zmm0
+; X86-NEXT:    vpshldvd {{\.LCPI[0-9]+_[0-9]+}}, %zmm1, %zmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: avx512_funnel_shift_d_512:
@@ -59,7 +59,7 @@ define <16 x i32> @avx512_funnel_shift_d_512_splat(<16 x i32> %a0, <16 x i32> %a
 define <32 x i16> @avx512_funnel_shift_w_512(<32 x i16> %a0, <32 x i16> %a1) {
 ; X86-LABEL: avx512_funnel_shift_w_512:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpshldvw {{\.LCPI.*}}, %zmm1, %zmm0
+; X86-NEXT:    vpshldvw {{\.LCPI[0-9]+_[0-9]+}}, %zmm1, %zmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: avx512_funnel_shift_w_512:

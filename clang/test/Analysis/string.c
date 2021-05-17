@@ -363,6 +363,20 @@ void strcpy_no_overflow(char *y) {
     strcpy(x, y); // no-warning
 }
 
+// PR37503
+void *get_void_ptr();
+char ***type_punned_ptr;
+void strcpy_no_assertion(char c) {
+  *(unsigned char **)type_punned_ptr = (unsigned char *)(get_void_ptr());
+  strcpy(**type_punned_ptr, &c); // no-crash
+}
+
+// PR49007
+char f(char ***c, int *i) {
+  *(void **)c = i + 1;
+  return (**c)[0]; // no-crash
+}
+
 //===----------------------------------------------------------------------===
 // stpcpy()
 //===----------------------------------------------------------------------===

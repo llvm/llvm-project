@@ -305,7 +305,7 @@ TEST(FileSpecTest, IsRelative) {
     "~/",
     "~/a",
     "~/a/",
-    "~/a/b"
+    "~/a/b",
     "~/a/b/",
     "/foo/.",
     "/foo/..",

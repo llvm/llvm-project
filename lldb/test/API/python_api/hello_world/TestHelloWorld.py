@@ -26,7 +26,6 @@ class HelloWorldTestCase(TestBase):
         # Call super's tearDown().
         TestBase.tearDown(self)
 
-    @add_test_categories(['pyapi'])
     @skipIfiOSSimulator
     def test_with_process_launch_api(self):
         """Create target, breakpoint, launch a process, and then kill it."""
@@ -72,7 +71,6 @@ class HelloWorldTestCase(TestBase):
         # The breakpoint should have a hit count of 1.
         self.assertEqual(breakpoint.GetHitCount(), 1, BREAKPOINT_HIT_ONCE)
 
-    @add_test_categories(['pyapi'])
     @skipIfiOSSimulator
     @skipIfReproducer # File synchronization is not supported during replay.
     def test_with_attach_to_process_with_id_api(self):
@@ -104,7 +102,6 @@ class HelloWorldTestCase(TestBase):
                     substrs=['main.c:%d' % self.line2,
                              '(int)argc=2'])
 
-    @add_test_categories(['pyapi'])
     @skipIfiOSSimulator
     @skipIfAsan # FIXME: Hangs indefinitely.
     @skipIfReproducer # FIXME: Unexpected packet during (active) replay

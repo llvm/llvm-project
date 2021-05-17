@@ -1,0 +1,34 @@
+; Check handling of the -F/--target option for setting a specific BFD
+; target name.
+
+; RUN: llvm-windres -F pe-i386 -### %p/Inputs/empty.rc %t.res | FileCheck %s --check-prefix=CHECK-I686
+; RUN: llvm-windres -Fpe-i386 -### %p/Inputs/empty.rc %t.res | FileCheck %s --check-prefix=CHECK-I686
+; CHECK-I686: "clang" "--driver-mode=gcc" "-target" "i686-w64-mingw32"
+; RUN: llvm-windres --target pe-x86-64 -### %p/Inputs/empty.rc %t.res | FileCheck %s --check-prefix=CHECK-X86-64
+; RUN: llvm-windres --target=pe-x86-64 -### %p/Inputs/empty.rc %t.res | FileCheck %s --check-prefix=CHECK-X86-64
+; CHECK-X86-64: "clang" "--driver-mode=gcc" "-target" "x86_64-w64-mingw32"
+
+; LLVM windres specific: Check that we can pass a full triple via the
+; -F/--target option, if it doesn't match the BFD target names.
+
+; RUN: llvm-windres -F armv7-w64-mingw32 -### %p/Inputs/empty.rc %t.res | FileCheck %s --check-prefix=CHECK-ARMV7
+; RUN: llvm-windres --target armv7-w64-mingw32 -### %p/Inputs/empty.rc %t.res | FileCheck %s --check-prefix=CHECK-ARMV7
+; CHECK-ARMV7: "clang" "--driver-mode=gcc" "-target" "armv7-w64-mingw32"
+
+; Check the actual written object types.
+
+; RUN: llvm-windres --no-preprocess -F i686-w64-mingw32 %p/Inputs/tag-stringtable-basic.rc %t.o
+; RUN: llvm-readobj --coff-resources %t.o | FileCheck %s --check-prefixes=CHECK-OBJ,CHECK-OBJ-I686
+; RUN: llvm-windres --no-preprocess -F x86_64-w64-mingw32 %p/Inputs/tag-stringtable-basic.rc %t.o
+; RUN: llvm-readobj --coff-resources %t.o | FileCheck %s --check-prefixes=CHECK-OBJ,CHECK-OBJ-X86-64
+; RUN: llvm-windres --no-preprocess -F armv7-w64-mingw32 %p/Inputs/tag-stringtable-basic.rc %t.o
+; RUN: llvm-readobj --coff-resources %t.o | FileCheck %s --check-prefixes=CHECK-OBJ,CHECK-OBJ-ARMV7
+; RUN: llvm-windres --no-preprocess -F aarch64-w64-mingw32 %p/Inputs/tag-stringtable-basic.rc %t.o
+; RUN: llvm-readobj --coff-resources %t.o | FileCheck %s --check-prefixes=CHECK-OBJ,CHECK-OBJ-AARCH64
+
+; CHECK-OBJ-I686: Format: COFF-i386
+; CHECK-OBJ-X86-64: Format: COFF-x86-64
+; CHECK-OBJ-ARMV7: Format: COFF-ARM{{$}}
+; CHECK-OBJ-AARCH64: Format: COFF-ARM64
+; CHECK-OBJ: Resources [
+; CHECK-OBJ:   Total Number of Resources:

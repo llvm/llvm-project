@@ -15,5 +15,6 @@ static_library("concurrency") {
   sources = [
     "ConcurrencyTidyModule.cpp",
     "MtUnsafeCheck.cpp",
+    "ThreadCanceltypeAsynchronousCheck.cpp",
   ]
 }

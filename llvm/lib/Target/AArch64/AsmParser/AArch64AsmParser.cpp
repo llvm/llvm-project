@@ -271,7 +271,7 @@ public:
   AArch64AsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                    const MCInstrInfo &MII, const MCTargetOptions &Options)
     : MCTargetAsmParser(Options, STI, MII) {
-    IsILP32 = Options.getABIName() == "ilp32";
+    IsILP32 = STI.getTargetTriple().getEnvironment() == Triple::GNUILP32;
     MCAsmParserExtension::Initialize(Parser);
     MCStreamer &S = getParser().getStreamer();
     if (S.getTargetStreamer() == nullptr)
@@ -379,7 +379,7 @@ private:
   };
 
   struct VectorIndexOp {
-    unsigned Val;
+    int Val;
   };
 
   struct ImmOp {
@@ -434,10 +434,6 @@ private:
   struct BTIHintOp {
     const char *Data;
     unsigned Length;
-    unsigned Val;
-  };
-
-  struct ExtendOp {
     unsigned Val;
   };
 
@@ -599,7 +595,7 @@ public:
     return VectorList.Count;
   }
 
-  unsigned getVectorIndex() const {
+  int getVectorIndex() const {
     assert(Kind == k_VectorIndex && "Invalid access!");
     return VectorIndex.Val;
   }
@@ -750,7 +746,8 @@ public:
         ELFRefKind == AArch64MCExpr::VK_GOTTPREL_LO12_NC ||
         ELFRefKind == AArch64MCExpr::VK_TLSDESC_LO12 ||
         ELFRefKind == AArch64MCExpr::VK_SECREL_LO12 ||
-        ELFRefKind == AArch64MCExpr::VK_SECREL_HI12) {
+        ELFRefKind == AArch64MCExpr::VK_SECREL_HI12 ||
+        ELFRefKind == AArch64MCExpr::VK_GOT_PAGE_LO15) {
       // Note that we don't range-check the addend. It's adjusted modulo page
       // size when converted, so there is no "out of range" condition when using
       // @pageoff.
@@ -1930,7 +1927,7 @@ public:
   }
 
   static std::unique_ptr<AArch64Operand>
-  CreateVectorIndex(unsigned Idx, SMLoc S, SMLoc E, MCContext &Ctx) {
+  CreateVectorIndex(int Idx, SMLoc S, SMLoc E, MCContext &Ctx) {
     auto Op = std::make_unique<AArch64Operand>(k_VectorIndex, Ctx);
     Op->VectorIndex.Val = Idx;
     Op->StartLoc = S;
@@ -2049,7 +2046,7 @@ public:
                                                        SMLoc S,
                                                        MCContext &Ctx) {
     auto Op = std::make_unique<AArch64Operand>(k_BTIHint, Ctx);
-    Op->BTIHint.Val = Val << 1 | 32;
+    Op->BTIHint.Val = Val | 32;
     Op->BTIHint.Data = Str.data();
     Op->BTIHint.Length = Str.size();
     Op->StartLoc = S;
@@ -2569,6 +2566,7 @@ AArch64AsmParser::tryParseAdrpLabel(OperandVector &Operands) {
                DarwinRefKind != MCSymbolRefExpr::VK_TLVPPAGE &&
                ELFRefKind != AArch64MCExpr::VK_ABS_PAGE_NC &&
                ELFRefKind != AArch64MCExpr::VK_GOT_PAGE &&
+               ELFRefKind != AArch64MCExpr::VK_GOT_PAGE_LO15 &&
                ELFRefKind != AArch64MCExpr::VK_GOTTPREL_PAGE &&
                ELFRefKind != AArch64MCExpr::VK_TLSDESC_PAGE) {
       // The operand must be an @page or @gotpage qualified symbolref.
@@ -2904,9 +2902,11 @@ static const struct Extension {
     {"mte", {AArch64::FeatureMTE}},
     {"memtag", {AArch64::FeatureMTE}},
     {"tlb-rmi", {AArch64::FeatureTLB_RMI}},
+    {"pan", {AArch64::FeaturePAN}},
     {"pan-rwv", {AArch64::FeaturePAN_RWV}},
     {"ccpp", {AArch64::FeatureCCPP}},
     {"rcpc", {AArch64::FeatureRCPC}},
+    {"rng", {AArch64::FeatureRandGen}},
     {"sve", {AArch64::FeatureSVE}},
     {"sve2", {AArch64::FeatureSVE2}},
     {"sve2-aes", {AArch64::FeatureSVE2AES}},
@@ -2915,8 +2915,9 @@ static const struct Extension {
     {"sve2-bitperm", {AArch64::FeatureSVE2BitPerm}},
     {"ls64", {AArch64::FeatureLS64}},
     {"xs", {AArch64::FeatureXS}},
+    {"pauth", {AArch64::FeaturePAuth}},
+    {"flagm", {AArch64::FeatureFlagM}},
     // FIXME: Unsupported extensions
-    {"pan", {}},
     {"lor", {}},
     {"rdma", {}},
     {"profile", {}},
@@ -3434,6 +3435,7 @@ bool AArch64AsmParser::parseSymbolicImmVal(const MCExpr *&ImmVal) {
                   .Case("tprel_lo12_nc", AArch64MCExpr::VK_TPREL_LO12_NC)
                   .Case("tlsdesc_lo12", AArch64MCExpr::VK_TLSDESC_LO12)
                   .Case("got", AArch64MCExpr::VK_GOT_PAGE)
+                  .Case("gotpage_lo15", AArch64MCExpr::VK_GOT_PAGE_LO15)
                   .Case("got_lo12", AArch64MCExpr::VK_GOT_LO12)
                   .Case("gottprel", AArch64MCExpr::VK_GOTTPREL_PAGE)
                   .Case("gottprel_lo12", AArch64MCExpr::VK_GOTTPREL_LO12_NC)
@@ -5265,10 +5267,9 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
 
 /// ParseDirective parses the arm specific directives
 bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
-  const MCObjectFileInfo::Environment Format =
-    getContext().getObjectFileInfo()->getObjectFileType();
-  bool IsMachO = Format == MCObjectFileInfo::IsMachO;
-  bool IsCOFF = Format == MCObjectFileInfo::IsCOFF;
+  const MCContext::Environment Format = getContext().getObjectFileType();
+  bool IsMachO = Format == MCContext::IsMachO;
+  bool IsCOFF = Format == MCContext::IsCOFF;
 
   auto IDVal = DirectiveID.getIdentifier().lower();
   SMLoc Loc = DirectiveID.getLoc();

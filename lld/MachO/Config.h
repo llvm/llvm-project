@@ -9,12 +9,16 @@
 #ifndef LLD_MACHO_CONFIG_H
 #define LLD_MACHO_CONFIG_H
 
+#include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/VersionTuple.h"
-#include "llvm/TextAPI/MachO/Architecture.h"
-#include "llvm/TextAPI/MachO/Platform.h"
+#include "llvm/TextAPI/Architecture.h"
+#include "llvm/TextAPI/Platform.h"
+#include "llvm/TextAPI/Target.h"
 
 #include <vector>
 
@@ -24,10 +28,19 @@ namespace macho {
 class Symbol;
 struct SymbolPriorityEntry;
 
+using NamePair = std::pair<llvm::StringRef, llvm::StringRef>;
+using SectionRenameMap = llvm::DenseMap<NamePair, NamePair>;
+using SegmentRenameMap = llvm::DenseMap<llvm::StringRef, llvm::StringRef>;
+
 struct PlatformInfo {
-  llvm::MachO::PlatformKind kind;
+  llvm::MachO::Target target;
   llvm::VersionTuple minimum;
   llvm::VersionTuple sdk;
+};
+
+enum class NamespaceKind {
+  twolevel,
+  flat,
 };
 
 enum class UndefinedSymbolTreatment {
@@ -38,8 +51,35 @@ enum class UndefinedSymbolTreatment {
   dynamic_lookup,
 };
 
+struct SectionAlign {
+  llvm::StringRef segName;
+  llvm::StringRef sectName;
+  uint32_t align;
+};
+
+struct SegmentProtection {
+  llvm::StringRef name;
+  uint32_t maxProt;
+  uint32_t initProt;
+};
+
+class SymbolPatterns {
+public:
+  // GlobPattern can also match literals,
+  // but we prefer the O(1) lookup of DenseSet.
+  llvm::DenseSet<llvm::CachedHashStringRef> literals;
+  std::vector<llvm::GlobPattern> globs;
+
+  bool empty() const { return literals.empty() && globs.empty(); }
+  void clear();
+  void insert(llvm::StringRef symbolName);
+  bool matchLiteral(llvm::StringRef symbolName) const;
+  bool matchGlob(llvm::StringRef symbolName) const;
+  bool match(llvm::StringRef symbolName) const;
+};
+
 struct Configuration {
-  Symbol *entry;
+  Symbol *entry = nullptr;
   bool hasReexports = false;
   bool allLoad = false;
   bool forceLoadObjC = false;
@@ -47,19 +87,31 @@ struct Configuration {
   bool implicitDylibs = false;
   bool isPic = false;
   bool headerPadMaxInstallNames = false;
+  bool ltoNewPassManager = LLVM_ENABLE_NEW_PASS_MANAGER;
+  bool markDeadStrippableDylib = false;
   bool printEachFile = false;
   bool printWhyLoad = false;
   bool searchDylibsFirst = false;
   bool saveTemps = false;
+  bool adhocCodesign = false;
+  bool emitFunctionStarts = false;
+  bool emitBitcodeBundle = false;
+  bool emitEncryptionInfo = false;
+  bool timeTraceEnabled = false;
+  bool dataConst = false;
   uint32_t headerPad;
   uint32_t dylibCompatibilityVersion = 0;
   uint32_t dylibCurrentVersion = 0;
+  uint32_t timeTraceGranularity = 500;
+  std::string progName;
   llvm::StringRef installName;
+  llvm::StringRef mapFile;
   llvm::StringRef outputFile;
   llvm::StringRef ltoObjPath;
+  llvm::StringRef thinLTOJobs;
   bool demangle = false;
-  llvm::MachO::Architecture arch;
-  PlatformInfo platform;
+  PlatformInfo platformInfo;
+  NamespaceKind namespaceKind = NamespaceKind::twolevel;
   UndefinedSymbolTreatment undefinedSymbolTreatment =
       UndefinedSymbolTreatment::error;
   llvm::MachO::HeaderFileType outputType;
@@ -67,7 +119,25 @@ struct Configuration {
   std::vector<llvm::StringRef> librarySearchPaths;
   std::vector<llvm::StringRef> frameworkSearchPaths;
   std::vector<llvm::StringRef> runtimePaths;
+  std::vector<std::string> astPaths;
+  std::vector<Symbol *> explicitUndefineds;
+  // There are typically few custom sectionAlignments or segmentProtections,
+  // so use a vector instead of a map.
+  std::vector<SectionAlign> sectionAlignments;
+  std::vector<SegmentProtection> segmentProtections;
+
   llvm::DenseMap<llvm::StringRef, SymbolPriorityEntry> priorities;
+  SectionRenameMap sectionRenameMap;
+  SegmentRenameMap segmentRenameMap;
+
+  SymbolPatterns exportedSymbols;
+  SymbolPatterns unexportedSymbols;
+
+  llvm::MachO::Architecture arch() const { return platformInfo.target.Arch; }
+
+  llvm::MachO::PlatformKind platform() const {
+    return platformInfo.target.Platform;
+  }
 };
 
 // The symbol with the highest priority should be ordered first in the output

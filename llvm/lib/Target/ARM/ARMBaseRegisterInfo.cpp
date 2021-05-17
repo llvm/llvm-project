@@ -403,7 +403,7 @@ bool ARMBaseRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   // If we have stack realignment and VLAs, we have no pointer to use to
   // access the stack. If we have stack realignment, and a large call frame,
   // we have no place to allocate the emergency spill slot.
-  if (needsStackRealignment(MF) && !TFI->hasReservedCallFrame(MF))
+  if (hasStackRealignment(MF) && !TFI->hasReservedCallFrame(MF))
     return true;
 
   // Thumb has trouble with negative offsets from the FP. Thumb2 has a limited
@@ -458,8 +458,8 @@ cannotEliminateFrame(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   if (MF.getTarget().Options.DisableFramePointerElim(MF) && MFI.adjustsStack())
     return true;
-  return MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken()
-    || needsStackRealignment(MF);
+  return MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
+         hasStackRealignment(MF);
 }
 
 Register
@@ -640,10 +640,10 @@ needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
 
 /// materializeFrameBaseRegister - Insert defining instruction(s) for BaseReg to
 /// be a pointer to FrameIdx at the beginning of the basic block.
-void ARMBaseRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
-                                                       Register BaseReg,
-                                                       int FrameIdx,
-                                                       int64_t Offset) const {
+Register
+ARMBaseRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
+                                                  int FrameIdx,
+                                                  int64_t Offset) const {
   ARMFunctionInfo *AFI = MBB->getParent()->getInfo<ARMFunctionInfo>();
   unsigned ADDriOpc = !AFI->isThumbFunction() ? ARM::ADDri :
     (AFI->isThumb1OnlyFunction() ? ARM::tADDframe : ARM::t2ADDri);
@@ -657,6 +657,7 @@ void ARMBaseRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
   MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   const MCInstrDesc &MCID = TII.get(ADDriOpc);
+  Register BaseReg = MRI.createVirtualRegister(&ARM::GPRRegClass);
   MRI.constrainRegClass(BaseReg, TII.getRegClass(MCID, 0, this, MF));
 
   MachineInstrBuilder MIB = BuildMI(*MBB, Ins, DL, MCID, BaseReg)
@@ -664,6 +665,8 @@ void ARMBaseRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
 
   if (!AFI->isThumb1OnlyFunction())
     MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
+
+  return BaseReg;
 }
 
 void ARMBaseRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
@@ -905,4 +908,18 @@ bool ARMBaseRegisterInfo::shouldCoalesce(MachineInstr *MI,
     return true;
   }
   return false;
+}
+
+bool ARMBaseRegisterInfo::shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
+                                               unsigned DefSubReg,
+                                               const TargetRegisterClass *SrcRC,
+                                               unsigned SrcSubReg) const {
+  // We can't extract an SPR from an arbitary DPR (as opposed to a DPR_VFP2).
+  if (DefRC == &ARM::SPRRegClass && DefSubReg == 0 &&
+      SrcRC == &ARM::DPRRegClass &&
+      (SrcSubReg == ARM::ssub_0 || SrcSubReg == ARM::ssub_1))
+    return false;
+
+  return TargetRegisterInfo::shouldRewriteCopySrc(DefRC, DefSubReg,
+                                                  SrcRC, SrcSubReg);
 }

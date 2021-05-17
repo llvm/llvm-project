@@ -36,7 +36,7 @@ define i1 @PR32078(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-NEXT:    [[CMP3:%.*]] = extractelement <4 x i1> [[CMP]], i32 3
 ; CHECK-NEXT:    [[CMP0_NOT:%.*]] = xor i1 [[CMP0]], true
 ; CHECK-NEXT:    [[CMP1_NOT:%.*]] = xor i1 [[CMP1]], true
-; CHECK-NEXT:    [[BRMERGE:%.*]] = or i1 [[CMP0_NOT]], [[CMP1_NOT]]
+; CHECK-NEXT:    [[BRMERGE:%.*]] = select i1 [[CMP0_NOT]], i1 true, i1 [[CMP1_NOT]]
 ; CHECK-NEXT:    br i1 [[BRMERGE]], label [[EXIT:%.*]], label [[CMP1_TRUE:%.*]]
 ; CHECK:       cmp1_true:
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP2]], i1 [[CMP3]], i1 false

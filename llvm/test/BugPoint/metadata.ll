@@ -1,11 +1,11 @@
 ; REQUIRES: plugins
-; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%shlibext %s -output-prefix %t -bugpoint-crashcalls -silence-passes -disable-namedmd-remove -disable-strip-debuginfo -disable-strip-debug-types > /dev/null
+; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%pluginext %s -output-prefix %t -bugpoint-crashcalls -silence-passes -disable-namedmd-remove -disable-strip-debuginfo -disable-strip-debug-types > /dev/null
 ; RUN: llvm-dis %t-reduced-simplified.bc -o - | FileCheck %s
 ;
-; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%shlibext %s -output-prefix %t-nodebug -bugpoint-crashcalls -silence-passes -disable-namedmd-remove > /dev/null
+; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%pluginext %s -output-prefix %t-nodebug -bugpoint-crashcalls -silence-passes -disable-namedmd-remove > /dev/null
 ; RUN: llvm-dis %t-nodebug-reduced-simplified.bc -o - | FileCheck %s --check-prefix=NODEBUG
 ;
-; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%shlibext %s -output-prefix %t-notype -bugpoint-crashcalls -silence-passes -disable-namedmd-remove -disable-strip-debuginfo > /dev/null
+; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%pluginext %s -output-prefix %t-notype -bugpoint-crashcalls -silence-passes -disable-namedmd-remove -disable-strip-debuginfo > /dev/null
 ; RUN: llvm-dis %t-notype-reduced-simplified.bc -o - | FileCheck %s --check-prefix=NOTYPE
 ;
 ; Bugpoint can drop the metadata on the call, as it does not contrinute to the crash.

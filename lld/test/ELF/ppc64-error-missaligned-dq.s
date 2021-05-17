@@ -1,5 +1,5 @@
 # REQUIRES: ppc
-#
+
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t.o
 # RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s
 
@@ -21,6 +21,9 @@ test:
         lxv   3, qword@toc@l(3)
         blr
 
+.data
        .p2align 4
-       .comm pad, 1, 1
-       .comm qword, 16, 1
+pad:
+       .byte 1
+qword:
+       .quad 0

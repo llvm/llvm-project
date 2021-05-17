@@ -9,7 +9,7 @@ sections:
     Types:
       - Kind:            LF_TYPESERVER2
         TypeServer2:
-          Guid:            '{01DF191B-22BF-6B42-96CE-5258B8329FE5}'
+          Guid:            '{1B19DF01-BF22-426B-96CE-5258B8329FE5}'
           Age:             18
           Name:            'C:\src\llvm-project\build\definitely_not_found_for_sure.pdb'
   - Name:            '.text$mn'

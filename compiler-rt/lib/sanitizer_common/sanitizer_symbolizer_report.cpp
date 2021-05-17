@@ -31,7 +31,7 @@ namespace __sanitizer {
 void ReportErrorSummary(const char *error_type, const AddressInfo &info,
                         const char *alt_tool_name) {
   if (!common_flags()->print_summary) return;
-  InternalScopedString buff(kMaxSummaryLength);
+  InternalScopedString buff;
   buff.append("%s ", error_type);
   RenderFrame(&buff, "%L %F", 0, info.address, &info,
               common_flags()->symbolize_vs_style,
@@ -150,7 +150,7 @@ static void PrintMemoryByte(InternalScopedString *str, const char *before,
 static void MaybeDumpInstructionBytes(uptr pc) {
   if (!common_flags()->dump_instruction_bytes || (pc < GetPageSizeCached()))
     return;
-  InternalScopedString str(1024);
+  InternalScopedString str;
   str.append("First 16 instruction bytes at pc: ");
   if (IsAccessibleMemoryRange(pc, 16)) {
     for (int i = 0; i < 16; ++i) {

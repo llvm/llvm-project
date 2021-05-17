@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // <functional>
 
 // class function<R(ArgTypes...)>
@@ -168,7 +170,7 @@ int main(int, char**)
         RTTI_ASSERT(f.target<Ptr>()); // f is unchanged because the target is small
 #endif
     }
-#endif  // TEST_STD_VER >= 11
+#endif // TEST_STD_VER >= 11
 
   return 0;
 }

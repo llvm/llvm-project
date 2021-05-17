@@ -28,16 +28,13 @@ define void @test() nounwind {
 ; CHECK-NEXT:    br label [[FOR_BODY21_I:%.*]]
 ; CHECK:       for.body21.i:
 ; CHECK-NEXT:    [[DESTYPIXELPTR_010_I:%.*]] = phi i8* [ null, [[FOR_BODY21_LR_PH_I]] ], [ [[INCDEC_PTR_I:%.*]], [[IF_END_I126:%.*]] ]
-; CHECK-NEXT:    [[X_09_I:%.*]] = phi i32 [ 0, [[FOR_BODY21_LR_PH_I]] ], [ [[INC_I125:%.*]], [[IF_END_I126]] ]
 ; CHECK-NEXT:    br i1 undef, label [[IF_END_I126]], label [[IF_ELSE_I124:%.*]]
 ; CHECK:       if.else.i124:
 ; CHECK-NEXT:    store i8 undef, i8* [[DESTYPIXELPTR_010_I]], align 1
 ; CHECK-NEXT:    br label [[IF_END_I126]]
 ; CHECK:       if.end.i126:
 ; CHECK-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds i8, i8* [[DESTYPIXELPTR_010_I]], i32 1
-; CHECK-NEXT:    [[INC_I125]] = add nuw i32 [[X_09_I]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC_I125]], undef
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY21_I]], label [[FOR_END_I129_LOOPEXIT:%.*]]
+; CHECK-NEXT:    br i1 true, label [[FOR_BODY21_I]], label [[FOR_END_I129_LOOPEXIT:%.*]]
 ; CHECK:       for.end.i129.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END_I129]]
 ; CHECK:       for.end.i129:

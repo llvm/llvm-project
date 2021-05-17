@@ -622,6 +622,23 @@ bool RegBankSelect::applyMapping(
 
 bool RegBankSelect::assignInstr(MachineInstr &MI) {
   LLVM_DEBUG(dbgs() << "Assign: " << MI);
+
+  unsigned Opc = MI.getOpcode();
+  if (isPreISelGenericOptimizationHint(Opc)) {
+    assert((Opc == TargetOpcode::G_ASSERT_ZEXT ||
+            Opc == TargetOpcode::G_ASSERT_SEXT) &&
+           "Unexpected hint opcode!");
+    // The only correct mapping for these is to always use the source register
+    // bank.
+    const RegisterBank *RB = MRI->getRegBankOrNull(MI.getOperand(1).getReg());
+    // We can assume every instruction above this one has a selected register
+    // bank.
+    assert(RB && "Expected source register to have a register bank?");
+    LLVM_DEBUG(dbgs() << "... Hint always uses source's register bank.\n");
+    MRI->setRegBank(MI.getOperand(0).getReg(), *RB);
+    return true;
+  }
+
   // Remember the repairing placement for all the operands.
   SmallVector<RepairingPlacement, 4> RepairPts;
 
@@ -700,6 +717,10 @@ bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
 
       // Ignore debug info.
       if (MI.isDebugInstr())
+        continue;
+
+      // Ignore IMPLICIT_DEF which must have a regclass.
+      if (MI.isImplicitDef())
         continue;
 
       if (!assignInstr(MI)) {

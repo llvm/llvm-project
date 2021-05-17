@@ -1126,9 +1126,12 @@ def VMOVH  : ASuInp<0b11101, 0b11, 0b0000, 0b01, 0,
              Requires<[HasFullFP16]>;
 
 def VINSH  : ASuInp<0b11101, 0b11, 0b0000, 0b11, 0,
-                  (outs SPR:$Sd), (ins SPR:$Sm),
+                  (outs SPR:$Sd), (ins SPR:$Sda, SPR:$Sm),
                   IIC_fpUNA16, "vins.f16\t$Sd, $Sm", []>,
-             Requires<[HasFullFP16]>;
+             Requires<[HasFullFP16]> {
+  let Constraints = "$Sd = $Sda";
+}
+
 } // PostEncoderMethod
 } // hasSideEffects
 

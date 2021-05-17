@@ -26,6 +26,7 @@
 
 #include "ClangdLSPServer.h"
 #include "CodeComplete.h"
+#include "Config.h"
 #include "GlobalCompilationDatabase.h"
 #include "Hover.h"
 #include "ParsedAST.h"
@@ -93,7 +94,8 @@ public:
   bool buildCommand(const ThreadsafeFS &TFS) {
     log("Loading compilation database...");
     DirectoryBasedGlobalCompilationDatabase::Options CDBOpts(TFS);
-    CDBOpts.CompileCommandsDir = Opts.CompileCommandsDir;
+    CDBOpts.CompileCommandsDir =
+        Config::current().CompileFlags.CDBSearch.FixedCDBPath;
     std::unique_ptr<GlobalCompilationDatabase> BaseCDB =
         std::make_unique<DirectoryBasedGlobalCompilationDatabase>(CDBOpts);
     BaseCDB = getQueryDriverDatabase(llvm::makeArrayRef(Opts.QueryDriverGlobs),
@@ -107,10 +109,10 @@ public:
 
     if (auto TrueCmd = CDB->getCompileCommand(File)) {
       Cmd = std::move(*TrueCmd);
-      log("Compile command from CDB is: {0}", llvm::join(Cmd.CommandLine, " "));
+      log("Compile command from CDB is: {0}", printArgv(Cmd.CommandLine));
     } else {
       Cmd = CDB->getFallbackCommand(File);
-      log("Generic fallback command is: {0}", llvm::join(Cmd.CommandLine, " "));
+      log("Generic fallback command is: {0}", printArgv(Cmd.CommandLine));
     }
 
     return true;
@@ -140,7 +142,7 @@ public:
         buildCompilerInvocation(Inputs, CaptureInvocationDiags, &CC1Args);
     auto InvocationDiags = CaptureInvocationDiags.take();
     ErrCount += showErrors(InvocationDiags);
-    log("internal (cc1) args are: {0}", llvm::join(CC1Args, " "));
+    log("internal (cc1) args are: {0}", printArgv(CC1Args));
     if (!Invocation) {
       elog("Failed to parse command line");
       return false;
@@ -179,7 +181,7 @@ public:
       elog("Failed to build AST");
       return false;
     }
-    ErrCount += showErrors(llvm::makeArrayRef(AST->getDiagnostics())
+    ErrCount += showErrors(llvm::makeArrayRef(*AST->getDiagnostics())
                                .drop_front(Preamble->Diags.size()));
 
     if (Opts.BuildDynamicSymbolIndex) {
@@ -190,21 +192,28 @@ public:
   }
 
   // Run AST-based features at each token in the file.
-  void testLocationFeatures() {
+  void testLocationFeatures(
+      llvm::function_ref<bool(const Position &)> ShouldCheckLine) {
     log("Testing features at each token (may be slow in large files)");
-    auto SpelledTokens =
-        AST->getTokens().spelledTokens(AST->getSourceManager().getMainFileID());
+    auto &SM = AST->getSourceManager();
+    auto SpelledTokens = AST->getTokens().spelledTokens(SM.getMainFileID());
     for (const auto &Tok : SpelledTokens) {
       unsigned Start = AST->getSourceManager().getFileOffset(Tok.location());
       unsigned End = Start + Tok.length();
       Position Pos = offsetToPosition(Inputs.Contents, Start);
+
+      if (!ShouldCheckLine(Pos))
+        continue;
+
       // FIXME: dumping the tokens may leak sensitive code into bug reports.
       // Add an option to turn this off, once we decide how options work.
       vlog("  {0} {1}", Pos, Tok.text(AST->getSourceManager()));
       auto Tree = SelectionTree::createRight(AST->getASTContext(),
                                              AST->getTokens(), Start, End);
-      Tweak::Selection Selection(&Index, *AST, Start, End, std::move(Tree));
-      for (const auto &T : prepareTweaks(Selection, Opts.TweakFilter)) {
+      Tweak::Selection Selection(&Index, *AST, Start, End, std::move(Tree),
+                                 nullptr);
+      for (const auto &T :
+           prepareTweaks(Selection, Opts.TweakFilter, Opts.FeatureModules)) {
         auto Result = T->apply(Selection);
         if (!Result) {
           elog("    tweak: {0} ==> FAIL: {1}", T->id(), Result.takeError());
@@ -227,8 +236,9 @@ public:
 
 } // namespace
 
-bool check(llvm::StringRef File, const ThreadsafeFS &TFS,
-           const ClangdLSPServer::Options &Opts) {
+bool check(llvm::StringRef File,
+           llvm::function_ref<bool(const Position &)> ShouldCheckLine,
+           const ThreadsafeFS &TFS, const ClangdLSPServer::Options &Opts) {
   llvm::SmallString<0> FakeFile;
   llvm::Optional<std::string> Contents;
   if (File.empty()) {
@@ -245,11 +255,14 @@ bool check(llvm::StringRef File, const ThreadsafeFS &TFS,
   }
   log("Testing on source file {0}", File);
 
+  auto ContextProvider = ClangdServer::createConfiguredContextProvider(
+      Opts.ConfigProvider, nullptr);
+  WithContext Ctx(ContextProvider(""));
   Checker C(File, Opts);
   if (!C.buildCommand(TFS) || !C.buildInvocation(TFS, Contents) ||
       !C.buildAST())
     return false;
-  C.testLocationFeatures();
+  C.testLocationFeatures(ShouldCheckLine);
 
   log("All checks completed, {0} errors", C.ErrCount);
   return C.ErrCount == 0;

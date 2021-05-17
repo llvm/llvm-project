@@ -6,7 +6,7 @@ source_set("sources") {
   sources = [ "cfi.cpp" ]
 }
 
-copy("blacklist") {
-  sources = [ "cfi_blacklist.txt" ]
+copy("ignorelist") {
+  sources = [ "cfi_ignorelist.txt" ]
   outputs = [ "$clang_resource_dir/share/{{source_target_relative}}" ]
 }

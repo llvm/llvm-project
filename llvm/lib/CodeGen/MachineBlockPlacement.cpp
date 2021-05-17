@@ -193,6 +193,7 @@ static cl::opt<unsigned> TriangleChainCount(
     cl::init(2),
     cl::Hidden);
 
+namespace llvm {
 extern cl::opt<unsigned> StaticLikelyProb;
 extern cl::opt<unsigned> ProfileLikelyProb;
 
@@ -204,6 +205,7 @@ extern cl::opt<GVDAGType> ViewBlockLayoutWithBFI;
 // Command line option to specify the name of the function for CFG dump
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -view-bfi-func-name=
 extern cl::opt<std::string> ViewBlockFreqFuncName;
+} // namespace llvm
 
 namespace {
 
@@ -3336,6 +3338,13 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
         TailDupPlacementAggressiveThreshold.getNumOccurrences() != 0)
       TailDupSize = TailDupPlacementAggressiveThreshold;
   }
+
+  // If there's no threshold provided through options, query the target
+  // information for a threshold instead.
+  if (TailDupPlacementThreshold.getNumOccurrences() == 0 &&
+      (PassConfig->getOptLevel() < CodeGenOpt::Aggressive ||
+       TailDupPlacementAggressiveThreshold.getNumOccurrences() == 0))
+    TailDupSize = TII->getTailDuplicateSize(PassConfig->getOptLevel());
 
   if (allowTailDupPlacement()) {
     MPDT = &getAnalysis<MachinePostDominatorTree>();

@@ -379,7 +379,7 @@ AliasResult TypeBasedAAResult::alias(const MemoryLocation &LocA,
     return AAResultBase::alias(LocA, LocB, AAQI);
 
   // Otherwise return a definitive result.
-  return NoAlias;
+  return AliasResult::NoAlias;
 }
 
 bool TypeBasedAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
@@ -736,4 +736,53 @@ bool TypeBasedAAWrapperPass::doFinalization(Module &M) {
 
 void TypeBasedAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
+}
+
+MDNode *AAMDNodes::ShiftTBAA(MDNode *MD, size_t Offset) {
+  // Fast path if there's no offset
+  if (Offset == 0)
+    return MD;
+  // Fast path if there's no path tbaa node (and thus scalar)
+  if (!isStructPathTBAA(MD))
+    return MD;
+
+  // The correct behavior here is to add the offset into the TBAA
+  // struct node offset. The base type, however may not have defined
+  // a type at this additional offset, resulting in errors. Since
+  // this method is only used within a given load/store access
+  // the offset provided is only used to subdivide the previous load
+  // maintaining the validity of the previous TBAA.
+  //
+  // This, however, should be revisited in the future.
+  return MD;
+}
+
+MDNode *AAMDNodes::ShiftTBAAStruct(MDNode *MD, size_t Offset) {
+  // Fast path if there's no offset
+  if (Offset == 0)
+    return MD;
+  SmallVector<Metadata *, 3> Sub;
+  for (size_t i = 0, size = MD->getNumOperands(); i < size; i += 3) {
+    ConstantInt *InnerOffset = mdconst::extract<ConstantInt>(MD->getOperand(i));
+    ConstantInt *InnerSize =
+        mdconst::extract<ConstantInt>(MD->getOperand(i + 1));
+    // Don't include any triples that aren't in bounds
+    if (InnerOffset->getZExtValue() + InnerSize->getZExtValue() <= Offset)
+      continue;
+
+    uint64_t NewSize = InnerSize->getZExtValue();
+    uint64_t NewOffset = InnerOffset->getZExtValue() - Offset;
+    if (InnerOffset->getZExtValue() < Offset) {
+      NewOffset = 0;
+      NewSize -= Offset - InnerOffset->getZExtValue();
+    }
+
+    // Shift the offset of the triple
+    Sub.push_back(ConstantAsMetadata::get(
+        ConstantInt::get(InnerOffset->getType(), NewOffset)));
+    Sub.push_back(ConstantAsMetadata::get(
+        ConstantInt::get(InnerSize->getType(), NewSize)));
+    Sub.push_back(MD->getOperand(i + 2));
+  }
+  return MDNode::get(MD->getContext(), Sub);
 }

@@ -98,7 +98,8 @@ static RegisterInfoInterface *
 CreateRegisterInfoInterface(const ArchSpec &target_arch) {
   assert((HostInfo::GetArchitecture().GetAddressByteSize() == 8) &&
          "Register setting path assumes this is a 64-bit host");
-  return new RegisterInfoPOSIX_arm64(target_arch);
+  return new RegisterInfoPOSIX_arm64(
+      target_arch, RegisterInfoPOSIX_arm64::eRegsetMaskDefault);
 }
 
 static Status GetThreadContextHelper(lldb::thread_t thread_handle,

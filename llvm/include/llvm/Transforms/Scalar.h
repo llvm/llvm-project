@@ -190,7 +190,8 @@ Pass *createLoopUnrollPass(int OptLevel = 2, bool OnlyWhenForced = false,
                            int Count = -1, int AllowPartial = -1,
                            int Runtime = -1, int UpperBound = -1,
                            int AllowPeeling = -1);
-// Create an unrolling pass for full unrolling that uses exact trip count only.
+// Create an unrolling pass for full unrolling that uses exact trip count only
+// and also does peeling.
 Pass *createSimpleLoopUnrollPass(int OptLevel = 2, bool OnlyWhenForced = false,
                                  bool ForgetAllSCEV = false);
 
@@ -210,7 +211,7 @@ Pass *createLoopRerollPass();
 //
 // LoopRotate - This pass is a simple loop rotating pass.
 //
-Pass *createLoopRotatePass(int MaxHeaderSize = -1);
+Pass *createLoopRotatePass(int MaxHeaderSize = -1, bool PrepareForLTO = false);
 
 //===----------------------------------------------------------------------===//
 //

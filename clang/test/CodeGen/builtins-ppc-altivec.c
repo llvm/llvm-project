@@ -3759,6 +3759,18 @@ void test6() {
   // CHECK-LE: sub nsw i32 31
   // CHECK-LE: @llvm.ppc.altivec.vperm
 
+  res_vf = vec_sldw(vf, vf, 0);
+  // CHECK: add nsw i32 {{[0-9a-zA-Z%.]+}}, 1
+  // CHECK: add nsw i32 {{[0-9a-zA-Z%.]+}}, 2
+  // CHECK: add nsw i32 {{[0-9a-zA-Z%.]+}}, 3
+  // CHECK: add nsw i32 {{[0-9a-zA-Z%.]+}}, 15
+  // CHECK: @llvm.ppc.altivec.vperm
+  // CHECK-LE: sub nsw i32 16
+  // CHECK-LE: sub nsw i32 17
+  // CHECK-LE: sub nsw i32 18
+  // CHECK-LE: sub nsw i32 31
+  // CHECK-LE: @llvm.ppc.altivec.vperm
+
   res_vsc = vec_vsldoi(vsc, vsc, 0);
 // CHECK: add nsw i32 {{[0-9a-zA-Z%.]+}}, 1
 // CHECK: add nsw i32 {{[0-9a-zA-Z%.]+}}, 2
@@ -5778,6 +5790,10 @@ void test6() {
 // CHECK: @llvm.ppc.altivec.vupkhpx
 // CHECK-LE: @llvm.ppc.altivec.vupklpx
 
+  res_vui = vec_vupkhpx(vp);
+// CHECK: @llvm.ppc.altivec.vupkhpx
+// CHECK-LE: @llvm.ppc.altivec.vupklpx
+
   res_vs  = vec_vupkhsb(vsc);
 // CHECK: @llvm.ppc.altivec.vupkhsb
 // CHECK-LE: @llvm.ppc.altivec.vupklsb
@@ -5816,6 +5832,10 @@ void test6() {
 // CHECK-LE: @llvm.ppc.altivec.vupkhsh
 
   res_vui = vec_unpackl(vp);
+// CHECK: @llvm.ppc.altivec.vupklpx
+// CHECK-LE: @llvm.ppc.altivec.vupkhpx
+
+  res_vui = vec_vupklpx(vp);
 // CHECK: @llvm.ppc.altivec.vupklpx
 // CHECK-LE: @llvm.ppc.altivec.vupkhpx
 
@@ -9576,4 +9596,22 @@ void test12() {
   vec_xst_be(vf, param_sll, &param_f);
   // CHECK: store <4 x float> %{{[0-9]+}}, <4 x float>* %{{[0-9]+}}, align 1
   // CHECK-LE: call void @llvm.ppc.vsx.stxvw4x.be(<4 x i32> %{{[0-9]+}}, i8* %{{[0-9]+}})
+}
+
+vector float test_rsqrtf(vector float a, vector float b) {
+  // CHECK-LABEL: test_rsqrtf
+  // CHECK: call fast <4 x float> @llvm.sqrt.v4f32
+  // CHECK: fdiv fast <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+  // CHECK-LE-LABEL: test_rsqrtf
+  // CHECK-LE: call fast <4 x float> @llvm.sqrt.v4f32
+  // CHECK-LE: fdiv fast <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+  return vec_rsqrt(a);
+}
+
+vector float test_recipdivf(vector float a, vector float b) {
+  // CHECK-LABEL: test_recipdivf
+  // CHECK: fdiv fast <4 x float>
+  // CHECK-LE-LABEL: test_recipdivf
+  // CHECK-LE: fdiv fast <4 x float>
+  return vec_recipdiv(a, b);
 }

@@ -12,7 +12,7 @@ ALL-NEXT:   Number of blocks: 25
 ALL-NEXT:   Number of streams: 17
 ALL-NEXT:   Signature: 1424295906
 ALL-NEXT:   Age: 1
-ALL-NEXT:   GUID: {0B355641-86A0-A249-896F-9988FAE52FF0}
+ALL-NEXT:   GUID: {4156350B-A086-49A2-896F-9988FAE52FF0}
 ALL-NEXT:   Features: 0x1
 ALL-NEXT:   Has Debug Info: true
 ALL-NEXT:   Has Types: true
@@ -601,7 +601,7 @@ BIG-NEXT:   Number of blocks: 99
 BIG-NEXT:   Number of streams: 64
 BIG-NEXT:   Signature: 1461714535
 BIG-NEXT:   Age: 1
-BIG-NEXT:   GUID: {880ECC89-DF81-0B4F-839C-58CBD052E937}
+BIG-NEXT:   GUID: {89CC0E88-81DF-4F0B-839C-58CBD052E937}
 BIG-NEXT:   Features: 0x1
 BIG-NEXT:   Has Debug Info: true
 BIG-NEXT:   Has Types: true

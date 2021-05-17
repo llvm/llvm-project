@@ -362,7 +362,7 @@ MachineBasicBlock::iterator AVRFrameLowering::eliminateCallFramePseudoInstr(
       New->getOperand(3).setIsDead();
 
       BuildMI(MBB, MI, DL, TII.get(AVR::SPWRITE), AVR::SP)
-          .addReg(AVR::R31R30, RegState::Kill);
+          .addReg(AVR::R31R30);
 
       // Make sure the remaining stack stores are converted to real store
       // instructions.

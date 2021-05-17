@@ -122,7 +122,7 @@ static Address ResolveAddress(Target &target, const Address &addr) {
 
 lldb::DisassemblerSP Disassembler::DisassembleRange(
     const ArchSpec &arch, const char *plugin_name, const char *flavor,
-    Target &target, const AddressRange &range, bool prefer_file_cache) {
+    Target &target, const AddressRange &range, bool force_live_memory) {
   if (range.GetByteSize() <= 0)
     return {};
 
@@ -137,7 +137,7 @@ lldb::DisassemblerSP Disassembler::DisassembleRange(
 
   const size_t bytes_disassembled = disasm_sp->ParseInstructions(
       target, range.GetBaseAddress(), {Limit::Bytes, range.GetByteSize()},
-      nullptr, prefer_file_cache);
+      nullptr, force_live_memory);
   if (bytes_disassembled == 0)
     return {};
 
@@ -181,9 +181,9 @@ bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
   if (!disasm_sp)
     return false;
 
-  const bool prefer_file_cache = false;
+  const bool force_live_memory = true;
   size_t bytes_disassembled = disasm_sp->ParseInstructions(
-      exe_ctx.GetTargetRef(), address, limit, &strm, prefer_file_cache);
+      exe_ctx.GetTargetRef(), address, limit, &strm, force_live_memory);
   if (bytes_disassembled == 0)
     return false;
 
@@ -1036,7 +1036,7 @@ InstructionList::GetIndexOfInstructionAtLoadAddress(lldb::addr_t load_addr,
 
 size_t Disassembler::ParseInstructions(Target &target, Address start,
                                        Limit limit, Stream *error_strm_ptr,
-                                       bool prefer_file_cache) {
+                                       bool force_live_memory) {
   m_instruction_list.Clear();
 
   if (!start.IsValid())
@@ -1052,8 +1052,8 @@ size_t Disassembler::ParseInstructions(Target &target, Address start,
   Status error;
   lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
   const size_t bytes_read =
-      target.ReadMemory(start, prefer_file_cache, data_sp->GetBytes(),
-                        data_sp->GetByteSize(), error, &load_addr);
+      target.ReadMemory(start, data_sp->GetBytes(), data_sp->GetByteSize(),
+                        error, force_live_memory, &load_addr);
   const bool data_from_file = load_addr == LLDB_INVALID_ADDRESS;
 
   if (bytes_read == 0) {

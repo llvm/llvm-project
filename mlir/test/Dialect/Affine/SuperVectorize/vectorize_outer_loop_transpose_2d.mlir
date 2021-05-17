@@ -7,9 +7,9 @@ func @vec2d(%A : memref<?x?x?xf32>) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %c2 = constant 2 : index
-  %M = dim %A, %c0 : memref<?x?x?xf32>
-  %N = dim %A, %c1 : memref<?x?x?xf32>
-  %P = dim %A, %c2 : memref<?x?x?xf32>
+  %M = memref.dim %A, %c0 : memref<?x?x?xf32>
+  %N = memref.dim %A, %c1 : memref<?x?x?xf32>
+  %P = memref.dim %A, %c2 : memref<?x?x?xf32>
   // CHECK: for  {{.*}} = 0 to %{{.*}} {
   // CHECK:   for  {{.*}} = 0 to %{{.*}} {
   // CHECK:     for  {{.*}} = 0 to %{{.*}} {
@@ -40,9 +40,9 @@ func @vec2d_imperfectly_nested(%A : memref<?x?x?xf32>) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %c2 = constant 2 : index
-  %0 = dim %A, %c0 : memref<?x?x?xf32>
-  %1 = dim %A, %c1 : memref<?x?x?xf32>
-  %2 = dim %A, %c2 : memref<?x?x?xf32>
+  %0 = memref.dim %A, %c0 : memref<?x?x?xf32>
+  %1 = memref.dim %A, %c1 : memref<?x?x?xf32>
+  %2 = memref.dim %A, %c2 : memref<?x?x?xf32>
   // CHECK: affine.for %{{.*}} = 0 to %{{.*}} step 32 {
   // CHECK:   affine.for %{{.*}} = 0 to %{{.*}} {
   // CHECK:     affine.for %{{.*}} = 0 to %{{.*}} step 256 {

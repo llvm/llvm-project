@@ -27,7 +27,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK-NEXT:    br i1
 
 ; CHECK-LABEL: middle.block:
-; CHECK:         %rdx.shuf = shufflevector <4 x i32>
+; CHECK:         call i32 @llvm.vector.reduce.add.v4i32(<4 x i32>
 define i32 @inv_val_store_to_inv_address_with_reduction(i32* %a, i64 %n, i32* %b) {
 entry:
   %ntrunc = trunc i64 %n to i32
@@ -166,15 +166,13 @@ for.end:                                          ; preds = %for.body
 ; CHECK-LABEL: inv_val_store_to_inv_address_conditional_diff_values_ic
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[NTRUNC:%.*]] = trunc i64 [[N:%.*]] to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[N]], 1
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i64 [[N]], i64 1
+; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[A4:%.*]] = bitcast i32* [[A:%.*]] to i8*
 ; CHECK-NEXT:    [[B1:%.*]] = bitcast i32* [[B:%.*]] to i8*
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i64 [[N]], 1
-; CHECK-NEXT:    [[SMAX2:%.*]] = select i1 [[TMP1]], i64 [[N]], i64 1
+; CHECK-NEXT:    [[SMAX2:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i32, i32* [[B]], i64 [[SMAX2]]
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, i8* [[A4]], i64 1
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt i8* [[UGLYGEP]], [[B1]]
@@ -272,15 +270,13 @@ for.end:                                          ; preds = %for.body
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[NTRUNC:%.*]] = trunc i64 [[N:%.*]] to i32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[NTRUNC]], [[K:%.*]]
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[N]], 1
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i64 [[N]], i64 1
+; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[A4:%.*]] = bitcast i32* [[A:%.*]] to i8*
 ; CHECK-NEXT:    [[B1:%.*]] = bitcast i32* [[B:%.*]] to i8*
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i64 [[N]], 1
-; CHECK-NEXT:    [[SMAX2:%.*]] = select i1 [[TMP1]], i64 [[N]], i64 1
+; CHECK-NEXT:    [[SMAX2:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i32, i32* [[B]], i64 [[SMAX2]]
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, i8* [[A4]], i64 1
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt i8* [[UGLYGEP]], [[B1]]
@@ -364,18 +360,17 @@ for.end:                                          ; preds = %for.body
 ; variant value stored to uniform address tests that the code gen extracts the
 ; last element from the variant vector and scalar stores it into the uniform
 ; address.
-; CHECK-LABEL: variant_val_store_to_inv_address
+define i32 @variant_val_store_to_inv_address(i32* %a, i64 %n, i32* %b, i32 %k) {
+; CHECK-LABEL: @variant_val_store_to_inv_address(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[N:%.*]], 1
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i64 [[N]], i64 1
+; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[B2:%.*]] = bitcast i32* [[B:%.*]] to i8*
 ; CHECK-NEXT:    [[A1:%.*]] = bitcast i32* [[A:%.*]] to i8*
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, i8* [[A1]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i64 [[N]], 1
-; CHECK-NEXT:    [[SMAX3:%.*]] = select i1 [[TMP1]], i64 [[N]], i64 1
+; CHECK-NEXT:    [[SMAX3:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i32, i32* [[B]], i64 [[SMAX3]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt i32* [[SCEVGEP]], [[A]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ugt i8* [[UGLYGEP]], [[B2]]
@@ -389,20 +384,16 @@ for.end:                                          ; preds = %for.body
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[TMP2]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP3]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP3]], align 8, !alias.scope !36
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i32 3
-; CHECK-NEXT:    store i32 [[TMP4]], i32* [[A]], align 4
+; CHECK-NEXT:    store i32 [[TMP4]], i32* [[A]], align 4, !alias.scope !39, !noalias !36
 ; CHECK-NEXT:    [[TMP5]] = add <4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP41:!llvm.loop !.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi <4 x i32> [ [[TMP5]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[DOTLCSSA]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[DOTLCSSA]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF5:%.*]] = shufflevector <4 x i32> [[BIN_RDX]], <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX6:%.*]] = add <4 x i32> [[BIN_RDX]], [[RDX_SHUF5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[BIN_RDX6]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[DOTLCSSA]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -418,11 +409,14 @@ for.end:                                          ; preds = %for.body
 ; CHECK-NEXT:    [[TMP3]] = add i32 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[COND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]], [[LOOP42:!llvm.loop !.*]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    [[TMP3_LCSSA:%.*]] = phi i32 [ [[TMP3]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    br label [[FOR_END]]
-define i32 @variant_val_store_to_inv_address(i32* %a, i64 %n, i32* %b, i32 %k) {
+; CHECK:       for.end:
+; CHECK-NEXT:    [[RDX_LCSSA:%.*]] = phi i32 [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ [[TMP3_LCSSA]], [[FOR_END_LOOPEXIT]] ]
+; CHECK-NEXT:    ret i32 [[RDX_LCSSA]]
+;
 entry:
   %ntrunc = trunc i64 %n to i32
   %cmp = icmp eq i32 %ntrunc, %k
@@ -591,3 +585,6 @@ bb7:
 bb26:
   ret void
 }
+
+; Make sure any check-not directives are not triggered by function declarations.
+; CHECK: declare

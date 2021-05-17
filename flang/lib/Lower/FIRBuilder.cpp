@@ -149,7 +149,7 @@ mlir::Value Fortran::lower::FirOpBuilder::convertWithSemantics(
     auto eleTy = helper.getComplexPartType(toTy);
     auto cast = createConvert(loc, eleTy, val);
     llvm::APFloat zero{
-        kindMap.getFloatSemantics(toTy.cast<fir::CplxType>().getFKind()), 0};
+        kindMap.getFloatSemantics(toTy.cast<fir::ComplexType>().getFKind()), 0};
     auto imag = createRealConstant(loc, eleTy, zero);
     return helper.createComplex(toTy, cast, imag);
   }
@@ -173,7 +173,7 @@ mlir::Value Fortran::lower::FirOpBuilder::createConvert(mlir::Location loc,
 
 fir::StringLitOp Fortran::lower::FirOpBuilder::createStringLit(
     mlir::Location loc, mlir::Type eleTy, llvm::StringRef data) {
-  auto strAttr = mlir::StringAttr::get(data, getContext());
+  auto strAttr = mlir::StringAttr::get(getContext(), data);
   auto valTag = mlir::Identifier::get(fir::StringLitOp::value(), getContext());
   mlir::NamedAttribute dataAttr(valTag, strAttr);
   auto sizeTag = mlir::Identifier::get(fir::StringLitOp::size(), getContext());

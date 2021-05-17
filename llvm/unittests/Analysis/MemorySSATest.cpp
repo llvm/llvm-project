@@ -11,12 +11,14 @@
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -1036,7 +1038,8 @@ TEST_F(MemorySSATest, TestLoadMustAlias) {
   }
   for (LoadInst *V : {LA3, LA4}) {
     MemoryUse *MemUse = dyn_cast_or_null<MemoryUse>(MSSA.getMemoryAccess(V));
-    EXPECT_EQ(MemUse->getOptimizedAccessType(), MustAlias)
+    EXPECT_EQ(MemUse->getOptimizedAccessType().getValue(),
+              AliasResult::MustAlias)
         << "Load " << I << " doesn't have the correct alias information";
     // EXPECT_EQ expands such that if we increment I above, it won't get
     // incremented except when we try to print the error message.
@@ -1085,7 +1088,8 @@ TEST_F(MemorySSATest, TestStoreMustAlias) {
       EXPECT_EQ(MemDef->getOptimizedAccessType(), None)
           << "Store " << I << " doesn't have the correct alias information";
     else
-      EXPECT_EQ(MemDef->getOptimizedAccessType(), MustAlias)
+      EXPECT_EQ(MemDef->getOptimizedAccessType().getValue(),
+                AliasResult::MustAlias)
           << "Store " << I << " doesn't have the correct alias information";
     // EXPECT_EQ expands such that if we increment I above, it won't get
     // incremented except when we try to print the error message.
@@ -1119,7 +1123,8 @@ TEST_F(MemorySSATest, TestLoadMayAlias) {
   unsigned I = 0;
   for (LoadInst *V : {LA1, LB1}) {
     MemoryUse *MemUse = dyn_cast_or_null<MemoryUse>(MSSA.getMemoryAccess(V));
-    EXPECT_EQ(MemUse->getOptimizedAccessType(), MayAlias)
+    EXPECT_EQ(MemUse->getOptimizedAccessType().getValue(),
+              AliasResult::MayAlias)
         << "Load " << I << " doesn't have the correct alias information";
     // EXPECT_EQ expands such that if we increment I above, it won't get
     // incremented except when we try to print the error message.
@@ -1127,7 +1132,8 @@ TEST_F(MemorySSATest, TestLoadMayAlias) {
   }
   for (LoadInst *V : {LA2, LB2}) {
     MemoryUse *MemUse = dyn_cast_or_null<MemoryUse>(MSSA.getMemoryAccess(V));
-    EXPECT_EQ(MemUse->getOptimizedAccessType(), MustAlias)
+    EXPECT_EQ(MemUse->getOptimizedAccessType().getValue(),
+              AliasResult::MustAlias)
         << "Load " << I << " doesn't have the correct alias information";
     // EXPECT_EQ expands such that if we increment I above, it won't get
     // incremented except when we try to print the error message.
@@ -1187,13 +1193,15 @@ TEST_F(MemorySSATest, TestStoreMayAlias) {
     EXPECT_EQ(MemDef->isOptimized(), true)
         << "Store " << I << " was not optimized";
     if (I == 1 || I == 3 || I == 4)
-      EXPECT_EQ(MemDef->getOptimizedAccessType(), MayAlias)
+      EXPECT_EQ(MemDef->getOptimizedAccessType().getValue(),
+                AliasResult::MayAlias)
           << "Store " << I << " doesn't have the correct alias information";
     else if (I == 0 || I == 2)
       EXPECT_EQ(MemDef->getOptimizedAccessType(), None)
           << "Store " << I << " doesn't have the correct alias information";
     else
-      EXPECT_EQ(MemDef->getOptimizedAccessType(), MustAlias)
+      EXPECT_EQ(MemDef->getOptimizedAccessType().getValue(),
+                AliasResult::MustAlias)
           << "Store " << I << " doesn't have the correct alias information";
     // EXPECT_EQ expands such that if we increment I above, it won't get
     // incremented except when we try to print the error message.
@@ -1668,4 +1676,53 @@ TEST_F(MemorySSATest, TestLoadClobber) {
 
   MemoryAccess *Load2Clobber = Walker->getClobberingMemoryAccess(Load2Access);
   EXPECT_EQ(Load2Clobber, Load1Access);
+}
+
+// We want to test if the location information are retained
+// when the IsGuaranteedLoopInvariant function handles a
+// memory access referring to a pointer defined in the entry
+// block, hence automatically guaranteed to be loop invariant.
+TEST_F(MemorySSATest, TestLoopInvariantEntryBlockPointer) {
+  SMDiagnostic E;
+  auto LocalM =
+      parseAssemblyString("define void @test(i64 %a0, i8* %a1, i1* %a2) {\n"
+                          "entry:\n"
+                          "%v0 = getelementptr i8, i8* %a1, i64 %a0\n"
+                          "%v1 = bitcast i8* %v0 to i64*\n"
+                          "%v2 = bitcast i8* %v0 to i32*\n"
+                          "%v3 = load i1, i1* %a2\n"
+                          "br i1 %v3, label %body, label %exit\n"
+                          "body:\n"
+                          "store i32 1, i32* %v2\n"
+                          "br label %exit\n"
+                          "exit:\n"
+                          "store i64 0, i64* %v1\n"
+                          "ret void\n"
+                          "}",
+                          E, C);
+  ASSERT_TRUE(LocalM);
+  F = LocalM->getFunction("test");
+  ASSERT_TRUE(F);
+  // Setup the analysis
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+  // Find the exit block
+  for (auto &BB : *F) {
+    if (BB.getName() == "exit") {
+      // Get the store instruction
+      auto *SI = BB.getFirstNonPHI();
+      // Get the memory access and location
+      MemoryAccess *MA = MSSA.getMemoryAccess(SI);
+      MemoryLocation ML = MemoryLocation::get(SI);
+      // Use the 'upward_defs_iterator' which internally calls
+      // IsGuaranteedLoopInvariant
+      auto ItA = upward_defs_begin({MA, ML}, MSSA.getDomTree());
+      auto ItB =
+          upward_defs_begin({ItA->first, ItA->second}, MSSA.getDomTree());
+      // Check if the location information have been retained
+      EXPECT_TRUE(ItB->second.Size.isPrecise());
+      EXPECT_TRUE(ItB->second.Size.hasValue());
+      EXPECT_TRUE(ItB->second.Size.getValue() == 8);
+    }
+  }
 }

@@ -739,6 +739,17 @@ ProcessSDDbgValues(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
   if (!N->getHasDebugValue())
     return;
 
+  /// Returns true if \p DV has any VReg operand locations which don't exist in
+  /// VRBaseMap.
+  auto HasUnknownVReg = [&VRBaseMap](SDDbgValue *DV) {
+    for (SDDbgOperand L : DV->getLocationOps()) {
+      if (L.getKind() == SDDbgOperand::SDNODE &&
+          VRBaseMap.count({L.getSDNode(), L.getResNo()}) == 0)
+        return true;
+    }
+    return false;
+  };
+
   // Opportunistically insert immediate dbg_value uses, i.e. those with the same
   // source order number as N.
   MachineBasicBlock *BB = Emitter.getBlock();
@@ -747,13 +758,20 @@ ProcessSDDbgValues(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
     if (DV->isEmitted())
       continue;
     unsigned DVOrder = DV->getOrder();
-    if (!Order || DVOrder == Order) {
-      MachineInstr *DbgMI = Emitter.EmitDbgValue(DV, VRBaseMap);
-      if (DbgMI) {
-        Orders.push_back({DVOrder, DbgMI});
-        BB->insert(InsertPos, DbgMI);
-      }
-    }
+    if (Order != 0 && DVOrder != Order)
+      continue;
+    // If DV has any VReg location operands which haven't been mapped then
+    // either that node is no longer available or we just haven't visited the
+    // node yet. In the former case we should emit an undef dbg_value, but we
+    // can do it later. And for the latter we'll want to wait until all
+    // dependent nodes have been visited.
+    if (!DV->isInvalidated() && HasUnknownVReg(DV))
+      continue;
+    MachineInstr *DbgMI = Emitter.EmitDbgValue(DV, VRBaseMap);
+    if (!DbgMI)
+      continue;
+    Orders.push_back({DVOrder, DbgMI});
+    BB->insert(InsertPos, DbgMI);
   }
 }
 
@@ -790,20 +808,21 @@ ProcessSourceNode(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
 void ScheduleDAGSDNodes::
 EmitPhysRegCopy(SUnit *SU, DenseMap<SUnit*, Register> &VRBaseMap,
                 MachineBasicBlock::iterator InsertPos) {
-  for (SUnit::const_pred_iterator I = SU->Preds.begin(), E = SU->Preds.end();
-       I != E; ++I) {
-    if (I->isCtrl()) continue;  // ignore chain preds
-    if (I->getSUnit()->CopyDstRC) {
+  for (const SDep &Pred : SU->Preds) {
+    if (Pred.isCtrl())
+      continue; // ignore chain preds
+    if (Pred.getSUnit()->CopyDstRC) {
       // Copy to physical register.
-      DenseMap<SUnit*, Register>::iterator VRI = VRBaseMap.find(I->getSUnit());
+      DenseMap<SUnit *, Register>::iterator VRI =
+          VRBaseMap.find(Pred.getSUnit());
       assert(VRI != VRBaseMap.end() && "Node emitted out of order - late");
       // Find the destination physical register.
       Register Reg;
-      for (SUnit::const_succ_iterator II = SU->Succs.begin(),
-             EE = SU->Succs.end(); II != EE; ++II) {
-        if (II->isCtrl()) continue;  // ignore chain preds
-        if (II->getReg()) {
-          Reg = II->getReg();
+      for (const SDep &Succ : SU->Succs) {
+        if (Succ.isCtrl())
+          continue; // ignore chain preds
+        if (Succ.getReg()) {
+          Reg = Succ.getReg();
           break;
         }
       }
@@ -811,13 +830,13 @@ EmitPhysRegCopy(SUnit *SU, DenseMap<SUnit*, Register> &VRBaseMap,
         .addReg(VRI->second);
     } else {
       // Copy from physical register.
-      assert(I->getReg() && "Unknown physical register!");
+      assert(Pred.getReg() && "Unknown physical register!");
       Register VRBase = MRI.createVirtualRegister(SU->CopyDstRC);
       bool isNew = VRBaseMap.insert(std::make_pair(SU, VRBase)).second;
       (void)isNew; // Silence compiler warning.
       assert(isNew && "Node emitted out of order - early");
       BuildMI(*BB, InsertPos, DebugLoc(), TII->get(TargetOpcode::COPY), VRBase)
-        .addReg(I->getReg());
+          .addReg(Pred.getReg());
     }
     break;
   }

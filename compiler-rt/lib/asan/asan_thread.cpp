@@ -100,18 +100,27 @@ void AsanThread::Destroy() {
   int tid = this->tid();
   VReport(1, "T%d exited\n", tid);
 
-  malloc_storage().CommitBack();
-  if (common_flags()->use_sigaltstack) UnsetAlternateSignalStack();
-  asanThreadRegistry().FinishThread(tid);
-  FlushToDeadThreadStats(&stats_);
-  // We also clear the shadow on thread destruction because
-  // some code may still be executing in later TSD destructors
-  // and we don't want it to have any poisoned stack.
-  ClearShadowForThreadStackAndTLS();
-  DeleteFakeStack(tid);
+  bool was_running =
+      (asanThreadRegistry().FinishThread(tid) == ThreadStatusRunning);
+  if (was_running) {
+    if (AsanThread *thread = GetCurrentThread())
+      CHECK_EQ(this, thread);
+    malloc_storage().CommitBack();
+    if (common_flags()->use_sigaltstack)
+      UnsetAlternateSignalStack();
+    FlushToDeadThreadStats(&stats_);
+    // We also clear the shadow on thread destruction because
+    // some code may still be executing in later TSD destructors
+    // and we don't want it to have any poisoned stack.
+    ClearShadowForThreadStackAndTLS();
+    DeleteFakeStack(tid);
+  } else {
+    CHECK_NE(this, GetCurrentThread());
+  }
   uptr size = RoundUpTo(sizeof(AsanThread), GetPageSizeCached());
   UnmapOrDie(this, size);
-  DTLS_Destroy();
+  if (was_running)
+    DTLS_Destroy();
 }
 
 void AsanThread::StartSwitchFiber(FakeStack **fake_stack_save, uptr bottom,
@@ -219,7 +228,7 @@ FakeStack *AsanThread::AsyncSignalSafeLazyInitFakeStack() {
 }
 
 void AsanThread::Init(const InitOptions *options) {
-  DCHECK_NE(tid(), ThreadRegistry::kUnknownTid);
+  DCHECK_NE(tid(), kInvalidTid);
   next_stack_top_ = next_stack_bottom_ = 0;
   atomic_store(&stack_switching_, false, memory_order_release);
   CHECK_EQ(this->stack_size(), 0U);
@@ -253,12 +262,9 @@ void AsanThread::Init(const InitOptions *options) {
 // SetThreadStackAndTls.
 #if !SANITIZER_FUCHSIA && !SANITIZER_RTEMS
 
-thread_return_t AsanThread::ThreadStart(
-    tid_t os_id, atomic_uintptr_t *signal_thread_is_registered) {
+thread_return_t AsanThread::ThreadStart(tid_t os_id) {
   Init();
   asanThreadRegistry().StartThread(tid(), os_id, ThreadType::Regular, nullptr);
-  if (signal_thread_is_registered)
-    atomic_store(signal_thread_is_registered, 1, memory_order_release);
 
   if (common_flags()->use_sigaltstack) SetAlternateSignalStack();
 
@@ -285,11 +291,10 @@ thread_return_t AsanThread::ThreadStart(
 
 AsanThread *CreateMainThread() {
   AsanThread *main_thread = AsanThread::Create(
-      /* start_routine */ nullptr, /* arg */ nullptr, /* parent_tid */ 0,
+      /* start_routine */ nullptr, /* arg */ nullptr, /* parent_tid */ kMainTid,
       /* stack */ nullptr, /* detached */ true);
   SetCurrentThread(main_thread);
-  main_thread->ThreadStart(internal_getpid(),
-                           /* signal_thread_is_registered */ nullptr);
+  main_thread->ThreadStart(internal_getpid());
   return main_thread;
 }
 
@@ -300,9 +305,9 @@ void AsanThread::SetThreadStackAndTls(const InitOptions *options) {
   DCHECK_EQ(options, nullptr);
   uptr tls_size = 0;
   uptr stack_size = 0;
-  GetThreadStackAndTls(tid() == 0, &stack_bottom_, &stack_size, &tls_begin_,
-                       &tls_size);
-  stack_top_ = stack_bottom_ + stack_size;
+  GetThreadStackAndTls(tid() == kMainTid, &stack_bottom_, &stack_size,
+                       &tls_begin_, &tls_size);
+  stack_top_ = RoundDownTo(stack_bottom_ + stack_size, SHADOW_GRANULARITY);
   tls_end_ = tls_begin_ + tls_size;
   dtls_ = DTLS_Get();
 
@@ -426,7 +431,7 @@ AsanThread *GetCurrentThread() {
       // address. We are not entirely sure that we have correct main thread
       // limits, so only do this magic on Android, and only if the found thread
       // is the main thread.
-      AsanThreadContext *tctx = GetThreadContextByTidLocked(0);
+      AsanThreadContext *tctx = GetThreadContextByTidLocked(kMainTid);
       if (tctx && ThreadStackContainsAddress(tctx, &context)) {
         SetCurrentThread(tctx->thread);
         return tctx->thread;
@@ -463,7 +468,7 @@ AsanThread *FindThreadByStackAddress(uptr addr) {
 void EnsureMainThreadIDIsCorrect() {
   AsanThreadContext *context =
       reinterpret_cast<AsanThreadContext *>(AsanTSDGet());
-  if (context && (context->tid == 0))
+  if (context && (context->tid == kMainTid))
     context->os_id = GetTid();
 }
 

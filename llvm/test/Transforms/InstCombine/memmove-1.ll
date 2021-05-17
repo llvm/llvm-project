@@ -15,3 +15,11 @@ define i8* @test_simplify1(i8* %mem1, i8* %mem2, i32 %size) {
   ret i8* %ret
 ; CHECK: ret i8* %mem1
 }
+
+define i8* @test_no_incompatible_attr(i8* %mem1, i8* %mem2, i32 %size) {
+; CHECK-LABEL: @test_no_incompatible_attr(
+  %ret = call dereferenceable(1) i8* @memmove(i8* %mem1, i8* %mem2, i32 %size)
+; CHECK: call void @llvm.memmove
+  ret i8* %ret
+; CHECK: ret i8* %mem1
+}

@@ -1,4 +1,7 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-unknown -mcpu=pwr9 | FileCheck  %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-unknown -mcpu=pwr9 | FileCheck  %s --check-prefixes=CHECK,CHECK64
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-ibm-aix-xcoff -mcpu=pwr9 -mattr=-altivec | FileCheck  %s --check-prefixes=CHECK,CHECK32
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-ibm-aix-xcoff -mcpu=pwr9 -mattr=-altivec | FileCheck  %s --check-prefixes=CHECK,CHECK64
+
 define signext i32 @shrinkwrapme(i32 signext %a, i32 signext %lim) {
 entry:
   %cmp5 = icmp sgt i32 %lim, 0
@@ -22,31 +25,29 @@ entry:
   %exitcond = icmp eq i32 %inc, %lim
   br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body
 
-; CHECK-LABEL: shrinkwrapme
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmpwi
+; CHECK-LABEL: {{[\.]?}}shrinkwrapme:
+; CHECK:            # %bb.0:
+; CHECK-NEXT:         cmpwi
 ; Prolog code
-; CHECK:         std 
-; CHECK:         std 
-; CHECK:         std 
-; CHECK:         std 
-; CHECK:         blt 0, .LBB0_3
-; CHECK:       # %bb.1:
-; CHECK-NEXT:    clrldi
-; CHECK-NEXT:    mtctr
-; CHECK-NEXT:    li 
-; CHECK:       .LBB0_2: 
-; CHECK:         add
-; CHECK:         bdnz .LBB0_2 
-; CHECK-NEXT:    b .LBB0_4
-; CHECK:       .LBB0_3: 
-; CHECK-NEXT:    li 
-; CHECK:       .LBB0_4: 
+; CHECK64-COUNT-18:   std
+
+; CHECK32-COUNT-18:   stw
+
+; CHECK:              blt 0, {{.*}}BB0_3
+; CHECK:            # %bb.1:
+; CHECK:              li
+; CHECK:            {{.*}}BB0_2:
+; CHECK:              add
+; CHECK:              bdnz {{.*}}BB0_2
+; CHECK-NEXT:         b {{.*}}BB0_4
+; CHECK:            {{.*}}BB0_3:
+; CHECK-NEXT:         li
+; CHECK:            {{.*}}BB0_4:
+
 ; Epilog code
-; CHECK:         ld 
-; CHECK:         ld 
-; CHECK:         extsw
-; CHECK:         ld 
-; CHECK:         ld 
-; CHECK:         blr
+; CHECK64-COUNT-18:   ld
+;
+; CHECK32-COUNT-18:   lwz
+
+; CHECK:              blr
 }

@@ -36,13 +36,13 @@
 @ RUN: llvm-mc -triple armv7-none-linux -filetype=obj -o %t.o %p/Inputs/7.s
 @ RUN: llvm-readelf -symbols %t.o | FileCheck %s
 
-#CHECK: $a
-#CHECK: $d
+#CHECK-DAG: $a
+#CHECK-DAG: $d
 
-#MIX: $a
+#MIX: $d
 #MIX: $a
 #MIX: $d
-#MIX: $d
+#MIX: $a
 
 #MAPPINGSYMBOLS-NOT: $a
 #MAPPINGSYMBOLS-NOT: $d

@@ -13,9 +13,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MCA_RETIRE_STAGE_H
-#define LLVM_MCA_RETIRE_STAGE_H
+#ifndef LLVM_MCA_STAGES_RETIRESTAGE_H
+#define LLVM_MCA_STAGES_RETIRESTAGE_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MCA/HardwareUnits/LSUnit.h"
 #include "llvm/MCA/HardwareUnits/RegisterFile.h"
 #include "llvm/MCA/HardwareUnits/RetireControlUnit.h"
@@ -39,6 +40,7 @@ public:
 
   bool hasWorkToComplete() const override { return !RCU.isEmpty(); }
   Error cycleStart() override;
+  Error cycleEnd() override;
   Error execute(InstRef &IR) override;
   void notifyInstructionRetired(const InstRef &IR) const;
 };
@@ -46,4 +48,4 @@ public:
 } // namespace mca
 } // namespace llvm
 
-#endif // LLVM_MCA_RETIRE_STAGE_H
+#endif // LLVM_MCA_STAGES_RETIRESTAGE_H

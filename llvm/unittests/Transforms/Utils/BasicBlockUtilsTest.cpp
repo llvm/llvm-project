@@ -11,6 +11,7 @@
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
@@ -21,6 +22,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Transforms/Utils/BreakCriticalEdges.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -215,6 +217,92 @@ TEST(BasicBlockUtils, SplitEdge_ex3) {
   for (BasicBlock &BB : *F) {
     if (BB.getName() == NewBB->getName()) {
       BBFlag = true;
+    }
+  }
+  EXPECT_TRUE(BBFlag);
+}
+
+TEST(BasicBlockUtils, SplitEdge_ex4) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(
+      C, "define void @bar(i32 %cond) personality i8 0 {\n"
+         "entry:\n"
+         "  switch i32 %cond, label %exit [\n"
+         "    i32 -1, label %continue\n"
+         "    i32 0, label %continue\n"
+         "    i32 1, label %continue_alt\n"
+         "    i32 2, label %continue_alt\n"
+         "  ]\n"
+         "exit:\n"
+         "  ret void\n"
+         "continue:\n"
+         "  invoke void @sink() to label %normal unwind label %exception\n"
+         "continue_alt:\n"
+         "  invoke void @sink_alt() to label %normal unwind label %exception\n"
+         "exception:\n"
+         "  %cleanup = landingpad i8 cleanup\n"
+         "  br label %trivial-eh-handler\n"
+         "trivial-eh-handler:\n"
+         "  call void @sideeffect(i32 1)\n"
+         "  br label %normal\n"
+         "normal:\n"
+         "  call void @sideeffect(i32 0)\n"
+         "  ret void\n"
+         "}\n"
+         "\n"
+         "declare void @sideeffect(i32)\n"
+         "declare void @sink() cold\n"
+         "declare void @sink_alt() cold\n");
+
+  Function *F = M->getFunction("bar");
+
+  DominatorTree DT(*F);
+
+  LoopInfo LI(DT);
+
+  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfo TLI(TLII);
+
+  AAResults AA(TLI);
+
+  MemorySSA MSSA(*F, &AA, &DT);
+  MemorySSAUpdater MSSAU(&MSSA);
+
+  BasicBlock *SrcBlock;
+  BasicBlock *DestBlock;
+
+  SrcBlock = getBasicBlockByName(*F, "continue");
+  DestBlock = getBasicBlockByName(*F, "exception");
+
+  unsigned SuccNum = GetSuccessorNumber(SrcBlock, DestBlock);
+  Instruction *LatchTerm = SrcBlock->getTerminator();
+
+  const CriticalEdgeSplittingOptions Options =
+      CriticalEdgeSplittingOptions(&DT, &LI, &MSSAU);
+
+  // Check that the following edge is both critical and the destination block is
+  // an exception block. These must be handled differently by SplitEdge
+  bool CriticalEdge =
+      isCriticalEdge(LatchTerm, SuccNum, Options.MergeIdenticalEdges);
+  EXPECT_TRUE(CriticalEdge);
+
+  bool Ehpad = DestBlock->isEHPad();
+  EXPECT_TRUE(Ehpad);
+
+  BasicBlock *NewBB = SplitEdge(SrcBlock, DestBlock, &DT, &LI, &MSSAU, "");
+
+  MSSA.verifyMemorySSA();
+  EXPECT_TRUE(DT.verify());
+  EXPECT_NE(NewBB, nullptr);
+  EXPECT_EQ(NewBB->getSinglePredecessor(), SrcBlock);
+  EXPECT_EQ(NewBB, SrcBlock->getTerminator()->getSuccessor(SuccNum));
+  EXPECT_EQ(NewBB->getParent(), F);
+
+  bool BBFlag = false;
+  for (BasicBlock &BB : *F) {
+    if (BB.getName() == NewBB->getName()) {
+      BBFlag = true;
+      break;
     }
   }
   EXPECT_TRUE(BBFlag);

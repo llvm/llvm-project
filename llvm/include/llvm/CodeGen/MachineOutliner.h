@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MACHINEOUTLINER_H
-#define LLVM_MACHINEOUTLINER_H
+#ifndef LLVM_CODEGEN_MACHINEOUTLINER_H
+#define LLVM_CODEGEN_MACHINEOUTLINER_H
 
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveRegUnits.h"

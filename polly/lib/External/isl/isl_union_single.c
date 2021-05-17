@@ -15,7 +15,8 @@
 
 /* A union of expressions defined over different domain spaces.
  * "space" describes the parameters.
- * The entries of "table" are keyed on the domain space of the entry.
+ * The entries of "table" are keyed on the domain space of the entry
+ * (ignoring parameters).
  */
 struct UNION {
 	int ref;
@@ -63,9 +64,10 @@ isl_stat FN(FN(UNION,foreach),BASE)(__isl_keep UNION *u,
 				      &FN(UNION,call_on_copy), &data);
 }
 
-/* Is the domain space of "entry" equal to the domain of "space"?
+/* Is the domain space of "entry" equal to the domain of "space",
+ * ignoring parameters?
  */
-static isl_bool FN(UNION,has_same_domain_space)(const void *entry,
+static isl_bool FN(UNION,has_same_domain_space_tuples)(const void *entry,
 	const void *val)
 {
 	PART *part = (PART *)entry;
@@ -100,9 +102,9 @@ static struct isl_hash_table_entry *FN(UNION,find_part_entry)(
 		return NULL;
 
 	ctx = FN(UNION,get_ctx)(u);
-	hash = isl_space_get_domain_hash(space);
+	hash = isl_space_get_tuple_domain_hash(space);
 	entry = isl_hash_table_find(ctx, &u->table, hash,
-			&FN(UNION,has_same_domain_space), space, reserve);
+		&FN(UNION,has_same_domain_space_tuples), space, reserve);
 	if (!entry || entry == isl_hash_table_entry_none)
 		return entry;
 	if (reserve && !entry->data)
@@ -176,6 +178,47 @@ static isl_stat FN(UNION,foreach_inplace)(__isl_keep UNION *u,
 		return isl_stat_error;
 	ctx = FN(UNION,get_ctx)(u);
 	return isl_hash_table_foreach(ctx, &u->table, fn, user);
+}
+
+static isl_bool FN(PART,has_domain_space_tuples)(__isl_keep PART *part,
+	__isl_keep isl_space *space);
+
+/* Do the tuples of "space" correspond to those of the domain of "part"?
+ * That is, is the domain space of "part" equal to "space", ignoring parameters?
+ */
+static isl_bool FN(UNION,has_domain_space_tuples)(const void *entry,
+	const void *val)
+{
+	PART *part = (PART *)entry;
+	isl_space *space = (isl_space *) val;
+
+	return FN(PART,has_domain_space_tuples)(part, space);
+}
+
+/* Call "fn" on each part of "u" that has domain space "space".
+ *
+ * Since each entry is defined over a different domain space,
+ * simply look for an entry with the given domain space and
+ * call "fn" on the corresponding part if there is one.
+ */
+isl_stat FN(UNION,foreach_on_domain)(__isl_keep UNION *u,
+	__isl_keep isl_space *space,
+	isl_stat (*fn)(__isl_take PART *part, void *user), void *user)
+{
+	uint32_t hash;
+	struct isl_hash_table_entry *entry;
+
+	if (!u || !space)
+		return isl_stat_error;
+	hash = isl_space_get_tuple_hash(space);
+	entry = isl_hash_table_find(FN(UNION,get_ctx)(u), &u->table,
+				    hash, &FN(UNION,has_domain_space_tuples),
+				    space, 0);
+	if (!entry)
+		return isl_stat_error;
+	if (entry == isl_hash_table_entry_none)
+		return isl_stat_ok;
+	return fn(FN(PART,copy)(entry->data), user);
 }
 
 static isl_stat FN(UNION,free_u_entry)(void **entry, void *user)

@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s modernize-use-bool-literals %t -- \
 // RUN:   -config="{CheckOptions: \
 // RUN:             [{key: modernize-use-bool-literals.IgnoreMacros, \
-// RUN:               value: 0}]}"
+// RUN:               value: false}]}"
 
 bool IntToTrue = 1;
 // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: converting integer literal to bool, use bool literal instead [modernize-use-bool-literals]

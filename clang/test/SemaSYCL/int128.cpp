@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple spir64 -aux-triple x86_64-unknown-linux-gnu \
-// RUN:    -fsycl -fsycl-is-device -verify -fsyntax-only %s
+// RUN:    -fsycl-is-device -verify -fsyntax-only %s
 
 typedef __uint128_t BIGTY;
 

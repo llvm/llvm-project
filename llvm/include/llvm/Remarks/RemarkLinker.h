@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_REMARKS_REMARK_LINKER_H
-#define LLVM_REMARKS_REMARK_LINKER_H
+#ifndef LLVM_REMARKS_REMARKLINKER_H
+#define LLVM_REMARKS_REMARKLINKER_H
 
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Remarks/Remark.h"
@@ -96,4 +96,4 @@ getRemarksSectionContents(const object::ObjectFile &Obj);
 } // end namespace remarks
 } // end namespace llvm
 
-#endif /* LLVM_REMARKS_REMARK_LINKER_H */
+#endif // LLVM_REMARKS_REMARKLINKER_H

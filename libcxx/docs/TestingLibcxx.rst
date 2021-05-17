@@ -27,15 +27,21 @@ Usage
 After building libc++, you can run parts of the libc++ test suite by simply
 running ``llvm-lit`` on a specified test or directory. If you're unsure
 whether the required libraries have been built, you can use the
-`check-cxx-deps` target. For example:
+`cxx-test-depends` target. For example:
 
 .. code-block:: bash
 
   $ cd <monorepo-root>
-  $ make -C <build> check-cxx-deps # If you want to make sure the targets get rebuilt
+  $ make -C <build> cxx-test-depends # If you want to make sure the targets get rebuilt
   $ <build>/bin/llvm-lit -sv libcxx/test/std/re # Run all of the std::regex tests
   $ <build>/bin/llvm-lit -sv libcxx/test/std/depr/depr.c.headers/stdlib_h.pass.cpp # Run a single test
   $ <build>/bin/llvm-lit -sv libcxx/test/std/atomics libcxx/test/std/threads # Test std::thread and std::atomic
+
+In the default configuration, the tests are built against headers that form a
+fake installation root of libc++. This installation root has to be updated when
+changes are made to the headers, so you should re-run the `cxx-test-depends`
+target before running the tests manually with `lit` when you make any sort of
+change, including to the headers.
 
 Sometimes you'll want to change the way LIT is running the tests. Custom options
 can be specified using the `--param=<name>=<val>` flag. The most common option
@@ -87,7 +93,7 @@ configuration easier.
    .. code-block:: bash
 
      $ cmake <options> -DLIBCXX_TEST_CONFIG=<path-to-site-config>
-     $ make -C <build> check-cxx-deps
+     $ make -C <build> cxx-test-depends
      $ <build>/bin/llvm-lit -sv libcxx/test # will use your custom config file
 
 
@@ -120,7 +126,7 @@ default.
 
 .. option:: std=<standard version>
 
-  **Values**: c++03, c++11, c++14, c++17, c++2a, c++2b
+  **Values**: c++03, c++11, c++14, c++17, c++20, c++2b
 
   Change the standard version used when building the tests.
 
@@ -147,7 +153,7 @@ default.
   **Default**: False
 
   Enable or disable testing against the installed version of libc++ library.
-  This impacts whether the ``with_system_cxx_lib`` Lit feature is defined or
+  This impacts whether the ``use_system_cxx_lib`` Lit feature is defined or
   not. The ``cxx_library_root`` and ``cxx_runtime_root`` parameters should
   still be used to specify the path of the library to link to and run against,
   respectively.

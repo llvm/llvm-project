@@ -617,6 +617,17 @@ void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
   // targets supporting dynamic offset calculation. It also calculates
   // total byte size of register data.
   ConfigureOffsets();
+
+  // Check if register info is reconfigurable
+  // AArch64 SVE register set has configurable register sizes
+  if (arch.GetTriple().isAArch64()) {
+    for (const auto &reg : m_regs) {
+      if (strcmp(reg.name, "vg") == 0) {
+        m_is_reconfigurable = true;
+        break;
+      }
+    }
+  }
 }
 
 void DynamicRegisterInfo::ConfigureOffsets() {
@@ -683,6 +694,14 @@ DynamicRegisterInfo::GetRegisterInfoAtIndex(uint32_t i) const {
 RegisterInfo *DynamicRegisterInfo::GetRegisterInfoAtIndex(uint32_t i) {
   if (i < m_regs.size())
     return &m_regs[i];
+  return nullptr;
+}
+
+const RegisterInfo *DynamicRegisterInfo::GetRegisterInfo(uint32_t kind,
+                                                         uint32_t num) const {
+  uint32_t reg_index = ConvertRegisterKindToRegisterNumber(kind, num);
+  if (reg_index != LLDB_INVALID_REGNUM)
+    return &m_regs[reg_index];
   return nullptr;
 }
 

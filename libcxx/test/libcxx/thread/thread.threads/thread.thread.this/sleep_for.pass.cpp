@@ -11,9 +11,9 @@
 // Until 58a0a70fb2f1, this_thread::sleep_for could sometimes get interrupted
 // by signals and this test would fail spuriously. Disable the test on the
 // corresponding system libraries.
-// UNSUPPORTED: with_system_cxx_lib=macosx10.11
-// UNSUPPORTED: with_system_cxx_lib=macosx10.10
-// UNSUPPORTED: with_system_cxx_lib=macosx10.9
+// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.11
+// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.10
+// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.9
 
 // <thread>
 

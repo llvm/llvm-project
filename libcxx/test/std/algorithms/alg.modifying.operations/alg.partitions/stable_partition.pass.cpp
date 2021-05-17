@@ -299,7 +299,7 @@ test1()
     assert(r == Iter(array+size));
 }
 
-#endif  // TEST_STD_VER >= 11
+#endif // TEST_STD_VER >= 11
 
 int main(int, char**)
 {

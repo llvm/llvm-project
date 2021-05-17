@@ -9,7 +9,7 @@ func @no_op(%arg0: !async.token) {
 // -----
 
 func @wrong_async_await_arg_type(%arg0: f32) {
-  // expected-error @+1 {{'async.await' op operand #0 must be async value type or token type, but got 'f32'}}
+  // expected-error @+1 {{'async.await' op operand #0 must be async value type or async token type, but got 'f32'}}
   async.await %arg0 : f32
 }
 

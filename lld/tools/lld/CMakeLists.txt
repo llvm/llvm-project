@@ -20,12 +20,16 @@ target_link_libraries(lld
   lldWasm
   )
 
+if(HAVE_LIBXAR)
+  target_link_libraries(lld PRIVATE ${XAR_LIB})
+endif()
+
 install(TARGETS lld
   RUNTIME DESTINATION bin)
 
 if(NOT LLD_SYMLINKS_TO_CREATE)
   set(LLD_SYMLINKS_TO_CREATE
-      lld-link ld.lld ld64.lld ld64.lld.darwinnew wasm-ld)
+      lld-link ld.lld ld64.lld ld64.lld.darwinnew ld64.lld.darwinold wasm-ld)
 endif()
 
 foreach(link ${LLD_SYMLINKS_TO_CREATE})

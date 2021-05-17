@@ -180,11 +180,76 @@ TEST(Attributes, StringRepresentation) {
   Attribute A = Attribute::getWithByValType(C, Ty);
   EXPECT_EQ(A.getAsString(), "byval(%mystruct)");
 
-  A = Attribute::getWithByValType(C, nullptr);
-  EXPECT_EQ(A.getAsString(), "byval");
-
   A = Attribute::getWithByValType(C, Type::getInt32Ty(C));
   EXPECT_EQ(A.getAsString(), "byval(i32)");
+}
+
+TEST(Attributes, HasParentContext) {
+  LLVMContext C1, C2;
+
+  {
+    Attribute Attr1 = Attribute::get(C1, Attribute::AlwaysInline);
+    Attribute Attr2 = Attribute::get(C2, Attribute::AlwaysInline);
+    EXPECT_TRUE(Attr1.hasParentContext(C1));
+    EXPECT_FALSE(Attr1.hasParentContext(C2));
+    EXPECT_FALSE(Attr2.hasParentContext(C1));
+    EXPECT_TRUE(Attr2.hasParentContext(C2));
+  }
+
+  {
+    AttributeSet AS1 = AttributeSet::get(
+        C1, makeArrayRef(Attribute::get(C1, Attribute::NoReturn)));
+    AttributeSet AS2 = AttributeSet::get(
+        C2, makeArrayRef(Attribute::get(C2, Attribute::NoReturn)));
+    EXPECT_TRUE(AS1.hasParentContext(C1));
+    EXPECT_FALSE(AS1.hasParentContext(C2));
+    EXPECT_FALSE(AS2.hasParentContext(C1));
+    EXPECT_TRUE(AS2.hasParentContext(C2));
+  }
+
+  {
+    AttributeList AL1 = AttributeList::get(C1, 1, Attribute::ZExt);
+    AttributeList AL2 = AttributeList::get(C2, 1, Attribute::ZExt);
+    EXPECT_TRUE(AL1.hasParentContext(C1));
+    EXPECT_FALSE(AL1.hasParentContext(C2));
+    EXPECT_FALSE(AL2.hasParentContext(C1));
+    EXPECT_TRUE(AL2.hasParentContext(C2));
+  }
+}
+
+TEST(Attributes, AttributeListPrinting) {
+  LLVMContext C;
+
+  {
+    std::string S;
+    raw_string_ostream OS(S);
+    AttributeList AL;
+    AL.addAttribute(C, AttributeList::FunctionIndex, Attribute::AlwaysInline)
+        .print(OS);
+    EXPECT_EQ(S, "AttributeList[\n"
+                 "  { function => alwaysinline }\n"
+                 "]\n");
+  }
+
+  {
+    std::string S;
+    raw_string_ostream OS(S);
+    AttributeList AL;
+    AL.addAttribute(C, AttributeList::ReturnIndex, Attribute::SExt).print(OS);
+    EXPECT_EQ(S, "AttributeList[\n"
+                 "  { return => signext }\n"
+                 "]\n");
+  }
+
+  {
+    std::string S;
+    raw_string_ostream OS(S);
+    AttributeList AL;
+    AL.addParamAttribute(C, 5, Attribute::ZExt).print(OS);
+    EXPECT_EQ(S, "AttributeList[\n"
+                 "  { arg(5) => zeroext }\n"
+                 "]\n");
+  }
 }
 
 } // end anonymous namespace

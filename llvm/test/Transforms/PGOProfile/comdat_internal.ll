@@ -18,7 +18,7 @@ $foo = comdat any
 ; CHECK-NOT: bitcast (i32 ()* @foo to i8*)
 ; CHECK-SAME: , i8* null, i32 1, [2 x i16] zeroinitializer }, section "__llvm_prf_data", comdat, align 8
 ; CHECK: @__llvm_prf_nm
-; CHECK: @llvm.used
+; CHECK: @llvm.compiler.used
 
 define internal i32 @foo() comdat {
 entry:

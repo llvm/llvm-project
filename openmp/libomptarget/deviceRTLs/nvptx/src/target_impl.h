@@ -12,19 +12,15 @@
 #ifndef _TARGET_IMPL_H_
 #define _TARGET_IMPL_H_
 
-#include <assert.h>
-#include <cuda.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "nvptx_interface.h"
 
-#define DEVICE __device__
-#define INLINE __forceinline__ DEVICE
-#define NOINLINE __noinline__ DEVICE
-#define SHARED __shared__
-#define ALIGN(N) __align__(N)
+#define INLINE inline __attribute__((always_inline))
+#define NOINLINE __attribute__((noinline))
+#define ALIGN(N) __attribute__((aligned(N)))
 
 ////////////////////////////////////////////////////////////////////////////////
 // Kernel options
@@ -37,8 +33,8 @@
 
 #define WARPSIZE 32
 
-// Maximum number of preallocated arguments to an outlined parallel/simd function.
-// Anything more requires dynamic memory allocation.
+// Maximum number of preallocated arguments to an outlined parallel/simd
+// function. Anything more requires dynamic memory allocation.
 #define MAX_SHARED_ARGS 20
 
 // Maximum number of omp state objects per SM allocated statically in global
@@ -84,66 +80,5 @@ enum DATA_SHARING_SIZES {
 enum : __kmpc_impl_lanemask_t {
   __kmpc_impl_all_lanes = ~(__kmpc_impl_lanemask_t)0
 };
-
-DEVICE void __kmpc_impl_unpack(uint64_t val, uint32_t &lo, uint32_t &hi);
-DEVICE uint64_t __kmpc_impl_pack(uint32_t lo, uint32_t hi);
-DEVICE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_lt();
-DEVICE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_gt();
-DEVICE uint32_t __kmpc_impl_smid();
-DEVICE double __kmpc_impl_get_wtick();
-DEVICE double __kmpc_impl_get_wtime();
-
-INLINE uint32_t __kmpc_impl_ffs(uint32_t x) { return __ffs(x); }
-
-INLINE uint32_t __kmpc_impl_popc(uint32_t x) { return __popc(x); }
-
-template <typename T> INLINE T __kmpc_impl_min(T x, T y) {
-  return min(x, y);
-}
-
-#ifndef CUDA_VERSION
-#error CUDA_VERSION macro is undefined, something wrong with cuda.
-#endif
-
-DEVICE __kmpc_impl_lanemask_t __kmpc_impl_activemask();
-
-DEVICE int32_t __kmpc_impl_shfl_sync(__kmpc_impl_lanemask_t Mask, int32_t Var,
-                                     int32_t SrcLane);
-
-DEVICE int32_t __kmpc_impl_shfl_down_sync(__kmpc_impl_lanemask_t Mask,
-                                          int32_t Var, uint32_t Delta,
-                                          int32_t Width);
-
-DEVICE void __kmpc_impl_syncthreads();
-DEVICE void __kmpc_impl_syncwarp(__kmpc_impl_lanemask_t Mask);
-
-// NVPTX specific kernel initialization
-DEVICE void __kmpc_impl_target_init();
-
-// Barrier until num_threads arrive.
-DEVICE void __kmpc_impl_named_sync(uint32_t num_threads);
-
-DEVICE void __kmpc_impl_threadfence();
-DEVICE void __kmpc_impl_threadfence_block();
-DEVICE void __kmpc_impl_threadfence_system();
-
-// Calls to the NVPTX layer (assuming 1D layout)
-DEVICE int GetThreadIdInBlock();
-DEVICE int GetBlockIdInKernel();
-DEVICE int GetNumberOfBlocksInKernel();
-DEVICE int GetNumberOfThreadsInBlock();
-DEVICE unsigned GetWarpId();
-DEVICE unsigned GetLaneId();
-
-// Locks
-DEVICE void __kmpc_impl_init_lock(omp_lock_t *lock);
-DEVICE void __kmpc_impl_destroy_lock(omp_lock_t *lock);
-DEVICE void __kmpc_impl_set_lock(omp_lock_t *lock);
-DEVICE void __kmpc_impl_unset_lock(omp_lock_t *lock);
-DEVICE int __kmpc_impl_test_lock(omp_lock_t *lock);
-
-// Memory
-DEVICE void *__kmpc_impl_malloc(size_t);
-DEVICE void __kmpc_impl_free(void *);
 
 #endif

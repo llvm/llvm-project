@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/AsmParser/Parser.h"
-#include "LLParser.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/AsmParser/LLParser.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -104,7 +104,7 @@ parseAssemblyFileWithIndex(StringRef Filename, SMDiagnostic &Err,
                            bool UpgradeDebugInfo,
                            DataLayoutCallbackTy DataLayoutCallback) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
-      MemoryBuffer::getFileOrSTDIN(Filename);
+      MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/true);
   if (std::error_code EC = FileOrErr.getError()) {
     Err = SMDiagnostic(Filename, SourceMgr::DK_Error,
                        "Could not open input file: " + EC.message());

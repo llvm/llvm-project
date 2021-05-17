@@ -92,7 +92,25 @@ AffineExpr::replaceDimsAndSymbols(ArrayRef<AffineExpr> dimReplacements,
   llvm_unreachable("Unknown AffineExpr");
 }
 
+AffineExpr AffineExpr::replaceDims(ArrayRef<AffineExpr> dimReplacements) const {
+  return replaceDimsAndSymbols(dimReplacements, {});
+}
+
+AffineExpr
+AffineExpr::replaceSymbols(ArrayRef<AffineExpr> symReplacements) const {
+  return replaceDimsAndSymbols({}, symReplacements);
+}
+
 /// Replace symbols[0 .. numDims - 1] by symbols[shift .. shift + numDims - 1].
+AffineExpr AffineExpr::shiftDims(unsigned numDims, unsigned shift) const {
+  SmallVector<AffineExpr, 4> dims;
+  for (unsigned idx = 0; idx < numDims; ++idx)
+    dims.push_back(getAffineDimExpr(idx + shift, getContext()));
+  return replaceDimsAndSymbols(dims, {});
+}
+
+/// Replace symbols[0 .. numSymbols - 1] by
+/// symbols[shift .. shift + numSymbols - 1].
 AffineExpr AffineExpr::shiftSymbols(unsigned numSymbols, unsigned shift) const {
   SmallVector<AffineExpr, 4> symbols;
   for (unsigned idx = 0; idx < numSymbols; ++idx)
@@ -257,6 +275,17 @@ bool AffineExpr::isFunctionOfDim(unsigned position) const {
   if (auto expr = this->dyn_cast<AffineBinaryOpExpr>()) {
     return expr.getLHS().isFunctionOfDim(position) ||
            expr.getRHS().isFunctionOfDim(position);
+  }
+  return false;
+}
+
+bool AffineExpr::isFunctionOfSymbol(unsigned position) const {
+  if (getKind() == AffineExprKind::SymbolId) {
+    return *this == mlir::getAffineSymbolExpr(position, getContext());
+  }
+  if (auto expr = this->dyn_cast<AffineBinaryOpExpr>()) {
+    return expr.getLHS().isFunctionOfSymbol(position) ||
+           expr.getRHS().isFunctionOfSymbol(position);
   }
   return false;
 }

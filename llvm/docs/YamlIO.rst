@@ -288,7 +288,7 @@ ScalarEnumerationTraits
 -----------------------
 YAML I/O supports translating between in-memory enumerations and a set of string
 values in YAML documents. This is done by specializing ScalarEnumerationTraits<>
-on your enumeration type and define a enumeration() method. 
+on your enumeration type and define an enumeration() method.
 For instance, suppose you had an enumeration of CPUs and a struct with it as 
 a field:
 
@@ -391,7 +391,7 @@ on MyFlags and provide the bit values and their names.
 With the above, YAML I/O (when writing) will test mask each value in the 
 bitset trait against the flags field, and each that matches will
 cause the corresponding string to be added to the flow sequence.  The opposite
-is done when reading and any unknown string values will result in a error. With 
+is done when reading and any unknown string values will result in an error. With
 the above schema, a same valid YAML document is:
 
 .. code-block:: yaml
@@ -439,7 +439,7 @@ to the flow sequence.
 Custom Scalar
 -------------
 Sometimes for readability a scalar needs to be formatted in a custom way. For
-instance your internal data structure may use a integer for time (seconds since
+instance your internal data structure may use an integer for time (seconds since
 some epoch), but in YAML it would be much nicer to express that integer in 
 some time format (e.g. 4-May-2012 10:30pm).  YAML I/O has a way to support  
 custom formatting and parsing of scalar types by specializing ScalarTraits<> on

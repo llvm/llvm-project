@@ -42,7 +42,7 @@
 ## If .text is retained, its referenced qux and .fred are retained as well.
 ## fred_und is used (by .fred) and thus emitted.
 ## Note, GNU ld does not retain qux.
-# RUN: ld.lld -r --gc-sections -e _start %t.o -o %tstart.ro
+# RUN: ld.lld -r --gc-sections -z nostart-stop-gc -e _start %t.o -o %tstart.ro
 # RUN: llvm-readelf -Ss %tstart.ro | FileCheck %s --check-prefix=KEEP_START
 
 # KEEP_START:      [ 1] .text
@@ -55,9 +55,9 @@
 
 # KEEP_START:      Symbol table '.symtab' contains 10 entries:
 # KEEP_START:      5: {{.*}} SECTION
-# KEEP_START-NEXT: 6: {{.*}} UND __start_qux
-# KEEP_START-NEXT: 7: {{.*}}   1 _start
-# KEEP_START-NEXT: 8: {{.*}}   5 fred
+# KEEP_START-NEXT: 6: {{.*}}   1 _start
+# KEEP_START-NEXT: 7: {{.*}}   5 fred
+# KEEP_START-NEXT: 8: {{.*}} UND __start_qux
 # KEEP_START-NEXT: 9: {{.*}} UND fred_und
 
 .section qux,"a",@progbits

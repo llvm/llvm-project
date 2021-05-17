@@ -335,9 +335,14 @@ public:
 
   // Override traversal to record the nodes we care about.
   // Generally, these are nodes with position information (TypeLoc, not Type).
+
   bool TraverseDecl(Decl *D) {
-    return !D || isInjectedClassName(D) ||
-           traverseNode("declaration", D, [&] { Base::TraverseDecl(D); });
+    return !D || isInjectedClassName(D) || traverseNode("declaration", D, [&] {
+      if (isa<TranslationUnitDecl>(D))
+        Base::TraverseAST(const_cast<ASTContext &>(Ctx));
+      else
+        Base::TraverseDecl(D);
+    });
   }
   bool TraverseTypeLoc(TypeLoc TL) {
     return !TL || traverseNode("type", TL, [&] { Base::TraverseTypeLoc(TL); });

@@ -201,6 +201,7 @@ static void stressSharedRegistry(MockAllocator<SharedCaches> *Allocator) {
 
 TEST(ScudoTSDTest, TSDRegistryTSDsCount) {
   Ready = false;
+  Pointers.clear();
   using AllocatorT = MockAllocator<SharedCaches>;
   auto Deleter = [](AllocatorT *A) {
     A->unmapTestOnly();

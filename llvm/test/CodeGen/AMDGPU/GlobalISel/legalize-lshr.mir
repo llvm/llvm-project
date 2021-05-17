@@ -2,6 +2,7 @@
 # RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -O0 -run-pass=legalizer -global-isel-abort=0 -o - %s | FileCheck -check-prefix=SI %s
 # RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -O0 -run-pass=legalizer -global-isel-abort=0 -o - %s | FileCheck -check-prefix=VI %s
 # RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -O0 -run-pass=legalizer -global-isel-abort=0 -o - %s | FileCheck -check-prefix=GFX9  %s
+# RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -O0 -run-pass=legalizer -global-isel-abort=0 -o - %s | FileCheck -check-prefix=GFX9  %s
 
 ---
 name: test_lshr_s32_s32

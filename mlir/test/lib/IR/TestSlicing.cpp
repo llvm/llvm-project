@@ -35,7 +35,7 @@ static LogicalResult createBackwardSliceFunction(Operation *op,
   builder.setInsertionPointToEnd(clonedFuncOp.addEntryBlock());
   for (auto arg : enumerate(parentFuncOp.getArguments()))
     mapper.map(arg.value(), clonedFuncOp.getArgument(arg.index()));
-  llvm::SetVector<Operation *> slice;
+  SetVector<Operation *> slice;
   getBackwardSlice(op, &slice);
   for (Operation *slicedOp : slice)
     builder.clone(*slicedOp, mapper);
@@ -65,7 +65,7 @@ void SliceAnalysisTestPass::runOnOperation() {
         return WalkResult::advance();
       std::string append =
           std::string("__backward_slice__") + std::to_string(opNum);
-      createBackwardSliceFunction(op, append);
+      (void)createBackwardSliceFunction(op, append);
       opNum++;
       return WalkResult::advance();
     });

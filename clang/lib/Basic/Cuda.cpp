@@ -32,6 +32,10 @@ const char *CudaVersionToString(CudaVersion V) {
     return "10.2";
   case CudaVersion::CUDA_110:
     return "11.0";
+  case CudaVersion::CUDA_111:
+    return "11.1";
+  case CudaVersion::CUDA_112:
+    return "11.2";
   }
   llvm_unreachable("invalid enum");
 }
@@ -48,21 +52,25 @@ CudaVersion CudaStringToVersion(const llvm::Twine &S) {
       .Case("10.1", CudaVersion::CUDA_101)
       .Case("10.2", CudaVersion::CUDA_102)
       .Case("11.0", CudaVersion::CUDA_110)
+      .Case("11.1", CudaVersion::CUDA_111)
+      .Case("11.2", CudaVersion::CUDA_112)
       .Default(CudaVersion::UNKNOWN);
 }
 
+namespace {
 struct CudaArchToStringMap {
   CudaArch arch;
   const char *arch_name;
   const char *virtual_arch_name;
 };
+} // namespace
 
 #define SM2(sm, ca)                                                            \
   { CudaArch::SM_##sm, "sm_" #sm, ca }
 #define SM(sm) SM2(sm, "compute_" #sm)
 #define GFX(gpu)                                                               \
   { CudaArch::GFX##gpu, "gfx" #gpu, "compute_amdgcn" }
-CudaArchToStringMap arch_names[] = {
+static const CudaArchToStringMap arch_names[] = {
     // clang-format off
     {CudaArch::UNUSED, "", ""},
     SM2(20, "compute_20"), SM2(21, "compute_20"), // Fermi
@@ -71,7 +79,7 @@ CudaArchToStringMap arch_names[] = {
     SM(60), SM(61), SM(62),          // Pascal
     SM(70), SM(72),                  // Volta
     SM(75),                          // Turing
-    SM(80),                          // Ampere
+    SM(80), SM(86),                  // Ampere
     GFX(600),  // gfx600
     GFX(601),  // gfx601
     GFX(602),  // gfx602
@@ -92,6 +100,7 @@ CudaArchToStringMap arch_names[] = {
     GFX(906),  // gfx906
     GFX(908),  // gfx908
     GFX(909),  // gfx909
+    GFX(90a),  // gfx90a
     GFX(90c),  // gfx90c
     GFX(1010), // gfx1010
     GFX(1011), // gfx1011
@@ -100,6 +109,7 @@ CudaArchToStringMap arch_names[] = {
     GFX(1031), // gfx1031
     GFX(1032), // gfx1032
     GFX(1033), // gfx1033
+    GFX(1034), // gfx1034
     // clang-format on
 };
 #undef SM
@@ -164,6 +174,8 @@ CudaVersion MinVersionForCudaArch(CudaArch A) {
     return CudaVersion::CUDA_100;
   case CudaArch::SM_80:
     return CudaVersion::CUDA_110;
+  case CudaArch::SM_86:
+    return CudaVersion::CUDA_111;
   default:
     llvm_unreachable("invalid enum");
   }
@@ -209,6 +221,10 @@ CudaVersion ToCudaVersion(llvm::VersionTuple Version) {
     return CudaVersion::CUDA_102;
   case 110:
     return CudaVersion::CUDA_110;
+  case 111:
+    return CudaVersion::CUDA_111;
+  case 112:
+    return CudaVersion::CUDA_112;
   default:
     return CudaVersion::UNKNOWN;
   }

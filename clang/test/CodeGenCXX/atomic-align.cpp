@@ -9,7 +9,7 @@ AM load1() {
   // m is declared to align to 8bytes, so generate load atomic instead
   // of libcall.
   // CHECK-LABEL: @_Z5load1v
-  // CHECK: load atomic {{.*}} monotonic
+  // CHECK: load atomic {{.*}} monotonic, align 8
   __atomic_load(&m, &am, 0);
   return am;
 }
@@ -24,7 +24,7 @@ AM load2() {
   // BM::f2 is declared to align to 8bytes, so generate load atomic instead
   // of libcall.
   // CHECK-LABEL: @_Z5load2v
-  // CHECK: load atomic {{.*}} monotonic
+  // CHECK: load atomic {{.*}} monotonic, align 8
   __atomic_load(&bm.f2, &am, 0);
   return am;
 }

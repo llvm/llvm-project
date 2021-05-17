@@ -39,9 +39,17 @@
 namespace llvm {
 namespace symbolize {
 
+template <typename T>
 Expected<DILineInfo>
-LLVMSymbolizer::symbolizeCodeCommon(SymbolizableModule *Info,
+LLVMSymbolizer::symbolizeCodeCommon(const T &ModuleSpecifier,
                                     object::SectionedAddress ModuleOffset) {
+
+  auto InfoOrErr = getOrCreateModuleInfo(ModuleSpecifier);
+  if (!InfoOrErr)
+    return InfoOrErr.takeError();
+
+  SymbolizableModule *Info = *InfoOrErr;
+
   // A null module means an error has already been reported. Return an empty
   // result.
   if (!Info)
@@ -63,36 +71,23 @@ LLVMSymbolizer::symbolizeCodeCommon(SymbolizableModule *Info,
 Expected<DILineInfo>
 LLVMSymbolizer::symbolizeCode(const ObjectFile &Obj,
                               object::SectionedAddress ModuleOffset) {
-  StringRef ModuleName = Obj.getFileName();
-  auto I = Modules.find(ModuleName);
-  if (I != Modules.end())
-    return symbolizeCodeCommon(I->second.get(), ModuleOffset);
-
-  std::unique_ptr<DIContext> Context = DWARFContext::create(Obj);
-  Expected<SymbolizableModule *> InfoOrErr =
-                     createModuleInfo(&Obj, std::move(Context), ModuleName);
-  if (!InfoOrErr)
-    return InfoOrErr.takeError();
-  return symbolizeCodeCommon(*InfoOrErr, ModuleOffset);
+  return symbolizeCodeCommon(Obj, ModuleOffset);
 }
 
 Expected<DILineInfo>
 LLVMSymbolizer::symbolizeCode(const std::string &ModuleName,
                               object::SectionedAddress ModuleOffset) {
-  Expected<SymbolizableModule *> InfoOrErr = getOrCreateModuleInfo(ModuleName);
-  if (!InfoOrErr)
-    return InfoOrErr.takeError();
-  return symbolizeCodeCommon(*InfoOrErr, ModuleOffset);
+  return symbolizeCodeCommon(ModuleName, ModuleOffset);
 }
 
-Expected<DIInliningInfo>
-LLVMSymbolizer::symbolizeInlinedCode(const std::string &ModuleName,
-                                     object::SectionedAddress ModuleOffset) {
-  SymbolizableModule *Info;
-  if (auto InfoOrErr = getOrCreateModuleInfo(ModuleName))
-    Info = InfoOrErr.get();
-  else
+template <typename T>
+Expected<DIInliningInfo> LLVMSymbolizer::symbolizeInlinedCodeCommon(
+    const T &ModuleSpecifier, object::SectionedAddress ModuleOffset) {
+  auto InfoOrErr = getOrCreateModuleInfo(ModuleSpecifier);
+  if (!InfoOrErr)
     return InfoOrErr.takeError();
+
+  SymbolizableModule *Info = *InfoOrErr;
 
   // A null module means an error has already been reported. Return an empty
   // result.
@@ -116,15 +111,28 @@ LLVMSymbolizer::symbolizeInlinedCode(const std::string &ModuleName,
   return InlinedContext;
 }
 
+Expected<DIInliningInfo>
+LLVMSymbolizer::symbolizeInlinedCode(const ObjectFile &Obj,
+                                     object::SectionedAddress ModuleOffset) {
+  return symbolizeInlinedCodeCommon(Obj, ModuleOffset);
+}
+
+Expected<DIInliningInfo>
+LLVMSymbolizer::symbolizeInlinedCode(const std::string &ModuleName,
+                                     object::SectionedAddress ModuleOffset) {
+  return symbolizeInlinedCodeCommon(ModuleName, ModuleOffset);
+}
+
+template <typename T>
 Expected<DIGlobal>
-LLVMSymbolizer::symbolizeData(const std::string &ModuleName,
-                              object::SectionedAddress ModuleOffset) {
-  SymbolizableModule *Info;
-  if (auto InfoOrErr = getOrCreateModuleInfo(ModuleName))
-    Info = InfoOrErr.get();
-  else
+LLVMSymbolizer::symbolizeDataCommon(const T &ModuleSpecifier,
+                                    object::SectionedAddress ModuleOffset) {
+
+  auto InfoOrErr = getOrCreateModuleInfo(ModuleSpecifier);
+  if (!InfoOrErr)
     return InfoOrErr.takeError();
 
+  SymbolizableModule *Info = *InfoOrErr;
   // A null module means an error has already been reported. Return an empty
   // result.
   if (!Info)
@@ -142,15 +150,27 @@ LLVMSymbolizer::symbolizeData(const std::string &ModuleName,
   return Global;
 }
 
+Expected<DIGlobal>
+LLVMSymbolizer::symbolizeData(const ObjectFile &Obj,
+                              object::SectionedAddress ModuleOffset) {
+  return symbolizeDataCommon(Obj, ModuleOffset);
+}
+
+Expected<DIGlobal>
+LLVMSymbolizer::symbolizeData(const std::string &ModuleName,
+                              object::SectionedAddress ModuleOffset) {
+  return symbolizeDataCommon(ModuleName, ModuleOffset);
+}
+
+template <typename T>
 Expected<std::vector<DILocal>>
-LLVMSymbolizer::symbolizeFrame(const std::string &ModuleName,
-                               object::SectionedAddress ModuleOffset) {
-  SymbolizableModule *Info;
-  if (auto InfoOrErr = getOrCreateModuleInfo(ModuleName))
-    Info = InfoOrErr.get();
-  else
+LLVMSymbolizer::symbolizeFrameCommon(const T &ModuleSpecifier,
+                                     object::SectionedAddress ModuleOffset) {
+  auto InfoOrErr = getOrCreateModuleInfo(ModuleSpecifier);
+  if (!InfoOrErr)
     return InfoOrErr.takeError();
 
+  SymbolizableModule *Info = *InfoOrErr;
   // A null module means an error has already been reported. Return an empty
   // result.
   if (!Info)
@@ -163,6 +183,18 @@ LLVMSymbolizer::symbolizeFrame(const std::string &ModuleName,
     ModuleOffset.Address += Info->getModulePreferredBase();
 
   return Info->symbolizeFrame(ModuleOffset);
+}
+
+Expected<std::vector<DILocal>>
+LLVMSymbolizer::symbolizeFrame(const ObjectFile &Obj,
+                               object::SectionedAddress ModuleOffset) {
+  return symbolizeFrameCommon(Obj, ModuleOffset);
+}
+
+Expected<std::vector<DILocal>>
+LLVMSymbolizer::symbolizeFrame(const std::string &ModuleName,
+                               object::SectionedAddress ModuleOffset) {
+  return symbolizeFrameCommon(ModuleName, ModuleOffset);
 }
 
 void LLVMSymbolizer::flush() {
@@ -571,6 +603,18 @@ LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
   return createModuleInfo(Objects.first, std::move(Context), ModuleName);
 }
 
+Expected<SymbolizableModule *>
+LLVMSymbolizer::getOrCreateModuleInfo(const ObjectFile &Obj) {
+  StringRef ObjName = Obj.getFileName();
+  auto I = Modules.find(ObjName);
+  if (I != Modules.end())
+    return I->second.get();
+
+  std::unique_ptr<DIContext> Context = DWARFContext::create(Obj);
+  // FIXME: handle COFF object with PDB info to use PDBContext
+  return createModuleInfo(&Obj, std::move(Context), ObjName);
+}
+
 namespace {
 
 // Undo these various manglings for Win32 extern "C" functions:
@@ -589,10 +633,8 @@ StringRef demanglePE32ExternCFunc(StringRef SymbolName) {
   if (Front != '?') {
     size_t AtPos = SymbolName.rfind('@');
     if (AtPos != StringRef::npos &&
-        std::all_of(SymbolName.begin() + AtPos + 1, SymbolName.end(),
-                    [](char C) { return C >= '0' && C <= '9'; })) {
+        all_of(drop_begin(SymbolName, AtPos + 1), isDigit))
       SymbolName = SymbolName.substr(0, AtPos);
-    }
   }
 
   // Remove any ending '@' for vectorcall.

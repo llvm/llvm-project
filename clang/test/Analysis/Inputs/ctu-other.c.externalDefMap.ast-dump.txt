@@ -4,3 +4,4 @@ c:@F@f ctu-other.c.ast
 c:@F@enumCheck ctu-other.c.ast
 c:@F@identImplicit ctu-other.c.ast
 c:@F@structInProto ctu-other.c.ast
+c:@F@switchWithoutCases ctu-other.c.ast

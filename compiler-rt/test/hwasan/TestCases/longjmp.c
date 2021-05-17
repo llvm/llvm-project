@@ -3,6 +3,9 @@
 
 // REQUIRES: stable-runtime
 
+// Stack aliasing is not implemented on x86.
+// XFAIL: x86_64
+
 #include <stdlib.h>
 #include <assert.h>
 #include <sanitizer/hwasan_interface.h>

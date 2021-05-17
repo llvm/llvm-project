@@ -1,4 +1,4 @@
-! RUN: %f18 -E %s 2>&1 | FileCheck %s
+! RUN: %flang -E %s 2>&1 | FileCheck %s
 ! CHECK: if(.true.)then
 ! CHECK: print*,'pp036.F no: ',.true.
 * #define FALSE TRUE ...  .FALSE. -> .TRUE.

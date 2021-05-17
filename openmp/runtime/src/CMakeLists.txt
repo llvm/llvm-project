@@ -50,6 +50,14 @@ if(${LIBOMP_USE_HWLOC})
   include_directories(${LIBOMP_HWLOC_INSTALL_DIR}/include)
 endif()
 
+# Building with time profiling support requires LLVM directory includes.
+if(LIBOMP_PROFILING_SUPPORT)
+  include_directories(
+    ${LLVM_MAIN_INCLUDE_DIR}
+    ${LLVM_INCLUDE_DIR}
+  )
+endif()
+
 # Getting correct source files to build library
 set(LIBOMP_CXXFILES)
 set(LIBOMP_ASMFILES)
@@ -85,7 +93,9 @@ else()
     # Windows specific files
     libomp_append(LIBOMP_CXXFILES z_Windows_NT_util.cpp)
     libomp_append(LIBOMP_CXXFILES z_Windows_NT-586_util.cpp)
-    libomp_append(LIBOMP_ASMFILES z_Windows_NT-586_asm.asm) # Windows assembly file
+    if(${LIBOMP_ARCH} STREQUAL "i386" OR ${LIBOMP_ARCH} STREQUAL "x86_64")
+      libomp_append(LIBOMP_ASMFILES z_Windows_NT-586_asm.asm) # Windows assembly file
+    endif()
   else()
     # Unix specific files
     libomp_append(LIBOMP_CXXFILES z_Linux_util.cpp)
@@ -133,7 +143,20 @@ endif()
 # Add the OpenMP library
 libomp_get_ldflags(LIBOMP_CONFIGURED_LDFLAGS)
 
-add_library(omp ${LIBOMP_LIBRARY_KIND} ${LIBOMP_SOURCE_FILES})
+libomp_get_libflags(LIBOMP_CONFIGURED_LIBFLAGS)
+# Build libomp library. Add LLVMSupport dependency if building in-tree with libomptarget profiling enabled.
+if(OPENMP_STANDALONE_BUILD OR (NOT OPENMP_ENABLE_LIBOMP_PROFILING))
+  add_library(omp ${LIBOMP_LIBRARY_KIND} ${LIBOMP_SOURCE_FILES})
+  # Linking command will include libraries in LIBOMP_CONFIGURED_LIBFLAGS
+  target_link_libraries(omp ${LIBOMP_CONFIGURED_LIBFLAGS} ${CMAKE_DL_LIBS})
+else()
+  add_llvm_library(omp ${LIBOMP_LIBRARY_KIND} ${LIBOMP_SOURCE_FILES} PARTIAL_SOURCES_INTENDED
+    LINK_LIBS ${LIBOMP_CONFIGURED_LIBFLAGS} ${CMAKE_DL_LIBS}
+    LINK_COMPONENTS Support
+    )
+  # libomp must be a C++ library such that it can link libLLVMSupport
+  set(LIBOMP_LINKER_LANGUAGE CXX)
+endif()
 
 set_target_properties(omp PROPERTIES
   PREFIX "" SUFFIX "" OUTPUT_NAME "${LIBOMP_LIB_FILE}"
@@ -165,10 +188,6 @@ if(NOT WIN32)
     WORKING_DIRECTORY ${LIBOMP_LIBRARY_DIR}
   )
 endif()
-
-# Linking command will include libraries in LIBOMP_CONFIGURED_LIBFLAGS
-libomp_get_libflags(LIBOMP_CONFIGURED_LIBFLAGS)
-target_link_libraries(omp ${LIBOMP_CONFIGURED_LIBFLAGS} ${CMAKE_DL_LIBS})
 
 # Create *.inc before compiling any sources
 # objects depend on : .inc files

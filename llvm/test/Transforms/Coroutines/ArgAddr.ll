@@ -1,9 +1,25 @@
 ; Need to move users of allocas that were moved into the coroutine frame after
 ; coro.begin.
-; RUN: opt < %s -preserve-alignment-assumptions-during-inlining=false -O2 -enable-coroutines -S | FileCheck %s
-; RUN: opt < %s -preserve-alignment-assumptions-during-inlining=false  -aa-pipeline=basic-aa -passes='default<O2>' -enable-coroutines -S | FileCheck %s
+; RUN: opt < %s -coro-split -S | FileCheck %s
+; RUN: opt < %s -passes=coro-split -S | FileCheck %s
 
-define nonnull i8* @f(i32 %n) {
+define nonnull i8* @f(i32 %n) "coroutine.presplit"="1" {
+; CHECK-LABEL: @f(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* bitcast ([3 x void (%f.Frame*)*]* @f.resumers to i8*))
+; CHECK-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 [[N:%.*]], i32* [[N_ADDR]], align 4
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @malloc(i32 24)
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call noalias nonnull i8* @llvm.coro.begin(token [[ID]], i8* [[CALL]])
+; CHECK-NEXT:    [[FRAMEPTR:%.*]] = bitcast i8* [[TMP0]] to %f.Frame*
+; CHECK-NEXT:    [[RESUME_ADDR:%.*]] = getelementptr inbounds [[F_FRAME:%.*]], %f.Frame* [[FRAMEPTR]], i32 0, i32 0
+; CHECK-NEXT:    store void (%f.Frame*)* @f.resume, void (%f.Frame*)** [[RESUME_ADDR]], align 8
+; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], %f.Frame* [[FRAMEPTR]], i32 0, i32 1
+; CHECK-NEXT:    store void (%f.Frame*)* @f.destroy, void (%f.Frame*)** [[DESTROY_ADDR]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[F_FRAME]], %f.Frame* [[FRAMEPTR]], i32 0, i32 2
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[N_ADDR]], align 4
+; CHECK-NEXT:    store i32 [[TMP2]], i32* [[TMP1]], align 4
+;
 entry:
   %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null);
   %n.addr = alloca i32
@@ -23,8 +39,8 @@ for.cond:
   %4 = call i8 @llvm.coro.suspend(token none, i1 false)
   %conv = sext i8 %4 to i32
   switch i32 %conv, label %coro_Suspend [
-    i32 0, label %for.cond
-    i32 1, label %coro_Cleanup
+  i32 0, label %for.cond
+  i32 1, label %coro_Cleanup
   ]
 
 coro_Cleanup:
@@ -45,22 +61,6 @@ entry:
   call void @llvm.coro.resume(i8* %hdl)
   call void @llvm.coro.destroy(i8* %hdl)
   ret i32 0
-; CHECK:      call void @ctor
-; CHECK-NEXT: %dec1.spill.addr.i = getelementptr inbounds i8, i8* %call.i, i64 20
-; CHECK-NEXT: bitcast i8* %dec1.spill.addr.i to i32*
-; CHECK-NEXT: store i32 4
-; CHECK-NEXT: call void @print(i32 4)
-; CHECK-NEXT: %index.addr12.i = getelementptr inbounds i8, i8* %call.i, i64 24
-; CHECK-NEXT: bitcast i8* %index.addr12.i to i1*
-; CHECK-NEXT: store i1 false
-; CHECK-NEXT: store i32 3
-; CHECK-NEXT: store i32 3
-; CHECK-NEXT: call void @print(i32 3)
-; CHECK-NEXT: store i1 false
-; CHECK-NEXT: store i32 2
-; CHECK-NEXT: store i32 2
-; CHECK-NEXT: call void @print(i32 2)
-; CHECK:      ret i32 0
 }
 
 declare i8* @malloc(i32)

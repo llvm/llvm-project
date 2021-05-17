@@ -92,7 +92,7 @@ define amdgpu_kernel void @test_call_external_void_func_i1_imm() #0 {
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_external_void_func_i1_signext(i32) #0 {
   %var = load volatile i1, i1 addrspace(1)* undef
-  call void @external_void_func_i1_signext(i1 %var)
+  call void @external_void_func_i1_signext(i1 signext %var)
   ret void
 }
 
@@ -113,7 +113,7 @@ define amdgpu_kernel void @test_call_external_void_func_i1_signext(i32) #0 {
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_external_void_func_i1_zeroext(i32) #0 {
   %var = load volatile i1, i1 addrspace(1)* undef
-  call void @external_void_func_i1_zeroext(i1 %var)
+  call void @external_void_func_i1_zeroext(i1 zeroext %var)
   ret void
 }
 
@@ -148,7 +148,7 @@ define amdgpu_kernel void @test_call_external_void_func_i8_imm(i32) #0 {
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_external_void_func_i8_signext(i32) #0 {
   %var = load volatile i8, i8 addrspace(1)* undef
-  call void @external_void_func_i8_signext(i8 %var)
+  call void @external_void_func_i8_signext(i8 signext %var)
   ret void
 }
 
@@ -166,7 +166,7 @@ define amdgpu_kernel void @test_call_external_void_func_i8_signext(i32) #0 {
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_external_void_func_i8_zeroext(i32) #0 {
   %var = load volatile i8, i8 addrspace(1)* undef
-  call void @external_void_func_i8_zeroext(i8 %var)
+  call void @external_void_func_i8_zeroext(i8 zeroext %var)
   ret void
 }
 
@@ -195,7 +195,7 @@ define amdgpu_kernel void @test_call_external_void_func_i16_imm() #0 {
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_external_void_func_i16_signext(i32) #0 {
   %var = load volatile i16, i16 addrspace(1)* undef
-  call void @external_void_func_i16_signext(i16 %var)
+  call void @external_void_func_i16_signext(i16 signext %var)
   ret void
 }
 
@@ -212,7 +212,7 @@ define amdgpu_kernel void @test_call_external_void_func_i16_signext(i32) #0 {
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_external_void_func_i16_zeroext(i32) #0 {
   %var = load volatile i16, i16 addrspace(1)* undef
-  call void @external_void_func_i16_zeroext(i16 %var)
+  call void @external_void_func_i16_zeroext(i16 zeroext %var)
   ret void
 }
 
@@ -739,8 +739,8 @@ entry:
 
 ; GCN-LABEL: {{^}}tail_call_byval_align16:
 ; GCN-NOT: s32
-; GCN: buffer_load_dword [[VREG1:v[0-9]+]], off, s[0:3], s32 offset:8
 ; GCN: buffer_load_dword [[VREG2:v[0-9]+]], off, s[0:3], s32 offset:12
+; GCN: buffer_load_dword [[VREG1:v[0-9]+]], off, s[0:3], s32 offset:8
 
 ; GCN: s_getpc_b64
 

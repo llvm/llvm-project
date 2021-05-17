@@ -2,7 +2,7 @@
 # Compile a source file and compare generated .mod files against expected.
 
 set -e
-F18_OPTIONS="-fdebug-resolve-names -fparse-only"
+FLANG_FC1_OPTIONS="-fsyntax-only"
 srcdir=$(dirname $0)
 source $srcdir/common.sh
 
@@ -21,7 +21,7 @@ for src in "$@"; do
   (
     cd $temp
     ls -1 *.mod > prev_files
-    $F18 $F18_OPTIONS $src
+    $FLANG_FC1 $FLANG_FC1_OPTIONS $src
     ls -1 *.mod | comm -13 prev_files -
   ) > $actual_files
   expected_files=$(sed -n 's/^!Expect: \(.*\)/\1/p' $src | sort)

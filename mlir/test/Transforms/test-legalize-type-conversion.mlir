@@ -45,6 +45,26 @@ func @test_invalid_result_materialization() {
 
 // -----
 
+// CHECK-LABEL: @test_transitive_use_materialization
+func @test_transitive_use_materialization() {
+  // CHECK: %[[V:.*]] = "test.type_producer"() : () -> f64
+  // CHECK: %[[C:.*]] = "test.cast"(%[[V]]) : (f64) -> f32
+  %result = "test.another_type_producer"() : () -> f32
+  // CHECK: "foo.return"(%[[C]])
+  "foo.return"(%result) : (f32) -> ()
+}
+
+// -----
+
+func @test_transitive_use_invalid_materialization() {
+  // expected-error@below {{failed to materialize conversion for result #0 of operation 'test.type_producer' that remained live after conversion}}
+  %result = "test.another_type_producer"() : () -> f16
+  // expected-note@below {{see existing live user here}}
+  "foo.return"(%result) : (f16) -> ()
+}
+
+// -----
+
 func @test_invalid_result_legalization() {
   // expected-error@below {{failed to legalize conversion operation generated for result #0 of operation 'test.type_producer' that remained live after conversion}}
   %result = "test.type_producer"() : () -> i16
@@ -61,4 +81,19 @@ func @test_valid_result_legalization() {
 
   %result = "test.type_producer"() : () -> f32
   "foo.return"(%result) : (f32) -> ()
+}
+
+// -----
+
+// Should not segfault here but gracefully fail.
+// CHECK-LABEL: func @test_signature_conversion_undo
+func @test_signature_conversion_undo() {
+  // CHECK: test.signature_conversion_undo
+  "test.signature_conversion_undo"() ({
+  // CHECK: ^{{.*}}(%{{.*}}: f32):
+  ^bb0(%arg0: f32):
+    "test.type_consumer"(%arg0) : (f32) -> ()
+    "test.return"(%arg0) : (f32) -> ()
+  }) : () -> ()
+  return
 }

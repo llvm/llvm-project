@@ -343,7 +343,8 @@ void ErrorODRViolation::Print() {
   Report("ERROR: AddressSanitizer: %s (%p):\n", scariness.GetDescription(),
          global1.beg);
   Printf("%s", d.Default());
-  InternalScopedString g1_loc(256), g2_loc(256);
+  InternalScopedString g1_loc;
+  InternalScopedString g2_loc;
   PrintGlobalLocation(&g1_loc, global1);
   PrintGlobalLocation(&g2_loc, global2);
   Printf("  [1] size=%zd '%s' %s\n", global1.size,
@@ -360,7 +361,7 @@ void ErrorODRViolation::Print() {
   Report(
       "HINT: if you don't care about these errors you may set "
       "ASAN_OPTIONS=detect_odr_violation=0\n");
-  InternalScopedString error_msg(256);
+  InternalScopedString error_msg;
   error_msg.append("%s: global '%s' at %s", scariness.GetDescription(),
                    MaybeDemangleGlobalName(global1.name), g1_loc.data());
   ReportErrorSummary(error_msg.data());
@@ -554,7 +555,7 @@ static void PrintShadowMemoryForAddress(uptr addr) {
   uptr shadow_addr = MemToShadow(addr);
   const uptr n_bytes_per_row = 16;
   uptr aligned_shadow = shadow_addr & ~(n_bytes_per_row - 1);
-  InternalScopedString str(4096 * 8);
+  InternalScopedString str;
   str.append("Shadow bytes around the buggy address:\n");
   for (int i = -5; i <= 5; i++) {
     uptr row_shadow_addr = aligned_shadow + i * n_bytes_per_row;

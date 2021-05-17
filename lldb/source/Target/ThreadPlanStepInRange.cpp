@@ -33,14 +33,14 @@ uint32_t ThreadPlanStepInRange::s_default_flag_values =
 
 ThreadPlanStepInRange::ThreadPlanStepInRange(
     Thread &thread, const AddressRange &range,
-    const SymbolContext &addr_context, lldb::RunMode stop_others,
-    LazyBool step_in_avoids_code_without_debug_info,
+    const SymbolContext &addr_context, const char *step_into_target,
+    lldb::RunMode stop_others, LazyBool step_in_avoids_code_without_debug_info,
     LazyBool step_out_avoids_code_without_debug_info)
     : ThreadPlanStepRange(ThreadPlan::eKindStepInRange,
                           "Step Range stepping in", thread, range, addr_context,
                           stop_others),
       ThreadPlanShouldStopHere(this), m_step_past_prologue(true),
-      m_virtual_step(false) {
+      m_virtual_step(false), m_step_into_target(step_into_target) {
   SetCallbacks();
   SetFlagsToDefault();
   SetupAvoidNoDebug(step_in_avoids_code_without_debug_info,

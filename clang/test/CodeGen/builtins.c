@@ -91,11 +91,15 @@ int main() {
   char s0[10], s1[] = "Hello";
   V(strcat, (s0, s1));
   V(strcmp, (s0, s1));
+  V(strdup, (s0));
   V(strncat, (s0, s1, n));
+  V(strndup, (s0, n));
   V(strchr, (s0, s1[0]));
   V(strrchr, (s0, s1[0]));
   V(strcpy, (s0, s1));
   V(strncpy, (s0, s1, n));
+  V(sprintf, (s0, "%s", s1));
+  V(snprintf, (s0, n, "%s", s1));
   
   // Object size checking
   V(__memset_chk, (s0, 0, sizeof s0, n));
@@ -437,6 +441,20 @@ void test_builtin_longjmp(void **buffer) {
 }
 
 #endif
+
+// CHECK-LABEL: define{{.*}} void @test_memory_builtins
+void test_memory_builtins(int n) {
+  // CHECK: call i8* @malloc
+  void * p = __builtin_malloc(n);
+  // CHECK: call void @free
+  __builtin_free(p);
+  // CHECK: call i8* @calloc
+  p = __builtin_calloc(1, n);
+  // CHECK: call i8* @realloc
+  p = __builtin_realloc(p, n);
+  // CHECK: call void @free
+  __builtin_free(p);
+}
 
 // CHECK-LABEL: define{{.*}} i64 @test_builtin_readcyclecounter
 long long test_builtin_readcyclecounter() {

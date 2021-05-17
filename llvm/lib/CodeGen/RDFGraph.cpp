@@ -994,8 +994,8 @@ RegisterRef DataFlowGraph::restrictRef(RegisterRef AR, RegisterRef BR) const {
 // For each stack in the map DefM, push the delimiter for block B on it.
 void DataFlowGraph::markBlock(NodeId B, DefStackMap &DefM) {
   // Push block delimiters.
-  for (auto I = DefM.begin(), E = DefM.end(); I != E; ++I)
-    I->second.start_block(B);
+  for (auto &P : DefM)
+    P.second.start_block(B);
 }
 
 // Remove all definitions coming from block B from each stack in DefM.
@@ -1003,8 +1003,8 @@ void DataFlowGraph::releaseBlock(NodeId B, DefStackMap &DefM) {
   // Pop all defs from this block from the definition stack. Defs that were
   // added to the map during the traversal of instructions will not have a
   // delimiter, but for those, the whole stack will be emptied.
-  for (auto I = DefM.begin(), E = DefM.end(); I != E; ++I)
-    I->second.clear_block(B);
+  for (auto &P : DefM)
+    P.second.clear_block(B);
 
   // Finally, remove empty stacks from the map.
   for (auto I = DefM.begin(), E = DefM.end(), NextI = I; I != E; I = NextI) {

@@ -11,6 +11,7 @@ declare i8* @llvm.objc.retainAutoreleaseReturnValue(i8*)
 declare void @llvm.objc.autoreleasePoolPop(i8*)
 declare void @llvm.objc.autoreleasePoolPush()
 declare i8* @llvm.objc.retainBlock(i8*)
+declare void @llvm.objc.clang.arc.noop.use(...)
 
 declare i8* @objc_retainedObject(i8*)
 declare i8* @objc_unretainedObject(i8*)
@@ -450,6 +451,32 @@ bb1:
   %v4 = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %v3)
   %v5 = call i8* @llvm.objc.autoreleaseReturnValue(i8* %v3)
   ret i8* %v3
+}
+
+; Remove operand bundle "clang.arc.attachedcall" and the autoreleaseRV call if the call
+; is a tail call.
+
+; CHECK-LABEL: define i8* @test31(
+; CHECK-NEXT: %[[CALL:.*]] = tail call i8* @returner()
+; CHECK-NEXT: ret i8* %[[CALL]]
+
+define i8* @test31() {
+  %call = tail call i8* @returner() [ "clang.arc.attachedcall"(i64 0) ]
+  call void (...) @llvm.objc.clang.arc.noop.use(i8* %call)
+  %1 = call i8* @llvm.objc.autoreleaseReturnValue(i8* %call)
+  ret i8* %1
+}
+
+; CHECK-LABEL: define i8* @test32(
+; CHECK: %[[CALL:.*]] = call i8* @returner() [ "clang.arc.attachedcall"(i64 0) ]
+; CHECK: call void (...) @llvm.objc.clang.arc.noop.use(i8* %[[CALL]])
+; CHECK: call i8* @llvm.objc.autoreleaseReturnValue(i8* %[[CALL]])
+
+define i8* @test32() {
+  %call = call i8* @returner() [ "clang.arc.attachedcall"(i64 0) ]
+  call void (...) @llvm.objc.clang.arc.noop.use(i8* %call)
+  %1 = call i8* @llvm.objc.autoreleaseReturnValue(i8* %call)
+  ret i8* %1
 }
 
 !0 = !{}

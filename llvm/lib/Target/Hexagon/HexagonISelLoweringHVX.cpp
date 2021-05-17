@@ -315,8 +315,7 @@ HexagonTargetLowering::getInt(unsigned IntId, MVT ResTy, ArrayRef<SDValue> Ops,
                               const SDLoc &dl, SelectionDAG &DAG) const {
   SmallVector<SDValue,4> IntOps;
   IntOps.push_back(DAG.getConstant(IntId, dl, MVT::i32));
-  for (const SDValue &Op : Ops)
-    IntOps.push_back(Op);
+  append_range(IntOps, Ops);
   return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, ResTy, IntOps);
 }
 
@@ -1955,6 +1954,8 @@ HexagonTargetLowering::WidenHvxSetCC(SDValue Op, SelectionDAG &DAG) const {
   unsigned WideOpLen = (8 * HwLen) / ElemTy.getSizeInBits();
   assert(WideOpLen * ElemTy.getSizeInBits() == 8 * HwLen);
   MVT WideOpTy = MVT::getVectorVT(ElemTy, WideOpLen);
+  if (!Subtarget.isHVXVectorType(WideOpTy, true))
+    return SDValue();
 
   SDValue WideOp0 = appendUndef(Op0, WideOpTy, DAG);
   SDValue WideOp1 = appendUndef(Op1, WideOpTy, DAG);

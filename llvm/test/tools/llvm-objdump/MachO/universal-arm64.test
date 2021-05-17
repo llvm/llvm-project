@@ -4,6 +4,10 @@
 # RUN: yaml2obj %s -o %tarm.o
 # RUN: llvm-objdump %tarm.o --universal-headers --macho | \
 # RUN:   FileCheck %s --match-full-lines
+# RUN: llvm-otool -fv %tarm.o | FileCheck %s --match-full-lines
+# RUN: llvm-objdump %tarm.o --universal-headers --macho --non-verbose | \
+# RUN:   FileCheck %s --match-full-lines --check-prefix=NONVERBOSE
+# RUN: llvm-otool -f %tarm.o | FileCheck %s --match-full-lines --check-prefix=NONVERBOSE
 
 # CHECK:      Fat headers
 # CHECK-NEXT: fat_magic FAT_MAGIC
@@ -30,6 +34,33 @@
 # CHECK-NEXT:     size 384
 # CHECK-NEXT:     align 2^12 (4096)
 # CHECK-NOT:{{.}}
+
+# NONVERBOSE:      Fat headers
+# NONVERBOSE-NEXT: fat_magic 0xcafebabe
+# NONVERBOSE-NEXT: nfat_arch 3
+# NONVERBOSE-NEXT: architecture 0
+# NONVERBOSE-NEXT:     cputype 16777228
+# NONVERBOSE-NEXT:     cpusubtype 0
+# NONVERBOSE-NEXT:     capabilities 0x0
+# NONVERBOSE-NEXT:     offset 4096
+# NONVERBOSE-NEXT:     size 352
+# NONVERBOSE-NEXT:     align 2^12 (4096)
+# NONVERBOSE-NEXT: architecture 1
+# NONVERBOSE-NEXT:     cputype 16777228
+# NONVERBOSE-NEXT:     cpusubtype 1
+# NONVERBOSE-NEXT:     capabilities 0x0
+# NONVERBOSE-NEXT:     offset 16384
+# NONVERBOSE-NEXT:     size 384
+# NONVERBOSE-NEXT:     align 2^14 (16384)
+# NONVERBOSE-NEXT: architecture 2
+# NONVERBOSE-NEXT:     cputype 16777228
+# NONVERBOSE-NEXT:     cpusubtype 2
+# NONVERBOSE-NEXT:     capabilities 0x0
+# NONVERBOSE-NEXT:     offset 28672
+# NONVERBOSE-NEXT:     size 384
+# NONVERBOSE-NEXT:     align 2^12 (4096)
+# NONVERBOSE-NOT:{{.}}
+
 
 --- !fat-mach-o
 FatHeader:

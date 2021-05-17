@@ -227,8 +227,7 @@ define void @test_05(i32* %p) {
 ; CHECK-NOT:     preloop
 ; CHECK:         entry:
 ; CHECK-NEXT:      %n = load i32, i32* %p, align 4, !range !
-; CHECK-NEXT:      [[CMP_1:%[^ ]+]] = icmp ugt i32 %n, 2
-; CHECK-NEXT:      %exit.mainloop.at = select i1 [[CMP_1]], i32 %n, i32 2
+; CHECK-NEXT:      %exit.mainloop.at = call i32 @llvm.umax.i32(i32 %n, i32 2)
 ; CHECK-NEXT:      [[CMP_2:%[^ ]+]] = icmp ult i32 2, %exit.mainloop.at
 ; CHECK-NEXT:      br i1 [[CMP_2]], label %loop_header.preheader, label %main.pseudo.exit
 ; CHECK:         range_check_block:                                ; preds = %inner_loop

@@ -626,32 +626,32 @@ define <4 x float> @test22(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvcmpgtsp vs0, v5, v4
 ; CHECK-NEXT:    xvcmpgtsp vs1, v4, v5
-; CHECK-NEXT:    xxlnor vs0, vs1, vs0
-; CHECK-NEXT:    xxsel v2, v3, v2, vs0
+; CHECK-NEXT:    xxlor vs0, vs1, vs0
+; CHECK-NEXT:    xxsel v2, v2, v3, vs0
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-REG-LABEL: test22:
 ; CHECK-REG:       # %bb.0: # %entry
 ; CHECK-REG-NEXT:    xvcmpgtsp vs0, v5, v4
 ; CHECK-REG-NEXT:    xvcmpgtsp vs1, v4, v5
-; CHECK-REG-NEXT:    xxlnor vs0, vs1, vs0
-; CHECK-REG-NEXT:    xxsel v2, v3, v2, vs0
+; CHECK-REG-NEXT:    xxlor vs0, vs1, vs0
+; CHECK-REG-NEXT:    xxsel v2, v2, v3, vs0
 ; CHECK-REG-NEXT:    blr
 ;
 ; CHECK-FISL-LABEL: test22:
 ; CHECK-FISL:       # %bb.0: # %entry
 ; CHECK-FISL-NEXT:    xvcmpgtsp vs1, v5, v4
 ; CHECK-FISL-NEXT:    xvcmpgtsp vs0, v4, v5
-; CHECK-FISL-NEXT:    xxlnor vs0, vs0, vs1
-; CHECK-FISL-NEXT:    xxsel v2, v3, v2, vs0
+; CHECK-FISL-NEXT:    xxlor vs0, vs0, vs1
+; CHECK-FISL-NEXT:    xxsel v2, v2, v3, vs0
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test22:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    xvcmpgtsp vs0, v5, v4
 ; CHECK-LE-NEXT:    xvcmpgtsp vs1, v4, v5
-; CHECK-LE-NEXT:    xxlnor vs0, vs1, vs0
-; CHECK-LE-NEXT:    xxsel v2, v3, v2, vs0
+; CHECK-LE-NEXT:    xxlor vs0, vs1, vs0
+; CHECK-LE-NEXT:    xxsel v2, v2, v3, vs0
 ; CHECK-LE-NEXT:    blr
 entry:
   %m = fcmp ueq <4 x float> %c, %d
@@ -1369,10 +1369,8 @@ define <2 x float> @test44(<2 x i64> %a) {
 ; CHECK-LE-NEXT:    xxlor vs1, v2, v2
 ; CHECK-LE-NEXT:    xscvuxdsp f1, f1
 ; CHECK-LE-NEXT:    xscvuxdsp f0, f0
-; CHECK-LE-NEXT:    xscvdpspn vs1, f1
-; CHECK-LE-NEXT:    xscvdpspn vs0, f0
-; CHECK-LE-NEXT:    xxsldwi v3, vs1, vs1, 3
-; CHECK-LE-NEXT:    xxsldwi v2, vs0, vs0, 3
+; CHECK-LE-NEXT:    xscvdpspn v3, f1
+; CHECK-LE-NEXT:    xscvdpspn v2, f0
 ; CHECK-LE-NEXT:    vmrghw v2, v3, v2
 ; CHECK-LE-NEXT:    blr
   %v = uitofp <2 x i64> %a to <2 x float>
@@ -1451,10 +1449,8 @@ define <2 x float> @test45(<2 x i64> %a) {
 ; CHECK-LE-NEXT:    xxlor vs1, v2, v2
 ; CHECK-LE-NEXT:    xscvsxdsp f1, f1
 ; CHECK-LE-NEXT:    xscvsxdsp f0, f0
-; CHECK-LE-NEXT:    xscvdpspn vs1, f1
-; CHECK-LE-NEXT:    xscvdpspn vs0, f0
-; CHECK-LE-NEXT:    xxsldwi v3, vs1, vs1, 3
-; CHECK-LE-NEXT:    xxsldwi v2, vs0, vs0, 3
+; CHECK-LE-NEXT:    xscvdpspn v3, f1
+; CHECK-LE-NEXT:    xscvdpspn v2, f0
 ; CHECK-LE-NEXT:    vmrghw v2, v3, v2
 ; CHECK-LE-NEXT:    blr
   %v = sitofp <2 x i64> %a to <2 x float>

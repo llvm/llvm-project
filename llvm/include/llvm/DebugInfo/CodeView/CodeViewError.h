@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_CODEVIEW_CODEVIEWERROR_H
-#define LLVM_DEBUGINFO_PDB_CODEVIEW_CODEVIEWERROR_H
+#ifndef LLVM_DEBUGINFO_CODEVIEW_CODEVIEWERROR_H
+#define LLVM_DEBUGINFO_CODEVIEW_CODEVIEWERROR_H
 
 #include "llvm/Support/Error.h"
 

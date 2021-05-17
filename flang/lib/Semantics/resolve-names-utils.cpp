@@ -219,6 +219,7 @@ class ArraySpecAnalyzer {
 public:
   ArraySpecAnalyzer(SemanticsContext &context) : context_{context} {}
   ArraySpec Analyze(const parser::ArraySpec &);
+  ArraySpec AnalyzeDeferredShapeSpecList(const parser::DeferredShapeSpecList &);
   ArraySpec Analyze(const parser::ComponentArraySpec &);
   ArraySpec Analyze(const parser::CoarraySpec &);
 
@@ -252,6 +253,11 @@ ArraySpec AnalyzeArraySpec(
     SemanticsContext &context, const parser::ComponentArraySpec &arraySpec) {
   return ArraySpecAnalyzer{context}.Analyze(arraySpec);
 }
+ArraySpec AnalyzeDeferredShapeSpecList(SemanticsContext &context,
+    const parser::DeferredShapeSpecList &deferredShapeSpecs) {
+  return ArraySpecAnalyzer{context}.AnalyzeDeferredShapeSpecList(
+      deferredShapeSpecs);
+}
 ArraySpec AnalyzeCoarraySpec(
     SemanticsContext &context, const parser::CoarraySpec &coarraySpec) {
   return ArraySpecAnalyzer{context}.Analyze(coarraySpec);
@@ -272,6 +278,12 @@ ArraySpec ArraySpecAnalyzer::Analyze(const parser::ArraySpec &x) {
                  [&](const auto &y) { Analyze(y); },
              },
       x.u);
+  CHECK(!arraySpec_.empty());
+  return arraySpec_;
+}
+ArraySpec ArraySpecAnalyzer::AnalyzeDeferredShapeSpecList(
+    const parser::DeferredShapeSpecList &x) {
+  Analyze(x);
   CHECK(!arraySpec_.empty());
   return arraySpec_;
 }

@@ -30,19 +30,19 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
         explicit capture of dependencies, an implementation could check whether
         the value corresponds to a captured dependency.
       }],
-      "bool", "isDefinedOutsideOfLoop", (ins "Value ":$value)
+      "bool", "isDefinedOutsideOfLoop", (ins "::mlir::Value ":$value)
     >,
     InterfaceMethod<[{
         Returns the region that makes up the body of the loop and should be
         inspected for loop-invariant operations.
       }],
-      "Region &", "getLoopBody"
+      "::mlir::Region &", "getLoopBody"
     >,
     InterfaceMethod<[{
         Moves the given vector of operations out of the loop. The vector is
         sorted topologically.
       }],
-      "LogicalResult", "moveOutOfLoop", (ins "ArrayRef<Operation *>":$ops)
+      "::mlir::LogicalResult", "moveOutOfLoop", (ins "::mlir::ArrayRef<::mlir::Operation *>":$ops)
     >,
   ];
 }

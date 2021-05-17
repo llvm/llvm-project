@@ -446,8 +446,8 @@ LegalizeRuleSet &LegalizerInfo::getActionDefinitionsBuilder(
   assert(!llvm::empty(Opcodes) && Opcodes.begin() + 1 != Opcodes.end() &&
          "Initializer list must have at least two opcodes");
 
-  for (auto I = Opcodes.begin() + 1, E = Opcodes.end(); I != E; ++I)
-    aliasActionDefinitions(Representative, *I);
+  for (unsigned Op : llvm::drop_begin(Opcodes))
+    aliasActionDefinitions(Representative, Op);
 
   auto &Return = getActionDefinitionsBuilder(Representative);
   Return.setIsAliasedByAnother();
@@ -485,7 +485,7 @@ LegalizerInfo::getAction(const LegalityQuery &Query) const {
 LegalizeActionStep
 LegalizerInfo::getAction(const MachineInstr &MI,
                          const MachineRegisterInfo &MRI) const {
-  SmallVector<LLT, 2> Types;
+  SmallVector<LLT, 8> Types;
   SmallBitVector SeenTypes(8);
   const MCOperandInfo *OpInfo = MI.getDesc().OpInfo;
   // FIXME: probably we'll need to cache the results here somehow?

@@ -7,8 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../utils.h"
-
 int main() {
   void *p = reinterpret_cast<void*>(42);
   int res = posix_memalign(&p, 17, 100);
@@ -17,7 +15,7 @@ int main() {
   // CHECK: {{#1 0x.* in main .*posix_memalign-alignment.cpp:}}[[@LINE-3]]
   // CHECK: SUMMARY: HWAddressSanitizer: invalid-posix-memalign-alignment
 
-  untag_printf("pointer after failed posix_memalign: %zd\n", (size_t)p);
+  printf("pointer after failed posix_memalign: %zd\n", (size_t)p);
   // CHECK-NULL: pointer after failed posix_memalign: 42
 
   return 0;

@@ -203,6 +203,24 @@ unsigned PPCMCCodeEmitter::getMemRIX16Encoding(const MCInst &MI, unsigned OpNo,
   return RegBits;
 }
 
+unsigned
+PPCMCCodeEmitter::getMemRIHashEncoding(const MCInst &MI, unsigned OpNo,
+                                       SmallVectorImpl<MCFixup> &Fixups,
+                                       const MCSubtargetInfo &STI) const {
+  // Encode (imm, reg) for the hash load/store to stack for the ROP Protection
+  // instructions.
+  const MCOperand &RegMO = MI.getOperand(OpNo + 1);
+  const MCOperand &MO = MI.getOperand(OpNo);
+
+  assert(RegMO.isReg() && "Base address must be a register.");
+  assert(MO.isImm() && "Expecting an immediate operand.");
+  assert(!(MO.getImm() % 8) && "Expecting offset to be 8 byte aligned.");
+
+  unsigned RegBits = getMachineOpValue(MI, RegMO, Fixups, STI) << 6;
+  unsigned DX = (MO.getImm() >> 3) & 0x3F;
+  return RegBits | DX;
+}
+
 uint64_t
 PPCMCCodeEmitter::getMemRI34PCRelEncoding(const MCInst &MI, unsigned OpNo,
                                           SmallVectorImpl<MCFixup> &Fixups,

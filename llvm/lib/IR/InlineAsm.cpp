@@ -29,11 +29,11 @@ using namespace llvm;
 
 InlineAsm::InlineAsm(FunctionType *FTy, const std::string &asmString,
                      const std::string &constraints, bool hasSideEffects,
-                     bool isAlignStack, AsmDialect asmDialect)
+                     bool isAlignStack, AsmDialect asmDialect, bool canThrow)
     : Value(PointerType::getUnqual(FTy), Value::InlineAsmVal),
       AsmString(asmString), Constraints(constraints), FTy(FTy),
       HasSideEffects(hasSideEffects), IsAlignStack(isAlignStack),
-      Dialect(asmDialect) {
+      Dialect(asmDialect), CanThrow(canThrow) {
   // Do various checks on the constraint string and type.
   assert(Verify(getFunctionType(), constraints) &&
          "Function type not legal for constraints!");
@@ -41,9 +41,10 @@ InlineAsm::InlineAsm(FunctionType *FTy, const std::string &asmString,
 
 InlineAsm *InlineAsm::get(FunctionType *FTy, StringRef AsmString,
                           StringRef Constraints, bool hasSideEffects,
-                          bool isAlignStack, AsmDialect asmDialect) {
+                          bool isAlignStack, AsmDialect asmDialect,
+                          bool canThrow) {
   InlineAsmKeyType Key(AsmString, Constraints, FTy, hasSideEffects,
-                       isAlignStack, asmDialect);
+                       isAlignStack, asmDialect, canThrow);
   LLVMContextImpl *pImpl = FTy->getContext().pImpl;
   return pImpl->InlineAsms.getOrCreate(PointerType::getUnqual(FTy), Key);
 }

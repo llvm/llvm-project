@@ -42,8 +42,7 @@ static bool checkLoopsStructure(const Loop &OuterLoop, const Loop &InnerLoop,
 
 LoopNest::LoopNest(Loop &Root, ScalarEvolution &SE)
     : MaxPerfectDepth(getMaxPerfectDepth(Root, SE)) {
-  for (Loop *L : breadth_first(&Root))
-    Loops.push_back(L);
+  append_range(Loops, breadth_first(&Root));
 }
 
 std::unique_ptr<LoopNest> LoopNest::getLoopNest(Loop &Root,
@@ -207,11 +206,12 @@ unsigned LoopNest::getMaxPerfectDepth(const Loop &Root, ScalarEvolution &SE) {
 }
 
 const BasicBlock &LoopNest::skipEmptyBlockUntil(const BasicBlock *From,
-                                                const BasicBlock *End) {
+                                                const BasicBlock *End,
+                                                bool CheckUniquePred) {
   assert(From && "Expecting valid From");
   assert(End && "Expecting valid End");
 
-  if (From == End || !From->getSingleSuccessor())
+  if (From == End || !From->getUniqueSuccessor())
     return *From;
 
   auto IsEmpty = [](const BasicBlock *BB) {
@@ -220,12 +220,13 @@ const BasicBlock &LoopNest::skipEmptyBlockUntil(const BasicBlock *From,
 
   // Visited is used to avoid running into an infinite loop.
   SmallPtrSet<const BasicBlock *, 4> Visited;
-  const BasicBlock *BB = From->getSingleSuccessor();
-  const BasicBlock *PredBB = BB;
-  while (BB && BB != End && IsEmpty(BB) && !Visited.count(BB)) {
+  const BasicBlock *BB = From->getUniqueSuccessor();
+  const BasicBlock *PredBB = From;
+  while (BB && BB != End && IsEmpty(BB) && !Visited.count(BB) &&
+         (!CheckUniquePred || BB->getUniquePredecessor())) {
     Visited.insert(BB);
     PredBB = BB;
-    BB = BB->getSingleSuccessor();
+    BB = BB->getUniqueSuccessor();
   }
 
   return (BB == End) ? *End : *PredBB;
@@ -336,9 +337,11 @@ static bool checkLoopsStructure(const Loop &OuterLoop, const Loop &InnerLoop,
 
   // Ensure the inner loop exit block lead to the outer loop latch possibly
   // through empty blocks.
-  const BasicBlock &SuccInner =
-      LoopNest::skipEmptyBlockUntil(InnerLoop.getExitBlock(), OuterLoopLatch);
-  if (&SuccInner != OuterLoopLatch && &SuccInner != ExtraPhiBlock) {
+  if ((!ExtraPhiBlock ||
+       &LoopNest::skipEmptyBlockUntil(InnerLoop.getExitBlock(),
+                                      ExtraPhiBlock) != ExtraPhiBlock) &&
+      (&LoopNest::skipEmptyBlockUntil(InnerLoop.getExitBlock(),
+                                      OuterLoopLatch) != OuterLoopLatch)) {
     DEBUG_WITH_TYPE(
         VerboseDebug,
         dbgs() << "Inner loop exit block " << *InnerLoopExit

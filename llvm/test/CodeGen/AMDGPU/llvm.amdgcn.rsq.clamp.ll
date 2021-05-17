@@ -23,10 +23,10 @@ define amdgpu_kernel void @rsq_clamp_f32(float addrspace(1)* %out, float %src) #
 ; SI: v_rsq_clamp_f64_e32
 
 ; TODO: this constant should be folded:
-; VI-DAG: s_mov_b32 [[NEG1:s[0-9+]]], -1
-; VI-DAG: s_mov_b32 s[[LOW1:[0-9+]]], [[NEG1]]
-; VI-DAG: s_mov_b32 s[[HIGH1:[0-9+]]], 0x7fefffff
-; VI-DAG: s_mov_b32 s[[HIGH2:[0-9+]]], 0xffefffff
+; VI-DAG: s_mov_b32 [[NEG1:s[0-9]+]], -1
+; VI-DAG: s_mov_b32 s[[LOW1:[0-9]+]], [[NEG1]]
+; VI-DAG: s_mov_b32 s[[HIGH1:[0-9]+]], 0x7fefffff
+; VI-DAG: s_mov_b32 s[[HIGH2:[0-9]+]], 0xffefffff
 ; VI-DAG: v_rsq_f64_e32 [[RSQ:v\[[0-9]+:[0-9]+\]]], s[{{[0-9]+:[0-9]+}}
 ; VI-DAG: v_min_f64 v[0:1], [[RSQ]], s{{\[}}[[LOW1]]:[[HIGH1]]]
 ; VI-DAG: v_max_f64 v[0:1], v[0:1], s{{\[}}[[LOW1]]:[[HIGH2]]]

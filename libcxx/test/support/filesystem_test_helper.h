@@ -19,6 +19,7 @@
 #include <chrono>
 #include <vector>
 
+#include "make_string.h"
 #include "test_macros.h"
 #include "rapid-cxx-test.h"
 #include "format_string.h"
@@ -295,14 +296,17 @@ private:
     // sharing the same cwd). However, it is fairly unlikely to happen as
     // we generally don't use scoped_test_env from multiple threads, so
     // this is deemed acceptable.
+    // The cwd.filename() itself isn't unique across all tests in the suite,
+    // so start the numbering from a hash of the full cwd, to avoid
+    // different tests interfering with each other.
     static inline fs::path available_cwd_path() {
         fs::path const cwd = utils::getcwd();
         fs::path const tmp = fs::temp_directory_path();
-        fs::path const base = tmp / cwd.filename();
-        int i = 0;
-        fs::path p = base / ("static_env." + std::to_string(i));
+        std::string base = cwd.filename().string();
+        size_t i = std::hash<std::string>()(cwd.string());
+        fs::path p = tmp / (base + "-static_env." + std::to_string(i));
         while (utils::exists(p.string())) {
-            p = fs::path(base) / ("static_env." + std::to_string(++i));
+            p = tmp / (base + "-static_env." + std::to_string(++i));
         }
         return p;
     }
@@ -429,32 +433,6 @@ struct CWDGuard {
 };
 
 // Misc test types
-
-#if TEST_STD_VER > 17 && defined(__cpp_char8_t)
-#define CHAR8_ONLY(x) x,
-#else
-#define CHAR8_ONLY(x)
-#endif
-
-#define MKSTR(Str) {Str, TEST_CONCAT(L, Str), CHAR8_ONLY(TEST_CONCAT(u8, Str)) TEST_CONCAT(u, Str), TEST_CONCAT(U, Str)}
-
-struct MultiStringType {
-  const char* s;
-  const wchar_t* w;
-#if TEST_STD_VER > 17 && defined(__cpp_char8_t)
-  const char8_t* u8;
-#endif
-  const char16_t* u16;
-  const char32_t* u32;
-
-  operator const char* () const { return s; }
-  operator const wchar_t* () const { return w; }
-#if TEST_STD_VER > 17 && defined(__cpp_char8_t)
-  operator const char8_t* () const { return u8; }
-#endif
-  operator const char16_t* () const { return u16; }
-  operator const char32_t* () const { return u32; }
-};
 
 const MultiStringType PathList[] = {
         MKSTR(""),
@@ -600,7 +578,7 @@ inline bool ErrorIs(const std::error_code& ec, std::errc First, ErrcT... Rest) {
 
 // Provide our own Sleep routine since std::this_thread::sleep_for is not
 // available in single-threaded mode.
-void SleepFor(std::chrono::seconds dur) {
+template <class Dur> void SleepFor(Dur dur) {
     using namespace std::chrono;
 #if defined(_LIBCPP_HAS_NO_MONOTONIC_CLOCK)
     using Clock = system_clock;
@@ -614,6 +592,29 @@ void SleepFor(std::chrono::seconds dur) {
 
 inline bool PathEq(fs::path const& LHS, fs::path const& RHS) {
   return LHS.native() == RHS.native();
+}
+
+inline bool PathEqIgnoreSep(fs::path LHS, fs::path RHS) {
+  LHS.make_preferred();
+  RHS.make_preferred();
+  return LHS.native() == RHS.native();
+}
+
+inline fs::perms NormalizeExpectedPerms(fs::perms P) {
+#ifdef _WIN32
+  // On Windows, fs::perms only maps down to one bit stored in the filesystem,
+  // a boolean readonly flag.
+  // Normalize permissions to the format it gets returned; all fs entries are
+  // read+exec for all users; writable ones also have the write bit set for
+  // all users.
+  P |= fs::perms::owner_read | fs::perms::group_read | fs::perms::others_read;
+  P |= fs::perms::owner_exec | fs::perms::group_exec | fs::perms::others_exec;
+  fs::perms Write =
+      fs::perms::owner_write | fs::perms::group_write | fs::perms::others_write;
+  if ((P & Write) != fs::perms::none)
+    P |= Write;
+#endif
+  return P;
 }
 
 struct ExceptionChecker {
@@ -653,9 +654,7 @@ struct ExceptionChecker {
       additional_msg = opt_message + ": ";
     }
     auto transform_path = [](const fs::path& p) {
-      if (p.native().empty())
-        return std::string("\"\"");
-      return p.string();
+      return "\"" + p.string() + "\"";
     };
     std::string format = [&]() -> std::string {
       switch (num_paths) {
@@ -689,5 +688,36 @@ struct ExceptionChecker {
   ExceptionChecker& operator=(ExceptionChecker const&) = delete;
 
 };
+
+inline fs::path GetWindowsInaccessibleDir() {
+  // Only makes sense on windows, but the code can be compiled for
+  // any platform.
+  const fs::path dir("C:\\System Volume Information");
+  std::error_code ec;
+  const fs::path root("C:\\");
+  for (const auto &ent : fs::directory_iterator(root, ec)) {
+    if (ent != dir)
+      continue;
+    // Basic sanity checks on the directory_entry
+    if (!ent.exists() || !ent.is_directory()) {
+      fprintf(stderr, "The expected inaccessible directory \"%s\" was found "
+                      "but doesn't behave as expected, skipping tests "
+                      "regarding it\n", dir.string().c_str());
+      return fs::path();
+    }
+    // Check that it indeed is inaccessible as expected
+    (void)fs::exists(ent, ec);
+    if (!ec) {
+      fprintf(stderr, "The expected inaccessible directory \"%s\" was found "
+                      "but seems to be accessible, skipping tests "
+                      "regarding it\n", dir.string().c_str());
+      return fs::path();
+    }
+    return ent;
+  }
+  fprintf(stderr, "No inaccessible directory \"%s\" found, skipping tests "
+                  "regarding it\n", dir.string().c_str());
+  return fs::path();
+}
 
 #endif /* FILESYSTEM_TEST_HELPER_HPP */

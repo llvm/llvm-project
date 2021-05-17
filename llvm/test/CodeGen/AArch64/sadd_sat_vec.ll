@@ -286,14 +286,7 @@ define <16 x i4> @v16i4(<16 x i4> %x, <16 x i4> %y) nounwind {
 define <16 x i1> @v16i1(<16 x i1> %x, <16 x i1> %y) nounwind {
 ; CHECK-LABEL: v16i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    shl v0.16b, v0.16b, #7
-; CHECK-NEXT:    shl v1.16b, v1.16b, #7
-; CHECK-NEXT:    sshr v0.16b, v0.16b, #7
-; CHECK-NEXT:    sshr v1.16b, v1.16b, #7
-; CHECK-NEXT:    shl v1.16b, v1.16b, #7
-; CHECK-NEXT:    shl v0.16b, v0.16b, #7
-; CHECK-NEXT:    sqadd v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    sshr v0.16b, v0.16b, #7
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %z = call <16 x i1> @llvm.sadd.sat.v16i1(<16 x i1> %x, <16 x i1> %y)
   ret <16 x i1> %z
@@ -373,48 +366,28 @@ define <8 x i64> @v8i64(<8 x i64> %x, <8 x i64> %y) nounwind {
 define <2 x i128> @v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
 ; CHECK-LABEL: v2i128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x7, #0 // =0
-; CHECK-NEXT:    cset w9, ge
-; CHECK-NEXT:    csinc w9, w9, wzr, ne
-; CHECK-NEXT:    cmp x3, #0 // =0
-; CHECK-NEXT:    cset w10, ge
-; CHECK-NEXT:    csinc w10, w10, wzr, ne
-; CHECK-NEXT:    cmp w10, w9
-; CHECK-NEXT:    cset w9, eq
-; CHECK-NEXT:    adds x11, x2, x6
+; CHECK-NEXT:    adds x8, x2, x6
 ; CHECK-NEXT:    adcs x12, x3, x7
+; CHECK-NEXT:    mov x9, #9223372036854775807
+; CHECK-NEXT:    eor x10, x3, x7
 ; CHECK-NEXT:    cmp x12, #0 // =0
-; CHECK-NEXT:    cset w13, ge
-; CHECK-NEXT:    mov x8, #9223372036854775807
-; CHECK-NEXT:    csinc w13, w13, wzr, ne
-; CHECK-NEXT:    cinv x14, x8, ge
-; CHECK-NEXT:    cmp w10, w13
-; CHECK-NEXT:    cset w13, ne
+; CHECK-NEXT:    eor x13, x3, x12
+; CHECK-NEXT:    cinv x14, x9, ge
+; CHECK-NEXT:    bics xzr, x13, x10
 ; CHECK-NEXT:    asr x10, x12, #63
-; CHECK-NEXT:    tst w9, w13
-; CHECK-NEXT:    csel x3, x14, x12, ne
-; CHECK-NEXT:    csel x2, x10, x11, ne
-; CHECK-NEXT:    cmp x5, #0 // =0
-; CHECK-NEXT:    cset w9, ge
-; CHECK-NEXT:    csinc w9, w9, wzr, ne
-; CHECK-NEXT:    cmp x1, #0 // =0
-; CHECK-NEXT:    cset w10, ge
-; CHECK-NEXT:    csinc w10, w10, wzr, ne
-; CHECK-NEXT:    cmp w10, w9
-; CHECK-NEXT:    cset w9, eq
-; CHECK-NEXT:    adds x11, x0, x4
-; CHECK-NEXT:    adcs x12, x1, x5
-; CHECK-NEXT:    cmp x12, #0 // =0
-; CHECK-NEXT:    cset w13, ge
-; CHECK-NEXT:    csinc w13, w13, wzr, ne
-; CHECK-NEXT:    cinv x8, x8, ge
-; CHECK-NEXT:    cmp w10, w13
-; CHECK-NEXT:    cset w10, ne
-; CHECK-NEXT:    tst w9, w10
-; CHECK-NEXT:    asr x9, x12, #63
-; CHECK-NEXT:    csel x9, x9, x11, ne
-; CHECK-NEXT:    csel x1, x8, x12, ne
-; CHECK-NEXT:    fmov d0, x9
+; CHECK-NEXT:    csel x2, x10, x8, lt
+; CHECK-NEXT:    csel x3, x14, x12, lt
+; CHECK-NEXT:    adds x8, x0, x4
+; CHECK-NEXT:    adcs x10, x1, x5
+; CHECK-NEXT:    eor x11, x1, x5
+; CHECK-NEXT:    cmp x10, #0 // =0
+; CHECK-NEXT:    eor x12, x1, x10
+; CHECK-NEXT:    cinv x9, x9, ge
+; CHECK-NEXT:    bics xzr, x12, x11
+; CHECK-NEXT:    asr x11, x10, #63
+; CHECK-NEXT:    csel x8, x11, x8, lt
+; CHECK-NEXT:    csel x1, x9, x10, lt
+; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    mov v0.d[1], x1
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret

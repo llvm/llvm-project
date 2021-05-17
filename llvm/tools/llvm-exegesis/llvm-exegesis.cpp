@@ -32,6 +32,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
@@ -251,8 +252,9 @@ generateSnippets(const LLVMState &State, unsigned Opcode,
   const Instruction &Instr = State.getIC().getInstr(Opcode);
   const MCInstrDesc &InstrDesc = Instr.Description;
   // Ignore instructions that we cannot run.
-  if (InstrDesc.isPseudo())
-    return make_error<Failure>("Unsupported opcode: isPseudo");
+  if (InstrDesc.isPseudo() || InstrDesc.usesCustomInsertionHook())
+    return make_error<Failure>(
+        "Unsupported opcode: isPseudo/usesCustomInserter");
   if (InstrDesc.isBranch() || InstrDesc.isIndirectBranch())
     return make_error<Failure>("Unsupported opcode: isBranch/isIndirectBranch");
   if (InstrDesc.isCall() || InstrDesc.isReturn())
@@ -435,7 +437,7 @@ static void analysisMain() {
 
   const Analysis Analyzer(*TheTarget, std::move(InstrInfo), Clustering,
                           AnalysisInconsistencyEpsilon,
-                          AnalysisDisplayUnstableOpcodes);
+                          AnalysisDisplayUnstableOpcodes, CpuName);
 
   maybeRunAnalysis<Analysis::PrintClusters>(Analyzer, "analysis clusters",
                                             AnalysisClustersOutputFile);

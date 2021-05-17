@@ -28,6 +28,16 @@ enum class RegionKind {
   Graph,
 };
 
+namespace OpTrait {
+/// A trait that specifies that an operation only defines graph regions.
+template <typename ConcreteType>
+class HasOnlyGraphRegion : public TraitBase<ConcreteType, HasOnlyGraphRegion> {
+public:
+  static RegionKind getRegionKind(unsigned index) { return RegionKind::Graph; }
+  static bool hasSSADominance(unsigned index) { return false; }
+};
+} // namespace OpTrait
+
 } // namespace mlir
 
 #include "mlir/IR/RegionKindInterface.h.inc"

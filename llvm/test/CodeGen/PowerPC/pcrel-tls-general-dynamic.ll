@@ -46,7 +46,7 @@ define i32 @GeneralDynamicValueLoad() {
   ; CHECK-O-NEXT:    58: 00 00 63 80                   lwz 3, 0(3)
 
   ; CHECK-SYM-LABEL: Symbol table '.symtab' contains 7 entries
-  ; CHECK-SYM:         6: 0000000000000000     0 TLS     GLOBAL DEFAULT  UND x
+  ; CHECK-SYM:       0000000000000000     0 TLS     GLOBAL DEFAULT  UND x
   entry:
     %0 = load i32, i32* @x, align 4
     ret i32 %0

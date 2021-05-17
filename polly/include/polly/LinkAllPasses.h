@@ -16,8 +16,6 @@
 
 #include "polly/CodeGen/PPCGCodeGeneration.h"
 #include "polly/Config/config.h"
-#include "polly/PruneUnprofitable.h"
-#include "polly/Simplify.h"
 #include "polly/Support/DumpModulePass.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstdlib>
@@ -30,7 +28,7 @@ class PassRegistry;
 namespace polly {
 llvm::Pass *createCodePreparationPass();
 llvm::Pass *createScopInlinerPass();
-llvm::Pass *createDeadCodeElimPass();
+llvm::Pass *createDeadCodeElimWrapperPass();
 llvm::Pass *createDependenceInfoPass();
 llvm::Pass *createDependenceInfoWrapperPassPass();
 llvm::Pass *createDOTOnlyPrinterPass();
@@ -44,7 +42,7 @@ llvm::Pass *createPolyhedralInfoPass();
 llvm::Pass *createScopDetectionWrapperPassPass();
 llvm::Pass *createScopInfoRegionPassPass();
 llvm::Pass *createScopInfoWrapperPassPass();
-llvm::Pass *createRewriteByrefParamsPass();
+llvm::Pass *createRewriteByrefParamsWrapperPass();
 llvm::Pass *createIslAstInfoWrapperPassPass();
 llvm::Pass *createCodeGenerationPass();
 #ifdef GPU_CODEGEN
@@ -55,10 +53,13 @@ llvm::Pass *
 createManagedMemoryRewritePassPass(GPUArch Arch = GPUArch::NVPTX64,
                                    GPURuntime Runtime = GPURuntime::CUDA);
 #endif
-llvm::Pass *createIslScheduleOptimizerPass();
+llvm::Pass *createIslScheduleOptimizerWrapperPass();
 llvm::Pass *createFlattenSchedulePass();
-llvm::Pass *createDeLICMPass();
+llvm::Pass *createForwardOpTreeWrapperPass();
+llvm::Pass *createDeLICMWrapperPass();
 llvm::Pass *createMaximalStaticExpansionPass();
+llvm::Pass *createSimplifyWrapperPass(int);
+llvm::Pass *createPruneUnprofitableWrapperPass();
 
 extern char &CodePreparationID;
 } // namespace polly
@@ -74,7 +75,7 @@ struct PollyForcePassLinking {
       return;
 
     polly::createCodePreparationPass();
-    polly::createDeadCodeElimPass();
+    polly::createDeadCodeElimWrapperPass();
     polly::createDependenceInfoPass();
     polly::createDOTOnlyPrinterPass();
     polly::createDOTOnlyViewerPass();
@@ -86,19 +87,21 @@ struct PollyForcePassLinking {
     polly::createScopInfoRegionPassPass();
     polly::createPollyCanonicalizePass();
     polly::createPolyhedralInfoPass();
+    polly::createRewriteByrefParamsWrapperPass();
     polly::createIslAstInfoWrapperPassPass();
     polly::createCodeGenerationPass();
 #ifdef GPU_CODEGEN
     polly::createPPCGCodeGenerationPass();
     polly::createManagedMemoryRewritePassPass();
 #endif
-    polly::createIslScheduleOptimizerPass();
+    polly::createIslScheduleOptimizerWrapperPass();
     polly::createMaximalStaticExpansionPass();
     polly::createFlattenSchedulePass();
-    polly::createDeLICMPass();
+    polly::createForwardOpTreeWrapperPass();
+    polly::createDeLICMWrapperPass();
     polly::createDumpModulePass("", true);
-    polly::createSimplifyPass();
-    polly::createPruneUnprofitablePass();
+    polly::createSimplifyWrapperPass(0);
+    polly::createPruneUnprofitableWrapperPass();
   }
 } PollyForcePassLinking; // Force link by creating a global definition.
 } // namespace
@@ -107,21 +110,24 @@ namespace llvm {
 class PassRegistry;
 void initializeCodePreparationPass(llvm::PassRegistry &);
 void initializeScopInlinerPass(llvm::PassRegistry &);
-void initializeDeadCodeElimPass(llvm::PassRegistry &);
+void initializeDeadCodeElimWrapperPassPass(llvm::PassRegistry &);
 void initializeJSONExporterPass(llvm::PassRegistry &);
 void initializeJSONImporterPass(llvm::PassRegistry &);
 void initializeIslAstInfoWrapperPassPass(llvm::PassRegistry &);
 void initializeCodeGenerationPass(llvm::PassRegistry &);
-void initializeRewriteByrefParamsPass(llvm::PassRegistry &);
+void initializeRewriteByrefParamsWrapperPassPass(llvm::PassRegistry &);
 #ifdef GPU_CODEGEN
 void initializePPCGCodeGenerationPass(llvm::PassRegistry &);
 void initializeManagedMemoryRewritePassPass(llvm::PassRegistry &);
 #endif
-void initializeIslScheduleOptimizerPass(llvm::PassRegistry &);
+void initializeIslScheduleOptimizerWrapperPassPass(llvm::PassRegistry &);
 void initializeMaximalStaticExpanderPass(llvm::PassRegistry &);
 void initializePollyCanonicalizePass(llvm::PassRegistry &);
 void initializeFlattenSchedulePass(llvm::PassRegistry &);
-void initializeDeLICMPass(llvm::PassRegistry &);
+void initializeForwardOpTreeWrapperPassPass(llvm::PassRegistry &);
+void initializeDeLICMWrapperPassPass(llvm::PassRegistry &);
+void initializeSimplifyWrapperPassPass(llvm::PassRegistry &);
+void initializePruneUnprofitableWrapperPassPass(llvm::PassRegistry &);
 } // namespace llvm
 
 #endif

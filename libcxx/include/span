@@ -22,6 +22,9 @@ inline constexpr size_t dynamic_extent = numeric_limits<size_t>::max();
 template <class ElementType, size_t Extent = dynamic_extent>
     class span;
 
+template<class ElementType, size_t Extent>
+    inline constexpr bool ranges::enable_borrowed_range<span<ElementType, Extent>> = true;
+
 // [span.objectrep], views of object representation
 template <class ElementType, size_t Extent>
     span<const byte, ((Extent == dynamic_extent) ? dynamic_extent :
@@ -32,7 +35,6 @@ template <class ElementType, size_t Extent>
         (sizeof(ElementType) * Extent))> as_writable_bytes(span<ElementType, Extent> s) noexcept;
 
 
-namespace std {
 template <class ElementType, size_t Extent = dynamic_extent>
 class span {
 public:
@@ -123,6 +125,7 @@ template<class Container>
 */
 
 #include <__config>
+#include <__ranges/enable_borrowed_range.h>
 #include <array>        // for array
 #include <cstddef>      // for byte
 #include <iterator>     // for iterators
@@ -197,7 +200,11 @@ public:
     using const_pointer          = const _Tp *;
     using reference              = _Tp &;
     using const_reference        = const _Tp &;
-    using iterator               =  __wrap_iter<pointer>;
+#if (_LIBCPP_DEBUG_LEVEL == 2) || defined(_LIBCPP_ABI_SPAN_POINTER_ITERATORS)
+    using iterator               = pointer;
+#else
+    using iterator               = __wrap_iter<pointer>;
+#endif
     using reverse_iterator       = _VSTD::reverse_iterator<iterator>;
 
     static constexpr size_type extent = _Extent;
@@ -372,7 +379,11 @@ public:
     using const_pointer          = const _Tp *;
     using reference              = _Tp &;
     using const_reference        = const _Tp &;
-    using iterator               =  __wrap_iter<pointer>;
+#if (_LIBCPP_DEBUG_LEVEL == 2) || defined(_LIBCPP_ABI_SPAN_POINTER_ITERATORS)
+    using iterator               = pointer;
+#else
+    using iterator               = __wrap_iter<pointer>;
+#endif
     using reverse_iterator       = _VSTD::reverse_iterator<iterator>;
 
     static constexpr size_type extent = dynamic_extent;
@@ -515,6 +526,11 @@ private:
     pointer   __data;
     size_type __size;
 };
+
+#if !defined(_LIBCPP_HAS_NO_RANGES)
+template <class _Tp, size_t _Extent>
+inline constexpr bool ranges::enable_borrowed_range<span<_Tp, _Extent> > = true;
+#endif // !defined(_LIBCPP_HAS_NO_RANGES)
 
 //  as_bytes & as_writable_bytes
 template <class _Tp, size_t _Extent>

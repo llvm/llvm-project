@@ -17,6 +17,29 @@ using namespace mlir::LLVM;
 
 namespace {
 
+struct AbsOpConversion : public ConvertOpToLLVMPattern<complex::AbsOp> {
+  using ConvertOpToLLVMPattern<complex::AbsOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(complex::AbsOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    complex::AbsOp::Adaptor transformed(operands);
+    auto loc = op.getLoc();
+
+    ComplexStructBuilder complexStruct(transformed.complex());
+    Value real = complexStruct.real(rewriter, op.getLoc());
+    Value imag = complexStruct.imaginary(rewriter, op.getLoc());
+
+    auto fmf = LLVM::FMFAttr::get(op.getContext(), {});
+    Value sqNorm = rewriter.create<LLVM::FAddOp>(
+        loc, rewriter.create<LLVM::FMulOp>(loc, real, real, fmf),
+        rewriter.create<LLVM::FMulOp>(loc, imag, imag, fmf), fmf);
+
+    rewriter.replaceOpWithNewOp<LLVM::SqrtOp>(op, sqNorm);
+    return success();
+  }
+};
+
 struct CreateOpConversion : public ConvertOpToLLVMPattern<complex::CreateOp> {
   using ConvertOpToLLVMPattern<complex::CreateOp>::ConvertOpToLLVMPattern;
 
@@ -110,11 +133,93 @@ struct AddOpConversion : public ConvertOpToLLVMPattern<complex::AddOp> {
     auto result = ComplexStructBuilder::undef(rewriter, loc, structType);
 
     // Emit IR to add complex numbers.
-    auto fmf = LLVM::FMFAttr::get({}, op.getContext());
+    auto fmf = LLVM::FMFAttr::get(op.getContext(), {});
     Value real =
         rewriter.create<LLVM::FAddOp>(loc, arg.lhs.real(), arg.rhs.real(), fmf);
     Value imag =
         rewriter.create<LLVM::FAddOp>(loc, arg.lhs.imag(), arg.rhs.imag(), fmf);
+    result.setReal(rewriter, loc, real);
+    result.setImaginary(rewriter, loc, imag);
+
+    rewriter.replaceOp(op, {result});
+    return success();
+  }
+};
+
+struct DivOpConversion : public ConvertOpToLLVMPattern<complex::DivOp> {
+  using ConvertOpToLLVMPattern<complex::DivOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(complex::DivOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = op.getLoc();
+    BinaryComplexOperands arg =
+        unpackBinaryComplexOperands<complex::DivOp>(op, operands, rewriter);
+
+    // Initialize complex number struct for result.
+    auto structType = typeConverter->convertType(op.getType());
+    auto result = ComplexStructBuilder::undef(rewriter, loc, structType);
+
+    // Emit IR to add complex numbers.
+    auto fmf = LLVM::FMFAttr::get(op.getContext(), {});
+    Value rhsRe = arg.rhs.real();
+    Value rhsIm = arg.rhs.imag();
+    Value lhsRe = arg.lhs.real();
+    Value lhsIm = arg.lhs.imag();
+
+    Value rhsSqNorm = rewriter.create<LLVM::FAddOp>(
+        loc, rewriter.create<LLVM::FMulOp>(loc, rhsRe, rhsRe, fmf),
+        rewriter.create<LLVM::FMulOp>(loc, rhsIm, rhsIm, fmf), fmf);
+
+    Value resultReal = rewriter.create<LLVM::FAddOp>(
+        loc, rewriter.create<LLVM::FMulOp>(loc, lhsRe, rhsRe, fmf),
+        rewriter.create<LLVM::FMulOp>(loc, lhsIm, rhsIm, fmf), fmf);
+
+    Value resultImag = rewriter.create<LLVM::FSubOp>(
+        loc, rewriter.create<LLVM::FMulOp>(loc, lhsIm, rhsRe, fmf),
+        rewriter.create<LLVM::FMulOp>(loc, lhsRe, rhsIm, fmf), fmf);
+
+    result.setReal(
+        rewriter, loc,
+        rewriter.create<LLVM::FDivOp>(loc, resultReal, rhsSqNorm, fmf));
+    result.setImaginary(
+        rewriter, loc,
+        rewriter.create<LLVM::FDivOp>(loc, resultImag, rhsSqNorm, fmf));
+
+    rewriter.replaceOp(op, {result});
+    return success();
+  }
+};
+
+struct MulOpConversion : public ConvertOpToLLVMPattern<complex::MulOp> {
+  using ConvertOpToLLVMPattern<complex::MulOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(complex::MulOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = op.getLoc();
+    BinaryComplexOperands arg =
+        unpackBinaryComplexOperands<complex::MulOp>(op, operands, rewriter);
+
+    // Initialize complex number struct for result.
+    auto structType = typeConverter->convertType(op.getType());
+    auto result = ComplexStructBuilder::undef(rewriter, loc, structType);
+
+    // Emit IR to add complex numbers.
+    auto fmf = LLVM::FMFAttr::get(op.getContext(), {});
+    Value rhsRe = arg.rhs.real();
+    Value rhsIm = arg.rhs.imag();
+    Value lhsRe = arg.lhs.real();
+    Value lhsIm = arg.lhs.imag();
+
+    Value real = rewriter.create<LLVM::FSubOp>(
+        loc, rewriter.create<LLVM::FMulOp>(loc, rhsRe, lhsRe, fmf),
+        rewriter.create<LLVM::FMulOp>(loc, rhsIm, lhsIm, fmf), fmf);
+
+    Value imag = rewriter.create<LLVM::FAddOp>(
+        loc, rewriter.create<LLVM::FMulOp>(loc, lhsIm, rhsRe, fmf),
+        rewriter.create<LLVM::FMulOp>(loc, lhsRe, rhsIm, fmf), fmf);
+
     result.setReal(rewriter, loc, real);
     result.setImaginary(rewriter, loc, imag);
 
@@ -138,7 +243,7 @@ struct SubOpConversion : public ConvertOpToLLVMPattern<complex::SubOp> {
     auto result = ComplexStructBuilder::undef(rewriter, loc, structType);
 
     // Emit IR to substract complex numbers.
-    auto fmf = LLVM::FMFAttr::get({}, op.getContext());
+    auto fmf = LLVM::FMFAttr::get(op.getContext(), {});
     Value real =
         rewriter.create<LLVM::FSubOp>(loc, arg.lhs.real(), arg.rhs.real(), fmf);
     Value imag =
@@ -153,12 +258,15 @@ struct SubOpConversion : public ConvertOpToLLVMPattern<complex::SubOp> {
 } // namespace
 
 void mlir::populateComplexToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
+    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   // clang-format off
-  patterns.insert<
+  patterns.add<
+      AbsOpConversion,
       AddOpConversion,
       CreateOpConversion,
+      DivOpConversion,
       ImOpConversion,
+      MulOpConversion,
       ReOpConversion,
       SubOpConversion
     >(converter);
@@ -176,14 +284,15 @@ void ConvertComplexToLLVMPass::runOnOperation() {
   auto module = getOperation();
 
   // Convert to the LLVM IR dialect using the converter defined above.
-  OwningRewritePatternList patterns;
+  RewritePatternSet patterns(&getContext());
   LLVMTypeConverter converter(&getContext());
-  populateStdToLLVMConversionPatterns(converter, patterns);
   populateComplexToLLVMConversionPatterns(converter, patterns);
 
   LLVMConversionTarget target(getContext());
-  target.addLegalOp<ModuleOp, ModuleTerminatorOp>();
-  if (failed(applyFullConversion(module, target, std::move(patterns))))
+  target.addLegalOp<ModuleOp, FuncOp>();
+  target.addLegalOp<LLVM::DialectCastOp>();
+  target.addIllegalDialect<complex::ComplexDialect>();
+  if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();
 }
 

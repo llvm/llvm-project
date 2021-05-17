@@ -20,8 +20,6 @@
 #include "llvm/Support/Allocator.h"
 #include <cassert>
 #include <cstdint>
-#include <memory>
-#include <vector>
 
 namespace llvm {
 namespace codeview {
@@ -118,4 +116,4 @@ public:
 } // end namespace codeview
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_CODEVIEW_MERGINGTYPETABLEBUILDER_H
+#endif // LLVM_DEBUGINFO_CODEVIEW_GLOBALTYPETABLEBUILDER_H

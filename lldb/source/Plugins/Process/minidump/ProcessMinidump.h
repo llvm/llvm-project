@@ -98,8 +98,8 @@ public:
 protected:
   void Clear();
 
-  bool UpdateThreadList(ThreadList &old_thread_list,
-                        ThreadList &new_thread_list) override;
+  bool DoUpdateThreadList(ThreadList &old_thread_list,
+                          ThreadList &new_thread_list) override;
 
   void ReadModuleList();
 

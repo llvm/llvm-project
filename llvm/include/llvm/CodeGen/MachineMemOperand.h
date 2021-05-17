@@ -43,9 +43,9 @@ struct MachinePointerInfo {
   /// Offset - This is an offset from the base Value*.
   int64_t Offset;
 
-  uint8_t StackID;
-
   unsigned AddrSpace = 0;
+
+  uint8_t StackID;
 
   explicit MachinePointerInfo(const Value *v, int64_t offset = 0,
                               uint8_t ID = 0)
@@ -60,8 +60,8 @@ struct MachinePointerInfo {
   }
 
   explicit MachinePointerInfo(unsigned AddressSpace = 0, int64_t offset = 0)
-      : V((const Value *)nullptr), Offset(offset), StackID(0),
-        AddrSpace(AddressSpace) {}
+      : V((const Value *)nullptr), Offset(offset), AddrSpace(AddressSpace),
+        StackID(0) {}
 
   explicit MachinePointerInfo(
     PointerUnion<const Value *, const PseudoSourceValue *> v,
@@ -223,17 +223,9 @@ public:
   /// Return the size in bits of the memory reference.
   uint64_t getSizeInBits() const { return Size * 8; }
 
-  LLVM_ATTRIBUTE_DEPRECATED(uint64_t getAlignment() const,
-                            "Use getAlign instead");
-
   /// Return the minimum known alignment in bytes of the actual memory
   /// reference.
   Align getAlign() const;
-
-  LLVM_ATTRIBUTE_DEPRECATED(uint64_t getBaseAlignment() const,
-                            "Use getBaseAlign instead") {
-    return BaseAlign.value();
-  }
 
   /// Return the minimum known alignment in bytes of the base address, without
   /// the offset.
@@ -276,7 +268,7 @@ public:
 
   /// Returns true if this memory operation doesn't have any ordering
   /// constraints other than normal aliasing. Volatile and (ordered) atomic
-  /// memory operations can't be reordered. 
+  /// memory operations can't be reordered.
   bool isUnordered() const {
     return (getOrdering() == AtomicOrdering::NotAtomic ||
             getOrdering() == AtomicOrdering::Unordered) &&

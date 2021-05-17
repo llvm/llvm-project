@@ -1,7 +1,7 @@
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-objdump %t -d --symbolize-operands --x86-asm-syntax=intel --no-show-raw-insn --no-leading-addr | \
+# RUN: llvm-objdump %t -d --symbolize-operands -M intel --no-show-raw-insn --no-leading-addr | \
 # RUN:   FileCheck %s --match-full-lines --check-prefix=INTEL
-# RUN: llvm-objdump %t -d --symbolize-operands --x86-asm-syntax=att --no-show-raw-insn --no-leading-addr | \
+# RUN: llvm-objdump %t -d --symbolize-operands -M att --no-show-raw-insn --no-leading-addr | \
 # RUN:   FileCheck %s --match-full-lines --check-prefix=ATT
 
 ## Expect to find the branch labels and global variable name.

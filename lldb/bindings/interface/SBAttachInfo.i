@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 namespace lldb {
-
+%feature("docstring",
+"Describes how to attach when calling :py:class:`SBTarget.Attach`."
+) SBAttachInfo;
 class SBAttachInfo
 {
 public:

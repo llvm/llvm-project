@@ -1,6 +1,6 @@
 # REQUIRES: x86
 
-# RUN: split-file %s %t
+# RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
 # RUN:     %t/basics.s -o %t/basics.o
 
@@ -19,6 +19,9 @@
 # EXPORTS-NOT:   0x{{0*}}[[#%X, FOO_ADDR]] _foo
 # EXPORTS-NM-DAG: (__TEXT,__cstring) non-external (was a private external) _foo
 # EXPORTS-NM-DAG: (__TEXT,__cstring) external _bar
+
+## The tests for weak .private_extern symbols not being referenced in the
+## weak bind table can be found in weak-private-extern.s
 
 #--- basics.s
 .section __TEXT,__cstring

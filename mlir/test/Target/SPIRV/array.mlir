@@ -11,8 +11,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 // -----
 
 spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
-  // CHECK: spv.globalVariable {{@.*}} : !spv.ptr<!spv.rtarray<f32, stride=4>, StorageBuffer>
-  spv.globalVariable @var0 : !spv.ptr<!spv.rtarray<f32, stride=4>, StorageBuffer>
-  // CHECK: spv.globalVariable {{@.*}} : !spv.ptr<!spv.rtarray<vector<4xf16>>, Input>
-  spv.globalVariable @var1 : !spv.ptr<!spv.rtarray<vector<4xf16>>, Input>
+  // CHECK: spv.GlobalVariable {{@.*}} : !spv.ptr<!spv.rtarray<f32, stride=4>, StorageBuffer>
+  spv.GlobalVariable @var0 : !spv.ptr<!spv.rtarray<f32, stride=4>, StorageBuffer>
+  // CHECK: spv.GlobalVariable {{@.*}} : !spv.ptr<!spv.rtarray<vector<4xf16>>, Input>
+  spv.GlobalVariable @var1 : !spv.ptr<!spv.rtarray<vector<4xf16>>, Input>
 }

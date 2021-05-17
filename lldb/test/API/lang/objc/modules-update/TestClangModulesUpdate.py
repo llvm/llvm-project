@@ -14,6 +14,7 @@ class TestClangModuleUpdate(TestBase):
 
     @skipIf(debug_info=no_match(["gmodules"]))
     @skipIfReproducer # VFS is a snapshot.
+    @skipIfDarwin # rdar://76540904
     def test_expr(self):
         with open(self.getBuildArtifact("module.modulemap"), "w") as f:
             f.write("""

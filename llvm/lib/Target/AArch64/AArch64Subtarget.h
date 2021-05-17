@@ -45,6 +45,7 @@ public:
     AppleA11,
     AppleA12,
     AppleA13,
+    AppleA14,
     Carmel,
     CortexA35,
     CortexA53,
@@ -195,8 +196,13 @@ protected:
   // HasZeroCycleZeroing - Has zero-cycle zeroing instructions.
   bool HasZeroCycleZeroing = false;
   bool HasZeroCycleZeroingGP = false;
-  bool HasZeroCycleZeroingFP = false;
   bool HasZeroCycleZeroingFPWorkaround = false;
+
+  // It is generally beneficial to rewrite "fmov s0, wzr" to "movi d0, #0".
+  // as movi is more efficient across all cores. Newer cores can eliminate
+  // fmovs early and there is no difference with movi, but this not true for
+  // all implementations.
+  bool HasZeroCycleZeroingFP = true;
 
   // StrictAlign - Disallow unaligned memory accesses.
   bool StrictAlign = false;
@@ -208,7 +214,6 @@ protected:
   unsigned MinVectorRegisterBitWidth = 64;
 
   bool OutlineAtomics = false;
-  bool UseAA = false;
   bool PredictableSelectIsExpensive = false;
   bool BalanceFPOps = false;
   bool CustomAsCheapAsMove = false;
@@ -220,6 +225,7 @@ protected:
   bool UseAlternateSExtLoadCVTF32Pattern = false;
   bool HasArithmeticBccFusion = false;
   bool HasArithmeticCbzFusion = false;
+  bool HasCmpBccFusion = false;
   bool HasFuseAddress = false;
   bool HasFuseAES = false;
   bool HasFuseArithmeticLogic = false;
@@ -376,6 +382,7 @@ public:
   }
   bool hasArithmeticBccFusion() const { return HasArithmeticBccFusion; }
   bool hasArithmeticCbzFusion() const { return HasArithmeticCbzFusion; }
+  bool hasCmpBccFusion() const { return HasCmpBccFusion; }
   bool hasFuseAddress() const { return HasFuseAddress; }
   bool hasFuseAES() const { return HasFuseAES; }
   bool hasFuseArithmeticLogic() const { return HasFuseArithmeticLogic; }
@@ -481,9 +488,12 @@ public:
   bool isTargetELF() const { return TargetTriple.isOSBinFormatELF(); }
   bool isTargetMachO() const { return TargetTriple.isOSBinFormatMachO(); }
 
-  bool isTargetILP32() const { return TargetTriple.isArch32Bit(); }
+  bool isTargetILP32() const {
+    return TargetTriple.isArch32Bit() ||
+           TargetTriple.getEnvironment() == Triple::GNUILP32;
+  }
 
-  bool useAA() const override { return UseAA; }
+  bool useAA() const override;
 
   bool outlineAtomics() const { return OutlineAtomics; }
 
@@ -551,7 +561,7 @@ public:
 
   bool enableEarlyIfConversion() const override;
 
-  bool enableAdvancedRASplitCost() const override { return true; }
+  bool enableAdvancedRASplitCost() const override { return false; }
 
   std::unique_ptr<PBQPRAConstraint> getCustomPBQPConstraints() const override;
 

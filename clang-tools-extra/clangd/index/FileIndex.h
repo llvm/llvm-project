@@ -71,6 +71,7 @@ enum class DuplicateHandling {
 /// locking when we swap or obtain references to snapshots.
 class FileSymbols {
 public:
+  FileSymbols(IndexContents IdxContents);
   /// Updates all slabs associated with the \p Key.
   /// If either is nullptr, corresponding data for \p Key will be removed.
   /// If CountReferences is true, \p Refs will be used for counting references
@@ -91,6 +92,8 @@ public:
   void profile(MemoryTree &MT) const;
 
 private:
+  IndexContents IdxContents;
+
   struct RefSlabAndCountReferences {
     std::shared_ptr<RefSlab> Slab;
     bool CountReferences = false;
@@ -107,7 +110,7 @@ private:
 /// FIXME: Expose an interface to remove files that are closed.
 class FileIndex : public MergedIndex {
 public:
-  FileIndex(bool UseDex = true, bool CollectMainFileRefs = false);
+  FileIndex();
 
   /// Update preamble symbols of file \p Path with all declarations in \p AST
   /// and macros in \p PP.
@@ -122,9 +125,6 @@ public:
   void profile(MemoryTree &MT) const;
 
 private:
-  bool UseDex; // FIXME: this should be always on.
-  bool CollectMainFileRefs;
-
   // Contains information from each file's preamble only. Symbols and relations
   // are sharded per declaration file to deduplicate multiple symbols and reduce
   // memory usage.
@@ -158,7 +158,7 @@ using SlabTuple = std::tuple<SymbolSlab, RefSlab, RelationSlab>;
 /// Retrieves symbols and refs of local top level decls in \p AST (i.e.
 /// `AST.getLocalTopLevelDecls()`).
 /// Exposed to assist in unit tests.
-SlabTuple indexMainDecls(ParsedAST &AST, bool CollectMainFileRefs = false);
+SlabTuple indexMainDecls(ParsedAST &AST);
 
 /// Index declarations from \p AST and macros from \p PP that are declared in
 /// included headers.

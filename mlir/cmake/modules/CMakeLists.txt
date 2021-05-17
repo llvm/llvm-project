@@ -1,3 +1,5 @@
+include(LLVMDistributionSupport)
+
 # Generate a list of CMake library targets so that other CMake projects can
 # link against them. LLVM calls its version of this file LLVMExports.cmake, but
 # the usual CMake convention seems to be ${Project}Targets.cmake.
@@ -19,7 +21,7 @@ get_property(MLIR_TRANSLATION_LIBS GLOBAL PROPERTY MLIR_TRANSLATION_LIBS)
 # Generate MlirConfig.cmake for the build tree.
 set(MLIR_CONFIG_CMAKE_DIR "${mlir_cmake_builddir}")
 set(MLIR_CONFIG_LLVM_CMAKE_DIR "${llvm_cmake_builddir}")
-set(MLIR_CONFIG_EXPORTS_FILE "\${MLIR_CMAKE_DIR}/MLIRTargets.cmake")
+set(MLIR_CONFIG_INCLUDE_EXPORTS "include(\"\${MLIR_CMAKE_DIR}/MLIRTargets.cmake\")")
 set(MLIR_CONFIG_INCLUDE_DIRS
   "${MLIR_SOURCE_DIR}/include"
   "${MLIR_BINARY_DIR}/include"
@@ -30,7 +32,6 @@ configure_file(
   @ONLY)
 set(MLIR_CONFIG_CMAKE_DIR)
 set(MLIR_CONFIG_LLVM_CMAKE_DIR)
-set(MLIR_CONFIG_EXPORTS_FILE)
 set(MLIR_CONFIG_INCLUDE_DIRS)
 
 # For compatibility with projects that include(MLIRConfig)
@@ -55,7 +56,7 @@ get_filename_component(MLIR_INSTALL_PREFIX \"\${MLIR_INSTALL_PREFIX}\" PATH)")
 endforeach(p)
 set(MLIR_CONFIG_CMAKE_DIR "\${MLIR_INSTALL_PREFIX}/${MLIR_INSTALL_PACKAGE_DIR}")
 set(MLIR_CONFIG_LLVM_CMAKE_DIR "\${MLIR_INSTALL_PREFIX}/${LLVM_INSTALL_PACKAGE_DIR}")
-set(MLIR_CONFIG_EXPORTS_FILE "\${MLIR_CMAKE_DIR}/MLIRTargets.cmake")
+get_config_exports_includes(MLIR MLIR_CONFIG_INCLUDE_EXPORTS)
 set(MLIR_CONFIG_INCLUDE_DIRS
   "\${MLIR_INSTALL_PREFIX}/include"
   )
@@ -66,21 +67,18 @@ configure_file(
 set(MLIR_CONFIG_CODE)
 set(MLIR_CONFIG_CMAKE_DIR)
 set(MLIR_CONFIG_LLVM_CMAKE_DIR)
-set(MLIR_CONFIG_EXPORTS_FILE)
 set(MLIR_CONFIG_INCLUDE_DIRS)
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   # Not TOOLCHAIN ONLY, so install the MLIR parts as well
   # Include the cmake files so other tools can use mlir-tblgen, etc.
-  get_property(mlir_has_exports GLOBAL PROPERTY MLIR_HAS_EXPORTS)
-  if(mlir_has_exports)
-    install(EXPORT MLIRTargets DESTINATION ${MLIR_INSTALL_PACKAGE_DIR}
-            COMPONENT mlir-cmake-exports)
-  endif()
+  install_distribution_exports(MLIR)
 
   install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/MLIRConfig.cmake
     ${CMAKE_CURRENT_SOURCE_DIR}/AddMLIR.cmake
+    ${CMAKE_CURRENT_SOURCE_DIR}/AddMLIRPython.cmake
+    ${CMAKE_CURRENT_SOURCE_DIR}/MLIRDetectPythonEnv.cmake
     DESTINATION ${MLIR_INSTALL_PACKAGE_DIR}
     COMPONENT mlir-cmake-exports)
 

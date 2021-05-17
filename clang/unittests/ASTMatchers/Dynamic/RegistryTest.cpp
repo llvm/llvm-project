@@ -297,6 +297,17 @@ TEST_F(RegistryTest, TypeTraversal) {
   EXPECT_TRUE(matches("int b[7];", M));
 }
 
+TEST_F(RegistryTest, CXXBaseSpecifier) {
+  // TODO: rewrite with top-level cxxBaseSpecifier matcher when available
+  DeclarationMatcher ClassHasAnyDirectBase =
+      constructMatcher("cxxRecordDecl",
+                       constructMatcher("hasDirectBase",
+                                        constructMatcher("cxxBaseSpecifier")))
+          .getTypedMatcher<Decl>();
+  EXPECT_TRUE(matches("class X {}; class Y : X {};", ClassHasAnyDirectBase));
+  EXPECT_TRUE(notMatches("class X {};", ClassHasAnyDirectBase));
+}
+
 TEST_F(RegistryTest, CXXCtorInitializer) {
   Matcher<Decl> CtorDecl = constructMatcher(
       "cxxConstructorDecl",
@@ -495,6 +506,26 @@ TEST_F(RegistryTest, Completion) {
   EXPECT_TRUE(hasCompletion(
       Comps, "isSameOrDerivedFrom(",
       "Matcher<CXXRecordDecl> isSameOrDerivedFrom(string|Matcher<NamedDecl>)"));
+}
+
+TEST_F(RegistryTest, MatcherBuilder) {
+  auto Ctor = *lookupMatcherCtor("mapAnyOf");
+  EXPECT_TRUE(Registry::isBuilderMatcher(Ctor));
+  auto BuiltCtor = Registry::buildMatcherCtor(Ctor, {}, Args(ASTNodeKind::getFromNodeKind<WhileStmt>(), ASTNodeKind::getFromNodeKind<ForStmt>()), nullptr);
+  EXPECT_TRUE(BuiltCtor.get());
+  auto LoopMatcher = Registry::constructMatcher(BuiltCtor.get(), SourceRange(), Args(), nullptr).getTypedMatcher<Stmt>();
+  EXPECT_TRUE(matches("void f() { for (;;) {} }", LoopMatcher));
+  EXPECT_TRUE(matches("void f() { while (true) {} }", LoopMatcher));
+  EXPECT_FALSE(matches("void f() { if (true) {} }", LoopMatcher));
+
+  auto NotBuiltCtor = Registry::buildMatcherCtor(Ctor, {}, Args(ASTNodeKind::getFromNodeKind<FunctionDecl>(), ASTNodeKind::getFromNodeKind<ForStmt>()), nullptr);
+  EXPECT_FALSE(NotBuiltCtor.get());
+}
+
+TEST_F(RegistryTest, NodeType) {
+  EXPECT_TRUE(Registry::nodeMatcherType(*lookupMatcherCtor("callExpr")).isSame(ASTNodeKind::getFromNodeKind<CallExpr>()));
+  EXPECT_TRUE(Registry::nodeMatcherType(*lookupMatcherCtor("has")).isNone());
+  EXPECT_TRUE(Registry::nodeMatcherType(*lookupMatcherCtor("allOf")).isNone());
 }
 
 TEST_F(RegistryTest, HasArgs) {

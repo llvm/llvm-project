@@ -73,7 +73,7 @@ PrettyStackTraceEntry *ReverseStackTrace(PrettyStackTraceEntry *Head) {
         std::make_tuple(Head, Head->NextEntry, Prev);
   return Prev;
 }
-}
+} // namespace llvm
 
 static void PrintStack(raw_ostream &OS) {
   // Print out the stack in reverse order. To avoid recursion (which is likely

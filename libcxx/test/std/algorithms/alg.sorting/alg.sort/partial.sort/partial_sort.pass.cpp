@@ -9,65 +9,66 @@
 // <algorithm>
 
 // template<RandomAccessIterator Iter>
-//   requires ShuffleIterator<Iter>
-//         && LessThanComparable<Iter::value_type>
-//   void
+//   requires ShuffleIterator<Iter> && LessThanComparable<Iter::value_type>
+//   constexpr void  // constexpr in C++20
 //   partial_sort(Iter first, Iter middle, Iter last);
 
 #include <algorithm>
-#include <random>
 #include <cassert>
 
 #include "test_macros.h"
+#include "test_iterators.h"
+#include "MoveOnly.h"
 
-std::mt19937 randomness;
-
-void
-test_larger_sorts(int N, int M)
+template<class T, class Iter>
+TEST_CONSTEXPR_CXX20 bool test()
 {
-    assert(N != 0);
-    assert(N >= M);
-    int* array = new int[N];
-    for (int i = 0; i < N; ++i)
-        array[i] = i;
-    std::shuffle(array, array+N, randomness);
-    std::partial_sort(array, array+M, array+N);
-    for (int i = 0; i < M; ++i)
-    {
-        assert(i < N); // quiet analysis warnings
-        assert(array[i] == i);
+    int orig[15] = {3,1,4,1,5, 9,2,6,5,3, 5,8,9,7,9};
+    T work[15] = {3,1,4,1,5, 9,2,6,5,3, 5,8,9,7,9};
+    for (int n = 0; n < 15; ++n) {
+        for (int m = 0; m <= n; ++m) {
+            std::partial_sort(Iter(work), Iter(work+m), Iter(work+n));
+            assert(std::is_sorted(work, work+m));
+            assert(std::is_permutation(work, work+n, orig));
+            // No element in the unsorted portion is less than any element in the sorted portion.
+            for (int i = m; i < n; ++i) {
+                assert(m == 0 || !(work[i] < work[m-1]));
+            }
+            std::copy(orig, orig+15, work);
+        }
     }
-    delete [] array;
-}
 
-void
-test_larger_sorts(int N)
-{
-    test_larger_sorts(N, 0);
-    test_larger_sorts(N, 1);
-    test_larger_sorts(N, 2);
-    test_larger_sorts(N, 3);
-    test_larger_sorts(N, N/2-1);
-    test_larger_sorts(N, N/2);
-    test_larger_sorts(N, N/2+1);
-    test_larger_sorts(N, N-2);
-    test_larger_sorts(N, N-1);
-    test_larger_sorts(N, N);
+    {
+        T input[] = {3, 4, 2, 5, 1};
+        std::partial_sort(Iter(input), Iter(input + 3), Iter(input + 5));
+        assert(input[0] == 1);
+        assert(input[1] == 2);
+        assert(input[2] == 3);
+        assert(input[3] + input[4] == 4 + 5);
+    }
+    return true;
 }
 
 int main(int, char**)
 {
-    int i = 0;
-    std::partial_sort(&i, &i, &i);
-    assert(i == 0);
-    test_larger_sorts(10);
-    test_larger_sorts(256);
-    test_larger_sorts(257);
-    test_larger_sorts(499);
-    test_larger_sorts(500);
-    test_larger_sorts(997);
-    test_larger_sorts(1000);
-    test_larger_sorts(1009);
+    int i = 42;
+    std::partial_sort(&i, &i, &i);  // no-op
+    assert(i == 42);
 
-  return 0;
+    test<int, random_access_iterator<int*> >();
+    test<int, int*>();
+
+#if TEST_STD_VER >= 11
+    test<MoveOnly, random_access_iterator<MoveOnly*>>();
+    test<MoveOnly, MoveOnly*>();
+#endif
+
+#if TEST_STD_VER >= 20
+    static_assert(test<int, random_access_iterator<int*>>());
+    static_assert(test<int, int*>());
+    static_assert(test<MoveOnly, random_access_iterator<MoveOnly*>>());
+    static_assert(test<MoveOnly, MoveOnly*>());
+#endif
+
+    return 0;
 }

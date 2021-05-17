@@ -17,17 +17,19 @@ namespace scudo {
 
 class ReleaseRecorder {
 public:
-  ReleaseRecorder(uptr BaseAddress, MapPlatformData *Data = nullptr)
-      : BaseAddress(BaseAddress), Data(Data) {}
+  ReleaseRecorder(uptr Base, MapPlatformData *Data = nullptr)
+      : Base(Base), Data(Data) {}
 
   uptr getReleasedRangesCount() const { return ReleasedRangesCount; }
 
   uptr getReleasedBytes() const { return ReleasedBytes; }
 
+  uptr getBase() const { return Base; }
+
   // Releases [From, To) range of pages back to OS.
   void releasePageRangeToOS(uptr From, uptr To) {
     const uptr Size = To - From;
-    releasePagesToOS(BaseAddress, From, Size, Data);
+    releasePagesToOS(Base, From, Size, Data);
     ReleasedRangesCount++;
     ReleasedBytes += Size;
   }
@@ -35,7 +37,7 @@ public:
 private:
   uptr ReleasedRangesCount = 0;
   uptr ReleasedBytes = 0;
-  uptr BaseAddress = 0;
+  uptr Base = 0;
   MapPlatformData *Data = nullptr;
 };
 
@@ -79,7 +81,8 @@ public:
       memset(Buffer, 0, BufferSize);
     } else {
       Buffer = reinterpret_cast<uptr *>(
-          map(nullptr, BufferSize, "scudo:counters", MAP_ALLOWNOMEM));
+          map(nullptr, roundUpTo(BufferSize, getPageSizeCached()),
+              "scudo:counters", MAP_ALLOWNOMEM));
     }
   }
   ~PackedCounterArray() {
@@ -88,7 +91,8 @@ public:
     if (Buffer == &StaticBuffer[0])
       Mutex.unlock();
     else
-      unmap(reinterpret_cast<void *>(Buffer), BufferSize);
+      unmap(reinterpret_cast<void *>(Buffer),
+            roundUpTo(BufferSize, getPageSizeCached()));
   }
 
   bool isAllocated() const { return !!Buffer; }
@@ -179,11 +183,13 @@ private:
   uptr CurrentRangeStatePage = 0;
 };
 
-template <class TransferBatchT, class ReleaseRecorderT, typename SkipRegionT>
+template <class TransferBatchT, class ReleaseRecorderT, typename DecompactPtrT,
+          typename SkipRegionT>
 NOINLINE void
-releaseFreeMemoryToOS(const IntrusiveList<TransferBatchT> &FreeList, uptr Base,
+releaseFreeMemoryToOS(const IntrusiveList<TransferBatchT> &FreeList,
                       uptr RegionSize, uptr NumberOfRegions, uptr BlockSize,
-                      ReleaseRecorderT *Recorder, SkipRegionT SkipRegion) {
+                      ReleaseRecorderT *Recorder, DecompactPtrT DecompactPtr,
+                      SkipRegionT SkipRegion) {
   const uptr PageSize = getPageSizeCached();
 
   // Figure out the number of chunks per page and whether we can take a fast
@@ -236,9 +242,8 @@ releaseFreeMemoryToOS(const IntrusiveList<TransferBatchT> &FreeList, uptr Base,
     // Each chunk affects one page only.
     for (const auto &It : FreeList) {
       for (u32 I = 0; I < It.getCount(); I++) {
-        const uptr P = reinterpret_cast<uptr>(It.get(I)) - Base;
-        // This takes care of P < Base and P >= Base + RoundedSize.
-        if (UNLIKELY(P >= RoundedSize))
+        const uptr P = DecompactPtr(It.get(I)) - Recorder->getBase();
+        if (P >= RoundedSize)
           continue;
         const uptr RegionIndex = NumberOfRegions == 1U ? 0 : P / RegionSize;
         const uptr PInRegion = P - RegionIndex * RegionSize;
@@ -251,9 +256,8 @@ releaseFreeMemoryToOS(const IntrusiveList<TransferBatchT> &FreeList, uptr Base,
     const uptr LastBlockInRegion = ((RegionSize / BlockSize) - 1U) * BlockSize;
     for (const auto &It : FreeList) {
       for (u32 I = 0; I < It.getCount(); I++) {
-        const uptr P = reinterpret_cast<uptr>(It.get(I)) - Base;
-        // This takes care of P < Base and P >= Base + RoundedSize.
-        if (UNLIKELY(P >= RoundedSize))
+        const uptr P = DecompactPtr(It.get(I)) - Recorder->getBase();
+        if (P >= RoundedSize)
           continue;
         const uptr RegionIndex = NumberOfRegions == 1U ? 0 : P / RegionSize;
         uptr PInRegion = P - RegionIndex * RegionSize;

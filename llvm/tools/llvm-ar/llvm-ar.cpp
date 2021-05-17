@@ -270,7 +270,8 @@ static void getArchive() {
 }
 
 static object::Archive &readLibrary(const Twine &Library) {
-  auto BufOrErr = MemoryBuffer::getFile(Library, -1, false);
+  auto BufOrErr = MemoryBuffer::getFile(Library, /*IsText=*/false,
+                                        /*RequiresNullTerminator=*/false);
   failIfError(BufOrErr.getError(), "could not open library " + Library);
   ArchiveBuffers.push_back(std::move(*BufOrErr));
   auto LibOrErr =
@@ -995,8 +996,8 @@ static void performOperation(ArchiveOperation Operation,
 static int performOperation(ArchiveOperation Operation,
                             std::vector<NewArchiveMember> *NewMembers) {
   // Create or open the archive object.
-  ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
-      MemoryBuffer::getFile(ArchiveName, -1, false);
+  ErrorOr<std::unique_ptr<MemoryBuffer>> Buf = MemoryBuffer::getFile(
+      ArchiveName, /*IsText=*/false, /*RequiresNullTerminator=*/false);
   std::error_code EC = Buf.getError();
   if (EC && EC != errc::no_such_file_or_directory)
     fail("unable to open '" + ArchiveName + "': " + EC.message());

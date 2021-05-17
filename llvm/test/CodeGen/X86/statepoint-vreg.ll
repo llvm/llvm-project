@@ -159,24 +159,29 @@ define void @test_base_derived(i32 addrspace(1)* %base, i32 addrspace(1)* %deriv
   ret void
 }
 
-; deopt GC pointer not present in GC args must be spilled
+; deopt GC pointer not present in GC args goes on reg.
 define void @test_deopt_gcpointer(i32 addrspace(1)* %a, i32 addrspace(1)* %b) gc "statepoint-example" {
 ; CHECK-LABEL: test_deopt_gcpointer:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    subq $16, %rsp
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 24
+; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset %rbx, -16
+; CHECK-NEXT:    .cfi_offset %rbx, -24
+; CHECK-NEXT:    .cfi_offset %r14, -16
 ; CHECK-NEXT:    movq %rsi, %rbx
-; CHECK-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rdi, %r14
 ; CHECK-NEXT:    callq func
 ; CHECK-NEXT:  .Ltmp4:
 ; CHECK-NEXT:    movq %rbx, %rdi
 ; CHECK-NEXT:    callq consume
-; CHECK-NEXT:    addq $16, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    addq $8, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %safepoint_token = tail call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @func, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 addrspace(1)* %a), "gc-live" (i32 addrspace(1)* %b)]

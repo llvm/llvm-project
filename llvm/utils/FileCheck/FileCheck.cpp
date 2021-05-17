@@ -22,6 +22,7 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cmath>
+#include <map>
 using namespace llvm;
 
 static cl::extrahelp FileCheckOptsEnv(
@@ -78,7 +79,7 @@ static cl::opt<bool> AllowEmptyInput(
              "checks that some error message does not occur, for example."));
 
 static cl::opt<bool> AllowUnusedPrefixes(
-    "allow-unused-prefixes", cl::init(true),
+    "allow-unused-prefixes", cl::init(false), cl::ZeroOrMore,
     cl::desc("Allow prefixes to be specified but not appear in the test."));
 
 static cl::opt<bool> MatchFullLines(
@@ -212,10 +213,19 @@ static MarkerStyle GetMarker(FileCheckDiag::MatchType MatchTy) {
   case FileCheckDiag::MatchFoundButDiscarded:
     return MarkerStyle('!', raw_ostream::CYAN,
                        "discard: overlaps earlier match");
+  case FileCheckDiag::MatchFoundErrorNote:
+    // Note should always be overridden within the FileCheckDiag.
+    return MarkerStyle('!', raw_ostream::RED,
+                       "error: unknown error after match",
+                       /*FiltersAsError=*/true);
   case FileCheckDiag::MatchNoneAndExcluded:
     return MarkerStyle('X', raw_ostream::GREEN);
   case FileCheckDiag::MatchNoneButExpected:
     return MarkerStyle('X', raw_ostream::RED, "error: no match found",
+                       /*FiltersAsError=*/true);
+  case FileCheckDiag::MatchNoneForInvalidPattern:
+    return MarkerStyle('X', raw_ostream::RED,
+                       "error: match failed for invalid pattern",
                        /*FiltersAsError=*/true);
   case FileCheckDiag::MatchFuzzy:
     return MarkerStyle('?', raw_ostream::MAGENTA, "possible intended match",
@@ -248,7 +258,10 @@ static void DumpInputAnnotationHelp(raw_ostream &OS) {
   // Labels for input lines.
   OS << "  - ";
   WithColor(OS, raw_ostream::SAVEDCOLOR, true) << "L:";
-  OS << "     labels line number L of the input file\n";
+  OS << "     labels line number L of the input file\n"
+     << "           An extra space is added after each input line to represent"
+     << " the\n"
+     << "           newline character\n";
 
   // Labels for annotation lines.
   OS << "  - ";
@@ -366,16 +379,25 @@ BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
                       const std::vector<FileCheckDiag> &Diags,
                       std::vector<InputAnnotation> &Annotations,
                       unsigned &LabelWidth) {
-  // How many diagnostics have we seen so far?
-  unsigned DiagCount = 0;
-  // How many diagnostics has the current check seen so far?
-  unsigned CheckDiagCount = 0;
+  struct CompareSMLoc {
+    bool operator()(const SMLoc &LHS, const SMLoc &RHS) const {
+      return LHS.getPointer() < RHS.getPointer();
+    }
+  };
+  // How many diagnostics does each pattern have?
+  std::map<SMLoc, unsigned, CompareSMLoc> DiagCountPerPattern;
+  for (auto Diag : Diags)
+    ++DiagCountPerPattern[Diag.CheckLoc];
+  // How many diagnostics have we seen so far per pattern?
+  std::map<SMLoc, unsigned, CompareSMLoc> DiagIndexPerPattern;
+  // How many total diagnostics have we seen so far?
+  unsigned DiagIndex = 0;
   // What's the widest label?
   LabelWidth = 0;
   for (auto DiagItr = Diags.begin(), DiagEnd = Diags.end(); DiagItr != DiagEnd;
        ++DiagItr) {
     InputAnnotation A;
-    A.DiagIndex = DiagCount++;
+    A.DiagIndex = DiagIndex++;
 
     // Build label, which uniquely identifies this check result.
     unsigned CheckBufferID = SM.FindBufferContainingLoc(DiagItr->CheckLoc);
@@ -391,17 +413,8 @@ BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
     else
       llvm_unreachable("expected diagnostic's check location to be either in "
                        "the check file or for an implicit pattern");
-    unsigned CheckDiagIndex = UINT_MAX;
-    auto DiagNext = std::next(DiagItr);
-    if (DiagNext != DiagEnd && DiagItr->CheckTy == DiagNext->CheckTy &&
-        DiagItr->CheckLoc == DiagNext->CheckLoc)
-      CheckDiagIndex = CheckDiagCount++;
-    else if (CheckDiagCount) {
-      CheckDiagIndex = CheckDiagCount;
-      CheckDiagCount = 0;
-    }
-    if (CheckDiagIndex != UINT_MAX)
-      Label << "'" << CheckDiagIndex;
+    if (DiagCountPerPattern[DiagItr->CheckLoc] > 1)
+      Label << "'" << DiagIndexPerPattern[DiagItr->CheckLoc]++;
     Label.flush();
     LabelWidth = std::max((std::string::size_type)LabelWidth, A.Label.size());
 
@@ -417,6 +430,11 @@ BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
       if (DiagItr->InputStartLine == DiagItr->InputEndLine &&
           DiagItr->InputStartCol == DiagItr->InputEndCol)
         A.Marker.Lead = ' ';
+    }
+    if (DiagItr->MatchTy == FileCheckDiag::MatchFoundErrorNote) {
+      assert(!DiagItr->Note.empty() &&
+             "expected custom note for MatchFoundErrorNote");
+      A.Marker.Note = "error: " + A.Marker.Note;
     }
     A.FoundAndExpectedMatch =
         DiagItr->MatchTy == FileCheckDiag::MatchFoundAndExpected;
@@ -662,15 +680,16 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
           COS.resetColor();
         else if (WasInMatch && !InMatch)
           COS.changeColor(raw_ostream::CYAN, true, true);
-        if (*InputFilePtr == '\n')
+        if (*InputFilePtr == '\n') {
           Newline = true;
-        else
+          COS << ' ';
+        } else
           COS << *InputFilePtr;
         ++InputFilePtr;
       }
     }
     *LineOS << '\n';
-    unsigned InputLineWidth = InputFilePtr - InputFileLine - Newline;
+    unsigned InputLineWidth = InputFilePtr - InputFileLine;
 
     // Print any annotations.
     while (AnnotationItr != AnnotationEnd &&
@@ -745,14 +764,11 @@ int main(int argc, char **argv) {
   }
 
   FileCheckRequest Req;
-  for (StringRef Prefix : CheckPrefixes)
-    Req.CheckPrefixes.push_back(Prefix);
+  append_range(Req.CheckPrefixes, CheckPrefixes);
 
-  for (StringRef Prefix : CommentPrefixes)
-    Req.CommentPrefixes.push_back(Prefix);
+  append_range(Req.CommentPrefixes, CommentPrefixes);
 
-  for (StringRef CheckNot : ImplicitCheckNot)
-    Req.ImplicitCheckNot.push_back(CheckNot);
+  append_range(Req.ImplicitCheckNot, ImplicitCheckNot);
 
   bool GlobalDefineError = false;
   for (StringRef G : GlobalDefines) {
@@ -806,7 +822,7 @@ int main(int argc, char **argv) {
 
   // Read the expected strings from the check file.
   ErrorOr<std::unique_ptr<MemoryBuffer>> CheckFileOrErr =
-      MemoryBuffer::getFileOrSTDIN(CheckFilename);
+      MemoryBuffer::getFileOrSTDIN(CheckFilename, /*IsText=*/true);
   if (std::error_code EC = CheckFileOrErr.getError()) {
     errs() << "Could not open check file '" << CheckFilename
            << "': " << EC.message() << '\n';
@@ -828,7 +844,7 @@ int main(int argc, char **argv) {
 
   // Open the file to check and add it to SourceMgr.
   ErrorOr<std::unique_ptr<MemoryBuffer>> InputFileOrErr =
-      MemoryBuffer::getFileOrSTDIN(InputFilename);
+      MemoryBuffer::getFileOrSTDIN(InputFilename, /*IsText=*/true);
   if (InputFilename == "-")
     InputFilename = "<stdin>"; // Overwrite for improved diagnostic messages
   if (std::error_code EC = InputFileOrErr.getError()) {

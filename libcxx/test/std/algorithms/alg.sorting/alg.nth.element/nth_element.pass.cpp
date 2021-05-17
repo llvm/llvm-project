@@ -9,61 +9,78 @@
 // <algorithm>
 
 // template<RandomAccessIterator Iter>
-//   requires ShuffleIterator<Iter>
-//         && LessThanComparable<Iter::value_type>
-//   void
+//   requires ShuffleIterator<Iter> && LessThanComparable<Iter::value_type>
+//   constexpr void  // constexpr in C++20
 //   nth_element(Iter first, Iter nth, Iter last);
 
 #include <algorithm>
-#include <random>
 #include <cassert>
 
 #include "test_macros.h"
+#include "test_iterators.h"
+#include "MoveOnly.h"
 
-std::mt19937 randomness;
-
-void
-test_one(int N, int M)
+template<class T, class Iter>
+TEST_CONSTEXPR_CXX20 bool test()
 {
-    assert(N != 0);
-    assert(M < N);
-    int* array = new int[N];
-    for (int i = 0; i < N; ++i)
-        array[i] = i;
-    std::shuffle(array, array+N, randomness);
-    std::nth_element(array, array+M, array+N);
-    assert(array[M] == M);
-    std::nth_element(array, array+N, array+N); // begin, end, end
-    delete [] array;
-}
+    int orig[15] = {3,1,4,1,5, 9,2,6,5,3, 5,8,9,7,9};
+    T work[15] = {3,1,4,1,5, 9,2,6,5,3, 5,8,9,7,9};
+    for (int n = 0; n < 15; ++n) {
+        for (int m = 0; m < n; ++m) {
+            std::nth_element(Iter(work), Iter(work+m), Iter(work+n));
+            assert(std::is_permutation(work, work+n, orig));
+            // No element to m's left is greater than m.
+            for (int i = 0; i < m; ++i) {
+                assert(!(work[i] > work[m]));
+            }
+            // No element to m's right is less than m.
+            for (int i = m; i < n; ++i) {
+                assert(!(work[i] < work[m]));
+            }
+            std::copy(orig, orig+15, work);
+        }
+    }
 
-void
-test(int N)
-{
-    test_one(N, 0);
-    test_one(N, 1);
-    test_one(N, 2);
-    test_one(N, 3);
-    test_one(N, N/2-1);
-    test_one(N, N/2);
-    test_one(N, N/2+1);
-    test_one(N, N-3);
-    test_one(N, N-2);
-    test_one(N, N-1);
+    {
+        T input[] = {3,1,4,1,5,9,2};
+        std::nth_element(Iter(input), Iter(input+4), Iter(input+7));
+        assert(input[4] == 4);
+        assert(input[5] + input[6] == 5 + 9);
+    }
+
+    {
+        T input[] = {0, 1, 2, 3, 4, 5, 7, 6};
+        std::nth_element(Iter(input), Iter(input + 6), Iter(input + 8));
+        assert(input[6] == 6);
+        assert(input[7] == 7);
+    }
+
+    {
+        T input[] = {1, 0, 2, 3, 4, 5, 6, 7};
+        std::nth_element(Iter(input), Iter(input + 1), Iter(input + 8));
+        assert(input[0] == 0);
+        assert(input[1] == 1);
+    }
+
+    return true;
 }
 
 int main(int, char**)
 {
-    int d = 0;
-    std::nth_element(&d, &d, &d);
-    assert(d == 0);
-    test(256);
-    test(257);
-    test(499);
-    test(500);
-    test(997);
-    test(1000);
-    test(1009);
+    test<int, random_access_iterator<int*> >();
+    test<int, int*>();
 
-  return 0;
+#if TEST_STD_VER >= 11
+    test<MoveOnly, random_access_iterator<MoveOnly*>>();
+    test<MoveOnly, MoveOnly*>();
+#endif
+
+#if TEST_STD_VER >= 20
+    static_assert(test<int, random_access_iterator<int*>>());
+    static_assert(test<int, int*>());
+    static_assert(test<MoveOnly, random_access_iterator<MoveOnly*>>());
+    static_assert(test<MoveOnly, MoveOnly*>());
+#endif
+
+    return 0;
 }

@@ -9,7 +9,7 @@
 #include "src/ctype/isblank.h"
 #include "utils/UnitTest/Test.h"
 
-TEST(IsBlank, DefaultLocale) {
+TEST(LlvmLibcIsBlank, DefaultLocale) {
   // Loops through all characters, verifying that space and horizontal tab
   // return a non-zero integer and everything else returns zero.
   for (int ch = 0; ch < 255; ++ch) {

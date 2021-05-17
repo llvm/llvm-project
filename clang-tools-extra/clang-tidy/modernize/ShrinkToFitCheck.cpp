@@ -21,31 +21,24 @@ namespace modernize {
 void ShrinkToFitCheck::registerMatchers(MatchFinder *Finder) {
   // Swap as a function need not to be considered, because rvalue can not
   // be bound to a non-const reference.
-  const auto ShrinkableAsMember =
-      memberExpr(member(valueDecl().bind("ContainerDecl")));
-  const auto ShrinkableAsDecl =
-      declRefExpr(hasDeclaration(valueDecl().bind("ContainerDecl")));
-  const auto CopyCtorCall = cxxConstructExpr(hasArgument(
-      0, anyOf(ShrinkableAsMember, ShrinkableAsDecl,
-               unaryOperator(has(ignoringParenImpCasts(ShrinkableAsMember))),
-               unaryOperator(has(ignoringParenImpCasts(ShrinkableAsDecl))))));
-  const auto SwapParam =
-      expr(anyOf(memberExpr(member(equalsBoundNode("ContainerDecl"))),
-                 declRefExpr(hasDeclaration(equalsBoundNode("ContainerDecl"))),
-                 unaryOperator(has(ignoringParenImpCasts(
-                     memberExpr(member(equalsBoundNode("ContainerDecl")))))),
-                 unaryOperator(has(ignoringParenImpCasts(declRefExpr(
-                     hasDeclaration(equalsBoundNode("ContainerDecl"))))))));
+  const auto ShrinkableExpr = mapAnyOf(memberExpr, declRefExpr);
+  const auto Shrinkable =
+      ShrinkableExpr.with(hasDeclaration(valueDecl().bind("ContainerDecl")));
+  const auto BoundShrinkable = ShrinkableExpr.with(
+      hasDeclaration(valueDecl(equalsBoundNode("ContainerDecl"))));
 
   Finder->addMatcher(
       cxxMemberCallExpr(
-          on(hasType(hasCanonicalType(hasDeclaration(namedDecl(
-              hasAnyName("std::basic_string", "std::deque", "std::vector")))))),
           callee(cxxMethodDecl(hasName("swap"))),
-          has(ignoringParenImpCasts(
-              memberExpr(traverse(TK_AsIs, hasDescendant(CopyCtorCall))))),
-          hasArgument(0, SwapParam.bind("ContainerToShrink")),
-          unless(isInTemplateInstantiation()))
+          hasArgument(
+              0, anyOf(Shrinkable, unaryOperator(hasUnaryOperand(Shrinkable)))),
+          on(cxxConstructExpr(hasArgument(
+              0,
+              expr(anyOf(BoundShrinkable,
+                         unaryOperator(hasUnaryOperand(BoundShrinkable))),
+                   hasType(hasCanonicalType(hasDeclaration(namedDecl(hasAnyName(
+                       "std::basic_string", "std::deque", "std::vector"))))))
+                  .bind("ContainerToShrink")))))
           .bind("CopyAndSwapTrick"),
       this);
 }

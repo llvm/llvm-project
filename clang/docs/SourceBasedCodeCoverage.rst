@@ -251,7 +251,7 @@ the exported data at a high level in the llvm-cov source code.
 Interpreting reports
 ====================
 
-There are four statistics tracked in a coverage summary:
+There are five statistics tracked in a coverage summary:
 
 * Function coverage is the percentage of functions which have been executed at
   least once. A function is considered to be executed if any of its
@@ -260,7 +260,8 @@ There are four statistics tracked in a coverage summary:
 * Instantiation coverage is the percentage of function instantiations which
   have been executed at least once. Template functions and static inline
   functions from headers are two kinds of functions which may have multiple
-  instantiations.
+  instantiations. This statistic is hidden by default in reports, but can be
+  enabled via the ``-show-instantiation-summary`` option.
 
 * Line coverage is the percentage of code lines which have been executed at
   least once. Only executable lines within function bodies are considered to be
@@ -305,6 +306,19 @@ Format compatibility guarantees
   minor version increment is for added functionality, and patch version
   increments are for bugfixes.
 
+Impact of llvm optimizations on coverage reports
+================================================
+
+llvm optimizations (such as inlining or CFG simplification) should have no
+impact on coverage report quality. This is due to the fact that the mapping
+from source regions to profile counters is immutable, and is generated before
+the llvm optimizer kicks in. The optimizer can't prove that profile counter
+instrumentation is safe to delete (because it's not: it affects the profile the
+program emits), and so leaves it alone.
+
+Note that this coverage feature does not rely on information that can degrade
+during the course of optimization, such as debug info line tables.
+
 Using the profiling runtime without static initializers
 =======================================================
 
@@ -329,6 +343,34 @@ without using static initializers, do this manually:
   out a profile. This function returns 0 when it succeeds, and a non-zero value
   otherwise. Calling this function multiple times appends profile data to an
   existing on-disk raw profile.
+
+In C++ files, declare these as ``extern "C"``.
+
+Using the profiling runtime without a filesystem
+------------------------------------------------
+
+The profiling runtime also supports freestanding environments that lack a
+filesystem. The runtime ships as a static archive that's structured to make
+dependencies on a hosted environment optional, depending on what features
+the client application uses.
+
+The first step is to export ``__llvm_profile_runtime``, as above, to disable
+the default static initializers. Instead of calling the ``*_file()`` APIs
+described above, use the following to save the profile directly to a buffer
+under your control:
+
+* Forward-declare ``uint64_t __llvm_profile_get_size_for_buffer(void)`` and
+  call it to determine the size of the profile. You'll need to allocate a
+  buffer of this size.
+
+* Forward-declare ``int __llvm_profile_write_buffer(char *Buffer)`` and call it
+  to copy the current counters to ``Buffer``, which is expected to already be
+  allocated and big enough for the profile.
+
+* Optionally, forward-declare ``void __llvm_profile_reset_counters(void)`` and
+  call it to reset the counters before entering a specific section to be
+  profiled. This is only useful if there is some setup that should be excluded
+  from the profile.
 
 In C++ files, declare these as ``extern "C"``.
 

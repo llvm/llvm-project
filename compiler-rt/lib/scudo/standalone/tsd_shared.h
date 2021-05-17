@@ -38,6 +38,13 @@ struct TSDRegistrySharedT {
     initLinkerInitialized(Instance);
   }
 
+  void initOnceMaybe(Allocator *Instance) {
+    ScopedLock L(Mutex);
+    if (LIKELY(Initialized))
+      return;
+    initLinkerInitialized(Instance); // Sets Initialized.
+  }
+
   void unmapTestOnly() { setCurrentTSD(nullptr); }
 
   ALWAYS_INLINE void initThreadMaybe(Allocator *Instance,
@@ -139,13 +146,6 @@ private:
     *getTlsPtr() |= B;
   }
 
-  void initOnceMaybe(Allocator *Instance) {
-    ScopedLock L(Mutex);
-    if (LIKELY(Initialized))
-      return;
-    initLinkerInitialized(Instance); // Sets Initialized.
-  }
-
   NOINLINE void initThread(Allocator *Instance) {
     initOnceMaybe(Instance);
     // Initial context assignment is done in a plain round-robin fashion.
@@ -197,11 +197,11 @@ private:
     return CurrentTSD;
   }
 
-  atomic_u32 CurrentIndex;
-  u32 NumberOfTSDs;
-  u32 NumberOfCoPrimes;
-  u32 CoPrimes[TSDsArraySize];
-  bool Initialized;
+  atomic_u32 CurrentIndex = {};
+  u32 NumberOfTSDs = 0;
+  u32 NumberOfCoPrimes = 0;
+  u32 CoPrimes[TSDsArraySize] = {};
+  bool Initialized = false;
   HybridMutex Mutex;
   HybridMutex MutexTSDs;
   TSD<Allocator> TSDs[TSDsArraySize];

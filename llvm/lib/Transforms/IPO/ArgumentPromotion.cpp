@@ -243,6 +243,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
   // to pass in the loaded pointers.
   //
   SmallVector<Value *, 16> Args;
+  const DataLayout &DL = F->getParent()->getDataLayout();
   while (!F->use_empty()) {
     CallBase &CB = cast<CallBase>(*F->user_back());
     assert(CB.getCalledFunction() == F);
@@ -264,13 +265,17 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
         StructType *STy = cast<StructType>(AgTy);
         Value *Idxs[2] = {
             ConstantInt::get(Type::getInt32Ty(F->getContext()), 0), nullptr};
+        const StructLayout *SL = DL.getStructLayout(STy);
+        Align StructAlign = *I->getParamAlign();
         for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
           Idxs[1] = ConstantInt::get(Type::getInt32Ty(F->getContext()), i);
           auto *Idx =
               IRB.CreateGEP(STy, *AI, Idxs, (*AI)->getName() + "." + Twine(i));
           // TODO: Tell AA about the new values?
-          Args.push_back(IRB.CreateLoad(STy->getElementType(i), Idx,
-                                        Idx->getName() + ".val"));
+          Align Alignment =
+              commonAlignment(StructAlign, SL->getElementOffset(i));
+          Args.push_back(IRB.CreateAlignedLoad(
+              STy->getElementType(i), Idx, Alignment, Idx->getName() + ".val"));
           ArgAttrVec.push_back(AttributeSet());
         }
       } else if (!I->use_empty()) {
@@ -358,8 +363,6 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
     CB.eraseFromParent();
   }
 
-  const DataLayout &DL = F->getParent()->getDataLayout();
-
   // Since we have now created the new function, splice the body of the old
   // function right into the new function, leaving the old rotting hulk of the
   // function empty.
@@ -386,13 +389,13 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
 
       // Just add all the struct element types.
       Type *AgTy = cast<PointerType>(I->getType())->getElementType();
-      Value *TheAlloca = new AllocaInst(
-          AgTy, DL.getAllocaAddrSpace(), nullptr,
-          I->getParamAlign().getValueOr(DL.getPrefTypeAlign(AgTy)), "",
-          InsertPt);
+      Align StructAlign = *I->getParamAlign();
+      Value *TheAlloca = new AllocaInst(AgTy, DL.getAllocaAddrSpace(), nullptr,
+                                        StructAlign, "", InsertPt);
       StructType *STy = cast<StructType>(AgTy);
       Value *Idxs[2] = {ConstantInt::get(Type::getInt32Ty(F->getContext()), 0),
                         nullptr};
+      const StructLayout *SL = DL.getStructLayout(STy);
 
       for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
         Idxs[1] = ConstantInt::get(Type::getInt32Ty(F->getContext()), i);
@@ -400,21 +403,13 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
             AgTy, TheAlloca, Idxs, TheAlloca->getName() + "." + Twine(i),
             InsertPt);
         I2->setName(I->getName() + "." + Twine(i));
-        new StoreInst(&*I2++, Idx, InsertPt);
+        Align Alignment = commonAlignment(StructAlign, SL->getElementOffset(i));
+        new StoreInst(&*I2++, Idx, false, Alignment, InsertPt);
       }
 
       // Anything that used the arg should now use the alloca.
       I->replaceAllUsesWith(TheAlloca);
       TheAlloca->takeName(&*I);
-
-      // If the alloca is used in a call, we must clear the tail flag since
-      // the callee now uses an alloca from the caller.
-      for (User *U : TheAlloca->users()) {
-        CallInst *Call = dyn_cast<CallInst>(U);
-        if (!Call)
-          continue;
-        Call->setTailCall(false);
-      }
       continue;
     }
 
@@ -446,9 +441,8 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
                "GEPs without uses should be cleaned up already");
         IndicesVector Operands;
         Operands.reserve(GEP->getNumIndices());
-        for (User::op_iterator II = GEP->idx_begin(), IE = GEP->idx_end();
-             II != IE; ++II)
-          Operands.push_back(cast<ConstantInt>(*II)->getSExtValue());
+        for (const Use &Idx : GEP->indices())
+          Operands.push_back(cast<ConstantInt>(Idx)->getSExtValue());
 
         // GEPs with a single 0 index can be merged with direct loads
         if (Operands.size() == 1 && Operands.front() == 0)
@@ -634,9 +628,8 @@ static bool isSafeToPromoteArgument(Argument *Arg, Type *ByValTy, AAResults &AAR
         if (V == Arg) {
           // This load actually loads (part of) Arg? Check the indices then.
           Indices.reserve(GEP->getNumIndices());
-          for (User::op_iterator II = GEP->idx_begin(), IE = GEP->idx_end();
-               II != IE; ++II)
-            if (ConstantInt *CI = dyn_cast<ConstantInt>(*II))
+          for (Use &Idx : GEP->indices())
+            if (ConstantInt *CI = dyn_cast<ConstantInt>(Idx))
               Indices.push_back(CI->getSExtValue());
             else
               // We found a non-constant GEP index for this argument? Bail out
@@ -689,9 +682,8 @@ static bool isSafeToPromoteArgument(Argument *Arg, Type *ByValTy, AAResults &AAR
         return false;
 
       // Ensure that all of the indices are constants.
-      for (User::op_iterator i = GEP->idx_begin(), e = GEP->idx_end(); i != e;
-           ++i)
-        if (ConstantInt *C = dyn_cast<ConstantInt>(*i))
+      for (Use &Idx : GEP->indices())
+        if (ConstantInt *C = dyn_cast<ConstantInt>(Idx))
           Operands.push_back(C->getSExtValue());
         else
           return false; // Not a constant operand GEP!
@@ -824,8 +816,7 @@ static bool canPaddingBeAccessed(Argument *arg) {
   // sanely.
   SmallVector<Value *, 16> WorkList(arg->users());
   while (!WorkList.empty()) {
-    Value *V = WorkList.back();
-    WorkList.pop_back();
+    Value *V = WorkList.pop_back_val();
     if (isa<GetElementPtrInst>(V) || isa<PHINode>(V)) {
       if (PtrValues.insert(V).second)
         llvm::append_range(WorkList, V->users());
@@ -953,7 +944,10 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
     // If this is a byval argument, and if the aggregate type is small, just
     // pass the elements, which is always safe, if the passed value is densely
     // packed or if we can prove the padding bytes are never accessed.
-    bool isSafeToPromote = PtrArg->hasByValAttr() &&
+    //
+    // Only handle arguments with specified alignment; if it's unspecified, the
+    // actual alignment of the argument is target-specific.
+    bool isSafeToPromote = PtrArg->hasByValAttr() && PtrArg->getParamAlign() &&
                            (ArgumentPromotionPass::isDenselyPacked(AgTy, DL) ||
                             !canPaddingBeAccessed(PtrArg));
     if (isSafeToPromote) {
@@ -990,13 +984,8 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
     // function, we could end up infinitely peeling the function argument.
     if (isSelfRecursive) {
       if (StructType *STy = dyn_cast<StructType>(AgTy)) {
-        bool RecursiveType = false;
-        for (const auto *EltTy : STy->elements()) {
-          if (EltTy == PtrArg->getType()) {
-            RecursiveType = true;
-            break;
-          }
-        }
+        bool RecursiveType =
+            llvm::is_contained(STy->elements(), PtrArg->getType());
         if (RecursiveType)
           continue;
       }
@@ -1030,11 +1019,12 @@ PreservedAnalyses ArgumentPromotionPass::run(LazyCallGraph::SCC &C,
   do {
     LocalChange = false;
 
+    FunctionAnalysisManager &FAM =
+        AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
+
     for (LazyCallGraph::Node &N : C) {
       Function &OldF = N.getFunction();
 
-      FunctionAnalysisManager &FAM =
-          AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
       // FIXME: This lambda must only be used with this function. We should
       // skip the lambda and just get the AA results directly.
       auto AARGetter = [&](Function &F) -> AAResults & {
@@ -1055,7 +1045,15 @@ PreservedAnalyses ArgumentPromotionPass::run(LazyCallGraph::SCC &C,
       // swaps out the particular function mapped to a particular node in the
       // graph.
       C.getOuterRefSCC().replaceNodeFunction(N, *NewF);
+      FAM.clear(OldF, OldF.getName());
       OldF.eraseFromParent();
+
+      PreservedAnalyses FuncPA;
+      FuncPA.preserveSet<CFGAnalyses>();
+      for (auto *U : NewF->users()) {
+        auto *UserF = cast<CallBase>(U)->getParent()->getParent();
+        FAM.invalidate(*UserF, FuncPA);
+      }
     }
 
     Changed |= LocalChange;
@@ -1064,7 +1062,10 @@ PreservedAnalyses ArgumentPromotionPass::run(LazyCallGraph::SCC &C,
   if (!Changed)
     return PreservedAnalyses::all();
 
-  return PreservedAnalyses::none();
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerCGSCCProxy>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  return PA;
 }
 
 namespace {

@@ -9,10 +9,8 @@
 #include "Symbols.h"
 #include "Config.h"
 #include "InputChunks.h"
-#include "InputEvent.h"
+#include "InputElement.h"
 #include "InputFiles.h"
-#include "InputGlobal.h"
-#include "InputTable.h"
 #include "OutputSections.h"
 #include "OutputSegment.h"
 #include "lld/Common/ErrorHandler.h"
@@ -91,6 +89,7 @@ UndefinedGlobal *WasmSym::tableBase;
 DefinedData *WasmSym::definedTableBase;
 UndefinedGlobal *WasmSym::memoryBase;
 DefinedData *WasmSym::definedMemoryBase;
+TableSymbol *WasmSym::indirectFunctionTable;
 
 WasmSymbolType Symbol::getWasmType() const {
   if (isa<FunctionSymbol>(this))
@@ -147,6 +146,7 @@ bool Symbol::isLive() const {
 
 void Symbol::markLive() {
   assert(!isDiscarded());
+  referenced = true;
   if (file != NULL && isDefined())
     file->markLive();
   if (auto *g = dyn_cast<DefinedGlobal>(this))
@@ -155,9 +155,17 @@ void Symbol::markLive() {
     e->event->live = true;
   if (auto *t = dyn_cast<DefinedTable>(this))
     t->table->live = true;
-  if (InputChunk *c = getChunk())
+  if (InputChunk *c = getChunk()) {
+    // Usually, a whole chunk is marked as live or dead, but in mergeable
+    // (splittable) sections, each piece of data has independent liveness bit.
+    // So we explicitly tell it which offset is in use.
+    if (auto *d = dyn_cast<DefinedData>(this)) {
+      if (auto *ms = dyn_cast<MergeInputSegment>(c)) {
+        ms->getSegmentPiece(d->value)->live = true;
+      }
+    }
     c->live = true;
-  referenced = true;
+  }
 }
 
 uint32_t Symbol::getOutputSymbolIndex() const {
@@ -208,13 +216,14 @@ bool Symbol::isExported() const {
   if (!isDefined() || isLocal())
     return false;
 
-  if (forceExport || config->exportAll)
+  if (config->exportAll || (config->exportDynamic && !isHidden()))
     return true;
 
-  if (config->exportDynamic && !isHidden())
-    return true;
+  return isExportedExplicit();
+}
 
-  return flags & WASM_SYMBOL_EXPORTED;
+bool Symbol::isExportedExplicit() const {
+  return forceExport || flags & WASM_SYMBOL_EXPORTED;
 }
 
 bool Symbol::isNoStrip() const {
@@ -277,22 +286,22 @@ DefinedFunction::DefinedFunction(StringRef name, uint32_t flags, InputFile *f,
                      function ? &function->signature : nullptr),
       function(function) {}
 
-uint64_t DefinedData::getVirtualAddress() const {
-  LLVM_DEBUG(dbgs() << "getVirtualAddress: " << getName() << "\n");
+uint64_t DefinedData::getVA() const {
+  LLVM_DEBUG(dbgs() << "getVA: " << getName() << "\n");
   if (segment)
-    return segment->outputSeg->startVA + segment->outputSegmentOffset + offset;
-  return offset;
+    return segment->getVA(value);
+  return value;
 }
 
-void DefinedData::setVirtualAddress(uint64_t value) {
-  LLVM_DEBUG(dbgs() << "setVirtualAddress " << name << " -> " << value << "\n");
+void DefinedData::setVA(uint64_t value_) {
+  LLVM_DEBUG(dbgs() << "setVA " << name << " -> " << value_ << "\n");
   assert(!segment);
-  offset = value;
+  value = value_;
 }
 
 uint64_t DefinedData::getOutputSegmentOffset() const {
   LLVM_DEBUG(dbgs() << "getOutputSegmentOffset: " << getName() << "\n");
-  return segment->outputSegmentOffset + offset;
+  return segment->getOffset(value);
 }
 
 uint64_t DefinedData::getOutputSegmentIndex() const {
@@ -302,7 +311,7 @@ uint64_t DefinedData::getOutputSegmentIndex() const {
 
 uint32_t GlobalSymbol::getGlobalIndex() const {
   if (auto *f = dyn_cast<DefinedGlobal>(this))
-    return f->global->getGlobalIndex();
+    return f->global->getAssignedIndex();
   assert(globalIndex != INVALID_INDEX);
   return globalIndex;
 }
@@ -315,7 +324,7 @@ void GlobalSymbol::setGlobalIndex(uint32_t index) {
 
 bool GlobalSymbol::hasGlobalIndex() const {
   if (auto *f = dyn_cast<DefinedGlobal>(this))
-    return f->global->hasGlobalIndex();
+    return f->global->hasAssignedIndex();
   return globalIndex != INVALID_INDEX;
 }
 
@@ -327,7 +336,7 @@ DefinedGlobal::DefinedGlobal(StringRef name, uint32_t flags, InputFile *file,
 
 uint32_t EventSymbol::getEventIndex() const {
   if (auto *f = dyn_cast<DefinedEvent>(this))
-    return f->event->getEventIndex();
+    return f->event->getAssignedIndex();
   assert(eventIndex != INVALID_INDEX);
   return eventIndex;
 }
@@ -340,7 +349,7 @@ void EventSymbol::setEventIndex(uint32_t index) {
 
 bool EventSymbol::hasEventIndex() const {
   if (auto *f = dyn_cast<DefinedEvent>(this))
-    return f->event->hasEventIndex();
+    return f->event->hasAssignedIndex();
   return eventIndex != INVALID_INDEX;
 }
 
@@ -361,12 +370,14 @@ void TableSymbol::setLimits(const WasmLimits &limits) {
 
 uint32_t TableSymbol::getTableNumber() const {
   if (const auto *t = dyn_cast<DefinedTable>(this))
-    return t->table->getTableNumber();
+    return t->table->getAssignedIndex();
   assert(tableNumber != INVALID_INDEX);
   return tableNumber;
 }
 
 void TableSymbol::setTableNumber(uint32_t number) {
+  if (const auto *t = dyn_cast<DefinedTable>(this))
+    return t->table->assignIndex(number);
   LLVM_DEBUG(dbgs() << "setTableNumber " << name << " -> " << number << "\n");
   assert(tableNumber == INVALID_INDEX);
   tableNumber = number;
@@ -374,7 +385,7 @@ void TableSymbol::setTableNumber(uint32_t number) {
 
 bool TableSymbol::hasTableNumber() const {
   if (const auto *t = dyn_cast<DefinedTable>(this))
-    return t->table->hasTableNumber();
+    return t->table->hasAssignedIndex();
   return tableNumber != INVALID_INDEX;
 }
 

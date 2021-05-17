@@ -1,7 +1,9 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++98 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++1z %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2b -verify=expected,cxx20_2b -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 -verify=expected,cxx20_2b -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 -verify=expected,cxx98_17 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 -verify=expected,cxx98_17 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 -verify=expected,cxx98_17 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 -verify=expected,cxx98_17 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
 
 namespace dr300 { // dr300: yes
   template<typename R, typename A> void f(R (&)(A)) {}
@@ -18,8 +20,8 @@ namespace dr301 { // dr301: yes
   void f() {
     bool a = (void(*)(S, S))operator+<S> <
              (void(*)(S, S))operator+<S>;
-    bool b = (void(*)(S, S))operator- <
-             (void(*)(S, S))operator-;
+    bool b = (void(*)(S, S))operator- < // cxx20_2b-note {{to match this '<'}}
+             (void(*)(S, S))operator-; // cxx20_2b-error {{expected '>'}}
     bool c = (void(*)(S, S))operator+ < // expected-note {{to match this '<'}}
              (void(*)(S, S))operator-; // expected-error {{expected '>'}}
   }
@@ -439,8 +441,10 @@ namespace dr331 { // dr331: yes
 
 namespace dr332 { // dr332: dup 577
   void f(volatile void); // expected-error {{'void' as parameter must not have type qualifiers}}
+  // cxx20_2b-warning@-1 {{volatile-qualified parameter type 'volatile void' is deprecated}}
   void g(const void); // expected-error {{'void' as parameter must not have type qualifiers}}
   void h(int n, volatile void); // expected-error {{'void' must be the first and only parameter}}
+  // cxx20_2b-warning@-1 {{volatile-qualified parameter type 'volatile void' is deprecated}}
 }
 
 namespace dr333 { // dr333: yes
@@ -910,10 +914,13 @@ namespace dr367 { // dr367: yes
 namespace dr368 { // dr368: yes
   template<typename T, T> struct S {}; // expected-note {{here}}
   template<typename T> int f(S<T, T()> *); // expected-error {{function type}}
-  template<typename T> int g(S<T, (T())> *); // expected-note {{type 'dr368::X'}}
-  template<typename T> int g(S<T, true ? T() : T()> *); // expected-note {{type 'dr368::X'}}
+  template<typename T> int g(S<T, (T())> *); // cxx98_17-note {{type 'dr368::X'}}
+  // cxx20_2b-note@-1 {{candidate function [with T = dr368::X]}}
+  template<typename T> int g(S<T, true ? T() : T()> *); // cxx98_17-note {{type 'dr368::X'}}
+  // cxx20_2b-note@-1 {{candidate function [with T = dr368::X]}}
   struct X {};
-  int n = g<X>(0); // expected-error {{no matching}}
+  int n = g<X>(0); // cxx98_17-error {{no matching}}
+  // cxx20_2b-error@-1 {{call to 'g' is ambiguous}}
 }
 
 // dr370: na
@@ -1103,7 +1110,7 @@ namespace dr384 { // dr384: yes
 }
 
 namespace dr385 { // dr385: yes
-  struct A { protected: void f(); }; 
+  struct A { protected: void f(); };
   struct B : A { using A::f; };
   struct C : A { void g(B b) { b.f(); } };
   void h(B b) { b.f(); }

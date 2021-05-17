@@ -74,7 +74,7 @@ getInterfaceVariables(spirv::FuncOp funcOp,
   if (!module) {
     return failure();
   }
-  llvm::SetVector<Operation *> interfaceVarSet;
+  SetVector<Operation *> interfaceVarSet;
 
   // TODO: This should in reality traverse the entry function
   // call graph and collect all the interfaces. For now, just traverse the
@@ -98,7 +98,7 @@ getInterfaceVariables(spirv::FuncOp funcOp,
   });
   for (auto &var : interfaceVarSet) {
     interfaceVars.push_back(SymbolRefAttr::get(
-        cast<spirv::GlobalVariableOp>(var).sym_name(), funcOp.getContext()));
+        funcOp.getContext(), cast<spirv::GlobalVariableOp>(var).sym_name()));
   }
   return success();
 }
@@ -139,7 +139,7 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
   SmallVector<int32_t, 3> localSize(localSizeAttr.getValues<int32_t>());
   builder.create<spirv::ExecutionModeOp>(
       funcOp.getLoc(), funcOp, spirv::ExecutionMode::LocalSize, localSize);
-  funcOp.removeAttr(entryPointAttrName);
+  funcOp->removeAttr(entryPointAttrName);
   return success();
 }
 
@@ -246,8 +246,8 @@ void LowerABIAttributesPass::runOnOperation() {
     return builder.create<spirv::BitcastOp>(loc, type, inputs[0]).getResult();
   });
 
-  OwningRewritePatternList patterns;
-  patterns.insert<ProcessInterfaceVarABI>(typeConverter, context);
+  RewritePatternSet patterns(context);
+  patterns.add<ProcessInterfaceVarABI>(typeConverter, context);
 
   ConversionTarget target(*context);
   // "Legal" function ops should have no interface variable ABI attributes.

@@ -23,6 +23,7 @@ add_clang_library(clangdSupport
   Logger.cpp
   Markup.cpp
   MemoryTree.cpp
+  Path.cpp
   Shutdown.cpp
   Threading.cpp
   ThreadsafeFS.cpp

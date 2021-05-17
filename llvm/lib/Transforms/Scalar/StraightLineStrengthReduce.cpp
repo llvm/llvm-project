@@ -285,9 +285,7 @@ bool StraightLineStrengthReduce::isBasisFor(const Candidate &Basis,
 
 static bool isGEPFoldable(GetElementPtrInst *GEP,
                           const TargetTransformInfo *TTI) {
-  SmallVector<const Value*, 4> Indices;
-  for (auto I = GEP->idx_begin(); I != GEP->idx_end(); ++I)
-    Indices.push_back(*I);
+  SmallVector<const Value *, 4> Indices(GEP->indices());
   return TTI->getGEPCost(GEP->getSourceElementType(), GEP->getPointerOperand(),
                          Indices) == TargetTransformInfo::TCC_Free;
 }
@@ -314,8 +312,8 @@ bool StraightLineStrengthReduce::isFoldable(const Candidate &C,
 // Returns true if GEP has zero or one non-zero index.
 static bool hasOnlyOneNonZeroIndex(GetElementPtrInst *GEP) {
   unsigned NumNonZeroIndices = 0;
-  for (auto I = GEP->idx_begin(); I != GEP->idx_end(); ++I) {
-    ConstantInt *ConstIdx = dyn_cast<ConstantInt>(*I);
+  for (Use &Idx : GEP->indices()) {
+    ConstantInt *ConstIdx = dyn_cast<ConstantInt>(Idx);
     if (ConstIdx == nullptr || !ConstIdx->isZero())
       ++NumNonZeroIndices;
   }
@@ -535,8 +533,8 @@ void StraightLineStrengthReduce::allocateCandidatesAndFindBasisForGEP(
     return;
 
   SmallVector<const SCEV *, 4> IndexExprs;
-  for (auto I = GEP->idx_begin(); I != GEP->idx_end(); ++I)
-    IndexExprs.push_back(SE->getSCEV(*I));
+  for (Use &Idx : GEP->indices())
+    IndexExprs.push_back(SE->getSCEV(Idx));
 
   gep_type_iterator GTI = gep_type_begin(GEP);
   for (unsigned I = 1, E = GEP->getNumOperands(); I != E; ++I, ++GTI) {

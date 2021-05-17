@@ -219,8 +219,29 @@ HexagonTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   // Copy the result values into the output registers.
   for (unsigned i = 0; i != RVLocs.size(); ++i) {
     CCValAssign &VA = RVLocs[i];
+    SDValue Val = OutVals[i];
 
-    Chain = DAG.getCopyToReg(Chain, dl, VA.getLocReg(), OutVals[i], Flag);
+    switch (VA.getLocInfo()) {
+      default:
+        // Loc info must be one of Full, BCvt, SExt, ZExt, or AExt.
+        llvm_unreachable("Unknown loc info!");
+      case CCValAssign::Full:
+        break;
+      case CCValAssign::BCvt:
+        Val = DAG.getBitcast(VA.getLocVT(), Val);
+        break;
+      case CCValAssign::SExt:
+        Val = DAG.getNode(ISD::SIGN_EXTEND, dl, VA.getLocVT(), Val);
+        break;
+      case CCValAssign::ZExt:
+        Val = DAG.getNode(ISD::ZERO_EXTEND, dl, VA.getLocVT(), Val);
+        break;
+      case CCValAssign::AExt:
+        Val = DAG.getNode(ISD::ANY_EXTEND, dl, VA.getLocVT(), Val);
+        break;
+    }
+
+    Chain = DAG.getCopyToReg(Chain, dl, VA.getLocReg(), Val, Flag);
 
     // Guarantee that all emitted copies are stuck together with flags.
     Flag = Chain.getValue(1);
@@ -308,6 +329,8 @@ Register HexagonTargetLowering::getRegisterByName(
                      .Case("m1", Hexagon::M1)
                      .Case("usr", Hexagon::USR)
                      .Case("ugp", Hexagon::UGP)
+                     .Case("cs0", Hexagon::CS0)
+                     .Case("cs1", Hexagon::CS1)
                      .Default(Register());
   if (Reg)
     return Reg;
@@ -498,7 +521,7 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   if (NeedsArgAlign && Subtarget.hasV60Ops()) {
     LLVM_DEBUG(dbgs() << "Function needs byte stack align due to call args\n");
-    Align VecAlign(HRI.getSpillAlignment(Hexagon::HvxVRRegClass));
+    Align VecAlign = HRI.getSpillAlign(Hexagon::HvxVRRegClass);
     LargestAlignSeen = std::max(LargestAlignSeen, VecAlign);
     MFI.ensureMaxAlignment(LargestAlignSeen);
   }
@@ -701,7 +724,7 @@ SDValue HexagonTargetLowering::LowerREADCYCLECOUNTER(SDValue Op,
                                                      SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
   SDLoc dl(Op);
-  SDVTList VTs = DAG.getVTList(MVT::i32, MVT::Other);
+  SDVTList VTs = DAG.getVTList(MVT::i64, MVT::Other);
   return DAG.getNode(HexagonISD::READCYCLE, dl, VTs, Chain);
 }
 
@@ -1703,6 +1726,12 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STORE, VT, Custom);
   }
 
+  // Custom-lower load/stores of boolean vectors.
+  for (MVT VT : {MVT::v2i1, MVT::v4i1, MVT::v8i1}) {
+    setOperationAction(ISD::LOAD,  VT, Custom);
+    setOperationAction(ISD::STORE, VT, Custom);
+  }
+
   for (MVT VT : {MVT::v2i16, MVT::v4i8, MVT::v8i8, MVT::v2i32, MVT::v4i16,
                  MVT::v2i32}) {
     setCondCodeAction(ISD::SETNE,  VT, Expand);
@@ -2072,7 +2101,7 @@ bool HexagonTargetLowering::isShuffleMaskLegal(ArrayRef<int> Mask,
 
 TargetLoweringBase::LegalizeTypeAction
 HexagonTargetLowering::getPreferredVectorAction(MVT VT) const {
-  unsigned VecLen = VT.getVectorNumElements();
+  unsigned VecLen = VT.getVectorMinNumElements();
   MVT ElemTy = VT.getVectorElementType();
 
   if (VecLen == 1 || VT.isScalableVector())
@@ -2855,27 +2884,62 @@ HexagonTargetLowering::allowTruncateForTailCall(Type *Ty1, Type *Ty2) const {
 
 SDValue
 HexagonTargetLowering::LowerLoad(SDValue Op, SelectionDAG &DAG) const {
+  MVT Ty = ty(Op);
+  const SDLoc &dl(Op);
+  // Lower loads of scalar predicate vectors (v2i1, v4i1, v8i1) to loads of i1
+  // followed by a TYPECAST.
   LoadSDNode *LN = cast<LoadSDNode>(Op.getNode());
+  bool DoCast = (Ty == MVT::v2i1 || Ty == MVT::v4i1 || Ty == MVT::v8i1);
+  if (DoCast) {
+    SDValue NL = DAG.getLoad(
+        LN->getAddressingMode(), LN->getExtensionType(), MVT::i1, dl,
+        LN->getChain(), LN->getBasePtr(), LN->getOffset(), LN->getPointerInfo(),
+        /*MemoryVT*/ MVT::i1, LN->getAlign(), LN->getMemOperand()->getFlags(),
+        LN->getAAInfo(), LN->getRanges());
+    LN = cast<LoadSDNode>(NL.getNode());
+  }
+
   unsigned ClaimAlign = LN->getAlignment();
-  validateConstPtrAlignment(LN->getBasePtr(), SDLoc(Op), ClaimAlign);
+  validateConstPtrAlignment(LN->getBasePtr(), dl, ClaimAlign);
   // Call LowerUnalignedLoad for all loads, it recognizes loads that
   // don't need extra aligning.
-  return LowerUnalignedLoad(Op, DAG);
+  SDValue LU = LowerUnalignedLoad(SDValue(LN, 0), DAG);
+  if (DoCast) {
+    SDValue TC = DAG.getNode(HexagonISD::TYPECAST, dl, Ty, LU);
+    SDValue Ch = cast<LoadSDNode>(LU.getNode())->getChain();
+    return DAG.getMergeValues({TC, Ch}, dl);
+  }
+  return LU;
 }
 
 SDValue
 HexagonTargetLowering::LowerStore(SDValue Op, SelectionDAG &DAG) const {
+  const SDLoc &dl(Op);
   StoreSDNode *SN = cast<StoreSDNode>(Op.getNode());
+  SDValue Val = SN->getValue();
+  MVT Ty = ty(Val);
+
+  bool DoCast = (Ty == MVT::v2i1 || Ty == MVT::v4i1 || Ty == MVT::v8i1);
+  if (DoCast) {
+    SDValue TC = DAG.getNode(HexagonISD::TYPECAST, dl, MVT::i1, Val);
+    SDValue NS = DAG.getStore(SN->getChain(), dl, TC, SN->getBasePtr(),
+                              SN->getMemOperand());
+    if (SN->isIndexed()) {
+      NS = DAG.getIndexedStore(NS, dl, SN->getBasePtr(), SN->getOffset(),
+                               SN->getAddressingMode());
+    }
+    SN = cast<StoreSDNode>(NS.getNode());
+  }
+
   unsigned ClaimAlign = SN->getAlignment();
   SDValue Ptr = SN->getBasePtr();
-  const SDLoc &dl(Op);
   validateConstPtrAlignment(Ptr, dl, ClaimAlign);
 
   MVT StoreTy = SN->getMemoryVT().getSimpleVT();
   unsigned NeedAlign = Subtarget.getTypeAlignment(StoreTy);
   if (ClaimAlign < NeedAlign)
     return expandUnalignedStore(SN, DAG);
-  return Op;
+  return SDValue(SN, 0);
 }
 
 SDValue
@@ -3442,8 +3506,8 @@ bool HexagonTargetLowering::allowsMemoryAccess(
 }
 
 bool HexagonTargetLowering::allowsMisalignedMemoryAccesses(
-      EVT VT, unsigned AddrSpace, unsigned Alignment,
-      MachineMemOperand::Flags Flags, bool *Fast) const {
+    EVT VT, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
+    bool *Fast) const {
   MVT SVT = VT.getSimpleVT();
   if (Subtarget.isHVXVectorType(SVT, true))
     return allowsHvxMisalignedMemoryAccesses(SVT, Flags, Fast);

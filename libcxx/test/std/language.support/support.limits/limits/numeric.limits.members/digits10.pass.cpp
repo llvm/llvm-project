@@ -42,7 +42,7 @@ int main(int, char**)
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
     test<char16_t, 4>();
     test<char32_t, 9>();
-#endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
+#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
     test<short, 4>();
     test<unsigned short, 4>();
     test<int, 9>();

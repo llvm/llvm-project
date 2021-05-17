@@ -68,13 +68,13 @@ void RunTestCaseImpl(MultiStringType const& MS, Args... args) {
   }
   // Iterators
   {
-    using It = input_iterator<const CharT*>;
+    using It = cpp17_input_iterator<const CharT*>;
     path p(It{TestPath}, args...);
     assert(p.native() == Expect);
     assert(p.string<CharT>() == TestPath);
   }
   {
-    using It = input_iterator<const CharT*>;
+    using It = cpp17_input_iterator<const CharT*>;
     path p(It{TestPath}, It{TestPathEnd}, args...);
     assert(p.native() == Expect);
     assert(p.string<CharT>() == TestPath);
@@ -87,6 +87,9 @@ void RunTestCase(MultiStringType const& MS) {
   RunTestCaseImpl<CharT>(MS, fs::path::format::auto_format);
   RunTestCaseImpl<CharT>(MS, fs::path::format::native_format);
   RunTestCaseImpl<CharT>(MS, fs::path::format::generic_format);
+  RunTestCaseImpl<CharT>(MS, fs::path::auto_format);
+  RunTestCaseImpl<CharT>(MS, fs::path::native_format);
+  RunTestCaseImpl<CharT>(MS, fs::path::generic_format);
 }
 
 void test_sfinae() {
@@ -96,7 +99,7 @@ void test_sfinae() {
     static_assert(std::is_constructible<path, It>::value, "");
   }
   {
-    using It = input_iterator<const char*>;
+    using It = cpp17_input_iterator<const char*>;
     static_assert(std::is_constructible<path, It>::value, "");
   }
   {
@@ -107,7 +110,7 @@ void test_sfinae() {
       using reference = const char&;
       using difference_type = std::ptrdiff_t;
     };
-    using It = input_iterator<const char*, Traits>;
+    using It = cpp17_input_iterator<const char*, Traits>;
     static_assert(std::is_constructible<path, It>::value, "");
   }
   {

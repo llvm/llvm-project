@@ -230,13 +230,13 @@ TEST(AddressSanitizer, UAF_Packed5) {
   delete [] Ident(p);
 }
 
-#if ASAN_HAS_BLACKLIST
+#if ASAN_HAS_IGNORELIST
 TEST(AddressSanitizer, IgnoreTest) {
   int *x = Ident(new int);
   delete Ident(x);
   *x = 0;
 }
-#endif  // ASAN_HAS_BLACKLIST
+#endif  // ASAN_HAS_IGNORELIST
 
 struct StructWithBitField {
   int bf1:1;

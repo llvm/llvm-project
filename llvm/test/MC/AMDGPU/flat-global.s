@@ -12,7 +12,7 @@ global_load_ubyte v1, v[3:4], off
 
 global_load_ubyte v1, v[3:4], off dlc
 // GFX10: encoding: [0x00,0x90,0x20,0xdc,0x03,0x00,0x7d,0x01]
-// GFX9-ERR: error: failed parsing operand
+// GFX9-ERR: error: dlc modifier is not supported on this GPU
 // VI-ERR: error: instruction not supported on this GPU
 
 global_load_sbyte v1, v[3:4], off
@@ -22,7 +22,7 @@ global_load_sbyte v1, v[3:4], off
 
 global_load_sbyte v1, v[3:4], off dlc
 // GFX10: encoding: [0x00,0x90,0x24,0xdc,0x03,0x00,0x7d,0x01]
-// GFX9-ERR: error: failed parsing operand
+// GFX9-ERR: error: dlc modifier is not supported on this GPU
 // VI-ERR: error: instruction not supported on this GPU
 
 global_load_ushort v1, v[3:4], off
@@ -32,7 +32,7 @@ global_load_ushort v1, v[3:4], off
 
 global_load_ushort v1, v[3:4], off dlc
 // GFX10: encoding: [0x00,0x90,0x28,0xdc,0x03,0x00,0x7d,0x01]
-// GFX9-ERR: error: failed parsing operand
+// GFX9-ERR: error: dlc modifier is not supported on this GPU
 // VI-ERR: error: instruction not supported on this GPU
 
 global_load_sshort v1, v[3:4], off
@@ -42,7 +42,7 @@ global_load_sshort v1, v[3:4], off
 
 global_load_sshort v1, v[3:4], off dlc
 // GFX10: encoding: [0x00,0x90,0x2c,0xdc,0x03,0x00,0x7d,0x01]
-// GFX9-ERR: error: failed parsing operand
+// GFX9-ERR: error: dlc modifier is not supported on this GPU
 // VI-ERR: error: instruction not supported on this GPU
 
 global_load_dword v1, v[3:4], off
@@ -52,7 +52,7 @@ global_load_dword v1, v[3:4], off
 
 global_load_dword v1, v[3:4], off dlc
 // GFX10: encoding: [0x00,0x90,0x30,0xdc,0x03,0x00,0x7d,0x01]
-// GFX9-ERR: error: failed parsing operand
+// GFX9-ERR: error: dlc modifier is not supported on this GPU
 // VI-ERR: error: instruction not supported on this GPU
 
 global_load_dwordx2 v[1:2], v[3:4], off
@@ -62,7 +62,7 @@ global_load_dwordx2 v[1:2], v[3:4], off
 
 global_load_dwordx2 v[1:2], v[3:4], off dlc
 // GFX10: encoding: [0x00,0x90,0x34,0xdc,0x03,0x00,0x7d,0x01]
-// GFX9-ERR: error: failed parsing operand
+// GFX9-ERR: error: dlc modifier is not supported on this GPU
 // VI-ERR: error: instruction not supported on this GPU
 
 global_load_dwordx3 v[1:3], v[3:4], off
@@ -72,7 +72,7 @@ global_load_dwordx3 v[1:3], v[3:4], off
 
 global_load_dwordx3 v[1:3], v[3:4], off dlc
 // GFX10: encoding: [0x00,0x90,0x3c,0xdc,0x03,0x00,0x7d,0x01]
-// GFX9-ERR: error: failed parsing operand
+// GFX9-ERR: error: dlc modifier is not supported on this GPU
 // VI-ERR: error: instruction not supported on this GPU
 
 global_load_dwordx4 v[1:4], v[3:4], off
@@ -82,7 +82,7 @@ global_load_dwordx4 v[1:4], v[3:4], off
 
 global_load_dwordx4 v[1:4], v[3:4], off dlc
 // GFX10: encoding: [0x00,0x90,0x38,0xdc,0x03,0x00,0x7d,0x01]
-// GFX9-ERR: error: failed parsing operand
+// GFX9-ERR: error: dlc modifier is not supported on this GPU
 // VI-ERR: error: instruction not supported on this GPU
 
 global_load_dword v1, v[3:4], off offset:0
@@ -122,7 +122,7 @@ global_store_byte v[3:4], v1, off
 
 global_store_byte v[3:4], v1, off dlc
 // GFX10: encoding: [0x00,0x90,0x60,0xdc,0x03,0x01,0x7d,0x00]
-// GFX9-ERR: error: failed parsing operand
+// GFX9-ERR: error: dlc modifier is not supported on this GPU
 // VI-ERR: error: instruction not supported on this GPU
 
 global_store_short v[3:4], v1, off
@@ -132,7 +132,7 @@ global_store_short v[3:4], v1, off
 
 global_store_short v[3:4], v1, off dlc
 // GFX10: encoding: [0x00,0x90,0x68,0xdc,0x03,0x01,0x7d,0x00]
-// GFX9-ERR: error: failed parsing operand
+// GFX9-ERR: error: dlc modifier is not supported on this GPU
 // VI-ERR: error: instruction not supported on this GPU
 
 global_store_dword v[3:4], v1, off
@@ -142,7 +142,7 @@ global_store_dword v[3:4], v1, off
 
 global_store_dword v[3:4], v1, off dlc
 // GFX10: encoding: [0x00,0x90,0x70,0xdc,0x03,0x01,0x7d,0x00]
-// GFX9-ERR: error: failed parsing operand
+// GFX9-ERR: error: dlc modifier is not supported on this GPU
 // VI-ERR: error: instruction not supported on this GPU
 
 global_store_dwordx2 v[3:4], v[1:2], off
@@ -152,7 +152,7 @@ global_store_dwordx2 v[3:4], v[1:2], off
 
 global_store_dwordx2 v[3:4], v[1:2], off dlc
 // GFX10: encoding: [0x00,0x90,0x74,0xdc,0x03,0x01,0x7d,0x00]
-// GFX9-ERR: error: failed parsing operand
+// GFX9-ERR: error: dlc modifier is not supported on this GPU
 // VI-ERR: error: instruction not supported on this GPU
 
 global_store_dwordx3 v[3:4], v[1:3], off
@@ -162,7 +162,7 @@ global_store_dwordx3 v[3:4], v[1:3], off
 
 global_store_dwordx3 v[3:4], v[1:3], off dlc
 // GFX10: encoding: [0x00,0x90,0x7c,0xdc,0x03,0x01,0x7d,0x00]
-// GFX9-ERR: error: failed parsing operand
+// GFX9-ERR: error: dlc modifier is not supported on this GPU
 // VI-ERR: error: instruction not supported on this GPU
 
 global_store_dwordx4 v[3:4], v[1:4], off
@@ -172,7 +172,7 @@ global_store_dwordx4 v[3:4], v[1:4], off
 
 global_store_dwordx4 v[3:4], v[1:4], off dlc
 // GFX10: encoding: [0x00,0x90,0x78,0xdc,0x03,0x01,0x7d,0x00]
-// GFX9-ERR: error: failed parsing operand
+// GFX9-ERR: error: dlc modifier is not supported on this GPU
 // VI-ERR: error: instruction not supported on this GPU
 
 global_store_dword v[3:4], v1, off offset:12

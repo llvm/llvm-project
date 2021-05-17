@@ -1,5 +1,4 @@
 // RUN: %check_clang_tidy -std=c++11-or-later %s abseil-faster-strsplit-delimiter %t
-// FIXME: Fix the checker to work in C++17 mode.
 
 namespace absl {
 

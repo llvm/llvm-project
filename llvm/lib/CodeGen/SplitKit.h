@@ -44,6 +44,7 @@ class MachineRegisterInfo;
 class TargetInstrInfo;
 class TargetRegisterInfo;
 class VirtRegMap;
+class VirtRegAuxInfo;
 
 /// Determines the latest safe point in a block in which we can insert a split,
 /// spill or other instruction related with CurLI.
@@ -131,6 +132,9 @@ public:
     bool isOneInstr() const {
       return SlotIndex::isSameInstr(FirstInstr, LastInstr);
     }
+
+    void print(raw_ostream &OS) const;
+    void dump() const;
   };
 
 private:
@@ -235,6 +239,10 @@ public:
     return IPA.getLastInsertPoint(*CurLI, *MF.getBlockNumbered(Num));
   }
 
+  SlotIndex getLastSplitPoint(MachineBasicBlock *BB) {
+    return IPA.getLastInsertPoint(*CurLI, *BB);
+  }
+
   MachineBasicBlock::iterator getLastSplitPointIter(MachineBasicBlock *BB) {
     return IPA.getLastInsertPointIter(*CurLI, *BB);
   }
@@ -265,6 +273,7 @@ class LLVM_LIBRARY_VISIBILITY SplitEditor {
   const TargetInstrInfo &TII;
   const TargetRegisterInfo &TRI;
   const MachineBlockFrequencyInfo &MBFI;
+  VirtRegAuxInfo &VRAI;
 
 public:
   /// ComplementSpillMode - Select how the complement live range should be
@@ -450,9 +459,9 @@ private:
 public:
   /// Create a new SplitEditor for editing the LiveInterval analyzed by SA.
   /// Newly created intervals will be appended to newIntervals.
-  SplitEditor(SplitAnalysis &sa, AAResults &aa, LiveIntervals &lis,
-              VirtRegMap &vrm, MachineDominatorTree &mdt,
-              MachineBlockFrequencyInfo &mbfi);
+  SplitEditor(SplitAnalysis &SA, AAResults &AA, LiveIntervals &LIS,
+              VirtRegMap &VRM, MachineDominatorTree &MDT,
+              MachineBlockFrequencyInfo &MBFI, VirtRegAuxInfo &VRAI);
 
   /// reset - Prepare for a new split.
   void reset(LiveRangeEdit&, ComplementSpillMode = SM_Partition);
@@ -502,7 +511,8 @@ public:
   SlotIndex leaveIntvAtTop(MachineBasicBlock &MBB);
 
   /// overlapIntv - Indicate that all instructions in range should use the open
-  /// interval, but also let the complement interval be live.
+  /// interval if End does not have tied-def usage of the register and in this
+  /// case compliment interval is used. Let the complement interval be live.
   ///
   /// This doubles the register pressure, but is sometimes required to deal with
   /// register uses after the last valid split point.

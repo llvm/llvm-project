@@ -12,19 +12,21 @@
 #include "utils/UnitTest/Test.h"
 #include <math.h>
 
+typedef long double LD;
 using FPBits = __llvm_libc::fputil::FPBits<long double>;
 
-TEST(logblTest, SpecialNumbers) {
-  EXPECT_TRUE(FPBits::inf() == __llvm_libc::logbl(FPBits::inf()));
-  EXPECT_TRUE(FPBits::inf() == __llvm_libc::logbl(FPBits::negInf()));
+TEST(LlvmLibclogblTest, SpecialNumbers) {
+  EXPECT_TRUE(LD(FPBits::inf()) == __llvm_libc::logbl(LD(FPBits::inf())));
+  EXPECT_TRUE(LD(FPBits::inf()) == __llvm_libc::logbl(LD(FPBits::negInf())));
 
-  EXPECT_TRUE(FPBits::negInf() == __llvm_libc::logbl(FPBits::zero()));
-  EXPECT_TRUE(FPBits::negInf() == __llvm_libc::logbl(FPBits::negZero()));
+  EXPECT_TRUE(LD(FPBits::negInf()) == __llvm_libc::logbl(LD(FPBits::zero())));
+  EXPECT_TRUE(LD(FPBits::negInf()) ==
+              __llvm_libc::logbl(LD(FPBits::negZero())));
 
-  EXPECT_TRUE(FPBits(__llvm_libc::logbl(FPBits::buildNaN(1))).isNaN());
+  EXPECT_TRUE(FPBits(__llvm_libc::logbl(LD(FPBits::buildNaN(1)))).isNaN());
 }
 
-TEST(logblTest, PowersOfTwo) {
+TEST(LlvmLibclogblTest, PowersOfTwo) {
   EXPECT_TRUE(0.0l == __llvm_libc::logbl(1.0l));
   EXPECT_TRUE(0.0l == __llvm_libc::logbl(-1.0l));
 
@@ -44,7 +46,7 @@ TEST(logblTest, PowersOfTwo) {
   EXPECT_TRUE(5.0l == __llvm_libc::logbl(-32.0l));
 }
 
-TEST(LogbTest, SomeIntegers) {
+TEST(LlvmLibcLogbTest, SomeIntegers) {
   EXPECT_TRUE(1.0l == __llvm_libc::logbl(3.0l));
   EXPECT_TRUE(1.0l == __llvm_libc::logbl(-3.0l));
 
@@ -61,12 +63,12 @@ TEST(LogbTest, SomeIntegers) {
   EXPECT_TRUE(5.0l == __llvm_libc::logbl(-55.0l));
 }
 
-TEST(LogblTest, LongDoubleRange) {
+TEST(LlvmLibcLogblTest, LongDoubleRange) {
   using UIntType = FPBits::UIntType;
   constexpr UIntType count = 10000000;
   constexpr UIntType step = UIntType(-1) / count;
   for (UIntType i = 0, v = 0; i <= count; ++i, v += step) {
-    long double x = FPBits(v);
+    long double x = LD(FPBits(v));
     if (isnan(x) || isinf(x) || x == 0.0l)
       continue;
 

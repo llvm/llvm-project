@@ -13,7 +13,6 @@
 #include "ASTCommon.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/DeclContextInternals.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/AST/Expr.h"
@@ -1390,7 +1389,7 @@ void ASTDeclWriter::VisitCXXMethodDecl(CXXMethodDecl *D) {
 }
 
 void ASTDeclWriter::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
-  Record.push_back(D->getTraillingAllocKind());
+  Record.push_back(D->getTrailingAllocKind());
   addExplicitSpecifier(D->getExplicitSpecifier(), Record);
   if (auto Inherited = D->getInheritedConstructor()) {
     Record.AddDeclRef(Inherited.getShadowDecl());

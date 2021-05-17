@@ -248,7 +248,7 @@ bool ModuleLinker::shouldLinkFromSource(bool &LinkFromSrc,
   }
 
   // We always have to add Src if it has appending linkage.
-  if (Src.hasAppendingLinkage()) {
+  if (Src.hasAppendingLinkage() || Dest.hasAppendingLinkage()) {
     LinkFromSrc = true;
     return false;
   }

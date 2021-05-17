@@ -25,6 +25,6 @@ define i1 @gep3() {
 ; CHECK-NEXT: ret i1 false
 }
 
-declare i8* @func1(i8* returned) nounwind readnone
-declare %gept* @func2(%gept* returned) nounwind readnone
+declare i8* @func1(i8* returned) nounwind readnone willreturn
+declare %gept* @func2(%gept* returned) nounwind readnone willreturn
 

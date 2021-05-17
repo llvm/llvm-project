@@ -18,7 +18,7 @@
 ; SCALAR-NEXT: {  :  }
 ; SCALAR-NEXT: Invalid Context:
 ; SCALAR-NEXT: {  : false }
-; SCALAR-NEXT: Arrays {
+; SCALAR:      Arrays {
 ; SCALAR-NEXT:     i32 MemRef_C[*]; // Element size 4
 ; SCALAR-NEXT:     i32 MemRef_A[*]; // Element size 4
 ; SCALAR-NEXT: }

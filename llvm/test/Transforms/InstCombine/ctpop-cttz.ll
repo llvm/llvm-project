@@ -8,7 +8,7 @@ declare <2 x i32> @llvm.ctpop.v2i32(<2 x i32>)
 ; __builtin_popcount(i | -i) -> 32 - __builtin_cttz(i, false)
 define i32 @ctpop1(i32 %0) {
 ; CHECK-LABEL: @ctpop1(
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.cttz.i32(i32 [[TMP0:%.*]], i1 false), !range !0
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.cttz.i32(i32 [[TMP0:%.*]], i1 false), !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %2 = sub i32 0, %0
@@ -34,8 +34,8 @@ define i32 @ctpop1_multiuse(i32 %0) {
 ; CHECK-LABEL: @ctpop1_multiuse(
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 0, [[TMP0:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP2]], [[TMP0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[TMP3]]), !range !0
-; CHECK-NEXT:    [[TMP5:%.*]] = sub nuw nsw i32 32, [[TMP4]]
+; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP3]], -1
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.ctpop.i32(i32 [[TMP4]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP5]], [[TMP3]]
 ; CHECK-NEXT:    ret i32 [[TMP6]]
 ;
@@ -51,7 +51,7 @@ define i32 @ctpop1_multiuse(i32 %0) {
 ; __builtin_popcount(~i & (i-1)) -> __builtin_cttz(i, false)
 define i32 @ctpop2(i32 %0) {
 ; CHECK-LABEL: @ctpop2(
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.cttz.i32(i32 [[TMP0:%.*]], i1 false), !range !0
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.cttz.i32(i32 [[TMP0:%.*]], i1 false), !range [[RNG0]]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %2 = xor i32 %0, -1
@@ -78,7 +78,7 @@ define i32 @ctpop2_multiuse(i32 %0) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP0:%.*]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP0]], -1
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.cttz.i32(i32 [[TMP0]], i1 false), !range !0
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.cttz.i32(i32 [[TMP0]], i1 false), !range [[RNG0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP5]], [[TMP4]]
 ; CHECK-NEXT:    ret i32 [[TMP6]]
 ;

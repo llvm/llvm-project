@@ -61,7 +61,9 @@ public:
   CommandObjectWatchpointCommandAdd(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "add",
                             "Add a set of LLDB commands to a watchpoint, to be "
-                            "executed whenever the watchpoint is hit.",
+                            "executed whenever the watchpoint is hit.  "
+                            "The commands added to the watchpoint replace any "
+                            "commands previously added to it.",
                             nullptr, eCommandRequiresTarget),
         IOHandlerDelegateMultiline("DONE",
                                    IOHandlerDelegate::Completion::LLDBCommand),
@@ -301,7 +303,7 @@ are no syntax errors may indicate that a function was declared but never called.
         options.SetPrintErrors(true);
         options.SetAddToHistory(false);
 
-        debugger.GetCommandInterpreter().HandleCommands(commands, &exe_ctx,
+        debugger.GetCommandInterpreter().HandleCommands(commands, exe_ctx,
                                                         options, result);
         result.GetImmediateOutputStream()->Flush();
         result.GetImmediateErrorStream()->Flush();

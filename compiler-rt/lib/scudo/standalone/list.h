@@ -57,9 +57,9 @@ template <class T> struct IntrusiveList {
   void checkConsistency() const;
 
 protected:
-  uptr Size;
-  T *First;
-  T *Last;
+  uptr Size = 0;
+  T *First = nullptr;
+  T *Last = nullptr;
 };
 
 template <class T> void IntrusiveList<T>::checkConsistency() const {

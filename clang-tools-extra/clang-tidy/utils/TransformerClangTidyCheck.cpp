@@ -104,7 +104,8 @@ void TransformerClangTidyCheck::check(
       Diag << FixItHint::CreateReplacement(T.Range, T.Replacement);
       break;
     case transformer::EditKind::AddInclude:
-      Diag << Inserter.createMainFileIncludeInsertion(T.Replacement);
+      Diag << Inserter.createIncludeInsertion(
+          Result.SourceManager->getFileID(T.Range.getBegin()), T.Replacement);
       break;
     }
 }

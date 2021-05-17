@@ -221,8 +221,7 @@ INTERCEPTOR(int, pthread_create, void *th, void *attr, void *(*callback)(void*),
   ThreadStartArg *A = reinterpret_cast<ThreadStartArg *> (MmapOrDie(
       GetPageSizeCached(), "pthread_create"));
   *A = {callback, param};
-  int res = REAL(pthread_create)(UntagPtr(th), UntagPtr(attr),
-                                 &HwasanThreadStartFunc, A);
+  int res = REAL(pthread_create)(th, attr, &HwasanThreadStartFunc, A);
   return res;
 }
 

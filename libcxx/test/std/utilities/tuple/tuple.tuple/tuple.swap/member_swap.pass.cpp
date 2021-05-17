@@ -20,7 +20,8 @@
 #include "test_macros.h"
 #include "MoveOnly.h"
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20
+bool test()
 {
     {
         typedef std::tuple<> T;
@@ -58,6 +59,15 @@ int main(int, char**)
         assert(std::get<1>(t1) == 1);
         assert(std::get<2>(t1) == 2);
     }
+    return true;
+}
 
-  return 0;
+int main(int, char**)
+{
+    test();
+#if TEST_STD_VER >= 20
+    static_assert(test());
+#endif
+
+    return 0;
 }

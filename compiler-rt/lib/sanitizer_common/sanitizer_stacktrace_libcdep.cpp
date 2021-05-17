@@ -23,8 +23,8 @@ void StackTrace::Print() const {
     Printf("    <empty stack>\n\n");
     return;
   }
-  InternalScopedString frame_desc(GetPageSizeCached() * 2);
-  InternalScopedString dedup_token(GetPageSizeCached());
+  InternalScopedString frame_desc;
+  InternalScopedString dedup_token;
   int dedup_frames = common_flags()->dedup_token_length;
   bool symbolize = RenderNeedsSymbolization(common_flags()->stack_trace_format);
   uptr frame_num = 0;
@@ -82,12 +82,15 @@ void BufferedStackTrace::Unwind(u32 max_depth, uptr pc, uptr bp, void *context,
       UnwindSlow(pc, context, max_depth);
     else
       UnwindSlow(pc, max_depth);
+    // If there are too few frames, the program may be built with
+    // -fno-asynchronous-unwind-tables. Fall back to fast unwinder below.
+    if (size > 2 || size >= max_depth)
+      return;
 #else
     UNREACHABLE("slow unwind requested but not available");
 #endif
-  } else {
-    UnwindFast(pc, bp, stack_top, stack_bottom, max_depth);
   }
+  UnwindFast(pc, bp, stack_top, stack_bottom, max_depth);
 }
 
 static int GetModuleAndOffsetForPc(uptr pc, char *module_name,
@@ -125,7 +128,7 @@ void __sanitizer_symbolize_pc(uptr pc, const char *fmt, char *out_buf,
     out_buf[out_buf_size - 1] = 0;
     return;
   }
-  InternalScopedString frame_desc(GetPageSizeCached());
+  InternalScopedString frame_desc;
   uptr frame_num = 0;
   // Reserve one byte for the final 0.
   char *out_end = out_buf + out_buf_size - 1;
@@ -156,7 +159,7 @@ void __sanitizer_symbolize_global(uptr data_addr, const char *fmt,
   out_buf[0] = 0;
   DataInfo DI;
   if (!Symbolizer::GetOrInit()->SymbolizeData(data_addr, &DI)) return;
-  InternalScopedString data_desc(GetPageSizeCached());
+  InternalScopedString data_desc;
   RenderData(&data_desc, fmt, &DI, common_flags()->strip_path_prefix);
   internal_strncpy(out_buf, data_desc.data(), out_buf_size);
   out_buf[out_buf_size - 1] = 0;

@@ -5,9 +5,10 @@ import site
 
 config.cxx_under_test           = "@CMAKE_CXX_COMPILER@"
 config.project_obj_root         = "@CMAKE_BINARY_DIR@"
+config.libcxxabi_hdr_root       = "@LIBCXXABI_HEADER_DIR@"
 config.libcxxabi_src_root       = "@LIBCXXABI_SOURCE_DIR@"
 config.libcxxabi_obj_root       = "@LIBCXXABI_BINARY_DIR@"
-config.abi_library_path         = "@LIBCXXABI_LIBRARY_DIR@"
+config.abi_library_root         = "@LIBCXXABI_LIBRARY_DIR@"
 config.libcxx_src_root          = "@LIBCXXABI_LIBCXX_PATH@"
 config.cxx_headers              = "@LIBCXXABI_LIBCXX_INCLUDES@"
 config.libunwind_headers        = "@LIBCXXABI_LIBUNWIND_INCLUDES_INTERNAL@"
@@ -24,7 +25,8 @@ config.libcxxabi_shared         = @LIBCXXABI_LINK_TESTS_WITH_SHARED_LIBCXXABI@
 config.enable_shared            = @LIBCXXABI_LINK_TESTS_WITH_SHARED_LIBCXX@
 config.enable_exceptions        = @LIBCXXABI_ENABLE_EXCEPTIONS@
 config.host_triple              = "@LLVM_HOST_TRIPLE@"
-config.target_triple            = "@TARGET_TRIPLE@"
+if "@TARGET_TRIPLE@":
+    config.target_triple        = "@TARGET_TRIPLE@"
 config.sysroot                  = "@LIBCXXABI_SYSROOT@"
 config.gcc_toolchain            = "@LIBCXXABI_GCC_TOOLCHAIN@"
 config.cxx_ext_threads          = @LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY@

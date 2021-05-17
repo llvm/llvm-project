@@ -387,10 +387,10 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 ; Double pattern:
-; Check that is not vectorized if fp-instruction has no fast-math property. 
+; Check that is not vectorized if fp-instruction has no fast-math property.
 ;
 ; double fcmp_0_fsub_select2_notvectorize(double * restrict x, const int N) {
-;   double sum = 0.                                              
+;   double sum = 0.
 ;   for (int i = 0; i < N; ++i)
 ;     if (x[i] > 0.)
 ;       sum -= x[i];
@@ -468,7 +468,7 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 ; Float pattern:
-;   Check that is not vectorized if fp-instruction has no fast-math property. 
+;   Check that is not vectorized if fp-instruction has no fast-math property.
 ;
 ; float fcmp_0_fmult_select1_notvectorize(float * restrict x, const int N) {
 ;   float sum = 0.
@@ -610,9 +610,9 @@ for.end:                                          ; preds = %for.body, %entry
 ; CHECK-DAG: %[[M1:.*]] = fmul fast <4 x float> %[[V0]], <float 3.000000e+00,
 ; CHECK-DAG: %[[M2:.*]] = fmul fast <4 x float> %[[V0]], <float 2.000000e+00,
 ; CHECK: %[[C11:.*]] = xor <4 x i1> %[[C1]], <i1 true,
-; CHECK-DAG: %[[C12:.*]] = and <4 x i1> %[[C2]], %[[C11]]
+; CHECK-DAG: %[[C12:.*]] = select <4 x i1> %[[C11]], <4 x i1> %[[C2]], <4 x i1> zeroinitializer
 ; CHECK-DAG: %[[C21:.*]] = xor <4 x i1> %[[C2]], <i1 true,
-; CHECK: %[[C22:.*]] = and <4 x i1> %[[C21]], %[[C11]]
+; CHECK: %[[C22:.*]] = select <4 x i1> %[[C11]], <4 x i1> %[[C21]], <4 x i1> zeroinitializer
 ; CHECK: %[[S1:.*]] = select <4 x i1> %[[C22]], <4 x float> %[[M1]], <4 x float> %[[M2]]
 ; CHECK: %[[S2:.*]] = select <4 x i1> %[[C1]], <4 x float> %[[V0]], <4 x float> %[[S1]]
 ; CHECK: fadd fast <4 x float> %[[S2]],
@@ -678,9 +678,9 @@ for.end:                                          ; preds = %for.inc, %entry
 ; CHECK-DAG: %[[SUB:.*]] = fsub fast <4 x float>
 ; CHECK-DAG: %[[ADD:.*]] = fadd fast <4 x float>
 ; CHECK: %[[C11:.*]] = xor <4 x i1> %[[C1]], <i1 true,
-; CHECK-DAG: %[[C12:.*]] = and <4 x i1> %[[C2]], %[[C11]]
+; CHECK-DAG: %[[C12:.*]] = select <4 x i1> %[[C11]], <4 x i1> %[[C2]], <4 x i1> zeroinitializer
 ; CHECK-DAG: %[[C21:.*]] = xor <4 x i1> %[[C2]], <i1 true,
-; CHECK: %[[C22:.*]] = and <4 x i1> %[[C21]], %[[C11]]
+; CHECK: %[[C22:.*]] = select <4 x i1> %[[C11]], <4 x i1> %[[C21]], <4 x i1> zeroinitializer
 ; CHECK: %[[S1:.*]] = select <4 x i1> %[[C12]], <4 x float> %[[SUB]], <4 x float> %[[ADD]]
 ; CHECK: %[[S2:.*]] = select <4 x i1> %[[C22]], {{.*}} <4 x float> %[[S1]]
 define float @fcmp_fadd_fsub(float* nocapture readonly %a, i32 %n) nounwind readonly {
@@ -793,9 +793,10 @@ for.end:                                          ; preds = %for.inc, %entry
 ;     return sum;
 ; }
 
-; CHECK-LABEL: @fcmp_store_back(
-; CHECK-NOT: <4 x float>
 define float @fcmp_store_back(float* nocapture %a, i32 %LEN) nounwind readonly {
+; CHECK-LABEL: @fcmp_store_back(
+; CHECK-NOT:     <4 x float>
+;
 entry:
   %cmp7 = icmp sgt i32 %LEN, 0
   br i1 %cmp7, label %for.body.preheader, label %for.end
@@ -819,3 +820,6 @@ for.end:                                          ; preds = %for.body, %entry
   %sum.0.lcssa = phi float [ 0.000000e+00, %entry ], [ %add, %for.body ]
   ret float %sum.0.lcssa
 }
+
+; Make sure any check-not directives are not triggered by function declarations.
+; CHECK: declare

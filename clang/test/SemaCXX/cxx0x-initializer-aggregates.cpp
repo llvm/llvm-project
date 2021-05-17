@@ -133,3 +133,10 @@ namespace array_addressof {
 namespace PR24816 {
   struct { int i; } ne = {{0, 1}}; // expected-error{{excess elements in scalar initializer}}
 }
+
+namespace no_crash {
+class Foo; // expected-note {{forward declaration}}
+void test(int size) {
+  Foo array[size] = {0}; // expected-error {{variable has incomplete type}}
+}
+}

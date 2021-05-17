@@ -48,11 +48,11 @@
 
 # DYLIB: @executable_path/libhello.dylib
 # DYLIB: @executable_path/libgoodbye.dylib
-# DYLIB: /usr/lib/libSystem.B.dylib
+# DYLIB: /usr/lib/libSystem.dylib
 
 # ARCHIVE:     @executable_path/libhello.dylib
 # ARCHIVE-NOT: @executable_path/libgoodbye.dylib
-# ARCHIVE:     /usr/lib/libSystem.B.dylib
+# ARCHIVE:     /usr/lib/libSystem.dylib
 
 .section __TEXT,__text
 .global _main

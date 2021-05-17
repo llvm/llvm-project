@@ -60,5 +60,6 @@ static_library("MCTargetDesc") {
     "PPCMCTargetDesc.cpp",
     "PPCPredicates.cpp",
     "PPCXCOFFObjectWriter.cpp",
+    "PPCXCOFFStreamer.cpp",
   ]
 }

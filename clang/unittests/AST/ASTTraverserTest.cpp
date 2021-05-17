@@ -1148,6 +1148,15 @@ void callDefaultArg()
 {
   hasDefaultArg(42);
 }
+
+void decomposition()
+{
+    int arr[3];
+    auto &[f, s, t] = arr;
+
+    f = 42;
+}
+
 )cpp",
                                        {"-std=c++20"});
 
@@ -1443,6 +1452,46 @@ CallExpr
 CallExpr
 |-DeclRefExpr 'hasDefaultArg'
 `-IntegerLiteral
+)cpp");
+  }
+
+  {
+    auto FN = ast_matchers::match(
+        functionDecl(hasName("decomposition"),
+                     hasDescendant(decompositionDecl().bind("decomp"))),
+        AST2->getASTContext());
+    EXPECT_EQ(FN.size(), 1u);
+
+    EXPECT_EQ(
+        dumpASTString(TK_AsIs, FN[0].getNodeAs<DecompositionDecl>("decomp")),
+        R"cpp(
+DecompositionDecl ''
+|-DeclRefExpr 'arr'
+|-BindingDecl 'f'
+| `-ArraySubscriptExpr
+|   |-ImplicitCastExpr
+|   | `-DeclRefExpr ''
+|   `-IntegerLiteral
+|-BindingDecl 's'
+| `-ArraySubscriptExpr
+|   |-ImplicitCastExpr
+|   | `-DeclRefExpr ''
+|   `-IntegerLiteral
+`-BindingDecl 't'
+  `-ArraySubscriptExpr
+    |-ImplicitCastExpr
+    | `-DeclRefExpr ''
+    `-IntegerLiteral
+)cpp");
+
+    EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource,
+                            FN[0].getNodeAs<DecompositionDecl>("decomp")),
+              R"cpp(
+DecompositionDecl ''
+|-DeclRefExpr 'arr'
+|-BindingDecl 'f'
+|-BindingDecl 's'
+`-BindingDecl 't'
 )cpp");
   }
 }

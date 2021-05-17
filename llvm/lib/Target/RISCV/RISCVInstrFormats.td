@@ -64,22 +64,21 @@ def VMConstraint  : RISCVVConstraint<0b100>;
 // register is being written with a mask value (e.g., comparisons) or the
 // scalar result of a reduction.
 //
-// * Widening: The destination vector register group cannot overlap a source
-// vector register group of a different EEW
+// * Widening: The destination EEW is greater than the source EEW, the source
+// EMUL is at least 1. The destination vector register group cannot overlap
+// with the source vector register groups besides the highest-numbered part of
+// the destination register group.
 //
-// * Narrowing: The destination vector register group cannot overlap the
-// first source vector register group
+// * Narrowing: The destination EEW is smaller than the source EEW. The
+// destination vector register group cannot overlap with the source vector
+// register groups besides the lowest-numbered part of the source register
+// group.
 //
-// * For vadc and vsbc, an illegal instruction exception is raised if the
-// destination vector register is v0.
+// * vmsbf.m/vmsif.m/vmsof.m: The destination register cannot overlap the
+// source register and, if masked, cannot overlap the mask register ('v0').
 //
-// * For vmadc and vmsbc, an illegal instruction exception is raised if the
-// destination vector register overlaps a source vector register group.
-//
-// * viota: An illegal instruction exception is raised if the destination
-// vector register group overlaps the source vector mask register. If the
-// instruction is masked, an illegal instruction exception is issued if the
-// destination vector register group overlaps v0.
+// * viota: The destination register cannot overlap the source register and,
+// if masked, cannot overlap the mask register ('v0').
 //
 // * v[f]slide[1]up: The destination vector register group for vslideup cannot
 // overlap the source vector register group.
@@ -96,12 +95,6 @@ def WidenW       : RISCVVConstraint<!or(VS1Constraint.Value,
                                         VMConstraint.Value)>;
 def WidenCvt     : RISCVVConstraint<!or(VS2Constraint.Value,
                                         VMConstraint.Value)>;
-def Narrow       : RISCVVConstraint<!or(VS2Constraint.Value,
-                                        VMConstraint.Value)>;
-def NarrowCvt    : RISCVVConstraint<!or(VS2Constraint.Value,
-                                        VMConstraint.Value)>;
-def Vmadc        : RISCVVConstraint<!or(VS2Constraint.Value,
-                                        VS1Constraint.Value)>;
 def Iota         : RISCVVConstraint<!or(VS2Constraint.Value,
                                         VMConstraint.Value)>;
 def SlideUp      : RISCVVConstraint<!or(VS2Constraint.Value,
@@ -174,8 +167,8 @@ class RVInst<dag outs, dag ins, string opcodestr, string argstr,
   bit HasDummyMask = 0;
   let TSFlags{11} = HasDummyMask;
 
-  bit WritesElement0 = 0;
-  let TSFlags{12} = WritesElement0;
+  bit ForceTailAgnostic = false;
+  let TSFlags{12} = ForceTailAgnostic;
 
   bit HasMergeOp = 0;
   let TSFlags{13} = HasMergeOp;
@@ -243,8 +236,25 @@ class RVInstR<bits<7> funct7, bits<3> funct3, RISCVOpcode opcode, dag outs,
   let Opcode = opcode.Value;
 }
 
-class RVInstR4<bits<2> funct2, RISCVOpcode opcode, dag outs, dag ins,
-               string opcodestr, string argstr>
+class RVInstR4<bits<2> funct2, bits<3> funct3, RISCVOpcode opcode, dag outs,
+               dag ins, string opcodestr, string argstr>
+    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR4> {
+  bits<5> rs3;
+  bits<5> rs2;
+  bits<5> rs1;
+  bits<5> rd;
+
+  let Inst{31-27} = rs3;
+  let Inst{26-25} = funct2;
+  let Inst{24-20} = rs2;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = funct3;
+  let Inst{11-7} = rd;
+  let Opcode = opcode.Value;
+}
+
+class RVInstR4Frm<bits<2> funct2, RISCVOpcode opcode, dag outs, dag ins,
+                  string opcodestr, string argstr>
     : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR4> {
   bits<5> rs3;
   bits<5> rs2;
@@ -309,16 +319,15 @@ class RVInstI<bits<3> funct3, RISCVOpcode opcode, dag outs, dag ins,
   let Opcode = opcode.Value;
 }
 
-class RVInstIShift<bit arithshift, bits<3> funct3, RISCVOpcode opcode,
+class RVInstIShift<bits<5> imm11_7, bits<3> funct3, RISCVOpcode opcode,
                    dag outs, dag ins, string opcodestr, string argstr>
     : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
   bits<6> shamt;
   bits<5> rs1;
   bits<5> rd;
 
-  let Inst{31} = 0;
-  let Inst{30} = arithshift;
-  let Inst{29-26} = 0;
+  let Inst{31-27} = imm11_7;
+  let Inst{26} = 0;
   let Inst{25-20} = shamt;
   let Inst{19-15} = rs1;
   let Inst{14-12} = funct3;
@@ -326,16 +335,14 @@ class RVInstIShift<bit arithshift, bits<3> funct3, RISCVOpcode opcode,
   let Opcode = opcode.Value;
 }
 
-class RVInstIShiftW<bit arithshift, bits<3> funct3, RISCVOpcode opcode,
+class RVInstIShiftW<bits<7> imm11_5, bits<3> funct3, RISCVOpcode opcode,
                     dag outs, dag ins, string opcodestr, string argstr>
     : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
   bits<5> shamt;
   bits<5> rs1;
   bits<5> rd;
 
-  let Inst{31} = 0;
-  let Inst{30} = arithshift;
-  let Inst{29-25} = 0;
+  let Inst{31-25} = imm11_5;
   let Inst{24-20} = shamt;
   let Inst{19-15} = rs1;
   let Inst{14-12} = funct3;

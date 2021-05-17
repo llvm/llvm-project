@@ -9,15 +9,14 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/YAMLTraits.h"
-#include <cassert>
 #include <string>
 
-llvm::Regex Infinity("^[-+]?(\\.inf|\\.Inf|\\.INF)$");
-llvm::Regex Base8("^0o[0-7]+$");
-llvm::Regex Base16("^0x[0-9a-fA-F]+$");
-llvm::Regex Float("^[-+]?(\\.[0-9]+|[0-9]+(\\.[0-9]*)?)([eE][-+]?[0-9]+)?$");
-
 inline bool isNumericRegex(llvm::StringRef S) {
+  static llvm::Regex Infinity("^[-+]?(\\.inf|\\.Inf|\\.INF)$");
+  static llvm::Regex Base8("^0o[0-7]+$");
+  static llvm::Regex Base16("^0x[0-9a-fA-F]+$");
+  static llvm::Regex Float(
+      "^[-+]?(\\.[0-9]+|[0-9]+(\\.[0-9]*)?)([eE][-+]?[0-9]+)?$");
 
   if (S.equals(".nan") || S.equals(".NaN") || S.equals(".NAN"))
     return true;

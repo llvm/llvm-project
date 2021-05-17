@@ -1080,6 +1080,7 @@ static bool rewriteToNumericBoxedExpression(const ObjCMessageExpr *Msg,
     case CK_BuiltinFnToFnPtr:
     case CK_ZeroToOCLOpaqueType:
     case CK_IntToOCLSampler:
+    case CK_MatrixCast:
       return false;
 
     case CK_BooleanToSignedIntegral:

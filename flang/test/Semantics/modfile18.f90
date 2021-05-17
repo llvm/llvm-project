@@ -1,4 +1,4 @@
-! RUN: %S/test_modfile.sh %s %t %f18
+! RUN: %S/test_modfile.sh %s %t %flang_fc1
 ! Tests folding of array constructors
 
 module m

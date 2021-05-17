@@ -27,7 +27,7 @@
 //          TYPE (uint4)
 //            0 - block probe, 1 - indirect call, 2 - direct call
 //          ATTRIBUTE (uint3)
-//            reserved
+//            1 - reserved, 2 - dangling
 //          ADDRESS_TYPE (uint1)
 //            0 - code address, 1 - address delta
 //          CODE_ADDRESS (uint64 or ULEB128)
@@ -36,7 +36,6 @@
 //        A list of NUM_INLINED_FUNCTIONS entries describing each of the inlined
 //        callees.  Each record contains:
 //          INLINE SITE
-//            GUID of the inlinee (uint64)
 //            ID of the callsite probe (ULEB128)
 //          FUNCTION BODY
 //            A FUNCTION BODY entry describing the inlined function.

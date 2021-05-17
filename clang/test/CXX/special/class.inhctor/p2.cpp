@@ -96,7 +96,7 @@ static_assert(ce.k2 == 'x', "");
 
 
 struct TemplateCtors { // expected-note 2{{candidate constructor (the implicit}}
-  constexpr TemplateCtors() {} // expected-note {{candidate inherited constructor}}
+  constexpr TemplateCtors() {}
   template<template<int> class T> TemplateCtors(X<0>, T<0>); // expected-note {{here}} expected-note {{candidate inherited constructor}}
   template<int N> TemplateCtors(X<1>, X<N>); // expected-note {{here}} expected-note {{candidate inherited constructor}}
   template<typename T> TemplateCtors(X<2>, T); // expected-note {{here}} expected-note {{candidate inherited constructor}}
@@ -104,8 +104,8 @@ struct TemplateCtors { // expected-note 2{{candidate constructor (the implicit}}
   template<typename T = int> TemplateCtors(int, int = 0, int = 0);
 };
 
-struct UsingTemplateCtors : TemplateCtors { // expected-note 2{{candidate constructor (the implicit}}
-  using TemplateCtors::TemplateCtors; // expected-note 6{{inherited here}}
+struct UsingTemplateCtors : TemplateCtors { // expected-note 3{{candidate constructor (the implicit}}
+  using TemplateCtors::TemplateCtors; // expected-note 5{{inherited here}}
 
   constexpr UsingTemplateCtors(X<0>, X<0>) {} // expected-note {{not viable}}
   constexpr UsingTemplateCtors(X<1>, X<1>) {} // expected-note {{not viable}}

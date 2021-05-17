@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_PDBSYMBOLSTREAM_H
-#define LLVM_DEBUGINFO_PDB_RAW_PDBSYMBOLSTREAM_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_SYMBOLSTREAM_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_SYMBOLSTREAM_H
 
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 

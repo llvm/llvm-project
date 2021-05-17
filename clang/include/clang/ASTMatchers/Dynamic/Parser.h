@@ -100,6 +100,14 @@ public:
     virtual llvm::Optional<MatcherCtor>
     lookupMatcherCtor(StringRef MatcherName) = 0;
 
+    virtual bool isBuilderMatcher(MatcherCtor) const = 0;
+
+    virtual ASTNodeKind nodeMatcherType(MatcherCtor) const = 0;
+
+    virtual internal::MatcherDescriptorPtr
+    buildMatcherCtor(MatcherCtor, SourceRange NameRange,
+                     ArrayRef<ParserValue> Args, Diagnostics *Error) const = 0;
+
     /// Compute the list of completion types for \p Context.
     ///
     /// Each element of \p Context represents a matcher invocation, going from
@@ -141,6 +149,15 @@ public:
 
     std::vector<ArgKind> getAcceptedCompletionTypes(
         llvm::ArrayRef<std::pair<MatcherCtor, unsigned>> Context) override;
+
+    bool isBuilderMatcher(MatcherCtor Ctor) const override;
+
+    ASTNodeKind nodeMatcherType(MatcherCtor) const override;
+
+    internal::MatcherDescriptorPtr
+    buildMatcherCtor(MatcherCtor, SourceRange NameRange,
+                     ArrayRef<ParserValue> Args,
+                     Diagnostics *Error) const override;
 
     std::vector<MatcherCompletion>
     getMatcherCompletions(llvm::ArrayRef<ArgKind> AcceptedTypes) override;
@@ -233,7 +250,11 @@ private:
 
   bool parseBindID(std::string &BindID);
   bool parseExpressionImpl(VariantValue *Value);
+  bool parseMatcherBuilder(MatcherCtor Ctor, const TokenInfo &NameToken,
+                           const TokenInfo &OpenToken, VariantValue *Value);
   bool parseMatcherExpressionImpl(const TokenInfo &NameToken,
+                                  const TokenInfo &OpenToken,
+                                  llvm::Optional<MatcherCtor> Ctor,
                                   VariantValue *Value);
   bool parseIdentifierPrefixImpl(VariantValue *Value);
 

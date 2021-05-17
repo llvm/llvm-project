@@ -99,10 +99,10 @@ implementation is located under ``lldb/packages/Python/lldbsuite``. We have
 several extensions and custom test primitives on top of what's offered by
 `unittest2 <https://docs.python.org/2/library/unittest.html>`_. Those can be
 found  in
-`lldbtest.py <https://github.com/llvm/llvm-project/blob/master/lldb/packages/Python/lldbsuite/test/lldbtest.py>`_.
+`lldbtest.py <https://github.com/llvm/llvm-project/blob/main/lldb/packages/Python/lldbsuite/test/lldbtest.py>`_.
 
 Below is the directory layout of the `example API test
-<https://github.com/llvm/llvm-project/tree/master/lldb/test/API/sample_test>`_.
+<https://github.com/llvm/llvm-project/tree/main/lldb/test/API/sample_test>`_.
 The test directory will always contain a python file, starting with ``Test``.
 Most of the tests are structured as a binary being debugged, so there will be
 one or more source files and a ``Makefile``.
@@ -127,7 +127,7 @@ Our testing framework also has a bunch of utilities that abstract common
 operations, such as creating targets, setting breakpoints etc. When code is
 shared across tests, we extract it into a utility in ``lldbutil``. It's always
 worth taking a look at  `lldbutil
-<https://github.com/llvm/llvm-project/blob/master/lldb/packages/Python/lldbsuite/test/lldbutil.py>`_
+<https://github.com/llvm/llvm-project/blob/main/lldb/packages/Python/lldbsuite/test/lldbutil.py>`_
 to see if there's a utility to simplify some of the testing boiler plate.
 Because we can't always audit every existing test, this is doubly true when
 looking at an existing test for inspiration.
@@ -156,7 +156,7 @@ test, the API test also allow for much more complex scenarios when it comes to
 building inferiors. Every test has its own ``Makefile``, most of them only a
 few lines long. A shared ``Makefile`` (``Makefile.rules``) with about a
 thousand lines of rules takes care of most if not all of the boiler plate,
-while individual make files can be used to build more advanced tests.  
+while individual make files can be used to build more advanced tests.
 
 Here's an example of a simple ``Makefile`` used by the example test.
 
@@ -168,7 +168,7 @@ Here's an example of a simple ``Makefile`` used by the example test.
   include Makefile.rules
 
 Finding the right variables to set can be tricky. You can always take a look at
-`Makefile.rules <https://github.com/llvm/llvm-project/blob/master/lldb/packages/Python/lldbsuite/test/make/Makefile.rules>`_
+`Makefile.rules <https://github.com/llvm/llvm-project/blob/main/lldb/packages/Python/lldbsuite/test/make/Makefile.rules>`_
 but often it's easier to find an existing ``Makefile`` that does something
 similar to what you want to do.
 
@@ -365,7 +365,7 @@ Running tests in QEMU System Emulation Environment
 
 QEMU can be used to test LLDB in an emulation environment in the absence of
 actual hardware. `QEMU based testing <https://lldb.llvm.org/use/qemu-testing.html>`_
-page describes how to setup a emulation environment using QEMU helper scripts
+page describes how to setup an emulation environment using QEMU helper scripts
 found under llvm-project/lldb/scripts/lldb-test-qemu. These scripts currently
 work with Arm or AArch64, but support for other architectures can be added easily.
 
@@ -373,7 +373,20 @@ Debugging Test Failures
 -----------------------
 
 On non-Windows platforms, you can use the ``-d`` option to ``dotest.py`` which
-will cause the script to wait for a while until a debugger is attached.
+will cause the script to print out the pid of the test and wait for a while
+until a debugger is attached. Then run ``lldb -p <pid>`` to attach.
+
+To instead debug a test's python source, edit the test and insert
+``import pdb; pdb.set_trace()`` at the point you want to start debugging. In
+addition to pdb's debugging facilities, lldb commands can be executed with the
+help of a pdb alias. For example ``lldb bt`` and ``lldb v some_var``. Add this
+line to your ``~/.pdbrc``:
+
+::
+
+   alias lldb self.dbg.HandleCommand("%*")
+
+::
 
 Debugging Test Failures on Windows
 ``````````````````````````````````

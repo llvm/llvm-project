@@ -198,12 +198,11 @@ void testIgnoredLarge() {
   testReturnLarge();
 }
 
-// CHECK: define{{.*}} i64 @_Z20testReturnHasTrivialv()
+// CHECK: define{{.*}} i32 @_Z20testReturnHasTrivialv()
 // CHECK: %[[RETVAL:.*]] = alloca %[[STRUCT_TRIVIAL:.*]], align 4
 // CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_TRIVIAL]], %[[STRUCT_TRIVIAL]]* %[[RETVAL]], i32 0, i32 0
 // CHECK: %[[V0:.*]] = load i32, i32* %[[COERCE_DIVE]], align 4
-// CHECK: %[[COERCE_VAL_II:.*]] = zext i32 %[[V0]] to i64
-// CHECK: ret i64 %[[COERCE_VAL_II]]
+// CHECK: ret i32 %[[V0]]
 // CHECK: }
 
 Trivial testReturnHasTrivial() {
@@ -262,3 +261,21 @@ void calleeExceptionLarge(Large, Large);
 void testExceptionLarge() {
   calleeExceptionLarge(Large(), Large());
 }
+
+// PR42961
+
+// CHECK: define{{.*}} @"_ZN3$_08__invokeEv"()
+// CHECK: %[[RETVAL:.*]] = alloca %[[STRUCT_SMALL]], align 8
+// CHECK: %[[COERCE:.*]] = alloca %[[STRUCT_SMALL]], align 8
+// CHECK: %[[CALL:.*]] = call{{.*}} @"_ZNK3$_0clEv"
+// CHECK: %[[COERCEDIVE:.*]] = getelementptr{{.*}} %[[COERCE]]
+// CHECK: %[[COERCEVALIP:.*]] = inttoptr{{.*}} %[[CALL]]
+// CHECK: %[[RETVALP:.*]] = bitcast %[[STRUCT_SMALL]]* %[[RETVAL]]
+// CHECK: %[[COERCEP:.*]] = bitcast %[[STRUCT_SMALL]]* %[[COERCE]]
+// CHECK: call {{.*}}memcpy{{.*}} %[[RETVALP]]{{.*}} %[[COERCEP]]
+// CHECK: %[[COERCEDIVE1:.*]] = getelementptr{{.*}} %[[RETVAL]]
+// CHECK: %[[TMP:.*]] = load{{.*}} %[[COERCEDIVE1]]
+// CHECK: %[[COERCEVALPI:.*]] = ptrtoint{{.*}} %[[TMP]]
+// CHECK: ret{{.*}} %[[COERCEVALPI]]
+
+Small (*fp)() = []() -> Small { return Small(); };

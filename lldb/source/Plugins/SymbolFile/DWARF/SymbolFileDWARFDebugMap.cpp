@@ -806,7 +806,7 @@ SymbolFileDWARFDebugMap::ResolveSymbolContext(const Address &exe_so_addr,
 }
 
 uint32_t SymbolFileDWARFDebugMap::ResolveSymbolContext(
-    const FileSpec &file_spec, uint32_t line, bool check_inlines,
+    const SourceLocationSpec &src_location_spec,
     SymbolContextItem resolve_scope, SymbolContextList &sc_list) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   const uint32_t initial = sc_list.GetSize();
@@ -815,18 +815,19 @@ uint32_t SymbolFileDWARFDebugMap::ResolveSymbolContext(
   for (uint32_t i = 0; i < cu_count; ++i) {
     // If we are checking for inlines, then we need to look through all compile
     // units no matter if "file_spec" matches.
-    bool resolve = check_inlines;
+    bool resolve = src_location_spec.GetCheckInlines();
 
     if (!resolve) {
       FileSpec so_file_spec;
       if (GetFileSpecForSO(i, so_file_spec))
-        resolve = FileSpec::Match(file_spec, so_file_spec);
+        resolve =
+            FileSpec::Match(src_location_spec.GetFileSpec(), so_file_spec);
     }
     if (resolve) {
       SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(i);
       if (oso_dwarf)
-        oso_dwarf->ResolveSymbolContext(file_spec, line, check_inlines,
-                                        resolve_scope, sc_list);
+        oso_dwarf->ResolveSymbolContext(src_location_spec, resolve_scope,
+                                        sc_list);
     }
   }
   return sc_list.GetSize() - initial;

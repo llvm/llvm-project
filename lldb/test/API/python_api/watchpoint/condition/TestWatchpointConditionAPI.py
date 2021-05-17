@@ -54,7 +54,7 @@ class WatchpointConditionAPITestCase(TestBase):
 
         # We should be stopped due to the breakpoint.  Get frame #0.
         process = target.GetProcess()
-        self.assertTrue(process.GetState() == lldb.eStateStopped,
+        self.assertEqual(process.GetState(), lldb.eStateStopped,
                         PROCESS_STOPPED)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
@@ -92,4 +92,4 @@ class WatchpointConditionAPITestCase(TestBase):
         self.DebugSBValue(value)
 
         # Verify that the condition is met.
-        self.assertTrue(value.GetValueAsUnsigned() == 5)
+        self.assertEqual(value.GetValueAsUnsigned(), 5)

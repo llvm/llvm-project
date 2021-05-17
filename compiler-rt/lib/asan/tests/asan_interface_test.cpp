@@ -172,8 +172,7 @@ TEST(AddressSanitizerInterface, SimplePoisonMemoryRegionTest) {
   BAD_ACCESS(array, 40);
   BAD_ACCESS(array, 60);
   BAD_ACCESS(array, 79);
-  char value;
-  EXPECT_DEATH(value = Ident(array[40]), kUseAfterPoisonErrorMessage);
+  EXPECT_DEATH(Ident(array[40]), kUseAfterPoisonErrorMessage);
   __asan_unpoison_memory_region(array + 40, 40);
   // access previously poisoned memory.
   GOOD_ACCESS(array, 40);

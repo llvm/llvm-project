@@ -136,11 +136,8 @@ body: |
     liveins: $vgpr0_vgpr1
     ; CHECK-LABEL: name: bitreverse_s64
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
-    ; CHECK: [[BITREVERSE:%[0-9]+]]:_(s32) = G_BITREVERSE [[UV1]]
-    ; CHECK: [[BITREVERSE1:%[0-9]+]]:_(s32) = G_BITREVERSE [[UV]]
-    ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[BITREVERSE]](s32), [[BITREVERSE1]](s32)
-    ; CHECK: $vgpr0_vgpr1 = COPY [[MV]](s64)
+    ; CHECK: [[BITREVERSE:%[0-9]+]]:_(s64) = G_BITREVERSE [[COPY]]
+    ; CHECK: $vgpr0_vgpr1 = COPY [[BITREVERSE]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_BITREVERSE %0
     $vgpr0_vgpr1 = COPY %1
@@ -155,15 +152,9 @@ body: |
     ; CHECK-LABEL: name: bitreverse_v2s64
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
-    ; CHECK: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV]](s64)
-    ; CHECK: [[BITREVERSE:%[0-9]+]]:_(s32) = G_BITREVERSE [[UV3]]
-    ; CHECK: [[BITREVERSE1:%[0-9]+]]:_(s32) = G_BITREVERSE [[UV2]]
-    ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[BITREVERSE]](s32), [[BITREVERSE1]](s32)
-    ; CHECK: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV1]](s64)
-    ; CHECK: [[BITREVERSE2:%[0-9]+]]:_(s32) = G_BITREVERSE [[UV5]]
-    ; CHECK: [[BITREVERSE3:%[0-9]+]]:_(s32) = G_BITREVERSE [[UV4]]
-    ; CHECK: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[BITREVERSE2]](s32), [[BITREVERSE3]](s32)
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64)
+    ; CHECK: [[BITREVERSE:%[0-9]+]]:_(s64) = G_BITREVERSE [[UV]]
+    ; CHECK: [[BITREVERSE1:%[0-9]+]]:_(s64) = G_BITREVERSE [[UV1]]
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[BITREVERSE]](s64), [[BITREVERSE1]](s64)
     ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
     %0:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:_(<2 x s64>) = G_BITREVERSE %0

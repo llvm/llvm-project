@@ -3,8 +3,8 @@
 define void @sink_add_mul(i32* %s1, i32 %x, i32* %d, i32 %n) {
 ; CHECK-LABEL: @sink_add_mul(
 ; CHECK:    vector.ph:
-; CHECK-NOT:  [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <4 x i32> undef, i32 [[X:%.*]], i32 0
-; CHECK-NOT:  [[BROADCAST_SPLAT9:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT8]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NOT:  %{{.*}} = insertelement <4 x i32> undef, i32 %{{.*}}, i32 0
+; CHECK-NOT:  %{{.*}} = shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> zeroinitializer
 ; CHECK:    vector.body:
 ; CHECK:      [[TMP2:%.*]] = insertelement <4 x i32> undef, i32 [[X:%.*]], i32 0
 ; CHECK:      [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> undef, <4 x i32> zeroinitializer
@@ -42,8 +42,8 @@ for.cond.cleanup:                                 ; preds = %for.body, %middle.b
 define void @sink_add_mul_multiple(i32* %s1, i32* %s2, i32 %x, i32* %d, i32* %d2, i32 %n) {
 ; CHECK-LABEL: @sink_add_mul_multiple(
 ; CHECK:    vector.ph:
-; CHECK-NOT:  [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <4 x i32> undef, i32 [[X:%.*]], i32 0
-; CHECK-NOT:  [[BROADCAST_SPLAT9:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT8]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NOT:  %{{.*}} = insertelement <4 x i32> undef, i32 %{{.*}}, i32 0
+; CHECK-NOT:  %{{.*}} = shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> zeroinitializer
 ; CHECK:    vector.body:
 ; CHECK:      [[TMP2:%.*]] = insertelement <4 x i32> undef, i32 %x, i32 0
 ; CHECK:      [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> undef, <4 x i32> zeroinitializer
@@ -147,8 +147,8 @@ for.cond.cleanup:                                 ; preds = %for.body, %middle.b
 define void @sink_sub(i32* %s1, i32 %x, i32* %d, i32 %n) {
 ; CHECK-LABEL: @sink_sub(
 ; CHECK:    vector.ph:
-; CHECK-NOT:  [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <4 x i32> undef, i32 [[X:%.*]], i32 0
-; CHECK-NOT:  [[BROADCAST_SPLAT9:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT8]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NOT:  %{{.*}} = insertelement <4 x i32> undef, i32 %{{.*}}, i32 0
+; CHECK-NOT:  %{{.*}} = shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> zeroinitializer
 ; CHECK:    vector.body:
 ; CHECK:      [[TMP2:%.*]] = insertelement <4 x i32> undef, i32 [[X:%.*]], i32 0
 ; CHECK:      [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> undef, <4 x i32> zeroinitializer
@@ -189,8 +189,8 @@ entry:
 ; CHECK-NEXT:   [[BROADCAST_SPLAT16:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT15]], <4 x i32> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:   br label [[VECTOR_BODY:%.*]]
 ; CHECK:      vector.body:
-; CHECK-NOT:    [[TMP2:%.*]] = insertelement <4 x i32> undef, i32 [[X:%.*]], i32 0
-; CHECK-NOT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NOT:    %{{.*}} = insertelement <4 x i32> undef, i32 %{{.*}}, i32 0
+; CHECK-NOT:    %{{.*}} = shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> zeroinitializer
 ;
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %vector.ph, label %for.cond.cleanup

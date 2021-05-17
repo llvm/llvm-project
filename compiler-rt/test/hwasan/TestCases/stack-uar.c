@@ -4,6 +4,9 @@
 
 // REQUIRES: stable-runtime
 
+// Stack aliasing is not implemented on x86.
+// XFAIL: x86_64
+
 void USE(void *x) { // pretend_to_do_something(void *x)
   __asm__ __volatile__("" : : "r" (x) : "memory");
 }

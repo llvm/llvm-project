@@ -1469,7 +1469,7 @@ define <2 x i1> @test_signed_v2f32_v2i1(<2 x float> %f) {
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov s1, v0.s[1]
 ; CHECK-NEXT:    fmov s2, #-1.00000000
-; CHECK-NEXT:    fmov s3, wzr
+; CHECK-NEXT:    movi d3, #0000000000000000
 ; CHECK-NEXT:    fmaxnm s4, s1, s2
 ; CHECK-NEXT:    fcmp s1, s1
 ; CHECK-NEXT:    fmaxnm s1, s0, s2
@@ -1849,7 +1849,7 @@ define <2 x i1> @test_signed_v2f64_v2i1(<2 x double> %f) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    fmov d2, #-1.00000000
-; CHECK-NEXT:    fmov d3, xzr
+; CHECK-NEXT:    movi d3, #0000000000000000
 ; CHECK-NEXT:    fmaxnm d4, d1, d2
 ; CHECK-NEXT:    fcmp d1, d1
 ; CHECK-NEXT:    fmaxnm d1, d0, d2
@@ -2212,7 +2212,7 @@ define <4 x i1> @test_signed_v4f16_v4i1(<4 x half> %f) {
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov s2, #-1.00000000
 ; CHECK-NEXT:    fcvt s4, h0
-; CHECK-NEXT:    fmov s3, wzr
+; CHECK-NEXT:    movi d3, #0000000000000000
 ; CHECK-NEXT:    fmaxnm s5, s4, s2
 ; CHECK-NEXT:    mov h1, v0.h[1]
 ; CHECK-NEXT:    fminnm s5, s5, s3

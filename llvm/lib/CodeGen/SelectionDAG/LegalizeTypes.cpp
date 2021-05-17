@@ -182,9 +182,8 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
   // Checked that NewNodes are only used by other NewNodes.
   for (unsigned i = 0, e = NewNodes.size(); i != e; ++i) {
     SDNode *N = NewNodes[i];
-    for (SDNode::use_iterator UI = N->use_begin(), UE = N->use_end();
-         UI != UE; ++UI)
-      assert(UI->getNodeId() == NewNode && "NewNode used by non-NewNode!");
+    for (SDNode *U : N->uses())
+      assert(U->getNodeId() == NewNode && "NewNode used by non-NewNode!");
   }
 #endif
 }
@@ -396,9 +395,7 @@ NodeDone:
     assert(N->getNodeId() == ReadyToProcess && "Node ID recalculated?");
     N->setNodeId(Processed);
 
-    for (SDNode::use_iterator UI = N->use_begin(), E = N->use_end();
-         UI != E; ++UI) {
-      SDNode *User = *UI;
+    for (SDNode *User : N->uses()) {
       int NodeId = User->getNodeId();
 
       // This node has two options: it can either be a new node or its Node ID
@@ -663,8 +660,7 @@ void DAGTypeLegalizer::ReplaceValueWith(SDValue From, SDValue To) {
 
     // Process the list of nodes that need to be reanalyzed.
     while (!NodesToAnalyze.empty()) {
-      SDNode *N = NodesToAnalyze.back();
-      NodesToAnalyze.pop_back();
+      SDNode *N = NodesToAnalyze.pop_back_val();
       if (N->getNodeId() != DAGTypeLegalizer::NewNode)
         // The node was analyzed while reanalyzing an earlier node - it is safe
         // to skip.  Note that this is not a morphing node - otherwise it would

@@ -1,4 +1,4 @@
-! RUN: %S/test_symbols.sh %s %t %f18 -fopenmp
+! RUN: %S/test_symbols.sh %s %t %flang_fc1 -fopenmp
 
 ! 2.15.3 Data-Sharing Attribute Clauses
 ! Both PARALLEL and DO (worksharing) directives need to create new scope,

@@ -1,5 +1,6 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 use strict;
+use warnings;
 require File::Temp;
 use File::Temp ();
 

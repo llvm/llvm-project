@@ -12,8 +12,8 @@
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Interfaces.h"
 #include "mlir/TableGen/OpClass.h"
-#include "mlir/TableGen/OpTrait.h"
 #include "mlir/TableGen/Operator.h"
+#include "mlir/TableGen/Trait.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
@@ -58,11 +58,11 @@ public:
     CustomDirective,
     FunctionalTypeDirective,
     OperandsDirective,
+    RefDirective,
     RegionsDirective,
     ResultsDirective,
     SuccessorsDirective,
     TypeDirective,
-    TypeRefDirective,
 
     /// This element is a literal.
     Literal,
@@ -166,7 +166,7 @@ using OperandsDirective = DirectiveElement<Element::Kind::OperandsDirective>;
 
 /// This class represents the `regions` directive. This directive represents
 /// all of the regions of an operation.
-using RegionsDirective = DirectiveElement<Element::Kind::ResultsDirective>;
+using RegionsDirective = DirectiveElement<Element::Kind::RegionsDirective>;
 
 /// This class represents the `results` directive. This directive represents
 /// all of the results of an operation.
@@ -234,10 +234,10 @@ private:
   std::unique_ptr<Element> inputs, results;
 };
 
-/// This class represents the `type` directive.
-class TypeDirective : public DirectiveElement<Element::Kind::TypeDirective> {
+/// This class represents the `ref` directive.
+class RefDirective : public DirectiveElement<Element::Kind::RefDirective> {
 public:
-  TypeDirective(std::unique_ptr<Element> arg) : operand(std::move(arg)) {}
+  RefDirective(std::unique_ptr<Element> arg) : operand(std::move(arg)) {}
   Element *getOperand() const { return operand.get(); }
 
 private:
@@ -245,11 +245,10 @@ private:
   std::unique_ptr<Element> operand;
 };
 
-/// This class represents the `type_ref` directive.
-class TypeRefDirective
-    : public DirectiveElement<Element::Kind::TypeRefDirective> {
+/// This class represents the `type` directive.
+class TypeDirective : public DirectiveElement<Element::Kind::TypeDirective> {
 public:
-  TypeRefDirective(std::unique_ptr<Element> arg) : operand(std::move(arg)) {}
+  TypeDirective(std::unique_ptr<Element> arg) : operand(std::move(arg)) {}
   Element *getOperand() const { return operand.get(); }
 
 private:
@@ -349,29 +348,41 @@ private:
 
 namespace {
 /// This class represents a group of elements that are optionally emitted based
-/// upon an optional variable of the operation.
+/// upon an optional variable of the operation, and a group of elements that are
+/// emotted when the anchor element is not present.
 class OptionalElement : public Element {
 public:
-  OptionalElement(std::vector<std::unique_ptr<Element>> &&elements,
+  OptionalElement(std::vector<std::unique_ptr<Element>> &&thenElements,
+                  std::vector<std::unique_ptr<Element>> &&elseElements,
                   unsigned anchor, unsigned parseStart)
-      : Element{Kind::Optional}, elements(std::move(elements)), anchor(anchor),
+      : Element{Kind::Optional}, thenElements(std::move(thenElements)),
+        elseElements(std::move(elseElements)), anchor(anchor),
         parseStart(parseStart) {}
   static bool classof(const Element *element) {
     return element->getKind() == Kind::Optional;
   }
 
-  /// Return the nested elements of this grouping.
-  auto getElements() const { return llvm::make_pointee_range(elements); }
+  /// Return the `then` elements of this grouping.
+  auto getThenElements() const {
+    return llvm::make_pointee_range(thenElements);
+  }
+
+  /// Return the `else` elements of this grouping.
+  auto getElseElements() const {
+    return llvm::make_pointee_range(elseElements);
+  }
 
   /// Return the anchor of this optional group.
-  Element *getAnchor() const { return elements[anchor].get(); }
+  Element *getAnchor() const { return thenElements[anchor].get(); }
 
   /// Return the index of the first element that needs to be parsed.
   unsigned getParseStart() const { return parseStart; }
 
 private:
-  /// The child elements of this optional.
-  std::vector<std::unique_ptr<Element>> elements;
+  /// The child elements of `then` branch of this optional.
+  std::vector<std::unique_ptr<Element>> thenElements;
+  /// The child elements of `else` branch of this optional.
+  std::vector<std::unique_ptr<Element>> elseElements;
   /// The index of the element that acts as the anchor for the optional group.
   unsigned anchor;
   /// The index of the first element that is parsed (is not a
@@ -434,10 +445,12 @@ struct OperationFormat {
     operandTypes.resize(op.getNumOperands(), TypeResolution());
     resultTypes.resize(op.getNumResults(), TypeResolution());
 
-    hasImplicitTermTrait =
-        llvm::any_of(op.getTraits(), [](const OpTrait &trait) {
-          return trait.getDef().isSubClassOf("SingleBlockImplicitTerminator");
-        });
+    hasImplicitTermTrait = llvm::any_of(op.getTraits(), [](const Trait &trait) {
+      return trait.getDef().isSubClassOf("SingleBlockImplicitTerminator");
+    });
+
+    hasSingleBlockTrait =
+        hasImplicitTermTrait || op.getTrait("::mlir::OpTrait::SingleBlock");
   }
 
   /// Generate the operation parser from this format.
@@ -472,6 +485,9 @@ struct OperationFormat {
   /// A flag indicating if this operation has the SingleBlockImplicitTerminator
   /// trait.
   bool hasImplicitTermTrait;
+
+  /// A flag indicating if this operation has the SingleBlock trait.
+  bool hasSingleBlockTrait;
 
   /// A map of buildable types to indices.
   llvm::MapVector<StringRef, int, llvm::StringMap<int>> buildableTypes;
@@ -668,6 +684,14 @@ const char *regionListEnsureTerminatorParserCode = R"(
     ensureTerminator(*region, parser.getBuilder(), result.location);
 )";
 
+/// The code snippet used to ensure a list of regions have a block.
+///
+/// {0}: The name of the region list.
+const char *regionListEnsureSingleBlockParserCode = R"(
+  for (auto &region : {0}Regions)
+    if (region->empty()) region->emplaceBlock();
+)";
+
 /// The code snippet used to generate a parser call for an optional region.
 ///
 /// {0}: The name of the region.
@@ -692,6 +716,13 @@ const char *regionParserCode = R"(
 /// {0}: The name of the region.
 const char *regionEnsureTerminatorParserCode = R"(
   ensureTerminator(*{0}Region, parser.getBuilder(), result.location);
+)";
+
+/// The code snippet used to ensure a region has a block.
+///
+/// {0}: The name of the region.
+const char *regionEnsureSingleBlockParserCode = R"(
+  if ({0}Region->empty()) {0}Region->emplaceBlock();
 )";
 
 /// The code snippet used to generate a parser call for a successor list.
@@ -793,7 +824,7 @@ static void genLiteralParser(StringRef value, OpMethodBody &body) {
 /// Generate the storage code required for parsing the given element.
 static void genElementParserStorage(Element *element, OpMethodBody &body) {
   if (auto *optional = dyn_cast<OptionalElement>(element)) {
-    auto elements = optional->getElements();
+    auto elements = optional->getThenElements();
 
     // If the anchor is a unit attribute, it won't be parsed directly so elide
     // it.
@@ -804,6 +835,8 @@ static void genElementParserStorage(Element *element, OpMethodBody &body) {
     for (auto &childElement : elements)
       if (&childElement != elidedAnchorElement)
         genElementParserStorage(&childElement, body);
+    for (auto &childElement : optional->getElseElements())
+      genElementParserStorage(&childElement, body);
 
   } else if (auto *custom = dyn_cast<CustomDirective>(element)) {
     for (auto &paramElement : custom->getArguments())
@@ -873,19 +906,6 @@ static void genElementParserStorage(Element *element, OpMethodBody &body) {
            << llvm::formatv(
                   "  ::llvm::ArrayRef<::mlir::Type> {0}Types({0}RawTypes);\n",
                   name);
-  } else if (auto *dir = dyn_cast<TypeRefDirective>(element)) {
-    ArgumentLengthKind lengthKind;
-    StringRef name = getTypeListName(dir->getOperand(), lengthKind);
-    // Refer to the previously encountered TypeDirective for name.
-    // Take a `const ::mlir::SmallVector<::mlir::Type, 1> &` in the declaration
-    // to properly track the types that will be parsed and pushed later on.
-    if (lengthKind != ArgumentLengthKind::Single)
-      body << "  const ::mlir::SmallVector<::mlir::Type, 1> &" << name
-           << "TypesRef(" << name << "Types);\n";
-    else
-      body << llvm::formatv(
-          "  ::llvm::ArrayRef<::mlir::Type> {0}RawTypesRef({0}RawTypes);\n",
-          name);
   } else if (auto *dir = dyn_cast<FunctionalTypeDirective>(element)) {
     ArgumentLengthKind ignored;
     body << "  ::llvm::ArrayRef<::mlir::Type> "
@@ -897,7 +917,6 @@ static void genElementParserStorage(Element *element, OpMethodBody &body) {
 
 /// Generate the parser for a parameter to a custom directive.
 static void genCustomParameterParser(Element &param, OpMethodBody &body) {
-  body << ", ";
   if (auto *attr = dyn_cast<AttributeVariable>(&param)) {
     body << attr->getVar()->name << "Attr";
   } else if (isa<AttrDictDirective>(&param)) {
@@ -926,15 +945,9 @@ static void genCustomParameterParser(Element &param, OpMethodBody &body) {
     else
       body << llvm::formatv("{0}Successor", name);
 
-  } else if (auto *dir = dyn_cast<TypeRefDirective>(&param)) {
-    ArgumentLengthKind lengthKind;
-    StringRef listName = getTypeListName(dir->getOperand(), lengthKind);
-    if (lengthKind == ArgumentLengthKind::Variadic)
-      body << llvm::formatv("{0}TypesRef", listName);
-    else if (lengthKind == ArgumentLengthKind::Optional)
-      body << llvm::formatv("{0}TypeRef", listName);
-    else
-      body << formatv("{0}RawTypesRef[0]", listName);
+  } else if (auto *dir = dyn_cast<RefDirective>(&param)) {
+    genCustomParameterParser(*dir->getOperand(), body);
+
   } else if (auto *dir = dyn_cast<TypeDirective>(&param)) {
     ArgumentLengthKind lengthKind;
     StringRef listName = getTypeListName(dir->getOperand(), lengthKind);
@@ -967,27 +980,39 @@ static void genCustomDirectiveParser(CustomDirective *dir, OpMethodBody &body) {
             "{0}Operand;\n",
             operand->getVar()->name);
       }
-    } else if (auto *dir = dyn_cast<TypeRefDirective>(&param)) {
-      // Reference to an optional which may or may not have been set.
-      // Retrieve from vector if not empty.
-      ArgumentLengthKind lengthKind;
-      StringRef listName = getTypeListName(dir->getOperand(), lengthKind);
-      if (lengthKind == ArgumentLengthKind::Optional)
-        body << llvm::formatv(
-            "    ::mlir::Type {0}TypeRef = {0}TypesRef.empty() "
-            "? Type() : {0}TypesRef[0];\n",
-            listName);
     } else if (auto *dir = dyn_cast<TypeDirective>(&param)) {
       ArgumentLengthKind lengthKind;
       StringRef listName = getTypeListName(dir->getOperand(), lengthKind);
       if (lengthKind == ArgumentLengthKind::Optional)
         body << llvm::formatv("    ::mlir::Type {0}Type;\n", listName);
+    } else if (auto *dir = dyn_cast<RefDirective>(&param)) {
+      Element *input = dir->getOperand();
+      if (auto *operand = dyn_cast<OperandVariable>(input)) {
+        if (!operand->getVar()->isOptional())
+          continue;
+        body << llvm::formatv(
+            "    {0} {1}Operand = {1}Operands.empty() ? {0}() : "
+            "{1}Operands[0];\n",
+            "llvm::Optional<::mlir::OpAsmParser::OperandType>",
+            operand->getVar()->name);
+
+      } else if (auto *type = dyn_cast<TypeDirective>(input)) {
+        ArgumentLengthKind lengthKind;
+        StringRef listName = getTypeListName(type->getOperand(), lengthKind);
+        if (lengthKind == ArgumentLengthKind::Optional) {
+          body << llvm::formatv("    ::mlir::Type {0}Type = {0}Types.empty() ? "
+                                "::mlir::Type() : {0}Types[0];\n",
+                                listName);
+        }
+      }
     }
   }
 
   body << "    if (parse" << dir->getName() << "(parser";
-  for (Element &param : dir->getArguments())
+  for (Element &param : dir->getArguments()) {
+    body << ", ";
     genCustomParameterParser(param, body);
+  }
 
   body << "))\n"
        << "      return ::mlir::failure();\n";
@@ -1008,9 +1033,6 @@ static void genCustomDirectiveParser(CustomDirective *dir, OpMethodBody &body) {
       body << llvm::formatv("    if ({0}Operand.hasValue())\n"
                             "      {0}Operands.push_back(*{0}Operand);\n",
                             var->name);
-    } else if (isa<TypeRefDirective>(&param)) {
-      // In the `type_ref` case, do not parse a new Type that needs to be added.
-      // Just do nothing here.
     } else if (auto *dir = dyn_cast<TypeDirective>(&param)) {
       ArgumentLengthKind lengthKind;
       StringRef listName = getTypeListName(dir->getOperand(), lengthKind);
@@ -1106,8 +1128,8 @@ void OperationFormat::genElementParser(Element *element, OpMethodBody &body,
                                        FmtContext &attrTypeCtx) {
   /// Optional Group.
   if (auto *optional = dyn_cast<OptionalElement>(element)) {
-    auto elements =
-        llvm::drop_begin(optional->getElements(), optional->getParseStart());
+    auto elements = llvm::drop_begin(optional->getThenElements(),
+                                     optional->getParseStart());
 
     // Generate a special optional parser for the first element to gate the
     // parsing of the rest of the elements.
@@ -1132,6 +1154,9 @@ void OperationFormat::genElementParser(Element *element, OpMethodBody &body,
         body << "  if (!" << region->name << "Region->empty()) {\n  ";
         if (hasImplicitTermTrait)
           body << llvm::formatv(regionEnsureTerminatorParserCode, region->name);
+        else if (hasSingleBlockTrait)
+          body << llvm::formatv(regionEnsureSingleBlockParserCode,
+                                region->name);
       }
     }
 
@@ -1152,7 +1177,17 @@ void OperationFormat::genElementParser(Element *element, OpMethodBody &body,
       if (&childElement != elidedAnchorElement)
         genElementParser(&childElement, body, attrTypeCtx);
     }
-    body << "  }\n";
+    body << "  }";
+
+    // Generate the else elements.
+    auto elseElements = optional->getElseElements();
+    if (!elseElements.empty()) {
+      body << " else {\n";
+      for (Element &childElement : elseElements)
+        genElementParser(&childElement, body, attrTypeCtx);
+      body << "  }";
+    }
+    body << "\n";
 
     /// Literals.
   } else if (LiteralElement *literal = dyn_cast<LiteralElement>(element)) {
@@ -1205,11 +1240,14 @@ void OperationFormat::genElementParser(Element *element, OpMethodBody &body,
     bool isVariadic = region->getVar()->isVariadic();
     body << llvm::formatv(isVariadic ? regionListParserCode : regionParserCode,
                           region->getVar()->name);
-    if (hasImplicitTermTrait) {
+    if (hasImplicitTermTrait)
       body << llvm::formatv(isVariadic ? regionListEnsureTerminatorParserCode
                                        : regionEnsureTerminatorParserCode,
                             region->getVar()->name);
-    }
+    else if (hasSingleBlockTrait)
+      body << llvm::formatv(isVariadic ? regionListEnsureSingleBlockParserCode
+                                       : regionEnsureSingleBlockParserCode,
+                            region->getVar()->name);
 
   } else if (auto *successor = dyn_cast<SuccessorVariable>(element)) {
     bool isVariadic = successor->getVar()->isVariadic();
@@ -1234,19 +1272,12 @@ void OperationFormat::genElementParser(Element *element, OpMethodBody &body,
     body << llvm::formatv(regionListParserCode, "full");
     if (hasImplicitTermTrait)
       body << llvm::formatv(regionListEnsureTerminatorParserCode, "full");
+    else if (hasSingleBlockTrait)
+      body << llvm::formatv(regionListEnsureSingleBlockParserCode, "full");
 
   } else if (isa<SuccessorsDirective>(element)) {
     body << llvm::formatv(successorListParserCode, "full");
 
-  } else if (auto *dir = dyn_cast<TypeRefDirective>(element)) {
-    ArgumentLengthKind lengthKind;
-    StringRef listName = getTypeListName(dir->getOperand(), lengthKind);
-    if (lengthKind == ArgumentLengthKind::Variadic)
-      body << llvm::formatv(variadicTypeParserCode, listName);
-    else if (lengthKind == ArgumentLengthKind::Optional)
-      body << llvm::formatv(optionalTypeParserCode, listName);
-    else
-      body << formatv(typeParserCode, listName);
   } else if (auto *dir = dyn_cast<TypeDirective>(element)) {
     ArgumentLengthKind lengthKind;
     StringRef listName = getTypeListName(dir->getOperand(), lengthKind);
@@ -1535,7 +1566,7 @@ const char *enumAttrBeginPrinterCode = R"(
 static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
                                OpMethodBody &body, bool withKeyword) {
   body << "  p.printOptionalAttrDict" << (withKeyword ? "WithKeyword" : "")
-       << "(getAttrs(), /*elidedAttrs=*/{";
+       << "((*this)->getAttrs(), /*elidedAttrs=*/{";
   // Elide the variadic segment size attributes if necessary.
   if (!fmt.allOperands &&
       op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments"))
@@ -1581,8 +1612,47 @@ static void genSpacePrinter(bool value, OpMethodBody &body,
   if (value) {
     body << "  p << ' ';\n";
     lastWasPunctuation = false;
+  } else {
+    lastWasPunctuation = true;
   }
   shouldEmitSpace = false;
+}
+
+/// Generate the printer for a custom directive parameter.
+static void genCustomDirectiveParameterPrinter(Element *element,
+                                               OpMethodBody &body) {
+  if (auto *attr = dyn_cast<AttributeVariable>(element)) {
+    body << attr->getVar()->name << "Attr()";
+
+  } else if (isa<AttrDictDirective>(element)) {
+    body << "getOperation()->getAttrDictionary()";
+
+  } else if (auto *operand = dyn_cast<OperandVariable>(element)) {
+    body << operand->getVar()->name << "()";
+
+  } else if (auto *region = dyn_cast<RegionVariable>(element)) {
+    body << region->getVar()->name << "()";
+
+  } else if (auto *successor = dyn_cast<SuccessorVariable>(element)) {
+    body << successor->getVar()->name << "()";
+
+  } else if (auto *dir = dyn_cast<RefDirective>(element)) {
+    genCustomDirectiveParameterPrinter(dir->getOperand(), body);
+
+  } else if (auto *dir = dyn_cast<TypeDirective>(element)) {
+    auto *typeOperand = dir->getOperand();
+    auto *operand = dyn_cast<OperandVariable>(typeOperand);
+    auto *var = operand ? operand->getVar()
+                        : cast<ResultVariable>(typeOperand)->getVar();
+    if (var->isVariadic())
+      body << var->name << "().getTypes()";
+    else if (var->isOptional())
+      body << llvm::formatv("({0}() ? {0}().getType() : Type())", var->name);
+    else
+      body << var->name << "().getType()";
+  } else {
+    llvm_unreachable("unknown custom directive parameter");
+  }
 }
 
 /// Generate the printer for a custom directive.
@@ -1591,48 +1661,8 @@ static void genCustomDirectivePrinter(CustomDirective *customDir,
   body << "  print" << customDir->getName() << "(p, *this";
   for (Element &param : customDir->getArguments()) {
     body << ", ";
-    if (auto *attr = dyn_cast<AttributeVariable>(&param)) {
-      body << attr->getVar()->name << "Attr()";
-
-    } else if (isa<AttrDictDirective>(&param)) {
-      body << "getOperation()->getAttrDictionary()";
-
-    } else if (auto *operand = dyn_cast<OperandVariable>(&param)) {
-      body << operand->getVar()->name << "()";
-
-    } else if (auto *region = dyn_cast<RegionVariable>(&param)) {
-      body << region->getVar()->name << "()";
-
-    } else if (auto *successor = dyn_cast<SuccessorVariable>(&param)) {
-      body << successor->getVar()->name << "()";
-
-    } else if (auto *dir = dyn_cast<TypeRefDirective>(&param)) {
-      auto *typeOperand = dir->getOperand();
-      auto *operand = dyn_cast<OperandVariable>(typeOperand);
-      auto *var = operand ? operand->getVar()
-                          : cast<ResultVariable>(typeOperand)->getVar();
-      if (var->isVariadic())
-        body << var->name << "().getTypes()";
-      else if (var->isOptional())
-        body << llvm::formatv("({0}() ? {0}().getType() : Type())", var->name);
-      else
-        body << var->name << "().getType()";
-    } else if (auto *dir = dyn_cast<TypeDirective>(&param)) {
-      auto *typeOperand = dir->getOperand();
-      auto *operand = dyn_cast<OperandVariable>(typeOperand);
-      auto *var = operand ? operand->getVar()
-                          : cast<ResultVariable>(typeOperand)->getVar();
-      if (var->isVariadic())
-        body << var->name << "().getTypes()";
-      else if (var->isOptional())
-        body << llvm::formatv("({0}() ? {0}().getType() : Type())", var->name);
-      else
-        body << var->name << "().getType()";
-    } else {
-      llvm_unreachable("unknown custom directive parameter");
-    }
+    genCustomDirectiveParameterPrinter(&param, body);
   }
-
   body << ");\n";
 }
 
@@ -1749,6 +1779,33 @@ static void genEnumAttrPrinter(const NamedAttribute *var, OpMethodBody &body) {
           "  }\n";
 }
 
+/// Generate the check for the anchor of an optional group.
+static void genOptionalGroupPrinterAnchor(Element *anchor, OpMethodBody &body) {
+  TypeSwitch<Element *>(anchor)
+      .Case<OperandVariable, ResultVariable>([&](auto *element) {
+        const NamedTypeConstraint *var = element->getVar();
+        if (var->isOptional())
+          body << "  if (" << var->name << "()) {\n";
+        else if (var->isVariadic())
+          body << "  if (!" << var->name << "().empty()) {\n";
+      })
+      .Case<RegionVariable>([&](RegionVariable *element) {
+        const NamedRegion *var = element->getVar();
+        // TODO: Add a check for optional regions here when ODS supports it.
+        body << "  if (!" << var->name << "().empty()) {\n";
+      })
+      .Case<TypeDirective>([&](TypeDirective *element) {
+        genOptionalGroupPrinterAnchor(element->getOperand(), body);
+      })
+      .Case<FunctionalTypeDirective>([&](FunctionalTypeDirective *element) {
+        genOptionalGroupPrinterAnchor(element->getInputs(), body);
+      })
+      .Case<AttributeVariable>([&](AttributeVariable *attr) {
+        body << "  if ((*this)->getAttr(\"" << attr->getVar()->name
+             << "\")) {\n";
+      });
+}
+
 void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
                                         Operator &op, bool &shouldEmitSpace,
                                         bool &lastWasPunctuation) {
@@ -1757,7 +1814,7 @@ void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
                              lastWasPunctuation);
 
   // Emit a whitespace element.
-  if (NewlineElement *newline = dyn_cast<NewlineElement>(element)) {
+  if (isa<NewlineElement>(element)) {
     body << "  p.printNewline();\n";
     return;
   }
@@ -1769,25 +1826,11 @@ void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
   if (OptionalElement *optional = dyn_cast<OptionalElement>(element)) {
     // Emit the check for the presence of the anchor element.
     Element *anchor = optional->getAnchor();
-    if (auto *operand = dyn_cast<OperandVariable>(anchor)) {
-      const NamedTypeConstraint *var = operand->getVar();
-      if (var->isOptional())
-        body << "  if (" << var->name << "()) {\n";
-      else if (var->isVariadic())
-        body << "  if (!" << var->name << "().empty()) {\n";
-    } else if (auto *region = dyn_cast<RegionVariable>(anchor)) {
-      const NamedRegion *var = region->getVar();
-      // TODO: Add a check for optional here when ODS supports it.
-      body << "  if (!" << var->name << "().empty()) {\n";
-
-    } else {
-      body << "  if ((*this)->getAttr(\""
-           << cast<AttributeVariable>(anchor)->getVar()->name << "\")) {\n";
-    }
+    genOptionalGroupPrinterAnchor(anchor, body);
 
     // If the anchor is a unit attribute, we don't need to print it. When
     // parsing, we will add this attribute if this group is present.
-    auto elements = optional->getElements();
+    auto elements = optional->getThenElements();
     Element *elidedAnchorElement = nullptr;
     auto *anchorAttr = dyn_cast<AttributeVariable>(anchor);
     if (anchorAttr && anchorAttr != &*elements.begin() &&
@@ -1802,7 +1845,20 @@ void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
                           lastWasPunctuation);
       }
     }
-    body << "  }\n";
+    body << "  }";
+
+    // Emit each of the else elements.
+    auto elseElements = optional->getElseElements();
+    if (!elseElements.empty()) {
+      body << " else {\n";
+      for (Element &childElement : elseElements) {
+        genElementPrinter(&childElement, body, op, shouldEmitSpace,
+                          lastWasPunctuation);
+      }
+      body << "  }";
+    }
+
+    body << "\n";
     return;
   }
 
@@ -1871,9 +1927,6 @@ void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
   } else if (auto *dir = dyn_cast<TypeDirective>(element)) {
     body << "  p << ";
     genTypeOperandPrinter(dir->getOperand(), body) << ";\n";
-  } else if (auto *dir = dyn_cast<TypeRefDirective>(element)) {
-    body << "  p << ";
-    genTypeOperandPrinter(dir->getOperand(), body) << ";\n";
   } else if (auto *dir = dyn_cast<FunctionalTypeDirective>(element)) {
     body << "  p.printFunctionalType(";
     genTypeOperandPrinter(dir->getInputs(), body) << ", ";
@@ -1923,6 +1976,7 @@ public:
     l_paren,
     r_paren,
     caret,
+    colon,
     comma,
     equal,
     less,
@@ -1936,11 +1990,11 @@ public:
     kw_custom,
     kw_functional_type,
     kw_operands,
+    kw_ref,
     kw_regions,
     kw_results,
     kw_successors,
     kw_type,
-    kw_type_ref,
     keyword_end,
 
     // String valued tokens.
@@ -2077,6 +2131,8 @@ Token FormatLexer::lexToken() {
   // Lex punctuation.
   case '^':
     return formToken(Token::caret, tokStart);
+  case ':':
+    return formToken(Token::colon, tokStart);
   case ',':
     return formToken(Token::comma, tokStart);
   case '=':
@@ -2141,11 +2197,11 @@ Token FormatLexer::lexIdentifier(const char *tokStart) {
           .Case("custom", Token::kw_custom)
           .Case("functional-type", Token::kw_functional_type)
           .Case("operands", Token::kw_operands)
+          .Case("ref", Token::kw_ref)
           .Case("regions", Token::kw_regions)
           .Case("results", Token::kw_results)
           .Case("successors", Token::kw_successors)
           .Case("type", Token::kw_type)
-          .Case("type_ref", Token::kw_type_ref)
           .Default(Token::identifier);
   return Token(kind, str);
 }
@@ -2176,6 +2232,19 @@ public:
   LogicalResult parse();
 
 private:
+  /// The current context of the parser when parsing an element.
+  enum ParserContext {
+    /// The element is being parsed in a "top-level" context, i.e. at the top of
+    /// the format or in an optional group.
+    TopLevelContext,
+    /// The element is being parsed as a custom directive child.
+    CustomDirectiveContext,
+    /// The element is being parsed as a type directive child.
+    TypeDirectiveContext,
+    /// The element is being parsed as a reference directive child.
+    RefDirectiveContext
+  };
+
   /// This struct represents a type resolution instance. It includes a specific
   /// type as well as an optional transformer to apply to that type in order to
   /// properly resolve the type of a variable.
@@ -2234,41 +2303,46 @@ private:
 
   /// Parse a specific element.
   LogicalResult parseElement(std::unique_ptr<Element> &element,
-                             bool isTopLevel);
+                             ParserContext context);
   LogicalResult parseVariable(std::unique_ptr<Element> &element,
-                              bool isTopLevel);
+                              ParserContext context);
   LogicalResult parseDirective(std::unique_ptr<Element> &element,
-                               bool isTopLevel);
-  LogicalResult parseLiteral(std::unique_ptr<Element> &element);
+                               ParserContext context);
+  LogicalResult parseLiteral(std::unique_ptr<Element> &element,
+                             ParserContext context);
   LogicalResult parseOptional(std::unique_ptr<Element> &element,
-                              bool isTopLevel);
+                              ParserContext context);
   LogicalResult parseOptionalChildElement(
       std::vector<std::unique_ptr<Element>> &childElements,
-      SmallPtrSetImpl<const NamedTypeConstraint *> &seenVariables,
       Optional<unsigned> &anchorIdx);
+  LogicalResult verifyOptionalChildElement(Element *element,
+                                           llvm::SMLoc childLoc, bool isAnchor);
 
   /// Parse the various different directives.
   LogicalResult parseAttrDictDirective(std::unique_ptr<Element> &element,
-                                       llvm::SMLoc loc, bool isTopLevel,
+                                       llvm::SMLoc loc, ParserContext context,
                                        bool withKeyword);
   LogicalResult parseCustomDirective(std::unique_ptr<Element> &element,
-                                     llvm::SMLoc loc, bool isTopLevel);
+                                     llvm::SMLoc loc, ParserContext context);
   LogicalResult parseCustomDirectiveParameter(
       std::vector<std::unique_ptr<Element>> &parameters);
   LogicalResult parseFunctionalTypeDirective(std::unique_ptr<Element> &element,
-                                             Token tok, bool isTopLevel);
+                                             Token tok, ParserContext context);
   LogicalResult parseOperandsDirective(std::unique_ptr<Element> &element,
-                                       llvm::SMLoc loc, bool isTopLevel);
+                                       llvm::SMLoc loc, ParserContext context);
+  LogicalResult parseReferenceDirective(std::unique_ptr<Element> &element,
+                                        llvm::SMLoc loc, ParserContext context);
   LogicalResult parseRegionsDirective(std::unique_ptr<Element> &element,
-                                      llvm::SMLoc loc, bool isTopLevel);
+                                      llvm::SMLoc loc, ParserContext context);
   LogicalResult parseResultsDirective(std::unique_ptr<Element> &element,
-                                      llvm::SMLoc loc, bool isTopLevel);
+                                      llvm::SMLoc loc, ParserContext context);
   LogicalResult parseSuccessorsDirective(std::unique_ptr<Element> &element,
-                                         llvm::SMLoc loc, bool isTopLevel);
+                                         llvm::SMLoc loc,
+                                         ParserContext context);
   LogicalResult parseTypeDirective(std::unique_ptr<Element> &element, Token tok,
-                                   bool isTopLevel, bool isTypeRef = false);
+                                   ParserContext context);
   LogicalResult parseTypeDirectiveOperand(std::unique_ptr<Element> &element,
-                                          bool isTypeRef = false);
+                                          bool isRefChild = false);
 
   //===--------------------------------------------------------------------===//
   // Lexer Utilities
@@ -2315,7 +2389,6 @@ private:
   llvm::DenseSet<const NamedTypeConstraint *> seenOperands;
   llvm::DenseSet<const NamedRegion *> seenRegions;
   llvm::DenseSet<const NamedSuccessor *> seenSuccessors;
-  llvm::DenseSet<const NamedTypeConstraint *> optionalVariables;
 };
 } // end anonymous namespace
 
@@ -2325,7 +2398,7 @@ LogicalResult FormatParser::parse() {
   // Parse each of the format elements into the main format.
   while (curToken.getKind() != Token::eof) {
     std::unique_ptr<Element> element;
-    if (failed(parseElement(element, /*isTopLevel=*/true)))
+    if (failed(parseElement(element, TopLevelContext)))
       return ::mlir::failure();
     fmt.elements.push_back(std::move(element));
   }
@@ -2337,7 +2410,7 @@ LogicalResult FormatParser::parse() {
 
   // Check for any type traits that we can use for inferring types.
   llvm::StringMap<TypeResolutionInstance> variableTyResolver;
-  for (const OpTrait &trait : op.getTraits()) {
+  for (const Trait &trait : op.getTraits()) {
     const llvm::Record &def = trait.getDef();
     if (def.isSubClassOf("AllTypesMatch")) {
       handleAllTypesMatchConstraint(def.getValueAsListOfStrings("values"),
@@ -2388,8 +2461,11 @@ LogicalResult FormatParser::verifyAttributes(
 
     // Traverse into optional groups.
     if (auto *optional = dyn_cast<OptionalElement>(element)) {
-      auto elements = optional->getElements();
-      iteratorStack.emplace_back(elements.begin(), elements.end());
+      auto thenElements = optional->getThenElements();
+      iteratorStack.emplace_back(thenElements.begin(), thenElements.end());
+
+      auto elseElements = optional->getElseElements();
+      iteratorStack.emplace_back(elseElements.begin(), elseElements.end());
       return ::mlir::success();
     }
 
@@ -2619,25 +2695,25 @@ ConstArgument FormatParser::findSeenArg(StringRef name) {
 }
 
 LogicalResult FormatParser::parseElement(std::unique_ptr<Element> &element,
-                                         bool isTopLevel) {
+                                         ParserContext context) {
   // Directives.
   if (curToken.isKeyword())
-    return parseDirective(element, isTopLevel);
+    return parseDirective(element, context);
   // Literals.
   if (curToken.getKind() == Token::literal)
-    return parseLiteral(element);
+    return parseLiteral(element, context);
   // Optionals.
   if (curToken.getKind() == Token::l_paren)
-    return parseOptional(element, isTopLevel);
+    return parseOptional(element, context);
   // Variables.
   if (curToken.getKind() == Token::variable)
-    return parseVariable(element, isTopLevel);
+    return parseVariable(element, context);
   return emitError(curToken.getLoc(),
                    "expected directive, literal, variable, or optional group");
 }
 
 LogicalResult FormatParser::parseVariable(std::unique_ptr<Element> &element,
-                                          bool isTopLevel) {
+                                          ParserContext context) {
   Token varTok = curToken;
   consumeToken();
 
@@ -2648,42 +2724,67 @@ LogicalResult FormatParser::parseVariable(std::unique_ptr<Element> &element,
   // op.
   /// Attributes
   if (const NamedAttribute *attr = findArg(op.getAttributes(), name)) {
-    if (isTopLevel && !seenAttrs.insert(attr))
+    if (context == TypeDirectiveContext)
+      return emitError(
+          loc, "attributes cannot be used as children to a `type` directive");
+    if (context == RefDirectiveContext) {
+      if (!seenAttrs.count(attr))
+        return emitError(loc, "attribute '" + name +
+                                  "' must be bound before it is referenced");
+    } else if (!seenAttrs.insert(attr)) {
       return emitError(loc, "attribute '" + name + "' is already bound");
+    }
+
     element = std::make_unique<AttributeVariable>(attr);
     return ::mlir::success();
   }
   /// Operands
   if (const NamedTypeConstraint *operand = findArg(op.getOperands(), name)) {
-    if (isTopLevel) {
+    if (context == TopLevelContext || context == CustomDirectiveContext) {
       if (fmt.allOperands || !seenOperands.insert(operand).second)
         return emitError(loc, "operand '" + name + "' is already bound");
+    } else if (context == RefDirectiveContext && !seenOperands.count(operand)) {
+      return emitError(loc, "operand '" + name +
+                                "' must be bound before it is referenced");
     }
     element = std::make_unique<OperandVariable>(operand);
     return ::mlir::success();
   }
   /// Regions
   if (const NamedRegion *region = findArg(op.getRegions(), name)) {
-    if (!isTopLevel)
+    if (context == TopLevelContext || context == CustomDirectiveContext) {
+      if (hasAllRegions || !seenRegions.insert(region).second)
+        return emitError(loc, "region '" + name + "' is already bound");
+    } else if (context == RefDirectiveContext && !seenRegions.count(region)) {
+      return emitError(loc, "region '" + name +
+                                "' must be bound before it is referenced");
+    } else {
       return emitError(loc, "regions can only be used at the top level");
-    if (hasAllRegions || !seenRegions.insert(region).second)
-      return emitError(loc, "region '" + name + "' is already bound");
+    }
     element = std::make_unique<RegionVariable>(region);
     return ::mlir::success();
   }
   /// Results.
   if (const auto *result = findArg(op.getResults(), name)) {
-    if (isTopLevel)
-      return emitError(loc, "results can not be used at the top level");
+    if (context != TypeDirectiveContext)
+      return emitError(loc, "result variables can can only be used as a child "
+                            "to a 'type' directive");
     element = std::make_unique<ResultVariable>(result);
     return ::mlir::success();
   }
   /// Successors.
   if (const auto *successor = findArg(op.getSuccessors(), name)) {
-    if (!isTopLevel)
+    if (context == TopLevelContext || context == CustomDirectiveContext) {
+      if (hasAllSuccessors || !seenSuccessors.insert(successor).second)
+        return emitError(loc, "successor '" + name + "' is already bound");
+    } else if (context == RefDirectiveContext &&
+               !seenSuccessors.count(successor)) {
+      return emitError(loc, "successor '" + name +
+                                "' must be bound before it is referenced");
+    } else {
       return emitError(loc, "successors can only be used at the top level");
-    if (hasAllSuccessors || !seenSuccessors.insert(successor).second)
-      return emitError(loc, "successor '" + name + "' is already bound");
+    }
+
     element = std::make_unique<SuccessorVariable>(successor);
     return ::mlir::success();
   }
@@ -2692,41 +2793,47 @@ LogicalResult FormatParser::parseVariable(std::unique_ptr<Element> &element,
 }
 
 LogicalResult FormatParser::parseDirective(std::unique_ptr<Element> &element,
-                                           bool isTopLevel) {
+                                           ParserContext context) {
   Token dirTok = curToken;
   consumeToken();
 
   switch (dirTok.getKind()) {
   case Token::kw_attr_dict:
-    return parseAttrDictDirective(element, dirTok.getLoc(), isTopLevel,
+    return parseAttrDictDirective(element, dirTok.getLoc(), context,
                                   /*withKeyword=*/false);
   case Token::kw_attr_dict_w_keyword:
-    return parseAttrDictDirective(element, dirTok.getLoc(), isTopLevel,
+    return parseAttrDictDirective(element, dirTok.getLoc(), context,
                                   /*withKeyword=*/true);
   case Token::kw_custom:
-    return parseCustomDirective(element, dirTok.getLoc(), isTopLevel);
+    return parseCustomDirective(element, dirTok.getLoc(), context);
   case Token::kw_functional_type:
-    return parseFunctionalTypeDirective(element, dirTok, isTopLevel);
+    return parseFunctionalTypeDirective(element, dirTok, context);
   case Token::kw_operands:
-    return parseOperandsDirective(element, dirTok.getLoc(), isTopLevel);
+    return parseOperandsDirective(element, dirTok.getLoc(), context);
   case Token::kw_regions:
-    return parseRegionsDirective(element, dirTok.getLoc(), isTopLevel);
+    return parseRegionsDirective(element, dirTok.getLoc(), context);
   case Token::kw_results:
-    return parseResultsDirective(element, dirTok.getLoc(), isTopLevel);
+    return parseResultsDirective(element, dirTok.getLoc(), context);
   case Token::kw_successors:
-    return parseSuccessorsDirective(element, dirTok.getLoc(), isTopLevel);
-  case Token::kw_type_ref:
-    return parseTypeDirective(element, dirTok, isTopLevel, /*isTypeRef=*/true);
+    return parseSuccessorsDirective(element, dirTok.getLoc(), context);
+  case Token::kw_ref:
+    return parseReferenceDirective(element, dirTok.getLoc(), context);
   case Token::kw_type:
-    return parseTypeDirective(element, dirTok, isTopLevel);
+    return parseTypeDirective(element, dirTok, context);
 
   default:
     llvm_unreachable("unknown directive token");
   }
 }
 
-LogicalResult FormatParser::parseLiteral(std::unique_ptr<Element> &element) {
+LogicalResult FormatParser::parseLiteral(std::unique_ptr<Element> &element,
+                                         ParserContext context) {
   Token literalTok = curToken;
+  if (context != TopLevelContext) {
+    return emitError(
+        literalTok.getLoc(),
+        "literals may only be used in a top-level section of the format");
+  }
   consumeToken();
 
   StringRef value = literalTok.getSpelling().drop_front().drop_back();
@@ -2751,22 +2858,39 @@ LogicalResult FormatParser::parseLiteral(std::unique_ptr<Element> &element) {
 }
 
 LogicalResult FormatParser::parseOptional(std::unique_ptr<Element> &element,
-                                          bool isTopLevel) {
+                                          ParserContext context) {
   llvm::SMLoc curLoc = curToken.getLoc();
-  if (!isTopLevel)
+  if (context != TopLevelContext)
     return emitError(curLoc, "optional groups can only be used as top-level "
                              "elements");
   consumeToken();
 
   // Parse the child elements for this optional group.
-  std::vector<std::unique_ptr<Element>> elements;
-  SmallPtrSet<const NamedTypeConstraint *, 8> seenVariables;
+  std::vector<std::unique_ptr<Element>> thenElements, elseElements;
   Optional<unsigned> anchorIdx;
   do {
-    if (failed(parseOptionalChildElement(elements, seenVariables, anchorIdx)))
+    if (failed(parseOptionalChildElement(thenElements, anchorIdx)))
       return ::mlir::failure();
   } while (curToken.getKind() != Token::r_paren);
   consumeToken();
+
+  // Parse the `else` elements of this optional group.
+  if (curToken.getKind() == Token::colon) {
+    consumeToken();
+    if (failed(parseToken(Token::l_paren, "expected '(' to start else branch "
+                                          "of optional group")))
+      return failure();
+    do {
+      llvm::SMLoc childLoc = curToken.getLoc();
+      elseElements.push_back({});
+      if (failed(parseElement(elseElements.back(), TopLevelContext)) ||
+          failed(verifyOptionalChildElement(elseElements.back().get(), childLoc,
+                                            /*isAnchor=*/false)))
+        return failure();
+    } while (curToken.getKind() != Token::r_paren);
+    consumeToken();
+  }
+
   if (failed(parseToken(Token::question, "expected '?' after optional group")))
     return ::mlir::failure();
 
@@ -2776,7 +2900,7 @@ LogicalResult FormatParser::parseOptional(std::unique_ptr<Element> &element,
 
   // The first parsable element of the group must be able to be parsed in an
   // optional fashion.
-  auto parseBegin = llvm::find_if_not(elements, [](auto &element) {
+  auto parseBegin = llvm::find_if_not(thenElements, [](auto &element) {
     return isa<WhitespaceElement>(element.get());
   });
   Element *firstElement = parseBegin->get();
@@ -2787,44 +2911,18 @@ LogicalResult FormatParser::parseOptional(std::unique_ptr<Element> &element,
                      "first parsable element of an operand group must be "
                      "an attribute, literal, operand, or region");
 
-  // After parsing all of the elements, ensure that all type directives refer
-  // only to elements within the group.
-  auto checkTypeOperand = [&](Element *typeEle) {
-    auto *opVar = dyn_cast<OperandVariable>(typeEle);
-    const NamedTypeConstraint *var = opVar ? opVar->getVar() : nullptr;
-    if (!seenVariables.count(var))
-      return emitError(curLoc, "type directive can only refer to variables "
-                               "within the optional group");
-    return ::mlir::success();
-  };
-  for (auto &ele : elements) {
-    if (auto *typeEle = dyn_cast<TypeRefDirective>(ele.get())) {
-      if (failed(checkTypeOperand(typeEle->getOperand())))
-        return failure();
-    } else if (auto *typeEle = dyn_cast<TypeDirective>(ele.get())) {
-      if (failed(checkTypeOperand(typeEle->getOperand())))
-        return ::mlir::failure();
-    } else if (auto *typeEle = dyn_cast<FunctionalTypeDirective>(ele.get())) {
-      if (failed(checkTypeOperand(typeEle->getInputs())) ||
-          failed(checkTypeOperand(typeEle->getResults())))
-        return ::mlir::failure();
-    }
-  }
-
-  optionalVariables.insert(seenVariables.begin(), seenVariables.end());
-  auto parseStart = parseBegin - elements.begin();
-  element = std::make_unique<OptionalElement>(std::move(elements), *anchorIdx,
-                                              parseStart);
+  auto parseStart = parseBegin - thenElements.begin();
+  element = std::make_unique<OptionalElement>(
+      std::move(thenElements), std::move(elseElements), *anchorIdx, parseStart);
   return ::mlir::success();
 }
 
 LogicalResult FormatParser::parseOptionalChildElement(
     std::vector<std::unique_ptr<Element>> &childElements,
-    SmallPtrSetImpl<const NamedTypeConstraint *> &seenVariables,
     Optional<unsigned> &anchorIdx) {
   llvm::SMLoc childLoc = curToken.getLoc();
   childElements.push_back({});
-  if (failed(parseElement(childElements.back(), /*isTopLevel=*/true)))
+  if (failed(parseElement(childElements.back(), TopLevelContext)))
     return ::mlir::failure();
 
   // Check to see if this element is the anchor of the optional group.
@@ -2837,7 +2935,14 @@ LogicalResult FormatParser::parseOptionalChildElement(
     consumeToken();
   }
 
-  return TypeSwitch<Element *, LogicalResult>(childElements.back().get())
+  return verifyOptionalChildElement(childElements.back().get(), childLoc,
+                                    isAnchor);
+}
+
+LogicalResult FormatParser::verifyOptionalChildElement(Element *element,
+                                                       llvm::SMLoc childLoc,
+                                                       bool isAnchor) {
+  return TypeSwitch<Element *, LogicalResult>(element)
       // All attributes can be within the optional group, but only optional
       // attributes can be the anchor.
       .Case([&](AttributeVariable *attrEle) {
@@ -2848,26 +2953,43 @@ LogicalResult FormatParser::parseOptionalChildElement(
       })
       // Only optional-like(i.e. variadic) operands can be within an optional
       // group.
-      .Case<OperandVariable>([&](OperandVariable *ele) {
+      .Case([&](OperandVariable *ele) {
         if (!ele->getVar()->isVariableLength())
           return emitError(childLoc, "only variable length operands can be "
                                      "used within an optional group");
-        seenVariables.insert(ele->getVar());
         return ::mlir::success();
       })
-      .Case<RegionVariable>([&](RegionVariable *) {
+      // Only optional-like(i.e. variadic) results can be within an optional
+      // group.
+      .Case([&](ResultVariable *ele) {
+        if (!ele->getVar()->isVariableLength())
+          return emitError(childLoc, "only variable length results can be "
+                                     "used within an optional group");
+        return ::mlir::success();
+      })
+      .Case([&](RegionVariable *) {
         // TODO: When ODS has proper support for marking "optional" regions, add
         // a check here.
         return ::mlir::success();
       })
-      // Literals, whitespace, custom directives, and type directives may be
-      // used, but they can't anchor the group.
+      .Case([&](TypeDirective *ele) {
+        return verifyOptionalChildElement(ele->getOperand(), childLoc,
+                                          /*isAnchor=*/false);
+      })
+      .Case([&](FunctionalTypeDirective *ele) {
+        if (failed(verifyOptionalChildElement(ele->getInputs(), childLoc,
+                                              /*isAnchor=*/false)))
+          return failure();
+        return verifyOptionalChildElement(ele->getResults(), childLoc,
+                                          /*isAnchor=*/false);
+      })
+      // Literals, whitespace, and custom directives may be used, but they can't
+      // anchor the group.
       .Case<LiteralElement, WhitespaceElement, CustomDirective,
-            FunctionalTypeDirective, OptionalElement, TypeRefDirective,
-            TypeDirective>([&](Element *) {
+            FunctionalTypeDirective, OptionalElement>([&](Element *) {
         if (isAnchor)
-          return emitError(childLoc, "only variables can be used to anchor "
-                                     "an optional group");
+          return emitError(childLoc, "only variables and types can be used "
+                                     "to anchor an optional group");
         return ::mlir::success();
       })
       .Default([&](Element *) {
@@ -2878,23 +3000,34 @@ LogicalResult FormatParser::parseOptionalChildElement(
 
 LogicalResult
 FormatParser::parseAttrDictDirective(std::unique_ptr<Element> &element,
-                                     llvm::SMLoc loc, bool isTopLevel,
+                                     llvm::SMLoc loc, ParserContext context,
                                      bool withKeyword) {
-  if (!isTopLevel)
+  if (context == TypeDirectiveContext)
     return emitError(loc, "'attr-dict' directive can only be used as a "
                           "top-level directive");
-  if (hasAttrDict)
-    return emitError(loc, "'attr-dict' directive has already been seen");
 
-  hasAttrDict = true;
+  if (context == RefDirectiveContext) {
+    if (!hasAttrDict)
+      return emitError(loc, "'ref' of 'attr-dict' is not bound by a prior "
+                            "'attr-dict' directive");
+
+    // Otherwise, this is a top-level context.
+  } else {
+    if (hasAttrDict)
+      return emitError(loc, "'attr-dict' directive has already been seen");
+    hasAttrDict = true;
+  }
+
   element = std::make_unique<AttrDictDirective>(withKeyword);
   return ::mlir::success();
 }
 
 LogicalResult
 FormatParser::parseCustomDirective(std::unique_ptr<Element> &element,
-                                   llvm::SMLoc loc, bool isTopLevel) {
+                                   llvm::SMLoc loc, ParserContext context) {
   llvm::SMLoc curLoc = curToken.getLoc();
+  if (context != TopLevelContext)
+    return emitError(loc, "'custom' is only valid as a top-level directive");
 
   // Parse the custom directive name.
   if (failed(
@@ -2927,13 +3060,6 @@ FormatParser::parseCustomDirective(std::unique_ptr<Element> &element,
   // After parsing all of the elements, ensure that all type directives refer
   // only to variables.
   for (auto &ele : elements) {
-    if (auto *typeEle = dyn_cast<TypeRefDirective>(ele.get())) {
-      if (!isa<OperandVariable, ResultVariable>(typeEle->getOperand())) {
-        return emitError(curLoc,
-                         "type_ref directives within a custom directive "
-                         "may only refer to variables");
-      }
-    }
     if (auto *typeEle = dyn_cast<TypeDirective>(ele.get())) {
       if (!isa<OperandVariable, ResultVariable>(typeEle->getOperand())) {
         return emitError(curLoc, "type directives within a custom directive "
@@ -2951,13 +3077,13 @@ LogicalResult FormatParser::parseCustomDirectiveParameter(
     std::vector<std::unique_ptr<Element>> &parameters) {
   llvm::SMLoc childLoc = curToken.getLoc();
   parameters.push_back({});
-  if (failed(parseElement(parameters.back(), /*isTopLevel=*/true)))
+  if (failed(parseElement(parameters.back(), CustomDirectiveContext)))
     return ::mlir::failure();
 
   // Verify that the element can be placed within a custom directive.
-  if (!isa<TypeRefDirective, TypeDirective, AttrDictDirective,
-           AttributeVariable, OperandVariable, RegionVariable,
-           SuccessorVariable>(parameters.back().get())) {
+  if (!isa<RefDirective, TypeDirective, AttrDictDirective, AttributeVariable,
+           OperandVariable, RegionVariable, SuccessorVariable>(
+          parameters.back().get())) {
     return emitError(childLoc, "only variables and types may be used as "
                                "parameters to a custom directive");
   }
@@ -2966,9 +3092,9 @@ LogicalResult FormatParser::parseCustomDirectiveParameter(
 
 LogicalResult
 FormatParser::parseFunctionalTypeDirective(std::unique_ptr<Element> &element,
-                                           Token tok, bool isTopLevel) {
+                                           Token tok, ParserContext context) {
   llvm::SMLoc loc = tok.getLoc();
-  if (!isTopLevel)
+  if (context != TopLevelContext)
     return emitError(
         loc, "'functional-type' is only valid as a top-level directive");
 
@@ -2987,8 +3113,13 @@ FormatParser::parseFunctionalTypeDirective(std::unique_ptr<Element> &element,
 
 LogicalResult
 FormatParser::parseOperandsDirective(std::unique_ptr<Element> &element,
-                                     llvm::SMLoc loc, bool isTopLevel) {
-  if (isTopLevel) {
+                                     llvm::SMLoc loc, ParserContext context) {
+  if (context == RefDirectiveContext) {
+    if (!fmt.allOperands)
+      return emitError(loc, "'ref' of 'operands' is not bound by a prior "
+                            "'operands' directive");
+
+  } else if (context == TopLevelContext || context == CustomDirectiveContext) {
     if (fmt.allOperands || !seenOperands.empty())
       return emitError(loc, "'operands' directive creates overlap in format");
     fmt.allOperands = true;
@@ -2998,64 +3129,95 @@ FormatParser::parseOperandsDirective(std::unique_ptr<Element> &element,
 }
 
 LogicalResult
+FormatParser::parseReferenceDirective(std::unique_ptr<Element> &element,
+                                      llvm::SMLoc loc, ParserContext context) {
+  if (context != CustomDirectiveContext)
+    return emitError(loc, "'ref' is only valid within a `custom` directive");
+
+  std::unique_ptr<Element> operand;
+  if (failed(parseToken(Token::l_paren, "expected '(' before argument list")) ||
+      failed(parseElement(operand, RefDirectiveContext)) ||
+      failed(parseToken(Token::r_paren, "expected ')' after argument list")))
+    return ::mlir::failure();
+
+  element = std::make_unique<RefDirective>(std::move(operand));
+  return ::mlir::success();
+}
+
+LogicalResult
 FormatParser::parseRegionsDirective(std::unique_ptr<Element> &element,
-                                    llvm::SMLoc loc, bool isTopLevel) {
-  if (!isTopLevel)
+                                    llvm::SMLoc loc, ParserContext context) {
+  if (context == TypeDirectiveContext)
     return emitError(loc, "'regions' is only valid as a top-level directive");
-  if (hasAllRegions || !seenRegions.empty())
-    return emitError(loc, "'regions' directive creates overlap in format");
-  hasAllRegions = true;
+  if (context == RefDirectiveContext) {
+    if (!hasAllRegions)
+      return emitError(loc, "'ref' of 'regions' is not bound by a prior "
+                            "'regions' directive");
+
+    // Otherwise, this is a TopLevel directive.
+  } else {
+    if (hasAllRegions || !seenRegions.empty())
+      return emitError(loc, "'regions' directive creates overlap in format");
+    hasAllRegions = true;
+  }
   element = std::make_unique<RegionsDirective>();
   return ::mlir::success();
 }
 
 LogicalResult
 FormatParser::parseResultsDirective(std::unique_ptr<Element> &element,
-                                    llvm::SMLoc loc, bool isTopLevel) {
-  if (isTopLevel)
-    return emitError(loc, "'results' directive can not be used as a "
-                          "top-level directive");
+                                    llvm::SMLoc loc, ParserContext context) {
+  if (context != TypeDirectiveContext)
+    return emitError(loc, "'results' directive can can only be used as a child "
+                          "to a 'type' directive");
   element = std::make_unique<ResultsDirective>();
   return ::mlir::success();
 }
 
 LogicalResult
 FormatParser::parseSuccessorsDirective(std::unique_ptr<Element> &element,
-                                       llvm::SMLoc loc, bool isTopLevel) {
-  if (!isTopLevel)
+                                       llvm::SMLoc loc, ParserContext context) {
+  if (context == TypeDirectiveContext)
     return emitError(loc,
                      "'successors' is only valid as a top-level directive");
-  if (hasAllSuccessors || !seenSuccessors.empty())
-    return emitError(loc, "'successors' directive creates overlap in format");
-  hasAllSuccessors = true;
+  if (context == RefDirectiveContext) {
+    if (!hasAllSuccessors)
+      return emitError(loc, "'ref' of 'successors' is not bound by a prior "
+                            "'successors' directive");
+
+    // Otherwise, this is a TopLevel directive.
+  } else {
+    if (hasAllSuccessors || !seenSuccessors.empty())
+      return emitError(loc, "'successors' directive creates overlap in format");
+    hasAllSuccessors = true;
+  }
   element = std::make_unique<SuccessorsDirective>();
   return ::mlir::success();
 }
 
 LogicalResult
 FormatParser::parseTypeDirective(std::unique_ptr<Element> &element, Token tok,
-                                 bool isTopLevel, bool isTypeRef) {
+                                 ParserContext context) {
   llvm::SMLoc loc = tok.getLoc();
-  if (!isTopLevel)
-    return emitError(loc, "'type' is only valid as a top-level directive");
+  if (context == TypeDirectiveContext)
+    return emitError(loc, "'type' cannot be used as a child of another `type`");
 
+  bool isRefChild = context == RefDirectiveContext;
   std::unique_ptr<Element> operand;
   if (failed(parseToken(Token::l_paren, "expected '(' before argument list")) ||
-      failed(parseTypeDirectiveOperand(operand, isTypeRef)) ||
+      failed(parseTypeDirectiveOperand(operand, isRefChild)) ||
       failed(parseToken(Token::r_paren, "expected ')' after argument list")))
     return ::mlir::failure();
-  if (isTypeRef)
-    element = std::make_unique<TypeRefDirective>(std::move(operand));
-  else
-    element = std::make_unique<TypeDirective>(std::move(operand));
+
+  element = std::make_unique<TypeDirective>(std::move(operand));
   return ::mlir::success();
 }
 
 LogicalResult
 FormatParser::parseTypeDirectiveOperand(std::unique_ptr<Element> &element,
-                                        bool isTypeRef) {
+                                        bool isRefChild) {
   llvm::SMLoc loc = curToken.getLoc();
-  if (failed(parseElement(element, /*isTopLevel=*/false)))
+  if (failed(parseElement(element, TypeDirectiveContext)))
     return ::mlir::failure();
   if (isa<LiteralElement>(element.get()))
     return emitError(
@@ -3063,36 +3225,35 @@ FormatParser::parseTypeDirectiveOperand(std::unique_ptr<Element> &element,
 
   if (auto *var = dyn_cast<OperandVariable>(element.get())) {
     unsigned opIdx = var->getVar() - op.operand_begin();
-    if (!isTypeRef && (fmt.allOperandTypes || seenOperandTypes.test(opIdx)))
+    if (!isRefChild && (fmt.allOperandTypes || seenOperandTypes.test(opIdx)))
       return emitError(loc, "'type' of '" + var->getVar()->name +
                                 "' is already bound");
-    if (isTypeRef && !(fmt.allOperandTypes || seenOperandTypes.test(opIdx)))
-      return emitError(loc, "'type_ref' of '" + var->getVar()->name +
-                                "' is not bound by a prior 'type' directive");
+    if (isRefChild && !(fmt.allOperandTypes || seenOperandTypes.test(opIdx)))
+      return emitError(loc, "'ref' of 'type($" + var->getVar()->name +
+                                ")' is not bound by a prior 'type' directive");
     seenOperandTypes.set(opIdx);
   } else if (auto *var = dyn_cast<ResultVariable>(element.get())) {
     unsigned resIdx = var->getVar() - op.result_begin();
-    if (!isTypeRef && (fmt.allResultTypes || seenResultTypes.test(resIdx)))
+    if (!isRefChild && (fmt.allResultTypes || seenResultTypes.test(resIdx)))
       return emitError(loc, "'type' of '" + var->getVar()->name +
                                 "' is already bound");
-    if (isTypeRef && !(fmt.allResultTypes || seenResultTypes.test(resIdx)))
-      return emitError(loc, "'type_ref' of '" + var->getVar()->name +
-                                "' is not bound by a prior 'type' directive");
+    if (isRefChild && !(fmt.allResultTypes || seenResultTypes.test(resIdx)))
+      return emitError(loc, "'ref' of 'type($" + var->getVar()->name +
+                                ")' is not bound by a prior 'type' directive");
     seenResultTypes.set(resIdx);
   } else if (isa<OperandsDirective>(&*element)) {
-    if (!isTypeRef && (fmt.allOperandTypes || seenOperandTypes.any()))
+    if (!isRefChild && (fmt.allOperandTypes || seenOperandTypes.any()))
       return emitError(loc, "'operands' 'type' is already bound");
-    if (isTypeRef && !(fmt.allOperandTypes || seenOperandTypes.all()))
-      return emitError(
-          loc,
-          "'operands' 'type_ref' is not bound by a prior 'type' directive");
+    if (isRefChild && !fmt.allOperandTypes)
+      return emitError(loc, "'ref' of 'type(operands)' is not bound by a prior "
+                            "'type' directive");
     fmt.allOperandTypes = true;
   } else if (isa<ResultsDirective>(&*element)) {
-    if (!isTypeRef && (fmt.allResultTypes || seenResultTypes.any()))
+    if (!isRefChild && (fmt.allResultTypes || seenResultTypes.any()))
       return emitError(loc, "'results' 'type' is already bound");
-    if (isTypeRef && !(fmt.allResultTypes || seenResultTypes.all()))
-      return emitError(
-          loc, "'results' 'type_ref' is not bound by a prior 'type' directive");
+    if (isRefChild && !fmt.allResultTypes)
+      return emitError(loc, "'ref' of 'type(results)' is not bound by a prior "
+                            "'type' directive");
     fmt.allResultTypes = true;
   } else {
     return emitError(loc, "invalid argument to 'type' directive");

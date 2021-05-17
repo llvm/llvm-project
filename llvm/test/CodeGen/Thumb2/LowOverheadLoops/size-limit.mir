@@ -123,6 +123,7 @@ body:             |
   ; CHECK:   renamable $r1, dead $cpsr = tSUBi8 killed renamable $r1, 4, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r0, dead $cpsr = tSUBi8 killed renamable $r0, 4, 14 /* CC::al */, $noreg
+  ; CHECK:   dead $lr = tMOVr $r3, 14 /* CC::al */, $noreg
   ; CHECK:   $lr = t2DLS killed $r3
   ; CHECK: bb.2.for.body:
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)

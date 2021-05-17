@@ -9,9 +9,10 @@
 // This file contains the implementation of critical with KMPC interface
 //
 //===----------------------------------------------------------------------===//
+#pragma omp declare target
 
-#include "interface.h"
 #include "common/debug.h"
+#include "interface.h"
 
 EXTERN
 void __kmpc_critical(kmp_Ident *loc, int32_t global_tid,
@@ -26,3 +27,5 @@ void __kmpc_end_critical(kmp_Ident *loc, int32_t global_tid,
   PRINT0(LD_IO, "call to kmpc_end_critical()\n");
   omp_unset_lock((omp_lock_t *)lck);
 }
+
+#pragma omp end declare target

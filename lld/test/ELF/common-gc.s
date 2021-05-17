@@ -32,8 +32,8 @@
 
 # GC-NOT: Name: bar
 
-.comm foo,4,4
 .comm bar,4,4
+.comm foo,4,4
 
 .text
 .globl _start

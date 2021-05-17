@@ -222,8 +222,8 @@ extractSystemIncludesAndTarget(llvm::SmallString<128> Driver,
   if (int RC = llvm::sys::ExecuteAndWait(Driver, Args, /*Env=*/llvm::None,
                                          Redirects)) {
     elog("System include extraction: driver execution failed with return code: "
-         "{0}. Args: ['{1}']",
-         llvm::to_string(RC), llvm::join(Args, "', '"));
+         "{0}. Args: [{1}]",
+         llvm::to_string(RC), printArgv(Args));
     return llvm::None;
   }
 

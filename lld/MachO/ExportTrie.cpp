@@ -44,7 +44,6 @@
 #include "llvm/Support/LEB128.h"
 
 using namespace llvm;
-using namespace llvm::MachO;
 using namespace lld;
 using namespace lld::macho;
 
@@ -62,6 +61,7 @@ struct ExportInfo {
   uint8_t flags = 0;
   ExportInfo(const Symbol &sym, uint64_t imageBase)
       : address(sym.getVA() - imageBase) {
+    using namespace llvm::MachO;
     // Set the symbol type.
     if (sym.isWeakDef())
       flags |= EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION;
@@ -108,7 +108,7 @@ bool TrieNode::updateOffset(size_t &nextOffset) {
   }
   // Compute size of all child edges.
   ++nodeSize; // Byte for number of children.
-  for (Edge &edge : edges) {
+  for (const Edge &edge : edges) {
     nodeSize += edge.substring.size() + 1             // String length.
                 + getULEB128Size(edge.child->offset); // Offset len.
   }

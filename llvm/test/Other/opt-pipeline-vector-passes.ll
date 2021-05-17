@@ -5,6 +5,7 @@
 ; RUN: opt -enable-new-pm=0 -O2 -vectorize-loops=0       -debug-pass=Structure  < %s -o /dev/null 2>&1 | FileCheck %s --check-prefixes=OLDPM_O2_FORCE_OFF
 ; RUN: opt -disable-verify -debug-pass-manager -passes='default<O1>' -S %s 2>&1 | FileCheck %s --check-prefixes=NEWPM_O1
 ; RUN: opt -disable-verify -debug-pass-manager -passes='default<O2>' -S %s 2>&1 | FileCheck %s --check-prefixes=NEWPM_O2
+; RUN: opt -disable-verify -debug-pass-manager -passes='default<O2>' -extra-vectorizer-passes -S %s 2>&1 | FileCheck %s --check-prefixes=NEWPM_O2_EXTRA
 
 ; REQUIRES: asserts
 
@@ -64,6 +65,27 @@
 ; NEWPM_O2:        Running pass: SLPVectorizerPass
 ; NEWPM_O2:        Running pass: VectorCombinePass
 
-define void @f() {
-  ret void
+; NEWPM_O2_EXTRA-LABEL: Running pass: LoopVectorizePass
+; NEWPM_O2_EXTRA: Running pass: EarlyCSEPass
+; NEWPM_O2_EXTRA: Running pass: CorrelatedValuePropagationPass
+; NEWPM_O2_EXTRA: Running pass: InstCombinePass
+; NEWPM_O2_EXTRA: Running pass: LICMPass
+; NEWPM_O2_EXTRA: Running pass: SimpleLoopUnswitchPass
+; NEWPM_O2_EXTRA: Running pass: SimplifyCFGPass
+; NEWPM_O2_EXTRA: Running pass: InstCombinePass
+; NEWPM_O2_EXTRA: Running pass: SLPVectorizerPass
+; NEWPM_O2_EXTRA: Running pass: EarlyCSEPass
+; NEWPM_O2_EXTRA: Running pass: VectorCombinePass
+
+define i64 @f(i1 %cond) {
+entry:
+  br label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %inc, %loop ]
+  %inc = add i64 %i, 1
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret i64 %i
 }

@@ -41,7 +41,7 @@ define linkonce_odr i32 @sharedFn() #1 comdat($sharedComdat) {
 ; CHECK-NEXT:         Field:           __linear_memory
 ; CHECK-NEXT:         Kind:            MEMORY
 ; CHECK-NEXT:         Memory:
-; CHECK-NEXT:           Initial:         0x1
+; CHECK-NEXT:           Minimum:         0x1
 ; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           funcImport
 ; CHECK-NEXT:         Kind:            FUNCTION

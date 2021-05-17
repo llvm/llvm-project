@@ -85,7 +85,7 @@ void ThreadContextBase::SetCreated(uptr _user_id, u64 _unique_id,
   unique_id = _unique_id;
   detached = _detached;
   // Parent tid makes no sense for the main thread.
-  if (tid != 0)
+  if (tid != kMainTid)
     parent_tid = _parent_tid;
   OnCreated(arg);
 }
@@ -98,8 +98,6 @@ void ThreadContextBase::Reset() {
 }
 
 // ThreadRegistry implementation.
-
-const u32 ThreadRegistry::kUnknownTid = ~0U;
 
 ThreadRegistry::ThreadRegistry(ThreadContextFactory factory, u32 max_threads,
                                u32 thread_quarantine_size, u32 max_reuse)
@@ -135,7 +133,7 @@ uptr ThreadRegistry::GetMaxAliveThreads() {
 u32 ThreadRegistry::CreateThread(uptr user_id, bool detached, u32 parent_tid,
                                  void *arg) {
   BlockingMutexLock l(&mtx_);
-  u32 tid = kUnknownTid;
+  u32 tid = kInvalidTid;
   ThreadContextBase *tctx = QuarantinePop();
   if (tctx) {
     tid = tctx->tid;
@@ -155,7 +153,7 @@ u32 ThreadRegistry::CreateThread(uptr user_id, bool detached, u32 parent_tid,
     Die();
   }
   CHECK_NE(tctx, 0);
-  CHECK_NE(tid, kUnknownTid);
+  CHECK_NE(tid, kInvalidTid);
   CHECK_LT(tid, max_threads_);
   CHECK_EQ(tctx->status, ThreadStatusInvalid);
   alive_threads_++;
@@ -186,7 +184,7 @@ u32 ThreadRegistry::FindThread(FindThreadCallback cb, void *arg) {
     if (tctx != 0 && cb(tctx, arg))
       return tctx->tid;
   }
-  return kUnknownTid;
+  return kInvalidTid;
 }
 
 ThreadContextBase *
@@ -278,7 +276,7 @@ void ThreadRegistry::JoinThread(u32 tid, void *arg) {
 // really started.  We just did CreateThread for a prospective new
 // thread before trying to create it, and then failed to actually
 // create it, and so never called StartThread.
-void ThreadRegistry::FinishThread(u32 tid) {
+ThreadStatus ThreadRegistry::FinishThread(u32 tid) {
   BlockingMutexLock l(&mtx_);
   CHECK_GT(alive_threads_, 0);
   alive_threads_--;
@@ -286,6 +284,7 @@ void ThreadRegistry::FinishThread(u32 tid) {
   ThreadContextBase *tctx = threads_[tid];
   CHECK_NE(tctx, 0);
   bool dead = tctx->detached;
+  ThreadStatus prev_status = tctx->status;
   if (tctx->status == ThreadStatusRunning) {
     CHECK_GT(running_threads_, 0);
     running_threads_--;
@@ -300,6 +299,7 @@ void ThreadRegistry::FinishThread(u32 tid) {
     QuarantinePush(tctx);
   }
   tctx->SetDestroyed();
+  return prev_status;
 }
 
 void ThreadRegistry::StartThread(u32 tid, tid_t os_id, ThreadType thread_type,

@@ -103,6 +103,30 @@ DisplayEnvEnd                "OPENMP DISPLAY ENVIRONMENT END"
 Device                       "[device]"
 Host                         "[host]"
 Tile                         "tile"
+Tiles                        "tiles"
+Threads                      "threads"
+Cores                        "cores"
+Socket                       "socket"
+Sockets                      "sockets"
+Die                          "die"
+Dice                         "dice"
+Module                       "module"
+Modules                      "modules"
+L1Cache                      "L1 cache"
+L1Caches                     "L1 caches"
+L2Cache                      "L2 cache"
+L2Caches                     "L2 caches"
+L3Cache                      "L3 cache"
+L3Caches                     "L3 caches"
+NumaDomain                   "NUMA domain"
+NumaDomains                  "NUMA domains"
+ProcGroup                    "processor group"
+ProcGroups                   "processor groups"
+Unknown                      "unknown"
+NoLeaf31Support              "cpuid leaf 31 not supported"
+HwlocFailed                  "Hwloc api failure"
+LLCache                      "LL cache"
+LLCaches                     "LL caches"
 
 
 
@@ -117,7 +141,7 @@ SysErr                       "OMP: System error #%1$d: %2$s\n"
 Hint                         "OMP: Hint %1$s\n"
 
 Pragma                       "%1$s pragma (at %2$s:%3$s():%4$s)"
-    # %1 is pragma name (like "parallel" or "master",
+    # %1 is pragma name (like "parallel" or "masked",
     # %2 is file name,
     # %3 is function (routine) name,
     # %4 is the line number (as string, so "s" type specifier should be used).
@@ -333,6 +357,8 @@ TopologyExtraNoTi            "%1$s: %2$d packages x %3$d nodes/pkg x %4$d tiles/
 OmptOutdatedWorkshare        "OMPT: Cannot determine workshare type; using the default (loop) instead. "
                              "This issue is fixed in an up-to-date compiler."
 OmpNoAllocator               "Allocator %1$s is not available, will use default allocator."
+TopologyGeneric              "%1$s: %2$s (%3$d total cores)"
+AffGranularityBad            "%1$s: granularity setting: %2$s does not exist in topology.  Using granularity=%3$s instead."
 
 # --- OpenMP errors detected at runtime ---
 #
@@ -362,8 +388,8 @@ StaticLibNotSupport          "Static %1$s does not support %2$s. Continuing with
 OBSOLETE                     "KMP_DYNAMIC_MODE=irml cannot be used with KMP_USE_IRML=0"
 IttUnknownGroup              "ittnotify: Unknown group \"%2$s\" specified in environment variable \"%1$s\"."
 IttEnvVarTooLong             "ittnotify: Environment variable \"%1$s\" too long: Actual lengths is %2$lu, max allowed length is %3$lu."
-AffUseGlobCpuidL11           "%1$s: Affinity capable, using global cpuid leaf 11 info"
-AffNotCapableUseLocCpuidL11  "%1$s: Affinity not capable, using local cpuid leaf 11 info"
+OBSOLETE                     "%1$s: Affinity capable, using global cpuid leaf 11 info"
+OBSOLETE                     "%1$s: Affinity not capable, using local cpuid leaf 11 info"
 AffInfoStr                   "%1$s: %2$s."
 AffInfoStrStr                "%1$s: %2$s - %3$s."
 OSProcToPhysicalThreadMap    "%1$s: OS proc to physical thread map:"
@@ -429,6 +455,18 @@ HierSchedInvalid             "Hierarchy ignored: unsupported level: %1$s."
 AffFormatDefault             "OMP: pid %1$s tid %2$s thread %3$s bound to OS proc set {%4$s}"
 APIDeprecated                "%1$s routine deprecated, please use %2$s instead."
 GompFeatureNotSupported      "libgomp compatibility layer does not support OpenMP feature: %1$s"
+AffHWSubsetManyDies          "KMP_HW_SUBSET ignored: too many Dies requested."
+AffUseGlobCpuidL             "%1$s: Affinity capable, using global cpuid leaf %2$d info"
+AffNotCapableUseLocCpuidL    "%1$s: Affinity not capable, using local cpuid leaf %2$d info"
+AffNotUsingHwloc             "%1$s: Affinity not capable, using hwloc."
+UserDirectedError            "%1$s: Encountered user-directed error: %2$s."
+UserDirectedWarning          "%1$s: Encountered user-directed warning: %2$s."
+FailedToCreateTeam           "Failed to create teams between lower bound (%1$d) and upper bound (%2$d)."
+AffHWSubsetManyGeneric       "KMP_HW_SUBSET ignored: %1$s: too many requested."
+AffHWSubsetNotExistGeneric   "KMP_HW_SUBSET ignored: %1$s: level not detected in machine topology."
+AffHWSubsetEqvLayers         "KMP_HW_SUBSET ignored: %1$s, %2$s: layers are equivalent, please only specify one."
+AffHWSubsetOutOfOrder        "KMP_HW_SUBSET ignored: %1$s layer should come after %2$s."
+AffEqualTopologyTypes        "%1$s: topology layer \"%2$s\" is equivalent to \"%3$s\"."
 
 # --------------------------------------------------------------------------------------------------
 -*- HINTS -*-
@@ -486,7 +524,7 @@ BadExeFormat                 "System error #193 is \"Bad format of EXE or DLL fi
                              "a file for another architecture. "
                              "Check whether \"%1$s\" is a file for %2$s architecture."
 SystemLimitOnThreads         "System-related limit on the number of threads."
-
+SetNewBound                  "Try setting new bounds (preferably less than or equal to %1$d) for num_teams clause."
 
 
 # --------------------------------------------------------------------------------------------------

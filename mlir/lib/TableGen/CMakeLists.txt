@@ -11,6 +11,7 @@
 llvm_add_library(MLIRTableGen STATIC
   Argument.cpp
   Attribute.cpp
+  AttrOrTypeDef.cpp
   Builder.cpp
   Constraint.cpp
   Dialect.cpp
@@ -18,15 +19,14 @@ llvm_add_library(MLIRTableGen STATIC
   Interfaces.cpp
   Operator.cpp
   OpClass.cpp
-  OpTrait.cpp
   Pass.cpp
   Pattern.cpp
   Predicate.cpp
   Region.cpp
   SideEffects.cpp
   Successor.cpp
+  Trait.cpp
   Type.cpp
-  TypeDef.cpp
 
   DISABLE_LLVM_LINK_LLVM_DYLIB
 

@@ -1,0 +1,2 @@
+RUN: not llvm-profdata merge %p/Inputs/fe-basic.proftext %p/Inputs/ir-basic.proftext -o /dev/null 2>&1 | FileCheck %s
+CHECK: ir-basic.proftext: Merge IR generated profile with Clang generated profile.

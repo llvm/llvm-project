@@ -23,11 +23,11 @@ define i8 @zext_or_icmp_icmp(i8 %a, i8 %b) {
 define i8 @zext_or_icmp_icmp_logical(i8 %a, i8 %b) {
 ; CHECK-LABEL: @zext_or_icmp_icmp_logical(
 ; CHECK-NEXT:    [[MASK:%.*]] = and i8 [[A:%.*]], 1
+; CHECK-NEXT:    [[TOBOOL1:%.*]] = icmp eq i8 [[MASK]], 0
 ; CHECK-NEXT:    [[TOBOOL2:%.*]] = icmp eq i8 [[B:%.*]], 0
-; CHECK-NEXT:    [[TOBOOL22:%.*]] = zext i1 [[TOBOOL2]] to i8
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[MASK]], 1
-; CHECK-NEXT:    [[ZEXT3:%.*]] = or i8 [[TMP1]], [[TOBOOL22]]
-; CHECK-NEXT:    ret i8 [[ZEXT3]]
+; CHECK-NEXT:    [[BOTHCOND:%.*]] = select i1 [[TOBOOL1]], i1 true, i1 [[TOBOOL2]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[BOTHCOND]] to i8
+; CHECK-NEXT:    ret i8 [[ZEXT]]
 ;
   %mask = and i8 %a, 1
   %toBool1 = icmp eq i8 %mask, 0
@@ -49,10 +49,7 @@ define i32 @dont_widen_undef() {
 ; CHECK-NEXT:    br label [[BLOCK2]]
 ; CHECK:       block2:
 ; CHECK-NEXT:    [[CMP_I:%.*]] = phi i1 [ false, [[BLOCK1:%.*]] ], [ true, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[M_011:%.*]] = phi i32 [ 0, [[BLOCK1]] ], [ 33, [[ENTRY]] ]
-; CHECK-NEXT:    [[M_1_OP:%.*]] = lshr i32 1, [[M_011]]
-; CHECK-NEXT:    [[SEXT_MASK:%.*]] = and i32 [[M_1_OP]], 65535
-; CHECK-NEXT:    [[CMP115:%.*]] = icmp ne i32 [[SEXT_MASK]], 0
+; CHECK-NEXT:    [[CMP115:%.*]] = phi i1 [ true, [[BLOCK1]] ], [ false, [[ENTRY]] ]
 ; CHECK-NEXT:    [[CMP1:%.*]] = or i1 [[CMP_I]], [[CMP115]]
 ; CHECK-NEXT:    [[CONV2:%.*]] = zext i1 [[CMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV2]]
@@ -82,10 +79,7 @@ define i32 @dont_widen_undef_logical() {
 ; CHECK-NEXT:    br label [[BLOCK2]]
 ; CHECK:       block2:
 ; CHECK-NEXT:    [[CMP_I:%.*]] = phi i1 [ false, [[BLOCK1:%.*]] ], [ true, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[M_011:%.*]] = phi i32 [ 0, [[BLOCK1]] ], [ 33, [[ENTRY]] ]
-; CHECK-NEXT:    [[M_1_OP:%.*]] = lshr i32 1, [[M_011]]
-; CHECK-NEXT:    [[SEXT_MASK:%.*]] = and i32 [[M_1_OP]], 65535
-; CHECK-NEXT:    [[CMP115:%.*]] = icmp ne i32 [[SEXT_MASK]], 0
+; CHECK-NEXT:    [[CMP115:%.*]] = phi i1 [ true, [[BLOCK1]] ], [ false, [[ENTRY]] ]
 ; CHECK-NEXT:    [[CMP1:%.*]] = or i1 [[CMP_I]], [[CMP115]]
 ; CHECK-NEXT:    [[CONV2:%.*]] = zext i1 [[CMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV2]]
@@ -106,3 +100,69 @@ block2:
   %conv2 = zext i1 %cmp1 to i32
   ret i32 %conv2
 }
+
+; This should not end with more instructions than it started from.
+
+define i32 @PR49475(i32 %x, i16 %y) {
+; CHECK-LABEL: @PR49475(
+; CHECK-NEXT:    [[M:%.*]] = and i16 [[Y:%.*]], 1
+; CHECK-NEXT:    [[B1:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[B2:%.*]] = icmp eq i16 [[M]], 0
+; CHECK-NEXT:    [[T1:%.*]] = or i1 [[B1]], [[B2]]
+; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[T1]] to i32
+; CHECK-NEXT:    ret i32 [[Z]]
+;
+  %m = and i16 %y, 1
+  %b1 = icmp eq i32 %x, 0
+  %b2 = icmp eq i16 %m, 0
+  %t1 = or i1 %b1, %b2
+  %z = zext i1 %t1 to i32
+  ret i32 %z
+}
+
+; This would infinite-loop.
+
+define i8 @PR49475_infloop(i32 %t0, i16 %insert, i64 %e, i8 %i162) {
+; CHECK-LABEL: @PR49475_infloop(
+; CHECK-NEXT:    [[B:%.*]] = icmp eq i32 [[T0:%.*]], 0
+; CHECK-NEXT:    [[B2:%.*]] = icmp eq i16 [[INSERT:%.*]], 0
+; CHECK-NEXT:    [[T1:%.*]] = or i1 [[B]], [[B2]]
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[T1]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[EXT]], [[T0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[AND]], 140
+; CHECK-NEXT:    [[XOR1:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[CONV16:%.*]] = sext i8 [[I162:%.*]] to i64
+; CHECK-NEXT:    [[SUB17:%.*]] = sub i64 [[CONV16]], [[E:%.*]]
+; CHECK-NEXT:    [[SEXT:%.*]] = shl i64 [[SUB17]], 32
+; CHECK-NEXT:    [[CONV18:%.*]] = ashr exact i64 [[SEXT]], 32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i64 [[CONV18]], [[XOR1]]
+; CHECK-NEXT:    [[CONV19:%.*]] = zext i1 [[CMP]] to i16
+; CHECK-NEXT:    [[OR21:%.*]] = or i16 [[CONV19]], [[INSERT]]
+; CHECK-NEXT:    [[TRUNC44:%.*]] = trunc i16 [[OR21]] to i8
+; CHECK-NEXT:    [[INC:%.*]] = or i8 [[TRUNC44]], [[I162]]
+; CHECK-NEXT:    [[TOBOOL23_NOT:%.*]] = icmp eq i16 [[OR21]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TOBOOL23_NOT]])
+; CHECK-NEXT:    ret i8 [[INC]]
+;
+  %b = icmp eq i32 %t0, 0
+  %b2 = icmp eq i16 %insert, 0
+  %t1 = or i1 %b, %b2
+  %ext = zext i1 %t1 to i32
+  %and = and i32 %t0, %ext
+  %conv13 = zext i32 %and to i64
+  %xor = xor i64 %conv13, 140
+  %conv16 = sext i8 %i162 to i64
+  %sub17 = sub i64 %conv16, %e
+  %sext = shl i64 %sub17, 32
+  %conv18 = ashr exact i64 %sext, 32
+  %cmp = icmp sge i64 %xor, %conv18
+  %conv19 = zext i1 %cmp to i16
+  %or21 = or i16 %insert, %conv19
+  %trunc44 = trunc i16 %or21 to i8
+  %inc = add i8 %i162, %trunc44
+  %tobool23.not = icmp eq i16 %or21, 0
+  call void @llvm.assume(i1 %tobool23.not)
+  ret i8 %inc
+}
+
+declare void @llvm.assume(i1 noundef)

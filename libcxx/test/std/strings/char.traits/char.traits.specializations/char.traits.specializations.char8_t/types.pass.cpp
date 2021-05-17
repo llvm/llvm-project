@@ -11,10 +11,10 @@
 
 // template<> struct char_traits<char8_t>
 
-// typedef char8_t       char_type;
+// typedef char8_t        char_type;
 // typedef unsigned int   int_type;
 // typedef streamoff      off_type;
-// typedef u16streampos   pos_type;
+// typedef u8streampos    pos_type;
 // typedef mbstate_t      state_type;
 
 #include <string>
@@ -29,7 +29,7 @@ int main(int, char**)
     static_assert((std::is_same<std::char_traits<char8_t>::char_type,  char8_t>::value), "");
     static_assert((std::is_same<std::char_traits<char8_t>::int_type,   unsigned int>::value), "");
     static_assert((std::is_same<std::char_traits<char8_t>::off_type,   std::streamoff>::value), "");
-    static_assert((std::is_same<std::char_traits<char8_t>::pos_type,   std::u16streampos>::value), "");
+    static_assert((std::is_same<std::char_traits<char8_t>::pos_type,   std::u8streampos>::value), "");
     static_assert((std::is_same<std::char_traits<char8_t>::state_type, std::mbstate_t>::value), "");
 #endif
 

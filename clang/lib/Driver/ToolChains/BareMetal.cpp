@@ -160,8 +160,9 @@ Tool *BareMetal::buildLinker() const {
 
 std::string BareMetal::getCompilerRTPath() const { return getRuntimesDir(); }
 
-std::string BareMetal::getCompilerRTBasename(const llvm::opt::ArgList &,
-                                             StringRef, FileType, bool) const {
+std::string BareMetal::buildCompilerRTBasename(const llvm::opt::ArgList &,
+                                               StringRef, FileType,
+                                               bool) const {
   return ("libclang_rt.builtins-" + getTriple().getArchName() + ".a").str();
 }
 
@@ -298,12 +299,13 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   CmdArgs.push_back("-Bstatic");
 
-  CmdArgs.push_back(Args.MakeArgString("-L" + TC.getRuntimesDir()));
-
-  TC.AddFilePathLibArgs(Args, CmdArgs);
   Args.AddAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
                             options::OPT_e, options::OPT_s, options::OPT_t,
                             options::OPT_Z_Flag, options::OPT_r});
+
+  TC.AddFilePathLibArgs(Args, CmdArgs);
+
+  CmdArgs.push_back(Args.MakeArgString("-L" + TC.getRuntimesDir()));
 
   if (TC.ShouldLinkCXXStdlib(Args))
     TC.AddCXXStdlibLibArgs(Args, CmdArgs);

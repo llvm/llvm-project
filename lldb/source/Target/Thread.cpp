@@ -71,16 +71,10 @@ enum {
 #include "TargetPropertiesEnum.inc"
 };
 
-class ThreadOptionValueProperties : public OptionValueProperties {
+class ThreadOptionValueProperties
+    : public Cloneable<ThreadOptionValueProperties, OptionValueProperties> {
 public:
-  ThreadOptionValueProperties(ConstString name)
-      : OptionValueProperties(name) {}
-
-  // This constructor is used when creating ThreadOptionValueProperties when it
-  // is part of a new lldb_private::Thread instance. It will copy all current
-  // global property values as needed
-  ThreadOptionValueProperties(ThreadProperties *global_properties)
-      : OptionValueProperties(*global_properties->GetValueProperties()) {}
+  ThreadOptionValueProperties(ConstString name) : Cloneable(name) {}
 
   const Property *GetPropertyAtIndex(const ExecutionContext *exe_ctx,
                                      bool will_modify,
@@ -108,8 +102,8 @@ ThreadProperties::ThreadProperties(bool is_global) : Properties() {
         std::make_shared<ThreadOptionValueProperties>(ConstString("thread"));
     m_collection_sp->Initialize(g_thread_properties);
   } else
-    m_collection_sp = std::make_shared<ThreadOptionValueProperties>(
-        Thread::GetGlobalProperties().get());
+    m_collection_sp =
+        OptionValueProperties::CreateLocalCopy(*Thread::GetGlobalProperties());
 }
 
 ThreadProperties::~ThreadProperties() = default;
@@ -530,7 +524,7 @@ bool Thread::RestoreRegisterStateFromCheckpoint(
   return false;
 }
 
-bool Thread::RestoreThreadStateFromCheckpoint(
+void Thread::RestoreThreadStateFromCheckpoint(
     ThreadStateCheckpoint &saved_state) {
   if (saved_state.stop_info_sp)
     saved_state.stop_info_sp->MakeStopInfoValid();
@@ -539,7 +533,6 @@ bool Thread::RestoreThreadStateFromCheckpoint(
       saved_state.current_inlined_depth);
   GetPlans().RestoreCompletedPlanCheckpoint(
       saved_state.m_completed_plan_checkpoint);
-  return true;
 }
 
 StateType Thread::GetState() const {
@@ -830,6 +823,8 @@ bool Thread::ShouldStop(Event *event_ptr) {
       ThreadPlan *plan_ptr = current_plan;
       while ((plan_ptr = GetPreviousPlan(plan_ptr)) != nullptr) {
         if (plan_ptr->PlanExplainsStop(event_ptr)) {
+          LLDB_LOGF(log, "Plan %s explains stop.", plan_ptr->GetName());
+
           should_stop = plan_ptr->ShouldStop(event_ptr);
 
           // plan_ptr explains the stop, next check whether plan_ptr is done,
@@ -861,10 +856,7 @@ bool Thread::ShouldStop(Event *event_ptr) {
   }
 
   if (!done_processing_current_plan) {
-    bool over_ride_stop = current_plan->ShouldAutoContinue(event_ptr);
-
-    LLDB_LOGF(log, "Plan %s explains stop, auto-continue %i.",
-              current_plan->GetName(), over_ride_stop);
+    bool override_stop = false;
 
     // We're starting from the base plan, so just let it decide;
     if (current_plan->IsBasePlan()) {
@@ -885,20 +877,24 @@ bool Thread::ShouldStop(Event *event_ptr) {
           if (should_stop)
             current_plan->WillStop();
 
-          // If a Master Plan wants to stop, and wants to stick on the stack,
-          // we let it. Otherwise, see if the plan's parent wants to stop.
+          if (current_plan->ShouldAutoContinue(event_ptr)) {
+            override_stop = true;
+            LLDB_LOGF(log, "Plan %s auto-continue: true.",
+                      current_plan->GetName());
+          }
 
+          // If a Master Plan wants to stop, we let it. Otherwise, see if the
+          // plan's parent wants to stop.
+
+          PopPlan();
           if (should_stop && current_plan->IsMasterPlan() &&
               !current_plan->OkayToDiscard()) {
-            PopPlan();
             break;
-          } else {
-            PopPlan();
+          }
 
-            current_plan = GetCurrentPlan();
-            if (current_plan == nullptr) {
-              break;
-            }
+          current_plan = GetCurrentPlan();
+          if (current_plan == nullptr) {
+            break;
           }
         } else {
           break;
@@ -906,7 +902,7 @@ bool Thread::ShouldStop(Event *event_ptr) {
       }
     }
 
-    if (over_ride_stop)
+    if (override_stop)
       should_stop = false;
   }
 
@@ -1181,14 +1177,6 @@ Status Thread::QueueThreadPlan(ThreadPlanSP &thread_plan_sp,
   return status;
 }
 
-void Thread::EnableTracer(bool value, bool single_stepping) {
-  GetPlans().EnableTracer(value, single_stepping);
-}
-
-void Thread::SetTracer(lldb::ThreadPlanTracerSP &tracer_sp) {
-  GetPlans().SetTracer(tracer_sp);
-}
-
 bool Thread::DiscardUserThreadPlansUpToIndex(uint32_t plan_index) {
   // Count the user thread plans from the back end to get the number of the one
   // we want to discard:
@@ -1241,7 +1229,7 @@ Status Thread::UnwindInnermostExpression() {
   return error;
 }
 
-ThreadPlanSP Thread::QueueFundamentalPlan(bool abort_other_plans) {
+ThreadPlanSP Thread::QueueBasePlan(bool abort_other_plans) {
   ThreadPlanSP thread_plan_sp(new ThreadPlanBase(*this));
   QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;
@@ -1289,16 +1277,10 @@ ThreadPlanSP Thread::QueueThreadPlanForStepInRange(
     lldb::RunMode stop_other_threads, Status &status,
     LazyBool step_in_avoids_code_without_debug_info,
     LazyBool step_out_avoids_code_without_debug_info) {
-  ThreadPlanSP thread_plan_sp(
-      new ThreadPlanStepInRange(*this, range, addr_context, stop_other_threads,
-                                step_in_avoids_code_without_debug_info,
-                                step_out_avoids_code_without_debug_info));
-  ThreadPlanStepInRange *plan =
-      static_cast<ThreadPlanStepInRange *>(thread_plan_sp.get());
-
-  if (step_in_target)
-    plan->SetStepInTarget(step_in_target);
-
+  ThreadPlanSP thread_plan_sp(new ThreadPlanStepInRange(
+      *this, range, addr_context, step_in_target, stop_other_threads,
+      step_in_avoids_code_without_debug_info,
+      step_out_avoids_code_without_debug_info));
   status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;
 }
@@ -1321,11 +1303,12 @@ ThreadPlanSP Thread::QueueThreadPlanForStepInRange(
 
 ThreadPlanSP Thread::QueueThreadPlanForStepOut(
     bool abort_other_plans, SymbolContext *addr_context, bool first_insn,
-    bool stop_other_threads, Vote stop_vote, Vote run_vote, uint32_t frame_idx,
-    Status &status, LazyBool step_out_avoids_code_without_debug_info) {
+    bool stop_other_threads, Vote report_stop_vote, Vote report_run_vote,
+    uint32_t frame_idx, Status &status,
+    LazyBool step_out_avoids_code_without_debug_info) {
   ThreadPlanSP thread_plan_sp(new ThreadPlanStepOut(
-      *this, addr_context, first_insn, stop_other_threads, stop_vote, run_vote,
-      frame_idx, step_out_avoids_code_without_debug_info));
+      *this, addr_context, first_insn, stop_other_threads, report_stop_vote,
+      report_run_vote, frame_idx, step_out_avoids_code_without_debug_info));
 
   status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;
@@ -1333,13 +1316,14 @@ ThreadPlanSP Thread::QueueThreadPlanForStepOut(
 
 ThreadPlanSP Thread::QueueThreadPlanForStepOutNoShouldStop(
     bool abort_other_plans, SymbolContext *addr_context, bool first_insn,
-    bool stop_other_threads, Vote stop_vote, Vote run_vote, uint32_t frame_idx,
-    Status &status, bool continue_to_next_branch) {
+    bool stop_other_threads, Vote report_stop_vote, Vote report_run_vote,
+    uint32_t frame_idx, Status &status, bool continue_to_next_branch) {
   const bool calculate_return_value =
       false; // No need to calculate the return value here.
   ThreadPlanSP thread_plan_sp(new ThreadPlanStepOut(
-      *this, addr_context, first_insn, stop_other_threads, stop_vote, run_vote,
-      frame_idx, eLazyBoolNo, continue_to_next_branch, calculate_return_value));
+      *this, addr_context, first_insn, stop_other_threads, report_stop_vote,
+      report_run_vote, frame_idx, eLazyBoolNo, continue_to_next_branch,
+      calculate_return_value));
 
   ThreadPlanStepOut *new_plan =
       static_cast<ThreadPlanStepOut *>(thread_plan_sp.get());
@@ -1695,12 +1679,20 @@ std::string Thread::StopReasonAsString(lldb::StopReason reason) {
     return "exception";
   case eStopReasonExec:
     return "exec";
+  case eStopReasonFork:
+    return "fork";
+  case eStopReasonVFork:
+    return "vfork";
+  case eStopReasonVForkDone:
+    return "vfork done";
   case eStopReasonPlanComplete:
     return "plan complete";
   case eStopReasonThreadExiting:
     return "thread exiting";
   case eStopReasonInstrumentation:
     return "instrumentation break";
+  case eStopReasonProcessorTrace:
+    return "processor trace";
   }
 
   return "StopReason = " + std::to_string(reason);

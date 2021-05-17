@@ -149,6 +149,18 @@ kern_return_t DNBArchMachARM64::GetGPRState(bool force) {
                          (thread_state_t)&m_state.context.gpr, &count);
   if (DNBLogEnabledForAny(LOG_THREAD)) {
     uint64_t *x = &m_state.context.gpr.__x[0];
+
+#if defined(__LP64__)
+        uint64_t log_fp = arm_thread_state64_get_fp(m_state.context.gpr);
+        uint64_t log_lr = arm_thread_state64_get_lr(m_state.context.gpr);
+        uint64_t log_sp = arm_thread_state64_get_sp(m_state.context.gpr);
+        uint64_t log_pc = arm_thread_state64_get_pc(m_state.context.gpr);
+#else
+        uint64_t log_fp = m_state.context.gpr.__fp;
+        uint64_t log_fp = m_state.context.gpr.__lr;
+        uint64_t log_fp = m_state.context.gpr.__sp;
+        uint64_t log_fp = m_state.context.gpr.__pc,
+#endif
     DNBLogThreaded(
         "thread_get_state(0x%4.4x, %u, &gpr, %u) => 0x%8.8x (count = %u) regs"
         "\n   x0=%16.16llx"
@@ -189,16 +201,7 @@ kern_return_t DNBArchMachARM64::GetGPRState(bool force) {
         x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9], x[0], x[11],
         x[12], x[13], x[14], x[15], x[16], x[17], x[18], x[19], x[20], x[21],
         x[22], x[23], x[24], x[25], x[26], x[27], x[28],
-#if defined(__LP64__)
-        (uint64_t) arm_thread_state64_get_fp (m_state.context.gpr),
-        (uint64_t) arm_thread_state64_get_lr (m_state.context.gpr),
-        (uint64_t) arm_thread_state64_get_sp (m_state.context.gpr),
-        (uint64_t) arm_thread_state64_get_pc (m_state.context.gpr),
-#else
-        m_state.context.gpr.__fp, m_state.context.gpr.__lr,
-        m_state.context.gpr.__sp, m_state.context.gpr.__pc,
-#endif
-        m_state.context.gpr.__cpsr);
+        log_fp, log_lr, log_sp, log_pc, m_state.context.gpr.__cpsr);
   }
   m_state.SetError(set, Read, kret);
   return kret;
@@ -340,6 +343,7 @@ kern_return_t DNBArchMachARM64::GetEXCState(bool force) {
   return kret;
 }
 
+#if 0
 static void DumpDBGState(const arm_debug_state_t &dbg) {
   uint32_t i = 0;
   for (i = 0; i < 16; i++)
@@ -348,6 +352,7 @@ static void DumpDBGState(const arm_debug_state_t &dbg) {
                      i, i, dbg.__bvr[i], dbg.__bcr[i], i, i, dbg.__wvr[i],
                      dbg.__wcr[i]);
 }
+#endif
 
 kern_return_t DNBArchMachARM64::GetDBGState(bool force) {
   int set = e_regSetDBG;
@@ -502,8 +507,8 @@ bool DNBArchMachARM64::NotifyException(MachException::Data &exc) {
                                         "watchpoint %d was hit on address "
                                         "0x%llx",
                        hw_index, (uint64_t)addr);
-      const int num_watchpoints = NumSupportedHardwareWatchpoints();
-      for (int i = 0; i < num_watchpoints; i++) {
+      const uint32_t num_watchpoints = NumSupportedHardwareWatchpoints();
+      for (uint32_t i = 0; i < num_watchpoints; i++) {
         if (LoHi[i] != 0 && LoHi[i] == hw_index && LoHi[i] != i &&
             GetWatchpointAddressByIndex(i) != INVALID_NUB_ADDRESS) {
           addr = GetWatchpointAddressByIndex(i);
@@ -526,7 +531,7 @@ bool DNBArchMachARM64::NotifyException(MachException::Data &exc) {
     }
     // detect a __builtin_debugtrap instruction pattern ("brk #0xf000")
     // and advance the $pc past it, so that the user can continue execution.
-    // Generally speaking, this knowledge should be centralized in lldb, 
+    // Generally speaking, this knowledge should be centralized in lldb,
     // recognizing the builtin_trap instruction and knowing how to advance
     // the pc past it, so that continue etc work.
     if (exc.exc_data.size() == 2 && exc.exc_data[0] == EXC_ARM_BREAKPOINT) {
@@ -819,15 +824,15 @@ uint32_t DNBArchMachARM64::EnableHardwareWatchpoint(nub_addr_t addr,
   // an 8 byte address, or (2) a power-of-two size region of memory; minimum
   // 8 bytes, maximum 2GB; the starting address must be aligned to that power
   // of two.
-  // 
+  //
   // For (1), 1-8 byte watchpoints, using the Byte Address Selector field in
   // DBGWCR<n>.BAS.  Any of the bytes may be watched, but if multiple bytes
   // are watched, the bytes selected must be contiguous.  The start address
   // watched must be doubleword (8-byte) aligned; if the start address is
   // word (4-byte) aligned, only 4 bytes can be watched.
-  // 
+  //
   // For (2), the MASK field in DBGWCR<n>.MASK is used.
-  // 
+  //
   // See the ARM ARM, section "Watchpoint exceptions", and more specifically,
   // "Watchpoint data address comparisons".
   //
@@ -839,9 +844,9 @@ uint32_t DNBArchMachARM64::EnableHardwareWatchpoint(nub_addr_t addr,
   // "Determining the memory location that caused a Watchpoint exception"),
   // and silently resume the inferior (disable watchpoint, stepi, re-enable
   // watchpoint) if the address lies outside the region that lldb asked us
-  // to watch.  
+  // to watch.
   //
-  // Alternatively, lldb would need to be prepared for a larger region 
+  // Alternatively, lldb would need to be prepared for a larger region
   // being watched than it requested, and silently resume the inferior if
   // the accessed address is outside the region lldb wants to watch.
 
@@ -2098,7 +2103,7 @@ bool DNBArchMachARM64::SetRegisterValue(uint32_t set, uint32_t reg,
           signed_value = (uint64_t) ptrauth_strip((void*) signed_value, ptrauth_key_function_pointer);
           signed_value = (uint64_t) ptrauth_sign_unauthenticated((void*) signed_value, ptrauth_key_function_pointer, 0);
 #endif
-        if (reg == gpr_pc) 
+        if (reg == gpr_pc)
          arm_thread_state64_set_pc_fptr (m_state.context.gpr, (void*) signed_value);
         else if (reg == gpr_lr)
           arm_thread_state64_set_lr_fptr (m_state.context.gpr, (void*) signed_value);
@@ -2278,7 +2283,7 @@ nub_size_t DNBArchMachARM64::SetRegisterContext(const void *buf,
 
     // Copy each struct individually to avoid any padding that might be between
     // the structs in m_state.context
-    uint8_t *p = (uint8_t *)buf;
+    uint8_t *p = const_cast<uint8_t*>(reinterpret_cast<const uint8_t *>(buf));
     ::memcpy(&m_state.context.gpr, p, sizeof(m_state.context.gpr));
     p += sizeof(m_state.context.gpr);
     ::memcpy(&m_state.context.vfp, p, sizeof(m_state.context.vfp));
@@ -2286,7 +2291,7 @@ nub_size_t DNBArchMachARM64::SetRegisterContext(const void *buf,
     ::memcpy(&m_state.context.exc, p, sizeof(m_state.context.exc));
     p += sizeof(m_state.context.exc);
 
-    size_t bytes_written = p - (uint8_t *)buf;
+    size_t bytes_written = p - reinterpret_cast<const uint8_t *>(buf);
     UNUSED_IF_ASSERT_DISABLED(bytes_written);
     assert(bytes_written == size);
     SetGPRState();

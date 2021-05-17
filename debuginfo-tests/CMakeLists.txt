@@ -54,10 +54,6 @@ if (WIN32)
   set(DEBUGINFO_TEST_DEPS ${DEBUGINFO_TEST_DEPS} lld)
 endif()
 
-if (NOT DEFINED Python3_EXECUTABLE)
-  message(FATAL_ERROR "Cannot run debuginfo-tests without python 3")
-endif()
-
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py

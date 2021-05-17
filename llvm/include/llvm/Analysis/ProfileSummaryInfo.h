@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ANALYSIS_PROFILE_SUMMARY_INFO_H
-#define LLVM_ANALYSIS_PROFILE_SUMMARY_INFO_H
+#ifndef LLVM_ANALYSIS_PROFILESUMMARYINFO_H
+#define LLVM_ANALYSIS_PROFILESUMMARYINFO_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/PassManager.h"
@@ -38,7 +38,7 @@ class Function;
 // units. This would require making this depend on BFI.
 class ProfileSummaryInfo {
 private:
-  const Module &M;
+  const Module *M;
   std::unique_ptr<ProfileSummary> Summary;
   void computeThresholds();
   // Count thresholds to answer isHotCount and isColdCount queries.
@@ -58,8 +58,7 @@ private:
   mutable DenseMap<int, uint64_t> ThresholdCache;
 
 public:
-  ProfileSummaryInfo(const Module &M) : M(M) { refresh(); }
-
+  ProfileSummaryInfo(const Module &M) : M(&M) { refresh(); }
   ProfileSummaryInfo(ProfileSummaryInfo &&Arg) = default;
 
   /// If no summary is present, attempt to refresh.

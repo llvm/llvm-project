@@ -78,4 +78,4 @@ using ::feupdateenv;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_CFENV
+#endif // _LIBCPP_CFENV

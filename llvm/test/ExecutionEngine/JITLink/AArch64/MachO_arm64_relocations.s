@@ -147,13 +147,15 @@ Lanon_data:
 # anonymous.
 #
 # Note: +8 offset in expression below to accounts for sizeof(Lanon_data).
-# jitlink-check: *{8}(section_addr(macho_reloc.o, __data) + 8) = (section_addr(macho_reloc.o, __data) + 8) - named_data + 2
+# jitlink-check: *{8}(section_addr(macho_reloc.o, __DATA,__data) + 8) = \
+# jitlink-check:     (section_addr(macho_reloc.o, __DATA,__data) + 8) - named_data + 2
         .p2align  3
 Lanon_minuend_quad:
         .quad Lanon_minuend_quad - named_data + 2
 
 # Note: +16 offset in expression below to accounts for sizeof(Lanon_data) + sizeof(Lanon_minuend_long).
-# jitlink-check: *{4}(section_addr(macho_reloc.o, __data) + 16) = ((section_addr(macho_reloc.o, __data) + 16) - named_data + 2)[31:0]
+# jitlink-check: *{4}(section_addr(macho_reloc.o, __DATA,__data) + 16) = \
+# jitlink-check:     ((section_addr(macho_reloc.o, __DATA,__data) + 16) - named_data + 2)[31:0]
         .p2align  2
 Lanon_minuend_long:
         .long Lanon_minuend_long - named_data + 2
@@ -185,7 +187,8 @@ named_func_addr_quad:
 # Check ARM64_RELOC_UNSIGNED / quad / non-extern handling by putting the
 # address of a local anonymous function into a quad symbol.
 #
-# jitlink-check: *{8}anon_func_addr_quad = section_addr(macho_reloc.o, __text)
+# jitlink-check: *{8}anon_func_addr_quad = \
+# jitlink-check:     section_addr(macho_reloc.o, __TEXT,__text)
         .globl  anon_func_addr_quad
         .p2align  3
 anon_func_addr_quad:
@@ -193,7 +196,8 @@ anon_func_addr_quad:
 
 # ARM64_RELOC_SUBTRACTOR Quad/Long in named storage with anonymous minuend
 #
-# jitlink-check: *{8}anon_minuend_quad1 = section_addr(macho_reloc.o, __data) - anon_minuend_quad1 + 2
+# jitlink-check: *{8}anon_minuend_quad1 = \
+# jitlink-check:     section_addr(macho_reloc.o, __DATA,__data) - anon_minuend_quad1 + 2
 # Only the form "B: .quad LA - B + C" is tested. The form "B: .quad B - LA + C" is
 # invalid because the subtrahend can not be local.
         .globl  anon_minuend_quad1
@@ -201,7 +205,8 @@ anon_func_addr_quad:
 anon_minuend_quad1:
         .quad Lanon_data - anon_minuend_quad1 + 2
 
-# jitlink-check: *{4}anon_minuend_long1 = (section_addr(macho_reloc.o, __data) - anon_minuend_long1 + 2)[31:0]
+# jitlink-check: *{4}anon_minuend_long1 = \
+# jitlink-check:     (section_addr(macho_reloc.o, __DATA,__data) - anon_minuend_long1 + 2)[31:0]
         .globl  anon_minuend_long1
         .p2align  2
 anon_minuend_long1:
@@ -308,14 +313,14 @@ test_got:
 # ORC responsibility set, which is automatically marked live and would couse
 # spurious passes.
 #
-# jitlink-check: *{8}section_addr(macho_reloc.o, __nds_test_sect) = 0
+# jitlink-check: *{8}section_addr(macho_reloc.o, __DATA,__nds_test_sect) = 0
         .section        __DATA,__nds_test_sect,regular,no_dead_strip
         .quad 0
 
 # Check that unreferenced local symbols that have been marked no-dead-strip are
 # not dead-striped.
 #
-# jitlink-check: *{8}section_addr(macho_reloc.o, __nds_test_nlst) = 0
+# jitlink-check: *{8}section_addr(macho_reloc.o, __DATA,__nds_test_nlst) = 0
         .section       __DATA,__nds_test_nlst,regular
         .no_dead_strip no_dead_strip_test_symbol
 no_dead_strip_test_symbol:

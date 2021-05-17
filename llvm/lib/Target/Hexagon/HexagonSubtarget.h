@@ -179,6 +179,12 @@ public:
   bool hasV67OpsOnly() const {
     return getHexagonArchVersion() == Hexagon::ArchEnum::V67;
   }
+  bool hasV68Ops() const {
+    return getHexagonArchVersion() >= Hexagon::ArchEnum::V68;
+  }
+  bool hasV68OpsOnly() const {
+    return getHexagonArchVersion() == Hexagon::ArchEnum::V68;
+  }
 
   bool useAudioOps() const { return UseAudioOps; }
   bool useCompound() const { return UseCompound; }
@@ -211,6 +217,9 @@ public:
   }
   bool useHVXV67Ops() const {
     return HexagonHVXVersion >= Hexagon::ArchEnum::V67;
+  }
+  bool useHVXV68Ops() const {
+    return HexagonHVXVersion >= Hexagon::ArchEnum::V68;
   }
   bool useHVX128BOps() const { return useHVXOps() && UseHVX128BOps; }
   bool useHVX64BOps() const { return useHVXOps() && UseHVX64BOps; }

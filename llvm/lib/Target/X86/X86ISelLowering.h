@@ -780,8 +780,11 @@ namespace llvm {
     // subvector broadcast from memory.
     SUBV_BROADCAST_LOAD,
 
-    // Store FP control world into i16 memory.
+    // Store FP control word into i16 memory.
     FNSTCW16m,
+
+    // Load FP control word from i16 memory.
+    FLDCW16m,
 
     /// This instruction implements FP_TO_SINT with the
     /// integer destination in memory and a FP reg source.  This corresponds
@@ -846,6 +849,19 @@ namespace llvm {
     // opcodes will be thought as target memory ops!
   };
   } // end namespace X86ISD
+
+  namespace X86 {
+    /// Current rounding mode is represented in bits 11:10 of FPSR. These
+    /// values are same as corresponding constants for rounding mode used
+    /// in glibc.
+    enum RoundingMode {
+      rmToNearest   = 0,        // FE_TONEAREST
+      rmDownward    = 1 << 10,  // FE_DOWNWARD
+      rmUpward      = 2 << 10,  // FE_UPWARD
+      rmTowardZero  = 3 << 10,  // FE_TOWARDZERO
+      rmMask        = 3 << 10   // Bit mask selecting rounding mode
+    };
+  }
 
   /// Define some predicates that are used for node matching.
   namespace X86 {
@@ -919,7 +935,7 @@ namespace llvm {
 
     /// Returns true if the target allows unaligned memory accesses of the
     /// specified type. Returns whether it is "fast" in the last argument.
-    bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AS, unsigned Align,
+    bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AS, Align Alignment,
                                         MachineMemOperand::Flags Flags,
                                         bool *Fast) const override;
 
@@ -1118,12 +1134,8 @@ namespace llvm {
 
     unsigned
     getInlineAsmMemConstraint(StringRef ConstraintCode) const override {
-      if (ConstraintCode == "o")
-        return InlineAsm::Constraint_o;
-      else if (ConstraintCode == "v")
+      if (ConstraintCode == "v")
         return InlineAsm::Constraint_v;
-      else if (ConstraintCode == "X")
-        return InlineAsm::Constraint_X;
       return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
     }
 
@@ -1166,8 +1178,9 @@ namespace llvm {
     /// of the specified type.
     /// If the AM is supported, the return value must be >= 0.
     /// If the AM is not supported, it returns a negative value.
-    int getScalingFactorCost(const DataLayout &DL, const AddrMode &AM, Type *Ty,
-                             unsigned AS) const override;
+    InstructionCost getScalingFactorCost(const DataLayout &DL,
+                                         const AddrMode &AM, Type *Ty,
+                                         unsigned AS) const override;
 
     /// This is used to enable splatted operand transforms for vector shifts
     /// and vector funnel shifts.
@@ -1408,6 +1421,8 @@ namespace llvm {
                                    SDValue Addr, SelectionDAG &DAG)
                                    const override;
 
+    Align getPrefLoopAlignment(MachineLoop *ML) const override;
+
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>
     findRepresentativeClass(const TargetRegisterInfo *TRI,
@@ -1519,6 +1534,7 @@ namespace llvm {
     SDValue lowerEH_SJLJ_SETUP_DISPATCH(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFLT_ROUNDS_(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGC_TRANSITION(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
@@ -1584,10 +1600,6 @@ namespace llvm {
     EmitVAARGWithCustomInserter(MachineInstr &MI, MachineBasicBlock *MBB) const;
 
     /// Utility function to emit the xmm reg save portion of va_start.
-    MachineBasicBlock *
-    EmitVAStartSaveXMMRegsWithCustomInserter(MachineInstr &BInstr,
-                                             MachineBasicBlock *BB) const;
-
     MachineBasicBlock *EmitLoweredCascadedSelect(MachineInstr &MI1,
                                                  MachineInstr &MI2,
                                                  MachineBasicBlock *BB) const;

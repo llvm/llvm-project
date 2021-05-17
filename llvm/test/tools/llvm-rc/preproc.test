@@ -1,0 +1,3 @@
+; RUN: llvm-rc -### -i%p "-DFOO1=\"foo bar\"" -UFOO2 -D FOO3 -- %p/Inputs/empty.rc | FileCheck %s
+
+; CHECK: {{^}} "clang" "--driver-mode=gcc" "-target" "{{.*}}-pc-windows-msvc-coff" "-E" "-xc" "-DRC_INVOKED" "{{.*}}empty.rc" "-o" "{{.*}}preproc-{{.*}}.rc" "-I" "{{.*}}" "-D" "FOO1=\"foo bar\"" "-U" "FOO2" "-D" "FOO3"{{$}}

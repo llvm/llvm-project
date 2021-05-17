@@ -577,7 +577,7 @@ private:
   ValueSP NewScalarValue(CompilerType &type) {
     ValueSP value_sp(new Value);
     value_sp->SetCompilerType(type);
-    value_sp->SetValueType(Value::eValueTypeScalar);
+    value_sp->SetValueType(Value::ValueType::Scalar);
     return value_sp;
   }
 
@@ -1003,6 +1003,7 @@ bool ABISysV_ppc64::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
 
   UnwindPlan::RowSP row(new UnwindPlan::Row);
   const int32_t ptr_size = 8;
+  row->SetUnspecifiedRegistersAreUndefined(true);
   row->GetCFAValue().SetIsRegisterDereferenced(sp_reg_num);
 
   row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * 2, true);

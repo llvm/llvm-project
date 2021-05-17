@@ -226,7 +226,7 @@
   (SI_FREEBSD || SI_NETBSD || SI_MAC || SI_LINUX_NOT_ANDROID || SI_SOLARIS)
 #define SANITIZER_INTERCEPT_GETPWENT \
   (SI_FREEBSD || SI_NETBSD || SI_MAC || SI_LINUX_NOT_ANDROID || SI_SOLARIS)
-#define SANITIZER_INTERCEPT_FGETGRENT_R (SI_FREEBSD || SI_GLIBC || SI_SOLARIS)
+#define SANITIZER_INTERCEPT_FGETGRENT_R (SI_GLIBC || SI_SOLARIS)
 #define SANITIZER_INTERCEPT_FGETPWENT SI_LINUX_NOT_ANDROID || SI_SOLARIS
 #define SANITIZER_INTERCEPT_GETPWENT_R \
   (SI_FREEBSD || SI_NETBSD || SI_GLIBC || SI_SOLARIS)
@@ -458,7 +458,7 @@
 #define SANITIZER_INTERCEPT_CTERMID_R (SI_MAC || SI_FREEBSD || SI_SOLARIS)
 
 #define SANITIZER_INTERCEPTOR_HOOKS \
-  (SI_LINUX || SI_MAC || SI_WINDOWS || SI_NETBSD || SI_SOLARIS)
+  (SI_LINUX || SI_MAC || SI_WINDOWS || SI_FREEBSD || SI_NETBSD || SI_SOLARIS)
 #define SANITIZER_INTERCEPT_RECV_RECVFROM SI_POSIX
 #define SANITIZER_INTERCEPT_SEND_SENDTO SI_POSIX
 #define SANITIZER_INTERCEPT_EVENTFD_READ_WRITE SI_LINUX
@@ -486,7 +486,7 @@
   (!SI_FREEBSD && !SI_MAC && !SI_NETBSD && SI_NOT_RTEMS)
 #define SANITIZER_INTERCEPT___LIBC_MEMALIGN SI_GLIBC
 #define SANITIZER_INTERCEPT_PVALLOC (SI_GLIBC || SI_ANDROID)
-#define SANITIZER_INTERCEPT_CFREE SI_GLIBC
+#define SANITIZER_INTERCEPT_CFREE (SI_GLIBC && !SANITIZER_RISCV64)
 #define SANITIZER_INTERCEPT_REALLOCARRAY SI_POSIX
 #define SANITIZER_INTERCEPT_ALIGNED_ALLOC (!SI_MAC && SI_NOT_RTEMS)
 #define SANITIZER_INTERCEPT_MALLOC_USABLE_SIZE (!SI_MAC && !SI_NETBSD)
@@ -584,5 +584,26 @@
   (SI_POSIX && !(SANITIZER_MAC && SANITIZER_I386))
 #define SANITIZER_INTERCEPT_UNAME (SI_POSIX && !SI_FREEBSD)
 #define SANITIZER_INTERCEPT___XUNAME SI_FREEBSD
+
+// This macro gives a way for downstream users to override the above
+// interceptor macros irrespective of the platform they are on. They have
+// to do two things:
+// 1. Build compiler-rt with -DSANITIZER_OVERRIDE_INTERCEPTORS.
+// 2. Provide a header file named sanitizer_intercept_overriders.h in the
+//    include path for their compiler-rt build.
+// An example of an overrider for strlen interceptor that one can list in
+// sanitizer_intercept_overriders.h is as follows:
+//
+// #ifdef SANITIZER_INTERCEPT_STRLEN
+// #undef SANITIZER_INTERCEPT_STRLEN
+// #define SANITIZER_INTERCEPT_STRLEN <value of choice>
+// #endif
+//
+// This "feature" is useful for downstream users who do not want some of
+// their libc funtions to be intercepted. They can selectively disable
+// interception of those functions.
+#ifdef SANITIZER_OVERRIDE_INTERCEPTORS
+#include <sanitizer_intercept_overriders.h>
+#endif
 
 #endif  // #ifndef SANITIZER_PLATFORM_INTERCEPTORS_H

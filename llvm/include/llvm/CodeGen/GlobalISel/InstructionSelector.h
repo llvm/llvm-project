@@ -18,6 +18,11 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/Support/CodeGenCoverage.h"
 #include "llvm/Support/LowLevelTypeImpl.h"
 #include <bitset>
@@ -39,7 +44,6 @@ class MachineOperand;
 class MachineRegisterInfo;
 class RegisterBankInfo;
 class TargetInstrInfo;
-class TargetRegisterClass;
 class TargetRegisterInfo;
 
 /// Container class for CodeGen predicate results.
@@ -136,6 +140,11 @@ enum {
   /// - InsnID - Instruction ID
   /// - The predicate to test
   GIM_CheckAPFloatImmPredicate,
+  /// Check an immediate predicate on the specified instruction
+  /// - InsnID - Instruction ID
+  /// - OpIdx - Operand index
+  /// - The predicate to test
+  GIM_CheckImmOperandPredicate,
   /// Check a memory operation has the specified atomic ordering.
   /// - InsnID - Instruction ID
   /// - Ordering - The AtomicOrdering value
@@ -430,18 +439,25 @@ public:
   CodeGenCoverage *CoverageInfo = nullptr;
   GISelKnownBits *KnownBits = nullptr;
   MachineFunction *MF = nullptr;
+  ProfileSummaryInfo *PSI = nullptr;
+  BlockFrequencyInfo *BFI = nullptr;
+  // For some predicates, we need to track the current MBB.
+  MachineBasicBlock *CurMBB = nullptr;
 
   virtual void setupGeneratedPerFunctionState(MachineFunction &MF) {
     llvm_unreachable("TableGen should have emitted implementation");
   }
 
   /// Setup per-MF selector state.
-  virtual void setupMF(MachineFunction &mf,
-                       GISelKnownBits &KB,
-                       CodeGenCoverage &covinfo) {
+  virtual void setupMF(MachineFunction &mf, GISelKnownBits *KB,
+                       CodeGenCoverage &covinfo, ProfileSummaryInfo *psi,
+                       BlockFrequencyInfo *bfi) {
     CoverageInfo = &covinfo;
-    KnownBits = &KB;
+    KnownBits = KB;
     MF = &mf;
+    PSI = psi;
+    BFI = bfi;
+    CurMBB = nullptr;
     setupGeneratedPerFunctionState(mf);
   }
 
@@ -463,6 +479,12 @@ protected:
 
     MatcherState(unsigned MaxRenderers);
   };
+
+  bool shouldOptForSize(const MachineFunction *MF) const {
+    const auto &F = MF->getFunction();
+    return F.hasOptSize() || F.hasMinSize() ||
+           (PSI && BFI && CurMBB && llvm::shouldOptForSize(*CurMBB, PSI, BFI));
+  }
 
 public:
   template <class PredicateBitset, class ComplexMatcherMemFn,
@@ -526,16 +548,6 @@ protected:
     llvm_unreachable(
         "Subclasses must override this with a tablegen-erated function");
   }
-
-  /// Constrain a register operand of an instruction \p I to a specified
-  /// register class. This could involve inserting COPYs before (for uses) or
-  /// after (for defs) and may replace the operand of \p I.
-  /// \returns whether operand regclass constraining succeeded.
-  bool constrainOperandRegToRegClass(MachineInstr &I, unsigned OpIdx,
-                                     const TargetRegisterClass &RC,
-                                     const TargetInstrInfo &TII,
-                                     const TargetRegisterInfo &TRI,
-                                     const RegisterBankInfo &RBI) const;
 
   bool isOperandImmEqual(const MachineOperand &MO, int64_t Value,
                          const MachineRegisterInfo &MRI) const;

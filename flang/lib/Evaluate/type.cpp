@@ -316,21 +316,6 @@ static bool AreCompatibleDerivedTypes(const semantics::DerivedTypeSpec *x,
   }
 }
 
-// Do the kind type parameters of type1 have the same values as the
-// corresponding kind type parameters of type2?
-static bool AreKindCompatible(const semantics::DerivedTypeSpec &type1,
-    const semantics::DerivedTypeSpec &type2) {
-  for (const auto &[name, param1] : type1.parameters()) {
-    if (param1.isKind()) {
-      const semantics::ParamValue *param2{type2.FindParameter(name)};
-      if (!PointeeComparison(&param1, param2)) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
 // See 7.3.2.3 (5) & 15.5.2.4
 bool DynamicType::IsTkCompatibleWith(const DynamicType &that) const {
   if (IsUnlimitedPolymorphic()) {
@@ -342,7 +327,7 @@ bool DynamicType::IsTkCompatibleWith(const DynamicType &that) const {
   } else if (derived_) {
     return that.derived_ &&
         AreCompatibleDerivedTypes(derived_, that.derived_, IsPolymorphic()) &&
-        AreKindCompatible(*derived_, *that.derived_);
+        AreTypeParamCompatible(*derived_, *that.derived_);
   } else {
     return kind_ == that.kind_;
   }

@@ -186,9 +186,9 @@ public:
     return SelectSVEAddSubImm(N, VT, Imm, Shift);
   }
 
-  template<MVT::SimpleValueType VT>
+  template <MVT::SimpleValueType VT, bool Invert = false>
   bool SelectSVELogicalImm(SDValue N, SDValue &Imm) {
-    return SelectSVELogicalImm(N, VT, Imm);
+    return SelectSVELogicalImm(N, VT, Imm, Invert);
   }
 
   template <MVT::SimpleValueType VT>
@@ -326,7 +326,7 @@ private:
 
   bool SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift);
 
-  bool SelectSVELogicalImm(SDValue N, MVT VT, SDValue &Imm);
+  bool SelectSVELogicalImm(SDValue N, MVT VT, SDValue &Imm, bool Invert);
 
   bool SelectSVESignedArithImm(SDValue N, SDValue &Imm);
   bool SelectSVEShiftImm(SDValue N, uint64_t Low, uint64_t High,
@@ -335,6 +335,8 @@ private:
   bool SelectSVEArithImm(SDValue N, MVT VT, SDValue &Imm);
   bool SelectSVERegRegAddrMode(SDValue N, unsigned Scale, SDValue &Base,
                                SDValue &Offset);
+
+  bool SelectAllActivePredicate(SDValue N);
 };
 } // end anonymous namespace
 
@@ -369,6 +371,7 @@ bool AArch64DAGToDAGISel::SelectInlineAsmMemoryOperand(
   default:
     llvm_unreachable("Unexpected asm memory constraint");
   case InlineAsm::Constraint_m:
+  case InlineAsm::Constraint_o:
   case InlineAsm::Constraint_Q:
     // We need to make sure that this one operand does not end up in XZR, thus
     // require the address to be in a PointerRegClass register.
@@ -1339,6 +1342,11 @@ bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
   SDValue Ops[] = { Base, Offset, Chain };
   SDNode *Res = CurDAG->getMachineNode(Opcode, dl, MVT::i64, DstVT,
                                        MVT::Other, Ops);
+
+  // Transfer memoperands.
+  MachineMemOperand *MemOp = cast<MemSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Res), {MemOp});
+
   // Either way, we're replacing the node, so tell the caller that.
   SDValue LoadedVal = SDValue(Res, 1);
   if (InsertTo64) {
@@ -3092,20 +3100,32 @@ bool AArch64DAGToDAGISel::SelectSVE8BitLslImm(SDValue N, SDValue &Base,
 
 bool AArch64DAGToDAGISel::SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift) {
   if (auto CNode = dyn_cast<ConstantSDNode>(N)) {
-    const int64_t ImmVal = CNode->getZExtValue();
+    const int64_t ImmVal = CNode->getSExtValue();
     SDLoc DL(N);
 
     switch (VT.SimpleTy) {
     case MVT::i8:
+      // Can always select i8s, no shift, mask the immediate value to
+      // deal with sign-extended value from lowering.
+      Shift = CurDAG->getTargetConstant(0, DL, MVT::i32);
+      Imm = CurDAG->getTargetConstant(ImmVal & 0xFF, DL, MVT::i32);
+      return true;
+    case MVT::i16:
+      // i16 values get sign-extended to 32-bits during lowering.
       if ((ImmVal & 0xFF) == ImmVal) {
         Shift = CurDAG->getTargetConstant(0, DL, MVT::i32);
         Imm = CurDAG->getTargetConstant(ImmVal, DL, MVT::i32);
         return true;
+      } else if ((ImmVal & 0xFF) == 0) {
+        assert((ImmVal >= -32768) && (ImmVal <= 32512));
+        Shift = CurDAG->getTargetConstant(8, DL, MVT::i32);
+        Imm = CurDAG->getTargetConstant((ImmVal >> 8) & 0xFF, DL, MVT::i32);
+        return true;
       }
       break;
-    case MVT::i16:
     case MVT::i32:
     case MVT::i64:
+      // Range of immediate won't trigger signedness problems for 32/64b.
       if ((ImmVal & 0xFF) == ImmVal) {
         Shift = CurDAG->getTargetConstant(0, DL, MVT::i32);
         Imm = CurDAG->getTargetConstant(ImmVal, DL, MVT::i32);
@@ -3164,32 +3184,36 @@ bool AArch64DAGToDAGISel::SelectSVEArithImm(SDValue N, MVT VT, SDValue &Imm) {
   return false;
 }
 
-bool AArch64DAGToDAGISel::SelectSVELogicalImm(SDValue N, MVT VT, SDValue &Imm) {
+bool AArch64DAGToDAGISel::SelectSVELogicalImm(SDValue N, MVT VT, SDValue &Imm,
+                                              bool Invert) {
   if (auto CNode = dyn_cast<ConstantSDNode>(N)) {
     uint64_t ImmVal = CNode->getZExtValue();
     SDLoc DL(N);
 
+    if (Invert)
+      ImmVal = ~ImmVal;
+
     // Shift mask depending on type size.
     switch (VT.SimpleTy) {
-      case MVT::i8:
-        ImmVal &= 0xFF;
-        ImmVal |= ImmVal << 8;
-        ImmVal |= ImmVal << 16;
-        ImmVal |= ImmVal << 32;
-        break;
-      case MVT::i16:
-        ImmVal &= 0xFFFF;
-        ImmVal |= ImmVal << 16;
-        ImmVal |= ImmVal << 32;
-        break;
-      case MVT::i32:
-        ImmVal &= 0xFFFFFFFF;
-        ImmVal |= ImmVal << 32;
-        break;
-      case MVT::i64:
-        break;
-      default:
-        llvm_unreachable("Unexpected type");
+    case MVT::i8:
+      ImmVal &= 0xFF;
+      ImmVal |= ImmVal << 8;
+      ImmVal |= ImmVal << 16;
+      ImmVal |= ImmVal << 32;
+      break;
+    case MVT::i16:
+      ImmVal &= 0xFFFF;
+      ImmVal |= ImmVal << 16;
+      ImmVal |= ImmVal << 32;
+      break;
+    case MVT::i32:
+      ImmVal &= 0xFFFFFFFF;
+      ImmVal |= ImmVal << 32;
+      break;
+    case MVT::i64:
+      break;
+    default:
+      llvm_unreachable("Unexpected type");
     }
 
     uint64_t encoding;
@@ -3881,6 +3905,18 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       if (tryMULLV64LaneV128(IntNo, Node))
         return;
       break;
+    case Intrinsic::swift_async_context_addr: {
+      SDLoc DL(Node);
+      CurDAG->SelectNodeTo(Node, AArch64::SUBXri, MVT::i64,
+                           CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL,
+                                                  AArch64::FP, MVT::i64),
+                           CurDAG->getTargetConstant(8, DL, MVT::i32),
+                           CurDAG->getTargetConstant(0, DL, MVT::i32));
+      auto &MF = CurDAG->getMachineFunction();
+      MF.getFrameInfo().setFrameAddressIsTaken(true);
+      MF.getInfo<AArch64FunctionInfo>()->setHasSwiftAsyncContext(true);
+      return;
+    }
     }
     break;
   }
@@ -4976,4 +5012,11 @@ bool AArch64DAGToDAGISel::SelectSVERegRegAddrMode(SDValue N, unsigned Scale,
     }
 
   return false;
+}
+
+bool AArch64DAGToDAGISel::SelectAllActivePredicate(SDValue N) {
+  const AArch64TargetLowering *TLI =
+      static_cast<const AArch64TargetLowering *>(getTargetLowering());
+
+  return TLI->isAllActivePredicate(N);
 }

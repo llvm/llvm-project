@@ -8,9 +8,7 @@
 
 #include "llvm-dwarfdump.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/Object/ObjectFile.h"
@@ -21,13 +19,23 @@ using namespace llvm;
 using namespace llvm::dwarfdump;
 using namespace llvm::object;
 
+namespace {
 /// This represents the number of categories of debug location coverage being
 /// calculated. The first category is the number of variables with 0% location
 /// coverage, but the last category is the number of variables with 100%
 /// location coverage.
 constexpr int NumOfCoverageCategories = 12;
 
-namespace {
+/// This is used for zero location coverage bucket.
+constexpr unsigned ZeroCoverageBucket = 0;
+
+/// This represents variables DIE offsets.
+using AbstractOriginVarsTy = llvm::SmallVector<uint64_t>;
+/// This maps function DIE offset to its variables.
+using AbstractOriginVarsTyMap = llvm::DenseMap<uint64_t, AbstractOriginVarsTy>;
+/// This represents function DIE offsets containing an abstract_origin.
+using FunctionsWithAbstractOriginTy = llvm::SmallVector<uint64_t>;
+
 /// Holds statistics for one function (or other entity that has a PC range and
 /// contains variables, such as a compile unit).
 struct PerFunctionStats {
@@ -164,12 +172,14 @@ static void collectLocStats(uint64_t ScopeBytesCovered, uint64_t BytesInScope,
   };
 
   unsigned CoverageBucket = getCoverageBucket();
+
   VarParamLocStats[CoverageBucket]++;
   if (IsParam)
     ParamLocStats[CoverageBucket]++;
   else if (IsLocalVar)
     LocalVarLocStats[CoverageBucket]++;
 }
+
 /// Construct an identifier for a given DIE from its Prefix, Name, DeclFileName
 /// and DeclLine. The identifier aims to be unique for any unique entities,
 /// but keeping the same among different instances of the same entity.
@@ -210,12 +220,18 @@ static uint64_t calculateOverlap(DWARFAddressRange A, DWARFAddressRange B) {
 }
 
 /// Collect debug info quality metrics for one DIE.
-static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
-                               std::string VarPrefix, uint64_t BytesInScope,
-                               uint32_t InlineDepth,
+static void collectStatsForDie(DWARFDie Die, const std::string &FnPrefix,
+                               const std::string &VarPrefix,
+                               uint64_t BytesInScope, uint32_t InlineDepth,
                                StringMap<PerFunctionStats> &FnStatMap,
                                GlobalStats &GlobalStats,
-                               LocationStats &LocStats) {
+                               LocationStats &LocStats,
+                               AbstractOriginVarsTy *AbstractOriginVariables) {
+  const dwarf::Tag Tag = Die.getTag();
+  // Skip CU node.
+  if (Tag == dwarf::DW_TAG_compile_unit)
+    return;
+
   bool HasLoc = false;
   bool HasSrcLoc = false;
   bool HasType = false;
@@ -223,19 +239,22 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
   uint64_t ScopeBytesCovered = 0;
   uint64_t BytesEntryValuesCovered = 0;
   auto &FnStats = FnStatMap[FnPrefix];
-  bool IsParam = Die.getTag() == dwarf::DW_TAG_formal_parameter;
-  bool IsLocalVar = Die.getTag() == dwarf::DW_TAG_variable;
-  bool IsConstantMember = Die.getTag() == dwarf::DW_TAG_member &&
+  bool IsParam = Tag == dwarf::DW_TAG_formal_parameter;
+  bool IsLocalVar = Tag == dwarf::DW_TAG_variable;
+  bool IsConstantMember = Tag == dwarf::DW_TAG_member &&
                           Die.find(dwarf::DW_AT_const_value);
 
-  if (Die.getTag() == dwarf::DW_TAG_call_site ||
-      Die.getTag() == dwarf::DW_TAG_GNU_call_site) {
+  // For zero covered inlined variables the locstats will be
+  // calculated later.
+  bool DeferLocStats = false;
+
+  if (Tag == dwarf::DW_TAG_call_site || Tag == dwarf::DW_TAG_GNU_call_site) {
     GlobalStats.CallSiteDIEs++;
     return;
   }
 
-  if (Die.getTag() == dwarf::DW_TAG_call_site_parameter ||
-      Die.getTag() == dwarf::DW_TAG_GNU_call_site_parameter) {
+  if (Tag == dwarf::DW_TAG_call_site_parameter ||
+      Tag == dwarf::DW_TAG_GNU_call_site_parameter) {
     GlobalStats.CallSiteParamDIEs++;
     return;
   }
@@ -255,6 +274,21 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
 
   if (Die.findRecursively(dwarf::DW_AT_type))
     HasType = true;
+
+  if (Die.find(dwarf::DW_AT_abstract_origin)) {
+    if (Die.find(dwarf::DW_AT_location) || Die.find(dwarf::DW_AT_const_value)) {
+      if (AbstractOriginVariables) {
+        auto Offset = Die.find(dwarf::DW_AT_abstract_origin);
+        // Do not track this variable any more, since it has location
+        // coverage.
+        llvm::erase_value(*AbstractOriginVariables, (*Offset).getRawUValue());
+      }
+    } else {
+      // The locstats will be handled at the end of
+      // the collectStatsRecursive().
+      DeferLocStats = true;
+    }
+  }
 
   auto IsEntryValue = [&](ArrayRef<uint8_t> D) -> bool {
     DWARFUnit *U = Die.getDwarfUnit();
@@ -315,7 +349,7 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
   }
 
   // Calculate the debug location statistics.
-  if (BytesInScope) {
+  if (BytesInScope && !DeferLocStats) {
     LocStats.NumVarParam++;
     if (IsParam)
       LocStats.NumParam++;
@@ -389,27 +423,73 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
   }
 }
 
+/// Recursively collect variables from subprogram with DW_AT_inline attribute.
+static void collectAbstractOriginFnInfo(
+    DWARFDie Die, uint64_t SPOffset,
+    AbstractOriginVarsTyMap &GlobalAbstractOriginFnInfo) {
+  DWARFDie Child = Die.getFirstChild();
+  while (Child) {
+    const dwarf::Tag ChildTag = Child.getTag();
+    if (ChildTag == dwarf::DW_TAG_formal_parameter ||
+        ChildTag == dwarf::DW_TAG_variable)
+      GlobalAbstractOriginFnInfo[SPOffset].push_back(Child.getOffset());
+    else if (ChildTag == dwarf::DW_TAG_lexical_block)
+      collectAbstractOriginFnInfo(Child, SPOffset, GlobalAbstractOriginFnInfo);
+    Child = Child.getSibling();
+  }
+}
+
 /// Recursively collect debug info quality metrics.
-static void collectStatsRecursive(DWARFDie Die, std::string FnPrefix,
-                                  std::string VarPrefix, uint64_t BytesInScope,
-                                  uint32_t InlineDepth,
-                                  StringMap<PerFunctionStats> &FnStatMap,
-                                  GlobalStats &GlobalStats,
-                                  LocationStats &LocStats) {
+static void collectStatsRecursive(
+    DWARFDie Die, std::string FnPrefix, std::string VarPrefix,
+    uint64_t BytesInScope, uint32_t InlineDepth,
+    StringMap<PerFunctionStats> &FnStatMap, GlobalStats &GlobalStats,
+    LocationStats &LocStats,
+    AbstractOriginVarsTyMap &GlobalAbstractOriginFnInfo,
+    FunctionsWithAbstractOriginTy &FnsWithAbstractOriginToBeProcessed,
+    AbstractOriginVarsTy *AbstractOriginVarsPtr = nullptr) {
+  // Skip NULL nodes.
+  if (Die.isNULL())
+    return;
+
   const dwarf::Tag Tag = Die.getTag();
   // Skip function types.
   if (Tag == dwarf::DW_TAG_subroutine_type)
     return;
 
   // Handle any kind of lexical scope.
+  const bool HasAbstractOrigin = Die.find(dwarf::DW_AT_abstract_origin) != None;
   const bool IsFunction = Tag == dwarf::DW_TAG_subprogram;
   const bool IsBlock = Tag == dwarf::DW_TAG_lexical_block;
   const bool IsInlinedFunction = Tag == dwarf::DW_TAG_inlined_subroutine;
-  if (IsFunction || IsInlinedFunction || IsBlock) {
+  // We want to know how many variables (with abstract_origin) don't have
+  // location info.
+  const bool IsCandidateForZeroLocCovTracking =
+      (IsInlinedFunction || (IsFunction && HasAbstractOrigin));
 
+  AbstractOriginVarsTy AbstractOriginVars;
+
+  // Get the vars of the inlined fn, so the locstats
+  // reports the missing vars (with coverage 0%).
+  if (IsCandidateForZeroLocCovTracking) {
+    auto OffsetFn = Die.find(dwarf::DW_AT_abstract_origin);
+    if (OffsetFn) {
+      uint64_t OffsetOfInlineFnCopy = (*OffsetFn).getRawUValue();
+      if (GlobalAbstractOriginFnInfo.count(OffsetOfInlineFnCopy)) {
+        AbstractOriginVars = GlobalAbstractOriginFnInfo[OffsetOfInlineFnCopy];
+        AbstractOriginVarsPtr = &AbstractOriginVars;
+      } else {
+        // This means that the DW_AT_inline fn copy is out of order,
+        // so this abstract origin instance will be processed later.
+        FnsWithAbstractOriginToBeProcessed.push_back(Die.getOffset());
+        AbstractOriginVarsPtr = nullptr;
+      }
+    }
+  }
+
+  if (IsFunction || IsInlinedFunction || IsBlock) {
     // Reset VarPrefix when entering a new function.
-    if (Die.getTag() == dwarf::DW_TAG_subprogram ||
-        Die.getTag() == dwarf::DW_TAG_inlined_subroutine)
+    if (IsFunction || IsInlinedFunction)
       VarPrefix = "v";
 
     // Ignore forward declarations.
@@ -434,9 +514,15 @@ static void collectStatsRecursive(DWARFDie Die, std::string FnPrefix,
 
     // Count the function.
     if (!IsBlock) {
-      // Skip over abstract origins.
-      if (Die.find(dwarf::DW_AT_inline))
+      // Skip over abstract origins, but collect variables
+      // from it so it can be used for location statistics
+      // for inlined instancies.
+      if (Die.find(dwarf::DW_AT_inline)) {
+        uint64_t SPOffset = Die.getOffset();
+        collectAbstractOriginFnInfo(Die, SPOffset, GlobalAbstractOriginFnInfo);
         return;
+      }
+
       std::string FnID = constructDieID(Die);
       // We've seen an instance of this function.
       auto &FnStats = FnStatMap[FnID];
@@ -465,7 +551,7 @@ static void collectStatsRecursive(DWARFDie Die, std::string FnPrefix,
   } else {
     // Not a scope, visit the Die itself. It could be a variable.
     collectStatsForDie(Die, FnPrefix, VarPrefix, BytesInScope, InlineDepth,
-                       FnStatMap, GlobalStats, LocStats);
+                       FnStatMap, GlobalStats, LocStats, AbstractOriginVarsPtr);
   }
 
   // Set InlineDepth correctly for child recursion
@@ -485,9 +571,32 @@ static void collectStatsRecursive(DWARFDie Die, std::string FnPrefix,
     if (Child.getTag() == dwarf::DW_TAG_formal_parameter)
       ChildVarPrefix += 'p' + toHex(FormalParameterIndex++) + '.';
 
-    collectStatsRecursive(Child, FnPrefix, ChildVarPrefix, BytesInScope,
-                          InlineDepth, FnStatMap, GlobalStats, LocStats);
+    collectStatsRecursive(
+        Child, FnPrefix, ChildVarPrefix, BytesInScope, InlineDepth, FnStatMap,
+        GlobalStats, LocStats, GlobalAbstractOriginFnInfo,
+        FnsWithAbstractOriginToBeProcessed, AbstractOriginVarsPtr);
     Child = Child.getSibling();
+  }
+
+  if (!IsCandidateForZeroLocCovTracking)
+    return;
+
+  // After we have processed all vars of the inlined function (or function with
+  // an abstract_origin), we want to know how many variables have no location.
+  for (auto Offset : AbstractOriginVars) {
+    LocStats.NumVarParam++;
+    LocStats.VarParamLocStats[ZeroCoverageBucket]++;
+    auto FnDie = Die.getDwarfUnit()->getDIEForOffset(Offset);
+    if (!FnDie)
+      continue;
+    auto Tag = FnDie.getTag();
+    if (Tag == dwarf::DW_TAG_formal_parameter) {
+      LocStats.NumParam++;
+      LocStats.ParamLocStats[ZeroCoverageBucket]++;
+    } else if (Tag == dwarf::DW_TAG_variable) {
+      LocStats.NumVar++;
+      LocStats.LocalVarLocStats[ZeroCoverageBucket]++;
+    }
   }
 }
 
@@ -536,9 +645,63 @@ static void printLocationStats(json::OStream &J, const char *Key,
 }
 
 static void printSectionSizes(json::OStream &J, const SectionSizes &Sizes) {
-  for (const auto &DebugSec : Sizes.DebugSectionSizes)
-    J.attribute((Twine("#bytes in ") + DebugSec.getKey()).str(),
-                int64_t(DebugSec.getValue()));
+  for (const auto &It : Sizes.DebugSectionSizes)
+    J.attribute((Twine("#bytes in ") + It.first).str(), int64_t(It.second));
+}
+
+/// Stop tracking variables that contain abstract_origin with a location.
+/// This is used for out-of-order DW_AT_inline subprograms only.
+static void updateVarsWithAbstractOriginLocCovInfo(
+    DWARFDie FnDieWithAbstractOrigin,
+    AbstractOriginVarsTy &AbstractOriginVars) {
+  DWARFDie Child = FnDieWithAbstractOrigin.getFirstChild();
+  while (Child) {
+    const dwarf::Tag ChildTag = Child.getTag();
+    if ((ChildTag == dwarf::DW_TAG_formal_parameter ||
+         ChildTag == dwarf::DW_TAG_variable) &&
+        (Child.find(dwarf::DW_AT_location) ||
+         Child.find(dwarf::DW_AT_const_value))) {
+      auto OffsetVar = Child.find(dwarf::DW_AT_abstract_origin);
+      if (OffsetVar)
+        llvm::erase_value(AbstractOriginVars, (*OffsetVar).getRawUValue());
+    } else if (ChildTag == dwarf::DW_TAG_lexical_block)
+      updateVarsWithAbstractOriginLocCovInfo(Child, AbstractOriginVars);
+    Child = Child.getSibling();
+  }
+}
+
+/// Collect zero location coverage for inlined variables which refer to
+/// a DW_AT_inline copy of subprogram that is out of order in the DWARF.
+/// Also cover the variables of a concrete function (represented with
+/// the DW_TAG_subprogram) with an abstract_origin attribute.
+static void collectZeroLocCovForVarsWithAbstractOrigin(
+    DWARFUnit *DwUnit, GlobalStats &GlobalStats, LocationStats &LocStats,
+    AbstractOriginVarsTyMap &GlobalAbstractOriginFnInfo,
+    FunctionsWithAbstractOriginTy &FnsWithAbstractOriginToBeProcessed) {
+  for (auto FnOffset : FnsWithAbstractOriginToBeProcessed) {
+    DWARFDie FnDieWithAbstractOrigin = DwUnit->getDIEForOffset(FnOffset);
+    auto FnCopy = FnDieWithAbstractOrigin.find(dwarf::DW_AT_abstract_origin);
+    AbstractOriginVarsTy AbstractOriginVars;
+    if (!FnCopy)
+      continue;
+
+    AbstractOriginVars = GlobalAbstractOriginFnInfo[(*FnCopy).getRawUValue()];
+    updateVarsWithAbstractOriginLocCovInfo(FnDieWithAbstractOrigin,
+                                           AbstractOriginVars);
+
+    for (auto Offset : AbstractOriginVars) {
+      LocStats.NumVarParam++;
+      LocStats.VarParamLocStats[ZeroCoverageBucket]++;
+      auto Tag = DwUnit->getDIEForOffset(Offset).getTag();
+      if (Tag == dwarf::DW_TAG_formal_parameter) {
+        LocStats.NumParam++;
+        LocStats.ParamLocStats[ZeroCoverageBucket]++;
+      } else if (Tag == dwarf::DW_TAG_variable) {
+        LocStats.NumVar++;
+        LocStats.LocalVarLocStats[ZeroCoverageBucket]++;
+      }
+    }
+  }
 }
 
 /// \}
@@ -558,10 +721,27 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   GlobalStats GlobalStats;
   LocationStats LocStats;
   StringMap<PerFunctionStats> Statistics;
-  for (const auto &CU : static_cast<DWARFContext *>(&DICtx)->compile_units())
-    if (DWARFDie CUDie = CU->getNonSkeletonUnitDIE(false))
+  for (const auto &CU : static_cast<DWARFContext *>(&DICtx)->compile_units()) {
+    if (DWARFDie CUDie = CU->getNonSkeletonUnitDIE(false)) {
+      // These variables are being reset for each CU, since there could be
+      // a situation where we have two subprogram DIEs with the same offsets
+      // in two diferent CUs, and we can end up using wrong variables info
+      // when trying to resolve abstract_origin attribute.
+      // TODO: Handle LTO cases where the abstract origin of
+      // the function is in a different CU than the one it's
+      // referenced from or inlined into.
+      AbstractOriginVarsTyMap GlobalAbstractOriginFnInfo;
+      FunctionsWithAbstractOriginTy FnsWithAbstractOriginToBeProcessed;
+
       collectStatsRecursive(CUDie, "/", "g", 0, 0, Statistics, GlobalStats,
-                            LocStats);
+                            LocStats, GlobalAbstractOriginFnInfo,
+                            FnsWithAbstractOriginToBeProcessed);
+
+      collectZeroLocCovForVarsWithAbstractOrigin(
+          CUDie.getDwarfUnit(), GlobalStats, LocStats,
+          GlobalAbstractOriginFnInfo, FnsWithAbstractOriginToBeProcessed);
+    }
+  }
 
   /// Collect the sizes of debug sections.
   SectionSizes Sizes;
@@ -570,7 +750,7 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   /// The version number should be increased every time the algorithm is changed
   /// (including bug fixes). New metrics may be added without increasing the
   /// version.
-  unsigned Version = 6;
+  unsigned Version = 8;
   unsigned VarParamTotal = 0;
   unsigned VarParamUnique = 0;
   unsigned VarParamWithLoc = 0;

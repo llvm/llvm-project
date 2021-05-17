@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}adjust_writemask_crash_0_nochain:
 ; GCN: image_get_lod v0, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}} dmask:0x2

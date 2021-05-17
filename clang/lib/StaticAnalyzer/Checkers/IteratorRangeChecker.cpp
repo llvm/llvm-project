@@ -228,7 +228,7 @@ void IteratorRangeChecker::verifyRandomIncrOrDecr(CheckerContext &C,
     Value = State->getRawSVal(*ValAsLoc);
   }
 
-  if (Value.isUnknown())
+  if (Value.isUnknownOrUndef())
     return;
 
   // Incremention or decremention by 0 is never a bug.

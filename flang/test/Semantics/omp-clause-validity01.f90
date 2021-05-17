@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
+! RUN: %S/test_errors.sh %s %t %flang_fc1 -fopenmp
 use omp_lib
 ! Check OpenMP clause validity for the following directives:
 !
@@ -172,6 +172,7 @@ use omp_lib
       exit
       exit outer
       !ERROR: EXIT to construct 'outofparallel' outside of PARALLEL construct is not allowed
+      !ERROR: EXIT to construct 'outofparallel' outside of DO construct is not allowed
       exit outofparallel
     end do inner
   end do outer
@@ -214,7 +215,6 @@ use omp_lib
      a = 3.14
   enddo
 
-  !ERROR: Clause LINEAR is not allowed if clause ORDERED appears on the DO directive
   !ERROR: Clause LINEAR is not allowed if clause ORDERED appears on the DO directive
   !ERROR: The parameter of the ORDERED clause must be a constant positive integer expression
   !$omp do ordered(1-1) private(b) linear(b) linear(a)
@@ -321,6 +321,7 @@ use omp_lib
   !$omp single private(a) lastprivate(c)
   a = 3.14
   !ERROR: Clause NOWAIT is not allowed if clause COPYPRIVATE appears on the END SINGLE directive
+  !ERROR: COPYPRIVATE variable 'a' may not appear on a PRIVATE or FIRSTPRIVATE clause on a SINGLE construct
   !ERROR: At most one NOWAIT clause can appear on the END SINGLE directive
   !$omp end single copyprivate(a) nowait nowait
   c = 2
@@ -477,14 +478,12 @@ use omp_lib
   !$omp barrier
   !$omp taskwait
   !$omp taskwait depend(source)
-  !ERROR: Internal: no symbol found for 'i'
-  !$omp taskwait depend(sink:i-1)
+  ! !$omp taskwait depend(sink:i-1)
   ! !$omp target enter data map(to:arrayA) map(alloc:arrayB)
   ! !$omp target update from(arrayA) to(arrayB)
   ! !$omp target exit data map(from:arrayA) map(delete:arrayB)
   !$omp ordered depend(source)
-  !ERROR: Internal: no symbol found for 'i'
-  !$omp ordered depend(sink:i-1)
+  ! !$omp ordered depend(sink:i-1)
   !$omp flush (c)
   !$omp flush acq_rel
   !$omp flush release
@@ -501,11 +500,9 @@ use omp_lib
 
 ! 2.13.2 critical Construct
 
-  !ERROR: Internal: no symbol found for 'first'
-  !$omp critical (first)
+  ! !$omp critical (first)
   a = 3.14
-  !ERROR: Internal: no symbol found for 'first'
-  !$omp end critical (first)
+  ! !$omp end critical (first)
 
 ! 2.9.1 task-clause -> if-clause |
 !                      final-clause |

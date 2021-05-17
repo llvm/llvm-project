@@ -9,7 +9,6 @@ define void @ptr_iv_v4i32(i32* noalias nocapture readonly %A, i32* noalias nocap
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    mov.w lr, #249
 ; CHECK-NEXT:    adr r3, .LCPI0_0
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vldrw.u32 q0, [r3]
 ; CHECK-NEXT:  .LBB0_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -60,7 +59,6 @@ define void @ptr_iv_v4i32_mult(i32* noalias nocapture readonly %A, i32* noalias 
 ; CHECK-NEXT:    mov.w lr, #249
 ; CHECK-NEXT:    adr r1, .LCPI1_0
 ; CHECK-NEXT:    adr r3, .LCPI1_1
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vldrw.u32 q0, [r3]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-NEXT:  .LBB1_1: @ %vector.body
@@ -117,7 +115,6 @@ define void @ptr_iv_v8i16(i16* noalias nocapture readonly %A, i16* noalias nocap
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    mov.w lr, #249
 ; CHECK-NEXT:    adr r3, .LCPI2_0
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vldrw.u32 q0, [r3]
 ; CHECK-NEXT:  .LBB2_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -173,7 +170,6 @@ define void @ptr_iv_v8i16_mult(i16* noalias nocapture readonly %A, i16* noalias 
 ; CHECK-NEXT:    mov.w lr, #249
 ; CHECK-NEXT:    adr.w r12, .LCPI3_0
 ; CHECK-NEXT:    adr r3, .LCPI3_1
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vldrw.u32 q0, [r3]
 ; CHECK-NEXT:    vldrw.u32 q1, [r12]
 ; CHECK-NEXT:  .LBB3_1: @ %vector.body
@@ -239,7 +235,6 @@ define void @ptr_iv_v16i8(i8* noalias nocapture readonly %A, i8* noalias nocaptu
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    mov.w lr, #249
 ; CHECK-NEXT:    adr r3, .LCPI4_0
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vldrw.u32 q0, [r3]
 ; CHECK-NEXT:  .LBB4_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -303,7 +298,6 @@ define void @ptr_iv_v16i8_mult(i8* noalias nocapture readonly %A, i8* noalias no
 ; CHECK-NEXT:    mov.w lr, #249
 ; CHECK-NEXT:    adr.w r12, .LCPI5_0
 ; CHECK-NEXT:    adr r3, .LCPI5_1
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vldrw.u32 q0, [r3]
 ; CHECK-NEXT:    vldrw.u32 q1, [r12]
 ; CHECK-NEXT:  .LBB5_1: @ %vector.body
@@ -385,7 +379,6 @@ define void @ptr_iv_v4f32(float* noalias nocapture readonly %A, float* noalias n
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    mov.w lr, #249
 ; CHECK-NEXT:    adr r3, .LCPI6_0
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vldrw.u32 q0, [r3]
 ; CHECK-NEXT:  .LBB6_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -436,7 +429,6 @@ define void @ptr_iv_v4f32_mult(float* noalias nocapture readonly %A, float* noal
 ; CHECK-NEXT:    mov.w lr, #249
 ; CHECK-NEXT:    adr r1, .LCPI7_0
 ; CHECK-NEXT:    adr r3, .LCPI7_1
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vldrw.u32 q0, [r3]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-NEXT:  .LBB7_1: @ %vector.body
@@ -496,7 +488,6 @@ define void @ptr_iv_v8f16(half* noalias nocapture readonly %A, half* noalias noc
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-NEXT:    adr r3, .LCPI8_0
 ; CHECK-NEXT:    vmov.f16 r2, s0
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vldrw.u32 q0, [r3]
 ; CHECK-NEXT:  .LBB8_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -556,7 +547,6 @@ define void @ptr_iv_v8f16_mult(half* noalias nocapture readonly %A, half* noalia
 ; CHECK-NEXT:    vmov.f16 r1, s0
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
 ; CHECK-NEXT:    adr r2, .LCPI9_1
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:  .LBB9_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1

@@ -12,10 +12,14 @@
 namespace llvm {
 namespace orc {
 
+char ObjectTransformLayer::ID;
+
+using BaseT = RTTIExtends<ObjectTransformLayer, ObjectLayer>;
+
 ObjectTransformLayer::ObjectTransformLayer(ExecutionSession &ES,
-                                            ObjectLayer &BaseLayer,
-                                            TransformFunction Transform)
-    : ObjectLayer(ES), BaseLayer(BaseLayer), Transform(std::move(Transform)) {}
+                                           ObjectLayer &BaseLayer,
+                                           TransformFunction Transform)
+    : BaseT(ES), BaseLayer(BaseLayer), Transform(std::move(Transform)) {}
 
 void ObjectTransformLayer::emit(
     std::unique_ptr<MaterializationResponsibility> R,

@@ -27,36 +27,35 @@ void AffineValueMap::difference(const AffineValueMap &a,
                                 const AffineValueMap &b, AffineValueMap *res) {
   assert(a.getNumResults() == b.getNumResults() && "invalid inputs");
 
-  // Fully compose A's map + operands.
-  auto aMap = a.getAffineMap();
-  SmallVector<Value, 4> aOperands(a.getOperands().begin(),
-                                  a.getOperands().end());
-  fullyComposeAffineMapAndOperands(&aMap, &aOperands);
+  SmallVector<Value, 4> allOperands;
+  allOperands.reserve(a.getNumOperands() + b.getNumOperands());
+  auto aDims = a.getOperands().take_front(a.getNumDims());
+  auto bDims = b.getOperands().take_front(b.getNumDims());
+  auto aSyms = a.getOperands().take_back(a.getNumSymbols());
+  auto bSyms = b.getOperands().take_back(b.getNumSymbols());
+  allOperands.append(aDims.begin(), aDims.end());
+  allOperands.append(bDims.begin(), bDims.end());
+  allOperands.append(aSyms.begin(), aSyms.end());
+  allOperands.append(bSyms.begin(), bSyms.end());
 
-  // Use the affine apply normalizer to get B's map into A's coordinate space.
-  AffineApplyNormalizer normalizer(aMap, aOperands);
-  SmallVector<Value, 4> bOperands(b.getOperands().begin(),
-                                  b.getOperands().end());
-  auto bMap = b.getAffineMap();
-  normalizer.normalize(&bMap, &bOperands);
-
-  assert(std::equal(bOperands.begin(), bOperands.end(),
-                    normalizer.getOperands().begin()) &&
-         "operands are expected to be the same after normalization");
+  // Shift dims and symbols of b's map.
+  auto bMap = b.getAffineMap()
+                  .shiftDims(a.getNumDims())
+                  .shiftSymbols(a.getNumSymbols());
 
   // Construct the difference expressions.
+  auto aMap = a.getAffineMap();
   SmallVector<AffineExpr, 4> diffExprs;
   diffExprs.reserve(a.getNumResults());
   for (unsigned i = 0, e = bMap.getNumResults(); i < e; ++i)
-    diffExprs.push_back(normalizer.getAffineMap().getResult(i) -
-                        bMap.getResult(i));
+    diffExprs.push_back(aMap.getResult(i) - bMap.getResult(i));
 
-  auto diffMap =
-      AffineMap::get(normalizer.getNumDims(), normalizer.getNumSymbols(),
-                     diffExprs, aMap.getContext());
-  canonicalizeMapAndOperands(&diffMap, &bOperands);
+  auto diffMap = AffineMap::get(bMap.getNumDims(), bMap.getNumSymbols(),
+                                diffExprs, bMap.getContext());
+  fullyComposeAffineMapAndOperands(&diffMap, &allOperands);
+  canonicalizeMapAndOperands(&diffMap, &allOperands);
   diffMap = simplifyAffineMap(diffMap);
-  res->reset(diffMap, bOperands);
+  res->reset(diffMap, allOperands);
 }
 
 // Returns true and sets 'indexOfMatch' if 'valueToMatch' is found in

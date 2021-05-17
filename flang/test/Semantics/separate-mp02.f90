@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %S/test_errors.sh %s %t %flang_fc1
 
 ! When a module subprogram has the MODULE prefix the following must match
 ! with the corresponding separate module procedure interface body:
@@ -109,10 +109,10 @@ contains
     real, intent(out) :: y
     real :: z
   end
-  !ERROR: Dummy argument name 'z' does not match corresponding name 'y' in interface body
   module subroutine s2(x, z)
     real, intent(in) :: x
-    real, intent(out) :: y
+  !ERROR: Dummy argument name 'z' does not match corresponding name 'y' in interface body
+    real, intent(out) :: z
   end
   module subroutine s3(x, y)
     !ERROR: Dummy argument 'x' is a procedure; the corresponding argument in the interface body is not
@@ -136,6 +136,12 @@ module m2b
     end
     module subroutine s3() bind(c, name="s3")
     end
+    module subroutine s4() bind(c, name=" s4")
+    end
+    module subroutine s5() bind(c)
+    end
+    module subroutine s6() bind(c)
+    end
   end interface
 end
 
@@ -148,8 +154,15 @@ contains
   !ERROR: Module subprogram 's2' does not have a binding label but the corresponding interface body does
   module subroutine s2()
   end
-  !ERROR: Module subprogram 's3' has binding label "s3_xxx" but the corresponding interface body has "s3"
+  !ERROR: Module subprogram 's3' has binding label 's3_xxx' but the corresponding interface body has 's3'
   module subroutine s3() bind(c, name="s3" // suffix)
+  end
+  module subroutine s4() bind(c, name="s4  ")
+  end
+  module subroutine s5() bind(c, name=" s5")
+  end
+  !ERROR: Module subprogram 's6' has binding label 'not_s6' but the corresponding interface body has 's6'
+  module subroutine s6() bind(c, name="not_s6")
   end
 end
 

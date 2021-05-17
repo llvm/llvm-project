@@ -5,6 +5,9 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:     -mcpu=pwr9 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
 ; RUN: FileCheck %s --check-prefix=CHECK-P9
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
+; RUN:     -mcpu=pwr9 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
+; RUN: FileCheck %s --check-prefix=CHECK-P9-BE
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:     -mcpu=pwr8 -mattr=-vsx -ppc-asm-full-reg-names \
 ; RUN:     -ppc-vsr-nums-as-vr < %s | FileCheck %s --check-prefix=CHECK-NOVSX
@@ -22,6 +25,11 @@ define dso_local <16 x i8> @testmrghb(<16 x i8> %a, <16 x i8> %b) local_unnamed_
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    vmrghb v2, v3, v2
 ; CHECK-P9-NEXT:    blr
+;
+; CHECK-P9-BE-LABEL: testmrghb:
+; CHECK-P9-BE:       # %bb.0: # %entry
+; CHECK-P9-BE-NEXT:    vmrglb v2, v2, v3
+; CHECK-P9-BE-NEXT:    blr
 ;
 ; CHECK-NOVSX-LABEL: testmrghb:
 ; CHECK-NOVSX:       # %bb.0: # %entry
@@ -46,6 +54,11 @@ define dso_local <16 x i8> @testmrghb2(<16 x i8> %a, <16 x i8> %b) local_unnamed
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    vmrghb v2, v2, v3
 ; CHECK-P9-NEXT:    blr
+;
+; CHECK-P9-BE-LABEL: testmrghb2:
+; CHECK-P9-BE:       # %bb.0: # %entry
+; CHECK-P9-BE-NEXT:    vmrglb v2, v3, v2
+; CHECK-P9-BE-NEXT:    blr
 ;
 ; CHECK-NOVSX-LABEL: testmrghb2:
 ; CHECK-NOVSX:       # %bb.0: # %entry
@@ -74,6 +87,11 @@ define dso_local <16 x i8> @testmrghh(<16 x i8> %a, <16 x i8> %b) local_unnamed_
 ; CHECK-P9-NEXT:    vmrghh v2, v3, v2
 ; CHECK-P9-NEXT:    blr
 ;
+; CHECK-P9-BE-LABEL: testmrghh:
+; CHECK-P9-BE:       # %bb.0: # %entry
+; CHECK-P9-BE-NEXT:    vmrglh v2, v2, v3
+; CHECK-P9-BE-NEXT:    blr
+;
 ; CHECK-NOVSX-LABEL: testmrghh:
 ; CHECK-NOVSX:       # %bb.0: # %entry
 ; CHECK-NOVSX-NEXT:    vmrghh v2, v3, v2
@@ -97,6 +115,11 @@ define dso_local <16 x i8> @testmrghh2(<16 x i8> %a, <16 x i8> %b) local_unnamed
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    vmrghh v2, v2, v3
 ; CHECK-P9-NEXT:    blr
+;
+; CHECK-P9-BE-LABEL: testmrghh2:
+; CHECK-P9-BE:       # %bb.0: # %entry
+; CHECK-P9-BE-NEXT:    vmrglh v2, v3, v2
+; CHECK-P9-BE-NEXT:    blr
 ;
 ; CHECK-NOVSX-LABEL: testmrghh2:
 ; CHECK-NOVSX:       # %bb.0: # %entry
@@ -125,6 +148,11 @@ define dso_local <16 x i8> @testmrglb(<16 x i8> %a, <16 x i8> %b) local_unnamed_
 ; CHECK-P9-NEXT:    vmrglb v2, v3, v2
 ; CHECK-P9-NEXT:    blr
 ;
+; CHECK-P9-BE-LABEL: testmrglb:
+; CHECK-P9-BE:       # %bb.0: # %entry
+; CHECK-P9-BE-NEXT:    vmrghb v2, v2, v3
+; CHECK-P9-BE-NEXT:    blr
+;
 ; CHECK-NOVSX-LABEL: testmrglb:
 ; CHECK-NOVSX:       # %bb.0: # %entry
 ; CHECK-NOVSX-NEXT:    vmrglb v2, v3, v2
@@ -148,6 +176,11 @@ define dso_local <16 x i8> @testmrglb2(<16 x i8> %a, <16 x i8> %b) local_unnamed
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    vmrglb v2, v2, v3
 ; CHECK-P9-NEXT:    blr
+;
+; CHECK-P9-BE-LABEL: testmrglb2:
+; CHECK-P9-BE:       # %bb.0: # %entry
+; CHECK-P9-BE-NEXT:    vmrghb v2, v3, v2
+; CHECK-P9-BE-NEXT:    blr
 ;
 ; CHECK-NOVSX-LABEL: testmrglb2:
 ; CHECK-NOVSX:       # %bb.0: # %entry
@@ -176,6 +209,11 @@ define dso_local <16 x i8> @testmrglh(<16 x i8> %a, <16 x i8> %b) local_unnamed_
 ; CHECK-P9-NEXT:    vmrglh v2, v3, v2
 ; CHECK-P9-NEXT:    blr
 ;
+; CHECK-P9-BE-LABEL: testmrglh:
+; CHECK-P9-BE:       # %bb.0: # %entry
+; CHECK-P9-BE-NEXT:    vmrghh v2, v2, v3
+; CHECK-P9-BE-NEXT:    blr
+;
 ; CHECK-NOVSX-LABEL: testmrglh:
 ; CHECK-NOVSX:       # %bb.0: # %entry
 ; CHECK-NOVSX-NEXT:    vmrglh v2, v3, v2
@@ -199,6 +237,11 @@ define dso_local <16 x i8> @testmrglh2(<16 x i8> %a, <16 x i8> %b) local_unnamed
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    vmrglh v2, v2, v3
 ; CHECK-P9-NEXT:    blr
+;
+; CHECK-P9-BE-LABEL: testmrglh2:
+; CHECK-P9-BE:       # %bb.0: # %entry
+; CHECK-P9-BE-NEXT:    vmrghh v2, v3, v2
+; CHECK-P9-BE-NEXT:    blr
 ;
 ; CHECK-NOVSX-LABEL: testmrglh2:
 ; CHECK-NOVSX:       # %bb.0: # %entry
@@ -227,6 +270,11 @@ define dso_local <16 x i8> @testmrghw(<16 x i8> %a, <16 x i8> %b) local_unnamed_
 ; CHECK-P9-NEXT:    vmrghw v2, v3, v2
 ; CHECK-P9-NEXT:    blr
 ;
+; CHECK-P9-BE-LABEL: testmrghw:
+; CHECK-P9-BE:       # %bb.0: # %entry
+; CHECK-P9-BE-NEXT:    vmrglw v2, v2, v3
+; CHECK-P9-BE-NEXT:    blr
+;
 ; CHECK-NOVSX-LABEL: testmrghw:
 ; CHECK-NOVSX:       # %bb.0: # %entry
 ; CHECK-NOVSX-NEXT:    vmrghw v2, v3, v2
@@ -250,6 +298,11 @@ define dso_local <16 x i8> @testmrghw2(<16 x i8> %a, <16 x i8> %b) local_unnamed
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    vmrghw v2, v2, v3
 ; CHECK-P9-NEXT:    blr
+;
+; CHECK-P9-BE-LABEL: testmrghw2:
+; CHECK-P9-BE:       # %bb.0: # %entry
+; CHECK-P9-BE-NEXT:    vmrglw v2, v3, v2
+; CHECK-P9-BE-NEXT:    blr
 ;
 ; CHECK-NOVSX-LABEL: testmrghw2:
 ; CHECK-NOVSX:       # %bb.0: # %entry
@@ -278,6 +331,11 @@ define dso_local <16 x i8> @testmrglw(<16 x i8> %a, <16 x i8> %b) local_unnamed_
 ; CHECK-P9-NEXT:    vmrglw v2, v3, v2
 ; CHECK-P9-NEXT:    blr
 ;
+; CHECK-P9-BE-LABEL: testmrglw:
+; CHECK-P9-BE:       # %bb.0: # %entry
+; CHECK-P9-BE-NEXT:    vmrghw v2, v2, v3
+; CHECK-P9-BE-NEXT:    blr
+;
 ; CHECK-NOVSX-LABEL: testmrglw:
 ; CHECK-NOVSX:       # %bb.0: # %entry
 ; CHECK-NOVSX-NEXT:    vmrglw v2, v3, v2
@@ -301,6 +359,11 @@ define dso_local <16 x i8> @testmrglw2(<16 x i8> %a, <16 x i8> %b) local_unnamed
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    vmrglw v2, v2, v3
 ; CHECK-P9-NEXT:    blr
+;
+; CHECK-P9-BE-LABEL: testmrglw2:
+; CHECK-P9-BE:       # %bb.0: # %entry
+; CHECK-P9-BE-NEXT:    vmrghw v2, v3, v2
+; CHECK-P9-BE-NEXT:    blr
 ;
 ; CHECK-NOVSX-LABEL: testmrglw2:
 ; CHECK-NOVSX:       # %bb.0: # %entry
@@ -333,6 +396,16 @@ define dso_local <8 x i16> @testmrglb3(<8 x i8>* nocapture readonly %a) local_un
 ; CHECK-P9-NEXT:    xxlxor v3, v3, v3
 ; CHECK-P9-NEXT:    vmrghb v2, v3, v2
 ; CHECK-P9-NEXT:    blr
+;
+; CHECK-P9-BE-LABEL: testmrglb3:
+; CHECK-P9-BE:       # %bb.0: # %entry
+; CHECK-P9-BE-NEXT:    lxsd v2, 0(r3)
+; CHECK-P9-BE-NEXT:    addis r3, r2, .LCPI12_0@toc@ha
+; CHECK-P9-BE-NEXT:    xxlxor v4, v4, v4
+; CHECK-P9-BE-NEXT:    addi r3, r3, .LCPI12_0@toc@l
+; CHECK-P9-BE-NEXT:    lxvx v3, 0, r3
+; CHECK-P9-BE-NEXT:    vperm v2, v4, v2, v3
+; CHECK-P9-BE-NEXT:    blr
 ;
 ; CHECK-NOVSX-LABEL: testmrglb3:
 ; CHECK-NOVSX:       # %bb.0: # %entry
@@ -389,6 +462,20 @@ define dso_local void @no_crash_elt0_from_RHS(<2 x double>* noalias nocapture de
 ; CHECK-P9-NEXT:    xxmrghd vs0, vs1, vs0
 ; CHECK-P9-NEXT:    stxv vs0, 0(r30)
 ;
+; CHECK-P9-BE-LABEL: no_crash_elt0_from_RHS:
+; CHECK-P9-BE:       # %bb.0: # %test_entry
+; CHECK-P9-BE-NEXT:    mflr r0
+; CHECK-P9-BE-NEXT:    std r0, 16(r1)
+; CHECK-P9-BE-NEXT:    stdu r1, -128(r1)
+; CHECK-P9-BE-NEXT:    std r30, 112(r1) # 8-byte Folded Spill
+; CHECK-P9-BE-NEXT:    mr r30, r3
+; CHECK-P9-BE-NEXT:    bl dummy
+; CHECK-P9-BE-NEXT:    nop
+; CHECK-P9-BE-NEXT:    xxlxor f0, f0, f0
+; CHECK-P9-BE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
+; CHECK-P9-BE-NEXT:    xxmrghd vs0, vs0, vs1
+; CHECK-P9-BE-NEXT:    stxv vs0, 0(r30)
+;
 ; CHECK-NOVSX-LABEL: no_crash_elt0_from_RHS:
 ; CHECK-NOVSX:       # %bb.0: # %test_entry
 ; CHECK-NOVSX-NEXT:    mflr r0
@@ -435,8 +522,14 @@ define dso_local <16 x i8> @no_crash_bitcast(i32 %a) {
 ;
 ; CHECK-P9-LABEL: no_crash_bitcast:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    mtvsrws v2, r3
+; CHECK-P9-NEXT:    mtvsrwz v2, r3
 ; CHECK-P9-NEXT:    blr
+;
+; CHECK-P9-BE-LABEL: no_crash_bitcast:
+; CHECK-P9-BE:       # %bb.0: # %entry
+; CHECK-P9-BE-NEXT:    mtvsrwz v2, r3
+; CHECK-P9-BE-NEXT:    vmrghw v2, v2, v2
+; CHECK-P9-BE-NEXT:    blr
 ;
 ; CHECK-NOVSX-LABEL: no_crash_bitcast:
 ; CHECK-NOVSX:       # %bb.0: # %entry
@@ -481,6 +574,17 @@ define dso_local <4 x i32> @replace_undefs_in_splat(<4 x i32> %a) local_unnamed_
 ; CHECK-P9-NEXT:    lxvx v3, 0, r3
 ; CHECK-P9-NEXT:    vmrgow v2, v3, v2
 ; CHECK-P9-NEXT:    blr
+;
+; CHECK-P9-BE-LABEL: replace_undefs_in_splat:
+; CHECK-P9-BE:       # %bb.0: # %entry
+; CHECK-P9-BE-NEXT:    addis r3, r2, .LCPI15_0@toc@ha
+; CHECK-P9-BE-NEXT:    addi r3, r3, .LCPI15_0@toc@l
+; CHECK-P9-BE-NEXT:    lxvx v3, 0, r3
+; CHECK-P9-BE-NEXT:    addis r3, r2, .LCPI15_1@toc@ha
+; CHECK-P9-BE-NEXT:    addi r3, r3, .LCPI15_1@toc@l
+; CHECK-P9-BE-NEXT:    lxvx v4, 0, r3
+; CHECK-P9-BE-NEXT:    vperm v2, v2, v4, v3
+; CHECK-P9-BE-NEXT:    blr
 ;
 ; CHECK-NOVSX-LABEL: replace_undefs_in_splat:
 ; CHECK-NOVSX:       # %bb.0: # %entry
@@ -531,6 +635,14 @@ define dso_local <16 x i8> @no_RAUW_in_combine_during_legalize(i32* nocapture re
 ; CHECK-P9-NEXT:    vperm v2, v4, v2, v3
 ; CHECK-P9-NEXT:    blr
 ;
+; CHECK-P9-BE-LABEL: no_RAUW_in_combine_during_legalize:
+; CHECK-P9-BE:       # %bb.0: # %entry
+; CHECK-P9-BE-NEXT:    sldi r4, r4, 2
+; CHECK-P9-BE-NEXT:    xxlxor v3, v3, v3
+; CHECK-P9-BE-NEXT:    lxsiwzx v2, r3, r4
+; CHECK-P9-BE-NEXT:    vmrghb v2, v2, v3
+; CHECK-P9-BE-NEXT:    blr
+;
 ; CHECK-NOVSX-LABEL: no_RAUW_in_combine_during_legalize:
 ; CHECK-NOVSX:       # %bb.0: # %entry
 ; CHECK-NOVSX-NEXT:    sldi r4, r4, 2
@@ -577,6 +689,12 @@ define dso_local <4 x i32> @testSplat4Low(<8 x i8>* nocapture readonly %ptr) loc
 ; CHECK-P9-NEXT:    lxvwsx v2, 0, r3
 ; CHECK-P9-NEXT:    blr
 ;
+; CHECK-P9-BE-LABEL: testSplat4Low:
+; CHECK-P9-BE:       # %bb.0: # %entry
+; CHECK-P9-BE-NEXT:    addi r3, r3, 4
+; CHECK-P9-BE-NEXT:    lxvwsx v2, 0, r3
+; CHECK-P9-BE-NEXT:    blr
+;
 ; CHECK-NOVSX-LABEL: testSplat4Low:
 ; CHECK-NOVSX:       # %bb.0: # %entry
 ; CHECK-NOVSX-NEXT:    ld r3, 0(r3)
@@ -611,6 +729,11 @@ define dso_local <4 x i32> @testSplat4hi(<8 x i8>* nocapture readonly %ptr) loca
 ; CHECK-P9-NEXT:    lxvwsx v2, 0, r3
 ; CHECK-P9-NEXT:    blr
 ;
+; CHECK-P9-BE-LABEL: testSplat4hi:
+; CHECK-P9-BE:       # %bb.0: # %entry
+; CHECK-P9-BE-NEXT:    lxvwsx v2, 0, r3
+; CHECK-P9-BE-NEXT:    blr
+;
 ; CHECK-NOVSX-LABEL: testSplat4hi:
 ; CHECK-NOVSX:       # %bb.0: # %entry
 ; CHECK-NOVSX-NEXT:    ld r3, 0(r3)
@@ -643,6 +766,11 @@ define dso_local <2 x i64> @testSplat8(<8 x i8>* nocapture readonly %ptr) local_
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    lxvdsx v2, 0, r3
 ; CHECK-P9-NEXT:    blr
+;
+; CHECK-P9-BE-LABEL: testSplat8:
+; CHECK-P9-BE:       # %bb.0: # %entry
+; CHECK-P9-BE-NEXT:    lxvdsx v2, 0, r3
+; CHECK-P9-BE-NEXT:    blr
 ;
 ; CHECK-NOVSX-LABEL: testSplat8:
 ; CHECK-NOVSX:       # %bb.0: # %entry

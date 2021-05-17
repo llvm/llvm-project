@@ -54,31 +54,31 @@ void test()
 TEST_CONSTEXPR_CXX20
 bool do_tests()
 {
-    test<input_iterator<const int*>, input_iterator<const int*> >();
-    test<input_iterator<const int*>, forward_iterator<const int*> >();
-    test<input_iterator<const int*>, bidirectional_iterator<const int*> >();
-    test<input_iterator<const int*>, random_access_iterator<const int*> >();
-    test<input_iterator<const int*>, const int*>();
+    test<cpp17_input_iterator<const int*>, cpp17_input_iterator<const int*> >();
+    test<cpp17_input_iterator<const int*>, forward_iterator<const int*> >();
+    test<cpp17_input_iterator<const int*>, bidirectional_iterator<const int*> >();
+    test<cpp17_input_iterator<const int*>, random_access_iterator<const int*> >();
+    test<cpp17_input_iterator<const int*>, const int*>();
 
-    test<forward_iterator<const int*>, input_iterator<const int*> >();
+    test<forward_iterator<const int*>, cpp17_input_iterator<const int*> >();
     test<forward_iterator<const int*>, forward_iterator<const int*> >();
     test<forward_iterator<const int*>, bidirectional_iterator<const int*> >();
     test<forward_iterator<const int*>, random_access_iterator<const int*> >();
     test<forward_iterator<const int*>, const int*>();
 
-    test<bidirectional_iterator<const int*>, input_iterator<const int*> >();
+    test<bidirectional_iterator<const int*>, cpp17_input_iterator<const int*> >();
     test<bidirectional_iterator<const int*>, forward_iterator<const int*> >();
     test<bidirectional_iterator<const int*>, bidirectional_iterator<const int*> >();
     test<bidirectional_iterator<const int*>, random_access_iterator<const int*> >();
     test<bidirectional_iterator<const int*>, const int*>();
 
-    test<random_access_iterator<const int*>, input_iterator<const int*> >();
+    test<random_access_iterator<const int*>, cpp17_input_iterator<const int*> >();
     test<random_access_iterator<const int*>, forward_iterator<const int*> >();
     test<random_access_iterator<const int*>, bidirectional_iterator<const int*> >();
     test<random_access_iterator<const int*>, random_access_iterator<const int*> >();
     test<random_access_iterator<const int*>, const int*>();
 
-    test<const int*, input_iterator<const int*> >();
+    test<const int*, cpp17_input_iterator<const int*> >();
     test<const int*, forward_iterator<const int*> >();
     test<const int*, bidirectional_iterator<const int*> >();
     test<const int*, random_access_iterator<const int*> >();

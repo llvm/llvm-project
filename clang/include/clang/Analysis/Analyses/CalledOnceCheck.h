@@ -17,6 +17,7 @@
 namespace clang {
 
 class AnalysisDeclContext;
+class BlockDecl;
 class CFG;
 class Decl;
 class DeclContext;
@@ -79,6 +80,7 @@ public:
   /// the path containing the call and not containing the call.  This helps us
   /// to pinpoint a bad path for the user.
   /// \param Parameter -- parameter that should be called once.
+  /// \param Function -- function declaration where the problem occured.
   /// \param Where -- the least common ancestor statement.
   /// \param Reason -- a reason describing the path without a call.
   /// \param IsCalledDirectly -- true, if parameter actually gets called on
@@ -86,9 +88,22 @@ public:
   /// collection, passed as a parameter, etc.).
   /// \param IsCompletionHandler -- true, if parameter is a completion handler.
   virtual void handleNeverCalled(const ParmVarDecl *Parameter,
-                                 const Stmt *Where, NeverCalledReason Reason,
+                                 const Decl *Function, const Stmt *Where,
+                                 NeverCalledReason Reason,
                                  bool IsCalledDirectly,
                                  bool IsCompletionHandler) {}
+
+  /// Called when the block is guaranteed to be called exactly once.
+  /// It means that we can be stricter with what we report on that block.
+  /// \param Block -- block declaration that is known to be called exactly once.
+  virtual void
+  handleBlockThatIsGuaranteedToBeCalledOnce(const BlockDecl *Block) {}
+
+  /// Called when the block has no guarantees about how many times it can get
+  /// called.
+  /// It means that we should be more lenient with reporting warnings in it.
+  /// \param Block -- block declaration in question.
+  virtual void handleBlockWithNoGuarantees(const BlockDecl *Block) {}
 };
 
 /// Check given CFG for 'called once' parameter violations.

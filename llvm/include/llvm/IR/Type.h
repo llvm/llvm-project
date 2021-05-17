@@ -308,6 +308,10 @@ public:
   /// ppc long double), this method returns -1.
   int getFPMantissaWidth() const;
 
+  /// Return whether the type is IEEE compatible, as defined by the eponymous
+  /// method in APFloat.
+  bool isIEEE() const { return APFloat::getZero(getFltSemantics()).isIEEE(); }
+
   /// If this is a vector type, return the element type, otherwise return
   /// 'this'.
   inline Type *getScalarType() const {
@@ -375,6 +379,11 @@ public:
     assert(getTypeID() == PointerTyID);
     return ContainedTys[0];
   }
+
+  /// Given vector type, change the element type,
+  /// whilst keeping the old number of elements.
+  /// For non-vectors simply returns \p EltTy.
+  inline Type *getWithNewType(Type *EltTy) const;
 
   /// Given an integer or vector type, change the lane bitwidth to NewBitwidth,
   /// whilst keeping the old number of lanes.

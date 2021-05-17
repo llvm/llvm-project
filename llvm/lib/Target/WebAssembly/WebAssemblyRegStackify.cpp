@@ -20,11 +20,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h" // for WebAssembly::ARGUMENT_*
+#include "Utils/WebAssemblyUtilities.h"
 #include "WebAssembly.h"
 #include "WebAssemblyDebugValueManager.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
-#include "WebAssemblyUtilities.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -121,14 +121,9 @@ static void convertImplicitDefToConstZero(MachineInstr *MI,
         Type::getDoubleTy(MF.getFunction().getContext())));
     MI->addOperand(MachineOperand::CreateFPImm(Val));
   } else if (RegClass == &WebAssembly::V128RegClass) {
-    // TODO: Replace this with v128.const 0 once that is supported in V8
-    Register TempReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
-    MI->setDesc(TII->get(WebAssembly::SPLAT_I32x4));
-    MI->addOperand(MachineOperand::CreateReg(TempReg, false));
-    MachineInstr *Const = BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-                                  TII->get(WebAssembly::CONST_I32), TempReg)
-                              .addImm(0);
-    LIS.InsertMachineInstrInMaps(*Const);
+    MI->setDesc(TII->get(WebAssembly::CONST_V128_I64x2));
+    MI->addOperand(MachineOperand::CreateImm(0));
+    MI->addOperand(MachineOperand::CreateImm(0));
   } else {
     llvm_unreachable("Unexpected reg class");
   }
@@ -342,7 +337,7 @@ static bool isSafeToMove(const MachineOperand *Def, const MachineOperand *Use,
   // instruction in which the current value is used, we cannot
   // stackify. Stackifying in this case would require that def moving below the
   // current def in the stack, which cannot be achieved, even with locals.
-  for (const auto &SubsequentDef : drop_begin(DefI->defs(), 1)) {
+  for (const auto &SubsequentDef : drop_begin(DefI->defs())) {
     for (const auto &PriorUse : UseI->uses()) {
       if (&PriorUse == Use)
         break;
@@ -701,7 +696,7 @@ public:
   MachineOperand &pop() {
     RangeTy &Range = Worklist.back();
     MachineOperand &Op = *Range.begin();
-    Range = drop_begin(Range, 1);
+    Range = drop_begin(Range);
     if (Range.empty())
       Worklist.pop_back();
     assert((Worklist.empty() || !Worklist.back().empty()) &&

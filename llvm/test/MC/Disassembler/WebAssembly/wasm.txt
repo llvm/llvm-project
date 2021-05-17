@@ -43,8 +43,7 @@
 0xFD 0x83 0x01
 
 # Including non-canonical LEB128 encodings
-# CHECK: i16x8.any_true
-# CHECK-NOT: i16x8.neg
+# CHECK: i16x8.q15mulr_sat_s
 0xFD 0x82 0x81 0x80 0x80 0x80 0x80 0x00
 
 # Check br_table, which has its own operand type.

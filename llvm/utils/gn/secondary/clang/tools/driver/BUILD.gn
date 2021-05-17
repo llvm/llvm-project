@@ -86,7 +86,7 @@ executable("clang") {
     # clang.  This is different from the CMake build, which requires devs to
     # explicitly build the "libcxx" target (which also needlessly compiles the
     # libcxx sources) to get a working compiler.
-    deps += [ "//libcxx/include" ]
+    deps += [ "//libcxx/include:copy_headers" ]
   }
   sources = [
     "cc1_main.cpp",

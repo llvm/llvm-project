@@ -41,3 +41,38 @@ entry:
 ; GISEL-LABEL: clrsb64
 ; GISEL:   cls [[TEMP:x[0-9]+]], [[TEMP]]
 }
+
+; Function Attrs: nounwind ssp
+; FALLBACK-NOT: remark{{.*}}clrsb32_zeroundef
+define i32 @clrsb32_zeroundef(i32 %x) #2 {
+entry:
+  %shr = ashr i32 %x, 31
+  %xor = xor i32 %shr, %x
+  %mul = shl i32 %xor, 1
+  %add = or i32 %mul, 1
+  %0 = tail call i32 @llvm.ctlz.i32(i32 %add, i1 true)
+
+  ret i32 %0
+; CHECK-LABEL: clrsb32_zeroundef
+; CHECK:   cls [[TEMP:w[0-9]+]], [[TEMP]]
+
+; GISEL-LABEL: clrsb32_zeroundef
+; GISEL: cls [[TEMP:w[0-9]+]], [[TEMP]]
+}
+
+; Function Attrs: nounwind ssp
+; FALLBACK-NOT: remark{{.*}}clrsb64
+define i64 @clrsb64_zeroundef(i64 %x) #3 {
+entry:
+  %shr = ashr i64 %x, 63
+  %xor = xor i64 %shr, %x
+  %mul = shl nsw i64 %xor, 1
+  %add = or i64 %mul, 1
+  %0 = tail call i64 @llvm.ctlz.i64(i64 %add, i1 true)
+
+  ret i64 %0
+; CHECK-LABEL: clrsb64_zeroundef
+; CHECK:   cls [[TEMP:x[0-9]+]], [[TEMP]]
+; GISEL-LABEL: clrsb64_zeroundef
+; GISEL:   cls [[TEMP:x[0-9]+]], [[TEMP]]
+}

@@ -5,6 +5,7 @@ def StdC : StandardSpec<"stdc"> {
   RestrictedPtrType FILERestrictedPtr = RestrictedPtrType<FILE>;
   NamedType StructTmType = NamedType<"struct tm">;
   PtrType StructTmPtr = PtrType<StructTmType>;
+  PtrType TimeTTypePtr = PtrType<TimeTType>;
 
   HeaderSpec Assert = HeaderSpec<
       "assert.h",
@@ -96,6 +97,12 @@ def StdC : StandardSpec<"stdc"> {
       ]
   >;
 
+  NamedType FEnvT = NamedType<"fenv_t">;
+  PtrType FEnvTPtr = PtrType<FEnvT>;
+  ConstType ConstFEnvTPtr = ConstType<FEnvTPtr>;
+  NamedType FExceptT = NamedType<"fexcept_t">;
+  PtrType FExceptTPtr = PtrType<FExceptT>;
+  ConstType ConstFExceptTPtr = ConstType<FExceptTPtr>;
   HeaderSpec Fenv = HeaderSpec<
       "fenv.h",
       [
@@ -111,7 +118,10 @@ def StdC : StandardSpec<"stdc"> {
           Macro<"FE_TOWARDZERO">,
           Macro<"FE_UPWARD">
       ],
-      [], // Types
+      [
+          NamedType<"fenv_t">,
+          NamedType<"fexcept_t">,
+      ], // Types
       [], // Enumerations
       [
           FunctionSpec<
@@ -138,6 +148,36 @@ def StdC : StandardSpec<"stdc"> {
               "fegetround",
               RetValSpec<IntType>,
               []
+          >,
+          FunctionSpec<
+              "fegetenv",
+              RetValSpec<IntType>,
+              [ArgSpec<FEnvTPtr>]
+          >,
+          FunctionSpec<
+              "fesetenv",
+              RetValSpec<IntType>,
+              [ArgSpec<ConstFEnvTPtr>]
+          >,
+          FunctionSpec<
+              "fegetexceptflag",
+              RetValSpec<IntType>,
+              [ArgSpec<FExceptTPtr>, ArgSpec<IntType>]
+          >,
+          FunctionSpec<
+              "fesetexceptflag",
+              RetValSpec<IntType>,
+              [ArgSpec<ConstFExceptTPtr>, ArgSpec<IntType>]
+          >,
+          FunctionSpec<
+              "feholdexcept",
+              RetValSpec<IntType>,
+              [ArgSpec<FEnvTPtr>]
+          >,
+          FunctionSpec<
+              "feupdateenv",
+              RetValSpec<IntType>,
+              [ArgSpec<ConstFEnvTPtr>]
           >,
       ]
   >;
@@ -322,6 +362,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"fmaxf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
           FunctionSpec<"fmaxl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
 
+          FunctionSpec<"fma", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
           FunctionSpec<"fmaf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>, ArgSpec<FloatType>]>,
 
           FunctionSpec<"frexp", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<IntPtr>]>,
@@ -347,8 +388,11 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"modff", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatPtr>]>,
           FunctionSpec<"modfl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoublePtr>]>,
 
+          FunctionSpec<"cos", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"cosf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
+          FunctionSpec<"sin", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"sinf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
+          FunctionSpec<"tan", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
 
           FunctionSpec<"expf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"exp2f", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
@@ -558,6 +602,32 @@ def StdC : StandardSpec<"stdc"> {
       ],
       [], // Enumerations
       [
+          FunctionSpec<
+              "asctime",
+              RetValSpec<CharPtr>,
+              [ArgSpec<StructTmPtr>]
+          >,
+          FunctionSpec<
+              "asctime_r",
+              RetValSpec<CharPtr>,
+              [
+                  ArgSpec<StructTmPtr>,
+                  ArgSpec<CharPtr>,
+              ]
+          >,
+          FunctionSpec<
+              "gmtime",
+              RetValSpec<StructTmPtr>,
+              [ArgSpec<TimeTTypePtr>]
+          >,
+          FunctionSpec<
+              "gmtime_r",
+              RetValSpec<StructTmPtr>,
+              [
+                  ArgSpec<TimeTTypePtr>,
+                  ArgSpec<StructTmPtr>,
+              ]
+          >,
           FunctionSpec<
               "mktime",
               RetValSpec<TimeTType>,

@@ -64,12 +64,14 @@ __isl_give isl_mat *isl_mat_alloc(isl_ctx *ctx,
 	mat->block = isl_blk_alloc(ctx, n_row * n_col);
 	if (isl_blk_is_error(mat->block))
 		goto error;
-	mat->row = isl_alloc_array(ctx, isl_int *, n_row);
+	mat->row = isl_calloc_array(ctx, isl_int *, n_row);
 	if (n_row && !mat->row)
 		goto error;
 
-	for (i = 0; i < n_row; ++i)
-		mat->row[i] = mat->block.data + i * n_col;
+	if (n_col != 0) {
+		for (i = 0; i < n_row; ++i)
+			mat->row[i] = mat->block.data + i * n_col;
+	}
 
 	mat->ctx = ctx;
 	isl_ctx_ref(ctx);
@@ -648,9 +650,6 @@ __isl_give isl_mat *isl_mat_left_hermite(__isl_take isl_mat *M, int neg,
 		*Q = NULL;
 	if (!M)
 		goto error;
-	M = isl_mat_cow(M);
-	if (!M)
-		goto error;
 	if (U) {
 		*U = isl_mat_identity(M->ctx, M->n_col);
 		if (!*U)
@@ -661,6 +660,13 @@ __isl_give isl_mat *isl_mat_left_hermite(__isl_take isl_mat *M, int neg,
 		if (!*Q)
 			goto error;
 	}
+
+	if (M->n_col == 0)
+		return M;
+
+	M = isl_mat_cow(M);
+	if (!M)
+		goto error;
 
 	col = 0;
 	isl_int_init(c);

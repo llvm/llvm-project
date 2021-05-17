@@ -90,7 +90,7 @@ in order to update the last commit with all pending changes.
 
 To get a patch accepted, it has to be reviewed by the LLVM community. This can
 be done using `LLVM's Phabricator`_ or the llvm-commits mailing list.
-Please  follow :ref:`Phabricator#requesting-a-review-via-the-web-interface <phabricator-request-review-web>`
+Please  follow :ref:`Phabricator#phabricator-reviews <phabricator-reviews>`
 to request a review using Phabricator.
 
 To make sure the right people see your patch, please select suitable reviewers
@@ -152,8 +152,8 @@ of LLVM's high-level design, as well as its internals:
 .. _irc.oftc.net: irc://irc.oftc.net/llvm
 .. _beginner keyword: https://bugs.llvm.org/buglist.cgi?bug_status=NEW&bug_status=REOPENED&keywords=beginner%2C%20&keywords_type=allwords&list_id=130748&query_format=advanced&resolution=---
 .. _bug tracker: https://bugs.llvm.org
-.. _clang-format-diff.py: https://reviews.llvm.org/source/clang/browse/cfe/trunk/tools/clang-format/clang-format-diff.py
-.. _git-clang-format: https://reviews.llvm.org/source/clang/browse/cfe/trunk/tools/clang-format/git-clang-format
+.. _clang-format-diff.py: https://reviews.llvm.org/source/llvm-github/browse/main/clang/tools/clang-format/clang-format-diff.py
+.. _git-clang-format: https://reviews.llvm.org/source/llvm-github/browse/main/clang/tools/clang-format/git-clang-format
 .. _LLVM's Phabricator: https://reviews.llvm.org/
 .. _LLVM's Open Projects page: https://llvm.org/OpenProjects.html#what
 .. _LLVM Developer's mailing list: http://lists.llvm.org/mailman/listinfo/llvm-dev

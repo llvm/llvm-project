@@ -85,22 +85,20 @@ define arm_aapcs_vfpcc <8 x i16> @vqdmulh_i16_c(<8 x i16> %s0, <8 x i16> %s1) {
 ; CHECK-NEXT:    vmov.u16 r0, q1[3]
 ; CHECK-NEXT:    vmov.u16 r1, q1[1]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r1, r0
-; CHECK-NEXT:    vmov.u16 r1, q2[4]
 ; CHECK-NEXT:    vmullb.s16 q0, q3, q0
 ; CHECK-NEXT:    vmov.i32 q3, #0x7fff
 ; CHECK-NEXT:    vshl.i32 q0, q0, #10
 ; CHECK-NEXT:    vshr.s32 q0, q0, #10
 ; CHECK-NEXT:    vshr.s32 q0, q0, #15
 ; CHECK-NEXT:    vmin.s32 q4, q0, q3
-; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    vmov r0, r1, d8
 ; CHECK-NEXT:    vmov.16 q0[0], r0
-; CHECK-NEXT:    vmov r0, s17
-; CHECK-NEXT:    vmov.16 q0[1], r0
-; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    vmov.16 q0[1], r1
+; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    vmov.16 q0[2], r0
-; CHECK-NEXT:    vmov r0, s19
-; CHECK-NEXT:    vmov.16 q0[3], r0
 ; CHECK-NEXT:    vmov.u16 r0, q2[6]
+; CHECK-NEXT:    vmov.16 q0[3], r1
+; CHECK-NEXT:    vmov.u16 r1, q2[4]
 ; CHECK-NEXT:    vmov q4[2], q4[0], r1, r0
 ; CHECK-NEXT:    vmov.u16 r0, q2[7]
 ; CHECK-NEXT:    vmov.u16 r1, q2[5]
@@ -116,14 +114,12 @@ define arm_aapcs_vfpcc <8 x i16> @vqdmulh_i16_c(<8 x i16> %s0, <8 x i16> %s1) {
 ; CHECK-NEXT:    vshr.s32 q1, q1, #10
 ; CHECK-NEXT:    vshr.s32 q1, q1, #15
 ; CHECK-NEXT:    vmin.s32 q1, q1, q3
-; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vmov r0, r1, d2
 ; CHECK-NEXT:    vmov.16 q0[4], r0
-; CHECK-NEXT:    vmov r0, s5
-; CHECK-NEXT:    vmov.16 q0[5], r0
-; CHECK-NEXT:    vmov r0, s6
+; CHECK-NEXT:    vmov.16 q0[5], r1
+; CHECK-NEXT:    vmov r0, r1, d3
 ; CHECK-NEXT:    vmov.16 q0[6], r0
-; CHECK-NEXT:    vmov r0, s7
-; CHECK-NEXT:    vmov.16 q0[7], r0
+; CHECK-NEXT:    vmov.16 q0[7], r1
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:
@@ -140,55 +136,7 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @vqdmulh_i16_interleaved(<8 x i16> %s0, <8 x i16> %s1) {
 ; CHECK-LABEL: vqdmulh_i16_interleaved:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.u16 r0, q0[0]
-; CHECK-NEXT:    vmov.16 q2[0], r0
-; CHECK-NEXT:    vmov.u16 r0, q0[2]
-; CHECK-NEXT:    vmov.16 q2[1], r0
-; CHECK-NEXT:    vmov.u16 r0, q0[4]
-; CHECK-NEXT:    vmov.16 q2[2], r0
-; CHECK-NEXT:    vmov.u16 r0, q0[6]
-; CHECK-NEXT:    vmov.16 q2[3], r0
-; CHECK-NEXT:    vmov.u16 r0, q0[1]
-; CHECK-NEXT:    vmov.16 q2[4], r0
-; CHECK-NEXT:    vmov.u16 r0, q0[3]
-; CHECK-NEXT:    vmov.16 q2[5], r0
-; CHECK-NEXT:    vmov.u16 r0, q0[5]
-; CHECK-NEXT:    vmov.16 q2[6], r0
-; CHECK-NEXT:    vmov.u16 r0, q0[7]
-; CHECK-NEXT:    vmov.16 q2[7], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[0]
-; CHECK-NEXT:    vmov.16 q0[0], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[2]
-; CHECK-NEXT:    vmov.16 q0[1], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[4]
-; CHECK-NEXT:    vmov.16 q0[2], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[6]
-; CHECK-NEXT:    vmov.16 q0[3], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[1]
-; CHECK-NEXT:    vmov.16 q0[4], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[3]
-; CHECK-NEXT:    vmov.16 q0[5], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[5]
-; CHECK-NEXT:    vmov.16 q0[6], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[7]
-; CHECK-NEXT:    vmov.16 q0[7], r0
-; CHECK-NEXT:    vqdmulh.s16 q1, q0, q2
-; CHECK-NEXT:    vmov.u16 r0, q1[0]
-; CHECK-NEXT:    vmov.16 q0[0], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[4]
-; CHECK-NEXT:    vmov.16 q0[1], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[1]
-; CHECK-NEXT:    vmov.16 q0[2], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[5]
-; CHECK-NEXT:    vmov.16 q0[3], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[2]
-; CHECK-NEXT:    vmov.16 q0[4], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[6]
-; CHECK-NEXT:    vmov.16 q0[5], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[3]
-; CHECK-NEXT:    vmov.16 q0[6], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[7]
-; CHECK-NEXT:    vmov.16 q0[7], r0
+; CHECK-NEXT:    vqdmulh.s16 q0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = shufflevector <8 x i16> %s0, <8 x i16> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
@@ -248,7 +196,6 @@ define void @vqdmulh_loop_i8(i8* nocapture readonly %x, i8* nocapture readonly %
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    mov.w lr, #64
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB8_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrb.u8 q0, [r0], #16
@@ -293,7 +240,6 @@ define void @vqdmulh_loop_i16(i16* nocapture readonly %x, i16* nocapture readonl
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    mov.w lr, #128
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB9_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrh.u16 q0, [r0], #16
@@ -338,7 +284,6 @@ define void @vqdmulh_loop_i32(i32* nocapture readonly %x, i32* nocapture readonl
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    mov.w lr, #256
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB10_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #16

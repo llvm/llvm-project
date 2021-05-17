@@ -11,11 +11,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMTargetMachine.h"
+#include "ARMTargetTransformInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/Support/CommandLine.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "arm-selectiondag-info"
+
+cl::opt<TPLoop::MemTransfer> EnableMemtransferTPLoop(
+    "arm-memtransfer-tploop", cl::Hidden,
+    cl::desc("Control conversion of memcpy to "
+             "Tail predicated loops (WLSTP)"),
+    cl::init(TPLoop::ForceDisabled),
+    cl::values(clEnumValN(TPLoop::ForceDisabled, "force-disabled",
+                          "Don't convert memcpy to TP loop."),
+               clEnumValN(TPLoop::ForceEnabled, "force-enabled",
+                          "Always convert memcpy to TP loop."),
+               clEnumValN(TPLoop::Allow, "allow",
+                          "Allow (may be subject to certain conditions) "
+                          "conversion of memcpy to TP loop.")));
 
 // Emit, if possible, a specialized version of the given Libcall. Typically this
 // means selecting the appropriately aligned version, but we also convert memset
@@ -124,19 +139,52 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
   return CallResult.second;
 }
 
+static bool shouldGenerateInlineTPLoop(const ARMSubtarget &Subtarget,
+                                       const SelectionDAG &DAG,
+                                       ConstantSDNode *ConstantSize,
+                                       Align Alignment, bool IsMemcpy) {
+  auto &F = DAG.getMachineFunction().getFunction();
+  if (!EnableMemtransferTPLoop)
+    return false;
+  if (EnableMemtransferTPLoop == TPLoop::ForceEnabled)
+    return true;
+  // Do not generate inline TP loop if optimizations is disabled,
+  // or if optimization for size (-Os or -Oz) is on.
+  if (F.hasOptNone() || F.hasOptSize())
+    return false;
+  // If cli option is unset, for memset always generate inline TP.
+  // For memcpy, check some conditions
+  if (!IsMemcpy)
+    return true;
+  if (!ConstantSize && Alignment >= Align(4))
+    return true;
+  if (ConstantSize &&
+      ConstantSize->getZExtValue() > Subtarget.getMaxInlineSizeThreshold() &&
+      ConstantSize->getZExtValue() <
+          Subtarget.getMaxMemcpyTPInlineSizeThreshold())
+    return true;
+  return false;
+}
+
 SDValue ARMSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, Align Alignment, bool isVolatile, bool AlwaysInline,
     MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
   const ARMSubtarget &Subtarget =
       DAG.getMachineFunction().getSubtarget<ARMSubtarget>();
+  ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
+
+  if (Subtarget.hasMVEIntegerOps() &&
+      shouldGenerateInlineTPLoop(Subtarget, DAG, ConstantSize, Alignment, true))
+    return DAG.getNode(ARMISD::MEMCPYLOOP, dl, MVT::Other, Chain, Dst, Src,
+                       DAG.getZExtOrTrunc(Size, dl, MVT::i32));
+
   // Do repeated 4-byte loads and stores. To be improved.
   // This requires 4-byte alignment.
   if (Alignment < Align(4))
     return SDValue();
   // This requires the copy size to be a constant, preferably
   // within a subtarget-specific limit.
-  ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
   if (!ConstantSize)
     return EmitSpecializedLibcall(DAG, dl, Chain, Dst, Src, Size,
                                   Alignment.value(), RTLIB::MEMCPY);
@@ -250,6 +298,22 @@ SDValue ARMSelectionDAGInfo::EmitTargetCodeForMemset(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, Align Alignment, bool isVolatile,
     MachinePointerInfo DstPtrInfo) const {
+
+  const ARMSubtarget &Subtarget =
+      DAG.getMachineFunction().getSubtarget<ARMSubtarget>();
+
+  ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
+
+  // Generate TP loop for llvm.memset
+  if (Subtarget.hasMVEIntegerOps() &&
+      shouldGenerateInlineTPLoop(Subtarget, DAG, ConstantSize, Alignment,
+                                 false)) {
+    Src = DAG.getSplatBuildVector(MVT::v16i8, dl,
+                                  DAG.getNode(ISD::TRUNCATE, dl, MVT::i8, Src));
+    return DAG.getNode(ARMISD::MEMSETLOOP, dl, MVT::Other, Chain, Dst, Src,
+                       DAG.getZExtOrTrunc(Size, dl, MVT::i32));
+  }
+
   return EmitSpecializedLibcall(DAG, dl, Chain, Dst, Src, Size,
                                 Alignment.value(), RTLIB::MEMSET);
 }

@@ -46,6 +46,11 @@ def main():
     platform = get_platform()
     if not platform:
         print('no prebuilt binary for', sys.platform)
+        print('build it yourself with:')
+        print('  rm -rf /tmp/gn &&')
+        print('  pushd /tmp && git clone https://gn.googlesource.com/gn &&')
+        print('  cd gn && build/gen.py && ninja -C out gn && popd &&')
+        print('  cp /tmp/gn/out/gn somewhere/on/PATH')
         return 1
     dirname = os.path.join(os.path.dirname(__file__), 'bin', platform)
     if not os.path.exists(dirname):

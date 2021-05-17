@@ -764,7 +764,7 @@ void RegPressureTracker::bumpDeadDefs(ArrayRef<RegisterMaskPair> DeadDefs) {
 /// instruction independent of liveness.
 void RegPressureTracker::recede(const RegisterOperands &RegOpers,
                                 SmallVectorImpl<RegisterMaskPair> *LiveUses) {
-  assert(!CurrPos->isDebugInstr());
+  assert(!CurrPos->isDebugOrPseudoInstr());
 
   // Boost pressure for all dead defs together.
   bumpDeadDefs(RegOpers.DeadDefs);
@@ -863,7 +863,7 @@ void RegPressureTracker::recedeSkipDebugValues() {
   CurrPos = prev_nodbg(CurrPos, MBB->begin());
 
   SlotIndex SlotIdx;
-  if (RequireIntervals && !CurrPos->isDebugInstr())
+  if (RequireIntervals && !CurrPos->isDebugOrPseudoInstr())
     SlotIdx = LIS->getInstructionIndex(*CurrPos).getRegSlot();
 
   // Open the top of the region using slot indexes.
@@ -873,9 +873,9 @@ void RegPressureTracker::recedeSkipDebugValues() {
 
 void RegPressureTracker::recede(SmallVectorImpl<RegisterMaskPair> *LiveUses) {
   recedeSkipDebugValues();
-  if (CurrPos->isDebugValue()) {
-    // It's possible to only have debug_value instructions and hit the start of
-    // the block.
+  if (CurrPos->isDebugValue() || CurrPos->isPseudoProbe()) {
+    // It's possible to only have debug_value and pseudo probe instructions and
+    // hit the start of the block.
     assert(CurrPos == MBB->begin());
     return;
   }
@@ -1041,7 +1041,7 @@ static void computeMaxPressureDelta(ArrayRef<unsigned> OldMaxPressureVec,
 /// This is intended for speculative queries. It leaves pressure inconsistent
 /// with the current position, so must be restored by the caller.
 void RegPressureTracker::bumpUpwardPressure(const MachineInstr *MI) {
-  assert(!MI->isDebugInstr() && "Expect a nondebug instruction.");
+  assert(!MI->isDebugOrPseudoInstr() && "Expect a nondebug instruction.");
 
   SlotIndex SlotIdx;
   if (RequireIntervals)
@@ -1282,7 +1282,7 @@ LaneBitmask RegPressureTracker::getLiveThroughAt(Register RegUnit,
 /// This is intended for speculative queries. It leaves pressure inconsistent
 /// with the current position, so must be restored by the caller.
 void RegPressureTracker::bumpDownwardPressure(const MachineInstr *MI) {
-  assert(!MI->isDebugInstr() && "Expect a nondebug instruction.");
+  assert(!MI->isDebugOrPseudoInstr() && "Expect a nondebug instruction.");
 
   SlotIndex SlotIdx;
   if (RequireIntervals)

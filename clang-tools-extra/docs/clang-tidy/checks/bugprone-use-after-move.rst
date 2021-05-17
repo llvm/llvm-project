@@ -24,6 +24,9 @@ move and before the use. For example, no warning will be output for this code:
     str = "Greetings, stranger!\n";
     std::cout << str;
 
+Subsections below explain more precisely what exactly the check considers to be
+a move, use, and reinitialization.
+
 The check takes control flow into account. A warning is only emitted if the use
 can be reached from the move. This means that the following code does not
 produce a warning:
@@ -60,7 +63,12 @@ mutually exclusive. For example (assuming that ``i`` is an int):
     }
 
 In this case, the check will erroneously produce a warning, even though it is
-not possible for both the move and the use to be executed.
+not possible for both the move and the use to be executed. More formally, the
+analysis is `flow-sensitive but not path-sensitive
+<https://en.wikipedia.org/wiki/Data-flow_analysis#Sensitivities>`_.
+
+Silencing erroneous warnings
+----------------------------
 
 An erroneous warning can be silenced by reinitializing the object after the
 move:
@@ -75,8 +83,30 @@ move:
       std::cout << str;
     }
 
-Subsections below explain more precisely what exactly the check considers to be
-a move, use, and reinitialization.
+If you want to avoid the overhead of actually reinitializing the object, you can
+create a dummy function that causes the check to assume the object was
+reinitialized:
+
+.. code-block:: c++
+
+    template <class T>
+    void IS_INITIALIZED(T&) {}
+
+You can use this as follows:
+
+.. code-block:: c++
+
+    if (i == 1) {
+      messages.emplace_back(std::move(str));
+    }
+    if (i == 2) {
+      IS_INITIALIZED(str);
+      std::cout << str;
+    }
+
+The check will not output a warning in this case because passing the object to a
+function as a non-const pointer or reference counts as a reinitialization (see section
+`Reinitialization`_ below).
 
 Unsequenced moves, uses, and reinitializations
 ----------------------------------------------
@@ -138,6 +168,10 @@ that a move always takes place:
 
 The check will assume that the last line causes a move, even though, in this
 particular case, it does not. Again, this is intentional.
+
+There is one special case: A call to ``std::move`` inside a ``try_emplace`` call
+is conservatively assumed not to move. This is to avoid spurious warnings, as
+the check has no way to reason about the ``bool`` returned by ``try_emplace``.
 
 When analyzing the order in which moves, uses and reinitializations happen (see
 section `Unsequenced moves, uses, and reinitializations`_), the move is assumed

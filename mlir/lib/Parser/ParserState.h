@@ -48,9 +48,10 @@ struct SymbolState {
 /// such as the current lexer position etc.
 struct ParserState {
   ParserState(const llvm::SourceMgr &sourceMgr, MLIRContext *ctx,
-              SymbolState &symbols)
+              SymbolState &symbols, AsmParserState *asmState)
       : context(ctx), lex(sourceMgr, ctx), curToken(lex.lexToken()),
-        symbols(symbols), parserDepth(symbols.nestedParserLocs.size()) {
+        symbols(symbols), parserDepth(symbols.nestedParserLocs.size()),
+        asmState(asmState) {
     // Set the top level lexer for the symbol state if one doesn't exist.
     if (!symbols.topLevelLexer)
       symbols.topLevelLexer = &lex;
@@ -77,6 +78,10 @@ struct ParserState {
 
   /// The depth of this parser in the nested parsing stack.
   size_t parserDepth;
+
+  /// An optional pointer to a struct containing high level parser state to be
+  /// populated during parsing.
+  AsmParserState *asmState;
 };
 
 } // end namespace detail

@@ -16,14 +16,16 @@
 // CHECK-NEXT:   AddressAlignment: 1
 // CHECK-NEXT:   EntrySize: 0
 // CHECK-NEXT:   SectionData (
-// CHECK-NEXT:     0000: 03050102
+// CHECK-NEXT:     0000: 03050201
 // CHECK-NEXT:   )
 // CHECK-NEXT: }
 // CHECK-NEXT: Section {
 // CHECK-NEXT:   Index: 4
 // CHECK-NEXT:   Name: .symtab
 
-// CHECK:        Name: local
+// CHECK:      Symbol {
+// CHECK:      Symbol {
+// CHECK-NEXT:   Name:
 // CHECK-NEXT:   Value:
 // CHECK-NEXT:   Size:
 // CHECK-NEXT:   Binding:
@@ -32,7 +34,7 @@
 // CHECK-NEXT:   Section: [[SEC:.*]]
 // CHECK-NEXT: }
 // CHECK-NEXT: Symbol {
-// CHECK-NEXT:   Name:
+// CHECK-NEXT:   Name: local
 // CHECK-NEXT:   Value:
 // CHECK-NEXT:   Size:
 // CHECK-NEXT:   Binding:
@@ -64,20 +66,20 @@
 // CHECK:      Addrsig [
 // CHECK-NEXT:   Sym: g1 (3)
 // CHECK-NEXT:   Sym: g3 (5)
-// CHECK-NEXT:   Sym: local (1)
-// CHECK-NEXT:   Sym:  (2)
+// CHECK-NEXT:   Sym: local (2)
+// CHECK-NEXT:   Sym:  (1)
 // CHECK-NEXT: ]
 
-// ASM: .addrsig
+// ASM:      .addrsig
+// ASM-NEXT: .addrsig_sym g1
 .addrsig
-// ASM: .addrsig_sym g1
 .addrsig_sym g1
 .globl g2
-// ASM: .addrsig_sym g3
+// ASM:      .addrsig_sym g3
+// ASM-NEXT: .addrsig_sym local
+// ASM-NEXT: .addrsig_sym .Llocal
 .addrsig_sym g3
-// ASM: .addrsig_sym local
 .addrsig_sym local
-// ASM: .addrsig_sym .Llocal
 .addrsig_sym .Llocal
 
 local:

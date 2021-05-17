@@ -12,8 +12,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ]
 
 ; CHECK-NOT: @global =
-; CHECK: @global.0 = private constant [2 x i8* ()*] [i8* ()* @f1, i8* ()* @f2], !type [[T1:![0-9]+]], !type [[T2:![0-9]+]], !type [[T3:![0-9]+]], !vcall_visibility [[VIS:![0-9]+$]]
-; CHECK: @global.1 = private constant [1 x i8* ()*] [i8* ()* @f3], !type [[T4:![0-9]+]], !type [[T5:![0-9]+]], !vcall_visibility [[VIS$]]
+; CHECK: @global.0 = private constant [2 x i8* ()*] [i8* ()* @f1, i8* ()* @f2], !type [[T1:![0-9]+]], !type [[T2:![0-9]+]], !type [[T3:![0-9]+]], !vcall_visibility [[VIS:![0-9]+]]{{$}}
+; CHECK: @global.1 = private constant [1 x i8* ()*] [i8* ()* @f3], !type [[T4:![0-9]+]], !type [[T5:![0-9]+]], !vcall_visibility [[VIS]]{{$}}
 ; CHECK-NOT: @global =
 @global = internal constant { [2 x i8* ()*], [1 x i8* ()*] } {
   [2 x i8* ()*] [i8* ()* @f1, i8* ()* @f2],

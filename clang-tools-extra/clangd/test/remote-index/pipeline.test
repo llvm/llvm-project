@@ -3,6 +3,11 @@
 # RUN: %python %S/pipeline_helper.py --input-file-name=%s --project-root=%S --index-file=%t.idx | FileCheck %s
 # REQUIRES: clangd-remote-index
 
+#      CHECK:  "uptime_seconds": "{{.*}}",
+# CHECK-NEXT:  "index_age_seconds": "{{.*}}",
+# CHECK-NEXT:  "index_commit_hash": "{{.*}}",
+# CHECK-NEXT:  "index_link": "{{.*}}"
+
 {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
 #      CHECK:  "id": 0,
 # CHECK-NEXT:  "jsonrpc": "2.0",

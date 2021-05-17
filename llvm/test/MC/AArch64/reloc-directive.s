@@ -8,6 +8,10 @@
 # PRINT: .reloc 0, R_AARCH64_ABS64, .data+2
 # PRINT: .reloc 0, R_AARCH64_TLSDESC, foo+3
 # PRINT: .reloc 0, R_AARCH64_IRELATIVE, 5
+# PRINT: .reloc 0, BFD_RELOC_NONE, 9
+# PRINT: .reloc 0, BFD_RELOC_16, 9
+# PRINT: .reloc 0, BFD_RELOC_32, 9
+# PRINT: .reloc 0, BFD_RELOC_64, 9
 .text
   ret
   nop
@@ -19,6 +23,11 @@
   .reloc 0, R_AARCH64_ABS64, .data+2
   .reloc 0, R_AARCH64_TLSDESC, foo+3
   .reloc 0, R_AARCH64_IRELATIVE, 5
+
+  .reloc 0, BFD_RELOC_NONE, 9
+  .reloc 0, BFD_RELOC_16, 9
+  .reloc 0, BFD_RELOC_32, 9
+  .reloc 0, BFD_RELOC_64, 9
 
 .data
 .globl foo
@@ -33,3 +42,7 @@ foo:
 # CHECK-NEXT: 0x0 R_AARCH64_ABS64 .data 0x2
 # CHECK-NEXT: 0x0 R_AARCH64_TLSDESC foo 0x3
 # CHECK-NEXT: 0x0 R_AARCH64_IRELATIVE - 0x5
+# CHECK-NEXT: 0x0 R_AARCH64_NONE - 0x9
+# CHECK-NEXT: 0x0 R_AARCH64_ABS16 - 0x9
+# CHECK-NEXT: 0x0 R_AARCH64_ABS32 - 0x9
+# CHECK-NEXT: 0x0 R_AARCH64_ABS64 - 0x9

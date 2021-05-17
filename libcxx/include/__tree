@@ -2410,7 +2410,7 @@ __tree<_Tp, _Compare, _Allocator>::__node_handle_merge_multi(_Tree& __source)
     }
 }
 
-#endif  // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER > 14
 
 template <class _Tp, class _Compare, class _Allocator>
 typename __tree<_Tp, _Compare, _Allocator>::iterator
@@ -2743,4 +2743,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif  // _LIBCPP___TREE
+#endif // _LIBCPP___TREE

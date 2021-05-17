@@ -59,7 +59,3 @@ Status OptionValueRegex::SetValueFromString(llvm::StringRef value,
   }
   return error;
 }
-
-lldb::OptionValueSP OptionValueRegex::DeepCopy() const {
-  return OptionValueSP(new OptionValueRegex(m_regex.GetText().str().c_str()));
-}

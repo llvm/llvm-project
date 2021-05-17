@@ -86,7 +86,7 @@ Finally, a `Block` has a list of arguments, and holds a list of `Operation`s:
 ```
 
 The code for the pass is available
-[here in the repo](https://github.com/llvm/llvm-project/blob/master/mlir/test/lib/IR/TestPrintNesting.cpp)
+[here in the repo](https://github.com/llvm/llvm-project/blob/main/mlir/test/lib/IR/TestPrintNesting.cpp)
 and can be exercised with `mlir-opt -test-print-nesting`.
 
 ### Example
@@ -110,7 +110,6 @@ llvm-project/mlir/test/IR/print-ir-nesting.mlir`:
     "dialect.innerop6"() : () -> ()
     "dialect.innerop7"() : () -> ()
   }) {"other attribute" = 42 : i64} : () -> ()
-  "module_terminator"() : () -> ()
 }) : () -> ()
 ```
 
@@ -147,7 +146,6 @@ visiting op: 'module' with 0 operands and 0 results
              0 nested regions:
             visiting op: 'dialect.innerop7' with 0 operands and 0 results
              0 nested regions:
-      visiting op: 'module_terminator' with 0 operands and 0 results
        0 nested regions:
 ```
 
@@ -273,7 +271,7 @@ results and print informations about them:
 ```
 
 The illustrating code for this pass is available
-[here in the repo](https://github.com/llvm/llvm-project/blob/master/mlir/test/lib/IR/TestPrintDefUse.cpp)
+[here in the repo](https://github.com/llvm/llvm-project/blob/main/mlir/test/lib/IR/TestPrintDefUse.cpp)
 and can be exercised with `mlir-opt -test-print-defuse`.
 
 The chaining of `Value`s and their uses can be viewed as following:

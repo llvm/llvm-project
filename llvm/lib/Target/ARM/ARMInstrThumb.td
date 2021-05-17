@@ -1659,19 +1659,16 @@ def : T1Pat<(post_store tGPR:$Rt, tGPR:$Rn, 4),
             (tSTMIA_UPD tGPR:$Rn, tGPR:$Rt)>;
 
 // If it's impossible to use [r,r] address mode for sextload, select to
-// ldr{b|h} + sxt{b|h} instead.
-def : T1Pat<(sextloadi8 t_addrmode_is1:$addr),
-            (tSXTB (tLDRBi t_addrmode_is1:$addr))>,
+// ldsr{b|h} r, 0 instead, in a hope that the mov 0 will be more likely to be
+// commoned out than a sxth.
+let AddedComplexity = 10 in {
+def : T1Pat<(sextloadi8 tGPR:$Rn),
+            (tLDRSB tGPR:$Rn, (tMOVi8 0))>,
       Requires<[IsThumb, IsThumb1Only, HasV6]>;
-def : T1Pat<(sextloadi8 t_addrmode_rr:$addr),
-            (tSXTB (tLDRBr t_addrmode_rr:$addr))>,
+def : T1Pat<(sextloadi16 tGPR:$Rn),
+            (tLDRSH tGPR:$Rn, (tMOVi8 0))>,
       Requires<[IsThumb, IsThumb1Only, HasV6]>;
-def : T1Pat<(sextloadi16 t_addrmode_is2:$addr),
-            (tSXTH (tLDRHi t_addrmode_is2:$addr))>,
-      Requires<[IsThumb, IsThumb1Only, HasV6]>;
-def : T1Pat<(sextloadi16 t_addrmode_rr:$addr),
-            (tSXTH (tLDRHr t_addrmode_rr:$addr))>,
-      Requires<[IsThumb, IsThumb1Only, HasV6]>;
+}
 
 def : T1Pat<(sextloadi8 t_addrmode_is1:$addr),
             (tASRri (tLSLri (tLDRBi t_addrmode_is1:$addr), 24), 24)>;
@@ -1769,3 +1766,21 @@ def : tInstAlias<"asr${s}${p} $Rdm, $imm",
 def tLDRConstPool
   : tAsmPseudo<"ldr${p} $Rt, $immediate",
                (ins tGPR:$Rt, const_pool_asm_imm:$immediate, pred:$p)>;
+
+//===----------------------------------
+// Atomic cmpxchg for -O0
+//===----------------------------------
+
+// See ARMInstrInfo.td. These two thumb specific pseudos are required to
+// restrict the register class for the UXTB/UXTH ops used in the expansion.
+
+let Constraints = "@earlyclobber $Rd,@earlyclobber $temp",
+    mayLoad = 1, mayStore = 1 in {
+def tCMP_SWAP_8 : PseudoInst<(outs GPR:$Rd, GPR:$temp),
+                             (ins GPR:$addr, tGPR:$desired, GPR:$new),
+                             NoItinerary, []>, Sched<[]>;
+
+def tCMP_SWAP_16 : PseudoInst<(outs GPR:$Rd, GPR:$temp),
+                              (ins GPR:$addr, tGPR:$desired, GPR:$new),
+                              NoItinerary, []>, Sched<[]>;
+}

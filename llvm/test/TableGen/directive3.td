@@ -1,6 +1,5 @@
 // RUN: not llvm-tblgen -gen-directive-decl -I %p/../../include %s 2>&1 | FileCheck -match-full-lines %s
 // RUN: not llvm-tblgen -gen-directive-impl -I %p/../../include %s 2>&1 | FileCheck -match-full-lines %s
-// RUN: not llvm-tblgen -gen-directive-gen -I %p/../../include %s 2>&1 | FileCheck -match-full-lines %s
 
 include "llvm/Frontend/Directive/DirectiveBase.td"
 

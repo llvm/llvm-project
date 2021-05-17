@@ -223,7 +223,14 @@ struct ValueInfo {
     return RefAndFlags.getPointer();
   }
 
-  bool isDSOLocal() const;
+  /// Returns the most constraining visibility among summaries. The
+  /// visibilities, ordered from least to most constraining, are: default,
+  /// protected and hidden.
+  GlobalValue::VisibilityTypes getELFVisibility() const;
+
+  /// Checks if all summaries are DSO local (have the flag set). When DSOLocal
+  /// propagation has been done, set the parameter to enable fast check.
+  bool isDSOLocal(bool WithDSOLocalPropagation = false) const;
 
   /// Checks if all copies are eligible for auto-hiding (have flag set).
   bool canAutoHide() const;
@@ -294,6 +301,9 @@ public:
     /// types based on global summary-based analysis.
     unsigned Linkage : 4;
 
+    /// Indicates the visibility.
+    unsigned Visibility : 2;
+
     /// Indicate if the global value cannot be imported (e.g. it cannot
     /// be renamed or references something that can't be renamed).
     unsigned NotEligibleToImport : 1;
@@ -322,10 +332,12 @@ public:
 
     /// Convenience Constructors
     explicit GVFlags(GlobalValue::LinkageTypes Linkage,
+                     GlobalValue::VisibilityTypes Visibility,
                      bool NotEligibleToImport, bool Live, bool IsLocal,
                      bool CanAutoHide)
-        : Linkage(Linkage), NotEligibleToImport(NotEligibleToImport),
-          Live(Live), DSOLocal(IsLocal), CanAutoHide(CanAutoHide) {}
+        : Linkage(Linkage), Visibility(Visibility),
+          NotEligibleToImport(NotEligibleToImport), Live(Live),
+          DSOLocal(IsLocal), CanAutoHide(CanAutoHide) {}
   };
 
 private:
@@ -409,6 +421,13 @@ public:
   void setCanAutoHide(bool CanAutoHide) { Flags.CanAutoHide = CanAutoHide; }
 
   bool canAutoHide() const { return Flags.CanAutoHide; }
+
+  GlobalValue::VisibilityTypes getVisibility() const {
+    return (GlobalValue::VisibilityTypes)Flags.Visibility;
+  }
+  void setVisibility(GlobalValue::VisibilityTypes Vis) {
+    Flags.Visibility = (unsigned)Vis;
+  }
 
   /// Flag that this global value cannot be imported.
   void setNotEligibleToImport() { Flags.NotEligibleToImport = true; }
@@ -594,6 +613,7 @@ public:
     return FunctionSummary(
         FunctionSummary::GVFlags(
             GlobalValue::LinkageTypes::AvailableExternallyLinkage,
+            GlobalValue::DefaultVisibility,
             /*NotEligibleToImport=*/true, /*Live=*/true, /*IsLocal=*/false,
             /*CanAutoHide=*/false),
         /*NumInsts=*/0, FunctionSummary::FFlags{}, /*EntryCount=*/0,
@@ -1037,6 +1057,10 @@ private:
   /// read/write only.
   bool WithAttributePropagation = false;
 
+  /// Indicates that summary-based DSOLocal propagation has run and the flag in
+  /// every summary of a GV is synchronized.
+  bool WithDSOLocalPropagation = false;
+
   /// Indicates that summary-based synthetic entry count propagation has run
   bool HasSyntheticEntryCounts = false;
 
@@ -1191,6 +1215,9 @@ public:
   void setWithAttributePropagation() {
     WithAttributePropagation = true;
   }
+
+  bool withDSOLocalPropagation() const { return WithDSOLocalPropagation; }
+  void setWithDSOLocalPropagation() { WithDSOLocalPropagation = true; }
 
   bool isReadOnly(const GlobalVarSummary *GVS) const {
     return WithAttributePropagation && GVS->maybeReadOnly();
@@ -1495,7 +1522,7 @@ public:
   /// Print out strongly connected components for debugging.
   void dumpSCCs(raw_ostream &OS);
 
-  /// Analyze index and detect unmodified globals
+  /// Do the access attribute and DSOLocal propagation in combined index.
   void propagateAttributes(const DenseSet<GlobalValue::GUID> &PreservedSymbols);
 
   /// Checks if we can import global variable from another module.

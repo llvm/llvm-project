@@ -14,6 +14,8 @@
 #include "lldb/Host/common/NativeThreadProtocol.h"
 #include "lldb/lldb-private-forward.h"
 
+#include "llvm/ADT/StringRef.h"
+
 #include <csignal>
 #include <map>
 #include <memory>
@@ -51,6 +53,8 @@ public:
 
   Status RemoveHardwareBreakpoint(lldb::addr_t addr) override;
 
+  NativeProcessLinux &GetProcess();
+
 private:
   // Interface for friend classes
 
@@ -81,7 +85,13 @@ private:
 
   void SetStoppedByTrace();
 
+  void SetStoppedByFork(bool is_vfork, lldb::pid_t child_pid);
+
+  void SetStoppedByVForkDone();
+
   void SetStoppedWithNoReason();
+
+  void SetStoppedByProcessorTrace(llvm::StringRef description);
 
   void SetExited();
 
@@ -89,8 +99,6 @@ private:
 
   // Private interface
   void MaybeLogStateChange(lldb::StateType new_state);
-
-  NativeProcessLinux &GetProcess();
 
   void SetStopped();
 

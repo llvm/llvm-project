@@ -90,9 +90,9 @@ static LogicalResult applyPatterns(FuncOp func) {
       [](scf::YieldOp op) { return !isa<scf::ParallelOp>(op->getParentOp()); });
   target.addLegalDialect<omp::OpenMPDialect>();
 
-  OwningRewritePatternList patterns;
-  patterns.insert<ParallelOpLowering>(func.getContext());
-  FrozenRewritePatternList frozen(std::move(patterns));
+  RewritePatternSet patterns(func.getContext());
+  patterns.add<ParallelOpLowering>(func.getContext());
+  FrozenRewritePatternSet frozen(std::move(patterns));
   return applyPartialConversion(func, target, frozen);
 }
 

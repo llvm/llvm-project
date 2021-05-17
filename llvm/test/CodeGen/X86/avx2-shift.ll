@@ -424,7 +424,7 @@ define <32 x i8> @shl9(<32 x i8> %A) nounwind {
 ; X32-LABEL: shl9:
 ; X32:       # %bb.0:
 ; X32-NEXT:    vpsllw $3, %ymm0, %ymm0
-; X32-NEXT:    vpand {{\.LCPI.*}}, %ymm0, %ymm0
+; X32-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: shl9:
@@ -440,7 +440,7 @@ define <32 x i8> @shr9(<32 x i8> %A) nounwind {
 ; X32-LABEL: shr9:
 ; X32:       # %bb.0:
 ; X32-NEXT:    vpsrlw $3, %ymm0, %ymm0
-; X32-NEXT:    vpand {{\.LCPI.*}}, %ymm0, %ymm0
+; X32-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: shr9:
@@ -472,7 +472,7 @@ define <32 x i8> @sra_v32i8(<32 x i8> %A) nounwind {
 ; X32-LABEL: sra_v32i8:
 ; X32:       # %bb.0:
 ; X32-NEXT:    vpsrlw $3, %ymm0, %ymm0
-; X32-NEXT:    vpand {{\.LCPI.*}}, %ymm0, %ymm0
+; X32-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X32-NEXT:    vmovdqa {{.*#+}} ymm1 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
 ; X32-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    vpsubb %ymm1, %ymm0, %ymm0

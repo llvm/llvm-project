@@ -489,8 +489,9 @@ void map_iterator_test() {
 
   auto not_found = one_two_three.find(7);
   MarkAsLive(not_found);
-  CompareExpressionPrettyPrintToRegex("not_found",
-      R"(std::__map_iterator  = {\[0x[a-f0-9]+\] =  end\(\)})");
+  // Because the end_node is not easily detected, just be sure it doesn't crash.
+  CompareExpressionPrettyPrintToRegex(
+      "not_found", R"(std::__map_iterator ( = {\[0x[a-f0-9]+\] = .*}|<error reading variable:.*>))");
 }
 
 void unordered_set_test() {
@@ -607,25 +608,27 @@ void shared_ptr_test() {
   // due to which there is one more count for the pointer. Hence, all the
   // following tests are testing with expected count plus 1.
   std::shared_ptr<const int> test0 = std::make_shared<const int>(5);
+  // The python regular expression matcher treats newlines as significant, so
+  // these regular expressions should be on one line.
   ComparePrettyPrintToRegex(
       test0,
-      R"(std::shared_ptr<int> count 2, weak 0 containing = {__ptr_ = 0x[a-f0-9]+})");
+      R"(std::shared_ptr<int> count [2\?], weak [0\?]( \(libc\+\+ missing debug info\))? containing = {__ptr_ = 0x[a-f0-9]+})");
 
   std::shared_ptr<const int> test1(test0);
   ComparePrettyPrintToRegex(
       test1,
-      R"(std::shared_ptr<int> count 3, weak 0 containing = {__ptr_ = 0x[a-f0-9]+})");
+      R"(std::shared_ptr<int> count [3\?], weak [0\?]( \(libc\+\+ missing debug info\))? containing = {__ptr_ = 0x[a-f0-9]+})");
 
   {
     std::weak_ptr<const int> test2 = test1;
     ComparePrettyPrintToRegex(
         test0,
-        R"(std::shared_ptr<int> count 3, weak 1 containing = {__ptr_ = 0x[a-f0-9]+})");
+        R"(std::shared_ptr<int> count [3\?], weak [1\?]( \(libc\+\+ missing debug info\))? containing = {__ptr_ = 0x[a-f0-9]+})");
   }
 
   ComparePrettyPrintToRegex(
       test0,
-      R"(std::shared_ptr<int> count 3, weak 0 containing = {__ptr_ = 0x[a-f0-9]+})");
+      R"(std::shared_ptr<int> count [3\?], weak [0\?]( \(libc\+\+ missing debug info\))? containing = {__ptr_ = 0x[a-f0-9]+})");
 
   std::shared_ptr<const int> test3;
   ComparePrettyPrintToChars(test3, "std::shared_ptr is nullptr");

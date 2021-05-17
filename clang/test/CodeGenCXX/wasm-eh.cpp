@@ -188,13 +188,7 @@ void test5() {
 
 // CHECK: [[TERMINATE_BB]]:
 // CHECK-NEXT:   %[[CLEANUPPAD1:.*]] = cleanuppad within %[[CLEANUPPAD0]] []
-// CHECK-NEXT:   %[[EXN:.*]] = call i8* @llvm.wasm.get.exception(token %[[CLEANUPPAD1]])
-// CHECK-NEXT:   call void @__clang_call_terminate(i8* %[[EXN]]) {{.*}} [ "funclet"(token %[[CLEANUPPAD1]]) ]
-// CHECK-NEXT:   unreachable
-
-// CHECK-LABEL: define {{.*}} void @__clang_call_terminate(i8* %0)
-// CHECK-NEXT:   call i8* @__cxa_begin_catch(i8* %{{.*}})
-// CHECK-NEXT:   call void @_ZSt9terminatev()
+// CHECK-NEXT:   call void @_ZSt9terminatev() {{.*}} [ "funclet"(token %[[CLEANUPPAD1]]) ]
 // CHECK-NEXT:   unreachable
 
 // Try-catch with cleanups
@@ -336,7 +330,7 @@ void test7() {
 // CHECK:   unreachable
 
 // CHECK:   %[[CLEANUPPAD7:.*]] = cleanuppad within %[[CLEANUPPAD4]] []
-// CHECK:   call void @__clang_call_terminate(i8* %{{.*}}) {{.*}} [ "funclet"(token %[[CLEANUPPAD7]]) ]
+// CHECK:   call void @_ZSt9terminatev() {{.*}} [ "funclet"(token %[[CLEANUPPAD7]]) ]
 // CHECK:   unreachable
 
 // Nested try-catches within a catch
@@ -411,8 +405,7 @@ void test10() throw() {
 // Here we only check if the command enables wasm exception handling in the
 // backend so that exception handling instructions can be generated in .s file.
 
-// TODO Reenable these lines after updating the backend to the new spec
-// R UN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -S -o - -std=c++11 | FileCheck %s --check-prefix=ASSEMBLY
+// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -S -o - -std=c++11 | FileCheck %s --check-prefix=ASSEMBLY
 
 // ASSEMBLY: try
 // ASSEMBLY: catch

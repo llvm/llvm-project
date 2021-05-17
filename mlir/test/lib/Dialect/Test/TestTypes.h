@@ -21,6 +21,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 
 namespace mlir {
 namespace test {
@@ -40,24 +41,13 @@ struct FieldInfo {
 } // namespace test
 } // namespace mlir
 
+#include "TestTypeInterfaces.h.inc"
+
 #define GET_TYPEDEF_CLASSES
 #include "TestTypeDefs.h.inc"
 
 namespace mlir {
 namespace test {
-
-#include "TestTypeInterfaces.h.inc"
-
-/// This class is a simple test type that uses a generated interface.
-struct TestType : public Type::TypeBase<TestType, Type, TypeStorage,
-                                        TestTypeInterface::Trait> {
-  using Base::Base;
-
-  /// Provide a definition for the necessary interface methods.
-  void printTypeC(Location loc) const {
-    emitRemark(loc) << *this << " - TestC";
-  }
-};
 
 /// Storage for simple named recursive types, where the type is identified by
 /// its name and can "contain" another type, including itself.

@@ -6,11 +6,11 @@
 ; FUNC-LABEL: {{^}}i32_mad24:
 ; Signed 24-bit multiply is not supported on pre-Cayman GPUs.
 ; EG: MULLO_INT
-; Make sure we aren't masking the inputs.
-; CM-NOT: AND
-; CM: MULADD_INT24
-; GCN-NOT: and
-; GCN: v_mad_i32_i24
+; CM: MULLO_INT
+; GCN: s_bfe_i32
+; GCN: s_bfe_i32
+; GCN: s_mul_i32
+; GCN: s_add_i32
 define amdgpu_kernel void @i32_mad24(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c) {
 entry:
   %0 = shl i32 %a, 8

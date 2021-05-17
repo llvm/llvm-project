@@ -307,7 +307,7 @@ FileSystem::CreateDataBuffer(const llvm::Twine &path, uint64_t size,
   std::unique_ptr<llvm::WritableMemoryBuffer> buffer;
   if (size == 0) {
     auto buffer_or_error =
-        llvm::WritableMemoryBuffer::getFile(*external_path, -1, is_volatile);
+        llvm::WritableMemoryBuffer::getFile(*external_path, is_volatile);
     if (!buffer_or_error)
       return nullptr;
     buffer = std::move(*buffer_or_error);
@@ -478,20 +478,18 @@ ErrorOr<std::string> FileSystem::GetExternalPath(const llvm::Twine &path) {
     return path.str();
 
   // If VFS mapped we know the underlying FS is a RedirectingFileSystem.
-  ErrorOr<vfs::RedirectingFileSystem::Entry *> E =
-      static_cast<vfs::RedirectingFileSystem &>(*m_fs).lookupPath(path);
-  if (!E) {
-    if (E.getError() == llvm::errc::no_such_file_or_directory) {
+  ErrorOr<vfs::RedirectingFileSystem::LookupResult> Result =
+      static_cast<vfs::RedirectingFileSystem &>(*m_fs).lookupPath(path.str());
+  if (!Result) {
+    if (Result.getError() == llvm::errc::no_such_file_or_directory) {
       return path.str();
     }
-    return E.getError();
+    return Result.getError();
   }
 
-  auto *F = dyn_cast<vfs::RedirectingFileSystem::RedirectingFileEntry>(*E);
-  if (!F)
-    return make_error_code(llvm::errc::not_supported);
-
-  return F->getExternalContentsPath().str();
+  if (Optional<StringRef> ExtRedirect = Result->getExternalRedirect())
+    return std::string(*ExtRedirect);
+  return make_error_code(llvm::errc::not_supported);
 }
 
 ErrorOr<std::string> FileSystem::GetExternalPath(const FileSpec &file_spec) {

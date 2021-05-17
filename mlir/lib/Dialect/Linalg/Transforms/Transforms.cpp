@@ -25,6 +25,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <type_traits>
@@ -45,43 +46,57 @@ using namespace mlir::linalg;
 const StringLiteral mlir::linalg::LinalgTransforms::kLinalgTransformMarker =
     "__internal_linalg_transform__";
 
-mlir::linalg::LinalgMarker::LinalgMarker(ArrayRef<Identifier> matchDisjunction,
-                                         Optional<Identifier> replacement)
+mlir::linalg::LinalgTransformationFilter::LinalgTransformationFilter(
+    ArrayRef<Identifier> matchDisjunction, Optional<Identifier> replacement)
     : matchDisjunction(matchDisjunction.begin(), matchDisjunction.end()),
       replacement(replacement) {}
 
-LogicalResult
-mlir::linalg::LinalgMarker::checkAndNotify(PatternRewriter &rewriter,
-                                           Operation *op) const {
+mlir::linalg::LinalgTransformationFilter::LinalgTransformationFilter(
+    FilterFunction f, ArrayRef<Identifier> matchDisjunction,
+    Optional<Identifier> replacement)
+    : filters(),
+      matchDisjunction(matchDisjunction.begin(), matchDisjunction.end()),
+      replacement(replacement) {
+  if (f)
+    filters.push_back(f);
+}
+
+LogicalResult mlir::linalg::LinalgTransformationFilter::checkAndNotify(
+    PatternRewriter &rewriter, Operation *op) const {
+  if (llvm::any_of(filters,
+                   [&](const FilterFunction &f) { return failed(f(op)); }))
+    return failure();
+
   auto attr = op->template getAttrOfType<StringAttr>(
       LinalgTransforms::kLinalgTransformMarker);
 
   if (!attr) {
-    // 1. Has no marker case and matchDisjunction is empty.
+    // 1. Has no filter case and matchDisjunction is empty.
     if (matchDisjunction.empty())
       return success();
 
-    // 2. Has no marker but was expecting a marker.
+    // 2. Has no filter but was expecting a filter.
     return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
-      diag << " does not have any marker from list: ";
+      diag << " does not have any filter from list: ";
       interleaveComma(matchDisjunction, diag);
     });
   }
 
-  // 4. Match explicit marker.
-  for (auto marker : matchDisjunction)
-    if (attr.getValue() == marker)
+  // 4. Match explicit filter.
+  for (auto filter : matchDisjunction)
+    if (attr.getValue() == filter)
       return success();
 
   // 5. Fail to match.
   return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
-    diag << " does not have any marker from list: ";
+    diag << " does not have any filter from list: ";
     interleaveComma(matchDisjunction, diag);
   });
 }
 
-void mlir::linalg::LinalgMarker::replaceLinalgMarker(PatternRewriter &rewriter,
-                                                     Operation *op) const {
+void mlir::linalg::LinalgTransformationFilter::
+    replaceLinalgTransformationFilter(PatternRewriter &rewriter,
+                                      Operation *op) const {
   if (replacement.hasValue())
     op->setAttr(LinalgTransforms::kLinalgTransformMarker,
                 rewriter.getStringAttr(replacement.getValue()));
@@ -105,16 +120,127 @@ mlir::linalg::LinalgTilingOptions::setTileSizes(ArrayRef<int64_t> ts) {
   return *this;
 }
 
+/// Try to compute a static bounding box for `operand`
+/// Return success if either:
+///   1. The operand is already statically shaped, `result` is left unchanged.
+///   2. The operand is (partially) dynamic, `result` is the result of a freshly
+///      created PadTensorOp.
+/// Return failure if the operand cannot be padded to a static shape.
+static LogicalResult padOperandToSmallestStaticBoundingBox(
+    PatternRewriter &rewriter, linalg::LinalgOp opToPad, OpOperand &operand,
+    const LinalgTilingOptions &options, Value &result) {
+  auto tensorType = operand.get().getType().cast<RankedTensorType>();
+  // Already static shape, no need to pad.
+  if (tensorType.hasStaticShape())
+    return success();
+  auto subtensor = operand.get().getDefiningOp<SubTensorOp>();
+  // Not a subtensor, cannot construct a static bounding box.
+  if (!subtensor)
+    return failure();
+  SmallVector<int64_t> staticSizes;
+  staticSizes.reserve(tensorType.getRank());
+  auto shapedOp =
+      cast<OffsetSizeAndStrideOpInterface>(subtensor.getOperation());
+  for (auto size : shapedOp.getMixedSizes()) {
+    auto indexAttr = size.is<Attribute>()
+                         ? size.get<Attribute>().dyn_cast<IntegerAttr>()
+                         : linalg::getSmallestBoundingIndex(size.get<Value>());
+    // SmallestBoundingIndex must exist for all sizes.
+    // For now return an error if we can't find it.
+    if (!indexAttr)
+      return rewriter.notifyMatchFailure(
+          opToPad, "No constant bounding box can be found for padding");
+    staticSizes.push_back(indexAttr.getInt());
+  }
+  Value pad = options.paddingValueComputationFunction(rewriter, operand);
+  auto staticTensorType =
+      RankedTensorType::get(staticSizes, tensorType.getElementType());
+  result = linalg::PadTensorOp::createPadHighOp(
+      staticTensorType, operand.get(), pad, opToPad->getLoc(), rewriter);
+  return success();
+}
+
+// Try to create a static bounding box around each operand of `res.op`.
+// If successful, `res.op` is rewritten in static form with padded operands.
+// `res.op` is updated to the cloned static form of the op on success.
+static LogicalResult rewriteAsPaddedOp(PatternRewriter &rewriter,
+                                       TiledLinalgOp &res,
+                                       const LinalgTilingOptions &options) {
+  LinalgOp opToPad = res.op;
+  Location loc = opToPad->getLoc();
+
+  // If the op is fully static, it does not need padding.
+  // TODO: there are cases where we may still want to pad to larger sizes.
+  if (llvm::all_of(opToPad.getShapedOperands(), [](Value v) {
+        return v.getType().cast<RankedTensorType>().hasStaticShape();
+      }))
+    return success();
+
+  OpBuilder::InsertionGuard g(rewriter);
+  // Set IP after op because we also take the dims of the original output.
+  rewriter.setInsertionPointAfter(opToPad);
+  // Make a copy of the shaped operands and update it.
+  SmallVector<Value> newOperands;
+  newOperands.reserve(opToPad.getNumShapedOperands());
+  for (OpOperand &operand : opToPad.getShapedOpOperands()) {
+    Value paddedOperand;
+    // If padding was requested but the shape cannot be bounded statically then
+    // the pattern fails to apply.
+    if (failed(padOperandToSmallestStaticBoundingBox(rewriter, opToPad, operand,
+                                                     options, paddedOperand))) {
+      return failure();
+    }
+    newOperands.push_back(paddedOperand ? paddedOperand : operand.get());
+  }
+
+  // Clone `opToPad` to operate on the statically padded shapes.
+  auto resultTensorTypes =
+      ValueRange(newOperands).take_back(opToPad.getNumOutputs()).getTypes();
+  ValueRange otherOperands = opToPad.getAssumedNonShapedOperands();
+  newOperands.append(otherOperands.begin(), otherOperands.end());
+  linalg::LinalgOp paddedOp =
+      opToPad.clone(rewriter, loc, resultTensorTypes, newOperands);
+
+  // Recover the subtensor out of the new static results. This keeps the
+  // original linalg op around because it uses the dims of the original results.
+  // This later folds away.
+  SmallVector<Value> paddedSubviewResults;
+  paddedSubviewResults.reserve(opToPad->getNumResults());
+  SetVector<Operation *> newUsersOfOpToPad;
+  for (auto it : llvm::zip(opToPad->getResults(), paddedOp->getResults())) {
+    auto rank = std::get<0>(it).getType().cast<RankedTensorType>().getRank();
+    SmallVector<OpFoldResult> offsets(rank, rewriter.getIndexAttr(0));
+    auto sizes = llvm::to_vector<4>(llvm::map_range(
+        llvm::seq<unsigned>(0, rank), [&](unsigned d) -> OpFoldResult {
+          auto dimOp = rewriter.create<memref::DimOp>(loc, std::get<0>(it), d);
+          newUsersOfOpToPad.insert(dimOp);
+          return dimOp.getResult();
+        }));
+    SmallVector<OpFoldResult> strides(rank, rewriter.getIndexAttr(1));
+    paddedSubviewResults.push_back(rewriter.create<SubTensorOp>(
+        loc, std::get<1>(it), offsets, sizes, strides));
+  }
+  // Replace the transient `opToPad` locally, except for uses that we just
+  // created for the purpose of extracting the dims.
+  rewriter.replaceOpWithIf(opToPad, paddedSubviewResults, [&](OpOperand &opOp) {
+    return !newUsersOfOpToPad.contains(opOp.getOwner());
+  });
+
+  res = TiledLinalgOp{paddedOp, res.loops, res.tensorResults};
+  return success();
+}
+
 /// Linalg base tiling pattern.
 mlir::linalg::LinalgBaseTilingPattern::LinalgBaseTilingPattern(
     StringRef opName, MLIRContext *context, LinalgTilingOptions options,
-    LinalgMarker marker, PatternBenefit benefit)
-    : RewritePattern(opName, {}, benefit, context), marker(marker),
+    LinalgTransformationFilter filter, PatternBenefit benefit)
+    : RewritePattern(opName, benefit, context), filter(filter),
       options(options) {}
 
 mlir::linalg::LinalgBaseTilingPattern::LinalgBaseTilingPattern(
-    LinalgTilingOptions options, LinalgMarker marker, PatternBenefit benefit)
-    : RewritePattern(benefit, MatchAnyOpTypeTag()), marker(marker),
+    MLIRContext *context, LinalgTilingOptions options,
+    LinalgTransformationFilter filter, PatternBenefit benefit)
+    : RewritePattern(MatchAnyOpTypeTag(), benefit, context), filter(filter),
       options(options) {}
 
 LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewriteBase(
@@ -122,7 +248,7 @@ LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewriteBase(
   LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
   if (!linalgOp)
     return failure();
-  if (failed(marker.checkAndNotify(rewriter, linalgOp)))
+  if (failed(filter.checkAndNotify(rewriter, linalgOp)))
     return failure();
 
   Optional<TiledLinalgOp> res = tileLinalgOp(rewriter, linalgOp, options);
@@ -130,43 +256,78 @@ LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewriteBase(
   if (!res)
     return failure();
 
-  // Return relevant information to derived pattern.
-  result = *res;
+  // Setup RAII guard to return properly.
+  LinalgOp tiledOp = res->op;
+  auto guard = llvm::make_scope_exit([&]() {
+    // Return relevant information to derived pattern.
+    result = *res;
+    // Replace filter on both tiledOp and tiledAndPaddedOp, if necessary.
+    filter.replaceLinalgTransformationFilter(rewriter, tiledOp);
+    if (tiledOp != res->op)
+      filter.replaceLinalgTransformationFilter(rewriter, res->op);
+  });
 
-  // New marker if specified.
-  marker.replaceLinalgMarker(rewriter, res->op.getOperation());
+  // Consider padding on the fly only if the op has tensor semantics.
+  if (!options.paddingValueComputationFunction ||
+      !linalgOp.hasTensorSemantics())
+    return success();
+
+  // Try to pad on the fly by rewriting res->op as a padded op.
+  if (failed(rewriteAsPaddedOp(rewriter, *res, options))) {
+    // Set so RAII guard does not propagate TiledLinalgOp to `result`.
+    return failure();
+  }
+
+  // Do not perform replacement of `linalgOp`, let the derived patterns
+  // do this as they see fit, from the resulting TiledLinalgOp.
   return success();
+}
+
+static ValueRange getTiledOpResult(TiledLinalgOp tiledOp) {
+  if (tiledOp.loops.empty())
+    return tiledOp.op.getOperation()->getResults();
+  return tiledOp.loops.front()->getResults();
+}
+
+static ValueRange
+getTiledAndFusedOpResult(TiledAndFusedLinalgOps tiledAndFusedOp) {
+  if (tiledAndFusedOp.fusedLoops.empty())
+    return tiledAndFusedOp.op.getOperation()->getResults();
+  return tiledAndFusedOp.fusedLoops.front()->getResults();
 }
 
 mlir::linalg::LinalgBaseTileAndFusePattern::LinalgBaseTileAndFusePattern(
     StringRef opName, MLIRContext *context,
     const LinalgDependenceGraph &dependenceGraph,
     LinalgTilingOptions tilingOptions, LinalgFusionOptions fusionOptions,
-    LinalgMarker marker, LinalgMarker fusedOpMarker,
-    LinalgMarker originalOpMarker, PatternBenefit benefit)
-    : RewritePattern(opName, {}, benefit, context),
+    LinalgTransformationFilter filter, LinalgTransformationFilter fusedOpMarker,
+    LinalgTransformationFilter originalOpMarker, PatternBenefit benefit)
+    : RewritePattern(opName, benefit, context, {}),
       dependenceGraph(dependenceGraph), tilingOptions(tilingOptions),
-      fusionOptions(fusionOptions), marker(marker),
+      fusionOptions(fusionOptions), filter(filter),
       fusedOpMarker(fusedOpMarker), originalOpMarker(originalOpMarker) {}
 
 LogicalResult mlir::linalg::LinalgBaseTileAndFusePattern::matchAndRewrite(
     Operation *op, PatternRewriter &rewriter) const {
   LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
-  if (!linalgOp)
+  // TODO: remove hasIndexSemantics check once index ops are supported.
+  if (!linalgOp || linalgOp.hasIndexSemantics())
     return failure();
-  if (failed(marker.checkAndNotify(rewriter, linalgOp)))
-    return failure();
-  if (!linalgOp.hasBufferSemantics())
+  if (failed(filter.checkAndNotify(rewriter, linalgOp)))
     return failure();
 
   DenseSet<Operation *> producers;
   producers.insert(linalgOp);
-  for (auto dependence : dependenceGraph.getDependentOperations(linalgOp)) {
-    if (!fusionOptions.indicesToFuse.count(
-            dependence.indexingOpView->getOperandNumber()))
+  for (auto dependence : dependenceGraph.getDependentOperationsInto(linalgOp)) {
+    Optional<unsigned> operandNumber = dependence.getIndexingOpViewOperandNum();
+    // When looking at dependences into, indexingOp is always OpOperand. We
+    // could assert, but continue if this is not the case.
+    if (!operandNumber)
       continue;
-    if (isa<LinalgOp>(dependence.dependentOpView->getOwner()))
-      producers.insert(dependence.dependentOpView->getOwner());
+    if (!fusionOptions.indicesToFuse.count(operandNumber.getValue()))
+      continue;
+    if (isa<LinalgOp>(dependence.getDependentOp()))
+      producers.insert(dependence.getDependentOp());
   }
 
   SmallVector<LinalgOp, 1> fusionOps;
@@ -210,60 +371,61 @@ LogicalResult mlir::linalg::LinalgBaseTileAndFusePattern::matchAndRewrite(
         tileLinalgOp(rewriter, tiledAndFusedOps->op, unfusedTilingOptions);
     if (!unfusedTiledOp)
       return failure();
-    rewriter.eraseOp(tiledAndFusedOps->op);
+    rewriter.replaceOp(tiledAndFusedOps->op,
+                       getTiledOpResult(unfusedTiledOp.getValue()));
     tiledAndFusedOps->op = unfusedTiledOp->op;
   }
+  op->replaceAllUsesWith(getTiledAndFusedOpResult(tiledAndFusedOps.getValue()));
 
-  marker.replaceLinalgMarker(rewriter, tiledAndFusedOps->op.getOperation());
+  filter.replaceLinalgTransformationFilter(rewriter,
+                                           tiledAndFusedOps->op.getOperation());
   for (auto fusedOp : tiledAndFusedOps->fusedProducers) {
-    fusedOpMarker.replaceLinalgMarker(rewriter, fusedOp.getOperation());
+    fusedOpMarker.replaceLinalgTransformationFilter(rewriter,
+                                                    fusedOp.getOperation());
   }
   for (auto origProducerOp : ArrayRef<LinalgOp>(fusionOps).drop_back()) {
-    originalOpMarker.replaceLinalgMarker(rewriter,
-                                         origProducerOp.getOperation());
+    originalOpMarker.replaceLinalgTransformationFilter(
+        rewriter, origProducerOp.getOperation());
   }
-  rewriter.updateRootInPlace(
-      op, [&]() { originalOpMarker.replaceLinalgMarker(rewriter, op); });
+  rewriter.updateRootInPlace(op, [&]() {
+    originalOpMarker.replaceLinalgTransformationFilter(rewriter, op);
+  });
   return success();
 }
 
-/// Linalg base interchange pattern.
-mlir::linalg::LinalgBaseInterchangePattern::LinalgBaseInterchangePattern(
-    StringRef opName, MLIRContext *context,
-    ArrayRef<unsigned> interchangeVector, LinalgMarker marker,
-    PatternBenefit benefit)
-    : RewritePattern(opName, {}, benefit, context), marker(marker),
+/// Linalg generic interchange pattern.
+mlir::linalg::GenericOpInterchangePattern::GenericOpInterchangePattern(
+    MLIRContext *context, ArrayRef<unsigned> interchangeVector,
+    LinalgTransformationFilter filter, PatternBenefit benefit)
+    : OpRewritePattern(context, benefit), filter(filter),
       interchangeVector(interchangeVector.begin(), interchangeVector.end()) {}
 
-LogicalResult mlir::linalg::LinalgBaseInterchangePattern::matchAndRewrite(
-    Operation *op, PatternRewriter &rewriter) const {
-  LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
-  if (!linalgOp)
+LogicalResult mlir::linalg::GenericOpInterchangePattern::matchAndRewrite(
+    GenericOp genericOp, PatternRewriter &rewriter) const {
+  if (failed(filter.checkAndNotify(rewriter, genericOp)))
     return failure();
-  if (failed(marker.checkAndNotify(rewriter, linalgOp)))
-    return failure();
-  if (failed(interchangeGenericLinalgOpPrecondition(op, interchangeVector)))
+  if (failed(interchangeGenericOpPrecondition(genericOp, interchangeVector)))
     return failure();
 
   // TODO: figure out how this interplays with named ops. In particular this
   // should break the named op property.
-  rewriter.updateRootInPlace(op, [&]() {
-    interchange(linalgOp, interchangeVector);
-    // New marker if specified.
-    marker.replaceLinalgMarker(rewriter, op);
+  rewriter.updateRootInPlace(genericOp, [&]() {
+    interchangeGenericOp(rewriter, genericOp, interchangeVector);
+    // New filter if specified.
+    filter.replaceLinalgTransformationFilter(rewriter, genericOp);
   });
   return success();
 }
 
 mlir::linalg::LinalgBasePromotionPattern::LinalgBasePromotionPattern(
     StringRef opName, MLIRContext *context, LinalgPromotionOptions options,
-    LinalgMarker marker, PatternBenefit benefit)
-    : RewritePattern(opName, {}, benefit, context), marker(marker),
+    LinalgTransformationFilter filter, PatternBenefit benefit)
+    : RewritePattern(opName, benefit, context, {}), filter(filter),
       options(options) {}
 
 LogicalResult mlir::linalg::LinalgBasePromotionPattern::matchAndRewrite(
     Operation *op, PatternRewriter &rewriter) const {
-  if (failed(marker.checkAndNotify(rewriter, op)))
+  if (failed(filter.checkAndNotify(rewriter, op)))
     return failure();
   if (failed(promoteSubviewsPrecondition(op, options)))
     return failure();
@@ -279,32 +441,40 @@ LogicalResult mlir::linalg::LinalgBasePromotionPattern::matchAndRewrite(
     return op->emitError("subview promotion failed");
   }
   rewriter.finalizeRootUpdate(op);
-  marker.replaceLinalgMarker(rewriter, op);
+  filter.replaceLinalgTransformationFilter(rewriter, op);
   return success();
 }
 
 mlir::linalg::LinalgBaseVectorizationPattern::LinalgBaseVectorizationPattern(
-    StringRef opName, MLIRContext *context, LinalgMarker marker,
+    MLIRContext *context, LinalgTransformationFilter filter,
     PatternBenefit benefit)
-    : RewritePattern(opName, {}, benefit, context), marker(marker) {}
+    : RewritePattern(MatchAnyOpTypeTag(), benefit, context), filter(filter) {}
+
+mlir::linalg::LinalgBaseVectorizationPattern::LinalgBaseVectorizationPattern(
+    StringRef opName, MLIRContext *context, LinalgTransformationFilter filter,
+    PatternBenefit benefit)
+    : RewritePattern(opName, benefit, context, {}), filter(filter) {}
 
 LogicalResult mlir::linalg::LinalgBaseVectorizationPattern::matchAndRewrite(
     Operation *op, PatternRewriter &rewriter) const {
   LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
   if (!linalgOp)
     return failure();
-  if (failed(marker.checkAndNotify(rewriter, linalgOp)))
+  if (failed(filter.checkAndNotify(rewriter, linalgOp)))
     return failure();
-  if (failed(vectorizeLinalgOpPrecondition(op)))
+  SmallVector<Value> newResults;
+  if (failed(vectorizeLinalgOp(rewriter, op, newResults)))
     return failure();
-  vectorizeLinalgOp(rewriter, op);
-  rewriter.eraseOp(op);
+  if (!newResults.empty())
+    rewriter.replaceOp(op, newResults);
+  else
+    rewriter.eraseOp(op);
   return success();
 }
 
 LogicalResult mlir::linalg::applyStagedPatterns(
-    Operation *op, ArrayRef<FrozenRewritePatternList> stage1Patterns,
-    const FrozenRewritePatternList &stage2Patterns,
+    Operation *op, ArrayRef<FrozenRewritePatternSet> stage1Patterns,
+    const FrozenRewritePatternSet &stage2Patterns,
     function_ref<LogicalResult(Operation *)> stage3Lambda) {
   unsigned iteration = 0;
   (void)iteration;
@@ -333,35 +503,11 @@ LogicalResult mlir::linalg::applyStagedPatterns(
   return success();
 }
 
-/// Given the `lbVal`, `ubVal` and `stepVal` of a loop, append `lbVal` and
-/// `ubVal` to `dims` and `stepVal` to `symbols`.
-/// Create new AffineDimExpr (`%lb` and `%ub`) and AffineSymbolExpr (`%step`)
-/// with positions matching the newly appended values. Substitute occurrences of
-/// `dimExpr` by either the min expression (i.e. `%lb`) or the max expression
-/// (i.e. `%lb + %step * floordiv(%ub -1 - %lb, %step)`), depending on whether
-/// the induction variable is used with a positive or negative  coefficient.
-static AffineExpr substituteLoopInExpr(AffineExpr expr, AffineExpr dimExpr,
-                                       Value lbVal, Value ubVal, Value stepVal,
-                                       SmallVectorImpl<Value> &dims,
-                                       SmallVectorImpl<Value> &symbols) {
-  MLIRContext *ctx = lbVal.getContext();
-  AffineExpr lb = getAffineDimExpr(dims.size(), ctx);
-  dims.push_back(lbVal);
-  AffineExpr ub = getAffineDimExpr(dims.size(), ctx);
-  dims.push_back(ubVal);
-  AffineExpr step = getAffineSymbolExpr(symbols.size(), ctx);
-  symbols.push_back(stepVal);
-  LLVM_DEBUG(DBGS() << "Before: " << expr << "\n");
-  AffineExpr ee = substWithMin(expr, dimExpr, lb,
-                               lb + step * ((ub - 1) - lb).floorDiv(step));
-  LLVM_DEBUG(DBGS() << "After: " << expr << "\n");
-  return ee;
-}
-
-/// Traverse the `dims` and substitute known min or max expressions in place of
-/// induction variables in `exprs`.
+/// Traverse the `dims` and substitute known min or max expressions returned by
+/// the lambda |getMinMaxExpr|.
 static AffineMap substitute(AffineMap map, SmallVectorImpl<Value> &dims,
-                            SmallVectorImpl<Value> &symbols) {
+                            SmallVectorImpl<Value> &symbols,
+                            GetMinMaxExprFn getMinMaxExpr) {
   auto exprs = llvm::to_vector<4>(map.getResults());
   for (AffineExpr &expr : exprs) {
     bool substituted = true;
@@ -369,25 +515,18 @@ static AffineMap substitute(AffineMap map, SmallVectorImpl<Value> &dims,
       substituted = false;
       for (unsigned dimIdx = 0; dimIdx < dims.size(); ++dimIdx) {
         Value dim = dims[dimIdx];
+        auto minMax = getMinMaxExpr(dim, dims, symbols);
+        if (!minMax)
+          continue;
         AffineExpr dimExpr = getAffineDimExpr(dimIdx, expr.getContext());
         LLVM_DEBUG(DBGS() << "Subst: " << dim << " @ " << dimExpr << "\n");
-        AffineExpr substitutedExpr;
-        if (auto forOp = scf::getForInductionVarOwner(dim))
-          substitutedExpr = substituteLoopInExpr(
-              expr, dimExpr, forOp.lowerBound(), forOp.upperBound(),
-              forOp.step(), dims, symbols);
-
-        if (auto parallelForOp = scf::getParallelForInductionVarOwner(dim))
-          for (unsigned idx = 0, e = parallelForOp.getNumLoops(); idx < e;
-               ++idx)
-            substitutedExpr = substituteLoopInExpr(
-                expr, dimExpr, parallelForOp.lowerBound()[idx],
-                parallelForOp.upperBound()[idx], parallelForOp.step()[idx],
-                dims, symbols);
-
-        if (!substitutedExpr)
-          continue;
-
+        LLVM_DEBUG(DBGS() << "Before: " << expr << "\n");
+        // Substitute occurrences of `dimExpr` by either the min expression or
+        // the max expression depending on whether the value is used with a
+        // positive or negative  coefficient.
+        AffineExpr substitutedExpr =
+            substWithMin(expr, dimExpr, minMax->first, minMax->second);
+        LLVM_DEBUG(DBGS() << "After: " << substitutedExpr << "\n");
         substituted = (substitutedExpr != expr);
         expr = substitutedExpr;
       }
@@ -401,7 +540,12 @@ static AffineMap substitute(AffineMap map, SmallVectorImpl<Value> &dims,
     auto map = AffineMap::get(dims.size(), symbols.size(), exprs,
                               exprs.front().getContext());
 
-    LLVM_DEBUG(DBGS() << "Map to simplify: " << map << "\n");
+    LLVM_DEBUG({
+      DBGS() << "Map to simplify: " << map << "\n";
+      DBGS() << "Operands:\n";
+      for (Value v : operands)
+        DBGS() << v << "\n";
+    });
 
     // Pull in affine.apply operations and compose them fully into the
     // result.
@@ -420,14 +564,37 @@ static AffineMap substitute(AffineMap map, SmallVectorImpl<Value> &dims,
   return AffineMap::get(dims.size(), symbols.size(), exprs, map.getContext());
 }
 
-LogicalResult AffineMinSCFCanonicalizationPattern::matchAndRewrite(
+/// Traverse the dims of the AffineMap of `affineMinOp` and substitute
+/// dimensions with known range by new expressions involving the min or max
+/// expression:
+///   - If the AffineDimExpr mapped to a known value has a positive sign, it
+///     is replaced by the min expression.
+///   - If the AffineDimExpr mapped to a known value has a negative sign, it is
+///     replaced by the max expression.
+/// All known values are iteratively replaced.
+/// This is used as an intermediate step in computing bounding boxes and
+/// canonicalize AffineMinOps. All dim and symbol operands are assumed to have
+/// positive values (positive orthant assumptions).
+/// Return a new AffineMap, dims and symbols that have been canonicalized and
+/// simplified.
+AffineMapAndOperands
+mlir::linalg::substituteMin(AffineMinOp affineMinOp,
+                            GetMinMaxExprFn getMinMaxExpr) {
+  AffineMapAndOperands res{affineMinOp.getAffineMap(),
+                           SmallVector<Value>(affineMinOp.getDimOperands()),
+                           SmallVector<Value>(affineMinOp.getSymbolOperands())};
+  res.map = substitute(affineMinOp.getAffineMap(), res.dims, res.symbols,
+                       getMinMaxExpr);
+  return res;
+}
+
+LogicalResult AffineMinRangeCanonicalizationPattern::matchAndRewrite(
     AffineMinOp minOp, PatternRewriter &rewriter) const {
   LLVM_DEBUG(DBGS() << "Canonicalize AffineMinSCF: " << *minOp.getOperation()
                     << "\n");
 
-  SmallVector<Value, 4> dims(minOp.getDimOperands()),
-      symbols(minOp.getSymbolOperands());
-  AffineMap map = substitute(minOp.getAffineMap(), dims, symbols);
+  auto affineMapAndOperands = substituteMin(minOp, getMinMaxFn);
+  AffineMap map = affineMapAndOperands.map;
 
   LLVM_DEBUG(DBGS() << "Resulting map: " << map << "\n");
 
@@ -462,8 +629,8 @@ LogicalResult AffineMinSCFCanonicalizationPattern::matchAndRewrite(
       rewriter.replaceOpWithNewOp<ConstantIndexOp>(minOp, cst.getValue());
     } else {
       auto resultMap = AffineMap::get(0, map.getNumSymbols(), {e}, ctx);
-      SmallVector<Value, 4> resultOperands = dims;
-      resultOperands.append(symbols.begin(), symbols.end());
+      SmallVector<Value> resultOperands = affineMapAndOperands.dims;
+      llvm::append_range(resultOperands, affineMapAndOperands.symbols);
       canonicalizeMapAndOperands(&resultMap, &resultOperands);
       resultMap = simplifyAffineMap(resultMap);
       rewriter.replaceOpWithNewOp<AffineApplyOp>(minOp, resultMap,

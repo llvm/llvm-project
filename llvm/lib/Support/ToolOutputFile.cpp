@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Signals.h"
 using namespace llvm;

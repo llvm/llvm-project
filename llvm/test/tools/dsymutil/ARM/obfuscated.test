@@ -4,6 +4,10 @@ RUN: dsymutil --symbol-map %p/../Inputs/obfuscated.map %p/../Inputs/obfuscated.a
 RUN:     | llvm-dwarfdump -v - \
 RUN:     | FileCheck %s
 
+RUN: dsymutil --accelerator=Pub --symbol-map %p/../Inputs/obfuscated.map %p/../Inputs/obfuscated.arm64 -f -o - \
+RUN:     | llvm-dwarfdump -v - \
+RUN:     | FileCheck --check-prefix=PUB %s
+
 RUN: dsymutil --symbol-map %p/../Inputs/obfuscated.map %p/../Inputs/obfuscated.arm64 -f -o - \
 RUN:     | llvm-dwarfdump -v - \
 RUN:     | FileCheck --check-prefix=NOHIDDEN %s
@@ -118,21 +122,21 @@ CHECK:       dir_index: 0
 CHECK:        mod_time: 0x00000000
 CHECK:          length: 0x00000000
 
-CHECK: .debug_pubnames contents:
-CHECK: length = 0x00000017, format = DWARF32, version = 0x0002, unit_offset = 0x00000000, unit_size = 0x00000044
-CHECK: 0x0000002e "main"
-CHECK: length = 0x00000016, format = DWARF32, version = 0x0002, unit_offset = 0x00000044, unit_size = 0x00000044
-CHECK: 0x0000002e "one"
-CHECK: length = 0x00000016, format = DWARF32, version = 0x0002, unit_offset = 0x00000088, unit_size = 0x00000044
-CHECK: 0x0000002e "two"
-CHECK: length = 0x00000018, format = DWARF32, version = 0x0002, unit_offset = 0x000000cc, unit_size = 0x00000044
-CHECK: 0x0000002e "three"
-CHECK: length = 0x00000017, format = DWARF32, version = 0x0002, unit_offset = 0x00000110, unit_size = 0x00000044
-CHECK: 0x0000002e "four"
-CHECK: length = 0x00000017, format = DWARF32, version = 0x0002, unit_offset = 0x00000154, unit_size = 0x00000044
-CHECK: 0x0000002e "five"
-CHECK: length = 0x00000016, format = DWARF32, version = 0x0002, unit_offset = 0x00000198, unit_size = 0x00000044
-CHECK: 0x0000002e "six"
+PUB: .debug_pubnames contents:
+PUB: length = 0x00000017, format = DWARF32, version = 0x0002, unit_offset = 0x00000000, unit_size = 0x00000044
+PUB: 0x0000002e "main"
+PUB: length = 0x00000016, format = DWARF32, version = 0x0002, unit_offset = 0x00000044, unit_size = 0x00000044
+PUB: 0x0000002e "one"
+PUB: length = 0x00000016, format = DWARF32, version = 0x0002, unit_offset = 0x00000088, unit_size = 0x00000044
+PUB: 0x0000002e "two"
+PUB: length = 0x00000018, format = DWARF32, version = 0x0002, unit_offset = 0x000000cc, unit_size = 0x00000044
+PUB: 0x0000002e "three"
+PUB: length = 0x00000017, format = DWARF32, version = 0x0002, unit_offset = 0x00000110, unit_size = 0x00000044
+PUB: 0x0000002e "four"
+PUB: length = 0x00000017, format = DWARF32, version = 0x0002, unit_offset = 0x00000154, unit_size = 0x00000044
+PUB: 0x0000002e "five"
+PUB: length = 0x00000016, format = DWARF32, version = 0x0002, unit_offset = 0x00000198, unit_size = 0x00000044
+PUB: 0x0000002e "six"
 
 CHECK: .apple_names contents:
 

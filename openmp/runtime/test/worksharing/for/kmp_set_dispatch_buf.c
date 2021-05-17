@@ -3,7 +3,7 @@
 // RUN: %libomp-run 1 && %libomp-run 2 && %libomp-run 5
 // RUN: %libomp-compile -DMY_SCHEDULE=guided && %libomp-run 7
 // RUN: %libomp-run 1 && %libomp-run 2 && %libomp-run 5
-// UNSUPPORTED: clang-11, clang-12
+// UNSUPPORTED: clang-11, clang-12, clang-13
 #include <stdio.h>
 #include <omp.h>
 #include <stdlib.h>

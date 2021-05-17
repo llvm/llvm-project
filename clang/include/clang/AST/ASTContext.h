@@ -34,11 +34,13 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Linkage.h"
+#include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/PartialDiagnostic.h"
-#include "clang/Basic/SanitizerBlacklist.h"
+#include "clang/Basic/ProfileList.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/XRayLists.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -298,6 +300,10 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// This is lazily created.  This is intentionally not serialized.
   mutable llvm::StringMap<StringLiteral *> StringLiteralCache;
 
+  /// MD5 hash of CUID. It is calculated when first used and cached by this
+  /// data member.
+  mutable std::string CUIDHash;
+
   /// Representation of a "canonical" template template parameter that
   /// is used in canonical template names.
   class CanonicalTemplateTemplateParm : public llvm::FoldingSetNode {
@@ -537,6 +543,9 @@ private:
   /// need them (like static local vars).
   llvm::MapVector<const NamedDecl *, unsigned> MangleNumbers;
   llvm::MapVector<const VarDecl *, unsigned> StaticLocalNumbers;
+  /// Mapping the associated device lambda mangling number if present.
+  mutable llvm::DenseMap<const CXXRecordDecl *, unsigned>
+      DeviceLambdaManglingNumbers;
 
   /// Mapping that stores parameterIndex values for ParmVarDecls when
   /// that value exceeds the bitfield size of ParmVarDeclBits.ParameterIndex.
@@ -558,13 +567,17 @@ private:
   ///  this ASTContext object.
   LangOptions &LangOpts;
 
-  /// Blacklist object that is used by sanitizers to decide which
+  /// NoSanitizeList object that is used by sanitizers to decide which
   /// entities should not be instrumented.
-  std::unique_ptr<SanitizerBlacklist> SanitizerBL;
+  std::unique_ptr<NoSanitizeList> NoSanitizeL;
 
   /// Function filtering mechanism to determine whether a given function
   /// should be imbued with the XRay "always" or "never" attributes.
   std::unique_ptr<XRayFunctionFilter> XRayFilter;
+
+  /// ProfileList object that is used by the profile instrumentation
+  /// to decide which entities should be instrumented.
+  std::unique_ptr<ProfileList> ProfList;
 
   /// The allocator used to create AST objects.
   ///
@@ -591,6 +604,9 @@ private:
   clang::PrintingPolicy PrintingPolicy;
   std::unique_ptr<interp::Context> InterpContext;
   std::unique_ptr<ParentMapContext> ParentMapCtx;
+
+  /// Keeps track of the deallocated DeclListNodes for future reuse.
+  DeclListNode *ListNodeFreeList = nullptr;
 
 public:
   IdentifierTable &Idents;
@@ -643,6 +659,24 @@ public:
   }
   void Deallocate(void *Ptr) const {}
 
+  /// Allocates a \c DeclListNode or returns one from the \c ListNodeFreeList
+  /// pool.
+  DeclListNode *AllocateDeclListNode(clang::NamedDecl *ND) {
+    if (DeclListNode *Alloc = ListNodeFreeList) {
+      ListNodeFreeList = Alloc->Rest.dyn_cast<DeclListNode*>();
+      Alloc->D = ND;
+      Alloc->Rest = nullptr;
+      return Alloc;
+    }
+    return new (*this) DeclListNode(ND);
+  }
+  /// Deallcates a \c DeclListNode by returning it to the \c ListNodeFreeList
+  /// pool.
+  void DeallocateDeclListNode(DeclListNode *N) {
+    N->Rest = ListNodeFreeList;
+    ListNodeFreeList = N;
+  }
+
   /// Return the total amount of physical memory allocated for representing
   /// AST nodes and type information.
   size_t getASTAllocatedMemory() const {
@@ -683,19 +717,24 @@ public:
     return LangOpts.CPlusPlus || LangOpts.RecoveryAST;
   }
 
-  const SanitizerBlacklist &getSanitizerBlacklist() const {
-    return *SanitizerBL;
-  }
+  const NoSanitizeList &getNoSanitizeList() const { return *NoSanitizeL; }
 
   const XRayFunctionFilter &getXRayFilter() const {
     return *XRayFilter;
   }
+
+  const ProfileList &getProfileList() const { return *ProfList; }
 
   DiagnosticsEngine &getDiagnostics() const;
 
   FullSourceLoc getFullLoc(SourceLocation Loc) const {
     return FullSourceLoc(Loc,SourceMgr);
   }
+
+  /// Return the C++ ABI kind that should be used. The C++ ABI can be overriden
+  /// at compile time with `-fc++-abi=`. If this is not provided, we instead use
+  /// the default ABI set by the target.
+  TargetCXXABI::Kind getCXXABIKind() const;
 
   /// All comments in this translation unit.
   RawCommentList Comments;
@@ -1010,6 +1049,9 @@ public:
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
   CanQualType Id##Ty;
 #include "clang/Basic/PPCTypes.def"
+#define RVV_TYPE(Name, Id, SingletonId) \
+  CanQualType SingletonId;
+#include "clang/Basic/RISCVVTypes.def"
 
   // Types for deductions in C++0x [stmt.ranged]'s desugaring. Built on demand.
   mutable QualType AutoDeductTy;     // Deduction against 'auto'.
@@ -1022,8 +1064,8 @@ public:
   // Implicitly-declared type 'struct _GUID'.
   mutable TagDecl *MSGuidTagDecl = nullptr;
 
-  /// Keep track of CUDA/HIP static device variables referenced by host code.
-  llvm::DenseSet<const VarDecl *> CUDAStaticDeviceVarReferencedByHost;
+  /// Keep track of CUDA/HIP device-side variables ODR-used by host code.
+  llvm::DenseSet<const VarDecl *> CUDADeviceVarODRUsedByHost;
 
   ASTContext(LangOptions &LOpts, SourceManager &SM, IdentifierTable &idents,
              SelectorTable &sels, Builtin::Context &builtins);
@@ -2401,12 +2443,10 @@ public:
         return (*SuperTnullability == NullabilityKind::NonNull &&
                 *SubTnullability == NullabilityKind::Nullable);
       }
-      else {
-        // For the return type, it's okay for the superclass method to specify
-        // "nullable" and the subclass method specify "nonnull"
-        return (*SuperTnullability == NullabilityKind::Nullable &&
-                *SubTnullability == NullabilityKind::NonNull);
-      }
+      // For the return type, it's okay for the superclass method to specify
+      // "nullable" and the subclass method specify "nonnull"
+      return (*SuperTnullability == NullabilityKind::Nullable &&
+              *SubTnullability == NullabilityKind::NonNull);
     }
     return true;
   }
@@ -2415,7 +2455,7 @@ public:
                            const ObjCMethodDecl *MethodImp);
 
   bool UnwrapSimilarTypes(QualType &T1, QualType &T2);
-  bool UnwrapSimilarArrayTypes(QualType &T1, QualType &T2);
+  void UnwrapSimilarArrayTypes(QualType &T1, QualType &T2);
 
   /// Determine if two types are similar, according to the C++ rules. That is,
   /// determine if they are the same other than qualifiers on the initial
@@ -2713,6 +2753,14 @@ public:
   // accepts fixed point types and returns the corresponding unsigned type for
   // a given fixed point type.
   QualType getCorrespondingUnsignedType(QualType T) const;
+
+  // Per C99 6.2.5p6, for every signed integer type, there is a corresponding
+  // unsigned integer type.  This method takes an unsigned type, and returns the
+  // corresponding signed integer type.
+  // With the introduction of fixed point types in ISO N1169, this method also
+  // accepts fixed point types and returns the corresponding signed type for
+  // a given fixed point type.
+  QualType getCorrespondingSignedType(QualType T) const;
 
   // Per ISO N1169, this method accepts fixed point types and returns the
   // corresponding saturated type for a given fixed point type.
@@ -3107,6 +3155,8 @@ public:
 
   /// Whether a C++ static variable should be externalized.
   bool shouldExternalizeStaticVar(const Decl *D) const;
+
+  StringRef getCUIDHash() const;
 
 private:
   /// All OMPTraitInfo objects live in this collection, one per

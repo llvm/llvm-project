@@ -40,6 +40,14 @@ class LangOptions;
 class MultiKeywordSelector;
 class SourceLocation;
 
+enum class ReservedIdentifierStatus {
+  NotReserved = 0,
+  StartsWithUnderscoreAtGlobalScope,
+  StartsWithDoubleUnderscore,
+  StartsWithUnderscoreFollowedByCapitalLetter,
+  ContainsDoubleUnderscore,
+};
+
 /// A simple pair of identifier info and location.
 using IdentifierLocPair = std::pair<IdentifierInfo *, SourceLocation>;
 
@@ -385,14 +393,7 @@ public:
 
   /// Determine whether \p this is a name reserved for the implementation (C99
   /// 7.1.3, C++ [lib.global.names]).
-  bool isReservedName(bool doubleUnderscoreOnly = false) const {
-    if (getLength() < 2)
-      return false;
-    const char *Name = getNameStart();
-    return Name[0] == '_' &&
-           (Name[1] == '_' ||
-            (Name[1] >= 'A' && Name[1] <= 'Z' && !doubleUnderscoreOnly));
-  }
+  ReservedIdentifierStatus isReserved(const LangOptions &LangOpts) const;
 
   /// Provide less than operator for lexicographical sorting.
   bool operator<(const IdentifierInfo &RHS) const {

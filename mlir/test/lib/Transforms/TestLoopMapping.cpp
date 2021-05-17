@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
@@ -26,6 +27,10 @@ class TestLoopMappingPass
     : public PassWrapper<TestLoopMappingPass, FunctionPass> {
 public:
   explicit TestLoopMappingPass() {}
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<AffineDialect, scf::SCFDialect>();
+  }
 
   void runOnFunction() override {
     FuncOp func = getFunction();

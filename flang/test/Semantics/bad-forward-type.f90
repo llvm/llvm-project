@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %S/test_errors.sh %s %t %flang_fc1
 ! Forward references to derived types (error cases)
 ! C732 A parent-type-name shall be the name of a previously defined
 ! extensible type (7.5.7).
@@ -79,3 +79,14 @@ subroutine s8
     real :: c
   end type
 end subroutine
+
+subroutine s9
+  type con
+    Type(t(3)), pointer :: y
+  end type
+  !ERROR: Cannot construct value for derived type 't' before it is defined
+  Integer :: nn = Size(Transfer(t(3)(666),[0]))
+  type :: t(n)
+    integer, kind :: n = 3
+  end type
+end subroutine s9

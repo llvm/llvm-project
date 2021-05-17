@@ -14,6 +14,7 @@
 
 #include <condition_variable>
 #include <mutex>
+#include <stdlib.h>
 #include <thread>
 #include <vector>
 
@@ -21,16 +22,90 @@
 // 32-bit architectures. It's not something we want to encourage, but we still
 // should ensure the tests pass.
 
-template <typename Primary> static void testPrimary() {
-  const scudo::uptr NumberOfAllocations = 32U;
-  auto Deleter = [](Primary *P) {
-    P->unmapTestOnly();
-    delete P;
-  };
-  std::unique_ptr<Primary, decltype(Deleter)> Allocator(new Primary, Deleter);
+struct TestConfig1 {
+  static const scudo::uptr PrimaryRegionSizeLog = 18U;
+  static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
+  static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
+  static const bool MaySupportMemoryTagging = false;
+  typedef scudo::uptr PrimaryCompactPtrT;
+  static const scudo::uptr PrimaryCompactPtrScale = 0;
+};
+
+struct TestConfig2 {
+  static const scudo::uptr PrimaryRegionSizeLog = 24U;
+  static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
+  static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
+  static const bool MaySupportMemoryTagging = false;
+  typedef scudo::uptr PrimaryCompactPtrT;
+  static const scudo::uptr PrimaryCompactPtrScale = 0;
+};
+
+struct TestConfig3 {
+  static const scudo::uptr PrimaryRegionSizeLog = 24U;
+  static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
+  static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
+  static const bool MaySupportMemoryTagging = true;
+  typedef scudo::uptr PrimaryCompactPtrT;
+  static const scudo::uptr PrimaryCompactPtrScale = 0;
+};
+
+template <typename BaseConfig, typename SizeClassMapT>
+struct Config : public BaseConfig {
+  using SizeClassMap = SizeClassMapT;
+};
+
+template <typename BaseConfig, typename SizeClassMapT>
+struct SizeClassAllocator
+    : public scudo::SizeClassAllocator64<Config<BaseConfig, SizeClassMapT>> {};
+template <typename SizeClassMapT>
+struct SizeClassAllocator<TestConfig1, SizeClassMapT>
+    : public scudo::SizeClassAllocator32<Config<TestConfig1, SizeClassMapT>> {};
+
+template <typename BaseConfig, typename SizeClassMapT>
+struct TestAllocator : public SizeClassAllocator<BaseConfig, SizeClassMapT> {
+  ~TestAllocator() { this->unmapTestOnly(); }
+
+  void *operator new(size_t size) {
+    void *p = nullptr;
+    EXPECT_EQ(0, posix_memalign(&p, alignof(TestAllocator), size));
+    return p;
+  }
+
+  void operator delete(void *ptr) { free(ptr); }
+};
+
+template <class BaseConfig> struct ScudoPrimaryTest : public Test {};
+
+#if SCUDO_FUCHSIA
+#define SCUDO_TYPED_TEST_ALL_TYPES(FIXTURE, NAME)                              \
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig2)                            \
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig3)
+#else
+#define SCUDO_TYPED_TEST_ALL_TYPES(FIXTURE, NAME)                              \
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig1)                            \
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig2)                            \
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig3)
+#endif
+
+#define SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TYPE)                             \
+  using FIXTURE##NAME##_##TYPE = FIXTURE##NAME<TYPE>;                          \
+  TEST_F(FIXTURE##NAME##_##TYPE, NAME) { Run(); }
+
+#define SCUDO_TYPED_TEST(FIXTURE, NAME)                                        \
+  template <class TypeParam>                                                   \
+  struct FIXTURE##NAME : public FIXTURE<TypeParam> {                           \
+    void Run();                                                                \
+  };                                                                           \
+  SCUDO_TYPED_TEST_ALL_TYPES(FIXTURE, NAME)                                    \
+  template <class TypeParam> void FIXTURE##NAME<TypeParam>::Run()
+
+SCUDO_TYPED_TEST(ScudoPrimaryTest, BasicPrimary) {
+  using Primary = TestAllocator<TypeParam, scudo::DefaultSizeClassMap>;
+  std::unique_ptr<Primary> Allocator(new Primary);
   Allocator->init(/*ReleaseToOsInterval=*/-1);
   typename Primary::CacheT Cache;
   Cache.init(nullptr, Allocator.get());
+  const scudo::uptr NumberOfAllocations = 32U;
   for (scudo::uptr I = 0; I <= 16U; I++) {
     const scudo::uptr Size = 1UL << I;
     if (!Primary::canAllocate(Size))
@@ -52,45 +127,14 @@ template <typename Primary> static void testPrimary() {
   Str.output();
 }
 
-template <typename SizeClassMapT> struct TestConfig1 {
-  using SizeClassMap = SizeClassMapT;
-  static const scudo::uptr PrimaryRegionSizeLog = 18U;
-  static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
-  static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
-  static const bool MaySupportMemoryTagging = false;
-};
-
-template <typename SizeClassMapT> struct TestConfig2 {
-  using SizeClassMap = SizeClassMapT;
-  static const scudo::uptr PrimaryRegionSizeLog = 24U;
-  static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
-  static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
-  static const bool MaySupportMemoryTagging = false;
-};
-
-template <typename SizeClassMapT> struct TestConfig3 {
-  using SizeClassMap = SizeClassMapT;
-  static const scudo::uptr PrimaryRegionSizeLog = 24U;
-  static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
-  static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
-  static const bool MaySupportMemoryTagging = true;
-};
-
-TEST(ScudoPrimaryTest, BasicPrimary) {
-  using SizeClassMap = scudo::DefaultSizeClassMap;
-#if !SCUDO_FUCHSIA
-  testPrimary<scudo::SizeClassAllocator32<TestConfig1<SizeClassMap>>>();
-#endif
-  testPrimary<scudo::SizeClassAllocator64<TestConfig2<SizeClassMap>>>();
-  testPrimary<scudo::SizeClassAllocator64<TestConfig3<SizeClassMap>>>();
-}
-
 struct SmallRegionsConfig {
   using SizeClassMap = scudo::DefaultSizeClassMap;
   static const scudo::uptr PrimaryRegionSizeLog = 20U;
   static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
   static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
   static const bool MaySupportMemoryTagging = false;
+  typedef scudo::uptr PrimaryCompactPtrT;
+  static const scudo::uptr PrimaryCompactPtrScale = 0;
 };
 
 // The 64-bit SizeClassAllocator can be easily OOM'd with small region sizes.
@@ -115,7 +159,7 @@ TEST(ScudoPrimaryTest, Primary64OOM) {
       break;
     }
     for (scudo::u32 J = 0; J < B->getCount(); J++)
-      memset(B->get(J), 'B', Size);
+      memset(Allocator.decompactPtr(ClassId, B->get(J)), 'B', Size);
     Batches.push_back(B);
   }
   while (!Batches.empty()) {
@@ -131,12 +175,9 @@ TEST(ScudoPrimaryTest, Primary64OOM) {
   Allocator.unmapTestOnly();
 }
 
-template <typename Primary> static void testIteratePrimary() {
-  auto Deleter = [](Primary *P) {
-    P->unmapTestOnly();
-    delete P;
-  };
-  std::unique_ptr<Primary, decltype(Deleter)> Allocator(new Primary, Deleter);
+SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryIterate) {
+  using Primary = TestAllocator<TypeParam, scudo::DefaultSizeClassMap>;
+  std::unique_ptr<Primary> Allocator(new Primary);
   Allocator->init(/*ReleaseToOsInterval=*/-1);
   typename Primary::CacheT Cache;
   Cache.init(nullptr, Allocator.get());
@@ -170,54 +211,40 @@ template <typename Primary> static void testIteratePrimary() {
   Str.output();
 }
 
-TEST(ScudoPrimaryTest, PrimaryIterate) {
-  using SizeClassMap = scudo::DefaultSizeClassMap;
-#if !SCUDO_FUCHSIA
-  testIteratePrimary<scudo::SizeClassAllocator32<TestConfig1<SizeClassMap>>>();
-#endif
-  testIteratePrimary<scudo::SizeClassAllocator64<TestConfig2<SizeClassMap>>>();
-  testIteratePrimary<scudo::SizeClassAllocator64<TestConfig3<SizeClassMap>>>();
-}
-
-static std::mutex Mutex;
-static std::condition_variable Cv;
-static bool Ready;
-
-template <typename Primary> static void performAllocations(Primary *Allocator) {
-  static thread_local typename Primary::CacheT Cache;
-  Cache.init(nullptr, Allocator);
-  std::vector<std::pair<scudo::uptr, void *>> V;
-  {
-    std::unique_lock<std::mutex> Lock(Mutex);
-    while (!Ready)
-      Cv.wait(Lock);
-  }
-  for (scudo::uptr I = 0; I < 256U; I++) {
-    const scudo::uptr Size = std::rand() % Primary::SizeClassMap::MaxSize / 4;
-    const scudo::uptr ClassId = Primary::SizeClassMap::getClassIdBySize(Size);
-    void *P = Cache.allocate(ClassId);
-    if (P)
-      V.push_back(std::make_pair(ClassId, P));
-  }
-  while (!V.empty()) {
-    auto Pair = V.back();
-    Cache.deallocate(Pair.first, Pair.second);
-    V.pop_back();
-  }
-  Cache.destroy(nullptr);
-}
-
-template <typename Primary> static void testPrimaryThreaded() {
-  Ready = false;
-  auto Deleter = [](Primary *P) {
-    P->unmapTestOnly();
-    delete P;
-  };
-  std::unique_ptr<Primary, decltype(Deleter)> Allocator(new Primary, Deleter);
+SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
+  using Primary = TestAllocator<TypeParam, scudo::SvelteSizeClassMap>;
+  std::unique_ptr<Primary> Allocator(new Primary);
   Allocator->init(/*ReleaseToOsInterval=*/-1);
+  std::mutex Mutex;
+  std::condition_variable Cv;
+  bool Ready = false;
   std::thread Threads[32];
   for (scudo::uptr I = 0; I < ARRAY_SIZE(Threads); I++)
-    Threads[I] = std::thread(performAllocations<Primary>, Allocator.get());
+    Threads[I] = std::thread([&]() {
+      static thread_local typename Primary::CacheT Cache;
+      Cache.init(nullptr, Allocator.get());
+      std::vector<std::pair<scudo::uptr, void *>> V;
+      {
+        std::unique_lock<std::mutex> Lock(Mutex);
+        while (!Ready)
+          Cv.wait(Lock);
+      }
+      for (scudo::uptr I = 0; I < 256U; I++) {
+        const scudo::uptr Size =
+            std::rand() % Primary::SizeClassMap::MaxSize / 4;
+        const scudo::uptr ClassId =
+            Primary::SizeClassMap::getClassIdBySize(Size);
+        void *P = Cache.allocate(ClassId);
+        if (P)
+          V.push_back(std::make_pair(ClassId, P));
+      }
+      while (!V.empty()) {
+        auto Pair = V.back();
+        Cache.deallocate(Pair.first, Pair.second);
+        V.pop_back();
+      }
+      Cache.destroy(nullptr);
+    });
   {
     std::unique_lock<std::mutex> Lock(Mutex);
     Ready = true;
@@ -231,24 +258,12 @@ template <typename Primary> static void testPrimaryThreaded() {
   Str.output();
 }
 
-TEST(ScudoPrimaryTest, PrimaryThreaded) {
-  using SizeClassMap = scudo::SvelteSizeClassMap;
-#if !SCUDO_FUCHSIA
-  testPrimaryThreaded<scudo::SizeClassAllocator32<TestConfig1<SizeClassMap>>>();
-#endif
-  testPrimaryThreaded<scudo::SizeClassAllocator64<TestConfig2<SizeClassMap>>>();
-  testPrimaryThreaded<scudo::SizeClassAllocator64<TestConfig3<SizeClassMap>>>();
-}
-
 // Through a simple allocation that spans two pages, verify that releaseToOS
 // actually releases some bytes (at least one page worth). This is a regression
 // test for an error in how the release criteria were computed.
-template <typename Primary> static void testReleaseToOS() {
-  auto Deleter = [](Primary *P) {
-    P->unmapTestOnly();
-    delete P;
-  };
-  std::unique_ptr<Primary, decltype(Deleter)> Allocator(new Primary, Deleter);
+SCUDO_TYPED_TEST(ScudoPrimaryTest, ReleaseToOS) {
+  using Primary = TestAllocator<TypeParam, scudo::DefaultSizeClassMap>;
+  std::unique_ptr<Primary> Allocator(new Primary);
   Allocator->init(/*ReleaseToOsInterval=*/-1);
   typename Primary::CacheT Cache;
   Cache.init(nullptr, Allocator.get());
@@ -260,13 +275,4 @@ template <typename Primary> static void testReleaseToOS() {
   Cache.deallocate(ClassId, P);
   Cache.destroy(nullptr);
   EXPECT_GT(Allocator->releaseToOS(), 0U);
-}
-
-TEST(ScudoPrimaryTest, ReleaseToOS) {
-  using SizeClassMap = scudo::DefaultSizeClassMap;
-#if !SCUDO_FUCHSIA
-  testReleaseToOS<scudo::SizeClassAllocator32<TestConfig1<SizeClassMap>>>();
-#endif
-  testReleaseToOS<scudo::SizeClassAllocator64<TestConfig2<SizeClassMap>>>();
-  testReleaseToOS<scudo::SizeClassAllocator64<TestConfig3<SizeClassMap>>>();
 }

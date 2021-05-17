@@ -748,7 +748,7 @@ static ExitOnError ExitOnErr;
 static void yamlToPdb(StringRef Path) {
   BumpPtrAllocator Allocator;
   ErrorOr<std::unique_ptr<MemoryBuffer>> ErrorOrBuffer =
-      MemoryBuffer::getFileOrSTDIN(Path, /*FileSize=*/-1,
+      MemoryBuffer::getFileOrSTDIN(Path, /*IsText=*/false,
                                    /*RequiresNullTerminator=*/false);
 
   if (ErrorOrBuffer.getError()) {
@@ -868,7 +868,6 @@ static void pdb2Yaml(StringRef Path) {
   auto &File = loadPDB(Path, Session);
 
   auto O = std::make_unique<YAMLOutputStyle>(File);
-  O = std::make_unique<YAMLOutputStyle>(File);
 
   ExitOnErr(O->dump());
 }

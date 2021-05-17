@@ -1,4 +1,4 @@
-! RUN: %S/test_folding.sh %s %t %f18
+! RUN: %S/test_folding.sh %s %t %flang_fc1
 
 ! Test intrinsic operation folding
 
@@ -29,6 +29,9 @@ module m
   logical, parameter :: test_neqv2 = .false..NEQV..true.
   logical, parameter :: test_neqv3 = .NOT.(.false..NEQV..false.)
   logical, parameter :: test_neqv4 = .NOT.(.true..NEQV..true.)
+
+  logical, parameter :: test_logical1 = logical(logical(.true., 2))
+  logical, parameter :: test_logical2 = .NOT.logical(logical(.false., 2))
 
 ! Check integer intrinsic operator folding
 

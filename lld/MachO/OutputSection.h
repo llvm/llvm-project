@@ -47,7 +47,6 @@ public:
   // Unneeded sections are omitted entirely (header and body).
   virtual bool isNeeded() const { return true; }
 
-  // Specifically finalizes addresses and section size, not content.
   virtual void finalize() {
     // TODO investigate refactoring synthetic section finalization logic into
     // overrides of this function.

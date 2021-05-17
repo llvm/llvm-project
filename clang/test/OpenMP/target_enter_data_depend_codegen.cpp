@@ -30,15 +30,15 @@ ST<int> gb;
 double gc[100];
 
 // CK1: [[SIZE00:@.+]] = {{.+}}constant [1 x i64] [i64 800]
-// CK1: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 32]
+// CK1: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] zeroinitializer
 
 // CK1: [[SIZE02:@.+]] = {{.+}}constant [1 x i64] [i64 4]
-// CK1: [[MTYPE02:@.+]] = {{.+}}constant [1 x i64] [i64 33]
+// CK1: [[MTYPE02:@.+]] = {{.+}}constant [1 x i64] [i64 1]
 
-// CK1: [[MTYPE03:@.+]] = {{.+}}constant [1 x i64] [i64 32]
+// CK1: [[MTYPE03:@.+]] = {{.+}}constant [1 x i64] zeroinitializer
 
 // CK1: [[SIZE04:@.+]] = {{.+}}constant [2 x i64] [i64 sdiv exact (i64 sub (i64 ptrtoint (double** getelementptr (double*, double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1), i32 1) to i64), i64 ptrtoint (double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1) to i64)), i64 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)), i64 24]
-// CK1: [[MTYPE04:@.+]] = {{.+}}constant [2 x i64] [i64 32, i64 281474976710673]
+// CK1: [[MTYPE04:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976710673]
 
 // CK1-LABEL: _Z3fooi
 void foo(int arg) {
@@ -382,7 +382,8 @@ void foo(int arg) {
 // CK1-DAG: [[BP]] = load [1 x i8*]*, [1 x i8*]** [[BP_PRIV:%[^,]+]],
 // CK1-DAG: [[P]] = load [1 x i8*]*, [1 x i8*]** [[P_PRIV:%[^,]+]],
 // CK1-DAG: [[S]] = load [1 x i64]*, [1 x i64]** [[S_PRIV:%[^,]+]],
-// CK1-DAG: call void (i8*, ...) %{{.+}}(i8* %{{[^,]+}}, [1 x i8*]** [[BP_PRIV]], [1 x i8*]** [[P_PRIV]], [1 x i64]** [[S_PRIV]])
+// CK1-DAG: [[FN:%.+]] = bitcast void (i8*, ...)* {{%.*}} to void (i8*,
+// CK1-DAG: call void [[FN]](i8* %{{[^,]+}}, [1 x i8*]** [[BP_PRIV]], [1 x i8*]** [[P_PRIV]], [1 x i64]** [[S_PRIV]])
 // CK1: ret i32 0
 // CK1: }
 
@@ -394,7 +395,8 @@ void foo(int arg) {
 // CK1-DAG: [[BP]] = load [1 x i8*]*, [1 x i8*]** [[BP_PRIV:%[^,]+]],
 // CK1-DAG: [[P]] = load [1 x i8*]*, [1 x i8*]** [[P_PRIV:%[^,]+]],
 // CK1-DAG: [[S]] = load [1 x i64]*, [1 x i64]** [[S_PRIV:%[^,]+]],
-// CK1-DAG: call void (i8*, ...) %{{.+}}(i8* %{{[^,]+}}, [1 x i8*]** [[BP_PRIV]], [1 x i8*]** [[P_PRIV]], [1 x i64]** [[S_PRIV]])
+// CK1-DAG: [[FN:%.+]] = bitcast void (i8*, ...)* {{%.*}} to void (i8*,
+// CK1-DAG: call void [[FN]](i8* %{{[^,]+}}, [1 x i8*]** [[BP_PRIV]], [1 x i8*]** [[P_PRIV]], [1 x i64]** [[S_PRIV]])
 // CK1: ret i32 0
 // CK1: }
 
@@ -406,7 +408,8 @@ void foo(int arg) {
 // CK1-DAG: [[BP]] = load [1 x i8*]*, [1 x i8*]** [[BP_PRIV:%[^,]+]],
 // CK1-DAG: [[P]] = load [1 x i8*]*, [1 x i8*]** [[P_PRIV:%[^,]+]],
 // CK1-DAG: [[S]] = load [1 x i64]*, [1 x i64]** [[S_PRIV:%[^,]+]],
-// CK1-DAG: call void (i8*, ...) %{{.+}}(i8* %{{[^,]+}}, [1 x i8*]** [[BP_PRIV]], [1 x i8*]** [[P_PRIV]], [1 x i64]** [[S_PRIV]])
+// CK1-DAG: [[FN:%.+]] = bitcast void (i8*, ...)* {{%.*}} to void (i8*,
+// CK1-DAG: call void [[FN]](i8* %{{[^,]+}}, [1 x i8*]** [[BP_PRIV]], [1 x i8*]** [[P_PRIV]], [1 x i64]** [[S_PRIV]])
 // CK1-NOT: __tgt_target_data_end
 // CK1: ret i32 0
 // CK1: }
@@ -419,7 +422,8 @@ void foo(int arg) {
 // CK1-DAG: [[BP]] = load [2 x i8*]*, [2 x i8*]** [[BP_PRIV:%[^,]+]],
 // CK1-DAG: [[P]] = load [2 x i8*]*, [2 x i8*]** [[P_PRIV:%[^,]+]],
 // CK1-DAG: [[S]] = load [2 x i64]*, [2 x i64]** [[S_PRIV:%[^,]+]],
-// CK1-DAG: call void (i8*, ...) %{{.+}}(i8* %{{[^,]+}}, [2 x i8*]** [[BP_PRIV]], [2 x i8*]** [[P_PRIV]], [2 x i64]** [[S_PRIV]])
+// CK1-DAG: [[FN:%.+]] = bitcast void (i8*, ...)* {{%.*}} to void (i8*,
+// CK1-DAG: call void [[FN]](i8* %{{[^,]+}}, [2 x i8*]** [[BP_PRIV]], [2 x i8*]** [[P_PRIV]], [2 x i64]** [[S_PRIV]])
 // CK1-NOT: __tgt_target_data_end
 // CK1: ret i32 0
 // CK1: }

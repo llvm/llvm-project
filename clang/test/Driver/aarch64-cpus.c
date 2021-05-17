@@ -33,7 +33,7 @@
 // ARM64E-DARWIN: "-cc1"{{.*}} "-triple" "arm64e{{.*}}" "-target-cpu" "apple-a12"
 
 // RUN: %clang -target arm64-apple-darwin -arch arm64_32 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64_32-DARWIN %s
-// ARM64_32-DARWIN: "-cc1"{{.*}} "-triple" "aarch64_32{{.*}}" "-target-cpu" "apple-s4"
+// ARM64_32-DARWIN: "-cc1"{{.*}} "-triple" "arm64_32{{.*}}" "-target-cpu" "apple-s4"
 
 // RUN: %clang -target aarch64 -mcpu=cortex-a35 -### -c %s 2>&1 | FileCheck -check-prefix=CA35 %s
 // RUN: %clang -target aarch64 -mlittle-endian -mcpu=cortex-a35 -### -c %s 2>&1 | FileCheck -check-prefix=CA35 %s
@@ -185,8 +185,14 @@
 // CORTEXA78: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-a78"
 // RUN: %clang -target aarch64 -mcpu=cortex-a78c  -### -c %s 2>&1 | FileCheck -check-prefix=CORTEX-A78C %s
 // CORTEX-A78C: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-a78c"
+// RUN: %clang -target aarch64 -mcpu=neoverse-e1  -### -c %s 2>&1 | FileCheck -check-prefix=NEOVERSE-E1 %s
+// NEOVERSE-E1: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-e1"
 // RUN: %clang -target aarch64 -mcpu=neoverse-v1  -### -c %s 2>&1 | FileCheck -check-prefix=NEOVERSE-V1 %s
 // NEOVERSE-V1: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-v1"
+// RUN: %clang -target aarch64 -mcpu=neoverse-n1 -### -c %s 2>&1 | FileCheck -check-prefix=NEOVERSE-N1 %s
+// NEOVERSE-N1: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-n1"
+// RUN: %clang -target aarch64 -mcpu=neoverse-n2 -### -c %s 2>&1 | FileCheck -check-prefix=NEOVERSE-N2 %s
+// NEOVERSE-N2: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-n2"
 
 // RUN: %clang -target aarch64 -mcpu=cortex-r82  -### -c %s 2>&1 | FileCheck -check-prefix=CORTEXR82 %s
 // CORTEXR82: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-r82"
@@ -476,12 +482,6 @@
 // MCPU-MTUNE-A73: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-a73"
 // MCPU-MTUNE-THUNDERX2T99: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "thunderx2t99"
 // MCPU-MTUNE-THUNDERX3T110: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "thunderx3t110"
-
-// RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a78c -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A78C %s
-// RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a78c -mfpu=crypto-neon-fp-armv8 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A78C-MFPU %s
-// CHECK-CORTEX-A78C: "-cc1"{{.*}} "-triple" "armv8.2a-{{.*}} "-target-cpu" "cortex-a78c"
-// CHECK-CORTEX-A78C-MFPU: "-cc1"{{.*}} "-target-feature" "+fp-armv8"
-// CHECK-CORTEX-A78C-MFPU: "-target-feature" "+crypto"
 
 // RUN: %clang -target aarch64 -march=armv8.1a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV81A %s
 // RUN: %clang -target aarch64 -march=armv8.1-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV81A %s
@@ -787,9 +787,6 @@
 // RUN: %clang -target aarch64 -march=armv8a+ras  -### -c %s 2>&1 | FileCheck -check-prefix=V8ARAS -check-prefix=GENERIC %s
 // RUN: %clang -target aarch64 -march=armv8-a+ras -### -c %s 2>&1 | FileCheck -check-prefix=V8ARAS -check-prefix=GENERIC %s
 // V8ARAS: "-target-feature" "+ras"
-
-// RUN: %clang -target aarch64 -mcpu=neoverse-n2 -### -c %s 2>&1 | FileCheck -check-prefix=NEOVERSE-N2 %s
-// NEOVERSE-N2: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-n2"
 
 // ================== Check whether -march accepts mixed-case values.
 // RUN: %clang -target aarch64_be -march=ARMV8.1A -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV81A-BE %s

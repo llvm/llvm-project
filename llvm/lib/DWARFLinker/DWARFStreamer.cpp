@@ -50,13 +50,14 @@ bool DwarfStreamer::init(Triple TheTriple) {
   if (!MAI)
     return error("no asm info for target " + TripleName, Context), false;
 
-  MOFI.reset(new MCObjectFileInfo);
-  MC.reset(new MCContext(MAI.get(), MRI.get(), MOFI.get()));
-  MOFI->InitMCObjectFileInfo(TheTriple, /*PIC*/ false, *MC);
-
   MSTI.reset(TheTarget->createMCSubtargetInfo(TripleName, "", ""));
   if (!MSTI)
     return error("no subtarget info for target " + TripleName, Context), false;
+
+  MOFI.reset(new MCObjectFileInfo);
+  MC.reset(
+      new MCContext(TheTriple, MAI.get(), MRI.get(), MOFI.get(), MSTI.get()));
+  MOFI->initMCObjectFileInfo(*MC, /*PIC=*/false);
 
   MAB = TheTarget->createMCAsmBackend(*MSTI, *MRI, MCOptions);
   if (!MAB)
@@ -212,7 +213,7 @@ void DwarfStreamer::emitPaperTrailWarningsDie(DIE &Die) {
   Asm.emitInt32(11 + Die.getSize() - 4);
   Asm.emitInt16(2);
   Asm.emitInt32(0);
-  Asm.emitInt8(MOFI->getTargetTriple().isArch64Bit() ? 8 : 4);
+  Asm.emitInt8(MC->getTargetTriple().isArch64Bit() ? 8 : 4);
   DebugInfoSectionSize += 11;
   emitDIE(Die);
 }
@@ -761,16 +762,12 @@ void DwarfStreamer::emitPubSectionForUnit(
 
 /// Emit .debug_pubnames for \p Unit.
 void DwarfStreamer::emitPubNamesForUnit(const CompileUnit &Unit) {
-  if (Minimize)
-    return;
   emitPubSectionForUnit(MC->getObjectFileInfo()->getDwarfPubNamesSection(),
                         "names", Unit, Unit.getPubnames());
 }
 
 /// Emit .debug_pubtypes for \p Unit.
 void DwarfStreamer::emitPubTypesForUnit(const CompileUnit &Unit) {
-  if (Minimize)
-    return;
   emitPubSectionForUnit(MC->getObjectFileInfo()->getDwarfPubTypesSection(),
                         "types", Unit, Unit.getPubtypes());
 }

@@ -5,6 +5,6 @@
 # RUN: env LLD_IN_TEST=1 not lld-link /out:%t.exe /entry:main \
 # RUN:   /manifest:embed \
 # RUN:   /manifestuac:"level='requireAdministrator'" \
-# RUN:   /manifestinput:%p/Inputs/manifestinput.test %t.obj 2>&1 | FileCheck %s
+# RUN:   /manifestinput:%p/Inputs/manifestinput.test %t.obj 2>&1 | FileCheck -DMSG=%errc_ENOENT %s
 
-# CHECK: error: unable to find mt.exe in PATH: {{[Nn]}}o such file or directory
+# CHECK: error: unable to find mt.exe in PATH: [[MSG]]

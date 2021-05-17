@@ -44,6 +44,7 @@ class ProcessAttachTestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
     @skipIfReproducer # FIXME: Unexpected packet during (active) replay
+    @skipIfWindows # This is flakey on Windows AND when it fails, it hangs: llvm.org/pr48806
     def test_attach_to_process_from_different_dir_by_id(self):
         """Test attach by process id"""
         newdir = self.getBuildArtifact("newdir")

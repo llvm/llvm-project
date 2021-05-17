@@ -48,8 +48,13 @@ createPromoteBuffersToStackPass(unsigned maxAllocSizeInBytes = 1024,
                                 unsigned bitwidthOfIndexType = 64,
                                 unsigned maxRankOfAllocatedMemRef = 1);
 
+/// Creates a pass that promotes heap-based allocations to stack-based ones.
+/// Only buffers smaller with `isSmallAlloc(alloc) == true` are promoted.
+std::unique_ptr<Pass>
+createPromoteBuffersToStackPass(std::function<bool(Value)> isSmallAlloc);
+
 /// Creates a pass that finalizes a partial bufferization by removing remaining
-/// tensor_load and tensor_to_memref operations.
+/// tensor_load and buffer_cast operations.
 std::unique_ptr<FunctionPass> createFinalizingBufferizePass();
 
 /// Creates a pass that converts memref function results to out-params.
@@ -57,9 +62,6 @@ std::unique_ptr<Pass> createBufferResultsToOutParamsPass();
 
 /// Creates an instance of the Canonicalizer pass.
 std::unique_ptr<Pass> createCanonicalizerPass();
-
-/// Create a pass that removes unnecessary Copy operations.
-std::unique_ptr<Pass> createCopyRemovalPass();
 
 /// Creates a pass to perform common sub expression elimination.
 std::unique_ptr<Pass> createCSEPass();

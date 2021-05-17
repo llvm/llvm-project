@@ -23,9 +23,11 @@
 // be listed in `UsingLibcxx.rst` in the documentation for the extension.
 
 #include <algorithm>
-#include <functional>
+#include <cstddef> // to_integer
+#include <functional> // identity
 #include <iterator>
 #include <memory>
+#include <utility> // to_underlying
 
 #include "test_macros.h"
 
@@ -33,7 +35,7 @@ struct P {
   bool operator()(int) const { return false; }
 };
 
-int main(int, char**) {
+void test_algorithms() {
   int arr[1] = { 1 };
 
   std::adjacent_find(std::begin(arr), std::end(arr));
@@ -44,7 +46,7 @@ int main(int, char**) {
   std::binary_search(std::begin(arr), std::end(arr), 1, std::greater<int>());
 #if TEST_STD_VER >= 17
   std::clamp(2, 1, 3);
-  std::clamp(2, 1, 3, std::greater<int>());
+  std::clamp(2, 3, 1, std::greater<int>());
 #endif
   std::count_if(std::begin(arr), std::end(arr), P());
   std::count(std::begin(arr), std::end(arr), 1);
@@ -144,6 +146,51 @@ int main(int, char**) {
   std::unique(std::begin(arr), std::end(arr), std::greater<int>());
   std::upper_bound(std::begin(arr), std::end(arr), 1);
   std::upper_bound(std::begin(arr), std::end(arr), 1, std::greater<int>());
+}
+
+template<class LV, class RV>
+void test_template_cast_wrappers(LV&& lv, RV&& rv) {
+  std::forward<LV>(lv);
+  std::forward<RV>(rv);
+  std::move(lv);
+  std::move(rv);
+  std::move_if_noexcept(lv);
+  std::move_if_noexcept(rv);
+
+#if TEST_STD_VER >= 17
+  std::as_const(lv);
+  std::as_const(rv);
+#endif
+
+#if TEST_STD_VER >= 20
+  std::identity()(lv);
+  std::identity()(rv);
+#endif
+}
+
+void test_nontemplate_cast_wrappers()
+{
+#if TEST_STD_VER >= 17
+  std::byte b{42};
+  std::to_integer<int>(b);
+#endif
+
+#if TEST_STD_VER >= 20
+  // std::bit_cast<unsigned int>(42);
+#endif
+
+#if TEST_STD_VER > 20
+  enum E { Apple, Orange } e = Apple;
+  std::to_underlying(e);
+#endif
+}
+
+int main(int, char**) {
+  test_algorithms();
+
+  int i = 42;
+  test_template_cast_wrappers(i, std::move(i));
+  test_nontemplate_cast_wrappers();
 
   return 0;
 }

@@ -2,21 +2,16 @@
 
 cmake_minimum_required(VERSION 3.13.4)
 
-if(POLICY CMP0068)
-  cmake_policy(SET CMP0068 NEW)
-  set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
+# CMP0116: Ninja generators transform `DEPFILE`s from `add_custom_command()`
+# New in CMake 3.20. https://cmake.org/cmake/help/latest/policy/CMP0116.html
+if(POLICY CMP0116)
+  cmake_policy(SET CMP0116 OLD)
 endif()
 
-if(POLICY CMP0075)
-  cmake_policy(SET CMP0075 NEW)
-endif()
-
-if(POLICY CMP0077)
-  cmake_policy(SET CMP0077 NEW)
-endif()
+set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
 
 if(NOT DEFINED LLVM_VERSION_MAJOR)
-  set(LLVM_VERSION_MAJOR 12)
+  set(LLVM_VERSION_MAJOR 13)
 endif()
 if(NOT DEFINED LLVM_VERSION_MINOR)
   set(LLVM_VERSION_MINOR 0)
@@ -79,9 +74,17 @@ set(LLVM_ENABLE_PROJECTS "" CACHE STRING
 if( LLVM_ENABLE_PROJECTS STREQUAL "all" )
   set( LLVM_ENABLE_PROJECTS ${LLVM_ALL_PROJECTS})
 endif()
-if ("flang" IN_LIST LLVM_ENABLE_PROJECTS AND NOT "mlir" IN_LIST LLVM_ENABLE_PROJECTS)
-  message(STATUS "Enabling MLIR as a dependency to flang")
-  list(APPEND LLVM_ENABLE_PROJECTS "mlir")
+
+if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
+  if (NOT "mlir" IN_LIST LLVM_ENABLE_PROJECTS)
+    message(STATUS "Enabling MLIR as a dependency to flang")
+    list(APPEND LLVM_ENABLE_PROJECTS "mlir")
+  endif()
+
+  option(FLANG_BUILD_NEW_DRIVER "Build the flang compiler driver" ON)
+  if (FLANG_BUILD_NEW_DRIVER AND NOT "clang" IN_LIST LLVM_ENABLE_PROJECTS)
+    message(FATAL_ERROR "Clang is not enabled, but it's required by the new Flang driver")
+  endif()
 endif()
 
 # LLVM_ENABLE_PROJECTS_USED is `ON` if the user has ever used the
@@ -680,10 +683,6 @@ set(LLVM_PROFDATA_FILE "" CACHE FILEPATH
 # first cmake run
 include(config-ix)
 
-string(REPLACE "Native" ${LLVM_NATIVE_ARCH}
-  LLVM_TARGETS_TO_BUILD "${LLVM_TARGETS_TO_BUILD}")
-list(REMOVE_DUPLICATES LLVM_TARGETS_TO_BUILD)
-
 # By default, we target the host, but this can be overridden at CMake
 # invocation time.
 set(LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_HOST_TRIPLE}" CACHE STRING
@@ -703,12 +702,13 @@ else()
 endif()
 option(LLVM_ENABLE_PLUGINS "Enable plugin support" ${LLVM_ENABLE_PLUGINS_default})
 
-set(ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER FALSE CACHE BOOL
-  "Enable the experimental new pass manager by default.")
+set(ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER TRUE CACHE BOOL
+  "Enable the new pass manager by default.")
 
 include(HandleLLVMOptions)
 
-find_package(Python3 REQUIRED COMPONENTS Interpreter)
+find_package(Python3 ${LLVM_MINIMUM_PYTHON_VERSION} REQUIRED
+    COMPONENTS Interpreter)
 
 ######
 
@@ -773,6 +773,11 @@ set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/bin )
 set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} )
 set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} )
 
+if(LLVM_INCLUDE_TESTS)
+  include(GetErrcMessages)
+  get_errc_messages(LLVM_LIT_ERRC_MESSAGES)
+endif()
+
 # For up-to-date instructions for installing the Tensorflow dependency, refer to
 # the bot setup script: https://github.com/google/ml-compiler-opt/blob/master/buildbot/buildbot_init.sh
 # In this case, the latest C API library is available for download from
@@ -803,6 +808,9 @@ if (NOT TENSORFLOW_AOT_PATH STREQUAL "")
   include_directories(${TENSORFLOW_AOT_PATH}/include)
   add_subdirectory(${TENSORFLOW_AOT_PATH}/xla_aot_runtime_src
     ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/tf_runtime)
+  install(TARGETS tf_xla_runtime EXPORT LLVMExports 
+    ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX} COMPONENT tf_xla_runtime)
+  set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS tf_xla_runtime)
 endif()
 
 # Keep the legacy CMake flag ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER for

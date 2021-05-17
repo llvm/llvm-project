@@ -16,7 +16,11 @@
 
 #include "PythonDataObjects.h"
 #include "PythonReadline.h"
+#include "SWIGPythonBridge.h"
 #include "ScriptInterpreterPythonImpl.h"
+#include "ScriptedProcessPythonInterface.h"
+
+#include "lldb/API/SBError.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
@@ -147,8 +151,6 @@ extern "C" void *LLDBSwigPython_GetChildAtIndex(void *implementor,
 
 extern "C" int LLDBSwigPython_GetIndexOfChildWithName(void *implementor,
                                                       const char *child_name);
-
-extern "C" void *LLDBSWIGPython_CastPyObjectToSBValue(void *data);
 
 extern lldb::ValueObjectSP
 LLDBSWIGPython_GetValueObjectSPFromSBValue(void *data);
@@ -410,6 +412,32 @@ FileSpec ScriptInterpreterPython::GetPythonDir() {
   return g_spec;
 }
 
+void ScriptInterpreterPython::SharedLibraryDirectoryHelper(
+    FileSpec &this_file) {
+  // When we're loaded from python, this_file will point to the file inside the
+  // python package directory. Replace it with the one in the lib directory.
+#ifdef _WIN32
+  // On windows, we need to manually back out of the python tree, and go into
+  // the bin directory. This is pretty much the inverse of what ComputePythonDir
+  // does.
+  if (this_file.GetFileNameExtension() == ConstString(".pyd")) {
+    this_file.RemoveLastPathComponent(); // _lldb.pyd or _lldb_d.pyd
+    this_file.RemoveLastPathComponent(); // lldb
+    llvm::StringRef libdir = LLDB_PYTHON_RELATIVE_LIBDIR;
+    for (auto it = llvm::sys::path::begin(libdir),
+              end = llvm::sys::path::end(libdir);
+         it != end; ++it)
+      this_file.RemoveLastPathComponent();
+    this_file.AppendPathComponent("bin");
+    this_file.AppendPathComponent("liblldb.dll");
+  }
+#else
+  // The python file is a symlink, so we can find the real library by resolving
+  // it. We can do this unconditionally.
+  FileSystem::Instance().ResolveSymbolicLink(this_file, this_file);
+#endif
+}
+
 lldb_private::ConstString ScriptInterpreterPython::GetPluginNameStatic() {
   static ConstString g_name("script-python");
   return g_name;
@@ -505,6 +533,9 @@ ScriptInterpreterPythonImpl::ScriptInterpreterPythonImpl(Debugger &debugger)
       m_pty_secondary_is_open(false), m_valid_session(true), m_lock_count(0),
       m_command_thread_state(nullptr) {
   InitializePrivate();
+
+  m_scripted_process_interface_up =
+      std::make_unique<ScriptedProcessPythonInterface>(*this);
 
   m_dictionary_name.append("_dict");
   StreamString run_string;
@@ -1678,35 +1709,6 @@ StructuredData::ArraySP ScriptInterpreterPythonImpl::OSPlugin_ThreadsInfo(
   return StructuredData::ArraySP();
 }
 
-// GetPythonValueFormatString provides a system independent type safe way to
-// convert a variable's type into a python value format. Python value formats
-// are defined in terms of builtin C types and could change from system to as
-// the underlying typedef for uint* types, size_t, off_t and other values
-// change.
-
-template <typename T> const char *GetPythonValueFormatString(T t);
-template <> const char *GetPythonValueFormatString(char *) { return "s"; }
-template <> const char *GetPythonValueFormatString(char) { return "b"; }
-template <> const char *GetPythonValueFormatString(unsigned char) {
-  return "B";
-}
-template <> const char *GetPythonValueFormatString(short) { return "h"; }
-template <> const char *GetPythonValueFormatString(unsigned short) {
-  return "H";
-}
-template <> const char *GetPythonValueFormatString(int) { return "i"; }
-template <> const char *GetPythonValueFormatString(unsigned int) { return "I"; }
-template <> const char *GetPythonValueFormatString(long) { return "l"; }
-template <> const char *GetPythonValueFormatString(unsigned long) {
-  return "k";
-}
-template <> const char *GetPythonValueFormatString(long long) { return "L"; }
-template <> const char *GetPythonValueFormatString(unsigned long long) {
-  return "K";
-}
-template <> const char *GetPythonValueFormatString(float t) { return "f"; }
-template <> const char *GetPythonValueFormatString(double t) { return "d"; }
-
 StructuredData::StringSP
 ScriptInterpreterPythonImpl::OSPlugin_RegisterContextData(
     StructuredData::ObjectSP os_plugin_object_sp, lldb::tid_t tid) {
@@ -2781,6 +2783,7 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
   };
 
   std::string module_name(pathname);
+  bool possible_package = false;
 
   if (extra_search_dir) {
     if (llvm::Error e = ExtendSysPath(extra_search_dir.GetPath())) {
@@ -2805,6 +2808,7 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
         return false;
       }
       // Not a filename, probably a package of some sort, let it go through.
+      possible_package = true;
     } else if (is_directory(st) || is_regular_file(st)) {
       if (module_file.GetDirectory().IsEmpty()) {
         error.SetErrorString("invalid directory name");
@@ -2831,6 +2835,18 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
       module_name.resize(module_name.length() - 4);
   }
 
+  if (!possible_package && module_name.find('.') != llvm::StringRef::npos) {
+    error.SetErrorStringWithFormat(
+        "Python does not allow dots in module names: %s", module_name.c_str());
+    return false;
+  }
+
+  if (module_name.find('-') != llvm::StringRef::npos) {
+    error.SetErrorStringWithFormat(
+        "Python discourages dashes in module names: %s", module_name.c_str());
+    return false;
+  }
+
   // check if the module is already import-ed
   StreamString command_stream;
   command_stream.Clear();
@@ -2838,7 +2854,7 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
   bool does_contain = false;
   // this call will succeed if the module was ever imported in any Debugger
   // in the lifetime of the process in which this LLDB framework is living
-  bool was_imported_globally =
+  const bool was_imported_globally =
       (ExecuteOneLineWithReturn(
            command_stream.GetData(),
            ScriptInterpreterPythonImpl::eScriptReturnTypeBool, &does_contain,
@@ -2846,20 +2862,15 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
                .SetEnableIO(false)
                .SetSetLLDBGlobals(false)) &&
        does_contain);
-  // this call will fail if the module was not imported in this Debugger
-  // before
-  command_stream.Clear();
-  command_stream.Printf("sys.getrefcount(%s)", module_name.c_str());
-  bool was_imported_locally = GetSessionDictionary()
-                                  .GetItemForKey(PythonString(module_name))
-                                  .IsAllocated();
-
-  bool was_imported = (was_imported_globally || was_imported_locally);
+  const bool was_imported_locally =
+      GetSessionDictionary()
+          .GetItemForKey(PythonString(module_name))
+          .IsAllocated();
 
   // now actually do the import
   command_stream.Clear();
 
-  if (was_imported) {
+  if (was_imported_globally || was_imported_locally) {
     if (!was_imported_locally)
       command_stream.Printf("import %s ; reload_module(%s)",
                             module_name.c_str(), module_name.c_str());

@@ -195,8 +195,7 @@ bool DeadCodeElimination::erase(const SetVector<NodeId> &Nodes) {
     // If it's a code node, add all ref nodes from it.
     uint16_t Kind = BA.Addr->getKind();
     if (Kind == NodeAttrs::Stmt || Kind == NodeAttrs::Phi) {
-      for (auto N : NodeAddr<CodeNode*>(BA).Addr->members(DFG))
-        DRNs.push_back(N);
+      append_range(DRNs, NodeAddr<CodeNode*>(BA).Addr->members(DFG));
       DINs.push_back(DFG.addr<InstrNode*>(I));
     } else {
       llvm_unreachable("Unexpected code node");

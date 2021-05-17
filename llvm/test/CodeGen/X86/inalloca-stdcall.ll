@@ -2,7 +2,7 @@
 
 %Foo = type { i32, i32 }
 
-declare x86_stdcallcc void @f(%Foo* inalloca %a)
+declare x86_stdcallcc void @f(%Foo* inalloca(%Foo) %a)
 declare x86_stdcallcc void @i(i32 %a)
 
 define void @g() {
@@ -17,7 +17,7 @@ define void @g() {
 ; CHECK: movl %esp, %eax
 ; CHECK: movl    $13, (%eax)
 ; CHECK: movl    $42, 4(%eax)
-  call x86_stdcallcc void @f(%Foo* inalloca %b)
+  call x86_stdcallcc void @f(%Foo* inalloca(%Foo) %b)
 ; CHECK: calll   _f@8
 ; CHECK-NOT: %esp
 ; CHECK: pushl

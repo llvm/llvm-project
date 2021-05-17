@@ -5,11 +5,12 @@
 
 // REQUIRES: stable-runtime
 
+// Stack aliasing is not implemented on x86.
+// XFAIL: x86_64
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-
-#include "utils.h"
 
 int main() {
   char Q[16] __attribute__((aligned(256)));
@@ -21,7 +22,7 @@ int main() {
 #elif TEST_NO == 3
   memcpy(Q, P, 32);
 #endif
-  write(STDOUT_FILENO, UNTAG("recovered\n"), 10);
+  write(STDOUT_FILENO, "recovered\n", 10);
   // WRITE: ERROR: HWAddressSanitizer: tag-mismatch on address
   // WRITE: WRITE of size 32 at {{.*}} tags: [[PTR_TAG:..]]/[[MEM_TAG:..]] (ptr/mem)
   // WRITE: Invalid access starting at offset [16, 32)

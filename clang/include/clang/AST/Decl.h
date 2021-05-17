@@ -356,6 +356,10 @@ public:
   /// a C++ class.
   bool isCXXInstanceMember() const;
 
+  /// Determine if the declaration obeys the reserved identifier rules of the
+  /// given language.
+  ReservedIdentifierStatus isReserved(const LangOptions &LangOpts) const;
+
   /// Determine what kind of linkage this entity has.
   ///
   /// This is not the linkage as defined by the standard or the codegen notion
@@ -577,6 +581,16 @@ public:
   /// Set whether this is an inline namespace declaration.
   void setInline(bool Inline) {
     AnonOrFirstNamespaceAndInline.setInt(Inline);
+  }
+
+  /// Returns true if the inline qualifier for \c Name is redundant.
+  bool isRedundantInlineQualifierFor(DeclarationName Name) const {
+    if (!isInline())
+      return false;
+    auto X = lookup(Name);
+    auto Y = getParent()->lookup(Name);
+    return std::distance(X.begin(), X.end()) ==
+      std::distance(Y.begin(), Y.end());
   }
 
   /// Get the original (first) namespace declaration.

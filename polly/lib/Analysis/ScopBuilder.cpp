@@ -25,6 +25,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -201,8 +202,8 @@ static bool containsErrorBlock(RegionNode *RN, const Region &R, LoopInfo &LI,
 static isl::map createNextIterationMap(isl::space SetSpace, unsigned Dim) {
   isl::space MapSpace = SetSpace.map_from_set();
   isl::map NextIterationMap = isl::map::universe(MapSpace);
-  for (unsigned u = 0; u < NextIterationMap.dim(isl::dim::in); u++)
-    if (u != Dim)
+  for (auto u : seq<isl_size>(0, NextIterationMap.dim(isl::dim::in)))
+    if (u != (isl_size)Dim)
       NextIterationMap =
           NextIterationMap.equate(isl::dim::in, u, isl::dim::out, u);
   isl::constraint C =
@@ -794,15 +795,15 @@ bool ScopBuilder::addLoopBoundsToHeaderDomain(
   auto Parts = partitionSetParts(HeaderBBDom, LoopDepth);
   HeaderBBDom = Parts.second;
 
-  // Check if there is a <nsw> tagged AddRec for this loop and if so do not add
-  // the bounded assumptions to the context as they are already implied by the
-  // <nsw> tag.
-  if (scop->hasNSWAddRecForLoop(L))
-    return true;
+  // Check if there is a <nsw> tagged AddRec for this loop and if so do not
+  // require a runtime check. The assumption is already implied by the <nsw>
+  // tag.
+  bool RequiresRTC = !scop->hasNSWAddRecForLoop(L);
 
   isl::set UnboundedCtx = Parts.first.params();
   recordAssumption(&RecordedAssumptions, INFINITELOOP, UnboundedCtx,
-                   HeaderBB->getTerminator()->getDebugLoc(), AS_RESTRICTION);
+                   HeaderBB->getTerminator()->getDebugLoc(), AS_RESTRICTION,
+                   nullptr, RequiresRTC);
   return true;
 }
 
@@ -1283,6 +1284,7 @@ void ScopBuilder::buildSchedule(RegionNode *RN, LoopStackTy &LoopStack) {
     auto NumBlocksProcessed = LoopData->NumBlocksProcessed;
 
     assert(std::next(LoopData) != LoopStack.rend());
+    Loop *L = LoopData->L;
     ++LoopData;
     --Dimension;
 
@@ -1290,6 +1292,25 @@ void ScopBuilder::buildSchedule(RegionNode *RN, LoopStackTy &LoopStack) {
       isl::union_set Domain = Schedule.get_domain();
       isl::multi_union_pw_aff MUPA = mapToDimension(Domain, Dimension);
       Schedule = Schedule.insert_partial_schedule(MUPA);
+
+      if (hasDisableAllTransformsHint(L)) {
+        /// If any of the loops has a disable_nonforced heuristic, mark the
+        /// entire SCoP as such. The ISL rescheduler can only reschedule the
+        /// SCoP in its entirety.
+        /// TODO: ScopDetection could avoid including such loops or warp them as
+        /// boxed loop. It still needs to pass-through loop with user-defined
+        /// metadata.
+        scop->markDisableHeuristics();
+      }
+
+      // It is easier to insert the marks here that do it retroactively.
+      isl::id IslLoopId = createIslLoopAttr(scop->getIslCtx(), L);
+      if (IslLoopId)
+        Schedule = Schedule.get_root()
+                       .get_child(0)
+                       .insert_mark(IslLoopId)
+                       .get_schedule();
+
       LoopData->Schedule = combineInSequence(LoopData->Schedule, Schedule);
     }
 
@@ -1495,7 +1516,7 @@ void ScopBuilder::addRecordedAssumptions() {
 
     if (!AS.BB) {
       scop->addAssumption(AS.Kind, AS.Set, AS.Loc, AS.Sign,
-                          nullptr /* BasicBlock */);
+                          nullptr /* BasicBlock */, AS.RequiresRTC);
       continue;
     }
 
@@ -1519,7 +1540,8 @@ void ScopBuilder::addRecordedAssumptions() {
     else /* (AS.Sign == AS_ASSUMPTION) */
       S = isl_set_params(isl_set_subtract(Dom, S));
 
-    scop->addAssumption(AS.Kind, isl::manage(S), AS.Loc, AS_RESTRICTION, AS.BB);
+    scop->addAssumption(AS.Kind, isl::manage(S), AS.Loc, AS_RESTRICTION, AS.BB,
+                        AS.RequiresRTC);
   }
 }
 
@@ -1759,6 +1781,11 @@ bool ScopBuilder::buildAccessMemIntrinsic(MemAccInst Inst, ScopStmt *Stmt) {
   if (DestAccFunc->isZero())
     return true;
 
+  if (auto *U = dyn_cast<SCEVUnknown>(DestAccFunc)) {
+    if (isa<ConstantPointerNull>(U->getValue()))
+      return true;
+  }
+
   auto *DestPtrSCEV = dyn_cast<SCEVUnknown>(SE.getPointerBase(DestAccFunc));
   assert(DestPtrSCEV);
   DestAccFunc = SE.getMinusSCEV(DestAccFunc, DestPtrSCEV);
@@ -1834,6 +1861,11 @@ bool ScopBuilder::buildAccessCallInst(MemAccInst Inst, ScopStmt *Stmt) {
       auto *ArgSCEV = SE.getSCEVAtScope(Arg, L);
       if (ArgSCEV->isZero())
         continue;
+
+      if (auto *U = dyn_cast<SCEVUnknown>(ArgSCEV)) {
+        if (isa<ConstantPointerNull>(U->getValue()))
+          return true;
+      }
 
       auto *ArgBasePtr = cast<SCEVUnknown>(SE.getPointerBase(ArgSCEV));
       addArrayAccess(Stmt, Inst, AccType, ArgBasePtr->getValue(),
@@ -2842,7 +2874,7 @@ void ScopBuilder::addUserContext() {
     return;
   }
 
-  for (unsigned i = 0; i < Space.dim(isl::dim::param); i++) {
+  for (auto i : seq<isl_size>(0, Space.dim(isl::dim::param))) {
     std::string NameContext =
         scop->getContext().get_dim_name(isl::dim::param, i);
     std::string NameUserContext = UserContext.get_dim_name(isl::dim::param, i);

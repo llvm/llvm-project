@@ -170,7 +170,8 @@ ModuleMacro *Preprocessor::addModuleMacro(Module *Mod, IdentifierInfo *II,
   return MM;
 }
 
-ModuleMacro *Preprocessor::getModuleMacro(Module *Mod, IdentifierInfo *II) {
+ModuleMacro *Preprocessor::getModuleMacro(Module *Mod,
+                                          const IdentifierInfo *II) {
   llvm::FoldingSetNodeID ID;
   ModuleMacro::Profile(ID, Mod, II);
 

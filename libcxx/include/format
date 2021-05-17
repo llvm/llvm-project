@@ -1,0 +1,182 @@
+// -*- C++ -*-
+//===--------------------------- format -----------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP_FORMAT
+#define _LIBCPP_FORMAT
+
+/*
+
+namespace std {
+  // [format.error], class format_error
+  class format_error : public runtime_error {
+  public:
+    explicit format_error(const string& what_arg);
+    explicit format_error(const char* what_arg);
+  };
+
+  // [format.parse.ctx], class template basic_format_parse_context
+  template<class charT>
+  class basic_format_parse_context {
+  public:
+    using char_type = charT;
+    using const_iterator = typename basic_string_view<charT>::const_iterator;
+    using iterator = const_iterator;
+
+  private:
+    iterator begin_;                                    // exposition only
+    iterator end_;                                      // exposition only
+    enum indexing { unknown, manual, automatic };       // exposition only
+    indexing indexing_;                                 // exposition only
+    size_t next_arg_id_;                                // exposition only
+    size_t num_args_;                                   // exposition only
+
+  public:
+    constexpr explicit basic_format_parse_context(basic_string_view<charT> fmt,
+                                                  size_t num_args = 0) noexcept;
+    basic_format_parse_context(const basic_format_parse_context&) = delete;
+    basic_format_parse_context& operator=(const basic_format_parse_context&) = delete;
+
+    constexpr const_iterator begin() const noexcept;
+    constexpr const_iterator end() const noexcept;
+    constexpr void advance_to(const_iterator it);
+
+    constexpr size_t next_arg_id();
+    constexpr void check_arg_id(size_t id);
+  };
+  using format_parse_context = basic_format_parse_context<char>;
+  using wformat_parse_context = basic_format_parse_context<wchar_t>;
+}
+
+*/
+
+#include <__config>
+#include <stdexcept>
+#include <string_view>
+#include <version>
+
+#ifdef _LIBCPP_NO_EXCEPTIONS
+#include <cstdlib>
+#endif
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+#if _LIBCPP_STD_VER > 17
+
+class _LIBCPP_EXCEPTION_ABI format_error : public runtime_error {
+public:
+  _LIBCPP_INLINE_VISIBILITY explicit format_error(const string& __s)
+      : runtime_error(__s) {}
+  _LIBCPP_INLINE_VISIBILITY explicit format_error(const char* __s)
+      : runtime_error(__s) {}
+  virtual ~format_error() noexcept;
+};
+
+// TODO FMT Remove this once we require compilers with proper C++20 support.
+// If the compiler has no concepts support, the format header will be disabled.
+// Without concepts support enable_if needs to be used and that too much effort
+// to support compilers with partial C++20 support.
+#if !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED)
+
+_LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY void
+__throw_format_error(const char* __s) {
+#ifndef _LIBCPP_NO_EXCEPTIONS
+  throw format_error(__s);
+#else
+  (void)__s;
+  _VSTD::abort();
+#endif
+}
+
+template <class _CharT>
+class _LIBCPP_TEMPLATE_VIS basic_format_parse_context {
+public:
+  using char_type = _CharT;
+  using const_iterator =
+      typename basic_string_view<_CharT>::const_iterator;
+  using iterator = const_iterator;
+
+public:
+  _LIBCPP_INLINE_VISIBILITY
+  constexpr explicit basic_format_parse_context(
+      basic_string_view<_CharT> __fmt, size_t __num_args = 0) noexcept
+      : __begin_(__fmt.begin()),
+        __end_(__fmt.end()),
+        __indexing_(__unknown),
+        __next_arg_id_(0),
+        __num_args_(__num_args) {}
+
+  basic_format_parse_context(const basic_format_parse_context&) = delete;
+  basic_format_parse_context&
+  operator=(const basic_format_parse_context&) = delete;
+
+  _LIBCPP_INLINE_VISIBILITY constexpr const_iterator begin() const noexcept {
+    return __begin_;
+  }
+  _LIBCPP_INLINE_VISIBILITY constexpr const_iterator end() const noexcept {
+    return __end_;
+  }
+  _LIBCPP_INLINE_VISIBILITY constexpr void advance_to(const_iterator __it) {
+    __begin_ = __it;
+  }
+
+  _LIBCPP_INLINE_VISIBILITY constexpr size_t next_arg_id() {
+    if (__indexing_ == __manual)
+      __throw_format_error("Using automatic argument numbering in manual "
+                           "argument numbering mode");
+
+    if (__indexing_ == __unknown)
+      __indexing_ = __automatic;
+    return __next_arg_id_++;
+  }
+  _LIBCPP_INLINE_VISIBILITY constexpr void check_arg_id(size_t __id) {
+    if (__indexing_ == __automatic)
+      __throw_format_error("Using manual argument numbering in automatic "
+                           "argument numbering mode");
+
+    if (__indexing_ == __unknown)
+      __indexing_ = __manual;
+
+    // Throws an exception to make the expression a non core constant
+    // expression as required by:
+    // [format.parse.ctx]/11
+    //   Remarks: Call expressions where id >= num_args_ are not core constant
+    //   expressions ([expr.const]).
+    // Note: the Throws clause [format.parse.ctx]/10 doesn't specify the
+    // behavior when id >= num_args_.
+    if (is_constant_evaluated() && __id >= __num_args_)
+      __throw_format_error("Argument index outside the valid range");
+  }
+
+private:
+  iterator __begin_;
+  iterator __end_;
+  enum _Indexing { __unknown, __manual, __automatic };
+  _Indexing __indexing_;
+  size_t __next_arg_id_;
+  size_t __num_args_;
+};
+
+using format_parse_context = basic_format_parse_context<char>;
+using wformat_parse_context = basic_format_parse_context<wchar_t>;
+
+#endif // !defined(_LIBCPP_HAS_NO_CONCEPTS) && !defined(_LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED)
+#endif //_LIBCPP_STD_VER > 17
+
+_LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
+
+#endif // _LIBCPP_FORMAT

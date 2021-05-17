@@ -13,9 +13,11 @@
 #ifndef GPU_OPS
 #define GPU_OPS
 
+include "mlir/Dialect/DLTI/DLTIBase.td"
 include "mlir/Dialect/GPU/GPUBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/IR/SymbolInterfaces.td"
+include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
@@ -197,7 +199,7 @@ def GPU_GPUFuncOp : GPU_Op<"func", [HasParent<"GPUModuleOp">,
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilderDAG<(ins "StringRef":$name, "FunctionType":$type,
+    OpBuilder<(ins "StringRef":$name, "FunctionType":$type,
       CArg<"TypeRange", "{}">:$workgroupAttributions,
       CArg<"TypeRange", "{}">:$privateAttributions,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
@@ -210,16 +212,6 @@ def GPU_GPUFuncOp : GPU_Op<"func", [HasParent<"GPUModuleOp">,
       return (*this)->getAttrOfType<UnitAttr>(
           GPUDialect::getKernelFuncAttrName()) != nullptr;
     }
-
-    /// Change the type of this function in place. This is an extremely
-    /// dangerous operation and it is up to the caller to ensure that this is
-    /// legal for this function, and to restore invariants:
-    ///  - the entry block args must be updated to match the function params.
-    ///  - the argument/result attributes may need an update: if the new type
-    ///  has less parameters we drop the extra attributes, if there are more
-    ///  parameters they won't have any attributes.
-    // TODO: consider removing this function thanks to rewrite patterns.
-    void setType(FunctionType newType);
 
     /// Returns the number of buffers located in the workgroup memory.
     unsigned getNumWorkgroupAttributions() {
@@ -377,7 +369,7 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func",
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilderDAG<(ins "GPUFuncOp":$kernelFunc, "KernelDim3":$gridSize,
+    OpBuilder<(ins "GPUFuncOp":$kernelFunc, "KernelDim3":$gridSize,
       "KernelDim3":$blockSize, "ValueRange":$kernelOperands)>
   ];
 
@@ -480,7 +472,7 @@ def GPU_LaunchOp : GPU_Op<"launch">,
          %num_bx : index, %num_by : index, %num_bz : index,
          %num_tx : index, %num_ty : index, %num_tz : index)
       "some_op"(%bx, %tx) : (index, index) -> ()
-      %3 = "std.load"(%val1, %bx) : (memref<?xf32, 1>, index) -> f32
+      %3 = "memref.load"(%val1, %bx) : (memref<?xf32, 1>, index) -> f32
     }
     ```
 
@@ -496,7 +488,7 @@ def GPU_LaunchOp : GPU_Op<"launch">,
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilderDAG<(ins "Value":$gridSizeX, "Value":$gridSizeY,
+    OpBuilder<(ins "Value":$gridSizeX, "Value":$gridSizeY,
       "Value":$gridSizeZ, "Value":$blockSizeX, "Value":$blockSizeY,
       "Value":$blockSizeZ)>
   ];
@@ -543,7 +535,7 @@ def GPU_ReturnOp : GPU_Op<"return", [HasParent<"GPUFuncOp">, NoSideEffect,
     by an invocation of the `gpu.func`.
   }];
 
-  let builders = [OpBuilderDAG<(ins), [{ // empty}]>];
+  let builders = [OpBuilder<(ins), [{ // empty}]>];
 
   let parser = [{ return parseReturnOp(parser, result); }];
   let printer = [{ p << getOperationName(); }];
@@ -694,7 +686,8 @@ def GPU_BarrierOp : GPU_Op<"barrier"> {
 }
 
 def GPU_GPUModuleOp : GPU_Op<"module", [
-  IsolatedFromAbove, SymbolTable, Symbol,
+  DataLayoutOpInterface, HasDefaultDLTIDataLayout, IsolatedFromAbove,
+  SymbolTable, Symbol,
   SingleBlockImplicitTerminator<"ModuleEndOp">
 ]> {
   let summary = "A top level compilation unit containing code to be run on a GPU.";
@@ -722,7 +715,7 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
 
     ```
   }];
-  let builders = [OpBuilderDAG<(ins "StringRef":$name)>];
+  let builders = [OpBuilder<(ins "StringRef":$name)>];
   let parser = [{ return ::parseGPUModuleOp(parser, result); }];
   let printer = [{ return ::print(p, *this); }];
   let regions = (region SizedRegion<1>:$body);
@@ -812,7 +805,7 @@ def GPU_AllocOp : GPU_Op<"alloc", [
   let summary = "GPU memory allocation operation.";
   let description = [{
     The `gpu.alloc` operation allocates a region of memory on the GPU. It is
-    similar to the `std.alloc` op, but supports asynchronous GPU execution.
+    similar to the `memref.alloc` op, but supports asynchronous GPU execution.
 
     The op does not execute before all async dependencies have finished
     executing.
@@ -850,7 +843,7 @@ def GPU_DeallocOp : GPU_Op<"dealloc", [GPU_AsyncOpInterface]> {
   let description = [{
     The `gpu.dealloc` operation frees the region of memory referenced by a
     memref which was originally created by the `gpu.alloc` operation. It is
-    similar to the `std.dealloc` op, but supports asynchronous GPU execution.
+    similar to the `memref.dealloc` op, but supports asynchronous GPU execution.
 
     The op does not execute before all async dependencies have finished
     executing.
@@ -906,6 +899,124 @@ def GPU_MemcpyOp : GPU_Op<"memcpy", [GPU_AsyncOpInterface]> {
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
     $dst`,` $src `:` type($dst)`,` type($src) attr-dict
   }];
+  let verifier = [{ return ::verify(*this); }];
+}
+
+def GPU_SubgroupMmaLoadMatrixOp : GPU_Op<"subgroup_mma_load_matrix",
+    [MemoryEffects<[MemRead]>]>{
+
+  let summary = "GPU warp synchronous matrix load";
+
+  let description = [{
+    The `gpu.subgroup_mma_load_matrix` operation loads a matrix collectively
+    using all the threads in a subgroup.
+
+    This operation takes a memref as argument. It is the source matrix from which
+    data is to be loaded. The op returns a `!gpu.mma_matrix`. The source memref
+    can be in the global or shared memory space. The starting of the load address
+    is determined using indices provided. The matrix being loaded is specified in
+    the result type. This attribute is necessary because there exists a different
+    LLVM intrinsic for loading each operand, This is probably because all operands
+    need to be laid out in a specific/different way for the operation in the registers.
+    `leadDimension` attribute specifies the leading dimension of the source matrix.
+
+    This op is meant to be used along with `gpu.subgroup_mma_store_matrix` and
+    `gpu.subgroup_mma_compute`.
+
+    Example:
+
+    ```mlir
+     %0 = gpu.subgroup_mma_load_matrix src[%i,%j] : {leadDimension = 32
+    : i32} : memref<32x32xf16, 3>, !gpu.mma_matrix<16x16xf16, "AOp">
+    ```
+  }];
+
+  let arguments = (ins Arg<MemRefRankOf<[F16, F32], [2]>, "", [MemRead]>:$srcMemref,
+                  Variadic<Index>:$indices,
+                  IndexAttr:$leadDimension);
+
+  let results = (outs GPU_MMAMatrix:$res);
+
+  let assemblyFormat = [{
+    $srcMemref`[`$indices`]` attr-dict `:` type($srcMemref) `->` type($res)
+  }];
+
+  let verifier = [{ return ::verify(*this); }];
+}
+
+def GPU_SubgroupMmaStoreMatrixOp : GPU_Op<"subgroup_mma_store_matrix",
+    [MemoryEffects<[MemWrite]>]>{
+
+  let summary = "GPU warp synchronous matrix store";
+
+  let description = [{
+    The `gpu.subgroup_mma_store_matrix` operation stores a matrix collectively
+    using all the threads in a subgroup.
+
+    This operation takes a `!gpu.mma_matrix` and a memref as arguments.
+    `!gpu.mma_matrix` is the source which contains the data to be stored.
+    The destination can be in the global or shared memory space. The starting
+    of store address is determined using indices provided. The `leadDimension`
+    attribute specifies the leading dimension of the destination matrix.
+
+    This op is meant to be used along with `gpu.subgroup_mma_load_matrix` and
+    `gpu.subgroup_mma_compute`.
+
+    Example:
+
+    ```mlir
+    gpu.subgroup_mma_store_matrix %D, %sg[%i,%j] : { leadDimension = 32 : i32} :
+    !gpu.mma_matrix<16x16xf16, "DOp">, memref<32x32xf16, 3>
+    ```
+  }];
+
+  let arguments = (ins Arg<MMAMatrixOf<[F16, F32]>>:$src,
+                  Arg<MemRefRankOf<[F16, F32], [2]>, "",[MemWrite]>:$dstMemref,
+                  Variadic<Index>:$indices,
+                  IndexAttr:$leadDimension);
+
+  let assemblyFormat = [{
+    $src`,` $dstMemref`[`$indices`]` attr-dict `:` type($src)`,` type($dstMemref)
+  }];
+
+  let verifier = [{ return ::verify(*this); }];
+}
+
+def GPU_SubgroupMmaComputeOp : GPU_Op<"subgroup_mma_compute", []>{
+
+  let summary = "GPU warp synchronous matrix multiply accumulate";
+
+  let description = [{
+    The `gpu.subgroup_mma_compute` operation performs a matrix-multiply accumulate(mma)
+    operation using all the threads in a subgroup.
+
+    This operation takes three `!gpu.mma_matrix`s as arguments. All of them hold `A`,
+     `B` and `C`operands for the mma operation. The operation performed is represented
+    as `D = A * B + C`. The op returns a `!gpu.mma_matrix` which contains the result of
+    the operation held by the current thread.
+
+    This op is meant to be used along with `gpu.subgroup_mma_store_matrix` and
+    `gpu.subgroup_mma_load_matrix`.
+
+    Example:
+
+    ```mlir
+    %D = gpu.subgroup_mma_compute_matrix %A, %B, %C :
+    !gpu.mma_matrix<16x16xf16, "AOp">, !gpu.mma_matrix<16x16xf16, "BOp">,
+    !gpu.mma_matrix<16x16xf16, "COp"> -> !gpu.mma_matrix<16x16xf16, "DOp">
+    ```
+  }];
+
+  let arguments = (ins Arg<MMAMatrixOf<[F16]>>:$opA,
+                  Arg<MMAMatrixOf<[F16]>>:$opB,
+                  Arg<MMAMatrixOf<[F16, F32]>>:$opC);
+
+  let results = (outs GPU_MMAMatrix:$res);
+
+  let assemblyFormat = [{
+    $opA`,` $opB`,` $opC attr-dict `:` type($opA)`,` type($opB)`,` type($opC) `->` type($res)
+  }];
+
   let verifier = [{ return ::verify(*this); }];
 }
 

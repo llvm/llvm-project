@@ -13,6 +13,6 @@
 ; ModuleID = 'multi-summary-disassemble.o'
 
 ^0 = module: (path: "multi-summary-disassemble.ll", hash: (1369602428, 2747878711, 259090915, 2507395659, 1141468049))
-^1 = gv: (guid: 3, summaries: (function: (module: ^0, flags: (linkage: internal, notEligibleToImport: 0, live: 0, dsoLocal: 1), insts: 1)))
+^1 = gv: (guid: 3, summaries: (function: (module: ^0, flags: (linkage: internal, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1), insts: 1)))
 ; CHECK: ^0 = module: (path:
 ; CHECK: ^1 = gv: (guid: 3, summaries: (function: (module: ^0,

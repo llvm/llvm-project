@@ -136,4 +136,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_LIB_DEBUGINFO_WITHCOLOR_H
+#endif // LLVM_SUPPORT_WITHCOLOR_H

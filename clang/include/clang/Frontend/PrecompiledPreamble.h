@@ -105,8 +105,8 @@ public:
   /// Check whether PrecompiledPreamble can be reused for the new contents(\p
   /// MainFileBuffer) of the main file.
   bool CanReuse(const CompilerInvocation &Invocation,
-                const llvm::MemoryBuffer *MainFileBuffer, PreambleBounds Bounds,
-                llvm::vfs::FileSystem *VFS) const;
+                const llvm::MemoryBufferRef &MainFileBuffer,
+                PreambleBounds Bounds, llvm::vfs::FileSystem &VFS) const;
 
   /// Changes options inside \p CI to use PCH from this preamble. Also remaps
   /// main file to \p MainFileBuffer and updates \p VFS to ensure the preamble

@@ -17,8 +17,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_GLOBALISEL_MACHINELEGALIZEHELPER_H
-#define LLVM_CODEGEN_GLOBALISEL_MACHINELEGALIZEHELPER_H
+#ifndef LLVM_CODEGEN_GLOBALISEL_LEGALIZERHELPER_H
+#define LLVM_CODEGEN_GLOBALISEL_LEGALIZERHELPER_H
 
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -170,8 +170,12 @@ private:
   widenScalarExtract(MachineInstr &MI, unsigned TypeIdx, LLT WideTy);
   LegalizeResult
   widenScalarInsert(MachineInstr &MI, unsigned TypeIdx, LLT WideTy);
-  LegalizeResult
-  widenScalarAddSubShlSat(MachineInstr &MI, unsigned TypeIdx, LLT WideTy);
+  LegalizeResult widenScalarAddSubOverflow(MachineInstr &MI, unsigned TypeIdx,
+                                           LLT WideTy);
+  LegalizeResult widenScalarAddSubShlSat(MachineInstr &MI, unsigned TypeIdx,
+                                         LLT WideTy);
+  LegalizeResult widenScalarMulo(MachineInstr &MI, unsigned TypeIdx,
+                                 LLT WideTy);
 
   /// Helper function to split a wide generic register into bitwise blocks with
   /// the given Type (which implies the number of blocks needed). The generic
@@ -245,6 +249,10 @@ private:
 
   void changeOpcode(MachineInstr &MI, unsigned NewOpcode);
 
+  LegalizeResult tryNarrowPow2Reduction(MachineInstr &MI, Register SrcReg,
+                                        LLT SrcTy, LLT NarrowTy,
+                                        unsigned ScalarOpc);
+
 public:
   /// Return the alignment to use for a stack temporary object with the given
   /// type.
@@ -293,6 +301,9 @@ public:
                                                            unsigned TypeIdx,
                                                            LLT NarrowTy);
 
+  LegalizeResult fewerElementsVectorMulo(MachineInstr &MI, unsigned TypeIdx,
+                                         LLT NarrowTy);
+
   LegalizeResult
   reduceLoadStoreWidth(MachineInstr &MI, unsigned TypeIdx, LLT NarrowTy);
 
@@ -312,8 +323,14 @@ public:
   LegalizeResult narrowScalarShiftByConstant(MachineInstr &MI, const APInt &Amt,
                                              LLT HalfTy, LLT ShiftAmtTy);
 
+  LegalizeResult fewerElementsVectorReductions(MachineInstr &MI,
+                                               unsigned TypeIdx, LLT NarrowTy);
+
   LegalizeResult narrowScalarShift(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
+  LegalizeResult narrowScalarAddSub(MachineInstr &MI, unsigned TypeIdx,
+                                    LLT NarrowTy);
   LegalizeResult narrowScalarMul(MachineInstr &MI, LLT Ty);
+  LegalizeResult narrowScalarFPTOI(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult narrowScalarExtract(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult narrowScalarInsert(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
 
@@ -336,6 +353,11 @@ public:
   LegalizeResult lowerLoad(MachineInstr &MI);
   LegalizeResult lowerStore(MachineInstr &MI);
   LegalizeResult lowerBitCount(MachineInstr &MI);
+  LegalizeResult lowerFunnelShiftWithInverse(MachineInstr &MI);
+  LegalizeResult lowerFunnelShiftAsShifts(MachineInstr &MI);
+  LegalizeResult lowerFunnelShift(MachineInstr &MI);
+  LegalizeResult lowerRotateWithReverseRotate(MachineInstr &MI);
+  LegalizeResult lowerRotate(MachineInstr &MI);
 
   LegalizeResult lowerU64ToF32BitOps(MachineInstr &MI);
   LegalizeResult lowerUITOFP(MachineInstr &MI);
@@ -369,7 +391,7 @@ public:
   LegalizeResult lowerReadWriteRegister(MachineInstr &MI);
   LegalizeResult lowerSMULH_UMULH(MachineInstr &MI);
   LegalizeResult lowerSelect(MachineInstr &MI);
-
+  LegalizeResult lowerDIVREM(MachineInstr &MI);
 };
 
 /// Helper function that creates a libcall to the given \p Name using the given

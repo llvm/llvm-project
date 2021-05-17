@@ -104,9 +104,11 @@ class LLDB(DebuggerBase):
         self._target.DeleteAllBreakpoints()
 
     def _add_breakpoint(self, file_, line):
-        if not self._target.BreakpointCreateByLocation(file_, line):
+        bp = self._target.BreakpointCreateByLocation(file_, line)
+        if not bp:
             raise DebuggerException(
                 'could not add breakpoint [{}:{}]'.format(file_, line))
+        return bp.GetID()
 
     def _add_conditional_breakpoint(self, file_, line, condition):
         bp = self._target.BreakpointCreateByLocation(file_, line)
@@ -115,37 +117,24 @@ class LLDB(DebuggerBase):
         else:
             raise DebuggerException(
                   'could not add breakpoint [{}:{}]'.format(file_, line))
+        return bp.GetID()
 
-    def _delete_conditional_breakpoint(self, file_, line, condition):
-        bp_count = self._target.GetNumBreakpoints()
-        bps = [self._target.GetBreakpointAtIndex(ix) for ix in range(0, bp_count)]
+    def get_triggered_breakpoint_ids(self):
+        # Breakpoints can only have been triggered if we've hit one.
+        stop_reason = self._translate_stop_reason(self._thread.GetStopReason())
+        if stop_reason != StopReason.BREAKPOINT:
+            return []
+        # Breakpoints have two data parts: Breakpoint ID, Location ID. We're
+        # only interested in the Breakpoint ID so we skip every other item.
+        return set([self._thread.GetStopReasonDataAtIndex(i)
+                    for i in range(0, self._thread.GetStopReasonDataCount(), 2)])
 
-        for bp in bps:
-            bp_cond = bp.GetCondition()
-            bp_cond = bp_cond if bp_cond is not None else ''
-
-            if bp_cond != condition:
-                continue
-
-            # If one of the bound bp locations for this bp is bound to the same
-            # line in file_ above, then delete the entire parent bp and all
-            # bp locs.
-            # https://lldb.llvm.org/python_reference/lldb.SBBreakpoint-class.html
-            for breakpoint_location in bp:
-                sb_address = breakpoint_location.GetAddress()
-
-                sb_line_entry = sb_address.GetLineEntry()
-                bl_line = sb_line_entry.GetLine()
-
-                sb_file_entry = sb_line_entry.GetFileSpec()
-                bl_dir = sb_file_entry.GetDirectory()
-                bl_file_name = sb_file_entry.GetFilename()
-
-                bl_file_path = os.path.join(bl_dir, bl_file_name)
-
-                if bl_file_path == file_ and bl_line == line:
-                    self._target.BreakpointDelete(bp.GetID())
-                    break
+    def delete_breakpoint(self, id):
+        bp = self._target.FindBreakpointByID(id)
+        if not bp:
+            # The ID is not valid.
+            raise KeyError
+        self._target.BreakpointDelete(bp.GetID())
 
     def launch(self):
         self._process = self._target.LaunchSimple(None, None, os.getcwd())

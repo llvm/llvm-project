@@ -455,7 +455,9 @@ public:
     typedef basic_string<char_type>                           string_type;
 
     // construct/copy/destroy:
-    explicit match_results(const Allocator& a = Allocator());
+    explicit match_results(const Allocator& a = Allocator()); // before C++20
+    match_results() : match_results(Allocator()) {}           // C++20
+    explicit match_results(const Allocator& a);               // C++20
     match_results(const match_results& m);
     match_results(match_results&& m) noexcept;
     match_results& operator=(const match_results& m);
@@ -763,6 +765,7 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #include <__config>
 #include <stdexcept>
 #include <__locale>
+#include <compare>
 #include <initializer_list>
 #include <utility>
 #include <iterator>
@@ -2632,7 +2635,7 @@ public:
         {
         __init(__il.begin(), __il.end());
         }
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
 //    ~basic_regex() = default;
 
@@ -2645,7 +2648,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     basic_regex& operator=(initializer_list<value_type> __il)
         {return assign(__il);}
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
     template <class _ST, class _SA>
         _LIBCPP_INLINE_VISIBILITY
         basic_regex& operator=(const basic_string<value_type, _ST, _SA>& __p)
@@ -2719,7 +2722,7 @@ public:
                         flag_type __f = regex_constants::ECMAScript)
         {return assign(__il.begin(), __il.end(), __f);}
 
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
     // const operations:
     _LIBCPP_INLINE_VISIBILITY
@@ -5357,7 +5360,13 @@ public:
     typedef basic_string<char_type>                           string_type;
 
     // construct/copy/destroy:
+#ifndef _LIBCPP_CXX03_LANG
+    match_results() : match_results(allocator_type()) {}
+    explicit match_results(const allocator_type& __a);
+#else
     explicit match_results(const allocator_type& __a = allocator_type());
+#endif
+
 //    match_results(const match_results&) = default;
 //    match_results& operator=(const match_results&) = default;
 //    match_results(match_results&& __m) = default;
@@ -6434,7 +6443,7 @@ public:
                          regex_constants::match_flag_type __m =
                                        regex_constants::match_default) = delete;
 #endif
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
     template <size_t _Np>
         regex_token_iterator(_BidirectionalIterator __a,
                              _BidirectionalIterator __b,
@@ -6549,7 +6558,7 @@ regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::
     __init(__a, __b);
 }
 
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
 template <class _BidirectionalIterator, class _CharT, class _Traits>
 template <size_t _Np>
@@ -6766,4 +6775,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif  // _LIBCPP_REGEX
+#endif // _LIBCPP_REGEX

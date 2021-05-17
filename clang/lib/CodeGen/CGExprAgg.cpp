@@ -901,6 +901,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
   case CK_CopyAndAutoreleaseBlockObject:
   case CK_BuiltinFnToFnPtr:
   case CK_ZeroToOCLOpaqueType:
+  case CK_MatrixCast:
 
   case CK_IntToOCLSampler:
   case CK_FloatingToFixedPoint:
@@ -1422,6 +1423,7 @@ static bool castPreservesZero(const CastExpr *CE) {
   case CK_PointerToIntegral:
     // Language extensions.
   case CK_VectorSplat:
+  case CK_MatrixCast:
   case CK_NonAtomicToAtomic:
   case CK_AtomicToNonAtomic:
     return true;
@@ -2056,7 +2058,7 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
               Record->hasTrivialCopyAssignment() ||
               Record->hasTrivialMoveConstructor() ||
               Record->hasTrivialMoveAssignment() ||
-              Record->isUnion()) &&
+              Record->hasAttr<TrivialABIAttr>() || Record->isUnion()) &&
              "Trying to aggregate-copy a type without a trivial copy/move "
              "constructor or assignment operator");
       // Ignore empty classes in C++.

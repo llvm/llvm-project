@@ -6,11 +6,12 @@
 
 # LLVM:      Name: allflags
 # LLVM-NEXT: Type: SHT_PROGBITS
-# LLVM-NEXT: Flags [ (0x80000FF7)
+# LLVM-NEXT: Flags [ (0x80200FF7)
 # LLVM-NEXT:   SHF_ALLOC (0x2)
 # LLVM-NEXT:   SHF_COMPRESSED (0x800)
 # LLVM-NEXT:   SHF_EXCLUDE (0x80000000)
 # LLVM-NEXT:   SHF_EXECINSTR (0x4)
+# LLVM-NEXT:   SHF_GNU_RETAIN (0x200000)
 # LLVM-NEXT:   SHF_GROUP (0x200)
 # LLVM-NEXT:   SHF_INFO_LINK (0x40)
 # LLVM-NEXT:   SHF_LINK_ORDER (0x80)
@@ -92,6 +93,14 @@
 # LLVM-NEXT:   SHF_COMPRESSED (0x800)
 # LLVM-NEXT: ]
 
+## SHF_GNU_RETAIN is defined in the OS-specific range, but we treat it generic
+## and allow it to be used with OSABI values other than GNU and FREEBSD.
+# LLVM:      Name: retain
+# LLVM-NEXT: Type: SHT_PROGBITS
+# LLVM-NEXT: Flags [ (0x200000)
+# LLVM-NEXT:   SHF_GNU_RETAIN (0x200000)
+# LLVM-NEXT: ]
+
 # LLVM:      Name: exclude
 # LLVM-NEXT: Type: SHT_PROGBITS
 # LLVM-NEXT: Flags [ (0x80000000)
@@ -104,7 +113,7 @@
 # LLVM-NEXT: ]
 
 # GNU: [Nr] Name          Type     Address          Off    Size   ES Flg          Lk Inf Al
-# GNU: [ 1] allflags      PROGBITS 0000000000000000 000040 000000 00 WAXMSILOGTCE 0   0  0
+# GNU: [ 1] allflags      PROGBITS 0000000000000000 000040 000000 00 WAXMSILOGTCRE 0   0  0
 # GNU: [ 2] noflags       PROGBITS 0000000000000000 000040 000000 00              0   0  0
 # GNU: [ 3] write         PROGBITS 0000000000000000 000040 000000 00 W            0   0  0
 # GNU: [ 4] alloc         PROGBITS 0000000000000000 000040 000000 00 A            0   0  0
@@ -117,8 +126,9 @@
 # GNU: [11] group         PROGBITS 0000000000000000 000040 000000 00 G            0   0  0
 # GNU: [12] tls           PROGBITS 0000000000000000 000040 000000 00 T            0   0  0
 # GNU: [13] compressed    PROGBITS 0000000000000000 000040 000000 00 C            0   0  0
-# GNU: [14] exclude       PROGBITS 0000000000000000 000040 000000 00 E            0   0  0
-# GNU: [15] unknown       PROGBITS 0000000000000000 000040 000000 00 x            0   0  0
+# GNU: [14] retain        PROGBITS 0000000000000000 000040 000000 00 R            0   0  0
+# GNU: [15] exclude       PROGBITS 0000000000000000 000040 000000 00 E            0   0  0
+# GNU: [16] unknown       PROGBITS 0000000000000000 000040 000000 00 x            0   0  0
 
 --- !ELF
 FileHeader:
@@ -131,7 +141,7 @@ Sections:
     Type:  SHT_PROGBITS
     Flags: [ SHF_WRITE, SHF_ALLOC, SHF_EXECINSTR, SHF_MERGE,
             SHF_STRINGS, SHF_INFO_LINK, SHF_LINK_ORDER, SHF_OS_NONCONFORMING,
-            SHF_GROUP, SHF_TLS, SHF_COMPRESSED, SHF_EXCLUDE ]
+            SHF_GROUP, SHF_TLS, SHF_COMPRESSED, SHF_GNU_RETAIN, SHF_EXCLUDE ]
   - Name:  noflags
     Type:  SHT_PROGBITS
     Flags: [ ]
@@ -168,6 +178,9 @@ Sections:
   - Name:  compressed
     Type:  SHT_PROGBITS
     Flags: [ SHF_COMPRESSED ]
+  - Name:  retain
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_GNU_RETAIN ]
   - Name:  exclude
     Type:  SHT_PROGBITS
     Flags: [ SHF_EXCLUDE ]

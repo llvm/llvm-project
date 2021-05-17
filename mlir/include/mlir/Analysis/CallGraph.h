@@ -139,8 +139,8 @@ private:
   Region *callableRegion;
 
   /// A set of out-going edges from this node to other nodes in the graph.
-  llvm::SetVector<Edge, SmallVector<Edge, 4>,
-                  llvm::SmallDenseSet<Edge, 4, EdgeKeyInfo>>
+  SetVector<Edge, SmallVector<Edge, 4>,
+            llvm::SmallDenseSet<Edge, 4, EdgeKeyInfo>>
       edges;
 
   // Provide access to private methods.

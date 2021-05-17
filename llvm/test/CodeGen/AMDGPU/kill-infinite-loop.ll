@@ -50,7 +50,7 @@ end:
 ; CHECK-LABEL: only_kill
 ; CHECK: exp null off, off, off, off done vm
 ; CHECK-NEXT: s_endpgm
-; SIInsertSkips inserts an extra null export here, but it should be harmless.
+; SILateBranchLowering inserts an extra null export here, but it should be harmless.
 ; CHECK: exp null off, off, off, off done vm
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @only_kill() #0 {

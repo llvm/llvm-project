@@ -350,7 +350,7 @@ bool ClangExpressionDeclMap::AddValueToStruct(const NamedDecl *decl,
   if (!var)
     return false;
 
-  LLDB_LOG(log, "Adding value for (NamedDecl*)%p [%s - %s] to the structure",
+  LLDB_LOG(log, "Adding value for (NamedDecl*){0} [{1} - {2}] to the structure",
            decl, name, var->GetName());
 
   // We know entity->m_parser_vars is valid because we used a parser variable
@@ -752,7 +752,7 @@ void ClangExpressionDeclMap::SearchPersistenDecls(NameSearchContext &context,
     MaybeRegisterFunctionBody(parser_function_decl);
   }
 
-  LLDB_LOG(log, "  CEDM::FEVD Found persistent decl %s", name);
+  LLDB_LOG(log, "  CEDM::FEVD Found persistent decl {0}", name);
 
   context.AddNamedDecl(parser_named_decl);
 }
@@ -810,7 +810,7 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context) {
     LLDB_LOG(log, "  CEDM::FEVD Adding type for $__lldb_class: {1}",
              class_qual_type.getAsString());
 
-    AddContextClassType(context, class_user_type);
+    AddContextClassType(context, class_user_type, method_decl);
 
     if (method_decl->isInstance()) {
       // self is a pointer to the object
@@ -1493,7 +1493,7 @@ bool ClangExpressionDeclMap::GetVariableValue(VariableSP &var,
     if (var_location_expr.GetExpressionData(const_value_extractor)) {
       var_location = Value(const_value_extractor.GetDataStart(),
                            const_value_extractor.GetByteSize());
-      var_location.SetValueType(Value::eValueTypeHostAddress);
+      var_location.SetValueType(Value::ValueType::HostAddress);
     } else {
       LLDB_LOG(log, "Error evaluating constant variable: {0}", err.AsCString());
       return false;
@@ -1512,10 +1512,10 @@ bool ClangExpressionDeclMap::GetVariableValue(VariableSP &var,
   if (parser_type)
     *parser_type = TypeFromParser(type_to_use);
 
-  if (var_location.GetContextType() == Value::eContextTypeInvalid)
+  if (var_location.GetContextType() == Value::ContextType::Invalid)
     var_location.SetCompilerType(type_to_use);
 
-  if (var_location.GetValueType() == Value::eValueTypeFileAddress) {
+  if (var_location.GetValueType() == Value::ValueType::FileAddress) {
     SymbolContext var_sc;
     var->CalculateSymbolContext(&var_sc);
 
@@ -1529,7 +1529,7 @@ bool ClangExpressionDeclMap::GetVariableValue(VariableSP &var,
 
     if (load_addr != LLDB_INVALID_ADDRESS) {
       var_location.GetScalar() = load_addr;
-      var_location.SetValueType(Value::eValueTypeLoadAddress);
+      var_location.SetValueType(Value::ValueType::LoadAddress);
     }
   }
 
@@ -1665,11 +1665,11 @@ void ClangExpressionDeclMap::AddOneGenericVariable(NameSearchContext &context,
   const Address symbol_address = symbol.GetAddress();
   lldb::addr_t symbol_load_addr = symbol_address.GetLoadAddress(target);
 
-  // parser_vars->m_lldb_value.SetContext(Value::eContextTypeClangType,
+  // parser_vars->m_lldb_value.SetContext(Value::ContextType::ClangType,
   // user_type.GetOpaqueQualType());
   parser_vars->m_lldb_value.SetCompilerType(user_type);
   parser_vars->m_lldb_value.GetScalar() = symbol_load_addr;
-  parser_vars->m_lldb_value.SetValueType(Value::eValueTypeLoadAddress);
+  parser_vars->m_lldb_value.SetValueType(Value::ValueType::LoadAddress);
 
   parser_vars->m_named_decl = var_decl;
   parser_vars->m_llvm_value = nullptr;
@@ -1860,14 +1860,14 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
       entity->GetParserVars(GetParserID());
 
   if (load_addr != LLDB_INVALID_ADDRESS) {
-    parser_vars->m_lldb_value.SetValueType(Value::eValueTypeLoadAddress);
+    parser_vars->m_lldb_value.SetValueType(Value::ValueType::LoadAddress);
     parser_vars->m_lldb_value.GetScalar() = load_addr;
   } else {
     // We have to try finding a file address.
 
     lldb::addr_t file_addr = fun_address.GetFileAddress();
 
-    parser_vars->m_lldb_value.SetValueType(Value::eValueTypeFileAddress);
+    parser_vars->m_lldb_value.SetValueType(Value::ValueType::FileAddress);
     parser_vars->m_lldb_value.GetScalar() = file_addr;
   }
 
@@ -1889,8 +1889,9 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
   }
 }
 
-void ClangExpressionDeclMap::AddContextClassType(NameSearchContext &context,
-                                                 const TypeFromUser &ut) {
+void ClangExpressionDeclMap::AddContextClassType(
+    NameSearchContext &context, const TypeFromUser &ut,
+    CXXMethodDecl *context_method) {
   CompilerType copied_clang_type = GuardedCopyType(ut);
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
@@ -1912,7 +1913,12 @@ void ClangExpressionDeclMap::AddContextClassType(NameSearchContext &context,
         void_clang_type, &void_ptr_clang_type, 1, false, 0);
 
     const bool is_virtual = false;
-    const bool is_static = false;
+    // If we evaluate an expression inside a static method, we also need to
+    // make our lldb_expr method static so that Clang denies access to
+    // non-static members.
+    // If we don't have a context_method we are evaluating within a context
+    // object and we can allow access to non-static members.
+    const bool is_static = context_method ? context_method->isStatic() : false;
     const bool is_inline = false;
     const bool is_explicit = false;
     const bool is_attr_used = true;

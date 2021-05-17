@@ -27,13 +27,12 @@ using namespace llvm;
 void anchor() {}
 
 static std::string LibPath(const std::string Name = "TestPlugin") {
-  const std::vector<testing::internal::string> &Argvs =
-      testing::internal::GetArgvs();
+  const auto &Argvs = testing::internal::GetArgvs();
   const char *Argv0 = Argvs.size() > 0 ? Argvs[0].c_str() : "PluginsTests";
   void *Ptr = (void *)(intptr_t)anchor;
   std::string Path = sys::fs::getMainExecutable(Argv0, Ptr);
   llvm::SmallString<256> Buf{sys::path::parent_path(Path)};
-  sys::path::append(Buf, (Name + LTDL_SHLIB_EXT).c_str());
+  sys::path::append(Buf, (Name + LLVM_PLUGIN_EXT).c_str());
   return std::string(Buf.str());
 }
 

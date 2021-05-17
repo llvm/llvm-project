@@ -14,10 +14,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyAsmPrinter.h"
-#include "MCTargetDesc/WebAssemblyInstPrinter.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
+#include "Utils/WebAssemblyTypeUtilities.h"
+#include "Utils/WebAssemblyUtilities.h"
 #include "WebAssembly.h"
 #include "WebAssemblyMCInstLower.h"
 #include "WebAssemblyMachineFunctionInfo.h"
@@ -169,20 +170,67 @@ MCSymbolWasm *WebAssemblyAsmPrinter::getMCSymbolForFunction(
   return WasmSym;
 }
 
+void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
+  if (!WebAssembly::isWasmVarAddressSpace(GV->getAddressSpace())) {
+    AsmPrinter::emitGlobalVariable(GV);
+    return;
+  }
+
+  assert(!GV->isThreadLocal());
+
+  MCSymbolWasm *Sym = cast<MCSymbolWasm>(getSymbol(GV));
+
+  if (!Sym->getType()) {
+    const WebAssemblyTargetLowering &TLI = *Subtarget->getTargetLowering();
+    SmallVector<EVT, 1> VTs;
+    ComputeValueVTs(TLI, GV->getParent()->getDataLayout(), GV->getValueType(),
+                    VTs);
+    if (VTs.size() != 1 ||
+        TLI.getNumRegisters(GV->getParent()->getContext(), VTs[0]) != 1)
+      report_fatal_error("Aggregate globals not yet implemented");
+    MVT VT = TLI.getRegisterType(GV->getParent()->getContext(), VTs[0]);
+    bool Mutable = true;
+    wasm::ValType Type = WebAssembly::toValType(VT);
+    Sym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
+    Sym->setGlobalType(wasm::WasmGlobalType{uint8_t(Type), Mutable});
+  }
+
+  emitVisibility(Sym, GV->getVisibility(), !GV->isDeclaration());
+  if (GV->hasInitializer()) {
+    assert(getSymbolPreferLocal(*GV) == Sym);
+    emitLinkage(GV, Sym);
+    getTargetStreamer()->emitGlobalType(Sym);
+    OutStreamer->emitLabel(Sym);
+    // TODO: Actually emit the initializer value.  Otherwise the global has the
+    // default value for its type (0, ref.null, etc).
+    OutStreamer->AddBlankLine();
+  }
+}
+
 void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
   for (auto &It : OutContext.getSymbols()) {
-    // Emit a .globaltype and .eventtype declaration.
+    // Emit .globaltype, .eventtype, or .tabletype declarations.
     auto Sym = cast<MCSymbolWasm>(It.getValue());
-    if (Sym->getType() == wasm::WASM_SYMBOL_TYPE_GLOBAL)
-      getTargetStreamer()->emitGlobalType(Sym);
-    else if (Sym->getType() == wasm::WASM_SYMBOL_TYPE_EVENT)
+    if (Sym->getType() == wasm::WASM_SYMBOL_TYPE_GLOBAL) {
+      // .globaltype already handled by emitGlobalVariable for defined
+      // variables; here we make sure the types of external wasm globals get
+      // written to the file.
+      if (Sym->isUndefined())
+        getTargetStreamer()->emitGlobalType(Sym);
+    } else if (Sym->getType() == wasm::WASM_SYMBOL_TYPE_EVENT)
       getTargetStreamer()->emitEventType(Sym);
+    else if (Sym->getType() == wasm::WASM_SYMBOL_TYPE_TABLE)
+      getTargetStreamer()->emitTableType(Sym);
   }
 
   DenseSet<MCSymbol *> InvokeSymbols;
+  bool HasAddressTakenFunction = false;
   for (const auto &F : M) {
     if (F.isIntrinsic())
       continue;
+
+    if (F.hasAddressTaken())
+      HasAddressTakenFunction = true;
 
     // Emit function type info for all undefined functions
     if (F.isDeclarationForLinker()) {
@@ -242,13 +290,25 @@ void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
     }
   }
 
+  // When a function's address is taken, a TABLE_INDEX relocation is emitted
+  // against the function symbol at the use site.  However the relocation
+  // doesn't explicitly refer to the table.  In the future we may want to
+  // define a new kind of reloc against both the function and the table, so
+  // that the linker can see that the function symbol keeps the table alive,
+  // but for now manually mark the table as live.
+  if (HasAddressTakenFunction) {
+    MCSymbolWasm *FunctionTable =
+        WebAssembly::getOrCreateFunctionTableSymbol(OutContext, Subtarget);
+    OutStreamer->emitSymbolAttribute(FunctionTable, MCSA_NoDeadStrip);
+  }
+
   for (const auto &G : M.globals()) {
-    if (!G.hasInitializer() && G.hasExternalLinkage()) {
-      if (G.getValueType()->isSized()) {
-        uint16_t Size = M.getDataLayout().getTypeAllocSize(G.getValueType());
-        OutStreamer->emitELFSize(getSymbol(&G),
-                                 MCConstantExpr::create(Size, OutContext));
-      }
+    if (!G.hasInitializer() && G.hasExternalLinkage() &&
+        !WebAssembly::isWasmVarAddressSpace(G.getAddressSpace()) &&
+        G.getValueType()->isSized()) {
+      uint16_t Size = M.getDataLayout().getTypeAllocSize(G.getValueType());
+      OutStreamer->emitELFSize(getSymbol(&G),
+                               MCConstantExpr::create(Size, OutContext));
     }
   }
 

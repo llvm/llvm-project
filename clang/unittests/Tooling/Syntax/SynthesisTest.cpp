@@ -38,8 +38,8 @@ protected:
   }
 };
 
-INSTANTIATE_TEST_CASE_P(SynthesisTests, SynthesisTest,
-                        ::testing::ValuesIn(allTestClangConfigs()), );
+INSTANTIATE_TEST_SUITE_P(SynthesisTests, SynthesisTest,
+                        ::testing::ValuesIn(allTestClangConfigs()) );
 
 TEST_P(SynthesisTest, Leaf_Punctuation) {
   buildTree("", GetParam());
@@ -238,12 +238,13 @@ TranslationUnit Detached synthesized
     |-IfStatement Statement synthesized
     | |-'if' IntroducerKeyword synthesized
     | |-'(' synthesized
-    | |-BinaryOperatorExpression synthesized
-    | | |-IntegerLiteralExpression LeftHandSide synthesized
-    | | | `-'1' LiteralToken synthesized
-    | | |-'+' OperatorToken synthesized
-    | | `-IntegerLiteralExpression RightHandSide synthesized
-    | |   `-'1' LiteralToken synthesized
+    | |-ExpressionStatement Condition synthesized
+    | | `-BinaryOperatorExpression Expression synthesized
+    | |   |-IntegerLiteralExpression LeftHandSide synthesized
+    | |   | `-'1' LiteralToken synthesized
+    | |   |-'+' OperatorToken synthesized
+    | |   `-IntegerLiteralExpression RightHandSide synthesized
+    | |     `-'1' LiteralToken synthesized
     | |-')' synthesized
     | |-CompoundStatement ThenStatement synthesized
     | | |-'{' OpenParen synthesized

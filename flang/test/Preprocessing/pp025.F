@@ -1,4 +1,4 @@
-! RUN: %f18 -E %s 2>&1 | FileCheck %s
+! RUN: %flang -E %s 2>&1 | FileCheck %s
 ! CHECK: res=ikwm2z
 * KWM expansion is before token pasting due to fixed-form space removal
       integer, parameter :: IKWM2Z = 777

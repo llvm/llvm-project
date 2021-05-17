@@ -7,8 +7,8 @@
 # We used to mark bar as absolute.
 
 # CHECK: [ 5] .text
-# CHECK: [[ADDR:[0-9a-f]+]] 0 NOTYPE  GLOBAL DEFAULT   5 bar
-# CHECK: [[ADDR]]           0 NOTYPE  GLOBAL DEFAULT   5 foo
+# CHECK: [[ADDR:[0-9a-f]+]] 0 NOTYPE  GLOBAL DEFAULT   5 foo
+# CHECK: [[ADDR]]           0 NOTYPE  GLOBAL DEFAULT   5 bar
 
 # The nop makes the test more interesting by making the offset of
 # text.f non zero.

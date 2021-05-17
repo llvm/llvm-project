@@ -36,7 +36,7 @@ body:             |
     %15:gr32bit = Select32 %11, %4, 14, 4, implicit $cc
     ADJCALLSTACKDOWN 0, 0
     $r2d = COPY %14
-    CallBRASL @bar, $r2d, csr_systemz, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc
+    CallBRASL @bar, $r2d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc
     ADJCALLSTACKUP 0, 0
     $r2l = COPY %15
     Return implicit $r2l

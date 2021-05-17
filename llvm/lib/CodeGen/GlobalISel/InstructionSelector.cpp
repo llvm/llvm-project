@@ -33,18 +33,6 @@ InstructionSelector::MatcherState::MatcherState(unsigned MaxRenderers)
 
 InstructionSelector::InstructionSelector() = default;
 
-bool InstructionSelector::constrainOperandRegToRegClass(
-    MachineInstr &I, unsigned OpIdx, const TargetRegisterClass &RC,
-    const TargetInstrInfo &TII, const TargetRegisterInfo &TRI,
-    const RegisterBankInfo &RBI) const {
-  MachineBasicBlock &MBB = *I.getParent();
-  MachineFunction &MF = *MBB.getParent();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-
-  return constrainOperandRegClass(MF, TRI, MRI, TII, RBI, I, RC,
-                                  I.getOperand(OpIdx));
-}
-
 bool InstructionSelector::isOperandImmEqual(
     const MachineOperand &MO, int64_t Value,
     const MachineRegisterInfo &MRI) const {

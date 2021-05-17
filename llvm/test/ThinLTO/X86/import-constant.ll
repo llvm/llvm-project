@@ -28,9 +28,9 @@
 ; PROMOTE: @_ZL3Obj.llvm.{{.*}} = hidden constant %struct.S { i32 4, i32 8, i32* @val }
 
 ; @outer is a write-only variable, so it's been converted to zeroinitializer.
-; IMPORT:      @outer = internal local_unnamed_addr global %struct.Q zeroinitializer
+; IMPORT:      @val = available_externally global i32 42
 ; IMPORT-NEXT: @_ZL3Obj.llvm.{{.*}} = available_externally hidden constant %struct.S { i32 4, i32 8, i32* @val }
-; IMPORT-NEXT: @val = available_externally global i32 42
+; IMPORT-NEXT: @outer = internal local_unnamed_addr global %struct.Q zeroinitializer
 
 ; OPT: @outer = internal unnamed_addr global %struct.Q zeroinitializer
 
@@ -39,8 +39,8 @@
 ; OPT-NEXT:   store %struct.S* null, %struct.S** getelementptr inbounds (%struct.Q, %struct.Q* @outer, i64 0, i32 0)
 ; OPT-NEXT:   ret i32 12
 
-; NOREFS:      @outer = internal local_unnamed_addr global %struct.Q zeroinitializer
-; NOREFS-NEXT: @_ZL3Obj.llvm.{{.*}} = external hidden constant %struct.S
+; NOREFS:      @_ZL3Obj.llvm.{{.*}} = external hidden constant %struct.S
+; NOREFS-NEXT: @outer = internal local_unnamed_addr global %struct.Q zeroinitializer
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

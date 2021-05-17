@@ -4,9 +4,8 @@
 define i1 @foo(i32 %i) optsize {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl $305419896, %eax # imm = 0x12345678
-; CHECK-NEXT:    andl %eax, %edi
-; CHECK-NEXT:    cmpl %eax, %edi
+; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    testl $305419896, %edi # imm = 0x12345678
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %and = and i32 %i, 305419896
@@ -17,9 +16,8 @@ define i1 @foo(i32 %i) optsize {
 define i1 @foo_pgso(i32 %i) !prof !14 {
 ; CHECK-LABEL: foo_pgso:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl $305419896, %eax # imm = 0x12345678
-; CHECK-NEXT:    andl %eax, %edi
-; CHECK-NEXT:    cmpl %eax, %edi
+; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    testl $305419896, %edi # imm = 0x12345678
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %and = and i32 %i, 305419896
@@ -33,8 +31,7 @@ define i1 @foo_pgso(i32 %i) !prof !14 {
 define zeroext i1 @g(i32 %x) optsize {
 ; CHECK-LABEL: g:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    orl $1, %edi
-; CHECK-NEXT:    cmpl $1, %edi
+; CHECK-NEXT:    testl $-2, %edi
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %t0 = or i32 %x, 1

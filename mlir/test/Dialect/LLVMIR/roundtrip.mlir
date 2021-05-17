@@ -1,10 +1,10 @@
 // RUN: mlir-opt %s | mlir-opt | FileCheck %s
 
 // CHECK-LABEL: func @ops
-// CHECK-SAME: (%[[I32:.*]]: i32, %[[FLOAT:.*]]: f32, %[[I8PTR1:.*]]: !llvm.ptr<i8>, %[[I8PTR2:.*]]: !llvm.ptr<i8>, %[[BOOL:.*]]: i1)
+// CHECK-SAME: (%[[I32:.*]]: i32, %[[FLOAT:.*]]: f32, %[[I8PTR1:.*]]: !llvm.ptr<i8>, %[[I8PTR2:.*]]: !llvm.ptr<i8>, %[[BOOL:.*]]: i1, %[[VI8PTR1:.*]]: !llvm.vec<2 x ptr<i8>>)
 func @ops(%arg0: i32, %arg1: f32,
           %arg2: !llvm.ptr<i8>, %arg3: !llvm.ptr<i8>,
-          %arg4: i1) {
+          %arg4: i1, %arg5 : !llvm.vec<2x!llvm.ptr<i8>>) {
 // Integer arithmetic binary operations.
 //
 // CHECK: {{.*}} = llvm.add %[[I32]], %[[I32]] : i32
@@ -15,6 +15,8 @@ func @ops(%arg0: i32, %arg1: f32,
 // CHECK: {{.*}} = llvm.urem %[[I32]], %[[I32]] : i32
 // CHECK: {{.*}} = llvm.srem %[[I32]], %[[I32]] : i32
 // CHECK: {{.*}} = llvm.icmp "ne" %[[I32]], %[[I32]] : i32
+// CHECK: {{.*}} = llvm.icmp "ne" %[[I8PTR1]], %[[I8PTR1]] : !llvm.ptr<i8>
+// CHECK: {{.*}} = llvm.icmp "ne" %[[VI8PTR1]], %[[VI8PTR1]] : !llvm.vec<2 x ptr<i8>>
   %0 = llvm.add %arg0, %arg0 : i32
   %1 = llvm.sub %arg0, %arg0 : i32
   %2 = llvm.mul %arg0, %arg0 : i32
@@ -23,6 +25,8 @@ func @ops(%arg0: i32, %arg1: f32,
   %5 = llvm.urem %arg0, %arg0 : i32
   %6 = llvm.srem %arg0, %arg0 : i32
   %7 = llvm.icmp "ne" %arg0, %arg0 : i32
+  %ptrcmp = llvm.icmp "ne" %arg2, %arg2 : !llvm.ptr<i8>
+  %vptrcmp = llvm.icmp "ne" %arg5, %arg5 : !llvm.vec<2 x ptr<i8>>
 
 // Floating point binary operations.
 //
@@ -284,8 +288,8 @@ func @null() {
 
 // CHECK-LABEL: @atomicrmw
 func @atomicrmw(%ptr : !llvm.ptr<f32>, %val : f32) {
-  // CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} unordered : f32
-  %0 = llvm.atomicrmw fadd %ptr, %val unordered : f32
+  // CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} monotonic : f32
+  %0 = llvm.atomicrmw fadd %ptr, %val monotonic : f32
   llvm.return
 }
 
@@ -418,4 +422,21 @@ func @fastmathFlags(%arg0: f32, %arg1: f32, %arg2: i32) {
 // CHECK: {{.*}} = llvm.fneg %arg0 : f32
   %10 = llvm.fneg %arg0 {fastmathFlags = #llvm.fastmath<>} : f32
   return
+}
+
+module {
+  // CHECK-LABEL: @loopOptions
+  llvm.func @loopOptions() {
+    // CHECK: llvm.br
+    // CHECK-SAME: llvm.loop = {options = #llvm.loopopts<disable_unroll = true, disable_licm = true, interleave_count = 1, disable_pipeline = true, pipeline_initiation_interval = 1>}, parallel_access = [@metadata::@group1]}
+    llvm.br ^bb1 {llvm.loop = {options = #llvm.loopopts<disable_unroll = true, disable_licm = true, interleave_count = 1, disable_pipeline = true, pipeline_initiation_interval = 1>}, parallel_access = [@metadata::@group1]}
+  ^bb1:
+    llvm.return
+  }
+  // CHECK: llvm.metadata @metadata attributes {test_attribute} {
+  llvm.metadata @metadata attributes {test_attribute} {
+    // CHECK: llvm.access_group @group1
+    llvm.access_group @group1
+    llvm.return
+  }
 }

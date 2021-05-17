@@ -96,11 +96,11 @@ func @different_attributes(index, index) -> (i1, i1, i1) {
 /// Check that operations with side effects are not eliminated.
 // CHECK-LABEL: @side_effect
 func @side_effect() -> (memref<2x1xf32>, memref<2x1xf32>) {
-  // CHECK: %0 = alloc() : memref<2x1xf32>
-  %0 = alloc() : memref<2x1xf32>
+  // CHECK: %0 = memref.alloc() : memref<2x1xf32>
+  %0 = memref.alloc() : memref<2x1xf32>
 
-  // CHECK-NEXT: %1 = alloc() : memref<2x1xf32>
-  %1 = alloc() : memref<2x1xf32>
+  // CHECK-NEXT: %1 = memref.alloc() : memref<2x1xf32>
+  %1 = memref.alloc() : memref<2x1xf32>
 
   // CHECK-NEXT: return %0, %1 : memref<2x1xf32>, memref<2x1xf32>
   return %0, %1 : memref<2x1xf32>, memref<2x1xf32>
@@ -244,3 +244,24 @@ func @nested_isolated() -> i32 {
 
   return %0 : i32
 }
+
+/// This test is checking that CSE gracefully handles values in graph regions
+/// where the use occurs before the def, and one of the defs could be CSE'd with
+/// the other.
+// CHECK-LABEL: @use_before_def
+func @use_before_def() {
+  // CHECK-NEXT: test.graph_region
+  test.graph_region {
+    // CHECK-NEXT: addi %c1_i32, %c1_i32_0
+    %0 = addi %1, %2 : i32
+
+    // CHECK-NEXT: constant 1
+    // CHECK-NEXT: constant 1
+    %1 = constant 1 : i32
+    %2 = constant 1 : i32
+
+    // CHECK-NEXT: "foo.yield"(%0) : (i32) -> ()
+    "foo.yield"(%0) : (i32) -> ()
+  }
+  return
+} 

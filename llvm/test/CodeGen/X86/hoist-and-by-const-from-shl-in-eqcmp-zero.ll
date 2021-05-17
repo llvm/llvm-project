@@ -461,7 +461,7 @@ define <4 x i1> @vec_4xi32_splat_eq(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-SSE2-LABEL: vec_4xi32_splat_eq:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pslld $23, %xmm1
-; X86-SSE2-NEXT:    paddd {{\.LCPI.*}}, %xmm1
+; X86-SSE2-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
 ; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [1,1,1,1]
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,1,3,3]
@@ -510,7 +510,7 @@ define <4 x i1> @vec_4xi32_nonsplat_eq(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-SSE2-LABEL: vec_4xi32_nonsplat_eq:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pslld $23, %xmm1
-; X86-SSE2-NEXT:    paddd {{\.LCPI.*}}, %xmm1
+; X86-SSE2-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
 ; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [0,1,16776960,2147483648]
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
@@ -563,12 +563,12 @@ define <4 x i1> @vec_4xi32_nonsplat_undef0_eq(<4 x i32> %x, <4 x i32> %y) nounwi
 ; X86-SSE2-NEXT:    movl $1, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm2
 ; X86-SSE2-NEXT:    pslld $23, %xmm1
-; X86-SSE2-NEXT:    paddd {{\.LCPI.*}}, %xmm1
+; X86-SSE2-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
 ; X86-SSE2-NEXT:    pmuludq %xmm1, %xmm2
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; X86-SSE2-NEXT:    pmuludq {{\.LCPI.*}}, %xmm1
+; X86-SSE2-NEXT:    pmuludq {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
 ; X86-SSE2-NEXT:    pand %xmm2, %xmm0
@@ -611,7 +611,7 @@ define <4 x i1> @vec_4xi32_nonsplat_undef1_eq(<4 x i32> %x, <4 x i32> %y) nounwi
 ; X86-SSE2-LABEL: vec_4xi32_nonsplat_undef1_eq:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pslld $23, %xmm1
-; X86-SSE2-NEXT:    paddd {{\.LCPI.*}}, %xmm1
+; X86-SSE2-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
 ; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [1,1,1,1]
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,1,3,3]
@@ -661,12 +661,12 @@ define <4 x i1> @vec_4xi32_nonsplat_undef2_eq(<4 x i32> %x, <4 x i32> %y) nounwi
 ; X86-SSE2-NEXT:    movl $1, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm2
 ; X86-SSE2-NEXT:    pslld $23, %xmm1
-; X86-SSE2-NEXT:    paddd {{\.LCPI.*}}, %xmm1
+; X86-SSE2-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
 ; X86-SSE2-NEXT:    pmuludq %xmm1, %xmm2
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; X86-SSE2-NEXT:    pmuludq {{\.LCPI.*}}, %xmm1
+; X86-SSE2-NEXT:    pmuludq {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
 ; X86-SSE2-NEXT:    pand %xmm2, %xmm0

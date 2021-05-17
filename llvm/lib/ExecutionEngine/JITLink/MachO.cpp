@@ -64,9 +64,9 @@ createLinkGraphFromMachOObject(MemoryBufferRef ObjectBuffer) {
 
     switch (CPUType) {
     case MachO::CPU_TYPE_ARM64:
-      return createLinkGraphFromMachOObject_arm64(std::move(ObjectBuffer));
+      return createLinkGraphFromMachOObject_arm64(ObjectBuffer);
     case MachO::CPU_TYPE_X86_64:
-      return createLinkGraphFromMachOObject_x86_64(std::move(ObjectBuffer));
+      return createLinkGraphFromMachOObject_x86_64(ObjectBuffer);
     }
     return make_error<JITLinkError>("MachO-64 CPU type not valid");
   } else

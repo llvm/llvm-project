@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -fheinous-gnu-extensions %s > %t 2>&1
-// RUN: FileCheck --input-file=%t -check-prefixes=CHECK,WARNINGS %s
+// RUN: FileCheck --input-file=%t --check-prefix=CHECK %s
 
 // This file is the C version of cfg.cpp.
 // Tests that are C-specific should go into this file.

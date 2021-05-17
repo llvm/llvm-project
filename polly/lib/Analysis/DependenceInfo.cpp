@@ -25,6 +25,7 @@
 #include "polly/ScopInfo.h"
 #include "polly/Support/GICHelper.h"
 #include "polly/Support/ISLTools.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/Support/Debug.h"
 #include "isl/aff.h"
 #include "isl/ctx.h"
@@ -189,7 +190,7 @@ static void collectInfo(Scop &S, isl_union_map *&Read,
 
 /// Fix all dimension of @p Zero to 0 and add it to @p user
 static void fixSetToZero(isl::set Zero, isl::union_set *User) {
-  for (unsigned i = 0; i < Zero.dim(isl::dim::set); i++)
+  for (auto i : seq<isl_size>(0, Zero.dim(isl::dim::set)))
     Zero = Zero.fix_si(isl::dim::set, i, 0);
   *User = User->add_set(Zero);
 }
@@ -667,7 +668,7 @@ bool Dependences::isValidSchedule(
   Dependences = Dependences.apply_range(Schedule);
 
   isl::set Zero = isl::set::universe(ScheduleSpace);
-  for (unsigned i = 0; i < Zero.dim(isl::dim::set); i++)
+  for (auto i : seq<isl_size>(0, Zero.dim(isl::dim::set)))
     Zero = Zero.fix_si(isl::dim::set, i, 0);
 
   isl::union_set UDeltas = Dependences.deltas();

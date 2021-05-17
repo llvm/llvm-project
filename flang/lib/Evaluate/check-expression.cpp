@@ -39,7 +39,7 @@ public:
     return semantics::IsKindTypeParameter(inq.parameter());
   }
   bool operator()(const semantics::Symbol &symbol) const {
-    const auto &ultimate{symbol.GetUltimate()};
+    const auto &ultimate{GetAssociationRoot(symbol)};
     return IsNamedConstant(ultimate) || IsImpliedDoIndex(ultimate) ||
         IsInitialProcedureTarget(ultimate);
   }
@@ -180,21 +180,19 @@ public:
     return false;
   }
   bool operator()(const semantics::Symbol &symbol) {
+    // This function checks only base symbols, not components.
     const Symbol &ultimate{symbol.GetUltimate()};
-    if (IsAllocatable(ultimate)) {
-      if (messages_) {
-        messages_->Say(
-            "An initial data target may not be a reference to an ALLOCATABLE '%s'"_err_en_US,
-            ultimate.name());
-        emittedMessage_ = true;
-      }
-      return false;
-    } else if (ultimate.Corank() > 0) {
-      if (messages_) {
-        messages_->Say(
-            "An initial data target may not be a reference to a coarray '%s'"_err_en_US,
-            ultimate.name());
-        emittedMessage_ = true;
+    if (const auto *assoc{
+            ultimate.detailsIf<semantics::AssocEntityDetails>()}) {
+      if (const auto &expr{assoc->expr()}) {
+        if (IsVariable(*expr)) {
+          return (*this)(*expr);
+        } else if (messages_) {
+          messages_->Say(
+              "An initial data target may not be an associated expression ('%s')"_err_en_US,
+              ultimate.name());
+          emittedMessage_ = true;
+        }
       }
       return false;
     } else if (!ultimate.attrs().test(semantics::Attr::TARGET)) {
@@ -213,8 +211,9 @@ public:
         emittedMessage_ = true;
       }
       return false;
+    } else {
+      return CheckVarOrComponent(ultimate);
     }
-    return true;
   }
   bool operator()(const StaticDataObject &) const { return false; }
   bool operator()(const TypeParamInquiry &) const { return false; }
@@ -233,6 +232,9 @@ public:
         x.u);
   }
   bool operator()(const CoarrayRef &) const { return false; }
+  bool operator()(const Component &x) {
+    return CheckVarOrComponent(x.GetLastSymbol()) && (*this)(x.base());
+  }
   bool operator()(const Substring &x) const {
     return IsConstantExpr(x.lower()) && IsConstantExpr(x.upper()) &&
         (*this)(x.parent());
@@ -258,6 +260,28 @@ public:
   bool operator()(const Relational<SomeType> &) const { return false; }
 
 private:
+  bool CheckVarOrComponent(const semantics::Symbol &symbol) {
+    const Symbol &ultimate{symbol.GetUltimate()};
+    if (IsAllocatable(ultimate)) {
+      if (messages_) {
+        messages_->Say(
+            "An initial data target may not be a reference to an ALLOCATABLE '%s'"_err_en_US,
+            ultimate.name());
+        emittedMessage_ = true;
+      }
+      return false;
+    } else if (ultimate.Corank() > 0) {
+      if (messages_) {
+        messages_->Say(
+            "An initial data target may not be a reference to a coarray '%s'"_err_en_US,
+            ultimate.name());
+        emittedMessage_ = true;
+      }
+      return false;
+    }
+    return true;
+  }
+
   parser::ContextualMessages *messages_;
   bool emittedMessage_{false};
 };
@@ -305,26 +329,30 @@ bool IsInitialProcedureTarget(const Expr<SomeType> &expr) {
   }
 }
 
-class ScalarExpansionVisitor : public AnyTraverse<ScalarExpansionVisitor,
-                                   std::optional<Expr<SomeType>>> {
+class ArrayConstantBoundChanger {
 public:
-  using Result = std::optional<Expr<SomeType>>;
-  using Base = AnyTraverse<ScalarExpansionVisitor, Result>;
-  ScalarExpansionVisitor(
-      ConstantSubscripts &&shape, std::optional<ConstantSubscripts> &&lb)
-      : Base{*this}, shape_{std::move(shape)}, lbounds_{std::move(lb)} {}
-  using Base::operator();
-  template <typename T> Result operator()(const Constant<T> &x) {
-    auto expanded{x.Reshape(std::move(shape_))};
-    if (lbounds_) {
-      expanded.set_lbounds(std::move(*lbounds_));
-    }
-    return AsGenericExpr(std::move(expanded));
+  ArrayConstantBoundChanger(ConstantSubscripts &&lbounds)
+      : lbounds_{std::move(lbounds)} {}
+
+  template <typename A> A ChangeLbounds(A &&x) const {
+    return std::move(x); // default case
+  }
+  template <typename T> Constant<T> ChangeLbounds(Constant<T> &&x) {
+    x.set_lbounds(std::move(lbounds_));
+    return std::move(x);
+  }
+  template <typename T> Expr<T> ChangeLbounds(Parentheses<T> &&x) {
+    return ChangeLbounds(
+        std::move(x.left())); // Constant<> can be parenthesized
+  }
+  template <typename T> Expr<T> ChangeLbounds(Expr<T> &&x) {
+    return std::visit(
+        [&](auto &&x) { return Expr<T>{ChangeLbounds(std::move(x))}; },
+        std::move(x.u)); // recurse until we hit a constant
   }
 
 private:
-  ConstantSubscripts shape_;
-  std::optional<ConstantSubscripts> lbounds_;
+  ConstantSubscripts &&lbounds_;
 };
 
 // Converts, folds, and then checks type, rank, and shape of an
@@ -351,7 +379,11 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
                 symbol.name(), symRank, folded.Rank());
           }
         } else if (auto extents{AsConstantExtents(context, symTS->shape())}) {
-          if (folded.Rank() == 0 && symRank > 0) {
+          if (folded.Rank() == 0 && symRank == 0) {
+            // symbol and constant are both scalars
+            return {std::move(folded)};
+          } else if (folded.Rank() == 0 && symRank > 0) {
+            // expand the scalar constant to an array
             return ScalarConstantExpander{std::move(*extents),
                 AsConstantExtents(
                     context, GetLowerBounds(context, NamedEntity{symbol}))}
@@ -360,7 +392,11 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
             if (CheckConformance(context.messages(), symTS->shape(),
                     *resultShape, "initialized object",
                     "initialization expression", false, false)) {
-              return {std::move(folded)};
+              // make a constant array with adjusted lower bounds
+              return ArrayConstantBoundChanger{
+                  std::move(*AsConstantExtents(
+                      context, GetLowerBounds(context, NamedEntity{symbol})))}
+                  .ChangeLbounds(std::move(folded));
             }
           }
         } else if (IsNamedConstant(symbol)) {
@@ -428,8 +464,11 @@ public:
 
   Result operator()(const semantics::Symbol &symbol) const {
     const auto &ultimate{symbol.GetUltimate()};
-    if (semantics::IsNamedConstant(ultimate) || ultimate.owner().IsModule() ||
-        ultimate.owner().IsSubmodule()) {
+    if (const auto *assoc{
+            ultimate.detailsIf<semantics::AssocEntityDetails>()}) {
+      return (*this)(assoc->expr());
+    } else if (semantics::IsNamedConstant(ultimate) ||
+        ultimate.owner().IsModule() || ultimate.owner().IsSubmodule()) {
       return std::nullopt;
     } else if (scope_.IsDerivedType() &&
         IsVariableName(ultimate)) { // C750, C754
@@ -572,16 +611,19 @@ public:
   using Base::operator();
 
   Result operator()(const semantics::Symbol &symbol) const {
-    if (symbol.attrs().test(semantics::Attr::CONTIGUOUS) ||
-        symbol.Rank() == 0) {
+    const auto &ultimate{symbol.GetUltimate()};
+    if (ultimate.attrs().test(semantics::Attr::CONTIGUOUS) ||
+        ultimate.Rank() == 0) {
       return true;
-    } else if (semantics::IsPointer(symbol)) {
+    } else if (semantics::IsPointer(ultimate)) {
       return false;
     } else if (const auto *details{
-                   symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
+                   ultimate.detailsIf<semantics::ObjectEntityDetails>()}) {
       // N.B. ALLOCATABLEs are deferred shape, not assumed, and
       // are obviously contiguous.
       return !details->IsAssumedShape() && !details->IsAssumedRank();
+    } else if (auto assoc{Base::operator()(ultimate)}) {
+      return assoc;
     } else {
       return false;
     }

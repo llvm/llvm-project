@@ -465,7 +465,7 @@ int main(int, char**)
             assert(!l2.locked());
         }
     }
-#endif  // TEST_HAS_NO_EXCEPTIONS
+#endif // TEST_HAS_NO_EXCEPTIONS
     {
         L0 l0;
         L0 l1;
@@ -521,7 +521,7 @@ int main(int, char**)
         assert(!l2.locked());
         assert(!l3.locked());
     }
-#endif  // TEST_STD_VER >= 11
+#endif // TEST_STD_VER >= 11
 
   return 0;
 }

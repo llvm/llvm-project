@@ -45,7 +45,6 @@
 # OUTPUT-NEXT:     Flags:   [ SHF_ALLOC ]
 # OUTPUT-NEXT:     Address: 0x1000
 # OUTPUT-NEXT:     Link:    .dynstr
-# OUTPUT-NEXT:     EntSize: 0x18
 # OUTPUT-NEXT:   - Name: .foo.2
 # OUTPUT-NEXT:     Type: SHT_PROGBITS
 # OUTPUT-NEXT:   - Name:    .dynstr
@@ -138,7 +137,6 @@ DynamicSymbols:
 # OUTPUT2-NEXT:     Flags:   [ SHF_ALLOC ]
 # OUTPUT2-NEXT:     Address: 0x3000
 # OUTPUT2-NEXT:     Link:    .strtab
-# OUTPUT2-NEXT:     EntSize: 0x18
 # OUTPUT2-NEXT:   - Name: .foo.4
 # OUTPUT2-NEXT:     Type: SHT_PROGBITS
 # OUTPUT2-NEXT:   - Name:    .strtab

@@ -33,10 +33,9 @@ body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: test_gep_i8
     ; CHECK: [[DEF:%[0-9]+]]:_(p0) = IMPLICIT_DEF
-    ; CHECK: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 20
-    ; CHECK: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[C]](s8)
-    ; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[DEF]], [[SEXT]](s32)
-    ; CHECK: G_STORE [[GEP]](p0), [[DEF]](p0) :: (store 1 into %ir.addr)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[DEF]], [[C]](s32)
+    ; CHECK: G_STORE [[PTR_ADD]](p0), [[DEF]](p0) :: (store 1 into %ir.addr)
     ; CHECK: RET 0
     %0(p0) = IMPLICIT_DEF
     %1(s8) = G_CONSTANT i8 20
@@ -55,10 +54,9 @@ body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: test_gep_i16
     ; CHECK: [[DEF:%[0-9]+]]:_(p0) = IMPLICIT_DEF
-    ; CHECK: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 20
-    ; CHECK: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[C]](s16)
-    ; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[DEF]], [[SEXT]](s32)
-    ; CHECK: G_STORE [[GEP]](p0), [[DEF]](p0) :: (store 1 into %ir.addr)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[DEF]], [[C]](s32)
+    ; CHECK: G_STORE [[PTR_ADD]](p0), [[DEF]](p0) :: (store 1 into %ir.addr)
     ; CHECK: RET 0
     %0(p0) = IMPLICIT_DEF
     %1(s16) = G_CONSTANT i16 20
@@ -78,8 +76,8 @@ body:             |
     ; CHECK-LABEL: name: test_gep_i32
     ; CHECK: [[DEF:%[0-9]+]]:_(p0) = IMPLICIT_DEF
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
-    ; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[DEF]], [[C]](s32)
-    ; CHECK: G_STORE [[GEP]](p0), [[DEF]](p0) :: (store 1 into %ir.addr)
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[DEF]], [[C]](s32)
+    ; CHECK: G_STORE [[PTR_ADD]](p0), [[DEF]](p0) :: (store 1 into %ir.addr)
     ; CHECK: RET 0
     %0(p0) = IMPLICIT_DEF
     %1(s32) = G_CONSTANT i32 20
@@ -99,8 +97,8 @@ body:             |
     ; CHECK-LABEL: name: test_gep_i64
     ; CHECK: [[DEF:%[0-9]+]]:_(p0) = IMPLICIT_DEF
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 20
-    ; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[DEF]], [[C]](s64)
-    ; CHECK: G_STORE [[GEP]](p0), [[DEF]](p0) :: (store 1 into %ir.addr)
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[DEF]], [[C]](s64)
+    ; CHECK: G_STORE [[PTR_ADD]](p0), [[DEF]](p0) :: (store 1 into %ir.addr)
     ; CHECK: RET 0
     %0(p0) = IMPLICIT_DEF
     %1(s64) = G_CONSTANT i64 20

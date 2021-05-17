@@ -6,7 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: c++03 || c++11 || c++14 || c++17
+
 // raw_storage_iterator
+
+#define _LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <memory>
 #include <type_traits>

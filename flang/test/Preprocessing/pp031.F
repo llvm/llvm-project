@@ -1,4 +1,4 @@
-! RUN: %f18 -E %s 2>&1 | FileCheck %s
+! RUN: %flang -E %s 2>&1 | FileCheck %s
 ! CHECK: if(777//ccomment.eq.777)then
 ! CHECK: print*,'pp031.F no: ',777//ccomment
 *  // C++ comment NOT erased from #define

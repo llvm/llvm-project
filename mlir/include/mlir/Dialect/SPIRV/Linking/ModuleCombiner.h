@@ -13,9 +13,8 @@
 #ifndef MLIR_DIALECT_SPIRV_LINKING_MODULECOMBINER_H_
 #define MLIR_DIALECT_SPIRV_LINKING_MODULECOMBINER_H_
 
-#include "mlir/Dialect/SPIRV/IR/SPIRVModule.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
+#include "mlir/IR/OwningOpRef.h"
+#include "mlir/Support/LLVM.h"
 
 namespace mlir {
 class OpBuilder;
@@ -41,10 +40,10 @@ class ModuleOp;
 ///
 /// For deduplication, the following 3 cases are taken into consideration:
 ///
-///   - If 2 spv.globalVariable's have either the same descriptor set + binding
+///   - If 2 spv.GlobalVariable's have either the same descriptor set + binding
 ///   or the same build_in attribute value, then replace one of them using the
 ///   other.
-///   - If 2 spv.specConstant's have the same spec_id attribute value, then
+///   - If 2 spv.SpecConstant's have the same spec_id attribute value, then
 ///   replace one of them using the other.
 ///   - If 2 spv.func's are identical replace one of them using the other.
 ///
@@ -67,11 +66,9 @@ class ModuleOp;
 ///                           function call.
 ///
 /// \return the combined module.
-OwningSPIRVModuleRef
-combine(llvm::MutableArrayRef<ModuleOp> modules,
-        OpBuilder &combinedModuleBuilder,
-        llvm::function_ref<void(ModuleOp, StringRef, StringRef)>
-            symbRenameListener);
+OwningOpRef<spirv::ModuleOp>
+combine(MutableArrayRef<ModuleOp> modules, OpBuilder &combinedModuleBuilder,
+        function_ref<void(ModuleOp, StringRef, StringRef)> symbRenameListener);
 } // namespace spirv
 } // namespace mlir
 

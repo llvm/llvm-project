@@ -183,6 +183,14 @@ uptr internal_munmap(void *addr, uptr length) {
   return internal_syscall(SYSCALL(munmap), (uptr)addr, length);
 }
 
+#if SANITIZER_LINUX
+uptr internal_mremap(void *old_address, uptr old_size, uptr new_size, int flags,
+                     void *new_address) {
+  return internal_syscall(SYSCALL(mremap), (uptr)old_address, old_size,
+                          new_size, flags, (uptr)new_address);
+}
+#endif
+
 int internal_mprotect(void *addr, uptr length, int prot) {
   return internal_syscall(SYSCALL(mprotect), (uptr)addr, length, prot);
 }
@@ -489,22 +497,24 @@ int TgKill(pid_t pid, tid_t tid, int sig) {
 }
 #endif
 
-#if !SANITIZER_SOLARIS && !SANITIZER_NETBSD
+#if SANITIZER_GLIBC
 u64 NanoTime() {
-#if SANITIZER_FREEBSD
-  timeval tv;
-#else
   kernel_timeval tv;
-#endif
   internal_memset(&tv, 0, sizeof(tv));
   internal_syscall(SYSCALL(gettimeofday), &tv, 0);
-  return (u64)tv.tv_sec * 1000*1000*1000 + tv.tv_usec * 1000;
+  return (u64)tv.tv_sec * 1000 * 1000 * 1000 + tv.tv_usec * 1000;
 }
-
+// Used by real_clock_gettime.
 uptr internal_clock_gettime(__sanitizer_clockid_t clk_id, void *tp) {
   return internal_syscall(SYSCALL(clock_gettime), clk_id, tp);
 }
-#endif  // !SANITIZER_SOLARIS && !SANITIZER_NETBSD
+#elif !SANITIZER_SOLARIS && !SANITIZER_NETBSD
+u64 NanoTime() {
+  struct timespec ts;
+  clock_gettime(CLOCK_REALTIME, &ts);
+  return (u64)ts.tv_sec * 1000 * 1000 * 1000 + ts.tv_nsec;
+}
+#endif
 
 // Like getenv, but reads env directly from /proc (on Linux) or parses the
 // 'environ' array (on some others) and does not use libc. This function
@@ -1334,50 +1344,42 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
 #elif SANITIZER_RISCV64
 uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
                     int *parent_tidptr, void *newtls, int *child_tidptr) {
-  long long res;
   if (!fn || !child_stack)
     return -EINVAL;
-  CHECK_EQ(0, (uptr)child_stack % 16);
-  child_stack = (char *)child_stack - 2 * sizeof(unsigned long long);
-  ((unsigned long long *)child_stack)[0] = (uptr)fn;
-  ((unsigned long long *)child_stack)[1] = (uptr)arg;
 
-  register int (*__fn)(void *) __asm__("a0") = fn;
+  CHECK_EQ(0, (uptr)child_stack % 16);
+
+  register int res __asm__("a0");
+  register int __flags __asm__("a0") = flags;
   register void *__stack __asm__("a1") = child_stack;
-  register int __flags __asm__("a2") = flags;
-  register void *__arg __asm__("a3") = arg;
-  register int *__ptid __asm__("a4") = parent_tidptr;
-  register void *__tls __asm__("a5") = newtls;
-  register int *__ctid __asm__("a6") = child_tidptr;
+  register int *__ptid __asm__("a2") = parent_tidptr;
+  register void *__tls __asm__("a3") = newtls;
+  register int *__ctid __asm__("a4") = child_tidptr;
+  register int (*__fn)(void *) __asm__("a5") = fn;
+  register void *__arg __asm__("a6") = arg;
+  register int nr_clone __asm__("a7") = __NR_clone;
 
   __asm__ __volatile__(
-      "mv a0,a2\n"          /* flags  */
-      "mv a2,a4\n"          /* ptid  */
-      "mv a3,a5\n"          /* tls  */
-      "mv a4,a6\n"          /* ctid  */
-      "addi a7, zero, %9\n" /* clone  */
-
       "ecall\n"
 
-      /* if (%r0 != 0)
-       *   return %r0;
+      /* if (a0 != 0)
+       *   return a0;
        */
       "bnez a0, 1f\n"
 
-      /* In the child, now. Call "fn(arg)". */
-      "ld  a0,  8(sp)\n"
-      "ld  a1, 16(sp)\n"
-      "jalr a1\n"
+      // In the child, now. Call "fn(arg)".
+      "mv a0, a6\n"
+      "jalr a5\n"
 
-      /* Call _exit(%r0).  */
-      "addi  a7, zero, %10\n"
+      // Call _exit(a0).
+      "addi a7, zero, %9\n"
       "ecall\n"
       "1:\n"
 
       : "=r"(res)
-      : "i"(-EINVAL), "r"(__fn), "r"(__stack), "r"(__flags), "r"(__arg),
-        "r"(__ptid), "r"(__tls), "r"(__ctid), "i"(__NR_clone), "i"(__NR_exit)
-      : "ra", "memory");
+      : "0"(__flags), "r"(__stack), "r"(__ptid), "r"(__tls), "r"(__ctid),
+        "r"(__fn), "r"(__arg), "r"(nr_clone), "i"(__NR_exit)
+      : "memory");
   return res;
 }
 #elif defined(__aarch64__)

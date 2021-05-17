@@ -24,6 +24,7 @@
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/NoFolder.h"
@@ -62,8 +63,6 @@ STATISTIC(NumAttributesValidFixpoint,
           "Number of abstract attributes in a valid fixpoint state");
 STATISTIC(NumAttributesManifested,
           "Number of abstract attributes manifested in IR");
-STATISTIC(NumAttributesFixedDueToRequiredDependences,
-          "Number of abstract attributes fixed due to required dependences");
 
 // TODO: Determine a good default value.
 //
@@ -140,6 +139,11 @@ static cl::opt<bool> ViewDepGraph("attributor-view-dep-graph", cl::Hidden,
 static cl::opt<bool> PrintDependencies("attributor-print-dep", cl::Hidden,
                                        cl::desc("Print attribute dependencies"),
                                        cl::init(false));
+
+static cl::opt<bool> EnableCallSiteSpecific(
+    "attributor-enable-call-site-specific-deduction", cl::Hidden,
+    cl::desc("Allow the Attributor to do call site specific analysis"),
+    cl::init(false));
 
 /// Logic operators for the change status enum class.
 ///
@@ -475,6 +479,8 @@ void IRPosition::verify() {
 #ifdef EXPENSIVE_CHECKS
   switch (getPositionKind()) {
   case IRP_INVALID:
+    assert((CBContext == nullptr) &&
+           "Invalid position must not have CallBaseContext!");
     assert(!Enc.getOpaqueValue() &&
            "Expected a nullptr for an invalid position!");
     return;
@@ -490,12 +496,16 @@ void IRPosition::verify() {
            "Associated value mismatch!");
     return;
   case IRP_CALL_SITE_RETURNED:
+    assert((CBContext == nullptr) &&
+           "'call site returned' position must not have CallBaseContext!");
     assert((isa<CallBase>(getAsValuePtr())) &&
            "Expected call base for 'call site returned' position!");
     assert(getAsValuePtr() == &getAssociatedValue() &&
            "Associated value mismatch!");
     return;
   case IRP_CALL_SITE:
+    assert((CBContext == nullptr) &&
+           "'call site function' position must not have CallBaseContext!");
     assert((isa<CallBase>(getAsValuePtr())) &&
            "Expected call base for 'call site function' position!");
     assert(getAsValuePtr() == &getAssociatedValue() &&
@@ -514,6 +524,8 @@ void IRPosition::verify() {
            "Associated value mismatch!");
     return;
   case IRP_CALL_SITE_ARGUMENT: {
+    assert((CBContext == nullptr) &&
+           "'call site argument' position must not have CallBaseContext!");
     Use *U = getAsUsePtr();
     assert(U && "Expected use for a 'call site argument' position!");
     assert(isa<CallBase>(U->getUser()) &&
@@ -535,7 +547,7 @@ Optional<Constant *>
 Attributor::getAssumedConstant(const Value &V, const AbstractAttribute &AA,
                                bool &UsedAssumedInformation) {
   const auto &ValueSimplifyAA = getAAFor<AAValueSimplify>(
-      AA, IRPosition::value(V), /* TrackDependence */ false);
+      AA, IRPosition::value(V, AA.getCallBaseContext()), DepClassTy::NONE);
   Optional<Value *> SimplifiedV =
       ValueSimplifyAA.getAssumedSimplifiedValue(*this);
   bool IsKnown = ValueSimplifyAA.isKnown();
@@ -612,10 +624,13 @@ bool Attributor::isAssumedDead(const Instruction &I,
                                const AbstractAttribute *QueryingAA,
                                const AAIsDead *FnLivenessAA,
                                bool CheckBBLivenessOnly, DepClassTy DepClass) {
+  const IRPosition::CallBaseContext *CBCtx =
+      QueryingAA ? QueryingAA->getCallBaseContext() : nullptr;
+
   if (!FnLivenessAA)
-    FnLivenessAA = lookupAAFor<AAIsDead>(IRPosition::function(*I.getFunction()),
-                                         QueryingAA,
-                                         /* TrackDependence */ false);
+    FnLivenessAA =
+        lookupAAFor<AAIsDead>(IRPosition::function(*I.getFunction(), CBCtx),
+                              QueryingAA, DepClassTy::NONE);
 
   // If we have a context instruction and a liveness AA we use it.
   if (FnLivenessAA &&
@@ -630,7 +645,7 @@ bool Attributor::isAssumedDead(const Instruction &I,
     return false;
 
   const AAIsDead &IsDeadAA = getOrCreateAAFor<AAIsDead>(
-      IRPosition::value(I), QueryingAA, /* TrackDependence */ false);
+      IRPosition::value(I, CBCtx), QueryingAA, DepClassTy::NONE);
   // Don't check liveness for AAIsDead.
   if (QueryingAA == &IsDeadAA)
     return false;
@@ -663,10 +678,9 @@ bool Attributor::isAssumedDead(const IRPosition &IRP,
   if (IRP.getPositionKind() == IRPosition::IRP_CALL_SITE)
     IsDeadAA = &getOrCreateAAFor<AAIsDead>(
         IRPosition::callsite_returned(cast<CallBase>(IRP.getAssociatedValue())),
-        QueryingAA, /* TrackDependence */ false);
+        QueryingAA, DepClassTy::NONE);
   else
-    IsDeadAA = &getOrCreateAAFor<AAIsDead>(IRP, QueryingAA,
-                                           /* TrackDependence */ false);
+    IsDeadAA = &getOrCreateAAFor<AAIsDead>(IRP, QueryingAA, DepClassTy::NONE);
   // Don't check liveness for AAIsDead.
   if (QueryingAA == IsDeadAA)
     return false;
@@ -714,7 +728,7 @@ bool Attributor::checkForAllUses(function_ref<bool(const Use &, bool &)> Pred,
   const Function *ScopeFn = IRP.getAnchorScope();
   const auto *LivenessAA =
       ScopeFn ? &getAAFor<AAIsDead>(QueryingAA, IRPosition::function(*ScopeFn),
-                                    /* TrackDependence */ false)
+                                    DepClassTy::NONE)
               : nullptr;
 
   while (!Worklist.empty()) {
@@ -850,6 +864,13 @@ bool Attributor::checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
   return true;
 }
 
+bool Attributor::shouldPropagateCallBaseContext(const IRPosition &IRP) {
+  // TODO: Maintain a cache of Values that are
+  // on the pathway from a Argument to a Instruction that would effect the
+  // liveness/return state etc.
+  return EnableCallSiteSpecific;
+}
+
 bool Attributor::checkForAllReturnedValuesAndReturnInsts(
     function_ref<bool(Value &, const SmallSetVector<ReturnInst *, 4> &)> Pred,
     const AbstractAttribute &QueryingAA) {
@@ -865,7 +886,8 @@ bool Attributor::checkForAllReturnedValuesAndReturnInsts(
   // and liveness information.
   // TODO: use the function scope once we have call site AAReturnedValues.
   const IRPosition &QueryIRP = IRPosition::function(*AssociatedFunction);
-  const auto &AARetVal = getAAFor<AAReturnedValues>(QueryingAA, QueryIRP);
+  const auto &AARetVal =
+      getAAFor<AAReturnedValues>(QueryingAA, QueryIRP, DepClassTy::REQUIRED);
   if (!AARetVal.getState().isValidState())
     return false;
 
@@ -881,8 +903,10 @@ bool Attributor::checkForAllReturnedValues(
     return false;
 
   // TODO: use the function scope once we have call site AAReturnedValues.
-  const IRPosition &QueryIRP = IRPosition::function(*AssociatedFunction);
-  const auto &AARetVal = getAAFor<AAReturnedValues>(QueryingAA, QueryIRP);
+  const IRPosition &QueryIRP = IRPosition::function(
+      *AssociatedFunction, QueryingAA.getCallBaseContext());
+  const auto &AARetVal =
+      getAAFor<AAReturnedValues>(QueryingAA, QueryIRP, DepClassTy::REQUIRED);
   if (!AARetVal.getState().isValidState())
     return false;
 
@@ -930,9 +954,9 @@ bool Attributor::checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
   // TODO: use the function scope once we have call site AAReturnedValues.
   const IRPosition &QueryIRP = IRPosition::function(*AssociatedFunction);
   const auto *LivenessAA =
-      CheckBBLivenessOnly ? nullptr
-                          : &(getAAFor<AAIsDead>(QueryingAA, QueryIRP,
-                                                 /* TrackDependence */ false));
+      CheckBBLivenessOnly
+          ? nullptr
+          : &(getAAFor<AAIsDead>(QueryingAA, QueryIRP, DepClassTy::NONE));
 
   auto &OpcodeInstMap =
       InfoCache.getOpcodeInstMapForFunction(*AssociatedFunction);
@@ -954,7 +978,7 @@ bool Attributor::checkForAllReadWriteInstructions(
   // TODO: use the function scope once we have call site AAReturnedValues.
   const IRPosition &QueryIRP = IRPosition::function(*AssociatedFunction);
   const auto &LivenessAA =
-      getAAFor<AAIsDead>(QueryingAA, QueryIRP, /* TrackDependence */ false);
+      getAAFor<AAIsDead>(QueryingAA, QueryIRP, DepClassTy::NONE);
 
   for (Instruction *I :
        InfoCache.getReadOrWriteInstsForFunction(*AssociatedFunction)) {
@@ -1124,6 +1148,9 @@ ChangeStatus Attributor::manifestAttributes() {
     if (!State.isAtFixpoint())
       State.indicateOptimisticFixpoint();
 
+    // We must not manifest Attributes that use Callbase info.
+    if (AA->hasCallBaseContext())
+      continue;
     // If the state is invalid, we do not try to manifest it.
     if (!State.isValidState())
       continue;
@@ -1174,6 +1201,10 @@ ChangeStatus Attributor::manifestAttributes() {
 }
 
 void Attributor::identifyDeadInternalFunctions() {
+  // Early exit if we don't intend to delete functions.
+  if (!DeleteFns)
+    return;
+
   // Identify dead internal functions and delete them. This happens outside
   // the other fixpoint analysis as we might treat potentially dead functions
   // as live to lower the number of iterations. If they happen to be dead, the
@@ -1251,6 +1282,17 @@ ChangeStatus Attributor::cleanupIR() {
       if (!isa<PHINode>(I) && !ToBeDeletedInsts.count(I) &&
           isInstructionTriviallyDead(I))
         DeadInsts.push_back(I);
+    }
+    if (isa<UndefValue>(NewV) && isa<CallBase>(U->getUser())) {
+      auto *CB = cast<CallBase>(U->getUser());
+      if (CB->isArgOperand(U)) {
+        unsigned Idx = CB->getArgOperandNo(U);
+        CB->removeParamAttr(Idx, Attribute::NoUndef);
+        Function *Fn = CB->getCalledFunction();
+        assert(Fn && "Expected callee when call argument is replaced!");
+        if (Fn->arg_size() > Idx)
+          Fn->removeParamAttr(Idx, Attribute::NoUndef);
+      }
     }
     if (isa<Constant>(NewV) && isa<BranchInst>(U->getUser())) {
       Instruction *UserI = cast<Instruction>(U->getUser());
@@ -1515,7 +1557,8 @@ static Function *internalizeFunction(Function &F) {
   SmallVector<ReturnInst *, 8> Returns;
 
   // Copy the body of the original function to the new one
-  CloneFunctionInto(Copied, &F, VMap, /* ModuleLevelChanges */ false, Returns);
+  CloneFunctionInto(Copied, &F, VMap, CloneFunctionChangeType::LocalChangesOnly,
+                    Returns);
 
   // Set the linakage and visibility late as CloneFunctionInto has some implicit
   // requirements.
@@ -1870,9 +1913,8 @@ void InformationCache::initializeInformationCache(const Function &CF,
       // Calls are interesting on their own, additionally:
       // For `llvm.assume` calls we also fill the KnowledgeMap as we find them.
       // For `must-tail` calls we remember the caller and callee.
-      if (IntrinsicInst *Assume = dyn_cast<IntrinsicInst>(&I)) {
-        if (Assume->getIntrinsicID() == Intrinsic::assume)
-          fillMapFromAssume(*Assume, KnowledgeMap);
+      if (auto *Assume = dyn_cast<AssumeInst>(&I)) {
+        fillMapFromAssume(*Assume, KnowledgeMap);
       } else if (cast<CallInst>(I).isMustTailCall()) {
         FI.ContainsMustTailCall = true;
         if (const Function *Callee = cast<CallInst>(I).getCalledFunction())
@@ -1923,6 +1965,8 @@ InformationCache::FunctionInfo::~FunctionInfo() {
 void Attributor::recordDependence(const AbstractAttribute &FromAA,
                                   const AbstractAttribute &ToAA,
                                   DepClassTy DepClass) {
+  if (DepClass == DepClassTy::NONE)
+    return;
   // If we are outside of an update, thus before the actual fixpoint iteration
   // started (= when we create AAs), we do not track dependences because we will
   // put all AAs into the initial worklist anyway.
@@ -1937,6 +1981,9 @@ void Attributor::rememberDependences() {
   assert(!DependenceStack.empty() && "No dependences to remember!");
 
   for (DepInfo &DI : *DependenceStack.back()) {
+    assert((DI.DepClass == DepClassTy::REQUIRED ||
+            DI.DepClass == DepClassTy::OPTIONAL) &&
+           "Expected required or optional dependence (1 bit)!");
     auto &DepAAs = const_cast<AbstractAttribute &>(*DI.FromAA).Deps;
     DepAAs.push_back(AbstractAttribute::DepTy(
         const_cast<AbstractAttribute *>(DI.ToAA), unsigned(DI.DepClass)));
@@ -2199,9 +2246,12 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, IRPosition::Kind AP) {
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, const IRPosition &Pos) {
   const Value &AV = Pos.getAssociatedValue();
-  return OS << "{" << Pos.getPositionKind() << ":" << AV.getName() << " ["
-            << Pos.getAnchorValue().getName() << "@" << Pos.getCallSiteArgNo()
-            << "]}";
+  OS << "{" << Pos.getPositionKind() << ":" << AV.getName() << " ["
+     << Pos.getAnchorValue().getName() << "@" << Pos.getCallSiteArgNo() << "]";
+
+  if (Pos.hasCallBaseContext())
+    OS << "[cb_context:" << *Pos.getCallBaseContext() << "]";
+  return OS << "}";
 }
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, const IntegerRangeState &S) {
@@ -2275,7 +2325,8 @@ void AbstractAttribute::printWithDeps(raw_ostream &OS) const {
 static bool runAttributorOnFunctions(InformationCache &InfoCache,
                                      SetVector<Function *> &Functions,
                                      AnalysisGetter &AG,
-                                     CallGraphUpdater &CGUpdater) {
+                                     CallGraphUpdater &CGUpdater,
+                                     bool DeleteFns) {
   if (Functions.empty())
     return false;
 
@@ -2284,7 +2335,8 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
 
   // Create an Attributor and initially empty information cache that is filled
   // while we identify default attribute opportunities.
-  Attributor A(Functions, InfoCache, CGUpdater);
+  Attributor A(Functions, InfoCache, CGUpdater, /* Allowed */ nullptr,
+               DeleteFns);
 
   // Create shallow wrappers for all functions that are not IPO amendable
   if (AllowShallowWrappers)
@@ -2363,7 +2415,7 @@ void AADepGraph::dumpGraph() {
 
   std::error_code EC;
 
-  raw_fd_ostream File(Filename, EC, sys::fs::OF_Text);
+  raw_fd_ostream File(Filename, EC, sys::fs::OF_TextWithCRLF);
   if (!EC)
     llvm::WriteGraph(File, this);
 
@@ -2387,7 +2439,8 @@ PreservedAnalyses AttributorPass::run(Module &M, ModuleAnalysisManager &AM) {
   CallGraphUpdater CGUpdater;
   BumpPtrAllocator Allocator;
   InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ nullptr);
-  if (runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater)) {
+  if (runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater,
+                               /* DeleteFns */ true)) {
     // FIXME: Think about passes we will preserve and add them here.
     return PreservedAnalyses::none();
   }
@@ -2414,7 +2467,8 @@ PreservedAnalyses AttributorCGSCCPass::run(LazyCallGraph::SCC &C,
   CGUpdater.initialize(CG, C, AM, UR);
   BumpPtrAllocator Allocator;
   InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ &Functions);
-  if (runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater)) {
+  if (runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater,
+                               /* DeleteFns */ false)) {
     // FIXME: Think about passes we will preserve and add them here.
     PreservedAnalyses PA;
     PA.preserve<FunctionAnalysisManagerCGSCCProxy>();
@@ -2489,7 +2543,8 @@ struct AttributorLegacyPass : public ModulePass {
     CallGraphUpdater CGUpdater;
     BumpPtrAllocator Allocator;
     InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ nullptr);
-    return runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater);
+    return runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater,
+                                    /* DeleteFns*/ true);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -2525,7 +2580,8 @@ struct AttributorCGSCCLegacyPass : public CallGraphSCCPass {
     Module &M = *Functions.back()->getParent();
     BumpPtrAllocator Allocator;
     InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ &Functions);
-    return runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater);
+    return runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater,
+                                    /* DeleteFns */ false);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {

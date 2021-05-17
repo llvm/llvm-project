@@ -224,18 +224,24 @@ uint32_t CompileUnit::FindLineEntry(uint32_t start_idx, uint32_t line,
   if (file_indexes.empty())
     return UINT32_MAX;
 
+  // TODO: Handle SourceLocationSpec column information
+  SourceLocationSpec location_spec(*file_spec_ptr, line, /*column=*/llvm::None,
+                                   /*check_inlines=*/false, exact);
+
   LineTable *line_table = GetLineTable();
   if (line_table)
     return line_table->FindLineEntryIndexByFileIndex(
-        start_idx, file_indexes, line, exact, line_entry_ptr);
+        start_idx, file_indexes, location_spec, line_entry_ptr);
   return UINT32_MAX;
 }
 
-void CompileUnit::ResolveSymbolContext(const FileSpec &file_spec,
-                                       uint32_t line, bool check_inlines,
-                                       bool exact,
-                                       SymbolContextItem resolve_scope,
-                                       SymbolContextList &sc_list) {
+void CompileUnit::ResolveSymbolContext(
+    const SourceLocationSpec &src_location_spec,
+    SymbolContextItem resolve_scope, SymbolContextList &sc_list) {
+  const FileSpec file_spec = src_location_spec.GetFileSpec();
+  const uint32_t line = src_location_spec.GetLine().getValueOr(0);
+  const bool check_inlines = src_location_spec.GetCheckInlines();
+
   // First find all of the file indexes that match our "file_spec". If
   // "file_spec" has an empty directory, then only compare the basenames when
   // finding file indexes
@@ -246,17 +252,6 @@ void CompileUnit::ResolveSymbolContext(const FileSpec &file_spec,
   // If we are not looking for inlined functions and our file spec doesn't
   // match then we are done...
   if (!file_spec_matches_cu_file_spec && !check_inlines)
-    return;
-
-  uint32_t file_idx =
-      GetSupportFiles().FindFileIndex(0, file_spec, true);
-  while (file_idx != UINT32_MAX) {
-    file_indexes.push_back(file_idx);
-    file_idx = GetSupportFiles().FindFileIndex(file_idx + 1, file_spec, true);
-  }
-
-  const size_t num_file_indexes = file_indexes.size();
-  if (num_file_indexes == 0)
     return;
 
   SymbolContext sc(GetModule());
@@ -271,10 +266,25 @@ void CompileUnit::ResolveSymbolContext(const FileSpec &file_spec,
     return;
   }
 
+  uint32_t file_idx =
+      GetSupportFiles().FindFileIndex(0, file_spec, true);
+  while (file_idx != UINT32_MAX) {
+    file_indexes.push_back(file_idx);
+    file_idx = GetSupportFiles().FindFileIndex(file_idx + 1, file_spec, true);
+  }
+
+  const size_t num_file_indexes = file_indexes.size();
+  if (num_file_indexes == 0)
+    return;
+
   LineTable *line_table = sc.comp_unit->GetLineTable();
 
-  if (line_table == nullptr)
+  if (line_table == nullptr) {
+    if (file_spec_matches_cu_file_spec && !check_inlines) {
+      sc_list.Append(sc);
+    }
     return;
+  }
 
   uint32_t line_idx;
   LineEntry line_entry;
@@ -284,21 +294,24 @@ void CompileUnit::ResolveSymbolContext(const FileSpec &file_spec,
     // table function that searches for a line entries that match a single
     // support file index
     line_idx = line_table->FindLineEntryIndexByFileIndex(
-        0, file_indexes.front(), line, exact, &line_entry);
+        0, file_indexes.front(), src_location_spec, &line_entry);
   } else {
     // We found multiple support files that match "file_spec" so use the
     // line table function that searches for a line entries that match a
     // multiple support file indexes.
-    line_idx = line_table->FindLineEntryIndexByFileIndex(0, file_indexes, line,
-                                                         exact, &line_entry);
+    line_idx = line_table->FindLineEntryIndexByFileIndex(
+        0, file_indexes, src_location_spec, &line_entry);
   }
   
   // If "exact == true", then "found_line" will be the same as "line". If
   // "exact == false", the "found_line" will be the closest line entry
   // with a line number greater than "line" and we will use this for our
   // subsequent line exact matches below.
-  uint32_t found_line = line_entry.line;
-  
+  const bool inlines = false;
+  const bool exact = true;
+  SourceLocationSpec found_entry(line_entry.file, line_entry.line,
+                                 line_entry.column, inlines, exact);
+
   while (line_idx != UINT32_MAX) {
     // If they only asked for the line entry, then we're done, we can
     // just copy that over. But if they wanted more than just the line
@@ -313,10 +326,10 @@ void CompileUnit::ResolveSymbolContext(const FileSpec &file_spec,
     sc_list.Append(sc);
     if (num_file_indexes == 1)
       line_idx = line_table->FindLineEntryIndexByFileIndex(
-          line_idx + 1, file_indexes.front(), found_line, true, &line_entry);
+          line_idx + 1, file_indexes.front(), found_entry, &line_entry);
     else
       line_idx = line_table->FindLineEntryIndexByFileIndex(
-          line_idx + 1, file_indexes, found_line, true, &line_entry);
+          line_idx + 1, file_indexes, found_entry, &line_entry);
   }
 }
 

@@ -24,18 +24,20 @@
   SOFTWARE.
  */
 #include "gmp_compat.h"
-#include <stdlib.h>
 #include <assert.h>
 #include <ctype.h>
-#include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #if defined(_MSC_VER)
 #include <BaseTsd.h>
 typedef SSIZE_T ssize_t;
+#else
+#include <sys/types.h>
 #endif
 
-#ifdef  NDEBUG
+#ifdef NDEBUG
 #define CHECK(res) (res)
 #else
 #define CHECK(res) assert(((res) == MP_OK) && "expected MP_OK")
@@ -53,34 +55,24 @@ static const uint16_t endian_test = 0x1FF;
  *
  *************************************************************************/
 /* gmp: mpq_clear */
-void GMPQAPI(clear)(mp_rat x) {
-  mp_rat_clear(x);
-}
+void GMPQAPI(clear)(mp_rat x) { mp_rat_clear(x); }
 
 /* gmp: mpq_cmp */
-int GMPQAPI(cmp)(mp_rat op1, mp_rat op2) {
-  return mp_rat_compare(op1, op2);
-}
+int GMPQAPI(cmp)(mp_rat op1, mp_rat op2) { return mp_rat_compare(op1, op2); }
 
 /* gmp: mpq_init */
-void GMPQAPI(init)(mp_rat x) {
-  CHECK(mp_rat_init(x));
-}
+void GMPQAPI(init)(mp_rat x) { CHECK(mp_rat_init(x)); }
 
 /* gmp: mpq_mul */
 void GMPQAPI(mul)(mp_rat product, mp_rat multiplier, mp_rat multiplicand) {
   CHECK(mp_rat_mul(multiplier, multiplicand, product));
 }
 
-/* gmp: mpq_set*/
-void GMPQAPI(set)(mp_rat rop, mp_rat op) {
-  CHECK(mp_rat_copy(op, rop));
-}
+/* gmp: mpq_set */
+void GMPQAPI(set)(mp_rat rop, mp_rat op) { CHECK(mp_rat_copy(op, rop)); }
 
 /* gmp: mpz_abs */
-void GMPZAPI(abs)(mp_int rop, mp_int op) {
-  CHECK(mp_int_abs(op, rop));
-}
+void GMPZAPI(abs)(mp_int rop, mp_int op) { CHECK(mp_int_abs(op, rop)); }
 
 /* gmp: mpz_add */
 void GMPZAPI(add)(mp_int rop, mp_int op1, mp_int op2) {
@@ -88,9 +80,7 @@ void GMPZAPI(add)(mp_int rop, mp_int op1, mp_int op2) {
 }
 
 /* gmp: mpz_clear */
-void GMPZAPI(clear)(mp_int x) {
-  mp_int_clear(x);
-}
+void GMPZAPI(clear)(mp_int x) { mp_int_clear(x); }
 
 /* gmp: mpz_cmp_si */
 int GMPZAPI(cmp_si)(mp_int op1, long op2) {
@@ -103,14 +93,10 @@ int GMPZAPI(cmpabs)(mp_int op1, mp_int op2) {
 }
 
 /* gmp: mpz_cmp */
-int GMPZAPI(cmp)(mp_int op1, mp_int op2) {
-  return mp_int_compare(op1, op2);
-}
+int GMPZAPI(cmp)(mp_int op1, mp_int op2) { return mp_int_compare(op1, op2); }
 
 /* gmp: mpz_init */
-void GMPZAPI(init)(mp_int x) {
-  CHECK(mp_int_init(x));
-}
+void GMPZAPI(init)(mp_int x) { CHECK(mp_int_init(x)); }
 
 /* gmp: mpz_mul */
 void GMPZAPI(mul)(mp_int rop, mp_int op1, mp_int op2) {
@@ -118,19 +104,13 @@ void GMPZAPI(mul)(mp_int rop, mp_int op1, mp_int op2) {
 }
 
 /* gmp: mpz_neg */
-void GMPZAPI(neg)(mp_int rop, mp_int op) {
-  CHECK(mp_int_neg(op, rop));
-}
+void GMPZAPI(neg)(mp_int rop, mp_int op) { CHECK(mp_int_neg(op, rop)); }
 
 /* gmp: mpz_set_si */
-void GMPZAPI(set_si)(mp_int rop, long op) {
-  CHECK(mp_int_set_value(rop, op));
-}
+void GMPZAPI(set_si)(mp_int rop, long op) { CHECK(mp_int_set_value(rop, op)); }
 
 /* gmp: mpz_set */
-void GMPZAPI(set)(mp_int rop, mp_int op) {
-  CHECK(mp_int_copy(op, rop));
-}
+void GMPZAPI(set)(mp_int rop, mp_int op) { CHECK(mp_int_copy(op, rop)); }
 
 /* gmp: mpz_sub */
 void GMPZAPI(sub)(mp_int rop, mp_int op1, mp_int op2) {
@@ -138,19 +118,13 @@ void GMPZAPI(sub)(mp_int rop, mp_int op1, mp_int op2) {
 }
 
 /* gmp: mpz_swap */
-void GMPZAPI(swap)(mp_int rop1, mp_int rop2) {
-  mp_int_swap(rop1, rop2);
-}
+void GMPZAPI(swap)(mp_int rop1, mp_int rop2) { mp_int_swap(rop1, rop2); }
 
 /* gmp: mpq_sgn */
-int GMPQAPI(sgn)(mp_rat op) {
-  return mp_rat_compare_zero(op);
-}
+int GMPQAPI(sgn)(mp_rat op) { return mp_rat_compare_zero(op); }
 
 /* gmp: mpz_sgn */
-int GMPZAPI(sgn)(mp_int op) {
-  return mp_int_compare_zero(op);
-}
+int GMPZAPI(sgn)(mp_int op) { return mp_int_compare_zero(op); }
 
 /* gmp: mpq_set_ui */
 void GMPQAPI(set_ui)(mp_rat rop, unsigned long op1, unsigned long op2) {
@@ -163,25 +137,18 @@ void GMPZAPI(set_ui)(mp_int rop, unsigned long op) {
 }
 
 /* gmp: mpq_den_ref */
-mp_int GMPQAPI(denref)(mp_rat op) {
-  return mp_rat_denom_ref(op);
-}
+mp_int GMPQAPI(denref)(mp_rat op) { return mp_rat_denom_ref(op); }
 
 /* gmp: mpq_num_ref */
-mp_int GMPQAPI(numref)(mp_rat op) {
-  return mp_rat_numer_ref(op);
-}
+mp_int GMPQAPI(numref)(mp_rat op) { return mp_rat_numer_ref(op); }
 
 /* gmp: mpq_canonicalize */
-void GMPQAPI(canonicalize)(mp_rat op) {
-  CHECK(mp_rat_reduce(op));
-}
+void GMPQAPI(canonicalize)(mp_rat op) { CHECK(mp_rat_reduce(op)); }
 
-/*************************************************************************
- *
+/*
  * Functions that can be implemented as a combination of imath functions
- *
- *************************************************************************/
+ */
+
 /* gmp: mpz_addmul */
 /* gmp: rop = rop + (op1 * op2) */
 void GMPZAPI(addmul)(mp_int rop, mp_int op1, mp_int op2) {
@@ -212,8 +179,7 @@ int GMPZAPI(divisible_p)(mp_int n, mp_int d) {
   /* check for d = 0 */
   int n_is_zero = mp_int_compare_zero(n) == 0;
   int d_is_zero = mp_int_compare_zero(d) == 0;
-  if (d_is_zero)
-    return n_is_zero;
+  if (d_is_zero) return n_is_zero;
 
   /* return true if remainder is 0 */
   CHECK(mp_int_init(r));
@@ -320,13 +286,12 @@ void GMPZAPI(gcd)(mp_int rop, mp_int op1, mp_int op2) {
 }
 
 /* gmp: mpz_get_str */
-char* GMPZAPI(get_str)(char *str, int radix, mp_int op) {
+char *GMPZAPI(get_str)(char *str, int radix, mp_int op) {
   int i, r, len;
 
   /* Support negative radix like gmp */
   r = radix;
-  if (r < 0)
-    r = -r;
+  if (r < 0) r = -r;
 
   /* Compute the length of the string needed to hold the int */
   len = mp_int_string_len(op, r);
@@ -338,16 +303,18 @@ char* GMPZAPI(get_str)(char *str, int radix, mp_int op) {
   CHECK(mp_int_to_string(op, r, str, len));
 
   /* Change case to match gmp */
-  for (i = 0; i < len - 1; i++)
-    if (radix < 0)
+  for (i = 0; i < len - 1; i++) {
+    if (radix < 0) {
       str[i] = toupper(str[i]);
-    else
+    } else {
       str[i] = tolower(str[i]);
+    }
+  }
   return str;
 }
 
 /* gmp: mpq_get_str */
-char* GMPQAPI(get_str)(char *str, int radix, mp_rat op) {
+char *GMPQAPI(get_str)(char *str, int radix, mp_rat op) {
   int i, r, len;
 
   /* Only print numerator if it is a whole number */
@@ -356,8 +323,7 @@ char* GMPQAPI(get_str)(char *str, int radix, mp_rat op) {
 
   /* Support negative radix like gmp */
   r = radix;
-  if (r < 0)
-    r = -r;
+  if (r < 0) r = -r;
 
   /* Compute the length of the string needed to hold the int */
   len = mp_rat_string_len(op, r);
@@ -369,11 +335,13 @@ char* GMPQAPI(get_str)(char *str, int radix, mp_rat op) {
   CHECK(mp_rat_to_string(op, r, str, len));
 
   /* Change case to match gmp */
-  for (i = 0; i < len; i++)
-    if (radix < 0)
+  for (i = 0; i < len; i++) {
+    if (radix < 0) {
       str[i] = toupper(str[i]);
-    else
+    } else {
       str[i] = tolower(str[i]);
+    }
+  }
 
   return str;
 }
@@ -393,26 +361,27 @@ int GMPQAPI(set_str)(mp_rat rop, char *s, int base) {
   int res = 0;
 
   /* Copy string to temporary storage so we can modify it below */
-  str = malloc(strlen(s)+1);
+  str = malloc(strlen(s) + 1);
   strcpy(str, s);
 
   /* Properly format the string as an int by terminating at the / */
   slash = strchr(str, '/');
-  if (slash)
-    *slash = '\0';
+  if (slash) *slash = '\0';
 
   /* Parse numerator */
   resN = mp_int_read_string(mp_rat_numer_ref(rop), base, str);
 
-  /* Parse denomenator if given or set to 1 if not */
-  if (slash)
-    resD = mp_int_read_string(mp_rat_denom_ref(rop), base, slash+1);
-  else
+  /* Parse denominator if given or set to 1 if not */
+  if (slash) {
+    resD = mp_int_read_string(mp_rat_denom_ref(rop), base, slash + 1);
+  } else {
     resD = mp_int_set_uvalue(mp_rat_denom_ref(rop), 1);
+  }
 
   /* Return failure if either parse failed */
-  if (resN != MP_OK || resD != MP_OK)
+  if (resN != MP_OK || resD != MP_OK) {
     res = -1;
+  }
 
   free(str);
   return res;
@@ -423,18 +392,24 @@ static unsigned long get_long_bits(mp_int op) {
    * the least significant digits that will fit into the long.  Read the digits
    * into the long starting at the most significant digit that fits into a
    * long. The long is shifted over by MP_DIGIT_BIT before each digit is added.
-   * The shift is decomposed into two steps to follow the patten used in the
-   * rest of the imath library. The two step shift is used to accomedate
-   * architectures that don't deal well with 32-bit shifts. */
-  mp_size num_digits_in_long = sizeof(unsigned long) / sizeof(mp_digit);
+   *
+   * The shift is decomposed into two steps (following the pattern used in the
+   * rest of the imath library) to accommodate architectures that don't deal
+   * well with 32-bit shifts.
+   */
+  mp_size digits_to_copy =
+      (sizeof(unsigned long) + sizeof(mp_digit) - 1) / sizeof(mp_digit);
+  if (digits_to_copy > MP_USED(op)) {
+    digits_to_copy = MP_USED(op);
+  }
+
   mp_digit *digits = MP_DIGITS(op);
   unsigned long out = 0;
-  int i;
 
-  for (i = num_digits_in_long - 1; i >= 0; i--) {
-    out <<= (MP_DIGIT_BIT/2);
-    out <<= (MP_DIGIT_BIT/2);
-    out  |= digits[i];
+  for (int i = digits_to_copy - 1; i >= 0; i--) {
+    out <<= (MP_DIGIT_BIT / 2);
+    out <<= (MP_DIGIT_BIT / 2);
+    out |= digits[i];
   }
 
   return out;
@@ -446,14 +421,12 @@ unsigned long GMPZAPI(get_ui)(mp_int op) {
 
   /* Try a standard conversion that fits into an unsigned long */
   mp_result res = mp_int_to_uint(op, &out);
-  if (res == MP_OK)
-    return out;
+  if (res == MP_OK) return out;
 
   /* Abort the try if we don't have a range error in the conversion.
    * The range error indicates that the value cannot fit into a long. */
   CHECK(res == MP_RANGE ? MP_OK : MP_RANGE);
-  if (res != MP_RANGE)
-    return 0;
+  if (res != MP_RANGE) return 0;
 
   return get_long_bits(op);
 }
@@ -466,14 +439,12 @@ long GMPZAPI(get_si)(mp_int op) {
 
   /* Try a standard conversion that fits into a long */
   mp_result res = mp_int_to_int(op, &out);
-  if (res == MP_OK)
-    return out;
+  if (res == MP_OK) return out;
 
   /* Abort the try if we don't have a range error in the conversion.
    * The range error indicates that the value cannot fit into a long. */
   CHECK(res == MP_RANGE ? MP_OK : MP_RANGE);
-  if (res != MP_RANGE)
-    return 0;
+  if (res != MP_RANGE) return 0;
 
   /* get least significant bits into an unsigned long */
   uout = get_long_bits(op);
@@ -483,10 +454,11 @@ long GMPZAPI(get_si)(mp_int op) {
   uout &= (~(1UL << long_msb));
 
   /* convert to negative if needed based on sign of op */
-  if (MP_SIGN(op) == MP_NEG)
+  if (MP_SIGN(op) == MP_NEG) {
     uout = 0 - uout;
+  }
 
-  out = (long) uout;
+  out = (long)uout;
   return out;
 }
 
@@ -513,11 +485,9 @@ void GMPZAPI(mul_2exp)(mp_int rop, mp_int op1, unsigned long op2) {
     CHECK(mp_int_mul_pow2(op1, op2, rop));
 }
 
-/*************************************************************************
- *
+/*
  * Functions needing expanded functionality
- *
- *************************************************************************/
+ */
 /* [Note]Overview of division implementation
 
     All division operations (N / D) compute q and r such that
@@ -578,9 +548,8 @@ void GMPZAPI(cdiv_q)(mp_int q, mp_int n, mp_int d) {
     if (rsign != 0) { /* r != 0 */
       CHECK(mp_int_add_value(q, 1, q));
     }
-  }
-  else if (qsign == 0) { /* q == 0 */
-    if (rsign != 0) {    /* r != 0 */
+  } else if (qsign == 0) { /* q == 0 */
+    if (rsign != 0) {      /* r != 0 */
       if ((nsign > 0 && dsign > 0) || (nsign < 0 && dsign < 0)) {
         CHECK(mp_int_set_value(q, 1));
       }
@@ -610,9 +579,8 @@ void GMPZAPI(fdiv_q)(mp_int q, mp_int n, mp_int d) {
     if (rsign != 0) { /* r != 0 */
       CHECK(mp_int_sub_value(q, 1, q));
     }
-  }
-  else if (qsign == 0) { /* q == 0 */
-    if (rsign != 0) {    /* r != 0 */
+  } else if (qsign == 0) { /* q == 0 */
+    if (rsign != 0) {      /* r != 0 */
       if ((nsign < 0 && dsign > 0) || (nsign > 0 && dsign < 0)) {
         CHECK(mp_int_set_value(q, -1));
       }
@@ -684,31 +652,32 @@ unsigned long GMPZAPI(fdiv_q_ui)(mp_int q, mp_int n, unsigned long d) {
 }
 
 /* gmp: mpz_export */
-void* GMPZAPI(export)(void *rop, size_t *countp, int order, size_t size, int endian, size_t nails, mp_int op) {
-  int i, j;
-  int num_used_bytes;
+void *GMPZAPI(export)(void *rop, size_t *countp, int order, size_t size,
+                      int endian, size_t nails, mp_int op) {
+  size_t i, j;
+  size_t num_used_bytes;
   size_t num_words, num_missing_bytes;
   ssize_t word_offset;
-  unsigned char* dst;
-  mp_digit* src;
+  unsigned char *dst;
+  mp_digit *src;
   int src_bits;
 
   /* We do not have a complete implementation. Assert to ensure our
-   * restrictions are in place. */
-  assert(nails  == 0 && "Do not support non-full words");
+   * restrictions are in place.
+   */
+  assert(nails == 0 && "Do not support non-full words");
   assert(endian == 1 || endian == 0 || endian == -1);
   assert(order == 1 || order == -1);
 
   /* Test for zero */
   if (mp_int_compare_zero(op) == 0) {
-    if (countp)
-      *countp = 0;
+    if (countp) *countp = 0;
     return rop;
   }
 
   /* Calculate how many words we need */
-  num_used_bytes  = mp_int_unsigned_len(op);
-  num_words       = (num_used_bytes + (size-1)) / size; /* ceil division */
+  num_used_bytes = mp_int_unsigned_len(op);
+  num_words = (num_used_bytes + (size - 1)) / size; /* ceil division */
   assert(num_used_bytes > 0);
 
   /* Check to see if we will have missing bytes in the last word.
@@ -720,7 +689,7 @@ void* GMPZAPI(export)(void *rop, size_t *countp, int order, size_t size, int end
      pad the word with extra zeros. Otherwise, the missing bytes can be filled
      directly from the zeros in the last digit in the number.
    */
-  num_missing_bytes   = (size * num_words) - num_used_bytes;
+  num_missing_bytes = (size * num_words) - num_used_bytes;
   assert(num_missing_bytes < size);
 
   /* Allocate space for the result if needed */
@@ -733,7 +702,8 @@ void* GMPZAPI(export)(void *rop, size_t *countp, int order, size_t size, int end
   }
 
   /* Initialize dst and src pointers */
-  dst = (unsigned char *) rop + (order >= 0 ? (num_words-1) * size : 0) + (endian >= 0 ? size-1 : 0);
+  dst = (unsigned char *)rop + (order >= 0 ? (num_words - 1) * size : 0) +
+        (endian >= 0 ? size - 1 : 0);
   src = MP_DIGITS(op);
   src_bits = MP_DIGIT_BIT;
 
@@ -756,13 +726,13 @@ void* GMPZAPI(export)(void *rop, size_t *countp, int order, size_t size, int end
     dst += word_offset;
   }
 
-  if (countp)
-    *countp = num_words;
+  if (countp) *countp = num_words;
   return rop;
 }
 
 /* gmp: mpz_import */
-void GMPZAPI(import)(mp_int rop, size_t count, int order, size_t size, int endian, size_t nails, const void* op) {
+void GMPZAPI(import)(mp_int rop, size_t count, int order, size_t size,
+                     int endian, size_t nails, const void *op) {
   mpz_t tmpz;
   mp_int tmp = &tmpz;
   size_t total_size;
@@ -771,13 +741,12 @@ void GMPZAPI(import)(mp_int rop, size_t count, int order, size_t size, int endia
   const unsigned char *src;
   mp_digit *dst;
   int dst_bits;
-  int i, j;
-  if (count == 0 || op == NULL)
-    return;
+  size_t i, j;
+  if (count == 0 || op == NULL) return;
 
   /* We do not have a complete implementation. Assert to ensure our
    * restrictions are in place. */
-  assert(nails  == 0 && "Do not support non-full words");
+  assert(nails == 0 && "Do not support non-full words");
   assert(endian == 1 || endian == 0 || endian == -1);
   assert(order == 1 || order == -1);
 
@@ -791,11 +760,11 @@ void GMPZAPI(import)(mp_int rop, size_t count, int order, size_t size, int endia
 
   /* Init temporary */
   mp_int_init_size(tmp, num_digits);
-  for (i = 0; i < num_digits; i++)
-    tmp->digits[i] = 0;
+  for (i = 0; i < num_digits; i++) tmp->digits[i] = 0;
 
   /* Copy bytes */
-  src = (const unsigned char *) op + (order >= 0 ? (count-1) * size : 0) + (endian >= 0 ? size-1 : 0);
+  src = (const unsigned char *)op + (order >= 0 ? (count - 1) * size : 0) +
+        (endian >= 0 ? size - 1 : 0);
   dst = MP_DIGITS(tmp);
   dst_bits = 0;
 
@@ -814,15 +783,14 @@ void GMPZAPI(import)(mp_int rop, size_t count, int order, size_t size, int endia
     src += word_offset;
   }
 
-  MP_USED(tmp) = num_digits;
+  tmp->used = num_digits;
 
   /* Remove leading zeros from number */
   {
-    mp_size uz_   = MP_USED(tmp);
-    mp_digit *dz_ = MP_DIGITS(tmp) + uz_ -1;
-    while (uz_ > 1 && (*dz_-- == 0))
-      --uz_;
-    MP_USED(tmp) = uz_;
+    mp_size uz_ = tmp->used;
+    mp_digit *dz_ = MP_DIGITS(tmp) + uz_ - 1;
+    while (uz_ > 1 && (*dz_-- == 0)) --uz_;
+    tmp->used = uz_;
   }
 
   /* Copy to destination */
@@ -836,8 +804,7 @@ size_t GMPZAPI(sizeinbase)(mp_int op, int base) {
   size_t size;
 
   /* If op == 0, return 1 */
-  if (mp_int_compare_zero(op) == 0)
-    return 1;
+  if (mp_int_compare_zero(op) == 0) return 1;
 
   /* Compute string length in base */
   res = mp_int_string_len(op, base);
@@ -850,8 +817,7 @@ size_t GMPZAPI(sizeinbase)(mp_int op, int base) {
   size -= 1;
 
   /* subtract one for the negative sign */
-  if (mp_int_compare_zero(op) < 0)
-    size -= 1;
+  if (mp_int_compare_zero(op) < 0) size -= 1;
 
   return size;
 }

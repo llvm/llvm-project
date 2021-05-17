@@ -43,12 +43,12 @@ static inline T remquo(T x, T y, int &q) {
     return x;
   }
 
-  bool resultSign = (xbits.sign == ybits.sign ? false : true);
+  bool resultSign = (xbits.encoding.sign == ybits.encoding.sign ? false : true);
 
   // Once we know the sign of the result, we can just operate on the absolute
   // values. The correct sign can be applied to the result after the result
   // is evaluated.
-  xbits.sign = ybits.sign = 0;
+  xbits.encoding.sign = ybits.encoding.sign = 0;
 
   NormalFloat<T> normalx(xbits), normaly(ybits);
   int exp = normalx.exponent - normaly.exponent;

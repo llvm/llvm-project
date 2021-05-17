@@ -8,8 +8,10 @@ declare void @llvm.objc.release(i8*)
 declare i8* @llvm.objc.autorelease(i8*)
 
 declare void @llvm.objc.clang.arc.use(...)
+declare void @llvm.objc.clang.arc.noop.use(...)
 
 declare void @test0_helper(i8*, i8**)
+declare void @can_release(i8*)
 
 ; Ensure that we honor clang.arc.use as a use and don't miscompile
 ; the reduced test case from <rdar://13195034>.
@@ -108,6 +110,21 @@ entry:
   ret void
 }
 
+; ARC optimizer should be able to safely remove the retain/release pair as the
+; call to @llvm.objc.clang.arc.noop.use is a no-op.
+
+; CHECK-LABEL: define void @test_arc_noop_use(
+; CHECK-NEXT:    call void @can_release(i8* %x)
+; CHECK-NEXT:    call void (...) @llvm.objc.clang.arc.noop.use(
+; CHECK-NEXT:    ret void
+
+define void @test_arc_noop_use(i8** %out, i8* %x) {
+  call i8* @llvm.objc.retain(i8* %x)
+  call void @can_release(i8* %x)
+  call void (...) @llvm.objc.clang.arc.noop.use(i8* %x)
+  call void @llvm.objc.release(i8* %x), !clang.imprecise_release !0
+  ret void
+}
 
 !0 = !{}
 

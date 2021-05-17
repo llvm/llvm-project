@@ -165,10 +165,13 @@
 
 // Sniff out to see if the underlying C library has C11 features
 // This is cribbed from __config; but lives here as well because we can't assume libc++
-#if __ISO_C_VISIBLE >= 2011 || TEST_STD_VER >= 11
+#if (defined(__ISO_C_VISIBLE) && (__ISO_C_VISIBLE >= 2011)) ||                 \
+    TEST_STD_VER >= 11
 #  if defined(__FreeBSD__)
-//  Specifically, FreeBSD does NOT have timespec_get, even though they have all
-//  the rest of C11 - this is PR#38495
+#    if __FreeBSD_version >= 1300064 || \
+       (__FreeBSD_version >= 1201504 && __FreeBSD_version < 1300000)
+#      define TEST_HAS_TIMESPEC_GET
+#    endif
 #    define TEST_HAS_ALIGNED_ALLOC
 #    define TEST_HAS_QUICK_EXIT
 #  elif defined(__BIONIC__)
@@ -212,10 +215,10 @@
 #  elif defined(__APPLE__)
      // timespec_get and aligned_alloc were introduced in macOS 10.15 and
      // aligned releases
-#    if (__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 101500 || \
-         __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ >= 130000 || \
-         __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ >= 130000 || \
-         __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ >= 60000)
+#    if ((defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 101500) || \
+         (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ >= 130000) || \
+         (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ >= 130000) || \
+         (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ >= 60000))
 #      define TEST_HAS_ALIGNED_ALLOC
 #      define TEST_HAS_TIMESPEC_GET
 #    endif
@@ -309,6 +312,10 @@
 #define LIBCPP_ONLY(...) ((void)0)
 #endif
 
+#if !defined(_LIBCPP_HAS_NO_RANGES)
+#define TEST_SUPPORTS_RANGES
+#endif
+
 #define TEST_IGNORE_NODISCARD (void)
 
 namespace test_macros_detail {
@@ -367,6 +374,24 @@ inline void DoNotOptimize(Tp const& value) {
 #else
 #define TEST_ALWAYS_INLINE
 #define TEST_NOINLINE
+#endif
+
+#ifdef _WIN32
+#define TEST_NOT_WIN32(...) ((void)0)
+#else
+#define TEST_NOT_WIN32(...) __VA_ARGS__
+#endif
+
+#if defined(_WIN32) && !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
+#define TEST_NOT_WIN32_DLL(...) ((void)0)
+#define TEST_ONLY_WIN32_DLL(...) __VA_ARGS__
+#else
+#define TEST_NOT_WIN32_DLL(...) __VA_ARGS__
+#define TEST_ONLY_WIN32_DLL(...) ((void)0)
+#endif
+
+#ifdef _WIN32
+#define TEST_WIN_NO_FILESYSTEM_PERMS_NONE
 #endif
 
 #if defined(__GNUC__)

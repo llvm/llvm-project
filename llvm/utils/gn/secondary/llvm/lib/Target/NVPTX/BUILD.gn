@@ -30,6 +30,7 @@ static_library("LLVMNVPTXCodeGen") {
     "NVPTXAllocaHoisting.cpp",
     "NVPTXAsmPrinter.cpp",
     "NVPTXAssignValidGlobalNames.cpp",
+    "NVPTXAtomicLower.cpp",
     "NVPTXFrameLowering.cpp",
     "NVPTXGenericToNVVM.cpp",
     "NVPTXISelDAGToDAG.cpp",
