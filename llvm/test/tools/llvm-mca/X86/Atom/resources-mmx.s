@@ -209,12 +209,12 @@ pxor        (%rax), %mm2
 # CHECK-NEXT:  1      1     1.00    *                   pcmpgtd	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        pcmpgtw	%mm0, %mm2
 # CHECK-NEXT:  1      1     1.00    *                   pcmpgtw	(%rax), %mm2
-# CHECK-NEXT:  1      4     4.00                        pmaddwd	%mm0, %mm2
-# CHECK-NEXT:  1      4     4.00    *                   pmaddwd	(%rax), %mm2
-# CHECK-NEXT:  1      4     4.00                        pmulhw	%mm0, %mm2
-# CHECK-NEXT:  1      4     4.00    *                   pmulhw	(%rax), %mm2
-# CHECK-NEXT:  1      4     4.00                        pmullw	%mm0, %mm2
-# CHECK-NEXT:  1      4     4.00    *                   pmullw	(%rax), %mm2
+# CHECK-NEXT:  1      4     1.00                        pmaddwd	%mm0, %mm2
+# CHECK-NEXT:  1      4     1.00    *                   pmaddwd	(%rax), %mm2
+# CHECK-NEXT:  1      4     1.00                        pmulhw	%mm0, %mm2
+# CHECK-NEXT:  1      4     1.00    *                   pmulhw	(%rax), %mm2
+# CHECK-NEXT:  1      4     1.00                        pmullw	%mm0, %mm2
+# CHECK-NEXT:  1      4     1.00    *                   pmullw	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        por	%mm0, %mm2
 # CHECK-NEXT:  1      1     1.00    *                   por	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        pslld	$1, %mm2
@@ -276,7 +276,7 @@ pxor        (%rax), %mm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]
-# CHECK-NEXT: 113.50 41.50
+# CHECK-NEXT: 95.50  41.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    Instructions:
@@ -325,12 +325,12 @@ pxor        (%rax), %mm2
 # CHECK-NEXT: 1.00    -     pcmpgtd	(%rax), %mm2
 # CHECK-NEXT: 0.50   0.50   pcmpgtw	%mm0, %mm2
 # CHECK-NEXT: 1.00    -     pcmpgtw	(%rax), %mm2
-# CHECK-NEXT: 4.00    -     pmaddwd	%mm0, %mm2
-# CHECK-NEXT: 4.00    -     pmaddwd	(%rax), %mm2
-# CHECK-NEXT: 4.00    -     pmulhw	%mm0, %mm2
-# CHECK-NEXT: 4.00    -     pmulhw	(%rax), %mm2
-# CHECK-NEXT: 4.00    -     pmullw	%mm0, %mm2
-# CHECK-NEXT: 4.00    -     pmullw	(%rax), %mm2
+# CHECK-NEXT: 1.00    -     pmaddwd	%mm0, %mm2
+# CHECK-NEXT: 1.00    -     pmaddwd	(%rax), %mm2
+# CHECK-NEXT: 1.00    -     pmulhw	%mm0, %mm2
+# CHECK-NEXT: 1.00    -     pmulhw	(%rax), %mm2
+# CHECK-NEXT: 1.00    -     pmullw	%mm0, %mm2
+# CHECK-NEXT: 1.00    -     pmullw	(%rax), %mm2
 # CHECK-NEXT: 0.50   0.50   por	%mm0, %mm2
 # CHECK-NEXT: 1.00    -     por	(%rax), %mm2
 # CHECK-NEXT: 0.50   0.50   pslld	$1, %mm2
