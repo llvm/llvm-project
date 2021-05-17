@@ -80,6 +80,9 @@ struct PseudoProbe {
   uint32_t Id;
   uint32_t Type;
   uint32_t Attr;
+  // Distribution factor that estimates the portion of the real execution count.
+  // A saturated distribution factor stands for 1.0 or 100%. A pesudo probe has
+  // a factor with the value ranged from 0.0 to 1.0.
   float Factor;
 
   bool isDangling() const {
