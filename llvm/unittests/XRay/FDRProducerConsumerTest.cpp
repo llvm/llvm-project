@@ -208,14 +208,14 @@ using RecordTypes =
     ::testing::Types<NewBufferRecord, NewCPUIDRecord, TSCWrapRecord,
                      WallclockRecord, CustomEventRecord, CallArgRecord,
                      PIDRecord, FunctionRecord>;
-INSTANTIATE_TYPED_TEST_SUITE_P(Records, RoundTripTest, RecordTypes);
+INSTANTIATE_TYPED_TEST_SUITE_P(Records, RoundTripTest, RecordTypes, );
 
 // For V5, we have two new types we're supporting.
 using RecordTypesV5 =
     ::testing::Types<NewBufferRecord, NewCPUIDRecord, TSCWrapRecord,
                      WallclockRecord, CustomEventRecordV5, TypedEventRecord,
                      CallArgRecord, PIDRecord, FunctionRecord>;
-INSTANTIATE_TYPED_TEST_SUITE_P(Records, RoundTripTestV5, RecordTypesV5);
+INSTANTIATE_TYPED_TEST_SUITE_P(Records, RoundTripTestV5, RecordTypesV5, );
 
 } // namespace
 } // namespace xray
