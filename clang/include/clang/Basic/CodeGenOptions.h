@@ -364,8 +364,10 @@ public:
   /// other styles we may implement in the future.
   std::string StackProtectorGuard;
 
-  /// The TLS base register when StackProtectorGuard is "tls".
+  /// The TLS base register when StackProtectorGuard is "tls", or register used
+  /// to store the stack canary for "sysreg".
   /// On x86 this can be "fs" or "gs".
+  /// On AArch64 this can only be "sp_el0".
   std::string StackProtectorGuardReg;
 
   /// Path to ignorelist file specifying which objects
