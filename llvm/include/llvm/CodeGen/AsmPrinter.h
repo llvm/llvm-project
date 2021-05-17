@@ -182,6 +182,9 @@ private:
   /// Emit comments in assembly output if this is true.
   bool VerboseAsm;
 
+  /// Output stream for the stack usage file (i.e., .su file).
+  std::unique_ptr<raw_fd_ostream> StackUsageStream;
+
   static char ID;
 
 protected:
@@ -357,6 +360,8 @@ public:
   void emitFrameAlloc(const MachineInstr &MI);
 
   void emitStackSizeSection(const MachineFunction &MF);
+
+  void emitStackUsage(const MachineFunction &MF);
 
   void emitBBAddrMapSection(const MachineFunction &MF);
 

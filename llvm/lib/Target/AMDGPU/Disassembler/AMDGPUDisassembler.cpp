@@ -1847,7 +1847,7 @@ AMDGPUDisassembler::decodeKernelDescriptorDirective(
     using namespace amdhsa;
     TwoByteBuffer = DE.getU16(Cursor);
 
-  if (!hasArchitectedFlatScratch())
+    if (!hasArchitectedFlatScratch())
       PRINT_DIRECTIVE(".amdhsa_user_sgpr_private_segment_buffer",
                       KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER);
     PRINT_DIRECTIVE(".amdhsa_user_sgpr_dispatch_ptr",
@@ -1858,7 +1858,7 @@ AMDGPUDisassembler::decodeKernelDescriptorDirective(
                     KERNEL_CODE_PROPERTY_ENABLE_SGPR_KERNARG_SEGMENT_PTR);
     PRINT_DIRECTIVE(".amdhsa_user_sgpr_dispatch_id",
                     KERNEL_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_ID);
-  if (!hasArchitectedFlatScratch())
+    if (!hasArchitectedFlatScratch())
       PRINT_DIRECTIVE(".amdhsa_user_sgpr_flat_scratch_init",
                       KERNEL_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT);
     PRINT_DIRECTIVE(".amdhsa_user_sgpr_private_segment_size",

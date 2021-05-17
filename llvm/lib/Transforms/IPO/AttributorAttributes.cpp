@@ -263,7 +263,8 @@ static bool genericValueTraversal(
   const AAIsDead *LivenessAA = nullptr;
   if (IRP.getAnchorScope())
     LivenessAA = &A.getAAFor<AAIsDead>(
-        QueryingAA, IRPosition::function(*IRP.getAnchorScope()),
+        QueryingAA,
+        IRPosition::function(*IRP.getAnchorScope(), IRP.getCallBaseContext()),
         DepClassTy::NONE);
   bool AnyDead = false;
 
@@ -1088,7 +1089,7 @@ ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A) {
   // Helper method to invoke the generic value traversal.
   auto VisitReturnedValue = [&](Value &RV, RVState &RVS,
                                 const Instruction *CtxI) {
-    IRPosition RetValPos = IRPosition::value(RV);
+    IRPosition RetValPos = IRPosition::value(RV, getCallBaseContext());
     return genericValueTraversal<AAReturnedValues, RVState>(
         A, RetValPos, *this, RVS, VisitValueCB, CtxI,
         /* UseValueSimplify */ false);
@@ -4559,7 +4560,9 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     // FIXME: Add a typecast support.
 
     auto &ValueSimplifyAA = A.getAAFor<AAValueSimplify>(
-        QueryingAA, IRPosition::value(QueryingValue), DepClassTy::REQUIRED);
+        QueryingAA,
+        IRPosition::value(QueryingValue, QueryingAA.getCallBaseContext()),
+        DepClassTy::REQUIRED);
 
     Optional<Value *> QueryingValueSimplified =
         ValueSimplifyAA.getAssumedSimplifiedValue(A);
@@ -4594,6 +4597,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     if (!getAssociatedValue().getType()->isIntegerTy())
       return false;
 
+    // This will also pass the call base context.
     const auto &AA =
         A.getAAFor<AAType>(*this, getIRPosition(), DepClassTy::NONE);
 
@@ -4722,9 +4726,17 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
       return checkAndUpdate(A, *this, ArgOp, SimplifiedAssociatedValue);
     };
 
+    // Generate a answer specific to a call site context.
+    bool Success;
     bool AllCallSitesKnown;
-    if (!A.checkForAllCallSites(PredForCallSite, *this, true,
-                                AllCallSitesKnown))
+    if (hasCallBaseContext())
+      Success = PredForCallSite(
+          AbstractCallSite(&getCallBaseContext()->getCalledOperandUse()));
+    else
+      Success = A.checkForAllCallSites(PredForCallSite, *this, true,
+                                       AllCallSitesKnown);
+
+    if (!Success)
       if (!askSimplifiedValueForOtherAAs(A))
         return indicatePessimisticFixpoint();
 
@@ -4895,8 +4907,9 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
 
     auto VisitValueCB = [&](Value &V, const Instruction *CtxI, bool &,
                             bool Stripped) -> bool {
-      auto &AA = A.getAAFor<AAValueSimplify>(*this, IRPosition::value(V),
-                                             DepClassTy::REQUIRED);
+      auto &AA = A.getAAFor<AAValueSimplify>(
+          *this, IRPosition::value(V, getCallBaseContext()),
+          DepClassTy::REQUIRED);
       if (!Stripped && this == &AA) {
         // TODO: Look the instruction and check recursively.
 
@@ -7360,7 +7373,8 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
 
         // If the value is not instruction, we query AA to Attributor.
         const auto &AA = A.getAAFor<AAValueConstantRange>(
-            *this, IRPosition::value(V), DepClassTy::REQUIRED);
+            *this, IRPosition::value(V, getCallBaseContext()),
+            DepClassTy::REQUIRED);
 
         // Clamp operator is not used to utilize a program point CtxI.
         T.unionAssumed(AA.getAssumedConstantRange(A, CtxI));

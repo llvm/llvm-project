@@ -16,12 +16,14 @@
 #define __has_extension(x) 0
 #endif
 
-#if __has_extension(c_atomic) || __has_extension(cxx_atomic)
-#define ATOMIC_LLONG_LOCK_FREE __CLANG_ATOMIC_LLONG_LOCK_FREE
-#elif __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 7)
-#define ATOMIC_LLONG_LOCK_FREE __GCC_ATOMIC_LLONG_LOCK_FREE
-#else
-#error Unsupported compiler.
+#ifndef ATOMIC_LLONG_LOCK_FREE
+#  if __has_extension(c_atomic) || __has_extension(cxx_atomic)
+#    define ATOMIC_LLONG_LOCK_FREE __CLANG_ATOMIC_LLONG_LOCK_FREE
+#  elif __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 7)
+#    define ATOMIC_LLONG_LOCK_FREE __GCC_ATOMIC_LLONG_LOCK_FREE
+#  else
+#    error Unsupported compiler.
+#  endif
 #endif
 
 namespace __sanitizer {

@@ -2671,9 +2671,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Instruction *FoldedLogic = foldBinOpIntoSelectOrPhi(I))
     return FoldedLogic;
 
-  if (Instruction *BSwap = matchBSwapOrBitReverse(I, /*MatchBSwaps*/ true,
-                                                  /*MatchBitReversals*/ false))
-    return BSwap;
+  if (Instruction *BitOp = matchBSwapOrBitReverse(I, /*MatchBSwaps*/ true,
+                                                  /*MatchBitReversals*/ true))
+    return BitOp;
 
   if (Instruction *Funnel = matchFunnelShift(I, *this))
     return Funnel;

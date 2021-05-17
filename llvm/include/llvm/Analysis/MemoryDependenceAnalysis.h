@@ -36,6 +36,7 @@ namespace llvm {
 
 class AAResults;
 class AssumptionCache;
+class BatchAAResults;
 class DominatorTree;
 class Function;
 class Instruction;
@@ -456,10 +457,18 @@ public:
                                         Instruction *QueryInst = nullptr,
                                         unsigned *Limit = nullptr);
 
+  MemDepResult getPointerDependencyFrom(const MemoryLocation &Loc, bool isLoad,
+                                        BasicBlock::iterator ScanIt,
+                                        BasicBlock *BB,
+                                        Instruction *QueryInst,
+                                        unsigned *Limit,
+                                        BatchAAResults &BatchAA);
+
   MemDepResult
   getSimplePointerDependencyFrom(const MemoryLocation &MemLoc, bool isLoad,
                                  BasicBlock::iterator ScanIt, BasicBlock *BB,
-                                 Instruction *QueryInst, unsigned *Limit);
+                                 Instruction *QueryInst, unsigned *Limit,
+                                 BatchAAResults &BatchAA);
 
   /// This analysis looks for other loads and stores with invariant.group
   /// metadata and the same pointer operand. Returns Unknown if it does not
@@ -495,7 +504,8 @@ private:
   MemDepResult GetNonLocalInfoForBlock(Instruction *QueryInst,
                                        const MemoryLocation &Loc, bool isLoad,
                                        BasicBlock *BB, NonLocalDepInfo *Cache,
-                                       unsigned NumSortedEntries);
+                                       unsigned NumSortedEntries,
+                                       BatchAAResults &BatchAA);
 
   void RemoveCachedNonLocalPointerDependencies(ValueIsLoadPair P);
 

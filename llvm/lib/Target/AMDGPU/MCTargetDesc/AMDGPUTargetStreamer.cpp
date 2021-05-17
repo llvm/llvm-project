@@ -322,9 +322,10 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
   OS << "\t\t.amdhsa_kernarg_size " << KD.kernarg_size << '\n';
 
   if (!hasArchitectedFlatScratch(STI))
-    PRINT_FIELD(OS, ".amdhsa_user_sgpr_private_segment_buffer", KD,
-              kernel_code_properties,
-              amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER);
+    PRINT_FIELD(
+        OS, ".amdhsa_user_sgpr_private_segment_buffer", KD,
+        kernel_code_properties,
+        amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER);
   PRINT_FIELD(OS, ".amdhsa_user_sgpr_dispatch_ptr", KD,
               kernel_code_properties,
               amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR);
@@ -348,9 +349,10 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     PRINT_FIELD(OS, ".amdhsa_wavefront_size32", KD,
                 kernel_code_properties,
                 amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32);
-  PRINT_FIELD(OS, (hasArchitectedFlatScratch(STI)
-                     ? ".amdhsa_enable_private_segment"
-                     : ".amdhsa_system_sgpr_private_segment_wavefront_offset"),
+  PRINT_FIELD(OS,
+              (hasArchitectedFlatScratch(STI)
+                   ? ".amdhsa_enable_private_segment"
+                   : ".amdhsa_system_sgpr_private_segment_wavefront_offset"),
               KD, compute_pgm_rsrc2,
               amdhsa::COMPUTE_PGM_RSRC2_ENABLE_PRIVATE_SEGMENT);
   PRINT_FIELD(OS, ".amdhsa_system_sgpr_workgroup_id_x", KD,

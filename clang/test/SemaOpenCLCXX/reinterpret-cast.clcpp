@@ -1,0 +1,20 @@
+// RUN: %clang_cc1 %s -pedantic -verify -fsyntax-only
+
+typedef int int2 __attribute__((ext_vector_type(2)));
+typedef int int3 __attribute__((ext_vector_type(3)));
+typedef int int4 __attribute__((ext_vector_type(4)));
+
+kernel void foo() {
+  // Testing conversions between vectors and vectors/scalars
+  long l1;
+  auto l_to_i2 = reinterpret_cast<int2>(l1);
+  int2 i2;
+  auto i2_to_l = reinterpret_cast<long>(i2);
+  auto i2_to_i = reinterpret_cast<int>(i2); // expected-error{{reinterpret_cast from vector 'int2' (vector of 2 'int' values) to scalar 'int' of different size}}
+  auto i2_to_i2 = reinterpret_cast<int2>(i2);
+
+  // Only integral types (and pointer/references) can be reinterpret casted to themselves.
+  // Currently this does not include any opencl types.
+  reserve_id_t r_id1;
+  auto r_id2 = reinterpret_cast<reserve_id_t>(r_id1); // expected-error{{reinterpret_cast from 'reserve_id_t' to 'reserve_id_t' is not allowed}}
+}

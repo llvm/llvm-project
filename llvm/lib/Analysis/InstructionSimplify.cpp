@@ -224,8 +224,8 @@ static bool valueDominatesPHI(Value *V, PHINode *P, const DominatorTree *DT) {
 
   // Otherwise, if the instruction is in the entry block and is not an invoke,
   // then it obviously dominates all phi nodes.
-  if (I->getParent() == &I->getFunction()->getEntryBlock() &&
-      !isa<InvokeInst>(I) && !isa<CallBrInst>(I))
+  if (I->getParent()->isEntryBlock() && !isa<InvokeInst>(I) &&
+      !isa<CallBrInst>(I))
     return true;
 
   return false;

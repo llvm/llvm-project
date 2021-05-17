@@ -220,6 +220,20 @@ bool BPFTargetLowering::isZExtFree(EVT VT1, EVT VT2) const {
   return NumBits1 == 32 && NumBits2 == 64;
 }
 
+BPFTargetLowering::ConstraintType
+BPFTargetLowering::getConstraintType(StringRef Constraint) const {
+  if (Constraint.size() == 1) {
+    switch (Constraint[0]) {
+    default:
+      break;
+    case 'w':
+      return C_RegisterClass;
+    }
+  }
+
+  return TargetLowering::getConstraintType(Constraint);
+}
+
 std::pair<unsigned, const TargetRegisterClass *>
 BPFTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                 StringRef Constraint,
@@ -229,6 +243,10 @@ BPFTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     switch (Constraint[0]) {
     case 'r': // GENERAL_REGS
       return std::make_pair(0U, &BPF::GPRRegClass);
+    case 'w':
+      if (HasAlu32)
+        return std::make_pair(0U, &BPF::GPR32RegClass);
+      break;
     default:
       break;
     }

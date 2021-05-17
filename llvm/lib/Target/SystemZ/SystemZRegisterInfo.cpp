@@ -22,9 +22,6 @@ using namespace llvm;
 #define GET_REGINFO_TARGET_DESC
 #include "SystemZGenRegisterInfo.inc"
 
-SystemZRegisterInfo::SystemZRegisterInfo()
-    : SystemZGenRegisterInfo(SystemZ::R14D) {}
-
 // Given that MO is a GRX32 operand, return either GR32 or GRH32 if MO
 // somehow belongs in it. Otherwise, return GRX32.
 static const TargetRegisterClass *getRC32(MachineOperand &MO,
@@ -192,7 +189,12 @@ bool SystemZRegisterInfo::getRegAllocationHints(
 }
 
 const MCPhysReg *
-SystemZRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
+SystemZXPLINK64Registers::getCalleeSavedRegs(const MachineFunction *MF) const {
+  return CSR_SystemZ_XPLINK64_SaveList;
+}
+
+const MCPhysReg *
+SystemZELFRegisters::getCalleeSavedRegs(const MachineFunction *MF) const {
   const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
   if (MF->getFunction().getCallingConv() == CallingConv::GHC)
     return CSR_SystemZ_NoRegs_SaveList;
@@ -207,7 +209,13 @@ SystemZRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 }
 
 const uint32_t *
-SystemZRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
+SystemZXPLINK64Registers::getCallPreservedMask(const MachineFunction &MF,
+                                               CallingConv::ID CC) const {
+  return CSR_SystemZ_XPLINK64_RegMask;
+}
+
+const uint32_t *
+SystemZELFRegisters::getCallPreservedMask(const MachineFunction &MF,
                                           CallingConv::ID CC) const {
   const SystemZSubtarget &Subtarget = MF.getSubtarget<SystemZSubtarget>();
   if (CC == CallingConv::GHC)
@@ -222,24 +230,43 @@ SystemZRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   return CSR_SystemZ_ELF_RegMask;
 }
 
+SystemZRegisterInfo::SystemZRegisterInfo(unsigned int RA)
+    : SystemZGenRegisterInfo(RA) {}
+
+const MCPhysReg *
+SystemZRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
+
+  const SystemZSubtarget *Subtarget = &MF->getSubtarget<SystemZSubtarget>();
+  SystemZCallingConventionRegisters *Regs = Subtarget->getSpecialRegisters();
+
+  return Regs->getCalleeSavedRegs(MF);
+}
+
+const uint32_t *
+SystemZRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
+                                          CallingConv::ID CC) const {
+
+  const SystemZSubtarget *Subtarget = &MF.getSubtarget<SystemZSubtarget>();
+  SystemZCallingConventionRegisters *Regs = Subtarget->getSpecialRegisters();
+  return Regs->getCallPreservedMask(MF, CC);
+}
+
 BitVector
 SystemZRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
   const SystemZFrameLowering *TFI = getFrameLowering(MF);
+  const SystemZSubtarget *Subtarget = &MF.getSubtarget<SystemZSubtarget>();
+  SystemZCallingConventionRegisters *Regs = Subtarget->getSpecialRegisters();
+  if (TFI->hasFP(MF))
+    // The frame pointer. Reserve all aliases.
+    for (MCRegAliasIterator AI(Regs->getFramePointerRegister(), this, true);
+         AI.isValid(); ++AI)
+      Reserved.set(*AI);
 
-  if (TFI->hasFP(MF)) {
-    // R11D is the frame pointer.  Reserve all aliases.
-    Reserved.set(SystemZ::R11D);
-    Reserved.set(SystemZ::R11L);
-    Reserved.set(SystemZ::R11H);
-    Reserved.set(SystemZ::R10Q);
-  }
-
-  // R15D is the stack pointer.  Reserve all aliases.
-  Reserved.set(SystemZ::R15D);
-  Reserved.set(SystemZ::R15L);
-  Reserved.set(SystemZ::R15H);
-  Reserved.set(SystemZ::R14Q);
+  // Reserve all aliases for the stack pointer.
+  for (MCRegAliasIterator AI(Regs->getStackPointerRegister(), this, true);
+       AI.isValid(); ++AI)
+    Reserved.set(*AI);
 
   // A0 and A1 hold the thread pointer.
   Reserved.set(SystemZ::A0);
@@ -420,7 +447,11 @@ bool SystemZRegisterInfo::shouldCoalesce(MachineInstr *MI,
 Register
 SystemZRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const SystemZFrameLowering *TFI = getFrameLowering(MF);
-  return TFI->hasFP(MF) ? SystemZ::R11D : SystemZ::R15D;
+  const SystemZSubtarget *Subtarget = &MF.getSubtarget<SystemZSubtarget>();
+  SystemZCallingConventionRegisters *Regs = Subtarget->getSpecialRegisters();
+
+  return TFI->hasFP(MF) ? Regs->getFramePointerRegister()
+                        : Regs->getStackPointerRegister();
 }
 
 const TargetRegisterClass *

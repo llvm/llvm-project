@@ -69,17 +69,17 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       /*defaultImplementation=*/ [{ return "permutation_map"; }]
     >,
     InterfaceMethod<
-      /*desc=*/[{
-      Return `true` when the `in_bounds` attribute at dimension
-      `dim` is set to `true`. Return `false` otherwise.}],
+      /*desc=*/[{ Return `true` if dimension `dim` is in-bounds. Return `false`
+                 otherwise. }],
       /*retTy=*/"bool",
       /*methodName=*/"isDimInBounds",
       /*args=*/(ins "unsigned":$dim),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return $_op.in_bounds() &&
-          $_op.in_bounds()->template cast<ArrayAttr>()[dim]
-                          .template cast<BoolAttr>().getValue();
+        return $_op.isBroadcastDim(dim)
+            || ($_op.in_bounds()
+                && $_op.in_bounds()->template cast<ArrayAttr>()[dim]
+                                    .template cast<BoolAttr>().getValue());
       }]
     >,
     InterfaceMethod<

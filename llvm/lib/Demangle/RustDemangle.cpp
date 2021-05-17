@@ -101,6 +101,7 @@ static inline bool isValid(const char C) {
 bool Demangler::demangle(StringView Mangled) {
   Position = 0;
   Error = false;
+  Print = true;
   RecursionLevel = 0;
 
   if (!Mangled.consumeFront("_R")) {
@@ -143,6 +144,30 @@ void Demangler::demanglePath() {
     parseOptionalBase62Number('s');
     Identifier Ident = parseIdentifier();
     print(Ident.Name);
+    break;
+  }
+  case 'M': {
+    demangleImplPath();
+    print("<");
+    demangleType();
+    print(">");
+    break;
+  }
+  case 'X': {
+    demangleImplPath();
+    print("<");
+    demangleType();
+    print(" as ");
+    demanglePath();
+    print(">");
+    break;
+  }
+  case 'Y': {
+    print("<");
+    demangleType();
+    print(" as ");
+    demanglePath();
+    print(">");
     break;
   }
   case 'N': {
@@ -197,6 +222,14 @@ void Demangler::demanglePath() {
     Error = true;
     break;
   }
+}
+
+// <impl-path> = [<disambiguator>] <path>
+// <disambiguator> = "s" <base-62-number>
+void Demangler::demangleImplPath() {
+  SwapAndRestore<bool> SavePrint(Print, false);
+  parseOptionalBase62Number('s');
+  demanglePath();
 }
 
 // <generic-arg> = <lifetime>
@@ -411,11 +444,17 @@ void Demangler::demangleConst() {
     case BasicType::USize:
       demangleConstInt();
       break;
+    case BasicType::Bool:
+      demangleConstBool();
+      break;
+    case BasicType::Char:
+      demangleConstChar();
+      break;
     case BasicType::Placeholder:
       print('_');
       break;
     default:
-      // FIXME demangle backreferences, bool constants, and char constants.
+      // FIXME demangle backreferences.
       Error = true;
       break;
     }
@@ -437,6 +476,67 @@ void Demangler::demangleConstInt() {
     print("0x");
     print(HexDigits);
   }
+}
+
+// <const-data> = "0_" // false
+//              | "1_" // true
+void Demangler::demangleConstBool() {
+  StringView HexDigits;
+  parseHexNumber(HexDigits);
+  if (HexDigits == "0")
+    print("false");
+  else if (HexDigits == "1")
+    print("true");
+  else
+    Error = true;
+}
+
+/// Returns true if CodePoint represents a printable ASCII character.
+static bool isAsciiPrintable(uint64_t CodePoint) {
+  return 0x20 <= CodePoint && CodePoint <= 0x7e;
+}
+
+// <const-data> = <hex-number>
+void Demangler::demangleConstChar() {
+  StringView HexDigits;
+  uint64_t CodePoint = parseHexNumber(HexDigits);
+  if (Error || HexDigits.size() > 6) {
+    Error = true;
+    return;
+  }
+
+  print("'");
+  switch (CodePoint) {
+  case '\t':
+    print(R"(\t)");
+    break;
+  case '\r':
+    print(R"(\r)");
+    break;
+  case '\n':
+    print(R"(\n)");
+    break;
+  case '\\':
+    print(R"(\\)");
+    break;
+  case '"':
+    print(R"(")");
+    break;
+  case '\'':
+    print(R"(\')");
+    break;
+  default:
+    if (isAsciiPrintable(CodePoint)) {
+      char C = CodePoint;
+      print(C);
+    } else {
+      print(R"(\u{)");
+      print(HexDigits);
+      print('}');
+    }
+    break;
+  }
+  print('\'');
 }
 
 // <undisambiguated-identifier> = ["u"] <decimal-number> ["_"] <bytes>

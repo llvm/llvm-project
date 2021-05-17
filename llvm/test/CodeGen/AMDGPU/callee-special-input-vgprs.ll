@@ -649,7 +649,7 @@ define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_x_byval() #1 
     i32 210, i32 220, i32 230, i32 240,
     i32 250, i32 260, i32 270, i32 280,
     i32 290, i32 300, i32 310, i32 320,
-    i32 addrspace(5)* byval(i32) %alloca)
+    i32 addrspace(5)* %alloca)
   ret void
 }
 
@@ -686,7 +686,7 @@ define void @func_call_too_many_args_use_workitem_id_x_byval() #1 {
     i32 210, i32 220, i32 230, i32 240,
     i32 250, i32 260, i32 270, i32 280,
     i32 290, i32 300, i32 310, i32 320,
-    i32 addrspace(5)* byval(i32) %alloca)
+    i32 addrspace(5)* %alloca)
   ret void
 }
 

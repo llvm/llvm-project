@@ -63,6 +63,10 @@ class Demangler {
   // Position in the input string.
   size_t Position;
 
+  // When true, print methods append the output to the stream.
+  // When false, the output is suppressed.
+  bool Print;
+
   // True if an error occurred.
   bool Error;
 
@@ -76,10 +80,13 @@ public:
 
 private:
   void demanglePath();
+  void demangleImplPath();
   void demangleGenericArg();
   void demangleType();
   void demangleConst();
   void demangleConstInt();
+  void demangleConstBool();
+  void demangleConstChar();
 
   Identifier parseIdentifier();
   uint64_t parseOptionalBase62Number(char Tag);
@@ -88,21 +95,21 @@ private:
   uint64_t parseHexNumber(StringView &HexDigits);
 
   void print(char C) {
-    if (Error)
+    if (Error || !Print)
       return;
 
     Output += C;
   }
 
   void print(StringView S) {
-    if (Error)
+    if (Error || !Print)
       return;
 
     Output += S;
   }
 
   void printDecimalNumber(uint64_t N) {
-    if (Error)
+    if (Error || !Print)
       return;
 
     Output << N;

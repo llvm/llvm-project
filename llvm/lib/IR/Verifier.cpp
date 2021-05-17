@@ -3377,9 +3377,9 @@ static bool isTypeCongruent(Type *L, Type *R) {
 
 static AttrBuilder getParameterABIAttributes(int I, AttributeList Attrs) {
   static const Attribute::AttrKind ABIAttrs[] = {
-      Attribute::StructRet,  Attribute::ByVal,      Attribute::InAlloca,
-      Attribute::InReg,      Attribute::SwiftSelf,  Attribute::SwiftAsync,
-      Attribute::SwiftError, Attribute::SwiftAsync, Attribute::Preallocated,
+      Attribute::StructRet,  Attribute::ByVal,          Attribute::InAlloca,
+      Attribute::InReg,      Attribute::StackAlignment, Attribute::SwiftSelf,
+      Attribute::SwiftAsync, Attribute::SwiftError,     Attribute::Preallocated,
       Attribute::ByRef};
   AttrBuilder Copy;
   for (auto AK : ABIAttrs) {
