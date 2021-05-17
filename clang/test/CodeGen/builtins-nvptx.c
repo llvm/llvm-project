@@ -1,4 +1,10 @@
 // REQUIRES: nvptx-registered-target
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu sm_80 -target-feature +ptx70 \
+// RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
+// RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX70_SM80 -check-prefix=LP32 %s
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_80 -target-feature +ptx70 \
+// RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
+// RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX70_SM80 -check-prefix=LP64 %s
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu sm_60 \
 // RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=LP32 %s
@@ -670,5 +676,82 @@ __device__ void nvvm_vote(int pred) {
   __nvvm_vote_uni(pred);
   // CHECK: call i32 @llvm.nvvm.vote.ballot(i1
   __nvvm_vote_ballot(pred);
+  // CHECK: ret void
+}
+
+// CHECK-LABEL: nvvm_mbarrier
+__device__ void nvvm_mbarrier(long long* addr, __attribute__((address_space(3))) long long* sharedAddr, int count, long long state) {
+  #if __CUDA_ARCH__ >= 800
+  __nvvm_mbarrier_init(addr, count);
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.mbarrier.init
+  __nvvm_mbarrier_init_shared(sharedAddr, count);
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.mbarrier.init.shared
+
+  __nvvm_mbarrier_inval(addr);
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.mbarrier.inval
+  __nvvm_mbarrier_inval_shared(sharedAddr);
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.mbarrier.inval.shared
+
+  __nvvm_mbarrier_arrive(addr);
+  // CHECK_PTX70_SM80: call i64 @llvm.nvvm.mbarrier.arrive
+  __nvvm_mbarrier_arrive_shared(sharedAddr);
+  // CHECK_PTX70_SM80: call i64 @llvm.nvvm.mbarrier.arrive.shared
+  __nvvm_mbarrier_arrive_noComplete(addr, count);
+  // CHECK_PTX70_SM80: call i64 @llvm.nvvm.mbarrier.arrive.noComplete
+  __nvvm_mbarrier_arrive_noComplete_shared(sharedAddr, count);
+  // CHECK_PTX70_SM80: call i64 @llvm.nvvm.mbarrier.arrive.noComplete.shared
+
+  __nvvm_mbarrier_arrive_drop(addr);
+  // CHECK_PTX70_SM80: call i64 @llvm.nvvm.mbarrier.arrive.drop
+  __nvvm_mbarrier_arrive_drop_shared(sharedAddr);
+  // CHECK_PTX70_SM80: call i64 @llvm.nvvm.mbarrier.arrive.drop.shared
+  __nvvm_mbarrier_arrive_drop_noComplete(addr, count);
+  // CHECK_PTX70_SM80: call i64 @llvm.nvvm.mbarrier.arrive.drop.noComplete
+  __nvvm_mbarrier_arrive_drop_noComplete_shared(sharedAddr, count);
+  // CHECK_PTX70_SM80: call i64 @llvm.nvvm.mbarrier.arrive.drop.noComplete.shared
+
+  __nvvm_mbarrier_test_wait(addr, state);
+  // CHECK_PTX70_SM80: call i1 @llvm.nvvm.mbarrier.test.wait
+  __nvvm_mbarrier_test_wait_shared(sharedAddr, state);
+  // CHECK_PTX70_SM80: call i1 @llvm.nvvm.mbarrier.test.wait.shared
+
+  __nvvm_mbarrier_pending_count(state);
+  // CHECK_PTX70_SM80: call i32 @llvm.nvvm.mbarrier.pending.count
+  #endif
+  // CHECK: ret void
+}
+
+// CHECK-LABEL: nvvm_async_copy
+__device__ void nvvm_async_copy(__attribute__((address_space(3))) void* dst, __attribute__((address_space(1))) const void* src, long long* addr, __attribute__((address_space(3))) long long* sharedAddr) {
+  #if __CUDA_ARCH__ >= 800
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.mbarrier.arrive
+  __nvvm_cp_async_mbarrier_arrive(addr);
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.mbarrier.arrive.shared
+  __nvvm_cp_async_mbarrier_arrive_shared(sharedAddr);
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.mbarrier.arrive.noinc
+  __nvvm_cp_async_mbarrier_arrive_noinc(addr);
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.mbarrier.arrive.noinc.shared
+  __nvvm_cp_async_mbarrier_arrive_noinc_shared(sharedAddr);
+
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.ca.shared.global.4
+  __nvvm_cp_async_ca_shared_global_4(dst, src);
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.ca.shared.global.8
+  __nvvm_cp_async_ca_shared_global_8(dst, src);
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.ca.shared.global.16
+  __nvvm_cp_async_ca_shared_global_16(dst, src);
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.cg.shared.global.16
+  __nvvm_cp_async_cg_shared_global_16(dst, src);
+
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.commit.group
+  __nvvm_cp_async_commit_group();
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.wait.group(i32 0)
+  __nvvm_cp_async_wait_group(0);
+    // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.wait.group(i32 8)
+  __nvvm_cp_async_wait_group(8);
+    // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.wait.group(i32 16)
+  __nvvm_cp_async_wait_group(16);
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.wait.all
+  __nvvm_cp_async_wait_all();
+  #endif
   // CHECK: ret void
 }

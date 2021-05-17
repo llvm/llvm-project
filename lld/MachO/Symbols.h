@@ -112,10 +112,11 @@ class Defined : public Symbol {
 public:
   Defined(StringRefZ name, InputFile *file, InputSection *isec, uint64_t value,
           uint64_t size, bool isWeakDef, bool isExternal, bool isPrivateExtern,
-          bool isThumb)
+          bool isThumb, bool isReferencedDynamically)
       : Symbol(DefinedKind, name, file), isec(isec), value(value), size(size),
         overridesWeakDef(false), privateExtern(isPrivateExtern),
-        includeInSymtab(true), thumb(isThumb), weakDef(isWeakDef),
+        includeInSymtab(true), thumb(isThumb),
+        referencedDynamically(isReferencedDynamically), weakDef(isWeakDef),
         external(isExternal) {
     if (isec)
       isec->numRefs++;
@@ -151,6 +152,11 @@ public:
   bool includeInSymtab : 1;
   // Only relevant when compiling for Thumb-supporting arm32 archs.
   bool thumb : 1;
+  // Symbols marked referencedDynamically won't be removed from the output's
+  // symbol table by tools like strip. In theory, this could be set on arbitrary
+  // symbols in input object files. In practice, it's used solely for the
+  // synthetic __mh_execute_header symbol.
+  bool referencedDynamically : 1;
 
 private:
   const bool weakDef : 1;

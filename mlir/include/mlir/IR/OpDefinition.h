@@ -93,8 +93,8 @@ void ensureRegionTerminator(
 /// they aren't customized.
 class OpState {
 public:
-  /// Ops are pointer-like, so we allow implicit conversion to bool.
-  operator bool() { return getOperation() != nullptr; }
+  /// Ops are pointer-like, so we allow conversion to bool.
+  explicit operator bool() { return getOperation() != nullptr; }
 
   /// This implicitly converts to Operation*.
   operator Operation *() const { return state; }

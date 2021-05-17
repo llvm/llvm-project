@@ -816,8 +816,12 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     }
     if (SanArgs.needsTsanRt() && SanArgs.linkRuntimes())
       SharedRuntimes.push_back("tsan");
-    if (SanArgs.needsHwasanRt() && SanArgs.linkRuntimes())
-      SharedRuntimes.push_back("hwasan");
+    if (SanArgs.needsHwasanRt() && SanArgs.linkRuntimes()) {
+      if (SanArgs.needsHwasanAliasesRt())
+        SharedRuntimes.push_back("hwasan_aliases");
+      else
+        SharedRuntimes.push_back("hwasan");
+    }
   }
 
   // The stats_client library is also statically linked into DSOs.
@@ -847,9 +851,15 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   }
 
   if (!SanArgs.needsSharedRt() && SanArgs.needsHwasanRt() && SanArgs.linkRuntimes()) {
-    StaticRuntimes.push_back("hwasan");
-    if (SanArgs.linkCXXRuntimes())
-      StaticRuntimes.push_back("hwasan_cxx");
+    if (SanArgs.needsHwasanAliasesRt()) {
+      StaticRuntimes.push_back("hwasan_aliases");
+      if (SanArgs.linkCXXRuntimes())
+        StaticRuntimes.push_back("hwasan_aliases_cxx");
+    } else {
+      StaticRuntimes.push_back("hwasan");
+      if (SanArgs.linkCXXRuntimes())
+        StaticRuntimes.push_back("hwasan_cxx");
+    }
   }
   if (SanArgs.needsDfsanRt() && SanArgs.linkRuntimes())
     StaticRuntimes.push_back("dfsan");

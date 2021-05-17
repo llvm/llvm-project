@@ -31,7 +31,11 @@
 //   * llvm.nvvm.max.ull --> ibid.
 //   * llvm.nvvm.h2f     --> llvm.convert.to.fp16.f32
 
-def llvm_anyi64ptr_ty     : LLVMAnyPointerType<llvm_i64_ty>;     // (space)i64*
+def llvm_global_i8ptr_ty  : LLVMQualPointerType<llvm_i8_ty, 1>;  // (global)i8*
+def llvm_shared_i8ptr_ty  : LLVMQualPointerType<llvm_i8_ty, 3>;  // (shared)i8*
+def llvm_i64ptr_ty        : LLVMPointerType<llvm_i64_ty>;        // i64*
+def llvm_any_i64ptr_ty    : LLVMAnyPointerType<llvm_i64_ty>;     // (space)i64*
+def llvm_shared_i64ptr_ty : LLVMQualPointerType<llvm_i64_ty, 3>; // (shared)i64*
 
 //
 // MISC
@@ -1052,6 +1056,110 @@ let TargetPrefix = "nvvm" in {
   def int_nvvm_membar_sys : GCCBuiltin<"__nvvm_membar_sys">,
       Intrinsic<[], [], []>;
 
+// Async Copy
+def int_nvvm_cp_async_mbarrier_arrive :
+    GCCBuiltin<"__nvvm_cp_async_mbarrier_arrive">,
+    Intrinsic<[],[llvm_i64ptr_ty],[IntrConvergent]>;
+def int_nvvm_cp_async_mbarrier_arrive_shared :
+    GCCBuiltin<"__nvvm_cp_async_mbarrier_arrive_shared">,
+    Intrinsic<[],[llvm_shared_i64ptr_ty],[IntrConvergent]>;
+def int_nvvm_cp_async_mbarrier_arrive_noinc :
+    GCCBuiltin<"__nvvm_cp_async_mbarrier_arrive_noinc">,
+    Intrinsic<[],[llvm_i64ptr_ty],[IntrConvergent]>;
+def int_nvvm_cp_async_mbarrier_arrive_noinc_shared :
+    GCCBuiltin<"__nvvm_cp_async_mbarrier_arrive_noinc_shared">,
+    Intrinsic<[],[llvm_shared_i64ptr_ty],[IntrConvergent]>;
+
+def int_nvvm_cp_async_ca_shared_global_4 :
+    GCCBuiltin<"__nvvm_cp_async_ca_shared_global_4">,
+    Intrinsic<[],[llvm_shared_i8ptr_ty, llvm_global_i8ptr_ty],
+    [IntrArgMemOnly, NoAlias<ArgIndex<0>>, NoAlias<ArgIndex<1>>,
+     WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>],
+    "llvm.nvvm.cp.async.ca.shared.global.4">;
+def int_nvvm_cp_async_ca_shared_global_8 :
+    GCCBuiltin<"__nvvm_cp_async_ca_shared_global_8">,
+    Intrinsic<[],[llvm_shared_i8ptr_ty, llvm_global_i8ptr_ty],
+    [IntrArgMemOnly, NoAlias<ArgIndex<0>>, NoAlias<ArgIndex<1>>,
+     WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>],
+    "llvm.nvvm.cp.async.ca.shared.global.8">;
+def int_nvvm_cp_async_ca_shared_global_16 :
+    GCCBuiltin<"__nvvm_cp_async_ca_shared_global_16">,
+    Intrinsic<[],[llvm_shared_i8ptr_ty, llvm_global_i8ptr_ty],
+    [IntrArgMemOnly, NoAlias<ArgIndex<0>>, NoAlias<ArgIndex<1>>,
+     WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>],
+    "llvm.nvvm.cp.async.ca.shared.global.16">;
+def int_nvvm_cp_async_cg_shared_global_16 :
+    GCCBuiltin<"__nvvm_cp_async_cg_shared_global_16">,
+    Intrinsic<[],[llvm_shared_i8ptr_ty, llvm_global_i8ptr_ty],
+    [IntrArgMemOnly, NoAlias<ArgIndex<0>>, NoAlias<ArgIndex<1>>,
+     WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>],
+    "llvm.nvvm.cp.async.cg.shared.global.16">;
+
+def int_nvvm_cp_async_commit_group :
+    GCCBuiltin<"__nvvm_cp_async_commit_group">,
+    Intrinsic<[],[],[]>;
+
+def int_nvvm_cp_async_wait_group :
+    GCCBuiltin<"__nvvm_cp_async_wait_group">,
+    Intrinsic<[],[llvm_i32_ty],[ImmArg<ArgIndex<0>>]>;
+
+def int_nvvm_cp_async_wait_all :
+    GCCBuiltin<"__nvvm_cp_async_wait_all">,
+    Intrinsic<[],[],[]>;
+
+// mbarrier
+def int_nvvm_mbarrier_init : GCCBuiltin<"__nvvm_mbarrier_init">,
+    Intrinsic<[],[llvm_i64ptr_ty, llvm_i32_ty],[IntrConvergent]>;
+def int_nvvm_mbarrier_init_shared :
+    GCCBuiltin<"__nvvm_mbarrier_init_shared">,
+    Intrinsic<[],[llvm_shared_i64ptr_ty, llvm_i32_ty],[IntrConvergent]>;
+
+def int_nvvm_mbarrier_inval : GCCBuiltin<"__nvvm_mbarrier_inval">,
+    Intrinsic<[],[llvm_i64ptr_ty],
+    [IntrConvergent, IntrWriteMem, IntrArgMemOnly,
+    WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+def int_nvvm_mbarrier_inval_shared :
+    GCCBuiltin<"__nvvm_mbarrier_inval_shared">,
+    Intrinsic<[],[llvm_shared_i64ptr_ty],
+    [IntrConvergent, IntrWriteMem, IntrArgMemOnly,
+    WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+
+def int_nvvm_mbarrier_arrive : GCCBuiltin<"__nvvm_mbarrier_arrive">,
+    Intrinsic<[llvm_i64_ty],[llvm_i64ptr_ty],[IntrConvergent]>;
+def int_nvvm_mbarrier_arrive_shared :
+    GCCBuiltin<"__nvvm_mbarrier_arrive_shared">,
+    Intrinsic<[llvm_i64_ty],[llvm_shared_i64ptr_ty],[IntrConvergent]>;
+def int_nvvm_mbarrier_arrive_noComplete :
+    GCCBuiltin<"__nvvm_mbarrier_arrive_noComplete">,
+    Intrinsic<[llvm_i64_ty],[llvm_i64ptr_ty, llvm_i32_ty],[IntrConvergent]>;
+def int_nvvm_mbarrier_arrive_noComplete_shared :
+    GCCBuiltin<"__nvvm_mbarrier_arrive_noComplete_shared">,
+    Intrinsic<[llvm_i64_ty],[llvm_shared_i64ptr_ty, llvm_i32_ty],[IntrConvergent]>;
+
+def int_nvvm_mbarrier_arrive_drop :
+    GCCBuiltin<"__nvvm_mbarrier_arrive_drop">,
+    Intrinsic<[llvm_i64_ty],[llvm_i64ptr_ty],[IntrConvergent]>;
+def int_nvvm_mbarrier_arrive_drop_shared :
+    GCCBuiltin<"__nvvm_mbarrier_arrive_drop_shared">,
+    Intrinsic<[llvm_i64_ty],[llvm_shared_i64ptr_ty],[IntrConvergent]>;
+def int_nvvm_mbarrier_arrive_drop_noComplete :
+    GCCBuiltin<"__nvvm_mbarrier_arrive_drop_noComplete">,
+    Intrinsic<[llvm_i64_ty],[llvm_i64ptr_ty, llvm_i32_ty],[IntrConvergent]>;
+def int_nvvm_mbarrier_arrive_drop_noComplete_shared :
+    GCCBuiltin<"__nvvm_mbarrier_arrive_drop_noComplete_shared">,
+    Intrinsic<[llvm_i64_ty],[llvm_shared_i64ptr_ty, llvm_i32_ty],[IntrConvergent]>;
+
+def int_nvvm_mbarrier_test_wait :
+    GCCBuiltin<"__nvvm_mbarrier_test_wait">,
+    Intrinsic<[llvm_i1_ty],[llvm_i64ptr_ty, llvm_i64_ty],[IntrConvergent]>;
+def int_nvvm_mbarrier_test_wait_shared :
+    GCCBuiltin<"__nvvm_mbarrier_test_wait_shared">,
+    Intrinsic<[llvm_i1_ty],[llvm_shared_i64ptr_ty, llvm_i64_ty],[IntrConvergent]>;
+
+def int_nvvm_mbarrier_pending_count :
+    GCCBuiltin<"__nvvm_mbarrier_pending_count">,
+    Intrinsic<[llvm_i32_ty],[llvm_i64_ty],[IntrNoMem, IntrConvergent]>;
+
 // Generated within nvvm. Use for ldu on sm_20 or later.  Second arg is the
 // pointer's alignment.
 def int_nvvm_ldu_global_i : Intrinsic<[llvm_anyint_ty],
@@ -1141,7 +1249,7 @@ def int_nvvm_move_ptr : Intrinsic<[llvm_anyptr_ty], [llvm_anyptr_ty],
 
 // For getting the handle from a texture or surface variable
 def int_nvvm_texsurf_handle
-  : Intrinsic<[llvm_i64_ty], [llvm_metadata_ty, llvm_anyi64ptr_ty],
+  : Intrinsic<[llvm_i64_ty], [llvm_metadata_ty, llvm_any_i64ptr_ty],
               [IntrNoMem], "llvm.nvvm.texsurf.handle">;
 def int_nvvm_texsurf_handle_internal
   : Intrinsic<[llvm_i64_ty], [llvm_anyptr_ty],
@@ -4095,6 +4203,49 @@ def int_nvvm_match_all_sync_i32p :
 def int_nvvm_match_all_sync_i64p :
   Intrinsic<[llvm_i64_ty, llvm_i1_ty], [llvm_i32_ty, llvm_i64_ty],
             [IntrInaccessibleMemOnly, IntrConvergent], "llvm.nvvm.match.all.sync.i64p">;
+
+//
+// REDUX.SYNC
+//
+// redux.sync.min.u32 dst, src, membermask;
+def int_nvvm_redux_sync_umin : GCCBuiltin<"__nvvm_redux_sync_umin">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+            [IntrConvergent, IntrInaccessibleMemOnly]>;
+
+// redux.sync.max.u32 dst, src, membermask;
+def int_nvvm_redux_sync_umax : GCCBuiltin<"__nvvm_redux_sync_umax">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+            [IntrConvergent, IntrInaccessibleMemOnly]>;
+
+// redux.sync.add.s32 dst, src, membermask;
+def int_nvvm_redux_sync_add : GCCBuiltin<"__nvvm_redux_sync_add">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+            [IntrConvergent, IntrInaccessibleMemOnly]>;
+
+// redux.sync.min.s32 dst, src, membermask;
+def int_nvvm_redux_sync_min : GCCBuiltin<"__nvvm_redux_sync_min">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+            [IntrConvergent, IntrInaccessibleMemOnly]>;
+
+// redux.sync.max.s32 dst, src, membermask;
+def int_nvvm_redux_sync_max : GCCBuiltin<"__nvvm_redux_sync_max">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+            [IntrConvergent, IntrInaccessibleMemOnly]>;
+
+// redux.sync.and.b32 dst, src, membermask;
+def int_nvvm_redux_sync_and : GCCBuiltin<"__nvvm_redux_sync_and">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+            [IntrConvergent, IntrInaccessibleMemOnly]>;
+
+// redux.sync.xor.b32 dst, src, membermask;
+def int_nvvm_redux_sync_xor : GCCBuiltin<"__nvvm_redux_sync_xor">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+            [IntrConvergent, IntrInaccessibleMemOnly]>;
+
+// redux.sync.or.b32 dst, src, membermask;
+def int_nvvm_redux_sync_or : GCCBuiltin<"__nvvm_redux_sync_or">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+            [IntrConvergent, IntrInaccessibleMemOnly]>;
 
 //
 // WMMA instructions

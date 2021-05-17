@@ -18,6 +18,7 @@ static_library("Passes") {
   ]
   sources = [
     "PassBuilder.cpp",
+    "PassBuilderBindings.cpp",
     "PassPlugin.cpp",
     "StandardInstrumentations.cpp",
   ]
