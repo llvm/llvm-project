@@ -96,29 +96,26 @@ while.end:                                        ; preds = %while.body, %entry
 define i32 @test_lshr2(i32* nocapture %x, i32* nocapture readonly %y, i32 %n) {
 ; CHECK-V6M-LABEL: test_lshr2:
 ; CHECK-V6M:       @ %bb.0: @ %entry
-; CHECK-V6M-NEXT:    cmp r2, #4
-; CHECK-V6M-NEXT:    blo .LBB1_3
-; CHECK-V6M-NEXT:  @ %bb.1: @ %while.body.preheader
 ; CHECK-V6M-NEXT:    lsrs r2, r2, #2
-; CHECK-V6M-NEXT:  .LBB1_2: @ %while.body
+; CHECK-V6M-NEXT:    beq .LBB1_2
+; CHECK-V6M-NEXT:  .LBB1_1: @ %while.body
 ; CHECK-V6M-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-V6M-NEXT:    ldm r1!, {r3}
 ; CHECK-V6M-NEXT:    lsls r3, r3, #1
 ; CHECK-V6M-NEXT:    stm r0!, {r3}
 ; CHECK-V6M-NEXT:    subs r2, r2, #1
-; CHECK-V6M-NEXT:    bne .LBB1_2
-; CHECK-V6M-NEXT:  .LBB1_3: @ %while.end
+; CHECK-V6M-NEXT:    bne .LBB1_1
+; CHECK-V6M-NEXT:  .LBB1_2: @ %while.end
 ; CHECK-V6M-NEXT:    movs r0, #0
 ; CHECK-V6M-NEXT:    bx lr
 ;
 ; CHECK-V7M-LABEL: test_lshr2:
 ; CHECK-V7M:       @ %bb.0: @ %entry
-; CHECK-V7M-NEXT:    cmp r2, #4
-; CHECK-V7M-NEXT:    blo .LBB1_3
+; CHECK-V7M-NEXT:    lsrs r2, r2, #2
+; CHECK-V7M-NEXT:    beq .LBB1_3
 ; CHECK-V7M-NEXT:  @ %bb.1: @ %while.body.preheader
 ; CHECK-V7M-NEXT:    subs r1, #4
 ; CHECK-V7M-NEXT:    subs r0, #4
-; CHECK-V7M-NEXT:    lsrs r2, r2, #2
 ; CHECK-V7M-NEXT:  .LBB1_2: @ %while.body
 ; CHECK-V7M-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-V7M-NEXT:    ldr r3, [r1, #4]!
@@ -134,24 +131,23 @@ define i32 @test_lshr2(i32* nocapture %x, i32* nocapture readonly %y, i32 %n) {
 ; CHECK-V81M:       @ %bb.0: @ %entry
 ; CHECK-V81M-NEXT:    .save {r7, lr}
 ; CHECK-V81M-NEXT:    push {r7, lr}
-; CHECK-V81M-NEXT:    cmp r2, #4
-; CHECK-V81M-NEXT:    blo .LBB1_3
-; CHECK-V81M-NEXT:  @ %bb.1: @ %while.body.preheader
-; CHECK-V81M-NEXT:    lsr.w lr, r2, #2
-; CHECK-V81M-NEXT:  .LBB1_2: @ %while.body
+; CHECK-V81M-NEXT:    lsrs r2, r2, #2
+; CHECK-V81M-NEXT:    wls lr, r2, .LBB1_2
+; CHECK-V81M-NEXT:  .LBB1_1: @ %while.body
 ; CHECK-V81M-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-V81M-NEXT:    ldr r2, [r1], #4
 ; CHECK-V81M-NEXT:    lsls r2, r2, #1
 ; CHECK-V81M-NEXT:    str r2, [r0], #4
-; CHECK-V81M-NEXT:    le lr, .LBB1_2
-; CHECK-V81M-NEXT:  .LBB1_3: @ %while.end
+; CHECK-V81M-NEXT:    le lr, .LBB1_1
+; CHECK-V81M-NEXT:  .LBB1_2: @ %while.end
 ; CHECK-V81M-NEXT:    movs r0, #0
 ; CHECK-V81M-NEXT:    pop {r7, pc}
 ;
 ; CHECK-V7A-LABEL: test_lshr2:
 ; CHECK-V7A:       @ %bb.0: @ %entry
-; CHECK-V7A-NEXT:    cmp r2, #4
-; CHECK-V7A-NEXT:    blo .LBB1_3
+; CHECK-V7A-NEXT:    mov r3, #0
+; CHECK-V7A-NEXT:    cmp r3, r2, lsr #2
+; CHECK-V7A-NEXT:    beq .LBB1_3
 ; CHECK-V7A-NEXT:  @ %bb.1: @ %while.body.preheader
 ; CHECK-V7A-NEXT:    lsr r2, r2, #2
 ; CHECK-V7A-NEXT:  .LBB1_2: @ %while.body
