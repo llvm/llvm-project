@@ -395,6 +395,7 @@ llvm.func @_mlir_ciface_foo(%arg0: !llvm.memref_2d_ptr, %arg1: !llvm.memref_2d_p
   llvm.store %8, %arg0 : !llvm.memref_2d_ptr
   llvm.return
 }
+```
 
 Rationale: Introducing auxiliary functions for C-compatible interfaces is
 preferred to modifying the calling convention since it will minimize the effect
