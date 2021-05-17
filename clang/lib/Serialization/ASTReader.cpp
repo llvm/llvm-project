@@ -1921,9 +1921,7 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
     std::string Filename = std::string(key.Filename);
     if (key.Imported)
       Reader.ResolveImportedPath(M, Filename);
-    // FIXME: This is not always the right filename-as-written, but we're not
-    // going to use this information to rebuild the module, so it doesn't make
-    // a lot of difference.
+    // FIXME: NameAsWritten
     Module::Header H = {std::string(key.Filename), "",
                         *FileMgr.getFile(Filename)};
     ModMap.addHeader(Mod, H, HeaderRole, /*Imported*/true);
