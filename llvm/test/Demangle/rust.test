@@ -33,6 +33,14 @@ CHECK: crate::{shim:reify#0}
 CHECK: crate::{Z:ident#10}
        _RNZC5crates8_5ident
 
+; Inherent impl
+
+CHECK: <_>
+       _RMC5cratep
+
+CHECK: <_>
+       _RMs_C5cratep
+
 ; Generic type arguments
 
 CHECK: generic::<_>
