@@ -300,7 +300,7 @@ namespace {
         MachineBasicBlock::iterator TIE = TBBInfo.BB->end();
         MachineBasicBlock::iterator FIE = FBBInfo.BB->end();
 
-        unsigned Dups1, Dups2;
+        unsigned Dups1 = 0, Dups2 = 0;
         if (!CountDuplicatedInstructions(TIB, FIB, TIE, FIE, Dups1, Dups2,
                                          *TBBInfo.BB, *FBBInfo.BB,
                                          /*SkipUnconditionalBranches*/ true))
