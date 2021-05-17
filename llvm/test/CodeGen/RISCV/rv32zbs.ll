@@ -720,16 +720,14 @@ define i32 @xor_i32_4098(i32 %a) nounwind {
 ;
 ; RV32IB-LABEL: xor_i32_4098:
 ; RV32IB:       # %bb.0:
-; RV32IB-NEXT:    lui a1, 1
-; RV32IB-NEXT:    addi a1, a1, 2
-; RV32IB-NEXT:    xor a0, a0, a1
+; RV32IB-NEXT:    binvi a0, a0, 1
+; RV32IB-NEXT:    binvi a0, a0, 12
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBS-LABEL: xor_i32_4098:
 ; RV32IBS:       # %bb.0:
-; RV32IBS-NEXT:    lui a1, 1
-; RV32IBS-NEXT:    addi a1, a1, 2
-; RV32IBS-NEXT:    xor a0, a0, a1
+; RV32IBS-NEXT:    binvi a0, a0, 1
+; RV32IBS-NEXT:    binvi a0, a0, 12
 ; RV32IBS-NEXT:    ret
   %xor = xor i32 %a, 4098
   ret i32 %xor
@@ -789,16 +787,14 @@ define i32 @or_i32_4098(i32 %a) nounwind {
 ;
 ; RV32IB-LABEL: or_i32_4098:
 ; RV32IB:       # %bb.0:
-; RV32IB-NEXT:    lui a1, 1
-; RV32IB-NEXT:    addi a1, a1, 2
-; RV32IB-NEXT:    or a0, a0, a1
+; RV32IB-NEXT:    bseti a0, a0, 1
+; RV32IB-NEXT:    bseti a0, a0, 12
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBS-LABEL: or_i32_4098:
 ; RV32IBS:       # %bb.0:
-; RV32IBS-NEXT:    lui a1, 1
-; RV32IBS-NEXT:    addi a1, a1, 2
-; RV32IBS-NEXT:    or a0, a0, a1
+; RV32IBS-NEXT:    bseti a0, a0, 1
+; RV32IBS-NEXT:    bseti a0, a0, 12
 ; RV32IBS-NEXT:    ret
   %or = or i32 %a, 4098
   ret i32 %or
