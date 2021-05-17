@@ -1297,7 +1297,7 @@ void FPS::handleTwoArgFP(MachineBasicBlock::iterator &I) {
   unsigned Op1 = getFPReg(MI.getOperand(NumOperands - 1));
   bool KillsOp0 = MI.killsRegister(X86::FP0 + Op0);
   bool KillsOp1 = MI.killsRegister(X86::FP0 + Op1);
-  DebugLoc dl = MI.getDebugLoc();
+  const DebugLoc &dl = MI.getDebugLoc();
 
   unsigned TOS = getStackEntry(0);
 
