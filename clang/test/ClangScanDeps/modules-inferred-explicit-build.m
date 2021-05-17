@@ -7,11 +7,11 @@
 //
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -format experimental-full \
 // RUN:   -mode preprocess-minimized-sources > %t.db
-// RUN: %S/module-deps-to-rsp.py %t.db --module-name=Inferred > %t.inferred.rsp
-// RUN: %S/module-deps-to-rsp.py %t.db --module-name=System > %t.system.rsp
-// RUN: %S/module-deps-to-rsp.py %t.db --tu-index=0 > %t.tu.rsp
-// RUN: %clang_cc1 -pedantic -Werror @%t.inferred.rsp
-// RUN: %clang_cc1 -pedantic -Werror @%t.system.rsp
+// RUN: %S/../../utils/module-deps-to-rsp.py %t.db --module-name=Inferred > %t.inferred.cc1.rsp
+// RUN: %S/../../utils/module-deps-to-rsp.py %t.db --module-name=System > %t.system.cc1.rsp
+// RUN: %S/../../utils/module-deps-to-rsp.py %t.db --tu-index=0 > %t.tu.rsp
+// RUN: %clang @%t.inferred.cc1.rsp -pedantic -Werror
+// RUN: %clang @%t.system.cc1.rsp -pedantic -Werror
 // RUN: %clang -x objective-c -fsyntax-only %t.dir/modules_cdb_input.cpp \
 // RUN:   -F%S/Inputs/frameworks -fmodules -fimplicit-module-maps \
 // RUN:   -pedantic -Werror @%t.tu.rsp
