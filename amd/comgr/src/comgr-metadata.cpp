@@ -480,6 +480,8 @@ static std::string convertOldTargetNameToNew(const std::string &OldName,
     Mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX904;
   } else if (OldName == "AMD:AMDGPU:9:0:6" || OldName == "AMD:AMDGPU:9:0:7") {
     Mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX906;
+  } else if (OldName == "AMD:AMDGPU:9:0:12") {
+    Mach = ELF::EF_AMDGPU_MACH_AMDGCN_GFX90C;
   } else {
     // Code object v2 only supports asics up to gfx906. Do NOT add handling
     // of new asics into this if-else-if* block.

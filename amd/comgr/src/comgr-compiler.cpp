@@ -392,11 +392,21 @@ static bool executeAssembler(AssemblerInvocation &Opts,
     return true;
   }
 
-  // FIXME: This is not pretty. MCContext has a ptr to MCObjectFileInfo and
-  // MCObjectFileInfo needs a MCContext reference in order to initialize itself.
-  std::unique_ptr<MCObjectFileInfo> MOFI(new MCObjectFileInfo());
+  // Build up the feature string from the target feature list.
+  std::string FS;
+  if (!Opts.Features.empty()) {
+    FS = Opts.Features[0];
+    for (unsigned I = 1, E = Opts.Features.size(); I != E; ++I) {
+      FS += "," + Opts.Features[I];
+    }
+  }
 
-  MCContext Ctx(MAI.get(), MRI.get(), MOFI.get(), &SrcMgr);
+  std::unique_ptr<MCObjectFileInfo> MOFI(new MCObjectFileInfo());
+  std::unique_ptr<MCSubtargetInfo> STI(
+      TheTarget->createMCSubtargetInfo(Opts.Triple, Opts.CPU, FS));
+
+  MCContext Ctx(Triple(Opts.Triple), MAI.get(), MRI.get(), MOFI.get(),
+                STI.get(), &SrcMgr);
 
   bool PIC = false;
   if (Opts.RelocationModel == "static") {
@@ -408,7 +418,7 @@ static bool executeAssembler(AssemblerInvocation &Opts,
     PIC = false;
   }
 
-  MOFI->InitMCObjectFileInfo(Triple(Opts.Triple), PIC, Ctx);
+  MOFI->initMCObjectFileInfo(Ctx, PIC);
   if (Opts.SaveTemporaryLabels) {
     Ctx.setAllowTemporaryLabels(false);
   }
@@ -429,20 +439,8 @@ static bool executeAssembler(AssemblerInvocation &Opts,
   }
   Ctx.setDwarfVersion(Opts.DwarfVersion);
 
-  // Build up the feature string from the target feature list.
-  std::string FS;
-  if (!Opts.Features.empty()) {
-    FS = Opts.Features[0];
-    for (unsigned I = 1, E = Opts.Features.size(); I != E; ++I) {
-      FS += "," + Opts.Features[I];
-    }
-  }
-
   std::unique_ptr<MCStreamer> Str;
-
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
-  std::unique_ptr<MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(Opts.Triple, Opts.CPU, FS));
 
   raw_pwrite_stream *Out = FDOS.get();
   std::unique_ptr<buffer_ostream> BOS;
