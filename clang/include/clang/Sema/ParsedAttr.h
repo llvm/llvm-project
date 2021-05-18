@@ -657,6 +657,10 @@ public:
     switch (getKind()) {
     case ParsedAttr::AT_OpenCLGlobalAddressSpace:
       return LangAS::sycl_global;
+    case ParsedAttr::AT_OpenCLGlobalDeviceAddressSpace:
+      return LangAS::sycl_global_device;
+    case ParsedAttr::AT_OpenCLGlobalHostAddressSpace:
+      return LangAS::sycl_global_host;
     case ParsedAttr::AT_OpenCLLocalAddressSpace:
       return LangAS::sycl_local;
     case ParsedAttr::AT_OpenCLPrivateAddressSpace:
