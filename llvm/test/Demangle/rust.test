@@ -160,6 +160,9 @@ CHECK: named::<Name<>>
 CHECK: types::<[u8; 0]>
        _RIC5typesAhj0_E
 
+CHECK: types::<[_]>
+       _RIC5typesSpE
+
 ; Integer constants. Test value demangling.
 
 CHECK: integer::<0>
