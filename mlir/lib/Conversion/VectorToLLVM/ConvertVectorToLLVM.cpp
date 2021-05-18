@@ -935,8 +935,9 @@ public:
 class VectorInsertStridedSliceOpSameRankRewritePattern
     : public OpRewritePattern<InsertStridedSliceOp> {
 public:
-  VectorInsertStridedSliceOpSameRankRewritePattern(MLIRContext *ctx)
-      : OpRewritePattern<InsertStridedSliceOp>(ctx) {
+  using OpRewritePattern<InsertStridedSliceOp>::OpRewritePattern;
+
+  void initialize() {
     // This pattern creates recursive InsertStridedSliceOp, but the recursion is
     // bounded as the rank is strictly decreasing.
     setHasBoundedRewriteRecursion();
@@ -1330,8 +1331,9 @@ private:
 class VectorExtractStridedSliceOpConversion
     : public OpRewritePattern<ExtractStridedSliceOp> {
 public:
-  VectorExtractStridedSliceOpConversion(MLIRContext *ctx)
-      : OpRewritePattern<ExtractStridedSliceOp>(ctx) {
+  using OpRewritePattern<ExtractStridedSliceOp>::OpRewritePattern;
+
+  void initialize() {
     // This pattern creates recursive ExtractStridedSliceOp, but the recursion
     // is bounded as the rank is strictly decreasing.
     setHasBoundedRewriteRecursion();
