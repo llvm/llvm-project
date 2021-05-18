@@ -107,7 +107,7 @@ entry:
 ; NORMAL-NEXT: addl $12, %esp
 define void @test4() optsize {
 entry:
-  call void @inreg(i32 1, i32 2, i32 3, i32 4)
+  call void @inreg(i32 1, i32 inreg 2, i32 3, i32 4)
   ret void
 }
 
@@ -307,9 +307,9 @@ define void @test11() optsize {
 define void @test12() optsize {
 entry:
   %s = alloca %struct.s, align 4
-  call void @struct(%struct.s* %s, i32 2, i32 3, i32 4)
+  call void @struct(%struct.s* byval(%struct.s) %s, i32 2, i32 3, i32 4)
   call void @good(i32 5, i32 6, i32 7, i32 8)
-  call void @struct(%struct.s* %s, i32 10, i32 11, i32 12)
+  call void @struct(%struct.s* byval(%struct.s) %s, i32 10, i32 11, i32 12)
   ret void
 }
 
@@ -340,7 +340,7 @@ define void @test12b() optsize {
 entry:
   %s = alloca %struct.s, align 4
   call void @good(i32 1, i32 2, i32 3, i32 4)
-  call void @struct(%struct.s* %s, i32 6, i32 7, i32 8)
+  call void @struct(%struct.s* byval(%struct.s) %s, i32 6, i32 7, i32 8)
   call void @good(i32 9, i32 10, i32 11, i32 12)
   ret void
 }
@@ -413,7 +413,7 @@ entry:
   %0 = bitcast %struct.A* %a to i64*
   %1 = load i64, i64* %0, align 4
   store i64 %1, i64* %agg.tmp, align 4
-  %call = call x86_thiscallcc %struct.B* @B_ctor(%struct.B* %ref.tmp, %struct.A* byval(%struct.A) %tmpcast)
+  %call = call x86_thiscallcc %struct.B* @B_ctor(%struct.B* returned %ref.tmp, %struct.A* byval(%struct.A) %tmpcast)
   %2 = getelementptr inbounds %struct.B, %struct.B* %tmp, i32 0, i32 0
   call void @B_func(%struct.B* sret(%struct.B) %tmp, %struct.B* %ref.tmp, i32 1)
   ret void
