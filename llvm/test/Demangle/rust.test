@@ -155,6 +155,11 @@ CHECK: named::<name::Name>
 CHECK: named::<Name<>>
        _RIC5namedIC4NameEE
 
+; Types
+
+CHECK: types::<[u8; 0]>
+       _RIC5typesAhj0_E
+
 ; Integer constants. Test value demangling.
 
 CHECK: integer::<0>

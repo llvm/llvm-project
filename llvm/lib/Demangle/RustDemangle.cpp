@@ -421,14 +421,26 @@ void Demangler::printBasicType(BasicType Type) {
 //          | "D" <dyn-bounds> <lifetime> // dyn Trait<Assoc = X> + Send + 'a
 //          | <backref>                   // backref
 void Demangler::demangleType() {
-  char C = look();
-  BasicType Type;
-  if (parseBasicType(C, Type)) {
-    consume();
-    return printBasicType(Type);
-  }
+  size_t Start = Position;
 
-  demanglePath(InType::Yes);
+  char C = consume();
+  BasicType Type;
+  if (parseBasicType(C, Type))
+    return printBasicType(Type);
+
+  switch (C) {
+  case 'A':
+    print("[");
+    demangleType();
+    print("; ");
+    demangleConst();
+    print("]");
+    break;
+  default:
+    Position = Start;
+    demanglePath(InType::Yes);
+    break;
+  }
 }
 
 // <const> = <basic-type> <const-data>
