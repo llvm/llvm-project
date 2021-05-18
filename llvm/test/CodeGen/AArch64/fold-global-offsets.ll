@@ -134,15 +134,14 @@ define i32 @f7() {
 ; GISEL-NEXT:    mov w9, #64
 ; GISEL-NEXT:    mov d1, v0.d[1]
 ; GISEL-NEXT:    sub x8, x9, #64 // =64
-; GISEL-NEXT:    fmov x11, d1
-; GISEL-NEXT:    fmov x10, d0
-; GISEL-NEXT:    lsl x12, x11, x8
-; GISEL-NEXT:    cmp x9, #64 // =64
-; GISEL-NEXT:    lsr x8, x11, x8
-; GISEL-NEXT:    orr x11, x12, x10, lsr #0
-; GISEL-NEXT:    csel x8, x11, x8, lo
-; GISEL-NEXT:    cmp x9, #0 // =0
-; GISEL-NEXT:    csel x8, x10, x8, eq
+; GISEL-NEXT:    fmov x10, d1
+; GISEL-NEXT:    fmov x9, d0
+; GISEL-NEXT:    lsl x11, x10, x8
+; GISEL-NEXT:    lsr x8, x10, x8
+; GISEL-NEXT:    orr x10, x11, x9, lsr #0
+; GISEL-NEXT:    tst wzr, #0x1
+; GISEL-NEXT:    csel x8, x10, x8, ne
+; GISEL-NEXT:    csel x8, x9, x8, ne
 ; GISEL-NEXT:    ldr w0, [x8, #20]
 ; GISEL-NEXT:    ret
 
