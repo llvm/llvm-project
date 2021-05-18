@@ -43,7 +43,7 @@ public:
     MergedChunk,
     Function,
     SyntheticFunction,
-    Section
+    Section,
   };
 
   StringRef name;
@@ -62,12 +62,15 @@ public:
   ArrayRef<WasmRelocation> getRelocations() const { return relocations; }
   void setRelocations(ArrayRef<WasmRelocation> rs) { relocations = rs; }
 
-  // Translate an offset in the input section to an offset in the output
+  // Translate an offset into the input chunk to an offset in the output
   // section.
   uint64_t getOffset(uint64_t offset) const;
-  // For data segments, translate and offset into the input segment into
-  // an offset into the output segment
-  uint64_t getSegmentOffset(uint64_t offset) const;
+  // Translate an offset into the input chunk into an offset into the output
+  // chunk.  For data segments (InputSegment) this will return and offset into
+  // the output segment.  For MergeInputChunk, this will return an offset into
+  // the parent merged chunk.  For other chunk types this is no-op and we just
+  // return unmodified offset.
+  uint64_t getChunkOffset(uint64_t offset) const;
   uint64_t getVA(uint64_t offset = 0) const;
 
   uint32_t getComdat() const { return comdat; }
@@ -132,22 +135,19 @@ protected:
 // each global variable.
 class InputSegment : public InputChunk {
 public:
-  InputSegment(const WasmSegment *seg, ObjFile *f)
-      : InputChunk(f, InputChunk::DataSegment, seg->Data.Name,
-                   seg->Data.Alignment, seg->Data.LinkingFlags),
+  InputSegment(const WasmSegment &seg, ObjFile *f)
+      : InputChunk(f, InputChunk::DataSegment, seg.Data.Name,
+                   seg.Data.Alignment, seg.Data.LinkingFlags),
         segment(seg) {
-    rawData = segment->Data.Content;
-    comdat = segment->Data.Comdat;
-    inputSectionOffset = segment->SectionOffset;
+    rawData = segment.Data.Content;
+    comdat = segment.Data.Comdat;
+    inputSectionOffset = segment.SectionOffset;
   }
-
-  InputSegment(StringRef name, uint32_t alignment, uint32_t flags)
-      : InputChunk(nullptr, InputChunk::DataSegment, name, alignment, flags) {}
 
   static bool classof(const InputChunk *c) { return c->kind() == DataSegment; }
 
 protected:
-  const WasmSegment *segment = nullptr;
+  const WasmSegment &segment;
 };
 
 class SyntheticMergedChunk;
@@ -174,12 +174,19 @@ static_assert(sizeof(SectionPiece) == 16, "SectionPiece is too big");
 // This corresponds segments marked as WASM_SEG_FLAG_STRINGS.
 class MergeInputChunk : public InputChunk {
 public:
-  MergeInputChunk(const WasmSegment *seg, ObjFile *f)
-      : InputChunk(f, Merge, seg->Data.Name, seg->Data.Alignment,
-                   seg->Data.LinkingFlags) {
-    rawData = seg->Data.Content;
-    comdat = seg->Data.Comdat;
-    inputSectionOffset = seg->SectionOffset;
+  MergeInputChunk(const WasmSegment &seg, ObjFile *f)
+      : InputChunk(f, Merge, seg.Data.Name, seg.Data.Alignment,
+                   seg.Data.LinkingFlags) {
+    rawData = seg.Data.Content;
+    comdat = seg.Data.Comdat;
+    inputSectionOffset = seg.SectionOffset;
+  }
+
+  MergeInputChunk(const WasmSection &s, ObjFile *f)
+      : InputChunk(f, Merge, s.Name, 0, llvm::wasm::WASM_SEG_FLAG_STRINGS) {
+    assert(s.Type == llvm::wasm::WASM_SEC_CUSTOM);
+    comdat = s.Comdat;
+    rawData = s.Content;
   }
 
   static bool classof(const InputChunk *s) { return s->kind() == Merge; }
