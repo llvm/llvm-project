@@ -436,6 +436,11 @@ void Demangler::demangleType() {
     demangleConst();
     print("]");
     break;
+  case 'S':
+    print("[");
+    demangleType();
+    print("]");
+    break;
   default:
     Position = Start;
     demanglePath(InType::Yes);
