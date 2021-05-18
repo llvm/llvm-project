@@ -3926,6 +3926,59 @@ void CombinerHelper::applyRotateOutOfRange(MachineInstr &MI) {
   Observer.changedInstr(MI);
 }
 
+bool CombinerHelper::matchICmpToTrueFalseKnownBits(MachineInstr &MI,
+                                                   int64_t &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_ICMP);
+  auto Pred = static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
+  auto KnownLHS = KB->getKnownBits(MI.getOperand(2).getReg());
+  auto KnownRHS = KB->getKnownBits(MI.getOperand(3).getReg());
+  Optional<bool> KnownVal;
+  switch (Pred) {
+  default:
+    llvm_unreachable("Unexpected G_ICMP predicate?");
+  case CmpInst::ICMP_EQ:
+    KnownVal = KnownBits::eq(KnownLHS, KnownRHS);
+    break;
+  case CmpInst::ICMP_NE:
+    KnownVal = KnownBits::ne(KnownLHS, KnownRHS);
+    break;
+  case CmpInst::ICMP_SGE:
+    KnownVal = KnownBits::sge(KnownLHS, KnownRHS);
+    break;
+  case CmpInst::ICMP_SGT:
+    KnownVal = KnownBits::sgt(KnownLHS, KnownRHS);
+    break;
+  case CmpInst::ICMP_SLE:
+    KnownVal = KnownBits::sle(KnownLHS, KnownRHS);
+    break;
+  case CmpInst::ICMP_SLT:
+    KnownVal = KnownBits::slt(KnownLHS, KnownRHS);
+    break;
+  case CmpInst::ICMP_UGE:
+    KnownVal = KnownBits::uge(KnownLHS, KnownRHS);
+    break;
+  case CmpInst::ICMP_UGT:
+    KnownVal = KnownBits::ugt(KnownLHS, KnownRHS);
+    break;
+  case CmpInst::ICMP_ULE:
+    KnownVal = KnownBits::ule(KnownLHS, KnownRHS);
+    break;
+  case CmpInst::ICMP_ULT:
+    KnownVal = KnownBits::ult(KnownLHS, KnownRHS);
+    break;
+  }
+  if (!KnownVal)
+    return false;
+  MatchInfo =
+      *KnownVal
+          ? getICmpTrueVal(getTargetLowering(),
+                           /*IsVector = */
+                           MRI.getType(MI.getOperand(0).getReg()).isVector(),
+                           /* IsFP = */ false)
+          : 0;
+  return true;
+}
+
 bool CombinerHelper::tryCombine(MachineInstr &MI) {
   if (tryCombineCopy(MI))
     return true;
