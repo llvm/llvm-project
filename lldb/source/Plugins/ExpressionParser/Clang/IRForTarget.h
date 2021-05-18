@@ -419,51 +419,46 @@ private:
   ///     True on success; false otherwise
   bool ReplaceVariables(llvm::Function &llvm_function);
 
-  /// Flags
-  bool m_resolve_vars; ///< True if external variable references and persistent
-                       ///variable references should be resolved
-  lldb_private::ConstString
-      m_func_name; ///< The name of the function to translate
-  lldb_private::ConstString
-      m_result_name; ///< The name of the result variable ($0, $1, ...)
-  lldb_private::TypeFromParser
-      m_result_type;      ///< The type of the result variable.
-  llvm::Module *m_module; ///< The module being processed, or NULL if that has
-                          ///not been determined yet.
-  std::unique_ptr<llvm::DataLayout> m_target_data; ///< The target data for the
-                                                   ///module being processed, or
-                                                   ///NULL if there is no
-                                                   ///module.
-  lldb_private::ClangExpressionDeclMap
-      *m_decl_map; ///< The DeclMap containing the Decls
-  llvm::FunctionCallee
-      m_CFStringCreateWithBytes; ///< The address of the function
-                                 /// CFStringCreateWithBytes, cast to the
-                                 /// appropriate function pointer type
-  llvm::FunctionCallee m_sel_registerName; ///< The address of the function
-                                           /// sel_registerName, cast to the
-                                           /// appropriate function pointer type
-  llvm::FunctionCallee m_objc_getClass; ///< The address of the function
-                                        /// objc_getClass, cast to the
-                                        /// appropriate function pointer type
-  llvm::IntegerType
-      *m_intptr_ty; ///< The type of an integer large enough to hold a pointer.
-  lldb_private::Stream
-      &m_error_stream; ///< The stream on which errors should be printed
-  lldb_private::IRExecutionUnit &
-      m_execution_unit; ///< The execution unit containing the IR being created.
-
-  llvm::StoreInst *m_result_store; ///< If non-NULL, the store instruction that
-                                   ///writes to the result variable.  If
-                                   /// m_has_side_effects is true, this is
-                                   /// NULL.
-  bool m_result_is_pointer; ///< True if the function's result in the AST is a
-                            ///pointer (see comments in
-                            /// ASTResultSynthesizer::SynthesizeBodyResult)
-
+  /// True if external variable references and persistent variable references
+  /// should be resolved
+  bool m_resolve_vars;
+  /// The name of the function to translate
+  lldb_private::ConstString m_func_name;
+  /// The name of the result variable ($0, $1, ...)
+  lldb_private::ConstString m_result_name;
+  /// The type of the result variable.
+  lldb_private::TypeFromParser m_result_type;
+  /// The module being processed, or NULL if that has not been determined yet.
+  llvm::Module *m_module = nullptr;
+  /// The target data for the module being processed, or NULL if there is no
+  /// module.
+  std::unique_ptr<llvm::DataLayout> m_target_data;
+  /// The DeclMap containing the Decls
+  lldb_private::ClangExpressionDeclMap *m_decl_map;
+  /// The address of the function CFStringCreateWithBytes, cast to the
+  /// appropriate function pointer type
+  llvm::FunctionCallee m_CFStringCreateWithBytes;
+  /// The address of the function sel_registerName, cast to the appropriate
+  /// function pointer type.
+  llvm::FunctionCallee m_sel_registerName;
+  /// The address of the function objc_getClass, cast to the appropriate
+  /// function pointer type.
+  llvm::FunctionCallee m_objc_getClass;
+  /// The type of an integer large enough to hold a pointer.
+  llvm::IntegerType *m_intptr_ty = nullptr;
+  /// The stream on which errors should be printed.
+  lldb_private::Stream &m_error_stream;
+  /// The execution unit containing the IR being created.
+  lldb_private::IRExecutionUnit &m_execution_unit;
+  /// If non-NULL, the store instruction that writes to the result variable.  If
+  /// m_has_side_effects is true, this is NULL.
+  llvm::StoreInst *m_result_store = nullptr;
+  /// True if the function's result in the AST is a pointer (see comments in
+  /// ASTResultSynthesizer::SynthesizeBodyResult)
+  bool m_result_is_pointer = false;
   /// A placeholder that will be replaced by a pointer to the final location of
   /// the static allocation.
-  llvm::GlobalVariable *m_reloc_placeholder;
+  llvm::GlobalVariable *m_reloc_placeholder = nullptr;
 
   class FunctionValueCache {
   public:
