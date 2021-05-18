@@ -120,10 +120,6 @@ namespace llvm {
         : Data(Str.data()), Length(Str.size()) {}
 #endif
 
-    static StringRef withNullAsEmpty(const char *data) {
-      return StringRef(data ? data : "");
-    }
-
     /// @}
     /// @name Iterators
     /// @{
