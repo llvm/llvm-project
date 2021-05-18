@@ -1016,6 +1016,18 @@ llvm.func @stringconstant() -> !llvm.array<12 x i8> {
   llvm.return %1 : !llvm.array<12 x i8>
 }
 
+llvm.func @complexfpconstant() -> !llvm.struct<(f32, f32)> {
+  %1 = llvm.mlir.constant([-1.000000e+00 : f32, 0.000000e+00 : f32]) : !llvm.struct<(f32, f32)>
+  // CHECK: ret { float, float } { float -1.000000e+00, float 0.000000e+00 }
+  llvm.return %1 : !llvm.struct<(f32, f32)>
+}
+
+llvm.func @complexintconstant() -> !llvm.struct<(i32, i32)> {
+  %1 = llvm.mlir.constant([-1 : i32, 0 : i32]) : !llvm.struct<(i32, i32)>
+  // CHECK: ret { i32, i32 } { i32 -1, i32 0 }
+  llvm.return %1 : !llvm.struct<(i32, i32)>
+}
+
 llvm.func @noreach() {
 // CHECK:    unreachable
   llvm.unreachable

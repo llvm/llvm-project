@@ -212,8 +212,13 @@ public:
                                              AST->getTokens(), Start, End);
       Tweak::Selection Selection(&Index, *AST, Start, End, std::move(Tree),
                                  nullptr);
-      for (const auto &T :
-           prepareTweaks(Selection, Opts.TweakFilter, Opts.FeatureModules)) {
+      // FS is only populated when applying a tweak, not during prepare as
+      // prepare should not do any I/O to be fast.
+      auto Tweaks =
+          prepareTweaks(Selection, Opts.TweakFilter, Opts.FeatureModules);
+      Selection.FS =
+          &AST->getSourceManager().getFileManager().getVirtualFileSystem();
+      for (const auto &T : Tweaks) {
         auto Result = T->apply(Selection);
         if (!Result) {
           elog("    tweak: {0} ==> FAIL: {1}", T->id(), Result.takeError());

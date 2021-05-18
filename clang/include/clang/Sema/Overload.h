@@ -760,9 +760,6 @@ class Sema;
     /// This candidate was not viable because its address could not be taken.
     ovl_fail_addr_not_available,
 
-    /// This candidate was not viable because its OpenCL extension is disabled.
-    ovl_fail_ext_disabled,
-
     /// This inherited constructor is not viable because it would slice the
     /// argument.
     ovl_fail_inhctor_slice,

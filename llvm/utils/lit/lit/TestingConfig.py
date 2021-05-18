@@ -22,12 +22,13 @@ class TestingConfig(object):
             }
 
         pass_vars = ['LIBRARY_PATH', 'LD_LIBRARY_PATH', 'SYSTEMROOT', 'TERM',
-                     'CLANG', 'LD_PRELOAD', 'ASAN_OPTIONS', 'UBSAN_OPTIONS',
-                     'LSAN_OPTIONS', 'ADB', 'ANDROID_SERIAL', 'SSH_AUTH_SOCK',
-                     'SANITIZER_IGNORE_CVE_2016_2143', 'TMPDIR', 'TMP', 'TEMP',
-                     'TEMPDIR', 'AVRLIT_BOARD', 'AVRLIT_PORT',
-                     'FILECHECK_OPTS', 'VCINSTALLDIR', 'VCToolsinstallDir',
-                     'VSINSTALLDIR', 'WindowsSdkDir', 'WindowsSDKLibVersion']
+                     'CLANG', 'LLDB', 'LD_PRELOAD', 'ASAN_OPTIONS',
+                     'UBSAN_OPTIONS', 'LSAN_OPTIONS', 'ADB', 'ANDROID_SERIAL',
+                     'SSH_AUTH_SOCK', 'SANITIZER_IGNORE_CVE_2016_2143',
+                     'TMPDIR', 'TMP', 'TEMP', 'TEMPDIR', 'AVRLIT_BOARD',
+                     'AVRLIT_PORT', 'FILECHECK_OPTS', 'VCINSTALLDIR',
+                     'VCToolsinstallDir', 'VSINSTALLDIR', 'WindowsSdkDir',
+                     'WindowsSDKLibVersion']
 
         if sys.platform == 'win32':
             pass_vars.append('INCLUDE')

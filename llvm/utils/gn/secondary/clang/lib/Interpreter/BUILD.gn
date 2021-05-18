@@ -5,6 +5,7 @@ static_library("Interpreter") {
     "//clang/lib/AST",
     "//clang/lib/Analysis",
     "//clang/lib/Basic",
+    "//clang/lib/CodeGen",
     "//clang/lib/Driver",
     "//clang/lib/Edit",
     "//clang/lib/Frontend",
@@ -13,13 +14,12 @@ static_library("Interpreter") {
     "//clang/lib/Parse",
     "//clang/lib/Sema",
     "//clang/lib/Serialization",
-    "//clang/lib/CodeGen",
+    "//llvm/lib/ExecutionEngine/Orc",
     "//llvm/lib/IR",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/Target:NativeTarget",
-    "//llvm/lib/ExecutionEngine/Orc",
   ]
   sources = [
     "IncrementalExecutor.cpp",

@@ -26,6 +26,9 @@ class LLDB(DebuggerBase):
         self._target = None
         self._process = None
         self._thread = None
+        # Map {id (int): condition (str)} for breakpoints which have a
+        # condition. See get_triggered_breakpoint_ids usage for more info.
+        self._breakpoint_conditions = {}
         super(LLDB, self).__init__(context, *args)
 
     def _custom_init(self):
@@ -104,37 +107,67 @@ class LLDB(DebuggerBase):
         self._target.DeleteAllBreakpoints()
 
     def _add_breakpoint(self, file_, line):
-        bp = self._target.BreakpointCreateByLocation(file_, line)
-        if not bp:
-            raise DebuggerException(
-                'could not add breakpoint [{}:{}]'.format(file_, line))
-        return bp.GetID()
+        return self._add_conditional_breakpoint(file_, line, None)
 
     def _add_conditional_breakpoint(self, file_, line, condition):
         bp = self._target.BreakpointCreateByLocation(file_, line)
-        if bp:
-            bp.SetCondition(condition)
-        else:
+        if not bp:
             raise DebuggerException(
                   'could not add breakpoint [{}:{}]'.format(file_, line))
-        return bp.GetID()
+        id = bp.GetID()
+        if condition:
+            bp.SetCondition(condition)
+            assert id not in self._breakpoint_conditions
+            self._breakpoint_conditions[id] = condition
+        return id
+
+    def _evaulate_breakpoint_condition(self, id):
+        """Evaluate the breakpoint condition and return the result.
+
+        Returns True if a conditional breakpoint with the specified id cannot
+        be found (i.e. assume it is an unconditional breakpoint).
+        """
+        try:
+            condition = self._breakpoint_conditions[id]
+        except KeyError:
+            # This must be an unconditional breakpoint.
+            return True
+        valueIR = self.evaluate_expression(condition)
+        return valueIR.type_name == 'bool' and valueIR.value == 'true'
 
     def get_triggered_breakpoint_ids(self):
         # Breakpoints can only have been triggered if we've hit one.
         stop_reason = self._translate_stop_reason(self._thread.GetStopReason())
         if stop_reason != StopReason.BREAKPOINT:
             return []
+        breakpoint_ids = set()
+        # When the stop reason is eStopReasonBreakpoint, GetStopReasonDataCount
+        # counts all breakpoints associated with the location that lldb has
+        # stopped at, regardless of their condition. I.e. Even if we have two
+        # breakpoints at the same source location that have mutually exclusive
+        # conditions, both will be counted by GetStopReasonDataCount when
+        # either condition is true. Check each breakpoint condition manually to
+        # filter the list down to breakpoints that have caused this stop.
+        #
         # Breakpoints have two data parts: Breakpoint ID, Location ID. We're
         # only interested in the Breakpoint ID so we skip every other item.
-        return set([self._thread.GetStopReasonDataAtIndex(i)
-                    for i in range(0, self._thread.GetStopReasonDataCount(), 2)])
+        for i in range(0, self._thread.GetStopReasonDataCount(), 2):
+            id = self._thread.GetStopReasonDataAtIndex(i)
+            if self._evaulate_breakpoint_condition(id):
+                breakpoint_ids.add(id)
+        return breakpoint_ids
 
     def delete_breakpoint(self, id):
         bp = self._target.FindBreakpointByID(id)
         if not bp:
             # The ID is not valid.
             raise KeyError
-        self._target.BreakpointDelete(bp.GetID())
+        try:
+            del self._breakpoint_conditions[id]
+        except KeyError:
+            # This must be an unconditional breakpoint.
+            pass
+        self._target.BreakpointDelete(id)
 
     def launch(self):
         self._process = self._target.LaunchSimple(None, None, os.getcwd())

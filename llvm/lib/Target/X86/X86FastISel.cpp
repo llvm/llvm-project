@@ -1183,6 +1183,7 @@ bool X86FastISel::X86SelectRet(const Instruction *I) {
   if (CC != CallingConv::C &&
       CC != CallingConv::Fast &&
       CC != CallingConv::Tail &&
+      CC != CallingConv::SwiftTail &&
       CC != CallingConv::X86_FastCall &&
       CC != CallingConv::X86_StdCall &&
       CC != CallingConv::X86_ThisCall &&
@@ -1197,7 +1198,7 @@ bool X86FastISel::X86SelectRet(const Instruction *I) {
   // fastcc with -tailcallopt is intended to provide a guaranteed
   // tail call optimization. Fastisel doesn't know how to do that.
   if ((CC == CallingConv::Fast && TM.Options.GuaranteedTailCallOpt) ||
-      CC == CallingConv::Tail)
+      CC == CallingConv::Tail || CC == CallingConv::SwiftTail)
     return false;
 
   // Let SDISel handle vararg functions.
@@ -1285,7 +1286,8 @@ bool X86FastISel::X86SelectRet(const Instruction *I) {
   // the sret argument into %rax/%eax (depending on ABI) for the return.
   // We saved the argument into a virtual register in the entry block,
   // so now we copy the value out and into %rax/%eax.
-  if (F.hasStructRetAttr() && CC != CallingConv::Swift) {
+  if (F.hasStructRetAttr() && CC != CallingConv::Swift &&
+      CC != CallingConv::SwiftTail) {
     Register Reg = X86MFInfo->getSRetReturnReg();
     assert(Reg &&
            "SRetReturnReg should have been set in LowerFormalArguments()!");
@@ -3066,6 +3068,7 @@ bool X86FastISel::fastLowerArguments() {
         Arg.hasAttribute(Attribute::InReg) ||
         Arg.hasAttribute(Attribute::StructRet) ||
         Arg.hasAttribute(Attribute::SwiftSelf) ||
+        Arg.hasAttribute(Attribute::SwiftAsync) ||
         Arg.hasAttribute(Attribute::SwiftError) ||
         Arg.hasAttribute(Attribute::Nest))
       return false;
@@ -3142,7 +3145,8 @@ static unsigned computeBytesPoppedByCalleeForSRet(const X86Subtarget *Subtarget,
   if (Subtarget->getTargetTriple().isOSMSVCRT())
     return 0;
   if (CC == CallingConv::Fast || CC == CallingConv::GHC ||
-      CC == CallingConv::HiPE || CC == CallingConv::Tail)
+      CC == CallingConv::HiPE || CC == CallingConv::Tail ||
+      CC == CallingConv::SwiftTail)
     return 0;
 
   if (CB)
@@ -3194,6 +3198,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   case CallingConv::Tail:
   case CallingConv::WebKit_JS:
   case CallingConv::Swift:
+  case CallingConv::SwiftTail:
   case CallingConv::X86_FastCall:
   case CallingConv::X86_StdCall:
   case CallingConv::X86_ThisCall:
@@ -3210,7 +3215,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   // fastcc with -tailcallopt is intended to provide a guaranteed
   // tail call optimization. Fastisel doesn't know how to do that.
   if ((CC == CallingConv::Fast && TM.Options.GuaranteedTailCallOpt) ||
-      CC == CallingConv::Tail)
+      CC == CallingConv::Tail || CC == CallingConv::SwiftTail)
     return false;
 
   // Don't know how to handle Win64 varargs yet.  Nothing special needed for

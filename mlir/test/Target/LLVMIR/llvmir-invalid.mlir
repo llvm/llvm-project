@@ -35,9 +35,17 @@ llvm.func @invalid_align(%arg0 : f32 {llvm.align = 4}) -> f32 {
 // -----
 
 llvm.func @no_nested_struct() -> !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>> {
-  // expected-error @+1 {{struct types are not supported in constants}}
+  // expected-error @+1 {{nested struct types are not supported in constants}}
   %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : tensor<2x2x2xi32>) : !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>>
   llvm.return %0 : !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>>
+}
+
+// -----
+
+llvm.func @struct_wrong_attribute_element_type() -> !llvm.struct<(f64, f64)> {
+  // expected-error @+1 {{FloatAttr does not match expected type of the constant}}
+  %0 = llvm.mlir.constant([1.0 : f32, 1.0 : f32]) : !llvm.struct<(f64, f64)>
+  llvm.return %0 : !llvm.struct<(f64, f64)>
 }
 
 // -----
@@ -63,4 +71,6 @@ llvm.func @passthrough_wrong_type() attributes {passthrough = [42]}
 // -----
 
 // expected-error @+1 {{expected arrays within 'passthrough' to contain two strings}}
-llvm.func @passthrough_wrong_type() attributes {passthrough = [[42, 42]]}
+llvm.func @passthrough_wrong_type() attributes {
+  passthrough = [[ 42, 42 ]]
+}
