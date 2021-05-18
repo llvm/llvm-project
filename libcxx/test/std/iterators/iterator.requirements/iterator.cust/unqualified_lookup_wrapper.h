@@ -57,4 +57,23 @@ constexpr int iter_move(some_union& u) noexcept(false) { return u.x; }
 
 } // namespace check_unqualified_lookup
 
+class move_tracker {
+public:
+  move_tracker() = default;
+  constexpr move_tracker(move_tracker&& other) noexcept : moves_{other.moves_ + 1} { other.moves_ = 0; }
+  constexpr move_tracker& operator=(move_tracker&& other) noexcept {
+    moves_ = other.moves_ + 1;
+    other.moves_ = 0;
+    return *this;
+  }
+
+  move_tracker(move_tracker const& other) = delete;
+  move_tracker& operator=(move_tracker const& other) = delete;
+
+  constexpr int moves() const noexcept { return moves_; }
+
+private:
+  int moves_ = 0;
+};
+
 #endif // LIBCPP_TEST_STD_ITERATOR_UNQUALIFIED_LOOKUP_WRAPPER
