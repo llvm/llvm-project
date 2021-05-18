@@ -151,7 +151,6 @@ LowerConstantIntrinsicsPass::run(Function &F, FunctionAnalysisManager &AM) {
   if (lowerConstantIntrinsics(F, AM.getCachedResult<TargetLibraryAnalysis>(F),
                               AM.getCachedResult<DominatorTreeAnalysis>(F))) {
     PreservedAnalyses PA;
-    PA.preserve<GlobalsAA>();
     PA.preserve<DominatorTreeAnalysis>();
     return PA;
   }

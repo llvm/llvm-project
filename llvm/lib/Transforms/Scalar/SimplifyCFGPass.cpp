@@ -323,7 +323,6 @@ PreservedAnalyses SimplifyCFGPass::run(Function &F,
   PreservedAnalyses PA;
   if (RequireAndPreserveDomTree)
     PA.preserve<DominatorTreeAnalysis>();
-  PA.preserve<GlobalsAA>();
   return PA;
 }
 

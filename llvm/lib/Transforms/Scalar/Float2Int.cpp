@@ -544,7 +544,6 @@ PreservedAnalyses Float2IntPass::run(Function &F, FunctionAnalysisManager &AM) {
 
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
-  PA.preserve<GlobalsAA>();
   return PA;
 }
 } // End namespace llvm
