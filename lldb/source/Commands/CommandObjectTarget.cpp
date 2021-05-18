@@ -848,8 +848,7 @@ protected:
         size_t matches = 0;
         bool use_var_name = false;
         if (m_option_variable.use_regex) {
-          RegularExpression regex(
-              llvm::StringRef::withNullAsEmpty(arg.c_str()));
+          RegularExpression regex(arg.ref());
           if (!regex.IsValid()) {
             result.GetErrorStream().Printf(
                 "error: invalid regular expression: '%s'\n", arg.c_str());

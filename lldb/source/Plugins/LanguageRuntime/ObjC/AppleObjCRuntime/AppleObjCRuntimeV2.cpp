@@ -663,8 +663,8 @@ protected:
     case 0:
       break;
     case 1: {
-      regex_up = std::make_unique<RegularExpression>(
-          llvm::StringRef::withNullAsEmpty(command.GetArgumentAtIndex(0)));
+      regex_up =
+          std::make_unique<RegularExpression>(command.GetArgumentAtIndex(0));
       if (!regex_up->IsValid()) {
         result.AppendError(
             "invalid argument - please provide a valid regular expression");
