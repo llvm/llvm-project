@@ -113,6 +113,11 @@ def Xlink : J<"Xlink=">, MetaVarName<"<arg>">,
     HelpText<"Pass <arg> to the COFF linker">;
 
 // Alias
+def alias_Bdynamic_call_shared: Flag<["-"], "call_shared">, Alias<Bdynamic>;
+def alias_Bdynamic_dy: Flag<["-"], "dy">, Alias<Bdynamic>;
+def alias_Bstatic_dn: Flag<["-"], "dn">, Alias<Bstatic>;
+def alias_Bstatic_non_shared: Flag<["-"], "non_shared">, Alias<Bstatic>;
+def alias_Bstatic_static: Flag<["-"], "static">, Alias<Bstatic>;
 def alias_entry_e: JoinedOrSeparate<["-"], "e">, Alias<entry>;
 def alias_strip_s: Flag<["-"], "s">, Alias<strip_all>;
 def alias_strip_S: Flag<["-"], "S">, Alias<strip_debug>;
