@@ -139,7 +139,9 @@ public:
 
   void notifyMaterializing(LinkGraph &G) {
     for (auto &P : Layer.Plugins)
-      P->notifyMaterializing(*MR, G, *this, ObjBuffer->getMemBufferRef());
+      P->notifyMaterializing(*MR, G, *this,
+                             ObjBuffer ? ObjBuffer->getMemBufferRef()
+                             : MemoryBufferRef());
   }
 
   void notifyFailed(Error Err) override {
