@@ -13,20 +13,18 @@
 // UNSUPPORTED: libcxx-no-debug-mode
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <unordered_map>
-#include <cassert>
 #include <string>
 
 #include "test_macros.h"
+#include "debug_macros.h"
 
 int main(int, char**) {
     typedef std::unordered_multimap<int, std::string> C;
     C c(1);
     C::local_iterator i = c.end(0);
-    C::value_type j = *i;
-    assert(false);
+    TEST_LIBCPP_ASSERT_FAILURE(*i, "Attempted to dereference a non-dereferenceable unordered container local_iterator");
 
     return 0;
 }

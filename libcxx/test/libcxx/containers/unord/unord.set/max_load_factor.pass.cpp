@@ -18,18 +18,17 @@
 // UNSUPPORTED: libcxx-no-debug-mode
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <unordered_set>
-#include <cassert>
 
 #include "test_macros.h"
+#include "debug_macros.h"
 
 int main(int, char**) {
     typedef std::unordered_set<int> C;
     C c;
-    c.max_load_factor(-0.5f);
-    assert(false);
+    TEST_LIBCPP_ASSERT_FAILURE(c.max_load_factor(-0.5f),
+                               "unordered container::max_load_factor(lf) called with lf <= 0");
 
     return 0;
 }
