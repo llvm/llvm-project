@@ -106,7 +106,26 @@ Within the `rewrite` section of a pattern, the following constraints apply:
 *   The root operation is required to either be: updated in-place, replaced, or
     erased.
 
-### Pattern Rewriter
+### Application Recursion
+
+Recursion is an important topic in the context of pattern rewrites, as a pattern
+may often be applicable to its own result. For example, imagine a pattern that
+peels a single iteration from a loop operation. If the loop has multiple
+peelable iterations, this pattern may apply multiple times during the
+application process. By looking at the implementation of this pattern, the bound
+for recursive application may be obvious, e.g. there are no peelable iterations
+within the loop, but from the perspective of the pattern driver this recursion
+is potentially dangerous. Often times the recursive application of a pattern
+indicates a bug in the matching logic. These types of bugs generally do not
+cause crashes, but create infinite loops within the application process. Given
+this, the pattern rewriting infrastructure conservatively assumes that no
+patterns have a proper bounded recursion, and will fail if recursion is
+detected. A pattern that is known to have proper support for handling recursion
+can signal this by calling `setHasBoundedRewriteRecursion` when initializing the
+pattern. This will signal to the pattern driver that recursive application of
+this pattern may happen, and the pattern is equipped to safely handle it.
+
+## Pattern Rewriter
 
 A `PatternRewriter` is a special class that allows for a pattern to communicate
 with the driver of pattern application. As noted above, *all* IR mutations,
