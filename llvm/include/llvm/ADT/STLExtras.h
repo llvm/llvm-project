@@ -144,6 +144,60 @@ template <typename ReturnType, typename... Args>
 struct function_traits<ReturnType (&)(Args...), false>
     : public function_traits<ReturnType (*)(Args...)> {};
 
+namespace detail {
+template <typename T, typename... Ts>
+constexpr size_t getFirstIndexOfTypeImpl() {
+  constexpr bool Matches[] = {false, std::is_same<T, Ts>{}...};
+  // TODO: use llvm::find once it's constexpr (std::find is constexpr in C++20)
+  for (size_t I = 1; I <= sizeof...(Ts); ++I)
+    if (Matches[I])
+      return I - 1;
+  return sizeof...(Ts);
+}
+template <typename T, typename... Ts> constexpr size_t getFirstIndexOfType() {
+  constexpr size_t Index = getFirstIndexOfTypeImpl<T, Ts...>();
+  static_assert(Index != sizeof...(Ts),
+                "type T is not present in type pack Ts");
+  return Index;
+}
+template <typename... Ts> static constexpr bool areTypesDistinct() {
+  constexpr size_t IndexOf[] = {0, getFirstIndexOfType<Ts, Ts...>()...};
+  // TODO: use llvm::find once it's constexpr (std::find is constexpr in C++20)
+  for (size_t I = 1; I <= sizeof...(Ts); ++I)
+    if (I - 1 != IndexOf[I])
+      return false;
+  return true;
+}
+} // namespace detail
+
+/// Determine if all types in Ts are distinct.
+///
+/// Useful to statically assert when Ts is intended to describe a non-multi set
+/// of types.
+template <typename... Ts>
+using TypesAreDistinct =
+    std::integral_constant<bool, detail::areTypesDistinct<Ts...>()>;
+
+/// Find the first index where a type appears in a list of types.
+///
+/// FirstIndexOfType<T, Ts...>::value is the first index of T in Ts.
+///
+/// Typically only meaningful when it is otherwise statically known that the
+/// type pack has no duplicate types. This should be guaranteed explicitly with
+/// static_assert(TypesAreDistinct<Ts...>{}).
+///
+/// It is a compile-time error to instantiate when T is not present in Ts, i.e.
+/// if is_one_of<T, Ts...>::value is false.
+template <typename T, typename... Ts>
+using FirstIndexOfType =
+    std::integral_constant<size_t, detail::getFirstIndexOfType<T, Ts...>()>;
+
+/// Find the type at a given index in a list of types.
+///
+/// TypeAtIndex<I, Ts...> is the type at index I in Ts.
+template <size_t I, typename... Ts>
+using TypeAtIndex = std::tuple_element_t<I, std::tuple<Ts...>>;
+
 //===----------------------------------------------------------------------===//
 //     Extra additions to <functional>
 //===----------------------------------------------------------------------===//
