@@ -570,7 +570,9 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   for (Loop *SubLoop : *L)
     LoopsToSimplify.insert(SubLoop);
 
-  if (Header->getParent()->isDebugInfoForProfiling())
+  // When a FSDiscriminator is enabled, we don't need to add the multiply
+  // factors to the discriminators.
+  if (Header->getParent()->isDebugInfoForProfiling() && !EnableFSDiscriminator)
     for (BasicBlock *BB : L->getBlocks())
       for (Instruction &I : *BB)
         if (!isa<DbgInfoIntrinsic>(&I))
