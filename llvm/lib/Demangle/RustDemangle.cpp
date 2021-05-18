@@ -110,7 +110,7 @@ bool Demangler::demangle(StringView Mangled) {
   }
   Input = Mangled;
 
-  demanglePath();
+  demanglePath(InType::No);
 
   // FIXME parse optional <instantiating-crate>.
 
@@ -120,6 +120,8 @@ bool Demangler::demangle(StringView Mangled) {
   return !Error;
 }
 
+// Demangles a path. InType indicates whether a path is inside a type.
+//
 // <path> = "C" <identifier>               // crate root
 //        | "M" <impl-path> <type>         // <T> (inherent impl)
 //        | "X" <impl-path> <type> <path>  // <T as Trait> (trait impl)
@@ -132,7 +134,7 @@ bool Demangler::demangle(StringView Mangled) {
 //      | "S"      // shim
 //      | <A-Z>    // other special namespaces
 //      | <a-z>    // internal namespaces
-void Demangler::demanglePath() {
+void Demangler::demanglePath(InType InType) {
   if (Error || RecursionLevel >= MaxRecursionLevel) {
     Error = true;
     return;
@@ -147,18 +149,18 @@ void Demangler::demanglePath() {
     break;
   }
   case 'M': {
-    demangleImplPath();
+    demangleImplPath(InType);
     print("<");
     demangleType();
     print(">");
     break;
   }
   case 'X': {
-    demangleImplPath();
+    demangleImplPath(InType);
     print("<");
     demangleType();
     print(" as ");
-    demanglePath();
+    demanglePath(InType::Yes);
     print(">");
     break;
   }
@@ -166,7 +168,7 @@ void Demangler::demanglePath() {
     print("<");
     demangleType();
     print(" as ");
-    demanglePath();
+    demanglePath(InType::Yes);
     print(">");
     break;
   }
@@ -176,7 +178,7 @@ void Demangler::demanglePath() {
       Error = true;
       break;
     }
-    demanglePath();
+    demanglePath(InType);
 
     uint64_t Disambiguator = parseOptionalBase62Number('s');
     Identifier Ident = parseIdentifier();
@@ -207,8 +209,11 @@ void Demangler::demanglePath() {
     break;
   }
   case 'I': {
-    demanglePath();
-    print("::<");
+    demanglePath(InType);
+    // Omit "::" when in a type, where it is optional.
+    if (InType == InType::No)
+      print("::");
+    print("<");
     for (size_t I = 0; !Error && !consumeIf('E'); ++I) {
       if (I > 0)
         print(", ");
@@ -226,10 +231,10 @@ void Demangler::demanglePath() {
 
 // <impl-path> = [<disambiguator>] <path>
 // <disambiguator> = "s" <base-62-number>
-void Demangler::demangleImplPath() {
+void Demangler::demangleImplPath(InType InType) {
   SwapAndRestore<bool> SavePrint(Print, false);
   parseOptionalBase62Number('s');
-  demanglePath();
+  demanglePath(InType);
 }
 
 // <generic-arg> = <lifetime>
@@ -416,11 +421,14 @@ void Demangler::printBasicType(BasicType Type) {
 //          | "D" <dyn-bounds> <lifetime> // dyn Trait<Assoc = X> + Send + 'a
 //          | <backref>                   // backref
 void Demangler::demangleType() {
+  char C = look();
   BasicType Type;
-  if (parseBasicType(consume(), Type))
-    printBasicType(Type);
-  else
-    Error = true; // FIXME parse remaining productions.
+  if (parseBasicType(C, Type)) {
+    consume();
+    return printBasicType(Type);
+  }
+
+  demanglePath(InType::Yes);
 }
 
 // <const> = <basic-type> <const-data>
