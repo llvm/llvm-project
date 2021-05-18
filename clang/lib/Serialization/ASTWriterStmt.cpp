@@ -115,6 +115,7 @@ void ASTStmtWriter::VisitDefaultStmt(DefaultStmt *S) {
 
 void ASTStmtWriter::VisitLabelStmt(LabelStmt *S) {
   VisitStmt(S);
+  Record.push_back(S->isSideEntry());
   Record.AddDeclRef(S->getDecl());
   Record.AddStmt(S->getSubStmt());
   Record.AddSourceLocation(S->getIdentLoc());

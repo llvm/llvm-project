@@ -923,6 +923,8 @@ void TextNodeDumper::VisitWhileStmt(const WhileStmt *Node) {
 
 void TextNodeDumper::VisitLabelStmt(const LabelStmt *Node) {
   OS << " '" << Node->getName() << "'";
+  if (Node->isSideEntry())
+    OS << " side_entry";
 }
 
 void TextNodeDumper::VisitGotoStmt(const GotoStmt *Node) {

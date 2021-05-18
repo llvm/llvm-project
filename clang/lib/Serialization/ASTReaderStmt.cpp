@@ -185,11 +185,13 @@ void ASTStmtReader::VisitDefaultStmt(DefaultStmt *S) {
 
 void ASTStmtReader::VisitLabelStmt(LabelStmt *S) {
   VisitStmt(S);
+  bool IsSideEntry = Record.readInt();
   auto *LD = readDeclAs<LabelDecl>();
   LD->setStmt(S);
   S->setDecl(LD);
   S->setSubStmt(Record.readSubStmt());
   S->setIdentLoc(readSourceLocation());
+  S->setSideEntry(IsSideEntry);
 }
 
 void ASTStmtReader::VisitAttributedStmt(AttributedStmt *S) {

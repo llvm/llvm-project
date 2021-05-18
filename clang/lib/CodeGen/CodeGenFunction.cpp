@@ -75,6 +75,7 @@ CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext)
           shouldEmitLifetimeMarkers(CGM.getCodeGenOpts(), CGM.getLangOpts())) {
   if (!suppressNewContext)
     CGM.getCXXABI().getMangleContext().startNewFunction();
+  EHStack.setCGF(this);
 
   SetFastMathFlags(CurFPFeatures);
   SetFPModel();
