@@ -1,0 +1,670 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//llvm:tblgen.bzl", "gentbl")
+
+package(
+    default_visibility = ["//visibility:public"],
+    licenses = ["notice"],
+)
+
+cc_test(
+    name = "adt_tests",
+    size = "medium",
+    srcs = glob(
+        [
+            "ADT/*.cpp",
+            "ADT/*.h",
+        ],
+        allow_empty = False,
+    ),
+    shard_count = 20,
+    deps = [
+        "//llvm:Core",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "analysis_tests",
+    size = "small",
+    srcs = glob(
+        ["Analysis/*.cpp"],
+        allow_empty = False,
+        exclude = [
+            # TODO: Add this file to the build.
+            "Analysis/TFUtilsTest.cpp",
+        ],
+    ),
+    deps = [
+        "//llvm:Analysis",
+        "//llvm:AsmParser",
+        "//llvm:Core",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//llvm:TransformUtils",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "asm_parser_tests",
+    size = "small",
+    srcs = glob(
+        ["AsmParser/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:AsmParser",
+        "//llvm:Core",
+        "//llvm:Support",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "bitcode_tests",
+    size = "small",
+    srcs = glob(
+        ["Bitcode/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:AsmParser",
+        "//llvm:BitReader",
+        "//llvm:BitWriter",
+        "//llvm:Core",
+        "//llvm:Support",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "bitstream_tests",
+    size = "small",
+    srcs = glob(
+        ["Bitstream/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:BitstreamReader",
+        "//llvm:BitstreamWriter",
+        "//llvm:Support",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "codegen_tests_includes",
+    textual_hdrs = glob(
+        ["CodeGen/*.inc"],
+        allow_empty = False,
+    ),
+)
+
+cc_test(
+    name = "codegen_tests",
+    size = "small",
+    srcs = glob(
+        [
+            "CodeGen/*.cpp",
+            "CodeGen/*.h",
+        ],
+        allow_empty = False,
+    ),
+    deps = [
+        ":codegen_tests_includes",
+        "//llvm:AllTargetsAsmParsers",
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:Analysis",
+        "//llvm:AsmParser",
+        "//llvm:BinaryFormat",
+        "//llvm:CodeGen",
+        "//llvm:Core",
+        "//llvm:MC",
+        "//llvm:Passes",
+        "//llvm:Support",
+        "//llvm:Target",
+        "//llvm:TestingSupport",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "codegen_globalisel_tests",
+    size = "small",
+    srcs = glob(
+        [
+            "CodeGen/GlobalISel/*.cpp",
+            "CodeGen/GlobalISel/*.h",
+        ],
+        allow_empty = False,
+    ),
+    copts = [
+        "$(STACK_FRAME_UNLIMITED)",
+    ],
+    deps = [
+        "//llvm:AllTargetsAsmParsers",
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:CodeGen",
+        "//llvm:Core",
+        "//llvm:FileCheckLib",
+        "//llvm:Support",
+        "//llvm:Target",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "debuginfo_tests",
+    size = "small",
+    srcs = glob(
+        [
+            "DebugInfo/DWARF/*.cpp",
+            "DebugInfo/DWARF/*.h",
+            # TODO: Re-enable these when they stop crashing.
+            #"DebugInfo/PDB/*.cpp",
+            #"DebugInfo/PDB/*.h",
+        ],
+        allow_empty = False,
+    ),
+    args = [
+        # Skip a test that relies on reading files in a way that doesn't easily
+        # work with Bazel.
+        "--gtest_filter=-NativeSymbolReuseTest.*",
+    ],
+    deps = [
+        "//llvm:AllTargetsAsmParsers",
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:CodeGen",
+        "//llvm:Core",
+        "//llvm:DebugInfoDWARF",
+        "//llvm:DebugInfoPDB",
+        "//llvm:ObjectYAML",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "execution_engine_tests",
+    size = "small",
+    srcs = glob(
+        ["ExecutionEngine/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:AsmParser",
+        "//llvm:Core",
+        "//llvm:ExecutionEngine",
+        "//llvm:Interpreter",
+        "//llvm:Support",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "execution_engine_mcjit_tests",
+    size = "small",
+    srcs = glob(
+        [
+            "ExecutionEngine/MCJIT/*.cpp",
+            "ExecutionEngine/MCJIT/*.h",
+        ],
+        allow_empty = False,
+    ),
+    copts = [
+        "$(STACK_FRAME_UNLIMITED)",
+    ],
+    deps = [
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:AsmParser",
+        "//llvm:Core",
+        "//llvm:ExecutionEngine",
+        "//llvm:MCJIT",
+        "//llvm:Passes",
+        "//llvm:Support",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "execution_engine_orc_tests",
+    size = "small",
+    srcs = glob(
+        [
+            "ExecutionEngine/Orc/*.cpp",
+            "ExecutionEngine/Orc/*.h",
+        ],
+        allow_empty = False,
+    ),
+    args = ["--gtest_filter=-ObjectLinkingLayerTest.TestSetProcessAllSections"],
+    deps = [
+        "//llvm:AllTargetsAsmParsers",
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:AsmParser",
+        "//llvm:Core",
+        "//llvm:ExecutionEngine",
+        "//llvm:OrcJIT",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "filecheck_tests",
+    size = "small",
+    srcs = glob(
+        ["FileCheck/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:FileCheckLib",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "ir_tests",
+    size = "medium",  # ConstantRangeTest cases may take several seconds each.
+    srcs = glob(
+        [
+            "IR/*.cpp",
+            "IR/*.h",
+            "Support/KnownBitsTest.h",
+        ],
+        allow_empty = False,
+    ),
+    shard_count = 20,
+    deps = [
+        "//llvm:Analysis",
+        "//llvm:AsmParser",
+        "//llvm:BinaryFormat",
+        "//llvm:Core",
+        "//llvm:Passes",
+        "//llvm:Scalar",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//llvm:config",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "line_editor_tests",
+    size = "small",
+    srcs = glob(
+        ["LineEditor/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:LineEditor",
+        "//llvm:Support",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "frontend_tests",
+    size = "small",
+    srcs = glob(
+        ["Frontend/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:Analysis",
+        "//llvm:FrontendOpenACC",
+        "//llvm:FrontendOpenMP",
+        "//llvm:Passes",
+        "//llvm:Support",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "linker_tests",
+    size = "small",
+    srcs = glob(
+        ["Linker/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:AsmParser",
+        "//llvm:Core",
+        "//llvm:Linker",
+        "//llvm:Support",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "mc_tests",
+    size = "small",
+    srcs = glob(
+        ["MC/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:AllTargetsDisassemblers",
+        "//llvm:MC",
+        "//llvm:MCDisassembler",
+        "//llvm:Support",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "mi_tests",
+    size = "small",
+    srcs = glob(
+        ["MI/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:AllTargetsAsmParsers",
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:CodeGen",
+        "//llvm:Core",
+        "//llvm:Support",
+        "//llvm:Target",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "object_tests",
+    size = "small",
+    srcs = glob(
+        ["Object/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:Object",
+        "//llvm:ObjectYAML",
+        "//llvm:TestingSupport",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "object_yaml_tests",
+    size = "small",
+    srcs = glob(
+        ["ObjectYAML/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:DebugInfoCodeView",
+        "//llvm:Object",
+        "//llvm:ObjectYAML",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+gentbl(
+    name = "option_tests_gen",
+    strip_include_prefix = "Option",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "Option/Opts.inc",
+    )],
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "Option/Opts.td",
+    td_srcs = [
+        "//llvm:include/llvm/Option/OptParser.td",
+    ],
+)
+
+gentbl(
+    name = "automata_automata_gen",
+    strip_include_prefix = "TableGen",
+    tbl_outs = [(
+        "-gen-automata",
+        "TableGen/AutomataAutomata.inc",
+    )],
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "TableGen/Automata.td",
+    td_srcs = ["//llvm:common_target_td_sources"] + [
+        "TableGen/Automata.td",
+    ],
+)
+
+gentbl(
+    name = "automata_tables_gen",
+    strip_include_prefix = "TableGen",
+    tbl_outs = [(
+        "-gen-searchable-tables",
+        "TableGen/AutomataTables.inc",
+    )],
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "TableGen/Automata.td",
+    td_srcs = ["//llvm:common_target_td_sources"] + [
+        "TableGen/Automata.td",
+    ],
+)
+
+cc_test(
+    name = "option_tests",
+    size = "small",
+    srcs = glob(
+        ["Option/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        ":option_tests_gen",
+        "//llvm:Option",
+        "//llvm:Support",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "remarks_tests",
+    size = "small",
+    srcs = glob(
+        ["Remarks/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:BitReader",
+        "//llvm:Remarks",
+        "//llvm:Support",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+        "//llvm:remark_linker",
+    ],
+)
+
+cc_test(
+    name = "profile_data_tests",
+    size = "small",
+    srcs = glob(
+        ["ProfileData/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:Core",
+        "//llvm:Coverage",
+        "//llvm:ProfileData",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "support_tests",
+    size = "small",
+    srcs = glob(
+        [
+            "Support/*.cpp",
+            "Support/*.h",
+        ],
+        allow_empty = False,
+        exclude = [
+            "Support/ParallelTest.cpp",
+        ],
+    ),
+    args = ["--gtest_filter=-ProgramTest.CreateProcessTrailingSlash"],
+    copts = [
+        "$(STACK_FRAME_UNLIMITED)",
+    ],
+    linkstatic = 1,
+    tags = [
+        "local",  # Not compatible with the sandbox on MacOS
+    ],
+    visibility = ["//visibility:private"],
+    deps = [
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:BinaryFormat",
+        "//llvm:Core",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//llvm:config",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "support_parallel_tests",
+    size = "small",
+    srcs = ["Support/ParallelTest.cpp"],
+    copts = [
+        "$(STACK_FRAME_UNLIMITED)",
+    ],
+    linkstatic = 1,
+    deps = [
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:Support",
+        "//llvm:config",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "tablegen_tests",
+    size = "small",
+    srcs = glob(
+        [
+            "TableGen/*.cpp",
+        ],
+        allow_empty = False,
+    ),
+    deps = [
+        ":automata_automata_gen",
+        ":automata_tables_gen",
+        "//llvm:Support",
+        "//llvm:TableGen",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+        "//llvm:tblgen",
+    ],
+)
+
+cc_test(
+    name = "target_aarch64_tests",
+    size = "small",
+    srcs = glob(
+        ["Target/AArch64/*.cpp"],
+        allow_empty = False,
+    ),
+    copts = [
+        "$(STACK_FRAME_UNLIMITED)",
+    ],
+    deps = [
+        "//llvm:AArch64CodeGen",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "transforms_tests",
+    size = "small",
+    srcs = glob(
+        [
+            "Transforms/IPO/*.cpp",
+            "Transforms/IPO/*.h",
+            "Transforms/Utils/*.cpp",
+        ],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:Analysis",
+        "//llvm:AsmParser",
+        "//llvm:Core",
+        "//llvm:IPO",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//llvm:TransformUtils",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "llvm_exegesis_tests",
+    size = "small",
+    srcs = glob(
+        [
+            "tools/llvm-exegesis/*.cpp",
+            "tools/llvm-exegesis/X86/*.cpp",
+            "tools/llvm-exegesis/X86/*.h",
+        ],
+        allow_empty = False,
+    ) + [
+        "tools/llvm-exegesis/Common/AssemblerUtils.h",
+    ],
+    copts = ["-DHAVE_LIBPFM=1"],
+    linkopts = ["-lpfm"],
+    tags = [
+        "manual",  # External dependency (libpfm4)
+        "nobuildkite",  # TODO(chandlerc): Add support for fetching and building libpfm4 and enable this.
+    ],
+    deps = [
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:AllTargetsDisassemblers",
+        "//llvm:MC",
+        "//llvm:MCDisassembler",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+        "//llvm:llvm-exegesis-lib",
+    ],
+)
