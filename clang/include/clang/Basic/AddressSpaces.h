@@ -46,6 +46,8 @@ enum class LangAS : unsigned {
 
   // SYCL specific address spaces.
   sycl_global,
+  sycl_global_device,
+  sycl_global_host,
   sycl_local,
   sycl_private,
 

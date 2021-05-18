@@ -34,10 +34,20 @@ the address space qualifier inference as detailed in
 
 The default address space is "generic-memory", which is a virtual address space
 that overlaps the global, local, and private address spaces. SYCL mode enables
-explicit conversions to/from the default address space from/to the address
-space-attributed type and implicit conversions from the address space-attributed
-type to the default address space. All named address spaces are disjoint and
-sub-sets of default address space.
+following conversions:
+
+- explicit conversions to/from the default address space from/to the address
+  space-attributed type
+- implicit conversions from the address space-attributed type to the default
+  address space
+- explicit conversions to/from the global address space from/to the
+  ``__attribute__((opencl_global_device))`` or
+  ``__attribute__((opencl_global_host))`` address space-attributed type
+- implicit conversions from the ``__attribute__((opencl_global_device))`` or
+  ``__attribute__((opencl_global_host))`` address space-attributed type to the
+  global address space
+
+All named address spaces are disjoint and sub-sets of default address space.
 
 The SPIR target allocates SYCL namespace scope variables in the global address
 space.
@@ -93,6 +103,10 @@ space attributes for pointers:
      - SYCL address_space enumeration
    * - ``__attribute__((opencl_global))``
      - global_space, constant_space
+   * - ``__attribute__((opencl_global_device))``
+     - global_space
+   * - ``__attribute__((opencl_global_host))``
+     - global_space
    * - ``__attribute__((opencl_local))``
      - local_space
    * - ``__attribute__((opencl_private))``

@@ -615,11 +615,16 @@ class LLVMConfig(object):
         tool_substitutions = []
         if ld_lld:
             tool_substitutions.append(ToolSubst(r'ld\.lld', command=ld_lld))
+            self.config.available_features.add('ld.lld')
         if lld_link:
             tool_substitutions.append(ToolSubst('lld-link', command=lld_link))
+            self.config.available_features.add('lld-link')
         if ld64_lld:
             tool_substitutions.append(ToolSubst(r'ld64\.lld', command=ld64_lld))
+            self.config.available_features.add('ld64.lld')
         if wasm_ld:
             tool_substitutions.append(ToolSubst('wasm-ld', command=wasm_ld))
+            self.config.available_features.add('wasm-ld')
         self.add_tool_substitutions(tool_substitutions)
+
         return was_found

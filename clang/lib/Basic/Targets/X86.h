@@ -36,6 +36,8 @@ static const unsigned X86AddrSpaceMap[] = {
     0,   // cuda_constant
     0,   // cuda_shared
     0,   // sycl_global
+    0,   // sycl_global_device
+    0,   // sycl_global_host
     0,   // sycl_local
     0,   // sycl_private
     270, // ptr32_sptr
