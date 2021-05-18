@@ -4168,7 +4168,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       if (!Ty) {
         std::tie(FullTy, Ty) =
             getPointerElementTypes(FullBaseTy->getScalarType());
-      } else if (Ty != getPointerElementFlatType(FullBaseTy->getScalarType()))
+      } else if (!cast<PointerType>(FullBaseTy->getScalarType())
+                      ->isOpaqueOrPointeeTypeMatches(Ty))
         return error(
             "Explicit gep type does not match pointee type of pointer operand");
 

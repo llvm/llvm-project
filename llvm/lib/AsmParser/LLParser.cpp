@@ -7741,7 +7741,7 @@ int LLParser::parseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
   if (!BasePointerType)
     return error(Loc, "base of getelementptr must be a pointer");
 
-  if (Ty != BasePointerType->getElementType()) {
+  if (!BasePointerType->isOpaqueOrPointeeTypeMatches(Ty)) {
     return error(
         ExplicitTypeLoc,
         typeComparisonErrorMessage(
