@@ -252,7 +252,7 @@ namespace {
 /// This class represents all of the information pertaining to a specific MLIR
 /// document.
 struct MLIRDocument {
-  MLIRDocument(const lsp::URIForFile &uri, StringRef contents,
+  MLIRDocument(const lsp::URIForFile &uri, StringRef contents, int64_t version,
                DialectRegistry &registry,
                std::vector<lsp::Diagnostic> &diagnostics);
 
@@ -283,6 +283,9 @@ struct MLIRDocument {
   buildHoverForBlockArgument(llvm::SMRange hoverRange, BlockArgument arg,
                              const AsmParserState::BlockDefinition &block);
 
+  /// The version of this document.
+  int64_t version;
+
   /// The context used to hold the state contained by the parsed document.
   MLIRContext context;
 
@@ -299,9 +302,9 @@ struct MLIRDocument {
 } // namespace
 
 MLIRDocument::MLIRDocument(const lsp::URIForFile &uri, StringRef contents,
-                           DialectRegistry &registry,
+                           int64_t version, DialectRegistry &registry,
                            std::vector<lsp::Diagnostic> &diagnostics)
-    : context(registry) {
+    : version(version), context(registry) {
   context.allowUnregisteredDialects();
   ScopedDiagnosticHandler handler(&context, [&](Diagnostic &diag) {
     diagnostics.push_back(getLspDiagnoticFromDiag(diag, uri));
@@ -569,14 +572,20 @@ lsp::MLIRServer::MLIRServer(DialectRegistry &registry)
 lsp::MLIRServer::~MLIRServer() {}
 
 void lsp::MLIRServer::addOrUpdateDocument(
-    const URIForFile &uri, StringRef contents,
+    const URIForFile &uri, StringRef contents, int64_t version,
     std::vector<Diagnostic> &diagnostics) {
   impl->documents[uri.file()] = std::make_unique<MLIRDocument>(
-      uri, contents, impl->registry, diagnostics);
+      uri, contents, version, impl->registry, diagnostics);
 }
 
-void lsp::MLIRServer::removeDocument(const URIForFile &uri) {
-  impl->documents.erase(uri.file());
+Optional<int64_t> lsp::MLIRServer::removeDocument(const URIForFile &uri) {
+  auto it = impl->documents.find(uri.file());
+  if (it == impl->documents.end())
+    return llvm::None;
+
+  int64_t version = it->second->version;
+  impl->documents.erase(it);
+  return version;
 }
 
 void lsp::MLIRServer::getLocationsOf(const URIForFile &uri,

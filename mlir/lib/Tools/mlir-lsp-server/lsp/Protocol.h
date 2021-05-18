@@ -180,6 +180,9 @@ struct TextDocumentItem {
 
   /// The content of the opened text document.
   std::string text;
+
+  /// The version number of this document.
+  int64_t version;
 };
 
 /// Add support for JSON serialization.
@@ -199,6 +202,22 @@ struct TextDocumentIdentifier {
 llvm::json::Value toJSON(const TextDocumentIdentifier &value);
 bool fromJSON(const llvm::json::Value &value, TextDocumentIdentifier &result,
               llvm::json::Path path);
+
+//===----------------------------------------------------------------------===//
+// VersionedTextDocumentIdentifier
+//===----------------------------------------------------------------------===//
+
+struct VersionedTextDocumentIdentifier {
+  /// The text document's URI.
+  URIForFile uri;
+  /// The version number of this document.
+  int64_t version;
+};
+
+/// Add support for JSON serialization.
+llvm::json::Value toJSON(const VersionedTextDocumentIdentifier &value);
+bool fromJSON(const llvm::json::Value &value,
+              VersionedTextDocumentIdentifier &result, llvm::json::Path path);
 
 //===----------------------------------------------------------------------===//
 // Position
@@ -381,7 +400,7 @@ bool fromJSON(const llvm::json::Value &value,
 
 struct DidChangeTextDocumentParams {
   /// The document that changed.
-  TextDocumentIdentifier textDocument;
+  VersionedTextDocumentIdentifier textDocument;
 
   /// The actual content changes.
   std::vector<TextDocumentContentChangeEvent> contentChanges;
@@ -498,12 +517,15 @@ llvm::json::Value toJSON(const Diagnostic &diag);
 //===----------------------------------------------------------------------===//
 
 struct PublishDiagnosticsParams {
-  PublishDiagnosticsParams(URIForFile uri) : uri(uri) {}
+  PublishDiagnosticsParams(URIForFile uri, int64_t version)
+      : uri(uri), version(version) {}
 
   /// The URI for which diagnostic information is reported.
   URIForFile uri;
   /// The list of reported diagnostics.
   std::vector<Diagnostic> diagnostics;
+  /// The version number of the document the diagnostics are published for.
+  int64_t version;
 };
 
 /// Add support for JSON serialization.
