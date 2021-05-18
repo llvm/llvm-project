@@ -132,8 +132,6 @@ ATLMachine g_atl_machine;
 
 std::vector<hsa_amd_memory_pool_t> atl_gpu_kernarg_pools;
 
-static std::vector<hsa_executable_t> g_executables;
-
 std::map<std::string, std::string> KernelNameMap;
 std::vector<std::map<std::string, atl_kernel_info_t>> KernelInfoTable;
 std::vector<std::map<std::string, atl_symbol_info_t>> SymbolInfoTable;
@@ -203,15 +201,6 @@ atmi_status_t Runtime::Initialize() {
 
 atmi_status_t Runtime::Finalize() {
   hsa_status_t err;
-
-  for (uint32_t i = 0; i < g_executables.size(); i++) {
-    err = hsa_executable_destroy(g_executables[i]);
-    if (err != HSA_STATUS_SUCCESS) {
-      printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
-             "Destroying executable", get_error_string(err));
-      exit(1);
-    }
-  }
 
   for (uint32_t i = 0; i < SymbolInfoTable.size(); i++) {
     SymbolInfoTable[i].clear();
@@ -1170,7 +1159,7 @@ atmi_status_t Runtime::RegisterModuleFromMemory(
     void *module_bytes, size_t module_size, atmi_place_t place,
     atmi_status_t (*on_deserialized_data)(void *data, size_t size,
                                           void *cb_state),
-    void *cb_state) {
+    void *cb_state, std::vector<hsa_executable_t> &HSAExecutables) {
   hsa_status_t err;
   int gpu = place.device_id;
   assert(gpu >= 0);
@@ -1269,7 +1258,7 @@ atmi_status_t Runtime::RegisterModuleFromMemory(
     }
 
     // save the executable and destroy during finalize
-    g_executables.push_back(executable);
+    HSAExecutables.push_back(executable);
     return ATMI_STATUS_SUCCESS;
   } else {
     return ATMI_STATUS_ERROR;
