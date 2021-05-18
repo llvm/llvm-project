@@ -21,6 +21,15 @@
 #include "unwind-ehabi-helpers.h"
 #endif
 
+#if defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
+#include <windows.h>
+#include <winnt.h>
+
+EXCEPTION_DISPOSITION _GCC_specific_handler(PEXCEPTION_RECORD, void *, PCONTEXT,
+                                            PDISPATCHER_CONTEXT,
+                                            _Unwind_Personality_Fn);
+#endif
+
 // Pointer encodings documented at:
 //   http://refspecs.freestandards.org/LSB_1.3.0/gLSB/gLSB/ehframehdr.html
 
@@ -169,6 +178,10 @@ COMPILER_RT_ABI _Unwind_Reason_Code __gcc_personality_sj0(
 COMPILER_RT_ABI _Unwind_Reason_Code __gcc_personality_v0(
     _Unwind_State state, struct _Unwind_Exception *exceptionObject,
     struct _Unwind_Context *context)
+#elif defined(__SEH__)
+static _Unwind_Reason_Code __gcc_personality_imp(
+    int version, _Unwind_Action actions, uint64_t exceptionClass,
+    struct _Unwind_Exception *exceptionObject, struct _Unwind_Context *context)
 #else
 COMPILER_RT_ABI _Unwind_Reason_Code __gcc_personality_v0(
     int version, _Unwind_Action actions, uint64_t exceptionClass,
@@ -233,3 +246,12 @@ COMPILER_RT_ABI _Unwind_Reason_Code __gcc_personality_v0(
   // No landing pad found, continue unwinding.
   return continueUnwind(exceptionObject, context);
 }
+
+#if defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
+COMPILER_RT_ABI EXCEPTION_DISPOSITION
+__gcc_personality_seh0(PEXCEPTION_RECORD ms_exc, void *this_frame,
+                       PCONTEXT ms_orig_context, PDISPATCHER_CONTEXT ms_disp) {
+  return _GCC_specific_handler(ms_exc, this_frame, ms_orig_context, ms_disp,
+                               __gcc_personality_imp);
+}
+#endif
