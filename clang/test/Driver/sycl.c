@@ -22,6 +22,6 @@
 
 // RUN: %clang -### -fsycl  %s 2>&1 | FileCheck %s --check-prefix=DEFAULT
 // RUN: %clangxx -### -fsycl %s 2>&1 | FileCheck %s --check-prefix=DEFAULT
-// RUN: %clang_cl -### -fsycl %s 2>&1 | FileCheck %s --check-prefix=DEFAULT
+// RUN: %clang_cl -### -fsycl -- %s 2>&1 | FileCheck %s --check-prefix=DEFAULT
 
 // DEFAULT: "-sycl-std=2020"
