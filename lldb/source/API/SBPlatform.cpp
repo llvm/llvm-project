@@ -413,8 +413,7 @@ SBError SBPlatform::ConnectRemote(SBPlatformConnectOptions &connect_options) {
   PlatformSP platform_sp(GetSP());
   if (platform_sp && connect_options.GetURL()) {
     Args args;
-    args.AppendArgument(
-        llvm::StringRef::withNullAsEmpty(connect_options.GetURL()));
+    args.AppendArgument(connect_options.GetURL());
     sb_error.ref() = platform_sp->ConnectRemote(args);
   } else {
     sb_error.SetErrorString("invalid platform");

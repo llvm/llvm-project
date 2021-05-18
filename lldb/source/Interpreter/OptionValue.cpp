@@ -543,8 +543,7 @@ lldb::OptionValueSP OptionValue::CreateValueFromCStringForTypeMask(
   }
 
   if (value_sp)
-    error = value_sp->SetValueFromString(
-        llvm::StringRef::withNullAsEmpty(value_cstr), eVarSetOperationAssign);
+    error = value_sp->SetValueFromString(value_cstr, eVarSetOperationAssign);
   else
     error.SetErrorString("unsupported type mask");
   return value_sp;
