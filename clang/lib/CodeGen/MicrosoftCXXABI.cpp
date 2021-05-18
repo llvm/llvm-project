@@ -131,7 +131,12 @@ public:
 
   /// MSVC needs an extra flag to indicate a catchall.
   CatchTypeInfo getCatchAllTypeInfo() override {
-    return CatchTypeInfo{nullptr, 0x40};
+    // For -EHa catch(...) must handle HW exception
+    // Adjective = HT_IsStdDotDot (0x40), only catch C++ exceptions
+    if (getContext().getLangOpts().EHAsynch)
+      return CatchTypeInfo{nullptr, 0};
+    else
+      return CatchTypeInfo{nullptr, 0x40};
   }
 
   bool shouldTypeidBeNullChecked(bool IsDeref, QualType SrcRecordTy) override;

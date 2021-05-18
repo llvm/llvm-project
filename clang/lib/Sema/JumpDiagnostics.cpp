@@ -965,6 +965,9 @@ void JumpScopeChecker::CheckJump(Stmt *From, Stmt *To, SourceLocation DiagLoc,
   if (!ToScopesWarning.empty()) {
     S.Diag(DiagLoc, JumpDiagWarning);
     NoteJumpIntoScopes(ToScopesWarning);
+    assert(isa<LabelStmt>(To));
+    LabelStmt *Label = cast<LabelStmt>(To);
+    Label->setSideEntry(true);
   }
 
   // Handle errors.
