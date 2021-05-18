@@ -1149,18 +1149,15 @@ body: |
     ; GFX9: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX9-UNALIGNED-LABEL: name: test_load_local_s24_align1
     ; GFX9-UNALIGNED: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
-    ; GFX9-UNALIGNED: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p3) :: (load 2, align 1, addrspace 3)
-    ; GFX9-UNALIGNED: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; GFX9-UNALIGNED: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
-    ; GFX9-UNALIGNED: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
-    ; GFX9-UNALIGNED: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-    ; GFX9-UNALIGNED: [[PTR_ADD:%[0-9]+]]:_(p3) = G_PTR_ADD [[COPY]], [[C1]](s32)
-    ; GFX9-UNALIGNED: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p3) :: (load 1 from unknown-address + 2, addrspace 3)
-    ; GFX9-UNALIGNED: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GFX9-UNALIGNED: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[LOAD1]], [[C2]](s32)
-    ; GFX9-UNALIGNED: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[AND]]
-    ; GFX9-UNALIGNED: [[COPY2:%[0-9]+]]:_(s32) = COPY [[OR]](s32)
-    ; GFX9-UNALIGNED: $vgpr0 = COPY [[COPY2]](s32)
+    ; GFX9-UNALIGNED: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p3) :: (load 2, align 1, addrspace 3)
+    ; GFX9-UNALIGNED: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
+    ; GFX9-UNALIGNED: [[PTR_ADD:%[0-9]+]]:_(p3) = G_PTR_ADD [[COPY]], [[C]](s32)
+    ; GFX9-UNALIGNED: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p3) :: (load 1 from unknown-address + 2, addrspace 3)
+    ; GFX9-UNALIGNED: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GFX9-UNALIGNED: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[LOAD]], [[C1]](s32)
+    ; GFX9-UNALIGNED: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[ZEXTLOAD]]
+    ; GFX9-UNALIGNED: [[COPY1:%[0-9]+]]:_(s32) = COPY [[OR]](s32)
+    ; GFX9-UNALIGNED: $vgpr0 = COPY [[COPY1]](s32)
     ; GFX10-LABEL: name: test_load_local_s24_align1
     ; GFX10: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
     ; GFX10: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p3) :: (load 2, align 1, addrspace 3)
