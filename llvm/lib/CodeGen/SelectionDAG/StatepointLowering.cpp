@@ -72,10 +72,6 @@ cl::opt<unsigned> MaxRegistersForGCPointers(
     "max-registers-for-gc-values", cl::Hidden, cl::init(0),
     cl::desc("Max number of VRegs allowed to pass GC pointer meta args in"));
 
-cl::opt<bool> AlwaysSpillBase("statepoint-always-spill-base", cl::Hidden,
-                              cl::init(true),
-                              cl::desc("Force spilling of base GC pointers"));
-
 typedef FunctionLoweringInfo::StatepointRelocationRecord RecordType;
 
 static void pushStackMapConstant(SmallVectorImpl<SDValue>& Ops,
