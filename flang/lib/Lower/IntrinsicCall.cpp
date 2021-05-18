@@ -524,7 +524,12 @@ static constexpr IntrinsicHandler handlers[]{
     {"iand", &I::genIAnd},
     {"ichar", &I::genIchar},
     {"ieor", &I::genIEOr},
-    {"index", &I::genIndex},
+    {"index",
+     &I::genIndex,
+     {{{"string", asAddr},
+       {"substring", asAddr},
+       {"back", asValue},
+       {"kind", asValue}}}},
     {"ior", &I::genIOr},
     {"len", &I::genLen},
     {"len_trim", &I::genLenTrim},
@@ -1701,9 +1706,6 @@ fir::ExtendedValue
 IntrinsicLibrary::genIndex(mlir::Type resultType,
                            llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 4);
-  for (int i = 0; i < 4; ++i)
-    if (fir::getBase(args[i]))
-      LLVM_DEBUG(llvm::dbgs() << "index(" << i << "): " << args[i] << '\n');
 
   auto stringBase = fir::getBase(args[0]);
   auto kind =
@@ -1713,10 +1715,10 @@ IntrinsicLibrary::genIndex(mlir::Type resultType,
   auto substringBase = fir::getBase(args[1]);
   auto substringLen = fir::getLen(args[1]);
   mlir::Value back =
-      fir::isUnboxedValue(args[2])
-          ? fir::getBase(args[2])
-          : builder.createIntegerConstant(loc, builder.getI1Type(), 0);
-  if (!fir::isUnboxedValue(args[3]))
+      isAbsent(args[2])
+          ? builder.createIntegerConstant(loc, builder.getI1Type(), 0)
+          : fir::getBase(args[2]);
+  if (isAbsent(args[3]))
     return builder.createConvert(
         loc, resultType,
         Fortran::lower::genIndex(builder, loc, kind, stringBase, stringLen,
@@ -1733,15 +1735,15 @@ IntrinsicLibrary::genIndex(mlir::Type resultType,
     builder.create<fir::StoreOp>(loc, castb, temp);
     return builder.createBox(loc, temp);
   };
-  auto backOpt = fir::isUnboxedValue(args[2])
-                     ? makeRefThenEmbox(*args[2].getUnboxed())
-                     : builder.create<fir::AbsentOp>(
-                           loc, fir::BoxType::get(builder.getI1Type()));
-  auto kindVal = fir::isUnboxedValue(args[3])
-                     ? fir::getBase(args[3])
-                     : builder.createIntegerConstant(
+  auto backOpt = isAbsent(args[2])
+                     ? builder.create<fir::AbsentOp>(
+                           loc, fir::BoxType::get(builder.getI1Type()))
+                     : makeRefThenEmbox(fir::getBase(args[2]));
+  auto kindVal = isAbsent(args[3])
+                     ? builder.createIntegerConstant(
                            loc, builder.getIndexType(),
-                           builder.getKindMap().defaultIntegerKind());
+                           builder.getKindMap().defaultIntegerKind())
+                     : fir::getBase(args[3]);
   // Create mutable fir.box to be passed to the runtime for the result.
   auto mutBox = Fortran::lower::createTempMutableBox(builder, loc, resultType);
   auto resBox = Fortran::lower::getMutableIRBox(builder, loc, mutBox);

@@ -54,7 +54,7 @@ logical function all_test(mask)
 ! CHECK: %[[a2:.*]] = fir.convert %[[c1]] : (index) -> i32
   all_test = all(mask)
 ! CHECK:  %[[a3:.*]] = fir.call @_FortranAAll(%[[a1]], %{{.*}}, %{{.*}}, %[[a2]]) : (!fir.box<none>, !fir.ref<i8>, i32, i32) -> i1
-end function all_test 
+end function all_test
 
 ! ALL
 ! CHECK-LABEL: all_test2
@@ -112,7 +112,7 @@ logical function any_test(mask)
 ! CHECK: %[[a2:.*]] = fir.convert %[[c1]] : (index) -> i32
   any_test = any(mask)
 ! CHECK:  %[[a3:.*]] = fir.call @_FortranAAny(%[[a1]], %{{.*}},  %{{.*}}, %[[a2]]) : (!fir.box<none>, !fir.ref<i8>, i32, i32) -> i1
-end function any_test 
+end function any_test
 
 ! ANY
 ! CHECK-LABEL: any_test2
@@ -348,6 +348,18 @@ integer function index_test2(s1, s2)
   ! CHECK: fir.freemem %[[ad1]]
 end function index_test2
 
+! CHECK-LABEL: func @_QPindex_test3
+integer function index_test3(s, i)
+  character(*) :: s
+  integer :: i
+  ! CHECK: %[[tmpChar:.*]] = fir.alloca !fir.char<1>
+  ! CHECK: fir.store %{{.*}} to %[[tmpChar]] : !fir.ref<!fir.char<1>>
+  ! CHECK: %[[tmpCast:.*]] = fir.convert %[[tmpChar]] : (!fir.ref<!fir.char<1>>) -> !fir.ref<i8>
+  ! CHECK: fir.call @_FortranAIndex1(%{{.*}}, %{{.*}}, %[[tmpCast]], %{{.*}}, %{{.*}})
+  index_test3 = index(s, char(i))
+end function
+
+
 ! IOR
 ! CHECK-LABEL: ior_test
 subroutine ior_test(a, b)
@@ -413,7 +425,7 @@ end subroutine
 ! CHECK-LABEL: maxloc_test2
 ! CHECK-SAME: %[[arg0:.*]]: !fir.box<!fir.array<?xi32>>, %[[arg1:.*]]: !fir.box<!fir.array<?xi32>>, %[[arg2:.*]]: !fir.ref<i32>
 subroutine maxloc_test2(arr,res,d)
-  integer :: arr(:) 
+  integer :: arr(:)
   integer :: res(:)
   integer :: d
 ! CHECK-DAG:  %[[c4:.*]] = constant 4 : index
@@ -463,7 +475,7 @@ end function
 
 ! MAXVAL
 ! CHECK-LABEL: maxval_test3
-! CHECK-SAME: %[[arg0:.*]]: !fir.box<!fir.array<?x?xi32>>, 
+! CHECK-SAME: %[[arg0:.*]]: !fir.box<!fir.array<?x?xi32>>,
 ! CHECK-SAME: %[[arg1:.*]]: !fir.box<!fir.array<?xi32>>
 subroutine maxval_test3(a,r)
   integer :: a(:,:)
@@ -506,7 +518,7 @@ end subroutine
 ! CHECK-LABEL: minloc_test2
 ! CHECK-SAME: %[[arg0:.*]]: !fir.box<!fir.array<?xi32>>, %[[arg1:.*]]: !fir.box<!fir.array<?xi32>>, %[[arg2:.*]]: !fir.ref<i32>
 subroutine minloc_test2(arr,res,d)
-  integer :: arr(:) 
+  integer :: arr(:)
   integer :: res(:)
   integer :: d
 ! CHECK-DAG:  %[[c4:.*]] = constant 4 : index
@@ -556,7 +568,7 @@ end function
 
 ! MINVAL
 ! CHECK-LABEL: minval_test3
-! CHECK-SAME: %[[arg0:.*]]: !fir.box<!fir.array<?x?xi32>>, 
+! CHECK-SAME: %[[arg0:.*]]: !fir.box<!fir.array<?x?xi32>>,
 ! CHECK-SAME: %[[arg1:.*]]: !fir.box<!fir.array<?xi32>>
 subroutine minval_test3(a,r)
   integer :: a(:,:)
@@ -647,10 +659,10 @@ real*16 function rrspacing_test2(x)
 !CHECK %{{.*}} = fir.call @_FortranARRSpacing16(%[[a1]]) : (f128) -> f128
 end function
 
-! SCAN 
+! SCAN
 ! CHECK-LABEL: func @_QPscan_test(%
 ! CHECK-SAME: [[s:[^:]+]]: !fir.boxchar<1>, %
-! CHECK-SAME: [[ss:[^:]+]]: !fir.boxchar<1>) -> i32 
+! CHECK-SAME: [[ss:[^:]+]]: !fir.boxchar<1>) -> i32
 integer function scan_test(s1, s2)
   character(*) :: s1, s2
 ! CHECK: %[[tmpBox:.*]] = fir.alloca !fir.box<!fir.heap<i32>>
@@ -670,7 +682,7 @@ integer function scan_test(s1, s2)
 ! CHECK: fir.freemem %[[tmpAddr]] : !fir.heap<i32>
 end function scan_test
 
-! SCAN 
+! SCAN
 ! CHECK-LABEL: func @_QPscan_test2(%
 ! CHECK-SAME: [[s:[^:]+]]: !fir.boxchar<1>, %
 ! CHECK-SAME: [[ss:[^:]+]]: !fir.boxchar<1>) -> i32
@@ -756,10 +768,10 @@ subroutine trim_test(c)
   return
 end subroutine
 
-! VERIFY 
+! VERIFY
 ! CHECK-LABEL: func @_QPverify_test(%
 ! CHECK-SAME: [[s:[^:]+]]: !fir.boxchar<1>, %
-! CHECK-SAME: [[ss:[^:]+]]: !fir.boxchar<1>) -> i32 
+! CHECK-SAME: [[ss:[^:]+]]: !fir.boxchar<1>) -> i32
 integer function verify_test(s1, s2)
   character(*) :: s1, s2
 ! CHECK: %[[tmpBox:.*]] = fir.alloca !fir.box<!fir.heap<i32>>
@@ -779,7 +791,7 @@ integer function verify_test(s1, s2)
 ! CHECK: fir.freemem %[[tmpAddr]] : !fir.heap<i32>
 end function verify_test
 
-! VERIFY 
+! VERIFY
 ! CHECK-LABEL: func @_QPverify_test2(%
 ! CHECK-SAME: [[s:[^:]+]]: !fir.boxchar<1>, %
 ! CHECK-SAME: [[ss:[^:]+]]: !fir.boxchar<1>) -> i32
