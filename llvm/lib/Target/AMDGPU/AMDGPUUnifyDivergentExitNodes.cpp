@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This is a variant of the UnifyDivergentExitNodes pass. Rather than ensuring
+// This is a variant of the UnifyFunctionExitNodes pass. Rather than ensuring
 // there is at most one ret and one unreachable instruction, it ensures there is
 // at most one divergent exiting block.
 //
