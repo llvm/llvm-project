@@ -191,6 +191,11 @@ const char *AMDGCN::OpenMPLinker::constructOmpExtraCmds(
          std::string(WaveFrontSizeBC)});
   }
 
+  if (Args.hasFlag(options::OPT_fgpu_sanitize,
+                   options::OPT_fno_gpu_sanitize, false)) {
+    BCLibs.push_back("asanrtl.bc");
+  }
+
   for (auto Lib : BCLibs)
     addBCLib(C.getDriver(), Args, CmdArgs, LibraryPaths, Lib,
              /* PostClang Link? */ false);
