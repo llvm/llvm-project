@@ -936,3 +936,20 @@ define i32 @rotateright32_doubleand1(i32 %v, i16 %r) {
   %or = or i32 %shr, %shl
   ret i32 %or
 }
+
+define i8 @unmasked_shlop_unmasked_shift_amount(i32 %x, i32 %shamt) {
+; CHECK-LABEL: @unmasked_shlop_unmasked_shift_amount(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT:%.*]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[X]] to i8
+; CHECK-NEXT:    [[T8:%.*]] = call i8 @llvm.fshr.i8(i8 [[TMP2]], i8 [[TMP3]], i8 [[TMP1]])
+; CHECK-NEXT:    ret i8 [[T8]]
+;
+  %maskx = and i32 %x, 255
+  %t4 = sub i32 8, %shamt
+  %t5 = shl i32 %x, %t4
+  %t6 = lshr i32 %maskx, %shamt
+  %t7 = or i32 %t5, %t6
+  %t8 = trunc i32 %t7 to i8
+  ret i8 %t8
+}
