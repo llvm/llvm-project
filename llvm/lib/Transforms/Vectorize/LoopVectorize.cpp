@@ -1047,8 +1047,11 @@ static Instruction *getDebugLocFromInstOrOperands(Instruction *I) {
 void InnerLoopVectorizer::setDebugLocFromInst(IRBuilder<> &B, const Value *Ptr) {
   if (const Instruction *Inst = dyn_cast_or_null<Instruction>(Ptr)) {
     const DILocation *DIL = Inst->getDebugLoc();
+
+    // When a FSDiscriminator is enabled, we don't need to add the multiply
+    // factors to the discriminators.
     if (DIL && Inst->getFunction()->isDebugInfoForProfiling() &&
-        !isa<DbgInfoIntrinsic>(Inst)) {
+        !isa<DbgInfoIntrinsic>(Inst) && !EnableFSDiscriminator) {
       assert(!VF.isScalable() && "scalable vectors not yet supported.");
       auto NewDIL =
           DIL->cloneByMultiplyingDuplicationFactor(UF * VF.getKnownMinValue());
@@ -1058,8 +1061,7 @@ void InnerLoopVectorizer::setDebugLocFromInst(IRBuilder<> &B, const Value *Ptr) 
         LLVM_DEBUG(dbgs()
                    << "Failed to create new discriminator: "
                    << DIL->getFilename() << " Line: " << DIL->getLine());
-    }
-    else
+    } else
       B.SetCurrentDebugLocation(DIL);
   } else
     B.SetCurrentDebugLocation(DebugLoc());

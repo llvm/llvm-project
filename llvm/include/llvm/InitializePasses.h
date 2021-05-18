@@ -275,6 +275,7 @@ void initializeLowerSwitchLegacyPassPass(PassRegistry &);
 void initializeLowerTypeTestsPass(PassRegistry&);
 void initializeLowerMatrixIntrinsicsLegacyPassPass(PassRegistry &);
 void initializeLowerMatrixIntrinsicsMinimalLegacyPassPass(PassRegistry &);
+void initializeMIRAddFSDiscriminatorsPass(PassRegistry &);
 void initializeMIRCanonicalizerPass(PassRegistry &);
 void initializeMIRNamerPass(PassRegistry &);
 void initializeMIRPrintingPassPass(PassRegistry&);

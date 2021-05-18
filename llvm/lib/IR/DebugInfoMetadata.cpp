@@ -23,6 +23,13 @@
 
 using namespace llvm;
 
+namespace llvm {
+// Use FS-AFDO discriminator.
+cl::opt<bool> EnableFSDiscriminator(
+    "enable-fs-discriminator", cl::Hidden, cl::init(false),
+    cl::desc("Enable adding flow sensitive discriminators"));
+} // namespace llvm
+
 const DIExpression::FragmentInfo DebugVariable::DefaultFragment = {
     std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::min()};
 
