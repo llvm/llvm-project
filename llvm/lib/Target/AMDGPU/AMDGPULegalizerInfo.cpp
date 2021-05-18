@@ -1274,6 +1274,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         {{S32, FlatPtr, 8, 8}, {S32, FlatPtr, 16, 16}});
   }
 
+  // Constant 32-bit is handled by addrspacecasting the 32-bit pointer to
+  // 64-bits.
+  //
+  // TODO: Should generalize bitcast action into coerce, which will also cover
+  // inserting addrspacecasts.
+  ExtLoads.customIf(typeIs(1, Constant32Ptr));
+
   ExtLoads.clampScalar(0, S32, S32)
           .widenScalarToNextPow2(0)
           .unsupportedIfMemSizeNotPow2()
@@ -1695,6 +1702,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case TargetOpcode::G_GLOBAL_VALUE:
     return legalizeGlobalValue(MI, MRI, B);
   case TargetOpcode::G_LOAD:
+  case TargetOpcode::G_SEXTLOAD:
+  case TargetOpcode::G_ZEXTLOAD:
     return legalizeLoad(Helper, MI);
   case TargetOpcode::G_FMAD:
     return legalizeFMad(MI, MRI, B);
@@ -2407,6 +2416,9 @@ bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
     Observer.changedInstr(MI);
     return true;
   }
+
+  if (MI.getOpcode() != AMDGPU::G_LOAD)
+    return false;
 
   Register ValReg = MI.getOperand(0).getReg();
   LLT ValTy = MRI.getType(ValReg);
