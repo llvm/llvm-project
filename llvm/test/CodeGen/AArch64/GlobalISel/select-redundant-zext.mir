@@ -64,13 +64,13 @@ body:             |
   bb.0:
     liveins: $w0
 
-    ; We should have a UBFMXri here, because isDef32 disallows copies.
+    ; We should have a ORRWrs here, because isDef32 disallows copies.
 
     ; CHECK-LABEL: name: dont_fold_copy
     ; CHECK: liveins: $w0
     ; CHECK: %copy:gpr32 = COPY $w0
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, %copy, %subreg.sub_32
-    ; CHECK: %zext:gpr64 = UBFMXri [[SUBREG_TO_REG]], 0, 31
+    ; CHECK: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, %copy, 0
+    ; CHECK: %zext:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
     ; CHECK: $x0 = COPY %zext
     ; CHECK: RET_ReallyLR implicit $x0
     %copy:gpr(s32) = COPY $w0
@@ -88,14 +88,14 @@ body:             |
   bb.0:
     liveins: $w0
 
-    ; We should have a UBFMXri here, because isDef32 disallows bitcasts.
+    ; We should have a ORRWrs here, because isDef32 disallows bitcasts.
 
     ; CHECK-LABEL: name: dont_fold_bitcast
     ; CHECK: liveins: $w0
     ; CHECK: %copy:gpr32all = COPY $w0
     ; CHECK: %bitcast1:gpr32 = COPY %copy
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, %bitcast1, %subreg.sub_32
-    ; CHECK: %zext:gpr64 = UBFMXri [[SUBREG_TO_REG]], 0, 31
+    ; CHECK: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, %bitcast1, 0
+    ; CHECK: %zext:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
     ; CHECK: $x0 = COPY %zext
     ; CHECK: RET_ReallyLR implicit $x0
     %copy:gpr(s32) = COPY $w0
@@ -115,14 +115,14 @@ body:             |
   bb.0:
     liveins: $x0
 
-    ; We should have a UBFMXri here, because isDef32 disallows truncs.
+    ; We should have a ORRWrs here, because isDef32 disallows truncs.
 
     ; CHECK-LABEL: name: dont_fold_trunc
     ; CHECK: liveins: $x0
     ; CHECK: %copy:gpr64sp = COPY $x0
     ; CHECK: %trunc:gpr32common = COPY %copy.sub_32
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, %trunc, %subreg.sub_32
-    ; CHECK: %zext:gpr64 = UBFMXri [[SUBREG_TO_REG]], 0, 31
+    ; CHECK: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, %trunc, 0
+    ; CHECK: %zext:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
     ; CHECK: $x0 = COPY %zext
     ; CHECK: RET_ReallyLR implicit $x0
     %copy:gpr(s64) = COPY $x0
@@ -151,11 +151,11 @@ body:             |
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK: bb.2:
   ; CHECK:   %phi:gpr32 = PHI %copy1, %bb.0, %copy2, %bb.1
-  ; CHECK:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, %phi, %subreg.sub_32
-  ; CHECK:   [[UBFMXri:%[0-9]+]]:gpr64 = UBFMXri [[SUBREG_TO_REG]], 0, 31
-  ; CHECK:   $x0 = COPY [[UBFMXri]]
+  ; CHECK:   [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, %phi, 0
+  ; CHECK:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
+  ; CHECK:   $x0 = COPY [[SUBREG_TO_REG]]
   ; CHECK:   RET_ReallyLR implicit $x0
-  ; We should have a UBFMXri here, because isDef32 disallows phis.
+  ; We should have a ORRWrs here, because isDef32 disallows phis.
 
   bb.0:
     liveins: $w0, $w1, $w2
@@ -192,9 +192,9 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[COPY1]], [[COPY]]
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[ADDWrr]], %subreg.sub_32
-    ; CHECK: [[UBFMXri:%[0-9]+]]:gpr64 = UBFMXri [[SUBREG_TO_REG]], 0, 31
-    ; CHECK: $x0 = COPY [[UBFMXri]]
+    ; CHECK: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, [[ADDWrr]], 0
+    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
+    ; CHECK: $x0 = COPY [[SUBREG_TO_REG]]
     ; CHECK: RET_ReallyLR implicit $x0
     %0:gpr(s32) = COPY $w0
     %1:gpr(s32) = COPY $w1
