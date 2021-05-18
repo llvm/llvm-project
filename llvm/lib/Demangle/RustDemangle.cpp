@@ -441,6 +441,19 @@ void Demangler::demangleType() {
     demangleType();
     print("]");
     break;
+  case 'T': {
+    print("(");
+    size_t I = 0;
+    for (; !Error && !consumeIf('E'); ++I) {
+      if (I > 0)
+        print(", ");
+      demangleType();
+    }
+    if (I == 1)
+      print(",");
+    print(")");
+    break;
+  }
   default:
     Position = Start;
     demanglePath(InType::Yes);
