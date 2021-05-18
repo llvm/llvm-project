@@ -64,7 +64,6 @@ Changes to the LLVM IR
 * The opaque pointer type ``ptr`` has been introduced. It is still in the
   process of being worked on and should not be used yet.
 
-=======
 Changes to building LLVM
 ------------------------
 
