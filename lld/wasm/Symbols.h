@@ -254,14 +254,14 @@ public:
 
 class SectionSymbol : public Symbol {
 public:
-  SectionSymbol(uint32_t flags, const InputSection *s, InputFile *f = nullptr)
+  SectionSymbol(uint32_t flags, const InputChunk *s, InputFile *f = nullptr)
       : Symbol("", SectionKind, flags, f), section(s) {}
 
   static bool classof(const Symbol *s) { return s->kind() == SectionKind; }
 
   const OutputSectionSymbol *getOutputSectionSymbol() const;
 
-  const InputSection *section;
+  const InputChunk *section;
 };
 
 class DataSymbol : public Symbol {

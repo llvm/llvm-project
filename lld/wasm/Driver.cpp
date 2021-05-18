@@ -796,12 +796,16 @@ static void wrapSymbols(ArrayRef<WrappedSymbol> wrapped) {
 }
 
 static void splitSections() {
-  // splitIntoPieces needs to be called on each MergeInputSection
+  // splitIntoPieces needs to be called on each MergeInputChunk
   // before calling finalizeContents().
   LLVM_DEBUG(llvm::dbgs() << "splitSections\n");
   parallelForEach(symtab->objectFiles, [](ObjFile *file) {
     for (InputChunk *seg : file->segments) {
       if (auto *s = dyn_cast<MergeInputChunk>(seg))
+        s->splitIntoPieces();
+    }
+    for (InputChunk *sec : file->customSections) {
+      if (auto *s = dyn_cast<MergeInputChunk>(sec))
         s->splitIntoPieces();
     }
   });
