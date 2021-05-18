@@ -105,4 +105,32 @@ int __sanitizer_symbolize_demangle(const char *Name, char *Buffer,
              : 0;
 }
 
+// Override __cxa_atexit and ignore callbacks.
+// This prevents crashes in a configuration when the symbolizer
+// is built into sanitizer runtime and consequently into the test process.
+// LLVM libraries have some global objects destroyed during exit,
+// so if the test process triggers any bugs after that, the symbolizer crashes.
+// An example stack trace of such crash:
+//
+// #1  __cxa_throw
+// #2  std::__u::__throw_system_error
+// #3  std::__u::recursive_mutex::lock
+// #4  __sanitizer_llvm::ManagedStaticBase::RegisterManagedStatic
+// #5  __sanitizer_llvm::errorToErrorCode
+// #6  __sanitizer_llvm::getFileAux
+// #7  __sanitizer_llvm::MemoryBuffer::getFileOrSTDIN
+// #10 __sanitizer_llvm::symbolize::LLVMSymbolizer::getOrCreateModuleInfo
+// #13 __sanitizer::Symbolizer::SymbolizeData
+// #14 __tsan::SymbolizeData
+// #16 __tsan::ReportRace
+// #18 __tsan_write4
+// #19 race() () at test/tsan/atexit4.cpp
+// #20 cxa_at_exit_wrapper
+// #21 __cxa_finalize
+// #22 __do_fini
+//
+// For the standalone llvm-symbolizer this does not hurt,
+// we just don't destroy few global objects on exit.
+int __cxa_atexit(void (*f)(void *a), void *arg, void *dso) { return 0; }
+
 }  // extern "C"
