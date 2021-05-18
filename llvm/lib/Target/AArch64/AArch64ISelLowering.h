@@ -1068,6 +1068,13 @@ private:
   bool shouldLocalize(const MachineInstr &MI,
                       const TargetTransformInfo *TTI) const override;
 
+  bool SimplifyDemandedBitsForTargetNode(SDValue Op,
+                                         const APInt &OriginalDemandedBits,
+                                         const APInt &OriginalDemandedElts,
+                                         KnownBits &Known,
+                                         TargetLoweringOpt &TLO,
+                                         unsigned Depth) const override;
+
   // Normally SVE is only used for byte size vectors that do not fit within a
   // NEON vector. This changes when OverrideNEON is true, allowing SVE to be
   // used for 64bit and 128bit vectors as well.
