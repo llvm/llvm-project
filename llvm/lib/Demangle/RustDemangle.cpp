@@ -110,7 +110,7 @@ bool Demangler::demangle(StringView Mangled) {
   }
   Input = Mangled;
 
-  demanglePath(InType::No);
+  demanglePath(rust_demangle::InType::No);
 
   // FIXME parse optional <instantiating-crate>.
 
@@ -160,7 +160,7 @@ void Demangler::demanglePath(InType InType) {
     print("<");
     demangleType();
     print(" as ");
-    demanglePath(InType::Yes);
+    demanglePath(rust_demangle::InType::Yes);
     print(">");
     break;
   }
@@ -168,7 +168,7 @@ void Demangler::demanglePath(InType InType) {
     print("<");
     demangleType();
     print(" as ");
-    demanglePath(InType::Yes);
+    demanglePath(rust_demangle::InType::Yes);
     print(">");
     break;
   }
@@ -211,7 +211,7 @@ void Demangler::demanglePath(InType InType) {
   case 'I': {
     demanglePath(InType);
     // Omit "::" when in a type, where it is optional.
-    if (InType == InType::No)
+    if (InType == rust_demangle::InType::No)
       print("::");
     print("<");
     for (size_t I = 0; !Error && !consumeIf('E'); ++I) {
@@ -456,7 +456,7 @@ void Demangler::demangleType() {
   }
   default:
     Position = Start;
-    demanglePath(InType::Yes);
+    demanglePath(rust_demangle::InType::Yes);
     break;
   }
 }
