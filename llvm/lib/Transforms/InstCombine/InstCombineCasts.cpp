@@ -526,6 +526,7 @@ Instruction *InstCombinerImpl::narrowFunnelShift(TruncInst &Trunc) {
   // even with non-power-of-2 sizes, but it is not a likely scenario.
   Type *DestTy = Trunc.getType();
   unsigned NarrowWidth = DestTy->getScalarSizeInBits();
+  unsigned WideWidth = Trunc.getSrcTy()->getScalarSizeInBits();
   if (!isPowerOf2_32(NarrowWidth))
     return nullptr;
 
@@ -556,8 +557,13 @@ Instruction *InstCombinerImpl::narrowFunnelShift(TruncInst &Trunc) {
   auto matchShiftAmount = [&](Value *L, Value *R, unsigned Width) -> Value * {
     // The shift amounts may add up to the narrow bit width:
     // (shl ShVal0, L) | (lshr ShVal1, Width - L)
-    if (match(R, m_OneUse(m_Sub(m_SpecificInt(Width), m_Specific(L)))))
-      return L;
+    // If this is a funnel shift (different operands are shifted), then the
+    // shift amount can not over-shift (create poison) in the narrow type.
+    unsigned MaxShiftAmountWidth = Log2_32(NarrowWidth);
+    APInt HiBitMask = ~APInt::getLowBitsSet(WideWidth, MaxShiftAmountWidth);
+    if (ShVal0 == ShVal1 || MaskedValueIsZero(L, HiBitMask))
+      if (match(R, m_OneUse(m_Sub(m_SpecificInt(Width), m_Specific(L)))))
+        return L;
 
     // The following patterns currently only work for rotation patterns.
     // TODO: Add more general funnel-shift compatible patterns.
@@ -592,7 +598,6 @@ Instruction *InstCombinerImpl::narrowFunnelShift(TruncInst &Trunc) {
   // The right-shifted value must have high zeros in the wide type (for example
   // from 'zext', 'and' or 'shift'). High bits of the left-shifted value are
   // truncated, so those do not matter.
-  unsigned WideWidth = Trunc.getSrcTy()->getScalarSizeInBits();
   APInt HiBitMask = APInt::getHighBitsSet(WideWidth, WideWidth - NarrowWidth);
   if (!MaskedValueIsZero(ShVal1, HiBitMask, 0, &Trunc))
     return nullptr;
