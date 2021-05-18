@@ -3694,6 +3694,8 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E) {
              TTI->getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy, None,
                                  0);
     }
+    if (isa<InsertElementInst>(VL[0]))
+      return InstructionCost::getInvalid();
     if (E->getOpcode() == Instruction::ExtractElement &&
         allSameType(VL) && allSameBlock(VL)) {
       SmallVector<int> Mask;
