@@ -135,6 +135,26 @@ CHECK: basic::<u64>
 CHECK: basic::<!>
        _RIC5basiczE
 
+; Named types. Test possible paths productions.
+
+CHECK: named::<name>
+       _RIC5namedC4nameE
+
+CHECK: named::<<_>>
+       _RIC5namedMC5cratepE
+
+CHECK: named::<<_ as Name>>
+       _RIC5namedXC5cratepC4NameE
+
+CHECK: named::<<_ as Name>>
+       _RIC5namedYpC4NameE
+
+CHECK: named::<name::Name>
+       _RIC5namedNvC4name4NameE
+
+CHECK: named::<Name<>>
+       _RIC5namedIC4NameEE
+
 ; Integer constants. Test value demangling.
 
 CHECK: integer::<0>
