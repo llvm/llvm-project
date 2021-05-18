@@ -289,6 +289,211 @@ def INT_MEMBAR_SYS : MEMBAR<"membar.sys;", int_nvvm_membar_sys>;
 
 
 //-----------------------------------
+// Async Copy Functions
+//-----------------------------------
+
+multiclass CP_ASYNC_MBARRIER_ARRIVE<string NoInc, string AddrSpace, Intrinsic Intrin> {
+  def _32 : NVPTXInst<(outs), (ins Int32Regs:$addr),
+            !strconcat("cp.async.mbarrier.arrive", NoInc, AddrSpace, ".b64 [$addr];"),
+            [(Intrin Int32Regs:$addr)]>,
+    Requires<[hasPTX70, hasSM80]>;
+  def _64 : NVPTXInst<(outs), (ins Int64Regs:$addr),
+            !strconcat("cp.async.mbarrier.arrive", NoInc, AddrSpace, ".b64 [$addr];"),
+            [(Intrin Int64Regs:$addr)]>,
+    Requires<[hasPTX70, hasSM80]>;
+}
+
+defm CP_ASYNC_MBARRIER_ARRIVE :
+  CP_ASYNC_MBARRIER_ARRIVE<"", "", int_nvvm_cp_async_mbarrier_arrive>;
+defm CP_ASYNC_MBARRIER_ARRIVE_SHARED :
+  CP_ASYNC_MBARRIER_ARRIVE<"", ".shared", int_nvvm_cp_async_mbarrier_arrive_shared>;
+defm CP_ASYNC_MBARRIER_ARRIVE_NOINC :
+  CP_ASYNC_MBARRIER_ARRIVE<".noinc", "", int_nvvm_cp_async_mbarrier_arrive_noinc>;
+defm CP_ASYNC_MBARRIER_ARRIVE_NOINC_SHARED :
+  CP_ASYNC_MBARRIER_ARRIVE<".noinc", ".shared", int_nvvm_cp_async_mbarrier_arrive_noinc_shared>;
+
+multiclass CP_ASYNC_CA_SHARED_GLOBAL_I<string cpsize, Intrinsic Intrin> {
+  def _32 : NVPTXInst<(outs), (ins Int32Regs:$dst, Int32Regs:$src),
+            !strconcat("cp.async.ca.shared.global [$dst], [$src], ", cpsize, ";"),
+            [(Intrin Int32Regs:$dst, Int32Regs:$src)]>,
+    Requires<[hasPTX70, hasSM80]>;
+  def _64 : NVPTXInst<(outs), (ins Int64Regs:$dst, Int64Regs:$src),
+            !strconcat("cp.async.ca.shared.global [$dst], [$src], ", cpsize, ";"),
+            [(Intrin Int64Regs:$dst, Int64Regs:$src)]>,
+    Requires<[hasPTX70, hasSM80]>;
+}
+
+defm CP_ASYNC_CA_SHARED_GLOBAL_4 :
+  CP_ASYNC_CA_SHARED_GLOBAL_I<"4", int_nvvm_cp_async_ca_shared_global_4>;
+
+defm CP_ASYNC_CA_SHARED_GLOBAL_8 :
+  CP_ASYNC_CA_SHARED_GLOBAL_I<"8", int_nvvm_cp_async_ca_shared_global_8>;
+
+defm CP_ASYNC_CA_SHARED_GLOBAL_16 :
+  CP_ASYNC_CA_SHARED_GLOBAL_I<"16", int_nvvm_cp_async_ca_shared_global_16>;
+
+multiclass CP_ASYNC_CG_SHARED_GLOBAL<string cpsize, Intrinsic Intrin> {
+  def _32 : NVPTXInst<(outs), (ins Int32Regs:$dst, Int32Regs:$src),
+            !strconcat("cp.async.cg.shared.global [$dst], [$src], ", cpsize, ";"),
+            [(Intrin Int32Regs:$dst, Int32Regs:$src)]>,
+    Requires<[hasPTX70, hasSM80]>;
+  def _64 : NVPTXInst<(outs), (ins Int64Regs:$dst, Int64Regs:$src),
+            !strconcat("cp.async.cg.shared.global [$dst], [$src], ", cpsize, ";"),
+            [(Intrin Int64Regs:$dst, Int64Regs:$src)]>,
+    Requires<[hasPTX70, hasSM80]>;
+}
+
+defm CP_ASYNC_CG_SHARED_GLOBAL_16 :
+  CP_ASYNC_CG_SHARED_GLOBAL<"16", int_nvvm_cp_async_cg_shared_global_16>;
+
+def CP_ASYNC_COMMIT_GROUP :
+  NVPTXInst<(outs), (ins), "cp.async.commit_group;", [(int_nvvm_cp_async_commit_group)]>,
+  Requires<[hasPTX70, hasSM80]>;
+
+def CP_ASYNC_WAIT_GROUP :
+  NVPTXInst<(outs), (ins i32imm:$n), "cp.async.wait_group $n;",
+  [(int_nvvm_cp_async_wait_group (i32 timm:$n))]>,
+  Requires<[hasPTX70, hasSM80]>;
+
+def CP_ASYNC_WAIT_ALL :
+  NVPTXInst<(outs), (ins), "cp.async.wait_all;",
+  [(int_nvvm_cp_async_wait_all)]>,
+  Requires<[hasPTX70, hasSM80]>;
+
+//-----------------------------------
+// MBarrier Functions
+//-----------------------------------
+
+multiclass MBARRIER_INIT<string AddrSpace, Intrinsic Intrin> {
+  def _32 : NVPTXInst<(outs), (ins Int32Regs:$addr, Int32Regs:$count),
+           !strconcat("mbarrier.init", AddrSpace, ".b64 [$addr], $count;"),
+    [(Intrin Int32Regs:$addr, Int32Regs:$count)]>,
+    Requires<[hasPTX70, hasSM80]>;
+  def _64 : NVPTXInst<(outs), (ins Int64Regs:$addr, Int32Regs:$count),
+           !strconcat("mbarrier.init", AddrSpace, ".b64 [$addr], $count;"),
+    [(Intrin Int64Regs:$addr, Int32Regs:$count)]>,
+    Requires<[hasPTX70, hasSM80]>;
+}
+
+defm MBARRIER_INIT : MBARRIER_INIT<"", int_nvvm_mbarrier_init>;
+defm MBARRIER_INIT_SHARED : MBARRIER_INIT<".shared",
+                                          int_nvvm_mbarrier_init_shared>;
+
+multiclass MBARRIER_INVAL<string AddrSpace, Intrinsic Intrin> {
+  def _32 : NVPTXInst<(outs), (ins Int32Regs:$addr),
+           !strconcat("mbarrier.inval", AddrSpace, ".b64 [$addr];"),
+    [(Intrin Int32Regs:$addr)]>,
+    Requires<[hasPTX70, hasSM80]>;
+  def _64 : NVPTXInst<(outs), (ins Int64Regs:$addr),
+           !strconcat("mbarrier.inval", AddrSpace, ".b64 [$addr];"),
+    [(Intrin Int64Regs:$addr)]>,
+    Requires<[hasPTX70, hasSM80]>;
+}
+
+defm MBARRIER_INVAL : MBARRIER_INVAL<"", int_nvvm_mbarrier_inval>;
+defm MBARRIER_INVAL_SHARED : MBARRIER_INVAL<".shared",
+                                            int_nvvm_mbarrier_inval_shared>;
+
+multiclass MBARRIER_ARRIVE<string AddrSpace, Intrinsic Intrin> {
+  def _32 : NVPTXInst<(outs Int64Regs:$state), (ins Int32Regs:$addr),
+           !strconcat("mbarrier.arrive", AddrSpace, ".b64 $state, [$addr];"),
+    [(set Int64Regs:$state, (Intrin Int32Regs:$addr))]>,
+    Requires<[hasPTX70, hasSM80]>;
+  def _64 : NVPTXInst<(outs Int64Regs:$state), (ins Int64Regs:$addr),
+           !strconcat("mbarrier.arrive", AddrSpace, ".b64 $state, [$addr];"),
+    [(set Int64Regs:$state, (Intrin Int64Regs:$addr))]>,
+    Requires<[hasPTX70, hasSM80]>;
+}
+
+defm MBARRIER_ARRIVE : MBARRIER_ARRIVE<"", int_nvvm_mbarrier_arrive>;
+defm MBARRIER_ARRIVE_SHARED :
+  MBARRIER_ARRIVE<".shared", int_nvvm_mbarrier_arrive_shared>;
+
+multiclass MBARRIER_ARRIVE_NOCOMPLETE<string AddrSpace, Intrinsic Intrin> {
+  def _32 : NVPTXInst<(outs Int64Regs:$state),
+           (ins Int32Regs:$addr, Int32Regs:$count),
+           !strconcat("mbarrier.arrive.noComplete", AddrSpace,
+                      ".b64 $state, [$addr], $count;"),
+    [(set Int64Regs:$state, (Intrin Int32Regs:$addr, Int32Regs:$count))]>,
+    Requires<[hasPTX70, hasSM80]>;
+  def _64 : NVPTXInst<(outs Int64Regs:$state),
+           (ins Int64Regs:$addr, Int32Regs:$count),
+           !strconcat("mbarrier.arrive.noComplete", AddrSpace,
+                      ".b64 $state, [$addr], $count;"),
+    [(set Int64Regs:$state, (Intrin Int64Regs:$addr, Int32Regs:$count))]>,
+    Requires<[hasPTX70, hasSM80]>;
+}
+
+defm MBARRIER_ARRIVE_NOCOMPLETE :
+  MBARRIER_ARRIVE_NOCOMPLETE<"", int_nvvm_mbarrier_arrive_noComplete>;
+defm MBARRIER_ARRIVE_NOCOMPLETE_SHARED :
+  MBARRIER_ARRIVE_NOCOMPLETE<".shared", int_nvvm_mbarrier_arrive_noComplete_shared>;
+
+multiclass MBARRIER_ARRIVE_DROP<string AddrSpace, Intrinsic Intrin> {
+  def _32 : NVPTXInst<(outs Int64Regs:$state), (ins Int32Regs:$addr),
+           !strconcat("mbarrier.arrive_drop", AddrSpace,
+                      ".b64 $state, [$addr];"),
+           [(set Int64Regs:$state, (Intrin Int32Regs:$addr))]>,
+    Requires<[hasPTX70, hasSM80]>;
+  def _64 : NVPTXInst<(outs Int64Regs:$state), (ins Int64Regs:$addr),
+           !strconcat("mbarrier.arrive_drop", AddrSpace,
+                      ".b64 $state, [$addr];"),
+           [(set Int64Regs:$state, (Intrin Int64Regs:$addr))]>,
+    Requires<[hasPTX70, hasSM80]>;
+}
+
+defm MBARRIER_ARRIVE_DROP :
+  MBARRIER_ARRIVE_DROP<"", int_nvvm_mbarrier_arrive_drop>;
+defm MBARRIER_ARRIVE_DROP_SHARED :
+  MBARRIER_ARRIVE_DROP<".shared", int_nvvm_mbarrier_arrive_drop_shared>;
+
+multiclass MBARRIER_ARRIVE_DROP_NOCOMPLETE<string AddrSpace, Intrinsic Intrin> {
+  def _32 : NVPTXInst<(outs Int64Regs:$state),
+           (ins Int32Regs:$addr, Int32Regs:$count),
+           !strconcat("mbarrier.arrive_drop.noComplete", AddrSpace,
+                      ".b64 $state, [$addr], $count;"),
+           [(set Int64Regs:$state, (Intrin Int32Regs:$addr, Int32Regs:$count))]>,
+    Requires<[hasPTX70, hasSM80]>;
+  def _64 : NVPTXInst<(outs Int64Regs:$state),
+           (ins Int64Regs:$addr, Int32Regs:$count),
+           !strconcat("mbarrier.arrive_drop.noComplete", AddrSpace,
+                      ".b64 $state, [$addr], $count;"),
+           [(set Int64Regs:$state, (Intrin Int64Regs:$addr, Int32Regs:$count))]>,
+    Requires<[hasPTX70, hasSM80]>;
+}
+
+defm MBARRIER_ARRIVE_DROP_NOCOMPLETE :
+  MBARRIER_ARRIVE_DROP_NOCOMPLETE<"", int_nvvm_mbarrier_arrive_drop_noComplete>;
+defm MBARRIER_ARRIVE_DROP_NOCOMPLETE_SHARED :
+  MBARRIER_ARRIVE_DROP_NOCOMPLETE<".shared",
+                       int_nvvm_mbarrier_arrive_drop_noComplete_shared>;
+
+multiclass MBARRIER_TEST_WAIT<string AddrSpace, Intrinsic Intrin> {
+  def _32 : NVPTXInst<(outs Int1Regs:$res), (ins Int32Regs:$addr, Int64Regs:$state),
+           !strconcat("mbarrier.test_wait", AddrSpace, ".b64 $res, [$addr], $state;"),
+           [(set Int1Regs:$res, (Intrin Int32Regs:$addr, Int64Regs:$state))]>,
+    Requires<[hasPTX70, hasSM80]>;
+  def _64 : NVPTXInst<(outs Int1Regs:$res), (ins Int64Regs:$addr, Int64Regs:$state),
+           !strconcat("mbarrier.test_wait", AddrSpace, ".b64 $res, [$addr], $state;"),
+           [(set Int1Regs:$res, (Intrin Int64Regs:$addr, Int64Regs:$state))]>,
+    Requires<[hasPTX70, hasSM80]>;
+}
+
+defm MBARRIER_TEST_WAIT :
+  MBARRIER_TEST_WAIT<"", int_nvvm_mbarrier_test_wait>;
+defm MBARRIER_TEST_WAIT_SHARED :
+  MBARRIER_TEST_WAIT<".shared", int_nvvm_mbarrier_test_wait_shared>;
+
+class MBARRIER_PENDING_COUNT<Intrinsic Intrin> :
+           NVPTXInst<(outs Int32Regs:$res), (ins Int64Regs:$state),
+           "mbarrier.pending_count.b64 $res, $state;",
+           [(set Int32Regs:$res, (Intrin Int64Regs:$state))]>,
+    Requires<[hasPTX70, hasSM80]>;
+
+def MBARRIER_PENDING_COUNT :
+  MBARRIER_PENDING_COUNT<int_nvvm_mbarrier_pending_count>;
+
+//-----------------------------------
 // Math Functions
 //-----------------------------------
 
