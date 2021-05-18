@@ -276,6 +276,62 @@ for.body:                                         ; preds = %entry, %for.body
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
+define void @test_memset_preheader(i8* %x, i8* %y, i32 %n) {
+; CHECK-LABEL: test_memset_preheader:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    cbz r2, .LBB6_5
+; CHECK-NEXT:  @ %bb.1: @ %prehead
+; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    mov r12, r0
+; CHECK-NEXT:    mov r3, r2
+; CHECK-NEXT:    wlstp.8 lr, r3, .LBB6_3
+; CHECK-NEXT:  .LBB6_2: @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vstrb.8 q0, [r12], #16
+; CHECK-NEXT:    letp lr, .LBB6_2
+; CHECK-NEXT:  .LBB6_3: @ %prehead
+; CHECK-NEXT:    dls lr, r2
+; CHECK-NEXT:    mov r12, r0
+; CHECK-NEXT:  .LBB6_4: @ %for.body
+; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldrb r3, [r12], #1
+; CHECK-NEXT:    strb r3, [r1], #1
+; CHECK-NEXT:    le lr, .LBB6_4
+; CHECK-NEXT:  .LBB6_5: @ %for.cond.cleanup
+; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    wlstp.8 lr, r2, .LBB6_7
+; CHECK-NEXT:  .LBB6_6: @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vstrb.8 q0, [r0], #16
+; CHECK-NEXT:    letp lr, .LBB6_6
+; CHECK-NEXT:  .LBB6_7: @ %for.cond.cleanup
+; CHECK-NEXT:    pop {r7, pc}
+entry:
+  %cmp6 = icmp ne i32 %n, 0
+  br i1 %cmp6, label %prehead, label %for.cond.cleanup
+
+prehead:
+  call void @llvm.memset.p0i8.i32(i8* %x, i8 0, i32 %n, i1 false)
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.09 = phi i32 [ %inc, %for.body ], [ 0, %prehead ]
+  %x.addr.08 = phi i8* [ %add.ptr, %for.body ], [ %x, %prehead ]
+  %y.addr.07 = phi i8* [ %add.ptr1, %for.body ], [ %y, %prehead ]
+  %add.ptr = getelementptr inbounds i8, i8* %x.addr.08, i32 1
+  %add.ptr1 = getelementptr inbounds i8, i8* %y.addr.07, i32 1
+  %l = load i8, i8* %x.addr.08
+  store i8 %l, i8* %y.addr.07
+  %inc = add nuw nsw i32 %i.09, 1
+  %exitcond.not = icmp eq i32 %inc, %n
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  call void @llvm.memset.p0i8.i32(i8* %x, i8 0, i32 %n, i1 false)
+  ret void
+}
+
+
 
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i32, i1 immarg)
 declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1 immarg)

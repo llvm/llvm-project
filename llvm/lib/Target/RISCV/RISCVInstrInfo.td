@@ -343,8 +343,15 @@ def ImmSubFrom32 : SDNodeXForm<imm, [{
                                    N->getValueType(0));
 }]>;
 
-// Check if an addition can be broken to a pair of ADDI.
-def AddiPair : ComplexPattern<XLenVT, 1, "selectAddiPair">;
+// Check if (add r, imm) can be optimized to (ADDI (ADDI r, imm0), imm1),
+// in which imm = imm0 + imm1 and both imm0 and imm1 are simm12.
+def AddiPair : PatLeaf<(imm), [{
+  if (!N->hasOneUse())
+    return false;
+  // The immediate operand must be in range [-4096,-2049] or [2048,4094].
+  int64_t Imm = N->getSExtValue();
+  return (-4096 <= Imm && Imm <= -2049) || (2048 <= Imm && Imm <= 4094);
+}]>;
 
 // Return imm/2.
 def AddiPairImmA : SDNodeXForm<imm, [{
@@ -1299,14 +1306,14 @@ def : Pat<(trap), (UNIMP)>;
 def : Pat<(debugtrap), (EBREAK)>;
 
 /// Simple optimization
-def : Pat<(add GPR:$rs1, (AddiPair GPR:$rs2)),
-          (ADDI (ADDI GPR:$rs1, (AddiPairImmB GPR:$rs2)),
+def : Pat<(add GPR:$rs1, (AddiPair:$rs2)),
+          (ADDI (ADDI GPR:$rs1, (AddiPairImmB AddiPair:$rs2)),
                 (AddiPairImmA GPR:$rs2))>;
 
 let Predicates = [IsRV64] in {
-def : Pat<(sext_inreg (add_oneuse GPR:$rs1, (AddiPair GPR:$rs2)), i32),
-          (ADDIW (ADDIW GPR:$rs1, (AddiPairImmB GPR:$rs2)),
-                 (AddiPairImmA GPR:$rs2))>;
+def : Pat<(sext_inreg (add_oneuse GPR:$rs1, (AddiPair:$rs2)), i32),
+          (ADDIW (ADDIW GPR:$rs1, (AddiPairImmB AddiPair:$rs2)),
+                 (AddiPairImmA AddiPair:$rs2))>;
 }
 
 //===----------------------------------------------------------------------===//

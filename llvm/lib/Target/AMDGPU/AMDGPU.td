@@ -226,6 +226,12 @@ def FeatureNSAtoVMEMBug : SubtargetFeature<"nsa-to-vmem-bug",
   "MIMG-NSA followed by VMEM fail if EXEC_LO or EXEC_HI equals zero"
 >;
 
+def FeatureNSAClauseBug : SubtargetFeature<"nsa-clause-bug",
+  "HasNSAClauseBug",
+  "true",
+  "MIMG-NSA in a hard clause has unpredictable results on GFX10.1"
+>;
+
 def FeatureFlatSegmentOffsetBug : SubtargetFeature<"flat-segment-offset-bug",
   "HasFlatSegmentOffsetBug",
   "true",
@@ -725,6 +731,12 @@ def FeaturePackedTID : SubtargetFeature<"packed-tid",
   "Workitem IDs are packed into v0 at kernel launch"
 >;
 
+def FeatureArchitectedFlatScratch : SubtargetFeature<"architected-flat-scratch",
+  "HasArchitectedFlatScratch",
+  "true",
+  "Flat Scratch register is a readonly SPI initialized architected register"
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -1000,6 +1012,7 @@ def FeatureGroup {
     FeatureVcmpxExecWARHazard,
     FeatureLdsBranchVmemWARHazard,
     FeatureNSAtoVMEMBug,
+    FeatureNSAClauseBug,
     FeatureOffset3fBug,
     FeatureFlatSegmentOffsetBug,
     FeatureNegativeUnalignedScratchOffsetBug

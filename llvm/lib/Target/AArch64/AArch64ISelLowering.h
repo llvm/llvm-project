@@ -101,6 +101,9 @@ enum NodeType : unsigned {
   UMAX_PRED,
   UMIN_PRED,
 
+  // Unpredicated vector instructions
+  BIC,
+
   // Predicated instructions with the result of inactive lanes provided by the
   // last operand.
   FABS_MERGE_PASSTHRU,

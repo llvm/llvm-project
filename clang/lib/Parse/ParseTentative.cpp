@@ -353,8 +353,8 @@ struct Parser::ConditionDeclarationOrInitStatementState {
       if (CanBeForRangeDecl) {
         // Skip until we hit a ')', ';', or a ':' with no matching '?'.
         // The final case is a for range declaration, the rest are not.
+        unsigned QuestionColonDepth = 0;
         while (true) {
-          unsigned QuestionColonDepth = 0;
           P.SkipUntil({tok::r_paren, tok::semi, tok::question, tok::colon},
                       StopBeforeMatch);
           if (P.Tok.is(tok::question))

@@ -44,6 +44,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  cos_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    cos_test.cpp
+  DEPENDS
+    libc.src.math.cos
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
   sinf_test
   NEED_MPFR
   SUITE
@@ -56,6 +68,18 @@ add_fp_unittest(
     libc.include.errno
     libc.src.math.sinf
     libc.utils.CPP.standalone_cpp
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  sin_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    sin_test.cpp
+  DEPENDS
+    libc.src.math.sin
     libc.utils.FPUtil.fputil
 )
 
@@ -1129,6 +1153,18 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.fma
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  tan_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    tan_test.cpp
+  DEPENDS
+    libc.src.math.tan
     libc.utils.FPUtil.fputil
 )
 

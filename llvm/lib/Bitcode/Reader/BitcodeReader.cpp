@@ -1524,6 +1524,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SwiftError;
   case bitc::ATTR_KIND_SWIFT_SELF:
     return Attribute::SwiftSelf;
+  case bitc::ATTR_KIND_SWIFT_ASYNC:
+    return Attribute::SwiftAsync;
   case bitc::ATTR_KIND_UW_TABLE:
     return Attribute::UWTable;
   case bitc::ATTR_KIND_VSCALE_RANGE:
@@ -1805,6 +1807,13 @@ Error BitcodeReader::parseTypeTableBody() {
           !PointerType::isValidElementType(ResultTy))
         return error("Invalid type");
       ResultTy = PointerType::get(ResultTy, AddressSpace);
+      break;
+    }
+    case bitc::TYPE_CODE_OPAQUE_POINTER: { // OPAQUE_POINTER: [addrspace]
+      if (Record.size() != 1)
+        return error("Invalid record");
+      unsigned AddressSpace = Record[0];
+      ResultTy = PointerType::get(Context, AddressSpace);
       break;
     }
     case bitc::TYPE_CODE_FUNCTION_OLD: {

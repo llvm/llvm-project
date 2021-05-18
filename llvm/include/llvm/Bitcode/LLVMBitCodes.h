@@ -168,8 +168,10 @@ enum TypeCodes {
 
   TYPE_CODE_TOKEN = 22, // TOKEN
 
-  TYPE_CODE_BFLOAT = 23, // BRAIN FLOATING POINT
-  TYPE_CODE_X86_AMX = 24 // X86 AMX
+  TYPE_CODE_BFLOAT = 23,  // BRAIN FLOATING POINT
+  TYPE_CODE_X86_AMX = 24, // X86 AMX
+
+  TYPE_CODE_OPAQUE_POINTER = 25, // OPAQUE_POINTER: [addrspace]
 };
 
 enum OperandBundleTagCode {
@@ -663,6 +665,7 @@ enum AttributeKindCodes {
   ATTR_KIND_HOT = 72,
   ATTR_KIND_NO_PROFILE = 73,
   ATTR_KIND_VSCALE_RANGE = 74,
+  ATTR_KIND_SWIFT_ASYNC = 75,
 };
 
 enum ComdatSelectionKindCodes {

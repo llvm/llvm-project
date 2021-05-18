@@ -10,10 +10,8 @@
 soffset
 ===========================
 
-An unsigned byte offset added to the base address to get memory address.
-
-.. WARNING:: Assembler currently supports 20-bit offsets only. Use :ref:`uimm20<amdgpu_synid_uimm20>` instead of :ref:`uimm21<amdgpu_synid_uimm21>`.
+An unsigned 20-bit offset added to the base address to get memory address.
 
 *Size:* 1 dword.
 
-*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`flat_scratch<amdgpu_synid_flat_scratch>`, :ref:`xnack<amdgpu_synid_xnack>`, :ref:`vcc<amdgpu_synid_vcc>`, :ref:`ttmp<amdgpu_synid_ttmp>`, :ref:`m0<amdgpu_synid_m0>`, :ref:`uimm21<amdgpu_synid_uimm21>`
+*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`flat_scratch<amdgpu_synid_flat_scratch>`, :ref:`xnack<amdgpu_synid_xnack>`, :ref:`vcc<amdgpu_synid_vcc>`, :ref:`ttmp<amdgpu_synid_ttmp>`, :ref:`m0<amdgpu_synid_m0>`, :ref:`uimm20<amdgpu_synid_uimm20>`

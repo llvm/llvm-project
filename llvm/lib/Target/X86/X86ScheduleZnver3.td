@@ -1530,12 +1530,103 @@ def : InstRW<[Zn3WriteZeroIdiomEFLAGS], (instrs CMP8rr,  CMP8rr_REV,
                                                 CMP32rr, CMP32rr_REV,
                                                 CMP64rr, CMP64rr_REV)>;
 
+def Zn3WriteFZeroIdiom : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [Zn3WriteZeroLatency]>,
+    SchedVar<NoSchedPred,                          [WriteFLogic]>
+]>;
+// NOTE: XORPSrr, XORPDrr are not zero-cycle!
+def : InstRW<[Zn3WriteFZeroIdiom], (instrs VXORPSrr, VXORPDrr,
+                                           VANDNPSrr, VANDNPDrr)>;
+
+def Zn3WriteFZeroIdiomY : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [Zn3WriteZeroLatency]>,
+    SchedVar<NoSchedPred,                          [WriteFLogicY]>
+]>;
+def : InstRW<[Zn3WriteFZeroIdiomY], (instrs VXORPSYrr, VXORPDYrr,
+                                            VANDNPSYrr, VANDNPDYrr)>;
+
+def Zn3WriteVZeroIdiomLogicX : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [Zn3WriteZeroLatency]>,
+    SchedVar<NoSchedPred,                          [WriteVecLogicX]>
+]>;
+// NOTE: PXORrr,PANDNrr are not zero-cycle!
+def : InstRW<[Zn3WriteVZeroIdiomLogicX], (instrs VPXORrr, VPANDNrr)>;
+
+def Zn3WriteVZeroIdiomLogicY : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [Zn3WriteZeroLatency]>,
+    SchedVar<NoSchedPred,                          [WriteVecLogicY]>
+]>;
+def : InstRW<[Zn3WriteVZeroIdiomLogicY], (instrs VPXORYrr, VPANDNYrr)>;
+
+def Zn3WriteVZeroIdiomALUX : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [Zn3WriteZeroLatency]>,
+    SchedVar<NoSchedPred,                          [WriteVecALUX]>
+]>;
+// NOTE: PSUBBrr, PSUBWrr, PSUBDrr, PSUBQrr,
+//       PCMPGTBrr, PCMPGTWrr, PCMPGTDrr, PCMPGTQrr are not zero-cycle!
+def : InstRW<[Zn3WriteVZeroIdiomALUX],
+             (instrs VPSUBBrr, VPSUBWrr, VPSUBDrr, VPSUBQrr,
+                     VPCMPGTBrr, VPCMPGTWrr, VPCMPGTDrr, VPCMPGTQrr)>;
+
+def Zn3WriteVZeroIdiomALUY : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [Zn3WriteZeroLatency]>,
+    SchedVar<NoSchedPred,                          [WriteVecALUY]>
+]>;
+def : InstRW<[Zn3WriteVZeroIdiomALUY],
+             (instrs VPSUBBYrr, VPSUBWYrr, VPSUBDYrr, VPSUBQYrr,
+                     VPCMPGTBYrr, VPCMPGTWYrr, VPCMPGTDYrr, VPCMPGTQYrr)>;
+
 def : IsZeroIdiomFunction<[
   // GPR Zero-idioms.
   DepBreakingClass<[ XOR32rr, XOR32rr_REV,
                      XOR64rr, XOR64rr_REV,
                      SUB32rr, SUB32rr_REV,
                      SUB64rr, SUB64rr_REV ], ZeroIdiomPredicate>,
+
+  // SSE XMM Zero-idioms.
+  DepBreakingClass<[
+    // fp variants.
+    XORPSrr, XORPDrr,
+    ANDNPSrr, ANDNPDrr,
+
+    // int variants.
+    PXORrr,
+    PANDNrr,
+    PSUBBrr, PSUBWrr, PSUBDrr, PSUBQrr,
+    PSUBSBrr, PSUBSWrr,
+    PSUBUSBrr, PSUBUSWrr,
+    PCMPGTBrr, PCMPGTWrr, PCMPGTDrr, PCMPGTQrr
+  ], ZeroIdiomPredicate>,
+
+  // AVX XMM Zero-idioms.
+  DepBreakingClass<[
+    // fp variants.
+    VXORPSrr, VXORPDrr,
+    VANDNPSrr, VANDNPDrr,
+
+    // int variants.
+    VPXORrr,
+    VPANDNrr,
+    VPSUBBrr, VPSUBWrr, VPSUBDrr, VPSUBQrr,
+    VPSUBSBrr, VPSUBSWrr,
+    VPSUBUSBrr, VPSUBUSWrr,
+    VPCMPGTBrr, VPCMPGTWrr, VPCMPGTDrr, VPCMPGTQrr,
+  ], ZeroIdiomPredicate>,
+
+  // AVX YMM Zero-idioms.
+  DepBreakingClass<[
+    // fp variants.
+    VXORPSYrr, VXORPDYrr,
+    VANDNPSYrr, VANDNPDYrr,
+
+    // int variants.
+    VPXORYrr,
+    VPANDNYrr,
+    VPSUBBYrr, VPSUBWYrr, VPSUBDYrr, VPSUBQYrr,
+    VPSUBSBYrr, VPSUBSWYrr,
+    VPSUBUSBYrr, VPSUBUSWYrr,
+    VPCMPGTBYrr, VPCMPGTWYrr, VPCMPGTDYrr, VPCMPGTQYrr
+  ], ZeroIdiomPredicate>,
 ]>;
 
 def : IsDepBreakingFunction<[

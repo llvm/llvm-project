@@ -42,7 +42,7 @@ public:
 
     bool result = Matcher.MatchAndExplain(*Holder.Exp, listener);
 
-    if (result)
+    if (result || !listener->IsInterested())
       return result;
     *listener << "(";
     Matcher.DescribeNegationTo(listener->stream());

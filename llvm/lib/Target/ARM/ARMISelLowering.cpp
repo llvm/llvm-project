@@ -11319,7 +11319,7 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     // 1) A terminator(t2WhileLoopStart) will be placed at that site.
     // 2) Since a TPLoopBody will be added later, any phis in successive blocks
     //    need to be updated. splitAt() already handles this.
-    TpExit = BB->splitAt(MI);
+    TpExit = BB->splitAt(MI, false);
     if (TpExit == BB) {
       assert(BB->canFallThrough() && "Exit Block must be Fallthrough of the "
                                      "block containing memcpy/memset Pseudo");
@@ -11327,7 +11327,7 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       BuildMI(BB, dl, TII->get(ARM::t2B))
           .addMBB(TpExit)
           .add(predOps(ARMCC::AL));
-      TpExit = BB->splitAt(MI);
+      TpExit = BB->splitAt(MI, false);
     }
 
     // Add logic for iteration count

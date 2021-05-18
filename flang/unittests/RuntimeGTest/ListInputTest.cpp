@@ -183,9 +183,9 @@ TEST_P(SimpleListInputTest, TestListInput) {
   }
 }
 
-INSTANTIATE_TEST_CASE_P(SimpleListInputTestInstantiation, SimpleListInputTest,
+INSTANTIATE_TEST_SUITE_P(SimpleListInputTestInstantiation, SimpleListInputTest,
     testing::Values(std::make_tuple("", std::vector<int>{}),
         std::make_tuple("0", std::vector<int>{}),
         std::make_tuple("1", std::vector<int>{1}),
         std::make_tuple("1, 2", std::vector<int>{1, 2}),
-        std::make_tuple("3*2", std::vector<int>{2, 2, 2})), );
+        std::make_tuple("3*2", std::vector<int>{2, 2, 2})));

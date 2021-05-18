@@ -22,6 +22,21 @@ def ConvertElementwiseToLinalg : FunctionPass<"convert-elementwise-to-linalg"> {
   let dependentDialects = ["linalg::LinalgDialect", "memref::MemRefDialect"];
 }
 
+def LinalgComprehensiveFuncBufferize :
+    FunctionPass<"linalg-comprehensive-func-bufferize"> {
+  let summary = "Bufferize (tensor into memref) the body of a FuncOp and try "
+    "to reuse the buffers for those arguments that "
+    "a) have been annotated 'inplaceable' and "
+    "b) whose buffer uses would be free of memory hazards";
+  let description = [{
+    This pass implements a cross-dialect bufferization approach and performs an
+    analysis to determine which op operands and results may be bufferized in the
+    same buffers. The analysis is performed on SSA use-def chains starting from
+    function operands that are annotated with the 'inplaceable' attribute
+  }];
+  let constructor = "mlir::createLinalgComprehensiveFuncBufferizePass()";
+}
+
 def LinalgFoldUnitExtentDims : FunctionPass<"linalg-fold-unit-extent-dims"> {
   let summary = "Remove unit-extent dimension in Linalg ops on tensors";
   let constructor = "mlir::createLinalgFoldUnitExtentDimsPass()";

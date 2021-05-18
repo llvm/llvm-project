@@ -280,3 +280,8 @@ def : Pat<(atomic_cmp_swap_32 GPR64:$addr, GPR32:$desired, GPR32:$new),
 def : Pat<(atomic_cmp_swap_64 GPR64:$addr, GPR64:$desired, GPR64:$new),
           (CMP_SWAP_64 GPR64:$addr, GPR64:$desired, GPR64:$new)>;
 }
+
+def : Pat<(int_aarch64_stlxp GPR64:$lo, GPR64:$hi, GPR64:$addr),
+          (STLXPX GPR64:$lo, GPR64:$hi, GPR64:$addr)>;
+def : Pat<(int_aarch64_stxp GPR64:$lo, GPR64:$hi, GPR64:$addr),
+          (STXPX GPR64:$lo, GPR64:$hi, GPR64:$addr)>;

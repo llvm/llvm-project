@@ -228,7 +228,7 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     }
     // 1. Get vlenb && multiply vlen with the number of vector registers.
     ScalableFactorRegister =
-        TII->getVLENFactoredAmount(MF, MBB, II, ScalableValue);
+        TII->getVLENFactoredAmount(MF, MBB, II, DL, ScalableValue);
   }
 
   if (!isInt<12>(Offset.getFixed())) {

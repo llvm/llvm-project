@@ -111,8 +111,8 @@ static cl::opt<unsigned> PHICSENumPHISmallSize(
         "perform a (faster!) exhaustive search instead of set-driven one."));
 
 // Max recursion depth for collectBitParts used when detecting bswap and
-// bitreverse idioms
-static const unsigned BitPartRecursionMaxDepth = 64;
+// bitreverse idioms.
+static const unsigned BitPartRecursionMaxDepth = 48;
 
 //===----------------------------------------------------------------------===//
 //  Local constant propagation.
@@ -738,9 +738,7 @@ void llvm::MergeBasicBlockIntoOnlyPred(BasicBlock *DestBB,
   BasicBlock *PredBB = DestBB->getSinglePredecessor();
   assert(PredBB && "Block doesn't have a single predecessor!");
 
-  bool ReplaceEntryBB = false;
-  if (PredBB == &DestBB->getParent()->getEntryBlock())
-    ReplaceEntryBB = true;
+  bool ReplaceEntryBB = PredBB->isEntryBlock();
 
   // DTU updates: Collect all the edges that enter
   // PredBB. These dominator edges will be redirected to DestBB.
@@ -2881,7 +2879,8 @@ struct BitPart {
 /// does not invalidate internal references (std::map instead of DenseMap).
 static const Optional<BitPart> &
 collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
-                std::map<Value *, Optional<BitPart>> &BPS, int Depth) {
+                std::map<Value *, Optional<BitPart>> &BPS, int Depth,
+                bool &FoundRoot) {
   auto I = BPS.find(V);
   if (I != BPS.end())
     return I->second;
@@ -2905,17 +2904,18 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
 
     // If this is an or instruction, it may be an inner node of the bswap.
     if (match(V, m_Or(m_Value(X), m_Value(Y)))) {
-      const auto &A =
-          collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
-      const auto &B =
-          collectBitParts(Y, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
-      if (!A || !B)
+      // Check we have both sources and they are from the same provider.
+      const auto &A = collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS,
+                                      Depth + 1, FoundRoot);
+      if (!A || !A->Provider)
+        return Result;
+
+      const auto &B = collectBitParts(Y, MatchBSwaps, MatchBitReversals, BPS,
+                                      Depth + 1, FoundRoot);
+      if (!B || A->Provider != B->Provider)
         return Result;
 
       // Try and merge the two together.
-      if (!A->Provider || A->Provider != B->Provider)
-        return Result;
-
       Result = BitPart(A->Provider, BitWidth);
       for (unsigned BitIdx = 0; BitIdx < BitWidth; ++BitIdx) {
         if (A->Provenance[BitIdx] != BitPart::Unset &&
@@ -2940,8 +2940,12 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
       if (BitShift.uge(BitWidth))
         return Result;
 
-      const auto &Res =
-          collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
+      // For bswap-only, limit shift amounts to whole bytes, for an early exit.
+      if (!MatchBitReversals && (BitShift.getZExtValue() % 8) != 0)
+        return Result;
+
+      const auto &Res = collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS,
+                                        Depth + 1, FoundRoot);
       if (!Res)
         return Result;
       Result = Res;
@@ -2970,8 +2974,8 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
       if (!MatchBitReversals && (NumMaskedBits % 8) != 0)
         return Result;
 
-      const auto &Res =
-          collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
+      const auto &Res = collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS,
+                                        Depth + 1, FoundRoot);
       if (!Res)
         return Result;
       Result = Res;
@@ -2985,8 +2989,8 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
 
     // If this is a zext instruction zero extend the result.
     if (match(V, m_ZExt(m_Value(X)))) {
-      const auto &Res =
-          collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
+      const auto &Res = collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS,
+                                        Depth + 1, FoundRoot);
       if (!Res)
         return Result;
 
@@ -3001,8 +3005,8 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
 
     // If this is a truncate instruction, extract the lower bits.
     if (match(V, m_Trunc(m_Value(X)))) {
-      const auto &Res =
-          collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
+      const auto &Res = collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS,
+                                        Depth + 1, FoundRoot);
       if (!Res)
         return Result;
 
@@ -3015,8 +3019,8 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
     // BITREVERSE - most likely due to us previous matching a partial
     // bitreverse.
     if (match(V, m_BitReverse(m_Value(X)))) {
-      const auto &Res =
-          collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
+      const auto &Res = collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS,
+                                        Depth + 1, FoundRoot);
       if (!Res)
         return Result;
 
@@ -3028,8 +3032,8 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
 
     // BSWAP - most likely due to us previous matching a partial bswap.
     if (match(V, m_BSwap(m_Value(X)))) {
-      const auto &Res =
-          collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
+      const auto &Res = collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS,
+                                        Depth + 1, FoundRoot);
       if (!Res)
         return Result;
 
@@ -3055,13 +3059,19 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
       if (cast<IntrinsicInst>(I)->getIntrinsicID() == Intrinsic::fshr)
         ModAmt = BitWidth - ModAmt;
 
-      const auto &LHS =
-          collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
-      const auto &RHS =
-          collectBitParts(Y, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
+      // For bswap-only, limit shift amounts to whole bytes, for an early exit.
+      if (!MatchBitReversals && (ModAmt % 8) != 0)
+        return Result;
 
       // Check we have both sources and they are from the same provider.
-      if (!LHS || !RHS || !LHS->Provider || LHS->Provider != RHS->Provider)
+      const auto &LHS = collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS,
+                                        Depth + 1, FoundRoot);
+      if (!LHS || !LHS->Provider)
+        return Result;
+
+      const auto &RHS = collectBitParts(Y, MatchBSwaps, MatchBitReversals, BPS,
+                                        Depth + 1, FoundRoot);
+      if (!RHS || LHS->Provider != RHS->Provider)
         return Result;
 
       unsigned StartBitRHS = BitWidth - ModAmt;
@@ -3074,8 +3084,14 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
     }
   }
 
-  // Okay, we got to something that isn't a shift, 'or' or 'and'.  This must be
-  // the input value to the bswap/bitreverse.
+  // If we've already found a root input value then we're never going to merge
+  // these back together.
+  if (FoundRoot)
+    return Result;
+
+  // Okay, we got to something that isn't a shift, 'or', 'and', etc. This must
+  // be the root input value to the bswap/bitreverse.
+  FoundRoot = true;
   Result = BitPart(V, BitWidth);
   for (unsigned BitIdx = 0; BitIdx < BitWidth; ++BitIdx)
     Result->Provenance[BitIdx] = BitIdx;
@@ -3117,8 +3133,10 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
       DemandedTy = Trunc->getType();
 
   // Try to find all the pieces corresponding to the bswap.
+  bool FoundRoot = false;
   std::map<Value *, Optional<BitPart>> BPS;
-  auto Res = collectBitParts(I, MatchBSwaps, MatchBitReversals, BPS, 0);
+  const auto &Res =
+      collectBitParts(I, MatchBSwaps, MatchBitReversals, BPS, 0, FoundRoot);
   if (!Res)
     return false;
   ArrayRef<int8_t> BitProvenance = Res->Provenance;

@@ -289,6 +289,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     FlatGlobalInsts(false),
     FlatScratchInsts(false),
     ScalarFlatScratchInsts(false),
+    HasArchitectedFlatScratch(false),
     AddNoCarryInsts(false),
     HasUnpackedD16VMem(false),
     LDSMisalignedBug(false),
@@ -306,6 +307,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     HasVcmpxExecWARHazard(false),
     HasLdsBranchVmemWARHazard(false),
     HasNSAtoVMEMBug(false),
+    HasNSAClauseBug(false),
     HasOffset3fBug(false),
     HasFlatSegmentOffsetBug(false),
     HasImageStoreD16Bug(false),
@@ -326,7 +328,8 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
 }
 
 bool GCNSubtarget::enableFlatScratch() const {
-  return EnableFlatScratch && hasFlatScratchInsts();
+  return flatScratchIsArchitected() ||
+         (EnableFlatScratch && hasFlatScratchInsts());
 }
 
 unsigned GCNSubtarget::getConstantBusLimit(unsigned Opcode) const {

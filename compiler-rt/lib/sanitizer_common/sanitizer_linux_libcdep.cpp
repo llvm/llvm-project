@@ -197,7 +197,7 @@ __attribute__((unused)) static bool GetLibcVersion(int *major, int *minor,
 __attribute__((unused)) static int g_use_dlpi_tls_data;
 
 #if SANITIZER_GLIBC && !SANITIZER_GO
-__attribute__((unused)) static uptr g_tls_size;
+__attribute__((unused)) static size_t g_tls_size;
 void InitTlsSize() {
   int major, minor, patch;
   g_use_dlpi_tls_data =

@@ -4008,14 +4008,16 @@ bool AMDGPULegalizerInfo::legalizeBufferAtomic(MachineInstr &MI,
   return true;
 }
 
-/// Turn a set of s16 typed registers in \p A16AddrRegs into a dword sized
+/// Turn a set of s16 typed registers in \p AddrRegs into a dword sized
 /// vector with s16 typed elements.
-static void packImageA16AddressToDwords(
-    MachineIRBuilder &B, MachineInstr &MI,
-    SmallVectorImpl<Register> &PackedAddrs, unsigned ArgOffset,
-    const AMDGPU::ImageDimIntrinsicInfo *Intr, unsigned EndIdx) {
+static void packImage16bitOpsToDwords(MachineIRBuilder &B, MachineInstr &MI,
+                                      SmallVectorImpl<Register> &PackedAddrs,
+                                      unsigned ArgOffset,
+                                      const AMDGPU::ImageDimIntrinsicInfo *Intr,
+                                      bool IsA16, bool IsG16) {
   const LLT S16 = LLT::scalar(16);
   const LLT V2S16 = LLT::vector(2, 16);
+  auto EndIdx = Intr->VAddrEnd;
 
   for (unsigned I = Intr->VAddrStart; I < EndIdx; I++) {
     MachineOperand &SrcOp = MI.getOperand(ArgOffset + I);
@@ -4026,6 +4028,10 @@ static void packImageA16AddressToDwords(
 
     if (I < Intr->GradientStart) {
       AddrReg = B.buildBitcast(V2S16, AddrReg).getReg(0);
+      PackedAddrs.push_back(AddrReg);
+    } else if ((I >= Intr->GradientStart && I < Intr->CoordStart && !IsG16) ||
+               (I >= Intr->CoordStart && !IsA16)) {
+      // Handle any gradient or coordinate operands that should not be packed
       PackedAddrs.push_back(AddrReg);
     } else {
       // Dz/dh, dz/dv and the last odd coord are packed with undef. Also, in 1D,
@@ -4222,29 +4228,23 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   }
 
   // Rewrite the addressing register layout before doing anything else.
-  if (IsA16 || IsG16) {
-    if (IsA16) {
-      // Target must support the feature and gradients need to be 16 bit too
-      if (!ST.hasA16() || !IsG16)
-        return false;
-    } else if (!ST.hasG16())
-      return false;
+  if (BaseOpcode->Gradients && !ST.hasG16() && (IsA16 != IsG16)) {
+    // 16 bit gradients are supported, but are tied to the A16 control
+    // so both gradients and addresses must be 16 bit
+    return false;
+  }
 
+  if (IsA16 && !ST.hasA16()) {
+    // A16 not supported
+    return false;
+  }
+
+  if (IsA16 || IsG16) {
     if (Intr->NumVAddrs > 1) {
       SmallVector<Register, 4> PackedRegs;
-      // Don't compress addresses for G16
-      const int PackEndIdx = IsA16 ? Intr->VAddrEnd : Intr->CoordStart;
-      packImageA16AddressToDwords(B, MI, PackedRegs, ArgOffset, Intr,
-                                  PackEndIdx);
 
-      if (!IsA16) {
-        // Add uncompressed address
-        for (unsigned I = Intr->CoordStart; I < Intr->VAddrEnd; I++) {
-          int AddrReg = MI.getOperand(ArgOffset + I).getReg();
-          assert(B.getMRI()->getType(AddrReg) == LLT::scalar(32));
-          PackedRegs.push_back(AddrReg);
-        }
-      }
+      packImage16bitOpsToDwords(B, MI, PackedRegs, ArgOffset, Intr, IsA16,
+                                IsG16);
 
       // See also below in the non-a16 branch
       const bool UseNSA = PackedRegs.size() >= 3 && ST.hasNSAEncoding();

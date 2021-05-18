@@ -46,3 +46,14 @@ ArrayRef<Builtin::Info> BPFTargetInfo::getTargetBuiltins() const {
   return llvm::makeArrayRef(BuiltinInfo, clang::BPF::LastTSBuiltin -
                                              Builtin::FirstTSBuiltin);
 }
+
+bool BPFTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
+                                         DiagnosticsEngine &Diags) {
+  for (const auto &Feature : Features) {
+    if (Feature == "+alu32") {
+      HasAlu32 = true;
+    }
+  }
+
+  return true;
+}

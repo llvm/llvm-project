@@ -59,7 +59,7 @@ using STLForwardCompatRemoveCVRefTestTypes = ::testing::Types<
     // clang-format on
     >;
 
-TYPED_TEST_CASE(STLForwardCompatRemoveCVRefTest,
+TYPED_TEST_SUITE(STLForwardCompatRemoveCVRefTest,
                 STLForwardCompatRemoveCVRefTestTypes);
 
 TYPED_TEST(STLForwardCompatRemoveCVRefTest, RemoveCVRef) {

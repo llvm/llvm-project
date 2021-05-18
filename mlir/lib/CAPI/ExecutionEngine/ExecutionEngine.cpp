@@ -10,22 +10,42 @@
 #include "mlir/CAPI/ExecutionEngine.h"
 #include "mlir/CAPI/IR.h"
 #include "mlir/CAPI/Support.h"
+#include "mlir/ExecutionEngine/OptUtils.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "llvm/ExecutionEngine/Orc/Mangling.h"
 #include "llvm/Support/TargetSelect.h"
 
 using namespace mlir;
 
-extern "C" MlirExecutionEngine mlirExecutionEngineCreate(MlirModule op) {
-  static bool init_once = [] {
+extern "C" MlirExecutionEngine mlirExecutionEngineCreate(MlirModule op,
+                                                         int optLevel) {
+  static bool initOnce = [] {
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
     return true;
   }();
-  (void)init_once;
+  (void)initOnce;
 
   mlir::registerLLVMDialectTranslation(*unwrap(op)->getContext());
-  auto jitOrError = ExecutionEngine::create(unwrap(op));
+
+  auto tmBuilderOrError = llvm::orc::JITTargetMachineBuilder::detectHost();
+  if (!tmBuilderOrError) {
+    llvm::errs() << "Failed to create a JITTargetMachineBuilder for the host\n";
+    return MlirExecutionEngine{nullptr};
+  }
+  auto tmOrError = tmBuilderOrError->createTargetMachine();
+  if (!tmOrError) {
+    llvm::errs() << "Failed to create a TargetMachine for the host\n";
+    return MlirExecutionEngine{nullptr};
+  }
+
+  // Create a transformer to run all LLVM optimization passes at the
+  // specified optimization level.
+  auto llvmOptLevel = static_cast<llvm::CodeGenOpt::Level>(optLevel);
+  auto transformer = mlir::makeLLVMPassesTransformer(
+      /*passes=*/{}, llvmOptLevel, /*targetMachine=*/tmOrError->get());
+  auto jitOrError = ExecutionEngine::create(
+      unwrap(op), /*llvmModuleBuilder=*/{}, transformer, llvmOptLevel);
   if (!jitOrError) {
     consumeError(jitOrError.takeError());
     return MlirExecutionEngine{nullptr};

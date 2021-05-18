@@ -166,6 +166,11 @@ public:
   replaceAllUsesExcept(Value newValue,
                        const SmallPtrSetImpl<Operation *> &exceptions) const;
 
+  /// Replace all uses of 'this' value with 'newValue', updating anything in the
+  /// IR that uses 'this' to use the other value instead except if the user is
+  /// 'exceptedUser'.
+  void replaceAllUsesExcept(Value newValue, Operation *exceptedUser) const;
+
   /// Replace all uses of 'this' value with 'newValue' if the given callback
   /// returns true.
   void replaceUsesWithIf(Value newValue,

@@ -39,13 +39,13 @@ struct MultiStringType {
   const char16_t* u16;
   const char32_t* u32;
 
-  operator const char*() const { return s; }
-  operator const wchar_t*() const { return w; }
+  constexpr operator const char*() const { return s; }
+  constexpr operator const wchar_t*() const { return w; }
 #if TEST_STD_VER > 17 && defined(__cpp_char8_t)
-  operator const char8_t*() const { return u8; }
+  constexpr operator const char8_t*() const { return u8; }
 #endif
-  operator const char16_t*() const { return u16; }
-  operator const char32_t*() const { return u32; }
+  constexpr operator const char16_t*() const { return u16; }
+  constexpr operator const char32_t*() const { return u32; }
 };
 
 // Helper to convert a const char* string to a basic_string<CharT>.
@@ -55,5 +55,9 @@ struct MultiStringType {
   std::basic_string<CharT> {                                                   \
     static_cast<const CharT*>(MultiStringType MKSTR(Str))                      \
   }
+
+// Like MAKE_STRING but converts to a const CharT*.
+#define MAKE_CSTRING(CharT, Str)                                               \
+  static_cast<const CharT*>(MultiStringType MKSTR(Str))
 
 #endif

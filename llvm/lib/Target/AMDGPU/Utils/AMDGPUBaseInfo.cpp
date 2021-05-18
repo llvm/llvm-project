@@ -155,6 +155,34 @@ int getMaskedMIMGOp(unsigned Opc, unsigned NewChannels) {
   return NewInfo ? NewInfo->Opcode : -1;
 }
 
+unsigned getAddrSizeMIMGOp(const MIMGBaseOpcodeInfo *BaseOpcode,
+                           const MIMGDimInfo *Dim, bool IsA16,
+                           bool IsG16Supported) {
+  unsigned AddrWords = BaseOpcode->NumExtraArgs;
+  unsigned AddrComponents = (BaseOpcode->Coordinates ? Dim->NumCoords : 0) +
+                            (BaseOpcode->LodOrClampOrMip ? 1 : 0);
+  if (IsA16)
+    AddrWords += divideCeil(AddrComponents, 2);
+  else
+    AddrWords += AddrComponents;
+
+  // Note: For subtargets that support A16 but not G16, enabling A16 also
+  // enables 16 bit gradients.
+  // For subtargets that support A16 (operand) and G16 (done with a different
+  // instruction encoding), they are independent.
+
+  if (BaseOpcode->Gradients) {
+    if ((IsA16 && !IsG16Supported) || BaseOpcode->G16)
+      // There are two gradients per coordinate, we pack them separately.
+      // For the 3d case,
+      // we get (dy/du, dx/du) (-, dz/du) (dy/dv, dx/dv) (-, dz/dv)
+      AddrWords += alignTo<2>(Dim->NumGradients / 2);
+    else
+      AddrWords += Dim->NumGradients;
+  }
+  return AddrWords;
+}
+
 struct MUBUFInfo {
   uint16_t Opcode;
   uint16_t BaseOpcode;
@@ -1429,6 +1457,10 @@ bool hasGFX10_3Insts(const MCSubtargetInfo &STI) {
 
 bool isGFX90A(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX90AInsts];
+}
+
+bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureArchitectedFlatScratch];
 }
 
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI) {

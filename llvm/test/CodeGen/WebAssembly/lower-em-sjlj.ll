@@ -1,5 +1,6 @@
-; RUN: opt < %s -wasm-lower-em-ehsjlj -S | FileCheck %s --check-prefixes=CHECK,NO-TLS
-; RUN: opt < %s -wasm-lower-em-ehsjlj -S --mattr=+atomics,+bulk-memory | FileCheck %s --check-prefixes=CHECK,TLS
+; RUN: opt < %s -wasm-lower-em-ehsjlj -S | FileCheck %s --check-prefixes=CHECK,NO-TLS -DPTR=i32
+; RUN: opt < %s -wasm-lower-em-ehsjlj -S --mattr=+atomics,+bulk-memory | FileCheck %s --check-prefixes=CHECK,TLS -DPTR=i32
+; RUN: opt < %s -wasm-lower-em-ehsjlj --mtriple=wasm64-unknown-unknown -data-layout="e-m:e-p:64:64-i64:64-n32:64-S128" -S | FileCheck %s --check-prefixes=CHECK -DPTR=i64
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -7,12 +8,12 @@ target triple = "wasm32-unknown-unknown"
 %struct.__jmp_buf_tag = type { [6 x i32], i32, [32 x i32] }
 
 @global_var = global i32 0, align 4
-; NO-TLS-DAG: __THREW__ = external global i32
-; NO-TLS-DAG: __threwValue = external global i32
+; NO-TLS-DAG: __THREW__ = external global [[PTR]]
+; NO-TLS-DAG: __threwValue = external global [[PTR]]
 ; TLS-DAG: __THREW__ = external thread_local(localexec) global i32
 ; TLS-DAG: __threwValue = external thread_local(localexec) global i32
 @global_longjmp_ptr = global void (%struct.__jmp_buf_tag*, i32)* @longjmp, align 4
-; CHECK-DAG: @global_longjmp_ptr = global void (%struct.__jmp_buf_tag*, i32)* bitcast (void (i32, i32)* @emscripten_longjmp to void (%struct.__jmp_buf_tag*, i32)*)
+; CHECK-DAG: @global_longjmp_ptr = global void (%struct.__jmp_buf_tag*, i32)* bitcast (void ([[PTR]], i32)* @emscripten_longjmp to void (%struct.__jmp_buf_tag*, i32)*)
 
 ; Test a simple setjmp - longjmp sequence
 define void @setjmp_longjmp() {
@@ -38,12 +39,12 @@ entry:
 ; CHECK: entry.split:
 ; CHECK-NEXT: phi i32 [ 0, %entry ], [ %[[LONGJMP_RESULT:.*]], %if.end ]
 ; CHECK-NEXT: %[[ARRAYDECAY1:.*]] = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %[[BUF]], i32 0, i32 0
-; CHECK-NEXT: %[[JMPBUF:.*]] = ptrtoint %struct.__jmp_buf_tag* %[[ARRAYDECAY1]] to i32
-; CHECK-NEXT: store i32 0, i32* @__THREW__
-; CHECK-NEXT: call cc{{.*}} void @__invoke_void_i32_i32(void (i32, i32)* @emscripten_longjmp, i32 %[[JMPBUF]], i32 1)
-; CHECK-NEXT: %[[__THREW__VAL:.*]] = load i32, i32* @__THREW__
-; CHECK-NEXT: store i32 0, i32* @__THREW__
-; CHECK-NEXT: %[[CMP0:.*]] = icmp ne i32 %__THREW__.val, 0
+; CHECK-NEXT: %[[JMPBUF:.*]] = ptrtoint %struct.__jmp_buf_tag* %[[ARRAYDECAY1]] to [[PTR]]
+; CHECK-NEXT: store [[PTR]] 0, [[PTR]]* @__THREW__
+; CHECK-NEXT: call cc{{.*}} void @__invoke_void_[[PTR]]_i32(void ([[PTR]], i32)* @emscripten_longjmp, [[PTR]] %[[JMPBUF]], i32 1)
+; CHECK-NEXT: %[[__THREW__VAL:.*]] = load [[PTR]], [[PTR]]* @__THREW__
+; CHECK-NEXT: store [[PTR]] 0, [[PTR]]* @__THREW__
+; CHECK-NEXT: %[[CMP0:.*]] = icmp ne [[PTR]] %__THREW__.val, 0
 ; CHECK-NEXT: %[[THREWVALUE_VAL:.*]] = load i32, i32* @__threwValue
 ; CHECK-NEXT: %[[CMP1:.*]] = icmp ne i32 %[[THREWVALUE_VAL]], 0
 ; CHECK-NEXT: %[[CMP:.*]] = and i1 %[[CMP0]], %[[CMP1]]
@@ -53,9 +54,9 @@ entry:
 ; CHECK-NEXT: unreachable
 
 ; CHECK: if.then1:
-; CHECK-NEXT: %[[__THREW__VAL_I32P:.*]] = inttoptr i32 %[[__THREW__VAL]] to i32*
-; CHECK-NEXT: %[[__THREW__VAL_I32P_LOADED:.*]] = load i32, i32* %[[__THREW__VAL_I32P]]
-; CHECK-NEXT: %[[LABEL:.*]] = call i32 @testSetjmp(i32 %[[__THREW__VAL_I32P_LOADED]], i32* %[[SETJMP_TABLE1]], i32 %[[SETJMP_TABLE_SIZE1]])
+; CHECK-NEXT: %[[__THREW__VAL_P:.*]] = inttoptr [[PTR]] %[[__THREW__VAL]] to [[PTR]]*
+; CHECK-NEXT: %[[__THREW__VAL_P_LOADED:.*]] = load [[PTR]], [[PTR]]* %[[__THREW__VAL_P]]
+; CHECK-NEXT: %[[LABEL:.*]] = call i32 @testSetjmp([[PTR]] %[[__THREW__VAL_P_LOADED]], i32* %[[SETJMP_TABLE1]], i32 %[[SETJMP_TABLE_SIZE1]])
 ; CHECK-NEXT: %[[CMP:.*]] = icmp eq i32 %[[LABEL]], 0
 ; CHECK-NEXT: br i1 %[[CMP]], label %if.then2, label %if.end2
 
@@ -70,7 +71,7 @@ entry:
 ; CHECK-NEXT: ]
 
 ; CHECK: if.then2:
-; CHECK-NEXT: call void @emscripten_longjmp(i32 %[[__THREW__VAL]], i32 %[[THREWVALUE_VAL]])
+; CHECK-NEXT: call void @emscripten_longjmp([[PTR]] %[[__THREW__VAL]], i32 %[[THREWVALUE_VAL]])
 ; CHECK-NEXT: unreachable
 
 ; CHECK: if.end2:
@@ -110,18 +111,18 @@ entry:
           to label %try.cont unwind label %lpad
 
 ; CHECK: entry.split:
-; CHECK: store i32 0, i32* @__THREW__
+; CHECK: store [[PTR]] 0, [[PTR]]* @__THREW__
 ; CHECK-NEXT: call cc{{.*}} void @__invoke_void(void ()* @foo)
-; CHECK-NEXT: %[[__THREW__VAL:.*]] = load i32, i32* @__THREW__
-; CHECK-NEXT: store i32 0, i32* @__THREW__
-; CHECK-NEXT: %[[CMP0:.*]] = icmp ne i32 %[[__THREW__VAL]], 0
+; CHECK-NEXT: %[[__THREW__VAL:.*]] = load [[PTR]], [[PTR]]* @__THREW__
+; CHECK-NEXT: store [[PTR]] 0, [[PTR]]* @__THREW__
+; CHECK-NEXT: %[[CMP0:.*]] = icmp ne [[PTR]] %[[__THREW__VAL]], 0
 ; CHECK-NEXT: %[[THREWVALUE_VAL:.*]] = load i32, i32* @__threwValue
 ; CHECK-NEXT: %[[CMP1:.*]] = icmp ne i32 %[[THREWVALUE_VAL]], 0
 ; CHECK-NEXT: %[[CMP:.*]] = and i1 %[[CMP0]], %[[CMP1]]
 ; CHECK-NEXT: br i1 %[[CMP]], label %if.then1, label %if.else1
 
 ; CHECK: entry.split.split:
-; CHECK-NEXT: %[[CMP:.*]] = icmp eq i32 %[[__THREW__VAL]], 1
+; CHECK-NEXT: %[[CMP:.*]] = icmp eq [[PTR]] %[[__THREW__VAL]], 1
 ; CHECK-NEXT: br i1 %[[CMP]], label %lpad, label %try.cont
 
 lpad:                                             ; preds = %entry
@@ -191,7 +192,7 @@ entry:
   call void @longjmp(%struct.__jmp_buf_tag* %arraydecay, i32 5) #1
   unreachable
 ; CHECK: %[[JMPBUF:.*]] = ptrtoint
-; CHECK-NEXT: call void @emscripten_longjmp(i32 %[[JMPBUF]], i32 5)
+; CHECK-NEXT: call void @emscripten_longjmp([[PTR]] %[[JMPBUF]], i32 5)
 }
 
 ; Test inline asm handling
@@ -265,7 +266,7 @@ entry:
 
   ; Store longjmp in a local variable, load it, and call it
   store void (%struct.__jmp_buf_tag*, i32)* @longjmp, void (%struct.__jmp_buf_tag*, i32)** %local_longjmp_ptr, align 4
-  ; CHECK: store void (%struct.__jmp_buf_tag*, i32)* bitcast (void (i32, i32)* @emscripten_longjmp to void (%struct.__jmp_buf_tag*, i32)*), void (%struct.__jmp_buf_tag*, i32)** %local_longjmp_ptr, align 4
+  ; CHECK: store void (%struct.__jmp_buf_tag*, i32)* bitcast (void ([[PTR]], i32)* @emscripten_longjmp to void (%struct.__jmp_buf_tag*, i32)*), void (%struct.__jmp_buf_tag*, i32)** %local_longjmp_ptr, align 4
   %longjmp_from_local_ptr = load void (%struct.__jmp_buf_tag*, i32)*, void (%struct.__jmp_buf_tag*, i32)** %local_longjmp_ptr, align 4
   %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf0, i32 0, i32 0
   call void %longjmp_from_local_ptr(%struct.__jmp_buf_tag* %arraydecay, i32 0)
@@ -278,7 +279,7 @@ entry:
   ; Pass longjmp as a function argument. This is a call but longjmp is not a
   ; callee but an argument.
   call void @take_longjmp(void (%struct.__jmp_buf_tag*, i32)* @longjmp)
-  ; CHECK: call void @take_longjmp(void (%struct.__jmp_buf_tag*, i32)* bitcast (void (i32, i32)* @emscripten_longjmp to void (%struct.__jmp_buf_tag*, i32)*))
+  ; CHECK: call void @take_longjmp(void (%struct.__jmp_buf_tag*, i32)* bitcast (void ([[PTR]], i32)* @emscripten_longjmp to void (%struct.__jmp_buf_tag*, i32)*))
   ret void
 }
 
@@ -297,8 +298,8 @@ declare void @free(i8*)
 ; CHECK-DAG: declare i32 @getTempRet0()
 ; CHECK-DAG: declare void @setTempRet0(i32)
 ; CHECK-DAG: declare i32* @saveSetjmp(%struct.__jmp_buf_tag*, i32, i32*, i32)
-; CHECK-DAG: declare i32 @testSetjmp(i32, i32*, i32)
-; CHECK-DAG: declare void @emscripten_longjmp(i32, i32)
+; CHECK-DAG: declare i32 @testSetjmp([[PTR]], i32*, i32)
+; CHECK-DAG: declare void @emscripten_longjmp([[PTR]], i32)
 ; CHECK-DAG: declare void @__invoke_void(void ()*)
 
 attributes #0 = { returns_twice }

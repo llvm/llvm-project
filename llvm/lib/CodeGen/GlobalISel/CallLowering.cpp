@@ -54,6 +54,8 @@ addFlagsUsingAttrFn(ISD::ArgFlagsTy &Flags,
     Flags.setReturned();
   if (AttrFn(Attribute::SwiftSelf))
     Flags.setSwiftSelf();
+  if (AttrFn(Attribute::SwiftAsync))
+    Flags.setSwiftAsync();
   if (AttrFn(Attribute::SwiftError))
     Flags.setSwiftError();
 }
@@ -326,19 +328,23 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
     return;
   }
 
+  // A vector PartLLT needs extending to LLTy's element size.
+  // E.g. <2 x s64> = G_SEXT <2 x s32>.
   if (PartLLT.isVector() == LLTy.isVector() &&
       PartLLT.getScalarSizeInBits() > LLTy.getScalarSizeInBits() &&
+      (!PartLLT.isVector() ||
+       PartLLT.getNumElements() == LLTy.getNumElements()) &&
       OrigRegs.size() == 1 && Regs.size() == 1) {
     Register SrcReg = Regs[0];
 
     LLT LocTy = MRI.getType(SrcReg);
 
     if (Flags.isSExt()) {
-      SrcReg = B.buildAssertSExt(LocTy, SrcReg,
-                                 LLTy.getScalarSizeInBits()).getReg(0);
+      SrcReg = B.buildAssertSExt(LocTy, SrcReg, LLTy.getScalarSizeInBits())
+                   .getReg(0);
     } else if (Flags.isZExt()) {
-      SrcReg = B.buildAssertZExt(LocTy, SrcReg,
-                                 LLTy.getScalarSizeInBits()).getReg(0);
+      SrcReg = B.buildAssertZExt(LocTy, SrcReg, LLTy.getScalarSizeInBits())
+                   .getReg(0);
     }
 
     B.buildTrunc(OrigRegs[0], SrcReg);
@@ -362,18 +368,30 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
 
   if (PartLLT.isVector()) {
     assert(OrigRegs.size() == 1);
+    SmallVector<Register> CastRegs(Regs.begin(), Regs.end());
+
+    // If PartLLT is a mismatched vector in both number of elements and element
+    // size, e.g. PartLLT == v2s64 and LLTy is v3s32, then first coerce it to
+    // have the same elt type, i.e. v4s32.
+    if (PartLLT.getSizeInBits() > LLTy.getSizeInBits() &&
+        PartLLT.getScalarSizeInBits() == LLTy.getScalarSizeInBits() * 2 &&
+        Regs.size() == 1) {
+      LLT NewTy = PartLLT.changeElementType(LLTy.getElementType())
+                      .changeNumElements(PartLLT.getNumElements() * 2);
+      CastRegs[0] = B.buildBitcast(NewTy, Regs[0]).getReg(0);
+      PartLLT = NewTy;
+    }
 
     if (LLTy.getScalarType() == PartLLT.getElementType()) {
-      mergeVectorRegsToResultRegs(B, OrigRegs, Regs);
+      mergeVectorRegsToResultRegs(B, OrigRegs, CastRegs);
     } else {
-      SmallVector<Register> CastRegs(Regs.size());
       unsigned I = 0;
       LLT GCDTy = getGCDType(LLTy, PartLLT);
 
       // We are both splitting a vector, and bitcasting its element types. Cast
       // the source pieces into the appropriate number of pieces with the result
       // element type.
-      for (Register SrcReg : Regs)
+      for (Register SrcReg : CastRegs)
         CastRegs[I++] = B.buildBitcast(GCDTy, SrcReg).getReg(0);
       mergeVectorRegsToResultRegs(B, OrigRegs, CastRegs);
     }

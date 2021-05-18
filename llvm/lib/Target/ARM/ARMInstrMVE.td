@@ -6870,7 +6870,7 @@ def SDT_MVEMEMCPYLOOPNODE
 def MVE_MEMCPYLOOPNODE : SDNode<"ARMISD::MEMCPYLOOP", SDT_MVEMEMCPYLOOPNODE,
                                 [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
 
-let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
+let usesCustomInserter = 1, hasNoSchedulingInfo = 1, Defs = [CPSR] in {
   def MVE_MEMCPYLOOPINST : PseudoInst<(outs),
         (ins rGPR:$dst, rGPR:$src, rGPR:$sz),
         NoItinerary,
@@ -6882,7 +6882,7 @@ def SDT_MVEMEMSETLOOPNODE
 def MVE_MEMSETLOOPNODE : SDNode<"ARMISD::MEMSETLOOP", SDT_MVEMEMSETLOOPNODE,
                                 [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
 
-let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
+let usesCustomInserter = 1, hasNoSchedulingInfo = 1, Defs = [CPSR] in {
   def MVE_MEMSETLOOPINST : PseudoInst<(outs),
         (ins rGPR:$dst, MQPR:$src, rGPR:$sz),
         NoItinerary,

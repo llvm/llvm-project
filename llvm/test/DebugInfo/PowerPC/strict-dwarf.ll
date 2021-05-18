@@ -2,16 +2,30 @@
 ; RUN:   llvm-dwarfdump -debug-info - | FileCheck %s
 ; RUN: llc -filetype=obj -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -strict-dwarf=true < %s | llvm-dwarfdump -debug-info - | \
-; RUN:   FileCheck %s
+; RUN:   FileCheck %s -check-prefix=STRICT
 
-; FIXME: when -strict-dwarf=true is specified, we should check "STRICT" to tell
-; that with DWARF 4, we should not generate DWARF 5 attribute DW_AT_noreturn and
-; DW_AT_alignment.
+; We also check that with/without -strict-dwarf=true, the location attribute
+; is not changed. The location attribute adding will call DwarfUnit::addUInt()
+; which contains a attribute 0, we want to make sure the strict-dwarf handling
+; is also right for attribute 0.
+; For this case, the location attribute adding is for global variable @_ZL3var
+; and the call chain to addUInt() is:
+; 1: DwarfCompileUnit::addLocationAttribute()
+; 2: DwarfUnit::addOpAddress()
+; 3: DwarfUnit::addUInt()
+; 4: addUInt(Block, (dwarf::Attribute)0, Form, Integer);
 
+; CHECK: DW_AT_name      ("var")
+; CHECK-NOT: DW_TAG_
 ; CHECK: DW_AT_alignment
+; CHECK: DW_AT_location  (DW_OP_addr 0x0)
 ; CHECK: DW_AT_noreturn
-; STRICT-NOT: DW_AT_noreturn
+;
+; STRICT: DW_AT_name      ("var")
 ; STRICT-NOT: DW_AT_alignment
+; STRICT-NOT: DW_TAG_
+; STRICT: DW_AT_location  (DW_OP_addr 0x0)
+; STRICT-NOT: DW_AT_noreturn
 
 @_ZL3var = internal global i32 0, align 16, !dbg !0
 

@@ -36,6 +36,7 @@ namespace llvm {
 
 class AAResults;
 class AssumptionCache;
+class BatchAAResults;
 class DominatorTree;
 class Function;
 class Instruction;
@@ -364,6 +365,10 @@ private:
 
   unsigned DefaultBlockScanLimit;
 
+  /// Offsets to dependant clobber loads.
+  using ClobberOffsetsMapType = DenseMap<LoadInst *, int32_t>;
+  ClobberOffsetsMapType ClobberOffsets;
+
 public:
   MemoryDependenceResults(AAResults &AA, AssumptionCache &AC,
                           const TargetLibraryInfo &TLI, DominatorTree &DT,
@@ -452,10 +457,18 @@ public:
                                         Instruction *QueryInst = nullptr,
                                         unsigned *Limit = nullptr);
 
+  MemDepResult getPointerDependencyFrom(const MemoryLocation &Loc, bool isLoad,
+                                        BasicBlock::iterator ScanIt,
+                                        BasicBlock *BB,
+                                        Instruction *QueryInst,
+                                        unsigned *Limit,
+                                        BatchAAResults &BatchAA);
+
   MemDepResult
   getSimplePointerDependencyFrom(const MemoryLocation &MemLoc, bool isLoad,
                                  BasicBlock::iterator ScanIt, BasicBlock *BB,
-                                 Instruction *QueryInst, unsigned *Limit);
+                                 Instruction *QueryInst, unsigned *Limit,
+                                 BatchAAResults &BatchAA);
 
   /// This analysis looks for other loads and stores with invariant.group
   /// metadata and the same pointer operand. Returns Unknown if it does not
@@ -467,6 +480,14 @@ public:
 
   /// Release memory in caches.
   void releaseMemory();
+
+  /// Return the clobber offset to dependent instruction.
+  Optional<int32_t> getClobberOffset(LoadInst *DepInst) const {
+    const auto Off = ClobberOffsets.find(DepInst);
+    if (Off != ClobberOffsets.end())
+      return Off->getSecond();
+    return None;
+  }
 
 private:
   MemDepResult getCallDependencyFrom(CallBase *Call, bool isReadOnlyCall,
@@ -483,7 +504,8 @@ private:
   MemDepResult GetNonLocalInfoForBlock(Instruction *QueryInst,
                                        const MemoryLocation &Loc, bool isLoad,
                                        BasicBlock *BB, NonLocalDepInfo *Cache,
-                                       unsigned NumSortedEntries);
+                                       unsigned NumSortedEntries,
+                                       BatchAAResults &BatchAA);
 
   void RemoveCachedNonLocalPointerDependencies(ValueIsLoadPair P);
 

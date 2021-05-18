@@ -54,8 +54,8 @@ protected:
   };
 };
 
-INSTANTIATE_TEST_CASE_P(SyntaxTreeTests, MutationTest,
-                        ::testing::ValuesIn(allTestClangConfigs()), );
+INSTANTIATE_TEST_SUITE_P(SyntaxTreeTests, MutationTest,
+                        ::testing::ValuesIn(allTestClangConfigs()) );
 
 TEST_P(MutationTest, RemoveStatement_InCompound) {
   CheckTransformation(RemoveStatement, "void test() { [[100+100;]] test(); }",

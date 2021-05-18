@@ -33,6 +33,27 @@ CHECK: crate::{shim:reify#0}
 CHECK: crate::{Z:ident#10}
        _RNZC5crates8_5ident
 
+; Inherent impl
+
+CHECK: <_>
+       _RMC5cratep
+
+CHECK: <_>
+       _RMs_C5cratep
+
+; Trait impl
+
+CHECK: <_ as Clone>
+       _RXC5cratepC5Clone
+
+CHECK: <_ as Clone>
+       _RXs_C5cratepC5Clone
+
+; Trait definition
+
+CHECK: <_ as Ord>
+       _RYpC3Ord
+
 ; Generic type arguments
 
 CHECK: generic::<_>
@@ -43,6 +64,11 @@ CHECK: generic::<_, _>
 
 CHECK: generic::<_, _, _>
        _RIC7genericpppE
+
+; Generic const arguments
+
+CHECK: generic_const::<_>
+       _RIC13generic_constKpE
 
 ; Basic types
 
@@ -108,6 +134,133 @@ CHECK: basic::<u64>
 
 CHECK: basic::<!>
        _RIC5basiczE
+
+; Integer constants. Test value demangling.
+
+CHECK: integer::<0>
+       _RIC7integerKi0_E
+
+CHECK: integer::<1>
+       _RIC7integerKi1_E
+
+CHECK: integer::<-1>
+       _RIC7integerKin1_E
+
+CHECK: integer::<-15>
+       _RIC7integerKinf_E
+
+CHECK: integer::<-16>
+       _RIC7integerKin10_E
+
+CHECK: integer::<18446744073709551615>
+       _RIC7integerKoffffffffffffffff_E
+
+CHECK: integer::<0x10000000000000000>
+       _RIC7integerKo10000000000000000_E
+
+CHECK: integer::<-0x123456789abcdef01>
+       _RIC7integerKnn123456789abcdef01_E
+
+; Invalid integer constant without any digits:
+
+CHECK: _RIC7integerKi_E
+       _RIC7integerKi_E
+
+; Invalid integer constants with insignificant leading zeros:
+
+CHECK: _RIC7integerKi00_E
+       _RIC7integerKi00_E
+
+CHECK: _RIC7integerKi01_E
+       _RIC7integerKi01_E
+
+; Integer constants. Test all integer types.
+
+CHECK: i8::<0>
+       _RIC2i8Ka0_E
+
+CHECK: u8::<0>
+       _RIC2u8Kh0_E
+
+CHECK: isize::<0>
+       _RIC5isizeKi0_E
+
+CHECK: usize::<0>
+       _RIC5usizeKj0_E
+
+CHECK: i32::<0>
+       _RIC3i32Kl0_E
+
+CHECK: u32::<0>
+       _RIC3u32Km0_E
+
+CHECK: i128::<0>
+       _RIC4i128Kn0_E
+
+CHECK: u128::<0>
+       _RIC4u128Ko0_E
+
+CHECK: i16::<0>
+       _RIC3i16Ks0_E
+
+CHECK: u16::<0>
+       _RIC3u16Kt0_E
+
+CHECK: i64::<0>
+       _RIC3i64Kx0_E
+
+CHECK: u64::<0>
+       _RIC3u64Ky0_E
+
+; Bool constants
+
+CHECK: bool::<false>
+       _RIC4boolKb0_E
+
+CHECK: bool::<true>
+       _RIC4boolKb1_E
+
+; Invalid bool constants
+
+CHECK: _RIC4boolKb2_E
+       _RIC4boolKb2_E
+
+CHECK: _RIC4boolKbn0_E
+       _RIC4boolKbn0_E
+
+; Char constants
+
+CHECK: char::<'a'>
+       _RIC4charKc61_E
+
+CHECK: char::<'"'>
+       _RIC4charKc22_E
+
+CHECK: char::<'\t'>
+       _RIC4charKc9_E
+
+CHECK: char::<'\r'>
+       _RIC4charKcd_E
+
+CHECK: char::<'\n'>
+       _RIC4charKca_E
+
+CHECK: char::<'\\'>
+       _RIC4charKc5c_E
+
+CHECK: char::<'\''>
+       _RIC4charKc27_E
+
+CHECK: char::<'\u{1f40d}'>
+       _RIC4charKc1f40d_E
+
+CHECK: char::<'\u{10ffff}'>
+       _RIC4charKc10ffff_E
+
+; Invalid char constants
+
+CHECK: _RIC4charKc1234567_E
+       _RIC4charKc1234567_E
 
 ; Invalid mangled characters
 

@@ -125,6 +125,137 @@ entry:
   ret void
 }
 
+define void @insert_store_nonconst_index_known_valid_by_assume(<16 x i8>* %q, i8 zeroext %s, i32 %idx) {
+; CHECK-LABEL: @insert_store_nonconst_index_known_valid_by_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 4
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, <16 x i8>* [[Q:%.*]], align 16
+; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX]]
+; CHECK-NEXT:    store <16 x i8> [[VECINS]], <16 x i8>* [[Q]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp = icmp ult i32 %idx, 4
+  call void @llvm.assume(i1 %cmp)
+  %0 = load <16 x i8>, <16 x i8>* %q
+  %vecins = insertelement <16 x i8> %0, i8 %s, i32 %idx
+  store <16 x i8> %vecins, <16 x i8>* %q
+  ret void
+}
+
+declare void @maythrow() readnone
+
+define void @insert_store_nonconst_index_not_known_valid_by_assume_after_load(<16 x i8>* %q, i8 zeroext %s, i32 %idx) {
+; CHECK-LABEL: @insert_store_nonconst_index_not_known_valid_by_assume_after_load(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, <16 x i8>* [[Q:%.*]], align 16
+; CHECK-NEXT:    call void @maythrow()
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX]]
+; CHECK-NEXT:    store <16 x i8> [[VECINS]], <16 x i8>* [[Q]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp = icmp ult i32 %idx, 4
+  %0 = load <16 x i8>, <16 x i8>* %q
+  call void @maythrow()
+  call void @llvm.assume(i1 %cmp)
+  %vecins = insertelement <16 x i8> %0, i8 %s, i32 %idx
+  store <16 x i8> %vecins, <16 x i8>* %q
+  ret void
+}
+
+define void @insert_store_nonconst_index_not_known_valid_by_assume(<16 x i8>* %q, i8 zeroext %s, i32 %idx) {
+; CHECK-LABEL: @insert_store_nonconst_index_not_known_valid_by_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 17
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, <16 x i8>* [[Q:%.*]], align 16
+; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX]]
+; CHECK-NEXT:    store <16 x i8> [[VECINS]], <16 x i8>* [[Q]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp = icmp ult i32 %idx, 17
+  call void @llvm.assume(i1 %cmp)
+  %0 = load <16 x i8>, <16 x i8>* %q
+  %vecins = insertelement <16 x i8> %0, i8 %s, i32 %idx
+  store <16 x i8> %vecins, <16 x i8>* %q
+  ret void
+}
+
+declare void @llvm.assume(i1)
+
+define void @insert_store_nonconst_index_known_valid_by_and(<16 x i8>* %q, i8 zeroext %s, i32 %idx) {
+; CHECK-LABEL: @insert_store_nonconst_index_known_valid_by_and(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, <16 x i8>* [[Q:%.*]], align 16
+; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = and i32 [[IDX:%.*]], 7
+; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX_CLAMPED]]
+; CHECK-NEXT:    store <16 x i8> [[VECINS]], <16 x i8>* [[Q]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load <16 x i8>, <16 x i8>* %q
+  %idx.clamped = and i32 %idx, 7
+  %vecins = insertelement <16 x i8> %0, i8 %s, i32 %idx.clamped
+  store <16 x i8> %vecins, <16 x i8>* %q
+  ret void
+}
+
+define void @insert_store_nonconst_index_not_known_valid_by_and(<16 x i8>* %q, i8 zeroext %s, i32 %idx) {
+; CHECK-LABEL: @insert_store_nonconst_index_not_known_valid_by_and(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, <16 x i8>* [[Q:%.*]], align 16
+; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = and i32 [[IDX:%.*]], 16
+; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX_CLAMPED]]
+; CHECK-NEXT:    store <16 x i8> [[VECINS]], <16 x i8>* [[Q]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load <16 x i8>, <16 x i8>* %q
+  %idx.clamped = and i32 %idx, 16
+  %vecins = insertelement <16 x i8> %0, i8 %s, i32 %idx.clamped
+  store <16 x i8> %vecins, <16 x i8>* %q
+  ret void
+}
+
+define void @insert_store_nonconst_index_known_valid_by_urem(<16 x i8>* %q, i8 zeroext %s, i32 %idx) {
+; CHECK-LABEL: @insert_store_nonconst_index_known_valid_by_urem(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, <16 x i8>* [[Q:%.*]], align 16
+; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = urem i32 [[IDX:%.*]], 16
+; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX_CLAMPED]]
+; CHECK-NEXT:    store <16 x i8> [[VECINS]], <16 x i8>* [[Q]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load <16 x i8>, <16 x i8>* %q
+  %idx.clamped = urem i32 %idx, 16
+  %vecins = insertelement <16 x i8> %0, i8 %s, i32 %idx.clamped
+  store <16 x i8> %vecins, <16 x i8>* %q
+  ret void
+}
+
+define void @insert_store_nonconst_index_not_known_valid_by_urem(<16 x i8>* %q, i8 zeroext %s, i32 %idx) {
+; CHECK-LABEL: @insert_store_nonconst_index_not_known_valid_by_urem(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, <16 x i8>* [[Q:%.*]], align 16
+; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = urem i32 [[IDX:%.*]], 17
+; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX_CLAMPED]]
+; CHECK-NEXT:    store <16 x i8> [[VECINS]], <16 x i8>* [[Q]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load <16 x i8>, <16 x i8>* %q
+  %idx.clamped = urem i32 %idx, 17
+  %vecins = insertelement <16 x i8> %0, i8 %s, i32 %idx.clamped
+  store <16 x i8> %vecins, <16 x i8>* %q
+  ret void
+}
+
 define void @insert_store_ptr_strip(<16 x i8>* %q, i8 zeroext %s) {
 ; CHECK-LABEL: @insert_store_ptr_strip(
 ; CHECK-NEXT:  entry:

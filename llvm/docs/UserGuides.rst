@@ -44,6 +44,7 @@ intermediate LLVM representation.
    MergeFunctions
    MCJITDesignAndImplementation
    ORCv2
+   OpaquePointers
    JITLink
    NewPassManager
    NVPTXUsage

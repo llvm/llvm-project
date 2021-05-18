@@ -126,7 +126,7 @@ struct InputFunctionCoverageData {
   InputFunctionCoverageData &operator=(InputFunctionCoverageData &&) = delete;
 };
 
-struct CoverageMappingTest : ::testing::TestWithParam<std::pair<bool, bool>> {
+struct CoverageMappingTest : ::testing::TestWithParam<std::tuple<bool, bool>> {
   bool UseMultipleReaders;
   StringMap<unsigned> Files;
   std::vector<std::string> Filenames;
@@ -139,8 +139,8 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::pair<bool, bool>> {
   std::unique_ptr<CoverageMapping> LoadedCoverage;
 
   void SetUp() override {
-    ProfileWriter.setOutputSparse(GetParam().first);
-    UseMultipleReaders = GetParam().second;
+    ProfileWriter.setOutputSparse(std::get<0>(GetParam()));
+    UseMultipleReaders = std::get<1>(GetParam());
   }
 
   unsigned getGlobalFileIndex(StringRef Name) {
@@ -892,12 +892,9 @@ TEST_P(CoverageMappingTest, skip_duplicate_function_record) {
   ASSERT_EQ(3U, NumFuncs);
 }
 
-// FIXME: Use ::testing::Combine() when llvm updates its copy of googletest.
-INSTANTIATE_TEST_CASE_P(ParameterizedCovMapTest, CoverageMappingTest,
-                        ::testing::Values(std::pair<bool, bool>({false, false}),
-                                          std::pair<bool, bool>({false, true}),
-                                          std::pair<bool, bool>({true, false}),
-                                          std::pair<bool, bool>({true, true})),);
+INSTANTIATE_TEST_SUITE_P(ParameterizedCovMapTest, CoverageMappingTest,
+                         ::testing::Combine(::testing::Bool(),
+                                            ::testing::Bool()));
 
 TEST(CoverageMappingTest, filename_roundtrip) {
   std::vector<std::string> Paths({"dir", "a", "b", "c", "d", "e"});

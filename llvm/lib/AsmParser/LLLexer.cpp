@@ -696,6 +696,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(speculative_load_hardening);
   KEYWORD(swifterror);
   KEYWORD(swiftself);
+  KEYWORD(swiftasync);
   KEYWORD(uwtable);
   KEYWORD(vscale_range);
   KEYWORD(willreturn);
@@ -845,6 +846,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   TYPEKEYWORD("x86_mmx",   Type::getX86_MMXTy(Context));
   TYPEKEYWORD("x86_amx",   Type::getX86_AMXTy(Context));
   TYPEKEYWORD("token",     Type::getTokenTy(Context));
+  TYPEKEYWORD("ptr", PointerType::getUnqual(Context));
 
 #undef TYPEKEYWORD
 

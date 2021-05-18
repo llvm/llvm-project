@@ -7979,6 +7979,11 @@ let Predicates = [HasLS64] in {
   def : ST64BPattern<int_aarch64_st64bv0, ST64BV0>;
 }
 
+let Defs = [X16, X17], mayStore = 1, isCodeGenOnly = 1 in
+def StoreSwiftAsyncContext
+      : Pseudo<(outs), (ins GPR64:$ctx, GPR64sp:$base, simm9:$offset),
+               []>, Sched<[]>;
+
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"
 
