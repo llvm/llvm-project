@@ -569,13 +569,6 @@ static void buildCommonPollyPipeline(FunctionPassManager &PM,
   PM.addPass(PB.buildFunctionSimplificationPipeline(
       Level, ThinOrFullLTOPhase::None)); // Cleanup
 
-  if (DumpAfter)
-    report_fatal_error("Option -polly-dump-after not supported with NPM",
-                       false);
-  if (!DumpAfterFile.empty())
-    report_fatal_error("Option -polly-dump-after-file not supported with NPM",
-                       false);
-
   if (CFGPrinter)
     PM.addPass(llvm::CFGPrinterPass());
 }
@@ -602,6 +595,11 @@ static void buildEarlyPollyPipeline(ModulePassManager &MPM,
 
   buildCommonPollyPipeline(FPM, Level, EnableForOpt);
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+
+  if (DumpAfter)
+    MPM.addPass(DumpModulePass("-after", true));
+  for (auto &Filename : DumpAfterFile)
+    MPM.addPass(DumpModulePass(Filename, false));
 }
 
 static void buildLatePollyPipeline(FunctionPassManager &PM,
@@ -619,6 +617,13 @@ static void buildLatePollyPipeline(FunctionPassManager &PM,
                        false);
 
   buildCommonPollyPipeline(PM, Level, EnableForOpt);
+
+  if (DumpAfter)
+    report_fatal_error("Option -polly-dump-after not supported with NPM",
+                       false);
+  if (!DumpAfterFile.empty())
+    report_fatal_error("Option -polly-dump-after-file not supported with NPM",
+                       false);
 }
 
 /// Register Polly to be available as an optimizer
