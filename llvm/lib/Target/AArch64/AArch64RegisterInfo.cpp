@@ -203,7 +203,7 @@ AArch64RegisterInfo::getDarwinCallPreservedMask(const MachineFunction &MF,
           ->supportSwiftError() &&
       MF.getFunction().getAttributes().hasAttrSomewhere(Attribute::SwiftError))
     return CSR_Darwin_AArch64_AAPCS_SwiftError_RegMask;
-  if (MF.getFunction().getCallingConv() == CallingConv::SwiftTail)
+  if (CC == CallingConv::SwiftTail)
     return CSR_Darwin_AArch64_AAPCS_SwiftTail_RegMask;
   if (CC == CallingConv::PreserveMost)
     return CSR_Darwin_AArch64_RT_MostRegs_RegMask;
@@ -239,7 +239,7 @@ AArch64RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
       MF.getFunction().getAttributes().hasAttrSomewhere(Attribute::SwiftError))
     return SCS ? CSR_AArch64_AAPCS_SwiftError_SCS_RegMask
                : CSR_AArch64_AAPCS_SwiftError_RegMask;
-  if (MF.getFunction().getCallingConv() == CallingConv::SwiftTail) {
+  if (CC == CallingConv::SwiftTail) {
     if (SCS)
       report_fatal_error("ShadowCallStack attribute not supported with swifttail");
     return CSR_AArch64_AAPCS_SwiftTail_RegMask;

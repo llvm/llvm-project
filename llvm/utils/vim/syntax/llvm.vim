@@ -177,6 +177,7 @@ syn keyword llvmKeyword
       \ swiftcc
       \ swifttailcc
       \ swifterror
+      \ swifttailcc
       \ swiftself
       \ syncscope
       \ tail

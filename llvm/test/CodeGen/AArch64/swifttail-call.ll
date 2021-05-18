@@ -158,7 +158,7 @@ define { double, [2 x double] } @test_mismatched_insert() {
 
 define void @fromC_totail() {
 ; COMMON-LABEL: fromC_totail:
-; COMMON: sub sp, sp, #32
+; COMMON: sub sp, sp, #48
 
 ; COMMON-NOT: sub sp,
 ; COMMON: mov w[[TMP:[0-9]+]], #42
@@ -176,7 +176,7 @@ define void @fromC_totail() {
 
 define void @fromC_totail_noreservedframe(i32 %len) {
 ; COMMON-LABEL: fromC_totail_noreservedframe:
-; COMMON: stp x29, x30, [sp, #-32]!
+; COMMON: stp x29, x30, [sp, #-48]!
 
 ; COMMON: mov w[[TMP:[0-9]+]], #42
   ; Note stack is subtracted here to allocate space for arg
@@ -217,4 +217,14 @@ define swifttailcc void @fromtail_toC() {
   call void @Ccallee_stack8([8 x i64] undef, i64 42)
   call void @Ccallee_stack8([8 x i64] undef, i64 42)
   ret void
+}
+
+declare swifttailcc i8* @SwiftSelf(i8 * swiftasync %context, i8* swiftself %closure)
+define swiftcc i8* @CallSwiftSelf(i8* swiftself %closure, i8* %context) {
+; CHECK-LABEL: CallSwiftSelf:
+; CHECK: stp x20
+  ;call void asm "","~{r13}"() ; We get a push r13 but why not with the call
+  ; below?
+  %res = call swifttailcc i8* @SwiftSelf(i8 * swiftasync %context, i8* swiftself %closure)
+  ret i8* %res
 }

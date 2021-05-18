@@ -193,11 +193,12 @@ cl::opt<bool> EnableHomogeneousPrologEpilog(
 
 STATISTIC(NumRedZoneFunctions, "Number of functions using red zone");
 
-// Returns how much of the incoming argument stack area we should clean up in an
-// epilogue. For the C calling convention this will be 0, for guaranteed tail
-// call conventions it can be positive (a normal return or a tail call to a
-// function that uses less stack space for arguments) or negative (for a tail
-// call to a function that needs more stack space than us for arguments).
+/// Returns how much of the incoming argument stack area (in bytes) we should
+/// clean up in an epilogue. For the C calling convention this will be 0, for
+/// guaranteed tail call conventions it can be positive (a normal return or a
+/// tail call to a function that uses less stack space for arguments) or
+/// negative (for a tail call to a function that needs more stack space than us
+/// for arguments).
 static int64_t getArgumentStackToRestore(MachineFunction &MF,
                                          MachineBasicBlock &MBB) {
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
@@ -320,8 +321,8 @@ static unsigned getFixedObjectSize(const MachineFunction &MF,
   if (!IsWin64 || IsFunclet) {
     return AFI->getTailCallReservedStack();
   } else {
-    assert(AFI->getTailCallReservedStack() == 0 &&
-           "don't know how guaranteed tail calls might work on Win64");
+    if (AFI->getTailCallReservedStack() != 0)
+      report_fatal_error("cannot generate ABI-changing tail call for Win64");
     // Var args are stored here in the primary function.
     const unsigned VarArgsArea = AFI->getVarArgsGPRSize();
     // To support EH funclets we allocate an UnwindHelp object
@@ -901,21 +902,17 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
     ++MBBI;
   }
   unsigned NewOpc;
-  int Scale = 1;
   switch (MBBI->getOpcode()) {
   default:
     llvm_unreachable("Unexpected callee-save save/restore opcode!");
   case AArch64::STPXi:
     NewOpc = AArch64::STPXpre;
-    Scale = 8;
     break;
   case AArch64::STPDi:
     NewOpc = AArch64::STPDpre;
-    Scale = 8;
     break;
   case AArch64::STPQi:
     NewOpc = AArch64::STPQpre;
-    Scale = 16;
     break;
   case AArch64::STRXui:
     NewOpc = AArch64::STRXpre;
@@ -928,15 +925,12 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
     break;
   case AArch64::LDPXi:
     NewOpc = AArch64::LDPXpost;
-    Scale = 8;
     break;
   case AArch64::LDPDi:
     NewOpc = AArch64::LDPDpost;
-    Scale = 8;
     break;
   case AArch64::LDPQi:
     NewOpc = AArch64::LDPQpost;
-    Scale = 16;
     break;
   case AArch64::LDRXui:
     NewOpc = AArch64::LDRXpost;
@@ -955,9 +949,18 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
       SEH->eraseFromParent();
   }
 
+  TypeSize Scale = TypeSize::Fixed(1);
+  unsigned Width;
+  int64_t MinOffset, MaxOffset;
+  bool Success = static_cast<const AArch64InstrInfo *>(TII)->getMemOpInfo(
+      NewOpc, Scale, Width, MinOffset, MaxOffset);
+  (void)Success;
+  assert(Success && "unknown load/store opcode");
+
   // If the first store isn't right where we want SP then we can't fold the
   // update in so create a normal arithmetic instruction instead.
-  if (MBBI->getOperand(MBBI->getNumOperands() - 1).getImm() != 0) {
+  if (MBBI->getOperand(MBBI->getNumOperands() - 1).getImm() != 0 ||
+      CSStackSizeInc < MinOffset || CSStackSizeInc > MaxOffset) {
     emitFrameOffset(MBB, MBBI, DL, AArch64::SP, AArch64::SP,
                     StackOffset::getFixed(CSStackSizeInc), TII,
                     InProlog ? MachineInstr::FrameSetup
@@ -980,7 +983,7 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
   assert(MBBI->getOperand(OpndIdx - 1).getReg() == AArch64::SP &&
          "Unexpected base register in callee-save save/restore instruction!");
   assert(CSStackSizeInc % Scale == 0);
-  MIB.addImm(CSStackSizeInc / Scale);
+  MIB.addImm(CSStackSizeInc / (int)Scale);
 
   MIB.setMIFlags(MBBI->getFlags());
   MIB.setMemRefs(MBBI->memoperands());

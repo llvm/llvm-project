@@ -12399,7 +12399,7 @@ context of a Swift execution.
 Semantics:
 """"""""""
 
-If the function has a ``swiftasync`` parameter, that argument will initially
+If the caller has a ``swiftasync`` parameter, that argument will initially
 be stored at the returned address. If not, it will be initialized to null.
 
 '``llvm.localescape``' and '``llvm.localrecover``' Intrinsics

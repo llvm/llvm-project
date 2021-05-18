@@ -8,7 +8,7 @@ define swifttailcc void @inreg(i8* inreg) {
   ret void
 }
 
-define swifttailcc void @inalloca(i8* inalloca) {
+define swifttailcc void @inalloca(i8* inalloca(i8)) {
 ; CHECK: inalloca attribute not allowed in swifttailcc musttail caller
   musttail call swifttailcc void @simple()
   ret void
@@ -40,7 +40,7 @@ define swifttailcc void @call_inreg() {
 
 define swifttailcc void @call_inalloca() {
 ; CHECK: inalloca attribute not allowed in swifttailcc musttail callee
-  musttail call swifttailcc void @inalloca(i8* inalloca undef)
+  musttail call swifttailcc void @inalloca(i8* inalloca(i8) undef)
   ret void
 }
 

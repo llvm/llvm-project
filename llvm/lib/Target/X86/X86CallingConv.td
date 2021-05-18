@@ -858,6 +858,10 @@ def CC_X86_32_C : CallingConv<[
   // The 'nest' parameter, if any, is passed in ECX.
   CCIfNest<CCAssignToReg<[ECX]>>,
 
+  // On swifttailcc pass swiftself in ECX.
+  CCIfCC<"CallingConv::SwiftTail",
+         CCIfSwiftSelf<CCIfType<[i32], CCAssignToReg<[ECX]>>>>,
+
   // The first 3 integer arguments, if marked 'inreg' and if the call is not
   // a vararg call, are passed in integer registers.
   CCIfNotVarArg<CCIfInReg<CCIfType<[i32], CCAssignToReg<[EAX, EDX, ECX]>>>>,
