@@ -13,20 +13,18 @@
 // UNSUPPORTED: libcxx-no-debug-mode
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <list>
-#include <cstdlib>
-#include <cassert>
 
 #include "test_macros.h"
+#include "debug_macros.h"
 
 int main(int, char**)
 {
     std::list<int> c1(100);
     std::list<int> c2;
-    std::list<int>::iterator i = c1.insert(next(c2.cbegin(), 10), 5, 1);
-    assert(false);
+    TEST_LIBCPP_ASSERT_FAILURE(c1.insert(c2.cbegin(), 5, 1),
+                               "list::insert(iterator, n, x) called with an iterator not referring to this list");
 
-  return 0;
+    return 0;
 }

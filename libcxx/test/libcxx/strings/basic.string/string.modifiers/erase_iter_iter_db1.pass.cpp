@@ -13,21 +13,19 @@
 // UNSUPPORTED: libcxx-no-debug-mode
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <string>
-#include <cassert>
-#include <exception>
-#include <cstdlib>
 
 #include "test_macros.h"
+#include "debug_macros.h"
 
 int main(int, char**)
 {
     std::string l1("123");
     std::string l2("123");
-    std::string::iterator i = l1.erase(l2.cbegin(), l1.cbegin()+1);
-    assert(false);
+    TEST_LIBCPP_ASSERT_FAILURE(
+        l1.erase(l2.cbegin(), l1.cbegin() + 1),
+        "string::erase(iterator,  iterator) called with an iterator not referring to this string");
 
     return 0;
 }
