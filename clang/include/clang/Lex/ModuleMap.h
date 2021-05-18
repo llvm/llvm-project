@@ -649,12 +649,14 @@ public:
   /// Sets the umbrella header of the given module to the given
   /// header.
   void setUmbrellaHeader(Module *Mod, const FileEntry *UmbrellaHeader,
-                         Twine NameAsWritten);
+                         const Twine &NameAsWritten,
+                         const Twine &PathRelativeToRootModuleDirectory);
 
   /// Sets the umbrella directory of the given module to the given
   /// directory.
   void setUmbrellaDir(Module *Mod, const DirectoryEntry *UmbrellaDir,
-                      Twine NameAsWritten);
+                      const Twine &NameAsWritten,
+                      const Twine &PathRelativeToRootModuleDirectory);
 
   /// Adds this header to the given module.
   /// \param Role The role of the header wrt the module.

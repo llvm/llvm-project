@@ -265,6 +265,54 @@ func @constant_wrong_type_string() {
 
 // -----
 
+llvm.func @array_attribute_one_element() -> !llvm.struct<(f64, f64)> {
+  // expected-error @+1 {{expected array attribute with two elements, representing a complex constant}}
+  %0 = llvm.mlir.constant([1.0 : f64]) : !llvm.struct<(f64, f64)>
+  llvm.return %0 : !llvm.struct<(f64, f64)>
+}
+
+// -----
+
+llvm.func @array_attribute_two_different_types() -> !llvm.struct<(f64, f64)> {
+  // expected-error @+1 {{expected array attribute with two elements, representing a complex constant}}
+  %0 = llvm.mlir.constant([1.0 : f64, 1.0 : f32]) : !llvm.struct<(f64, f64)>
+  llvm.return %0 : !llvm.struct<(f64, f64)>
+}
+
+// -----
+
+llvm.func @struct_wrong_attribute_type() -> !llvm.struct<(f64, f64)> {
+  // expected-error @+1 {{expected array attribute with two elements, representing a complex constant}}
+  %0 = llvm.mlir.constant(1.0 : f64) : !llvm.struct<(f64, f64)>
+  llvm.return %0 : !llvm.struct<(f64, f64)>
+}
+
+// -----
+
+llvm.func @struct_one_element() -> !llvm.struct<(f64)> {
+  // expected-error @+1 {{expected struct type with two elements of the same type, the type of a complex constant}}
+  %0 = llvm.mlir.constant([1.0 : f64, 1.0 : f64]) : !llvm.struct<(f64)>
+  llvm.return %0 : !llvm.struct<(f64)>
+}
+
+// -----
+
+llvm.func @struct_two_different_elements() -> !llvm.struct<(f64, f32)> {
+  // expected-error @+1 {{expected struct type with two elements of the same type, the type of a complex constant}}
+  %0 = llvm.mlir.constant([1.0 : f64, 1.0 : f64]) : !llvm.struct<(f64, f32)>
+  llvm.return %0 : !llvm.struct<(f64, f32)>
+}
+
+// -----
+
+llvm.func @struct_wrong_element_types() -> !llvm.struct<(!llvm.array<2 x f64>, !llvm.array<2 x f64>)> {
+  // expected-error @+1 {{expected struct element types to be floating point type or integer type}}
+  %0 = llvm.mlir.constant([dense<[1.0, 1.0]> : tensor<2xf64>, dense<[1.0, 1.0]> : tensor<2xf64>]) : !llvm.struct<(!llvm.array<2 x f64>, !llvm.array<2 x f64>)>
+  llvm.return %0 : !llvm.struct<(!llvm.array<2 x f64>, !llvm.array<2 x f64>)>
+}
+
+// -----
+
 func @insertvalue_non_llvm_type(%a : i32, %b : i32) {
   // expected-error@+1 {{expected LLVM IR Dialect type}}
   llvm.insertvalue %a, %b[0] : tensor<*xi32>

@@ -1200,7 +1200,8 @@ public:
 
       // Create a constant scalar value from the splat constant.
       Value scalarConstant = rewriter.create<ConstantOp>(
-          def->getLoc(), constantAttr.getSplatValue());
+          def->getLoc(), constantAttr.getSplatValue(),
+          constantAttr.getType().getElementType());
 
       auto fusedOp = rewriter.create<GenericOp>(
           rewriter.getUnknownLoc(), genericOp->getResultTypes(),

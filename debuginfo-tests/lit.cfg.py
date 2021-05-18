@@ -118,7 +118,7 @@ else:
         'debuginfo-tests project.'.format(config.host_triple))
 
 # Check which debuggers are available:
-built_lldb = llvm_config.use_llvm_tool('lldb', search_env='CLANG')
+built_lldb = llvm_config.use_llvm_tool('lldb', search_env='LLDB')
 lldb_path = None
 if built_lldb is not None:
     lldb_path = built_lldb

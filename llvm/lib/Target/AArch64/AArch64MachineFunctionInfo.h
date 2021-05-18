@@ -54,6 +54,12 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// callee is expected to pop the args.
   unsigned ArgumentStackToRestore = 0;
 
+  /// Space just below incoming stack pointer reserved for arguments being
+  /// passed on the stack during a tail call. This will be the difference
+  /// between the largest tail call argument space needed in this function and
+  /// what's already available by reusing space of incoming arguments.
+  unsigned TailCallReservedStack = 0;
+
   /// HasStackFrame - True if this function has a stack frame. Set by
   /// determineCalleeSaves().
   bool HasStackFrame = false;
@@ -178,6 +184,11 @@ public:
   unsigned getArgumentStackToRestore() const { return ArgumentStackToRestore; }
   void setArgumentStackToRestore(unsigned bytes) {
     ArgumentStackToRestore = bytes;
+  }
+
+  unsigned getTailCallReservedStack() const { return TailCallReservedStack; }
+  void setTailCallReservedStack(unsigned bytes) {
+    TailCallReservedStack = bytes;
   }
 
   bool hasCalculatedStackSizeSVE() const { return HasCalculatedStackSizeSVE; }

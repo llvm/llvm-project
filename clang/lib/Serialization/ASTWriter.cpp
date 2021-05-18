@@ -3965,72 +3965,6 @@ void ASTWriter::WriteOpenCLExtensions(Sema &SemaRef) {
   }
   Stream.EmitRecord(OPENCL_EXTENSIONS, Record);
 }
-
-void ASTWriter::WriteOpenCLExtensionTypes(Sema &SemaRef) {
-  if (!SemaRef.Context.getLangOpts().OpenCL)
-    return;
-
-  // Sort the elements of the map OpenCLTypeExtMap by TypeIDs,
-  // without copying them.
-  const llvm::DenseMap<const Type *, std::set<std::string>> &OpenCLTypeExtMap =
-      SemaRef.OpenCLTypeExtMap;
-  using ElementTy = std::pair<TypeID, const std::set<std::string> *>;
-  llvm::SmallVector<ElementTy, 8> StableOpenCLTypeExtMap;
-  StableOpenCLTypeExtMap.reserve(OpenCLTypeExtMap.size());
-
-  for (const auto &I : OpenCLTypeExtMap)
-    StableOpenCLTypeExtMap.emplace_back(
-        getTypeID(I.first->getCanonicalTypeInternal()), &I.second);
-
-  auto CompareByTypeID = [](const ElementTy &E1, const ElementTy &E2) -> bool {
-    return E1.first < E2.first;
-  };
-  llvm::sort(StableOpenCLTypeExtMap, CompareByTypeID);
-
-  RecordData Record;
-  for (const ElementTy &E : StableOpenCLTypeExtMap) {
-    Record.push_back(E.first); // TypeID
-    const std::set<std::string> *ExtSet = E.second;
-    Record.push_back(static_cast<unsigned>(ExtSet->size()));
-    for (const std::string &Ext : *ExtSet)
-      AddString(Ext, Record);
-  }
-
-  Stream.EmitRecord(OPENCL_EXTENSION_TYPES, Record);
-}
-
-void ASTWriter::WriteOpenCLExtensionDecls(Sema &SemaRef) {
-  if (!SemaRef.Context.getLangOpts().OpenCL)
-    return;
-
-  // Sort the elements of the map OpenCLDeclExtMap by DeclIDs,
-  // without copying them.
-  const llvm::DenseMap<const Decl *, std::set<std::string>> &OpenCLDeclExtMap =
-      SemaRef.OpenCLDeclExtMap;
-  using ElementTy = std::pair<DeclID, const std::set<std::string> *>;
-  llvm::SmallVector<ElementTy, 8> StableOpenCLDeclExtMap;
-  StableOpenCLDeclExtMap.reserve(OpenCLDeclExtMap.size());
-
-  for (const auto &I : OpenCLDeclExtMap)
-    StableOpenCLDeclExtMap.emplace_back(getDeclID(I.first), &I.second);
-
-  auto CompareByDeclID = [](const ElementTy &E1, const ElementTy &E2) -> bool {
-    return E1.first < E2.first;
-  };
-  llvm::sort(StableOpenCLDeclExtMap, CompareByDeclID);
-
-  RecordData Record;
-  for (const ElementTy &E : StableOpenCLDeclExtMap) {
-    Record.push_back(E.first); // DeclID
-    const std::set<std::string> *ExtSet = E.second;
-    Record.push_back(static_cast<unsigned>(ExtSet->size()));
-    for (const std::string &Ext : *ExtSet)
-      AddString(Ext, Record);
-  }
-
-  Stream.EmitRecord(OPENCL_EXTENSION_DECLS, Record);
-}
-
 void ASTWriter::WriteCUDAPragmas(Sema &SemaRef) {
   if (SemaRef.ForceCUDAHostDeviceDepth > 0) {
     RecordData::value_type Record[] = {SemaRef.ForceCUDAHostDeviceDepth};
@@ -4775,16 +4709,11 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   WriteIdentifierTable(PP, SemaRef.IdResolver, isModule);
   WriteFPPragmaOptions(SemaRef.CurFPFeatureOverrides());
   WriteOpenCLExtensions(SemaRef);
-  WriteOpenCLExtensionTypes(SemaRef);
   WriteCUDAPragmas(SemaRef);
 
   // If we're emitting a module, write out the submodule information.
   if (WritingModule)
     WriteSubmodules(WritingModule);
-
-  // We need to have information about submodules to correctly deserialize
-  // decls from OpenCLExtensionDecls block
-  WriteOpenCLExtensionDecls(SemaRef);
 
   Stream.EmitRecord(SPECIAL_TYPES, SpecialTypes);
 

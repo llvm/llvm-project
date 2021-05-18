@@ -2697,6 +2697,11 @@ def : Pat<(vselect v4i32:$vA, v4f32:$vB, v4f32:$vC),
           (XXSEL $vC, $vB, $vA)>;
 def : Pat<(vselect v2i64:$vA, v2f64:$vB, v2f64:$vC),
           (XXSEL $vC, $vB, $vA)>;
+def : Pat<(v1i128 (vselect v1i128:$vA, v1i128:$vB, v1i128:$vC)),
+          (COPY_TO_REGCLASS
+                 (XXSEL (COPY_TO_REGCLASS $vC, VSRC),
+                        (COPY_TO_REGCLASS $vB, VSRC),
+                        (COPY_TO_REGCLASS $vA, VSRC)), VRRC)>;
 
 def : Pat<(v4f32 (any_fmaxnum v4f32:$src1, v4f32:$src2)),
           (v4f32 (XVMAXSP $src1, $src2))>;

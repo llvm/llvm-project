@@ -1962,7 +1962,30 @@ static LogicalResult verify(LLVM::ConstantOp op) {
     }
     return success();
   }
-  if (!op.value().isa<IntegerAttr, FloatAttr, ElementsAttr>())
+  if (auto structType = op.getType().dyn_cast<LLVMStructType>()) {
+    if (structType.getBody().size() != 2 ||
+        structType.getBody()[0] != structType.getBody()[1]) {
+      return op.emitError() << "expected struct type with two elements of the "
+                               "same type, the type of a complex constant";
+    }
+
+    auto arrayAttr = op.value().dyn_cast<ArrayAttr>();
+    if (!arrayAttr || arrayAttr.size() != 2 ||
+        arrayAttr[0].getType() != arrayAttr[1].getType()) {
+      return op.emitOpError() << "expected array attribute with two elements, "
+                                 "representing a complex constant";
+    }
+
+    Type elementType = structType.getBody()[0];
+    if (!elementType
+             .isa<IntegerType, Float16Type, Float32Type, Float64Type>()) {
+      return op.emitError()
+             << "expected struct element types to be floating point type or "
+                "integer type";
+    }
+    return success();
+  }
+  if (!op.value().isa<IntegerAttr, ArrayAttr, FloatAttr, ElementsAttr>())
     return op.emitOpError()
            << "only supports integer, float, string or elements attributes";
   return success();

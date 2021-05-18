@@ -26,7 +26,8 @@ set(MSAN_RTL_HEADERS
   msan_origin.h
   msan_poisoning.h
   msan_report.h
-  msan_thread.h)
+  msan_thread.h
+  )
 
 set(MSAN_RTL_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")

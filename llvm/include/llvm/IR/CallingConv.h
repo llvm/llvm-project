@@ -86,6 +86,11 @@ namespace CallingConv {
     /// and has no return value. All register values are preserved.
     CFGuard_Check = 19,
 
+    /// SwiftTail - This follows the Swift calling convention in how arguments
+    /// are passed but guarantees tail calls will be made by making the callee
+    /// clean up their stack.
+    SwiftTail = 20,
+
     // Target - This is the start of the target-specific calling conventions,
     // e.g. fastcall and thiscall on X86.
     FirstTargetCC = 64,
