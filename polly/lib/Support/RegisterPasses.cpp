@@ -269,7 +269,7 @@ void initializePollyPasses(PassRegistry &Registry) {
   initializeForwardOpTreeWrapperPassPass(Registry);
   initializeDeLICMWrapperPassPass(Registry);
   initializeSimplifyWrapperPassPass(Registry);
-  initializeDumpModulePass(Registry);
+  initializeDumpModuleWrapperPassPass(Registry);
   initializePruneUnprofitableWrapperPassPass(Registry);
 }
 
@@ -302,10 +302,11 @@ void initializePollyPasses(PassRegistry &Registry) {
 static void registerPollyPasses(llvm::legacy::PassManagerBase &PM,
                                 bool EnableForOpt) {
   if (DumpBefore)
-    PM.add(polly::createDumpModulePass("-before", true));
+    PM.add(polly::createDumpModuleWrapperPass("-before", true));
   for (auto &Filename : DumpBeforeFile)
-    PM.add(polly::createDumpModulePass(Filename, false));
+    PM.add(polly::createDumpModuleWrapperPass(Filename, false));
 
+  PM.add(polly::createCodePreparationPass());
   PM.add(polly::createScopDetectionWrapperPassPass());
 
   if (PollyDetectOnly)
@@ -397,9 +398,9 @@ static void registerPollyPasses(llvm::legacy::PassManagerBase &PM,
   PM.add(createBarrierNoopPass());
 
   if (DumpAfter)
-    PM.add(polly::createDumpModulePass("-after", true));
+    PM.add(polly::createDumpModuleWrapperPass("-after", true));
   for (auto &Filename : DumpAfterFile)
-    PM.add(polly::createDumpModulePass(Filename, false));
+    PM.add(polly::createDumpModuleWrapperPass(Filename, false));
 
   if (CFGPrinter)
     PM.add(llvm::createCFGPrinterLegacyPassPass());
@@ -429,7 +430,6 @@ registerPollyEarlyAsPossiblePasses(const llvm::PassManagerBuilder &Builder,
     return;
 
   registerCanonicalicationPasses(PM);
-  PM.add(polly::createCodePreparationPass());
   registerPollyPasses(PM, EnableForOpt);
 }
 
@@ -444,7 +444,6 @@ registerPollyLoopOptimizerEndPasses(const llvm::PassManagerBuilder &Builder,
   if (!shouldEnablePollyForDiagnostic() && !EnableForOpt)
     return;
 
-  PM.add(polly::createCodePreparationPass());
   registerPollyPasses(PM, EnableForOpt);
   if (EnableForOpt)
     PM.add(createCodegenCleanupPass());
@@ -461,7 +460,6 @@ registerPollyScalarOptimizerLatePasses(const llvm::PassManagerBuilder &Builder,
   if (!shouldEnablePollyForDiagnostic() && !EnableForOpt)
     return;
 
-  PM.add(polly::createCodePreparationPass());
   polly::registerPollyPasses(PM, EnableForOpt);
   if (EnableForOpt)
     PM.add(createCodegenCleanupPass());
@@ -485,12 +483,6 @@ static void buildCommonPollyPipeline(FunctionPassManager &PM,
 
   // TODO add utility passes for the various command line options, once they're
   // ported
-  if (DumpBefore)
-    report_fatal_error("Option -polly-dump-before not supported with NPM",
-                       false);
-  if (!DumpBeforeFile.empty())
-    report_fatal_error("Option -polly-dump-before-file not supported with NPM",
-                       false);
 
   if (PollyDetectOnly) {
     // Don't add more passes other than the ScopPassManager's detection passes.
@@ -597,12 +589,16 @@ static void buildEarlyPollyPipeline(ModulePassManager &MPM,
 
   FunctionPassManager FPM = buildCanonicalicationPassesForNPM(MPM, Level);
 
-  if (DumpBefore)
-    report_fatal_error("Option -polly-dump-before not supported with NPM",
-                       false);
-  if (!DumpBeforeFile.empty())
-    report_fatal_error("Option -polly-dump-before-file not supported with NPM",
-                       false);
+  if (DumpBefore || !DumpBeforeFile.empty()) {
+    MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+
+    if (DumpBefore)
+      MPM.addPass(DumpModulePass("-before", true));
+    for (auto &Filename : DumpBeforeFile)
+      MPM.addPass(DumpModulePass(Filename, false));
+
+    FPM = FunctionPassManager();
+  }
 
   buildCommonPollyPipeline(FPM, Level, EnableForOpt);
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
