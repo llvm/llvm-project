@@ -472,7 +472,7 @@ void StubHelperSection::setup() {
       make<Defined>("__dyld_private", nullptr, in.imageLoaderCache, 0, 0,
                     /*isWeakDef=*/false,
                     /*isExternal=*/false, /*isPrivateExtern=*/false,
-                    /*isThumb=*/false);
+                    /*isThumb=*/false, /*isReferencedDynamically=*/false);
 }
 
 ImageLoaderCacheSection::ImageLoaderCacheSection() {
@@ -856,6 +856,8 @@ template <class LP> void SymtabSectionImpl<LP>::writeTo(uint8_t *buf) const {
       }
       nList->n_desc |= defined->thumb ? N_ARM_THUMB_DEF : 0;
       nList->n_desc |= defined->isExternalWeakDef() ? N_WEAK_DEF : 0;
+      nList->n_desc |=
+          defined->referencedDynamically ? REFERENCED_DYNAMICALLY : 0;
     } else if (auto *dysym = dyn_cast<DylibSymbol>(entry.sym)) {
       uint16_t n_desc = nList->n_desc;
       int16_t ordinal = ordinalForDylibSymbol(*dysym);
@@ -1091,9 +1093,9 @@ void BitcodeBundleSection::writeTo(uint8_t *buf) const {
 
 void macho::createSyntheticSymbols() {
   auto addHeaderSymbol = [](const char *name) {
-    symtab->addSynthetic(name, in.header->isec, 0,
-                         /*privateExtern=*/true,
-                         /*includeInSymtab=*/false);
+    symtab->addSynthetic(name, in.header->isec, /*value=*/0,
+                         /*privateExtern=*/true, /*includeInSymtab=*/false,
+                         /*referencedDynamically=*/false);
   };
 
   switch (config->outputType) {
@@ -1105,16 +1107,15 @@ void macho::createSyntheticSymbols() {
     // Otherwise, it's an absolute symbol.
     if (config->isPic)
       symtab->addSynthetic("__mh_execute_header", in.header->isec, /*value=*/0,
-                           /*privateExtern=*/false,
-                           /*includeInSymtab=*/true);
+                           /*privateExtern=*/false, /*includeInSymtab=*/true,
+                           /*referencedDynamically=*/true);
     else
-      symtab->addSynthetic("__mh_execute_header",
-                           /*isec*/ nullptr, /*value=*/0,
-                           /*privateExtern=*/false,
-                           /*includeInSymtab=*/true);
+      symtab->addSynthetic("__mh_execute_header", /*isec=*/nullptr, /*value=*/0,
+                           /*privateExtern=*/false, /*includeInSymtab=*/true,
+                           /*referencedDynamically=*/true);
     break;
 
-    // The following symbols are  N_SECT symbols, even though the header is not
+    // The following symbols are N_SECT symbols, even though the header is not
     // part of any section and that they are private to the bundle/dylib/object
     // they are part of.
   case MH_BUNDLE:
