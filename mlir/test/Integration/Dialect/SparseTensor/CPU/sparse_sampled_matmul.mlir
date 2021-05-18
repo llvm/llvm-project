@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN:   --sparsification="fast-output" --sparse-tensor-conversion \
+// RUN:   --sparsification --sparse-tensor-conversion \
 // RUN:   --convert-linalg-to-loops --convert-vector-to-scf --convert-scf-to-std \
 // RUN:   --func-bufferize --tensor-constant-bufferize --tensor-bufferize \
 // RUN:   --std-bufferize --finalizing-bufferize  \
@@ -41,7 +41,7 @@ module {
   func @sampled_dense_dense(%args: tensor<?x?xf32, #SparseMatrix>,
                             %arga: tensor<?x?xf32>,
                             %argb: tensor<?x?xf32>,
-                            %argx: tensor<?x?xf32>) -> tensor<?x?xf32> {
+                            %argx: tensor<?x?xf32> {linalg.inplaceable = true}) -> tensor<?x?xf32> {
     %0 = linalg.generic #trait_sampled_dense_dense
       ins(%args, %arga, %argb: tensor<?x?xf32, #SparseMatrix>, tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%argx: tensor<?x?xf32>) {

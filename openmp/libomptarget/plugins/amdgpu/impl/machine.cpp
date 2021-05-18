@@ -14,7 +14,6 @@
 #include <vector>
 
 extern ATLMachine g_atl_machine;
-extern hsa_region_t atl_cpu_kernarg_region;
 
 void ATLProcessor::addMemory(const ATLMemory &mem) {
   for (auto &mem_obj : memories_) {

@@ -99,7 +99,7 @@ struct PollyForcePassLinking {
     polly::createFlattenSchedulePass();
     polly::createForwardOpTreeWrapperPass();
     polly::createDeLICMWrapperPass();
-    polly::createDumpModulePass("", true);
+    polly::createDumpModuleWrapperPass("", true);
     polly::createSimplifyWrapperPass(0);
     polly::createPruneUnprofitableWrapperPass();
   }

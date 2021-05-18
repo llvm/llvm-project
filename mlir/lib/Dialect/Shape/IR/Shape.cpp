@@ -15,6 +15,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -769,6 +770,37 @@ OpFoldResult ConstShapeOp::fold(ArrayRef<Attribute>) { return shapeAttr(); }
 void ConstShapeOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                MLIRContext *context) {
   patterns.add<TensorCastConstShape>(context);
+}
+
+LogicalResult mlir::shape::ConstShapeOp::inferReturnTypes(
+    MLIRContext *context, Optional<Location> location, ValueRange operands,
+    DictionaryAttr attributes, RegionRange regions,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  Builder b(context);
+  auto shape = attributes.getAs<DenseIntElementsAttr>("shape");
+  if (!shape)
+    return emitOptionalError(location, "missing shape attribute");
+  inferredReturnTypes.assign({RankedTensorType::get(
+      {static_cast<int64_t>(shape.size())}, b.getIndexType())});
+  return success();
+}
+
+bool mlir::shape::ConstShapeOp::isCompatibleReturnTypes(TypeRange l,
+                                                        TypeRange r) {
+  if (l.size() != 1 || r.size() != 1)
+    return false;
+
+  Type lhs = l.front();
+  Type rhs = r.front();
+
+  if (lhs == rhs)
+    return true;
+
+  if (lhs.isa<ShapeType>() || rhs.isa<ShapeType>())
+    // Shape type is compatible with all other valid return types.
+    return true;
+
+  return succeeded(verifyCompatibleShapes(lhs, rhs));
 }
 
 //===----------------------------------------------------------------------===//

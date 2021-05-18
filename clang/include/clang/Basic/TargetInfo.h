@@ -129,9 +129,9 @@ struct TransferrableTargetInfo {
     Float128
   };
 protected:
-  IntType SizeType, IntMaxType, PtrDiffType, IntPtrType, WCharType,
-          WIntType, Char16Type, Char32Type, Int64Type, SigAtomicType,
-          ProcessIDType;
+  IntType SizeType, IntMaxType, PtrDiffType, IntPtrType, WCharType, WIntType,
+      Char16Type, Char32Type, Int64Type, Int16Type, SigAtomicType,
+      ProcessIDType;
 
   /// Whether Objective-C's built-in boolean type should be signed char.
   ///
@@ -350,6 +350,10 @@ public:
   IntType getInt64Type() const { return Int64Type; }
   IntType getUInt64Type() const {
     return getCorrespondingUnsignedType(Int64Type);
+  }
+  IntType getInt16Type() const { return Int16Type; }
+  IntType getUInt16Type() const {
+    return getCorrespondingUnsignedType(Int16Type);
   }
   IntType getSigAtomicType() const { return SigAtomicType; }
   IntType getProcessIDType() const { return ProcessIDType; }

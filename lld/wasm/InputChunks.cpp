@@ -57,8 +57,37 @@ StringRef InputChunk::getComdatName() const {
   return file->getWasmObj()->linkingData().Comdats[index];
 }
 
+uint32_t InputChunk::getSize() const {
+  if (const auto *ms = dyn_cast<SyntheticMergedChunk>(this))
+    return ms->builder.getSize();
+
+  if (const auto *f = dyn_cast<InputFunction>(this)) {
+    if (config->compressRelocations && f->file) {
+      return f->getCompressedSize();
+    }
+  }
+
+  return data().size();
+}
+
+uint32_t InputChunk::getInputSize() const {
+  if (const auto *f = dyn_cast<InputFunction>(this))
+    return f->function->Size;
+  return getSize();
+}
+
 // Copy this input chunk to an mmap'ed output file and apply relocations.
 void InputChunk::writeTo(uint8_t *buf) const {
+  if (const auto *f = dyn_cast<InputFunction>(this)) {
+    if (file && config->compressRelocations)
+      return f->writeCompressed(buf);
+  } else if (const auto *ms = dyn_cast<SyntheticMergedChunk>(this)) {
+    ms->builder.write(buf + outSecOff);
+    // Apply relocations
+    ms->relocate(buf + outSecOff);
+    return;
+  }
+
   // Copy contents
   memcpy(buf + outSecOff, data().data(), data().size());
 
@@ -73,7 +102,7 @@ void InputChunk::relocate(uint8_t *buf) const {
   LLVM_DEBUG(dbgs() << "applying relocations: " << toString(this)
                     << " count=" << relocations.size() << "\n");
   int32_t inputSectionOffset = getInputSectionOffset();
-  auto tombstone = getTombstone();
+  uint64_t tombstone = getTombstone();
 
   for (const WasmRelocation &rel : relocations) {
     uint8_t *loc = buf + rel.Offset - inputSectionOffset;
@@ -147,6 +176,14 @@ void InputChunk::writeRelocations(raw_ostream &os) const {
     if (relocTypeHasAddend(rel.Type))
       writeSleb128(os, file->calcNewAddend(rel), "reloc addend");
   }
+}
+
+uint64_t InputChunk::getTombstone() const {
+  if (const auto *s = dyn_cast<InputSection>(this)) {
+    return s->tombstoneValue;
+  }
+
+  return 0;
 }
 
 void InputFunction::setFunctionIndex(uint32_t index) {
@@ -235,7 +272,7 @@ void InputFunction::calculateSize() {
   uint32_t start = getInputSectionOffset();
   uint32_t end = start + function->Size;
 
-  auto tombstone = getTombstone();
+  uint64_t tombstone = getTombstone();
 
   uint32_t lastRelocEnd = start + functionSizeLength;
   for (const WasmRelocation &rel : relocations) {
@@ -259,10 +296,7 @@ void InputFunction::calculateSize() {
 
 // Override the default writeTo method so that we can (optionally) write the
 // compressed version of the function.
-void InputFunction::writeTo(uint8_t *buf) const {
-  if (!file || !config->compressRelocations)
-    return InputChunk::writeTo(buf);
-
+void InputFunction::writeCompressed(uint8_t *buf) const {
   buf += outSecOff;
   uint8_t *orig = buf;
   (void)orig;
@@ -270,7 +304,7 @@ void InputFunction::writeTo(uint8_t *buf) const {
   const uint8_t *secStart = file->codeSection->Content.data();
   const uint8_t *funcStart = secStart + getInputSectionOffset();
   const uint8_t *end = funcStart + function->Size;
-  auto tombstone = getTombstone();
+  uint64_t tombstone = getTombstone();
   uint32_t count;
   decodeULEB128(funcStart, &count);
   funcStart += count;
@@ -294,26 +328,30 @@ void InputFunction::writeTo(uint8_t *buf) const {
   LLVM_DEBUG(dbgs() << "  total: " << (buf + chunkSize - orig) << "\n");
 }
 
-uint64_t InputSegment::getOffset(uint64_t offset) const {
-  if (const MergeInputSegment *ms = dyn_cast<MergeInputSegment>(this)) {
-    LLVM_DEBUG(dbgs() << "getOffset(merged): " << getName() << "\n");
+uint64_t InputChunk::getOffset(uint64_t offset) const {
+  return outSecOff + offset;
+}
+
+uint64_t InputChunk::getSegmentOffset(uint64_t offset) const {
+  if (const auto *ms = dyn_cast<MergeInputChunk>(this)) {
+    LLVM_DEBUG(dbgs() << "getSegmentOffset(merged): " << getName() << "\n");
     LLVM_DEBUG(dbgs() << "offset: " << offset << "\n");
     LLVM_DEBUG(dbgs() << "parentOffset: " << ms->getParentOffset(offset)
                       << "\n");
     assert(ms->parent);
-    return ms->parent->getOffset(ms->getParentOffset(offset));
+    return ms->parent->getSegmentOffset(ms->getParentOffset(offset));
   }
   return outputSegmentOffset + offset;
 }
 
-uint64_t InputSegment::getVA(uint64_t offset) const {
-  return (outputSeg ? outputSeg->startVA : 0) + getOffset(offset);
+uint64_t InputChunk::getVA(uint64_t offset) const {
+  return (outputSeg ? outputSeg->startVA : 0) + getSegmentOffset(offset);
 }
 
 // Generate code to apply relocations to the data section at runtime.
 // This is only called when generating shared libaries (PIC) where address are
 // not known at static link time.
-void InputSegment::generateRelocationCode(raw_ostream &os) const {
+void InputChunk::generateRelocationCode(raw_ostream &os) const {
   LLVM_DEBUG(dbgs() << "generating runtime relocations: " << getName()
                     << " count=" << relocations.size() << "\n");
 
@@ -324,7 +362,7 @@ void InputSegment::generateRelocationCode(raw_ostream &os) const {
                                 ? WASM_OPCODE_I64_ADD
                                 : WASM_OPCODE_I32_ADD;
 
-  auto tombstone = getTombstone();
+  uint64_t tombstone = getTombstone();
   // TODO(sbc): Encode the relocations in the data section and write a loop
   // here to apply them.
   for (const WasmRelocation &rel : relocations) {
@@ -382,7 +420,7 @@ void InputSegment::generateRelocationCode(raw_ostream &os) const {
 
 // Split WASM_SEG_FLAG_STRINGS section. Such a section is a sequence of
 // null-terminated strings.
-void MergeInputSegment::splitStrings(ArrayRef<uint8_t> data) {
+void MergeInputChunk::splitStrings(ArrayRef<uint8_t> data) {
   LLVM_DEBUG(llvm::dbgs() << "splitStrings\n");
   size_t off = 0;
   StringRef s = toStringRef(data);
@@ -405,15 +443,15 @@ void MergeInputSegment::splitStrings(ArrayRef<uint8_t> data) {
 //
 // Note that this function is called from parallelForEach. This must be
 // thread-safe (i.e. no memory allocation from the pools).
-void MergeInputSegment::splitIntoPieces() {
+void MergeInputChunk::splitIntoPieces() {
   assert(pieces.empty());
   // As of now we only support WASM_SEG_FLAG_STRINGS but in the future we
   // could add other types of splitting (see ELF's splitIntoPieces).
-  assert(segment->Data.LinkingFlags & WASM_SEG_FLAG_STRINGS);
+  assert(flags & WASM_SEG_FLAG_STRINGS);
   splitStrings(data());
 }
 
-SegmentPiece *MergeInputSegment::getSegmentPiece(uint64_t offset) {
+SectionPiece *MergeInputChunk::getSectionPiece(uint64_t offset) {
   if (this->data().size() <= offset)
     fatal(toString(this) + ": offset is outside the section");
 
@@ -421,36 +459,25 @@ SegmentPiece *MergeInputSegment::getSegmentPiece(uint64_t offset) {
   // In that case we need to  do a binary search of the original section piece
   // vector.
   auto it = partition_point(
-      pieces, [=](SegmentPiece p) { return p.inputOff <= offset; });
+      pieces, [=](SectionPiece p) { return p.inputOff <= offset; });
   return &it[-1];
 }
 
 // Returns the offset in an output section for a given input offset.
 // Because contents of a mergeable section is not contiguous in output,
 // it is not just an addition to a base output offset.
-uint64_t MergeInputSegment::getParentOffset(uint64_t offset) const {
+uint64_t MergeInputChunk::getParentOffset(uint64_t offset) const {
   // If Offset is not at beginning of a section piece, it is not in the map.
   // In that case we need to search from the original section piece vector.
-  const SegmentPiece *piece = getSegmentPiece(offset);
+  const SectionPiece *piece = getSectionPiece(offset);
   uint64_t addend = offset - piece->inputOff;
   return piece->outputOff + addend;
 }
 
-uint32_t SyntheticMergedDataSegment::getSize() const {
-  return builder.getSize();
-}
-
-void SyntheticMergedDataSegment::writeTo(uint8_t *buf) const {
-  builder.write(buf + outSecOff);
-
-  // Apply relocations
-  relocate(buf + outSecOff);
-}
-
-void SyntheticMergedDataSegment::finalizeContents() {
+void SyntheticMergedChunk::finalizeContents() {
   // Add all string pieces to the string table builder to create section
   // contents.
-  for (MergeInputSegment *sec : segments)
+  for (MergeInputChunk *sec : chunks)
     for (size_t i = 0, e = sec->pieces.size(); i != e; ++i)
       if (sec->pieces[i].live)
         builder.add(sec->getData(i));
@@ -461,7 +488,7 @@ void SyntheticMergedDataSegment::finalizeContents() {
   // finalize() fixed tail-optimized strings, so we can now get
   // offsets of strings. Get an offset for each string and save it
   // to a corresponding SectionPiece for easy access.
-  for (MergeInputSegment *sec : segments)
+  for (MergeInputChunk *sec : chunks)
     for (size_t i = 0, e = sec->pieces.size(); i != e; ++i)
       if (sec->pieces[i].live)
         sec->pieces[i].outputOff = builder.getOffset(sec->getData(i));

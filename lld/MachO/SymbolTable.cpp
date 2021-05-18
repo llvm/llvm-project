@@ -45,7 +45,8 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef name,
 Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
                                  InputSection *isec, uint64_t value,
                                  uint64_t size, bool isWeakDef,
-                                 bool isPrivateExtern, bool isThumb) {
+                                 bool isPrivateExtern, bool isThumb,
+                                 bool isReferencedDynamically) {
   Symbol *s;
   bool wasInserted;
   bool overridesWeakDef = false;
@@ -57,10 +58,11 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
   if (!wasInserted) {
     if (auto *defined = dyn_cast<Defined>(s)) {
       if (isWeakDef) {
-        // Both old and new symbol weak (e.g. inline function in two TUs):
-        // If one of them isn't private extern, the merged symbol isn't.
         if (defined->isWeakDef()) {
+          // Both old and new symbol weak (e.g. inline function in two TUs):
+          // If one of them isn't private extern, the merged symbol isn't.
           defined->privateExtern &= isPrivateExtern;
+          defined->referencedDynamically |= isReferencedDynamically;
 
           // FIXME: Handle this for bitcode files.
           // FIXME: We currently only do this if both symbols are weak.
@@ -84,9 +86,9 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
     // of a name conflict, we fall through to the replaceSymbol() call below.
   }
 
-  Defined *defined =
-      replaceSymbol<Defined>(s, name, file, isec, value, size, isWeakDef,
-                             /*isExternal=*/true, isPrivateExtern, isThumb);
+  Defined *defined = replaceSymbol<Defined>(
+      s, name, file, isec, value, size, isWeakDef, /*isExternal=*/true,
+      isPrivateExtern, isThumb, isReferencedDynamically);
   defined->overridesWeakDef = overridesWeakDef;
   return defined;
 }
@@ -178,10 +180,11 @@ Symbol *SymbolTable::addLazy(StringRef name, ArchiveFile *file,
 
 Defined *SymbolTable::addSynthetic(StringRef name, InputSection *isec,
                                    uint64_t value, bool isPrivateExtern,
-                                   bool includeInSymtab) {
+                                   bool includeInSymtab,
+                                   bool referencedDynamically) {
   Defined *s = addDefined(name, nullptr, isec, value, /*size=*/0,
                           /*isWeakDef=*/false, isPrivateExtern,
-                          /*isThumb=*/false);
+                          /*isThumb=*/false, referencedDynamically);
   s->includeInSymtab = includeInSymtab;
   return s;
 }

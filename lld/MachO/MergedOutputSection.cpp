@@ -299,7 +299,7 @@ void MergedOutputSection::finalize() {
       r.referent = thunkInfo.sym = symtab->addDefined(
           thunkName, /*file=*/nullptr, thunkInfo.isec, /*value=*/0,
           /*size=*/thunkSize, /*isWeakDef=*/false, /*isPrivateExtern=*/true,
-          /*isThumb=*/false);
+          /*isThumb=*/false, /*isReferencedDynamically=*/false);
       target->populateThunk(thunkInfo.isec, funcSym);
       finalizeOne(thunkInfo.isec);
       thunks.push_back(thunkInfo.isec);

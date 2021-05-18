@@ -559,10 +559,11 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.UniqueBasicBlockSectionNames =
       CodeGenOpts.UniqueBasicBlockSectionNames;
   Options.StackProtectorGuard =
-      llvm::StringSwitch<llvm::StackProtectorGuards>(CodeGenOpts
-          .StackProtectorGuard)
+      llvm::StringSwitch<llvm::StackProtectorGuards>(
+          CodeGenOpts.StackProtectorGuard)
           .Case("tls", llvm::StackProtectorGuards::TLS)
           .Case("global", llvm::StackProtectorGuards::Global)
+          .Case("sysreg", llvm::StackProtectorGuards::SysReg)
           .Default(llvm::StackProtectorGuards::None);
   Options.StackProtectorGuardOffset = CodeGenOpts.StackProtectorGuardOffset;
   Options.StackProtectorGuardReg = CodeGenOpts.StackProtectorGuardReg;

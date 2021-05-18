@@ -506,6 +506,16 @@ static Type genIntType(PatternRewriter &rewriter, unsigned width) {
   return rewriter.getIntegerType(width);
 }
 
+/// Detects in-place annotation on tensor argument.
+static bool getInPlace(Value val) {
+  if (auto arg = val.dyn_cast<BlockArgument>())
+    if (auto funcOp = dyn_cast<FuncOp>(arg.getOwner()->getParentOp()))
+      if (auto attr = funcOp.getArgAttrOfType<BoolAttr>(
+              arg.getArgNumber(), linalg::LinalgDialect::kInplaceableAttrName))
+        return attr.getValue();
+  return false;
+}
+
 /// Generates buffer for the output tensor.
 static Value genOutputBuffer(CodeGen &codegen, PatternRewriter &rewriter,
                              linalg::GenericOp op, MemRefType denseTp,
@@ -515,9 +525,8 @@ static Value genOutputBuffer(CodeGen &codegen, PatternRewriter &rewriter,
   // The output tensor simply could materialize from the buffer that will
   // be generated for the tensor present in the outs() clause. This has
   // the major advantage that the sparse kernel only updates the nonzero
-  // positions for the output tensor. Currently this results in functional,
-  // but slightly imprecise IR, so it is put under an experimental option.
-  if (codegen.options.fastOutput)
+  // positions for the output tensor.
+  if (getInPlace(tensor))
     return rewriter.create<memref::BufferCastOp>(loc, denseTp, tensor);
   // By default, a new buffer is allocated which is initialized to the
   // tensor defined in the outs() clause. This is always correct but

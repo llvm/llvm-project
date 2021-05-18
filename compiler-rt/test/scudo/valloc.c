@@ -17,8 +17,7 @@ size_t round_up_to(size_t size, size_t alignment) {
   return (size + alignment - 1) & ~(alignment - 1);
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   void *p = NULL;
   size_t size, page_size;
 
