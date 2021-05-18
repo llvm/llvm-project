@@ -967,9 +967,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
 
   // For Swift, mangled names are put into DW_AT_linkage_name; human-readable
   // names are emitted put into DW_AT_name and the accelerator table.
-  if ((CTy->getRuntimeLang() == dwarf::DW_LANG_Swift ||
-       CTy->getRuntimeLang() == dwarf::DW_LANG_PLI) &&
-      CTy->getRawIdentifier())
+  if (CTy->getRuntimeLang() == dwarf::DW_LANG_Swift && CTy->getRawIdentifier())
     addString(Buffer, dwarf::DW_AT_linkage_name, CTy->getIdentifier());
 
   if (Tag == dwarf::DW_TAG_enumeration_type ||
