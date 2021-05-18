@@ -35,6 +35,6 @@ if (NOT WIN32)
   add_dependencies(PluginsTests TestPlugin)
 endif()
 
-set(LLVM_LINK_COMPONENTS Support Passes Core Target native)
+set(LLVM_LINK_COMPONENTS Support Passes Core Target native AllTargetsInfos)
 add_llvm_unittest(PassesBindingsTests PassBuilderBindingsTest.cpp)
 target_link_libraries(PassesBindingsTests PRIVATE LLVMTestingSupport)
