@@ -78,6 +78,7 @@ protected:
                                    const DILineInfo &Info) = 0;
   void printContext(SourceCode SourceCode);
   void printVerbose(StringRef Filename, const DILineInfo &Info);
+  virtual void printStartAddress(const DILineInfo &Info) {}
   virtual void printFooter() {}
 
 private:
@@ -105,6 +106,7 @@ public:
 class LLVMPrinter : public PlainPrinterBase {
 private:
   void printSimpleLocation(StringRef Filename, const DILineInfo &Info) override;
+  void printStartAddress(const DILineInfo &Info) override;
   void printFooter() override;
 
 public:
