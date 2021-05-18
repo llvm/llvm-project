@@ -130,9 +130,7 @@ static const std::map<std::string, KernelArgMD::ValueKind> ArgValueKind = {
 atmi_machine_t g_atmi_machine;
 ATLMachine g_atl_machine;
 
-hsa_region_t atl_gpu_kernarg_region;
 std::vector<hsa_amd_memory_pool_t> atl_gpu_kernarg_pools;
-hsa_region_t atl_cpu_kernarg_region;
 
 static std::vector<hsa_executable_t> g_executables;
 
@@ -143,19 +141,12 @@ std::vector<std::map<std::string, atl_symbol_info_t>> SymbolInfoTable;
 bool g_atmi_initialized = false;
 bool g_atmi_hostcall_required = false;
 
-struct timespec context_init_time;
-int context_init_time_init = 0;
-
 /*
    atlc is all internal global values.
    The structure atl_context_t is defined in atl_internal.h
    Most references will use the global structure prefix atlc.
-   However the pointer value atlc_p-> is equivalent to atlc.
-
 */
-
 atl_context_t atlc = {.struct_initialized = false};
-atl_context_t *atlc_p = NULL;
 
 namespace core {
 /* Machine Info */
@@ -243,7 +234,6 @@ atmi_status_t Runtime::Finalize() {
 }
 
 static void atmi_init_context_structs() {
-  atlc_p = &atlc;
   atlc.struct_initialized = true; /* This only gets called one time */
   atlc.g_hsa_initialized = false;
   atlc.g_gpu_initialized = false;
@@ -517,6 +507,7 @@ static hsa_status_t init_compute_and_memory() {
     proc_index++;
   }
   proc_index = 0;
+  hsa_region_t atl_cpu_kernarg_region;
   atl_cpu_kernarg_region.handle = (uint64_t)-1;
   if (cpu_procs.size() > 0) {
     err = hsa_agent_iterate_regions(
@@ -533,6 +524,7 @@ static hsa_status_t init_compute_and_memory() {
       exit(1);
     }
   }
+  hsa_region_t atl_gpu_kernarg_region;
   /* Find a memory region that supports kernel arguments.  */
   atl_gpu_kernarg_region.handle = (uint64_t)-1;
   if (gpu_procs.size() > 0) {
@@ -649,11 +641,6 @@ atmi_status_t atl_init_gpu_context() {
   err = init_hsa();
   if (err != HSA_STATUS_SUCCESS)
     return ATMI_STATUS_ERROR;
-
-  if (context_init_time_init == 0) {
-    clock_gettime(CLOCK_MONOTONIC_RAW, &context_init_time);
-    context_init_time_init = 1;
-  }
 
   err = hsa_amd_register_system_event_handler(callbackEvent, NULL);
   if (err != HSA_STATUS_SUCCESS) {
