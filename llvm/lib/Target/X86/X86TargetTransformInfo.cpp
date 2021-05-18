@@ -1684,6 +1684,9 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::TRUNCATE,  MVT::v2i1,    MVT::v2i64,  2 }, // vpsllq+vptestmq
     { ISD::TRUNCATE,  MVT::v4i1,    MVT::v4i64,  2 }, // vpsllq+vptestmq
     { ISD::TRUNCATE,  MVT::v4i32,   MVT::v4i64,  1 }, // vpmovqd
+    { ISD::TRUNCATE,  MVT::v4i8,    MVT::v4i64,  2 }, // vpmovqb
+    { ISD::TRUNCATE,  MVT::v4i16,   MVT::v4i64,  2 }, // vpmovqw
+    { ISD::TRUNCATE,  MVT::v8i8,    MVT::v8i32,  2 }, // vpmovwb
 
     // sign extend is vpcmpeq+maskedmove+vpmovdw+vpacksswb
     // zero extend is vpcmpeq+maskedmove+vpmovdw+vpsrlw+vpackuswb
@@ -1773,10 +1776,6 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 
     { ISD::TRUNCATE,    MVT::v4i32,  MVT::v4i64,  2 },
     { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i32,  2 },
-
-    { ISD::TRUNCATE,    MVT::v4i8,   MVT::v4i64,  2 },
-    { ISD::TRUNCATE,    MVT::v4i16,  MVT::v4i64,  2 },
-    { ISD::TRUNCATE,    MVT::v8i8,   MVT::v8i32,  2 },
     { ISD::TRUNCATE,    MVT::v8i16,  MVT::v8i32,  2 },
 
     { ISD::FP_EXTEND,   MVT::v8f64,  MVT::v8f32,  3 },

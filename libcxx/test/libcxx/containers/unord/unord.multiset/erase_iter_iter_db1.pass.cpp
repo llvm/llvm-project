@@ -13,19 +13,19 @@
 // UNSUPPORTED: libcxx-no-debug-mode
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <unordered_set>
-#include <cassert>
 
 #include "test_macros.h"
+#include "debug_macros.h"
 
 int main(int, char**) {
     int a1[] = {1, 2, 3};
     std::unordered_multiset<int> l1(a1, a1+3);
     std::unordered_multiset<int> l2(a1, a1+3);
-    std::unordered_multiset<int>::iterator i = l1.erase(l2.cbegin(), next(l1.cbegin()));
-    assert(false);
+    TEST_LIBCPP_ASSERT_FAILURE(
+        l1.erase(l2.cbegin(), std::next(l1.cbegin())),
+        "unordered container::erase(iterator, iterator) called with an iterator not referring to this container");
 
     return 0;
 }

@@ -13,15 +13,12 @@
 // UNSUPPORTED: libcxx-no-debug-mode
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <vector>
 #include <cassert>
-#include <iterator>
-#include <exception>
-#include <cstdlib>
 
 #include "test_macros.h"
+#include "debug_macros.h"
 
 int main(int, char**) {
   typedef int T;
@@ -29,8 +26,7 @@ int main(int, char**) {
   C c(1);
   assert(c.front() == 0);
   c.clear();
-  assert(c.front() == 0);
-  assert(false);
+  TEST_LIBCPP_ASSERT_FAILURE(c.front(), "front() called on an empty vector");
 
   return 0;
 }

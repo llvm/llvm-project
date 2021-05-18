@@ -13,22 +13,18 @@
 // UNSUPPORTED: libcxx-no-debug-mode
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <string>
 #include <cassert>
-#include <iterator>
-#include <exception>
-#include <cstdlib>
 
 #include "test_macros.h"
+#include "debug_macros.h"
 
 int main(int, char**) {
   typedef std::string S;
   S s;
   assert(s[0] == 0);
-  assert(s[1] == 0);
-  assert(false);
+  TEST_LIBCPP_ASSERT_FAILURE(s[1], "string index out of bounds");
 
   return 0;
 }

@@ -13,11 +13,11 @@
 // UNSUPPORTED: libcxx-no-debug-mode
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <vector>
 #include <cassert>
 
+#include "debug_macros.h"
 #include "test_macros.h"
 #include "min_allocator.h"
 
@@ -26,8 +26,7 @@ int main(int, char**) {
   typedef std::vector<T, min_allocator<T> > C;
   const C c(1);
   assert(c[0] == 0);
-  assert(c[1] == 0);
-  assert(false);
+  TEST_LIBCPP_ASSERT_FAILURE(c[1], "vector[] index out of bounds");
 
   return 0;
 }

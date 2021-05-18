@@ -13,20 +13,18 @@
 // UNSUPPORTED: libcxx-no-debug-mode
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <unordered_map>
-#include <cassert>
-#include <utility>
 
 #include "test_macros.h"
+#include "debug_macros.h"
 
 int main(int, char**) {
     typedef std::pair<int, int> P;
     P a1[] = {P(1, 1), P(2, 2), P(3, 3)};
     std::unordered_map<int, int> l1(a1, a1+3);
-    std::unordered_map<int, int>::iterator i = l1.erase(next(l1.cbegin()), l1.cbegin());
-    assert(false);
+    TEST_LIBCPP_ASSERT_FAILURE(l1.erase(std::next(l1.cbegin()), l1.cbegin()),
+                               "Attempted to increment a non-incrementable unordered container const_iterator");
 
     return 0;
 }

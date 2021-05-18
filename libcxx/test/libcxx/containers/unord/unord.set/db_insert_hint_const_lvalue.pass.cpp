@@ -13,23 +13,22 @@
 // UNSUPPORTED: libcxx-no-debug-mode
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <unordered_set>
-#include <cassert>
 
 #include "test_macros.h"
+#include "debug_macros.h"
 
 int main(int, char**) {
     typedef std::unordered_set<double> C;
-    typedef C::iterator R;
     typedef C::value_type P;
     C c;
     C c2;
     C::const_iterator e = c2.end();
     P v(3.5);
-    R r = c.insert(e, v);
-    assert(false);
+    TEST_LIBCPP_ASSERT_FAILURE(
+        c.insert(e, v),
+        "unordered_set::insert(const_iterator, const value_type&) called with an iterator not referring to this unordered_set");
 
     return 0;
 }
