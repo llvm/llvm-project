@@ -2880,6 +2880,10 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
       llvm_unreachable("Cannot invoke this intrinsic");
     case Intrinsic::donothing:
       // Ignore invokes to @llvm.donothing: jump directly to the next BB.
+    case Intrinsic::seh_try_begin:
+    case Intrinsic::seh_scope_begin:
+    case Intrinsic::seh_try_end:
+    case Intrinsic::seh_scope_end:
       break;
     case Intrinsic::experimental_patchpoint_void:
     case Intrinsic::experimental_patchpoint_i64:
@@ -6792,6 +6796,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       lowerCallToExternalSymbol(I, FunctionName);
     return;
   case Intrinsic::donothing:
+  case Intrinsic::seh_try_begin:
+  case Intrinsic::seh_scope_begin:
+  case Intrinsic::seh_try_end:
+  case Intrinsic::seh_scope_end:
     // ignore
     return;
   case Intrinsic::experimental_stackmap:
