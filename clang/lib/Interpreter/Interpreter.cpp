@@ -157,7 +157,7 @@ IncrementalCompilerBuilder::create(std::vector<const char *> &ClangArgv) {
   ParseDiagnosticArgs(*DiagOpts, ParsedArgs, &Diags);
 
   driver::Driver Driver(/*MainBinaryName=*/ClangArgv[0],
-                        llvm::sys::getDefaultTargetTriple(), Diags);
+                        llvm::sys::getProcessTriple(), Diags);
   Driver.setCheckInputsExist(false); // the input comes from mem buffers
   llvm::ArrayRef<const char *> RF = llvm::makeArrayRef(ClangArgv);
   std::unique_ptr<driver::Compilation> Compilation(Driver.BuildCompilation(RF));
