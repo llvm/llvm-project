@@ -1142,6 +1142,7 @@ define <4 x i64> @PR50356(<4 x i64> %0, <4 x i32> %1, <4 x i64> %2) unnamed_addr
 ; XOP-LABEL: PR50356:
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; XOP-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
 ; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; XOP-NEXT:    vpaddq %xmm1, %xmm1, %xmm1
 ; XOP-NEXT:    vpermil2pd $0, %xmm1, %xmm3, %xmm0, %xmm0
@@ -1157,6 +1158,7 @@ define <4 x i64> @PR50356(<4 x i64> %0, <4 x i32> %1, <4 x i64> %2) unnamed_addr
 ; AVX1-LABEL: PR50356:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-NEXT:    vpaddq %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpermilpd %xmm1, %xmm3, %xmm3

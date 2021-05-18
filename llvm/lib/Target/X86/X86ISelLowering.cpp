@@ -9979,7 +9979,8 @@ static SDValue createVariablePermute(MVT VT, SDValue SrcVec, SDValue IndicesVec,
          "Illegal variable permute mask size");
   if (IndicesVec.getValueType().getVectorNumElements() > NumElts) {
     if (IndicesVec.getValueSizeInBits() == SizeInBits)
-      IndicesVec = DAG.getBitcast(IndicesVT, IndicesVec);
+      IndicesVec = DAG.getNode(ISD::ZERO_EXTEND_VECTOR_INREG, SDLoc(IndicesVec),
+                               IndicesVT, IndicesVec);
     else
       IndicesVec = extractSubVector(IndicesVec, 0, DAG, SDLoc(IndicesVec),
                                     NumElts * VT.getScalarSizeInBits());
