@@ -131,6 +131,3 @@ ds_bvh_stack_rtn_b32 v255, v254, v253, v[249:252]
 
 ds_bvh_stack_rtn_b32 v255, v254, v253, v[249:252] offset:127
 // GFX11: encoding: [0x7f,0x00,0xb4,0xda,0xfe,0xfd,0xf9,0xff]
-
-ds_bvh_stack_rtn_b32 v255, v254, v253, v[249:252] offset:127 gds
-// GFX11: encoding: [0x7f,0x00,0xb6,0xda,0xfe,0xfd,0xf9,0xff]
