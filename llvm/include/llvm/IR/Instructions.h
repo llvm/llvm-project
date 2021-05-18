@@ -5280,6 +5280,15 @@ inline unsigned getLoadStoreAddressSpace(Value *I) {
   return cast<StoreInst>(I)->getPointerAddressSpace();
 }
 
+/// A helper function that returns the type of a load or store instruction.
+inline Type *getLoadStoreType(Value *I) {
+  assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
+         "Expected Load or Store instruction");
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    return LI->getType();
+  return cast<StoreInst>(I)->getValueOperand()->getType();
+}
+
 //===----------------------------------------------------------------------===//
 //                              FreezeInst Class
 //===----------------------------------------------------------------------===//
