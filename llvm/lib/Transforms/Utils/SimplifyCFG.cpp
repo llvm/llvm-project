@@ -1325,6 +1325,10 @@ bool SimplifyCFGOpt::PerformValueComparisonIntoPredecessorFolding(
     DTU->applyUpdates(Updates);
   }
 
+  // Here the BB is not a dead block but folded into its predecessors, so move
+  // the probe and mark it as dangling.
+  moveAndDanglePseudoProbes(BB, NewSI);
+
   ++NumFoldValueComparisonIntoPredecessors;
   return true;
 }
