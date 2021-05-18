@@ -36,7 +36,10 @@
 
 typedef u8 tag_t;
 
-#if defined(__x86_64__)
+#if defined(HWASAN_ALIASING_MODE)
+#  if !defined(__x86_64__)
+#    error Aliasing mode is only supported on x86_64
+#  endif
 // Tags are done in middle bits using userspace aliasing.
 constexpr unsigned kAddressTagShift = 39;
 constexpr unsigned kTagBits = 3;
@@ -49,12 +52,16 @@ constexpr unsigned kTagBits = 3;
 // simpler/faster shadow calculation.
 constexpr unsigned kTaggableRegionCheckShift =
     __sanitizer::Max(kAddressTagShift + kTagBits + 1U, 44U);
+#elif defined(__x86_64__)
+// Tags are done in upper bits using Intel LAM.
+constexpr unsigned kAddressTagShift = 57;
+constexpr unsigned kTagBits = 6;
 #else
 // TBI (Top Byte Ignore) feature of AArch64: bits [63:56] are ignored in address
 // translation and can be used to store a tag.
 constexpr unsigned kAddressTagShift = 56;
 constexpr unsigned kTagBits = 8;
-#endif  // defined(__x86_64__)
+#endif  // defined(HWASAN_ALIASING_MODE)
 
 // Mask for extracting tag bits from the lower 8 bits.
 constexpr uptr kTagMask = (1UL << kTagBits) - 1;
