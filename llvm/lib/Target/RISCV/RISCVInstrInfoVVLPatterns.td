@@ -1073,14 +1073,14 @@ foreach mti = AllMasks in {
             (!cast<Instruction>("PseudoVMXOR_MM_" # mti.LMul.MX)
                  VR:$rs1, VR:$rs2, GPR:$vl, mti.Log2SEW)>;
 
-  def : Pat<(mti.Mask (riscv_vmand_vl (riscv_vmnot_vl VR:$rs1,
-                                                      VLOpFrag),
-                                      VR:$rs2, VLOpFrag)),
+  def : Pat<(mti.Mask (riscv_vmand_vl VR:$rs1,
+                                      (riscv_vmnot_vl VR:$rs2, VLOpFrag),
+                                      VLOpFrag)),
             (!cast<Instruction>("PseudoVMANDNOT_MM_" # mti.LMul.MX)
                  VR:$rs1, VR:$rs2, GPR:$vl, mti.Log2SEW)>;
-  def : Pat<(mti.Mask (riscv_vmor_vl (riscv_vmnot_vl VR:$rs1,
-                                                     VLOpFrag),
-                                     VR:$rs2, VLOpFrag)),
+  def : Pat<(mti.Mask (riscv_vmor_vl VR:$rs1,
+                                     (riscv_vmnot_vl VR:$rs2, VLOpFrag),
+                                     VLOpFrag)),
             (!cast<Instruction>("PseudoVMORNOT_MM_" # mti.LMul.MX)
                  VR:$rs1, VR:$rs2, GPR:$vl, mti.Log2SEW)>;
   // XOR is associative so we need 2 patterns for VMXNOR.
