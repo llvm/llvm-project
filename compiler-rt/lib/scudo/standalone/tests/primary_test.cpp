@@ -32,7 +32,12 @@ struct TestConfig1 {
 };
 
 struct TestConfig2 {
+#if defined(__mips__)
+  // Unable to allocate greater size on QEMU-user.
+  static const scudo::uptr PrimaryRegionSizeLog = 23U;
+#else
   static const scudo::uptr PrimaryRegionSizeLog = 24U;
+#endif
   static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
   static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
   static const bool MaySupportMemoryTagging = false;
@@ -41,7 +46,12 @@ struct TestConfig2 {
 };
 
 struct TestConfig3 {
+#if defined(__mips__)
+  // Unable to allocate greater size on QEMU-user.
+  static const scudo::uptr PrimaryRegionSizeLog = 23U;
+#else
   static const scudo::uptr PrimaryRegionSizeLog = 24U;
+#endif
   static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
   static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
   static const bool MaySupportMemoryTagging = true;
