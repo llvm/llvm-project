@@ -460,7 +460,7 @@ void Writer::populateTargetFeatures() {
     }
 
     // Find TLS data segments
-    auto isTLS = [](InputSegment *segment) {
+    auto isTLS = [](InputChunk *segment) {
       return segment->live && segment->isTLS();
     };
     tlsUsed = tlsUsed ||
@@ -816,7 +816,7 @@ void Writer::assignIndexes() {
   out.tableSec->assignIndexes();
 }
 
-static StringRef getOutputDataSegmentName(const InputSegment &seg) {
+static StringRef getOutputDataSegmentName(const InputChunk &seg) {
   // We always merge .tbss and .tdata into a single TLS segment so all TLS
   // symbols are be relative to single __tls_base.
   if (seg.isTLS())
@@ -852,7 +852,7 @@ OutputSegment *Writer::createOutputSegment(StringRef name) {
 
 void Writer::createOutputSegments() {
   for (ObjFile *file : symtab->objectFiles) {
-    for (InputSegment *segment : file->segments) {
+    for (InputChunk *segment : file->segments) {
       if (!segment->live)
         continue;
       StringRef name = getOutputDataSegmentName(*segment);
@@ -919,7 +919,7 @@ void Writer::combineOutputSegments() {
           combined->initFlags = WASM_DATA_SEGMENT_IS_PASSIVE;
       }
       bool first = true;
-      for (InputSegment *inSeg : s->inputSegments) {
+      for (InputChunk *inSeg : s->inputSegments) {
         if (first)
           inSeg->alignment = std::max(inSeg->alignment, s->alignment);
         first = false;
@@ -1201,7 +1201,7 @@ void Writer::createApplyDataRelocationsFunction() {
     raw_string_ostream os(bodyContent);
     writeUleb128(os, 0, "num locals");
     for (const OutputSegment *seg : segments)
-      for (const InputSegment *inSeg : seg->inputSegments)
+      for (const InputChunk *inSeg : seg->inputSegments)
         inSeg->generateRelocationCode(os);
 
     writeU8(os, WASM_OPCODE_END, "END");
