@@ -255,9 +255,42 @@ public:
     return failure();
   }
 
+  /// This method provides a convenient interface for creating and initializing
+  /// derived rewrite patterns of the given type `T`.
+  template <typename T, typename... Args>
+  static std::unique_ptr<T> create(Args &&... args) {
+    std::unique_ptr<T> pattern =
+        std::make_unique<T>(std::forward<Args>(args)...);
+    initializePattern<T>(*pattern);
+
+    // Set a default debug name if one wasn't provided.
+    if (pattern->getDebugName().empty())
+      pattern->setDebugName(llvm::getTypeName<T>());
+    return pattern;
+  }
+
 protected:
   /// Inherit the base constructors from `Pattern`.
   using Pattern::Pattern;
+
+private:
+  /// Trait to check if T provides a `getOperationName` method.
+  template <typename T, typename... Args>
+  using has_initialize = decltype(std::declval<T>().initialize());
+  template <typename T>
+  using detect_has_initialize = llvm::is_detected<has_initialize, T>;
+
+  /// Initialize the derived pattern by calling its `initialize` method.
+  template <typename T>
+  static std::enable_if_t<detect_has_initialize<T>::value>
+  initializePattern(T &pattern) {
+    pattern.initialize();
+  }
+  /// Empty derived pattern initializer for patterns that do not have an
+  /// initialize method.
+  template <typename T>
+  static std::enable_if_t<!detect_has_initialize<T>::value>
+  initializePattern(T &) {}
 
   /// An anchor for the virtual table.
   virtual void anchor();
@@ -992,13 +1025,8 @@ private:
   template <typename T, typename... Args>
   std::enable_if_t<std::is_base_of<RewritePattern, T>::value>
   addImpl(Args &&... args) {
-    auto pattern = std::make_unique<T>(std::forward<Args>(args)...);
-
-    // Pattern can potentially set name in ctor. Preserve old name if present.
-    if (pattern->getDebugName().empty())
-      pattern->setDebugName(llvm::getTypeName<T>());
-
-    nativePatterns.emplace_back(std::move(pattern));
+    nativePatterns.emplace_back(
+        RewritePattern::create<T>(std::forward<Args>(args)...));
   }
   template <typename T, typename... Args>
   std::enable_if_t<std::is_base_of<PDLPatternModule, T>::value>
