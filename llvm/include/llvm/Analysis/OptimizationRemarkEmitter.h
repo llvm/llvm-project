@@ -76,6 +76,9 @@ public:
     if (F->getContext().getLLVMRemarkStreamer() ||
         F->getContext().getDiagHandlerPtr()->isAnyRemarkEnabled()) {
       auto R = RemarkBuilder();
+      static_assert(
+          std::is_base_of<DiagnosticInfoOptimizationBase, decltype(R)>::value,
+          "the lambda passed to emit() must return a remark");
       emit((DiagnosticInfoOptimizationBase &)R);
     }
   }
