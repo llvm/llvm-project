@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -verify -fsyntax-only -Weverything -std=c++11 -triple x86_64-apple-darwin10
+// RUN: %clang_cc1 %s -verify -fsyntax-only -Weverything -Wno-unused-but-set-variable -std=c++11 -triple x86_64-apple-darwin10
 
 // Test the compatibility of clang++'s vector extensions with g++'s vector
 // extensions. In comparison to the extensions available in C, the !, ?:, && and

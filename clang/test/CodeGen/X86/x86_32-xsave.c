@@ -1,17 +1,17 @@
-// RUN: %clang_cc1 %s -DTEST_XSAVE -O0 -triple=i686-unknown-unknown -target-feature +xsave -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=XSAVE
-// RUN: %clang_cc1 %s -DTEST_XSAVE -O0 -triple=i686-unknown-unknown -target-feature +xsave -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=XSAVE
+// RUN: %clang_cc1 %s -DTEST_XSAVE -O0 -triple=i686-unknown-unknown -target-feature +xsave -emit-llvm -o - -Wall -Wno-unused-but-set-variable -Werror | FileCheck %s --check-prefix=XSAVE
+// RUN: %clang_cc1 %s -DTEST_XSAVE -O0 -triple=i686-unknown-unknown -target-feature +xsave -fno-signed-char -emit-llvm -o - -Wall -Wno-unused-but-set-variable -Werror | FileCheck %s --check-prefix=XSAVE
 
-// RUN: %clang_cc1 %s -DTEST_XGETBV -O0 -triple=i686-unknown-unknown -target-feature +xsave -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=XGETBV
-// RUN: %clang_cc1 %s -DTEST_XSETBV -O0 -triple=i686-unknown-unknown -target-feature +xsave -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=XSETBV
+// RUN: %clang_cc1 %s -DTEST_XGETBV -O0 -triple=i686-unknown-unknown -target-feature +xsave -emit-llvm -o - -Wall -Wno-unused-but-set-variable -Werror | FileCheck %s --check-prefix=XGETBV
+// RUN: %clang_cc1 %s -DTEST_XSETBV -O0 -triple=i686-unknown-unknown -target-feature +xsave -emit-llvm -o - -Wall -Wno-unused-but-set-variable -Werror | FileCheck %s --check-prefix=XSETBV
 
-// RUN: %clang_cc1 %s -DTEST_XSAVEOPT -O0 -triple=i686-unknown-unknown -target-feature +xsave -target-feature +xsaveopt -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=XSAVEOPT
-// RUN: %clang_cc1 %s -DTEST_XSAVEOPT -O0 -triple=i686-unknown-unknown -target-feature +xsave -target-feature +xsaveopt -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=XSAVEOPT
+// RUN: %clang_cc1 %s -DTEST_XSAVEOPT -O0 -triple=i686-unknown-unknown -target-feature +xsave -target-feature +xsaveopt -emit-llvm -o - -Wall -Wno-unused-but-set-variable -Werror | FileCheck %s --check-prefix=XSAVEOPT
+// RUN: %clang_cc1 %s -DTEST_XSAVEOPT -O0 -triple=i686-unknown-unknown -target-feature +xsave -target-feature +xsaveopt -fno-signed-char -emit-llvm -o - -Wall -Wno-unused-but-set-variable -Werror | FileCheck %s --check-prefix=XSAVEOPT
 
-// RUN: %clang_cc1 %s -DTEST_XSAVEC -O0 -triple=i686-unknown-unknown -target-feature +xsave -target-feature +xsavec -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=XSAVEC
-// RUN: %clang_cc1 %s -DTEST_XSAVEC -O0 -triple=i686-unknown-unknown -target-feature +xsave -target-feature +xsavec -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=XSAVEC
+// RUN: %clang_cc1 %s -DTEST_XSAVEC -O0 -triple=i686-unknown-unknown -target-feature +xsave -target-feature +xsavec -emit-llvm -o - -Wall -Wno-unused-but-set-variable -Werror | FileCheck %s --check-prefix=XSAVEC
+// RUN: %clang_cc1 %s -DTEST_XSAVEC -O0 -triple=i686-unknown-unknown -target-feature +xsave -target-feature +xsavec -fno-signed-char -emit-llvm -o - -Wall -Wno-unused-but-set-variable -Werror | FileCheck %s --check-prefix=XSAVEC
 
-// RUN: %clang_cc1 %s -DTEST_XSAVES -O0 -triple=i686-unknown-unknown -target-feature +xsave -target-feature +xsaves -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=XSAVES
-// RUN: %clang_cc1 %s -DTEST_XSAVES -O0 -triple=i686-unknown-unknown -target-feature +xsave -target-feature +xsaves -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=XSAVES
+// RUN: %clang_cc1 %s -DTEST_XSAVES -O0 -triple=i686-unknown-unknown -target-feature +xsave -target-feature +xsaves -emit-llvm -o - -Wall -Wno-unused-but-set-variable -Werror | FileCheck %s --check-prefix=XSAVES
+// RUN: %clang_cc1 %s -DTEST_XSAVES -O0 -triple=i686-unknown-unknown -target-feature +xsave -target-feature +xsaves -fno-signed-char -emit-llvm -o - -Wall -Wno-unused-but-set-variable -Werror | FileCheck %s --check-prefix=XSAVES
 
 // Don't include mm_malloc.h, it's system specific.
 #define __MM_MALLOC_H

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -verify -fsyntax-only -Weverything -triple x86_64-apple-darwin10
+// RUN: %clang_cc1 %s -verify -fsyntax-only -Weverything -Wno-unused-but-set-variable -triple x86_64-apple-darwin10
 
 // Test the compatibility of clang's vector extensions with gcc's vector
 // extensions for C. Notably &&, ||, ?: and ! are not available.
