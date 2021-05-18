@@ -2386,6 +2386,10 @@ static LogicalResult verifyTransferOp(Operation *op, ShapedType shapedType,
       return op->emitOpError("expects the optional in_bounds attr of same rank "
                              "as permutation_map results: ")
              << AffineMapAttr::get(permutationMap);
+    for (unsigned int i = 0; i < permutationMap.getNumResults(); ++i)
+      if (permutationMap.getResult(i).isa<AffineConstantExpr>()
+          && !inBounds.getValue()[i].cast<BoolAttr>().getValue())
+        return op->emitOpError("requires broadcast dimensions to be in-bounds");
   }
 
   return success();

@@ -60,7 +60,7 @@ using STLForwardCompatRemoveCVRefTestTypes = ::testing::Types<
     >;
 
 TYPED_TEST_SUITE(STLForwardCompatRemoveCVRefTest,
-                STLForwardCompatRemoveCVRefTestTypes);
+                 STLForwardCompatRemoveCVRefTestTypes, );
 
 TYPED_TEST(STLForwardCompatRemoveCVRefTest, RemoveCVRef) {
   using From = typename TypeParam::first_type;

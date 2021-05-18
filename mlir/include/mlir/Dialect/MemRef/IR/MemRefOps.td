@@ -203,7 +203,7 @@ def MemRef_AllocaOp : AllocLikeOp<"alloca", AutomaticAllocationScopeResource> {
 //===----------------------------------------------------------------------===//
 
 def MemRef_BufferCastOp : MemRef_Op<"buffer_cast",
-    [SameOperandsAndResultShape, SameOperandsAndResultElementType,
+    [SameOperandsAndResultShape, SameOperandsAndResultElementType, NoSideEffect,
      TypesMatchWith<"type of 'tensor' is the tensor equivalent of 'memref'",
                     "memref", "tensor",
                     "getTensorTypeFromMemRefType($_self)">]> {
@@ -218,6 +218,10 @@ def MemRef_BufferCastOp : MemRef_Op<"buffer_cast",
 
     Note, that mutating the result of the buffer cast operation leads to
     undefined behavior.
+
+    This operation is a specialized variant of the built-in
+    unrealized_conversion_cast and is intended for use in the context of
+    gradual bufferization.
   }];
 
   let arguments = (ins AnyTensor:$tensor);

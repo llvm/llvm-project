@@ -444,9 +444,6 @@ let TargetPrefix = "aarch64", IntrProperties = [IntrNoMem] in {
   def int_aarch64_neon_ursqrte : AdvSIMD_1VectorArg_Intrinsic;
   def int_aarch64_neon_frsqrte : AdvSIMD_1FloatArg_Intrinsic;
 
-  // Vector Bitwise Reverse
-  def int_aarch64_neon_rbit : AdvSIMD_1VectorArg_Intrinsic;
-
   // Vector Conversions Between Half-Precision and Single-Precision.
   def int_aarch64_neon_vcvtfp2hf
     : DefaultAttrsIntrinsic<[llvm_v4i16_ty], [llvm_v4f32_ty], [IntrNoMem]>;

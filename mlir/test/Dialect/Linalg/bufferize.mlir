@@ -172,17 +172,16 @@ func @bufferize_subtensor(%t : tensor<?x?xf32>) -> (tensor<2x3xf32>, tensor<2x?x
   //      CHECK: %[[IDX:.*]] = call @make_index() : () -> index
   %i0 = call @make_index() : () -> index
 
-  //      CHECK: %[[M0:.*]] = memref.buffer_cast %[[T]] : memref<?x?xf32>
+  //      CHECK: %[[M:.*]] = memref.buffer_cast %[[T]] : memref<?x?xf32>
   // CHECK-NEXT: %[[A0:.*]] = memref.alloc() : memref<2x3xf32>
-  // CHECK-NEXT: %[[SM0:.*]] = memref.subview %[[M0]][0, 0] [2, 3] [1, 1]
+  // CHECK-NEXT: %[[SM0:.*]] = memref.subview %[[M]][0, 0] [2, 3] [1, 1]
   // CHECK-SAME:   memref<?x?xf32> to memref<2x3xf32, #[[$MAP0]]>
   // CHECK-NEXT: linalg.copy(%[[SM0]], %[[A0]]) : memref<2x3xf32, #[[$MAP0]]>, memref<2x3xf32>
   // CHECK-NEXT: %[[RT0:.*]] = memref.tensor_load %[[A0]] : memref<2x3xf32>
   %st0 = subtensor %t[0, 0][2, 3][1, 1] : tensor<?x?xf32> to tensor<2x3xf32>
 
-  //      CHECK: %[[M1:.*]] = memref.buffer_cast %[[T]] : memref<?x?xf32>
   // CHECK-NEXT: %[[A1:.*]] = memref.alloc(%[[IDX]]) : memref<2x?xf32>
-  // CHECK-NEXT: %[[SM1:.*]] = memref.subview %[[M1]][0, %[[IDX]]] [2, %[[IDX]]] [1, 2]
+  // CHECK-NEXT: %[[SM1:.*]] = memref.subview %[[M]][0, %[[IDX]]] [2, %[[IDX]]] [1, 2]
   // CHECK-SAME:   memref<?x?xf32> to memref<2x?xf32, #[[$MAP1]]>
   // CHECK-NEXT: linalg.copy(%[[SM1]], %[[A1]]) : memref<2x?xf32, #[[$MAP1]]>, memref<2x?xf32>
   // CHECK-NEXT: %[[RT1:.*]] = memref.tensor_load %[[A1]] : memref<2x?xf32>
@@ -213,26 +212,25 @@ func @bufferize_subtensor_insert(%t : tensor<?x?xf32>, %st0 : tensor<2x3xf32>, %
   // CHECK: %[[IDX:.*]] = call @make_index() : () -> index
 
 
-  // CHECK-DAG: %[[M0:.*]] = memref.buffer_cast %[[T]] : memref<?x?xf32>
+  // CHECK-DAG: %[[M:.*]] = memref.buffer_cast %[[T]] : memref<?x?xf32>
   // CHECK-DAG: %[[SM0:.*]] = memref.buffer_cast %[[ST0]] : memref<2x3xf32>
   // CHECK-NEXT: %[[DIM0:.*]] = memref.dim %[[T]], %[[C0]] : tensor<?x?xf32>
   // CHECK-NEXT: %[[DIM1:.*]] = memref.dim %[[T]], %[[C1]] : tensor<?x?xf32>
-  // CHECK-NEXT: %[[M0_COPY:.*]] = memref.alloc(%[[DIM0]], %[[DIM1]]) : memref<?x?xf32>
-  // CHECK-NEXT: linalg.copy(%[[M0]], %[[M0_COPY]]) : memref<?x?xf32>, memref<?x?xf32>
-  // CHECK-NEXT: %[[SUBVIEW0:.*]] = memref.subview %[[M0_COPY]][0, 0] [2, 3] [1, 1]
+  // CHECK-NEXT: %[[M_COPY0:.*]] = memref.alloc(%[[DIM0]], %[[DIM1]]) : memref<?x?xf32>
+  // CHECK-NEXT: linalg.copy(%[[M]], %[[M_COPY0]]) : memref<?x?xf32>, memref<?x?xf32>
+  // CHECK-NEXT: %[[SUBVIEW0:.*]] = memref.subview %[[M_COPY0]][0, 0] [2, 3] [1, 1]
   // CHECK-SAME:   memref<?x?xf32> to memref<2x3xf32, #[[$MAP0]]>
   // CHECK-NEXT: linalg.copy(%[[SM0]], %[[SUBVIEW0]]) : memref<2x3xf32>, memref<2x3xf32, #[[$MAP0]]>
-  // CHECK-NEXT: %[[RT0:.*]] = memref.tensor_load %[[M0_COPY]] : memref<?x?xf32>
+  // CHECK-NEXT: %[[RT0:.*]] = memref.tensor_load %[[M_COPY0]] : memref<?x?xf32>
   %t0 = subtensor_insert %st0 into %t[0, 0][2, 3][1, 1] : tensor<2x3xf32> into tensor<?x?xf32>
 
-  //  CHECK-DAG: %[[M1:.*]] = memref.buffer_cast %[[T]] : memref<?x?xf32>
   //  CHECK-DAG: %[[SM1:.*]] = memref.buffer_cast %[[ST1]] : memref<2x?xf32>
-  // CHECK-NEXT: %[[M1_COPY:.*]] = memref.alloc(%[[DIM0]], %[[DIM1]]) : memref<?x?xf32>
-  // CHECK-NEXT: linalg.copy(%[[M1]], %[[M1_COPY]]) : memref<?x?xf32>, memref<?x?xf32>
-  // CHECK-NEXT: %[[SUBVIEW1:.*]] = memref.subview %[[M1_COPY]][0, %[[IDX]]] [2, %[[IDX]]] [1, 2]
+  // CHECK-NEXT: %[[M_COPY1:.*]] = memref.alloc(%[[DIM0]], %[[DIM1]]) : memref<?x?xf32>
+  // CHECK-NEXT: linalg.copy(%[[M]], %[[M_COPY1]]) : memref<?x?xf32>, memref<?x?xf32>
+  // CHECK-NEXT: %[[SUBVIEW1:.*]] = memref.subview %[[M_COPY1]][0, %[[IDX]]] [2, %[[IDX]]] [1, 2]
   // CHECK-SAME:   memref<?x?xf32> to memref<2x?xf32, #[[$MAP1]]>
   // CHECK-NEXT: linalg.copy(%[[SM1]], %[[SUBVIEW1]]) : memref<2x?xf32>, memref<2x?xf32, #[[$MAP1]]>
-  // CHECK-NEXT: %[[RT1:.*]] = memref.tensor_load %[[M1_COPY]] : memref<?x?xf32>
+  // CHECK-NEXT: %[[RT1:.*]] = memref.tensor_load %[[M_COPY1]] : memref<?x?xf32>
   %t1 = subtensor_insert %st1 into %t[0, %i0][2, %i0][1, 2] : tensor<2x?xf32> into tensor<?x?xf32>
 
   //     CHECK: return %[[RT0]], %[[RT1]]

@@ -58,7 +58,7 @@ static const uptr kMaxAllowedMallocSize = 1UL << 40;  // 1T
 struct AP64 {
   static const uptr kSpaceBeg = ~0ULL;
 
-#if defined(__x86_64__)
+#if defined(HWASAN_ALIASING_MODE)
   static const uptr kSpaceSize = 1ULL << kAddressTagShift;
 #else
   static const uptr kSpaceSize = 0x2000000000ULL;
@@ -110,7 +110,7 @@ typedef RingBuffer<HeapAllocationRecord> HeapAllocationsRingBuffer;
 void GetAllocatorStats(AllocatorStatCounters s);
 
 inline bool InTaggableRegion(uptr addr) {
-#if defined(__x86_64__)
+#if defined(HWASAN_ALIASING_MODE)
   // Aliases are mapped next to shadow so that the upper bits match the shadow
   // base.
   return (addr >> kTaggableRegionCheckShift) ==
