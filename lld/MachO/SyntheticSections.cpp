@@ -587,9 +587,11 @@ static bool shouldExportSymbol(const Defined *defined) {
   // Measurements show that symbol ordering (which again looks up
   // every symbol in a hashmap) is the biggest bottleneck when linking
   // chromium_framework, so this will likely be worth optimizing.
-  return config->exportedSymbols.empty()
-             ? !config->unexportedSymbols.match(defined->getName())
-             : config->exportedSymbols.match(defined->getName());
+  if (!config->exportedSymbols.empty())
+    return config->exportedSymbols.match(defined->getName());
+  if (!config->unexportedSymbols.empty())
+    return !config->unexportedSymbols.match(defined->getName());
+  return true;
 }
 
 void ExportSection::finalizeContents() {
