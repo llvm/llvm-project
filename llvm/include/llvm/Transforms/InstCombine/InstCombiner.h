@@ -249,8 +249,8 @@ public:
     if (BinaryOperator *BO = dyn_cast<BinaryOperator>(V))
       if (BO->getOpcode() == Instruction::Add ||
           BO->getOpcode() == Instruction::Sub)
-        if (isa<Constant>(BO->getOperand(0)) ||
-            isa<Constant>(BO->getOperand(1)))
+        if (match(BO, PatternMatch::m_c_BinOp(PatternMatch::m_Value(),
+                                              PatternMatch::m_ImmConstant())))
           return WillInvertAllUses;
 
     // Selects with invertible operands are freely invertible
