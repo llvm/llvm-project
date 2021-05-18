@@ -483,6 +483,8 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     // SYCL Version is set to a value when building SYCL applications
     if (LangOpts.getSYCLVersion() == LangOptions::SYCL_2017)
       Builder.defineMacro("CL_SYCL_LANGUAGE_VERSION", "121");
+    else if (LangOpts.getSYCLVersion() == LangOptions::SYCL_2020)
+      Builder.defineMacro("SYCL_LANGUAGE_VERSION", "202001");
   }
 
   // Not "standard" per se, but available even with the -undef flag.
