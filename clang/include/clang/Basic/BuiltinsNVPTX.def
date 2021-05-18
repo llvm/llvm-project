@@ -456,6 +456,16 @@ TARGET_BUILTIN(__nvvm_match_any_sync_i64, "WiUiWi", "", PTX60)
 TARGET_BUILTIN(__nvvm_match_all_sync_i32p, "UiUiUii*", "", PTX60)
 TARGET_BUILTIN(__nvvm_match_all_sync_i64p, "WiUiWii*", "", PTX60)
 
+// Redux
+TARGET_BUILTIN(__nvvm_redux_sync_add, "iii", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_redux_sync_min, "iii", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_redux_sync_max, "iii", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_redux_sync_umin, "UiUii", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_redux_sync_umax, "UiUii", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_redux_sync_and, "iii", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_redux_sync_xor, "iii", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_redux_sync_or, "iii", "", AND(SM_80,PTX70))
+
 // Membar
 
 BUILTIN(__nvvm_membar_cta, "v", "")

@@ -4205,6 +4205,49 @@ def int_nvvm_match_all_sync_i64p :
             [IntrInaccessibleMemOnly, IntrConvergent], "llvm.nvvm.match.all.sync.i64p">;
 
 //
+// REDUX.SYNC
+//
+// redux.sync.min.u32 dst, src, membermask;
+def int_nvvm_redux_sync_umin : GCCBuiltin<"__nvvm_redux_sync_umin">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+            [IntrConvergent, IntrInaccessibleMemOnly]>;
+
+// redux.sync.max.u32 dst, src, membermask;
+def int_nvvm_redux_sync_umax : GCCBuiltin<"__nvvm_redux_sync_umax">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+            [IntrConvergent, IntrInaccessibleMemOnly]>;
+
+// redux.sync.add.s32 dst, src, membermask;
+def int_nvvm_redux_sync_add : GCCBuiltin<"__nvvm_redux_sync_add">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+            [IntrConvergent, IntrInaccessibleMemOnly]>;
+
+// redux.sync.min.s32 dst, src, membermask;
+def int_nvvm_redux_sync_min : GCCBuiltin<"__nvvm_redux_sync_min">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+            [IntrConvergent, IntrInaccessibleMemOnly]>;
+
+// redux.sync.max.s32 dst, src, membermask;
+def int_nvvm_redux_sync_max : GCCBuiltin<"__nvvm_redux_sync_max">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+            [IntrConvergent, IntrInaccessibleMemOnly]>;
+
+// redux.sync.and.b32 dst, src, membermask;
+def int_nvvm_redux_sync_and : GCCBuiltin<"__nvvm_redux_sync_and">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+            [IntrConvergent, IntrInaccessibleMemOnly]>;
+
+// redux.sync.xor.b32 dst, src, membermask;
+def int_nvvm_redux_sync_xor : GCCBuiltin<"__nvvm_redux_sync_xor">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+            [IntrConvergent, IntrInaccessibleMemOnly]>;
+
+// redux.sync.or.b32 dst, src, membermask;
+def int_nvvm_redux_sync_or : GCCBuiltin<"__nvvm_redux_sync_or">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+            [IntrConvergent, IntrInaccessibleMemOnly]>;
+
+//
 // WMMA instructions
 //
 // WMMA.LOAD
