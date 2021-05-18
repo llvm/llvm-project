@@ -253,7 +253,28 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, BlockReuse) {
   EXPECT_TRUE(Found);
 }
 
-SCUDO_TYPED_TEST(ScudoCombinedTest, ReallocateLarge) {
+SCUDO_TYPED_TEST(ScudoCombinedTest, ReallocateLargeIncreasing) {
+  auto *Allocator = this->Allocator.get();
+
+  // Reallocate a chunk all the way up to a secondary allocation, verifying that
+  // we preserve the data in the process.
+  scudo::uptr Size = 16;
+  void *P = Allocator->allocate(Size, Origin);
+  const char Marker = 0xab;
+  memset(P, Marker, Size);
+  while (Size < TypeParam::Primary::SizeClassMap::MaxSize * 4) {
+    void *NewP = Allocator->reallocate(P, Size * 2);
+    EXPECT_NE(NewP, nullptr);
+    for (scudo::uptr J = 0; J < Size; J++)
+      EXPECT_EQ((reinterpret_cast<char *>(NewP))[J], Marker);
+    memset(reinterpret_cast<char *>(NewP) + Size, Marker, Size);
+    Size *= 2U;
+    P = NewP;
+  }
+  Allocator->deallocate(P, Origin);
+}
+
+SCUDO_TYPED_TEST(ScudoCombinedTest, ReallocateLargeDecreasing) {
   auto *Allocator = this->Allocator.get();
 
   // Reallocate a large chunk all the way down to a byte, verifying that we
