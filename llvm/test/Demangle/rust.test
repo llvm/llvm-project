@@ -163,6 +163,18 @@ CHECK: types::<[u8; 0]>
 CHECK: types::<[_]>
        _RIC5typesSpE
 
+CHECK: types::<()>
+       _RIC5typesTEE
+
+CHECK: types::<(_,)>
+       _RIC5typesTpEE
+
+CHECK: types::<(_, _)>
+       _RIC5typesTppEE
+
+CHECK: types::<(_, _, _)>
+       _RIC5typesTpppEE
+
 ; Integer constants. Test value demangling.
 
 CHECK: integer::<0>
