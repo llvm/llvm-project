@@ -1,9 +1,12 @@
 ; Legacy pass manager
-; RUN: opt %loadPolly -enable-new-pm=0 -O3 -polly -polly-position=early             -polly-dump-before-file=%t-legacy-early.ll --disable-output < %s && FileCheck --input-file=%t-legacy-early.ll --check-prefix=EARLY %s
-; RUN: opt %loadPolly -enable-new-pm=0 -O3 -polly -polly-position=before-vectorizer -polly-dump-before-file=%t-legacy-late.ll  --disable-output < %s && FileCheck --input-file=%t-legacy-late.ll  --check-prefix=LATE  %s
-;
+; RUN: opt %loadPolly -enable-new-pm=0 -O3 -polly -polly-position=early             -polly-dump-before-file=%t-legacy-before-early.ll --disable-output < %s && FileCheck --input-file=%t-legacy-before-early.ll --check-prefix=EARLY  %s
+; RUN: opt %loadPolly -enable-new-pm=0 -O3 -polly -polly-position=before-vectorizer -polly-dump-before-file=%t-legacy-before-late.ll  --disable-output < %s && FileCheck --input-file=%t-legacy-before-late.ll  --check-prefix=LATE   %s
+; RUN: opt %loadPolly -enable-new-pm=0 -O3 -polly -polly-position=early             -polly-dump-after-file=%t-legacy-after-early.ll   --disable-output < %s && FileCheck --input-file=%t-legacy-after-early.ll  --check-prefix=EARLY --check-prefix=AFTEREARLY %s
+; RUN: opt %loadPolly -enable-new-pm=0 -O3 -polly -polly-position=before-vectorizer -polly-dump-after-file=%t-legacy-after-late.ll    --disable-output < %s && FileCheck --input-file=%t-legacy-after-late.ll   --check-prefix=LATE  --check-prefix=AFTERLATE  %s
+;-
 ; New pass manager
-; RUN: opt %loadPolly -enable-new-pm=1 -O3 -polly -polly-position=early             -polly-dump-before-file=%t-npm-early.ll    --disable-output < %s && FileCheck --input-file=%t-npm-early.ll    --check-prefix=EARLY  %s
+; RUN: opt %loadPolly -enable-new-pm=1 -O3 -polly -polly-position=early             -polly-dump-before-file=%t-npm-before-early.ll    --disable-output < %s && FileCheck --input-file=%t-npm-before-early.ll    --check-prefix=EARLY %s
+; RUN: opt %loadPolly -enable-new-pm=1 -O3 -polly -polly-position=early             -polly-dump-after-file=%t-npm-after-early.ll      --disable-output < %s && FileCheck --input-file=%t-npm-after-early.ll     --check-prefix=EARLY --check-prefix=AFTEREARLY %s
 ;
 ; Check the module dumping before Polly at specific positions in the
 ; pass pipeline.
@@ -72,9 +75,11 @@ return:
 
 
 ; EARLY-LABEL: @callee(
+; AFTEREARLY:  polly.split_new_and_old:
 ; EARLY:         store double 4.200000e+01, double* %arrayidx
 ; EARLY-LABEL: @caller(
 ; EARLY:         call void @callee(
 
 ; LATE-LABEL: @caller(
+; AFTERLATE:  polly.split_new_and_old:
 ; LATE:          store double 4.200000e+01, double* %arrayidx
