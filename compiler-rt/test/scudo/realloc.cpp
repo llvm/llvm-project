@@ -17,8 +17,7 @@
 
 #include <sanitizer/allocator_interface.h>
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   void *p, *old_p;
   // Those sizes will exercise both allocators (Primary & Secondary).
   std::vector<size_t> sizes{1, 16, 1024, 32768, 1 << 16, 1 << 17, 1 << 20};
@@ -34,7 +33,8 @@ int main(int argc, char **argv)
     p = nullptr;
     // Make sure we get a chunk with a usable size actually larger than size.
     do {
-      if (p) free(p);
+      if (p)
+        free(p);
       size += 16;
       p = malloc(size);
       usable_size = __sanitizer_get_allocated_size(p);

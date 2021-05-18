@@ -23,7 +23,7 @@
 #include <unistd.h>
 
 static const size_t kNumAllocs = 64;
-static const size_t kAllocSize = 1 << 20;  // 1MB.
+static const size_t kAllocSize = 1 << 20; // 1MB.
 
 static void *allocs[kNumAllocs];
 
@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
       usleep(100000);
     allocs[i] = malloc(kAllocSize);
     if (allocs[i])
-      memset(allocs[i], 0xff, kAllocSize);  // Dirty the pages.
+      memset(allocs[i], 0xff, kAllocSize); // Dirty the pages.
     else
       returned_null++;
   }
