@@ -365,7 +365,7 @@ Symbol *SymbolTable::addDefinedFunction(StringRef name, uint32_t flags,
 }
 
 Symbol *SymbolTable::addDefinedData(StringRef name, uint32_t flags,
-                                    InputFile *file, InputSegment *segment,
+                                    InputFile *file, InputChunk *segment,
                                     uint64_t address, uint64_t size) {
   LLVM_DEBUG(dbgs() << "addDefinedData:" << name << " addr:" << address
                     << "\n");

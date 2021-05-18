@@ -2986,9 +2986,9 @@ void CommandInterpreter::GetLLDBCommandsFromIOHandler(
   IOHandlerSP io_handler_sp(
       new IOHandlerEditline(debugger, IOHandler::Type::CommandList,
                             "lldb", // Name of input reader for history
-                            llvm::StringRef::withNullAsEmpty(prompt), // Prompt
-                            llvm::StringRef(), // Continuation prompt
-                            true,              // Get multiple lines
+                            llvm::StringRef(prompt), // Prompt
+                            llvm::StringRef(),       // Continuation prompt
+                            true,                    // Get multiple lines
                             debugger.GetUseColor(),
                             0,         // Don't show line numbers
                             delegate,  // IOHandlerDelegate
@@ -3006,9 +3006,9 @@ void CommandInterpreter::GetPythonCommandsFromIOHandler(
   IOHandlerSP io_handler_sp(
       new IOHandlerEditline(debugger, IOHandler::Type::PythonCode,
                             "lldb-python", // Name of input reader for history
-                            llvm::StringRef::withNullAsEmpty(prompt), // Prompt
-                            llvm::StringRef(), // Continuation prompt
-                            true,              // Get multiple lines
+                            llvm::StringRef(prompt), // Prompt
+                            llvm::StringRef(),       // Continuation prompt
+                            true,                    // Get multiple lines
                             debugger.GetUseColor(),
                             0,         // Don't show line numbers
                             delegate,  // IOHandlerDelegate

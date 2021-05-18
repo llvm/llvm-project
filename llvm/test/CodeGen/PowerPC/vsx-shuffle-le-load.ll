@@ -5,9 +5,9 @@
 define <2 x double> @loadChainHasUser(<2 x double>* %p1, <2 x double> %v2) {
 ; CHECK-LABEL: loadChainHasUser:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lxv 0, 0(3)
+; CHECK-NEXT:    lxvd2x 0, 0, 3
 ; CHECK-NEXT:    stxv 34, 0(3)
-; CHECK-NEXT:    xxswapd 34, 0
+; CHECK-NEXT:    xxlor 34, 0, 0
 ; CHECK-NEXT:    blr
   %v1 = load <2 x double>, <2 x double>* %p1
   store <2 x double> %v2, <2 x double>* %p1, align 16

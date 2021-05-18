@@ -800,8 +800,8 @@ static void splitSections() {
   // before calling finalizeContents().
   LLVM_DEBUG(llvm::dbgs() << "splitSections\n");
   parallelForEach(symtab->objectFiles, [](ObjFile *file) {
-    for (InputSegment *seg : file->segments) {
-      if (auto *s = dyn_cast<MergeInputSegment>(seg))
+    for (InputChunk *seg : file->segments) {
+      if (auto *s = dyn_cast<MergeInputChunk>(seg))
         s->splitIntoPieces();
     }
   });

@@ -819,7 +819,7 @@ protected:
   /// Middle Block between the vector and the scalar.
   BasicBlock *LoopMiddleBlock;
 
-  /// The unique ExitBlock of the scalar loop if one exists.  Note that
+  /// The (unique) ExitBlock of the scalar loop.  Note that
   /// there can be multiple exiting edges reaching this block.
   BasicBlock *LoopExitBlock;
 
@@ -1229,9 +1229,10 @@ public:
         TTI(TTI), TLI(TLI), DB(DB), AC(AC), ORE(ORE), TheFunction(F),
         Hints(Hints), InterleaveInfo(IAI) {}
 
-  /// \return An upper bound for the vectorization factor, or None if
-  /// vectorization and interleaving should be avoided up front.
-  Optional<ElementCount> computeMaxVF(ElementCount UserVF, unsigned UserIC);
+  /// \return An upper bound for the vectorization factors (both fixed and
+  /// scalable). If the factors are 0, vectorization and interleaving should be
+  /// avoided up front.
+  FixedScalableVFPair computeMaxVF(ElementCount UserVF, unsigned UserIC);
 
   /// \return True if runtime checks are required for vectorization, and false
   /// otherwise.
@@ -1625,11 +1626,13 @@ public:
 private:
   unsigned NumPredStores = 0;
 
-  /// \return An upper bound for the vectorization factor, a power-of-2 larger
-  /// than zero. One is returned if vectorization should best be avoided due
-  /// to cost.
-  ElementCount computeFeasibleMaxVF(unsigned ConstTripCount,
-                                    ElementCount UserVF);
+  /// \return An upper bound for the vectorization factors for both
+  /// fixed and scalable vectorization, where the minimum-known number of
+  /// elements is a power-of-2 larger than zero. If scalable vectorization is
+  /// disabled or unsupported, then the scalable part will be equal to
+  /// ElementCount::getScalable(0).
+  FixedScalableVFPair computeFeasibleMaxVF(unsigned ConstTripCount,
+                                           ElementCount UserVF);
 
   /// \return the maximized element count based on the targets vector
   /// registers and the loop trip-count, but limited to a maximum safe VF.
@@ -3249,13 +3252,9 @@ void InnerLoopVectorizer::emitMinimumIterationCountCheck(Loop *L,
                                DT->getNode(Bypass)->getIDom()) &&
          "TC check is expected to dominate Bypass");
 
-  // Update dominator for Bypass & LoopExit (if needed).
+  // Update dominator for Bypass & LoopExit.
   DT->changeImmediateDominator(Bypass, TCCheckBlock);
-  if (!Cost->requiresScalarEpilogue())
-    // If there is an epilogue which must run, there's no edge from the
-    // middle block to exit blocks  and thus no need to update the immediate
-    // dominator of the exit blocks.
-    DT->changeImmediateDominator(LoopExitBlock, TCCheckBlock);
+  DT->changeImmediateDominator(LoopExitBlock, TCCheckBlock);
 
   ReplaceInstWithInst(
       TCCheckBlock->getTerminator(),
@@ -3279,11 +3278,7 @@ BasicBlock *InnerLoopVectorizer::emitSCEVChecks(Loop *L, BasicBlock *Bypass) {
   // Update dominator only if this is first RT check.
   if (LoopBypassBlocks.empty()) {
     DT->changeImmediateDominator(Bypass, SCEVCheckBlock);
-    if (!Cost->requiresScalarEpilogue())
-      // If there is an epilogue which must run, there's no edge from the
-      // middle block to exit blocks  and thus no need to update the immediate
-      // dominator of the exit blocks.
-      DT->changeImmediateDominator(LoopExitBlock, SCEVCheckBlock);
+    DT->changeImmediateDominator(LoopExitBlock, SCEVCheckBlock);
   }
 
   LoopBypassBlocks.push_back(SCEVCheckBlock);
@@ -3436,10 +3431,9 @@ Value *InnerLoopVectorizer::emitTransformedIndex(
 Loop *InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
   LoopScalarBody = OrigLoop->getHeader();
   LoopVectorPreHeader = OrigLoop->getLoopPreheader();
+  LoopExitBlock = OrigLoop->getUniqueExitBlock();
+  assert(LoopExitBlock && "Must have an exit block");
   assert(LoopVectorPreHeader && "Invalid loop structure");
-  LoopExitBlock = OrigLoop->getUniqueExitBlock(); // may be nullptr
-  assert((LoopExitBlock || Cost->requiresScalarEpilogue()) &&
-         "multiple exit loop without required epilogue?");
 
   LoopMiddleBlock =
       SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->getTerminator(), DT,
@@ -3448,20 +3442,12 @@ Loop *InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
       SplitBlock(LoopMiddleBlock, LoopMiddleBlock->getTerminator(), DT, LI,
                  nullptr, Twine(Prefix) + "scalar.ph");
 
+  // Set up branch from middle block to the exit and scalar preheader blocks.
+  // completeLoopSkeleton will update the condition to use an iteration check,
+  // if required to decide whether to execute the remainder.
+  BranchInst *BrInst =
+      BranchInst::Create(LoopExitBlock, LoopScalarPreHeader, Builder.getTrue());
   auto *ScalarLatchTerm = OrigLoop->getLoopLatch()->getTerminator();
-
-  // Set up the middle block terminator.  Two cases:
-  // 1) If we know that we must execute the scalar epilogue, emit an
-  //    unconditional branch.
-  // 2) Otherwise, we must have a single unique exit block (due to how we
-  //    implement the multiple exit case).  In this case, set up a conditonal
-  //    branch from the middle block to the loop scalar preheader, and the
-  //    exit block.  completeLoopSkeleton will update the condition to use an
-  //    iteration check, if required to decide whether to execute the remainder.
-  BranchInst *BrInst = Cost->requiresScalarEpilogue() ?
-    BranchInst::Create(LoopScalarPreHeader) :
-    BranchInst::Create(LoopExitBlock, LoopScalarPreHeader,
-                       Builder.getTrue());
   BrInst->setDebugLoc(ScalarLatchTerm->getDebugLoc());
   ReplaceInstWithInst(LoopMiddleBlock->getTerminator(), BrInst);
 
@@ -3473,11 +3459,7 @@ Loop *InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
                  nullptr, nullptr, Twine(Prefix) + "vector.body");
 
   // Update dominator for loop exit.
-  if (!Cost->requiresScalarEpilogue())
-    // If there is an epilogue which must run, there's no edge from the
-    // middle block to exit blocks  and thus no need to update the immediate
-    // dominator of the exit blocks.
-    DT->changeImmediateDominator(LoopExitBlock, LoopMiddleBlock);
+  DT->changeImmediateDominator(LoopExitBlock, LoopMiddleBlock);
 
   // Create and register the new vector loop.
   Loop *Lp = LI->AllocateLoop();
@@ -3579,14 +3561,10 @@ BasicBlock *InnerLoopVectorizer::completeLoopSkeleton(Loop *L,
   auto *ScalarLatchTerm = OrigLoop->getLoopLatch()->getTerminator();
 
   // Add a check in the middle block to see if we have completed
-  // all of the iterations in the first vector loop.  Three cases:
-  // 1) If we require a scalar epilogue, there is no conditional branch as
-  //    we unconditionally branch to the scalar preheader.  Do nothing.
-  // 2) If (N - N%VF) == N, then we *don't* need to run the remainder.
-  //    Thus if tail is to be folded, we know we don't need to run the
-  //    remainder and we can use the previous value for the condition (true).
-  // 3) Otherwise, construct a runtime check.
-  if (!Cost->requiresScalarEpilogue() && !Cost->foldTailByMasking()) {
+  // all of the iterations in the first vector loop.
+  // If (N - N%VF) == N, then we *don't* need to run the remainder.
+  // If tail is to be folded, we know we don't need to run the remainder.
+  if (!Cost->foldTailByMasking()) {
     Instruction *CmpN = CmpInst::Create(Instruction::ICmp, CmpInst::ICMP_EQ,
                                         Count, VectorTripCount, "cmp.n",
                                         LoopMiddleBlock->getTerminator());
@@ -3650,17 +3628,17 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
   |    [  ]_|   <-- vector loop.
   |     |
   |     v
-  \   -[ ]   <--- middle-block.
-   \/   |
-   /\   v
-   | ->[ ]     <--- new preheader.
+  |   -[ ]   <--- middle-block.
+  |  /  |
+  | /   v
+  -|- >[ ]     <--- new preheader.
    |    |
- (opt)  v      <-- edge from middle to exit iff epilogue is not required.
+   |    v
    |   [ ] \
-   |   [ ]_|   <-- old scalar loop to handle remainder (scalar epilogue).
+   |   [ ]_|   <-- old scalar loop to handle remainder.
     \   |
      \  v
-      >[ ]     <-- exit block(s).
+      >[ ]     <-- exit block.
    ...
    */
 
@@ -4097,19 +4075,13 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
   // Forget the original basic block.
   PSE.getSE()->forgetLoop(OrigLoop);
 
-  // If we inserted an edge from the middle block to the unique exit block,
-  // update uses outside the loop (phis) to account for the newly inserted
-  // edge.
-  if (!Cost->requiresScalarEpilogue()) { 
-    // Fix-up external users of the induction variables.
-    for (auto &Entry : Legal->getInductionVars())
-      fixupIVUsers(Entry.first, Entry.second,
-                   getOrCreateVectorTripCount(LI->getLoopFor(LoopVectorBody)),
-                   IVEndValues[Entry.first], LoopMiddleBlock);
+  // Fix-up external users of the induction variables.
+  for (auto &Entry : Legal->getInductionVars())
+    fixupIVUsers(Entry.first, Entry.second,
+                 getOrCreateVectorTripCount(LI->getLoopFor(LoopVectorBody)),
+                 IVEndValues[Entry.first], LoopMiddleBlock);
 
-    fixLCSSAPHIs(State);
-  }
-
+  fixLCSSAPHIs(State);
   for (Instruction *PI : PredicatedInstructions)
     sinkScalarOperands(&*PI);
 
@@ -4330,13 +4302,12 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(PHINode *Phi,
   // recurrence in the exit block, and then add an edge for the middle block.
   // Note that LCSSA does not imply single entry when the original scalar loop
   // had multiple exiting edges (as we always run the last iteration in the
-  // scalar epilogue); in that case, there is no edge from middle to exit and
-  // and thus no phis which needed updated.
-  if (!Cost->requiresScalarEpilogue())
-    for (PHINode &LCSSAPhi : LoopExitBlock->phis())
-      if (any_of(LCSSAPhi.incoming_values(),
-                 [Phi](Value *V) { return V == Phi; }))
-        LCSSAPhi.addIncoming(ExtractForPhiUsedOutsideLoop, LoopMiddleBlock);
+  // scalar epilogue); in that case, the exiting path through middle will be
+  // dynamically dead and the value picked for the phi doesn't matter.
+  for (PHINode &LCSSAPhi : LoopExitBlock->phis())
+    if (any_of(LCSSAPhi.incoming_values(),
+               [Phi](Value *V) { return V == Phi; }))
+      LCSSAPhi.addIncoming(ExtractForPhiUsedOutsideLoop, LoopMiddleBlock);
 }
 
 static bool useOrderedReductions(RecurrenceDescriptor &RdxDesc) {
@@ -4514,11 +4485,10 @@ void InnerLoopVectorizer::fixReduction(VPWidenPHIRecipe *PhiR,
   // We know that the loop is in LCSSA form. We need to update the PHI nodes
   // in the exit blocks.  See comment on analogous loop in
   // fixFirstOrderRecurrence for a more complete explaination of the logic.
-  if (!Cost->requiresScalarEpilogue())
-    for (PHINode &LCSSAPhi : LoopExitBlock->phis())
-      if (any_of(LCSSAPhi.incoming_values(),
-                 [LoopExitInst](Value *V) { return V == LoopExitInst; }))
-        LCSSAPhi.addIncoming(ReducedPartRdx, LoopMiddleBlock);
+  for (PHINode &LCSSAPhi : LoopExitBlock->phis())
+    if (any_of(LCSSAPhi.incoming_values(),
+               [LoopExitInst](Value *V) { return V == LoopExitInst; }))
+      LCSSAPhi.addIncoming(ReducedPartRdx, LoopMiddleBlock);
 
   // Fix the scalar loop reduction variable with the incoming reduction sum
   // from the vector body and from the backedge value.
@@ -5709,7 +5679,7 @@ LoopVectorizationCostModel::getMaxLegalScalableVF(unsigned MaxSafeElements) {
   return MaxScalableVF;
 }
 
-ElementCount
+FixedScalableVFPair
 LoopVectorizationCostModel::computeFeasibleMaxVF(unsigned ConstTripCount,
                                                  ElementCount UserVF) {
   MinBWs = computeMinimumValueSizes(TheLoop->getBlocks(), *DB, &TTI);
@@ -5775,22 +5745,24 @@ LoopVectorizationCostModel::computeFeasibleMaxVF(unsigned ConstTripCount,
   LLVM_DEBUG(dbgs() << "LV: The Smallest and Widest types: " << SmallestType
                     << " / " << WidestType << " bits.\n");
 
-  ElementCount MaxFixedVF = ElementCount::getFixed(1);
+  FixedScalableVFPair Result(ElementCount::getFixed(1),
+                             ElementCount::getScalable(0));
   if (auto MaxVF = getMaximizedVFForTarget(ConstTripCount, SmallestType,
                                            WidestType, MaxSafeFixedVF))
-    MaxFixedVF = MaxVF;
+    Result.FixedVF = MaxVF;
 
   if (auto MaxVF = getMaximizedVFForTarget(ConstTripCount, SmallestType,
                                            WidestType, MaxSafeScalableVF))
-    // FIXME: Return scalable VF as well (to be added in future patch).
-    if (MaxVF.isScalable())
+    if (MaxVF.isScalable()) {
+      Result.ScalableVF = MaxVF;
       LLVM_DEBUG(dbgs() << "LV: Found feasible scalable VF = " << MaxVF
                         << "\n");
+    }
 
-  return MaxFixedVF;
+  return Result;
 }
 
-Optional<ElementCount>
+FixedScalableVFPair
 LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   if (Legal->getRuntimePointerChecking()->Need && TTI.hasBranchDivergence()) {
     // TODO: It may by useful to do since it's still likely to be dynamically
@@ -5799,7 +5771,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
         "Not inserting runtime ptr check for divergent target",
         "runtime pointer checks needed. Not enabled for divergent target",
         "CantVersionLoopWithDivergentTarget", ORE, TheLoop);
-    return None;
+    return FixedScalableVFPair::getNone();
   }
 
   unsigned TC = PSE.getSE()->getSmallConstantTripCount(TheLoop);
@@ -5808,7 +5780,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     reportVectorizationFailure("Single iteration (non) loop",
         "loop trip count is one, irrelevant for vectorization",
         "SingleIterationLoop", ORE, TheLoop);
-    return None;
+    return FixedScalableVFPair::getNone();
   }
 
   switch (ScalarEpilogueStatus) {
@@ -5835,7 +5807,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     // Bail if runtime checks are required, which are not good when optimising
     // for size.
     if (runtimeChecksRequired())
-      return None;
+      return FixedScalableVFPair::getNone();
 
     break;
   }
@@ -5853,7 +5825,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       ScalarEpilogueStatus = CM_ScalarEpilogueAllowed;
       return computeFeasibleMaxVF(TC, UserVF);
     }
-    return None;
+    return FixedScalableVFPair::getNone();
   }
 
   // Now try the tail folding
@@ -5868,26 +5840,29 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     InterleaveInfo.invalidateGroupsRequiringScalarEpilogue();
   }
 
-  ElementCount MaxVF = computeFeasibleMaxVF(TC, UserVF);
-  assert(!MaxVF.isScalable() &&
-         "Scalable vectors do not yet support tail folding");
-  assert((UserVF.isNonZero() || isPowerOf2_32(MaxVF.getFixedValue())) &&
-         "MaxVF must be a power of 2");
-  unsigned MaxVFtimesIC =
-      UserIC ? MaxVF.getFixedValue() * UserIC : MaxVF.getFixedValue();
-  // Avoid tail folding if the trip count is known to be a multiple of any VF we
-  // chose.
-  ScalarEvolution *SE = PSE.getSE();
-  const SCEV *BackedgeTakenCount = PSE.getBackedgeTakenCount();
-  const SCEV *ExitCount = SE->getAddExpr(
-      BackedgeTakenCount, SE->getOne(BackedgeTakenCount->getType()));
-  const SCEV *Rem = SE->getURemExpr(
-      SE->applyLoopGuards(ExitCount, TheLoop),
-      SE->getConstant(BackedgeTakenCount->getType(), MaxVFtimesIC));
-  if (Rem->isZero()) {
-    // Accept MaxVF if we do not have a tail.
-    LLVM_DEBUG(dbgs() << "LV: No tail will remain for any chosen VF.\n");
-    return MaxVF;
+  FixedScalableVFPair MaxFactors = computeFeasibleMaxVF(TC, UserVF);
+  // Avoid tail folding if the trip count is known to be a multiple of any VF
+  // we chose.
+  // FIXME: The condition below pessimises the case for fixed-width vectors,
+  // when scalable VFs are also candidates for vectorization.
+  if (MaxFactors.FixedVF.isVector() && !MaxFactors.ScalableVF) {
+    ElementCount MaxFixedVF = MaxFactors.FixedVF;
+    assert((UserVF.isNonZero() || isPowerOf2_32(MaxFixedVF.getFixedValue())) &&
+           "MaxFixedVF must be a power of 2");
+    unsigned MaxVFtimesIC = UserIC ? MaxFixedVF.getFixedValue() * UserIC
+                                   : MaxFixedVF.getFixedValue();
+    ScalarEvolution *SE = PSE.getSE();
+    const SCEV *BackedgeTakenCount = PSE.getBackedgeTakenCount();
+    const SCEV *ExitCount = SE->getAddExpr(
+        BackedgeTakenCount, SE->getOne(BackedgeTakenCount->getType()));
+    const SCEV *Rem = SE->getURemExpr(
+        SE->applyLoopGuards(ExitCount, TheLoop),
+        SE->getConstant(BackedgeTakenCount->getType(), MaxVFtimesIC));
+    if (Rem->isZero()) {
+      // Accept MaxFixedVF if we do not have a tail.
+      LLVM_DEBUG(dbgs() << "LV: No tail will remain for any chosen VF.\n");
+      return MaxFactors;
+    }
   }
 
   // If we don't know the precise trip count, or if the trip count that we
@@ -5896,7 +5871,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   // FIXME: look for a smaller MaxVF that does divide TC rather than masking.
   if (Legal->prepareToFoldTailByMasking()) {
     FoldTailByMasking = true;
-    return MaxVF;
+    return MaxFactors;
   }
 
   // If there was a tail-folding hint/switch, but we can't fold the tail by
@@ -5905,12 +5880,12 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking: vectorize with a "
                          "scalar epilogue instead.\n");
     ScalarEpilogueStatus = CM_ScalarEpilogueAllowed;
-    return MaxVF;
+    return MaxFactors;
   }
 
   if (ScalarEpilogueStatus == CM_ScalarEpilogueNotAllowedUsePredicate) {
     LLVM_DEBUG(dbgs() << "LV: Can't fold tail by masking: don't vectorize\n");
-    return None;
+    return FixedScalableVFPair::getNone();
   }
 
   if (TC == 0) {
@@ -5918,7 +5893,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
         "Unable to calculate the loop count due to complex control flow",
         "unable to calculate the loop count due to complex control flow",
         "UnknownLoopCountComplexCFG", ORE, TheLoop);
-    return None;
+    return FixedScalableVFPair::getNone();
   }
 
   reportVectorizationFailure(
@@ -5927,7 +5902,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       "Enable vectorization of this loop with '#pragma clang loop "
       "vectorize(enable)' when compiling with -Os/-Oz",
       "NoTailLoopWithOptForSize", ORE, TheLoop);
-  return None;
+  return FixedScalableVFPair::getNone();
 }
 
 ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
@@ -7961,8 +7936,8 @@ LoopVectorizationPlanner::planInVPlanNativePath(ElementCount UserVF) {
 Optional<VectorizationFactor>
 LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   assert(OrigLoop->isInnermost() && "Inner loop expected.");
-  Optional<ElementCount> MaybeMaxVF = CM.computeMaxVF(UserVF, UserIC);
-  if (!MaybeMaxVF) // Cases that should not to be vectorized nor interleaved.
+  FixedScalableVFPair MaxFactors = CM.computeMaxVF(UserVF, UserIC);
+  if (!MaxFactors) // Cases that should not to be vectorized nor interleaved.
     return None;
 
   // Invalidate interleave groups if all blocks of loop will be predicated.
@@ -7979,29 +7954,24 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
       CM.invalidateCostModelingDecisions();
   }
 
-  ElementCount MaxVF = MaybeMaxVF.getValue();
-  assert(MaxVF.isNonZero() && "MaxVF is zero.");
-
-  bool UserVFIsLegal = ElementCount::isKnownLE(UserVF, MaxVF);
-  if (!UserVF.isZero() &&
-      (UserVFIsLegal || (UserVF.isScalable() && MaxVF.isScalable()))) {
-    // FIXME: MaxVF is temporarily used inplace of UserVF for illegal scalable
-    // VFs here, this should be reverted to only use legal UserVFs once the
-    // loop below supports scalable VFs.
-    ElementCount VF = UserVFIsLegal ? UserVF : MaxVF;
+  ElementCount MaxUserVF =
+      UserVF.isScalable() ? MaxFactors.ScalableVF : MaxFactors.FixedVF;
+  bool UserVFIsLegal = ElementCount::isKnownLE(UserVF, MaxUserVF);
+  if (!UserVF.isZero() && UserVFIsLegal) {
     LLVM_DEBUG(dbgs() << "LV: Using " << (UserVFIsLegal ? "user" : "max")
-                      << " VF " << VF << ".\n");
-    assert(isPowerOf2_32(VF.getKnownMinValue()) &&
+                      << " VF " << UserVF << ".\n");
+    assert(isPowerOf2_32(UserVF.getKnownMinValue()) &&
            "VF needs to be a power of two");
     // Collect the instructions (and their associated costs) that will be more
     // profitable to scalarize.
-    CM.selectUserVectorizationFactor(VF);
+    CM.selectUserVectorizationFactor(UserVF);
     CM.collectInLoopReductions();
-    buildVPlansWithVPRecipes(VF, VF);
+    buildVPlansWithVPRecipes({UserVF}, {UserVF});
     LLVM_DEBUG(printPlans(dbgs()));
-    return {{VF, 0}};
+    return {{UserVF, 0}};
   }
 
+  ElementCount MaxVF = MaxFactors.FixedVF;
   assert(!MaxVF.isScalable() &&
          "Scalable vectors not yet supported beyond this point");
 
@@ -8020,7 +7990,7 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
 
   buildVPlansWithVPRecipes(ElementCount::getFixed(1), MaxVF);
   LLVM_DEBUG(printPlans(dbgs()));
-  if (MaxVF.isScalar())
+  if (!MaxFactors.hasVector())
     return VectorizationFactor::Disabled();
 
   // Select the optimal vectorization factor.
@@ -8323,11 +8293,7 @@ BasicBlock *EpilogueVectorizerMainLoop::emitMinimumIterationCountCheck(
 
     // Update dominator for Bypass & LoopExit.
     DT->changeImmediateDominator(Bypass, TCCheckBlock);
-    if (!Cost->requiresScalarEpilogue())
-      // For loops with multiple exits, there's no edge from the middle block
-      // to exit blocks (as the epilogue must run) and thus no need to update
-      // the immediate dominator of the exit blocks.
-      DT->changeImmediateDominator(LoopExitBlock, TCCheckBlock);
+    DT->changeImmediateDominator(LoopExitBlock, TCCheckBlock);
 
     LoopBypassBlocks.push_back(TCCheckBlock);
 
@@ -8391,12 +8357,7 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton() {
 
   DT->changeImmediateDominator(LoopScalarPreHeader,
                                EPI.EpilogueIterationCountCheck);
-  if (!Cost->requiresScalarEpilogue())
-    // If there is an epilogue which must run, there's no edge from the
-    // middle block to exit blocks  and thus no need to update the immediate
-    // dominator of the exit blocks.
-    DT->changeImmediateDominator(LoopExitBlock,
-                                 EPI.EpilogueIterationCountCheck);
+  DT->changeImmediateDominator(LoopExitBlock, EPI.EpilogueIterationCountCheck);
 
   // Keep track of bypass blocks, as they feed start values to the induction
   // phis in the scalar loop preheader.

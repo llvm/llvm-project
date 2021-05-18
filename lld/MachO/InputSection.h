@@ -87,7 +87,7 @@ inline bool isDebugSection(uint32_t flags) {
          llvm::MachO::S_ATTR_DEBUG;
 }
 
-bool isCodeSection(InputSection *);
+bool isCodeSection(const InputSection *);
 
 extern std::vector<InputSection *> inputSections;
 

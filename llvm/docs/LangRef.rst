@@ -12443,6 +12443,68 @@ The '``llvm.localescape``' intrinsic blocks inlining, as inlining changes where
 the escaped allocas are allocated, which would break attempts to use
 '``llvm.localrecover``'.
 
+'``llvm.seh.try.begin``' and '``llvm.seh.try.end``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.seh.try.begin()
+      declare void @llvm.seh.try.end()
+
+Overview:
+"""""""""
+
+The '``llvm.seh.try.begin``' and '``llvm.seh.try.end``' intrinsics mark
+the boundary of a _try region for Windows SEH Asynchrous Exception Handling.
+
+Semantics:
+""""""""""
+
+When a C-function is compiled with Windows SEH Asynchrous Exception option,
+-feh_asynch (aka MSVC -EHa), these two intrinsics are injected to mark _try
+boundary and to prevent potential exceptions from being moved across boundary.
+Any set of operations can then be confined to the region by reading their leaf
+inputs via volatile loads and writing their root outputs via volatile stores.
+
+'``llvm.seh.scope.begin``' and '``llvm.seh.scope.end``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.seh.scope.begin()
+      declare void @llvm.seh.scope.end()
+
+Overview:
+"""""""""
+
+The '``llvm.seh.scope.begin``' and '``llvm.seh.scope.end``' intrinsics mark
+the boundary of a CPP object lifetime for Windows SEH Asynchrous Exception
+Handling (MSVC option -EHa).
+
+Semantics:
+""""""""""
+
+LLVM's ordinary exception-handling representation associates EH cleanups and
+handlers only with ``invoke``s, which normally correspond only to call sites.  To
+support arbitrary faulting instructions, it must be possible to recover the current
+EH scope for any instruction.  Turning every operation in LLVM that could fault
+into an ``invoke`` of a new, potentially-throwing intrinsic would require adding a
+large number of intrinsics, impede optimization of those operations, and make
+compilation slower by introducing many extra basic blocks.  These intrinsics can
+be used instead to mark the region protected by a cleanup, such as for a local
+C++ object with a non-trivial destructor.  ``llvm.seh.scope.begin`` is used to mark
+the start of the region; it is always called with ``invoke``, with the unwind block
+being the desired unwind destination for any potentially-throwing instructions
+within the region.  `llvm.seh.scope.end` is used to mark when the scope ends
+and the EH cleanup is no longer required (e.g. because the destructor is being
+called).
+
 .. _int_read_register:
 .. _int_read_volatile_register:
 .. _int_write_register:

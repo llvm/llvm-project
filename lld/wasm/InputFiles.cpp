@@ -464,9 +464,9 @@ void ObjFile::parse(bool ignoreComdats) {
 
   // Populate `Segments`.
   for (const WasmSegment &s : wasmObj->dataSegments()) {
-    InputSegment *seg;
+    InputChunk *seg;
     if (shouldMerge(s)) {
-      seg = make<MergeInputSegment>(&s, this);
+      seg = make<MergeInputChunk>(&s, this);
     } else
       seg = make<InputSegment>(&s, this);
     seg->discarded = isExcludedByComdat(seg);
@@ -568,7 +568,7 @@ Symbol *ObjFile::createDefined(const WasmSymbol &sym) {
     return symtab->addDefinedFunction(name, flags, this, func);
   }
   case WASM_SYMBOL_TYPE_DATA: {
-    InputSegment *seg = segments[sym.Info.DataRef.Segment];
+    InputChunk *seg = segments[sym.Info.DataRef.Segment];
     auto offset = sym.Info.DataRef.Offset;
     auto size = sym.Info.DataRef.Size;
     if (sym.isBindingLocal())

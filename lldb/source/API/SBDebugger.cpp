@@ -1387,7 +1387,7 @@ void SBDebugger::SetPrompt(const char *prompt) {
   LLDB_RECORD_METHOD(void, SBDebugger, SetPrompt, (const char *), prompt);
 
   if (m_opaque_sp)
-    m_opaque_sp->SetPrompt(llvm::StringRef::withNullAsEmpty(prompt));
+    m_opaque_sp->SetPrompt(llvm::StringRef(prompt));
 }
 
 const char *SBDebugger::GetReproducerPath() const {
