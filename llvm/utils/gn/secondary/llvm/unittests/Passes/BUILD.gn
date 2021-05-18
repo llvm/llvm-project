@@ -48,7 +48,7 @@ unittest("PluginsTests") {
   }
 }
 
-unittest("PassesBindingsTest") {
+unittest("PassesBindingsTests") {
   deps = [
     "//llvm/include/llvm/Config:config",
     "//llvm/lib/IR",
