@@ -2374,6 +2374,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
         SmallVector<OperandBundleDef, 1> OpBundles;
         DeoptCall->getOperandBundlesAsDefs(OpBundles);
+        auto DeoptAttributes = DeoptCall->getAttributes();
         DeoptCall->eraseFromParent();
         assert(!OpBundles.empty() &&
                "Expected at least the deopt operand bundle");
@@ -2382,6 +2383,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
         CallInst *NewDeoptCall =
             Builder.CreateCall(NewDeoptIntrinsic, CallArgs, OpBundles);
         NewDeoptCall->setCallingConv(CallingConv);
+        NewDeoptCall->setAttributes(DeoptAttributes);
         if (NewDeoptCall->getType()->isVoidTy())
           Builder.CreateRetVoid();
         else
