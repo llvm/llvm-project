@@ -140,7 +140,7 @@ struct AndroidSvelteConfig {
 
 #if SCUDO_CAN_USE_PRIMARY64
 struct FuchsiaConfig {
-  using SizeClassMap = DefaultSizeClassMap;
+  using SizeClassMap = FuchsiaSizeClassMap;
   static const bool MaySupportMemoryTagging = false;
 
   typedef SizeClassAllocator64<FuchsiaConfig> Primary;
