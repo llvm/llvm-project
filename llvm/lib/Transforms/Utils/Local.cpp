@@ -1150,12 +1150,11 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   assert(succ_empty(BB) && "The successor list of BB isn't empty before "
                            "applying corresponding DTU updates.");
 
-  if (DTU) {
+  if (DTU)
     DTU->applyUpdates(Updates);
-    DTU->deleteBB(BB);
-  } else {
-    BB->eraseFromParent(); // Delete the old basic block.
-  }
+
+  DeleteDeadBlock(BB, DTU);
+
   return true;
 }
 
