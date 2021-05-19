@@ -2,7 +2,7 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-from typing import Any, Dict, Sequence
+from typing import Dict, Sequence
 
 from mlir.ir import *
 from mlir.dialects import linalg
@@ -19,16 +19,17 @@ __all__ = [
     "emit_named_structured_op",
 ]
 
-def isa(cls : Type, ty : Type):
+
+def isa(cls: Type, ty: Type):
   try:
     cls(ty)
     return True
   except ValueError:
     return False
 
+
 def prepare_common_structured_op(op_config: LinalgStructuredOpConfig,
-                                 *ins: Value,
-                                 outs: Sequence[Value],
+                                 *ins: Value, outs: Sequence[Value],
                                  captures: Sequence[Value]):
   all_arg_defs = op_config.ordered_tensor_args
   in_arg_defs = [arg for arg in all_arg_defs if arg.usage == "input"]
@@ -82,11 +83,13 @@ def prepare_common_structured_op(op_config: LinalgStructuredOpConfig,
 
   # Emit the generic op.
   # TODO: Support emission of pure memref form.
-  indexing_maps_attr = ArrayAttr.get(
-      [AffineMapAttr.get(am)
-       # TODO: linalg verification does not currently allow symbols.
-       # Compress them for now.
-       for am in AffineMap.compress_unused_symbols(op_config.indexing_maps, Context.current)])
+  indexing_maps_attr = ArrayAttr.get([
+      AffineMapAttr.get(am)
+      # TODO: linalg verification does not currently allow symbols.
+      # Compress them for now.
+      for am in AffineMap.compress_unused_symbols(op_config.indexing_maps,
+                                                  Context.current)
+  ])
   iterator_types_attr = ArrayAttr.get(
       [StringAttr.get(s) for s in op_config.iterator_types])
 
@@ -144,7 +147,7 @@ def emit_named_structured_op(op_config: LinalgStructuredOpConfig,
 
   # If we get here, there must exist a builtin class `op_class_name`.
   ctx = Context.current
-  fully_qualified_name = 'linalg.' + op_name
+  fully_qualified_name = "linalg." + op_name
   if (not ctx.is_registered_operation(fully_qualified_name) or
       not op_class_name in linalg.__dict__.keys()):
     raise NotImplementedError(
@@ -156,7 +159,8 @@ def emit_named_structured_op(op_config: LinalgStructuredOpConfig,
   # Note: mlir-linalg-ods-yaml-gen.cpp uses a special linalg.memoized_indexing_maps
   # attribute that the non-yaml path does not. The non-yaml path hardcodes the
   # indexing_maps in C++ directly.
-  named_op.operation.attributes["linalg.memoized_indexing_maps"] = indexing_maps_attr
+  named_op.operation.attributes[
+      "linalg.memoized_indexing_maps"] = indexing_maps_attr
   # iterator_types are hardcoded in C++ both in the yaml and non-yaml path.
 
   if len(result_types) == 1:
@@ -168,8 +172,7 @@ def emit_named_structured_op(op_config: LinalgStructuredOpConfig,
 class _BodyBuilder:
   """Constructs a structured op body by evaluating assignments."""
 
-  def __init__(self,
-               type_mapping: Dict[str, Type],
+  def __init__(self, type_mapping: Dict[str, Type],
                block_arg_mapping: Dict[str, Value],
                capture_arg_mapping: Dict[str, Value]):
     self.type_mapping = type_mapping
@@ -195,12 +198,16 @@ class _BodyBuilder:
       try:
         return self.capture_arg_mapping[expr.scalar_capture.capture]
       except KeyError:
-        raise ValueError(f"Capture {expr.scalar_capture.capture} is not bound for "
-                         f"this structured op.")
+        raise ValueError(
+            f"Capture {expr.scalar_capture.capture} is not bound for "
+            f"this structured op.")
     elif expr.scalar_const:
-      return self.constant(expr.scalar_const.type_var.name, expr.scalar_const.value)
+      value_attr = Attribute.parse(expr.scalar_const.value)
+      return std.ConstantOp(value_attr.type, value_attr).result
     elif expr.scalar_index:
-      return self.index(expr.scalar_index.dim)
+      dim_attr = IntegerAttr.get(
+          IntegerType.get_signless(64), expr.scalar_index.dim)
+      return linalg.IndexOp(IndexType.get(), dim_attr).result
     elif expr.scalar_apply:
       try:
         fn = getattr(self, f"_eval_{expr.scalar_apply.fn_name}")
@@ -217,25 +224,6 @@ class _BodyBuilder:
       return self.cast(expr.symbolic_cast.to_type.name, operand_value)
     raise NotImplementedError(f"Unimplemented scalar body expression: {expr}")
 
-  def constant(self, type_var_name: str, value: Any) -> Value:
-    try:
-      type = self.type_mapping[type_var_name]
-    except KeyError:
-      raise ValueError(f"Unbound type variable '{type_var_name}' ("
-                       f"expected one of {self.type_mappings.keys()}")
-    try:
-      if(_is_floating_point_type(type)):
-        return std.ConstantOp(type, FloatAttr.get(type, float(value))).result
-      elif(_is_integer_type(type)):
-        return std.ConstantOp(type, IntegerAttr.get(type, int(value))).result
-    except ValueError:
-      raise ValueError(f"Unable to cast value {value} to type {type}")
-    raise NotImplementedError(f"Unimplemented constant type {type}")
-
-  def index(self, dim: int) -> Value:
-    dim_attr = IntegerAttr.get(IntegerType.get_signless(64), dim)
-    return linalg.IndexOp(IndexType.get(), dim_attr).result
-
   def cast(self, type_var_name: str, operand: Value) -> Value:
     try:
       to_type = self.type_mapping[type_var_name]
@@ -248,6 +236,7 @@ class _BodyBuilder:
       return self._cast_to_integer(to_type, operand)
     elif _is_floating_point_type(to_type):
       return self._cast_to_floating_point(to_type, operand)
+
   def _cast_to_integer(self, to_type: Type, operand: Value) -> Value:
     to_width = IntegerType(to_type).width
     operand_type = operand.type
@@ -345,6 +334,7 @@ def _get_tensor_def_names(
     *tensor_def_configs: TensorDefConfig) -> Sequence[str]:
   return [tdc.tensor_def.tensor_name for tdc in tensor_def_configs]
 
+
 def _add_type_mapping(name: str, type: Type, type_mapping: Dict[str, Type]):
   if name in type_mapping:
     if type_mapping[name] != type:
@@ -352,17 +342,21 @@ def _add_type_mapping(name: str, type: Type, type_mapping: Dict[str, Type]):
                        f"{type_mapping[name]} by type {type}")
   type_mapping[name] = type
 
+
 def _is_floating_point_type(t: Type) -> bool:
   # TODO: Create a FloatType in the Python API and implement the switch
   # there.
   return (F64Type.isinstance(t) or F32Type.isinstance(t) or
           F16Type.isinstance(t) or BF16Type.isinstance(t))
 
+
 def _is_integer_type(t: Type) -> bool:
   return IntegerType.isinstance(t)
 
+
 def _is_index_type(t: Type) -> bool:
   return IndexType.isinstance(t)
+
 
 def _get_floating_point_width(t: Type) -> int:
   # TODO: Create a FloatType in the Python API and implement the switch
