@@ -242,10 +242,15 @@ public:
     ///   pass, in the case of a non-failure, we should first check if any
     ///   potential mutations were made. This allows for reducing the number of
     ///   logs that don't contain meaningful changes.
+    /// * 'printAfterOnlyOnFailure' signals that when printing the IR after a
+    ///   pass, we only print in the case of a failure.
+    ///     - This option should *not* be used with the other `printAfter` flags
+    ///       above.
     /// * 'opPrintingFlags' sets up the printing flags to use when printing the
     ///   IR.
     explicit IRPrinterConfig(
         bool printModuleScope = false, bool printAfterOnlyOnChange = false,
+        bool printAfterOnlyOnFailure = false,
         OpPrintingFlags opPrintingFlags = OpPrintingFlags());
     virtual ~IRPrinterConfig();
 
@@ -270,6 +275,12 @@ public:
     /// "changed".
     bool shouldPrintAfterOnlyOnChange() const { return printAfterOnlyOnChange; }
 
+    /// Returns true if the IR should only printed after a pass if the pass
+    /// "failed".
+    bool shouldPrintAfterOnlyOnFailure() const {
+      return printAfterOnlyOnFailure;
+    }
+
     /// Returns the printing flags to be used to print the IR.
     OpPrintingFlags getOpPrintingFlags() const { return opPrintingFlags; }
 
@@ -280,6 +291,10 @@ public:
     /// A flag that indicates that the IR after a pass should only be printed if
     /// a change is detected.
     bool printAfterOnlyOnChange;
+
+    /// A flag that indicates that the IR after a pass should only be printed if
+    /// the pass failed.
+    bool printAfterOnlyOnFailure;
 
     /// Flags to control printing behavior.
     OpPrintingFlags opPrintingFlags;
@@ -299,16 +314,20 @@ public:
   /// * 'printAfterOnlyOnChange' signals that when printing the IR after a
   ///   pass, in the case of a non-failure, we should first check if any
   ///   potential mutations were made.
+  /// * 'printAfterOnlyOnFailure' signals that when printing the IR after a
+  ///   pass, we only print in the case of a failure.
+  ///     - This option should *not* be used with the other `printAfter` flags
+  ///       above.
+  /// * 'out' corresponds to the stream to output the printed IR to.
   /// * 'opPrintingFlags' sets up the printing flags to use when printing the
   ///   IR.
-  /// * 'out' corresponds to the stream to output the printed IR to.
   void enableIRPrinting(
       std::function<bool(Pass *, Operation *)> shouldPrintBeforePass =
           [](Pass *, Operation *) { return true; },
       std::function<bool(Pass *, Operation *)> shouldPrintAfterPass =
           [](Pass *, Operation *) { return true; },
       bool printModuleScope = true, bool printAfterOnlyOnChange = true,
-      raw_ostream &out = llvm::errs(),
+      bool printAfterOnlyOnFailure = false, raw_ostream &out = llvm::errs(),
       OpPrintingFlags opPrintingFlags = OpPrintingFlags());
 
   //===--------------------------------------------------------------------===//
