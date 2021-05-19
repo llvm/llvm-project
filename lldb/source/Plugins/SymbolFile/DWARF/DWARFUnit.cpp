@@ -500,6 +500,19 @@ void DWARFUnit::SetRangesBase(dw_addr_t ranges_base) {
         ranges_base, toString(table_or_error.takeError()).c_str());
 }
 
+const llvm::Optional<llvm::DWARFDebugRnglistTable> &DWARFUnit::GetRnglist() {
+  return m_rnglist_table;
+}
+
+llvm::Optional<uint64_t> DWARFUnit::GetRnglistOffset(uint32_t Index) {
+  if (!GetRnglist())
+    return llvm::None;
+  if (llvm::Optional<uint64_t> off = GetRnglist()->getOffsetEntry(
+          m_dwarf.GetDWARFContext().getOrLoadRngListsData().GetAsLLVM(), Index))
+    return *off + m_ranges_base;
+  return llvm::None;
+}
+
 void DWARFUnit::SetStrOffsetsBase(dw_offset_t str_offsets_base) {
   m_str_offsets_base = str_offsets_base;
 }
@@ -941,11 +954,11 @@ DWARFUnit::FindRnglistFromOffset(dw_offset_t offset) {
     return ranges;
   }
 
-  if (!m_rnglist_table)
+  if (!GetRnglist())
     return llvm::createStringError(errc::invalid_argument,
                                    "missing or invalid range list table");
 
-  auto range_list_or_error = m_rnglist_table->findList(
+  auto range_list_or_error = GetRnglist()->findList(
       m_dwarf.GetDWARFContext().getOrLoadRngListsData().GetAsLLVM(), offset);
   if (!range_list_or_error)
     return range_list_or_error.takeError();
@@ -976,7 +989,7 @@ llvm::Expected<DWARFRangeList>
 DWARFUnit::FindRnglistFromIndex(uint32_t index) {
   if (llvm::Optional<uint64_t> offset = GetRnglistOffset(index))
     return FindRnglistFromOffset(*offset);
-  if (m_rnglist_table)
+  if (GetRnglist())
     return llvm::createStringError(errc::invalid_argument,
                                    "invalid range list table index %d", index);
 
