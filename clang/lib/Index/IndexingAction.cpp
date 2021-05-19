@@ -672,6 +672,10 @@ protected:
     return std::make_unique<MultiplexConsumer>(std::move(Consumers));
   }
 
+  void EndSourceFile() override {
+    FrontendAction::EndSourceFile();
+  }
+
   void EndSourceFileAction() override {
     // Invoke wrapped action's method.
     WrapperFrontendAction::EndSourceFileAction();
