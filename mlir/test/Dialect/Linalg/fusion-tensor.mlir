@@ -662,3 +662,39 @@ func @no_fuse_constant_with_reduction() -> tensor<3xf32>
   } -> tensor<3xf32>
   return %result : tensor<3xf32>
 }
+
+// -----
+
+#map = affine_map<(d0, d1) -> (d0, d1)>
+#trait = {
+  indexing_maps = [#map, #map],
+  iterator_types = ["parallel", "parallel"]
+}
+func @break_outs_dependency(%arg0 : tensor<?x?xf32>) -> tensor<?x?xf32>
+{
+  %0 = linalg.generic #trait ins(%arg0 : tensor<?x?xf32>) outs(%arg0 : tensor<?x?xf32>) {
+       ^bb0(%arg1 : f32, %arg2 : f32) :
+         %1 = addf %arg1, %arg1 : f32
+         linalg.yield %1 : f32
+       } -> tensor<?x?xf32>
+  %2 = linalg.generic #trait ins(%0 : tensor<?x?xf32>) outs(%0 : tensor<?x?xf32>) {
+       ^bb0(%arg1 : f32, %arg2 : f32) :
+         %3 = mulf %arg1, %arg1 : f32
+         linalg.yield %3 : f32
+       } -> tensor<?x?xf32>
+  return %2 : tensor<?x?xf32>
+}
+//      CHECK: func @break_outs_dependency(
+// CHECK-SAME:   %[[ARG0:.+]]: tensor<?x?xf32>)
+//  CHECK-DAG:   %[[C0:.+]] = constant 0 : index
+//  CHECK-DAG:   %[[C1:.+]] = constant 1 : index
+//  CHECK-DAG:   %[[D0:.+]] = memref.dim %[[ARG0]], %[[C0]]
+//  CHECK-DAG:   %[[D1:.+]] = memref.dim %[[ARG0]], %[[C1]]
+//  CHECK-DAG:   %[[INIT:.+]] = linalg.init_tensor [%[[D0]], %[[D1]]]
+//      CHECK:   %[[GENERIC1:.+]] = linalg.generic
+// CHECK-SAME:     outs(%[[INIT]] : tensor<?x?xf32>)
+//  CHECK-DAG:   %[[D0:.+]] = memref.dim %[[GENERIC1]], %[[C0]]
+//  CHECK-DAG:   %[[D1:.+]] = memref.dim %[[GENERIC1]], %[[C1]]
+//  CHECK-DAG:   %[[INIT:.+]] = linalg.init_tensor [%[[D0]], %[[D1]]]
+//      CHECK:   %[[RESULT:.+]] = linalg.generic
+// CHECK-SAME:     outs(%[[INIT]] : tensor<?x?xf32>)
