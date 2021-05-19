@@ -70,7 +70,7 @@
     - [Spilling](#spilling)
     - [Simultaneous Lifetimes In Multiple Places](#simultaneous-lifetimes-in-multiple-places)
     - [File Scope Globals](#file-scope-globals)
-    - [Lds Variables](#lds-variables)
+    - [LDS Variables](#lds-variables)
     - [Make Sure The Non-SSA MIR Form Works With def/kill Scheme](#make-sure-the-non-ssa-mir-form-works-with-defkill-scheme)
   - [Integer Fragment IDs](#integer-fragment-ids)
     - [Local Variable Broken Into Two Scalars](#local-variable-broken-into-two-scalars-1)
@@ -378,7 +378,7 @@ that entire program duration. However, the global variable may exist in a
 different location for a given part of the subprogram. This can be expressed
 using bounded lifetime segments for the `DIGlobalVariable`. If the computed
 lifetime segment is specified, it only applies for the program locations not
-covered by a bounded lifetime segments. If the computed lifetime segment is not
+covered by a bounded lifetime segment. If the computed lifetime segment is not
 specified, and no bounded lifetime segment covers the program location, then the
 `DIGlobalVariable` location is the undefined location description for that
 program location. The bounded lifetime segments of a `DIGlobalVariable` can also
@@ -392,7 +392,7 @@ locations.]_
 > `bounded`, or `global` fragment?
 
 > TODO: Should the global variable fragment be the location description of the
-> LLVM global variable rather than an implicit location desiption that is a
+> LLVM global variable rather than an implicit location description that is a
 > pointer to it? That would void needing the `DIOpDeref` when referencing the
 > global variable fragment. Seems can use `DIOpAddrOf` if need the address, and
 > all other uses need the location description of the actual LLVM global
@@ -446,7 +446,7 @@ _[Note: Unlike a `DIVariable`, a `DIFragment` is not named and so is not
 directly exposed to the user of a debugger.]_
 
 _[Note: A `DIFragment` may be a piece of a `DIVariable` directly, or indirectly
-by virtue of being a piece of some other `DIFragment`.]
+by virtue of being a piece of some other `DIFragment`.]_
 
 _[Note: A `DIFragment` may be introduced to factor the definition of part of a
 location description shared by other location descriptions for convenience or to
@@ -547,7 +547,7 @@ location's instruction and the, possibly empty, set of lifetime segments with an
 - Otherwise, if there is a computed lifetime segment, then the location
   description is comprised of the location description of the computed lifetime
   segment. _[Note: A computed lifetime segment corresponds to the DWARF
-  `loclist` default location description.]
+  `loclist` default location description.]_
 - Otherwise, the location description is the undefined location description.
 
 _[Note: When multiple bounded lifetime segments for the same `DIObject` are
@@ -556,7 +556,7 @@ simultaneously in more than one place. For example, a variable may exist in
 memory and then be promoted to a register where it is only read before being
 clobbered and reverting to using the memory location. While promoted to the
 register, a debugger may read from either the register or memory since they both
-have the same value, but must update both the register and memory if the value
+have the same value but must update both the register and memory if the value
 of the variable needs to be changed.]_
 
 _[Note: A `DIObject` with no `DILifetime`s has an undefined location
@@ -602,8 +602,8 @@ the edges:
   (termed reachable `DILifetime`s).
 
 If the reachable lifetime graph has any cycles or if any `DILifetime` or
-`DIFragment` are not in the reachable lifetime graph then then the metadata is
-not well-formed.
+`DIFragment` are not in the reachable lifetime graph, then the metadata is not
+well-formed.
 
 _[Note: In current debug information the `DILifetime` information is part of the
 debug intrinsics. A new lifetime for an object is defined by using a debug
@@ -650,7 +650,7 @@ defined if they are local to a function or are global._
 
 _For example, a computed lifetime segment created only to define the location of
 a local variable (or a piece of a local variable), would be retained by the
-function that defines the local variable. If the function was deleted there is
+function that defines the local variable. If the function were deleted there is
 no need for the computed lifetime segment any more._
 
 _Similarly, a computed lifetime segment that contributes a lifetime to the
@@ -658,10 +658,10 @@ location description of a global variable (or fragment of a global variable)
 using only local variables (or fragments of local variables) or bounded lifetime
 segments of the same function, would be retained by the function that defines
 the local variables (or fragments of local variables) or owns the bounded
-lifetime segments. If the function was deleted there is no need for the computed
-lifetime segment any more as the local variable (or fragment of a local
+lifetime segments. If the function were deleted there is no need for the
+computed lifetime segment any more as the local variable (or fragment of a local
 variable) references would need to be replaced with the undefined location
-description, and the the bounded lifetime segments would never be active._
+description, and the bounded lifetime segments would never be active._
 
 _Otherwise, the computed lifetime segment applies to a global variable (or
 fragment of a global variable) and either involves other global variables (or
@@ -692,17 +692,20 @@ The result of the evaluation is the typed location description of the single
 resulting stack element. If the stack does not have a single element after
 evaluation, then the expression is not well-formed.
 
-> TODO: Maybe operators should specify their input type(s)? It do not match what
-> DWARF does currently. Such types cannot trivially be used to enforce type
+> TODO: Maybe operators should specify their input type(s)? It does not match
+> what DWARF does currently. Such types cannot trivially be used to enforce type
 > correctness since the expression language is an arbitrary stack, and in
-> general the whole expression has to be evaluated to determine the inputs types
+> general the whole expression has to be evaluated to determine the input types
 > to a given operation.
 
 Each operation definition begins with a specification which describes the
 parameters to the operation, the entries it pops from the stack, and the entries
-it pushes on the stack. The specification is accepted by the following modified
-BNF grammar, where `[]` denotes character classes, `*` denotes zero-or-more
-repetitions of a term, and `+` denotes one-or-more repetitions of a term.
+it pushes on the stack. The specification is accepted by the modified BNF
+grammar in _Figure 1---LLVM IR Expression Operation Specification Syntax_, where
+`[]` denotes character classes, `*` denotes zero-or-more repetitions of a term,
+and `+` denotes one-or-more repetitions of a term.
+
+__Figure 1---LLVM IR Expression Operation Specification Syntax__
 
 ```bnf
 <operation-specification> ::= <operation-syntax> <operation-stack-effects>
@@ -710,23 +713,23 @@ repetitions of a term, and `+` denotes one-or-more repetitions of a term.
        <operation-syntax> ::= <operation-identifier> "(" <parameter-list> ")"
          <parameter-list> ::= "" | <parameter-binding-list>
  <parameter-binding-list> ::= <parameter-binding> ( ", " <parameter-binding> )+
-      <parameter-binding> ::= <binding-identifer> ":" <parameter-binding-kind>
+      <parameter-binding> ::= <binding-identifier> ":" <parameter-binding-kind>
  <parameter-binding-kind> ::= "type" | "unsigned" | "literal" | "addrspace"
 
 <operation-stack-effects> ::= "{" <stack-list> "->" <stack-list> "}"
              <stack-list> ::= "" | <stack-binding-list>
      <stack-binding-list> ::= <stack-binding> ( " " <stack-binding> )+
-          <stack-binding> ::= "(" <binding-identifer> ":" <llvm-type> ")"
+          <stack-binding> ::= "(" <binding-identifier> ":" <llvm-type> ")"
 
-    <operation-identifer> ::= [A-Za-z]+
-      <binding-identifer> ::= [A-Z] [A-Z0-9]* "'"*
+   <operation-identifier> ::= [A-Za-z]+
+     <binding-identifier> ::= [A-Z] [A-Z0-9]* "'"*
 ```
 
 The `<operation-syntax>` describes the LLVM IR concrete syntax of the operation
 in an expression.
 
 The `<parameter-binding-list>` defines positional parameters to the operation.
-Each parameter in the list has a `<binding-identifer>` which binds to the
+Each parameter in the list has a `<binding-identifier>` which binds to the
 argument passed via the parameter, and a `<parameter-binding-kind>` which
 defines the kind of arguments accepted by the parameter.
 
@@ -762,7 +765,7 @@ well-formed. The assertions for stack outputs define post-conditions of the
 operation output.
 
 The remaining body of the definition for an operation may reference the bound
-meta-syntactic variable identifiers from the specification, and may define
+meta-syntactic variable identifiers from the specification and may define
 additional meta-syntactic variables following the same left-to-right binding
 semantics.
 
@@ -776,11 +779,11 @@ In the operation definitions, the following functions are defined:
   exceeds the size of the location storage specified by any single location
   description of `L`, then the expression is not well-formed.
 
-  > TODO: Consider defining reading undefined bits as producing an undefined
-  > location description. This would need DWARF to adopt this model which may be
-  > necessary as compilers support optimized code better. This would need all
-  > usage or `read` to be reworded to specify result if `read` detects undefined
-  > bits.
+> TODO: Consider defining reading undefined bits as producing an undefined
+> location description. This would need DWARF to adopt this model which may be
+> necessary as compilers support optimized code better. This would need all
+> usage or `read` to be reworded to specify result if `read` detects undefined
+> bits.
 
 #### `DIOpReferrer`
 
@@ -1127,10 +1130,10 @@ supported by [DWARF location lists][21].
 void @llvm.dbg.def(metadata, metadata)
 ```
 
-The first argument to `llvm.dbg.def` is required to be a `DILifetime`, and is
-the beginning of the bounded lifetime being defined.
+The first argument to `llvm.dbg.def` is required to be a `DILifetime` and is the
+beginning of the bounded lifetime being defined.
 
-The second argument to `llvm.dbg.def` is required to be a value-as-metadata, and
+The second argument to `llvm.dbg.def` is required to be a value-as-metadata and
 defines the LLVM entity acting as the referrer of the bounded lifetime segment
 specified by the first argument. A value of `undef` is allowed and specifies the
 undefined location description.
@@ -1153,7 +1156,7 @@ DBG_DEF metadata, <value>
 void @llvm.dbg.kill(metadata)
 ```
 
-The first argument to `llvm.dbg.kill` is required to be a `DILifetime`, and is
+The first argument to `llvm.dbg.kill` is required to be a `DILifetime` and is
 the end of the lifetime being killed.
 
 Every call to the `llvm.dbg.kill` intrinsic is required to be reachable from a
@@ -1606,11 +1609,11 @@ For the given range, the value of `i` is computable so long as both `x` and `y`
 are live, the determination of which is left until the backend debug information
 generation (for example, for old DWARF or for other debug information formats),
 or until debugger runtime when the expression is evaluated (for example, for
-DWARF with `DW_OP_call` and `DW_TAG_dwarf_procedure`). During compilation this
+DWARF with `DW_OP_call` and `DW_TAG_dwarf_procedure`). During compilation, this
 representation allows all updates to maintain the debug information efficiently
 by making updates "shallow".
 
-In other cases this can allow the debugger to provide locations for part of a
+In other cases, this can allow the debugger to provide locations for part of a
 source variable, even when other parts are not available. This may be the case
 if a `struct` with many fields is broken up during SRoA and the lifetimes of
 each piece diverge.
@@ -1760,7 +1763,7 @@ the more conservative change to mark the `redundant` variable as `undef` in the
 above case, changing the source to modify `redundant` after the load results in
 both `redundant` and `loaded` referring to the same location, and both being
 read-write. A modification of `redundant` in the debugger before the use of
-`loaded` is permitted, and would have the effect of also updating `loaded`. An
+`loaded` is permitted and would have the effect of also updating `loaded`. An
 example of the modified source needed to cause this is:
 
 ```c
@@ -1859,7 +1862,7 @@ after the common load.
 For AMDGPU, the `DW_AT_LLVM_lane_pc` attribute is used to specify the program
 location of the separate lanes of a SIMT thread.
 
-If the lane is an active lane then this will be the same as the current program
+If the lane is an active lane, then this will be the same as the current program
 location.
 
 If the lane is inactive, but was active on entry to the subprogram, then this is
@@ -1943,7 +1946,7 @@ concept is the same.
 To create the DWARF location list expression that defines the location
 description of a vector of lane program locations, the LLVM MIR `DBG_DEF`
 pseudo instruction can be used to annotate the linearized control flow. This
-can be done by defining a `DIFragment` for the lane PC, and using it as the
+can be done by defining a `DIFragment` for the lane PC and using it as the
 `activeLanePC` parameter of the corresponding `DISubprogram` of the function
 being described. The DWARF location list expression created for it is used as
 the value of the `DW_AT_LLVM_lane_pc` attribute on the subprogram's debugger
@@ -1968,14 +1971,14 @@ over a disjoint range of the function instructions corresponding to that
 region. Together the lifetimes cover all instructions of the function, such
 that at every PC in the function exactly one lifetime is active.
 
-For an `IF/THEN/ELSE` region the divergent program location is at the start of
+For an `IF/THEN/ELSE` region, the divergent program location is at the start of
 the region for the `THEN` region since it is executed first. For the `ELSE`
-region the divergent program location is at the end of the `IF/THEN/ELSE`
+region, the divergent program location is at the end of the `IF/THEN/ELSE`
 region since the `THEN` region has completed.
 
 The lane PC fragment is then defined with an expression that takes the
 bounded divergent lane PC and modifies it by inserting the current program
-location for each lane that the `EXEC` maks indicates is active.
+location for each lane that the `EXEC` mask indicates is active.
 
 The following provides an example using pseudo LLVM MIR.
 
@@ -2402,17 +2405,17 @@ call void @llvm.dbg.kill(metadata !1)
 
 > TODO: Define.
 
-### Lds Variables
+### LDS Variables
 
 > TODO: LDS variables, one variable but multiple kernels with distinct
 > lifetimes, is that possible in LLVM?
 >
-> Could allow the `llvm.dbg.def` intrinsic to refer to a global, and use that
+> Could allow the `llvm.dbg.def` intrinsic to refer to a global and use that
 > to define live ranges which live in functions and refer to storage outside
 > of the function.
 >
-> I would expect tha LDS variables would have no `!dbg.default` and instead have
-> `llvm.dbg.def` in each function that can access it. The bounded lifetime
+> I would expect that LDS variables would have no `!dbg.default` and instead
+> have `llvm.dbg.def` in each function that can access it. The bounded lifetime
 > segment would have an expression that evaluates to the location of the LDS
 > variable in the specific subprogram. For a kernel it would likely be an
 > absolute address in the LDS address space. Each kernel may have a different
@@ -2423,7 +2426,7 @@ call void @llvm.dbg.kill(metadata !1)
 ### Make Sure The Non-SSA MIR Form Works With def/kill Scheme
 
 > TODO: Make sure the non-SSA MIR form works with def/kill scheme, and
-> additionally confirm why we don't seem to need the work upstream that is
+> additionally confirm why we do not seem to need the work upstream that is
 > trying to move to referring to an instruction rather than a register? See
 > [[llvm-dev] [RFC] DebugInfo: A different way of specifying variable locations
 > post-isel](https://lists.llvm.org/pipermail/llvm-dev/2020-February/139440.html).
@@ -2431,7 +2434,7 @@ call void @llvm.dbg.kill(metadata !1)
 ## Integer Fragment IDs
 
 > TODO: This was just a quick jotting-down of one idea for eliminating the need
-> for a distincit `DIFragment` to represent the identity of fragments.
+> for a distinct `DIFragment` to represent the identity of fragments.
 
 ### Local Variable Broken Into Two Scalars
 
