@@ -43,12 +43,17 @@ FunctionPass *llvm::createMIRAddFSDiscriminatorsPass(unsigned LowBit,
 static uint64_t getCallStackHash(const MachineBasicBlock &BB,
                                  const MachineInstr &MI,
                                  const DILocation *DIL) {
-  uint64_t Ret = MD5Hash(std::to_string(DIL->getLine()));
-  Ret ^= MD5Hash(BB.getName());
-  Ret ^= MD5Hash(DIL->getScope()->getSubprogram()->getLinkageName());
+  auto updateHash = [](const StringRef &Str) -> uint64_t {
+    if (Str.empty())
+      return 0;
+    return MD5Hash(Str);
+  };
+  uint64_t Ret = updateHash(std::to_string(DIL->getLine()));
+  Ret ^= updateHash(BB.getName());
+  Ret ^= updateHash(DIL->getScope()->getSubprogram()->getLinkageName());
   for (DIL = DIL->getInlinedAt(); DIL; DIL = DIL->getInlinedAt()) {
-    Ret ^= MD5Hash(std::to_string(DIL->getLine()));
-    Ret ^= MD5Hash(DIL->getScope()->getSubprogram()->getLinkageName());
+    Ret ^= updateHash(std::to_string(DIL->getLine()));
+    Ret ^= updateHash(DIL->getScope()->getSubprogram()->getLinkageName());
   }
   return Ret;
 }
