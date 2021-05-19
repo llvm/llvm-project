@@ -19,6 +19,8 @@
 namespace lldb_private {
 
 class ClangASTImporter;
+class ClangModulesDeclVendor;
+class Target;
 class TypeSystemClang;
 
 /// \class ClangPersistentVariables ClangPersistentVariables.h
@@ -30,7 +32,7 @@ class TypeSystemClang;
 /// 0-based counter for naming result variables.
 class ClangPersistentVariables : public PersistentExpressionState {
 public:
-  ClangPersistentVariables();
+  ClangPersistentVariables(std::shared_ptr<Target> target_sp);
 
   ~ClangPersistentVariables() override = default;
 
@@ -40,6 +42,7 @@ public:
   }
 
   std::shared_ptr<ClangASTImporter> GetClangASTImporter();
+  std::shared_ptr<ClangModulesDeclVendor> GetClangModulesDeclVendor();
 
   lldb::ExpressionVariableSP
   CreatePersistentVariable(const lldb::ValueObjectSP &valobj_sp) override;
@@ -106,6 +109,8 @@ private:
                                    ///these are the highest-
                                    ///< priority source for macros.
   std::shared_ptr<ClangASTImporter> m_ast_importer_sp;
+  std::shared_ptr<ClangModulesDeclVendor> m_modules_decl_vendor_sp;
+  std::shared_ptr<Target> m_target_sp;
 };
 
 } // namespace lldb_private

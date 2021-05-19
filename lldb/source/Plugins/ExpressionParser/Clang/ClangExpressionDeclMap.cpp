@@ -1021,7 +1021,8 @@ void ClangExpressionDeclMap::LookupInModulesDeclVendor(
   if (!m_target)
     return;
 
-  auto *modules_decl_vendor = m_target->GetClangModulesDeclVendor();
+  std::shared_ptr<ClangModulesDeclVendor> modules_decl_vendor =
+      GetClangModulesDeclVendor();
   if (!modules_decl_vendor)
     return;
 
@@ -1213,8 +1214,8 @@ void ClangExpressionDeclMap::LookupFunction(
   std::vector<clang::NamedDecl *> decls_from_modules;
 
   if (target) {
-    if (ClangModulesDeclVendor *decl_vendor =
-            target->GetClangModulesDeclVendor()) {
+    if (std::shared_ptr<ClangModulesDeclVendor> decl_vendor =
+            GetClangModulesDeclVendor()) {
       decl_vendor->FindDecls(name, false, UINT32_MAX, decls_from_modules);
     }
   }

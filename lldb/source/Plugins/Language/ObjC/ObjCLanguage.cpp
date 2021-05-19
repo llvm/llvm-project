@@ -990,8 +990,11 @@ std::unique_ptr<Language::TypeScavenger> ObjCLanguage::GetTypeScavenger() {
       bool result = false;
 
       if (auto *target = exe_scope->CalculateTarget().get()) {
-        if (auto *clang_modules_decl_vendor =
-                target->GetClangModulesDeclVendor()) {
+        auto *persistent_vars = llvm::cast<ClangPersistentVariables>(
+            target->GetPersistentExpressionStateForLanguage(
+                lldb::eLanguageTypeC));
+        if (std::shared_ptr<ClangModulesDeclVendor> clang_modules_decl_vendor =
+                persistent_vars->GetClangModulesDeclVendor()) {
           ConstString key_cs(key);
           auto types = clang_modules_decl_vendor->FindTypes(
               key_cs, /*max_matches*/ UINT32_MAX);
