@@ -314,7 +314,7 @@ uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
 void GsymCreator::addFunctionInfo(FunctionInfo &&FI) {
   std::lock_guard<std::recursive_mutex> Guard(Mutex);
   Ranges.insert(FI.Range);
-  Funcs.emplace_back(FI);
+  Funcs.emplace_back(std::move(FI));
 }
 
 void GsymCreator::forEachFunctionInfo(
