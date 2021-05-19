@@ -48063,6 +48063,8 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
   unsigned NewOpcode =
       negateFMAOpcode(N->getOpcode(), NegA != NegB, NegC, false);
 
+  // Propagate fast-math-flags to new FMA node.
+  SelectionDAG::FlagInserter FlagsInserter(DAG, Flags);
   if (IsStrict) {
     assert(N->getNumOperands() == 4 && "Shouldn't be greater than 4");
     return DAG.getNode(NewOpcode, dl, {VT, MVT::Other},
