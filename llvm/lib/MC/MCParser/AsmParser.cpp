@@ -186,6 +186,17 @@ private:
   // Is alt macro mode enabled.
   bool AltMacroMode = false;
 
+protected:
+  virtual bool parseStatement(ParseStatementInfo &Info,
+                              MCAsmParserSemaCallback *SI);
+
+  /// This routine uses the target specific ParseInstruction function to
+  /// parse an instruction into Operands, and then call the target specific
+  /// MatchAndEmit function to match and emit the instruction.
+  bool parseAndMatchAndEmitTargetInstruction(ParseStatementInfo &Info,
+                                             StringRef IDVal, AsmToken ID,
+                                             SMLoc IDLoc);
+
 public:
   AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
             const MCAsmInfo &MAI, unsigned CB);
@@ -273,8 +284,6 @@ public:
   /// }
 
 private:
-  bool parseStatement(ParseStatementInfo &Info,
-                      MCAsmParserSemaCallback *SI);
   bool parseCurlyBlockScope(SmallVectorImpl<AsmRewrite>& AsmStrRewrites);
   bool parseCppHashLineFilenameComment(SMLoc L, bool SaveLocInfo = true);
 
@@ -699,6 +708,36 @@ private:
 
   void initializeDirectiveKindMap();
   void initializeCVDefRangeTypeMap();
+};
+
+class HLASMAsmParser final : public AsmParser {
+private:
+  MCAsmLexer &Lexer;
+  MCStreamer &Out;
+
+  void lexLeadingSpaces() {
+    while (Lexer.is(AsmToken::Space))
+      Lexer.Lex();
+  }
+
+  bool parseAsHLASMLabel(ParseStatementInfo &Info, MCAsmParserSemaCallback *SI);
+  bool parseAsMachineInstruction(ParseStatementInfo &Info,
+                                 MCAsmParserSemaCallback *SI);
+
+public:
+  HLASMAsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
+                 const MCAsmInfo &MAI, unsigned CB = 0)
+      : AsmParser(SM, Ctx, Out, MAI, CB), Lexer(getLexer()), Out(Out) {
+    Lexer.setSkipSpace(false);
+    Lexer.setAllowHashInIdentifier(true);
+    Lexer.setLexHLASMIntegers(true);
+    Lexer.setLexHLASMStrings(true);
+  }
+
+  ~HLASMAsmParser() { Lexer.setSkipSpace(true); }
+
+  bool parseStatement(ParseStatementInfo &Info,
+                      MCAsmParserSemaCallback *SI) override;
 };
 
 } // end anonymous namespace
@@ -2257,6 +2296,13 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
   if (checkForValidSection())
     return true;
 
+  return parseAndMatchAndEmitTargetInstruction(Info, IDVal, ID, IDLoc);
+}
+
+bool AsmParser::parseAndMatchAndEmitTargetInstruction(ParseStatementInfo &Info,
+                                                      StringRef IDVal,
+                                                      AsmToken ID,
+                                                      SMLoc IDLoc) {
   // Canonicalize the opcode to lower case.
   std::string OpcodeStr = IDVal.lower();
   ParseInstructionInfo IInfo(Info.AsmRewrites);
@@ -6124,6 +6170,76 @@ bool AsmParser::parseMSInlineAsm(
   return false;
 }
 
+bool HLASMAsmParser::parseAsMachineInstruction(ParseStatementInfo &Info,
+                                               MCAsmParserSemaCallback *SI) {
+  AsmToken OperationEntryTok = Lexer.getTok();
+  SMLoc OperationEntryLoc = OperationEntryTok.getLoc();
+  StringRef OperationEntryVal;
+
+  // If we see a new line or carriage return, emit the new line
+  // and lex it.
+  if (OperationEntryTok.is(AsmToken::EndOfStatement)) {
+    if (getTok().getString().front() == '\n' ||
+        getTok().getString().front() == '\r') {
+      Out.AddBlankLine();
+      Lex();
+      return false;
+    }
+  }
+
+  // Attempt to parse the first token as an Identifier
+  if (parseIdentifier(OperationEntryVal))
+    return Error(OperationEntryLoc, "unexpected token at start of statement");
+
+  // Once we've parsed the operation entry successfully, lex
+  // any spaces to get to the OperandEntries.
+  lexLeadingSpaces();
+
+  return parseAndMatchAndEmitTargetInstruction(
+      Info, OperationEntryVal, OperationEntryTok, OperationEntryLoc);
+}
+
+bool HLASMAsmParser::parseStatement(ParseStatementInfo &Info,
+                                    MCAsmParserSemaCallback *SI) {
+  assert(!hasPendingError() && "parseStatement started with pending error");
+
+  // Should the first token be interpreted as a machine instruction.
+  bool ShouldParseAsMachineInstruction = false;
+
+  // If a Name Entry exists, it should occur at the very
+  // start of the string. In this case, we should parse the
+  // first non-space token as a Label.
+  // If the Name entry is missing (i.e. there's some other
+  // token), then we attempt to parse the first non-space
+  // token as a Machine Instruction.
+  if (getTok().is(AsmToken::Space))
+    ShouldParseAsMachineInstruction = true;
+
+  // If we have an EndOfStatement (which includes the target's comment
+  // string) we can appropriately lex it early on)
+  if (Lexer.is(AsmToken::EndOfStatement)) {
+    // if this is a line comment we can drop it safely
+    if (getTok().getString().empty() || getTok().getString().front() == '\r' ||
+        getTok().getString().front() == '\n')
+      Out.AddBlankLine();
+    Lex();
+    return false;
+  }
+
+  // We have established how to parse the inline asm statement.
+  // Now we can safely lex any leading spaces to get to the
+  // first token.
+  lexLeadingSpaces();
+
+  if (ShouldParseAsMachineInstruction)
+    return parseAsMachineInstruction(Info, SI);
+
+  // Label parsing support isn't implemented completely (yet).
+  SMLoc Loc = getTok().getLoc();
+  eatToEndOfStatement();
+  return Error(Loc, "HLASM Label parsing support not yet implemented");
+}
+
 namespace llvm {
 namespace MCParserUtils {
 
@@ -6211,5 +6327,8 @@ bool parseAssignmentExpression(StringRef Name, bool allow_redef,
 MCAsmParser *llvm::createMCAsmParser(SourceMgr &SM, MCContext &C,
                                      MCStreamer &Out, const MCAsmInfo &MAI,
                                      unsigned CB) {
+  if (C.getTargetTriple().isOSzOS())
+    return new HLASMAsmParser(SM, C, Out, MAI, CB);
+
   return new AsmParser(SM, C, Out, MAI, CB);
 }
