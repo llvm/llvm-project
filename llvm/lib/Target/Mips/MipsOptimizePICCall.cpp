@@ -227,6 +227,7 @@ bool OptimizePICCall::runOnMachineFunction(MachineFunction &F) {
 bool OptimizePICCall::visitNode(MBBInfo &MBBI) {
   bool Changed = false;
   MachineBasicBlock *MBB = MBBI.getNode()->getBlock();
+  bool IsNanoMips = MBB->getParent()->getSubtarget().getTargetTriple().isNanoMips();
 
   for (MachineBasicBlock::iterator I = MBB->begin(), E = MBB->end(); I != E;
        ++I) {
@@ -256,7 +257,8 @@ bool OptimizePICCall::visitNode(MBBInfo &MBBI) {
     if (Entry)
       incCntAndSetReg(Entry, Reg);
 
-    setCallTargetReg(MBB, I);
+    if (!IsNanoMips)
+      setCallTargetReg(MBB, I);
   }
 
   return Changed;

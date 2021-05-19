@@ -146,8 +146,6 @@ class AdjustStack<SDPatternOperator operator> :
 //
 //===----------------------------------------------------------------------===//
 
-let isCodeGenOnly = 1 in {
-
 // _POOL32A0_0 pool of instructions.
 def SLLV_NM  : ArithLoginR32<"sllv", GPR32NMOpnd, shl>;
 def SRLV_NM  : ArithLoginR32<"srlv", GPR32NMOpnd, srl>;
@@ -217,6 +215,13 @@ def PseudoReturnNM : PseudoInstNM<(outs), (ins GPR32NMOpnd:$rs), []> {
   bit isCTI = 1;
 }
 
+let hasPostISelHook = 1, isCall = 1, isCTI = 1, Defs = [RA_NM] in {
+  def JALRC_NM : InstNM<(outs GPR32NMOpnd:$rd), (ins GPR32NMOpnd:$rs),
+                        "jalrc\t$rd, $rs", []>, InstSize32;
+
+  def JALRCPseudo : PseudoInstNM<(outs), (ins GPR32NMOpnd:$rs),
+                                 [(MipsJmpLink GPR32NMOpnd:$rs)]>,
+    PseudoInstExpansion<(JALRC_NM RA_NM, GPR32NMOpnd:$rs)>;
 }
 
 def imm32_NM : IntImmLeaf<i32, [{
