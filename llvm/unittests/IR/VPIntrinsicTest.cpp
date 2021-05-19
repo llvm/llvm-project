@@ -183,16 +183,17 @@ TEST_F(VPIntrinsicTest, OpcodeRoundTrip) {
   unsigned FullTripCounts = 0;
   for (unsigned OC : Opcodes) {
     Intrinsic::ID VPID = VPIntrinsic::GetForOpcode(OC);
-    // no equivalent VP intrinsic available
+    // No equivalent VP intrinsic available.
     if (VPID == Intrinsic::not_intrinsic)
       continue;
 
-    unsigned RoundTripOC = VPIntrinsic::GetFunctionalOpcodeForVP(VPID);
-    // no equivalent Opcode available
-    if (RoundTripOC == Instruction::Call)
+    Optional<unsigned> RoundTripOC =
+        VPIntrinsic::GetFunctionalOpcodeForVP(VPID);
+    // No equivalent Opcode available.
+    if (!RoundTripOC)
       continue;
 
-    ASSERT_EQ(RoundTripOC, OC);
+    ASSERT_EQ(*RoundTripOC, OC);
     ++FullTripCounts;
   }
   ASSERT_NE(FullTripCounts, 0u);
@@ -207,13 +208,13 @@ TEST_F(VPIntrinsicTest, IntrinsicIDRoundTrip) {
   unsigned FullTripCounts = 0;
   for (const auto &VPDecl : *M) {
     auto VPID = VPDecl.getIntrinsicID();
-    unsigned OC = VPIntrinsic::GetFunctionalOpcodeForVP(VPID);
+    Optional<unsigned> OC = VPIntrinsic::GetFunctionalOpcodeForVP(VPID);
 
     // no equivalent Opcode available
-    if (OC == Instruction::Call)
+    if (!OC)
       continue;
 
-    Intrinsic::ID RoundTripVPID = VPIntrinsic::GetForOpcode(OC);
+    Intrinsic::ID RoundTripVPID = VPIntrinsic::GetForOpcode(*OC);
 
     ASSERT_EQ(RoundTripVPID, VPID);
     ++FullTripCounts;
