@@ -5648,6 +5648,12 @@ LoopVectorizationCostModel::getMaxLegalScalableVF(unsigned MaxSafeElements) {
     return ElementCount::getScalable(0);
   }
 
+  if (Hints->isScalableVectorizationDisabled()) {
+    reportVectorizationInfo("Scalable vectorization is explicitly disabled",
+                            "ScalableVectorizationDisabled", ORE, TheLoop);
+    return ElementCount::getScalable(0);
+  }
+
   auto MaxScalableVF = ElementCount::getScalable(
       std::numeric_limits<ElementCount::ScalarTy>::max());
 
