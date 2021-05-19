@@ -38,9 +38,9 @@
 ;;
 ;; Check that fs-afdo discriminators are generated.
 ; CHECK: .loc    1 23 9 is_stmt 0 discriminator 1 # unroll.c:23:9
-; CHECK: .loc    1 23 9 is_stmt 0 discriminator 1073741825 # unroll.c:23:9
-; CHECK: .loc    1 23 9 is_stmt 0 discriminator 2147483649 # unroll.c:23:9
-; CHECK: .loc    1 23 9 is_stmt 0 discriminator 268435457 # unroll.c:23:9
+; CHECK: .loc    1 23 9 is_stmt 0 discriminator 3892314113 # unroll.c:23:9
+; CHECK: .loc    1 23 9 is_stmt 0 discriminator 2818572289 # unroll.c:23:9
+; CHECK: .loc    1 23 9 is_stmt 0 discriminator 3623878657 # unroll.c:23:9
 ;;
 ;; Check that variable __llvm_fs_discriminator__ is generated.
 ; CHECK: .type   __llvm_fs_discriminator__,@object # @__llvm_fs_discriminator__
