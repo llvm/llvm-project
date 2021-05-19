@@ -1,5 +1,6 @@
 ; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/branch.prof | opt -analyze -branch-prob -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/branch.prof | opt -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/branch.prof -overwrite-existing-weights=1 | opt -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s  --check-prefix=OVW
 
 ; Original C++ code for this test case:
 ;
@@ -90,6 +91,8 @@ for.cond:                                         ; preds = %for.inc, %if.then.2
   br i1 %cmp5, label %for.body, label %for.end, !dbg !50, !prof !80
 ; CHECK: edge for.cond -> for.body probability is 0x73333333 / 0x80000000 = 90.00%
 ; CHECK: edge for.cond -> for.end probability is 0x0ccccccd / 0x80000000 = 10.00%
+; OVW: edge for.cond -> for.body probability is 0x76b3f3be / 0x80000000 = 92.74% 
+; OVW: edge for.cond -> for.end probability is 0x094c0c42 / 0x80000000 = 7.26% 
 
 for.body:                                         ; preds = %for.cond
   call void @llvm.dbg.declare(metadata double* %x, metadata !51, metadata !17), !dbg !53
