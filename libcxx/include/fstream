@@ -179,8 +179,8 @@ typedef basic_fstream<wchar_t> wfstream;
 
 */
 
-#include <__config>
 #include <__availability>
+#include <__config>
 #include <__debug>
 #include <__locale>
 #include <cstdio>

@@ -56,12 +56,13 @@ public:
 
 */
 
-#include <__config>
 #include <__availability>
-#include <exception>
+#include <__config>
 #include <cstddef>
 #include <cstdint>
+#include <exception>
 #include <type_traits>
+
 #ifdef _LIBCPP_NO_EXCEPTIONS
 #include <cstdlib>
 #endif

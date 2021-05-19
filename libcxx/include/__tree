@@ -11,10 +11,10 @@
 #define _LIBCPP___TREE
 
 #include <__config>
+#include <algorithm>
 #include <iterator>
 #include <memory>
 #include <stdexcept>
-#include <algorithm>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header

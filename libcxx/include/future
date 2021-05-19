@@ -361,8 +361,8 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>;
 
 */
 
-#include <__config>
 #include <__availability>
+#include <__config>
 #include <__debug>
 #include <chrono>
 #include <exception>

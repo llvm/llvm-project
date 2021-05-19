@@ -661,19 +661,7 @@ void* align(size_t alignment, size_t size, void*& ptr, size_t& space);
 */
 
 #include <__config>
-#include <type_traits>
-#include <typeinfo>
-#include <compare>
-#include <cstddef>
-#include <cstdint>
-#include <new>
-#include <utility>
-#include <iterator>
 #include <__functional_base>
-#include <iosfwd>
-#include <tuple>
-#include <stdexcept>
-#include <cstring>
 #include <__memory/addressof.h>
 #include <__memory/allocation_guard.h>
 #include <__memory/allocator.h>
@@ -687,6 +675,18 @@ void* align(size_t alignment, size_t size, void*& ptr, size_t& space);
 #include <__memory/temporary_buffer.h>
 #include <__memory/uninitialized_algorithms.h>
 #include <__memory/unique_ptr.h>
+#include <compare>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <iosfwd>
+#include <iterator>
+#include <new>
+#include <stdexcept>
+#include <tuple>
+#include <type_traits>
+#include <typeinfo>
+#include <utility>
 #include <version>
 
 #if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
