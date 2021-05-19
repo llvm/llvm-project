@@ -470,15 +470,23 @@ static void printHelp(const opt::OptTable &OptTable, raw_ostream &OS,
 // help flag is set then ParseObjcopyOptions will print the help messege and
 // exit.
 Expected<DriverConfig>
-parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
+parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
                     llvm::function_ref<Error(Error)> ErrorCallback) {
   DriverConfig DC;
   ObjcopyOptTable T;
+
+  const char *const *DashDash =
+      std::find_if(RawArgsArr.begin(), RawArgsArr.end(),
+                   [](StringRef Str) { return Str == "--"; });
+  ArrayRef<const char *> ArgsArr = makeArrayRef(RawArgsArr.begin(), DashDash);
+  if (DashDash != RawArgsArr.end())
+    DashDash = std::next(DashDash);
+
   unsigned MissingArgumentIndex, MissingArgumentCount;
   llvm::opt::InputArgList InputArgs =
       T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
 
-  if (InputArgs.size() == 0) {
+  if (InputArgs.size() == 0 && DashDash == RawArgsArr.end()) {
     printHelp(T, errs(), ToolType::Objcopy);
     exit(1);
   }
@@ -502,6 +510,7 @@ parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
 
   for (auto Arg : InputArgs.filtered(OBJCOPY_INPUT))
     Positional.push_back(Arg->getValue());
+  std::copy(DashDash, RawArgsArr.end(), std::back_inserter(Positional));
 
   if (Positional.empty())
     return createStringError(errc::invalid_argument, "no input file specified");
