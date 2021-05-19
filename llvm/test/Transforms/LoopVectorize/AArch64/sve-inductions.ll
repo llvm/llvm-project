@@ -1,4 +1,4 @@
-; RUN: opt -mtriple aarch64-linux-gnu -mattr=+sve -loop-vectorize -dce -instcombine < %s -S | FileCheck %s
+; RUN: opt -mtriple aarch64-linux-gnu -mattr=+sve -loop-vectorize -scalable-vectorization=on -dce -instcombine < %s -S | FileCheck %s
 
 ; Test that we can add on the induction variable
 ;   for (long long i = 0; i < n; i++) {
