@@ -52,9 +52,7 @@ static float half2float(uint16_t half) {
     float f;
     uint32_t u;
   } u;
-  // Sign extend to 4 byte.
-  int32_t sign_extended = static_cast<int16_t>(half);
-  uint32_t v = static_cast<uint32_t>(sign_extended);
+  int32_t v = (int16_t)half;
 
   if (0 == (v & 0x7c00)) {
     u.u = v & 0x80007FFFU;
