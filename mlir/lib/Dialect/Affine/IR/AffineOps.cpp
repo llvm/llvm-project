@@ -698,12 +698,19 @@ void mlir::fullyComposeAffineMapAndOperands(AffineMap *map,
 
 AffineApplyOp mlir::makeComposedAffineApply(OpBuilder &b, Location loc,
                                             AffineMap map,
-                                            ArrayRef<Value> operands) {
+                                            ValueRange operands) {
   AffineMap normalizedMap = map;
   SmallVector<Value, 8> normalizedOperands(operands.begin(), operands.end());
   composeAffineMapAndOperands(&normalizedMap, &normalizedOperands);
   assert(normalizedMap);
   return b.create<AffineApplyOp>(loc, normalizedMap, normalizedOperands);
+}
+
+AffineApplyOp mlir::makeComposedAffineApply(OpBuilder &b, Location loc,
+                                            AffineExpr e, ValueRange values) {
+  return makeComposedAffineApply(
+      b, loc, AffineMap::inferFromExprList(ArrayRef<AffineExpr>{e}).front(),
+      values);
 }
 
 // A symbol may appear as a dim in affine.apply operations. This function
