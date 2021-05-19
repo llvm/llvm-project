@@ -21,7 +21,16 @@ def MipsFullAddr : SDNode<"MipsISD::FullAddr", SDTIntUnaryOp>;
 // nanoMIPS Operand, Complex Patterns and Transformations Definitions.
 //===----------------------------------------------------------------------===//
 
-def UImm5AsmOperandClass : UImmAsmOperandClass<5, []>;
+def imm32ZExt12 : IntImmLeaf<i32, [{ return isUInt<12>(Imm.getZExtValue()); }]>;
+
+def UImm12AsmOperandClass : UImmAsmOperandClass<12, []>;
+
+def UImm5AsmOperandClass : UImmAsmOperandClass<5, [UImm12AsmOperandClass]>;
+
+def uimm12_nm : Operand<i32> {
+  let PrintMethod = "printUImm<12>";
+  let ParserMatchClass = !cast<AsmOperandClass>("UImm12AsmOperandClass");
+}
 
 def uimm5_nm : Operand<i32> {
   let PrintMethod = "printUImm<5>";
@@ -51,9 +60,9 @@ class ArithLogicR16<string opstr, RegisterOperand RO,
 class ArithLogicINM<string opstr, Operand Od, RegisterOperand RO,
                     SDPatternOperator imm_type = null_frag,
                     SDPatternOperator OpNode = null_frag> :
-  InstNM<(outs RO:$rt), (ins RO:$rs, Od:$imm16),
-         !strconcat(opstr, "\t$rt, $rs, $imm16"),
-         [(set RO:$rt, (OpNode RO:$rs, imm_type:$imm16))]>, InstSize32 {
+  InstNM<(outs RO:$rt), (ins RO:$rs, Od:$imm),
+         !strconcat(opstr, "\t$rt, $rs, $imm"),
+         [(set RO:$rt, (OpNode RO:$rs, imm_type:$imm))]>, InstSize32 {
   let isReMaterializable = 1;
 }
 
@@ -159,6 +168,8 @@ def DIV_NM   : DivMod<"div", sdiv>;
 def MOD_NM   : DivMod<"mod", srem>;
 def DIVU_NM  : DivMod<"divu", udiv>;
 def MODU_NM  : DivMod<"modu", urem>;
+
+def ORI_NM : ArithLogicINM<"ori", uimm12_nm, GPR32NMOpnd, imm32ZExt12, or>;
 
 def ADDiu_NM : ArithLogicINM<"addiu", simm16_relaxed, GPR32NMOpnd,
                              imm32SExt16, add>;
