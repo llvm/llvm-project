@@ -1,7 +1,5 @@
 # RUN: %PYTHON %s | FileCheck %s
 
-from typing import Optional, Sequence
-
 from mlir.ir import *
 from mlir.dialects import builtin
 from mlir.dialects import linalg
@@ -11,30 +9,36 @@ from mlir.dialects.linalg.opdsl.lang import *
 
 
 @linalg_structured_op
-def matmul_mono(A=TensorDef(T, S.M, S.K),
-                B=TensorDef(T, S.K, S.N),
-                C=TensorDef(T, S.M, S.N, output=True)):
+def matmul_mono(
+    A=TensorDef(T, S.M, S.K),
+    B=TensorDef(T, S.K, S.N),
+    C=TensorDef(T, S.M, S.N, output=True)):
   C[D.m, D.n] += A[D.m, D.k] * B[D.k, D.n]
 
 
 @linalg_structured_op
-def matmul_poly(A=TensorDef(TV.T1, S.M, S.K),
-                B=TensorDef(TV.T2, S.K, S.N),
-                C=TensorDef(U, S.M, S.N, output=True)):
+def matmul_poly(
+    A=TensorDef(TV.T1, S.M, S.K),
+    B=TensorDef(TV.T2, S.K, S.N),
+    C=TensorDef(U, S.M, S.N, output=True)):
   C[D.m, D.n] += cast(U, A[D.m, D.k]) * cast(U, B[D.k, D.n])
 
+
 @linalg_structured_op
-def fill_rng_2d(A=TensorDef(T, S.M, S.N, output=True),
-                min=CaptureDef(F64),
-                max=CaptureDef(F64),
-                seed=CaptureDef(I32)):
-  multiplier = const(I32, 1103515245)
-  increment = const(I32, 12345)
-  temp1 = (cast(I32, index(D.m)) + seed) * multiplier + increment
-  temp2 = (cast(I32, index(D.n)) + temp1) * multiplier + increment
-  inv_randmax = const(F64, 2.3283064e-10)
-  scaling = (max - min) * inv_randmax
-  A[D.m, D.n] = cast(T, cast(F64, temp2) * scaling + min)
+def fill_rng(
+    O=TensorDef(T, S.M, S.N, output=True),
+    min=CaptureDef(F64),
+    max=CaptureDef(F64),
+    seed=CaptureDef(I32)):
+  multiplier = cast(I32, const(1103515245))
+  increment = cast(I32, const(12345))
+  rand1 = (cast(I32, index(D.m)) + seed) * multiplier + increment
+  rand2 = (cast(I32, index(D.n)) + rand1) * multiplier + increment
+  inv_range = cast(F64, const(2.3283064e-10))
+  offset = cast(F64, const(2147483647))
+  scaling = (max - min) * inv_range
+  O[D.m, D.n] = cast(T, (offset + cast(F64, rand2)) * scaling + min)
+
 
 with Context() as ctx, Location.unknown():
   module = Module.create()
@@ -64,8 +68,8 @@ with Context() as ctx, Location.unknown():
     # CHECK-SAME: ins(%[[A]], %[[B]]
     # CHECK-SAME: outs(%[[INITC]]
 
-    @builtin.FuncOp.from_py_func(RankedTensorType.get((4, 16), f32),
-                                 RankedTensorType.get((16, 8), f32))
+    @builtin.FuncOp.from_py_func(
+        RankedTensorType.get((4, 16), f32), RankedTensorType.get((16, 8), f32))
     def test_matmul_mono(lhs, rhs):
       init_result = linalg.InitTensorOp([4, 8], f32)
       return matmul_mono(lhs, rhs, outs=[init_result.result])
@@ -78,9 +82,9 @@ with Context() as ctx, Location.unknown():
     # CHECK-NEXT:   %[[ADD:.+]] = addi %[[C_ARG]], %[[MUL]] : i32
     # CHECK-NEXT:   linalg.yield %[[ADD]] : i32
     # CHECK-NEXT: -> tensor<4x8xi32>
-    @builtin.FuncOp.from_py_func(RankedTensorType.get((4, 16), i8),
-                                 RankedTensorType.get((16, 8), i8),
-                                 RankedTensorType.get((4, 8), i32))
+    @builtin.FuncOp.from_py_func(
+        RankedTensorType.get((4, 16), i8), RankedTensorType.get((16, 8), i8),
+        RankedTensorType.get((4, 8), i32))
     def test_i8i8i32_matmul(lhs, rhs, init_result):
       return matmul_poly(lhs, rhs, outs=[init_result])
 
@@ -92,9 +96,9 @@ with Context() as ctx, Location.unknown():
     # CHECK-NEXT:   %[[ADD:.+]] = addi %[[C_ARG]], %[[MUL]] : i32
     # CHECK-NEXT:   linalg.yield %[[ADD]] : i32
     # CHECK-NEXT: -> tensor<4x8xi32>
-    @builtin.FuncOp.from_py_func(RankedTensorType.get((4, 16), i8),
-                                 RankedTensorType.get((16, 8), i16),
-                                 RankedTensorType.get((4, 8), i32))
+    @builtin.FuncOp.from_py_func(
+        RankedTensorType.get((4, 16), i8), RankedTensorType.get((16, 8), i16),
+        RankedTensorType.get((4, 8), i32))
     def test_i8i16i32_matmul(lhs, rhs, init_result):
       return matmul_poly(lhs, rhs, outs=[init_result])
 
@@ -106,9 +110,9 @@ with Context() as ctx, Location.unknown():
     # CHECK-NEXT:   %[[ADD:.+]] = addi %[[C_ARG]], %[[MUL]] : i16
     # CHECK-NEXT:   linalg.yield %[[ADD]] : i16
     # CHECK-NEXT: -> tensor<4x8xi16>
-    @builtin.FuncOp.from_py_func(RankedTensorType.get((4, 16), i32),
-                                 RankedTensorType.get((16, 8), i32),
-                                 RankedTensorType.get((4, 8), i16))
+    @builtin.FuncOp.from_py_func(
+        RankedTensorType.get((4, 16), i32), RankedTensorType.get((16, 8), i32),
+        RankedTensorType.get((4, 8), i16))
     def test_i32i32i16_matmul(lhs, rhs, init_result):
       return matmul_poly(lhs, rhs, outs=[init_result])
 
@@ -120,9 +124,9 @@ with Context() as ctx, Location.unknown():
     # CHECK-NEXT:   %[[ADD:.+]] = addf %[[C_ARG]], %[[MUL]] : f32
     # CHECK-NEXT:   linalg.yield %[[ADD]] : f32
     # CHECK-NEXT: -> tensor<4x8xf32>
-    @builtin.FuncOp.from_py_func(RankedTensorType.get((4, 16), i8),
-                                 RankedTensorType.get((16, 8), i8),
-                                 RankedTensorType.get((4, 8), f32))
+    @builtin.FuncOp.from_py_func(
+        RankedTensorType.get((4, 16), i8), RankedTensorType.get((16, 8), i8),
+        RankedTensorType.get((4, 8), f32))
     def test_i8i8f32_matmul(lhs, rhs, init_result):
       return matmul_poly(lhs, rhs, outs=[init_result])
 
@@ -134,9 +138,9 @@ with Context() as ctx, Location.unknown():
     # CHECK-NEXT:   %[[ADD:.+]] = addf %[[C_ARG]], %[[MUL]] : f32
     # CHECK-NEXT:   linalg.yield %[[ADD]] : f32
     # CHECK-NEXT: -> tensor<4x8xf32>
-    @builtin.FuncOp.from_py_func(RankedTensorType.get((4, 16), f16),
-                                 RankedTensorType.get((16, 8), f16),
-                                 RankedTensorType.get((4, 8), f32))
+    @builtin.FuncOp.from_py_func(
+        RankedTensorType.get((4, 16), f16), RankedTensorType.get((16, 8), f16),
+        RankedTensorType.get((4, 8), f32))
     def test_f16f16f32_matmul(lhs, rhs, init_result):
       return matmul_poly(lhs, rhs, outs=[init_result])
 
@@ -148,33 +152,36 @@ with Context() as ctx, Location.unknown():
     # CHECK-NEXT:   %[[ADD:.+]] = addf %[[C_ARG]], %[[MUL]] : f32
     # CHECK-NEXT:   linalg.yield %[[ADD]] : f32
     # CHECK-NEXT: -> tensor<4x8xf32>
-    @builtin.FuncOp.from_py_func(RankedTensorType.get((4, 16), f64),
-                                 RankedTensorType.get((16, 8), f64),
-                                 RankedTensorType.get((4, 8), f32))
+    @builtin.FuncOp.from_py_func(
+        RankedTensorType.get((4, 16), f64), RankedTensorType.get((16, 8), f64),
+        RankedTensorType.get((4, 8), f32))
     def test_f64f64f32_matmul(lhs, rhs, init_result):
       return matmul_poly(lhs, rhs, outs=[init_result])
 
-    # CHECK-LABEL: @test_fill_rng_2d
+    # CHECK-LABEL: @test_fill_rng
     # CHECK-SAME:  %{{.*}} tensor<4x16xi32>, %[[MIN:.+]]: f64, %[[MAX:.+]]: f64, %[[SEED:.+]]: i32
     # CHECK-DAG:    %[[IDX0:.+]] = linalg.index 0 : index
     # CHECK-DAG:    %[[IDX1:.+]] = linalg.index 1 : index
     # CHECK-DAG:    %[[IDX0_CAST:.+]] = index_cast %[[IDX0]] : index to i32
     # CHECK-DAG:    %[[IDX1_CAST:.+]] = index_cast %[[IDX1]] : index to i32
     # CHECK-DAG:    %[[RND0:.+]] = addi %[[IDX0_CAST]], %[[SEED]] : i32
-    # CHECK-DAG:    %[[CST0:.+]] = constant 1103515245 : i32
-    # CHECK-DAG:    %[[CST1:.+]] = constant 12345 : i32
-    # CHECK-DAG:    %[[RND1:.+]] = muli %[[RND0]], %[[CST0]] : i32
-    # CHECK-DAG:    %[[RND2:.+]] = addi %[[RND1]], %[[CST1]] : i32
-    # CHECK:        %[[RND3:.+]] = sitofp %{{.*}} : i32 to f64
+    # CHECK-DAG:    %[[CST0:.+]] = constant 1103515245 : i64
+    # CHECK-DAG:    %[[CST0_CAST:.+]] = trunci %[[CST0]] : i64 to i32
+    # CHECK-DAG:    %[[CST1:.+]] = constant 12345 : i64
+    # CHECK-DAG:    %[[CST1_CAST:.+]] = trunci %[[CST1]] : i64 to i32
+    # CHECK-DAG:    %[[RND1:.+]] = muli %[[RND0]], %[[CST0_CAST]] : i32
+    # CHECK-DAG:    %[[RND2:.+]] = addi %[[RND1]], %[[CST1_CAST]] : i32
+    # Skip random number computation for the second index.
     # CHECK-DAG:    %[[DIFF:.+]] = subf %[[MAX]], %[[MIN]] : f64
-    # CHECK-DAG:    %[[CST2:.+]] = constant 2.3283063999999999E-10 : f64
-    # CHECK-DAG:    %[[FACT:.+]] = mulf %[[DIFF]], %[[CST2]] : f64
-    # CHECK-DAG:    %[[RND4:.+]] = mulf %[[RND3]], %[[FACT]] : f64
+    # CHECK-DAG:    %[[CST3:.+]] = constant 2.3283063999999999E-10 : f64
+    # CHECK-DAG:    %[[FACT:.+]] = mulf %[[DIFF]], %[[CST3]] : f64
+    # CHECK-DAG:    %[[RND4:.+]] = mulf %{{.+}}, %[[FACT]] : f64
     # CHECK-DAG:    %[[RND5:.+]] = addf %[[RND4]], %[[MIN]] : f64
     # CHECK-DAG:    %{{.*}} = fptosi %[[RND5]] : f64 to i32
-    @builtin.FuncOp.from_py_func(RankedTensorType.get((4, 16), i32),
-                                 f64, f64, i32)
-    def test_fill_rng_2d(init_result, min, max, seed):
-      return fill_rng_2d(outs=[init_result], captures=[min, max, seed])
+    @builtin.FuncOp.from_py_func(
+        RankedTensorType.get((4, 16), i32), f64, f64, i32)
+    def test_fill_rng(init_result, min, max, seed):
+      return fill_rng(outs=[init_result], captures=[min, max, seed])
+
 
 print(module)
