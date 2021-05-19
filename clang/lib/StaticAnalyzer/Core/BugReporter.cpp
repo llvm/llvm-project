@@ -1988,12 +1988,11 @@ PathDiagnosticBuilder::generate(const PathDiagnosticConsumer *PDC) const {
 
   const SourceManager &SM = getSourceManager();
   const AnalyzerOptions &Opts = getAnalyzerOptions();
-  StringRef ErrorTag = ErrorNode->getLocation().getTag()->getTagDescription();
 
   // See whether we need to silence the checker/package.
   // FIXME: This will not work if the report was emitted with an incorrect tag.
   for (const std::string &CheckerOrPackage : Opts.SilencedCheckersAndPackages) {
-    if (ErrorTag.startswith(CheckerOrPackage))
+    if (R->getBugType().getCheckerName().startswith(CheckerOrPackage))
       return nullptr;
   }
 
