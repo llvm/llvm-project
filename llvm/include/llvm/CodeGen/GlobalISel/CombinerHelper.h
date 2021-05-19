@@ -513,6 +513,10 @@ public:
   bool matchRotateOutOfRange(MachineInstr &MI);
   void applyRotateOutOfRange(MachineInstr &MI);
 
+  /// \returns true if a G_ICMP instruction \p MI can be replaced with a true
+  /// or false constant based off of KnownBits information.
+  bool matchICmpToTrueFalseKnownBits(MachineInstr &MI, int64_t &MatchInfo);
+
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.
   bool tryCombine(MachineInstr &MI);
