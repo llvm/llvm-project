@@ -701,9 +701,9 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
       int numOutputs = getNumOutputs();
       int numControlOperands = getNumControlOperands();
 
-      auto operandIndex = operand.getOperandNumber();
+      int operandIndex = operand.getOperandNumber();
       assert(operandIndex >= numControlOperands &&
-             operandIndex < getNumOperands() &&
+             operandIndex < static_cast<int>(getNumOperands()) &&
              "Can erase only `input` or `output` operand");
 
       if (operandIndex >= numControlOperands + numInputs)
