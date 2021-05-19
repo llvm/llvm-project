@@ -4803,6 +4803,12 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
 
   SDVTList VTs = DAG.getVTList(ValueVTs);
 
+  // Propagate fast-math-flags from IR to node(s).
+  SDNodeFlags Flags;
+  if (auto *FPMO = dyn_cast<FPMathOperator>(&I))
+    Flags.copyFMF(*FPMO);
+  SelectionDAG::FlagInserter FlagsInserter(DAG, Flags);
+
   // Create the node.
   SDValue Result;
   if (IsTgtIntrinsic) {
