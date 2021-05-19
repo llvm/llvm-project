@@ -11,3 +11,9 @@ define void @store(ptr %a, i32 %i) {
     store i32 %i, ptr %a
     ret void
 }
+
+; CHECK: @cmpxchg
+define void @cmpxchg(ptr %p, i32 %a, i32 %b) {
+    %val_success = cmpxchg ptr %p, i32 %a, i32 %b acq_rel monotonic
+    ret void
+}
