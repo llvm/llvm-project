@@ -36,6 +36,11 @@ using OpenACCIRBuilder = llvm::OpenMPIRBuilder;
 static constexpr uint64_t createFlag = 0;
 /// 1 = to/copyin
 static constexpr uint64_t copyinFlag = 1;
+/// 2 = from/copyout
+static constexpr uint64_t copyoutFlag = 2;
+/// 8 = delete
+static constexpr uint64_t deleteFlag = 8;
+
 /// Default value for the device id
 static constexpr int64_t defaultDevice = -1;
 
@@ -57,10 +62,10 @@ static llvm::Constant *createSourceLocStrFromLocation(Location loc,
 }
 
 /// Create the location struct from the operation location information.
-static llvm::Value *createSourceLocationInfo(acc::EnterDataOp &op,
-                                             OpenACCIRBuilder &builder) {
-  auto loc = op.getLoc();
-  auto funcOp = op.getOperation()->getParentOfType<LLVM::LLVMFuncOp>();
+static llvm::Value *createSourceLocationInfo(OpenACCIRBuilder &builder,
+                                             Operation *op) {
+  auto loc = op->getLoc();
+  auto funcOp = op->getParentOfType<LLVM::LLVMFuncOp>();
   StringRef funcName = funcOp ? funcOp.getName() : "unknown";
   llvm::Constant *locStr =
       createSourceLocStrFromLocation(loc, builder, funcName);
@@ -81,10 +86,16 @@ static llvm::Constant *createMappingInformation(Location loc,
 
 /// Return the runtime function used to lower the given operation.
 static llvm::Function *getAssociatedFunction(OpenACCIRBuilder &builder,
-                                             Operation &op) {
-  if (isa<acc::EnterDataOp>(op))
-    return builder.getOrCreateRuntimeFunctionPtr(
-        llvm::omp::OMPRTL___tgt_target_data_begin_mapper);
+                                             Operation *op) {
+  return llvm::TypeSwitch<Operation *, llvm::Function *>(op)
+      .Case([&](acc::EnterDataOp) {
+        return builder.getOrCreateRuntimeFunctionPtr(
+            llvm::omp::OMPRTL___tgt_target_data_begin_mapper);
+      })
+      .Case([&](acc::ExitDataOp) {
+        return builder.getOrCreateRuntimeFunctionPtr(
+            llvm::omp::OMPRTL___tgt_target_data_end_mapper);
+      });
   llvm_unreachable("Unknown OpenACC operation");
 }
 
@@ -105,7 +116,7 @@ static llvm::Value *getSizeInBytes(llvm::IRBuilderBase &builder,
 /// to populate the future functions arguments.
 static LogicalResult
 processOperands(llvm::IRBuilderBase &builder,
-                LLVM::ModuleTranslation &moduleTranslation, Operation &op,
+                LLVM::ModuleTranslation &moduleTranslation, Operation *op,
                 ValueRange operands, unsigned totalNbOperand,
                 uint64_t operandFlag, SmallVector<uint64_t> &flags,
                 SmallVector<llvm::Constant *> &names, unsigned &index,
@@ -137,7 +148,7 @@ processOperands(llvm::IRBuilderBase &builder,
       dataPtr = dataValue;
       dataSize = getSizeInBytes(builder, dataValue);
     } else {
-      return op.emitOpError()
+      return op->emitOpError()
              << "Data operand must be legalized before translation."
              << "Unsupported type: " << data.getType();
     }
@@ -171,28 +182,81 @@ processOperands(llvm::IRBuilderBase &builder,
   return success();
 }
 
+/// Process data operands from acc::EnterDataOp
+static LogicalResult
+processDataOperands(llvm::IRBuilderBase &builder,
+                    LLVM::ModuleTranslation &moduleTranslation,
+                    acc::EnterDataOp op, SmallVector<uint64_t> &flags,
+                    SmallVector<llvm::Constant *> &names, unsigned &index,
+                    llvm::AllocaInst *argsBase, llvm::AllocaInst *args,
+                    llvm::AllocaInst *argSizes) {
+  // TODO add `create_zero` and `attach` operands
+
+  // Create operands are handled as `alloc` call.
+  if (failed(processOperands(builder, moduleTranslation, op,
+                             op.createOperands(), op.getNumDataOperands(),
+                             createFlag, flags, names, index, argsBase, args,
+                             argSizes)))
+    return failure();
+
+  // Copyin operands are handled as `to` call.
+  if (failed(processOperands(builder, moduleTranslation, op,
+                             op.copyinOperands(), op.getNumDataOperands(),
+                             copyinFlag, flags, names, index, argsBase, args,
+                             argSizes)))
+    return failure();
+
+  return success();
+}
+
+/// Process data operands from acc::ExitDataOp
+static LogicalResult
+processDataOperands(llvm::IRBuilderBase &builder,
+                    LLVM::ModuleTranslation &moduleTranslation,
+                    acc::ExitDataOp op, SmallVector<uint64_t> &flags,
+                    SmallVector<llvm::Constant *> &names, unsigned &index,
+                    llvm::AllocaInst *argsBase, llvm::AllocaInst *args,
+                    llvm::AllocaInst *argSizes) {
+  // TODO add `detach` operands
+
+  // Delete operands are handled as `delete` call.
+  if (failed(processOperands(builder, moduleTranslation, op,
+                             op.deleteOperands(), op.getNumDataOperands(),
+                             deleteFlag, flags, names, index, argsBase, args,
+                             argSizes)))
+    return failure();
+
+  // Copyout operands are handled as `from` call.
+  if (failed(processOperands(builder, moduleTranslation, op,
+                             op.copyoutOperands(), op.getNumDataOperands(),
+                             copyoutFlag, flags, names, index, argsBase, args,
+                             argSizes)))
+    return failure();
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Conversion functions
 //===----------------------------------------------------------------------===//
 
-/// Converts an OpenACC enter_data operartion into LLVM IR.
+/// Converts an OpenACC standalone data operation into LLVM IR.
+template <typename OpTy>
 static LogicalResult
-convertEnterDataOp(Operation &op, llvm::IRBuilderBase &builder,
-                   LLVM::ModuleTranslation &moduleTranslation) {
-  auto enterDataOp = cast<acc::EnterDataOp>(op);
-  auto enclosingFuncOp = op.getParentOfType<LLVM::LLVMFuncOp>();
+convertStandaloneDataOp(OpTy &op, llvm::IRBuilderBase &builder,
+                        LLVM::ModuleTranslation &moduleTranslation) {
+  auto enclosingFuncOp =
+      op.getOperation()->template getParentOfType<LLVM::LLVMFuncOp>();
   llvm::Function *enclosingFunction =
       moduleTranslation.lookupFunction(enclosingFuncOp.getName());
 
   OpenACCIRBuilder *accBuilder = moduleTranslation.getOpenMPBuilder();
 
-  auto *srcLocInfo = createSourceLocationInfo(enterDataOp, *accBuilder);
+  auto *srcLocInfo = createSourceLocationInfo(*accBuilder, op);
   auto *mapperFunc = getAssociatedFunction(*accBuilder, op);
 
   // Number of arguments in the enter_data operation.
-  // TODO include create_zero and attach operands.
-  unsigned totalNbOperand =
-      enterDataOp.createOperands().size() + enterDataOp.copyinOperands().size();
+  unsigned totalNbOperand = op.getNumDataOperands();
 
   // TODO could be moved to OpenXXIRBuilder?
   llvm::LLVMContext &ctx = builder.getContext();
@@ -214,18 +278,8 @@ convertEnterDataOp(Operation &op, llvm::IRBuilderBase &builder,
   SmallVector<llvm::Constant *> names;
   unsigned index = 0;
 
-  // Create operands are handled as `alloc` call.
-  if (failed(processOperands(builder, moduleTranslation, op,
-                             enterDataOp.createOperands(), totalNbOperand,
-                             createFlag, flags, names, index, argsBase, args,
-                             argSizes)))
-    return failure();
-
-  // Copyin operands are handled as `to` call.
-  if (failed(processOperands(builder, moduleTranslation, op,
-                             enterDataOp.copyinOperands(), totalNbOperand,
-                             copyinFlag, flags, names, index, argsBase, args,
-                             argSizes)))
+  if (failed(processDataOperands(builder, moduleTranslation, op, flags, names,
+                                 index, argsBase, args, argSizes)))
     return failure();
 
   llvm::GlobalVariable *maptypes =
@@ -282,8 +336,13 @@ LogicalResult OpenACCDialectLLVMIRTranslationInterface::convertOperation(
     LLVM::ModuleTranslation &moduleTranslation) const {
 
   return llvm::TypeSwitch<Operation *, LogicalResult>(op)
-      .Case([&](acc::EnterDataOp) {
-        return convertEnterDataOp(*op, builder, moduleTranslation);
+      .Case([&](acc::EnterDataOp enterDataOp) {
+        return convertStandaloneDataOp<acc::EnterDataOp>(enterDataOp, builder,
+                                                         moduleTranslation);
+      })
+      .Case([&](acc::ExitDataOp exitDataOp) {
+        return convertStandaloneDataOp<acc::ExitDataOp>(exitDataOp, builder,
+                                                        moduleTranslation);
       })
       .Default([&](Operation *op) {
         return op->emitError("unsupported OpenACC operation: ")
