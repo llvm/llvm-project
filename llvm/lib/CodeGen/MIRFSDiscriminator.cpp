@@ -91,7 +91,7 @@ bool MIRAddFSDiscriminators::runOnMachineFunction(MachineFunction &MF) {
       if (LineNo == 0)
         continue;
       unsigned Discriminator = DIL->getDiscriminator();
-      LocationDiscriminator LD = {DIL->getFilename(), LineNo, Discriminator};
+      LocationDiscriminator LD{DIL->getFilename(), LineNo, Discriminator};
       auto &BBMap = LDBM[LD];
       auto R = BBMap.insert(&BB);
       if (BBMap.size() == 1)
