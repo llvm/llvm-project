@@ -17,8 +17,7 @@
 #include "lld/Common/Memory.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/ScopedPrinter.h"
-
-#include <algorithm>
+#include "llvm/Support/TimeProfiler.h"
 
 using namespace llvm;
 using namespace llvm::MachO;
@@ -356,4 +355,13 @@ void ConcatOutputSection::mergeFlags(InputSection *input) {
   // Merge the rest
   flags |= input->flags;
   flags &= pureMask;
+}
+
+void ConcatOutputSection::eraseOmittedInputSections() {
+  // Remove the duplicates from inputs
+  inputs.erase(std::remove_if(inputs.begin(), inputs.end(),
+                              [](const ConcatInputSection *isec) -> bool {
+                                return isec->shouldOmitFromOutput();
+                              }),
+               inputs.end());
 }

@@ -9,6 +9,7 @@
 #include "Writer.h"
 #include "ConcatOutputSection.h"
 #include "Config.h"
+#include "ICF.h"
 #include "InputFiles.h"
 #include "InputSection.h"
 #include "MapFile.h"
@@ -51,6 +52,7 @@ public:
   void scanSymbols();
   template <class LP> void createOutputSections();
   template <class LP> void createLoadCommands();
+  void foldIdenticalSections();
   void finalizeAddresses();
   void finalizeLinkEditSegment();
   void assignAddresses(OutputSegment *);
@@ -76,6 +78,7 @@ public:
 
   LCUuid *uuidCommand = nullptr;
   OutputSegment *linkEditSegment = nullptr;
+  DenseMap<NamePair, ConcatOutputSection *> concatOutputSections;
 };
 
 // LC_DYLD_INFO_ONLY stores the offsets of symbol import/export information.
@@ -885,7 +888,6 @@ template <class LP> void Writer::createOutputSections() {
   }
 
   // Then add input sections to output sections.
-  DenseMap<NamePair, ConcatOutputSection *> concatOutputSections;
   for (const auto &p : enumerate(inputSections)) {
     InputSection *isec = p.value();
     OutputSection *osec;
@@ -938,6 +940,47 @@ template <class LP> void Writer::createOutputSections() {
 
   // dyld requires __LINKEDIT segment to always exist (even if empty).
   linkEditSegment = getOrCreateOutputSegment(segment_names::linkEdit);
+}
+
+void Writer::foldIdenticalSections() {
+  if (config->icfLevel == ICFLevel::none)
+    return;
+  ConcatOutputSection *textOutputSection = concatOutputSections.lookup(
+      maybeRenameSection({segment_names::text, section_names::text}));
+  if (textOutputSection == nullptr)
+    return;
+
+  TimeTraceScope timeScope("Fold Identical Code Sections");
+  // The ICF equivalence-class segregation algorithm relies on pre-computed
+  // hashes of InputSection::data for the ConcatOutputSection::inputs and all
+  // sections referenced by their relocs. We could recursively traverse the
+  // relocs to find every referenced InputSection, but that precludes easy
+  // parallelization. Therefore, we hash every InputSection here where we have
+  // them all accessible as a simple vector.
+  std::vector<InputSection *> hashable;
+  // If an InputSection is ineligible for ICF, we give it a unique ID to force
+  // it into an unfoldable singleton equivalence class.  Begin the unique-ID
+  // space at inputSections.size(), so that it will never intersect with
+  // equivalence-class IDs which begin at 0. Since hashes & unique IDs never
+  // coexist with equivalence-class IDs, this is not necessary, but might help
+  // someone keep the numbers straight in case we ever need to debug the
+  // ICF::segregate()
+  uint64_t icfUniqueID = inputSections.size();
+  for (InputSection *isec : inputSections) {
+    if (isec->isHashableForICF(isec->parent == textOutputSection))
+      hashable.push_back(isec);
+    else
+      isec->icfEqClass[0] = ++icfUniqueID;
+  }
+  parallelForEach(hashable, [](InputSection *isec) { isec->hashForICF(); });
+  // Now that every input section is either hashed or marked as unique,
+  // run the segregation algorithm to detect foldable subsections
+  ICF(textOutputSection->inputs).run();
+  size_t oldSize = textOutputSection->inputs.size();
+  textOutputSection->eraseOmittedInputSections();
+  size_t newSize = textOutputSection->inputs.size();
+  log("ICF kept " + Twine(newSize) + " removed " + Twine(oldSize - newSize) +
+      " of " + Twine(oldSize));
 }
 
 void Writer::finalizeAddresses() {
@@ -1071,6 +1114,7 @@ template <class LP> void Writer::run() {
     in.stubHelper->setup();
   scanSymbols();
   createOutputSections<LP>();
+  foldIdenticalSections();
   // After this point, we create no new segments; HOWEVER, we might
   // yet create branch-range extension thunks for architectures whose
   // hardware call instructions have limited range, e.g., ARM(64).

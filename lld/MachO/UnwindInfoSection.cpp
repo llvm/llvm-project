@@ -143,11 +143,17 @@ void UnwindInfoSectionImpl<Ptr>::prepareRelocations(ConcatInputSection *isec) {
   // work. But since there are usually just few personality functions
   // that are referenced from many places, at least some of them likely
   // live, it wouldn't reduce number of got entries.
-  for (Reloc &r : isec->relocs) {
+  for (size_t i = 0; i < isec->relocs.size(); ++i) {
+    Reloc &r = isec->relocs[i];
     assert(target->hasAttr(r.type, RelocAttrBits::UNSIGNED));
     if (r.offset % sizeof(CompactUnwindEntry<Ptr>) !=
         offsetof(CompactUnwindEntry<Ptr>, personality))
       continue;
+
+    Reloc &rFunc = isec->relocs[++i];
+    assert(r.offset ==
+           rFunc.offset + offsetof(CompactUnwindEntry<Ptr>, personality));
+    rFunc.referent.get<InputSection *>()->hasPersonality = true;
 
     if (auto *s = r.referent.dyn_cast<Symbol *>()) {
       if (auto *undefined = dyn_cast<Undefined>(s)) {
