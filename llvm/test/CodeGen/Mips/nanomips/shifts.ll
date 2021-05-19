@@ -53,3 +53,15 @@ define i32 @test_rotrv(i32 %a, i32 %b) {
   %or = or i32 %shl, %shr
   ret i32 %or
 }
+
+define i32 @test_rotr(i32 %a) {
+; CHECK-NOT: srl
+; CHECK-NOT: sll
+; CHECK: rotr $a0, $a0, 5
+; CHECK: ROTR_NM
+  %sub = sub i32 32, 5
+  %shl = shl i32 %a, %sub
+  %shr = lshr i32 %a, 5
+  %or = or i32 %shl, %shr
+  ret i32 %or
+}
