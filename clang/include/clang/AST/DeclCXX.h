@@ -1852,15 +1852,17 @@ private:
   CXXDeductionGuideDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
                         ExplicitSpecifier ES,
                         const DeclarationNameInfo &NameInfo, QualType T,
-                        TypeSourceInfo *TInfo, SourceLocation EndLocation)
+                        TypeSourceInfo *TInfo, SourceLocation EndLocation,
+                        CXXConstructorDecl *Ctor)
       : FunctionDecl(CXXDeductionGuide, C, DC, StartLoc, NameInfo, T, TInfo,
                      SC_None, false, ConstexprSpecKind::Unspecified),
-        ExplicitSpec(ES) {
+        Ctor(Ctor), ExplicitSpec(ES) {
     if (EndLocation.isValid())
       setRangeEnd(EndLocation);
     setIsCopyDeductionCandidate(false);
   }
 
+  CXXConstructorDecl *Ctor;
   ExplicitSpecifier ExplicitSpec;
   void setExplicitSpecifier(ExplicitSpecifier ES) { ExplicitSpec = ES; }
 
@@ -1871,7 +1873,8 @@ public:
   static CXXDeductionGuideDecl *
   Create(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
          ExplicitSpecifier ES, const DeclarationNameInfo &NameInfo, QualType T,
-         TypeSourceInfo *TInfo, SourceLocation EndLocation);
+         TypeSourceInfo *TInfo, SourceLocation EndLocation,
+         CXXConstructorDecl *Ctor = nullptr);
 
   static CXXDeductionGuideDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
@@ -1884,6 +1887,12 @@ public:
   /// Get the template for which this guide performs deduction.
   TemplateDecl *getDeducedTemplate() const {
     return getDeclName().getCXXDeductionGuideTemplate();
+  }
+
+  /// Get the constructor from which this deduction guide was generated, if
+  /// this is an implicit deduction guide.
+  CXXConstructorDecl *getCorrespondingConstructor() const {
+    return Ctor;
   }
 
   void setIsCopyDeductionCandidate(bool isCDC = true) {
