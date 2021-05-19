@@ -4645,13 +4645,8 @@ bool SimplifyCFGOpt::simplifyReturn(ReturnInst *RI, IRBuilder<> &Builder) {
     }
 
     // If we eliminated all predecessors of the block, delete the block now.
-    if (pred_empty(BB)) {
-      // We know there are no successors, so just nuke the block.
-      if (DTU)
-        DTU->deleteBB(BB);
-      else
-        BB->eraseFromParent();
-    }
+    if (pred_empty(BB))
+      DeleteDeadBlock(BB, DTU);
 
     return true;
   }
