@@ -34,7 +34,25 @@ define i32 @test2(i8 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[ZEXT_9:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ZEXT]], 31
+; CHECK-NEXT:    [[ZEXT_1:%.*]] = zext i8 [[A]] to i32
+; CHECK-NEXT:    [[AND_1:%.*]] = and i32 [[ZEXT_1]], 31
+; CHECK-NEXT:    [[ZEXT_2:%.*]] = zext i8 [[A]] to i32
+; CHECK-NEXT:    [[AND_2:%.*]] = and i32 [[ZEXT_2]], 31
+; CHECK-NEXT:    [[ZEXT_3:%.*]] = zext i8 [[A]] to i32
+; CHECK-NEXT:    [[AND_3:%.*]] = and i32 [[ZEXT_3]], 31
+; CHECK-NEXT:    [[ZEXT_4:%.*]] = zext i8 [[A]] to i32
+; CHECK-NEXT:    [[AND_4:%.*]] = and i32 [[ZEXT_4]], 31
+; CHECK-NEXT:    [[ZEXT_5:%.*]] = zext i8 [[A]] to i32
+; CHECK-NEXT:    [[AND_5:%.*]] = and i32 [[ZEXT_5]], 31
+; CHECK-NEXT:    [[ZEXT_6:%.*]] = zext i8 [[A]] to i32
+; CHECK-NEXT:    [[AND_6:%.*]] = and i32 [[ZEXT_6]], 31
+; CHECK-NEXT:    [[ZEXT_7:%.*]] = zext i8 [[A]] to i32
+; CHECK-NEXT:    [[AND_7:%.*]] = and i32 [[ZEXT_7]], 31
+; CHECK-NEXT:    [[ZEXT_8:%.*]] = zext i8 [[A]] to i32
+; CHECK-NEXT:    [[AND_8:%.*]] = and i32 [[ZEXT_8]], 31
+; CHECK-NEXT:    [[ZEXT_9:%.*]] = zext i8 [[A]] to i32
 ; CHECK-NEXT:    [[AND_9:%.*]] = and i32 [[ZEXT_9]], 31
 ; CHECK-NEXT:    [[SHL_9:%.*]] = shl i32 [[AND_9]], 15
 ; CHECK-NEXT:    ret i32 [[SHL_9]]
@@ -61,7 +79,16 @@ define i32 @test3(i8 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[ZEXT_9:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[ZEXT_1:%.*]] = zext i8 [[A]] to i32
+; CHECK-NEXT:    [[ZEXT_2:%.*]] = zext i8 [[A]] to i32
+; CHECK-NEXT:    [[ZEXT_3:%.*]] = zext i8 [[A]] to i32
+; CHECK-NEXT:    [[ZEXT_4:%.*]] = zext i8 [[A]] to i32
+; CHECK-NEXT:    [[ZEXT_5:%.*]] = zext i8 [[A]] to i32
+; CHECK-NEXT:    [[ZEXT_6:%.*]] = zext i8 [[A]] to i32
+; CHECK-NEXT:    [[ZEXT_7:%.*]] = zext i8 [[A]] to i32
+; CHECK-NEXT:    [[ZEXT_8:%.*]] = zext i8 [[A]] to i32
+; CHECK-NEXT:    [[ZEXT_9:%.*]] = zext i8 [[A]] to i32
 ; CHECK-NEXT:    [[DIV_9:%.*]] = udiv i32 [[ZEXT_9]], 31
 ; CHECK-NEXT:    ret i32 [[DIV_9]]
 ;
