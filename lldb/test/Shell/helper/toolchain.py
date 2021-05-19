@@ -147,14 +147,14 @@ def use_support_substitutions(config):
 
     llvm_config.use_clang(additional_flags=['--target=specify-a-target-or-use-a-_host-substitution'],
                           additional_tool_dirs=additional_tool_dirs,
-                          required=True)
+                          required=True, use_installed=True)
 
 
     if sys.platform == 'win32':
         _use_msvc_substitutions(config)
 
     have_lld = llvm_config.use_lld(additional_tool_dirs=additional_tool_dirs,
-                                   required=False)
+                                   required=False, use_installed=True)
     if have_lld:
         config.available_features.add('lld')
 

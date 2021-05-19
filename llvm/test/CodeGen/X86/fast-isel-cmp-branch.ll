@@ -19,7 +19,7 @@ exit:
 ; different basic block, so its operands aren't necessarily exported
 ; for cross-block usage.
 
-; CHECK: movb    %cl, [[OFS:[0-9]*]](%rsp)
+; CHECK: movb    %al, [[OFS:[0-9]*]](%rsp)
 ; CHECK: callq   {{_?}}bar
 ; CHECK: movb    [[OFS]](%rsp), %al
 

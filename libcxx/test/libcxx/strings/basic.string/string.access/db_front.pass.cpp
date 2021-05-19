@@ -13,23 +13,19 @@
 // UNSUPPORTED: libcxx-no-debug-mode
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <string>
 #include <cassert>
-#include <iterator>
-#include <exception>
-#include <cstdlib>
 
 #include "test_macros.h"
+#include "debug_macros.h"
 
 int main(int, char**) {
   typedef std::string S;
   S s(1, '\0');
   assert(s.front() == 0);
   s.clear();
-  assert(s.front() == 0);
-  assert(false);
+  TEST_LIBCPP_ASSERT_FAILURE(s.front(), "string::front(): string is empty");
 
   return 0;
 }

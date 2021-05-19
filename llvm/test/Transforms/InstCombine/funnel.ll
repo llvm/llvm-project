@@ -353,3 +353,65 @@ define <2 x i64> @fshl_select_vector(<2 x i64> %x, <2 x i64> %y, <2 x i64> %sham
   %r = select <2 x i1> %cmp, <2 x i64> %y, <2 x i64> %or
   ret <2 x i64> %r
 }
+
+; Negative test - an oversized shift in the narrow type would produce the wrong value.
+
+define i8 @unmasked_shlop_unmasked_shift_amount(i32 %x, i32 %y, i32 %shamt) {
+; CHECK-LABEL: @unmasked_shlop_unmasked_shift_amount(
+; CHECK-NEXT:    [[MASKY:%.*]] = and i32 [[Y:%.*]], 255
+; CHECK-NEXT:    [[T4:%.*]] = sub i32 8, [[SHAMT:%.*]]
+; CHECK-NEXT:    [[T5:%.*]] = shl i32 [[X:%.*]], [[T4]]
+; CHECK-NEXT:    [[T6:%.*]] = lshr i32 [[MASKY]], [[SHAMT]]
+; CHECK-NEXT:    [[T7:%.*]] = or i32 [[T5]], [[T6]]
+; CHECK-NEXT:    [[T8:%.*]] = trunc i32 [[T7]] to i8
+; CHECK-NEXT:    ret i8 [[T8]]
+;
+  %masky = and i32 %y, 255
+  %t4 = sub i32 8, %shamt
+  %t5 = shl i32 %x, %t4
+  %t6 = lshr i32 %masky, %shamt
+  %t7 = or i32 %t5, %t6
+  %t8 = trunc i32 %t7 to i8
+  ret i8 %t8
+}
+
+; Negative test - an oversized shift in the narrow type would produce the wrong value.
+
+define i8 @unmasked_shlop_insufficient_mask_shift_amount(i16 %x, i16 %y, i16 %shamt) {
+; CHECK-LABEL: @unmasked_shlop_insufficient_mask_shift_amount(
+; CHECK-NEXT:    [[SHM:%.*]] = and i16 [[SHAMT:%.*]], 15
+; CHECK-NEXT:    [[MASKX:%.*]] = and i16 [[X:%.*]], 255
+; CHECK-NEXT:    [[T4:%.*]] = sub nsw i16 8, [[SHM]]
+; CHECK-NEXT:    [[T5:%.*]] = shl i16 [[Y:%.*]], [[T4]]
+; CHECK-NEXT:    [[T6:%.*]] = lshr i16 [[MASKX]], [[SHM]]
+; CHECK-NEXT:    [[T7:%.*]] = or i16 [[T5]], [[T6]]
+; CHECK-NEXT:    [[T8:%.*]] = trunc i16 [[T7]] to i8
+; CHECK-NEXT:    ret i8 [[T8]]
+;
+  %shm = and i16 %shamt, 15
+  %maskx = and i16 %x, 255
+  %t4 = sub i16 8, %shm
+  %t5 = shl i16 %y, %t4
+  %t6 = lshr i16 %maskx, %shm
+  %t7 = or i16 %t5, %t6
+  %t8 = trunc i16 %t7 to i8
+  ret i8 %t8
+}
+
+define i8 @unmasked_shlop_masked_shift_amount(i16 %x, i16 %y, i16 %shamt) {
+; CHECK-LABEL: @unmasked_shlop_masked_shift_amount(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i16 [[SHAMT:%.*]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i16 [[Y:%.*]] to i8
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i16 [[X:%.*]] to i8
+; CHECK-NEXT:    [[T8:%.*]] = call i8 @llvm.fshr.i8(i8 [[TMP2]], i8 [[TMP3]], i8 [[TMP1]])
+; CHECK-NEXT:    ret i8 [[T8]]
+;
+  %shm = and i16 %shamt, 7
+  %maskx = and i16 %x, 255
+  %t4 = sub i16 8, %shm
+  %t5 = shl i16 %y, %t4
+  %t6 = lshr i16 %maskx, %shm
+  %t7 = or i16 %t5, %t6
+  %t8 = trunc i16 %t7 to i8
+  ret i8 %t8
+}

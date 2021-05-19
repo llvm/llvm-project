@@ -132,6 +132,7 @@ LANGOPT(ZVector           , 1, 0, "System z vector extensions")
 LANGOPT(Exceptions        , 1, 0, "exception handling")
 LANGOPT(ObjCExceptions    , 1, 0, "Objective-C exceptions")
 LANGOPT(CXXExceptions     , 1, 0, "C++ exceptions")
+LANGOPT(EHAsynch          , 1, 0, "C/C++ EH Asynch exceptions")
 ENUM_LANGOPT(ExceptionHandling, ExceptionHandlingKind, 3,
              ExceptionHandlingKind::None, "exception handling")
 LANGOPT(IgnoreExceptions  , 1, 0, "ignore exceptions")
@@ -251,7 +252,7 @@ LANGOPT(GPUExcludeWrongSideOverloads, 1, 0, "always exclude wrong side overloads
 
 LANGOPT(SYCLIsDevice      , 1, 0, "Generate code for SYCL device")
 LANGOPT(SYCLIsHost        , 1, 0, "SYCL host compilation")
-ENUM_LANGOPT(SYCLVersion  , SYCLMajorVersion, 1, SYCL_None, "Version of the SYCL standard used")
+ENUM_LANGOPT(SYCLVersion  , SYCLMajorVersion, 2, SYCL_None, "Version of the SYCL standard used")
 
 LANGOPT(HIPUseNewLaunchAPI, 1, 0, "Use new kernel launching API for HIP")
 
@@ -413,6 +414,10 @@ LANGOPT(RelativeCXXABIVTables, 1, 0,
         "Use an ABI-incompatible v-table layout that uses relative references")
 
 LANGOPT(ArmSveVectorBits, 32, 0, "SVE vector size in bits")
+
+ENUM_LANGOPT(ExtendIntArgs, ExtendArgsKind, 1, ExtendArgsKind::ExtendTo32, 
+             "Controls how scalar integer arguments are extended in calls "
+             "to unprototyped and varargs functions")
 
 #undef LANGOPT
 #undef COMPATIBLE_LANGOPT

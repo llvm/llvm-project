@@ -1,5 +1,6 @@
 add_llvm_component_library(LLVMPasses
   PassBuilder.cpp
+  PassBuilderBindings.cpp
   PassPlugin.cpp
   StandardInstrumentations.cpp
 

@@ -1,6 +1,5 @@
-// RUN: mlir-opt %s -linalg-fusion-for-tensor-ops="allow-folding-unit-dim-reshapes=false" -split-input-file -verify-each=0 | FileCheck %s
-// RUN: mlir-opt %s -linalg-fusion-for-tensor-ops="allow-folding-unit-dim-reshapes=true" -split-input-file -verify-each=0 | FileCheck %s --check-prefix=FOLDUNITDIM
-
+// RUN: mlir-opt %s -linalg-fusion-for-tensor-ops="allow-folding-unit-dim-reshapes=false" -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -linalg-fusion-for-tensor-ops="allow-folding-unit-dim-reshapes=true" -split-input-file | FileCheck %s --check-prefix=FOLDUNITDIM
 #map0 = affine_map<(d0, d1, d2) -> (d2, d0, d1)>
 #map1 = affine_map<(d0, d1, d2) -> (d1, d2, d0)>
 func @generic_op_reshape_producer_fusion(%arg0 : tensor<?x?x4x?xf32>,
@@ -30,13 +29,11 @@ func @generic_op_reshape_producer_fusion(%arg0 : tensor<?x?x4x?xf32>,
 // CHECK-SAME:     [0], [1, 2], [3]
 //      CHECK:   %[[T1:.+]] = linalg.tensor_reshape %[[ARG1]]
 // CHECK-SAME:     [0], [1], [2, 3]
-//      CHECK:   %[[T2:.+]] = linalg.tensor_reshape %[[T0]]
-// CHECK-SAME:     [0], [1], [2, 3]
 //      CHECK:   %[[T3:.+]] = linalg.generic
 // CHECK-SAME:     indexing_maps = [#[[MAP5]], #[[MAP6]], #[[MAP6]]]
 // CHECK-SAME:     ["parallel", "parallel", "parallel", "parallel"]
 // CHECK-SAME:     ins(%[[ARG0]], %[[T1]] : tensor<?x?x4x?xf32>, tensor<?x?x?x4xf32>)
-// CHECK-SAME:     outs(%[[T2]] : tensor<?x?x?x4xf32>)
+// CHECK-SAME:     outs(%{{.+}} : tensor<?x?x?x4xf32>)
 //      CHECK:   %[[T4:.+]] = linalg.tensor_reshape %[[T3]]
 // CHECK-SAME:     [0], [1], [2, 3]
 // CHECK-SAME:     tensor<?x?x?x4xf32> into tensor<?x?x?xf32>
@@ -73,13 +70,11 @@ func @generic_op_reshape_consumer_fusion(%arg0 : tensor<?x?xf32>,
 //      CHECK:   %[[T1:.+]] = linalg.tensor_reshape %[[ARG1]]
 // CHECK-SAME:     [0], [1, 2, 3]
 // CHECK-SAME:     tensor<?x?xf32> into tensor<?x4x?x5xf32>
-//      CHECK:   %[[T2:.+]] = linalg.tensor_reshape %[[ARG0]]
-// CHECK-SAME:     [0], [1, 2, 3]
 //      CHECK:   %[[T3:.+]] = linalg.generic
 // CHECK-SAME:     indexing_maps = [#[[MAP2]], #[[MAP2]], #[[MAP2]]]
 // CHECK-SAME:     ["parallel", "parallel", "parallel", "parallel"]
 // CHECK-SAME:     ins(%[[T0]], %[[T1]] : tensor<?x4x?x5xf32>, tensor<?x4x?x5xf32>)
-// CHECK-SAME:     outs(%[[T2]] : tensor<?x4x?x5xf32>)
+// CHECK-SAME:     outs(%{{.+}} : tensor<?x4x?x5xf32>)
 //      CHECK:   return %[[T3]] : tensor<?x4x?x5xf32>
 
 
@@ -115,13 +110,11 @@ func @reshape_as_consumer_permutation
 //      CHECK:   %[[T1:.+]] = linalg.tensor_reshape %[[ARG1]]
 // CHECK-SAME:     [0, 1, 2], [3]
 // CHECK-SAME:     tensor<?x?xf32> into tensor<3x4x?x?xf32>
-//      CHECK:   %[[T2:.+]] = linalg.tensor_reshape %[[ARG0]]
-// CHECK-SAME:     [0, 1], [2], [3, 4, 5]
 //      CHECK:   %[[T3:.+]] = linalg.generic
 // CHECK-SAME:     indexing_maps = [#[[MAP8]], #[[MAP9]], #[[MAP10]]]
 // CHECK-SAME:     ["parallel", "parallel", "parallel", "parallel", "parallel", "parallel"]
 // CHECK-SAME:     ins(%[[T0]], %[[T1]] : tensor<3x4x?x?x2x?xf32>, tensor<3x4x?x?xf32>)
-// CHECK-SAME:     outs(%[[T2]] : tensor<?x2x?x3x4x?xf32>)
+// CHECK-SAME:     outs(%{{.+}} : tensor<?x2x?x3x4x?xf32>)
 //      CHECK:   return %[[T3]] : tensor<?x2x?x3x4x?xf32>
 
 // -----
@@ -417,13 +410,11 @@ func @generic_op_reshape_consumer_fusion_projected(%arg0 : tensor<?x?xf32>,
 //      CHECK:   %[[T1:.+]] = linalg.tensor_reshape %[[ARG1]]
 // CHECK-SAME:     [0, 1, 2], [3]
 // CHECK-SAME:     tensor<?x?xf32> into tensor<?x4x5x?xf32>
-//      CHECK:   %[[T2:.+]] = linalg.tensor_reshape %[[ARG0]]
-// CHECK-SAME:     [0], [1, 2, 3]
 //      CHECK:   %[[T3:.+]] = linalg.generic
 // CHECK-SAME:     indexing_maps = [#[[MAP4]], #[[MAP4]], #[[MAP5]]]
 // CHECK-SAME:     ["parallel", "parallel", "parallel", "parallel"]
 // CHECK-SAME:     ins(%[[T0]], %[[T1]] : tensor<?x4x5x?xf32>, tensor<?x4x5x?xf32>)
-// CHECK-SAME:     outs(%[[T2]] : tensor<?x?x4x5xf32>)
+// CHECK-SAME:     outs(%{{.+}} : tensor<?x?x4x5xf32>)
 //      CHECK:   return %[[T3]] : tensor<?x?x4x5xf32>
 
 // -----
@@ -501,8 +492,7 @@ func @unit_dim_reshape_expansion_full
 //    FOLDUNITDIM-SAME:   %[[ARG0:.+]]: tensor<1x?x1x2x1x4xf32>
 //    FOLDUNITDIM-SAME:   %[[ARG1:.+]]: tensor<?x2x4xf32>
 //     FOLDUNITDIM-DAG:   %[[RESHAPE:.+]] = linalg.tensor_reshape %[[ARG1]]
-//     FOLDUNITDIM-DAG:   %[[INIT:.+]] = linalg.init_tensor [1, %{{.+}}, 1, 2, 1, 4]
 //         FOLDUNITDIM:   linalg.generic
 //    FOLDUNITDIM-SAME:     ins(%[[ARG0]], %[[RESHAPE]] : tensor<1x?x1x2x1x4xf32>, tensor<1x?x1x2x1x4xf32>)
-//    FOLDUNITDIM-SAME:     outs(%[[INIT]] : tensor<1x?x1x2x1x4xf32>)
+//    FOLDUNITDIM-SAME:     outs(%{{.+}} : tensor<1x?x1x2x1x4xf32>)
 

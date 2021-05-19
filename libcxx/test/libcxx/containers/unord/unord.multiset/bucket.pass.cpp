@@ -17,18 +17,16 @@
 // UNSUPPORTED: libcxx-no-debug-mode
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <unordered_set>
-#include <cassert>
 
 #include "test_macros.h"
+#include "debug_macros.h"
 
 int main(int, char**) {
     typedef std::unordered_multiset<int> C;
     C c;
-    (void) c.bucket(3);
-    assert(false);
+    TEST_LIBCPP_ASSERT_FAILURE(c.bucket(3), "unordered container::bucket(key) called when bucket_count() == 0");
 
     return 0;
 }

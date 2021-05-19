@@ -21,9 +21,6 @@ using affine_min = ValueBuilder<AffineMinOp>;
 using affine_max = ValueBuilder<AffineMaxOp>;
 using affine_store = OperationBuilder<AffineStoreOp>;
 
-/// Provide an index notation around affine_load and affine_store.
-using AffineIndexedValue = TemplatedIndexedValue<affine_load, affine_store>;
-
 } // namespace intrinsics
 } // namespace edsc
 } // namespace mlir

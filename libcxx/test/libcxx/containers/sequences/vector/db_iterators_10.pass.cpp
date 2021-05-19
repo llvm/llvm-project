@@ -13,15 +13,11 @@
 // UNSUPPORTED: libcxx-no-debug-mode
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <vector>
-#include <cassert>
-#include <iterator>
-#include <exception>
-#include <cstdlib>
 
 #include "test_macros.h"
+#include "debug_macros.h"
 #include "min_allocator.h"
 
 int main(int, char**) {
@@ -29,9 +25,7 @@ int main(int, char**) {
   typedef std::vector<T, min_allocator<T> > C;
   C c1;
   C c2;
-  int i = c1.begin() - c2.begin();
-  (void)i;
-  assert(false);
+  TEST_LIBCPP_ASSERT_FAILURE(c1.begin() - c2.begin(), "Attempted to subtract incompatible iterators");
 
   return 0;
 }

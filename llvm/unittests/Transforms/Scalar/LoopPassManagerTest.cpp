@@ -610,7 +610,6 @@ TEST_F(LoopPassManagerTest, InvalidationOfBundledAnalyses) {
 
   EXPECT_CALL(MFPHandle, run(HasName("f"), _)).WillOnce(InvokeWithoutArgs([] {
     auto PA = PreservedAnalyses::none();
-    PA.preserve<AAManager>();
     // Not preserving `DominatorTreeAnalysis`.
     PA.preserve<LoopAnalysis>();
     PA.preserve<LoopAnalysisManagerFunctionProxy>();
@@ -626,7 +625,6 @@ TEST_F(LoopPassManagerTest, InvalidationOfBundledAnalyses) {
 
   EXPECT_CALL(MFPHandle, run(HasName("f"), _)).WillOnce(InvokeWithoutArgs([] {
     auto PA = PreservedAnalyses::none();
-    PA.preserve<AAManager>();
     PA.preserve<DominatorTreeAnalysis>();
     // Not preserving the `LoopAnalysis`.
     PA.preserve<LoopAnalysisManagerFunctionProxy>();
@@ -642,7 +640,6 @@ TEST_F(LoopPassManagerTest, InvalidationOfBundledAnalyses) {
 
   EXPECT_CALL(MFPHandle, run(HasName("f"), _)).WillOnce(InvokeWithoutArgs([] {
     auto PA = PreservedAnalyses::none();
-    PA.preserve<AAManager>();
     PA.preserve<DominatorTreeAnalysis>();
     PA.preserve<LoopAnalysis>();
     // Not preserving the `LoopAnalysisManagerFunctionProxy`.
@@ -658,7 +655,6 @@ TEST_F(LoopPassManagerTest, InvalidationOfBundledAnalyses) {
 
   EXPECT_CALL(MFPHandle, run(HasName("f"), _)).WillOnce(InvokeWithoutArgs([] {
     auto PA = PreservedAnalyses::none();
-    PA.preserve<AAManager>();
     PA.preserve<DominatorTreeAnalysis>();
     PA.preserve<LoopAnalysis>();
     PA.preserve<LoopAnalysisManagerFunctionProxy>();

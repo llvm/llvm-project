@@ -64,6 +64,7 @@ template <typename T, typename ResultT> class TypeSwitch;
 
 // Other common classes.
 class APInt;
+class APSInt;
 class APFloat;
 template <typename Fn> class function_ref;
 template <typename IteratorT> class iterator_range;
@@ -118,6 +119,7 @@ using TypeSwitch = llvm::TypeSwitch<T, ResultT>;
 // Other common classes.
 using llvm::APFloat;
 using llvm::APInt;
+using llvm::APSInt;
 template <typename Fn> using function_ref = llvm::function_ref<Fn>;
 using llvm::iterator_range;
 using llvm::raw_ostream;

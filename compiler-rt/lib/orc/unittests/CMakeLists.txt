@@ -82,6 +82,7 @@ endmacro()
 set(UNITTEST_SOURCES
   extensible_rtti_test.cpp
   orc_unit_test_main.cpp
+  stl_extras_test.cpp
   )
 
 if (COMPILER_RT_CAN_EXECUTE_TESTS)

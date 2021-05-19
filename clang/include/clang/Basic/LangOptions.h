@@ -130,6 +130,10 @@ public:
   enum SYCLMajorVersion {
     SYCL_None,
     SYCL_2017,
+    SYCL_2020,
+    // The "default" SYCL version to be used when none is specified on the
+    // frontend command line.
+    SYCL_Default = SYCL_2020
   };
 
   /// Clang versions with different platform ABI conformance.
@@ -261,6 +265,13 @@ public:
     POSIX,
     /// Single Threaded Environment.
     Single
+  };
+
+  enum class ExtendArgsKind {
+    /// Integer arguments are sign or zero extended to 32/64 bits
+    /// during default argument promotions.
+    ExtendTo32,
+    ExtendTo64
   };
 
 public:

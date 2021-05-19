@@ -13,13 +13,12 @@
 // UNSUPPORTED: libcxx-no-debug-mode
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <list>
-#include <cstdlib>
 #include <cassert>
 
 #include "test_macros.h"
+#include "debug_macros.h"
 
 int main(int, char**)
 {
@@ -31,8 +30,7 @@ int main(int, char**)
     assert(c == std::list<int>(a, a+1));
     c.pop_back();
     assert(c.empty());
-    c.pop_back(); // operation under test
-    assert(false);
+    TEST_LIBCPP_ASSERT_FAILURE(c.pop_back(), "list::pop_back() called on an empty list");
 
-  return 0;
+    return 0;
 }

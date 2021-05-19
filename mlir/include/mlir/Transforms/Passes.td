@@ -362,6 +362,11 @@ def Canonicalizer : Pass<"canonicalize"> {
     details.
   }];
   let constructor = "mlir::createCanonicalizerPass()";
+  let options = [
+    Option<"topDownProcessingEnabled", "top-down", "bool",
+           /*default=*/"false",
+           "Seed the worklist in general top-down order">
+  ];
 }
 
 def CSE : Pass<"cse"> {

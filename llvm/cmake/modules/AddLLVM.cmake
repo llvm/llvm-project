@@ -1439,8 +1439,8 @@ function(add_unittest test_suite test_name)
   list(APPEND LLVM_LINK_COMPONENTS Support) # gtest needs it for raw_ostream
   add_llvm_executable(${test_name} IGNORE_EXTERNALIZE_DEBUGINFO NO_INSTALL_RPATH ${ARGN})
 
-  # The runtime benefits of ThinLTO don't outweight the compile time costs for tests.
-  if(uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
+  # The runtime benefits of LTO don't outweight the compile time costs for tests.
+  if(LLVM_ENABLE_LTO)
     if((UNIX OR MINGW) AND LLVM_USE_LINKER STREQUAL "lld")
       set_property(TARGET ${test_name} APPEND_STRING PROPERTY
                     LINK_FLAGS " -Wl,--lto-O0")

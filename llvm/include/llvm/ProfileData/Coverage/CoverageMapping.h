@@ -334,6 +334,8 @@ public:
   /// Return the number of times that a region of code associated with this
   /// counter was executed.
   Expected<int64_t> evaluate(const Counter &C) const;
+
+  unsigned getMaxCounterID(const Counter &C) const;
 };
 
 /// Code coverage information for a single function.

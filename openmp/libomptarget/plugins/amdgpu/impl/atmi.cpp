@@ -25,18 +25,6 @@ atmi_machine_t *atmi_machine_get_info() {
 }
 
 /*
- * Modules
- */
-atmi_status_t atmi_module_register_from_memory_to_place(
-    void *module_bytes, size_t module_size, atmi_place_t place,
-    atmi_status_t (*on_deserialized_data)(void *data, size_t size,
-                                          void *cb_state),
-    void *cb_state) {
-  return core::Runtime::getInstance().RegisterModuleFromMemory(
-      module_bytes, module_size, place, on_deserialized_data, cb_state);
-}
-
-/*
  * Data
  */
 

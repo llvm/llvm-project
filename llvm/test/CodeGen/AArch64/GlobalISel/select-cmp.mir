@@ -254,8 +254,8 @@ body:             |
     ; CHECK: liveins: $w0, $x1
     ; CHECK: %reg0:gpr32 = COPY $w0
     ; CHECK: %reg1:gpr64 = COPY $x1
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, %reg0, %subreg.sub_32
-    ; CHECK: %ext:gpr64 = UBFMXri [[SUBREG_TO_REG]], 0, 31
+    ; CHECK: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, %reg0, 0
+    ; CHECK: %ext:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
     ; CHECK: [[SUBSXrs:%[0-9]+]]:gpr64 = SUBSXrs %reg1, %ext, 5, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 9, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp

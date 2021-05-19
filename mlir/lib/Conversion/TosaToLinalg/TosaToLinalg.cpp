@@ -1259,6 +1259,11 @@ public:
     auto outputTy = op.output().getType().cast<ShapedType>();
     unsigned rank = inputTy.getRank();
 
+    // This is an illegal configuration. terminate and log an error
+    if (op.double_round() && !op.scale32())
+      return rewriter.notifyMatchFailure(
+          op, "tosa.rescale requires scale32 for double_round to be true");
+
     if (!outputTy.hasStaticShape())
       return rewriter.notifyMatchFailure(
           op, "tosa to linalg conversion expects statically shaped tensors");

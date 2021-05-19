@@ -412,7 +412,8 @@ int X86FrameLowering::mergeSPUpdates(MachineBasicBlock &MBB,
   if (PI != MBB.end() && PI->isCFIInstruction()) {
     auto CIs = MBB.getParent()->getFrameInstructions();
     MCCFIInstruction CI = CIs[PI->getOperand(0).getCFIIndex()];
-    if (CI.getOperation() == MCCFIInstruction::OpDefCfaOffset)
+    if (CI.getOperation() == MCCFIInstruction::OpDefCfaOffset ||
+        CI.getOperation() == MCCFIInstruction::OpAdjustCfaOffset)
       PI = MBB.erase(PI);
   }
   if (!doMergeWithPrevious)
@@ -1496,8 +1497,9 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
         const auto &Attrs = MF.getFunction().getAttributes();
 
         if (Attrs.hasAttrSomewhere(Attribute::SwiftAsync)) {
-          // We have an initial context in r11, store it just before the frame
+          // We have an initial context in r14, store it just before the frame
           // pointer.
+          MBB.addLiveIn(X86::R14);
           BuildMI(MBB, MBBI, DL, TII.get(X86::PUSH64r))
               .addReg(X86::R14)
               .setMIFlag(MachineInstr::FrameSetup);

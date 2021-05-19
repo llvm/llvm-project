@@ -36,6 +36,7 @@ func @test_shape_num_elements_unknown() {
 func @const_shape() {
   %0 = shape.const_shape [1, 2, 3] : !shape.shape
   %1 = shape.const_shape [4, 5, 6] : tensor<?xindex>
+  %2 = shape.const_shape [4, 5, 6] : tensor<3xindex>
   return
 }
 

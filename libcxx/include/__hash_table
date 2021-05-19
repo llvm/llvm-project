@@ -89,7 +89,7 @@ struct __hash_node_base
 };
 
 template <class _Tp, class _VoidPtr>
-struct __hash_node
+struct _LIBCPP_STANDALONE_DEBUG __hash_node
     : public __hash_node_base
              <
                  typename __rebind_pointer<_VoidPtr, __hash_node<_Tp, _VoidPtr> >::type

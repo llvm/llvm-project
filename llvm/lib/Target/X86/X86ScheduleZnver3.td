@@ -35,7 +35,10 @@ def Znver3Model : SchedMachineModel {
   // The maximum capacity of the op cache is 4K ops.
   // Agner, 22.5 µop cache
   // The size of the µop cache is big enough for holding most critical loops.
-  let LoopMicroOpBufferSize = 4096;
+  // FIXME: PR50384: IndVars has quadradic complexity, with large values here
+  //        the compilation of certain loops ends up taking way too long.
+  // let LoopMicroOpBufferSize = 4096;
+  let LoopMicroOpBufferSize = 256;
   // AMD SOG 19h, 2.6.2 L1 Data Cache
   // The L1 data cache has a 4- or 5- cycle integer load-to-use latency.
   // AMD SOG 19h, 2.12 L1 Data Cache
@@ -615,14 +618,14 @@ def Zn3MULX32rr : SchedWriteRes<[Zn3Multiplier]> {
   let ResourceCycles = [1];
   let NumMicroOps = 2;
 }
-def : InstRW<[Zn3MULX32rr], (instrs MULX32rr)>;
+def : InstRW<[Zn3MULX32rr, WriteIMulH], (instrs MULX32rr)>;
 
 def Zn3MULX32rm : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3Multiplier]> {
   let Latency = !add(Znver3Model.LoadLatency, Zn3MULX32rr.Latency);
   let ResourceCycles = [1, 1, 2];
   let NumMicroOps = Zn3MULX32rr.NumMicroOps;
 }
-def : InstRW<[Zn3MULX32rm], (instrs MULX32rm)>;
+def : InstRW<[Zn3MULX32rm, WriteIMulH], (instrs MULX32rm)>;
 
 defm : Zn3WriteResIntPair<WriteIMul32Imm, [Zn3Multiplier], 3, [1], 1>; // Integer 32-bit multiplication by immediate.
 defm : Zn3WriteResIntPair<WriteIMul32Reg, [Zn3Multiplier], 3, [1], 1>; // Integer 32-bit multiplication by register.
@@ -633,18 +636,18 @@ def Zn3MULX64rr : SchedWriteRes<[Zn3Multiplier]> {
   let ResourceCycles = [1];
   let NumMicroOps = 2;
 }
-def : InstRW<[Zn3MULX64rr], (instrs MULX64rr)>;
+def : InstRW<[Zn3MULX64rr, WriteIMulH], (instrs MULX64rr)>;
 
 def Zn3MULX64rm : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3Multiplier]> {
   let Latency = !add(Znver3Model.LoadLatency, Zn3MULX64rr.Latency);
   let ResourceCycles = [1, 1, 2];
   let NumMicroOps = Zn3MULX64rr.NumMicroOps;
 }
-def : InstRW<[Zn3MULX64rm], (instrs MULX64rm)>;
+def : InstRW<[Zn3MULX64rm, WriteIMulH], (instrs MULX64rm)>;
 
 defm : Zn3WriteResIntPair<WriteIMul64Imm, [Zn3Multiplier], 3, [1], 1>; // Integer 64-bit multiplication by immediate.
 defm : Zn3WriteResIntPair<WriteIMul64Reg, [Zn3Multiplier], 3, [1], 1>; // Integer 64-bit multiplication by register.
-defm : Zn3WriteResInt<WriteIMulH, [Zn3Multiplier], 2, [2], 2>;         // Integer multiplication, high part.
+defm : Zn3WriteResInt<WriteIMulH, [], 4, [], 0>;         // Integer multiplication, high part.
 
 defm : Zn3WriteResInt<WriteBSWAP32, [Zn3ALU0123], 1, [1], 1>; // Byte Order (Endianness) 32-bit Swap.
 defm : Zn3WriteResInt<WriteBSWAP64, [Zn3ALU0123], 1, [1], 1>; // Byte Order (Endianness) 64-bit Swap.

@@ -938,7 +938,6 @@ PreservedAnalyses MergeICmpsPass::run(Function &F,
   if (!MadeChanges)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
-  PA.preserve<GlobalsAA>();
   PA.preserve<DominatorTreeAnalysis>();
   return PA;
 }

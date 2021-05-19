@@ -936,3 +936,24 @@ define i32 @rotateright32_doubleand1(i32 %v, i16 %r) {
   %or = or i32 %shr, %shl
   ret i32 %or
 }
+
+; TODO: This should be a rotate (funnel-shift).
+
+define i8 @unmasked_shlop_unmasked_shift_amount(i32 %x, i32 %shamt) {
+; CHECK-LABEL: @unmasked_shlop_unmasked_shift_amount(
+; CHECK-NEXT:    [[MASKX:%.*]] = and i32 [[X:%.*]], 255
+; CHECK-NEXT:    [[T4:%.*]] = sub i32 8, [[SHAMT:%.*]]
+; CHECK-NEXT:    [[T5:%.*]] = shl i32 [[X]], [[T4]]
+; CHECK-NEXT:    [[T6:%.*]] = lshr i32 [[MASKX]], [[SHAMT]]
+; CHECK-NEXT:    [[T7:%.*]] = or i32 [[T5]], [[T6]]
+; CHECK-NEXT:    [[T8:%.*]] = trunc i32 [[T7]] to i8
+; CHECK-NEXT:    ret i8 [[T8]]
+;
+  %maskx = and i32 %x, 255
+  %t4 = sub i32 8, %shamt
+  %t5 = shl i32 %x, %t4
+  %t6 = lshr i32 %maskx, %shamt
+  %t7 = or i32 %t5, %t6
+  %t8 = trunc i32 %t7 to i8
+  ret i8 %t8
+}

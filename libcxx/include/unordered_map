@@ -702,7 +702,7 @@ public:
 
 #ifndef _LIBCPP_CXX03_LANG
 template <class _Key, class _Tp>
-struct __hash_value_type
+struct _LIBCPP_STANDALONE_DEBUG __hash_value_type
 {
     typedef _Key                                     key_type;
     typedef _Tp                                      mapped_type;

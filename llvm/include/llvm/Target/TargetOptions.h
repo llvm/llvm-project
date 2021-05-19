@@ -73,11 +73,7 @@ namespace llvm {
     None    // Do not use Basic Block Sections.
   };
 
-  enum class StackProtectorGuards {
-    None,
-    TLS,
-    Global
-  };
+  enum class StackProtectorGuards { None, TLS, Global, SysReg };
 
   enum class EABI {
     Unknown,
@@ -335,7 +331,7 @@ namespace llvm {
     /// Stack protector guard offset to use.
     int StackProtectorGuardOffset = INT_MAX;
 
-    /// Stack protector guard mode to use, e.g. tls, global.
+    /// Stack protector guard mode to use, e.g. tls, global, sysreg.
     StackProtectorGuards StackProtectorGuard =
                                          StackProtectorGuards::None;
 

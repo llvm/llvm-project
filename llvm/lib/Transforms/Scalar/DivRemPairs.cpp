@@ -394,6 +394,5 @@ PreservedAnalyses DivRemPairsPass::run(Function &F,
   // TODO: This pass just hoists/replaces math ops - all analyses are preserved?
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
-  PA.preserve<GlobalsAA>();
   return PA;
 }

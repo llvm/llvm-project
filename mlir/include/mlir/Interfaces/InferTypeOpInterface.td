@@ -107,11 +107,23 @@ def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
       Insert operations using the given OpBuilder that computes the
       result shape. Only one of this method or
       `reifyReturnTypeShapesPerResultDim` needs to be overriden by the
-      operation.
+      operation. This interface is supposed to be workable during dialect
+      conversion (e.g. convert from tensor world to buffer world),
+      where `getOperand` may be invalid. For example, some ops (e.g.
+      dynamic_reshape(input, target_shape)) may depend on their operands
+      to calculate the result shape. When the `matchAndRewrite ` method
+      of a conversion pattern is called, the operands of the op to convert
+      may have been converted into other types, which makes it invalid to
+      call the `getOperand` method of such op directly inside the
+      conversion pattern.  To solve this problem, this interface follows
+      the design of the conversion pattern, that is, accepting passed in
+      operands to avoid calling `getOperand` directly inside the interface
+      implementation.
       }],
       /*retTy=*/"::mlir::LogicalResult",
       /*methodName=*/"reifyReturnTypeShapes",
       /*args=*/(ins "::mlir::OpBuilder&":$builder,
+          "::mlir::ValueRange":$operands,
           "::mlir::SmallVectorImpl<Value> &":$reifiedReturnShapes),
       /*methodBody=*/[{}],
       /*defaultImplementation=*/[{ return ::mlir::failure(); }]

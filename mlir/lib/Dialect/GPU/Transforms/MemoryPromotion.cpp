@@ -14,7 +14,7 @@
 #include "mlir/Dialect/GPU/MemoryPromotion.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/MemRef/EDSC/Intrinsics.h"
-#include "mlir/Dialect/SCF/EDSC/Builders.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopUtils.h"
@@ -41,7 +41,7 @@ static StringRef getDimName(unsigned dim) {
 /// GPUDialect::getNumWorkgroupDimensions() loops, completing the nest with
 /// single-iteration loops. Maps the innermost loops to thread dimensions, in
 /// reverse order to enable access coalescing in the innermost loop.
-static void insertCopyLoops(OpBuilder &builder, Location loc,
+static void insertCopyLoops(OpBuilder &b, Location loc,
                             MemRefBoundsCapture &bounds, Value from, Value to) {
   // Create EDSC handles for bounds.
   unsigned rank = bounds.rank();
@@ -68,24 +68,24 @@ static void insertCopyLoops(OpBuilder &builder, Location loc,
                   [](int64_t step) { return std_constant_index(step); });
 
   // Obtain thread identifiers and block sizes, necessary to map to them.
-  auto indexType = builder.getIndexType();
+  auto indexType = b.getIndexType();
   SmallVector<Value, 3> threadIds, blockDims;
   for (unsigned i = 0; i < 3; ++i) {
-    auto dimName = builder.getStringAttr(getDimName(i));
-    threadIds.push_back(
-        builder.create<gpu::ThreadIdOp>(loc, indexType, dimName));
-    blockDims.push_back(
-        builder.create<gpu::BlockDimOp>(loc, indexType, dimName));
+    auto dimName = b.getStringAttr(getDimName(i));
+    threadIds.push_back(b.create<gpu::ThreadIdOp>(loc, indexType, dimName));
+    blockDims.push_back(b.create<gpu::BlockDimOp>(loc, indexType, dimName));
   }
 
   // Produce the loop nest with copies.
   SmallVector<Value, 8> ivs(lbs.size());
-  loopNestBuilder(lbs, ubs, steps, [&](ValueRange loopIvs) {
-    ivs.assign(loopIvs.begin(), loopIvs.end());
-    auto activeIvs = llvm::makeArrayRef(ivs).take_back(rank);
-    MemRefIndexedValue fromHandle(from), toHandle(to);
-    toHandle(activeIvs) = fromHandle(activeIvs);
-  });
+  mlir::scf::buildLoopNest(
+      b, loc, lbs, ubs, steps,
+      [&](OpBuilder &b, Location loc, ValueRange loopIvs) {
+        ivs.assign(loopIvs.begin(), loopIvs.end());
+        auto activeIvs = llvm::makeArrayRef(ivs).take_back(rank);
+        Value loaded = b.create<memref::LoadOp>(loc, from, activeIvs);
+        b.create<memref::StoreOp>(loc, loaded, to, activeIvs);
+      });
 
   // Map the innermost loops to threads in reverse order.
   for (auto en :
@@ -142,17 +142,17 @@ static void insertCopies(Region &region, Location loc, Value from, Value to) {
   assert(llvm::hasSingleElement(region) &&
          "unstructured control flow not supported");
 
-  OpBuilder builder(region.getContext());
-  builder.setInsertionPointToStart(&region.front());
+  OpBuilder b(region.getContext());
+  b.setInsertionPointToStart(&region.front());
 
-  ScopedContext edscContext(builder, loc);
+  ScopedContext edscContext(b, loc);
   MemRefBoundsCapture fromBoundsCapture(from);
-  insertCopyLoops(builder, loc, fromBoundsCapture, from, to);
-  builder.create<gpu::BarrierOp>(loc);
+  insertCopyLoops(b, loc, fromBoundsCapture, from, to);
+  b.create<gpu::BarrierOp>(loc);
 
-  builder.setInsertionPoint(&region.front().back());
-  builder.create<gpu::BarrierOp>(loc);
-  insertCopyLoops(builder, loc, fromBoundsCapture, to, from);
+  b.setInsertionPoint(&region.front().back());
+  b.create<gpu::BarrierOp>(loc);
+  insertCopyLoops(b, loc, fromBoundsCapture, to, from);
 }
 
 /// Promotes a function argument to workgroup memory in the given function. The

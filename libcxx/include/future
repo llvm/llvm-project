@@ -363,11 +363,12 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>;
 
 #include <__config>
 #include <__availability>
-#include <system_error>
-#include <memory>
+#include <__debug>
 #include <chrono>
 #include <exception>
+#include <memory>
 #include <mutex>
+#include <system_error>
 #include <thread>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

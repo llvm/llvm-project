@@ -45,10 +45,6 @@ struct SparsificationPass : public SparsificationBase<SparsificationPass> {
   Option<int32_t> vectorLength{
       *this, "vl", llvm::cl::desc("Set the vector length"), llvm::cl::init(1)};
 
-  Option<bool> fastOutput{*this, "fast-output",
-                          llvm::cl::desc("Allows fast output buffers"),
-                          llvm::cl::init(false)};
-
   /// Returns parallelization strategy given on command line.
   SparseParallelizationStrategy parallelOption() {
     switch (parallelization) {
@@ -82,7 +78,7 @@ struct SparsificationPass : public SparsificationBase<SparsificationPass> {
     RewritePatternSet patterns(ctx);
     // Translate strategy flags to strategy options.
     SparsificationOptions options(parallelOption(), vectorOption(),
-                                  vectorLength, fastOutput);
+                                  vectorLength);
     // Apply rewriting.
     populateSparsificationPatterns(patterns, options);
     vector::populateVectorToVectorCanonicalizationPatterns(patterns);

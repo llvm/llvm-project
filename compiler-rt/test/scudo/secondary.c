@@ -20,8 +20,7 @@ void handler(int signo, siginfo_t *info, void *uctx) {
   exit(1);
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   // The size must be large enough to be serviced by the secondary allocator.
   long page_size = sysconf(_SC_PAGESIZE);
   size_t size = (1U << 17) + page_size;

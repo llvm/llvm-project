@@ -13,20 +13,17 @@
 // UNSUPPORTED: libcxx-no-debug-mode
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
-#include <cstdlib>
 #include <vector>
 
 #include "test_macros.h"
-
+#include "debug_macros.h"
 
 int main(int, char**) {
     std::vector<int> v;
     v.push_back(0);
     v.pop_back();
-    v.pop_back();
-    std::exit(1);
+    TEST_LIBCPP_ASSERT_FAILURE(v.pop_back(), "vector::pop_back called on an empty vector");
 
     return 0;
 }

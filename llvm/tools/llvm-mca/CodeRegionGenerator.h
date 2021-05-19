@@ -39,7 +39,8 @@ protected:
 public:
   CodeRegionGenerator(SourceMgr &SM) : Regions(SM) {}
   virtual ~CodeRegionGenerator();
-  virtual Expected<const CodeRegions &> parseCodeRegions() = 0;
+  virtual Expected<const CodeRegions &>
+  parseCodeRegions(const std::unique_ptr<MCInstPrinter> &IP) = 0;
 };
 
 /// This class is responsible for parsing input ASM and generating
@@ -60,7 +61,8 @@ public:
         AssemblerDialect(0) {}
 
   unsigned getAssemblerDialect() const { return AssemblerDialect; }
-  Expected<const CodeRegions &> parseCodeRegions() override;
+  Expected<const CodeRegions &>
+  parseCodeRegions(const std::unique_ptr<MCInstPrinter> &IP) override;
 };
 
 } // namespace mca

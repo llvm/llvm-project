@@ -299,9 +299,10 @@ template <> StoreInst *isCandidate<StoreInst>(Instruction *In) {
   return getIfUnordered(dyn_cast<StoreInst>(In));
 }
 
-#if !defined(_MSC_VER) || _MSC_VER >= 1924
-// VS2017 has trouble compiling this:
+#if !defined(_MSC_VER) || _MSC_VER >= 1926
+// VS2017 and some versions of VS2019 have trouble compiling this:
 // error C2976: 'std::map': too few template arguments
+// VS 2019 16.x is known to work, except for 16.4/16.5 (MSC_VER 1924/1925)
 template <typename Pred, typename... Ts>
 void erase_if(std::map<Ts...> &map, Pred p)
 #else

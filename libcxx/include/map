@@ -486,8 +486,9 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 */
 
 #include <__config>
-#include <__tree>
+#include <__debug>
 #include <__node_handle>
+#include <__tree>
 #include <compare>
 #include <initializer_list>
 #include <iterator> // __libcpp_erase_if_container
@@ -666,7 +667,7 @@ template <class _TreeIterator> class __map_const_iterator;
 #ifndef _LIBCPP_CXX03_LANG
 
 template <class _Key, class _Tp>
-struct __value_type
+struct _LIBCPP_STANDALONE_DEBUG __value_type
 {
     typedef _Key                                     key_type;
     typedef _Tp                                      mapped_type;
