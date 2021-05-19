@@ -35,7 +35,7 @@ uint32_t GsymCreator::insertFile(StringRef Path, llvm::sys::path::Style Style) {
   const uint32_t Base = insertString(filename);
   FileEntry FE(Dir, Base);
 
-  std::lock_guard<std::recursive_mutex> Guard(Mutex);
+  std::lock_guard<std::mutex> Guard(Mutex);
   const auto NextIndex = Files.size();
   // Find FE in hash map and insert if not present.
   auto R = FileEntryToIndex.insert(std::make_pair(FE, NextIndex));
@@ -55,7 +55,7 @@ llvm::Error GsymCreator::save(StringRef Path,
 }
 
 llvm::Error GsymCreator::encode(FileWriter &O) const {
-  std::lock_guard<std::recursive_mutex> Guard(Mutex);
+  std::lock_guard<std::mutex> Guard(Mutex);
   if (Funcs.empty())
     return createStringError(std::errc::invalid_argument,
                              "no functions to encode");
@@ -188,7 +188,7 @@ static ForwardIt removeIfBinary(ForwardIt FirstIt, ForwardIt LastIt,
 }
 
 llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
-  std::lock_guard<std::recursive_mutex> Guard(Mutex);
+  std::lock_guard<std::mutex> Guard(Mutex);
   if (Finalized)
     return createStringError(std::errc::invalid_argument, "already finalized");
   Finalized = true;
@@ -296,7 +296,7 @@ uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
 
   // The hash can be calculated outside the lock.
   CachedHashStringRef CHStr(S);
-  std::lock_guard<std::recursive_mutex> Guard(Mutex);
+  std::lock_guard<std::mutex> Guard(Mutex);
   if (Copy) {
     // We need to provide backing storage for the string if requested
     // since StringTableBuilder stores references to strings. Any string
@@ -312,14 +312,14 @@ uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
 }
 
 void GsymCreator::addFunctionInfo(FunctionInfo &&FI) {
-  std::lock_guard<std::recursive_mutex> Guard(Mutex);
+  std::lock_guard<std::mutex> Guard(Mutex);
   Ranges.insert(FI.Range);
   Funcs.emplace_back(std::move(FI));
 }
 
 void GsymCreator::forEachFunctionInfo(
     std::function<bool(FunctionInfo &)> const &Callback) {
-  std::lock_guard<std::recursive_mutex> Guard(Mutex);
+  std::lock_guard<std::mutex> Guard(Mutex);
   for (auto &FI : Funcs) {
     if (!Callback(FI))
       break;
@@ -328,7 +328,7 @@ void GsymCreator::forEachFunctionInfo(
 
 void GsymCreator::forEachFunctionInfo(
     std::function<bool(const FunctionInfo &)> const &Callback) const {
-  std::lock_guard<std::recursive_mutex> Guard(Mutex);
+  std::lock_guard<std::mutex> Guard(Mutex);
   for (const auto &FI : Funcs) {
     if (!Callback(FI))
       break;
@@ -336,7 +336,7 @@ void GsymCreator::forEachFunctionInfo(
 }
 
 size_t GsymCreator::getNumFunctionInfos() const {
-  std::lock_guard<std::recursive_mutex> Guard(Mutex);
+  std::lock_guard<std::mutex> Guard(Mutex);
   return Funcs.size();
 }
 
@@ -347,6 +347,6 @@ bool GsymCreator::IsValidTextAddress(uint64_t Addr) const {
 }
 
 bool GsymCreator::hasFunctionInfoForAddress(uint64_t Addr) const {
-  std::lock_guard<std::recursive_mutex> Guard(Mutex);
+  std::lock_guard<std::mutex> Guard(Mutex);
   return Ranges.contains(Addr);
 }
