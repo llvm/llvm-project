@@ -4851,11 +4851,7 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
 
   // If this block is now dead, remove it.
   if (pred_empty(BB) && BB != &BB->getParent()->getEntryBlock()) {
-    // We know there are no successors, so just nuke the block.
-    if (DTU)
-      DTU->deleteBB(BB);
-    else
-      BB->eraseFromParent();
+    DeleteDeadBlock(BB, DTU);
     return true;
   }
 
