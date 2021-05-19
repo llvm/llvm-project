@@ -5,52 +5,59 @@
 ; This test checks combinations of FNEG and FMA intrinsics on AVX-512 target
 ; PR28892
 
-define <16 x float> @test1(<16 x float> %a, <16 x float> %b, <16 x float> %c)  {
-; CHECK-LABEL: test1:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vfmsub213ps {{.*#+}} zmm0 = (zmm1 * zmm0) - zmm2
-; CHECK-NEXT:    retq
-entry:
-  %sub.i = fsub <16 x float> <float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0>, %c
-  %0 = tail call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %a, <16 x float> %b, <16 x float> %sub.i, i32 4) #2
-  ret <16 x float> %0
-}
-
+declare <8 x float> @llvm.fma.v8f32(<8 x float>, <8 x float>, <8 x float>)
+declare <16 x float> @llvm.fma.v16f32(<16 x float>, <16 x float>, <16 x float>)
 declare <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float>, <16 x float>, <16 x float>, i32)
 declare <16 x float> @llvm.x86.avx512.mask.vfnmadd.ps.512(<16 x float>, <16 x float>, <16 x float>, i16, i32)
 declare <16 x float> @llvm.x86.avx512.mask.vfnmsub.ps.512(<16 x float>, <16 x float>, <16 x float>, i16, i32)
+declare <8 x float> @llvm.x86.fma.vfmsub.ps.256(<8 x float>, <8 x float>, <8 x float>)
+declare <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a, <8 x double> %b, <8 x double> %c, i32)
+declare <2 x double> @llvm.x86.avx512.mask.vfmadd.sd(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8, i32)
+declare <4 x float> @llvm.x86.avx512.mask3.vfmadd.ss(<4 x float>, <4 x float>, <4 x float>, i8, i32)
+declare <4 x float> @llvm.x86.avx512.mask.vfmadd.ss(<4 x float>, <4 x float>, <4 x float>, i8, i32)
+declare <16 x float> @llvm.x86.avx512.vfmaddsub.ps.512(<16 x float>, <16 x float>, <16 x float>, i32)
+declare <8 x double> @llvm.x86.avx512.vfmaddsub.pd.512(<8 x double>, <8 x double>, <8 x double>, i32)
 
+define <16 x float> @test1(<16 x float> %a, <16 x float> %b, <16 x float> %c)  {
+; CHECK-LABEL: test1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vfmsub213ps {{.*#+}} zmm0 = (zmm1 * zmm0) - zmm2
+; CHECK-NEXT:    retq
+  %sub.i = fneg <16 x float> %c
+  %t0 = tail call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %a, <16 x float> %b, <16 x float> %sub.i, i32 4)
+  ret <16 x float> %t0
+}
 
 define <16 x float> @test2(<16 x float> %a, <16 x float> %b, <16 x float> %c) {
 ; CHECK-LABEL: test2:
-; CHECK:       # %bb.0: # %entry
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfnmsub213ps {{.*#+}} zmm0 = -(zmm1 * zmm0) - zmm2
 ; CHECK-NEXT:    retq
-entry:
-  %0 = tail call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %a, <16 x float> %b, <16 x float> %c, i32 4) #2
-  %sub.i = fsub <16 x float> <float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0>, %0
-  ret <16 x float> %sub.i
+  %fma = call <16 x float> @llvm.fma.v16f32(<16 x float> %a, <16 x float> %b, <16 x float> %c)
+  %neg = fneg <16 x float> %fma
+  ret <16 x float> %neg
 }
 
 define <16 x float> @test3(<16 x float> %a, <16 x float> %b, <16 x float> %c)  {
 ; CHECK-LABEL: test3:
-; CHECK:       # %bb.0: # %entry
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmsub213ps {{.*#+}} zmm0 = (zmm1 * zmm0) - zmm2
 ; CHECK-NEXT:    retq
-entry:
-  %0 = tail call <16 x float> @llvm.x86.avx512.mask.vfnmadd.ps.512(<16 x float> %a, <16 x float> %b, <16 x float> %c, i16 -1, i32 4) #2
-  %sub.i = fsub <16 x float> <float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0>, %0
+  %t0 = fneg <16 x float> %b
+  %t1 = call <16 x float> @llvm.fma.v16f32(<16 x float> %a, <16 x float> %t0, <16 x float> %c)
+  %sub.i = fneg <16 x float> %t1
   ret <16 x float> %sub.i
 }
 
 define <16 x float> @test4(<16 x float> %a, <16 x float> %b, <16 x float> %c) {
 ; CHECK-LABEL: test4:
-; CHECK:       # %bb.0: # %entry
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd213ps {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
 ; CHECK-NEXT:    retq
-entry:
-  %0 = tail call <16 x float> @llvm.x86.avx512.mask.vfnmsub.ps.512(<16 x float> %a, <16 x float> %b, <16 x float> %c, i16 -1, i32 4) #2
-  %sub.i = fsub <16 x float> <float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0>, %0
+  %t0 = fneg <16 x float> %b
+  %t1 = fneg <16 x float> %c
+  %t2 = call <16 x float> @llvm.fma.v16f32(<16 x float> %a, <16 x float> %t0, <16 x float> %t1)
+  %sub.i = fsub <16 x float> <float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0>, %t2
   ret <16 x float> %sub.i
 }
 
@@ -67,24 +74,24 @@ entry:
 
 define <16 x float> @test6(<16 x float> %a, <16 x float> %b, <16 x float> %c) {
 ; CHECK-LABEL: test6:
-; CHECK:       # %bb.0: # %entry
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmadd213ps {ru-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-entry:
-  %0 = tail call <16 x float> @llvm.x86.avx512.mask.vfnmsub.ps.512(<16 x float> %a, <16 x float> %b, <16 x float> %c, i16 -1, i32 10) #2
-  %sub.i = fsub <16 x float> <float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0>, %0
+  %t0 = fneg <16 x float> %b
+  %t1 = fneg <16 x float> %c
+  %t2 = call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %a, <16 x float> %t0, <16 x float> %t1, i32 10)
+  %sub.i = fsub <16 x float> <float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0>, %t2
   ret <16 x float> %sub.i
 }
 
-
 define <8 x float> @test7(<8 x float> %a, <8 x float> %b, <8 x float> %c) {
 ; CHECK-LABEL: test7:
-; CHECK:       # %bb.0: # %entry
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2
 ; CHECK-NEXT:    retq
-entry:
-  %0 = tail call <8 x float> @llvm.x86.fma.vfmsub.ps.256(<8 x float> %a, <8 x float> %b, <8 x float> %c) #2
-  %sub.i = fsub <8 x float> <float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0>, %0
+  %t0 = fneg <8 x float> %c
+  %t1 = call <8 x float> @llvm.fma.v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %t0)
+  %sub.i = fsub <8 x float> <float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0>, %t1
   ret <8 x float> %sub.i
 }
 
@@ -99,21 +106,15 @@ entry:
   ret <8 x float> %0
 }
 
-declare <8 x float> @llvm.x86.fma.vfmsub.ps.256(<8 x float>, <8 x float>, <8 x float>)
-
-
 define <8 x double> @test9(<8 x double> %a, <8 x double> %b, <8 x double> %c) {
 ; CHECK-LABEL: test9:
-; CHECK:       # %bb.0: # %entry
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfnmsub213pd {{.*#+}} zmm0 = -(zmm1 * zmm0) - zmm2
 ; CHECK-NEXT:    retq
-entry:
-  %0 = tail call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a, <8 x double> %b, <8 x double> %c, i32 4) #2
-  %sub.i = fsub <8 x double> <double -0.0, double -0.0, double -0.0, double -0.0, double -0.0, double -0.0, double -0.0, double -0.0>, %0
+  %t0 = tail call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a, <8 x double> %b, <8 x double> %c, i32 4)
+  %sub.i = fneg <8 x double> %t0
   ret <8 x double> %sub.i
 }
-
-declare <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a, <8 x double> %b, <8 x double> %c, i32)
 
 define <2 x double> @test10(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: test10:
@@ -126,8 +127,6 @@ entry:
   %sub.i = fsub <2 x double> <double -0.0, double -0.0>, %0
   ret <2 x double> %sub.i
 }
-
-declare <2 x double> @llvm.x86.avx512.mask.vfmadd.sd(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8, i32)
 
 define <4 x float> @test11(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 zeroext %mask) local_unnamed_addr #0 {
 ; SKX-LABEL: test11:
@@ -154,8 +153,6 @@ entry:
   ret <4 x float> %0
 }
 
-declare <4 x float> @llvm.x86.avx512.mask3.vfmadd.ss(<4 x float>, <4 x float>, <4 x float>, i8, i32)
-
 define <4 x float> @test11b(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 zeroext %mask) local_unnamed_addr #0 {
 ; SKX-LABEL: test11b:
 ; SKX:       # %bb.0: # %entry
@@ -173,8 +170,6 @@ entry:
   %0 = tail call <4 x float> @llvm.x86.avx512.mask.vfmadd.ss(<4 x float> %a, <4 x float> %b, <4 x float> %sub.i, i8 %mask, i32 4) #10
   ret <4 x float> %0
 }
-
-declare <4 x float> @llvm.x86.avx512.mask.vfmadd.ss(<4 x float>, <4 x float>, <4 x float>, i8, i32)
 
 define <8 x double> @test12(<8 x double> %a, <8 x double> %b, <8 x double> %c, i8 %mask) {
 ; SKX-LABEL: test12:
@@ -216,7 +211,6 @@ define <2 x double> @test13(<2 x double> %a, <2 x double> %b, <2 x double> %c, i
 ; KNL-NEXT:    vmovsd %xmm1, %xmm3, %xmm3 {%k1}
 ; KNL-NEXT:    vmovapd %xmm3, %xmm0
 ; KNL-NEXT:    retq
-
 entry:
   %sub.i = fsub <2 x double> <double -0.0, double -0.0>, %a
   %0 = tail call <2 x double> @llvm.x86.avx512.mask.vfmadd.sd(<2 x double> %sub.i, <2 x double> %b, <2 x double> %c, i8 %mask, i32 4)
@@ -291,7 +285,6 @@ define <16 x float> @test16(<16 x float> %a, <16 x float> %b, <16 x float> %c, i
   %sel = select <16 x i1> %bc, <16 x float> %res, <16 x float> %a
   ret <16 x float> %sel
 }
-declare <16 x float> @llvm.x86.avx512.vfmaddsub.ps.512(<16 x float>, <16 x float>, <16 x float>, i32)
 
 define <8 x double> @test17(<8 x double> %a, <8 x double> %b, <8 x double> %c, i8 %mask) {
 ; SKX-LABEL: test17:
@@ -311,7 +304,6 @@ define <8 x double> @test17(<8 x double> %a, <8 x double> %b, <8 x double> %c, i
   %sel = select <8 x i1> %bc, <8 x double> %res, <8 x double> %a
   ret <8 x double> %sel
 }
-declare <8 x double> @llvm.x86.avx512.vfmaddsub.pd.512(<8 x double>, <8 x double>, <8 x double>, i32)
 
 define <4 x float> @test18(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 zeroext %mask) local_unnamed_addr #0 {
 ; SKX-LABEL: test18:
