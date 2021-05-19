@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef MLIR_DIALECT_TOSA_TRANSFORMS_PASSES
+#define MLIR_DIALECT_TOSA_TRANSFORMS_PASSES
+
 include "mlir/Pass/PassBase.td"
 
 def TosaMakeBroadcastable : FunctionPass<"tosa-make-broadcastable"> {
@@ -24,3 +27,5 @@ def TosaMakeBroadcastable : FunctionPass<"tosa-make-broadcastable"> {
 
   let constructor = "createTosaMakeBroadcastablePass()";
 }
+
+#endif // MLIR_DIALECT_TOSA_TRANSFORMS_PASSES
