@@ -1,4 +1,4 @@
-# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -resource-pressure=false -instruction-info=false < %s | FileCheck %s
+# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=generic -resource-pressure=false -instruction-info=false < %s | FileCheck %s
 
 .cv_fpo_pushreg ebx
 add %eax, %eax
