@@ -7,6 +7,13 @@ define i32 @test_sllv(i32 %a, i32 %b) {
   ret i32 %sllv
 }
 
+define i32 @test_sll(i32 %a) {
+; CHECK: sll $a0, $a0, 10
+; CHECK: SLL_NM
+  %sll = shl i32 %a, 10
+  ret i32 %sll
+}
+
 define i32 @test_srlv(i32 %a, i32 %b) {
 ; CHECK: srlv $a0, $a0, $a1
 ; CHECK: SRLV_NM

@@ -22,6 +22,7 @@ def MipsFullAddr : SDNode<"MipsISD::FullAddr", SDTIntUnaryOp>;
 //===----------------------------------------------------------------------===//
 
 def imm32ZExt12 : IntImmLeaf<i32, [{ return isUInt<12>(Imm.getZExtValue()); }]>;
+def imm32ZExt5  : IntImmLeaf<i32, [{ return isUInt<5>(Imm.getZExtValue()); }]>;
 
 def UImm12AsmOperandClass : UImmAsmOperandClass<12, []>;
 
@@ -169,9 +170,13 @@ def MOD_NM   : DivMod<"mod", srem>;
 def DIVU_NM  : DivMod<"divu", udiv>;
 def MODU_NM  : DivMod<"modu", urem>;
 
+// P.U12 pool of instructions
 def ORI_NM  : ArithLogicINM<"ori", uimm12_nm, GPR32NMOpnd, imm32ZExt12, or>;
 def XORI_NM : ArithLogicINM<"xori", uimm12_nm, GPR32NMOpnd, imm32ZExt12, xor>;
 def ANDI_NM : ArithLogicINM<"andi", uimm12_nm, GPR32NMOpnd, imm32ZExt12, and>;
+
+// P.SHIFT pool of instructions
+def SLL_NM  : ArithLogicINM<"sll", uimm5_nm, GPR32NMOpnd, imm32ZExt5, shl>;
 
 def ADDiu_NM : ArithLogicINM<"addiu", simm16_relaxed, GPR32NMOpnd,
                              imm32SExt16, add>;
