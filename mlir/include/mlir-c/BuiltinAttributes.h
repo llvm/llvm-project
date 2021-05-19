@@ -313,6 +313,10 @@ mlirDenseElementsAttrSplatGet(MlirType shapedType, MlirAttribute element);
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirDenseElementsAttrBoolSplatGet(MlirType shapedType, bool element);
 MLIR_CAPI_EXPORTED MlirAttribute
+mlirDenseElementsAttrUInt8SplatGet(MlirType shapedType, uint8_t element);
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirDenseElementsAttrInt8SplatGet(MlirType shapedType, int8_t element);
+MLIR_CAPI_EXPORTED MlirAttribute
 mlirDenseElementsAttrUInt32SplatGet(MlirType shapedType, uint32_t element);
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirDenseElementsAttrInt32SplatGet(MlirType shapedType, int32_t element);
@@ -330,6 +334,10 @@ mlirDenseElementsAttrDoubleSplatGet(MlirType shapedType, double element);
 /// data element type.
 MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrBoolGet(
     MlirType shapedType, intptr_t numElements, const int *elements);
+MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrUInt8Get(
+    MlirType shapedType, intptr_t numElements, const uint8_t *elements);
+MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrInt8Get(
+    MlirType shapedType, intptr_t numElements, const int8_t *elements);
 MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrUInt32Get(
     MlirType shapedType, intptr_t numElements, const uint32_t *elements);
 MLIR_CAPI_EXPORTED MlirAttribute mlirDenseElementsAttrInt32Get(
@@ -364,6 +372,10 @@ MLIR_CAPI_EXPORTED MlirAttribute
 mlirDenseElementsAttrGetSplatValue(MlirAttribute attr);
 MLIR_CAPI_EXPORTED int
 mlirDenseElementsAttrGetBoolSplatValue(MlirAttribute attr);
+MLIR_CAPI_EXPORTED int8_t
+mlirDenseElementsAttrGetInt8SplatValue(MlirAttribute attr);
+MLIR_CAPI_EXPORTED uint8_t
+mlirDenseElementsAttrGetUInt8SplatValue(MlirAttribute attr);
 MLIR_CAPI_EXPORTED int32_t
 mlirDenseElementsAttrGetInt32SplatValue(MlirAttribute attr);
 MLIR_CAPI_EXPORTED uint32_t
@@ -383,6 +395,10 @@ mlirDenseElementsAttrGetStringSplatValue(MlirAttribute attr);
 /// contained by the given dense elements attribute.
 MLIR_CAPI_EXPORTED bool mlirDenseElementsAttrGetBoolValue(MlirAttribute attr,
                                                           intptr_t pos);
+MLIR_CAPI_EXPORTED int8_t mlirDenseElementsAttrGetInt8Value(MlirAttribute attr,
+                                                            intptr_t pos);
+MLIR_CAPI_EXPORTED uint8_t
+mlirDenseElementsAttrGetUInt8Value(MlirAttribute attr, intptr_t pos);
 MLIR_CAPI_EXPORTED int32_t
 mlirDenseElementsAttrGetInt32Value(MlirAttribute attr, intptr_t pos);
 MLIR_CAPI_EXPORTED uint32_t
