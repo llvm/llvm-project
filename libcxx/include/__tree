@@ -714,7 +714,7 @@ public:
 };
 
 template <class _VoidPtr>
-class __tree_node_base
+class _LIBCPP_STANDALONE_DEBUG __tree_node_base
     : public __tree_node_base_types<_VoidPtr>::__end_node_type
 {
     typedef __tree_node_base_types<_VoidPtr> _NodeBaseTypes;
@@ -742,7 +742,7 @@ private:
 };
 
 template <class _Tp, class _VoidPtr>
-class __tree_node
+class _LIBCPP_STANDALONE_DEBUG __tree_node
     : public __tree_node_base<_VoidPtr>
 {
 public:
