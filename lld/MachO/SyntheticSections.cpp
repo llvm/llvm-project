@@ -20,7 +20,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
@@ -31,7 +31,7 @@
 #include <sys/mman.h>
 #endif
 
-#ifdef HAVE_LIBXAR
+#ifdef LLVM_HAVE_LIBXAR
 #include <fcntl.h>
 #include <xar/xar.h>
 #endif
@@ -1036,7 +1036,7 @@ private:
   } while (0);
 
 void BitcodeBundleSection::finalize() {
-#ifdef HAVE_LIBXAR
+#ifdef LLVM_HAVE_LIBXAR
   using namespace llvm::sys::fs;
   CHECK_EC(createTemporaryFile("bitcode-bundle", "xar", xarPath));
 
@@ -1048,7 +1048,7 @@ void BitcodeBundleSection::finalize() {
   CHECK_EC(xar_close(xar));
 
   file_size(xarPath, xarSize);
-#endif // defined(HAVE_LIBXAR)
+#endif // defined(LLVM_HAVE_LIBXAR)
 }
 
 void BitcodeBundleSection::writeTo(uint8_t *buf) const {
