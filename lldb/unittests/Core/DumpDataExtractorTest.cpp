@@ -174,8 +174,30 @@ TEST(DumpDataExtractorTest, Formats) {
            "{0x0000000000000000 0xaaaabbbbccccdddd}");
 
   // See half2float for format details.
+  // Test zeroes.
+  TestDump(std::vector<uint16_t>{0x0000, 0x8000},
+           lldb::Format::eFormatVectorOfFloat16, "{0 -0}");
+  // Some subnormal numbers.
+  TestDump(std::vector<uint16_t>{0x0001, 0x8001},
+           lldb::Format::eFormatVectorOfFloat16, "{5.96046e-08 -5.96046e-08}");
+  // A full mantisse and empty expontent.
+  TestDump(std::vector<uint16_t>{0x83ff, 0x03ff},
+           lldb::Format::eFormatVectorOfFloat16, "{-6.09756e-05 6.09756e-05}");
+  // Some normal numbers.
+  TestDump(std::vector<uint16_t>{0b0100001001001000},
+           lldb::Format::eFormatVectorOfFloat16, "{3.14062}");
   TestDump(std::vector<uint16_t>{0xabcd, 0x1234},
            lldb::Format::eFormatVectorOfFloat16, "{-0.0609436 0.000757217}");
+  // Largest and smallest normal number.
+  TestDump(std::vector<uint16_t>{0x0400, 0x7bff},
+           lldb::Format::eFormatVectorOfFloat16, "{6.10352e-05 65504}");
+  // quiet/signaling NaNs.
+  TestDump(std::vector<uint16_t>{0xffff, 0xffc0, 0x7fff, 0x7fc0},
+           lldb::Format::eFormatVectorOfFloat16, "{nan nan nan nan}");
+  // +/-Inf.
+  TestDump(std::vector<uint16_t>{0xfc00, 0x7c00},
+           lldb::Format::eFormatVectorOfFloat16, "{-inf inf}");
+
   TestDump(std::vector<float>{std::numeric_limits<float>::min(),
                               std::numeric_limits<float>::max()},
            lldb::Format::eFormatVectorOfFloat32, "{1.17549e-38 3.40282e+38}");
