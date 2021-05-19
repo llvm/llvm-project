@@ -4903,6 +4903,20 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   RenderFloatingPointOptions(TC, D, OFastEnabled, Args, CmdArgs, JA);
 
+  if (Arg *A = Args.getLastArg(options::OPT_fextend_args_EQ)) {
+    const llvm::Triple::ArchType Arch = TC.getArch();
+    if (Arch == llvm::Triple::x86 || Arch == llvm::Triple::x86_64) {
+      StringRef V = A->getValue();
+      if (V == "64")
+        CmdArgs.push_back("-fextend-arguments=64");
+      else if (V != "32")
+        D.Diag(diag::err_drv_invalid_argument_to_option)
+            << A->getValue() << A->getOption().getName();
+    } else
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getOption().getName() << TripleStr;
+  }
+
   if (Arg *A = Args.getLastArg(options::OPT_mdouble_EQ)) {
     if (TC.getArch() == llvm::Triple::avr)
       A->render(Args, CmdArgs);

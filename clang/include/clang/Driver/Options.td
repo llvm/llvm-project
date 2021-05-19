@@ -1451,6 +1451,14 @@ defm math_errno : BoolFOption<"math-errno",
   PosFlag<SetTrue, [CC1Option], "Require math functions to indicate errors by setting errno">,
   NegFlag<SetFalse>>,
   ShouldParseIf<!strconcat("!", open_cl.KeyPath)>;
+def fextend_args_EQ : Joined<["-"], "fextend-arguments=">, Group<f_Group>,
+  Flags<[CC1Option, NoArgumentUnused]>,
+  HelpText<"Controls how scalar integer arguments are extended in calls "
+           "to unprototyped and varargs functions">,
+  Values<"32,64">,
+  NormalizedValues<["ExtendTo32", "ExtendTo64"]>,
+  NormalizedValuesScope<"LangOptions::ExtendArgsKind">,
+  MarshallingInfoEnum<LangOpts<"ExtendIntArgs">,"ExtendTo32">;
 def fbracket_depth_EQ : Joined<["-"], "fbracket-depth=">, Group<f_Group>, Flags<[CoreOption]>;
 def fsignaling_math : Flag<["-"], "fsignaling-math">, Group<f_Group>;
 def fno_signaling_math : Flag<["-"], "fno-signaling-math">, Group<f_Group>;
