@@ -1,7 +1,7 @@
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: matmul
-  cpp_op_name: MatmulOp
+  cpp_class_name: MatmulOp
   doc: |-
     Performs a matrix multiplication of two 2D inputs.
 
@@ -63,7 +63,7 @@ structured_op: !LinalgStructuredOpConfig
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: batch_matmul
-  cpp_op_name: BatchMatmulOp
+  cpp_class_name: BatchMatmulOp
   doc: |-
     Performs a batched matrix multiplication of two 3D inputs.
 
@@ -126,7 +126,7 @@ structured_op: !LinalgStructuredOpConfig
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: matvec
-  cpp_op_name: MatvecOp
+  cpp_class_name: MatvecOp
   doc: |-
     Performs a matrix-vector multiplication.
 
@@ -187,7 +187,7 @@ structured_op: !LinalgStructuredOpConfig
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: vecmat
-  cpp_op_name: VecmatOp
+  cpp_class_name: VecmatOp
   doc: |-
     Performs a vector-matrix multiplication.
 
@@ -248,7 +248,7 @@ structured_op: !LinalgStructuredOpConfig
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: dot
-  cpp_op_name: DotOp
+  cpp_class_name: DotOp
   doc: |-
     Performs a dot product of two vectors to a scalar result.
 
@@ -305,4 +305,160 @@ structured_op: !LinalgStructuredOpConfig
                 operands:
                 - !ScalarExpression
                   scalar_arg: B
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: fill_rng_2d
+  cpp_class_name: FillRng2DOp
+  doc: |-
+    Fills the output tensor with pseudo random numbers.
 
+    The operation generations pseudo random numbers using a linear congruential
+    generator. It provides no guarantees regarding the distribution of the
+    generated random numbers. Instead of generating the random numbers
+    sequentially, it instantiates one random number generator per data element
+    and runs them in parallel. The seed operand and the indices of the data
+    element seed the random number generation. The min and max operands limit
+    the range of the generated random numbers.
+
+    Note: The captures are hard-coded till there is capture support on the C++
+    side.
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !<LinalgTensorDef>
+    name: O
+    usage: output
+    shape: affine_map<()[s0, s1] -> (s0, s1)>
+    element_type_var: T
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<(d0, d1)[s0, s1] -> (d0, d1)>
+  iterator_types:
+  - parallel
+  - parallel
+  assignments:
+  - !ScalarAssign
+    arg: O
+    value: !ScalarExpression
+      symbolic_cast:
+        type_var: T
+        operands:
+        - !ScalarExpression
+          scalar_apply:
+            fn_name: add
+            operands:
+            - !ScalarExpression
+              scalar_apply:
+                fn_name: mul
+                operands:
+                - !ScalarExpression
+                  scalar_apply:
+                    fn_name: add
+                    operands:
+                    - !ScalarExpression
+                      symbolic_cast:
+                        type_var: F64
+                        operands:
+                        - !ScalarExpression
+                          scalar_const: '2147483647 : i64'
+                    - !ScalarExpression
+                      symbolic_cast:
+                        type_var: F64
+                        operands:
+                        - !ScalarExpression
+                          scalar_apply:
+                            fn_name: add
+                            operands:
+                            - !ScalarExpression
+                              scalar_apply:
+                                fn_name: mul
+                                operands:
+                                - !ScalarExpression
+                                  scalar_apply:
+                                    fn_name: add
+                                    operands:
+                                    - !ScalarExpression
+                                      symbolic_cast:
+                                        type_var: I32
+                                        operands:
+                                        - !ScalarExpression
+                                          scalar_index: 1
+                                    - !ScalarExpression
+                                      scalar_apply:
+                                        fn_name: add
+                                        operands:
+                                        - !ScalarExpression
+                                          scalar_apply:
+                                            fn_name: mul
+                                            operands:
+                                            - !ScalarExpression
+                                              scalar_apply:
+                                                fn_name: add
+                                                operands:
+                                                - !ScalarExpression
+                                                  symbolic_cast:
+                                                    type_var: I32
+                                                    operands:
+                                                    - !ScalarExpression
+                                                      scalar_index: 0
+                                                - !ScalarExpression
+                                                  symbolic_cast:
+                                                    type_var: I32
+                                                    operands:
+                                                    - !ScalarExpression
+                                                      scalar_const: '42 : i64'
+                                            - !ScalarExpression
+                                              symbolic_cast:
+                                                type_var: I32
+                                                operands:
+                                                - !ScalarExpression
+                                                  scalar_const: '1103515245 : i64'
+                                        - !ScalarExpression
+                                          symbolic_cast:
+                                            type_var: I32
+                                            operands:
+                                            - !ScalarExpression
+                                              scalar_const: '12345 : i64'
+                                - !ScalarExpression
+                                  symbolic_cast:
+                                    type_var: I32
+                                    operands:
+                                    - !ScalarExpression
+                                      scalar_const: '1103515245 : i64'
+                            - !ScalarExpression
+                              symbolic_cast:
+                                type_var: I32
+                                operands:
+                                - !ScalarExpression
+                                  scalar_const: '12345 : i64'
+                - !ScalarExpression
+                  scalar_apply:
+                    fn_name: mul
+                    operands:
+                    - !ScalarExpression
+                      scalar_apply:
+                        fn_name: sub
+                        operands:
+                        - !ScalarExpression
+                          symbolic_cast:
+                            type_var: F64
+                            operands:
+                            - !ScalarExpression
+                              scalar_const: '1000 : i64'
+                        - !ScalarExpression
+                          symbolic_cast:
+                            type_var: F64
+                            operands:
+                            - !ScalarExpression
+                              scalar_const: '-1000 : i64'
+                    - !ScalarExpression
+                      symbolic_cast:
+                        type_var: F64
+                        operands:
+                        - !ScalarExpression
+                          scalar_const: '2.3283063999999999E-10 : f64'
+            - !ScalarExpression
+              symbolic_cast:
+                type_var: F64
+                operands:
+                - !ScalarExpression
+                  scalar_const: '-1000 : i64'
