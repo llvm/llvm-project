@@ -23,6 +23,9 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO.h"
@@ -2330,7 +2333,6 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
 };
 
 ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
-  auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
   Function *F = getAnchorScope();
   ReversePostOrderTraversal<Function *> RPOT(F);
   auto NumSingleThreadedBBs = SingleThreadedBBs.size();
@@ -2366,17 +2368,12 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
     if (!C || !C->isZero())
       return false;
 
-    if (auto *CB = dyn_cast<CallBase>(Cmp->getOperand(0))) {
-      RuntimeFunction ThreadNumRuntimeIDs[] = {OMPRTL_omp_get_thread_num,
-                                               OMPRTL___kmpc_master,
-                                               OMPRTL___kmpc_global_thread_num};
-
-      for (const auto ThreadNumRuntimeID : ThreadNumRuntimeIDs) {
-        auto &RFI = OMPInfoCache.RFIs[ThreadNumRuntimeID];
-        if (CB->getCalledFunction() == RFI.Declaration)
-          return true;
-      }
-    }
+    if (auto *II = dyn_cast<IntrinsicInst>(Cmp->getOperand(0)))
+      if (II->getIntrinsicID() == Intrinsic::nvvm_read_ptx_sreg_tid_x)
+        return true;
+    if (auto *II = dyn_cast<IntrinsicInst>(Cmp->getOperand(0)))
+      if (II->getIntrinsicID() == Intrinsic::amdgcn_workitem_id_x)
+        return true;
 
     return false;
   };
