@@ -53,9 +53,9 @@ define void @test(<16 x i32> %a0, <16 x i32> %b0, <16 x i32> %a1, <16 x i32> %b1
 ; X86-NEXT:    addl %ecx, %edx
 ; X86-NEXT:    kmovw %k1, %ecx
 ; X86-NEXT:    addl %edi, %ecx
-; X86-NEXT:    addl %eax, %ecx
-; X86-NEXT:    addl %edx, %ecx
-; X86-NEXT:    movw %cx, (%esi)
+; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    addl %edx, %eax
+; X86-NEXT:    movw %ax, (%esi)
 ; X86-NEXT:    leal -8(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
@@ -107,10 +107,10 @@ define void @test(<16 x i32> %a0, <16 x i32> %b0, <16 x i32> %a1, <16 x i32> %b1
 ; X64-NEXT:    kmovw %k1, %ebx
 ; X64-NEXT:    addl %edi, %eax
 ; X64-NEXT:    addl %ecx, %edx
-; X64-NEXT:    leal (%rbx,%rsi), %ecx
-; X64-NEXT:    addl %eax, %ecx
-; X64-NEXT:    addl %edx, %ecx
-; X64-NEXT:    movw %cx, (%r14)
+; X64-NEXT:    addl %ebx, %eax
+; X64-NEXT:    addl %esi, %eax
+; X64-NEXT:    addl %edx, %eax
+; X64-NEXT:    movw %ax, (%r14)
 ; X64-NEXT:    leaq -16(%rbp), %rsp
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    popq %r14

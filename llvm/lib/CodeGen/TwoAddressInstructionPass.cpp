@@ -527,6 +527,11 @@ bool TwoAddressInstructionPass::isProfitableToCommute(Register RegA,
   if (isRevCopyChain(RegB, RegA, MaxDataFlowEdge))
     return false;
 
+  // Look for other target specific commute preference.
+  bool Commute;
+  if (TII->hasCommutePreference(*MI, Commute))
+    return Commute;
+
   // Since there are no intervening uses for both registers, then commute
   // if the def of RegC is closer. Its live interval is shorter.
   return LastDefB && LastDefC && LastDefC > LastDefB;
