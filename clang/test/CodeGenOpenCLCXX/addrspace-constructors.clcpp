@@ -2,8 +2,8 @@
 
 // CHECK: %struct.X = type { i32 }
 
-// CHECK: @ci = dso_local addrspace(2) constant i32 0
-// CHECK: @gi = dso_local addrspace(1) global i32 0
+// CHECK: @ci ={{.*}} addrspace(2) constant i32 0
+// CHECK: @gi ={{.*}} addrspace(1) global i32 0
 __constant int ci = 0;
 __global int gi = 0;
 
@@ -19,9 +19,9 @@ struct X {
   constexpr X(int x) __constant : x(x) {}
 };
 
-// CHECK: @cx1 = dso_local addrspace(2) constant %struct.X zeroinitializer
-// CHECK: @cx2 = dso_local addrspace(2) constant %struct.X { i32 1 }
-// CHECK: @gx = dso_local addrspace(1) global %struct.X zeroinitializer
+// CHECK: @cx1 ={{.*}} addrspace(2) constant %struct.X zeroinitializer
+// CHECK: @cx2 ={{.*}} addrspace(2) constant %struct.X { i32 1 }
+// CHECK: @gx ={{.*}} addrspace(1) global %struct.X zeroinitializer
 __constant X cx1;
 __constant X cx2(1);
 __global X gx;
