@@ -1792,6 +1792,9 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(ARMISD::VST2_UPD)
     MAKE_CASE(ARMISD::VST3_UPD)
     MAKE_CASE(ARMISD::VST4_UPD)
+    MAKE_CASE(ARMISD::VST1x2_UPD)
+    MAKE_CASE(ARMISD::VST1x3_UPD)
+    MAKE_CASE(ARMISD::VST1x4_UPD)
     MAKE_CASE(ARMISD::VST2LN_UPD)
     MAKE_CASE(ARMISD::VST3LN_UPD)
     MAKE_CASE(ARMISD::VST4LN_UPD)
@@ -14625,6 +14628,8 @@ static SDValue CombineBaseUpdate(SDNode *N,
     // Find the new opcode for the updating load/store.
     bool isLoadOp = true;
     bool isLaneOp = false;
+    // Workaround for vst1x and vld1x which do not have alignment operand.
+    bool hasAlignment = true;
     unsigned NewOpc = 0;
     unsigned NumVecs = 0;
     if (isIntrinsic) {
@@ -14642,9 +14647,6 @@ static SDValue CombineBaseUpdate(SDNode *N,
       case Intrinsic::arm_neon_vld1x2:
       case Intrinsic::arm_neon_vld1x3:
       case Intrinsic::arm_neon_vld1x4:
-      case Intrinsic::arm_neon_vst1x2:
-      case Intrinsic::arm_neon_vst1x3:
-      case Intrinsic::arm_neon_vst1x4:
       case Intrinsic::arm_neon_vld2dup:
       case Intrinsic::arm_neon_vld3dup:
       case Intrinsic::arm_neon_vld4dup:
@@ -14671,6 +14673,12 @@ static SDValue CombineBaseUpdate(SDNode *N,
         NumVecs = 3; isLoadOp = false; isLaneOp = true; break;
       case Intrinsic::arm_neon_vst4lane: NewOpc = ARMISD::VST4LN_UPD;
         NumVecs = 4; isLoadOp = false; isLaneOp = true; break;
+      case Intrinsic::arm_neon_vst1x2:   NewOpc = ARMISD::VST1x2_UPD;
+        NumVecs = 2; isLoadOp = false; hasAlignment = false; break;
+      case Intrinsic::arm_neon_vst1x3:   NewOpc = ARMISD::VST1x3_UPD;
+        NumVecs = 3; isLoadOp = false; hasAlignment = false; break;
+      case Intrinsic::arm_neon_vst1x4:   NewOpc = ARMISD::VST1x4_UPD;
+        NumVecs = 4; isLoadOp = false; hasAlignment = false; break;
       }
     } else {
       isLaneOp = true;
@@ -14774,7 +14782,9 @@ static SDValue CombineBaseUpdate(SDNode *N,
     } else {
       // Loads (and of course intrinsics) match the intrinsics' signature,
       // so just add all but the alignment operand.
-      for (unsigned i = AddrOpIdx + 1; i < N->getNumOperands() - 1; ++i)
+      unsigned LastOperand =
+          hasAlignment ? N->getNumOperands() - 1 : N->getNumOperands();
+      for (unsigned i = AddrOpIdx + 1; i < LastOperand; ++i)
         Ops.push_back(N->getOperand(i));
     }
 
