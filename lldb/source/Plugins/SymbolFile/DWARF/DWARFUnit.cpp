@@ -485,28 +485,37 @@ DWARFDataExtractor DWARFUnit::GetLocationData() const {
 }
 
 void DWARFUnit::SetRangesBase(dw_addr_t ranges_base) {
+  lldbassert(!m_rnglist_table_done);
+
   m_ranges_base = ranges_base;
-
-  if (GetVersion() < 5)
-    return;
-
-  if (auto table_or_error = ParseListTableHeader<llvm::DWARFDebugRnglistTable>(
-          m_dwarf.GetDWARFContext().getOrLoadRngListsData().GetAsLLVM(),
-          ranges_base, DWARF32))
-    m_rnglist_table = std::move(table_or_error.get());
-  else
-    GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-        "Failed to extract range list table at offset 0x%" PRIx64 ": %s",
-        ranges_base, toString(table_or_error.takeError()).c_str());
 }
 
 const llvm::Optional<llvm::DWARFDebugRnglistTable> &DWARFUnit::GetRnglist() {
+  if (GetVersion() >= 5 && !m_rnglist_table_done) {
+    m_rnglist_table_done = true;
+    if (auto table_or_error =
+            ParseListTableHeader<llvm::DWARFDebugRnglistTable>(
+                m_dwarf.GetDWARFContext().getOrLoadRngListsData().GetAsLLVM(),
+                m_ranges_base, DWARF32))
+      m_rnglist_table = std::move(table_or_error.get());
+    else
+      GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
+          "Failed to extract range list table at offset 0x%" PRIx64 ": %s",
+          m_ranges_base, toString(table_or_error.takeError()).c_str());
+  }
   return m_rnglist_table;
 }
 
+// This function is called only for DW_FORM_rnglistx.
 llvm::Optional<uint64_t> DWARFUnit::GetRnglistOffset(uint32_t Index) {
   if (!GetRnglist())
     return llvm::None;
+  if (!m_ranges_base) {
+    GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
+        "%8.8x: DW_FORM_rnglistx cannot be used without DW_AT_rnglists_base",
+        GetOffset());
+    return llvm::None;
+  }
   if (llvm::Optional<uint64_t> off = GetRnglist()->getOffsetEntry(
           m_dwarf.GetDWARFContext().getOrLoadRngListsData().GetAsLLVM(), Index))
     return *off + m_ranges_base;
