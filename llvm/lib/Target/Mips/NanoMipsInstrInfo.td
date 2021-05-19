@@ -178,6 +178,7 @@ def ANDI_NM : ArithLogicINM<"andi", uimm12_nm, GPR32NMOpnd, imm32ZExt12, and>;
 // P.SHIFT pool of instructions
 def SLL_NM  : ArithLogicINM<"sll", uimm5_nm, GPR32NMOpnd, imm32ZExt5, shl>;
 def SRL_NM  : ArithLogicINM<"srl", uimm5_nm, GPR32NMOpnd, imm32ZExt5, srl>;
+def SRA_NM  : ArithLogicINM<"sra", uimm5_nm, GPR32NMOpnd, imm32ZExt5, sra>;
 
 def ADDiu_NM : ArithLogicINM<"addiu", simm16_relaxed, GPR32NMOpnd,
                              imm32SExt16, add>;

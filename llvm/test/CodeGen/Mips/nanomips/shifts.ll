@@ -35,6 +35,13 @@ define i32 @test_srav(i32 %a, i32 %b) {
   ret i32 %srav
 }
 
+define i32 @test_sra(i32 %a) {
+; CHECK: sra $a0, $a0, 10
+; CHECK: SRA_NM
+  %sra = ashr i32 %a, 10
+  ret i32 %sra
+}
+
 define i32 @test_rotrv(i32 %a, i32 %b) {
 ; CHECK-NOT: srlv
 ; CHECK-NOT: sllv
