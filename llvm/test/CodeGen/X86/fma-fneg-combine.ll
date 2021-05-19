@@ -38,6 +38,16 @@ define <16 x float> @test2(<16 x float> %a, <16 x float> %b, <16 x float> %c) {
   ret <16 x float> %neg
 }
 
+define <16 x float> @test2_nsz(<16 x float> %a, <16 x float> %b, <16 x float> %c) {
+; CHECK-LABEL: test2_nsz:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vfnmsub213ps {{.*#+}} zmm0 = -(zmm1 * zmm0) - zmm2
+; CHECK-NEXT:    retq
+  %fma = call nsz <16 x float> @llvm.fma.v16f32(<16 x float> %a, <16 x float> %b, <16 x float> %c)
+  %neg = fneg <16 x float> %fma
+  ret <16 x float> %neg
+}
+
 define <16 x float> @test3(<16 x float> %a, <16 x float> %b, <16 x float> %c)  {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0:
@@ -45,6 +55,17 @@ define <16 x float> @test3(<16 x float> %a, <16 x float> %b, <16 x float> %c)  {
 ; CHECK-NEXT:    retq
   %t0 = fneg <16 x float> %b
   %t1 = call <16 x float> @llvm.fma.v16f32(<16 x float> %a, <16 x float> %t0, <16 x float> %c)
+  %sub.i = fneg <16 x float> %t1
+  ret <16 x float> %sub.i
+}
+
+define <16 x float> @test3_nsz(<16 x float> %a, <16 x float> %b, <16 x float> %c)  {
+; CHECK-LABEL: test3_nsz:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vfmsub213ps {{.*#+}} zmm0 = (zmm1 * zmm0) - zmm2
+; CHECK-NEXT:    retq
+  %t0 = fneg <16 x float> %b
+  %t1 = call nsz <16 x float> @llvm.fma.v16f32(<16 x float> %a, <16 x float> %t0, <16 x float> %c)
   %sub.i = fneg <16 x float> %t1
   ret <16 x float> %sub.i
 }
@@ -57,6 +78,18 @@ define <16 x float> @test4(<16 x float> %a, <16 x float> %b, <16 x float> %c) {
   %t0 = fneg <16 x float> %b
   %t1 = fneg <16 x float> %c
   %t2 = call <16 x float> @llvm.fma.v16f32(<16 x float> %a, <16 x float> %t0, <16 x float> %t1)
+  %sub.i = fsub <16 x float> <float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0>, %t2
+  ret <16 x float> %sub.i
+}
+
+define <16 x float> @test4_nsz(<16 x float> %a, <16 x float> %b, <16 x float> %c) {
+; CHECK-LABEL: test4_nsz:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vfmadd213ps {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
+; CHECK-NEXT:    retq
+  %t0 = fneg <16 x float> %b
+  %t1 = fneg <16 x float> %c
+  %t2 = call nsz <16 x float> @llvm.fma.v16f32(<16 x float> %a, <16 x float> %t0, <16 x float> %t1)
   %sub.i = fsub <16 x float> <float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0>, %t2
   ret <16 x float> %sub.i
 }
@@ -84,6 +117,18 @@ define <16 x float> @test6(<16 x float> %a, <16 x float> %b, <16 x float> %c) {
   ret <16 x float> %sub.i
 }
 
+define <16 x float> @test6_nsz(<16 x float> %a, <16 x float> %b, <16 x float> %c) {
+; CHECK-LABEL: test6_nsz:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vfmadd213ps {ru-sae}, %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    retq
+  %t0 = fneg <16 x float> %b
+  %t1 = fneg <16 x float> %c
+  %t2 = call nsz <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %a, <16 x float> %t0, <16 x float> %t1, i32 10)
+  %sub.i = fsub <16 x float> <float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0>, %t2
+  ret <16 x float> %sub.i
+}
+
 define <8 x float> @test7(<8 x float> %a, <8 x float> %b, <8 x float> %c) {
 ; CHECK-LABEL: test7:
 ; CHECK:       # %bb.0:
@@ -91,6 +136,17 @@ define <8 x float> @test7(<8 x float> %a, <8 x float> %b, <8 x float> %c) {
 ; CHECK-NEXT:    retq
   %t0 = fneg <8 x float> %c
   %t1 = call <8 x float> @llvm.fma.v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %t0)
+  %sub.i = fsub <8 x float> <float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0>, %t1
+  ret <8 x float> %sub.i
+}
+
+define <8 x float> @test7_nsz(<8 x float> %a, <8 x float> %b, <8 x float> %c) {
+; CHECK-LABEL: test7_nsz:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2
+; CHECK-NEXT:    retq
+  %t0 = fneg <8 x float> %c
+  %t1 = call nsz <8 x float> @llvm.fma.v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %t0)
   %sub.i = fsub <8 x float> <float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0>, %t1
   ret <8 x float> %sub.i
 }
@@ -112,6 +168,16 @@ define <8 x double> @test9(<8 x double> %a, <8 x double> %b, <8 x double> %c) {
 ; CHECK-NEXT:    vfnmsub213pd {{.*#+}} zmm0 = -(zmm1 * zmm0) - zmm2
 ; CHECK-NEXT:    retq
   %t0 = tail call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a, <8 x double> %b, <8 x double> %c, i32 4)
+  %sub.i = fneg <8 x double> %t0
+  ret <8 x double> %sub.i
+}
+
+define <8 x double> @test9_nsz(<8 x double> %a, <8 x double> %b, <8 x double> %c) {
+; CHECK-LABEL: test9_nsz:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vfnmsub213pd {{.*#+}} zmm0 = -(zmm1 * zmm0) - zmm2
+; CHECK-NEXT:    retq
+  %t0 = tail call nsz <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a, <8 x double> %b, <8 x double> %c, i32 4)
   %sub.i = fneg <8 x double> %t0
   ret <8 x double> %sub.i
 }
