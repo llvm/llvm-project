@@ -325,6 +325,7 @@ protected:
   dw_offset_t m_str_offsets_base = 0; // Value of DW_AT_str_offsets_base.
 
   llvm::Optional<llvm::DWARFDebugRnglistTable> m_rnglist_table;
+  bool m_rnglist_table_done = false;
   llvm::Optional<llvm::DWARFListTableHeader> m_loclist_table_header;
 
   const DIERef::Section m_section;
