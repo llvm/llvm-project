@@ -241,6 +241,7 @@ void CustomSection::finalizeInputSections() {
   std::vector<InputChunk *> newSections;
 
   for (InputChunk *s : inputSections) {
+    s->outputSec = this;
     MergeInputChunk *ms = dyn_cast<MergeInputChunk>(s);
     if (!ms) {
       newSections.push_back(s);
@@ -251,6 +252,7 @@ void CustomSection::finalizeInputSections() {
       mergedSection =
           make<SyntheticMergedChunk>(name, 0, WASM_SEG_FLAG_STRINGS);
       newSections.push_back(mergedSection);
+      mergedSection->outputSec = this;
     }
     mergedSection->addMergeChunk(ms);
   }
@@ -272,7 +274,6 @@ void CustomSection::finalizeContents() {
 
   for (InputChunk *section : inputSections) {
     assert(!section->discarded);
-    section->outputSec = this;
     section->outSecOff = payloadSize;
     payloadSize += section->getSize();
   }
