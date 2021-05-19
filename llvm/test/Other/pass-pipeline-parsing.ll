@@ -142,7 +142,7 @@
 ; RUN:     | FileCheck %s --check-prefix=CHECK-NESTED-FP-LP
 ; CHECK-NESTED-FP-LP: Running pass: NoOpLoopPass
 
-; RUN: opt -disable-output -debug-pass-manager -debug-pass-manager-verbose \
+; RUN: opt -disable-output -debug-pass-manager=verbose \
 ; RUN:     -passes='module(no-op-function,no-op-loop,no-op-cgscc,cgscc(no-op-function,no-op-loop),function(no-op-loop))' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-ADAPTORS
 ; CHECK-ADAPTORS: Running pass: ModuleToFunctionPassAdaptor
@@ -167,7 +167,7 @@
 ; RUN: opt -disable-output -debug-pass-manager \
 ; RUN:     -passes='module(function(no-op-function,loop(no-op-loop,no-op-loop)))' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-MANAGERS-NO-VERBOSE
-; RUN: opt -disable-output -debug-pass-manager -debug-pass-manager-verbose \
+; RUN: opt -disable-output -debug-pass-manager=verbose \
 ; RUN:     -passes='module(function(no-op-function,loop(no-op-loop,no-op-loop)))' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-MANAGERS
 ; CHECK-MANAGERS: Running pass: PassManager{{.*}}Function

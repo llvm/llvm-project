@@ -80,27 +80,28 @@ public:
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 };
 
+struct PrintPassOptions {
+  /// Print adaptors and pass managers.
+  bool Verbose = false;
+  /// Don't print information for analyses.
+  bool SkipAnalyses = false;
+  /// Indent based on hierarchy.
+  bool Indent = false;
+};
+
 // Debug logging for transformation and analysis passes.
 class PrintPassInstrumentation {
-  void printWithIdent(bool Expand, const Twine &Msg);
+  raw_ostream &print();
 
 public:
-  PrintPassInstrumentation(bool DebugLogging) : DebugLogging(DebugLogging) {}
+  PrintPassInstrumentation(bool Enabled, PrintPassOptions Opts)
+      : Enabled(Enabled), Opts(Opts) {}
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
 private:
-  bool DebugLogging;
-  int Ident = 0;
-};
-
-// Pass structure dumper
-class PassStructurePrinter {
-  int Ident = 0;
-  void printWithIdent(bool Expand, const Twine &Msg);
-
-public:
-  PassStructurePrinter() {}
-  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+  bool Enabled;
+  PrintPassOptions Opts;
+  int Indent = 0;
 };
 
 class PreservedCFGCheckerInstrumentation {
@@ -414,7 +415,6 @@ public:
 class StandardInstrumentations {
   PrintIRInstrumentation PrintIR;
   PrintPassInstrumentation PrintPass;
-  PassStructurePrinter StructurePrinter;
   TimePassesHandler TimePasses;
   OptNoneInstrumentation OptNone;
   OptBisectInstrumentation OptBisect;
@@ -427,7 +427,8 @@ class StandardInstrumentations {
   bool VerifyEach;
 
 public:
-  StandardInstrumentations(bool DebugLogging, bool VerifyEach = false);
+  StandardInstrumentations(bool DebugLogging, bool VerifyEach = false,
+                           PrintPassOptions PrintPassOpts = PrintPassOptions());
 
   // Register all the standard instrumentation callbacks. If \p FAM is nullptr
   // then PreservedCFGChecker is not enabled.
