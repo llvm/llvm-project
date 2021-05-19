@@ -16,9 +16,6 @@ class CppBitfieldsTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
-    # BitFields exhibit crashes in record layout on Windows
-    # (http://llvm.org/pr21800)
-    @skipIfWindows
     def test_and_run_command(self):
         """Test 'frame variable ...' on a variable with bitfields."""
         self.build()
