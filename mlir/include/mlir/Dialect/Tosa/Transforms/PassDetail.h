@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DIALECT_TOSA_TRANSFORMS_PASSDETAIL_H
-#define DIALECT_TOSA_TRANSFORMS_PASSDETAIL_H
+#ifndef MLIR_DIALECT_TOSA_TRANSFORMS_PASSDETAIL_H
+#define MLIR_DIALECT_TOSA_TRANSFORMS_PASSDETAIL_H
 
 #include "mlir/Pass/Pass.h"
 
@@ -18,4 +18,4 @@ namespace mlir {
 
 } // end namespace mlir
 
-#endif // DIALECT_TOSA_TRANSFORMS_PASSDETAIL_H
+#endif // MLIR_DIALECT_TOSA_TRANSFORMS_PASSDETAIL_H
