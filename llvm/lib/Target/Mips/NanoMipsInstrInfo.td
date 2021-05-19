@@ -89,9 +89,11 @@ class RegImmNM<string opstr, Operand Od, RegisterOperand RO,
 
 class LoadMemoryNM<string opstr, DAGOperand RO, DAGOperand MO,
                  SDPatternOperator OpNode = null_frag,
-                 ComplexPattern Addr = addr> :
+                   ComplexPattern Addr = addr,
+                   InstrItinClass itin> :
     InstNM<(outs RO:$rt), (ins MO:$addr), !strconcat(opstr, "\t$rt, $addr"),
-           [(set RO:$rt, (OpNode Addr:$addr))]> {
+           [(set RO:$rt, (OpNode Addr:$addr))],
+           itin> {
   let DecoderMethod = "DecodeMem";
   let canFoldAsLoad = 1;
   let mayLoad = 1;
@@ -100,9 +102,11 @@ class LoadMemoryNM<string opstr, DAGOperand RO, DAGOperand MO,
 
 class StoreMemoryNM<string opstr, DAGOperand RO, DAGOperand MO,
                     SDPatternOperator OpNode = null_frag,
-                    ComplexPattern Addr = addr> :
+                    ComplexPattern Addr = addr,
+                    InstrItinClass itin> :
     InstNM<(outs), (ins RO:$rt, MO:$addr), !strconcat(opstr, "\t$rt, $addr"),
-           [(OpNode RO:$rt, Addr:$addr)]> {
+           [(OpNode RO:$rt, Addr:$addr)],
+           itin> {
   let DecoderMethod = "DecodeMem";
   let mayStore = 1;
   string BaseOpcode = opstr;
@@ -190,9 +194,6 @@ def NOT_NM   : ArithLogicR16<"not", GPR3Opnd, not>;
 def XOR16_NM : ArithLogicR16<"xor16", GPR3Opnd>;
 def AND16_NM : ArithLogicR16<"and16", GPR3Opnd>;
 def OR16_NM  : ArithLogicR16<"or16", GPR3Opnd>;
-
-def LW_NM : LoadMemoryNM<"lw", GPR32NMOpnd, mem, load>, InstSize32;
-def SW_NM : StoreMemoryNM<"sw", GPR32NMOpnd, mem, store>, InstSize32;
 
 def JRC_NM : IndirectBranchNM<"jrc", GPR32NMOpnd>;
 
@@ -318,9 +319,8 @@ def BNEZC_NM : CBranchZeroNM<"beqzc", brtarget, setne, GPR32NMOpnd>;
 // TODO: native nanomips formats
 def BC_NM       : JumpFJ<jmptarget, "bc", br, bb, "b">, IsBranch, ISA_NANOMIPS;
 
-//def JAL  : MMRel, JumpLink<"jal", calltarget>, FJ<3>, ISA_MIPS1;
-
 }
+
 
 // Reversed branch conditions:
 def : Pat<(brcond (i32 (setugt GPR32NM:$lhs, GPR32NM:$rhs)), bb:$dst),
@@ -331,3 +331,38 @@ def : Pat<(brcond (i32 (setule GPR32NM:$lhs, GPR32NM:$rhs)), bb:$dst),
           (BGEUC_NM GPR32NM:$rhs, GPR32NM:$lhs, bb:$dst)>, ISA_NANOMIPS;
 def : Pat<(brcond (i32 (setle GPR32NM:$lhs, GPR32NM:$rhs)), bb:$dst),
           (BGEC_NM GPR32NM:$rhs, GPR32NM:$lhs, bb:$dst)>, ISA_NANOMIPS;
+
+
+//===----------------------------------------------------------------------===//
+//
+// Load / store instructions
+//
+//===----------------------------------------------------------------------===//
+
+def addrsimm9 : ComplexPattern<iPTR, 2, "selectIntAddrSImm9", [frameindex]>;
+
+let isCodeGenOnly = 1 in {
+
+def LW_NM : LoadMemoryNM<"lw", GPR32NMOpnd, mem, load, addrimm12, II_LW>, InstSize32;
+def LWs9_NM : LoadMemoryNM<"lw", GPR32NMOpnd, mem, load, addrsimm9, II_LW>, InstSize32;
+def SW_NM : StoreMemoryNM<"sw", GPR32NMOpnd, mem, store, addrimm12, II_SW>, InstSize32;
+def SWs9_NM : StoreMemoryNM<"sw", GPR32NMOpnd, mem, store, addrsimm9, II_SW>, InstSize32;
+
+def LHU_NM : LoadMemoryNM<"lhu", GPR32NMOpnd, mem, zextloadi16, addrimm12, II_LHU>, InstSize32;
+def LHUs9_NM : LoadMemoryNM<"lhu", GPR32NMOpnd, mem, zextloadi16, addrsimm9, II_LHU>, InstSize32;
+def LH_NM : LoadMemoryNM<"lh", GPR32NMOpnd, mem, sextloadi16, addrimm12, II_LH>, InstSize32;
+def LHs9_NM : LoadMemoryNM<"lh", GPR32NMOpnd, mem, sextloadi16, addrsimm9, II_LH>, InstSize32;
+def SH_NM : StoreMemoryNM<"sh", GPR32NMOpnd, mem, truncstorei16, addrimm12, II_SH>, InstSize32;
+def SHs9_NM : StoreMemoryNM<"sh", GPR32NMOpnd, mem, truncstorei16, addrsimm9, II_SH>, InstSize32;
+
+def LBU_NM : LoadMemoryNM<"lbu", GPR32NMOpnd, mem, zextloadi8, addrimm12, II_LBU>, InstSize32;
+def LBUs9_NM : LoadMemoryNM<"lbu", GPR32NMOpnd, mem, zextloadi8, addrsimm9, II_LBU>, InstSize32;
+def LB_NM : LoadMemoryNM<"lb", GPR32NMOpnd, mem, sextloadi8, addrimm12, II_LB>, InstSize32;
+def LBs9_NM : LoadMemoryNM<"lb", GPR32NMOpnd, mem, sextloadi8, addrsimm9, II_LB>, InstSize32;
+def SB_NM : StoreMemoryNM<"sb", GPR32NMOpnd, mem, truncstorei8, addrimm12, II_SB>, InstSize32;
+def SBs9_NM : StoreMemoryNM<"sb", GPR32NMOpnd, mem, truncstorei8, addrsimm9, II_SB>, InstSize32;
+
+// TODO: GP addressing
+// TODO: 'X' load/stores reg+reg
+
+}

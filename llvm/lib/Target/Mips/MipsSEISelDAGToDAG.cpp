@@ -458,6 +458,14 @@ bool MipsSEDAGToDAGISel::selectIntAddrLSL2MM(SDValue Addr, SDValue &Base,
   return selectAddrDefault(Addr, Base, Offset);
 }
 
+
+bool MipsSEDAGToDAGISel::selectIntAddrSImm9(SDValue Addr, SDValue &Base,
+                                            SDValue &Offset) const {
+  return selectAddrFrameIndex(Addr, Base, Offset) ||
+    selectAddrFrameIndexOffset(Addr, Base, Offset, 9) ||
+    selectAddrDefault(Addr, Base, Offset);
+}
+
 bool MipsSEDAGToDAGISel::selectIntAddrSImm10(SDValue Addr, SDValue &Base,
                                              SDValue &Offset) const {
 

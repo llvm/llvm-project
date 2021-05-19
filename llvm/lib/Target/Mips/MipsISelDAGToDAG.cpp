@@ -115,6 +115,12 @@ bool MipsDAGToDAGISel::selectIntAddrLSL2MM(SDValue Addr, SDValue &Base,
   return false;
 }
 
+bool MipsDAGToDAGISel::selectIntAddrSImm9(SDValue Addr, SDValue &Base,
+                                           SDValue &Offset) const {
+  llvm_unreachable("Unimplemented function.");
+  return false;
+}
+
 bool MipsDAGToDAGISel::selectIntAddrSImm10(SDValue Addr, SDValue &Base,
                                            SDValue &Offset) const {
   llvm_unreachable("Unimplemented function.");

@@ -80,6 +80,9 @@ private:
   bool selectIntAddrLSL2MM(SDValue Addr, SDValue &Base,
                            SDValue &Offset) const override;
 
+  bool selectIntAddrSImm9(SDValue Addr, SDValue &Base,
+                          SDValue &Offset) const override;
+
   bool selectIntAddrSImm10(SDValue Addr, SDValue &Base,
                            SDValue &Offset) const override;
 

@@ -687,6 +687,17 @@ def : InstRW<[GenericWriteCache], (instrs CACHE_MM)>;
 def : InstRW<[GenericWriteSync], (instrs SYNC_MM, SYNCI_MM)>;
 def : InstRW<[GenericWriteSync], (instrs GINVI_MMR6, GINVT_MMR6)>;
 
+// nanoMIPS
+// ========
+
+def : InstRW<[GenericWriteLoad], (instrs LW_NM, LWs9_NM, 
+                                  LHU_NM, LHUs9_NM, LH_NM, LHs9_NM,
+                                  LBU_NM, LBUs9_NM, LB_NM, LBs9_NM)>;
+
+def: InstRW<[GenericWriteStore], (instrs SW_NM, SWs9_NM,
+                                  SH_NM, SHs9_NM,
+                                  SB_NM, SBs9_NM)>;
+
 // microMIPS32r6
 // =============
 
@@ -725,13 +736,6 @@ def : InstRW<[GenericWriteLoad], (instrs LWUPC, LDPC)>;
 def : InstRW<[GenericWriteLoad], (instrs LLD_R6, LL64_R6)>;
 
 def : InstRW<[GenericWriteStoreSC], (instrs SC64_R6, SCD_R6)>;
-
-// nanoMIPS
-// ========
-
-def : InstRW<[GenericWriteStore], (instrs SW_NM)>;
-
-def : InstRW<[GenericWriteStore], (instrs LW_NM)>;
 
 // MIPSR6 CRC ASE - hasCRC
 // =======================

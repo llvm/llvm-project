@@ -1,4 +1,5 @@
-class InstNM<dag outs, dag ins, string asmstr, list<dag> pattern>:
+class InstNM<dag outs, dag ins, string asmstr, list<dag> pattern,
+             InstrItinClass itin = IIPseudo>:
   Instruction, PredicateControl, ISA_NANOMIPS
 {
   let Namespace = "Mips";
@@ -13,6 +14,8 @@ class InstNM<dag outs, dag ins, string asmstr, list<dag> pattern>:
   let Pattern   = pattern;
 
   bit isCTI = 0; // Any form of Control Transfer Instruction.
+
+  let Itinerary = itin;
 }
 
 class InstSize16 {
