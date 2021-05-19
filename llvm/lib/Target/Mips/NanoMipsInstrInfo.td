@@ -169,7 +169,8 @@ def MOD_NM   : DivMod<"mod", srem>;
 def DIVU_NM  : DivMod<"divu", udiv>;
 def MODU_NM  : DivMod<"modu", urem>;
 
-def ORI_NM : ArithLogicINM<"ori", uimm12_nm, GPR32NMOpnd, imm32ZExt12, or>;
+def ORI_NM  : ArithLogicINM<"ori", uimm12_nm, GPR32NMOpnd, imm32ZExt12, or>;
+def XORI_NM : ArithLogicINM<"xori", uimm12_nm, GPR32NMOpnd, imm32ZExt12, xor>;
 
 def ADDiu_NM : ArithLogicINM<"addiu", simm16_relaxed, GPR32NMOpnd,
                              imm32SExt16, add>;
