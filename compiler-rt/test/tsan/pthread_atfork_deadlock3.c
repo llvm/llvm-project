@@ -2,11 +2,11 @@
 // Regression test for
 // https://groups.google.com/g/thread-sanitizer/c/TQrr4-9PRYo/m/HFR4FMi6AQAJ
 #include "test.h"
+#include <errno.h>
+#include <signal.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <errno.h>
-#include <string.h>
-#include <signal.h>
 
 long glob = 0;
 
@@ -64,7 +64,7 @@ int main() {
   }
   pthread_atfork(atfork, afterfork, afterfork_child);
   pthread_t t;
-  pthread_create(&t, NULL, worker, (void*)pthread_self());
+  pthread_create(&t, NULL, worker, (void *)pthread_self());
   barrier_wait(&barrier);
   pid_t pid = fork();
   if (pid < 0) {
