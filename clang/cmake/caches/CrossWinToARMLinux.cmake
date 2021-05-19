@@ -10,6 +10,7 @@
 #
 # Configure:
 #  cmake -G Ninja ^
+#       -DTARGET_TRIPLE=armv7-linux-gnueabihf ^
 #       -DCMAKE_INSTALL_PREFIX=../install ^
 #       -DDEFAULT_SYSROOT=<path-to-develop-arm-linux-root-fs> ^
 #       -DLLVM_AR=<llvm_obj_root>/bin/llvm-ar[.exe] ^
@@ -20,10 +21,14 @@
 #       <llvm_src_root>/llvm-project/llvm
 # Build:
 #  cmake --build . --target install
-# Test:
+# Tests:
 #  cmake --build . --target check-llvm
 #  cmake --build . --target check-clang
 #  cmake --build . --target check-lld
+#  cmake --build . --target check-compiler-rt
+#  cmake --build . --target check-cxxabi
+#  cmake --build . --target check-unwind
+#  cmake --build . --target check-cxx
 
 # LLVM_PROJECT_DIR is the path to the llvm-project directory.
 # The right way to compute it would probably be to use "${CMAKE_SOURCE_DIR}/../",
@@ -40,28 +45,52 @@ endif()
 if (DEFINED LLVM_AR)
   set(CMAKE_AR "${LLVM_AR}" CACHE STRING "")
 endif()
-
 if (NOT DEFINED LLVM_TARGETS_TO_BUILD)
   set(LLVM_TARGETS_TO_BUILD "ARM" CACHE STRING "")
 endif()
+if (NOT DEFINED LLVM_ENABLE_ASSERTIONS)
+  set(LLVM_ENABLE_ASSERTIONS ON CACHE BOOL "")
+endif()
+if (NOT DEFINED LLVM_ENABLE_PROJECTS)
+  set(LLVM_ENABLE_PROJECTS "clang;clang-tools-extra;lld" CACHE STRING "")
+endif()
+if (NOT DEFINED LLVM_ENABLE_RUNTIMES)
+  set(LLVM_ENABLE_RUNTIMES "compiler-rt;libunwind;libcxxabi;libcxx" CACHE STRING "")
+endif()
 
-if (NOT DEFINED CMAKE_C_COMPILER_TARGET)
-  # Required if COMPILER_RT_DEFAULT_TARGET_ONLY is ON
-  set(CMAKE_C_COMPILER_TARGET "armv7-linux-gnueabihf" CACHE STRING "")
+if (NOT DEFINED TARGET_TRIPLE)
+  set(TARGET_TRIPLE "armv7-unknown-linux-gnueabihf")
+else()
+  #NOTE: we must normalize specified target triple to a fully specified triple,
+  # including the vendor part. It is necessary to synchronize the runtime library
+  # installation path and operable target triple by Clang to get a correct runtime
+  # path through `-print-runtime-dir` Clang option.
+  string(REPLACE "-" ";" TARGET_TRIPLE "${TARGET_TRIPLE}")
+  list(LENGTH TARGET_TRIPLE TARGET_TRIPLE_LEN)
+  if (TARGET_TRIPLE_LEN LESS 3)
+    message(FATAL_ERROR "invalid target triple")
+  endif()
+  # We suppose missed vendor's part.
+  if (TARGET_TRIPLE_LEN LESS 4)
+    list(INSERT TARGET_TRIPLE 1 "unknown")
+  endif()
+  string(REPLACE ";" "-" TARGET_TRIPLE "${TARGET_TRIPLE}")
 endif()
 
 if (NOT DEFINED CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING "")
 endif()
 
+message(STATUS "Toolchain target triple: ${TARGET_TRIPLE}")
+
 set(CMAKE_CROSSCOMPILING                    ON CACHE BOOL "")
 set(CMAKE_CL_SHOWINCLUDES_PREFIX            "Note: including file: " CACHE STRING "")
+# Required if COMPILER_RT_DEFAULT_TARGET_ONLY is ON
+set(CMAKE_C_COMPILER_TARGET 				"${TARGET_TRIPLE}" CACHE STRING "")
 
-set(LLVM_ENABLE_ASSERTIONS                  ON CACHE BOOL "")
-set(LLVM_ENABLE_PROJECTS                    "clang;clang-tools-extra;lld" CACHE STRING "")
-set(LLVM_ENABLE_RUNTIMES                    "compiler-rt;libunwind;libcxxabi;libcxx" CACHE STRING "")
-set(LLVM_DEFAULT_TARGET_TRIPLE              "${CMAKE_C_COMPILER_TARGET}" CACHE STRING "")
-set(LLVM_TARGET_ARCH                        "${CMAKE_C_COMPILER_TARGET}" CACHE STRING "")
+set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR		ON CACHE BOOL "")
+set(LLVM_DEFAULT_TARGET_TRIPLE              "${TARGET_TRIPLE}" CACHE STRING "")
+set(LLVM_TARGET_ARCH                        "${TARGET_TRIPLE}" CACHE STRING "")
 set(LLVM_LIT_ARGS                           "-vv ${LLVM_LIT_ARGS}" CACHE STRING "" FORCE)
 
 set(CLANG_DEFAULT_LINKER                    "lld" CACHE STRING "")
@@ -76,7 +105,7 @@ set(COMPILER_RT_DEFAULT_TARGET_ONLY         ON CACHE BOOL "")
 set(COMPILER_RT_INCLUDE_TESTS               ON CACHE BOOL "")
 
 set(LIBUNWIND_USE_COMPILER_RT               ON CACHE BOOL "")
-set(LIBUNWIND_TARGET_TRIPLE                 "${CMAKE_C_COMPILER_TARGET}" CACHE STRING "")
+set(LIBUNWIND_TARGET_TRIPLE                 "${TARGET_TRIPLE}" CACHE STRING "")
 set(LIBUNWIND_SYSROOT                       "${DEFAULT_SYSROOT}" CACHE STRING "")
 set(LIBUNWIND_ENABLE_SHARED                 OFF CACHE BOOL "")
 
@@ -84,7 +113,7 @@ set(LIBCXXABI_USE_LLVM_UNWINDER             ON CACHE BOOL "")
 set(LIBCXXABI_ENABLE_STATIC_UNWINDER        ON CACHE BOOL "")
 set(LIBCXXABI_USE_COMPILER_RT               ON CACHE BOOL "")
 set(LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS OFF CACHE BOOL "")
-set(LIBCXXABI_TARGET_TRIPLE                 "${CMAKE_C_COMPILER_TARGET}" CACHE STRING "")
+set(LIBCXXABI_TARGET_TRIPLE                 "${TARGET_TRIPLE}" CACHE STRING "")
 set(LIBCXXABI_SYSROOT                       "${DEFAULT_SYSROOT}" CACHE STRING "")
 set(LIBCXXABI_LINK_TESTS_WITH_SHARED_LIBCXXABI OFF CACHE BOOL "")
 set(LIBCXXABI_LINK_TESTS_WITH_SHARED_LIBCXX    OFF CACHE BOOL "")
@@ -92,7 +121,7 @@ set(LIBCXX_LINK_TESTS_WITH_SHARED_LIBCXXABI    OFF CACHE BOOL "")
 set(LIBCXX_LINK_TESTS_WITH_SHARED_LIBCXX       OFF CACHE BOOL "")
 
 set(LIBCXX_USE_COMPILER_RT                  ON CACHE BOOL "")
-set(LIBCXX_TARGET_TRIPLE                    "${CMAKE_C_COMPILER_TARGET}" CACHE STRING "")
+set(LIBCXX_TARGET_TRIPLE                    "${TARGET_TRIPLE}" CACHE STRING "")
 set(LIBCXX_SYSROOT                          "${DEFAULT_SYSROOT}" CACHE STRING "")
 set(LIBCXX_ENABLE_SHARED                    OFF CACHE BOOL "")
 set(LIBCXX_CXX_ABI                          "libcxxabi" CACHE STRING "")
