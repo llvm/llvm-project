@@ -229,8 +229,7 @@ void use_myEnum() {
 // inherited be implementations of those protocol methods.
 @protocol AvailabilityP2
 @optional
--(void)methodA __attribute__((availability(macosx,introduced=10.1,deprecated=10.2))); // expected-note 4{{'methodA' has been explicitly marked deprecated here}} \
-// expected-note 2{{protocol method is here}}
+-(void)methodA __attribute__((availability(macosx,introduced=10.1,deprecated=10.2))); // expected-note 4{{'methodA' has been explicitly marked deprecated here}}
 -(void)methodB __attribute__((unavailable)); // expected-note 4{{'methodB' has been explicitly marked unavailable here}}
 -(void)methodC;
 @end
@@ -279,7 +278,7 @@ void testImplementsAvailabilityP2b(ImplementsAvailabilityP2b *obj) {
 
 __attribute__((objc_root_class))
 @interface ImplementsAvailabilityP2c <AvailabilityP2>
--(void)methodA __attribute__((availability(macosx,introduced=10.2))); // expected-warning{{method introduced after the protocol method it implements on macOS (10.2 vs. 10.1)}}
+-(void)methodA __attribute__((availability(macosx,introduced=10.2)));
 -(void)methodB __attribute__((unavailable));
 @end
 
@@ -288,7 +287,7 @@ __attribute__((objc_root_class))
 @end
 
 @implementation ImplementsAvailabilityP2d
--(void)methodA __attribute__((availability(macosx,introduced=10.2))) // expected-warning{{method introduced after the protocol method it implements on macOS (10.2 vs. 10.1)}}
+-(void)methodA __attribute__((availability(macosx,introduced=10.2)))
 {
 }
 -(void)methodB __attribute__((unavailable)) {
