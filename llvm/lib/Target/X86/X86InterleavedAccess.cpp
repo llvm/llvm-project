@@ -733,9 +733,6 @@ bool X86InterleavedAccessGroup::lowerIntoOptimizedSequence() {
     // results by generating some sort of (optimized) target-specific
     // instructions.
 
-    if (ShuffleTy->getNumElements() != NumSubVecElems)
-      return false;
-
     switch (NumSubVecElems) {
     default:
       return false;
