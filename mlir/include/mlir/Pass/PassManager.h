@@ -37,6 +37,7 @@ class PassInstrumentor;
 namespace detail {
 struct OpPassManagerImpl;
 class OpToOpPassAdaptor;
+class PassCrashReproducerGenerator;
 struct PassExecutionState;
 } // end namespace detail
 
@@ -373,12 +374,11 @@ private:
   /// Dump the statistics of the passes within this pass manager.
   void dumpStatistics();
 
-  /// Run the pass manager with crash recover enabled.
+  /// Run the pass manager with crash recovery enabled.
   LogicalResult runWithCrashRecovery(Operation *op, AnalysisManager am);
-  /// Run the given passes with crash recover enabled.
-  LogicalResult
-  runWithCrashRecovery(MutableArrayRef<std::unique_ptr<Pass>> passes,
-                       Operation *op, AnalysisManager am);
+
+  /// Run the passes of the pass manager, and return the result.
+  LogicalResult runPasses(Operation *op, AnalysisManager am);
 
   /// Context this PassManager was initialized with.
   MLIRContext *context;
@@ -389,17 +389,15 @@ private:
   /// A manager for pass instrumentations.
   std::unique_ptr<PassInstrumentor> instrumentor;
 
-  /// An optional factory to use when generating a crash reproducer if valid.
-  ReproducerStreamFactory crashReproducerStreamFactory;
+  /// An optional crash reproducer generator, if this pass manager is setup to
+  /// generate reproducers.
+  std::unique_ptr<detail::PassCrashReproducerGenerator> crashReproGenerator;
 
   /// A hash key used to detect when reinitialization is necessary.
   llvm::hash_code initializationKey;
 
   /// Flag that specifies if pass timing is enabled.
   bool passTiming : 1;
-
-  /// Flag that specifies if the generated crash reproducer should be local.
-  bool localReproducer : 1;
 
   /// A flag that indicates if the IR should be verified in between passes.
   bool verifyPasses : 1;
