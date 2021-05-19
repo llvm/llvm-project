@@ -15,6 +15,15 @@ The LLVM Security Group has the following goals:
 
 The LLVM Security Group is private. It is composed of trusted LLVM contributors. Its discussions remain within the Security Group (plus issue reporter and key experts) while an issue is being investigated. After an issue becomes public, the entirety of the group’s discussions pertaining to that issue also become public.
 
+.. _report-security-issue:
+
+How to report a security issue?
+===============================
+
+To report a security issue in the LLVM Project, please `open a new issue`_ in the LLVM project page, on the chromium issue tracker.  Be sure to use the "Security bug report" template.
+
+We aim to acknowledge your report within two business days since you first reach out. If you do not receive any response by then, you can escalate by sending a message to the `llvm-dev mailing list`_ asking to get in touch with someone from the LLVM Security Group. **The escalation mailing list is public**: avoid discussing or mentioning the specific issue when posting on it.
+
 
 Group Composition
 =================
@@ -141,22 +150,28 @@ Members of the LLVM Security Group are expected to:
 Discussion Medium
 =================
 
-*FUTURE*: this section needs more work! Where discussions occur is influenced by other factors that are still open in this document. We can figure it out later.
-See other existing systems: `chromium issue tracker`_, tentative `GitHub security`_. It seems like bugzilla and email don’t meet security requirements.
+*FUTURE*: this section needs more work! Where discussions occur is influenced by other factors that are still open in this document. We can finalize it later.
+It seems like bugzilla and email don't meet security requirements.
 
 The medium used to host LLVM Security Group discussions is security-sensitive. It should therefore run on infrastructure which can meet our security expectations.
 
-This is where all security discussions occur:
+We are currently using the `chromium issue tracker`_ (as the `llvm` project) to have security discussions:
 
 * File security issues.
-* Nominate new members.
-* Propose member removal.
-* Suggest policy changes.
 * Discuss security improvements to LLVM.
-
 
 When a new issue is filed, a template is provided to help issue reporters provide all relevant information.
 
+*FUTURE*: The `Github security`_ workflow allows publicly disclosing resolved security issues on the github project page, and we would be interested in adopting it for that purpose.  However, it does not easily allow confidential reporting of security issues, as creating Github Security Advisories is currently restricted to Github project admins.  That is why we have started with the `chromium issue tracker`_ instead.
+
+
+We also occasionally need to discuss logistics of the LLVM Security Group itself:
+
+* Nominate new members.
+* Propose member removal.
+* Suggest policy changes.
+
+We often have these discussions publicly, in our :ref:`monthly public sync-up call <online-sync-ups>` and on public LLVM mailing lists.  For internal or confidential discussions, we also use a private mailing list.
 
 Process
 =======
@@ -204,18 +219,9 @@ The parts of the LLVM Project which are currently treated as non-security sensit
 * Language front-ends, such as clang, for which a malicious input file can cause undesirable behavior. For example, a maliciously-crafter C or Rust source file can cause arbitrary code to execute in LLVM. These parts of LLVM haven't been hardened, and compiling untrusted code usually also includes running utilities such as `make` which can more readily perform malicious things.
 * *FUTURE*: this section will be expanded.
 
-.. _report-security-issue:
-
-How to report a security issue?
-===============================
-
-*FUTURE*: this section will be expanded once we’ve figured out other details above. In the meantime, if you found a security issue please follow directly the escalation instructions below.
-
-Not everyone who wants to report a security issue will be familiar with LLVM, its community, and processes. Therefore, this needs to be easy to find on the LLVM website, and set clear expectations to issue reporters.
-
-We aim to acknowledge your report within two business days since you first reach out. If you do not receive any response by then, you can escalate by sending a message to the `llvm-dev mailing list`_ asking to get in touch with someone from the LLVM Security Group. **The escalation mailing list is public**: avoid discussing or mentioning the specific issue when posting on it.
 
 .. _CVE process: https://cve.mitre.org
+.. _open a new issue: https://bugs.chromium.org/p/llvm/issues/entry
 .. _chromium issue tracker: https://crbug.com
 .. _GitHub security: https://help.github.com/en/articles/about-maintainer-security-advisories
 .. _llvm-dev mailing list: https://lists.llvm.org/mailman/listinfo/llvm-dev
