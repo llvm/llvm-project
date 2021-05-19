@@ -4,6 +4,7 @@
 
 ; CHECK-LABEL: define internal fastcc void @f.resume({{.*}})
 ; CHECK:       entry.resume:
+; CHECK:        call void @llvm.dbg.declare(
 ; CHECK:        call void @llvm.dbg.declare(metadata %f.Frame* %FramePtr, metadata ![[PROMISEVAR_RESUME:[0-9]+]], metadata !DIExpression(
 ;
 ; CHECK: ![[PROMISEVAR_RESUME]] = !DILocalVariable(name: "__promise"
