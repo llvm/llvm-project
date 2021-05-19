@@ -40,3 +40,11 @@ define void @store(ptr %a, i32 %i) {
     store i32 %i, ptr %a
     ret void
 }
+
+; CHECK: define void @gep(ptr %a)
+; CHECK:     %b = getelementptr i8, ptr %a, i32 2
+; CHECK:     ret void
+define void @gep(ptr %a) {
+    %b = getelementptr i8, ptr %a, i32 2
+    ret void
+}
