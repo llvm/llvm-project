@@ -2428,44 +2428,7 @@ bool llvm::removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU,
   if (MSSAU)
     MSSAU->removeBlocks(BlocksToRemove);
 
-  // Loop over all of the basic blocks that are up for removal, dropping all of
-  // their internal references. Update DTU if available.
-  std::vector<DominatorTree::UpdateType> Updates;
-  for (auto *BB : BlocksToRemove) {
-    SmallSet<BasicBlock *, 8> UniqueSuccessors;
-    for (BasicBlock *Successor : successors(BB)) {
-      // Only remove references to BB in reachable successors of BB.
-      if (Reachable.count(Successor))
-        Successor->removePredecessor(BB);
-      if (DTU)
-        UniqueSuccessors.insert(Successor);
-    }
-    BB->dropAllReferences();
-    if (DTU) {
-      Instruction *TI = BB->getTerminator();
-      assert(TI && "Basic block should have a terminator");
-      // Terminators like invoke can have users. We have to replace their users,
-      // before removing them.
-      if (!TI->use_empty())
-        TI->replaceAllUsesWith(UndefValue::get(TI->getType()));
-      TI->eraseFromParent();
-      new UnreachableInst(BB->getContext(), BB);
-      assert(succ_empty(BB) && "The successor list of BB isn't empty before "
-                               "applying corresponding DTU updates.");
-      Updates.reserve(Updates.size() + UniqueSuccessors.size());
-      for (auto *UniqueSuccessor : UniqueSuccessors)
-        Updates.push_back({DominatorTree::Delete, BB, UniqueSuccessor});
-    }
-  }
-
-  if (DTU) {
-    DTU->applyUpdates(Updates);
-    for (auto *BB : BlocksToRemove)
-      DTU->deleteBB(BB);
-  } else {
-    for (auto *BB : BlocksToRemove)
-      BB->eraseFromParent();
-  }
+  DeleteDeadBlocks(BlocksToRemove.takeVector(), DTU);
 
   return Changed;
 }
