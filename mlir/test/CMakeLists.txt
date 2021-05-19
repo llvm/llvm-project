@@ -63,6 +63,7 @@ set(MLIR_TEST_DEPENDS
   mlir-capi-sparse-tensor-test
   mlir-cpu-runner
   mlir-linalg-ods-gen
+  mlir-linalg-ods-yaml-gen
   mlir-lsp-server
   mlir-opt
   mlir-reduce
