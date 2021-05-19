@@ -22,8 +22,7 @@ class BitVector;
 
 namespace mlir {
 class TypeRange;
-template <typename ValueRangeT>
-class ValueTypeRange;
+template <typename ValueRangeT> class ValueTypeRange;
 
 /// `Block` represents an ordered list of `Operation`s.
 class Block : public IRObjectWithUseList<BlockOperand>,
@@ -88,21 +87,18 @@ public:
   bool args_empty() { return arguments.empty(); }
 
   /// Add one value to the argument list.
-  BlockArgument addArgument(Type type, Optional<Location> loc = {});
+  BlockArgument addArgument(Type type);
 
   /// Insert one value to the position in the argument list indicated by the
   /// given iterator. The existing arguments are shifted. The block is expected
   /// not to have predecessors.
-  BlockArgument insertArgument(args_iterator it, Type type,
-                               Optional<Location> loc = {});
+  BlockArgument insertArgument(args_iterator it, Type type);
 
   /// Add one argument to the argument list for each type specified in the list.
-  iterator_range<args_iterator> addArguments(TypeRange types,
-                                             ArrayRef<Location> locs = {});
+  iterator_range<args_iterator> addArguments(TypeRange types);
 
   /// Add one value to the argument list at the specified position.
-  BlockArgument insertArgument(unsigned index, Type type,
-                               Optional<Location> loc = {});
+  BlockArgument insertArgument(unsigned index, Type type);
 
   /// Erase the argument at 'index' and remove it from the argument list.
   void eraseArgument(unsigned index);
@@ -181,18 +177,15 @@ public:
 
   /// Return an iterator range over the operations within this block that are of
   /// 'OpT'.
-  template <typename OpT>
-  iterator_range<op_iterator<OpT>> getOps() {
+  template <typename OpT> iterator_range<op_iterator<OpT>> getOps() {
     auto endIt = end();
     return {detail::op_filter_iterator<OpT, iterator>(begin(), endIt),
             detail::op_filter_iterator<OpT, iterator>(endIt, endIt)};
   }
-  template <typename OpT>
-  op_iterator<OpT> op_begin() {
+  template <typename OpT> op_iterator<OpT> op_begin() {
     return detail::op_filter_iterator<OpT, iterator>(begin(), end());
   }
-  template <typename OpT>
-  op_iterator<OpT> op_end() {
+  template <typename OpT> op_iterator<OpT> op_end() {
     return detail::op_filter_iterator<OpT, iterator>(end(), end());
   }
 

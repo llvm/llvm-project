@@ -1,9 +1,7 @@
 // RUN: mlir-opt %s -test-legalize-type-conversion -allow-unregistered-dialect -split-input-file -verify-diagnostics | FileCheck %s
 
-
-func @test_invalid_arg_materialization(
-  // expected-error@below {{failed to materialize conversion for block argument #0 that remained live after conversion, type was 'i16'}}
-  %arg0: i16) {
+// expected-error@below {{failed to materialize conversion for block argument #0 that remained live after conversion, type was 'i16'}}
+func @test_invalid_arg_materialization(%arg0: i16) {
   // expected-note@below {{see existing live user here}}
   "foo.return"(%arg0) : (i16) -> ()
 }
