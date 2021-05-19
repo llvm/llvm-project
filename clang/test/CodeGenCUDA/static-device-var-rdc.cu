@@ -51,14 +51,14 @@
 // HOST-DAG: @_ZL1y = internal global i32 undef
 
 // Test normal static device variables
-// INT-DEV-DAG: @_ZL1x = dso_local addrspace(1) externally_initialized global i32 0
+// INT-DEV-DAG: @_ZL1x = addrspace(1) externally_initialized global i32 0
 // INT-HOST-DAG: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"_ZL1x\00"
 
 // Test externalized static device variables
-// EXT-DEV-DAG: @_ZL1x.static.[[HASH:.*]] = dso_local addrspace(1) externally_initialized global i32 0
+// EXT-DEV-DAG: @_ZL1x.static.[[HASH:.*]] = addrspace(1) externally_initialized global i32 0
 // EXT-HOST-DAG: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"_ZL1x.static.[[HASH:.*]]\00"
 
-// POSTFIX: @_ZL1x.static.[[HASH:.*]] = dso_local addrspace(1) externally_initialized global i32 0
+// POSTFIX: @_ZL1x.static.[[HASH:.*]] = addrspace(1) externally_initialized global i32 0
 // POSTFIX: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"_ZL1x.static.[[HASH]]\00"
 
 static __device__ int x;
@@ -69,11 +69,11 @@ static __device__ int x;
 static __device__ int x2;
 
 // Test normal static device variables
-// INT-DEV-DAG: @_ZL1y = dso_local addrspace(4) externally_initialized global i32 0
+// INT-DEV-DAG: @_ZL1y = addrspace(4) externally_initialized global i32 0
 // INT-HOST-DAG: @[[DEVNAMEY:[0-9]+]] = {{.*}}c"_ZL1y\00"
 
 // Test externalized static device variables
-// EXT-DEV-DAG: @_ZL1y.static.[[HASH]] = dso_local addrspace(4) externally_initialized global i32 0
+// EXT-DEV-DAG: @_ZL1y.static.[[HASH]] = addrspace(4) externally_initialized global i32 0
 // EXT-HOST-DAG: @[[DEVNAMEY:[0-9]+]] = {{.*}}c"_ZL1y.static.[[HASH]]\00"
 
 static __constant__ int y;
