@@ -21,6 +21,13 @@ define i32 @test_srlv(i32 %a, i32 %b) {
   ret i32 %srlv
 }
 
+define i32 @test_srl(i32 %a) {
+; CHECK: srl $a0, $a0, 10
+; CHECK: SRL_NM
+  %srl = lshr i32 %a, 10
+  ret i32 %srl
+}
+
 define i32 @test_srav(i32 %a, i32 %b) {
 ; CHECK: srav $a0, $a0, $a1
 ; CHECK: SRAV_NM
