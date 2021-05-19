@@ -4426,10 +4426,7 @@ bool SimplifyCFGOpt::simplifySingleResume(ResumeInst *RI) {
   }
 
   // The landingpad is now unreachable.  Zap it.
-  if (DTU)
-    DTU->deleteBB(BB);
-  else
-    BB->eraseFromParent();
+  DeleteDeadBlock(BB, DTU);
   return true;
 }
 
