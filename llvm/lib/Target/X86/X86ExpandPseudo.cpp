@@ -95,7 +95,7 @@ void X86ExpandPseudo::ExpandICallBranchFunnel(
   ++InsPt;
 
   std::vector<std::pair<MachineBasicBlock *, unsigned>> TargetMBBs;
-  DebugLoc DL = JTInst->getDebugLoc();
+  const DebugLoc &DL = JTInst->getDebugLoc();
   MachineOperand Selector = JTInst->getOperand(0);
   const GlobalValue *CombinedGlobal = JTInst->getOperand(1).getGlobal();
 
@@ -193,7 +193,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MBBI) {
   MachineInstr &MI = *MBBI;
   unsigned Opcode = MI.getOpcode();
-  DebugLoc DL = MBBI->getDebugLoc();
+  const DebugLoc &DL = MBBI->getDebugLoc();
   switch (Opcode) {
   default:
     return false;
@@ -546,7 +546,7 @@ void X86ExpandPseudo::ExpandVastartSaveXmmRegs(
 
   MachineFunction *Func = EntryBlk->getParent();
   const TargetInstrInfo *TII = STI->getInstrInfo();
-  DebugLoc DL = VAStartPseudoInstr->getDebugLoc();
+  const DebugLoc &DL = VAStartPseudoInstr->getDebugLoc();
   Register CountReg = VAStartPseudoInstr->getOperand(0).getReg();
 
   // Calculate liveins for newly created blocks.

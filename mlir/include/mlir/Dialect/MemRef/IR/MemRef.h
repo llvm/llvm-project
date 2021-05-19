@@ -62,7 +62,9 @@ namespace memref {
 // 'index' type, and specify a stride for the slower memory space (memory space
 // with a lower memory space id), transferring chunks of
 // number_of_elements_per_stride every stride until %num_elements are
-// transferred. Either both or no stride arguments should be specified.
+// transferred. Either both or no stride arguments should be specified. If the
+// source and destination locations overlap the behavior of this operation is
+// not defined.
 //
 // For example, a DmaStartOp operation that transfers 256 elements of a memref
 // '%src' in memory space 0 at indices [%i, %j] to memref '%dst' in memory space

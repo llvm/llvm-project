@@ -85,5 +85,5 @@ static const auto ObjCTestArrayForRunOptions =
 const auto ObjCTestValuesForRunOptions =
     ::testing::ValuesIn(ObjCTestArrayForRunOptions);
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportObjCDecl,
-                        ObjCTestValuesForRunOptions, );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportObjCDecl,
+                         ObjCTestValuesForRunOptions);

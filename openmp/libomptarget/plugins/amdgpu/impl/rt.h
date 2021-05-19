@@ -59,7 +59,7 @@ public:
       void *, size_t, atmi_place_t,
       atmi_status_t (*on_deserialized_data)(void *data, size_t size,
                                             void *cb_state),
-      void *cb_state);
+      void *cb_state, std::vector<hsa_executable_t> &HSAExecutables);
 
   // data
   static atmi_status_t Memcpy(hsa_signal_t, void *, const void *, size_t);

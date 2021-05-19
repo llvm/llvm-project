@@ -230,10 +230,10 @@ OPTIONS
 
  Print only undefined symbols.
 
-.. option:: --version
+.. option:: --version, -V
 
- Display the version of the :program:`llvm-nm` executable. Does not stack with
- other commands.
+ Display the version of the :program:`llvm-nm` executable, then exit. Does not
+ stack with other commands.
 
 .. option:: --without-aliases
 

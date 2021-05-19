@@ -132,7 +132,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
           (CC == CallingConv::AMDGPU_HS || CC == CallingConv::AMDGPU_GS))
         ArgInfo.PrivateSegmentWaveByteOffset =
             ArgDescriptor::createRegister(AMDGPU::SGPR5);
-      }
+    }
   }
 
   bool isAmdHsaOrMesa = ST.isAmdHsaOrMesa(F);

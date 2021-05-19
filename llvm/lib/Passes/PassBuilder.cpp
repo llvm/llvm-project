@@ -1821,12 +1821,19 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
   MPM.addPass(
       createModuleToPostOrderCGSCCPassAdaptor(PostOrderFunctionAttrsPass()));
-  // FIXME: here we run IP alias analysis in the legacy PM.
+
+  // Require the GlobalsAA analysis for the module so we can query it within
+  // MainFPM.
+  MPM.addPass(RequireAnalysisPass<GlobalsAA, Module>());
+  // Invalidate AAManager so it can be recreated and pick up the newly available
+  // GlobalsAA.
+  MPM.addPass(
+      createModuleToFunctionPassAdaptor(InvalidateAnalysisPass<AAManager>()));
 
   FunctionPassManager MainFPM;
-
   MainFPM.addPass(createFunctionToLoopPassAdaptor(
-      LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap)));
+      LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap),
+      EnableMSSALoopDependency, /*UseBlockFrequencyInfo=*/true));
 
   if (RunNewGVN)
     MainFPM.addPass(NewGVNPass());

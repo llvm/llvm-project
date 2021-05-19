@@ -328,6 +328,8 @@ public:
   // Resource pools
   SignalPoolT FreeSignalPool;
 
+  std::vector<hsa_executable_t> HSAExecutables;
+
   struct atmiFreePtrDeletor {
     void operator()(void *p) {
       atmi_free(p); // ignore failure to free
@@ -538,6 +540,18 @@ public:
     RequiresFlags = OMP_REQ_UNDEFINED;
   }
 
+  void DestroyHSAExecutables() {
+    hsa_status_t Err;
+    for (uint32_t I = 0; I < HSAExecutables.size(); I++) {
+      Err = hsa_executable_destroy(HSAExecutables[I]);
+      if (Err != HSA_STATUS_SUCCESS) {
+        printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
+               "Destroying executable", get_error_string(Err));
+        return;
+      }
+    }
+  }
+
   ~RTLDeviceInfoTy() {
     DP("Finalizing the HSA-ATMI DeviceInfo.\n");
     // Run destructors on types that use HSA before
@@ -546,6 +560,8 @@ public:
     KernelArgPoolMap.clear();
     // Terminate hostrpc before finalizing ATMI
     hostrpc_terminate();
+
+    DestroyHSAExecutables();
     atmi_finalize();
   }
 };
@@ -971,15 +987,16 @@ atmi_status_t interop_get_symbol_info(char *base, size_t img_size,
 }
 
 template <typename C>
-atmi_status_t module_register_from_memory_to_place(void *module_bytes,
-                                                   size_t module_size,
-                                                   atmi_place_t place, C cb) {
+atmi_status_t module_register_from_memory_to_place(
+    void *module_bytes, size_t module_size, atmi_place_t place, C cb,
+    std::vector<hsa_executable_t> &HSAExecutables) {
   auto L = [](void *data, size_t size, void *cb_state) -> atmi_status_t {
     C *unwrapped = static_cast<C *>(cb_state);
     return (*unwrapped)(data, size);
   };
-  return atmi_module_register_from_memory_to_place(
-      module_bytes, module_size, place, L, static_cast<void *>(&cb));
+  return core::Runtime::RegisterModuleFromMemory(
+      module_bytes, module_size, place, L, static_cast<void *>(&cb),
+      HSAExecutables);
 }
 } // namespace
 
@@ -1180,9 +1197,8 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
 
     atmi_status_t err = module_register_from_memory_to_place(
         (void *)image->ImageStart, img_size, get_gpu_place(device_id),
-        [&](void *data, size_t size) {
-          return env.before_loading(data, size);
-        });
+        [&](void *data, size_t size) { return env.before_loading(data, size); },
+        DeviceInfo.HSAExecutables);
 
     check("Module registering", err);
     if (err != ATMI_STATUS_SUCCESS) {
@@ -1764,11 +1780,15 @@ int32_t __tgt_rtl_run_target_team_region_locked(
   KernelTy *KernelInfo = (KernelTy *)tgt_entry_ptr;
 
   std::string kernel_name = std::string(KernelInfo->Name);
+  if (KernelInfoTable[device_id].find(kernel_name) ==
+      KernelInfoTable[device_id].end()) {
+    DP("Kernel %s not found\n", kernel_name.c_str());
+    return OFFLOAD_FAIL;
+  }
+
   uint32_t sgpr_count, vgpr_count, sgpr_spill_count, vgpr_spill_count;
 
   {
-    assert(KernelInfoTable[device_id].find(kernel_name) !=
-           KernelInfoTable[device_id].end());
     auto it = KernelInfoTable[device_id][kernel_name];
     sgpr_count = it.sgpr_count;
     vgpr_count = it.vgpr_count;
@@ -1832,8 +1852,6 @@ int32_t __tgt_rtl_run_target_team_region_locked(
     packet->completion_signal = {0}; // may want a pool of signals
 
     {
-      assert(KernelInfoTable[device_id].find(kernel_name) !=
-             KernelInfoTable[device_id].end());
       auto it = KernelInfoTable[device_id][kernel_name];
       packet->kernel_object = it.kernel_object;
       packet->private_segment_size = it.private_segment_size;

@@ -26,26 +26,27 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// Author: wan@google.com (Zhanyong Wan)
+
 
 // Google Mock - a framework for writing C++ mock classes.
 //
 // This is the main header file a user should include.
+
+// GOOGLETEST_CM0002 DO NOT DELETE
 
 #ifndef GMOCK_INCLUDE_GMOCK_GMOCK_H_
 #define GMOCK_INCLUDE_GMOCK_GMOCK_H_
 
 // This file implements the following syntax:
 //
-//   ON_CALL(mock_object.Method(...))
+//   ON_CALL(mock_object, Method(...))
 //     .With(...) ?
 //     .WillByDefault(...);
 //
 // where With() is optional and WillByDefault() must appear exactly
 // once.
 //
-//   EXPECT_CALL(mock_object.Method(...))
+//   EXPECT_CALL(mock_object, Method(...))
 //     .With(...) ?
 //     .Times(...) ?
 //     .InSequence(...) *
@@ -55,6 +56,18 @@
 //
 // where all clauses are optional and WillOnce() can be repeated.
 
+#include "gmock/gmock-actions.h"
+#include "gmock/gmock-cardinalities.h"
+#include "gmock/gmock-function-mocker.h"
+#include "gmock/gmock-generated-actions.h"
+#include "gmock/gmock-generated-function-mockers.h"
+#include "gmock/gmock-generated-matchers.h"
+#include "gmock/gmock-matchers.h"
+#include "gmock/gmock-more-actions.h"
+#include "gmock/gmock-more-matchers.h"
+#include "gmock/gmock-nice-strict.h"
+#include "gmock/internal/gmock-internal-utils.h"
+
 #ifdef __clang__
 #if __has_warning("-Wdeprecated-copy")
 #pragma clang diagnostic push
@@ -62,22 +75,12 @@
 #endif
 #endif
 
-#include "gmock/gmock-actions.h"
-#include "gmock/gmock-cardinalities.h"
-#include "gmock/gmock-generated-actions.h"
-#include "gmock/gmock-generated-function-mockers.h"
-#include "gmock/gmock-generated-nice-strict.h"
-#include "gmock/gmock-generated-matchers.h"
-#include "gmock/gmock-matchers.h"
-#include "gmock/gmock-more-actions.h"
-#include "gmock/gmock-more-matchers.h"
-#include "gmock/internal/gmock-internal-utils.h"
-
 namespace testing {
 
 // Declares Google Mock flags that we want a user to use programmatically.
 GMOCK_DECLARE_bool_(catch_leaked_mocks);
 GMOCK_DECLARE_string_(verbose);
+GMOCK_DECLARE_int32_(default_mock_behavior);
 
 // Initializes Google Mock.  This must be called before running the
 // tests.  In particular, it parses the command line for the flags
@@ -96,6 +99,10 @@ GTEST_API_ void InitGoogleMock(int* argc, char** argv);
 // UNICODE mode.
 GTEST_API_ void InitGoogleMock(int* argc, wchar_t** argv);
 
+// This overloaded version can be used on Arduino/embedded platforms where
+// there is no argc/argv.
+GTEST_API_ void InitGoogleMock();
+
 }  // namespace testing
 
 #ifdef __clang__
@@ -103,4 +110,5 @@ GTEST_API_ void InitGoogleMock(int* argc, wchar_t** argv);
 #pragma clang diagnostic pop
 #endif
 #endif
+
 #endif  // GMOCK_INCLUDE_GMOCK_GMOCK_H_

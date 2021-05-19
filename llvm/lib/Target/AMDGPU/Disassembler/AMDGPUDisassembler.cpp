@@ -774,15 +774,17 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
   if (isGFX10Plus()) {
     unsigned DimIdx =
         AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::dim);
+    int A16Idx =
+        AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::a16);
     const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
         AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
     const AMDGPU::MIMGDimInfo *Dim =
         AMDGPU::getMIMGDimInfoByEncoding(MI.getOperand(DimIdx).getImm());
+    const bool IsA16 = (A16Idx != -1 && MI.getOperand(A16Idx).getImm());
 
-    AddrSize = BaseOpcode->NumExtraArgs +
-               (BaseOpcode->Gradients ? Dim->NumGradients : 0) +
-               (BaseOpcode->Coordinates ? Dim->NumCoords : 0) +
-               (BaseOpcode->LodOrClampOrMip ? 1 : 0);
+    AddrSize =
+        AMDGPU::getAddrSizeMIMGOp(BaseOpcode, Dim, IsA16, AMDGPU::hasG16(STI));
+
     IsNSA = Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA ||
             Info->MIMGEncoding == AMDGPU::MIMGEncGfx11NSA;
     if (!IsNSA) {
@@ -1845,7 +1847,7 @@ AMDGPUDisassembler::decodeKernelDescriptorDirective(
     using namespace amdhsa;
     TwoByteBuffer = DE.getU16(Cursor);
 
-  if (!hasArchitectedFlatScratch())
+    if (!hasArchitectedFlatScratch())
       PRINT_DIRECTIVE(".amdhsa_user_sgpr_private_segment_buffer",
                       KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER);
     PRINT_DIRECTIVE(".amdhsa_user_sgpr_dispatch_ptr",
@@ -1856,7 +1858,7 @@ AMDGPUDisassembler::decodeKernelDescriptorDirective(
                     KERNEL_CODE_PROPERTY_ENABLE_SGPR_KERNARG_SEGMENT_PTR);
     PRINT_DIRECTIVE(".amdhsa_user_sgpr_dispatch_id",
                     KERNEL_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_ID);
-  if (!hasArchitectedFlatScratch())
+    if (!hasArchitectedFlatScratch())
       PRINT_DIRECTIVE(".amdhsa_user_sgpr_flat_scratch_init",
                       KERNEL_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT);
     PRINT_DIRECTIVE(".amdhsa_user_sgpr_private_segment_size",

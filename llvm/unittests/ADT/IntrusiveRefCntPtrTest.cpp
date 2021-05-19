@@ -28,7 +28,7 @@ template <typename T> struct IntrusiveRefCntPtrTest : testing::Test {};
 typedef ::testing::Types<SimpleRefCounted<RefCountedBase>,
                          SimpleRefCounted<ThreadSafeRefCountedBase>>
     IntrusiveRefCntTypes;
-TYPED_TEST_CASE(IntrusiveRefCntPtrTest, IntrusiveRefCntTypes);
+TYPED_TEST_SUITE(IntrusiveRefCntPtrTest, IntrusiveRefCntTypes, );
 
 TYPED_TEST(IntrusiveRefCntPtrTest, RefCountedBaseCopyDoesNotLeak) {
   EXPECT_EQ(0, NumInstances);

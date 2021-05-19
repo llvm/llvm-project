@@ -70,6 +70,10 @@ New Compiler Flags
 - ``-Wreserved-identifier`` emits warning when user code uses reserved
   identifiers.
 
+- ``-fstack-usage`` generates an extra .su file per input source file. The .su
+  file contains frame size information for each function defined in the source
+  file.
+
 Deprecated Compiler Flags
 -------------------------
 

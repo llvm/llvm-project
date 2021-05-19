@@ -402,6 +402,10 @@ static TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
   case CodeGenOptions::SVML:
     TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::SVML);
     break;
+  case CodeGenOptions::Darwin_libsystem_m:
+    TLII->addVectorizableFunctionsFromVecLib(
+        TargetLibraryInfoImpl::DarwinLibSystemM);
+    break;
   default:
     break;
   }
@@ -555,10 +559,11 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.UniqueBasicBlockSectionNames =
       CodeGenOpts.UniqueBasicBlockSectionNames;
   Options.StackProtectorGuard =
-      llvm::StringSwitch<llvm::StackProtectorGuards>(CodeGenOpts
-          .StackProtectorGuard)
+      llvm::StringSwitch<llvm::StackProtectorGuards>(
+          CodeGenOpts.StackProtectorGuard)
           .Case("tls", llvm::StackProtectorGuards::TLS)
           .Case("global", llvm::StackProtectorGuards::Global)
+          .Case("sysreg", llvm::StackProtectorGuards::SysReg)
           .Default(llvm::StackProtectorGuards::None);
   Options.StackProtectorGuardOffset = CodeGenOpts.StackProtectorGuardOffset;
   Options.StackProtectorGuardReg = CodeGenOpts.StackProtectorGuardReg;
@@ -567,6 +572,7 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.ExplicitEmulatedTLS = CodeGenOpts.ExplicitEmulatedTLS;
   Options.DebuggerTuning = CodeGenOpts.getDebuggerTuning();
   Options.EmitStackSizeSection = CodeGenOpts.StackSizeSection;
+  Options.StackUsageOutput = CodeGenOpts.StackUsageOutput;
   Options.EmitAddrsig = CodeGenOpts.Addrsig;
   Options.ForceDwarfFrameSection = CodeGenOpts.ForceDwarfFrameSection;
   Options.EmitCallSiteInfo = CodeGenOpts.EmitCallSiteInfo;

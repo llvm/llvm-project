@@ -460,7 +460,7 @@ public:
 protected:
   llvm::StringRef GetScopeString(VariableSP var_sp) {
     if (!var_sp)
-      return llvm::StringRef::withNullAsEmpty(nullptr);
+      return llvm::StringRef();
 
     switch (var_sp->GetScope()) {
     case eValueTypeVariableGlobal:
@@ -477,7 +477,7 @@ protected:
       break;
     }
 
-    return llvm::StringRef::withNullAsEmpty(nullptr);
+    return llvm::StringRef();
   }
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {

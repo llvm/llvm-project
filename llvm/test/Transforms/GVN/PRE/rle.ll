@@ -37,12 +37,12 @@ define i8 @crash0({i32, i32} %A, {i32, i32}* %P) {
 declare void @helper()
 define void @crash1() {
 ; CHECK-LABEL: @crash1(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* undef, i8* undef, i64 undef, i1 false) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* undef, i8* undef, i64 undef, i1 false) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* undef, i8* undef, i64 undef, i1 false) nounwind
-  %tmp = load i8, i8* bitcast (void ()* @helper to i8*)
-  %x = icmp eq i8 %tmp, 15
+  %ttmp = load i8, i8* bitcast (void ()* @helper to i8*)
+  %x = icmp eq i8 %ttmp, 15
   ret void
 }
 
@@ -203,8 +203,8 @@ entry:
   %conv = bitcast i16* %A to i8*
   tail call void @llvm.memset.p0i8.i64(i8* %conv, i8 1, i64 200, i1 false)
   %arrayidx = getelementptr inbounds i16, i16* %A, i64 42
-  %tmp2 = load i16, i16* %arrayidx
-  ret i16 %tmp2
+  %ttmp2 = load i16, i16* %arrayidx
+  ret i16 %ttmp2
 }
 
 ; memset -> float forwarding.
@@ -225,8 +225,8 @@ entry:
   %conv = bitcast float* %A to i8*                ; <i8*> [#uses=1]
   tail call void @llvm.memset.p0i8.i64(i8* %conv, i8 %Val, i64 400, i1 false)
   %arrayidx = getelementptr inbounds float, float* %A, i64 42 ; <float*> [#uses=1]
-  %tmp2 = load float, float* %arrayidx                   ; <float> [#uses=1]
-  ret float %tmp2
+  %ttmp2 = load float, float* %arrayidx                   ; <float> [#uses=1]
+  ret float %ttmp2
 }
 
 ;; non-local memset -> i16 load forwarding.
@@ -276,8 +276,8 @@ entry:
   %conv = bitcast float* %A to i8*                ; <i8*> [#uses=1]
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %conv, i8* bitcast ({i32, float, i32 }* @GCst to i8*), i64 12, i1 false)
   %arrayidx = getelementptr inbounds float, float* %A, i64 1 ; <float*> [#uses=1]
-  %tmp2 = load float, float* %arrayidx                   ; <float> [#uses=1]
-  ret float %tmp2
+  %ttmp2 = load float, float* %arrayidx                   ; <float> [#uses=1]
+  ret float %ttmp2
 }
 
 ; memcpy from address space 1
@@ -292,8 +292,8 @@ entry:
   %conv = bitcast float* %A to i8*                ; <i8*> [#uses=1]
   tail call void @llvm.memcpy.p0i8.p1i8.i64(i8* %conv, i8 addrspace(1)* bitcast ({i32, float, i32 } addrspace(1)* @GCst_as1 to i8 addrspace(1)*), i64 12, i1 false)
   %arrayidx = getelementptr inbounds float, float* %A, i64 1 ; <float*> [#uses=1]
-  %tmp2 = load float, float* %arrayidx                   ; <float> [#uses=1]
-  ret float %tmp2
+  %ttmp2 = load float, float* %arrayidx                   ; <float> [#uses=1]
+  ret float %ttmp2
 }
 
 ;; non-local i32/float -> i8 load forwarding.
@@ -934,17 +934,17 @@ define i32 @memset_to_load() nounwind readnone {
 ; CHECK-LABEL: @memset_to_load(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X:%.*]] = alloca [256 x i32], align 4
-; CHECK-NEXT:    [[TMP:%.*]] = bitcast [256 x i32]* [[X]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 4 [[TMP]], i8 0, i64 1024, i1 false)
+; CHECK-NEXT:    [[TTMP:%.*]] = bitcast [256 x i32]* [[X]] to i8*
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 4 [[TTMP]], i8 0, i64 1024, i1 false)
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
   %x = alloca [256 x i32], align 4                ; <[256 x i32]*> [#uses=2]
-  %tmp = bitcast [256 x i32]* %x to i8*           ; <i8*> [#uses=1]
-  call void @llvm.memset.p0i8.i64(i8* align 4 %tmp, i8 0, i64 1024, i1 false)
+  %ttmp = bitcast [256 x i32]* %x to i8*           ; <i8*> [#uses=1]
+  call void @llvm.memset.p0i8.i64(i8* align 4 %ttmp, i8 0, i64 1024, i1 false)
   %arraydecay = getelementptr inbounds [256 x i32], [256 x i32]* %x, i32 0, i32 0 ; <i32*>
-  %tmp1 = load i32, i32* %arraydecay                   ; <i32> [#uses=1]
-  ret i32 %tmp1
+  %ttmp1 = load i32, i32* %arraydecay                   ; <i32> [#uses=1]
+  ret i32 %ttmp1
 }
 
 
@@ -956,20 +956,21 @@ define i32 @load_load_partial_alias(i8* %P) nounwind ssp {
 ; CHECK-LABEL: @load_load_partial_alias(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[P:%.*]] to i32*
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]], align 4
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[P]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = load i8, i8* [[ADD_PTR]], align 1
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP5]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP2]], [[CONV]]
+; CHECK-NEXT:    [[TTMP2:%.*]] = load i32, i32* [[TMP0]], align 4
+; LE-NEXT:       [[TMP1:%.*]] = lshr i32 [[TTMP2]], 8
+; BE-NEXT:       [[TMP1:%.*]] = lshr i32 [[TTMP2]], 16
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i8
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP2]] to i32
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TTMP2]], [[CONV]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
 entry:
   %0 = bitcast i8* %P to i32*
-  %tmp2 = load i32, i32* %0
+  %ttmp2 = load i32, i32* %0
   %add.ptr = getelementptr inbounds i8, i8* %P, i64 1
-  %tmp5 = load i8, i8* %add.ptr
-  %conv = zext i8 %tmp5 to i32
-  %add = add nsw i32 %tmp2, %conv
+  %ttmp5 = load i8, i8* %add.ptr
+  %conv = zext i8 %ttmp5 to i32
+  %add = add nsw i32 %ttmp2, %conv
   ret i32 %add
 }
 
@@ -981,11 +982,12 @@ define i32 @load_load_partial_alias_cross_block(i8* %P) nounwind ssp {
 ; CHECK-NEXT:    [[XX:%.*]] = bitcast i8* [[P:%.*]] to i32*
 ; CHECK-NEXT:    [[X1:%.*]] = load i32, i32* [[XX]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X1]], 127
+; LE-NEXT:       [[TMP0:%.*]] = lshr i32 [[X1]], 8
+; BE-NEXT:       [[TMP0:%.*]] = lshr i32 [[X1]], 16
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i8
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[IF_END:%.*]]
 ; CHECK:       land.lhs.true:
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i8, i8* [[P]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = load i8, i8* [[ARRAYIDX4]], align 1
-; CHECK-NEXT:    [[CONV6:%.*]] = zext i8 [[TMP5]] to i32
+; CHECK-NEXT:    [[CONV6:%.*]] = zext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV6]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret i32 52
@@ -998,14 +1000,188 @@ entry:
 
 land.lhs.true:                                    ; preds = %entry
   %arrayidx4 = getelementptr inbounds i8, i8* %P, i64 1
-  %tmp5 = load i8, i8* %arrayidx4, align 1
-  %conv6 = zext i8 %tmp5 to i32
+  %ttmp5 = load i8, i8* %arrayidx4, align 1
+  %conv6 = zext i8 %ttmp5 to i32
   ret i32 %conv6
 
 if.end:
   ret i32 52
 }
 
+define i32 @load_load_partial_alias_cross_block_phi_trans(i8* %P) nounwind {
+; CHECK-LABEL: @load_load_partial_alias_cross_block_phi_trans(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[XX:%.*]] = bitcast i8* [[P:%.*]] to i32*
+; CHECK-NEXT:    [[X1:%.*]] = load i32, i32* [[XX]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X1]], 127
+; LE-NEXT:       [[TMP0:%.*]] = lshr i32 [[X1]], 16
+; BE-NEXT:       [[TMP0:%.*]] = lshr i32 [[X1]], 8
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i8
+; LE-NEXT:       [[TMP2:%.*]] = lshr i32 [[X1]], 8
+; BE-NEXT:       [[TMP2:%.*]] = lshr i32 [[X1]], 16
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[TTMP5:%.*]] = phi i8 [ [[TMP3]], [[IF]] ], [ [[TMP1]], [[ELSE]] ]
+; CHECK-NEXT:    [[CONV6:%.*]] = zext i8 [[TTMP5]] to i32
+; CHECK-NEXT:    ret i32 [[CONV6]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i32 52
+;
+entry:
+  %xx = bitcast i8* %P to i32*
+  %x1 = load i32, i32* %xx, align 4
+  %cmp = icmp eq i32 %x1, 127
+  br i1 %cmp, label %if, label %else
+
+if:
+  %arrayidx.if = getelementptr inbounds i8, i8* %P, i64 1
+  br label %join
+
+else:
+  %arrayidx.else = getelementptr inbounds i8, i8* %P, i64 2
+  br label %join
+
+join:
+  %idx = phi i64 [ 1, %if ], [ 2, %else ]
+  %arrayidx4 = getelementptr inbounds i8, i8* %P, i64 %idx
+  %ttmp5 = load i8, i8* %arrayidx4, align 1
+  %conv6 = zext i8 %ttmp5 to i32
+  ret i32 %conv6
+
+if.end:
+  ret i32 52
+}
+
+define void @load_load_partial_alias_loop(i8* %P) {
+; LE-LABEL: @load_load_partial_alias_loop(
+; LE-NEXT:  entry:
+; LE-NEXT:    [[P_1:%.*]] = getelementptr i8, i8* [[P:%.*]], i64 1
+; LE-NEXT:    [[V_1:%.*]] = load i8, i8* [[P_1]], align 1
+; LE-NEXT:    call void @use.i8(i8 [[V_1]])
+; LE-NEXT:    [[P_1_32:%.*]] = bitcast i8* [[P_1]] to i32*
+; LE-NEXT:    [[V_1_32:%.*]] = load i32, i32* [[P_1_32]], align 4
+; LE-NEXT:    call void @use.i32(i32 [[V_1_32]])
+; LE-NEXT:    [[TMP0:%.*]] = trunc i32 [[V_1_32]] to i8
+; LE-NEXT:    br label [[LOOP:%.*]]
+; LE:       loop:
+; LE-NEXT:    [[V_I:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[TMP2:%.*]], [[LOOP_LOOP_CRIT_EDGE:%.*]] ]
+; LE-NEXT:    [[I:%.*]] = phi i64 [ 1, [[ENTRY]] ], [ [[I_INC:%.*]], [[LOOP_LOOP_CRIT_EDGE]] ]
+; LE-NEXT:    [[P_I:%.*]] = getelementptr i8, i8* [[P]], i64 [[I]]
+; LE-NEXT:    call void @use.i8(i8 [[V_I]])
+; LE-NEXT:    [[P_I_32:%.*]] = bitcast i8* [[P_I]] to i32*
+; LE-NEXT:    [[V_I_32:%.*]] = load i32, i32* [[P_I_32]], align 4
+; LE-NEXT:    call void @use.i32(i32 [[V_I_32]])
+; LE-NEXT:    [[I_INC]] = add i64 [[I]], 1
+; LE-NEXT:    [[CMP:%.*]] = icmp ne i64 [[I_INC]], 64
+; LE-NEXT:    [[TMP1:%.*]] = lshr i32 [[V_I_32]], 8
+; LE-NEXT:    [[TMP2]] = trunc i32 [[TMP1]] to i8
+; LE-NEXT:    br i1 [[CMP]], label [[LOOP_LOOP_CRIT_EDGE]], label [[EXIT:%.*]]
+; LE:       loop.loop_crit_edge:
+; LE-NEXT:    br label [[LOOP]]
+; LE:       exit:
+; LE-NEXT:    ret void
+;
+; BE-LABEL: @load_load_partial_alias_loop(
+; BE-NEXT:  entry:
+; BE-NEXT:    [[P_1:%.*]] = getelementptr i8, i8* [[P:%.*]], i64 1
+; BE-NEXT:    [[V_1:%.*]] = load i8, i8* [[P_1]], align 1
+; BE-NEXT:    call void @use.i8(i8 [[V_1]])
+; BE-NEXT:    [[P_1_32:%.*]] = bitcast i8* [[P_1]] to i32*
+; BE-NEXT:    [[V_1_32:%.*]] = load i32, i32* [[P_1_32]], align 4
+; BE-NEXT:    call void @use.i32(i32 [[V_1_32]])
+; BE-NEXT:    [[TMP0:%.*]] = lshr i32 [[V_1_32]], 24
+; BE-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i8
+; BE-NEXT:    br label [[LOOP:%.*]]
+; BE:       loop:
+; BE-NEXT:    [[V_I:%.*]] = phi i8 [ [[TMP1]], [[ENTRY:%.*]] ], [ [[TMP3:%.*]], [[LOOP_LOOP_CRIT_EDGE:%.*]] ]
+; BE-NEXT:    [[I:%.*]] = phi i64 [ 1, [[ENTRY]] ], [ [[I_INC:%.*]], [[LOOP_LOOP_CRIT_EDGE]] ]
+; BE-NEXT:    [[P_I:%.*]] = getelementptr i8, i8* [[P]], i64 [[I]]
+; BE-NEXT:    call void @use.i8(i8 [[V_I]])
+; BE-NEXT:    [[P_I_32:%.*]] = bitcast i8* [[P_I]] to i32*
+; BE-NEXT:    [[V_I_32:%.*]] = load i32, i32* [[P_I_32]], align 4
+; BE-NEXT:    call void @use.i32(i32 [[V_I_32]])
+; BE-NEXT:    [[I_INC]] = add i64 [[I]], 1
+; BE-NEXT:    [[CMP:%.*]] = icmp ne i64 [[I_INC]], 64
+; BE-NEXT:    [[TMP2:%.*]] = lshr i32 [[V_I_32]], 16
+; BE-NEXT:    [[TMP3]] = trunc i32 [[TMP2]] to i8
+; BE-NEXT:    br i1 [[CMP]], label [[LOOP_LOOP_CRIT_EDGE]], label [[EXIT:%.*]]
+; BE:       loop.loop_crit_edge:
+; BE-NEXT:    br label [[LOOP]]
+; BE:       exit:
+; BE-NEXT:    ret void
+;
+entry:
+  %P.1 = getelementptr i8, i8* %P, i64 1
+  %v.1 = load i8, i8* %P.1
+  call void @use.i8(i8 %v.1)
+  %P.1.32 = bitcast i8* %P.1 to i32*
+  %v.1.32 = load i32, i32* %P.1.32
+  call void @use.i32(i32 %v.1.32)
+  br label %loop
+
+loop:
+  %i = phi i64 [ 1, %entry ], [ %i.inc, %loop ]
+  %P.i = getelementptr i8, i8* %P, i64 %i
+  %v.i = load i8, i8* %P.i
+  call void @use.i8(i8 %v.i)
+  %P.i.32 = bitcast i8* %P.i to i32*
+  %v.i.32 = load i32, i32* %P.i.32
+  call void @use.i32(i32 %v.i.32)
+  %i.inc = add i64 %i, 1
+  %cmp = icmp ne i64 %i.inc, 64
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+declare void @use.i8(i8) readnone
+declare void @use.i32(i32) readnone
+
+@global = external local_unnamed_addr global i8, align 4
+
+define void @load_load_partial_alias_atomic(i8* %arg) {
+; CHECK-LABEL: @load_load_partial_alias_atomic(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[TMP2_1:%.*]] = getelementptr inbounds i8, i8* [[ARG:%.*]], i64 1
+; CHECK-NEXT:    [[TMP2_2:%.*]] = bitcast i8* [[TMP2_1]] to i64*
+; CHECK-NEXT:    [[TMP2_3:%.*]] = load i64, i64* [[TMP2_2]], align 4
+; CHECK-NEXT:    [[TMP3_1:%.*]] = getelementptr inbounds i8, i8* [[ARG]], i64 2
+; LE-NEXT:       [[TMP0:%.*]] = lshr i64 [[TMP2_3]], 8
+; BE-NEXT:       [[TMP0:%.*]] = lshr i64 [[TMP2_3]], 48
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i8
+; CHECK-NEXT:    br label [[BB5:%.*]]
+; CHECK:       bb5:
+; CHECK-NEXT:    [[TMP4_1:%.*]] = phi i8 [ [[TMP4_1_PRE:%.*]], [[BB5]] ], [ [[TMP1]], [[BB:%.*]] ]
+; CHECK-NEXT:    [[TMP6_1:%.*]] = load atomic i8, i8* @global acquire, align 4
+; CHECK-NEXT:    [[TMP7_1:%.*]] = add i8 [[TMP6_1]], [[TMP4_1]]
+; CHECK-NEXT:    store i8 [[TMP7_1]], i8* [[ARG]], align 1
+; CHECK-NEXT:    [[TMP4_1_PRE]] = load i8, i8* [[TMP3_1]], align 4
+; CHECK-NEXT:    br label [[BB5]]
+;
+bb:
+  %tmp1.1 = getelementptr inbounds i8, i8* %arg, i64 0
+  %tmp2.1 = getelementptr inbounds i8, i8* %arg, i64 1
+  %tmp2.2 = bitcast i8* %tmp2.1 to i64*
+  %tmp2.3 = load i64, i64* %tmp2.2, align 4
+  %tmp2.4 = icmp ugt i64 %tmp2.3, 1
+
+  %tmp3.1 = getelementptr inbounds i8, i8* %arg, i64 2
+  br label %bb5
+
+bb5:                                              ; preds = %bb14, %bb
+  %tmp4.1 = load i8, i8* %tmp3.1, align 4
+  %tmp6.1 = load atomic i8, i8* getelementptr inbounds (i8, i8* @global, i64 0) acquire, align 4
+  %tmp7.1 = add i8 %tmp6.1, %tmp4.1
+  store i8 %tmp7.1, i8* %tmp1.1
+  br label %bb5
+
+}
 
 ;;===----------------------------------------------------------------------===;;
 ;; Load Widening
@@ -1019,18 +1195,18 @@ if.end:
 define i32 @test_widening1(i8* %P) nounwind ssp noredzone {
 ; CHECK-LABEL: @test_widening1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = load i8, i8* getelementptr inbounds ([[WIDENING1:%.*]], %widening1* @f, i64 0, i32 1), align 4
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, i8* getelementptr inbounds ([[WIDENING1]], %widening1* @f, i64 0, i32 2), align 1
-; CHECK-NEXT:    [[CONV2:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[TTMP:%.*]] = load i8, i8* getelementptr inbounds ([[WIDENING1:%.*]], %widening1* @f, i64 0, i32 1), align 4
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TTMP]] to i32
+; CHECK-NEXT:    [[TTMP1:%.*]] = load i8, i8* getelementptr inbounds ([[WIDENING1]], %widening1* @f, i64 0, i32 2), align 1
+; CHECK-NEXT:    [[CONV2:%.*]] = zext i8 [[TTMP1]] to i32
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV]], [[CONV2]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
 entry:
-  %tmp = load i8, i8* getelementptr inbounds (%widening1, %widening1* @f, i64 0, i32 1), align 4
-  %conv = zext i8 %tmp to i32
-  %tmp1 = load i8, i8* getelementptr inbounds (%widening1, %widening1* @f, i64 0, i32 2), align 1
-  %conv2 = zext i8 %tmp1 to i32
+  %ttmp = load i8, i8* getelementptr inbounds (%widening1, %widening1* @f, i64 0, i32 1), align 4
+  %conv = zext i8 %ttmp to i32
+  %ttmp1 = load i8, i8* getelementptr inbounds (%widening1, %widening1* @f, i64 0, i32 2), align 1
+  %conv2 = zext i8 %ttmp1 to i32
   %add = add nsw i32 %conv, %conv2
   ret i32 %add
 }
@@ -1038,32 +1214,32 @@ entry:
 define i32 @test_widening2() nounwind ssp noredzone {
 ; CHECK-LABEL: @test_widening2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = load i8, i8* getelementptr inbounds ([[WIDENING1:%.*]], %widening1* @f, i64 0, i32 1), align 4
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, i8* getelementptr inbounds ([[WIDENING1]], %widening1* @f, i64 0, i32 2), align 1
-; CHECK-NEXT:    [[CONV2:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[TTMP:%.*]] = load i8, i8* getelementptr inbounds ([[WIDENING1:%.*]], %widening1* @f, i64 0, i32 1), align 4
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TTMP]] to i32
+; CHECK-NEXT:    [[TTMP1:%.*]] = load i8, i8* getelementptr inbounds ([[WIDENING1]], %widening1* @f, i64 0, i32 2), align 1
+; CHECK-NEXT:    [[CONV2:%.*]] = zext i8 [[TTMP1]] to i32
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV]], [[CONV2]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, i8* getelementptr inbounds ([[WIDENING1]], %widening1* @f, i64 0, i32 3), align 2
-; CHECK-NEXT:    [[CONV3:%.*]] = zext i8 [[TMP2]] to i32
+; CHECK-NEXT:    [[TTMP2:%.*]] = load i8, i8* getelementptr inbounds ([[WIDENING1]], %widening1* @f, i64 0, i32 3), align 2
+; CHECK-NEXT:    [[CONV3:%.*]] = zext i8 [[TTMP2]] to i32
 ; CHECK-NEXT:    [[ADD2:%.*]] = add nsw i32 [[ADD]], [[CONV3]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, i8* getelementptr inbounds ([[WIDENING1]], %widening1* @f, i64 0, i32 4), align 1
-; CHECK-NEXT:    [[CONV4:%.*]] = zext i8 [[TMP3]] to i32
+; CHECK-NEXT:    [[TTMP3:%.*]] = load i8, i8* getelementptr inbounds ([[WIDENING1]], %widening1* @f, i64 0, i32 4), align 1
+; CHECK-NEXT:    [[CONV4:%.*]] = zext i8 [[TTMP3]] to i32
 ; CHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[ADD2]], [[CONV4]]
 ; CHECK-NEXT:    ret i32 [[ADD3]]
 ;
 entry:
-  %tmp = load i8, i8* getelementptr inbounds (%widening1, %widening1* @f, i64 0, i32 1), align 4
-  %conv = zext i8 %tmp to i32
-  %tmp1 = load i8, i8* getelementptr inbounds (%widening1, %widening1* @f, i64 0, i32 2), align 1
-  %conv2 = zext i8 %tmp1 to i32
+  %ttmp = load i8, i8* getelementptr inbounds (%widening1, %widening1* @f, i64 0, i32 1), align 4
+  %conv = zext i8 %ttmp to i32
+  %ttmp1 = load i8, i8* getelementptr inbounds (%widening1, %widening1* @f, i64 0, i32 2), align 1
+  %conv2 = zext i8 %ttmp1 to i32
   %add = add nsw i32 %conv, %conv2
 
-  %tmp2 = load i8, i8* getelementptr inbounds (%widening1, %widening1* @f, i64 0, i32 3), align 2
-  %conv3 = zext i8 %tmp2 to i32
+  %ttmp2 = load i8, i8* getelementptr inbounds (%widening1, %widening1* @f, i64 0, i32 3), align 2
+  %conv3 = zext i8 %ttmp2 to i32
   %add2 = add nsw i32 %add, %conv3
 
-  %tmp3 = load i8, i8* getelementptr inbounds (%widening1, %widening1* @f, i64 0, i32 4), align 1
-  %conv4 = zext i8 %tmp3 to i32
+  %ttmp3 = load i8, i8* getelementptr inbounds (%widening1, %widening1* @f, i64 0, i32 4), align 1
+  %conv4 = zext i8 %ttmp3 to i32
   %add3 = add nsw i32 %add2, %conv4
 
   ret i32 %add3
@@ -1094,8 +1270,8 @@ define void @test_escape1() nounwind {
 ; CHECK-LABEL: @test_escape1(
 ; CHECK-NEXT:    [[X:%.*]] = alloca i8**, align 8
 ; CHECK-NEXT:    store i8** getelementptr inbounds ([5 x i8*], [5 x i8*]* @_ZTV1X, i64 0, i64 2), i8*** [[X]], align 8
-; CHECK-NEXT:    call void @use() #[[ATTR6]]
-; CHECK-NEXT:    call void @use3(i8*** [[X]], i8** getelementptr inbounds ([5 x i8*], [5 x i8*]* @_ZTV1X, i64 0, i64 2)) #[[ATTR6]]
+; CHECK-NEXT:    call void @use() #[[ATTR3]]
+; CHECK-NEXT:    call void @use3(i8*** [[X]], i8** getelementptr inbounds ([5 x i8*], [5 x i8*]* @_ZTV1X, i64 0, i64 2)) #[[ATTR3]]
 ; CHECK-NEXT:    ret void
 ;
   %x = alloca i8**, align 8

@@ -1164,7 +1164,7 @@ public:
 
   /// Set the LLVM function attributes (sext, zext, etc).
   void SetLLVMFunctionAttributes(GlobalDecl GD, const CGFunctionInfo &Info,
-                                 llvm::Function *F);
+                                 llvm::Function *F, bool IsThunk);
 
   /// Set the LLVM function attributes which only apply to a function
   /// definition.
@@ -1200,7 +1200,7 @@ public:
   void ConstructAttributeList(StringRef Name, const CGFunctionInfo &Info,
                               CGCalleeInfo CalleeInfo,
                               llvm::AttributeList &Attrs, unsigned &CallingConv,
-                              bool AttrOnCallSite);
+                              bool AttrOnCallSite, bool IsThunk);
 
   /// Adds attributes to F according to our CodeGenOptions and LangOptions, as
   /// though we had emitted it ourselves.  We remove any attributes on F that
@@ -1477,11 +1477,10 @@ private:
                                                   const FunctionDecl *FD);
   void UpdateMultiVersionNames(GlobalDecl GD, const FunctionDecl *FD);
 
-  llvm::Constant *GetOrCreateLLVMGlobal(StringRef MangledName,
-                                        llvm::PointerType *PTy,
-                                        const VarDecl *D,
-                                        ForDefinition_t IsForDefinition
-                                          = NotForDefinition);
+  llvm::Constant *
+  GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
+                        unsigned AddrSpace, const VarDecl *D,
+                        ForDefinition_t IsForDefinition = NotForDefinition);
 
   bool GetCPUAndFeaturesAttributes(GlobalDecl GD,
                                    llvm::AttrBuilder &AttrBuilder);

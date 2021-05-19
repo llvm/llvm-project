@@ -39,7 +39,6 @@ void foo(id a) {
     // CHECK: unreachable
 
     // CHECK:      call void @objc_exception_try_exit
-    // CHECK:      [[T:%.*]] = load i8*, i8** [[SYNC]]
     // CHECK-NEXT: call i32 @objc_sync_exit
     // CHECK: ret void
     return;
@@ -49,9 +48,8 @@ void foo(id a) {
 
 // CHECK-LABEL: define{{.*}} i32 @f0(
 int f0(id a) {
-  // TODO: we can optimize the ret to a constant if we can figure out
-  // either that x isn't stored to within the synchronized block or
-  // that the synchronized block can't longjmp.
+  // We can optimize the ret to a constant as we can figure out
+  // that x isn't stored to within the synchronized block.
 
   // CHECK: [[X:%.*]] = alloca i32
   // CHECK: store i32 1, i32* [[X]]
@@ -59,8 +57,7 @@ int f0(id a) {
   @synchronized((x++, a)) {    
   }
 
-  // CHECK: [[T:%.*]] = load i32, i32* [[X]]
-  // CHECK: ret i32 [[T]]
+  // CHECK: ret i32 1
   return x;
 }
 

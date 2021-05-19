@@ -21,7 +21,7 @@ class BitVectorTest : public ::testing::Test { };
 
 // Test both BitVector and SmallBitVector with the same suite of tests.
 typedef ::testing::Types<BitVector, SmallBitVector> BitVectorTestTypes;
-TYPED_TEST_CASE(BitVectorTest, BitVectorTestTypes);
+TYPED_TEST_SUITE(BitVectorTest, BitVectorTestTypes, );
 
 TYPED_TEST(BitVectorTest, TrivialOperation) {
   TypeParam Vec;

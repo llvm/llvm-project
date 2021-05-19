@@ -956,6 +956,23 @@ public:
         });
   }
 
+  /// Conditionally narrow the scalar or elt to match the size of another.
+  LegalizeRuleSet &maxScalarEltSameAsIf(LegalityPredicate Predicate,
+                                        unsigned TypeIdx,
+                                        unsigned SmallTypeIdx) {
+    typeIdx(TypeIdx);
+    return narrowScalarIf(
+        [=](const LegalityQuery &Query) {
+          return Query.Types[SmallTypeIdx].getScalarSizeInBits() <
+                     Query.Types[TypeIdx].getScalarSizeInBits() &&
+                 Predicate(Query);
+        },
+        [=](const LegalityQuery &Query) {
+          LLT T = Query.Types[SmallTypeIdx];
+          return std::make_pair(TypeIdx, T);
+        });
+  }
+
   /// Add more elements to the vector to reach the next power of two.
   /// No effect if the type is not a vector or the element count is a power of
   /// two.

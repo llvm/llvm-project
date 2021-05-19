@@ -54,6 +54,12 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// callee is expected to pop the args.
   unsigned ArgumentStackToRestore = 0;
 
+  /// Space just below incoming stack pointer reserved for arguments being
+  /// passed on the stack during a tail call. This will be the difference
+  /// between the largest tail call argument space needed in this function and
+  /// what's already available by reusing space of incoming arguments.
+  unsigned TailCallReservedStack = 0;
+
   /// HasStackFrame - True if this function has a stack frame. Set by
   /// determineCalleeSaves().
   bool HasStackFrame = false;
@@ -159,6 +165,14 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// indirect branch destinations.
   bool BranchTargetEnforcement = false;
 
+  /// Whether this function has an extended frame record [Ctx, FP, LR]. If so,
+  /// bit 60 of the in-memory FP will be 1 to enable other tools to detect the
+  /// extended record.
+  bool HasSwiftAsyncContext = false;
+
+  /// The stack slot where the Swift asynchronous context is stored.
+  int SwiftAsyncContextFrameIdx = std::numeric_limits<int>::max();
+
 public:
   explicit AArch64FunctionInfo(MachineFunction &MF);
 
@@ -170,6 +184,11 @@ public:
   unsigned getArgumentStackToRestore() const { return ArgumentStackToRestore; }
   void setArgumentStackToRestore(unsigned bytes) {
     ArgumentStackToRestore = bytes;
+  }
+
+  unsigned getTailCallReservedStack() const { return TailCallReservedStack; }
+  void setTailCallReservedStack(unsigned bytes) {
+    TailCallReservedStack = bytes;
   }
 
   bool hasCalculatedStackSizeSVE() const { return HasCalculatedStackSizeSVE; }
@@ -235,6 +254,13 @@ public:
           continue;
         int64_t Offset = MFI.getObjectOffset(FrameIdx);
         int64_t ObjSize = MFI.getObjectSize(FrameIdx);
+        MinOffset = std::min<int64_t>(Offset, MinOffset);
+        MaxOffset = std::max<int64_t>(Offset + ObjSize, MaxOffset);
+      }
+
+      if (SwiftAsyncContextFrameIdx != std::numeric_limits<int>::max()) {
+        int64_t Offset = MFI.getObjectOffset(getSwiftAsyncContextFrameIdx());
+        int64_t ObjSize = MFI.getObjectSize(getSwiftAsyncContextFrameIdx());
         MinOffset = std::min<int64_t>(Offset, MinOffset);
         MaxOffset = std::max<int64_t>(Offset + ObjSize, MaxOffset);
       }
@@ -371,6 +397,16 @@ public:
   bool shouldSignWithBKey() const { return SignWithBKey; }
 
   bool branchTargetEnforcement() const { return BranchTargetEnforcement; }
+
+  void setHasSwiftAsyncContext(bool HasContext) {
+    HasSwiftAsyncContext = HasContext;
+  }
+  bool hasSwiftAsyncContext() const { return HasSwiftAsyncContext; }
+
+  void setSwiftAsyncContextFrameIdx(int FI) {
+    SwiftAsyncContextFrameIdx = FI;
+  }
+  int getSwiftAsyncContextFrameIdx() const { return SwiftAsyncContextFrameIdx; }
 
 private:
   // Hold the lists of LOHs.

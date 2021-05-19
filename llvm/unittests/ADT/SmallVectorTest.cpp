@@ -208,7 +208,7 @@ typedef ::testing::Types<SmallVector<Constructable, 0>,
                          SmallVector<Constructable, 4>,
                          SmallVector<Constructable, 5>
                          > SmallVectorTestTypes;
-TYPED_TEST_CASE(SmallVectorTest, SmallVectorTestTypes);
+TYPED_TEST_SUITE(SmallVectorTest, SmallVectorTestTypes, );
 
 // Constructor test.
 TYPED_TEST(SmallVectorTest, ConstructorNonIterTest) {
@@ -811,7 +811,7 @@ typedef ::testing::Types<
     std::pair<SmallVector<Constructable, 2>, SmallVector<Constructable, 2>>
   > DualSmallVectorTestTypes;
 
-TYPED_TEST_CASE(DualSmallVectorsTest, DualSmallVectorTestTypes);
+TYPED_TEST_SUITE(DualSmallVectorsTest, DualSmallVectorTestTypes, );
 
 TYPED_TEST(DualSmallVectorsTest, MoveAssignment) {
   SCOPED_TRACE("MoveAssignTest-DualVectorTypes");
@@ -1095,8 +1095,8 @@ protected:
 using SmallVectorReferenceInvalidationTestTypes =
     ::testing::Types<SmallVector<int, 3>, SmallVector<Constructable, 3>>;
 
-TYPED_TEST_CASE(SmallVectorReferenceInvalidationTest,
-                SmallVectorReferenceInvalidationTestTypes);
+TYPED_TEST_SUITE(SmallVectorReferenceInvalidationTest,
+                 SmallVectorReferenceInvalidationTestTypes, );
 
 TYPED_TEST(SmallVectorReferenceInvalidationTest, PushBack) {
   // Note: setup adds [1, 2, ...] to V until it's at capacity in small mode.
@@ -1382,8 +1382,8 @@ using SmallVectorInternalReferenceInvalidationTestTypes =
     ::testing::Types<SmallVector<std::pair<int, int>, 3>,
                      SmallVector<std::pair<Constructable, Constructable>, 3>>;
 
-TYPED_TEST_CASE(SmallVectorInternalReferenceInvalidationTest,
-                SmallVectorInternalReferenceInvalidationTestTypes);
+TYPED_TEST_SUITE(SmallVectorInternalReferenceInvalidationTest,
+                 SmallVectorInternalReferenceInvalidationTestTypes, );
 
 TYPED_TEST(SmallVectorInternalReferenceInvalidationTest, EmplaceBack) {
   // Note: setup adds [1, 2, ...] to V until it's at capacity in small mode.

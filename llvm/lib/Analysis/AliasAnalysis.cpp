@@ -718,13 +718,13 @@ ModRefInfo AAResults::getModRefInfo(const Instruction *I,
 /// with a smarter AA in place, this test is just wasting compile time.
 ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
                                          const MemoryLocation &MemLoc,
-                                         DominatorTree *DT) {
+                                         DominatorTree *DT,
+                                         AAQueryInfo &AAQI) {
   if (!DT)
     return ModRefInfo::ModRef;
 
   const Value *Object = getUnderlyingObject(MemLoc.Ptr);
-  if (!isIdentifiedObject(Object) || isa<GlobalValue>(Object) ||
-      isa<Constant>(Object))
+  if (!isIdentifiedFunctionLocal(Object))
     return ModRefInfo::ModRef;
 
   const auto *Call = dyn_cast<CallBase>(I);
@@ -750,7 +750,9 @@ ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
          !Call->isByValArgument(ArgNo)))
       continue;
 
-    AliasResult AR = alias(*CI, Object);
+    AliasResult AR = alias(
+        MemoryLocation::getBeforeOrAfter(*CI),
+        MemoryLocation::getBeforeOrAfter(Object), AAQI);
     // If this is a no-capture pointer argument, see if we can tell that it
     // is impossible to alias the pointer we're checking.  If not, we have to
     // assume that the call could touch the pointer, even though it doesn't

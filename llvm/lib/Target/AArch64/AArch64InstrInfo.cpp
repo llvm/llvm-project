@@ -135,6 +135,9 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case AArch64::SPACE:
     NumBytes = MI.getOperand(1).getImm();
     break;
+  case AArch64::StoreSwiftAsyncContext:
+    NumBytes = 20;
+    break;
   case TargetOpcode::BUNDLE:
     NumBytes = getInstBundleLength(MI);
     break;
@@ -1901,6 +1904,68 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   }
 
   Register Reg = MI.getOperand(0).getReg();
+  TargetOptions Options = MI.getParent()->getParent()->getTarget().Options;
+  if (Options.StackProtectorGuard == StackProtectorGuards::SysReg) {
+    const AArch64SysReg::SysReg *SrcReg =
+        AArch64SysReg::lookupSysRegByName(Options.StackProtectorGuardReg);
+    if (!SrcReg)
+      report_fatal_error("Unknown SysReg for Stack Protector Guard Register");
+
+    // mrs xN, sysreg
+    BuildMI(MBB, MI, DL, get(AArch64::MRS))
+        .addDef(Reg, RegState::Renamable)
+        .addImm(SrcReg->Encoding);
+    int Offset = Options.StackProtectorGuardOffset;
+    if (Offset >= 0 && Offset <= 32760 && Offset % 8 == 0) {
+      // ldr xN, [xN, #offset]
+      BuildMI(MBB, MI, DL, get(AArch64::LDRXui))
+          .addDef(Reg)
+          .addUse(Reg, RegState::Kill)
+          .addImm(Offset / 8);
+    } else if (Offset >= -256 && Offset <= 255) {
+      // ldur xN, [xN, #offset]
+      BuildMI(MBB, MI, DL, get(AArch64::LDURXi))
+          .addDef(Reg)
+          .addUse(Reg, RegState::Kill)
+          .addImm(Offset);
+    } else if (Offset >= -4095 && Offset <= 4095) {
+      if (Offset > 0) {
+        // add xN, xN, #offset
+        BuildMI(MBB, MI, DL, get(AArch64::ADDXri))
+            .addDef(Reg)
+            .addUse(Reg, RegState::Kill)
+            .addImm(Offset)
+            .addImm(0);
+      } else {
+        // sub xN, xN, #offset
+        BuildMI(MBB, MI, DL, get(AArch64::SUBXri))
+            .addDef(Reg)
+            .addUse(Reg, RegState::Kill)
+            .addImm(-Offset)
+            .addImm(0);
+      }
+      // ldr xN, [xN]
+      BuildMI(MBB, MI, DL, get(AArch64::LDRXui))
+          .addDef(Reg)
+          .addUse(Reg, RegState::Kill)
+          .addImm(0);
+    } else {
+      // Cases that are larger than +/- 4095 and not a multiple of 8, or larger
+      // than 23760.
+      // It might be nice to use AArch64::MOVi32imm here, which would get
+      // expanded in PreSched2 after PostRA, but our lone scratch Reg already
+      // contains the MRS result. findScratchNonCalleeSaveRegister() in
+      // AArch64FrameLowering might help us find such a scratch register
+      // though. If we failed to find a scratch register, we could emit a
+      // stream of add instructions to build up the immediate. Or, we could try
+      // to insert a AArch64::MOVi32imm before register allocation so that we
+      // didn't need to scavenge for a scratch register.
+      report_fatal_error("Unable to encode Stack Protector Guard Offset");
+    }
+    MBB.erase(MI);
+    return true;
+  }
+
   const GlobalValue *GV =
       cast<GlobalValue>((*MI.memoperands_begin())->getValue());
   const TargetMachine &TM = MBB.getParent()->getTarget();
@@ -2640,6 +2705,13 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
     MinOffset = 0;
     MaxOffset = 4095;
     break;
+  case AArch64::StoreSwiftAsyncContext:
+    // Store is an STRXui, but there might be an ADDXri in the expansion too.
+    Scale = TypeSize::Fixed(1);
+    Width = 8;
+    MinOffset = 0;
+    MaxOffset = 4095;
+    break;
   case AArch64::LDPWi:
   case AArch64::LDPSi:
   case AArch64::LDNPWi:
@@ -2684,6 +2756,38 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
     Width = 1;
     MinOffset = 0;
     MaxOffset = 4095;
+    break;
+  case AArch64::STPXpre:
+  case AArch64::LDPXpost:
+  case AArch64::STPDpre:
+  case AArch64::LDPDpost:
+    Scale = TypeSize::Fixed(8);
+    Width = 8;
+    MinOffset = -512;
+    MaxOffset = 504;
+    break;
+  case AArch64::STPQpre:
+  case AArch64::LDPQpost:
+    Scale = TypeSize::Fixed(16);
+    Width = 16;
+    MinOffset = -1024;
+    MaxOffset = 1008;
+    break;
+  case AArch64::STRXpre:
+  case AArch64::STRDpre:
+  case AArch64::LDRXpost:
+  case AArch64::LDRDpost:
+    Scale = TypeSize::Fixed(1);
+    Width = 8;
+    MinOffset = -256;
+    MaxOffset = 255;
+    break;
+  case AArch64::STRQpre:
+  case AArch64::LDRQpost:
+    Scale = TypeSize::Fixed(1);
+    Width = 16;
+    MinOffset = -256;
+    MaxOffset = 255;
     break;
   case AArch64::ADDG:
     Scale = TypeSize::Fixed(16);

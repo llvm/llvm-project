@@ -601,3 +601,145 @@ if.end:
   %rec.lcssa = phi i16 [ %rec, %for.cond ], [ 10, %for.body ]
   ret i16 %rec.lcssa
 }
+
+; A test where the instructions to sink may not be visited in dominance order.
+define void @sink_dominance(i32* %ptr, i32 %N) {
+; CHECK-LABEL: @sink_dominance(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[FOR:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[FOR_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOR_TRUNC:%.*]] = trunc i64 [[FOR]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[FOR_TRUNC]], 213
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i32 [[FOR_TRUNC]], i32 22
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, i32* [[PTR:%.*]], i32 [[IV]]
+; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[GEP]], align 4
+; CHECK-NEXT:    [[FOR_NEXT]] = zext i32 [[LV]] to i64
+; CHECK-NEXT:    store i32 [[SELECT]], i32* [[GEP]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[CMP73:%.*]] = icmp ugt i32 [[N:%.*]], [[IV_NEXT]]
+; CHECK-NEXT:    br i1 [[CMP73]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %for = phi i64 [ 0, %entry ], [ %for.next, %loop ]
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+
+  %for.trunc = trunc i64 %for to i32
+  %cmp = icmp slt i32 %for.trunc, 213
+  %select = select i1 %cmp, i32 %for.trunc, i32 22
+
+  %gep = getelementptr inbounds i32, i32* %ptr, i32 %iv
+  %lv = load i32, i32* %gep, align 4
+  %for.next = zext i32 %lv to i64
+  store i32 %select, i32* %gep
+
+  %iv.next = add i32 %iv, 1
+  %cmp73 = icmp ugt i32 %N, %iv.next
+  br i1 %cmp73, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; Similar to @sink_dominance, but with 2 separate chains that merge at %select
+; with a different number of instructions in between.
+define void @sink_dominance_2(i32* %ptr, i32 %N) {
+; CHECK-LABEL: @sink_dominance_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[FOR:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[FOR_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOR_TRUNC:%.*]] = trunc i64 [[FOR]] to i32
+; CHECK-NEXT:    [[STEP:%.*]] = add i32 [[FOR_TRUNC]], 2
+; CHECK-NEXT:    [[STEP_2:%.*]] = mul i32 [[STEP]], 99
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[FOR_TRUNC]], 213
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i32 [[FOR_TRUNC]], i32 [[STEP_2]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, i32* [[PTR:%.*]], i32 [[IV]]
+; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[GEP]], align 4
+; CHECK-NEXT:    [[FOR_NEXT]] = zext i32 [[LV]] to i64
+; CHECK-NEXT:    store i32 [[SELECT]], i32* [[GEP]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[CMP73:%.*]] = icmp ugt i32 [[N:%.*]], [[IV_NEXT]]
+; CHECK-NEXT:    br i1 [[CMP73]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %for = phi i64 [ 0, %entry ], [ %for.next, %loop ]
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+
+  %for.trunc = trunc i64 %for to i32
+  %step = add i32 %for.trunc, 2
+  %step.2 = mul i32 %step, 99
+
+  %cmp = icmp slt i32 %for.trunc, 213
+  %select = select i1 %cmp, i32 %for.trunc, i32 %step.2
+
+  %gep = getelementptr inbounds i32, i32* %ptr, i32 %iv
+  %lv = load i32, i32* %gep, align 4
+  %for.next = zext i32 %lv to i64
+  store i32 %select, i32* %gep
+
+  %iv.next = add i32 %iv, 1
+  %cmp73 = icmp ugt i32 %N, %iv.next
+  br i1 %cmp73, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @cannot_sink_load_past_store(i32* %ptr, i32 %N) {
+; CHECK-LABEL: @cannot_sink_load_past_store(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[FOR:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[FOR_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[GEP_FOR:%.*]] = getelementptr inbounds i32, i32* [[PTR:%.*]], i64 [[FOR]]
+; CHECK-NEXT:    [[LV_FOR:%.*]] = load i32, i32* [[GEP_FOR]], align 4
+; CHECK-NEXT:    [[FOR_TRUNC:%.*]] = trunc i64 [[FOR]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[LV_FOR]], [[FOR_TRUNC]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i32 [[LV_FOR]], i32 22
+; CHECK-NEXT:    [[GEP_IV:%.*]] = getelementptr inbounds i32, i32* [[PTR]], i32 [[IV]]
+; CHECK-NEXT:    store i32 0, i32* [[GEP_IV]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[FOR_NEXT]] = zext i32 [[IV]] to i64
+; CHECK-NEXT:    [[CMP73:%.*]] = icmp ugt i32 [[N:%.*]], [[IV_NEXT]]
+; CHECK-NEXT:    br i1 [[CMP73]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %for = phi i64 [ 0, %entry ], [ %for.next, %loop ]
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+
+  %gep.for = getelementptr inbounds i32, i32* %ptr, i64 %for
+  %lv.for = load i32, i32* %gep.for, align 4
+  %for.trunc = trunc i64 %for to i32
+  %cmp = icmp slt i32 %lv.for, %for.trunc
+  %select = select i1 %cmp, i32 %lv.for, i32 22
+
+  %gep.iv = getelementptr inbounds i32, i32* %ptr, i32 %iv
+  store i32 0, i32* %gep.iv
+  %iv.next = add i32 %iv, 1
+  %for.next = zext i32 %iv to i64
+
+  %cmp73 = icmp ugt i32 %N, %iv.next
+  br i1 %cmp73, label %loop, label %exit
+
+exit:
+  ret void
+}

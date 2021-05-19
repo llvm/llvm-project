@@ -33,46 +33,29 @@ public:
 
   GDBRemoteClientBase(const char *comm_name, const char *listener_name);
 
-  bool SendAsyncSignal(int signo, std::chrono::seconds interrupt_timeout);
+  bool SendAsyncSignal(int signo);
 
-  bool Interrupt(std::chrono::seconds interrupt_timeout);
+  bool Interrupt();
 
   lldb::StateType SendContinuePacketAndWaitForResponse(
       ContinueDelegate &delegate, const UnixSignals &signals,
-      llvm::StringRef payload, std::chrono::seconds interrupt_timeout,
-      StringExtractorGDBRemote &response);
+      llvm::StringRef payload, StringExtractorGDBRemote &response);
 
-  // If interrupt_timeout == 0 seconds, don't interrupt the target.
-  // Only send the packet if the target is stopped.
-  // If you want to use this mode, use the fact that the timeout is defaulted
-  // so it's clear from the call-site that you are using no-interrupt.
-  // If it is non-zero, interrupt the target if it is running, and
-  // send the packet.
-  // It the target doesn't respond within the given timeout, it returns
-  // ErrorReplyTimeout.
-  PacketResult SendPacketAndWaitForResponse(
-      llvm::StringRef payload, StringExtractorGDBRemote &response,
-      std::chrono::seconds interrupt_timeout = std::chrono::seconds(0));
+  PacketResult SendPacketAndWaitForResponse(llvm::StringRef payload,
+                                            StringExtractorGDBRemote &response,
+                                            bool send_async);
 
   PacketResult SendPacketAndReceiveResponseWithOutputSupport(
       llvm::StringRef payload, StringExtractorGDBRemote &response,
-      std::chrono::seconds interrupt_timeout,
+      bool send_async,
       llvm::function_ref<void(llvm::StringRef)> output_callback);
 
   bool SendvContPacket(llvm::StringRef payload,
-                       std::chrono::seconds interrupt_timeout,
                        StringExtractorGDBRemote &response);
 
   class Lock {
   public:
-    // If interrupt_timeout == 0 seconds, only take the lock if the target is
-    // not running. If using this option, use the fact that the
-    // interrupt_timeout is defaulted so it will be obvious at the call site
-    // that you are choosing this mode. If it is non-zero, interrupt the target
-    // if it is running, waiting for the given timeout for the interrupt to
-    // succeed.
-    Lock(GDBRemoteClientBase &comm,
-         std::chrono::seconds interrupt_timeout = std::chrono::seconds(0));
+    Lock(GDBRemoteClientBase &comm, bool interrupt);
     ~Lock();
 
     explicit operator bool() { return m_acquired; }
@@ -84,11 +67,10 @@ public:
   private:
     std::unique_lock<std::recursive_mutex> m_async_lock;
     GDBRemoteClientBase &m_comm;
-    std::chrono::seconds m_interrupt_timeout;
     bool m_acquired;
     bool m_did_interrupt;
 
-    void SyncWithContinueThread();
+    void SyncWithContinueThread(bool interrupt);
   };
 
 protected:
@@ -127,7 +109,7 @@ private:
 
   /// When was the interrupt packet sent. Used to make sure we time out if the
   /// stub does not respond to interrupt requests.
-  std::chrono::time_point<std::chrono::steady_clock> m_interrupt_endpoint;
+  std::chrono::time_point<std::chrono::steady_clock> m_interrupt_time;
 
   /// Number of threads interested in sending.
   uint32_t m_async_count;

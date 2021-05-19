@@ -511,9 +511,10 @@ bool llvm::isInTailCallPosition(const CallBase &Call, const TargetMachine &TM) {
   // not profitable. Also, if the callee is a special function (e.g.
   // longjmp on x86), it can end up causing miscompilation that has not
   // been fully understood.
-  if (!Ret &&
-      ((!TM.Options.GuaranteedTailCallOpt &&
-        Call.getCallingConv() != CallingConv::Tail) || !isa<UnreachableInst>(Term)))
+  if (!Ret && ((!TM.Options.GuaranteedTailCallOpt &&
+                Call.getCallingConv() != CallingConv::Tail &&
+                Call.getCallingConv() != CallingConv::SwiftTail) ||
+               !isa<UnreachableInst>(Term)))
     return false;
 
   // If I will have a chain, make sure no other instruction that will have a

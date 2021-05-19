@@ -69,7 +69,7 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
     // GR64all + its subclasses.
     assert(RBGPR.covers(*TRI.getRegClass(AArch64::GPR32RegClassID)) &&
            "Subclass not added?");
-    assert(RBGPR.getSize() == 64 && "GPRs should hold up to 64-bit");
+    assert(RBGPR.getSize() == 128 && "GPRs should hold up to 128-bit");
 
     // The FPR register bank is fully defined by all the registers in
     // GR64all + its subclasses.
@@ -87,7 +87,7 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
     // Check that the TableGen'ed like file is in sync we our expectations.
     // First, the Idx.
     assert(checkPartialMappingIdx(PMI_FirstGPR, PMI_LastGPR,
-                                  {PMI_GPR32, PMI_GPR64}) &&
+                                  {PMI_GPR32, PMI_GPR64, PMI_GPR128}) &&
            "PartialMappingIdx's are incorrectly ordered");
     assert(checkPartialMappingIdx(PMI_FirstFPR, PMI_LastFPR,
                                   {PMI_FPR16, PMI_FPR32, PMI_FPR64, PMI_FPR128,
@@ -104,6 +104,7 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
 
     CHECK_PARTIALMAP(PMI_GPR32, 0, 32, RBGPR);
     CHECK_PARTIALMAP(PMI_GPR64, 0, 64, RBGPR);
+    CHECK_PARTIALMAP(PMI_GPR128, 0, 128, RBGPR);
     CHECK_PARTIALMAP(PMI_FPR16, 0, 16, RBFPR);
     CHECK_PARTIALMAP(PMI_FPR32, 0, 32, RBFPR);
     CHECK_PARTIALMAP(PMI_FPR64, 0, 64, RBFPR);
@@ -124,6 +125,7 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
 
     CHECK_VALUEMAP(GPR, 32);
     CHECK_VALUEMAP(GPR, 64);
+    CHECK_VALUEMAP(GPR, 128);
     CHECK_VALUEMAP(FPR, 16);
     CHECK_VALUEMAP(FPR, 32);
     CHECK_VALUEMAP(FPR, 64);
@@ -142,6 +144,7 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
 
     CHECK_VALUEMAP_3OPS(GPR, 32);
     CHECK_VALUEMAP_3OPS(GPR, 64);
+    CHECK_VALUEMAP_3OPS(GPR, 128);
     CHECK_VALUEMAP_3OPS(FPR, 32);
     CHECK_VALUEMAP_3OPS(FPR, 64);
     CHECK_VALUEMAP_3OPS(FPR, 128);
@@ -871,12 +874,16 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OpRegBankIdx[3] = PMI_FirstGPR;
     break;
   case TargetOpcode::G_EXTRACT: {
-    // For s128 sources we have to use fpr.
+    // For s128 sources we have to use fpr unless we know otherwise.
+    auto Src = MI.getOperand(1).getReg();
     LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
-    if (SrcTy.getSizeInBits() == 128) {
-      OpRegBankIdx[0] = PMI_FirstFPR;
-      OpRegBankIdx[1] = PMI_FirstFPR;
-    }
+    if (SrcTy.getSizeInBits() != 128)
+      break;
+    auto Idx = MRI.getRegClassOrNull(Src) == &AArch64::XSeqPairsClassRegClass
+                   ? PMI_FirstGPR
+                   : PMI_FirstFPR;
+    OpRegBankIdx[0] = Idx;
+    OpRegBankIdx[1] = Idx;
     break;
   }
   case TargetOpcode::G_BUILD_VECTOR: {

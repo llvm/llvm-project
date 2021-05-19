@@ -10,8 +10,8 @@
 
 // Tests that the allocator shuffles the chunks before returning to the user.
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 int main(int argc, char **argv) {
   int alloc_size = argc == 2 ? atoi(argv[1]) : 100;

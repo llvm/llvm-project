@@ -355,125 +355,6 @@ static OverwriteResult isMaskedStoreOverwrite(const Instruction *Later,
   return OW_Complete;
 }
 
-/// Return 'OW_Complete' if a store to the 'Later' location (by \p LaterI
-/// instruction) completely overwrites a store to the 'Earlier' location.
-/// (by \p EarlierI instruction).
-/// Return OW_MaybePartial if \p Later does not completely overwrite
-/// \p Earlier, but they both write to the same underlying object. In that
-/// case, use isPartialOverwrite to check if \p Later partially overwrites
-/// \p Earlier. Returns 'OW_Unknown' if nothing can be determined.
-static OverwriteResult
-isOverwrite(const Instruction *LaterI, const Instruction *EarlierI,
-            const MemoryLocation &Later, const MemoryLocation &Earlier,
-            const DataLayout &DL, const TargetLibraryInfo &TLI,
-            int64_t &EarlierOff, int64_t &LaterOff, BatchAAResults &AA,
-            const Function *F) {
-  // FIXME: Vet that this works for size upper-bounds. Seems unlikely that we'll
-  // get imprecise values here, though (except for unknown sizes).
-  if (!Later.Size.isPrecise() || !Earlier.Size.isPrecise()) {
-    // In case no constant size is known, try to an IR values for the number
-    // of bytes written and check if they match.
-    const auto *LaterMemI = dyn_cast<MemIntrinsic>(LaterI);
-    const auto *EarlierMemI = dyn_cast<MemIntrinsic>(EarlierI);
-    if (LaterMemI && EarlierMemI) {
-      const Value *LaterV = LaterMemI->getLength();
-      const Value *EarlierV = EarlierMemI->getLength();
-      if (LaterV == EarlierV && AA.isMustAlias(Earlier, Later))
-        return OW_Complete;
-    }
-
-    // Masked stores have imprecise locations, but we can reason about them
-    // to some extent.
-    return isMaskedStoreOverwrite(LaterI, EarlierI, AA);
-  }
-
-  const uint64_t LaterSize = Later.Size.getValue();
-  const uint64_t EarlierSize = Earlier.Size.getValue();
-
-  // Query the alias information
-  AliasResult AAR = AA.alias(Later, Earlier);
-
-  // If the start pointers are the same, we just have to compare sizes to see if
-  // the later store was larger than the earlier store.
-  if (AAR == AliasResult::MustAlias) {
-    // Make sure that the Later size is >= the Earlier size.
-    if (LaterSize >= EarlierSize)
-      return OW_Complete;
-  }
-
-  // If we hit a partial alias we may have a full overwrite
-  if (AAR == AliasResult::PartialAlias && AAR.hasOffset()) {
-    int32_t Off = AAR.getOffset();
-    if (Off >= 0 && (uint64_t)Off + EarlierSize <= LaterSize)
-      return OW_Complete;
-  }
-
-  // Check to see if the later store is to the entire object (either a global,
-  // an alloca, or a byval/inalloca argument).  If so, then it clearly
-  // overwrites any other store to the same object.
-  const Value *P1 = Earlier.Ptr->stripPointerCasts();
-  const Value *P2 = Later.Ptr->stripPointerCasts();
-  const Value *UO1 = getUnderlyingObject(P1), *UO2 = getUnderlyingObject(P2);
-
-  // If we can't resolve the same pointers to the same object, then we can't
-  // analyze them at all.
-  if (UO1 != UO2)
-    return OW_Unknown;
-
-  // If the "Later" store is to a recognizable object, get its size.
-  uint64_t ObjectSize = getPointerSize(UO2, DL, TLI, F);
-  if (ObjectSize != MemoryLocation::UnknownSize)
-    if (ObjectSize == LaterSize && ObjectSize >= EarlierSize)
-      return OW_Complete;
-
-  // Okay, we have stores to two completely different pointers.  Try to
-  // decompose the pointer into a "base + constant_offset" form.  If the base
-  // pointers are equal, then we can reason about the two stores.
-  EarlierOff = 0;
-  LaterOff = 0;
-  const Value *BP1 = GetPointerBaseWithConstantOffset(P1, EarlierOff, DL);
-  const Value *BP2 = GetPointerBaseWithConstantOffset(P2, LaterOff, DL);
-
-  // If the base pointers still differ, we have two completely different stores.
-  if (BP1 != BP2)
-    return OW_Unknown;
-
-  // The later access completely overlaps the earlier store if and only if
-  // both start and end of the earlier one is "inside" the later one:
-  //    |<->|--earlier--|<->|
-  //    |-------later-------|
-  // Accesses may overlap if and only if start of one of them is "inside"
-  // another one:
-  //    |<->|--earlier--|<----->|
-  //    |-------later-------|
-  //           OR
-  //    |----- earlier -----|
-  //    |<->|---later---|<----->|
-  //
-  // We have to be careful here as *Off is signed while *.Size is unsigned.
-
-  // Check if the earlier access starts "not before" the later one.
-  if (EarlierOff >= LaterOff) {
-    // If the earlier access ends "not after" the later access then the earlier
-    // one is completely overwritten by the later one.
-    if (uint64_t(EarlierOff - LaterOff) + EarlierSize <= LaterSize)
-      return OW_Complete;
-    // If start of the earlier access is "before" end of the later access then
-    // accesses overlap.
-    else if ((uint64_t)(EarlierOff - LaterOff) < LaterSize)
-      return OW_MaybePartial;
-  }
-  // If start of the later access is "before" end of the earlier access then
-  // accesses overlap.
-  else if ((uint64_t)(LaterOff - EarlierOff) < EarlierSize) {
-    return OW_MaybePartial;
-  }
-
-  // Can reach here only if accesses are known not to overlap. There is no
-  // dedicated code to indicate no overlap so signal "unknown".
-  return OW_Unknown;
-}
-
 /// Return 'OW_Complete' if a store to the 'Later' location completely
 /// overwrites a store to the 'Earlier' location, 'OW_End' if the end of the
 /// 'Earlier' location is completely overwritten by 'Later', 'OW_Begin' if the
@@ -1033,6 +914,123 @@ struct DSEState {
     return State;
   }
 
+  /// Return 'OW_Complete' if a store to the 'Later' location (by \p LaterI
+  /// instruction) completely overwrites a store to the 'Earlier' location.
+  /// (by \p EarlierI instruction).
+  /// Return OW_MaybePartial if \p Later does not completely overwrite
+  /// \p Earlier, but they both write to the same underlying object. In that
+  /// case, use isPartialOverwrite to check if \p Later partially overwrites
+  /// \p Earlier. Returns 'OW_Unknown' if nothing can be determined.
+  OverwriteResult
+  isOverwrite(const Instruction *LaterI, const Instruction *EarlierI,
+              const MemoryLocation &Later, const MemoryLocation &Earlier,
+              int64_t &EarlierOff, int64_t &LaterOff) {
+    // FIXME: Vet that this works for size upper-bounds. Seems unlikely that we'll
+    // get imprecise values here, though (except for unknown sizes).
+    if (!Later.Size.isPrecise() || !Earlier.Size.isPrecise()) {
+      // In case no constant size is known, try to an IR values for the number
+      // of bytes written and check if they match.
+      const auto *LaterMemI = dyn_cast<MemIntrinsic>(LaterI);
+      const auto *EarlierMemI = dyn_cast<MemIntrinsic>(EarlierI);
+      if (LaterMemI && EarlierMemI) {
+        const Value *LaterV = LaterMemI->getLength();
+        const Value *EarlierV = EarlierMemI->getLength();
+        if (LaterV == EarlierV && BatchAA.isMustAlias(Earlier, Later))
+          return OW_Complete;
+      }
+
+      // Masked stores have imprecise locations, but we can reason about them
+      // to some extent.
+      return isMaskedStoreOverwrite(LaterI, EarlierI, BatchAA);
+    }
+
+    const uint64_t LaterSize = Later.Size.getValue();
+    const uint64_t EarlierSize = Earlier.Size.getValue();
+
+    // Query the alias information
+    AliasResult AAR = BatchAA.alias(Later, Earlier);
+
+    // If the start pointers are the same, we just have to compare sizes to see if
+    // the later store was larger than the earlier store.
+    if (AAR == AliasResult::MustAlias) {
+      // Make sure that the Later size is >= the Earlier size.
+      if (LaterSize >= EarlierSize)
+        return OW_Complete;
+    }
+
+    // If we hit a partial alias we may have a full overwrite
+    if (AAR == AliasResult::PartialAlias && AAR.hasOffset()) {
+      int32_t Off = AAR.getOffset();
+      if (Off >= 0 && (uint64_t)Off + EarlierSize <= LaterSize)
+        return OW_Complete;
+    }
+
+    // Check to see if the later store is to the entire object (either a global,
+    // an alloca, or a byval/inalloca argument).  If so, then it clearly
+    // overwrites any other store to the same object.
+    const Value *P1 = Earlier.Ptr->stripPointerCasts();
+    const Value *P2 = Later.Ptr->stripPointerCasts();
+    const Value *UO1 = getUnderlyingObject(P1), *UO2 = getUnderlyingObject(P2);
+
+    // If we can't resolve the same pointers to the same object, then we can't
+    // analyze them at all.
+    if (UO1 != UO2)
+      return OW_Unknown;
+
+    // If the "Later" store is to a recognizable object, get its size.
+    uint64_t ObjectSize = getPointerSize(UO2, DL, TLI, &F);
+    if (ObjectSize != MemoryLocation::UnknownSize)
+      if (ObjectSize == LaterSize && ObjectSize >= EarlierSize)
+        return OW_Complete;
+
+    // Okay, we have stores to two completely different pointers.  Try to
+    // decompose the pointer into a "base + constant_offset" form.  If the base
+    // pointers are equal, then we can reason about the two stores.
+    EarlierOff = 0;
+    LaterOff = 0;
+    const Value *BP1 = GetPointerBaseWithConstantOffset(P1, EarlierOff, DL);
+    const Value *BP2 = GetPointerBaseWithConstantOffset(P2, LaterOff, DL);
+
+    // If the base pointers still differ, we have two completely different stores.
+    if (BP1 != BP2)
+      return OW_Unknown;
+
+    // The later access completely overlaps the earlier store if and only if
+    // both start and end of the earlier one is "inside" the later one:
+    //    |<->|--earlier--|<->|
+    //    |-------later-------|
+    // Accesses may overlap if and only if start of one of them is "inside"
+    // another one:
+    //    |<->|--earlier--|<----->|
+    //    |-------later-------|
+    //           OR
+    //    |----- earlier -----|
+    //    |<->|---later---|<----->|
+    //
+    // We have to be careful here as *Off is signed while *.Size is unsigned.
+
+    // Check if the earlier access starts "not before" the later one.
+    if (EarlierOff >= LaterOff) {
+      // If the earlier access ends "not after" the later access then the earlier
+      // one is completely overwritten by the later one.
+      if (uint64_t(EarlierOff - LaterOff) + EarlierSize <= LaterSize)
+        return OW_Complete;
+      // If start of the earlier access is "before" end of the later access then
+      // accesses overlap.
+      else if ((uint64_t)(EarlierOff - LaterOff) < LaterSize)
+        return OW_MaybePartial;
+    }
+    // If start of the later access is "before" end of the earlier access then
+    // accesses overlap.
+    else if ((uint64_t)(LaterOff - EarlierOff) < EarlierSize) {
+      return OW_MaybePartial;
+    }
+
+    // Can reach here only if accesses are known not to overlap. There is no
+    // dedicated code to indicate no overlap so signal "unknown".
+    return OW_Unknown;
+  }
+
   bool isInvisibleToCallerAfterRet(const Value *V) {
     if (isa<AllocaInst>(V))
       return true;
@@ -1120,8 +1118,8 @@ struct DSEState {
 
     int64_t InstWriteOffset, DepWriteOffset;
     if (auto CC = getLocForWriteEx(UseInst))
-      return isOverwrite(UseInst, DefInst, *CC, DefLoc, DL, TLI, DepWriteOffset,
-                         InstWriteOffset, BatchAA, &F) == OW_Complete;
+      return isOverwrite(UseInst, DefInst, *CC, DefLoc, DepWriteOffset,
+                         InstWriteOffset) == OW_Complete;
     return false;
   }
 
@@ -1224,9 +1222,8 @@ struct DSEState {
       return BatchAA.isMustAlias(TermLoc.Ptr, LocUO);
     }
     int64_t InstWriteOffset, DepWriteOffset;
-    return isOverwrite(MaybeTerm, AccessI, TermLoc, Loc, DL, TLI,
-                       DepWriteOffset, InstWriteOffset, BatchAA,
-                       &F) == OW_Complete;
+    return isOverwrite(MaybeTerm, AccessI, TermLoc, Loc, DepWriteOffset,
+                       InstWriteOffset) == OW_Complete;
   }
 
   // Returns true if \p Use may read from \p DefLoc.
@@ -1273,9 +1270,8 @@ struct DSEState {
 
     Ptr = Ptr->stripPointerCasts();
     if (auto *I = dyn_cast<Instruction>(Ptr)) {
-      if (I->getParent() == &I->getFunction()->getEntryBlock()) {
+      if (I->getParent()->isEntryBlock())
         return true;
-      }
     }
     if (auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
       return IsGuaranteedLoopInvariantBase(GEP->getPointerOperand()) &&
@@ -1422,8 +1418,8 @@ struct DSEState {
         continue;
       } else {
         int64_t InstWriteOffset, DepWriteOffset;
-        auto OR = isOverwrite(KillingI, CurrentI, DefLoc, *CurrentLoc, DL, TLI,
-                              DepWriteOffset, InstWriteOffset, BatchAA, &F);
+        auto OR = isOverwrite(KillingI, CurrentI, DefLoc, *CurrentLoc,
+                              DepWriteOffset, InstWriteOffset);
         // If Current does not write to the same object as KillingDef, check
         // the next candidate.
         if (OR == OW_Unknown) {
@@ -1940,9 +1936,8 @@ bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
       } else {
         // Check if NI overwrites SI.
         int64_t InstWriteOffset, DepWriteOffset;
-        OverwriteResult OR =
-            isOverwrite(SI, NI, SILoc, NILoc, State.DL, TLI, DepWriteOffset,
-                        InstWriteOffset, State.BatchAA, &F);
+        OverwriteResult OR = State.isOverwrite(SI, NI, SILoc, NILoc,
+                                               DepWriteOffset, InstWriteOffset);
         if (OR == OW_MaybePartial) {
           auto Iter = State.IOLs.insert(
               std::make_pair<BasicBlock *, InstOverlapIntervalsTy>(

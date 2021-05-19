@@ -85,7 +85,8 @@ public:
   Value(const Value &) = default;
   Value &operator=(const Value &) = default;
 
-  template <typename U> bool isa() const {
+  template <typename U>
+  bool isa() const {
     assert(*this && "isa<> used on a null type.");
     return U::classof(*this);
   }
@@ -94,13 +95,16 @@ public:
   bool isa() const {
     return isa<First>() || isa<Second, Rest...>();
   }
-  template <typename U> U dyn_cast() const {
+  template <typename U>
+  U dyn_cast() const {
     return isa<U>() ? U(impl) : U(nullptr);
   }
-  template <typename U> U dyn_cast_or_null() const {
+  template <typename U>
+  U dyn_cast_or_null() const {
     return (*this && isa<U>()) ? U(impl) : U(nullptr);
   }
-  template <typename U> U cast() const {
+  template <typename U>
+  U cast() const {
     assert(isa<U>());
     return U(impl);
   }
@@ -134,9 +138,9 @@ public:
     return llvm::dyn_cast_or_null<OpTy>(getDefiningOp());
   }
 
-  /// If this value is the result of an operation, use it as a location,
-  /// otherwise return an unknown location.
+  /// Return the location of this value.
   Location getLoc() const;
+  void setLoc(Location loc);
 
   /// Return the Region in which this Value is defined.
   Region *getParentRegion();
@@ -165,6 +169,11 @@ public:
   void
   replaceAllUsesExcept(Value newValue,
                        const SmallPtrSetImpl<Operation *> &exceptions) const;
+
+  /// Replace all uses of 'this' value with 'newValue', updating anything in the
+  /// IR that uses 'this' to use the other value instead except if the user is
+  /// 'exceptedUser'.
+  void replaceAllUsesExcept(Value newValue, Operation *exceptedUser) const;
 
   /// Replace all uses of 'this' value with 'newValue' if the given callback
   /// returns true.
@@ -245,14 +254,18 @@ public:
   }
 
 private:
-  BlockArgumentImpl(Type type, Block *owner, int64_t index)
-      : ValueImpl(type, Kind::BlockArgument), owner(owner), index(index) {}
+  BlockArgumentImpl(Type type, Block *owner, int64_t index, Location loc)
+      : ValueImpl(type, Kind::BlockArgument), owner(owner), index(index),
+        loc(loc) {}
 
   /// The owner of this argument.
   Block *owner;
 
   /// The position in the argument list.
   int64_t index;
+
+  /// The source location of this argument.
+  Location loc;
 
   /// Allow access to owner and constructor.
   friend BlockArgument;
@@ -274,10 +287,15 @@ public:
   /// Returns the number of this argument.
   unsigned getArgNumber() const { return getImpl()->index; }
 
+  /// Return the location for this argument.
+  Location getLoc() const { return getImpl()->loc; }
+  void setLoc(Location loc) { getImpl()->loc = loc; }
+
 private:
   /// Allocate a new argument with the given type and owner.
-  static BlockArgument create(Type type, Block *owner, int64_t index) {
-    return new detail::BlockArgumentImpl(type, owner, index);
+  static BlockArgument create(Type type, Block *owner, int64_t index,
+                              Location loc) {
+    return new detail::BlockArgumentImpl(type, owner, index, loc);
   }
 
   /// Destroy and deallocate this argument.
@@ -421,7 +439,8 @@ inline ::llvm::hash_code hash_value(Value arg) {
 
 namespace llvm {
 
-template <> struct DenseMapInfo<mlir::Value> {
+template <>
+struct DenseMapInfo<mlir::Value> {
   static mlir::Value getEmptyKey() {
     void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
     return mlir::Value::getFromOpaquePointer(pointer);
@@ -448,7 +467,8 @@ struct DenseMapInfo<mlir::BlockArgument> : public DenseMapInfo<mlir::Value> {
 };
 
 /// Allow stealing the low bits of a value.
-template <> struct PointerLikeTypeTraits<mlir::Value> {
+template <>
+struct PointerLikeTypeTraits<mlir::Value> {
 public:
   static inline void *getAsVoidPointer(mlir::Value value) {
     return const_cast<void *>(value.getAsOpaquePointer());

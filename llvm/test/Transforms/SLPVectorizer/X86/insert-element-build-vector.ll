@@ -38,6 +38,61 @@ define <4 x float> @simple_select(<4 x float> %a, <4 x float> %b, <4 x i32> %c) 
   ret <4 x float> %rd
 }
 
+define <8 x float> @simple_select2(<4 x float> %a, <4 x float> %b, <4 x i32> %c) #0 {
+; CHECK-LABEL: @simple_select2(
+; CHECK-NEXT:    [[C0:%.*]] = extractelement <4 x i32> [[C:%.*]], i32 0
+; CHECK-NEXT:    [[C1:%.*]] = extractelement <4 x i32> [[C]], i32 1
+; CHECK-NEXT:    [[C2:%.*]] = extractelement <4 x i32> [[C]], i32 2
+; CHECK-NEXT:    [[C3:%.*]] = extractelement <4 x i32> [[C]], i32 3
+; CHECK-NEXT:    [[A0:%.*]] = extractelement <4 x float> [[A:%.*]], i32 0
+; CHECK-NEXT:    [[A1:%.*]] = extractelement <4 x float> [[A]], i32 1
+; CHECK-NEXT:    [[A2:%.*]] = extractelement <4 x float> [[A]], i32 2
+; CHECK-NEXT:    [[A3:%.*]] = extractelement <4 x float> [[A]], i32 3
+; CHECK-NEXT:    [[B0:%.*]] = extractelement <4 x float> [[B:%.*]], i32 0
+; CHECK-NEXT:    [[B1:%.*]] = extractelement <4 x float> [[B]], i32 1
+; CHECK-NEXT:    [[B2:%.*]] = extractelement <4 x float> [[B]], i32 2
+; CHECK-NEXT:    [[B3:%.*]] = extractelement <4 x float> [[B]], i32 3
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp ne i32 [[C0]], 0
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[C1]], 0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[C2]], 0
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[C3]], 0
+; CHECK-NEXT:    [[S0:%.*]] = select i1 [[CMP0]], float [[A0]], float [[B0]]
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[CMP1]], float [[A1]], float [[B1]]
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[CMP2]], float [[A2]], float [[B2]]
+; CHECK-NEXT:    [[S3:%.*]] = select i1 [[CMP3]], float [[A3]], float [[B3]]
+; CHECK-NEXT:    [[RA:%.*]] = insertelement <8 x float> undef, float [[S0]], i32 0
+; CHECK-NEXT:    [[RB:%.*]] = insertelement <8 x float> [[RA]], float [[S1]], i32 2
+; CHECK-NEXT:    [[RC:%.*]] = insertelement <8 x float> [[RB]], float [[S2]], i32 4
+; CHECK-NEXT:    [[RD:%.*]] = insertelement <8 x float> [[RC]], float [[S3]], i32 7
+; CHECK-NEXT:    ret <8 x float> [[RD]]
+;
+  %c0 = extractelement <4 x i32> %c, i32 0
+  %c1 = extractelement <4 x i32> %c, i32 1
+  %c2 = extractelement <4 x i32> %c, i32 2
+  %c3 = extractelement <4 x i32> %c, i32 3
+  %a0 = extractelement <4 x float> %a, i32 0
+  %a1 = extractelement <4 x float> %a, i32 1
+  %a2 = extractelement <4 x float> %a, i32 2
+  %a3 = extractelement <4 x float> %a, i32 3
+  %b0 = extractelement <4 x float> %b, i32 0
+  %b1 = extractelement <4 x float> %b, i32 1
+  %b2 = extractelement <4 x float> %b, i32 2
+  %b3 = extractelement <4 x float> %b, i32 3
+  %cmp0 = icmp ne i32 %c0, 0
+  %cmp1 = icmp ne i32 %c1, 0
+  %cmp2 = icmp ne i32 %c2, 0
+  %cmp3 = icmp ne i32 %c3, 0
+  %s0 = select i1 %cmp0, float %a0, float %b0
+  %s1 = select i1 %cmp1, float %a1, float %b1
+  %s2 = select i1 %cmp2, float %a2, float %b2
+  %s3 = select i1 %cmp3, float %a3, float %b3
+  %ra = insertelement <8 x float> undef, float %s0, i32 0
+  %rb = insertelement <8 x float> %ra, float %s1, i32 2
+  %rc = insertelement <8 x float> %rb, float %s2, i32 4
+  %rd = insertelement <8 x float> %rc, float %s3, i32 7
+  ret <8 x float> %rd
+}
+
 declare void @llvm.assume(i1) nounwind
 
 ; This entire tree is ephemeral, don't vectorize any of it.

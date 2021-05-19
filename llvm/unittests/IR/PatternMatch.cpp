@@ -1641,7 +1641,7 @@ template <typename T> struct MutableConstTest : PatternMatchTest { };
 typedef ::testing::Types<std::tuple<Value*, Instruction*>,
                          std::tuple<const Value*, const Instruction *>>
     MutableConstTestTypes;
-TYPED_TEST_CASE(MutableConstTest, MutableConstTestTypes);
+TYPED_TEST_SUITE(MutableConstTest, MutableConstTestTypes, );
 
 TYPED_TEST(MutableConstTest, ICmp) {
   auto &IRB = PatternMatchTest::IRB;

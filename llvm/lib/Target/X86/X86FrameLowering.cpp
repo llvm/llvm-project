@@ -409,7 +409,13 @@ int X86FrameLowering::mergeSPUpdates(MachineBasicBlock &MBB,
     return 0;
 
   PI = MBB.erase(PI);
-  if (PI != MBB.end() && PI->isCFIInstruction()) PI = MBB.erase(PI);
+  if (PI != MBB.end() && PI->isCFIInstruction()) {
+    auto CIs = MBB.getParent()->getFrameInstructions();
+    MCCFIInstruction CI = CIs[PI->getOperand(0).getCFIIndex()];
+    if (CI.getOperation() == MCCFIInstruction::OpDefCfaOffset ||
+        CI.getOperation() == MCCFIInstruction::OpAdjustCfaOffset)
+      PI = MBB.erase(PI);
+  }
   if (!doMergeWithPrevious)
     MBBI = skipDebugInstructionsForward(PI, MBB.end());
 
@@ -1356,6 +1362,14 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
       STI.getTargetLowering()->hasStackProbeSymbol(MF);
   unsigned StackProbeSize = STI.getTargetLowering()->getStackProbeSize(MF);
 
+  if (HasFP && X86FI->hasSwiftAsyncContext()) {
+    BuildMI(MBB, MBBI, DL, TII.get(X86::BTS64ri8),
+            MachineFramePtr)
+        .addUse(MachineFramePtr)
+        .addImm(60)
+        .setMIFlag(MachineInstr::FrameSetup);
+  }
+
   // Re-align the stack on 64-bit if the x86-interrupt calling convention is
   // used and an error code was pushed, since the x86-64 ABI requires a 16-byte
   // stack alignment.
@@ -1470,11 +1484,44 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
 
     if (!IsWin64Prologue && !IsFunclet) {
       // Update EBP with the new base value.
-      BuildMI(MBB, MBBI, DL,
-              TII.get(Uses64BitFramePtr ? X86::MOV64rr : X86::MOV32rr),
-              FramePtr)
-          .addReg(StackPtr)
-          .setMIFlag(MachineInstr::FrameSetup);
+      if (!X86FI->hasSwiftAsyncContext()) {
+        BuildMI(MBB, MBBI, DL,
+                TII.get(Uses64BitFramePtr ? X86::MOV64rr : X86::MOV32rr),
+                FramePtr)
+            .addReg(StackPtr)
+            .setMIFlag(MachineInstr::FrameSetup);
+      } else {
+        // Before we update the live frame pointer we have to ensure there's a
+        // valid (or null) asynchronous context in its slot just before FP in
+        // the frame record, so store it now.
+        const auto &Attrs = MF.getFunction().getAttributes();
+
+        if (Attrs.hasAttrSomewhere(Attribute::SwiftAsync)) {
+          // We have an initial context in r14, store it just before the frame
+          // pointer.
+          MBB.addLiveIn(X86::R14);
+          BuildMI(MBB, MBBI, DL, TII.get(X86::PUSH64r))
+              .addReg(X86::R14)
+              .setMIFlag(MachineInstr::FrameSetup);
+        } else {
+          // No initial context, store null so that there's no pointer that
+          // could be misused.
+          BuildMI(MBB, MBBI, DL, TII.get(X86::PUSH64i8))
+              .addImm(0)
+              .setMIFlag(MachineInstr::FrameSetup);
+        }
+        BuildMI(MBB, MBBI, DL, TII.get(X86::LEA64r), FramePtr)
+            .addUse(X86::RSP)
+            .addImm(1)
+            .addUse(X86::NoRegister)
+            .addImm(8)
+            .addUse(X86::NoRegister)
+            .setMIFlag(MachineInstr::FrameSetup);
+        BuildMI(MBB, MBBI, DL, TII.get(X86::SUB64ri8), X86::RSP)
+            .addUse(X86::RSP)
+            .addImm(8)
+            .setMIFlag(MachineInstr::FrameSetup);
+      }
 
       if (NeedsDwarfCFI) {
         // Mark effective beginning of when frame pointer becomes valid.
@@ -1979,10 +2026,26 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   // AfterPop is the position to insert .cfi_restore.
   MachineBasicBlock::iterator AfterPop = MBBI;
   if (HasFP) {
+    if (X86FI->hasSwiftAsyncContext()) {
+      // Discard the context.
+      int Offset = 16 + mergeSPUpdates(MBB, MBBI, true);
+      emitSPUpdate(MBB, MBBI, DL, Offset, /*InEpilogue*/true);
+    }
     // Pop EBP.
     BuildMI(MBB, MBBI, DL, TII.get(Is64Bit ? X86::POP64r : X86::POP32r),
             MachineFramePtr)
         .setMIFlag(MachineInstr::FrameDestroy);
+
+    // We need to reset FP to its untagged state on return. Bit 60 is currently
+    // used to show the presence of an extended frame.
+    if (X86FI->hasSwiftAsyncContext()) {
+      BuildMI(MBB, MBBI, DL, TII.get(X86::BTR64ri8),
+              MachineFramePtr)
+          .addUse(MachineFramePtr)
+          .addImm(60)
+          .setMIFlag(MachineInstr::FrameDestroy);
+    }
+
     if (NeedsDwarfCFI) {
       unsigned DwarfStackPtr =
           TRI->getDwarfRegNum(Is64Bit ? X86::RSP : X86::ESP, true);
@@ -2007,7 +2070,9 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
 
     if (Opc != X86::DBG_VALUE && !PI->isTerminator()) {
       if ((Opc != X86::POP32r || !PI->getFlag(MachineInstr::FrameDestroy)) &&
-          (Opc != X86::POP64r || !PI->getFlag(MachineInstr::FrameDestroy)))
+          (Opc != X86::POP64r || !PI->getFlag(MachineInstr::FrameDestroy)) &&
+          (Opc != X86::BTR64ri8 || !PI->getFlag(MachineInstr::FrameDestroy)) &&
+          (Opc != X86::ADD64ri8 || !PI->getFlag(MachineInstr::FrameDestroy)))
         break;
       FirstCSPop = PI;
     }
@@ -2038,6 +2103,9 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
     unsigned SEHFrameOffset = calculateSetFPREG(SEHStackAllocAmt);
     uint64_t LEAAmount =
         IsWin64Prologue ? SEHStackAllocAmt - SEHFrameOffset : -CSSize;
+
+    if (X86FI->hasSwiftAsyncContext())
+      LEAAmount -= 16;
 
     // There are only two legal forms of epilogue:
     // - add SEHAllocationSize, %rsp
@@ -2367,6 +2435,14 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
     SpillSlotOffset -= SlotSize;
     MFI.CreateFixedSpillStackObject(SlotSize, SpillSlotOffset);
 
+    // The async context lives directly before the frame pointer, and we
+    // allocate a second slot to preserve stack alignment.
+    if (X86FI->hasSwiftAsyncContext()) {
+      SpillSlotOffset -= SlotSize;
+      MFI.CreateFixedSpillStackObject(SlotSize, SpillSlotOffset);
+      SpillSlotOffset -= SlotSize;
+    }
+
     // Since emitPrologue and emitEpilogue will handle spilling and restoring of
     // the frame register, we can delete it from CSI list and not have to worry
     // about avoiding it later.
@@ -2508,7 +2584,7 @@ void X86FrameLowering::emitCatchRetReturnValue(MachineBasicBlock &MBB,
   assert(!isAsynchronousEHPersonality(classifyEHPersonality(
              MBB.getParent()->getFunction().getPersonalityFn())) &&
          "SEH should not use CATCHRET");
-  DebugLoc DL = CatchRet->getDebugLoc();
+  const DebugLoc &DL = CatchRet->getDebugLoc();
   MachineBasicBlock *CatchRetTarget = CatchRet->getOperand(0).getMBB();
 
   // Fill EAX/RAX with the address of the target block.
@@ -3160,7 +3236,7 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
   bool reserveCallFrame = hasReservedCallFrame(MF);
   unsigned Opcode = I->getOpcode();
   bool isDestroy = Opcode == TII.getCallFrameDestroyOpcode();
-  DebugLoc DL = I->getDebugLoc();
+  DebugLoc DL = I->getDebugLoc(); // copy DebugLoc as I will be erased.
   uint64_t Amount = TII.getFrameSize(*I);
   uint64_t InternalAmt = (isDestroy || Amount) ? TII.getFrameAdjustment(*I) : 0;
   I = MBB.erase(I);
@@ -3267,7 +3343,11 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
 bool X86FrameLowering::canUseAsPrologue(const MachineBasicBlock &MBB) const {
   assert(MBB.getParent() && "Block is not attached to a function!");
   const MachineFunction &MF = *MBB.getParent();
-  return !TRI->hasStackRealignment(MF) || !MBB.isLiveIn(X86::EFLAGS);
+  if (!MBB.isLiveIn(X86::EFLAGS))
+    return true;
+
+  const X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
+  return !TRI->hasStackRealignment(MF) && !X86FI->hasSwiftAsyncContext();
 }
 
 bool X86FrameLowering::canUseAsEpilogue(const MachineBasicBlock &MBB) const {
@@ -3279,6 +3359,12 @@ bool X86FrameLowering::canUseAsEpilogue(const MachineBasicBlock &MBB) const {
   // it as an epilogue.
   if (STI.isTargetWin64() && !MBB.succ_empty() && !MBB.isReturnBlock())
     return false;
+
+  // Swift async context epilogue has a BTR instruction that clobbers parts of
+  // EFLAGS.
+  const MachineFunction &MF = *MBB.getParent();
+  if (MF.getInfo<X86MachineFunctionInfo>()->hasSwiftAsyncContext())
+    return !flagsNeedToBePreservedBeforeTheTerminators(MBB);
 
   if (canUseLEAForSPInEpilogue(*MBB.getParent()))
     return true;

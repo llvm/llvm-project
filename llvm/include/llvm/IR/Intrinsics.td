@@ -479,7 +479,12 @@ def int_objc_arc_annotation_bottomup_bbstart  : Intrinsic<[],
 def int_objc_arc_annotation_bottomup_bbend  : Intrinsic<[],
                                                         [llvm_ptrptr_ty,
                                                          llvm_ptrptr_ty]>;
+//===--------------- Swift asynchronous context intrinsics ----------------===//
 
+// Returns the location of the Swift asynchronous context (usually stored just
+// before the frame pointer), and triggers the creation of a null context if it
+// would otherwise be unneeded.
+def int_swift_async_context_addr : Intrinsic<[llvm_ptrptr_ty], [], [IntrNoMem]>;
 
 //===--------------------- Code Generator Intrinsics ----------------------===//
 //
@@ -515,6 +520,16 @@ def int_localrecover : DefaultAttrsIntrinsic<[llvm_ptr_ty],
 def int_eh_recoverfp : DefaultAttrsIntrinsic<[llvm_ptr_ty],
                                  [llvm_ptr_ty, llvm_ptr_ty],
                                  [IntrNoMem]>;
+
+// To mark the beginning/end of a try-scope for Windows SEH -EHa
+//  calls/invokes to these intrinsics are placed to model control flows
+//    caused by HW exceptions under option -EHa.
+//  calls/invokes to these intrinsics will be discarded during a codegen pass
+//   after EH tables are generated
+def int_seh_try_begin : Intrinsic<[], [], [IntrWriteMem, IntrWillReturn]>;
+def int_seh_try_end : Intrinsic<[], [], [IntrWriteMem, IntrWillReturn]>;
+def int_seh_scope_begin : Intrinsic<[], [], [IntrNoMem]>;
+def int_seh_scope_end : Intrinsic<[], [], [IntrNoMem]>;
 
 // Note: we treat stacksave/stackrestore as writemem because we don't otherwise
 // model their dependencies on allocas.

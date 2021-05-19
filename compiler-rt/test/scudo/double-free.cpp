@@ -10,8 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   assert(argc == 2);
   if (!strcmp(argv[1], "malloc")) {
     void *p = malloc(sizeof(int));

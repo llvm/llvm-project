@@ -17,13 +17,11 @@
 // UNSUPPORTED: libcxx-no-debug-mode
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <unordered_map>
-#include <cassert>
-#include <utility>
 
 #include "test_macros.h"
+#include "debug_macros.h"
 
 int main(int, char**)
 {
@@ -36,10 +34,8 @@ int main(int, char**)
     std::unordered_multimap<int, int>::iterator i2 = c2.begin();
     swap(c1, c2);
     c1.erase(i2);
-    c2.erase(i1);
-    std::unordered_multimap<int, int>::iterator j = i1;
-    c1.erase(i1);
-    assert(false);
+    TEST_LIBCPP_ASSERT_FAILURE(
+        c1.erase(i1), "unordered container erase(iterator) called with an iterator not referring to this container");
 
     return 0;
 }

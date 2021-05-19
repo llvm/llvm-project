@@ -102,43 +102,32 @@ bool TargetLowering::parametersInCSRMatch(const MachineRegisterInfo &MRI,
   return true;
 }
 
-/// Set CallLoweringInfo attribute flags based on the call instruction's
-/// argument attributes.
+/// Set CallLoweringInfo attribute flags based on a call instruction
+/// and called function attributes.
 void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
                                                      unsigned ArgIdx) {
-  auto Attrs = Call->getAttributes();
-
-  IsSExt = Attrs.hasParamAttribute(ArgIdx, Attribute::SExt);
-  IsZExt = Attrs.hasParamAttribute(ArgIdx, Attribute::ZExt);
-  IsInReg = Attrs.hasParamAttribute(ArgIdx, Attribute::InReg);
-  IsSRet = Attrs.hasParamAttribute(ArgIdx, Attribute::StructRet);
-  IsNest = Attrs.hasParamAttribute(ArgIdx, Attribute::Nest);
-  IsReturned = Attrs.hasParamAttribute(ArgIdx, Attribute::Returned);
-  IsSwiftSelf = Attrs.hasParamAttribute(ArgIdx, Attribute::SwiftSelf);
-  IsSwiftError = Attrs.hasParamAttribute(ArgIdx, Attribute::SwiftError);
-  Alignment = Attrs.getParamStackAlignment(ArgIdx);
-
-  IsByVal = Attrs.hasParamAttribute(ArgIdx, Attribute::ByVal);
-  IsInAlloca = Attrs.hasParamAttribute(ArgIdx, Attribute::InAlloca);
-  IsPreallocated = Attrs.hasParamAttribute(ArgIdx, Attribute::Preallocated);
-
-  assert(IsByVal + IsInAlloca + IsPreallocated <= 1 &&
-         "can't have multiple indirect attributes");
-  IndirectType = nullptr;
+  IsSExt = Call->paramHasAttr(ArgIdx, Attribute::SExt);
+  IsZExt = Call->paramHasAttr(ArgIdx, Attribute::ZExt);
+  IsInReg = Call->paramHasAttr(ArgIdx, Attribute::InReg);
+  IsSRet = Call->paramHasAttr(ArgIdx, Attribute::StructRet);
+  IsNest = Call->paramHasAttr(ArgIdx, Attribute::Nest);
+  IsByVal = Call->paramHasAttr(ArgIdx, Attribute::ByVal);
+  IsPreallocated = Call->paramHasAttr(ArgIdx, Attribute::Preallocated);
+  IsInAlloca = Call->paramHasAttr(ArgIdx, Attribute::InAlloca);
+  IsReturned = Call->paramHasAttr(ArgIdx, Attribute::Returned);
+  IsSwiftSelf = Call->paramHasAttr(ArgIdx, Attribute::SwiftSelf);
+  IsSwiftAsync = Call->paramHasAttr(ArgIdx, Attribute::SwiftAsync);
+  IsSwiftError = Call->paramHasAttr(ArgIdx, Attribute::SwiftError);
+  Alignment = Call->getParamStackAlign(ArgIdx);
+  ByValType = nullptr;
   if (IsByVal) {
-    IndirectType = Call->getParamByValType(ArgIdx);
-    assert(IndirectType && "no byval type?");
+    ByValType = Call->getParamByValType(ArgIdx);
     if (!Alignment)
       Alignment = Call->getParamAlign(ArgIdx);
   }
-  if (IsInAlloca) {
-    IndirectType = Call->getParamInAllocaType(ArgIdx);
-    assert(IndirectType && "no inalloca type?");
-  }
-  if (IsPreallocated) {
-    IndirectType = Call->getParamPreallocatedType(ArgIdx);
-    assert(IndirectType && "no preallocated type?");
-  }
+  PreallocatedType = nullptr;
+  if (IsPreallocated)
+    PreallocatedType = Call->getParamPreallocatedType(ArgIdx);
 }
 
 /// Generate a libcall taking the given operands as arguments and returning a
@@ -5466,7 +5455,7 @@ TargetLowering::prepareUREMEqFold(EVT SETCCVT, SDValue REMNode,
 
   EVT VT = REMNode.getValueType();
   EVT SVT = VT.getScalarType();
-  EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
+  EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout(), !DCI.isBeforeLegalize());
   EVT ShSVT = ShVT.getScalarType();
 
   // If MUL is unavailable, we cannot proceed in any case.
@@ -5710,7 +5699,7 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
 
   EVT VT = REMNode.getValueType();
   EVT SVT = VT.getScalarType();
-  EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
+  EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout(), !DCI.isBeforeLegalize());
   EVT ShSVT = ShVT.getScalarType();
 
   // If we are after ops legalization, and MUL is unavailable, we can not

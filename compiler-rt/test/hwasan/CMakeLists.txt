@@ -33,5 +33,15 @@ endif()
 add_lit_testsuite(check-hwasan "Running the HWAddressSanitizer tests"
   ${HWASAN_TESTSUITES}
   DEPENDS ${HWASAN_TEST_DEPS}
+  PARAMS "HWASAN_ENABLE_ALIASES=1"
   )
 set_target_properties(check-hwasan PROPERTIES FOLDER "Compiler-RT Misc")
+
+add_lit_testsuite(check-hwasan-lam
+  "Running the HWAddressSanitizer tests with Intel LAM"
+  ${HWASAN_TESTSUITES}
+  DEPENDS ${HWASAN_TEST_DEPS}
+  PARAMS "HWASAN_ENABLE_ALIASES=0"
+  EXCLUDE_FROM_CHECK_ALL
+  )
+set_target_properties(check-hwasan-lam PROPERTIES FOLDER "Compiler-RT Misc")

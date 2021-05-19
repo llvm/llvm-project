@@ -23,6 +23,7 @@ namespace targets {
 
 class LLVM_LIBRARY_VISIBILITY BPFTargetInfo : public TargetInfo {
   static const Builtin::Info BuiltinInfo[];
+  bool HasAlu32 = false;
 
 public:
   BPFTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
@@ -55,6 +56,8 @@ public:
                          bool Enabled) const override {
     Features[Name] = Enabled;
   }
+  bool handleTargetFeatures(std::vector<std::string> &Features,
+                            DiagnosticsEngine &Diags) override;
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
@@ -68,7 +71,16 @@ public:
   ArrayRef<const char *> getGCCRegNames() const override { return None; }
 
   bool validateAsmConstraint(const char *&Name,
-                             TargetInfo::ConstraintInfo &info) const override {
+                             TargetInfo::ConstraintInfo &Info) const override {
+    switch (*Name) {
+    default:
+      break;
+    case 'w':
+      if (HasAlu32) {
+        Info.setAllowsRegister();
+      }
+      break;
+    }
     return true;
   }
 
@@ -93,6 +105,10 @@ public:
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
   bool setCPU(const std::string &Name) override {
+    if (Name == "v3") {
+      HasAlu32 = true;
+    }
+
     StringRef CPUName(Name);
     return isValidCPUName(CPUName);
   }

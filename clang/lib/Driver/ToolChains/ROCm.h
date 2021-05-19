@@ -110,6 +110,7 @@ private:
   // Cache ROCm installation search paths.
   SmallVector<Candidate, 4> ROCmSearchDirs;
   bool PrintROCmSearchDirs;
+  bool Verbose;
 
   bool allGenericLibsValid() const {
     return !OCML.empty() && !OCKL.empty() && !OpenCL.empty() && !HIP.empty() &&

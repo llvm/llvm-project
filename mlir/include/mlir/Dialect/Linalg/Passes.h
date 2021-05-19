@@ -53,6 +53,12 @@ std::unique_ptr<OperationPass<FuncOp>> createConvertLinalgToParallelLoopsPass();
 /// Placeholder for now, this is NYI.
 std::unique_ptr<OperationPass<FuncOp>> createConvertLinalgToAffineLoopsPass();
 
+/// Create a pass that bufferizes the body of a FuncOp and tries to reuse the
+/// buffers for those arguments that:
+///   a) have been annotated 'inplaceable' and
+///   b) whose buffer uses would be free of memory hazards.
+std::unique_ptr<Pass> createLinalgComprehensiveFuncBufferizePass();
+
 /// Create a pass to convert Linalg operations which work on tensors to use
 /// buffers instead.
 std::unique_ptr<OperationPass<FuncOp>> createLinalgBufferizePass();

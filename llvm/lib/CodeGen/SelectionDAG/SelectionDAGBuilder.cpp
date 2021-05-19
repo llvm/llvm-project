@@ -2072,7 +2072,7 @@ bool SelectionDAGBuilder::isExportableFromCurrentBlock(const Value *V,
   // If this is an argument, we can export it if the BB is the entry block or
   // if it is already exported.
   if (isa<Argument>(V)) {
-    if (FromBB == &FromBB->getParent()->getEntryBlock())
+    if (FromBB->isEntryBlock())
       return true;
 
     // Otherwise, can only export this if it is already exported.
@@ -2873,13 +2873,17 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
   const Value *Callee(I.getCalledOperand());
   const Function *Fn = dyn_cast<Function>(Callee);
   if (isa<InlineAsm>(Callee))
-    visitInlineAsm(I);
+    visitInlineAsm(I, EHPadBB);
   else if (Fn && Fn->isIntrinsic()) {
     switch (Fn->getIntrinsicID()) {
     default:
       llvm_unreachable("Cannot invoke this intrinsic");
     case Intrinsic::donothing:
       // Ignore invokes to @llvm.donothing: jump directly to the next BB.
+    case Intrinsic::seh_try_begin:
+    case Intrinsic::seh_scope_begin:
+    case Intrinsic::seh_try_end:
+    case Intrinsic::seh_scope_end:
       break;
     case Intrinsic::experimental_patchpoint_void:
     case Intrinsic::experimental_patchpoint_i64:
@@ -6792,6 +6796,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       lowerCallToExternalSymbol(I, FunctionName);
     return;
   case Intrinsic::donothing:
+  case Intrinsic::seh_try_begin:
+  case Intrinsic::seh_scope_begin:
+  case Intrinsic::seh_try_end:
+  case Intrinsic::seh_scope_end:
     // ignore
     return;
   case Intrinsic::experimental_stackmap:
@@ -7281,36 +7289,72 @@ void SelectionDAGBuilder::visitVectorPredicationIntrinsic(
   setValue(&VPIntrin, Result);
 }
 
+SDValue SelectionDAGBuilder::lowerStartEH(SDValue Chain,
+                                          const BasicBlock *EHPadBB,
+                                          MCSymbol *&BeginLabel) {
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineModuleInfo &MMI = MF.getMMI();
+
+  // Insert a label before the invoke call to mark the try range.  This can be
+  // used to detect deletion of the invoke via the MachineModuleInfo.
+  BeginLabel = MMI.getContext().createTempSymbol();
+
+  // For SjLj, keep track of which landing pads go with which invokes
+  // so as to maintain the ordering of pads in the LSDA.
+  unsigned CallSiteIndex = MMI.getCurrentCallSite();
+  if (CallSiteIndex) {
+    MF.setCallSiteBeginLabel(BeginLabel, CallSiteIndex);
+    LPadToCallSiteMap[FuncInfo.MBBMap[EHPadBB]].push_back(CallSiteIndex);
+
+    // Now that the call site is handled, stop tracking it.
+    MMI.setCurrentCallSite(0);
+  }
+
+  return DAG.getEHLabel(getCurSDLoc(), Chain, BeginLabel);
+}
+
+SDValue SelectionDAGBuilder::lowerEndEH(SDValue Chain, const InvokeInst *II,
+                                        const BasicBlock *EHPadBB,
+                                        MCSymbol *BeginLabel) {
+  assert(BeginLabel && "BeginLabel should've been set");
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineModuleInfo &MMI = MF.getMMI();
+
+  // Insert a label at the end of the invoke call to mark the try range.  This
+  // can be used to detect deletion of the invoke via the MachineModuleInfo.
+  MCSymbol *EndLabel = MMI.getContext().createTempSymbol();
+  Chain = DAG.getEHLabel(getCurSDLoc(), Chain, EndLabel);
+
+  // Inform MachineModuleInfo of range.
+  auto Pers = classifyEHPersonality(FuncInfo.Fn->getPersonalityFn());
+  // There is a platform (e.g. wasm) that uses funclet style IR but does not
+  // actually use outlined funclets and their LSDA info style.
+  if (MF.hasEHFunclets() && isFuncletEHPersonality(Pers)) {
+    assert(II && "II should've been set");
+    WinEHFuncInfo *EHInfo = MF.getWinEHFuncInfo();
+    EHInfo->addIPToStateRange(II, BeginLabel, EndLabel);
+  } else if (!isScopedEHPersonality(Pers)) {
+    assert(EHPadBB);
+    MF.addInvoke(FuncInfo.MBBMap[EHPadBB], BeginLabel, EndLabel);
+  }
+
+  return Chain;
+}
+
 std::pair<SDValue, SDValue>
 SelectionDAGBuilder::lowerInvokable(TargetLowering::CallLoweringInfo &CLI,
                                     const BasicBlock *EHPadBB) {
-  MachineFunction &MF = DAG.getMachineFunction();
-  MachineModuleInfo &MMI = MF.getMMI();
   MCSymbol *BeginLabel = nullptr;
 
   if (EHPadBB) {
-    // Insert a label before the invoke call to mark the try range.  This can be
-    // used to detect deletion of the invoke via the MachineModuleInfo.
-    BeginLabel = MMI.getContext().createTempSymbol();
-
-    // For SjLj, keep track of which landing pads go with which invokes
-    // so as to maintain the ordering of pads in the LSDA.
-    unsigned CallSiteIndex = MMI.getCurrentCallSite();
-    if (CallSiteIndex) {
-      MF.setCallSiteBeginLabel(BeginLabel, CallSiteIndex);
-      LPadToCallSiteMap[FuncInfo.MBBMap[EHPadBB]].push_back(CallSiteIndex);
-
-      // Now that the call site is handled, stop tracking it.
-      MMI.setCurrentCallSite(0);
-    }
-
     // Both PendingLoads and PendingExports must be flushed here;
     // this call might not return.
     (void)getRoot();
-    DAG.setRoot(DAG.getEHLabel(getCurSDLoc(), getControlRoot(), BeginLabel));
-
+    DAG.setRoot(lowerStartEH(getControlRoot(), EHPadBB, BeginLabel));
     CLI.setChain(getRoot());
   }
+
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   std::pair<SDValue, SDValue> Result = TLI.LowerCallTo(CLI);
 
@@ -7332,22 +7376,8 @@ SelectionDAGBuilder::lowerInvokable(TargetLowering::CallLoweringInfo &CLI,
   }
 
   if (EHPadBB) {
-    // Insert a label at the end of the invoke call to mark the try range.  This
-    // can be used to detect deletion of the invoke via the MachineModuleInfo.
-    MCSymbol *EndLabel = MMI.getContext().createTempSymbol();
-    DAG.setRoot(DAG.getEHLabel(getCurSDLoc(), getRoot(), EndLabel));
-
-    // Inform MachineModuleInfo of range.
-    auto Pers = classifyEHPersonality(FuncInfo.Fn->getPersonalityFn());
-    // There is a platform (e.g. wasm) that uses funclet style IR but does not
-    // actually use outlined funclets and their LSDA info style.
-    if (MF.hasEHFunclets() && isFuncletEHPersonality(Pers)) {
-      assert(CLI.CB);
-      WinEHFuncInfo *EHInfo = DAG.getMachineFunction().getWinEHFuncInfo();
-      EHInfo->addIPToStateRange(cast<InvokeInst>(CLI.CB), BeginLabel, EndLabel);
-    } else if (!isScopedEHPersonality(Pers)) {
-      MF.addInvoke(FuncInfo.MBBMap[EHPadBB], BeginLabel, EndLabel);
-    }
+    DAG.setRoot(lowerEndEH(getRoot(), cast_or_null<InvokeInst>(CLI.CB), EHPadBB,
+                           BeginLabel));
   }
 
   return Result;
@@ -8317,7 +8347,8 @@ public:
 } // end anonymous namespace
 
 /// visitInlineAsm - Handle a call to an InlineAsm object.
-void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call) {
+void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
+                                         const BasicBlock *EHPadBB) {
   const InlineAsm *IA = cast<InlineAsm>(Call.getCalledOperand());
 
   /// ConstraintOperands - Information about all of the constraints.
@@ -8405,17 +8436,26 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call) {
     ExtraInfo.update(T);
   }
 
-
   // We won't need to flush pending loads if this asm doesn't touch
   // memory and is nonvolatile.
   SDValue Flag, Chain = (HasSideEffect) ? getRoot() : DAG.getRoot();
 
+  bool EmitEHLabels = isa<InvokeInst>(Call) && IA->canThrow();
+  if (EmitEHLabels) {
+    assert(EHPadBB && "InvokeInst must have an EHPadBB");
+  }
   bool IsCallBr = isa<CallBrInst>(Call);
-  if (IsCallBr) {
-    // If this is a callbr we need to flush pending exports since inlineasm_br
-    // is a terminator. We need to do this before nodes are glued to
-    // the inlineasm_br node.
+
+  if (IsCallBr || EmitEHLabels) {
+    // If this is a callbr or invoke we need to flush pending exports since
+    // inlineasm_br and invoke are terminators.
+    // We need to do this before nodes are glued to the inlineasm_br node.
     Chain = getControlRoot();
+  }
+
+  MCSymbol *BeginLabel = nullptr;
+  if (EmitEHLabels) {
+    Chain = lowerStartEH(Chain, EHPadBB, BeginLabel);
   }
 
   // Second pass over the constraints: compute which constraint option to use.
@@ -8808,8 +8848,13 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call) {
   if (!OutChains.empty())
     Chain = DAG.getNode(ISD::TokenFactor, getCurSDLoc(), MVT::Other, OutChains);
 
+  if (EmitEHLabels) {
+    Chain = lowerEndEH(Chain, cast<InvokeInst>(&Call), EHPadBB, BeginLabel);
+  }
+
   // Only Update Root if inline assembly has a memory effect.
-  if (ResultValues.empty() || HasSideEffect || !OutChains.empty() || IsCallBr)
+  if (ResultValues.empty() || HasSideEffect || !OutChains.empty() || IsCallBr ||
+      EmitEHLabels)
     DAG.setRoot(Chain);
 }
 
@@ -9348,6 +9393,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     Entry.IsByRef = false;
     Entry.IsReturned = false;
     Entry.IsSwiftSelf = false;
+    Entry.IsSwiftAsync = false;
     Entry.IsSwiftError = false;
     Entry.IsCFGuardTarget = false;
     Entry.Alignment = Alignment;
@@ -9418,7 +9464,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     // FIXME: Split arguments if CLI.IsPostTypeLegalization
     Type *FinalType = Args[i].Ty;
     if (Args[i].IsByVal)
-      FinalType = Args[i].IndirectType;
+      FinalType = cast<PointerType>(Args[i].Ty)->getElementType();
     bool NeedsRegBlock = functionArgumentNeedsConsecutiveRegisters(
         FinalType, CLI.CallConv, CLI.IsVarArg);
     for (unsigned Value = 0, NumValues = ValueVTs.size(); Value != NumValues;
@@ -9461,6 +9507,8 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
         Flags.setSRet();
       if (Args[i].IsSwiftSelf)
         Flags.setSwiftSelf();
+      if (Args[i].IsSwiftAsync)
+        Flags.setSwiftAsync();
       if (Args[i].IsSwiftError)
         Flags.setSwiftError();
       if (Args[i].IsCFGuardTarget)
@@ -9489,10 +9537,11 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
       }
       Align MemAlign;
       if (Args[i].IsByVal || Args[i].IsInAlloca || Args[i].IsPreallocated) {
-        Type *ElementTy = Args[i].IndirectType;
-        assert(ElementTy && "Indirect type not set in ArgListEntry");
+        PointerType *Ty = cast<PointerType>(Args[i].Ty);
+        Type *ElementTy = Ty->getElementType();
 
-        unsigned FrameSize = DL.getTypeAllocSize(ElementTy);
+        unsigned FrameSize = DL.getTypeAllocSize(
+            Args[i].ByValType ? Args[i].ByValType : ElementTy);
         Flags.setByValSize(FrameSize);
 
         // info is not there but there are cases it cannot get right.
@@ -9998,6 +10047,8 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         Flags.setSRet();
       if (Arg.hasAttribute(Attribute::SwiftSelf))
         Flags.setSwiftSelf();
+      if (Arg.hasAttribute(Attribute::SwiftAsync))
+        Flags.setSwiftAsync();
       if (Arg.hasAttribute(Attribute::SwiftError))
         Flags.setSwiftError();
       if (Arg.hasAttribute(Attribute::ByVal))

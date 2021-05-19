@@ -296,13 +296,6 @@ std::chrono::seconds ProcessProperties::GetUtilityExpressionTimeout() const {
   return std::chrono::seconds(value);
 }
 
-std::chrono::seconds ProcessProperties::GetInterruptTimeout() const {
-  const uint32_t idx = ePropertyInterruptTimeout;
-  uint64_t value = m_collection_sp->GetPropertyAtIndexAsUInt64(
-      nullptr, idx, g_process_properties[idx].default_uint_value);
-  return std::chrono::seconds(value);
-}
-
 bool ProcessProperties::GetSteppingRunsAllThreads() const {
   const uint32_t idx = ePropertySteppingRunsAllThreads;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
@@ -1340,8 +1333,8 @@ Status Process::ResumeSynchronous(Stream *stream) {
 
   Status error = PrivateResume();
   if (error.Success()) {
-    StateType state = WaitForProcessToStop(GetInterruptTimeout(), nullptr, true,
-                                           listener_sp, stream);
+    StateType state =
+        WaitForProcessToStop(llvm::None, nullptr, true, listener_sp, stream);
     const bool must_be_alive =
         false; // eStateExited is ok, so this must be false
     if (!StateIsStoppedState(state, must_be_alive))
@@ -3081,10 +3074,9 @@ Status Process::Halt(bool clear_thread_plans, bool use_run_lock) {
     return Status();
   }
 
-  // Wait for the process halt timeout seconds for the process to stop.
-  StateType state =
-      WaitForProcessToStop(GetInterruptTimeout(), &event_sp, true,
-                           halt_listener_sp, nullptr, use_run_lock);
+  // Wait for 10 second for the process to stop.
+  StateType state = WaitForProcessToStop(
+      seconds(10), &event_sp, true, halt_listener_sp, nullptr, use_run_lock);
   RestoreProcessEvents();
 
   if (state == eStateInvalid || !event_sp) {
@@ -3115,8 +3107,8 @@ Status Process::StopForDestroyOrDetach(lldb::EventSP &exit_event_sp) {
     SendAsyncInterrupt();
 
     // Consume the interrupt event.
-    StateType state = WaitForProcessToStop(GetInterruptTimeout(),
-                                           &exit_event_sp, true, listener_sp);
+    StateType state =
+        WaitForProcessToStop(seconds(10), &exit_event_sp, true, listener_sp);
 
     RestoreProcessEvents();
 
@@ -5643,6 +5635,8 @@ addr_t Process::ResolveIndirectFunction(const Address *address, Status &error) {
           symbol ? symbol->GetName().AsCString() : "<UNKNOWN>");
       function_addr = LLDB_INVALID_ADDRESS;
     } else {
+      if (ABISP abi_sp = GetABI())
+        function_addr = abi_sp->FixCodeAddress(function_addr);
       m_resolved_indirect_addresses.insert(
           std::pair<addr_t, addr_t>(addr, function_addr));
     }

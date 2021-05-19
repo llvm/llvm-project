@@ -574,6 +574,7 @@ public:
     unsigned StackSize = 0;
 
     uint32_t CompactUnwindEncoding = 0;
+    int CurOffset = 0;
     for (size_t i = 0, e = Instrs.size(); i != e; ++i) {
       const MCCFIInstruction &Inst = Instrs[i];
 
@@ -603,6 +604,9 @@ public:
         assert(FPPush.getOperation() == MCCFIInstruction::OpOffset &&
                "Frame pointer not pushed!");
 
+        assert(FPPush.getOffset() + 8 == LRPush.getOffset());
+        CurOffset = FPPush.getOffset();
+
         unsigned LRReg = *MRI.getLLVMRegNum(LRPush.getRegister(), true);
         unsigned FPReg = *MRI.getLLVMRegNum(FPPush.getRegister(), true);
 
@@ -629,10 +633,18 @@ public:
         if (i + 1 == e)
           return CU::UNWIND_ARM64_MODE_DWARF;
 
+        if (CurOffset != 0 && Inst.getOffset() != CurOffset - 8)
+          return CU::UNWIND_ARM64_MODE_DWARF;
+        CurOffset = Inst.getOffset();
+
         const MCCFIInstruction &Inst2 = Instrs[++i];
         if (Inst2.getOperation() != MCCFIInstruction::OpOffset)
           return CU::UNWIND_ARM64_MODE_DWARF;
         unsigned Reg2 = *MRI.getLLVMRegNum(Inst2.getRegister(), true);
+
+        if (Inst2.getOffset() != CurOffset - 8)
+          return CU::UNWIND_ARM64_MODE_DWARF;
+        CurOffset = Inst2.getOffset();
 
         // N.B. The encodings must be in register number order, and the X
         // registers before the D registers.

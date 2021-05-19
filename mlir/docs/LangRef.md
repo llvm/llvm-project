@@ -56,7 +56,7 @@ allowing operation semantics to be described abstractly using
 to operate on operations more generically.  Traits often describe verification
 constraints on valid IR, enabling complex invariants to be captured and
 checked. (see [Op vs
-Operation](docs/Tutorials/Toy/Ch-2/#op-vs-operation-using-mlir-operations))
+Operation](Tutorials/Toy/Ch-2/#op-vs-operation-using-mlir-operations))
 
 One obvious application of MLIR is to represent an
 [SSA-based](https://en.wikipedia.org/wiki/Static_single_assignment_form) IR,

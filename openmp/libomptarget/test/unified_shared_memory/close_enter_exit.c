@@ -1,7 +1,7 @@
 // RUN: %libomptarget-compile-run-and-check-generic
 
+// REQUIRES: unified_shared_memory
 // UNSUPPORTED: clang-6, clang-7, clang-8, clang-9
-// XFAIL: nvptx64-nvidia-cuda
 
 // Fails on amdgcn with error: GPU Memory Error
 // XFAIL: amdgcn-amd-amdhsa

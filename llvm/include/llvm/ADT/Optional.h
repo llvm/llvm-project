@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/None.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/type_traits.h"
 #include <cassert>
@@ -29,8 +30,6 @@ namespace llvm {
 class raw_ostream;
 
 namespace optional_detail {
-
-struct in_place_t {};
 
 /// Storage for any type.
 //
@@ -245,12 +244,15 @@ public:
   constexpr Optional() {}
   constexpr Optional(NoneType) {}
 
-  constexpr Optional(const T &y) : Storage(optional_detail::in_place_t{}, y) {}
+  constexpr Optional(const T &y) : Storage(in_place, y) {}
   constexpr Optional(const Optional &O) = default;
 
-  constexpr Optional(T &&y)
-      : Storage(optional_detail::in_place_t{}, std::move(y)) {}
+  constexpr Optional(T &&y) : Storage(in_place, std::move(y)) {}
   constexpr Optional(Optional &&O) = default;
+
+  template <typename... ArgTypes>
+  constexpr Optional(in_place_t, ArgTypes &&...Args)
+      : Storage(in_place, std::forward<ArgTypes>(Args)...) {}
 
   Optional &operator=(T &&y) {
     Storage = std::move(y);

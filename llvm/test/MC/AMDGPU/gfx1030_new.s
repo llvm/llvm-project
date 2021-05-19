@@ -2,6 +2,7 @@
 // RUN: llvm-mc -arch=amdgcn -mcpu=gfx1031 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
 // RUN: llvm-mc -arch=amdgcn -mcpu=gfx1032 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
 // RUN: llvm-mc -arch=amdgcn -mcpu=gfx1033 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
+// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1034 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
 
 global_load_dword_addtid v1, s[2:3] offset:16
 // GFX10: encoding: [0x10,0x80,0x58,0xdc,0x00,0x00,0x02,0x01]

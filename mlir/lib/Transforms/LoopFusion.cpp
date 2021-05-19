@@ -1575,9 +1575,15 @@ public:
 
           DenseSet<Value> privateMemrefs;
           for (Value memref : producerConsumerMemrefs) {
-            // Don't create a private memref if 'srcNode' writes to escaping
-            // memrefs.
-            if (srcEscapingMemRefs.count(memref) > 0)
+            // If `memref` is an escaping one, do not create a private memref
+            // for the below scenarios, since doing so will leave the escaping
+            // memref unmodified as all the writes originally meant for the
+            // escaping memref would be performed on the private memref:
+            // 1. The source is to be removed after fusion,
+            // OR
+            // 2. The destination writes to `memref`.
+            if (srcEscapingMemRefs.count(memref) > 0 &&
+                (removeSrcNode || dstNode->getStoreOpCount(memref) > 0))
               continue;
 
             // Don't create a private memref if 'srcNode' has in edges on

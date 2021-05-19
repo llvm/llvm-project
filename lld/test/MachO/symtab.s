@@ -62,7 +62,8 @@
 # CHECK-NEXT:    Type: Section (0xE)
 # CHECK-NEXT:    Section: __text (0x1)
 # CHECK-NEXT:    RefType: UndefinedNonLazy (0x0)
-# CHECK-NEXT:    Flags [ (0x0)
+# CHECK-NEXT:    Flags [ (0x10)
+# CHECK-NEXT:      ReferencedDynamically (0x10)
 # CHECK-NEXT:    ]
 # CHECK-NEXT:    Value: 0x100000000
 # CHECK-NEXT:  }

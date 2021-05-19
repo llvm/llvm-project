@@ -105,7 +105,7 @@ typedef ::testing::Types<DenseMap<uint32_t, uint32_t>,
                          SmallDenseMap<CtorTester, CtorTester, 4,
                                        CtorTesterMapInfo>
                          > DenseMapTestTypes;
-TYPED_TEST_CASE(DenseMapTest, DenseMapTestTypes);
+TYPED_TEST_SUITE(DenseMapTest, DenseMapTestTypes, );
 
 // Empty map tests
 TYPED_TEST(DenseMapTest, EmptyIntMapTest) {

@@ -27,10 +27,14 @@ Location Value::getLoc() const {
   if (auto *op = getDefiningOp())
     return op->getLoc();
 
-  // Use the location of the parent operation if this is a block argument.
-  // TODO: Should we just add locations to block arguments?
-  Operation *parentOp = cast<BlockArgument>().getOwner()->getParentOp();
-  return parentOp ? parentOp->getLoc() : UnknownLoc::get(getContext());
+  return cast<BlockArgument>().getLoc();
+}
+
+void Value::setLoc(Location loc) {
+  if (auto *op = getDefiningOp())
+    return op->setLoc(loc);
+
+  return cast<BlockArgument>().setLoc(loc);
 }
 
 /// Return the Region in which this Value is defined.
@@ -63,8 +67,19 @@ void Value::replaceAllUsesWith(Value newValue) const {
 /// listed in 'exceptions' .
 void Value::replaceAllUsesExcept(
     Value newValue, const SmallPtrSetImpl<Operation *> &exceptions) const {
-  for (auto &use : llvm::make_early_inc_range(getUses())) {
+  for (OpOperand &use : llvm::make_early_inc_range(getUses())) {
     if (exceptions.count(use.getOwner()) == 0)
+      use.set(newValue);
+  }
+}
+
+/// Replace all uses of 'this' value with 'newValue', updating anything in the
+/// IR that uses 'this' to use the other value instead except if the user is
+/// 'exceptedUser'.
+void Value::replaceAllUsesExcept(Value newValue,
+                                 Operation *exceptedUser) const {
+  for (OpOperand &use : llvm::make_early_inc_range(getUses())) {
+    if (use.getOwner() != exceptedUser)
       use.set(newValue);
   }
 }

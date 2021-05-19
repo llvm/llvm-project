@@ -61,6 +61,9 @@ Changes to the LLVM IR
 * The ``inalloca`` attribute now has a mandatory type field, similar
   to ``byval`` and ``sret``.
 
+* The opaque pointer type ``ptr`` has been introduced. It is still in the
+  process of being worked on and should not be used yet.
+
 Changes to building LLVM
 ------------------------
 
@@ -70,13 +73,6 @@ Changes to building LLVM
 
 Changes to TableGen
 -------------------
-
-Changes to Backend Code Generation
-----------------------------------
-
-* When lowering calls, only ABI attributes on the call itself are checked, not
-  the caller. Frontends need to make sure to properly set ABI attributes on
-  calls (and always should have).
 
 Changes to the ARM Backend
 --------------------------
@@ -88,6 +84,10 @@ Changes to the MIPS Target
 
 During this release ...
 
+Changes to the Hexagon Target
+-----------------------------
+
+* The Hexagon target now supports V68/HVX ISA.
 
 Changes to the PowerPC Target
 -----------------------------

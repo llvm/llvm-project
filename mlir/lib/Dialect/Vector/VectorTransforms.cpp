@@ -3040,6 +3040,18 @@ struct TransferWriteToVectorStoreLowering
   }
 };
 
+/// Transpose a vector transfer op's `in_bounds` attribute according to given
+/// indices.
+static ArrayAttr
+transposeInBoundsAttr(OpBuilder &builder, ArrayAttr attr,
+                      const SmallVector<unsigned> &permutation) {
+  SmallVector<bool> newInBoundsValues;
+  for (unsigned pos : permutation)
+    newInBoundsValues.push_back(
+        attr.getValue()[pos].cast<BoolAttr>().getValue());
+  return builder.getBoolArrayAttr(newInBoundsValues);
+}
+
 /// Lower transfer_read op with permutation into a transfer_read with a
 /// permutation map composed of leading zeros followed by a minor identiy +
 /// vector.transpose op.
@@ -3084,6 +3096,7 @@ struct TransferReadPermutationLowering
       newVectorShape[pos.value()] = originalShape[pos.index()];
     }
 
+    // Transpose mask operand.
     Value newMask;
     if (op.mask()) {
       // Remove unused dims from the permutation map. E.g.:
@@ -3103,15 +3116,87 @@ struct TransferReadPermutationLowering
                                                      maskTransposeIndices);
     }
 
+    // Transpose in_bounds attribute.
+    ArrayAttr newInBounds =
+        op.in_bounds() ? transposeInBoundsAttr(
+                             rewriter, op.in_bounds().getValue(), permutation)
+                       : ArrayAttr();
+
+    // Generate new transfer_read operation.
     VectorType newReadType =
         VectorType::get(newVectorShape, op.getVectorType().getElementType());
     Value newRead = rewriter.create<vector::TransferReadOp>(
         op.getLoc(), newReadType, op.source(), op.indices(), newMap,
-        op.padding(), newMask, op.in_bounds() ? *op.in_bounds() : ArrayAttr());
+        op.padding(), newMask, newInBounds);
 
+    // Transpose result of transfer_read.
     SmallVector<int64_t> transposePerm(permutation.begin(), permutation.end());
     rewriter.replaceOpWithNewOp<vector::TransposeOp>(op, newRead,
                                                      transposePerm);
+    return success();
+  }
+};
+
+/// Lower transfer_write op with permutation into a transfer_write with a
+/// minor identity permutation map. (transfer_write ops cannot have broadcasts.)
+/// Ex:
+///     vector.transfer_write %v ...
+///         permutation_map: (d0, d1, d2) -> (d2, d0, d1)
+/// into:
+///     %tmp = vector.transpose %v, [2, 0, 1]
+///     vector.transfer_write %tmp ...
+///         permutation_map: (d0, d1, d2) -> (d0, d1, d2)
+///
+///     vector.transfer_write %v ...
+///         permutation_map: (d0, d1, d2, d3) -> (d3, d2)
+/// into:
+///     %tmp = vector.transpose %v, [1, 0]
+///     %v = vector.transfer_write %tmp ...
+///         permutation_map: (d0, d1, d2, d3) -> (d2, d3)
+struct TransferWritePermutationLowering
+    : public OpRewritePattern<vector::TransferWriteOp> {
+  using OpRewritePattern<vector::TransferWriteOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::TransferWriteOp op,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<unsigned> permutation;
+    AffineMap map = op.permutation_map();
+    if (map.isMinorIdentity())
+      return failure();
+    if (!map.isPermutationOfMinorIdentityWithBroadcasting(permutation))
+      return failure();
+
+    // Remove unused dims from the permutation map. E.g.:
+    // E.g.:  (d0, d1, d2, d3, d4, d5) -> (d5, d3, d4)
+    // comp = (d0, d1, d2) -> (d2, d0, d1)
+    auto comp = compressUnusedDims(map);
+    // Get positions of remaining result dims.
+    SmallVector<int64_t> indices;
+    llvm::transform(comp.getResults(), std::back_inserter(indices),
+                    [](AffineExpr expr) {
+      return expr.dyn_cast<AffineDimExpr>().getPosition();
+    });
+
+    // Transpose mask operand.
+    Value newMask = op.mask()
+        ? rewriter.create<vector::TransposeOp>(op.getLoc(), op.mask(), indices)
+        : Value();
+
+    // Transpose in_bounds attribute.
+    ArrayAttr newInBounds = op.in_bounds()
+        ? transposeInBoundsAttr(rewriter, op.in_bounds().getValue(),
+                                permutation)
+        : ArrayAttr();
+
+    // Generate new transfer_write operation.
+    Value newVec = rewriter.create<vector::TransposeOp>(
+        op.getLoc(), op.vector(), indices);
+    auto newMap = AffineMap::getMinorIdentityMap(
+        map.getNumDims(), map.getNumResults(), rewriter.getContext());
+    rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
+        op, Type(), newVec, op.source(), op.indices(), newMap, newMask,
+        newInBounds);
+
     return success();
   }
 };
@@ -4068,7 +4153,8 @@ void mlir::vector::populateVectorTransferLoweringPatterns(
     RewritePatternSet &patterns) {
   patterns
       .add<TransferReadToVectorLoadLowering, TransferWriteToVectorStoreLowering,
-           TransferReadPermutationLowering, TransferOpReduceRank>(
+           TransferReadPermutationLowering, TransferWritePermutationLowering,
+           TransferOpReduceRank>(
           patterns.getContext());
 }
 

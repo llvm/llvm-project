@@ -196,6 +196,129 @@ program being debugged. The fact that the API tests work with different
 variants mean that more general tests should be API tests, so that they can be
 run against the different variants.
 
+Guidelines for API tests
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+API tests are expected to be fast, reliable and maintainable. To achieve this
+goal, API tests should conform to the following guidelines in addition to normal
+good testing practices.
+
+**Don't unnecessarily launch the test executable.**
+    Launching a process and running to a breakpoint can often be the most
+    expensive part of a test and should be avoided if possible. A large part
+    of LLDB's functionality is available directly after creating an `SBTarget`
+    of the test executable.
+
+    The part of the SB API that can be tested with just a target includes
+    everything that represents information about the executable and its
+    debug information (e.g., `SBTarget`, `SBModule`, `SBSymbolContext`,
+    `SBFunction`, `SBInstruction`, `SBCompileUnit`, etc.). For test executables
+    written in languages with a type system that is mostly defined at compile
+    time (e.g., C and C++) there is also usually no process necessary to test
+    the `SBType`-related parts of the API. With those languages it's also
+    possible to test `SBValue` by running expressions with
+    `SBTarget.EvaluateExpression` or the `expect_expr` testing utility.
+
+    Functionality that always requires a running process is everything that
+    tests the `SBProcess`, `SBThread`, and `SBFrame` classes. The same is true
+    for tests that exercise breakpoints, watchpoints and sanitizers.
+    Languages such as Objective-C that have a dependency on a runtime
+    environment also always require a running process.
+
+**Don't unnecessarily include system headers in test sources.**
+    Including external headers slows down the compilation of the test executable
+    and it makes reproducing test failures on other operating systems or
+    configurations harder.
+
+**Avoid specifying test-specific compiler flags when including system headers.**
+    If a test requires including a system header (e.g., a test for a libc++
+    formatter includes a libc++ header), try to avoid specifying custom compiler
+    flags if possible. Certain debug information formats such as ``gmodules``
+    use a cache that is shared between all API tests and that contains
+    precompiled system headers. If you add or remove a specific compiler flag
+    in your test (e.g., adding ``-DFOO`` to the ``Makefile`` or ``self.build``
+    arguments), then the test will not use the shared precompiled header cache
+    and expensively recompile all system headers from scratch. If you depend on
+    a specific compiler flag for the test, you can avoid this issue by either
+    removing all system header includes or decorating the test function with
+    ``@no_debug_info_test`` (which will avoid running all debug information
+    variants including ``gmodules``).
+
+**Test programs should be kept simple.**
+    Test executables should do the minimum amount of work to bring the process
+    into the state that is required for the test. Simulating a 'real' program
+    that actually tries to do some useful task rarely helps with catching bugs
+    and makes the test much harder to debug and maintain. The test programs
+    should always be deterministic (i.e., do not generate and check against
+    random test values).
+
+**Identifiers in tests should be simple and descriptive.**
+    Often test programs need to declare functions and classes which require
+    choosing some form of identifier for them. These identifiers should always
+    either be kept simple for small tests (e.g., ``A``, ``B``, ...) or have some
+    descriptive name (e.g., ``ClassWithTailPadding``, ``inlined_func``, ...).
+    Never choose identifiers that are already used anywhere else in LLVM or
+    other programs (e.g., don't name a class  ``VirtualFileSystem``, a function
+    ``llvm_unreachable``, or a namespace ``rapidxml``) as this will mislead
+    people ``grep``'ing the LLVM repository for those strings.
+
+**Prefer LLDB testing utilities over directly working with the SB API.**
+    The ``lldbutil`` module and the ``TestBase`` class come with a large amount
+    of utility functions that can do common test setup tasks (e.g., starting a
+    test executable and running the process to a breakpoint). Using these
+    functions not only keeps the test shorter and free of duplicated code, but
+    they also follow best test suite practices and usually give much clearer
+    error messages if something goes wrong. The test utilities also contain
+    custom asserts and checks that should be preferably used (e.g.
+    ``self.assertSuccess``).
+
+**Prefer calling the SB API over checking command output.**
+    Avoid writing your tests on top of ``self.expect(...)`` calls that check
+    the output of LLDB commands and instead try calling into the SB API. Relying
+    on LLDB commands makes changing (and improving) the output/syntax of
+    commands harder and the resulting tests are often prone to accepting
+    incorrect test results. Especially improved error messages that contain
+    more information might cause these ``self.expect`` calls to unintentionally
+    find the required ``substrs``. For example, the following ``self.expect``
+    check will unexpectedly pass if it's ran as the first expression in a test:
+
+::
+
+    self.expect("expr 2 + 2", substrs=["0"])
+
+When running the same command in LLDB the reason for the unexpected success
+is that '0' is found in the name of the implicitly created result variable:
+
+::
+
+    (lldb) expr 2 + 2
+    (int) $0 = 4
+           ^ The '0' substring is found here.
+
+A better way to write the test above would be using LLDB's testing function
+``expect_expr`` will only pass if the expression produces a value of 0:
+
+::
+
+    self.expect_expr("2 + 2", result_value="0")
+
+**Prefer using specific asserts over the generic assertTrue/assertFalse.**.
+    The `self.assertTrue`/`self.assertFalse` functions should always be your
+    last option as they give non-descriptive error messages. The test class has
+    several expressive asserts such as `self.assertIn` that automatically
+    generate an explanation how the received values differ from the expected
+    ones. Check the documentation of Python's `unittest` module to see what
+    asserts are available. If you can't find a specific assert that fits your
+    needs and you fall back to a generic assert, make sure you put useful
+    information into the assert's `msg` argument that helps explain the failure.
+
+::
+
+    # Bad. Will print a generic error such as 'False is not True'.
+    self.assertTrue(expected_string in list_of_results)
+    # Good. Will print expected_string and the contents of list_of_results.
+    self.assertIn(expected_string, list_of_results)
+
 Running The Tests
 -----------------
 

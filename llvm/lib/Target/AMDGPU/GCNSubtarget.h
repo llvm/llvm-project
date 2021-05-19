@@ -193,6 +193,7 @@ protected:
   bool HasVcmpxExecWARHazard;
   bool HasLdsBranchVmemWARHazard;
   bool HasNSAtoVMEMBug;
+  bool HasNSAClauseBug;
   bool HasOffset3fBug;
   bool HasFlatSegmentOffsetBug;
   bool HasImageStoreD16Bug;
@@ -977,6 +978,8 @@ public:
     return HasNSAtoVMEMBug;
   }
 
+  bool hasNSAClauseBug() const { return HasNSAClauseBug; }
+
   bool hasHardClauses() const { return getGeneration() >= GFX10; }
 
   bool hasGFX90AInsts() const { return GFX90AInsts; }
@@ -1031,9 +1034,7 @@ public:
 
   /// \returns true if the flat_scratch register is initialized by the HW.
   /// In this case it is readonly.
-  bool flatScratchIsArchitected() const {
-    return HasArchitectedFlatScratch;
-  }
+  bool flatScratchIsArchitected() const { return HasArchitectedFlatScratch; }
 
   /// \returns true if the machine has merged shaders in which s0-s7 are
   /// reserved by the hardware and user SGPRs start at s8

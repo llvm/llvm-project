@@ -109,6 +109,7 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1031: AK = GK_GFX1031; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1032: AK = GK_GFX1032; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1033: AK = GK_GFX1033; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1034: AK = GK_GFX1034; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1100: AK = GK_GFX1100; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1101: AK = GK_GFX1101; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1102: AK = GK_GFX1102; break;
@@ -172,6 +173,7 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX1031: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1031;
   case GK_GFX1032: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1032;
   case GK_GFX1033: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1033;
+  case GK_GFX1034: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1034;
   case GK_GFX1100: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1100;
   case GK_GFX1101: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1101;
   case GK_GFX1102: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1102;
@@ -320,9 +322,10 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
   OS << "\t\t.amdhsa_kernarg_size " << KD.kernarg_size << '\n';
 
   if (!hasArchitectedFlatScratch(STI))
-    PRINT_FIELD(OS, ".amdhsa_user_sgpr_private_segment_buffer", KD,
-              kernel_code_properties,
-              amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER);
+    PRINT_FIELD(
+        OS, ".amdhsa_user_sgpr_private_segment_buffer", KD,
+        kernel_code_properties,
+        amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER);
   PRINT_FIELD(OS, ".amdhsa_user_sgpr_dispatch_ptr", KD,
               kernel_code_properties,
               amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR);
@@ -346,9 +349,10 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     PRINT_FIELD(OS, ".amdhsa_wavefront_size32", KD,
                 kernel_code_properties,
                 amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32);
-  PRINT_FIELD(OS, (hasArchitectedFlatScratch(STI)
-                     ? ".amdhsa_enable_private_segment"
-                     : ".amdhsa_system_sgpr_private_segment_wavefront_offset"),
+  PRINT_FIELD(OS,
+              (hasArchitectedFlatScratch(STI)
+                   ? ".amdhsa_enable_private_segment"
+                   : ".amdhsa_system_sgpr_private_segment_wavefront_offset"),
               KD, compute_pgm_rsrc2,
               amdhsa::COMPUTE_PGM_RSRC2_ENABLE_PRIVATE_SEGMENT);
   PRINT_FIELD(OS, ".amdhsa_system_sgpr_workgroup_id_x", KD,

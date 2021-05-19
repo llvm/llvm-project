@@ -1,5 +1,6 @@
 // RUN: cat %s | clang-repl | FileCheck %s
 // REQUIRES: host-supports-jit
+// UNSUPPORTED: system-aix
 
 extern "C" int printf(const char *, ...);
 int i = 42;

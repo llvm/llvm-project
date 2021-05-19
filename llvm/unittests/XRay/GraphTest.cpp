@@ -59,7 +59,7 @@ typedef ::testing::Types<GraphT, const GraphT> GraphTestTypes;
 using VVT = typename GraphT::VertexValueType;
 using EVT = typename GraphT::EdgeValueType;
 
-TYPED_TEST_CASE(GraphTest, GraphTestTypes);
+TYPED_TEST_SUITE(GraphTest, GraphTestTypes, );
 
 template <typename T> void graphVertexTester(T &G) {
   std::set<unsigned> V({1u, 2u, 3u, 4u, 5u, 6u});

@@ -5,7 +5,7 @@
 
 define <3 x i8> @shl() {
 ; CHECK-LABEL: @shl(
-; CHECK-NEXT:    ret <3 x i8> <i8 undef, i8 0, i8 0>
+; CHECK-NEXT:    ret <3 x i8> <i8 poison, i8 0, i8 0>
 ;
   %c = shl <3 x i8> undef, <i8 undef, i8 4, i8 1>
   ret <3 x i8> %c

@@ -111,7 +111,7 @@ struct CharacterComparisonTests : public ::testing::Test {
 };
 
 using CharacterTypes = ::testing::Types<char, char16_t, char32_t>;
-TYPED_TEST_CASE(CharacterComparisonTests, CharacterTypes);
+TYPED_TEST_SUITE(CharacterComparisonTests, CharacterTypes, );
 
 TYPED_TEST(CharacterComparisonTests, CompareCharacters) {
   for (auto &[x, y, xBytes, yBytes, expect] : this->parameters) {
@@ -204,7 +204,7 @@ void RunExtremumTests(const char *which,
 }
 
 template <typename CHAR> struct ExtremumTests : public ::testing::Test {};
-TYPED_TEST_CASE(ExtremumTests, CharacterTypes);
+TYPED_TEST_SUITE(ExtremumTests, CharacterTypes, );
 
 TYPED_TEST(ExtremumTests, MinTests) {
   static std::vector<ExtremumTestCase> tests{
@@ -284,7 +284,7 @@ void RunSearchTests(const char *which,
 }
 
 template <typename CHAR> struct SearchTests : public ::testing::Test {};
-TYPED_TEST_CASE(SearchTests, CharacterTypes);
+TYPED_TEST_SUITE(SearchTests, CharacterTypes, );
 
 TYPED_TEST(SearchTests, IndexTests) {
   static SearchFunctions functions{

@@ -10,12 +10,11 @@
 #include <malloc.h>
 #include <stdlib.h>
 
-extern "C" const char* __scudo_default_options() {
-  return "DeallocationTypeMismatch=0";  // Defaults to true in scudo_flags.inc.
+extern "C" const char *__scudo_default_options() {
+  return "DeallocationTypeMismatch=0"; // Defaults to true in scudo_flags.inc.
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   int *p = (int *)malloc(16);
   assert(p);
   delete p;

@@ -188,56 +188,26 @@ VPBlockBase *VPBlockBase::getEnclosingBlockWithPredecessors() {
   return Parent->getEnclosingBlockWithPredecessors();
 }
 
-static VPValue *getSingleOperandOrNull(VPUser &U) {
-  if (U.getNumOperands() == 1)
-    return U.getOperand(0);
-
-  return nullptr;
-}
-
-static const VPValue *getSingleOperandOrNull(const VPUser &U) {
-  if (U.getNumOperands() == 1)
-    return U.getOperand(0);
-
-  return nullptr;
-}
-
-static void resetSingleOpUser(VPUser &U, VPValue *NewVal) {
-  assert(U.getNumOperands() <= 1 && "Didn't expect more than one operand!");
-  if (!NewVal) {
-    if (U.getNumOperands() == 1)
-      U.removeLastOperand();
-    return;
-  }
-
-  if (U.getNumOperands() == 1)
-    U.setOperand(0, NewVal);
-  else
-    U.addOperand(NewVal);
-}
-
 VPValue *VPBlockBase::getCondBit() {
-  return getSingleOperandOrNull(CondBitUser);
+  return CondBitUser.getSingleOperandOrNull();
 }
 
 const VPValue *VPBlockBase::getCondBit() const {
-  return getSingleOperandOrNull(CondBitUser);
+  return CondBitUser.getSingleOperandOrNull();
 }
 
-void VPBlockBase::setCondBit(VPValue *CV) {
-  resetSingleOpUser(CondBitUser, CV);
-}
+void VPBlockBase::setCondBit(VPValue *CV) { CondBitUser.resetSingleOpUser(CV); }
 
 VPValue *VPBlockBase::getPredicate() {
-  return getSingleOperandOrNull(PredicateUser);
+  return PredicateUser.getSingleOperandOrNull();
 }
 
 const VPValue *VPBlockBase::getPredicate() const {
-  return getSingleOperandOrNull(PredicateUser);
+  return PredicateUser.getSingleOperandOrNull();
 }
 
 void VPBlockBase::setPredicate(VPValue *CV) {
-  resetSingleOpUser(PredicateUser, CV);
+  PredicateUser.resetSingleOpUser(CV);
 }
 
 void VPBlockBase::deleteCFG(VPBlockBase *Entry) {
@@ -401,7 +371,7 @@ void VPBasicBlock::dropAllReferences(VPValue *NewValue) {
 }
 
 VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {
-  assert(SplitAt->getParent() == this &&
+  assert((SplitAt == end() || SplitAt->getParent() == this) &&
          "can only split at a position in the same block");
 
   SmallVector<VPBlockBase *, 2> Succs(getSuccessors().begin(),

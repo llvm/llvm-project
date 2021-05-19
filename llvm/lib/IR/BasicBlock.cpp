@@ -372,6 +372,12 @@ bool BasicBlock::isLegalToHoistInto() const {
   return !Term->isExceptionalTerminator();
 }
 
+bool BasicBlock::isEntryBlock() const {
+  const Function *F = getParent();
+  assert(F && "Block must have a parent function to use this API");
+  return this == &F->getEntryBlock();
+}
+
 BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName,
                                         bool Before) {
   if (Before)

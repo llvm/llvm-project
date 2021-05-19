@@ -45,6 +45,9 @@ def exclude_all_symbols: F<"exclude-all-symbols">,
     HelpText<"Don't automatically export any symbols">;
 def export_all_symbols: F<"export-all-symbols">,
     HelpText<"Export all symbols even if a def file or dllexport attributes are used">;
+defm fatal_warnings: B<"fatal-warnings",
+    "Treat warnings as errors",
+    "Do not treat warnings as errors (default)">;
 defm file_alignment: Eq<"file-alignment", "Set file alignment">;
 defm gc_sections: B<"gc-sections",
     "Remove unused sections",
@@ -110,6 +113,11 @@ def Xlink : J<"Xlink=">, MetaVarName<"<arg>">,
     HelpText<"Pass <arg> to the COFF linker">;
 
 // Alias
+def alias_Bdynamic_call_shared: Flag<["-"], "call_shared">, Alias<Bdynamic>;
+def alias_Bdynamic_dy: Flag<["-"], "dy">, Alias<Bdynamic>;
+def alias_Bstatic_dn: Flag<["-"], "dn">, Alias<Bstatic>;
+def alias_Bstatic_non_shared: Flag<["-"], "non_shared">, Alias<Bstatic>;
+def alias_Bstatic_static: Flag<["-"], "static">, Alias<Bstatic>;
 def alias_entry_e: JoinedOrSeparate<["-"], "e">, Alias<entry>;
 def alias_strip_s: Flag<["-"], "s">, Alias<strip_all>;
 def alias_strip_S: Flag<["-"], "S">, Alias<strip_debug>;
@@ -125,6 +133,7 @@ def: Flag<["--"], "full-shutdown">;
 def: F<"high-entropy-va">;
 def: S<"major-image-version">;
 def: S<"minor-image-version">;
+def: F<"no-undefined">;
 def: F<"nxcompat">;
 def: F<"pic-executable">;
 def: S<"plugin">;

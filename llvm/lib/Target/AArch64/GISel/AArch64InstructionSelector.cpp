@@ -490,6 +490,8 @@ getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB,
     if (Ty.getSizeInBits() == 64)
       return GetAllRegSet ? &AArch64::GPR64allRegClass
                           : &AArch64::GPR64RegClass;
+    if (Ty.getSizeInBits() == 128)
+      return &AArch64::XSeqPairsClassRegClass;
     return nullptr;
   }
 
@@ -522,6 +524,8 @@ getMinClassForRegBank(const RegisterBank &RB, unsigned SizeInBits,
     if (SizeInBits == 64)
       return GetAllRegSet ? &AArch64::GPR64allRegClass
                           : &AArch64::GPR64RegClass;
+    if (SizeInBits == 128)
+      return &AArch64::XSeqPairsClassRegClass;
   }
 
   if (RegBankID == AArch64::FPRRegBankID) {
@@ -2465,19 +2469,24 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       if (DstTy.getSizeInBits() != 64)
         return false;
 
-      const RegisterBank &SrcRB = *RBI.getRegBank(SrcReg, MRI, TRI);
-      const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
-      // Check we have the right regbank always.
-      assert(SrcRB.getID() == AArch64::FPRRegBankID &&
-             DstRB.getID() == AArch64::FPRRegBankID &&
-             "Wrong extract regbank!");
-      (void)SrcRB;
-
-      // Emit the same code as a vector extract.
-      // Offset must be a multiple of 64.
       unsigned Offset = I.getOperand(2).getImm();
       if (Offset % 64 != 0)
         return false;
+
+      // Check we have the right regbank always.
+      const RegisterBank &SrcRB = *RBI.getRegBank(SrcReg, MRI, TRI);
+      const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
+      assert(SrcRB.getID() == DstRB.getID() && "Wrong extract regbank!");
+
+      if (SrcRB.getID() == AArch64::GPRRegBankID) {
+        MIB.buildInstr(TargetOpcode::COPY, {DstReg}, {})
+            .addUse(SrcReg, 0, Offset == 0 ? AArch64::sube64 : AArch64::subo64);
+        I.eraseFromParent();
+        return true;
+      }
+
+      // Emit the same code as a vector extract.
+      // Offset must be a multiple of 64.
       unsigned LaneIdx = Offset / 64;
       MachineInstr *Extract = emitExtractVectorElt(
           DstReg, DstRB, LLT::scalar(64), SrcReg, LaneIdx, MIB);
@@ -2964,34 +2973,46 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
           return selectCopy(I, TII, MRI, TRI, RBI);
       }
 
+      // For the 32-bit -> 64-bit case, we can emit a mov (ORRWrs)
+      // + SUBREG_TO_REG.
+      //
       // If we are zero extending from 32 bits to 64 bits, it's possible that
       // the instruction implicitly does the zero extend for us. In that case,
-      // we can just emit a SUBREG_TO_REG.
+      // we only need the SUBREG_TO_REG.
       if (IsGPR && SrcSize == 32 && DstSize == 64) {
         // Unlike with the G_LOAD case, we don't want to look through copies
-        // here.
+        // here. (See isDef32.)
         MachineInstr *Def = MRI.getVRegDef(SrcReg);
-        if (Def && isDef32(*Def)) {
-          MIB.buildInstr(AArch64::SUBREG_TO_REG, {DefReg}, {})
-              .addImm(0)
-              .addUse(SrcReg)
-              .addImm(AArch64::sub_32);
+        Register SubregToRegSrc = SrcReg;
 
-          if (!RBI.constrainGenericRegister(DefReg, AArch64::GPR64RegClass,
-                                            MRI)) {
-            LLVM_DEBUG(dbgs() << "Failed to constrain G_ZEXT destination\n");
-            return false;
-          }
-
-          if (!RBI.constrainGenericRegister(SrcReg, AArch64::GPR32RegClass,
-                                            MRI)) {
-            LLVM_DEBUG(dbgs() << "Failed to constrain G_ZEXT source\n");
-            return false;
-          }
-
-          I.eraseFromParent();
-          return true;
+        // Does the instruction implicitly zero extend?
+        if (!Def || !isDef32(*Def)) {
+          // No. Zero out using an OR.
+          Register OrDst = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
+          const Register ZReg = AArch64::WZR;
+          MIB.buildInstr(AArch64::ORRWrs, {OrDst}, {ZReg, SrcReg}).addImm(0);
+          SubregToRegSrc = OrDst;
         }
+
+        MIB.buildInstr(AArch64::SUBREG_TO_REG, {DefReg}, {})
+            .addImm(0)
+            .addUse(SubregToRegSrc)
+            .addImm(AArch64::sub_32);
+
+        if (!RBI.constrainGenericRegister(DefReg, AArch64::GPR64RegClass,
+                                          MRI)) {
+          LLVM_DEBUG(dbgs() << "Failed to constrain G_ZEXT destination\n");
+          return false;
+        }
+
+        if (!RBI.constrainGenericRegister(SrcReg, AArch64::GPR32RegClass,
+                                          MRI)) {
+          LLVM_DEBUG(dbgs() << "Failed to constrain G_ZEXT source\n");
+          return false;
+        }
+
+        I.eraseFromParent();
+        return true;
       }
     }
 
@@ -4900,6 +4921,15 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
   switch (IntrinID) {
   default:
     return false;
+  case Intrinsic::aarch64_ldxp:
+  case Intrinsic::aarch64_ldaxp: {
+    auto NewI = MIB.buildInstr(
+        IntrinID == Intrinsic::aarch64_ldxp ? AArch64::LDXPX : AArch64::LDAXPX,
+        {I.getOperand(0).getReg(), I.getOperand(1).getReg()},
+        {I.getOperand(3)});
+    NewI.cloneMemRefs(I);
+    break;
+  }
   case Intrinsic::trap:
     MIB.buildInstr(AArch64::BRK, {}, {}).addImm(1);
     break;
@@ -5024,6 +5054,17 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     I.eraseFromParent();
     return true;
   }
+  case Intrinsic::swift_async_context_addr:
+    auto Sub = MIB.buildInstr(AArch64::SUBXri, {I.getOperand(0).getReg()},
+                              {Register(AArch64::FP)})
+                   .addImm(8)
+                   .addImm(0);
+    constrainSelectedInstRegOperands(*Sub, TII, TRI, RBI);
+
+    MF->getFrameInfo().setFrameAddressIsTaken(true);
+    MF->getInfo<AArch64FunctionInfo>()->setHasSwiftAsyncContext(true);
+    I.eraseFromParent();
+    return true;
   }
   return false;
 }

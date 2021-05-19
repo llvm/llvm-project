@@ -55,11 +55,12 @@ public:
   };
 
   enum VectorLibrary {
-    NoLibrary,  // Don't use any vector library.
-    Accelerate, // Use the Accelerate framework.
-    LIBMVEC,    // GLIBC vector math library.
-    MASSV,      // IBM MASS vector library.
-    SVML        // Intel short vector math library.
+    NoLibrary,         // Don't use any vector library.
+    Accelerate,        // Use the Accelerate framework.
+    LIBMVEC,           // GLIBC vector math library.
+    MASSV,             // IBM MASS vector library.
+    SVML,              // Intel short vector math library.
+    Darwin_libsystem_m // Use Darwin's libsytem_m vector functions.
   };
 
   enum ObjCDispatchMethodKind {
@@ -363,14 +364,21 @@ public:
   /// other styles we may implement in the future.
   std::string StackProtectorGuard;
 
-  /// The TLS base register when StackProtectorGuard is "tls".
+  /// The TLS base register when StackProtectorGuard is "tls", or register used
+  /// to store the stack canary for "sysreg".
   /// On x86 this can be "fs" or "gs".
+  /// On AArch64 this can only be "sp_el0".
   std::string StackProtectorGuardReg;
 
   /// Path to ignorelist file specifying which objects
   /// (files, functions) listed for instrumentation by sanitizer
   /// coverage pass should actually not be instrumented.
   std::vector<std::string> SanitizeCoverageIgnorelistFiles;
+
+  /// Name of the stack usage file (i.e., .su file) if user passes
+  /// -fstack-usage. If empty, it can be implied that -fstack-usage is not
+  /// passed on the command line.
+  std::string StackUsageOutput;
 
   /// Executable and command-line used to create a given CompilerInvocation.
   /// Most of the time this will be the full -cc1 command.

@@ -218,7 +218,7 @@ bool optimizeSection(std::list<std::list<IntrinsicInst *>> &MergeableInsts) {
 
     const uint8_t FragIdIndex = ImageDimIntr->VAddrEnd - 1;
     auto FragId = cast<ConstantInt>(IIList.front()->getArgOperand(FragIdIndex));
-    const APInt &NewFragIdVal = FragId->getValue().udiv(4);
+    const APInt &NewFragIdVal = FragId->getValue().udiv(4) * 4;
 
     // Create the new instructions.
     IRBuilder<> B(IIList.front());
@@ -251,12 +251,13 @@ bool optimizeSection(std::list<std::list<IntrinsicInst *>> &MergeableInsts) {
       Value *VecOp = UndefValue::get(II->getType());
       auto Idx = cast<ConstantInt>(II->getArgOperand(FragIdIndex));
       if (NumElts == 1) {
-        VecOp = B.CreateExtractElement(NewCalls[0], Idx);
+        VecOp = B.CreateExtractElement(NewCalls[0], Idx->getValue().urem(4));
         LLVM_DEBUG(dbgs() << "Add: " << *VecOp << "\n");
       } else {
         for (unsigned I = 0; I < NumElts; ++I) {
           VecOp = B.CreateInsertElement(
-              VecOp, B.CreateExtractElement(NewCalls[I], Idx), I);
+              VecOp, B.CreateExtractElement(
+                NewCalls[I], Idx->getValue().urem(4)), I);
           LLVM_DEBUG(dbgs() << "Add: " << *VecOp << "\n");
         }
       }

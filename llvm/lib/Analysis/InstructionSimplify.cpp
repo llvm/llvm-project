@@ -224,8 +224,8 @@ static bool valueDominatesPHI(Value *V, PHINode *P, const DominatorTree *DT) {
 
   // Otherwise, if the instruction is in the entry block and is not an invoke,
   // then it obviously dominates all phi nodes.
-  if (I->getParent() == &I->getFunction()->getEntryBlock() &&
-      !isa<InvokeInst>(I) && !isa<CallBrInst>(I))
+  if (I->getParent()->isEntryBlock() && !isa<InvokeInst>(I) &&
+      !isa<CallBrInst>(I))
     return true;
 
   return false;
@@ -5625,6 +5625,19 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
 
     break;
   }
+  case Intrinsic::experimental_vector_extract: {
+    Type *ReturnType = F->getReturnType();
+
+    // (extract_vector (insert_vector _, X, 0), 0) -> X
+    unsigned IdxN = cast<ConstantInt>(Op1)->getZExtValue();
+    Value *X = nullptr;
+    if (match(Op0, m_Intrinsic<Intrinsic::experimental_vector_insert>(
+                       m_Value(), m_Value(X), m_Zero())) &&
+        IdxN == 0 && X->getType() == ReturnType)
+      return X;
+
+    break;
+  }
   default:
     break;
   }
@@ -5717,6 +5730,21 @@ static Value *simplifyIntrinsic(CallBase *Call, const SimplifyQuery &Q) {
                             cast<ConstantInt>(Op2)->getZExtValue());
     if (ScaledOne.isNonNegative() && match(Op1, m_SpecificInt(ScaledOne)))
       return Op0;
+
+    return nullptr;
+  }
+  case Intrinsic::experimental_vector_insert: {
+    Value *SubVec = Call->getArgOperand(1);
+    Value *Idx = Call->getArgOperand(2);
+    Type *ReturnType = F->getReturnType();
+
+    // (insert_vector _, (extract_vector X, 0), 0) -> X
+    unsigned IdxN = cast<ConstantInt>(Idx)->getZExtValue();
+    Value *X = nullptr;
+    if (match(SubVec, m_Intrinsic<Intrinsic::experimental_vector_extract>(
+                          m_Value(X), m_Zero())) &&
+        IdxN == 0 && X->getType() == ReturnType)
+      return X;
 
     return nullptr;
   }

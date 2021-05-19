@@ -168,8 +168,10 @@ enum TypeCodes {
 
   TYPE_CODE_TOKEN = 22, // TOKEN
 
-  TYPE_CODE_BFLOAT = 23, // BRAIN FLOATING POINT
-  TYPE_CODE_X86_AMX = 24 // X86 AMX
+  TYPE_CODE_BFLOAT = 23,  // BRAIN FLOATING POINT
+  TYPE_CODE_X86_AMX = 24, // X86 AMX
+
+  TYPE_CODE_OPAQUE_POINTER = 25, // OPAQUE_POINTER: [addrspace]
 };
 
 enum OperandBundleTagCode {
@@ -373,12 +375,15 @@ enum ConstantsCodes {
   CST_CODE_CE_INBOUNDS_GEP = 20, // INBOUNDS_GEP:  [n x operands]
   CST_CODE_BLOCKADDRESS = 21,    // CST_CODE_BLOCKADDRESS [fnty, fnval, bb#]
   CST_CODE_DATA = 22,            // DATA:          [n x elements]
-  CST_CODE_INLINEASM = 23,       // INLINEASM:     [sideeffect|alignstack|
+  CST_CODE_INLINEASM_OLD2 = 23,  // INLINEASM:     [sideeffect|alignstack|
                                  //                 asmdialect,asmstr,conststr]
   CST_CODE_CE_GEP_WITH_INRANGE_INDEX = 24, //      [opty, flags, n x operands]
   CST_CODE_CE_UNOP = 25,                   // CE_UNOP:      [opcode, opval]
   CST_CODE_POISON = 26,                    // POISON
   CST_CODE_DSO_LOCAL_EQUIVALENT = 27,      // DSO_LOCAL_EQUIVALENT [gvty, gv]
+  CST_CODE_INLINEASM = 28, // INLINEASM:     [sideeffect|alignstack|
+                           //                 asmdialect|unwind,
+                           //                 asmstr,conststr]
 };
 
 /// CastOpcodes - These are values used in the bitcode files to encode which
@@ -660,6 +665,7 @@ enum AttributeKindCodes {
   ATTR_KIND_HOT = 72,
   ATTR_KIND_NO_PROFILE = 73,
   ATTR_KIND_VSCALE_RANGE = 74,
+  ATTR_KIND_SWIFT_ASYNC = 75,
 };
 
 enum ComdatSelectionKindCodes {

@@ -1,5 +1,5 @@
 # Needed by LLVM's CMake checks because this file defines multiple targets.
-set(LLVM_OPTIONAL_SOURCES PluginsTest.cpp TestPlugin.cpp)
+set(LLVM_OPTIONAL_SOURCES PluginsTest.cpp TestPlugin.cpp PassBuilderBindingsTest.cpp)
 
 # If plugins are disabled, this test will disable itself at runtime. Otherwise,
 # reconfiguring with plugins disabled will leave behind a stale executable.
@@ -34,3 +34,9 @@ if (NOT WIN32)
   add_dependencies(TestPlugin intrinsics_gen)
   add_dependencies(PluginsTests TestPlugin)
 endif()
+
+set(LLVM_LINK_COMPONENTS Support Passes Core Target native AllTargetsInfos)
+add_llvm_unittest(PassesBindingsTests
+	PassBuilderBindingsTest.cpp
+	)
+target_link_libraries(PassesBindingsTests PRIVATE LLVMTestingSupport)

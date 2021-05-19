@@ -521,7 +521,8 @@ static void replaceCommonSymbols() {
                            /*size=*/0,
                            /*isWeakDef=*/false,
                            /*isExternal=*/true, common->privateExtern,
-                           /*isThumb=*/false);
+                           /*isThumb=*/false,
+                           /*isReferencedDynamically=*/false);
   }
 }
 
@@ -1194,6 +1195,27 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
     createSyntheticSections();
     createSyntheticSymbols();
+
+    if (!config->exportedSymbols.empty()) {
+      for (Symbol *sym : symtab->getSymbols()) {
+        if (auto *defined = dyn_cast<Defined>(sym)) {
+          StringRef symbolName = defined->getName();
+          if (config->exportedSymbols.match(symbolName)) {
+            if (defined->privateExtern) {
+              error("cannot export hidden symbol " + symbolName +
+                    "\n>>> defined in " + toString(defined->getFile()));
+            }
+          } else {
+            defined->privateExtern = true;
+          }
+        }
+      }
+    } else if (!config->unexportedSymbols.empty()) {
+      for (Symbol *sym : symtab->getSymbols())
+        if (auto *defined = dyn_cast<Defined>(sym))
+          if (config->unexportedSymbols.match(defined->getName()))
+            defined->privateExtern = true;
+    }
 
     for (const Arg *arg : args.filtered(OPT_sectcreate)) {
       StringRef segName = arg->getValue(0);

@@ -508,6 +508,8 @@ codegen::getStackProtectorGuardMode(llvm::TargetOptions &Options) {
     return StackProtectorGuards::TLS;
   if (getStackProtectorGuard() == "global")
     return StackProtectorGuards::Global;
+  if (getStackProtectorGuard() == "sysreg")
+    return StackProtectorGuards::SysReg;
   if (getStackProtectorGuard() != "none") {
     ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
         MemoryBuffer::getFile(getStackProtectorGuard());

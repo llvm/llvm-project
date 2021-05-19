@@ -27,16 +27,16 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-// Authors: wan@google.com (Zhanyong Wan), eefacm@gmail.com (Sean Mcafee)
-//
-// The Google C++ Testing Framework (Google Test)
+// The Google C++ Testing and Mocking Framework (Google Test)
 //
 // This header file declares the String class and functions used internally by
 // Google Test.  They are subject to change without notice. They should not used
 // by code external to Google Test.
 //
-// This header file is #included by <gtest/internal/gtest-internal.h>.
+// This header file is #included by gtest-internal.h.
 // It should not be #included by other files.
+
+// GOOGLETEST_CM0001 DO NOT DELETE
 
 #ifndef GTEST_INCLUDE_GTEST_INTERNAL_GTEST_STRING_H_
 #define GTEST_INCLUDE_GTEST_INTERNAL_GTEST_STRING_H_
@@ -94,7 +94,8 @@ class GTEST_API_ String {
   static const char* Utf16ToAnsi(LPCWSTR utf16_str);
 #endif
 
-  // Compares two C strings.  Returns true iff they have the same content.
+  // Compares two C strings.  Returns true if and only if they have the same
+  // content.
   //
   // Unlike strcmp(), this function can handle NULL argument(s).  A
   // NULL C string is considered different to any non-NULL C string,
@@ -107,16 +108,16 @@ class GTEST_API_ String {
   // returned.
   static std::string ShowWideCString(const wchar_t* wide_c_str);
 
-  // Compares two wide C strings.  Returns true iff they have the same
-  // content.
+  // Compares two wide C strings.  Returns true if and only if they have the
+  // same content.
   //
   // Unlike wcscmp(), this function can handle NULL argument(s).  A
   // NULL C string is considered different to any non-NULL C string,
   // including the empty string.
   static bool WideCStringEquals(const wchar_t* lhs, const wchar_t* rhs);
 
-  // Compares two C strings, ignoring case.  Returns true iff they
-  // have the same content.
+  // Compares two C strings, ignoring case.  Returns true if and only if
+  // they have the same content.
   //
   // Unlike strcasecmp(), this function can handle NULL argument(s).
   // A NULL C string is considered different to any non-NULL C string,
@@ -124,8 +125,8 @@ class GTEST_API_ String {
   static bool CaseInsensitiveCStringEquals(const char* lhs,
                                            const char* rhs);
 
-  // Compares two wide C strings, ignoring case.  Returns true iff they
-  // have the same content.
+  // Compares two wide C strings, ignoring case.  Returns true if and only if
+  // they have the same content.
   //
   // Unlike wcscasecmp(), this function can handle NULL argument(s).
   // A NULL C string is considered different to any non-NULL wide C string,
@@ -139,8 +140,8 @@ class GTEST_API_ String {
   static bool CaseInsensitiveWideCStringEquals(const wchar_t* lhs,
                                                const wchar_t* rhs);
 
-  // Returns true iff the given string ends with the given suffix, ignoring
-  // case. Any string is considered to end with an empty suffix.
+  // Returns true if and only if the given string ends with the given suffix,
+  // ignoring case. Any string is considered to end with an empty suffix.
   static bool EndsWithCaseInsensitive(
       const std::string& str, const std::string& suffix);
 
@@ -149,6 +150,9 @@ class GTEST_API_ String {
 
   // Formats an int value as "%X".
   static std::string FormatHexInt(int value);
+
+  // Formats an int value as "%X".
+  static std::string FormatHexUInt32(UInt32 value);
 
   // Formats a byte as "%02X".
   static std::string FormatByte(unsigned char value);

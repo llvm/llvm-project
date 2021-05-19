@@ -1684,6 +1684,9 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::TRUNCATE,  MVT::v2i1,    MVT::v2i64,  2 }, // vpsllq+vptestmq
     { ISD::TRUNCATE,  MVT::v4i1,    MVT::v4i64,  2 }, // vpsllq+vptestmq
     { ISD::TRUNCATE,  MVT::v4i32,   MVT::v4i64,  1 }, // vpmovqd
+    { ISD::TRUNCATE,  MVT::v4i8,    MVT::v4i64,  2 }, // vpmovqb
+    { ISD::TRUNCATE,  MVT::v4i16,   MVT::v4i64,  2 }, // vpmovqw
+    { ISD::TRUNCATE,  MVT::v8i8,    MVT::v8i32,  2 }, // vpmovwb
 
     // sign extend is vpcmpeq+maskedmove+vpmovdw+vpacksswb
     // zero extend is vpcmpeq+maskedmove+vpmovdw+vpsrlw+vpackuswb
@@ -1773,10 +1776,6 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 
     { ISD::TRUNCATE,    MVT::v4i32,  MVT::v4i64,  2 },
     { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i32,  2 },
-
-    { ISD::TRUNCATE,    MVT::v4i8,   MVT::v4i64,  2 },
-    { ISD::TRUNCATE,    MVT::v4i16,  MVT::v4i64,  2 },
-    { ISD::TRUNCATE,    MVT::v8i8,   MVT::v8i32,  2 },
     { ISD::TRUNCATE,    MVT::v8i16,  MVT::v8i32,  2 },
 
     { ISD::FP_EXTEND,   MVT::v8f64,  MVT::v8f32,  3 },
@@ -3254,134 +3253,50 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
     return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                   CostKind);
 
-  // Legalize the type.
-  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Src);
+  // Handle non-power-of-two vectors such as <3 x float> and <48 x i16>
+  if (auto *VTy = dyn_cast<FixedVectorType>(Src)) {
+    const unsigned NumElem = VTy->getNumElements();
+    if (!isPowerOf2_32(NumElem)) {
+      // Factorize NumElem into sum of power-of-two.
+      InstructionCost Cost = 0;
+      unsigned NumElemDone = 0;
+      for (unsigned NumElemLeft = NumElem, Factor;
+           Factor = PowerOf2Floor(NumElemLeft), NumElemLeft > 0;
+           NumElemLeft -= Factor) {
+        Type *SubTy = FixedVectorType::get(VTy->getScalarType(), Factor);
+        unsigned SubTyBytes = SubTy->getPrimitiveSizeInBits() / 8;
 
-  auto *VTy = dyn_cast<FixedVectorType>(Src);
+        Cost +=
+            getMemoryOpCost(Opcode, SubTy, Alignment, AddressSpace, CostKind);
 
-  // Handle the simple case of non-vectors.
-  // NOTE: this assumes that legalization never creates vector from scalars!
-  if (!VTy || !LT.second.isVector())
-    // Each load/store unit costs 1.
-    return LT.first * 1;
+        std::pair<InstructionCost, MVT> LST =
+            TLI->getTypeLegalizationCost(DL, SubTy);
+        if (!LST.second.isVector()) {
+          APInt DemandedElts =
+              APInt::getBitsSet(NumElem, NumElemDone, NumElemDone + Factor);
+          Cost += getScalarizationOverhead(VTy, DemandedElts,
+                                           Opcode == Instruction::Load,
+                                           Opcode == Instruction::Store);
+        }
 
-  bool IsLoad = Opcode == Instruction::Load;
-
-  Type *EltTy = VTy->getElementType();
-
-  const int EltTyBits = DL.getTypeSizeInBits(EltTy);
-  assert(((EltTyBits > 0) && (EltTyBits % 8 == 0)) &&
-         "Expected byte-size types");
-  const int EltTyBytes = EltTyBits / 8;
-  assert(EltTyBytes != 0 && "Had sub-byte-sized type?");
-
-  InstructionCost Cost = 0;
-
-  // Source of truth: how many elements were there in the original IR vector?
-  const unsigned SrcNumElt = VTy->getNumElements();
-
-  // How far have we gotten?
-  int NumEltRemaining = SrcNumElt;
-  // Note that we intentionally capture by-reference, NumEltRemaining changes.
-  auto NumEltDone = [&]() { return SrcNumElt - NumEltRemaining; };
-
-  assert(LT.second.getSizeInBits() % 8 == 0 && "Non-byte-sized legal type?");
-  const int MaxLegalOpSizeBytes = LT.second.getSizeInBits() / 8;
-  assert(MaxLegalOpSizeBytes != 0 && "Legalized to sub-byte-sized type?");
-
-  // With what size are we currently operating?
-  int CurrOpSizeBytes = MaxLegalOpSizeBytes;
-
-  // How many elements would a single op deal with at once?
-  assert(CurrOpSizeBytes % EltTyBytes == 0 &&
-         "Operation size is not a multiple of element size?");
-  int CurrNumEltPerOp = CurrOpSizeBytes / EltTyBytes;
-
-  // Note that even if we can store 64 bits of an XMM, we still operate on XMM.
-  const unsigned XMMBits = 128;
-  assert(XMMBits % EltTyBits == 0 && "Filing XMM with EltTy leaves padding.");
-  const int NumEltPerXMM = XMMBits / EltTyBits;
-
-  auto *XMMVecTy = FixedVectorType::get(EltTy, NumEltPerXMM);
-
-  for (int SubVecEltsLeft = 0; NumEltRemaining > 0;
-       CurrOpSizeBytes /= 2, CurrNumEltPerOp /= 2) {
-    assert(CurrOpSizeBytes > 0 && CurrNumEltPerOp > 0 && "How'd we get here?");
-    assert((((NumEltRemaining * EltTyBytes) < (2 * CurrOpSizeBytes)) ||
-            (CurrOpSizeBytes == MaxLegalOpSizeBytes)) &&
-           "Unless we haven't halved the op size yet, "
-           "we have less than two op's sized units of work left.");
-
-    auto *CurrVecTy = CurrNumEltPerOp > NumEltPerXMM
-                          ? FixedVectorType::get(EltTy, CurrNumEltPerOp)
-                          : XMMVecTy;
-
-    assert(CurrVecTy->getNumElements() % CurrNumEltPerOp == 0 &&
-           "After halving sizes, the vector elt count is no longer a multiple "
-           "of number of elements per operation?");
-    auto *CoalescedVecTy =
-        CurrNumEltPerOp == 1
-            ? CurrVecTy
-            : FixedVectorType::get(
-                  IntegerType::get(Src->getContext(),
-                                   EltTyBits * CurrNumEltPerOp),
-                  CurrVecTy->getNumElements() / CurrNumEltPerOp);
-    assert(DL.getTypeSizeInBits(CoalescedVecTy) ==
-               DL.getTypeSizeInBits(CurrVecTy) &&
-           "coalesciing elements doesn't change vector width.");
-
-    while (NumEltRemaining > 0) {
-      assert(SubVecEltsLeft >= 0 && "Subreg element count overconsumtion?");
-
-      // Can we use this vector size, as per the remaining element count?
-      // Iff the vector is naturally aligned, we can do a wide load regardless.
-      if (NumEltRemaining < CurrNumEltPerOp &&
-          (!IsLoad || Alignment.valueOrOne() < CurrOpSizeBytes))
-        break; // Try smalled vector size.
-
-      bool Is0thSubVec = (NumEltDone() % LT.second.getVectorNumElements()) == 0;
-
-      // If we have fully processed the previous reg, we need to replenish it.
-      if (SubVecEltsLeft == 0) {
-        SubVecEltsLeft += CurrVecTy->getNumElements();
-        // And that's free only for the 0'th subvector of a legalized vector.
-        if (!Is0thSubVec)
-          Cost += getShuffleCost(IsLoad ? TTI::ShuffleKind::SK_InsertSubvector
-                                        : TTI::ShuffleKind::SK_ExtractSubvector,
-                                 VTy, None, NumEltDone(), CurrVecTy);
+        NumElemDone += Factor;
+        Alignment = commonAlignment(Alignment.valueOrOne(), SubTyBytes);
       }
-
-      // While we can directly load/store ZMM, YMM, and 64-bit halves of XMM,
-      // for smaller widths (32/16/8) we have to insert/extract them separately.
-      // Again, it's free for the 0'th subreg (if op is 32/64 bit wide,
-      // but let's pretend that it is also true for 16/8 bit wide ops...)
-      if (CurrOpSizeBytes <= 32 / 8 && !Is0thSubVec) {
-        int NumEltDoneInCurrXMM = NumEltDone() % NumEltPerXMM;
-        assert(NumEltDoneInCurrXMM % CurrNumEltPerOp == 0 && "");
-        int CoalescedVecEltIdx = NumEltDoneInCurrXMM / CurrNumEltPerOp;
-        APInt DemandedElts =
-            APInt::getBitsSet(CoalescedVecTy->getNumElements(),
-                              CoalescedVecEltIdx, CoalescedVecEltIdx + 1);
-        assert(DemandedElts.countPopulation() == 1 && "Inserting single value");
-        Cost += getScalarizationOverhead(CoalescedVecTy, DemandedElts, IsLoad,
-                                         !IsLoad);
-      }
-
-      // This isn't exactly right. We're using slow unaligned 32-byte accesses
-      // as a proxy for a double-pumped AVX memory interface such as on
-      // Sandybridge.
-      if (CurrOpSizeBytes == 32 && ST->isUnalignedMem32Slow())
-        Cost += 2;
-      else
-        Cost += 1;
-
-      SubVecEltsLeft -= CurrNumEltPerOp;
-      NumEltRemaining -= CurrNumEltPerOp;
-      Alignment = commonAlignment(Alignment.valueOrOne(), CurrOpSizeBytes);
+      assert(NumElemDone == NumElem && "Processed wrong element count?");
+      return Cost;
     }
   }
 
-  assert(NumEltRemaining <= 0 && "Should have processed all the elements.");
+  // Legalize the type.
+  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Src);
+
+  // Each load/store unit costs 1.
+  InstructionCost Cost = LT.first * 1;
+
+  // This isn't exactly right. We're using slow unaligned 32-byte accesses as a
+  // proxy for a double-pumped AVX memory interface such as on Sandybridge.
+  if (LT.second.getStoreSize() == 32 && ST->isUnalignedMem32Slow())
+    Cost *= 2;
 
   return Cost;
 }
@@ -4691,9 +4606,17 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX2(
     ScalarTy =
         Type::getIntNTy(ScalarTy->getContext(), DL.getTypeSizeInBits(ScalarTy));
 
-  // Get the cost of all the memory operations.
-  InstructionCost MemOpCosts = getMemoryOpCost(
-      Opcode, VecTy, MaybeAlign(Alignment), AddressSpace, CostKind);
+  // Calculate the number of memory operations (NumOfMemOps), required
+  // for load/store the VecTy.
+  unsigned VecTySize = DL.getTypeStoreSize(VecTy);
+  unsigned LegalVTSize = LegalVT.getStoreSize();
+  unsigned NumOfMemOps = (VecTySize + LegalVTSize - 1) / LegalVTSize;
+
+  // Get the cost of one memory operation.
+  auto *SingleMemOpTy = FixedVectorType::get(VecTy->getElementType(),
+                                             LegalVT.getVectorNumElements());
+  InstructionCost MemOpCost = getMemoryOpCost(
+      Opcode, SingleMemOpTy, MaybeAlign(Alignment), AddressSpace, CostKind);
 
   auto *VT = FixedVectorType::get(ScalarTy, VF);
   EVT ETy = TLI->getValueType(DL, VT);
@@ -4748,13 +4671,13 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX2(
   if (Opcode == Instruction::Load) {
     if (const auto *Entry =
             CostTableLookup(AVX2InterleavedLoadTbl, Factor, ETy.getSimpleVT()))
-      return MemOpCosts + Entry->Cost;
+      return NumOfMemOps * MemOpCost + Entry->Cost;
   } else {
     assert(Opcode == Instruction::Store &&
            "Expected Store Instruction at this  point");
     if (const auto *Entry =
             CostTableLookup(AVX2InterleavedStoreTbl, Factor, ETy.getSimpleVT()))
-      return MemOpCosts + Entry->Cost;
+      return NumOfMemOps * MemOpCost + Entry->Cost;
   }
 
   return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,

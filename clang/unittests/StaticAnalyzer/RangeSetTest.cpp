@@ -188,7 +188,7 @@ llvm::APSInt RangeSetTest<BaseType>::Base{sizeof(BaseType) * 8, !isSigned()};
 
 using IntTypes = ::testing::Types<int8_t, uint8_t, int16_t, uint16_t, int32_t,
                                   uint32_t, int64_t, uint64_t>;
-TYPED_TEST_CASE(RangeSetTest, IntTypes);
+TYPED_TEST_SUITE(RangeSetTest, IntTypes, );
 
 TYPED_TEST(RangeSetTest, RangeSetNegateTest) {
   // Use next values of the range {MIN, A, B, MID, C, D, MAX}.

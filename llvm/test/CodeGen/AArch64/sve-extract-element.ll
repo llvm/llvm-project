@@ -478,4 +478,53 @@ define i64 @test_lanex_splat_2xi64(i64 %x, i32 %y) #0 {
   ret i64 %c
 }
 
+define i1 @test_lane0_16xi1(<vscale x 16 x i1> %a) #0 {
+; CHECK-LABEL: test_lane0_16xi1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.b, p0/z, #1 // =0x1
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 16 x i1> %a, i32 0
+  ret i1 %b
+}
+
+define i1 @test_lane9_8xi1(<vscale x 8 x i1> %a) #0 {
+; CHECK-LABEL: test_lane9_8xi1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.h, p0/z, #1 // =0x1
+; CHECK-NEXT:    mov z0.h, z0.h[9]
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 8 x i1> %a, i32 9
+  ret i1 %b
+}
+
+define i1 @test_lanex_4xi1(<vscale x 4 x i1> %a, i32 %x) #0 {
+; CHECK-LABEL: test_lanex_4xi1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sxtw x8, w0
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
+; CHECK-NEXT:    lastb w8, p1, z0.s
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 4 x i1> %a, i32 %x
+  ret i1 %b
+}
+
+define i1 @test_lane4_2xi1(<vscale x 2 x i1> %a) #0 {
+; CHECK-LABEL: test_lane4_2xi1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.d, p0/z, #1 // =0x1
+; CHECK-NEXT:    mov z0.d, z0.d[4]
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 2 x i1> %a, i32 4
+  ret i1 %b
+}
+
 attributes #0 = { "target-features"="+sve" }

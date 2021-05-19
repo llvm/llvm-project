@@ -208,16 +208,29 @@ bool llvm::isPotentiallyReachableFromMany(
   return false;
 }
 
-bool llvm::isPotentiallyReachable(const BasicBlock *A, const BasicBlock *B,
-                                  const DominatorTree *DT, const LoopInfo *LI) {
+bool llvm::isPotentiallyReachable(
+    const BasicBlock *A, const BasicBlock *B,
+    const SmallPtrSetImpl<BasicBlock *> *ExclusionSet, const DominatorTree *DT,
+    const LoopInfo *LI) {
   assert(A->getParent() == B->getParent() &&
          "This analysis is function-local!");
+
+  if (DT) {
+    if (DT->isReachableFromEntry(A) && !DT->isReachableFromEntry(B))
+      return false;
+    if (!ExclusionSet || ExclusionSet->empty()) {
+      if (A->isEntryBlock() && DT->isReachableFromEntry(B))
+        return true;
+      if (B->isEntryBlock() && DT->isReachableFromEntry(A))
+        return false;
+    }
+  }
 
   SmallVector<BasicBlock*, 32> Worklist;
   Worklist.push_back(const_cast<BasicBlock*>(A));
 
   return isPotentiallyReachableFromMany(Worklist, const_cast<BasicBlock *>(B),
-                                        nullptr, DT, LI);
+                                        ExclusionSet, DT, LI);
 }
 
 bool llvm::isPotentiallyReachable(
@@ -226,8 +239,6 @@ bool llvm::isPotentiallyReachable(
     const LoopInfo *LI) {
   assert(A->getParent()->getParent() == B->getParent()->getParent() &&
          "This analysis is function-local!");
-
-  SmallVector<BasicBlock*, 32> Worklist;
 
   if (A->getParent() == B->getParent()) {
     // The same block case is special because it's the only time we're looking
@@ -242,43 +253,28 @@ bool llvm::isPotentiallyReachable(
     if (LI && LI->getLoopFor(BB) != nullptr)
       return true;
 
-    // Linear scan, start at 'A', see whether we hit 'B' or the end first.
-    for (BasicBlock::const_iterator I = A->getIterator(), E = BB->end(); I != E;
-         ++I) {
-      if (&*I == B)
-        return true;
-    }
+    // If A comes before B, then B is definitively reachable from A.
+    if (A == B || A->comesBefore(B))
+      return true;
 
     // Can't be in a loop if it's the entry block -- the entry block may not
     // have predecessors.
-    if (BB == &BB->getParent()->getEntryBlock())
+    if (BB->isEntryBlock())
       return false;
 
     // Otherwise, continue doing the normal per-BB CFG walk.
+    SmallVector<BasicBlock*, 32> Worklist;
     Worklist.append(succ_begin(BB), succ_end(BB));
-
     if (Worklist.empty()) {
       // We've proven that there's no path!
       return false;
     }
-  } else {
-    Worklist.push_back(const_cast<BasicBlock*>(A->getParent()));
+
+    return isPotentiallyReachableFromMany(
+        Worklist, const_cast<BasicBlock *>(B->getParent()), ExclusionSet,
+        DT, LI);
   }
 
-  if (DT) {
-    if (DT->isReachableFromEntry(A->getParent()) &&
-        !DT->isReachableFromEntry(B->getParent()))
-      return false;
-    if (!ExclusionSet || ExclusionSet->empty()) {
-      if (A->getParent() == &A->getParent()->getParent()->getEntryBlock() &&
-          DT->isReachableFromEntry(B->getParent()))
-        return true;
-      if (B->getParent() == &A->getParent()->getParent()->getEntryBlock() &&
-          DT->isReachableFromEntry(A->getParent()))
-        return false;
-    }
-  }
-
-  return isPotentiallyReachableFromMany(
-      Worklist, const_cast<BasicBlock *>(B->getParent()), ExclusionSet, DT, LI);
+  return isPotentiallyReachable(
+      A->getParent(), B->getParent(), ExclusionSet, DT, LI);
 }

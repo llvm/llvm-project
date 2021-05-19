@@ -478,7 +478,7 @@ void unreachable_call() {
 // CHECK1-NEXT:    [[ADD26:%.*]] = add nsw i32 [[CONV25]], 1
 // CHECK1-NEXT:    [[CONV27:%.*]] = trunc i32 [[ADD26]] to i8
 // CHECK1-NEXT:    store i8 [[CONV27]], i8* [[Y]], align 8
-// CHECK1-NEXT:    [[CALL:%.*]] = call nonnull align 8 dereferenceable(8) i64* @_ZN2TTIxcEixEi(%struct.TT* nonnull dereferenceable(16) [[TMP7]], i32 0) #[[ATTR7:[0-9]+]]
+// CHECK1-NEXT:    [[CALL:%.*]] = call nonnull align 8 dereferenceable(8) i64* @_ZN2TTIxcEixEi(%struct.TT* nonnull align 8 dereferenceable(16) [[TMP7]], i32 0) #[[ATTR7:[0-9]+]]
 // CHECK1-NEXT:    [[TMP21:%.*]] = load i64, i64* [[CALL]], align 8
 // CHECK1-NEXT:    [[ADD28:%.*]] = add nsw i64 [[TMP21]], 1
 // CHECK1-NEXT:    store i64 [[ADD28]], i64* [[CALL]], align 8
@@ -492,7 +492,7 @@ void unreachable_call() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN2TTIxcEixEi
-// CHECK1-SAME: (%struct.TT* nonnull dereferenceable(16) [[THIS:%.*]], i32 [[I:%.*]]) #[[ATTR5:[0-9]+]] comdat align 2 {
+// CHECK1-SAME: (%struct.TT* nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 [[I:%.*]]) #[[ATTR5:[0-9]+]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.TT*, align 8
 // CHECK1-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
@@ -1309,7 +1309,7 @@ void unreachable_call() {
 // CHECK2-NEXT:    [[ADD25:%.*]] = add nsw i32 [[CONV24]], 1
 // CHECK2-NEXT:    [[CONV26:%.*]] = trunc i32 [[ADD25]] to i8
 // CHECK2-NEXT:    store i8 [[CONV26]], i8* [[Y]], align 8
-// CHECK2-NEXT:    [[CALL:%.*]] = call nonnull align 8 dereferenceable(8) i64* @_ZN2TTIxcEixEi(%struct.TT* nonnull dereferenceable(16) [[TMP7]], i32 0) #[[ATTR7:[0-9]+]]
+// CHECK2-NEXT:    [[CALL:%.*]] = call nonnull align 8 dereferenceable(8) i64* @_ZN2TTIxcEixEi(%struct.TT* nonnull align 8 dereferenceable(16) [[TMP7]], i32 0) #[[ATTR7:[0-9]+]]
 // CHECK2-NEXT:    [[TMP21:%.*]] = load i64, i64* [[CALL]], align 8
 // CHECK2-NEXT:    [[ADD27:%.*]] = add nsw i64 [[TMP21]], 1
 // CHECK2-NEXT:    store i64 [[ADD27]], i64* [[CALL]], align 8
@@ -1323,7 +1323,7 @@ void unreachable_call() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZN2TTIxcEixEi
-// CHECK2-SAME: (%struct.TT* nonnull dereferenceable(16) [[THIS:%.*]], i32 [[I:%.*]]) #[[ATTR5:[0-9]+]] comdat align 2 {
+// CHECK2-SAME: (%struct.TT* nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 [[I:%.*]]) #[[ATTR5:[0-9]+]] comdat align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.TT*, align 4
 // CHECK2-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
@@ -2137,7 +2137,7 @@ void unreachable_call() {
 // CHECK3-NEXT:    [[ADD25:%.*]] = add nsw i32 [[CONV24]], 1
 // CHECK3-NEXT:    [[CONV26:%.*]] = trunc i32 [[ADD25]] to i8
 // CHECK3-NEXT:    store i8 [[CONV26]], i8* [[Y]], align 8
-// CHECK3-NEXT:    [[CALL:%.*]] = call nonnull align 8 dereferenceable(8) i64* @_ZN2TTIxcEixEi(%struct.TT* nonnull dereferenceable(16) [[TMP7]], i32 0) #[[ATTR7:[0-9]+]]
+// CHECK3-NEXT:    [[CALL:%.*]] = call nonnull align 8 dereferenceable(8) i64* @_ZN2TTIxcEixEi(%struct.TT* nonnull align 8 dereferenceable(16) [[TMP7]], i32 0) #[[ATTR7:[0-9]+]]
 // CHECK3-NEXT:    [[TMP21:%.*]] = load i64, i64* [[CALL]], align 8
 // CHECK3-NEXT:    [[ADD27:%.*]] = add nsw i64 [[TMP21]], 1
 // CHECK3-NEXT:    store i64 [[ADD27]], i64* [[CALL]], align 8
@@ -2151,7 +2151,7 @@ void unreachable_call() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_ZN2TTIxcEixEi
-// CHECK3-SAME: (%struct.TT* nonnull dereferenceable(16) [[THIS:%.*]], i32 [[I:%.*]]) #[[ATTR5:[0-9]+]] comdat align 2 {
+// CHECK3-SAME: (%struct.TT* nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 [[I:%.*]]) #[[ATTR5:[0-9]+]] comdat align 2 {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.TT*, align 4
 // CHECK3-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4

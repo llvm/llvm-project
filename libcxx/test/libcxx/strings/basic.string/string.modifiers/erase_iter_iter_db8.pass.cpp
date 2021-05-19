@@ -13,19 +13,18 @@
 // UNSUPPORTED: libcxx-no-debug-mode
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <string>
-#include <cassert>
 
 #include "test_macros.h"
+#include "debug_macros.h"
 #include "min_allocator.h"
 
 int main(int, char**) {
   typedef std::basic_string<char, std::char_traits<char>, min_allocator<char> > S;
   S l1("123");
-  S::iterator i = l1.erase(l1.cbegin() + 1, l1.cbegin());
-  assert(false);
+  TEST_LIBCPP_ASSERT_FAILURE(l1.erase(l1.cbegin() + 1, l1.cbegin()),
+                             "string::erase(first, last) called with invalid range");
 
   return 0;
 }

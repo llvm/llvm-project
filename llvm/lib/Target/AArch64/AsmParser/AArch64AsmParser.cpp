@@ -2046,7 +2046,7 @@ public:
                                                        SMLoc S,
                                                        MCContext &Ctx) {
     auto Op = std::make_unique<AArch64Operand>(k_BTIHint, Ctx);
-    Op->BTIHint.Val = Val << 1 | 32;
+    Op->BTIHint.Val = Val | 32;
     Op->BTIHint.Data = Str.data();
     Op->BTIHint.Length = Str.size();
     Op->StartLoc = S;

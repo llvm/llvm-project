@@ -114,6 +114,7 @@ class GIApplyKind;
 class GIApplyKindWithArgs;
 
 def register_matchinfo: GIDefMatchData<"Register">;
+def int64_matchinfo: GIDefMatchData<"int64_t">;
 def build_fn_matchinfo :
 GIDefMatchData<"std::function<void(MachineIRBuilder &)>">;
 
@@ -613,6 +614,12 @@ def rotate_out_of_range : GICombineRule<
   (apply [{ Helper.applyRotateOutOfRange(*${root}); }])
 >;
 
+def icmp_to_true_false_known_bits : GICombineRule<
+  (defs root:$d, int64_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_ICMP):$d,
+         [{ return Helper.matchICmpToTrueFalseKnownBits(*${d}, ${matchinfo}); }]),
+  (apply [{ Helper.replaceInstWithConstant(*${d}, ${matchinfo}); }])>;
+
 def funnel_shift_combines : GICombineGroup<[funnel_shift_to_rotate]>;
 
 // FIXME: These should use the custom predicate feature once it lands.
@@ -634,7 +641,7 @@ def const_combines : GICombineGroup<[constant_fp_op, const_ptradd_to_i2p]>;
 
 def known_bits_simplifications : GICombineGroup<[
   redundant_and, redundant_sext_inreg, redundant_or, urem_pow2_to_mask,
-  zext_trunc_fold]>;
+  zext_trunc_fold, icmp_to_true_false_known_bits]>;
 
 def width_reduction_combines : GICombineGroup<[reduce_shl_of_extend]>;
 

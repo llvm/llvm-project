@@ -931,6 +931,17 @@ static bool isLifetimeStart(const Instruction *Inst) {
   return false;
 }
 
+/// Assuming To can be reached from both From and Between, does Between lie on
+/// every path from From to To?
+static bool liesBetween(const Instruction *From, Instruction *Between,
+                        const Instruction *To, DominatorTree *DT) {
+  if (From->getParent() == Between->getParent())
+    return DT->dominates(From, Between);
+  SmallSet<BasicBlock *, 1> Exclusion;
+  Exclusion.insert(Between->getParent());
+  return !isPotentiallyReachable(From, To, &Exclusion, DT);
+}
+
 /// Try to locate the three instruction involved in a missed
 /// load-elimination case that is due to an intervening store.
 static void reportMayClobberedLoad(LoadInst *Load, MemDepResult DepInfo,
@@ -944,17 +955,46 @@ static void reportMayClobberedLoad(LoadInst *Load, MemDepResult DepInfo,
   R << "load of type " << NV("Type", Load->getType()) << " not eliminated"
     << setExtraArgs();
 
-  for (auto *U : Load->getPointerOperand()->users())
+  for (auto *U : Load->getPointerOperand()->users()) {
     if (U != Load && (isa<LoadInst>(U) || isa<StoreInst>(U)) &&
+        cast<Instruction>(U)->getFunction() == Load->getFunction() &&
         DT->dominates(cast<Instruction>(U), Load)) {
-      // FIXME: for now give up if there are multiple memory accesses that
-      // dominate the load.  We need further analysis to decide which one is
-      // that we're forwarding from.
-      if (OtherAccess)
-        OtherAccess = nullptr;
-      else
+      // Use the most immediately dominating value
+      if (OtherAccess) {
+        if (DT->dominates(cast<Instruction>(OtherAccess), cast<Instruction>(U)))
+          OtherAccess = U;
+        else
+          assert(DT->dominates(cast<Instruction>(U),
+                               cast<Instruction>(OtherAccess)));
+      } else
         OtherAccess = U;
     }
+  }
+
+  if (!OtherAccess) {
+    // There is no dominating use, check if we can find a closest non-dominating
+    // use that lies between any other potentially available use and Load.
+    for (auto *U : Load->getPointerOperand()->users()) {
+      if (U != Load && (isa<LoadInst>(U) || isa<StoreInst>(U)) &&
+          cast<Instruction>(U)->getFunction() == Load->getFunction() &&
+          isPotentiallyReachable(cast<Instruction>(U), Load, nullptr, DT)) {
+        if (OtherAccess) {
+          if (liesBetween(cast<Instruction>(OtherAccess), cast<Instruction>(U),
+                          Load, DT)) {
+            OtherAccess = U;
+          } else if (!liesBetween(cast<Instruction>(U),
+                                  cast<Instruction>(OtherAccess), Load, DT)) {
+            // These uses are both partially available at Load were it not for
+            // the clobber, but neither lies strictly after the other.
+            OtherAccess = nullptr;
+            break;
+          } // else: keep current OtherAccess since it lies between U and Load
+        } else {
+          OtherAccess = U;
+        }
+      }
+    }
+  }
 
   if (OtherAccess)
     R << " in favor of " << NV("OtherAccess", OtherAccess);
@@ -999,9 +1039,21 @@ bool GVN::AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo,
       // Can't forward from non-atomic to atomic without violating memory model.
       if (DepLoad != Load && Address &&
           Load->isAtomic() <= DepLoad->isAtomic()) {
-        int Offset = analyzeLoadFromClobberingLoad(Load->getType(), Address,
-                                                   DepLoad, DL);
+        Type *LoadType = Load->getType();
+        int Offset = -1;
 
+        // If MD reported clobber, check it was nested.
+        if (DepInfo.isClobber() &&
+            canCoerceMustAliasedValueToLoad(DepLoad, LoadType, DL)) {
+          const auto ClobberOff = MD->getClobberOffset(DepLoad);
+          // GVN has no deal with a negative offset.
+          Offset = (ClobberOff == None || ClobberOff.getValue() < 0)
+                       ? -1
+                       : ClobberOff.getValue();
+        }
+        if (Offset == -1)
+          Offset =
+              analyzeLoadFromClobberingLoad(LoadType, Address, DepLoad, DL);
         if (Offset != -1) {
           Res = AvailableValue::getLoad(DepLoad, Offset);
           return true;

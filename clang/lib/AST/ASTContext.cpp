@@ -937,6 +937,8 @@ static const LangASMap *getAddressSpaceMap(const TargetInfo &T,
         8,  // cuda_constant
         9,  // cuda_shared
         1,  // sycl_global
+        5,  // sycl_global_device
+        6,  // sycl_global_host
         3,  // sycl_local
         0,  // sycl_private
         10, // ptr32_sptr
@@ -5766,29 +5768,29 @@ QualType ASTContext::getUnqualifiedArrayType(QualType type,
 /// Attempt to unwrap two types that may both be array types with the same bound
 /// (or both be array types of unknown bound) for the purpose of comparing the
 /// cv-decomposition of two types per C++ [conv.qual].
-bool ASTContext::UnwrapSimilarArrayTypes(QualType &T1, QualType &T2) {
-  bool UnwrappedAny = false;
+void ASTContext::UnwrapSimilarArrayTypes(QualType &T1, QualType &T2) {
   while (true) {
     auto *AT1 = getAsArrayType(T1);
-    if (!AT1) return UnwrappedAny;
+    if (!AT1)
+      return;
 
     auto *AT2 = getAsArrayType(T2);
-    if (!AT2) return UnwrappedAny;
+    if (!AT2)
+      return;
 
     // If we don't have two array types with the same constant bound nor two
     // incomplete array types, we've unwrapped everything we can.
     if (auto *CAT1 = dyn_cast<ConstantArrayType>(AT1)) {
       auto *CAT2 = dyn_cast<ConstantArrayType>(AT2);
       if (!CAT2 || CAT1->getSize() != CAT2->getSize())
-        return UnwrappedAny;
+        return;
     } else if (!isa<IncompleteArrayType>(AT1) ||
                !isa<IncompleteArrayType>(AT2)) {
-      return UnwrappedAny;
+      return;
     }
 
     T1 = AT1->getElementType();
     T2 = AT2->getElementType();
-    UnwrappedAny = true;
   }
 }
 

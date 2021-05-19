@@ -167,9 +167,9 @@ body:             |
 
     ; CHECK-LABEL: name: zext_s64_from_s32
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.sub_32
-    ; CHECK: [[UBFMXri:%[0-9]+]]:gpr64 = UBFMXri [[SUBREG_TO_REG]], 0, 31
-    ; CHECK: $x0 = COPY [[UBFMXri]]
+    ; CHECK: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, [[COPY]], 0
+    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
+    ; CHECK: $x0 = COPY [[SUBREG_TO_REG]]
     %0(s32) = COPY $w0
     %1(s64) = G_ZEXT %0
     $x0 = COPY %1(s64)

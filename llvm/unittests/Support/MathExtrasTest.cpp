@@ -483,7 +483,7 @@ class OverflowTest : public ::testing::Test { };
 using OverflowTestTypes = ::testing::Types<signed char, short, int, long,
                                            long long>;
 
-TYPED_TEST_CASE(OverflowTest, OverflowTestTypes);
+TYPED_TEST_SUITE(OverflowTest, OverflowTestTypes, );
 
 TYPED_TEST(OverflowTest, AddNoOverflow) {
   TypeParam Result;
