@@ -284,10 +284,6 @@ public:
   bool findCommutedOpIndices(const MachineInstr &MI, unsigned &SrcOpIdx1,
                              unsigned &SrcOpIdx2) const override;
 
-  /// Returns true if we have preference on the operands order in MI, the
-  /// commute decision is returned in Commute.
-  bool hasCommutePreference(MachineInstr &MI, bool &Commute) const override;
-
   /// Returns an adjusted FMA opcode that must be used in FMA instruction that
   /// performs the same computations as the given \p MI but which has the
   /// operands \p SrcOpIdx1 and \p SrcOpIdx2 commuted.
