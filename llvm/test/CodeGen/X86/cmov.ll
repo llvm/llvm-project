@@ -47,7 +47,7 @@ define void @test3(i64 %a, i64 %b, i1 %p) nounwind {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    testb $1, %dl
 ; CHECK-NEXT:    cmovel %esi, %edi
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
   %c = trunc i64 %a to i32
@@ -110,7 +110,7 @@ define i1 @test4() nounwind {
 ; CHECK-NEXT:    movzbl %cl, %esi
 ; CHECK-NEXT:    movl $_2E_str, %edi
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    callq printf
+; CHECK-NEXT:    callq printf@PLT
 ; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq

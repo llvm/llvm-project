@@ -578,6 +578,25 @@ Attribute DenseElementsAttr::AttributeElementIterator::operator*() const {
     FloatElementIterator floatIt(floatEltTy.getFloatSemantics(), intIt);
     return FloatAttr::get(eltTy, *floatIt);
   }
+  if (auto complexTy = eltTy.dyn_cast<ComplexType>()) {
+    auto complexEltTy = complexTy.getElementType();
+    ComplexIntElementIterator complexIntIt(owner, index);
+    if (complexEltTy.isa<IntegerType>()) {
+      auto value = *complexIntIt;
+      auto real = IntegerAttr::get(complexEltTy, value.real());
+      auto imag = IntegerAttr::get(complexEltTy, value.imag());
+      return ArrayAttr::get(complexTy.getContext(),
+                            ArrayRef<Attribute>{real, imag});
+    }
+
+    ComplexFloatElementIterator complexFloatIt(
+        complexEltTy.cast<FloatType>().getFloatSemantics(), complexIntIt);
+    auto value = *complexFloatIt;
+    auto real = FloatAttr::get(complexEltTy, value.real());
+    auto imag = FloatAttr::get(complexEltTy, value.imag());
+    return ArrayAttr::get(complexTy.getContext(),
+                          ArrayRef<Attribute>{real, imag});
+  }
   if (owner.isa<DenseStringElementsAttr>()) {
     ArrayRef<StringRef> vals = owner.getRawStringData();
     return StringAttr::get(owner.isSplat() ? vals.front() : vals[index], eltTy);

@@ -2335,6 +2335,16 @@ static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
       return TC_Success;
     }
 
+    if (Self.LangOpts.OpenCL && !CStyle) {
+      if (DestType->isExtVectorType() || SrcType->isExtVectorType()) {
+        // FIXME: Allow for reinterpret cast between 3 and 4 element vectors
+        if (Self.areVectorTypesSameSize(SrcType, DestType)) {
+          Kind = CK_BitCast;
+          return TC_Success;
+        }
+      }
+    }
+
     // Otherwise, pick a reasonable diagnostic.
     if (!destIsVector)
       msg = diag::err_bad_cxx_cast_vector_to_scalar_different_size;

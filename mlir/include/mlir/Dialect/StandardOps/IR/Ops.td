@@ -27,6 +27,9 @@ def StandardOps_Dialect : Dialect {
   let name = "std";
   let cppNamespace = "";
   let hasConstantMaterializer = 1;
+  // TODO: This dependency is needed to handle memref ops in the
+  // canonicalize pass and should be resolved.
+  let dependentDialects = ["memref::MemRefDialect"];
 }
 
 // Base class for Standard dialect ops.
@@ -1092,7 +1095,10 @@ def ConstantOp : Std_Op<"constant",
 
   let builders = [
     OpBuilder<(ins "Attribute":$value),
-    [{ build($_builder, $_state, value.getType(), value); }]>];
+    [{ build($_builder, $_state, value.getType(), value); }]>,
+    OpBuilder<(ins "Attribute":$value, "Type":$type),
+    [{ build($_builder, $_state, type, value); }]>,
+  ];
 
   let extraClassDeclaration = [{
     Attribute getValue() { return (*this)->getAttr("value"); }

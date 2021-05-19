@@ -164,15 +164,6 @@ extractSystemIncludesAndTarget(llvm::SmallString<128> Driver,
     return llvm::None;
   }
 
-  if (!llvm::sys::fs::exists(Driver)) {
-    elog("System include extraction: {0} does not exist.", Driver);
-    return llvm::None;
-  }
-  if (!llvm::sys::fs::can_execute(Driver)) {
-    elog("System include extraction: {0} is not executable.", Driver);
-    return llvm::None;
-  }
-
   llvm::SmallString<128> StdErrPath;
   if (auto EC = llvm::sys::fs::createTemporaryFile("system-includes", "clangd",
                                                    StdErrPath)) {
@@ -219,11 +210,13 @@ extractSystemIncludesAndTarget(llvm::SmallString<128> Driver,
     }
   }
 
+  std::string ErrMsg;
   if (int RC = llvm::sys::ExecuteAndWait(Driver, Args, /*Env=*/llvm::None,
-                                         Redirects)) {
+                                         Redirects, /*SecondsToWait=*/0,
+                                         /*MemoryLimit=*/0, &ErrMsg)) {
     elog("System include extraction: driver execution failed with return code: "
-         "{0}. Args: [{1}]",
-         llvm::to_string(RC), printArgv(Args));
+         "{0} - '{1}'. Args: [{2}]",
+         llvm::to_string(RC), ErrMsg, printArgv(Args));
     return llvm::None;
   }
 

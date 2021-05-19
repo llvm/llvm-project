@@ -294,3 +294,12 @@ DEMANGLE: -demangle{{ }}
 RUN: ld.lld -### -m i386pep foo.o -no-demangle | FileCheck -check-prefix NO-DEMANGLE %s
 RUN: ld.lld -### -m i386pep foo.o --no-demangle | FileCheck -check-prefix NO-DEMANGLE %s
 NO-DEMANGLE: -demangle:no
+
+RUN: ld.lld -### -m i386pep foo.o -fatal-warnings | FileCheck -check-prefix FATAL_WARNINGS %s
+RUN: ld.lld -### -m i386pep foo.o --fatal-warnings | FileCheck -check-prefix FATAL_WARNINGS %s
+FATAL_WARNINGS: -WX{{ }}
+
+RUN: ld.lld -### -m i386pep foo.o | FileCheck -check-prefix NO-FATAL_WARNINGS %s
+RUN: ld.lld -### -m i386pep foo.o -no-fatal-warnings | FileCheck -check-prefix NO-FATAL_WARNINGS %s
+RUN: ld.lld -### -m i386pep foo.o --no-fatal-warnings | FileCheck -check-prefix NO-FATAL_WARNINGS %s
+NO-FATAL_WARNINGS: -WX:no

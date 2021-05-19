@@ -45,6 +45,9 @@ def exclude_all_symbols: F<"exclude-all-symbols">,
     HelpText<"Don't automatically export any symbols">;
 def export_all_symbols: F<"export-all-symbols">,
     HelpText<"Export all symbols even if a def file or dllexport attributes are used">;
+defm fatal_warnings: B<"fatal-warnings",
+    "Treat warnings as errors",
+    "Do not treat warnings as errors (default)">;
 defm file_alignment: Eq<"file-alignment", "Set file alignment">;
 defm gc_sections: B<"gc-sections",
     "Remove unused sections",

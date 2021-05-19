@@ -5579,9 +5579,6 @@ Decl *Sema::ActOnDeclarator(Scope *S, Declarator &D) {
       Dcl && Dcl->getDeclContext()->isFileContext())
     Dcl->setTopLevelDeclInObjCContainer();
 
-  if (getLangOpts().OpenCL)
-    setCurrentOpenCLExtensionForDecl(Dcl);
-
   return Dcl;
 }
 
