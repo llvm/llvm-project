@@ -486,9 +486,9 @@ void CodeGenFunction::EmitStartEHSpec(const Decl *D) {
     // encode these in an object file but MSVC doesn't do anything with it.
     if (getTarget().getCXXABI().isMicrosoft())
       return;
-    // In wasm we currently treat 'throw()' in the same way as 'noexcept'. In
+    // In Wasm EH we currently treat 'throw()' in the same way as 'noexcept'. In
     // case of throw with types, we ignore it and print a warning for now.
-    // TODO Correctly handle exception specification in wasm
+    // TODO Correctly handle exception specification in Wasm EH
     if (CGM.getLangOpts().hasWasmExceptions()) {
       if (EST == EST_DynamicNone)
         EHStack.pushTerminate();
@@ -498,6 +498,19 @@ void CodeGenFunction::EmitStartEHSpec(const Decl *D) {
             << FD->getExceptionSpecSourceRange();
       return;
     }
+    // Currently Emscripten EH only handles 'throw()' but not 'throw' with
+    // types. 'throw()' handling will be done in JS glue code so we don't need
+    // to do anything in that case. Just print a warning message in case of
+    // throw with types.
+    // TODO Correctly handle exception specification in Emscripten EH
+    if (getTarget().getCXXABI() == TargetCXXABI::WebAssembly &&
+        CGM.getLangOpts().getExceptionHandling() ==
+            LangOptions::ExceptionHandlingKind::None &&
+        EST == EST_Dynamic)
+      CGM.getDiags().Report(D->getLocation(),
+                            diag::warn_wasm_dynamic_exception_spec_ignored)
+          << FD->getExceptionSpecSourceRange();
+
     unsigned NumExceptions = Proto->getNumExceptions();
     EHFilterScope *Filter = EHStack.pushFilter(NumExceptions);
 
