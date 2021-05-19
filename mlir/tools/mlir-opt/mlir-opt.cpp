@@ -190,7 +190,7 @@ int main(int argc, char **argv) {
 #ifdef MLIR_INCLUDE_TESTS
   test::registerTestDialect(registry);
 #endif
-  return failed(MlirOptMain(argc, argv, "MLIR modular optimizer driver\n",
-                            registry,
-                            /*preloadDialectsInContext=*/false));
+  return mlir::asMainReturnCode(
+      mlir::MlirOptMain(argc, argv, "MLIR modular optimizer driver\n", registry,
+                        /*preloadDialectsInContext=*/false));
 }

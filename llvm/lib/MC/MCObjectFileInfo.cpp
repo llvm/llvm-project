@@ -11,6 +11,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSection.h"
@@ -791,9 +792,10 @@ void MCObjectFileInfo::initWasmMCObjectFileInfo(const Triple &T) {
   DwarfLineSection =
       Ctx->getWasmSection(".debug_line", SectionKind::getMetadata());
   DwarfLineStrSection =
-      Ctx->getWasmSection(".debug_line_str", SectionKind::getMetadata());
-  DwarfStrSection =
-      Ctx->getWasmSection(".debug_str", SectionKind::getMetadata());
+      Ctx->getWasmSection(".debug_line_str", SectionKind::getMetadata(),
+                          wasm::WASM_SEG_FLAG_STRINGS);
+  DwarfStrSection = Ctx->getWasmSection(
+      ".debug_str", SectionKind::getMetadata(), wasm::WASM_SEG_FLAG_STRINGS);
   DwarfLocSection =
       Ctx->getWasmSection(".debug_loc", SectionKind::getMetadata());
   DwarfAbbrevSection =
@@ -836,7 +838,8 @@ void MCObjectFileInfo::initWasmMCObjectFileInfo(const Triple &T) {
   DwarfAbbrevDWOSection =
       Ctx->getWasmSection(".debug_abbrev.dwo", SectionKind::getMetadata());
   DwarfStrDWOSection =
-      Ctx->getWasmSection(".debug_str.dwo", SectionKind::getMetadata());
+      Ctx->getWasmSection(".debug_str.dwo", SectionKind::getMetadata(),
+                          wasm::WASM_SEG_FLAG_STRINGS);
   DwarfLineDWOSection =
       Ctx->getWasmSection(".debug_line.dwo", SectionKind::getMetadata());
   DwarfLocDWOSection =

@@ -655,6 +655,10 @@ unsigned RuntimeDyldImpl::computeGOTSize(const ObjectFile &Obj) {
 // compute stub buffer size for the given section
 unsigned RuntimeDyldImpl::computeSectionStubBufSize(const ObjectFile &Obj,
                                                     const SectionRef &Section) {
+  if (!MemMgr.allowStubAllocation()) {
+    return 0;
+  }
+
   unsigned StubSize = getMaxStubSize();
   if (StubSize == 0) {
     return 0;
@@ -1113,7 +1117,7 @@ void RuntimeDyldImpl::applyExternalSymbolRelocations(
       }
 
       // FIXME: Implement error handling that doesn't kill the host program!
-      if (!Addr)
+      if (!Addr && !Resolver.allowsZeroSymbols())
         report_fatal_error("Program used external function '" + Name +
                            "' which could not be resolved!");
 

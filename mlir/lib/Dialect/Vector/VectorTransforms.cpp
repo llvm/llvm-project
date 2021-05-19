@@ -2934,8 +2934,8 @@ struct TransferWriteInsertPattern
 /// - The op has no mask.
 struct TransferReadToVectorLoadLowering
     : public OpRewritePattern<vector::TransferReadOp> {
-  TransferReadToVectorLoadLowering(MLIRContext *context)
-      : OpRewritePattern<vector::TransferReadOp>(context) {}
+  using OpRewritePattern<vector::TransferReadOp>::OpRewritePattern;
+
   LogicalResult matchAndRewrite(vector::TransferReadOp read,
                                 PatternRewriter &rewriter) const override {
     SmallVector<unsigned, 4> broadcastedDims;
@@ -3009,8 +3009,8 @@ struct TransferReadToVectorLoadLowering
 /// - The op has no mask.
 struct TransferWriteToVectorStoreLowering
     : public OpRewritePattern<vector::TransferWriteOp> {
-  TransferWriteToVectorStoreLowering(MLIRContext *context)
-      : OpRewritePattern<vector::TransferWriteOp>(context) {}
+  using OpRewritePattern<vector::TransferWriteOp>::OpRewritePattern;
+
   LogicalResult matchAndRewrite(vector::TransferWriteOp write,
                                 PatternRewriter &rewriter) const override {
     // TODO: Support non-minor-identity maps
@@ -3086,6 +3086,7 @@ struct TransferReadPermutationLowering
     if (permutationMap.isIdentity())
       return failure();
 
+    permutationMap = map.getPermutationMap(permutation, op.getContext());
     // Caluclate the map of the new read by applying the inverse permutation.
     permutationMap = inversePermutation(permutationMap);
     AffineMap newMap = permutationMap.compose(map);
@@ -4149,13 +4150,18 @@ void mlir::vector::populateVectorTransposeLoweringPatterns(
                                     patterns.getContext());
 }
 
+void mlir::vector::populateVectorTransferPermutationMapLoweringPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<TransferReadPermutationLowering,
+               TransferWritePermutationLowering, TransferOpReduceRank>(
+      patterns.getContext());
+}
+
 void mlir::vector::populateVectorTransferLoweringPatterns(
     RewritePatternSet &patterns) {
-  patterns
-      .add<TransferReadToVectorLoadLowering, TransferWriteToVectorStoreLowering,
-           TransferReadPermutationLowering, TransferWritePermutationLowering,
-           TransferOpReduceRank>(
-          patterns.getContext());
+  patterns.add<TransferReadToVectorLoadLowering,
+               TransferWriteToVectorStoreLowering>(patterns.getContext());
+  populateVectorTransferPermutationMapLoweringPatterns(patterns);
 }
 
 void mlir::vector::populateVectorMultiReductionLoweringPatterns(

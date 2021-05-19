@@ -53,6 +53,7 @@ add_flang_library(FortranRuntime
   io-error.cpp
   io-stmt.cpp
   main.cpp
+  matmul.cpp
   memory.cpp
   misc-intrinsic.cpp
   namelist.cpp

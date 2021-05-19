@@ -53,20 +53,6 @@
 // RUN:   -o /dev/null -x assembler-with-cpp %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=WARN --allow-empty %s
 
-// RUN: %clang -mimplicit-it=always -target armv7-linux-gnueabi -E \
-// RUN:   -fintegrated-as -o /dev/null -x c++ %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s
-// RUN: %clang -mimplicit-it=always -target armv7-linux-gnueabi -E \
-// RUN:   -fno-integrated-as -o /dev/null -x c++ %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=WARN --allow-empty %s
-
-// RUN: %clang -mimplicit-it=always -target armv7-linux-gnueabi -E \
-// RUN:   -fintegrated-as -o /dev/null -x assembler-with-cpp %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s
-// RUN: %clang -mimplicit-it=always -target armv7-linux-gnueabi -E \
-// RUN:   -fno-integrated-as -o /dev/null -x assembler-with-cpp %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=WARN --allow-empty %s
-
 // RUN: %clang -Wa,-mbig-obj -target i386-pc-windows -E -fintegrated-as \
 // RUN:   -o /dev/null -x c++ %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=NOWARN --allow-empty %s

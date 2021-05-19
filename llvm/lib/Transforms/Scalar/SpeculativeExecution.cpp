@@ -343,7 +343,6 @@ PreservedAnalyses SpeculativeExecutionPass::run(Function &F,
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
-  PA.preserve<GlobalsAA>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }

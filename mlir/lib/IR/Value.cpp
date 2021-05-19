@@ -27,14 +27,10 @@ Location Value::getLoc() const {
   if (auto *op = getDefiningOp())
     return op->getLoc();
 
-  return cast<BlockArgument>().getLoc();
-}
-
-void Value::setLoc(Location loc) {
-  if (auto *op = getDefiningOp())
-    return op->setLoc(loc);
-
-  return cast<BlockArgument>().setLoc(loc);
+  // Use the location of the parent operation if this is a block argument.
+  // TODO: Should we just add locations to block arguments?
+  Operation *parentOp = cast<BlockArgument>().getOwner()->getParentOp();
+  return parentOp ? parentOp->getLoc() : UnknownLoc::get(getContext());
 }
 
 /// Return the Region in which this Value is defined.

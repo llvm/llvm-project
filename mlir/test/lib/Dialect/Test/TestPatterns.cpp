@@ -137,7 +137,7 @@ static void reifyReturnShape(Operation *op) {
   // Use permutations of 2 args as operands.
   auto shapedOp = cast<OpWithShapedTypeInferTypeInterfaceOp>(op);
   SmallVector<Value, 2> shapes;
-  if (failed(shapedOp.reifyReturnTypeShapes(b, shapes)) ||
+  if (failed(shapedOp.reifyReturnTypeShapes(b, op->getOperands(), shapes)) ||
       !llvm::hasSingleElement(shapes))
     return;
   for (auto it : llvm::enumerate(shapes)) {
@@ -473,8 +473,9 @@ struct TestNonRootReplacement : public RewritePattern {
 /// bounded recursion.
 struct TestBoundedRecursiveRewrite
     : public OpRewritePattern<TestRecursiveRewriteOp> {
-  TestBoundedRecursiveRewrite(MLIRContext *ctx)
-      : OpRewritePattern<TestRecursiveRewriteOp>(ctx) {
+  using OpRewritePattern<TestRecursiveRewriteOp>::OpRewritePattern;
+
+  void initialize() {
     // The conversion target handles bounding the recursion of this pattern.
     setHasBoundedRewriteRecursion();
   }

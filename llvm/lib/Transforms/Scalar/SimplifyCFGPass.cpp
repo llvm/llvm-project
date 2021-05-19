@@ -42,6 +42,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SimplifyCFGOptions.h"
 #include <utility>
@@ -183,14 +184,10 @@ static bool mergeEmptyReturnBlocks(Function &F, DomTreeUpdater *DTU) {
       Updates.push_back({DominatorTree::Insert, &BB, RetBlock});
   }
 
-  if (DTU) {
+  if (DTU)
     DTU->applyUpdates(Updates);
-    for (auto *BB : DeadBlocks)
-      DTU->deleteBB(BB);
-  } else {
-    for (auto *BB : DeadBlocks)
-      BB->eraseFromParent();
-  }
+
+  DeleteDeadBlocks(DeadBlocks, DTU);
 
   return Changed;
 }
@@ -323,7 +320,6 @@ PreservedAnalyses SimplifyCFGPass::run(Function &F,
   PreservedAnalyses PA;
   if (RequireAndPreserveDomTree)
     PA.preserve<DominatorTreeAnalysis>();
-  PA.preserve<GlobalsAA>();
   return PA;
 }
 

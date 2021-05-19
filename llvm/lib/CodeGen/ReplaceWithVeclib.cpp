@@ -205,11 +205,9 @@ PreservedAnalyses ReplaceWithVeclib::run(Function &F,
     PA.preserveSet<CFGAnalyses>();
     PA.preserve<TargetLibraryAnalysis>();
     PA.preserve<ScalarEvolutionAnalysis>();
-    PA.preserve<AAManager>();
     PA.preserve<LoopAccessAnalysis>();
     PA.preserve<DemandedBitsAnalysis>();
     PA.preserve<OptimizationRemarkEmitterAnalysis>();
-    PA.preserve<GlobalsAA>();
     return PA;
   } else {
     // The pass did not replace any calls, hence it preserves all analyses.

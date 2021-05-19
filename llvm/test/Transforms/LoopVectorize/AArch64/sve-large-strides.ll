@@ -1,4 +1,4 @@
-; RUN: opt -mtriple aarch64-linux-gnu -mattr=+sve -loop-vectorize -dce -instcombine -S <%s | FileCheck %s
+; RUN: opt -mtriple aarch64-linux-gnu -mattr=+sve -loop-vectorize -scalable-vectorization=on -dce -instcombine -S <%s | FileCheck %s
 
 define void @stride7_i32(i32* noalias nocapture %dst, i64 %n) {
 ; CHECK-LABEL: @stride7_i32(

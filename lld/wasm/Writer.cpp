@@ -100,7 +100,7 @@ private:
   uint64_t fileSize = 0;
 
   std::vector<WasmInitEntry> initFunctions;
-  llvm::StringMap<std::vector<InputSection *>> customSectionMapping;
+  llvm::StringMap<std::vector<InputChunk *>> customSectionMapping;
 
   // Stable storage for command export wrapper function name strings.
   std::list<std::string> commandExportWrapperNames;
@@ -121,7 +121,7 @@ void Writer::calculateCustomSections() {
   log("calculateCustomSections");
   bool stripDebug = config->stripDebug || config->stripAll;
   for (ObjFile *file : symtab->objectFiles) {
-    for (InputSection *section : file->customSections) {
+    for (InputChunk *section : file->customSections) {
       // Exclude COMDAT sections that are not selected for inclusion
       if (section->discarded)
         continue;

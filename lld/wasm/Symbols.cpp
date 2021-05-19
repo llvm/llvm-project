@@ -301,7 +301,7 @@ void DefinedData::setVA(uint64_t value_) {
 
 uint64_t DefinedData::getOutputSegmentOffset() const {
   LLVM_DEBUG(dbgs() << "getOutputSegmentOffset: " << getName() << "\n");
-  return segment->getSegmentOffset(value);
+  return segment->getChunkOffset(value);
 }
 
 uint64_t DefinedData::getOutputSegmentIndex() const {

@@ -555,7 +555,6 @@ PreservedAnalyses LibCallsShrinkWrapPass::run(Function &F,
   if (!runImpl(F, TLI, DT))
     return PreservedAnalyses::all();
   auto PA = PreservedAnalyses();
-  PA.preserve<GlobalsAA>();
   PA.preserve<DominatorTreeAnalysis>();
   return PA;
 }

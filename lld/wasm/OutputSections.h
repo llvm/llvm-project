@@ -111,7 +111,7 @@ protected:
 // separately and are instead synthesized by the linker.
 class CustomSection : public OutputSection {
 public:
-  CustomSection(std::string name, ArrayRef<InputSection *> inputSections)
+  CustomSection(std::string name, ArrayRef<InputChunk *> inputSections)
       : OutputSection(llvm::wasm::WASM_SEC_CUSTOM, name),
         inputSections(inputSections) {}
 
@@ -128,8 +128,9 @@ public:
   void finalizeContents() override;
 
 protected:
+  void finalizeInputSections();
   size_t payloadSize = 0;
-  ArrayRef<InputSection *> inputSections;
+  std::vector<InputChunk *> inputSections;
   std::string nameData;
 };
 

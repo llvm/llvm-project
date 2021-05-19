@@ -267,7 +267,7 @@ struct __list_node_base
 };
 
 template <class _Tp, class _VoidPtr>
-struct __list_node
+struct _LIBCPP_STANDALONE_DEBUG __list_node
     : public __list_node_base<_Tp, _VoidPtr>
 {
     _Tp __value_;

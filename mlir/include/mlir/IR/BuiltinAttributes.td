@@ -466,6 +466,12 @@ def Builtin_IntegerAttr : Builtin_Attr<"Integer"> {
         return BoolAttr::get(type.getContext(), value.getBoolValue());
       return $_get(type.getContext(), type, value);
     }]>,
+    AttrBuilder<(ins "const APSInt &":$value), [{
+      auto signedness = value.isSigned() ?
+        IntegerType::Signed : IntegerType::Unsigned;
+      auto type = IntegerType::get($_ctxt, value.getBitWidth(), signedness);
+      return $_get(type.getContext(), type, value);
+    }]>,
     AttrBuilderWithInferredContext<(ins "Type":$type, "int64_t":$value), [{
       // `index` has a defined internal storage width.
       if (type.isIndex()) {
@@ -491,6 +497,10 @@ def Builtin_IntegerAttr : Builtin_Attr<"Integer"> {
     /// Return the integer value as a unsigned 64-bit int. The attribute must be
     /// an unsigned integer.
     uint64_t getUInt() const;
+
+    /// Return the value as an APSInt which carries the signed from the type of
+    /// the attribute.  This traps on signless integers types!
+    APSInt getAPSInt() const;
 
   private:
     /// Return a boolean attribute. This is a special variant of the `get`

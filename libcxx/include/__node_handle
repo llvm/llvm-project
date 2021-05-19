@@ -11,6 +11,7 @@
 #define _LIBCPP___NODE_HANDLE
 
 #include <__config>
+#include <__debug>
 #include <memory>
 #include <optional>
 
