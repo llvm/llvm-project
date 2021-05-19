@@ -48,9 +48,6 @@ def : ReadAdvance<ReadAfterVecYLd, 3>;
 
 def : ReadAdvance<ReadInt2Fpu, 0>;
 
-// Many SchedWrites are defined in pairs with and without a folded load.
-// Instructions with folded loads are usually micro-fused, so they only appear
-// as two micro-ops when dispatched by the schedulers.
 // This multiclass defines the resource usage for variants with and without
 // folded loads.
 multiclass AtomWriteResPair<X86FoldableSchedWrite SchedRW,
@@ -59,14 +56,13 @@ multiclass AtomWriteResPair<X86FoldableSchedWrite SchedRW,
                             int RRLat = 1, int RMLat = 1,
                             list<int> RRRes = [1],
                             list<int> RMRes = [1]> {
-  // Register variant is using a single cycle on ExePort.
+  // Register variant.
   def : WriteRes<SchedRW, RRPorts> {
     let Latency = RRLat;
     let ResourceCycles = RRRes;
   }
 
-  // Memory variant also uses a cycle on JLAGU and adds 3 cycles to the
-  // latency.
+  // Memory variant.
   def : WriteRes<SchedRW.Folded, RMPorts> {
     let Latency = RMLat;
     let ResourceCycles = RMRes;
