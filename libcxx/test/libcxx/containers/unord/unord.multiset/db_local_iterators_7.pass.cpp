@@ -13,12 +13,12 @@
 // UNSUPPORTED: libcxx-no-debug-mode
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <unordered_set>
 #include <cassert>
 
 #include "test_macros.h"
+#include "debug_macros.h"
 
 int main(int, char**) {
     typedef int T;
@@ -30,8 +30,8 @@ int main(int, char**) {
     assert(i != c.end(b));
     ++i;
     assert(i == c.end(b));
-    ++i;
-    assert(false);
+    TEST_LIBCPP_ASSERT_FAILURE(++i,
+                               "Attempted to increment a non-incrementable unordered container const_local_iterator");
 
     return 0;
 }

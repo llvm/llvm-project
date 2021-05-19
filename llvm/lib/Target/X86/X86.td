@@ -1437,7 +1437,7 @@ def : ProcModel<"x86-64-v2", SandyBridgeModel, ProcessorFeatures.X86_64V2Feature
 def : ProcModel<"x86-64-v3", HaswellModel, ProcessorFeatures.X86_64V3Features,
                 ProcessorFeatures.HSWTuning>;
 // Close to the AVX-512 level implemented by Xeon Scalable Processors.
-def : ProcModel<"x86-64-v4", HaswellModel, ProcessorFeatures.X86_64V4Features,
+def : ProcModel<"x86-64-v4", SkylakeServerModel, ProcessorFeatures.X86_64V4Features,
                 ProcessorFeatures.SKXTuning>;
 
 //===----------------------------------------------------------------------===//

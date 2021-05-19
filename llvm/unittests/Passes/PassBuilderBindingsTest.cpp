@@ -15,12 +15,13 @@ using namespace llvm;
 
 class PassBuilderCTest : public testing::Test {
   void SetUp() override {
-    LLVMInitializeNativeTarget();
+    LLVMInitializeAllTargetInfos();
     char *Triple = LLVMGetDefaultTargetTriple();
     char *Err;
     LLVMTargetRef Target;
     if (LLVMGetTargetFromTriple(Triple, &Target, &Err)) {
-      FAIL() << "Failed to create target from default triple: " << Err;
+      FAIL() << "Failed to create target from default triple (" << Triple
+             << "): " << Err;
     }
     TM = LLVMCreateTargetMachine(Target, Triple, "generic", "",
                                  LLVMCodeGenLevelDefault, LLVMRelocDefault,

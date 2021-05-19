@@ -44,5 +44,25 @@ func @escape_strings() {
 // CHECK-ALIAS: "foo.op"() : () -> () loc(#[[LOC:.*]])
 "foo.op"() : () -> () loc(#loc)
 
+// CHECK-LABEL: func @argLocs(
+// CHECK-SAME:  %arg0: i32 loc({{.*}}locations.mlir":[[# @LINE+1]]:15),
+func @argLocs(%x: i32,
+// CHECK-SAME:  %arg1: i64 loc({{.*}}locations.mlir":[[# @LINE+1]]:15))
+              %y: i64 loc("hotdog")) {
+  return
+}
+
+// CHECK-LABEL: "foo.unknown_op_with_bbargs"()
+"foo.unknown_op_with_bbargs"() ({
+// CHECK-NEXT: ^bb0(%arg0: i32 loc({{.*}}locations.mlir":[[# @LINE+1]]:7),
+ ^bb0(%x: i32,
+// CHECK-SAME: %arg1: i32 loc("cheetos"),
+      %y: i32 loc("cheetos"),
+// CHECK-SAME: %arg2: i32 loc("out_of_line_location")):
+      %z: i32 loc(#loc)):
+    %1 = addi %x, %y : i32
+    "foo.yield"(%1) : (i32) -> ()
+  }) : () -> ()
+
 // CHECK-ALIAS: #[[LOC]] = loc("out_of_line_location")
 #loc = loc("out_of_line_location")

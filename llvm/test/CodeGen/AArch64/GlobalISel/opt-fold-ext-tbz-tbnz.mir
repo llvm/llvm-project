@@ -112,8 +112,8 @@ body:             |
   ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK:   liveins: $x0
   ; CHECK:   %copy:gpr32 = COPY $w0
-  ; CHECK:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, %copy, %subreg.sub_32
-  ; CHECK:   %zext:gpr64 = UBFMXri [[SUBREG_TO_REG]], 0, 31
+  ; CHECK:   [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, %copy, 0
+  ; CHECK:   %zext:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
   ; CHECK:   [[COPY:%[0-9]+]]:gpr32all = COPY %zext.sub_32
   ; CHECK:   [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
   ; CHECK:   TBNZW [[COPY1]], 3, %bb.1
