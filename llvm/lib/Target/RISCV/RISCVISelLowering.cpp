@@ -440,6 +440,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
 
+      setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
 
       setOperationAction(ISD::SELECT, VT, Expand);
@@ -636,6 +637,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
         setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
 
+        setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
         setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
 
         setOperationAction(ISD::LOAD, VT, Custom);
@@ -3091,6 +3093,15 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   SDValue Vec = Op.getOperand(0);
   SDValue Val = Op.getOperand(1);
   SDValue Idx = Op.getOperand(2);
+
+  if (VecVT.getVectorElementType() == MVT::i1) {
+    // FIXME: For now we just promote to an i8 vector and insert into that,
+    // but this is probably not optimal.
+    MVT WideVT = MVT::getVectorVT(MVT::i8, VecVT.getVectorElementCount());
+    Vec = DAG.getNode(ISD::ZERO_EXTEND, DL, WideVT, Vec);
+    Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, WideVT, Vec, Val, Idx);
+    return DAG.getNode(ISD::TRUNCATE, DL, VecVT, Vec);
+  }
 
   MVT ContainerVT = VecVT;
   // If the operand is a fixed-length vector, convert to a scalable one.
