@@ -163,6 +163,8 @@ def AND_NM   : ArithLoginR32<"and", GPR32NMOpnd, and>;
 def OR_NM    : ArithLoginR32<"or", GPR32NMOpnd, or>;
 def NOR_NM   : ArithLoginR32<"nor", GPR32NMOpnd>;
 def XOR_NM   : ArithLoginR32<"xor", GPR32NMOpnd, xor>;
+def SLT_NM   : ArithLoginR32<"slt", GPR32NMOpnd, setlt>;
+def SLTU_NM  : ArithLoginR32<"sltu", GPR32NMOpnd, setult>;
 def MUL_NM   : ArithLoginR32<"mul", GPR32NMOpnd, mul>;
 def MUH_NM   : ArithLoginR32<"muh", GPR32NMOpnd, mulhs>;
 def MULU_NM  : ArithLoginR32<"mulu", GPR32NMOpnd>;
@@ -173,9 +175,11 @@ def DIVU_NM  : DivMod<"divu", udiv>;
 def MODU_NM  : DivMod<"modu", urem>;
 
 // P.U12 pool of instructions
-def ORI_NM  : ArithLogicINM<"ori", uimm12_nm, GPR32NMOpnd, imm32ZExt12, or>;
-def XORI_NM : ArithLogicINM<"xori", uimm12_nm, GPR32NMOpnd, imm32ZExt12, xor>;
-def ANDI_NM : ArithLogicINM<"andi", uimm12_nm, GPR32NMOpnd, imm32ZExt12, and>;
+def ORI_NM   : ArithLogicINM<"ori", uimm12_nm, GPR32NMOpnd, imm32ZExt12, or>;
+def XORI_NM  : ArithLogicINM<"xori", uimm12_nm, GPR32NMOpnd, imm32ZExt12, xor>;
+def ANDI_NM  : ArithLogicINM<"andi", uimm12_nm, GPR32NMOpnd, imm32ZExt12, and>;
+def SLTI_NM  : ArithLogicINM<"slti", uimm12_nm, GPR32NMOpnd, imm32ZExt12, setlt>;
+def SLTIU_NM : ArithLogicINM<"sltiu", uimm12_nm, GPR32NMOpnd, imm32ZExt12, setult>;
 
 // P.SHIFT pool of instructions
 def SLL_NM  : ArithLogicINM<"sll", uimm5_nm, GPR32NMOpnd, imm32ZExt5, shl>;
@@ -239,6 +243,27 @@ def : MipsPat<(MipsFullAddr tglobaladdr:$in),
 def : MipsPat<(not (or GPR32NM:$rs, GPR32NM:$rt)),
               (NOR_NM GPR32NM:$rs, GPR32NM:$rt)>, ISA_NANOMIPS;
 
+// SetCC patterns.
+def : MipsPat<(seteq GPR32NM:$lhs, GPR32NM:$rhs),
+              (SLTIU_NM (XOR_NM GPR32NM:$lhs, GPR32NM:$rhs), 1)>;
+def : MipsPat<(setne GPR32NM:$lhs, GPR32NM:$rhs),
+              (SLTU_NM ZERO_NM, (XOR_NM GPR32NM:$lhs, GPR32NM:$rhs))>;
+def : MipsPat<(setle GPR32NM:$lhs, GPR32NM:$rhs),
+              (NOT_NM (SLT_NM GPR32NM:$rhs, GPR32NM:$lhs))>;
+def : MipsPat<(setule GPR32NM:$lhs, GPR32NM:$rhs),
+              (NOT_NM (SLTU_NM GPR32NM:$rhs, GPR32NM:$lhs))>;
+def : MipsPat<(setgt GPR32NM:$lhs, GPR32NM:$rhs),
+              (SLT_NM GPR32NM:$rhs, GPR32NM:$lhs)>;
+def : MipsPat<(setugt GPR32NM:$lhs, GPR32NM:$rhs),
+              (SLTU_NM GPR32NM:$rhs, GPR32NM:$lhs)>;
+def : MipsPat<(setge GPR32NM:$lhs, GPR32NM:$rhs),
+              (NOT_NM (SLT_NM GPR32NM:$lhs, GPR32NM:$rhs))>;
+def : MipsPat<(setuge GPR32NM:$lhs, GPR32NM:$rhs),
+              (NOT_NM (SLTU_NM GPR32NM:$lhs, GPR32NM:$rhs))>;
+def : MipsPat<(setge GPR32NM:$lhs, imm32ZExt12:$rhs),
+              (NOT_NM (SLTIU_NM GPR32NM:$lhs, imm32ZExt12:$rhs))>;
+def : MipsPat<(setuge GPR32NM:$lhs, imm32ZExt12:$rhs),
+              (NOT_NM (SLTIU_NM GPR32NM:$lhs, imm32ZExt12:$rhs))>;
 
 //===----------------------------------------------------------------------===//
 //
