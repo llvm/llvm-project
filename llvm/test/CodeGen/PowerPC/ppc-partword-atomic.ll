@@ -46,10 +46,9 @@ define dso_local zeroext i32 @testI8(i8 zeroext %val) local_unnamed_addr #0 {
 ; PWR9-NEXT:    stbcx. 3, 0, 5
 ; PWR9-NEXT:    bne 0, .LBB0_1
 ; PWR9-NEXT:  # %bb.2: # %entry
-; PWR9-NEXT:    clrlwi 3, 4, 24
-; PWR9-NEXT:    addis 4, 2, global_int@toc@ha
+; PWR9-NEXT:    addis 3, 2, global_int@toc@ha
 ; PWR9-NEXT:    lwsync
-; PWR9-NEXT:    stw 3, global_int@toc@l(4)
+; PWR9-NEXT:    stw 4, global_int@toc@l(3)
 ; PWR9-NEXT:    li 3, 55
 ; PWR9-NEXT:    blr
 entry:
@@ -100,10 +99,9 @@ define dso_local zeroext i32 @testI16(i16 zeroext %val) local_unnamed_addr #0 {
 ; PWR9-NEXT:    sthcx. 3, 0, 5
 ; PWR9-NEXT:    bne 0, .LBB1_1
 ; PWR9-NEXT:  # %bb.2: # %entry
-; PWR9-NEXT:    clrlwi 3, 4, 16
-; PWR9-NEXT:    addis 4, 2, global_int@toc@ha
+; PWR9-NEXT:    addis 3, 2, global_int@toc@ha
 ; PWR9-NEXT:    lwsync
-; PWR9-NEXT:    stw 3, global_int@toc@l(4)
+; PWR9-NEXT:    stw 4, global_int@toc@l(3)
 ; PWR9-NEXT:    li 3, 55
 ; PWR9-NEXT:    blr
 entry:
