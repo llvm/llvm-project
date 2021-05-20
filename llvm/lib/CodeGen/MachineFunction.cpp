@@ -438,6 +438,16 @@ MachineMemOperand *MachineFunction::getMachineMemOperand(
 }
 
 MachineMemOperand *MachineFunction::getMachineMemOperand(
+    MachinePointerInfo PtrInfo, MachineMemOperand::Flags f, LLT MemTy,
+    Align base_alignment, const AAMDNodes &AAInfo, const MDNode *Ranges,
+    SyncScope::ID SSID, AtomicOrdering Ordering,
+    AtomicOrdering FailureOrdering) {
+  return new (Allocator)
+      MachineMemOperand(PtrInfo, f, MemTy, base_alignment, AAInfo, Ranges, SSID,
+                        Ordering, FailureOrdering);
+}
+
+MachineMemOperand *MachineFunction::getMachineMemOperand(
     const MachineMemOperand *MMO, const MachinePointerInfo &PtrInfo, uint64_t Size) {
   return new (Allocator)
       MachineMemOperand(PtrInfo, MMO->getFlags(), Size, MMO->getBaseAlign(),
@@ -445,9 +455,17 @@ MachineMemOperand *MachineFunction::getMachineMemOperand(
                         MMO->getSuccessOrdering(), MMO->getFailureOrdering());
 }
 
+MachineMemOperand *MachineFunction::getMachineMemOperand(
+    const MachineMemOperand *MMO, const MachinePointerInfo &PtrInfo, LLT Ty) {
+  return new (Allocator)
+      MachineMemOperand(PtrInfo, MMO->getFlags(), Ty, MMO->getBaseAlign(),
+                        AAMDNodes(), nullptr, MMO->getSyncScopeID(),
+                        MMO->getSuccessOrdering(), MMO->getFailureOrdering());
+}
+
 MachineMemOperand *
 MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
-                                      int64_t Offset, uint64_t Size) {
+                                      int64_t Offset, LLT Ty) {
   const MachinePointerInfo &PtrInfo = MMO->getPointerInfo();
 
   // If there is no pointer value, the offset isn't tracked so we need to adjust
@@ -459,7 +477,7 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
   // Do not preserve ranges, since we don't necessarily know what the high bits
   // are anymore.
   return new (Allocator) MachineMemOperand(
-      PtrInfo.getWithOffset(Offset), MMO->getFlags(), Size, Alignment,
+      PtrInfo.getWithOffset(Offset), MMO->getFlags(), Ty, Alignment,
       MMO->getAAInfo(), nullptr, MMO->getSyncScopeID(),
       MMO->getSuccessOrdering(), MMO->getFailureOrdering());
 }
