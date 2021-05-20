@@ -360,6 +360,7 @@ define i8 @add_i8_monotonic(i8* %mem, i8 %operand) {
 ; PPC32-NEXT:    bne cr0, .LBB12_1
 ; PPC32-NEXT:  # %bb.2:
 ; PPC32-NEXT:    srw r3, r7, r3
+; PPC32-NEXT:    clrlwi r3, r3, 24
 ; PPC32-NEXT:    blr
 ;
 ; PPC64-LABEL: add_i8_monotonic:
@@ -380,6 +381,7 @@ define i8 @add_i8_monotonic(i8* %mem, i8 %operand) {
 ; PPC64-NEXT:    bne cr0, .LBB12_1
 ; PPC64-NEXT:  # %bb.2:
 ; PPC64-NEXT:    srw r3, r7, r3
+; PPC64-NEXT:    clrlwi r3, r3, 24
 ; PPC64-NEXT:    blr
   %val = atomicrmw add i8* %mem, i8 %operand monotonic
   ret i8 %val
@@ -405,6 +407,7 @@ define i16 @xor_i16_seq_cst(i16* %mem, i16 %operand) {
 ; PPC32-NEXT:    bne cr0, .LBB13_1
 ; PPC32-NEXT:  # %bb.2:
 ; PPC32-NEXT:    srw r3, r7, r3
+; PPC32-NEXT:    clrlwi r3, r3, 16
 ; PPC32-NEXT:    lwsync
 ; PPC32-NEXT:    blr
 ;
@@ -428,6 +431,7 @@ define i16 @xor_i16_seq_cst(i16* %mem, i16 %operand) {
 ; PPC64-NEXT:    bne cr0, .LBB13_1
 ; PPC64-NEXT:  # %bb.2:
 ; PPC64-NEXT:    srw r3, r7, r3
+; PPC64-NEXT:    clrlwi r3, r3, 16
 ; PPC64-NEXT:    lwsync
 ; PPC64-NEXT:    blr
   %val = atomicrmw xor i16* %mem, i16 %operand seq_cst
