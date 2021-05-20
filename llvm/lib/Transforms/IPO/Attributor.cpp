@@ -1621,19 +1621,12 @@ void Attributor::createShallowWrapper(Function &F) {
   NumFnShallowWrappersCreated++;
 }
 
-/// Make another copy of the function \p F such that the copied version has
-/// internal linkage afterwards and can be analysed. Then we replace all uses
-/// of the original function to the copied one
-///
-/// Only non-exactly defined functions that have `linkonce_odr` or `weak_odr`
-/// linkage can be internalized because these linkages guarantee that other
-/// definitions with the same name have the same semantics as this one
-///
-static Function *internalizeFunction(Function &F) {
-  assert(AllowDeepWrapper && "Cannot create a copy if not allowed.");
-  assert(!F.isDeclaration() && !F.hasExactDefinition() &&
-         !GlobalValue::isInterposableLinkage(F.getLinkage()) &&
-         "Trying to internalize function which cannot be internalized.");
+Function *Attributor::internalizeFunction(Function &F, bool Force) {
+  if (!AllowDeepWrapper && !Force)
+    return nullptr;
+  if (F.isDeclaration() || F.hasLocalLinkage() ||
+      GlobalValue::isInterposableLinkage(F.getLinkage()))
+    return nullptr;
 
   Module &M = *F.getParent();
   FunctionType *FnTy = F.getFunctionType();
@@ -1663,7 +1656,8 @@ static Function *internalizeFunction(Function &F) {
   SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
   F.getAllMetadata(MDs);
   for (auto MDIt : MDs)
-    Copied->addMetadata(MDIt.first, *MDIt.second);
+    if (!Copied->hasMetadata())
+      Copied->addMetadata(MDIt.first, *MDIt.second);
 
   M.getFunctionList().insert(F.getIterator(), Copied);
   F.replaceAllUsesWith(Copied);
@@ -1674,6 +1668,9 @@ static Function *internalizeFunction(Function &F) {
 
 bool Attributor::isValidFunctionSignatureRewrite(
     Argument &Arg, ArrayRef<Type *> ReplacementTypes) {
+
+  if (!RewriteSignatures)
+    return false;
 
   auto CallSiteCanBeChanged = [](AbstractCallSite ACS) {
     // Forbid the call site to cast the function return type. If we need to
@@ -2459,7 +2456,8 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
       Function *F = Functions[u];
       if (!F->isDeclaration() && !F->isDefinitionExact() && F->getNumUses() &&
           !GlobalValue::isInterposableLinkage(F->getLinkage())) {
-        Function *NewF = internalizeFunction(*F);
+        Function *NewF = Attributor::internalizeFunction(*F);
+        assert(NewF && "Could not internalize function.");
         Functions.insert(NewF);
 
         // Update call graph
