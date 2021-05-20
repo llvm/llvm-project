@@ -16,7 +16,6 @@
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
-#include "mlir/Dialect/MemRef/EDSC/Intrinsics.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -75,8 +74,8 @@ makeTiledLoopRanges(OpBuilder &b, Location loc, AffineMap map,
   // Create a new range with the applied tile sizes.
   SmallVector<Range, 4> res;
   for (unsigned idx = 0, e = tileSizes.size(); idx < e; ++idx)
-    res.push_back(
-        Range{std_constant_index(0), shapeSizes[idx], tileSizes[idx]});
+    res.push_back(Range{b.create<ConstantIndexOp>(loc, 0), shapeSizes[idx],
+                        tileSizes[idx]});
   return std::make_tuple(res, loopIndexToRangeIndex);
 }
 
@@ -330,7 +329,7 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(
   SmallVector<Value, 4> tileSizeVector =
       options.tileSizeComputationFunction(b, op);
   if (tileSizeVector.size() < nLoops) {
-    auto zero = std_constant_index(0);
+    auto zero = b.create<ConstantIndexOp>(op.getLoc(), 0);
     tileSizeVector.append(nLoops - tileSizeVector.size(), zero);
   }
 

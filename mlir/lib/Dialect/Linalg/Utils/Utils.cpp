@@ -525,10 +525,11 @@ SmallVector<Value, 4> makeTiledShapes(OpBuilder &b, Location loc,
   for (unsigned idx = 0, idxIvs = 0, e = tileSizes.size(); idx < e; ++idx) {
     LLVM_DEBUG(llvm::dbgs() << "makeTiledShapes: for loop#" << idx << "\n");
     bool isTiled = !isZero(tileSizes[idx]);
-    lbs.push_back(isTiled ? ivs[idxIvs++] : (Value)std_constant_index(0));
+    lbs.push_back(isTiled ? ivs[idxIvs++]
+                          : (Value)b.create<ConstantIndexOp>(loc, 0));
     // Before composing, we need to make range a closed interval.
     Value size = isTiled ? tileSizes[idx] : sizeBounds[idx];
-    subShapeSizes.push_back(size - std_constant_index(1));
+    subShapeSizes.push_back(size - b.create<ConstantIndexOp>(loc, 1));
     LLVM_DEBUG(llvm::dbgs() << "lb: " << lbs.back() << "\n");
     LLVM_DEBUG(llvm::dbgs() << "size: " << subShapeSizes.back() << "\n");
   }
@@ -560,7 +561,7 @@ SmallVector<Value, 4> makeTiledShapes(OpBuilder &b, Location loc,
       LLVM_DEBUG(llvm::dbgs() << "makeTiledShapes: for dim#" << r);
       if (!isTiled(map.getSubMap({r}), tileSizes)) {
         offsets.push_back(b.getIndexAttr(0));
-        Value dim = memref_dim(shapedOp, r).value;
+        Value dim = b.createOrFold<memref::DimOp>(loc, shapedOp, r);
         sizes.push_back(dim);
         strides.push_back(b.getIndexAttr(1));
         LLVM_DEBUG(llvm::dbgs() << ": not tiled: use size: " << dim << "\n");
@@ -576,7 +577,7 @@ SmallVector<Value, 4> makeTiledShapes(OpBuilder &b, Location loc,
       offsets.push_back(offset);
       auto closedIntSize = applyMapToValues(b, loc, m, subShapeSizes).front();
       // Resulting size needs to be made half open interval again.
-      auto size = closedIntSize + std_constant_index(1);
+      auto size = closedIntSize + b.create<ConstantIndexOp>(loc, 1);
       LLVM_DEBUG(llvm::dbgs() << "makeTiledShapes: raw size: " << size << "\n");
 
       // The size of the subview / subtensor should be trimmed to avoid
