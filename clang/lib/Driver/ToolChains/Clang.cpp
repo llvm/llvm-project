@@ -4454,7 +4454,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                                    JA.isDeviceOffloading(Action::OFK_Host));
 
     if (D.isUsingLTO() && !isDeviceOffloadAction) {
-      Args.AddLastArg(CmdArgs, options::OPT_flto, options::OPT_flto_EQ);
+      if (Args.hasArg(options::OPT_flto))
+        CmdArgs.push_back("-flto");
+      else {
+        if (D.getLTOMode() == LTOK_Thin)
+          CmdArgs.push_back("-flto=thin");
+        else
+          CmdArgs.push_back("-flto=full");
+      }
       CmdArgs.push_back("-flto-unit");
     }
   }
