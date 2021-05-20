@@ -1,4 +1,4 @@
-//===- CopyConfig.h -------------------------------------------------------===//
+//===- CommonConfig.h -------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,20 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLVM_OBJCOPY_COPY_CONFIG_H
-#define LLVM_TOOLS_LLVM_OBJCOPY_COPY_CONFIG_H
+#ifndef LLVM_TOOLS_LLVM_OBJCOPY_COMMONCONFIG_H
+#define LLVM_TOOLS_LLVM_OBJCOPY_COMMONCONFIG_H
 
-#include "ELF/ELFConfig.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/ELFTypes.h"
-#include "llvm/Support/Allocator.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/Regex.h"
 // Necessary for llvm::DebugCompressionType::None
@@ -99,7 +95,7 @@ enum class MatchStyle {
 
 class NameOrPattern {
   StringRef Name;
-  // Regex is shared between multiple CopyConfig instances.
+  // Regex is shared between multiple CommonConfig instances.
   std::shared_ptr<Regex> R;
   std::shared_ptr<GlobPattern> G;
   bool IsPositiveMatch = true;
@@ -146,10 +142,7 @@ public:
 };
 
 // Configuration for copying/stripping a single file.
-struct CopyConfig {
-  // Format-specific options to be initialized lazily when needed.
-  Optional<elf::ELFCopyConfig> ELF;
-
+struct CommonConfig {
   // Main input/output options
   StringRef InputFilename;
   FileFormat InputFormat = FileFormat::Unspecified;
@@ -168,12 +161,10 @@ struct CopyConfig {
   StringRef SymbolsPrefix;
   StringRef AllocSectionsPrefix;
   DiscardType DiscardMode = DiscardType::None;
-  Optional<StringRef> NewSymbolVisibility;
 
   // Repeated options
   std::vector<StringRef> AddSection;
   std::vector<StringRef> DumpSection;
-  std::vector<StringRef> SymbolsToAdd;
   std::vector<StringRef> RPathToAdd;
   std::vector<StringRef> RPathToPrepend;
   DenseMap<StringRef, StringRef> RPathsToUpdate;
@@ -233,55 +224,9 @@ struct CopyConfig {
   bool RemoveAllRpaths = false;
 
   DebugCompressionType CompressionType = DebugCompressionType::None;
-
-  // parseELFConfig performs ELF-specific command-line parsing. Fills `ELF` on
-  // success or returns an Error otherwise.
-  Error parseELFConfig() {
-    if (!ELF) {
-      Expected<elf::ELFCopyConfig> ELFConfig = elf::parseConfig(*this);
-      if (!ELFConfig)
-        return ELFConfig.takeError();
-      ELF = *ELFConfig;
-    }
-    return Error::success();
-  }
 };
 
-// Configuration for the overall invocation of this tool. When invoked as
-// objcopy, will always contain exactly one CopyConfig. When invoked as strip,
-// will contain one or more CopyConfigs.
-struct DriverConfig {
-  SmallVector<CopyConfig, 1> CopyConfigs;
-  BumpPtrAllocator Alloc;
-};
-
-// ParseObjcopyOptions returns the config and sets the input arguments. If a
-// help flag is set then ParseObjcopyOptions will print the help messege and
-// exit. ErrorCallback is used to handle recoverable errors. An Error returned
-// by the callback aborts the parsing and is then returned by this function.
-Expected<DriverConfig>
-parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
-                    llvm::function_ref<Error(Error)> ErrorCallback);
-
-// ParseInstallNameToolOptions returns the config and sets the input arguments.
-// If a help flag is set then ParseInstallNameToolOptions will print the help
-// messege and exit.
-Expected<DriverConfig>
-parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr);
-
-// ParseBitcodeStripOptions returns the config and sets the input arguments.
-// If a help flag is set then ParseBitcodeStripOptions will print the help
-// messege and exit.
-Expected<DriverConfig> parseBitcodeStripOptions(ArrayRef<const char *> ArgsArr);
-
-// ParseStripOptions returns the config and sets the input arguments. If a
-// help flag is set then ParseStripOptions will print the help messege and
-// exit. ErrorCallback is used to handle recoverable errors. An Error returned
-// by the callback aborts the parsing and is then returned by this function.
-Expected<DriverConfig>
-parseStripOptions(ArrayRef<const char *> ArgsArr,
-                  llvm::function_ref<Error(Error)> ErrorCallback);
 } // namespace objcopy
 } // namespace llvm
 
-#endif
+#endif // LLVM_TOOLS_LLVM_OBJCOPY_COMMONCONFIG_H
