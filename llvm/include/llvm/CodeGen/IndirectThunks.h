@@ -27,7 +27,8 @@ template <typename Derived> class ThunkInserter {
 protected:
   bool InsertedThunks;
   void doInitialization(Module &M) {}
-  void createThunkFunction(MachineModuleInfo &MMI, StringRef Name);
+  void createThunkFunction(MachineModuleInfo &MMI, StringRef Name,
+                           bool Comdat = true);
 
 public:
   void init(Module &M) {
@@ -40,17 +41,21 @@ public:
 
 template <typename Derived>
 void ThunkInserter<Derived>::createThunkFunction(MachineModuleInfo &MMI,
-                                                 StringRef Name) {
+                                                 StringRef Name, bool Comdat) {
   assert(Name.startswith(getDerived().getThunkPrefix()) &&
          "Created a thunk with an unexpected prefix!");
 
   Module &M = const_cast<Module &>(*MMI.getModule());
   LLVMContext &Ctx = M.getContext();
   auto Type = FunctionType::get(Type::getVoidTy(Ctx), false);
-  Function *F =
-      Function::Create(Type, GlobalValue::LinkOnceODRLinkage, Name, &M);
-  F->setVisibility(GlobalValue::HiddenVisibility);
-  F->setComdat(M.getOrInsertComdat(Name));
+  Function *F = Function::Create(Type,
+                                 Comdat ? GlobalValue::LinkOnceODRLinkage
+                                        : GlobalValue::InternalLinkage,
+                                 Name, &M);
+  if (Comdat) {
+    F->setVisibility(GlobalValue::HiddenVisibility);
+    F->setComdat(M.getOrInsertComdat(Name));
+  }
 
   // Add Attributes so that we don't create a frame, unwind information, or
   // inline.
