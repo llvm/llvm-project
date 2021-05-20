@@ -15,8 +15,8 @@ $mystr = comdat any
 ; CHECK: $dead_global = comdat noduplicates
 ; CHECK: $private_str = comdat noduplicates
 
-; CHECK: @dead_global = global { i32, [60 x i8] } { i32 42, [60 x i8] zeroinitializer }, comdat, align 32
-; CHECK: @private_str = internal constant { [8 x i8], [56 x i8] } { [8 x i8] c"private\00", [56 x i8] zeroinitializer }, comdat, align 32
+; CHECK: @dead_global = global { i32, [28 x i8] } { i32 42, [28 x i8] zeroinitializer }, comdat, align 32
+; CHECK: @private_str = internal constant { [8 x i8], [24 x i8] } { [8 x i8] c"private\00", [24 x i8] zeroinitializer }, comdat, align 32
 
 ; CHECK: @__asan_global_dead_global = private global { {{.*}} }, section ".ASAN$GL", comdat($dead_global), align 64, !associated
 ; CHECK: @__asan_global_private_str = private global { {{.*}} }, section ".ASAN$GL", comdat($private_str), align 64, !associated

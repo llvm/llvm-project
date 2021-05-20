@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Here we check that the global redzone sizes grow with the object size.
 
 @G10 = global [10 x i8] zeroinitializer, align 1
-; CHECK: @G10 = global { [10 x i8], [54 x i8] }
+; CHECK: @G10 = global { [10 x i8], [22 x i8] }
 
 @G31 = global [31 x i8] zeroinitializer, align 1
 @G32 = global [32 x i8] zeroinitializer, align 1
