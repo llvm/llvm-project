@@ -69,27 +69,27 @@ static const size_t kNumberOfAccessSizes = 5;
 static const size_t kDefaultShadowScale = 4;
 static const uint64_t kDynamicShadowSentinel =
     std::numeric_limits<uint64_t>::max();
-static const unsigned kPointerTagShift = 56;
 
 static const unsigned kShadowBaseAlignment = 32;
 
-static cl::opt<std::string> ClMemoryAccessCallbackPrefix(
-    "hwasan-memory-access-callback-prefix",
-    cl::desc("Prefix for memory access callbacks"), cl::Hidden,
-    cl::init("__hwasan_"));
+static cl::opt<std::string>
+    ClMemoryAccessCallbackPrefix("hwasan-memory-access-callback-prefix",
+                                 cl::desc("Prefix for memory access callbacks"),
+                                 cl::Hidden, cl::init("__hwasan_"));
 
-static cl::opt<bool>
-    ClInstrumentWithCalls("hwasan-instrument-with-calls",
-                cl::desc("instrument reads and writes with callbacks"),
-                cl::Hidden, cl::init(false));
+static cl::opt<bool> ClInstrumentWithCalls(
+    "hwasan-instrument-with-calls",
+    cl::desc("instrument reads and writes with callbacks"), cl::Hidden,
+    cl::init(false));
 
 static cl::opt<bool> ClInstrumentReads("hwasan-instrument-reads",
                                        cl::desc("instrument read instructions"),
                                        cl::Hidden, cl::init(true));
 
-static cl::opt<bool> ClInstrumentWrites(
-    "hwasan-instrument-writes", cl::desc("instrument write instructions"),
-    cl::Hidden, cl::init(true));
+static cl::opt<bool>
+    ClInstrumentWrites("hwasan-instrument-writes",
+                       cl::desc("instrument write instructions"), cl::Hidden,
+                       cl::init(true));
 
 static cl::opt<bool> ClInstrumentAtomics(
     "hwasan-instrument-atomics",
@@ -100,10 +100,10 @@ static cl::opt<bool> ClInstrumentByval("hwasan-instrument-byval",
                                        cl::desc("instrument byval arguments"),
                                        cl::Hidden, cl::init(true));
 
-static cl::opt<bool> ClRecover(
-    "hwasan-recover",
-    cl::desc("Enable recovery mode (continue-after-error)."),
-    cl::Hidden, cl::init(false));
+static cl::opt<bool>
+    ClRecover("hwasan-recover",
+              cl::desc("Enable recovery mode (continue-after-error)."),
+              cl::Hidden, cl::init(false));
 
 static cl::opt<bool> ClInstrumentStack("hwasan-instrument-stack",
                                        cl::desc("instrument stack (allocas)"),
@@ -130,10 +130,10 @@ static cl::opt<int> ClMatchAllTag(
     cl::desc("don't report bad accesses via pointers with this tag"),
     cl::Hidden, cl::init(-1));
 
-static cl::opt<bool> ClEnableKhwasan(
-    "hwasan-kernel",
-    cl::desc("Enable KernelHWAddressSanitizer instrumentation"),
-    cl::Hidden, cl::init(false));
+static cl::opt<bool>
+    ClEnableKhwasan("hwasan-kernel",
+                    cl::desc("Enable KernelHWAddressSanitizer instrumentation"),
+                    cl::Hidden, cl::init(false));
 
 // These flags allow to change the shadow mapping and control how shadow memory
 // is accessed. The shadow mapping looks like:
@@ -185,6 +185,15 @@ static cl::opt<bool> ClInlineAllChecks("hwasan-inline-all-checks",
                                        cl::desc("inline all checks"),
                                        cl::Hidden, cl::init(false));
 
+static cl::opt<bool> ClUntagPointer("hwasan-untag-mem-operation",
+                                    cl::desc("untag mem operate"), cl::Hidden,
+                                    cl::init(false));
+
+// TODO: Need to co-related with clang option.
+static cl::opt<bool> ClUsePageAlias("hwasan-use-page-alias",
+                                    cl::desc("hwasan use page alias"),
+                                    cl::Hidden, cl::init(true));
+
 namespace {
 
 /// An instrumentation pass implementing detection of addressability bugs
@@ -192,10 +201,12 @@ namespace {
 class HWAddressSanitizer {
 public:
   explicit HWAddressSanitizer(Module &M, bool CompileKernel = false,
-                              bool Recover = false) : M(M) {
+                              bool Recover = false)
+      : M(M) {
     this->Recover = ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover;
-    this->CompileKernel = ClEnableKhwasan.getNumOccurrences() > 0 ?
-        ClEnableKhwasan : CompileKernel;
+    this->CompileKernel = ClEnableKhwasan.getNumOccurrences() > 0
+                              ? ClEnableKhwasan
+                              : CompileKernel;
 
     initializeModule();
   }
@@ -224,6 +235,7 @@ public:
 
   bool isInterestingAlloca(const AllocaInst &AI);
   bool tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag, size_t Size);
+  Value *getTargetTagPtr(IRBuilder<> &IRB, Value *PtrLong, Value *Tag);
   Value *tagPointer(IRBuilder<> &IRB, Type *Ty, Value *PtrLong, Value *Tag);
   Value *untagPointer(IRBuilder<> &IRB, Value *PtrLong);
   bool instrumentStack(
@@ -235,16 +247,34 @@ public:
   Value *getNextTagWithCall(IRBuilder<> &IRB);
   Value *getStackBaseTag(IRBuilder<> &IRB);
   Value *getAllocaTag(IRBuilder<> &IRB, Value *StackTag, AllocaInst *AI,
-                     unsigned AllocaNo);
+                      unsigned AllocaNo);
   Value *getUARTag(IRBuilder<> &IRB, Value *StackTag);
 
   Value *getHwasanThreadSlotPtr(IRBuilder<> &IRB, Type *Ty);
+  Value *retagTargetTag(IRBuilder<> &IRB, Value *OldTag);
   void emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord);
 
   void instrumentGlobal(GlobalVariable *GV, uint8_t Tag);
   void instrumentGlobals();
 
   void instrumentPersonalityFunctions();
+
+  unsigned getTargetTagShift() {
+    if (TargetTriple.getArch() == Triple::x86_64)
+      return 57;
+    else
+      return 56;
+  }
+
+  uint64_t getTargetTagMask() {
+    if (TargetTriple.getArch() == Triple::x86_64)
+      return 0x3FLL;
+    else
+      return 0xFFLL;
+  }
+
+  unsigned kPointerTagShift;
+  uint64_t TagMaskByte;
 
 private:
   LLVMContext *C;
@@ -484,7 +514,7 @@ void HWAddressSanitizer::initializeModule() {
 
   // x86_64 uses userspace pointer aliases, currently heap-only with callback
   // instrumentation only.
-  UsePageAliases = TargetTriple.getArch() == Triple::x86_64;
+  UsePageAliases = ClUsePageAlias && (TargetTriple.getArch() == Triple::x86_64);
   InstrumentWithCalls = UsePageAliases ? true : ClInstrumentWithCalls;
   InstrumentStack = UsePageAliases ? false : ClInstrumentStack;
 
@@ -498,6 +528,8 @@ void HWAddressSanitizer::initializeModule() {
   Int32Ty = IRB.getInt32Ty();
 
   HwasanCtorFunction = nullptr;
+  kPointerTagShift = getTargetTagShift();
+  TagMaskByte = getTargetTagMask();
 
   // Older versions of Android do not have the required runtime support for
   // short granules, global or personality function instrumentation. On other
@@ -799,28 +831,27 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
   IRB.SetInsertPoint(CheckFailTerm);
   InlineAsm *Asm;
   switch (TargetTriple.getArch()) {
-    case Triple::x86_64:
-      // The signal handler will find the data address in rdi.
-      Asm = InlineAsm::get(
-          FunctionType::get(IRB.getVoidTy(), {PtrLong->getType()}, false),
-          "int3\nnopl " +
-              itostr(0x40 + (AccessInfo & HWASanAccessInfo::RuntimeMask)) +
-              "(%rax)",
-          "{rdi}",
-          /*hasSideEffects=*/true);
-      break;
-    case Triple::aarch64:
-    case Triple::aarch64_be:
-      // The signal handler will find the data address in x0.
-      Asm = InlineAsm::get(
-          FunctionType::get(IRB.getVoidTy(), {PtrLong->getType()}, false),
-          "brk #" +
-              itostr(0x900 + (AccessInfo & HWASanAccessInfo::RuntimeMask)),
-          "{x0}",
-          /*hasSideEffects=*/true);
-      break;
-    default:
-      report_fatal_error("unsupported architecture");
+  case Triple::x86_64:
+    // The signal handler will find the data address in rdi.
+    Asm = InlineAsm::get(
+        FunctionType::get(IRB.getVoidTy(), {PtrLong->getType()}, false),
+        "int3\nnopl " +
+            itostr(0x40 + (AccessInfo & HWASanAccessInfo::RuntimeMask)) +
+            "(%rax)",
+        "{rdi}",
+        /*hasSideEffects=*/true);
+    break;
+  case Triple::aarch64:
+  case Triple::aarch64_be:
+    // The signal handler will find the data address in x0.
+    Asm = InlineAsm::get(
+        FunctionType::get(IRB.getVoidTy(), {PtrLong->getType()}, false),
+        "brk #" + itostr(0x900 + (AccessInfo & HWASanAccessInfo::RuntimeMask)),
+        "{x0}",
+        /*hasSideEffects=*/true);
+    break;
+  default:
+    report_fatal_error("unsupported architecture");
   }
   IRB.CreateCall(Asm, PtrLong);
   if (Recover)
@@ -851,7 +882,7 @@ bool HWAddressSanitizer::instrumentMemAccess(InterestingMemoryOperand &O) {
   LLVM_DEBUG(dbgs() << "Instrumenting: " << O.getInsn() << "\n");
 
   if (O.MaybeMask)
-    return false; //FIXME
+    return false; // FIXME
 
   IRBuilder<> IRB(O.getInsn());
   if (isPowerOf2_64(O.TypeSize) &&
@@ -870,7 +901,8 @@ bool HWAddressSanitizer::instrumentMemAccess(InterestingMemoryOperand &O) {
                    {IRB.CreatePointerCast(Addr, IntptrTy),
                     ConstantInt::get(IntptrTy, O.TypeSize / 8)});
   }
-  untagPointerOperand(O.getInsn(), Addr);
+  if (ClUntagPointer)
+    untagPointerOperand(O.getInsn(), Addr);
 
   return true;
 }
@@ -887,8 +919,8 @@ static uint64_t getAllocaSizeInBytes(const AllocaInst &AI) {
   return SizeInBytes * ArraySize;
 }
 
-bool HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI,
-                                   Value *Tag, size_t Size) {
+bool HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag,
+                                   size_t Size) {
   size_t AlignedSize = alignTo(Size, Mapping.getObjectAlignment());
   if (!UseShortGranules)
     Size = AlignedSize;
@@ -921,7 +953,7 @@ bool HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI,
   return true;
 }
 
-static unsigned RetagMask(unsigned AllocaNo) {
+static unsigned retagMaskArmv8(unsigned AllocaNo) {
   // A list of 8-bit numbers that have at most one run of non-zero bits.
   // x = x ^ (mask << 56) can be encoded as a single armv8 instruction for these
   // masks.
@@ -937,6 +969,29 @@ static unsigned RetagMask(unsigned AllocaNo) {
                                  60, 28,  12,  4,   126, 254, 62,  30,  14,
                                  6,  2,   127, 63,  31,  15,  7,   3,   1};
   return FastMasks[AllocaNo % (sizeof(FastMasks) / sizeof(FastMasks[0]))];
+}
+
+static unsigned retagX86_64(unsigned AllocaNo, uint64_t TagMaskByte) {
+  return AllocaNo & TagMaskByte;
+}
+
+static unsigned retagMask(unsigned AllocaNo, Triple TargetTriple,
+                          uint64_t TagMaskByte) {
+  if (TargetTriple.getArch() == Triple::x86_64)
+    return retagX86_64(AllocaNo, TagMaskByte);
+  return retagMaskArmv8(AllocaNo);
+}
+
+// The whole pass imply the Tag is 8-bits size, because it is first
+// implemented by aarch64 whose tag is happen 1 byte. We should diff
+// it frome other targets now.
+Value *HWAddressSanitizer::retagTargetTag(IRBuilder<> &IRB, Value *OldTag) {
+  if (TargetTriple.getArch() == Triple::x86_64) {
+    Constant *TagMask = ConstantInt::get(IntptrTy, TagMaskByte);
+    Value *NewTag = IRB.CreateAnd(OldTag, TagMask);
+    return NewTag;
+  } else
+    return OldTag;
 }
 
 Value *HWAddressSanitizer::getNextTagWithCall(IRBuilder<> &IRB) {
@@ -964,6 +1019,9 @@ Value *HWAddressSanitizer::getStackBaseTag(IRBuilder<> &IRB) {
   Value *StackTag =
       IRB.CreateXor(StackPointerLong, IRB.CreateLShr(StackPointerLong, 20),
                     "hwasan.stack.base.tag");
+
+  StackTag = retagTargetTag(IRB, StackTag);
+
   return StackTag;
 }
 
@@ -971,34 +1029,51 @@ Value *HWAddressSanitizer::getAllocaTag(IRBuilder<> &IRB, Value *StackTag,
                                         AllocaInst *AI, unsigned AllocaNo) {
   if (ClGenerateTagsWithCalls)
     return getNextTagWithCall(IRB);
-  return IRB.CreateXor(StackTag,
-                       ConstantInt::get(IntptrTy, RetagMask(AllocaNo)));
+
+  Value *Tag = IRB.CreateXor(
+      StackTag, ConstantInt::get(
+                    IntptrTy, retagMask(AllocaNo, TargetTriple, TagMaskByte)));
+  return retagTargetTag(IRB, Tag);
 }
 
 Value *HWAddressSanitizer::getUARTag(IRBuilder<> &IRB, Value *StackTag) {
   if (ClUARRetagToZero)
     return ConstantInt::get(IntptrTy, 0);
+
   if (ClGenerateTagsWithCalls)
     return getNextTagWithCall(IRB);
-  return IRB.CreateXor(StackTag, ConstantInt::get(IntptrTy, 0xFFU));
+
+  Value *Tag = IRB.CreateXor(StackTag, ConstantInt::get(IntptrTy, 0xFFU));
+  return retagTargetTag(IRB, Tag);
+}
+
+Value *HWAddressSanitizer::getTargetTagPtr(IRBuilder<> &IRB, Value *PtrLong,
+                                           Value *Tag) {
+  Value *TaggedPtrLong;
+  Value *Mask;
+  Value *ShiftedTag = IRB.CreateShl(Tag, kPointerTagShift);
+  // Kernel addresses have 0xFF in the most significant byte.
+  if (CompileKernel) {
+    // X86_64 can not tag the highest bit.
+    if (TargetTriple.getArch() == Triple::x86_64)
+      Mask = ConstantInt::get(IntptrTy, ((1ULL << kPointerTagShift) - 1) |
+                                            (1ULL << (64 - 1)));
+    else
+      Mask = ConstantInt::get(IntptrTy, (1ULL << kPointerTagShift) - 1);
+    ShiftedTag = IRB.CreateOr(ShiftedTag, Mask);
+    TaggedPtrLong = IRB.CreateAnd(PtrLong, ShiftedTag);
+  } else {
+    // Userspace can simply do OR (tag << kPointerTagShift);
+    TaggedPtrLong = IRB.CreateOr(PtrLong, ShiftedTag);
+  }
+  return TaggedPtrLong;
 }
 
 // Add a tag to an address.
 Value *HWAddressSanitizer::tagPointer(IRBuilder<> &IRB, Type *Ty,
                                       Value *PtrLong, Value *Tag) {
   assert(!UsePageAliases);
-  Value *TaggedPtrLong;
-  if (CompileKernel) {
-    // Kernel addresses have 0xFF in the most significant byte.
-    Value *ShiftedTag = IRB.CreateOr(
-        IRB.CreateShl(Tag, kPointerTagShift),
-        ConstantInt::get(IntptrTy, (1ULL << kPointerTagShift) - 1));
-    TaggedPtrLong = IRB.CreateAnd(PtrLong, ShiftedTag);
-  } else {
-    // Userspace can simply do OR (tag << 56);
-    Value *ShiftedTag = IRB.CreateShl(Tag, kPointerTagShift);
-    TaggedPtrLong = IRB.CreateOr(PtrLong, ShiftedTag);
-  }
+  Value *TaggedPtrLong = getTargetTagPtr(IRB, PtrLong, Tag);
   return IRB.CreateIntToPtr(TaggedPtrLong, Ty);
 }
 
@@ -1008,11 +1083,13 @@ Value *HWAddressSanitizer::untagPointer(IRBuilder<> &IRB, Value *PtrLong) {
   Value *UntaggedPtrLong;
   if (CompileKernel) {
     // Kernel addresses have 0xFF in the most significant byte.
-    UntaggedPtrLong = IRB.CreateOr(PtrLong,
-        ConstantInt::get(PtrLong->getType(), 0xFFULL << kPointerTagShift));
+    UntaggedPtrLong =
+        IRB.CreateOr(PtrLong, ConstantInt::get(PtrLong->getType(),
+                                               0xFFULL << kPointerTagShift));
   } else {
     // Userspace addresses have 0x00.
-    UntaggedPtrLong = IRB.CreateAnd(PtrLong,
+    UntaggedPtrLong = IRB.CreateAnd(
+        PtrLong,
         ConstantInt::get(PtrLong->getType(), ~(0xFFULL << kPointerTagShift)));
   }
   return UntaggedPtrLong;
@@ -1033,7 +1110,6 @@ Value *HWAddressSanitizer::getHwasanThreadSlotPtr(IRBuilder<> &IRB, Type *Ty) {
   }
   if (ThreadPtrGlobal)
     return ThreadPtrGlobal;
-
 
   return nullptr;
 }
@@ -1163,8 +1239,9 @@ bool HWAddressSanitizer::instrumentStack(
       // Prepend "tag_offset, N" to the dwarf expression.
       // Tag offset logically applies to the alloca pointer, and it makes sense
       // to put it at the beginning of the expression.
-      SmallVector<uint64_t, 8> NewOps = {dwarf::DW_OP_LLVM_tag_offset,
-                                         RetagMask(N)};
+      SmallVector<uint64_t, 8> NewOps = {
+          dwarf::DW_OP_LLVM_tag_offset,
+          retagMask(N, TargetTriple, TagMaskByte)};
       auto Locations = DDI->location_ops();
       unsigned LocNo = std::distance(Locations.begin(), find(Locations, AI));
       DDI->setExpression(
@@ -1213,9 +1290,9 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
 
   SmallVector<InterestingMemoryOperand, 16> OperandsToInstrument;
   SmallVector<MemIntrinsic *, 16> IntrinToInstrument;
-  SmallVector<AllocaInst*, 8> AllocasToInstrument;
-  SmallVector<Instruction*, 8> RetVec;
-  SmallVector<Instruction*, 8> LandingPadVec;
+  SmallVector<AllocaInst *, 8> AllocasToInstrument;
+  SmallVector<Instruction *, 8> RetVec;
+  SmallVector<Instruction *, 8> LandingPadVec;
   DenseMap<AllocaInst *, std::vector<DbgVariableIntrinsic *>> AllocaDbgMap;
   for (auto &BB : F) {
     for (auto &Inst : BB) {
@@ -1459,8 +1536,10 @@ void HWAddressSanitizer::instrumentGlobals() {
 
   for (GlobalVariable *GV : Globals) {
     // Skip tag 0 in order to avoid collisions with untagged memory.
+    Tag &= TagMaskByte;
     if (Tag == 0)
       Tag = 1;
+
     instrumentGlobal(GV, Tag++);
   }
 }
