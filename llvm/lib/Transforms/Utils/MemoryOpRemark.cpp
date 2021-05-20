@@ -120,6 +120,7 @@ StringRef MemoryOpRemark::remarkName(RemarkKind RK) {
   case RK_Call:
     return "MemoryOpCall";
   }
+  llvm_unreachable("missing RemarkKind case");
 }
 
 static void inlineVolatileOrAtomicWithExtraArgs(bool *Inline, bool Volatile,
@@ -378,4 +379,5 @@ StringRef AutoInitRemark::remarkName(RemarkKind RK) {
   case RK_Call:
     return "AutoInitCall";
   }
+  llvm_unreachable("missing RemarkKind case");
 }
