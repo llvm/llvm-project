@@ -129,7 +129,6 @@ class Configuration(object):
         self.configure_compile_flags()
         self.configure_link_flags()
         self.configure_env()
-        self.configure_sanitizer()
         self.configure_coverage()
         self.configure_modules()
         self.configure_substitutions()
@@ -462,67 +461,6 @@ class Configuration(object):
         if self.get_lit_bool('cxx_ext_threads', default=False):
             self.cxx.link_flags += ['-lc++external_threads']
         self.target_info.add_cxx_link_flags(self.cxx.link_flags)
-
-    def configure_sanitizer(self):
-        san = self.get_lit_conf('use_sanitizer', '').strip()
-        if san:
-            # Search for llvm-symbolizer along the compiler path first
-            # and then along the PATH env variable.
-            symbolizer_search_paths = os.environ.get('PATH', '')
-            cxx_path = libcxx.util.which(self.cxx.path)
-            if cxx_path is not None:
-                symbolizer_search_paths = (
-                    os.path.dirname(cxx_path) +
-                    os.pathsep + symbolizer_search_paths)
-            llvm_symbolizer = libcxx.util.which('llvm-symbolizer',
-                                                symbolizer_search_paths)
-
-            def add_ubsan():
-                self.cxx.flags += ['-fsanitize=undefined',
-                                   '-fno-sanitize=float-divide-by-zero',
-                                   '-fno-sanitize-recover=all']
-                self.exec_env['UBSAN_OPTIONS'] = 'print_stacktrace=1'
-                self.config.available_features.add('ubsan')
-
-            # Setup the sanitizer compile flags
-            self.cxx.flags += ['-g', '-fno-omit-frame-pointer']
-            if san == 'Address' or san == 'Address;Undefined' or san == 'Undefined;Address':
-                self.cxx.flags += ['-fsanitize=address']
-                if llvm_symbolizer is not None:
-                    self.exec_env['ASAN_SYMBOLIZER_PATH'] = llvm_symbolizer
-                self.config.available_features.add('asan')
-                self.config.available_features.add('sanitizer-new-delete')
-                self.cxx.compile_flags += ['-O1']
-                if san == 'Address;Undefined' or san == 'Undefined;Address':
-                    add_ubsan()
-            elif san == 'Memory' or san == 'MemoryWithOrigins':
-                self.cxx.flags += ['-fsanitize=memory']
-                if san == 'MemoryWithOrigins':
-                    self.cxx.compile_flags += [
-                        '-fsanitize-memory-track-origins']
-                if llvm_symbolizer is not None:
-                    self.exec_env['MSAN_SYMBOLIZER_PATH'] = llvm_symbolizer
-                self.config.available_features.add('msan')
-                self.config.available_features.add('sanitizer-new-delete')
-                self.cxx.compile_flags += ['-O1']
-            elif san == 'Undefined':
-                add_ubsan()
-                self.cxx.compile_flags += ['-O2']
-            elif san == 'Thread':
-                self.cxx.flags += ['-fsanitize=thread']
-                self.config.available_features.add('tsan')
-                self.config.available_features.add('sanitizer-new-delete')
-            elif san == 'DataFlow':
-                self.cxx.flags += ['-fsanitize=dataflow']
-            elif san == 'Leaks':
-                self.cxx.link_flags += ['-fsanitize=leaks']
-            else:
-                self.lit_config.fatal('unsupported value for '
-                                      'use_sanitizer: {0}'.format(san))
-            san_lib = self.get_lit_conf('sanitizer_library')
-            if san_lib:
-                self.cxx.link_flags += [
-                    san_lib, '-Wl,-rpath,%s' % os.path.dirname(san_lib)]
 
     def configure_coverage(self):
         self.generate_coverage = self.get_lit_bool('generate_coverage', False)
