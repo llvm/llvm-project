@@ -1,5 +1,5 @@
-; RUN: opt -S -amdgpu-image-intrinsic-opt -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1000 < %s 2>&1 | FileCheck -check-prefixes=GFX10 %s
-; RUN: opt -S -amdgpu-image-intrinsic-opt -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1100 < %s 2>&1 | FileCheck -check-prefixes=GFX11 %s
+; RUN: opt -S -passes=amdgpu-image-intrinsic-opt -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1010 < %s 2>&1 | FileCheck -check-prefixes=GFX10 %s
+; RUN: opt -S -passes=amdgpu-image-intrinsic-opt -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1100 < %s 2>&1 | FileCheck -check-prefixes=GFX11 %s
 
 ; GFX10-NOT:  %0 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
 ; GFX11:  %0 = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
