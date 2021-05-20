@@ -39,9 +39,20 @@ template <typename Config> static void testSecondaryBasic(void) {
 // the test on arm32 until we can debug it further.
 #ifndef __arm__
   // If the Secondary can't cache that pointer, it will be unmapped.
-  if (!L->canCache(Size))
-    EXPECT_DEATH(memset(P, 'A', Size), "");
+  if (!L->canCache(Size)) {
+    EXPECT_DEATH(
+        {
+          // Repeat few time to avoid missing crash if it's mmaped by unrelated
+          // code.
+          for (int i = 0; i < 10; ++i) {
+            P = L->allocate(scudo::Options{}, Size);
+            L->deallocate(scudo::Options{}, P);
+            memset(P, 'A', Size);
+          }
+        },
+        "");
 #endif // __arm__
+  }
 
   const scudo::uptr Align = 1U << 16;
   P = L->allocate(scudo::Options{}, Size + Align, Align);
