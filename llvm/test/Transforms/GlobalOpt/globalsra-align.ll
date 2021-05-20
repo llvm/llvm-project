@@ -5,12 +5,13 @@ target datalayout = "p:16:32:64" ; 16-bit pointers with 32-bit ABI alignment and
 
 @a = internal externally_initialized global [3 x [7 x i32*]] zeroinitializer, align 16
 
-; FIXME:
 ; PR50253
-; The store alignments are correct initially, but they should be updated
-; after transforming the global. The global pointer retains its original
-; "align 16", so access to element N into the new array should be offset
-; by the ABI alignment of N pointers.
+; The alignments are correct initially, but they should be updated
+; after transforming the global. The stored global pointer array retains
+; its original "align 16", so access to element N into the new array
+; should be offset by the ABI alignment of N pointers.
+; Loaded globals are split into individual pointers and use the
+; preferred alignment from the datalayout.
 
 ;.
 ; CHECK: @[[A_1:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr externally_initialized global [7 x i32*] zeroinitializer, align 16
@@ -22,7 +23,7 @@ target datalayout = "p:16:32:64" ; 16-bit pointers with 32-bit ABI alignment and
 define i32* @reduce_align_0() {
 ; CHECK-LABEL: @reduce_align_0(
 ; CHECK-NEXT:    [[X:%.*]] = load i32*, i32** @a.2.0, align 8
-; CHECK-NEXT:    store i32* null, i32** getelementptr inbounds ([7 x i32*], [7 x i32*]* @a.1, i32 0, i64 0), align 4
+; CHECK-NEXT:    store i32* null, i32** getelementptr inbounds ([7 x i32*], [7 x i32*]* @a.1, i32 0, i64 0), align 16
 ; CHECK-NEXT:    ret i32* [[X]]
 ;
   %x = load i32*, i32** getelementptr inbounds ([3 x [7 x i32*]], [3 x [7 x i32*]]* @a, i64 0, i64 2, i64 0), align 8
@@ -32,8 +33,8 @@ define i32* @reduce_align_0() {
 
 define i32* @reduce_align_1() {
 ; CHECK-LABEL: @reduce_align_1(
-; CHECK-NEXT:    [[X:%.*]] = load i32*, i32** @a.2.1, align 4
-; CHECK-NEXT:    store i32* null, i32** getelementptr inbounds ([7 x i32*], [7 x i32*]* @a.1, i32 0, i64 1), align 16
+; CHECK-NEXT:    [[X:%.*]] = load i32*, i32** @a.2.1, align 8
+; CHECK-NEXT:    store i32* null, i32** getelementptr inbounds ([7 x i32*], [7 x i32*]* @a.1, i32 0, i64 1), align 4
 ; CHECK-NEXT:    ret i32* [[X]]
 ;
   %x = load i32*, i32** getelementptr inbounds ([3 x [7 x i32*]], [3 x [7 x i32*]]* @a, i64 0, i64 2, i64 1), align 4
@@ -43,8 +44,8 @@ define i32* @reduce_align_1() {
 
 define i32* @reduce_align_2() {
 ; CHECK-LABEL: @reduce_align_2(
-; CHECK-NEXT:    [[X:%.*]] = load i32*, i32** @a.2.2, align 16
-; CHECK-NEXT:    store i32* null, i32** getelementptr inbounds ([7 x i32*], [7 x i32*]* @a.1, i32 0, i64 2), align 4
+; CHECK-NEXT:    [[X:%.*]] = load i32*, i32** @a.2.2, align 8
+; CHECK-NEXT:    store i32* null, i32** getelementptr inbounds ([7 x i32*], [7 x i32*]* @a.1, i32 0, i64 2), align 8
 ; CHECK-NEXT:    ret i32* [[X]]
 ;
   %x = load i32*, i32** getelementptr inbounds ([3 x [7 x i32*]], [3 x [7 x i32*]]* @a, i64 0, i64 2, i64 2), align 16
@@ -54,8 +55,8 @@ define i32* @reduce_align_2() {
 
 define i32* @reduce_align_3() {
 ; CHECK-LABEL: @reduce_align_3(
-; CHECK-NEXT:    [[X:%.*]] = load i32*, i32** @a.2.3, align 4
-; CHECK-NEXT:    store i32* null, i32** getelementptr inbounds ([7 x i32*], [7 x i32*]* @a.1, i32 0, i64 3), align 8
+; CHECK-NEXT:    [[X:%.*]] = load i32*, i32** @a.2.3, align 8
+; CHECK-NEXT:    store i32* null, i32** getelementptr inbounds ([7 x i32*], [7 x i32*]* @a.1, i32 0, i64 3), align 4
 ; CHECK-NEXT:    ret i32* [[X]]
 ;
   %x = load i32*, i32** getelementptr inbounds ([3 x [7 x i32*]], [3 x [7 x i32*]]* @a, i64 0, i64 2, i64 3), align 4

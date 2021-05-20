@@ -630,6 +630,23 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
     }
     GEP->replaceAllUsesWith(NewPtr);
 
+    // We changed the pointer of any memory access user. Recalculate alignments.
+    for (User *U : NewPtr->users()) {
+      if (auto *Load = dyn_cast<LoadInst>(U)) {
+        Align PrefAlign = DL.getPrefTypeAlign(Load->getType());
+        Align NewAlign = getOrEnforceKnownAlignment(Load->getPointerOperand(),
+                                                    PrefAlign, DL, Load);
+        Load->setAlignment(NewAlign);
+      }
+      if (auto *Store = dyn_cast<StoreInst>(U)) {
+        Align PrefAlign =
+            DL.getPrefTypeAlign(Store->getValueOperand()->getType());
+        Align NewAlign = getOrEnforceKnownAlignment(Store->getPointerOperand(),
+                                                    PrefAlign, DL, Store);
+        Store->setAlignment(NewAlign);
+      }
+    }
+
     if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(GEP))
       GEPI->eraseFromParent();
     else
