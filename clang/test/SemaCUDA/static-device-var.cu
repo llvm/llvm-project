@@ -1,15 +1,13 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang_cc1 -triple nvptx -fcuda-is-device \
-// RUN:    -emit-llvm -o - %s -fsyntax-only -verify=dev
+// RUN: %clang_cc1 -triple nvptx -fcuda-is-device -std=c++11 \
+// RUN:    -emit-llvm -o - %s -fsyntax-only -verify=dev,com
 
-// RUN: %clang_cc1 -triple x86_64-gnu-linux \
-// RUN:    -emit-llvm -o - %s -fsyntax-only -verify=host
+// RUN: %clang_cc1 -triple x86_64-gnu-linux -std=c++11 \
+// RUN:    -emit-llvm -o - %s -fsyntax-only -verify=host,com
 
 // Checks allowed usage of file-scope and function-scope static variables.
-
-// host-no-diagnostics
 
 #include "Inputs/cuda.h"
 
@@ -40,6 +38,28 @@ __global__ void kernel(int *a) {
   a[1] = y;
   a[2] = z;
   // dev-error@-1 {{reference to __host__ variable 'z' in __global__ function}}
+}
+
+// Check dynamic initialization of static device variable is not allowed.
+
+namespace TestStaticVarInLambda {
+class A {
+public:
+  A(char *);
+};
+class B {
+public:
+  __device__ B(char *);
+};
+void fun() {
+  (void) [](char *c) {
+    static A var1(c);
+    static __device__ B var2(c);
+    // com-error@-1 {{dynamic initialization is not supported for __device__, __constant__, __shared__, and __managed__ variables}}
+    (void) var1;
+    (void) var2;
+  };
+}
 }
 
 int* getDeviceSymbol(int *x);
