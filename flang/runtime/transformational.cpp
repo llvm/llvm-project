@@ -351,6 +351,7 @@ void RTNAME(Pack)(Descriptor &result, const Descriptor &source,
   }
 }
 
+} // extern "C" - TODO put Reshape under extern "C"
 // F2018 16.9.163
 OwningPtr<Descriptor> RTNAME(Reshape)(const Descriptor &source,
     const Descriptor &shape, const Descriptor *pad, const Descriptor *order,
@@ -464,6 +465,7 @@ OwningPtr<Descriptor> RTNAME(Reshape)(const Descriptor &source,
 
   return result;
 }
+extern "C" { // TODO - remove when Reshape is under extern "C"
 
 // SPREAD
 void RTNAME(Spread)(Descriptor &result, const Descriptor &source, int dim,
