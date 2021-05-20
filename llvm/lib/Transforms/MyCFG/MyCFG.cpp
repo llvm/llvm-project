@@ -123,15 +123,15 @@ void traverseBasicBlock(Function &F, int nestedLevel) {
         }
       }
     }
-    if (isThreadStartCheckpoint and !nestedLevel) {
+    if (isThreadStartCheckpoint && !nestedLevel) {
       outs() << prefix << "This basic block is thread start checkpoint\n";
       isThreadStartCheckpoint = false;
     }
-    if (isExitPointCheckpoint and !nestedLevel) {
-      outs() << prefix << "This basic block is an exit-point checkpoint (this is still not correctly implemented)\n";
-    }
-    if (isThreadEndCheckpoint and !nestedLevel) {
+    if (isThreadEndCheckpoint && !nestedLevel) {
       outs() << prefix << "This basic block is thread end checkpoint\n";
+    }
+    if (isExitPointCheckpoint) {
+      outs() << prefix << "This basic block is an exit-point checkpoint\n";
     }
     if (!nestedLevel) {
       outs() << "\n\n";
