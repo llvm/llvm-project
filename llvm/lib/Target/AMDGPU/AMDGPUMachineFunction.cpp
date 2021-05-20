@@ -64,7 +64,7 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
 
 void AMDGPUMachineFunction::allocateModuleLDSGlobal(const Module *M) {
   if (isModuleEntryFunction()) {
-    GlobalVariable *GV = M->getGlobalVariable("llvm.amdgcn.module.lds");
+    const GlobalVariable *GV = M->getNamedGlobal("llvm.amdgcn.module.lds");
     if (GV) {
       unsigned Offset = allocateLDSGlobal(M->getDataLayout(), *GV);
       (void)Offset;
