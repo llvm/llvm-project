@@ -134,6 +134,7 @@ void InputChunk::relocate(uint8_t *buf) const {
       encodeSLEB128(static_cast<int32_t>(value), loc, 5);
       break;
     case R_WASM_TABLE_INDEX_SLEB64:
+    case R_WASM_TABLE_INDEX_REL_SLEB64:
     case R_WASM_MEMORY_ADDR_SLEB64:
     case R_WASM_MEMORY_ADDR_REL_SLEB64:
       encodeSLEB128(static_cast<int64_t>(value), loc, 10);

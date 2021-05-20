@@ -1403,6 +1403,8 @@ void Writer::run() {
     config->tableBase = 1;
     if (WasmSym::definedTableBase)
       WasmSym::definedTableBase->setVA(config->tableBase);
+    if (WasmSym::definedTableBase32)
+      WasmSym::definedTableBase32->setVA(config->tableBase);
   }
 
   log("-- createOutputSegments");

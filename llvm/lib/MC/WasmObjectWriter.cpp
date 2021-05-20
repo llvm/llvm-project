@@ -528,6 +528,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
   }
 
   if (Type == wasm::R_WASM_TABLE_INDEX_REL_SLEB ||
+      Type == wasm::R_WASM_TABLE_INDEX_REL_SLEB64 ||
       Type == wasm::R_WASM_TABLE_INDEX_SLEB ||
       Type == wasm::R_WASM_TABLE_INDEX_SLEB64 ||
       Type == wasm::R_WASM_TABLE_INDEX_I32 ||
@@ -590,6 +591,7 @@ WasmObjectWriter::getProvisionalValue(const WasmRelocationEntry &RelEntry,
 
   switch (RelEntry.Type) {
   case wasm::R_WASM_TABLE_INDEX_REL_SLEB:
+  case wasm::R_WASM_TABLE_INDEX_REL_SLEB64:
   case wasm::R_WASM_TABLE_INDEX_SLEB:
   case wasm::R_WASM_TABLE_INDEX_SLEB64:
   case wasm::R_WASM_TABLE_INDEX_I32:
@@ -598,7 +600,8 @@ WasmObjectWriter::getProvisionalValue(const WasmRelocationEntry &RelEntry,
     const MCSymbolWasm *Base =
         cast<MCSymbolWasm>(Layout.getBaseSymbol(*RelEntry.Symbol));
     assert(Base->isFunction());
-    if (RelEntry.Type == wasm::R_WASM_TABLE_INDEX_REL_SLEB)
+    if (RelEntry.Type == wasm::R_WASM_TABLE_INDEX_REL_SLEB ||
+        RelEntry.Type == wasm::R_WASM_TABLE_INDEX_REL_SLEB64)
       return TableIndices[Base] - InitialTableOffset;
     else
       return TableIndices[Base];
@@ -742,6 +745,7 @@ void WasmObjectWriter::applyRelocations(
       writePatchableSLEB<5>(Stream, Value, Offset);
       break;
     case wasm::R_WASM_TABLE_INDEX_SLEB64:
+    case wasm::R_WASM_TABLE_INDEX_REL_SLEB64:
     case wasm::R_WASM_MEMORY_ADDR_SLEB64:
     case wasm::R_WASM_MEMORY_ADDR_REL_SLEB64:
       writePatchableSLEB<10>(Stream, Value, Offset);
@@ -1757,7 +1761,8 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
           Rel.Type != wasm::R_WASM_TABLE_INDEX_I64 &&
           Rel.Type != wasm::R_WASM_TABLE_INDEX_SLEB &&
           Rel.Type != wasm::R_WASM_TABLE_INDEX_SLEB64 &&
-          Rel.Type != wasm::R_WASM_TABLE_INDEX_REL_SLEB)
+          Rel.Type != wasm::R_WASM_TABLE_INDEX_REL_SLEB &&
+          Rel.Type != wasm::R_WASM_TABLE_INDEX_REL_SLEB64)
         return;
       assert(Rel.Symbol->isFunction());
       const MCSymbolWasm *Base =
