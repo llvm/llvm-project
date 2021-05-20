@@ -156,14 +156,15 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
   case R_WASM_TABLE_INDEX_I64:
   case R_WASM_TABLE_INDEX_SLEB:
   case R_WASM_TABLE_INDEX_SLEB64:
-  case R_WASM_TABLE_INDEX_REL_SLEB: {
+  case R_WASM_TABLE_INDEX_REL_SLEB:
+  case R_WASM_TABLE_INDEX_REL_SLEB64: {
     if (!getFunctionSymbol(reloc.Index)->hasTableIndex())
       return 0;
     uint32_t index = getFunctionSymbol(reloc.Index)->getTableIndex();
-    if (reloc.Type == R_WASM_TABLE_INDEX_REL_SLEB)
+    if (reloc.Type == R_WASM_TABLE_INDEX_REL_SLEB ||
+        reloc.Type == R_WASM_TABLE_INDEX_REL_SLEB64)
       index -= config->tableBase;
     return index;
-
   }
   case R_WASM_MEMORY_ADDR_LEB:
   case R_WASM_MEMORY_ADDR_LEB64:
