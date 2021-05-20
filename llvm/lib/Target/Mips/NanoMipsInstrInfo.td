@@ -249,21 +249,17 @@ def : MipsPat<(seteq GPR32NM:$lhs, GPR32NM:$rhs),
 def : MipsPat<(setne GPR32NM:$lhs, GPR32NM:$rhs),
               (SLTU_NM ZERO_NM, (XOR_NM GPR32NM:$lhs, GPR32NM:$rhs))>;
 def : MipsPat<(setle GPR32NM:$lhs, GPR32NM:$rhs),
-              (NOT_NM (SLT_NM GPR32NM:$rhs, GPR32NM:$lhs))>;
+              (XORI_NM (SLT_NM GPR32NM:$rhs, GPR32NM:$lhs), 1)>;
 def : MipsPat<(setule GPR32NM:$lhs, GPR32NM:$rhs),
-              (NOT_NM (SLTU_NM GPR32NM:$rhs, GPR32NM:$lhs))>;
+              (XORI_NM (SLTU_NM GPR32NM:$rhs, GPR32NM:$lhs), 1)>;
 def : MipsPat<(setgt GPR32NM:$lhs, GPR32NM:$rhs),
               (SLT_NM GPR32NM:$rhs, GPR32NM:$lhs)>;
 def : MipsPat<(setugt GPR32NM:$lhs, GPR32NM:$rhs),
               (SLTU_NM GPR32NM:$rhs, GPR32NM:$lhs)>;
 def : MipsPat<(setge GPR32NM:$lhs, GPR32NM:$rhs),
-              (NOT_NM (SLT_NM GPR32NM:$lhs, GPR32NM:$rhs))>;
+              (XORI_NM (SLT_NM GPR32NM:$lhs, GPR32NM:$rhs), 1)>;
 def : MipsPat<(setuge GPR32NM:$lhs, GPR32NM:$rhs),
-              (NOT_NM (SLTU_NM GPR32NM:$lhs, GPR32NM:$rhs))>;
-def : MipsPat<(setge GPR32NM:$lhs, imm32ZExt12:$rhs),
-              (NOT_NM (SLTIU_NM GPR32NM:$lhs, imm32ZExt12:$rhs))>;
-def : MipsPat<(setuge GPR32NM:$lhs, imm32ZExt12:$rhs),
-              (NOT_NM (SLTIU_NM GPR32NM:$lhs, imm32ZExt12:$rhs))>;
+              (XORI_NM (SLTU_NM GPR32NM:$lhs, GPR32NM:$rhs), 1)>;
 
 //===----------------------------------------------------------------------===//
 //

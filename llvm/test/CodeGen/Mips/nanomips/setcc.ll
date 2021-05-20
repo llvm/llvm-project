@@ -35,8 +35,8 @@ define i1 @test_setult(i32 %a, i32 %b) {
 define i1 @test_setle(i32 %a, i32 %b) {
 ; CHECK: slt $a0, $a1, $a0
 ; CHECK: SLT_NM
-; CHECK: not $a0, $a0
-; CHECK: NOT_NM
+; CHECK: xori $a0, $a0, 1
+; CHECK: XORI_NM
   %cmp = icmp sle i32 %a, %b
   ret i1 %cmp
 }
@@ -44,8 +44,8 @@ define i1 @test_setle(i32 %a, i32 %b) {
 define i1 @test_setule(i32 %a, i32 %b) {
 ; CHECK: sltu $a0, $a1, $a0
 ; CHECK: SLTU_NM
-; CHECK: not $a0, $a0
-; CHECK: NOT_NM
+; CHECK: xori $a0, $a0, 1
+; CHECK: XORI_NM
   %cmp = icmp ule i32 %a, %b
   ret i1 %cmp
 }
@@ -67,8 +67,8 @@ define i1 @test_setugt(i32 %a, i32 %b) {
 define i1 @test_setge(i32 %a, i32 %b) {
 ; CHECK: slt $a0, $a0, $a1
 ; CHECK: SLT_NM
-; CHECK: not $a0, $a0
-; CHECK: NOT_NM
+; CHECK: xori $a0, $a0, 1
+; CHECK: XORI_NM
   %cmp = icmp sge i32 %a, %b
   ret i1 %cmp
 }
@@ -76,29 +76,9 @@ define i1 @test_setge(i32 %a, i32 %b) {
 define i1 @test_setuge(i32 %a, i32 %b) {
 ; CHECK: sltu $a0, $a0, $a1
 ; CHECK: SLTU_NM
-; CHECK: not $a0, $a0
-; CHECK: NOT_NM
+; CHECK: xori $a0, $a0
+; CHECK: XORI_NM
   %cmp = icmp uge i32 %a, %b
-  ret i1 %cmp
-}
-
-; Making sure setge with immediate uses slti.
-define i1 @test_setge_imm(i32 %a) {
-; CHECK: slti $a0, $a0, 10
-; CHECK: SLTI_NM
-; CHECK: not $a0, $a0
-; CHECK: NOT_NM
-  %cmp = icmp sge i32 %a, 10
-  ret i1 %cmp
-}
-
-; Making sure setuge with immediate uses sltui.
-define i1 @test_setuge_imm(i32 %a) {
-; CHECK: sltiu $a0, $a0, 10
-; CHECK: SLTIU_NM
-; CHECK: not $a0, $a0
-; CHECK: NOT_NM
-  %cmp = icmp uge i32 %a, 10
   ret i1 %cmp
 }
 
