@@ -19,14 +19,18 @@ class ELFObjectFileBase;
 } // end namespace object
 
 namespace objcopy {
-struct CopyConfig;
+struct CommonConfig;
+struct ELFConfig;
 
 namespace elf {
-Error executeObjcopyOnIHex(const CopyConfig &Config, MemoryBuffer &In,
+Error executeObjcopyOnIHex(const CommonConfig &Config,
+                           const ELFConfig &ELFConfig, MemoryBuffer &In,
                            raw_ostream &Out);
-Error executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
+Error executeObjcopyOnRawBinary(const CommonConfig &Config,
+                                const ELFConfig &ELFConfig, MemoryBuffer &In,
                                 raw_ostream &Out);
-Error executeObjcopyOnBinary(const CopyConfig &Config,
+Error executeObjcopyOnBinary(const CommonConfig &Config,
+                             const ELFConfig &ELFConfig,
                              object::ELFObjectFileBase &In, raw_ostream &Out);
 
 } // end namespace elf
