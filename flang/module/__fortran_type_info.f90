@@ -88,7 +88,7 @@ module __Fortran_type_info
     type(DerivedType), pointer :: derived ! for category == Derived
     type(Value), pointer :: lenValue(:) ! (SIZE(derived%lenParameterKind))
     type(Value), pointer :: bounds(:, :) ! (2, rank): lower, upper
-    class(*), pointer :: initialization
+    type(__builtin_c_ptr) :: initialization
   end type
 
   type :: ProcPtrComponent ! procedure pointer components
