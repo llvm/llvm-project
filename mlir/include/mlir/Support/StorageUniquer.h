@@ -81,7 +81,7 @@ class StorageUniquer {
 public:
   /// This class acts as the base storage that all storage classes must derived
   /// from.
-  class BaseStorage {
+  class alignas(8) BaseStorage {
   protected:
     BaseStorage() = default;
   };

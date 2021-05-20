@@ -298,17 +298,11 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
   if (MemDep)
     MemDep->invalidateCachedPredecessors();
 
-  // Finally, erase the old block and update dominator info.
-  if (DTU) {
-    assert(BB->getInstList().size() == 1 &&
-           isa<UnreachableInst>(BB->getTerminator()) &&
-           "The successor list of BB isn't empty before "
-           "applying corresponding DTU updates.");
+  if (DTU)
     DTU->applyUpdates(Updates);
-    DTU->deleteBB(BB);
-  } else {
-    BB->eraseFromParent(); // Nuke BB if DTU is nullptr.
-  }
+
+  // Finally, erase the old block and update dominator info.
+  DeleteDeadBlock(BB, DTU);
 
   return true;
 }

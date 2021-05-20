@@ -459,13 +459,6 @@ public:
                                      unsigned &SrcOpIdx1,
                                      unsigned &SrcOpIdx2) const;
 
-  /// Returns true if the target has a preference on the operands order of
-  /// the given machine instruction. And specify if \p Commute is required to
-  /// get the desired operands order.
-  virtual bool hasCommutePreference(MachineInstr &MI, bool &Commute) const {
-    return false;
-  }
-
   /// A pair composed of a register and a sub-register index.
   /// Used to give some type checking when modeling Reg:SubReg.
   struct RegSubRegPair {

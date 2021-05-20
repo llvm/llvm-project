@@ -270,14 +270,16 @@ static void EmitMSInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
 }
 
 static void EmitGCCInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
-                                MachineModuleInfo *MMI, int AsmPrinterVariant,
+                                MachineModuleInfo *MMI, const MCAsmInfo *MAI,
                                 AsmPrinter *AP, unsigned LocCookie,
                                 raw_ostream &OS) {
   int CurVariant = -1;            // The number of the {.|.|.} region we are in.
   const char *LastEmitted = AsmStr; // One past the last character emitted.
   unsigned NumOperands = MI->getNumOperands();
+  int AsmPrinterVariant = MAI->getAssemblerDialect();
 
-  OS << '\t';
+  if (MAI->getEmitGNUAsmStartIndentationMarker())
+    OS << '\t';
 
   while (*LastEmitted) {
     switch (*LastEmitted) {
@@ -499,11 +501,9 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
   SmallString<256> StringData;
   raw_svector_ostream OS(StringData);
 
-  // The variant of the current asmprinter.
-  int AsmPrinterVariant = MAI->getAssemblerDialect();
   AsmPrinter *AP = const_cast<AsmPrinter*>(this);
   if (MI->getInlineAsmDialect() == InlineAsm::AD_ATT)
-    EmitGCCInlineAsmStr(AsmStr, MI, MMI, AsmPrinterVariant, AP, LocCookie, OS);
+    EmitGCCInlineAsmStr(AsmStr, MI, MMI, MAI, AP, LocCookie, OS);
   else
     EmitMSInlineAsmStr(AsmStr, MI, MMI, AP, LocCookie, OS);
 

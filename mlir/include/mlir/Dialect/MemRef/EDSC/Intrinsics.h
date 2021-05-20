@@ -31,9 +31,6 @@ using memref_tensor_load = ValueBuilder<memref::TensorLoadOp>;
 using memref_tensor_store = OperationBuilder<memref::TensorStoreOp>;
 using memref_view = ValueBuilder<memref::ViewOp>;
 
-/// Provide an index notation around memref_load and memref_store.
-using MemRefIndexedValue =
-    TemplatedIndexedValue<intrinsics::memref_load, intrinsics::memref_store>;
 } // namespace intrinsics
 } // namespace edsc
 } // namespace mlir

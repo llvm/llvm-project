@@ -117,7 +117,7 @@ struct LinalgStructuredOpConfig {
   SmallVector<LinalgTensorDef> args;
   LinalgIndexingMapsConfig indexingMaps;
   SmallVector<LinalgIteratorTypeDef> iteratorTypes;
-  SmallVector<ScalarAssign> assignments;
+  SmallVector<ScalarAssign, 2> assignments;
 };
 
 struct LinalgOpConfig {

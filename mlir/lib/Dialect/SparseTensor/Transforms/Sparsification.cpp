@@ -347,17 +347,27 @@ static Dim toDim(SparseTensorEncodingAttr &enc, unsigned d) {
 
 /// Helper method to inspect sparse encodings in the tensor types.
 /// Fills the per-dimension sparsity information for all tensors.
-static void findSparseAnnotations(Merger &merger, linalg::GenericOp op) {
+static bool findSparseAnnotations(Merger &merger, linalg::GenericOp op) {
+  bool annotated = false;
   unsigned numTensors = op.getNumShapedOperands();
+  unsigned lhs = numTensors - 1;
   for (unsigned t = 0; t < numTensors; t++) {
     auto map = op.getIndexingMap(t);
     unsigned rank = op.getShapedType(t).getRank();
     auto enc = getSparseTensorEncoding(op.getShapedType(t));
+    if (enc) {
+      annotated = true;
+      if (enc.getDimOrdering() && !enc.getDimOrdering().isIdentity())
+        return false; // TODO: handle permutations
+      if (t == lhs)
+        return false; // TODO: handle sparse outputs
+    }
     for (unsigned d = 0; d < rank; d++) {
       unsigned idx = map.getDimPosition(d);
       merger.setDim(t, idx, toDim(enc, d));
     }
   }
+  return annotated;
 }
 
 /// A DFS helper to compute a topological sort. Note that recursion is
@@ -1356,7 +1366,8 @@ public:
     unsigned numTensors = op.getNumShapedOperands();
     unsigned numLoops = op.iterator_types().getValue().size();
     Merger merger(numTensors, numLoops);
-    findSparseAnnotations(merger, op);
+    if (!findSparseAnnotations(merger, op))
+      return failure();
 
     // Computes a topologically sorted iteration graph to ensure
     // tensors are visited in natural index order. Fails on cycles.

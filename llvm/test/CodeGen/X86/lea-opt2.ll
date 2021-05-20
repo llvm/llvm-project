@@ -11,14 +11,15 @@
 ;        subl    %edx, %ecx
 ;        subl    %eax, %ecx
 
+; TODO: replace lea with sub.
 ; C - (A + B)   -->    C - A - B
 define i32 @test1(i32* %p, i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
 ; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    subl %edx, %ecx
-; CHECK-NEXT:    subl %eax, %ecx
+; CHECK-NEXT:    leal (%rdx,%rax), %esi
+; CHECK-NEXT:    subl %esi, %ecx
 ; CHECK-NEXT:    movl %ecx, (%rdi)
 ; CHECK-NEXT:    subl %edx, %eax
 ; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
@@ -31,15 +32,16 @@ entry:
   ret i32 %sub1
 }
 
+; TODO: replace lea with add.
 ; (A + B) + C   -->    C + A + B
 define i32 @test2(i32* %p, i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
 ; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    addl %eax, %ecx
-; CHECK-NEXT:    addl %edx, %ecx
-; CHECK-NEXT:    movl %ecx, (%rdi)
+; CHECK-NEXT:    leal (%rax,%rdx), %esi
+; CHECK-NEXT:    addl %ecx, %esi
+; CHECK-NEXT:    movl %esi, (%rdi)
 ; CHECK-NEXT:    subl %edx, %eax
 ; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
@@ -51,15 +53,16 @@ entry:
   ret i32 %sub1
 }
 
+; TODO: replace lea with add.
 ; C + (A + B)   -->    C + A + B
 define i32 @test3(i32* %p, i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
 ; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    addl %eax, %ecx
-; CHECK-NEXT:    addl %edx, %ecx
-; CHECK-NEXT:    movl %ecx, (%rdi)
+; CHECK-NEXT:    leal (%rax,%rdx), %esi
+; CHECK-NEXT:    addl %ecx, %esi
+; CHECK-NEXT:    movl %esi, (%rdi)
 ; CHECK-NEXT:    subl %edx, %eax
 ; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
@@ -92,12 +95,13 @@ entry:
   ret i32 %sub1
 }
 
+; TODO: replace lea with sub.
 define i64 @test5(i64* %p, i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    subq %rdx, %rcx
-; CHECK-NEXT:    subq %rax, %rcx
+; CHECK-NEXT:    leaq (%rdx,%rax), %rsi
+; CHECK-NEXT:    subq %rsi, %rcx
 ; CHECK-NEXT:    movq %rcx, (%rdi)
 ; CHECK-NEXT:    subq %rdx, %rax
 ; CHECK-NEXT:    retq
@@ -110,13 +114,14 @@ entry:
   ret i64 %sub1
 }
 
+; TODO: replace lea with add.
 define i64 @test6(i64* %p, i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: test6:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    addq %rdx, %rcx
-; CHECK-NEXT:    addq %rax, %rcx
-; CHECK-NEXT:    movq %rcx, (%rdi)
+; CHECK-NEXT:    leaq (%rdx,%rax), %rsi
+; CHECK-NEXT:    addq %rcx, %rsi
+; CHECK-NEXT:    movq %rsi, (%rdi)
 ; CHECK-NEXT:    subq %rdx, %rax
 ; CHECK-NEXT:    retq
 entry:
@@ -128,13 +133,14 @@ entry:
   ret i64 %sub1
 }
 
+; TODO: replace lea with add.
 define i64 @test7(i64* %p, i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: test7:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    addq %rdx, %rcx
-; CHECK-NEXT:    addq %rax, %rcx
-; CHECK-NEXT:    movq %rcx, (%rdi)
+; CHECK-NEXT:    leaq (%rdx,%rax), %rsi
+; CHECK-NEXT:    addq %rcx, %rsi
+; CHECK-NEXT:    movq %rsi, (%rdi)
 ; CHECK-NEXT:    subq %rdx, %rax
 ; CHECK-NEXT:    retq
 entry:

@@ -3,9 +3,9 @@
 // RUN: %clang_cc1 -fopenmp -DOMP5 -x c++ -std=c++11 -triple x86_64-apple-darwin10 -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -DOMP5 -x c++ -triple x86_64-apple-darwin10 -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK2
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -DOMP5 -x c++ -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK3
+// RUN: %clang_cc1 -verify -fopenmp-simd -DOMP5 -x c++ -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // RUN: %clang_cc1 -fopenmp-simd -DOMP5 -x c++ -std=c++11 -triple x86_64-apple-darwin10 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -DOMP5 -x c++ -triple x86_64-apple-darwin10 -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK4
+// RUN: %clang_cc1 -fopenmp-simd -DOMP5 -x c++ -triple x86_64-apple-darwin10 -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -528,91 +528,4 @@ int main() {
 // CHECK2-NEXT:    store atomic volatile i8 1, i8* [[TMP5]] unordered, align 1
 // CHECK2-NEXT:    ret void
 //
-//
-// CHECK3-LABEL: define {{[^@]+}}@main
-// CHECK3-SAME: () #[[ATTR0:[0-9]+]] {
-// CHECK3-NEXT:  entry:
-// CHECK3-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[A:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[I:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    store i32 0, i32* [[RETVAL]], align 4
-// CHECK3-NEXT:    store i32 0, i32* [[A]], align 4
-// CHECK3-NEXT:    store i32 0, i32* [[I]], align 4
-// CHECK3-NEXT:    br label [[FOR_COND:%.*]]
-// CHECK3:       for.cond:
-// CHECK3-NEXT:    [[TMP0:%.*]] = load i32, i32* [[I]], align 4
-// CHECK3-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP0]], 10
-// CHECK3-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
-// CHECK3:       for.body:
-// CHECK3-NEXT:    [[TMP1:%.*]] = load i32, i32* [[I]], align 4
-// CHECK3-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[TMP1]], 5
-// CHECK3-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-// CHECK3:       if.then:
-// CHECK3-NEXT:    store i32 0, i32* [[A]], align 4
-// CHECK3-NEXT:    [[TMP2:%.*]] = load i32, i32* [[I]], align 4
-// CHECK3-NEXT:    [[TMP3:%.*]] = load i32, i32* [[A]], align 4
-// CHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP3]], [[TMP2]]
-// CHECK3-NEXT:    store i32 [[ADD]], i32* [[A]], align 4
-// CHECK3-NEXT:    [[TMP4:%.*]] = load i32, i32* [[I]], align 4
-// CHECK3-NEXT:    [[TMP5:%.*]] = load i32, i32* [[A]], align 4
-// CHECK3-NEXT:    [[ADD2:%.*]] = add nsw i32 [[TMP5]], [[TMP4]]
-// CHECK3-NEXT:    store i32 [[ADD2]], i32* [[A]], align 4
-// CHECK3-NEXT:    [[TMP6:%.*]] = load i32, i32* [[I]], align 4
-// CHECK3-NEXT:    [[TMP7:%.*]] = load i32, i32* [[A]], align 4
-// CHECK3-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP7]], [[TMP6]]
-// CHECK3-NEXT:    store i32 [[ADD3]], i32* [[A]], align 4
-// CHECK3-NEXT:    br label [[IF_END]]
-// CHECK3:       if.end:
-// CHECK3-NEXT:    br label [[FOR_INC:%.*]]
-// CHECK3:       for.inc:
-// CHECK3-NEXT:    [[TMP8:%.*]] = load i32, i32* [[I]], align 4
-// CHECK3-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP8]], 1
-// CHECK3-NEXT:    store i32 [[INC]], i32* [[I]], align 4
-// CHECK3-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP2:![0-9]+]]
-// CHECK3:       for.end:
-// CHECK3-NEXT:    ret i32 0
-//
-//
-// CHECK4-LABEL: define {{[^@]+}}@main
-// CHECK4-SAME: () #[[ATTR0:[0-9]+]] {
-// CHECK4-NEXT:  entry:
-// CHECK4-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK4-NEXT:    [[A:%.*]] = alloca i32, align 4
-// CHECK4-NEXT:    [[I:%.*]] = alloca i32, align 4
-// CHECK4-NEXT:    store i32 0, i32* [[RETVAL]], align 4
-// CHECK4-NEXT:    store i32 0, i32* [[A]], align 4
-// CHECK4-NEXT:    store i32 0, i32* [[I]], align 4
-// CHECK4-NEXT:    br label [[FOR_COND:%.*]]
-// CHECK4:       for.cond:
-// CHECK4-NEXT:    [[TMP0:%.*]] = load i32, i32* [[I]], align 4
-// CHECK4-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP0]], 10
-// CHECK4-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
-// CHECK4:       for.body:
-// CHECK4-NEXT:    [[TMP1:%.*]] = load i32, i32* [[I]], align 4
-// CHECK4-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[TMP1]], 5
-// CHECK4-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-// CHECK4:       if.then:
-// CHECK4-NEXT:    store i32 0, i32* [[A]], align 4
-// CHECK4-NEXT:    [[TMP2:%.*]] = load i32, i32* [[I]], align 4
-// CHECK4-NEXT:    [[TMP3:%.*]] = load i32, i32* [[A]], align 4
-// CHECK4-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP3]], [[TMP2]]
-// CHECK4-NEXT:    store i32 [[ADD]], i32* [[A]], align 4
-// CHECK4-NEXT:    [[TMP4:%.*]] = load i32, i32* [[I]], align 4
-// CHECK4-NEXT:    [[TMP5:%.*]] = load i32, i32* [[A]], align 4
-// CHECK4-NEXT:    [[ADD2:%.*]] = add nsw i32 [[TMP5]], [[TMP4]]
-// CHECK4-NEXT:    store i32 [[ADD2]], i32* [[A]], align 4
-// CHECK4-NEXT:    [[TMP6:%.*]] = load i32, i32* [[I]], align 4
-// CHECK4-NEXT:    [[TMP7:%.*]] = load i32, i32* [[A]], align 4
-// CHECK4-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP7]], [[TMP6]]
-// CHECK4-NEXT:    store i32 [[ADD3]], i32* [[A]], align 4
-// CHECK4-NEXT:    br label [[IF_END]]
-// CHECK4:       if.end:
-// CHECK4-NEXT:    br label [[FOR_INC:%.*]]
-// CHECK4:       for.inc:
-// CHECK4-NEXT:    [[TMP8:%.*]] = load i32, i32* [[I]], align 4
-// CHECK4-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP8]], 1
-// CHECK4-NEXT:    store i32 [[INC]], i32* [[I]], align 4
-// CHECK4-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP2:![0-9]+]]
-// CHECK4:       for.end:
-// CHECK4-NEXT:    ret i32 0
 //

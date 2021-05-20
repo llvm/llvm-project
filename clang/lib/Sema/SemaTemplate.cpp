@@ -2217,7 +2217,7 @@ struct ConvertConstructorToDeductionGuideTransform {
       return nullptr;
     TypeSourceInfo *NewTInfo = TLB.getTypeSourceInfo(SemaRef.Context, NewType);
 
-    return buildDeductionGuide(TemplateParams, CD->getExplicitSpecifier(),
+    return buildDeductionGuide(TemplateParams, CD, CD->getExplicitSpecifier(),
                                NewTInfo, CD->getBeginLoc(), CD->getLocation(),
                                CD->getEndLoc(), MaterializedTypedefs);
   }
@@ -2247,7 +2247,7 @@ struct ConvertConstructorToDeductionGuideTransform {
       Params.push_back(NewParam);
     }
 
-    return buildDeductionGuide(Template->getTemplateParameters(),
+    return buildDeductionGuide(Template->getTemplateParameters(), nullptr,
                                ExplicitSpecifier(), TSI, Loc, Loc, Loc);
   }
 
@@ -2425,9 +2425,9 @@ private:
   }
 
   FunctionTemplateDecl *buildDeductionGuide(
-      TemplateParameterList *TemplateParams, ExplicitSpecifier ES,
-      TypeSourceInfo *TInfo, SourceLocation LocStart, SourceLocation Loc,
-      SourceLocation LocEnd,
+      TemplateParameterList *TemplateParams, CXXConstructorDecl *Ctor,
+      ExplicitSpecifier ES, TypeSourceInfo *TInfo, SourceLocation LocStart,
+      SourceLocation Loc, SourceLocation LocEnd,
       llvm::ArrayRef<TypedefNameDecl *> MaterializedTypedefs = {}) {
     DeclarationNameInfo Name(DeductionGuideName, Loc);
     ArrayRef<ParmVarDecl *> Params =
@@ -2436,7 +2436,7 @@ private:
     // Build the implicit deduction guide template.
     auto *Guide =
         CXXDeductionGuideDecl::Create(SemaRef.Context, DC, LocStart, ES, Name,
-                                      TInfo->getType(), TInfo, LocEnd);
+                                      TInfo->getType(), TInfo, LocEnd, Ctor);
     Guide->setImplicit();
     Guide->setParams(Params);
 

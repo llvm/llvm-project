@@ -24,11 +24,11 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-NOINDICATOR-NOT: __odr_asan_gen_a
 ; CHECK-NOALIAS-NOT: private alias
 ; CHECK-INDICATOR: @__odr_asan_gen_a = global i8 0, align 1
-; CHECK-ALIAS: @0 = private alias { [2 x i32], [56 x i8] }, { [2 x i32], [56 x i8] }* @a
+; CHECK-ALIAS: @0 = private alias { [2 x i32], [24 x i8] }, { [2 x i32], [24 x i8] }* @a
 
-; CHECK-ALIAS: @1 = private alias { [2 x i32], [56 x i8] }, { [2 x i32], [56 x i8] }* @b
-; CHECK-ALIAS: @2 = private alias { [2 x i32], [56 x i8] }, { [2 x i32], [56 x i8] }* @c
-; CHECK-ALIAS: @3 = private alias { [2 x i32], [56 x i8] }, { [2 x i32], [56 x i8] }* @d
+; CHECK-ALIAS: @1 = private alias { [2 x i32], [24 x i8] }, { [2 x i32], [24 x i8] }* @b
+; CHECK-ALIAS: @2 = private alias { [2 x i32], [24 x i8] }, { [2 x i32], [24 x i8] }* @c
+; CHECK-ALIAS: @3 = private alias { [2 x i32], [24 x i8] }, { [2 x i32], [24 x i8] }* @d
 
 ; Function Attrs: nounwind sanitize_address uwtable
 define i32 @foo(i32 %M) #0 {

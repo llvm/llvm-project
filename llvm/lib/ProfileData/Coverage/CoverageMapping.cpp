@@ -186,6 +186,22 @@ Expected<int64_t> CounterMappingContext::evaluate(const Counter &C) const {
   llvm_unreachable("Unhandled CounterKind");
 }
 
+unsigned CounterMappingContext::getMaxCounterID(const Counter &C) const {
+  switch (C.getKind()) {
+  case Counter::Zero:
+    return 0;
+  case Counter::CounterValueReference:
+    return C.getCounterID();
+  case Counter::Expression: {
+    if (C.getExpressionID() >= Expressions.size())
+      return 0;
+    const auto &E = Expressions[C.getExpressionID()];
+    return std::max(getMaxCounterID(E.LHS), getMaxCounterID(E.RHS));
+  }
+  }
+  llvm_unreachable("Unhandled CounterKind");
+}
+
 void FunctionRecordIterator::skipOtherFiles() {
   while (Current != Records.end() && !Filename.empty() &&
          Filename != Current->Filenames[0])
@@ -201,6 +217,15 @@ ArrayRef<unsigned> CoverageMapping::getImpreciseRecordIndicesForFilename(
   if (RecordIt == FilenameHash2RecordIndices.end())
     return {};
   return RecordIt->second;
+}
+
+static unsigned getMaxCounterID(const CounterMappingContext &Ctx,
+                                const CoverageMappingRecord &Record) {
+  unsigned MaxCounterID = 0;
+  for (const auto &Region : Record.MappingRegions) {
+    MaxCounterID = std::max(MaxCounterID, Ctx.getMaxCounterID(Region.Count));
+  }
+  return MaxCounterID;
 }
 
 Error CoverageMapping::loadFunctionRecord(
@@ -227,7 +252,7 @@ Error CoverageMapping::loadFunctionRecord(
       return Error::success();
     } else if (IPE != instrprof_error::unknown_function)
       return make_error<InstrProfError>(IPE);
-    Counts.assign(Record.MappingRegions.size(), 0);
+    Counts.assign(getMaxCounterID(Ctx, Record) + 1, 0);
   }
   Ctx.setCounts(Counts);
 

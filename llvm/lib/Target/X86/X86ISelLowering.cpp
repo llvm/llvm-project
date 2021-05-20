@@ -25049,6 +25049,9 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   MVT VT = Op.getSimpleValueType();
   const IntrinsicData* IntrData = getIntrinsicWithoutChain(IntNo);
 
+  // Propagate flags from original node to transformed node(s).
+  SelectionDAG::FlagInserter FlagsInserter(DAG, Op->getFlags());
+
   if (IntrData) {
     switch(IntrData->Type) {
     case INTR_TYPE_1OP: {
@@ -48060,6 +48063,8 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
   unsigned NewOpcode =
       negateFMAOpcode(N->getOpcode(), NegA != NegB, NegC, false);
 
+  // Propagate fast-math-flags to new FMA node.
+  SelectionDAG::FlagInserter FlagsInserter(DAG, Flags);
   if (IsStrict) {
     assert(N->getNumOperands() == 4 && "Shouldn't be greater than 4");
     return DAG.getNode(NewOpcode, dl, {VT, MVT::Other},

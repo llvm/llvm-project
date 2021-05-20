@@ -126,3 +126,31 @@ namespace PackInTypeConstraint {
      ...); // expected-error {{does not contain any unexpanded}}
   }
 }
+
+namespace BuiltinIsConstantEvaluated {
+  // Check that we do all satisfaction and diagnostic checks in a constant context.
+  template<typename T> concept C = __builtin_is_constant_evaluated(); // expected-warning {{always}}
+  static_assert(C<int>);
+
+  template<typename T> concept D = __builtin_is_constant_evaluated() == true; // expected-warning {{always}}
+  static_assert(D<int>);
+
+  template<typename T> concept E = __builtin_is_constant_evaluated() == true && // expected-warning {{always}}
+                                   false; // expected-note {{'false' evaluated to false}}
+  static_assert(E<int>); // expected-error {{failed}} expected-note {{because 'int' does not satisfy 'E'}}
+
+  template<typename T> concept F = __builtin_is_constant_evaluated() == false; // expected-warning {{always}}
+  // expected-note@-1 {{'__builtin_is_constant_evaluated() == false' (1 == 0)}}
+  static_assert(F<int>); // expected-error {{failed}} expected-note {{because 'int' does not satisfy 'F'}}
+
+  template<typename T> concept G = __builtin_is_constant_evaluated() && // expected-warning {{always}}
+                                   false; // expected-note {{'false' evaluated to false}}
+  static_assert(G<int>); // expected-error {{failed}} expected-note {{because 'int' does not satisfy 'G'}}
+}
+
+namespace NoConstantFolding {
+  // Ensure we use strict constant evaluation rules when checking satisfaction.
+  int n;
+  template <class T> concept C = &n + 3 - 3 == &n; // expected-error {{non-constant expression}} expected-note {{cannot refer to element 3 of non-array object}}
+  static_assert(C<void>); // expected-note {{while checking}}
+}

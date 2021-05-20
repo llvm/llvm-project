@@ -3,9 +3,9 @@
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-linux -fexceptions -fcxx-exceptions -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-linux -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK2
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -verify -fopenmp-simd -x c++ -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s --check-prefix=CHECK3
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -verify -fopenmp-simd -x c++ -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK4
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER
@@ -1091,62 +1091,4 @@ int main(int argc, char **argv) {
 // CHECK2:       omp.arraycpy.done5:
 // CHECK2-NEXT:    ret void
 //
-//
-// CHECK3-LABEL: define {{[^@]+}}@main
-// CHECK3-SAME: (i32 [[ARGC:%.*]], i8** [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
-// CHECK3-NEXT:  entry:
-// CHECK3-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[ARGV_ADDR:%.*]] = alloca i8**, align 8
-// CHECK3-NEXT:    [[I:%.*]] = alloca i64, align 8
-// CHECK3-NEXT:    store i32 0, i32* [[RETVAL]], align 4
-// CHECK3-NEXT:    store i32 [[ARGC]], i32* [[ARGC_ADDR]], align 4
-// CHECK3-NEXT:    store i8** [[ARGV]], i8*** [[ARGV_ADDR]], align 8
-// CHECK3-NEXT:    store i64 0, i64* [[I]], align 8
-// CHECK3-NEXT:    br label [[FOR_COND:%.*]]
-// CHECK3:       for.cond:
-// CHECK3-NEXT:    [[TMP0:%.*]] = load i64, i64* [[I]], align 8
-// CHECK3-NEXT:    [[CMP:%.*]] = icmp slt i64 [[TMP0]], 10
-// CHECK3-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
-// CHECK3:       for.body:
-// CHECK3-NEXT:    br label [[FOR_INC:%.*]]
-// CHECK3:       for.inc:
-// CHECK3-NEXT:    [[TMP1:%.*]] = load i64, i64* [[I]], align 8
-// CHECK3-NEXT:    [[INC:%.*]] = add nsw i64 [[TMP1]], 1
-// CHECK3-NEXT:    store i64 [[INC]], i64* [[I]], align 8
-// CHECK3-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP2:![0-9]+]]
-// CHECK3:       for.end:
-// CHECK3-NEXT:    [[TMP2:%.*]] = load i32, i32* [[RETVAL]], align 4
-// CHECK3-NEXT:    ret i32 [[TMP2]]
-//
-//
-// CHECK4-LABEL: define {{[^@]+}}@main
-// CHECK4-SAME: (i32 [[ARGC:%.*]], i8** [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] !dbg [[DBG6:![0-9]+]] {
-// CHECK4-NEXT:  entry:
-// CHECK4-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK4-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
-// CHECK4-NEXT:    [[ARGV_ADDR:%.*]] = alloca i8**, align 8
-// CHECK4-NEXT:    [[I:%.*]] = alloca i64, align 8
-// CHECK4-NEXT:    store i32 0, i32* [[RETVAL]], align 4
-// CHECK4-NEXT:    store i32 [[ARGC]], i32* [[ARGC_ADDR]], align 4
-// CHECK4-NEXT:    call void @llvm.dbg.declare(metadata i32* [[ARGC_ADDR]], metadata [[META14:![0-9]+]], metadata !DIExpression()), !dbg [[DBG15:![0-9]+]]
-// CHECK4-NEXT:    store i8** [[ARGV]], i8*** [[ARGV_ADDR]], align 8
-// CHECK4-NEXT:    call void @llvm.dbg.declare(metadata i8*** [[ARGV_ADDR]], metadata [[META16:![0-9]+]], metadata !DIExpression()), !dbg [[DBG17:![0-9]+]]
-// CHECK4-NEXT:    call void @llvm.dbg.declare(metadata i64* [[I]], metadata [[META18:![0-9]+]], metadata !DIExpression()), !dbg [[DBG23:![0-9]+]]
-// CHECK4-NEXT:    store i64 0, i64* [[I]], align 8, !dbg [[DBG23]]
-// CHECK4-NEXT:    br label [[FOR_COND:%.*]], !dbg [[DBG24:![0-9]+]]
-// CHECK4:       for.cond:
-// CHECK4-NEXT:    [[TMP0:%.*]] = load i64, i64* [[I]], align 8, !dbg [[DBG25:![0-9]+]]
-// CHECK4-NEXT:    [[CMP:%.*]] = icmp slt i64 [[TMP0]], 10, !dbg [[DBG27:![0-9]+]]
-// CHECK4-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]], !dbg [[DBG28:![0-9]+]]
-// CHECK4:       for.body:
-// CHECK4-NEXT:    br label [[FOR_INC:%.*]], !dbg [[DBG29:![0-9]+]]
-// CHECK4:       for.inc:
-// CHECK4-NEXT:    [[TMP1:%.*]] = load i64, i64* [[I]], align 8, !dbg [[DBG31:![0-9]+]]
-// CHECK4-NEXT:    [[INC:%.*]] = add nsw i64 [[TMP1]], 1, !dbg [[DBG31]]
-// CHECK4-NEXT:    store i64 [[INC]], i64* [[I]], align 8, !dbg [[DBG31]]
-// CHECK4-NEXT:    br label [[FOR_COND]], !dbg [[DBG32:![0-9]+]], !llvm.loop [[LOOP33:![0-9]+]]
-// CHECK4:       for.end:
-// CHECK4-NEXT:    [[TMP2:%.*]] = load i32, i32* [[RETVAL]], align 4, !dbg [[DBG36:![0-9]+]]
-// CHECK4-NEXT:    ret i32 [[TMP2]], !dbg [[DBG36]]
 //

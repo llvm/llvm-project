@@ -2552,13 +2552,21 @@ ModuleAddressSanitizer::getRedzoneSizeForGlobal(uint64_t SizeInBytes) const {
   constexpr uint64_t kMaxRZ = 1 << 18;
   const uint64_t MinRZ = getMinRedzoneSizeForGlobal();
 
-  // Calculate RZ, where MinRZ <= RZ <= MaxRZ, and RZ ~ 1/4 * SizeInBytes.
-  uint64_t RZ =
-      std::max(MinRZ, std::min(kMaxRZ, (SizeInBytes / MinRZ / 4) * MinRZ));
+  uint64_t RZ = 0;
+  if (SizeInBytes <= MinRZ / 2) {
+    // Reduce redzone size for small size objects, e.g. int, char[1]. MinRZ is
+    // at least 32 bytes, optimize when SizeInBytes is less than or equal to
+    // half of MinRZ.
+    RZ = MinRZ - SizeInBytes;
+  } else {
+    // Calculate RZ, where MinRZ <= RZ <= MaxRZ, and RZ ~ 1/4 * SizeInBytes.
+    RZ = std::max(MinRZ, std::min(kMaxRZ, (SizeInBytes / MinRZ / 4) * MinRZ));
 
-  // Round up to multiple of MinRZ.
-  if (SizeInBytes % MinRZ)
-    RZ += MinRZ - (SizeInBytes % MinRZ);
+    // Round up to multiple of MinRZ.
+    if (SizeInBytes % MinRZ)
+      RZ += MinRZ - (SizeInBytes % MinRZ);
+  }
+
   assert((RZ + SizeInBytes) % MinRZ == 0);
 
   return RZ;
