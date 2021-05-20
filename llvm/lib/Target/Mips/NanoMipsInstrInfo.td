@@ -220,6 +220,17 @@ def PseudoReturnNM : PseudoInstNM<(outs), (ins GPR32NMOpnd:$rs), []> {
   bit isCTI = 1;
 }
 
+// Indirect branch is matched as PseudoIndirectBranchNM and expanded to JRC_NM.
+def PseudoIndirectBranchNM :
+    PseudoInstNM<(outs), (ins GPR32NMOpnd:$rs), [(brind GPR32NMOpnd:$rs)]>,
+    PseudoInstExpansion<(JRC_NM GPR32NMOpnd:$rs)> {
+  let isTerminator = 1;
+  let isBarrier = 1;
+  let isBranch = 1;
+  let isIndirectBranch = 1;
+  bit isCTI = 1;
+}
+
 let hasPostISelHook = 1, isCall = 1, isCTI = 1, Defs = [RA_NM] in {
   def JALRC_NM : InstNM<(outs GPR32NMOpnd:$rd), (ins GPR32NMOpnd:$rs),
                         "jalrc\t$rd, $rs", []>, InstSize32;
