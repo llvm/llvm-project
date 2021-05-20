@@ -172,8 +172,10 @@ Value *InstrProfIncrementInst::getStep() const {
 
 Optional<RoundingMode> ConstrainedFPIntrinsic::getRoundingMode() const {
   unsigned NumOperands = getNumArgOperands();
-  Metadata *MD =
-      cast<MetadataAsValue>(getArgOperand(NumOperands - 2))->getMetadata();
+  Metadata *MD = nullptr;
+  auto *MAV = dyn_cast<MetadataAsValue>(getArgOperand(NumOperands - 2));
+  if (MAV)
+    MD = MAV->getMetadata();
   if (!MD || !isa<MDString>(MD))
     return None;
   return StrToRoundingMode(cast<MDString>(MD)->getString());
@@ -182,11 +184,29 @@ Optional<RoundingMode> ConstrainedFPIntrinsic::getRoundingMode() const {
 Optional<fp::ExceptionBehavior>
 ConstrainedFPIntrinsic::getExceptionBehavior() const {
   unsigned NumOperands = getNumArgOperands();
-  Metadata *MD =
-      cast<MetadataAsValue>(getArgOperand(NumOperands - 1))->getMetadata();
+  Metadata *MD = nullptr;
+  auto *MAV = dyn_cast<MetadataAsValue>(getArgOperand(NumOperands - 1));
+  if (MAV)
+    MD = MAV->getMetadata();
   if (!MD || !isa<MDString>(MD))
     return None;
   return StrToExceptionBehavior(cast<MDString>(MD)->getString());
+}
+
+bool ConstrainedFPIntrinsic::isDefaultFPEnvironment() const {
+  Optional<fp::ExceptionBehavior> Except = getExceptionBehavior();
+  if (Except) {
+    if (Except.getValue() != fp::ebIgnore)
+      return false;
+  }
+
+  Optional<RoundingMode> Rounding = getRoundingMode();
+  if (Rounding) {
+    if (Rounding.getValue() != RoundingMode::NearestTiesToEven)
+      return false;
+  }
+
+  return true;
 }
 
 FCmpInst::Predicate ConstrainedFPCmpIntrinsic::getPredicate() const {
