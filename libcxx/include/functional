@@ -507,6 +507,7 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 */
 
 #include <__config>
+#include <__debug>
 #include <concepts>
 #include <type_traits>
 #include <typeinfo>

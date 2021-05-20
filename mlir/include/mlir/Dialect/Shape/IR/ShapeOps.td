@@ -93,7 +93,8 @@ def Shape_BroadcastOp : Shape_Op<"broadcast", [Commutative, NoSideEffect]> {
   let verifier = [{ return ::verify(*this); }];
 }
 
-def Shape_ConstShapeOp : Shape_Op<"const_shape", [ConstantLike, NoSideEffect]> {
+def Shape_ConstShapeOp : Shape_Op<"const_shape",
+    [ConstantLike, NoSideEffect, DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let summary = "Creates a constant shape or extent tensor";
   let description = [{
     Creates a constant shape or extent tensor. The individual extents are given
@@ -103,7 +104,7 @@ def Shape_ConstShapeOp : Shape_Op<"const_shape", [ConstantLike, NoSideEffect]> {
     ```mlir
     %0 = shape.const_shape [] : !shape.shape
     %1 = shape.const_shape [1, 2, 3] : !shape.shape
-    %2 = shape.const_shape [4, 5, 6] : tensor<?xindex>
+    %2 = shape.const_shape [4, 5, 6] : tensor<3xindex>
     ```
   }];
   let arguments = (ins IndexElementsAttr:$shape);
@@ -114,6 +115,11 @@ def Shape_ConstShapeOp : Shape_Op<"const_shape", [ConstantLike, NoSideEffect]> {
   let parser = [{ return ::parse$cppClass(parser, result); }];
   let hasFolder = 1;
   let hasCanonicalizer = 1;
+
+  let extraClassDeclaration = [{
+    // InferTypeOpInterface:
+    static bool isCompatibleReturnTypes(TypeRange l, TypeRange r);
+  }];
 }
 
 def Shape_ConstSizeOp : Shape_Op<"const_size", [

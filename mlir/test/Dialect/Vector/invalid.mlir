@@ -371,6 +371,16 @@ func @test_vector.transfer_read(%arg0: memref<?x?xvector<2x3xf32>>) {
   %c3 = constant 3 : index
   %f0 = constant 0.0 : f32
   %vf0 = splat %f0 : vector<2x3xf32>
+  // expected-error@+1 {{requires broadcast dimensions to be in-bounds}}
+  %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 {in_bounds = [false, true], permutation_map = affine_map<(d0, d1)->(0, d1)>} : memref<?x?xvector<2x3xf32>>, vector<1x1x2x3xf32>
+}
+
+// -----
+
+func @test_vector.transfer_read(%arg0: memref<?x?xvector<2x3xf32>>) {
+  %c3 = constant 3 : index
+  %f0 = constant 0.0 : f32
+  %vf0 = splat %f0 : vector<2x3xf32>
   %mask = splat %c1 : vector<2x3xi1>
   // expected-error@+1 {{does not support masks with vector element type}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %vf0, %mask {permutation_map = affine_map<(d0, d1)->(d0, d1)>} : memref<?x?xvector<2x3xf32>>, vector<1x1x2x3xf32>

@@ -5225,6 +5225,40 @@ TEST_P(ErrorHandlingTest, ErrorIsNotPropagatedFromMemberToNamespace) {
   EXPECT_TRUE(ImportedOK);
 }
 
+TEST_P(ErrorHandlingTest, ODRViolationWithinTypedefDecls) {
+  // Importing `z` should fail - instead of crashing - due to an ODR violation.
+  // The `bar::e` typedef sets it's DeclContext after the import is done.
+  // However, if the importation fails, it will be left as a nullptr.
+  // During the cleanup of the failed import, we should check whether the
+  // DeclContext is null or not - instead of dereferencing that unconditionally.
+  constexpr auto ToTUCode = R"(
+      namespace X {
+        struct bar {
+          int odr_violation;
+        };
+      })";
+  constexpr auto FromTUCode = R"(
+      namespace X {
+        enum b {};
+        struct bar {
+          typedef b e;
+          static e d;
+        };
+      }
+      int z = X::bar::d;
+      )";
+  Decl *ToTU = getToTuDecl(ToTUCode, Lang_CXX11);
+  static_cast<void>(ToTU);
+  Decl *FromTU = getTuDecl(FromTUCode, Lang_CXX11);
+  auto *FromZ =
+      FirstDeclMatcher<VarDecl>().match(FromTU, varDecl(hasName("z")));
+  ASSERT_TRUE(FromZ);
+  ASSERT_TRUE(FromZ->hasInit());
+
+  auto *ImportedZ = Import(FromZ, Lang_CXX11);
+  EXPECT_FALSE(ImportedZ);
+}
+
 // An error should be set for a class if it had a previous import with an error
 // from another TU.
 TEST_P(ErrorHandlingTest,

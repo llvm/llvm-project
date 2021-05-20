@@ -2213,7 +2213,7 @@ inline double RoundSignedAPIntToDouble(const APInt &APIVal) {
   return APIVal.signedRoundToDouble();
 }
 
-/// Converts the given APInt to a float vlalue.
+/// Converts the given APInt to a float value.
 inline float RoundAPIntToFloat(const APInt &APIVal) {
   return float(RoundAPIntToDouble(APIVal));
 }

@@ -127,12 +127,6 @@ struct VFInfo {
   std::string ScalarName; /// Scalar Function Name.
   std::string VectorName; /// Vector Function Name associated to this VFInfo.
   VFISAKind ISA;          /// Instruction Set Architecture.
-
-  // Comparison operator.
-  bool operator==(const VFInfo &Other) const {
-    return std::tie(Shape, ScalarName, VectorName, ISA) ==
-           std::tie(Shape, Other.ScalarName, Other.VectorName, Other.ISA);
-  }
 };
 
 namespace VFABI {

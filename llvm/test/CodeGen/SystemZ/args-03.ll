@@ -68,9 +68,9 @@ define void @foo() {
 ; CHECK-STACK: mvghi 160(%r15), -5
 ; CHECK-STACK: brasl %r14, bar@PLT
 
-  call void @bar (i8 -1, i16 -2, i32 -3, i64 -4, float 0.0, double 0.0,
+  call void @bar (i8 zeroext -1, i16 zeroext -2, i32 zeroext -3, i64 -4, float 0.0, double 0.0,
                   fp128 0xL00000000000000000000000000000000, i64 -5,
-                  float -0.0, double -0.0, i8 -6, i16 -7, i32 -8, i64 -9,
+                  float -0.0, double -0.0, i8 zeroext -6, i16 zeroext -7, i32 zeroext -8, i64 -9,
                   float 0.0, double 0.0,
                   fp128 0xL00000000000000000000000000000000)
   ret void

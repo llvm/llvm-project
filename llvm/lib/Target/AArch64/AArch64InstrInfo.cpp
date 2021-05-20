@@ -1904,6 +1904,68 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   }
 
   Register Reg = MI.getOperand(0).getReg();
+  TargetOptions Options = MI.getParent()->getParent()->getTarget().Options;
+  if (Options.StackProtectorGuard == StackProtectorGuards::SysReg) {
+    const AArch64SysReg::SysReg *SrcReg =
+        AArch64SysReg::lookupSysRegByName(Options.StackProtectorGuardReg);
+    if (!SrcReg)
+      report_fatal_error("Unknown SysReg for Stack Protector Guard Register");
+
+    // mrs xN, sysreg
+    BuildMI(MBB, MI, DL, get(AArch64::MRS))
+        .addDef(Reg, RegState::Renamable)
+        .addImm(SrcReg->Encoding);
+    int Offset = Options.StackProtectorGuardOffset;
+    if (Offset >= 0 && Offset <= 32760 && Offset % 8 == 0) {
+      // ldr xN, [xN, #offset]
+      BuildMI(MBB, MI, DL, get(AArch64::LDRXui))
+          .addDef(Reg)
+          .addUse(Reg, RegState::Kill)
+          .addImm(Offset / 8);
+    } else if (Offset >= -256 && Offset <= 255) {
+      // ldur xN, [xN, #offset]
+      BuildMI(MBB, MI, DL, get(AArch64::LDURXi))
+          .addDef(Reg)
+          .addUse(Reg, RegState::Kill)
+          .addImm(Offset);
+    } else if (Offset >= -4095 && Offset <= 4095) {
+      if (Offset > 0) {
+        // add xN, xN, #offset
+        BuildMI(MBB, MI, DL, get(AArch64::ADDXri))
+            .addDef(Reg)
+            .addUse(Reg, RegState::Kill)
+            .addImm(Offset)
+            .addImm(0);
+      } else {
+        // sub xN, xN, #offset
+        BuildMI(MBB, MI, DL, get(AArch64::SUBXri))
+            .addDef(Reg)
+            .addUse(Reg, RegState::Kill)
+            .addImm(-Offset)
+            .addImm(0);
+      }
+      // ldr xN, [xN]
+      BuildMI(MBB, MI, DL, get(AArch64::LDRXui))
+          .addDef(Reg)
+          .addUse(Reg, RegState::Kill)
+          .addImm(0);
+    } else {
+      // Cases that are larger than +/- 4095 and not a multiple of 8, or larger
+      // than 23760.
+      // It might be nice to use AArch64::MOVi32imm here, which would get
+      // expanded in PreSched2 after PostRA, but our lone scratch Reg already
+      // contains the MRS result. findScratchNonCalleeSaveRegister() in
+      // AArch64FrameLowering might help us find such a scratch register
+      // though. If we failed to find a scratch register, we could emit a
+      // stream of add instructions to build up the immediate. Or, we could try
+      // to insert a AArch64::MOVi32imm before register allocation so that we
+      // didn't need to scavenge for a scratch register.
+      report_fatal_error("Unable to encode Stack Protector Guard Offset");
+    }
+    MBB.erase(MI);
+    return true;
+  }
+
   const GlobalValue *GV =
       cast<GlobalValue>((*MI.memoperands_begin())->getValue());
   const TargetMachine &TM = MBB.getParent()->getTarget();

@@ -8383,7 +8383,11 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
       // traverse of the 'to' context).
       auto PosF = ImportedFromDecls.find(ToD);
       if (PosF != ImportedFromDecls.end()) {
-        SharedState->removeDeclFromLookup(ToD);
+        // In the case of TypedefNameDecl we create the Decl first and only
+        // then we import and set its DeclContext. So, the DC might not be set
+        // when we reach here.
+        if (ToD->getDeclContext())
+          SharedState->removeDeclFromLookup(ToD);
         ImportedFromDecls.erase(PosF);
       }
 

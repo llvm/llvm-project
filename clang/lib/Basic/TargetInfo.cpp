@@ -98,6 +98,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   Char16Type = UnsignedShort;
   Char32Type = UnsignedInt;
   Int64Type = SignedLongLong;
+  Int16Type = SignedShort;
   SigAtomicType = SignedInt;
   ProcessIDType = SignedInt;
   UseSignedCharForObjCBool = true;

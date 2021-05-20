@@ -417,8 +417,8 @@ class VOP_SDWAe<VOPProfile P> : Enc64 {
   bits<1> clamp;
 
   let Inst{39-32} = !if(P.HasSrc0, src0{7-0}, 0);
-  let Inst{42-40} = !if(P.EmitDstSel, dst_sel{2-0}, 0);
-  let Inst{44-43} = !if(P.EmitDstSel, dst_unused{1-0}, 0);
+  let Inst{42-40} = !if(P.EmitDstSel, dst_sel{2-0}, ?);
+  let Inst{44-43} = !if(P.EmitDstSel, dst_unused{1-0}, ?);
   let Inst{45}    = !if(P.HasSDWAClamp, clamp{0}, 0);
   let Inst{50-48} = !if(P.HasSrc0, src0_sel{2-0}, 0);
   let Inst{51}    = !if(P.HasSrc0IntMods, src0_modifiers{0}, 0);
@@ -468,8 +468,8 @@ class VOP_SDWA9Ae<VOPProfile P> : VOP_SDWA9e<P> {
   bits<1> clamp;
   bits<2> omod;
 
-  let Inst{42-40} = !if(P.EmitDstSel, dst_sel{2-0}, 0);
-  let Inst{44-43} = !if(P.EmitDstSel, dst_unused{1-0}, 0);
+  let Inst{42-40} = !if(P.EmitDstSel, dst_sel{2-0}, ?);
+  let Inst{44-43} = !if(P.EmitDstSel, dst_unused{1-0}, ?);
   let Inst{45}    = !if(P.HasSDWAClamp, clamp{0}, 0);
   let Inst{47-46} = !if(P.HasSDWAOMod, omod{1-0}, 0);
 }

@@ -31,7 +31,10 @@ struct Canonicalizer : public CanonicalizerBase<Canonicalizer> {
     return success();
   }
   void runOnOperation() override {
-    (void)applyPatternsAndFoldGreedily(getOperation()->getRegions(), patterns);
+    (void)applyPatternsAndFoldGreedily(
+        getOperation()->getRegions(), patterns,
+        /*maxIterations=*/10, /*useTopDownTraversal=*/
+        topDownProcessingEnabled);
   }
 
   FrozenRewritePatternSet patterns;

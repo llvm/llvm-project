@@ -75,7 +75,7 @@ define void @andnot_v8i1(<8 x i1>* %x, <8 x i1>* %y) {
 ; CHECK-NEXT:    vsetivli a2, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vle1.v v25, (a0)
 ; CHECK-NEXT:    vle1.v v26, (a1)
-; CHECK-NEXT:    vmandnot.mm v25, v25, v26
+; CHECK-NEXT:    vmandnot.mm v25, v26, v25
 ; CHECK-NEXT:    vse1.v v25, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i1>, <8 x i1>* %x
@@ -92,7 +92,7 @@ define void @ornot_v16i1(<16 x i1>* %x, <16 x i1>* %y) {
 ; CHECK-NEXT:    vsetivli a2, 16, e8,m1,ta,mu
 ; CHECK-NEXT:    vle1.v v25, (a0)
 ; CHECK-NEXT:    vle1.v v26, (a1)
-; CHECK-NEXT:    vmornot.mm v25, v25, v26
+; CHECK-NEXT:    vmornot.mm v25, v26, v25
 ; CHECK-NEXT:    vse1.v v25, (a0)
 ; CHECK-NEXT:    ret
   %a = load <16 x i1>, <16 x i1>* %x

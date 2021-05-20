@@ -125,6 +125,7 @@ template<class Container>
 */
 
 #include <__config>
+#include <__debug>
 #include <__ranges/enable_borrowed_range.h>
 #include <array>        // for array
 #include <cstddef>      // for byte

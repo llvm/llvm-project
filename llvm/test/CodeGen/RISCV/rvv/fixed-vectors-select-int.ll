@@ -15,7 +15,7 @@ define <1 x i1> @select_v1i1(i1 zeroext %c, <1 x i1> %a, <1 x i1> %b) {
 ; CHECK-NEXT:    vsetivli a0, 1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vmv.v.x v25, a1
 ; CHECK-NEXT:    vmsne.vi v26, v25, 0
-; CHECK-NEXT:    vmandnot.mm v25, v26, v8
+; CHECK-NEXT:    vmandnot.mm v25, v8, v26
 ; CHECK-NEXT:    vmand.mm v26, v0, v26
 ; CHECK-NEXT:    vmor.mm v0, v26, v25
 ; CHECK-NEXT:    ret
@@ -36,7 +36,7 @@ define <1 x i1> @selectcc_v1i1(i1 signext %a, i1 signext %b, <1 x i1> %c, <1 x i
 ; CHECK-NEXT:    vsetivli a1, 1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vmv.v.x v25, a0
 ; CHECK-NEXT:    vmsne.vi v26, v25, 0
-; CHECK-NEXT:    vmandnot.mm v25, v26, v8
+; CHECK-NEXT:    vmandnot.mm v25, v8, v26
 ; CHECK-NEXT:    vmand.mm v26, v0, v26
 ; CHECK-NEXT:    vmor.mm v0, v26, v25
 ; CHECK-NEXT:    ret
@@ -56,7 +56,7 @@ define <2 x i1> @select_v2i1(i1 zeroext %c, <2 x i1> %a, <2 x i1> %b) {
 ; CHECK-NEXT:    vsetivli a0, 2, e8,mf8,ta,mu
 ; CHECK-NEXT:    vmv.v.x v25, a1
 ; CHECK-NEXT:    vmsne.vi v26, v25, 0
-; CHECK-NEXT:    vmandnot.mm v25, v26, v8
+; CHECK-NEXT:    vmandnot.mm v25, v8, v26
 ; CHECK-NEXT:    vmand.mm v26, v0, v26
 ; CHECK-NEXT:    vmor.mm v0, v26, v25
 ; CHECK-NEXT:    ret
@@ -77,7 +77,7 @@ define <2 x i1> @selectcc_v2i1(i1 signext %a, i1 signext %b, <2 x i1> %c, <2 x i
 ; CHECK-NEXT:    vsetivli a1, 2, e8,mf8,ta,mu
 ; CHECK-NEXT:    vmv.v.x v25, a0
 ; CHECK-NEXT:    vmsne.vi v26, v25, 0
-; CHECK-NEXT:    vmandnot.mm v25, v26, v8
+; CHECK-NEXT:    vmandnot.mm v25, v8, v26
 ; CHECK-NEXT:    vmand.mm v26, v0, v26
 ; CHECK-NEXT:    vmor.mm v0, v26, v25
 ; CHECK-NEXT:    ret
@@ -97,7 +97,7 @@ define <4 x i1> @select_v4i1(i1 zeroext %c, <4 x i1> %a, <4 x i1> %b) {
 ; CHECK-NEXT:    vsetivli a0, 4, e8,mf4,ta,mu
 ; CHECK-NEXT:    vmv.v.x v25, a1
 ; CHECK-NEXT:    vmsne.vi v26, v25, 0
-; CHECK-NEXT:    vmandnot.mm v25, v26, v8
+; CHECK-NEXT:    vmandnot.mm v25, v8, v26
 ; CHECK-NEXT:    vmand.mm v26, v0, v26
 ; CHECK-NEXT:    vmor.mm v0, v26, v25
 ; CHECK-NEXT:    ret
@@ -118,7 +118,7 @@ define <4 x i1> @selectcc_v4i1(i1 signext %a, i1 signext %b, <4 x i1> %c, <4 x i
 ; CHECK-NEXT:    vsetivli a1, 4, e8,mf4,ta,mu
 ; CHECK-NEXT:    vmv.v.x v25, a0
 ; CHECK-NEXT:    vmsne.vi v26, v25, 0
-; CHECK-NEXT:    vmandnot.mm v25, v26, v8
+; CHECK-NEXT:    vmandnot.mm v25, v8, v26
 ; CHECK-NEXT:    vmand.mm v26, v0, v26
 ; CHECK-NEXT:    vmor.mm v0, v26, v25
 ; CHECK-NEXT:    ret
@@ -138,7 +138,7 @@ define <8 x i1> @select_v8i1(i1 zeroext %c, <8 x i1> %a, <8 x i1> %b) {
 ; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vmv.v.x v25, a1
 ; CHECK-NEXT:    vmsne.vi v26, v25, 0
-; CHECK-NEXT:    vmandnot.mm v25, v26, v8
+; CHECK-NEXT:    vmandnot.mm v25, v8, v26
 ; CHECK-NEXT:    vmand.mm v26, v0, v26
 ; CHECK-NEXT:    vmor.mm v0, v26, v25
 ; CHECK-NEXT:    ret
@@ -159,7 +159,7 @@ define <8 x i1> @selectcc_v8i1(i1 signext %a, i1 signext %b, <8 x i1> %c, <8 x i
 ; CHECK-NEXT:    vsetivli a1, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vmv.v.x v25, a0
 ; CHECK-NEXT:    vmsne.vi v26, v25, 0
-; CHECK-NEXT:    vmandnot.mm v25, v26, v8
+; CHECK-NEXT:    vmandnot.mm v25, v8, v26
 ; CHECK-NEXT:    vmand.mm v26, v0, v26
 ; CHECK-NEXT:    vmor.mm v0, v26, v25
 ; CHECK-NEXT:    ret
@@ -179,7 +179,7 @@ define <16 x i1> @select_v16i1(i1 zeroext %c, <16 x i1> %a, <16 x i1> %b) {
 ; CHECK-NEXT:    vsetivli a0, 16, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.x v25, a1
 ; CHECK-NEXT:    vmsne.vi v26, v25, 0
-; CHECK-NEXT:    vmandnot.mm v25, v26, v8
+; CHECK-NEXT:    vmandnot.mm v25, v8, v26
 ; CHECK-NEXT:    vmand.mm v26, v0, v26
 ; CHECK-NEXT:    vmor.mm v0, v26, v25
 ; CHECK-NEXT:    ret
@@ -200,7 +200,7 @@ define <16 x i1> @selectcc_v16i1(i1 signext %a, i1 signext %b, <16 x i1> %c, <16
 ; CHECK-NEXT:    vsetivli a1, 16, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.x v25, a0
 ; CHECK-NEXT:    vmsne.vi v26, v25, 0
-; CHECK-NEXT:    vmandnot.mm v25, v26, v8
+; CHECK-NEXT:    vmandnot.mm v25, v8, v26
 ; CHECK-NEXT:    vmand.mm v26, v0, v26
 ; CHECK-NEXT:    vmor.mm v0, v26, v25
 ; CHECK-NEXT:    ret

@@ -20,7 +20,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
@@ -31,7 +31,7 @@
 #include <sys/mman.h>
 #endif
 
-#ifdef HAVE_LIBXAR
+#ifdef LLVM_HAVE_LIBXAR
 #include <fcntl.h>
 #include <xar/xar.h>
 #endif
@@ -472,7 +472,7 @@ void StubHelperSection::setup() {
       make<Defined>("__dyld_private", nullptr, in.imageLoaderCache, 0, 0,
                     /*isWeakDef=*/false,
                     /*isExternal=*/false, /*isPrivateExtern=*/false,
-                    /*isThumb=*/false);
+                    /*isThumb=*/false, /*isReferencedDynamically=*/false);
 }
 
 ImageLoaderCacheSection::ImageLoaderCacheSection() {
@@ -566,38 +566,11 @@ uint32_t LazyBindingSection::encode(const DylibSymbol &sym) {
 ExportSection::ExportSection()
     : LinkEditSection(segment_names::linkEdit, section_names::export_) {}
 
-static void validateExportSymbol(const Defined *defined) {
-  StringRef symbolName = defined->getName();
-  if (defined->privateExtern && config->exportedSymbols.match(symbolName))
-    error("cannot export hidden symbol " + symbolName + "\n>>> defined in " +
-          toString(defined->getFile()));
-}
-
-static bool shouldExportSymbol(const Defined *defined) {
-  if (defined->privateExtern) {
-    assert(defined->isExternal() && "invalid input file");
-    return false;
-  }
-  // TODO: Is this a performance bottleneck? If a build has mostly
-  // global symbols in the input but uses -exported_symbols to filter
-  // out most of them, then it would be better to set the value of
-  // privateExtern at parse time instead of calling
-  // exportedSymbols.match() more than once.
-  //
-  // Measurements show that symbol ordering (which again looks up
-  // every symbol in a hashmap) is the biggest bottleneck when linking
-  // chromium_framework, so this will likely be worth optimizing.
-  return config->exportedSymbols.empty()
-             ? !config->unexportedSymbols.match(defined->getName())
-             : config->exportedSymbols.match(defined->getName());
-}
-
 void ExportSection::finalizeContents() {
   trieBuilder.setImageBase(in.header->addr);
   for (const Symbol *sym : symtab->getSymbols()) {
     if (const auto *defined = dyn_cast<Defined>(sym)) {
-      validateExportSymbol(defined);
-      if (!shouldExportSymbol(defined))
+      if (defined->privateExtern)
         continue;
       trieBuilder.addSymbol(*defined);
       hasWeakSymbol = hasWeakSymbol || sym->isWeakDef();
@@ -780,7 +753,10 @@ void SymtabSection::finalizeContents() {
       if (!defined->includeInSymtab)
         continue;
       assert(defined->isExternal());
-      addSymbol(externalSymbols, defined);
+      if (defined->privateExtern)
+        addSymbol(localSymbols, defined);
+      else
+        addSymbol(externalSymbols, defined);
     } else if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
       if (dysym->isReferenced())
         addSymbol(undefinedSymbols, sym);
@@ -832,7 +808,7 @@ template <class LP> void SymtabSectionImpl<LP>::writeTo(uint8_t *buf) const {
     // TODO populate n_desc with more flags
     if (auto *defined = dyn_cast<Defined>(entry.sym)) {
       uint8_t scope = 0;
-      if (!shouldExportSymbol(defined)) {
+      if (defined->privateExtern) {
         // Private external -- dylib scoped symbol.
         // Promote to non-external at link time.
         scope = N_PEXT;
@@ -856,6 +832,8 @@ template <class LP> void SymtabSectionImpl<LP>::writeTo(uint8_t *buf) const {
       }
       nList->n_desc |= defined->thumb ? N_ARM_THUMB_DEF : 0;
       nList->n_desc |= defined->isExternalWeakDef() ? N_WEAK_DEF : 0;
+      nList->n_desc |=
+          defined->referencedDynamically ? REFERENCED_DYNAMICALLY : 0;
     } else if (auto *dysym = dyn_cast<DylibSymbol>(entry.sym)) {
       uint16_t n_desc = nList->n_desc;
       int16_t ordinal = ordinalForDylibSymbol(*dysym);
@@ -1058,7 +1036,7 @@ private:
   } while (0);
 
 void BitcodeBundleSection::finalize() {
-#ifdef HAVE_LIBXAR
+#ifdef LLVM_HAVE_LIBXAR
   using namespace llvm::sys::fs;
   CHECK_EC(createTemporaryFile("bitcode-bundle", "xar", xarPath));
 
@@ -1070,7 +1048,7 @@ void BitcodeBundleSection::finalize() {
   CHECK_EC(xar_close(xar));
 
   file_size(xarPath, xarSize);
-#endif // defined(HAVE_LIBXAR)
+#endif // defined(LLVM_HAVE_LIBXAR)
 }
 
 void BitcodeBundleSection::writeTo(uint8_t *buf) const {
@@ -1091,9 +1069,9 @@ void BitcodeBundleSection::writeTo(uint8_t *buf) const {
 
 void macho::createSyntheticSymbols() {
   auto addHeaderSymbol = [](const char *name) {
-    symtab->addSynthetic(name, in.header->isec, 0,
-                         /*privateExtern=*/true,
-                         /*includeInSymtab=*/false);
+    symtab->addSynthetic(name, in.header->isec, /*value=*/0,
+                         /*privateExtern=*/true, /*includeInSymtab=*/false,
+                         /*referencedDynamically=*/false);
   };
 
   switch (config->outputType) {
@@ -1105,16 +1083,15 @@ void macho::createSyntheticSymbols() {
     // Otherwise, it's an absolute symbol.
     if (config->isPic)
       symtab->addSynthetic("__mh_execute_header", in.header->isec, /*value=*/0,
-                           /*privateExtern=*/false,
-                           /*includeInSymtab=*/true);
+                           /*privateExtern=*/false, /*includeInSymtab=*/true,
+                           /*referencedDynamically=*/true);
     else
-      symtab->addSynthetic("__mh_execute_header",
-                           /*isec*/ nullptr, /*value=*/0,
-                           /*privateExtern=*/false,
-                           /*includeInSymtab=*/true);
+      symtab->addSynthetic("__mh_execute_header", /*isec=*/nullptr, /*value=*/0,
+                           /*privateExtern=*/false, /*includeInSymtab=*/true,
+                           /*referencedDynamically=*/true);
     break;
 
-    // The following symbols are  N_SECT symbols, even though the header is not
+    // The following symbols are N_SECT symbols, even though the header is not
     // part of any section and that they are private to the bundle/dylib/object
     // they are part of.
   case MH_BUNDLE:

@@ -4166,7 +4166,7 @@ def : Pat<(vnot (v4i32 V128:$Rn)), (NOTv16i8 V128:$Rn)>;
 def : Pat<(vnot (v1i64 V64:$Rn)),  (NOTv8i8  V64:$Rn)>;
 def : Pat<(vnot (v2i64 V128:$Rn)), (NOTv16i8 V128:$Rn)>;
 
-defm RBIT   : SIMDTwoVectorB<1, 0b01, 0b00101, "rbit", int_aarch64_neon_rbit>;
+defm RBIT   : SIMDTwoVectorB<1, 0b01, 0b00101, "rbit", bitreverse>;
 defm REV16  : SIMDTwoVectorB<0, 0b00, 0b00001, "rev16", AArch64rev16>;
 defm REV32  : SIMDTwoVectorBH<1, 0b00000, "rev32", AArch64rev32>;
 defm REV64  : SIMDTwoVectorBHS<0, 0b00000, "rev64", AArch64rev64>;

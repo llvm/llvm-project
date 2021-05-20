@@ -91,7 +91,7 @@ void InputSection::writeTo(uint8_t *buf) {
   }
 }
 
-bool macho::isCodeSection(InputSection *isec) {
+bool macho::isCodeSection(const InputSection *isec) {
   uint32_t type = isec->flags & SECTION_TYPE;
   if (type != S_REGULAR && type != S_COALESCED)
     return false;

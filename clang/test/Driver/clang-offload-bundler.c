@@ -274,8 +274,7 @@
 
 // RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu -inputs=%t.o,%t.tgt1,%t.tgt2 -outputs=%t.bundle3.o -### 2>&1 \
 // RUN: | FileCheck %s -DHOST=%itanium_abi_triple -DINOBJ1=%t.o -DINOBJ2=%t.tgt1 -DINOBJ3=%t.tgt2 -DOUTOBJ=%t.bundle3.o --check-prefix CK-OBJ-CMD
-// CK-OBJ-CMD: llvm-objcopy{{(.exe)?}}" "--add-section=__CLANG_OFFLOAD_BUNDLE__host-[[HOST]]={{.*}}" "--add-section=__CLANG_OFFLOAD_BUNDLE__openmp-powerpc64le-ibm-linux-gnu=[[INOBJ2]]" "--add-section=__CLANG_OFFLOAD_BUNDLE__openmp-x86_64-pc-linux-gnu=[[INOBJ3]]" "[[INOBJ1]]" "[[TEMPOBJ:.*]]"
-// CK-OBJ-CMD: llvm-objcopy{{(.exe)?}}" "--set-section-flags=__CLANG_OFFLOAD_BUNDLE__host-[[HOST]]=readonly,exclude" "--set-section-flags=__CLANG_OFFLOAD_BUNDLE__openmp-powerpc64le-ibm-linux-gnu=readonly,exclude" "--set-section-flags=__CLANG_OFFLOAD_BUNDLE__openmp-x86_64-pc-linux-gnu=readonly,exclude" "[[TEMPOBJ]]" "[[OUTOBJ]]"
+// CK-OBJ-CMD: llvm-objcopy{{(.exe)?}}" "--add-section=__CLANG_OFFLOAD_BUNDLE__host-[[HOST]]={{.*}}" "--set-section-flags=__CLANG_OFFLOAD_BUNDLE__host-[[HOST]]=readonly,exclude" "--add-section=__CLANG_OFFLOAD_BUNDLE__openmp-powerpc64le-ibm-linux-gnu=[[INOBJ2]]" "--set-section-flags=__CLANG_OFFLOAD_BUNDLE__openmp-powerpc64le-ibm-linux-gnu=readonly,exclude" "--add-section=__CLANG_OFFLOAD_BUNDLE__openmp-x86_64-pc-linux-gnu=[[INOBJ3]]" "--set-section-flags=__CLANG_OFFLOAD_BUNDLE__openmp-x86_64-pc-linux-gnu=readonly,exclude" "[[INOBJ1]]" "[[OUTOBJ]]"
 
 // RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu -inputs=%t.o,%t.tgt1,%t.tgt2 -outputs=%t.bundle3.o
 // RUN: clang-offload-bundler -type=o -inputs=%t.bundle3.o -list | FileCheck -check-prefix=CKLST %s

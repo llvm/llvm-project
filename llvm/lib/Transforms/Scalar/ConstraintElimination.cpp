@@ -475,7 +475,6 @@ PreservedAnalyses ConstraintEliminationPass::run(Function &F,
 
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
-  PA.preserve<GlobalsAA>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }

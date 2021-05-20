@@ -8,7 +8,7 @@ about it typically involves processing this form into config objects that
 represent actual op definitions (i.e. YAML).
 """
 
-from typing import Any, Callable, Dict, List, Optional, Sequence, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, Union
 
 from mlir import ir as _ir
 
@@ -36,8 +36,8 @@ class TensorExpression:
     results = set()
 
     def visit_dim_def(dim_def):
-        if isinstance(dim_def, DimDef):
-          results.add(dim_def)
+      if isinstance(dim_def, DimDef):
+        results.add(dim_def)
 
     def visit_affine_exprs(expr):
       if isinstance(expr, TensorUse):
@@ -52,23 +52,29 @@ class TensorExpression:
 
   def collect_uses(self, uses: Set["TensorUse"]):
     """Collects all TensorUses reachable through this expression."""
+
     def visit_tensor_use(expr):
       if isinstance(expr, TensorUse):
         uses.add(expr)
+
     self.visit_tensor_exprs(visit_tensor_use)
 
   def collect_indices(self, indices: Set["index"]):
     """Collects all index accesses reachable through this expression."""
+
     def visit_index(expr):
       if isinstance(expr, index):
         indices.add(expr)
+
     self.visit_tensor_exprs(visit_index)
 
   def collect_captures(self, captures: Set["CaptureDef"]):
     """Collects all CaptureDefs reachable through this expression."""
+
     def visit_capture_def(expr):
       if isinstance(expr, CaptureDef):
         captures.add(expr)
+
     self.visit_tensor_exprs(visit_capture_def)
 
   def __add__(self, rhs: "TensorExpression") -> "TensorExpression":
@@ -159,8 +165,8 @@ class TensorDef:
 
   def __getitem__(self, dims) -> TensorUse:
     assert self.owner, "TensorDef is not attached to an op"
-    state = AffineBuildState(global_state=self.owner._affine_state,
-                             allow_new_symbols=False)
+    state = AffineBuildState(
+        global_state=self.owner._affine_state, allow_new_symbols=False)
     if not isinstance(dims, tuple):
       dims = (dims,)  # Handle single subscript case.
     # Special case: (None) is a 0d-scalar use.
@@ -196,6 +202,7 @@ class TensorDef:
     return (f"{self.tensor_name}:TensorDef({output}{repr(self.type_var)}, "
             f"shape={self.shape})")
 
+
 class CaptureDef(TensorExpression):
   """Defines an SSA value captured by the operation.
 
@@ -225,6 +232,7 @@ class CaptureDef(TensorExpression):
 
   def __repr__(self):
     return (f"{self.capture_name}:CaptureDef({repr(self.type_var)})")
+
 
 class Comprehension:
   """Represents a single comprehension."""
@@ -334,22 +342,26 @@ class PrimApply(TensorExpression):
   def __repr__(self):
     return f"{repr(self.prim)}({', '.join(repr(a) for a in self.args)})"
 
+
 class const(TensorExpression):
   """Returns the given constant floating point or integer value."""
 
-  def __init__(self, type_var: TypeVar, value: Any):
-    if not isinstance(type_var, TypeVar):
-      raise ValueError(f"const requires a TypeVar. Got: {repr(type_var)}")
-    if not (isinstance(value, float) or isinstance(value, int)):
-      raise ValueError(f"const requires int or float. Got: {type(value)}")
-    self.type_var = type_var
-    self.value = value
+  def __init__(self, value: Any):
+    with _ir.Context():
+      if isinstance(value, float):
+        self.value = str(_ir.FloatAttr.get_f64(float(value)))
+      elif isinstance(value, int):
+        self.value = str(
+            _ir.IntegerAttr.get(_ir.IntegerType.get_signless(64), int(value)))
+      else:
+        raise ValueError(f"const requires int or float. Got: {type(value)}")
 
   def to_scalar_expression(self) -> ScalarExpression:
-    return ScalarConst(self.type_var, self.value).expr()
+    return ScalarConst(self.value).expr()
 
   def __repr__(self):
     return f"const({self.type_var}, {self.value})"
+
 
 class index(TensorExpression):
   """Returns the iteration index for a given dimension name.
@@ -358,7 +370,7 @@ class index(TensorExpression):
   domain of the operation.
   """
 
-  def __init__(self, dim : DimDef):
+  def __init__(self, dim: DimDef):
     self.dim_def = dim
     self.dim = -1
 
@@ -433,7 +445,8 @@ class OpMetadataDef(YAMLObject):
   """Metadata about the op (generally not behavior impacting)."""
   yaml_tag = "!LinalgOpMetadata"
 
-  def __init__(self, name: str, cpp_class_name: Optional[str], doc: Optional[str]):
+  def __init__(self, name: str, cpp_class_name: Optional[str],
+               doc: Optional[str]):
     self.name = name
     self.cpp_class_name = cpp_class_name if cpp_class_name is not None else name
     self.doc = doc
@@ -457,7 +470,8 @@ class LinalgOpDef:
                name: str,
                cpp_class_name: Optional[str] = None,
                doc: Optional[str] = None):
-    self.metadata = OpMetadataDef(name=name, cpp_class_name=cpp_class_name, doc=doc)
+    self.metadata = OpMetadataDef(
+        name=name, cpp_class_name=cpp_class_name, doc=doc)
     self.registered_tensors = dict()  # type: Dict[str, TensorDef]
     self.registered_captures = dict()  # type: Dict[str, CaptureDef]
     self.comprehensions = list()  # type: List[Comprehension]

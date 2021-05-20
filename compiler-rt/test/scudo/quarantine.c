@@ -18,8 +18,7 @@
 
 #include <sanitizer/allocator_interface.h>
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   void *p, *old_p;
   size_t allocated_bytes, size = 1U << 8, alignment = 1U << 8;
 

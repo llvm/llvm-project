@@ -150,10 +150,19 @@ void PlainPrinterBase::printVerbose(StringRef Filename,
     OS << "  Function start filename: " << Info.StartFileName << '\n';
     OS << "  Function start line: " << Info.StartLine << '\n';
   }
+  printStartAddress(Info);
   OS << "  Line: " << Info.Line << '\n';
   OS << "  Column: " << Info.Column << '\n';
   if (Info.Discriminator)
     OS << "  Discriminator: " << Info.Discriminator << '\n';
+}
+
+void LLVMPrinter::printStartAddress(const DILineInfo &Info) {
+  if (Info.StartAddress) {
+    OS << "  Function start address: 0x";
+    OS.write_hex(*Info.StartAddress);
+    OS << '\n';
+  }
 }
 
 void LLVMPrinter::printFooter() { OS << '\n'; }
@@ -290,6 +299,8 @@ void JSONPrinter::print(const Request &Request, const DIInliningInfo &Info) {
                                ? LineInfo.StartFileName
                                : ""},
          {"StartLine", LineInfo.StartLine},
+         {"StartAddress",
+          LineInfo.StartAddress ? toHex(*LineInfo.StartAddress) : ""},
          {"FileName",
           LineInfo.FileName != DILineInfo::BadString ? LineInfo.FileName : ""},
          {"Line", LineInfo.Line},

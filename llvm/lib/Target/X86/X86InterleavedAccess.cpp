@@ -724,29 +724,33 @@ bool X86InterleavedAccessGroup::lowerIntoOptimizedSequence() {
   auto *ShuffleTy = cast<FixedVectorType>(Shuffles[0]->getType());
 
   if (isa<LoadInst>(Inst)) {
-    // Try to generate target-sized register(/instruction).
-    decompose(Inst, Factor, ShuffleTy, DecomposedVectors);
-
     auto *ShuffleEltTy = cast<FixedVectorType>(Inst->getType());
     unsigned NumSubVecElems = ShuffleEltTy->getNumElements() / Factor;
-    // Perform matrix-transposition in order to compute interleaved
-    // results by generating some sort of (optimized) target-specific
-    // instructions.
-
     switch (NumSubVecElems) {
     default:
       return false;
     case 4:
-      transpose_4x4(DecomposedVectors, TransposedVectors);
-      break;
     case 8:
     case 16:
     case 32:
     case 64:
-      deinterleave8bitStride3(DecomposedVectors, TransposedVectors,
-                              NumSubVecElems);
+      if (ShuffleTy->getNumElements() != NumSubVecElems)
+        return false;
       break;
     }
+
+    // Try to generate target-sized register(/instruction).
+    decompose(Inst, Factor, ShuffleTy, DecomposedVectors);
+
+    // Perform matrix-transposition in order to compute interleaved
+    // results by generating some sort of (optimized) target-specific
+    // instructions.
+
+    if (NumSubVecElems == 4)
+      transpose_4x4(DecomposedVectors, TransposedVectors);
+    else
+      deinterleave8bitStride3(DecomposedVectors, TransposedVectors,
+                              NumSubVecElems);
 
     // Now replace the unoptimized-interleaved-vectors with the
     // transposed-interleaved vectors.

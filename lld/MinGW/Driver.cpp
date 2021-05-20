@@ -437,5 +437,5 @@ bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   std::vector<const char *> vec;
   for (const std::string &s : linkArgs)
     vec.push_back(s.c_str());
-  return coff::link(vec, true, stdoutOS, stderrOS);
+  return coff::link(vec, canExitEarly, stdoutOS, stderrOS);
 }

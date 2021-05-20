@@ -145,10 +145,11 @@ template<class T>
 */
 
 #include <__config>
+#include <__debug>
+#include <cmath> // for isnormal
+#include <functional>
 #include <iterator>
 #include <limits> // for numeric_limits
-#include <functional>
-#include <cmath> // for isnormal
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

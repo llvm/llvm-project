@@ -11,7 +11,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_ZLIB
   LLVM_ENABLE_LIBXML2
   LLD_DEFAULT_LD_LLD_IS_MINGW
-  HAVE_LIBXAR
+  LLVM_HAVE_LIBXAR
   )
 
 configure_lit_site_cfg(

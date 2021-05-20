@@ -1648,9 +1648,13 @@ void PDBLinker::addSections(ArrayRef<OutputSection *> outputSections,
 }
 
 void PDBLinker::commit(codeview::GUID *guid) {
-  ExitOnError exitOnErr((config->pdbPath + ": ").str());
-  // Write to a file.
-  exitOnErr(builder.commit(config->pdbPath, guid));
+  // Print an error and continue if PDB writing fails. This is done mainly so
+  // the user can see the output of /time and /summary, which is very helpful
+  // when trying to figure out why a PDB file is too large.
+  if (Error e = builder.commit(config->pdbPath, guid)) {
+    checkError(std::move(e));
+    error("failed to write PDB file " + Twine(config->pdbPath));
+  }
 }
 
 static uint32_t getSecrelReloc() {

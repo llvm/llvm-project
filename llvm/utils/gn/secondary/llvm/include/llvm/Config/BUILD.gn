@@ -296,12 +296,6 @@ write_cmake_config("config") {
     values += [ "HAVE_LIBEDIT=" ]
   }
 
-  if (llvm_enable_libxar) {
-    values += [ "HAVE_LIBXAR=1" ]
-  } else {
-    values += [ "HAVE_LIBXAR=" ]
-  }
-
   if (llvm_enable_terminfo) {
     values += [ "LLVM_ENABLE_TERMINFO=1" ]
   } else {
@@ -366,6 +360,12 @@ write_cmake_config("llvm-config") {
       "HAVE_SYSEXITS_H=1",
       "LLVM_ON_UNIX=1",
     ]
+  }
+
+  if (llvm_enable_libxar) {
+    values += [ "LLVM_HAVE_LIBXAR=1" ]
+  } else {
+    values += [ "LLVM_HAVE_LIBXAR=" ]
   }
 
   if (llvm_enable_threads) {

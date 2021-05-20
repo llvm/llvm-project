@@ -12,6 +12,7 @@
 #include "OutputSegment.h"
 #include "WriterUtils.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Memory.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
@@ -178,7 +179,7 @@ void DataSection::finalizeContents() {
     log("Data segment: size=" + Twine(segment->size) + ", startVA=" +
         Twine::utohexstr(segment->startVA) + ", name=" + segment->name);
 
-    for (InputSegment *inputSeg : segment->inputSegments) {
+    for (InputChunk *inputSeg : segment->inputSegments) {
       inputSeg->outputSec = this;
       inputSeg->outSecOff = segment->sectionOffset + segment->header.size() +
                             inputSeg->outputSegmentOffset;
@@ -234,13 +235,42 @@ bool DataSection::isNeeded() const {
   return false;
 }
 
+// Lots of duplication here with OutputSegment::finalizeInputSegments
+void CustomSection::finalizeInputSections() {
+  SyntheticMergedChunk *mergedSection = nullptr;
+  std::vector<InputChunk *> newSections;
+
+  for (InputChunk *s : inputSections) {
+    MergeInputChunk *ms = dyn_cast<MergeInputChunk>(s);
+    if (!ms) {
+      newSections.push_back(s);
+      continue;
+    }
+
+    if (!mergedSection) {
+      mergedSection =
+          make<SyntheticMergedChunk>(name, 0, WASM_SEG_FLAG_STRINGS);
+      newSections.push_back(mergedSection);
+    }
+    mergedSection->addMergeChunk(ms);
+  }
+
+  if (!mergedSection)
+    return;
+
+  mergedSection->finalizeContents();
+  inputSections = newSections;
+}
+
 void CustomSection::finalizeContents() {
+  finalizeInputSections();
+
   raw_string_ostream os(nameData);
   encodeULEB128(name.size(), os);
   os << name;
   os.flush();
 
-  for (InputSection *section : inputSections) {
+  for (InputChunk *section : inputSections) {
     assert(!section->discarded);
     section->outputSec = this;
     section->outSecOff = payloadSize;
@@ -264,19 +294,19 @@ void CustomSection::writeTo(uint8_t *buf) {
   buf += nameData.size();
 
   // Write custom sections payload
-  for (const InputSection *section : inputSections)
+  for (const InputChunk *section : inputSections)
     section->writeTo(buf);
 }
 
 uint32_t CustomSection::getNumRelocations() const {
   uint32_t count = 0;
-  for (const InputSection *inputSect : inputSections)
+  for (const InputChunk *inputSect : inputSections)
     count += inputSect->getNumRelocations();
   return count;
 }
 
 void CustomSection::writeRelocations(raw_ostream &os) const {
-  for (const InputSection *s : inputSections)
+  for (const InputChunk *s : inputSections)
     s->writeRelocations(os);
 }
 

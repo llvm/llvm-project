@@ -106,7 +106,57 @@ Within the `rewrite` section of a pattern, the following constraints apply:
 *   The root operation is required to either be: updated in-place, replaced, or
     erased.
 
-### Pattern Rewriter
+### Application Recursion
+
+Recursion is an important topic in the context of pattern rewrites, as a pattern
+may often be applicable to its own result. For example, imagine a pattern that
+peels a single iteration from a loop operation. If the loop has multiple
+peelable iterations, this pattern may apply multiple times during the
+application process. By looking at the implementation of this pattern, the bound
+for recursive application may be obvious, e.g. there are no peelable iterations
+within the loop, but from the perspective of the pattern driver this recursion
+is potentially dangerous. Often times the recursive application of a pattern
+indicates a bug in the matching logic. These types of bugs generally do not
+cause crashes, but create infinite loops within the application process. Given
+this, the pattern rewriting infrastructure conservatively assumes that no
+patterns have a proper bounded recursion, and will fail if recursion is
+detected. A pattern that is known to have proper support for handling recursion
+can signal this by calling `setHasBoundedRewriteRecursion` when initializing the
+pattern. This will signal to the pattern driver that recursive application of
+this pattern may happen, and the pattern is equipped to safely handle it.
+
+### Initialization
+
+Several pieces of pattern state require explicit initialization by the pattern,
+for example setting `setHasBoundedRewriteRecursion` if a pattern safely handles
+recursive application. This pattern state can be initialized either in the
+constructor of the pattern or via the utility `initialize` hook. Using the
+`initialize` hook removes the need to redefine pattern constructors just to
+inject additional pattern state initialization. An example is shown below:
+
+```c++
+class MyPattern : public RewritePattern {
+public:
+  /// Inherit the constructors from RewritePattern.
+  using RewritePattern::RewritePattern;
+
+  /// Initialize the pattern.
+  void initialize() {
+    /// Signal that this pattern safely handles recursive application.
+    setHasBoundedRewriteRecursion();
+  }
+
+  // ...
+};
+```
+
+### Construction
+
+Constructing a RewritePattern should be performed by using the static
+`RewritePattern::create<T>` utility method. This method ensures that the pattern
+is properly initialized and prepared for insertion into a `RewritePatternSet`.
+
+## Pattern Rewriter
 
 A `PatternRewriter` is a special class that allows for a pattern to communicate
 with the driver of pattern application. As noted above, *all* IR mutations,
@@ -242,8 +292,8 @@ driver can be found [here](DialectConversion.md).
 
 ### Greedy Pattern Rewrite Driver
 
-This driver performs a post order traversal over the provided operations and
-greedily applies the patterns that locally have the most benefit. The benefit of
+This driver walks the provided operations and greedily applies the patterns that
+locally have the most benefit. The benefit of
 a pattern is decided solely by the benefit specified on the pattern, and the
 relative order of the pattern within the pattern list (when two patterns have
 the same local benefit). Patterns are iteratively applied to operations until a
@@ -251,6 +301,13 @@ fixed point is reached, at which point the driver finishes. This driver may be
 used via the following: `applyPatternsAndFoldGreedily` and
 `applyOpPatternsAndFold`. The latter of which only applies patterns to the
 provided operation, and will not traverse the IR.
+
+The driver is configurable and supports two modes: 1) you may opt-in to a
+"top-down" traversal, which seeds the worklist with each operation top down and
+in a pre-order over the region tree.  This is generally more efficient in
+compile time.  2) the default is a "bottom up" traversal, which builds the
+initial worklist with a postorder traversal of the region tree.  This may
+match larger patterns with ambiguous pattern sets.
 
 Note: This driver is the one used by the [canonicalization](Canonicalization.md)
 [pass](Passes.md#-canonicalize-canonicalize-operations) in MLIR.

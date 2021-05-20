@@ -130,11 +130,7 @@ static const std::map<std::string, KernelArgMD::ValueKind> ArgValueKind = {
 atmi_machine_t g_atmi_machine;
 ATLMachine g_atl_machine;
 
-hsa_region_t atl_gpu_kernarg_region;
 std::vector<hsa_amd_memory_pool_t> atl_gpu_kernarg_pools;
-hsa_region_t atl_cpu_kernarg_region;
-
-static std::vector<hsa_executable_t> g_executables;
 
 std::map<std::string, std::string> KernelNameMap;
 std::vector<std::map<std::string, atl_kernel_info_t>> KernelInfoTable;
@@ -143,19 +139,12 @@ std::vector<std::map<std::string, atl_symbol_info_t>> SymbolInfoTable;
 bool g_atmi_initialized = false;
 bool g_atmi_hostcall_required = false;
 
-struct timespec context_init_time;
-int context_init_time_init = 0;
-
 /*
    atlc is all internal global values.
    The structure atl_context_t is defined in atl_internal.h
    Most references will use the global structure prefix atlc.
-   However the pointer value atlc_p-> is equivalent to atlc.
-
 */
-
 atl_context_t atlc = {.struct_initialized = false};
-atl_context_t *atlc_p = NULL;
 
 namespace core {
 /* Machine Info */
@@ -213,15 +202,6 @@ atmi_status_t Runtime::Initialize() {
 atmi_status_t Runtime::Finalize() {
   hsa_status_t err;
 
-  for (uint32_t i = 0; i < g_executables.size(); i++) {
-    err = hsa_executable_destroy(g_executables[i]);
-    if (err != HSA_STATUS_SUCCESS) {
-      printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
-             "Destroying executable", get_error_string(err));
-      exit(1);
-    }
-  }
-
   for (uint32_t i = 0; i < SymbolInfoTable.size(); i++) {
     SymbolInfoTable[i].clear();
   }
@@ -243,7 +223,6 @@ atmi_status_t Runtime::Finalize() {
 }
 
 static void atmi_init_context_structs() {
-  atlc_p = &atlc;
   atlc.struct_initialized = true; /* This only gets called one time */
   atlc.g_hsa_initialized = false;
   atlc.g_gpu_initialized = false;
@@ -517,6 +496,7 @@ static hsa_status_t init_compute_and_memory() {
     proc_index++;
   }
   proc_index = 0;
+  hsa_region_t atl_cpu_kernarg_region;
   atl_cpu_kernarg_region.handle = (uint64_t)-1;
   if (cpu_procs.size() > 0) {
     err = hsa_agent_iterate_regions(
@@ -533,6 +513,7 @@ static hsa_status_t init_compute_and_memory() {
       exit(1);
     }
   }
+  hsa_region_t atl_gpu_kernarg_region;
   /* Find a memory region that supports kernel arguments.  */
   atl_gpu_kernarg_region.handle = (uint64_t)-1;
   if (gpu_procs.size() > 0) {
@@ -649,11 +630,6 @@ atmi_status_t atl_init_gpu_context() {
   err = init_hsa();
   if (err != HSA_STATUS_SUCCESS)
     return ATMI_STATUS_ERROR;
-
-  if (context_init_time_init == 0) {
-    clock_gettime(CLOCK_MONOTONIC_RAW, &context_init_time);
-    context_init_time_init = 1;
-  }
 
   err = hsa_amd_register_system_event_handler(callbackEvent, NULL);
   if (err != HSA_STATUS_SUCCESS) {
@@ -1183,7 +1159,7 @@ atmi_status_t Runtime::RegisterModuleFromMemory(
     void *module_bytes, size_t module_size, atmi_place_t place,
     atmi_status_t (*on_deserialized_data)(void *data, size_t size,
                                           void *cb_state),
-    void *cb_state) {
+    void *cb_state, std::vector<hsa_executable_t> &HSAExecutables) {
   hsa_status_t err;
   int gpu = place.device_id;
   assert(gpu >= 0);
@@ -1282,7 +1258,7 @@ atmi_status_t Runtime::RegisterModuleFromMemory(
     }
 
     // save the executable and destroy during finalize
-    g_executables.push_back(executable);
+    HSAExecutables.push_back(executable);
     return ATMI_STATUS_SUCCESS;
   } else {
     return ATMI_STATUS_ERROR;

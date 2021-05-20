@@ -417,12 +417,12 @@ public:
   }
 
   // Equivalent non-predicated opcode
-  unsigned getFunctionalOpcode() const {
+  Optional<unsigned> getFunctionalOpcode() const {
     return GetFunctionalOpcodeForVP(getIntrinsicID());
   }
 
   // Equivalent non-predicated opcode
-  static unsigned GetFunctionalOpcodeForVP(Intrinsic::ID ID);
+  static Optional<unsigned> GetFunctionalOpcodeForVP(Intrinsic::ID ID);
 };
 
 /// This is the common base class for constrained floating point intrinsics.

@@ -122,7 +122,7 @@ using FDRRecordTypes =
                      NewCPUIDRecord, TSCWrapRecord, WallclockRecord,
                      CustomEventRecord, CallArgRecord, BufferExtents,
                      PIDRecord>;
-INSTANTIATE_TYPED_TEST_SUITE_P(Records, PrinterTest, FDRRecordTypes);
+INSTANTIATE_TYPED_TEST_SUITE_P(Records, PrinterTest, FDRRecordTypes, );
 
 TEST(FDRRecordPrinterTest, WriteFunctionRecordEnter) {
   std::string Data;

@@ -177,8 +177,8 @@ struct SizeMemberDisabled {
   size_t size() { return 42; }
 };
 
-template<>
-inline constexpr bool std::disable_sized_range<SizeMemberDisabled> = true;
+template <>
+inline constexpr bool std::ranges::disable_sized_range<SizeMemberDisabled> = true;
 
 struct ImproperlyDisabledMember {
   size_t size() const { return 42; }
@@ -186,22 +186,22 @@ struct ImproperlyDisabledMember {
 
 // Intentionally disabling "const ConstSizeMemberDisabled". This doesn't disable anything
 // because T is always uncvrefed before being checked.
-template<>
-inline constexpr bool std::disable_sized_range<const ImproperlyDisabledMember> = true;
+template <>
+inline constexpr bool std::ranges::disable_sized_range<const ImproperlyDisabledMember> = true;
 
 struct SizeFunctionDisabled {
   friend size_t size(SizeFunctionDisabled) { return 42; }
 };
 
-template<>
-inline constexpr bool std::disable_sized_range<SizeFunctionDisabled> = true;
+template <>
+inline constexpr bool std::ranges::disable_sized_range<SizeFunctionDisabled> = true;
 
 struct ImproperlyDisabledFunction {
   friend size_t size(ImproperlyDisabledFunction const&) { return 42; }
 };
 
-template<>
-inline constexpr bool std::disable_sized_range<const ImproperlyDisabledFunction> = true;
+template <>
+inline constexpr bool std::ranges::disable_sized_range<const ImproperlyDisabledFunction> = true;
 
 static_assert( std::is_invocable_v<RangeSizeT, ImproperlyDisabledMember&>);
 static_assert( std::is_invocable_v<RangeSizeT, const ImproperlyDisabledMember&>);
@@ -266,8 +266,8 @@ struct DisabledSizeRangeWithBeginEnd {
   constexpr size_t size() { return 1; }
 };
 
-template<>
-inline constexpr bool std::disable_sized_range<DisabledSizeRangeWithBeginEnd> = true;
+template <>
+inline constexpr bool std::ranges::disable_sized_range<DisabledSizeRangeWithBeginEnd> = true;
 
 struct SizeBeginAndEndMembers {
   int buff[8];

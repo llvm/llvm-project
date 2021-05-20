@@ -2880,6 +2880,10 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
       llvm_unreachable("Cannot invoke this intrinsic");
     case Intrinsic::donothing:
       // Ignore invokes to @llvm.donothing: jump directly to the next BB.
+    case Intrinsic::seh_try_begin:
+    case Intrinsic::seh_scope_begin:
+    case Intrinsic::seh_try_end:
+    case Intrinsic::seh_scope_end:
       break;
     case Intrinsic::experimental_patchpoint_void:
     case Intrinsic::experimental_patchpoint_i64:
@@ -4798,6 +4802,12 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
     ValueVTs.push_back(MVT::Other);
 
   SDVTList VTs = DAG.getVTList(ValueVTs);
+
+  // Propagate fast-math-flags from IR to node(s).
+  SDNodeFlags Flags;
+  if (auto *FPMO = dyn_cast<FPMathOperator>(&I))
+    Flags.copyFMF(*FPMO);
+  SelectionDAG::FlagInserter FlagsInserter(DAG, Flags);
 
   // Create the node.
   SDValue Result;
@@ -6792,6 +6802,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       lowerCallToExternalSymbol(I, FunctionName);
     return;
   case Intrinsic::donothing:
+  case Intrinsic::seh_try_begin:
+  case Intrinsic::seh_scope_begin:
+  case Intrinsic::seh_try_end:
+  case Intrinsic::seh_scope_end:
     // ignore
     return;
   case Intrinsic::experimental_stackmap:
@@ -9456,7 +9470,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     // FIXME: Split arguments if CLI.IsPostTypeLegalization
     Type *FinalType = Args[i].Ty;
     if (Args[i].IsByVal)
-      FinalType = cast<PointerType>(Args[i].Ty)->getElementType();
+      FinalType = Args[i].IndirectType;
     bool NeedsRegBlock = functionArgumentNeedsConsecutiveRegisters(
         FinalType, CLI.CallConv, CLI.IsVarArg);
     for (unsigned Value = 0, NumValues = ValueVTs.size(); Value != NumValues;
@@ -9529,11 +9543,10 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
       }
       Align MemAlign;
       if (Args[i].IsByVal || Args[i].IsInAlloca || Args[i].IsPreallocated) {
-        PointerType *Ty = cast<PointerType>(Args[i].Ty);
-        Type *ElementTy = Ty->getElementType();
+        Type *ElementTy = Args[i].IndirectType;
+        assert(ElementTy && "Indirect type not set in ArgListEntry");
 
-        unsigned FrameSize = DL.getTypeAllocSize(
-            Args[i].ByValType ? Args[i].ByValType : ElementTy);
+        unsigned FrameSize = DL.getTypeAllocSize(ElementTy);
         Flags.setByValSize(FrameSize);
 
         // info is not there but there are cases it cannot get right.

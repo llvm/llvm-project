@@ -85,7 +85,7 @@ public:
   const Flags &GetOptions() const { return m_options; }
 
   const char *operator=(const char *value) {
-    SetCurrentValue(llvm::StringRef::withNullAsEmpty(value));
+    SetCurrentValue(value);
     return m_current_value.c_str();
   }
 

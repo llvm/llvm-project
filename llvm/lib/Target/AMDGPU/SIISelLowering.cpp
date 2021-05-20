@@ -12156,8 +12156,15 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     // to round-to-nearest-even.
     // The only exception is DS_ADD_F64 which never flushes regardless of mode.
     if (AS == AMDGPUAS::LOCAL_ADDRESS && Subtarget->hasLDSFPAtomics()) {
-      return (Ty->isDoubleTy() && !fpModeMatchesGlobalFPAtomicMode(RMW)) ?
-        AtomicExpansionKind::CmpXChg : AtomicExpansionKind::None;
+      if (!Ty->isDoubleTy())
+        return AtomicExpansionKind::None;
+
+      return (fpModeMatchesGlobalFPAtomicMode(RMW) ||
+              RMW->getFunction()
+                      ->getFnAttribute("amdgpu-unsafe-fp-atomics")
+                      .getValueAsString() == "true")
+                 ? AtomicExpansionKind::None
+                 : AtomicExpansionKind::CmpXChg;
     }
 
     return AtomicExpansionKind::CmpXChg;

@@ -1068,7 +1068,6 @@ PreservedAnalyses LoopDistributePass::run(Function &F,
   PreservedAnalyses PA;
   PA.preserve<LoopAnalysis>();
   PA.preserve<DominatorTreeAnalysis>();
-  PA.preserve<GlobalsAA>();
   return PA;
 }
 

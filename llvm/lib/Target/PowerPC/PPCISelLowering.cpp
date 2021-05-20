@@ -14627,12 +14627,15 @@ SDValue PPCTargetLowering::combineVReverseMemOP(ShuffleVectorSDNode *SVN,
     return SDValue();
 
   if (LSBase->getOpcode() == ISD::LOAD) {
-    // If the load has more than one user except the shufflevector instruction,
-    // it is not profitable to replace the shufflevector with a reverse load.
-    if (!LSBase->hasOneUse())
-      return SDValue();
+    // If the load return value 0 has more than one user except the
+    // shufflevector instruction, it is not profitable to replace the
+    // shufflevector with a reverse load.
+    for (SDNode::use_iterator UI = LSBase->use_begin(), UE = LSBase->use_end();
+         UI != UE; ++UI)
+      if (UI.getUse().getResNo() == 0 && UI->getOpcode() != ISD::VECTOR_SHUFFLE)
+        return SDValue();
 
-    SDLoc dl(SVN);
+    SDLoc dl(LSBase);
     SDValue LoadOps[] = {LSBase->getChain(), LSBase->getBasePtr()};
     return DAG.getMemIntrinsicNode(
         PPCISD::LOAD_VEC_BE, dl, DAG.getVTList(VT, MVT::Other), LoadOps,
