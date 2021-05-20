@@ -224,8 +224,12 @@ public:
   }
 
   bool isLegalMaskedLoadStore(Type *DataType, Align Alignment) {
-    if (isa<FixedVectorType>(DataType) || !ST->hasSVE())
+    if (!ST->hasSVE())
       return false;
+
+    // For fixed vectors, avoid scalarization if using SVE for them.
+    if (isa<FixedVectorType>(DataType) && !ST->useSVEForFixedLengthVectors())
+      return false; // Fall back to scalarization of masked operations.
 
     return isLegalElementTypeForSVE(DataType->getScalarType());
   }
