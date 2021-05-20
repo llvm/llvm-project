@@ -1120,9 +1120,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget->hasSVE()) {
-    // FIXME: Add custom lowering of MLOAD to handle different passthrus (not a
-    // splat of 0 or undef) once vector selects supported in SVE codegen. See
-    // D68877 for more details.
     for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32, MVT::nxv2i64}) {
       setOperationAction(ISD::BITREVERSE, VT, Custom);
       setOperationAction(ISD::BSWAP, VT, Custom);
@@ -1191,6 +1188,15 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       if (VT != MVT::nxv16i1) {
         setOperationAction(ISD::SINT_TO_FP, VT, Custom);
         setOperationAction(ISD::UINT_TO_FP, VT, Custom);
+      }
+
+      // NEON doesn't support masked loads or stores, but SVE does
+      for (auto VT :
+           {MVT::v4f16, MVT::v8f16, MVT::v2f32, MVT::v4f32, MVT::v1f64,
+            MVT::v2f64, MVT::v8i8, MVT::v16i8, MVT::v4i16, MVT::v8i16,
+            MVT::v2i32, MVT::v4i32, MVT::v1i64, MVT::v2i64}) {
+        setOperationAction(ISD::MLOAD, VT, Custom);
+        setOperationAction(ISD::MSTORE, VT, Custom);
       }
     }
 
@@ -1480,6 +1486,8 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::FSUB, VT, Custom);
   setOperationAction(ISD::FTRUNC, VT, Custom);
   setOperationAction(ISD::LOAD, VT, Custom);
+  setOperationAction(ISD::MLOAD, VT, Custom);
+  setOperationAction(ISD::MSTORE, VT, Custom);
   setOperationAction(ISD::MUL, VT, Custom);
   setOperationAction(ISD::MULHS, VT, Custom);
   setOperationAction(ISD::MULHU, VT, Custom);
@@ -4621,6 +4629,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerINTRINSIC_WO_CHAIN(Op, DAG);
   case ISD::STORE:
     return LowerSTORE(Op, DAG);
+  case ISD::MSTORE:
+    return LowerFixedLengthVectorMStoreToSVE(Op, DAG);
   case ISD::MGATHER:
     return LowerMGATHER(Op, DAG);
   case ISD::MSCATTER:
@@ -4664,6 +4674,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   }
   case ISD::TRUNCATE:
     return LowerTRUNCATE(Op, DAG);
+  case ISD::MLOAD:
+    return LowerFixedLengthVectorMLoadToSVE(Op, DAG);
   case ISD::LOAD:
     if (useSVEForFixedLengthVectorVT(Op.getValueType()))
       return LowerFixedLengthVectorLoadToSVE(Op, DAG);
@@ -17368,6 +17380,66 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorLoadToSVE(
   return DAG.getMergeValues(MergedValues, DL);
 }
 
+static SDValue convertFixedMaskToScalableVector(SDValue Mask,
+                                                SelectionDAG &DAG) {
+  SDLoc DL(Mask);
+  EVT InVT = Mask.getValueType();
+  EVT ContainerVT = getContainerForFixedLengthVector(DAG, InVT);
+
+  auto Op1 = convertToScalableVector(DAG, ContainerVT, Mask);
+  auto Op2 = DAG.getConstant(0, DL, ContainerVT);
+  auto Pg = getPredicateForFixedLengthVector(DAG, DL, InVT);
+
+  EVT CmpVT = Pg.getValueType();
+  return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, DL, CmpVT,
+                     {Pg, Op1, Op2, DAG.getCondCode(ISD::SETNE)});
+}
+
+// Convert all fixed length vector loads larger than NEON to masked_loads.
+SDValue AArch64TargetLowering::LowerFixedLengthVectorMLoadToSVE(
+    SDValue Op, SelectionDAG &DAG) const {
+  auto Load = cast<MaskedLoadSDNode>(Op);
+
+  if (Load->getExtensionType() != ISD::LoadExtType::NON_EXTLOAD)
+    return SDValue();
+
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+
+  SDValue Mask = convertFixedMaskToScalableVector(Load->getMask(), DAG);
+
+  SDValue PassThru;
+  bool IsPassThruZeroOrUndef = false;
+
+  if (Load->getPassThru()->isUndef()) {
+    PassThru = DAG.getUNDEF(ContainerVT);
+    IsPassThruZeroOrUndef = true;
+  } else {
+    if (ContainerVT.isInteger())
+      PassThru = DAG.getConstant(0, DL, ContainerVT);
+    else
+      PassThru = DAG.getConstantFP(0, DL, ContainerVT);
+    if (isZerosVector(Load->getPassThru().getNode()))
+      IsPassThruZeroOrUndef = true;
+  }
+
+  auto NewLoad = DAG.getMaskedLoad(
+      ContainerVT, DL, Load->getChain(), Load->getBasePtr(), Load->getOffset(),
+      Mask, PassThru, Load->getMemoryVT(), Load->getMemOperand(),
+      Load->getAddressingMode(), Load->getExtensionType());
+
+  if (!IsPassThruZeroOrUndef) {
+    SDValue OldPassThru =
+        convertToScalableVector(DAG, ContainerVT, Load->getPassThru());
+    NewLoad = DAG.getSelect(DL, ContainerVT, Mask, NewLoad, OldPassThru);
+  }
+
+  auto Result = convertFromScalableVector(DAG, VT, NewLoad);
+  SDValue MergedValues[2] = {Result, Load->getChain()};
+  return DAG.getMergeValues(MergedValues, DL);
+}
+
 // Convert all fixed length vector stores larger than NEON to masked_stores.
 SDValue AArch64TargetLowering::LowerFixedLengthVectorStoreToSVE(
     SDValue Op, SelectionDAG &DAG) const {
@@ -17383,6 +17455,26 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorStoreToSVE(
       getPredicateForFixedLengthVector(DAG, DL, VT), Store->getMemoryVT(),
       Store->getMemOperand(), Store->getAddressingMode(),
       Store->isTruncatingStore());
+}
+
+SDValue AArch64TargetLowering::LowerFixedLengthVectorMStoreToSVE(
+    SDValue Op, SelectionDAG &DAG) const {
+  auto Store = cast<MaskedStoreSDNode>(Op);
+
+  if (Store->isTruncatingStore())
+    return SDValue();
+
+  SDLoc DL(Op);
+  EVT VT = Store->getValue().getValueType();
+  EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+
+  auto NewValue = convertToScalableVector(DAG, ContainerVT, Store->getValue());
+  SDValue Mask = convertFixedMaskToScalableVector(Store->getMask(), DAG);
+
+  return DAG.getMaskedStore(
+      Store->getChain(), DL, NewValue, Store->getBasePtr(), Store->getOffset(),
+      Mask, Store->getMemoryVT(), Store->getMemOperand(),
+      Store->getAddressingMode(), Store->isTruncatingStore());
 }
 
 SDValue AArch64TargetLowering::LowerFixedLengthVectorIntDivideToSVE(
