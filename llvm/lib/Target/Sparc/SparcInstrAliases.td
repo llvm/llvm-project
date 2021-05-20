@@ -491,6 +491,7 @@ def : MnemonicAlias<"stsh", "sth">;
 
 def : MnemonicAlias<"stuha", "stha">;
 def : MnemonicAlias<"stsha", "stha">;
+def : MnemonicAlias<"stw", "st">, Requires<[HasV9]>;
 
 def : MnemonicAlias<"lduw", "ld">, Requires<[HasV9]>;
 def : MnemonicAlias<"lduwa", "lda">, Requires<[HasV9]>;
