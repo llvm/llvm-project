@@ -10,12 +10,12 @@
 // RUN: %clang_cc1 -DCK1 -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
 // RUN: %clang_cc1 -DCK1 -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK4
 
-// RUN: %clang_cc1 -DCK1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK5
+// RUN: %clang_cc1 -DCK1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // RUN: %clang_cc1 -DCK1 -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK1 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK6
-// RUN: %clang_cc1 -DCK1 -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK7
+// RUN: %clang_cc1 -DCK1 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -DCK1 -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // RUN: %clang_cc1 -DCK1 -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK1 -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK8
+// RUN: %clang_cc1 -DCK1 -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 #ifdef CK1
 
 int Gbla;
@@ -87,12 +87,12 @@ int teams_argument_global_local(int a){
 // RUN: %clang_cc1 -DCK2 -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
 // RUN: %clang_cc1 -DCK2 -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK12
 
-// RUN: %clang_cc1 -DCK2 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK13
+// RUN: %clang_cc1 -DCK2 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // RUN: %clang_cc1 -DCK2 -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK2 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK14
-// RUN: %clang_cc1 -DCK2 -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK15
+// RUN: %clang_cc1 -DCK2 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -DCK2 -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // RUN: %clang_cc1 -DCK2 -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK2 -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK16
+// RUN: %clang_cc1 -DCK2 -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 #ifdef CK2
 
 template <typename T>
@@ -139,12 +139,12 @@ int teams_template_arg(void) {
 // RUN: %clang_cc1 -DCK3 -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
 // RUN: %clang_cc1 -DCK3 -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK20
 
-// RUN: %clang_cc1 -DCK3 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK21
+// RUN: %clang_cc1 -DCK3 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // RUN: %clang_cc1 -DCK3 -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK3 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK22
-// RUN: %clang_cc1 -DCK3 -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK23
+// RUN: %clang_cc1 -DCK3 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -DCK3 -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // RUN: %clang_cc1 -DCK3 -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK3 -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK24
+// RUN: %clang_cc1 -DCK3 -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 #ifdef CK3
 
 
@@ -193,13 +193,13 @@ int teams_template_struct(void) {
 // RUN: %clang_cc1 -DCK4 -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK28
 
 // RUN: %clang_cc1 -DCK4 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -DCK4 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=CHECK29
+// RUN: %clang_cc1 -DCK4 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // RUN: %clang_cc1 -DCK4 -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t %s
-// RUN: %clang_cc1 -DCK4 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK30
+// RUN: %clang_cc1 -DCK4 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // RUN: %clang_cc1 -DCK4 -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm-bc %s -o %t-x86-host.bc
-// RUN: %clang_cc1 -DCK4 -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix=CHECK31
+// RUN: %clang_cc1 -DCK4 -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // RUN: %clang_cc1 -DCK4 -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s
-// RUN: %clang_cc1 -DCK4 -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK32
+// RUN: %clang_cc1 -DCK4 -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 
 #ifdef CK4
 
@@ -235,13 +235,13 @@ int main (int argc, char **argv) {
 // RUN: %clang_cc1 -DCK5 -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK36
 
 // RUN: %clang_cc1 -DCK5 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -DCK5 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=CHECK37
+// RUN: %clang_cc1 -DCK5 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // RUN: %clang_cc1 -DCK5 -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t %s
-// RUN: %clang_cc1 -DCK5 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK38
+// RUN: %clang_cc1 -DCK5 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // RUN: %clang_cc1 -DCK5 -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm-bc %s -o %t-x86-host.bc
-// RUN: %clang_cc1 -DCK5 -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix=CHECK39
+// RUN: %clang_cc1 -DCK5 -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // RUN: %clang_cc1 -DCK5 -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s
-// RUN: %clang_cc1 -DCK5 -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK40
+// RUN: %clang_cc1 -DCK5 -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 
 // expected-no-diagnostics
 #ifdef CK5
@@ -282,12 +282,12 @@ int main (int argc, char **argv) {
 // RUN: %clang_cc1 -DCK6 -fopenmp -fopenmp-version=50 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
 // RUN: %clang_cc1 -DCK6 -fopenmp -fopenmp-version=50 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK44
 
-// RUN: %clang_cc1 -DCK6 -verify -fopenmp-version=50 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK45
+// RUN: %clang_cc1 -DCK6 -verify -fopenmp-version=50 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // RUN: %clang_cc1 -DCK6 -fopenmp-simd -fopenmp-version=50 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK6 -fopenmp-simd -fopenmp-version=50 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK46
-// RUN: %clang_cc1 -DCK6 -verify -fopenmp-simd -fopenmp-version=50 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK47
+// RUN: %clang_cc1 -DCK6 -fopenmp-simd -fopenmp-version=50 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
+// RUN: %clang_cc1 -DCK6 -verify -fopenmp-simd -fopenmp-version=50 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // RUN: %clang_cc1 -DCK6 -fopenmp-simd -fopenmp-version=50 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -DCK6 -fopenmp-simd -fopenmp-version=50 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK48
+// RUN: %clang_cc1 -DCK6 -fopenmp-simd -fopenmp-version=50 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 #ifdef CK6
 
 void foo() {
@@ -2222,170 +2222,6 @@ void foo() {
 // CHECK4-NEXT:    ret void
 //
 //
-// CHECK5-LABEL: define {{[^@]+}}@_Z27teams_argument_global_locali
-// CHECK5-SAME: (i32 signext [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-// CHECK5-NEXT:  entry:
-// CHECK5-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
-// CHECK5-NEXT:    [[COMP:%.*]] = alloca i32, align 4
-// CHECK5-NEXT:    [[LA:%.*]] = alloca i32, align 4
-// CHECK5-NEXT:    [[LC:%.*]] = alloca float, align 4
-// CHECK5-NEXT:    [[TMP:%.*]] = alloca i32*, align 8
-// CHECK5-NEXT:    [[_TMP5:%.*]] = alloca i32*, align 8
-// CHECK5-NEXT:    store i32 [[A]], i32* [[A_ADDR]], align 4
-// CHECK5-NEXT:    store i32 1, i32* [[COMP]], align 4
-// CHECK5-NEXT:    store i32 23, i32* [[LA]], align 4
-// CHECK5-NEXT:    store float 2.500000e+01, float* [[LC]], align 4
-// CHECK5-NEXT:    [[TMP0:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK5-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
-// CHECK5-NEXT:    store i32 [[INC]], i32* [[COMP]], align 4
-// CHECK5-NEXT:    [[TMP1:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK5-NEXT:    [[INC1:%.*]] = add nsw i32 [[TMP1]], 1
-// CHECK5-NEXT:    store i32 [[INC1]], i32* [[COMP]], align 4
-// CHECK5-NEXT:    [[TMP2:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK5-NEXT:    [[INC2:%.*]] = add nsw i32 [[TMP2]], 1
-// CHECK5-NEXT:    store i32 [[INC2]], i32* [[COMP]], align 4
-// CHECK5-NEXT:    [[TMP3:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK5-NEXT:    [[INC3:%.*]] = add nsw i32 [[TMP3]], 1
-// CHECK5-NEXT:    store i32 [[INC3]], i32* [[COMP]], align 4
-// CHECK5-NEXT:    [[TMP4:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK5-NEXT:    [[INC4:%.*]] = add nsw i32 [[TMP4]], 1
-// CHECK5-NEXT:    store i32 [[INC4]], i32* [[COMP]], align 4
-// CHECK5-NEXT:    [[TMP5:%.*]] = load i32*, i32** @Gblc, align 8
-// CHECK5-NEXT:    store i32* [[TMP5]], i32** [[TMP]], align 8
-// CHECK5-NEXT:    [[TMP6:%.*]] = load i32*, i32** @Gblc, align 8
-// CHECK5-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[TMP]], align 8
-// CHECK5-NEXT:    store i32* [[TMP7]], i32** [[_TMP5]], align 8
-// CHECK5-NEXT:    [[TMP8:%.*]] = load i32, i32* @Gbla, align 4
-// CHECK5-NEXT:    [[TMP9:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK5-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP9]], [[TMP8]]
-// CHECK5-NEXT:    store i32 [[ADD]], i32* [[COMP]], align 4
-// CHECK5-NEXT:    [[TMP10:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK5-NEXT:    ret i32 [[TMP10]]
-//
-//
-// CHECK6-LABEL: define {{[^@]+}}@_Z27teams_argument_global_locali
-// CHECK6-SAME: (i32 signext [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-// CHECK6-NEXT:  entry:
-// CHECK6-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
-// CHECK6-NEXT:    [[COMP:%.*]] = alloca i32, align 4
-// CHECK6-NEXT:    [[LA:%.*]] = alloca i32, align 4
-// CHECK6-NEXT:    [[LC:%.*]] = alloca float, align 4
-// CHECK6-NEXT:    [[TMP:%.*]] = alloca i32*, align 8
-// CHECK6-NEXT:    [[_TMP5:%.*]] = alloca i32*, align 8
-// CHECK6-NEXT:    store i32 [[A]], i32* [[A_ADDR]], align 4
-// CHECK6-NEXT:    store i32 1, i32* [[COMP]], align 4
-// CHECK6-NEXT:    store i32 23, i32* [[LA]], align 4
-// CHECK6-NEXT:    store float 2.500000e+01, float* [[LC]], align 4
-// CHECK6-NEXT:    [[TMP0:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK6-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
-// CHECK6-NEXT:    store i32 [[INC]], i32* [[COMP]], align 4
-// CHECK6-NEXT:    [[TMP1:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK6-NEXT:    [[INC1:%.*]] = add nsw i32 [[TMP1]], 1
-// CHECK6-NEXT:    store i32 [[INC1]], i32* [[COMP]], align 4
-// CHECK6-NEXT:    [[TMP2:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK6-NEXT:    [[INC2:%.*]] = add nsw i32 [[TMP2]], 1
-// CHECK6-NEXT:    store i32 [[INC2]], i32* [[COMP]], align 4
-// CHECK6-NEXT:    [[TMP3:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK6-NEXT:    [[INC3:%.*]] = add nsw i32 [[TMP3]], 1
-// CHECK6-NEXT:    store i32 [[INC3]], i32* [[COMP]], align 4
-// CHECK6-NEXT:    [[TMP4:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK6-NEXT:    [[INC4:%.*]] = add nsw i32 [[TMP4]], 1
-// CHECK6-NEXT:    store i32 [[INC4]], i32* [[COMP]], align 4
-// CHECK6-NEXT:    [[TMP5:%.*]] = load i32*, i32** @Gblc, align 8
-// CHECK6-NEXT:    store i32* [[TMP5]], i32** [[TMP]], align 8
-// CHECK6-NEXT:    [[TMP6:%.*]] = load i32*, i32** @Gblc, align 8
-// CHECK6-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[TMP]], align 8
-// CHECK6-NEXT:    store i32* [[TMP7]], i32** [[_TMP5]], align 8
-// CHECK6-NEXT:    [[TMP8:%.*]] = load i32, i32* @Gbla, align 4
-// CHECK6-NEXT:    [[TMP9:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK6-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP9]], [[TMP8]]
-// CHECK6-NEXT:    store i32 [[ADD]], i32* [[COMP]], align 4
-// CHECK6-NEXT:    [[TMP10:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK6-NEXT:    ret i32 [[TMP10]]
-//
-//
-// CHECK7-LABEL: define {{[^@]+}}@_Z27teams_argument_global_locali
-// CHECK7-SAME: (i32 [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-// CHECK7-NEXT:  entry:
-// CHECK7-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
-// CHECK7-NEXT:    [[COMP:%.*]] = alloca i32, align 4
-// CHECK7-NEXT:    [[LA:%.*]] = alloca i32, align 4
-// CHECK7-NEXT:    [[LC:%.*]] = alloca float, align 4
-// CHECK7-NEXT:    [[TMP:%.*]] = alloca i32*, align 4
-// CHECK7-NEXT:    [[_TMP5:%.*]] = alloca i32*, align 4
-// CHECK7-NEXT:    store i32 [[A]], i32* [[A_ADDR]], align 4
-// CHECK7-NEXT:    store i32 1, i32* [[COMP]], align 4
-// CHECK7-NEXT:    store i32 23, i32* [[LA]], align 4
-// CHECK7-NEXT:    store float 2.500000e+01, float* [[LC]], align 4
-// CHECK7-NEXT:    [[TMP0:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK7-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
-// CHECK7-NEXT:    store i32 [[INC]], i32* [[COMP]], align 4
-// CHECK7-NEXT:    [[TMP1:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK7-NEXT:    [[INC1:%.*]] = add nsw i32 [[TMP1]], 1
-// CHECK7-NEXT:    store i32 [[INC1]], i32* [[COMP]], align 4
-// CHECK7-NEXT:    [[TMP2:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK7-NEXT:    [[INC2:%.*]] = add nsw i32 [[TMP2]], 1
-// CHECK7-NEXT:    store i32 [[INC2]], i32* [[COMP]], align 4
-// CHECK7-NEXT:    [[TMP3:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK7-NEXT:    [[INC3:%.*]] = add nsw i32 [[TMP3]], 1
-// CHECK7-NEXT:    store i32 [[INC3]], i32* [[COMP]], align 4
-// CHECK7-NEXT:    [[TMP4:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK7-NEXT:    [[INC4:%.*]] = add nsw i32 [[TMP4]], 1
-// CHECK7-NEXT:    store i32 [[INC4]], i32* [[COMP]], align 4
-// CHECK7-NEXT:    [[TMP5:%.*]] = load i32*, i32** @Gblc, align 4
-// CHECK7-NEXT:    store i32* [[TMP5]], i32** [[TMP]], align 4
-// CHECK7-NEXT:    [[TMP6:%.*]] = load i32*, i32** @Gblc, align 4
-// CHECK7-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[TMP]], align 4
-// CHECK7-NEXT:    store i32* [[TMP7]], i32** [[_TMP5]], align 4
-// CHECK7-NEXT:    [[TMP8:%.*]] = load i32, i32* @Gbla, align 4
-// CHECK7-NEXT:    [[TMP9:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK7-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP9]], [[TMP8]]
-// CHECK7-NEXT:    store i32 [[ADD]], i32* [[COMP]], align 4
-// CHECK7-NEXT:    [[TMP10:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK7-NEXT:    ret i32 [[TMP10]]
-//
-//
-// CHECK8-LABEL: define {{[^@]+}}@_Z27teams_argument_global_locali
-// CHECK8-SAME: (i32 [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-// CHECK8-NEXT:  entry:
-// CHECK8-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
-// CHECK8-NEXT:    [[COMP:%.*]] = alloca i32, align 4
-// CHECK8-NEXT:    [[LA:%.*]] = alloca i32, align 4
-// CHECK8-NEXT:    [[LC:%.*]] = alloca float, align 4
-// CHECK8-NEXT:    [[TMP:%.*]] = alloca i32*, align 4
-// CHECK8-NEXT:    [[_TMP5:%.*]] = alloca i32*, align 4
-// CHECK8-NEXT:    store i32 [[A]], i32* [[A_ADDR]], align 4
-// CHECK8-NEXT:    store i32 1, i32* [[COMP]], align 4
-// CHECK8-NEXT:    store i32 23, i32* [[LA]], align 4
-// CHECK8-NEXT:    store float 2.500000e+01, float* [[LC]], align 4
-// CHECK8-NEXT:    [[TMP0:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK8-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
-// CHECK8-NEXT:    store i32 [[INC]], i32* [[COMP]], align 4
-// CHECK8-NEXT:    [[TMP1:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK8-NEXT:    [[INC1:%.*]] = add nsw i32 [[TMP1]], 1
-// CHECK8-NEXT:    store i32 [[INC1]], i32* [[COMP]], align 4
-// CHECK8-NEXT:    [[TMP2:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK8-NEXT:    [[INC2:%.*]] = add nsw i32 [[TMP2]], 1
-// CHECK8-NEXT:    store i32 [[INC2]], i32* [[COMP]], align 4
-// CHECK8-NEXT:    [[TMP3:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK8-NEXT:    [[INC3:%.*]] = add nsw i32 [[TMP3]], 1
-// CHECK8-NEXT:    store i32 [[INC3]], i32* [[COMP]], align 4
-// CHECK8-NEXT:    [[TMP4:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK8-NEXT:    [[INC4:%.*]] = add nsw i32 [[TMP4]], 1
-// CHECK8-NEXT:    store i32 [[INC4]], i32* [[COMP]], align 4
-// CHECK8-NEXT:    [[TMP5:%.*]] = load i32*, i32** @Gblc, align 4
-// CHECK8-NEXT:    store i32* [[TMP5]], i32** [[TMP]], align 4
-// CHECK8-NEXT:    [[TMP6:%.*]] = load i32*, i32** @Gblc, align 4
-// CHECK8-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[TMP]], align 4
-// CHECK8-NEXT:    store i32* [[TMP7]], i32** [[_TMP5]], align 4
-// CHECK8-NEXT:    [[TMP8:%.*]] = load i32, i32* @Gbla, align 4
-// CHECK8-NEXT:    [[TMP9:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK8-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP9]], [[TMP8]]
-// CHECK8-NEXT:    store i32 [[ADD]], i32* [[COMP]], align 4
-// CHECK8-NEXT:    [[TMP10:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK8-NEXT:    ret i32 [[TMP10]]
-//
-//
 // CHECK9-LABEL: define {{[^@]+}}@_Z18teams_template_argv
 // CHECK9-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK9-NEXT:  entry:
@@ -3146,74 +2982,6 @@ void foo() {
 // CHECK12-NEXT:    ret void
 //
 //
-// CHECK13-LABEL: define {{[^@]+}}@_Z18teams_template_argv
-// CHECK13-SAME: () #[[ATTR0:[0-9]+]] {
-// CHECK13-NEXT:  entry:
-// CHECK13-NEXT:    [[COMP:%.*]] = alloca i32, align 4
-// CHECK13-NEXT:    [[LA:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
-// CHECK13-NEXT:    [[LB:%.*]] = alloca [[STRUCT_SS_0:%.*]], align 8
-// CHECK13-NEXT:    store i32 1, i32* [[COMP]], align 4
-// CHECK13-NEXT:    [[TMP0:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK13-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
-// CHECK13-NEXT:    store i32 [[INC]], i32* [[COMP]], align 4
-// CHECK13-NEXT:    [[TMP1:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK13-NEXT:    [[INC1:%.*]] = add nsw i32 [[TMP1]], 1
-// CHECK13-NEXT:    store i32 [[INC1]], i32* [[COMP]], align 4
-// CHECK13-NEXT:    [[TMP2:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK13-NEXT:    ret i32 [[TMP2]]
-//
-//
-// CHECK14-LABEL: define {{[^@]+}}@_Z18teams_template_argv
-// CHECK14-SAME: () #[[ATTR0:[0-9]+]] {
-// CHECK14-NEXT:  entry:
-// CHECK14-NEXT:    [[COMP:%.*]] = alloca i32, align 4
-// CHECK14-NEXT:    [[LA:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
-// CHECK14-NEXT:    [[LB:%.*]] = alloca [[STRUCT_SS_0:%.*]], align 8
-// CHECK14-NEXT:    store i32 1, i32* [[COMP]], align 4
-// CHECK14-NEXT:    [[TMP0:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK14-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
-// CHECK14-NEXT:    store i32 [[INC]], i32* [[COMP]], align 4
-// CHECK14-NEXT:    [[TMP1:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK14-NEXT:    [[INC1:%.*]] = add nsw i32 [[TMP1]], 1
-// CHECK14-NEXT:    store i32 [[INC1]], i32* [[COMP]], align 4
-// CHECK14-NEXT:    [[TMP2:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK14-NEXT:    ret i32 [[TMP2]]
-//
-//
-// CHECK15-LABEL: define {{[^@]+}}@_Z18teams_template_argv
-// CHECK15-SAME: () #[[ATTR0:[0-9]+]] {
-// CHECK15-NEXT:  entry:
-// CHECK15-NEXT:    [[COMP:%.*]] = alloca i32, align 4
-// CHECK15-NEXT:    [[LA:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
-// CHECK15-NEXT:    [[LB:%.*]] = alloca [[STRUCT_SS_0:%.*]], align 4
-// CHECK15-NEXT:    store i32 1, i32* [[COMP]], align 4
-// CHECK15-NEXT:    [[TMP0:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK15-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
-// CHECK15-NEXT:    store i32 [[INC]], i32* [[COMP]], align 4
-// CHECK15-NEXT:    [[TMP1:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK15-NEXT:    [[INC1:%.*]] = add nsw i32 [[TMP1]], 1
-// CHECK15-NEXT:    store i32 [[INC1]], i32* [[COMP]], align 4
-// CHECK15-NEXT:    [[TMP2:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK15-NEXT:    ret i32 [[TMP2]]
-//
-//
-// CHECK16-LABEL: define {{[^@]+}}@_Z18teams_template_argv
-// CHECK16-SAME: () #[[ATTR0:[0-9]+]] {
-// CHECK16-NEXT:  entry:
-// CHECK16-NEXT:    [[COMP:%.*]] = alloca i32, align 4
-// CHECK16-NEXT:    [[LA:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
-// CHECK16-NEXT:    [[LB:%.*]] = alloca [[STRUCT_SS_0:%.*]], align 4
-// CHECK16-NEXT:    store i32 1, i32* [[COMP]], align 4
-// CHECK16-NEXT:    [[TMP0:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK16-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
-// CHECK16-NEXT:    store i32 [[INC]], i32* [[COMP]], align 4
-// CHECK16-NEXT:    [[TMP1:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK16-NEXT:    [[INC1:%.*]] = add nsw i32 [[TMP1]], 1
-// CHECK16-NEXT:    store i32 [[INC1]], i32* [[COMP]], align 4
-// CHECK16-NEXT:    [[TMP2:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK16-NEXT:    ret i32 [[TMP2]]
-//
-//
 // CHECK17-LABEL: define {{[^@]+}}@_Z21teams_template_structv
 // CHECK17-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK17-NEXT:  entry:
@@ -3882,110 +3650,6 @@ void foo() {
 // CHECK20-NEXT:    ret void
 //
 //
-// CHECK21-LABEL: define {{[^@]+}}@_Z21teams_template_structv
-// CHECK21-SAME: () #[[ATTR0:[0-9]+]] {
-// CHECK21-NEXT:  entry:
-// CHECK21-NEXT:    [[V:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
-// CHECK21-NEXT:    [[CALL:%.*]] = call signext i32 @_ZN2SSIiLi123ELx456EE3fooEv(%struct.SS* nonnull align 4 dereferenceable(8) [[V]])
-// CHECK21-NEXT:    ret i32 [[CALL]]
-//
-//
-// CHECK21-LABEL: define {{[^@]+}}@_ZN2SSIiLi123ELx456EE3fooEv
-// CHECK21-SAME: (%struct.SS* nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR0]] comdat align 2 {
-// CHECK21-NEXT:  entry:
-// CHECK21-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.SS*, align 8
-// CHECK21-NEXT:    [[COMP:%.*]] = alloca i32, align 4
-// CHECK21-NEXT:    store %struct.SS* [[THIS]], %struct.SS** [[THIS_ADDR]], align 8
-// CHECK21-NEXT:    [[THIS1:%.*]] = load %struct.SS*, %struct.SS** [[THIS_ADDR]], align 8
-// CHECK21-NEXT:    store i32 1, i32* [[COMP]], align 4
-// CHECK21-NEXT:    [[TMP0:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK21-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
-// CHECK21-NEXT:    store i32 [[INC]], i32* [[COMP]], align 4
-// CHECK21-NEXT:    [[TMP1:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK21-NEXT:    [[INC2:%.*]] = add nsw i32 [[TMP1]], 1
-// CHECK21-NEXT:    store i32 [[INC2]], i32* [[COMP]], align 4
-// CHECK21-NEXT:    [[TMP2:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK21-NEXT:    ret i32 [[TMP2]]
-//
-//
-// CHECK22-LABEL: define {{[^@]+}}@_Z21teams_template_structv
-// CHECK22-SAME: () #[[ATTR0:[0-9]+]] {
-// CHECK22-NEXT:  entry:
-// CHECK22-NEXT:    [[V:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
-// CHECK22-NEXT:    [[CALL:%.*]] = call signext i32 @_ZN2SSIiLi123ELx456EE3fooEv(%struct.SS* nonnull align 4 dereferenceable(8) [[V]])
-// CHECK22-NEXT:    ret i32 [[CALL]]
-//
-//
-// CHECK22-LABEL: define {{[^@]+}}@_ZN2SSIiLi123ELx456EE3fooEv
-// CHECK22-SAME: (%struct.SS* nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR0]] comdat align 2 {
-// CHECK22-NEXT:  entry:
-// CHECK22-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.SS*, align 8
-// CHECK22-NEXT:    [[COMP:%.*]] = alloca i32, align 4
-// CHECK22-NEXT:    store %struct.SS* [[THIS]], %struct.SS** [[THIS_ADDR]], align 8
-// CHECK22-NEXT:    [[THIS1:%.*]] = load %struct.SS*, %struct.SS** [[THIS_ADDR]], align 8
-// CHECK22-NEXT:    store i32 1, i32* [[COMP]], align 4
-// CHECK22-NEXT:    [[TMP0:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK22-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
-// CHECK22-NEXT:    store i32 [[INC]], i32* [[COMP]], align 4
-// CHECK22-NEXT:    [[TMP1:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK22-NEXT:    [[INC2:%.*]] = add nsw i32 [[TMP1]], 1
-// CHECK22-NEXT:    store i32 [[INC2]], i32* [[COMP]], align 4
-// CHECK22-NEXT:    [[TMP2:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK22-NEXT:    ret i32 [[TMP2]]
-//
-//
-// CHECK23-LABEL: define {{[^@]+}}@_Z21teams_template_structv
-// CHECK23-SAME: () #[[ATTR0:[0-9]+]] {
-// CHECK23-NEXT:  entry:
-// CHECK23-NEXT:    [[V:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
-// CHECK23-NEXT:    [[CALL:%.*]] = call i32 @_ZN2SSIiLi123ELx456EE3fooEv(%struct.SS* nonnull align 4 dereferenceable(8) [[V]])
-// CHECK23-NEXT:    ret i32 [[CALL]]
-//
-//
-// CHECK23-LABEL: define {{[^@]+}}@_ZN2SSIiLi123ELx456EE3fooEv
-// CHECK23-SAME: (%struct.SS* nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR0]] comdat align 2 {
-// CHECK23-NEXT:  entry:
-// CHECK23-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.SS*, align 4
-// CHECK23-NEXT:    [[COMP:%.*]] = alloca i32, align 4
-// CHECK23-NEXT:    store %struct.SS* [[THIS]], %struct.SS** [[THIS_ADDR]], align 4
-// CHECK23-NEXT:    [[THIS1:%.*]] = load %struct.SS*, %struct.SS** [[THIS_ADDR]], align 4
-// CHECK23-NEXT:    store i32 1, i32* [[COMP]], align 4
-// CHECK23-NEXT:    [[TMP0:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK23-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
-// CHECK23-NEXT:    store i32 [[INC]], i32* [[COMP]], align 4
-// CHECK23-NEXT:    [[TMP1:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK23-NEXT:    [[INC2:%.*]] = add nsw i32 [[TMP1]], 1
-// CHECK23-NEXT:    store i32 [[INC2]], i32* [[COMP]], align 4
-// CHECK23-NEXT:    [[TMP2:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK23-NEXT:    ret i32 [[TMP2]]
-//
-//
-// CHECK24-LABEL: define {{[^@]+}}@_Z21teams_template_structv
-// CHECK24-SAME: () #[[ATTR0:[0-9]+]] {
-// CHECK24-NEXT:  entry:
-// CHECK24-NEXT:    [[V:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
-// CHECK24-NEXT:    [[CALL:%.*]] = call i32 @_ZN2SSIiLi123ELx456EE3fooEv(%struct.SS* nonnull align 4 dereferenceable(8) [[V]])
-// CHECK24-NEXT:    ret i32 [[CALL]]
-//
-//
-// CHECK24-LABEL: define {{[^@]+}}@_ZN2SSIiLi123ELx456EE3fooEv
-// CHECK24-SAME: (%struct.SS* nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR0]] comdat align 2 {
-// CHECK24-NEXT:  entry:
-// CHECK24-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.SS*, align 4
-// CHECK24-NEXT:    [[COMP:%.*]] = alloca i32, align 4
-// CHECK24-NEXT:    store %struct.SS* [[THIS]], %struct.SS** [[THIS_ADDR]], align 4
-// CHECK24-NEXT:    [[THIS1:%.*]] = load %struct.SS*, %struct.SS** [[THIS_ADDR]], align 4
-// CHECK24-NEXT:    store i32 1, i32* [[COMP]], align 4
-// CHECK24-NEXT:    [[TMP0:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK24-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
-// CHECK24-NEXT:    store i32 [[INC]], i32* [[COMP]], align 4
-// CHECK24-NEXT:    [[TMP1:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK24-NEXT:    [[INC2:%.*]] = add nsw i32 [[TMP1]], 1
-// CHECK24-NEXT:    store i32 [[INC2]], i32* [[COMP]], align 4
-// CHECK24-NEXT:    [[TMP2:%.*]] = load i32, i32* [[COMP]], align 4
-// CHECK24-NEXT:    ret i32 [[TMP2]]
-//
-//
 // CHECK25-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l216
 // CHECK25-SAME: (i64 [[ARGC:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK25-NEXT:  entry:
@@ -4170,102 +3834,6 @@ void foo() {
 // CHECK28-NEXT:    [[TMP0:%.*]] = load i8***, i8**** [[ARGC_ADDR]], align 4
 // CHECK28-NEXT:    store i8** null, i8*** [[TMP0]], align 4
 // CHECK28-NEXT:    ret void
-//
-//
-// CHECK29-LABEL: define {{[^@]+}}@main
-// CHECK29-SAME: (i32 signext [[ARGC:%.*]], i8** [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
-// CHECK29-NEXT:  entry:
-// CHECK29-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK29-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
-// CHECK29-NEXT:    [[ARGV_ADDR:%.*]] = alloca i8**, align 8
-// CHECK29-NEXT:    store i32 0, i32* [[RETVAL]], align 4
-// CHECK29-NEXT:    store i32 [[ARGC]], i32* [[ARGC_ADDR]], align 4
-// CHECK29-NEXT:    store i8** [[ARGV]], i8*** [[ARGV_ADDR]], align 8
-// CHECK29-NEXT:    store i32 0, i32* [[ARGC_ADDR]], align 4
-// CHECK29-NEXT:    [[TMP0:%.*]] = load i8**, i8*** [[ARGV_ADDR]], align 8
-// CHECK29-NEXT:    [[CALL:%.*]] = call signext i32 @_Z5tmainIPPcEiT_(i8** [[TMP0]])
-// CHECK29-NEXT:    ret i32 [[CALL]]
-//
-//
-// CHECK29-LABEL: define {{[^@]+}}@_Z5tmainIPPcEiT_
-// CHECK29-SAME: (i8** [[ARGC:%.*]]) #[[ATTR1:[0-9]+]] comdat {
-// CHECK29-NEXT:  entry:
-// CHECK29-NEXT:    [[ARGC_ADDR:%.*]] = alloca i8**, align 8
-// CHECK29-NEXT:    store i8** [[ARGC]], i8*** [[ARGC_ADDR]], align 8
-// CHECK29-NEXT:    store i8** null, i8*** [[ARGC_ADDR]], align 8
-// CHECK29-NEXT:    ret i32 0
-//
-//
-// CHECK30-LABEL: define {{[^@]+}}@main
-// CHECK30-SAME: (i32 signext [[ARGC:%.*]], i8** [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
-// CHECK30-NEXT:  entry:
-// CHECK30-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK30-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
-// CHECK30-NEXT:    [[ARGV_ADDR:%.*]] = alloca i8**, align 8
-// CHECK30-NEXT:    store i32 0, i32* [[RETVAL]], align 4
-// CHECK30-NEXT:    store i32 [[ARGC]], i32* [[ARGC_ADDR]], align 4
-// CHECK30-NEXT:    store i8** [[ARGV]], i8*** [[ARGV_ADDR]], align 8
-// CHECK30-NEXT:    store i32 0, i32* [[ARGC_ADDR]], align 4
-// CHECK30-NEXT:    [[TMP0:%.*]] = load i8**, i8*** [[ARGV_ADDR]], align 8
-// CHECK30-NEXT:    [[CALL:%.*]] = call signext i32 @_Z5tmainIPPcEiT_(i8** [[TMP0]])
-// CHECK30-NEXT:    ret i32 [[CALL]]
-//
-//
-// CHECK30-LABEL: define {{[^@]+}}@_Z5tmainIPPcEiT_
-// CHECK30-SAME: (i8** [[ARGC:%.*]]) #[[ATTR1:[0-9]+]] comdat {
-// CHECK30-NEXT:  entry:
-// CHECK30-NEXT:    [[ARGC_ADDR:%.*]] = alloca i8**, align 8
-// CHECK30-NEXT:    store i8** [[ARGC]], i8*** [[ARGC_ADDR]], align 8
-// CHECK30-NEXT:    store i8** null, i8*** [[ARGC_ADDR]], align 8
-// CHECK30-NEXT:    ret i32 0
-//
-//
-// CHECK31-LABEL: define {{[^@]+}}@main
-// CHECK31-SAME: (i32 [[ARGC:%.*]], i8** [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
-// CHECK31-NEXT:  entry:
-// CHECK31-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK31-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
-// CHECK31-NEXT:    [[ARGV_ADDR:%.*]] = alloca i8**, align 4
-// CHECK31-NEXT:    store i32 0, i32* [[RETVAL]], align 4
-// CHECK31-NEXT:    store i32 [[ARGC]], i32* [[ARGC_ADDR]], align 4
-// CHECK31-NEXT:    store i8** [[ARGV]], i8*** [[ARGV_ADDR]], align 4
-// CHECK31-NEXT:    store i32 0, i32* [[ARGC_ADDR]], align 4
-// CHECK31-NEXT:    [[TMP0:%.*]] = load i8**, i8*** [[ARGV_ADDR]], align 4
-// CHECK31-NEXT:    [[CALL:%.*]] = call i32 @_Z5tmainIPPcEiT_(i8** [[TMP0]])
-// CHECK31-NEXT:    ret i32 [[CALL]]
-//
-//
-// CHECK31-LABEL: define {{[^@]+}}@_Z5tmainIPPcEiT_
-// CHECK31-SAME: (i8** [[ARGC:%.*]]) #[[ATTR1:[0-9]+]] comdat {
-// CHECK31-NEXT:  entry:
-// CHECK31-NEXT:    [[ARGC_ADDR:%.*]] = alloca i8**, align 4
-// CHECK31-NEXT:    store i8** [[ARGC]], i8*** [[ARGC_ADDR]], align 4
-// CHECK31-NEXT:    store i8** null, i8*** [[ARGC_ADDR]], align 4
-// CHECK31-NEXT:    ret i32 0
-//
-//
-// CHECK32-LABEL: define {{[^@]+}}@main
-// CHECK32-SAME: (i32 [[ARGC:%.*]], i8** [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
-// CHECK32-NEXT:  entry:
-// CHECK32-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK32-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
-// CHECK32-NEXT:    [[ARGV_ADDR:%.*]] = alloca i8**, align 4
-// CHECK32-NEXT:    store i32 0, i32* [[RETVAL]], align 4
-// CHECK32-NEXT:    store i32 [[ARGC]], i32* [[ARGC_ADDR]], align 4
-// CHECK32-NEXT:    store i8** [[ARGV]], i8*** [[ARGV_ADDR]], align 4
-// CHECK32-NEXT:    store i32 0, i32* [[ARGC_ADDR]], align 4
-// CHECK32-NEXT:    [[TMP0:%.*]] = load i8**, i8*** [[ARGV_ADDR]], align 4
-// CHECK32-NEXT:    [[CALL:%.*]] = call i32 @_Z5tmainIPPcEiT_(i8** [[TMP0]])
-// CHECK32-NEXT:    ret i32 [[CALL]]
-//
-//
-// CHECK32-LABEL: define {{[^@]+}}@_Z5tmainIPPcEiT_
-// CHECK32-SAME: (i8** [[ARGC:%.*]]) #[[ATTR1:[0-9]+]] comdat {
-// CHECK32-NEXT:  entry:
-// CHECK32-NEXT:    [[ARGC_ADDR:%.*]] = alloca i8**, align 4
-// CHECK32-NEXT:    store i8** [[ARGC]], i8*** [[ARGC_ADDR]], align 4
-// CHECK32-NEXT:    store i8** null, i8*** [[ARGC_ADDR]], align 4
-// CHECK32-NEXT:    ret i32 0
 //
 //
 // CHECK33-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l265
@@ -4526,134 +4094,6 @@ void foo() {
 // CHECK36-NEXT:    ret void
 //
 //
-// CHECK37-LABEL: define {{[^@]+}}@main
-// CHECK37-SAME: (i32 signext [[ARGC:%.*]], i8** [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
-// CHECK37-NEXT:  entry:
-// CHECK37-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK37-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
-// CHECK37-NEXT:    [[ARGV_ADDR:%.*]] = alloca i8**, align 8
-// CHECK37-NEXT:    [[A:%.*]] = alloca i32, align 4
-// CHECK37-NEXT:    [[B:%.*]] = alloca i32, align 4
-// CHECK37-NEXT:    store i32 0, i32* [[RETVAL]], align 4
-// CHECK37-NEXT:    store i32 [[ARGC]], i32* [[ARGC_ADDR]], align 4
-// CHECK37-NEXT:    store i8** [[ARGV]], i8*** [[ARGV_ADDR]], align 8
-// CHECK37-NEXT:    store i32 20, i32* [[A]], align 4
-// CHECK37-NEXT:    store i32 5, i32* [[B]], align 4
-// CHECK37-NEXT:    store i32 0, i32* [[ARGC_ADDR]], align 4
-// CHECK37-NEXT:    [[TMP0:%.*]] = load i8**, i8*** [[ARGV_ADDR]], align 8
-// CHECK37-NEXT:    [[CALL:%.*]] = call signext i32 @_Z5tmainIPPcEiT_(i8** [[TMP0]])
-// CHECK37-NEXT:    ret i32 [[CALL]]
-//
-//
-// CHECK37-LABEL: define {{[^@]+}}@_Z5tmainIPPcEiT_
-// CHECK37-SAME: (i8** [[ARGC:%.*]]) #[[ATTR1:[0-9]+]] comdat {
-// CHECK37-NEXT:  entry:
-// CHECK37-NEXT:    [[ARGC_ADDR:%.*]] = alloca i8**, align 8
-// CHECK37-NEXT:    [[A:%.*]] = alloca i32, align 4
-// CHECK37-NEXT:    [[B:%.*]] = alloca i32, align 4
-// CHECK37-NEXT:    store i8** [[ARGC]], i8*** [[ARGC_ADDR]], align 8
-// CHECK37-NEXT:    store i32 10, i32* [[A]], align 4
-// CHECK37-NEXT:    store i32 5, i32* [[B]], align 4
-// CHECK37-NEXT:    store i8** null, i8*** [[ARGC_ADDR]], align 8
-// CHECK37-NEXT:    ret i32 0
-//
-//
-// CHECK38-LABEL: define {{[^@]+}}@main
-// CHECK38-SAME: (i32 signext [[ARGC:%.*]], i8** [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
-// CHECK38-NEXT:  entry:
-// CHECK38-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK38-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
-// CHECK38-NEXT:    [[ARGV_ADDR:%.*]] = alloca i8**, align 8
-// CHECK38-NEXT:    [[A:%.*]] = alloca i32, align 4
-// CHECK38-NEXT:    [[B:%.*]] = alloca i32, align 4
-// CHECK38-NEXT:    store i32 0, i32* [[RETVAL]], align 4
-// CHECK38-NEXT:    store i32 [[ARGC]], i32* [[ARGC_ADDR]], align 4
-// CHECK38-NEXT:    store i8** [[ARGV]], i8*** [[ARGV_ADDR]], align 8
-// CHECK38-NEXT:    store i32 20, i32* [[A]], align 4
-// CHECK38-NEXT:    store i32 5, i32* [[B]], align 4
-// CHECK38-NEXT:    store i32 0, i32* [[ARGC_ADDR]], align 4
-// CHECK38-NEXT:    [[TMP0:%.*]] = load i8**, i8*** [[ARGV_ADDR]], align 8
-// CHECK38-NEXT:    [[CALL:%.*]] = call signext i32 @_Z5tmainIPPcEiT_(i8** [[TMP0]])
-// CHECK38-NEXT:    ret i32 [[CALL]]
-//
-//
-// CHECK38-LABEL: define {{[^@]+}}@_Z5tmainIPPcEiT_
-// CHECK38-SAME: (i8** [[ARGC:%.*]]) #[[ATTR1:[0-9]+]] comdat {
-// CHECK38-NEXT:  entry:
-// CHECK38-NEXT:    [[ARGC_ADDR:%.*]] = alloca i8**, align 8
-// CHECK38-NEXT:    [[A:%.*]] = alloca i32, align 4
-// CHECK38-NEXT:    [[B:%.*]] = alloca i32, align 4
-// CHECK38-NEXT:    store i8** [[ARGC]], i8*** [[ARGC_ADDR]], align 8
-// CHECK38-NEXT:    store i32 10, i32* [[A]], align 4
-// CHECK38-NEXT:    store i32 5, i32* [[B]], align 4
-// CHECK38-NEXT:    store i8** null, i8*** [[ARGC_ADDR]], align 8
-// CHECK38-NEXT:    ret i32 0
-//
-//
-// CHECK39-LABEL: define {{[^@]+}}@main
-// CHECK39-SAME: (i32 [[ARGC:%.*]], i8** [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
-// CHECK39-NEXT:  entry:
-// CHECK39-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK39-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
-// CHECK39-NEXT:    [[ARGV_ADDR:%.*]] = alloca i8**, align 4
-// CHECK39-NEXT:    [[A:%.*]] = alloca i32, align 4
-// CHECK39-NEXT:    [[B:%.*]] = alloca i32, align 4
-// CHECK39-NEXT:    store i32 0, i32* [[RETVAL]], align 4
-// CHECK39-NEXT:    store i32 [[ARGC]], i32* [[ARGC_ADDR]], align 4
-// CHECK39-NEXT:    store i8** [[ARGV]], i8*** [[ARGV_ADDR]], align 4
-// CHECK39-NEXT:    store i32 20, i32* [[A]], align 4
-// CHECK39-NEXT:    store i32 5, i32* [[B]], align 4
-// CHECK39-NEXT:    store i32 0, i32* [[ARGC_ADDR]], align 4
-// CHECK39-NEXT:    [[TMP0:%.*]] = load i8**, i8*** [[ARGV_ADDR]], align 4
-// CHECK39-NEXT:    [[CALL:%.*]] = call i32 @_Z5tmainIPPcEiT_(i8** [[TMP0]])
-// CHECK39-NEXT:    ret i32 [[CALL]]
-//
-//
-// CHECK39-LABEL: define {{[^@]+}}@_Z5tmainIPPcEiT_
-// CHECK39-SAME: (i8** [[ARGC:%.*]]) #[[ATTR1:[0-9]+]] comdat {
-// CHECK39-NEXT:  entry:
-// CHECK39-NEXT:    [[ARGC_ADDR:%.*]] = alloca i8**, align 4
-// CHECK39-NEXT:    [[A:%.*]] = alloca i32, align 4
-// CHECK39-NEXT:    [[B:%.*]] = alloca i32, align 4
-// CHECK39-NEXT:    store i8** [[ARGC]], i8*** [[ARGC_ADDR]], align 4
-// CHECK39-NEXT:    store i32 10, i32* [[A]], align 4
-// CHECK39-NEXT:    store i32 5, i32* [[B]], align 4
-// CHECK39-NEXT:    store i8** null, i8*** [[ARGC_ADDR]], align 4
-// CHECK39-NEXT:    ret i32 0
-//
-//
-// CHECK40-LABEL: define {{[^@]+}}@main
-// CHECK40-SAME: (i32 [[ARGC:%.*]], i8** [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
-// CHECK40-NEXT:  entry:
-// CHECK40-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK40-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
-// CHECK40-NEXT:    [[ARGV_ADDR:%.*]] = alloca i8**, align 4
-// CHECK40-NEXT:    [[A:%.*]] = alloca i32, align 4
-// CHECK40-NEXT:    [[B:%.*]] = alloca i32, align 4
-// CHECK40-NEXT:    store i32 0, i32* [[RETVAL]], align 4
-// CHECK40-NEXT:    store i32 [[ARGC]], i32* [[ARGC_ADDR]], align 4
-// CHECK40-NEXT:    store i8** [[ARGV]], i8*** [[ARGV_ADDR]], align 4
-// CHECK40-NEXT:    store i32 20, i32* [[A]], align 4
-// CHECK40-NEXT:    store i32 5, i32* [[B]], align 4
-// CHECK40-NEXT:    store i32 0, i32* [[ARGC_ADDR]], align 4
-// CHECK40-NEXT:    [[TMP0:%.*]] = load i8**, i8*** [[ARGV_ADDR]], align 4
-// CHECK40-NEXT:    [[CALL:%.*]] = call i32 @_Z5tmainIPPcEiT_(i8** [[TMP0]])
-// CHECK40-NEXT:    ret i32 [[CALL]]
-//
-//
-// CHECK40-LABEL: define {{[^@]+}}@_Z5tmainIPPcEiT_
-// CHECK40-SAME: (i8** [[ARGC:%.*]]) #[[ATTR1:[0-9]+]] comdat {
-// CHECK40-NEXT:  entry:
-// CHECK40-NEXT:    [[ARGC_ADDR:%.*]] = alloca i8**, align 4
-// CHECK40-NEXT:    [[A:%.*]] = alloca i32, align 4
-// CHECK40-NEXT:    [[B:%.*]] = alloca i32, align 4
-// CHECK40-NEXT:    store i8** [[ARGC]], i8*** [[ARGC_ADDR]], align 4
-// CHECK40-NEXT:    store i32 10, i32* [[A]], align 4
-// CHECK40-NEXT:    store i32 5, i32* [[B]], align 4
-// CHECK40-NEXT:    store i8** null, i8*** [[ARGC_ADDR]], align 4
-// CHECK40-NEXT:    ret i32 0
-//
-//
 // CHECK41-LABEL: define {{[^@]+}}@_Z3foov
 // CHECK41-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK41-NEXT:  entry:
@@ -4721,27 +4161,4 @@ void foo() {
 // CHECK44-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 4
 // CHECK44-NEXT:    ret void
 //
-//
-// CHECK45-LABEL: define {{[^@]+}}@_Z3foov
-// CHECK45-SAME: () #[[ATTR0:[0-9]+]] {
-// CHECK45-NEXT:  entry:
-// CHECK45-NEXT:    ret void
-//
-//
-// CHECK46-LABEL: define {{[^@]+}}@_Z3foov
-// CHECK46-SAME: () #[[ATTR0:[0-9]+]] {
-// CHECK46-NEXT:  entry:
-// CHECK46-NEXT:    ret void
-//
-//
-// CHECK47-LABEL: define {{[^@]+}}@_Z3foov
-// CHECK47-SAME: () #[[ATTR0:[0-9]+]] {
-// CHECK47-NEXT:  entry:
-// CHECK47-NEXT:    ret void
-//
-//
-// CHECK48-LABEL: define {{[^@]+}}@_Z3foov
-// CHECK48-SAME: () #[[ATTR0:[0-9]+]] {
-// CHECK48-NEXT:  entry:
-// CHECK48-NEXT:    ret void
 //
