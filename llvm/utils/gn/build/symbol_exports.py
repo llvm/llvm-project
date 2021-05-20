@@ -25,12 +25,12 @@ def main():
     symbols = open(args.source).readlines()
 
     if args.format == 'linux':
-        output_lines = ['FOO {\n']
-        if symbols:
-            output_lines += (['  global:\n',] +
-                             ['    %s;\n' % s.rstrip() for s in symbols])
-        output_lines += ['  local: *;\n',
-                         '};\n']
+        output_lines = (['FOO {\n',
+                         '  global:\n',] +
+                        ['    %s;\n' % s.rstrip() for s in symbols] +
+                        ['  local:\n',
+                         '    *;\n',
+                         '};\n'])
     elif args.format == 'mac':
         output_lines = ['_' + s for s in symbols]
     else:
