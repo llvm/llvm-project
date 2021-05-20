@@ -13,9 +13,6 @@ define void @known_call(i8* %src, i8* %dst, i64 %size) {
 ; YAML-NEXT:   - String:          'Call to '
 ; YAML-NEXT:   - Callee:          memset
 ; YAML-NEXT:   - String:          ' inserted by -ftrivial-auto-var-init.'
-; YAML-NEXT:   - String:          ' Inlined: '
-; YAML-NEXT:   - StoreInlined:     'false'
-; YAML-NEXT:   - String:          .
 ; YAML-NEXT:   - String:          ' Volatile: '
 ; YAML-NEXT:   - StoreVolatile:   'false'
 ; YAML-NEXT:   - String:          .
@@ -34,9 +31,6 @@ define void @known_call(i8* %src, i8* %dst, i64 %size) {
 ; YAML-NEXT:   - String:          'Call to '
 ; YAML-NEXT:   - Callee:          memcpy
 ; YAML-NEXT:   - String:          ' inserted by -ftrivial-auto-var-init.'
-; YAML-NEXT:   - String:          ' Inlined: '
-; YAML-NEXT:   - StoreInlined:     'false'
-; YAML-NEXT:   - String:          .
 ; YAML-NEXT:   - String:          ' Volatile: '
 ; YAML-NEXT:   - StoreVolatile:   'false'
 ; YAML-NEXT:   - String:          .
@@ -55,9 +49,6 @@ define void @known_call(i8* %src, i8* %dst, i64 %size) {
 ; YAML-NEXT:   - String:          'Call to '
 ; YAML-NEXT:   - Callee:          memmove
 ; YAML-NEXT:   - String:          ' inserted by -ftrivial-auto-var-init.'
-; YAML-NEXT:   - String:          ' Inlined: '
-; YAML-NEXT:   - StoreInlined:     'false'
-; YAML-NEXT:   - String:          .
 ; YAML-NEXT:   - String:          ' Volatile: '
 ; YAML-NEXT:   - StoreVolatile:   'false'
 ; YAML-NEXT:   - String:          .
@@ -88,9 +79,6 @@ define void @known_call(i8* %src, i8* %dst, i64 %size) {
 ; YAML-NEXT:   - String:          'Call to '
 ; YAML-NEXT:   - Callee:          memset
 ; YAML-NEXT:   - String:          ' inserted by -ftrivial-auto-var-init.'
-; YAML-NEXT:   - String:          ' Memory operation size: '
-; YAML-NEXT:   - StoreSize:       '32'
-; YAML-NEXT:   - String:          ' bytes.'
 ; YAML-NEXT: ...
   call i8* @memset(i8* %dst, i32 0, i64 32), !annotation !0, !dbg !DILocation(scope: !4)
   ret void
@@ -111,9 +99,6 @@ define void @known_call_with_size(i8* %src, i8* %dst) {
 ; YAML-NEXT:   - String:          ' Memory operation size: '
 ; YAML-NEXT:   - StoreSize:       '32'
 ; YAML-NEXT:   - String:          ' bytes.'
-; YAML-NEXT:   - String:          ' Inlined: '
-; YAML-NEXT:   - StoreInlined:     'false'
-; YAML-NEXT:   - String:          .
 ; YAML-NEXT:   - String:          ' Volatile: '
 ; YAML-NEXT:   - StoreVolatile:   'false'
 ; YAML-NEXT:   - String:          .
@@ -135,9 +120,6 @@ define void @known_call_with_size(i8* %src, i8* %dst) {
 ; YAML-NEXT:   - String:          ' Memory operation size: '
 ; YAML-NEXT:   - StoreSize:       '32'
 ; YAML-NEXT:   - String:          ' bytes.'
-; YAML-NEXT:   - String:          ' Inlined: '
-; YAML-NEXT:   - StoreInlined:     'false'
-; YAML-NEXT:   - String:          .
 ; YAML-NEXT:   - String:          ' Volatile: '
 ; YAML-NEXT:   - StoreVolatile:   'false'
 ; YAML-NEXT:   - String:          .
@@ -159,9 +141,6 @@ define void @known_call_with_size(i8* %src, i8* %dst) {
 ; YAML-NEXT:   - String:          ' Memory operation size: '
 ; YAML-NEXT:   - StoreSize:       '32'
 ; YAML-NEXT:   - String:          ' bytes.'
-; YAML-NEXT:   - String:          ' Inlined: '
-; YAML-NEXT:   - StoreInlined:     'false'
-; YAML-NEXT:   - String:          .
 ; YAML-NEXT:   - String:          ' Volatile: '
 ; YAML-NEXT:   - StoreVolatile:   'false'
 ; YAML-NEXT:   - String:          .
@@ -204,9 +183,6 @@ define void @known_call_volatile(i8* %src, i8* %dst, i64 %size) {
 ; YAML-NEXT:   - String:          ' Volatile: '
 ; YAML-NEXT:   - StoreVolatile:   'true'
 ; YAML-NEXT:   - String:          .
-; YAML-NEXT:   - String:          ' Inlined: '
-; YAML-NEXT:   - StoreInlined:     'false'
-; YAML-NEXT:   - String:          .
 ; YAML-NEXT:   - String:          ' Atomic: '
 ; YAML-NEXT:   - StoreAtomic:     'false'
 ; YAML-NEXT:   - String:          .
@@ -225,9 +201,6 @@ define void @known_call_volatile(i8* %src, i8* %dst, i64 %size) {
 ; YAML-NEXT:   - String:          ' Volatile: '
 ; YAML-NEXT:   - StoreVolatile:   'true'
 ; YAML-NEXT:   - String:          .
-; YAML-NEXT:   - String:          ' Inlined: '
-; YAML-NEXT:   - StoreInlined:     'false'
-; YAML-NEXT:   - String:          .
 ; YAML-NEXT:   - String:          ' Atomic: '
 ; YAML-NEXT:   - StoreAtomic:     'false'
 ; YAML-NEXT:   - String:          .
@@ -245,9 +218,6 @@ define void @known_call_volatile(i8* %src, i8* %dst, i64 %size) {
 ; YAML-NEXT:   - String:          ' inserted by -ftrivial-auto-var-init.'
 ; YAML-NEXT:   - String:          ' Volatile: '
 ; YAML-NEXT:   - StoreVolatile:   'true'
-; YAML-NEXT:   - String:          .
-; YAML-NEXT:   - String:          ' Inlined: '
-; YAML-NEXT:   - StoreInlined:     'false'
 ; YAML-NEXT:   - String:          .
 ; YAML-NEXT:   - String:          ' Atomic: '
 ; YAML-NEXT:   - StoreAtomic:     'false'
@@ -272,9 +242,6 @@ define void @known_call_atomic(i8* %src, i8* %dst, i64 %size) {
 ; YAML-NEXT:   - String:          ' Atomic: '
 ; YAML-NEXT:   - StoreAtomic:     'true'
 ; YAML-NEXT:   - String:          .
-; YAML-NEXT:   - String:          ' Inlined: '
-; YAML-NEXT:   - StoreInlined:     'false'
-; YAML-NEXT:   - String:          .
 ; YAML-NEXT:   - String:          ' Volatile: '
 ; YAML-NEXT:   - StoreVolatile:   'false'
 ; YAML-NEXT:   - String:          .
@@ -293,9 +260,6 @@ define void @known_call_atomic(i8* %src, i8* %dst, i64 %size) {
 ; YAML-NEXT:   - String:          ' Atomic: '
 ; YAML-NEXT:   - StoreAtomic:     'true'
 ; YAML-NEXT:   - String:          .
-; YAML-NEXT:   - String:          ' Inlined: '
-; YAML-NEXT:   - StoreInlined:     'false'
-; YAML-NEXT:   - String:          .
 ; YAML-NEXT:   - String:          ' Volatile: '
 ; YAML-NEXT:   - StoreVolatile:   'false'
 ; YAML-NEXT:   - String:          .
@@ -313,9 +277,6 @@ define void @known_call_atomic(i8* %src, i8* %dst, i64 %size) {
 ; YAML-NEXT:   - String:          ' inserted by -ftrivial-auto-var-init.'
 ; YAML-NEXT:   - String:          ' Atomic: '
 ; YAML-NEXT:   - StoreAtomic:     'true'
-; YAML-NEXT:   - String:          .
-; YAML-NEXT:   - String:          ' Inlined: '
-; YAML-NEXT:   - StoreInlined:     'false'
 ; YAML-NEXT:   - String:          .
 ; YAML-NEXT:   - String:          ' Volatile: '
 ; YAML-NEXT:   - StoreVolatile:   'false'
@@ -342,14 +303,11 @@ define void @known_call_with_size_alloca(i8* %src) {
 ; YAML-NEXT:   - String:          ' Memory operation size: '
 ; YAML-NEXT:   - StoreSize:       '1'
 ; YAML-NEXT:   - String:          ' bytes.'
-; YAML-NEXT:   - String:          "\nWritten Variables: "
-; YAML-NEXT:   - WVarName:        dst
+; YAML-NEXT:   - String:          "\nVariables: "
+; YAML-NEXT:   - VarName:         dst
 ; YAML-NEXT:   - String:          ' ('
-; YAML-NEXT:   - WVarSize:        '1'
+; YAML-NEXT:   - VarSize:         '1'
 ; YAML-NEXT:   - String:          ' bytes)'
-; YAML-NEXT:   - String:          .
-; YAML-NEXT:   - String:          ' Inlined: '
-; YAML-NEXT:   - StoreInlined:     'false'
 ; YAML-NEXT:   - String:          .
 ; YAML-NEXT:   - String:          ' Volatile: '
 ; YAML-NEXT:   - StoreVolatile:   'false'
@@ -374,14 +332,11 @@ define void @known_call_with_size_alloca(i8* %src) {
 ; YAML-NEXT:   - String:          ' Memory operation size: '
 ; YAML-NEXT:   - StoreSize:       '1'
 ; YAML-NEXT:   - String:          ' bytes.'
-; YAML-NEXT:   - String:          "\nWritten Variables: "
-; YAML-NEXT:   - WVarName:        dst
+; YAML-NEXT:   - String:          "\nVariables: "
+; YAML-NEXT:   - VarName:         dst
 ; YAML-NEXT:   - String:          ' ('
-; YAML-NEXT:   - WVarSize:        '1'
+; YAML-NEXT:   - VarSize:         '1'
 ; YAML-NEXT:   - String:          ' bytes)'
-; YAML-NEXT:   - String:          .
-; YAML-NEXT:   - String:          ' Inlined: '
-; YAML-NEXT:   - StoreInlined:     'false'
 ; YAML-NEXT:   - String:          .
 ; YAML-NEXT:   - String:          ' Volatile: '
 ; YAML-NEXT:   - StoreVolatile:   'false'
@@ -405,14 +360,11 @@ define void @known_call_with_size_alloca(i8* %src) {
 ; YAML-NEXT:   - String:          ' Memory operation size: '
 ; YAML-NEXT:   - StoreSize:       '1'
 ; YAML-NEXT:   - String:          ' bytes.'
-; YAML-NEXT:   - String:          "\nWritten Variables: "
-; YAML-NEXT:   - WVarName:        dst
+; YAML-NEXT:   - String:          "\nVariables: "
+; YAML-NEXT:   - VarName:         dst
 ; YAML-NEXT:   - String:          ' ('
-; YAML-NEXT:   - WVarSize:        '1'
+; YAML-NEXT:   - VarSize:         '1'
 ; YAML-NEXT:   - String:          ' bytes)'
-; YAML-NEXT:   - String:          .
-; YAML-NEXT:   - String:          ' Inlined: '
-; YAML-NEXT:   - StoreInlined:     'false'
 ; YAML-NEXT:   - String:          .
 ; YAML-NEXT:   - String:          ' Volatile: '
 ; YAML-NEXT:   - StoreVolatile:   'false'
@@ -436,10 +388,10 @@ define void @known_call_with_size_alloca(i8* %src) {
 ; YAML-NEXT:   - String:          ' Memory operation size: '
 ; YAML-NEXT:   - StoreSize:       '1'
 ; YAML-NEXT:   - String:          ' bytes.'
-; YAML-NEXT:   - String:          "\nWritten Variables: "
-; YAML-NEXT:   - WVarName:        dst
+; YAML-NEXT:   - String:          "\nVariables: "
+; YAML-NEXT:   - VarName:         dst
 ; YAML-NEXT:   - String:          ' ('
-; YAML-NEXT:   - WVarSize:        '1'
+; YAML-NEXT:   - VarSize:         '1'
 ; YAML-NEXT:   - String:          ' bytes)'
 ; YAML-NEXT:   - String:          .
 ; YAML-NEXT: ...

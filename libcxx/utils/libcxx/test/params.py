@@ -110,6 +110,30 @@ DEFAULT_PARAMETERS = [
               AddCompileFlag('-D_LIBCPP_DEBUG={}'.format(debugLevel))
             ]),
 
+  Parameter(name='use_sanitizer', choices=['', 'Address', 'Undefined', 'Memory', 'MemoryWithOrigins', 'Thread', 'DataFlow', 'Leaks'], type=str, default='',
+            help="An optional sanitizer to enable when building and running the test suite.",
+            actions=lambda sanitizer: filter(None, [
+              AddFlag('-g -fno-omit-frame-pointer') if sanitizer else None,
+
+              AddFlag('-fsanitize=undefined -fno-sanitize=float-divide-by-zero -fno-sanitize-recover=all') if sanitizer == 'Undefined' else None,
+              AddFeature('ubsan')                                                                          if sanitizer == 'Undefined' else None,
+
+              AddFlag('-fsanitize=address') if sanitizer == 'Address' else None,
+              AddFeature('asan')            if sanitizer == 'Address' else None,
+
+              AddFlag('-fsanitize=memory')               if sanitizer in ['Memory', 'MemoryWithOrigins'] else None,
+              AddFeature('msan')                         if sanitizer in ['Memory', 'MemoryWithOrigins'] else None,
+              AddFlag('-fsanitize-memory-track-origins') if sanitizer == 'MemoryWithOrigins' else None,
+
+              AddFlag('-fsanitize=thread') if sanitizer == 'Thread' else None,
+              AddFeature('tsan')           if sanitizer == 'Thread' else None,
+
+              AddFlag('-fsanitize=dataflow') if sanitizer == 'DataFlow' else None,
+              AddFlag('-fsanitize=leaks') if sanitizer == 'Leaks' else None,
+
+              AddFeature('sanitizer-new-delete') if sanitizer in ['Address', 'Memory', 'MemoryWithOrigins', 'Thread'] else None,
+            ])),
+
   # Parameters to enable or disable parts of the test suite
   Parameter(name='enable_experimental', choices=[True, False], type=bool, default=False,
             help="Whether to enable tests for experimental C++ libraries (typically Library Fundamentals TSes).",

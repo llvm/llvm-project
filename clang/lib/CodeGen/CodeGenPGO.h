@@ -87,6 +87,10 @@ public:
   // Insert instrumentation or attach profile metadata at value sites
   void valueProfile(CGBuilderTy &Builder, uint32_t ValueKind,
                     llvm::Instruction *ValueSite, llvm::Value *ValuePtr);
+
+  // Set a module flag indicating if value profiling is enabled.
+  void setValueProfilingFlag(llvm::Module &M);
+
 private:
   void setFuncName(llvm::Function *Fn);
   void setFuncName(StringRef Name, llvm::GlobalValue::LinkageTypes Linkage);

@@ -1,9 +1,9 @@
 import("//clang/lib/ARCMigrate/enable.gni")
+import("//llvm/utils/gn/build/symbol_exports.gni")
 import("//llvm/version.gni")
 
 # This build file is just enough to get check-clang to pass, it's missing
 # several things from the CMake build:
-# - using libclang.exports
 # - a build target copying the Python bindings
 # - the GN linux build always builds without -fPIC (as if LLVM_ENABLE_PIC=OFF
 #   in the CMake build), so libclang is always a static library on linux
@@ -14,6 +14,10 @@ if (host_os != "win" && host_os != "mac") {
   # ELF targets need -fPIC to build shared libs but they aren't on by default.
   # For now, make libclang a static lib there.
   libclang_target_type = "static_library"
+}
+
+symbol_exports("exports") {
+  exports_file = "libclang.exports"
 }
 
 target(libclang_target_type, "libclang") {
@@ -35,6 +39,10 @@ target(libclang_target_type, "libclang") {
   ]
   if (clang_enable_arcmt) {
     deps += [ "//clang/lib/ARCMigrate" ]
+  }
+
+  if (libclang_target_type == "shared_library") {
+    deps += [ ":exports" ]
   }
 
   defines = []
@@ -87,6 +95,4 @@ target(libclang_target_type, "libclang") {
       "-Wl,-rpath,@loader_path/../lib",
     ]
   }
-
-  # FIXME: Use libclang.exports
 }
