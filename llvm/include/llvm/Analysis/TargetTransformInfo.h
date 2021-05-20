@@ -1239,7 +1239,7 @@ public:
   ///
   /// Some types may require the use of register classes that do not have
   /// any callee-saved registers, so would require a spill and fill.
-  unsigned getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const;
+  InstructionCost getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const;
 
   /// \returns True if the intrinsic is a supported memory intrinsic.  Info
   /// will contain additional information - whether the intrinsic may write
@@ -1673,7 +1673,8 @@ public:
   virtual unsigned getNumberOfParts(Type *Tp) = 0;
   virtual InstructionCost
   getAddressComputationCost(Type *Ty, ScalarEvolution *SE, const SCEV *Ptr) = 0;
-  virtual unsigned getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) = 0;
+  virtual InstructionCost
+  getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) = 0;
   virtual bool getTgtMemIntrinsic(IntrinsicInst *Inst,
                                   MemIntrinsicInfo &Info) = 0;
   virtual unsigned getAtomicMemIntrinsicMaxElementSize() const = 0;
@@ -2190,7 +2191,7 @@ public:
                                             const SCEV *Ptr) override {
     return Impl.getAddressComputationCost(Ty, SE, Ptr);
   }
-  unsigned getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) override {
+  InstructionCost getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) override {
     return Impl.getCostOfKeepingLiveOverCall(Tys);
   }
   bool getTgtMemIntrinsic(IntrinsicInst *Inst,

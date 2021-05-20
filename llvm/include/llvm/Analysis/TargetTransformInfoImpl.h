@@ -636,7 +636,7 @@ public:
     return 1;
   }
 
-  unsigned getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const {
+  InstructionCost getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const {
     return 0;
   }
 

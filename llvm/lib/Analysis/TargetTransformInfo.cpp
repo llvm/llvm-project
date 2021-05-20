@@ -917,7 +917,7 @@ InstructionCost TargetTransformInfo::getExtendedAddReductionCost(
                                               CostKind);
 }
 
-unsigned
+InstructionCost
 TargetTransformInfo::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const {
   return TTIImpl->getCostOfKeepingLiveOverCall(Tys);
 }
