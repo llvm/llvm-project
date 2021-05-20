@@ -267,7 +267,6 @@ void RTNAME(EoshiftVector)(Descriptor &result, const Descriptor &source,
   SubscriptValue extent{source.GetDimension(0).Extent()};
   std::size_t elementLen{
       AllocateResult(result, source, 1, &extent, terminator, "EOSHIFT")};
-  std::optional<int> blankFill; // kind of character
   if (boundary) {
     RUNTIME_CHECK(terminator, boundary->rank() == 0);
     RUNTIME_CHECK(terminator,
