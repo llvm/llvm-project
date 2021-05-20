@@ -12547,7 +12547,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   }
 
   if (LangOpts.OpenMP && VDecl->isFileVarDecl())
-    DeclsToCheckForDeferredDiags.push_back(VDecl);
+    DeclsToCheckForDeferredDiags.insert(VDecl);
   CheckCompleteVariableDeclaration(VDecl);
 }
 
@@ -14796,7 +14796,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
     auto ES = getEmissionStatus(FD);
     if (ES == Sema::FunctionEmissionStatus::Emitted ||
         ES == Sema::FunctionEmissionStatus::Unknown)
-      DeclsToCheckForDeferredDiags.push_back(FD);
+      DeclsToCheckForDeferredDiags.insert(FD);
   }
 
   return dcl;

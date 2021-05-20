@@ -1793,7 +1793,7 @@ public:
   private:
     /// Function or variable declarations to be checked for whether the deferred
     /// diagnostics should be emitted.
-    SmallVector<Decl *, 4> DeclsToCheckForDeferredDiags;
+    llvm::SmallSetVector<Decl *, 4> DeclsToCheckForDeferredDiags;
 
   public:
   // Emit all deferred diagnostics.

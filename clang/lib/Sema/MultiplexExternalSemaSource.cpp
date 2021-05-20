@@ -268,7 +268,7 @@ void MultiplexExternalSemaSource::ReadExtVectorDecls(
 }
 
 void MultiplexExternalSemaSource::ReadDeclsToCheckForDeferredDiags(
-    llvm::SmallVector<Decl *, 4> &Decls) {
+    llvm::SmallSetVector<Decl *, 4> &Decls) {
   for(size_t i = 0; i < Sources.size(); ++i)
     Sources[i]->ReadDeclsToCheckForDeferredDiags(Decls);
 }
