@@ -246,10 +246,18 @@ public:
     return nullptr;
   }
 
-  void GetLowerBounds(SubscriptValue subscript[]) const {
+  int GetLowerBounds(SubscriptValue subscript[]) const {
     for (int j{0}; j < raw_.rank; ++j) {
       subscript[j] = GetDimension(j).LowerBound();
     }
+    return raw_.rank;
+  }
+
+  int GetShape(SubscriptValue subscript[]) const {
+    for (int j{0}; j < raw_.rank; ++j) {
+      subscript[j] = GetDimension(j).Extent();
+    }
+    return raw_.rank;
   }
 
   // When the passed subscript vector contains the last (or first)
