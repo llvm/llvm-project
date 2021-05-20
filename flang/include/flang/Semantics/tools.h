@@ -459,7 +459,10 @@ public:
       name_iterator &nameIterator() { return nameIterator_; }
       name_iterator nameEnd() { return nameEnd_; }
       const Symbol &GetTypeSymbol() const { return derived_->typeSymbol(); }
-      const Scope &GetScope() const { return DEREF(derived_->scope()); }
+      const Scope &GetScope() const {
+        return derived_->scope() ? *derived_->scope()
+                                 : DEREF(GetTypeSymbol().scope());
+      }
       bool operator==(const ComponentPathNode &that) const {
         return &*derived_ == &*that.derived_ &&
             nameIterator_ == that.nameIterator_ &&
