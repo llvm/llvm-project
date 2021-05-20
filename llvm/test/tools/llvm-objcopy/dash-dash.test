@@ -6,12 +6,12 @@
 # RUN: yaml2obj %s -o test-obj
 # RUN: llvm-objcopy --only-section=.test test-obj -- --only-section
 # RUN: llvm-objcopy --only-section=.test test-obj out-obj1
-# RUN: cmp out-obj1 -- --only-section
+# RUN: cmp -- out-obj1 --only-section
 
 ## Check the case when '--' is specified with input files but no options.
 # RUN: llvm-objcopy -- test-obj --add-section
 # RUN: llvm-objcopy test-obj out-obj2
-# RUN: cmp out-obj2 -- --add-section
+# RUN: cmp -- out-obj2 --add-section
 
 ## Check the case when '--' is specified with options but no input files.
 # RUN: not llvm-objcopy --only-section=.test -- 2>&1 | FileCheck %s --check-prefixes=CHECK-NO-INPUT
