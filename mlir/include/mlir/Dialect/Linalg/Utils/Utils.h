@@ -9,7 +9,6 @@
 #ifndef MLIR_DIALECT_LINALG_UTILS_H_
 #define MLIR_DIALECT_LINALG_UTILS_H_
 
-#include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
