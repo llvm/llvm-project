@@ -82,6 +82,29 @@ public:
         FirstLine(std::max(static_cast<int64_t>(1), Line - Lines / 2)),
         LastLine(FirstLine + Lines - 1),
         PrunedSource(pruneSource(load(FileName, EmbeddedSource))) {}
+
+  void format(raw_ostream &OS) {
+    if (!PrunedSource)
+      return;
+    size_t MaxLineNumberWidth = std::ceil(std::log10(LastLine));
+    int64_t L = FirstLine;
+    for (size_t Pos = 0; Pos < PrunedSource->size(); ++L) {
+      size_t PosEnd = PrunedSource->find('\n', Pos);
+      StringRef String = PrunedSource->substr(
+          Pos, (PosEnd == StringRef::npos) ? StringRef::npos : (PosEnd - Pos));
+      if (String.endswith("\r"))
+        String = String.drop_back(1);
+      OS << format_decimal(L, MaxLineNumberWidth);
+      if (L == Line)
+        OS << " >: ";
+      else
+        OS << "  : ";
+      OS << String << '\n';
+      if (PosEnd == StringRef::npos)
+        break;
+      Pos = PosEnd + 1;
+    }
+  }
 };
 
 void PlainPrinterBase::printHeader(uint64_t Address) {
@@ -95,27 +118,7 @@ void PlainPrinterBase::printHeader(uint64_t Address) {
 
 // Prints source code around in the FileName the Line.
 void PlainPrinterBase::printContext(SourceCode SourceCode) {
-  if (!SourceCode.PrunedSource)
-    return;
-
-  StringRef Source = *SourceCode.PrunedSource;
-  std::string SourceCopy;
-  if (*Source.end() != '\0') {
-    SourceCopy = Source.str();
-    Source = SourceCopy;
-  }
-
-  size_t MaxLineNumberWidth = std::ceil(std::log10(SourceCode.LastLine));
-  for (line_iterator I = line_iterator(MemoryBufferRef(Source, ""), false);
-       !I.is_at_eof(); ++I) {
-    int64_t L = SourceCode.FirstLine + I.line_number() - 1;
-    OS << format_decimal(L, MaxLineNumberWidth);
-    if (L == SourceCode.Line)
-      OS << " >: ";
-    else
-      OS << "  : ";
-    OS << *I << '\n';
-  }
+  SourceCode.format(OS);
 }
 
 void PlainPrinterBase::printFunctionName(StringRef FunctionName, bool Inlined) {
@@ -131,7 +134,8 @@ void PlainPrinterBase::printFunctionName(StringRef FunctionName, bool Inlined) {
 void LLVMPrinter::printSimpleLocation(StringRef Filename,
                                       const DILineInfo &Info) {
   OS << Filename << ':' << Info.Line << ':' << Info.Column << '\n';
-  printContext(SourceCode(Filename, Info.Line, Config.SourceContextLines));
+  printContext(
+      SourceCode(Filename, Info.Line, Config.SourceContextLines, Info.Source));
 }
 
 void GNUPrinter::printSimpleLocation(StringRef Filename,
@@ -140,7 +144,8 @@ void GNUPrinter::printSimpleLocation(StringRef Filename,
   if (Info.Discriminator)
     OS << " (discriminator " << Info.Discriminator << ')';
   OS << '\n';
-  printContext(SourceCode(Filename, Info.Line, Config.SourceContextLines));
+  printContext(
+      SourceCode(Filename, Info.Line, Config.SourceContextLines, Info.Source));
 }
 
 void PlainPrinterBase::printVerbose(StringRef Filename,
@@ -291,7 +296,7 @@ void JSONPrinter::print(const Request &Request, const DIInliningInfo &Info) {
   json::Array Array;
   for (uint32_t I = 0, N = Info.getNumberOfFrames(); I < N; ++I) {
     const DILineInfo &LineInfo = Info.getFrame(I);
-    Array.push_back(json::Object(
+    json::Object Object(
         {{"FunctionName", LineInfo.FunctionName != DILineInfo::BadString
                               ? LineInfo.FunctionName
                               : ""},
@@ -305,7 +310,15 @@ void JSONPrinter::print(const Request &Request, const DIInliningInfo &Info) {
           LineInfo.FileName != DILineInfo::BadString ? LineInfo.FileName : ""},
          {"Line", LineInfo.Line},
          {"Column", LineInfo.Column},
-         {"Discriminator", LineInfo.Discriminator}}));
+         {"Discriminator", LineInfo.Discriminator}});
+    SourceCode SourceCode(LineInfo.FileName, LineInfo.Line,
+                          Config.SourceContextLines, LineInfo.Source);
+    std::string FormattedSource;
+    raw_string_ostream Stream(FormattedSource);
+    SourceCode.format(Stream);
+    if (!FormattedSource.empty())
+      Object["Source"] = std::move(FormattedSource);
+    Array.push_back(std::move(Object));
   }
   json::Object Json = toJSON(Request);
   Json["Symbol"] = std::move(Array);
