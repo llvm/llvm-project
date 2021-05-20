@@ -470,6 +470,23 @@ static Optional<Instruction *> instCombineSVELast(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, Extract);
 }
 
+static Optional<Instruction *> instCombineRDFFR(InstCombiner &IC,
+                                                IntrinsicInst &II) {
+  LLVMContext &Ctx = II.getContext();
+  IRBuilder<> Builder(Ctx);
+  Builder.SetInsertPoint(&II);
+  // Replace rdffr with predicated rdffr.z intrinsic, so that optimizePTestInstr
+  // can work with RDFFR_PP for ptest elimination.
+  auto *AllPat =
+      ConstantInt::get(Type::getInt32Ty(Ctx), AArch64SVEPredPattern::all);
+  auto *PTrue = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_ptrue,
+                                        {II.getType()}, {AllPat});
+  auto *RDFFR =
+      Builder.CreateIntrinsic(Intrinsic::aarch64_sve_rdffr_z, {}, {PTrue});
+  RDFFR->takeName(&II);
+  return IC.replaceInstUsesWith(II, RDFFR);
+}
+
 Optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -481,6 +498,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineConvertFromSVBool(IC, II);
   case Intrinsic::aarch64_sve_dup:
     return instCombineSVEDup(IC, II);
+  case Intrinsic::aarch64_sve_rdffr:
+    return instCombineRDFFR(IC, II);
   case Intrinsic::aarch64_sve_lasta:
   case Intrinsic::aarch64_sve_lastb:
     return instCombineSVELast(IC, II);
