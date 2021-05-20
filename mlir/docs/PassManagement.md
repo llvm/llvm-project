@@ -1213,11 +1213,14 @@ useful for situations where the crash is known to be within a specific pass, or
 when the original input relies on components (like dialects or passes) that may
 not always be available.
 
+Note: Local reproducer generation requires that multi-threading is
+disabled(`-mlir-disable-threading`)
+
 For example, if the failure in the previous example came from `canonicalize`,
 the following reproducer will be generated:
 
 ```mlir
-// configuration: -pass-pipeline='func(canonicalize)' -verify-each
+// configuration: -pass-pipeline='func(canonicalize)' -verify-each -mlir-disable-threading
 
 module {
   func @foo() {
