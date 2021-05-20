@@ -1235,14 +1235,21 @@ parseBitcodeStripOptions(ArrayRef<const char *> ArgsArr) {
 // help flag is set then ParseStripOptions will print the help messege and
 // exit.
 Expected<DriverConfig>
-parseStripOptions(ArrayRef<const char *> ArgsArr,
+parseStripOptions(ArrayRef<const char *> RawArgsArr,
                   llvm::function_ref<Error(Error)> ErrorCallback) {
+  const char *const *DashDash =
+      std::find_if(RawArgsArr.begin(), RawArgsArr.end(),
+                   [](StringRef Str) { return Str == "--"; });
+  ArrayRef<const char *> ArgsArr = makeArrayRef(RawArgsArr.begin(), DashDash);
+  if (DashDash != RawArgsArr.end())
+    DashDash = std::next(DashDash);
+
   StripOptTable T;
   unsigned MissingArgumentIndex, MissingArgumentCount;
   llvm::opt::InputArgList InputArgs =
       T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
 
-  if (InputArgs.size() == 0) {
+  if (InputArgs.size() == 0 && DashDash == RawArgsArr.end()) {
     printHelp(T, errs(), ToolType::Strip);
     exit(1);
   }
@@ -1264,6 +1271,7 @@ parseStripOptions(ArrayRef<const char *> ArgsArr,
                              Arg->getAsString(InputArgs).c_str());
   for (auto Arg : InputArgs.filtered(STRIP_INPUT))
     Positional.push_back(Arg->getValue());
+  std::copy(DashDash, RawArgsArr.end(), std::back_inserter(Positional));
 
   if (Positional.empty())
     return createStringError(errc::invalid_argument, "no input file specified");
