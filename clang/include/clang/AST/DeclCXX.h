@@ -3827,7 +3827,7 @@ public:
 /// DecompositionDecl of type 'int (&)[3]'.
 class BindingDecl : public ValueDecl {
   /// The declaration that this binding binds to part of.
-  LazyDeclPtr Decomp;
+  ValueDecl *Decomp;
   /// The binding represented by this declaration. References to this
   /// declaration are effectively equivalent to this expression (except
   /// that it is only evaluated once at the point of declaration of the
@@ -3853,7 +3853,7 @@ public:
 
   /// Get the decomposition declaration that this binding represents a
   /// decomposition of.
-  ValueDecl *getDecomposedDecl() const;
+  ValueDecl *getDecomposedDecl() const { return Decomp; }
 
   /// Get the variable (if any) that holds the value of evaluating the binding.
   /// Only present for user-defined bindings for tuple-like types.
