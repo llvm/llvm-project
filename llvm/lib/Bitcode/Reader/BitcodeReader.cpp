@@ -5629,10 +5629,15 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
       }
     }
 
-    // Remove align from return attribute on CallInst.
-    if (auto *CI = dyn_cast<CallInst>(&I)) {
-      if (CI->getFunctionType()->getReturnType()->isVoidTy())
-        CI->removeAttribute(0, Attribute::Alignment);
+    // Remove incompatible attributes on function calls.
+    if (auto *CI = dyn_cast<CallBase>(&I)) {
+      CI->removeAttributes(AttributeList::ReturnIndex,
+                           AttributeFuncs::typeIncompatible(
+                               CI->getFunctionType()->getReturnType()));
+
+      for (unsigned ArgNo = 0; ArgNo < CI->arg_size(); ++ArgNo)
+        CI->removeParamAttrs(ArgNo, AttributeFuncs::typeIncompatible(
+                                        CI->getArgOperand(ArgNo)->getType()));
     }
   }
 
