@@ -24,7 +24,6 @@ namespace mlir {
 class AffineExpr;
 class AffineForOp;
 class AffineMap;
-class OperationFolder;
 class PatternRewriter;
 
 namespace linalg {
