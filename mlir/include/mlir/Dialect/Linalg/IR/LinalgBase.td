@@ -48,7 +48,8 @@ def Linalg_Dialect : Dialect {
     constexpr const static ::llvm::StringLiteral
       kInplaceableAttrName = "linalg.inplaceable";
 
-    using RegionBuilderFunType = llvm::function_ref<void(Block &, ValueRange)>;
+    using RegionBuilderFunType =
+      llvm::function_ref<void(ImplicitLocOpBuilder &b, Block &, ValueRange)>;
     RegionBuilderFunType getRegionBuilder(StringRef name) {
       return namedStructuredOpRegionBuilders.lookup(name);
     }
