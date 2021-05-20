@@ -47,6 +47,15 @@ def FeatureISA60
                      "Is M68060 ISA supported",
                      [ FeatureISA40 ]>;
 
+foreach i = {0-6} in
+  def FeatureReserveA#i :
+      SubtargetFeature<"reserve-a"#i, "UserReservedRegister[M68k::A"#i#"]",
+                       "true", "Reserve A"#i#" register">;
+foreach i = {0-7} in
+  def FeatureReserveD#i :
+      SubtargetFeature<"reserve-d"#i, "UserReservedRegister[M68k::D"#i#"]",
+                       "true", "Reserve D"#i#" register">;
+
 //===----------------------------------------------------------------------===//
 // M68k processors supported.
 //===----------------------------------------------------------------------===//
