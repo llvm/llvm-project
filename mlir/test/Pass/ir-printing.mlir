@@ -4,6 +4,7 @@
 // RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func(cse,canonicalize)' -print-ir-after-all -o /dev/null 2>&1 | FileCheck -check-prefix=AFTER_ALL %s
 // RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func(cse,canonicalize)' -print-ir-before=cse -print-ir-module-scope -o /dev/null 2>&1 | FileCheck -check-prefix=BEFORE_MODULE %s
 // RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func(cse,cse)' -print-ir-after-all -print-ir-after-change -o /dev/null 2>&1 | FileCheck -check-prefix=AFTER_ALL_CHANGE %s
+// RUN: not mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func(cse,test-pass-failure)' -print-ir-after-failure -o /dev/null 2>&1 | FileCheck -check-prefix=AFTER_FAILURE %s
 
 func @foo() {
   %0 = constant 0 : i32
@@ -60,3 +61,6 @@ func @bar() {
 // AFTER_ALL_CHANGE-NOT: *** IR Dump After{{.*}}CSE ***
 // We expect that only 'foo' changed during CSE, and the second run of CSE did
 // nothing.
+
+// AFTER_FAILURE-NOT: *** IR Dump After{{.*}}CSE
+// AFTER_FAILURE: *** IR Dump After{{.*}}TestFailurePass Failed ***
