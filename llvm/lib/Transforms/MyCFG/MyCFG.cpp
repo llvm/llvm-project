@@ -12,7 +12,6 @@
 #include "llvm/ADT/BreadthFirstIterator.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/ADT/DepthFirstIterator.h"
-#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/Analysis/HeatUtils.h"
@@ -113,13 +112,15 @@ void traverseBasicBlock(Function &F, int nestedLevel) {
       // Check if instruction is calling a function
       if (isa<CallInst>(i)) {
         auto *call = &cast<CallBase>(i);
-        outs() << prefix << "Traversing nestedLevel function " << call->getCalledFunction()->getName() << " Instruction '" << i << "'\n";
         // use this hack to check if function is external
-        outs() << prefix << "Check is external? empty " << call->getCalledFunction()->empty() << "\n";
-        outs() << prefix << "Check is external? size " << call->getCalledFunction()->size() << "\n";
-        traverseBasicBlock(*call->getCalledFunction(), nestedLevel + 1);
-        outs() << prefix << "Finished traversing nestedLevel function " << call->getCalledFunction()->getName() << "\n";
-        isExitPointCheckpoint |= true;
+        if (!call->getCalledFunction()->empty()) {
+          outs() << prefix << "Traversing nestedLevel function " << call->getCalledFunction()->getName() << " Instruction '" << i << "'\n";
+          traverseBasicBlock(*call->getCalledFunction(), nestedLevel + 1);
+          outs() << prefix << "Finished traversing nestedLevel function " << call->getCalledFunction()->getName() << "\n";
+        } else {
+          // The function is outside of the translation unit, hence it is an exit point
+          isExitPointCheckpoint |= true;
+        }
       }
     }
     if (isThreadStartCheckpoint and !nestedLevel) {
