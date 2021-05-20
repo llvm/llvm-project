@@ -3246,6 +3246,19 @@ static bool isQualificationConversionStep(QualType FromType, QualType ToType,
       !PreviousToQualsIncludeConst)
     return false;
 
+  // The following wording is from C++20, where the result of the conversion
+  // is T3, not T2.
+  //   -- if [...] P1,i [...] is "array of unknown bound of", P3,i is
+  //      "array of unknown bound of"
+  if (FromType->isIncompleteArrayType() && !ToType->isIncompleteArrayType())
+    return false;
+
+  //   -- if the resulting P3,i is different from P1,i [...], then const is
+  //      added to every cv 3_k for 0 < k < i.
+  if (!CStyle && FromType->isConstantArrayType() &&
+      ToType->isIncompleteArrayType() && !PreviousToQualsIncludeConst)
+    return false;
+
   // Keep track of whether all prior cv-qualifiers in the "to" type
   // include const.
   PreviousToQualsIncludeConst =
@@ -4199,12 +4212,15 @@ static ImplicitConversionSequence::CompareKind
 CompareQualificationConversions(Sema &S,
                                 const StandardConversionSequence& SCS1,
                                 const StandardConversionSequence& SCS2) {
-  // C++ 13.3.3.2p3:
+  // C++ [over.ics.rank]p3:
   //  -- S1 and S2 differ only in their qualification conversion and
-  //     yield similar types T1 and T2 (C++ 4.4), respectively, and the
-  //     cv-qualification signature of type T1 is a proper subset of
-  //     the cv-qualification signature of type T2, and S1 is not the
+  //     yield similar types T1 and T2 (C++ 4.4), respectively, [...]
+  // [C++98]
+  //     [...] and the cv-qualification signature of type T1 is a proper subset
+  //     of the cv-qualification signature of type T2, and S1 is not the
   //     deprecated string literal array-to-pointer conversion (4.2).
+  // [C++2a]
+  //     [...] where T1 can be converted to T2 by a qualification conversion.
   if (SCS1.First != SCS2.First || SCS1.Second != SCS2.Second ||
       SCS1.Third != SCS2.Third || SCS1.Third != ICK_Qualification)
     return ImplicitConversionSequence::Indistinguishable;
@@ -4225,79 +4241,35 @@ CompareQualificationConversions(Sema &S,
   if (UnqualT1 == UnqualT2)
     return ImplicitConversionSequence::Indistinguishable;
 
-  ImplicitConversionSequence::CompareKind Result
-    = ImplicitConversionSequence::Indistinguishable;
+  // Don't ever prefer a standard conversion sequence that uses the deprecated
+  // string literal array to pointer conversion.
+  bool CanPick1 = !SCS1.DeprecatedStringLiteralToCharPtr;
+  bool CanPick2 = !SCS2.DeprecatedStringLiteralToCharPtr;
 
   // Objective-C++ ARC:
   //   Prefer qualification conversions not involving a change in lifetime
-  //   to qualification conversions that do not change lifetime.
-  if (SCS1.QualificationIncludesObjCLifetime !=
-                                      SCS2.QualificationIncludesObjCLifetime) {
-    Result = SCS1.QualificationIncludesObjCLifetime
-               ? ImplicitConversionSequence::Worse
-               : ImplicitConversionSequence::Better;
-  }
+  //   to qualification conversions that do change lifetime.
+  if (SCS1.QualificationIncludesObjCLifetime &&
+      !SCS2.QualificationIncludesObjCLifetime)
+    CanPick1 = false;
+  if (SCS2.QualificationIncludesObjCLifetime &&
+      !SCS1.QualificationIncludesObjCLifetime)
+    CanPick2 = false;
 
-  while (S.Context.UnwrapSimilarTypes(T1, T2)) {
-    // Within each iteration of the loop, we check the qualifiers to
-    // determine if this still looks like a qualification
-    // conversion. Then, if all is well, we unwrap one more level of
-    // pointers or pointers-to-members and do it all again
-    // until there are no more pointers or pointers-to-members left
-    // to unwrap. This essentially mimics what
-    // IsQualificationConversion does, but here we're checking for a
-    // strict subset of qualifiers.
-    if (T1.getQualifiers().withoutObjCLifetime() ==
-        T2.getQualifiers().withoutObjCLifetime())
-      // The qualifiers are the same, so this doesn't tell us anything
-      // about how the sequences rank.
-      // ObjC ownership quals are omitted above as they interfere with
-      // the ARC overload rule.
-      ;
-    else if (T2.isMoreQualifiedThan(T1)) {
-      // T1 has fewer qualifiers, so it could be the better sequence.
-      if (Result == ImplicitConversionSequence::Worse)
-        // Neither has qualifiers that are a subset of the other's
-        // qualifiers.
-        return ImplicitConversionSequence::Indistinguishable;
+  bool ObjCLifetimeConversion;
+  if (CanPick1 &&
+      !S.IsQualificationConversion(T1, T2, false, ObjCLifetimeConversion))
+    CanPick1 = false;
+  // FIXME: In Objective-C ARC, we can have qualification conversions in both
+  // directions, so we can't short-cut this second check in general.
+  if (CanPick2 &&
+      !S.IsQualificationConversion(T2, T1, false, ObjCLifetimeConversion))
+    CanPick2 = false;
 
-      Result = ImplicitConversionSequence::Better;
-    } else if (T1.isMoreQualifiedThan(T2)) {
-      // T2 has fewer qualifiers, so it could be the better sequence.
-      if (Result == ImplicitConversionSequence::Better)
-        // Neither has qualifiers that are a subset of the other's
-        // qualifiers.
-        return ImplicitConversionSequence::Indistinguishable;
-
-      Result = ImplicitConversionSequence::Worse;
-    } else {
-      // Qualifiers are disjoint.
-      return ImplicitConversionSequence::Indistinguishable;
-    }
-
-    // If the types after this point are equivalent, we're done.
-    if (S.Context.hasSameUnqualifiedType(T1, T2))
-      break;
-  }
-
-  // Check that the winning standard conversion sequence isn't using
-  // the deprecated string literal array to pointer conversion.
-  switch (Result) {
-  case ImplicitConversionSequence::Better:
-    if (SCS1.DeprecatedStringLiteralToCharPtr)
-      Result = ImplicitConversionSequence::Indistinguishable;
-    break;
-
-  case ImplicitConversionSequence::Indistinguishable:
-    break;
-
-  case ImplicitConversionSequence::Worse:
-    if (SCS2.DeprecatedStringLiteralToCharPtr)
-      Result = ImplicitConversionSequence::Indistinguishable;
-    break;
-  }
-
-  return Result;
+  if (CanPick1 != CanPick2)
+    return CanPick1 ? ImplicitConversionSequence::Better
+                    : ImplicitConversionSequence::Worse;
+  return ImplicitConversionSequence::Indistinguishable;
 }
 
 /// CompareDerivedToBaseConversions - Compares two standard conversion
