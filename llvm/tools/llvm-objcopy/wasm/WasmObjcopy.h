@@ -18,10 +18,11 @@ class WasmObjectFile;
 } // end namespace object
 
 namespace objcopy {
-struct CopyConfig;
+struct CommonConfig;
+struct WasmConfig;
 
 namespace wasm {
-Error executeObjcopyOnBinary(const CopyConfig &Config,
+Error executeObjcopyOnBinary(const CommonConfig &Config, const WasmConfig &,
                              object::WasmObjectFile &In, raw_ostream &Out);
 
 } // end namespace wasm

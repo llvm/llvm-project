@@ -1,4 +1,4 @@
-//===- CopyConfig.cpp -----------------------------------------------------===//
+//===- ConfigManager.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CopyConfig.h"
-
+#include "ConfigManager.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -18,6 +17,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/StringSaver.h"
 #include <memory>
@@ -466,6 +466,190 @@ static void printHelp(const opt::OptTable &OptTable, raw_ostream &OS,
   OS << "\nPass @FILE as argument to read options from FILE.\n";
 }
 
+static Expected<NewSymbolInfo> parseNewSymbolInfo(StringRef FlagValue,
+                                                  uint8_t DefaultVisibility) {
+  // Parse value given with --add-symbol option and create the
+  // new symbol if possible. The value format for --add-symbol is:
+  //
+  // <name>=[<section>:]<value>[,<flags>]
+  //
+  // where:
+  // <name> - symbol name, can be empty string
+  // <section> - optional section name. If not given ABS symbol is created
+  // <value> - symbol value, can be decimal or hexadecimal number prefixed
+  //           with 0x.
+  // <flags> - optional flags affecting symbol type, binding or visibility:
+  //           The following are currently supported:
+  //
+  //           global, local, weak, default, hidden, file, section, object,
+  //           indirect-function.
+  //
+  //           The following flags are ignored and provided for GNU
+  //           compatibility only:
+  //
+  //           warning, debug, constructor, indirect, synthetic,
+  //           unique-object, before=<symbol>.
+  NewSymbolInfo SI;
+  StringRef Value;
+  std::tie(SI.SymbolName, Value) = FlagValue.split('=');
+  if (Value.empty())
+    return createStringError(
+        errc::invalid_argument,
+        "bad format for --add-symbol, missing '=' after '%s'",
+        SI.SymbolName.str().c_str());
+
+  if (Value.contains(':')) {
+    std::tie(SI.SectionName, Value) = Value.split(':');
+    if (SI.SectionName.empty() || Value.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "bad format for --add-symbol, missing section name or symbol value");
+  }
+
+  SmallVector<StringRef, 6> Flags;
+  Value.split(Flags, ',');
+  if (Flags[0].getAsInteger(0, SI.Value))
+    return createStringError(errc::invalid_argument, "bad symbol value: '%s'",
+                             Flags[0].str().c_str());
+
+  SI.Visibility = DefaultVisibility;
+  using Functor = std::function<void(void)>;
+  SmallVector<StringRef, 6> UnsupportedFlags;
+  for (size_t I = 1, NumFlags = Flags.size(); I < NumFlags; ++I)
+    static_cast<Functor>(
+        StringSwitch<Functor>(Flags[I])
+            .CaseLower("global", [&SI] { SI.Bind = ELF::STB_GLOBAL; })
+            .CaseLower("local", [&SI] { SI.Bind = ELF::STB_LOCAL; })
+            .CaseLower("weak", [&SI] { SI.Bind = ELF::STB_WEAK; })
+            .CaseLower("default", [&SI] { SI.Visibility = ELF::STV_DEFAULT; })
+            .CaseLower("hidden", [&SI] { SI.Visibility = ELF::STV_HIDDEN; })
+            .CaseLower("protected",
+                       [&SI] { SI.Visibility = ELF::STV_PROTECTED; })
+            .CaseLower("file", [&SI] { SI.Type = ELF::STT_FILE; })
+            .CaseLower("section", [&SI] { SI.Type = ELF::STT_SECTION; })
+            .CaseLower("object", [&SI] { SI.Type = ELF::STT_OBJECT; })
+            .CaseLower("function", [&SI] { SI.Type = ELF::STT_FUNC; })
+            .CaseLower("indirect-function",
+                       [&SI] { SI.Type = ELF::STT_GNU_IFUNC; })
+            .CaseLower("debug", [] {})
+            .CaseLower("constructor", [] {})
+            .CaseLower("warning", [] {})
+            .CaseLower("indirect", [] {})
+            .CaseLower("synthetic", [] {})
+            .CaseLower("unique-object", [] {})
+            .StartsWithLower("before", [] {})
+            .Default([&] { UnsupportedFlags.push_back(Flags[I]); }))();
+  if (!UnsupportedFlags.empty())
+    return createStringError(errc::invalid_argument,
+                             "unsupported flag%s for --add-symbol: '%s'",
+                             UnsupportedFlags.size() > 1 ? "s" : "",
+                             join(UnsupportedFlags, "', '").c_str());
+  return SI;
+}
+
+Expected<const ELFConfig &> ConfigManager::getELFConfig() const {
+  if (!ELF) {
+    if (Common.StripSwiftSymbols || Common.KeepUndefined)
+      return createStringError(llvm::errc::invalid_argument,
+                               "option not supported by llvm-objcopy for ELF");
+
+    // Parse lazy options.
+    ELFConfig ResConfig;
+
+    if (NewSymbolVisibility) {
+      const uint8_t Invalid = 0xff;
+      ResConfig.NewSymbolVisibility =
+          StringSwitch<uint8_t>(*NewSymbolVisibility)
+              .Case("default", ELF::STV_DEFAULT)
+              .Case("hidden", ELF::STV_HIDDEN)
+              .Case("internal", ELF::STV_INTERNAL)
+              .Case("protected", ELF::STV_PROTECTED)
+              .Default(Invalid);
+
+      if (ResConfig.NewSymbolVisibility == Invalid)
+        return createStringError(errc::invalid_argument,
+                                 "'%s' is not a valid symbol visibility",
+                                 NewSymbolVisibility->str().c_str());
+    }
+
+    for (StringRef Arg : SymbolsToAdd) {
+      Expected<NewSymbolInfo> NSI = parseNewSymbolInfo(
+          Arg,
+          ResConfig.NewSymbolVisibility.getValueOr((uint8_t)ELF::STV_DEFAULT));
+      if (!NSI)
+        return NSI.takeError();
+      ResConfig.SymbolsToAdd.push_back(*NSI);
+    }
+
+    ELF = std::move(ResConfig);
+  }
+
+  return *ELF;
+}
+
+Expected<const COFFConfig &> ConfigManager::getCOFFConfig() const {
+  if (Common.AllowBrokenLinks || !Common.SplitDWO.empty() ||
+      !Common.SymbolsPrefix.empty() || !Common.AllocSectionsPrefix.empty() ||
+      !Common.DumpSection.empty() || !Common.KeepSection.empty() ||
+      NewSymbolVisibility || !Common.SymbolsToGlobalize.empty() ||
+      !Common.SymbolsToKeep.empty() || !Common.SymbolsToLocalize.empty() ||
+      !Common.SymbolsToWeaken.empty() || !Common.SymbolsToKeepGlobal.empty() ||
+      !Common.SectionsToRename.empty() || !Common.SetSectionAlignment.empty() ||
+      Common.ExtractDWO || Common.LocalizeHidden || Common.PreserveDates ||
+      Common.StripDWO || Common.StripNonAlloc || Common.StripSections ||
+      Common.StripSwiftSymbols || Common.KeepUndefined || Common.Weaken ||
+      Common.DecompressDebugSections ||
+      Common.DiscardMode == DiscardType::Locals || !SymbolsToAdd.empty() ||
+      Common.EntryExpr) {
+    return createStringError(llvm::errc::invalid_argument,
+                             "option not supported by llvm-objcopy for COFF");
+  }
+
+  return COFF;
+}
+
+Expected<const MachOConfig &> ConfigManager::getMachOConfig() const {
+  if (Common.AllowBrokenLinks || !Common.SplitDWO.empty() ||
+      !Common.SymbolsPrefix.empty() || !Common.AllocSectionsPrefix.empty() ||
+      !Common.KeepSection.empty() || NewSymbolVisibility ||
+      !Common.SymbolsToGlobalize.empty() || !Common.SymbolsToKeep.empty() ||
+      !Common.SymbolsToLocalize.empty() || !Common.SymbolsToWeaken.empty() ||
+      !Common.SymbolsToKeepGlobal.empty() || !Common.SectionsToRename.empty() ||
+      !Common.UnneededSymbolsToRemove.empty() ||
+      !Common.SetSectionAlignment.empty() || !Common.SetSectionFlags.empty() ||
+      Common.ExtractDWO || Common.LocalizeHidden || Common.PreserveDates ||
+      Common.StripAllGNU || Common.StripDWO || Common.StripNonAlloc ||
+      Common.StripSections || Common.Weaken || Common.DecompressDebugSections ||
+      Common.StripUnneeded || Common.DiscardMode == DiscardType::Locals ||
+      !SymbolsToAdd.empty() || Common.EntryExpr) {
+    return createStringError(llvm::errc::invalid_argument,
+                             "option not supported by llvm-objcopy for MachO");
+  }
+
+  return MachO;
+}
+
+Expected<const WasmConfig &> ConfigManager::getWasmConfig() const {
+  if (!Common.AddGnuDebugLink.empty() || Common.ExtractPartition ||
+      !Common.SplitDWO.empty() || !Common.SymbolsPrefix.empty() ||
+      !Common.AllocSectionsPrefix.empty() ||
+      Common.DiscardMode != DiscardType::None || NewSymbolVisibility ||
+      !SymbolsToAdd.empty() || !Common.RPathToAdd.empty() ||
+      !Common.OnlySection.empty() || !Common.SymbolsToGlobalize.empty() ||
+      !Common.SymbolsToKeep.empty() || !Common.SymbolsToLocalize.empty() ||
+      !Common.SymbolsToRemove.empty() ||
+      !Common.UnneededSymbolsToRemove.empty() ||
+      !Common.SymbolsToWeaken.empty() || !Common.SymbolsToKeepGlobal.empty() ||
+      !Common.SectionsToRename.empty() || !Common.SetSectionAlignment.empty() ||
+      !Common.SetSectionFlags.empty() || !Common.SymbolsToRename.empty()) {
+    return createStringError(
+        llvm::errc::invalid_argument,
+        "only add-section, dump-section, and remove-section are supported");
+  }
+
+  return Wasm;
+}
+
 // ParseObjcopyOptions returns the config and sets the input arguments. If a
 // help flag is set then ParseObjcopyOptions will print the help messege and
 // exit.
@@ -519,7 +703,8 @@ parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
     return createStringError(errc::invalid_argument,
                              "too many positional arguments");
 
-  CopyConfig Config;
+  ConfigManager ConfigMgr;
+  CommonConfig &Config = ConfigMgr.Common;
   Config.InputFilename = Positional[0];
   Config.OutputFilename = Positional[Positional.size() == 1 ? 0 : 1];
   if (InputArgs.hasArg(OBJCOPY_target) &&
@@ -559,7 +744,7 @@ parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
                            .Default(FileFormat::Unspecified);
 
   if (InputArgs.hasArg(OBJCOPY_new_symbol_visibility))
-    Config.NewSymbolVisibility =
+    ConfigMgr.NewSymbolVisibility =
         InputArgs.getLastArgValue(OBJCOPY_new_symbol_visibility);
 
   Config.OutputFormat = StringSwitch<FileFormat>(OutputFormat)
@@ -808,7 +993,7 @@ parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
                                SymbolMatchStyle, ErrorCallback))
       return std::move(E);
   for (auto Arg : InputArgs.filtered(OBJCOPY_add_symbol))
-    Config.SymbolsToAdd.push_back(Arg->getValue());
+    ConfigMgr.SymbolsToAdd.push_back(Arg->getValue());
 
   Config.AllowBrokenLinks = InputArgs.hasArg(OBJCOPY_allow_broken_links);
 
@@ -862,7 +1047,7 @@ parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
                              "cannot specify --extract-partition together with "
                              "--extract-main-partition");
 
-  DC.CopyConfigs.push_back(std::move(Config));
+  DC.CopyConfigs.push_back(std::move(ConfigMgr));
   return std::move(DC);
 }
 
@@ -872,7 +1057,8 @@ parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
 Expected<DriverConfig>
 parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
   DriverConfig DC;
-  CopyConfig Config;
+  ConfigManager ConfigMgr;
+  CommonConfig &Config = ConfigMgr.Common;
   InstallNameToolOptTable T;
   unsigned MissingArgumentIndex, MissingArgumentCount;
   llvm::opt::InputArgList InputArgs =
@@ -996,14 +1182,15 @@ parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
   Config.InputFilename = Positional[0];
   Config.OutputFilename = Positional[0];
 
-  DC.CopyConfigs.push_back(std::move(Config));
+  DC.CopyConfigs.push_back(std::move(ConfigMgr));
   return std::move(DC);
 }
 
 Expected<DriverConfig>
 parseBitcodeStripOptions(ArrayRef<const char *> ArgsArr) {
   DriverConfig DC;
-  CopyConfig Config;
+  ConfigManager ConfigMgr;
+  CommonConfig &Config = ConfigMgr.Common;
   BitcodeStripOptTable T;
   unsigned MissingArgumentIndex, MissingArgumentCount;
   opt::InputArgList InputArgs =
@@ -1040,7 +1227,7 @@ parseBitcodeStripOptions(ArrayRef<const char *> ArgsArr) {
   Config.InputFilename = Positional[0];
   Config.OutputFilename = Positional[0];
 
-  DC.CopyConfigs.push_back(std::move(Config));
+  DC.CopyConfigs.push_back(std::move(ConfigMgr));
   return std::move(DC);
 }
 
@@ -1086,7 +1273,8 @@ parseStripOptions(ArrayRef<const char *> ArgsArr,
         errc::invalid_argument,
         "multiple input files cannot be used in combination with -o");
 
-  CopyConfig Config;
+  ConfigManager ConfigMgr;
+  CommonConfig &Config = ConfigMgr.Common;
 
   if (InputArgs.hasArg(STRIP_regex) && InputArgs.hasArg(STRIP_wildcard))
     return createStringError(errc::invalid_argument,
@@ -1159,7 +1347,7 @@ parseStripOptions(ArrayRef<const char *> ArgsArr,
     Config.InputFilename = Positional[0];
     Config.OutputFilename =
         InputArgs.getLastArgValue(STRIP_output, Positional[0]);
-    DC.CopyConfigs.push_back(std::move(Config));
+    DC.CopyConfigs.push_back(std::move(ConfigMgr));
   } else {
     StringMap<unsigned> InputFiles;
     for (StringRef Filename : Positional) {
@@ -1175,7 +1363,7 @@ parseStripOptions(ArrayRef<const char *> ArgsArr,
       }
       Config.InputFilename = Filename;
       Config.OutputFilename = Filename;
-      DC.CopyConfigs.push_back(Config);
+      DC.CopyConfigs.push_back(ConfigMgr);
     }
   }
 
