@@ -21,11 +21,11 @@ body:             |
     ; MIPS32: liveins: $a0, $a1
     ; MIPS32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
     ; MIPS32: [[COPY1:%[0-9]+]]:_(p0) = COPY $a1
-    ; MIPS32: G_STORE [[COPY]](s32), [[COPY1]](p0) :: (store 4 into %ir.ptr)
+    ; MIPS32: G_STORE [[COPY]](s32), [[COPY1]](p0) :: (store (s32) into %ir.ptr)
     ; MIPS32: RetRA
     %0:_(s32) = COPY $a0
     %1:_(p0) = COPY $a1
-    G_STORE %0(s32), %1(p0) :: (store 4 into %ir.ptr)
+    G_STORE %0(s32), %1(p0) :: (store (s32) into %ir.ptr)
     RetRA
 
 ...
@@ -44,13 +44,13 @@ body:             |
     ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
     ; MIPS32: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; MIPS32: [[COPY2:%[0-9]+]]:_(p0) = COPY $a2
-    ; MIPS32: G_STORE [[MV]](s64), [[COPY2]](p0) :: (store 8 into %ir.ptr)
+    ; MIPS32: G_STORE [[MV]](s64), [[COPY2]](p0) :: (store (s64) into %ir.ptr)
     ; MIPS32: RetRA
     %2:_(s32) = COPY $a0
     %3:_(s32) = COPY $a1
     %0:_(s64) = G_MERGE_VALUES %2(s32), %3(s32)
     %1:_(p0) = COPY $a2
-    G_STORE %0(s64), %1(p0) :: (store 8 into %ir.ptr)
+    G_STORE %0(s64), %1(p0) :: (store (s64) into %ir.ptr)
     RetRA
 
 ...
@@ -67,11 +67,11 @@ body:             |
     ; MIPS32: liveins: $a1, $f12
     ; MIPS32: [[COPY:%[0-9]+]]:_(s32) = COPY $f12
     ; MIPS32: [[COPY1:%[0-9]+]]:_(p0) = COPY $a1
-    ; MIPS32: G_STORE [[COPY]](s32), [[COPY1]](p0) :: (store 4 into %ir.ptr)
+    ; MIPS32: G_STORE [[COPY]](s32), [[COPY1]](p0) :: (store (s32) into %ir.ptr)
     ; MIPS32: RetRA
     %0:_(s32) = COPY $f12
     %1:_(p0) = COPY $a1
-    G_STORE %0(s32), %1(p0) :: (store 4 into %ir.ptr)
+    G_STORE %0(s32), %1(p0) :: (store (s32) into %ir.ptr)
     RetRA
 
 ...
@@ -88,11 +88,11 @@ body:             |
     ; MIPS32: liveins: $a2, $d6
     ; MIPS32: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
     ; MIPS32: [[COPY1:%[0-9]+]]:_(p0) = COPY $a2
-    ; MIPS32: G_STORE [[COPY]](s64), [[COPY1]](p0) :: (store 8 into %ir.ptr)
+    ; MIPS32: G_STORE [[COPY]](s64), [[COPY1]](p0) :: (store (s64) into %ir.ptr)
     ; MIPS32: RetRA
     %0:_(s64) = COPY $d6
     %1:_(p0) = COPY $a2
-    G_STORE %0(s64), %1(p0) :: (store 8 into %ir.ptr)
+    G_STORE %0(s64), %1(p0) :: (store (s64) into %ir.ptr)
     RetRA
 
 ...

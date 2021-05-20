@@ -41,13 +41,13 @@ body:             |
     ; MIPS32: [[LUi:%[0-9]+]]:gpr32 = LUi target-flags(mips-abs-hi) @float_align1
     ; MIPS32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu [[LUi]], target-flags(mips-abs-lo) @float_align1
     ; MIPS32: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
-    ; MIPS32: SWL [[COPY1]], [[ADDiu]], 3 :: (store 4 into @float_align1, align 1)
-    ; MIPS32: SWR [[COPY1]], [[ADDiu]], 0 :: (store 4 into @float_align1, align 1)
+    ; MIPS32: SWL [[COPY1]], [[ADDiu]], 3 :: (store (s32) into @float_align1, align 1)
+    ; MIPS32: SWR [[COPY1]], [[ADDiu]], 0 :: (store (s32) into @float_align1, align 1)
     ; MIPS32: RetRA
     %0:fprb(s32) = COPY $f12
     %1:gprb(p0) = G_GLOBAL_VALUE @float_align1
     %2:gprb(s32) = COPY %0(s32)
-    G_STORE %2(s32), %1(p0) :: (store 4 into @float_align1, align 1)
+    G_STORE %2(s32), %1(p0) :: (store (s32) into @float_align1, align 1)
     RetRA
 
 ...
@@ -66,11 +66,11 @@ body:             |
     ; MIPS32: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; MIPS32: [[LUi:%[0-9]+]]:gpr32 = LUi target-flags(mips-abs-hi) @float_align4
     ; MIPS32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu [[LUi]], target-flags(mips-abs-lo) @float_align4
-    ; MIPS32: SWC1 [[COPY]], [[ADDiu]], 0 :: (store 4 into @float_align4)
+    ; MIPS32: SWC1 [[COPY]], [[ADDiu]], 0 :: (store (s32) into @float_align4)
     ; MIPS32: RetRA
     %0:fprb(s32) = COPY $f12
     %1:gprb(p0) = G_GLOBAL_VALUE @float_align4
-    G_STORE %0(s32), %1(p0) :: (store 4 into @float_align4)
+    G_STORE %0(s32), %1(p0) :: (store (s32) into @float_align4)
     RetRA
 
 ...
@@ -89,11 +89,11 @@ body:             |
     ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
     ; MIPS32: [[LUi:%[0-9]+]]:gpr32 = LUi target-flags(mips-abs-hi) @i32_align8
     ; MIPS32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu [[LUi]], target-flags(mips-abs-lo) @i32_align8
-    ; MIPS32: SW [[COPY]], [[ADDiu]], 0 :: (store 4 into @i32_align8, align 8)
+    ; MIPS32: SW [[COPY]], [[ADDiu]], 0 :: (store (s32) into @i32_align8, align 8)
     ; MIPS32: RetRA
     %0:gprb(s32) = COPY $a0
     %1:gprb(p0) = G_GLOBAL_VALUE @i32_align8
-    G_STORE %0(s32), %1(p0) :: (store 4 into @i32_align8, align 8)
+    G_STORE %0(s32), %1(p0) :: (store (s32) into @i32_align8, align 8)
     RetRA
 
 ...

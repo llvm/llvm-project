@@ -19,7 +19,7 @@ body: |
     ; CHECK-NOT: $x2 = LDRXui %stack.0, 0
     liveins: $x0
     DBG_VALUE %stack.0, 0
-    $x2 = LDRXui %stack.0, 0 :: (load 8 from %stack.0)
+    $x2 = LDRXui %stack.0, 0 :: (load (s64) from %stack.0)
     $x0 = ADDXrr $x0, $x2
     $xzr = SUBSXri $x0, 1, 0, implicit-def $nzcv
     Bcc 11, %bb.1, implicit $nzcv

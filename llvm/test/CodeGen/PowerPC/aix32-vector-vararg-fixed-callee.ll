@@ -11,11 +11,11 @@ define double @callee(i32 %count, <4 x i32> %vsi, double %next, ...) {
   ; CHECK: bb.0.entry:
   ; CHECK:   LIFETIME_START %stack.0.arg_list
   ; CHECK:   [[ADDI:%[0-9]+]]:gprc = ADDI %fixed-stack.0, 0
-  ; CHECK:   STW killed [[ADDI]], 0, %stack.0.arg_list :: (store 4 into %ir.0)
+  ; CHECK:   STW killed [[ADDI]], 0, %stack.0.arg_list :: (store (s32) into %ir.0)
   ; CHECK:   [[ADDI1:%[0-9]+]]:gprc = ADDI %fixed-stack.0, 15
   ; CHECK:   [[RLWINM:%[0-9]+]]:gprc_and_gprc_nor0 = RLWINM killed [[ADDI1]], 0, 0, 27
   ; CHECK:   [[ADDI2:%[0-9]+]]:gprc = nuw ADDI killed [[RLWINM]], 16
-  ; CHECK:   [[XFLOADf64_:%[0-9]+]]:vsfrc = XFLOADf64 $zero, killed [[ADDI2]] :: (load 8 from %ir.4, align 16)
+  ; CHECK:   [[XFLOADf64_:%[0-9]+]]:vsfrc = XFLOADf64 $zero, killed [[ADDI2]] :: (load (s64) from %ir.4, align 16)
   ; CHECK:   LIFETIME_END %stack.0.arg_list
   ; CHECK:   $f1 = COPY [[XFLOADf64_]]
   ; CHECK:   BLR implicit $lr, implicit $rm, implicit $f1

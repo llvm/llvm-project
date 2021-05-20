@@ -175,7 +175,7 @@ body:             |
     DBG_VALUE %0, $noreg, !23, !DIExpression(), debug-location !27
     TEST64rr %0, %0, implicit-def $eflags, debug-location !28
     DBG_VALUE %0, $noreg, !23, !DIExpression(), debug-location !27
-    MOV8mi %0, 1, $noreg, 0, $noreg, 0, debug-location !30 :: (store 1 into %ir.0)
+    MOV8mi %0, 1, $noreg, 0, $noreg, 0, debug-location !30 :: (store (s8) into %ir.0)
     CFI_INSTRUCTION offset $r13, -123
     DBG_VALUE %0, $noreg, !21, !DIExpression(), debug-location !27
     DBG_VALUE %0, $noreg, !23, !DIExpression(), debug-location !27
@@ -201,9 +201,9 @@ body:             |
   bb.1.if.then:
     successors: %bb.2(0x80000000)
   
-    %2:vr128 = MOVAPSrm %0, 1, $noreg, 0, $noreg, debug-location !32 :: (load 16 from %ir.p1)
+    %2:vr128 = MOVAPSrm %0, 1, $noreg, 0, $noreg, debug-location !32 :: (load (s128) from %ir.p1)
     DBG_VALUE %2, $noreg, !24, !DIExpression(), debug-location !33
-    MOVAPSmr %1, 1, $noreg, 0, $noreg, killed %2, debug-location !34 :: (store 16 into %ir.p2)
+    MOVAPSmr %1, 1, $noreg, 0, $noreg, killed %2, debug-location !34 :: (store (s128) into %ir.p2)
   
   bb.2.if.end:
     RET 0, debug-location !36

@@ -78,14 +78,14 @@ body:             |
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
     frame-setup CFI_INSTRUCTION offset $lr, -4
     frame-setup CFI_INSTRUCTION offset $r7, -8
-    renamable $d0 = VLDRD %const.0, 0, 14, $noreg :: (load 8 from constant-pool)
-    renamable $d1 = VLDRD %const.1, 0, 14, $noreg :: (load 8 from constant-pool)
-    renamable $d2 = VLDRD %const.2, 0, 14, $noreg :: (load 8 from constant-pool)
-    renamable $d3 = VLDRD %const.3, 0, 14, $noreg :: (load 8 from constant-pool)
-    renamable $d4 = VLDRD %const.4, 0, 14, $noreg :: (load 8 from constant-pool)
-    renamable $d5 = VLDRD %const.5, 0, 14, $noreg :: (load 8 from constant-pool)
-    renamable $d6 = VLDRD %const.6, 0, 14, $noreg :: (load 8 from constant-pool)
-    renamable $d7 = VLDRD %const.7, 0, 14, $noreg :: (load 8 from constant-pool)
+    renamable $d0 = VLDRD %const.0, 0, 14, $noreg :: (load (s64) from constant-pool)
+    renamable $d1 = VLDRD %const.1, 0, 14, $noreg :: (load (s64) from constant-pool)
+    renamable $d2 = VLDRD %const.2, 0, 14, $noreg :: (load (s64) from constant-pool)
+    renamable $d3 = VLDRD %const.3, 0, 14, $noreg :: (load (s64) from constant-pool)
+    renamable $d4 = VLDRD %const.4, 0, 14, $noreg :: (load (s64) from constant-pool)
+    renamable $d5 = VLDRD %const.5, 0, 14, $noreg :: (load (s64) from constant-pool)
+    renamable $d6 = VLDRD %const.6, 0, 14, $noreg :: (load (s64) from constant-pool)
+    renamable $d7 = VLDRD %const.7, 0, 14, $noreg :: (load (s64) from constant-pool)
     renamable $r0 = t2BICri killed renamable $r0, 1, 14, $noreg, $noreg
     tBLXNS_CALL killed renamable $r0, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit $d0, implicit $d1, implicit $d2, implicit $d3, implicit $d4, implicit $d5, implicit $d6, implicit $d7, implicit-def $sp
     $sp = t2LDMIA_UPD $sp, 14, $noreg, def $r7, def $lr

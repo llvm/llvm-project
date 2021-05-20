@@ -32,9 +32,9 @@ body:             |
     ; CHECK: [[PTR:%[0-9]+]]:gpr = COPY $r0
 
     %1(s32) = G_FCONSTANT float 0.0
-    ; CHECK: [[VREG:%[0-9]+]]:spr = VLDRS %const.0, 0, 14 /* CC::al */, $noreg :: (load 4 from constant-pool)
+    ; CHECK: [[VREG:%[0-9]+]]:spr = VLDRS %const.0, 0, 14 /* CC::al */, $noreg :: (load (s32) from constant-pool)
 
-    G_STORE %1(s32), %0 :: (store 4)
+    G_STORE %1(s32), %0 :: (store (s32))
     ; CHECK: VSTRS [[VREG]], [[PTR]], 0, 14 /* CC::al */, $noreg
 
     BX_RET 14, $noreg
@@ -63,9 +63,9 @@ body:             |
     ; CHECK: [[PTR:%[0-9]+]]:gpr = COPY $r0
 
     %1(s64) = G_FCONSTANT double 0.0
-    ; CHECK: [[VREG:%[0-9]+]]:dpr = VLDRD %const.0, 0, 14 /* CC::al */, $noreg :: (load 8 from constant-pool)
+    ; CHECK: [[VREG:%[0-9]+]]:dpr = VLDRD %const.0, 0, 14 /* CC::al */, $noreg :: (load (s64) from constant-pool)
 
-    G_STORE %1(s64), %0 :: (store 8)
+    G_STORE %1(s64), %0 :: (store (s64))
     ; CHECK: VSTRD [[VREG]], [[PTR]], 0, 14 /* CC::al */, $noreg
 
     BX_RET 14, $noreg
@@ -96,9 +96,9 @@ body:             |
 
     %1(s32) = G_FCONSTANT float -2.0
     ; VFP3: [[VREG:%[0-9]+]]:spr = FCONSTS 128, 14 /* CC::al */, $noreg
-    ; VFP2: [[VREG:%[0-9]+]]:spr = VLDRS %const.0, 0, 14 /* CC::al */, $noreg :: (load 4 from constant-pool)
+    ; VFP2: [[VREG:%[0-9]+]]:spr = VLDRS %const.0, 0, 14 /* CC::al */, $noreg :: (load (s32) from constant-pool)
 
-    G_STORE %1(s32), %0 :: (store 4)
+    G_STORE %1(s32), %0 :: (store (s32))
     ; CHECK: VSTRS [[VREG]], [[PTR]], 0, 14 /* CC::al */, $noreg
 
     BX_RET 14, $noreg
@@ -129,9 +129,9 @@ body:             |
 
     %1(s64) = G_FCONSTANT double 5.0e-1
     ; VFP3: [[VREG:%[0-9]+]]:dpr = FCONSTD 96, 14 /* CC::al */, $noreg
-    ; VFP2: [[VREG:%[0-9]+]]:dpr = VLDRD %const.0, 0, 14 /* CC::al */, $noreg :: (load 8 from constant-pool)
+    ; VFP2: [[VREG:%[0-9]+]]:dpr = VLDRD %const.0, 0, 14 /* CC::al */, $noreg :: (load (s64) from constant-pool)
 
-    G_STORE %1(s64), %0 :: (store 8)
+    G_STORE %1(s64), %0 :: (store (s64))
     ; CHECK: VSTRD [[VREG]], [[PTR]], 0, 14 /* CC::al */, $noreg
 
     BX_RET 14, $noreg

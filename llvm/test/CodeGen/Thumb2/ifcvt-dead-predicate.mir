@@ -47,7 +47,7 @@ body:             |
   ; CHECK: bb.0.entry:
   ; CHECK:   successors: %bb.1
   ; CHECK:   liveins: $r0, $r1, $r2
-  ; CHECK:   renamable $r0 = tLDRBi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 1 from %ir.command_set, align 4)
+  ; CHECK:   renamable $r0 = tLDRBi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load (s8) from %ir.command_set, align 4)
   ; CHECK:   dead renamable $r0, $cpsr = tLSLri killed renamable $r0, 24, 14 /* CC::al */, $noreg
   ; CHECK:   $r0, dead $noreg = tMOVi8 0, 5 /* CC::pl */, $cpsr
   ; CHECK:   tBX_RET 5 /* CC::pl */, killed $cpsr, implicit killed $r0
@@ -60,7 +60,7 @@ body:             |
     successors: %bb.1, %bb.2
     liveins: $r0, $r1, $r2
 
-    renamable $r0 = tLDRBi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 1 from %ir.command_set, align 4)
+    renamable $r0 = tLDRBi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load (s8) from %ir.command_set, align 4)
     dead renamable $r0, $cpsr = tLSLri killed renamable $r0, 24, 14 /* CC::al */, $noreg
     t2Bcc %bb.2, 4 /* CC::mi */, killed $cpsr
 

@@ -79,18 +79,18 @@ define void @fptoint_nofpexcept(ppc_fp128 %p, fp128 %m, i32* %addr1, i64* %addr2
   ; CHECK:   [[COPY5:%[0-9]+]]:vslrc = COPY %5
   ; CHECK:   [[COPY6:%[0-9]+]]:vfrc = COPY [[COPY5]].sub_64
   ; CHECK:   [[MFVSRWZ:%[0-9]+]]:gprc = MFVSRWZ killed [[COPY6]]
-  ; CHECK:   STW killed [[MFVSRWZ]], 0, [[COPY1]] :: (volatile store 4 into %ir.addr1)
+  ; CHECK:   STW killed [[MFVSRWZ]], 0, [[COPY1]] :: (volatile store (s32) into %ir.addr1)
   ; CHECK:   %8:vrrc = nofpexcept XSCVQPUWZ [[COPY2]]
   ; CHECK:   [[COPY7:%[0-9]+]]:vslrc = COPY %8
   ; CHECK:   [[COPY8:%[0-9]+]]:vfrc = COPY [[COPY7]].sub_64
   ; CHECK:   [[MFVSRWZ1:%[0-9]+]]:gprc = MFVSRWZ killed [[COPY8]]
-  ; CHECK:   STW killed [[MFVSRWZ1]], 0, [[COPY1]] :: (volatile store 4 into %ir.addr1)
+  ; CHECK:   STW killed [[MFVSRWZ1]], 0, [[COPY1]] :: (volatile store (s32) into %ir.addr1)
   ; CHECK:   %11:vrrc = nofpexcept XSCVQPSDZ [[COPY2]]
   ; CHECK:   %12:g8rc = nofpexcept MFVRD killed %11
-  ; CHECK:   STD killed %12, 0, [[COPY]] :: (volatile store 8 into %ir.addr2)
+  ; CHECK:   STD killed %12, 0, [[COPY]] :: (volatile store (s64) into %ir.addr2)
   ; CHECK:   %13:vrrc = nofpexcept XSCVQPUDZ [[COPY2]]
   ; CHECK:   %14:g8rc = nofpexcept MFVRD killed %13
-  ; CHECK:   STD killed %14, 0, [[COPY]] :: (volatile store 8 into %ir.addr2)
+  ; CHECK:   STD killed %14, 0, [[COPY]] :: (volatile store (s64) into %ir.addr2)
   ; CHECK:   [[MFFS:%[0-9]+]]:f8rc = MFFS implicit $rm
   ; CHECK:   MTFSB1 31, implicit-def $rm
   ; CHECK:   MTFSB0 30, implicit-def $rm
@@ -98,9 +98,9 @@ define void @fptoint_nofpexcept(ppc_fp128 %p, fp128 %m, i32* %addr1, i64* %addr2
   ; CHECK:   MTFSFb 1, [[MFFS]], implicit-def $rm
   ; CHECK:   %16:vsfrc = nofpexcept XSCVDPSXWS killed %15, implicit $rm
   ; CHECK:   [[MFVSRWZ2:%[0-9]+]]:gprc = MFVSRWZ killed %16
-  ; CHECK:   STW killed [[MFVSRWZ2]], 0, [[COPY1]] :: (volatile store 4 into %ir.addr1)
+  ; CHECK:   STW killed [[MFVSRWZ2]], 0, [[COPY1]] :: (volatile store (s32) into %ir.addr1)
   ; CHECK:   [[ADDIStocHA8_:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, %const.0
-  ; CHECK:   [[DFLOADf32_:%[0-9]+]]:vssrc = DFLOADf32 target-flags(ppc-toc-lo) %const.0, killed [[ADDIStocHA8_]] :: (load 4 from constant-pool)
+  ; CHECK:   [[DFLOADf32_:%[0-9]+]]:vssrc = DFLOADf32 target-flags(ppc-toc-lo) %const.0, killed [[ADDIStocHA8_]] :: (load (s32) from constant-pool)
   ; CHECK:   [[COPY9:%[0-9]+]]:f8rc = COPY [[DFLOADf32_]]
   ; CHECK:   [[FCMPOD:%[0-9]+]]:crrc = FCMPOD [[COPY4]], [[COPY9]]
   ; CHECK:   [[COPY10:%[0-9]+]]:crbitrc = COPY [[FCMPOD]].sub_eq
@@ -137,7 +137,7 @@ define void @fptoint_nofpexcept(ppc_fp128 %p, fp128 %m, i32* %addr1, i64* %addr2
   ; CHECK:   %38:vsfrc = nofpexcept XSCVDPSXWS killed %37, implicit $rm
   ; CHECK:   [[MFVSRWZ3:%[0-9]+]]:gprc = MFVSRWZ killed %38
   ; CHECK:   [[XOR:%[0-9]+]]:gprc = XOR killed [[MFVSRWZ3]], killed [[ISEL]]
-  ; CHECK:   STW killed [[XOR]], 0, [[COPY1]] :: (volatile store 4 into %ir.addr1)
+  ; CHECK:   STW killed [[XOR]], 0, [[COPY1]] :: (volatile store (s32) into %ir.addr1)
   ; CHECK:   BLR8 implicit $lr8, implicit $rm
 entry:
   %conv1 = tail call i32 @llvm.experimental.constrained.fptosi.i32.f128(fp128 %m, metadata !"fpexcept.ignore") #0

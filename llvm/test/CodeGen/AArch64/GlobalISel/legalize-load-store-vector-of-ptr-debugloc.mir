@@ -46,7 +46,7 @@ body:             |
     ; CHECK: RET_ReallyLR debug-location !DILocation(line: 5, column: 1
     %0:_(<2 x p0>) = COPY $q0
     %1:_(p0) = COPY $x0
-    G_STORE %0(<2 x p0>), %1(p0), debug-location !11 :: (store 16)
+    G_STORE %0(<2 x p0>), %1(p0), debug-location !11 :: (store (<2 x p0>))
     RET_ReallyLR debug-location !12
 
 ...

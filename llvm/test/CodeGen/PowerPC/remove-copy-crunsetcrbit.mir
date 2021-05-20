@@ -111,7 +111,7 @@ body:             |
     liveins: $x2
 
     %3:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, @b
-    %4:gprc = LWZ target-flags(ppc-toc-lo) @b, killed %3, implicit $x2 :: (dereferenceable load 4 from @b)
+    %4:gprc = LWZ target-flags(ppc-toc-lo) @b, killed %3, implicit $x2 :: (dereferenceable load (s32) from @b)
     %5:crrc = CMPLWI killed %4, 0
     BCC 76, killed %5, %bb.5
     B %bb.1
@@ -121,7 +121,7 @@ body:             |
     liveins: $x2
 
     %6:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, @d
-    %7:gprc = LWZ target-flags(ppc-toc-lo) @d, killed %6, implicit $x2 :: (dereferenceable load 4 from @d)
+    %7:gprc = LWZ target-flags(ppc-toc-lo) @d, killed %6, implicit $x2 :: (dereferenceable load (s32) from @d)
     %8:crrc = CMPWI killed %7, 0
     %0:crbitrc = COPY killed %8.sub_eq
     %9:crbitrc = CRUNSET
@@ -144,10 +144,10 @@ body:             |
     successors: %bb.4(0x80000000)
     liveins: $x2
 
-    %11:g8rc_and_g8rc_nox0 = LD target-flags(ppc-toc-lo) @e, %10, implicit $x2 :: (dereferenceable load 8 from @e)
-    %12:g8rc = LWA 0, killed %11 :: (load 4 from %ir.1)
+    %11:g8rc_and_g8rc_nox0 = LD target-flags(ppc-toc-lo) @e, %10, implicit $x2 :: (dereferenceable load (s64) from @e)
+    %12:g8rc = LWA 0, killed %11 :: (load (s32) from %ir.1)
     %15:g8rc = RLDICR killed %12, 2, 61
-    %16:gprc = LWZX %14, killed %15 :: (load 4 from %ir.arrayidx)
+    %16:gprc = LWZX %14, killed %15 :: (load (s32) from %ir.arrayidx)
     %17:crrc = CMPWI killed %16, 0
     %18:crbitrc = COPY killed %17.sub_eq
     %1:crbitrc = CRNOR killed %18, %18
@@ -159,7 +159,7 @@ body:             |
 
     %2:crbitrc = COPY killed %24
     %21:gprc = ISEL %20, %19, killed %2
-    STW killed %21, target-flags(ppc-toc-lo) @c, %22, implicit $x2 :: (store 4 into @c)
+    STW killed %21, target-flags(ppc-toc-lo) @c, %22, implicit $x2 :: (store (s32) into @c)
     B %bb.2
 
   bb.5.while.end:

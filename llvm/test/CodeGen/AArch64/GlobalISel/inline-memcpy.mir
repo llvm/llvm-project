@@ -70,12 +70,12 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
     ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
-    ; CHECK: G_MEMCPY [[COPY]](p0), [[COPY1]](p0), [[COPY2]](s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
+    ; CHECK: G_MEMCPY [[COPY]](p0), [[COPY1]](p0), [[COPY2]](s64), 1 :: (store (s8) into %ir.0, align 4), (load (s8) from %ir.1, align 4)
     ; CHECK: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s64) = COPY $x2
-    G_MEMCPY %0(p0), %1(p0), %2(s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
+    G_MEMCPY %0(p0), %1(p0), %2(s64), 1 :: (store (s8) into %ir.0, align 4), (load (s8) from %ir.1, align 4)
     RET_ReallyLR
 
 ...
@@ -96,33 +96,33 @@ body:             |
     ; CHECK: liveins: $x0, $x1
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY1]](p0) :: (load 16 from %ir.1, align 4)
-    ; CHECK: G_STORE [[LOAD]](s128), [[COPY]](p0) :: (store 16 into %ir.0, align 4)
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY1]](p0) :: (load (s128) from %ir.1, align 4)
+    ; CHECK: G_STORE [[LOAD]](s128), [[COPY]](p0) :: (store (s128) into %ir.0, align 4)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[GEP]](p0) :: (load 16 from %ir.1 + 16, align 4)
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[GEP]](p0) :: (load (s128) from %ir.1 + 16, align 4)
     ; CHECK: [[GEP1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CHECK: G_STORE [[LOAD1]](s128), [[GEP1]](p0) :: (store 16 into %ir.0 + 16, align 4)
+    ; CHECK: G_STORE [[LOAD1]](s128), [[GEP1]](p0) :: (store (s128) into %ir.0 + 16, align 4)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
     ; CHECK: [[GEP2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
-    ; CHECK: [[LOAD2:%[0-9]+]]:_(s128) = G_LOAD [[GEP2]](p0) :: (load 16 from %ir.1 + 32, align 4)
+    ; CHECK: [[LOAD2:%[0-9]+]]:_(s128) = G_LOAD [[GEP2]](p0) :: (load (s128) from %ir.1 + 32, align 4)
     ; CHECK: [[GEP3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CHECK: G_STORE [[LOAD2]](s128), [[GEP3]](p0) :: (store 16 into %ir.0 + 32, align 4)
+    ; CHECK: G_STORE [[LOAD2]](s128), [[GEP3]](p0) :: (store (s128) into %ir.0 + 32, align 4)
     ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
     ; CHECK: [[GEP4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C2]](s64)
-    ; CHECK: [[LOAD3:%[0-9]+]]:_(s128) = G_LOAD [[GEP4]](p0) :: (load 16 from %ir.1 + 48, align 4)
+    ; CHECK: [[LOAD3:%[0-9]+]]:_(s128) = G_LOAD [[GEP4]](p0) :: (load (s128) from %ir.1 + 48, align 4)
     ; CHECK: [[GEP5:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
-    ; CHECK: G_STORE [[LOAD3]](s128), [[GEP5]](p0) :: (store 16 into %ir.0 + 48, align 4)
+    ; CHECK: G_STORE [[LOAD3]](s128), [[GEP5]](p0) :: (store (s128) into %ir.0 + 48, align 4)
     ; CHECK: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
     ; CHECK: [[GEP6:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C3]](s64)
-    ; CHECK: [[LOAD4:%[0-9]+]]:_(s64) = G_LOAD [[GEP6]](p0) :: (load 8 from %ir.1 + 64, align 4)
+    ; CHECK: [[LOAD4:%[0-9]+]]:_(s64) = G_LOAD [[GEP6]](p0) :: (load (s64) from %ir.1 + 64, align 4)
     ; CHECK: [[GEP7:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s64)
-    ; CHECK: G_STORE [[LOAD4]](s64), [[GEP7]](p0) :: (store 8 into %ir.0 + 64, align 4)
+    ; CHECK: G_STORE [[LOAD4]](s64), [[GEP7]](p0) :: (store (s64) into %ir.0 + 64, align 4)
     ; CHECK: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s64) = G_CONSTANT i64 72
-    G_MEMCPY %0(p0), %1(p0), %2(s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
+    G_MEMCPY %0(p0), %1(p0), %2(s64), 1 :: (store (s8) into %ir.0, align 4), (load (s8) from %ir.1, align 4)
     RET_ReallyLR
 
 ...
@@ -143,33 +143,33 @@ body:             |
     ; CHECK: liveins: $x0, $x1
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY1]](p0) :: (load 16 from %ir.1, align 4)
-    ; CHECK: G_STORE [[LOAD]](s128), [[COPY]](p0) :: (store 16 into %ir.0, align 4)
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY1]](p0) :: (load (s128) from %ir.1, align 4)
+    ; CHECK: G_STORE [[LOAD]](s128), [[COPY]](p0) :: (store (s128) into %ir.0, align 4)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[GEP]](p0) :: (load 16 from %ir.1 + 16, align 4)
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[GEP]](p0) :: (load (s128) from %ir.1 + 16, align 4)
     ; CHECK: [[GEP1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CHECK: G_STORE [[LOAD1]](s128), [[GEP1]](p0) :: (store 16 into %ir.0 + 16, align 4)
+    ; CHECK: G_STORE [[LOAD1]](s128), [[GEP1]](p0) :: (store (s128) into %ir.0 + 16, align 4)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
     ; CHECK: [[GEP2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
-    ; CHECK: [[LOAD2:%[0-9]+]]:_(s128) = G_LOAD [[GEP2]](p0) :: (load 16 from %ir.1 + 32, align 4)
+    ; CHECK: [[LOAD2:%[0-9]+]]:_(s128) = G_LOAD [[GEP2]](p0) :: (load (s128) from %ir.1 + 32, align 4)
     ; CHECK: [[GEP3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CHECK: G_STORE [[LOAD2]](s128), [[GEP3]](p0) :: (store 16 into %ir.0 + 32, align 4)
+    ; CHECK: G_STORE [[LOAD2]](s128), [[GEP3]](p0) :: (store (s128) into %ir.0 + 32, align 4)
     ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
     ; CHECK: [[GEP4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C2]](s64)
-    ; CHECK: [[LOAD3:%[0-9]+]]:_(s128) = G_LOAD [[GEP4]](p0) :: (load 16 from %ir.1 + 48, align 4)
+    ; CHECK: [[LOAD3:%[0-9]+]]:_(s128) = G_LOAD [[GEP4]](p0) :: (load (s128) from %ir.1 + 48, align 4)
     ; CHECK: [[GEP5:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
-    ; CHECK: G_STORE [[LOAD3]](s128), [[GEP5]](p0) :: (store 16 into %ir.0 + 48, align 4)
+    ; CHECK: G_STORE [[LOAD3]](s128), [[GEP5]](p0) :: (store (s128) into %ir.0 + 48, align 4)
     ; CHECK: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
     ; CHECK: [[GEP6:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C3]](s64)
-    ; CHECK: [[LOAD4:%[0-9]+]]:_(s64) = G_LOAD [[GEP6]](p0) :: (load 8 from %ir.1 + 64, align 4)
+    ; CHECK: [[LOAD4:%[0-9]+]]:_(s64) = G_LOAD [[GEP6]](p0) :: (load (s64) from %ir.1 + 64, align 4)
     ; CHECK: [[GEP7:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s64)
-    ; CHECK: G_STORE [[LOAD4]](s64), [[GEP7]](p0) :: (store 8 into %ir.0 + 64, align 4)
+    ; CHECK: G_STORE [[LOAD4]](s64), [[GEP7]](p0) :: (store (s64) into %ir.0 + 64, align 4)
     ; CHECK: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s64) = G_CONSTANT i64 72
-    G_MEMCPY %0(p0), %1(p0), %2(s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
+    G_MEMCPY %0(p0), %1(p0), %2(s64), 1 :: (store (s8) into %ir.0, align 4), (load (s8) from %ir.1, align 4)
     RET_ReallyLR
 
 ...
@@ -191,12 +191,12 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 72
-    ; CHECK: G_MEMCPY [[COPY]](p0), [[COPY1]](p0), [[C]](s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
+    ; CHECK: G_MEMCPY [[COPY]](p0), [[COPY1]](p0), [[C]](s64), 1 :: (store (s8) into %ir.0, align 4), (load (s8) from %ir.1, align 4)
     ; CHECK: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s64) = G_CONSTANT i64 72
-    G_MEMCPY %0(p0), %1(p0), %2(s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
+    G_MEMCPY %0(p0), %1(p0), %2(s64), 1 :: (store (s8) into %ir.0, align 4), (load (s8) from %ir.1, align 4)
     RET_ReallyLR
 
 ...
@@ -217,53 +217,53 @@ body:             |
     ; CHECK: liveins: $x0, $x1
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY1]](p0) :: (load 16 from %ir.1, align 4)
-    ; CHECK: G_STORE [[LOAD]](s128), [[COPY]](p0) :: (store 16 into %ir.0, align 4)
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY1]](p0) :: (load (s128) from %ir.1, align 4)
+    ; CHECK: G_STORE [[LOAD]](s128), [[COPY]](p0) :: (store (s128) into %ir.0, align 4)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[GEP]](p0) :: (load 16 from %ir.1 + 16, align 4)
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[GEP]](p0) :: (load (s128) from %ir.1 + 16, align 4)
     ; CHECK: [[GEP1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CHECK: G_STORE [[LOAD1]](s128), [[GEP1]](p0) :: (store 16 into %ir.0 + 16, align 4)
+    ; CHECK: G_STORE [[LOAD1]](s128), [[GEP1]](p0) :: (store (s128) into %ir.0 + 16, align 4)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
     ; CHECK: [[GEP2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
-    ; CHECK: [[LOAD2:%[0-9]+]]:_(s128) = G_LOAD [[GEP2]](p0) :: (load 16 from %ir.1 + 32, align 4)
+    ; CHECK: [[LOAD2:%[0-9]+]]:_(s128) = G_LOAD [[GEP2]](p0) :: (load (s128) from %ir.1 + 32, align 4)
     ; CHECK: [[GEP3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CHECK: G_STORE [[LOAD2]](s128), [[GEP3]](p0) :: (store 16 into %ir.0 + 32, align 4)
+    ; CHECK: G_STORE [[LOAD2]](s128), [[GEP3]](p0) :: (store (s128) into %ir.0 + 32, align 4)
     ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
     ; CHECK: [[GEP4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C2]](s64)
-    ; CHECK: [[LOAD3:%[0-9]+]]:_(s128) = G_LOAD [[GEP4]](p0) :: (load 16 from %ir.1 + 48, align 4)
+    ; CHECK: [[LOAD3:%[0-9]+]]:_(s128) = G_LOAD [[GEP4]](p0) :: (load (s128) from %ir.1 + 48, align 4)
     ; CHECK: [[GEP5:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
-    ; CHECK: G_STORE [[LOAD3]](s128), [[GEP5]](p0) :: (store 16 into %ir.0 + 48, align 4)
+    ; CHECK: G_STORE [[LOAD3]](s128), [[GEP5]](p0) :: (store (s128) into %ir.0 + 48, align 4)
     ; CHECK: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
     ; CHECK: [[GEP6:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C3]](s64)
-    ; CHECK: [[LOAD4:%[0-9]+]]:_(s128) = G_LOAD [[GEP6]](p0) :: (load 16 from %ir.1 + 64, align 4)
+    ; CHECK: [[LOAD4:%[0-9]+]]:_(s128) = G_LOAD [[GEP6]](p0) :: (load (s128) from %ir.1 + 64, align 4)
     ; CHECK: [[GEP7:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s64)
-    ; CHECK: G_STORE [[LOAD4]](s128), [[GEP7]](p0) :: (store 16 into %ir.0 + 64, align 4)
+    ; CHECK: G_STORE [[LOAD4]](s128), [[GEP7]](p0) :: (store (s128) into %ir.0 + 64, align 4)
     ; CHECK: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 80
     ; CHECK: [[GEP8:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C4]](s64)
-    ; CHECK: [[LOAD5:%[0-9]+]]:_(s128) = G_LOAD [[GEP8]](p0) :: (load 16 from %ir.1 + 80, align 4)
+    ; CHECK: [[LOAD5:%[0-9]+]]:_(s128) = G_LOAD [[GEP8]](p0) :: (load (s128) from %ir.1 + 80, align 4)
     ; CHECK: [[GEP9:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C4]](s64)
-    ; CHECK: G_STORE [[LOAD5]](s128), [[GEP9]](p0) :: (store 16 into %ir.0 + 80, align 4)
+    ; CHECK: G_STORE [[LOAD5]](s128), [[GEP9]](p0) :: (store (s128) into %ir.0 + 80, align 4)
     ; CHECK: [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 96
     ; CHECK: [[GEP10:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C5]](s64)
-    ; CHECK: [[LOAD6:%[0-9]+]]:_(s128) = G_LOAD [[GEP10]](p0) :: (load 16 from %ir.1 + 96, align 4)
+    ; CHECK: [[LOAD6:%[0-9]+]]:_(s128) = G_LOAD [[GEP10]](p0) :: (load (s128) from %ir.1 + 96, align 4)
     ; CHECK: [[GEP11:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C5]](s64)
-    ; CHECK: G_STORE [[LOAD6]](s128), [[GEP11]](p0) :: (store 16 into %ir.0 + 96, align 4)
+    ; CHECK: G_STORE [[LOAD6]](s128), [[GEP11]](p0) :: (store (s128) into %ir.0 + 96, align 4)
     ; CHECK: [[C6:%[0-9]+]]:_(s64) = G_CONSTANT i64 112
     ; CHECK: [[GEP12:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C6]](s64)
-    ; CHECK: [[LOAD7:%[0-9]+]]:_(s128) = G_LOAD [[GEP12]](p0) :: (load 16 from %ir.1 + 112, align 4)
+    ; CHECK: [[LOAD7:%[0-9]+]]:_(s128) = G_LOAD [[GEP12]](p0) :: (load (s128) from %ir.1 + 112, align 4)
     ; CHECK: [[GEP13:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C6]](s64)
-    ; CHECK: G_STORE [[LOAD7]](s128), [[GEP13]](p0) :: (store 16 into %ir.0 + 112, align 4)
+    ; CHECK: G_STORE [[LOAD7]](s128), [[GEP13]](p0) :: (store (s128) into %ir.0 + 112, align 4)
     ; CHECK: [[C7:%[0-9]+]]:_(s64) = G_CONSTANT i64 127
     ; CHECK: [[GEP14:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C7]](s64)
-    ; CHECK: [[LOAD8:%[0-9]+]]:_(s128) = G_LOAD [[GEP14]](p0) :: (load 16 from %ir.1 + 127, align 1, basealign 4)
+    ; CHECK: [[LOAD8:%[0-9]+]]:_(s128) = G_LOAD [[GEP14]](p0) :: (load (s128) from %ir.1 + 127, align 1, basealign 4)
     ; CHECK: [[GEP15:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C7]](s64)
-    ; CHECK: G_STORE [[LOAD8]](s128), [[GEP15]](p0) :: (store 16 into %ir.0 + 127, align 1, basealign 4)
+    ; CHECK: G_STORE [[LOAD8]](s128), [[GEP15]](p0) :: (store (s128) into %ir.0 + 127, align 1, basealign 4)
     ; CHECK: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s64) = G_CONSTANT i64 143
-    G_MEMCPY %0(p0), %1(p0), %2(s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
+    G_MEMCPY %0(p0), %1(p0), %2(s64), 1 :: (store (s8) into %ir.0, align 4), (load (s8) from %ir.1, align 4)
     RET_ReallyLR
 
 ...

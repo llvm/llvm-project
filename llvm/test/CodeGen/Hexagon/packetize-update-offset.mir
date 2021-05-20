@@ -24,8 +24,8 @@ body: |
   successors: %bb.0, %bb.1
   liveins: $lc0, $r0, $r27
   $r1 = A2_addi $r0, 24
-  $r0 = S2_storerb_pi $r0, 2, $r27 :: (store 1 into @g0, align 2)
-  S4_storeiri_io killed $r0, 0, 0 :: (store 4 into @g1, align 4)
+  $r0 = S2_storerb_pi $r0, 2, $r27 :: (store (s8) into @g0, align 2)
+  S4_storeiri_io killed $r0, 0, 0 :: (store (s32) into @g1, align 4)
   $r0 = A2_tfr killed $r1
   ENDLOOP0 %bb.0, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
 

@@ -5,13 +5,13 @@
 
 # CHECK-NOT: remark: file.ll:[[#]]:[[#]]: lost [[#]] debug locations during pass
 
---- |  
+--- |
   define void @snork() !dbg !6 { unreachable }
-  
+
   !llvm.module.flags = !{!0}
   !llvm.dbg.cu = !{!1}
   !llvm.debugify = !{!4, !5}
-  
+
   !0 = !{i32 2, !"Debug Info Version", i32 3}
   !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !3)
   !2 = !DIFile(filename: "file.ll", directory: "/")
@@ -36,7 +36,7 @@ body:             |
     %0:_(p0) = G_IMPLICIT_DEF debug-location !DILocation(line: 0, scope: !6)
     %1:_(s8) = G_CONSTANT i8 0
     %2:_(s64) = G_IMPLICIT_DEF debug-location !DILocation(line: 0, scope: !6)
-    G_MEMSET %0(p0), %1(s8), %2(s64), 1, debug-location !11 :: (store 1)
+    G_MEMSET %0(p0), %1(s8), %2(s64), 1, debug-location !11 :: (store (s8))
     DBG_VALUE 0, 0, !9, !DIExpression(), debug-location !12
     RET_ReallyLR debug-location !12
 

@@ -174,7 +174,7 @@ body:             |
     dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $al, debug-location !23
     CALL64pcrel32 @getVal, csr_64, implicit $rsp, implicit $ssp, implicit $al, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-location !23
     DBG_VALUE $eax, $noreg, !18, !DIExpression(), debug-location !24
-    MOV32mr $rsp, 1, $noreg, 12, $noreg, killed renamable $eax, debug-location !24 :: (store 4 into %ir.local1)
+    MOV32mr $rsp, 1, $noreg, 12, $noreg, killed renamable $eax, debug-location !24 :: (store (s32) into %ir.local1)
     renamable $r8d = LEA64_32r killed renamable $r14, 1, $noreg, 3, $noreg, debug-location !24
     renamable $r9d = LEA64_32r killed renamable $r15, 1, renamable $rbx, 0, $noreg, debug-location !24
     DBG_VALUE $rsp, $noreg, !18, !DIExpression(DW_OP_plus_uconst, 12, DW_OP_deref), debug-location !24

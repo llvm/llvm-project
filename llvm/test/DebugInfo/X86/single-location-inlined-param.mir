@@ -97,7 +97,7 @@ body:             |
     liveins: $edi
 
     DBG_VALUE $edi, $noreg, !17, !DIExpression(), debug-location !24
-    MOV32mr $rip, 1, $noreg, @glob, $noreg, renamable $edi, debug-location !27 :: (store 4 into @glob)
+    MOV32mr $rip, 1, $noreg, @glob, $noreg, renamable $edi, debug-location !27 :: (store (s32) into @glob)
     renamable $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
     TEST32rr killed renamable $edi, renamable $edi, implicit-def $eflags, debug-location !32
     JCC_1 %bb.1, 4, implicit $eflags, debug-location !34

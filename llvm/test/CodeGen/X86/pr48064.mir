@@ -48,7 +48,7 @@
 
 ## Make sure that %stack.3.exp.i not replaced with %stack.2.o.i
 # CHECK:  bb.3.catch.i (landing-pad, ehfunclet-entry):
-# CHECK:    %7:gr32 = MOV32rm %stack.3.exp.i, 1, $noreg, 0, $noreg :: (dereferenceable load 4 from %ir.exp.i)
+# CHECK:    %7:gr32 = MOV32rm %stack.3.exp.i, 1, $noreg, 0, $noreg :: (dereferenceable load (s32) from %ir.exp.i)
 
 --- |
   ; ModuleID = 'test-pre-stc.mir'
@@ -316,21 +316,21 @@ body:             |
     successors: %bb.1(0x7ffff800), %bb.2(0x00000800)
 
     %0:gr32 = COPY $esp
-    MOV32mr %stack.0.zx, 1, $noreg, 0, $noreg, %0 :: (store 4 into %ir.3)
-    MOV32mi %stack.0.zx, 1, $noreg, 12, $noreg, -1 :: (store 4 into %ir.4)
+    MOV32mr %stack.0.zx, 1, $noreg, 0, $noreg, %0 :: (store (s32) into %ir.3)
+    MOV32mi %stack.0.zx, 1, $noreg, 12, $noreg, -1 :: (store (s32) into %ir.4)
     %1:gr32 = nuw LEA32r %stack.0.zx, 1, $noreg, 4, $noreg
-    MOV32mi %stack.0.zx, 1, $noreg, 8, $noreg, @"__ehhandler$main" :: (store 4 into %ir.6)
-    %2:gr32 = MOV32rm $noreg, 1, $noreg, 0, $fs :: (load 4 from `%EHRegistrationNode* addrspace(257)* null`, addrspace 257)
-    MOV32mr %stack.0.zx, 1, $noreg, 4, $noreg, killed %2 :: (store 4 into %ir.8)
-    MOV32mr $noreg, 1, $noreg, 0, $fs, killed %1 :: (store 4 into `%EHRegistrationNode* addrspace(257)* null`, addrspace 257)
-    MOV32mi %stack.2.o.i, 1, $noreg, 0, $noreg, 1 :: (store 4 into %ir.i.i.i1)
-    MOV32mi %stack.1.tmp.i.i, 1, $noreg, 0, $noreg, 999 :: (store 4 into %ir.tmp.i.i)
-    MOV32mi %stack.0.zx, 1, $noreg, 12, $noreg, 1 :: (store 4 into %ir.12)
+    MOV32mi %stack.0.zx, 1, $noreg, 8, $noreg, @"__ehhandler$main" :: (store (s32) into %ir.6)
+    %2:gr32 = MOV32rm $noreg, 1, $noreg, 0, $fs :: (load (s32) from `%EHRegistrationNode* addrspace(257)* null`, addrspace 257)
+    MOV32mr %stack.0.zx, 1, $noreg, 4, $noreg, killed %2 :: (store (s32) into %ir.8)
+    MOV32mr $noreg, 1, $noreg, 0, $fs, killed %1 :: (store (s32) into `%EHRegistrationNode* addrspace(257)* null`, addrspace 257)
+    MOV32mi %stack.2.o.i, 1, $noreg, 0, $noreg, 1 :: (store (s32) into %ir.i.i.i1)
+    MOV32mi %stack.1.tmp.i.i, 1, $noreg, 0, $noreg, 999 :: (store (s32) into %ir.tmp.i.i)
+    MOV32mi %stack.0.zx, 1, $noreg, 12, $noreg, 1 :: (store (s32) into %ir.12)
     ADJCALLSTACKDOWN32 8, 0, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
     %3:gr32 = COPY $esp
     %4:gr32 = LEA32r %stack.1.tmp.i.i, 1, $noreg, 0, $noreg
-    MOV32mr %3, 1, $noreg, 0, $noreg, killed %4 :: (store 4 into stack)
-    MOV32mi %3, 1, $noreg, 4, $noreg, @_TI1H :: (store 4 into stack + 4)
+    MOV32mr %3, 1, $noreg, 0, $noreg, killed %4 :: (store (s32) into stack)
+    MOV32mi %3, 1, $noreg, 4, $noreg, @_TI1H :: (store (s32) into stack + 4)
     CALLpcrel32 @_CxxThrowException, csr_noregs, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp
     ADJCALLSTACKUP32 8, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
     JMP_1 %bb.1
@@ -342,11 +342,11 @@ body:             |
   bb.2.ehcleanup.i (landing-pad, ehfunclet-entry):
     successors: %bb.3(0x80000000)
 
-    MOV32mi %stack.2.o.i, 1, $noreg, 0, $noreg, 9999 :: (store 4 into %ir.14)
+    MOV32mi %stack.2.o.i, 1, $noreg, 0, $noreg, 9999 :: (store (s32) into %ir.14)
     ADJCALLSTACKDOWN32 4, 0, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
     %5:gr32 = COPY $esp
     %6:gr32 = LEA32r %stack.2.o.i, 1, $noreg, 0, $noreg
-    MOV32mr %5, 1, $noreg, 0, $noreg, killed %6 :: (store 4 into stack)
+    MOV32mr %5, 1, $noreg, 0, $noreg, killed %6 :: (store (s32) into stack)
     CALLpcrel32 @"escape__YAXPAH@Z", csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp
     ADJCALLSTACKUP32 4, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
     CLEANUPRET
@@ -354,9 +354,9 @@ body:             |
   bb.3.catch.i (landing-pad, ehfunclet-entry):
     successors: %bb.4(0x80000000)
 
-    %7:gr32 = MOV32rm %stack.3.exp.i, 1, $noreg, 0, $noreg :: (dereferenceable load 4 from %ir.exp.i)
-    %8:gr32 = MOV32rm killed %7, 1, $noreg, 0, $noreg :: (load 4 from %ir.18)
-    MOV32mr $noreg, 1, $noreg, @v__3HC, $noreg, killed %8 :: (volatile store release 4 into @v__3HC)
+    %7:gr32 = MOV32rm %stack.3.exp.i, 1, $noreg, 0, $noreg :: (dereferenceable load (s32) from %ir.exp.i)
+    %8:gr32 = MOV32rm killed %7, 1, $noreg, 0, $noreg :: (load (s32) from %ir.18)
+    MOV32mr $noreg, 1, $noreg, @v__3HC, $noreg, killed %8 :: (volatile store release (s32) into @v__3HC)
     CATCHRET %bb.4, %bb.0
 
   bb.4.catch.i (landing-pad):
@@ -365,8 +365,8 @@ body:             |
     JMP_4 %bb.5
 
   bb.5.func__YAXXZ.exit:
-    %9:gr32 = MOV32rm %stack.0.zx, 1, $noreg, 4, $noreg :: (dereferenceable load 4 from %ir.22)
-    MOV32mr $noreg, 1, $noreg, 0, $fs, killed %9 :: (store 4 into `%EHRegistrationNode* addrspace(257)* null`, addrspace 257)
+    %9:gr32 = MOV32rm %stack.0.zx, 1, $noreg, 4, $noreg :: (dereferenceable load (s32) from %ir.22)
+    MOV32mr $noreg, 1, $noreg, 0, $fs, killed %9 :: (store (s32) into `%EHRegistrationNode* addrspace(257)* null`, addrspace 257)
     %10:gr32 = MOV32r0 implicit-def dead $eflags
     $eax = COPY %10
     RET 0, $eax

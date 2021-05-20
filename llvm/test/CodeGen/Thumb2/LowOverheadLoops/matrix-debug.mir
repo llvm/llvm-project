@@ -246,7 +246,7 @@ body:             |
   ; CHECK:   liveins: $r1, $r5, $r8, $r9, $r10, $r12
   ; CHECK:   DBG_VALUE $r1, $noreg, !30, !DIExpression(), debug-location !32
   ; CHECK:   DBG_VALUE 0, $noreg, !31, !DIExpression(), debug-location !32
-  ; CHECK:   renamable $r2 = t2LDRs renamable $r9, renamable $r1, 2, 14 /* CC::al */, $noreg, debug-location !41 :: (load 4 from %ir.arrayidx7.us)
+  ; CHECK:   renamable $r2 = t2LDRs renamable $r9, renamable $r1, 2, 14 /* CC::al */, $noreg, debug-location !41 :: (load (s32) from %ir.arrayidx7.us)
   ; CHECK:   $r3 = tMOVr $r5, 14 /* CC::al */, $noreg, debug-location !32
   ; CHECK:   $r0 = tMOVr $r8, 14 /* CC::al */, $noreg, debug-location !32
   ; CHECK:   dead $lr = tMOVr $r10, 14 /* CC::al */, $noreg, debug-location !32
@@ -255,15 +255,15 @@ body:             |
   ; CHECK:   successors: %bb.3(0x7c000000), %bb.4(0x04000000)
   ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3, $r5, $r8, $r9, $r10, $r12
   ; CHECK:   DBG_VALUE $noreg, $noreg, !31, !DIExpression(), debug-location !32
-  ; CHECK:   renamable $r6, renamable $r3 = t2LDRSH_POST killed renamable $r3, 2, 14 /* CC::al */, $noreg, debug-location !43 :: (load 2 from %ir.lsr.iv5)
-  ; CHECK:   renamable $r4, renamable $r0 = t2LDRSH_POST killed renamable $r0, 2, 14 /* CC::al */, $noreg, debug-location !44 :: (load 2 from %ir.lsr.iv1)
+  ; CHECK:   renamable $r6, renamable $r3 = t2LDRSH_POST killed renamable $r3, 2, 14 /* CC::al */, $noreg, debug-location !43 :: (load (s16) from %ir.lsr.iv5)
+  ; CHECK:   renamable $r4, renamable $r0 = t2LDRSH_POST killed renamable $r0, 2, 14 /* CC::al */, $noreg, debug-location !44 :: (load (s16) from %ir.lsr.iv1)
   ; CHECK:   renamable $r2 = nsw t2SMLABB killed renamable $r4, killed renamable $r6, killed renamable $r2, 14 /* CC::al */, $noreg, debug-location !41
   ; CHECK:   DBG_VALUE $noreg, $noreg, !31, !DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value), debug-location !32
   ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.3, debug-location !42
   ; CHECK: bb.4.for.cond1.for.inc9_crit_edge.us:
   ; CHECK:   successors: %bb.5(0x04000000), %bb.2(0x7c000000)
   ; CHECK:   liveins: $r1, $r2, $r5, $r8, $r9, $r10, $r12
-  ; CHECK:   t2STRs killed renamable $r2, renamable $r9, renamable $r1, 2, 14 /* CC::al */, $noreg, debug-location !41 :: (store 4 into %ir.8)
+  ; CHECK:   t2STRs killed renamable $r2, renamable $r9, renamable $r1, 2, 14 /* CC::al */, $noreg, debug-location !41 :: (store (s32) into %ir.8)
   ; CHECK:   renamable $r1, dead $cpsr = nuw nsw tADDi8 killed renamable $r1, 1, 14 /* CC::al */, $noreg, debug-location !49
   ; CHECK:   DBG_VALUE $r1, $noreg, !30, !DIExpression(), debug-location !32
   ; CHECK:   renamable $r5 = tADDhirr killed renamable $r5, renamable $r12, 14 /* CC::al */, $noreg, debug-location !37
@@ -322,7 +322,7 @@ body:             |
 
     DBG_VALUE $r1, $noreg, !30, !DIExpression(), debug-location !32
     DBG_VALUE 0, $noreg, !31, !DIExpression(), debug-location !32
-    renamable $r2 = t2LDRs renamable $r9, renamable $r1, 2, 14, $noreg, debug-location !41 :: (load 4 from %ir.arrayidx7.us)
+    renamable $r2 = t2LDRs renamable $r9, renamable $r1, 2, 14, $noreg, debug-location !41 :: (load (s32) from %ir.arrayidx7.us)
     $r3 = tMOVr $r5, 14, $noreg, debug-location !32
     $r0 = tMOVr $r8, 14, $noreg, debug-location !32
     $lr = tMOVr $r10, 14, $noreg, debug-location !32
@@ -333,9 +333,9 @@ body:             |
     liveins: $lr, $r0, $r1, $r2, $r3, $r5, $r8, $r9, $r10, $r12
 
     DBG_VALUE $noreg, $noreg, !31, !DIExpression(), debug-location !32
-    renamable $r6, renamable $r3 = t2LDRSH_POST killed renamable $r3, 2, 14, $noreg, debug-location !47 :: (load 2 from %ir.lsr.iv5)
+    renamable $r6, renamable $r3 = t2LDRSH_POST killed renamable $r3, 2, 14, $noreg, debug-location !47 :: (load (s16) from %ir.lsr.iv5)
     renamable $lr = t2LoopDec killed renamable $lr, 1, debug-location !46
-    renamable $r4, renamable $r0 = t2LDRSH_POST killed renamable $r0, 2, 14, $noreg, debug-location !50 :: (load 2 from %ir.lsr.iv1)
+    renamable $r4, renamable $r0 = t2LDRSH_POST killed renamable $r0, 2, 14, $noreg, debug-location !50 :: (load (s16) from %ir.lsr.iv1)
     renamable $r2 = nsw t2SMLABB killed renamable $r4, killed renamable $r6, killed renamable $r2, 14, $noreg, debug-location !41
     DBG_VALUE $noreg, $noreg, !31, !DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value), debug-location !32
     t2LoopEnd renamable $lr, %bb.3, implicit-def dead $cpsr, debug-location !46
@@ -345,7 +345,7 @@ body:             |
     successors: %bb.5(0x04000000), %bb.2(0x7c000000)
     liveins: $r1, $r2, $r5, $r8, $r9, $r10, $r12
 
-    t2STRs killed renamable $r2, renamable $r9, renamable $r1, 2, 14, $noreg, debug-location !41 :: (store 4 into %ir.8)
+    t2STRs killed renamable $r2, renamable $r9, renamable $r1, 2, 14, $noreg, debug-location !41 :: (store (s32) into %ir.8)
     renamable $r1, dead $cpsr = nuw nsw tADDi8 killed renamable $r1, 1, 14, $noreg, debug-location !55
     DBG_VALUE $r1, $noreg, !30, !DIExpression(), debug-location !32
     renamable $r5 = tADDhirr killed renamable $r5, renamable $r12, 14, $noreg, debug-location !37

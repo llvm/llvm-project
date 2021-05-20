@@ -179,7 +179,7 @@ body:             |
   ; CHECK-V7:   t2B %bb.4, 14 /* CC::al */, $noreg
   ; CHECK-V7: bb.3.b3:
   ; CHECK-V7:   successors: %bb.4(0x80000000)
-  ; CHECK-V7:   renamable $r0 = t2LDRi12 undef renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from `i32* undef`)
+  ; CHECK-V7:   renamable $r0 = t2LDRi12 undef renamable $r0, 0, 14 /* CC::al */, $noreg :: (load (s32) from `i32* undef`)
   ; CHECK-V7:   renamable $r0 = t2ANDri killed renamable $r0, 256, 14 /* CC::al */, $noreg, $noreg
   ; CHECK-V7: bb.4.b5:
   ; CHECK-V7:   successors: %bb.5(0x50000000)
@@ -213,7 +213,7 @@ body:             |
   ; CHECK-V8:   t2B %bb.4, 14 /* CC::al */, $noreg
   ; CHECK-V8: bb.3.b3:
   ; CHECK-V8:   successors: %bb.4(0x80000000)
-  ; CHECK-V8:   renamable $r0 = t2LDRi12 undef renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from `i32* undef`)
+  ; CHECK-V8:   renamable $r0 = t2LDRi12 undef renamable $r0, 0, 14 /* CC::al */, $noreg :: (load (s32) from `i32* undef`)
   ; CHECK-V8:   renamable $r0 = t2ANDri killed renamable $r0, 256, 14 /* CC::al */, $noreg, $noreg
   ; CHECK-V8: bb.4.b5:
   ; CHECK-V8:   successors: %bb.5(0x30000000), %bb.6(0x50000000)
@@ -256,7 +256,7 @@ body:             |
   bb.3.b3:
     successors: %bb.4(0x80000000)
 
-    renamable $r0 = t2LDRi12 undef renamable $r0, 0, 14, $noreg :: (load 4 from `i32* undef`)
+    renamable $r0 = t2LDRi12 undef renamable $r0, 0, 14, $noreg :: (load (s32) from `i32* undef`)
     renamable $r0 = t2ANDri killed renamable $r0, 256, 14, $noreg, $noreg
 
   bb.4.b5:
@@ -344,7 +344,7 @@ body:             |
   ; CHECK-V7:   t2B %bb.4, 14 /* CC::al */, $noreg
   ; CHECK-V7: bb.3.b3:
   ; CHECK-V7:   successors: %bb.4(0x80000000)
-  ; CHECK-V7:   renamable $r0 = t2LDRi12 undef renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from `i32* undef`)
+  ; CHECK-V7:   renamable $r0 = t2LDRi12 undef renamable $r0, 0, 14 /* CC::al */, $noreg :: (load (s32) from `i32* undef`)
   ; CHECK-V7:   renamable $r0 = t2ANDri killed renamable $r0, 256, 14 /* CC::al */, $noreg, $noreg
   ; CHECK-V7: bb.4.b5:
   ; CHECK-V7:   successors: %bb.5(0x30000000), %bb.6(0x50000000)
@@ -381,7 +381,7 @@ body:             |
   ; CHECK-V8:   t2B %bb.4, 14 /* CC::al */, $noreg
   ; CHECK-V8: bb.3.b3:
   ; CHECK-V8:   successors: %bb.4(0x80000000)
-  ; CHECK-V8:   renamable $r0 = t2LDRi12 undef renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from `i32* undef`)
+  ; CHECK-V8:   renamable $r0 = t2LDRi12 undef renamable $r0, 0, 14 /* CC::al */, $noreg :: (load (s32) from `i32* undef`)
   ; CHECK-V8:   renamable $r0 = t2ANDri killed renamable $r0, 256, 14 /* CC::al */, $noreg, $noreg
   ; CHECK-V8: bb.4.b5:
   ; CHECK-V8:   successors: %bb.5(0x30000000), %bb.6(0x50000000)
@@ -424,7 +424,7 @@ body:             |
   bb.3.b3:
     successors: %bb.4(0x80000000)
 
-    renamable $r0 = t2LDRi12 undef renamable $r0, 0, 14, $noreg :: (load 4 from `i32* undef`)
+    renamable $r0 = t2LDRi12 undef renamable $r0, 0, 14, $noreg :: (load (s32) from `i32* undef`)
     renamable $r0 = t2ANDri killed renamable $r0, 256, 14, $noreg, $noreg
 
   bb.4.b5:
@@ -512,7 +512,7 @@ body:             |
   ; CHECK-V7:   t2B %bb.4, 14 /* CC::al */, $noreg
   ; CHECK-V7: bb.3.b3:
   ; CHECK-V7:   successors: %bb.4(0x80000000)
-  ; CHECK-V7:   renamable $r0 = t2LDRi12 undef renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from `i32* undef`)
+  ; CHECK-V7:   renamable $r0 = t2LDRi12 undef renamable $r0, 0, 14 /* CC::al */, $noreg :: (load (s32) from `i32* undef`)
   ; CHECK-V7:   renamable $r0 = t2ANDri killed renamable $r0, 256, 14 /* CC::al */, $noreg, $noreg
   ; CHECK-V7: bb.4.b5:
   ; CHECK-V7:   successors: %bb.5(0x30000000), %bb.6(0x50000000)
@@ -549,7 +549,7 @@ body:             |
   ; CHECK-V8:   t2B %bb.4, 14 /* CC::al */, $noreg
   ; CHECK-V8: bb.3.b3:
   ; CHECK-V8:   successors: %bb.4(0x80000000)
-  ; CHECK-V8:   renamable $r0 = t2LDRi12 undef renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from `i32* undef`)
+  ; CHECK-V8:   renamable $r0 = t2LDRi12 undef renamable $r0, 0, 14 /* CC::al */, $noreg :: (load (s32) from `i32* undef`)
   ; CHECK-V8:   renamable $r0 = t2ANDri killed renamable $r0, 256, 14 /* CC::al */, $noreg, $noreg
   ; CHECK-V8: bb.4.b5:
   ; CHECK-V8:   successors: %bb.5(0x30000000), %bb.6(0x50000000)
@@ -592,7 +592,7 @@ body:             |
   bb.3.b3:
     successors: %bb.4(0x80000000)
 
-    renamable $r0 = t2LDRi12 undef renamable $r0, 0, 14, $noreg :: (load 4 from `i32* undef`)
+    renamable $r0 = t2LDRi12 undef renamable $r0, 0, 14, $noreg :: (load (s32) from `i32* undef`)
     renamable $r0 = t2ANDri killed renamable $r0, 256, 14, $noreg, $noreg
 
   bb.4.b5:

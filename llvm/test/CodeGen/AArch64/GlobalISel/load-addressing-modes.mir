@@ -42,13 +42,13 @@ body:             |
     ; CHECK: liveins: $x0, $x1
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY]], [[COPY1]], 0, 0 :: (load 8 from %ir.addr)
+    ; CHECK: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY]], [[COPY1]], 0, 0 :: (load (s64) from %ir.addr)
     ; CHECK: $x0 = COPY [[LDRXroX]]
     ; CHECK: RET_ReallyLR implicit $x0
     %0:gpr(p0) = COPY $x0
     %1:gpr(s64) = COPY $x1
     %2:gpr(p0) = G_PTR_ADD %0, %1
-    %4:gpr(s64) = G_LOAD %2(p0) :: (load 8 from %ir.addr)
+    %4:gpr(s64) = G_LOAD %2(p0) :: (load (s64) from %ir.addr)
     $x0 = COPY %4(s64)
     RET_ReallyLR implicit $x0
 ...
@@ -67,13 +67,13 @@ body:             |
     ; CHECK: liveins: $d0, $x1
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[LDRDroX:%[0-9]+]]:fpr64 = LDRDroX [[COPY]], [[COPY1]], 0, 0 :: (load 8 from %ir.addr)
+    ; CHECK: [[LDRDroX:%[0-9]+]]:fpr64 = LDRDroX [[COPY]], [[COPY1]], 0, 0 :: (load (s64) from %ir.addr)
     ; CHECK: $d0 = COPY [[LDRDroX]]
     ; CHECK: RET_ReallyLR implicit $d0
     %0:gpr(p0) = COPY $d0
     %1:gpr(s64) = COPY $x1
     %2:gpr(p0) = G_PTR_ADD %0, %1
-    %4:fpr(s64) = G_LOAD %2(p0) :: (load 8 from %ir.addr)
+    %4:fpr(s64) = G_LOAD %2(p0) :: (load (s64) from %ir.addr)
     $d0 = COPY %4(s64)
     RET_ReallyLR implicit $d0
 ...
@@ -94,7 +94,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
     ; CHECK: [[ADDXrr:%[0-9]+]]:gpr64common = ADDXrr [[COPY]], [[COPY1]]
-    ; CHECK: [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[ADDXrr]], 0 :: (load 8 from %ir.addr)
+    ; CHECK: [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[ADDXrr]], 0 :: (load (s64) from %ir.addr)
     ; CHECK: [[COPY2:%[0-9]+]]:gpr64 = COPY [[ADDXrr]]
     ; CHECK: [[ADDXrr1:%[0-9]+]]:gpr64 = ADDXrr [[COPY2]], [[LDRXui]]
     ; CHECK: $x0 = COPY [[ADDXrr1]]
@@ -102,7 +102,7 @@ body:             |
     %0:gpr(p0) = COPY $x0
     %1:gpr(s64) = COPY $x1
     %2:gpr(p0) = G_PTR_ADD %0, %1
-    %4:gpr(s64) = G_LOAD %2(p0) :: (load 8 from %ir.addr)
+    %4:gpr(s64) = G_LOAD %2(p0) :: (load (s64) from %ir.addr)
     %5:gpr(s64) = G_PTRTOINT %2
     %6:gpr(s64) = G_ADD %5, %4
     $x0 = COPY %6(s64)
@@ -123,7 +123,7 @@ body:             |
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
-    ; CHECK: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load 8 from %ir.addr)
+    ; CHECK: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
     ; CHECK: $x2 = COPY [[LDRXroX]]
     ; CHECK: RET_ReallyLR implicit $x2
     %0:gpr(s64) = COPY $x0
@@ -131,7 +131,7 @@ body:             |
     %2:gpr(s64) = G_SHL %0, %1(s64)
     %3:gpr(p0) = COPY $x1
     %4:gpr(p0) = G_PTR_ADD %3, %2
-    %5:gpr(s64) = G_LOAD %4(p0) :: (load 8 from %ir.addr)
+    %5:gpr(s64) = G_LOAD %4(p0) :: (load (s64) from %ir.addr)
     $x2 = COPY %5(s64)
     RET_ReallyLR implicit $x2
 
@@ -150,7 +150,7 @@ body:             |
     ; CHECK: liveins: $x0, $x1, $d2
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
-    ; CHECK: [[LDRDroX:%[0-9]+]]:fpr64 = LDRDroX [[COPY1]], [[COPY]], 0, 1 :: (load 8 from %ir.addr)
+    ; CHECK: [[LDRDroX:%[0-9]+]]:fpr64 = LDRDroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
     ; CHECK: $d2 = COPY [[LDRDroX]]
     ; CHECK: RET_ReallyLR implicit $d2
     %0:gpr(s64) = COPY $x0
@@ -158,7 +158,7 @@ body:             |
     %2:gpr(s64) = G_SHL %0, %1(s64)
     %3:gpr(p0) = COPY $x1
     %4:gpr(p0) = G_PTR_ADD %3, %2
-    %5:fpr(s64) = G_LOAD %4(p0) :: (load 8 from %ir.addr)
+    %5:fpr(s64) = G_LOAD %4(p0) :: (load (s64) from %ir.addr)
     $d2 = COPY %5(s64)
     RET_ReallyLR implicit $d2
 
@@ -177,7 +177,7 @@ body:             |
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
-    ; CHECK: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load 8 from %ir.addr)
+    ; CHECK: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
     ; CHECK: $x2 = COPY [[LDRXroX]]
     ; CHECK: RET_ReallyLR implicit $x2
     %0:gpr(s64) = COPY $x0
@@ -185,7 +185,7 @@ body:             |
     %2:gpr(s64) = G_MUL %0, %1(s64)
     %3:gpr(p0) = COPY $x1
     %4:gpr(p0) = G_PTR_ADD %3, %2
-    %5:gpr(s64) = G_LOAD %4(p0) :: (load 8 from %ir.addr)
+    %5:gpr(s64) = G_LOAD %4(p0) :: (load (s64) from %ir.addr)
     $x2 = COPY %5(s64)
     RET_ReallyLR implicit $x2
 
@@ -204,7 +204,7 @@ body:             |
     ; CHECK: liveins: $x0, $x1, $d2
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
-    ; CHECK: [[LDRDroX:%[0-9]+]]:fpr64 = LDRDroX [[COPY1]], [[COPY]], 0, 1 :: (load 8 from %ir.addr)
+    ; CHECK: [[LDRDroX:%[0-9]+]]:fpr64 = LDRDroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
     ; CHECK: $d2 = COPY [[LDRDroX]]
     ; CHECK: RET_ReallyLR implicit $d2
     %0:gpr(s64) = COPY $x0
@@ -212,7 +212,7 @@ body:             |
     %2:gpr(s64) = G_MUL %0, %1(s64)
     %3:gpr(p0) = COPY $x1
     %4:gpr(p0) = G_PTR_ADD %3, %2
-    %5:fpr(s64) = G_LOAD %4(p0) :: (load 8 from %ir.addr)
+    %5:fpr(s64) = G_LOAD %4(p0) :: (load (s64) from %ir.addr)
     $d2 = COPY %5(s64)
     RET_ReallyLR implicit $d2
 
@@ -231,7 +231,7 @@ body:             |
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
-    ; CHECK: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load 8 from %ir.addr)
+    ; CHECK: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
     ; CHECK: $x2 = COPY [[LDRXroX]]
     ; CHECK: RET_ReallyLR implicit $x2
     %0:gpr(s64) = COPY $x0
@@ -239,7 +239,7 @@ body:             |
     %2:gpr(s64) = G_MUL %1, %0(s64)
     %3:gpr(p0) = COPY $x1
     %4:gpr(p0) = G_PTR_ADD %3, %2
-    %5:gpr(s64) = G_LOAD %4(p0) :: (load 8 from %ir.addr)
+    %5:gpr(s64) = G_LOAD %4(p0) :: (load (s64) from %ir.addr)
     $x2 = COPY %5(s64)
     RET_ReallyLR implicit $x2
 
@@ -258,7 +258,7 @@ body:             |
     ; CHECK: liveins: $x0, $x1, $d2
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
-    ; CHECK: [[LDRDroX:%[0-9]+]]:fpr64 = LDRDroX [[COPY1]], [[COPY]], 0, 1 :: (load 8 from %ir.addr)
+    ; CHECK: [[LDRDroX:%[0-9]+]]:fpr64 = LDRDroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
     ; CHECK: $d2 = COPY [[LDRDroX]]
     ; CHECK: RET_ReallyLR implicit $d2
     %0:gpr(s64) = COPY $x0
@@ -266,7 +266,7 @@ body:             |
     %2:gpr(s64) = G_MUL %1, %0(s64)
     %3:gpr(p0) = COPY $x1
     %4:gpr(p0) = G_PTR_ADD %3, %2
-    %5:fpr(s64) = G_LOAD %4(p0) :: (load 8 from %ir.addr)
+    %5:fpr(s64) = G_LOAD %4(p0) :: (load (s64) from %ir.addr)
     $d2 = COPY %5(s64)
     RET_ReallyLR implicit $d2
 
@@ -290,7 +290,7 @@ body:             |
     ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
     ; CHECK: [[MADDXrrr:%[0-9]+]]:gpr64 = MADDXrrr [[SUBREG_TO_REG]], [[COPY]], $xzr
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
-    ; CHECK: [[LDRDroX:%[0-9]+]]:fpr64 = LDRDroX [[COPY1]], [[MADDXrrr]], 0, 0 :: (load 8 from %ir.addr)
+    ; CHECK: [[LDRDroX:%[0-9]+]]:fpr64 = LDRDroX [[COPY1]], [[MADDXrrr]], 0, 0 :: (load (s64) from %ir.addr)
     ; CHECK: $d2 = COPY [[LDRDroX]]
     ; CHECK: RET_ReallyLR implicit $d2
     %0:gpr(s64) = COPY $x0
@@ -298,7 +298,7 @@ body:             |
     %2:gpr(s64) = G_MUL %1, %0(s64)
     %3:gpr(p0) = COPY $x1
     %4:gpr(p0) = G_PTR_ADD %3, %2
-    %5:fpr(s64) = G_LOAD %4(p0) :: (load 8 from %ir.addr)
+    %5:fpr(s64) = G_LOAD %4(p0) :: (load (s64) from %ir.addr)
     $d2 = COPY %5(s64)
     RET_ReallyLR implicit $d2
 
@@ -322,7 +322,7 @@ body:             |
     ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
     ; CHECK: [[MADDXrrr:%[0-9]+]]:gpr64 = MADDXrrr [[SUBREG_TO_REG]], [[COPY]], $xzr
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
-    ; CHECK: [[LDRDroX:%[0-9]+]]:fpr64 = LDRDroX [[COPY1]], [[MADDXrrr]], 0, 0 :: (load 8 from %ir.addr)
+    ; CHECK: [[LDRDroX:%[0-9]+]]:fpr64 = LDRDroX [[COPY1]], [[MADDXrrr]], 0, 0 :: (load (s64) from %ir.addr)
     ; CHECK: $d2 = COPY [[LDRDroX]]
     ; CHECK: RET_ReallyLR implicit $d2
     %0:gpr(s64) = COPY $x0
@@ -330,7 +330,7 @@ body:             |
     %2:gpr(s64) = G_MUL %1, %0(s64)
     %3:gpr(p0) = COPY $x1
     %4:gpr(p0) = G_PTR_ADD %3, %2
-    %5:fpr(s64) = G_LOAD %4(p0) :: (load 8 from %ir.addr)
+    %5:fpr(s64) = G_LOAD %4(p0) :: (load (s64) from %ir.addr)
     $d2 = COPY %5(s64)
     RET_ReallyLR implicit $d2
 
@@ -352,7 +352,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK: [[UBFMXri:%[0-9]+]]:gpr64common = UBFMXri [[COPY]], 61, 60
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
-    ; CHECK: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[UBFMXri]], 0, 0 :: (load 8 from %ir.addr)
+    ; CHECK: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[UBFMXri]], 0, 0 :: (load (s64) from %ir.addr)
     ; CHECK: [[ADDXri:%[0-9]+]]:gpr64common = ADDXri [[UBFMXri]], 3, 0
     ; CHECK: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[LDRXroX]], [[ADDXri]]
     ; CHECK: $x2 = COPY [[ADDXrr]]
@@ -362,7 +362,7 @@ body:             |
     %2:gpr(s64) = G_SHL %0, %1(s64)
     %3:gpr(p0) = COPY $x1
     %4:gpr(p0) = G_PTR_ADD %3, %2
-    %5:gpr(s64) = G_LOAD %4(p0) :: (load 8 from %ir.addr)
+    %5:gpr(s64) = G_LOAD %4(p0) :: (load (s64) from %ir.addr)
     %6:gpr(s64) = G_ADD %2, %1
     %7:gpr(s64) = G_ADD %5, %6
     $x2 = COPY %7(s64)
@@ -387,7 +387,7 @@ body:             |
     ; CHECK: [[UBFMXri:%[0-9]+]]:gpr64common = UBFMXri [[COPY]], 61, 60
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
     ; CHECK: [[ADDXrr:%[0-9]+]]:gpr64common = ADDXrr [[COPY1]], [[UBFMXri]]
-    ; CHECK: [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[ADDXrr]], 0 :: (load 8 from %ir.addr)
+    ; CHECK: [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[ADDXrr]], 0 :: (load (s64) from %ir.addr)
     ; CHECK: [[ADDXri:%[0-9]+]]:gpr64common = ADDXri [[UBFMXri]], 3, 0
     ; CHECK: [[ADDXrr1:%[0-9]+]]:gpr64 = ADDXrr [[LDRXui]], [[ADDXri]]
     ; CHECK: [[COPY2:%[0-9]+]]:gpr64 = COPY [[ADDXrr]]
@@ -399,7 +399,7 @@ body:             |
     %2:gpr(s64) = G_SHL %0, %1(s64)
     %3:gpr(p0) = COPY $x1
     %4:gpr(p0) = G_PTR_ADD %3, %2
-    %5:gpr(s64) = G_LOAD %4(p0) :: (load 8 from %ir.addr)
+    %5:gpr(s64) = G_LOAD %4(p0) :: (load (s64) from %ir.addr)
     %6:gpr(s64) = G_ADD %2, %1
     %7:gpr(s64) = G_ADD %5, %6
     %8:gpr(s64) = G_PTRTOINT %4
@@ -424,8 +424,8 @@ body:             |
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
-    ; CHECK: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load 8 from %ir.addr)
-    ; CHECK: [[LDRXroX1:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load 8 from %ir.addr)
+    ; CHECK: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
+    ; CHECK: [[LDRXroX1:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
     ; CHECK: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[LDRXroX]], [[LDRXroX1]]
     ; CHECK: $x2 = COPY [[ADDXrr]]
     ; CHECK: RET_ReallyLR implicit $x2
@@ -434,8 +434,8 @@ body:             |
     %2:gpr(s64) = G_SHL %0, %1(s64)
     %3:gpr(p0) = COPY $x1
     %4:gpr(p0) = G_PTR_ADD %3, %2
-    %5:gpr(s64) = G_LOAD %4(p0) :: (load 8 from %ir.addr)
-    %6:gpr(s64) = G_LOAD %4(p0) :: (load 8 from %ir.addr)
+    %5:gpr(s64) = G_LOAD %4(p0) :: (load (s64) from %ir.addr)
+    %6:gpr(s64) = G_LOAD %4(p0) :: (load (s64) from %ir.addr)
     %7:gpr(s64) = G_ADD %5, %6
     $x2 = COPY %7(s64)
     RET_ReallyLR implicit $x2
@@ -458,8 +458,8 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
     ; CHECK: [[ADDXrs:%[0-9]+]]:gpr64common = ADDXrs [[COPY1]], [[COPY]], 3
-    ; CHECK: [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[ADDXrs]], 0 :: (load 8 from %ir.addr)
-    ; CHECK: [[LDRXui1:%[0-9]+]]:gpr64 = LDRXui [[ADDXrs]], 0 :: (load 8 from %ir.addr)
+    ; CHECK: [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[ADDXrs]], 0 :: (load (s64) from %ir.addr)
+    ; CHECK: [[LDRXui1:%[0-9]+]]:gpr64 = LDRXui [[ADDXrs]], 0 :: (load (s64) from %ir.addr)
     ; CHECK: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[LDRXui]], [[LDRXui1]]
     ; CHECK: $x2 = COPY [[ADDXrr]]
     ; CHECK: RET_ReallyLR implicit $x2
@@ -468,8 +468,8 @@ body:             |
     %2:gpr(s64) = G_SHL %0, %1(s64)
     %3:gpr(p0) = COPY $x1
     %4:gpr(p0) = G_PTR_ADD %3, %2
-    %5:gpr(s64) = G_LOAD %4(p0) :: (load 8 from %ir.addr)
-    %6:gpr(s64) = G_LOAD %4(p0) :: (load 8 from %ir.addr)
+    %5:gpr(s64) = G_LOAD %4(p0) :: (load (s64) from %ir.addr)
+    %6:gpr(s64) = G_LOAD %4(p0) :: (load (s64) from %ir.addr)
     %7:gpr(s64) = G_ADD %5, %6
     $x2 = COPY %7(s64)
     RET_ReallyLR implicit $x2
@@ -494,7 +494,7 @@ body:             |
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64common = COPY $x1
     ; CHECK: [[COPY2:%[0-9]+]]:gpr64 = COPY [[COPY1]]
     ; CHECK: [[ADDXrs:%[0-9]+]]:gpr64 = ADDXrs [[COPY2]], [[COPY]], 3
-    ; CHECK: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load 8 from %ir.addr)
+    ; CHECK: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
     ; CHECK: [[ADDXri:%[0-9]+]]:gpr64common = ADDXri [[UBFMXri]], 3, 0
     ; CHECK: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[LDRXroX]], [[ADDXri]]
     ; CHECK: [[ADDXrr1:%[0-9]+]]:gpr64 = ADDXrr [[ADDXrs]], [[ADDXrr]]
@@ -505,7 +505,7 @@ body:             |
     %2:gpr(s64) = G_SHL %0, %1(s64)
     %3:gpr(p0) = COPY $x1
     %4:gpr(p0) = G_PTR_ADD %3, %2
-    %5:gpr(s64) = G_LOAD %4(p0) :: (load 8 from %ir.addr)
+    %5:gpr(s64) = G_LOAD %4(p0) :: (load (s64) from %ir.addr)
     %6:gpr(s64) = G_ADD %2, %1
     %7:gpr(s64) = G_ADD %5, %6
     %8:gpr(s64) = G_PTRTOINT %4
@@ -527,13 +527,13 @@ body:             |
     ; CHECK: liveins: $x0, $x1
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[LDRWroX:%[0-9]+]]:gpr32 = LDRWroX [[COPY]], [[COPY1]], 0, 0 :: (load 4 from %ir.addr)
+    ; CHECK: [[LDRWroX:%[0-9]+]]:gpr32 = LDRWroX [[COPY]], [[COPY1]], 0, 0 :: (load (s32) from %ir.addr)
     ; CHECK: $w2 = COPY [[LDRWroX]]
     ; CHECK: RET_ReallyLR implicit $w2
     %0:gpr(p0) = COPY $x0
     %1:gpr(s64) = COPY $x1
     %2:gpr(p0) = G_PTR_ADD %0, %1
-    %4:gpr(s32) = G_LOAD %2(p0) :: (load 4 from %ir.addr)
+    %4:gpr(s32) = G_LOAD %2(p0) :: (load (s32) from %ir.addr)
     $w2 = COPY %4(s32)
     RET_ReallyLR implicit $w2
 ...
@@ -551,13 +551,13 @@ body:             |
     ; CHECK: liveins: $d0, $x1
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[LDRSroX:%[0-9]+]]:fpr32 = LDRSroX [[COPY]], [[COPY1]], 0, 0 :: (load 4 from %ir.addr)
+    ; CHECK: [[LDRSroX:%[0-9]+]]:fpr32 = LDRSroX [[COPY]], [[COPY1]], 0, 0 :: (load (s32) from %ir.addr)
     ; CHECK: $s2 = COPY [[LDRSroX]]
     ; CHECK: RET_ReallyLR implicit $h2
     %0:gpr(p0) = COPY $d0
     %1:gpr(s64) = COPY $x1
     %2:gpr(p0) = G_PTR_ADD %0, %1
-    %4:fpr(s32) = G_LOAD %2(p0) :: (load 4 from %ir.addr)
+    %4:fpr(s32) = G_LOAD %2(p0) :: (load (s32) from %ir.addr)
     $s2 = COPY %4(s32)
     RET_ReallyLR implicit $h2
 ...
@@ -575,13 +575,13 @@ body:             |
     ; CHECK: liveins: $x0, $x1
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[LDRHroX:%[0-9]+]]:fpr16 = LDRHroX [[COPY]], [[COPY1]], 0, 0 :: (load 2 from %ir.addr)
+    ; CHECK: [[LDRHroX:%[0-9]+]]:fpr16 = LDRHroX [[COPY]], [[COPY1]], 0, 0 :: (load (s16) from %ir.addr)
     ; CHECK: $h2 = COPY [[LDRHroX]]
     ; CHECK: RET_ReallyLR implicit $h2
     %0:gpr(p0) = COPY $x0
     %1:gpr(s64) = COPY $x1
     %2:gpr(p0) = G_PTR_ADD %0, %1
-    %4:fpr(s16) = G_LOAD %2(p0) :: (load 2 from %ir.addr)
+    %4:fpr(s16) = G_LOAD %2(p0) :: (load (s16) from %ir.addr)
     $h2 = COPY %4(s16)
     RET_ReallyLR implicit $h2
 ...
@@ -599,13 +599,13 @@ body:             |
     ; CHECK: liveins: $x0, $x1
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[LDRBBroX:%[0-9]+]]:gpr32 = LDRBBroX [[COPY]], [[COPY1]], 0, 0 :: (load 1 from %ir.addr)
+    ; CHECK: [[LDRBBroX:%[0-9]+]]:gpr32 = LDRBBroX [[COPY]], [[COPY1]], 0, 0 :: (load (s8) from %ir.addr)
     ; CHECK: $w2 = COPY [[LDRBBroX]]
     ; CHECK: RET_ReallyLR implicit $w2
     %0:gpr(p0) = COPY $x0
     %1:gpr(s64) = COPY $x1
     %2:gpr(p0) = G_PTR_ADD %0, %1
-    %4:gpr(s32) = G_LOAD %2(p0) :: (load 1 from %ir.addr)
+    %4:gpr(s32) = G_LOAD %2(p0) :: (load (s8) from %ir.addr)
     $w2 = COPY %4(s32)
     RET_ReallyLR implicit $w2
 ...
@@ -623,12 +623,12 @@ body:             |
     ; CHECK: liveins: $d0, $x1
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[LDRQroX:%[0-9]+]]:fpr128 = LDRQroX [[COPY]], [[COPY1]], 0, 0 :: (load 16 from %ir.addr)
+    ; CHECK: [[LDRQroX:%[0-9]+]]:fpr128 = LDRQroX [[COPY]], [[COPY1]], 0, 0 :: (load (<2 x s64>) from %ir.addr)
     ; CHECK: $q0 = COPY [[LDRQroX]]
     ; CHECK: RET_ReallyLR implicit $q0
     %0:gpr(p0) = COPY $d0
     %1:gpr(s64) = COPY $x1
     %2:gpr(p0) = G_PTR_ADD %0, %1
-    %4:fpr(<2 x s64>) = G_LOAD %2(p0) :: (load 16 from %ir.addr)
+    %4:fpr(<2 x s64>) = G_LOAD %2(p0) :: (load (<2 x s64>) from %ir.addr)
     $q0 = COPY %4(<2 x s64>)
     RET_ReallyLR implicit $q0

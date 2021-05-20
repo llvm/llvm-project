@@ -54,19 +54,19 @@ body:             |
   ; CHECK:   liveins: $x12, $x1, $x9, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27
   ; CHECK:   $x2 = frame-setup ADDI $x2, -2032
   ; CHECK:   CFI_INSTRUCTION def_cfa_offset 2032
-  ; CHECK:   SD killed $x1, $x2, 2024 :: (store 8 into %stack.3)
-  ; CHECK:   SD killed $x8, $x2, 2016 :: (store 8 into %stack.4)
-  ; CHECK:   SD killed $x9, $x2, 2008 :: (store 8 into %stack.5)
-  ; CHECK:   SD killed $x18, $x2, 2000 :: (store 8 into %stack.6)
-  ; CHECK:   SD killed $x19, $x2, 1992 :: (store 8 into %stack.7)
-  ; CHECK:   SD killed $x20, $x2, 1984 :: (store 8 into %stack.8)
-  ; CHECK:   SD killed $x21, $x2, 1976 :: (store 8 into %stack.9)
-  ; CHECK:   SD killed $x22, $x2, 1968 :: (store 8 into %stack.10)
-  ; CHECK:   SD killed $x23, $x2, 1960 :: (store 8 into %stack.11)
-  ; CHECK:   SD killed $x24, $x2, 1952 :: (store 8 into %stack.12)
-  ; CHECK:   SD killed $x25, $x2, 1944 :: (store 8 into %stack.13)
-  ; CHECK:   SD killed $x26, $x2, 1936 :: (store 8 into %stack.14)
-  ; CHECK:   SD killed $x27, $x2, 1928 :: (store 8 into %stack.15)
+  ; CHECK:   SD killed $x1, $x2, 2024 :: (store (s64) into %stack.3)
+  ; CHECK:   SD killed $x8, $x2, 2016 :: (store (s64) into %stack.4)
+  ; CHECK:   SD killed $x9, $x2, 2008 :: (store (s64) into %stack.5)
+  ; CHECK:   SD killed $x18, $x2, 2000 :: (store (s64) into %stack.6)
+  ; CHECK:   SD killed $x19, $x2, 1992 :: (store (s64) into %stack.7)
+  ; CHECK:   SD killed $x20, $x2, 1984 :: (store (s64) into %stack.8)
+  ; CHECK:   SD killed $x21, $x2, 1976 :: (store (s64) into %stack.9)
+  ; CHECK:   SD killed $x22, $x2, 1968 :: (store (s64) into %stack.10)
+  ; CHECK:   SD killed $x23, $x2, 1960 :: (store (s64) into %stack.11)
+  ; CHECK:   SD killed $x24, $x2, 1952 :: (store (s64) into %stack.12)
+  ; CHECK:   SD killed $x25, $x2, 1944 :: (store (s64) into %stack.13)
+  ; CHECK:   SD killed $x26, $x2, 1936 :: (store (s64) into %stack.14)
+  ; CHECK:   SD killed $x27, $x2, 1928 :: (store (s64) into %stack.15)
   ; CHECK:   CFI_INSTRUCTION offset $x1, -8
   ; CHECK:   CFI_INSTRUCTION offset $x8, -16
   ; CHECK:   CFI_INSTRUCTION offset $x9, -24
@@ -112,8 +112,8 @@ body:             |
   ; CHECK:   renamable $x21 = ADDI $x2, 1664
   ; CHECK:   renamable $x22 = ADDI $x2, 1792
   ; CHECK:   renamable $x23 = ADDI $x2, 1920
-  ; CHECK:   SD killed $x1, $x2, 8 :: (store 8 into %stack.16)
-  ; CHECK:   SD killed $x5, $x2, 0 :: (store 8 into %stack.17)
+  ; CHECK:   SD killed $x1, $x2, 8 :: (store (s64) into %stack.16)
+  ; CHECK:   SD killed $x5, $x2, 0 :: (store (s64) into %stack.17)
   ; CHECK:   $x11 = LUI 1
   ; CHECK:   $x11 = ADDIW killed $x11, -2048
   ; CHECK:   $x24 = ADD $x2, killed $x11
@@ -128,7 +128,7 @@ body:             |
   ; CHECK:   renamable $x11 = ANDI renamable $x15, 255
   ; CHECK:   renamable $x13 = SLLI renamable $x11, 3
   ; CHECK:   renamable $x13 = ADD renamable $x26, killed renamable $x13
-  ; CHECK:   renamable $x13 = LD killed renamable $x13, 0 :: (load 8)
+  ; CHECK:   renamable $x13 = LD killed renamable $x13, 0 :: (load (s64))
   ; CHECK:   renamable $x9 = SRAI renamable $x13, 63
   ; CHECK:   renamable $x9 = SRLI killed renamable $x9, 62
   ; CHECK:   renamable $x9 = ADD renamable $x13, killed renamable $x9
@@ -143,9 +143,9 @@ body:             |
   ; CHECK:   $x1 = ADDIW killed $x1, -1896
   ; CHECK:   $x1 = ADD $x2, killed $x1
   ; CHECK:   $x1 = ADD killed $x1, killed $x5
-  ; CHECK:   $x5 = LD $x2, 0 :: (load 8 from %stack.17)
+  ; CHECK:   $x5 = LD $x2, 0 :: (load (s64) from %stack.17)
   ; CHECK:   renamable $v0 = PseudoVRELOAD_M1 killed $x1 :: (load unknown-size from %stack.1, align 8)
-  ; CHECK:   $x1 = LD $x2, 8 :: (load 8 from %stack.16)
+  ; CHECK:   $x1 = LD $x2, 8 :: (load (s64) from %stack.16)
   ; CHECK:   renamable $v0 = PseudoVSLIDEDOWN_VX_M1 undef renamable $v0, killed renamable $v0, killed renamable $x13, $noreg, 8, implicit $vl, implicit $vtype
   ; CHECK:   renamable $x13 = PseudoVMV_X_S_M1 killed renamable $v0, 8, implicit $vl, implicit $vtype
   ; CHECK:   BLT killed renamable $x16, renamable $x27, %bb.2
@@ -159,19 +159,19 @@ body:             |
   ; CHECK:   $x10 = frame-destroy ADDIW killed $x10, -1792
   ; CHECK:   $x2 = frame-destroy SUB $x8, killed $x10
   ; CHECK:   $x2 = frame-destroy ADDI $x2, 272
-  ; CHECK:   $x27 = LD $x2, 1928 :: (load 8 from %stack.15)
-  ; CHECK:   $x26 = LD $x2, 1936 :: (load 8 from %stack.14)
-  ; CHECK:   $x25 = LD $x2, 1944 :: (load 8 from %stack.13)
-  ; CHECK:   $x24 = LD $x2, 1952 :: (load 8 from %stack.12)
-  ; CHECK:   $x23 = LD $x2, 1960 :: (load 8 from %stack.11)
-  ; CHECK:   $x22 = LD $x2, 1968 :: (load 8 from %stack.10)
-  ; CHECK:   $x21 = LD $x2, 1976 :: (load 8 from %stack.9)
-  ; CHECK:   $x20 = LD $x2, 1984 :: (load 8 from %stack.8)
-  ; CHECK:   $x19 = LD $x2, 1992 :: (load 8 from %stack.7)
-  ; CHECK:   $x18 = LD $x2, 2000 :: (load 8 from %stack.6)
-  ; CHECK:   $x9 = LD $x2, 2008 :: (load 8 from %stack.5)
-  ; CHECK:   $x8 = LD $x2, 2016 :: (load 8 from %stack.4)
-  ; CHECK:   $x1 = LD $x2, 2024 :: (load 8 from %stack.3)
+  ; CHECK:   $x27 = LD $x2, 1928 :: (load (s64) from %stack.15)
+  ; CHECK:   $x26 = LD $x2, 1936 :: (load (s64) from %stack.14)
+  ; CHECK:   $x25 = LD $x2, 1944 :: (load (s64) from %stack.13)
+  ; CHECK:   $x24 = LD $x2, 1952 :: (load (s64) from %stack.12)
+  ; CHECK:   $x23 = LD $x2, 1960 :: (load (s64) from %stack.11)
+  ; CHECK:   $x22 = LD $x2, 1968 :: (load (s64) from %stack.10)
+  ; CHECK:   $x21 = LD $x2, 1976 :: (load (s64) from %stack.9)
+  ; CHECK:   $x20 = LD $x2, 1984 :: (load (s64) from %stack.8)
+  ; CHECK:   $x19 = LD $x2, 1992 :: (load (s64) from %stack.7)
+  ; CHECK:   $x18 = LD $x2, 2000 :: (load (s64) from %stack.6)
+  ; CHECK:   $x9 = LD $x2, 2008 :: (load (s64) from %stack.5)
+  ; CHECK:   $x8 = LD $x2, 2016 :: (load (s64) from %stack.4)
+  ; CHECK:   $x1 = LD $x2, 2024 :: (load (s64) from %stack.3)
   ; CHECK:   $x2 = frame-destroy ADDI $x2, 2032
   ; CHECK:   PseudoRET
   bb.0:
@@ -207,7 +207,7 @@ body:             |
     renamable $x11 = ANDI renamable $x15, 255
     renamable $x13 = SLLI renamable $x11, 3
     renamable $x13 = ADD renamable $x26, killed renamable $x13
-    renamable $x13 = LD killed renamable $x13, 0 :: (load 8)
+    renamable $x13 = LD killed renamable $x13, 0 :: (load (s64))
     renamable $x9 = SRAI renamable $x13, 63
     renamable $x9 = SRLI killed renamable $x9, 62
     renamable $x9 = ADD renamable $x13, killed renamable $x9

@@ -69,17 +69,17 @@ constants:
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: test_urem_i8
-    ; CHECK: [[MOV8rm:%[0-9]+]]:gr8 = MOV8rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load 1 from %fixed-stack.0, align 16)
-    ; CHECK: [[MOV8rm1:%[0-9]+]]:gr8 = MOV8rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (invariant load 1 from %fixed-stack.1, align 4)
+    ; CHECK: [[MOV8rm:%[0-9]+]]:gr8 = MOV8rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load (s8) from %fixed-stack.0, align 16)
+    ; CHECK: [[MOV8rm1:%[0-9]+]]:gr8 = MOV8rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (invariant load (s8) from %fixed-stack.1, align 4)
     ; CHECK: $ax = MOVZX16rr8 [[MOV8rm]]
     ; CHECK: DIV8r [[MOV8rm1]], implicit-def $al, implicit-def $ah, implicit-def $eflags, implicit $ax
     ; CHECK: [[COPY:%[0-9]+]]:gr8 = COPY $ah
     ; CHECK: $al = COPY [[COPY]]
     ; CHECK: RET 0, implicit $al
     %2:gpr(p0) = G_FRAME_INDEX %fixed-stack.1
-    %0:gpr(s8) = G_LOAD %2(p0) :: (invariant load 1 from %fixed-stack.1, align 16)
+    %0:gpr(s8) = G_LOAD %2(p0) :: (invariant load (s8) from %fixed-stack.1, align 16)
     %3:gpr(p0) = G_FRAME_INDEX %fixed-stack.0
-    %1:gpr(s8) = G_LOAD %3(p0) :: (invariant load 1 from %fixed-stack.0, align 4)
+    %1:gpr(s8) = G_LOAD %3(p0) :: (invariant load (s8) from %fixed-stack.0, align 4)
     %4:gpr(s8) = G_UREM %0, %1
     $al = COPY %4(s8)
     RET 0, implicit $al
@@ -131,8 +131,8 @@ constants:
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: test_urem_i16
-    ; CHECK: [[MOV16rm:%[0-9]+]]:gr16 = MOV16rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load 2 from %fixed-stack.0, align 16)
-    ; CHECK: [[MOV16rm1:%[0-9]+]]:gr16 = MOV16rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (invariant load 2 from %fixed-stack.1, align 4)
+    ; CHECK: [[MOV16rm:%[0-9]+]]:gr16 = MOV16rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load (s16) from %fixed-stack.0, align 16)
+    ; CHECK: [[MOV16rm1:%[0-9]+]]:gr16 = MOV16rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (invariant load (s16) from %fixed-stack.1, align 4)
     ; CHECK: $ax = COPY [[MOV16rm]]
     ; CHECK: [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def $eflags
     ; CHECK: $dx = COPY [[MOV32r0_]].sub_16bit
@@ -141,9 +141,9 @@ body:             |
     ; CHECK: $ax = COPY [[COPY]]
     ; CHECK: RET 0, implicit $ax
     %2:gpr(p0) = G_FRAME_INDEX %fixed-stack.1
-    %0:gpr(s16) = G_LOAD %2(p0) :: (invariant load 2 from %fixed-stack.1, align 16)
+    %0:gpr(s16) = G_LOAD %2(p0) :: (invariant load (s16) from %fixed-stack.1, align 16)
     %3:gpr(p0) = G_FRAME_INDEX %fixed-stack.0
-    %1:gpr(s16) = G_LOAD %3(p0) :: (invariant load 2 from %fixed-stack.0, align 4)
+    %1:gpr(s16) = G_LOAD %3(p0) :: (invariant load (s16) from %fixed-stack.0, align 4)
     %4:gpr(s16) = G_UREM %0, %1
     $ax = COPY %4(s16)
     RET 0, implicit $ax
@@ -195,8 +195,8 @@ constants:
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: test_urem_i32
-    ; CHECK: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load 4 from %fixed-stack.0, align 16)
-    ; CHECK: [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (invariant load 4 from %fixed-stack.1)
+    ; CHECK: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load (s32) from %fixed-stack.0, align 16)
+    ; CHECK: [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (invariant load (s32) from %fixed-stack.1)
     ; CHECK: $eax = COPY [[MOV32rm]]
     ; CHECK: [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def $eflags
     ; CHECK: $edx = COPY [[MOV32r0_]]
@@ -205,9 +205,9 @@ body:             |
     ; CHECK: $eax = COPY [[COPY]]
     ; CHECK: RET 0, implicit $eax
     %2:gpr(p0) = G_FRAME_INDEX %fixed-stack.1
-    %0:gpr(s32) = G_LOAD %2(p0) :: (invariant load 4 from %fixed-stack.1, align 16)
+    %0:gpr(s32) = G_LOAD %2(p0) :: (invariant load (s32) from %fixed-stack.1, align 16)
     %3:gpr(p0) = G_FRAME_INDEX %fixed-stack.0
-    %1:gpr(s32) = G_LOAD %3(p0) :: (invariant load 4 from %fixed-stack.0, align 4)
+    %1:gpr(s32) = G_LOAD %3(p0) :: (invariant load (s32) from %fixed-stack.0, align 4)
     %4:gpr(s32) = G_UREM %0, %1
     $eax = COPY %4(s32)
     RET 0, implicit $eax

@@ -97,7 +97,7 @@ tracksRegLiveness: true
 body:             |
   bb.0.entry:
     frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
-    renamable $edi = MOV32rm $rip, 1, $noreg, @global1, $noreg, debug-location !16 :: (dereferenceable load 4 from @global1)
+    renamable $edi = MOV32rm $rip, 1, $noreg, @global1, $noreg, debug-location !16 :: (dereferenceable load (s32) from @global1)
     DBG_VALUE 456, $noreg, !12, !DIExpression(DW_OP_LLVM_fragment, 64, 32), debug-location !16
     DBG_VALUE 123, $noreg, !12, !DIExpression(DW_OP_LLVM_fragment, 32, 32), debug-location !16
     DBG_VALUE $edi, $noreg, !12, !DIExpression(DW_OP_LLVM_fragment, 0, 32), debug-location !16
@@ -125,11 +125,11 @@ body:             |
     liveins: $rbx
 
     frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp, debug-location !20
-    renamable $ebx = MOV32rm $rip, 1, $noreg, @global1, $noreg, debug-location !20 :: (dereferenceable load 4 from @global1)
+    renamable $ebx = MOV32rm $rip, 1, $noreg, @global1, $noreg, debug-location !20 :: (dereferenceable load (s32) from @global1)
     DBG_VALUE $ebx, $noreg, !19, !DIExpression(DW_OP_LLVM_fragment, 0, 32), debug-location !20
-    renamable $esi = MOV32rm $rip, 1, $noreg, @global2, $noreg, debug-location !20 :: (dereferenceable load 4 from @global2)
+    renamable $esi = MOV32rm $rip, 1, $noreg, @global2, $noreg, debug-location !20 :: (dereferenceable load (s32) from @global2)
     DBG_VALUE $esi, $noreg, !19, !DIExpression(DW_OP_LLVM_fragment, 32, 32), debug-location !20
-    renamable $edx = MOV32rm $rip, 1, $noreg, @global3, $noreg, debug-location !20 :: (dereferenceable load 4 from @global3)
+    renamable $edx = MOV32rm $rip, 1, $noreg, @global3, $noreg, debug-location !20 :: (dereferenceable load (s32) from @global3)
     DBG_VALUE $edx, $noreg, !19, !DIExpression(DW_OP_LLVM_fragment, 64, 32), debug-location !20
     $edi = MOV32rr $ebx, debug-location !20
     CALL64pcrel32 @ext3, csr_64, implicit $rsp, implicit $ssp, implicit killed $edi, implicit $esi, implicit $edx, implicit-def $rsp, implicit-def $ssp, debug-location !20

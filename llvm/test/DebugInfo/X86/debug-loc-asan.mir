@@ -221,53 +221,53 @@ body:             |
     $rsp = frame-setup AND64ri8 $rsp, -32, implicit-def dead $eflags
     $rsp = frame-setup SUB64ri32 $rsp, 160, implicit-def dead $eflags
     renamable $rax = LEA64r $rsp, 1, $noreg, 64, $noreg
-    CMP32mi8 $noreg, 1, $noreg, @__asan_option_detect_stack_use_after_return, $noreg, 0, implicit-def $eflags :: (load 4 from @__asan_option_detect_stack_use_after_return)
+    CMP32mi8 $noreg, 1, $noreg, @__asan_option_detect_stack_use_after_return, $noreg, 0, implicit-def $eflags :: (load (s32) from @__asan_option_detect_stack_use_after_return)
     $rcx = MOV64rr $rax
-    MOV32mr $rsp, 1, $noreg, 60, $noreg, killed $edi :: (store 4 into %stack.1)
-    MOV64mr $rsp, 1, $noreg, 48, $noreg, killed $rax :: (store 8 into %stack.2)
-    MOV64mr $rsp, 1, $noreg, 40, $noreg, killed $rcx :: (store 8 into %stack.3)
+    MOV32mr $rsp, 1, $noreg, 60, $noreg, killed $edi :: (store (s32) into %stack.1)
+    MOV64mr $rsp, 1, $noreg, 48, $noreg, killed $rax :: (store (s64) into %stack.2)
+    MOV64mr $rsp, 1, $noreg, 40, $noreg, killed $rcx :: (store (s64) into %stack.3)
     JCC_1 %bb.2, 4, implicit $eflags
   
   bb.1 (%ir-block.3):
     $edi = MOV32ri 64, implicit-def $rdi
-    $rsi = MOV64rm $rsp, 1, $noreg, 48, $noreg :: (load 8 from %stack.2)
+    $rsi = MOV64rm $rsp, 1, $noreg, 48, $noreg :: (load (s64) from %stack.2)
     CALL64pcrel32 @__asan_stack_malloc_0, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit killed $rsi, implicit-def $rax
-    MOV64mr $rsp, 1, $noreg, 40, $noreg, killed $rax :: (store 8 into %stack.3)
+    MOV64mr $rsp, 1, $noreg, 40, $noreg, killed $rax :: (store (s64) into %stack.3)
   
   bb.2 (%ir-block.5):
-    $rax = MOV64rm $rsp, 1, $noreg, 40, $noreg :: (load 8 from %stack.3)
+    $rax = MOV64rm $rsp, 1, $noreg, 40, $noreg :: (load (s64) from %stack.3)
     $rcx = MOV64rr $rax
     renamable $rcx = ADD64ri8 renamable $rcx, 32, implicit-def $eflags
-    MOV64mi32 renamable $rax, 1, $noreg, 0, $noreg, 1102416563 :: (store 8 into %ir.9)
+    MOV64mi32 renamable $rax, 1, $noreg, 0, $noreg, 1102416563 :: (store (s64) into %ir.9)
     renamable $rdx = MOV64ri @___asan_gen_
-    MOV64mr renamable $rax, 1, $noreg, 8, $noreg, killed renamable $rdx :: (store 8 into %ir.11)
+    MOV64mr renamable $rax, 1, $noreg, 8, $noreg, killed renamable $rdx :: (store (s64) into %ir.11)
     renamable $rdx = MOV64ri @_Z3bari
-    MOV64mr renamable $rax, 1, $noreg, 16, $noreg, killed renamable $rdx :: (store 8 into %ir.13)
+    MOV64mr renamable $rax, 1, $noreg, 16, $noreg, killed renamable $rdx :: (store (s64) into %ir.13)
     $rdx = MOV64rr $rax
     renamable $rdx = SHR64ri renamable $rdx, 3, implicit-def $eflags
     $rsi = MOV64rr $rdx
     renamable $rsi = ADD64ri32 renamable $rsi, 2147450880, implicit-def $eflags
     renamable $rdi = MOV64ri -868083100587789839
-    MOV64mr killed renamable $rdx, 1, $noreg, 2147450880, $noreg, killed renamable $rdi :: (store 8 into %ir.17)
+    MOV64mr killed renamable $rdx, 1, $noreg, 2147450880, $noreg, killed renamable $rdi :: (store (s64) into %ir.17)
     $rdx = MOV64rr $rcx
     renamable $rdx = SHR64ri renamable $rdx, 3, implicit-def $eflags
-    renamable $r8b = MOV8rm killed renamable $rdx, 1, $noreg, 2147450880, $noreg :: (load 1 from %ir.21)
+    renamable $r8b = MOV8rm killed renamable $rdx, 1, $noreg, 2147450880, $noreg :: (load (s8) from %ir.21)
     DBG_VALUE renamable $rcx, 0, !10, !DIExpression(DW_OP_deref), debug-location !11
     CMP8ri renamable $r8b, 0, implicit-def $eflags
-    MOV64mr $rsp, 1, $noreg, 32, $noreg, killed $rax :: (store 8 into %stack.4)
-    MOV64mr $rsp, 1, $noreg, 24, $noreg, killed $rcx :: (store 8 into %stack.5)
+    MOV64mr $rsp, 1, $noreg, 32, $noreg, killed $rax :: (store (s64) into %stack.4)
+    MOV64mr $rsp, 1, $noreg, 24, $noreg, killed $rcx :: (store (s64) into %stack.5)
     DBG_VALUE $rsp, 0, !10, !DIExpression(DW_OP_plus_uconst, 24, DW_OP_deref, DW_OP_deref), debug-location !11
-    MOV64mr $rsp, 1, $noreg, 16, $noreg, killed $rsi :: (store 8 into %stack.6)
-    MOV8mr $rsp, 1, $noreg, 15, $noreg, killed $r8b :: (store 1 into %stack.7)
+    MOV64mr $rsp, 1, $noreg, 16, $noreg, killed $rsi :: (store (s64) into %stack.6)
+    MOV8mr $rsp, 1, $noreg, 15, $noreg, killed $r8b :: (store (s8) into %stack.7)
     JCC_1 %bb.5, 4, implicit $eflags
   
   bb.3 (%ir-block.24):
     DBG_VALUE $rsp, 0, !10, !DIExpression(DW_OP_plus_uconst, 24, DW_OP_deref, DW_OP_deref), debug-location !11
-    $rax = MOV64rm $rsp, 1, $noreg, 24, $noreg :: (load 8 from %stack.5)
+    $rax = MOV64rm $rsp, 1, $noreg, 24, $noreg :: (load (s64) from %stack.5)
     renamable $rax = AND64ri8 renamable $rax, 7, implicit-def $eflags
     renamable $rax = ADD64ri8 renamable $rax, 3, implicit-def $eflags
     $cl = MOV8rr $al, implicit killed $rax
-    $dl = MOV8rm $rsp, 1, $noreg, 15, $noreg :: (load 1 from %stack.7)
+    $dl = MOV8rm $rsp, 1, $noreg, 15, $noreg :: (load (s8) from %stack.7)
     CMP8rr killed renamable $cl, killed renamable $dl, implicit-def $eflags
     JCC_1 %bb.5, 12, implicit $eflags
   
@@ -275,28 +275,28 @@ body:             |
     successors: 
   
     DBG_VALUE $rsp, 0, !10, !DIExpression(DW_OP_plus_uconst, 24, DW_OP_deref, DW_OP_deref), debug-location !11
-    $rdi = MOV64rm $rsp, 1, $noreg, 24, $noreg :: (load 8 from %stack.5)
+    $rdi = MOV64rm $rsp, 1, $noreg, 24, $noreg :: (load (s64) from %stack.5)
     CALL64pcrel32 @__asan_report_store4, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi
     INLINEASM &"", 1
   
   bb.5 (%ir-block.30):
     DBG_VALUE $rsp, 0, !10, !DIExpression(DW_OP_plus_uconst, 24, DW_OP_deref, DW_OP_deref), debug-location !11
-    $rax = MOV64rm $rsp, 1, $noreg, 24, $noreg :: (load 8 from %stack.5)
-    $ecx = MOV32rm $rsp, 1, $noreg, 60, $noreg :: (load 4 from %stack.1)
-    MOV32mr renamable $rax, 1, $noreg, 0, $noreg, killed renamable $ecx :: (store 4 into %ir.8)
+    $rax = MOV64rm $rsp, 1, $noreg, 24, $noreg :: (load (s64) from %stack.5)
+    $ecx = MOV32rm $rsp, 1, $noreg, 60, $noreg :: (load (s32) from %stack.1)
+    MOV32mr renamable $rax, 1, $noreg, 0, $noreg, killed renamable $ecx :: (store (s32) into %ir.8)
     renamable $rax = SHR64ri renamable $rax, 3, implicit-def $eflags, debug-location !12
-    renamable $dl = MOV8rm killed renamable $rax, 1, $noreg, 2147450880, $noreg, debug-location !12 :: (load 1 from %ir.34)
+    renamable $dl = MOV8rm killed renamable $rax, 1, $noreg, 2147450880, $noreg, debug-location !12 :: (load (s8) from %ir.34)
     CMP8ri renamable $dl, 0, implicit-def $eflags, debug-location !12
-    MOV8mr $rsp, 1, $noreg, 14, $noreg, killed $dl :: (store 1 into %stack.8)
+    MOV8mr $rsp, 1, $noreg, 14, $noreg, killed $dl :: (store (s8) into %stack.8)
     JCC_1 %bb.8, 4, implicit $eflags, debug-location !12
   
   bb.6 (%ir-block.37):
     DBG_VALUE $rsp, 0, !10, !DIExpression(DW_OP_plus_uconst, 24, DW_OP_deref, DW_OP_deref), debug-location !11
-    $rax = MOV64rm $rsp, 1, $noreg, 24, $noreg :: (load 8 from %stack.5)
+    $rax = MOV64rm $rsp, 1, $noreg, 24, $noreg :: (load (s64) from %stack.5)
     renamable $rax = AND64ri8 renamable $rax, 7, implicit-def $eflags, debug-location !12
     renamable $rax = ADD64ri8 renamable $rax, 3, implicit-def $eflags, debug-location !12
     $cl = MOV8rr $al, implicit killed $rax, debug-location !12
-    $dl = MOV8rm $rsp, 1, $noreg, 14, $noreg :: (load 1 from %stack.8)
+    $dl = MOV8rm $rsp, 1, $noreg, 14, $noreg :: (load (s8) from %stack.8)
     CMP8rr killed renamable $cl, killed renamable $dl, implicit-def $eflags, debug-location !12
     JCC_1 %bb.8, 12, implicit $eflags
   
@@ -304,40 +304,40 @@ body:             |
     successors: 
   
     DBG_VALUE $rsp, 0, !10, !DIExpression(DW_OP_plus_uconst, 24, DW_OP_deref, DW_OP_deref), debug-location !11
-    $rdi = MOV64rm $rsp, 1, $noreg, 24, $noreg :: (load 8 from %stack.5)
+    $rdi = MOV64rm $rsp, 1, $noreg, 24, $noreg :: (load (s64) from %stack.5)
     CALL64pcrel32 @__asan_report_load4, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, debug-location !12
     INLINEASM &"", 1
   
   bb.8 (%ir-block.43):
     DBG_VALUE $rsp, 0, !10, !DIExpression(DW_OP_plus_uconst, 24, DW_OP_deref, DW_OP_deref), debug-location !11
-    $rax = MOV64rm $rsp, 1, $noreg, 24, $noreg :: (load 8 from %stack.5)
-    renamable $ecx = MOV32rm killed renamable $rax, 1, $noreg, 0, $noreg, debug-location !12 :: (load 4 from %ir.8)
+    $rax = MOV64rm $rsp, 1, $noreg, 24, $noreg :: (load (s64) from %stack.5)
+    renamable $ecx = MOV32rm killed renamable $rax, 1, $noreg, 0, $noreg, debug-location !12 :: (load (s32) from %ir.8)
     renamable $ecx = ADD32ri8 renamable $ecx, 2, implicit-def $eflags, debug-location !12
-    $rdx = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load 8 from %stack.4)
-    MOV64mi32 renamable $rdx, 1, $noreg, 0, $noreg, 1172321806, debug-location !12 :: (store 8 into %ir.9)
-    $rsi = MOV64rm $rsp, 1, $noreg, 48, $noreg :: (load 8 from %stack.2)
+    $rdx = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.4)
+    MOV64mi32 renamable $rdx, 1, $noreg, 0, $noreg, 1172321806, debug-location !12 :: (store (s64) into %ir.9)
+    $rsi = MOV64rm $rsp, 1, $noreg, 48, $noreg :: (load (s64) from %stack.2)
     CMP64rr killed renamable $rdx, killed renamable $rsi, implicit-def $eflags, debug-location !12
-    MOV32mr $rsp, 1, $noreg, 8, $noreg, killed $ecx :: (store 4 into %stack.9)
+    MOV32mr $rsp, 1, $noreg, 8, $noreg, killed $ecx :: (store (s32) into %stack.9)
     JCC_1 %bb.10, 4, implicit $eflags, debug-location !12
   
   bb.9 (%ir-block.46):
     DBG_VALUE $rsp, 0, !10, !DIExpression(DW_OP_plus_uconst, 24, DW_OP_deref, DW_OP_deref), debug-location !11
     renamable $rax = MOV64ri -723401728380766731, debug-location !12
-    $rcx = MOV64rm $rsp, 1, $noreg, 16, $noreg :: (load 8 from %stack.6)
-    MOV64mr killed renamable $rcx, 1, $noreg, 0, $noreg, killed renamable $rax, debug-location !12 :: (store 8 into %ir.48)
-    $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load 8 from %stack.4)
-    renamable $rdx = MOV64rm killed renamable $rax, 1, $noreg, 56, $noreg, debug-location !12 :: (load 8 from %ir.50)
-    MOV8mi killed renamable $rdx, 1, $noreg, 0, $noreg, 0, debug-location !12 :: (store 1 into %ir.52)
+    $rcx = MOV64rm $rsp, 1, $noreg, 16, $noreg :: (load (s64) from %stack.6)
+    MOV64mr killed renamable $rcx, 1, $noreg, 0, $noreg, killed renamable $rax, debug-location !12 :: (store (s64) into %ir.48)
+    $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.4)
+    renamable $rdx = MOV64rm killed renamable $rax, 1, $noreg, 56, $noreg, debug-location !12 :: (load (s64) from %ir.50)
+    MOV8mi killed renamable $rdx, 1, $noreg, 0, $noreg, 0, debug-location !12 :: (store (s8) into %ir.52)
     JMP_1 %bb.11, debug-location !12
   
   bb.10 (%ir-block.53):
     DBG_VALUE $rsp, 0, !10, !DIExpression(DW_OP_plus_uconst, 24, DW_OP_deref, DW_OP_deref), debug-location !11
-    $rax = MOV64rm $rsp, 1, $noreg, 16, $noreg :: (load 8 from %stack.6)
-    MOV64mi32 killed renamable $rax, 1, $noreg, 0, $noreg, 0, debug-location !12 :: (store 8 into %ir.55)
+    $rax = MOV64rm $rsp, 1, $noreg, 16, $noreg :: (load (s64) from %stack.6)
+    MOV64mi32 killed renamable $rax, 1, $noreg, 0, $noreg, 0, debug-location !12 :: (store (s64) into %ir.55)
   
   bb.11 (%ir-block.56):
     DBG_VALUE $rsp, 0, !10, !DIExpression(DW_OP_plus_uconst, 24, DW_OP_deref, DW_OP_deref), debug-location !11
-    $eax = MOV32rm $rsp, 1, $noreg, 8, $noreg :: (load 4 from %stack.9)
+    $eax = MOV32rm $rsp, 1, $noreg, 8, $noreg :: (load (s32) from %stack.9)
     $rsp = MOV64rr $rbp, debug-location !12
     $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !12
     CFI_INSTRUCTION def_cfa $rsp, 8, debug-location !12

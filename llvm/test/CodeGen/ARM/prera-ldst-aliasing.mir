@@ -26,10 +26,10 @@ body:             |
 
     %1 : gpr = COPY $r1
     %0 : gpr = COPY $r0
-    %2 : gpr = t2LDRi12 %1, 0, 14, $noreg :: (load 4 from %ir.y)
-    t2STRi12 killed %2, %0, 0, 14, $noreg :: (store 4 into %ir.x)
-    %3 : gpr = t2LDRi12 %1, 4, 14, $noreg :: (load 4 from %ir.arrayidx2)
-    t2STRi12 killed %3, %0, 4, 14, $noreg :: (store 4 into %ir.arrayidx3)
+    %2 : gpr = t2LDRi12 %1, 0, 14, $noreg :: (load (s32) from %ir.y)
+    t2STRi12 killed %2, %0, 0, 14, $noreg :: (store (s32) into %ir.x)
+    %3 : gpr = t2LDRi12 %1, 4, 14, $noreg :: (load (s32) from %ir.arrayidx2)
+    t2STRi12 killed %3, %0, 4, 14, $noreg :: (store (s32) into %ir.arrayidx3)
     ; CHECK: t2LDRi12
     ; CHECK-NEXT: t2LDRi12
     ; CHECK-NEXT: t2STRi12

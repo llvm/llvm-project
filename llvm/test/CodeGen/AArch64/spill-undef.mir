@@ -53,15 +53,15 @@ body:             |
 
   bb.1:
     %4 = ADRP target-flags(aarch64-page) @g
-    %8 = LDRWui %4, target-flags(aarch64-pageoff, aarch64-nc) @g :: (volatile dereferenceable load 4 from @g)
+    %8 = LDRWui %4, target-flags(aarch64-pageoff, aarch64-nc) @g :: (volatile dereferenceable load (s32) from @g)
     INLINEASM &nop, 1, 12, implicit-def dead early-clobber $x0, 12, implicit-def dead early-clobber $x1, 12, implicit-def dead early-clobber $x2, 12, implicit-def dead early-clobber $x3, 12, implicit-def dead early-clobber $x4, 12, implicit-def dead early-clobber $x5, 12, implicit-def dead early-clobber $x6, 12, implicit-def dead early-clobber $x7, 12, implicit-def dead early-clobber $x8, 12, implicit-def dead early-clobber $x9, 12, implicit-def dead early-clobber $x10, 12, implicit-def dead early-clobber $x11, 12, implicit-def dead early-clobber $x12, 12, implicit-def dead early-clobber $x13, 12, implicit-def dead early-clobber $x14, 12, implicit-def dead early-clobber $x15, 12, implicit-def dead early-clobber $x16, 12, implicit-def dead early-clobber $x17, 12, implicit-def dead early-clobber $x18, 12, implicit-def dead early-clobber $x19, 12, implicit-def dead early-clobber $x20, 12, implicit-def dead early-clobber $x21, 12, implicit-def dead early-clobber $x22, 12, implicit-def dead early-clobber $x23, 12, implicit-def dead early-clobber $x24, 12, implicit-def dead early-clobber $x25, 12, implicit-def dead early-clobber $x26, 12, implicit-def dead early-clobber $x27, 12, implicit-def dead early-clobber $x28, 12, implicit-def dead early-clobber $fp, 12, implicit-def dead early-clobber $lr
 
   bb.2:
     INLINEASM &nop, 1, 12, implicit-def dead early-clobber $x0, 12, implicit-def dead early-clobber $x1, 12, implicit-def dead early-clobber $x2, 12, implicit-def dead early-clobber $x3, 12, implicit-def dead early-clobber $x4, 12, implicit-def dead early-clobber $x5, 12, implicit-def dead early-clobber $x6, 12, implicit-def dead early-clobber $x7, 12, implicit-def dead early-clobber $x8, 12, implicit-def dead early-clobber $x9, 12, implicit-def dead early-clobber $x10, 12, implicit-def dead early-clobber $x11, 12, implicit-def dead early-clobber $x12, 12, implicit-def dead early-clobber $x13, 12, implicit-def dead early-clobber $x14, 12, implicit-def dead early-clobber $x15, 12, implicit-def dead early-clobber $x16, 12, implicit-def dead early-clobber $x17, 12, implicit-def dead early-clobber $x18, 12, implicit-def dead early-clobber $x19, 12, implicit-def dead early-clobber $x20, 12, implicit-def dead early-clobber $x21, 12, implicit-def dead early-clobber $x22, 12, implicit-def dead early-clobber $x23, 12, implicit-def dead early-clobber $x24, 12, implicit-def dead early-clobber $x25, 12, implicit-def dead early-clobber $x26, 12, implicit-def dead early-clobber $x27, 12, implicit-def dead early-clobber $x28, 12, implicit-def dead early-clobber $fp, 12, implicit-def dead early-clobber $lr
     %6 = ADRP target-flags(aarch64-page) @g
     $w0 = MOVi32imm 42
-    STRWui %8, %6, target-flags(aarch64-pageoff, aarch64-nc) @g :: (volatile store 4 into @g)
-    STRXui %9, %6, target-flags(aarch64-pageoff, aarch64-nc) @g :: (volatile store 8 into @g)
+    STRWui %8, %6, target-flags(aarch64-pageoff, aarch64-nc) @g :: (volatile store (s32) into @g)
+    STRXui %9, %6, target-flags(aarch64-pageoff, aarch64-nc) @g :: (volatile store (s64) into @g)
     RET_ReallyLR implicit killed $w0
 
 ...

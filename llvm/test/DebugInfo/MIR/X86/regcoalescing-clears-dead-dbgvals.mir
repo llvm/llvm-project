@@ -83,7 +83,7 @@ body:             |
     ; CHECK-NEXT: DBG_VALUE $noreg
 
     %0:gr32 = COPY killed %7
-    %8:gr32 = MOV32rm %2, 1, $noreg, 0, $noreg :: (load 4 from %ir.pin, align 1)
+    %8:gr32 = MOV32rm %2, 1, $noreg, 0, $noreg :: (load (s32) from %ir.pin, align 1)
     %5:gr32 = COPY killed %8
     %5:gr32 = XOR32rr %5, %4, implicit-def dead $eflags
     %1:gr32 = COPY killed %0
@@ -128,7 +128,7 @@ body:             |
     ; CHECK-NEXT: %[[REG13]]:gr32 = ADD32rr %[[REG13]], %[[REG12]]
 
     %0:gr32 = COPY killed %7
-    %8:gr32 = MOV32rm %2, 1, $noreg, 0, $noreg :: (load 4 from %ir.pin, align 1)
+    %8:gr32 = MOV32rm %2, 1, $noreg, 0, $noreg :: (load (s32) from %ir.pin, align 1)
     %8:gr32 = XOR32rr %8, %4, implicit-def dead $eflags
     DBG_VALUE %0, $noreg, !3, !DIExpression(), debug-location !5
     %0:gr32 = ADD32rr %0, killed %8, implicit-def dead $eflags

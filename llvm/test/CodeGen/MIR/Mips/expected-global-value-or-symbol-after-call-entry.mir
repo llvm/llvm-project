@@ -30,8 +30,8 @@ body: |
     $v0, $v1 = GotPrologue16 &_gp_disp, &_gp_disp
     $v0 = SllX16 killed $v0, 16
     $v0 = AdduRxRyRz16 killed $v1, killed $v0
-  ; CHECK: [[@LINE+1]]:67: expected a global value or an external symbol after 'call-entry'
-    $v1 = LwRxRyOffMemX16 $v0, @foo, 0 :: (load 4 from call-entry foo)
+  ; CHECK: [[@LINE+1]]:71: expected a global value or an external symbol after 'call-entry'
+    $v1 = LwRxRyOffMemX16 $v0, @foo, 0 :: (load (s32) from call-entry foo)
     $t9 = COPY $v1
     $gp = COPY killed $v0
     JumpLinkReg16 killed $v1, csr_o32, implicit-def $ra, implicit killed $t9, implicit $a0, implicit killed $gp, implicit-def $sp, implicit-def dead $v0

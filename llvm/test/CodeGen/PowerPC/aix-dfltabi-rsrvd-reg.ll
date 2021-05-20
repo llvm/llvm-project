@@ -85,15 +85,15 @@ entry:
 ; EXTABI:         body:             |
 ; EXTABI:         bb.0.entry:
 ; EXTABI:         liveins: $f1, $x4
-; EXTABI-DAG:     renamable $f0 = XFLOADf64 $zero8, renamable $x4 :: (volatile load 8 from %ir.b, align 4)
+; EXTABI-DAG:     renamable $f0 = XFLOADf64 $zero8, renamable $x4 :: (volatile load (s64) from %ir.b, align 4)
 ; EXTABI-DAG:     renamable $f0 = nofpexcept XSADDDP killed renamable $f0, renamable $f1, implicit $rm
 ; EXTABI-DAG:     renamable $vf31 = nofpexcept XSMULDP killed renamable $f1, renamable $f1, implicit $rm
-; EXTABI:         XFSTOREf64 killed renamable $f0, $zero8, renamable $x4 :: (volatile store 8 into %ir.b, align 4)
+; EXTABI:         XFSTOREf64 killed renamable $f0, $zero8, renamable $x4 :: (volatile store (s64) into %ir.b, align 4)
 ; EXTABI-LABEL:   INLINEASM
-; EXTABI-DAG:     renamable $f0 = XFLOADf64 $zero8, renamable $x4 :: (volatile load 8 from %ir.b, align 4)
+; EXTABI-DAG:     renamable $f0 = XFLOADf64 $zero8, renamable $x4 :: (volatile load (s64) from %ir.b, align 4)
 ; EXTABI-DAG:     renamable $f0 = nofpexcept XSADDDP killed renamable $vf31, killed renamable $f0, implicit $rm
-; EXTABI-DAG:     XFSTOREf64 killed renamable $f0, $zero8, renamable $x4 :: (volatile store 8 into %ir.b, align 4)
-; EXTABI:         renamable $f1 = XFLOADf64 $zero8, killed renamable $x4 :: (volatile load 8 from %ir.b, align 4)
+; EXTABI-DAG:     XFSTOREf64 killed renamable $f0, $zero8, renamable $x4 :: (volatile store (s64) into %ir.b, align 4)
+; EXTABI:         renamable $f1 = XFLOADf64 $zero8, killed renamable $x4 :: (volatile load (s64) from %ir.b, align 4)
 
 ; DFLABI-LABEL:   vec_test
 
@@ -144,12 +144,12 @@ entry:
 ; EXTABI:         body:             |
 ; EXTABI-DAG:     bb.0.entry:
 ; EXTABI-DAG:     liveins: $v2, $x3
-; EXTABI-DAG:     renamable $v3 = LXVW4X $zero8, renamable $x3 :: (volatile load 16 from %ir.b, align 4)
+; EXTABI-DAG:     renamable $v3 = LXVW4X $zero8, renamable $x3 :: (volatile load (s128) from %ir.b, align 4)
 ; EXTABI-DAG:     renamable $v31 = COPY $v2
 ; EXTABI-DAG:     renamable $v2 = VADDUWM killed renamable $v3, $v2
 ; EXTABI-LABEL:   INLINEASM    
-; EXTABI-DAG:     renamable $v2 = LXVW4X $zero8, renamable $x3 :: (volatile load 16 from %ir.b, align 4)
+; EXTABI-DAG:     renamable $v2 = LXVW4X $zero8, renamable $x3 :: (volatile load (s128) from %ir.b, align 4)
 ; EXTABI-DAG:     renamable $v3 = VMULUWM killed renamable $v31, renamable $v31
 ; EXTABI-DAG:     renamable $v2 = VADDUWM killed renamable $v3, killed renamable $v2
-; EXTABI-DAG:     STXVW4X killed renamable $v2, $zero8, renamable $x3 :: (volatile store 16 into %ir.b, align 4)
-; EXTABI:         renamable $v2 = LXVW4X $zero8, killed renamable $x3 :: (volatile load 16 from %ir.b, align 4)
+; EXTABI-DAG:     STXVW4X killed renamable $v2, $zero8, renamable $x3 :: (volatile store (s128) into %ir.b, align 4)
+; EXTABI:         renamable $v2 = LXVW4X $zero8, killed renamable $x3 :: (volatile load (s128) from %ir.b, align 4)

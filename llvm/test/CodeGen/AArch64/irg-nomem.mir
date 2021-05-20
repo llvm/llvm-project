@@ -64,10 +64,10 @@ body:             |
     ; Check that stores are merged across IRG.
     ; CHECK: STPXi renamable $x9, renamable $x9, renamable $x0, 0
 
-    STRXui renamable $x9, renamable $x0, 0 :: (store 8 into %ir.x)
+    STRXui renamable $x9, renamable $x0, 0 :: (store (s64) into %ir.x)
     dead renamable $x10 = IRG renamable $x8, $xzr
     dead renamable $x8 = IRG $sp, $xzr
-    STRXui killed renamable $x9, killed renamable $x0, 1 :: (store 8 into %ir.arrayidx1)
+    STRXui killed renamable $x9, killed renamable $x0, 1 :: (store (s64) into %ir.arrayidx1)
     RET undef $lr
 
 ...

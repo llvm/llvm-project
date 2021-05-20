@@ -7,12 +7,12 @@ name: test
 body: |
   bb.0:
     ; CHECK-LABEL: name: test
-    ; CHECK: renamable $x5 = LD 0, killed renamable $x5 :: (load 8)
-    ; CHECK: renamable $x4 = LD 0, killed renamable $x4 :: (load 8)
+    ; CHECK: renamable $x5 = LD 0, killed renamable $x5 :: (load (s64))
+    ; CHECK: renamable $x4 = LD 0, killed renamable $x4 :: (load (s64))
     ; CHECK: renamable $x5 = MULLD killed renamable $x5, renamable $x3
     ; CHECK: renamable $x3 = MADDLD8 killed renamable $x4, killed renamable $x3, killed renamable $x5
-    renamable $x5 = LD 0, killed renamable $x5 :: (load 8)
+    renamable $x5 = LD 0, killed renamable $x5 :: (load (s64))
     renamable $x5 = MULLD killed renamable $x5, renamable $x3
-    renamable $x4 = LD 0, killed renamable $x4 :: (load 8)
+    renamable $x4 = LD 0, killed renamable $x4 :: (load (s64))
     renamable $x3 = MADDLD8 killed renamable $x4, killed renamable $x3, killed renamable $x5
 ...

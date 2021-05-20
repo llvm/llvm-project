@@ -110,8 +110,8 @@ body:             |
     DBG_VALUE $a0_64, $noreg, !18, !DIExpression(), debug-location !20
     $sp_64 = DADDiu $sp_64, -16
     CFI_INSTRUCTION def_cfa_offset 16
-    SD killed $ra_64, $sp_64, 8 :: (store 8 into %stack.0)
-    SD killed $s0_64, $sp_64, 0 :: (store 8 into %stack.1)
+    SD killed $ra_64, $sp_64, 8 :: (store (s64) into %stack.0)
+    SD killed $s0_64, $sp_64, 0 :: (store (s64) into %stack.1)
     CFI_INSTRUCTION offset $ra_64, -8
     CFI_INSTRUCTION offset $s0_64, -16
     DBG_VALUE $s0_64, $noreg, !18, !DIExpression(), debug-location !20
@@ -128,8 +128,8 @@ body:             |
     renamable $v1 = nsw ADDiu renamable $v0, 10, debug-location !20
     renamable $v0 = MOVZ_I_I killed renamable $v1, killed renamable $at, killed renamable $v0, debug-location !20
     renamable $v0_64 = SLL64_32 killed renamable $v0, debug-location !20
-    $s0_64 = LD $sp_64, 0, debug-location !20 :: (load 8 from %stack.1)
-    $ra_64 = LD $sp_64, 8, debug-location !20 :: (load 8 from %stack.0)
+    $s0_64 = LD $sp_64, 0, debug-location !20 :: (load (s64) from %stack.1)
+    $ra_64 = LD $sp_64, 8, debug-location !20 :: (load (s64) from %stack.0)
     PseudoReturn64 undef $ra_64, implicit $v0_64, debug-location !20 {
       $sp_64 = DADDiu $sp_64, 16
     }

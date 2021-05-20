@@ -24,19 +24,19 @@ body:             |
     ; DARWIN: liveins: $x0, $x1
     ; DARWIN: %ptr:_(p0) = COPY $x0
     ; DARWIN: %width:_(s64) = COPY $x1
-    ; DARWIN: G_BZERO %ptr(p0), %width(s64), 0 :: (store 4)
+    ; DARWIN: G_BZERO %ptr(p0), %width(s64), 0 :: (store (s32))
     ; DARWIN: RET_ReallyLR
     ; UNKNOWN-LABEL: name: bzero_unknown_width
     ; UNKNOWN: liveins: $x0, $x1
     ; UNKNOWN: %ptr:_(p0) = COPY $x0
     ; UNKNOWN: %zero:_(s8) = G_CONSTANT i8 0
     ; UNKNOWN: %width:_(s64) = COPY $x1
-    ; UNKNOWN: G_MEMSET %ptr(p0), %zero(s8), %width(s64), 0 :: (store 4)
+    ; UNKNOWN: G_MEMSET %ptr(p0), %zero(s8), %width(s64), 0 :: (store (s32))
     ; UNKNOWN: RET_ReallyLR
     %ptr:_(p0) = COPY $x0
     %zero:_(s8) = G_CONSTANT i8 0
     %width:_(s64) = COPY $x1
-    G_MEMSET %ptr(p0), %zero(s8), %width(s64), 0 :: (store 4)
+    G_MEMSET %ptr(p0), %zero(s8), %width(s64), 0 :: (store (s32))
     RET_ReallyLR
 ...
 ---
@@ -49,19 +49,19 @@ body:             |
     ; DARWIN: liveins: $x0, $x1
     ; DARWIN: %ptr:_(p0) = COPY $x0
     ; DARWIN: %width:_(s64) = COPY $x1
-    ; DARWIN: G_BZERO %ptr(p0), %width(s64), 1 :: (store 4)
+    ; DARWIN: G_BZERO %ptr(p0), %width(s64), 1 :: (store (s32))
     ; DARWIN: RET_ReallyLR
     ; UNKNOWN-LABEL: name: bzero_tail_unknown_width
     ; UNKNOWN: liveins: $x0, $x1
     ; UNKNOWN: %ptr:_(p0) = COPY $x0
     ; UNKNOWN: %zero:_(s8) = G_CONSTANT i8 0
     ; UNKNOWN: %width:_(s64) = COPY $x1
-    ; UNKNOWN: G_MEMSET %ptr(p0), %zero(s8), %width(s64), 1 :: (store 4)
+    ; UNKNOWN: G_MEMSET %ptr(p0), %zero(s8), %width(s64), 1 :: (store (s32))
     ; UNKNOWN: RET_ReallyLR
     %ptr:_(p0) = COPY $x0
     %zero:_(s8) = G_CONSTANT i8 0
     %width:_(s64) = COPY $x1
-    G_MEMSET %ptr(p0), %zero(s8), %width(s64), 1 :: (store 4)
+    G_MEMSET %ptr(p0), %zero(s8), %width(s64), 1 :: (store (s32))
     RET_ReallyLR
 ...
 ---
@@ -76,19 +76,19 @@ body:             |
     ; DARWIN: liveins: $x0, $x1
     ; DARWIN: %ptr:_(p0) = COPY $x0
     ; DARWIN: %width:_(s64) = G_CONSTANT i64 1024
-    ; DARWIN: G_BZERO %ptr(p0), %width(s64), 0 :: (store 4)
+    ; DARWIN: G_BZERO %ptr(p0), %width(s64), 0 :: (store (s32))
     ; DARWIN: RET_ReallyLR
     ; UNKNOWN-LABEL: name: bzero_constant_width
     ; UNKNOWN: liveins: $x0, $x1
     ; UNKNOWN: %ptr:_(p0) = COPY $x0
     ; UNKNOWN: %zero:_(s8) = G_CONSTANT i8 0
     ; UNKNOWN: %width:_(s64) = G_CONSTANT i64 1024
-    ; UNKNOWN: G_MEMSET %ptr(p0), %zero(s8), %width(s64), 0 :: (store 4)
+    ; UNKNOWN: G_MEMSET %ptr(p0), %zero(s8), %width(s64), 0 :: (store (s32))
     ; UNKNOWN: RET_ReallyLR
     %ptr:_(p0) = COPY $x0
     %zero:_(s8) = G_CONSTANT i8 0
     %width:_(s64) = G_CONSTANT i64 1024
-    G_MEMSET %ptr(p0), %zero(s8), %width(s64), 0 :: (store 4)
+    G_MEMSET %ptr(p0), %zero(s8), %width(s64), 0 :: (store (s32))
     RET_ReallyLR
 ...
 ---
@@ -103,19 +103,19 @@ body:             |
     ; DARWIN: liveins: $x0, $x1
     ; DARWIN: %ptr:_(p0) = COPY $x0
     ; DARWIN: %width:_(s64) = G_CONSTANT i64 256
-    ; DARWIN: G_BZERO %ptr(p0), %width(s64), 0 :: (store 4)
+    ; DARWIN: G_BZERO %ptr(p0), %width(s64), 0 :: (store (s32))
     ; DARWIN: RET_ReallyLR
     ; UNKNOWN-LABEL: name: bzero_constant_width_minsize
     ; UNKNOWN: liveins: $x0, $x1
     ; UNKNOWN: %ptr:_(p0) = COPY $x0
     ; UNKNOWN: %zero:_(s8) = G_CONSTANT i8 0
     ; UNKNOWN: %width:_(s64) = G_CONSTANT i64 256
-    ; UNKNOWN: G_MEMSET %ptr(p0), %zero(s8), %width(s64), 0 :: (store 4)
+    ; UNKNOWN: G_MEMSET %ptr(p0), %zero(s8), %width(s64), 0 :: (store (s32))
     ; UNKNOWN: RET_ReallyLR
     %ptr:_(p0) = COPY $x0
     %zero:_(s8) = G_CONSTANT i8 0
     %width:_(s64) = G_CONSTANT i64 256
-    G_MEMSET %ptr(p0), %zero(s8), %width(s64), 0 :: (store 4)
+    G_MEMSET %ptr(p0), %zero(s8), %width(s64), 0 :: (store (s32))
     RET_ReallyLR
 ...
 ---
@@ -131,17 +131,17 @@ body:             |
     ; DARWIN: %ptr:_(p0) = COPY $x0
     ; DARWIN: %not_zero:_(s8) = G_CONSTANT i8 1
     ; DARWIN: %width:_(s64) = G_CONSTANT i64 256
-    ; DARWIN: G_MEMSET %ptr(p0), %not_zero(s8), %width(s64), 0 :: (store 4)
+    ; DARWIN: G_MEMSET %ptr(p0), %not_zero(s8), %width(s64), 0 :: (store (s32))
     ; DARWIN: RET_ReallyLR
     ; UNKNOWN-LABEL: name: not_zero
     ; UNKNOWN: liveins: $x0, $x1
     ; UNKNOWN: %ptr:_(p0) = COPY $x0
     ; UNKNOWN: %not_zero:_(s8) = G_CONSTANT i8 1
     ; UNKNOWN: %width:_(s64) = G_CONSTANT i64 256
-    ; UNKNOWN: G_MEMSET %ptr(p0), %not_zero(s8), %width(s64), 0 :: (store 4)
+    ; UNKNOWN: G_MEMSET %ptr(p0), %not_zero(s8), %width(s64), 0 :: (store (s32))
     ; UNKNOWN: RET_ReallyLR
     %ptr:_(p0) = COPY $x0
     %not_zero:_(s8) = G_CONSTANT i8 1
     %width:_(s64) = G_CONSTANT i64 256
-    G_MEMSET %ptr(p0), %not_zero(s8), %width(s64), 0 :: (store 4)
+    G_MEMSET %ptr(p0), %not_zero(s8), %width(s64), 0 :: (store (s32))
     RET_ReallyLR

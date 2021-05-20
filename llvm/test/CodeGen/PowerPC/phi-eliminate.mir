@@ -159,7 +159,7 @@ body:             |
   ; CHECK:   %22:crrc = CMPLWI %21, 10
   ; CHECK:   %23:gprc = ISEL %15, %14, killed %22.sub_lt
   ; CEHCK:   %24:gprc = ADD4 killed %23, killed %21
-  ; CHECK:   %25:g8rc_and_g8rc_nox0 = STBU killed %24, -1, undef %0:g8rc_and_g8rc_nox0 :: (store 1 into %ir.7)
+  ; CHECK:   %25:g8rc_and_g8rc_nox0 = STBU killed %24, -1, undef %0:g8rc_and_g8rc_nox0 :: (store (s8) into %ir.7)
   ; CHECK:   %26:gprc = DIVW %19, %9
   ; CHECK:   %57:gprc = COPY killed %26
   ; CHECK:   %58:gprc = COPY %19
@@ -243,7 +243,7 @@ body:             |
     %22:crrc = CMPLWI %21, 10
     %23:gprc = ISEL %15, %14, killed %22.sub_lt
     %24:gprc = ADD4 killed %23, killed %21
-    %25:g8rc_and_g8rc_nox0 = STBU killed %24, -1, undef %0:g8rc_and_g8rc_nox0 :: (store 1 into %ir.7)
+    %25:g8rc_and_g8rc_nox0 = STBU killed %24, -1, undef %0:g8rc_and_g8rc_nox0 :: (store (s8) into %ir.7)
     %26:gprc = DIVW %19, %9
     BDZ8 %bb.4, implicit-def $ctr8, implicit $ctr8
     B %bb.3

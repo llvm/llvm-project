@@ -13,14 +13,14 @@
   source_filename = "t.ll"
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64--linux-gnu"
-  
+
   %class.v = type <{ i32, i8, i8, [2 x i8] }>
   %class.j = type <{ %"class.j<6, a::f>::D", i32, [4 x i8] }>
   %"class.j<6, a::f>::D" = type { %"class.j<6, a::f>::p" }
   %"class.j<6, a::f>::p" = type { i64 }
-  
+
   @bt = global i32 0, align 4
-  
+
   define void @_ZN1v2bvEv(%class.v* nocapture readonly %this) local_unnamed_addr align 2 !dbg !14 {
   entry:
     %bz = alloca %class.j, align 8
@@ -32,7 +32,7 @@
       i32 1, label %_ZN1jILi6EN1a1fEE1mEj.exit
       i32 0, label %sw.bb2
     ]
-  
+
   _ZN1jILi6EN1a1fEE1mEj.exit:                       ; preds = %entry
     %1 = bitcast %class.j* %att to i64*
     %2 = bitcast %class.j* %bz to i64*
@@ -40,7 +40,7 @@
     call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !18, metadata !23), !dbg !24
     store i64 1, i64* %1, align 8, !dbg !27
     br label %sw.epilog
-  
+
   sw.bb2:                                           ; preds = %entry
     %3 = bitcast %class.j* %att to i64*
     %4 = bitcast %class.j* %bz to i64*
@@ -53,7 +53,7 @@
     %.phi.trans.insert26 = bitcast i32* %agg.tmp.sroa.2.0..sroa_idx1.i.i.i.i.i.i.phi.trans.insert to i64*
     %agg.tmp.sroa.2.0.copyload2.i.i6.i.i.i.i.pre = load i64, i64* %.phi.trans.insert26, align 8
     br label %sw.epilog
-  
+
   sw.epilog:                                        ; preds = %sw.bb2, %_ZN1jILi6EN1a1fEE1mEj.exit, %entry
     %agg.tmp.sroa.2.0.copyload2.i.i6.i.i.i.i = phi i64 [ %agg.tmp.sroa.2.0.copyload2.i.i6.i.i.i.i.pre, %sw.bb2 ], [ undef, %entry ], [ undef, %_ZN1jILi6EN1a1fEE1mEj.exit ], !dbg !32
     %5 = phi i64 [ %.pre25, %sw.bb2 ], [ 0, %entry ], [ 1, %_ZN1jILi6EN1a1fEE1mEj.exit ]
@@ -71,21 +71,21 @@
     call void @_Z2byi1LS_bbPi(i32 %7, [2 x i64] %.fca.1.insert12, [2 x i64] %.fca.1.insert, i1 %tobool, i1 false, i32* nonnull @bt)
     ret void
   }
-  
+
   declare void @_Z2byi1LS_bbPi(i32, [2 x i64], [2 x i64], i1, i1, i32*) local_unnamed_addr
-  
+
   ; Function Attrs: nounwind readnone speculatable
   declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #0
-  
+
   ; Function Attrs: nounwind
   declare void @llvm.stackprotector(i8*, i8**) #1
-  
+
   attributes #0 = { nounwind readnone speculatable }
   attributes #1 = { nounwind }
-  
+
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!12, !13}
-  
+
   !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 5.0.0 (trunk 305696) (llvm/trunk 305708)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, globals: !2)
   !1 = !DIFile(filename: "/<stdin>", directory: "/")
   !2 = !{}
@@ -151,10 +151,10 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
-liveins:         
+registers:
+liveins:
   - { reg: '$x0', virtual-reg: '' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -171,79 +171,79 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-  - { id: 0, name: bz, type: default, offset: -32, size: 16, alignment: 8, 
+fixedStack:
+stack:
+  - { id: 0, name: bz, type: default, offset: -32, size: 16, alignment: 8,
       callee-saved-register: '', local-offset: -16, debug-info-variable: '',
       debug-info-expression: '', debug-info-location: '' }
-  - { id: 1, name: att, type: default, offset: -48, size: 16, alignment: 8, 
+  - { id: 1, name: att, type: default, offset: -48, size: 16, alignment: 8,
       callee-saved-register: '', local-offset: -32, debug-info-variable: '',
       debug-info-expression: '', debug-info-location: '' }
-  - { id: 2, name: '', type: spill-slot, offset: -16, size: 8, alignment: 16, 
+  - { id: 2, name: '', type: spill-slot, offset: -16, size: 8, alignment: 16,
       callee-saved-register: '$lr', debug-info-variable: '',
       debug-info-expression: '', debug-info-location: '' }
-constants:       
+constants:
 body:             |
   bb.0.entry:
     successors: %bb.3.sw.bb2(0x2aaaaaab), %bb.1.entry(0x55555555)
     liveins: $x0, $lr
-  
+
     $sp = frame-setup SUBXri $sp, 48, 0
-    frame-setup STRXui killed $lr, $sp, 4 :: (store 8 into %stack.2)
+    frame-setup STRXui killed $lr, $sp, 4 :: (store (s64) into %stack.2)
     frame-setup CFI_INSTRUCTION def_cfa_offset 48
     frame-setup CFI_INSTRUCTION offset $w30, -16
-    $w8 = LDRSBWui $x0, 4 :: (load 1 from %ir.ap, align 4)
+    $w8 = LDRSBWui $x0, 4 :: (load (s8) from %ir.ap, align 4)
     CBZW $w8, %bb.3.sw.bb2
-  
+
   bb.1.entry:
     successors: %bb.2._ZN1jILi6EN1a1fEE1mEj.exit(0x40000001), %bb.4(0x3fffffff)
     liveins: $w8, $x0
-  
+
     dead $wzr = SUBSWri killed $w8, 1, 0, implicit-def $nzcv
     Bcc 1, %bb.4, implicit $nzcv
-  
+
   bb.2._ZN1jILi6EN1a1fEE1mEj.exit:
     successors: %bb.5.sw.epilog(0x80000000)
     liveins: $x0
-  
+
     $w2 = ORRWri $wzr, 0, implicit-def $x2
     $x3 = IMPLICIT_DEF debug-location !32
     $x1 = IMPLICIT_DEF
-    STRXui $x2, $sp, 2 :: (store 8 into %ir.2)
+    STRXui $x2, $sp, 2 :: (store (s64) into %ir.2)
     DBG_VALUE 0, 0, !18, !23, debug-location !24
-    STRXui $x2, $sp, 0, debug-location !27 :: (store 8 into %ir.1)
+    STRXui $x2, $sp, 0, debug-location !27 :: (store (s64) into %ir.1)
     $w4 = ORRWri $wzr, 0, implicit-def $x4
     B %bb.5.sw.epilog
-  
+
   bb.3.sw.bb2:
     successors: %bb.5.sw.epilog(0x80000000)
     liveins: $x0
-  
-    $x4, $x3 = LDPXi $sp, 0 :: (dereferenceable load 8 from %ir.3), (dereferenceable load 8 from %ir..phi.trans.insert26)
-    $x2, $x1 = LDPXi $sp, 2 :: (dereferenceable load 8 from %ir..phi.trans.insert), (dereferenceable load 8 from %ir.4)
+
+    $x4, $x3 = LDPXi $sp, 0 :: (dereferenceable load (s64) from %ir.3), (dereferenceable load (s64) from %ir..phi.trans.insert26)
+    $x2, $x1 = LDPXi $sp, 2 :: (dereferenceable load (s64) from %ir..phi.trans.insert), (dereferenceable load (s64) from %ir.4)
     B %bb.5.sw.epilog
-  
+
   bb.4:
     successors: %bb.5.sw.epilog(0x80000000)
     liveins: $x0
-  
+
     $x2 = ORRXrs $xzr, $xzr, 0
     $x4 = ORRXrs $xzr, $xzr, 0
     $x3 = IMPLICIT_DEF debug-location !32
     $x1 = IMPLICIT_DEF
-  
+
   bb.5.sw.epilog:
     liveins: $x0, $x1, $x2, $x3, $x4
-  
-    $w8 = LDRBBui $x0, 5 :: (load 1 from %ir.bx)
-    $w0 = LDRWui killed $x0, 0 :: (load 4 from %ir.bw1)
+
+    $w8 = LDRBBui $x0, 5 :: (load (s8) from %ir.bx)
+    $w0 = LDRWui killed $x0, 0 :: (load (s32) from %ir.bw1)
     $x7 = ADRP target-flags(aarch64-page) @bt
     $x7 = ADDXri killed $x7, target-flags(aarch64-pageoff, aarch64-nc) @bt, 0
     dead $wzr = SUBSWri killed $w8, 0, 0, implicit-def $nzcv
     $w5 = CSINCWr $wzr, $wzr, 0, implicit killed $nzcv
     $w6 = ORRWrs $wzr, $wzr, 0
     BL @_Z2byi1LS_bbPi, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $x1, implicit killed $x2, implicit killed $x3, implicit killed $x4, implicit killed $w5, implicit killed $w6, implicit killed $x7, implicit-def $sp
-    $lr = LDRXui $sp, 4 :: (load 8 from %stack.2)
+    $lr = LDRXui $sp, 4 :: (load (s64) from %stack.2)
     $sp = ADDXri $sp, 48, 0
     RET undef $lr
 

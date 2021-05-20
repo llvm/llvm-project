@@ -32,14 +32,14 @@ body:             |
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GCN: $m0 = COPY [[COPY1]]
-    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load 4)
-    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load 4)
+    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_32 = COPY $sgpr0
     $m0 = COPY %1
-    %2:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec :: (load 4)
+    %2:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec :: (load (s32))
     $m0 = COPY %1
-    %3:vgpr_32 = DS_READ_B32 %0, 64, 0, implicit $m0, implicit $exec :: (load 4)
+    %3:vgpr_32 = DS_READ_B32 %0, 64, 0, implicit $m0, implicit $exec :: (load (s32))
 
 ...
 
@@ -56,15 +56,15 @@ body:             |
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GCN: $m0 = COPY [[COPY1]]
-    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load 4)
-    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load 4)
+    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_32 = COPY $sgpr0
     $m0 = COPY %1
-    %2:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec :: (load 4)
+    %2:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec :: (load (s32))
     $m0 = COPY %1
     $m0 = COPY %1
-    %3:vgpr_32 = DS_READ_B32 %0, 64, 0, implicit $m0, implicit $exec :: (load 4)
+    %3:vgpr_32 = DS_READ_B32 %0, 64, 0, implicit $m0, implicit $exec :: (load (s32))
 
 ...
 
@@ -82,16 +82,16 @@ body:             |
     ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GCN: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GCN: $m0 = COPY [[COPY1]]
-    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load 4)
+    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
     ; GCN: $m0 = COPY [[COPY2]]
-    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load 4)
+    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_32 = COPY $sgpr0
     %2:sgpr_32 = COPY $sgpr1
     $m0 = COPY %1
-    %3:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec :: (load 4)
+    %3:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec :: (load (s32))
     $m0 = COPY %2
-    %4:vgpr_32 = DS_READ_B32 %0, 64, 0, implicit $m0, implicit $exec :: (load 4)
+    %4:vgpr_32 = DS_READ_B32 %0, 64, 0, implicit $m0, implicit $exec :: (load (s32))
 
 ...
 
@@ -109,17 +109,17 @@ body:             |
     ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GCN: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GCN: $m0 = COPY [[COPY1]]
-    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load 4)
+    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
     ; GCN: $m0 = COPY [[COPY2]]
-    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load 4)
+    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_32 = COPY $sgpr0
     %2:sgpr_32 = COPY $sgpr1
     $m0 = COPY %1
-    %3:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec :: (load 4)
+    %3:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec :: (load (s32))
     $m0 = COPY %1
     $m0 = COPY %2
-    %4:vgpr_32 = DS_READ_B32 %0, 64, 0, implicit $m0, implicit $exec :: (load 4)
+    %4:vgpr_32 = DS_READ_B32 %0, 64, 0, implicit $m0, implicit $exec :: (load (s32))
 
 ...
 
@@ -138,18 +138,18 @@ body:             |
     ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GCN: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GCN: $m0 = COPY [[COPY1]]
-    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load 4)
+    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
     ; GCN: $m0 = COPY [[COPY2]]
     ; GCN: $m0 = COPY [[COPY1]]
-    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load 4)
+    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_32 = COPY $sgpr0
     %2:sgpr_32 = COPY $sgpr1
     $m0 = COPY %1
-    %3:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec :: (load 4)
+    %3:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec :: (load (s32))
     $m0 = COPY %2
     $m0 = COPY %1
-    %4:vgpr_32 = DS_READ_B32 %0, 64, 0, implicit $m0, implicit $exec :: (load 4)
+    %4:vgpr_32 = DS_READ_B32 %0, 64, 0, implicit $m0, implicit $exec :: (load (s32))
 
 ...
 
@@ -166,14 +166,14 @@ body:             |
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GCN: $m0 = S_MOV_B32 -1
-    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load 4)
-    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load 4)
+    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_32 = COPY $sgpr0
     $m0 = S_MOV_B32 -1
-    %2:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec :: (load 4)
+    %2:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec :: (load (s32))
     $m0 = S_MOV_B32 -1
-    %3:vgpr_32 = DS_READ_B32 %0, 64, 0, implicit $m0, implicit $exec :: (load 4)
+    %3:vgpr_32 = DS_READ_B32 %0, 64, 0, implicit $m0, implicit $exec :: (load (s32))
 
 ...
 
@@ -190,15 +190,15 @@ body:             |
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GCN: $m0 = COPY [[COPY1]]
-    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load 4)
+    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
     ; GCN: $m0 = IMPLICIT_DEF
-    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load 4)
+    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_32 = COPY $sgpr0
     $m0 = COPY %1
-    %2:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec :: (load 4)
+    %2:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec :: (load (s32))
     $m0 = IMPLICIT_DEF
-    %3:vgpr_32 = DS_READ_B32 %0, 64, 0, implicit $m0, implicit $exec :: (load 4)
+    %3:vgpr_32 = DS_READ_B32 %0, 64, 0, implicit $m0, implicit $exec :: (load (s32))
 
 ...
 
@@ -215,15 +215,15 @@ body:             |
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GCN: $m0 = COPY [[COPY1]]
-    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load 4)
+    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
     ; GCN: S_NOP 0, implicit-def $m0
-    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load 4)
+    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_32 = COPY $sgpr0
     $m0 = COPY %1
-    %2:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec :: (load 4)
+    %2:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec :: (load (s32))
     S_NOP 0, implicit-def $m0
-    %3:vgpr_32 = DS_READ_B32 %0, 64, 0, implicit $m0, implicit $exec :: (load 4)
+    %3:vgpr_32 = DS_READ_B32 %0, 64, 0, implicit $m0, implicit $exec :: (load (s32))
 
 ...
 
@@ -241,19 +241,19 @@ body:             |
     ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GCN: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GCN: $m0 = COPY [[COPY1]]
-    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load 4)
+    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
     ; GCN: $m0 = COPY [[COPY2]]
-    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load 4)
-    ; GCN: [[DS_READ_B32_2:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 128, 0, implicit $m0, implicit $exec :: (load 4)
+    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
+    ; GCN: [[DS_READ_B32_2:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 128, 0, implicit $m0, implicit $exec :: (load (s32))
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_32 = COPY $sgpr0
     %2:sgpr_32 = COPY $sgpr1
     $m0 = COPY %1
-    %3:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec :: (load 4)
+    %3:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec :: (load (s32))
     $m0 = COPY %2
-    %4:vgpr_32 = DS_READ_B32 %0, 64, 0, implicit $m0, implicit $exec :: (load 4)
+    %4:vgpr_32 = DS_READ_B32 %0, 64, 0, implicit $m0, implicit $exec :: (load (s32))
     $m0 = COPY %2
-    %5:vgpr_32 = DS_READ_B32 %0, 128, 0, implicit $m0, implicit $exec :: (load 4)
+    %5:vgpr_32 = DS_READ_B32 %0, 128, 0, implicit $m0, implicit $exec :: (load (s32))
 ...
 
 ---
@@ -269,17 +269,17 @@ body:             |
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GCN: $m0 = COPY [[COPY1]]
-    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load 4)
+    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
     ; GCN: dead $sgpr30_sgpr31 = SI_CALL undef $sgpr6_sgpr7, @func, csr_amdgpu_highregs
     ; GCN: $m0 = COPY [[COPY1]]
-    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load 4)
+    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_32 = COPY $sgpr0
     $m0 = COPY %1
-    %2:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec :: (load 4)
+    %2:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec :: (load (s32))
     dead $sgpr30_sgpr31 = SI_CALL undef $sgpr6_sgpr7, @func, csr_amdgpu_highregs
     $m0 = COPY %1
-    %3:vgpr_32 = DS_READ_B32 %0, 64, 0, implicit $m0, implicit $exec :: (load 4)
+    %3:vgpr_32 = DS_READ_B32 %0, 64, 0, implicit $m0, implicit $exec :: (load (s32))
 
 ...
 
@@ -295,21 +295,21 @@ body:             |
   ; GCN:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GCN:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; GCN:   $m0 = COPY [[COPY1]]
-  ; GCN:   [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load 4)
+  ; GCN:   [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
   ; GCN: bb.1:
   ; GCN:   $m0 = COPY [[COPY1]]
-  ; GCN:   [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load 4)
+  ; GCN:   [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
   bb.0:
     liveins: $vgpr0, $sgpr0
 
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_32 = COPY $sgpr0
     $m0 = COPY %1
-    %2:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec :: (load 4)
+    %2:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec :: (load (s32))
 
   bb.1:
     $m0 = COPY %1
-    %3:vgpr_32 = DS_READ_B32 %0, 64, 0, implicit $m0, implicit $exec :: (load 4)
+    %3:vgpr_32 = DS_READ_B32 %0, 64, 0, implicit $m0, implicit $exec :: (load (s32))
 
 ...
 
@@ -326,15 +326,15 @@ body:             |
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GCN: $m0 = COPY [[COPY1]]
-    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load 4)
+    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
     ; GCN: $m0 = COPY $m0
-    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load 4)
+    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_32 = COPY $sgpr0
     $m0 = COPY %1
-    %2:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec :: (load 4)
+    %2:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec :: (load (s32))
     $m0 = COPY $m0
-    %3:vgpr_32 = DS_READ_B32 %0, 64, 0, implicit $m0, implicit $exec :: (load 4)
+    %3:vgpr_32 = DS_READ_B32 %0, 64, 0, implicit $m0, implicit $exec :: (load (s32))
 
 ...
 
@@ -351,16 +351,16 @@ body:             |
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GCN: $m0 = COPY $sgpr0
-    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load 4)
+    ; GCN: [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 0, 0, implicit $m0, implicit $exec :: (load (s32))
     ; GCN: $sgpr0 = S_MOV_B32 0
     ; GCN: $m0 = COPY $sgpr0
-    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load 4)
+    ; GCN: [[DS_READ_B32_1:%[0-9]+]]:vgpr_32 = DS_READ_B32 [[COPY]], 64, 0, implicit $m0, implicit $exec :: (load (s32))
     %0:vgpr_32 = COPY $vgpr0
     %1:sgpr_32 = COPY $sgpr0
     $m0 = COPY $sgpr0
-    %2:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec :: (load 4)
+    %2:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec :: (load (s32))
     $sgpr0 = S_MOV_B32 0
     $m0 = COPY $sgpr0
-    %3:vgpr_32 = DS_READ_B32 %0, 64, 0, implicit $m0, implicit $exec :: (load 4)
+    %3:vgpr_32 = DS_READ_B32 %0, 64, 0, implicit $m0, implicit $exec :: (load (s32))
 
 ...

@@ -183,7 +183,7 @@ body:             |
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r4, -16
   ; CHECK:   dead $r7 = frame-setup tADDrSPi $sp, 2, 14 /* CC::al */, $noreg
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa $r7, 8
-  ; CHECK:   renamable $r12 = t2LDRi12 renamable $r0, 0, 14 /* CC::al */, $noreg, debug-location !24 :: (load 4 from %ir.a)
+  ; CHECK:   renamable $r12 = t2LDRi12 renamable $r0, 0, 14 /* CC::al */, $noreg, debug-location !24 :: (load (s32) from %ir.a)
   ; CHECK:   DBG_VALUE 0, $noreg, !21, !DIExpression(), debug-location !25
   ; CHECK:   DBG_VALUE $r12, $noreg, !20, !DIExpression(), debug-location !23
   ; CHECK:   tCBZ $r2, %bb.4, debug-location !28
@@ -207,7 +207,7 @@ body:             |
   ; CHECK:   DBG_VALUE $vpr, $noreg, !17, !DIExpression(), debug-location !30
   ; CHECK:   $q1 = MVE_VORR killed $q0, killed $q0, 0, $noreg, undef $q1
   ; CHECK:   MVE_VPST 8, implicit $vpr, debug-location !30
-  ; CHECK:   renamable $r1, renamable $q0 = MVE_VLDRHU32_post killed renamable $r1, 8, 1, killed renamable $vpr, debug-location !30 :: (load 8 from %ir.lsr.iv14, align 2)
+  ; CHECK:   renamable $r1, renamable $q0 = MVE_VLDRHU32_post killed renamable $r1, 8, 1, killed renamable $vpr, debug-location !30 :: (load (s64) from %ir.lsr.iv14, align 2)
   ; CHECK:   renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14 /* CC::al */, $noreg, debug-location !30
   ; CHECK:   renamable $q0 = MVE_VMOVLs16bh killed renamable $q0, 0, $noreg, undef renamable $q0, debug-location !30
   ; CHECK:   renamable $q0 = MVE_VSUBi32 renamable $q1, killed renamable $q0, 0, $noreg, undef renamable $q0, debug-location !32
@@ -221,7 +221,7 @@ body:             |
   ; CHECK: bb.4.for.cond.cleanup:
   ; CHECK:   liveins: $r0, $r12
   ; CHECK:   DBG_VALUE $r12, $noreg, !20, !DIExpression(), debug-location !23
-  ; CHECK:   t2STRi12 killed renamable $r12, killed renamable $r0, 0, 14 /* CC::al */, $noreg, debug-location !33 :: (store 4 into %ir.a)
+  ; CHECK:   t2STRi12 killed renamable $r12, killed renamable $r0, 0, 14 /* CC::al */, $noreg, debug-location !33 :: (store (s32) into %ir.a)
   ; CHECK:   tPOP_RET 14 /* CC::al */, $noreg, def $r4, def $r6, def $r7, def $pc, debug-location !34
   bb.0.entry:
     successors: %bb.4(0x30000000), %bb.1(0x50000000)
@@ -241,7 +241,7 @@ body:             |
     frame-setup CFI_INSTRUCTION offset $r4, -16
     $r7 = frame-setup tADDrSPi $sp, 2, 14, $noreg
     frame-setup CFI_INSTRUCTION def_cfa $r7, 8
-    renamable $r12 = t2LDRi12 renamable $r0, 0, 14, $noreg, debug-location !24 :: (load 4 from %ir.a)
+    renamable $r12 = t2LDRi12 renamable $r0, 0, 14, $noreg, debug-location !24 :: (load (s32) from %ir.a)
     DBG_VALUE 0, $noreg, !21, !DIExpression(), debug-location !29
     DBG_VALUE $r12, $noreg, !20, !DIExpression(), debug-location !23
     tCBZ $r2, %bb.4, debug-location !32
@@ -270,7 +270,7 @@ body:             |
     DBG_VALUE $vpr, $noreg, !17, !DIExpression(), debug-location !34
     $q1 = MVE_VORR killed $q0, $q0, 0, $noreg, undef $q1
     MVE_VPST 8, implicit $vpr, debug-location !34
-    renamable $r1, renamable $q0 = MVE_VLDRHU32_post killed renamable $r1, 8, 1, killed renamable $vpr, debug-location !34 :: (load 8 from %ir.lsr.iv14, align 2)
+    renamable $r1, renamable $q0 = MVE_VLDRHU32_post killed renamable $r1, 8, 1, killed renamable $vpr, debug-location !34 :: (load (s64) from %ir.lsr.iv14, align 2)
     renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14, $noreg, debug-location !34
     renamable $q0 = MVE_VMOVLs16bh killed renamable $q0, 0, $noreg, undef renamable $q0, debug-location !34
     renamable $lr = t2LoopDec killed renamable $lr, 1, debug-location !33
@@ -290,7 +290,7 @@ body:             |
     liveins: $r0, $r12
 
     DBG_VALUE $r12, $noreg, !20, !DIExpression(), debug-location !23
-    t2STRi12 killed renamable $r12, killed renamable $r0, 0, 14, $noreg, debug-location !42 :: (store 4 into %ir.a)
+    t2STRi12 killed renamable $r12, killed renamable $r0, 0, 14, $noreg, debug-location !42 :: (store (s32) into %ir.a)
     tPOP_RET 14, $noreg, def $r4, def $r6, def $r7, def $pc, debug-location !43
 
 ...

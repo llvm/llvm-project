@@ -66,7 +66,7 @@ body:             |
     liveins: $x0, $lr
 
     DBG_VALUE $x0, $noreg, !16, !DIExpression(), debug-location !17
-    early-clobber $sp = frame-setup STPXpre $fp, killed $lr, $sp, -2 :: (store 8 into %stack.1), (store 8 into %stack.0)
+    early-clobber $sp = frame-setup STPXpre $fp, killed $lr, $sp, -2 :: (store (s64) into %stack.1), (store (s64) into %stack.0)
     $fp = frame-setup ADDXri $sp, 0, 0
     frame-setup CFI_INSTRUCTION def_cfa $w29, 16
     frame-setup CFI_INSTRUCTION offset $w30, -8
@@ -76,7 +76,7 @@ body:             |
     renamable $x0 = nsw ADDXri killed $x0, 222, 0, debug-location !17
     renamable $x1 = nsw SUBXri renamable $x2, 444, 0, debug-location !17
     BL @call, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit killed $x1, implicit killed $x2, implicit-def $sp, debug-location !17
-    early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2, debug-location !17 :: (load 8 from %stack.1), (load 8 from %stack.0)
+    early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2, debug-location !17 :: (load (s64) from %stack.1), (load (s64) from %stack.0)
     RET undef $lr, debug-location !17
 
 ...

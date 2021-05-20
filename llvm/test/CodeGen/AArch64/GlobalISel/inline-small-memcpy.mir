@@ -42,18 +42,18 @@ body:             |
     ; CHECK: liveins: $x0, $x1
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY1]](p0) :: (load 16 from %ir.1, align 4)
-    ; CHECK: G_STORE [[LOAD]](s128), [[COPY]](p0) :: (store 16 into %ir.0, align 4)
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY1]](p0) :: (load (s128) from %ir.1, align 4)
+    ; CHECK: G_STORE [[LOAD]](s128), [[COPY]](p0) :: (store (s128) into %ir.0, align 4)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[GEP]](p0) :: (load 16 from %ir.1 + 16, align 4)
-    ; CHECK: [[GEP1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CHECK: G_STORE [[LOAD1]](s128), [[GEP1]](p0) :: (store 16 into %ir.0 + 16, align 4)
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s64)
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[PTR_ADD]](p0) :: (load (s128) from %ir.1 + 16, align 4)
+    ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s64)
+    ; CHECK: G_STORE [[LOAD1]](s128), [[PTR_ADD1]](p0) :: (store (s128) into %ir.0 + 16, align 4)
     ; CHECK: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s64) = G_CONSTANT i64 32
-    G_MEMCPY %0(p0), %1(p0), %2(s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
+    G_MEMCPY %0(p0), %1(p0), %2(s64), 1 :: (store (s8) into %ir.0, align 4), (load (s8) from %ir.1, align 4)
     RET_ReallyLR
 
 ...
@@ -75,12 +75,12 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 36
-    ; CHECK: G_MEMCPY [[COPY]](p0), [[COPY1]](p0), [[C]](s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
+    ; CHECK: G_MEMCPY [[COPY]](p0), [[COPY1]](p0), [[C]](s64), 1 :: (store (s8) into %ir.0, align 4), (load (s8) from %ir.1, align 4)
     ; CHECK: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s64) = G_CONSTANT i64 36
-    G_MEMCPY %0(p0), %1(p0), %2(s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
+    G_MEMCPY %0(p0), %1(p0), %2(s64), 1 :: (store (s8) into %ir.0, align 4), (load (s8) from %ir.1, align 4)
     RET_ReallyLR
 
 ...

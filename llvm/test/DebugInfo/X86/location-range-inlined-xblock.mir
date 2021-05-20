@@ -125,7 +125,7 @@ body:             |
     CFI_INSTRUCTION offset $rbx, -16
     $ebx = MOV32rr $edi
     DBG_VALUE $ebx, $noreg, !15, !DIExpression(), debug-location !16
-    MOV32mr $rip, 1, $noreg, @glob, $noreg, $edi, debug-location !17 :: (store 4 into @glob)
+    MOV32mr $rip, 1, $noreg, @glob, $noreg, $edi, debug-location !17 :: (store (s32) into @glob)
     DBG_VALUE $ebx, $noreg, !27, !DIExpression(), debug-location !30
     DBG_VALUE 0, $noreg, !28, !DIExpression(), debug-location !30
     TEST32rr $edi, $edi, implicit-def $eflags, debug-location !31
@@ -162,7 +162,7 @@ body:             |
     DBG_VALUE $eax, $noreg, !28, !DIExpression(), debug-location !30
     DBG_VALUE $eax, $noreg, !28, !DIExpression(), debug-location !30
     renamable $eax = nsw IMUL32rr killed renamable $eax, killed renamable $ebx, implicit-def dead $eflags, debug-location !38
-    MOV32mr $rip, 1, $noreg, @glob, $noreg, killed renamable $eax, debug-location !39 :: (store 4 into @glob)
+    MOV32mr $rip, 1, $noreg, @glob, $noreg, killed renamable $eax, debug-location !39 :: (store (s32) into @glob)
     $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, debug-location !40
     $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !40
     DBG_VALUE $edi, $noreg, !15, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !16

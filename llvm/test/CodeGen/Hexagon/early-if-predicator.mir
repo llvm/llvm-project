@@ -73,7 +73,7 @@ body:             |
 
   bb.1.if:
     successors: %bb.2(0x80000000)
-    S4_storeiri_io %0, 0, 1 :: (store 4 into %ir.p)
+    S4_storeiri_io %0, 0, 1 :: (store (s32) into %ir.p)
 
   bb.2.endif:
     PS_jmpret $r31, implicit-def dead $pc

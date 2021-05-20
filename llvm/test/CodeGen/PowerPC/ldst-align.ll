@@ -6,7 +6,7 @@ define i64 @load(i64* %p) {
   ; CHECK: bb.0.entry:
   ; CHECK:   liveins: $x3
   ; CHECK:   [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x3
-  ; CHECK:   [[LD:%[0-9]+]]:g8rc = LD 24, [[COPY]] :: (load 8 from %ir.arrayidx, align 2)
+  ; CHECK:   [[LD:%[0-9]+]]:g8rc = LD 24, [[COPY]] :: (load (s64) from %ir.arrayidx, align 2)
   ; CHECK:   $x3 = COPY [[LD]]
   ; CHECK:   BLR8 implicit $lr8, implicit $rm, implicit $x3
 entry:
@@ -21,7 +21,7 @@ define void @store(i64* %p) {
   ; CHECK:   liveins: $x3
   ; CHECK:   [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x3
   ; CHECK:   [[LI8_:%[0-9]+]]:g8rc = LI8 9
-  ; CHECK:   STD killed [[LI8_]], 16, [[COPY]] :: (store 8 into %ir.arrayidx, align 1)
+  ; CHECK:   STD killed [[LI8_]], 16, [[COPY]] :: (store (s64) into %ir.arrayidx, align 1)
   ; CHECK:   BLR8 implicit $lr8, implicit $rm
 entry:
   %arrayidx = getelementptr inbounds i64, i64* %p, i64 2
@@ -35,7 +35,7 @@ define void @store_aligned(i64* %p) {
   ; CHECK:   liveins: $x3
   ; CHECK:   [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x3
   ; CHECK:   [[LI8_:%[0-9]+]]:g8rc = LI8 9
-  ; CHECK:   STD killed [[LI8_]], 16, [[COPY]] :: (store 8 into %ir.arrayidx, align 4)
+  ; CHECK:   STD killed [[LI8_]], 16, [[COPY]] :: (store (s64) into %ir.arrayidx, align 4)
   ; CHECK:   BLR8 implicit $lr8, implicit $rm
 entry:
   %arrayidx = getelementptr inbounds i64, i64* %p, i64 2

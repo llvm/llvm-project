@@ -632,10 +632,10 @@ body:             |
 
     %1 = MOVHI target-flags(lanai-hi) @a
     %2 = OR_I_LO killed %1, target-flags(lanai-lo) @a
-    %3 = LDW_RI killed %2, 0, 0 :: (load 4 from @a, !tbaa !0)
+    %3 = LDW_RI killed %2, 0, 0 :: (load (s32) from @a, !tbaa !0)
     %4 = MOVHI target-flags(lanai-hi) @b
     %5 = OR_I_LO killed %4, target-flags(lanai-lo) @b
-    %6 = LDW_RI killed %5, 0, 0 :: (load 4 from @b, !tbaa !0)
+    %6 = LDW_RI killed %5, 0, 0 :: (load (s32) from @b, !tbaa !0)
     %0 = SUB_R killed %6, killed %3, 0
     SFSUB_F_RI_LO %0, 0, implicit-def $sr
     BRCC %bb.3.if.end, 10, implicit $sr

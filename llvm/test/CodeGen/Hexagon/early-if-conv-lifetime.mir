@@ -58,7 +58,7 @@ body:             |
     successors: %bb.1.b1(0x40000000), %bb.2.b2(0x40000000)
 
     %1 = IMPLICIT_DEF
-    %0 = L2_loadrb_io killed %1, 0 :: (load 1 from `i8* undef`)
+    %0 = L2_loadrb_io killed %1, 0 :: (load (s8) from `i8* undef`)
     %2 = C2_cmpeqi killed %0, 102
     %3 = COPY killed %2
     J2_jumpf killed %3, %bb.2.b2, implicit-def dead $pc

@@ -85,8 +85,8 @@ body:             |
     ; CHECK: %val1:_(s64) = COPY $x0
     ; CHECK: %val2:_(s64) = COPY $x1
     ; CHECK: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @g + 1
-    ; CHECK: G_STORE %val1(s64), [[GV]](p0) :: (store 8)
-    ; CHECK: G_STORE %val2(s64), [[GV]](p0) :: (store 8)
+    ; CHECK: G_STORE %val1(s64), [[GV]](p0) :: (store (s64))
+    ; CHECK: G_STORE %val2(s64), [[GV]](p0) :: (store (s64))
     ; CHECK: RET_ReallyLR implicit $x0
     %val1:_(s64) = COPY $x0
     %val2:_(s64) = COPY $x1
@@ -94,8 +94,8 @@ body:             |
     %offset:_(s64) = G_CONSTANT i64 1
     %ptr_add1:_(p0) = G_PTR_ADD %global, %offset(s64)
     %ptr_add2:_(p0) = G_PTR_ADD %global, %offset(s64)
-    G_STORE %val1:_(s64), %ptr_add1 :: (store 8)
-    G_STORE %val2:_(s64), %ptr_add2 :: (store 8)
+    G_STORE %val1:_(s64), %ptr_add1 :: (store (s64))
+    G_STORE %val2:_(s64), %ptr_add2 :: (store (s64))
     RET_ReallyLR implicit $x0
 
 ...
@@ -118,8 +118,8 @@ body:             |
     ; CHECK: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @g + 2
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
     ; CHECK: %ptr_add2:_(p0) = G_PTR_ADD [[GV]], [[C]](s64)
-    ; CHECK: G_STORE %val1(s64), [[GV]](p0) :: (store 8)
-    ; CHECK: G_STORE %val2(s64), %ptr_add2(p0) :: (store 8)
+    ; CHECK: G_STORE %val1(s64), [[GV]](p0) :: (store (s64))
+    ; CHECK: G_STORE %val2(s64), %ptr_add2(p0) :: (store (s64))
     ; CHECK: RET_ReallyLR implicit $x0
     %val1:_(s64) = COPY $x0
     %val2:_(s64) = COPY $x1
@@ -128,8 +128,8 @@ body:             |
     %offset2:_(s64) = G_CONSTANT i64 10
     %ptr_add1:_(p0) = G_PTR_ADD %global, %offset1(s64)
     %ptr_add2:_(p0) = G_PTR_ADD %global, %offset2(s64)
-    G_STORE %val1:_(s64), %ptr_add1 :: (store 8)
-    G_STORE %val2:_(s64), %ptr_add2 :: (store 8)
+    G_STORE %val1:_(s64), %ptr_add1 :: (store (s64))
+    G_STORE %val2:_(s64), %ptr_add2 :: (store (s64))
     RET_ReallyLR implicit $x0
 
 ...

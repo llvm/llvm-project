@@ -14,16 +14,16 @@ body: |
     ; CHECK: %ptr1:_(p1) = COPY $vgpr2_vgpr3
     ; CHECK: %ptr2:_(p1) = COPY $vgpr4_vgpr5
     ; CHECK: %div:_(s32), %rem:_ = G_SDIVREM %src1, %src2
-    ; CHECK: G_STORE %div(s32), %ptr1(p1) :: (store 4, addrspace 1)
-    ; CHECK: G_STORE %rem(s32), %ptr2(p1) :: (store 4, addrspace 1)
+    ; CHECK: G_STORE %div(s32), %ptr1(p1) :: (store (s32), addrspace 1)
+    ; CHECK: G_STORE %rem(s32), %ptr2(p1) :: (store (s32), addrspace 1)
     %src1:_(s32) = COPY $vgpr0
     %src2:_(s32) = COPY $vgpr1
     %ptr1:_(p1) = COPY $vgpr2_vgpr3
     %ptr2:_(p1) = COPY $vgpr4_vgpr5
     %div:_(s32) = G_SDIV %src1:_(s32), %src2:_(s32)
-    G_STORE %div:_(s32), %ptr1:_(p1) :: (store 4, addrspace 1, align 4)
+    G_STORE %div:_(s32), %ptr1:_(p1) :: (store (s32), addrspace 1, align 4)
     %rem:_(s32) = G_SREM %src1:_(s32), %src2:_(s32)
-    G_STORE %rem:_(s32), %ptr2:_(p1) :: (store 4, addrspace 1, align 4)
+    G_STORE %rem:_(s32), %ptr2:_(p1) :: (store (s32), addrspace 1, align 4)
 ...
 ---
 name: test_sdiv_srem_v2
@@ -38,16 +38,16 @@ body: |
     ; CHECK: %ptr1:_(p1) = COPY $vgpr4_vgpr5
     ; CHECK: %ptr2:_(p1) = COPY $vgpr6_vgpr7
     ; CHECK: %div:_(<2 x s32>), %rem:_ = G_SDIVREM %src1, %src2
-    ; CHECK: G_STORE %div(<2 x s32>), %ptr1(p1) :: (store 8, align 4, addrspace 1)
-    ; CHECK: G_STORE %rem(<2 x s32>), %ptr2(p1) :: (store 8, align 4, addrspace 1)
+    ; CHECK: G_STORE %div(<2 x s32>), %ptr1(p1) :: (store (<2 x s32>), align 4, addrspace 1)
+    ; CHECK: G_STORE %rem(<2 x s32>), %ptr2(p1) :: (store (<2 x s32>), align 4, addrspace 1)
     %src1:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %src2:_(<2 x s32>) = COPY $vgpr2_vgpr3
     %ptr1:_(p1) = COPY $vgpr4_vgpr5
     %ptr2:_(p1) = COPY $vgpr6_vgpr7
     %div:_(<2 x s32>) = G_SDIV %src1:_(<2 x s32>), %src2:_(<2 x s32>)
-    G_STORE %div:_(<2 x s32>), %ptr1:_(p1) :: (store 8, addrspace 1, align 4)
+    G_STORE %div:_(<2 x s32>), %ptr1:_(p1) :: (store (<2 x s32>), addrspace 1, align 4)
     %rem:_(<2 x s32>) = G_SREM %src1:_(<2 x s32>), %src2:_(<2 x s32>)
-    G_STORE %rem:_(<2 x s32>), %ptr2:_(p1) :: (store 8, addrspace 1, align 4)
+    G_STORE %rem:_(<2 x s32>), %ptr2:_(p1) :: (store (<2 x s32>), addrspace 1, align 4)
 ...
 ---
 name: test_sdiv_srem_v4
@@ -62,16 +62,16 @@ body: |
     ; CHECK: %ptr1:_(p1) = COPY $vgpr8_vgpr9
     ; CHECK: %ptr2:_(p1) = COPY $vgpr10_vgpr11
     ; CHECK: %div:_(<4 x s32>), %rem:_ = G_SDIVREM %src1, %src2
-    ; CHECK: G_STORE %div(<4 x s32>), %ptr1(p1) :: (store 16, align 4, addrspace 1)
-    ; CHECK: G_STORE %rem(<4 x s32>), %ptr2(p1) :: (store 16, align 4, addrspace 1)
+    ; CHECK: G_STORE %div(<4 x s32>), %ptr1(p1) :: (store (<4 x s32>), align 4, addrspace 1)
+    ; CHECK: G_STORE %rem(<4 x s32>), %ptr2(p1) :: (store (<4 x s32>), align 4, addrspace 1)
     %src1:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %src2:_(<4 x s32>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
     %ptr1:_(p1) = COPY $vgpr8_vgpr9
     %ptr2:_(p1) = COPY $vgpr10_vgpr11
     %div:_(<4 x s32>) = G_SDIV %src1:_(<4 x s32>), %src2:_(<4 x s32>)
-    G_STORE %div:_(<4 x s32>), %ptr1:_(p1) :: (store 16, addrspace 1, align 4)
+    G_STORE %div:_(<4 x s32>), %ptr1:_(p1) :: (store (<4 x s32>), addrspace 1, align 4)
     %rem:_(<4 x s32>) = G_SREM %src1:_(<4 x s32>), %src2:_(<4 x s32>)
-    G_STORE %rem:_(<4 x s32>), %ptr2:_(p1) :: (store 16, addrspace 1, align 4)
+    G_STORE %rem:_(<4 x s32>), %ptr2:_(p1) :: (store (<4 x s32>), addrspace 1, align 4)
 ...
 ---
 name: test_srem_sdiv
@@ -86,16 +86,16 @@ body: |
     ; CHECK: %ptr1:_(p1) = COPY $vgpr2_vgpr3
     ; CHECK: %ptr2:_(p1) = COPY $vgpr4_vgpr5
     ; CHECK: %div:_(s32), %rem:_ = G_SDIVREM %src1, %src2
-    ; CHECK: G_STORE %rem(s32), %ptr1(p1) :: (store 4, addrspace 1)
-    ; CHECK: G_STORE %div(s32), %ptr2(p1) :: (store 4, addrspace 1)
+    ; CHECK: G_STORE %rem(s32), %ptr1(p1) :: (store (s32), addrspace 1)
+    ; CHECK: G_STORE %div(s32), %ptr2(p1) :: (store (s32), addrspace 1)
     %src1:_(s32) = COPY $vgpr0
     %src2:_(s32) = COPY $vgpr1
     %ptr1:_(p1) = COPY $vgpr2_vgpr3
     %ptr2:_(p1) = COPY $vgpr4_vgpr5
     %rem:_(s32) = G_SREM %src1:_(s32), %src2:_(s32)
-    G_STORE %rem:_(s32), %ptr1:_(p1) :: (store 4, addrspace 1, align 4)
+    G_STORE %rem:_(s32), %ptr1:_(p1) :: (store (s32), addrspace 1, align 4)
     %div:_(s32) = G_SDIV %src1:_(s32), %src2:_(s32)
-    G_STORE %div:_(s32), %ptr2:_(p1) :: (store 4, addrspace 1, align 4)
+    G_STORE %div:_(s32), %ptr2:_(p1) :: (store (s32), addrspace 1, align 4)
 ...
 ---
 name: test_srem_sdiv_v2
@@ -110,16 +110,16 @@ body: |
     ; CHECK: %ptr1:_(p1) = COPY $vgpr4_vgpr5
     ; CHECK: %ptr2:_(p1) = COPY $vgpr6_vgpr7
     ; CHECK: %div:_(<2 x s32>), %rem:_ = G_SDIVREM %src1, %src2
-    ; CHECK: G_STORE %rem(<2 x s32>), %ptr1(p1) :: (store 8, align 4, addrspace 1)
-    ; CHECK: G_STORE %div(<2 x s32>), %ptr2(p1) :: (store 8, align 4, addrspace 1)
+    ; CHECK: G_STORE %rem(<2 x s32>), %ptr1(p1) :: (store (<2 x s32>), align 4, addrspace 1)
+    ; CHECK: G_STORE %div(<2 x s32>), %ptr2(p1) :: (store (<2 x s32>), align 4, addrspace 1)
     %src1:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %src2:_(<2 x s32>) = COPY $vgpr2_vgpr3
     %ptr1:_(p1) = COPY $vgpr4_vgpr5
     %ptr2:_(p1) = COPY $vgpr6_vgpr7
     %rem:_(<2 x s32>) = G_SREM %src1:_(<2 x s32>), %src2:_(<2 x s32>)
-    G_STORE %rem:_(<2 x s32>), %ptr1:_(p1) :: (store 8, addrspace 1, align 4)
+    G_STORE %rem:_(<2 x s32>), %ptr1:_(p1) :: (store (<2 x s32>), addrspace 1, align 4)
     %div:_(<2 x s32>) = G_SDIV %src1:_(<2 x s32>), %src2:_(<2 x s32>)
-    G_STORE %div:_(<2 x s32>), %ptr2:_(p1) :: (store 8, addrspace 1, align 4)
+    G_STORE %div:_(<2 x s32>), %ptr2:_(p1) :: (store (<2 x s32>), addrspace 1, align 4)
 ...
 ---
 name: test_srem_sdiv_v4
@@ -134,16 +134,16 @@ body: |
     ; CHECK: %ptr1:_(p1) = COPY $vgpr8_vgpr9
     ; CHECK: %ptr2:_(p1) = COPY $vgpr10_vgpr11
     ; CHECK: %div:_(<4 x s32>), %rem:_ = G_SDIVREM %src1, %src2
-    ; CHECK: G_STORE %rem(<4 x s32>), %ptr1(p1) :: (store 16, align 4, addrspace 1)
-    ; CHECK: G_STORE %div(<4 x s32>), %ptr2(p1) :: (store 16, align 4, addrspace 1)
+    ; CHECK: G_STORE %rem(<4 x s32>), %ptr1(p1) :: (store (<4 x s32>), align 4, addrspace 1)
+    ; CHECK: G_STORE %div(<4 x s32>), %ptr2(p1) :: (store (<4 x s32>), align 4, addrspace 1)
     %src1:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %src2:_(<4 x s32>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
     %ptr1:_(p1) = COPY $vgpr8_vgpr9
     %ptr2:_(p1) = COPY $vgpr10_vgpr11
     %rem:_(<4 x s32>) = G_SREM %src1:_(<4 x s32>), %src2:_(<4 x s32>)
-    G_STORE %rem:_(<4 x s32>), %ptr1:_(p1) :: (store 16, addrspace 1, align 4)
+    G_STORE %rem:_(<4 x s32>), %ptr1:_(p1) :: (store (<4 x s32>), addrspace 1, align 4)
     %div:_(<4 x s32>) = G_SDIV %src1:_(<4 x s32>), %src2:_(<4 x s32>)
-    G_STORE %div:_(<4 x s32>), %ptr2:_(p1) :: (store 16, addrspace 1, align 4)
+    G_STORE %div:_(<4 x s32>), %ptr2:_(p1) :: (store (<4 x s32>), addrspace 1, align 4)
 ...
 ---
 name: test_udiv_urem
@@ -158,16 +158,16 @@ body: |
     ; CHECK: %ptr1:_(p1) = COPY $vgpr2_vgpr3
     ; CHECK: %ptr2:_(p1) = COPY $vgpr4_vgpr5
     ; CHECK: %div:_(s32), %rem:_ = G_UDIVREM %src1, %src2
-    ; CHECK: G_STORE %div(s32), %ptr1(p1) :: (store 4, addrspace 1)
-    ; CHECK: G_STORE %rem(s32), %ptr2(p1) :: (store 4, addrspace 1)
+    ; CHECK: G_STORE %div(s32), %ptr1(p1) :: (store (s32), addrspace 1)
+    ; CHECK: G_STORE %rem(s32), %ptr2(p1) :: (store (s32), addrspace 1)
     %src1:_(s32) = COPY $vgpr0
     %src2:_(s32) = COPY $vgpr1
     %ptr1:_(p1) = COPY $vgpr2_vgpr3
     %ptr2:_(p1) = COPY $vgpr4_vgpr5
     %div:_(s32) = G_UDIV %src1:_(s32), %src2:_(s32)
-    G_STORE %div:_(s32), %ptr1:_(p1) :: (store 4, addrspace 1, align 4)
+    G_STORE %div:_(s32), %ptr1:_(p1) :: (store (s32), addrspace 1, align 4)
     %rem:_(s32) = G_UREM %src1:_(s32), %src2:_(s32)
-    G_STORE %rem:_(s32), %ptr2:_(p1) :: (store 4, addrspace 1, align 4)
+    G_STORE %rem:_(s32), %ptr2:_(p1) :: (store (s32), addrspace 1, align 4)
 ...
 ---
 name: test_udiv_urem_v2
@@ -182,16 +182,16 @@ body: |
     ; CHECK: %ptr1:_(p1) = COPY $vgpr4_vgpr5
     ; CHECK: %ptr2:_(p1) = COPY $vgpr6_vgpr7
     ; CHECK: %div:_(<2 x s32>), %rem:_ = G_UDIVREM %src1, %src2
-    ; CHECK: G_STORE %div(<2 x s32>), %ptr1(p1) :: (store 8, align 4, addrspace 1)
-    ; CHECK: G_STORE %rem(<2 x s32>), %ptr2(p1) :: (store 8, align 4, addrspace 1)
+    ; CHECK: G_STORE %div(<2 x s32>), %ptr1(p1) :: (store (<2 x s32>), align 4, addrspace 1)
+    ; CHECK: G_STORE %rem(<2 x s32>), %ptr2(p1) :: (store (<2 x s32>), align 4, addrspace 1)
     %src1:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %src2:_(<2 x s32>) = COPY $vgpr2_vgpr3
     %ptr1:_(p1) = COPY $vgpr4_vgpr5
     %ptr2:_(p1) = COPY $vgpr6_vgpr7
     %div:_(<2 x s32>) = G_UDIV %src1:_(<2 x s32>), %src2:_(<2 x s32>)
-    G_STORE %div:_(<2 x s32>), %ptr1:_(p1) :: (store 8, addrspace 1, align 4)
+    G_STORE %div:_(<2 x s32>), %ptr1:_(p1) :: (store (<2 x s32>), addrspace 1, align 4)
     %rem:_(<2 x s32>) = G_UREM %src1:_(<2 x s32>), %src2:_(<2 x s32>)
-    G_STORE %rem:_(<2 x s32>), %ptr2:_(p1) :: (store 8, addrspace 1, align 4)
+    G_STORE %rem:_(<2 x s32>), %ptr2:_(p1) :: (store (<2 x s32>), addrspace 1, align 4)
 ...
 ---
 name: test_udiv_urem_v4
@@ -206,16 +206,16 @@ body: |
     ; CHECK: %ptr1:_(p1) = COPY $vgpr8_vgpr9
     ; CHECK: %ptr2:_(p1) = COPY $vgpr10_vgpr11
     ; CHECK: %div:_(<4 x s32>), %rem:_ = G_UDIVREM %src1, %src2
-    ; CHECK: G_STORE %div(<4 x s32>), %ptr1(p1) :: (store 16, align 4, addrspace 1)
-    ; CHECK: G_STORE %rem(<4 x s32>), %ptr2(p1) :: (store 16, align 4, addrspace 1)
+    ; CHECK: G_STORE %div(<4 x s32>), %ptr1(p1) :: (store (<4 x s32>), align 4, addrspace 1)
+    ; CHECK: G_STORE %rem(<4 x s32>), %ptr2(p1) :: (store (<4 x s32>), align 4, addrspace 1)
     %src1:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %src2:_(<4 x s32>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
     %ptr1:_(p1) = COPY $vgpr8_vgpr9
     %ptr2:_(p1) = COPY $vgpr10_vgpr11
     %div:_(<4 x s32>) = G_UDIV %src1:_(<4 x s32>), %src2:_(<4 x s32>)
-    G_STORE %div:_(<4 x s32>), %ptr1:_(p1) :: (store 16, addrspace 1, align 4)
+    G_STORE %div:_(<4 x s32>), %ptr1:_(p1) :: (store (<4 x s32>), addrspace 1, align 4)
     %rem:_(<4 x s32>) = G_UREM %src1:_(<4 x s32>), %src2:_(<4 x s32>)
-    G_STORE %rem:_(<4 x s32>), %ptr2:_(p1) :: (store 16, addrspace 1, align 4)
+    G_STORE %rem:_(<4 x s32>), %ptr2:_(p1) :: (store (<4 x s32>), addrspace 1, align 4)
 ...
 ---
 name: test_urem_udiv
@@ -230,16 +230,16 @@ body: |
     ; CHECK: %ptr1:_(p1) = COPY $vgpr2_vgpr3
     ; CHECK: %ptr2:_(p1) = COPY $vgpr4_vgpr5
     ; CHECK: %div:_(s32), %rem:_ = G_UDIVREM %src1, %src2
-    ; CHECK: G_STORE %rem(s32), %ptr1(p1) :: (store 4, addrspace 1)
-    ; CHECK: G_STORE %div(s32), %ptr2(p1) :: (store 4, addrspace 1)
+    ; CHECK: G_STORE %rem(s32), %ptr1(p1) :: (store (s32), addrspace 1)
+    ; CHECK: G_STORE %div(s32), %ptr2(p1) :: (store (s32), addrspace 1)
     %src1:_(s32) = COPY $vgpr0
     %src2:_(s32) = COPY $vgpr1
     %ptr1:_(p1) = COPY $vgpr2_vgpr3
     %ptr2:_(p1) = COPY $vgpr4_vgpr5
     %rem:_(s32) = G_UREM %src1:_(s32), %src2:_(s32)
-    G_STORE %rem:_(s32), %ptr1:_(p1) :: (store 4, addrspace 1, align 4)
+    G_STORE %rem:_(s32), %ptr1:_(p1) :: (store (s32), addrspace 1, align 4)
     %div:_(s32) = G_UDIV %src1:_(s32), %src2:_(s32)
-    G_STORE %div:_(s32), %ptr2:_(p1) :: (store 4, addrspace 1, align 4)
+    G_STORE %div:_(s32), %ptr2:_(p1) :: (store (s32), addrspace 1, align 4)
 ...
 ---
 name: test_urem_udiv_v2
@@ -254,16 +254,16 @@ body: |
     ; CHECK: %ptr1:_(p1) = COPY $vgpr4_vgpr5
     ; CHECK: %ptr2:_(p1) = COPY $vgpr6_vgpr7
     ; CHECK: %div:_(<2 x s32>), %rem:_ = G_UDIVREM %src1, %src2
-    ; CHECK: G_STORE %rem(<2 x s32>), %ptr1(p1) :: (store 8, align 4, addrspace 1)
-    ; CHECK: G_STORE %div(<2 x s32>), %ptr2(p1) :: (store 8, align 4, addrspace 1)
+    ; CHECK: G_STORE %rem(<2 x s32>), %ptr1(p1) :: (store (<2 x s32>), align 4, addrspace 1)
+    ; CHECK: G_STORE %div(<2 x s32>), %ptr2(p1) :: (store (<2 x s32>), align 4, addrspace 1)
     %src1:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %src2:_(<2 x s32>) = COPY $vgpr2_vgpr3
     %ptr1:_(p1) = COPY $vgpr4_vgpr5
     %ptr2:_(p1) = COPY $vgpr6_vgpr7
     %rem:_(<2 x s32>) = G_UREM %src1:_(<2 x s32>), %src2:_(<2 x s32>)
-    G_STORE %rem:_(<2 x s32>), %ptr1:_(p1) :: (store 8, addrspace 1, align 4)
+    G_STORE %rem:_(<2 x s32>), %ptr1:_(p1) :: (store (<2 x s32>), addrspace 1, align 4)
     %div:_(<2 x s32>) = G_UDIV %src1:_(<2 x s32>), %src2:_(<2 x s32>)
-    G_STORE %div:_(<2 x s32>), %ptr2:_(p1) :: (store 8, addrspace 1, align 4)
+    G_STORE %div:_(<2 x s32>), %ptr2:_(p1) :: (store (<2 x s32>), addrspace 1, align 4)
 ...
 ---
 name: test_urem_udiv_v4
@@ -278,16 +278,16 @@ body: |
     ; CHECK: %ptr1:_(p1) = COPY $vgpr8_vgpr9
     ; CHECK: %ptr2:_(p1) = COPY $vgpr10_vgpr11
     ; CHECK: %div:_(<4 x s32>), %rem:_ = G_UDIVREM %src1, %src2
-    ; CHECK: G_STORE %rem(<4 x s32>), %ptr1(p1) :: (store 16, align 4, addrspace 1)
-    ; CHECK: G_STORE %div(<4 x s32>), %ptr2(p1) :: (store 16, align 4, addrspace 1)
+    ; CHECK: G_STORE %rem(<4 x s32>), %ptr1(p1) :: (store (<4 x s32>), align 4, addrspace 1)
+    ; CHECK: G_STORE %div(<4 x s32>), %ptr2(p1) :: (store (<4 x s32>), align 4, addrspace 1)
     %src1:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %src2:_(<4 x s32>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
     %ptr1:_(p1) = COPY $vgpr8_vgpr9
     %ptr2:_(p1) = COPY $vgpr10_vgpr11
     %rem:_(<4 x s32>) = G_UREM %src1:_(<4 x s32>), %src2:_(<4 x s32>)
-    G_STORE %rem:_(<4 x s32>), %ptr1:_(p1) :: (store 16, addrspace 1, align 4)
+    G_STORE %rem:_(<4 x s32>), %ptr1:_(p1) :: (store (<4 x s32>), addrspace 1, align 4)
     %div:_(<4 x s32>) = G_UDIV %src1:_(<4 x s32>), %src2:_(<4 x s32>)
-    G_STORE %div:_(<4 x s32>), %ptr2:_(p1) :: (store 16, addrspace 1, align 4)
+    G_STORE %div:_(<4 x s32>), %ptr2:_(p1) :: (store (<4 x s32>), addrspace 1, align 4)
 ...
 ---
 name: test_sdiv_srem_extra_use
@@ -303,23 +303,23 @@ body: |
     ; CHECK: %ptr2:_(p1) = G_IMPLICIT_DEF
     ; CHECK: %ptr3:_(p1) = COPY $vgpr2_vgpr3
     ; CHECK: %ptr4:_(p1) = COPY $vgpr4_vgpr5
-    ; CHECK: G_STORE %src1(s32), %ptr1(p1) :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
-    ; CHECK: G_STORE %src2(s32), %ptr2(p1) :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    ; CHECK: G_STORE %src1(s32), %ptr1(p1) :: (volatile store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
+    ; CHECK: G_STORE %src2(s32), %ptr2(p1) :: (volatile store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
     ; CHECK: %div:_(s32), %rem:_ = G_SDIVREM %src1, %src2
-    ; CHECK: G_STORE %div(s32), %ptr3(p1) :: (store 4, addrspace 1)
-    ; CHECK: G_STORE %rem(s32), %ptr4(p1) :: (store 4, addrspace 1)
+    ; CHECK: G_STORE %div(s32), %ptr3(p1) :: (store (s32), addrspace 1)
+    ; CHECK: G_STORE %rem(s32), %ptr4(p1) :: (store (s32), addrspace 1)
     %src1:_(s32) = COPY $vgpr0
     %src2:_(s32) = COPY $vgpr1
     %ptr1:_(p1) = G_IMPLICIT_DEF
     %ptr2:_(p1) = G_IMPLICIT_DEF
     %ptr3:_(p1) = COPY $vgpr2_vgpr3
     %ptr4:_(p1) = COPY $vgpr4_vgpr5
-    G_STORE %src1:_(s32), %ptr1:_(p1) :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
-    G_STORE %src2:_(s32), %ptr2:_(p1) :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    G_STORE %src1:_(s32), %ptr1:_(p1) :: (volatile store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
+    G_STORE %src2:_(s32), %ptr2:_(p1) :: (volatile store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
     %div:_(s32) = G_SDIV %src1:_(s32), %src2:_(s32)
-    G_STORE %div:_(s32), %ptr3:_(p1) :: (store 4, addrspace 1, align 4)
+    G_STORE %div:_(s32), %ptr3:_(p1) :: (store (s32), addrspace 1, align 4)
     %rem:_(s32) = G_SREM %src1:_(s32), %src2:_(s32)
-    G_STORE %rem:_(s32), %ptr4:_(p1) :: (store 4, addrspace 1, align 4)
+    G_STORE %rem:_(s32), %ptr4:_(p1) :: (store (s32), addrspace 1, align 4)
 ...
 ---
 name: test_sdiv_srem_extra_sdiv
@@ -337,21 +337,21 @@ body: |
     ; CHECK: %ptr2:_(p1) = COPY $vgpr4_vgpr5
     ; CHECK: %ptr3:_(p1) = COPY $vgpr6_vgpr7
     ; CHECK: %div:_(s32), %rem:_ = G_SDIVREM %src1, %src2
-    ; CHECK: G_STORE %div(s32), %ptr1(p1) :: (store 4, addrspace 1)
-    ; CHECK: G_STORE %rem(s32), %ptr2(p1) :: (store 4, addrspace 1)
+    ; CHECK: G_STORE %div(s32), %ptr1(p1) :: (store (s32), addrspace 1)
+    ; CHECK: G_STORE %rem(s32), %ptr2(p1) :: (store (s32), addrspace 1)
     ; CHECK: %div2:_(s32) = G_SDIV %src1, %src2
-    ; CHECK: G_STORE %div2(s32), %ptr3(p1) :: (store 4, addrspace 1)
+    ; CHECK: G_STORE %div2(s32), %ptr3(p1) :: (store (s32), addrspace 1)
     %src1:_(s32) = COPY $vgpr0
     %src2:_(s32) = COPY $vgpr1
     %ptr1:_(p1) = COPY $vgpr2_vgpr3
     %ptr2:_(p1) = COPY $vgpr4_vgpr5
     %ptr3:_(p1) = COPY $vgpr6_vgpr7
     %div:_(s32) = G_SDIV %src1:_(s32), %src2:_(s32)
-    G_STORE %div:_(s32), %ptr1:_(p1) :: (store 4, addrspace 1, align 4)
+    G_STORE %div:_(s32), %ptr1:_(p1) :: (store (s32), addrspace 1, align 4)
     %rem:_(s32) = G_SREM %src1:_(s32), %src2:_(s32)
-    G_STORE %rem:_(s32), %ptr2:_(p1) :: (store 4, addrspace 1, align 4)
+    G_STORE %rem:_(s32), %ptr2:_(p1) :: (store (s32), addrspace 1, align 4)
     %div2:_(s32) = G_SDIV %src1:_(s32), %src2:_(s32)
-    G_STORE %div2:_(s32), %ptr3:_(p1) :: (store 4, addrspace 1, align 4)
+    G_STORE %div2:_(s32), %ptr3:_(p1) :: (store (s32), addrspace 1, align 4)
 ...
 ---
 name: test_sdiv_srem_extra_srem
@@ -369,21 +369,21 @@ body: |
     ; CHECK: %ptr2:_(p1) = COPY $vgpr4_vgpr5
     ; CHECK: %ptr3:_(p1) = COPY $vgpr6_vgpr7
     ; CHECK: %div:_(s32), %rem:_ = G_SDIVREM %src1, %src2
-    ; CHECK: G_STORE %div(s32), %ptr1(p1) :: (store 4, addrspace 1)
-    ; CHECK: G_STORE %rem(s32), %ptr2(p1) :: (store 4, addrspace 1)
+    ; CHECK: G_STORE %div(s32), %ptr1(p1) :: (store (s32), addrspace 1)
+    ; CHECK: G_STORE %rem(s32), %ptr2(p1) :: (store (s32), addrspace 1)
     ; CHECK: %rem2:_(s32) = G_SREM %src1, %src2
-    ; CHECK: G_STORE %rem2(s32), %ptr3(p1) :: (store 4, addrspace 1)
+    ; CHECK: G_STORE %rem2(s32), %ptr3(p1) :: (store (s32), addrspace 1)
     %src1:_(s32) = COPY $vgpr0
     %src2:_(s32) = COPY $vgpr1
     %ptr1:_(p1) = COPY $vgpr2_vgpr3
     %ptr2:_(p1) = COPY $vgpr4_vgpr5
     %ptr3:_(p1) = COPY $vgpr6_vgpr7
     %div:_(s32) = G_SDIV %src1:_(s32), %src2:_(s32)
-    G_STORE %div:_(s32), %ptr1:_(p1) :: (store 4, addrspace 1, align 4)
+    G_STORE %div:_(s32), %ptr1:_(p1) :: (store (s32), addrspace 1, align 4)
     %rem:_(s32) = G_SREM %src1:_(s32), %src2:_(s32)
-    G_STORE %rem:_(s32), %ptr2:_(p1) :: (store 4, addrspace 1, align 4)
+    G_STORE %rem:_(s32), %ptr2:_(p1) :: (store (s32), addrspace 1, align 4)
     %rem2:_(s32) = G_SREM %src1:_(s32), %src2:_(s32)
-    G_STORE %rem2:_(s32), %ptr3:_(p1) :: (store 4, addrspace 1, align 4)
+    G_STORE %rem2:_(s32), %ptr3:_(p1) :: (store (s32), addrspace 1, align 4)
 ...
 # Some negative tests.
 ---
@@ -400,18 +400,18 @@ body: |
     ; CHECK: %ptr1:_(p1) = COPY $vgpr3_vgpr4
     ; CHECK: %ptr2:_(p1) = COPY $vgpr5_vgpr6
     ; CHECK: %div:_(s32) = G_SDIV %src1, %src2
-    ; CHECK: G_STORE %div(s32), %ptr1(p1) :: (store 4, addrspace 1)
+    ; CHECK: G_STORE %div(s32), %ptr1(p1) :: (store (s32), addrspace 1)
     ; CHECK: %rem:_(s32) = G_SREM %src1, %src3
-    ; CHECK: G_STORE %rem(s32), %ptr2(p1) :: (store 4, addrspace 1)
+    ; CHECK: G_STORE %rem(s32), %ptr2(p1) :: (store (s32), addrspace 1)
     %src1:_(s32) = COPY $vgpr0
     %src2:_(s32) = COPY $vgpr1
     %src3:_(s32) = COPY $vgpr2
     %ptr1:_(p1) = COPY $vgpr3_vgpr4
     %ptr2:_(p1) = COPY $vgpr5_vgpr6
     %div:_(s32) = G_SDIV %src1:_(s32), %src2:_(s32)
-    G_STORE %div:_(s32), %ptr1:_(p1) :: (store 4, addrspace 1, align 4)
+    G_STORE %div:_(s32), %ptr1:_(p1) :: (store (s32), addrspace 1, align 4)
     %rem:_(s32) = G_SREM %src1:_(s32), %src3:_(s32)
-    G_STORE %rem:_(s32), %ptr2:_(p1) :: (store 4, addrspace 1, align 4)
+    G_STORE %rem:_(s32), %ptr2:_(p1) :: (store (s32), addrspace 1, align 4)
 ...
 ---
 name: test_sdiv_srem_src_opnds_swapped
@@ -426,17 +426,17 @@ body: |
     ; CHECK: %ptr1:_(p1) = COPY $vgpr2_vgpr3
     ; CHECK: %ptr2:_(p1) = COPY $vgpr4_vgpr5
     ; CHECK: %div:_(s32) = G_SDIV %src1, %src2
-    ; CHECK: G_STORE %div(s32), %ptr1(p1) :: (store 4, addrspace 1)
+    ; CHECK: G_STORE %div(s32), %ptr1(p1) :: (store (s32), addrspace 1)
     ; CHECK: %rem:_(s32) = G_SREM %src2, %src1
-    ; CHECK: G_STORE %rem(s32), %ptr2(p1) :: (store 4, addrspace 1)
+    ; CHECK: G_STORE %rem(s32), %ptr2(p1) :: (store (s32), addrspace 1)
     %src1:_(s32) = COPY $vgpr0
     %src2:_(s32) = COPY $vgpr1
     %ptr1:_(p1) = COPY $vgpr2_vgpr3
     %ptr2:_(p1) = COPY $vgpr4_vgpr5
     %div:_(s32) = G_SDIV %src1:_(s32), %src2:_(s32)
-    G_STORE %div:_(s32), %ptr1:_(p1) :: (store 4, addrspace 1, align 4)
+    G_STORE %div:_(s32), %ptr1:_(p1) :: (store (s32), addrspace 1, align 4)
     %rem:_(s32) = G_SREM %src2:_(s32), %src1:_(s32)
-    G_STORE %rem:_(s32), %ptr2:_(p1) :: (store 4, addrspace 1, align 4)
+    G_STORE %rem:_(s32), %ptr2:_(p1) :: (store (s32), addrspace 1, align 4)
 ...
 ---
 name: test_sdiv_urem
@@ -451,17 +451,17 @@ body: |
     ; CHECK: %ptr1:_(p1) = COPY $vgpr2_vgpr3
     ; CHECK: %ptr2:_(p1) = COPY $vgpr4_vgpr5
     ; CHECK: %div:_(s32) = G_SDIV %src1, %src2
-    ; CHECK: G_STORE %div(s32), %ptr1(p1) :: (store 4, addrspace 1)
+    ; CHECK: G_STORE %div(s32), %ptr1(p1) :: (store (s32), addrspace 1)
     ; CHECK: %rem:_(s32) = G_UREM %src1, %src2
-    ; CHECK: G_STORE %rem(s32), %ptr2(p1) :: (store 4, addrspace 1)
+    ; CHECK: G_STORE %rem(s32), %ptr2(p1) :: (store (s32), addrspace 1)
     %src1:_(s32) = COPY $vgpr0
     %src2:_(s32) = COPY $vgpr1
     %ptr1:_(p1) = COPY $vgpr2_vgpr3
     %ptr2:_(p1) = COPY $vgpr4_vgpr5
     %div:_(s32) = G_SDIV %src1:_(s32), %src2:_(s32)
-    G_STORE %div:_(s32), %ptr1:_(p1) :: (store 4, addrspace 1, align 4)
+    G_STORE %div:_(s32), %ptr1:_(p1) :: (store (s32), addrspace 1, align 4)
     %rem:_(s32) = G_UREM %src1:_(s32), %src2:_(s32)
-    G_STORE %rem:_(s32), %ptr2:_(p1) :: (store 4, addrspace 1, align 4)
+    G_STORE %rem:_(s32), %ptr2:_(p1) :: (store (s32), addrspace 1, align 4)
 ...
 ---
 name: test_udiv_srem
@@ -476,17 +476,17 @@ body: |
     ; CHECK: %ptr1:_(p1) = COPY $vgpr2_vgpr3
     ; CHECK: %ptr2:_(p1) = COPY $vgpr4_vgpr5
     ; CHECK: %div:_(s32) = G_UDIV %src1, %src2
-    ; CHECK: G_STORE %div(s32), %ptr1(p1) :: (store 4, addrspace 1)
+    ; CHECK: G_STORE %div(s32), %ptr1(p1) :: (store (s32), addrspace 1)
     ; CHECK: %rem:_(s32) = G_SREM %src1, %src2
-    ; CHECK: G_STORE %rem(s32), %ptr2(p1) :: (store 4, addrspace 1)
+    ; CHECK: G_STORE %rem(s32), %ptr2(p1) :: (store (s32), addrspace 1)
     %src1:_(s32) = COPY $vgpr0
     %src2:_(s32) = COPY $vgpr1
     %ptr1:_(p1) = COPY $vgpr2_vgpr3
     %ptr2:_(p1) = COPY $vgpr4_vgpr5
     %div:_(s32) = G_UDIV %src1:_(s32), %src2:_(s32)
-    G_STORE %div:_(s32), %ptr1:_(p1) :: (store 4, addrspace 1, align 4)
+    G_STORE %div:_(s32), %ptr1:_(p1) :: (store (s32), addrspace 1, align 4)
     %rem:_(s32) = G_SREM %src1:_(s32), %src2:_(s32)
-    G_STORE %rem:_(s32), %ptr2:_(p1) :: (store 4, addrspace 1, align 4)
+    G_STORE %rem:_(s32), %ptr2:_(p1) :: (store (s32), addrspace 1, align 4)
 ...
 ---
 name: test_sdiv_srem_different_blocks
@@ -500,24 +500,24 @@ body: |
   ; CHECK:   %src2:_(s32) = COPY $vgpr1
   ; CHECK:   %ptr1:_(p1) = COPY $vgpr2_vgpr3
   ; CHECK:   %div:_(s32) = G_SDIV %src1, %src2
-  ; CHECK:   G_STORE %div(s32), %ptr1(p1) :: (store 4, addrspace 1)
+  ; CHECK:   G_STORE %div(s32), %ptr1(p1) :: (store (s32), addrspace 1)
   ; CHECK:   S_BRANCH %bb.1
   ; CHECK: bb.1:
   ; CHECK:   liveins: $vgpr4_vgpr5
   ; CHECK:   %ptr2:_(p1) = COPY $vgpr4_vgpr5
   ; CHECK:   %rem:_(s32) = G_SREM %src1, %src2
-  ; CHECK:   G_STORE %rem(s32), %ptr2(p1) :: (store 4, addrspace 1)
+  ; CHECK:   G_STORE %rem(s32), %ptr2(p1) :: (store (s32), addrspace 1)
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
     %src1:_(s32) = COPY $vgpr0
     %src2:_(s32) = COPY $vgpr1
     %ptr1:_(p1) = COPY $vgpr2_vgpr3
     %div:_(s32) = G_SDIV %src1:_(s32), %src2:_(s32)
-    G_STORE %div:_(s32), %ptr1:_(p1) :: (store 4, addrspace 1, align 4)
+    G_STORE %div:_(s32), %ptr1:_(p1) :: (store (s32), addrspace 1, align 4)
     S_BRANCH %bb.1
   bb.1:
     liveins: $vgpr4_vgpr5
     %ptr2:_(p1) = COPY $vgpr4_vgpr5
     %rem:_(s32) = G_SREM %src1:_(s32), %src2:_(s32)
-    G_STORE %rem:_(s32), %ptr2:_(p1) :: (store 4, addrspace 1, align 4)
+    G_STORE %rem:_(s32), %ptr2:_(p1) :: (store (s32), addrspace 1, align 4)
 ...

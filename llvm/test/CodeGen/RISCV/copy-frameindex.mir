@@ -45,7 +45,7 @@ body: |
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   [[ADDI:%[0-9]+]]:gpr = ADDI %stack.0, 0
-  ; CHECK:   SW $x0, killed [[ADDI]], 0 :: (volatile store 4 into %stack.0)
+  ; CHECK:   SW $x0, killed [[ADDI]], 0 :: (volatile store (s32) into %stack.0)
   ; CHECK: bb.2:
   ; CHECK:   PseudoRET
   bb.0:
@@ -56,6 +56,6 @@ body: |
     DBG_VALUE %1, $noreg, !1, !DIExpression(DW_OP_plus_uconst, 0, DW_OP_stack_value), debug-location !3
     BEQ killed %0:gpr, $x0, %bb.2
   bb.1:
-    SW $x0, killed %1:gpr, 0 :: (volatile store 4 into %stack.0, align 4)
+    SW $x0, killed %1:gpr, 0 :: (volatile store (s32) into %stack.0, align 4)
   bb.2:
     PseudoRET

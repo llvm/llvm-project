@@ -297,7 +297,7 @@ body:             |
   ; CHECK:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK: bb.4.bb17:
   ; CHECK:   successors: %bb.5(0x80000000), %bb.8(0x00000000)
-  ; CHECK:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm undef %35:gr64, 1, $noreg, 0, $noreg :: (load unordered 4 from `i32 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm undef %35:gr64, 1, $noreg, 0, $noreg :: (load unordered (s32) from `i32 addrspace(1)* undef`, addrspace 1)
   ; CHECK:   [[AND32ri:%[0-9]+]]:gr32 = AND32ri [[AND32ri]], 33554431, implicit-def dead $eflags
   ; CHECK:   EH_LABEL <mcsymbol .Ltmp0>
   ; CHECK:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
@@ -309,8 +309,8 @@ body:             |
   ; CHECK:   JMP_1 %bb.5
   ; CHECK: bb.5.bb21:
   ; CHECK:   successors: %bb.9(0x7c000000), %bb.6(0x04000000)
-  ; CHECK:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @global, $noreg :: (load 8 from got)
-  ; CHECK:   [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm [[MOV64rm]], 1, $noreg, 0, $noreg :: (dereferenceable load unordered 8 from @global)
+  ; CHECK:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @global, $noreg :: (load (s64) from got)
+  ; CHECK:   [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm [[MOV64rm]], 1, $noreg, 0, $noreg :: (dereferenceable load unordered (s64) from @global)
   ; CHECK:   [[NOT64r:%[0-9]+]]:gr64 = NOT64r [[NOT64r]]
   ; CHECK:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK:   dead [[NOT64r]]:gr64, [[COPY2]]:gr64 = STATEPOINT 2, 5, 1, undef %50:gr64, undef $rdi, 2, 0, 2, 0, 2, 27, 2, 0, 2, 2, 2, 0, 2, 0, 2, 0, 2, 1, 2, 0, 2, 7, 2, 0, 2, 10, 2, 1, 2, 83, 2, 0, 2, 5, 2, 1, 2, 0, [[COPY2]], 2, 7, 2, 0, 2, 8, 2, 2, 2, 7, 2, 0, 2, 7, 2, 0, 2, 8, 2, 2, 2, 2, [[NOT64r]](tied-def 0), [[COPY2]](tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp
@@ -322,9 +322,9 @@ body:             |
   ; CHECK:   JMP_1 %bb.6
   ; CHECK: bb.6.bb33.preheader:
   ; CHECK:   successors: %bb.7(0x80000000)
-  ; CHECK:   [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @global.1, $noreg :: (load 8 from got)
-  ; CHECK:   [[MOV64rm2:%[0-9]+]]:gr64 = MOV64rm [[MOV64rm1]], 1, $noreg, 0, $noreg :: (dereferenceable load unordered 8 from @global.1)
-  ; CHECK:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm $noreg, 1, $noreg, 660, $gs :: (load 4 from `i32 addrspace(256)* inttoptr (i64 660 to i32 addrspace(256)*)`, addrspace 256)
+  ; CHECK:   [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @global.1, $noreg :: (load (s64) from got)
+  ; CHECK:   [[MOV64rm2:%[0-9]+]]:gr64 = MOV64rm [[MOV64rm1]], 1, $noreg, 0, $noreg :: (dereferenceable load unordered (s64) from @global.1)
+  ; CHECK:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm $noreg, 1, $noreg, 660, $gs :: (load (s32) from `i32 addrspace(256)* inttoptr (i64 660 to i32 addrspace(256)*)`, addrspace 256)
   ; CHECK:   [[NOT64r1:%[0-9]+]]:gr64 = NOT64r [[NOT64r1]]
   ; CHECK:   [[COPY4:%[0-9]+]]:gr64 = COPY [[NOT64r1]]
   ; CHECK:   [[OR32ri:%[0-9]+]]:gr32 = OR32ri [[OR32ri]], 268435456, implicit-def dead $eflags
@@ -335,19 +335,19 @@ body:             |
   ; CHECK: bb.7.bb33:
   ; CHECK:   successors: %bb.7(0x80000000)
   ; CHECK:   [[INC64r:%[0-9]+]]:gr64_with_sub_8bit = nuw nsw INC64r [[INC64r]], implicit-def dead $eflags
-  ; CHECK:   [[MOV64rm2:%[0-9]+]]:gr64 = MOV64rm undef %59:gr64, 1, $noreg, 0, $noreg :: (load unordered 8 from `i8 addrspace(1)* addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[MOV64rm2:%[0-9]+]]:gr64 = MOV64rm undef %59:gr64, 1, $noreg, 0, $noreg :: (load unordered (s64) from `i8 addrspace(1)* addrspace(1)* undef`, addrspace 1)
   ; CHECK:   [[NOT64r2:%[0-9]+]]:gr64 = NOT64r [[NOT64r2]]
   ; CHECK:   CMP64rr [[NOT64r2]], [[COPY6]], implicit-def $eflags
   ; CHECK:   undef %102.sub_32bit:gr64_with_sub_8bit = MOV32ri 0
   ; CHECK:   [[CMOV64rr:%[0-9]+]]:gr64 = CMOV64rr [[CMOV64rr]], %102, 4, implicit killed $eflags
   ; CHECK:   INLINEASM &"lock btsq $0,($1)", 1 /* sideeffect attdialect */, 4325385 /* reguse:GR64 */, %102, 4325385 /* reguse:GR64 */, undef %56:gr64, 12 /* clobber */, implicit-def dead early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def dead early-clobber $eflags
-  ; CHECK:   LCMPXCHG32 undef %67:gr64, 1, $noreg, 0, $noreg, [[COPY5]], implicit-def dead $eax, implicit-def dead $eflags, implicit undef $eax :: (load store acquire monotonic 4 on `i32 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   LCMPXCHG32 undef %67:gr64, 1, $noreg, 0, $noreg, [[COPY5]], implicit-def dead $eax, implicit-def dead $eflags, implicit undef $eax :: (load store acquire monotonic (s32) on `i32 addrspace(1)* undef`, addrspace 1)
   ; CHECK:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK:   $rdi = COPY [[COPY4]]
   ; CHECK:   CALL64pcrel32 target-flags(x86-plt) @wobble, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
   ; CHECK:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK:   [[MOV64rm2:%[0-9]+]]:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @global, $noreg :: (load 8 from got)
-  ; CHECK:   [[MOV64rm3:%[0-9]+]]:gr64 = MOV64rm [[MOV64rm2]], 1, $noreg, 0, $noreg :: (dereferenceable load unordered 8 from @global)
+  ; CHECK:   [[MOV64rm2:%[0-9]+]]:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @global, $noreg :: (load (s64) from got)
+  ; CHECK:   [[MOV64rm3:%[0-9]+]]:gr64 = MOV64rm [[MOV64rm2]], 1, $noreg, 0, $noreg :: (dereferenceable load unordered (s64) from @global)
   ; CHECK:   [[NOT64r2:%[0-9]+]]:gr64 = NOT64r [[NOT64r2]]
   ; CHECK:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK:   $rdi = COPY [[NOT64r2]]
@@ -364,7 +364,7 @@ body:             |
   ; CHECK:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK: bb.9.bb64:
   ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   LCMPXCHG32 undef %76:gr64, 1, $noreg, 0, $noreg, [[MOV32ri1]], implicit-def dead $eax, implicit-def dead $eflags, implicit undef $eax :: (load store acquire monotonic 4 on `i32 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   LCMPXCHG32 undef %76:gr64, 1, $noreg, 0, $noreg, [[MOV32ri1]], implicit-def dead $eax, implicit-def dead $eflags, implicit undef $eax :: (load store acquire monotonic (s32) on `i32 addrspace(1)* undef`, addrspace 1)
   ; CHECK:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK:   STATEPOINT 2, 5, 1, undef %79:gr64, undef $rdi, 2, 0, 2, 0, 2, 27, 2, 0, 2, 2, 2, 0, 2, 0, 2, 0, 2, 1, 2, 0, 2, 7, 2, 0, 2, 10, 2, 1, 2, 133, 2, 0, 2, 5, 2, 1, 2, 7, 2, 0, 2, 8, 2, 2, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 8, 2, 2, 2, 0, 2, 0, 2, 0, csr_64, implicit-def $rsp, implicit-def $ssp
   ; CHECK:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
@@ -374,8 +374,8 @@ body:             |
 
     %20:gr32 = MOV32r0 implicit-def dead $eflags
     %74:gr32 = MOV32ri -1
-    %46:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @global, $noreg :: (load 8 from got)
-    %51:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @global.1, $noreg :: (load 8 from got)
+    %46:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @global, $noreg :: (load (s64) from got)
+    %51:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @global.1, $noreg :: (load (s64) from got)
 
   bb.1.bb1:
     successors: %bb.9(0x40000000), %bb.2(0x40000000)
@@ -415,7 +415,7 @@ body:             |
   bb.4.bb17:
     successors: %bb.5(0x80000000), %bb.8(0x00000000)
 
-    %36:gr32 = MOV32rm undef %35:gr64, 1, $noreg, 0, $noreg :: (load unordered 4 from `i32 addrspace(1)* undef`, addrspace 1)
+    %36:gr32 = MOV32rm undef %35:gr64, 1, $noreg, 0, $noreg :: (load unordered (s32) from `i32 addrspace(1)* undef`, addrspace 1)
     %36:gr32 = AND32ri %36, 33554431, implicit-def dead $eflags
     EH_LABEL <mcsymbol .Ltmp0>
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
@@ -428,7 +428,7 @@ body:             |
   bb.5.bb21:
     successors: %bb.9(0x7c000000), %bb.6(0x04000000)
 
-    %44:gr64 = MOV64rm %46, 1, $noreg, 0, $noreg :: (dereferenceable load unordered 8 from @global)
+    %44:gr64 = MOV64rm %46, 1, $noreg, 0, $noreg :: (dereferenceable load unordered (s64) from @global)
     %44:gr64 = NOT64r %44
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     dead %44:gr64, %31:gr64 = STATEPOINT 2, 5, 1, undef %50:gr64, undef $rdi, 2, 0, 2, 0, 2, 27, 2, 0, 2, 2, 2, 0, 2, 0, 2, 0, 2, 1, 2, 0, 2, 7, 2, 0, 2, 10, 2, 1, 2, 83, 2, 0, 2, 5, 2, 1, 2, 0, %31, 2, 7, 2, 0, 2, 8, 2, 2, 2, 7, 2, 0, 2, 7, 2, 0, 2, 8, 2, 2, 2, 2, %44(tied-def 0), %31(tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp
@@ -440,8 +440,8 @@ body:             |
   bb.6.bb33.preheader:
     successors: %bb.7(0x80000000)
 
-    %64:gr64 = MOV64rm %51, 1, $noreg, 0, $noreg :: (dereferenceable load unordered 8 from @global.1)
-    %65:gr32 = MOV32rm $noreg, 1, $noreg, 660, $gs :: (load 4 from `i32 addrspace(256)* inttoptr (i64 660 to i32 addrspace(256)*)`, addrspace 256)
+    %64:gr64 = MOV64rm %51, 1, $noreg, 0, $noreg :: (dereferenceable load unordered (s64) from @global.1)
+    %65:gr32 = MOV32rm $noreg, 1, $noreg, 660, $gs :: (load (s32) from `i32 addrspace(256)* inttoptr (i64 660 to i32 addrspace(256)*)`, addrspace 256)
     undef %53.sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags
     %64:gr64 = NOT64r %64
     %65:gr32 = OR32ri %65, 268435456, implicit-def dead $eflags
@@ -452,17 +452,17 @@ body:             |
     successors: %bb.7(0x80000000)
 
     %81:gr64_with_sub_8bit = nuw nsw INC64r %81, implicit-def dead $eflags
-    %63:gr64 = MOV64rm undef %59:gr64, 1, $noreg, 0, $noreg :: (load unordered 8 from `i8 addrspace(1)* addrspace(1)* undef`, addrspace 1)
+    %63:gr64 = MOV64rm undef %59:gr64, 1, $noreg, 0, $noreg :: (load unordered (s64) from `i8 addrspace(1)* addrspace(1)* undef`, addrspace 1)
     %63:gr64 = NOT64r %63
     CMP64rr %63, %31, implicit-def $eflags
     %63:gr64 = CMOV64rr %63, %53, 4, implicit killed $eflags
     INLINEASM &"lock btsq $0,($1)", 1 /* sideeffect attdialect */, 4325385 /* reguse:GR64 */, %53, 4325385 /* reguse:GR64 */, undef %56:gr64, 12 /* clobber */, implicit-def dead early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def dead early-clobber $eflags
-    LCMPXCHG32 undef %67:gr64, 1, $noreg, 0, $noreg, %65, implicit-def dead $eax, implicit-def dead $eflags, implicit undef $eax :: (load store acquire monotonic 4 on `i32 addrspace(1)* undef`, addrspace 1)
+    LCMPXCHG32 undef %67:gr64, 1, $noreg, 0, $noreg, %65, implicit-def dead $eax, implicit-def dead $eflags, implicit undef $eax :: (load store acquire monotonic (s32) on `i32 addrspace(1)* undef`, addrspace 1)
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     $rdi = COPY %64
     CALL64pcrel32 target-flags(x86-plt) @wobble, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit-def $rsp, implicit-def $ssp
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    %71:gr64 = MOV64rm %46, 1, $noreg, 0, $noreg :: (dereferenceable load unordered 8 from @global)
+    %71:gr64 = MOV64rm %46, 1, $noreg, 0, $noreg :: (dereferenceable load unordered (s64) from @global)
     %71:gr64 = NOT64r %71
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     $rdi = COPY %71
@@ -483,7 +483,7 @@ body:             |
   bb.9.bb64:
     successors: %bb.1(0x80000000)
 
-    LCMPXCHG32 undef %76:gr64, 1, $noreg, 0, $noreg, %74, implicit-def dead $eax, implicit-def dead $eflags, implicit undef $eax :: (load store acquire monotonic 4 on `i32 addrspace(1)* undef`, addrspace 1)
+    LCMPXCHG32 undef %76:gr64, 1, $noreg, 0, $noreg, %74, implicit-def dead $eax, implicit-def dead $eflags, implicit undef $eax :: (load store acquire monotonic (s32) on `i32 addrspace(1)* undef`, addrspace 1)
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     STATEPOINT 2, 5, 1, undef %79:gr64, undef $rdi, 2, 0, 2, 0, 2, 27, 2, 0, 2, 2, 2, 0, 2, 0, 2, 0, 2, 1, 2, 0, 2, 7, 2, 0, 2, 10, 2, 1, 2, 133, 2, 0, 2, 5, 2, 1, 2, 7, 2, 0, 2, 8, 2, 2, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 8, 2, 2, 2, 0, 2, 0, 2, 0, csr_64, implicit-def $rsp, implicit-def $ssp
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp

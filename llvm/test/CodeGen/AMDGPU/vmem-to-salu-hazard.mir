@@ -340,6 +340,6 @@ body:             |
     $vgpr0 = IMPLICIT_DEF
     $vgpr1 = IMPLICIT_DEF
     $vgpr2 = IMPLICIT_DEF
-    $vgpr3 = GLOBAL_ATOMIC_ADD_RTN $vgpr0_vgpr1, $vgpr2, 0, 1, implicit $exec :: (load store syncscope("agent") seq_cst 4, addrspace 1)
+    $vgpr3 = GLOBAL_ATOMIC_ADD_RTN $vgpr0_vgpr1, $vgpr2, 0, 1, implicit $exec :: (load store syncscope("agent") seq_cst (s32), addrspace 1)
     $exec_lo = S_MOV_B32 -1
 ...

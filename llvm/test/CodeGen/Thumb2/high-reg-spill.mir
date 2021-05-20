@@ -37,11 +37,11 @@ stack:
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: constraint_h
-    ; CHECK: renamable $r0 = tLDRspi %stack.0.i, 0, 14 /* CC::al */, $noreg :: (dereferenceable load 4 from %ir.i)
+    ; CHECK: renamable $r0 = tLDRspi %stack.0.i, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from %ir.i)
     ; CHECK: renamable $r8 = COPY killed renamable $r0
     ; CHECK: INLINEASM &"@ $0", 1 /* sideeffect attdialect */, 589833 /* reguse:GPRnopc */, killed renamable $r8, 12 /* clobber */, implicit-def dead early-clobber $r12
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg
-    %1:tgpr = tLDRspi %stack.0.i, 0, 14, $noreg :: (dereferenceable load 4 from %ir.i)
+    %1:tgpr = tLDRspi %stack.0.i, 0, 14, $noreg :: (dereferenceable load (s32) from %ir.i)
     %0:hgpr = COPY %1
     INLINEASM &"@ $0", 1, 589833, %0, 12, implicit-def early-clobber $r12
     tBX_RET 14, $noreg

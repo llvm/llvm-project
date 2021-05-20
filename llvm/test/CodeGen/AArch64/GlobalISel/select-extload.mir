@@ -20,10 +20,10 @@ body:             |
 
     ; CHECK-LABEL: name: aextload_s32_from_s16
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[T0:%[0-9]+]]:gpr32 = LDRHHui [[COPY]], 0 :: (load 2 from %ir.addr)
+    ; CHECK: [[T0:%[0-9]+]]:gpr32 = LDRHHui [[COPY]], 0 :: (load (s16) from %ir.addr)
     ; CHECK: $w0 = COPY [[T0]]
     %0:gpr(p0) = COPY $x0
-    %1:gpr(s32) = G_LOAD %0 :: (load 2 from %ir.addr)
+    %1:gpr(s32) = G_LOAD %0 :: (load (s16) from %ir.addr)
     $w0 = COPY %1(s32)
 ...
 
@@ -38,11 +38,11 @@ body:             |
 
     ; CHECK-LABEL: name: aextload_s32_from_s16
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[T0:%[0-9]+]]:gpr32 = LDRHHui [[COPY]], 0 :: (load 2 from %ir.addr)
+    ; CHECK: [[T0:%[0-9]+]]:gpr32 = LDRHHui [[COPY]], 0 :: (load (s16) from %ir.addr)
     ; CHECK: [[T1:%[0-9]+]]:gpr32all = COPY [[T0]]
     ; CHECK: $w0 = COPY [[T1]]
     %0:gpr(p0) = COPY $x0
-    %1:gpr(s16) = G_LOAD %0 :: (load 2 from %ir.addr)
+    %1:gpr(s16) = G_LOAD %0 :: (load (s16) from %ir.addr)
     %2:gpr(s32) = G_ANYEXT %1
     $w0 = COPY %2(s32)
 ...

@@ -30,16 +30,16 @@ body: |
 
     ; SI-LABEL: name: split_smrd_load_range
     ; SI: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; SI: [[LOAD:%[0-9]+]]:sgpr(<2 x s32>) = G_LOAD [[COPY]](p4) :: (load 8, addrspace 4)
+    ; SI: [[LOAD:%[0-9]+]]:sgpr(<2 x s32>) = G_LOAD [[COPY]](p4) :: (load (<2 x s32>), addrspace 4)
     ; SI: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 8
     ; SI: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; SI: [[LOAD1:%[0-9]+]]:sgpr(s32) = G_LOAD [[PTR_ADD]](p4) :: (load 4 from unknown-address + 8, align 8, addrspace 4)
+    ; SI: [[LOAD1:%[0-9]+]]:sgpr(s32) = G_LOAD [[PTR_ADD]](p4) :: (load (s32) from unknown-address + 8, align 8, addrspace 4)
     ; SI: [[DEF:%[0-9]+]]:sgpr(<3 x s32>) = G_IMPLICIT_DEF
     ; SI: [[INSERT:%[0-9]+]]:sgpr(<3 x s32>) = G_INSERT [[DEF]], [[LOAD]](<2 x s32>), 0
     ; SI: [[INSERT1:%[0-9]+]]:sgpr(<3 x s32>) = G_INSERT [[INSERT]], [[LOAD1]](s32), 64
     ; SI: $sgpr0_sgpr1_sgpr2 = COPY [[INSERT1]](<3 x s32>)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(<3 x s32>) = G_LOAD %0 :: (load 12, align 8, addrspace 4, !range !0)
+    %1:_(<3 x s32>) = G_LOAD %0 :: (load (<3 x s32>), align 8, addrspace 4, !range !0)
     $sgpr0_sgpr1_sgpr2 = COPY %1
 
 ...
@@ -53,16 +53,16 @@ body: |
 
     ; SI-LABEL: name: split_smrd_load_tbaa
     ; SI: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; SI: [[LOAD:%[0-9]+]]:sgpr(<2 x s32>) = G_LOAD [[COPY]](p4) :: (load 8, !tbaa !2, addrspace 4)
+    ; SI: [[LOAD:%[0-9]+]]:sgpr(<2 x s32>) = G_LOAD [[COPY]](p4) :: (load (<2 x s32>), !tbaa !2, addrspace 4)
     ; SI: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 8
     ; SI: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; SI: [[LOAD1:%[0-9]+]]:sgpr(s32) = G_LOAD [[PTR_ADD]](p4) :: (load 4 from unknown-address + 8, align 8, !tbaa !2, addrspace 4)
+    ; SI: [[LOAD1:%[0-9]+]]:sgpr(s32) = G_LOAD [[PTR_ADD]](p4) :: (load (s32) from unknown-address + 8, align 8, !tbaa !2, addrspace 4)
     ; SI: [[DEF:%[0-9]+]]:sgpr(<3 x s32>) = G_IMPLICIT_DEF
     ; SI: [[INSERT:%[0-9]+]]:sgpr(<3 x s32>) = G_INSERT [[DEF]], [[LOAD]](<2 x s32>), 0
     ; SI: [[INSERT1:%[0-9]+]]:sgpr(<3 x s32>) = G_INSERT [[INSERT]], [[LOAD1]](s32), 64
     ; SI: $sgpr0_sgpr1_sgpr2 = COPY [[INSERT1]](<3 x s32>)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(<3 x s32>) = G_LOAD %0 :: (load 12, align 8, addrspace 4, !tbaa !1)
+    %1:_(<3 x s32>) = G_LOAD %0 :: (load (<3 x s32>), align 8, addrspace 4, !tbaa !1)
     $sgpr0_sgpr1_sgpr2 = COPY %1
 
 ...

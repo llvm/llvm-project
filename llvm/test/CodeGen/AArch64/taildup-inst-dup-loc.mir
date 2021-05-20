@@ -20,7 +20,7 @@ body:             |
   ; CHECK:   B %bb.2
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.9(0x80000000)
-  ; CHECK:   [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[DEF3]], 0 :: (load 8 from `i64* undef`)
+  ; CHECK:   [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[DEF3]], 0 :: (load (s64) from `i64* undef`)
   ; CHECK:   B %bb.9
   ; CHECK: bb.2:
   ; CHECK:   successors: %bb.3(0x40000000), %bb.4(0x40000000)
@@ -71,7 +71,7 @@ body:             |
   bb.2:
     successors: %bb.8(0x80000000)
 
-    %8:gpr64 = LDRXui %9, 0 :: (load 8 from `i64* undef`)
+    %8:gpr64 = LDRXui %9, 0 :: (load (s64) from `i64* undef`)
     B %bb.8
 
   bb.3:

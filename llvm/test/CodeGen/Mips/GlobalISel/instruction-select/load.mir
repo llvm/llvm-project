@@ -21,17 +21,17 @@ body:             |
     ; MIPS32FP32-LABEL: name: load_i32
     ; MIPS32FP32: liveins: $a0
     ; MIPS32FP32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; MIPS32FP32: [[LW:%[0-9]+]]:gpr32 = LW [[COPY]], 0 :: (load 4 from %ir.ptr)
+    ; MIPS32FP32: [[LW:%[0-9]+]]:gpr32 = LW [[COPY]], 0 :: (load (s32) from %ir.ptr)
     ; MIPS32FP32: $v0 = COPY [[LW]]
     ; MIPS32FP32: RetRA implicit $v0
     ; MIPS32FP64-LABEL: name: load_i32
     ; MIPS32FP64: liveins: $a0
     ; MIPS32FP64: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; MIPS32FP64: [[LW:%[0-9]+]]:gpr32 = LW [[COPY]], 0 :: (load 4 from %ir.ptr)
+    ; MIPS32FP64: [[LW:%[0-9]+]]:gpr32 = LW [[COPY]], 0 :: (load (s32) from %ir.ptr)
     ; MIPS32FP64: $v0 = COPY [[LW]]
     ; MIPS32FP64: RetRA implicit $v0
     %0:gprb(p0) = COPY $a0
-    %1:gprb(s32) = G_LOAD %0(p0) :: (load 4 from %ir.ptr)
+    %1:gprb(s32) = G_LOAD %0(p0) :: (load (s32) from %ir.ptr)
     $v0 = COPY %1(s32)
     RetRA implicit $v0
 
@@ -49,17 +49,17 @@ body:             |
     ; MIPS32FP32-LABEL: name: load_float
     ; MIPS32FP32: liveins: $a0
     ; MIPS32FP32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; MIPS32FP32: [[LWC1_:%[0-9]+]]:fgr32 = LWC1 [[COPY]], 0 :: (load 4 from %ir.ptr)
+    ; MIPS32FP32: [[LWC1_:%[0-9]+]]:fgr32 = LWC1 [[COPY]], 0 :: (load (s32) from %ir.ptr)
     ; MIPS32FP32: $f0 = COPY [[LWC1_]]
     ; MIPS32FP32: RetRA implicit $f0
     ; MIPS32FP64-LABEL: name: load_float
     ; MIPS32FP64: liveins: $a0
     ; MIPS32FP64: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; MIPS32FP64: [[LWC1_:%[0-9]+]]:fgr32 = LWC1 [[COPY]], 0 :: (load 4 from %ir.ptr)
+    ; MIPS32FP64: [[LWC1_:%[0-9]+]]:fgr32 = LWC1 [[COPY]], 0 :: (load (s32) from %ir.ptr)
     ; MIPS32FP64: $f0 = COPY [[LWC1_]]
     ; MIPS32FP64: RetRA implicit $f0
     %0:gprb(p0) = COPY $a0
-    %1:fprb(s32) = G_LOAD %0(p0) :: (load 4 from %ir.ptr)
+    %1:fprb(s32) = G_LOAD %0(p0) :: (load (s32) from %ir.ptr)
     $f0 = COPY %1(s32)
     RetRA implicit $f0
 
@@ -77,17 +77,17 @@ body:             |
     ; MIPS32FP32-LABEL: name: load_double
     ; MIPS32FP32: liveins: $a0
     ; MIPS32FP32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; MIPS32FP32: [[LDC1_:%[0-9]+]]:afgr64 = LDC1 [[COPY]], 0 :: (load 8 from %ir.ptr)
+    ; MIPS32FP32: [[LDC1_:%[0-9]+]]:afgr64 = LDC1 [[COPY]], 0 :: (load (s64) from %ir.ptr)
     ; MIPS32FP32: $d0 = COPY [[LDC1_]]
     ; MIPS32FP32: RetRA implicit $d0
     ; MIPS32FP64-LABEL: name: load_double
     ; MIPS32FP64: liveins: $a0
     ; MIPS32FP64: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; MIPS32FP64: [[LDC164_:%[0-9]+]]:fgr64 = LDC164 [[COPY]], 0 :: (load 8 from %ir.ptr)
+    ; MIPS32FP64: [[LDC164_:%[0-9]+]]:fgr64 = LDC164 [[COPY]], 0 :: (load (s64) from %ir.ptr)
     ; MIPS32FP64: $d0 = COPY [[LDC164_]]
     ; MIPS32FP64: RetRA implicit $d0
     %0:gprb(p0) = COPY $a0
-    %1:fprb(s64) = G_LOAD %0(p0) :: (load 8 from %ir.ptr)
+    %1:fprb(s64) = G_LOAD %0(p0) :: (load (s64) from %ir.ptr)
     $d0 = COPY %1(s64)
     RetRA implicit $d0
 

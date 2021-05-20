@@ -11,7 +11,7 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK:   [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-  ; CHECK:   [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 0 :: (load 1)
+  ; CHECK:   [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 0 :: (load (s8))
   ; CHECK:   TBZW [[LDRBBui]], 0, %bb.2
   ; CHECK: bb.1:
   ; CHECK:   RET_ReallyLR
@@ -22,7 +22,7 @@ body:             |
     liveins: $x0
 
     %0:gpr(p0) = COPY $x0
-    %8:gpr(s8) = G_LOAD %0(p0) :: (load 1)
+    %8:gpr(s8) = G_LOAD %0(p0) :: (load (s8))
     %4:gpr(s32) = G_ANYEXT %8(s8)
     %5:gpr(s32) = G_CONSTANT i32 1
     %6:gpr(s32) = G_XOR %4, %5
@@ -47,7 +47,7 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK:   [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-  ; CHECK:   [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 0 :: (load 1)
+  ; CHECK:   [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 0 :: (load (s8))
   ; CHECK:   TBZW [[LDRBBui]], 0, %bb.2
   ; CHECK: bb.1:
   ; CHECK:   RET_ReallyLR
@@ -61,7 +61,7 @@ body:             |
     liveins: $x0
 
     %0:gpr(p0) = COPY $x0
-    %8:gpr(s8) = G_LOAD %0(p0) :: (load 1)
+    %8:gpr(s8) = G_LOAD %0(p0) :: (load (s8))
     %4:gpr(s64) = G_ANYEXT %8(s8)
     %5:gpr(s64) = G_CONSTANT i64 1
     %6:gpr(s64) = G_XOR %4, %5

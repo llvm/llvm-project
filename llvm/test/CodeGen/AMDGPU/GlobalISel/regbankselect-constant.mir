@@ -12,10 +12,10 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
     ; CHECK: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; CHECK: G_STORE [[COPY1]](s32), [[COPY]](p1) :: (store 4)
+    ; CHECK: G_STORE [[COPY1]](s32), [[COPY]](p1) :: (store (s32))
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_CONSTANT i32 1
-    G_STORE %1, %0 :: (store 4)
+    G_STORE %1, %0 :: (store (s32))
 
 ...
 

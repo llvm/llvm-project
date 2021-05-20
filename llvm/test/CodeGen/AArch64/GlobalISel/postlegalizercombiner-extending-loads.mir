@@ -22,10 +22,10 @@ body: |
     liveins: $x0
     ; CHECK-LABEL: name: test_zeroext
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load 1 from %ir.addr)
+    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8) from %ir.addr)
     ; CHECK: $w0 = COPY [[ZEXTLOAD]](s32)
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
+    %1:_(s8) = G_LOAD %0 :: (load (s8) from %ir.addr)
     %2:_(s32) = G_ZEXT %1
     $w0 = COPY %2
 ...
@@ -40,11 +40,11 @@ body: |
     ; because an anyexting load like s64 = G_LOAD %p (load 4) isn't legal.
     ; CHECK-LABEL: name: test_no_anyext
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load 4 from %ir.addr)
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.addr)
     ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s32)
     ; CHECK: $x0 = COPY [[ANYEXT]](s64)
     %0:_(p0) = COPY $x0
-    %1:_(s32) = G_LOAD %0 :: (load 4 from %ir.addr)
+    %1:_(s32) = G_LOAD %0 :: (load (s32) from %ir.addr)
     %2:_(s64) = G_ANYEXT %1
     $x0 = COPY %2
 ...

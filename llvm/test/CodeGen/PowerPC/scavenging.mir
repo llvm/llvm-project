@@ -153,11 +153,11 @@ body: |
 # CHECK-LABEL: name: spill_at_begin
 # CHECK: bb.0:
 # CHECK: liveins:
-# CHECK: STD killed [[REG:\$x[0-9]+]]{{.*}}(store 8 into %stack.{{[0-9]+}})
+# CHECK: STD killed [[REG:\$x[0-9]+]]{{.*}}(store (s64) into %stack.{{[0-9]+}})
 # CHECK: [[REG]] = LIS8 0
 # CHECK: [[REG]] = ORI8 killed [[REG]], 48
 # CHECK: NOP implicit killed [[REG]]
-# CHECK: [[REG]] = LD{{.*}}(load 8 from %stack.{{[0-9]+}})
+# CHECK: [[REG]] = LD{{.*}}(load (s64) from %stack.{{[0-9]+}})
 name: spill_at_begin
 tracksRegLiveness: true
 stack:

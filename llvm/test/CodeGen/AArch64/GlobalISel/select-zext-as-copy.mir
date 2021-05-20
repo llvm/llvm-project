@@ -21,13 +21,13 @@ body:             |
 
     ; CHECK-LABEL: name: zext_of_load_copy
     ; CHECK: [[DEF:%[0-9]+]]:gpr64common = IMPLICIT_DEF
-    ; CHECK: [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[DEF]], 0 :: (load 1)
+    ; CHECK: [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[DEF]], 0 :: (load (s8))
     ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, [[LDRBBui]], %subreg.sub_32
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY [[SUBREG_TO_REG]]
     ; CHECK: [[ANDXri:%[0-9]+]]:gpr64sp = ANDXri [[COPY]], 4096
     ; CHECK: $x0 = COPY [[ANDXri]]
     %3:gpr(p0) = G_IMPLICIT_DEF
-    %2:gpr(s8) = G_LOAD %3(p0) :: (load 1)
+    %2:gpr(s8) = G_LOAD %3(p0) :: (load (s8))
     %4:gpr(s64) = G_ZEXT %2(s8)
     %5:gpr(s64) = G_CONSTANT i64 1
     %6:gpr(s64) = G_AND %4, %5

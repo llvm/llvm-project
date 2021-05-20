@@ -34,12 +34,12 @@ body:             |
     ; CHECK: liveins: $q0, $x0
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: STRQui [[COPY]], [[COPY1]], 0 :: (store 16 into %ir.ptr)
+    ; CHECK: STRQui [[COPY]], [[COPY1]], 0 :: (store (<2 x s64>) into %ir.ptr)
     ; CHECK: RET_ReallyLR
     %0:fpr(<2 x p0>) = COPY $q0
     %1:gpr(p0) = COPY $x0
     %2:fpr(<2 x s64>) = G_BITCAST %0(<2 x p0>)
-    G_STORE %2(<2 x s64>), %1(p0) :: (store 16 into %ir.ptr)
+    G_STORE %2(<2 x s64>), %1(p0) :: (store (<2 x s64>) into %ir.ptr)
     RET_ReallyLR
 
 ...
@@ -61,11 +61,11 @@ body:             |
     ; CHECK-LABEL: name: load_v2p0
     ; CHECK: liveins: $x0
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY]], 0 :: (load 16 from %ir.ptr)
+    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY]], 0 :: (load (<2 x s64>) from %ir.ptr)
     ; CHECK: $q0 = COPY [[LDRQui]]
     ; CHECK: RET_ReallyLR implicit $q0
     %0:gpr(p0) = COPY $x0
-    %2:fpr(<2 x s64>) = G_LOAD %0(p0) :: (load 16 from %ir.ptr)
+    %2:fpr(<2 x s64>) = G_LOAD %0(p0) :: (load (<2 x s64>) from %ir.ptr)
     %1:fpr(<2 x p0>) = G_BITCAST %2(<2 x s64>)
     $q0 = COPY %1(<2 x p0>)
     RET_ReallyLR implicit $q0

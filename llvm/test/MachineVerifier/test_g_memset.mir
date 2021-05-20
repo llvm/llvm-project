@@ -18,16 +18,16 @@ body:             |
     G_MEMSET %0, %1, %2, 0
 
     ; CHECK: *** Bad machine code: memset memory operand must be a store ***
-    G_MEMSET %0, %1, %2, 0 :: (load 4)
+    G_MEMSET %0, %1, %2, 0 :: (load (s32))
 
     ; CHECK: *** Bad machine code: Missing mayLoad flag ***
     ; CHECK: *** Bad machine code: memset memory operand must be a store ***
-    G_MEMSET %0, %1, %2, 0 :: (load store 4)
+    G_MEMSET %0, %1, %2, 0 :: (load store (s32))
 
     ; CHECK: *** Bad machine code: inconsistent memset address space ***
-    G_MEMSET %0, %1, %2, 0 :: (store 4, addrspace 1)
+    G_MEMSET %0, %1, %2, 0 :: (store (s32), addrspace 1)
 
    ; CHECK: *** Bad machine code: memset operand must be a pointer ***
-    G_MEMSET %1, %1, %2, 0 :: (store 4)
+    G_MEMSET %1, %1, %2, 0 :: (store (s32))
 
 ...

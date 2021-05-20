@@ -33,20 +33,20 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: test_vaarg
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[COPY]](p0), debug-location !DILocation(line: 4, column: 3, scope: {{.*}}) :: (load 8)
+    ; CHECK: [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[COPY]](p0), debug-location !DILocation(line: 4, column: 3, scope: {{.*}}) :: (load (p0))
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
     ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD]], [[C]](s64), debug-location !DILocation(line: 4, column: 3, scope: {{.*}})
-    ; CHECK: G_STORE [[PTR_ADD]](p0), [[COPY]](p0), debug-location !DILocation(line: 4, column: 3, scope: {{.*}}) :: (store 8)
-    ; CHECK: [[LOAD1:%[0-9]+]]:_(p0) = G_LOAD [[COPY]](p0), debug-location !DILocation(line: 5, column: 1, scope: {{.*}}) :: (load 8)
+    ; CHECK: G_STORE [[PTR_ADD]](p0), [[COPY]](p0), debug-location !DILocation(line: 4, column: 3, scope: {{.*}}) :: (store (p0))
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(p0) = G_LOAD [[COPY]](p0), debug-location !DILocation(line: 5, column: 1, scope: {{.*}}) :: (load (p0))
     ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD1]], [[C]](s64), debug-location !DILocation(line: 5, column: 1, scope: {{.*}})
-    ; CHECK: G_STORE [[PTR_ADD1]](p0), [[COPY]](p0), debug-location !DILocation(line: 5, column: 1, scope: {{.*}}) :: (store 8)
-    ; CHECK: [[LOAD2:%[0-9]+]]:_(p0) = G_LOAD [[COPY]](p0), debug-location !DILocation(line: 4, column: 3, scope: {{.*}}) :: (load 8)
+    ; CHECK: G_STORE [[PTR_ADD1]](p0), [[COPY]](p0), debug-location !DILocation(line: 5, column: 1, scope: {{.*}}) :: (store (p0))
+    ; CHECK: [[LOAD2:%[0-9]+]]:_(p0) = G_LOAD [[COPY]](p0), debug-location !DILocation(line: 4, column: 3, scope: {{.*}}) :: (load (p0))
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 15
     ; CHECK: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD2]], [[C1]](s64), debug-location !DILocation(line: 4, column: 3, scope: {{.*}})
     ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -16
     ; CHECK: [[PTRMASK:%[0-9]+]]:_(p0) = G_PTRMASK [[PTR_ADD2]], [[C2]](s64), debug-location !DILocation(line: 4, column: 3, scope: {{.*}})
     ; CHECK: [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTRMASK]], [[C]](s64), debug-location !DILocation(line: 4, column: 3, scope: {{.*}})
-    ; CHECK: G_STORE [[PTR_ADD3]](p0), [[COPY]](p0), debug-location !DILocation(line: 4, column: 3, scope: {{.*}}) :: (store 8)
+    ; CHECK: G_STORE [[PTR_ADD3]](p0), [[COPY]](p0), debug-location !DILocation(line: 4, column: 3, scope: {{.*}}) :: (store (p0))
     %0:_(p0) = COPY $x0
 
     %1:_(s8) = G_VAARG %0(p0), 1, debug-location !11

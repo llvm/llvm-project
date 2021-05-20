@@ -29,8 +29,8 @@ body: |
     ; CHECK: liveins: $x10, $x11, $x1
     ; CHECK: $x2 = frame-setup ADDI $x2, -2032
     ; CHECK: CFI_INSTRUCTION def_cfa_offset 2032
-    ; CHECK: SD killed $x1, $x2, 2024 :: (store 8 into %stack.3)
-    ; CHECK: SD killed $x8, $x2, 2016 :: (store 8 into %stack.4)
+    ; CHECK: SD killed $x1, $x2, 2024 :: (store (s64) into %stack.3)
+    ; CHECK: SD killed $x8, $x2, 2016 :: (store (s64) into %stack.4)
     ; CHECK: CFI_INSTRUCTION offset $x1, -8
     ; CHECK: CFI_INSTRUCTION offset $x8, -16
     ; CHECK: $x8 = frame-setup ADDI $x2, 2032
@@ -49,8 +49,8 @@ body: |
     ; CHECK: $x10 = PseudoReadVLENB
     ; CHECK: $x2 = ADD $x2, killed $x10
     ; CHECK: $x2 = frame-destroy ADDI $x2, 240
-    ; CHECK: $x8 = LD $x2, 2016 :: (load 8 from %stack.4)
-    ; CHECK: $x1 = LD $x2, 2024 :: (load 8 from %stack.3)
+    ; CHECK: $x8 = LD $x2, 2016 :: (load (s64) from %stack.4)
+    ; CHECK: $x1 = LD $x2, 2024 :: (load (s64) from %stack.3)
     ; CHECK: $x2 = frame-destroy ADDI $x2, 2032
     ; CHECK: PseudoRET
     %1:gpr = COPY $x11

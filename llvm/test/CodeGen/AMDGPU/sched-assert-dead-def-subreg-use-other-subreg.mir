@@ -27,7 +27,7 @@ body:             |
   ; CHECK:   [[COPY:%[0-9]+]]:vreg_512 = COPY %0
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   BUFFER_STORE_DWORD_OFFEN %0.sub3, undef %5:vgpr_32, $sgpr24_sgpr25_sgpr26_sgpr27, $sgpr32, 0, 0, 0, 0, implicit $exec :: (store 4, align 8, addrspace 5)
+  ; CHECK:   BUFFER_STORE_DWORD_OFFEN %0.sub3, undef %5:vgpr_32, $sgpr24_sgpr25_sgpr26_sgpr27, $sgpr32, 0, 0, 0, 0, implicit $exec :: (store (s32), align 8, addrspace 5)
   ; CHECK:   dead %6:vgpr_32 = DS_READ_B32_gfx9 undef %7:vgpr_32, 0, 0, implicit $exec
   ; CHECK:   dead %8:vreg_64 = DS_READ_B64_gfx9 [[V_MOV_B32_e32_]], 0, 0, implicit $exec
   ; CHECK:   dead %9:vreg_128 = DS_READ_B128_gfx9 [[V_ADD_U32_e32_]], 0, 0, implicit $exec
@@ -51,7 +51,7 @@ body:             |
     %4:vreg_512 = COPY %0
 
   bb.1:
-    BUFFER_STORE_DWORD_OFFEN %0.sub3, undef %5:vgpr_32, $sgpr24_sgpr25_sgpr26_sgpr27, $sgpr32, 0, 0, 0, 0, implicit $exec :: (store 4, align 8, addrspace 5)
+    BUFFER_STORE_DWORD_OFFEN %0.sub3, undef %5:vgpr_32, $sgpr24_sgpr25_sgpr26_sgpr27, $sgpr32, 0, 0, 0, 0, implicit $exec :: (store (s32), align 8, addrspace 5)
     %6:vgpr_32 = DS_READ_B32_gfx9 undef %7:vgpr_32, 0, 0, implicit $exec
     %8:vreg_64 = DS_READ_B64_gfx9 %1, 0, 0, implicit $exec
     %9:vreg_128 = DS_READ_B128_gfx9 %2, 0, 0, implicit $exec

@@ -16,7 +16,7 @@ body:             |
   bb.0:
     successors: %bb.0(0x20000000)
     liveins: $r2
-    renamable $r3 = LWZtoc %jump-table.0, $r2 :: (load 4 from got)
+    renamable $r3 = LWZtoc %jump-table.0, $r2 :: (load (s32) from got)
     BLR implicit $lr, implicit $rm, implicit killed $r3
 ...
 

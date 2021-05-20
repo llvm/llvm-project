@@ -83,8 +83,8 @@ body:             |
   ; CHECK:   [[PHI3:%[0-9]+]]:gpr = PHI [[COPY2]], %bb.3, %19, %bb.4
   ; CHECK:   [[PHI4:%[0-9]+]]:gpr = PHI [[COPY1]], %bb.3, %21, %bb.4
   ; CHECK:   [[PHI5:%[0-9]+]]:gprlr = PHI [[t2DoLoopStart]], %bb.3, %26, %bb.4
-  ; CHECK:   [[t2LDRB_POST:%[0-9]+]]:rgpr, [[t2LDRB_POST1:%[0-9]+]]:gpr = t2LDRB_POST [[PHI3]], 1, 14 /* CC::al */, $noreg :: (load 1 from %ir.x.addr.08)
-  ; CHECK:   early-clobber %25:gprnopc = t2STRB_POST killed [[t2LDRB_POST]], [[PHI4]], 1, 14 /* CC::al */, $noreg :: (store 1 into %ir.y.addr.07)
+  ; CHECK:   [[t2LDRB_POST:%[0-9]+]]:rgpr, [[t2LDRB_POST1:%[0-9]+]]:gpr = t2LDRB_POST [[PHI3]], 1, 14 /* CC::al */, $noreg :: (load (s8) from %ir.x.addr.08)
+  ; CHECK:   early-clobber %25:gprnopc = t2STRB_POST killed [[t2LDRB_POST]], [[PHI4]], 1, 14 /* CC::al */, $noreg :: (store (s8) into %ir.y.addr.07)
   ; CHECK:   [[COPY3:%[0-9]+]]:gpr = COPY %25
   ; CHECK:   [[t2LoopEndDec1:%[0-9]+]]:gprlr = t2LoopEndDec [[PHI5]], %bb.4, implicit-def $cpsr
   ; CHECK:   t2B %bb.5, 14 /* CC::al */, $noreg
@@ -137,8 +137,8 @@ body:             |
     %1:gpr = PHI %7, %bb.5, %4, %bb.2
     %2:gpr = PHI %8, %bb.5, %5, %bb.2
     %3:gprlr = PHI %0, %bb.5, %6, %bb.2
-    %13:rgpr, %4:gpr = t2LDRB_POST %1, 1, 14 /* CC::al */, $noreg :: (load 1 from %ir.x.addr.08)
-    early-clobber %14:gprnopc = t2STRB_POST killed %13, %2, 1, 14 /* CC::al */, $noreg :: (store 1 into %ir.y.addr.07)
+    %13:rgpr, %4:gpr = t2LDRB_POST %1, 1, 14 /* CC::al */, $noreg :: (load (s8) from %ir.x.addr.08)
+    early-clobber %14:gprnopc = t2STRB_POST killed %13, %2, 1, 14 /* CC::al */, $noreg :: (store (s8) into %ir.y.addr.07)
     %15:gprlr = t2LoopDec %3, 1
     %5:gpr = COPY %14
     %6:gpr = COPY %15

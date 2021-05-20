@@ -46,4 +46,4 @@ body:             |
     liveins: $sgpr4, $sgpr5, $sgpr9, $sgpr22, $vgpr0, $sgpr6_sgpr7
 
     renamable $vgpr2 = IMPLICIT_DEF
-    SI_SPILL_V32_SAVE killed $vgpr2, %stack.0, $sgpr32, 0, implicit $exec :: (store 4 into %stack.0, addrspace 5)
+    SI_SPILL_V32_SAVE killed $vgpr2, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)

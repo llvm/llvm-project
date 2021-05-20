@@ -44,11 +44,11 @@ body:             |
     $x28 = COPY $xzr
     $fp = COPY $xzr
     $lr = COPY $xzr
-    ST1Fourv1d killed $d16_d17_d18_d19, %stack.0 :: (store 32 into %stack.0, align 8)
-    ; CHECK:  STRXui killed $[[SCAVREG:x[0-9]+|fp|lr]], $sp, [[SPOFFSET:[0-9]+]] :: (store 8 into %stack.1)
+    ST1Fourv1d killed $d16_d17_d18_d19, %stack.0 :: (store (s256) into %stack.0, align 8)
+    ; CHECK:  STRXui killed $[[SCAVREG:x[0-9]+|fp|lr]], $sp, [[SPOFFSET:[0-9]+]] :: (store (s64) into %stack.1)
     ; CHECK-NEXT:  $[[SCAVREG]] = ADDXri $sp, {{[0-9]+}}, 0
-    ; CHECK-NEXT:  ST1Fourv1d killed $d16_d17_d18_d19, killed $[[SCAVREG]] :: (store 32 into %stack.0, align 8)
-    ; CHECK-NEXT:  $[[SCAVREG]] = LDRXui $sp, [[SPOFFSET]] :: (load 8 from %stack.1)
+    ; CHECK-NEXT:  ST1Fourv1d killed $d16_d17_d18_d19, killed $[[SCAVREG]] :: (store (s256) into %stack.0, align 8)
+    ; CHECK-NEXT:  $[[SCAVREG]] = LDRXui $sp, [[SPOFFSET]] :: (load (s64) from %stack.1)
 
     HINT 0, implicit $x0
     HINT 0, implicit $x1

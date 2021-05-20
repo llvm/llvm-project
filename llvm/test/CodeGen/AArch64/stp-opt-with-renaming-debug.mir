@@ -20,12 +20,12 @@
 # CHECK-LABEL: name: test_dbg_value1
 # CHECK: bb.0:
 # CHECK-NEXT: liveins: $x0, $x1
-# CHECK:       $x10, renamable $x8 = LDPXi renamable $x0, 0 :: (load 8)
-# CHECK-NEXT:  renamable $x9 = LDRXui renamable $x0, 1 :: (load 8)
-# CHECK-NEXT:  STRXui renamable $x9, renamable $x0, 100 :: (store 8, align 4)
+# CHECK:       $x10, renamable $x8 = LDPXi renamable $x0, 0 :: (load (s64))
+# CHECK-NEXT:  renamable $x9 = LDRXui renamable $x0, 1 :: (load (s64))
+# CHECK-NEXT:  STRXui renamable $x9, renamable $x0, 100 :: (store (s64), align 4)
 # CHECK-NEXT:  DBG_VALUE $x9, $noreg
 # CHECK-NEXT:  renamable $x8 = ADDXrr $x8, $x8
-# CHECK-NEXT:  STPXi renamable $x8, killed $x10, renamable $x0, 10 :: (store 8, align 4)
+# CHECK-NEXT:  STPXi renamable $x8, killed $x10, renamable $x0, 10 :: (store (s64), align 4)
 # CHECK-NEXT:  RET undef $lr
 name:           test_dbg_value1
 alignment:       4
@@ -41,13 +41,13 @@ machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $x0, $x1
-    renamable $x9, renamable $x8 = LDPXi renamable $x0, 0 :: (load 8)
-    STRXui renamable killed $x9, renamable $x0, 11 :: (store 8, align 4)
-    renamable $x9 = LDRXui renamable $x0, 1 :: (load 8)
-    STRXui renamable $x9, renamable $x0, 100 :: (store 8, align 4)
+    renamable $x9, renamable $x8 = LDPXi renamable $x0, 0 :: (load (s64))
+    STRXui renamable killed $x9, renamable $x0, 11 :: (store (s64), align 4)
+    renamable $x9 = LDRXui renamable $x0, 1 :: (load (s64))
+    STRXui renamable $x9, renamable $x0, 100 :: (store (s64), align 4)
     DBG_VALUE $x9, $noreg, !7, !DIExpression(DW_OP_plus_uconst, 32), debug-location !9
     renamable $x8 = ADDXrr $x8, $x8
-    STRXui renamable $x8, renamable $x0, 10 :: (store 8, align 4)
+    STRXui renamable $x8, renamable $x0, 10 :: (store (s64), align 4)
     RET undef $lr
 
 ...
@@ -59,9 +59,9 @@ body:             |
 # CHECK:       $x8 = ORRXrs $xzr, $x0, 0
 # CHECK-NEXT:  renamable $x0 = nuw ADDXri $x0, 8, 0
 # CHECK-NEXT:  DBG_VALUE $x0, $noreg,
-# CHECK-NEXT:  STRXui killed renamable $x8, renamable $x19, 2 :: (store 8)
+# CHECK-NEXT:  STRXui killed renamable $x8, renamable $x19, 2 :: (store (s64))
 # CHECK-NEXT:  $x8 = ADDXrs renamable $x0, killed renamable $x20, 0
-# CHECK-NEXT:  STPXi $xzr, renamable $x8, renamable $x19, 0 :: (store 8)
+# CHECK-NEXT:  STPXi $xzr, renamable $x8, renamable $x19, 0 :: (store (s64))
 # CHECK-NEXT:  RET undef $lr, implicit $x0
 name:            test_dbg_value2
 alignment:       4
@@ -80,9 +80,9 @@ body:             |
     $x8 = ORRXrs $xzr, $x0, 0
     renamable $x0 = nuw ADDXri $x0, 8, 0
     DBG_VALUE $x0, $noreg, !7, !DIExpression(), debug-location !9
-    STRXui killed renamable $x8, renamable $x19, 2 :: (store 8)
+    STRXui killed renamable $x8, renamable $x19, 2 :: (store (s64))
     $x8 = ADDXrs renamable $x0, killed renamable $x20, 0
-    STRXui $xzr, renamable $x19, 0 :: (store 8)
-    STRXui killed renamable $x8, killed renamable $x19, 1 :: (store 8)
+    STRXui $xzr, renamable $x19, 0 :: (store (s64))
+    STRXui killed renamable $x8, killed renamable $x19, 1 :: (store (s64))
     RET undef $lr, implicit $x0
 ...

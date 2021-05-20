@@ -157,7 +157,7 @@ body:             |
     successors: %bb.2(0x26666665), %bb.5(0x5999999b)
     liveins: $lr, $r0, $r1, $r2, $r12
   
-    renamable $r3 = tLDRBi renamable $r0, 0, 14, $noreg :: (load 1 from %ir.lsr.iv1)
+    renamable $r3 = tLDRBi renamable $r0, 0, 14, $noreg :: (load (s8) from %ir.lsr.iv1)
     renamable $r4 = t2SUBri renamable $r3, 108, 14, $noreg, $noreg
     tCMPi8 renamable $r4, 4, 14, $noreg, implicit-def $cpsr
     tBcc %bb.2, 8, killed $cpsr
