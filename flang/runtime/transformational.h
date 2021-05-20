@@ -22,6 +22,13 @@
 #include "memory.h"
 
 namespace Fortran::runtime {
+
+// TODO: redo API, put under extern "C"
+OwningPtr<Descriptor> RTNAME(Reshape)(const Descriptor &source,
+    const Descriptor &shape, const Descriptor *pad = nullptr,
+    const Descriptor *order = nullptr, const char *sourceFile = nullptr,
+    int line = 0);
+
 extern "C" {
 
 void RTNAME(Cshift)(Descriptor &result, const Descriptor &source,
@@ -40,12 +47,6 @@ void RTNAME(EoshiftVector)(Descriptor &result, const Descriptor &source,
 void RTNAME(Pack)(Descriptor &result, const Descriptor &source,
     const Descriptor &mask, const Descriptor *vector = nullptr,
     const char *sourceFile = nullptr, int line = 0);
-
-// TODO: redo API
-OwningPtr<Descriptor> RTNAME(Reshape)(const Descriptor &source,
-    const Descriptor &shape, const Descriptor *pad = nullptr,
-    const Descriptor *order = nullptr, const char *sourceFile = nullptr,
-    int line = 0);
 
 void RTNAME(Spread)(Descriptor &result, const Descriptor &source, int dim,
     std::int64_t ncopies, const char *sourceFile = nullptr, int line = 0);
