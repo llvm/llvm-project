@@ -20,6 +20,9 @@
         - [`DIGlobalVariable`](#diglobalvariable)
         - [`DILocalVariable`](#dilocalvariable)
       - [`DIFragment`](#difragment)
+    - [`DICode`](#dicode)
+      - [`DILabel`](#dilabel)
+      - [`DIExprCode`](#diexprcode)
     - [`DICompositeType`](#dicompositetype)
     - [`DILifetime`](#dilifetime)
     - [`DICompileUnit`](#dicompileunit)
@@ -49,6 +52,7 @@
   - [Intrinsics](#intrinsics)
     - [`llvm.dbg.def`](#llvmdbgdef)
     - [`llvm.dbg.kill`](#llvmdbgkill)
+    - [`llvm.dbg.label`](#llvmdbglabel)
 - [Examples](#examples)
   - [Variable Located In An `alloca`](#variable-located-in-an-alloca)
   - [Variable Promoted To An SSA Register](#variable-promoted-to-an-ssa-register)
@@ -79,7 +83,7 @@
 
 # Introduction
 
-As described in the [DWARF Extensions For Heterogeneous Debugging][19] (the
+As described in the [DWARF Extensions For Heterogeneous Debugging][20] (the
 "DWARF extensions"), AMD has been working to support debugging of heterogeneous
 programs. This document describes changes to the LLVM representation of debug
 information (the "LLVM extensions") required to support the DWARF extensions.
@@ -150,7 +154,7 @@ only incremental changes to the existing approach.
 
 The original motivation for the LLVM extensions was to make the minimum required
 changes to the existing LLVM representation of debug information needed to
-support the [DWARF Extensions For Heterogeneous Debugging][19]. This involved an
+support the [DWARF Extensions For Heterogeneous Debugging][20]. This involved an
 evaluation of the existing debug information for machine locations in LLVM,
 which uncovered some hard-to-fix bugs rooted in the incidental complexity and
 inconsistency of LLVM's debug intrinsics and expressions.
@@ -233,7 +237,7 @@ usually trivial at the time the expression is created, but expensive to infer
 later. Factored expressions can result in more compact debug information by
 leveraging dynamic calling of DWARF procedures in DWARF 5, and we expect to be
 able to use factoring for other purposes, such as debug information for
-[divergent control flow][25]. It is possible to statically "flatten" this
+[divergent control flow][26]. It is possible to statically "flatten" this
 factored representation later, if required by the debug information format
 being emitted, or if the emitter determines it would be more profitable to do
 so.
@@ -295,7 +299,7 @@ Manual][10].
 
 The definitions of "location description", "single location description", and
 "location storage" are the ones from the section titled [DWARF Location
-Description][22] in the DWARF Extensions For Heterogeneous Debugging.
+Description][23] in the DWARF Extensions For Heterogeneous Debugging.
 
 A location description can consist of one or more single location descriptions.
 A single location description specifies a location storage and bit offset. A
@@ -309,7 +313,7 @@ description at the same instruction.
 ## LLVM Debug Information Expressions
 
 _[Note: LLVM expressions derive much of their semantics from the DWARF
-expressions described in the [AMDGPU Dwarf Expressions][20].]_
+expressions described in the [AMDGPU Dwarf Expressions][21].]_
 
 LLVM debug information expressions ("LLVM expressions") specify a typed
 location. _[Note: Unlike DWARF expressions, they cannot directly describe how to
@@ -330,7 +334,7 @@ well-formed or results in an evaluation error.
 ## LLVM Expression Evaluation Context
 
 An LLVM expression is evaluated in a context that includes the same context
-elements as described in [DWARF Expression Evaluation Context][23] with the
+elements as described in [DWARF Expression Evaluation Context][24] with the
 following exceptions.  The _current result kind_ is not applicable as all LLVM
 expressions are location descriptions.  The _current object_ and _initial stack_
 are not applicable as LLVM expressions have no implicit inputs.
@@ -407,10 +411,8 @@ Abstract node types cannot be created directly.
 
 ### `DIObject`
 
-A `DIObject` is an abstract metadata node.
-
-Represents the identity of a program object used to hold data. There are several
-kinds of program objects.
+A `DIObject` is an abstract metadata node that represents the identity of a
+program object used to hold data. There are several kinds of program objects.
 
 #### `DIVariable`
 
@@ -438,6 +440,10 @@ A `DILocalVariable` is a `DIVariable`, which represents the identity of a local
 variable. See [DILocalVariable][15].
 
 #### `DIFragment`
+
+```llvm
+distinct !DIFragment()
+```
 
 A `DIFragment` is a `DIObject`, which represents the identity of a location
 description that can be used as the piece of another location description.
@@ -470,6 +476,30 @@ compact debug information.]_
 _[Note: `DIFragment` replaces using `DW_OP_LLVM_fragment` in the current LLVM IR
 `DIExpression` operations. This simplifies updating expressions which now purely
 describe the location description.]_
+
+### `DICode`
+
+A `DICode` is an abstract metadata node that represents the identity of a
+program code location. There are several kinds of program code locations.
+
+#### `DILabel`
+
+A `DILabel` is a `DICode`, which represents the identity of a source language
+label. See [DILabel][19].
+
+#### `DIExprCode`
+
+```llvm
+distinct !DIExprCode()
+```
+
+A `DIExprCode` is a `DICode`, which represents a code location that can be
+referenced by the `argObjects` field of a `DILifetime` as an argument to its
+`location` field's `DIExpr`.
+
+_[Note: `DIExprCode` does not represent a source language label and so generates
+no debug information in itself. It is only used to allow a `DIExpr` to refer to
+a code location address.]_
 
 ### `DICompositeType`
 
@@ -564,9 +594,16 @@ description. If the `argObjects` field of a `DILifetime` references such a
 `DIObject` then the argument can be removed, and the `location` expression
 updated to use the `DIOpConstant` with an `undef` value.]_
 
+The location description of a `DICode` is a single implicit location description
+with a value that is the address of the start of the basic block that contain
+the `llvm.dbg.label` intrinsic that references it. If a `DICode` is not
+referenced by exactly one call to the `llvm.dbg.label` intrinsic, then the
+metadata is not well-formed. See [`llvm.dbg.label`](#llvmdbglabel).
+
 The optional `argObjects` field specifies a tuple of zero or more input
-`DIObject`s to the expression specified by the `location` field. Omitting the
-`argObjects` field is equivalent to specifying it to be the empty tuple.
+`DIObject`s or `DICode`s to the expression specified by the `location` field.
+Omitting the `argObjects` field is equivalent to specifying it to be the empty
+tuple.
 
 The required `location` field specifies the expression which evaluates to the
 location description of the lifetime segment.
@@ -596,14 +633,15 @@ the edges:
 - From each `DICompositeType` (termed root nodes) to the `DIFragment`s that are
   referenced by the optional `dataLocation`, `associated`, and `rank` fields
   (termed reachable `DIVariable`s).
-- From each reachable `DILifetime` to the `DIObject`s referenced by their
-  `argObjects` fields (termed reachable `DIObject`s).
+- From each reachable `DILifetime` to the `DIObject`s or `DICode`s referenced by
+  their `argObjects` fields (termed reachable `DIObject`s or reachable `DICode`s
+  respectively).
 - From each reachable `DIObject` to the `DILifetime`s that reference them
   (termed reachable `DILifetime`s).
 
-If the reachable lifetime graph has any cycles or if any `DILifetime` or
-`DIFragment` are not in the reachable lifetime graph, then the metadata is not
-well-formed.
+If the reachable lifetime graph has any cycles or if any `DILifetime`,
+`DIFragment`, or `DIExprCode` are not in the reachable lifetime graph, then the
+metadata is not well-formed.
 
 _[Note: In current debug information the `DILifetime` information is part of the
 debug intrinsics. A new lifetime for an object is defined by using a debug
@@ -633,8 +671,9 @@ non-source language program function. See [DISubprogram][18].
 A non-source language program function includes `DIFlagArtificial` in the
 `flags` field.
 
-All `DILocalVariable` local variables and `DILabel` labels of the function are
-required to be referenced by the `retainedNodes` field of the `DISubprogram`.
+All `DILocalVariable` local variables, `DILabel` labels, and `DIExprCode` code
+locations of the function are required to be referenced by the `retainedNodes`
+field of the `DISubprogram`.
 
 For all `DILifetime` computed lifetime segments that are part of the reachable
 lifetime graph:
@@ -806,7 +845,7 @@ DIOpArg(N:unsigned, T:type)
 { -> (L:T) }
 ```
 
-`L` is the location description of the `N`th zero-based input input `I` to the
+`L` is the location description of the `N`th zero-based input `I` to the
 expression.
 
 If there are fewer than `N + 1` inputs to the expression, then the expression is
@@ -856,12 +895,6 @@ description `IL`.
 Otherwise, `L` comprises one implicit location description `IL`. `IL` specifies
 implicit location storage `ILS` and offset 0. `ILS` has value `V` and size
 `bitsizeof(T)`.
-
-> TODO: Can `V` be a label? `blockaddr(func, label)` seems to be a way to get
-> the address of a label in a function. Or can there be a `DIOpLabel(T:type
-> F:function L:label)` operation? Using `DILabel` does not seem the best choice
-> as it is intended for source program labels that have names. How is a LLVM
-> function label associated with a `DILabel`?
 
 #### `DIOpConvert`
 
@@ -1122,7 +1155,7 @@ The intrinsics define the program location range over which the location
 description specified by a bounded lifetime segment of a `DILifetime` is active.
 They support defining a single or multiple locations for a source program
 variable. Multiple locations can be active at the same program location as
-supported by [DWARF location lists][21].
+supported by [DWARF location lists][22].
 
 ### `llvm.dbg.def`
 
@@ -1156,8 +1189,8 @@ DBG_DEF metadata, <value>
 void @llvm.dbg.kill(metadata)
 ```
 
-The first argument to `llvm.dbg.kill` is required to be a `DILifetime` and is
-the end of the lifetime being killed.
+The argument to `llvm.dbg.kill` is required to be a `DILifetime` and is the end
+of the lifetime being killed.
 
 Every call to the `llvm.dbg.kill` intrinsic is required to be reachable from a
 call to the `llvm.dbg.def` intrinsic which specifies the same `DILifetime`,
@@ -1168,6 +1201,23 @@ with the same meaning:
 
 ```llvm
 DBG_KILL metadata
+```
+
+### `llvm.dbg.label`
+
+```llvm
+void @llvm.dbg.label(metadata)
+```
+
+The argument to `llvm.dbg.label` is required to be a `DICode` and defines its
+address value to be the code address of the start of the basic block that
+contains it.
+
+The MC pseudo instruction equivalent is `DBG_LABEL` which has the same argument
+with the same meaning:
+
+```llvm
+DBG_LABEL metadata
 ```
 
 # Examples
@@ -2057,12 +2107,10 @@ The following provides an example using pseudo LLVM MIR.
   lex_end:
 
 ;; Labels
-; TODO: Allow DILabel to be artificial (add flags)
-; TODO: If these coincide with actual source labels do we need the artifical copy?
-!lex_1_start.label = distinct !DILabel(..., flags: DIFlagArtificial)
-!lex_1_1_start.label = distinct !DILabel(..., flags: DIFlagArtificial)
-!lex_1_1_end.label = distinct !DILabel(..., flags: DIFlagArtificial)
-!lex_1_end.label = distinct !DILabel(..., flags: DIFlagArtificial)
+!lex_1_start.label = distinct !DExprCode()
+!lex_1_1_start.label = distinct !DExprCode()
+!lex_1_1_end.label = distinct !DExprCode()
+!lex_1_end.label = distinct !DExprCode()
 
 ;; Saved EXEC Mask Fragments
 ; These track the value of the EXEC mask saved on entry to each `IF/THEN/ELSE`
@@ -2163,8 +2211,6 @@ The following provides an example using pseudo LLVM MIR.
 ; operations which correspond to a DWARF operation that needs the type/size? Or
 ; should we just add types to all operations?
 
-; TODO: Allow argObjects to include DILabels
-
 ;; Computed Divergent Lane PC Fragments
 !divergent_lane_pc.lex.fragment = distinct !DIFragment()
 !divergent_lane_pc.lex.lifetime = distinct !DILifetime(
@@ -2252,7 +2298,11 @@ The following provides an example using pseudo LLVM MIR.
     !divergent_lane_pc.lex_1_1_then.lifetime,
     !divergent_lane_pc.lex_1_1_else.lifetime,
     !divergent_lane_pc.lex_1_else.lifetime,
-    !active_lane_pc.lifetime
+    !active_lane_pc.lifetime,
+    !lex_1_start.label,
+    !lex_1_1_start.label,
+    !lex_1_1_end.label,
+    !lex_1_end.label
   }
 )
 ```
@@ -2298,13 +2348,14 @@ An `IF/THEN/ELSEIF/ELSEIF/...` region can be treated as a nest of
     6. [DIGlobalVariable][16]
     7. [DICompileUnit][17]
     8. [DISubprogram][18]
-11. [LLVM DWARF Extensions For Heterogeneous Debugging][19]
-    1. [DWARF Expressions][20]
-    2. [DWARF Location List Expressions][21]
-    3. [DWARF Location Description][22]
-    4. [DWARF Expression Evaluation Context][23]
-12. [LLVM User Guide for AMDGPU Backend][24]
-    1. [DW_AT_LLVM_lane_pc][25]
+    9. [DILabel][19]
+11. [LLVM DWARF Extensions For Heterogeneous Debugging][20]
+    1. [DWARF Expressions][21]
+    2. [DWARF Location List Expressions][22]
+    3. [DWARF Location Description][23]
+    4. [DWARF Expression Evaluation Context][24]
+12. [LLVM User Guide for AMDGPU Backend][25]
+    1. [DW_AT_LLVM_lane_pc][26]
 
 [01]: https://lists.llvm.org/pipermail/llvm-dev/2014-November/078656.html
 [02]: https://lists.llvm.org/pipermail/llvm-dev/2014-November/078682.html
@@ -2324,13 +2375,14 @@ An `IF/THEN/ELSEIF/ELSEIF/...` region can be treated as a nest of
 [16]: https://llvm.org/docs/LangRef.html#diglobalvariable
 [17]: https://llvm.org/docs/LangRef.html#dicompileunit
 [18]: https://llvm.org/docs/LangRef.html#disubprogram
-[19]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html
-[20]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#dwarf-expressions
-[21]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#dwarf-location-list-expressions
-[22]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#dwarf-location-description
-[23]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#dwarf-expression-evaluation-context
-[24]: https://llvm.org/docs/AMDGPUUsage.html
-[25]: https://llvm.org/docs/AMDGPUUsage.html#dw-at-llvm-lane-pc
+[19]: https://llvm.org/docs/LangRef.html#dilabel
+[20]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html
+[21]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#dwarf-expressions
+[22]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#dwarf-location-list-expressions
+[23]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#dwarf-location-description
+[24]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#dwarf-expression-evaluation-context
+[25]: https://llvm.org/docs/AMDGPUUsage.html
+[26]: https://llvm.org/docs/AMDGPUUsage.html#dw-at-llvm-lane-pc
 
 # Other Ideas
 
