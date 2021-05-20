@@ -3634,13 +3634,13 @@ def warn_fun_requires_lock_precise :
 def note_found_mutex_near_match : Note<"found near match '%0'">;
 
 // Verbose thread safety warnings
-def warn_thread_safety_verbose : Warning<"Thread safety verbose warning.">,
+def warn_thread_safety_verbose : Warning<"thread safety verbose warning">,
   InGroup<ThreadSafetyVerbose>, DefaultIgnore;
-def note_thread_warning_in_fun : Note<"Thread warning in function %0">;
-def note_guarded_by_declared_here : Note<"Guarded_by declared here.">;
+def note_thread_warning_in_fun : Note<"thread warning in function %0">;
+def note_guarded_by_declared_here : Note<"guarded_by declared here">;
 
 // Dummy warning that will trigger "beta" warnings from the analysis if enabled.
-def warn_thread_safety_beta : Warning<"Thread safety beta warning.">,
+def warn_thread_safety_beta : Warning<"thread safety beta warning">,
   InGroup<ThreadSafetyBeta>, DefaultIgnore;
 
 // Consumed warnings
