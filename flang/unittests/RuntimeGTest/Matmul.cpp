@@ -27,7 +27,7 @@ TEST(Matmul, Basic) {
       std::vector<int>{3, 2}, std::vector<std::int16_t>{6, 7, 8, 9, 10, 11})};
   auto v{MakeArray<TypeCategory::Integer, 8>(
       std::vector<int>{2}, std::vector<std::int64_t>{-1, -2})};
-  StaticDescriptor<2> statDesc;
+  StaticDescriptor<2, true> statDesc;
   Descriptor &result{statDesc.descriptor()};
 
   RTNAME(Matmul)(result, *x, *y, __FILE__, __LINE__);
