@@ -1603,8 +1603,8 @@ void CompilerInvocation::GenerateCodeGenArgs(
 
   GenerateArg(Args, OPT_fdiagnostics_hotness_threshold_EQ,
               Opts.DiagnosticsHotnessThreshold
-              ? Twine(*Opts.DiagnosticsHotnessThreshold)
-              : "auto",
+                  ? Twine(*Opts.DiagnosticsHotnessThreshold)
+                  : "auto",
               SA);
 
   for (StringRef Sanitizer : serializeSanitizerKinds(Opts.SanitizeRecover))
