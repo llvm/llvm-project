@@ -1,4 +1,6 @@
-// RUN: %clang_tsan -O1 %s -o %t && %deflake %run %t | FileCheck %s
+// RUN: %clang_tsan -O1 %s -o %t && %deflake %run %t > %t.out
+// RUN: FileCheck %s --check-prefixes=CHECK,PARENT --input-file %t.out
+// RUN: FileCheck %s --check-prefixes=CHECK,CHILD --input-file %t.out
 // Regression test for
 // https://groups.google.com/g/thread-sanitizer/c/TQrr4-9PRYo/m/HFR4FMi6AQAJ
 #include "test.h"
@@ -42,9 +44,6 @@ void afterfork() {
 }
 
 void afterfork_child() {
-  // Can't synchronize with barriers because we are
-  // in the new process, but want consistent output.
-  sleep(1);
   write(2, "in afterfork_child\n", strlen("in afterfork_child\n"));
   glob++;
 }
@@ -91,8 +90,8 @@ int main() {
 // CHECK:     #0 handler
 // CHECK:   Previous write of size 8
 // CHECK:     #0 worker
-// CHECK: afterfork
-// CHECK: in handler
-// CHECK: afterfork_child
-// CHECK: CHILD
+// PARENT: afterfork
+// PARENT: in handler
+// CHILD: afterfork_child
+// CHILD: CHILD
 // CHECK: PARENT
