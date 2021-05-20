@@ -2508,6 +2508,14 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
       }
     }
 
+    // Make sure that we don't make an ill-formed AST where the type of the
+    // Class is non-dependent and its attached base class specifier is an
+    // dependent type, which violates invariants in many clang code paths (e.g.
+    // constexpr evaluator). If this case happens (in errory-recovery mode), we
+    // explicitly mark the Class decl invalid. The diagnostic was already
+    // emitted.
+    if (!Class->getTypeForDecl()->isDependentType())
+      Class->setInvalidDecl();
     return new (Context) CXXBaseSpecifier(SpecifierRange, Virtual,
                                           Class->getTagKind() == TTK_Class,
                                           Access, TInfo, EllipsisLoc);
