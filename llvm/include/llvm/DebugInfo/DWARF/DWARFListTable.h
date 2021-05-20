@@ -94,6 +94,7 @@ public:
   uint8_t getAddrSize() const { return HeaderData.AddrSize; }
   uint64_t getLength() const { return HeaderData.Length; }
   uint16_t getVersion() const { return HeaderData.Version; }
+  uint32_t getOffsetEntryCount() const { return HeaderData.OffsetEntryCount; }
   StringRef getSectionName() const { return SectionName; }
   StringRef getListTypeString() const { return ListTypeString; }
   dwarf::DwarfFormat getFormat() const { return Format; }
@@ -175,6 +176,7 @@ public:
 
   uint64_t getHeaderOffset() const { return Header.getHeaderOffset(); }
   uint8_t getAddrSize() const { return Header.getAddrSize(); }
+  uint32_t getOffsetEntryCount() const { return Header.getOffsetEntryCount(); }
   dwarf::DwarfFormat getFormat() const { return Header.getFormat(); }
 
   void dump(DWARFDataExtractor Data, raw_ostream &OS,

@@ -507,19 +507,23 @@ const llvm::Optional<llvm::DWARFDebugRnglistTable> &DWARFUnit::GetRnglist() {
 }
 
 // This function is called only for DW_FORM_rnglistx.
-llvm::Optional<uint64_t> DWARFUnit::GetRnglistOffset(uint32_t Index) {
+llvm::Expected<uint64_t> DWARFUnit::GetRnglistOffset(uint32_t Index) {
   if (!GetRnglist())
-    return llvm::None;
-  if (!m_ranges_base) {
-    GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-        "%8.8x: DW_FORM_rnglistx cannot be used without DW_AT_rnglists_base",
-        GetOffset());
-    return llvm::None;
-  }
+    return llvm::createStringError(errc::invalid_argument,
+                                   "missing or invalid range list table");
+  if (!m_ranges_base)
+    return llvm::createStringError(errc::invalid_argument,
+                                   "DW_FORM_rnglistx cannot be used without "
+                                   "DW_AT_rnglists_base for CU at 0x%8.8x",
+                                   GetOffset());
   if (llvm::Optional<uint64_t> off = GetRnglist()->getOffsetEntry(
           m_dwarf.GetDWARFContext().getOrLoadRngListsData().GetAsLLVM(), Index))
     return *off + m_ranges_base;
-  return llvm::None;
+  return llvm::createStringError(
+      errc::invalid_argument,
+      "invalid range list table index %u; OffsetEntryCount is %u, "
+      "DW_AT_rnglists_base is %" PRIu64,
+      Index, GetRnglist()->getOffsetEntryCount(), m_ranges_base);
 }
 
 void DWARFUnit::SetStrOffsetsBase(dw_offset_t str_offsets_base) {
@@ -996,12 +1000,8 @@ DWARFUnit::FindRnglistFromOffset(dw_offset_t offset) {
 
 llvm::Expected<DWARFRangeList>
 DWARFUnit::FindRnglistFromIndex(uint32_t index) {
-  if (llvm::Optional<uint64_t> offset = GetRnglistOffset(index))
-    return FindRnglistFromOffset(*offset);
-  if (GetRnglist())
-    return llvm::createStringError(errc::invalid_argument,
-                                   "invalid range list table index %d", index);
-
-  return llvm::createStringError(errc::invalid_argument,
-                                 "missing or invalid range list table");
+  llvm::Expected<uint64_t> maybe_offset = GetRnglistOffset(index);
+  if (!maybe_offset)
+    return maybe_offset.takeError();
+  return FindRnglistFromOffset(*maybe_offset);
 }
