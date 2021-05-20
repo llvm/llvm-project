@@ -370,15 +370,6 @@ static void ioctl_table_fill() {
 
 #if SANITIZER_GLIBC
   // _(SIOCDEVPLIP, WRITE, struct_ifreq_sz); // the same as EQL_ENSLAVE
-  _(CYGETDEFTHRESH, WRITE, sizeof(int));
-  _(CYGETDEFTIMEOUT, WRITE, sizeof(int));
-  _(CYGETMON, WRITE, struct_cyclades_monitor_sz);
-  _(CYGETTHRESH, WRITE, sizeof(int));
-  _(CYGETTIMEOUT, WRITE, sizeof(int));
-  _(CYSETDEFTHRESH, NONE, 0);
-  _(CYSETDEFTIMEOUT, NONE, 0);
-  _(CYSETTHRESH, NONE, 0);
-  _(CYSETTIMEOUT, NONE, 0);
   _(EQL_EMANCIPATE, WRITE, struct_ifreq_sz);
   _(EQL_ENSLAVE, WRITE, struct_ifreq_sz);
   _(EQL_GETMASTRCFG, WRITE, struct_ifreq_sz);
