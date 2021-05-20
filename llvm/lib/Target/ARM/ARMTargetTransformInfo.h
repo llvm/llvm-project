@@ -124,8 +124,8 @@ public:
   /// \name Scalar TTI Implementations
   /// @{
 
-  int getIntImmCodeSizeCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
-                            Type *Ty);
+  InstructionCost getIntImmCodeSizeCost(unsigned Opcode, unsigned Idx,
+                                        const APInt &Imm, Type *Ty);
 
   using BaseT::getIntImmCost;
   InstructionCost getIntImmCost(const APInt &Imm, Type *Ty,

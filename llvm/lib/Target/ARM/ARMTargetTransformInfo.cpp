@@ -283,8 +283,8 @@ InstructionCost ARMTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
 
 // Constants smaller than 256 fit in the immediate field of
 // Thumb1 instructions so we return a zero cost and 1 otherwise.
-int ARMTTIImpl::getIntImmCodeSizeCost(unsigned Opcode, unsigned Idx,
-                                      const APInt &Imm, Type *Ty) {
+InstructionCost ARMTTIImpl::getIntImmCodeSizeCost(unsigned Opcode, unsigned Idx,
+                                                  const APInt &Imm, Type *Ty) {
   if (Imm.isNonNegative() && Imm.getLimitedValue() < 256)
     return 0;
 
