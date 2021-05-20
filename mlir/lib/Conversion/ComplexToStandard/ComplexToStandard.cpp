@@ -42,11 +42,40 @@ struct AbsOpConversion : public OpConversionPattern<complex::AbsOp> {
     return success();
   }
 };
+
+struct EqualOpConversion : public OpConversionPattern<complex::EqualOp> {
+  using OpConversionPattern<complex::EqualOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(complex::EqualOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    complex::EqualOp::Adaptor transformed(operands);
+    auto loc = op.getLoc();
+    auto type =
+        transformed.lhs().getType().cast<ComplexType>().getElementType();
+
+    Value realLhs =
+        rewriter.create<complex::ReOp>(loc, type, transformed.lhs());
+    Value imagLhs =
+        rewriter.create<complex::ImOp>(loc, type, transformed.lhs());
+    Value realRhs =
+        rewriter.create<complex::ReOp>(loc, type, transformed.rhs());
+    Value imagRhs =
+        rewriter.create<complex::ImOp>(loc, type, transformed.rhs());
+    Value realEqual =
+        rewriter.create<CmpFOp>(loc, CmpFPredicate::OEQ, realLhs, realRhs);
+    Value imagEqual =
+        rewriter.create<CmpFOp>(loc, CmpFPredicate::OEQ, imagLhs, imagRhs);
+
+    rewriter.replaceOpWithNewOp<AndOp>(op, realEqual, imagEqual);
+    return success();
+  }
+};
 } // namespace
 
 void mlir::populateComplexToStandardConversionPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<AbsOpConversion>(patterns.getContext());
+  patterns.add<AbsOpConversion, EqualOpConversion>(patterns.getContext());
 }
 
 namespace {
@@ -65,7 +94,7 @@ void ConvertComplexToStandardPass::runOnFunction() {
   ConversionTarget target(getContext());
   target.addLegalDialect<StandardOpsDialect, math::MathDialect,
                          complex::ComplexDialect>();
-  target.addIllegalOp<complex::AbsOp>();
+  target.addIllegalOp<complex::AbsOp, complex::EqualOp>();
   if (failed(applyPartialConversion(function, target, std::move(patterns))))
     signalPassFailure();
 }
