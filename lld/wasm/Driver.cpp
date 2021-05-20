@@ -584,15 +584,9 @@ createUndefinedGlobal(StringRef name, llvm::wasm::WasmGlobalType *type) {
 
 static InputGlobal *createGlobal(StringRef name, bool isMutable) {
   llvm::wasm::WasmGlobal wasmGlobal;
-  if (config->is64.getValueOr(false)) {
-    wasmGlobal.Type = {WASM_TYPE_I64, isMutable};
-    wasmGlobal.InitExpr.Opcode = WASM_OPCODE_I64_CONST;
-    wasmGlobal.InitExpr.Value.Int64 = 0;
-  } else {
-    wasmGlobal.Type = {WASM_TYPE_I32, isMutable};
-    wasmGlobal.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
-    wasmGlobal.InitExpr.Value.Int32 = 0;
-  }
+  bool is64 = config->is64.getValueOr(false);
+  wasmGlobal.Type = {uint8_t(is64 ? WASM_TYPE_I64 : WASM_TYPE_I32), isMutable};
+  wasmGlobal.InitExpr = intConst(0, is64);
   wasmGlobal.SymbolName = name;
   return make<InputGlobal>(wasmGlobal, nullptr);
 }
@@ -635,12 +629,19 @@ static void createSyntheticSymbols() {
     // which to load our static data and function table.
     // See:
     // https://github.com/WebAssembly/tool-conventions/blob/master/DynamicLinking.md
-    WasmSym::memoryBase = createUndefinedGlobal(
-        "__memory_base",
-        config->is64.getValueOr(false) ? &globalTypeI64 : &globalTypeI32);
-    WasmSym::tableBase = createUndefinedGlobal("__table_base", &globalTypeI32);
+    bool is64 = config->is64.getValueOr(false);
+    auto *globalType = is64 ? &globalTypeI64 : &globalTypeI32;
+    WasmSym::memoryBase = createUndefinedGlobal("__memory_base", globalType);
+    WasmSym::tableBase = createUndefinedGlobal("__table_base", globalType);
     WasmSym::memoryBase->markLive();
     WasmSym::tableBase->markLive();
+    if (is64) {
+      WasmSym::tableBase32 =
+          createUndefinedGlobal("__table_base32", &globalTypeI32);
+      WasmSym::tableBase32->markLive();
+    } else {
+      WasmSym::tableBase32 = nullptr;
+    }
   } else {
     // For non-PIC code
     WasmSym::stackPointer = createGlobalVariable("__stack_pointer", true);
@@ -673,6 +674,9 @@ static void createOptionalSymbols() {
     WasmSym::heapBase = symtab->addOptionalDataSymbol("__heap_base");
     WasmSym::definedMemoryBase = symtab->addOptionalDataSymbol("__memory_base");
     WasmSym::definedTableBase = symtab->addOptionalDataSymbol("__table_base");
+    if (config->is64.getValueOr(false))
+      WasmSym::definedTableBase32 =
+          symtab->addOptionalDataSymbol("__table_base32");
   }
 
   // For non-shared memory programs we still need to define __tls_base since we

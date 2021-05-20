@@ -3847,15 +3847,16 @@ void Verifier::visitAtomicCmpXchgInst(AtomicCmpXchgInst &CXI) {
 
   PointerType *PTy = dyn_cast<PointerType>(CXI.getOperand(0)->getType());
   Assert(PTy, "First cmpxchg operand must be a pointer.", &CXI);
-  Type *ElTy = PTy->getElementType();
-  Assert(ElTy->isIntOrPtrTy(),
-         "cmpxchg operand must have integer or pointer type", ElTy, &CXI);
-  checkAtomicMemAccessSize(ElTy, &CXI);
-  Assert(ElTy == CXI.getOperand(1)->getType(),
+  Type *ElTy = CXI.getOperand(1)->getType();
+  Assert(PTy->isOpaqueOrPointeeTypeMatches(ElTy),
          "Expected value type does not match pointer operand type!", &CXI,
          ElTy);
   Assert(ElTy == CXI.getOperand(2)->getType(),
-         "Stored value type does not match pointer operand type!", &CXI, ElTy);
+         "Stored value type does not match expected value operand type!", &CXI,
+         ElTy);
+  Assert(ElTy->isIntOrPtrTy(),
+         "cmpxchg operand must have integer or pointer type", ElTy, &CXI);
+  checkAtomicMemAccessSize(ElTy, &CXI);
   visitInstruction(CXI);
 }
 
@@ -3867,7 +3868,7 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
   auto Op = RMWI.getOperation();
   PointerType *PTy = dyn_cast<PointerType>(RMWI.getOperand(0)->getType());
   Assert(PTy, "First atomicrmw operand must be a pointer.", &RMWI);
-  Type *ElTy = PTy->getElementType();
+  Type *ElTy = RMWI.getOperand(1)->getType();
   if (Op == AtomicRMWInst::Xchg) {
     Assert(ElTy->isIntegerTy() || ElTy->isFloatingPointTy(), "atomicrmw " +
            AtomicRMWInst::getOperationName(Op) +
@@ -3885,7 +3886,7 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
            &RMWI, ElTy);
   }
   checkAtomicMemAccessSize(ElTy, &RMWI);
-  Assert(ElTy == RMWI.getOperand(1)->getType(),
+  Assert(PTy->isOpaqueOrPointeeTypeMatches(ElTy),
          "Argument value type does not match pointer operand type!", &RMWI,
          ElTy);
   Assert(AtomicRMWInst::FIRST_BINOP <= Op && Op <= AtomicRMWInst::LAST_BINOP,

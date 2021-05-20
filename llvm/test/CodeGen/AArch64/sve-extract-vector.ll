@@ -105,7 +105,30 @@ define <16 x i8> @extract_v16i8_nxv16i8_idx1(<vscale x 16 x i8> %vec) nounwind {
   ret <16 x i8> %retval
 }
 
+
+; Extracting illegal subvectors
+
+define <vscale x 1 x i32> @extract_nxv1i32_nxv4i32(<vscale x 4 x i32> %vec) nounwind {
+; CHECK-LABEL: extract_nxv1i32_nxv4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  %retval = call <vscale x 1 x i32> @llvm.experimental.vector.extract.nxv1i32.nxv4i32(<vscale x 4 x i32> %vec, i64 0)
+  ret <vscale x 1 x i32> %retval
+}
+
+define <vscale x 1 x i16> @extract_nxv1i16_nxv6i16(<vscale x 6 x i16> %vec) nounwind {
+; CHECK-LABEL: extract_nxv1i16_nxv6i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  %retval = call <vscale x 1 x i16> @llvm.experimental.vector.extract.nxv1i16.nxv6i16(<vscale x 6 x i16> %vec, i64 0)
+  ret <vscale x 1 x i16> %retval
+}
+
+
 declare <2 x i64> @llvm.experimental.vector.extract.v2i64.nxv2i64(<vscale x 2 x i64>, i64)
 declare <4 x i32> @llvm.experimental.vector.extract.v4i32.nxv4i32(<vscale x 4 x i32>, i64)
 declare <8 x i16> @llvm.experimental.vector.extract.v8i16.nxv8i16(<vscale x 8 x i16>, i64)
 declare <16 x i8> @llvm.experimental.vector.extract.v16i8.nxv16i8(<vscale x 16 x i8>, i64)
+
+declare <vscale x 1 x i32> @llvm.experimental.vector.extract.nxv1i32.nxv4i32(<vscale x 4 x i32>, i64)
+declare <vscale x 1 x i16> @llvm.experimental.vector.extract.nxv1i16.nxv6i16(<vscale x 6 x i16>, i64)

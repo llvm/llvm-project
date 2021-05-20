@@ -575,7 +575,7 @@ defm vmaxnmavq: Reduction<Scalar, "maxnmav", [Scalar, Vector]>;
 }
 
 foreach half = [ "b", "t" ] in {
-  defvar halfconst = !if(!eq(half, "b"), 0, 1);
+  defvar halfconst = !ne(half, "b");
 
   let params = [f32], pnt = PNT_None in {
     def vcvt#half#q_f16: Intrinsic<
@@ -1153,8 +1153,7 @@ defm vshlltq : vshll_imm<1>;
 
 multiclass DyadicImmShift<Type outtype, Immediate imm, string intname = NAME,
                           dag extraargs = (?)> {
-  defvar intparams = !if(!eq(!cast<string>(outtype), !cast<string>(Vector)),
-                         [Vector], [outtype, Vector]);
+  defvar intparams = !if(!eq(outtype, Vector), [Vector], [outtype, Vector]);
 
   def q_n: Intrinsic<
       outtype, (args outtype:$a, Vector:$b, imm:$sh),
@@ -1529,12 +1528,7 @@ let params = T.Usual in {
 foreach desttype = T.All in {
   // We want a vreinterpretq between every pair of supported vector types
   // _except_ that there shouldn't be one from a type to itself.
-  //
-  // So this foldl expression implements what you'd write in Python as
-  // [srctype for srctype in T.All if srctype != desttype]
-  let params = !foldl([]<Type>, T.All, tlist, srctype, !listconcat(tlist,
-      !if(!eq(!cast<string>(desttype),!cast<string>(srctype)),[],[srctype])))
-  in {
+  let params = !filter(srctype, T.All, !ne(srctype, desttype)) in {
     def "vreinterpretq_" # desttype: Intrinsic<
         VecOf<desttype>, (args Vector:$x), (vreinterpret $x, VecOf<desttype>)>;
   }
@@ -1576,8 +1570,9 @@ foreach desttype = !listconcat(T.Int16, T.Int32, T.Float) in {
   defvar is_dest_float = !eq(desttype.kind, "f");
   defvar is_dest_unsigned = !eq(desttype.kind, "u");
   // First immediate operand of the LLVM intrinsic
-  defvar unsigned_flag = !if(is_dest_float, (unsignedflag Scalar),
-                             !if(is_dest_unsigned, V.True, V.False));
+  defvar unsigned_flag = !cond(is_dest_float: (unsignedflag Scalar),
+                               is_dest_unsigned: V.True,
+                               true: V.False);
   // For float->int conversions _n and _x_n intrinsics are not polymorphic
   // because the signedness of the destination type cannot be inferred.
   defvar pnt_nx = !if(is_dest_float, PNT_2Type, PNT_None);

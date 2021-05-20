@@ -67,9 +67,9 @@ static int GY;
 // DEVICE-NOT: llvm.used
 // DEVICE-NOT: omp_offload
 
-// HOST-DAG: @G7 = dso_local global i32 0, align 4
+// HOST-DAG: @G7 = global i32 0, align 4
 // HOST-DAG: @_ZL2G8 = internal global i32 0, align 4
-// HOST-DAG: @G9 = dso_local global i32 0, align 4
+// HOST-DAG: @G9 = global i32 0, align 4
 // HOST-DAG: @_ZL3G10 = internal global i32 0, align 4
-// HOST-DAG: @G11 = dso_local global i32 0, align 4
+// HOST-DAG: @G11 = global i32 0, align 4
 // HOST-DAG: @_ZL3G12 = internal global i32 0, align 4

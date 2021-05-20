@@ -1,4 +1,4 @@
-// RUN: %clang_profgen -mllvm -vp-static-alloc=false  -O2 -o %t %s
+// RUN: %clang_profgen -mllvm -enable-value-profiling -mllvm -vp-static-alloc=false  -O2 -o %t %s
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t
 // RUN: env LLVM_PROFILE_FILE=%t-2.profraw %run %t DO_NOT_INSTRUMENT
 // RUN: llvm-profdata merge -o %t.profdata %t.profraw

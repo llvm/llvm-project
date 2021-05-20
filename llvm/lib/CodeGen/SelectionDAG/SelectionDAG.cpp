@@ -2636,12 +2636,21 @@ SDValue SelectionDAG::getSplatSourceVector(SDValue V, int &SplatIdx) {
   return SDValue();
 }
 
-SDValue SelectionDAG::getSplatValue(SDValue V) {
+SDValue SelectionDAG::getSplatValue(SDValue V, bool LegalTypes) {
   int SplatIdx;
-  if (SDValue SrcVector = getSplatSourceVector(V, SplatIdx))
-    return getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(V),
-                   SrcVector.getValueType().getScalarType(), SrcVector,
+  if (SDValue SrcVector = getSplatSourceVector(V, SplatIdx)) {
+    EVT SVT = SrcVector.getValueType().getScalarType();
+    EVT LegalSVT = SVT;
+    if (LegalTypes && !TLI->isTypeLegal(SVT)) {
+      if (!SVT.isInteger())
+        return SDValue();
+      LegalSVT = TLI->getTypeToTransformTo(*getContext(), LegalSVT);
+      if (LegalSVT.bitsLT(SVT))
+        return SDValue();
+    }
+    return getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(V), LegalSVT, SrcVector,
                    getVectorIdxConstant(SplatIdx, SDLoc(V)));
+  }
   return SDValue();
 }
 
