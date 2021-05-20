@@ -2989,8 +2989,13 @@ llvm::DIType *CGDebugInfo::CreateType(const LValueReferenceType *Ty,
 
 llvm::DIType *CGDebugInfo::CreateType(const RValueReferenceType *Ty,
                                       llvm::DIFile *Unit) {
-  return CreatePointerLikeType(llvm::dwarf::DW_TAG_rvalue_reference_type, Ty,
-                               Ty->getPointeeType(), Unit);
+  llvm::dwarf::Tag Tag = llvm::dwarf::DW_TAG_rvalue_reference_type;
+  // DW_TAG_rvalue_reference_type was introduced in DWARF 4.
+  if (CGM.getCodeGenOpts().DebugStrictDwarf &&
+      CGM.getCodeGenOpts().DwarfVersion < 4)
+    Tag = llvm::dwarf::DW_TAG_reference_type;
+
+  return CreatePointerLikeType(Tag, Ty, Ty->getPointeeType(), Unit);
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const MemberPointerType *Ty,
