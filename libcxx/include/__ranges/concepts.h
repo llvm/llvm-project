@@ -36,6 +36,10 @@ namespace ranges {
     ranges::end(__t);
   };
 
+  template<class _Range>
+  concept borrowed_range = range<_Range> &&
+    (is_lvalue_reference_v<_Range> || enable_borrowed_range<remove_cvref_t<_Range>>);
+
   // `iterator_t` defined in <__ranges/access.h>
 
   template <range _Rp>
