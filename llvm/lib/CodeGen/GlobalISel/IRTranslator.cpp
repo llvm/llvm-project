@@ -1925,9 +1925,9 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     assert(DI.getVariable()->isValidLocationForIntrinsic(
                MIRBuilder.getDebugLoc()) &&
            "Expected inlined-at fields to agree");
-    if (!V) {
-      // Currently the optimizer can produce this; insert an undef to
-      // help debugging.  Probably the optimizer should not do this.
+    if (!V || DI.hasArgList()) {
+      // DI cannot produce a valid DBG_VALUE, so produce an undef DBG_VALUE to
+      // terminate any prior location.
       MIRBuilder.buildIndirectDbgValue(0, DI.getVariable(), DI.getExpression());
     } else if (const auto *CI = dyn_cast<Constant>(V)) {
       MIRBuilder.buildConstDbgValue(*CI, DI.getVariable(), DI.getExpression());
