@@ -25,7 +25,6 @@
 
 using DebugFnMap = llvm::DenseMap<llvm::StringRef, const llvm::DISubprogram *>;
 using DebugInstMap = llvm::DenseMap<const llvm::Instruction *, bool>;
-using DebugVarMap = llvm::DenseMap<const llvm::DILocalVariable *, unsigned>;
 using WeakInstValueMap =
     llvm::DenseMap<const llvm::Instruction *, llvm::WeakVH>;
 
@@ -38,8 +37,6 @@ struct DebugInfoPerPass {
   // This tracks value (instruction) deletion. If an instruction gets deleted,
   // WeakVH nulls itself.
   WeakInstValueMap InstToDelete;
-  // Maps variable into dbg users (#dbg values/declares for this variable).
-  DebugVarMap DIVariables;
 };
 
 /// Map pass names to a per-pass DebugInfoPerPass instance.

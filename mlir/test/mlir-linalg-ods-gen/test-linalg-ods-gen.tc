@@ -23,15 +23,16 @@
 //  IMPL-NEXT: map2 = simplifyAffineMap(map2);
 //  IMPL-NEXT: return {{.+}}.getAffineMapArrayAttr({ map0, map1, map2 });
 //
-//       IMPL:  void Test1Op::regionBuilder(Block &block, ValueRange captures) {
+//       IMPL:  void Test1Op::regionBuilder(ImplicitLocOpBuilder &b,
+//       IMPL:    Block &block, ValueRange captures) {
 //       IMPL:  Value [[a:.*]](args[0]), [[b:.*]](args[1]), [[c:.*]](args[2]);
-//       IMPL:  Value [[d:.*]] = std_mulf([[a]], [[b]]);
-//       IMPL:  Value [[e:.*]] = std_addf([[c]], [[d]]);
-//       IMPL:  (linalg_yield(ValueRange{ [[e]] }));
+//       IMPL:  Value [[d:.*]] = b.create<MulFOp>([[a]], [[b]]);
+//       IMPL:  Value [[e:.*]] = b.create<AddFOp>([[c]], [[d]]);
+//       IMPL:  b.create<linalg::YieldOp>(ValueRange{ [[e]] });
 //
 ods_def<Test1Op> :
 def test1(A: f32(M, K), B: f32(K)) -> (C: f32(M)) {
-  C(m) = std_addf<k>(C(m), std_mulf(A(m, k), B(k)));
+  C(m) = AddFOp<k>(C(m), MulFOp(A(m, k), B(k)));
 }
 
 // ODS-LABEL: def Test2Op : LinalgStructuredBase_Op<"test2", [
@@ -47,15 +48,16 @@ def test1(A: f32(M, K), B: f32(K)) -> (C: f32(M)) {
 //       IMPL:  AffineMap::get(3, 3, {d2, d1}, context)
 //       IMPL:  AffineMap::get(3, 3, {d0, d1}, context)
 //
-//       IMPL:  Test2Op::regionBuilder(Block &block, ValueRange captures) {
+//       IMPL:  Test2Op::regionBuilder(ImplicitLocOpBuilder &b,
+//       IMPL:    Block &block, ValueRange captures) {
 //       IMPL:  Value [[a:.*]](args[0]), [[b:.*]](args[1]), [[c:.*]](args[2]);
-//       IMPL:  Value [[d:.*]] = std_mulf([[a]], [[b]]);
-//       IMPL:  Value [[e:.*]] = std_addf([[c]], [[d]]);
-//       IMPL:  (linalg_yield(ValueRange{ [[e]] }));
+//       IMPL:  Value [[d:.*]] = b.create<MulFOp>([[a]], [[b]]);
+//       IMPL:  Value [[e:.*]] = b.create<AddFOp>([[c]], [[d]]);
+//       IMPL:  b.create<linalg::YieldOp>(ValueRange{ [[e]] });
 //
 ods_def<Test2Op> :
 def test2(A: f32(M, K), B: f32(K, N)) -> (C: f32(M, N)) {
-  C(m, n) = std_addf<k>(C(m, n), std_mulf(A(m, k), B(k, n)));
+  C(m, n) = AddFOp<k>(C(m, n), MulFOp(A(m, k), B(k, n)));
 }
 
 // ODS-LABEL: def Test3Op : LinalgStructuredBase_Op<"test3", [
@@ -71,15 +73,16 @@ def test2(A: f32(M, K), B: f32(K, N)) -> (C: f32(M, N)) {
 //       IMPL:  AffineMap::get(4, 4, {d3, d2}, context)
 //       IMPL:  AffineMap::get(4, 4, {d0, d1, d2}, context)
 //
-//       IMPL:  Test3Op::regionBuilder(Block &block, ValueRange captures) {
+//       IMPL:  Test3Op::regionBuilder(ImplicitLocOpBuilder &b,
+//       IMPL:    Block &block, ValueRange captures) {
 //       IMPL:  Value [[a:.*]](args[0]), [[b:.*]](args[1]), [[c:.*]](args[2]);
-//       IMPL:  Value [[d:.*]] = std_mulf([[a]], [[b]]);
-//       IMPL:  Value [[e:.*]] = std_addf([[c]], [[d]]);
-//       IMPL:  (linalg_yield(ValueRange{ [[e]] }));
+//       IMPL:  Value [[d:.*]] = b.create<MulFOp>([[a]], [[b]]);
+//       IMPL:  Value [[e:.*]] = b.create<AddFOp>([[c]], [[d]]);
+//       IMPL:  b.create<linalg::YieldOp>(ValueRange{ [[e]] });
 //
 ods_def<Test3Op> :
 def test3(A: f32(Batch, M, K), B: f32(K, N)) -> (C: f32(Batch, M, N)) {
-  C(b, m, n) = std_addf<k>(C(b, m, n), std_mulf(A(b, m, k), B(k, n)));
+  C(b, m, n) = AddFOp<k>(C(b, m, n), MulFOp(A(b, m, k), B(k, n)));
 }
 
 // Test attribute definitions
@@ -115,7 +118,7 @@ attr(
   array_attr : f32[],
   optional_attr? : f32
 ) {
-  C(b, m, n) = std_addf<k>(C(b, m, n), std_mulf(A(b, m, k), B(k, n)));
+  C(b, m, n) = AddFOp<k>(C(b, m, n), MulFOp(A(b, m, k), B(k, n)));
 }
 
 // Test attribute usage in affine expressions
@@ -136,8 +139,8 @@ attr(
 ods_def<Test5Op>:
 def test5(I: f32(N, H, W, C), K: f32(F, KH, KW, C)) -> (O: f32(N, H, W, F))
      attr(strides: 2xi32) {
-  O(n, h, w, f) = std_addf<kh, kw>(
-      std_mulf(std_addf(I(n, h * strides[0] + kh, w * strides[1] + kw, c),
+  O(n, h, w, f) = AddFOp<kh, kw>(
+      MulFOp(AddFOp(I(n, h * strides[0] + kh, w * strides[1] + kw, c),
                         I(n, h * strides[0] + kh, w * strides[1] + kw, c)),
                K(f, kh, kw, c)));
 }
@@ -159,7 +162,7 @@ It has two inputs.
 It has one output.
 """
 {
-  C(m) = std_addf<k>(C(m), std_mulf(A(m, k), B(k)));
+  C(m) = AddFOp<k>(C(m), MulFOp(A(m, k), B(k)));
 }
 
 // Test attribute builder
@@ -174,19 +177,20 @@ ods_def<Test7Op>:
 def test7(A: f32(M, K), B: f32(K)) -> (C: f32(M))
      attr(attr_a: f32, attr_b: 4xi32)
 {
-  C(m) = std_addf<k>(C(m), std_mulf(A(m, k), B(k)));
+  C(m) = AddFOp<k>(C(m), MulFOp(A(m, k), B(k)));
 }
 
 // Test output arg order.
-// IMPL-LABEL:  void Test8Op::regionBuilder(Block &block, ValueRange captures) {
+// IMPL-LABEL:  void Test8Op::regionBuilder(ImplicitLocOpBuilder &b,
+//       IMPL:    Block &block, ValueRange captures) {
 //       IMPL:  Value [[a:.*]](args[0]), [[b:.*]](args[1]), [[c:.*]](args[2]);
-//       IMPL:  Value [[d:.*]] = std_mulf([[a]], [[b]]);
-//       IMPL:  Value [[e:.*]] = std_subf([[d]], [[c]]);
-//       IMPL:  (linalg_yield(ValueRange{ [[e]] }));
+//       IMPL:  Value [[d:.*]] = b.create<MulFOp>([[a]], [[b]]);
+//       IMPL:  Value [[e:.*]] = b.create<SubFOp>([[d]], [[c]]);
+//       IMPL:  b.create<linalg::YieldOp>(ValueRange{ [[e]] });
 ods_def<Test8Op>:
 def test8(A: f32(M, K), B: f32(K)) -> (C: f32(M))
 {
-  C(m) = std_subf<k>(std_mulf(A(m, k), B(k)), C(m));
+  C(m) = SubFOp<k>(MulFOp(A(m, k), B(k)), C(m));
 }
 
 // Test shape-only operand.
@@ -194,10 +198,11 @@ def test8(A: f32(M, K), B: f32(K)) -> (C: f32(M))
 //       IMPL:    auto map0 = AffineMap::get(2, 2, {d0, d1}, context);
 //       IMPL:    auto map1 = AffineMap::get(2, 2, {d1}, context);
 //       IMPL:    auto map2 = AffineMap::get(2, 2, {d0}, context);
-// IMPL-LABEL:  void Test9Op::regionBuilder(Block &block, ValueRange captures) {
+// IMPL-LABEL:  void Test9Op::regionBuilder(ImplicitLocOpBuilder &b,
+//       IMPL:    Block &block, ValueRange captures) {
 //       IMPL:  Value [[a:.*]](args[0]), [[c:.*]](args[2]);
 ods_def<Test9Op>:
 def test9(A: f32(M, K), B: f32(K)) -> (C: f32(M))
 {
-  C(m) = std_addf<k>(C(m), A(m, k));
+  C(m) = AddFOp<k>(C(m), A(m, k));
 }

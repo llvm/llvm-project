@@ -796,11 +796,17 @@ fp16_fml_fallthrough:
     StringRef Scope = A->getValue();
     bool EnableRetBr = false;
     bool EnableBlr = false;
-    if (Scope != "none" && Scope != "all") {
+    bool DisableComdat = false;
+    if (Scope != "none") {
       SmallVector<StringRef, 4> Opts;
       Scope.split(Opts, ",");
       for (auto Opt : Opts) {
         Opt = Opt.trim();
+        if (Opt == "all") {
+          EnableBlr = true;
+          EnableRetBr = true;
+          continue;
+        }
         if (Opt == "retbr") {
           EnableRetBr = true;
           continue;
@@ -809,13 +815,18 @@ fp16_fml_fallthrough:
           EnableBlr = true;
           continue;
         }
+        if (Opt == "comdat") {
+          DisableComdat = false;
+          continue;
+        }
+        if (Opt == "nocomdat") {
+          DisableComdat = true;
+          continue;
+        }
         D.Diag(diag::err_invalid_sls_hardening)
             << Scope << A->getAsString(Args);
         break;
       }
-    } else if (Scope == "all") {
-      EnableRetBr = true;
-      EnableBlr = true;
     }
 
     if (EnableRetBr || EnableBlr)
@@ -827,6 +838,9 @@ fp16_fml_fallthrough:
       Features.push_back("+harden-sls-retbr");
     if (EnableBlr)
       Features.push_back("+harden-sls-blr");
+    if (DisableComdat) {
+      Features.push_back("+harden-sls-nocomdat");
+    }
   }
 
 }

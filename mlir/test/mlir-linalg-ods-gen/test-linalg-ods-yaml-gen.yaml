@@ -75,8 +75,8 @@ structured_op: !LinalgStructuredOpConfig
 #  ODS-NEXT:      TypeRange(inputs),
 #  ODS-NEXT:      TypeRange(outputs)
 
-# IMPL-LABEL:  void Test1Op::regionBuilder
-#  IMPL-SAME:  (Block &block, ValueRange captures)
+# IMPL-LABEL:  void Test1Op::regionBuilder(
+#       IMPL:    ImplicitLocOpBuilder &b, Block &block, ValueRange captures)
 #       IMPL:  Value [[VAL0:[a-z0-9]+]] = helper.constant("42 : i64");
 #   IMPL-DAG:  Value [[VAL1:[a-z0-9]+]] = helper.cast(block.getArgument(0).getType(), [[VAL0]]);
 #   IMPL-DAG:  Value [[VAL2:[a-z0-9]+]] = helper.index(1);
@@ -133,5 +133,6 @@ structured_op: !LinalgStructuredOpConfig
 #       IMPL:  "affine_map<(d0, d1)[s0, s1] -> (d1, d0)>"
 #       IMPL:  "affine_map<(d0, d1)[s0, s1] -> (d0, d1)>"
 
-#       IMPL:  void Test2Op::regionBuilder(Block &block, ValueRange captures)
+#       IMPL:  void Test2Op::regionBuilder(
+#       IMPL:    ImplicitLocOpBuilder &b, Block &block, ValueRange captures)
 #       IMPL:  yields.push_back(block.getArgument(0));
