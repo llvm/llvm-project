@@ -146,18 +146,17 @@ extern int n2[__alignof(struct nS) == 1 ? 1 : -1];
 // GCC 4.4 but the change can lead to differences in the structure layout.
 // See the documentation of -Wpacked-bitfield-compat for more information.
 struct packed_chars {
-  char a:4;
+  char a : 8, b : 8, c : 8, d : 4;
 #ifdef __ORBIS__
   // Test for pre-r254596 clang behavior on the PS4 target. PS4 must maintain
   // ABI backwards compatibility.
-  char b:8 __attribute__ ((packed));
+  char e : 8 __attribute__((packed));
   // expected-warning@-1 {{'packed' attribute ignored for field of type 'char'}}
-  char c:4;
 #else
-  char b:8 __attribute__ ((packed));
+  char e : 8 __attribute__((packed));
   // expected-warning@-1 {{'packed' attribute was ignored on bit-fields with single-byte alignment in older versions of GCC and Clang}}
-  char c:4;
 #endif
+  char f : 4, g : 8, h : 8, i : 8;
 };
 
 #if (defined(_WIN32) || defined(__ORBIS__)) && !defined(__declspec) // _MSC_VER is unavailable in cc1.
@@ -165,9 +164,13 @@ struct packed_chars {
 //
 // Additionally, test for pre-r254596 clang behavior on the PS4 target. PS4
 // must maintain ABI backwards compatibility.
-extern int o1[sizeof(struct packed_chars) == 3 ? 1 : -1];
+extern int o1[sizeof(struct packed_chars) == 9 ? 1 : -1];
 extern int o2[__alignof(struct packed_chars) == 1 ? 1 : -1];
+#elif defined(_AIX)
+// On AIX, char bitfields have the same alignment as unsigned int.
+extern int o1[sizeof(struct packed_chars) == 8 ? 1 : -1];
+extern int o2[__alignof(struct packed_chars) == 4 ? 1 : -1];
 #else
-extern int o1[sizeof(struct packed_chars) == 2 ? 1 : -1];
+extern int o1[sizeof(struct packed_chars) == 8 ? 1 : -1];
 extern int o2[__alignof(struct packed_chars) == 1 ? 1 : -1];
 #endif
