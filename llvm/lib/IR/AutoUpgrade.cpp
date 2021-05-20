@@ -4377,11 +4377,11 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
     F.addParamAttr(0, NewAttr);
   }
 
-  // If function has void return type, check it has align attribute. It has no
-  // affect on the return type and no longer passes the verifier.
-  if (F.getReturnType()->isVoidTy() &&
-      F.hasAttribute(AttributeList::ReturnIndex, Attribute::Alignment))
-    F.removeAttribute(AttributeList::ReturnIndex, Attribute::Alignment);
+  // Remove all incompatibile attributes from function.
+  F.removeAttributes(AttributeList::ReturnIndex,
+                     AttributeFuncs::typeIncompatible(F.getReturnType()));
+  for (auto &Arg : F.args())
+    Arg.removeAttrs(AttributeFuncs::typeIncompatible(Arg.getType()));
 }
 
 static bool isOldLoopArgument(Metadata *MD) {
