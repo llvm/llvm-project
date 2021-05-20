@@ -509,8 +509,11 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([
       // Auto-generated.
       ArrayAttr iterator_types();
       ArrayAttr indexing_maps();
-      static void regionBuilder(Block &block, ValueRange captures);
-      static std::function<void(Block &, ValueRange)> getRegionBuilder() {{
+      static void regionBuilder(
+        ImplicitLocOpBuilder &b, Block &block, ValueRange captures);
+      static std::function<
+        void(ImplicitLocOpBuilder &b, Block &, ValueRange)>
+      getRegionBuilder() {{
         return regionBuilder;
       }
 
@@ -755,7 +758,8 @@ std::string {0}::getLibraryCallName() {{
     // {1}: Number of args
     // {2}: Statements
     static const char structuredOpRegionBuilderFormat[] = R"FMT(
-void {0}::regionBuilder(Block &block, ValueRange captures) {{
+void {0}::regionBuilder(
+    ImplicitLocOpBuilder &b, Block &block, ValueRange captures) {{
   assert({1} > 0 && block.getNumArguments() == {1} &&
          "{0} regionBuilder expects {1} (>=0) args");
   RegionBuilderHelper helper(block.getArgument(0).getContext(), block);
