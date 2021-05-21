@@ -1877,12 +1877,12 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::FP_TO_UINT,  MVT::v4i16, MVT::v4f64, 2 },
     { ISD::FP_TO_UINT,  MVT::v8i8,  MVT::v8f32, 4 },
     { ISD::FP_TO_UINT,  MVT::v8i16, MVT::v8f32, 3 },
+    { ISD::FP_TO_UINT,  MVT::v8i32, MVT::v8f32, 9 },
     // This node is expanded into scalarized operations but BasicTTI is overly
     // optimistic estimating its cost.  It computes 3 per element (one
     // vector-extract, one scalar conversion and one vector-insert).  The
     // problem is that the inserts form a read-modify-write chain so latency
     // should be factored in too.  Inflating the cost per element by 1.
-    { ISD::FP_TO_UINT,  MVT::v8i32, MVT::v8f32, 8*4 },
     { ISD::FP_TO_UINT,  MVT::v4i32, MVT::v4f64, 4*4 },
 
     { ISD::FP_EXTEND,   MVT::v4f64,  MVT::v4f32,  1 },
@@ -1985,6 +1985,7 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::FP_TO_UINT,  MVT::v2i16,  MVT::v2f32,  2 },
     { ISD::FP_TO_UINT,  MVT::v2i16,  MVT::v2f64,  2 },
     { ISD::FP_TO_UINT,  MVT::v4i16,  MVT::v4f32,  4 },
+    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v4f32,  8 },
 
     { ISD::ZERO_EXTEND, MVT::v4i16,  MVT::v4i8,   1 },
     { ISD::SIGN_EXTEND, MVT::v4i16,  MVT::v4i8,   6 },
