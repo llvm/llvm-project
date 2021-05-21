@@ -15,7 +15,6 @@
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
-#include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/AffineExpr.h"
@@ -31,8 +30,6 @@
 #include <type_traits>
 
 using namespace mlir;
-using namespace mlir::edsc;
-using namespace mlir::edsc::intrinsics;
 using namespace mlir::linalg;
 
 using llvm::dbgs;
@@ -640,9 +637,7 @@ mlir::linalg::vectorizeLinalgOp(OpBuilder &b, Operation *op,
   if (failed(vectorizeLinalgOpPrecondition(op)))
     return failure();
 
-  edsc::ScopedContext scope(b, op->getLoc());
   auto linalgOp = cast<LinalgOp>(op);
-
   if (isaContractionOpInterface(linalgOp))
     return vectorizeContraction(b, linalgOp, newResults);
 
@@ -726,7 +721,6 @@ LogicalResult ConvOpVectorization<ConvOp, N>::matchAndRewrite(
     ConvOp op, PatternRewriter &rewriter) const {
   Location loc = op.getLoc();
   MLIRContext *context = op.getContext();
-  edsc::ScopedContext scope(rewriter, loc);
 
   ShapedType inShapeType = op.getInputShapedType(0);
   ShapedType kShapeType = op.getInputShapedType(1);
