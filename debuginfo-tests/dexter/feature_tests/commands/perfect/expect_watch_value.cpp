@@ -22,16 +22,16 @@ int main()
 }
 
 /*
-DexExpectWatchValue('n', '8', on_line='entry')
+DexExpectWatchValue('n', '8', on_line=ref('entry'))
 DexExpectWatchValue('i',
                     '1', '2', '3', '4', '5', '6', '7', '8',
-                    on_line='loop')
+                    on_line=ref('loop'))
 
 DexExpectWatchValue('fac',
                     '1', '2', '6', '24', '120', '720', '5040',
-                     on_line='loop')
+                     on_line=ref('loop'))
 
-DexExpectWatchValue('n', '8', on_line='loop')
-DexExpectWatchValue('fac', '40320', on_line='ret')
-DexExpectWatchValue('n', '8', on_line='ret')
+DexExpectWatchValue('n', '8', on_line=ref('loop'))
+DexExpectWatchValue('fac', '40320', on_line=ref('ret'))
+DexExpectWatchValue('n', '8', on_line=ref('ret'))
 */

@@ -21,5 +21,5 @@ int main() {
   return ret; // DexLabel('to')
 }
 
-// DexLimitSteps('1', '1', from_line='from', to_line='to')
-// DexExpectWatchValue('i', 0, 1, 2, from_line='from', to_line='to')
+// DexLimitSteps('1', '1', from_line=ref('from'), to_line=ref('to'))
+// DexExpectWatchValue('i', 0, 1, 2, from_line=ref('from'), to_line=ref('to'))

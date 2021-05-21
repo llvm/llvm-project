@@ -43,12 +43,12 @@ int main() {
          + staticallyDoubledDouble); // DexLabel('main_end')
 }
 
-// DexExpectWatchType('m_member', 'int', 'double', from_line='gv_start', to_line='gv_end')
+// DexExpectWatchType('m_member', 'int', 'double', from_line=ref('gv_start'), to_line=ref('gv_end'))
 
-// DexExpectWatchType('to_double', 'const int &', 'const double &', from_line='sd_start', to_line='sd_end')
+// DexExpectWatchType('to_double', 'const int &', 'const double &', from_line=ref('sd_start'), to_line=ref('sd_end'))
 
-// DexExpectWatchType('myInt', 'Doubled<int>', from_line='main_start', to_line='main_end')
-// DexExpectWatchType('myDouble', 'Doubled<double>', from_line='main_start', to_line='main_end')
-// DexExpectWatchType('staticallyDoubledInt', 'int', from_line='main_start', to_line='main_end')
-// DexExpectWatchType('staticallyDoubledDouble', 'double', from_line='main_start', to_line='main_end')
+// DexExpectWatchType('myInt', 'Doubled<int>', from_line=ref('main_start'), to_line=ref('main_end'))
+// DexExpectWatchType('myDouble', 'Doubled<double>', from_line=ref('main_start'), to_line=ref('main_end'))
+// DexExpectWatchType('staticallyDoubledInt', 'int', from_line=ref('main_start'), to_line=ref('main_end'))
+// DexExpectWatchType('staticallyDoubledDouble', 'double', from_line=ref('main_start'), to_line=ref('main_end'))
 

@@ -14,5 +14,5 @@ int main() {
   return 0; // DexLabel('long_range')
 }
 
-// DexLimitSteps('i', '0', from_line='from', to_line='long_range')
-// DexExpectWatchValue('i', 0, 1, 2, 3, from_line='from', to_line='long_range')
+// DexLimitSteps('i', '0', from_line=ref('from'), to_line=ref('long_range'))
+// DexExpectWatchValue('i', 0, 1, 2, 3, from_line=ref('from'), to_line=ref('long_range'))
