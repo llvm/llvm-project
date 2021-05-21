@@ -127,8 +127,12 @@ public:
   // i64 can be used to index into aggregates like arrays
   mlir::Type indexType() { return mlir::IntegerType::get(&getContext(), 64); }
 
-  // TODO
-  bool requiresExtendedDesc() { return false; }
+  // Is an extended descriptor needed given the element type of a fir.box type ?
+  // Extended descriptors are required for derived types.
+  bool requiresExtendedDesc(mlir::Type boxElementType) {
+    auto eleTy = fir::unwrapSequenceType(boxElementType);
+    return eleTy.isa<fir::RecordType>();
+  }
 
   // Magic value to indicate we do not know the rank of an entity, either
   // because it is assumed rank or because we have not determined it yet.
@@ -165,13 +169,21 @@ public:
       parts.push_back(mlir::LLVM::LLVMArrayType::get(rowTy, rank));
     }
     // opt-type-ptr: i8* (see fir.tdesc)
-    if (requiresExtendedDesc()) {
+    if (requiresExtendedDesc(ele)) {
       parts.push_back(getExtendedDescFieldTypeModel<8>()(&getContext()));
       parts.push_back(getExtendedDescFieldTypeModel<9>()(&getContext()));
       auto rowTy = getExtendedDescFieldTypeModel<10>()(&getContext());
-      unsigned numLenParams = 0; // FIXME
-      parts.push_back(mlir::LLVM::LLVMArrayType::get(rowTy, numLenParams));
-      TODO_NOLOC("extended descriptor");
+      parts.push_back(mlir::LLVM::LLVMArrayType::get(rowTy, 1));
+      if (auto recTy = fir::unwrapSequenceType(ele).dyn_cast<fir::RecordType>())
+        if (recTy.getNumLenParams() > 0) {
+          // The descriptor design needs to be clarified regarding the number of
+          // length parameters in the addendum. Since it can change for
+          // polymorphic allocatables, it seems all length parameters cannot
+          // always possibly be placed in the addendum.
+          TODO_NOLOC("extended descriptor derived with length parameters");
+          unsigned numLenParams = recTy.getNumLenParams();
+          parts.push_back(mlir::LLVM::LLVMArrayType::get(rowTy, numLenParams));
+        }
     }
     return mlir::LLVM::LLVMPointerType::get(
         mlir::LLVM::LLVMStructType::getLiteral(&getContext(), parts,

@@ -49,8 +49,8 @@ end subroutine
 subroutine scalar_null()
   real, pointer :: p => NULL()
 ! CHECK-LABEL: fir.global internal @_QFscalar_nullEp : !fir.box<!fir.ptr<f32>>
-  ! CHECK: %[[zero:.*]] = fir.zero_bits !fir.ref<none>
-  ! CHECK: %[[box:.*]] = fir.embox %[[zero]] : (!fir.ref<none>) -> !fir.box<!fir.ptr<f32>>
+  ! CHECK: %[[zero:.*]] = fir.zero_bits !fir.ptr<f32>
+  ! CHECK: %[[box:.*]] = fir.embox %[[zero]] : (!fir.ptr<f32>) -> !fir.box<!fir.ptr<f32>>
   ! CHECK: fir.has_value %[[box]] : !fir.box<!fir.ptr<f32>>
 end subroutine
 
@@ -106,8 +106,9 @@ end subroutine
 subroutine array_null()
   real, pointer :: p(:) => NULL()
 ! CHECK-LABEL: fir.global internal @_QFarray_nullEp : !fir.box<!fir.ptr<!fir.array<?xf32>>>
-  ! CHECK: %[[zero:.*]] = fir.zero_bits !fir.ref<none>
-  ! CHECK: %[[box:.*]] = fir.embox %[[zero]] : (!fir.ref<none>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  ! CHECK: %[[zero:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xf32>>
+  ! CHECK: %[[shape:.*]] = fir.shape %c0{{.*}} : (index) -> !fir.shape<1>
+  ! CHECK: %[[box:.*]] = fir.embox %[[zero]](%[[shape]]) : (!fir.ptr<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
   ! CHECK: fir.has_value %[[box]] : !fir.box<!fir.ptr<!fir.array<?xf32>>>
 end subroutine
 

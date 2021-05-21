@@ -34,6 +34,7 @@
 #include "flang/Parser/provenance.h"
 #include "flang/Parser/unparse.h"
 #include "flang/Semantics/expression.h"
+#include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/unparse-with-symbols.h"
 #include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
@@ -212,6 +213,14 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   if (semantics.AnyFatalError()) {
     llvm::errs() << programPrefix << "semantic errors in " << path << '\n';
     return mlir::failure();
+  }
+  Fortran::semantics::RuntimeDerivedTypeTables tables;
+  if (!semantics.AnyFatalError()) {
+    tables =
+        Fortran::semantics::BuildRuntimeDerivedTypeTables(semanticsContext);
+    if (!tables.schemata)
+      llvm::errs() << programPrefix
+                   << "could not find module file for __fortran_type_info\n";
   }
   if (dumpSymbols)
     semantics.DumpSymbols(llvm::outs());

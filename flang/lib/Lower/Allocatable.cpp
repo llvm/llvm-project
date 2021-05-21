@@ -809,8 +809,9 @@ Fortran::lower::createUnallocatedBox(Fortran::lower::FirOpBuilder &builder,
   auto eleTy = type;
   if (auto seqType = eleTy.dyn_cast<fir::SequenceType>())
     eleTy = seqType.getEleTy();
-  if (eleTy.isa<fir::RecordType>())
-    TODO(loc, "Derived type allocatable initialization");
+  if (auto recTy = eleTy.dyn_cast<fir::RecordType>())
+    if (recTy.getNumLenParams() > 0)
+      TODO(loc, "creating unallocated fir.box of derived type with length parameters");
   auto nullAddr = builder.createNullConstant(loc, heapType);
   mlir::Value shape;
   if (auto seqTy = type.dyn_cast<fir::SequenceType>()) {
