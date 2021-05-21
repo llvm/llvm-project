@@ -19,7 +19,6 @@
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
@@ -37,8 +36,6 @@
 #define DEBUG_TYPE "linalg-fusion"
 
 using namespace mlir;
-using namespace mlir::edsc;
-using namespace mlir::edsc::intrinsics;
 using namespace mlir::linalg;
 
 using llvm::dbgs;
@@ -408,7 +405,6 @@ mlir::linalg::fuseProducerOfBuffer(OpBuilder &b, OpOperand &consumerOpOperand,
   // Fuse `producer` just before `consumer`.
   OpBuilder::InsertionGuard g(b);
   b.setInsertionPoint(consumerOpOperand.getOwner());
-  ScopedContext scope(b, consumerOpOperand.getOwner()->getLoc());
   LLVM_DEBUG(llvm::dbgs() << "Fuse into consumer: "
                           << *consumerOpOperand.getOwner() << "\n");
 
@@ -491,7 +487,6 @@ mlir::linalg::fuseProducerOfTensor(OpBuilder &b, OpResult producerOpResult,
   // Insert fused `producer` just before `consumer`.
   OpBuilder::InsertionGuard g(b);
   b.setInsertionPoint(consumerOp);
-  ScopedContext scope(b, consumerOp->getLoc());
   LLVM_DEBUG(llvm::dbgs() << "Fuse into consumer: " << *consumerOp << "\n");
   LinalgOp fusedProducer =
       fuse(b, producerOp,
@@ -886,7 +881,6 @@ tileAndFuseLinalgOpsImpl(OpBuilder &b, ArrayRef<LinalgOp> ops,
 
   OpBuilder::InsertionGuard guard(b);
   b.setInsertionPoint(rootOp);
-  ScopedContext scope(b, rootOp.getLoc());
 
   // Find all the producers.
   LLVM_DEBUG(llvm::dbgs() << "findAllFusableDependences\n");

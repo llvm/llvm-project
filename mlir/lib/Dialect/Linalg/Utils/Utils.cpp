@@ -16,7 +16,6 @@
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/StandardOps/Utils/Utils.h"
 #include "mlir/IR/AffineExpr.h"
@@ -31,8 +30,6 @@
 #define DEBUG_TYPE "linalg-utils"
 
 using namespace mlir;
-using namespace mlir::edsc;
-using namespace mlir::edsc::intrinsics;
 using namespace mlir::linalg;
 using namespace mlir::scf;
 
@@ -470,8 +467,6 @@ void GenerateLoopNest<scf::ParallelOp>::doit(
   SmallVector<DistributionMethod, 0> distributionMethod;
   if (distributionOptions) {
     auto &options = distributionOptions.getValue();
-    OpBuilder &b = edsc::ScopedContext::getBuilderRef();
-    Location loc = edsc::ScopedContext::getLocation();
     distributionMethod.assign(distributionOptions->distributionMethod.begin(),
                               distributionOptions->distributionMethod.end());
     SmallVector<Range, 2> parallelLoopRanges;
