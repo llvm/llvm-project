@@ -18,46 +18,119 @@
 
 namespace __sanitizer {
 
-void StackTrace::Print() const {
+namespace {
+
+class StackTraceTextPrinter {
+ public:
+  StackTraceTextPrinter(const char *stack_trace_fmt, char frame_delimiter,
+                        InternalScopedString *output,
+                        InternalScopedString *dedup_token)
+      : stack_trace_fmt_(stack_trace_fmt),
+        frame_delimiter_(frame_delimiter),
+        output_(output),
+        dedup_token_(dedup_token),
+        symbolize_(RenderNeedsSymbolization(stack_trace_fmt)) {}
+
+  bool ProcessAddressFrames(uptr pc) {
+    SymbolizedStack *frames = symbolize_
+                                  ? Symbolizer::GetOrInit()->SymbolizePC(pc)
+                                  : SymbolizedStack::New(pc);
+    if (!frames)
+      return false;
+
+    for (SymbolizedStack *cur = frames; cur; cur = cur->next) {
+      uptr prev_len = output_->length();
+      RenderFrame(output_, stack_trace_fmt_, frame_num_++, cur->info.address,
+                  symbolize_ ? &cur->info : nullptr,
+                  common_flags()->symbolize_vs_style,
+                  common_flags()->strip_path_prefix);
+
+      if (prev_len != output_->length())
+        output_->append("%c", frame_delimiter_);
+
+      ExtendDedupToken(cur);
+    }
+    frames->ClearAll();
+    return true;
+  }
+
+ private:
+  // Extend the dedup token by appending a new frame.
+  void ExtendDedupToken(SymbolizedStack *stack) {
+    if (!dedup_token_)
+      return;
+
+    if (dedup_frames_-- > 0) {
+      if (dedup_token_->length())
+        dedup_token_->append("--");
+      if (stack->info.function != nullptr)
+        dedup_token_->append(stack->info.function);
+    }
+  }
+
+  const char *stack_trace_fmt_;
+  const char frame_delimiter_;
+  int dedup_frames_ = common_flags()->dedup_token_length;
+  uptr frame_num_ = 0;
+  InternalScopedString *output_;
+  InternalScopedString *dedup_token_;
+  const bool symbolize_ = false;
+};
+
+static void CopyStringToBuffer(const InternalScopedString &str, char *out_buf,
+                               uptr out_buf_size) {
+  if (!out_buf_size)
+    return;
+
+  CHECK_GT(out_buf_size, 0);
+  uptr copy_size = Min(str.length(), out_buf_size - 1);
+  internal_memcpy(out_buf, str.data(), copy_size);
+  out_buf[copy_size] = '\0';
+}
+
+}  // namespace
+
+void StackTrace::PrintTo(InternalScopedString *output) const {
+  CHECK(output);
+
+  InternalScopedString dedup_token;
+  StackTraceTextPrinter printer(common_flags()->stack_trace_format, '\n',
+                                output, &dedup_token);
+
   if (trace == nullptr || size == 0) {
-    Printf("    <empty stack>\n\n");
+    output->append("    <empty stack>\n\n");
     return;
   }
-  InternalScopedString frame_desc;
-  InternalScopedString dedup_token;
-  int dedup_frames = common_flags()->dedup_token_length;
-  bool symbolize = RenderNeedsSymbolization(common_flags()->stack_trace_format);
-  uptr frame_num = 0;
+
   for (uptr i = 0; i < size && trace[i]; i++) {
     // PCs in stack traces are actually the return addresses, that is,
     // addresses of the next instructions after the call.
     uptr pc = GetPreviousInstructionPc(trace[i]);
-    SymbolizedStack *frames;
-    if (symbolize)
-      frames = Symbolizer::GetOrInit()->SymbolizePC(pc);
-    else
-      frames = SymbolizedStack::New(pc);
-    CHECK(frames);
-    for (SymbolizedStack *cur = frames; cur; cur = cur->next) {
-      frame_desc.clear();
-      RenderFrame(&frame_desc, common_flags()->stack_trace_format, frame_num++,
-                  cur->info.address, symbolize ? &cur->info : nullptr,
-                  common_flags()->symbolize_vs_style,
-                  common_flags()->strip_path_prefix);
-      Printf("%s\n", frame_desc.data());
-      if (dedup_frames-- > 0) {
-        if (dedup_token.length())
-          dedup_token.append("--");
-        if (cur->info.function != nullptr)
-          dedup_token.append(cur->info.function);
-      }
-    }
-    frames->ClearAll();
+    CHECK(printer.ProcessAddressFrames(pc));
   }
-  // Always print a trailing empty line after stack trace.
-  Printf("\n");
+
+  // Always add a trailing empty line after stack trace.
+  output->append("\n");
+
+  // Append deduplication token, if non-empty.
   if (dedup_token.length())
-    Printf("DEDUP_TOKEN: %s\n", dedup_token.data());
+    output->append("DEDUP_TOKEN: %s\n", dedup_token.data());
+}
+
+uptr StackTrace::PrintTo(char *out_buf, uptr out_buf_size) const {
+  CHECK(out_buf);
+
+  InternalScopedString output;
+  PrintTo(&output);
+  CopyStringToBuffer(output, out_buf, out_buf_size);
+
+  return output.length();
+}
+
+void StackTrace::Print() const {
+  InternalScopedString output;
+  PrintTo(&output);
+  Printf("%s", output.data());
 }
 
 void BufferedStackTrace::Unwind(u32 max_depth, uptr pc, uptr bp, void *context,
@@ -115,41 +188,18 @@ extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE
 void __sanitizer_symbolize_pc(uptr pc, const char *fmt, char *out_buf,
                               uptr out_buf_size) {
-  if (!out_buf_size) return;
-  pc = StackTrace::GetPreviousInstructionPc(pc);
-  SymbolizedStack *frame;
-  bool symbolize = RenderNeedsSymbolization(fmt);
-  if (symbolize)
-    frame = Symbolizer::GetOrInit()->SymbolizePC(pc);
-  else
-    frame = SymbolizedStack::New(pc);
-  if (!frame) {
-    internal_strncpy(out_buf, "<can't symbolize>", out_buf_size);
-    out_buf[out_buf_size - 1] = 0;
+  if (!out_buf_size)
     return;
+
+  pc = StackTrace::GetPreviousInstructionPc(pc);
+
+  InternalScopedString output;
+  StackTraceTextPrinter printer(fmt, '\0', &output, nullptr);
+  if (!printer.ProcessAddressFrames(pc)) {
+    output.clear();
+    output.append("<can't symbolize>");
   }
-  InternalScopedString frame_desc;
-  uptr frame_num = 0;
-  // Reserve one byte for the final 0.
-  char *out_end = out_buf + out_buf_size - 1;
-  for (SymbolizedStack *cur = frame; cur && out_buf < out_end;
-       cur = cur->next) {
-    frame_desc.clear();
-    RenderFrame(&frame_desc, fmt, frame_num++, cur->info.address,
-                symbolize ? &cur->info : nullptr,
-                common_flags()->symbolize_vs_style,
-                common_flags()->strip_path_prefix);
-    if (!frame_desc.length())
-      continue;
-    // Reserve one byte for the terminating 0.
-    uptr n = out_end - out_buf - 1;
-    internal_strncpy(out_buf, frame_desc.data(), n);
-    out_buf += __sanitizer::Min<uptr>(n, frame_desc.length());
-    *out_buf++ = 0;
-  }
-  CHECK(out_buf <= out_end);
-  *out_buf = 0;
-  frame->ClearAll();
+  CopyStringToBuffer(output, out_buf, out_buf_size);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE

@@ -12,6 +12,7 @@
 #ifndef SANITIZER_STACKTRACE_H
 #define SANITIZER_STACKTRACE_H
 
+#include "sanitizer_common.h"
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_platform.h"
 
@@ -55,6 +56,16 @@ struct StackTrace {
 
   // Prints a symbolized stacktrace, followed by an empty line.
   void Print() const;
+
+  // Prints a symbolized stacktrace to the output string, followed by an empty
+  // line.
+  void PrintTo(InternalScopedString *output) const;
+
+  // Prints a symbolized stacktrace to the output buffer, followed by an empty
+  // line. Returns the number of symbols that should have been written to buffer
+  // (not including trailing '\0'). Thus, the string is truncated iff return
+  // value is not less than "out_buf_size".
+  uptr PrintTo(char *out_buf, uptr out_buf_size) const;
 
   static bool WillUseFastUnwind(bool request_fast_unwind) {
     if (!SANITIZER_CAN_FAST_UNWIND)
