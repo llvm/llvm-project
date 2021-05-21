@@ -263,6 +263,8 @@ def : MipsPat<(MipsJmpLink (i32 texternalsym:$dst)),
 
 def : MipsPat<(MipsFullAddr tglobaladdr:$in),
               (Li_NM tglobaladdr:$in)>, ISA_NANOMIPS;
+def : MipsPat<(MipsFullAddr tjumptable:$in),
+              (Li_NM tjumptable:$in)>, ISA_NANOMIPS;
 
 def : MipsPat<(not (or GPR32NM:$rs, GPR32NM:$rt)),
               (NOR_NM GPR32NM:$rs, GPR32NM:$rt)>, ISA_NANOMIPS;

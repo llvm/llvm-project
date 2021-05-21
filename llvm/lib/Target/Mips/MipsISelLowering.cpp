@@ -2225,9 +2225,13 @@ lowerJumpTable(SDValue Op, SelectionDAG &DAG) const
   JumpTableSDNode *N = cast<JumpTableSDNode>(Op);
   EVT Ty = Op.getValueType();
 
-  if (!isPositionIndependent())
+  if (!isPositionIndependent()) {
+    if (Subtarget.hasNanoMips()) {
+      return getNMAddrNonPIC(N, SDLoc(N), Ty, DAG);
+    }
     return Subtarget.hasSym32() ? getAddrNonPIC(N, SDLoc(N), Ty, DAG)
                                 : getAddrNonPICSym64(N, SDLoc(N), Ty, DAG);
+  }
 
   return getAddrLocal(N, SDLoc(N), Ty, DAG, ABI.IsN32() || ABI.IsN64());
 }
