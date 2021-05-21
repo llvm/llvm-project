@@ -1989,13 +1989,6 @@ PathDiagnosticBuilder::generate(const PathDiagnosticConsumer *PDC) const {
   const SourceManager &SM = getSourceManager();
   const AnalyzerOptions &Opts = getAnalyzerOptions();
 
-  // See whether we need to silence the checker/package.
-  // FIXME: This will not work if the report was emitted with an incorrect tag.
-  for (const std::string &CheckerOrPackage : Opts.SilencedCheckersAndPackages) {
-    if (R->getBugType().getCheckerName().startswith(CheckerOrPackage))
-      return nullptr;
-  }
-
   if (!PDC->shouldGenerateDiagnostics())
     return generateEmptyDiagnosticForReport(R, getSourceManager());
 
@@ -3039,6 +3032,14 @@ void BugReporter::FlushReport(BugReportEquivClass& EQ) {
   BugReport *report = findReportInEquivalenceClass(EQ, bugReports);
   if (!report)
     return;
+
+  // See whether we need to silence the checker/package.
+  for (const std::string &CheckerOrPackage :
+       getAnalyzerOptions().SilencedCheckersAndPackages) {
+    if (report->getBugType().getCheckerName().startswith(
+            CheckerOrPackage))
+      return;
+  }
 
   ArrayRef<PathDiagnosticConsumer*> Consumers = getPathDiagnosticConsumers();
   std::unique_ptr<DiagnosticForConsumerMapTy> Diagnostics =
