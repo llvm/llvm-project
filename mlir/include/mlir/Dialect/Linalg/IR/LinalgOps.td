@@ -584,6 +584,15 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
   ];
 
   let extraClassDeclaration = [{
+    /// Number of loops
+    unsigned getNumLoops() { return step().size(); }
+
+    /// Number of input operands
+    unsigned getNumInputs() { return inputs().size(); }
+
+    /// Number of output operands
+    unsigned getNumOutputs() { return outputs().size(); }
+
     /// Number of operands controlling the loop: lbs, ubs, steps
     unsigned getNumControlOperands() { return 3 * getNumLoops(); }
 
@@ -596,7 +605,6 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
     ValueRange getRegionOutputArgs() {
       return getBody()->getArguments().take_back(outputs().size());
     }
-
 
     void setLowerBounds(ValueRange lowerBounds) {
       unsigned numLoops = getNumLoops();
@@ -622,6 +630,16 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
         setOperand(pos, steps[i]);
     }
 
+    /// Block argument that corresponds to the `input` or `output` operand.
+    BlockArgument getTiedBlockArgument(OpOperand& operand) {
+      auto operandIndex = operand.getOperandNumber();
+      assert(
+          operandIndex >= getNumControlOperands() &&
+          operandIndex < getNumOperands() &&
+          "tied block arg is defined only for `input` and `output` arguments");
+      return getBody()->getArgument(operandIndex - 2 * getNumLoops());
+    }
+
    /// Result that corresponds to the `outputs` argument of tensor type.
    OpResult getTiedOpResult(OpOperand& opOperand) {
       // No result can correspond to a memref argument.
@@ -642,7 +660,76 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
       return getOperation()->getResult(tensorId);
     }
 
-    unsigned getNumLoops() { return step().size(); }
+    /// Append `operand` to the `input` arguments.
+    OpOperand& appendInputOperand(OpBuilder& builder, Value operand) {
+      int numLoops = getNumLoops();
+      int numInputs = getNumInputs();
+      int numOutputs = getNumOutputs();
+
+      getOperation()->insertOperands(getNumControlOperands() + numInputs,
+                                     operand);
+      getBody()->insertArgument(numLoops + numInputs, operand.getType());
+      getOperation()->setAttr(
+          TiledLoopOp::getOperandSegmentSizeAttr(),
+          builder.getI32VectorAttr(
+              {numLoops, numLoops, numLoops, numInputs + 1, numOutputs}));
+      return getOperation()->getOpOperand(getNumControlOperands() + numInputs);
+    }
+
+    /// Append `operand` to the `output` arguments.
+    OpOperand& appendOutputOperand(OpBuilder& builder, Value operand) {
+      int numLoops = getNumLoops();
+      int numInputs = getNumInputs();
+      int numOutputs = getNumOutputs();
+
+      getOperation()->insertOperands(
+          getNumControlOperands() + numInputs + numOutputs, operand);
+      getBody()->insertArgument(numLoops + numInputs + numOutputs,
+                                operand.getType());
+      getOperation()->setAttr(
+          TiledLoopOp::getOperandSegmentSizeAttr(),
+          builder.getI32VectorAttr(
+              {numLoops, numLoops, numLoops, numInputs, numOutputs + 1}));
+      return getOperation()->getOpOperand(getNumControlOperands() + numInputs +
+                                          numOutputs);
+    }
+
+    /// Erase `operand` from the `input` or `output` arguments.
+    void eraseOperand(OpBuilder& builder, OpOperand& operand) {
+      int numInputs = getNumInputs();
+      int numLoops = getNumLoops();
+      int numOutputs = getNumOutputs();
+      int numControlOperands = getNumControlOperands();
+
+      auto operandIndex = operand.getOperandNumber();
+      assert(operandIndex >= numControlOperands &&
+             operandIndex < getNumOperands() &&
+             "Can erase only `input` or `output` operand");
+
+      if (operandIndex >= numControlOperands + numInputs)
+        --numOutputs;
+      else
+        --numInputs;
+
+      getOperation()->eraseOperand(operandIndex);
+      getBody()->eraseArgument(operandIndex - 2 * numLoops);
+      getOperation()->setAttr(
+          TiledLoopOp::getOperandSegmentSizeAttr(),
+          builder.getI32VectorAttr(
+              {numLoops, numLoops, numLoops, numInputs, numOutputs}));
+    }
+
+    OpOperand* findInputOperand(Value value) {
+      OperandRange::iterator it = llvm::find(inputs(), value);
+      if (it == inputs().end()) return nullptr;
+      return it.getBase();
+    }
+
+    OpOperand* findOutputOperand(Value value) {
+      OperandRange::iterator it = llvm::find(outputs(), value);
+      if (it == outputs().end()) return nullptr;
+      return it.getBase();
+    }
   }];
 
   let hasCanonicalizer = 1;
