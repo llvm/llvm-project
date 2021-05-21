@@ -24,7 +24,12 @@ struct ForcedMaxvalReal10 {
   static constexpr Fortran::lower::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
       auto ty = mlir::FloatType::getF80(ctx);
-      return mlir::FunctionType::get(ctx, {ty}, {ty});
+      auto boxTy =
+          Fortran::lower::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy, intTy, boxTy},
+                                     {ty});
     };
   }
 };
@@ -35,7 +40,12 @@ struct ForcedMaxvalReal16 {
   static constexpr Fortran::lower::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
       auto ty = mlir::FloatType::getF128(ctx);
-      return mlir::FunctionType::get(ctx, {ty}, {ty});
+      auto boxTy =
+          Fortran::lower::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy, intTy, boxTy},
+                                     {ty});
     };
   }
 };
@@ -47,7 +57,12 @@ struct ForcedMaxvalInteger16 {
   static constexpr Fortran::lower::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
       auto ty = mlir::IntegerType::get(ctx, 128);
-      return mlir::FunctionType::get(ctx, {ty}, {ty});
+      auto boxTy =
+          Fortran::lower::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy, intTy, boxTy},
+                                     {ty});
     };
   }
 };
@@ -58,7 +73,12 @@ struct ForcedMinvalReal10 {
   static constexpr Fortran::lower::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
       auto ty = mlir::FloatType::getF80(ctx);
-      return mlir::FunctionType::get(ctx, {ty}, {ty});
+      auto boxTy =
+          Fortran::lower::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy, intTy, boxTy},
+                                     {ty});
     };
   }
 };
@@ -69,7 +89,12 @@ struct ForcedMinvalReal16 {
   static constexpr Fortran::lower::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
       auto ty = mlir::FloatType::getF128(ctx);
-      return mlir::FunctionType::get(ctx, {ty}, {ty});
+      auto boxTy =
+          Fortran::lower::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy, intTy, boxTy},
+                                     {ty});
     };
   }
 };
@@ -81,7 +106,181 @@ struct ForcedMinvalInteger16 {
   static constexpr Fortran::lower::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
       auto ty = mlir::IntegerType::get(ctx, 128);
-      return mlir::FunctionType::get(ctx, {ty}, {ty});
+      auto boxTy =
+          Fortran::lower::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy, intTy, boxTy},
+                                     {ty});
+    };
+  }
+};
+
+/// Placeholder for real*10 version of Product Intrinsic
+struct ForcedProductReal10 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(ProductReal10));
+  static constexpr Fortran::lower::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::FloatType::getF80(ctx);
+      auto boxTy =
+          Fortran::lower::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy, intTy, boxTy},
+                                     {ty});
+    };
+  }
+};
+
+/// Placeholder for real*16 version of Product Intrinsic
+struct ForcedProductReal16 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(ProductReal16));
+  static constexpr Fortran::lower::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::FloatType::getF128(ctx);
+      auto boxTy =
+          Fortran::lower::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy, intTy, boxTy},
+                                     {ty});
+    };
+  }
+};
+
+/// Placeholder for integer*16 version of Product Intrinsic
+struct ForcedProductInteger16 {
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(ProductInteger16));
+  static constexpr Fortran::lower::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::IntegerType::get(ctx, 128);
+      auto boxTy =
+          Fortran::lower::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy, intTy, boxTy},
+                                     {ty});
+    };
+  }
+};
+
+/// Placeholder for complex(10) version of Product Intrinsic
+struct ForcedProductComplex10 {
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(CppProductComplex10));
+  static constexpr Fortran::lower::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::ComplexType::get(mlir::FloatType::getF80(ctx));
+      auto boxTy =
+          Fortran::lower::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      auto resTy = fir::ReferenceType::get(ty);
+      return mlir::FunctionType::get(
+          ctx, {resTy, boxTy, strTy, intTy, intTy, boxTy}, {});
+    };
+  }
+};
+
+/// Placeholder for complex(16) version of Product Intrinsic
+struct ForcedProductComplex16 {
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(CppProductComplex16));
+  static constexpr Fortran::lower::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::ComplexType::get(mlir::FloatType::getF128(ctx));
+      auto boxTy =
+          Fortran::lower::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      auto resTy = fir::ReferenceType::get(ty);
+      return mlir::FunctionType::get(
+          ctx, {resTy, boxTy, strTy, intTy, intTy, boxTy}, {});
+    };
+  }
+};
+
+/// Placeholder for real*10 version of Sum Intrinsic
+struct ForcedSumReal10 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(SumReal10));
+  static constexpr Fortran::lower::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::FloatType::getF80(ctx);
+      auto boxTy =
+          Fortran::lower::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy, intTy, boxTy},
+                                     {ty});
+    };
+  }
+};
+
+/// Placeholder for real*16 version of Sum Intrinsic
+struct ForcedSumReal16 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(SumReal16));
+  static constexpr Fortran::lower::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::FloatType::getF128(ctx);
+      auto boxTy =
+          Fortran::lower::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy, intTy, boxTy},
+                                     {ty});
+    };
+  }
+};
+
+/// Placeholder for integer*16 version of Sum Intrinsic
+struct ForcedSumInteger16 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(SumInteger16));
+  static constexpr Fortran::lower::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::IntegerType::get(ctx, 128);
+      auto boxTy =
+          Fortran::lower::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy, intTy, boxTy},
+                                     {ty});
+    };
+  }
+};
+
+/// Placeholder for complex(10) version of Sum Intrinsic
+struct ForcedSumComplex10 {
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(CppSumComplex10));
+  static constexpr Fortran::lower::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::ComplexType::get(mlir::FloatType::getF80(ctx));
+      auto boxTy =
+          Fortran::lower::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      auto resTy = fir::ReferenceType::get(ty);
+      return mlir::FunctionType::get(
+          ctx, {resTy, boxTy, strTy, intTy, intTy, boxTy}, {});
+    };
+  }
+};
+
+/// Placeholder for complex(16) version of Sum Intrinsic
+struct ForcedSumComplex16 {
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(CppSumComplex16));
+  static constexpr Fortran::lower::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::ComplexType::get(mlir::FloatType::getF128(ctx));
+      auto boxTy =
+          Fortran::lower::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      auto resTy = fir::ReferenceType::get(ty);
+      return mlir::FunctionType::get(
+          ctx, {resTy, boxTy, strTy, intTy, intTy, boxTy}, {});
     };
   }
 };
@@ -275,7 +474,6 @@ mlir::Value Fortran::lower::genMaxval(Fortran::lower::FirOpBuilder &builder,
       Fortran::lower::locationToLineNo(builder, loc, fTy.getInput(2));
   auto args = Fortran::lower::createArguments(
       builder, loc, fTy, arrayBox, sourceFile, sourceLine, dim, maskBox);
-  builder.create<fir::CallOp>(loc, func, args);
 
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
 }
@@ -402,7 +600,164 @@ mlir::Value Fortran::lower::genMinval(Fortran::lower::FirOpBuilder &builder,
       Fortran::lower::locationToLineNo(builder, loc, fTy.getInput(2));
   auto args = Fortran::lower::createArguments(
       builder, loc, fTy, arrayBox, sourceFile, sourceLine, dim, maskBox);
-  builder.create<fir::CallOp>(loc, func, args);
+
+  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+}
+
+/// Generate call to Product intrinsic runtime routine. This is the version
+/// that handles any rank array with the dim argument specified.
+void Fortran::lower::genProductDim(Fortran::lower::FirOpBuilder &builder,
+                                   mlir::Location loc, mlir::Value resultBox,
+                                   mlir::Value arrayBox, mlir::Value dim,
+                                   mlir::Value maskBox) {
+  auto func = Fortran::lower::getRuntimeFunc<mkRTKey(ProductDim)>(loc, builder);
+  genReduction3Args(func, builder, loc, resultBox, arrayBox, dim, maskBox);
+}
+
+/// Generate call to Product intrinsic runtime routine. This is the version
+/// that does not take a dim argument.
+mlir::Value Fortran::lower::genProduct(Fortran::lower::FirOpBuilder &builder,
+                                       mlir::Location loc, mlir::Value arrayBox,
+                                       mlir::Value maskBox,
+                                       mlir::Value resultBox) {
+  mlir::FuncOp func;
+  auto ty = arrayBox.getType();
+  auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
+  auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
+  auto dim = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
+
+  if (eleTy.isF32())
+    func = Fortran::lower::getRuntimeFunc<mkRTKey(ProductReal4)>(loc, builder);
+  else if (eleTy.isF64())
+    func = Fortran::lower::getRuntimeFunc<mkRTKey(ProductReal8)>(loc, builder);
+  else if (eleTy.isF80())
+    func = Fortran::lower::getRuntimeFunc<ForcedProductReal10>(loc, builder);
+  else if (eleTy.isF128())
+    func = Fortran::lower::getRuntimeFunc<ForcedProductReal16>(loc, builder);
+  else if (eleTy ==
+           builder.getIntegerType(builder.getKindMap().getIntegerBitsize(1)))
+    func =
+        Fortran::lower::getRuntimeFunc<mkRTKey(ProductInteger1)>(loc, builder);
+  else if (eleTy ==
+           builder.getIntegerType(builder.getKindMap().getIntegerBitsize(2)))
+    func =
+        Fortran::lower::getRuntimeFunc<mkRTKey(ProductInteger2)>(loc, builder);
+  else if (eleTy ==
+           builder.getIntegerType(builder.getKindMap().getIntegerBitsize(4)))
+    func =
+        Fortran::lower::getRuntimeFunc<mkRTKey(ProductInteger4)>(loc, builder);
+  else if (eleTy ==
+           builder.getIntegerType(builder.getKindMap().getIntegerBitsize(8)))
+    func =
+        Fortran::lower::getRuntimeFunc<mkRTKey(ProductInteger8)>(loc, builder);
+  else if (eleTy ==
+           builder.getIntegerType(builder.getKindMap().getIntegerBitsize(16)))
+    func = Fortran::lower::getRuntimeFunc<ForcedProductInteger16>(loc, builder);
+  else if (eleTy == fir::ComplexType::get(builder.getContext(), 4))
+    func = Fortran::lower::getRuntimeFunc<mkRTKey(CppProductComplex4)>(loc,
+                                                                       builder);
+  else if (eleTy == fir::ComplexType::get(builder.getContext(), 8))
+    func = Fortran::lower::getRuntimeFunc<mkRTKey(CppProductComplex8)>(loc,
+                                                                       builder);
+  else if (eleTy == fir::ComplexType::get(builder.getContext(), 10))
+    func = Fortran::lower::getRuntimeFunc<ForcedProductComplex10>(loc, builder);
+  else if (eleTy == fir::ComplexType::get(builder.getContext(), 16))
+    func = Fortran::lower::getRuntimeFunc<ForcedProductComplex16>(loc, builder);
+  else
+    fir::emitFatalError(loc, "invalid type in Product lowering");
+
+  auto fTy = func.getType();
+  auto sourceFile = Fortran::lower::locationToFilename(builder, loc);
+  if (fir::isa_complex(eleTy)) {
+    auto sourceLine =
+        Fortran::lower::locationToLineNo(builder, loc, fTy.getInput(3));
+    auto args =
+        Fortran::lower::createArguments(builder, loc, fTy, resultBox, arrayBox,
+                                        sourceFile, sourceLine, dim, maskBox);
+    builder.create<fir::CallOp>(loc, func, args);
+    return resultBox;
+  }
+
+  auto sourceLine =
+      Fortran::lower::locationToLineNo(builder, loc, fTy.getInput(2));
+  auto args = Fortran::lower::createArguments(
+      builder, loc, fTy, arrayBox, sourceFile, sourceLine, dim, maskBox);
+
+  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+}
+/// Generate call to Sum intrinsic runtime routine. This is the version
+/// that handles any rank array with the dim argument specified.
+void Fortran::lower::genSumDim(Fortran::lower::FirOpBuilder &builder,
+                               mlir::Location loc, mlir::Value resultBox,
+                               mlir::Value arrayBox, mlir::Value dim,
+                               mlir::Value maskBox) {
+  auto func = Fortran::lower::getRuntimeFunc<mkRTKey(SumDim)>(loc, builder);
+  genReduction3Args(func, builder, loc, resultBox, arrayBox, dim, maskBox);
+}
+
+/// Generate call to Sum intrinsic runtime routine. This is the version
+/// that does not take a dim argument.
+mlir::Value Fortran::lower::genSum(Fortran::lower::FirOpBuilder &builder,
+                                   mlir::Location loc, mlir::Value arrayBox,
+                                   mlir::Value maskBox, mlir::Value resultBox) {
+  mlir::FuncOp func;
+  auto ty = arrayBox.getType();
+  auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
+  auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
+  auto dim = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
+
+  if (eleTy.isF32())
+    func = Fortran::lower::getRuntimeFunc<mkRTKey(SumReal4)>(loc, builder);
+  else if (eleTy.isF64())
+    func = Fortran::lower::getRuntimeFunc<mkRTKey(SumReal8)>(loc, builder);
+  else if (eleTy.isF80())
+    func = Fortran::lower::getRuntimeFunc<ForcedSumReal10>(loc, builder);
+  else if (eleTy.isF128())
+    func = Fortran::lower::getRuntimeFunc<ForcedSumReal16>(loc, builder);
+  else if (eleTy ==
+           builder.getIntegerType(builder.getKindMap().getIntegerBitsize(1)))
+    func = Fortran::lower::getRuntimeFunc<mkRTKey(SumInteger1)>(loc, builder);
+  else if (eleTy ==
+           builder.getIntegerType(builder.getKindMap().getIntegerBitsize(2)))
+    func = Fortran::lower::getRuntimeFunc<mkRTKey(SumInteger2)>(loc, builder);
+  else if (eleTy ==
+           builder.getIntegerType(builder.getKindMap().getIntegerBitsize(4)))
+    func = Fortran::lower::getRuntimeFunc<mkRTKey(SumInteger4)>(loc, builder);
+  else if (eleTy ==
+           builder.getIntegerType(builder.getKindMap().getIntegerBitsize(8)))
+    func = Fortran::lower::getRuntimeFunc<mkRTKey(SumInteger8)>(loc, builder);
+  else if (eleTy ==
+           builder.getIntegerType(builder.getKindMap().getIntegerBitsize(16)))
+    func = Fortran::lower::getRuntimeFunc<ForcedSumInteger16>(loc, builder);
+  else if (eleTy == fir::ComplexType::get(builder.getContext(), 4))
+    func =
+        Fortran::lower::getRuntimeFunc<mkRTKey(CppSumComplex4)>(loc, builder);
+  else if (eleTy == fir::ComplexType::get(builder.getContext(), 8))
+    func =
+        Fortran::lower::getRuntimeFunc<mkRTKey(CppSumComplex8)>(loc, builder);
+  else if (eleTy == fir::ComplexType::get(builder.getContext(), 10))
+    func = Fortran::lower::getRuntimeFunc<ForcedSumComplex10>(loc, builder);
+  else if (eleTy == fir::ComplexType::get(builder.getContext(), 16))
+    func = Fortran::lower::getRuntimeFunc<ForcedSumComplex16>(loc, builder);
+  else
+    fir::emitFatalError(loc, "invalid type in Sum lowering");
+
+  auto fTy = func.getType();
+  auto sourceFile = Fortran::lower::locationToFilename(builder, loc);
+  if (fir::isa_complex(eleTy)) {
+    auto sourceLine =
+        Fortran::lower::locationToLineNo(builder, loc, fTy.getInput(3));
+    auto args =
+        Fortran::lower::createArguments(builder, loc, fTy, resultBox, arrayBox,
+                                        sourceFile, sourceLine, dim, maskBox);
+    builder.create<fir::CallOp>(loc, func, args);
+    return resultBox;
+  }
+
+  auto sourceLine =
+      Fortran::lower::locationToLineNo(builder, loc, fTy.getInput(2));
+  auto args = Fortran::lower::createArguments(
+      builder, loc, fTy, arrayBox, sourceFile, sourceLine, dim, maskBox);
 
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
 }

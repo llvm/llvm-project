@@ -107,10 +107,92 @@ static bool isAbsent(const fir::ExtendedValue &exv) {
   return !fir::getBase(exv);
 }
 
-/// Process calls to Maxval, Minval intrinsic functions
+/// Process calls to Maxval, Minval, Product, Sum intrinsic functions that
+/// take a DIM argument.
+template <typename FD>
+static fir::ExtendedValue
+genFuncDim(FD funcDim, mlir::Type resultType,
+           Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
+           Fortran::lower::StatementContext *stmtCtx, llvm::StringRef errMsg,
+           mlir::Value array, fir::ExtendedValue dimArg, mlir::Value mask,
+           int rank) {
+
+  // Create mutable fir.box to be passed to the runtime for the result.
+  auto resultArrayType = builder.getVarLenSeqTy(resultType, rank - 1);
+  auto resultMutableBox =
+      Fortran::lower::createTempMutableBox(builder, loc, resultArrayType);
+  auto resultIrBox =
+      Fortran::lower::getMutableIRBox(builder, loc, resultMutableBox);
+
+  auto dim = isAbsent(dimArg)
+                 ? builder.createIntegerConstant(loc, builder.getIndexType(), 0)
+                 : fir::getBase(dimArg);
+  funcDim(builder, loc, resultIrBox, array, dim, mask);
+
+  auto res = Fortran::lower::genMutableBoxRead(builder, loc, resultMutableBox);
+  return res.match(
+      [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
+        // Add cleanup code
+        assert(stmtCtx);
+        auto *bldr = &builder;
+        auto temp = box.getAddr();
+        stmtCtx->attachCleanup(
+            [=]() { bldr->create<fir::FreeMemOp>(loc, temp); });
+        return box;
+      },
+      [&](const auto &) -> fir::ExtendedValue {
+        fir::emitFatalError(loc, errMsg);
+      });
+}
+
+/// Process calls to Product, Sum intrinsic functions
+template <typename FN, typename FD>
+static fir::ExtendedValue
+genProdOrSum(FN func, FD funcDim, mlir::Type resultType,
+             Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
+             Fortran::lower::StatementContext *stmtCtx, llvm::StringRef errMsg,
+             llvm::ArrayRef<fir::ExtendedValue> args) {
+
+  assert(args.size() == 3);
+
+  // Handle required array argument
+  fir::BoxValue arryTmp = builder.createBox(loc, args[0]);
+  mlir::Value array = fir::getBase(arryTmp);
+  int rank = arryTmp.rank();
+  assert(rank >= 1);
+
+  // Handle optional mask argument
+  auto mask = isAbsent(args[2])
+                  ? builder.create<fir::AbsentOp>(
+                        loc, fir::BoxType::get(builder.getI1Type()))
+                  : builder.createBox(loc, args[2]);
+
+  bool absentDim = isAbsent(args[1]);
+
+  // We call the type specific versions because the result is scalar
+  // in the case below.
+  if (absentDim || rank == 1) {
+    auto ty = array.getType();
+    auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
+    auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
+    if (fir::isa_complex(eleTy)) {
+      auto result = builder.createTemporary(loc, eleTy);
+      func(builder, loc, array, mask, result);
+      return builder.create<fir::LoadOp>(loc, result);
+    }
+    auto resultBox = builder.create<fir::AbsentOp>(
+        loc, fir::BoxType::get(builder.getI1Type()));
+    return func(builder, loc, array, mask, resultBox);
+  }
+  // Handle Product/Sum cases that have an array result.
+  return genFuncDim(funcDim, resultType, builder, loc, stmtCtx, errMsg, array,
+                    args[1], mask, rank);
+}
+
+/// Process calls to Maxval, Minval, Product, Sum intrinsic functions
 template <typename FN, typename FD, typename FC>
 static fir::ExtendedValue
-genExtremumval(FN func, FD funcDim, FC funcChar, mlir::Type resultType,
+genExtremumVal(FN func, FD funcDim, FC funcChar, mlir::Type resultType,
                Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
                Fortran::lower::StatementContext *stmtCtx,
                llvm::StringRef errMsg,
@@ -165,43 +247,9 @@ genExtremumval(FN func, FD funcDim, FC funcChar, mlir::Type resultType,
         });
   }
 
-  // Note: The Min/Maxval cases below have an array result.
-  // Create mutable fir.box to be passed to the runtime for the result.
-  auto resultArrayType = builder.getVarLenSeqTy(resultType, rank - 1);
-  auto resultMutableBox =
-      Fortran::lower::createTempMutableBox(builder, loc, resultArrayType);
-  auto resultIrBox =
-      Fortran::lower::getMutableIRBox(builder, loc, resultMutableBox);
-
-  auto dim = absentDim
-                 ? builder.createIntegerConstant(loc, builder.getIndexType(), 0)
-                 : fir::getBase(args[1]);
-  funcDim(builder, loc, resultIrBox, array, dim, mask);
-
-  auto res = Fortran::lower::genMutableBoxRead(builder, loc, resultMutableBox);
-
-  return res.match(
-      [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
-        // Add cleanup code
-        assert(stmtCtx);
-        auto *bldr = &builder;
-        auto temp = box.getAddr();
-        stmtCtx->attachCleanup(
-            [=]() { bldr->create<fir::FreeMemOp>(loc, temp); });
-        return box;
-      },
-      [&](const fir::CharArrayBoxValue &box) -> fir::ExtendedValue {
-        // Add cleanup code
-        assert(stmtCtx);
-        auto *bldr = &builder;
-        auto temp = box.getAddr();
-        stmtCtx->attachCleanup(
-            [=]() { bldr->create<fir::FreeMemOp>(loc, temp); });
-        return box;
-      },
-      [&](const auto &) -> fir::ExtendedValue {
-        fir::emitFatalError(loc, errMsg);
-      });
+  // Handle Min/Maxval cases that have an array result.
+  return genFuncDim(funcDim, resultType, builder, loc, stmtCtx, errMsg, array,
+                    args[1], mask, rank);
 }
 
 /// Process calls to Minloc, Maxloc intrinsic functions
@@ -377,12 +425,14 @@ struct IntrinsicLibrary {
   mlir::Value genModulo(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genNint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genPresent(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genProduct(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genRRSpacing(mlir::Type resultType,
                            llvm::ArrayRef<mlir::Value> args);
   fir::ExtendedValue genScan(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSign(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSpacing(mlir::Type resultType,
                          llvm::ArrayRef<mlir::Value> args);
+  fir::ExtendedValue genSum(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genVerify(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   /// Implement all conversion functions like DBLE, the first argument is
@@ -568,6 +618,10 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genPresent,
      {{{"a", asInquired}}},
      /*isElemental=*/false},
+    {"product",
+     &I::genProduct,
+     {{{"array", asAddr}, {"dim", asValue}, {"mask", asAddr}}},
+     /*isElemental=*/false},
     {"rrspacing", &I::genRRSpacing},
     {"scan",
      &I::genScan,
@@ -578,6 +632,10 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/true},
     {"sign", &I::genSign},
     {"spacing", &I::genSpacing},
+    {"sum",
+     &I::genSum,
+     {{{"array", asAddr}, {"dim", asValue}, {"mask", asAddr}}},
+     /*isElemental=*/false},
     {"trim", &I::genTrim, {{{"string", asAddr}}}, /*isElemental=*/false},
     {"verify",
      &I::genVerify,
@@ -1889,6 +1947,14 @@ IntrinsicLibrary::genPresent(mlir::Type,
                                           fir::getBase(args[0]));
 }
 
+// PRODUCT
+fir::ExtendedValue
+IntrinsicLibrary::genProduct(mlir::Type resultType,
+                             llvm::ArrayRef<fir::ExtendedValue> args) {
+  return genProdOrSum(Fortran::lower::genProduct, Fortran::lower::genProductDim,
+                      resultType, builder, loc, stmtCtx,
+                      "unexpected result for Product", args);
+}
 // RRSPACING
 mlir::Value IntrinsicLibrary::genRRSpacing(mlir::Type resultType,
                                            llvm::ArrayRef<mlir::Value> args) {
@@ -2000,8 +2066,8 @@ mlir::Value IntrinsicLibrary::genSign(mlir::Type resultType,
   // TODO: Requirements when second argument is +0./0.
   auto zero = builder.createRealZeroConstant(loc, resultType);
   auto neg = builder.create<fir::NegfOp>(loc, abs);
-  auto cmp =
-      builder.create<mlir::CmpFOp>(loc, mlir::CmpFPredicate::OLT, args[1], zero);
+  auto cmp = builder.create<mlir::CmpFOp>(loc, mlir::CmpFPredicate::OLT,
+                                          args[1], zero);
   return builder.create<mlir::SelectOp>(loc, cmp, neg, abs);
 }
 
@@ -2013,6 +2079,15 @@ mlir::Value IntrinsicLibrary::genSpacing(mlir::Type resultType,
   return builder.createConvert(
       loc, resultType,
       Fortran::lower::genSpacing(builder, loc, fir::getBase(args[0])));
+}
+
+// SUM
+fir::ExtendedValue
+IntrinsicLibrary::genSum(mlir::Type resultType,
+                         llvm::ArrayRef<fir::ExtendedValue> args) {
+  return genProdOrSum(Fortran::lower::genSum, Fortran::lower::genSumDim,
+                      resultType, builder, loc, stmtCtx,
+                      "unexpected result for Sum", args);
 }
 
 // TRIM
@@ -2197,7 +2272,7 @@ IntrinsicLibrary::genMaxloc(mlir::Type resultType,
 fir::ExtendedValue
 IntrinsicLibrary::genMaxval(mlir::Type resultType,
                             llvm::ArrayRef<fir::ExtendedValue> args) {
-  return genExtremumval(Fortran::lower::genMaxval, Fortran::lower::genMaxvalDim,
+  return genExtremumVal(Fortran::lower::genMaxval, Fortran::lower::genMaxvalDim,
                         Fortran::lower::genMaxvalChar, resultType, builder, loc,
                         stmtCtx, "unexpected result for Maxval", args);
 }
@@ -2215,7 +2290,7 @@ IntrinsicLibrary::genMinloc(mlir::Type resultType,
 fir::ExtendedValue
 IntrinsicLibrary::genMinval(mlir::Type resultType,
                             llvm::ArrayRef<fir::ExtendedValue> args) {
-  return genExtremumval(Fortran::lower::genMinval, Fortran::lower::genMinvalDim,
+  return genExtremumVal(Fortran::lower::genMinval, Fortran::lower::genMinvalDim,
                         Fortran::lower::genMinvalChar, resultType, builder, loc,
                         stmtCtx, "unexpected result for Minval", args);
 }

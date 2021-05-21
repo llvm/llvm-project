@@ -102,6 +102,30 @@ void genMinvalDim(Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
                   mlir::Value resultBox, mlir::Value arrayBox, mlir::Value dim,
                   mlir::Value maskBox);
 
+/// Generate call to Product intrinsic runtime routine. This is the version
+/// that does not take a dim argument.
+mlir::Value genProduct(Fortran::lower::FirOpBuilder &builder,
+                       mlir::Location loc, mlir::Value arrayBox,
+                       mlir::Value maskBox, mlir::Value resultBox);
+
+/// Generate call to Product intrinsic runtime routine. This is the version
+/// that takes arrays of any rank with a dim argument specified.
+void genProductDim(Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
+                   mlir::Value resultBox, mlir::Value arrayBox, mlir::Value dim,
+                   mlir::Value maskBox);
+
+/// Generate call to Sum intrinsic runtime routine. This is the version
+/// that does not take a dim argument.
+mlir::Value genSum(Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
+                   mlir::Value arrayBox, mlir::Value maskBox,
+                   mlir::Value resultBox);
+
+/// Generate call to Sum intrinsic runtime routine. This is the version
+/// that takes arrays of any rank with a dim argument specified.
+void genSumDim(Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
+               mlir::Value resultBox, mlir::Value arrayBox, mlir::Value dim,
+               mlir::Value maskBox);
+
 } // namespace Fortran::lower
 
 #endif // FORTRAN_LOWER_REDUCTIONRUNTIME_H

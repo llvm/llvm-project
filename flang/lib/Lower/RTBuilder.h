@@ -207,6 +207,20 @@ constexpr TypeBuilderFunc getModel<bool &>() {
   };
 }
 template <>
+constexpr TypeBuilderFunc getModel<std::complex<float> &>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    auto ty = mlir::ComplexType::get(mlir::FloatType::getF32(context));
+    return fir::ReferenceType::get(ty);
+  };
+}
+template <>
+constexpr TypeBuilderFunc getModel<std::complex<double> &>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    auto ty = mlir::ComplexType::get(mlir::FloatType::getF64(context));
+    return fir::ReferenceType::get(ty);
+  };
+}
+template <>
 constexpr TypeBuilderFunc getModel<c_float_complex_t>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return fir::ComplexType::get(context, sizeof(float));
