@@ -235,7 +235,7 @@ declare i32 @external()
 
 define i32 @rem4() {
 ; CHECK-LABEL: @rem4(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @external(), [[RNG0:!range !.*]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @external(), !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %call = call i32 @external(), !range !0
@@ -326,8 +326,100 @@ define <2 x i32> @srem_with_sext_bool_divisor_vec(<2 x i1> %x, <2 x i32> %y) {
 }
 
 define i8 @srem_minusone_divisor() {
-; CHECK-LABEL: @srem_minusone_divisor
-; CHECK-NEXT:   ret i8 poison
+; CHECK-LABEL: @srem_minusone_divisor(
+; CHECK-NEXT:    ret i8 poison
+;
   %v = srem i8 -128, -1
   ret i8 %v
+}
+
+define i32 @srem_of_mul_nsw(i32 %x, i32 %y) {
+; CHECK-LABEL: @srem_of_mul_nsw(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MOD:%.*]] = srem i32 [[MUL]], [[Y]]
+; CHECK-NEXT:    ret i32 [[MOD]]
+;
+  %mul = mul nsw i32 %x, %y
+  %mod = srem i32 %mul, %y
+  ret i32 %mod
+}
+
+; Verify that the optimization kicks in for:
+;   - Y * X % Y as well as X * Y % Y
+;   - vector types
+define <2 x i32> @srem_of_mul_nsw_vec_commuted(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @srem_of_mul_nsw_vec_commuted(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw <2 x i32> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[MOD:%.*]] = srem <2 x i32> [[MUL]], [[Y]]
+; CHECK-NEXT:    ret <2 x i32> [[MOD]]
+;
+  %mul = mul nsw <2 x i32> %y, %x
+  %mod = srem <2 x i32> %mul, %y
+  ret <2 x i32> %mod
+}
+
+define i32 @srem_of_mul_nuw(i32 %x, i32 %y) {
+; CHECK-LABEL: @srem_of_mul_nuw(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MOD:%.*]] = srem i32 [[MUL]], [[Y]]
+; CHECK-NEXT:    ret i32 [[MOD]]
+;
+  %mul = mul nuw i32 %x, %y
+  %mod = srem i32 %mul, %y
+  ret i32 %mod
+}
+
+define i32 @srem_of_mul(i32 %x, i32 %y) {
+; CHECK-LABEL: @srem_of_mul(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MOD:%.*]] = srem i32 [[MUL]], [[Y]]
+; CHECK-NEXT:    ret i32 [[MOD]]
+;
+  %mul = mul i32 %x, %y
+  %mod = srem i32 %mul, %y
+  ret i32 %mod
+}
+
+define i32 @urem_of_mul_nsw(i32 %x, i32 %y) {
+; CHECK-LABEL: @urem_of_mul_nsw(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MOD:%.*]] = urem i32 [[MUL]], [[Y]]
+; CHECK-NEXT:    ret i32 [[MOD]]
+;
+  %mul = mul nsw i32 %x, %y
+  %mod = urem i32 %mul, %y
+  ret i32 %mod
+}
+
+define i32 @urem_of_mul_nuw(i32 %x, i32 %y) {
+; CHECK-LABEL: @urem_of_mul_nuw(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MOD:%.*]] = urem i32 [[MUL]], [[Y]]
+; CHECK-NEXT:    ret i32 [[MOD]]
+;
+  %mul = mul nuw i32 %x, %y
+  %mod = urem i32 %mul, %y
+  ret i32 %mod
+}
+
+define <2 x i32> @srem_of_mul_nuw_vec_commuted(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @srem_of_mul_nuw_vec_commuted(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw <2 x i32> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[MOD:%.*]] = urem <2 x i32> [[MUL]], [[Y]]
+; CHECK-NEXT:    ret <2 x i32> [[MOD]]
+;
+  %mul = mul nuw <2 x i32> %y, %x
+  %mod = urem <2 x i32> %mul, %y
+  ret <2 x i32> %mod
+}
+
+define i32 @urem_of_mul(i32 %x, i32 %y) {
+; CHECK-LABEL: @urem_of_mul(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MOD:%.*]] = urem i32 [[MUL]], [[Y]]
+; CHECK-NEXT:    ret i32 [[MOD]]
+;
+  %mul = mul i32 %x, %y
+  %mod = urem i32 %mul, %y
+  ret i32 %mod
 }
