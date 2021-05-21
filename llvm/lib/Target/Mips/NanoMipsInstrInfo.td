@@ -416,3 +416,9 @@ def SBs9_NM : StoreMemoryNM<"sb", GPR32NMOpnd, mem, truncstorei8, addrsimm9, II_
 // TODO: 'X' load/stores reg+reg
 
 }
+
+// Any-extending loads
+def : Pat<(i32 (extloadi8 addr:$addr)),
+          (LBU_NM addr:$addr)>, ISA_NANOMIPS;
+def : Pat<(i32 (extloadi16 addr:$addr)),
+          (LHU_NM addr:$addr)>, ISA_NANOMIPS;
