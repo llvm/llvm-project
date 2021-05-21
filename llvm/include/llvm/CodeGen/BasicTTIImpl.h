@@ -356,9 +356,8 @@ public:
     return getTLI()->isTypeLegal(VT);
   }
 
-  unsigned getRegUsageForType(Type *Ty) {
-    InstructionCost::CostType Val =
-        *getTLI()->getTypeLegalizationCost(DL, Ty).first.getValue();
+  InstructionCost getRegUsageForType(Type *Ty) {
+    InstructionCost Val = getTLI()->getTypeLegalizationCost(DL, Ty).first;
     assert(Val >= 0 && "Negative cost!");
     return Val;
   }

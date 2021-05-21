@@ -449,7 +449,7 @@ bool TargetTransformInfo::isTypeLegal(Type *Ty) const {
   return TTIImpl->isTypeLegal(Ty);
 }
 
-unsigned TargetTransformInfo::getRegUsageForType(Type *Ty) const {
+InstructionCost TargetTransformInfo::getRegUsageForType(Type *Ty) const {
   return TTIImpl->getRegUsageForType(Ty);
 }
 
