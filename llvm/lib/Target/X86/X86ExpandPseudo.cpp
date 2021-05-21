@@ -196,8 +196,7 @@ void X86ExpandPseudo::expandCALL_RVMARKER(MachineBasicBlock &MBB,
   MachineInstr &MI = *MBBI;
 
   MachineInstr *OriginalCall;
-  MachineOperand &CallTarget = MI.getOperand(1);
-  assert((CallTarget.isGlobal() || CallTarget.isReg()) &&
+  assert((MI.getOperand(1).isGlobal() || MI.getOperand(1).isReg()) &&
          "invalid operand for regular call");
   unsigned Opc = -1;
   if (MI.getOpcode() == X86::CALL64m_RVMARKER)
