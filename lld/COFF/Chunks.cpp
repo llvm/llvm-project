@@ -482,6 +482,8 @@ static uint8_t getBaserelType(const coff_relocation &rel) {
   case AMD64:
     if (rel.Type == IMAGE_REL_AMD64_ADDR64)
       return IMAGE_REL_BASED_DIR64;
+    if (rel.Type == IMAGE_REL_AMD64_ADDR32)
+      return IMAGE_REL_BASED_HIGHLOW;
     return IMAGE_REL_BASED_ABSOLUTE;
   case I386:
     if (rel.Type == IMAGE_REL_I386_DIR32)
