@@ -1,45 +1,38 @@
-; RUN: llc %s --stack-protector-guard=sysreg \
-; RUN:   --stack-protector-guard-reg=sp_el0 \
-; RUN:   --stack-protector-guard-offset=0 -verify-machineinstrs -o - | \
+; RUN: split-file %s %t
+; RUN: cat %t/main.ll %t/a.ll > %t/a2.ll
+; RUN: cat %t/main.ll %t/b.ll > %t/b2.ll
+; RUN: cat %t/main.ll %t/c.ll > %t/c2.ll
+; RUN: cat %t/main.ll %t/d.ll > %t/d2.ll
+; RUN: cat %t/main.ll %t/e.ll > %t/e2.ll
+; RUN: cat %t/main.ll %t/f.ll > %t/f2.ll
+; RUN: cat %t/main.ll %t/g.ll > %t/g2.ll
+; RUN: cat %t/main.ll %t/h.ll > %t/h2.ll
+; RUN: cat %t/main.ll %t/i.ll > %t/i2.ll
+; RUN: cat %t/main.ll %t/j.ll > %t/j2.ll
+; RUN: llc %t/a2.ll -verify-machineinstrs -o - | \
 ; RUN: FileCheck --check-prefix=CHECK --check-prefix=CHECK-NO-OFFSET %s
-; RUN: llc %s --stack-protector-guard=sysreg \
-; RUN:   --stack-protector-guard-reg=sp_el0 \
-; RUN:   --stack-protector-guard-offset=8 -verify-machineinstrs -o - | \
+; RUN: llc %t/b2.ll -verify-machineinstrs -o - | \
 ; RUN: FileCheck --check-prefix=CHECK --check-prefix=CHECK-POSITIVE-OFFSET %s
-; RUN: llc %s --stack-protector-guard=sysreg \
-; RUN:   --stack-protector-guard-reg=sp_el0 \
-; RUN:   --stack-protector-guard-offset=-8 -verify-machineinstrs -o - | \
+; RUN: llc %t/c2.ll -verify-machineinstrs -o - | \
 ; RUN: FileCheck --check-prefix=CHECK --check-prefix=CHECK-NEGATIVE-OFFSET %s
-; RUN: llc %s --stack-protector-guard=sysreg \
-; RUN:   --stack-protector-guard-reg=sp_el0 \
-; RUN:   --stack-protector-guard-offset=1 -verify-machineinstrs -o - | \
+; RUN: llc %t/d2.ll -verify-machineinstrs -o - | \
 ; RUN: FileCheck --check-prefix=CHECK --check-prefix=CHECK-NPOT-OFFSET %s
-; RUN: llc %s --stack-protector-guard=sysreg \
-; RUN:   --stack-protector-guard-reg=sp_el0 \
-; RUN:   --stack-protector-guard-offset=-1 -verify-machineinstrs -o - | \
+; RUN: llc %t/e2.ll -verify-machineinstrs -o - | \
 ; RUN: FileCheck --check-prefix=CHECK --check-prefix=CHECK-NPOT-NEG-OFFSET %s
-; RUN: llc %s --stack-protector-guard=sysreg \
-; RUN:   --stack-protector-guard-reg=sp_el0 \
-; RUN:   --stack-protector-guard-offset=257 -verify-machineinstrs -o - | \
+; RUN: llc %t/f2.ll -verify-machineinstrs -o - | \
 ; RUN: FileCheck --check-prefix=CHECK --check-prefix=CHECK-257-OFFSET %s
-; RUN: llc %s --stack-protector-guard=sysreg \
-; RUN:   --stack-protector-guard-reg=sp_el0 \
-; RUN:   --stack-protector-guard-offset=-257 -verify-machineinstrs -o - | \
+; RUN: llc %t/g2.ll -verify-machineinstrs -o - | \
 ; RUN: FileCheck --check-prefix=CHECK --check-prefix=CHECK-MINUS-257-OFFSET %s
 
 ; XFAIL
-; RUN: not --crash llc %s --stack-protector-guard=sysreg \
-; RUN:   --stack-protector-guard-reg=sp_el0 \
-; RUN:   --stack-protector-guard-offset=32761 -o - 2>&1 | \
+; RUN: not --crash llc %t/h2.ll -o - 2>&1 | \
 ; RUN: FileCheck --check-prefix=CHECK-BAD-OFFSET %s
-; RUN: not --crash llc %s --stack-protector-guard=sysreg \
-; RUN:   --stack-protector-guard-reg=sp_el0 \
-; RUN:   --stack-protector-guard-offset=-4096 -o - 2>&1 | \
+; RUN: not --crash llc %t/i2.ll -o - 2>&1 | \
 ; RUN: FileCheck --check-prefix=CHECK-BAD-OFFSET %s
-; RUN: not --crash llc %s --stack-protector-guard=sysreg \
-; RUN:   --stack-protector-guard-reg=sp_el0 \
-; RUN:   --stack-protector-guard-offset=4097 -o - 2>&1 | \
+; RUN: not --crash llc %t/j2.ll -o - 2>&1 | \
 ; RUN: FileCheck --check-prefix=CHECK-BAD-OFFSET %s
+
+;--- main.ll
 
 target triple = "aarch64-unknown-linux-gnu"
 
@@ -100,6 +93,31 @@ entry:
 
 declare void @baz(i32*)
 
-attributes #0 = { sspstrong }
-
 ; CHECK-BAD-OFFSET: LLVM ERROR: Unable to encode Stack Protector Guard Offset
+
+attributes #0 = { sspstrong }
+!llvm.module.flags = !{!1, !2, !3}
+
+!1 = !{i32 2, !"stack-protector-guard", !"sysreg"}
+!2 = !{i32 2, !"stack-protector-guard-reg", !"sp_el0"}
+
+;--- a.ll
+!3 = !{i32 2, !"stack-protector-guard-offset", i32 0}
+;--- b.ll
+!3 = !{i32 2, !"stack-protector-guard-offset", i32 8}
+;--- c.ll
+!3 = !{i32 2, !"stack-protector-guard-offset", i32 -8}
+;--- d.ll
+!3 = !{i32 2, !"stack-protector-guard-offset", i32 1}
+;--- e.ll
+!3 = !{i32 2, !"stack-protector-guard-offset", i32 -1}
+;--- f.ll
+!3 = !{i32 2, !"stack-protector-guard-offset", i32 257}
+;--- g.ll
+!3 = !{i32 2, !"stack-protector-guard-offset", i32 -257}
+;--- h.ll
+!3 = !{i32 2, !"stack-protector-guard-offset", i32 32761}
+;--- i.ll
+!3 = !{i32 2, !"stack-protector-guard-offset", i32 -4096}
+;--- j.ll
+!3 = !{i32 2, !"stack-protector-guard-offset", i32 4097}
