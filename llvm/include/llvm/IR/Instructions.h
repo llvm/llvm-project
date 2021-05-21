@@ -590,6 +590,18 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
+  static bool isValidSuccessOrdering(AtomicOrdering Ordering) {
+    return Ordering != AtomicOrdering::NotAtomic &&
+           Ordering != AtomicOrdering::Unordered;
+  }
+
+  static bool isValidFailureOrdering(AtomicOrdering Ordering) {
+    return Ordering != AtomicOrdering::NotAtomic &&
+           Ordering != AtomicOrdering::Unordered &&
+           Ordering != AtomicOrdering::AcquireRelease &&
+           Ordering != AtomicOrdering::Release;
+  }
+
   /// Returns the success ordering constraint of this cmpxchg instruction.
   AtomicOrdering getSuccessOrdering() const {
     return getSubclassData<SuccessOrderingField>();
@@ -597,8 +609,8 @@ public:
 
   /// Sets the success ordering constraint of this cmpxchg instruction.
   void setSuccessOrdering(AtomicOrdering Ordering) {
-    assert(Ordering != AtomicOrdering::NotAtomic &&
-           "CmpXchg instructions can only be atomic.");
+    assert(isValidSuccessOrdering(Ordering) &&
+           "invalid CmpXchg success ordering");
     setSubclassData<SuccessOrderingField>(Ordering);
   }
 
@@ -609,8 +621,8 @@ public:
 
   /// Sets the failure ordering constraint of this cmpxchg instruction.
   void setFailureOrdering(AtomicOrdering Ordering) {
-    assert(Ordering != AtomicOrdering::NotAtomic &&
-           "CmpXchg instructions can only be atomic.");
+    assert(isValidFailureOrdering(Ordering) &&
+           "invalid CmpXchg failure ordering");
     setSubclassData<FailureOrderingField>(Ordering);
   }
 
