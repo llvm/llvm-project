@@ -1,3 +1,4 @@
+// REQUIRES: lldb
 // Purpose:
 //      Check that we can use label-relative line numbers.
 //

@@ -485,6 +485,8 @@ LogicalResult checkPrepareXferOp(OpTy xferOp,
     return failure();
   if (xferOp.getVectorType().getRank() <= options.targetRank)
     return failure();
+  if (xferOp.getShapedType().template isa<RankedTensorType>())
+    return failure();
   return success();
 }
 
@@ -802,6 +804,8 @@ struct UnrollTransferReadConversion
                                 PatternRewriter &rewriter) const override {
     if (xferOp.getVectorType().getRank() <= options.targetRank)
       return failure();
+    if (xferOp.getShapedType().template isa<RankedTensorType>())
+      return failure();
 
     auto insertOp = getInsertOp(xferOp);
     auto vec = getResultVector(xferOp, rewriter);
@@ -917,6 +921,8 @@ struct UnrollTransferWriteConversion
   LogicalResult matchAndRewrite(TransferWriteOp xferOp,
                                 PatternRewriter &rewriter) const override {
     if (xferOp.getVectorType().getRank() <= options.targetRank)
+      return failure();
+    if (xferOp.getShapedType().template isa<RankedTensorType>())
       return failure();
 
     auto vec = getDataVector(xferOp);
