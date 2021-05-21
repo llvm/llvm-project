@@ -1154,7 +1154,11 @@ void UserValue::computeIntervals(MachineRegisterInfo &MRI,
   // location's lexical scope. In this case, splitting of an interval
   // can result in an interval outside of the scope being created,
   // causing extra unnecessary DBG_VALUEs to be emitted. To prevent
-  // this, trim the intervals to the lexical scope.
+  // this, trim the intervals to the lexical scope in the case of inlined
+  // variables, since heavy inlining may cause production of dramatically big
+  // number of DBG_VALUEs to be generated.
+  if (!dl.getInlinedAt())
+    return;
 
   LexicalScope *Scope = LS.findLexicalScope(dl);
   if (!Scope)
