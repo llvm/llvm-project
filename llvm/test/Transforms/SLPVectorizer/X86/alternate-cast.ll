@@ -61,55 +61,11 @@ define <8 x float> @sitofp_uitofp(<8 x i32> %a) {
 }
 
 define <8 x i32> @fptosi_fptoui(<8 x float> %a) {
-; SSE-LABEL: @fptosi_fptoui(
-; SSE-NEXT:    [[A4:%.*]] = extractelement <8 x float> [[A:%.*]], i32 4
-; SSE-NEXT:    [[A5:%.*]] = extractelement <8 x float> [[A]], i32 5
-; SSE-NEXT:    [[A6:%.*]] = extractelement <8 x float> [[A]], i32 6
-; SSE-NEXT:    [[A7:%.*]] = extractelement <8 x float> [[A]], i32 7
-; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A]], <8 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; SSE-NEXT:    [[TMP2:%.*]] = fptosi <4 x float> [[TMP1]] to <4 x i32>
-; SSE-NEXT:    [[AB4:%.*]] = fptoui float [[A4]] to i32
-; SSE-NEXT:    [[AB5:%.*]] = fptoui float [[A5]] to i32
-; SSE-NEXT:    [[AB6:%.*]] = fptoui float [[A6]] to i32
-; SSE-NEXT:    [[AB7:%.*]] = fptoui float [[A7]] to i32
-; SSE-NEXT:    [[R31:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
-; SSE-NEXT:    [[R4:%.*]] = insertelement <8 x i32> [[R31]], i32 [[AB4]], i32 4
-; SSE-NEXT:    [[R5:%.*]] = insertelement <8 x i32> [[R4]], i32 [[AB5]], i32 5
-; SSE-NEXT:    [[R6:%.*]] = insertelement <8 x i32> [[R5]], i32 [[AB6]], i32 6
-; SSE-NEXT:    [[R7:%.*]] = insertelement <8 x i32> [[R6]], i32 [[AB7]], i32 7
-; SSE-NEXT:    ret <8 x i32> [[R7]]
-;
-; SLM-LABEL: @fptosi_fptoui(
-; SLM-NEXT:    [[A4:%.*]] = extractelement <8 x float> [[A:%.*]], i32 4
-; SLM-NEXT:    [[A5:%.*]] = extractelement <8 x float> [[A]], i32 5
-; SLM-NEXT:    [[A6:%.*]] = extractelement <8 x float> [[A]], i32 6
-; SLM-NEXT:    [[A7:%.*]] = extractelement <8 x float> [[A]], i32 7
-; SLM-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A]], <8 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; SLM-NEXT:    [[TMP2:%.*]] = fptosi <4 x float> [[TMP1]] to <4 x i32>
-; SLM-NEXT:    [[AB4:%.*]] = fptoui float [[A4]] to i32
-; SLM-NEXT:    [[AB5:%.*]] = fptoui float [[A5]] to i32
-; SLM-NEXT:    [[AB6:%.*]] = fptoui float [[A6]] to i32
-; SLM-NEXT:    [[AB7:%.*]] = fptoui float [[A7]] to i32
-; SLM-NEXT:    [[R31:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
-; SLM-NEXT:    [[R4:%.*]] = insertelement <8 x i32> [[R31]], i32 [[AB4]], i32 4
-; SLM-NEXT:    [[R5:%.*]] = insertelement <8 x i32> [[R4]], i32 [[AB5]], i32 5
-; SLM-NEXT:    [[R6:%.*]] = insertelement <8 x i32> [[R5]], i32 [[AB6]], i32 6
-; SLM-NEXT:    [[R7:%.*]] = insertelement <8 x i32> [[R6]], i32 [[AB7]], i32 7
-; SLM-NEXT:    ret <8 x i32> [[R7]]
-;
-; AVX-LABEL: @fptosi_fptoui(
-; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A:%.*]], <8 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; AVX-NEXT:    [[TMP2:%.*]] = fptosi <4 x float> [[TMP1]] to <4 x i32>
-; AVX-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[A]], <8 x float> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; AVX-NEXT:    [[TMP4:%.*]] = fptoui <4 x float> [[TMP3]] to <4 x i32>
-; AVX-NEXT:    [[R72:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; AVX-NEXT:    ret <8 x i32> [[R72]]
-;
-; AVX512-LABEL: @fptosi_fptoui(
-; AVX512-NEXT:    [[TMP1:%.*]] = fptosi <8 x float> [[A:%.*]] to <8 x i32>
-; AVX512-NEXT:    [[TMP2:%.*]] = fptoui <8 x float> [[A]] to <8 x i32>
-; AVX512-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
-; AVX512-NEXT:    ret <8 x i32> [[TMP3]]
+; CHECK-LABEL: @fptosi_fptoui(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptosi <8 x float> [[A:%.*]] to <8 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = fptoui <8 x float> [[A]] to <8 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    ret <8 x i32> [[TMP3]]
 ;
   %a0 = extractelement <8 x float> %a, i32 0
   %a1 = extractelement <8 x float> %a, i32 1
