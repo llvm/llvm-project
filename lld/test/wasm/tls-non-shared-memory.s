@@ -9,7 +9,7 @@
 get_tls1:
   .functype get_tls1 () -> (i32)
   global.get __tls_base
-  i32.const tls1
+  i32.const tls1@TLSREL
   i32.add
   end_function
 
@@ -38,6 +38,9 @@ tls1:
 
 # RUN: wasm-ld --no-gc-sections --no-entry -o %t.wasm %t.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
+
+# RUN: wasm-ld --experimental-pic -shared -o %t.so %t.o
+# RUN: obj2yaml %t.so | FileCheck %s --check-prefix=PIC
 
 #      CHECK:   - Type:            GLOBAL
 # __stack_pointer
@@ -73,3 +76,31 @@ tls1:
 # CHECK-NEXT:          Opcode:          I32_CONST
 # CHECK-NEXT:          Value:           1028
 # CHECK-NEXT:        Content:         2A000000
+# CHECK-NEXT:  - Type:            CUSTOM
+
+
+# In PIC mode we expect TLS data and non-TLS data to be merged into
+# a single segment which is initialized via the  __memory_base import
+
+#      PIC:  - Type:            IMPORT
+# PIC-NEXT:    Imports:
+# PIC-NEXT:      - Module:          env
+# PIC-NEXT:        Field:           memory
+# PIC-NEXT:        Kind:            MEMORY
+# PIC-NEXT:        Memory:
+# PIC-NEXT:          Minimum:         0x1
+# PIC-NEXT:      - Module:          env
+# PIC-NEXT:        Field:           __memory_base
+# PIC-NEXT:        Kind:            GLOBAL
+# PIC-NEXT:        GlobalType:      I32
+
+# .tdata and .data are combined into single segment in PIC mode.
+#      PIC:  - Type:            DATA
+# PIC-NEXT:    Segments:
+# PIC-NEXT:      - SectionOffset:   6
+# PIC-NEXT:        InitFlags:       0
+# PIC-NEXT:        Offset:
+# PIC-NEXT:          Opcode:          GLOBAL_GET
+# PIC-NEXT:          Index:           0
+# PIC-NEXT:        Content:         2B0000002A000000
+# PIC-NEXT:  - Type:            CUSTOM
