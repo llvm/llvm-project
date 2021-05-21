@@ -33,7 +33,7 @@ set(LIBS
   MLIRAnalysis
   MLIRDialect
   MLIREDSC
-  MlirLspServerLib
+  MLIRLspServerLib
   MLIRParser
   MLIRPass
   MLIRTransforms
