@@ -217,8 +217,13 @@ large test cases that would normally take much longer to complete.
 
 ### Description
 Name the line this command is found on or 'on_line' if it is provided. Line
-names can be referenced by other commands expecting line number arguments.
-For example, `DexExpectWatchValues(..., on_line='my_line_name')`.
+names can be converted to line numbers with the `ref(str)` function. For
+example, `DexExpectWatchValues(..., on_line=ref('my_line_name'))`. Use
+arithmetic operators to get offsets from labels:
+
+    DexExpectWatchValues(..., on_line=ref('my_line_name') + 3)
+    DexExpectWatchValues(..., on_line=ref('my_line_name') - 5)
+
 
 ### Heuristic
 This command does not contribute to the heuristic score.
