@@ -5734,16 +5734,19 @@ static Value *simplifyIntrinsic(CallBase *Call, const SimplifyQuery &Q) {
     return nullptr;
   }
   case Intrinsic::experimental_vector_insert: {
+    Value *Vec = Call->getArgOperand(0);
     Value *SubVec = Call->getArgOperand(1);
     Value *Idx = Call->getArgOperand(2);
     Type *ReturnType = F->getReturnType();
 
-    // (insert_vector _, (extract_vector X, 0), 0) -> X
+    // (insert_vector Y, (extract_vector X, 0), 0) -> X
+    // where: Y is X, or Y is undef
     unsigned IdxN = cast<ConstantInt>(Idx)->getZExtValue();
     Value *X = nullptr;
     if (match(SubVec, m_Intrinsic<Intrinsic::experimental_vector_extract>(
                           m_Value(X), m_Zero())) &&
-        IdxN == 0 && X->getType() == ReturnType)
+        (Q.isUndefValue(Vec) || Vec == X) && IdxN == 0 &&
+        X->getType() == ReturnType)
       return X;
 
     return nullptr;
