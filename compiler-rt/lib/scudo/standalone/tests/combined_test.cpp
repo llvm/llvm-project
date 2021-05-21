@@ -97,7 +97,7 @@ template <class TypeParam> struct ScudoCombinedTest : public Test {
 
   void RunTest();
 
-  void BasicTest(scudo::uptr SizeLogMin, scudo::uptr SizeLogMax);
+  void BasicTest(scudo::uptr SizeLog);
 
   using AllocatorT = TestAllocator<TypeParam>;
   std::unique_ptr<AllocatorT> Allocator;
@@ -141,37 +141,56 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, IsOwned) {
 }
 
 template <class Config>
-void ScudoCombinedTest<Config>::BasicTest(scudo::uptr SizeLogMin,
-                                          scudo::uptr SizeLogMax) {
+void ScudoCombinedTest<Config>::BasicTest(scudo::uptr SizeLog) {
   auto *Allocator = this->Allocator.get();
 
   // This allocates and deallocates a bunch of chunks, with a wide range of
   // sizes and alignments, with a focus on sizes that could trigger weird
   // behaviors (plus or minus a small delta of a power of two for example).
-  for (scudo::uptr SizeLog = SizeLogMin; SizeLog <= SizeLogMax; SizeLog++) {
-    for (scudo::uptr AlignLog = MinAlignLog; AlignLog <= 16U; AlignLog++) {
-      const scudo::uptr Align = 1U << AlignLog;
-      for (scudo::sptr Delta = -32; Delta <= 32; Delta++) {
-        if (static_cast<scudo::sptr>(1U << SizeLog) + Delta <= 0)
-          continue;
-        const scudo::uptr Size = (1U << SizeLog) + Delta;
-        void *P = Allocator->allocate(Size, Origin, Align);
-        EXPECT_NE(P, nullptr);
-        EXPECT_TRUE(Allocator->isOwned(P));
-        EXPECT_TRUE(scudo::isAligned(reinterpret_cast<scudo::uptr>(P), Align));
-        EXPECT_LE(Size, Allocator->getUsableSize(P));
-        memset(P, 0xaa, Size);
-        checkMemoryTaggingMaybe(Allocator, P, Size, Align);
-        Allocator->deallocate(P, Origin, Size);
-      }
+  for (scudo::uptr AlignLog = MinAlignLog; AlignLog <= 16U; AlignLog++) {
+    const scudo::uptr Align = 1U << AlignLog;
+    for (scudo::sptr Delta = -32; Delta <= 32; Delta++) {
+      if (static_cast<scudo::sptr>(1U << SizeLog) + Delta <= 0)
+        continue;
+      const scudo::uptr Size = (1U << SizeLog) + Delta;
+      void *P = Allocator->allocate(Size, Origin, Align);
+      EXPECT_NE(P, nullptr);
+      EXPECT_TRUE(Allocator->isOwned(P));
+      EXPECT_TRUE(scudo::isAligned(reinterpret_cast<scudo::uptr>(P), Align));
+      EXPECT_LE(Size, Allocator->getUsableSize(P));
+      memset(P, 0xaa, Size);
+      checkMemoryTaggingMaybe(Allocator, P, Size, Align);
+      Allocator->deallocate(P, Origin, Size);
     }
   }
 }
 
-SCUDO_TYPED_TEST(ScudoCombinedTest, BasicCombined0) { this->BasicTest(0, 16); }
-SCUDO_TYPED_TEST(ScudoCombinedTest, BasicCombined1) { this->BasicTest(17, 18); }
-SCUDO_TYPED_TEST(ScudoCombinedTest, BasicCombined2) { this->BasicTest(19, 19); }
-SCUDO_TYPED_TEST(ScudoCombinedTest, BasicCombined3) { this->BasicTest(20, 20); }
+#define SCUDO_MAKE_BASIC_TEST(SizeLog)                                         \
+  SCUDO_TYPED_TEST(ScudoCombinedTest, BasicCombined##SizeLog) {                \
+    this->BasicTest(SizeLog);                                                  \
+  }
+
+SCUDO_MAKE_BASIC_TEST(0)
+SCUDO_MAKE_BASIC_TEST(1)
+SCUDO_MAKE_BASIC_TEST(2)
+SCUDO_MAKE_BASIC_TEST(3)
+SCUDO_MAKE_BASIC_TEST(4)
+SCUDO_MAKE_BASIC_TEST(5)
+SCUDO_MAKE_BASIC_TEST(6)
+SCUDO_MAKE_BASIC_TEST(7)
+SCUDO_MAKE_BASIC_TEST(8)
+SCUDO_MAKE_BASIC_TEST(9)
+SCUDO_MAKE_BASIC_TEST(10)
+SCUDO_MAKE_BASIC_TEST(11)
+SCUDO_MAKE_BASIC_TEST(12)
+SCUDO_MAKE_BASIC_TEST(13)
+SCUDO_MAKE_BASIC_TEST(14)
+SCUDO_MAKE_BASIC_TEST(15)
+SCUDO_MAKE_BASIC_TEST(16)
+SCUDO_MAKE_BASIC_TEST(17)
+SCUDO_MAKE_BASIC_TEST(18)
+SCUDO_MAKE_BASIC_TEST(19)
+SCUDO_MAKE_BASIC_TEST(20)
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, ZeroContents) {
   auto *Allocator = this->Allocator.get();
