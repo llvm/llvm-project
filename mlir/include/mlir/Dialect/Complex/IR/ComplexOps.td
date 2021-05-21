@@ -166,6 +166,10 @@ def EqualOp : Complex_Op<"eq",
 
   let arguments = (ins Complex<AnyFloat>:$lhs, Complex<AnyFloat>:$rhs);
   let results = (outs I1:$result);
+  let builders = [
+    OpBuilder<(ins "Value":$lhs, "Value":$rhs), [{
+      build($_builder, $_state, $_builder.getI1Type(), lhs, rhs);
+    }]>];
 
   let assemblyFormat = "$lhs `,` $rhs  attr-dict `:` type($lhs)";
 }
@@ -205,6 +209,10 @@ def NotEqualOp : Complex_Op<"neq",
 
   let arguments = (ins Complex<AnyFloat>:$lhs, Complex<AnyFloat>:$rhs);
   let results = (outs I1:$result);
+  let builders = [
+    OpBuilder<(ins "Value":$lhs, "Value":$rhs), [{
+      build($_builder, $_state, $_builder.getI1Type(), lhs, rhs);
+    }]>];
 
   let assemblyFormat = "$lhs `,` $rhs  attr-dict `:` type($lhs)";
 }

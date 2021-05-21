@@ -36,7 +36,7 @@ int main() {
   return fun(5, 20);
 }
 
-// DexExpectWatchValue('parama', 20, on_line='s0')
+// DexExpectWatchValue('parama', 20, on_line=ref('s0'))
 //
 // NOTE: the dexter command uses --fail-lt 0.1 (instead of the standard 1.0)
 // because seeing 'optimized out' would still be a win; it's the best we can do

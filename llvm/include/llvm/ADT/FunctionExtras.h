@@ -90,13 +90,24 @@ protected:
   // The heuristic used is related to common ABI register passing conventions.
   // It doesn't have to be exact though, and in one way it is more strict
   // because we want to still be able to observe either moves *or* copies.
+  template <typename T> struct AdjustedParamTBase {
+    static_assert(!std::is_reference<T>::value,
+                  "references should be handled by template specialization");
+    using type = typename std::conditional<
+        llvm::is_trivially_copy_constructible<T>::value &&
+            llvm::is_trivially_move_constructible<T>::value &&
+            IsSizeLessThanThresholdT<T>::value,
+        T, T &>::type;
+  };
+
+  // This specialization ensures that 'AdjustedParam<V<T>&>' or
+  // 'AdjustedParam<V<T>&&>' does not trigger a compile-time error when 'T' is
+  // an incomplete type and V a templated type.
+  template <typename T> struct AdjustedParamTBase<T &> { using type = T &; };
+  template <typename T> struct AdjustedParamTBase<T &&> { using type = T &; };
+
   template <typename T>
-  using AdjustedParamT = typename std::conditional<
-      !std::is_reference<T>::value &&
-          llvm::is_trivially_copy_constructible<T>::value &&
-          llvm::is_trivially_move_constructible<T>::value &&
-          IsSizeLessThanThresholdT<T>::value,
-      T, T &>::type;
+  using AdjustedParamT = typename AdjustedParamTBase<T>::type;
 
   // The type of the erased function pointer we use as a callback to dispatch to
   // the stored callable when it is trivial to move and destroy.

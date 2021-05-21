@@ -32,7 +32,7 @@ int main() {
 DexExpectProgramState({
   'frames': [
     {
-      'location': { 'lineno': 'foo' },
+      'location': { 'lineno': ref('foo') },
       'watches': {
         'v.Data == 0': 'true',
         'v.Kind': '2142'

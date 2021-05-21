@@ -598,7 +598,10 @@ static llvm::Triple computeTargetTriple(const Driver &D,
 void Driver::setLTOMode(const llvm::opt::ArgList &Args) {
   LTOMode = LTOK_None;
   if (!Args.hasFlag(options::OPT_flto, options::OPT_flto_EQ,
-                    options::OPT_fno_lto, false))
+                    options::OPT_fno_lto, false) &&
+      !Args.hasFlag(options::OPT_flto_EQ_auto, options::OPT_fno_lto, false) &&
+      !Args.hasFlag(options::OPT_flto_EQ_jobserver, options::OPT_fno_lto,
+                    false))
     return;
 
   StringRef LTOName("full");

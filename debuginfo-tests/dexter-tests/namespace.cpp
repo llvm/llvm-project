@@ -20,5 +20,5 @@ int main() {
   return 0;
 }
 
-// DexExpectWatchValue('monkey::ape', 32, on_line='main')
+// DexExpectWatchValue('monkey::ape', 32, on_line=ref('main'))
 

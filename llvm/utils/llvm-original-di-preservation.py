@@ -23,10 +23,16 @@ class DISPBug:
     self.action = action
     self.fn_name = fn_name
 
+class DIVarBug:
+  def __init__(self, action, name, fn_name):
+    self.action = action
+    self.name = name
+    self.fn_name = fn_name
+
 # Report the bugs in form of html.
-def generate_html_report(di_location_bugs, di_subprogram_bugs, \
+def generate_html_report(di_location_bugs, di_subprogram_bugs, di_var_bugs, \
                          di_location_bugs_summary, di_sp_bugs_summary, \
-                         html_file):
+                         di_var_bugs_summary, html_file):
   fileout = open(html_file, "w")
 
   html_header = """ <html>
@@ -145,7 +151,7 @@ def generate_html_report(di_location_bugs, di_subprogram_bugs, \
 
   at_least_one_bug_found = False
 
-  # Handle loction bugs.
+  # Handle fn bugs.
   for file, per_file_bugs in di_subprogram_bugs.items():
     for llvm_pass, per_pass_bugs in per_file_bugs.items():
       # No SP bugs for the pass.
@@ -212,6 +218,89 @@ def generate_html_report(di_location_bugs, di_subprogram_bugs, \
     """
   table_di_sp_sum += "</table>\n"
 
+  # Create the table for Variable bugs.
+  table_title_di_var = "Variable Location Bugs found by the Debugify"
+  table_di_var = """<table>
+  <caption><b>{}</b></caption>
+  <tr>
+  """.format(table_title_di_var)
+
+  header_di_var = ["File", "LLVM Pass Name", "Variable", "Function", "Action"]
+
+  for column in header_di_var:
+    table_di_var += "    <th>{0}</th>\n".format(column.strip())
+  table_di_var += "  </tr>\n"
+
+  at_least_one_bug_found = False
+
+  # Handle var bugs.
+  for file, per_file_bugs in di_var_bugs.items():
+    for llvm_pass, per_pass_bugs in per_file_bugs.items():
+      # No SP bugs for the pass.
+      if len(per_pass_bugs) == 0:
+        continue
+      at_least_one_bug_found = True
+      row = []
+      table_di_var += "  </tr>\n"
+      # Get the bugs info.
+      for x in per_pass_bugs:
+        row.append("    <tr>\n")
+        row.append(file)
+        row.append(llvm_pass)
+        row.append(x.name)
+        row.append(x.fn_name)
+        row.append(x.action)
+        row.append("    </tr>\n")
+      # Dump the bugs info into the table.
+      for column in row:
+        # The same file-pass pair can have multiple bugs.
+        if (column == "    <tr>\n" or column == "    </tr>\n"):
+          table_di_var += column
+          continue
+        table_di_var += "    <td>{0}</td>\n".format(column.strip())
+      table_di_var += "  <tr>\n"
+
+  if not at_least_one_bug_found:
+    table_di_var += """<tr>
+        <td colspan='4'> No bugs found </td>
+      </tr>
+    """
+  table_di_var += "</table>\n"
+
+  # Create the summary table for the sp bugs.
+  table_title_di_var_sum = "Summary of Variable Location Bugs"
+  table_di_var_sum = """<table>
+  <caption><b>{}</b></caption>
+  <tr>
+  """.format(table_title_di_var_sum)
+
+  header_di_var_sum = ["LLVM Pass Name", "Number of bugs"]
+
+  for column in header_di_var_sum:
+    table_di_var_sum += "    <th>{0}</th>\n".format(column.strip())
+  table_di_var_sum += "  </tr>\n"
+
+  # Print the summary.
+  row = []
+  for llvm_pass, num in sorted(di_var_bugs_summary.items()):
+    row.append("    <tr>\n")
+    row.append(llvm_pass)
+    row.append(str(num))
+    row.append("    </tr>\n")
+  for column in row:
+    if (column == "    <tr>\n" or column == "    </tr>\n"):
+      table_di_var_sum += column
+      continue
+    table_di_var_sum += "    <td>{0}</td>\n".format(column.strip())
+  table_di_var_sum += "  <tr>\n"
+
+  if not at_least_one_bug_found:
+    table_di_var_sum += """<tr>
+        <td colspan='2'> No bugs found </td>
+      </tr>
+    """
+  table_di_var_sum += "</table>\n"
+
   # Finish the html page.
   html_footer = """</body>
   </html>"""
@@ -227,6 +316,11 @@ def generate_html_report(di_location_bugs, di_subprogram_bugs, \
   fileout.writelines(table_di_sp)
   fileout.writelines(new_line)
   fileout.writelines(table_di_sp_sum)
+  fileout.writelines(new_line)
+  fileout.writelines(new_line)
+  fileout.writelines(table_di_var)
+  fileout.writelines(new_line)
+  fileout.writelines(table_di_var_sum)
   fileout.writelines(html_footer)
   fileout.close()
 
@@ -288,10 +382,12 @@ def Main():
   # Use the defaultdict in order to make multidim dicts.
   di_location_bugs = defaultdict(lambda: defaultdict(dict))
   di_subprogram_bugs = defaultdict(lambda: defaultdict(dict))
+  di_variable_bugs = defaultdict(lambda: defaultdict(dict))
 
   # Use the ordered dict to make a summary.
   di_location_bugs_summary = OrderedDict()
   di_sp_bugs_summary = OrderedDict()
+  di_var_bugs_summary = OrderedDict()
 
   # Map the bugs into the file-pass pairs.
   for bugs_per_pass in debug_info_bugs:
@@ -302,6 +398,8 @@ def Main():
 
     di_loc_bugs = []
     di_sp_bugs = []
+    di_var_bugs = []
+
     for bug in bugs:
       bugs_metadata = bug["metadata"]
       if bugs_metadata == "DILocation":
@@ -326,16 +424,28 @@ def Main():
           di_sp_bugs_summary[bugs_pass] += 1
         else:
           di_sp_bugs_summary[bugs_pass] = 1
+      elif bugs_metadata == "dbg-var-intrinsic":
+        action = bug["action"]
+        fn_name = bug["fn-name"]
+        name = bug["name"]
+        di_var_bugs.append(DIVarBug(action, name, fn_name))
+
+        # Fill the summary dict.
+        if bugs_pass in di_var_bugs_summary:
+          di_var_bugs_summary[bugs_pass] += 1
+        else:
+          di_var_bugs_summary[bugs_pass] = 1
       else:
-        print ("error: Only DILocation and DISubprogram are supported.")
+        print ("error: Unsupported metadata.")
         sys.exit(1)
 
     di_location_bugs[bugs_file][bugs_pass] = di_loc_bugs
     di_subprogram_bugs[bugs_file][bugs_pass] = di_sp_bugs
+    di_variable_bugs[bugs_file][bugs_pass] = di_var_bugs
 
-  generate_html_report(di_location_bugs, di_subprogram_bugs, \
+  generate_html_report(di_location_bugs, di_subprogram_bugs, di_variable_bugs, \
                        di_location_bugs_summary, di_sp_bugs_summary, \
-                       opts.html_file)
+                       di_var_bugs_summary, opts.html_file)
 
 if __name__ == "__main__":
   Main()
