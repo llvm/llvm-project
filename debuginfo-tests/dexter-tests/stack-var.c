@@ -12,6 +12,6 @@ int main() {
   return test; // DexLabel('after_bar')
 }
 
-// DexExpectWatchValue('test', '23', on_line='before_bar')
-// DexExpectWatchValue('test', '23', on_line='after_bar')
+// DexExpectWatchValue('test', '23', on_line=ref('before_bar'))
+// DexExpectWatchValue('test', '23', on_line=ref('after_bar'))
 
