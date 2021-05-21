@@ -144,6 +144,16 @@ class AdjustStack<SDPatternOperator operator> :
   let hasNoSchedulingInfo = 1;
 }
 
+class EffectiveAddressNM<string opstr, RegisterOperand RO> :
+  InstNM<(outs RO:$rt), (ins mem_ea:$addr), !strconcat(opstr, "\t$rt, $addr"),
+         [(set RO:$rt, addr:$addr)]> {
+  let isCodeGenOnly = 1;
+  let hasNoSchedulingInfo = 1;
+  let DecoderMethod = "DecodeMem";
+  string BaseOpcode = !strconcat(opstr, "_lea");
+}
+
+
 //===----------------------------------------------------------------------===//
 //
 // Instruction Definitions
@@ -204,6 +214,9 @@ def JRC_NM : IndirectBranchNM<"jrc", GPR32NMOpnd>;
 def BALC_NM : CallNM<"balc", MipsJmpLink, tglobaladdr>, InstSize32;
 
 def Li_NM : RegImmNM<"li", simm32_relaxed, GPR32NMOpnd>, InstSize48;
+
+def LEA_ADDiu_NM : EffectiveAddressNM<"addiu", GPR32NMOpnd>, InstSize32;
+
 
 def ADJCALLSTACKDOWN_NM : AdjustStack<callseq_start>;
 def ADJCALLSTACKUP_NM   : AdjustStack<callseq_end>;
