@@ -404,16 +404,16 @@ declare void @llvm.memset(i8* %dest, i8 %val, i32 %len, i1 %isvolatile)
 ; It is odd to add nocapture but a result of the llvm.memcpy nocapture.
 ;
 define i32 @memcpy_volatile(i8* %ptr1, i8* %ptr2) {
-; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind willreturn
+; IS__TUNIT____: Function Attrs: argmemonly nofree nounwind willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@memcpy_volatile
 ; IS__TUNIT____-SAME: (i8* nocapture nofree writeonly [[PTR1:%.*]], i8* nocapture nofree readonly [[PTR2:%.*]]) #[[ATTR10:[0-9]+]] {
-; IS__TUNIT____-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture nofree writeonly [[PTR1]], i8* noalias nocapture nofree readonly [[PTR2]], i32 noundef 8, i1 noundef true) #[[ATTR17:[0-9]+]]
+; IS__TUNIT____-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture nofree writeonly [[PTR1]], i8* noalias nocapture nofree readonly [[PTR2]], i32 noundef 8, i1 noundef true) #[[ATTR18:[0-9]+]]
 ; IS__TUNIT____-NEXT:    ret i32 4
 ;
-; IS__CGSCC____: Function Attrs: argmemonly nofree nosync nounwind willreturn
+; IS__CGSCC____: Function Attrs: argmemonly nofree nounwind willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@memcpy_volatile
 ; IS__CGSCC____-SAME: (i8* nocapture nofree writeonly [[PTR1:%.*]], i8* nocapture nofree readonly [[PTR2:%.*]]) #[[ATTR10:[0-9]+]] {
-; IS__CGSCC____-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture nofree writeonly [[PTR1]], i8* noalias nocapture nofree readonly [[PTR2]], i32 noundef 8, i1 noundef true) #[[ATTR18:[0-9]+]]
+; IS__CGSCC____-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture nofree writeonly [[PTR1]], i8* noalias nocapture nofree readonly [[PTR2]], i32 noundef 8, i1 noundef true) #[[ATTR19:[0-9]+]]
 ; IS__CGSCC____-NEXT:    ret i32 4
 ;
   call void @llvm.memcpy(i8* %ptr1, i8* %ptr2, i32 8, i1 1)
@@ -428,13 +428,13 @@ define i32 @memset_non_volatile(i8* %ptr1, i8 %val) {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@memset_non_volatile
 ; IS__TUNIT____-SAME: (i8* nocapture nofree writeonly [[PTR1:%.*]], i8 [[VAL:%.*]]) #[[ATTR11:[0-9]+]] {
-; IS__TUNIT____-NEXT:    call void @llvm.memset.p0i8.i32(i8* nocapture nofree writeonly [[PTR1]], i8 [[VAL]], i32 noundef 8, i1 noundef false) #[[ATTR18:[0-9]+]]
+; IS__TUNIT____-NEXT:    call void @llvm.memset.p0i8.i32(i8* nocapture nofree writeonly [[PTR1]], i8 [[VAL]], i32 noundef 8, i1 noundef false) #[[ATTR19:[0-9]+]]
 ; IS__TUNIT____-NEXT:    ret i32 4
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@memset_non_volatile
 ; IS__CGSCC____-SAME: (i8* nocapture nofree writeonly [[PTR1:%.*]], i8 [[VAL:%.*]]) #[[ATTR11:[0-9]+]] {
-; IS__CGSCC____-NEXT:    call void @llvm.memset.p0i8.i32(i8* nocapture nofree writeonly [[PTR1]], i8 [[VAL]], i32 noundef 8, i1 noundef false) #[[ATTR19:[0-9]+]]
+; IS__CGSCC____-NEXT:    call void @llvm.memset.p0i8.i32(i8* nocapture nofree writeonly [[PTR1]], i8 [[VAL]], i32 noundef 8, i1 noundef false) #[[ATTR20:[0-9]+]]
 ; IS__CGSCC____-NEXT:    ret i32 4
 ;
   call void @llvm.memset(i8* %ptr1, i8 %val, i32 8, i1 0)
@@ -508,13 +508,13 @@ define float @cos_test2(float %x) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@cos_test2
 ; IS__TUNIT____-SAME: (float [[X:%.*]]) #[[ATTR15]] {
-; IS__TUNIT____-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X]]) #[[ATTR19:[0-9]+]]
+; IS__TUNIT____-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X]]) #[[ATTR20:[0-9]+]]
 ; IS__TUNIT____-NEXT:    ret float [[C]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@cos_test2
 ; IS__CGSCC____-SAME: (float [[X:%.*]]) #[[ATTR16:[0-9]+]] {
-; IS__CGSCC____-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X]]) #[[ATTR20:[0-9]+]]
+; IS__CGSCC____-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X]]) #[[ATTR21:[0-9]+]]
 ; IS__CGSCC____-NEXT:    ret float [[C]]
 ;
   %c = call float @llvm.cos(float %x)
@@ -531,16 +531,17 @@ define float @cos_test2(float %x) {
 ; IS__TUNIT____: attributes #[[ATTR7]] = { nofree nounwind }
 ; IS__TUNIT____: attributes #[[ATTR8]] = { nofree nosync nounwind willreturn }
 ; IS__TUNIT____: attributes #[[ATTR9]] = { nofree nosync nounwind }
-; IS__TUNIT____: attributes #[[ATTR10]] = { argmemonly nofree nosync nounwind willreturn }
+; IS__TUNIT____: attributes #[[ATTR10]] = { argmemonly nofree nounwind willreturn }
 ; IS__TUNIT____: attributes #[[ATTR11]] = { argmemonly nofree nosync nounwind willreturn writeonly }
 ; IS__TUNIT____: attributes #[[ATTR12:[0-9]+]] = { convergent readnone }
 ; IS__TUNIT____: attributes #[[ATTR13]] = { readnone }
 ; IS__TUNIT____: attributes #[[ATTR14]] = { nounwind }
 ; IS__TUNIT____: attributes #[[ATTR15]] = { nofree nosync nounwind readnone willreturn }
-; IS__TUNIT____: attributes #[[ATTR16:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
-; IS__TUNIT____: attributes #[[ATTR17]] = { willreturn }
-; IS__TUNIT____: attributes #[[ATTR18]] = { willreturn writeonly }
-; IS__TUNIT____: attributes #[[ATTR19]] = { readnone willreturn }
+; IS__TUNIT____: attributes #[[ATTR16:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
+; IS__TUNIT____: attributes #[[ATTR17:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
+; IS__TUNIT____: attributes #[[ATTR18]] = { willreturn }
+; IS__TUNIT____: attributes #[[ATTR19]] = { willreturn writeonly }
+; IS__TUNIT____: attributes #[[ATTR20]] = { readnone willreturn }
 ;.
 ; IS__CGSCC_OPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind optsize readnone ssp uwtable willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR1]] = { argmemonly nofree norecurse nosync nounwind uwtable willreturn }
@@ -552,17 +553,18 @@ define float @cos_test2(float %x) {
 ; IS__CGSCC_OPM: attributes #[[ATTR7]] = { nofree norecurse nounwind }
 ; IS__CGSCC_OPM: attributes #[[ATTR8]] = { nofree norecurse nosync nounwind willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind }
-; IS__CGSCC_OPM: attributes #[[ATTR10]] = { argmemonly nofree nosync nounwind willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR10]] = { argmemonly nofree nounwind willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR11]] = { argmemonly nofree nosync nounwind willreturn writeonly }
 ; IS__CGSCC_OPM: attributes #[[ATTR12:[0-9]+]] = { convergent readnone }
 ; IS__CGSCC_OPM: attributes #[[ATTR13]] = { readnone }
 ; IS__CGSCC_OPM: attributes #[[ATTR14]] = { nounwind }
 ; IS__CGSCC_OPM: attributes #[[ATTR15]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR16]] = { nofree nosync nounwind readnone willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR17:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR18]] = { willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR19]] = { willreturn writeonly }
-; IS__CGSCC_OPM: attributes #[[ATTR20]] = { readnone willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR17:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
+; IS__CGSCC_OPM: attributes #[[ATTR18:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR19]] = { willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR20]] = { willreturn writeonly }
+; IS__CGSCC_OPM: attributes #[[ATTR21]] = { readnone willreturn }
 ;.
 ; IS__CGSCC_NPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind optsize readnone ssp uwtable willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR1]] = { argmemonly nofree norecurse nosync nounwind uwtable willreturn }
@@ -574,15 +576,16 @@ define float @cos_test2(float %x) {
 ; IS__CGSCC_NPM: attributes #[[ATTR7]] = { nofree norecurse nounwind }
 ; IS__CGSCC_NPM: attributes #[[ATTR8]] = { nofree norecurse nosync nounwind willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind }
-; IS__CGSCC_NPM: attributes #[[ATTR10]] = { argmemonly nofree nosync nounwind willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR10]] = { argmemonly nofree nounwind willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR11]] = { argmemonly nofree nosync nounwind willreturn writeonly }
 ; IS__CGSCC_NPM: attributes #[[ATTR12:[0-9]+]] = { convergent readnone }
 ; IS__CGSCC_NPM: attributes #[[ATTR13]] = { readnone }
 ; IS__CGSCC_NPM: attributes #[[ATTR14]] = { nounwind }
 ; IS__CGSCC_NPM: attributes #[[ATTR15]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR16]] = { nofree nosync nounwind readnone willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR17:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR18]] = { willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR19]] = { willreturn writeonly }
-; IS__CGSCC_NPM: attributes #[[ATTR20]] = { readnone willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR17:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
+; IS__CGSCC_NPM: attributes #[[ATTR18:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR19]] = { willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR20]] = { willreturn writeonly }
+; IS__CGSCC_NPM: attributes #[[ATTR21]] = { readnone willreturn }
 ;.

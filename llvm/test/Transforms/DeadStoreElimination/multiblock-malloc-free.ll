@@ -239,7 +239,7 @@ declare %struct.NodePtrVecStruct* @NodePtrVec_new(i32)
 define noalias %struct.SystemCallMapElementStruct* @SystemCallMapElement_new(i8* nocapture readonly %label, i32 %initialSize) {
 ; CHECK-LABEL: @SystemCallMapElement_new(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call dereferenceable_or_null(24) i8* @malloc(i64 24) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call dereferenceable_or_null(24) i8* @malloc(i64 24) #[[ATTR7:[0-9]+]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[CALL]] to %struct.SystemCallMapElementStruct*
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8* [[CALL]], null
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[CLEANUP:%.*]], label [[IF_THEN:%.*]]
@@ -256,7 +256,7 @@ define noalias %struct.SystemCallMapElementStruct* @SystemCallMapElement_new(i8*
 ; CHECK-NEXT:    tail call void @free(i8* nonnull [[CALL]])
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[CALL6:%.*]] = tail call %struct.NodePtrVecStruct* @NodePtrVec_new(i32 [[INITIALSIZE:%.*]]) #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    [[CALL6:%.*]] = tail call %struct.NodePtrVecStruct* @NodePtrVec_new(i32 [[INITIALSIZE:%.*]]) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    [[NODES:%.*]] = getelementptr inbounds i8, i8* [[CALL]], i64 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[NODES]] to %struct.NodePtrVecStruct**
 ; CHECK-NEXT:    store %struct.NodePtrVecStruct* [[CALL6]], %struct.NodePtrVecStruct** [[TMP2]], align 8
@@ -311,7 +311,7 @@ cleanup:                                          ; preds = %entry, %if.end, %if
 define noalias %struct.BitfieldStruct* @Bitfield_new(i32 %bitsNeeded) {
 ; CHECK-LABEL: @Bitfield_new(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call dereferenceable_or_null(16) i8* @malloc(i64 16) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call dereferenceable_or_null(16) i8* @malloc(i64 16) #[[ATTR7]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[CALL]] to %struct.BitfieldStruct*
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8* [[CALL]], null
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[CLEANUP:%.*]], label [[IF_END:%.*]]
@@ -319,7 +319,7 @@ define noalias %struct.BitfieldStruct* @Bitfield_new(i32 %bitsNeeded) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[BITSNEEDED:%.*]], 7
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[ADD]], 8
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[DIV]] to i64
-; CHECK-NEXT:    [[CALL1:%.*]] = tail call i8* @calloc(i64 [[CONV]], i64 1) #[[ATTR7:[0-9]+]]
+; CHECK-NEXT:    [[CALL1:%.*]] = tail call i8* @calloc(i64 [[CONV]], i64 1) #[[ATTR8:[0-9]+]]
 ; CHECK-NEXT:    [[BITFIELD:%.*]] = getelementptr inbounds i8, i8* [[CALL]], i64 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[BITFIELD]] to i8**
 ; CHECK-NEXT:    store i8* [[CALL1]], i8** [[TMP1]], align 8
