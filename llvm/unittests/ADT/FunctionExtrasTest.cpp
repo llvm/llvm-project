@@ -273,4 +273,22 @@ TEST(UniqueFunctionTest, SFINAE) {
   EXPECT_EQ("string", returns([] { return "hello"; }));
 }
 
+// A forward declared type, and a templated type.
+class Incomplete;
+template <typename T> class Templated { T A; };
+
+// Check that we can define unique_function that have references to
+// incomplete types, even if those types are templated over an
+// incomplete type.
+TEST(UniqueFunctionTest, IncompleteTypes) {
+  unique_function<void(Templated<Incomplete> &&)>
+      IncompleteArgumentRValueReference;
+  unique_function<void(Templated<Incomplete> &)>
+      IncompleteArgumentLValueReference;
+  unique_function<void(Templated<Incomplete> *)> IncompleteArgumentPointer;
+  unique_function<Templated<Incomplete> &()> IncompleteResultLValueReference;
+  unique_function<Templated<Incomplete> && ()> IncompleteResultRValueReference2;
+  unique_function<Templated<Incomplete> *()> IncompleteResultPointer;
+}
+
 } // anonymous namespace
