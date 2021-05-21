@@ -27,6 +27,7 @@ class DexLimitSteps(CommandBase):
         except KeyError:
             self.from_line = kwargs.pop('from_line', 1)
             self.to_line = kwargs.pop('to_line', 999999)
+        self.hit_count = kwargs.pop('hit_count', None)
         if kwargs:
             raise TypeError('unexpected named args: {}'.format(
                 ', '.join(kwargs)))
