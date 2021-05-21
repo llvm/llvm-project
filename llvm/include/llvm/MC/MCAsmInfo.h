@@ -265,6 +265,11 @@ protected:
   /// null.  Defaults to null.
   const char *ByteListDirective = nullptr;
 
+  /// This directive allows emission of a zero-terminated ascii string without
+  /// the standard C escape characters embedded into it.  If a target doesn't
+  /// support this, it can be set to null. Defaults to null.
+  const char *PlainStringDirective = nullptr;
+
   /// Form used for character literals in the assembly syntax.  Useful for
   /// producing strings as byte lists.  If a target does not use or support
   /// this, it shall be set to ACLS_Unknown.  Defaults to ACLS_Unknown.
@@ -686,6 +691,7 @@ public:
   const char *getAsciiDirective() const { return AsciiDirective; }
   const char *getAscizDirective() const { return AscizDirective; }
   const char *getByteListDirective() const { return ByteListDirective; }
+  const char *getPlainStringDirective() const { return PlainStringDirective; }
   AsmCharLiteralSyntax characterLiteralSyntax() const {
     return CharacterLiteralSyntax;
   }
