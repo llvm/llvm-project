@@ -10,8 +10,8 @@
 #ifndef _LIBCPP___MEMORY_SHARED_PTR_H
 #define _LIBCPP___MEMORY_SHARED_PTR_H
 
-#include <__config>
 #include <__availability>
+#include <__config>
 #include <__functional_base> // std::less, std::binary_function
 #include <__memory/addressof.h>
 #include <__memory/allocation_guard.h>
