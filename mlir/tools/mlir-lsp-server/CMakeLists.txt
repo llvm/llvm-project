@@ -32,7 +32,6 @@ set(LIBS
   MLIRLoopAnalysis
   MLIRAnalysis
   MLIRDialect
-  MLIREDSC
   MLIRLspServerLib
   MLIRParser
   MLIRPass

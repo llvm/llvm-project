@@ -3811,11 +3811,6 @@ void Verifier::verifySwiftErrorValue(const Value *SwiftErrorVal) {
 
 void Verifier::visitAllocaInst(AllocaInst &AI) {
   SmallPtrSet<Type*, 4> Visited;
-  PointerType *PTy = AI.getType();
-  // TODO: Relax this restriction?
-  Assert(PTy->getAddressSpace() == DL.getAllocaAddrSpace(),
-         "Allocation instruction pointer not in the stack address space!",
-         &AI);
   Assert(AI.getAllocatedType()->isSized(&Visited),
          "Cannot allocate unsized type", &AI);
   Assert(AI.getArraySize()->getType()->isIntegerTy(),

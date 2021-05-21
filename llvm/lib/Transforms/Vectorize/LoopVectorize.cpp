@@ -6568,8 +6568,8 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<ElementCount> VFs) {
   const auto &TTICapture = TTI;
   auto GetRegUsage = [&TTICapture](Type *Ty, ElementCount VF) {
     if (Ty->isTokenTy() || !VectorType::isValidElementType(Ty))
-      return 0U;
-    return TTICapture.getRegUsageForType(VectorType::get(Ty, VF));
+      return 0;
+    return *TTICapture.getRegUsageForType(VectorType::get(Ty, VF)).getValue();
   };
 
   for (unsigned int i = 0, s = IdxToInstr.size(); i < s; ++i) {
