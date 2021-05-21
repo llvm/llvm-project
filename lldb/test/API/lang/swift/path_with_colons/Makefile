@@ -1,3 +1,2 @@
-SWIFT_SOURCES := main.swift
-
-include Makefile.rules
+all:
+	$(MAKE) -C "pro:ject"

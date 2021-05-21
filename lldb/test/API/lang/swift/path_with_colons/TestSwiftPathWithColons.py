@@ -45,6 +45,7 @@ class TestSwiftPathWithColon(TestBase):
         copied_src = os.path.join(colon_dir, 'main.swift')
         dst = os.path.join(colon_dir, 'a.out')
         dst_makefile = os.path.join(colon_dir, 'Makefile')
+        exe = os.path.join(colon_dir, 'a.out')
 
         if not os.path.exists(colon_dir):
             os.makedirs(colon_dir)
@@ -53,26 +54,23 @@ class TestSwiftPathWithColon(TestBase):
         # clean slate for the next test case.
         def cleanup():
             shutil.rmtree(colon_dir)
-            os.chdir(self.getSourceDir())
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
         f = open(dst_makefile, 'w')
         f.write('''
-LEVEL = ../../../../make
 SWIFT_SOURCES := main.swift
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 ''')
         f.close()
 
         shutil.copy(src, copied_src)
 
-        os.chdir(colon_dir)
         self.build()
 
         # Create the target
-        target = self.dbg.CreateTarget(self.getBuildArtifact())
+        target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
         # Don't allow ansi highlighting to interfere with the output.
