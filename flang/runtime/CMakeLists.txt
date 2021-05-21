@@ -35,6 +35,7 @@ add_flang_library(FortranRuntime
   allocatable.cpp
   buffer.cpp
   complex-reduction.c
+  copy.cpp
   character.cpp
   connection.cpp
   derived.cpp

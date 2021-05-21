@@ -38,6 +38,8 @@ class LLVM_LIBRARY_VISIBILITY M68kAsmPrinter : public AsmPrinter {
 
   void EmitInstrWithMacroNoAT(const MachineInstr *MI);
 
+  void printOperand(const MachineInstr *MI, int OpNum, raw_ostream &OS);
+
 public:
   const M68kSubtarget *Subtarget;
   const M68kMachineFunctionInfo *MMFI;
@@ -52,6 +54,9 @@ public:
   StringRef getPassName() const override { return "M68k Assembly Printer"; }
 
   virtual bool runOnMachineFunction(MachineFunction &MF) override;
+
+  bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                       const char *ExtraCode, raw_ostream &OS) override;
 
   void emitInstruction(const MachineInstr *MI) override;
   void emitFunctionBodyStart() override;

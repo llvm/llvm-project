@@ -52,7 +52,8 @@ int main() {
   MATCH(2, pad.GetDimension(1).Extent());
   MATCH(3, pad.GetDimension(2).Extent());
 
-  auto result{RTNAME(Reshape)(*source, *shape, &pad)};
+  auto result{
+      RTNAME(Reshape)(*source, *shape, &pad, nullptr, __FILE__, __LINE__)};
   TEST(result.get() != nullptr);
   result->Check();
   MATCH(sizeof(std::int32_t), result->ElementBytes());

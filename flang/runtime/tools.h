@@ -66,7 +66,8 @@ inline void PutContiguousConverted(TO *to, FROM *from, std::size_t count) {
   }
 }
 
-static inline std::int64_t GetInt64(const char *p, std::size_t bytes) {
+static inline std::int64_t GetInt64(
+    const char *p, std::size_t bytes, Terminator &terminator) {
   switch (bytes) {
   case 1:
     return *reinterpret_cast<const CppTypeFor<TypeCategory::Integer, 1> *>(p);
@@ -77,8 +78,7 @@ static inline std::int64_t GetInt64(const char *p, std::size_t bytes) {
   case 8:
     return *reinterpret_cast<const CppTypeFor<TypeCategory::Integer, 8> *>(p);
   default:
-    Terminator{__FILE__, __LINE__}.Crash(
-        "GetInt64: no case for %zd bytes", bytes);
+    terminator.Crash("GetInt64: no case for %zd bytes", bytes);
   }
 }
 
@@ -333,6 +333,5 @@ std::optional<std::pair<TypeCategory, int>> inline constexpr GetResultType(
   }
   return std::nullopt;
 }
-
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_TOOLS_H_

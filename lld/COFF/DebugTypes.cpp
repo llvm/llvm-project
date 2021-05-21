@@ -54,7 +54,8 @@ public:
     auto expectedInfo = file.getPDBInfoStream();
     if (!expectedInfo)
       return;
-    auto it = mappings.emplace(expectedInfo->getGuid(), this);
+    Guid = expectedInfo->getGuid();
+    auto it = mappings.emplace(Guid, this);
     assert(it.second);
     (void)it;
   }
@@ -70,6 +71,9 @@ public:
 
   // TpiSource for IPI stream.
   TypeServerIpiSource *ipiSrc = nullptr;
+
+  // The PDB signature GUID.
+  codeview::GUID Guid;
 
   static std::map<codeview::GUID, TypeServerSource *> mappings;
 };
@@ -429,6 +433,15 @@ Expected<TypeServerSource *> UseTypeServerSource::getTypeServerSource() {
       return createFileError(tsPath, std::move(*pdb->loadErr));
 
     tsSrc = (TypeServerSource *)pdb->debugTypesObj;
+
+    // Just because a file with a matching name was found and it was an actual
+    // PDB file doesn't mean it matches.  For it to match the InfoStream's GUID
+    // must match the GUID specified in the TypeServer2 record.
+    if (tsSrc->Guid != tsId) {
+      return createFileError(tsPath,
+                             make_error<pdb::PDBError>(
+                                 pdb::pdb_error_code::signature_out_of_date));
+    }
   }
   return tsSrc;
 }
@@ -442,14 +455,6 @@ Error UseTypeServerSource::mergeDebugT(TypeMerger *m) {
   auto expectedInfo = pdbSession.getPDBInfoStream();
   if (!expectedInfo)
     return expectedInfo.takeError();
-
-  // Just because a file with a matching name was found and it was an actual
-  // PDB file doesn't mean it matches.  For it to match the InfoStream's GUID
-  // must match the GUID specified in the TypeServer2 record.
-  if (expectedInfo->getGuid() != typeServerDependency.getGuid())
-    return createFileError(
-        typeServerDependency.getName(),
-        make_error<pdb::PDBError>(pdb::pdb_error_code::signature_out_of_date));
 
   // Reuse the type index map of the type server.
   tpiMap = (*tsSrc)->tpiMap;

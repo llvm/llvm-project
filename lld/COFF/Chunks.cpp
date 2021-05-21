@@ -32,12 +32,15 @@ namespace coff {
 SectionChunk::SectionChunk(ObjFile *f, const coff_section *h)
     : Chunk(SectionKind), file(f), header(h), repl(this) {
   // Initialize relocs.
-  setRelocs(file->getCOFFObj()->getRelocations(header));
+  if (file)
+    setRelocs(file->getCOFFObj()->getRelocations(header));
 
   // Initialize sectionName.
   StringRef sectionName;
-  if (Expected<StringRef> e = file->getCOFFObj()->getSectionName(header))
-    sectionName = *e;
+  if (file) {
+    if (Expected<StringRef> e = file->getCOFFObj()->getSectionName(header))
+      sectionName = *e;
+  }
   sectionNameData = sectionName.data();
   sectionNameSize = sectionName.size();
 
@@ -49,7 +52,10 @@ SectionChunk::SectionChunk(ObjFile *f, const coff_section *h)
   // enabled, treat non-comdat sections as roots. Generally optimized object
   // files will be built with -ffunction-sections or /Gy, so most things worth
   // stripping will be in a comdat.
-  live = !config->doGC || !isCOMDAT();
+  if (config)
+    live = !config->doGC || !isCOMDAT();
+  else
+    live = true;
 }
 
 // SectionChunk is one of the most frequently allocated classes, so it is

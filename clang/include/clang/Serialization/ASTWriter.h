@@ -402,8 +402,8 @@ private:
   /// headers. The declarations themselves are stored as declaration
   /// IDs, since they will be written out to an EAGERLY_DESERIALIZED_DECLS
   /// record.
-  SmallVector<uint64_t, 16> EagerlyDeserializedDecls;
-  SmallVector<uint64_t, 16> ModularCodegenDecls;
+  SmallVector<serialization::DeclID, 16> EagerlyDeserializedDecls;
+  SmallVector<serialization::DeclID, 16> ModularCodegenDecls;
 
   /// DeclContexts that have received extensions since their serialized
   /// form.

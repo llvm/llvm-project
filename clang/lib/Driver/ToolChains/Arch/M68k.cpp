@@ -72,6 +72,38 @@ void m68k::getM68kTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   m68k::FloatABI FloatABI = m68k::getM68kFloatABI(D, Args);
   if (FloatABI == m68k::FloatABI::Soft)
     Features.push_back("-hard-float");
+
+  // Handle '-ffixed-<register>' flags
+  if (Args.hasArg(options::OPT_ffixed_a0))
+    Features.push_back("+reserve-a0");
+  if (Args.hasArg(options::OPT_ffixed_a1))
+    Features.push_back("+reserve-a1");
+  if (Args.hasArg(options::OPT_ffixed_a2))
+    Features.push_back("+reserve-a2");
+  if (Args.hasArg(options::OPT_ffixed_a3))
+    Features.push_back("+reserve-a3");
+  if (Args.hasArg(options::OPT_ffixed_a4))
+    Features.push_back("+reserve-a4");
+  if (Args.hasArg(options::OPT_ffixed_a5))
+    Features.push_back("+reserve-a5");
+  if (Args.hasArg(options::OPT_ffixed_a6))
+    Features.push_back("+reserve-a6");
+  if (Args.hasArg(options::OPT_ffixed_d0))
+    Features.push_back("+reserve-d0");
+  if (Args.hasArg(options::OPT_ffixed_d1))
+    Features.push_back("+reserve-d1");
+  if (Args.hasArg(options::OPT_ffixed_d2))
+    Features.push_back("+reserve-d2");
+  if (Args.hasArg(options::OPT_ffixed_d3))
+    Features.push_back("+reserve-d3");
+  if (Args.hasArg(options::OPT_ffixed_d4))
+    Features.push_back("+reserve-d4");
+  if (Args.hasArg(options::OPT_ffixed_d5))
+    Features.push_back("+reserve-d5");
+  if (Args.hasArg(options::OPT_ffixed_d6))
+    Features.push_back("+reserve-d6");
+  if (Args.hasArg(options::OPT_ffixed_d7))
+    Features.push_back("+reserve-d7");
 }
 
 m68k::FloatABI m68k::getM68kFloatABI(const Driver &D, const ArgList &Args) {
