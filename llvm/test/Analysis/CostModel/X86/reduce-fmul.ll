@@ -44,10 +44,10 @@ define void @reduce_f64(double %arg) {
 ;
 ; AVX1-LABEL: 'reduce_f64'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V1 = call double @llvm.vector.reduce.fmul.v1f64(double %arg, <1 x double> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2 = call double @llvm.vector.reduce.fmul.v2f64(double %arg, <2 x double> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4 = call double @llvm.vector.reduce.fmul.v4f64(double %arg, <4 x double> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8 = call double @llvm.vector.reduce.fmul.v8f64(double %arg, <8 x double> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V16 = call double @llvm.vector.reduce.fmul.v16f64(double %arg, <16 x double> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2 = call double @llvm.vector.reduce.fmul.v2f64(double %arg, <2 x double> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4 = call double @llvm.vector.reduce.fmul.v4f64(double %arg, <4 x double> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V8 = call double @llvm.vector.reduce.fmul.v8f64(double %arg, <8 x double> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V16 = call double @llvm.vector.reduce.fmul.v16f64(double %arg, <16 x double> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX2-LABEL: 'reduce_f64'
