@@ -268,7 +268,6 @@ using StackPrintDeathTest = StackPrintTest;
 
 TEST_F(StackPrintDeathTest, SKIP_ON_SPARC(RequiresNonNullBuffer)) {
   UnwindFast();
-  char buf[100];
   EXPECT_DEATH(trace.PrintTo(NULL, 100), "");
 }
 
