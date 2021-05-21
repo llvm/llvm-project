@@ -2041,11 +2041,15 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   std::pair<InstructionCost, MVT> LTDest =
       TLI->getTypeLegalizationCost(DL, Dst);
 
-  if (ST->hasSSE2() && !ST->hasAVX()) {
+  if (ST->hasSSE41() && !ST->hasAVX())
+    if (const auto *Entry = ConvertCostTableLookup(SSE41ConversionTbl, ISD,
+                                                   LTDest.second, LTSrc.second))
+      return AdjustCost(LTSrc.first * Entry->Cost);
+
+  if (ST->hasSSE2() && !ST->hasAVX())
     if (const auto *Entry = ConvertCostTableLookup(SSE2ConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
       return AdjustCost(LTSrc.first * Entry->Cost);
-  }
 
   EVT SrcTy = TLI->getValueType(DL, Src);
   EVT DstTy = TLI->getValueType(DL, Dst);
