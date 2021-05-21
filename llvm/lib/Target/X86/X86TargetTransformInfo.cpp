@@ -1792,7 +1792,7 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::FP_EXTEND,   MVT::v8f64,  MVT::v8f32,  3 },
     { ISD::FP_ROUND,    MVT::v8f32,  MVT::v8f64,  3 },
 
-    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v8i32,  8 },
+    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v8i32,  5 },
   };
 
   static const TypeConversionCostTblEntry AVXConversionTbl[] = {
@@ -1857,7 +1857,7 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::UINT_TO_FP,  MVT::v2f64, MVT::v2i32, 6 },
     { ISD::UINT_TO_FP,  MVT::v4f32, MVT::v4i32, 6 },
     { ISD::UINT_TO_FP,  MVT::v4f64, MVT::v4i32, 6 },
-    { ISD::UINT_TO_FP,  MVT::v8f32, MVT::v8i32, 9 },
+    { ISD::UINT_TO_FP,  MVT::v8f32, MVT::v8i32, 8 },
     { ISD::UINT_TO_FP,  MVT::v2f64, MVT::v2i64, 5 },
     { ISD::UINT_TO_FP,  MVT::v4f64, MVT::v4i64, 6 },
     // The generic code to compute the scalar overhead is currently broken.
@@ -1961,7 +1961,7 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::UINT_TO_FP, MVT::v4f32, MVT::v8i16, 15 },
     { ISD::UINT_TO_FP, MVT::v2f64, MVT::v8i16, 8*10 },
     { ISD::UINT_TO_FP, MVT::v2f64, MVT::v4i32, 4*10 },
-    { ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i32, 8 },
+    { ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i32, 5 },
     { ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i64, 6 },
     { ISD::UINT_TO_FP, MVT::v4f32, MVT::v2i64, 15 },
 

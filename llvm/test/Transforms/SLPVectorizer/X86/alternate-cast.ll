@@ -7,31 +7,11 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=skx -basic-aa -slp-vectorizer -instcombine -S | FileCheck %s --check-prefix=CHECK --check-prefix=AVX512
 
 define <8 x float> @sitofp_uitofp(<8 x i32> %a) {
-; SSE-LABEL: @sitofp_uitofp(
-; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[A:%.*]], <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; SSE-NEXT:    [[TMP2:%.*]] = sitofp <4 x i32> [[TMP1]] to <4 x float>
-; SSE-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; SSE-NEXT:    [[TMP4:%.*]] = uitofp <4 x i32> [[TMP3]] to <4 x float>
-; SSE-NEXT:    [[R72:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; SSE-NEXT:    ret <8 x float> [[R72]]
-;
-; SLM-LABEL: @sitofp_uitofp(
-; SLM-NEXT:    [[TMP1:%.*]] = sitofp <8 x i32> [[A:%.*]] to <8 x float>
-; SLM-NEXT:    [[TMP2:%.*]] = uitofp <8 x i32> [[A]] to <8 x float>
-; SLM-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
-; SLM-NEXT:    ret <8 x float> [[TMP3]]
-;
-; AVX-LABEL: @sitofp_uitofp(
-; AVX-NEXT:    [[TMP1:%.*]] = sitofp <8 x i32> [[A:%.*]] to <8 x float>
-; AVX-NEXT:    [[TMP2:%.*]] = uitofp <8 x i32> [[A]] to <8 x float>
-; AVX-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
-; AVX-NEXT:    ret <8 x float> [[TMP3]]
-;
-; AVX512-LABEL: @sitofp_uitofp(
-; AVX512-NEXT:    [[TMP1:%.*]] = sitofp <8 x i32> [[A:%.*]] to <8 x float>
-; AVX512-NEXT:    [[TMP2:%.*]] = uitofp <8 x i32> [[A]] to <8 x float>
-; AVX512-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
-; AVX512-NEXT:    ret <8 x float> [[TMP3]]
+; CHECK-LABEL: @sitofp_uitofp(
+; CHECK-NEXT:    [[TMP1:%.*]] = sitofp <8 x i32> [[A:%.*]] to <8 x float>
+; CHECK-NEXT:    [[TMP2:%.*]] = uitofp <8 x i32> [[A]] to <8 x float>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    ret <8 x float> [[TMP3]]
 ;
   %a0 = extractelement <8 x i32> %a, i32 0
   %a1 = extractelement <8 x i32> %a, i32 1
