@@ -14,8 +14,16 @@
 
 #include <string.h>
 
+#include <algorithm>
+#include <string>
+
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_internal_defs.h"
+
+using testing::ContainsRegex;
+using testing::MatchesRegex;
 
 namespace __sanitizer {
 
@@ -185,32 +193,9 @@ TEST_F(StackPrintTest, SKIP_ON_SPARC(ContainsFullTrace)) {
 
   char buf[3000];
   uptr len = trace.PrintTo(buf, sizeof(buf));
-
-  // This is the no-truncation case.
-  ASSERT_LT(len, sizeof(buf));
-
-  // Printed contents should always end with an empty line, unless truncated.
-  EXPECT_EQ(buf[len - 2], '\n');
-  EXPECT_EQ(buf[len - 1], '\n');
-  EXPECT_EQ(buf[len], '\0');
-
-  // Buffer contents are delimited by newlines, by default.
-  char *saveptr;
-  char *line = strtok_r(buf, "\n", &saveptr);
-
-  // Checks buffer contents line-by-line.
-  for (u32 i = 0; i < trace.size; ++i) {
-    char traceline[100];
-
-    // Should be synced with the stack trace format, set above.
-    snprintf(traceline, sizeof(traceline) - 1, "#%u 0x%lx", i,
-             trace.trace[i] - 1);
-
-    EXPECT_STREQ(line, traceline);
-    line = strtok_r(NULL, "\n", &saveptr);
-  }
-
-  EXPECT_EQ(line, nullptr);
+  EXPECT_THAT(std::string(buf),
+              MatchesRegex("(#[0-9]+ 0x[0-9a-f]+\n){" +
+                           std::to_string(trace.size) + "}\n"));
 }
 
 TEST_F(StackPrintTest, SKIP_ON_SPARC(TruncatesContents)) {
