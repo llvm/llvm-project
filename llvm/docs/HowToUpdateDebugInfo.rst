@@ -387,6 +387,9 @@ as follows:
   # Test each pass and export the issues report into the JSON file.
   $ clang -Xclang -fverify-debuginfo-preserve -Xclang -fverify-debuginfo-preserve-export=sample.json -g -O2 sample.c
 
+Please do note that there are some known false positives, for source locations
+and debug intrinsic checking, so that will be addressed as a future work.
+
 Mutation testing for MIR-level transformations
 ----------------------------------------------
 
