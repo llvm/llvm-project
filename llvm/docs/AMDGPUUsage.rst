@@ -1279,7 +1279,7 @@ are deprecated and should not be used.
   Specifies the code object version number. The description field has the
   following layout:
 
-  .. code::
+  .. code:: c
 
     struct amdgpu_hsa_note_code_object_version_s {
       uint32_t major_version;
@@ -1292,7 +1292,7 @@ are deprecated and should not be used.
   Specifies the HSAIL properties used by the HSAIL Finalizer. The description
   field has the following layout:
 
-  .. code::
+  .. code:: c
 
     struct amdgpu_hsa_note_hsail_s {
       uint32_t hsail_major_version;
@@ -1305,7 +1305,7 @@ are deprecated and should not be used.
 ``NT_AMD_HSA_ISA_VERSION``
   Specifies the target ISA version. The description field has the following layout:
 
-  .. code::
+  .. code:: c
 
     struct amdgpu_hsa_note_isa_s {
       uint16_t vendor_name_size;
