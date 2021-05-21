@@ -4,6 +4,7 @@ add_public_tablegen_target(MLIRGPUToNVVMIncGen)
 
 add_mlir_conversion_library(MLIRGPUToNVVMTransforms
   LowerGpuOpsToNVVMOps.cpp
+  WmmaOpsToNvvm.cpp
 
   DEPENDS
   MLIRConversionPassIncGen
