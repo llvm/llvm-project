@@ -5,17 +5,16 @@ define i32 @diamond_broadcast(i32* noalias nocapture %B, i32* noalias nocapture 
 ; CHECK-LABEL: @diamond_broadcast(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* [[A:%.*]], align 4
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[LD]], [[LD]]
-; CHECK-NEXT:    store i32 [[MUL]], i32* [[B:%.*]], align 4
-; CHECK-NEXT:    [[MUL8:%.*]] = mul i32 [[LD]], [[LD]]
-; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 1
-; CHECK-NEXT:    store i32 [[MUL8]], i32* [[ARRAYIDX9]], align 4
-; CHECK-NEXT:    [[MUL14:%.*]] = mul i32 [[LD]], [[LD]]
+; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 1
 ; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 2
-; CHECK-NEXT:    store i32 [[MUL14]], i32* [[ARRAYIDX15]], align 4
-; CHECK-NEXT:    [[MUL20:%.*]] = mul i32 [[LD]], [[LD]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[LD]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[LD]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[LD]], i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[LD]], i32 3
+; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i32> [[TMP3]], [[TMP3]]
 ; CHECK-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 3
-; CHECK-NEXT:    store i32 [[MUL20]], i32* [[ARRAYIDX21]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32* [[B]] to <4 x i32>*
+; CHECK-NEXT:    store <4 x i32> [[TMP4]], <4 x i32>* [[TMP5]], align 4
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
