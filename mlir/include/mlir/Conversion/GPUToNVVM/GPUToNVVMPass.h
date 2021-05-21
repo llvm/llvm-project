@@ -31,6 +31,10 @@ void configureGpuToNVVMConversionLegality(ConversionTarget &target);
 void populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
                                          RewritePatternSet &patterns);
 
+/// Collect a set of patterns to convert WMMA ops from GPU dialect to NVVM.
+void populateGpuWMMAToNVVMConversionPatterns(LLVMTypeConverter &converter,
+                                             RewritePatternSet &patterns);
+
 /// Creates a pass that lowers GPU dialect operations to NVVM counterparts. The
 /// index bitwidth used for the lowering of the device side index computations
 /// is configurable.
