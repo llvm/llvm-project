@@ -461,10 +461,10 @@ define i32 @fmul(i32 %arg) {
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = fmul <4 x float> undef, undef
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F32 = fmul <8 x float> undef, undef
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16F32 = fmul <16 x float> undef, undef
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = fmul double undef, undef
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = fmul <2 x double> undef, undef
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4F64 = fmul <4 x double> undef, undef
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8F64 = fmul <8 x double> undef, undef
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F64 = fmul double undef, undef
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2F64 = fmul <2 x double> undef, undef
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F64 = fmul <4 x double> undef, undef
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F64 = fmul <8 x double> undef, undef
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX2-LABEL: 'fmul'

@@ -785,6 +785,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::FADD, MVT::v8f32,      1 }, // Haswell from http://www.agner.org/
     { ISD::FSUB, MVT::v4f64,      1 }, // Haswell from http://www.agner.org/
     { ISD::FSUB, MVT::v8f32,      1 }, // Haswell from http://www.agner.org/
+    { ISD::FMUL, MVT::f64,        1 }, // Haswell from http://www.agner.org/
+    { ISD::FMUL, MVT::v2f64,      1 }, // Haswell from http://www.agner.org/
     { ISD::FMUL, MVT::v4f64,      1 }, // Haswell from http://www.agner.org/
     { ISD::FMUL, MVT::v8f32,      1 }, // Haswell from http://www.agner.org/
 
@@ -827,6 +829,10 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
 
     { ISD::FNEG,    MVT::v4f64,      2 }, // BTVER2 from http://www.agner.org/
     { ISD::FNEG,    MVT::v8f32,      2 }, // BTVER2 from http://www.agner.org/
+
+    { ISD::FMUL,    MVT::f64,        2 }, // BTVER2 from http://www.agner.org/
+    { ISD::FMUL,    MVT::v2f64,      2 }, // BTVER2 from http://www.agner.org/
+    { ISD::FMUL,    MVT::v4f64,      4 }, // BTVER2 from http://www.agner.org/
 
     { ISD::FDIV,    MVT::f32,       14 }, // SNB from http://www.agner.org/
     { ISD::FDIV,    MVT::v4f32,     14 }, // SNB from http://www.agner.org/
