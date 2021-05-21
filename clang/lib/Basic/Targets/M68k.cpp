@@ -191,6 +191,30 @@ bool M68kTargetInfo::validateAsmConstraint(
   return false;
 }
 
+llvm::Optional<std::string>
+M68kTargetInfo::handleAsmEscapedChar(char EscChar) const {
+  char C;
+  switch (EscChar) {
+  case '.':
+  case '#':
+    C = EscChar;
+    break;
+  case '/':
+    C = '%';
+    break;
+  case '$':
+    C = 's';
+    break;
+  case '&':
+    C = 'd';
+    break;
+  default:
+    return llvm::None;
+  }
+
+  return std::string(1, C);
+}
+
 std::string M68kTargetInfo::convertConstraint(const char *&Constraint) const {
   if (*Constraint == 'C')
     // Two-character constraint; add "^" hint for later parsing
