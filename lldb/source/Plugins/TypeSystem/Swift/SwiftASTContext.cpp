@@ -2441,6 +2441,20 @@ bool SwiftASTContext::SetTriple(const llvm::Triple triple, Module *module) {
                                     version.getAsString());
     }
   }
+
+  if (triple.isArch64Bit())
+    m_pointer_byte_size = 8;
+  else if (triple.isArch32Bit())
+    m_pointer_byte_size = 4;
+  else if (triple.isArch16Bit())
+    m_pointer_byte_size = 2;
+  else {
+    LOG_PRINTF(LIBLLDB_LOG_TYPES,
+               "Could not set pointer byte size using triple: %s",
+               triple.str().c_str());
+    m_pointer_byte_size = 0;
+  }
+
   if (llvm::Triple(triple).getOS() == llvm::Triple::UnknownOS) {
     // This case triggers an llvm_unreachable() in the Swift compiler.
     LOG_PRINTF(LIBLLDB_LOG_TYPES, "Cannot initialize Swift with an unknown OS");
@@ -4845,13 +4859,6 @@ SwiftASTContext *SwiftASTContext::GetSwiftASTContext(swift::ASTContext *ast) {
 }
 
 uint32_t SwiftASTContext::GetPointerByteSize() {
-  VALID_OR_RETURN(0);
-
-  if (m_pointer_byte_size == 0)
-    m_pointer_byte_size =
-        ToCompilerType(GetASTContext()->TheRawPointerType.getPointer())
-            .GetByteSize(nullptr)
-            .getValueOr(0);
   return m_pointer_byte_size;
 }
 
