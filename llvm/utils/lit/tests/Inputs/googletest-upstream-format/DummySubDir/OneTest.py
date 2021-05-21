@@ -11,6 +11,7 @@ Running main() from gtest_main.cc
 FirstTest.
   subTestA
   subTestB
+  subTestC
 ParameterizedTest/0.
   subTest
 ParameterizedTest/1.
@@ -29,6 +30,12 @@ elif test_name == 'FirstTest.subTestB':
     print('I am subTest B, I FAIL')
     print('And I have two lines of output')
     sys.exit(1)
+elif test_name == 'FirstTest.subTestC':
+    print('I am subTest C, I am SKIPPED')
+    print('[  PASSED  ] 0 tests.')
+    print('[  SKIPPED ] 1 test, listed below:')
+    print('[  SKIPPED ] FirstTest.subTestC')
+    sys.exit(0)
 elif test_name in ('ParameterizedTest/0.subTest',
                    'ParameterizedTest/1.subTest'):
     print('I am a parameterized test, I also PASS')
