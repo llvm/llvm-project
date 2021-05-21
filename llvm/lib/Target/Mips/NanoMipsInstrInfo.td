@@ -358,7 +358,7 @@ def BLTIUC_NM : CBranchImmNM<"bltiuc", brtarget, setult, GPR32NMOpnd, uimm7, imm
 def BLTUC_NM  : CBranchNM<"bltuc", brtarget, setult, GPR32NMOpnd>, InstSize32;
 
 def BNEC_NM  : CBranchNM<"bnec", brtarget, setne, GPR32NMOpnd>, InstSize32;
-def BNEIC_NM : CBranchImmNM<"bnec", brtarget, setne, GPR32NMOpnd, uimm7, immZExt7>;
+def BNEIC_NM : CBranchImmNM<"bneic", brtarget, setne, GPR32NMOpnd, uimm7, immZExt7>;
 def BNEZC_NM : CBranchZeroNM<"beqzc", brtarget, setne, GPR32NMOpnd>;
 
 
