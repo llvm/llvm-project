@@ -52,7 +52,7 @@ class AMDGPULowerModuleLDS : public ModulePass {
 
   static void removeFromUsedList(Module &M, StringRef Name,
                                  SmallPtrSetImpl<Constant *> &ToRemove) {
-    GlobalVariable *GV = M.getGlobalVariable(Name);
+    GlobalVariable *GV = M.getNamedGlobal(Name);
     if (!GV || ToRemove.empty()) {
       return;
     }
