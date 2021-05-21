@@ -62,7 +62,8 @@ public:
 private:
   void ExpandICallBranchFunnel(MachineBasicBlock *MBB,
                                MachineBasicBlock::iterator MBBI);
-
+  void expandCALL_RVMARKER(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator MBBI);
   bool ExpandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
   bool ExpandMBB(MachineBasicBlock &MBB);
 
@@ -184,6 +185,78 @@ void X86ExpandPseudo::ExpandICallBranchFunnel(
         .add(JTInst->getOperand(3 + 2 * P.second));
   }
   JTMBB->erase(JTInst);
+}
+
+void X86ExpandPseudo::expandCALL_RVMARKER(MachineBasicBlock &MBB,
+                                          MachineBasicBlock::iterator MBBI) {
+  // Expand CALL_RVMARKER pseudo to call instruction, followed by the special
+  //"movq %rax, %rdi" marker.
+  // TODO: Mark the sequence as bundle, to avoid passes moving other code
+  // in between.
+  MachineInstr &MI = *MBBI;
+
+  MachineInstr *OriginalCall;
+  MachineOperand &CallTarget = MI.getOperand(1);
+  assert((CallTarget.isGlobal() || CallTarget.isReg()) &&
+         "invalid operand for regular call");
+  unsigned Opc = -1;
+  if (MI.getOpcode() == X86::CALL64m_RVMARKER)
+    Opc = X86::CALL64m;
+  else if (MI.getOpcode() == X86::CALL64r_RVMARKER)
+    Opc = X86::CALL64r;
+  else if (MI.getOpcode() == X86::CALL64pcrel32_RVMARKER)
+    Opc = X86::CALL64pcrel32;
+  else
+    llvm_unreachable("unexpected opcode");
+
+  OriginalCall = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc)).getInstr();
+  unsigned OpStart = 1;
+  bool RAXImplicitDead = false;
+  for (; OpStart < MI.getNumOperands(); ++OpStart) {
+    MachineOperand &Op = MI.getOperand(OpStart);
+    // RAX may be 'implicit dead', if there are no other users of the return
+    // value. We introduce a new use, so change it to 'implicit def'.
+    if (Op.isReg() && Op.isImplicit() && Op.isDead() &&
+        TRI->regsOverlap(Op.getReg(), X86::RAX)) {
+      Op.setIsDead(false);
+      Op.setIsDef(true);
+      RAXImplicitDead = true;
+    }
+    OriginalCall->addOperand(Op);
+  }
+
+  // Emit marker "movq %rax, %rdi".  %rdi is not callee-saved, so it cannot be
+  // live across the earlier call. The call to the ObjC runtime function returns
+  // the first argument, so the value of %rax is unchanged after the ObjC
+  // runtime call.
+  auto *Marker = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(X86::MOV64rr))
+                     .addReg(X86::RDI, RegState::Define)
+                     .addReg(X86::RAX)
+                     .getInstr();
+  if (MI.shouldUpdateCallSiteInfo())
+    MBB.getParent()->moveCallSiteInfo(&MI, Marker);
+
+  // Emit call to ObjC runtime.
+  unsigned RuntimeCallType = MI.getOperand(0).getImm();
+  assert(RuntimeCallType <= 1 && "objc runtime call type must be 0 or 1");
+  Module *M = MBB.getParent()->getFunction().getParent();
+  auto &Context = M->getContext();
+  auto *I8PtrTy = PointerType::get(IntegerType::get(Context, 8), 0);
+  FunctionCallee Fn = M->getOrInsertFunction(
+      RuntimeCallType == 0 ? "objc_retainAutoreleasedReturnValue"
+                           : "objc_unsafeClaimAutoreleasedReturnValue",
+      FunctionType::get(I8PtrTy, {I8PtrTy}, false));
+  const uint32_t *RegMask =
+      TRI->getCallPreservedMask(*MBB.getParent(), CallingConv::C);
+  BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(X86::CALL64pcrel32))
+      .addGlobalAddress(cast<GlobalValue>(Fn.getCallee()), 0, 0)
+      .addRegMask(RegMask)
+      .addReg(X86::RAX,
+              RegState::Implicit |
+                  (RAXImplicitDead ? (RegState::Dead | RegState::Define)
+                                   : RegState::Define))
+      .getInstr();
+  MI.eraseFromParent();
 }
 
 /// If \p MBBI is a pseudo instruction, this method expands
@@ -521,6 +594,11 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     MI.setDesc(TII->get(X86::TILEZERO));
     return true;
   }
+  case X86::CALL64pcrel32_RVMARKER:
+  case X86::CALL64r_RVMARKER:
+  case X86::CALL64m_RVMARKER:
+    expandCALL_RVMARKER(MBB, MBBI);
+    return true;
   }
   llvm_unreachable("Previous switch has a fallthrough?");
 }

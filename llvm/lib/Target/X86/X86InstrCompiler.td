@@ -1197,6 +1197,12 @@ def : Pat<(X86call (i64 tglobaladdr:$dst)),
 def : Pat<(X86call (i64 texternalsym:$dst)),
           (CALL64pcrel32 texternalsym:$dst)>;
 
+def : Pat<(X86call_rvmarker (timm:$sel), (i64 texternalsym:$dst)),
+          (CALL64pcrel32_RVMARKER timm:$sel, texternalsym:$dst)>;
+def : Pat<(X86call_rvmarker (timm:$sel), (i64 tglobaladdr:$dst)),
+          (CALL64pcrel32_RVMARKER timm:$sel, tglobaladdr:$dst)>;
+
+
 // Tailcall stuff. The TCRETURN instructions execute after the epilog, so they
 // can never use callee-saved registers. That is the purpose of the GR64_TC
 // register classes.
