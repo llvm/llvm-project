@@ -17,7 +17,9 @@ namespace tidy {
 namespace socialpoint {
 
 /// Finds non-extern non-inline function and variable definitions in header
-/// files, which can lead to potential ODR violations.
+/// files, which can lead to potential ODR violations. THIS IS CUSTOM MODIFICATION
+/// OF http://clang.llvm.org/extra/clang-tidy/checks/misc-definitions-in-headers.html
+/// This modification allows to fix internal linkage definitions on header files
 ///
 /// The check supports these options:
 ///   - `UseHeaderFileExtension`: Whether to use file extension to distinguish
@@ -28,8 +30,13 @@ namespace socialpoint {
 ///
 ///     For extension-less header files, using an empty string or leaving an
 ///     empty string between ";" if there are other filename extensions.
+///   - `IncludeInternalLinkage`: Internal linkage variable definitions are taken 
+///     into account when IncludeInternalLinkage is set to true. By default is false
+///     Examples at file scope:
+///        const int a = 1;
+///        static int b = 1;
 ///
-/// For the user-facing documentation see:
+// For the original check documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/misc-definitions-in-headers.html
 class DefinitionsInHeadersCheck : public ClangTidyCheck {
 public:
