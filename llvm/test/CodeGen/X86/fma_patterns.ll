@@ -1308,10 +1308,10 @@ define float @test_f32_interp(float %x, float %y, float %t) {
 ; AVX512-NOINFS-NEXT:    vfmsub213ss {{.*#+}} xmm1 = (xmm2 * xmm1) - xmm1
 ; AVX512-NOINFS-NEXT:    vfmsub213ss {{.*#+}} xmm0 = (xmm2 * xmm0) - xmm1
 ; AVX512-NOINFS-NEXT:    retq
-  %t1 = fsub float 1.0, %t
-  %tx = fmul float %x, %t
-  %ty = fmul float %y, %t1
-  %r = fadd float %tx, %ty
+  %t1 = fsub nsz float 1.0, %t
+  %tx = fmul nsz float %x, %t
+  %ty = fmul nsz float %y, %t1
+  %r = fadd nsz float %tx, %ty
   ret float %r
 }
 
@@ -1357,10 +1357,10 @@ define <4 x float> @test_v4f32_interp(<4 x float> %x, <4 x float> %y, <4 x float
 ; AVX512-NOINFS-NEXT:    vfmsub213ps {{.*#+}} xmm1 = (xmm2 * xmm1) - xmm1
 ; AVX512-NOINFS-NEXT:    vfmsub213ps {{.*#+}} xmm0 = (xmm2 * xmm0) - xmm1
 ; AVX512-NOINFS-NEXT:    retq
-  %t1 = fsub <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>, %t
-  %tx = fmul <4 x float> %x, %t
-  %ty = fmul <4 x float> %y, %t1
-  %r = fadd <4 x float> %tx, %ty
+  %t1 = fsub nsz <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>, %t
+  %tx = fmul nsz <4 x float> %x, %t
+  %ty = fmul nsz <4 x float> %y, %t1
+  %r = fadd nsz <4 x float> %tx, %ty
   ret <4 x float> %r
 }
 
@@ -1406,10 +1406,10 @@ define <8 x float> @test_v8f32_interp(<8 x float> %x, <8 x float> %y, <8 x float
 ; AVX512-NOINFS-NEXT:    vfmsub213ps {{.*#+}} ymm1 = (ymm2 * ymm1) - ymm1
 ; AVX512-NOINFS-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm2 * ymm0) - ymm1
 ; AVX512-NOINFS-NEXT:    retq
-  %t1 = fsub <8 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, %t
-  %tx = fmul <8 x float> %x, %t
-  %ty = fmul <8 x float> %y, %t1
-  %r = fadd <8 x float> %tx, %ty
+  %t1 = fsub nsz <8 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, %t
+  %tx = fmul nsz <8 x float> %x, %t
+  %ty = fmul nsz <8 x float> %y, %t1
+  %r = fadd nsz <8 x float> %tx, %ty
   ret <8 x float> %r
 }
 
@@ -1455,10 +1455,10 @@ define double @test_f64_interp(double %x, double %y, double %t) {
 ; AVX512-NOINFS-NEXT:    vfmsub213sd {{.*#+}} xmm1 = (xmm2 * xmm1) - xmm1
 ; AVX512-NOINFS-NEXT:    vfmsub213sd {{.*#+}} xmm0 = (xmm2 * xmm0) - xmm1
 ; AVX512-NOINFS-NEXT:    retq
-  %t1 = fsub double 1.0, %t
-  %tx = fmul double %x, %t
-  %ty = fmul double %y, %t1
-  %r = fadd double %tx, %ty
+  %t1 = fsub nsz double 1.0, %t
+  %tx = fmul nsz double %x, %t
+  %ty = fmul nsz double %y, %t1
+  %r = fadd nsz double %tx, %ty
   ret double %r
 }
 
@@ -1504,10 +1504,10 @@ define <2 x double> @test_v2f64_interp(<2 x double> %x, <2 x double> %y, <2 x do
 ; AVX512-NOINFS-NEXT:    vfmsub213pd {{.*#+}} xmm1 = (xmm2 * xmm1) - xmm1
 ; AVX512-NOINFS-NEXT:    vfmsub213pd {{.*#+}} xmm0 = (xmm2 * xmm0) - xmm1
 ; AVX512-NOINFS-NEXT:    retq
-  %t1 = fsub <2 x double> <double 1.0, double 1.0>, %t
-  %tx = fmul <2 x double> %x, %t
-  %ty = fmul <2 x double> %y, %t1
-  %r = fadd <2 x double> %tx, %ty
+  %t1 = fsub nsz <2 x double> <double 1.0, double 1.0>, %t
+  %tx = fmul nsz <2 x double> %x, %t
+  %ty = fmul nsz <2 x double> %y, %t1
+  %r = fadd nsz <2 x double> %tx, %ty
   ret <2 x double> %r
 }
 
@@ -1553,10 +1553,10 @@ define <4 x double> @test_v4f64_interp(<4 x double> %x, <4 x double> %y, <4 x do
 ; AVX512-NOINFS-NEXT:    vfmsub213pd {{.*#+}} ymm1 = (ymm2 * ymm1) - ymm1
 ; AVX512-NOINFS-NEXT:    vfmsub213pd {{.*#+}} ymm0 = (ymm2 * ymm0) - ymm1
 ; AVX512-NOINFS-NEXT:    retq
-  %t1 = fsub <4 x double> <double 1.0, double 1.0, double 1.0, double 1.0>, %t
-  %tx = fmul <4 x double> %x, %t
-  %ty = fmul <4 x double> %y, %t1
-  %r = fadd <4 x double> %tx, %ty
+  %t1 = fsub nsz <4 x double> <double 1.0, double 1.0, double 1.0, double 1.0>, %t
+  %tx = fmul nsz <4 x double> %x, %t
+  %ty = fmul nsz <4 x double> %y, %t1
+  %r = fadd nsz <4 x double> %tx, %ty
   ret <4 x double> %r
 }
 
@@ -1579,9 +1579,9 @@ define <4 x float> @test_v4f32_fneg_fmadd(<4 x float> %a0, <4 x float> %a1, <4 x
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vfnmsub213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2
 ; AVX512-NEXT:    retq
-  %mul = fmul <4 x float> %a0, %a1
-  %add = fadd <4 x float> %mul, %a2
-  %neg = fsub <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %add
+  %mul = fmul nsz <4 x float> %a0, %a1
+  %add = fadd nsz <4 x float> %mul, %a2
+  %neg = fsub nsz <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %add
   ret <4 x float> %neg
 }
 
@@ -1600,9 +1600,9 @@ define <4 x double> @test_v4f64_fneg_fmsub(<4 x double> %a0, <4 x double> %a1, <
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2
 ; AVX512-NEXT:    retq
-  %mul = fmul <4 x double> %a0, %a1
-  %sub = fsub <4 x double> %mul, %a2
-  %neg = fsub <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %sub
+  %mul = fmul nsz <4 x double> %a0, %a1
+  %sub = fsub nsz <4 x double> %mul, %a2
+  %neg = fsub nsz <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %sub
   ret <4 x double> %neg
 }
 
@@ -1621,10 +1621,10 @@ define <4 x float> @test_v4f32_fneg_fnmadd(<4 x float> %a0, <4 x float> %a1, <4 
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vfmsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2
 ; AVX512-NEXT:    retq
-  %mul = fmul <4 x float> %a0, %a1
-  %neg0 = fsub <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %mul
-  %add = fadd <4 x float> %neg0, %a2
-  %neg1 = fsub <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %add
+  %mul = fmul nsz <4 x float> %a0, %a1
+  %neg0 = fsub nsz <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %mul
+  %add = fadd nsz <4 x float> %neg0, %a2
+  %neg1 = fsub nsz <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %add
   ret <4 x float> %neg1
 }
 
@@ -1643,10 +1643,10 @@ define <4 x double> @test_v4f64_fneg_fnmsub(<4 x double> %a0, <4 x double> %a1, 
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2
 ; AVX512-NEXT:    retq
-  %mul = fmul <4 x double> %a0, %a1
-  %neg0 = fsub <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %mul
-  %sub = fsub <4 x double> %neg0, %a2
-  %neg1 = fsub <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %sub
+  %mul = fmul nsz  <4 x double> %a0, %a1
+  %neg0 = fsub nsz <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %mul
+  %sub = fsub nsz <4 x double> %neg0, %a2
+  %neg1 = fsub nsz <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %sub
   ret <4 x double> %neg1
 }
 
