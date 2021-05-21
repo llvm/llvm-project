@@ -193,7 +193,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ZeroContents) {
 SCUDO_TYPED_TEST(ScudoCombinedTest, ZeroFill) {
   auto *Allocator = this->Allocator.get();
 
-  // Ensure that specifying ZeroContents returns a zero'd out block.
+  // Ensure that specifying ZeroFill returns a zero'd out block.
   Allocator->setFillContents(scudo::ZeroFill);
   for (scudo::uptr SizeLog = 0U; SizeLog <= 20U; SizeLog++) {
     for (scudo::uptr Delta = 0U; Delta <= 4U; Delta++) {
@@ -380,21 +380,20 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, DisableMemoryTagging) {
     // Check that disabling memory tagging works correctly.
     void *P = Allocator->allocate(2048, Origin);
     EXPECT_DEATH(reinterpret_cast<char *>(P)[2048] = 0xaa, "");
-    scudo::disableMemoryTagChecksTestOnly();
-    Allocator->disableMemoryTagging();
-    reinterpret_cast<char *>(P)[2048] = 0xaa;
-    Allocator->deallocate(P, Origin);
+    if (scudo::disableMemoryTagChecksTestOnly()) {
+      Allocator->disableMemoryTagging();
+      reinterpret_cast<char *>(P)[2048] = 0xaa;
+      Allocator->deallocate(P, Origin);
 
-    P = Allocator->allocate(2048, Origin);
-    EXPECT_EQ(scudo::untagPointer(P), P);
-    reinterpret_cast<char *>(P)[2048] = 0xaa;
-    Allocator->deallocate(P, Origin);
+      P = Allocator->allocate(2048, Origin);
+      EXPECT_EQ(scudo::untagPointer(P), P);
+      reinterpret_cast<char *>(P)[2048] = 0xaa;
+      Allocator->deallocate(P, Origin);
 
-    Allocator->releaseToOS();
-
-    // Disabling memory tag checks may interfere with subsequent tests.
-    // Re-enable them now.
-    scudo::enableMemoryTagChecksTestOnly();
+      // Disabling memory tag checks may interfere with subsequent tests.
+      // Re-enable them now.
+      scudo::enableMemoryTagChecksTestOnly();
+    }
   }
 }
 

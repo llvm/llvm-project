@@ -55,7 +55,7 @@
 ; CHECK64-NEXT:        .vbyte	8, 0x408c200000000000
 ; CHECK-NEXT:          .globl  const_chrarray
 ; CHECK-NEXT:  const_chrarray:
-; CHECK-NEXT:          .byte   'a,'b,'c,'d
+; CHECK-NEXT:          .byte   "abcd"
 ; CHECK-NEXT:          .globl  const_dblarr
 ; CHECK-NEXT:          .align  3
 ; CHECK-NEXT:  const_dblarr:
