@@ -535,7 +535,10 @@ class Sema;
     };
 
     /// ConversionKind - The kind of implicit conversion sequence.
-    unsigned ConversionKind;
+    unsigned ConversionKind : 31;
+
+    // Whether the initializer list was of an incomplete array.
+    unsigned InitializerListOfIncompleteArray : 1;
 
     /// When initializing an array or std::initializer_list from an
     /// initializer-list, this is the array or std::initializer_list type being
@@ -573,12 +576,16 @@ class Sema;
     };
 
     ImplicitConversionSequence()
-        : ConversionKind(Uninitialized), InitializerListContainerType() {
+        : ConversionKind(Uninitialized),
+          InitializerListOfIncompleteArray(false),
+          InitializerListContainerType() {
       Standard.setAsIdentityConversion();
     }
 
     ImplicitConversionSequence(const ImplicitConversionSequence &Other)
         : ConversionKind(Other.ConversionKind),
+          InitializerListOfIncompleteArray(
+              Other.InitializerListOfIncompleteArray),
           InitializerListContainerType(Other.InitializerListContainerType) {
       switch (ConversionKind) {
       case Uninitialized: break;
@@ -680,8 +687,12 @@ class Sema;
     bool hasInitializerListContainerType() const {
       return !InitializerListContainerType.isNull();
     }
-    void setInitializerListContainerType(QualType T) {
+    void setInitializerListContainerType(QualType T, bool IA) {
       InitializerListContainerType = T;
+      InitializerListOfIncompleteArray = IA;
+    }
+    bool isInitializerListOfIncompleteArray() const {
+      return InitializerListOfIncompleteArray;
     }
     QualType getInitializerListContainerType() const {
       assert(hasInitializerListContainerType() &&
