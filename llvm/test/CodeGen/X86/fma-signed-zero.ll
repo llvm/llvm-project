@@ -9,7 +9,8 @@ declare float @llvm.fma.f32(float, float, float)
 define float @fneg_fma32(float %x, float %y, float %z) {
 ; CHECK-LABEL: fneg_fma32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2
+; CHECK-NEXT:    vfnmsub213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2
+; CHECK-NEXT:    vxorps {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %negx = fneg float %x
   %negz = fneg float %z
@@ -35,7 +36,8 @@ declare double @llvm.fma.f64(double, double, double)
 define double @fneg_fma64(double %x, double %y, double %z) {
 ; CHECK-LABEL: fneg_fma64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2
+; CHECK-NEXT:    vfnmsub213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2
+; CHECK-NEXT:    vxorpd {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %negx = fneg double %x
   %negz = fneg double %z
