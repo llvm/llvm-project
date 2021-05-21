@@ -143,9 +143,9 @@ define void @extract_reverse_order(<2 x double>* %ptr.1, <4 x double>* %ptr.2) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V2_LANE_2]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[V2_LANE_2]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[SHUFFLE]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[SHUFFLE]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[V_1]], i32 0
 ; CHECK-NEXT:    call void @use(double [[TMP3]])
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[SHUFFLE]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[V_1]], i32 1
 ; CHECK-NEXT:    call void @use(double [[TMP4]])
 ; CHECK-NEXT:    store <2 x double> [[TMP2]], <2 x double>* [[PTR_1]], align 8
 ; CHECK-NEXT:    ret void
