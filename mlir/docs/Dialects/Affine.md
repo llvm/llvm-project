@@ -13,7 +13,7 @@ core concepts that are used throughout the document.
 ### Dimensions and Symbols
 
 Dimensions and symbols are the two kinds of identifiers that can appear in the
-polyhedral structures, and are always of [`index`](../LangRef.md#index-type)
+polyhedral structures, and are always of [`index`](Builtin.md#indextype)
 type. Dimensions are declared in parentheses and symbols are declared in square
 brackets.
 
@@ -113,7 +113,7 @@ less than or equal to that result. `mod` is the modulo operation: since its
 second argument is always positive, its results are always positive in our
 usage. The `integer-literal` operand for ceildiv, floordiv, and mod is always
 expected to be positive. `bare-id` is an identifier which must have type
-[index](../LangRef.md#index-type). The precedence of operations in an affine
+[index](Builtin.md#indextype). The precedence of operations in an affine
 expression are ordered from highest to lowest in the order: (1)
 parenthesization, (2) negation, (3) modulo, multiplication, floordiv, and
 ceildiv, and (4) addition and subtraction. All of these operators associate from
