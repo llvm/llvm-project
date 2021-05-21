@@ -304,18 +304,39 @@ bool llvm::collectDebugInfoMetadata(Module &M,
     // Collect the DISubprogram.
     auto *SP = F.getSubprogram();
     DIPreservationMap[NameOfWrappedPass].DIFunctions.insert({F.getName(), SP});
-    if (SP)
+    if (SP) {
       LLVM_DEBUG(dbgs() << "  Collecting subprogram: " << *SP << '\n');
+      for (const DINode *DN : SP->getRetainedNodes()) {
+        if (const auto *DV = dyn_cast<DILocalVariable>(DN)) {
+          DIPreservationMap[NameOfWrappedPass].DIVariables[DV] = 0;
+        }
+      }
+    }
 
     for (BasicBlock &BB : F) {
-      // Collect debug locations (!dbg).
-      // TODO: Collect dbg.values.
+      // Collect debug locations (!dbg) and debug variable intrinsics.
       for (Instruction &I : BB) {
         // Skip PHIs.
         if (isa<PHINode>(I))
           continue;
 
-        // Skip debug instructions.
+        // Collect dbg.values and dbg.declares.
+        if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I)) {
+          if (!SP)
+            continue;
+          // Skip inlined variables.
+          if (I.getDebugLoc().getInlinedAt())
+            continue;
+          // Skip undef values.
+          if (DVI->isUndef())
+            continue;
+
+          auto *Var = DVI->getVariable();
+          DIPreservationMap[NameOfWrappedPass].DIVariables[Var]++;
+          continue;
+        }
+
+        // Skip debug instructions other than dbg.value and dbg.declare.
         if (isa<DbgInfoIntrinsic>(&I))
           continue;
 
@@ -435,6 +456,39 @@ static bool checkInstructions(const DebugInstMap &DILocsBefore,
   return Preserved;
 }
 
+// This checks the preservation of original debug variable intrinsics.
+static bool checkVars(const DebugVarMap &DIFunctionsBefore,
+                      const DebugVarMap &DIFunctionsAfter,
+                      StringRef NameOfWrappedPass, StringRef FileNameFromCU,
+                      bool ShouldWriteIntoJSON, llvm::json::Array &Bugs) {
+  bool Preserved = true;
+  for (const auto &V : DIFunctionsBefore) {
+    auto VarIt = DIFunctionsAfter.find(V.first);
+    if (VarIt == DIFunctionsAfter.end())
+      continue;
+
+    unsigned NumOfDbgValsAfter = VarIt->second;
+
+    if (V.second > NumOfDbgValsAfter) {
+      if (ShouldWriteIntoJSON)
+        Bugs.push_back(llvm::json::Object(
+            {{"metadata", "dbg-var-intrinsic"},
+             {"name", V.first->getName()},
+             {"fn-name", V.first->getScope()->getSubprogram()->getName()},
+             {"action", "drop"}}));
+      else
+        dbg() << "WARNING: " << NameOfWrappedPass
+              << " drops dbg.value()/dbg.declare() for " << V.first->getName()
+              << " from "
+              << "function " << V.first->getScope()->getSubprogram()->getName()
+              << " (file " << FileNameFromCU << ")\n";
+      Preserved = false;
+    }
+  }
+
+  return Preserved;
+}
+
 // Write the json data into the specifed file.
 static void writeJSON(StringRef OrigDIVerifyBugsReportFilePath,
                       StringRef FileNameFromCU, StringRef NameOfWrappedPass,
@@ -484,18 +538,40 @@ bool llvm::checkDebugInfoMetadata(Module &M,
     auto *SP = F.getSubprogram();
     DIPreservationAfter[NameOfWrappedPass].DIFunctions.insert(
         {F.getName(), SP});
-    if (SP)
+
+    if (SP) {
       LLVM_DEBUG(dbgs() << "  Collecting subprogram: " << *SP << '\n');
+      for (const DINode *DN : SP->getRetainedNodes()) {
+        if (const auto *DV = dyn_cast<DILocalVariable>(DN)) {
+          DIPreservationAfter[NameOfWrappedPass].DIVariables[DV] = 0;
+        }
+      }
+    }
 
     for (BasicBlock &BB : F) {
-      // Collect debug locations (!dbg attachments).
-      // TODO: Collect dbg.values.
+      // Collect debug locations (!dbg) and debug variable intrinsics.
       for (Instruction &I : BB) {
         // Skip PHIs.
         if (isa<PHINode>(I))
           continue;
 
-        // Skip debug instructions.
+        // Collect dbg.values and dbg.declares.
+        if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I)) {
+          if (!SP)
+            continue;
+          // Skip inlined variables.
+          if (I.getDebugLoc().getInlinedAt())
+            continue;
+          // Skip undef values.
+          if (DVI->isUndef())
+            continue;
+
+          auto *Var = DVI->getVariable();
+          DIPreservationAfter[NameOfWrappedPass].DIVariables[Var]++;
+          continue;
+        }
+
+        // Skip debug instructions other than dbg.value and dbg.declare.
         if (isa<DbgInfoIntrinsic>(&I))
           continue;
 
@@ -522,6 +598,9 @@ bool llvm::checkDebugInfoMetadata(Module &M,
 
   auto InstToDelete = DIPreservationAfter[NameOfWrappedPass].InstToDelete;
 
+  auto DIVarsBefore = DIPreservationMap[NameOfWrappedPass].DIVariables;
+  auto DIVarsAfter = DIPreservationAfter[NameOfWrappedPass].DIVariables;
+
   bool ShouldWriteIntoJSON = !OrigDIVerifyBugsReportFilePath.empty();
   llvm::json::Array Bugs;
 
@@ -531,7 +610,11 @@ bool llvm::checkDebugInfoMetadata(Module &M,
   bool ResultForInsts = checkInstructions(
       DILocsBefore, DILocsAfter, InstToDelete, NameOfWrappedPass,
       FileNameFromCU, ShouldWriteIntoJSON, Bugs);
-  bool Result = ResultForFunc && ResultForInsts;
+
+  bool ResultForVars = checkVars(DIVarsBefore, DIVarsAfter, NameOfWrappedPass,
+                                 FileNameFromCU, ShouldWriteIntoJSON, Bugs);
+
+  bool Result = ResultForFunc && ResultForInsts && ResultForVars;
 
   StringRef ResultBanner = NameOfWrappedPass != "" ? NameOfWrappedPass : Banner;
   if (ShouldWriteIntoJSON && !Bugs.empty())
