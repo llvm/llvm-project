@@ -102,7 +102,7 @@ void traverseBasicBlock(Function &F, int nestedLevel) {
   for (int i = 0; i < nestedLevel; i++) {
     prefix.append(">>");
   }
-  bool isThreadStartCheckpoint = true;
+  bool isThreadStartCheckpoint = F.getName() == "main";
   for (auto &bb : F) {
     outs() << prefix << "Basic Block '" << &bb << "' Instructions: '" << bb << "'\n";
 
@@ -113,7 +113,7 @@ void traverseBasicBlock(Function &F, int nestedLevel) {
       // then this will be thread end checkpoint
       if (i.isTerminator()) {
         // Thread end only in the original function (main)
-        if (i.getNumSuccessors() == 0 && nestedLevel == 0) {
+        if (i.getNumSuccessors() == 0 && nestedLevel == 0 && F.getName() == "main") {
           isThreadEndCheckpoint |= true;
         }
       }
@@ -139,12 +139,12 @@ void traverseBasicBlock(Function &F, int nestedLevel) {
     st << &bb;
 
     std::string name = st.str();
-    if (isThreadStartCheckpoint && !nestedLevel) {
+    if (isThreadStartCheckpoint) {
       outs() << prefix << "This basic block:'" << name << "' is thread start checkpoint\n";
       name.append(" - Thread Start");
       isThreadStartCheckpoint = false;
     }
-    if (isThreadEndCheckpoint && !nestedLevel) {
+    if (isThreadEndCheckpoint) {
       name.append(" - Thread End");
       outs() << prefix << "This basic block:'" << name << "' is thread end checkpoint\n";
     }
@@ -162,11 +162,13 @@ void traverseBasicBlock(Function &F, int nestedLevel) {
 PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
   if (F.getName() == "main") {
     outs() << "==================================================\n";
-    outs() << "Function '" << F.getName() << "'\n";
-    traverseBasicBlock(F, 0);
-    //  traverse(F);
-    CFGPrinterPass cfg;
-    cfg.run(F, AM);
   }
+  outs() << "Function '" << F.getName() << "'\n";
+  traverseBasicBlock(F, 0);
+
+  traverse(F);
+
+  CFGPrinterPass cfg;
+  cfg.run(F, AM);
   return PreservedAnalyses::all();
 }
