@@ -193,7 +193,7 @@ public:
                                   TTI::TargetCostKind CostKind,
                                   const Instruction *I = nullptr);
 
-  int getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys);
+  InstructionCost getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys);
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP);
