@@ -22,5 +22,6 @@
 # CHECK: PASS: googletest-format :: {{[Dd]ummy[Ss]ub[Dd]ir}}/OneTest.py/ParameterizedTest/0.subTest
 # CHECK: PASS: googletest-format :: {{[Dd]ummy[Ss]ub[Dd]ir}}/OneTest.py/ParameterizedTest/1.subTest
 # CHECK: Failed Tests (1)
+# CHECK: Skipped{{ *}}: 1
 # CHECK: Passed{{ *}}: 3
 # CHECK: Failed{{ *}}: 1
