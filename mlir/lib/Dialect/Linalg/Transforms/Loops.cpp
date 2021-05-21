@@ -597,11 +597,15 @@ struct LowerTiledLoopsToSCF
   void runOnFunction() override {
     MLIRContext *context = &getContext();
     RewritePatternSet patterns(context);
-    patterns.add<TiledLoopToSCFPattern>(context);
+    populateTiledLoopToSCFPattern(patterns);
     (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
 };
 } // namespace
+
+void mlir::linalg::populateTiledLoopToSCFPattern(RewritePatternSet &patterns) {
+  patterns.add<TiledLoopToSCFPattern>(patterns.getContext());
+}
 
 std::unique_ptr<OperationPass<FuncOp>>
 mlir::createConvertLinalgTiledLoopsToSCFPass() {
