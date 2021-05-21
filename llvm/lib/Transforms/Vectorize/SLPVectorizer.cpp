@@ -544,15 +544,19 @@ static void inversePermutation(ArrayRef<unsigned> Indices,
 
 /// \returns inserting index of InsertElement or InsertValue instruction,
 /// using Offset as base offset for index.
-static Optional<unsigned> getInsertIndex(Value *InsertInst, unsigned Offset) {
-  unsigned Index = Offset;
+static Optional<int> getInsertIndex(Value *InsertInst, unsigned Offset) {
+  int Index = Offset;
   if (auto *IE = dyn_cast<InsertElementInst>(InsertInst)) {
     if (auto *CI = dyn_cast<ConstantInt>(IE->getOperand(2))) {
       auto *VT = cast<FixedVectorType>(IE->getType());
+      if (CI->getValue().uge(VT->getNumElements()))
+        return UndefMaskElem;
       Index *= VT->getNumElements();
       Index += CI->getZExtValue();
       return Index;
     }
+    if (isa<UndefValue>(IE->getOperand(2)))
+      return UndefMaskElem;
     return None;
   }
 
@@ -2884,36 +2888,36 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     case Instruction::InsertElement: {
       assert(ReuseShuffleIndicies.empty() && "All inserts should be unique");
 
-      int Offset = *getInsertIndex(VL[0], 0);
-      ValueList Operands(VL.size());
-      Operands[0] = cast<Instruction>(VL[0])->getOperand(1);
-      bool IsConsecutive = true;
-      for (unsigned I = 1, E = VL.size(); I < E; ++I) {
-        IsConsecutive &= (I == *getInsertIndex(VL[I], 0) - Offset);
-        Operands[I] = cast<Instruction>(VL[I])->getOperand(1);
-      }
+      // Check that we have a buildvector and not a shuffle of 2 or more
+      // different vectors.
+      ValueSet SourceVectors;
+      for (Value *V : VL)
+        SourceVectors.insert(cast<Instruction>(V)->getOperand(0));
 
-      // FIXME: support vectorization of non-consecutive inserts
-      // using shuffle with its proper cost estimation
-      if (IsConsecutive) {
-        TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx);
-        LLVM_DEBUG(dbgs() << "SLP: added inserts bundle.\n");
-
-        TE->setOperand(0, Operands);
-
-        ValueList VectorOperands;
-        for (Value *V : VL)
-          VectorOperands.push_back(cast<Instruction>(V)->getOperand(0));
-
-        TE->setOperand(1, VectorOperands);
-
-        buildTree_rec(Operands, Depth + 1, {TE, 0});
+      if (count_if(VL, [&SourceVectors](Value *V) {
+            return !SourceVectors.contains(V);
+          }) >= 2) {
+        // Found 2nd source vector - cancel.
+        LLVM_DEBUG(dbgs() << "SLP: Gather of insertelement vectors with "
+                             "different source vectors.\n");
+        newTreeEntry(VL, None /*not vectorized*/, S, UserTreeIdx,
+                     ReuseShuffleIndicies);
+        BS.cancelScheduling(VL, VL0);
         return;
       }
 
-      LLVM_DEBUG(dbgs() << "SLP: skipping non-consecutive inserts.\n");
-      BS.cancelScheduling(VL, VL0);
-      buildTree_rec(Operands, Depth, UserTreeIdx);
+      TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx);
+      LLVM_DEBUG(dbgs() << "SLP: added inserts bundle.\n");
+
+      constexpr int NumOps = 2;
+      ValueList VectorOperands[NumOps];
+      for (int I = 0; I < NumOps; ++I) {
+        for (Value *V : VL)
+          VectorOperands[I].push_back(cast<Instruction>(V)->getOperand(I));
+
+        TE->setOperand(I, VectorOperands[I]);
+      }
+      buildTree_rec(VectorOperands[NumOps - 1], Depth + 1, {TE, 0});
       return;
     }
     case Instruction::Load: {
@@ -3806,21 +3810,41 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E) {
       auto *SrcVecTy = cast<FixedVectorType>(VL0->getType());
 
       unsigned const NumElts = SrcVecTy->getNumElements();
+      unsigned const NumScalars = VL.size();
       APInt DemandedElts = APInt::getNullValue(NumElts);
-      for (auto *V : VL)
-        DemandedElts.setBit(*getInsertIndex(V, 0));
+      // TODO: Add support for Instruction::InsertValue.
+      unsigned Offset = UINT_MAX;
+      bool IsIdentity = true;
+      SmallVector<int> ShuffleMask(NumElts, UndefMaskElem);
+      for (unsigned I = 0; I < NumScalars; ++I) {
+        Optional<int> InsertIdx = getInsertIndex(VL[I], 0);
+        if (!InsertIdx || *InsertIdx == UndefMaskElem)
+          continue;
+        unsigned Idx = *InsertIdx;
+        DemandedElts.setBit(Idx);
+        if (Idx < Offset) {
+          Offset = Idx;
+          IsIdentity &= I == 0;
+        } else {
+          assert(Idx >= Offset && "Failed to find vector index offset");
+          IsIdentity &= Idx - Offset == I;
+        }
+        ShuffleMask[Idx] = I;
+      }
+      assert(Offset < NumElts && "Failed to find vector index offset");
 
       InstructionCost Cost = 0;
       Cost -= TTI->getScalarizationOverhead(SrcVecTy, DemandedElts,
                                             /*Insert*/ true, /*Extract*/ false);
 
-      unsigned const NumScalars = VL.size();
-      unsigned const Offset = *getInsertIndex(VL[0], 0);
-      if (NumElts != NumScalars && Offset % NumScalars != 0)
+      if (IsIdentity && NumElts != NumScalars && Offset % NumScalars != 0)
         Cost += TTI->getShuffleCost(
             TargetTransformInfo::SK_InsertSubvector, SrcVecTy, /*Mask*/ None,
             Offset,
             FixedVectorType::get(SrcVecTy->getElementType(), NumScalars));
+      else if (!IsIdentity)
+        Cost += TTI->getShuffleCost(TTI::SK_PermuteSingleSrc, SrcVecTy,
+                                    ShuffleMask);
 
       return Cost;
     }
@@ -4357,6 +4381,11 @@ InstructionCost BoUpSLP::getTreeCost() {
 
   SmallPtrSet<Value *, 16> ExtractCostCalculated;
   InstructionCost ExtractCost = 0;
+  SmallBitVector IsIdentity;
+  SmallVector<unsigned> VF;
+  SmallVector<SmallVector<int>> ShuffleMask;
+  SmallVector<Value *> FirstUsers;
+  SmallVector<APInt> DemandedElts;
   for (ExternalUser &EU : ExternalUses) {
     // We only add extract cost once for the same scalar.
     if (!ExtractCostCalculated.insert(EU.Scalar).second)
@@ -4371,6 +4400,49 @@ InstructionCost BoUpSLP::getTreeCost() {
     // No extract cost for vector "scalar"
     if (isa<FixedVectorType>(EU.Scalar->getType()))
       continue;
+
+    // If found user is an insertelement, do not calculate extract cost but try
+    // to detect it as a final shuffled/identity match.
+    if (EU.User && isa<InsertElementInst>(EU.User)) {
+      if (auto *FTy = dyn_cast<FixedVectorType>(EU.User->getType())) {
+        Optional<int> InsertIdx = getInsertIndex(EU.User, 0);
+        if (!InsertIdx || *InsertIdx == UndefMaskElem)
+          continue;
+        Value *VU = EU.User;
+        auto *It = find_if(FirstUsers, [VU](Value *V) {
+          // Checks if 2 insertelements are from the same buildvector.
+          if (VU->getType() != V->getType())
+            return false;
+          auto *IE1 = cast<InsertElementInst>(VU);
+          auto *IE2 = cast<InsertElementInst>(V);
+          do {
+            if (IE1 == VU || IE2 == V)
+              return true;
+            if (IE1)
+              IE1 = dyn_cast<InsertElementInst>(IE1->getOperand(0));
+            if (IE2)
+              IE2 = dyn_cast<InsertElementInst>(IE2->getOperand(0));
+          } while (IE1 || IE2);
+          return false;
+        });
+        int VecId = -1;
+        if (It == FirstUsers.end()) {
+          VF.push_back(FTy->getNumElements());
+          ShuffleMask.emplace_back(VF.back(), UndefMaskElem);
+          FirstUsers.push_back(EU.User);
+          DemandedElts.push_back(APInt::getNullValue(VF.back()));
+          IsIdentity.push_back(true);
+          VecId = FirstUsers.size() - 1;
+        } else {
+          VecId = std::distance(FirstUsers.begin(), It);
+        }
+        int Idx = *InsertIdx;
+        ShuffleMask[VecId][Idx] = EU.Lane;
+        IsIdentity.set(IsIdentity.test(VecId) &
+                       (EU.Lane == Idx || EU.Lane == UndefMaskElem));
+        DemandedElts[VecId].setBit(Idx);
+      }
+    }
 
     // If we plan to rewrite the tree in a smaller type, we will need to sign
     // extend the extracted value back to the original type. Here, we account
@@ -4392,6 +4464,39 @@ InstructionCost BoUpSLP::getTreeCost() {
 
   InstructionCost SpillCost = getSpillCost();
   Cost += SpillCost + ExtractCost;
+  for (int I = 0, E = FirstUsers.size(); I < E; ++I) {
+    if (!IsIdentity.test(I)) {
+      InstructionCost C = TTI->getShuffleCost(
+          TTI::SK_PermuteSingleSrc,
+          cast<FixedVectorType>(FirstUsers[I]->getType()), ShuffleMask[I]);
+      LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C
+                        << " for final shuffle of insertelement external users "
+                        << *VectorizableTree.front()->Scalars.front() << ".\n"
+                        << "SLP: Current total cost = " << Cost << "\n");
+      Cost += C;
+    }
+    unsigned VF = ShuffleMask[I].size();
+    for (int &Mask : ShuffleMask[I])
+      Mask = (Mask == UndefMaskElem ? 0 : VF) + Mask;
+    InstructionCost C = TTI->getShuffleCost(
+        TTI::SK_PermuteTwoSrc, cast<FixedVectorType>(FirstUsers[I]->getType()),
+        ShuffleMask[I]);
+    LLVM_DEBUG(
+        dbgs()
+        << "SLP: Adding cost " << C
+        << " for final shuffle of vector node and external insertelement users "
+        << *VectorizableTree.front()->Scalars.front() << ".\n"
+        << "SLP: Current total cost = " << Cost << "\n");
+    Cost += C;
+    InstructionCost InsertCost = TTI->getScalarizationOverhead(
+        cast<FixedVectorType>(FirstUsers[I]->getType()), DemandedElts[I],
+        /*Insert*/ true,
+        /*Extract*/ false);
+    Cost -= InsertCost;
+    LLVM_DEBUG(dbgs() << "SLP: subtracting the cost " << InsertCost
+                      << " for insertelements gather.\n"
+                      << "SLP: Current total cost = " << Cost << "\n");
+  }
 
 #ifndef NDEBUG
   SmallString<256> Str;
@@ -4854,35 +4959,62 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     }
     case Instruction::InsertElement: {
       Builder.SetInsertPoint(VL0);
-      Value *V = vectorizeTree(E->getOperand(0));
+      Value *V = vectorizeTree(E->getOperand(1));
 
       const unsigned NumElts =
           cast<FixedVectorType>(VL0->getType())->getNumElements();
       const unsigned NumScalars = E->Scalars.size();
 
       // Create InsertVector shuffle if necessary
-      if (NumElts != NumScalars) {
-        unsigned MinIndex = *getInsertIndex(E->Scalars[0], 0);
-        Instruction *FirstInsert = nullptr;
-        for (auto *Scalar : E->Scalars)
-          if (!FirstInsert &&
-              !is_contained(E->Scalars,
-                            cast<Instruction>(Scalar)->getOperand(0)))
-            FirstInsert = cast<Instruction>(Scalar);
+      Instruction *FirstInsert = nullptr;
+      bool IsIdentity = true;
+      unsigned Offset = UINT_MAX;
+      for (unsigned I = 0; I < NumScalars; ++I) {
+        Value *Scalar = E->Scalars[I];
+        if (!FirstInsert &&
+            !is_contained(E->Scalars, cast<Instruction>(Scalar)->getOperand(0)))
+          FirstInsert = cast<Instruction>(Scalar);
+        Optional<int> InsertIdx = getInsertIndex(Scalar, 0);
+        if (!InsertIdx || *InsertIdx == UndefMaskElem)
+          continue;
+        unsigned Idx = *InsertIdx;
+        if (Idx < Offset) {
+          Offset = Idx;
+          IsIdentity &= I == 0;
+        } else {
+          assert(Idx >= Offset && "Failed to find vector index offset");
+          IsIdentity &= Idx - Offset == I;
+        }
+      }
+      assert(Offset < NumElts && "Failed to find vector index offset");
 
-        // Create shuffle to resize vector
-        SmallVector<int, 16> Mask(NumElts, UndefMaskElem);
+      // Create shuffle to resize vector
+      SmallVector<int> Mask(NumElts, UndefMaskElem);
+      if (!IsIdentity) {
+        for (unsigned I = 0; I < NumScalars; ++I) {
+          Value *Scalar = E->Scalars[I];
+          Optional<int> InsertIdx = getInsertIndex(Scalar, 0);
+          if (!InsertIdx || *InsertIdx == UndefMaskElem)
+            continue;
+          Mask[*InsertIdx - Offset] = I;
+        }
+      } else {
         std::iota(Mask.begin(), std::next(Mask.begin(), NumScalars), 0);
+      }
+      if (!IsIdentity || NumElts != NumScalars)
         V = Builder.CreateShuffleVector(V, UndefValue::get(V->getType()), Mask);
 
-        const unsigned MaxIndex = MinIndex + NumScalars;
-        for (unsigned I = 0; I < NumElts; I++)
-          Mask[I] =
-              (I < MinIndex || I >= MaxIndex) ? I : NumElts - MinIndex + I;
+      if (NumElts != NumScalars) {
+        SmallVector<int> InsertMask(NumElts);
+        std::iota(InsertMask.begin(), InsertMask.end(), 0);
+        for (unsigned I = 0; I < NumElts; I++) {
+          if (Mask[I] != UndefMaskElem)
+            InsertMask[Offset + I] = NumElts + I;
+        }
 
         V = Builder.CreateShuffleVector(
-            FirstInsert->getOperand(0), V, Mask,
-            cast<Instruction>(E->Scalars[NumScalars - 1])->getName());
+            FirstInsert->getOperand(0), V, InsertMask,
+            cast<Instruction>(E->Scalars.back())->getName());
       }
 
       ++NumVectorInstructions;
@@ -7573,8 +7705,7 @@ static bool findBuildAggregate_rec(Instruction *LastInsertInst,
                                    unsigned OperandOffset) {
   do {
     Value *InsertedOperand = LastInsertInst->getOperand(1);
-    Optional<unsigned> OperandIndex =
-        getInsertIndex(LastInsertInst, OperandOffset);
+    Optional<int> OperandIndex = getInsertIndex(LastInsertInst, OperandOffset);
     if (!OperandIndex)
       return false;
     if (isa<InsertElementInst>(InsertedOperand) ||
@@ -7586,14 +7717,11 @@ static bool findBuildAggregate_rec(Instruction *LastInsertInst,
       BuildVectorOpds[*OperandIndex] = InsertedOperand;
       InsertElts[*OperandIndex] = LastInsertInst;
     }
-    if (isa<UndefValue>(LastInsertInst->getOperand(0)))
-      return true;
     LastInsertInst = dyn_cast<Instruction>(LastInsertInst->getOperand(0));
   } while (LastInsertInst != nullptr &&
            (isa<InsertValueInst>(LastInsertInst) ||
-            isa<InsertElementInst>(LastInsertInst)) &&
-           LastInsertInst->hasOneUse());
-  return false;
+            isa<InsertElementInst>(LastInsertInst)));
+  return true;
 }
 
 /// Recognize construction of vectors like
