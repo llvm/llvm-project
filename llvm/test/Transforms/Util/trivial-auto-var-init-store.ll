@@ -11,8 +11,7 @@ define void @store(i32* %dst) {
 ; YAML-NEXT: DebugLoc:
 ; YAML-NEXT: Function:        store
 ; YAML-NEXT: Args:
-; YAML-NEXT:   - String:          Store inserted by -ftrivial-auto-var-init.
-; YAML-NEXT:   - String:          "\nStore size: "
+; YAML-NEXT:   - String:          "Store inserted by -ftrivial-auto-var-init.\nStore size: "
 ; YAML-NEXT:   - StoreSize:       '4'
 ; YAML-NEXT:   - String:          ' bytes.'
 ; YAML-NEXT:   - String:          ' Volatile: '
@@ -36,8 +35,7 @@ define void @volatile_store(i32* %dst) {
 ; YAML-NEXT: DebugLoc:
 ; YAML-NEXT: Function:        volatile_store
 ; YAML-NEXT: Args:
-; YAML-NEXT:   - String:          Store inserted by -ftrivial-auto-var-init.
-; YAML-NEXT:   - String:          "\nStore size: "
+; YAML-NEXT:   - String:          "Store inserted by -ftrivial-auto-var-init.\nStore size: "
 ; YAML-NEXT:   - StoreSize:       '4'
 ; YAML-NEXT:   - String:          ' bytes.'
 ; YAML-NEXT:   - String:          ' Volatile: '
@@ -61,8 +59,7 @@ define void @atomic_store(i32* %dst) {
 ; YAML-NEXT: DebugLoc:
 ; YAML-NEXT: Function:        atomic_store
 ; YAML-NEXT: Args:
-; YAML-NEXT:   - String:          Store inserted by -ftrivial-auto-var-init.
-; YAML-NEXT:   - String:          "\nStore size: "
+; YAML-NEXT:   - String:          "Store inserted by -ftrivial-auto-var-init.\nStore size: "
 ; YAML-NEXT:   - StoreSize:       '4'
 ; YAML-NEXT:   - String:          ' bytes.'
 ; YAML-NEXT:   - String:          ' Atomic: '
@@ -87,14 +84,13 @@ define void @store_alloca() {
 ; YAML-NEXT: DebugLoc:
 ; YAML-NEXT: Function:        store_alloca
 ; YAML-NEXT: Args:
-; YAML-NEXT:   - String:          Store inserted by -ftrivial-auto-var-init.
-; YAML-NEXT:   - String:          "\nStore size: "
+; YAML-NEXT:   - String:          "Store inserted by -ftrivial-auto-var-init.\nStore size: "
 ; YAML-NEXT:   - StoreSize:       '4'
 ; YAML-NEXT:   - String:          ' bytes.'
-; YAML-NEXT:   - String:          "\nWritten Variables: "
-; YAML-NEXT:   - WVarName:        dst
+; YAML-NEXT:   - String:          "\nVariables: "
+; YAML-NEXT:   - VarName:         dst
 ; YAML-NEXT:   - String:          ' ('
-; YAML-NEXT:   - WVarSize:        '4'
+; YAML-NEXT:   - VarSize:         '4'
 ; YAML-NEXT:   - String:          ' bytes)'
 ; YAML-NEXT:   - String:          .
 ; YAML-NEXT:   - String:          ' Volatile: '

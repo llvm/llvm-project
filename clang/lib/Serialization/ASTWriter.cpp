@@ -4667,9 +4667,9 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   }
 
   // Build a record containing all of the DeclsToCheckForDeferredDiags.
-  RecordData DeclsToCheckForDeferredDiags;
+  SmallVector<serialization::DeclID, 64> DeclsToCheckForDeferredDiags;
   for (auto *D : SemaRef.DeclsToCheckForDeferredDiags)
-    AddDeclRef(D, DeclsToCheckForDeferredDiags);
+    DeclsToCheckForDeferredDiags.push_back(GetDeclRef(D));
 
   RecordData DeclUpdatesOffsetsRecord;
 

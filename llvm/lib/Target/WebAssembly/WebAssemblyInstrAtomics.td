@@ -259,26 +259,20 @@ defm ATOMIC_LOAD32_U_I64 : AtomicLoad<I64, "i64.atomic.load32_u", 0x16>;
 // therefore don't have the extension type field. So instead of matching that,
 // we match the patterns that the type legalizer expands them to.
 
-// We directly match zext patterns and select the zext atomic loads.
-// i32 (zext (i8 (atomic_load_8))) gets legalized to
-// i32 (and (i32 (atomic_load_8)), 255)
-// These can be selected to a single zero-extending atomic load instruction.
-def zext_aload_8_32 :
-  PatFrag<(ops node:$addr), (and (i32 (atomic_load_8 node:$addr)), 255)>;
-def zext_aload_16_32 :
-  PatFrag<(ops node:$addr), (and (i32 (atomic_load_16 node:$addr)), 65535)>;
 // Unlike regular loads, extension to i64 is handled differently than i32.
 // i64 (zext (i8 (atomic_load_8))) gets legalized to
 // i64 (and (i64 (anyext (i32 (atomic_load_8)))), 255)
+// Extension to i32 is elided by SelectionDAG as our atomic loads are
+// zero-extending.
 def zext_aload_8_64 :
   PatFrag<(ops node:$addr),
-          (and (i64 (anyext (i32 (atomic_load_8 node:$addr)))), 255)>;
+          (i64 (zext (i32 (atomic_load_8 node:$addr))))>;
 def zext_aload_16_64 :
   PatFrag<(ops node:$addr),
-          (and (i64 (anyext (i32 (atomic_load_16 node:$addr)))), 65535)>;
+          (i64 (zext (i32 (atomic_load_16 node:$addr))))>;
 def zext_aload_32_64 :
   PatFrag<(ops node:$addr),
-          (zext (i32 (atomic_load node:$addr)))>;
+          (i64 (zext (i32 (atomic_load_32 node:$addr))))>;
 
 // We don't have single sext atomic load instructions. So for sext loads, we
 // match bare subword loads (for 32-bit results) and anyext loads (for 64-bit
@@ -290,8 +284,6 @@ def sext_aload_16_64 :
   PatFrag<(ops node:$addr), (anyext (i32 (atomic_load_16 node:$addr)))>;
 
 // Select zero-extending loads with no constant offset.
-defm : LoadPatNoOffset<i32, zext_aload_8_32, "ATOMIC_LOAD8_U_I32">;
-defm : LoadPatNoOffset<i32, zext_aload_16_32, "ATOMIC_LOAD16_U_I32">;
 defm : LoadPatNoOffset<i64, zext_aload_8_64, "ATOMIC_LOAD8_U_I64">;
 defm : LoadPatNoOffset<i64, zext_aload_16_64, "ATOMIC_LOAD16_U_I64">;
 defm : LoadPatNoOffset<i64, zext_aload_32_64, "ATOMIC_LOAD32_U_I64">;
@@ -304,10 +296,6 @@ defm : LoadPatNoOffset<i64, sext_aload_16_64, "ATOMIC_LOAD16_U_I64">;
 // 32->64 sext load gets selected as i32.atomic.load, i64.extend_i32_s
 
 // Zero-extending loads with constant offset
-defm : LoadPatImmOff<i32, zext_aload_8_32, regPlusImm, "ATOMIC_LOAD8_U_I32">;
-defm : LoadPatImmOff<i32, zext_aload_16_32, regPlusImm, "ATOMIC_LOAD16_U_I32">;
-defm : LoadPatImmOff<i32, zext_aload_8_32, or_is_add, "ATOMIC_LOAD8_U_I32">;
-defm : LoadPatImmOff<i32, zext_aload_16_32, or_is_add, "ATOMIC_LOAD16_U_I32">;
 defm : LoadPatImmOff<i64, zext_aload_8_64, regPlusImm, "ATOMIC_LOAD8_U_I64">;
 defm : LoadPatImmOff<i64, zext_aload_16_64, regPlusImm, "ATOMIC_LOAD16_U_I64">;
 defm : LoadPatImmOff<i64, zext_aload_32_64, regPlusImm, "ATOMIC_LOAD32_U_I64">;
@@ -327,8 +315,6 @@ defm : LoadPatImmOff<i64, sext_aload_16_64, or_is_add, "ATOMIC_LOAD16_U_I64">;
 // No 32->64 patterns, just use i32.atomic.load and i64.extend_s/i64
 
 // Extending loads with just a constant offset
-defm : LoadPatOffsetOnly<i32, zext_aload_8_32, "ATOMIC_LOAD8_U_I32">;
-defm : LoadPatOffsetOnly<i32, zext_aload_16_32, "ATOMIC_LOAD16_U_I32">;
 defm : LoadPatOffsetOnly<i64, zext_aload_8_64, "ATOMIC_LOAD8_U_I64">;
 defm : LoadPatOffsetOnly<i64, zext_aload_16_64, "ATOMIC_LOAD16_U_I64">;
 defm : LoadPatOffsetOnly<i64, zext_aload_32_64, "ATOMIC_LOAD32_U_I64">;
@@ -337,8 +323,6 @@ defm : LoadPatOffsetOnly<i32, atomic_load_16, "ATOMIC_LOAD16_U_I32">;
 defm : LoadPatOffsetOnly<i64, sext_aload_8_64, "ATOMIC_LOAD8_U_I64">;
 defm : LoadPatOffsetOnly<i64, sext_aload_16_64, "ATOMIC_LOAD16_U_I64">;
 
-defm : LoadPatGlobalAddrOffOnly<i32, zext_aload_8_32, "ATOMIC_LOAD8_U_I32">;
-defm : LoadPatGlobalAddrOffOnly<i32, zext_aload_16_32, "ATOMIC_LOAD16_U_I32">;
 defm : LoadPatGlobalAddrOffOnly<i64, zext_aload_8_64, "ATOMIC_LOAD8_U_I64">;
 defm : LoadPatGlobalAddrOffOnly<i64, zext_aload_16_64, "ATOMIC_LOAD16_U_I64">;
 defm : LoadPatGlobalAddrOffOnly<i64, zext_aload_32_64, "ATOMIC_LOAD32_U_I64">;
@@ -651,22 +635,13 @@ defm : BinRMWPattern<atomic_swap_32, atomic_swap_64,
 // These are combined patterns of truncating store patterns and zero-extending
 // load patterns above.
 class zext_bin_rmw_8_32<PatFrag kind> :
-  PatFrag<(ops node:$addr, node:$val),
-          (and (i32 (kind node:$addr, node:$val)), 255)>;
-class zext_bin_rmw_16_32<PatFrag kind> :
-  PatFrag<(ops node:$addr, node:$val),
-          (and (i32 (kind node:$addr, node:$val)), 65535)>;
+  PatFrag<(ops node:$addr, node:$val), (i32 (kind node:$addr, node:$val))>;
+class zext_bin_rmw_16_32<PatFrag kind> : zext_bin_rmw_8_32<kind>;
 class zext_bin_rmw_8_64<PatFrag kind> :
   PatFrag<(ops node:$addr, node:$val),
-    (and (i64 (anyext (i32 (kind node:$addr,
-                                 (i32 (trunc (i64 node:$val))))))), 255)>;
-class zext_bin_rmw_16_64<PatFrag kind> :
-  PatFrag<(ops node:$addr, node:$val),
-    (and (i64 (anyext (i32 (kind node:$addr,
-                                 (i32 (trunc (i64 node:$val))))))), 65535)>;
-class zext_bin_rmw_32_64<PatFrag kind> :
-  PatFrag<(ops node:$addr, node:$val),
           (zext (i32 (kind node:$addr, (i32 (trunc (i64 node:$val))))))>;
+class zext_bin_rmw_16_64<PatFrag kind> : zext_bin_rmw_8_64<kind>;
+class zext_bin_rmw_32_64<PatFrag kind> : zext_bin_rmw_8_64<kind>;
 
 // Truncating & sign-extending binary RMW patterns.
 // These are combined patterns of truncating store patterns and sign-extending
@@ -887,10 +862,8 @@ defm : TerRMWPattern<atomic_cmp_swap_32, atomic_cmp_swap_64,
 // additional nodes such as anyext or assertzext depending on operand types.
 class zext_ter_rmw_8_32<PatFrag kind> :
   PatFrag<(ops node:$addr, node:$exp, node:$new),
-          (and (i32 (kind node:$addr, node:$exp, node:$new)), 255)>;
-class zext_ter_rmw_16_32<PatFrag kind> :
-  PatFrag<(ops node:$addr, node:$exp, node:$new),
-          (and (i32 (kind node:$addr, node:$exp, node:$new)), 65535)>;
+          (i32 (kind node:$addr, node:$exp, node:$new))>;
+class zext_ter_rmw_16_32<PatFrag kind> : zext_ter_rmw_8_32<kind>;
 class zext_ter_rmw_8_64<PatFrag kind> :
   PatFrag<(ops node:$addr, node:$exp, node:$new),
           (zext (i32 (assertzext (i32 (kind node:$addr,

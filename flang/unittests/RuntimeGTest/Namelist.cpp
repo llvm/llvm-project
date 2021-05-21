@@ -34,7 +34,7 @@ TEST(NamelistTests, BasicSanity) {
   static constexpr int numLines{12};
   static constexpr int lineLength{32};
   static char buffer[numLines][lineLength];
-  StaticDescriptor<1> statDescs[1];
+  StaticDescriptor<1, true> statDescs[1];
   Descriptor &internalDesc{statDescs[0].descriptor()};
   SubscriptValue extent[]{numLines};
   internalDesc.Establish(TypeCode{CFI_type_char}, /*elementBytes=*/lineLength,
@@ -136,7 +136,7 @@ TEST(NamelistTests, Subscripts) {
   const NamelistGroup::Item items[]{{"a", *aDesc}};
   const NamelistGroup group{"justa", 1, items};
   static char t1[]{"&justa A(0,1:-1:-2)=1 2/"};
-  StaticDescriptor<1> statDescs[2];
+  StaticDescriptor<1, true> statDescs[2];
   Descriptor &internalDesc{statDescs[0].descriptor()};
   internalDesc.Establish(TypeCode{CFI_type_char},
       /*elementBytes=*/std::strlen(t1), t1, 0, nullptr, CFI_attribute_pointer);

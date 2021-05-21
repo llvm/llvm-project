@@ -235,7 +235,7 @@ public:
   /// Return a rangelist's offset based on an index. The index designates
   /// an entry in the rangelist table's offset array and is supplied by
   /// DW_FORM_rnglistx.
-  llvm::Optional<uint64_t> GetRnglistOffset(uint32_t Index);
+  llvm::Expected<uint64_t> GetRnglistOffset(uint32_t Index);
 
   llvm::Optional<uint64_t> GetLoclistOffset(uint32_t Index) {
     if (!m_loclist_table_header)
