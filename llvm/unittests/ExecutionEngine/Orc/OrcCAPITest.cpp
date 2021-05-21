@@ -88,7 +88,7 @@ public:
 
   void SetUp() override {
     if (!TargetSupported)
-      return;
+      GTEST_SKIP();
 
     LLVMOrcJITTargetMachineBuilderRef JTMB = nullptr;
     LLVMErrorRef E1 = LLVMOrcJITTargetMachineBuilderDetectHost(&JTMB);
@@ -219,11 +219,6 @@ static std::string toString(LLVMErrorRef E) {
 }
 
 TEST_F(OrcCAPITestBase, SymbolStringPoolUniquing) {
-  if (!Jit) {
-    // TODO: Use GTEST_SKIP() when GTest is updated to version 1.10.0
-    return;
-  }
-
   LLVMOrcSymbolStringPoolEntryRef E1 =
       LLVMOrcExecutionSessionIntern(ExecutionSession, "aaa");
   LLVMOrcSymbolStringPoolEntryRef E2 =
@@ -240,10 +235,6 @@ TEST_F(OrcCAPITestBase, SymbolStringPoolUniquing) {
 }
 
 TEST_F(OrcCAPITestBase, JITDylibLookup) {
-  if (!Jit) {
-    // TODO: Use GTEST_SKIP() when GTest is updated to version 1.10.0
-    return;
-  }
   LLVMOrcJITDylibRef DoesNotExist =
       LLVMOrcExecutionSessionGetJITDylibByName(ExecutionSession, "test");
   ASSERT_FALSE(!!DoesNotExist);
@@ -255,11 +246,6 @@ TEST_F(OrcCAPITestBase, JITDylibLookup) {
 }
 
 TEST_F(OrcCAPITestBase, MaterializationUnitCreation) {
-  if (!Jit) {
-    // TODO: Use GTEST_SKIP() when GTest is updated to version 1.10.0
-    return;
-  }
-
   LLVMOrcSymbolStringPoolEntryRef Name =
       LLVMOrcLLJITMangleAndIntern(Jit, "test");
   LLVMJITSymbolFlags Flags = {LLVMJITSymbolGenericFlagsWeak, 0};
@@ -278,11 +264,6 @@ TEST_F(OrcCAPITestBase, MaterializationUnitCreation) {
 }
 
 TEST_F(OrcCAPITestBase, DefinitionGenerators) {
-  if (!Jit) {
-    // TODO: Use GTEST_SKIP() when GTest is updated to version 1.10.0
-    return;
-  }
-
   LLVMOrcDefinitionGeneratorRef Gen =
       LLVMOrcCreateCustomCAPIDefinitionGenerator(&definitionGeneratorFn,
                                                  nullptr);
@@ -297,11 +278,6 @@ TEST_F(OrcCAPITestBase, DefinitionGenerators) {
 }
 
 TEST_F(OrcCAPITestBase, ResourceTrackerDefinitionLifetime) {
-  if (!Jit) {
-    // TODO: Use GTEST_SKIP() when GTest is updated to version 1.10.0
-    return;
-  }
-
   // This test case ensures that all symbols loaded into a JITDylib with a
   // ResourceTracker attached are cleared from the JITDylib once the RT is
   // removed.
@@ -327,11 +303,6 @@ TEST_F(OrcCAPITestBase, ResourceTrackerDefinitionLifetime) {
 }
 
 TEST_F(OrcCAPITestBase, ResourceTrackerTransfer) {
-  if (!Jit) {
-    // TODO: Use GTEST_SKIP() when GTest is updated to version 1.10.0
-    return;
-  }
-
   LLVMOrcResourceTrackerRef DefaultRT =
       LLVMOrcJITDylibGetDefaultResourceTracker(MainDylib);
   LLVMOrcResourceTrackerRef RT2 =
@@ -351,11 +322,6 @@ TEST_F(OrcCAPITestBase, ResourceTrackerTransfer) {
 }
 
 TEST_F(OrcCAPITestBase, AddObjectBuffer) {
-  if (!Jit) {
-    // TODO: Use GTEST_SKIP() when GTest is updated to version 1.10.0
-    return;
-  }
-
   LLVMOrcObjectLayerRef ObjLinkingLayer = LLVMOrcLLJITGetObjLinkingLayer(Jit);
   LLVMMemoryBufferRef ObjBuffer = createTestObject(SumExample, "sum.ll");
 
@@ -372,11 +338,6 @@ TEST_F(OrcCAPITestBase, AddObjectBuffer) {
 }
 
 TEST_F(OrcCAPITestBase, ExecutionTest) {
-  if (!Jit) {
-    // TODO: Use GTEST_SKIP() when GTest is updated to version 1.10.0
-    return;
-  }
-
   using SumFunctionType = int32_t (*)(int32_t, int32_t);
 
   // This test performs OrcJIT compilation of a simple sum module
