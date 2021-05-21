@@ -1,0 +1,7 @@
+diff a/debuginfo-tests/dexter/feature_tests/subtools/test/label_another_line.cpp b/debuginfo-tests/dexter/feature_tests/subtools/test/label_another_line.cpp	(rejected hunks)
+@@ -11,4 +11,4 @@
+ }
+ 
+ // DexLabel('test', on_line=10)
+-// DexExpectWatchValue('result', '0', on_line=ref('test'))
++// DexExpectWatchValue('result', '0', on_line=ref('test'))

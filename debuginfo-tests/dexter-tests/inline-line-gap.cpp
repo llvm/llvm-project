@@ -40,7 +40,7 @@ int __attribute__((optnone)) main() {
 
 /*
 DexExpectProgramState({'frames':[
-     {'function': 'inlineCrashFrame', 'location':{'lineno' : 'stop'} },
+     {'function': 'inlineCrashFrame', 'location':{'lineno' : ref('stop')} },
      {'function': 'callerOfInlineCrashFrame'},
      {'function': 'main'}
 ]})

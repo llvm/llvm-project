@@ -27,10 +27,10 @@ int main() {
   return val1 + val2;
 }
 
-// DexExpectWatchValue('ix', 0, 2, 5, from_line='from', to_line='to')
-// DexExpectWatchValue('val1', 0, from_line='val1_check', to_line='val1_check_to')
-// DexExpectWatchValue('val2', 2, from_line='val2_check', to_line='val2_check_to')
+// DexExpectWatchValue('ix', 0, 2, 5, from_line=ref('from'), to_line=ref('to'))
+// DexExpectWatchValue('val1', 0, from_line=ref('val1_check'), to_line=ref('val1_check_to'))
+// DexExpectWatchValue('val2', 2, from_line=ref('val2_check'), to_line=ref('val2_check_to'))
 
-// DexLimitSteps('ix', 5, from_line='from', to_line='to')
-// DexLimitSteps('val1', 0, from_line='val1_check', to_line='val1_check_to')
-// DexLimitSteps('val2', 2, from_line='val2_check', to_line='val2_check_to')
+// DexLimitSteps('ix', 5, from_line=ref('from'), to_line=ref('to'))
+// DexLimitSteps('val1', 0, from_line=ref('val1_check'), to_line=ref('val1_check_to'))
+// DexLimitSteps('val2', 2, from_line=ref('val2_check'), to_line=ref('val2_check_to'))

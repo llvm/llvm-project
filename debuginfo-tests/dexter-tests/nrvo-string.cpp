@@ -51,6 +51,6 @@ int main() {
   get_string2();
 }
 
-// DexExpectWatchValue('output.i', 3, on_line='string-nrvo')
-// DexExpectWatchValue('output.i', 5, on_line='string2-nrvo')
+// DexExpectWatchValue('output.i', 3, on_line=ref('string-nrvo'))
+// DexExpectWatchValue('output.i', 5, on_line=ref('string2-nrvo'))
 
