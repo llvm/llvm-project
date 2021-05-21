@@ -361,7 +361,6 @@ def BNEC_NM  : CBranchNM<"bnec", brtarget, setne, GPR32NMOpnd>, InstSize32;
 def BNEIC_NM : CBranchImmNM<"bneic", brtarget, setne, GPR32NMOpnd, uimm7, immZExt7>;
 def BNEZC_NM : CBranchZeroNM<"beqzc", brtarget, setne, GPR32NMOpnd>;
 
-
 // Unconditional branch
 // TODO: native nanomips formats
 def BC_NM       : JumpFJ<jmptarget, "bc", br, bb, "b">, IsBranch, ISA_NANOMIPS;
@@ -378,6 +377,10 @@ def : Pat<(brcond (i32 (setule GPR32NM:$lhs, GPR32NM:$rhs)), bb:$dst),
           (BGEUC_NM GPR32NM:$rhs, GPR32NM:$lhs, bb:$dst)>, ISA_NANOMIPS;
 def : Pat<(brcond (i32 (setle GPR32NM:$lhs, GPR32NM:$rhs)), bb:$dst),
           (BGEC_NM GPR32NM:$rhs, GPR32NM:$lhs, bb:$dst)>, ISA_NANOMIPS;
+
+// Branch on integer value
+def : Pat<(brcond (i32 GPR32NM:$lhs), bb:$dst),
+          (BNEC_NM GPR32NM:$lhs, ZERO_NM, bb:$dst)>, ISA_NANOMIPS;
 
 
 //===----------------------------------------------------------------------===//
