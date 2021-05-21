@@ -774,6 +774,6 @@ define void @test16d(i8 %v, i8** %P) {
 ; IS________NPM: attributes #[[ATTR2:[0-9]+]] = { nofree nounwind }
 ; IS________NPM: attributes #[[ATTR3]] = { noreturn }
 ; IS________NPM: attributes #[[ATTR4:[0-9]+]] = { argmemonly nofree nosync nounwind willreturn }
-; IS________NPM: attributes #[[ATTR5:[0-9]+]] = { argmemonly nofree nosync nounwind willreturn writeonly }
+; IS________NPM: attributes #[[ATTR5:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
 ; IS________NPM: attributes #[[ATTR6]] = { nounwind }
 ;.
