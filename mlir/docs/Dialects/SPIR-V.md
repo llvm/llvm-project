@@ -1395,11 +1395,11 @@ dialect.
 [MlirDialectConversionRewritePattern]: ../DialectConversion.md#conversion-patterns
 [MlirDialectConversionSignatureConversion]: ../DialectConversion.md#region-signature-conversion
 [MlirOpInterface]: ../Interfaces/#operation-interfaces
-[MlirIntegerType]: ../LangRef.md#integer-type
+[MlirIntegerType]: Builtin.md#integertype
 [MlirFloatType]: ../LangRef.md#floating-point-types
 [MlirVectorType]: ../LangRef.md#vector-type
 [MlirMemrefType]: ../LangRef.md#memref-type
-[MlirIndexType]: ../LangRef.md#index-type
+[MlirIndexType]: Builtin.md#indextype
 [MlirGpuDialect]: ../Dialects/GPU.md
 [MlirStandardDialect]: ../Dialects/Standard.md
 [MlirSpirvHeaders]: https://github.com/llvm/llvm-project/tree/main/mlir/include/mlir/Dialect/SPIRV
