@@ -1,10 +1,12 @@
 // RUN: %clang_cc1 -cl-std=CL1.2 -cl-ext=-+cl_khr_fp64 -triple spir-unknown-unknown -disable-llvm-passes -emit-llvm -o - %s | FileCheck -check-prefixes=FP64,ALL %s
 // RUN: %clang_cc1 -cl-std=CL1.2 -cl-ext=-cl_khr_fp64 -triple spir-unknown-unknown -disable-llvm-passes -emit-llvm -o - %s | FileCheck -check-prefixes=NOFP64,ALL %s
+// RUN: %clang_cc1 -cl-std=CL3.0 -cl-ext=+__opencl_c_fp64,+cl_khr_fp64 -triple spir-unknown-unknown -disable-llvm-passes -emit-llvm -o - %s | FileCheck -check-prefixes=FP64,ALL %s
+// RUN: %clang_cc1 -cl-std=CL3.0 -cl-ext=-__opencl_c_fp64,-cl_khr_fp64 -triple spir-unknown-unknown -disable-llvm-passes -emit-llvm -o - %s | FileCheck -check-prefixes=NOFP64,ALL %s
 
 typedef __attribute__((ext_vector_type(2))) float float2;
 typedef __attribute__((ext_vector_type(2))) half half2;
 
-#ifdef cl_khr_fp64
+#if defined(cl_khr_fp64) || defined(__opencl_c_fp64)
 typedef __attribute__((ext_vector_type(2))) double double2;
 #endif
 
@@ -28,7 +30,7 @@ kernel void test_printf_half2(half2 arg) {
   printf("%v2hf", arg);
 }
 
-#ifdef cl_khr_fp64
+#if defined(cl_khr_fp64) || defined(__opencl_c_fp64)
 // FP64-LABEL: @test_printf_double2(
 // FP64: call spir_func i32 (i8 addrspace(2)*, ...) @printf(i8 addrspace(2)* getelementptr inbounds ([6 x i8], [6 x i8] addrspace(2)* @.str.2, i32 0, i32 0), <2 x double> %0)
 kernel void test_printf_double2(double2 arg) {
