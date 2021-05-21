@@ -167,10 +167,10 @@ composability encountered in DWARF.
 With this in mind, we revisited the DWARF extensions to see if they could inform
 a more tractable design for LLVM. We had already worked to address the
 complexity and ambiguity of DWARF by defining a formalization for its expression
-language, and improved the composability by unifying values and location
+language and improved the composability by unifying values and location
 descriptions on the evaluation stack. Together, these changes also increased the
 expressiveness of DWARF. Using similar ideas in LLVM allowed us to support
-additional real world cases, and describe existing cases with greater accuracy.
+additional real world cases and describe existing cases with greater accuracy.
 
 This led us to start from the DWARF extensions and design a new set of debug
 information representations. This was very heavily influenced by prior art in
@@ -218,7 +218,7 @@ transparent updates, which can be reasoned about in the context of a single
 operation and its inputs and outputs, rather than the space of all possible
 surrounding operations and dependent expressions.
 
-By eliminating any implicit expression inputs or operations, and constraining
+By eliminating any implicit expression inputs or operations and constraining
 the state space of expressions using well-formedness rules, it is unambiguous
 whether a given transformation is valid and semantics-preserving, without ever
 having to consider anything outside of the expression itself.
@@ -272,7 +272,7 @@ object. None of these tradeoffs were considered acceptable.
 
 This section describes a provisional set of changes to the [LLVM Language
 Reference Manual][10] to support the [DWARF Extensions For Heterogeneous
-Debugging][18]. It is not currently fully implemented and is subject to change.
+Debugging][20]. It is not currently fully implemented and is subject to change.
 
 ## External Definitions
 
@@ -1024,7 +1024,7 @@ to the storage that `L` denotes. If `DIOpDeref` is applied to the resulting
 `(L':T addrspace(N)*)`, then it will result in `(L:T)`. If any other operation
 is applied, then the expression is not well-formed.
 
-_[Note: `DIOpAddrOf` can be used for any location description kind of 'L', not
+_[Note: `DIOpAddrOf` can be used for any location description kind of `L`, not
 just memory location descriptions.]_
 
 _[Note: DWARF only supports creating implicit pointer location descriptors for
@@ -1602,7 +1602,7 @@ Becomes:
 A function can specify the location of the global variable `!1` over some range
 by simply defining bounded lifetime segments that also reference `!1`. These
 will override the "default" location description specified by the computed
-lifetime segment `!4'.
+lifetime segment `!4`.
 
 ## Induction Variable
 
