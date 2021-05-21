@@ -20,7 +20,6 @@
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
@@ -42,29 +41,8 @@
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace mlir;
-using namespace mlir::edsc;
-using namespace mlir::edsc::intrinsics;
 using namespace mlir::LLVM;
 using namespace mlir::linalg;
-
-using llvm_add = ValueBuilder<LLVM::AddOp>;
-using llvm_bitcast = ValueBuilder<LLVM::BitcastOp>;
-using llvm_constant = ValueBuilder<LLVM::ConstantOp>;
-using llvm_extractvalue = ValueBuilder<LLVM::ExtractValueOp>;
-using llvm_gep = ValueBuilder<LLVM::GEPOp>;
-using llvm_insertvalue = ValueBuilder<LLVM::InsertValueOp>;
-using llvm_call = OperationBuilder<LLVM::CallOp>;
-using llvm_icmp = ValueBuilder<LLVM::ICmpOp>;
-using llvm_load = ValueBuilder<LLVM::LoadOp>;
-using llvm_store = OperationBuilder<LLVM::StoreOp>;
-using llvm_select = ValueBuilder<LLVM::SelectOp>;
-using llvm_mul = ValueBuilder<LLVM::MulOp>;
-using llvm_ptrtoint = ValueBuilder<LLVM::PtrToIntOp>;
-using llvm_sub = ValueBuilder<LLVM::SubOp>;
-using llvm_undef = ValueBuilder<LLVM::UndefOp>;
-using llvm_urem = ValueBuilder<LLVM::URemOp>;
-using llvm_alloca = ValueBuilder<LLVM::AllocaOp>;
-using llvm_return = OperationBuilder<LLVM::ReturnOp>;
 
 template <typename T>
 static Type getPtrToElementType(T containerType, LLVMTypeConverter &lowering) {
@@ -87,41 +65,6 @@ static Type convertRangeType(RangeType t, LLVMTypeConverter &converter) {
 }
 
 namespace {
-/// EDSC-compatible wrapper for MemRefDescriptor.
-class BaseViewConversionHelper {
-public:
-  BaseViewConversionHelper(Type type)
-      : d(MemRefDescriptor::undef(rewriter(), loc(), type)) {}
-
-  BaseViewConversionHelper(Value v) : d(v) {}
-
-  /// Wrappers around MemRefDescriptor that use EDSC builder and location.
-  Value allocatedPtr() { return d.allocatedPtr(rewriter(), loc()); }
-  void setAllocatedPtr(Value v) { d.setAllocatedPtr(rewriter(), loc(), v); }
-  Value alignedPtr() { return d.alignedPtr(rewriter(), loc()); }
-  void setAlignedPtr(Value v) { d.setAlignedPtr(rewriter(), loc(), v); }
-  Value offset() { return d.offset(rewriter(), loc()); }
-  void setOffset(Value v) { d.setOffset(rewriter(), loc(), v); }
-  Value size(unsigned i) { return d.size(rewriter(), loc(), i); }
-  void setSize(unsigned i, Value v) { d.setSize(rewriter(), loc(), i, v); }
-  void setConstantSize(unsigned i, int64_t v) {
-    d.setConstantSize(rewriter(), loc(), i, v);
-  }
-  Value stride(unsigned i) { return d.stride(rewriter(), loc(), i); }
-  void setStride(unsigned i, Value v) { d.setStride(rewriter(), loc(), i, v); }
-  void setConstantStride(unsigned i, int64_t v) {
-    d.setConstantStride(rewriter(), loc(), i, v);
-  }
-
-  operator Value() { return d; }
-
-private:
-  OpBuilder &rewriter() { return ScopedContext::getBuilderRef(); }
-  Location loc() { return ScopedContext::getLocation(); }
-
-  MemRefDescriptor d;
-};
-
 // RangeOp creates a new range descriptor.
 class RangeOpConversion : public ConvertOpToLLVMPattern<RangeOp> {
 public:
@@ -133,14 +76,17 @@ public:
     auto rangeDescriptorTy = convertRangeType(
         rangeOp.getType().cast<RangeType>(), *getTypeConverter());
 
-    edsc::ScopedContext context(rewriter, rangeOp->getLoc());
+    ImplicitLocOpBuilder b(rangeOp->getLoc(), rewriter);
 
     // Fill in an aggregate value of the descriptor.
     RangeOpAdaptor adaptor(operands);
-    Value desc = llvm_undef(rangeDescriptorTy);
-    desc = llvm_insertvalue(desc, adaptor.min(), rewriter.getI64ArrayAttr(0));
-    desc = llvm_insertvalue(desc, adaptor.max(), rewriter.getI64ArrayAttr(1));
-    desc = llvm_insertvalue(desc, adaptor.step(), rewriter.getI64ArrayAttr(2));
+    Value desc = b.create<LLVM::UndefOp>(rangeDescriptorTy);
+    desc = b.create<LLVM::InsertValueOp>(desc, adaptor.min(),
+                                         rewriter.getI64ArrayAttr(0));
+    desc = b.create<LLVM::InsertValueOp>(desc, adaptor.max(),
+                                         rewriter.getI64ArrayAttr(1));
+    desc = b.create<LLVM::InsertValueOp>(desc, adaptor.step(),
+                                         rewriter.getI64ArrayAttr(2));
     rewriter.replaceOp(rangeOp, desc);
     return success();
   }
@@ -169,17 +115,18 @@ public:
         }))
       return failure();
 
-    edsc::ScopedContext context(rewriter, reshapeOp->getLoc());
     ReshapeOpAdaptor adaptor(operands);
-    BaseViewConversionHelper baseDesc(adaptor.src());
-    BaseViewConversionHelper desc(typeConverter->convertType(dstType));
-    desc.setAllocatedPtr(baseDesc.allocatedPtr());
-    desc.setAlignedPtr(baseDesc.alignedPtr());
-    desc.setOffset(baseDesc.offset());
+    MemRefDescriptor baseDesc(adaptor.src());
+    Location loc = reshapeOp->getLoc();
+    auto desc = MemRefDescriptor::undef(rewriter, reshapeOp->getLoc(),
+                                        typeConverter->convertType(dstType));
+    desc.setAllocatedPtr(rewriter, loc, baseDesc.allocatedPtr(rewriter, loc));
+    desc.setAlignedPtr(rewriter, loc, baseDesc.alignedPtr(rewriter, loc));
+    desc.setOffset(rewriter, loc, baseDesc.offset(rewriter, loc));
     for (auto en : llvm::enumerate(dstType.getShape()))
-      desc.setConstantSize(en.index(), en.value());
+      desc.setConstantSize(rewriter, loc, en.index(), en.value());
     for (auto en : llvm::enumerate(strides))
-      desc.setConstantStride(en.index(), en.value());
+      desc.setConstantStride(rewriter, loc, en.index(), en.value());
     rewriter.replaceOp(reshapeOp, {desc});
     return success();
   }
