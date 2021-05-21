@@ -51,8 +51,8 @@ template <typename Config> static void testSecondaryBasic(void) {
           }
         },
         "");
-#endif // __arm__
   }
+#endif // __arm__
 
   const scudo::uptr Align = 1U << 16;
   P = L->allocate(scudo::Options{}, Size + Align, Align);
