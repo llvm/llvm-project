@@ -1312,6 +1312,11 @@ RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
     auto SysReg = RISCVSysReg::lookupSysRegByName(Identifier);
     if (!SysReg)
       SysReg = RISCVSysReg::lookupSysRegByAltName(Identifier);
+    if (!SysReg)
+      if ((SysReg = RISCVSysReg::lookupSysRegByDeprecatedName(Identifier)))
+        Warning(S, "'" + Identifier + "' is a deprecated alias for '" +
+                       SysReg->Name + "'");
+
     // Accept a named Sys Reg if the required features are present.
     if (SysReg) {
       if (!SysReg->haveRequiredFeatures(getSTI().getFeatureBits())) {
