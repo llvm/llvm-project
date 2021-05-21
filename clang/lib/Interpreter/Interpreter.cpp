@@ -16,6 +16,7 @@
 #include "IncrementalExecutor.h"
 #include "IncrementalParser.h"
 
+#include "clang/AST/ASTContext.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
@@ -204,8 +205,11 @@ llvm::Expected<Transaction &> Interpreter::Parse(llvm::StringRef Code) {
 llvm::Error Interpreter::Execute(Transaction &T) {
   assert(T.TheModule);
   if (!IncrExecutor) {
+    const llvm::Triple &Triple =
+        getCompilerInstance()->getASTContext().getTargetInfo().getTriple();
     llvm::Error Err = llvm::Error::success();
-    IncrExecutor = std::make_unique<IncrementalExecutor>(*TSCtx, Err);
+    IncrExecutor = std::make_unique<IncrementalExecutor>(*TSCtx, Err, Triple);
+
     if (Err)
       return Err;
   }
