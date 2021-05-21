@@ -193,7 +193,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ZeroContents) {
 SCUDO_TYPED_TEST(ScudoCombinedTest, ZeroFill) {
   auto *Allocator = this->Allocator.get();
 
-  // Ensure that specifying ZeroContents returns a zero'd out block.
+  // Ensure that specifying ZeroFill returns a zero'd out block.
   Allocator->setFillContents(scudo::ZeroFill);
   for (scudo::uptr SizeLog = 0U; SizeLog <= 20U; SizeLog++) {
     for (scudo::uptr Delta = 0U; Delta <= 4U; Delta++) {
