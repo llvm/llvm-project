@@ -168,8 +168,7 @@ def EqualOp : Complex_Op<"eq",
   let results = (outs I1:$result);
   let builders = [
     OpBuilder<(ins "Value":$lhs, "Value":$rhs), [{
-      build($_builder, $_state, IntegerType::get(lhs.getContext(), 1), lhs,
-            rhs);
+      build($_builder, $_state, $_builder.getI1Type(), lhs, rhs);
     }]>];
 
   let assemblyFormat = "$lhs `,` $rhs  attr-dict `:` type($lhs)";
@@ -212,8 +211,7 @@ def NotEqualOp : Complex_Op<"neq",
   let results = (outs I1:$result);
   let builders = [
     OpBuilder<(ins "Value":$lhs, "Value":$rhs), [{
-      build($_builder, $_state, IntegerType::get(lhs.getContext(), 1), lhs,
-            rhs);
+      build($_builder, $_state, $_builder.getI1Type(), lhs, rhs);
     }]>];
 
   let assemblyFormat = "$lhs `,` $rhs  attr-dict `:` type($lhs)";
