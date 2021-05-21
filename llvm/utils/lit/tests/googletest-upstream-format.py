@@ -17,9 +17,11 @@
 # CHECK-NEXT: And I have two lines of output
 # CHECK: ***
 # CHECK: SKIPPED: googletest-upstream-format :: {{[Dd]ummy[Ss]ub[Dd]ir}}/OneTest.py/FirstTest.subTestC
+# CHECK: UNRESOLVED: googletest-upstream-format :: {{[Dd]ummy[Ss]ub[Dd]ir}}/OneTest.py/FirstTest.subTestD
 # CHECK: PASS: googletest-upstream-format :: {{[Dd]ummy[Ss]ub[Dd]ir}}/OneTest.py/ParameterizedTest/0.subTest
 # CHECK: PASS: googletest-upstream-format :: {{[Dd]ummy[Ss]ub[Dd]ir}}/OneTest.py/ParameterizedTest/1.subTest
 # CHECK: Failed Tests (1)
 # CHECK: Skipped{{ *}}: 1
 # CHECK: Passed{{ *}}: 3
+# CHECK: Unresolved{{ *}}: 1
 # CHECK: Failed{{ *}}: 1
