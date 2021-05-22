@@ -73,8 +73,6 @@ namespace llvm {
     None    // Do not use Basic Block Sections.
   };
 
-  enum class StackProtectorGuards { None, TLS, Global, SysReg };
-
   enum class EABI {
     Unknown,
     Default, // Default means not specified
@@ -327,16 +325,6 @@ namespace llvm {
     /// When set to true, don't use DWARF extensions in later DWARF versions.
     /// By default, it is set to false.
     unsigned DebugStrictDwarf : 1;
-
-    /// Stack protector guard offset to use.
-    int StackProtectorGuardOffset = INT_MAX;
-
-    /// Stack protector guard mode to use, e.g. tls, global, sysreg.
-    StackProtectorGuards StackProtectorGuard =
-                                         StackProtectorGuards::None;
-
-    /// Stack protector guard reg to use, e.g. usually fs or gs in X86.
-    std::string StackProtectorGuardReg = "None";
 
     /// Name of the stack usage file (i.e., .su file) if user passes
     /// -fstack-usage. If empty, it can be implied that -fstack-usage is not

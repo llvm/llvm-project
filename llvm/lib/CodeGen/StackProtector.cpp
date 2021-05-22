@@ -380,9 +380,8 @@ static Value *getStackGuard(const TargetLoweringBase *TLI, Module *M,
                             IRBuilder<> &B,
                             bool *SupportsSelectionDAGSP = nullptr) {
   Value *Guard = TLI->getIRStackGuard(B);
-  auto GuardMode = TLI->getTargetMachine().Options.StackProtectorGuard;
-  if ((GuardMode == llvm::StackProtectorGuards::TLS ||
-       GuardMode == llvm::StackProtectorGuards::None) && Guard)
+  StringRef GuardMode = M->getStackProtectorGuard();
+  if ((GuardMode == "tls" || GuardMode.empty()) && Guard)
     return B.CreateLoad(B.getInt8PtrTy(), Guard, true, "StackGuard");
 
   // Use SelectionDAG SSP handling, since there isn't an IR guard.
