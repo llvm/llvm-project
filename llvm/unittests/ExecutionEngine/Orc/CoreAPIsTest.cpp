@@ -1249,8 +1249,10 @@ TEST_F(CoreAPIsStandardTest, TestLookupWithUnthreadedMaterialization) {
 TEST_F(CoreAPIsStandardTest, TestLookupWithThreadedMaterialization) {
 #if LLVM_ENABLE_THREADS
 
+  std::mutex WorkThreadsMutex;
   std::vector<std::thread> WorkThreads;
   ES.setDispatchTask([&](std::unique_ptr<Task> T) {
+    std::lock_guard<std::mutex> Lock(WorkThreadsMutex);
     WorkThreads.push_back(
         std::thread([T = std::move(T)]() mutable { T->run(); }));
   });
