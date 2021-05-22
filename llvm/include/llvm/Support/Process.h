@@ -216,6 +216,10 @@ public:
   /// Use \arg NoCleanup for calling _exit() instead of exit().
   LLVM_ATTRIBUTE_NORETURN
   static void Exit(int RetCode, bool NoCleanup = false);
+
+private:
+  LLVM_ATTRIBUTE_NORETURN
+  static void ExitNoCleanup(int RetCode);
 };
 
 }
