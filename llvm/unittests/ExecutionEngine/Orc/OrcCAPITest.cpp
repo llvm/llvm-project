@@ -63,7 +63,7 @@ public:
     // the case that it fails anyway.
     char *TT = LLVMOrcJITTargetMachineBuilderGetTargetTriple(JTMB);
     TargetTriple = TT;
-    LLVMOrcJITTargetMachineBuilderDisposeTargetTriple(JTMB, TT);
+    LLVMDisposeMessage(TT);
 
     if (!isSupported(TargetTriple)) {
       // If this triple isn't supported then bail out.
