@@ -790,8 +790,8 @@ define i32 @srem_constpow2() {
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 176 for instruction: %V8i64 = srem <8 x i64> undef, <i64 2, i64 4, i64 8, i64 16, i64 32, i64 64, i64 128, i64 256>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I32 = srem i32 undef, 16
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %V4i32 = srem <4 x i32> undef, <i32 2, i32 4, i32 8, i32 16>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %V8i32 = srem <8 x i32> undef, <i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 176 for instruction: %V16i32 = srem <16 x i32> undef, <i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256, i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 89 for instruction: %V8i32 = srem <8 x i32> undef, <i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 178 for instruction: %V16i32 = srem <16 x i32> undef, <i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256, i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I16 = srem i16 undef, 16
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 45 for instruction: %V8i16 = srem <8 x i16> undef, <i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 102 for instruction: %V16i16 = srem <16 x i16> undef, <i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256>
@@ -904,8 +904,8 @@ define i32 @srem_constpow2() {
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 176 for instruction: %V8i64 = srem <8 x i64> undef, <i64 2, i64 4, i64 8, i64 16, i64 32, i64 64, i64 128, i64 256>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I32 = srem i32 undef, 16
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %V4i32 = srem <4 x i32> undef, <i32 2, i32 4, i32 8, i32 16>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %V8i32 = srem <8 x i32> undef, <i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 176 for instruction: %V16i32 = srem <16 x i32> undef, <i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256, i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 89 for instruction: %V8i32 = srem <8 x i32> undef, <i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 178 for instruction: %V16i32 = srem <16 x i32> undef, <i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256, i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I16 = srem i16 undef, 16
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 45 for instruction: %V8i16 = srem <8 x i16> undef, <i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 102 for instruction: %V16i16 = srem <16 x i16> undef, <i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256>
@@ -1085,8 +1085,8 @@ define i32 @srem_uniformconstpow2() {
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 100 for instruction: %V8i64 = srem <8 x i64> undef, <i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I32 = srem i32 undef, 16
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4i32 = srem <4 x i32> undef, <i32 16, i32 16, i32 16, i32 16>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8i32 = srem <8 x i32> undef, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16i32 = srem <16 x i32> undef, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %V8i32 = srem <8 x i32> undef, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %V16i32 = srem <16 x i32> undef, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I16 = srem i16 undef, 16
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8i16 = srem <8 x i16> undef, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V16i16 = srem <16 x i16> undef, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
@@ -1199,8 +1199,8 @@ define i32 @srem_uniformconstpow2() {
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 100 for instruction: %V8i64 = srem <8 x i64> undef, <i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I32 = srem i32 undef, 16
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4i32 = srem <4 x i32> undef, <i32 16, i32 16, i32 16, i32 16>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8i32 = srem <8 x i32> undef, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16i32 = srem <16 x i32> undef, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %V8i32 = srem <8 x i32> undef, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %V16i32 = srem <16 x i32> undef, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I16 = srem i16 undef, 16
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8i16 = srem <8 x i16> undef, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V16i16 = srem <16 x i16> undef, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>

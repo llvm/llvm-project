@@ -3,9 +3,9 @@
 ; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mattr=+sse4.2 | FileCheck %s --check-prefixes=SSE,SSE42
 ; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx | FileCheck %s --check-prefixes=AVX,AVX1
 ; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX2
-; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx512f | FileCheck %s --check-prefixes=AVX512F
-; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=AVX512BW
-; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx512f,+avx512dq | FileCheck %s --check-prefixes=AVX512DQ
+; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx512f | FileCheck %s --check-prefixes=AVX512,AVX512F
+; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=AVX512,AVX512BW
+; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx512f,+avx512dq | FileCheck %s --check-prefixes=AVX512,AVX512DQ
 ;
 ; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mcpu=slm | FileCheck %s --check-prefixes=SSE,SLM
 ; RUN: opt < %s -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mcpu=goldmont | FileCheck %s --check-prefixes=SSE,GLM
@@ -974,8 +974,8 @@ define i32 @mul(i32 %arg) {
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %V8I64 = mul <8 x i64> undef, undef
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = mul i32 undef, undef
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = mul <4 x i32> undef, undef
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = mul <8 x i32> undef, undef
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = mul <16 x i32> undef, undef
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8I32 = mul <8 x i32> undef, undef
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V16I32 = mul <16 x i32> undef, undef
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = mul i16 undef, undef
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = mul <8 x i16> undef, undef
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = mul <16 x i16> undef, undef
@@ -1107,8 +1107,8 @@ define i32 @mul(i32 %arg) {
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %V8I64 = mul <8 x i64> undef, undef
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = mul i32 undef, undef
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = mul <4 x i32> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = mul <8 x i32> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = mul <16 x i32> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8I32 = mul <8 x i32> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V16I32 = mul <16 x i32> undef, undef
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = mul i16 undef, undef
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = mul <8 x i16> undef, undef
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = mul <16 x i16> undef, undef
