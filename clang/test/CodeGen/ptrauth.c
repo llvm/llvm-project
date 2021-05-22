@@ -86,8 +86,8 @@ extern struct InitiallyIncomplete returns_initially_incomplete(void);
 void use_while_incomplete() {
   // NOPCH:      [[VAR:%.*]] = alloca {}*,
   // NOPCH-NEXT: store {}*  bitcast ({ i8*, i32, i64, i64 }* @returns_initially_incomplete.ptrauth to {}*), {}** [[VAR]],
-  // PCH:        [[VAR:%.*]] = alloca i64 ()*,
-  // PCH-NEXT:   store i64 ()*  bitcast ({ i8*, i32, i64, i64 }* @returns_initially_incomplete.ptrauth to i64 ()*), i64 ()** [[VAR]],
+  // PCH:        [[VAR:%.*]] = alloca i32 ()*,
+  // PCH-NEXT:   store i32 ()*  bitcast ({ i8*, i32, i64, i64 }* @returns_initially_incomplete.ptrauth to i32 ()*), i32 ()** [[VAR]],
   struct InitiallyIncomplete (*fnptr)(void) = &returns_initially_incomplete;
 }
 struct InitiallyIncomplete { int x; };
