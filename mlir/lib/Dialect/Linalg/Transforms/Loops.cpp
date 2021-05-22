@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
+#include "mlir/Dialect/StandardOps/Utils/Utils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BlockAndValueMapping.h"
@@ -23,41 +24,6 @@
 
 using namespace mlir;
 using namespace mlir::linalg;
-
-namespace {
-/// Helper struct to build simple arithmetic quantities with minimal type
-/// inference support.
-struct ArithBuilder {
-  ArithBuilder(OpBuilder &b, Location loc) : b(b), loc(loc) {}
-
-  Value select(Value cmp, Value lhs, Value rhs) {
-    return b.create<SelectOp>(loc, cmp, lhs, rhs);
-  }
-  Value slt(Value lhs, Value rhs) {
-    if (lhs.getType().isa<IntegerType>())
-      return b.create<CmpIOp>(loc, CmpIPredicate::slt, lhs, rhs);
-    return b.create<CmpFOp>(loc, CmpFPredicate::OLT, lhs, rhs);
-  }
-  Value sgt(Value lhs, Value rhs) {
-    if (lhs.getType().isa<IntegerType>())
-      return b.create<CmpIOp>(loc, CmpIPredicate::sgt, lhs, rhs);
-    return b.create<CmpFOp>(loc, CmpFPredicate::OGT, lhs, rhs);
-  }
-  Value add(Value lhs, Value rhs) {
-    if (lhs.getType().isa<IntegerType>())
-      return b.create<AddIOp>(loc, lhs, rhs);
-    return b.create<AddFOp>(loc, lhs, rhs);
-  }
-  Value mul(Value lhs, Value rhs) {
-    if (lhs.getType().isa<IntegerType>())
-      return b.create<MulIOp>(loc, lhs, rhs);
-    return b.create<MulFOp>(loc, lhs, rhs);
-  }
-
-  OpBuilder &b;
-  Location loc;
-};
-} // namespace
 
 static SmallVector<Value> makeCanonicalAffineApplies(OpBuilder &b, Location loc,
                                                      AffineMap map,

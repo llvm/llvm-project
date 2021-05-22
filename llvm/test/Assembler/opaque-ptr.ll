@@ -40,3 +40,27 @@ define void @store(ptr %a, i32 %i) {
     store i32 %i, ptr %a
     ret void
 }
+
+; CHECK: define void @gep(ptr %a)
+; CHECK:     %b = getelementptr i8, ptr %a, i32 2
+; CHECK:     ret void
+define void @gep(ptr %a) {
+    %b = getelementptr i8, ptr %a, i32 2
+    ret void
+}
+
+; CHECK: define void @cmpxchg(ptr %p, i32 %a, i32 %b)
+; CHECK:     %val_success = cmpxchg ptr %p, i32 %a, i32 %b acq_rel monotonic
+; CHECK:     ret void
+define void @cmpxchg(ptr %p, i32 %a, i32 %b) {
+    %val_success = cmpxchg ptr %p, i32 %a, i32 %b acq_rel monotonic
+    ret void
+}
+
+; CHECK: define void @atomicrmw(ptr %a, i32 %i)
+; CHECK:     %b = atomicrmw add ptr %a, i32 %i acquire
+; CHECK:     ret void
+define void @atomicrmw(ptr %a, i32 %i) {
+    %b = atomicrmw add ptr %a, i32 %i acquire
+    ret void
+}

@@ -1855,15 +1855,17 @@ private:
   CXXDeductionGuideDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
                         ExplicitSpecifier ES,
                         const DeclarationNameInfo &NameInfo, QualType T,
-                        TypeSourceInfo *TInfo, SourceLocation EndLocation)
+                        TypeSourceInfo *TInfo, SourceLocation EndLocation,
+                        CXXConstructorDecl *Ctor)
       : FunctionDecl(CXXDeductionGuide, C, DC, StartLoc, NameInfo, T, TInfo,
                      SC_None, false, ConstexprSpecKind::Unspecified),
-        ExplicitSpec(ES) {
+        Ctor(Ctor), ExplicitSpec(ES) {
     if (EndLocation.isValid())
       setRangeEnd(EndLocation);
     setIsCopyDeductionCandidate(false);
   }
 
+  CXXConstructorDecl *Ctor;
   ExplicitSpecifier ExplicitSpec;
   void setExplicitSpecifier(ExplicitSpecifier ES) { ExplicitSpec = ES; }
 
@@ -1874,7 +1876,8 @@ public:
   static CXXDeductionGuideDecl *
   Create(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
          ExplicitSpecifier ES, const DeclarationNameInfo &NameInfo, QualType T,
-         TypeSourceInfo *TInfo, SourceLocation EndLocation);
+         TypeSourceInfo *TInfo, SourceLocation EndLocation,
+         CXXConstructorDecl *Ctor = nullptr);
 
   static CXXDeductionGuideDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
@@ -1887,6 +1890,12 @@ public:
   /// Get the template for which this guide performs deduction.
   TemplateDecl *getDeducedTemplate() const {
     return getDeclName().getCXXDeductionGuideTemplate();
+  }
+
+  /// Get the constructor from which this deduction guide was generated, if
+  /// this is an implicit deduction guide.
+  CXXConstructorDecl *getCorrespondingConstructor() const {
+    return Ctor;
   }
 
   void setIsCopyDeductionCandidate(bool isCDC = true) {
@@ -3821,7 +3830,7 @@ public:
 /// DecompositionDecl of type 'int (&)[3]'.
 class BindingDecl : public ValueDecl {
   /// The declaration that this binding binds to part of.
-  LazyDeclPtr Decomp;
+  ValueDecl *Decomp;
   /// The binding represented by this declaration. References to this
   /// declaration are effectively equivalent to this expression (except
   /// that it is only evaluated once at the point of declaration of the
@@ -3847,7 +3856,7 @@ public:
 
   /// Get the decomposition declaration that this binding represents a
   /// decomposition of.
-  ValueDecl *getDecomposedDecl() const;
+  ValueDecl *getDecomposedDecl() const { return Decomp; }
 
   /// Get the variable (if any) that holds the value of evaluating the binding.
   /// Only present for user-defined bindings for tuple-like types.

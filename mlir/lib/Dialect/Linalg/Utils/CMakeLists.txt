@@ -6,9 +6,7 @@ add_mlir_dialect_library(MLIRLinalgUtils
 
   LINK_LIBS PUBLIC
   MLIRAffine
-  MLIREDSC
   MLIRIR
-  MLIRLinalgEDSC
   MLIRLinalg
   MLIRSCF
   MLIRPass

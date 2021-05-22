@@ -4140,13 +4140,18 @@ bool BoUpSLP::isFullyVectorizableTinyTree() const {
 
   // Handle splat and all-constants stores. Also try to vectorize tiny trees
   // with the second gather nodes if they have less scalar operands rather than
-  // the initial tree element (may be profitable to shuffle the second gather).
+  // the initial tree element (may be profitable to shuffle the second gather)
+  // or they are extractelements, which form shuffle.
+  SmallVector<int> Mask;
   if (VectorizableTree[0]->State == TreeEntry::Vectorize &&
       (allConstant(VectorizableTree[1]->Scalars) ||
        isSplat(VectorizableTree[1]->Scalars) ||
        (VectorizableTree[1]->State == TreeEntry::NeedToGather &&
         VectorizableTree[1]->Scalars.size() <
-            VectorizableTree[0]->Scalars.size())))
+            VectorizableTree[0]->Scalars.size()) ||
+       (VectorizableTree[1]->State == TreeEntry::NeedToGather &&
+        VectorizableTree[1]->getOpcode() == Instruction::ExtractElement &&
+        isShuffle(VectorizableTree[1]->Scalars, Mask))))
     return true;
 
   // Gathering cost would be too much for tiny trees.
@@ -6088,6 +6093,9 @@ static bool collectValuesToDemote(Value *V, SmallPtrSetImpl<Value *> &Expr,
     break;
   case Instruction::ZExt:
   case Instruction::SExt:
+    if (isa<ExtractElementInst>(I->getOperand(0)) ||
+        isa<InsertElementInst>(I->getOperand(0)))
+      return false;
     break;
 
   // We can demote certain binary operations if we can demote both of their

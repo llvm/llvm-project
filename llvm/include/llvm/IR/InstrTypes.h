@@ -1555,6 +1555,13 @@ public:
     setAttributes(PAL);
   }
 
+  /// Removes the attributes from the given argument
+  void removeParamAttrs(unsigned ArgNo, const AttrBuilder &Attrs) {
+    AttributeList PAL = getAttributes();
+    PAL = PAL.removeParamAttributes(getContext(), ArgNo, Attrs);
+    setAttributes(PAL);
+  }
+
   /// Removes noundef and other attributes that imply undefined behavior if a
   /// `undef` or `poison` value is passed from the given argument.
   void removeParamUndefImplyingAttrs(unsigned ArgNo) {

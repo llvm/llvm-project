@@ -8,7 +8,7 @@
 /// but local aliases are not used.
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -mrelocation-model pic -pic-level 1 -fhalf-no-semantic-interposition %s -o - | FileCheck %s --check-prefixes=PREEMPT,NOMETADATA
 
-// CHECK: @var = dso_local global i32 0, align 4
+// CHECK: @var = global i32 0, align 4
 // CHECK: @ext_var = external global i32, align 4
 // CHECK: @ifunc = ifunc i32 (), bitcast (i8* ()* @ifunc_resolver to i32 ()*)
 // CHECK: define dso_local i32 @func()

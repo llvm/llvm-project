@@ -148,6 +148,29 @@ def ImOp : Complex_Op<"im",
 }
 
 //===----------------------------------------------------------------------===//
+// EqualOp
+//===----------------------------------------------------------------------===//
+
+def EqualOp : Complex_Op<"eq",
+    [NoSideEffect, AllTypesMatch<["lhs", "rhs"]>]> {
+  let summary = "computes whether two complex values are equal";
+  let description = [{
+    The `eq` op takes two complex numbers and returns whether they are equal.
+
+    Example:
+
+    ```mlir
+    %a = complex.eq %b, %c : complex<f32>
+    ```
+  }];
+
+  let arguments = (ins Complex<AnyFloat>:$lhs, Complex<AnyFloat>:$rhs);
+  let results = (outs I1:$result);
+
+  let assemblyFormat = "$lhs `,` $rhs  attr-dict `:` type($lhs)";
+}
+
+//===----------------------------------------------------------------------===//
 // MulOp
 //===----------------------------------------------------------------------===//
 
@@ -160,6 +183,30 @@ def MulOp : ComplexArithmeticOp<"mul"> {
     %a = complex.mul %b, %c : complex<f32>
     ```
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// NotEqualOp
+//===----------------------------------------------------------------------===//
+
+def NotEqualOp : Complex_Op<"neq",
+    [NoSideEffect, AllTypesMatch<["lhs", "rhs"]>]> {
+  let summary = "computes whether two complex values are not equal";
+  let description = [{
+    The `neq` op takes two complex numbers and returns whether they are not
+    equal.
+
+    Example:
+
+    ```mlir
+    %a = complex.neq %b, %c : complex<f32>
+    ```
+  }];
+
+  let arguments = (ins Complex<AnyFloat>:$lhs, Complex<AnyFloat>:$rhs);
+  let results = (outs I1:$result);
+
+  let assemblyFormat = "$lhs `,` $rhs  attr-dict `:` type($lhs)";
 }
 
 //===----------------------------------------------------------------------===//

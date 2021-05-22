@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "WasmObjcopy.h"
-#include "CopyConfig.h"
+#include "CommonConfig.h"
 #include "Object.h"
 #include "Reader.h"
 #include "Writer.h"
@@ -39,7 +39,7 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
   return createStringError(errc::invalid_argument, "section '%s' not found",
                            SecName.str().c_str());
 }
-static Error handleArgs(const CopyConfig &Config, Object &Obj) {
+static Error handleArgs(const CommonConfig &Config, Object &Obj) {
   // Only support AddSection, DumpSection, RemoveSection for now.
   for (StringRef Flag : Config.DumpSection) {
     StringRef SecName;
@@ -72,26 +72,10 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
     Obj.addSectionWithOwnedContents(Sec, std::move(Buf));
   }
 
-  if (!Config.AddGnuDebugLink.empty() || Config.ExtractPartition ||
-      !Config.SplitDWO.empty() || !Config.SymbolsPrefix.empty() ||
-      !Config.AllocSectionsPrefix.empty() ||
-      Config.DiscardMode != DiscardType::None || Config.NewSymbolVisibility ||
-      !Config.SymbolsToAdd.empty() || !Config.RPathToAdd.empty() ||
-      !Config.OnlySection.empty() || !Config.SymbolsToGlobalize.empty() ||
-      !Config.SymbolsToKeep.empty() || !Config.SymbolsToLocalize.empty() ||
-      !Config.SymbolsToRemove.empty() ||
-      !Config.UnneededSymbolsToRemove.empty() ||
-      !Config.SymbolsToWeaken.empty() || !Config.SymbolsToKeepGlobal.empty() ||
-      !Config.SectionsToRename.empty() || !Config.SetSectionAlignment.empty() ||
-      !Config.SetSectionFlags.empty() || !Config.SymbolsToRename.empty()) {
-    return createStringError(
-        llvm::errc::invalid_argument,
-        "only add-section, dump-section, and remove-section are supported");
-  }
   return Error::success();
 }
 
-Error executeObjcopyOnBinary(const CopyConfig &Config,
+Error executeObjcopyOnBinary(const CommonConfig &Config, const WasmConfig &,
                              object::WasmObjectFile &In, raw_ostream &Out) {
   Reader TheReader(In);
   Expected<std::unique_ptr<Object>> ObjOrErr = TheReader.create();

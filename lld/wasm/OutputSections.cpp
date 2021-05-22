@@ -8,6 +8,7 @@
 
 #include "OutputSections.h"
 #include "InputChunks.h"
+#include "InputElement.h"
 #include "InputFiles.h"
 #include "OutputSegment.h"
 #include "WriterUtils.h"
@@ -162,12 +163,8 @@ void DataSection::finalizeContents() {
       if (config->isPic) {
         initExpr.Opcode = WASM_OPCODE_GLOBAL_GET;
         initExpr.Value.Global = WasmSym::memoryBase->getGlobalIndex();
-      } else if (config->is64.getValueOr(false)) {
-        initExpr.Opcode = WASM_OPCODE_I64_CONST;
-        initExpr.Value.Int64 = static_cast<int64_t>(segment->startVA);
       } else {
-        initExpr.Opcode = WASM_OPCODE_I32_CONST;
-        initExpr.Value.Int32 = static_cast<int32_t>(segment->startVA);      
+        initExpr = intConst(segment->startVA, config->is64.getValueOr(false));
       }
       writeInitExpr(os, initExpr);
     }
@@ -241,6 +238,7 @@ void CustomSection::finalizeInputSections() {
   std::vector<InputChunk *> newSections;
 
   for (InputChunk *s : inputSections) {
+    s->outputSec = this;
     MergeInputChunk *ms = dyn_cast<MergeInputChunk>(s);
     if (!ms) {
       newSections.push_back(s);
@@ -251,6 +249,7 @@ void CustomSection::finalizeInputSections() {
       mergedSection =
           make<SyntheticMergedChunk>(name, 0, WASM_SEG_FLAG_STRINGS);
       newSections.push_back(mergedSection);
+      mergedSection->outputSec = this;
     }
     mergedSection->addMergeChunk(ms);
   }
@@ -272,7 +271,6 @@ void CustomSection::finalizeContents() {
 
   for (InputChunk *section : inputSections) {
     assert(!section->discarded);
-    section->outputSec = this;
     section->outSecOff = payloadSize;
     payloadSize += section->getSize();
   }

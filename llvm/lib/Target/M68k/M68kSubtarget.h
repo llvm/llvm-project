@@ -18,6 +18,7 @@
 #include "M68kISelLowering.h"
 #include "M68kInstrInfo.h"
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
@@ -46,6 +47,8 @@ protected:
   // selected as well.
   enum SubtargetEnum { M00, M10, M20, M30, M40, M60 };
   SubtargetEnum SubtargetKind = M00;
+
+  BitVector UserReservedRegister;
 
   InstrItineraryData InstrItins;
 
@@ -94,6 +97,11 @@ public:
   bool isLegalToCallImmediateAddr() const;
 
   bool isPositionIndependent() const;
+
+  bool isRegisterReservedByUser(Register R) const {
+    assert(R < M68k::NUM_TARGET_REGS && "Register out of range");
+    return UserReservedRegister[R];
+  }
 
   /// Classify a global variable reference for the current subtarget according
   /// to how we should reference it in a non-pcrel context.

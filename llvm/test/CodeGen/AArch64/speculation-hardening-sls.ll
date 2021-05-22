@@ -1,7 +1,9 @@
-; RUN: llc -mattr=harden-sls-retbr,harden-sls-blr -verify-machineinstrs -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,HARDEN,ISBDSB,ISBDSBDAGISEL
+; RUN: llc -mattr=harden-sls-retbr,harden-sls-blr -verify-machineinstrs -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,HARDEN,HARDEN-COMDAT,ISBDSB,ISBDSBDAGISEL
+; RUN: llc -mattr=harden-sls-retbr,harden-sls-blr,harden-sls-nocomdat -verify-machineinstrs -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,HARDEN,HARDEN-COMDAT-OFF,ISBDSB,ISBDSBDAGISEL
 ; RUN: llc -mattr=harden-sls-retbr,harden-sls-blr -mattr=+sb -verify-machineinstrs -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,HARDEN,SB,SBDAGISEL
+; RUN: llc -global-isel -global-isel-abort=0 -mattr=harden-sls-retbr,harden-sls-blr -verify-machineinstrs -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,HARDEN,HARDEN-COMDAT,ISBDSB
 ; RUN: llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,NOHARDEN
-; RUN: llc -global-isel -global-isel-abort=0 -mattr=harden-sls-retbr,harden-sls-blr -verify-machineinstrs -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,HARDEN,ISBDSB
+; RUN: llc -global-isel -global-isel-abort=0 -mattr=harden-sls-retbr,harden-sls-blr,harden-sls-nocomdat -verify-machineinstrs -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,HARDEN,HARDEN-COMDAT-OFF,ISBDSB
 ; RUN: llc -global-isel -global-isel-abort=0 -mattr=harden-sls-retbr,harden-sls-blr -mattr=+sb -verify-machineinstrs -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,HARDEN,SB
 
 ; Function Attrs: norecurse nounwind readnone
@@ -210,6 +212,14 @@ entry:
 ; SB-NEXT:     dsb sy
 ; SB-NEXT:     isb
 ; HARDEN-NEXT: .Lfunc_end
+; HARDEN-COMDAT:  .section .text.__llvm_slsblr_thunk_x19
+; HARDEN-COMDAT:  .hidden __llvm_slsblr_thunk_x19
+; HARDEN-COMDAT:  .weak __llvm_slsblr_thunk_x19
+; HARDEN-COMDAT: .type  __llvm_slsblr_thunk_x19,@function
+; HARDEN-COMDAT-OFF-NOT:  .section .text.__llvm_slsblr_thunk_x19
+; HARDEN-COMDAT-OFF-NOT:  .hidden __llvm_slsblr_thunk_x19
+; HARDEN-COMDAT-OFF-NOT:  .weak __llvm_slsblr_thunk_x19
+; HARDEN-COMDAT-OFF:      .type __llvm_slsblr_thunk_x19,@function
 ; HARDEN-label: __llvm_slsblr_thunk_x19:
 ; HARDEN:    mov x16, x19
 ; HARDEN:    br x16

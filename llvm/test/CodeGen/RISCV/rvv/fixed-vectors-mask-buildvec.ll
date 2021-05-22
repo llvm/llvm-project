@@ -8,6 +8,64 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-v -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=8 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,CHECK-RV32,RV32-LMULMAX8
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-v -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=8 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,CHECK-RV64,RV64-LMULMAX8
 
+define <1 x i1> @buildvec_mask_nonconst_v1i1(i1 %x) {
+; CHECK-LABEL: buildvec_mask_nonconst_v1i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    vsetivli a1, 1, e8,mf8,ta,mu
+; CHECK-NEXT:    vmv.v.x v25, a0
+; CHECK-NEXT:    vmsne.vi v0, v25, 0
+; CHECK-NEXT:    ret
+  %1 = insertelement <1 x i1> undef, i1 %x, i32 0
+  ret <1 x i1> %1
+}
+
+define <1 x i1> @buildvec_mask_optsize_nonconst_v1i1(i1 %x) optsize {
+; CHECK-LABEL: buildvec_mask_optsize_nonconst_v1i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    vsetivli a1, 1, e8,mf8,ta,mu
+; CHECK-NEXT:    vmv.v.x v25, a0
+; CHECK-NEXT:    vmsne.vi v0, v25, 0
+; CHECK-NEXT:    ret
+  %1 = insertelement <1 x i1> undef, i1 %x, i32 0
+  ret <1 x i1> %1
+}
+
+define <2 x i1> @buildvec_mask_nonconst_v2i1(i1 %x, i1 %y) {
+; CHECK-LABEL: buildvec_mask_nonconst_v2i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli a2, 2, e8,mf8,ta,mu
+; CHECK-NEXT:    vmv.v.x v25, a1
+; CHECK-NEXT:    vmv.s.x v25, a0
+; CHECK-NEXT:    vand.vi v25, v25, 1
+; CHECK-NEXT:    vmsne.vi v0, v25, 0
+; CHECK-NEXT:    ret
+  %1 = insertelement <2 x i1> undef, i1 %x, i32 0
+  %2 = insertelement <2 x i1> %1,  i1 %y, i32 1
+  ret <2 x i1> %2
+}
+
+; FIXME: optsize isn't smaller than the code above
+define <2 x i1> @buildvec_mask_optsize_nonconst_v2i1(i1 %x, i1 %y) optsize {
+; CHECK-LABEL: buildvec_mask_optsize_nonconst_v2i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sb a1, 15(sp)
+; CHECK-NEXT:    sb a0, 14(sp)
+; CHECK-NEXT:    vsetivli a0, 2, e8,mf8,ta,mu
+; CHECK-NEXT:    addi a0, sp, 14
+; CHECK-NEXT:    vle8.v v25, (a0)
+; CHECK-NEXT:    vand.vi v25, v25, 1
+; CHECK-NEXT:    vmsne.vi v0, v25, 0
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = insertelement <2 x i1> undef, i1 %x, i32 0
+  %2 = insertelement <2 x i1> %1,  i1 %y, i32 1
+  ret <2 x i1> %2
+}
+
 define <3 x i1> @buildvec_mask_v1i1() {
 ; CHECK-LABEL: buildvec_mask_v1i1:
 ; CHECK:       # %bb.0:
@@ -38,6 +96,73 @@ define <4 x i1> @buildvec_mask_v4i1() {
   ret <4 x i1> <i1 0, i1 1, i1 1, i1 0>
 }
 
+define <4 x i1> @buildvec_mask_nonconst_v4i1(i1 %x, i1 %y) {
+; CHECK-LABEL: buildvec_mask_nonconst_v4i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a2, zero, 3
+; CHECK-NEXT:    vsetivli a3, 1, e8,mf8,ta,mu
+; CHECK-NEXT:    vmv.s.x v0, a2
+; CHECK-NEXT:    vsetivli a2, 4, e8,mf4,ta,mu
+; CHECK-NEXT:    vmv.v.x v25, a1
+; CHECK-NEXT:    vmerge.vxm v25, v25, a0, v0
+; CHECK-NEXT:    vand.vi v25, v25, 1
+; CHECK-NEXT:    vmsne.vi v0, v25, 0
+; CHECK-NEXT:    ret
+  %1 = insertelement <4 x i1> undef, i1 %x, i32 0
+  %2 = insertelement <4 x i1> %1,  i1 %x, i32 1
+  %3 = insertelement <4 x i1> %2,  i1 %y, i32 2
+  %4 = insertelement <4 x i1> %3,  i1 %y, i32 3
+  ret <4 x i1> %4
+}
+
+; FIXME: optsize isn't smaller than the code above
+define <4 x i1> @buildvec_mask_optsize_nonconst_v4i1(i1 %x, i1 %y) optsize {
+; CHECK-LABEL: buildvec_mask_optsize_nonconst_v4i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sb a1, 15(sp)
+; CHECK-NEXT:    sb a1, 14(sp)
+; CHECK-NEXT:    sb a0, 13(sp)
+; CHECK-NEXT:    sb a0, 12(sp)
+; CHECK-NEXT:    vsetivli a0, 4, e8,mf4,ta,mu
+; CHECK-NEXT:    addi a0, sp, 12
+; CHECK-NEXT:    vle8.v v25, (a0)
+; CHECK-NEXT:    vand.vi v25, v25, 1
+; CHECK-NEXT:    vmsne.vi v0, v25, 0
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = insertelement <4 x i1> undef, i1 %x, i32 0
+  %2 = insertelement <4 x i1> %1,  i1 %x, i32 1
+  %3 = insertelement <4 x i1> %2,  i1 %y, i32 2
+  %4 = insertelement <4 x i1> %3,  i1 %y, i32 3
+  ret <4 x i1> %4
+}
+
+define <4 x i1> @buildvec_mask_nonconst_v4i1_2(i1 %x, i1 %y) {
+; CHECK-LABEL: buildvec_mask_nonconst_v4i1_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sb a1, 15(sp)
+; CHECK-NEXT:    addi a1, zero, 1
+; CHECK-NEXT:    sb a1, 14(sp)
+; CHECK-NEXT:    sb a0, 13(sp)
+; CHECK-NEXT:    sb zero, 12(sp)
+; CHECK-NEXT:    vsetivli a0, 4, e8,mf4,ta,mu
+; CHECK-NEXT:    addi a0, sp, 12
+; CHECK-NEXT:    vle8.v v25, (a0)
+; CHECK-NEXT:    vand.vi v25, v25, 1
+; CHECK-NEXT:    vmsne.vi v0, v25, 0
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = insertelement <4 x i1> undef, i1 0, i32 0
+  %2 = insertelement <4 x i1> %1,  i1 %x, i32 1
+  %3 = insertelement <4 x i1> %2,  i1  1, i32 2
+  %4 = insertelement <4 x i1> %3,  i1 %y, i32 3
+  ret <4 x i1> %4
+}
+
 define <8 x i1> @buildvec_mask_v8i1() {
 ; CHECK-LABEL: buildvec_mask_v8i1:
 ; CHECK:       # %bb.0:
@@ -46,6 +171,124 @@ define <8 x i1> @buildvec_mask_v8i1() {
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    ret
   ret <8 x i1> <i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1>
+}
+
+define <8 x i1> @buildvec_mask_nonconst_v8i1(i1 %x, i1 %y) {
+; CHECK-LABEL: buildvec_mask_nonconst_v8i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a2, zero, 19
+; CHECK-NEXT:    vsetivli a3, 1, e8,mf8,ta,mu
+; CHECK-NEXT:    vmv.s.x v0, a2
+; CHECK-NEXT:    vsetivli a2, 8, e8,mf2,ta,mu
+; CHECK-NEXT:    vmv.v.x v25, a1
+; CHECK-NEXT:    vmerge.vxm v25, v25, a0, v0
+; CHECK-NEXT:    vand.vi v25, v25, 1
+; CHECK-NEXT:    vmsne.vi v0, v25, 0
+; CHECK-NEXT:    ret
+  %1 = insertelement <8 x i1> undef, i1 %x, i32 0
+  %2 = insertelement <8 x i1> %1,  i1 %x, i32 1
+  %3 = insertelement <8 x i1> %2,  i1 %y, i32 2
+  %4 = insertelement <8 x i1> %3,  i1 %y, i32 3
+  %5 = insertelement <8 x i1> %4,  i1 %x, i32 4
+  %6 = insertelement <8 x i1> %5,  i1 %y, i32 5
+  %7 = insertelement <8 x i1> %6,  i1 %y, i32 6
+  %8 = insertelement <8 x i1> %7,  i1 %y, i32 7
+  ret <8 x i1> %8
+}
+
+define <8 x i1> @buildvec_mask_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %w) {
+; CHECK-LABEL: buildvec_mask_nonconst_v8i1_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sb a2, 15(sp)
+; CHECK-NEXT:    sb zero, 14(sp)
+; CHECK-NEXT:    sb a3, 13(sp)
+; CHECK-NEXT:    sb a0, 12(sp)
+; CHECK-NEXT:    sb a1, 11(sp)
+; CHECK-NEXT:    addi a1, zero, 1
+; CHECK-NEXT:    sb a1, 10(sp)
+; CHECK-NEXT:    sb a0, 9(sp)
+; CHECK-NEXT:    sb a0, 8(sp)
+; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
+; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vle8.v v25, (a0)
+; CHECK-NEXT:    vand.vi v25, v25, 1
+; CHECK-NEXT:    vmsne.vi v0, v25, 0
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = insertelement <8 x i1> undef, i1 %x, i32 0
+  %2 = insertelement <8 x i1> %1,  i1 %x, i32 1
+  %3 = insertelement <8 x i1> %2,  i1  1, i32 2
+  %4 = insertelement <8 x i1> %3,  i1 %y, i32 3
+  %5 = insertelement <8 x i1> %4,  i1 %x, i32 4
+  %6 = insertelement <8 x i1> %5,  i1 %w, i32 5
+  %7 = insertelement <8 x i1> %6,  i1  0, i32 6
+  %8 = insertelement <8 x i1> %7,  i1 %z, i32 7
+  ret <8 x i1> %8
+}
+
+define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %w) optsize {
+; CHECK-LABEL: buildvec_mask_optsize_nonconst_v8i1_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sb a2, 15(sp)
+; CHECK-NEXT:    sb zero, 14(sp)
+; CHECK-NEXT:    sb a3, 13(sp)
+; CHECK-NEXT:    sb a0, 12(sp)
+; CHECK-NEXT:    sb a1, 11(sp)
+; CHECK-NEXT:    addi a1, zero, 1
+; CHECK-NEXT:    sb a1, 10(sp)
+; CHECK-NEXT:    sb a0, 9(sp)
+; CHECK-NEXT:    sb a0, 8(sp)
+; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
+; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vle8.v v25, (a0)
+; CHECK-NEXT:    vand.vi v25, v25, 1
+; CHECK-NEXT:    vmsne.vi v0, v25, 0
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = insertelement <8 x i1> undef, i1 %x, i32 0
+  %2 = insertelement <8 x i1> %1,  i1 %x, i32 1
+  %3 = insertelement <8 x i1> %2,  i1  1, i32 2
+  %4 = insertelement <8 x i1> %3,  i1 %y, i32 3
+  %5 = insertelement <8 x i1> %4,  i1 %x, i32 4
+  %6 = insertelement <8 x i1> %5,  i1 %w, i32 5
+  %7 = insertelement <8 x i1> %6,  i1  0, i32 6
+  %8 = insertelement <8 x i1> %7,  i1 %z, i32 7
+  ret <8 x i1> %8
+}
+
+define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1(i1 %x, i1 %y) optsize {
+; CHECK-LABEL: buildvec_mask_optsize_nonconst_v8i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sb a1, 15(sp)
+; CHECK-NEXT:    sb a1, 14(sp)
+; CHECK-NEXT:    sb a1, 13(sp)
+; CHECK-NEXT:    sb a0, 12(sp)
+; CHECK-NEXT:    sb a1, 11(sp)
+; CHECK-NEXT:    sb a1, 10(sp)
+; CHECK-NEXT:    sb a0, 9(sp)
+; CHECK-NEXT:    sb a0, 8(sp)
+; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
+; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vle8.v v25, (a0)
+; CHECK-NEXT:    vand.vi v25, v25, 1
+; CHECK-NEXT:    vmsne.vi v0, v25, 0
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = insertelement <8 x i1> undef, i1 %x, i32 0
+  %2 = insertelement <8 x i1> %1,  i1 %x, i32 1
+  %3 = insertelement <8 x i1> %2,  i1 %y, i32 2
+  %4 = insertelement <8 x i1> %3,  i1 %y, i32 3
+  %5 = insertelement <8 x i1> %4,  i1 %x, i32 4
+  %6 = insertelement <8 x i1> %5,  i1 %y, i32 5
+  %7 = insertelement <8 x i1> %6,  i1 %y, i32 6
+  %8 = insertelement <8 x i1> %7,  i1 %y, i32 7
+  ret <8 x i1> %8
 }
 
 define <10 x i1> @buildvec_mask_v10i1() {
@@ -518,13 +761,13 @@ define <128 x i1> @buildvec_mask_optsize_v128i1() optsize {
 ;
 ; RV32-LMULMAX4-LABEL: buildvec_mask_optsize_v128i1:
 ; RV32-LMULMAX4:       # %bb.0:
-; RV32-LMULMAX4-NEXT:    lui a0, %hi(.LCPI10_0)
-; RV32-LMULMAX4-NEXT:    addi a0, a0, %lo(.LCPI10_0)
+; RV32-LMULMAX4-NEXT:    lui a0, %hi(.LCPI21_0)
+; RV32-LMULMAX4-NEXT:    addi a0, a0, %lo(.LCPI21_0)
 ; RV32-LMULMAX4-NEXT:    addi a1, zero, 64
 ; RV32-LMULMAX4-NEXT:    vsetvli a1, a1, e8,m4,ta,mu
 ; RV32-LMULMAX4-NEXT:    vle1.v v0, (a0)
-; RV32-LMULMAX4-NEXT:    lui a0, %hi(.LCPI10_1)
-; RV32-LMULMAX4-NEXT:    addi a0, a0, %lo(.LCPI10_1)
+; RV32-LMULMAX4-NEXT:    lui a0, %hi(.LCPI21_1)
+; RV32-LMULMAX4-NEXT:    addi a0, a0, %lo(.LCPI21_1)
 ; RV32-LMULMAX4-NEXT:    vle1.v v8, (a0)
 ; RV32-LMULMAX4-NEXT:    ret
 ;
@@ -551,8 +794,8 @@ define <128 x i1> @buildvec_mask_optsize_v128i1() optsize {
 ;
 ; RV32-LMULMAX8-LABEL: buildvec_mask_optsize_v128i1:
 ; RV32-LMULMAX8:       # %bb.0:
-; RV32-LMULMAX8-NEXT:    lui a0, %hi(.LCPI10_0)
-; RV32-LMULMAX8-NEXT:    addi a0, a0, %lo(.LCPI10_0)
+; RV32-LMULMAX8-NEXT:    lui a0, %hi(.LCPI21_0)
+; RV32-LMULMAX8-NEXT:    addi a0, a0, %lo(.LCPI21_0)
 ; RV32-LMULMAX8-NEXT:    addi a1, zero, 128
 ; RV32-LMULMAX8-NEXT:    vsetvli a1, a1, e8,m8,ta,mu
 ; RV32-LMULMAX8-NEXT:    vle1.v v0, (a0)
@@ -560,8 +803,8 @@ define <128 x i1> @buildvec_mask_optsize_v128i1() optsize {
 ;
 ; RV64-LMULMAX8-LABEL: buildvec_mask_optsize_v128i1:
 ; RV64-LMULMAX8:       # %bb.0:
-; RV64-LMULMAX8-NEXT:    lui a0, %hi(.LCPI10_0)
-; RV64-LMULMAX8-NEXT:    addi a0, a0, %lo(.LCPI10_0)
+; RV64-LMULMAX8-NEXT:    lui a0, %hi(.LCPI21_0)
+; RV64-LMULMAX8-NEXT:    addi a0, a0, %lo(.LCPI21_0)
 ; RV64-LMULMAX8-NEXT:    addi a1, zero, 128
 ; RV64-LMULMAX8-NEXT:    vsetvli a1, a1, e8,m8,ta,mu
 ; RV64-LMULMAX8-NEXT:    vle1.v v0, (a0)

@@ -672,6 +672,7 @@ static void addExplicitSpecifier(ExplicitSpecifier ES,
 
 void ASTDeclWriter::VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D) {
   addExplicitSpecifier(D->getExplicitSpecifier(), Record);
+  Record.AddDeclRef(D->Ctor);
   VisitFunctionDecl(D);
   Record.push_back(D->isCopyDeductionCandidate());
   Code = serialization::DECL_CXX_DEDUCTION_GUIDE;

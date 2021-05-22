@@ -3028,6 +3028,7 @@ def mtls_size_EQ : Joined<["-"], "mtls-size=">, Group<m_Group>, Flags<[NoXarchOp
   HelpText<"Specify bit size of immediate TLS offsets (AArch64 ELF only): "
            "12 (for 4KB) | 24 (for 16MB, default) | 32 (for 4GB) | 48 (for 256TB, needs -mcmodel=large)">,
   MarshallingInfoInt<CodeGenOpts<"TLSSize">>;
+def mimplicit_it_EQ : Joined<["-"], "mimplicit-it=">, Group<m_Group>;
 def mdefault_build_attributes : Joined<["-"], "mdefault-build-attributes">, Group<m_Group>;
 def mno_default_build_attributes : Joined<["-"], "mno-default-build-attributes">, Group<m_Group>;
 def mconstant_cfstrings : Flag<["-"], "mconstant-cfstrings">, Group<clang_ignored_m_Group>;
@@ -4026,6 +4027,13 @@ def m68020 : Flag<["-"], "m68020">, Group<m_m68k_Features_Group>;
 def m68030 : Flag<["-"], "m68030">, Group<m_m68k_Features_Group>;
 def m68040 : Flag<["-"], "m68040">, Group<m_m68k_Features_Group>;
 def m68060 : Flag<["-"], "m68060">, Group<m_m68k_Features_Group>;
+
+foreach i = {0-6} in
+  def ffixed_a#i : Flag<["-"], "ffixed-a"#i>, Group<m_m68k_Features_Group>,
+    HelpText<"Reserve the a"#i#" register (M68k only)">;
+foreach i = {0-7} in
+  def ffixed_d#i : Flag<["-"], "ffixed-d"#i>, Group<m_m68k_Features_Group>,
+    HelpText<"Reserve the d"#i#" register (M68k only)">;
 
 // X86 feature flags
 def mx87 : Flag<["-"], "mx87">, Group<m_x86_Features_Group>;

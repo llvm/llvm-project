@@ -56,6 +56,46 @@ endfunction()
 # only defines other functions (i.e. it doesn't execute any more code directly).
 llvm_distribution_build_target_map()
 
+# Look up the distribution a particular target belongs to.
+# - target: The target to look up.
+# - in_distribution_var: The variable with this name is set in the caller's
+#   scope to indicate if the target is in any distribution. If no distributions
+#   have been configured, this will always be set to true.
+# - distribution_var: The variable with this name is set in the caller's scope
+#   to indicate the distribution name for the target. If the target belongs to
+#   the default (unnamed) distribution, or if no distributions have been
+#   configured, it's set to the empty string.
+# - UMBRELLA: The (optional) umbrella target that the target is a part of. For
+#   example, all LLVM libraries have the umbrella target llvm-libraries.
+function(get_llvm_distribution target in_distribution_var distribution_var)
+  if(NOT LLVM_DISTRIBUTION_COMPONENTS AND NOT LLVM_DISTRIBUTIONS)
+    set(${in_distribution_var} YES PARENT_SCOPE)
+    set(${distribution_var} "" PARENT_SCOPE)
+    return()
+  endif()
+
+  cmake_parse_arguments(ARG "" UMBRELLA "" ${ARGN})
+  get_property(distribution GLOBAL PROPERTY LLVM_DISTRIBUTION_FOR_${target})
+  if(ARG_UMBRELLA)
+    get_property(umbrella_distribution GLOBAL PROPERTY LLVM_DISTRIBUTION_FOR_${ARG_UMBRELLA})
+    if(distribution AND umbrella_distribution AND NOT distribution STREQUAL umbrella_distribution)
+      message(SEND_ERROR "Target ${target} has different distribution ${distribution} from its"
+                         " umbrella target ${ARG_UMBRELLA} distribution ${umbrella_distribution}")
+    elseif(NOT distribution)
+      set(distribution ${umbrella_distribution})
+    endif()
+  endif()
+  if(distribution)
+    set(${in_distribution_var} YES PARENT_SCOPE)
+    if(distribution STREQUAL "<DEFAULT>")
+      set(distribution "")
+    endif()
+    set(${distribution_var} "${distribution}" PARENT_SCOPE)
+  else()
+    set(${in_distribution_var} NO PARENT_SCOPE)
+  endif()
+endfunction()
+
 # Get the EXPORT argument to use for an install command for a target in a
 # project. As explained at the top of the file, the project export set for a
 # distribution is named ${project}{distribution}Targets (except for LLVM where
@@ -79,31 +119,15 @@ function(get_target_export_arg target project export_arg_var)
     set(suffix "Targets")
   endif()
 
-  if(NOT LLVM_DISTRIBUTION_COMPONENTS AND NOT LLVM_DISTRIBUTIONS)
-    set(${export_arg_var} EXPORT ${project}${suffix} PARENT_SCOPE)
-    set_property(GLOBAL PROPERTY ${project_upper}_HAS_EXPORTS True)
-    return()
-  endif()
+  get_llvm_distribution(${target} in_distribution distribution ${ARGN})
 
-  cmake_parse_arguments(ARG "" UMBRELLA "" ${ARGN})
-  get_property(distribution GLOBAL PROPERTY LLVM_DISTRIBUTION_FOR_${target})
-  if(ARG_UMBRELLA)
-    get_property(umbrella_distribution GLOBAL PROPERTY LLVM_DISTRIBUTION_FOR_${ARG_UMBRELLA})
-    if(distribution AND umbrella_distribution AND NOT distribution STREQUAL umbrella_distribution)
-      message(SEND_ERROR "Target ${target} has different distribution ${distribution} from its"
-                         " umbrella target ${ARG_UMBRELLA} distribution ${umbrella_distribution}")
-    elseif(NOT distribution)
-      set(distribution ${umbrella_distribution})
-    endif()
-  endif()
-  if(distribution)
-    if(distribution STREQUAL "<DEFAULT>")
-      set(${export_arg_var} EXPORT ${project}${suffix} PARENT_SCOPE)
-      set_property(GLOBAL PROPERTY ${project_upper}_HAS_EXPORTS True)
-    else()
-      set(${export_arg_var} EXPORT ${project}${distribution}${suffix} PARENT_SCOPE)
+  if(in_distribution)
+    set(${export_arg_var} EXPORT ${project}${distribution}${suffix} PARENT_SCOPE)
+    if(distribution)
       string(TOUPPER "${distribution}" distribution_upper)
       set_property(GLOBAL PROPERTY ${project_upper}_${distribution_upper}_HAS_EXPORTS True)
+    else()
+      set_property(GLOBAL PROPERTY ${project_upper}_HAS_EXPORTS True)
     endif()
   else()
     set(${export_arg_var} "" PARENT_SCOPE)

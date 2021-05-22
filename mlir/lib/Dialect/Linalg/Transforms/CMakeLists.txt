@@ -27,11 +27,9 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRAffineUtils
   MLIRAnalysis
   MLIRComplex
-  MLIREDSC
   MLIRIR
   MLIRMemRef
   MLIRLinalgAnalysis
-  MLIRLinalgEDSC
   MLIRLinalg
   MLIRLinalgUtils
   MLIRSCF

@@ -26,6 +26,7 @@ if (LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
   set(LIBCXXABI_USE_LLVM_UNWINDER OFF)
 endif()
 
+# TODO: Clients using those options should switch to from-scratch Lit configuration files.
 option(LIBCXX_LINK_TESTS_WITH_SHARED_LIBCXXABI
        "Whether the libc++ tests should link with the shared libc++abi library"
        ${LIBCXXABI_ENABLE_SHARED})
