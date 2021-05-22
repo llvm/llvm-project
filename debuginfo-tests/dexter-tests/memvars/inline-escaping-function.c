@@ -42,4 +42,4 @@ int main() {
   return fun(5);
 }
 
-// DexExpectWatchValue('param', 10, on_line='s0')
+// DexExpectWatchValue('param', 10, on_line=ref('s0'))

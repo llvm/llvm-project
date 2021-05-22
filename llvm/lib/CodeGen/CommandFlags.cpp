@@ -79,9 +79,6 @@ CGOPT_EXP(bool, FunctionSections)
 CGOPT(bool, IgnoreXCOFFVisibility)
 CGOPT(bool, XCOFFTracebackTable)
 CGOPT(std::string, BBSections)
-CGOPT(std::string, StackProtectorGuard)
-CGOPT(int, StackProtectorGuardOffset)
-CGOPT(std::string, StackProtectorGuardReg)
 CGOPT(unsigned, TLSSize)
 CGOPT(bool, EmulatedTLS)
 CGOPT(bool, UniqueSectionNames)
@@ -366,21 +363,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init("none"));
   CGBINDOPT(BBSections);
 
-  static cl::opt<std::string> StackProtectorGuard(
-      "stack-protector-guard", cl::desc("Stack protector guard mode"),
-      cl::init("none"));
-  CGBINDOPT(StackProtectorGuard);
-
-  static cl::opt<std::string> StackProtectorGuardReg(
-      "stack-protector-guard-reg", cl::desc("Stack protector guard register"),
-      cl::init("none"));
-  CGBINDOPT(StackProtectorGuardReg);
-
-  static cl::opt<int> StackProtectorGuardOffset(
-      "stack-protector-guard-offset", cl::desc("Stack protector guard offset"),
-      cl::init(INT_MAX));
-  CGBINDOPT(StackProtectorGuardOffset);
-
   static cl::opt<unsigned> TLSSize(
       "tls-size", cl::desc("Bit size of immediate TLS offsets"), cl::init(0));
   CGBINDOPT(TLSSize);
@@ -502,26 +484,6 @@ codegen::getBBSectionsMode(llvm::TargetOptions &Options) {
   }
 }
 
-llvm::StackProtectorGuards
-codegen::getStackProtectorGuardMode(llvm::TargetOptions &Options) {
-  if (getStackProtectorGuard() == "tls")
-    return StackProtectorGuards::TLS;
-  if (getStackProtectorGuard() == "global")
-    return StackProtectorGuards::Global;
-  if (getStackProtectorGuard() == "sysreg")
-    return StackProtectorGuards::SysReg;
-  if (getStackProtectorGuard() != "none") {
-    ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
-        MemoryBuffer::getFile(getStackProtectorGuard());
-    if (!MBOrErr)
-      errs() << "error illegal stack protector guard mode: "
-             << MBOrErr.getError().message() << "\n";
-    else
-      Options.BBSectionsFuncListBuf = std::move(*MBOrErr);
-  }
-  return StackProtectorGuards::None;
-}
-
 // Common utility function tightly tied to the options listed here. Initializes
 // a TargetOptions object with CodeGen flags and returns it.
 TargetOptions
@@ -558,9 +520,6 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.BBSections = getBBSectionsMode(Options);
   Options.UniqueSectionNames = getUniqueSectionNames();
   Options.UniqueBasicBlockSectionNames = getUniqueBasicBlockSectionNames();
-  Options.StackProtectorGuard = getStackProtectorGuardMode(Options);
-  Options.StackProtectorGuardOffset = getStackProtectorGuardOffset();
-  Options.StackProtectorGuardReg = getStackProtectorGuardReg();
   Options.TLSSize = getTLSSize();
   Options.EmulatedTLS = getEmulatedTLS();
   Options.ExplicitEmulatedTLS = EmulatedTLSView->getNumOccurrences() > 0;

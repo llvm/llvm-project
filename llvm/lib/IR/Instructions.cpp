@@ -1556,13 +1556,6 @@ void AtomicCmpXchgInst::Init(Value *Ptr, Value *Cmp, Value *NewVal,
          "Ptr must be a pointer to NewVal type!");
   assert(getOperand(1)->getType() == getOperand(2)->getType() &&
          "Cmp type and NewVal type must be same!");
-  assert(SuccessOrdering != AtomicOrdering::NotAtomic &&
-         "AtomicCmpXchg instructions must be atomic!");
-  assert(FailureOrdering != AtomicOrdering::NotAtomic &&
-         "AtomicCmpXchg instructions must be atomic!");
-  assert(FailureOrdering != AtomicOrdering::Release &&
-         FailureOrdering != AtomicOrdering::AcquireRelease &&
-         "AtomicCmpXchg failure ordering cannot include release semantics");
 }
 
 AtomicCmpXchgInst::AtomicCmpXchgInst(Value *Ptr, Value *Cmp, Value *NewVal,
@@ -1803,6 +1796,15 @@ bool GetElementPtrInst::accumulateConstantOffset(const DataLayout &DL,
                                                  APInt &Offset) const {
   // Delegate to the generic GEPOperator implementation.
   return cast<GEPOperator>(this)->accumulateConstantOffset(DL, Offset);
+}
+
+bool GetElementPtrInst::collectOffset(
+    const DataLayout &DL, unsigned BitWidth,
+    SmallDenseMap<Value *, APInt, 8> &VariableOffsets,
+    APInt &ConstantOffset) const {
+  // Delegate to the generic GEPOperator implementation.
+  return cast<GEPOperator>(this)->collectOffset(DL, BitWidth, VariableOffsets,
+                                                ConstantOffset);
 }
 
 //===----------------------------------------------------------------------===//

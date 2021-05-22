@@ -31,6 +31,8 @@ protected:
         TestAsmPrinter::create("x86_64-pc-linux", Version, Format);
     ASSERT_THAT_EXPECTED(ExpectedTestPrinter, Succeeded());
     TestPrinter = std::move(ExpectedTestPrinter.get());
+    if (!TestPrinter)
+      GTEST_SKIP();
   }
 
   dwarf::Form Form;
@@ -51,17 +53,11 @@ struct DIEExprFixture : public DIEFixtureBase {
 };
 
 TEST_P(DIEExprFixture, SizeOf) {
-  if (!TestPrinter)
-    return;
-
   DIEExpr Tst(Val);
   EXPECT_EQ(Size, Tst.SizeOf(TestPrinter->getAP(), Form));
 }
 
 TEST_P(DIEExprFixture, EmitValue) {
-  if (!TestPrinter)
-    return;
-
   DIEExpr Tst(Val);
   EXPECT_CALL(TestPrinter->getMS(), emitValueImpl(Val, Size, _));
   Tst.emitValue(TestPrinter->getAP(), Form);
@@ -90,17 +86,11 @@ struct DIELabelFixture : public DIEFixtureBase {
 };
 
 TEST_P(DIELabelFixture, SizeOf) {
-  if (!TestPrinter)
-    return;
-
   DIELabel Tst(Val);
   EXPECT_EQ(Size, Tst.SizeOf(TestPrinter->getAP(), Form));
 }
 
 TEST_P(DIELabelFixture, EmitValue) {
-  if (!TestPrinter)
-    return;
-
   DIELabel Tst(Val);
 
   const MCExpr *Arg0 = nullptr;
@@ -142,17 +132,11 @@ struct DIEDeltaFixture : public DIEFixtureBase {
 };
 
 TEST_P(DIEDeltaFixture, SizeOf) {
-  if (!TestPrinter)
-    return;
-
   DIEDelta Tst(Hi, Lo);
   EXPECT_EQ(Size, Tst.SizeOf(TestPrinter->getAP(), Form));
 }
 
 TEST_P(DIEDeltaFixture, EmitValue) {
-  if (!TestPrinter)
-    return;
-
   DIEDelta Tst(Hi, Lo);
   EXPECT_CALL(TestPrinter->getMS(), emitAbsoluteSymbolDiff(Hi, Lo, Size));
   Tst.emitValue(TestPrinter->getAP(), Form);
@@ -173,9 +157,6 @@ struct DIELocListFixture : public DIEFixtureBase {
 };
 
 TEST_P(DIELocListFixture, SizeOf) {
-  if (!TestPrinter)
-    return;
-
   DIELocList Tst(999);
   EXPECT_EQ(Size, Tst.SizeOf(TestPrinter->getAP(), Form));
 }

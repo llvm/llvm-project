@@ -1368,7 +1368,7 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
       bool isInf = APF.isInfinity();
       bool isNaN = APF.isNaN();
       if (!isInf && !isNaN) {
-        double Val = isDouble ? APF.convertToDouble() : APF.convertToFloat();
+        double Val = APF.convertToDouble();
         SmallString<128> StrVal;
         APF.toString(StrVal, 6, 0, false);
         // Check to make sure that the stringized number is not some string like

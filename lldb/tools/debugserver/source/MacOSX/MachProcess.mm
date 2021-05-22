@@ -701,7 +701,7 @@ MachProcess::GetDeploymentInfo(const struct load_command &lc,
   // DYLD_FORCE_PLATFORM=6. In that case, force the platform to
   // macCatalyst and use the macCatalyst version of the host OS
   // instead of the macOS deployment target.
-  if (is_executable && GetProcessPlatformViaDYLDSPI() == PLATFORM_MACCATALYST) {
+  if (is_executable && GetPlatform() == PLATFORM_MACCATALYST) {
     info.platform = PLATFORM_MACCATALYST;
     std::string catalyst_version = GetMacCatalystVersionString();
     const char *major = catalyst_version.c_str();
@@ -1094,6 +1094,12 @@ struct dyld_process_cache_info {
   bool privateCache;
 };
 
+uint32_t MachProcess::GetPlatform() {
+  if (m_platform == 0)
+    m_platform = MachProcess::GetProcessPlatformViaDYLDSPI();
+  return m_platform;
+}
+
 uint32_t MachProcess::GetProcessPlatformViaDYLDSPI() {
   kern_return_t kern_ret;
   uint32_t platform = 0;
@@ -1140,7 +1146,7 @@ MachProcess::GetAllLoadedLibrariesInfos(nub_process_t pid) {
   int pointer_size = GetInferiorAddrSize(pid);
   std::vector<struct binary_image_information> image_infos;
   GetAllLoadedBinariesViaDYLDSPI(image_infos);
-  uint32_t platform = GetProcessPlatformViaDYLDSPI();
+  uint32_t platform = GetPlatform();
   const size_t image_count = image_infos.size();
   for (size_t i = 0; i < image_count; i++) {
     GetMachOInformationFromMemory(platform, image_infos[i].load_address,
@@ -1160,7 +1166,7 @@ JSONGenerator::ObjectSP MachProcess::GetLibrariesInfoForAddresses(
 
   std::vector<struct binary_image_information> all_image_infos;
   GetAllLoadedBinariesViaDYLDSPI(all_image_infos);
-  uint32_t platform = GetProcessPlatformViaDYLDSPI();
+  uint32_t platform = GetPlatform();
 
   std::vector<struct binary_image_information> image_infos;
   const size_t macho_addresses_count = macho_addresses.size();
@@ -1324,6 +1330,7 @@ void MachProcess::Clear(bool detaching) {
   // Clear any cached thread list while the pid and task are still valid
 
   m_task.Clear();
+  m_platform = 0;
   // Now clear out all member variables
   m_pid = INVALID_NUB_PROCESS;
   if (!detaching)
@@ -1615,6 +1622,7 @@ bool MachProcess::Detach() {
 
   // NULL our task out as we have already restored all exception ports
   m_task.Clear();
+  m_platform = 0;
 
   // Clear out any notion of the process we once were
   const bool detaching = true;

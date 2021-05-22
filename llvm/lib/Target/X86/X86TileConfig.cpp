@@ -176,7 +176,7 @@ bool X86TileConfig::runOnMachineFunction(MachineFunction &MF) {
             SubIdx = 0;
           auto Iter = DefMI.getIterator();
           if (&MBB == &MF.front() &&
-              std::distance(MBB.instr_begin(), Iter) < ConstPos)
+              (unsigned)std::distance(MBB.instr_begin(), Iter) < ConstPos)
             Iter = ConstMI->getIterator();
           NewMI = addFrameReference(
                       BuildMI(MBB, ++Iter, DL,

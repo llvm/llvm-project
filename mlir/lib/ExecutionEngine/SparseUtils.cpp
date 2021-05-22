@@ -243,9 +243,11 @@ private:
 
 /// Templated reader.
 template <typename P, typename I, typename V>
-void *newSparseTensor(char *filename, uint8_t *sparsity, uint64_t size) {
+void *newSparseTensor(char *filename, uint8_t *sparsity, uint64_t *perm,
+                      uint64_t size) {
   uint64_t idata[64];
-  SparseTensor *t = static_cast<SparseTensor *>(openTensorC(filename, idata));
+  SparseTensor *t =
+      static_cast<SparseTensor *>(openTensorC(filename, idata, perm));
   assert(size == t->getRank()); // sparsity array must match rank
   SparseTensorStorageBase *tensor =
       new SparseTensorStorage<P, I, V>(t, sparsity);
@@ -371,7 +373,7 @@ extern "C" {
 /// understood by other methods in the sparse runtime support library. An
 /// array parameter is used to pass the rank, the number of nonzero elements,
 /// and the dimension sizes (one per rank).
-void *openTensorC(char *filename, uint64_t *idata) {
+void *openTensorC(char *filename, uint64_t *idata, uint64_t *perm) {
   // Open the file.
   FILE *file = fopen(filename, "r");
   if (!file) {
@@ -393,16 +395,24 @@ void *openTensorC(char *filename, uint64_t *idata) {
   uint64_t nnz = idata[1];
   std::vector<uint64_t> indices(rank);
   for (uint64_t r = 0; r < rank; r++)
-    indices[r] = idata[2 + r];
+    if (perm)
+      indices[perm[r]] = idata[2 + r];
+    else
+      indices[r] = idata[2 + r];
   SparseTensor *tensor = new SparseTensor(indices, nnz);
   // Read all nonzero elements.
   for (uint64_t k = 0; k < nnz; k++) {
+    uint64_t idx = -1;
     for (uint64_t r = 0; r < rank; r++) {
-      if (fscanf(file, "%" PRIu64, &indices[r]) != 1) {
+      if (fscanf(file, "%" PRIu64, &idx) != 1) {
         fprintf(stderr, "Cannot find next index in %s\n", filename);
         exit(1);
       }
-      indices[r]--; // 0-based index
+      // Add 0-based index.
+      if (perm)
+        indices[perm[r]] = idx - 1;
+      else
+        indices[r] = idx - 1;
     }
     double value;
     if (fscanf(file, "%lg\n", &value) != 1) {
@@ -421,7 +431,7 @@ void *openTensorC(char *filename, uint64_t *idata) {
 void *openTensor(char *filename, uint64_t *ibase, uint64_t *idata,
                  uint64_t ioff, uint64_t isize, uint64_t istride) {
   assert(istride == 1);
-  return openTensorC(filename, idata + ioff);
+  return openTensorC(filename, idata + ioff, nullptr);
 }
 
 /// Yields the next element from the given opaque sparse tensor object.
@@ -477,7 +487,7 @@ char *getTensorFilename(uint64_t id) {
 
 #define CASE(p, i, v, P, I, V)                                                 \
   if (ptrTp == (p) && indTp == (i) && valTp == (v))                            \
-  return newSparseTensor<P, I, V>(filename, sparsity, asize)
+  return newSparseTensor<P, I, V>(filename, sparsity, perm, asize)
 
 #define IMPL1(RET, NAME, TYPE, LIB)                                            \
   RET NAME(void *tensor) {                                                     \
@@ -515,9 +525,12 @@ enum PrimaryTypeEnum : uint64_t {
 
 void *newSparseTensor(char *filename, uint8_t *abase, uint8_t *adata,
                       uint64_t aoff, uint64_t asize, uint64_t astride,
-                      uint64_t ptrTp, uint64_t indTp, uint64_t valTp) {
-  assert(astride == 1);
+                      uint64_t *pbase, uint64_t *pdata, uint64_t poff,
+                      uint64_t psize, uint64_t pstride, uint64_t ptrTp,
+                      uint64_t indTp, uint64_t valTp) {
+  assert(astride == 1 && pstride == 1);
   uint8_t *sparsity = adata + aoff;
+  uint64_t *perm = pdata + poff;
 
   // The most common cases: 64-bit or 32-bit overhead, double/float values.
   CASE(kU64, kU64, kF64, uint64_t, uint64_t, double);

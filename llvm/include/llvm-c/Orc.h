@@ -652,7 +652,7 @@ void LLVMOrcDisposeJITTargetMachineBuilder(
  * Returns the target triple for the given JITTargetMachineBuilder as a string.
  *
  * The caller owns the resulting string as must dispose of it by calling
- * LLVMOrcJITTargetMachineBuilderDisposeTargetTriple.
+ * LLVMDisposeMessage
  */
 char *LLVMOrcJITTargetMachineBuilderGetTargetTriple(
     LLVMOrcJITTargetMachineBuilderRef JTMB);
@@ -663,13 +663,6 @@ char *LLVMOrcJITTargetMachineBuilderGetTargetTriple(
  */
 void LLVMOrcJITTargetMachineBuilderSetTargetTriple(
     LLVMOrcJITTargetMachineBuilderRef JTMB, const char *TargetTriple);
-
-/**
- * Destroy a triple string returned by
- * LLVMOrcJITTargetMachineBuilderGetTargetTriple.
- */
-void LLVMOrcJITTargetMachineBuilderDisposeTargetTriple(
-    LLVMOrcJITTargetMachineBuilderRef JTMB, char *TargetTriple);
 
 /**
  * Add an object to an ObjectLayer to the given JITDylib.

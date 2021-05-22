@@ -33,15 +33,20 @@ template <typename Config> static void testSecondaryBasic(void) {
   EXPECT_GE(SecondaryT::getBlockSize(P), Size);
   L->deallocate(scudo::Options{}, P);
 
-// TODO(hctim): Looks like the secondary pointer doesn't get unmapped on arm32.
-// It's not clear whether this is a kernel issue, or something in EXPECT_DEATH()
-// is mmap-ing something that uses the same vaddr space. For now, just disable
-// the test on arm32 until we can debug it further.
-#ifndef __arm__
   // If the Secondary can't cache that pointer, it will be unmapped.
-  if (!L->canCache(Size))
-    EXPECT_DEATH(memset(P, 'A', Size), "");
-#endif // __arm__
+  if (!L->canCache(Size)) {
+    EXPECT_DEATH(
+        {
+          // Repeat few time to avoid missing crash if it's mmaped by unrelated
+          // code.
+          for (int i = 0; i < 10; ++i) {
+            P = L->allocate(scudo::Options{}, Size);
+            L->deallocate(scudo::Options{}, P);
+            memset(P, 'A', Size);
+          }
+        },
+        "");
+  }
 
   const scudo::uptr Align = 1U << 16;
   P = L->allocate(scudo::Options{}, Size + Align, Align);

@@ -777,6 +777,15 @@ void CodeGenModule::Release() {
   if (!getCodeGenOpts().RecordCommandLine.empty())
     EmitCommandLineMetadata();
 
+  if (!getCodeGenOpts().StackProtectorGuard.empty())
+    getModule().setStackProtectorGuard(getCodeGenOpts().StackProtectorGuard);
+  if (!getCodeGenOpts().StackProtectorGuardReg.empty())
+    getModule().setStackProtectorGuardReg(
+        getCodeGenOpts().StackProtectorGuardReg);
+  if (getCodeGenOpts().StackProtectorGuardOffset != INT_MAX)
+    getModule().setStackProtectorGuardOffset(
+        getCodeGenOpts().StackProtectorGuardOffset);
+
   getTargetCodeGenInfo().emitTargetMetadata(*this, MangledDeclNames);
 
   EmitBackendOptionsMetadata(getCodeGenOpts());

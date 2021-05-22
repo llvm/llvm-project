@@ -235,3 +235,14 @@ RUN: not llvm-dis -disable-output %p/Inputs/invalid-fcmp-opnum.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-FCMP-OPNUM %s
 
 INVALID-FCMP-OPNUM: Invalid record: operand number exceeded available operands
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-cmpxchg-ordering.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=CMPXCHG-ORDERING %s
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-cmpxchg-ordering-2.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=CMPXCHG-ORDERING %s
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-cmpxchg-ordering-3.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=CMPXCHG-ORDERING %s
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-cmpxchg-ordering-4.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=CMPXCHG-ORDERING %s
+
+CMPXCHG-ORDERING: Invalid cmpxchg {{failure|success}} ordering

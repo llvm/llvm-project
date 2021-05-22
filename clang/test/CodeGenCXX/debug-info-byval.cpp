@@ -24,7 +24,7 @@ void foo(EVT e);
 EVT bar();
 
 void get(int *i, unsigned dl, VAL v, VAL *p, unsigned n, EVT missing_arg) {
-//CHECK: .{{asciz|string}} "missing_arg"
+//CHECK: .{{asciz|string|byte}} "missing_arg"
   EVT e = bar();
   if (dl == n)
     foo(missing_arg);

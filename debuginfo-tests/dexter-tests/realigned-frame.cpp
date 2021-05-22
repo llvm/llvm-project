@@ -27,7 +27,7 @@ int main() {
 }
 /*
 DexExpectProgramState({'frames':[
-    {'function': 'Foo::bar', 'location' : {'lineno' : 'in_bar'} },
+    {'function': 'Foo::bar', 'location' : {'lineno' : ref('in_bar')} },
     {'function': 'Foo::foo',
      'watches' : {
        'a' : '1',

@@ -26,12 +26,14 @@
 namespace clang {
 
 IncrementalExecutor::IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
-                                         llvm::Error &Err)
+                                         llvm::Error &Err,
+                                         const llvm::Triple &Triple)
     : TSCtx(TSC) {
   using namespace llvm::orc;
   llvm::ErrorAsOutParameter EAO(&Err);
 
-  if (auto JitOrErr = LLJITBuilder().create())
+  auto JTMB = JITTargetMachineBuilder(Triple);
+  if (auto JitOrErr = LLJITBuilder().setJITTargetMachineBuilder(JTMB).create())
     Jit = std::move(*JitOrErr);
   else {
     Err = JitOrErr.takeError();

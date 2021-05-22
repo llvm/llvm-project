@@ -83,7 +83,7 @@ private:
 
   bool simplifyInstWithSCEV(Instruction *I);
 
-  bool visitInstruction(Instruction &I) { return simplifyInstWithSCEV(&I); }
+  bool visitInstruction(Instruction &I);
   bool visitBinaryOperator(BinaryOperator &I);
   bool visitLoad(LoadInst &I);
   bool visitCastInst(CastInst &I);

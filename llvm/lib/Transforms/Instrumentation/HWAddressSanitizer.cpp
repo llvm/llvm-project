@@ -73,23 +73,24 @@ static const unsigned kPointerTagShift = 56;
 
 static const unsigned kShadowBaseAlignment = 32;
 
-static cl::opt<std::string> ClMemoryAccessCallbackPrefix(
-    "hwasan-memory-access-callback-prefix",
-    cl::desc("Prefix for memory access callbacks"), cl::Hidden,
-    cl::init("__hwasan_"));
+static cl::opt<std::string>
+    ClMemoryAccessCallbackPrefix("hwasan-memory-access-callback-prefix",
+                                 cl::desc("Prefix for memory access callbacks"),
+                                 cl::Hidden, cl::init("__hwasan_"));
 
-static cl::opt<bool>
-    ClInstrumentWithCalls("hwasan-instrument-with-calls",
-                cl::desc("instrument reads and writes with callbacks"),
-                cl::Hidden, cl::init(false));
+static cl::opt<bool> ClInstrumentWithCalls(
+    "hwasan-instrument-with-calls",
+    cl::desc("instrument reads and writes with callbacks"), cl::Hidden,
+    cl::init(false));
 
 static cl::opt<bool> ClInstrumentReads("hwasan-instrument-reads",
                                        cl::desc("instrument read instructions"),
                                        cl::Hidden, cl::init(true));
 
-static cl::opt<bool> ClInstrumentWrites(
-    "hwasan-instrument-writes", cl::desc("instrument write instructions"),
-    cl::Hidden, cl::init(true));
+static cl::opt<bool>
+    ClInstrumentWrites("hwasan-instrument-writes",
+                       cl::desc("instrument write instructions"), cl::Hidden,
+                       cl::init(true));
 
 static cl::opt<bool> ClInstrumentAtomics(
     "hwasan-instrument-atomics",
@@ -100,10 +101,10 @@ static cl::opt<bool> ClInstrumentByval("hwasan-instrument-byval",
                                        cl::desc("instrument byval arguments"),
                                        cl::Hidden, cl::init(true));
 
-static cl::opt<bool> ClRecover(
-    "hwasan-recover",
-    cl::desc("Enable recovery mode (continue-after-error)."),
-    cl::Hidden, cl::init(false));
+static cl::opt<bool>
+    ClRecover("hwasan-recover",
+              cl::desc("Enable recovery mode (continue-after-error)."),
+              cl::Hidden, cl::init(false));
 
 static cl::opt<bool> ClInstrumentStack("hwasan-instrument-stack",
                                        cl::desc("instrument stack (allocas)"),
@@ -130,10 +131,10 @@ static cl::opt<int> ClMatchAllTag(
     cl::desc("don't report bad accesses via pointers with this tag"),
     cl::Hidden, cl::init(-1));
 
-static cl::opt<bool> ClEnableKhwasan(
-    "hwasan-kernel",
-    cl::desc("Enable KernelHWAddressSanitizer instrumentation"),
-    cl::Hidden, cl::init(false));
+static cl::opt<bool>
+    ClEnableKhwasan("hwasan-kernel",
+                    cl::desc("Enable KernelHWAddressSanitizer instrumentation"),
+                    cl::Hidden, cl::init(false));
 
 // These flags allow to change the shadow mapping and control how shadow memory
 // is accessed. The shadow mapping looks like:
@@ -192,10 +193,12 @@ namespace {
 class HWAddressSanitizer {
 public:
   explicit HWAddressSanitizer(Module &M, bool CompileKernel = false,
-                              bool Recover = false) : M(M) {
+                              bool Recover = false)
+      : M(M) {
     this->Recover = ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover;
-    this->CompileKernel = ClEnableKhwasan.getNumOccurrences() > 0 ?
-        ClEnableKhwasan : CompileKernel;
+    this->CompileKernel = ClEnableKhwasan.getNumOccurrences() > 0
+                              ? ClEnableKhwasan
+                              : CompileKernel;
 
     initializeModule();
   }
@@ -235,7 +238,7 @@ public:
   Value *getNextTagWithCall(IRBuilder<> &IRB);
   Value *getStackBaseTag(IRBuilder<> &IRB);
   Value *getAllocaTag(IRBuilder<> &IRB, Value *StackTag, AllocaInst *AI,
-                     unsigned AllocaNo);
+                      unsigned AllocaNo);
   Value *getUARTag(IRBuilder<> &IRB, Value *StackTag);
 
   Value *getHwasanThreadSlotPtr(IRBuilder<> &IRB, Type *Ty);
@@ -799,28 +802,27 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
   IRB.SetInsertPoint(CheckFailTerm);
   InlineAsm *Asm;
   switch (TargetTriple.getArch()) {
-    case Triple::x86_64:
-      // The signal handler will find the data address in rdi.
-      Asm = InlineAsm::get(
-          FunctionType::get(IRB.getVoidTy(), {PtrLong->getType()}, false),
-          "int3\nnopl " +
-              itostr(0x40 + (AccessInfo & HWASanAccessInfo::RuntimeMask)) +
-              "(%rax)",
-          "{rdi}",
-          /*hasSideEffects=*/true);
-      break;
-    case Triple::aarch64:
-    case Triple::aarch64_be:
-      // The signal handler will find the data address in x0.
-      Asm = InlineAsm::get(
-          FunctionType::get(IRB.getVoidTy(), {PtrLong->getType()}, false),
-          "brk #" +
-              itostr(0x900 + (AccessInfo & HWASanAccessInfo::RuntimeMask)),
-          "{x0}",
-          /*hasSideEffects=*/true);
-      break;
-    default:
-      report_fatal_error("unsupported architecture");
+  case Triple::x86_64:
+    // The signal handler will find the data address in rdi.
+    Asm = InlineAsm::get(
+        FunctionType::get(IRB.getVoidTy(), {PtrLong->getType()}, false),
+        "int3\nnopl " +
+            itostr(0x40 + (AccessInfo & HWASanAccessInfo::RuntimeMask)) +
+            "(%rax)",
+        "{rdi}",
+        /*hasSideEffects=*/true);
+    break;
+  case Triple::aarch64:
+  case Triple::aarch64_be:
+    // The signal handler will find the data address in x0.
+    Asm = InlineAsm::get(
+        FunctionType::get(IRB.getVoidTy(), {PtrLong->getType()}, false),
+        "brk #" + itostr(0x900 + (AccessInfo & HWASanAccessInfo::RuntimeMask)),
+        "{x0}",
+        /*hasSideEffects=*/true);
+    break;
+  default:
+    report_fatal_error("unsupported architecture");
   }
   IRB.CreateCall(Asm, PtrLong);
   if (Recover)
@@ -851,7 +853,7 @@ bool HWAddressSanitizer::instrumentMemAccess(InterestingMemoryOperand &O) {
   LLVM_DEBUG(dbgs() << "Instrumenting: " << O.getInsn() << "\n");
 
   if (O.MaybeMask)
-    return false; //FIXME
+    return false; // FIXME
 
   IRBuilder<> IRB(O.getInsn());
   if (isPowerOf2_64(O.TypeSize) &&
@@ -887,8 +889,8 @@ static uint64_t getAllocaSizeInBytes(const AllocaInst &AI) {
   return SizeInBytes * ArraySize;
 }
 
-bool HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI,
-                                   Value *Tag, size_t Size) {
+bool HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag,
+                                   size_t Size) {
   size_t AlignedSize = alignTo(Size, Mapping.getObjectAlignment());
   if (!UseShortGranules)
     Size = AlignedSize;
@@ -1008,11 +1010,13 @@ Value *HWAddressSanitizer::untagPointer(IRBuilder<> &IRB, Value *PtrLong) {
   Value *UntaggedPtrLong;
   if (CompileKernel) {
     // Kernel addresses have 0xFF in the most significant byte.
-    UntaggedPtrLong = IRB.CreateOr(PtrLong,
-        ConstantInt::get(PtrLong->getType(), 0xFFULL << kPointerTagShift));
+    UntaggedPtrLong =
+        IRB.CreateOr(PtrLong, ConstantInt::get(PtrLong->getType(),
+                                               0xFFULL << kPointerTagShift));
   } else {
     // Userspace addresses have 0x00.
-    UntaggedPtrLong = IRB.CreateAnd(PtrLong,
+    UntaggedPtrLong = IRB.CreateAnd(
+        PtrLong,
         ConstantInt::get(PtrLong->getType(), ~(0xFFULL << kPointerTagShift)));
   }
   return UntaggedPtrLong;
@@ -1033,7 +1037,6 @@ Value *HWAddressSanitizer::getHwasanThreadSlotPtr(IRBuilder<> &IRB, Type *Ty) {
   }
   if (ThreadPtrGlobal)
     return ThreadPtrGlobal;
-
 
   return nullptr;
 }
@@ -1213,9 +1216,9 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
 
   SmallVector<InterestingMemoryOperand, 16> OperandsToInstrument;
   SmallVector<MemIntrinsic *, 16> IntrinToInstrument;
-  SmallVector<AllocaInst*, 8> AllocasToInstrument;
-  SmallVector<Instruction*, 8> RetVec;
-  SmallVector<Instruction*, 8> LandingPadVec;
+  SmallVector<AllocaInst *, 8> AllocasToInstrument;
+  SmallVector<Instruction *, 8> RetVec;
+  SmallVector<Instruction *, 8> LandingPadVec;
   DenseMap<AllocaInst *, std::vector<DbgVariableIntrinsic *>> AllocaDbgMap;
   for (auto &BB : F) {
     for (auto &Inst : BB) {

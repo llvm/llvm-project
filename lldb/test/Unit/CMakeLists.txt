@@ -1,5 +1,5 @@
 add_custom_target(lldb-unit-test-deps)
-add_dependencies(lldb-unit-test-deps lldb-test-deps)
+add_dependencies(lldb-unit-test-deps lldb-test-depends)
 
 add_lit_testsuites(LLDB-UNIT
   ${CMAKE_CURRENT_SOURCE_DIR}

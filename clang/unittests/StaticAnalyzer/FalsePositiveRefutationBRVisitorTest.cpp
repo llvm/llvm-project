@@ -19,13 +19,6 @@
 #include "llvm/Config/llvm-config.h"
 #include "gtest/gtest.h"
 
-// FIXME: Use GTEST_SKIP() instead if GTest is updated to version 1.10.0
-#ifdef LLVM_WITH_Z3
-#define SKIP_WITHOUT_Z3
-#else
-#define SKIP_WITHOUT_Z3 return
-#endif
-
 namespace clang {
 namespace ento {
 namespace {
@@ -101,6 +94,15 @@ void addFalsePositiveGenerator(AnalysisASTConsumer &AnalysisConsumer,
   });
 }
 
+class FalsePositiveRefutationBRVisitorTestBase : public testing::Test {
+public:
+  void SetUp() override {
+#ifndef LLVM_WITH_Z3
+    GTEST_SKIP() << "Requires the LLVM_ENABLE_Z3_SOLVER cmake option.";
+#endif
+  }
+};
+
 // C++20 use constexpr below.
 const std::vector<std::string> LazyAssumeArgs{
     "-Xclang", "-analyzer-config", "-Xclang", "eagerly-assume=false"};
@@ -108,8 +110,7 @@ const std::vector<std::string> LazyAssumeAndCrossCheckArgs{
     "-Xclang", "-analyzer-config", "-Xclang", "eagerly-assume=false",
     "-Xclang", "-analyzer-config", "-Xclang", "crosscheck-with-z3=true"};
 
-TEST(FalsePositiveRefutationBRVisitor, UnSatInTheMiddleNoReport) {
-  SKIP_WITHOUT_Z3;
+TEST_F(FalsePositiveRefutationBRVisitorTestBase, UnSatInTheMiddleNoReport) {
   constexpr auto Code = R"(
      void reachedWithContradiction();
      void reachedWithNoContradiction();
@@ -139,8 +140,8 @@ TEST(FalsePositiveRefutationBRVisitor, UnSatInTheMiddleNoReport) {
             "test.FalsePositiveGenerator:REACHED_WITH_CONTRADICTION\n");
 }
 
-TEST(FalsePositiveRefutationBRVisitor, UnSatAtErrorNodeWithNewSymbolNoReport) {
-  SKIP_WITHOUT_Z3;
+TEST_F(FalsePositiveRefutationBRVisitorTestBase,
+       UnSatAtErrorNodeWithNewSymbolNoReport) {
   constexpr auto Code = R"(
     void reportIfCanBeTrue(bool);
     void reachedWithNoContradiction();
@@ -170,9 +171,8 @@ TEST(FalsePositiveRefutationBRVisitor, UnSatAtErrorNodeWithNewSymbolNoReport) {
             "test.FalsePositiveGenerator:CAN_BE_TRUE\n");
 }
 
-TEST(FalsePositiveRefutationBRVisitor,
-     UnSatAtErrorNodeDueToRefinedConstraintNoReport) {
-  SKIP_WITHOUT_Z3;
+TEST_F(FalsePositiveRefutationBRVisitorTestBase,
+       UnSatAtErrorNodeDueToRefinedConstraintNoReport) {
   constexpr auto Code = R"(
     void reportIfCanBeTrue(bool);
     void reachedWithNoContradiction();

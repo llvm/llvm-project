@@ -606,10 +606,12 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::MUL,     MVT::v4i32,      1 }, // pmulld (Skylake from agner.org)
     { ISD::MUL,     MVT::v8i64,      8 }, // 3*pmuludq/3*shift/2*add
 
+    { ISD::FNEG,    MVT::v8f64,      1 }, // Skylake from http://www.agner.org/
     { ISD::FADD,    MVT::v8f64,      1 }, // Skylake from http://www.agner.org/
     { ISD::FSUB,    MVT::v8f64,      1 }, // Skylake from http://www.agner.org/
     { ISD::FMUL,    MVT::v8f64,      1 }, // Skylake from http://www.agner.org/
 
+    { ISD::FNEG,    MVT::v16f32,     1 }, // Skylake from http://www.agner.org/
     { ISD::FADD,    MVT::v16f32,     1 }, // Skylake from http://www.agner.org/
     { ISD::FSUB,    MVT::v16f32,     1 }, // Skylake from http://www.agner.org/
     { ISD::FMUL,    MVT::v16f32,     1 }, // Skylake from http://www.agner.org/
@@ -777,10 +779,14 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::MUL,  MVT::v8i32,      2 }, // pmulld (Haswell from agner.org)
     { ISD::MUL,  MVT::v4i64,      8 }, // 3*pmuludq/3*shift/2*add
 
+    { ISD::FNEG, MVT::v4f64,      1 }, // Haswell from http://www.agner.org/
+    { ISD::FNEG, MVT::v8f32,      1 }, // Haswell from http://www.agner.org/
     { ISD::FADD, MVT::v4f64,      1 }, // Haswell from http://www.agner.org/
     { ISD::FADD, MVT::v8f32,      1 }, // Haswell from http://www.agner.org/
     { ISD::FSUB, MVT::v4f64,      1 }, // Haswell from http://www.agner.org/
     { ISD::FSUB, MVT::v8f32,      1 }, // Haswell from http://www.agner.org/
+    { ISD::FMUL, MVT::f64,        1 }, // Haswell from http://www.agner.org/
+    { ISD::FMUL, MVT::v2f64,      1 }, // Haswell from http://www.agner.org/
     { ISD::FMUL, MVT::v4f64,      1 }, // Haswell from http://www.agner.org/
     { ISD::FMUL, MVT::v8f32,      1 }, // Haswell from http://www.agner.org/
 
@@ -820,6 +826,13 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::MUL,     MVT::v4i64,     18 },
 
     { ISD::MUL,     MVT::v32i8,     26 }, // extend/pmullw/trunc sequence.
+
+    { ISD::FNEG,    MVT::v4f64,      2 }, // BTVER2 from http://www.agner.org/
+    { ISD::FNEG,    MVT::v8f32,      2 }, // BTVER2 from http://www.agner.org/
+
+    { ISD::FMUL,    MVT::f64,        2 }, // BTVER2 from http://www.agner.org/
+    { ISD::FMUL,    MVT::v2f64,      2 }, // BTVER2 from http://www.agner.org/
+    { ISD::FMUL,    MVT::v4f64,      4 }, // BTVER2 from http://www.agner.org/
 
     { ISD::FDIV,    MVT::f32,       14 }, // SNB from http://www.agner.org/
     { ISD::FDIV,    MVT::v4f32,     14 }, // SNB from http://www.agner.org/
@@ -919,6 +932,11 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::FDIV, MVT::f64,        38 }, // Pentium IV from http://www.agner.org/
     { ISD::FDIV, MVT::v2f64,      69 }, // Pentium IV from http://www.agner.org/
 
+    { ISD::FNEG, MVT::f32,         1 }, // Pentium IV from http://www.agner.org/
+    { ISD::FNEG, MVT::f64,         1 }, // Pentium IV from http://www.agner.org/
+    { ISD::FNEG, MVT::v4f32,       1 }, // Pentium IV from http://www.agner.org/
+    { ISD::FNEG, MVT::v2f64,       1 }, // Pentium IV from http://www.agner.org/
+
     { ISD::FADD, MVT::f32,         2 }, // Pentium IV from http://www.agner.org/
     { ISD::FADD, MVT::f64,         2 }, // Pentium IV from http://www.agner.org/
 
@@ -933,6 +951,9 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   static const CostTblEntry SSE1CostTable[] = {
     { ISD::FDIV, MVT::f32,   17 }, // Pentium III from http://www.agner.org/
     { ISD::FDIV, MVT::v4f32, 34 }, // Pentium III from http://www.agner.org/
+
+    { ISD::FNEG, MVT::f32,    2 }, // Pentium III from http://www.agner.org/
+    { ISD::FNEG, MVT::v4f32,  2 }, // Pentium III from http://www.agner.org/
 
     { ISD::FADD, MVT::f32,    1 }, // Pentium III from http://www.agner.org/
     { ISD::FADD, MVT::v4f32,  2 }, // Pentium III from http://www.agner.org/
@@ -1792,7 +1813,7 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::FP_EXTEND,   MVT::v8f64,  MVT::v8f32,  3 },
     { ISD::FP_ROUND,    MVT::v8f32,  MVT::v8f64,  3 },
 
-    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v8i32,  8 },
+    { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v8i32,  5 },
   };
 
   static const TypeConversionCostTblEntry AVXConversionTbl[] = {
@@ -1857,7 +1878,7 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::UINT_TO_FP,  MVT::v2f64, MVT::v2i32, 6 },
     { ISD::UINT_TO_FP,  MVT::v4f32, MVT::v4i32, 6 },
     { ISD::UINT_TO_FP,  MVT::v4f64, MVT::v4i32, 6 },
-    { ISD::UINT_TO_FP,  MVT::v8f32, MVT::v8i32, 9 },
+    { ISD::UINT_TO_FP,  MVT::v8f32, MVT::v8i32, 8 },
     { ISD::UINT_TO_FP,  MVT::v2f64, MVT::v2i64, 5 },
     { ISD::UINT_TO_FP,  MVT::v4f64, MVT::v4i64, 6 },
     // The generic code to compute the scalar overhead is currently broken.
@@ -1877,12 +1898,12 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::FP_TO_UINT,  MVT::v4i16, MVT::v4f64, 2 },
     { ISD::FP_TO_UINT,  MVT::v8i8,  MVT::v8f32, 4 },
     { ISD::FP_TO_UINT,  MVT::v8i16, MVT::v8f32, 3 },
+    { ISD::FP_TO_UINT,  MVT::v8i32, MVT::v8f32, 9 },
     // This node is expanded into scalarized operations but BasicTTI is overly
     // optimistic estimating its cost.  It computes 3 per element (one
     // vector-extract, one scalar conversion and one vector-insert).  The
     // problem is that the inserts form a read-modify-write chain so latency
     // should be factored in too.  Inflating the cost per element by 1.
-    { ISD::FP_TO_UINT,  MVT::v8i32, MVT::v8f32, 8*4 },
     { ISD::FP_TO_UINT,  MVT::v4i32, MVT::v4f64, 4*4 },
 
     { ISD::FP_EXTEND,   MVT::v4f64,  MVT::v4f32,  1 },
@@ -1961,7 +1982,7 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::UINT_TO_FP, MVT::v4f32, MVT::v8i16, 15 },
     { ISD::UINT_TO_FP, MVT::v2f64, MVT::v8i16, 8*10 },
     { ISD::UINT_TO_FP, MVT::v2f64, MVT::v4i32, 4*10 },
-    { ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i32, 8 },
+    { ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i32, 5 },
     { ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i64, 6 },
     { ISD::UINT_TO_FP, MVT::v4f32, MVT::v2i64, 15 },
 
@@ -1985,6 +2006,7 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::FP_TO_UINT,  MVT::v2i16,  MVT::v2f32,  2 },
     { ISD::FP_TO_UINT,  MVT::v2i16,  MVT::v2f64,  2 },
     { ISD::FP_TO_UINT,  MVT::v4i16,  MVT::v4f32,  4 },
+    { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v4f32,  8 },
 
     { ISD::ZERO_EXTEND, MVT::v4i16,  MVT::v4i8,   1 },
     { ISD::SIGN_EXTEND, MVT::v4i16,  MVT::v4i8,   6 },
@@ -2040,11 +2062,15 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   std::pair<InstructionCost, MVT> LTDest =
       TLI->getTypeLegalizationCost(DL, Dst);
 
-  if (ST->hasSSE2() && !ST->hasAVX()) {
+  if (ST->hasSSE41() && !ST->hasAVX())
+    if (const auto *Entry = ConvertCostTableLookup(SSE41ConversionTbl, ISD,
+                                                   LTDest.second, LTSrc.second))
+      return AdjustCost(LTSrc.first * Entry->Cost);
+
+  if (ST->hasSSE2() && !ST->hasAVX())
     if (const auto *Entry = ConvertCostTableLookup(SSE2ConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
       return AdjustCost(LTSrc.first * Entry->Cost);
-  }
 
   EVT SrcTy = TLI->getValueType(DL, Src);
   EVT DstTy = TLI->getValueType(DL, Dst);

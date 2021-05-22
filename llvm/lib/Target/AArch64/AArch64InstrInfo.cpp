@@ -1904,10 +1904,10 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   }
 
   Register Reg = MI.getOperand(0).getReg();
-  TargetOptions Options = MI.getParent()->getParent()->getTarget().Options;
-  if (Options.StackProtectorGuard == StackProtectorGuards::SysReg) {
+  Module &M = *MBB.getParent()->getFunction().getParent();
+  if (M.getStackProtectorGuard() == "sysreg") {
     const AArch64SysReg::SysReg *SrcReg =
-        AArch64SysReg::lookupSysRegByName(Options.StackProtectorGuardReg);
+        AArch64SysReg::lookupSysRegByName(M.getStackProtectorGuardReg());
     if (!SrcReg)
       report_fatal_error("Unknown SysReg for Stack Protector Guard Register");
 
@@ -1915,7 +1915,7 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     BuildMI(MBB, MI, DL, get(AArch64::MRS))
         .addDef(Reg, RegState::Renamable)
         .addImm(SrcReg->Encoding);
-    int Offset = Options.StackProtectorGuardOffset;
+    int Offset = M.getStackProtectorGuardOffset();
     if (Offset >= 0 && Offset <= 32760 && Offset % 8 == 0) {
       // ldr xN, [xN, #offset]
       BuildMI(MBB, MI, DL, get(AArch64::LDRXui))

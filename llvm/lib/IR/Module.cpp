@@ -686,6 +686,41 @@ void Module::setFramePointer(FramePointerKind Kind) {
   addModuleFlag(ModFlagBehavior::Max, "frame-pointer", static_cast<int>(Kind));
 }
 
+StringRef Module::getStackProtectorGuard() const {
+  Metadata *MD = getModuleFlag("stack-protector-guard");
+  if (auto *MDS = dyn_cast_or_null<MDString>(MD))
+    return MDS->getString();
+  return {};
+}
+
+void Module::setStackProtectorGuard(StringRef Kind) {
+  MDString *ID = MDString::get(getContext(), Kind);
+  addModuleFlag(ModFlagBehavior::Error, "stack-protector-guard", ID);
+}
+
+StringRef Module::getStackProtectorGuardReg() const {
+  Metadata *MD = getModuleFlag("stack-protector-guard-reg");
+  if (auto *MDS = dyn_cast_or_null<MDString>(MD))
+    return MDS->getString();
+  return {};
+}
+
+void Module::setStackProtectorGuardReg(StringRef Reg) {
+  MDString *ID = MDString::get(getContext(), Reg);
+  addModuleFlag(ModFlagBehavior::Error, "stack-protector-guard-reg", ID);
+}
+
+int Module::getStackProtectorGuardOffset() const {
+  Metadata *MD = getModuleFlag("stack-protector-guard-offset");
+  if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
+    return CI->getSExtValue();
+  return INT_MAX;
+}
+
+void Module::setStackProtectorGuardOffset(int Offset) {
+  addModuleFlag(ModFlagBehavior::Error, "stack-protector-guard-offset", Offset);
+}
+
 void Module::setSDKVersion(const VersionTuple &V) {
   SmallVector<unsigned, 3> Entries;
   Entries.push_back(V.getMajor());

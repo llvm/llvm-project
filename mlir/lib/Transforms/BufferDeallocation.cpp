@@ -151,8 +151,10 @@ private:
     }
     // Recurse into all distinct regions and check for explicit control-flow
     // loops.
-    for (Region &region : op->getRegions())
-      recurse(region.front(), current);
+    for (Region &region : op->getRegions()) {
+      if (!region.empty())
+        recurse(region.front(), current);
+    }
   }
 
   /// Recurses into explicit control-flow structures that are given by

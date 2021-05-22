@@ -17,7 +17,7 @@ int main() {
   return test; // test = 4
 }
 
-// DexLimitSteps(from_line='from', to_line='to')
+// DexLimitSteps(from_line=ref('from'), to_line=ref('to'))
 //// Unconditionally limit dexter's view of the program from line 'from' to
 //// 'to'. Check for test=0, 1, 2 so that the test will fail if dexter sees
 //// test=0 or test=4.
