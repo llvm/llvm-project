@@ -1019,12 +1019,11 @@ PreservedAnalyses ArgumentPromotionPass::run(LazyCallGraph::SCC &C,
   do {
     LocalChange = false;
 
-    FunctionAnalysisManager &FAM =
-        AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
-
     for (LazyCallGraph::Node &N : C) {
       Function &OldF = N.getFunction();
 
+      FunctionAnalysisManager &FAM =
+          AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
       // FIXME: This lambda must only be used with this function. We should
       // skip the lambda and just get the AA results directly.
       auto AARGetter = [&](Function &F) -> AAResults & {
@@ -1047,13 +1046,6 @@ PreservedAnalyses ArgumentPromotionPass::run(LazyCallGraph::SCC &C,
       C.getOuterRefSCC().replaceNodeFunction(N, *NewF);
       FAM.clear(OldF, OldF.getName());
       OldF.eraseFromParent();
-
-      PreservedAnalyses FuncPA;
-      FuncPA.preserveSet<CFGAnalyses>();
-      for (auto *U : NewF->users()) {
-        auto *UserF = cast<CallBase>(U)->getParent()->getParent();
-        FAM.invalidate(*UserF, FuncPA);
-      }
     }
 
     Changed |= LocalChange;
@@ -1062,10 +1054,7 @@ PreservedAnalyses ArgumentPromotionPass::run(LazyCallGraph::SCC &C,
   if (!Changed)
     return PreservedAnalyses::all();
 
-  PreservedAnalyses PA;
-  PA.preserve<FunctionAnalysisManagerCGSCCProxy>();
-  PA.preserveSet<AllAnalysesOn<Function>>();
-  return PA;
+  return PreservedAnalyses::none();
 }
 
 namespace {
