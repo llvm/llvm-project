@@ -808,7 +808,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     // operations and we only need to extract the upper YMM half.
     // Two ops + 1 extract + 1 insert = 4.
     { ISD::MUL,     MVT::v16i16,     4 },
-    { ISD::MUL,     MVT::v8i32,      4 },
+    { ISD::MUL,     MVT::v8i32,      5 }, // BTVER2 from http://www.agner.org/
     { ISD::SUB,     MVT::v32i8,      4 },
     { ISD::ADD,     MVT::v32i8,      4 },
     { ISD::SUB,     MVT::v16i16,     4 },

@@ -30,7 +30,7 @@ vector.body:                                      ; preds = %for.body.lr.ph, %ve
   %5 = bitcast i32* %4 to <8 x i32>*
   ;CHECK: cost of 2 {{.*}} load
   %6 = load <8 x i32>, <8 x i32>* %5, align 4
-  ;CHECK: cost of 4 {{.*}} mul
+  ;CHECK: cost of 5 {{.*}} mul
   %7 = mul nsw <8 x i32> %6, <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
   %8 = getelementptr inbounds i32, i32* %A, i64 %index
   %9 = bitcast i32* %8 to <8 x i32>*
