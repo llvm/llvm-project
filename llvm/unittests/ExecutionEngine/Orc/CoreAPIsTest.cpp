@@ -1252,9 +1252,14 @@ TEST_F(CoreAPIsStandardTest, TestLookupWithThreadedMaterialization) {
   std::mutex WorkThreadsMutex;
   std::vector<std::thread> WorkThreads;
   ES.setDispatchTask([&](std::unique_ptr<Task> T) {
+    std::promise<void> WaitP;
     std::lock_guard<std::mutex> Lock(WorkThreadsMutex);
     WorkThreads.push_back(
-        std::thread([T = std::move(T)]() mutable { T->run(); }));
+        std::thread([T = std::move(T), WaitF = WaitP.get_future()]() mutable {
+          WaitF.get();
+          T->run();
+        }));
+    WaitP.set_value();
   });
 
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));

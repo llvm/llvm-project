@@ -677,6 +677,10 @@ public:
         }
       }
 
+    // Avoid unnecessary work if there are no matrix intrinsics in the function.
+    if (WorkList.empty())
+      return false;
+
     // Propagate shapes until nothing changes any longer.
     while (!WorkList.empty()) {
       WorkList = propagateShapeForward(WorkList);
