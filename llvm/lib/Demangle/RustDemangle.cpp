@@ -454,6 +454,16 @@ void Demangler::demangleType() {
     print(")");
     break;
   }
+  case 'R':
+    print("&");
+    // FIXME demangle [<lifetime>].
+    demangleType();
+    break;
+  case 'Q':
+    print("&mut ");
+    // FIXME demangle [<lifetime>].
+    demangleType();
+    break;
   case 'P':
     print("*const ");
     demangleType();
