@@ -815,6 +815,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     // Two ops + 1 extract + 1 insert = 4.
     { ISD::MUL,     MVT::v16i16,     4 },
     { ISD::MUL,     MVT::v8i32,      5 }, // BTVER2 from http://www.agner.org/
+    { ISD::MUL,     MVT::v4i64,     12 },
+
     { ISD::SUB,     MVT::v32i8,      4 },
     { ISD::ADD,     MVT::v32i8,      4 },
     { ISD::SUB,     MVT::v16i16,     4 },
@@ -823,13 +825,6 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::ADD,     MVT::v8i32,      4 },
     { ISD::SUB,     MVT::v4i64,      4 },
     { ISD::ADD,     MVT::v4i64,      4 },
-
-    // A v4i64 multiply is custom lowered as two split v2i64 vectors that then
-    // are lowered as a series of long multiplies(3), shifts(3) and adds(2)
-    // Because we believe v4i64 to be a legal type, we must also include the
-    // extract+insert in the cost table. Therefore, the cost here is 18
-    // instead of 8.
-    { ISD::MUL,     MVT::v4i64,     18 },
 
     { ISD::FNEG,    MVT::v4f64,      2 }, // BTVER2 from http://www.agner.org/
     { ISD::FNEG,    MVT::v8f32,      2 }, // BTVER2 from http://www.agner.org/

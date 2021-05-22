@@ -976,8 +976,8 @@ define i32 @mul(i32 %arg) {
 ; AVX1-LABEL: 'mul'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = mul i64 undef, undef
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = mul <2 x i64> undef, undef
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V4I64 = mul <4 x i64> undef, undef
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %V8I64 = mul <8 x i64> undef, undef
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = mul <4 x i64> undef, undef
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = mul <8 x i64> undef, undef
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = mul i32 undef, undef
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = mul <4 x i32> undef, undef
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8I32 = mul <8 x i32> undef, undef
@@ -1130,8 +1130,8 @@ define i32 @mul(i32 %arg) {
 ; BTVER2-LABEL: 'mul'
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = mul i64 undef, undef
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = mul <2 x i64> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V4I64 = mul <4 x i64> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %V8I64 = mul <8 x i64> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = mul <4 x i64> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = mul <8 x i64> undef, undef
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = mul i32 undef, undef
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = mul <4 x i32> undef, undef
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8I32 = mul <8 x i32> undef, undef
