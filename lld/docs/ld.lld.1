@@ -815,7 +815,11 @@ The stack size is recorded as the size of the
 program segment.
 .Pp
 .It Cm start-stop-gc
-Don't let __start_/__stop_ references retain non-SHF_LINK_ORDER non-SHF_GROUP C identifier name sections.
+Don't let __start_/__stop_ references retain the associated C identifier name sections (default).
+.Pp
+.It Cm nostart-stop-gc
+Let __start_/__stop_ references retain the associated C identifier name sections.
+.Pp
 .It Cm text
 Do not allow relocations against read-only segments.
 This is the default.
