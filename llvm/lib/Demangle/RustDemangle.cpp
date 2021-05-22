@@ -454,6 +454,14 @@ void Demangler::demangleType() {
     print(")");
     break;
   }
+  case 'P':
+    print("*const ");
+    demangleType();
+    break;
+  case 'O':
+    print("*mut ");
+    demangleType();
+    break;
   default:
     Position = Start;
     demanglePath(rust_demangle::InType::Yes);
