@@ -211,7 +211,7 @@ template <class charT> class messages_byname;
 
 #if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 // Most unix variants have catopen.  These are the specific ones that don't.
-#  if !defined(__BIONIC__) && !defined(_NEWLIB_VERSION)
+#  if !defined(__BIONIC__) && !defined(_NEWLIB_VERSION) && !defined(__EMSCRIPTEN__)
 #    define _LIBCPP_HAS_CATOPEN 1
 #    include <nl_types.h>
 #  endif

@@ -353,7 +353,7 @@
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || \
     defined(__OpenBSD__) || defined(__DragonFly__) || defined(__sun__)
 #  define _LIBCPP_USING_ARC4_RANDOM
-#elif defined(__wasi__)
+#elif defined(__wasi__) || defined(__EMSCRIPTEN__)
 #  define _LIBCPP_USING_GETENTROPY
 #elif defined(__Fuchsia__)
 #  define _LIBCPP_USING_FUCHSIA_CPRNG
@@ -1028,7 +1028,8 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
       defined(__APPLE__) || \
       defined(__sun__) || \
       defined(__MVS__) || \
-      defined(_AIX)
+      defined(_AIX) || \
+      defined(__EMSCRIPTEN__)
 #    define _LIBCPP_HAS_THREAD_API_PTHREAD
 #  elif defined(__Fuchsia__)
      // TODO(44575): Switch to C11 thread API when possible.
