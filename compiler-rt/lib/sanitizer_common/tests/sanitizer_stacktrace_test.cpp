@@ -192,7 +192,7 @@ TEST_F(StackPrintTest, SKIP_ON_SPARC(ContainsFullTrace)) {
   UnwindFast();
 
   char buf[3000];
-  uptr len = trace.PrintTo(buf, sizeof(buf));
+  trace.PrintTo(buf, sizeof(buf));
   EXPECT_THAT(std::string(buf),
               MatchesRegex("(#[0-9]+ 0x[0-9a-f]+\n){" +
                            std::to_string(trace.size) + "}\n"));
