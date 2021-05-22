@@ -98,7 +98,7 @@ end
 module m6
   real :: f6
   interface g6
-  !ERROR: Procedure 'f6' was previously declared
+  !ERROR: 'f6' is already declared in this scoping unit
     real function f6()
     end function f6
   end interface g6
@@ -107,7 +107,7 @@ end module m6
 module m7
   integer :: f7
   interface g7
-    !ERROR: Procedure 'f7' was previously declared
+    !ERROR: 'f7' is already declared in this scoping unit
     real function f7()
     end function f7
   end interface g7
@@ -116,7 +116,7 @@ end module m7
 module m8
   real :: f8
   interface g8
-    !ERROR: Procedure 'f8' was previously declared
+    !ERROR: 'f8' is already declared in this scoping unit
     subroutine f8()
     end subroutine f8
   end interface g8
