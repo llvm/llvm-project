@@ -10,22 +10,17 @@ define dso_local void @foo(i32* noalias nocapture %A, i32* noalias nocapture rea
 ; CHECK-NEXT:    [[LSR_IV14:%.*]] = phi i32* [ [[SCEVGEP15:%.*]], [[VECTOR_BODY]] ], [ [[A:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[LSR_IV11:%.*]] = phi i32* [ [[SCEVGEP12:%.*]], [[VECTOR_BODY]] ], [ [[C:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32* [ [[SCEVGEP:%.*]], [[VECTOR_BODY]] ], [ [[B:%.*]], [[ENTRY]] ]
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[START]], [[ENTRY]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ 32003, [[ENTRY]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[LSR_IV1416:%.*]] = bitcast i32* [[LSR_IV14]] to <4 x i32>*
 ; CHECK-NEXT:    [[LSR_IV1113:%.*]] = bitcast i32* [[LSR_IV11]] to <4 x i32>*
 ; CHECK-NEXT:    [[LSR_IV10:%.*]] = bitcast i32* [[LSR_IV]] to <4 x i32>*
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> undef, i32 [[INDEX]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i1> @llvm.arm.mve.vctp32(i32 [[TMP1]])
 ; CHECK-NEXT:    [[TMP3]] = sub i32 [[TMP1]], 4
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[LSR_IV10]], i32 4, <4 x i1> [[TMP2]], <4 x i32> undef)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[LSR_IV1113]], i32 4, <4 x i1> [[TMP2]], <4 x i32> undef)
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD9]], [[WIDE_MASKED_LOAD]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> [[TMP4]], <4 x i32>* [[LSR_IV1416]], i32 4, <4 x i1> [[TMP2]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i32, i32* [[LSR_IV]], i32 4
 ; CHECK-NEXT:    [[SCEVGEP12]] = getelementptr i32, i32* [[LSR_IV11]], i32 4
 ; CHECK-NEXT:    [[SCEVGEP15]] = getelementptr i32, i32* [[LSR_IV14]], i32 4
@@ -48,13 +43,7 @@ vector.body:
   %lsr.iv1416 = bitcast i32* %lsr.iv14 to <4 x i32>*
   %lsr.iv1113 = bitcast i32* %lsr.iv11 to <4 x i32>*
   %lsr.iv10 = bitcast i32* %lsr.iv to <4 x i32>*
-  %broadcast.splatinsert = insertelement <4 x i32> undef, i32 %index, i32 0
-  %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
-  %induction = add <4 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3>
-
-  ; %1 = icmp ult <4 x i32> %induction, <i32 32002, i32 32002, i32 32002, i32 32002>
   %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 32003)
-
   %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv10, i32 4, <4 x i1> %1, <4 x i32> undef)
   %wide.masked.load9 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv1113, i32 4, <4 x i1> %1, <4 x i32> undef)
   %2 = add nsw <4 x i32> %wide.masked.load9, %wide.masked.load
@@ -244,11 +233,7 @@ vector.body:
   %broadcast.splatinsert = insertelement <4 x i32> undef, i32 %index, i32 0
   %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
   %induction = add <4 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3>
-
-; Non-uniform constant vector here. This can't be represented with
-; @llvm.get.active.lane.mask, but let's keep this test as a sanity check:
   %1 = icmp ult <4 x i32> %induction, <i32 0, i32 3200, i32 32002, i32 32002>
-
   %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv10, i32 4, <4 x i1> %1, <4 x i32> undef)
   %wide.masked.load9 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv1113, i32 4, <4 x i1> %1, <4 x i32> undef)
   %2 = add nsw <4 x i32> %wide.masked.load9, %wide.masked.load
@@ -285,13 +270,8 @@ vector.body:
   %lsr.iv1416 = bitcast i32* %lsr.iv14 to <4 x i32>*
   %lsr.iv1113 = bitcast i32* %lsr.iv11 to <4 x i32>*
   %lsr.iv10 = bitcast i32* %lsr.iv to <4 x i32>*
-  %broadcast.splatinsert = insertelement <4 x i32> undef, i32 %index, i32 0
-  %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
-  %induction = add <4 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3>
-
 ; BTC = UINT_MAX, and scalar trip count BTC + 1 would overflow:
   %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 4294967295)
-
   %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv10, i32 4, <4 x i1> %1, <4 x i32> undef)
   %wide.masked.load9 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv1113, i32 4, <4 x i1> %1, <4 x i32> undef)
   %2 = add nsw <4 x i32> %wide.masked.load9, %wide.masked.load
@@ -328,12 +308,7 @@ vector.body:
   %lsr.iv1416 = bitcast i32* %lsr.iv14 to <4 x i32>*
   %lsr.iv1113 = bitcast i32* %lsr.iv11 to <4 x i32>*
   %lsr.iv10 = bitcast i32* %lsr.iv to <4 x i32>*
-  %broadcast.splatinsert = insertelement <4 x i32> undef, i32 %index, i32 0
-  %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
-  %induction = add <4 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3>
-
   %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 32003)
-
   %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv10, i32 4, <4 x i1> %1, <4 x i32> undef)
   %wide.masked.load9 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv1113, i32 4, <4 x i1> %1, <4 x i32> undef)
   %2 = add nsw <4 x i32> %wide.masked.load9, %wide.masked.load
@@ -371,13 +346,8 @@ vector.body:
   %lsr.iv1416 = bitcast i32* %lsr.iv14 to <4 x i32>*
   %lsr.iv1113 = bitcast i32* %lsr.iv11 to <4 x i32>*
   %lsr.iv10 = bitcast i32* %lsr.iv to <4 x i32>*
-  %broadcast.splatinsert = insertelement <4 x i32> undef, i32 %index, i32 0
-  %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
-  %induction = add <4 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3>
-
 ; The induction variable %N is not an IV:
   %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %N, i32 32003)
-
   %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv10, i32 4, <4 x i1> %1, <4 x i32> undef)
   %wide.masked.load9 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv1113, i32 4, <4 x i1> %1, <4 x i32> undef)
   %2 = add nsw <4 x i32> %wide.masked.load9, %wide.masked.load
@@ -414,12 +384,7 @@ vector.body:
   %lsr.iv1416 = bitcast i32* %lsr.iv14 to <4 x i32>*
   %lsr.iv1113 = bitcast i32* %lsr.iv11 to <4 x i32>*
   %lsr.iv10 = bitcast i32* %lsr.iv to <4 x i32>*
-  %broadcast.splatinsert = insertelement <4 x i32> undef, i32 %index, i32 0
-  %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
-  %induction = add <4 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3>
-
   %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 32003)
-
   %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv10, i32 4, <4 x i1> %1, <4 x i32> undef)
   %wide.masked.load9 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv1113, i32 4, <4 x i1> %1, <4 x i32> undef)
   %2 = add nsw <4 x i32> %wide.masked.load9, %wide.masked.load
@@ -460,9 +425,6 @@ vector.body:
   %lsr.iv1416 = bitcast i32* %lsr.iv14 to <4 x i32>*
   %lsr.iv1113 = bitcast i32* %lsr.iv11 to <4 x i32>*
   %lsr.iv10 = bitcast i32* %lsr.iv to <4 x i32>*
-  %broadcast.splatinsert = insertelement <4 x i32> undef, i32 %index, i32 0
-  %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
-  %induction = add <4 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3>
   %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 32003)
   %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv10, i32 4, <4 x i1> %1, <4 x i32> undef)
   %wide.masked.load9 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv1113, i32 4, <4 x i1> %1, <4 x i32> undef)
@@ -514,10 +476,8 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %lsr.iv3840 = bitcast i32* %lsr.iv38 to <4 x i32>*
   %lsr.iv3335 = bitcast i32* %lsr.iv33 to <4 x i32>*
   %lsr.iv2830 = bitcast i32* %lsr.iv28 to <4 x i32>*
-
 ; It's using %j.025, the induction variable from its outer loop:
   %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %j.025, i32 4096)
-
   %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv3840, i32 4, <4 x i1> %active.lane.mask, <4 x i32> undef)
   %wide.masked.load27 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv3335, i32 4, <4 x i1> %active.lane.mask, <4 x i32> undef)
   %1 = add nsw <4 x i32> %wide.masked.load27, %wide.masked.load

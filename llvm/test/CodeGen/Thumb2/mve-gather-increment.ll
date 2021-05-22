@@ -244,7 +244,6 @@ define arm_aapcs_vfpcc void @gather_pre_inc(i32* noalias nocapture readonly %dat
 ; CHECK-NEXT:    .long 4294967272 @ 0xffffffe8
 ; CHECK-NEXT:    .long 0 @ 0x0
 vector.ph:                                        ; preds = %for.body.preheader
-  %ind.end = shl i32 %n.vec, 1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -288,7 +287,6 @@ define arm_aapcs_vfpcc void @gather_post_inc(i32* noalias nocapture readonly %da
 ; CHECK-NEXT:    .long 4294967248 @ 0xffffffd0
 ; CHECK-NEXT:    .long 4294967272 @ 0xffffffe8
 vector.ph41:                                      ; preds = %for.body6.preheader
-  %ind.end47 = shl i32 %n.vec43, 1
   br label %vector.body39
 
 vector.body39:                                    ; preds = %vector.body39, %vector.ph41

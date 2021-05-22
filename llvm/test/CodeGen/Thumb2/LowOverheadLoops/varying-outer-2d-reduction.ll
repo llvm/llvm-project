@@ -183,7 +183,6 @@ for.body:                                         ; preds = %for.end, %for.body.
   br i1 %cmp433, label %vector.ph, label %for.end
 
 vector.ph:                                        ; preds = %for.body
-  %trip.count.minus.1 = add i32 %i8, -1
   %start = call i32 @llvm.start.loop.iterations.i32(i32 %i7)
   br label %vector.body
 

@@ -30,7 +30,6 @@ entry:
 vector.ph:                                        ; preds = %entry
   %n.rnd.up = add i32 %N, 15
   %n.vec = and i32 %n.rnd.up, -16
-  %trip.count.minus.1 = add i32 %N, -1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -100,7 +99,6 @@ entry:
 vector.ph:                                        ; preds = %entry
   %n.rnd.up = add i32 %N, 7
   %n.vec = and i32 %n.rnd.up, -8
-  %trip.count.minus.1 = add i32 %N, -1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -172,7 +170,6 @@ entry:
 vector.ph:                                        ; preds = %entry
   %n.rnd.up = add i32 %N, 15
   %n.vec = and i32 %n.rnd.up, -16
-  %trip.count.minus.1 = add i32 %N, -1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -242,7 +239,6 @@ entry:
 vector.ph:                                        ; preds = %entry
   %n.rnd.up = add i32 %N, 7
   %n.vec = and i32 %n.rnd.up, -8
-  %trip.count.minus.1 = add i32 %N, -1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -314,7 +310,6 @@ entry:
 vector.ph:                                        ; preds = %entry
   %n.rnd.up = add i32 %N, 15
   %n.vec = and i32 %n.rnd.up, -16
-  %trip.count.minus.1 = add i32 %N, -1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -384,7 +379,6 @@ entry:
 vector.ph:                                        ; preds = %entry
   %n.rnd.up = add i32 %N, 7
   %n.vec = and i32 %n.rnd.up, -8
-  %trip.count.minus.1 = add i32 %N, -1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -481,7 +475,6 @@ entry:
 vector.ph:                                        ; preds = %entry
   %n.rnd.up = add i32 %N, 3
   %n.vec = and i32 %n.rnd.up, -4
-  %trip.count.minus.1 = add i32 %N, -1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -510,7 +503,6 @@ middle.block:                                     ; preds = %vector.body
 vector.ph47:                                      ; preds = %middle.block
   %n.rnd.up48 = add i32 %N, 3
   %n.vec50 = and i32 %n.rnd.up48, -4
-  %trip.count.minus.154 = add i32 %N, -1
   %i11 = insertelement <4 x i32> <i32 undef, i32 0, i32 0, i32 0>, i32 %i10, i32 0
   br label %vector.body46
 
@@ -594,7 +586,6 @@ entry:
 vector.ph:                                        ; preds = %entry
   %n.rnd.up = add i32 %N, 7
   %n.vec = and i32 %n.rnd.up, -8
-  %trip.count.minus.1 = add i32 %N, -1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -719,7 +710,6 @@ lor.end:                                          ; preds = %entry, %lor.rhs
 vector.ph:                                        ; preds = %lor.end
   %n.rnd.up = add i32 %4, 3
   %n.vec = and i32 %n.rnd.up, -4
-  %trip.count.minus.1 = add i32 %4, -1
   %5 = insertelement <4 x i32> <i32 undef, i32 0, i32 0, i32 0>, i32 %0, i32 0
   br label %vector.body
 
