@@ -19,7 +19,12 @@
 # RUN: FileCheck --check-prefix=CHECK-INF < %t.cfgset.out %s
 
 # CHECK-INF: -- Testing:
-# CHECK-INF: TIMEOUT: googletest-timeout :: {{[Dd]ummy[Ss]ub[Dd]ir}}/OneTest.py/T.InfiniteLoopSubTest
+# CHECK-INF: TIMEOUT: googletest-timeout :: [[PATH:[Dd]ummy[Ss]ub[Dd]ir/]][[FILE:OneTest\.py]]/[[TEST:T\.InfiniteLoopSubTest]]
+# CHECK-INF-NEXT: ******************** TEST 'googletest-timeout :: [[PATH]][[FILE]]/[[TEST]]' FAILED ********************
+# CHECK-INF-NEXT: Script:
+# CHECK-INF-NEXT: --
+# CHECK-INF-NEXT: [[FILE]] --gtest_filter=[[TEST]]
+# CHECK-INF-NEXT: --
 # CHECK-INF: Timed Out: 1
 
 ###############################################################################
