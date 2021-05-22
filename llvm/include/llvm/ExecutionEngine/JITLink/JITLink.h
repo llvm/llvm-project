@@ -135,6 +135,11 @@ private:
   JITTargetAddress Address = 0;
   uint64_t IsDefined : 1;
   uint64_t IsAbsolute : 1;
+
+protected:
+  // bitfields for Block, allocated here to improve packing.
+  uint64_t P2Align : 5;
+  uint64_t AlignmentOffset : 57;
 };
 
 using SectionOrdinal = unsigned;
@@ -265,8 +270,6 @@ public:
 private:
   static constexpr uint64_t MaxAlignmentOffset = (1ULL << 57) - 1;
 
-  uint64_t P2Align : 5;
-  uint64_t AlignmentOffset : 57;
   Section &Parent;
   const char *Data = nullptr;
   size_t Size = 0;
