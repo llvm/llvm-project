@@ -84,6 +84,9 @@ class Driver {
   /// LTO mode selected via -f(no-)?lto(=.*)? options.
   LTOKind LTOMode;
 
+  /// LTO mode selected via -f(no-offload-)?lto(=.*)? options.
+  LTOKind OffloadLTOMode;
+
 public:
   enum OpenMPRuntimeKind {
     /// An unknown OpenMP runtime. We can't generate effective OpenMP code
@@ -559,10 +562,14 @@ public:
   bool ShouldEmitStaticLibrary(const llvm::opt::ArgList &Args) const;
 
   /// Returns true if we are performing any kind of LTO.
-  bool isUsingLTO() const { return LTOMode != LTOK_None; }
+  bool isUsingLTO(bool IsOffload = false) const {
+    return getLTOMode(IsOffload) != LTOK_None;
+  }
 
   /// Get the specific kind of LTO being performed.
-  LTOKind getLTOMode() const { return LTOMode; }
+  LTOKind getLTOMode(bool IsOffload = false) const {
+    return IsOffload ? OffloadLTOMode : LTOMode;
+  }
 
 private:
 
