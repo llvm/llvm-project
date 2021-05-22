@@ -9,9 +9,6 @@ define void @mat_vec_sext_i16(i16** nocapture readonly %A, i16* nocapture readon
 ; CHECK:       for.cond1.preheader.us.preheader:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -4
-; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT28:%.*]] = insertelement <4 x i32> undef, i32 [[TRIP_COUNT_MINUS_1]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT29:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT28]], <4 x i32> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TT:%.*]] = add i32 [[N_VEC]], -4
 ; CHECK-NEXT:    [[TT1:%.*]] = lshr i32 [[TT]], 2
 ; CHECK-NEXT:    [[TT2:%.*]] = add nuw nsw i32 [[TT1]], 1
@@ -30,9 +27,6 @@ define void @mat_vec_sext_i16(i16** nocapture readonly %A, i16* nocapture readon
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ [[TT4]], [[FOR_COND1_PREHEADER_US]] ], [ [[TT14:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TT5:%.*]] = phi i32 [ [[START]], [[FOR_COND1_PREHEADER_US]] ], [ [[TT15:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[N]], [[FOR_COND1_PREHEADER_US]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> undef, i32 [[INDEX]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TT6:%.*]] = getelementptr inbounds i16, i16* [[TT3]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.vctp32(i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP2]] = sub i32 [[TMP0]], 4
@@ -66,9 +60,6 @@ entry:
 for.cond1.preheader.us.preheader:                 ; preds = %entry
   %n.rnd.up = add i32 %N, 3
   %n.vec = and i32 %n.rnd.up, -4
-  %trip.count.minus.1 = add i32 %N, -1
-  %broadcast.splatinsert28 = insertelement <4 x i32> undef, i32 %trip.count.minus.1, i32 0
-  %broadcast.splat29 = shufflevector <4 x i32> %broadcast.splatinsert28, <4 x i32> undef, <4 x i32> zeroinitializer
   %tt = add i32 %n.vec, -4
   %tt1 = lshr i32 %tt, 2
   %tt2 = add nuw nsw i32 %tt1, 1
@@ -88,14 +79,8 @@ vector.body:                                      ; preds = %vector.body, %for.c
   %index = phi i32 [ 0, %for.cond1.preheader.us ], [ %index.next, %vector.body ]
   %vec.phi = phi <4 x i32> [ %tt4, %for.cond1.preheader.us ], [ %tt14, %vector.body ]
   %tt5 = phi i32 [ %start, %for.cond1.preheader.us ], [ %tt15, %vector.body ]
-  %broadcast.splatinsert = insertelement <4 x i32> undef, i32 %index, i32 0
-  %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
-  %induction = add <4 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3>
   %tt6 = getelementptr inbounds i16, i16* %tt3, i32 %index
-
-  ; %tt7 = icmp ule <4 x i32> %induction, %broadcast.splat29
   %tt7 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %N)
-
   %tt8 = bitcast i16* %tt6 to <4 x i16>*
   %wide.masked.load = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %tt8, i32 2, <4 x i1> %tt7, <4 x i16> undef)
   %tt9 = sext <4 x i16> %wide.masked.load to <4 x i32>
@@ -130,9 +115,6 @@ define void @mat_vec_i32(i32** nocapture readonly %A, i32* nocapture readonly %B
 ; CHECK:       for.cond1.preheader.us.preheader:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -4
-; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT27:%.*]] = insertelement <4 x i32> undef, i32 [[TRIP_COUNT_MINUS_1]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT28:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT27]], <4 x i32> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TT:%.*]] = add i32 [[N_VEC]], -4
 ; CHECK-NEXT:    [[TT1:%.*]] = lshr i32 [[TT]], 2
 ; CHECK-NEXT:    [[TT2:%.*]] = add nuw nsw i32 [[TT1]], 1
@@ -151,9 +133,6 @@ define void @mat_vec_i32(i32** nocapture readonly %A, i32* nocapture readonly %B
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ [[TT4]], [[FOR_COND1_PREHEADER_US]] ], [ [[TT12:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TT5:%.*]] = phi i32 [ [[START]], [[FOR_COND1_PREHEADER_US]] ], [ [[TT13:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[N]], [[FOR_COND1_PREHEADER_US]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> undef, i32 [[INDEX]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TT6:%.*]] = getelementptr inbounds i32, i32* [[TT3]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.vctp32(i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP2]] = sub i32 [[TMP0]], 4
@@ -185,9 +164,6 @@ entry:
 for.cond1.preheader.us.preheader:                 ; preds = %entry
   %n.rnd.up = add i32 %N, 3
   %n.vec = and i32 %n.rnd.up, -4
-  %trip.count.minus.1 = add i32 %N, -1
-  %broadcast.splatinsert27 = insertelement <4 x i32> undef, i32 %trip.count.minus.1, i32 0
-  %broadcast.splat28 = shufflevector <4 x i32> %broadcast.splatinsert27, <4 x i32> undef, <4 x i32> zeroinitializer
   %tt = add i32 %n.vec, -4
   %tt1 = lshr i32 %tt, 2
   %tt2 = add nuw nsw i32 %tt1, 1
@@ -207,14 +183,8 @@ vector.body:                                      ; preds = %vector.body, %for.c
   %index = phi i32 [ 0, %for.cond1.preheader.us ], [ %index.next, %vector.body ]
   %vec.phi = phi <4 x i32> [ %tt4, %for.cond1.preheader.us ], [ %tt12, %vector.body ]
   %tt5 = phi i32 [ %start, %for.cond1.preheader.us ], [ %tt13, %vector.body ]
-  %broadcast.splatinsert = insertelement <4 x i32> undef, i32 %index, i32 0
-  %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
-  %induction = add <4 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3>
   %tt6 = getelementptr inbounds i32, i32* %tt3, i32 %index
-
-  ; %tt7 = icmp ule <4 x i32> %induction, %broadcast.splat28
   %tt7 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %N)
-
   %tt8 = bitcast i32* %tt6 to <4 x i32>*
   %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %tt8, i32 4, <4 x i1> %tt7, <4 x i32> undef)
   %tt9 = getelementptr inbounds i32, i32* %B, i32 %index

@@ -82,7 +82,6 @@ entry:
   br i1 %cmp8, label %vector.ph, label %for.cond.cleanup
 
 vector.ph:                                        ; preds = %entry
-  %trip.count.minus.1 = add i32 %N, -1
   %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
   br label %vector.body
 
@@ -92,13 +91,10 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %lsr.iv = phi i32* [ %scevgep, %vector.body ], [ %B, %vector.ph ]
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %6 = phi i32 [ %start, %vector.ph ], [ %8, %vector.body ]
-
   %lsr.iv13 = bitcast i32* %lsr.iv to <4 x i32>*
   %lsr.iv1416 = bitcast i32* %lsr.iv14 to <4 x i32>*
   %lsr.iv1719 = bitcast i32* %lsr.iv17 to <4 x i32>*
-
   %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %N)
-
   %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv13, i32 4, <4 x i1> %active.lane.mask, <4 x i32> undef)
   %wide.masked.load12 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv1416, i32 4, <4 x i1> %active.lane.mask, <4 x i32> undef)
   %7 = add nsw <4 x i32> %wide.masked.load12, %wide.masked.load
