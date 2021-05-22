@@ -472,10 +472,54 @@ void Demangler::demangleType() {
     print("*mut ");
     demangleType();
     break;
+  case 'F':
+    demangleFnSig();
+    break;
   default:
     Position = Start;
     demanglePath(rust_demangle::InType::Yes);
     break;
+  }
+}
+
+// <fn-sig> := [<binder>] ["U"] ["K" <abi>] {<type>} "E" <type>
+// <abi> = "C"
+//       | <undisambiguated-identifier>
+void Demangler::demangleFnSig() {
+  // FIXME demangle binder.
+
+  if (consumeIf('U'))
+    print("unsafe ");
+
+  if (consumeIf('K')) {
+    print("extern \"");
+    if (consumeIf('C')) {
+      print("C");
+    } else {
+      Identifier Ident = parseIdentifier();
+      for (char C : Ident.Name) {
+        // When mangling ABI string, the "-" is replaced with "_".
+        if (C == '_')
+          C = '-';
+        print(C);
+      }
+    }
+    print("\" ");
+  }
+
+  print("fn(");
+  for (size_t I = 0; !Error && !consumeIf('E'); ++I) {
+    if (I > 0)
+      print(", ");
+    demangleType();
+  }
+  print(")");
+
+  if (consumeIf('u')) {
+    // Skip the unit type from the output.
+  } else {
+    print(" -> ");
+    demangleType();
   }
 }
 

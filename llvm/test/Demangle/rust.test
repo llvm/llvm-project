@@ -187,6 +187,35 @@ CHECK: types::<*const _>
 CHECK: types::<*mut _>
        _RIC5typesOpE
 
+; Function signatures
+
+CHECK: function::<fn()>
+       _RIC8functionFEuE
+
+CHECK: function::<fn() -> _>
+       _RIC8functionFEpE
+
+CHECK: function::<fn(_)>
+       _RIC8functionFpEuE
+
+CHECK: function::<fn(_, _)>
+       _RIC8functionFppEuE
+
+CHECK: function::<fn(_, _, _)>
+       _RIC8functionFpppEuE
+
+CHECK: function::<unsafe fn()>
+       _RIC8functionFUEuE
+
+CHECK: function::<extern "C" fn()>
+       _RIC8functionFKCEuE
+
+CHECK: function::<extern "cdecl" fn()>
+       _RIC8functionFK5cdeclEuE
+
+CHECK: function::<unsafe extern "C-cmse-nonsecure-call" fn()>
+       _RIC8functionFUK21C_cmse_nonsecure_callEuE
+
 ; Integer constants. Test value demangling.
 
 CHECK: integer::<0>
