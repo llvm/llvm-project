@@ -184,6 +184,22 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
                                          Op2Info, Opd1PropInfo,
                                          Opd2PropInfo, Args, CxtI);
+
+  // vXi8 multiplications are always promoted to vXi16.
+  if (Opcode == Instruction::Mul && Ty->isVectorTy() &&
+      Ty->getScalarSizeInBits() == 8) {
+    Type *WideVecTy =
+        VectorType::getExtendedElementVectorType(cast<VectorType>(Ty));
+    return getCastInstrCost(Instruction::ZExt, WideVecTy, Ty,
+                            TargetTransformInfo::CastContextHint::None,
+                            CostKind) +
+           getCastInstrCost(Instruction::Trunc, Ty, WideVecTy,
+                            TargetTransformInfo::CastContextHint::None,
+                            CostKind) +
+           getArithmeticInstrCost(Opcode, WideVecTy, CostKind, Op1Info, Op2Info,
+                                  Opd1PropInfo, Opd2PropInfo);
+  }
+
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
 
@@ -205,7 +221,6 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   static const CostTblEntry SLMCostTable[] = {
     { ISD::MUL,   MVT::v4i32, 11 }, // pmulld
     { ISD::MUL,   MVT::v8i16, 2  }, // pmullw
-    { ISD::MUL,   MVT::v16i8, 14 }, // extend/pmullw/trunc sequence.
     { ISD::FMUL,  MVT::f64,   2  }, // mulsd
     { ISD::FMUL,  MVT::v2f64, 4  }, // mulpd
     { ISD::FMUL,  MVT::v4f32, 2  }, // mulps
@@ -570,10 +585,6 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SHL,   MVT::v64i8,     11 }, // vpblendvb sequence.
     { ISD::SRL,   MVT::v64i8,     11 }, // vpblendvb sequence.
     { ISD::SRA,   MVT::v64i8,     24 }, // vpblendvb sequence.
-
-    { ISD::MUL,   MVT::v64i8,     11 }, // extend/pmullw/trunc sequence.
-    { ISD::MUL,   MVT::v32i8,      4 }, // extend/pmullw/trunc sequence.
-    { ISD::MUL,   MVT::v16i8,      4 }, // extend/pmullw/trunc sequence.
   };
 
   // Look for AVX512BW lowering tricks for custom cases.
@@ -598,9 +609,6 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SRA,     MVT::v4i64,      1 },
     { ISD::SRA,     MVT::v8i64,      1 },
 
-    { ISD::MUL,     MVT::v64i8,     26 }, // extend/pmullw/trunc sequence.
-    { ISD::MUL,     MVT::v32i8,     13 }, // extend/pmullw/trunc sequence.
-    { ISD::MUL,     MVT::v16i8,      5 }, // extend/pmullw/trunc sequence.
     { ISD::MUL,     MVT::v16i32,     1 }, // pmulld (Skylake from agner.org)
     { ISD::MUL,     MVT::v8i32,      1 }, // pmulld (Skylake from agner.org)
     { ISD::MUL,     MVT::v4i32,      1 }, // pmulld (Skylake from agner.org)
@@ -773,8 +781,6 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SUB,  MVT::v4i64,      1 }, // psubq
     { ISD::ADD,  MVT::v4i64,      1 }, // paddq
 
-    { ISD::MUL,  MVT::v32i8,     17 }, // extend/pmullw/trunc sequence.
-    { ISD::MUL,  MVT::v16i8,      7 }, // extend/pmullw/trunc sequence.
     { ISD::MUL,  MVT::v16i16,     1 }, // pmullw
     { ISD::MUL,  MVT::v8i32,      2 }, // pmulld (Haswell from agner.org)
     { ISD::MUL,  MVT::v4i64,      8 }, // 3*pmuludq/3*shift/2*add
@@ -824,8 +830,6 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     // extract+insert in the cost table. Therefore, the cost here is 18
     // instead of 8.
     { ISD::MUL,     MVT::v4i64,     18 },
-
-    { ISD::MUL,     MVT::v32i8,     26 }, // extend/pmullw/trunc sequence.
 
     { ISD::FNEG,    MVT::v4f64,      2 }, // BTVER2 from http://www.agner.org/
     { ISD::FNEG,    MVT::v8f32,      2 }, // BTVER2 from http://www.agner.org/
@@ -922,7 +926,6 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SRA,  MVT::v2i64,      12 }, // srl/xor/sub sequence.
     { ISD::SRA,  MVT::v4i64,  2*12+2 }, // srl/xor/sub sequence+split.
 
-    { ISD::MUL,  MVT::v16i8,      12 }, // extend/pmullw/trunc sequence.
     { ISD::MUL,  MVT::v8i16,       1 }, // pmullw
     { ISD::MUL,  MVT::v4i32,       6 }, // 3*pmuludq/4*shuffle
     { ISD::MUL,  MVT::v2i64,       8 }, // 3*pmuludq/3*shift/2*add
