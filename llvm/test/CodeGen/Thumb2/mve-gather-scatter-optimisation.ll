@@ -39,7 +39,6 @@ define arm_aapcs_vfpcc void @push_out_mul_gather(i32* noalias nocapture readonly
 ; CHECK-NEXT:    .long 4294967272 @ 0xffffffe8
 
 vector.ph:                                        ; preds = %for.body.preheader
-  %ind.end = shl i32 %n.vec, 1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -83,7 +82,6 @@ define arm_aapcs_vfpcc void @push_out_add_gather(i32* noalias nocapture readonly
 ; CHECK-NEXT:    .long 16 @ 0x10
 
 vector.ph:                                        ; preds = %for.body.preheader
-  %ind.end = shl i32 %n.vec, 1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -127,7 +125,6 @@ define arm_aapcs_vfpcc void @push_out_mul_add_gather(i32* noalias nocapture read
 ; CHECK-NEXT:    .long 0 @ 0x0
 
 vector.ph:                                        ; preds = %for.body.preheader
-  %ind.end = shl i32 %n.vec, 1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -173,7 +170,6 @@ define arm_aapcs_vfpcc void @push_out_mul_scatter(i32* noalias nocapture readonl
                                                   <4 x i32> %to.store) {
 
 vector.ph:                                        ; preds = %for.body.preheader
-  %ind.end = shl i32 %n.vec, 1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -215,7 +211,6 @@ define arm_aapcs_vfpcc void @push_out_add_scatter(i32* noalias nocapture readonl
                                                   <4 x i32> %to.store) {
 
 vector.ph:                                        ; preds = %for.body.preheader
-  %ind.end = shl i32 %n.vec, 1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -259,7 +254,6 @@ define arm_aapcs_vfpcc void @push_out_mul_gather_scatter(i32* noalias nocapture 
                                                          i32* noalias nocapture %dst, i32 %n.vec) {
 
 vector.ph:                                        ; preds = %for.body.preheader
-  %ind.end = shl i32 %n.vec, 1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -301,7 +295,6 @@ define arm_aapcs_vfpcc void @push_out_add_sub_block(i32* noalias nocapture reado
 ; CHECK-NEXT:    .long 16 @ 0x10
 
 vector.ph:                                        ; preds = %for.body.preheader
-  %ind.end = shl i32 %n.vec, 1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -358,7 +351,6 @@ define arm_aapcs_vfpcc void @non_gatscat_use1(i32* noalias nocapture readonly %d
 ; CHECK-NEXT:    .long 6 @ 0x6
 
 vector.ph:                                        ; preds = %for.body.preheader
-  %ind.end = shl i32 %n.vec, 1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -411,7 +403,6 @@ define arm_aapcs_vfpcc void @non_gatscat_use2(i32* noalias nocapture readonly %d
 ; CHECK-NEXT:    .long 6 @ 0x6
 
 vector.ph:                                        ; preds = %for.body.preheader
-  %ind.end = shl i32 %n.vec, 1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -528,7 +519,6 @@ for.cond8.preheader.us.us.preheader.preheader:    ; preds = %entry
   %2 = add nuw i32 %1, 1
   %min.iters.check = icmp ult i32 %0, 6
   %n.vec = and i32 %2, -4
-  %ind.end = shl i32 %n.vec, 1
   %broadcast.splatinsert86 = insertelement <4 x i32> undef, i32 %m, i32 0
   %broadcast.splat87 = shufflevector <4 x i32> %broadcast.splatinsert86, <4 x i32> undef, <4 x i32> zeroinitializer
   %cmp.n = icmp eq i32 %2, %n.vec
@@ -983,7 +973,6 @@ for.body10.i:                                     ; preds = %for.cond.cleanup20.
   br i1 0, label %for.cond.cleanup20.i, label %for.cond22.preheader.lr.ph.i
 
 for.cond22.preheader.lr.ph.i:                     ; preds = %for.body10.i
-  %ind.end = add nsw i32 0, %n.vec
   %.splatinsert = insertelement <4 x i32> undef, i32 0, i32 0
   %.splat = shufflevector <4 x i32> %.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
   %induction = add <4 x i32> %.splat, <i32 0, i32 1, i32 2, i32 3>
