@@ -175,6 +175,12 @@ CHECK: types::<(_, _)>
 CHECK: types::<(_, _, _)>
        _RIC5typesTpppEE
 
+CHECK: types::<&_>
+       _RIC5typesRpE
+
+CHECK: types::<&mut _>
+       _RIC5typesQpE
+
 CHECK: types::<*const _>
        _RIC5typesPpE
 
