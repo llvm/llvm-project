@@ -33,7 +33,7 @@ def main():
   parser.add_argument(
       '--no_x86_scrub_sp', action='store_false', dest='x86_scrub_sp')
   parser.add_argument(
-      '--x86_scrub_rip', action='store_true', default=True,
+      '--x86_scrub_rip', action='store_true', default=False,
       help='Use more regex for x86 rip matching to reduce diffs between various subtargets')
   parser.add_argument(
       '--no_x86_scrub_rip', action='store_false', dest='x86_scrub_rip')
