@@ -47,7 +47,7 @@ entry:
 ; Function Attrs: nounwind readnone
 declare i64 @llvm.bpf.btf.type.id(i32, i64) #1
 
-attributes #0 = { nounwind "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+attributes #0 = { nounwind "frame-pointer"="all" "no-trapping-math" "stack-protector-buffer-size"="8" }
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}

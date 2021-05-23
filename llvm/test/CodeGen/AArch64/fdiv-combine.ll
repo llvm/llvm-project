@@ -91,4 +91,4 @@ declare void @foo_3_2xd(<2 x double>, <2 x double>, <2 x double>)
 declare void @foo_2f(float, float)
 declare void @foo_2d(double, double)
 
-attributes #0 = { "unsafe-fp-math"="true" }
+attributes #0 = { "unsafe-fp-math" }

@@ -329,7 +329,7 @@ entry:
 
 declare void @hhh(double, double)
 
-attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="true" "use-soft-float"="false" }
-attributes #1 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="true" "use-soft-float"="false" }
+attributes #0 = { nounwind "frame-pointer"="all" "no-infs-fp-math" "no-nans-fp-math" "stack-protector-buffer-size"="8" "unsafe-fp-math" "use-soft-float"="false" }
+attributes #1 = { "frame-pointer"="all" "no-infs-fp-math" "no-nans-fp-math" "stack-protector-buffer-size"="8" "unsafe-fp-math" "use-soft-float"="false" }
 attributes #2 = { nounwind }
 

@@ -68,5 +68,5 @@ entry:
   ret void
 }
 
-attributes #0 = { "unsafe-fp-math"="true" }
-attributes #1 = { noinline optnone "unsafe-fp-math"="true" }
+attributes #0 = { "unsafe-fp-math" }
+attributes #1 = { noinline optnone "unsafe-fp-math" }

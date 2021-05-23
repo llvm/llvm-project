@@ -1611,4 +1611,4 @@ end:
   ret void
 }
 
-attributes #0 = { "unsafe-fp-math"="true" }
+attributes #0 = { "unsafe-fp-math" }

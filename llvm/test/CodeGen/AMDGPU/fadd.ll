@@ -72,4 +72,4 @@ define amdgpu_kernel void @fadd_0_nsz_attr_f32(float addrspace(1)* %out, float %
 }
 
 attributes #0 = { nounwind }
-attributes #1 = { nounwind "no-signed-zeros-fp-math"="true" }
+attributes #1 = { nounwind "no-signed-zeros-fp-math" }

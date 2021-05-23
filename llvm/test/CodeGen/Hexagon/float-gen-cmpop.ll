@@ -62,7 +62,7 @@ b0:
   ret i32 %v2
 }
 
-attributes #0 = { nounwind readonly "target-cpu"="hexagonv55" "no-nans-fp-math"="true" }
+attributes #0 = { nounwind readonly "target-cpu"="hexagonv55" "no-nans-fp-math" }
 
 !0 = !{!1, !1, i64 0}
 !1 = !{!"float", !2}

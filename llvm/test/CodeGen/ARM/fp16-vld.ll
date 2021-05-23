@@ -45,4 +45,4 @@ byeblock:
   ret void
 }
 
-attributes #0 = { norecurse nounwind readonly "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "target-cpu"="generic" "target-features"="+armv8.2-a,+fullfp16,+strict-align,-thumb-mode" "unsafe-fp-math"="true" "use-soft-float"="false" }
+attributes #0 = { norecurse nounwind readonly "no-infs-fp-math" "no-nans-fp-math" "no-signed-zeros-fp-math" "no-trapping-math" "target-cpu"="generic" "target-features"="+armv8.2-a,+fullfp16,+strict-align,-thumb-mode" "unsafe-fp-math" "use-soft-float"="false" }
