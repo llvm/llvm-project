@@ -1031,16 +1031,13 @@ bool __create_directory(const path& p, error_code* ec) {
   if (detail::mkdir(p.c_str(), static_cast<int>(perms::all)) == 0)
     return true;
 
-  if (errno == EEXIST) {
-    error_code mec = capture_errno();
-    error_code ignored_ec;
-    const file_status st = status(p, ignored_ec);
-    if (!is_directory(st)) {
-      err.report(mec);
-    }
-  } else {
-    err.report(capture_errno());
-  }
+  if (errno != EEXIST)
+    return err.report(capture_errno());
+  error_code mec = capture_errno();
+  error_code ignored_ec;
+  const file_status st = status(p, ignored_ec);
+  if (!is_directory(st))
+    return err.report(mec);
   return false;
 }
 
