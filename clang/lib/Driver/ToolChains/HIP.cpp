@@ -459,3 +459,28 @@ HIPToolChain::getHIPDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
 
   return BCLibs;
 }
+
+void HIPToolChain::checkTargetID(const llvm::opt::ArgList &DriverArgs) const {
+  auto PTID = getParsedTargetID(DriverArgs);
+  if (PTID.OptionalTargetID && !PTID.OptionalGPUArch) {
+    getDriver().Diag(clang::diag::err_drv_bad_target_id)
+        << PTID.OptionalTargetID.getValue();
+    return;
+  }
+
+  assert(PTID.OptionalFeatures && "Invalid return from getParsedTargetID");
+  auto &FeatureMap = PTID.OptionalFeatures.getValue();
+  // Sanitizer is not supported with xnack-.
+  if (DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
+                         options::OPT_fno_gpu_sanitize, false)) {
+    auto Loc = FeatureMap.find("xnack");
+    if (Loc != FeatureMap.end() && !Loc->second) {
+      auto &Diags = getDriver().getDiags();
+      auto DiagID = Diags.getCustomDiagID(
+          DiagnosticsEngine::Error,
+          "'-fgpu-sanitize' is not compatible with offload arch '%0'. "
+          "Use an offload arch without 'xnack-' instead");
+      Diags.Report(DiagID) << PTID.OptionalTargetID.getValue();
+    }
+  }
+}
