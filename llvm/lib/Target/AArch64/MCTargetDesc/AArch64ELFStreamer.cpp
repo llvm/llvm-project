@@ -50,51 +50,51 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
   void emitInst(uint32_t Inst) override;
 
   void emitDirectiveVariantPCS(MCSymbol *Symbol) override {
-    OS << "\t.variant_pcs " << Symbol->getName() << "\n";
+    OS << "\t.variant_pcs\t" << Symbol->getName() << "\n";
   }
 
   void EmitARM64WinCFIAllocStack(unsigned Size) override {
-    OS << "\t.seh_stackalloc " << Size << "\n";
+    OS << "\t.seh_stackalloc\t" << Size << "\n";
   }
   void EmitARM64WinCFISaveR19R20X(int Offset) override {
-    OS << "\t.seh_save_r19r20_x " << Offset << "\n";
+    OS << "\t.seh_save_r19r20_x\t" << Offset << "\n";
   }
   void EmitARM64WinCFISaveFPLR(int Offset) override {
-    OS << "\t.seh_save_fplr " << Offset << "\n";
+    OS << "\t.seh_save_fplr\t" << Offset << "\n";
   }
   void EmitARM64WinCFISaveFPLRX(int Offset) override {
-    OS << "\t.seh_save_fplr_x " << Offset << "\n";
+    OS << "\t.seh_save_fplr_x\t" << Offset << "\n";
   }
   void EmitARM64WinCFISaveReg(unsigned Reg, int Offset) override {
-    OS << "\t.seh_save_reg x" << Reg << ", " << Offset << "\n";
+    OS << "\t.seh_save_reg\tx" << Reg << ", " << Offset << "\n";
   }
   void EmitARM64WinCFISaveRegX(unsigned Reg, int Offset) override {
-    OS << "\t.seh_save_reg_x x" << Reg << ", " << Offset << "\n";
+    OS << "\t.seh_save_reg_x\tx" << Reg << ", " << Offset << "\n";
   }
   void EmitARM64WinCFISaveRegP(unsigned Reg, int Offset) override {
-    OS << "\t.seh_save_regp x" << Reg << ", " << Offset << "\n";
+    OS << "\t.seh_save_regp\tx" << Reg << ", " << Offset << "\n";
   }
   void EmitARM64WinCFISaveRegPX(unsigned Reg, int Offset) override {
-    OS << "\t.seh_save_regp_x x" << Reg << ", " << Offset << "\n";
+    OS << "\t.seh_save_regp_x\tx" << Reg << ", " << Offset << "\n";
   }
   void EmitARM64WinCFISaveLRPair(unsigned Reg, int Offset) override {
-    OS << "\t.seh_save_lrpair x" << Reg << ", " << Offset << "\n";
+    OS << "\t.seh_save_lrpair\tx" << Reg << ", " << Offset << "\n";
   }
   void EmitARM64WinCFISaveFReg(unsigned Reg, int Offset) override {
-    OS << "\t.seh_save_freg d" << Reg << ", " << Offset << "\n";
+    OS << "\t.seh_save_freg\td" << Reg << ", " << Offset << "\n";
   }
   void EmitARM64WinCFISaveFRegX(unsigned Reg, int Offset) override {
-    OS << "\t.seh_save_freg_x d" << Reg << ", " << Offset << "\n";
+    OS << "\t.seh_save_freg_x\td" << Reg << ", " << Offset << "\n";
   }
   void EmitARM64WinCFISaveFRegP(unsigned Reg, int Offset) override {
-    OS << "\t.seh_save_fregp d" << Reg << ", " << Offset << "\n";
+    OS << "\t.seh_save_fregp\td" << Reg << ", " << Offset << "\n";
   }
   void EmitARM64WinCFISaveFRegPX(unsigned Reg, int Offset) override {
-    OS << "\t.seh_save_fregp_x d" << Reg << ", " << Offset << "\n";
+    OS << "\t.seh_save_fregp_x\td" << Reg << ", " << Offset << "\n";
   }
   void EmitARM64WinCFISetFP() override { OS << "\t.seh_set_fp\n"; }
   void EmitARM64WinCFIAddFP(unsigned Size) override {
-    OS << "\t.seh_add_fp " << Size << "\n";
+    OS << "\t.seh_add_fp\t" << Size << "\n";
   }
   void EmitARM64WinCFINop() override { OS << "\t.seh_nop\n"; }
   void EmitARM64WinCFISaveNext() override { OS << "\t.seh_save_next\n"; }
