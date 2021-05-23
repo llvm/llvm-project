@@ -165,12 +165,12 @@ def ModuleOp : Builtin_Op<"module", [
   let summary = "A top level container operation";
   let description = [{
     A `module` represents a top-level container operation. It contains a single
-   [graph region](#control-flow-and-ssacfg-regions) containing a single block
-   which can contain any operations and does not have a terminator. Operations
-   within this region cannot implicitly capture values defined outside the module,
-   i.e. Modules are [IsolatedFromAbove](Traits.md#isolatedfromabove). Modules have
-   an optional [symbol name](SymbolsAndSymbolTables.md) which can be used to refer
-   to them in operations.
+    [graph region](../LangRef.md#control-flow-and-ssacfg-regions) containing a single block
+    which can contain any operations and does not have a terminator. Operations
+    within this region cannot implicitly capture values defined outside the module,
+    i.e. Modules are [IsolatedFromAbove](../Traits.md#isolatedfromabove). Modules have
+    an optional [symbol name](../SymbolsAndSymbolTables.md) which can be used to refer
+    to them in operations.
 
     Example:
 
