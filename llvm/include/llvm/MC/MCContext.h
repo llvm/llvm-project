@@ -393,8 +393,7 @@ namespace llvm {
 
   public:
     explicit MCContext(const Triple &TheTriple, const MCAsmInfo *MAI,
-                       const MCRegisterInfo *MRI, const MCObjectFileInfo *MOFI,
-                       const MCSubtargetInfo *MSTI,
+                       const MCRegisterInfo *MRI, const MCSubtargetInfo *MSTI,
                        const SourceMgr *Mgr = nullptr,
                        MCTargetOptions const *TargetOpts = nullptr,
                        bool DoAutoReset = true);
@@ -415,6 +414,8 @@ namespace llvm {
     void setDiagnosticHandler(DiagHandlerTy DiagHandler) {
       this->DiagHandler = DiagHandler;
     }
+
+    void setObjectFileInfo(const MCObjectFileInfo *Mofi) { MOFI = Mofi; }
 
     const MCAsmInfo *getAsmInfo() const { return MAI; }
 

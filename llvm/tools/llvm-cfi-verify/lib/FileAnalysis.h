@@ -207,7 +207,6 @@ private:
   std::unique_ptr<const MCAsmInfo> AsmInfo;
   std::unique_ptr<MCSubtargetInfo> SubtargetInfo;
   std::unique_ptr<const MCInstrInfo> MII;
-  MCObjectFileInfo MOFI;
   std::unique_ptr<MCContext> Context;
   std::unique_ptr<const MCDisassembler> Disassembler;
   std::unique_ptr<const MCInstrAnalysis> MIA;
