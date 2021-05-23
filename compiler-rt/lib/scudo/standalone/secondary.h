@@ -28,7 +28,10 @@ namespace scudo {
 
 namespace LargeBlock {
 
-struct Header {
+struct alignas(Max<uptr>(archSupportsMemoryTagging()
+                             ? archMemoryTagGranuleSize()
+                             : 1,
+                         1U << SCUDO_MIN_ALIGNMENT_LOG)) Header {
   LargeBlock::Header *Prev;
   LargeBlock::Header *Next;
   uptr CommitBase;
@@ -38,9 +41,12 @@ struct Header {
   [[no_unique_address]] MapPlatformData Data;
 };
 
-constexpr uptr getHeaderSize() {
-  return roundUpTo(sizeof(Header), 1U << SCUDO_MIN_ALIGNMENT_LOG);
-}
+static_assert(sizeof(Header) % (1U << SCUDO_MIN_ALIGNMENT_LOG) == 0, "");
+static_assert(!archSupportsMemoryTagging() ||
+                  sizeof(Header) % archMemoryTagGranuleSize() == 0,
+              "");
+
+constexpr uptr getHeaderSize() { return sizeof(Header); }
 
 template <typename Config> static uptr addHeaderTag(uptr Ptr) {
   if (allocatorSupportsMemoryTagging<Config>())
@@ -49,8 +55,7 @@ template <typename Config> static uptr addHeaderTag(uptr Ptr) {
 }
 
 template <typename Config> static Header *getHeader(uptr Ptr) {
-  return reinterpret_cast<Header *>(addHeaderTag<Config>(Ptr) -
-                                    getHeaderSize());
+  return reinterpret_cast<Header *>(addHeaderTag<Config>(Ptr)) - 1;
 }
 
 template <typename Config> static Header *getHeader(const void *Ptr) {
