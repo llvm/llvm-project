@@ -865,6 +865,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::FDIV,  MVT::v4f32, 14 }, // Nehalem from http://www.agner.org/
     { ISD::FDIV,  MVT::f64,   22 }, // Nehalem from http://www.agner.org/
     { ISD::FDIV,  MVT::v2f64, 22 }, // Nehalem from http://www.agner.org/
+
+    { ISD::MUL,   MVT::v2i64,  6 }  // 3*pmuludq/3*shift/2*add
   };
 
   if (ST->hasSSE42())
