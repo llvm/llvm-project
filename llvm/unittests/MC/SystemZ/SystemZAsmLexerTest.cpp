@@ -62,6 +62,7 @@ protected:
   std::unique_ptr<MCRegisterInfo> MRI;
   std::unique_ptr<MockedUpMCAsmInfo> MUPMAI;
   std::unique_ptr<const MCInstrInfo> MII;
+  std::unique_ptr<MCObjectFileInfo> MOFI;
   std::unique_ptr<MCStreamer> Str;
   std::unique_ptr<MCAsmParser> Parser;
   std::unique_ptr<MCContext> Ctx;
@@ -74,7 +75,6 @@ protected:
   const Target *TheTarget;
 
   const MCTargetOptions MCOptions;
-  MCObjectFileInfo MOFI;
 
   SystemZAsmLexerTest() {
     // We will use the SystemZ triple, because of missing
@@ -112,9 +112,11 @@ protected:
     SrcMgr.AddNewSourceBuffer(std::move(Buffer), SMLoc());
     EXPECT_EQ(Buffer, nullptr);
 
-    Ctx.reset(new MCContext(Triple, MUPMAI.get(), MRI.get(), &MOFI, STI.get(),
-                            &SrcMgr, &MCOptions));
-    MOFI.initMCObjectFileInfo(*Ctx, /*PIC=*/false, /*LargeCodeModel=*/false);
+    Ctx.reset(new MCContext(Triple, MUPMAI.get(), MRI.get(), STI.get(), &SrcMgr,
+                            &MCOptions));
+    MOFI.reset(TheTarget->createMCObjectFileInfo(*Ctx, /*PIC=*/false,
+                                                 /*LargeCodeModel=*/false));
+    Ctx->setObjectFileInfo(MOFI.get());
 
     Str.reset(TheTarget->createNullStreamer(*Ctx));
 

@@ -99,10 +99,11 @@ initializeRecordStreamer(const Module &M,
   if (!MCII)
     return;
 
-  MCObjectFileInfo MOFI;
-  MCContext MCCtx(TT, MAI.get(), MRI.get(), &MOFI, STI.get());
-  MOFI.initMCObjectFileInfo(MCCtx, /*PIC=*/false);
-  MOFI.setSDKVersion(M.getSDKVersion());
+  MCContext MCCtx(TT, MAI.get(), MRI.get(), STI.get());
+  std::unique_ptr<MCObjectFileInfo> MOFI(
+      T->createMCObjectFileInfo(MCCtx, /*PIC=*/false));
+  MOFI->setSDKVersion(M.getSDKVersion());
+  MCCtx.setObjectFileInfo(MOFI.get());
   RecordStreamer Streamer(MCCtx, M);
   T->createNullTargetStreamer(Streamer);
 

@@ -464,9 +464,10 @@ llvm::Error dwarfgen::Generator::init(Triple TheTriple, uint16_t V) {
     return make_error<StringError>("no target machine for target " + TripleName,
                                    inconvertibleErrorCode());
 
+  MC.reset(new MCContext(TheTriple, MAI.get(), MRI.get(), MSTI.get()));
   TLOF = TM->getObjFileLowering();
-  MC.reset(new MCContext(TheTriple, MAI.get(), MRI.get(), TLOF, MSTI.get()));
   TLOF->Initialize(*MC, *TM);
+  MC->setObjectFileInfo(TLOF);
 
   MCE = TheTarget->createMCCodeEmitter(*MII, *MRI, *MC);
   if (!MCE)
