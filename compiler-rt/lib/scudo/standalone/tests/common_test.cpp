@@ -1,4 +1,4 @@
-//===-- common_test.cpp ---------------------------------------*- C++ -*-===//
+//===-- common_test.cpp -----------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,6 +16,8 @@
 namespace scudo {
 
 static uptr getResidentMemorySize() {
+  if (!SCUDO_LINUX)
+    UNREACHABLE("Not implemented!");
   uptr Size;
   uptr Resident;
   std::ifstream IFS("/proc/self/statm");
@@ -32,7 +34,7 @@ TEST(ScudoCommonTest, SKIP_ON_FUCHSIA(ResidentMemorySize)) {
   const uptr Size = 1ull << 30;
   const uptr Threshold = Size >> 3;
 
-  MapPlatformData Data;
+  MapPlatformData Data = {};
   uptr *P = reinterpret_cast<uptr *>(
       map(nullptr, Size, "ResidentMemorySize", 0, &Data));
   const uptr N = Size / sizeof(*P);
@@ -47,8 +49,7 @@ TEST(ScudoCommonTest, SKIP_ON_FUCHSIA(ResidentMemorySize)) {
   releasePagesToOS((uptr)P, 0, Size, &Data);
   EXPECT_EQ(std::count(P, P + N, 0), N);
   // FIXME: does not work with QEMU-user.
-  // EXPECT_LT(getResidentMemorySize() - OnStart, Threshold) << OnStart << " "
-  // <<  getResidentMemorySize();
+  // EXPECT_LT(getResidentMemorySize() - OnStart, Threshold);
 
   memset(P, 1, Size);
   EXPECT_EQ(std::count(P, P + N, 0), 0);
