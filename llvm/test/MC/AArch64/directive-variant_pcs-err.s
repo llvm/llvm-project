@@ -1,17 +1,11 @@
 // RUN: not llvm-mc -triple aarch64-unknown-none-eabi -filetype asm -o - %s 2>&1 | FileCheck %s
 
+// CHECK:      [[#@LINE+1]]:13: error: expected symbol name
 .variant_pcs
-// CHECK: error: expected symbol name
-// CHECK-NEXT:   .variant_pcs
-// CHECK-NEXT:               ^
 
+// CHECK:      [[#@LINE+1]]:14: error: unknown symbol
 .variant_pcs foo
-// CHECK: error: unknown symbol in '.variant_pcs' directive
-// CHECK-NEXT:   .variant_pcs foo
-// CHECK-NEXT:                ^
 
 .global foo
+// CHECK:      [[#@LINE+1]]:18: error: expected newline
 .variant_pcs foo bar
-// CHECK: error: unexpected token in '.variant_pcs' directive
-// CHECK-NEXT:   .variant_pcs foo bar
-// CHECK-NEXT:                    ^
