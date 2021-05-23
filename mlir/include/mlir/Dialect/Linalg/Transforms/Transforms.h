@@ -78,6 +78,12 @@ void populateLinalgBufferizePatterns(BufferizeTypeConverter &converter,
 /// tensors.
 void populateFoldUnitExtentDimsPatterns(RewritePatternSet &patterns);
 
+/// Patterns that are used to inline constant operands into linalg generic ops.
+void populateInlineConstantOperandsPatterns(RewritePatternSet &patterns);
+
+/// Pattern to convert TiledLoopOp to SCF loops.
+void populateTiledLoopToSCFPattern(RewritePatternSet &patterns);
+
 /// Options that control fusion of elementwise operations.
 struct LinalgElementwiseFusionOptions {
   /// Enable fusion of reshapes into the shape with elementwise operations. By

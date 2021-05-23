@@ -122,24 +122,28 @@ class GoogleTest(TestFormat):
         if litConfig.noExecute:
             return lit.Test.PASS, ''
 
+        header = f"Script:\n--\n{' '.join(cmd)}\n--\n"
+
         try:
             out, err, exitCode = lit.util.executeCommand(
                 cmd, env=test.config.environment,
                 timeout=litConfig.maxIndividualTestTime)
         except lit.util.ExecuteCommandTimeoutException:
             return (lit.Test.TIMEOUT,
-                    'Reached timeout of {} seconds'.format(
-                        litConfig.maxIndividualTestTime)
-                   )
+                    f'{header}Reached timeout of '
+                    f'{litConfig.maxIndividualTestTime} seconds')
 
         if exitCode:
-            return lit.Test.FAIL, out + err
+            return lit.Test.FAIL, header + out + err
+
+        if '[  SKIPPED ] 1 test,' in out:
+            return lit.Test.SKIPPED, ''
 
         passing_test_line = '[  PASSED  ] 1 test.'
         if passing_test_line not in out:
-            msg = ('Unable to find %r in gtest output:\n\n%s%s' %
-                   (passing_test_line, out, err))
-            return lit.Test.UNRESOLVED, msg
+            return (lit.Test.UNRESOLVED,
+                    f'{header}Unable to find {passing_test_line} '
+                    f'in gtest output:\n\n{out}{err}')
 
         return lit.Test.PASS,''
 

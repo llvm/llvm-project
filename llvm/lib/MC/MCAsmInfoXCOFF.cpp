@@ -40,6 +40,7 @@ MCAsmInfoXCOFF::MCAsmInfoXCOFF() {
   AsciiDirective = nullptr; // not supported
   AscizDirective = nullptr; // not supported
   ByteListDirective = "\t.byte\t";
+  PlainStringDirective = "\t.string\t";
   CharacterLiteralSyntax = ACLS_SingleQuotePrefix;
 
   // Use .vbyte for data definition to avoid directives that apply an implicit

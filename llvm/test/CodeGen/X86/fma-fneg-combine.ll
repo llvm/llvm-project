@@ -29,10 +29,17 @@ define <16 x float> @test1(<16 x float> %a, <16 x float> %b, <16 x float> %c)  {
 }
 
 define <16 x float> @test2(<16 x float> %a, <16 x float> %b, <16 x float> %c) {
-; CHECK-LABEL: test2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfnmsub213ps {{.*#+}} zmm0 = -(zmm1 * zmm0) - zmm2
-; CHECK-NEXT:    retq
+; SKX-LABEL: test2:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vfmadd213ps {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
+; SKX-NEXT:    vxorps {{.*}}(%rip){1to16}, %zmm0, %zmm0
+; SKX-NEXT:    retq
+;
+; KNL-LABEL: test2:
+; KNL:       # %bb.0:
+; KNL-NEXT:    vfmadd213ps {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
+; KNL-NEXT:    vpxord {{.*}}(%rip){1to16}, %zmm0, %zmm0
+; KNL-NEXT:    retq
   %fma = call <16 x float> @llvm.fma.v16f32(<16 x float> %a, <16 x float> %b, <16 x float> %c)
   %neg = fneg <16 x float> %fma
   ret <16 x float> %neg
@@ -49,10 +56,17 @@ define <16 x float> @test2_nsz(<16 x float> %a, <16 x float> %b, <16 x float> %c
 }
 
 define <16 x float> @test3(<16 x float> %a, <16 x float> %b, <16 x float> %c)  {
-; CHECK-LABEL: test3:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmsub213ps {{.*#+}} zmm0 = (zmm1 * zmm0) - zmm2
-; CHECK-NEXT:    retq
+; SKX-LABEL: test3:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vfnmadd213ps {{.*#+}} zmm0 = -(zmm1 * zmm0) + zmm2
+; SKX-NEXT:    vxorps {{.*}}(%rip){1to16}, %zmm0, %zmm0
+; SKX-NEXT:    retq
+;
+; KNL-LABEL: test3:
+; KNL:       # %bb.0:
+; KNL-NEXT:    vfnmadd213ps {{.*#+}} zmm0 = -(zmm1 * zmm0) + zmm2
+; KNL-NEXT:    vpxord {{.*}}(%rip){1to16}, %zmm0, %zmm0
+; KNL-NEXT:    retq
   %t0 = fneg <16 x float> %b
   %t1 = call <16 x float> @llvm.fma.v16f32(<16 x float> %a, <16 x float> %t0, <16 x float> %c)
   %sub.i = fneg <16 x float> %t1
@@ -71,10 +85,17 @@ define <16 x float> @test3_nsz(<16 x float> %a, <16 x float> %b, <16 x float> %c
 }
 
 define <16 x float> @test4(<16 x float> %a, <16 x float> %b, <16 x float> %c) {
-; CHECK-LABEL: test4:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd213ps {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
-; CHECK-NEXT:    retq
+; SKX-LABEL: test4:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vfnmsub213ps {{.*#+}} zmm0 = -(zmm1 * zmm0) - zmm2
+; SKX-NEXT:    vxorps {{.*}}(%rip){1to16}, %zmm0, %zmm0
+; SKX-NEXT:    retq
+;
+; KNL-LABEL: test4:
+; KNL:       # %bb.0:
+; KNL-NEXT:    vfnmsub213ps {{.*#+}} zmm0 = -(zmm1 * zmm0) - zmm2
+; KNL-NEXT:    vpxord {{.*}}(%rip){1to16}, %zmm0, %zmm0
+; KNL-NEXT:    retq
   %t0 = fneg <16 x float> %b
   %t1 = fneg <16 x float> %c
   %t2 = call <16 x float> @llvm.fma.v16f32(<16 x float> %a, <16 x float> %t0, <16 x float> %t1)
@@ -106,10 +127,17 @@ entry:
 }
 
 define <16 x float> @test6(<16 x float> %a, <16 x float> %b, <16 x float> %c) {
-; CHECK-LABEL: test6:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd213ps {ru-sae}, %zmm2, %zmm1, %zmm0
-; CHECK-NEXT:    retq
+; SKX-LABEL: test6:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vfnmsub213ps {ru-sae}, %zmm2, %zmm1, %zmm0
+; SKX-NEXT:    vxorps {{.*}}(%rip){1to16}, %zmm0, %zmm0
+; SKX-NEXT:    retq
+;
+; KNL-LABEL: test6:
+; KNL:       # %bb.0:
+; KNL-NEXT:    vfnmsub213ps {ru-sae}, %zmm2, %zmm1, %zmm0
+; KNL-NEXT:    vpxord {{.*}}(%rip){1to16}, %zmm0, %zmm0
+; KNL-NEXT:    retq
   %t0 = fneg <16 x float> %b
   %t1 = fneg <16 x float> %c
   %t2 = call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %a, <16 x float> %t0, <16 x float> %t1, i32 10)
@@ -130,10 +158,18 @@ define <16 x float> @test6_nsz(<16 x float> %a, <16 x float> %b, <16 x float> %c
 }
 
 define <8 x float> @test7(<8 x float> %a, <8 x float> %b, <8 x float> %c) {
-; CHECK-LABEL: test7:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2
-; CHECK-NEXT:    retq
+; SKX-LABEL: test7:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm2
+; SKX-NEXT:    vxorps {{.*}}(%rip){1to8}, %ymm0, %ymm0
+; SKX-NEXT:    retq
+;
+; KNL-LABEL: test7:
+; KNL:       # %bb.0:
+; KNL-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm2
+; KNL-NEXT:    vbroadcastss {{.*#+}} ymm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; KNL-NEXT:    vxorps %ymm1, %ymm0, %ymm0
+; KNL-NEXT:    retq
   %t0 = fneg <8 x float> %c
   %t1 = call <8 x float> @llvm.fma.v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %t0)
   %sub.i = fsub <8 x float> <float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0>, %t1
@@ -163,10 +199,17 @@ entry:
 }
 
 define <8 x double> @test9(<8 x double> %a, <8 x double> %b, <8 x double> %c) {
-; CHECK-LABEL: test9:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfnmsub213pd {{.*#+}} zmm0 = -(zmm1 * zmm0) - zmm2
-; CHECK-NEXT:    retq
+; SKX-LABEL: test9:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vfmadd213pd {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
+; SKX-NEXT:    vxorpd {{.*}}(%rip){1to8}, %zmm0, %zmm0
+; SKX-NEXT:    retq
+;
+; KNL-LABEL: test9:
+; KNL:       # %bb.0:
+; KNL-NEXT:    vfmadd213pd {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
+; KNL-NEXT:    vpxorq {{.*}}(%rip){1to8}, %zmm0, %zmm0
+; KNL-NEXT:    retq
   %t0 = tail call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a, <8 x double> %b, <8 x double> %c, i32 4)
   %sub.i = fneg <8 x double> %t0
   ret <8 x double> %sub.i

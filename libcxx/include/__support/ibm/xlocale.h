@@ -10,9 +10,9 @@
 #ifndef _LIBCPP_SUPPORT_IBM_XLOCALE_H
 #define _LIBCPP_SUPPORT_IBM_XLOCALE_H
 
-#include <stdarg.h>
 #include <__support/ibm/locale_mgmt_aix.h>
 #include <__support/ibm/locale_mgmt_zos.h>
+#include <stdarg.h>
 
 #include "cstdlib"
 

@@ -31,12 +31,16 @@ string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_LIBS_DIR ${LLVM_LIBRA
 string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_TOOLS_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
 
 # Create a custom target to track test dependencies.
+add_custom_target(lldb-test-depends)
+set_target_properties(lldb-test-depends PROPERTIES FOLDER "lldb misc")
+
+# Create an alias for the legacy name of lldb-test-depends
 add_custom_target(lldb-test-deps)
-set_target_properties(lldb-test-deps PROPERTIES FOLDER "lldb misc")
+add_dependencies(lldb-test-deps lldb-test-depends)
 
 function(add_lldb_test_dependency)
   foreach(dependency ${ARGN})
-    add_dependencies(lldb-test-deps ${dependency})
+    add_dependencies(lldb-test-depends ${dependency})
   endforeach()
 endfunction(add_lldb_test_dependency)
 
@@ -201,7 +205,7 @@ add_lit_testsuite(check-lldb-reproducers-capture
   ${CMAKE_CURRENT_BINARY_DIR}/Shell
   PARAMS "lldb-run-with-repro=capture"
   EXCLUDE_FROM_CHECK_ALL
-  DEPENDS lldb-test-deps)
+  DEPENDS lldb-test-depends)
 
 # Add a lit test suite that runs the API & shell test by replaying a
 # reproducer.
@@ -211,7 +215,7 @@ add_lit_testsuite(check-lldb-reproducers
   ${CMAKE_CURRENT_BINARY_DIR}/Shell
   PARAMS "lldb-run-with-repro=replay"
   EXCLUDE_FROM_CHECK_ALL
-  DEPENDS lldb-test-deps)
+  DEPENDS lldb-test-depends)
 add_dependencies(check-lldb-reproducers check-lldb-reproducers-capture)
 
 if(LLDB_BUILT_STANDALONE)

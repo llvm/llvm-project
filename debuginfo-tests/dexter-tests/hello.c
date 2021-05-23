@@ -10,4 +10,4 @@ int main() {
   __debugbreak(); // DexLabel('stop')
 }
 
-// DexExpectWatchValue('x', 42, on_line='stop')
+// DexExpectWatchValue('x', 42, on_line=ref('stop'))

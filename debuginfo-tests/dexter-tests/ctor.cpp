@@ -24,7 +24,7 @@ DexExpectProgramState({
 	'frames': [
 		{
 			'location': {
-				'lineno': 'ctor_start'
+				'lineno': ref('ctor_start')
 			},
 			'watches': {
 				'*this': {'is_irretrievable': False}

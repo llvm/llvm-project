@@ -415,6 +415,22 @@ let isPseudo = 1, isCall = 1, isCodeGenOnly = 1,
   }
 }
 
+let isPseudo = 1, isCall = 1, isCodeGenOnly = 1,
+    Uses = [RSP, SSP],
+    SchedRW = [WriteJump] in {
+  def CALL64m_RVMARKER :
+     PseudoI<(outs), (ins i32imm:$sel, i64mem:$dst), [(X86call_rvmarker timm:$sel, (loadi64 addr:$dst))]>,
+             Requires<[In64BitMode]>;
+
+  def CALL64r_RVMARKER :
+    PseudoI<(outs), (ins i32imm:$sel, GR64:$dst), [(X86call_rvmarker timm:$sel, GR64:$dst)]>,
+            Requires<[In64BitMode]>;
+
+  def CALL64pcrel32_RVMARKER :
+    PseudoI<(outs), (ins i32imm:$sel, i64i32imm_brtarget:$dst), []>,
+            Requires<[In64BitMode]>;
+}
+
 // Conditional tail calls are similar to the above, but they are branches
 // rather than barriers, and they use EFLAGS.
 let isCall = 1, isTerminator = 1, isReturn = 1, isBranch = 1,

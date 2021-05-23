@@ -72,6 +72,6 @@ int main() {
   return 0;          // DexLabel('s4')
 }
 
-// DexExpectWatchValue('x', '5',  from_line='s1', to_line='s4')
-// DexExpectWatchValue('y', '5',  from_line='s2', to_line='s4')
-// DexExpectWatchValue('z', '5',  from_line='s3', to_line='s4')
+// DexExpectWatchValue('x', '5',  from_line=ref('s1'), to_line=ref('s4'))
+// DexExpectWatchValue('y', '5',  from_line=ref('s2'), to_line=ref('s4'))
+// DexExpectWatchValue('z', '5',  from_line=ref('s3'), to_line=ref('s4'))

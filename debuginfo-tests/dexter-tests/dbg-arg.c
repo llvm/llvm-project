@@ -48,7 +48,7 @@ int main() {
 DexExpectProgramState({
   'frames': [
     {
-      'location': { 'lineno': 'l_assign' },
+      'location': { 'lineno': ref('l_assign') },
       'watches': {
         '*mutex': { 'is_irretrievable': False }
       }

@@ -1286,7 +1286,8 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
                                            UseMaskForCond, UseMaskForGaps);
 }
 
-int AArch64TTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) {
+InstructionCost
+AArch64TTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) {
   InstructionCost Cost = 0;
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   for (auto *I : Tys) {
@@ -1297,7 +1298,7 @@ int AArch64TTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) {
       Cost += getMemoryOpCost(Instruction::Store, I, Align(128), 0, CostKind) +
               getMemoryOpCost(Instruction::Load, I, Align(128), 0, CostKind);
   }
-  return *Cost.getValue();
+  return Cost;
 }
 
 unsigned AArch64TTIImpl::getMaxInterleaveFactor(unsigned VF) {

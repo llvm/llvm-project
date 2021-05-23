@@ -16,7 +16,6 @@
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
@@ -26,8 +25,6 @@
 #include "llvm/Support/CommandLine.h"
 
 using namespace mlir;
-using namespace mlir::edsc;
-using namespace mlir::edsc::intrinsics;
 using namespace mlir::linalg;
 using namespace mlir::scf;
 
@@ -316,7 +313,6 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(
     OpBuilder &b, LinalgOp op, const LinalgTilingOptions &options) {
   OpBuilder::InsertionGuard g(b);
   b.setInsertionPoint(op);
-  ScopedContext scope(b, op.getLoc());
 
   if (!options.tileSizeComputationFunction)
     return llvm::None;

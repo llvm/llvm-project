@@ -50,11 +50,6 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "lower-matrix-intrinsics"
 
-static cl::opt<bool> EnableShapePropagation(
-    "matrix-propagate-shape", cl::init(true), cl::Hidden,
-    cl::desc("Enable/disable shape propagation from matrix intrinsics to other "
-             "instructions."));
-
 static cl::opt<bool>
     FuseMatrix("fuse-matrix", cl::init(true), cl::Hidden,
                cl::desc("Enable/disable fusing matrix instructions."));
@@ -660,33 +655,32 @@ public:
   }
 
   bool Visit() {
-    if (EnableShapePropagation) {
-      SmallVector<Instruction *, 32> WorkList;
+    SmallVector<Instruction *, 32> WorkList;
 
-      // Initially only the shape of matrix intrinsics is known.
-      // Initialize the work list with ops carrying shape information.
-      for (BasicBlock &BB : Func)
-        for (Instruction &Inst : BB) {
-          IntrinsicInst *II = dyn_cast<IntrinsicInst>(&Inst);
-          if (!II)
-            continue;
+    // Initially only the shape of matrix intrinsics is known.
+    // Initialize the work list with ops carrying shape information.
+    for (BasicBlock &BB : Func)
+      for (Instruction &Inst : BB) {
+        IntrinsicInst *II = dyn_cast<IntrinsicInst>(&Inst);
+        if (!II)
+          continue;
 
-          switch (II->getIntrinsicID()) {
-          case Intrinsic::matrix_multiply:
-          case Intrinsic::matrix_transpose:
-          case Intrinsic::matrix_column_major_load:
-          case Intrinsic::matrix_column_major_store:
-            WorkList.push_back(&Inst);
-            break;
-          default:
-            break;
-          }
+        switch (II->getIntrinsicID()) {
+        case Intrinsic::matrix_multiply:
+        case Intrinsic::matrix_transpose:
+        case Intrinsic::matrix_column_major_load:
+        case Intrinsic::matrix_column_major_store:
+          WorkList.push_back(&Inst);
+          break;
+        default:
+          break;
         }
-      // Propagate shapes until nothing changes any longer.
-      while (!WorkList.empty()) {
-        WorkList = propagateShapeForward(WorkList);
-        WorkList = propagateShapeBackward(WorkList);
       }
+
+    // Propagate shapes until nothing changes any longer.
+    while (!WorkList.empty()) {
+      WorkList = propagateShapeForward(WorkList);
+      WorkList = propagateShapeBackward(WorkList);
     }
 
     bool Changed = false;

@@ -218,3 +218,7 @@ bool UnrolledInstAnalyzer::visitPHINode(PHINode &PN) {
   // The loop induction PHI nodes are definitionally free.
   return PN.getParent() == L->getHeader();
 }
+
+bool UnrolledInstAnalyzer::visitInstruction(Instruction &I) {
+  return simplifyInstWithSCEV(&I);
+}

@@ -20,9 +20,9 @@ int test1(int test1_a, int test1_b) {
   return test1_result; // DexExpectStepOrder(2)
   // DexLabel('test1_end')
 }
-// DexExpectWatchValue('test1_a', 3, from_line='test1_start', to_line='test1_end')
-// DexExpectWatchValue('test1_b', 4, from_line='test1_start', to_line='test1_end')
-// DexExpectWatchValue('test1_result', 0, 7, from_line='test1_start', to_line='test1_end')
+// DexExpectWatchValue('test1_a', 3, from_line=ref('test1_start'), to_line=ref('test1_end'))
+// DexExpectWatchValue('test1_b', 4, from_line=ref('test1_start'), to_line=ref('test1_end'))
+// DexExpectWatchValue('test1_result', 0, 7, from_line=ref('test1_start'), to_line=ref('test1_end'))
 
 __attribute__((optnone))
 int test2(int test2_a, int test2_b) {
@@ -31,9 +31,9 @@ int test2(int test2_a, int test2_b) {
   return test2_a << 2;   // DexExpectStepOrder(4)
   // DexLabel('test2_end')
 }
-// DexExpectWatchValue('test2_a', 1, from_line='test2_start', to_line='test2_end')
-// DexExpectWatchValue('test2_b', 2, from_line='test2_start', to_line='test2_end')
-// DexExpectWatchValue('test2_result', 4, from_line='test2_start', to_line='test2_end')
+// DexExpectWatchValue('test2_a', 1, from_line=ref('test2_start'), to_line=ref('test2_end'))
+// DexExpectWatchValue('test2_b', 2, from_line=ref('test2_start'), to_line=ref('test2_end'))
+// DexExpectWatchValue('test2_result', 4, from_line=ref('test2_start'), to_line=ref('test2_end'))
 
 __attribute__((optnone))
 int test3(int test3_a, int test3_b) {
@@ -47,10 +47,10 @@ int test3(int test3_a, int test3_b) {
   return test3_temp1; // DexExpectStepOrder(8)
   // DexLabel('test3_end')
 }
-// DexExpectWatchValue('test3_a', 5, from_line='test3_start', to_line='test3_end')
-// DexExpectWatchValue('test3_b', 6, from_line='test3_start', to_line='test3_end')
-// DexExpectWatchValue('test3_temp1', 0, 10, from_line='test3_start', to_line='test3_end')
-// DexExpectWatchValue('test3_temp2', 0, 11, from_line='test3_start', to_line='test3_end')
+// DexExpectWatchValue('test3_a', 5, from_line=ref('test3_start'), to_line=ref('test3_end'))
+// DexExpectWatchValue('test3_b', 6, from_line=ref('test3_start'), to_line=ref('test3_end'))
+// DexExpectWatchValue('test3_temp1', 0, 10, from_line=ref('test3_start'), to_line=ref('test3_end'))
+// DexExpectWatchValue('test3_temp2', 0, 11, from_line=ref('test3_start'), to_line=ref('test3_end'))
 
 unsigned num_iterations = 4;
 
@@ -73,10 +73,10 @@ int test4(int test4_a, int test4_b) {
   return (val1 > val2) ? val2 : val1; // DexExpectStepOrder(20)
   // DexLabel('test4_end')
 }
-// DexExpectWatchValue('test4_a', 1, from_line='test4_start', to_line='test4_end')
-// DexExpectWatchValue('test4_b', 9, from_line='test4_start', to_line='test4_end')
-// DexExpectWatchValue('val1', 0, 9, 8, 7, 6, 5, from_line='test4_start', to_line='test4_end')
-// DexExpectWatchValue('val2', 0, 9, 18, 9, 10, 5, 7, 10, 5, 9, from_line='test4_start', to_line='test4_end')
+// DexExpectWatchValue('test4_a', 1, from_line=ref('test4_start'), to_line=ref('test4_end'))
+// DexExpectWatchValue('test4_b', 9, from_line=ref('test4_start'), to_line=ref('test4_end'))
+// DexExpectWatchValue('val1', 0, 9, 8, 7, 6, 5, from_line=ref('test4_start'), to_line=ref('test4_end'))
+// DexExpectWatchValue('val2', 0, 9, 18, 9, 10, 5, 7, 10, 5, 9, from_line=ref('test4_start'), to_line=ref('test4_end'))
 
 __attribute__((optnone))
 int test5(int test5_val) {
@@ -87,8 +87,8 @@ int test5(int test5_val) {
   return c ? test5_val : test5_val; // DexExpectStepOrder(24)
   // DexLabel('test5_end')
 }
-// DexExpectWatchValue('test5_val', 7, from_line='test5_start', to_line='test5_end')
-// DexExpectWatchValue('c', 1, 5, from_line='test5_start', to_line='test5_end')
+// DexExpectWatchValue('test5_val', 7, from_line=ref('test5_start'), to_line=ref('test5_end'))
+// DexExpectWatchValue('c', 1, 5, from_line=ref('test5_start'), to_line=ref('test5_end'))
 
 int main() {
   int main_result = 0;
@@ -101,4 +101,4 @@ int main() {
   return main_result;
   // DexLabel('main_end')
 }
-// DexExpectWatchValue('main_result', 0, 7, 11, 21, 26, 33, from_line='main_start', to_line='main_end')
+// DexExpectWatchValue('main_result', 0, 7, 11, 21, 26, 33, from_line=ref('main_start'), to_line=ref('main_end'))

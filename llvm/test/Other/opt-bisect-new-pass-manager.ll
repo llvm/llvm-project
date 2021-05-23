@@ -94,6 +94,10 @@
 ; CHECK-LIMIT-MULTI-PASS: BISECT: NOT running pass (8) PostOrderFunctionAttrsPass on (f4)
 ; CHECK-LIMIT-MULTI-PASS: BISECT: NOT running pass (9) EarlyCSEPass on f4
 
+; Make sure we don't skip writing the output to stdout.
+; RUN: opt %s -opt-bisect-limit=0 -passes=early-cse | opt -S | FileCheck %s -check-prefix=CHECK-OUTPUT
+; RUN: opt %s -opt-bisect-limit=0 -passes=early-cse -S | FileCheck %s -check-prefix=CHECK-OUTPUT
+; CHECK-OUTPUT: define void @f1
 
 declare i32 @g()
 
