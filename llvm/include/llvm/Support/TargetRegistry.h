@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
@@ -130,6 +131,9 @@ public:
   using MCAsmInfoCtorFnTy = MCAsmInfo *(*)(const MCRegisterInfo &MRI,
                                            const Triple &TT,
                                            const MCTargetOptions &Options);
+  using MCObjectFileInfoCtorFnTy = MCObjectFileInfo *(*)(MCContext &Ctx,
+                                                         bool PIC,
+                                                         bool LargeCodeModel);
   using MCInstrInfoCtorFnTy = MCInstrInfo *(*)();
   using MCInstrAnalysisCtorFnTy = MCInstrAnalysis *(*)(const MCInstrInfo *Info);
   using MCRegInfoCtorFnTy = MCRegisterInfo *(*)(const Triple &TT);
@@ -226,6 +230,9 @@ private:
   /// MCAsmInfoCtorFn - Constructor function for this target's MCAsmInfo, if
   /// registered.
   MCAsmInfoCtorFnTy MCAsmInfoCtorFn;
+
+  /// Constructor function for this target's MCObjectFileInfo, if registered.
+  MCObjectFileInfoCtorFnTy MCObjectFileInfoCtorFn;
 
   /// MCInstrInfoCtorFn - Constructor function for this target's MCInstrInfo,
   /// if registered.
@@ -348,6 +355,19 @@ public:
     if (!MCAsmInfoCtorFn)
       return nullptr;
     return MCAsmInfoCtorFn(MRI, Triple(TheTriple), Options);
+  }
+
+  /// Create a MCObjectFileInfo implementation for the specified target
+  /// triple.
+  ///
+  MCObjectFileInfo *createMCObjectFileInfo(MCContext &Ctx, bool PIC,
+                                           bool LargeCodeModel = false) const {
+    if (!MCObjectFileInfoCtorFn) {
+      MCObjectFileInfo *MOFI = new MCObjectFileInfo();
+      MOFI->initMCObjectFileInfo(Ctx, PIC, LargeCodeModel);
+      return MOFI;
+    }
+    return MCObjectFileInfoCtorFn(Ctx, PIC, LargeCodeModel);
   }
 
   /// createMCInstrInfo - Create a MCInstrInfo implementation.
@@ -724,6 +744,19 @@ struct TargetRegistry {
     T.MCAsmInfoCtorFn = Fn;
   }
 
+  /// Register a MCObjectFileInfo implementation for the given target.
+  ///
+  /// Clients are responsible for ensuring that registration doesn't occur
+  /// while another thread is attempting to access the registry. Typically
+  /// this is done by initializing all targets at program startup.
+  ///
+  /// @param T - The target being registered.
+  /// @param Fn - A function to construct a MCObjectFileInfo for the target.
+  static void RegisterMCObjectFileInfo(Target &T,
+                                       Target::MCObjectFileInfoCtorFnTy Fn) {
+    T.MCObjectFileInfoCtorFn = Fn;
+  }
+
   /// RegisterMCInstrInfo - Register a MCInstrInfo implementation for the
   /// given target.
   ///
@@ -988,6 +1021,39 @@ private:
 struct RegisterMCAsmInfoFn {
   RegisterMCAsmInfoFn(Target &T, Target::MCAsmInfoCtorFnTy Fn) {
     TargetRegistry::RegisterMCAsmInfo(T, Fn);
+  }
+};
+
+/// Helper template for registering a target object file info implementation.
+/// This invokes the static "Create" method on the class to actually do the
+/// construction.  Usage:
+///
+/// extern "C" void LLVMInitializeFooTarget() {
+///   extern Target TheFooTarget;
+///   RegisterMCObjectFileInfo<FooMCObjectFileInfo> X(TheFooTarget);
+/// }
+template <class MCObjectFileInfoImpl> struct RegisterMCObjectFileInfo {
+  RegisterMCObjectFileInfo(Target &T) {
+    TargetRegistry::RegisterMCObjectFileInfo(T, &Allocator);
+  }
+
+private:
+  static MCObjectFileInfo *Allocator(MCContext &Ctx, bool PIC,
+                                     bool LargeCodeModel = false) {
+    return new MCObjectFileInfoImpl(Ctx, PIC, LargeCodeModel);
+  }
+};
+
+/// Helper template for registering a target object file info implementation.
+/// This invokes the specified function to do the construction.  Usage:
+///
+/// extern "C" void LLVMInitializeFooTarget() {
+///   extern Target TheFooTarget;
+///   RegisterMCObjectFileInfoFn X(TheFooTarget, TheFunction);
+/// }
+struct RegisterMCObjectFileInfoFn {
+  RegisterMCObjectFileInfoFn(Target &T, Target::MCObjectFileInfoCtorFnTy Fn) {
+    TargetRegistry::RegisterMCObjectFileInfo(T, Fn);
   }
 };
 

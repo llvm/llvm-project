@@ -130,13 +130,13 @@ Expected<std::vector<BenchmarkCode>> readSnippets(const LLVMState &State,
 
   BenchmarkCode Result;
 
-  MCObjectFileInfo ObjectFileInfo;
   const TargetMachine &TM = State.getTargetMachine();
   MCContext Context(TM.getTargetTriple(), TM.getMCAsmInfo(),
-                    TM.getMCRegisterInfo(), &ObjectFileInfo,
-                    TM.getMCSubtargetInfo());
+                    TM.getMCRegisterInfo(), TM.getMCSubtargetInfo());
+  std::unique_ptr<MCObjectFileInfo> ObjectFileInfo(
+      TM.getTarget().createMCObjectFileInfo(Context, /*PIC=*/false));
+  Context.setObjectFileInfo(ObjectFileInfo.get());
   Context.initInlineSourceManager();
-  ObjectFileInfo.initMCObjectFileInfo(Context, /*PIC=*/false);
   BenchmarkCodeStreamer Streamer(&Context, TM.getMCRegisterInfo(), &Result);
 
   std::string Error;

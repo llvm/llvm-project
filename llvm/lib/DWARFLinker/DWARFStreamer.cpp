@@ -54,10 +54,9 @@ bool DwarfStreamer::init(Triple TheTriple) {
   if (!MSTI)
     return error("no subtarget info for target " + TripleName, Context), false;
 
-  MOFI.reset(new MCObjectFileInfo);
-  MC.reset(
-      new MCContext(TheTriple, MAI.get(), MRI.get(), MOFI.get(), MSTI.get()));
-  MOFI->initMCObjectFileInfo(*MC, /*PIC=*/false);
+  MC.reset(new MCContext(TheTriple, MAI.get(), MRI.get(), MSTI.get()));
+  MOFI.reset(TheTarget->createMCObjectFileInfo(*MC, /*PIC=*/false));
+  MC->setObjectFileInfo(MOFI.get());
 
   MAB = TheTarget->createMCAsmBackend(*MSTI, *MRI, MCOptions);
   if (!MAB)
