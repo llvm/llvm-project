@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Transforms/Scalar/LoopPassManager.h"
 
 namespace llvm {
 
@@ -97,7 +98,7 @@ LoopUnrollResult UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
                                   LoopInfo *LI, ScalarEvolution *SE,
                                   DominatorTree *DT, AssumptionCache *AC,
                                   const TargetTransformInfo *TTI,
-                                  OptimizationRemarkEmitter *ORE,
+                                  OptimizationRemarkEmitter *ORE, LPMUpdater *U,
                                   Loop **EpilogueLoop = nullptr);
 
 bool isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
