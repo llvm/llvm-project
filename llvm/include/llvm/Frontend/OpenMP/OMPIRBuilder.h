@@ -882,6 +882,167 @@ private:
   ///
   Value *getOMPCriticalRegionLock(StringRef CriticalName);
 
+  /// Callback type for Atomic Expression update
+  /// ex:
+  /// \code{.cpp}
+  /// unsigned x = 0;
+  /// #pragma omp atomic update
+  /// x = Expr(x_old);  //Expr() is any legal operation
+  /// \endcode
+  ///
+  /// \param XOld the value of the atomic memory address to use for update
+  /// \param IRB reference to the IRBuilder to use
+  ///
+  /// \returns Value to update X to.
+  using AtomicUpdateCallbackTy =
+      const function_ref<Value *(Value *XOld, IRBuilder<> &IRB)>;
+
+private:
+  enum AtomicKind { Read, Write, Update, Capture };
+
+  /// Determine whether to emit flush or not
+  ///
+  /// \param Loc    The insert and source location description.
+  /// \param AO     The required atomic ordering
+  /// \param AK     The OpenMP atomic operation kind used.
+  ///
+  /// \returns		wether a flush was emitted or not
+  bool checkAndEmitFlushAfterAtomic(const LocationDescription &Loc,
+                                    AtomicOrdering AO, AtomicKind AK);
+
+  /// Emit atomic update for constructs: X = X BinOp Expr ,or X = Expr BinOp X
+  /// For complex Operations: X = UpdateOp(X) => CmpExch X, old_X, UpdateOp(X)
+  /// Only Scalar data types.
+  ///
+  /// \param AllocIP	  Instruction to create AllocaInst before.
+  /// \param X			    The target atomic pointer to be updated
+  /// \param Expr		    The value to update X with.
+  /// \param AO			    Atomic ordering of the generated atomic
+  ///                   instructions.
+  /// \param RMWOp		  The binary operation used for update. If
+  ///                   operation is not supported by atomicRMW,
+  ///                   or belong to {FADD, FSUB, BAD_BINOP}.
+  ///                   Then a `cmpExch` based	atomic will be generated.
+  /// \param UpdateOp 	Code generator for complex expressions that cannot be
+  ///                   expressed through atomicrmw instruction.
+  /// \param VolatileX	     true if \a X volatile?
+  /// \param IsXLHSInRHSPart true if \a X is Left H.S. in Right H.S. part of
+  ///                        the update expression, false otherwise.
+  ///                        (e.g. true for X = X BinOp Expr)
+  ///
+  /// \returns A pair of the old value of X before the update, and the value
+  ///          used for the update.
+  std::pair<Value *, Value *> emitAtomicUpdate(Instruction *AllocIP, Value *X,
+                                               Value *Expr, AtomicOrdering AO,
+                                               AtomicRMWInst::BinOp RMWOp,
+                                               AtomicUpdateCallbackTy &UpdateOp,
+                                               bool VolatileX,
+                                               bool IsXLHSInRHSPart);
+
+  /// Emit the binary op. described by \p RMWOp, using \p Src1 and \p Src2 .
+  ///
+  /// \Return The instruction
+  Value *emitRMWOpAsInstruction(Value *Src1, Value *Src2,
+                                AtomicRMWInst::BinOp RMWOp);
+
+public:
+  /// a struct to pack relevant information while generating atomic Ops
+  struct AtomicOpValue {
+    Value *Var = nullptr;
+    bool IsSigned = false;
+    bool IsVolatile = false;
+  };
+
+  /// Emit atomic Read for : V = X --- Only Scalar data types.
+  ///
+  /// \param Loc    The insert and source location description.
+  /// \param X			The target pointer to be atomically read
+  /// \param V			Memory address where to store atomically read
+  /// 					    value
+  /// \param AO			Atomic ordering of the generated atomic
+  /// 					    instructions.
+  ///
+  /// \return Insertion point after generated atomic read IR.
+  InsertPointTy createAtomicRead(const LocationDescription &Loc,
+                                 AtomicOpValue &X, AtomicOpValue &V,
+                                 AtomicOrdering AO);
+
+  /// Emit atomic write for : X = Expr --- Only Scalar data types.
+  ///
+  /// \param Loc    The insert and source location description.
+  /// \param X			The target pointer to be atomically written to
+  /// \param Expr		The value to store.
+  /// \param AO			Atomic ordering of the generated atomic
+  ///               instructions.
+  ///
+  /// \return Insertion point after generated atomic Write IR.
+  InsertPointTy createAtomicWrite(const LocationDescription &Loc,
+                                  AtomicOpValue &X, Value *Expr,
+                                  AtomicOrdering AO);
+
+  /// Emit atomic update for constructs: X = X BinOp Expr ,or X = Expr BinOp X
+  /// For complex Operations: X = UpdateOp(X) => CmpExch X, old_X, UpdateOp(X)
+  /// Only Scalar data types.
+  ///
+  /// \param Loc      The insert and source location description.
+  /// \param AllocIP  Instruction to create AllocaInst before.
+  /// \param X        The target atomic pointer to be updated
+  /// \param Expr     The value to update X with.
+  /// \param AO       Atomic ordering of the generated atomic instructions.
+  /// \param RMWOp    The binary operation used for update. If operation
+  ///                 is	not supported by atomicRMW, or belong to
+  ///	                {FADD, FSUB, BAD_BINOP}. Then a `cmpExch` based
+  ///                 atomic will be generated.
+  /// \param UpdateOp 	Code generator for complex expressions that cannot be
+  ///                   expressed through atomicrmw instruction.
+  /// \param IsXLHSInRHSPart true if \a X is Left H.S. in Right H.S. part of
+  ///                        the update expression, false otherwise.
+  ///	                       (e.g. true for X = X BinOp Expr)
+  ///
+  /// \return Insertion point after generated atomic update IR.
+  InsertPointTy createAtomicUpdate(const LocationDescription &Loc,
+                                   Instruction *AllocIP, AtomicOpValue &X,
+                                   Value *Expr, AtomicOrdering AO,
+                                   AtomicRMWInst::BinOp RMWOp,
+                                   AtomicUpdateCallbackTy &UpdateOp,
+                                   bool IsXLHSInRHSPart);
+
+  /// Emit atomic update for constructs: --- Only Scalar data types
+  /// V = X; X = X BinOp Expr ,
+  /// X = X BinOp Expr; V = X,
+  /// V = X; X = Expr BinOp X,
+  /// X = Expr BinOp X; V = X,
+  /// V = X; X = UpdateOp(X),
+  /// X = UpdateOp(X); V = X,
+  ///
+  /// \param Loc        The insert and source location description.
+  /// \param AllocIP    Instruction to create AllocaInst before.
+  /// \param X          The target atomic pointer to be updated
+  /// \param V          Memory address where to store captured value
+  /// \param Expr       The value to update X with.
+  /// \param AO         Atomic ordering of the generated atomic instructions
+  /// \param RMWOp      The binary operation used for update. If
+  ///                   operation is not supported by atomicRMW, or belong to
+  ///	                  {FADD, FSUB, BAD_BINOP}. Then a cmpExch based
+  ///                   atomic will be generated.
+  /// \param UpdateOp   Code generator for complex expressions that cannot be
+  ///                   expressed through atomicrmw instruction.
+  /// \param UpdateExpr true if X is an in place update of the form
+  ///                   X = X BinOp Expr or X = Expr BinOp X
+  /// \param IsXLHSInRHSPart true if X is Left H.S. in Right H.S. part of the
+  ///                        update expression, false otherwise.
+  ///                        (e.g. true for X = X BinOp Expr)
+  /// \param IsPostfixUpdate true if original value of 'x' must be stored in
+  ///                        'v', not an updated one.
+  ///
+  /// \return Insertion point after generated atomic capture IR.
+  InsertPointTy
+  createAtomicCapture(const LocationDescription &Loc, Instruction *AllocIP,
+                      AtomicOpValue &X, AtomicOpValue &V, Value *Expr,
+                      AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
+                      AtomicUpdateCallbackTy &UpdateOp, bool UpdateExpr,
+                      bool IsPostfixUpdate, bool IsXLHSInRHSPart);
+
   /// Create the control flow structure of a canonical OpenMP loop.
   ///
   /// The emitted loop will be disconnected, i.e. no edge to the loop's
