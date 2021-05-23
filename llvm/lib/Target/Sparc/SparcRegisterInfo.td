@@ -106,6 +106,8 @@ def ASR31 : SparcCtrlReg<31, "ASR31">;
 def PSR : SparcCtrlReg<0, "PSR">;
 def WIM : SparcCtrlReg<0, "WIM">;
 def TBR : SparcCtrlReg<0, "TBR">;
+// PC on the other hand is only available for SparcV9.
+def PC : SparcCtrlReg<5, "PC">;
 
 def TPC : SparcCtrlReg<0, "TPC">;
 def TNPC : SparcCtrlReg<1, "TNPC">;
