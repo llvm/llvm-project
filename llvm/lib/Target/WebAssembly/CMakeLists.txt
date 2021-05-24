@@ -38,6 +38,7 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyLowerGlobalDtors.cpp
   WebAssemblyMachineFunctionInfo.cpp
   WebAssemblyMCInstLower.cpp
+  WebAssemblyNullifyDebugValueLists.cpp
   WebAssemblyOptimizeLiveIntervals.cpp
   WebAssemblyOptimizeReturned.cpp
   WebAssemblyPeephole.cpp

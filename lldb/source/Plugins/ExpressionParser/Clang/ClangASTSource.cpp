@@ -850,8 +850,8 @@ void ClangASTSource::FindDeclInModules(NameSearchContext &context,
                                        ConstString name) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-  ClangModulesDeclVendor *modules_decl_vendor =
-      m_target->GetClangModulesDeclVendor();
+  std::shared_ptr<ClangModulesDeclVendor> modules_decl_vendor =
+      GetClangModulesDeclVendor();
   if (!modules_decl_vendor)
     return;
 
@@ -1143,8 +1143,8 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
     // Check the modules only if the debug information didn't have a complete
     // interface.
 
-    if (ClangModulesDeclVendor *modules_decl_vendor =
-            m_target->GetClangModulesDeclVendor()) {
+    if (std::shared_ptr<ClangModulesDeclVendor> modules_decl_vendor =
+            GetClangModulesDeclVendor()) {
       ConstString interface_name(interface_decl->getNameAsString().c_str());
       bool append = false;
       uint32_t max_matches = 1;
@@ -1313,8 +1313,8 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
     // Check the modules only if the debug information didn't have a complete
     // interface.
 
-    ClangModulesDeclVendor *modules_decl_vendor =
-        m_target->GetClangModulesDeclVendor();
+    std::shared_ptr<ClangModulesDeclVendor> modules_decl_vendor =
+        GetClangModulesDeclVendor();
 
     if (!modules_decl_vendor)
       break;
@@ -1749,4 +1749,11 @@ CompilerType ClangASTSource::GuardedCopyType(const CompilerType &src_type) {
     return CompilerType();
 
   return m_clang_ast_context->GetType(copied_qual_type);
+}
+
+std::shared_ptr<ClangModulesDeclVendor>
+ClangASTSource::GetClangModulesDeclVendor() {
+  auto persistent_vars = llvm::cast<ClangPersistentVariables>(
+      m_target->GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeC));
+  return persistent_vars->GetClangModulesDeclVendor();
 }

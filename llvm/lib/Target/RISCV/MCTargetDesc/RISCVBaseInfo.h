@@ -86,7 +86,7 @@ enum VConstraintType {
   VMConstraint = 0b100,
 };
 
-enum VLMUL {
+enum VLMUL : uint8_t {
   LMUL_1 = 0,
   LMUL_2,
   LMUL_4,

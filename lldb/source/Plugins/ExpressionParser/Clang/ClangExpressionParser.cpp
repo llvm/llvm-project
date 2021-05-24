@@ -687,11 +687,11 @@ ClangExpressionParser::ClangExpressionParser(
     break;
   }
 
-  if (ClangModulesDeclVendor *decl_vendor =
-          target_sp->GetClangModulesDeclVendor()) {
-    if (auto *clang_persistent_vars = llvm::cast<ClangPersistentVariables>(
-            target_sp->GetPersistentExpressionStateForLanguage(
-                lldb::eLanguageTypeC))) {
+  if (auto *clang_persistent_vars = llvm::cast<ClangPersistentVariables>(
+          target_sp->GetPersistentExpressionStateForLanguage(
+              lldb::eLanguageTypeC))) {
+    if (std::shared_ptr<ClangModulesDeclVendor> decl_vendor =
+            clang_persistent_vars->GetClangModulesDeclVendor()) {
       std::unique_ptr<PPCallbacks> pp_callbacks(
           new LLDBPreprocessorCallbacks(*decl_vendor, *clang_persistent_vars,
                                         m_compiler->getSourceManager()));
