@@ -8,6 +8,7 @@
 
 #include "ClangPersistentVariables.h"
 #include "ClangASTImporter.h"
+#include "ClangModulesDeclVendor.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Value.h"
@@ -23,8 +24,10 @@
 using namespace lldb;
 using namespace lldb_private;
 
-ClangPersistentVariables::ClangPersistentVariables()
-    : lldb_private::PersistentExpressionState(LLVMCastKind::eKindClang) {}
+ClangPersistentVariables::ClangPersistentVariables(
+    std::shared_ptr<Target> target_sp)
+    : lldb_private::PersistentExpressionState(LLVMCastKind::eKindClang),
+      m_target_sp(target_sp) {}
 
 ExpressionVariableSP ClangPersistentVariables::CreatePersistentVariable(
     const lldb::ValueObjectSP &valobj_sp) {
@@ -107,6 +110,15 @@ ClangPersistentVariables::GetClangASTImporter() {
     m_ast_importer_sp = std::make_shared<ClangASTImporter>();
   }
   return m_ast_importer_sp;
+}
+
+std::shared_ptr<ClangModulesDeclVendor>
+ClangPersistentVariables::GetClangModulesDeclVendor() {
+  if (!m_modules_decl_vendor_sp) {
+    m_modules_decl_vendor_sp.reset(
+        ClangModulesDeclVendor::Create(*m_target_sp.get()));
+  }
+  return m_modules_decl_vendor_sp;
 }
 
 ConstString

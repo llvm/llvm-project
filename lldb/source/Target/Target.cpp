@@ -2546,23 +2546,6 @@ SourceManager &Target::GetSourceManager() {
   return *m_source_manager_up;
 }
 
-ClangModulesDeclVendor *Target::GetClangModulesDeclVendor() {
-  static std::mutex s_clang_modules_decl_vendor_mutex; // If this is contended
-                                                       // we can make it
-                                                       // per-target
-
-  {
-    std::lock_guard<std::mutex> guard(s_clang_modules_decl_vendor_mutex);
-
-    if (!m_clang_modules_decl_vendor_up) {
-      m_clang_modules_decl_vendor_up.reset(
-          ClangModulesDeclVendor::Create(*this));
-    }
-  }
-
-  return m_clang_modules_decl_vendor_up.get();
-}
-
 Target::StopHookSP Target::CreateStopHook(StopHook::StopHookKind kind) {
   lldb::user_id_t new_uid = ++m_stop_hook_next_id;
   Target::StopHookSP stop_hook_sp;

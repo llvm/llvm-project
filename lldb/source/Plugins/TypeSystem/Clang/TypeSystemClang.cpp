@@ -9653,7 +9653,8 @@ ScratchTypeSystemClang::ScratchTypeSystemClang(Target &target,
                                                llvm::Triple triple)
     : TypeSystemClang("scratch ASTContext", triple), m_triple(triple),
       m_target_wp(target.shared_from_this()),
-      m_persistent_variables(new ClangPersistentVariables) {
+      m_persistent_variables(
+          new ClangPersistentVariables(target.shared_from_this())) {
   m_scratch_ast_source_up = CreateASTSource();
   m_scratch_ast_source_up->InstallASTContext(*this);
   llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> proxy_ast_source(
