@@ -1144,6 +1144,13 @@ RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
   return {SubRegIdx, InsertExtractIdx};
 }
 
+// Permit combining of mask vectors as BUILD_VECTOR never expands to scalar
+// stores for those types.
+bool RISCVTargetLowering::mergeStoresAfterLegalization(EVT VT) const {
+  return !Subtarget.useRVVForFixedLengthVectors() ||
+         (VT.isFixedLengthVector() && VT.getVectorElementType() == MVT::i1);
+}
+
 static bool useRVVForFixedLengthVectorVT(MVT VT,
                                          const RISCVSubtarget &Subtarget) {
   assert(VT.isFixedLengthVector() && "Expected a fixed length vector type!");
@@ -1372,8 +1379,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode())) {
       // If we have to use more than one INSERT_VECTOR_ELT then this
       // optimization is likely to increase code size; avoid peforming it in
-      // such a case. We can go through the stack as long as we're at least
-      // byte-sized.
+      // such a case. We can use a load from a constant pool in this case.
       if (DAG.shouldOptForSize() && NumElts > NumViaIntegerBits)
         return SDValue();
       // Now we can create our integer vector type. Note that it may be larger

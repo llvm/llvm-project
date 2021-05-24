@@ -557,6 +557,14 @@ private:
       MachineFunction &MF) const;
 
   bool useRVVForFixedLengthVectorVT(MVT VT) const;
+
+  /// RVV code generation for fixed length vectors does not lower all
+  /// BUILD_VECTORs. This makes BUILD_VECTOR legalisation a source of stores to
+  /// merge. However, merging them creates a BUILD_VECTOR that is just as
+  /// illegal as the original, thus leading to an infinite legalisation loop.
+  /// NOTE: Once BUILD_VECTOR can be custom lowered for all legal vector types,
+  /// this override can be removed.
+  bool mergeStoresAfterLegalization(EVT VT) const override;
 };
 
 namespace RISCV {
