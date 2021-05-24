@@ -326,6 +326,10 @@ mlirOpPrintingFlagsUseLocalScope(MlirOpPrintingFlags flags);
 ///   - Result type inference is enabled and cannot be performed.
 MLIR_CAPI_EXPORTED MlirOperation mlirOperationCreate(MlirOperationState *state);
 
+/// Creates a deep copy of an operation. The operation is not inserted and
+/// ownership is transferred to the caller.
+MLIR_CAPI_EXPORTED MlirOperation mlirOperationClone(MlirOperation op);
+
 /// Takes an operation owned by the caller and destroys it.
 MLIR_CAPI_EXPORTED void mlirOperationDestroy(MlirOperation op);
 
