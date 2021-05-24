@@ -593,6 +593,9 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
       return LT.first * Entry->Cost;
 
   static const CostTblEntry AVX512CostTable[] = {
+    { ISD::SHL,     MVT::v4i32,      1 },
+    { ISD::SRL,     MVT::v4i32,      1 },
+    { ISD::SRA,     MVT::v4i32,      1 },
     { ISD::SHL,     MVT::v8i32,      1 },
     { ISD::SRL,     MVT::v8i32,      1 },
     { ISD::SRA,     MVT::v8i32,      1 },
@@ -600,6 +603,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SRL,     MVT::v16i32,     1 },
     { ISD::SRA,     MVT::v16i32,     1 },
 
+    { ISD::SHL,     MVT::v2i64,      1 },
+    { ISD::SRL,     MVT::v2i64,      1 },
     { ISD::SHL,     MVT::v4i64,      1 },
     { ISD::SRL,     MVT::v4i64,      1 },
     { ISD::SHL,     MVT::v8i64,      1 },
@@ -630,16 +635,16 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
       return LT.first * Entry->Cost;
 
   static const CostTblEntry AVX2ShiftCostTable[] = {
-    // Shifts on v4i64/v8i32 on AVX2 is legal even though we declare to
+    // Shifts on vXi64/vXi32 on AVX2 is legal even though we declare to
     // customize them to detect the cases where shift amount is a scalar one.
-    { ISD::SHL,     MVT::v4i32,    1 },
-    { ISD::SRL,     MVT::v4i32,    1 },
-    { ISD::SRA,     MVT::v4i32,    1 },
+    { ISD::SHL,     MVT::v4i32,    2 }, // vpsllvd (Haswell from agner.org)
+    { ISD::SRL,     MVT::v4i32,    2 }, // vpsrlvd (Haswell from agner.org)
+    { ISD::SRA,     MVT::v4i32,    2 }, // vpsravd (Haswell from agner.org)
     { ISD::SHL,     MVT::v8i32,    2 }, // vpsllvd (Haswell from agner.org)
     { ISD::SRL,     MVT::v8i32,    2 }, // vpsrlvd (Haswell from agner.org)
     { ISD::SRA,     MVT::v8i32,    2 }, // vpsravd (Haswell from agner.org)
-    { ISD::SHL,     MVT::v2i64,    1 },
-    { ISD::SRL,     MVT::v2i64,    1 },
+    { ISD::SHL,     MVT::v2i64,    2 }, // vpsllvq (Haswell from agner.org)
+    { ISD::SRL,     MVT::v2i64,    2 }, // vpsrlvq (Haswell from agner.org)
     { ISD::SHL,     MVT::v4i64,    2 }, // vpsllvq (Haswell from agner.org)
     { ISD::SRL,     MVT::v4i64,    2 }, // vpsrlvq (Haswell from agner.org)
   };
@@ -656,8 +661,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
                                     TargetTransformInfo::OP_None);
   }
 
-  // Look for AVX2 lowering tricks.
-  if (ST->hasAVX2()) {
+  // Look for AVX2 lowering tricks (XOP is always better at 128-bit shifts).
+  if (ST->hasAVX2() && !(ST->hasXOP() && LT.second.is128BitVector())) {
     if (ISD == ISD::SHL && LT.second == MVT::v16i16 &&
         (Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
          Op2Info == TargetTransformInfo::OK_NonUniformConstantValue))

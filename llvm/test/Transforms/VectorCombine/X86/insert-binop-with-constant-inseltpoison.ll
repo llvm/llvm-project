@@ -164,20 +164,13 @@ define <2 x i64> @shl_constant_op0_load(i64* %p) {
 }
 
 define <4 x i32> @shl_constant_op0_multiuse(i32 %a0, <4 x i32> %a1) {
-; SSE-LABEL: @shl_constant_op0_multiuse(
-; SSE-NEXT:    [[INS:%.*]] = insertelement <4 x i32> <i32 undef, i32 1, i32 2, i32 3>, i32 [[A0:%.*]], i32 0
-; SSE-NEXT:    [[MUL_SCALAR:%.*]] = shl i32 [[A0]], 3
-; SSE-NEXT:    [[MUL:%.*]] = insertelement <4 x i32> <i32 0, i32 16, i32 64, i32 192>, i32 [[MUL_SCALAR]], i64 0
-; SSE-NEXT:    [[AND:%.*]] = and <4 x i32> [[INS]], [[A1:%.*]]
-; SSE-NEXT:    [[XOR:%.*]] = xor <4 x i32> [[AND]], [[MUL]]
-; SSE-NEXT:    ret <4 x i32> [[XOR]]
-;
-; AVX-LABEL: @shl_constant_op0_multiuse(
-; AVX-NEXT:    [[INS:%.*]] = insertelement <4 x i32> <i32 undef, i32 1, i32 2, i32 3>, i32 [[A0:%.*]], i32 0
-; AVX-NEXT:    [[MUL:%.*]] = shl <4 x i32> [[INS]], <i32 3, i32 4, i32 5, i32 6>
-; AVX-NEXT:    [[AND:%.*]] = and <4 x i32> [[INS]], [[A1:%.*]]
-; AVX-NEXT:    [[XOR:%.*]] = xor <4 x i32> [[AND]], [[MUL]]
-; AVX-NEXT:    ret <4 x i32> [[XOR]]
+; CHECK-LABEL: @shl_constant_op0_multiuse(
+; CHECK-NEXT:    [[INS:%.*]] = insertelement <4 x i32> <i32 undef, i32 1, i32 2, i32 3>, i32 [[A0:%.*]], i32 0
+; CHECK-NEXT:    [[MUL_SCALAR:%.*]] = shl i32 [[A0]], 3
+; CHECK-NEXT:    [[MUL:%.*]] = insertelement <4 x i32> <i32 0, i32 16, i32 64, i32 192>, i32 [[MUL_SCALAR]], i64 0
+; CHECK-NEXT:    [[AND:%.*]] = and <4 x i32> [[INS]], [[A1:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor <4 x i32> [[AND]], [[MUL]]
+; CHECK-NEXT:    ret <4 x i32> [[XOR]]
 ;
   %ins = insertelement <4 x i32> <i32 undef, i32 1, i32 2, i32 3>, i32 %a0, i32 0
   %mul = shl <4 x i32> %ins, <i32 3, i32 4, i32 5, i32 6>
