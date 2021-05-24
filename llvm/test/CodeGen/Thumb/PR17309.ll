@@ -51,7 +51,7 @@ declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 
-attributes #0 = { nounwind optsize "frame-pointer"="non-leaf" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
+attributes #0 = { nounwind optsize "less-precise-fpmad"="false" "frame-pointer"="non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind }
-attributes #2 = { optsize "frame-pointer"="non-leaf" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
+attributes #2 = { optsize "less-precise-fpmad"="false" "frame-pointer"="non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #3 = { nounwind optsize }

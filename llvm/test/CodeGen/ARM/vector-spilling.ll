@@ -31,4 +31,4 @@ entry:
 
 declare void @foo(<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>)
 
-attributes #0 = { noredzone "frame-pointer"="none" "use-soft-float"="false" }
+attributes #0 = { noredzone "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }

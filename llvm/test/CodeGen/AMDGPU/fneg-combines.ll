@@ -2600,4 +2600,4 @@ declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #0
 
 attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "unsafe-fp-math" }
+attributes #2 = { nounwind "unsafe-fp-math"="true" }

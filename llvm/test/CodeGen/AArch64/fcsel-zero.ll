@@ -78,5 +78,5 @@ define double @dune(double %a, double %b) #0 {
 ; CHECK-NEXT: fcsel {{d[0-9]+}}, {{d[0-9]+}}, [[R]], ne
 }
 
-attributes #0 = { nounwind "unsafe-fp-math" }
+attributes #0 = { nounwind "unsafe-fp-math"="true" }
 

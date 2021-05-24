@@ -1,7 +1,7 @@
 ; RUN: opt -S -O2 < %s | FileCheck %s -check-prefix=DISABLE
 ; RUN: opt -S -hexagon-emit-lookup-tables=true -O2 < %s | FileCheck %s -check-prefix=DISABLE
 ; RUN: opt -S -hexagon-emit-lookup-tables=false -O2 < %s | FileCheck %s -check-prefix=DISABLE
-; The attribute "no-jump-tables" disables the generation of switch generated lookup tables
+; The attribute "no-jump-tables"="true" disables the generation of switch generated lookup tables
 
 ; DISABLE-NOT: @{{.*}} = private unnamed_addr constant [6 x i32] [i32 9, i32 20, i32 14, i32 22, i32 12, i32 5]
 

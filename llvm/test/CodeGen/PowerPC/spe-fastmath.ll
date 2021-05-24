@@ -28,4 +28,4 @@ entry:
   ret void
 }
 
-attributes #0 = { "no-infs-fp-math" "no-nans-fp-math" }
+attributes #0 = { "no-infs-fp-math"="true" "no-nans-fp-math"="true" }

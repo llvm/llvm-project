@@ -54,5 +54,5 @@ define <4 x double> @float_to_int_to_float_reg_v4f64(<4 x double> %x) #0 {
   ret <4 x double> %sitofp
 }
 
-attributes #0 = { "no-signed-zeros-fp-math" }
+attributes #0 = { "no-signed-zeros-fp-math"="true" }
 

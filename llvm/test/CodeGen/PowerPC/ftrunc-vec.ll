@@ -42,5 +42,5 @@ define <2 x double> @truncf64u(<2 x double> %a) #0 {
   ret <2 x double> %t1
 }
 
-attributes #0 = { "no-signed-zeros-fp-math" }
+attributes #0 = { "no-signed-zeros-fp-math"="true" }
 

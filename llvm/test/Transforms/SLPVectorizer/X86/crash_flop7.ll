@@ -74,4 +74,4 @@ for.end300:                                       ; preds = %for.body267, %for.e
   unreachable
 }
 
-attributes #0 = { nounwind ssp uwtable "frame-pointer"="none" "use-soft-float"="false" }
+attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }

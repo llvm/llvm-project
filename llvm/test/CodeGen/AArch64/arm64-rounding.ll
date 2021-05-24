@@ -201,4 +201,4 @@ entry:
 }
 
 attributes #0 = { nounwind }
-attributes #1 = { nounwind "unsafe-fp-math" }
+attributes #1 = { nounwind "unsafe-fp-math"="true" }

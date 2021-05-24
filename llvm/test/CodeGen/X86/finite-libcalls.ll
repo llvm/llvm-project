@@ -469,6 +469,6 @@ declare float @llvm.pow.f32(float, float) #1
 declare double @llvm.pow.f64(double, double) #1
 declare x86_fp80 @llvm.pow.f80(x86_fp80, x86_fp80) #1
 
-attributes #0 = { nounwind "no-infs-fp-math" "no-nans-fp-math" }
+attributes #0 = { nounwind "no-infs-fp-math"="true" "no-nans-fp-math"="true" }
 attributes #1 = { nounwind readnone speculatable }
 

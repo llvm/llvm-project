@@ -45,8 +45,8 @@ declare !dbg !13 dso_local i64 @bpf_helper(i8*) local_unnamed_addr #1
 
 declare !dbg !17 dso_local i32 @do_work(i32) #1 section ".callback_fn"
 
-attributes #0 = { nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math" "stack-protector-buffer-size"="8" }
-attributes #1 = { "frame-pointer"="all" "no-trapping-math" "stack-protector-buffer-size"="8" }
+attributes #0 = { nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+attributes #1 = { "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #2 = { nounwind }
 
 !llvm.dbg.cu = !{!0}

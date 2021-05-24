@@ -1308,4 +1308,4 @@ define void @PR46531(i32* %x, i32* %y, i32* %z) {
   ret void
 }
 
-attributes #0 = { "no-nans-fp-math" }
+attributes #0 = { "no-nans-fp-math"="true" }

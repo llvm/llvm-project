@@ -13,4 +13,4 @@ entry:
   ret i32 42
 }
 
-attributes #0 = { minsize norecurse nounwind optsize readnone }
+attributes #0 = { minsize norecurse nounwind optsize readnone "no-trapping-math"="false" }
