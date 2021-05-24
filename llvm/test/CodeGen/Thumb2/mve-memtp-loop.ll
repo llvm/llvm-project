@@ -233,23 +233,14 @@ define void @test11(i8* nocapture %x, i8* nocapture %y, i32 %n) {
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    popgt {r4, pc}
 ; CHECK-NEXT:  .LBB10_1: @ %prehead
-; CHECK-NEXT:    add.w r3, r2, #15
 ; CHECK-NEXT:    mov r12, r1
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsr.w lr, r3, #4
 ; CHECK-NEXT:    mov r3, r2
-; CHECK-NEXT:    subs.w lr, lr, #0
-; CHECK-NEXT:    beq .LBB10_3
-; CHECK-NEXT:    b .LBB10_2
+; CHECK-NEXT:    wlstp.8 lr, r3, .LBB10_3
 ; CHECK-NEXT:  .LBB10_2: @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vctp.8 r3
-; CHECK-NEXT:    subs r3, #16
-; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vldrbt.u8 q0, [r12], #16
-; CHECK-NEXT:    vstrbt.8 q0, [r4], #16
-; CHECK-NEXT:    subs.w lr, lr, #1
-; CHECK-NEXT:    bne .LBB10_2
-; CHECK-NEXT:    b .LBB10_3
+; CHECK-NEXT:    vldrb.u8 q0, [r12], #16
+; CHECK-NEXT:    vstrb.8 q0, [r4], #16
+; CHECK-NEXT:    letp lr, .LBB10_2
 ; CHECK-NEXT:  .LBB10_3: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldrb r3, [r0], #1
