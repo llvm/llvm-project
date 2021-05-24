@@ -305,11 +305,12 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
         if (!MFI.isVRegStackified(OldReg)) {
           const TargetRegisterClass *RC = MRI.getRegClass(OldReg);
           Register NewReg = MRI.createVirtualRegister(RC);
+          auto InsertPt = std::next(MI.getIterator());
           if (UseEmpty[Register::virtReg2Index(OldReg)]) {
             unsigned Opc = getDropOpcode(RC);
-            MachineInstr *Drop = BuildMI(MBB, std::next(MI.getIterator()),
-                                         MI.getDebugLoc(), TII->get(Opc))
-                                     .addReg(NewReg);
+            MachineInstr *Drop =
+                BuildMI(MBB, InsertPt, MI.getDebugLoc(), TII->get(Opc))
+                    .addReg(NewReg);
             // After the drop instruction, this reg operand will not be used
             Drop->getOperand(0).setIsKill();
             if (MFI.isFrameBaseVirtual() && OldReg == MFI.getFrameBaseVreg())
@@ -320,8 +321,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
 
             WebAssemblyDebugValueManager(&MI).replaceWithLocal(LocalId);
 
-            BuildMI(MBB, std::next(MI.getIterator()), MI.getDebugLoc(),
-                    TII->get(Opc))
+            BuildMI(MBB, InsertPt, MI.getDebugLoc(), TII->get(Opc))
                 .addImm(LocalId)
                 .addReg(NewReg);
           }
