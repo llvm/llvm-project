@@ -358,23 +358,23 @@ define void @atomiccmpxchg_null_propagated() {
 ; Note: The unreachable on %t and %e is _not_ from AAUndefinedBehavior
 
 define i32 @cond_br_on_undef() {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT____: Function Attrs: nofree noreturn nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@cond_br_on_undef
-; IS__TUNIT____-SAME: () #[[ATTR0]] {
+; IS__TUNIT____-SAME: () #[[ATTR5:[0-9]+]] {
 ; IS__TUNIT____-NEXT:    unreachable
 ; IS__TUNIT____:       t:
-; IS__TUNIT____-NEXT:    ret i32 1
+; IS__TUNIT____-NEXT:    unreachable
 ; IS__TUNIT____:       e:
-; IS__TUNIT____-NEXT:    ret i32 2
+; IS__TUNIT____-NEXT:    unreachable
 ;
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@cond_br_on_undef
-; IS__CGSCC____-SAME: () #[[ATTR0]] {
+; IS__CGSCC____-SAME: () #[[ATTR5:[0-9]+]] {
 ; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       t:
-; IS__CGSCC____-NEXT:    ret i32 1
+; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       e:
-; IS__CGSCC____-NEXT:    ret i32 2
+; IS__CGSCC____-NEXT:    unreachable
 ;
   br i1 undef, label %t, label %e
 t:
@@ -394,9 +394,9 @@ define void @cond_br_on_undef2(i1 %cond) {
 ; IS__TUNIT____:       t1:
 ; IS__TUNIT____-NEXT:    unreachable
 ; IS__TUNIT____:       t2:
-; IS__TUNIT____-NEXT:    ret void
+; IS__TUNIT____-NEXT:    unreachable
 ; IS__TUNIT____:       e2:
-; IS__TUNIT____-NEXT:    ret void
+; IS__TUNIT____-NEXT:    unreachable
 ; IS__TUNIT____:       e1:
 ; IS__TUNIT____-NEXT:    ret void
 ;
@@ -407,9 +407,9 @@ define void @cond_br_on_undef2(i1 %cond) {
 ; IS__CGSCC____:       t1:
 ; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       t2:
-; IS__CGSCC____-NEXT:    ret void
+; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       e2:
-; IS__CGSCC____-NEXT:    ret void
+; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       e1:
 ; IS__CGSCC____-NEXT:    ret void
 ;
@@ -439,23 +439,23 @@ define i1 @ret_undef() {
 }
 
 define void @cond_br_on_undef_interproc() {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT____: Function Attrs: nofree noreturn nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@cond_br_on_undef_interproc
-; IS__TUNIT____-SAME: () #[[ATTR0]] {
+; IS__TUNIT____-SAME: () #[[ATTR5]] {
 ; IS__TUNIT____-NEXT:    unreachable
 ; IS__TUNIT____:       t:
-; IS__TUNIT____-NEXT:    ret void
+; IS__TUNIT____-NEXT:    unreachable
 ; IS__TUNIT____:       e:
-; IS__TUNIT____-NEXT:    ret void
+; IS__TUNIT____-NEXT:    unreachable
 ;
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@cond_br_on_undef_interproc
-; IS__CGSCC____-SAME: () #[[ATTR0]] {
+; IS__CGSCC____-SAME: () #[[ATTR5]] {
 ; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       t:
-; IS__CGSCC____-NEXT:    ret void
+; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       e:
-; IS__CGSCC____-NEXT:    ret void
+; IS__CGSCC____-NEXT:    unreachable
 ;
   %cond = call i1 @ret_undef()
   br i1 %cond, label %t, label %e
@@ -493,23 +493,23 @@ e:
 
 ; More complicated interproc deduction of undef
 define void @cond_br_on_undef_interproc2() {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT____: Function Attrs: nofree noreturn nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@cond_br_on_undef_interproc2
-; IS__TUNIT____-SAME: () #[[ATTR0]] {
+; IS__TUNIT____-SAME: () #[[ATTR5]] {
 ; IS__TUNIT____-NEXT:    unreachable
 ; IS__TUNIT____:       t:
-; IS__TUNIT____-NEXT:    ret void
+; IS__TUNIT____-NEXT:    unreachable
 ; IS__TUNIT____:       e:
-; IS__TUNIT____-NEXT:    ret void
+; IS__TUNIT____-NEXT:    unreachable
 ;
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@cond_br_on_undef_interproc2
-; IS__CGSCC____-SAME: () #[[ATTR0]] {
+; IS__CGSCC____-SAME: () #[[ATTR5]] {
 ; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       t:
-; IS__CGSCC____-NEXT:    ret void
+; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       e:
-; IS__CGSCC____-NEXT:    ret void
+; IS__CGSCC____-NEXT:    unreachable
 ;
   %cond = call i1 @ret_undef2()
   br i1 %cond, label %t, label %e
@@ -631,13 +631,13 @@ define i32 @foo() {
 define void @arg_nonnull_1(i32* nonnull %a) {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@arg_nonnull_1
-; IS__TUNIT____-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR5:[0-9]+]] {
+; IS__TUNIT____-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR6:[0-9]+]] {
 ; IS__TUNIT____-NEXT:    store i32 0, i32* [[A]], align 4
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@arg_nonnull_1
-; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR5:[0-9]+]] {
+; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR6:[0-9]+]] {
 ; IS__CGSCC____-NEXT:    store i32 0, i32* [[A]], align 4
 ; IS__CGSCC____-NEXT:    ret void
 ;
@@ -648,13 +648,13 @@ define void @arg_nonnull_1(i32* nonnull %a) {
 define void @arg_nonnull_1_noundef_1(i32* nonnull noundef %a) {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@arg_nonnull_1_noundef_1
-; IS__TUNIT____-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR5]] {
+; IS__TUNIT____-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR6]] {
 ; IS__TUNIT____-NEXT:    store i32 0, i32* [[A]], align 4
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@arg_nonnull_1_noundef_1
-; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR5]] {
+; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR6]] {
 ; IS__CGSCC____-NEXT:    store i32 0, i32* [[A]], align 4
 ; IS__CGSCC____-NEXT:    ret void
 ;
@@ -665,7 +665,7 @@ define void @arg_nonnull_1_noundef_1(i32* nonnull noundef %a) {
 define void @arg_nonnull_12(i32* nonnull %a, i32* nonnull %b, i32* %c) {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@arg_nonnull_12
-; IS__TUNIT____-SAME: (i32* nocapture nofree nonnull writeonly [[A:%.*]], i32* nocapture nofree nonnull writeonly [[B:%.*]], i32* nofree writeonly [[C:%.*]]) #[[ATTR5]] {
+; IS__TUNIT____-SAME: (i32* nocapture nofree nonnull writeonly [[A:%.*]], i32* nocapture nofree nonnull writeonly [[B:%.*]], i32* nofree writeonly [[C:%.*]]) #[[ATTR6]] {
 ; IS__TUNIT____-NEXT:    [[D:%.*]] = icmp eq i32* [[C]], null
 ; IS__TUNIT____-NEXT:    br i1 [[D]], label [[T:%.*]], label [[F:%.*]]
 ; IS__TUNIT____:       t:
@@ -679,7 +679,7 @@ define void @arg_nonnull_12(i32* nonnull %a, i32* nonnull %b, i32* %c) {
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@arg_nonnull_12
-; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull writeonly [[A:%.*]], i32* nocapture nofree nonnull writeonly [[B:%.*]], i32* nofree writeonly [[C:%.*]]) #[[ATTR5]] {
+; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull writeonly [[A:%.*]], i32* nocapture nofree nonnull writeonly [[B:%.*]], i32* nofree writeonly [[C:%.*]]) #[[ATTR6]] {
 ; IS__CGSCC____-NEXT:    [[D:%.*]] = icmp eq i32* [[C]], null
 ; IS__CGSCC____-NEXT:    br i1 [[D]], label [[T:%.*]], label [[F:%.*]]
 ; IS__CGSCC____:       t:
@@ -706,7 +706,7 @@ ret:
 define void @arg_nonnull_12_noundef_2(i32* nonnull %a, i32* noundef nonnull %b, i32* %c) {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@arg_nonnull_12_noundef_2
-; IS__TUNIT____-SAME: (i32* nocapture nofree nonnull writeonly [[A:%.*]], i32* nocapture nofree noundef nonnull writeonly [[B:%.*]], i32* nofree writeonly [[C:%.*]]) #[[ATTR5]] {
+; IS__TUNIT____-SAME: (i32* nocapture nofree nonnull writeonly [[A:%.*]], i32* nocapture nofree noundef nonnull writeonly [[B:%.*]], i32* nofree writeonly [[C:%.*]]) #[[ATTR6]] {
 ; IS__TUNIT____-NEXT:    [[D:%.*]] = icmp eq i32* [[C]], null
 ; IS__TUNIT____-NEXT:    br i1 [[D]], label [[T:%.*]], label [[F:%.*]]
 ; IS__TUNIT____:       t:
@@ -720,7 +720,7 @@ define void @arg_nonnull_12_noundef_2(i32* nonnull %a, i32* noundef nonnull %b, 
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@arg_nonnull_12_noundef_2
-; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull writeonly [[A:%.*]], i32* nocapture nofree noundef nonnull writeonly [[B:%.*]], i32* nofree writeonly [[C:%.*]]) #[[ATTR5]] {
+; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull writeonly [[A:%.*]], i32* nocapture nofree noundef nonnull writeonly [[B:%.*]], i32* nofree writeonly [[C:%.*]]) #[[ATTR6]] {
 ; IS__CGSCC____-NEXT:    [[D:%.*]] = icmp eq i32* [[C]], null
 ; IS__CGSCC____-NEXT:    br i1 [[D]], label [[T:%.*]], label [[F:%.*]]
 ; IS__CGSCC____:       t:
@@ -818,8 +818,8 @@ define void @arg_nonnull_violation3_1(i1 %c) {
 ; IS__TUNIT____-NEXT:    [[PTR:%.*]] = alloca i32, align 4
 ; IS__TUNIT____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS__TUNIT____:       t:
-; IS__TUNIT____-NEXT:    call void @arg_nonnull_12(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]]) #[[ATTR6:[0-9]+]]
-; IS__TUNIT____-NEXT:    call void @arg_nonnull_12(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* noalias nocapture nofree noundef writeonly align 536870912 null) #[[ATTR6]]
+; IS__TUNIT____-NEXT:    call void @arg_nonnull_12(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]]) #[[ATTR7:[0-9]+]]
+; IS__TUNIT____-NEXT:    call void @arg_nonnull_12(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* noalias nocapture nofree noundef writeonly align 536870912 null) #[[ATTR7]]
 ; IS__TUNIT____-NEXT:    unreachable
 ; IS__TUNIT____:       f:
 ; IS__TUNIT____-NEXT:    unreachable
@@ -832,8 +832,8 @@ define void @arg_nonnull_violation3_1(i1 %c) {
 ; IS__CGSCC____-NEXT:    [[PTR:%.*]] = alloca i32, align 4
 ; IS__CGSCC____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS__CGSCC____:       t:
-; IS__CGSCC____-NEXT:    call void @arg_nonnull_12(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]]) #[[ATTR6:[0-9]+]]
-; IS__CGSCC____-NEXT:    call void @arg_nonnull_12(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* noalias nocapture nofree noundef writeonly align 536870912 null) #[[ATTR6]]
+; IS__CGSCC____-NEXT:    call void @arg_nonnull_12(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]]) #[[ATTR7:[0-9]+]]
+; IS__CGSCC____-NEXT:    call void @arg_nonnull_12(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* noalias nocapture nofree noundef writeonly align 536870912 null) #[[ATTR7]]
 ; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       f:
 ; IS__CGSCC____-NEXT:    unreachable
@@ -865,8 +865,8 @@ define void @arg_nonnull_violation3_2(i1 %c) {
 ; IS__TUNIT____-NEXT:    [[PTR:%.*]] = alloca i32, align 4
 ; IS__TUNIT____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS__TUNIT____:       t:
-; IS__TUNIT____-NEXT:    call void @arg_nonnull_12_noundef_2(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]]) #[[ATTR6]]
-; IS__TUNIT____-NEXT:    call void @arg_nonnull_12_noundef_2(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* noalias nocapture nofree noundef writeonly align 536870912 null) #[[ATTR6]]
+; IS__TUNIT____-NEXT:    call void @arg_nonnull_12_noundef_2(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]]) #[[ATTR7]]
+; IS__TUNIT____-NEXT:    call void @arg_nonnull_12_noundef_2(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* noalias nocapture nofree noundef writeonly align 536870912 null) #[[ATTR7]]
 ; IS__TUNIT____-NEXT:    unreachable
 ; IS__TUNIT____:       f:
 ; IS__TUNIT____-NEXT:    unreachable
@@ -879,8 +879,8 @@ define void @arg_nonnull_violation3_2(i1 %c) {
 ; IS__CGSCC____-NEXT:    [[PTR:%.*]] = alloca i32, align 4
 ; IS__CGSCC____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS__CGSCC____:       t:
-; IS__CGSCC____-NEXT:    call void @arg_nonnull_12_noundef_2(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]]) #[[ATTR6]]
-; IS__CGSCC____-NEXT:    call void @arg_nonnull_12_noundef_2(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* noalias nocapture nofree noundef writeonly align 536870912 null) #[[ATTR6]]
+; IS__CGSCC____-NEXT:    call void @arg_nonnull_12_noundef_2(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]]) #[[ATTR7]]
+; IS__CGSCC____-NEXT:    call void @arg_nonnull_12_noundef_2(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32* noalias nocapture nofree noundef writeonly align 536870912 null) #[[ATTR7]]
 ; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       f:
 ; IS__CGSCC____-NEXT:    unreachable
@@ -1131,14 +1131,16 @@ define i32* @violate_noundef_pointer() {
 ; IS__TUNIT____: attributes #[[ATTR2]] = { nofree nosync nounwind null_pointer_is_valid willreturn writeonly }
 ; IS__TUNIT____: attributes #[[ATTR3]] = { nofree nounwind readnone willreturn }
 ; IS__TUNIT____: attributes #[[ATTR4]] = { nofree nounwind null_pointer_is_valid willreturn }
-; IS__TUNIT____: attributes #[[ATTR5]] = { argmemonly nofree nosync nounwind willreturn writeonly }
-; IS__TUNIT____: attributes #[[ATTR6]] = { nofree nosync nounwind willreturn writeonly }
+; IS__TUNIT____: attributes #[[ATTR5]] = { nofree noreturn nosync nounwind readnone willreturn }
+; IS__TUNIT____: attributes #[[ATTR6]] = { argmemonly nofree nosync nounwind willreturn writeonly }
+; IS__TUNIT____: attributes #[[ATTR7]] = { nofree nosync nounwind willreturn writeonly }
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind null_pointer_is_valid readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind null_pointer_is_valid willreturn writeonly }
 ; IS__CGSCC____: attributes #[[ATTR3]] = { nofree norecurse nounwind readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR4]] = { nofree norecurse nounwind null_pointer_is_valid willreturn }
-; IS__CGSCC____: attributes #[[ATTR5]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
-; IS__CGSCC____: attributes #[[ATTR6]] = { nounwind willreturn writeonly }
+; IS__CGSCC____: attributes #[[ATTR5]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
+; IS__CGSCC____: attributes #[[ATTR6]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
+; IS__CGSCC____: attributes #[[ATTR7]] = { nounwind willreturn writeonly }
 ;.
