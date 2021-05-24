@@ -212,7 +212,7 @@ struct HybridSample : public PerfSample {
   }
 
 #ifndef NDEBUG
-  __attribute__((used)) void print() const {
+  void print() const {
     dbgs() << "LBR stack\n";
     printLBRStack(LBRStack);
     dbgs() << "Call stack\n";
