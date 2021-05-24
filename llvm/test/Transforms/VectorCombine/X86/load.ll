@@ -630,8 +630,8 @@ define <8 x i32> @load_v1i32_extract_insert_v8i32_extra_use(<1 x i32>* align 16 
 define <8 x i16> @gep1_load_v2i16_extract_insert_v8i16(<2 x i16>* align 1 dereferenceable(16) %p) {
 ; SSE2-LABEL: @gep1_load_v2i16_extract_insert_v8i16(
 ; SSE2-NEXT:    [[GEP:%.*]] = getelementptr inbounds <2 x i16>, <2 x i16>* [[P:%.*]], i64 1
-; SSE2-NEXT:    [[L:%.*]] = load <2 x i16>, <2 x i16>* [[GEP]], align 8
-; SSE2-NEXT:    [[S:%.*]] = extractelement <2 x i16> [[L]], i32 0
+; SSE2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <2 x i16>, <2 x i16>* [[GEP]], i32 0, i32 0
+; SSE2-NEXT:    [[S:%.*]] = load i16, i16* [[TMP1]], align 8
 ; SSE2-NEXT:    [[R:%.*]] = insertelement <8 x i16> undef, i16 [[S]], i64 0
 ; SSE2-NEXT:    ret <8 x i16> [[R]]
 ;
