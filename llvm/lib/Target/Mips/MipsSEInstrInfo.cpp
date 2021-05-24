@@ -593,6 +593,20 @@ unsigned MipsSEInstrInfo::getOppositeBranchOpc(unsigned Opc) const {
   case Mips::BNZ_W:  return Mips::BZ_W;
   case Mips::BNZ_D:  return Mips::BZ_D;
   case Mips::BNZ_V:  return Mips::BZ_V;
+  case Mips::BEQC_NM:   return Mips::BNEC_NM;
+  case Mips::BEQIC_NM:  return Mips::BNEIC_NM;
+  case Mips::BEQZC_NM:  return Mips::BNEZC_NM;
+  case Mips::BGEC_NM:   return Mips::BLTC_NM;
+  case Mips::BGEIC_NM:  return Mips::BLTIC_NM;
+  case Mips::BGEIUC_NM: return Mips::BLTIUC_NM;
+  case Mips::BGEUC_NM:  return Mips::BLTUC_NM;
+  case Mips::BLTC_NM:   return Mips::BGEC_NM;
+  case Mips::BLTIC_NM:  return Mips::BGEIC_NM;
+  case Mips::BLTIUC_NM: return Mips::BGEIUC_NM;
+  case Mips::BLTUC_NM:  return Mips::BGEUC_NM;
+  case Mips::BNEC_NM:   return Mips::BEQC_NM;
+  case Mips::BNEIC_NM:  return Mips::BEQIC_NM;
+  case Mips::BNEZC_NM:  return Mips::BEQZC_NM;
   }
 }
 
