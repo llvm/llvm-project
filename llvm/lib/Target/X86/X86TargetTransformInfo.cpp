@@ -3466,8 +3466,7 @@ X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy, Align Alignment,
   auto *MaskTy =
       FixedVectorType::get(Type::getInt8Ty(SrcVTy->getContext()), NumElem);
   if ((IsLoad && !isLegalMaskedLoad(SrcVTy, Alignment)) ||
-      (IsStore && !isLegalMaskedStore(SrcVTy, Alignment)) ||
-      !isPowerOf2_32(NumElem)) {
+      (IsStore && !isLegalMaskedStore(SrcVTy, Alignment))) {
     // Scalarization
     APInt DemandedElts = APInt::getAllOnesValue(NumElem);
     InstructionCost MaskSplitCost =
@@ -3491,11 +3490,11 @@ X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy, Align Alignment,
   InstructionCost Cost = 0;
   if (VT.isSimple() && LT.second != VT.getSimpleVT() &&
       LT.second.getVectorNumElements() == NumElem)
-    // Promotion requires expand/truncate for data and a shuffle for mask.
+    // Promotion requires extend/truncate for data and a shuffle for mask.
     Cost += getShuffleCost(TTI::SK_PermuteTwoSrc, SrcVTy, None, 0, nullptr) +
             getShuffleCost(TTI::SK_PermuteTwoSrc, MaskTy, None, 0, nullptr);
 
-  else if (LT.second.getVectorNumElements() > NumElem) {
+  else if (LT.first * LT.second.getVectorNumElements() > NumElem) {
     auto *NewMaskTy = FixedVectorType::get(MaskTy->getElementType(),
                                            LT.second.getVectorNumElements());
     // Expanding requires fill mask with zeroes
