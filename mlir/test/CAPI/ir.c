@@ -1619,6 +1619,38 @@ int testOperands() {
   return 0;
 }
 
+/// Tests clone APIs.
+int testClone() {
+  fprintf(stderr, "@testClone\n");
+  // CHECK-LABEL: @testClone
+
+  MlirContext ctx = mlirContextCreate();
+  MlirLocation loc = mlirLocationUnknownGet(ctx);
+  MlirType indexType = mlirIndexTypeGet(ctx);
+  MlirStringRef valueStringRef =  mlirStringRefCreateFromCString("value");
+
+  MlirAttribute indexZeroLiteral =
+      mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("0 : index"));
+  MlirNamedAttribute indexZeroValueAttr = mlirNamedAttributeGet(mlirIdentifierGet(ctx, valueStringRef), indexZeroLiteral);
+  MlirOperationState constZeroState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("std.constant"), loc);
+  mlirOperationStateAddResults(&constZeroState, 1, &indexType);
+  mlirOperationStateAddAttributes(&constZeroState, 1, &indexZeroValueAttr);
+  MlirOperation constZero = mlirOperationCreate(&constZeroState);
+
+  MlirAttribute indexOneLiteral =
+      mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("1 : index"));
+  MlirOperation constOne = mlirOperationClone(constZero);
+  mlirOperationSetAttributeByName(constOne, valueStringRef, indexOneLiteral);
+
+  mlirOperationPrint(constZero, printToStderr, NULL);
+  mlirOperationPrint(constOne, printToStderr, NULL);
+  // CHECK: %0 = "std.constant"() {value = 0 : index} : () -> index
+  // CHECK: %0 = "std.constant"() {value = 1 : index} : () -> index
+
+  return 0;
+}
+
 // Wraps a diagnostic into additional text we can match against.
 MlirLogicalResult errorHandler(MlirDiagnostic diagnostic, void *userData) {
   fprintf(stderr, "processing diagnostic (userData: %ld) <<\n", (long)userData);
@@ -1698,6 +1730,8 @@ int main() {
     return 10;
   if (testOperands())
     return 11;
+  if (testClone())
+    return 12;
 
   mlirContextDestroy(ctx);
 
