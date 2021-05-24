@@ -7296,6 +7296,7 @@ static unsigned getISDForVPIntrinsic(const VPIntrinsic &VPIntrin) {
 
 void SelectionDAGBuilder::visitVectorPredicationIntrinsic(
     const VPIntrinsic &VPIntrin) {
+  SDLoc DL = getCurSDLoc();
   unsigned Opcode = getISDForVPIntrinsic(VPIntrin);
 
   SmallVector<EVT, 4> ValueVTs;
@@ -7303,12 +7304,22 @@ void SelectionDAGBuilder::visitVectorPredicationIntrinsic(
   ComputeValueVTs(TLI, DAG.getDataLayout(), VPIntrin.getType(), ValueVTs);
   SDVTList VTs = DAG.getVTList(ValueVTs);
 
+  auto EVLParamPos =
+      VPIntrinsic::GetVectorLengthParamPos(VPIntrin.getIntrinsicID());
+
+  MVT EVLParamVT = TLI.getVPExplicitVectorLengthTy();
+  assert(EVLParamVT.isScalarInteger() && EVLParamVT.bitsGE(MVT::i32) &&
+         "Unexpected target EVL type");
+
   // Request operands.
   SmallVector<SDValue, 7> OpValues;
-  for (int i = 0; i < (int)VPIntrin.getNumArgOperands(); ++i)
-    OpValues.push_back(getValue(VPIntrin.getArgOperand(i)));
+  for (int I = 0; I < (int)VPIntrin.getNumArgOperands(); ++I) {
+    auto Op = getValue(VPIntrin.getArgOperand(I));
+    if (I == EVLParamPos)
+      Op = DAG.getNode(ISD::ZERO_EXTEND, DL, EVLParamVT, Op);
+    OpValues.push_back(Op);
+  }
 
-  SDLoc DL = getCurSDLoc();
   SDValue Result = DAG.getNode(Opcode, DL, VTs, OpValues);
   setValue(&VPIntrin, Result);
 }
