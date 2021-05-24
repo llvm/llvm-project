@@ -52,7 +52,7 @@ class AMDGPULowerModuleLDS : public ModulePass {
 
   static void removeFromUsedList(Module &M, StringRef Name,
                                  SmallPtrSetImpl<Constant *> &ToRemove) {
-    GlobalVariable *GV = M.getGlobalVariable(Name);
+    GlobalVariable *GV = M.getNamedGlobal(Name);
     if (!GV || ToRemove.empty()) {
       return;
     }
@@ -212,8 +212,6 @@ public:
 
     Align MaxAlign =
         AMDGPU::getAlign(DL, LocalVars[0]); // was sorted on alignment
-    Constant *InstanceAddress = Constant::getIntegerValue(
-        PointerType::get(LDSTy, AMDGPUAS::LOCAL_ADDRESS), APInt(32, 0));
 
     GlobalVariable *SGV = new GlobalVariable(
         M, LDSTy, false, GlobalValue::InternalLinkage, UndefValue::get(LDSTy),
@@ -236,7 +234,7 @@ public:
       GlobalVariable *GV = LocalVars[I];
       Constant *GEPIdx[] = {ConstantInt::get(I32, 0), ConstantInt::get(I32, I)};
       GV->replaceAllUsesWith(
-          ConstantExpr::getGetElementPtr(LDSTy, InstanceAddress, GEPIdx));
+          ConstantExpr::getGetElementPtr(LDSTy, SGV, GEPIdx));
       GV->eraseFromParent();
     }
 

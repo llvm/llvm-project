@@ -7,10 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "MachOObjcopy.h"
-#include "../CopyConfig.h"
 #include "../llvm-objcopy.h"
+#include "CommonConfig.h"
 #include "MachOReader.h"
 #include "MachOWriter.h"
+#include "MultiFormatConfig.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/MachOUniversal.h"
@@ -48,7 +49,7 @@ static StringRef getPayloadString(const LoadCommand &LC) {
       .rtrim('\0');
 }
 
-static Error removeSections(const CopyConfig &Config, Object &Obj) {
+static Error removeSections(const CommonConfig &Config, Object &Obj) {
   SectionPred RemovePred = [](const std::unique_ptr<Section> &) {
     return false;
   };
@@ -79,14 +80,14 @@ static Error removeSections(const CopyConfig &Config, Object &Obj) {
   return Obj.removeSections(RemovePred);
 }
 
-static void markSymbols(const CopyConfig &Config, Object &Obj) {
+static void markSymbols(const CommonConfig &, Object &Obj) {
   // Symbols referenced from the indirect symbol table must not be removed.
   for (IndirectSymbolEntry &ISE : Obj.IndirectSymTable.Symbols)
     if (ISE.Symbol)
       (*ISE.Symbol)->Referenced = true;
 }
 
-static void updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
+static void updateAndRemoveSymbols(const CommonConfig &Config, Object &Obj) {
   for (SymbolEntry &Sym : Obj.SymTable) {
     auto I = Config.SymbolsToRename.find(Sym.Name);
     if (I != Config.SymbolsToRename.end())
@@ -136,7 +137,7 @@ static LoadCommand buildRPathLoadCommand(StringRef Path) {
   return LC;
 }
 
-static Error processLoadCommands(const CopyConfig &Config, Object &Obj) {
+static Error processLoadCommands(const CommonConfig &Config, Object &Obj) {
   // Remove RPaths.
   DenseSet<StringRef> RPathsToRemove(Config.RPathsToRemove.begin(),
                                      Config.RPathsToRemove.end());
@@ -330,24 +331,7 @@ static Error isValidMachOCannonicalName(StringRef Name) {
   return Error::success();
 }
 
-static Error handleArgs(const CopyConfig &Config, Object &Obj) {
-  if (Config.AllowBrokenLinks || !Config.SplitDWO.empty() ||
-      !Config.SymbolsPrefix.empty() || !Config.AllocSectionsPrefix.empty() ||
-      !Config.KeepSection.empty() || Config.NewSymbolVisibility ||
-      !Config.SymbolsToGlobalize.empty() || !Config.SymbolsToKeep.empty() ||
-      !Config.SymbolsToLocalize.empty() || !Config.SymbolsToWeaken.empty() ||
-      !Config.SymbolsToKeepGlobal.empty() || !Config.SectionsToRename.empty() ||
-      !Config.UnneededSymbolsToRemove.empty() ||
-      !Config.SetSectionAlignment.empty() || !Config.SetSectionFlags.empty() ||
-      Config.ExtractDWO || Config.LocalizeHidden || Config.PreserveDates ||
-      Config.StripAllGNU || Config.StripDWO || Config.StripNonAlloc ||
-      Config.StripSections || Config.Weaken || Config.DecompressDebugSections ||
-      Config.StripUnneeded || Config.DiscardMode == DiscardType::Locals ||
-      !Config.SymbolsToAdd.empty() || Config.EntryExpr) {
-    return createStringError(llvm::errc::invalid_argument,
-                             "option not supported by llvm-objcopy for MachO");
-  }
-
+static Error handleArgs(const CommonConfig &Config, Object &Obj) {
   // Dump sections before add/remove for compatibility with GNU objcopy.
   for (StringRef Flag : Config.DumpSection) {
     StringRef SectionName;
@@ -387,7 +371,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
   return Error::success();
 }
 
-Error executeObjcopyOnBinary(const CopyConfig &Config,
+Error executeObjcopyOnBinary(const CommonConfig &Config, const MachOConfig &,
                              object::MachOObjectFile &In, raw_ostream &Out) {
   MachOReader Reader(In);
   Expected<std::unique_ptr<Object>> O = Reader.create();
@@ -416,7 +400,7 @@ Error executeObjcopyOnBinary(const CopyConfig &Config,
   return Writer.write();
 }
 
-Error executeObjcopyOnMachOUniversalBinary(CopyConfig &Config,
+Error executeObjcopyOnMachOUniversalBinary(const MultiFormatConfig &Config,
                                            const MachOUniversalBinary &In,
                                            raw_ostream &Out) {
   SmallVector<OwningBinary<Binary>, 2> Binaries;
@@ -431,7 +415,7 @@ Error executeObjcopyOnMachOUniversalBinary(CopyConfig &Config,
       Expected<std::unique_ptr<MemoryBuffer>> OutputBufferOrErr =
           writeArchiveToBuffer(*NewArchiveMembersOrErr,
                                (*ArOrErr)->hasSymbolTable(), (*ArOrErr)->kind(),
-                               Config.DeterministicArchives,
+                               Config.getCommonConfig().DeterministicArchives,
                                (*ArOrErr)->isThin());
       if (!OutputBufferOrErr)
         return OutputBufferOrErr.takeError();
@@ -455,18 +439,24 @@ Error executeObjcopyOnMachOUniversalBinary(CopyConfig &Config,
     Expected<std::unique_ptr<MachOObjectFile>> ObjOrErr = O.getAsObjectFile();
     if (!ObjOrErr) {
       consumeError(ObjOrErr.takeError());
-      return createStringError(std::errc::invalid_argument,
-                               "slice for '%s' of the universal Mach-O binary "
-                               "'%s' is not a Mach-O object or an archive",
-                               O.getArchFlagName().c_str(),
-                               Config.InputFilename.str().c_str());
+      return createStringError(
+          std::errc::invalid_argument,
+          "slice for '%s' of the universal Mach-O binary "
+          "'%s' is not a Mach-O object or an archive",
+          O.getArchFlagName().c_str(),
+          Config.getCommonConfig().InputFilename.str().c_str());
     }
     std::string ArchFlagName = O.getArchFlagName();
 
     SmallVector<char, 0> Buffer;
     raw_svector_ostream MemStream(Buffer);
 
-    if (Error E = executeObjcopyOnBinary(Config, **ObjOrErr, MemStream))
+    Expected<const MachOConfig &> MachO = Config.getMachOConfig();
+    if (!MachO)
+      return MachO.takeError();
+
+    if (Error E = executeObjcopyOnBinary(Config.getCommonConfig(), *MachO,
+                                         **ObjOrErr, MemStream))
       return E;
 
     std::unique_ptr<MemoryBuffer> MB =

@@ -62,6 +62,7 @@ struct OutputFunctionCoverageData {
   uint64_t Hash;
   std::vector<StringRef> Filenames;
   std::vector<CounterMappingRegion> Regions;
+  std::vector<CounterExpression> Expressions;
 
   OutputFunctionCoverageData() : Hash(0) {}
 
@@ -78,7 +79,7 @@ struct OutputFunctionCoverageData {
     Record.FunctionName = Name;
     Record.FunctionHash = Hash;
     Record.Filenames = Filenames;
-    Record.Expressions = {};
+    Record.Expressions = Expressions;
     Record.MappingRegions = Regions;
   }
 };
@@ -111,6 +112,7 @@ struct InputFunctionCoverageData {
   std::string Name;
   uint64_t Hash;
   std::vector<CounterMappingRegion> Regions;
+  std::vector<CounterExpression> Expressions;
 
   InputFunctionCoverageData(std::string Name, uint64_t Hash)
       : Name(std::move(Name)), Hash(Hash) {}
@@ -189,13 +191,17 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::tuple<bool, bool>> {
         LS, CS, LE, CE));
   }
 
+  void addExpression(CounterExpression CE) {
+    InputFunctions.back().Expressions.push_back(CE);
+  }
+
   std::string writeCoverageRegions(InputFunctionCoverageData &Data) {
     SmallVector<unsigned, 8> FileIDs(Data.ReverseVirtualFileMapping.size());
     for (const auto &E : Data.ReverseVirtualFileMapping)
       FileIDs[E.second] = E.first;
     std::string Coverage;
     llvm::raw_string_ostream OS(Coverage);
-    CoverageMappingWriter(FileIDs, None, Data.Regions).write(OS);
+    CoverageMappingWriter(FileIDs, Data.Expressions, Data.Regions).write(OS);
     return OS.str();
   }
 
@@ -207,10 +213,9 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::tuple<bool, bool>> {
     Filenames.resize(Files.size() + 1);
     for (const auto &E : Files)
       Filenames[E.getValue()] = E.getKey().str();
-    std::vector<CounterExpression> Expressions;
     ArrayRef<std::string> FilenameRefs = llvm::makeArrayRef(Filenames);
     RawCoverageMappingReader Reader(Coverage, FilenameRefs, Data.Filenames,
-                                    Expressions, Data.Regions);
+                                    Data.Expressions, Data.Regions);
     EXPECT_THAT_ERROR(Reader.read(), Succeeded());
   }
 
@@ -794,6 +799,26 @@ TEST_P(CoverageMappingTest, combine_expansions) {
   EXPECT_EQ(CoverageSegment(3, 1, 10, true), Segments[1]);
   EXPECT_EQ(CoverageSegment(3, 5, 2, false), Segments[2]);
   EXPECT_EQ(CoverageSegment(5, 5, false), Segments[3]);
+}
+
+// Test that counters not associated with any code regions are allowed.
+TEST_P(CoverageMappingTest, non_code_region_counters) {
+  // No records in profdata
+
+  startFunction("func", 0x1234);
+  addCMR(Counter::getCounter(0), "file", 1, 1, 5, 5);
+  addCMR(Counter::getExpression(0), "file", 6, 1, 6, 5);
+  addExpression(CounterExpression(
+      CounterExpression::Add, Counter::getCounter(1), Counter::getCounter(2)));
+
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
+
+  std::vector<std::string> Names;
+  for (const auto &Func : LoadedCoverage->getCoveredFunctions()) {
+    Names.push_back(Func.Name);
+    ASSERT_EQ(2U, Func.CountedRegions.size());
+  }
+  ASSERT_EQ(1U, Names.size());
 }
 
 TEST_P(CoverageMappingTest, strip_filename_prefix) {

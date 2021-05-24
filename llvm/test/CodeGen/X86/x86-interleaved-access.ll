@@ -1930,3 +1930,22 @@ define void @splat4_v4i64_load_store(<4 x i64>* %s, <16 x i64>* %d) {
   store <16 x i64> %r, <16 x i64>* %d, align 8
   ret void
 }
+
+define <2 x i64> @PR37616(<16 x i64>* %a0) {
+; AVX1-LABEL: PR37616:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps 16(%rdi), %xmm0
+; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; AVX1-NEXT:    retq
+;
+; AVX2OR512-LABEL: PR37616:
+; AVX2OR512:       # %bb.0:
+; AVX2OR512-NEXT:    vmovaps (%rdi), %ymm0
+; AVX2OR512-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[2],mem[2]
+; AVX2OR512-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX2OR512-NEXT:    vzeroupper
+; AVX2OR512-NEXT:    retq
+  %load = load <16 x i64>, <16 x i64>* %a0, align 128
+  %shuffle = shufflevector <16 x i64> %load, <16 x i64> undef, <2 x i32> <i32 2, i32 6>
+  ret <2 x i64> %shuffle
+}

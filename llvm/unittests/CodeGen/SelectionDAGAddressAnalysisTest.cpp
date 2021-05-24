@@ -42,14 +42,14 @@ protected:
     // initialize a target. A skeleton Target for unittests would allow us to
     // always run these tests.
     if (!T)
-      return;
+      GTEST_SKIP();
 
     TargetOptions Options;
     TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
         T->createTargetMachine("AArch64", "", "+sve", Options, None, None,
                                CodeGenOpt::Aggressive)));
     if (!TM)
-      return;
+      GTEST_SKIP();
 
     SMDiagnostic SMError;
     M = parseAssemblyString(Assembly, SMError, Context);
@@ -94,8 +94,6 @@ protected:
 };
 
 TEST_F(SelectionDAGAddressAnalysisTest, sameFrameObject) {
-  if (!TM)
-    return;
   SDLoc Loc;
   auto Int8VT = EVT::getIntegerVT(Context, 8);
   auto VecVT = EVT::getVectorVT(Context, Int8VT, 4);
@@ -119,8 +117,6 @@ TEST_F(SelectionDAGAddressAnalysisTest, sameFrameObject) {
 }
 
 TEST_F(SelectionDAGAddressAnalysisTest, noAliasingFrameObjects) {
-  if (!TM)
-    return;
   SDLoc Loc;
   auto Int8VT = EVT::getIntegerVT(Context, 8);
   // <4 x i8>
@@ -153,8 +149,6 @@ TEST_F(SelectionDAGAddressAnalysisTest, noAliasingFrameObjects) {
 }
 
 TEST_F(SelectionDAGAddressAnalysisTest, unknownSizeFrameObjects) {
-  if (!TM)
-    return;
   SDLoc Loc;
   auto Int8VT = EVT::getIntegerVT(Context, 8);
   // <vscale x 4 x i8>
@@ -184,8 +178,6 @@ TEST_F(SelectionDAGAddressAnalysisTest, unknownSizeFrameObjects) {
 }
 
 TEST_F(SelectionDAGAddressAnalysisTest, globalWithFrameObject) {
-  if (!TM)
-    return;
   SDLoc Loc;
   auto Int8VT = EVT::getIntegerVT(Context, 8);
   // <vscale x 4 x i8>
@@ -218,8 +210,6 @@ TEST_F(SelectionDAGAddressAnalysisTest, globalWithFrameObject) {
 }
 
 TEST_F(SelectionDAGAddressAnalysisTest, fixedSizeFrameObjectsWithinDiff) {
-  if (!TM)
-    return;
   SDLoc Loc;
   auto Int8VT = EVT::getIntegerVT(Context, 8);
   // <vscale x 4 x i8>
@@ -259,8 +249,6 @@ TEST_F(SelectionDAGAddressAnalysisTest, fixedSizeFrameObjectsWithinDiff) {
 }
 
 TEST_F(SelectionDAGAddressAnalysisTest, fixedSizeFrameObjectsOutOfDiff) {
-  if (!TM)
-    return;
   SDLoc Loc;
   auto Int8VT = EVT::getIntegerVT(Context, 8);
   // <vscale x 4 x i8>
@@ -297,8 +285,6 @@ TEST_F(SelectionDAGAddressAnalysisTest, fixedSizeFrameObjectsOutOfDiff) {
 }
 
 TEST_F(SelectionDAGAddressAnalysisTest, twoFixedStackObjects) {
-  if (!TM)
-    return;
   SDLoc Loc;
   auto Int8VT = EVT::getIntegerVT(Context, 8);
   // <vscale x 2 x i8>

@@ -3,9 +3,9 @@
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -fexceptions -fcxx-exceptions -triple x86_64-unknown-unknown -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -include-pch %t -fsyntax-only -verify %s -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-llvm -o - | FileCheck %s --check-prefix=CHECK2
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -emit-llvm -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -o - %s | FileCheck %s --check-prefix=CHECK3
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -emit-llvm -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -o - %s | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -fexceptions -fcxx-exceptions -triple x86_64-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -include-pch %t -fsyntax-only -verify %s -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-llvm -o - | FileCheck %s --check-prefix=CHECK4
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -include-pch %t -fsyntax-only -verify %s -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER
@@ -362,117 +362,4 @@ int main() {
 // CHECK2-NEXT:    call void @__clang_call_terminate(i8* [[TMP11]]) #[[ATTR7]]
 // CHECK2-NEXT:    unreachable
 //
-//
-// CHECK3-LABEL: define {{[^@]+}}@_Z3foov
-// CHECK3-SAME: () #[[ATTR0:[0-9]+]] {
-// CHECK3-NEXT:  entry:
-// CHECK3-NEXT:    call void @_Z8mayThrowv()
-// CHECK3-NEXT:    ret void
-//
-//
-// CHECK3-LABEL: define {{[^@]+}}@_Z3barv
-// CHECK3-SAME: () #[[ATTR0]] {
-// CHECK3-NEXT:  entry:
-// CHECK3-NEXT:    call void @_Z8mayThrowv()
-// CHECK3-NEXT:    ret void
-//
-//
-// CHECK3-LABEL: define {{[^@]+}}@main
-// CHECK3-SAME: () #[[ATTR2:[0-9]+]] personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
-// CHECK3-NEXT:  entry:
-// CHECK3-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    store i32 0, i32* [[RETVAL]], align 4
-// CHECK3-NEXT:    invoke void @_Z3foov()
-// CHECK3-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]]
-// CHECK3:       invoke.cont:
-// CHECK3-NEXT:    invoke void @_Z3barv()
-// CHECK3-NEXT:    to label [[INVOKE_CONT1:%.*]] unwind label [[TERMINATE_LPAD]]
-// CHECK3:       invoke.cont1:
-// CHECK3-NEXT:    [[CALL:%.*]] = call i32 @_Z5tmainIiET_v()
-// CHECK3-NEXT:    ret i32 [[CALL]]
-// CHECK3:       terminate.lpad:
-// CHECK3-NEXT:    [[TMP0:%.*]] = landingpad { i8*, i32 }
-// CHECK3-NEXT:    catch i8* null
-// CHECK3-NEXT:    [[TMP1:%.*]] = extractvalue { i8*, i32 } [[TMP0]], 0
-// CHECK3-NEXT:    call void @__clang_call_terminate(i8* [[TMP1]]) #[[ATTR5:[0-9]+]]
-// CHECK3-NEXT:    unreachable
-//
-//
-// CHECK3-LABEL: define {{[^@]+}}@__clang_call_terminate
-// CHECK3-SAME: (i8* [[TMP0:%.*]]) #[[ATTR3:[0-9]+]] comdat {
-// CHECK3-NEXT:    [[TMP2:%.*]] = call i8* @__cxa_begin_catch(i8* [[TMP0]]) #[[ATTR6:[0-9]+]]
-// CHECK3-NEXT:    call void @_ZSt9terminatev() #[[ATTR5]]
-// CHECK3-NEXT:    unreachable
-//
-//
-// CHECK3-LABEL: define {{[^@]+}}@_Z5tmainIiET_v
-// CHECK3-SAME: () #[[ATTR4:[0-9]+]] comdat personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
-// CHECK3-NEXT:  entry:
-// CHECK3-NEXT:    invoke void @_Z3foov()
-// CHECK3-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]]
-// CHECK3:       invoke.cont:
-// CHECK3-NEXT:    ret i32 0
-// CHECK3:       terminate.lpad:
-// CHECK3-NEXT:    [[TMP0:%.*]] = landingpad { i8*, i32 }
-// CHECK3-NEXT:    catch i8* null
-// CHECK3-NEXT:    [[TMP1:%.*]] = extractvalue { i8*, i32 } [[TMP0]], 0
-// CHECK3-NEXT:    call void @__clang_call_terminate(i8* [[TMP1]]) #[[ATTR5]]
-// CHECK3-NEXT:    unreachable
-//
-//
-// CHECK4-LABEL: define {{[^@]+}}@_Z3foov
-// CHECK4-SAME: () #[[ATTR0:[0-9]+]] {
-// CHECK4-NEXT:  entry:
-// CHECK4-NEXT:    call void @_Z8mayThrowv()
-// CHECK4-NEXT:    ret void
-//
-//
-// CHECK4-LABEL: define {{[^@]+}}@_Z3barv
-// CHECK4-SAME: () #[[ATTR0]] {
-// CHECK4-NEXT:  entry:
-// CHECK4-NEXT:    call void @_Z8mayThrowv()
-// CHECK4-NEXT:    ret void
-//
-//
-// CHECK4-LABEL: define {{[^@]+}}@main
-// CHECK4-SAME: () #[[ATTR2:[0-9]+]] personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
-// CHECK4-NEXT:  entry:
-// CHECK4-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK4-NEXT:    store i32 0, i32* [[RETVAL]], align 4
-// CHECK4-NEXT:    invoke void @_Z3foov()
-// CHECK4-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]]
-// CHECK4:       invoke.cont:
-// CHECK4-NEXT:    invoke void @_Z3barv()
-// CHECK4-NEXT:    to label [[INVOKE_CONT1:%.*]] unwind label [[TERMINATE_LPAD]]
-// CHECK4:       invoke.cont1:
-// CHECK4-NEXT:    [[CALL:%.*]] = call i32 @_Z5tmainIiET_v()
-// CHECK4-NEXT:    ret i32 [[CALL]]
-// CHECK4:       terminate.lpad:
-// CHECK4-NEXT:    [[TMP0:%.*]] = landingpad { i8*, i32 }
-// CHECK4-NEXT:    catch i8* null
-// CHECK4-NEXT:    [[TMP1:%.*]] = extractvalue { i8*, i32 } [[TMP0]], 0
-// CHECK4-NEXT:    call void @__clang_call_terminate(i8* [[TMP1]]) #[[ATTR5:[0-9]+]]
-// CHECK4-NEXT:    unreachable
-//
-//
-// CHECK4-LABEL: define {{[^@]+}}@__clang_call_terminate
-// CHECK4-SAME: (i8* [[TMP0:%.*]]) #[[ATTR3:[0-9]+]] comdat {
-// CHECK4-NEXT:    [[TMP2:%.*]] = call i8* @__cxa_begin_catch(i8* [[TMP0]]) #[[ATTR6:[0-9]+]]
-// CHECK4-NEXT:    call void @_ZSt9terminatev() #[[ATTR5]]
-// CHECK4-NEXT:    unreachable
-//
-//
-// CHECK4-LABEL: define {{[^@]+}}@_Z5tmainIiET_v
-// CHECK4-SAME: () #[[ATTR4:[0-9]+]] comdat personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
-// CHECK4-NEXT:  entry:
-// CHECK4-NEXT:    invoke void @_Z3foov()
-// CHECK4-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]]
-// CHECK4:       invoke.cont:
-// CHECK4-NEXT:    ret i32 0
-// CHECK4:       terminate.lpad:
-// CHECK4-NEXT:    [[TMP0:%.*]] = landingpad { i8*, i32 }
-// CHECK4-NEXT:    catch i8* null
-// CHECK4-NEXT:    [[TMP1:%.*]] = extractvalue { i8*, i32 } [[TMP0]], 0
-// CHECK4-NEXT:    call void @__clang_call_terminate(i8* [[TMP1]]) #[[ATTR5]]
-// CHECK4-NEXT:    unreachable
 //

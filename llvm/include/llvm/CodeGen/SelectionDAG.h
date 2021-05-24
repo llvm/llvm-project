@@ -1817,8 +1817,10 @@ public:
   SDValue getSplatSourceVector(SDValue V, int &SplatIndex);
 
   /// If V is a splat vector, return its scalar source operand by extracting
-  /// that element from the source vector.
-  SDValue getSplatValue(SDValue V);
+  /// that element from the source vector. If LegalTypes is true, this method
+  /// may only return a legally-typed splat value. If it cannot legalize the
+  /// splatted value it will return SDValue().
+  SDValue getSplatValue(SDValue V, bool LegalTypes = false);
 
   /// If a SHL/SRA/SRL node \p V has a constant or splat constant shift amount
   /// that is less than the element bit-width of the shift node, return it.

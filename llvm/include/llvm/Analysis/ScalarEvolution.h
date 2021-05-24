@@ -1340,8 +1340,6 @@ private:
              !isa<SCEVCouldNotCompute>(MaxNotTaken);
     }
 
-    bool hasOperand(const SCEV *S) const;
-
     /// Test whether this ExitLimit contains all information.
     bool hasFullInfo() const {
       return !isa<SCEVCouldNotCompute>(ExactNotTaken);

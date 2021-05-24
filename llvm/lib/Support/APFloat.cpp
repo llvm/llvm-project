@@ -66,6 +66,13 @@ namespace llvm {
 
     /* Number of bits actually used in the semantics. */
     unsigned int sizeInBits;
+
+    // Returns true if any number described by this semantics can be precisely
+    // represented by the specified semantics.
+    bool isRepresentableBy(const fltSemantics &S) const {
+      return maxExponent <= S.maxExponent && minExponent >= S.minExponent &&
+             precision <= S.precision;
+    }
   };
 
   static const fltSemantics semIEEEhalf = {15, -14, 11, 16};
@@ -4873,6 +4880,32 @@ APFloat::opStatus APFloat::convertToInteger(APSInt &result,
   // Keeps the original signed-ness.
   result = APInt(bitWidth, parts);
   return status;
+}
+
+double APFloat::convertToDouble() const {
+  if (&getSemantics() == (const llvm::fltSemantics *)&semIEEEdouble)
+    return getIEEE().convertToDouble();
+  assert(getSemantics().isRepresentableBy(semIEEEdouble) &&
+         "Float semantics is not representable by IEEEdouble");
+  APFloat Temp = *this;
+  bool LosesInfo;
+  opStatus St = Temp.convert(semIEEEdouble, rmNearestTiesToEven, &LosesInfo);
+  assert(!(St & opInexact) && !LosesInfo && "Unexpected imprecision");
+  (void)St;
+  return Temp.getIEEE().convertToDouble();
+}
+
+float APFloat::convertToFloat() const {
+  if (&getSemantics() == (const llvm::fltSemantics *)&semIEEEsingle)
+    return getIEEE().convertToFloat();
+  assert(getSemantics().isRepresentableBy(semIEEEsingle) &&
+         "Float semantics is not representable by IEEEsingle");
+  APFloat Temp = *this;
+  bool LosesInfo;
+  opStatus St = Temp.convert(semIEEEsingle, rmNearestTiesToEven, &LosesInfo);
+  assert(!(St & opInexact) && !LosesInfo && "Unexpected imprecision");
+  (void)St;
+  return Temp.getIEEE().convertToFloat();
 }
 
 } // namespace llvm

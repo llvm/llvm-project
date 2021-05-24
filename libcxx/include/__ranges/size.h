@@ -26,11 +26,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if !defined(_LIBCPP_HAS_NO_RANGES)
 
+// clang-format off
+namespace ranges {
 template<class>
 inline constexpr bool disable_sized_range = false;
 
-// clang-format off
-namespace ranges {
 // [range.prim.size]
 namespace __size {
   void size(auto&) = delete;
@@ -89,8 +89,7 @@ namespace __size {
     template<__difference _Tp>
     [[nodiscard]] constexpr __integer_like auto operator()(_Tp&& __t) const
         noexcept(noexcept(ranges::end(__t) - ranges::begin(__t))) {
-      return _VSTD::__to_unsigned_like<range_difference_t<remove_cvref_t<_Tp>>>(
-          ranges::end(__t) - ranges::begin(__t));
+      return _VSTD::__to_unsigned_like(ranges::end(__t) - ranges::begin(__t));
     }
   };
 } // end namespace __size

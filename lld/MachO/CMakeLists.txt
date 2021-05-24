@@ -48,6 +48,7 @@ add_lld_library(lldMachO2
   LINK_LIBS
   lldCommon
   ${LLVM_PTHREAD_LIB}
+  ${XAR_LIB}
 
   DEPENDS
   MachOOptionsTableGen

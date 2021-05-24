@@ -8,13 +8,15 @@ from mlir.dialects import std
 from mlir.passmanager import *
 from mlir.execution_engine import *
 
+
 # Log everything to stderr and flush so that we have a unified stream to match
 # errors/info emitted by MLIR to stderr.
 def log(*args):
   print(*args, file=sys.stderr)
   sys.stderr.flush()
 
-boilerplate = """
+
+matmul_boiler = """
 func @main() -> f32 attributes {llvm.emit_c_interface} {
   %v0 = constant 0.0 : f32
   %v1 = constant 1.0 : f32
@@ -27,7 +29,7 @@ func @main() -> f32 attributes {llvm.emit_c_interface} {
   linalg.fill(%B, %v2) : memref<16x8xf32>, f32
   linalg.fill(%C, %v0) : memref<4x8xf32>, f32
 
-  call @matmul_on_buffers(%A, %B, %C) : 
+  call @matmul_on_buffers(%A, %B, %C) :
     (memref<4x16xf32>, memref<16x8xf32>, memref<4x8xf32>) -> ()
 
   %c0 = constant 0 : index
@@ -38,7 +40,23 @@ func @main() -> f32 attributes {llvm.emit_c_interface} {
 }
 """
 
-def transform(module):
+fill_boiler = """
+func @main() -> i32 attributes {llvm.emit_c_interface} {
+  %O = memref.alloc() : memref<4x16xi32>
+
+  call @fill_on_buffers(%O) :
+    (memref<4x16xi32>) -> ()
+
+  %c0 = constant 0 : index
+  %0 = memref.load %O[%c0, %c0] : memref<4x16xi32>
+
+  // TODO: FFI-based solution to allow testing and printing with python code.
+  return %0 : i32
+}
+"""
+
+
+def transform(module, boilerplate):
   import mlir.conversions
   import mlir.dialects.linalg.passes
   import mlir.transforms
@@ -46,26 +64,27 @@ def transform(module):
   # TODO: Allow cloning functions from one module to another.
   # Atm we have to resort to string concatenation.
   mod = Module.parse(
-    str(module.operation.regions[0].blocks[0].operations[0].operation) +
-    boilerplate)
-  pm = PassManager.parse("func(convert-linalg-to-loops, convert-scf-to-std)," + 
-                         "convert-vector-to-llvm," + 
-                         "convert-std-to-llvm")
+      str(module.operation.regions[0].blocks[0].operations[0].operation) +
+      boilerplate)
+  pm = PassManager.parse("func(convert-linalg-to-loops, convert-scf-to-std)," +
+                         "convert-vector-to-llvm," + "convert-std-to-llvm")
   pm.run(mod)
   return mod
 
-def test_builtin():
+
+def test_matmul_builtin():
   with Context() as ctx, Location.unknown():
     module = Module.create()
     f32 = F32Type.get()
     with InsertionPoint(module.body):
-      @builtin.FuncOp.from_py_func(MemRefType.get((4, 16), f32),
-                                   MemRefType.get((16, 8), f32),
-                                   MemRefType.get((4, 8), f32))
+
+      @builtin.FuncOp.from_py_func(
+          MemRefType.get((4, 16), f32), MemRefType.get((16, 8), f32),
+          MemRefType.get((4, 8), f32))
       def matmul_on_buffers(lhs, rhs, out):
         linalg.matmul(lhs, rhs, outs=[out])
-    
-    execution_engine = ExecutionEngine(transform(module))
+
+    execution_engine = ExecutionEngine(transform(module, matmul_boiler))
 
     # TODO: FFI-based solution to allow testing and printing with python code.
     # Prepare arguments: one result f32.
@@ -74,23 +93,26 @@ def test_builtin():
     res = c_float_p(-1.)
     execution_engine.invoke("main", res)
 
-    log('RESULT: ', res[0])
+    log("RESULT: ", res[0])
     # CHECK: RESULT: 32.0
 
-test_builtin()
 
-def test_generic():
+test_matmul_builtin()
+
+
+def test_matmul_generic():
   with Context() as ctx, Location.unknown():
     module = Module.create()
     f32 = F32Type.get()
     with InsertionPoint(module.body):
-      @builtin.FuncOp.from_py_func(MemRefType.get((4, 16), f32),
-                                   MemRefType.get((16, 8), f32),
-                                   MemRefType.get((4, 8), f32))
+
+      @builtin.FuncOp.from_py_func(
+          MemRefType.get((4, 16), f32), MemRefType.get((16, 8), f32),
+          MemRefType.get((4, 8), f32))
       def matmul_on_buffers(lhs, rhs, out):
         linalg.matmul(lhs, rhs, outs=[out], emit_generic=True)
-    
-    execution_engine = ExecutionEngine(transform(module))
+
+    execution_engine = ExecutionEngine(transform(module, matmul_boiler))
 
     # TODO: FFI-based solution to allow testing and printing with python code.
     # Prepare arguments: one result f32.
@@ -99,7 +121,62 @@ def test_generic():
     res = c_float_p(-1.)
     execution_engine.invoke("main", res)
 
-    log('RESULT: ', res[0])
+    log("RESULT: ", res[0])
     # CHECK: RESULT: 32.0
 
-test_generic()
+
+test_matmul_generic()
+
+
+def test_fill_builtin():
+  with Context() as ctx, Location.unknown():
+    module = Module.create()
+    f64 = F64Type.get()
+    i32 = IntegerType.get_signless(32)
+    with InsertionPoint(module.body):
+
+      @builtin.FuncOp.from_py_func(MemRefType.get((4, 16), i32))
+      def fill_on_buffers(out):
+        linalg.fill_rng_2d(outs=[out])
+
+    execution_engine = ExecutionEngine(transform(module, fill_boiler))
+
+    # TODO: FFI-based solution to allow testing and printing with python code.
+    # Prepare arguments: one result i32.
+    # Arguments must be passed as pointers.
+    c_int_p = ctypes.c_int * 1
+    res = c_int_p(-1)
+    execution_engine.invoke("main", res)
+
+    log("RESULT: ", res[0])
+    # CHECK: RESULT: -480
+
+
+test_fill_builtin()
+
+
+def test_fill_generic():
+  with Context() as ctx, Location.unknown():
+    module = Module.create()
+    f64 = F64Type.get()
+    i32 = IntegerType.get_signless(32)
+    with InsertionPoint(module.body):
+
+      @builtin.FuncOp.from_py_func(MemRefType.get((4, 16), i32))
+      def fill_on_buffers(out):
+        linalg.fill_rng_2d(outs=[out])
+
+    execution_engine = ExecutionEngine(transform(module, fill_boiler))
+
+    # TODO: FFI-based solution to allow testing and printing with python code.
+    # Prepare arguments: one result i32.
+    # Arguments must be passed as pointers.
+    c_int_p = ctypes.c_int * 1
+    res = c_int_p(-1)
+    execution_engine.invoke("main", res)
+
+    log("RESULT: ", res[0])
+    # CHECK: RESULT: -480
+
+
+test_fill_generic()

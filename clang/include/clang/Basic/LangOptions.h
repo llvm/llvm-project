@@ -267,6 +267,13 @@ public:
     Single
   };
 
+  enum class ExtendArgsKind {
+    /// Integer arguments are sign or zero extended to 32/64 bits
+    /// during default argument promotions.
+    ExtendTo32,
+    ExtendTo64
+  };
+
 public:
   /// The used language standard.
   LangStandard::Kind LangStd;

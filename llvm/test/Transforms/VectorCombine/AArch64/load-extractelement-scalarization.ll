@@ -45,6 +45,19 @@ define i32 @load_extract_idx_3(<4 x i32>* %x) {
   ret i32 %r
 }
 
+; Out-of-bounds index for extractelement, should not be converted to narrow
+; load, because it would introduce a dereference of a poison pointer.
+define i32 @load_extract_idx_4(<4 x i32>* %x) {
+; CHECK-LABEL: @load_extract_idx_4(
+; CHECK-NEXT:    [[LV:%.*]] = load <4 x i32>, <4 x i32>* [[X:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[LV]], i32 4
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %lv = load <4 x i32>, <4 x i32>* %x
+  %r = extractelement <4 x i32> %lv, i32 4
+  ret i32 %r
+}
+
 define i32 @load_extract_idx_var_i64(<4 x i32>* %x, i64 %idx) {
 ; CHECK-LABEL: @load_extract_idx_var_i64(
 ; CHECK-NEXT:    [[LV:%.*]] = load <4 x i32>, <4 x i32>* [[X:%.*]], align 16
@@ -365,6 +378,23 @@ define i32 @load_multiple_extracts_with_constant_idx(<4 x i32>* %x) {
   %lv = load <4 x i32>, <4 x i32>* %x
   %e.0 = extractelement <4 x i32> %lv, i32 0
   %e.1 = extractelement <4 x i32> %lv, i32 1
+  %res = add i32 %e.0, %e.1
+  ret i32 %res
+}
+
+; Scalarizing the load for multiple extracts is profitable in this case,
+; because the vector large vector requires 2 vector registers.
+define i32 @load_multiple_extracts_with_constant_idx_profitable(<8 x i32>* %x) {
+; CHECK-LABEL: @load_multiple_extracts_with_constant_idx_profitable(
+; CHECK-NEXT:    [[LV:%.*]] = load <8 x i32>, <8 x i32>* [[X:%.*]], align 32
+; CHECK-NEXT:    [[E_0:%.*]] = extractelement <8 x i32> [[LV]], i32 0
+; CHECK-NEXT:    [[E_1:%.*]] = extractelement <8 x i32> [[LV]], i32 6
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[E_0]], [[E_1]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %lv = load <8 x i32>, <8 x i32>* %x
+  %e.0 = extractelement <8 x i32> %lv, i32 0
+  %e.1 = extractelement <8 x i32> %lv, i32 6
   %res = add i32 %e.0, %e.1
   ret i32 %res
 }

@@ -174,8 +174,8 @@ define void @test_04(i1 %c, i64* align 1 %ptr, [3 x i8*]* %vtable) local_unnamed
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[TRUE2_CRITEDGE:%.*]], label [[FALSE1:%.*]]
 ; CHECK:       false1:
 ; CHECK-NEXT:    store volatile i64 1, i64* [[PTR:%.*]], align 4
-; CHECK-NEXT:    [[VTABLE:%.*]] = bitcast [3 x i8*]* %vtable to i8*
-; CHECK-NEXT:    [[P:%.*]] = call i1 @llvm.type.test(i8* [[VTABLE]], metadata !"foo")
+; CHECK-NEXT:    [[VTABLEI8:%.*]] = bitcast [3 x i8*]* [[VTABLE:%.*]] to i8*
+; CHECK-NEXT:    [[P:%.*]] = call i1 @llvm.type.test(i8* [[VTABLEI8]], metadata !"foo")
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[P]])
 ; CHECK-NEXT:    store volatile i64 0, i64* [[PTR]], align 8
 ; CHECK-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
@@ -186,9 +186,9 @@ define void @test_04(i1 %c, i64* align 1 %ptr, [3 x i8*]* %vtable) local_unnamed
 ; CHECK-NEXT:    store volatile i64 3, i64* [[PTR]], align 8
 ; CHECK-NEXT:    ret void
 ; CHECK:       true2.critedge:
-; CHECK-NEXT:    [[VTABLE:%.*]] = bitcast [3 x i8*]* %vtable to i8*
-; CHECK-NEXT:    [[P:%.*]] = call i1 @llvm.type.test(i8* [[VTABLE]], metadata !"foo")
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[P]])
+; CHECK-NEXT:    [[VTABLEI8_C:%.*]] = bitcast [3 x i8*]* [[VTABLE]] to i8*
+; CHECK-NEXT:    [[P_C:%.*]] = call i1 @llvm.type.test(i8* [[VTABLEI8_C]], metadata !"foo")
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[P_C]])
 ; CHECK-NEXT:    store volatile i64 0, i64* [[PTR]], align 8
 ; CHECK-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
 ; CHECK-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8

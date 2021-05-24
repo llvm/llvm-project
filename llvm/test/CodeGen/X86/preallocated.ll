@@ -129,11 +129,11 @@ define void @nested_with_init() {
 ; CHECK: pushl [[REGISTER2]]
 ; CHECK: calll _init
 
-  call void @foo_ret_p(%Foo* %b1, %Foo* preallocated(%Foo) %b2) ["preallocated"(token %t2)]
+  call void @foo_ret_p(%Foo* sret(%Foo) %b1, %Foo* preallocated(%Foo) %b2) ["preallocated"(token %t2)]
 ; CHECK-NOT: subl {{\$[0-9]+}}, %esp
 ; CHECK-NOT: pushl
 ; CHECK: calll _foo_ret_p
-  call void @foo_ret_p(%Foo* %tmp, %Foo* preallocated(%Foo) %b1) ["preallocated"(token %t1)]
+  call void @foo_ret_p(%Foo* sret(%Foo) %tmp, %Foo* preallocated(%Foo) %b1) ["preallocated"(token %t1)]
 ; CHECK-NOT: subl {{\$[0-9]+}}, %esp
 ; CHECK-NOT: pushl
 ; CHECK: calll _foo_ret_p
@@ -150,7 +150,7 @@ define void @inreg() {
 ; CHECK: subl $8, %esp
 ; CHECK: movl $9, %eax
 ; CHECK: calll _foo_inreg_p
-  call void @foo_inreg_p(i32 9, %Foo* preallocated(%Foo) %b) ["preallocated"(token %t)]
+  call void @foo_inreg_p(i32 inreg 9, %Foo* preallocated(%Foo) %b) ["preallocated"(token %t)]
   ret void
 }
 

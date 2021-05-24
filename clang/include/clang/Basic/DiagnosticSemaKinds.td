@@ -118,7 +118,8 @@ def warn_float_underflow : Warning<
   "magnitude of floating-point constant too small for type %0; minimum is %1">,
   InGroup<LiteralRange>;
 def warn_double_const_requires_fp64 : Warning<
-  "double precision constant requires cl_khr_fp64, casting to single precision">;
+  "double precision constant requires %select{cl_khr_fp64|cl_khr_fp64 and __opencl_c_fp64}0, "
+  "casting to single precision">;
 def err_half_const_requires_fp16 : Error<
   "half precision constant requires cl_khr_fp16">;
 
@@ -3634,13 +3635,13 @@ def warn_fun_requires_lock_precise :
 def note_found_mutex_near_match : Note<"found near match '%0'">;
 
 // Verbose thread safety warnings
-def warn_thread_safety_verbose : Warning<"Thread safety verbose warning.">,
+def warn_thread_safety_verbose : Warning<"thread safety verbose warning">,
   InGroup<ThreadSafetyVerbose>, DefaultIgnore;
-def note_thread_warning_in_fun : Note<"Thread warning in function %0">;
-def note_guarded_by_declared_here : Note<"Guarded_by declared here.">;
+def note_thread_warning_in_fun : Note<"thread warning in function %0">;
+def note_guarded_by_declared_here : Note<"guarded_by declared here">;
 
 // Dummy warning that will trigger "beta" warnings from the analysis if enabled.
-def warn_thread_safety_beta : Warning<"Thread safety beta warning.">,
+def warn_thread_safety_beta : Warning<"thread safety beta warning">,
   InGroup<ThreadSafetyBeta>, DefaultIgnore;
 
 // Consumed warnings
@@ -10027,6 +10028,8 @@ def err_opencl_requires_extension : Error<
 def ext_opencl_double_without_pragma : Extension<
   "Clang permits use of type 'double' regardless pragma if 'cl_khr_fp64' is"
   " supported">;
+def err_opencl_double_requires_extension :  Error<
+    "use of type 'double' requires %select{cl_khr_fp64|cl_khr_fp64 and __opencl_c_fp64}0 support">;
 def warn_opencl_generic_address_space_arg : Warning<
   "passing non-generic address space pointer to %0"
   " may cause dynamic conversion affecting performance">,

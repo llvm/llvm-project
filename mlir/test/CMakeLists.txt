@@ -1,5 +1,4 @@
 add_subdirectory(CAPI)
-add_subdirectory(EDSC)
 add_subdirectory(SDBM)
 add_subdirectory(lib)
 
@@ -63,8 +62,8 @@ set(MLIR_TEST_DEPENDS
   mlir-capi-pass-test
   mlir-capi-sparse-tensor-test
   mlir-cpu-runner
-  mlir-edsc-builder-api-test
   mlir-linalg-ods-gen
+  mlir-linalg-ods-yaml-gen
   mlir-lsp-server
   mlir-opt
   mlir-reduce

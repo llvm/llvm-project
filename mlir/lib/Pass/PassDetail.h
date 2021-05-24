@@ -82,6 +82,43 @@ private:
   friend class mlir::PassManager;
 };
 
+//===----------------------------------------------------------------------===//
+// PassCrashReproducerGenerator
+//===----------------------------------------------------------------------===//
+
+class PassCrashReproducerGenerator {
+public:
+  PassCrashReproducerGenerator(
+      PassManager::ReproducerStreamFactory &streamFactory,
+      bool localReproducer);
+  ~PassCrashReproducerGenerator();
+
+  /// Initialize the generator in preparation for reproducer generation. The
+  /// generator should be reinitialized before each run of the pass manager.
+  void initialize(iterator_range<PassManager::pass_iterator> passes,
+                  Operation *op, bool pmFlagVerifyPasses);
+  /// Finalize the current run of the generator, generating any necessary
+  /// reproducers if the provided execution result is a failure.
+  void finalize(Operation *rootOp, LogicalResult executionResult);
+
+  /// Prepare a new reproducer for the given pass, operating on `op`.
+  void prepareReproducerFor(Pass *pass, Operation *op);
+
+  /// Prepare a new reproducer for the given passes, operating on `op`.
+  void prepareReproducerFor(iterator_range<PassManager::pass_iterator> passes,
+                            Operation *op);
+
+  /// Remove the last recorded reproducer anchored at the given pass and
+  /// operation.
+  void removeLastReproducerFor(Pass *pass, Operation *op);
+
+private:
+  struct Impl;
+
+  /// The internal implementation of the crash reproducer.
+  std::unique_ptr<Impl> impl;
+};
+
 } // end namespace detail
 } // end namespace mlir
 #endif // MLIR_PASS_PASSDETAIL_H_

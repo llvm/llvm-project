@@ -7483,7 +7483,7 @@ int LLParser::parseLoad(Instruction *&Inst, PerFunctionState &PFS) {
       Ordering == AtomicOrdering::AcquireRelease)
     return error(Loc, "atomic load cannot use Release ordering");
 
-  if (Ty != cast<PointerType>(Val->getType())->getElementType()) {
+  if (!cast<PointerType>(Val->getType())->isOpaqueOrPointeeTypeMatches(Ty)) {
     return error(
         ExplicitTypeLoc,
         typeComparisonErrorMessage(
@@ -7534,7 +7534,8 @@ int LLParser::parseStore(Instruction *&Inst, PerFunctionState &PFS) {
     return error(PtrLoc, "store operand must be a pointer");
   if (!Val->getType()->isFirstClassType())
     return error(Loc, "store operand must be a first class value");
-  if (cast<PointerType>(Ptr->getType())->getElementType() != Val->getType())
+  if (!cast<PointerType>(Ptr->getType())
+           ->isOpaqueOrPointeeTypeMatches(Val->getType()))
     return error(Loc, "stored value and pointer type do not match");
   if (isAtomic && !Alignment)
     return error(Loc, "atomic store must have explicit non-zero alignment");
@@ -7590,10 +7591,14 @@ int LLParser::parseCmpXchg(Instruction *&Inst, PerFunctionState &PFS) {
         "cmpxchg failure ordering cannot include release semantics");
   if (!Ptr->getType()->isPointerTy())
     return error(PtrLoc, "cmpxchg operand must be a pointer");
-  if (cast<PointerType>(Ptr->getType())->getElementType() != Cmp->getType())
+  if (!cast<PointerType>(Ptr->getType())
+           ->isOpaqueOrPointeeTypeMatches(Cmp->getType()))
     return error(CmpLoc, "compare value and pointer type do not match");
-  if (cast<PointerType>(Ptr->getType())->getElementType() != New->getType())
+  if (!cast<PointerType>(Ptr->getType())
+           ->isOpaqueOrPointeeTypeMatches(New->getType()))
     return error(NewLoc, "new value and pointer type do not match");
+  if (Cmp->getType() != New->getType())
+    return error(NewLoc, "compare value and new value type do not match");
   if (!New->getType()->isFirstClassType())
     return error(NewLoc, "cmpxchg operand must be a first class value");
 
@@ -7663,7 +7668,8 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
     return tokError("atomicrmw cannot be unordered");
   if (!Ptr->getType()->isPointerTy())
     return error(PtrLoc, "atomicrmw operand must be a pointer");
-  if (cast<PointerType>(Ptr->getType())->getElementType() != Val->getType())
+  if (!cast<PointerType>(Ptr->getType())
+           ->isOpaqueOrPointeeTypeMatches(Val->getType()))
     return error(ValLoc, "atomicrmw value and pointer type do not match");
 
   if (Operation == AtomicRMWInst::Xchg) {
@@ -7740,7 +7746,7 @@ int LLParser::parseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
   if (!BasePointerType)
     return error(Loc, "base of getelementptr must be a pointer");
 
-  if (Ty != BasePointerType->getElementType()) {
+  if (!BasePointerType->isOpaqueOrPointeeTypeMatches(Ty)) {
     return error(
         ExplicitTypeLoc,
         typeComparisonErrorMessage(

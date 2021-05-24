@@ -32,13 +32,13 @@ int main() {
 
 /*
 # Expect param == 5 before stepping through inlined 'use'.
-DexExpectWatchValue('param', '5', on_line='fun1')
+DexExpectWatchValue('param', '5', on_line=ref('fun1'))
 
 # Expect param == 255 after assignment in inlined frame 'use'.
 DexExpectProgramState({
   'frames': [
     { 'function': 'use',
-      'location': { 'lineno': 'use1' },
+      'location': { 'lineno': ref('use1') },
     },
     { 'function': 'fun',
       'location': { 'lineno': 20 },
@@ -48,5 +48,5 @@ DexExpectProgramState({
 })
 
 # Expect param == 255 after inlined call to 'use'.
-DexExpectWatchValue('param', '255', on_line='fun2')
+DexExpectWatchValue('param', '255', on_line=ref('fun2'))
 */

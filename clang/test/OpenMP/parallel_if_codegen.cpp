@@ -3,18 +3,18 @@
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple x86_64-unknown-linux -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-unknown-linux -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK2
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK3
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -triple x86_64-unknown-linux -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -triple x86_64-unknown-linux -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK4
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -triple x86_64-unknown-linux -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-linux -emit-llvm %s -disable-O0-optnone -o - | FileCheck %s --check-prefix=CHECK5
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK6
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-linux -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-linux -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK7
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK8
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple x86_64-unknown-linux -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-unknown-linux -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK9
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-unknown-linux -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 
 // expected-no-diagnostics
 #ifndef HEADER
@@ -405,68 +405,6 @@ int main() {
 // CHECK2-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
 // CHECK2-NEXT:    call void @_Z3fn3v()
 // CHECK2-NEXT:    ret void
-//
-//
-// CHECK3-LABEL: define {{[^@]+}}@_Z9gtid_testv
-// CHECK3-SAME: () #[[ATTR0:[0-9]+]] {
-// CHECK3-NEXT:  entry:
-// CHECK3-NEXT:    call void @_Z9gtid_testv()
-// CHECK3-NEXT:    ret void
-//
-//
-// CHECK3-LABEL: define {{[^@]+}}@main
-// CHECK3-SAME: () #[[ATTR1:[0-9]+]] {
-// CHECK3-NEXT:  entry:
-// CHECK3-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    store i32 0, i32* [[RETVAL]], align 4
-// CHECK3-NEXT:    call void @_Z3fn4v()
-// CHECK3-NEXT:    call void @_Z3fn5v()
-// CHECK3-NEXT:    call void @_Z3fn6v()
-// CHECK3-NEXT:    [[TMP0:%.*]] = load i32, i32* @Arg, align 4
-// CHECK3-NEXT:    [[CALL:%.*]] = call i32 @_Z5tmainIiEiT_(i32 [[TMP0]])
-// CHECK3-NEXT:    ret i32 [[CALL]]
-//
-//
-// CHECK3-LABEL: define {{[^@]+}}@_Z5tmainIiEiT_
-// CHECK3-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] comdat {
-// CHECK3-NEXT:  entry:
-// CHECK3-NEXT:    [[ARG_ADDR:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    store i32 [[ARG]], i32* [[ARG_ADDR]], align 4
-// CHECK3-NEXT:    call void @_Z3fn1v()
-// CHECK3-NEXT:    call void @_Z3fn2v()
-// CHECK3-NEXT:    call void @_Z3fn3v()
-// CHECK3-NEXT:    ret i32 0
-//
-//
-// CHECK4-LABEL: define {{[^@]+}}@_Z9gtid_testv
-// CHECK4-SAME: () #[[ATTR0:[0-9]+]] {
-// CHECK4-NEXT:  entry:
-// CHECK4-NEXT:    call void @_Z9gtid_testv()
-// CHECK4-NEXT:    ret void
-//
-//
-// CHECK4-LABEL: define {{[^@]+}}@main
-// CHECK4-SAME: () #[[ATTR1:[0-9]+]] {
-// CHECK4-NEXT:  entry:
-// CHECK4-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK4-NEXT:    store i32 0, i32* [[RETVAL]], align 4
-// CHECK4-NEXT:    call void @_Z3fn4v()
-// CHECK4-NEXT:    call void @_Z3fn5v()
-// CHECK4-NEXT:    call void @_Z3fn6v()
-// CHECK4-NEXT:    [[TMP0:%.*]] = load i32, i32* @Arg, align 4
-// CHECK4-NEXT:    [[CALL:%.*]] = call i32 @_Z5tmainIiEiT_(i32 [[TMP0]])
-// CHECK4-NEXT:    ret i32 [[CALL]]
-//
-//
-// CHECK4-LABEL: define {{[^@]+}}@_Z5tmainIiEiT_
-// CHECK4-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] comdat {
-// CHECK4-NEXT:  entry:
-// CHECK4-NEXT:    [[ARG_ADDR:%.*]] = alloca i32, align 4
-// CHECK4-NEXT:    store i32 [[ARG]], i32* [[ARG_ADDR]], align 4
-// CHECK4-NEXT:    call void @_Z3fn1v()
-// CHECK4-NEXT:    call void @_Z3fn2v()
-// CHECK4-NEXT:    call void @_Z3fn3v()
-// CHECK4-NEXT:    ret i32 0
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_Z9gtid_testv
@@ -978,65 +916,4 @@ int main() {
 // CHECK7-NEXT:    call void @_Z3fn3v()
 // CHECK7-NEXT:    ret void
 //
-//
-// CHECK8-LABEL: define {{[^@]+}}@_Z9gtid_testv
-// CHECK8-SAME: () #[[ATTR0:[0-9]+]] {
-// CHECK8-NEXT:  entry:
-// CHECK8-NEXT:    call void @_Z9gtid_testv()
-// CHECK8-NEXT:    ret void
-//
-//
-// CHECK8-LABEL: define {{[^@]+}}@main
-// CHECK8-SAME: () #[[ATTR1:[0-9]+]] {
-// CHECK8-NEXT:  entry:
-// CHECK8-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK8-NEXT:    store i32 0, i32* [[RETVAL]], align 4
-// CHECK8-NEXT:    call void @_Z3fn4v()
-// CHECK8-NEXT:    call void @_Z3fn5v()
-// CHECK8-NEXT:    call void @_Z3fn6v()
-// CHECK8-NEXT:    [[TMP0:%.*]] = load i32, i32* @Arg, align 4
-// CHECK8-NEXT:    [[CALL:%.*]] = call i32 @_Z5tmainIiEiT_(i32 [[TMP0]])
-// CHECK8-NEXT:    ret i32 [[CALL]]
-//
-//
-// CHECK8-LABEL: define {{[^@]+}}@_Z5tmainIiEiT_
-// CHECK8-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] comdat {
-// CHECK8-NEXT:  entry:
-// CHECK8-NEXT:    [[ARG_ADDR:%.*]] = alloca i32, align 4
-// CHECK8-NEXT:    store i32 [[ARG]], i32* [[ARG_ADDR]], align 4
-// CHECK8-NEXT:    call void @_Z3fn1v()
-// CHECK8-NEXT:    call void @_Z3fn2v()
-// CHECK8-NEXT:    call void @_Z3fn3v()
-// CHECK8-NEXT:    ret i32 0
-//
-//
-// CHECK9-LABEL: define {{[^@]+}}@_Z9gtid_testv
-// CHECK9-SAME: () #[[ATTR0:[0-9]+]] {
-// CHECK9-NEXT:  entry:
-// CHECK9-NEXT:    call void @_Z9gtid_testv()
-// CHECK9-NEXT:    ret void
-//
-//
-// CHECK9-LABEL: define {{[^@]+}}@main
-// CHECK9-SAME: () #[[ATTR1:[0-9]+]] {
-// CHECK9-NEXT:  entry:
-// CHECK9-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK9-NEXT:    store i32 0, i32* [[RETVAL]], align 4
-// CHECK9-NEXT:    call void @_Z3fn4v()
-// CHECK9-NEXT:    call void @_Z3fn5v()
-// CHECK9-NEXT:    call void @_Z3fn6v()
-// CHECK9-NEXT:    [[TMP0:%.*]] = load i32, i32* @Arg, align 4
-// CHECK9-NEXT:    [[CALL:%.*]] = call i32 @_Z5tmainIiEiT_(i32 [[TMP0]])
-// CHECK9-NEXT:    ret i32 [[CALL]]
-//
-//
-// CHECK9-LABEL: define {{[^@]+}}@_Z5tmainIiEiT_
-// CHECK9-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] comdat {
-// CHECK9-NEXT:  entry:
-// CHECK9-NEXT:    [[ARG_ADDR:%.*]] = alloca i32, align 4
-// CHECK9-NEXT:    store i32 [[ARG]], i32* [[ARG_ADDR]], align 4
-// CHECK9-NEXT:    call void @_Z3fn1v()
-// CHECK9-NEXT:    call void @_Z3fn2v()
-// CHECK9-NEXT:    call void @_Z3fn3v()
-// CHECK9-NEXT:    ret i32 0
 //

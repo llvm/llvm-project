@@ -78,6 +78,9 @@ void populateLinalgBufferizePatterns(BufferizeTypeConverter &converter,
 /// tensors.
 void populateFoldUnitExtentDimsPatterns(RewritePatternSet &patterns);
 
+/// Patterns that are used to inline constant operands into linalg generic ops.
+void populateInlineConstantOperandsPatterns(RewritePatternSet &patterns);
+
 /// Options that control fusion of elementwise operations.
 struct LinalgElementwiseFusionOptions {
   /// Enable fusion of reshapes into the shape with elementwise operations. By
@@ -220,10 +223,9 @@ void interchangeGenericOp(PatternRewriter &rewriter, GenericOp genericOp,
 /// smallest constant value for the size of the buffer needed for each
 /// dimension. If that is not possible, contains the dynamic size of the
 /// subview. The call back should return the buffer to use.
-using AllocBufferCallbackFn =
-    std::function<Optional<Value>(OpBuilder &b, memref::SubViewOp subView,
-                                  ArrayRef<Value> boundingSubViewSize,
-                                  DataLayout &layout, OperationFolder *folder)>;
+using AllocBufferCallbackFn = std::function<Optional<Value>(
+    OpBuilder &b, memref::SubViewOp subView,
+    ArrayRef<Value> boundingSubViewSize, DataLayout &layout)>;
 
 /// Callback function type used to deallocate the buffers used to hold the
 /// promoted subview.
@@ -321,8 +323,7 @@ struct PromotionInfo {
 Optional<PromotionInfo>
 promoteSubviewAsNewBuffer(OpBuilder &b, Location loc, memref::SubViewOp subView,
                           AllocBufferCallbackFn allocationFn,
-                          DataLayout &layout,
-                          OperationFolder *folder = nullptr);
+                          DataLayout &layout);
 
 /// Promotes the `subViews` into a new buffer allocated at the insertion point
 /// `b`. Promotion occurs in 3 steps:
@@ -335,8 +336,7 @@ promoteSubviewAsNewBuffer(OpBuilder &b, Location loc, memref::SubViewOp subView,
 /// Returns the modified linalg op (the modification happens in place) as well
 /// as all the copy ops created.
 Optional<LinalgOp> promoteSubViews(OpBuilder &b, LinalgOp op,
-                                   LinalgPromotionOptions options,
-                                   OperationFolder *folder = nullptr);
+                                   LinalgPromotionOptions options);
 
 /// Emit a suitable vector form for a Linalg op with fully static shape.
 LogicalResult vectorizeLinalgOp(OpBuilder &builder, Operation *op,

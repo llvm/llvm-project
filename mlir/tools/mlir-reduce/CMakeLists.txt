@@ -31,7 +31,6 @@ set(LIBS
   ${test_libs}
   MLIRAnalysis
   MLIRDialect
-  MLIREDSC
   MLIRIR
   MLIRLoopAnalysis
   MLIROptLib

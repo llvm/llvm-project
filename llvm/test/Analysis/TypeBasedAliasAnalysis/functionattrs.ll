@@ -79,7 +79,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i1) nounwind
 ; CHECK: attributes #4 = { nofree nosync nounwind readnone willreturn mustprogress }
 ; CHECK: attributes #5 = { nofree nosync nounwind willreturn mustprogress }
 ; CHECK: attributes #6 = { nofree norecurse nosync nounwind willreturn mustprogress }
-; CHECK: attributes #7 = { argmemonly nofree nosync nounwind willreturn }
+; CHECK: attributes #7 = { argmemonly nofree nounwind willreturn }
 
 ; Root note.
 !0 = !{ }

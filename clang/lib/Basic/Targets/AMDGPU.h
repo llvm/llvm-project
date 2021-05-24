@@ -292,6 +292,7 @@ public:
     bool IsAMDGCN = isAMDGCN(getTriple());
 
     Opts["cl_khr_fp64"] = hasFP64();
+    Opts["__opencl_c_fp64"] = hasFP64();
 
     if (IsAMDGCN || GPUKind >= llvm::AMDGPU::GK_CEDAR) {
       Opts["cl_khr_byte_addressable_store"] = true;

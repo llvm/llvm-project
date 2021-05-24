@@ -1027,7 +1027,14 @@ void CombinerHelper::applyCombineDivRem(MachineInstr &MI,
 
   bool IsSigned =
       Opcode == TargetOpcode::G_SDIV || Opcode == TargetOpcode::G_SREM;
-  Builder.setInstrAndDebugLoc(MI);
+
+  // Check which instruction is first in the block so we don't break def-use
+  // deps by "moving" the instruction incorrectly.
+  if (dominates(MI, *OtherMI))
+    Builder.setInstrAndDebugLoc(MI);
+  else
+    Builder.setInstrAndDebugLoc(*OtherMI);
+
   Builder.buildInstr(IsSigned ? TargetOpcode::G_SDIVREM
                               : TargetOpcode::G_UDIVREM,
                      {DestDivReg, DestRemReg},

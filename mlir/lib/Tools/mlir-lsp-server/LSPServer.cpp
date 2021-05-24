@@ -103,8 +103,10 @@ void LSPServer::Impl::onShutdown(const NoParams &,
 
 void LSPServer::Impl::onDocumentDidOpen(
     const DidOpenTextDocumentParams &params) {
-  PublishDiagnosticsParams diagParams(params.textDocument.uri);
+  PublishDiagnosticsParams diagParams(params.textDocument.uri,
+                                      params.textDocument.version);
   server.addOrUpdateDocument(params.textDocument.uri, params.textDocument.text,
+                             params.textDocument.version,
                              diagParams.diagnostics);
 
   // Publish any recorded diagnostics.
@@ -112,12 +114,15 @@ void LSPServer::Impl::onDocumentDidOpen(
 }
 void LSPServer::Impl::onDocumentDidClose(
     const DidCloseTextDocumentParams &params) {
-  server.removeDocument(params.textDocument.uri);
+  Optional<int64_t> version = server.removeDocument(params.textDocument.uri);
+  if (!version)
+    return;
 
   // Empty out the diagnostics shown for this document. This will clear out
   // anything currently displayed by the client for this document (e.g. in the
   // "Problems" pane of VSCode).
-  publishDiagnostics(PublishDiagnosticsParams(params.textDocument.uri));
+  publishDiagnostics(
+      PublishDiagnosticsParams(params.textDocument.uri, *version));
 }
 void LSPServer::Impl::onDocumentDidChange(
     const DidChangeTextDocumentParams &params) {
@@ -125,10 +130,11 @@ void LSPServer::Impl::onDocumentDidChange(
   // to avoid this.
   if (params.contentChanges.size() != 1)
     return;
-  PublishDiagnosticsParams diagParams(params.textDocument.uri);
-  server.addOrUpdateDocument(params.textDocument.uri,
-                             params.contentChanges.front().text,
-                             diagParams.diagnostics);
+  PublishDiagnosticsParams diagParams(params.textDocument.uri,
+                                      params.textDocument.version);
+  server.addOrUpdateDocument(
+      params.textDocument.uri, params.contentChanges.front().text,
+      params.textDocument.version, diagParams.diagnostics);
 
   // Publish any recorded diagnostics.
   publishDiagnostics(diagParams);

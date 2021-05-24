@@ -470,6 +470,23 @@ static Optional<Instruction *> instCombineSVELast(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, Extract);
 }
 
+static Optional<Instruction *> instCombineRDFFR(InstCombiner &IC,
+                                                IntrinsicInst &II) {
+  LLVMContext &Ctx = II.getContext();
+  IRBuilder<> Builder(Ctx);
+  Builder.SetInsertPoint(&II);
+  // Replace rdffr with predicated rdffr.z intrinsic, so that optimizePTestInstr
+  // can work with RDFFR_PP for ptest elimination.
+  auto *AllPat =
+      ConstantInt::get(Type::getInt32Ty(Ctx), AArch64SVEPredPattern::all);
+  auto *PTrue = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_ptrue,
+                                        {II.getType()}, {AllPat});
+  auto *RDFFR =
+      Builder.CreateIntrinsic(Intrinsic::aarch64_sve_rdffr_z, {}, {PTrue});
+  RDFFR->takeName(&II);
+  return IC.replaceInstUsesWith(II, RDFFR);
+}
+
 Optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -481,6 +498,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineConvertFromSVBool(IC, II);
   case Intrinsic::aarch64_sve_dup:
     return instCombineSVEDup(IC, II);
+  case Intrinsic::aarch64_sve_rdffr:
+    return instCombineRDFFR(IC, II);
   case Intrinsic::aarch64_sve_lasta:
   case Intrinsic::aarch64_sve_lastb:
     return instCombineSVELast(IC, II);
@@ -1267,7 +1286,8 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
                                            UseMaskForCond, UseMaskForGaps);
 }
 
-int AArch64TTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) {
+InstructionCost
+AArch64TTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) {
   InstructionCost Cost = 0;
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   for (auto *I : Tys) {
@@ -1278,7 +1298,7 @@ int AArch64TTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) {
       Cost += getMemoryOpCost(Instruction::Store, I, Align(128), 0, CostKind) +
               getMemoryOpCost(Instruction::Load, I, Align(128), 0, CostKind);
   }
-  return *Cost.getValue();
+  return Cost;
 }
 
 unsigned AArch64TTIImpl::getMaxInterleaveFactor(unsigned VF) {
@@ -1678,17 +1698,31 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       { TTI::SK_Broadcast, MVT::nxv8i16,  1 },
       { TTI::SK_Broadcast, MVT::nxv4i32,  1 },
       { TTI::SK_Broadcast, MVT::nxv2i64,  1 },
+      { TTI::SK_Broadcast, MVT::nxv2f16,  1 },
+      { TTI::SK_Broadcast, MVT::nxv4f16,  1 },
       { TTI::SK_Broadcast, MVT::nxv8f16,  1 },
+      { TTI::SK_Broadcast, MVT::nxv2bf16, 1 },
+      { TTI::SK_Broadcast, MVT::nxv4bf16, 1 },
       { TTI::SK_Broadcast, MVT::nxv8bf16, 1 },
+      { TTI::SK_Broadcast, MVT::nxv2f32,  1 },
       { TTI::SK_Broadcast, MVT::nxv4f32,  1 },
       { TTI::SK_Broadcast, MVT::nxv2f64,  1 },
+      { TTI::SK_Broadcast, MVT::nxv16i1,  1 },
+      { TTI::SK_Broadcast, MVT::nxv8i1,   1 },
+      { TTI::SK_Broadcast, MVT::nxv4i1,   1 },
+      { TTI::SK_Broadcast, MVT::nxv2i1,   1 },
       // Handle the cases for vector.reverse with scalable vectors
       { TTI::SK_Reverse, MVT::nxv16i8,  1 },
       { TTI::SK_Reverse, MVT::nxv8i16,  1 },
       { TTI::SK_Reverse, MVT::nxv4i32,  1 },
       { TTI::SK_Reverse, MVT::nxv2i64,  1 },
+      { TTI::SK_Reverse, MVT::nxv2f16,  1 },
+      { TTI::SK_Reverse, MVT::nxv4f16,  1 },
       { TTI::SK_Reverse, MVT::nxv8f16,  1 },
+      { TTI::SK_Reverse, MVT::nxv2bf16, 1 },
+      { TTI::SK_Reverse, MVT::nxv4bf16, 1 },
       { TTI::SK_Reverse, MVT::nxv8bf16, 1 },
+      { TTI::SK_Reverse, MVT::nxv2f32,  1 },
       { TTI::SK_Reverse, MVT::nxv4f32,  1 },
       { TTI::SK_Reverse, MVT::nxv2f64,  1 },
       { TTI::SK_Reverse, MVT::nxv16i1,  1 },

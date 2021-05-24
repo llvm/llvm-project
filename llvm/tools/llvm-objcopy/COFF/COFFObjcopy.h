@@ -18,10 +18,12 @@ class COFFObjectFile;
 } // end namespace object
 
 namespace objcopy {
-struct CopyConfig;
+struct CommonConfig;
+struct COFFConfig;
 
 namespace coff {
-Error executeObjcopyOnBinary(const CopyConfig &Config,
+
+Error executeObjcopyOnBinary(const CommonConfig &Config, const COFFConfig &,
                              object::COFFObjectFile &In, raw_ostream &Out);
 
 } // end namespace coff

@@ -141,8 +141,8 @@ public:
   std::vector<InputGlobal *> globals;
   std::vector<InputEvent *> events;
   std::vector<InputTable *> tables;
-  std::vector<InputSection *> customSections;
-  llvm::DenseMap<uint32_t, InputSection *> customSectionsByIndex;
+  std::vector<InputChunk *> customSections;
+  llvm::DenseMap<uint32_t, InputChunk *> customSectionsByIndex;
 
   Symbol *getSymbol(uint32_t index) const { return symbols[index]; }
   FunctionSymbol *getFunctionSymbol(uint32_t index) const;

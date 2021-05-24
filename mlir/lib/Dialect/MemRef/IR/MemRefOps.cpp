@@ -734,8 +734,8 @@ static Value getResultDimFromShapeInterface(OpBuilder &builder, OpResult result,
   // check if the op implements the first interface method or the second, and
   // get the value to use appropriately.
   SmallVector<Value> reifiedResultShapes;
-  if (succeeded(
-          shapedTypeOp.reifyReturnTypeShapes(builder, reifiedResultShapes))) {
+  if (succeeded(shapedTypeOp.reifyReturnTypeShapes(
+          builder, result.getOwner()->getOperands(), reifiedResultShapes))) {
     if (reifiedResultShapes.size() <= resultNumber)
       return nullptr;
     Value resultShape = reifiedResultShapes[resultNumber];

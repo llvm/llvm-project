@@ -9571,8 +9571,9 @@ Overview:
 
 The '``alloca``' instruction allocates memory on the stack frame of the
 currently executing function, to be automatically released when this
-function returns to its caller. The object is always allocated in the
-address space for allocas indicated in the datalayout.
+function returns to its caller.  If the address space is not explicitly
+specified, the object is allocated in the alloca address space from the
+:ref:`datalayout string<langref_datalayout>`.
 
 Arguments:
 """"""""""
@@ -9602,6 +9603,10 @@ the function returns (either with the ``ret`` or ``resume`` instructions),
 the memory is reclaimed. Allocating zero bytes is legal, but the returned
 pointer may not be unique. The order in which memory is allocated (ie.,
 which way the stack grows) is not specified.
+
+Note that '``alloca``' outside of the alloca address space from the
+:ref:`datalayout string<langref_datalayout>` is meaningful only if the
+target has assigned it a semantics.
 
 If the returned pointer is used by :ref:`llvm.lifetime.start <int_lifestart>`,
 the returned object is initially dead.

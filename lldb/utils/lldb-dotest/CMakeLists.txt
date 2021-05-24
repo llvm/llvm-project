@@ -1,6 +1,6 @@
 # Make lldb-dotest a custom target.
 add_custom_target(lldb-dotest)
-add_dependencies(lldb-dotest lldb-test-deps)
+add_dependencies(lldb-dotest lldb-test-depends)
 set_target_properties(lldb-dotest PROPERTIES FOLDER "lldb utils")
 
 get_property(LLDB_DOTEST_ARGS GLOBAL PROPERTY LLDB_DOTEST_ARGS_PROPERTY)

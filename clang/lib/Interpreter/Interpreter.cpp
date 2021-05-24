@@ -16,6 +16,7 @@
 #include "IncrementalExecutor.h"
 #include "IncrementalParser.h"
 
+#include "clang/AST/ASTContext.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
@@ -157,7 +158,7 @@ IncrementalCompilerBuilder::create(std::vector<const char *> &ClangArgv) {
   ParseDiagnosticArgs(*DiagOpts, ParsedArgs, &Diags);
 
   driver::Driver Driver(/*MainBinaryName=*/ClangArgv[0],
-                        llvm::sys::getDefaultTargetTriple(), Diags);
+                        llvm::sys::getProcessTriple(), Diags);
   Driver.setCheckInputsExist(false); // the input comes from mem buffers
   llvm::ArrayRef<const char *> RF = llvm::makeArrayRef(ClangArgv);
   std::unique_ptr<driver::Compilation> Compilation(Driver.BuildCompilation(RF));
@@ -204,8 +205,11 @@ llvm::Expected<Transaction &> Interpreter::Parse(llvm::StringRef Code) {
 llvm::Error Interpreter::Execute(Transaction &T) {
   assert(T.TheModule);
   if (!IncrExecutor) {
+    const llvm::Triple &Triple =
+        getCompilerInstance()->getASTContext().getTargetInfo().getTriple();
     llvm::Error Err = llvm::Error::success();
-    IncrExecutor = std::make_unique<IncrementalExecutor>(*TSCtx, Err);
+    IncrExecutor = std::make_unique<IncrementalExecutor>(*TSCtx, Err, Triple);
+
     if (Err)
       return Err;
   }

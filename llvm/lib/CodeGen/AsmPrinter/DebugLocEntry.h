@@ -121,11 +121,6 @@ public:
     // Currently, DBG_VALUE_VAR expressions must use stack_value.
     assert(Expr && Expr->isValid() &&
            is_contained(Locs, dwarf::DW_OP_stack_value));
-    for (DbgValueLocEntry &Entry : ValueLocEntries) {
-      assert(!Entry.isConstantFP() && !Entry.isConstantInt() &&
-             "Constant values should only be present in non-variadic "
-             "DBG_VALUEs.");
-    }
 #endif
   }
 
@@ -142,11 +137,6 @@ public:
       // Currently, DBG_VALUE_VAR expressions must use stack_value.
       assert(Expr && Expr->isValid() &&
              is_contained(Expr->getElements(), dwarf::DW_OP_stack_value));
-      for (DbgValueLocEntry &Entry : ValueLocEntries) {
-        assert(!Entry.isConstantFP() && !Entry.isConstantInt() &&
-               "Constant values should only be present in non-variadic "
-               "DBG_VALUEs.");
-      }
     }
 #endif
   }

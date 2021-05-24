@@ -12,6 +12,7 @@ set(x86_64_SOURCES
 
 set(ORC_IMPL_HEADERS
 # Implementation headers will go here.
+  error.h
   extensible_rtti.h
 )
 

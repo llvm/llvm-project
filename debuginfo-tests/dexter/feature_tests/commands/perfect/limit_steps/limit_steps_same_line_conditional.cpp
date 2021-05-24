@@ -20,7 +20,7 @@ int main() {
   return val1 + placeholder;
 }
 
-// DexExpectWatchValue('val1', 0, 1, 3, from_line='from', to_line='extended_to')
+// DexExpectWatchValue('val1', 0, 1, 3, from_line=ref('from'), to_line=ref('extended_to'))
 
-// DexLimitSteps('ix', 0, from_line='from', to_line='to')
-// DexLimitSteps('ix', 1, from_line='from', to_line='extended_to')
+// DexLimitSteps('ix', 0, from_line=ref('from'), to_line=ref('to'))
+// DexLimitSteps('ix', 1, from_line=ref('from'), to_line=ref('extended_to'))

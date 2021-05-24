@@ -962,6 +962,12 @@ void CodeGenPGO::emitCounterIncrement(CGBuilderTy &Builder, const Stmt *S,
         makeArrayRef(Args));
 }
 
+void CodeGenPGO::setValueProfilingFlag(llvm::Module &M) {
+  if (CGM.getCodeGenOpts().hasProfileClangInstr())
+    M.addModuleFlag(llvm::Module::Warning, "EnableValueProfiling",
+                    uint32_t(EnableValueProfiling));
+}
+
 // This method either inserts a call to the profile run-time during
 // instrumentation or puts profile data into metadata for PGO use.
 void CodeGenPGO::valueProfile(CGBuilderTy &Builder, uint32_t ValueKind,

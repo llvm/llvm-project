@@ -418,6 +418,5 @@ MergedLoadStoreMotionPass::run(Function &F, FunctionAnalysisManager &AM) {
   PreservedAnalyses PA;
   if (!Options.SplitFooterBB)
     PA.preserveSet<CFGAnalyses>();
-  PA.preserve<GlobalsAA>();
   return PA;
 }

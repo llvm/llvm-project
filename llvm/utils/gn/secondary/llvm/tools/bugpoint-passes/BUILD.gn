@@ -1,8 +1,16 @@
+import("//llvm/utils/gn/build/symbol_exports.gni")
+
 assert(host_os != "win", "loadable modules not supported on win")
+
+symbol_exports("exports") {
+  exports_file = "bugpoint.exports"
+}
 
 loadable_module("bugpoint-passes") {
   output_name = "BugpointPasses"
   deps = [
+    ":exports",
+
     # BugpointPasses doesn't want to link in any LLVM code, it just
     # needs its headers.
     "//llvm/include/llvm/IR:public_tablegen",
@@ -15,6 +23,4 @@ loadable_module("bugpoint-passes") {
     # for loadable_modules for now.
     cflags = [ "-fPIC" ]
   }
-
-  # FIXME: Use bugpoint.exports to remove all exports.
 }

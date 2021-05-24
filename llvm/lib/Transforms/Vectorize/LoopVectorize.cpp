@@ -1047,9 +1047,12 @@ static Instruction *getDebugLocFromInstOrOperands(Instruction *I) {
 void InnerLoopVectorizer::setDebugLocFromInst(IRBuilder<> &B, const Value *Ptr) {
   if (const Instruction *Inst = dyn_cast_or_null<Instruction>(Ptr)) {
     const DILocation *DIL = Inst->getDebugLoc();
+
+    // When a FSDiscriminator is enabled, we don't need to add the multiply
+    // factors to the discriminators.
     if (DIL && Inst->getFunction()->isDebugInfoForProfiling() &&
-        !isa<DbgInfoIntrinsic>(Inst)) {
-      assert(!VF.isScalable() && "scalable vectors not yet supported.");
+        !isa<DbgInfoIntrinsic>(Inst) && !EnableFSDiscriminator) {
+      // FIXME: For scalable vectors, assume vscale=1.
       auto NewDIL =
           DIL->cloneByMultiplyingDuplicationFactor(UF * VF.getKnownMinValue());
       if (NewDIL)
@@ -1058,8 +1061,7 @@ void InnerLoopVectorizer::setDebugLocFromInst(IRBuilder<> &B, const Value *Ptr) 
         LLVM_DEBUG(dbgs()
                    << "Failed to create new discriminator: "
                    << DIL->getFilename() << " Line: " << DIL->getLine());
-    }
-    else
+    } else
       B.SetCurrentDebugLocation(DIL);
   } else
     B.SetCurrentDebugLocation(DebugLoc());
@@ -5646,6 +5648,12 @@ LoopVectorizationCostModel::getMaxLegalScalableVF(unsigned MaxSafeElements) {
     return ElementCount::getScalable(0);
   }
 
+  if (Hints->isScalableVectorizationDisabled()) {
+    reportVectorizationInfo("Scalable vectorization is explicitly disabled",
+                            "ScalableVectorizationDisabled", ORE, TheLoop);
+    return ElementCount::getScalable(0);
+  }
+
   auto MaxScalableVF = ElementCount::getScalable(
       std::numeric_limits<ElementCount::ScalarTy>::max());
 
@@ -6560,8 +6568,8 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<ElementCount> VFs) {
   const auto &TTICapture = TTI;
   auto GetRegUsage = [&TTICapture](Type *Ty, ElementCount VF) {
     if (Ty->isTokenTy() || !VectorType::isValidElementType(Ty))
-      return 0U;
-    return TTICapture.getRegUsageForType(VectorType::get(Ty, VF));
+      return 0;
+    return *TTICapture.getRegUsageForType(VectorType::get(Ty, VF)).getValue();
   };
 
   for (unsigned int i = 0, s = IdxToInstr.size(); i < s; ++i) {
@@ -10283,8 +10291,6 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
       PA.preserve<LoopAnalysis>();
       PA.preserve<DominatorTreeAnalysis>();
     }
-    PA.preserve<BasicAA>();
-    PA.preserve<GlobalsAA>();
     if (!Result.MadeCFGChange)
       PA.preserveSet<CFGAnalyses>();
     return PA;

@@ -16,5 +16,5 @@ int main(const int argc, const char * argv[]) {
   return sum;
 }
 
-// DexLimitSteps('ix', 0, 3, from_line='start', to_line='end')
-// DexExpectWatchValue('ix', 0, 3, from_line='start', to_line='end')
+// DexLimitSteps('ix', 0, 3, from_line=ref('start'), to_line=ref('end'))
+// DexExpectWatchValue('ix', 0, 3, from_line=ref('start'), to_line=ref('end'))

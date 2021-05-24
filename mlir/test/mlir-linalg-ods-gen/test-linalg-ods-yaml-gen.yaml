@@ -1,0 +1,138 @@
+# RUN: mlir-linalg-ods-yaml-gen %s --o-ods-decl=- | FileCheck %s --check-prefix=ODS
+# RUN: mlir-linalg-ods-yaml-gen %s --o-impl=- | FileCheck %s --check-prefix=IMPL
+
+# @linalg_structured_op
+# def test1(O=TensorDef(T, S.M, S.N, output=True)):
+#   """Title.
+
+#   Detailed description.
+#   """
+#   O[D.m, D.n] = cast(T, const(42)) + cast(T, index(D.n))
+
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: test1
+  cpp_class_name: Test1Op
+  doc: |-
+    Title.
+
+    Detailed description.
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !<LinalgTensorDef>
+    name: O
+    usage: output
+    shape: affine_map<()[s0, s1] -> (s0, s1)>
+    element_type_var: T
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<(d0, d1)[s0, s1] -> (d0, d1)>
+  iterator_types:
+  - parallel
+  - parallel
+  assignments:
+  - !ScalarAssign
+    arg: O
+    value: !ScalarExpression
+      scalar_apply:
+        fn_name: add
+        operands:
+        - !ScalarExpression
+          symbolic_cast:
+            type_var: T
+            operands:
+            - !ScalarExpression
+              scalar_const: '42 : i64'
+        - !ScalarExpression
+          symbolic_cast:
+            type_var: T
+            operands:
+            - !ScalarExpression
+              scalar_index: 1
+
+# ODS-LABEL:  def Test1Op : LinalgStructuredBase_Op<"test1"
+
+#       ODS:  let summary = [{ Title. }];
+#  ODS-NEXT:  let description = [{
+#  ODS-NEXT:    Detailed description.
+#  ODS-NEXT:  }];
+
+#       ODS:  let arguments =
+#  ODS-NEXT:    Variadic<AnyShaped>:$inputs,
+#  ODS-NEXT:    Variadic<AnyShaped>:$outputs
+
+#       ODS:  let builders =
+#       ODS:    $_state.addOperands(inputs);
+#  ODS-NEXT:    $_state.addOperands(outputs);
+#  ODS-NEXT:    $_state.addAttribute(
+#  ODS-NEXT:      "operand_segment_sizes",
+#  ODS-NEXT:      $_builder.getI32VectorAttr({
+#  ODS-NEXT:        static_cast<int32_t>(inputs.size()),
+#  ODS-NEXT:        static_cast<int32_t>(outputs.size())}));
+#  ODS-NEXT:    createAndFillStructuredOpRegion<Test1Op>(
+#  ODS-NEXT:      $_builder,
+#  ODS-NEXT:      $_state,
+#  ODS-NEXT:      TypeRange(inputs),
+#  ODS-NEXT:      TypeRange(outputs)
+
+# IMPL-LABEL:  void Test1Op::regionBuilder(
+#       IMPL:    ImplicitLocOpBuilder &b, Block &block, ValueRange captures)
+#       IMPL:  Value [[VAL0:[a-z0-9]+]] = helper.constant("42 : i64");
+#   IMPL-DAG:  Value [[VAL1:[a-z0-9]+]] = helper.cast(block.getArgument(0).getType(), [[VAL0]]);
+#   IMPL-DAG:  Value [[VAL2:[a-z0-9]+]] = helper.index(1);
+#   IMPL-DAG:  Value [[VAL3:[a-z0-9]+]] = helper.cast(block.getArgument(0).getType(), [[VAL2]]);
+#   IMPL-DAG:  Value [[VAL4:[a-z0-9]+]] = helper.applyfn__add([[VAL1]], [[VAL3]]);
+
+
+# @linalg_structured_op
+# def test2(I=TensorDef(T, S.M, S.N),
+#           O=TensorDef(T, S.M, S.N, output=True)):
+#   """Title.
+
+#   Detailed description.
+#   """
+#   O[D.m, D.n] = I[D.n, D.m]
+
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: test2
+  cpp_class_name: Test2Op
+  doc: |-
+    Title.
+
+    Detailed description.
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !<LinalgTensorDef>
+    name: I
+    usage: input
+    shape: affine_map<()[s0, s1] -> (s0, s1)>
+    element_type_var: T
+  - !<LinalgTensorDef>
+    name: O
+    usage: output
+    shape: affine_map<()[s0, s1] -> (s0, s1)>
+    element_type_var: T
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<(d0, d1)[s0, s1] -> (d1, d0)>
+    - affine_map<(d0, d1)[s0, s1] -> (d0, d1)>
+  iterator_types:
+  - parallel
+  - parallel
+  assignments:
+  - !ScalarAssign
+    arg: O
+    value: !ScalarExpression
+      scalar_arg: I
+
+# IMPL-LABEL:  Test2Op::iterator_types()
+#  IMPL-NEXT:  { getParallelIteratorTypeName(), getParallelIteratorTypeName() }
+
+#       IMPL:  Test2Op::indexing_maps()
+#       IMPL:  "affine_map<(d0, d1)[s0, s1] -> (d1, d0)>"
+#       IMPL:  "affine_map<(d0, d1)[s0, s1] -> (d0, d1)>"
+
+#       IMPL:  void Test2Op::regionBuilder(
+#       IMPL:    ImplicitLocOpBuilder &b, Block &block, ValueRange captures)
+#       IMPL:  yields.push_back(block.getArgument(0));

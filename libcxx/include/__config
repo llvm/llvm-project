@@ -1342,6 +1342,12 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #endif
 #endif // !defined(_LIBCPP_NODEBUG_TYPE)
 
+#if __has_attribute(__standalone_debug__)
+#define _LIBCPP_STANDALONE_DEBUG __attribute__((__standalone_debug__))
+#else
+#define _LIBCPP_STANDALONE_DEBUG
+#endif
+
 #if __has_attribute(__preferred_name__)
 #define _LIBCPP_PREFERRED_NAME(x) __attribute__((__preferred_name__(x)))
 #else

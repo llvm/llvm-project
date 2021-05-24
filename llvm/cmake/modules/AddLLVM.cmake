@@ -218,13 +218,30 @@ if (NOT DEFINED LLVM_LINKER_DETECTED)
 endif()
 
 function(add_link_opts target_name)
+  get_llvm_distribution(${target_name} in_distribution in_distribution_var)
+  if(NOT in_distribution)
+    # Don't LTO optimize targets that aren't part of any distribution.
+    if (LLVM_ENABLE_LTO)
+      # We may consider avoiding LTO altogether by using -fembed-bitcode
+      # and teaching the linker to select machine code from .o files, see
+      # https://lists.llvm.org/pipermail/llvm-dev/2021-April/149843.html
+      if((UNIX OR MINGW) AND LLVM_USE_LINKER STREQUAL "lld")
+        set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+                      LINK_FLAGS " -Wl,--lto-O0")
+      elseif(LINKER_IS_LLD_LINK)
+        set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+                      LINK_FLAGS " /opt:lldlto=0")
+      endif()
+    endif()
+  endif()
+
   # Don't use linker optimizations in debug builds since it slows down the
   # linker in a context where the optimizations are not important.
   if (NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
 
     # Pass -O3 to the linker. This enabled different optimizations on different
     # linkers.
-    if(NOT (CMAKE_SYSTEM_NAME MATCHES "Darwin|SunOS|AIX|OS390" OR WIN32))
+    if(NOT (CMAKE_SYSTEM_NAME MATCHES "Darwin|SunOS|AIX|OS390" OR WIN32) AND in_distribution)
       set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                    LINK_FLAGS " -Wl,-O3")
     endif()
@@ -1439,8 +1456,8 @@ function(add_unittest test_suite test_name)
   list(APPEND LLVM_LINK_COMPONENTS Support) # gtest needs it for raw_ostream
   add_llvm_executable(${test_name} IGNORE_EXTERNALIZE_DEBUGINFO NO_INSTALL_RPATH ${ARGN})
 
-  # The runtime benefits of ThinLTO don't outweight the compile time costs for tests.
-  if(uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
+  # The runtime benefits of LTO don't outweight the compile time costs for tests.
+  if(LLVM_ENABLE_LTO)
     if((UNIX OR MINGW) AND LLVM_USE_LINKER STREQUAL "lld")
       set_property(TARGET ${test_name} APPEND_STRING PROPERTY
                     LINK_FLAGS " -Wl,--lto-O0")

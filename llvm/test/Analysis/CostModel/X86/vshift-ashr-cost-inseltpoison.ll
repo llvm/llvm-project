@@ -160,7 +160,7 @@ define <8 x i32> @var_shift_v8i32(<8 x i32> %a, <8 x i32> %b) {
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %shift
 ;
 ; AVX2-LABEL: 'var_shift_v8i32'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = ashr <8 x i32> %a, %b
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = ashr <8 x i32> %a, %b
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %shift
 ;
 ; XOPAVX1-LABEL: 'var_shift_v8i32'
@@ -168,7 +168,7 @@ define <8 x i32> @var_shift_v8i32(<8 x i32> %a, <8 x i32> %b) {
 ; XOPAVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %shift
 ;
 ; XOPAVX2-LABEL: 'var_shift_v8i32'
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = ashr <8 x i32> %a, %b
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = ashr <8 x i32> %a, %b
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %shift
 ;
 ; AVX512-LABEL: 'var_shift_v8i32'
@@ -197,7 +197,7 @@ define <16 x i32> @var_shift_v16i32(<16 x i32> %a, <16 x i32> %b) {
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %shift
 ;
 ; AVX2-LABEL: 'var_shift_v16i32'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = ashr <16 x i32> %a, %b
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %shift = ashr <16 x i32> %a, %b
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %shift
 ;
 ; XOPAVX1-LABEL: 'var_shift_v16i32'
@@ -205,7 +205,7 @@ define <16 x i32> @var_shift_v16i32(<16 x i32> %a, <16 x i32> %b) {
 ; XOPAVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %shift
 ;
 ; XOPAVX2-LABEL: 'var_shift_v16i32'
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = ashr <16 x i32> %a, %b
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %shift = ashr <16 x i32> %a, %b
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %shift
 ;
 ; AVX512-LABEL: 'var_shift_v16i32'
@@ -1216,7 +1216,7 @@ define <8 x i32> @constant_shift_v8i32(<8 x i32> %a) {
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %shift
 ;
 ; AVX2-LABEL: 'constant_shift_v8i32'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = ashr <8 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = ashr <8 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %shift
 ;
 ; XOPAVX1-LABEL: 'constant_shift_v8i32'
@@ -1224,7 +1224,7 @@ define <8 x i32> @constant_shift_v8i32(<8 x i32> %a) {
 ; XOPAVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %shift
 ;
 ; XOPAVX2-LABEL: 'constant_shift_v8i32'
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = ashr <8 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = ashr <8 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %shift
 ;
 ; AVX512-LABEL: 'constant_shift_v8i32'
@@ -1253,7 +1253,7 @@ define <16 x i32> @constant_shift_v16i32(<16 x i32> %a) {
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %shift
 ;
 ; AVX2-LABEL: 'constant_shift_v16i32'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = ashr <16 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %shift = ashr <16 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %shift
 ;
 ; XOPAVX1-LABEL: 'constant_shift_v16i32'
@@ -1261,7 +1261,7 @@ define <16 x i32> @constant_shift_v16i32(<16 x i32> %a) {
 ; XOPAVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %shift
 ;
 ; XOPAVX2-LABEL: 'constant_shift_v16i32'
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = ashr <16 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %shift = ashr <16 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %shift
 ;
 ; AVX512-LABEL: 'constant_shift_v16i32'

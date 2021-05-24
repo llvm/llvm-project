@@ -1,6 +1,6 @@
-; RUN: opt %s -disable-verify -disable-output -passes='default<O2>' -debug-pass-manager -debug-pass-manager-verbose -cgscc-npm-no-fp-rerun=1 \
+; RUN: opt %s -disable-verify -disable-output -passes='default<O2>' -debug-pass-manager=verbose -cgscc-npm-no-fp-rerun=1 \
 ; RUN:  2>&1 | FileCheck %s -check-prefixes=CHECK,NOREPS
-; RUN: opt %s -disable-verify -disable-output -passes='default<O2>' -debug-pass-manager -debug-pass-manager-verbose -cgscc-npm-no-fp-rerun=0 \
+; RUN: opt %s -disable-verify -disable-output -passes='default<O2>' -debug-pass-manager=verbose -cgscc-npm-no-fp-rerun=0 \
 ; RUN:  2>&1 | FileCheck %s -check-prefixes=CHECK,REPS
 
 ; Pre-attribute the functions to avoid the PostOrderFunctionAttrsPass cause

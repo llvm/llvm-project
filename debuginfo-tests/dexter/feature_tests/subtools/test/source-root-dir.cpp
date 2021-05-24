@@ -12,4 +12,4 @@ int main() {
   printf("hello world: %d\n", x); // DexLabel('check')
 }
 
-// DexExpectWatchValue('x', 42, on_line='check')
+// DexExpectWatchValue('x', 42, on_line=ref('check'))

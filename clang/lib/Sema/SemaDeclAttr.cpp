@@ -2300,6 +2300,7 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
 
   case AMK_Override:
   case AMK_ProtocolImplementation:
+  case AMK_OptionalProtocolImplementation:
     OverrideOrImpl = true;
     break;
   }
@@ -2368,6 +2369,14 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
                  diag::warn_mismatched_availability_override_unavail)
               << AvailabilityAttr::getPrettyPlatformName(Platform->getName())
               << (AMK == AMK_Override);
+          } else if (Which != 1 && AMK == AMK_OptionalProtocolImplementation) {
+            // Allow different 'introduced' / 'obsoleted' availability versions
+            // on a method that implements an optional protocol requirement. It
+            // makes less sense to allow this for 'deprecated' as the user can't
+            // see if the method is 'deprecated' as 'respondsToSelector' will
+            // still return true when the method is deprecated.
+            ++i;
+            continue;
           } else {
             Diag(OldAA->getLocation(),
                  diag::warn_mismatched_availability_override)
@@ -4409,6 +4418,13 @@ static void handleConstantAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (VD->hasLocalStorage()) {
     S.Diag(AL.getLoc(), diag::err_cuda_nonstatic_constdev);
     return;
+  }
+  // constexpr variable may already get an implicit constant attr, which should
+  // be replaced by the explicit constant attr.
+  if (auto *A = D->getAttr<CUDAConstantAttr>()) {
+    if (!A->isImplicit())
+      return;
+    D->dropAttr<CUDAConstantAttr>();
   }
   D->addAttr(::new (S.Context) CUDAConstantAttr(S.Context, AL));
 }

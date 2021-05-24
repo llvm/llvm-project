@@ -242,7 +242,6 @@ PreservedAnalyses SCCPPass::run(Function &F, FunctionAnalysisManager &AM) {
     return PreservedAnalyses::all();
 
   auto PA = PreservedAnalyses();
-  PA.preserve<GlobalsAA>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }

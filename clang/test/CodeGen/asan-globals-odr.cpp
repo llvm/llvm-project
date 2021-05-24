@@ -14,7 +14,7 @@ int main() {
   return global;
 }
 
-// CHECK: [[VAR:@.*global.*]] ={{.*}} global { i32, [60 x i8] } zeroinitializer, align 32
+// CHECK: [[VAR:@.*global.*]] ={{.*}} global { i32, [28 x i8] } zeroinitializer, align 32
 
 // INDICATOR0-NOT: __odr_asan_gen
 // INDICATOR1: [[ODR:@.*__odr_asan_gen_.*global.*]] = global i8 0, align 1

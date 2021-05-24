@@ -26,6 +26,14 @@
 #include "llvm/ADT/SmallVector.h"
 using namespace clang;
 
+template <typename AttrT> static bool hasExplicitAttr(const VarDecl *D) {
+  if (!D)
+    return false;
+  if (auto *A = D->getAttr<AttrT>())
+    return !A->isImplicit();
+  return false;
+}
+
 void Sema::PushForceCUDAHostDevice() {
   assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
   ForceCUDAHostDeviceDepth++;
@@ -131,6 +139,35 @@ Sema::CUDAFunctionTarget Sema::IdentifyCUDATarget(const FunctionDecl *D,
   }
 
   return CFT_Host;
+}
+
+/// IdentifyTarget - Determine the CUDA compilation target for this variable.
+Sema::CUDAVariableTarget Sema::IdentifyCUDATarget(const VarDecl *Var) {
+  if (Var->hasAttr<HIPManagedAttr>())
+    return CVT_Unified;
+  if (Var->isConstexpr() && !hasExplicitAttr<CUDAConstantAttr>(Var))
+    return CVT_Both;
+  if (Var->hasAttr<CUDADeviceAttr>() || Var->hasAttr<CUDAConstantAttr>() ||
+      Var->hasAttr<CUDASharedAttr>() ||
+      Var->getType()->isCUDADeviceBuiltinSurfaceType() ||
+      Var->getType()->isCUDADeviceBuiltinTextureType())
+    return CVT_Device;
+  // Function-scope static variable without explicit device or constant
+  // attribute are emitted
+  //  - on both sides in host device functions
+  //  - on device side in device or global functions
+  if (auto *FD = dyn_cast<FunctionDecl>(Var->getDeclContext())) {
+    switch (IdentifyCUDATarget(FD)) {
+    case CFT_HostDevice:
+      return CVT_Both;
+    case CFT_Device:
+    case CFT_Global:
+      return CVT_Device;
+    default:
+      return CVT_Host;
+    }
+  }
+  return CVT_Host;
 }
 
 // * CUDA Call preference table
@@ -637,7 +674,8 @@ void Sema::maybeAddCUDAHostDeviceAttrs(FunctionDecl *NewD,
 
 void Sema::MaybeAddCUDAConstantAttr(VarDecl *VD) {
   if (getLangOpts().CUDAIsDevice && VD->isConstexpr() &&
-      (VD->isFileVarDecl() || VD->isStaticDataMember())) {
+      (VD->isFileVarDecl() || VD->isStaticDataMember()) &&
+      !VD->hasAttr<CUDAConstantAttr>()) {
     VD->addAttr(CUDAConstantAttr::CreateImplicit(getASTContext()));
   }
 }

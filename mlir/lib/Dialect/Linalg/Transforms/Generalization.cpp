@@ -15,10 +15,10 @@
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
-#include "mlir/EDSC/Builders.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SmallVector.h"
@@ -60,8 +60,9 @@ static GenericOp createGenericOpFromNamedOp(LinalgOp namedOp,
       namedOp.getLoc(), types, namedOp.getInputs(), namedOp.getOutputs(),
       indexingMaps, iterators,
       [&regionBuilder](OpBuilder &bodyBuilder, Location loc, ValueRange) {
-        edsc::ScopedContext scope(bodyBuilder, loc);
-        regionBuilder(*bodyBuilder.getBlock(), /*captures=*/{});
+        ImplicitLocOpBuilder b(loc, bodyBuilder);
+        regionBuilder(b, *bodyBuilder.getBlock(),
+                      /*captures=*/{});
       });
 }
 

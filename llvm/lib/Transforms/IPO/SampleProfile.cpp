@@ -208,7 +208,6 @@ static cl::opt<bool> CallsitePrioritizedInline(
     cl::desc("Use call site prioritized inlining for sample profile loader."
              "Currently only CSSPGO is supported."));
 
-
 static cl::opt<std::string> ProfileInlineReplayFile(
     "sample-profile-inline-replay", cl::init(""), cl::value_desc("filename"),
     cl::desc(
@@ -221,6 +220,10 @@ static cl::opt<unsigned>
                      cl::ZeroOrMore,
                      cl::desc("Max number of promotions for a single indirect "
                               "call callsite in sample profile loader"));
+
+static cl::opt<bool> OverwriteExistingWeights(
+    "overwrite-existing-weights", cl::Hidden, cl::init(false),
+    cl::desc("Ignore existing branch weights on IR and always overwrite."));
 
 namespace {
 
@@ -1453,9 +1456,10 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
           auto T = FS->findCallTargetMapAt(CallSite);
           if (!T || T.get().empty())
             continue;
-          // Prorate the callsite counts to reflect what is already done to the
-          // callsite, such as ICP or calliste cloning.
           if (FunctionSamples::ProfileIsProbeBased) {
+            // Prorate the callsite counts based on the pre-ICP distribution
+            // factor to reflect what is already done to the callsite before
+            // ICP, such as calliste cloning.
             if (Optional<PseudoProbe> Probe = extractProbe(I)) {
               if (Probe->Factor < 1)
                 T = SampleRecord::adjustCallTargets(T.get(), Probe->Factor);
@@ -1476,16 +1480,29 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
                 Sum += NameFS.second.getEntrySamples();
             }
           }
-          if (!Sum)
-            continue;
-          updateIDTMetaData(I, SortedCallTargets, Sum);
+          if (Sum)
+            updateIDTMetaData(I, SortedCallTargets, Sum);
+          else if (OverwriteExistingWeights)
+            I.setMetadata(LLVMContext::MD_prof, nullptr);
         } else if (!isa<IntrinsicInst>(&I)) {
           I.setMetadata(LLVMContext::MD_prof,
                         MDB.createBranchWeights(
                             {static_cast<uint32_t>(BlockWeights[BB])}));
         }
       }
+    } else if (OverwriteExistingWeights) {
+      // Set profile metadata (possibly annotated by LTO prelink) to zero or
+      // clear it for cold code.
+      for (auto &I : BB->getInstList()) {
+        if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
+          if (cast<CallBase>(I).isIndirectCall())
+            I.setMetadata(LLVMContext::MD_prof, nullptr);
+          else
+            I.setMetadata(LLVMContext::MD_prof, MDB.createBranchWeights(0));
+        }
+      }
     }
+
     Instruction *TI = BB->getTerminator();
     if (TI->getNumSuccessors() == 1)
       continue;
@@ -1527,20 +1544,28 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
     uint64_t TempWeight;
     // Only set weights if there is at least one non-zero weight.
     // In any other case, let the analyzer set weights.
-    // Do not set weights if the weights are present. In ThinLTO, the profile
-    // annotation is done twice. If the first annotation already set the
-    // weights, the second pass does not need to set it.
-    if (MaxWeight > 0 && !TI->extractProfTotalWeight(TempWeight)) {
+    // Do not set weights if the weights are present unless under
+    // OverwriteExistingWeights. In ThinLTO, the profile annotation is done
+    // twice. If the first annotation already set the weights, the second pass
+    // does not need to set it. With OverwriteExistingWeights, Blocks with zero
+    // weight should have their existing metadata (possibly annotated by LTO
+    // prelink) cleared.
+    if (MaxWeight > 0 &&
+        (!TI->extractProfTotalWeight(TempWeight) || OverwriteExistingWeights)) {
       LLVM_DEBUG(dbgs() << "SUCCESS. Found non-zero weights.\n");
-      TI->setMetadata(LLVMContext::MD_prof,
-                      MDB.createBranchWeights(Weights));
+      TI->setMetadata(LLVMContext::MD_prof, MDB.createBranchWeights(Weights));
       ORE->emit([&]() {
         return OptimizationRemark(DEBUG_TYPE, "PopularDest", MaxDestInst)
                << "most popular destination for conditional branches at "
                << ore::NV("CondBranchesLoc", BranchLoc);
       });
     } else {
-      LLVM_DEBUG(dbgs() << "SKIPPED. All branch weights are zero.\n");
+      if (OverwriteExistingWeights) {
+        TI->setMetadata(LLVMContext::MD_prof, nullptr);
+        LLVM_DEBUG(dbgs() << "CLEARED. All branch weights are zero.\n");
+      } else {
+        LLVM_DEBUG(dbgs() << "SKIPPED. All branch weights are zero.\n");
+      }
     }
   }
 }

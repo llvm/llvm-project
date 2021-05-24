@@ -189,8 +189,8 @@ else()
   set(LLVM_ENABLE_TERMINFO 0)
 endif()
 
-check_library_exists(xar xar_open "" HAVE_LIBXAR)
-if(HAVE_LIBXAR)
+check_library_exists(xar xar_open "" LLVM_HAVE_LIBXAR)
+if(LLVM_HAVE_LIBXAR)
   set(XAR_LIB xar)
 endif()
 

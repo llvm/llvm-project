@@ -171,6 +171,9 @@ struct Config {
   bool ShouldDiscardValueNames = true;
   DiagnosticHandlerFunction DiagHandler;
 
+  /// Add FSAFDO discriminators.
+  bool AddFSDiscriminator = false;
+
   /// If this field is set, LTO will write input file paths and symbol
   /// resolutions here in llvm-lto2 command line flag format. This can be
   /// used for testing and for running the LTO pipeline outside of the linker

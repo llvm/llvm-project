@@ -66,18 +66,3 @@ class DexExpectProgramState(CommandBase):
                 self.encounters.append(step.step_index)
 
         return self.times < 0 < len(self.encounters) or len(self.encounters) == self.times
-
-    def has_labels(self):
-        return len(self.get_label_args()) > 0
-
-    def get_label_args(self):
-        return [frame.location.lineno
-                    for frame in self.expected_program_state.frames
-                        if frame.location and
-                        isinstance(frame.location.lineno, str)]
-
-    def resolve_label(self, label_line__pair):
-        label, line = label_line__pair
-        for frame in self.expected_program_state.frames:
-            if frame.location and frame.location.lineno == label:
-                frame.location.lineno = line

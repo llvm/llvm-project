@@ -3960,7 +3960,6 @@ SDValue DAGTypeLegalizer::WidenVecRes_CONCAT_VECTORS(SDNode *N) {
 SDValue DAGTypeLegalizer::WidenVecRes_EXTRACT_SUBVECTOR(SDNode *N) {
   EVT      VT = N->getValueType(0);
   EVT      WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
-  unsigned WidenNumElts = WidenVT.getVectorNumElements();
   SDValue  InOp = N->getOperand(0);
   SDValue  Idx  = N->getOperand(1);
   SDLoc dl(N);
@@ -3975,7 +3974,12 @@ SDValue DAGTypeLegalizer::WidenVecRes_EXTRACT_SUBVECTOR(SDNode *N) {
   if (IdxVal == 0 && InVT == WidenVT)
     return InOp;
 
+  if (VT.isScalableVector())
+    report_fatal_error("Don't know how to widen the result of "
+                       "EXTRACT_SUBVECTOR for scalable vectors");
+
   // Check if we can extract from the vector.
+  unsigned WidenNumElts = WidenVT.getVectorNumElements();
   unsigned InNumElts = InVT.getVectorNumElements();
   if (IdxVal % WidenNumElts == 0 && IdxVal + WidenNumElts < InNumElts)
     return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, WidenVT, InOp, Idx);
@@ -4520,6 +4524,7 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
 
   case ISD::BITCAST:            Res = WidenVecOp_BITCAST(N); break;
   case ISD::CONCAT_VECTORS:     Res = WidenVecOp_CONCAT_VECTORS(N); break;
+  case ISD::INSERT_SUBVECTOR:   Res = WidenVecOp_INSERT_SUBVECTOR(N); break;
   case ISD::EXTRACT_SUBVECTOR:  Res = WidenVecOp_EXTRACT_SUBVECTOR(N); break;
   case ISD::EXTRACT_VECTOR_ELT: Res = WidenVecOp_EXTRACT_VECTOR_ELT(N); break;
   case ISD::STORE:              Res = WidenVecOp_STORE(N); break;
@@ -4832,6 +4837,24 @@ SDValue DAGTypeLegalizer::WidenVecOp_CONCAT_VECTORS(SDNode *N) {
                                DAG.getVectorIdxConstant(j, dl));
   }
   return DAG.getBuildVector(VT, dl, Ops);
+}
+
+SDValue DAGTypeLegalizer::WidenVecOp_INSERT_SUBVECTOR(SDNode *N) {
+  SDValue SubVec = N->getOperand(1);
+  SDValue InVec = N->getOperand(0);
+
+  if (getTypeAction(InVec.getValueType()) == TargetLowering::TypeWidenVector)
+    InVec = GetWidenedVector(InVec);
+
+  if (getTypeAction(SubVec.getValueType()) == TargetLowering::TypeWidenVector)
+    SubVec = GetWidenedVector(SubVec);
+
+  if (SubVec.getValueType() == InVec.getValueType() && InVec.isUndef() &&
+      N->getConstantOperandVal(2) == 0)
+    return SubVec;
+
+  report_fatal_error("Don't know how to widen the operands for "
+                     "INSERT_SUBVECTOR");
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_EXTRACT_SUBVECTOR(SDNode *N) {

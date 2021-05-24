@@ -97,7 +97,7 @@ template <class TypeParam> struct ScudoCombinedTest : public Test {
 
   void RunTest();
 
-  void BasicTest(scudo::uptr SizeLogMin, scudo::uptr SizeLogMax);
+  void BasicTest(scudo::uptr SizeLog);
 
   using AllocatorT = TestAllocator<TypeParam>;
   std::unique_ptr<AllocatorT> Allocator;
@@ -141,37 +141,56 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, IsOwned) {
 }
 
 template <class Config>
-void ScudoCombinedTest<Config>::BasicTest(scudo::uptr SizeLogMin,
-                                          scudo::uptr SizeLogMax) {
+void ScudoCombinedTest<Config>::BasicTest(scudo::uptr SizeLog) {
   auto *Allocator = this->Allocator.get();
 
   // This allocates and deallocates a bunch of chunks, with a wide range of
   // sizes and alignments, with a focus on sizes that could trigger weird
   // behaviors (plus or minus a small delta of a power of two for example).
-  for (scudo::uptr SizeLog = SizeLogMin; SizeLog <= SizeLogMax; SizeLog++) {
-    for (scudo::uptr AlignLog = MinAlignLog; AlignLog <= 16U; AlignLog++) {
-      const scudo::uptr Align = 1U << AlignLog;
-      for (scudo::sptr Delta = -32; Delta <= 32; Delta++) {
-        if (static_cast<scudo::sptr>(1U << SizeLog) + Delta <= 0)
-          continue;
-        const scudo::uptr Size = (1U << SizeLog) + Delta;
-        void *P = Allocator->allocate(Size, Origin, Align);
-        EXPECT_NE(P, nullptr);
-        EXPECT_TRUE(Allocator->isOwned(P));
-        EXPECT_TRUE(scudo::isAligned(reinterpret_cast<scudo::uptr>(P), Align));
-        EXPECT_LE(Size, Allocator->getUsableSize(P));
-        memset(P, 0xaa, Size);
-        checkMemoryTaggingMaybe(Allocator, P, Size, Align);
-        Allocator->deallocate(P, Origin, Size);
-      }
+  for (scudo::uptr AlignLog = MinAlignLog; AlignLog <= 16U; AlignLog++) {
+    const scudo::uptr Align = 1U << AlignLog;
+    for (scudo::sptr Delta = -32; Delta <= 32; Delta++) {
+      if (static_cast<scudo::sptr>(1U << SizeLog) + Delta <= 0)
+        continue;
+      const scudo::uptr Size = (1U << SizeLog) + Delta;
+      void *P = Allocator->allocate(Size, Origin, Align);
+      EXPECT_NE(P, nullptr);
+      EXPECT_TRUE(Allocator->isOwned(P));
+      EXPECT_TRUE(scudo::isAligned(reinterpret_cast<scudo::uptr>(P), Align));
+      EXPECT_LE(Size, Allocator->getUsableSize(P));
+      memset(P, 0xaa, Size);
+      checkMemoryTaggingMaybe(Allocator, P, Size, Align);
+      Allocator->deallocate(P, Origin, Size);
     }
   }
 }
 
-SCUDO_TYPED_TEST(ScudoCombinedTest, BasicCombined0) { this->BasicTest(0, 16); }
-SCUDO_TYPED_TEST(ScudoCombinedTest, BasicCombined1) { this->BasicTest(17, 18); }
-SCUDO_TYPED_TEST(ScudoCombinedTest, BasicCombined2) { this->BasicTest(19, 19); }
-SCUDO_TYPED_TEST(ScudoCombinedTest, BasicCombined3) { this->BasicTest(20, 20); }
+#define SCUDO_MAKE_BASIC_TEST(SizeLog)                                         \
+  SCUDO_TYPED_TEST(ScudoCombinedTest, BasicCombined##SizeLog) {                \
+    this->BasicTest(SizeLog);                                                  \
+  }
+
+SCUDO_MAKE_BASIC_TEST(0)
+SCUDO_MAKE_BASIC_TEST(1)
+SCUDO_MAKE_BASIC_TEST(2)
+SCUDO_MAKE_BASIC_TEST(3)
+SCUDO_MAKE_BASIC_TEST(4)
+SCUDO_MAKE_BASIC_TEST(5)
+SCUDO_MAKE_BASIC_TEST(6)
+SCUDO_MAKE_BASIC_TEST(7)
+SCUDO_MAKE_BASIC_TEST(8)
+SCUDO_MAKE_BASIC_TEST(9)
+SCUDO_MAKE_BASIC_TEST(10)
+SCUDO_MAKE_BASIC_TEST(11)
+SCUDO_MAKE_BASIC_TEST(12)
+SCUDO_MAKE_BASIC_TEST(13)
+SCUDO_MAKE_BASIC_TEST(14)
+SCUDO_MAKE_BASIC_TEST(15)
+SCUDO_MAKE_BASIC_TEST(16)
+SCUDO_MAKE_BASIC_TEST(17)
+SCUDO_MAKE_BASIC_TEST(18)
+SCUDO_MAKE_BASIC_TEST(19)
+SCUDO_MAKE_BASIC_TEST(20)
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, ZeroContents) {
   auto *Allocator = this->Allocator.get();
@@ -193,7 +212,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ZeroContents) {
 SCUDO_TYPED_TEST(ScudoCombinedTest, ZeroFill) {
   auto *Allocator = this->Allocator.get();
 
-  // Ensure that specifying ZeroContents returns a zero'd out block.
+  // Ensure that specifying ZeroFill returns a zero'd out block.
   Allocator->setFillContents(scudo::ZeroFill);
   for (scudo::uptr SizeLog = 0U; SizeLog <= 20U; SizeLog++) {
     for (scudo::uptr Delta = 0U; Delta <= 4U; Delta++) {
@@ -253,7 +272,28 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, BlockReuse) {
   EXPECT_TRUE(Found);
 }
 
-SCUDO_TYPED_TEST(ScudoCombinedTest, ReallocateLarge) {
+SCUDO_TYPED_TEST(ScudoCombinedTest, ReallocateLargeIncreasing) {
+  auto *Allocator = this->Allocator.get();
+
+  // Reallocate a chunk all the way up to a secondary allocation, verifying that
+  // we preserve the data in the process.
+  scudo::uptr Size = 16;
+  void *P = Allocator->allocate(Size, Origin);
+  const char Marker = 0xab;
+  memset(P, Marker, Size);
+  while (Size < TypeParam::Primary::SizeClassMap::MaxSize * 4) {
+    void *NewP = Allocator->reallocate(P, Size * 2);
+    EXPECT_NE(NewP, nullptr);
+    for (scudo::uptr J = 0; J < Size; J++)
+      EXPECT_EQ((reinterpret_cast<char *>(NewP))[J], Marker);
+    memset(reinterpret_cast<char *>(NewP) + Size, Marker, Size);
+    Size *= 2U;
+    P = NewP;
+  }
+  Allocator->deallocate(P, Origin);
+}
+
+SCUDO_TYPED_TEST(ScudoCombinedTest, ReallocateLargeDecreasing) {
   auto *Allocator = this->Allocator.get();
 
   // Reallocate a large chunk all the way down to a byte, verifying that we
@@ -359,21 +399,20 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, DisableMemoryTagging) {
     // Check that disabling memory tagging works correctly.
     void *P = Allocator->allocate(2048, Origin);
     EXPECT_DEATH(reinterpret_cast<char *>(P)[2048] = 0xaa, "");
-    scudo::disableMemoryTagChecksTestOnly();
-    Allocator->disableMemoryTagging();
-    reinterpret_cast<char *>(P)[2048] = 0xaa;
-    Allocator->deallocate(P, Origin);
+    if (scudo::disableMemoryTagChecksTestOnly()) {
+      Allocator->disableMemoryTagging();
+      reinterpret_cast<char *>(P)[2048] = 0xaa;
+      Allocator->deallocate(P, Origin);
 
-    P = Allocator->allocate(2048, Origin);
-    EXPECT_EQ(scudo::untagPointer(P), P);
-    reinterpret_cast<char *>(P)[2048] = 0xaa;
-    Allocator->deallocate(P, Origin);
+      P = Allocator->allocate(2048, Origin);
+      EXPECT_EQ(scudo::untagPointer(P), P);
+      reinterpret_cast<char *>(P)[2048] = 0xaa;
+      Allocator->deallocate(P, Origin);
 
-    Allocator->releaseToOS();
-
-    // Disabling memory tag checks may interfere with subsequent tests.
-    // Re-enable them now.
-    scudo::enableMemoryTagChecksTestOnly();
+      // Disabling memory tag checks may interfere with subsequent tests.
+      // Re-enable them now.
+      scudo::enableMemoryTagChecksTestOnly();
+    }
   }
 }
 

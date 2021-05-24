@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "ELFObjcopy.h"
-#include "CopyConfig.h"
+#include "CommonConfig.h"
+#include "ELFConfig.h"
 #include "Object.h"
 #include "llvm-objcopy.h"
 #include "llvm/ADT/BitmaskEnum.h"
@@ -132,7 +133,7 @@ static ElfType getOutputElfType(const MachineInfo &MI) {
     return MI.IsLittleEndian ? ELFT_ELF32LE : ELFT_ELF32BE;
 }
 
-static std::unique_ptr<Writer> createELFWriter(const CopyConfig &Config,
+static std::unique_ptr<Writer> createELFWriter(const CommonConfig &Config,
                                                Object &Obj, raw_ostream &Out,
                                                ElfType OutputElfType) {
   // Depending on the initial ELFT and OutputFormat we need a different Writer.
@@ -153,7 +154,7 @@ static std::unique_ptr<Writer> createELFWriter(const CopyConfig &Config,
   llvm_unreachable("Invalid output format");
 }
 
-static std::unique_ptr<Writer> createWriter(const CopyConfig &Config,
+static std::unique_ptr<Writer> createWriter(const CommonConfig &Config,
                                             Object &Obj, raw_ostream &Out,
                                             ElfType OutputElfType) {
   switch (Config.OutputFormat) {
@@ -243,7 +244,7 @@ static bool isUnneededSymbol(const Symbol &Sym) {
          Sym.Type != STT_SECTION;
 }
 
-static Error updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
+static Error updateAndRemoveSymbols(const CommonConfig &Config, Object &Obj) {
   // TODO: update or remove symbols only if there is an option that affects
   // them.
   if (!Obj.SymbolTable)
@@ -338,7 +339,7 @@ static Error updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
   return Obj.removeSymbols(RemoveSymbolsPred);
 }
 
-static Error replaceAndRemoveSections(const CopyConfig &Config, Object &Obj) {
+static Error replaceAndRemoveSections(const CommonConfig &Config, Object &Obj) {
   SectionPred RemovePred = [](const SectionBase &) { return false; };
 
   // Removes:
@@ -506,11 +507,8 @@ static Error replaceAndRemoveSections(const CopyConfig &Config, Object &Obj) {
 // any previous removals. Lastly whether or not something is removed shouldn't
 // depend a) on the order the options occur in or b) on some opaque priority
 // system. The only priority is that keeps/copies overrule removes.
-static Error handleArgs(const CopyConfig &Config, Object &Obj) {
-  if (Config.StripSwiftSymbols || Config.KeepUndefined)
-    return createStringError(llvm::errc::invalid_argument,
-                             "option not supported by llvm-objcopy for ELF");
-
+static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
+                        Object &Obj) {
   if (Config.OutputArch) {
     Obj.Machine = Config.OutputArch.getValue().EMachine;
     Obj.OSABI = Config.OutputArch.getValue().OSABI;
@@ -635,11 +633,11 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
 
   // If the symbol table was previously removed, we need to create a new one
   // before adding new symbols.
-  if (!Obj.SymbolTable && !Config.ELF->SymbolsToAdd.empty())
+  if (!Obj.SymbolTable && !ELFConfig.SymbolsToAdd.empty())
     if (Error E = Obj.addNewSymbolTable())
       return E;
 
-  for (const NewSymbolInfo &SI : Config.ELF->SymbolsToAdd) {
+  for (const NewSymbolInfo &SI : ELFConfig.SymbolsToAdd) {
     SectionBase *Sec = Obj.findSection(SI.SectionName);
     uint64_t Value = Sec ? Sec->Addr + SI.Value : SI.Value;
     Obj.SymbolTable->addSymbol(
@@ -663,7 +661,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
   return Error::success();
 }
 
-static Error writeOutput(const CopyConfig &Config, Object &Obj,
+static Error writeOutput(const CommonConfig &Config, Object &Obj,
                          raw_ostream &Out, ElfType OutputElfType) {
   std::unique_ptr<Writer> Writer =
       createWriter(Config, Obj, Out, OutputElfType);
@@ -672,7 +670,8 @@ static Error writeOutput(const CopyConfig &Config, Object &Obj,
   return Writer->write();
 }
 
-Error executeObjcopyOnIHex(const CopyConfig &Config, MemoryBuffer &In,
+Error executeObjcopyOnIHex(const CommonConfig &Config,
+                           const ELFConfig &ELFConfig, MemoryBuffer &In,
                            raw_ostream &Out) {
   IHexReader Reader(&In);
   Expected<std::unique_ptr<Object>> Obj = Reader.create(true);
@@ -681,15 +680,16 @@ Error executeObjcopyOnIHex(const CopyConfig &Config, MemoryBuffer &In,
 
   const ElfType OutputElfType =
       getOutputElfType(Config.OutputArch.getValueOr(MachineInfo()));
-  if (Error E = handleArgs(Config, **Obj))
+  if (Error E = handleArgs(Config, ELFConfig, **Obj))
     return E;
   return writeOutput(Config, **Obj, Out, OutputElfType);
 }
 
-Error executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
+Error executeObjcopyOnRawBinary(const CommonConfig &Config,
+                                const ELFConfig &ELFConfig, MemoryBuffer &In,
                                 raw_ostream &Out) {
   uint8_t NewSymbolVisibility =
-      Config.ELF->NewSymbolVisibility.getValueOr((uint8_t)ELF::STV_DEFAULT);
+      ELFConfig.NewSymbolVisibility.getValueOr((uint8_t)ELF::STV_DEFAULT);
   BinaryReader Reader(&In, NewSymbolVisibility);
   Expected<std::unique_ptr<Object>> Obj = Reader.create(true);
   if (!Obj)
@@ -699,16 +699,17 @@ Error executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
   // (-B<arch>).
   const ElfType OutputElfType =
       getOutputElfType(Config.OutputArch.getValueOr(MachineInfo()));
-  if (Error E = handleArgs(Config, **Obj))
+  if (Error E = handleArgs(Config, ELFConfig, **Obj))
     return E;
   return writeOutput(Config, **Obj, Out, OutputElfType);
 }
 
-Error executeObjcopyOnBinary(const CopyConfig &Config,
+Error executeObjcopyOnBinary(const CommonConfig &Config,
+                             const ELFConfig &ELFConfig,
                              object::ELFObjectFileBase &In, raw_ostream &Out) {
   ELFReader Reader(&In, Config.ExtractPartition);
   Expected<std::unique_ptr<Object>> Obj =
-      Reader.create(!Config.SymbolsToAdd.empty());
+      Reader.create(!ELFConfig.SymbolsToAdd.empty());
   if (!Obj)
     return Obj.takeError();
   // Prefer OutputArch (-O<format>) if set, otherwise infer it from the input.
@@ -716,7 +717,7 @@ Error executeObjcopyOnBinary(const CopyConfig &Config,
       Config.OutputArch ? getOutputElfType(Config.OutputArch.getValue())
                         : getOutputElfType(In);
 
-  if (Error E = handleArgs(Config, **Obj))
+  if (Error E = handleArgs(Config, ELFConfig, **Obj))
     return createFileError(Config.InputFilename, std::move(E));
 
   if (Error E = writeOutput(Config, **Obj, Out, OutputElfType))

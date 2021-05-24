@@ -364,4 +364,7 @@ def warn_poison_system_directories : Warning <
 def warn_opencl_unsupported_core_feature : Warning<
   "%0 is a core feature in %select{OpenCL C|C++ for OpenCL}1 version %2 but not supported on this target">,
   InGroup<OpenCLCoreFeaturesDiagGroup>, DefaultIgnore;
+
+def err_opencl_extension_and_feature_differs : Error<
+  "options %0 and %1 are set to different values">;
 }

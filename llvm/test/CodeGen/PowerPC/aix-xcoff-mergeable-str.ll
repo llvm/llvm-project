@@ -44,7 +44,7 @@ entry:
 ; CHECK-NEXT: L..strA:
 ; CHECK-NEXT: .byte   'h,'e,'l,'l,'o,' ,'w,'o,'r,'l,'d,'!,0012,0000
 ; CHECK-NEXT: L...str:
-; CHECK-NEXT: .byte   'a,'b,'c,'d,'e,'f,'g,'h,0000
+; CHECK-NEXT: .string "abcdefgh"
 
 ; CHECKOBJ:     00000010 <.rodata.str2.2>:
 ; CHECKOBJ-NEXT:       10: 01 08 01 10

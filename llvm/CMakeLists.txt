@@ -931,6 +931,8 @@ set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
 include(AddLLVM)
 include(TableGen)
 
+include(LLVMDistributionSupport)
+
 if( MINGW AND NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" )
   # People report that -O3 is unreliable on MinGW. The traditional
   # build also uses -O2 for that reason:
@@ -1119,7 +1121,6 @@ endif()
 
 # This must be at the end of the LLVM root CMakeLists file because it must run
 # after all targets are created.
-include(LLVMDistributionSupport)
 llvm_distribution_add_targets()
 process_llvm_pass_plugins(GEN_CONFIG)
 

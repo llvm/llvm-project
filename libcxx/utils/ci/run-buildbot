@@ -183,7 +183,8 @@ generic-cxx03)
     export CC=clang
     export CXX=clang++
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx03.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx03.cmake" \
+                   -DLIBCXX_TEST_CONFIG="${MONOREPO_ROOT}/libcxx/test/configs/libcxx-trunk-shared.cfg.in"
     check-cxx-cxxabi
     check-abi-list
 ;;
@@ -191,7 +192,8 @@ generic-cxx11)
     export CC=clang
     export CXX=clang++
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx11.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx11.cmake" \
+                   -DLIBCXX_TEST_CONFIG="${MONOREPO_ROOT}/libcxx/test/configs/libcxx-trunk-shared.cfg.in"
     check-cxx-cxxabi
     check-abi-list
 ;;
@@ -199,7 +201,8 @@ generic-cxx14)
     export CC=clang
     export CXX=clang++
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx14.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx14.cmake" \
+                   -DLIBCXX_TEST_CONFIG="${MONOREPO_ROOT}/libcxx/test/configs/libcxx-trunk-shared.cfg.in"
     check-cxx-cxxabi
     check-abi-list
 ;;
@@ -207,7 +210,8 @@ generic-cxx17)
     export CC=clang
     export CXX=clang++
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx17.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx17.cmake" \
+                   -DLIBCXX_TEST_CONFIG="${MONOREPO_ROOT}/libcxx/test/configs/libcxx-trunk-shared.cfg.in"
     check-cxx-cxxabi
     check-abi-list
 ;;
@@ -215,7 +219,8 @@ generic-cxx20)
     export CC=clang
     export CXX=clang++
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx20.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx20.cmake" \
+                   -DLIBCXX_TEST_CONFIG="${MONOREPO_ROOT}/libcxx/test/configs/libcxx-trunk-shared.cfg.in"
     check-cxx-cxxabi
     check-abi-list
 ;;
@@ -223,7 +228,8 @@ generic-cxx2b)
     export CC=clang-tot
     export CXX=clang++-tot
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx2b.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx2b.cmake" \
+                   -DLIBCXX_TEST_CONFIG="${MONOREPO_ROOT}/libcxx/test/configs/libcxx-trunk-shared.cfg.in"
     check-cxx-cxxabi
     check-abi-list
 ;;
@@ -246,7 +252,8 @@ generic-static)
     export CC=clang
     export CXX=clang++
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-static.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-static.cmake" \
+                   -DLIBCXX_TEST_CONFIG="${MONOREPO_ROOT}/libcxx/test/configs/libcxx-trunk-static.cfg.in"
     check-cxx-cxxabi
 ;;
 generic-32bit)
@@ -435,6 +442,13 @@ runtimes-build)
 
     echo "--- Installing libc++ and libc++abi to a fake location"
     ${NINJA} -C "${BUILD_DIR}" install-cxx install-cxxabi
+;;
+legacy-test-config)
+    export CC=clang
+    export CXX=clang++
+    clean
+    generate-cmake -DLIBCXX_TEST_CONFIG="${MONOREPO_ROOT}/libcxx/test/configs/legacy.cfg.in"
+    check-cxx-cxxabi
 ;;
 legacy-standalone)
     export CC=clang

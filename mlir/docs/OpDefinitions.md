@@ -1809,7 +1809,7 @@ requirements that were desirable:
         will consider it.
 *   MLIR allows both defined and undefined ops.
     *   Defined ops should have fixed semantics and could have a corresponding
-        reference implementation defined using, for example, EDSC.
+        reference implementation defined.
     *   Dialects are under full control of the dialect owner and normally live
         with the framework of the dialect.
 *   The op's traits (e.g., commutative) are modelled along with the op in the

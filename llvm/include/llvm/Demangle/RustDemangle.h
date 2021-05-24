@@ -52,6 +52,11 @@ enum class BasicType {
   Never,
 };
 
+enum class InType {
+  No,
+  Yes,
+};
+
 class Demangler {
   // Maximum recursion level. Used to avoid stack overflow.
   size_t MaxRecursionLevel;
@@ -79,8 +84,8 @@ public:
   bool demangle(StringView MangledName);
 
 private:
-  void demanglePath();
-  void demangleImplPath();
+  void demanglePath(InType InType);
+  void demangleImplPath(InType InType);
   void demangleGenericArg();
   void demangleType();
   void demangleConst();

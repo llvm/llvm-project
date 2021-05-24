@@ -20,7 +20,7 @@ target_link_libraries(lld
   lldWasm
   )
 
-if(HAVE_LIBXAR)
+if(LLVM_HAVE_LIBXAR)
   target_link_libraries(lld PRIVATE ${XAR_LIB})
 endif()
 

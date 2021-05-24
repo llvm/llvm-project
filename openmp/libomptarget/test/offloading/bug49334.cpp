@@ -1,5 +1,8 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
 
+// Currently hangs on amdgpu
+// UNSUPPORTED: amdgcn-amd-amdhsa
+
 #include <cassert>
 #include <iostream>
 #include <memory>

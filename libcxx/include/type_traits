@@ -789,6 +789,33 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_integral_v
 
 #endif // __has_keyword(__is_integral)
 
+// __libcpp_is_signed_integer, __libcpp_is_unsigned_integer
+
+// [basic.fundamental] defines five standard signed integer types;
+// __int128_t is an extended signed integer type.
+// The signed and unsigned integer types, plus bool and the
+// five types with "char" in their name, compose the "integral" types.
+
+template <class _Tp> struct __libcpp_is_signed_integer : public false_type {};
+template <> struct __libcpp_is_signed_integer<signed char>      : public true_type {};
+template <> struct __libcpp_is_signed_integer<signed short>     : public true_type {};
+template <> struct __libcpp_is_signed_integer<signed int>       : public true_type {};
+template <> struct __libcpp_is_signed_integer<signed long>      : public true_type {};
+template <> struct __libcpp_is_signed_integer<signed long long> : public true_type {};
+#ifndef _LIBCPP_HAS_NO_INT128
+template <> struct __libcpp_is_signed_integer<__int128_t>       : public true_type {};
+#endif
+
+template <class _Tp> struct __libcpp_is_unsigned_integer : public false_type {};
+template <> struct __libcpp_is_unsigned_integer<unsigned char>      : public true_type {};
+template <> struct __libcpp_is_unsigned_integer<unsigned short>     : public true_type {};
+template <> struct __libcpp_is_unsigned_integer<unsigned int>       : public true_type {};
+template <> struct __libcpp_is_unsigned_integer<unsigned long>      : public true_type {};
+template <> struct __libcpp_is_unsigned_integer<unsigned long long> : public true_type {};
+#ifndef _LIBCPP_HAS_NO_INT128
+template <> struct __libcpp_is_unsigned_integer<__uint128_t>        : public true_type {};
+#endif
+
 // is_floating_point
 
 template <class _Tp> struct __libcpp_is_floating_point              : public false_type {};

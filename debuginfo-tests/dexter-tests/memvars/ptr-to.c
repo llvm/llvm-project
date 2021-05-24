@@ -26,10 +26,10 @@ int main() {
 }
 
 
-// DexExpectWatchValue('local', 0xA, on_line='s1')
-// DexExpectWatchValue('local', 0xB, on_line='s2')
-// DexExpectWatchValue('*plocal', 0xA, on_line='s1')
-// DexExpectWatchValue('*plocal', 0xB, on_line='s2')
+// DexExpectWatchValue('local', 0xA, on_line=ref('s1'))
+// DexExpectWatchValue('local', 0xB, on_line=ref('s2'))
+// DexExpectWatchValue('*plocal', 0xA, on_line=ref('s1'))
+// DexExpectWatchValue('*plocal', 0xB, on_line=ref('s2'))
 //// Ideally we should be able to observe the dead store to local (0xB) through
 //// plocal here.
-// DexExpectWatchValue('(local == *plocal)', 'true', from_line='s1', to_line='s2')
+// DexExpectWatchValue('(local == *plocal)', 'true', from_line=ref('s1'), to_line=ref('s2'))

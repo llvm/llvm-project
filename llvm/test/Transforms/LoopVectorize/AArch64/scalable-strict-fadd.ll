@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -mattr=+sve -enable-strict-reductions -S | FileCheck %s -check-prefix=CHECK
+; RUN: opt < %s -loop-vectorize -scalable-vectorization=on -mtriple aarch64-unknown-linux-gnu -mattr=+sve -enable-strict-reductions -S | FileCheck %s -check-prefix=CHECK
 
 define float @fadd_strict(float* noalias nocapture readonly %a, i64 %n) {
 ; CHECK-LABEL: @fadd_strict

@@ -1,4 +1,6 @@
-; RUN: llc %s -start-after=codegenprepare -stop-before=finalize-isel -o - | FileCheck %s
+; RUN: llc %s -start-after=codegenprepare -stop-before=finalize-isel -o - | FileCheck --check-prefixes=CHECK,DAG %s
+; RUN: llc %s -fast-isel=true -start-after=codegenprepare -stop-before=finalize-isel -o - | FileCheck --check-prefixes=CHECK,FAST %s
+; RUN: llc %s -global-isel=true -start-after=codegenprepare -stop-before=finalize-isel -o - | FileCheck --check-prefixes=CHECK,GLOBAL %s
 
 ;; Test that a dbg.value that uses a DIArgList is correctly converted to a
 ;; DBG_VALUE_LIST that uses the registers corresponding to its operands.
@@ -6,10 +8,16 @@
 ; CHECK-DAG: [[A_VAR:![0-9]+]] = !DILocalVariable(name: "a"
 ; CHECK-DAG: [[B_VAR:![0-9]+]] = !DILocalVariable(name: "b"
 ; CHECK-DAG: [[C_VAR:![0-9]+]] = !DILocalVariable(name: "c"
-; CHECK-LABEL: bb.0.entry
-; CHECK-DAG: DBG_VALUE_LIST [[A_VAR]], !DIExpression(DW_OP_LLVM_arg, 0), %0, debug-location
-; CHECK-DAG: DBG_VALUE_LIST [[B_VAR]], !DIExpression(DW_OP_LLVM_arg, 0), %1, debug-location
-; CHECK: DBG_VALUE_LIST [[C_VAR]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), %0, %1, debug-location
+; CHECK-LABEL: bb.{{(0|1)}}.entry
+; DAG-DAG: DBG_VALUE_LIST [[A_VAR]], !DIExpression(DW_OP_LLVM_arg, 0), %0, debug-location
+; DAG-DAG: DBG_VALUE_LIST [[B_VAR]], !DIExpression(DW_OP_LLVM_arg, 0), %1, debug-location
+; DAG: DBG_VALUE_LIST [[C_VAR]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), %0, %1, debug-location
+; FAST-DAG: DBG_VALUE $noreg, $noreg, [[A_VAR]], !DIExpression(DW_OP_LLVM_arg, 0), debug-location
+; FAST-DAG: DBG_VALUE $noreg, $noreg, [[B_VAR]], !DIExpression(DW_OP_LLVM_arg, 0), debug-location
+; FAST: DBG_VALUE $noreg, $noreg, [[C_VAR]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), debug-location
+; GLOBAL-DAG: DBG_VALUE $noreg, 0, [[A_VAR]], !DIExpression(DW_OP_LLVM_arg, 0), debug-location
+; GLOBAL-DAG: DBG_VALUE $noreg, 0, [[B_VAR]], !DIExpression(DW_OP_LLVM_arg, 0), debug-location
+; GLOBAL: DBG_VALUE $noreg, 0, [[C_VAR]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), debug-location
 
 target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc19.16.27034"

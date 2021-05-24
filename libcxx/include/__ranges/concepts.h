@@ -6,10 +6,13 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef _LIBCPP_RANGES_CONCEPTS_H
-#define _LIBCPP_RANGES_CONCEPTS_H
+#ifndef _LIBCPP___RANGES_CONCEPTS_H
+#define _LIBCPP___RANGES_CONCEPTS_H
 
 #include <__config>
+#include <__iterator/concepts.h>
+#include <__ranges/access.h>
+#include <__ranges/size.h>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -33,6 +36,10 @@ namespace ranges {
     ranges::end(__t);
   };
 
+  template<class _Range>
+  concept borrowed_range = range<_Range> &&
+    (is_lvalue_reference_v<_Range> || enable_borrowed_range<remove_cvref_t<_Range>>);
+
   // `iterator_t` defined in <__ranges/access.h>
 
   template <range _Rp>
@@ -50,6 +57,12 @@ namespace ranges {
   template <range _Rp>
   using range_rvalue_reference_t = iter_rvalue_reference_t<iterator_t<_Rp> >;
 
+  // [range.sized]
+  template <class _Tp>
+  concept sized_range = range<_Tp> && requires(_Tp& __t) { ranges::size(__t); };
+
+  // `disable_sized_range` defined in `<__ranges/size.h>`
+
   // [range.refinements], other range refinements
   template <class _Tp>
   concept input_range = range<_Tp> && input_iterator<iterator_t<_Tp> >;
@@ -61,11 +74,11 @@ namespace ranges {
   concept bidirectional_range = forward_range<_Tp> && bidirectional_iterator<iterator_t<_Tp> >;
 
   template <class _Tp>
-  concept common_range = range<_Tp> && same_as<iterator_t<_Tp>, sentinel_t<_Tp> >;
-
-  template <class _Tp>
   concept random_access_range =
       bidirectional_range<_Tp> && random_access_iterator<iterator_t<_Tp> >;
+
+  template <class _Tp>
+  concept common_range = range<_Tp> && same_as<iterator_t<_Tp>, sentinel_t<_Tp> >;
 } // namespace ranges
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
@@ -76,4 +89,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP_RANGES_CONCEPTS_H
+#endif // _LIBCPP___RANGES_CONCEPTS_H

@@ -13,7 +13,6 @@
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -220,14 +219,15 @@ namespace {
 
 class RegionBuilderHelper {
 public:
-  RegionBuilderHelper(Block &block) : block(block) {}
+  RegionBuilderHelper(MLIRContext *context, Block &block)
+      : context(context), block(block) {}
 
   // Generates operations to cast the given operand to a specified type.
   // If the cast cannot be performed, a warning will be issued and the
   // operand returned as-is (which will presumably yield a verification
   // issue downstream).
   Value cast(Type toType, Value operand) {
-    OpBuilder builder = getBuilder(operand);
+    OpBuilder builder = getBuilder();
     auto loc = operand.getLoc();
 
     if (operand.getType() == toType)
@@ -236,11 +236,14 @@ public:
       // If operand is floating point, cast directly to the int type.
       if (operand.getType().isa<FloatType>())
         return builder.create<FPToSIOp>(loc, toType, operand);
+      // Cast index operands directly to the int type.
+      if (operand.getType().isIndex())
+        return builder.create<IndexCastOp>(loc, toType, operand);
       if (auto fromIntType = operand.getType().dyn_cast<IntegerType>()) {
         // Either sign extend or truncate.
         if (toIntType.getWidth() > fromIntType.getWidth())
           return builder.create<SignExtendIOp>(loc, toType, operand);
-        else if (toIntType.getWidth() < fromIntType.getWidth())
+        if (toIntType.getWidth() < fromIntType.getWidth())
           return builder.create<TruncateIOp>(loc, toType, operand);
       }
     } else if (auto toFloatType = toType.dyn_cast<FloatType>()) {
@@ -251,7 +254,7 @@ public:
       if (auto fromFloatType = operand.getType().dyn_cast<FloatType>()) {
         if (toFloatType.getWidth() > fromFloatType.getWidth())
           return builder.create<FPExtOp>(loc, toFloatType, operand);
-        else if (toFloatType.getWidth() < fromFloatType.getWidth())
+        if (toFloatType.getWidth() < fromFloatType.getWidth())
           return builder.create<FPTruncOp>(loc, toFloatType, operand);
       }
     }
@@ -262,19 +265,28 @@ public:
   }
 
   Value applyfn__add(Value lhs, Value rhs) {
-    OpBuilder builder = getBuilder(lhs);
+    OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
       return builder.create<AddFOp>(lhs.getLoc(), lhs, rhs);
-    else if (isInteger(lhs))
+    if (isInteger(lhs))
       return builder.create<AddIOp>(lhs.getLoc(), lhs, rhs);
     llvm_unreachable("unsupported non numeric type");
   }
 
+  Value applyfn__sub(Value lhs, Value rhs) {
+    OpBuilder builder = getBuilder();
+    if (isFloatingPoint(lhs))
+      return builder.create<SubFOp>(lhs.getLoc(), lhs, rhs);
+    if (isInteger(lhs))
+      return builder.create<SubIOp>(lhs.getLoc(), lhs, rhs);
+    llvm_unreachable("unsupported non numeric type");
+  }
+
   Value applyfn__mul(Value lhs, Value rhs) {
-    OpBuilder builder = getBuilder(lhs);
+    OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
       return builder.create<MulFOp>(lhs.getLoc(), lhs, rhs);
-    else if (isInteger(lhs))
+    if (isInteger(lhs))
       return builder.create<MulIOp>(lhs.getLoc(), lhs, rhs);
     llvm_unreachable("unsupported non numeric type");
   }
@@ -284,18 +296,39 @@ public:
     if (values.empty())
       return;
     Value first = values.front();
-    OpBuilder builder = getBuilder(first);
+    OpBuilder builder = getBuilder();
     builder.create<YieldOp>(first.getLoc(), values);
   }
 
+  Value constant(std::string value) {
+    OpBuilder builder = getBuilder();
+    Location loc = builder.getUnknownLoc();
+    Attribute valueAttr = parseAttribute(value, builder.getContext());
+    return builder.create<ConstantOp>(loc, valueAttr.getType(), valueAttr);
+  }
+
+  Value index(int64_t dim) {
+    OpBuilder builder = getBuilder();
+    return builder.create<IndexOp>(builder.getUnknownLoc(), dim);
+  }
+
+  Type getIntegerType(unsigned width) {
+    return IntegerType::get(context, width);
+  }
+
+  Type getFloat32Type() { return Float32Type::get(context); }
+
+  Type getFloat64Type() { return Float64Type::get(context); }
+
 private:
+  MLIRContext *context;
   Block &block;
 
   bool isFloatingPoint(Value value) { return value.getType().isa<FloatType>(); }
   bool isInteger(Value value) { return value.getType().isa<IntegerType>(); }
 
-  OpBuilder getBuilder(Value value) {
-    OpBuilder builder(value.getContext());
+  OpBuilder getBuilder() {
+    OpBuilder builder(context);
     builder.setInsertionPointToEnd(&block);
     return builder;
   }
@@ -306,10 +339,10 @@ private:
 //===----------------------------------------------------------------------===//
 // CopyOp
 //===----------------------------------------------------------------------===//
-void CopyOp::regionBuilder(Block &block, ValueRange captures) {
-  using namespace edsc::intrinsics;
+void CopyOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
+                           ValueRange captures) {
   assert(block.getNumArguments() == 2 && "CopyOp regionBuilder expects 2 args");
-  (linalg_yield(block.getArgument(0)));
+  b.create<linalg::YieldOp>(block.getArgument(0));
 }
 
 void CopyOp::build(OpBuilder &builder, OperationState &result, Value input,
@@ -386,10 +419,10 @@ void CopyOp::getEffects(
 //===----------------------------------------------------------------------===//
 // FillOp
 //===----------------------------------------------------------------------===//
-void FillOp::regionBuilder(Block &block, ValueRange captures) {
-  using namespace edsc::intrinsics;
+void FillOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
+                           ValueRange captures) {
   assert(captures.size() == 1 && "FillOp regionBuilder expects 1 capture");
-  (linalg_yield(captures));
+  b.create<linalg::YieldOp>(captures);
 }
 
 void FillOp::build(OpBuilder &builder, OperationState &result, Value output,
@@ -1475,7 +1508,6 @@ computeReshapeCollapsedType(MemRefType type,
   return canonicalizeStridedLayout(
       MemRefType::Builder(type).setShape(newSizes).setAffineMaps({layout}));
 }
-
 
 template <typename AffineExprTy>
 unsigned getMaxPosOfType(ArrayRef<ReassociationExprs> exprArrays) {
@@ -2736,8 +2768,8 @@ fillStructuredOpRegion(OpBuilder &opBuilder, Region &region,
   }
 
   opBuilder.setInsertionPointToStart(body);
-  mlir::edsc::ScopedContext scope(opBuilder, opBuilder.getUnknownLoc());
-  NamedStructuredOpType::regionBuilder(*body, captures);
+  ImplicitLocOpBuilder b(opBuilder.getUnknownLoc(), opBuilder);
+  NamedStructuredOpType::regionBuilder(b, *body, captures);
 
   // indexing_maps is an auto-generated method.
 

@@ -10,9 +10,9 @@ target triple = "x86_64-pc-linux-gnu"
 @0 = private unnamed_addr global %struct.ident_t { i32 0, i32 34, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str0, i32 0, i32 0) }, align 8
 @.str0 = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00", align 1
 
-; CHECK: remark: deduplication_remarks.c:9:10: OpenMP runtime call __kmpc_global_thread_num moved to deduplication_remarks.c:5:10
-; CHECK: remark: deduplication_remarks.c:7:10: OpenMP runtime call __kmpc_global_thread_num deduplicated
-; CHECK: remark: deduplication_remarks.c:5:10: OpenMP runtime call __kmpc_global_thread_num deduplicated
+; CHECK: remark: deduplication_remarks.c:4:0: OpenMP runtime call __kmpc_global_thread_num moved to beginning of OpenMP region
+; CHECK: remark: deduplication_remarks.c:4:0: OpenMP runtime call __kmpc_global_thread_num deduplicated
+; CHECK: remark: deduplication_remarks.c:4:0: OpenMP runtime call __kmpc_global_thread_num deduplicated
 define dso_local void @deduplicate() local_unnamed_addr !dbg !14 {
   %1 = tail call i32 @__kmpc_global_thread_num(%struct.ident_t* nonnull @0), !dbg !21
   call void @useI32(i32 %1), !dbg !23

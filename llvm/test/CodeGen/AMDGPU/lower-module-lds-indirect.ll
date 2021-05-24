@@ -3,9 +3,9 @@
 
 ; CHECK: %llvm.amdgcn.module.lds.t = type { double, float }
 
-; CHECK: @function_indirect = addrspace(1) global float* addrspacecast (float addrspace(3)* getelementptr (%llvm.amdgcn.module.lds.t, %llvm.amdgcn.module.lds.t addrspace(3)* null, i32 0, i32 1) to float*), align 8
+; CHECK: @function_indirect = addrspace(1) global float* addrspacecast (float addrspace(3)* getelementptr inbounds (%llvm.amdgcn.module.lds.t, %llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 1) to float*), align 8
 
-; CHECK: @kernel_indirect = addrspace(1) global double* addrspacecast (double addrspace(3)* null to double*), align 8
+; CHECK: @kernel_indirect = addrspace(1) global double* addrspacecast (double addrspace(3)* getelementptr inbounds (%llvm.amdgcn.module.lds.t, %llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 0) to double*), align 8
 
 ; CHECK: @llvm.amdgcn.module.lds = internal addrspace(3) global %llvm.amdgcn.module.lds.t undef, align 8
 

@@ -11,7 +11,7 @@ currently encode too many details of how the language is interpreted. Move this
 to helpers on the comprehension objects themselves.
 """
 
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
 from mlir import ir as _ir
 
@@ -70,6 +70,7 @@ class TensorDefConfig(YAMLObject):
   def __repr__(self):
     return f"Def({self.tensor_def}, shape_map={self.shape_map}, indexing_map={self.indexing_map})"
 
+
 class CaptureDefConfig(YAMLObject):
   """Wrapper around a CaptureDef."""
   yaml_tag = "LinalgCaptureDef"
@@ -113,8 +114,7 @@ class LinalgIndexingMapsConfig(YAMLObject):
 
 
 class LinalgStructuredOpConfig(YAMLObject):
-  """Configuration for metadata sufficient to construct a linalg single
-  contraction named op."""
+  """Configuration for metadata sufficient to construct a linalg named op."""
 
   yaml_tag = "!LinalgStructuredOpConfig"
 
@@ -156,8 +156,8 @@ class LinalgStructuredOpConfig(YAMLObject):
     for cuse in self.uses.values():
       cuse.indexing_map = self._normalize_affine_map(cuse.indexing_map)
     for cdef in self.tensor_args.values():
-      cdef.shape_map = self._normalize_affine_map(cdef.shape_map,
-                                                  with_dims=False)
+      cdef.shape_map = self._normalize_affine_map(
+          cdef.shape_map, with_dims=False)
 
     # Now for each write use, propagate the indexing maps from the use to the
     # tensor, ensuring that there are not conflicts.
@@ -198,8 +198,8 @@ class LinalgStructuredOpConfig(YAMLObject):
     for index in collected_indices:
       if index.dim_def.dimname not in self.affine_state.all_dims:
         raise ValueError(
-          f"The dimension {index.dim.dimname} is not part of the iteration "
-          f"domain {self.affine_state.all_dims}")
+            f"The dimension {index.dim.dimname} is not part of the iteration "
+            f"domain {self.affine_state.all_dims}")
       index.resolve_dimension_name(self.affine_state)
 
     # Generate the scalar assignments (used to build a body).
@@ -210,18 +210,21 @@ class LinalgStructuredOpConfig(YAMLObject):
 
   @property
   def ordered_tensor_args(self) -> Sequence[TensorDefConfig]:
-    return sorted(self.tensor_args.values(),
-                  key=lambda tdc: tdc.tensor_def.registered_index)
+    return sorted(
+        self.tensor_args.values(),
+        key=lambda tdc: tdc.tensor_def.registered_index)
 
   @property
   def ordered_tensor_uses(self) -> Sequence[TensorUseConfig]:
-    return sorted(self.uses.values(),
-                  key=lambda tuc: tuc.tensor_use.tensor_def.registered_index)
+    return sorted(
+        self.uses.values(),
+        key=lambda tuc: tuc.tensor_use.tensor_def.registered_index)
 
   @property
   def ordered_capture_args(self) -> Sequence[CaptureDefConfig]:
-    return sorted(self.capture_args.values(),
-                  key=lambda cdc: cdc.capture_def.registered_index)
+    return sorted(
+        self.capture_args.values(),
+        key=lambda cdc: cdc.capture_def.registered_index)
 
   @property
   def ordered_dims(self) -> Sequence[Tuple[str, int]]:
@@ -252,15 +255,14 @@ class LinalgStructuredOpConfig(YAMLObject):
     if tensor_def in self.tensor_args:
       return
     with self.context:
-      local_state = AffineBuildState(global_state=self.affine_state,
-                                     allow_new_dims=False)
+      local_state = AffineBuildState(
+          global_state=self.affine_state, allow_new_dims=False)
       exprs = []
       for expr in tensor_def.shape:
         exprs.append(expr.build(state=local_state))
       assert local_state.local_dim_count == 0
-      indexing_map = _ir.AffineMap.get(dim_count=0,
-                                       symbol_count=local_state.symbol_count,
-                                       exprs=exprs)
+      indexing_map = _ir.AffineMap.get(
+          dim_count=0, symbol_count=local_state.symbol_count, exprs=exprs)
 
       def_config = TensorDefConfig(tensor_def, indexing_map)
       self.tensor_args[tensor_def] = def_config
@@ -269,15 +271,16 @@ class LinalgStructuredOpConfig(YAMLObject):
     if tensor_use in self.uses:
       return
     with self.context:
-      local_state = AffineBuildState(global_state=self.affine_state,
-                                     allow_new_symbols=False)
+      local_state = AffineBuildState(
+          global_state=self.affine_state, allow_new_symbols=False)
       exprs = []
       for expr in tensor_use.indices:
         exprs.append(expr.build(state=local_state))
       assert local_state.local_symbol_count == 0
-      indexing_map = _ir.AffineMap.get(dim_count=local_state.dim_count,
-                                       symbol_count=local_state.symbol_count,
-                                       exprs=exprs)
+      indexing_map = _ir.AffineMap.get(
+          dim_count=local_state.dim_count,
+          symbol_count=local_state.symbol_count,
+          exprs=exprs)
 
       use_config = TensorUseConfig(tensor_use, indexing_map)
       self.uses[tensor_use] = use_config
@@ -299,16 +302,15 @@ class LinalgStructuredOpConfig(YAMLObject):
           exprs=list(affine_map.results))
 
   def to_yaml_custom_dict(self):
-    self_dict = dict(
-        args=self.ordered_tensor_args,
-        captures=self.ordered_capture_args,
-        # TODO: Refactor the hierarchy internally when supporting more
-        # than static (preserving this serialized form).
-        indexing_maps=LinalgIndexingMapsConfig(
-            static_indexing_maps=self.indexing_maps),
-        iterator_types=self.iterator_types,
-        assignments=self.assignments,
-    )
+    self_dict = dict(args=self.ordered_tensor_args)
+    if self.ordered_capture_args:
+      self_dict["captures"] = self.ordered_capture_args
+    # TODO: Refactor the hierarchy internally when supporting more
+    # than static (preserving this serialized form).
+    self_dict["indexing_maps"] = LinalgIndexingMapsConfig(
+        static_indexing_maps=self.indexing_maps)
+    self_dict["iterator_types"] = self.iterator_types
+    self_dict["assignments"] = self.assignments
     return self_dict
 
   def __repr__(self):
@@ -359,9 +361,10 @@ class LinalgOpConfig(YAMLObject):
     assert len(
         tc_op_def.comprehensions) == 1, "Only one comprehension supported"
     return [
-        LinalgOpConfig(tc_op_def.metadata,
-                       structured_op=LinalgStructuredOpConfig(
-                           tc_op_def.comprehensions[0], context)),
+        LinalgOpConfig(
+            tc_op_def.metadata,
+            structured_op=LinalgStructuredOpConfig(tc_op_def.comprehensions[0],
+                                                   context)),
     ]
 
   def __repr__(self):

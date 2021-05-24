@@ -630,25 +630,6 @@ bool LowOverheadLoop::ValidateTailPredicate() {
     return false;
   }
 
-  // Check that creating a [W|D]LSTP, which will define LR with an element
-  // count instead of iteration count, won't affect any other instructions
-  // than the LoopStart and LoopDec.
-  // TODO: We should try to insert the [W|D]LSTP after any of the other uses.
-  Register StartReg = isDo(Start) ? Start->getOperand(1).getReg()
-                                  : Start->getOperand(0).getReg();
-  if (StartInsertPt == Start && StartReg == ARM::LR) {
-    if (auto *IterCount = RDA.getMIOperand(Start, isDo(Start) ? 1 : 0)) {
-      SmallPtrSet<MachineInstr *, 2> Uses;
-      RDA.getGlobalUses(IterCount, MCRegister::from(ARM::LR), Uses);
-      for (auto *Use : Uses) {
-        if (Use != Start && Use != Dec) {
-          LLVM_DEBUG(dbgs() << " ARM Loops: Found LR use: " << *Use);
-          return false;
-        }
-      }
-    }
-  }
-
   // For tail predication, we need to provide the number of elements, instead
   // of the iteration count, to the loop start instruction. The number of
   // elements is provided to the vctp instruction, so we need to check that
@@ -1410,8 +1391,7 @@ void ARMLowOverheadLoops::IterationCountDCE(LowOverheadLoop &LoLoop) {
 
   LLVM_DEBUG(dbgs() << "ARM Loops: Trying DCE on loop iteration count.\n");
 
-  MachineInstr *Def =
-      RDA->getMIOperand(LoLoop.Start, isDo(LoLoop.Start) ? 1 : 0);
+  MachineInstr *Def = RDA->getMIOperand(LoLoop.Start, 1);
   if (!Def) {
     LLVM_DEBUG(dbgs() << "ARM Loops: Couldn't find iteration count.\n");
     return;

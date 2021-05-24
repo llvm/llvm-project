@@ -189,8 +189,7 @@ static void moveInstructionBefore(Instruction &I, Instruction &Dest,
 static void foreachMemoryAccess(MemorySSA *MSSA, Loop *L,
                                 function_ref<void(Instruction *)> Fn);
 static SmallVector<SmallSetVector<Value *, 8>, 0>
-collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA, Loop *L,
-                           SmallVectorImpl<Instruction *> &MaybePromotable);
+collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA, Loop *L);
 
 namespace {
 struct LoopInvariantCodeMotion {
@@ -473,11 +472,6 @@ bool LoopInvariantCodeMotion::runOnLoop(
               DT, TLI, L, CurAST.get(), MSSAU.get(), &SafetyInfo, ORE);
         }
       } else {
-        SmallVector<Instruction *, 16> MaybePromotable;
-        foreachMemoryAccess(MSSA, L, [&](Instruction *I) {
-          MaybePromotable.push_back(I);
-        });
-
         // Promoting one set of accesses may make the pointers for another set
         // loop invariant, so run this in a loop (with the MaybePromotable set
         // decreasing in size over time).
@@ -485,7 +479,7 @@ bool LoopInvariantCodeMotion::runOnLoop(
         do {
           LocalPromoted = false;
           for (const SmallSetVector<Value *, 8> &PointerMustAliases :
-               collectPromotionCandidates(MSSA, AA, L, MaybePromotable)) {
+               collectPromotionCandidates(MSSA, AA, L)) {
             LocalPromoted |= promoteLoopAccessesToScalars(
                 PointerMustAliases, ExitBlocks, InsertPts, MSSAInsertPts, PIC,
                 LI, DT, TLI, L, /*AST*/nullptr, MSSAU.get(), &SafetyInfo, ORE);
@@ -2279,8 +2273,7 @@ static void foreachMemoryAccess(MemorySSA *MSSA, Loop *L,
 }
 
 static SmallVector<SmallSetVector<Value *, 8>, 0>
-collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA, Loop *L,
-                           SmallVectorImpl<Instruction *> &MaybePromotable) {
+collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA, Loop *L) {
   AliasSetTracker AST(*AA);
 
   auto IsPotentiallyPromotable = [L](const Instruction *I) {
@@ -2294,13 +2287,11 @@ collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA, Loop *L,
   // Populate AST with potentially promotable accesses and remove them from
   // MaybePromotable, so they will not be checked again on the next iteration.
   SmallPtrSet<Value *, 16> AttemptingPromotion;
-  llvm::erase_if(MaybePromotable, [&](Instruction *I) {
+  foreachMemoryAccess(MSSA, L, [&](Instruction *I) {
     if (IsPotentiallyPromotable(I)) {
       AttemptingPromotion.insert(I);
       AST.add(I);
-      return true;
     }
-    return false;
   });
 
   // We're only interested in must-alias sets that contain a mod.

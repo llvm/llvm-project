@@ -41,7 +41,6 @@ protected:
 };
 
 UnwindInfoSection *makeUnwindInfoSection();
-void prepareCompactUnwind(InputSection *isec);
 
 } // namespace macho
 } // namespace lld

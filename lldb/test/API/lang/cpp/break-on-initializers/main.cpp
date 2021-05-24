@@ -1,12 +1,8 @@
-#include <stdio.h>
-#include <vector>
-
 class Trivial {
 public:
   Trivial(int input) : m_int(input) {}
 private:
   int m_int;
-
 };
 
 class Foo {
@@ -15,17 +11,14 @@ private:
 
 public:
   Foo(int input) {
-    printf("I have been made!\n");
+    ++input;
   }
 
 private:
   Trivial m_other_trivial = Trivial(200); // Set the after constructor breakpoint here
 };
 
-int
-main()
-{
+int main() {
   Foo myFoo(10); // Set a breakpoint here to get started
   return 0;
 }
-    

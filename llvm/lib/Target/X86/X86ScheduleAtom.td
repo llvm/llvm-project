@@ -37,6 +37,7 @@ def AtomPort0 : ProcResource<1>; // ALU: ALU0, shift/rotate, load/store
 def AtomPort1 : ProcResource<1>; // ALU: ALU1, bit processing, jump, and LEA
                                  // SIMD/FP: SIMD ALU, FP Adder
 
+// NOTE: This is for ops that can use EITHER port, not for ops that require BOTH ports.
 def AtomPort01 : ProcResGroup<[AtomPort0, AtomPort1]>;
 
 // Loads are 3 cycles, so ReadAfterLd registers needn't be available until 3
@@ -48,9 +49,6 @@ def : ReadAdvance<ReadAfterVecYLd, 3>;
 
 def : ReadAdvance<ReadInt2Fpu, 0>;
 
-// Many SchedWrites are defined in pairs with and without a folded load.
-// Instructions with folded loads are usually micro-fused, so they only appear
-// as two micro-ops when dispatched by the schedulers.
 // This multiclass defines the resource usage for variants with and without
 // folded loads.
 multiclass AtomWriteResPair<X86FoldableSchedWrite SchedRW,
@@ -59,14 +57,13 @@ multiclass AtomWriteResPair<X86FoldableSchedWrite SchedRW,
                             int RRLat = 1, int RMLat = 1,
                             list<int> RRRes = [1],
                             list<int> RMRes = [1]> {
-  // Register variant is using a single cycle on ExePort.
+  // Register variant.
   def : WriteRes<SchedRW, RRPorts> {
     let Latency = RRLat;
     let ResourceCycles = RRRes;
   }
 
-  // Memory variant also uses a cycle on JLAGU and adds 3 cycles to the
-  // latency.
+  // Memory variant.
   def : WriteRes<SchedRW.Folded, RMPorts> {
     let Latency = RMLat;
     let ResourceCycles = RMRes;
@@ -227,30 +224,30 @@ defm : X86WriteResUnsupported<WriteFMoveY>;
 
 defm : X86WriteRes<WriteEMMS,       [AtomPort01], 5, [5], 1>;
 
-defm : AtomWriteResPair<WriteFAdd,           [AtomPort0],  [AtomPort0],  5,  5,  [5],  [5]>;
-defm : AtomWriteResPair<WriteFAddX,          [AtomPort0],  [AtomPort0],  5,  5,  [5],  [5]>;
+defm : AtomWriteResPair<WriteFAdd,           [AtomPort1], [AtomPort0,AtomPort1],  5,  5,  [1],  [1,1]>;
+defm : AtomWriteResPair<WriteFAddX,          [AtomPort1], [AtomPort0,AtomPort1],  5,  5,  [1],  [1,1]>;
 defm : X86WriteResPairUnsupported<WriteFAddY>;
 defm : X86WriteResPairUnsupported<WriteFAddZ>;
-defm : AtomWriteResPair<WriteFAdd64,         [AtomPort0],  [AtomPort0],  5,  5,  [5],  [5]>;
-defm : AtomWriteResPair<WriteFAdd64X,       [AtomPort01], [AtomPort01],  6,  7,  [6],  [7]>;
+defm : AtomWriteResPair<WriteFAdd64,         [AtomPort1], [AtomPort0,AtomPort1],  5,  5,  [1],  [1,1]>;
+defm : AtomWriteResPair<WriteFAdd64X,        [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  6,  7,  [5,5],  [6,6]>;
 defm : X86WriteResPairUnsupported<WriteFAdd64Y>;
 defm : X86WriteResPairUnsupported<WriteFAdd64Z>;
-defm : AtomWriteResPair<WriteFCmp,           [AtomPort0],  [AtomPort0],  5,  5,  [5],  [5]>;
-defm : AtomWriteResPair<WriteFCmpX,          [AtomPort0],  [AtomPort0],  5,  5,  [5],  [5]>;
+defm : AtomWriteResPair<WriteFCmp,           [AtomPort1], [AtomPort0,AtomPort1],  5,  5,  [1],  [1,1]>;
+defm : AtomWriteResPair<WriteFCmpX,          [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  6,  7,  [5,5],  [6,6]>;
 defm : X86WriteResPairUnsupported<WriteFCmpY>;
 defm : X86WriteResPairUnsupported<WriteFCmpZ>;
-defm : AtomWriteResPair<WriteFCmp64,         [AtomPort0],  [AtomPort0],  5,  5,  [5],  [5]>;
-defm : AtomWriteResPair<WriteFCmp64X,       [AtomPort01], [AtomPort01],  6,  7,  [6],  [7]>;
+defm : AtomWriteResPair<WriteFCmp64,         [AtomPort1], [AtomPort0,AtomPort1],  5,  5,  [1],  [1,1]>;
+defm : AtomWriteResPair<WriteFCmp64X,        [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  6,  7,  [5,5],  [6,6]>;
 defm : X86WriteResPairUnsupported<WriteFCmp64Y>;
 defm : X86WriteResPairUnsupported<WriteFCmp64Z>;
 defm : AtomWriteResPair<WriteFCom,           [AtomPort0],  [AtomPort0],  5,  5,  [5],  [5]>;
 defm : AtomWriteResPair<WriteFComX,          [AtomPort0],  [AtomPort0],  5,  5,  [5],  [5]>;
-defm : AtomWriteResPair<WriteFMul,           [AtomPort0],  [AtomPort0],  4,  4,  [4],  [4]>;
-defm : AtomWriteResPair<WriteFMulX,          [AtomPort0],  [AtomPort0],  5,  5,  [5],  [5]>;
+defm : AtomWriteResPair<WriteFMul,           [AtomPort0],  [AtomPort0],  4,  4,  [2],  [2]>;
+defm : AtomWriteResPair<WriteFMulX,          [AtomPort0],  [AtomPort0],  5,  5,  [2],  [2]>;
 defm : X86WriteResPairUnsupported<WriteFMulY>;
 defm : X86WriteResPairUnsupported<WriteFMulZ>;
-defm : AtomWriteResPair<WriteFMul64,         [AtomPort0],  [AtomPort0],  5,  5,  [5],  [5]>;
-defm : AtomWriteResPair<WriteFMul64X,       [AtomPort01], [AtomPort01],  9, 10,  [9], [10]>;
+defm : AtomWriteResPair<WriteFMul64,         [AtomPort0],  [AtomPort0],  5,  5,  [2],  [2]>;
+defm : AtomWriteResPair<WriteFMul64X,        [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  9, 10,  [9,9],  [10,10]>;
 defm : X86WriteResPairUnsupported<WriteFMul64Y>;
 defm : X86WriteResPairUnsupported<WriteFMul64Z>;
 defm : AtomWriteResPair<WriteFRcp,           [AtomPort0],  [AtomPort0],  4,  4,  [4],  [4]>;
@@ -388,15 +385,15 @@ defm : AtomWriteResPair<WriteVecLogic,     [AtomPort01],  [AtomPort0], 1, 1>;
 defm : AtomWriteResPair<WriteVecLogicX,    [AtomPort01],  [AtomPort0], 1, 1>;
 defm : X86WriteResPairUnsupported<WriteVecLogicY>;
 defm : X86WriteResPairUnsupported<WriteVecLogicZ>;
-defm : AtomWriteResPair<WriteVecTest,      [AtomPort01],  [AtomPort0], 1, 1>;
+defm : X86WriteResPairUnsupported<WriteVecTest>;
 defm : X86WriteResPairUnsupported<WriteVecTestY>;
 defm : X86WriteResPairUnsupported<WriteVecTestZ>;
 defm : AtomWriteResPair<WriteVecShift,     [AtomPort01], [AtomPort01], 2, 3, [2], [3]>;
 defm : AtomWriteResPair<WriteVecShiftX,    [AtomPort01], [AtomPort01], 2, 3, [2], [3]>;
 defm : X86WriteResPairUnsupported<WriteVecShiftY>;
 defm : X86WriteResPairUnsupported<WriteVecShiftZ>;
-defm : AtomWriteResPair<WriteVecShiftImm,  [AtomPort01], [AtomPort01], 1, 1, [1], [1]>;
-defm : AtomWriteResPair<WriteVecShiftImmX, [AtomPort01], [AtomPort01], 1, 1, [1], [1]>;
+defm : AtomWriteResPair<WriteVecShiftImm,   [AtomPort0],  [AtomPort0], 1, 1>;
+defm : AtomWriteResPair<WriteVecShiftImmX,  [AtomPort0],  [AtomPort0], 1, 1>;
 defm : X86WriteResPairUnsupported<WriteVecShiftImmY>;
 defm : X86WriteResPairUnsupported<WriteVecShiftImmZ>;
 defm : AtomWriteResPair<WriteVecIMul,       [AtomPort0],  [AtomPort0], 4, 4, [1], [1]>;

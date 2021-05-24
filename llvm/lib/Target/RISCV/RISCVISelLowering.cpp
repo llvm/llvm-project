@@ -440,6 +440,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
 
+      setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
 
       setOperationAction(ISD::SELECT, VT, Expand);
@@ -636,6 +637,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
         setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
 
+        setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
         setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
 
         setOperationAction(ISD::LOAD, VT, Custom);
@@ -1365,12 +1367,15 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     // according to the size of the final vector - use i8 chunks rather than
     // XLenVT if we're producing a v8i1. This results in more consistent
     // codegen across RV32 and RV64.
-    // If we have to use more than one INSERT_VECTOR_ELT then this optimization
-    // is likely to increase code size; avoid peforming it in such a case.
     unsigned NumViaIntegerBits =
         std::min(std::max(NumElts, 8u), Subtarget.getXLen());
-    if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode()) &&
-        (!DAG.shouldOptForSize() || NumElts <= NumViaIntegerBits)) {
+    if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode())) {
+      // If we have to use more than one INSERT_VECTOR_ELT then this
+      // optimization is likely to increase code size; avoid peforming it in
+      // such a case. We can go through the stack as long as we're at least
+      // byte-sized.
+      if (DAG.shouldOptForSize() && NumElts > NumViaIntegerBits)
+        return SDValue();
       // Now we can create our integer vector type. Note that it may be larger
       // than the resulting mask type: v4i1 would use v1i8 as its integer type.
       MVT IntegerViaVecVT =
@@ -1425,20 +1430,29 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
       return Vec;
     }
 
-    // A splat can be lowered as a SETCC. For each fixed-length mask vector
-    // type, we have a legal equivalently-sized i8 type, so we can use that.
+    // A BUILD_VECTOR can be lowered as a SETCC. For each fixed-length mask
+    // vector type, we have a legal equivalently-sized i8 type, so we can use
+    // that.
+    MVT WideVecVT = VT.changeVectorElementType(MVT::i8);
+    SDValue VecZero = DAG.getConstant(0, DL, WideVecVT);
+
+    SDValue WideVec;
     if (SDValue Splat = cast<BuildVectorSDNode>(Op)->getSplatValue()) {
+      // For a splat, perform a scalar truncate before creating the wider
+      // vector.
       assert(Splat.getValueType() == XLenVT &&
              "Unexpected type for i1 splat value");
-      MVT InterVT = VT.changeVectorElementType(MVT::i8);
       Splat = DAG.getNode(ISD::AND, DL, XLenVT, Splat,
                           DAG.getConstant(1, DL, XLenVT));
-      Splat = DAG.getSplatBuildVector(InterVT, DL, Splat);
-      SDValue Zero = DAG.getConstant(0, DL, InterVT);
-      return DAG.getSetCC(DL, VT, Splat, Zero, ISD::SETNE);
+      WideVec = DAG.getSplatBuildVector(WideVecVT, DL, Splat);
+    } else {
+      SmallVector<SDValue, 8> Ops(Op->op_values());
+      WideVec = DAG.getBuildVector(WideVecVT, DL, Ops);
+      SDValue VecOne = DAG.getConstant(1, DL, WideVecVT);
+      WideVec = DAG.getNode(ISD::AND, DL, WideVecVT, WideVec, VecOne);
     }
 
-    return SDValue();
+    return DAG.getSetCC(DL, VT, WideVec, VecZero, ISD::SETNE);
   }
 
   if (SDValue Splat = cast<BuildVectorSDNode>(Op)->getSplatValue()) {
@@ -1847,7 +1861,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   SDValue Gather;
   // TODO: This doesn't trigger for i64 vectors on RV32, since there we
   // encounter a bitcasted BUILD_VECTOR with low/high i32 values.
-  if (SDValue SplatValue = DAG.getSplatValue(V1)) {
+  if (SDValue SplatValue = DAG.getSplatValue(V1, /*LegalTypes*/ true)) {
     Gather = lowerScalarSplat(SplatValue, VL, ContainerVT, DL, DAG, Subtarget);
   } else {
     SDValue LHSIndices = DAG.getBuildVector(IndexVT, DL, GatherIndicesLHS);
@@ -3091,6 +3105,15 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   SDValue Vec = Op.getOperand(0);
   SDValue Val = Op.getOperand(1);
   SDValue Idx = Op.getOperand(2);
+
+  if (VecVT.getVectorElementType() == MVT::i1) {
+    // FIXME: For now we just promote to an i8 vector and insert into that,
+    // but this is probably not optimal.
+    MVT WideVT = MVT::getVectorVT(MVT::i8, VecVT.getVectorElementCount());
+    Vec = DAG.getNode(ISD::ZERO_EXTEND, DL, WideVT, Vec);
+    Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, WideVT, Vec, Val, Idx);
+    return DAG.getNode(ISD::TRUNCATE, DL, VecVT, Vec);
+  }
 
   MVT ContainerVT = VecVT;
   // If the operand is a fixed-length vector, convert to a scalable one.

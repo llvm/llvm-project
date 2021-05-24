@@ -9,6 +9,7 @@
 #include "mlir/Conversion/ComplexToStandard/ComplexToStandard.h"
 
 #include <memory>
+#include <type_traits>
 
 #include "../PassDetail.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
@@ -42,11 +43,48 @@ struct AbsOpConversion : public OpConversionPattern<complex::AbsOp> {
     return success();
   }
 };
+
+template <typename ComparisonOp, CmpFPredicate p>
+struct ComparisonOpConversion : public OpConversionPattern<ComparisonOp> {
+  using OpConversionPattern<ComparisonOp>::OpConversionPattern;
+  using ResultCombiner =
+      std::conditional_t<std::is_same<ComparisonOp, complex::EqualOp>::value,
+                         AndOp, OrOp>;
+
+  LogicalResult
+  matchAndRewrite(ComparisonOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    typename ComparisonOp::Adaptor transformed(operands);
+    auto loc = op.getLoc();
+    auto type = transformed.lhs()
+                    .getType()
+                    .template cast<ComplexType>()
+                    .getElementType();
+
+    Value realLhs =
+        rewriter.create<complex::ReOp>(loc, type, transformed.lhs());
+    Value imagLhs =
+        rewriter.create<complex::ImOp>(loc, type, transformed.lhs());
+    Value realRhs =
+        rewriter.create<complex::ReOp>(loc, type, transformed.rhs());
+    Value imagRhs =
+        rewriter.create<complex::ImOp>(loc, type, transformed.rhs());
+    Value realComparison = rewriter.create<CmpFOp>(loc, p, realLhs, realRhs);
+    Value imagComparison = rewriter.create<CmpFOp>(loc, p, imagLhs, imagRhs);
+
+    rewriter.replaceOpWithNewOp<ResultCombiner>(op, realComparison,
+                                                imagComparison);
+    return success();
+  }
+};
 } // namespace
 
 void mlir::populateComplexToStandardConversionPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<AbsOpConversion>(patterns.getContext());
+  patterns.add<AbsOpConversion,
+               ComparisonOpConversion<complex::EqualOp, CmpFPredicate::OEQ>,
+               ComparisonOpConversion<complex::NotEqualOp, CmpFPredicate::UNE>>(
+      patterns.getContext());
 }
 
 namespace {
@@ -65,7 +103,7 @@ void ConvertComplexToStandardPass::runOnFunction() {
   ConversionTarget target(getContext());
   target.addLegalDialect<StandardOpsDialect, math::MathDialect,
                          complex::ComplexDialect>();
-  target.addIllegalOp<complex::AbsOp>();
+  target.addIllegalOp<complex::AbsOp, complex::EqualOp, complex::NotEqualOp>();
   if (failed(applyPartialConversion(function, target, std::move(patterns))))
     signalPassFailure();
 }

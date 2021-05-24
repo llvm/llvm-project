@@ -325,20 +325,13 @@ define void @twoloops(i32* %X, i32 %n, i32 %m) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    add.w r1, r2, #15
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    bic r1, r1, #16
 ; CHECK-NEXT:    mov r3, r2
-; CHECK-NEXT:    lsr.w lr, r1, #4
 ; CHECK-NEXT:    mov r1, r0
-; CHECK-NEXT:    mov r12, lr
-; CHECK-NEXT:    wls lr, lr, .LBB13_2
+; CHECK-NEXT:    wlstp.8 lr, r3, .LBB13_2
 ; CHECK-NEXT:  .LBB13_1: @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vctp.8 r3
-; CHECK-NEXT:    subs r3, #16
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrbt.8 q0, [r1], #16
-; CHECK-NEXT:    le lr, .LBB13_1
+; CHECK-NEXT:    vstrb.8 q0, [r1], #16
+; CHECK-NEXT:    letp lr, .LBB13_1
 ; CHECK-NEXT:  .LBB13_2: @ %entry
 ; CHECK-NEXT:    wlstp.8 lr, r2, .LBB13_4
 ; CHECK-NEXT:  .LBB13_3: @ =>This Inner Loop Header: Depth=1

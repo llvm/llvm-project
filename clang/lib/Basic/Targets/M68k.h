@@ -44,6 +44,7 @@ public:
   bool hasFeature(StringRef Feature) const override;
   ArrayRef<const char *> getGCCRegNames() const override;
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override;
+  std::string convertConstraint(const char *&Constraint) const override;
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &info) const override;
   const char *getClobbers() const override;

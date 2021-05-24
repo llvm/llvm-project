@@ -3948,17 +3948,23 @@ LegalizerHelper::reduceOperationWidth(MachineInstr &MI, unsigned int TypeIdx,
   assert(TypeIdx == 0 && "only one type index expected");
 
   const unsigned Opc = MI.getOpcode();
-  const int NumOps = MI.getNumOperands() - 1;
-  const Register DstReg = MI.getOperand(0).getReg();
+  const int NumDefOps = MI.getNumExplicitDefs();
+  const int NumSrcOps = MI.getNumOperands() - NumDefOps;
   const unsigned Flags = MI.getFlags();
   const unsigned NarrowSize = NarrowTy.getSizeInBits();
   const LLT NarrowScalarTy = LLT::scalar(NarrowSize);
 
-  assert(NumOps <= 3 && "expected instruction with 1 result and 1-3 sources");
+  assert(MI.getNumOperands() <= 4 && "expected instruction with either 1 "
+                                     "result and 1-3 sources or 2 results and "
+                                     "1-2 sources");
+
+  SmallVector<Register, 2> DstRegs;
+  for (int I = 0; I < NumDefOps; ++I)
+    DstRegs.push_back(MI.getOperand(I).getReg());
 
   // First of all check whether we are narrowing (changing the element type)
   // or reducing the vector elements
-  const LLT DstTy = MRI.getType(DstReg);
+  const LLT DstTy = MRI.getType(DstRegs[0]);
   const bool IsNarrow = NarrowTy.getScalarType() != DstTy.getScalarType();
 
   SmallVector<Register, 8> ExtractedRegs[3];
@@ -3968,8 +3974,8 @@ LegalizerHelper::reduceOperationWidth(MachineInstr &MI, unsigned int TypeIdx,
 
   // Break down all the sources into NarrowTy pieces we can operate on. This may
   // involve creating merges to a wider type, padded with undef.
-  for (int I = 0; I != NumOps; ++I) {
-    Register SrcReg = MI.getOperand(I + 1).getReg();
+  for (int I = 0; I != NumSrcOps; ++I) {
+    Register SrcReg = MI.getOperand(I + NumDefOps).getReg();
     LLT SrcTy = MRI.getType(SrcReg);
 
     // The type to narrow SrcReg to. For narrowing, this is a smaller scalar.
@@ -3996,10 +4002,10 @@ LegalizerHelper::reduceOperationWidth(MachineInstr &MI, unsigned int TypeIdx,
                         TargetOpcode::G_ANYEXT);
   }
 
-  SmallVector<Register, 8> ResultRegs;
+  SmallVector<Register, 8> ResultRegs[2];
 
   // Input operands for each sub-instruction.
-  SmallVector<SrcOp, 4> InputRegs(NumOps, Register());
+  SmallVector<SrcOp, 4> InputRegs(NumSrcOps, Register());
 
   int NumParts = ExtractedRegs[0].size();
   const unsigned DstSize = DstTy.getSizeInBits();
@@ -4021,33 +4027,44 @@ LegalizerHelper::reduceOperationWidth(MachineInstr &MI, unsigned int TypeIdx,
 
   for (int I = 0; I != NumRealParts; ++I) {
     // Emit this instruction on each of the split pieces.
-    for (int J = 0; J != NumOps; ++J)
+    for (int J = 0; J != NumSrcOps; ++J)
       InputRegs[J] = ExtractedRegs[J][I];
 
-    auto Inst = MIRBuilder.buildInstr(Opc, {NarrowDstTy}, InputRegs, Flags);
-    ResultRegs.push_back(Inst.getReg(0));
+    MachineInstrBuilder Inst;
+    if (NumDefOps == 1)
+      Inst = MIRBuilder.buildInstr(Opc, {NarrowDstTy}, InputRegs, Flags);
+    else
+      Inst = MIRBuilder.buildInstr(Opc, {NarrowDstTy, NarrowDstTy}, InputRegs,
+                                   Flags);
+
+    for (int J = 0; J != NumDefOps; ++J)
+      ResultRegs[J].push_back(Inst.getReg(J));
   }
 
   // Fill out the widened result with undef instead of creating instructions
   // with undef inputs.
   int NumUndefParts = NumParts - NumRealParts;
-  if (NumUndefParts != 0)
-    ResultRegs.append(NumUndefParts,
-                      MIRBuilder.buildUndef(NarrowDstTy).getReg(0));
+  if (NumUndefParts != 0) {
+    Register Undef = MIRBuilder.buildUndef(NarrowDstTy).getReg(0);
+    for (int I = 0; I != NumDefOps; ++I)
+      ResultRegs[I].append(NumUndefParts, Undef);
+  }
 
   // Extract the possibly padded result. Use a scratch register if we need to do
   // a final bitcast, otherwise use the original result register.
   Register MergeDstReg;
-  if (IsNarrow && DstTy.isVector())
-    MergeDstReg = MRI.createGenericVirtualRegister(DstScalarTy);
-  else
-    MergeDstReg = DstReg;
+  for (int I = 0; I != NumDefOps; ++I) {
+    if (IsNarrow && DstTy.isVector())
+      MergeDstReg = MRI.createGenericVirtualRegister(DstScalarTy);
+    else
+      MergeDstReg = DstRegs[I];
 
-  buildWidenedRemergeToDst(MergeDstReg, DstLCMTy, ResultRegs);
+    buildWidenedRemergeToDst(MergeDstReg, DstLCMTy, ResultRegs[I]);
 
-  // Recast to vector if we narrowed a vector
-  if (IsNarrow && DstTy.isVector())
-    MIRBuilder.buildBitcast(DstReg, MergeDstReg);
+    // Recast to vector if we narrowed a vector
+    if (IsNarrow && DstTy.isVector())
+      MIRBuilder.buildBitcast(DstRegs[I], MergeDstReg);
+  }
 
   MI.eraseFromParent();
   return Legalized;

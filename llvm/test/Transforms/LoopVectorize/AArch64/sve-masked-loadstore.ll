@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -dce -instcombine -mtriple aarch64-linux-gnu -mattr=+sve -S %s -o - | FileCheck %s
+; RUN: opt -loop-vectorize -dce -instcombine -mtriple aarch64-linux-gnu -mattr=+sve -S %s -scalable-vectorization=on -o - | FileCheck %s
 
 define void @mloadstore_f32(float* noalias nocapture %a, float* noalias nocapture readonly %b, i64 %n) {
 ; CHECK-LABEL: @mloadstore_f32

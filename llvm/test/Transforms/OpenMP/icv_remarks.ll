@@ -1,5 +1,5 @@
-; RUN: opt -passes=openmp-opt-cgscc -pass-remarks=openmp-opt -openmp-print-icv-values -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt -openmp-opt-cgscc -pass-remarks=openmp-opt -openmp-print-icv-values -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=openmp-opt-cgscc -pass-remarks-analysis=openmp-opt -openmp-print-icv-values -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -openmp-opt-cgscc -pass-remarks-analysis=openmp-opt -openmp-print-icv-values -disable-output < %s 2>&1 | FileCheck %s
 
 ; ModuleID = 'icv_remarks.c'
 source_filename = "icv_remarks.c"

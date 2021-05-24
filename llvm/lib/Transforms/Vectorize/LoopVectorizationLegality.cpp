@@ -48,6 +48,23 @@ static cl::opt<unsigned> PragmaVectorizeSCEVCheckThreshold(
     cl::desc("The maximum number of SCEV checks allowed with a "
              "vectorize(enable) pragma"));
 
+// FIXME: When scalable vectorization is stable enough, change the default
+// to SK_PreferFixedWidth.
+static cl::opt<LoopVectorizeHints::ScalableForceKind> ScalableVectorization(
+    "scalable-vectorization", cl::init(LoopVectorizeHints::SK_FixedWidthOnly),
+    cl::Hidden,
+    cl::desc("Control whether the compiler can use scalable vectors to "
+             "vectorize a loop"),
+    cl::values(
+        clEnumValN(LoopVectorizeHints::SK_FixedWidthOnly, "off",
+                   "Scalable vectorization is disabled."),
+        clEnumValN(LoopVectorizeHints::SK_PreferFixedWidth, "on",
+                   "Scalable vectorization is available, but favor fixed-width "
+                   "vectorization when the cost is inconclusive."),
+        clEnumValN(LoopVectorizeHints::SK_PreferScalable, "preferred",
+                   "Scalable vectorization is available and favored when the "
+                   "cost is inconclusive.")));
+
 /// Maximum vectorization interleave count.
 static const unsigned MaxInterleaveFactor = 16;
 
@@ -77,14 +94,24 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
       Force("vectorize.enable", FK_Undefined, HK_FORCE),
       IsVectorized("isvectorized", 0, HK_ISVECTORIZED),
       Predicate("vectorize.predicate.enable", FK_Undefined, HK_PREDICATE),
-      Scalable("vectorize.scalable.enable", false, HK_SCALABLE), TheLoop(L),
-      ORE(ORE) {
+      Scalable("vectorize.scalable.enable", SK_Unspecified, HK_SCALABLE),
+      TheLoop(L), ORE(ORE) {
   // Populate values with existing loop metadata.
   getHintsFromMetadata();
 
   // force-vector-interleave overrides DisableInterleaving.
   if (VectorizerParams::isInterleaveForced())
     Interleave.Value = VectorizerParams::VectorizationInterleave;
+
+  if ((LoopVectorizeHints::ScalableForceKind)Scalable.Value == SK_Unspecified)
+    // If the width is set, but the metadata says nothing about the scalable
+    // property, then assume it concerns only a fixed-width UserVF.
+    // If width is not set, the flag takes precedence.
+    Scalable.Value = Width.Value ? SK_FixedWidthOnly : ScalableVectorization;
+  else if (ScalableVectorization == SK_FixedWidthOnly)
+    // If the flag is set to disable any use of scalable vectors, override the
+    // loop hint.
+    Scalable.Value = SK_FixedWidthOnly;
 
   if (IsVectorized.Value != 1)
     // If the vectorization width and interleaving count are both 1 then

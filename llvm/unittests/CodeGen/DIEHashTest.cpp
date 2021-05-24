@@ -662,8 +662,7 @@ TEST_F(DIEHashTest, MemberSdata) {
 // A a;
 TEST_F(DIEHashTest, MemberBlock) {
   if (!this->getAsmPrinter())
-    // TODO: Use GTEST_SKIP() when GTest is updated to version 1.10.0
-    return;
+    GTEST_SKIP();
 
   DIE &A = *DIE::get(Alloc, dwarf::DW_TAG_structure_type);
   DIEInteger One(1);

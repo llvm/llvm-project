@@ -59,13 +59,6 @@ ParseResult mlir::function_like_impl::parseFunctionArgumentList(
     if (!allowAttributes && !attrs.empty())
       return parser.emitError(loc, "expected arguments without attributes");
     argAttrs.push_back(attrs);
-
-    // Parse a location if specified.  TODO: Don't drop it on the floor.
-    Optional<Location> explicitLoc;
-    if (!argument.name.empty() &&
-        parser.parseOptionalLocationSpecifier(explicitLoc))
-      return failure();
-
     return success();
   };
 
@@ -305,15 +298,13 @@ void mlir::function_like_impl::printFunctionSignature(
       p << ", ";
 
     if (!isExternal) {
-      ArrayRef<NamedAttribute> attrs;
-      if (argAttrs)
-        attrs = argAttrs[i].cast<DictionaryAttr>().getValue();
-      p.printRegionArgument(body.getArgument(i), attrs);
-    } else {
-      p.printType(argTypes[i]);
-      if (argAttrs)
-        p.printOptionalAttrDict(argAttrs[i].cast<DictionaryAttr>().getValue());
+      p.printOperand(body.getArgument(i));
+      p << ": ";
     }
+
+    p.printType(argTypes[i]);
+    if (argAttrs)
+      p.printOptionalAttrDict(argAttrs[i].cast<DictionaryAttr>().getValue());
   }
 
   if (isVariadic) {

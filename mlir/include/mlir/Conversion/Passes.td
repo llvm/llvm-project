@@ -521,6 +521,9 @@ def ConvertVectorToSCF : FunctionPass<"convert-vector-to-scf"> {
            "Perform full unrolling when converting vector transfers to SCF">,
     Option<"targetRank", "target-rank", "unsigned", /*default=*/"1",
            "Target vector rank to which transfer ops should be lowered">,
+    Option<"lowerPermutationMaps", "lower-permutation-maps", "bool",
+           /*default=*/"false", "Replace permutation maps with vector "
+           "transposes/broadcasts before lowering transfer ops">
   ];
 }
 

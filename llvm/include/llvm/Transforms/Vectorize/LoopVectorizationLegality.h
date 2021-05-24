@@ -96,6 +96,20 @@ public:
     FK_Enabled = 1,    ///< Forcing enabled.
   };
 
+  enum ScalableForceKind {
+    /// Not selected.
+    SK_Unspecified = -1,
+    /// Disables vectorization with scalable vectors.
+    SK_FixedWidthOnly = 0,
+    /// Vectorize loops using scalable vectors or fixed-width vectors, but favor
+    /// scalable vectors when the cost-model is inconclusive. This is the
+    /// default when the scalable.enable hint is enabled through a pragma.
+    SK_PreferScalable = 1,
+    /// Vectorize loops using scalable vectors or fixed-width  vectors, but
+    /// favor fixed-width vectors when the cost is inconclusive.
+    SK_PreferFixedWidth = 2,
+  };
+
   LoopVectorizeHints(const Loop *L, bool InterleaveOnlyWhenForced,
                      OptimizationRemarkEmitter &ORE);
 
@@ -109,7 +123,8 @@ public:
   void emitRemarkWithHints() const;
 
   ElementCount getWidth() const {
-    return ElementCount::get(Width.Value, isScalable());
+    return ElementCount::get(Width.Value,
+                             isScalableVectorizationExplicitlyEnabled());
   }
   unsigned getInterleave() const {
     if (Interleave.Value)
@@ -129,7 +144,16 @@ public:
     return (ForceKind)Force.Value;
   }
 
-  bool isScalable() const { return Scalable.Value; }
+  /// \return true if scalable vectorization has been explicitly enabled.
+  bool isScalableVectorizationExplicitlyEnabled() const {
+    return Scalable.Value == SK_PreferFixedWidth ||
+           Scalable.Value == SK_PreferScalable;
+  }
+
+  /// \return true if scalable vectorization has been explicitly disabled.
+  bool isScalableVectorizationDisabled() const {
+    return Scalable.Value == SK_FixedWidthOnly;
+  }
 
   /// If hints are provided that force vectorization, use the AlwaysPrint
   /// pass name to force the frontend to print the diagnostic.

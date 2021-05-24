@@ -235,15 +235,7 @@ public:
   /// Return a rangelist's offset based on an index. The index designates
   /// an entry in the rangelist table's offset array and is supplied by
   /// DW_FORM_rnglistx.
-  llvm::Optional<uint64_t> GetRnglistOffset(uint32_t Index) const {
-    if (!m_rnglist_table)
-      return llvm::None;
-    if (llvm::Optional<uint64_t> off = m_rnglist_table->getOffsetEntry(
-            m_dwarf.GetDWARFContext().getOrLoadRngListsData().GetAsLLVM(),
-            Index))
-      return *off + m_ranges_base;
-    return llvm::None;
-  }
+  llvm::Expected<uint64_t> GetRnglistOffset(uint32_t Index);
 
   llvm::Optional<uint64_t> GetLoclistOffset(uint32_t Index) {
     if (!m_loclist_table_header)
@@ -291,6 +283,8 @@ protected:
     return &m_die_array[0];
   }
 
+  const llvm::Optional<llvm::DWARFDebugRnglistTable> &GetRnglist();
+
   SymbolFileDWARF &m_dwarf;
   std::shared_ptr<DWARFUnit> m_dwo;
   DWARFUnitHeader m_header;
@@ -331,6 +325,7 @@ protected:
   dw_offset_t m_str_offsets_base = 0; // Value of DW_AT_str_offsets_base.
 
   llvm::Optional<llvm::DWARFDebugRnglistTable> m_rnglist_table;
+  bool m_rnglist_table_done = false;
   llvm::Optional<llvm::DWARFListTableHeader> m_loclist_table_header;
 
   const DIERef::Section m_section;

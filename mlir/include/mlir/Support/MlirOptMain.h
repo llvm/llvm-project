@@ -16,6 +16,7 @@
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/StringRef.h"
 
+#include <cstdlib>
 #include <memory>
 
 namespace llvm {
@@ -60,6 +61,20 @@ LogicalResult MlirOptMain(llvm::raw_ostream &outputStream,
 LogicalResult MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
                           DialectRegistry &registry,
                           bool preloadDialectsInContext = false);
+
+/// Helper wrapper to return the result of MlirOptMain directly from main.
+///
+/// Example:
+///
+///     int main(int argc, char **argv) {
+///       // ...
+///       return mlir::asMainReturnCode(mlir::MlirOptMain(
+///           argc, argv, /* ... */);
+///     }
+///
+inline int asMainReturnCode(LogicalResult r) {
+  return r.succeeded() ? EXIT_SUCCESS : EXIT_FAILURE;
+}
 
 } // end namespace mlir
 

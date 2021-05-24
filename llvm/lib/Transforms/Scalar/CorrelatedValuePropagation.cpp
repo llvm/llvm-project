@@ -1118,7 +1118,6 @@ CorrelatedValuePropagationPass::run(Function &F, FunctionAnalysisManager &AM) {
   if (!Changed) {
     PA = PreservedAnalyses::all();
   } else {
-    PA.preserve<GlobalsAA>();
     PA.preserve<DominatorTreeAnalysis>();
     PA.preserve<LazyValueAnalysis>();
   }

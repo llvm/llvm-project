@@ -236,3 +236,14 @@ module m11
     type(t(*)), intent(in) :: x
   end subroutine
 end module
+
+module m12
+  type :: t1
+    integer :: n
+    integer :: n2
+    integer :: n_3
+    ! CHECK: .n.n, SAVE, TARGET: ObjectEntity type: CHARACTER(1_8,1) init:"n"
+    ! CHECK: .n.n2, SAVE, TARGET: ObjectEntity type: CHARACTER(2_8,1) init:"n2"
+    ! CHECK: .n.n_3, SAVE, TARGET: ObjectEntity type: CHARACTER(3_8,1) init:"n_3"
+  end type
+end module

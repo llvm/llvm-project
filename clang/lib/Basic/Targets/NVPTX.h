@@ -138,6 +138,7 @@ public:
     Opts["__cl_clang_non_portable_kernel_param_types"] = true;
 
     Opts["cl_khr_fp64"] = true;
+    Opts["__opencl_c_fp64"] = true;
     Opts["cl_khr_byte_addressable_store"] = true;
     Opts["cl_khr_global_int32_base_atomics"] = true;
     Opts["cl_khr_global_int32_extended_atomics"] = true;

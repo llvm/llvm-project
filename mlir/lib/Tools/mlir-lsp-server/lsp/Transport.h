@@ -15,6 +15,7 @@
 #ifndef LIB_MLIR_TOOLS_MLIRLSPSERVER_LSP_TRANSPORT_H_
 #define LIB_MLIR_TOOLS_MLIRLSPSERVER_LSP_TRANSPORT_H_
 
+#include "Logging.h"
 #include "Protocol.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
@@ -157,6 +158,7 @@ public:
   template <typename T>
   OutgoingNotification<T> outgoingNotification(llvm::StringLiteral method) {
     return [&, method](const T &params) {
+      Logger::info("--> {0}", method);
       transport.notify(method, llvm::json::Value(params));
     };
   }

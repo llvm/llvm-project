@@ -2683,7 +2683,7 @@ def : T2Pat<(ARMusat (sra GPRnopc:$Rn, asr_imm:$shft), imm0_31:$pos),
 defm t2LSL  : T2I_sh_ir<0b00, "lsl", imm1_31, shl>;
 defm t2LSR  : T2I_sh_ir<0b01, "lsr", imm_sr,  srl>;
 defm t2ASR  : T2I_sh_ir<0b10, "asr", imm_sr,  sra>;
-defm t2ROR  : T2I_sh_ir<0b11, "ror", imm0_31, rotr>;
+defm t2ROR  : T2I_sh_ir<0b11, "ror", imm1_31, rotr>;
 
 // LSL #0 is actually MOV, and has slightly different permitted registers to
 // LSL with non-zero shift

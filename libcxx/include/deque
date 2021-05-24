@@ -161,13 +161,14 @@ template <class T, class Allocator, class Predicate>
 */
 
 #include <__config>
+#include <__debug>
 #include <__split_buffer>
+#include <algorithm>
 #include <compare>
-#include <type_traits>
 #include <initializer_list>
 #include <iterator>
-#include <algorithm>
 #include <stdexcept>
+#include <type_traits>
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

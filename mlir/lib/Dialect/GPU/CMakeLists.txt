@@ -47,7 +47,6 @@ add_mlir_dialect_library(MLIRGPU
   MLIRAsync
   MLIRDataLayoutInterfaces
   MLIRDLTI
-  MLIREDSC
   MLIRIR
   MLIRMemRef
   MLIRLLVMIR

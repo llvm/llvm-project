@@ -99,7 +99,6 @@ void Environment::GetEnvAll() {
     std::cout << "ATMI_MAX_HSA_QUEUE_SIZE : positive integer" << std::endl
               << "ATMI_DEBUG : 1 for printing out trace/debug info"
               << std::endl;
-    exit(0);
   }
 
   var = GetEnv("ATMI_MAX_HSA_QUEUE_SIZE");

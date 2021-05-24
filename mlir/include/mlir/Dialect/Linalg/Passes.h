@@ -36,6 +36,8 @@ std::unique_ptr<OperationPass<FuncOp>>
 createLinalgPromotionPass(bool dynamicBuffers, bool useAlloca);
 std::unique_ptr<OperationPass<FuncOp>> createLinalgPromotionPass();
 
+std::unique_ptr<OperationPass<FuncOp>> createLinalgInlineScalarOperandsPass();
+
 /// Create a pass to convert Linalg tiled loops to `scf.for` and `scf.parallel`
 /// loops and memref.load/memref.store accesses.
 std::unique_ptr<OperationPass<FuncOp>> createConvertLinalgTiledLoopsToSCFPass();

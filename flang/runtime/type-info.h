@@ -27,12 +27,13 @@ public:
   // It includes all of the ancestor types' bindings, if any, first,
   // with any overrides from descendants already applied to them.  Local
   // bindings then follow in alphabetic order of binding name.
-  StaticDescriptor<1> binding; // TYPE(BINDING), DIMENSION(:), POINTER
+  StaticDescriptor<1, true>
+      binding; // TYPE(BINDING), DIMENSION(:), POINTER, CONTIGUOUS
 
   StaticDescriptor<0> name; // CHARACTER(:), POINTER
 
   std::uint64_t sizeInBytes{0};
-  StaticDescriptor<0> parent; // TYPE(DERIVEDTYPE), POINTER
+  StaticDescriptor<0, true> parent; // TYPE(DERIVEDTYPE), POINTER
 
   // Instantiations of a parameterized derived type with KIND type
   // parameters will point this data member to the description of
@@ -40,7 +41,7 @@ public:
   // module via use association.  The original uninstantiated derived
   // type description will point to itself.  Derived types that have
   // no KIND type parameters will have a null pointer here.
-  StaticDescriptor<0> uninstantiated; // TYPE(DERIVEDTYPE), POINTER
+  StaticDescriptor<0, true> uninstantiated; // TYPE(DERIVEDTYPE), POINTER
 
   // TODO: flags for SEQUENCE, BIND(C), any PRIVATE component(? see 7.5.2)
   std::uint64_t typeHash{0};
@@ -52,14 +53,16 @@ public:
   // This array of local data components includes the parent component.
   // Components are in alphabetic order.
   // It does not include procedure pointer components.
-  StaticDescriptor<1, true> component; // TYPE(COMPONENT), POINTER, DIMENSION(:)
+  StaticDescriptor<1, true>
+      component; // TYPE(COMPONENT), POINTER, DIMENSION(:), CONTIGUOUS
 
   // Procedure pointer components
-  StaticDescriptor<1, true> procPtr; // TYPE(PROCPTR), POINTER, DIMENSION(:)
+  StaticDescriptor<1, true>
+      procPtr; // TYPE(PROCPTR), POINTER, DIMENSION(:), CONTIGUOUS
 
   // Does not include special bindings from ancestral types.
   StaticDescriptor<1, true>
-      special; // TYPE(SPECIALBINDING), POINTER, DIMENSION(:)
+      special; // TYPE(SPECIALBINDING), POINTER, DIMENSION(:), CONTIGUOUS
 
   std::size_t LenParameters() const {
     return lenParameterKind.descriptor().Elements();
@@ -95,8 +98,10 @@ struct Component {
   std::uint64_t offset{0};
   Value characterLen; // for TypeCategory::Character
   StaticDescriptor<0, true> derivedType; // TYPE(DERIVEDTYPE), POINTER
-  StaticDescriptor<1, true> lenValue; // TYPE(VALUE), POINTER, DIMENSION(:)
-  StaticDescriptor<2, true> bounds; // TYPE(VALUE), POINTER, DIMENSION(2,:)
+  StaticDescriptor<1, true>
+      lenValue; // TYPE(VALUE), POINTER, DIMENSION(:), CONTIGUOUS
+  StaticDescriptor<2, true>
+      bounds; // TYPE(VALUE), POINTER, DIMENSION(2,:), CONTIGUOUS
   char *initialization{nullptr}; // for Genre::Data and Pointer
   // TODO: cobounds
   // TODO: `PRIVATE` attribute

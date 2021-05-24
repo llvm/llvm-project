@@ -33,7 +33,6 @@ makeInvocationForModuleBuildWithoutPaths(const ModuleDeps &Deps,
   CI.getFrontendOpts().IsSystemModule = Deps.IsSystem;
 
   CI.getLangOpts()->ImplicitModules = false;
-  CI.getHeaderSearchOpts().ImplicitModuleMaps = false;
 
   return CI;
 }
@@ -57,10 +56,16 @@ std::vector<std::string> ModuleDeps::getCanonicalCommandLine(
     std::function<StringRef(ModuleID)> LookupPCMPath,
     std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps) const {
   CompilerInvocation CI(Invocation);
+  FrontendOptions &FrontendOpts = CI.getFrontendOpts();
+
+  InputKind ModuleMapInputKind(FrontendOpts.DashX.getLanguage(),
+                               InputKind::Format::ModuleMap);
+  FrontendOpts.Inputs.emplace_back(ClangModuleMapFile, ModuleMapInputKind);
+  FrontendOpts.OutputFile = std::string(LookupPCMPath(ID));
 
   dependencies::detail::collectPCMAndModuleMapPaths(
       ClangModuleDeps, LookupPCMPath, LookupModuleDeps,
-      CI.getFrontendOpts().ModuleFiles, CI.getFrontendOpts().ModuleMapFiles);
+      FrontendOpts.ModuleFiles, FrontendOpts.ModuleMapFiles);
 
   return serializeCompilerInvocation(CI);
 }
@@ -179,13 +184,22 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   const FileEntry *ModuleMap = Instance.getPreprocessor()
                                    .getHeaderSearchInfo()
                                    .getModuleMap()
-                                   .getContainingModuleMapFile(M);
+                                   .getModuleMapFileForUniquing(M);
   MD.ClangModuleMapFile = std::string(ModuleMap ? ModuleMap->getName() : "");
 
   serialization::ModuleFile *MF =
       MDC.Instance.getASTReader()->getModuleManager().lookup(M->getASTFile());
   MDC.Instance.getASTReader()->visitInputFiles(
       *MF, true, true, [&](const serialization::InputFile &IF, bool isSystem) {
+        // __inferred_module.map is the result of the way in which an implicit
+        // module build handles inferred modules. It adds an overlay VFS with
+        // this file in the proper directory and relies on the rest of Clang to
+        // handle it like normal. With explicitly built modules we don't need
+        // to play VFS tricks, so replace it with the correct module map.
+        if (IF.getFile()->getName().endswith("__inferred_module.map")) {
+          MD.FileDeps.insert(ModuleMap->getName());
+          return;
+        }
         MD.FileDeps.insert(IF.getFile()->getName());
       });
 

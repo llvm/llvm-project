@@ -235,11 +235,17 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     StringRef Scope = A->getValue();
     bool EnableRetBr = false;
     bool EnableBlr = false;
-    if (Scope != "none" && Scope != "all") {
+    bool DisableComdat = false;
+    if (Scope != "none") {
       SmallVector<StringRef, 4> Opts;
       Scope.split(Opts, ",");
       for (auto Opt : Opts) {
         Opt = Opt.trim();
+        if (Opt == "all") {
+          EnableBlr = true;
+          EnableRetBr = true;
+          continue;
+        }
         if (Opt == "retbr") {
           EnableRetBr = true;
           continue;
@@ -248,19 +254,27 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
           EnableBlr = true;
           continue;
         }
+        if (Opt == "comdat") {
+          DisableComdat = false;
+          continue;
+        }
+        if (Opt == "nocomdat") {
+          DisableComdat = true;
+          continue;
+        }
         D.Diag(diag::err_invalid_sls_hardening)
             << Scope << A->getAsString(Args);
         break;
       }
-    } else if (Scope == "all") {
-      EnableRetBr = true;
-      EnableBlr = true;
     }
 
     if (EnableRetBr)
       Features.push_back("+harden-sls-retbr");
     if (EnableBlr)
       Features.push_back("+harden-sls-blr");
+    if (DisableComdat) {
+      Features.push_back("+harden-sls-nocomdat");
+    }
   }
 
   // En/disable crc

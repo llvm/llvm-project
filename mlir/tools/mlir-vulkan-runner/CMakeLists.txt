@@ -56,7 +56,6 @@ if (MLIR_VULKAN_RUNNER_ENABLED)
   set(LIBS
     ${conversion_libs}
     MLIRAnalysis
-    MLIREDSC
     MLIRExecutionEngine
     MLIRGPU
     MLIRIR

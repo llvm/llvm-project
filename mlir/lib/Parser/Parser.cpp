@@ -249,17 +249,11 @@ public:
   Operation *parseGenericOperation(Block *insertBlock,
                                    Block::iterator insertPt);
 
-  /// This type is used to keep track of things that are either an Operation or
-  /// a BlockArgument.  We cannot use Value for this, because not all Operations
-  /// have results.
-  using OpOrArgument = llvm::PointerUnion<Operation *, BlockArgument>;
-
-  /// Parse an optional trailing location and add it to the specifier Operation
-  /// or `OperandType` if present.
+  /// Parse an optional trailing location for the given operation.
   ///
   ///   trailing-location ::= (`loc` (`(` location `)` | attribute-alias))?
   ///
-  ParseResult parseTrailingLocationSpecifier(OpOrArgument opOrArgument);
+  ParseResult parseTrailingOperationLocation(Operation *op);
 
   /// This is the structure of a result specifier in the assembly syntax,
   /// including the name, number of results, and location.
@@ -391,8 +385,7 @@ private:
 
   /// A set of operations whose locations reference aliases that have yet to
   /// be resolved.
-  SmallVector<std::pair<OpOrArgument, Token>, 8>
-      opsAndArgumentsWithDeferredLocs;
+  SmallVector<std::pair<Operation *, Token>, 8> opsWithDeferredLocs;
 
   /// The builder used when creating parsed operation instances.
   OpBuilder opBuilder;
@@ -440,7 +433,7 @@ ParseResult OperationParser::finalize() {
 
   // Resolve the locations of any deferred operations.
   auto &attributeAliases = state.symbols.attributeAliasDefinitions;
-  for (std::pair<OpOrArgument, Token> &it : opsAndArgumentsWithDeferredLocs) {
+  for (std::pair<Operation *, Token> &it : opsWithDeferredLocs) {
     llvm::SMLoc tokLoc = it.second.getLoc();
     StringRef identifier = it.second.getSpelling().drop_front();
     Attribute attr = attributeAliases.lookup(identifier);
@@ -451,11 +444,7 @@ ParseResult OperationParser::finalize() {
     if (!locAttr)
       return emitError(tokLoc)
              << "expected location, but found '" << attr << "'";
-    auto opOrArgument = it.first;
-    if (auto *op = opOrArgument.dyn_cast<Operation *>())
-      op->setLoc(locAttr);
-    else
-      opOrArgument.get<BlockArgument>().setLoc(locAttr);
+    it.first->setLoc(locAttr);
   }
 
   // Pop the top level name scope.
@@ -974,7 +963,7 @@ Operation *OperationParser::parseGenericOperation() {
 
   // Create the operation and try to parse a location for it.
   Operation *op = opBuilder.createOperation(result);
-  if (parseTrailingLocationSpecifier(op))
+  if (parseTrailingOperationLocation(op))
     return nullptr;
   return op;
 }
@@ -1367,22 +1356,6 @@ public:
     result = getBuilder().getStringAttr(atToken.getSymbolReference());
     attrs.push_back(getBuilder().getNamedAttr(attrName, result));
     parser.consumeToken();
-    return success();
-  }
-
-  /// Parse a loc(...) specifier if present, filling in result if so.
-  ParseResult
-  parseOptionalLocationSpecifier(Optional<Location> &result) override {
-    // If there is a 'loc' we parse a trailing location.
-    if (!parser.consumeIf(Token::kw_loc))
-      return success();
-    LocationAttr directLoc;
-    if (parser.parseToken(Token::l_paren, "expected '(' in location") ||
-        parser.parseLocationInstance(directLoc) ||
-        parser.parseToken(Token::r_paren, "expected ')' in location"))
-      return failure();
-
-    result = directLoc;
     return success();
   }
 
@@ -1873,13 +1846,12 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
 
   // Otherwise, create the operation and try to parse a location for it.
   Operation *op = opBuilder.createOperation(opState);
-  if (parseTrailingLocationSpecifier(op))
+  if (parseTrailingOperationLocation(op))
     return nullptr;
   return op;
 }
 
-ParseResult
-OperationParser::parseTrailingLocationSpecifier(OpOrArgument opOrArgument) {
+ParseResult OperationParser::parseTrailingOperationLocation(Operation *op) {
   // If there is a 'loc' we parse a trailing location.
   if (!consumeIf(Token::kw_loc))
     return success();
@@ -1907,7 +1879,7 @@ OperationParser::parseTrailingLocationSpecifier(OpOrArgument opOrArgument) {
                << "expected location, but found '" << attr << "'";
     } else {
       // Otherwise, remember this operation and resolve its location later.
-      opsAndArgumentsWithDeferredLocs.emplace_back(opOrArgument, tok);
+      opsWithDeferredLocs.emplace_back(op, tok);
     }
 
     // Otherwise, we parse the location directly.
@@ -1918,12 +1890,8 @@ OperationParser::parseTrailingLocationSpecifier(OpOrArgument opOrArgument) {
   if (parseToken(Token::r_paren, "expected ')' in location"))
     return failure();
 
-  if (directLoc) {
-    if (auto *op = opOrArgument.dyn_cast<Operation *>())
-      op->setLoc(directLoc);
-    else
-      opOrArgument.get<BlockArgument>().setLoc(directLoc);
-  }
+  if (directLoc)
+    op->setLoc(directLoc);
   return success();
 }
 
@@ -1974,8 +1942,7 @@ ParseResult OperationParser::parseRegion(
                    .attachNote(getEncodedSourceLocation(*defLoc))
                << "previously referenced here";
       }
-      auto loc = getEncodedSourceLocation(placeholderArgPair.first.loc);
-      BlockArgument arg = block->addArgument(placeholderArgPair.second, loc);
+      BlockArgument arg = block->addArgument(placeholderArgPair.second);
 
       // Add a definition of this arg to the assembly state if provided.
       if (state.asmState)
@@ -2155,14 +2122,8 @@ ParseResult OperationParser::parseOptionalBlockArgList(Block *owner) {
             if (arg.getType() != type)
               return emitError("argument and block argument type mismatch");
           } else {
-            auto loc = getEncodedSourceLocation(useInfo.loc);
-            arg = owner->addArgument(type, loc);
+            arg = owner->addArgument(type);
           }
-
-          // If the argument has an explicit loc(...) specifier, parse and apply
-          // it.
-          if (parseTrailingLocationSpecifier(arg))
-            return failure();
 
           // Mark this block argument definition in the parser state if it was
           // provided.

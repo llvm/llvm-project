@@ -154,6 +154,9 @@ public:
       : IntrinsicTypeSpec(TypeCategory::Character, std::move(kind)),
         length_{std::move(length)} {}
   const ParamValue &length() const { return length_; }
+  bool operator==(const CharacterTypeSpec &that) const {
+    return kind() == that.kind() && length_ == that.length_;
+  }
   std::string AsFortran() const;
 
 private:

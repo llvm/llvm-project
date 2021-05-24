@@ -71,7 +71,7 @@ entry:
 ; CHECK-NEXT:         .comm   a[RW],4,2
 ; CHECK-NEXT:         .comm   f[RW],4,2
 ; CHECK-NEXT:         .csect .rodata.str1.1L...str[RO],2
-; CHECK-NEXT:         .byte 'a,'b,'c,'d,'e,'f,'g,'h,0000
+; CHECK-NEXT:         .string "abcdefgh"
 ; CHECK32:            .csect p[RW],2
 ; CHECK32-NEXT:       .globl  p[RW]
 ; CHECK32-NEXT:       .align  2

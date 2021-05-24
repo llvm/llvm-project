@@ -52,5 +52,5 @@ int main() {
   return fun(5);
 }
 
-// DexExpectWatchValue('*p', 5, 5, 5, 5, 5, on_line='s1')
-// DexExpectWatchValue('param', 5, from_line='s2', to_line='s3')
+// DexExpectWatchValue('*p', 5, 5, 5, 5, 5, on_line=ref('s1'))
+// DexExpectWatchValue('param', 5, from_line=ref('s2'), to_line=ref('s3'))

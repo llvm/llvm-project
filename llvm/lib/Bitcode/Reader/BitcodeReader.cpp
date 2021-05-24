@@ -3844,12 +3844,11 @@ Error BitcodeReader::parseBitcodeInto(Module *M, bool ShouldLazyLoadMetadata,
 Error BitcodeReader::typeCheckLoadStoreInst(Type *ValType, Type *PtrType) {
   if (!isa<PointerType>(PtrType))
     return error("Load/Store operand is not a pointer type");
-  Type *ElemType = cast<PointerType>(PtrType)->getElementType();
 
-  if (ValType && ValType != ElemType)
+  if (!cast<PointerType>(PtrType)->isOpaqueOrPointeeTypeMatches(ValType))
     return error("Explicit load/store type does not match pointee "
                  "type of pointer operand");
-  if (!PointerType::isLoadableOrStorableType(ElemType))
+  if (!PointerType::isLoadableOrStorableType(ValType))
     return error("Cannot load/store from pointer");
   return Error::success();
 }
@@ -4169,7 +4168,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       if (!Ty) {
         std::tie(FullTy, Ty) =
             getPointerElementTypes(FullBaseTy->getScalarType());
-      } else if (Ty != getPointerElementFlatType(FullBaseTy->getScalarType()))
+      } else if (!cast<PointerType>(FullBaseTy->getScalarType())
+                      ->isOpaqueOrPointeeTypeMatches(Ty))
         return error(
             "Explicit gep type does not match pointee type of pointer operand");
 
@@ -5231,15 +5231,18 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       unsigned OpNum = 0;
 
       Value *Ptr = nullptr;
-      if (getValueTypePair(Record, OpNum, NextValueNo, Ptr, &FullTy))
+      if (getValueTypePair(Record, OpNum, NextValueNo, Ptr))
         return error("Invalid record");
 
       if (!isa<PointerType>(Ptr->getType()))
         return error("Invalid record");
 
       Value *Val = nullptr;
-      if (popValue(Record, OpNum, NextValueNo,
-                   getPointerElementFlatType(FullTy), Val))
+      if (popValue(Record, OpNum, NextValueNo, nullptr, Val))
+        return error("Invalid record");
+
+      if (!cast<PointerType>(Ptr->getType())
+               ->isOpaqueOrPointeeTypeMatches(Val->getType()))
         return error("Invalid record");
 
       if (!(NumRecords == (OpNum + 4) || NumRecords == (OpNum + 5)))
@@ -5272,7 +5275,6 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
             Align(TheModule->getDataLayout().getTypeStoreSize(Val->getType()));
 
       I = new AtomicRMWInst(Operation, Ptr, Val, *Alignment, Ordering, SSID);
-      FullTy = getPointerElementFlatType(FullTy);
       cast<AtomicRMWInst>(I)->setVolatile(IsVol);
 
       InstructionList.push_back(I);
@@ -5627,10 +5629,15 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
       }
     }
 
-    // Remove align from return attribute on CallInst.
-    if (auto *CI = dyn_cast<CallInst>(&I)) {
-      if (CI->getFunctionType()->getReturnType()->isVoidTy())
-        CI->removeAttribute(0, Attribute::Alignment);
+    // Remove incompatible attributes on function calls.
+    if (auto *CI = dyn_cast<CallBase>(&I)) {
+      CI->removeAttributes(AttributeList::ReturnIndex,
+                           AttributeFuncs::typeIncompatible(
+                               CI->getFunctionType()->getReturnType()));
+
+      for (unsigned ArgNo = 0; ArgNo < CI->arg_size(); ++ArgNo)
+        CI->removeParamAttrs(ArgNo, AttributeFuncs::typeIncompatible(
+                                        CI->getArgOperand(ArgNo)->getType()));
     }
   }
 

@@ -118,6 +118,23 @@ void DbgVariableIntrinsic::replaceVariableLocationOp(unsigned OpIdx,
       0, MetadataAsValue::get(getContext(), DIArgList::get(getContext(), MDs)));
 }
 
+void DbgVariableIntrinsic::addVariableLocationOps(ArrayRef<Value *> NewValues,
+                                                  DIExpression *NewExpr) {
+  assert(NewExpr->hasAllLocationOps(getNumVariableLocationOps() +
+                                    NewValues.size()) &&
+         "NewExpr for debug variable intrinsic does not reference every "
+         "location operand.");
+  assert(!is_contained(NewValues, nullptr) && "New values must be non-null");
+  setArgOperand(2, MetadataAsValue::get(getContext(), NewExpr));
+  SmallVector<ValueAsMetadata *, 4> MDs;
+  for (auto *VMD : location_ops())
+    MDs.push_back(getAsMetadata(VMD));
+  for (auto *VMD : NewValues)
+    MDs.push_back(getAsMetadata(VMD));
+  setArgOperand(
+      0, MetadataAsValue::get(getContext(), DIArgList::get(getContext(), MDs)));
+}
+
 Optional<uint64_t> DbgVariableIntrinsic::getFragmentSizeInBits() const {
   if (auto Fragment = getExpression()->getFragmentInfo())
     return Fragment->SizeInBits;
@@ -172,8 +189,10 @@ Value *InstrProfIncrementInst::getStep() const {
 
 Optional<RoundingMode> ConstrainedFPIntrinsic::getRoundingMode() const {
   unsigned NumOperands = getNumArgOperands();
-  Metadata *MD =
-      cast<MetadataAsValue>(getArgOperand(NumOperands - 2))->getMetadata();
+  Metadata *MD = nullptr;
+  auto *MAV = dyn_cast<MetadataAsValue>(getArgOperand(NumOperands - 2));
+  if (MAV)
+    MD = MAV->getMetadata();
   if (!MD || !isa<MDString>(MD))
     return None;
   return StrToRoundingMode(cast<MDString>(MD)->getString());
@@ -182,11 +201,29 @@ Optional<RoundingMode> ConstrainedFPIntrinsic::getRoundingMode() const {
 Optional<fp::ExceptionBehavior>
 ConstrainedFPIntrinsic::getExceptionBehavior() const {
   unsigned NumOperands = getNumArgOperands();
-  Metadata *MD =
-      cast<MetadataAsValue>(getArgOperand(NumOperands - 1))->getMetadata();
+  Metadata *MD = nullptr;
+  auto *MAV = dyn_cast<MetadataAsValue>(getArgOperand(NumOperands - 1));
+  if (MAV)
+    MD = MAV->getMetadata();
   if (!MD || !isa<MDString>(MD))
     return None;
   return StrToExceptionBehavior(cast<MDString>(MD)->getString());
+}
+
+bool ConstrainedFPIntrinsic::isDefaultFPEnvironment() const {
+  Optional<fp::ExceptionBehavior> Except = getExceptionBehavior();
+  if (Except) {
+    if (Except.getValue() != fp::ebIgnore)
+      return false;
+  }
+
+  Optional<RoundingMode> Rounding = getRoundingMode();
+  if (Rounding) {
+    if (Rounding.getValue() != RoundingMode::NearestTiesToEven)
+      return false;
+  }
+
+  return true;
 }
 
 FCmpInst::Predicate ConstrainedFPCmpIntrinsic::getPredicate() const {
@@ -317,8 +354,8 @@ bool VPIntrinsic::IsVPIntrinsic(Intrinsic::ID ID) {
 }
 
 // Equivalent non-predicated opcode
-unsigned VPIntrinsic::GetFunctionalOpcodeForVP(Intrinsic::ID ID) {
-  unsigned FunctionalOC = Instruction::Call;
+Optional<unsigned> VPIntrinsic::GetFunctionalOpcodeForVP(Intrinsic::ID ID) {
+  Optional<unsigned> FunctionalOC;
   switch (ID) {
   default:
     break;

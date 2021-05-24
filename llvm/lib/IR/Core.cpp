@@ -1399,12 +1399,8 @@ double LLVMConstRealGetDouble(LLVMValueRef ConstantVal, LLVMBool *LosesInfo) {
   ConstantFP *cFP = unwrap<ConstantFP>(ConstantVal) ;
   Type *Ty = cFP->getType();
 
-  if (Ty->isFloatTy()) {
-    *LosesInfo = false;
-    return cFP->getValueAPF().convertToFloat();
-  }
-
-  if (Ty->isDoubleTy()) {
+  if (Ty->isHalfTy() || Ty->isBFloatTy() || Ty->isFloatTy() ||
+      Ty->isDoubleTy()) {
     *LosesInfo = false;
     return cFP->getValueAPF().convertToDouble();
   }

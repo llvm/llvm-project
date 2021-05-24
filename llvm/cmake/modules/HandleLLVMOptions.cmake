@@ -412,7 +412,7 @@ elseif(MINGW) # FIXME: Also cygwin?
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--stack,16777216")
 
   # Pass -mbig-obj to mingw gas to avoid COFF 2**16 section limit.
-  if (NOT CLANG)
+  if (NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     append("-Wa,-mbig-obj" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   endif()
 endif()

@@ -748,7 +748,26 @@ static std::string getVarName(InstrProfIncrementInst *Inc, StringRef Prefix) {
   return (Prefix + Name + "." + Twine(FuncHash)).str();
 }
 
+static uint64_t getIntModuleFlagOrZero(Module *M, StringRef Flag) {
+  auto *MD = dyn_cast_or_null<ConstantAsMetadata>(M->getModuleFlag(Flag));
+  if (!MD)
+    return 0;
+
+  // If the flag is a ConstantAsMetadata, it should be an integer representable
+  // in 64-bits.
+  return cast<ConstantInt>(MD->getValue())->getZExtValue();
+}
+
 static inline bool shouldRecordFunctionAddr(Function *F) {
+  // Only record function addresses if IR PGO is enabled or if clang value
+  // profiling is enabled. Recording function addresses greatly increases object
+  // file size, because it prevents the inliner from deleting functions that
+  // have been inlined everywhere.
+  if (!isIRPGOFlagSet(F->getParent()) &&
+      getIntModuleFlagOrZero(F->getParent(), "EnableValueProfiling") == 0) {
+    return false;
+  }
+
   // Check the linkage
   bool HasAvailableExternallyLinkage = F->hasAvailableExternallyLinkage();
   if (!F->hasLinkOnceLinkage() && !F->hasLocalLinkage() &&

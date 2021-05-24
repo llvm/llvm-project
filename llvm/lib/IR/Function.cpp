@@ -301,6 +301,12 @@ void Argument::removeAttr(Attribute::AttrKind Kind) {
   getParent()->removeParamAttr(getArgNo(), Kind);
 }
 
+void Argument::removeAttrs(const AttrBuilder &B) {
+  AttributeList AL = getParent()->getAttributes();
+  AL = AL.removeParamAttributes(Parent->getContext(), getArgNo(), B);
+  getParent()->setAttributes(AL);
+}
+
 bool Argument::hasAttribute(Attribute::AttrKind Kind) const {
   return getParent()->hasParamAttribute(getArgNo(), Kind);
 }

@@ -88,7 +88,7 @@ define void @two_preds_with_extra_op_and_branchweights(i8 %v0, i8 %v1, i8 %v2, i
 ; ALL-NEXT:    br i1 [[C0]], label [[PRED0:%.*]], label [[PRED1:%.*]]
 ; ALL:       pred0:
 ; ALL-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1:%.*]], 0
-; ALL-NEXT:    br i1 [[C1]], label [[FINAL_LEFT:%.*]], label [[DISPATCH:%.*]], !prof !0
+; ALL-NEXT:    br i1 [[C1]], label [[FINAL_LEFT:%.*]], label [[DISPATCH:%.*]], !prof [[PROF0:![0-9]+]]
 ; ALL:       pred1:
 ; ALL-NEXT:    [[C2:%.*]] = icmp eq i8 [[V2:%.*]], 0
 ; ALL-NEXT:    [[V3_ADJ:%.*]] = add i8 [[V1]], [[V2]]

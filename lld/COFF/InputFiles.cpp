@@ -1042,6 +1042,21 @@ BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
 
 BitcodeFile::~BitcodeFile() = default;
 
+namespace {
+// Convenience class for initializing a coff_section with specific flags.
+class FakeSection {
+public:
+  FakeSection(int c) { section.Characteristics = c; }
+
+  coff_section section;
+};
+
+FakeSection ltoTextSection(IMAGE_SCN_MEM_EXECUTE);
+FakeSection ltoDataSection(IMAGE_SCN_CNT_INITIALIZED_DATA);
+SectionChunk ltoTextSectionChunk(nullptr, &ltoTextSection.section);
+SectionChunk ltoDataSectionChunk(nullptr, &ltoDataSection.section);
+} // namespace
+
 void BitcodeFile::parse() {
   std::vector<std::pair<Symbol *, bool>> comdat(obj->getComdatTable().size());
   for (size_t i = 0; i != obj->getComdatTable().size(); ++i)
@@ -1052,6 +1067,11 @@ void BitcodeFile::parse() {
     StringRef symName = saver.save(objSym.getName());
     int comdatIndex = objSym.getComdatIndex();
     Symbol *sym;
+    SectionChunk *fakeSC = nullptr;
+    if (objSym.isExecutable())
+      fakeSC = &ltoTextSectionChunk;
+    else
+      fakeSC = &ltoDataSectionChunk;
     if (objSym.isUndefined()) {
       sym = symtab->addUndefined(symName, this, false);
     } else if (objSym.isCommon()) {
@@ -1066,11 +1086,11 @@ void BitcodeFile::parse() {
       if (symName == obj->getComdatTable()[comdatIndex])
         sym = comdat[comdatIndex].first;
       else if (comdat[comdatIndex].second)
-        sym = symtab->addRegular(this, symName);
+        sym = symtab->addRegular(this, symName, nullptr, fakeSC);
       else
         sym = symtab->addUndefined(symName, this, false);
     } else {
-      sym = symtab->addRegular(this, symName);
+      sym = symtab->addRegular(this, symName, nullptr, fakeSC);
     }
     symbols.push_back(sym);
     if (objSym.isUsed())

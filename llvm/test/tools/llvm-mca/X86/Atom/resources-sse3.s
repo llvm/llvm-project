@@ -43,10 +43,10 @@ mwait
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      6     3.00                        addsubpd	%xmm0, %xmm2
-# CHECK-NEXT:  1      7     3.50    *                   addsubpd	(%rax), %xmm2
-# CHECK-NEXT:  1      5     5.00                        addsubps	%xmm0, %xmm2
-# CHECK-NEXT:  1      5     5.00    *                   addsubps	(%rax), %xmm2
+# CHECK-NEXT:  1      6     5.00                        addsubpd	%xmm0, %xmm2
+# CHECK-NEXT:  1      7     6.00    *                   addsubpd	(%rax), %xmm2
+# CHECK-NEXT:  1      5     1.00                        addsubps	%xmm0, %xmm2
+# CHECK-NEXT:  1      5     1.00    *                   addsubps	(%rax), %xmm2
 # CHECK-NEXT:  1      8     4.00                        haddpd	%xmm0, %xmm2
 # CHECK-NEXT:  1      9     4.50    *                   haddpd	(%rax), %xmm2
 # CHECK-NEXT:  1      8     4.00                        haddps	%xmm0, %xmm2
@@ -71,14 +71,14 @@ mwait
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]
-# CHECK-NEXT: 103.50 87.50
+# CHECK-NEXT: 99.00  94.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    Instructions:
-# CHECK-NEXT: 3.00   3.00   addsubpd	%xmm0, %xmm2
-# CHECK-NEXT: 3.50   3.50   addsubpd	(%rax), %xmm2
-# CHECK-NEXT: 5.00    -     addsubps	%xmm0, %xmm2
-# CHECK-NEXT: 5.00    -     addsubps	(%rax), %xmm2
+# CHECK-NEXT: 5.00   5.00   addsubpd	%xmm0, %xmm2
+# CHECK-NEXT: 6.00   6.00   addsubpd	(%rax), %xmm2
+# CHECK-NEXT:  -     1.00   addsubps	%xmm0, %xmm2
+# CHECK-NEXT: 1.00   1.00   addsubps	(%rax), %xmm2
 # CHECK-NEXT: 4.00   4.00   haddpd	%xmm0, %xmm2
 # CHECK-NEXT: 4.50   4.50   haddpd	(%rax), %xmm2
 # CHECK-NEXT: 4.00   4.00   haddps	%xmm0, %xmm2

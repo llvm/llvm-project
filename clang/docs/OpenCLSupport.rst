@@ -339,7 +339,24 @@ Missing features or with limited support
 
 .. _opencl_300:
 
-OpenCL 3.0 Implementation Status
+OpenCL C 3.0 Usage
+================================
+
+OpenCL C 3.0 language standard makes most OpenCL C 2.0 features optional. Optional
+functionality in OpenCL C 3.0 is indicated with the presence of feature-test macros
+(list of feature-test macros is `here <https://www.khronos.org/registry/OpenCL/specs/3.0-unified/html/OpenCL_C.html#features>`_).
+Command-line flag :ref:`-cl-ext <opencl_cl_ext>` can be used to override features supported by a target.
+
+For cases when there is an associated extension for a specific feature (fp64 and 3d image writes)
+user should specify both (extension and feature) in command-line flag:
+
+   .. code-block:: console
+
+     $ clang -cc1 -cl-std=CL3.0 -cl-ext=+cl_khr_fp64,+__opencl_c_fp64 ...
+     $ clang -cc1 -cl-std=CL3.0 -cl-ext=-cl_khr_fp64,-__opencl_c_fp64 ...
+
+
+OpenCL C 3.0 Implementation Status
 ================================
 
 The following table provides an overview of features in OpenCL C 3.0 and their

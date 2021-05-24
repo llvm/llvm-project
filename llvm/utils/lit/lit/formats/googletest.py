@@ -135,6 +135,9 @@ class GoogleTest(TestFormat):
         if exitCode:
             return lit.Test.FAIL, out + err
 
+        if '[  SKIPPED ] 1 test,' in out:
+            return lit.Test.SKIPPED, ''
+
         passing_test_line = '[  PASSED  ] 1 test.'
         if passing_test_line not in out:
             msg = ('Unable to find %r in gtest output:\n\n%s%s' %

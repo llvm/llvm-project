@@ -110,6 +110,10 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
       set(LLVM_INCLUDE_TESTS OFF)
     endif()
   endif()
+
+  if(LLVM_HAVE_LIBXAR)
+    set(XAR_LIB xar)
+  endif()
 endif()
 
 set(LLD_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})

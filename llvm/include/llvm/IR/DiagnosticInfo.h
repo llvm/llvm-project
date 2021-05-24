@@ -743,6 +743,11 @@ public:
   OptimizationRemarkMissed(const char *PassName, StringRef RemarkName,
                            const Instruction *Inst);
 
+  /// Same as above but \p F is used to derive code region and debug
+  /// location.
+  OptimizationRemarkMissed(const char *PassName, StringRef RemarkName,
+                           const Function *F);
+
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_OptimizationRemarkMissed;
   }
@@ -794,6 +799,11 @@ public:
   /// location.
   OptimizationRemarkAnalysis(const char *PassName, StringRef RemarkName,
                              const Instruction *Inst);
+
+  /// Same as above but \p F is used to derive code region and debug
+  /// location.
+  OptimizationRemarkAnalysis(const char *PassName, StringRef RemarkName,
+                             const Function *F);
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_OptimizationRemarkAnalysis;

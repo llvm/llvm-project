@@ -71,7 +71,7 @@ entry:
 ; ASM32-NEXT:          .byte   0x01                            # NumberOfFPParms = 0, +HasParmsOnStack
 ; ASM32-NEXT:          .vbyte  4, L..main0-.main               # Function size
 ; ASM32-NEXT:          .vbyte  2, 0x0004                       # Function name len = 4
-; ASM32-NEXT:          .byte   'm,'a,'i,'n                     # Function Name
+; ASM32-NEXT:          .byte   "main"                          # Function Name
 ; ASM32-NEXT:  L..func_end0:
 ; ASM32-NEXT:                                          # -- End function
 ; ASM32-NEXT:  L..sec_end0:
@@ -165,15 +165,15 @@ entry:
 ; ASM32:               .dwsect 0x70000
 ; ASM32-NEXT:  L...dwstr:
 ; ASM32-NEXT:  L..info_string0:
-; ASM32-NEXT:          .byte   'c,'l,'a,'n,'g,' ,'v,'e,'r,'s,'i,'o,'n,' ,'1,'2,'.,'0,'.,'0,0000 # string offset=0
+; ASM32-NEXT:          .string "clang version 12.0.0"          # string offset=0
 ; ASM32-NEXT:  L..info_string1:
-; ASM32-NEXT:          .byte   '1,'.,'c,0000                   # string offset=21
+; ASM32-NEXT:          .string "1.c"                           # string offset=21
 ; ASM32-NEXT:  L..info_string2:
-; ASM32-NEXT:          .byte   'd,'e,'b,'u,'g,0000             # string offset=25
+; ASM32-NEXT:          .string "debug"                         # string offset=25
 ; ASM32-NEXT:  L..info_string3:
-; ASM32-NEXT:          .byte   'm,'a,'i,'n,0000                # string offset=31
+; ASM32-NEXT:          .string "main"                          # string offset=31
 ; ASM32-NEXT:  L..info_string4:
-; ASM32-NEXT:          .byte   'i,'n,'t,0000                   # string offset=36
+; ASM32-NEXT:          .string "int"                           # string offset=36
 ; ASM32-NEXT:          .toc
 ; ASM32:               .dwsect 0x20000
 ; ASM32-NEXT:  L...dwline:
@@ -200,10 +200,10 @@ entry:
 ; ASM32-NEXT:          .byte   0
 ; ASM32-NEXT:          .byte   0
 ; ASM32-NEXT:          .byte   1
-; ASM32-NEXT:          .byte   'd,'e,'b,'u,'g
+; ASM32-NEXT:          .byte   "debug"
 ; ASM32-NEXT:          .byte   0
 ; ASM32-NEXT:          .byte   0
-; ASM32-NEXT:          .byte   '1,'.,'c
+; ASM32-NEXT:          .byte   "1.c"
 ; ASM32-NEXT:          .byte   0
 ; ASM32-NEXT:          .byte   1
 ; ASM32-NEXT:          .byte   0
@@ -272,7 +272,7 @@ entry:
 ; ASM64-NEXT:          .byte   0x01                            # NumberOfFPParms = 0, +HasParmsOnStack
 ; ASM64-NEXT:          .vbyte  4, L..main0-.main               # Function size
 ; ASM64-NEXT:          .vbyte  2, 0x0004                       # Function name len = 4
-; ASM64-NEXT:          .byte   'm,'a,'i,'n                     # Function Name
+; ASM64-NEXT:          .byte   "main"                          # Function Name
 ; ASM64-NEXT:  L..func_end0:
 ; ASM64-NEXT:                                          # -- End function
 ; ASM64-NEXT:  L..sec_end0:
@@ -366,16 +366,16 @@ entry:
 ; ASM64:               .dwsect 0x70000
 ; ASM64-NEXT:  L...dwstr:
 ; ASM64-NEXT:  L..info_string0:
-; ASM64-NEXT:          .byte   'c,'l,'a,'n,'g,' ,'v,'e,'r,'s,'i,'o,'n,' ,'1,'2,'.,'0,'.,'0,0000 # string offset=0
+; ASM64-NEXT:          .string "clang version 12.0.0"          # string offset=0
 ; ASM64-NEXT:  L..info_string1:
-; ASM64-NEXT:          .byte   '1,'.,'c,0000                   # string offset=21
+; ASM64-NEXT:          .string "1.c"                           # string offset=21
 ; ASM64-NEXT:  L..info_string2:
-; ASM64-NEXT:          .byte   'd,'e,'b,'u,'g,0000             # string offset=25
+; ASM64-NEXT:          .string "debug"                         # string offset=25
 ; ASM64-NEXT:  L..info_string3:
-; ASM64-NEXT:          .byte   'm,'a,'i,'n,0000                # string offset=31
+; ASM64-NEXT:          .string "main"                          # string offset=31
 ; ASM64-NEXT:  L..info_string4:
-; ASM64-NEXT:          .byte   'i,'n,'t,0000                   # string offset=36
-; ASM64-NEXT:          .toc
+; ASM64-NEXT:          .string "int"                           # string offset=36
+; ASM64-NEXT:         .toc
 ; ASM64:               .dwsect 0x20000
 ; ASM64-NEXT:  L...dwline:
 ; ASM64-NEXT:  L..debug_line_0:
@@ -401,10 +401,10 @@ entry:
 ; ASM64-NEXT:          .byte   0
 ; ASM64-NEXT:          .byte   0
 ; ASM64-NEXT:          .byte   1
-; ASM64-NEXT:          .byte   'd,'e,'b,'u,'g
+; ASM64-NEXT:          .byte   "debug"
 ; ASM64-NEXT:          .byte   0
 ; ASM64-NEXT:          .byte   0
-; ASM64-NEXT:          .byte   '1,'.,'c
+; ASM64-NEXT:          .byte   "1.c"
 ; ASM64-NEXT:          .byte   0
 ; ASM64-NEXT:          .byte   1
 ; ASM64-NEXT:          .byte   0

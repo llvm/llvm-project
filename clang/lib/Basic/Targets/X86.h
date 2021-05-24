@@ -338,6 +338,10 @@ public:
 
   bool setFPMath(StringRef Name) override;
 
+  bool supportsExtendIntArgs() const override {
+    return getTriple().getArch() != llvm::Triple::x86;
+  }
+
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
     // Most of the non-ARM calling conventions are i386 conventions.
     switch (CC) {

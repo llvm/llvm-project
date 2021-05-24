@@ -347,3 +347,29 @@ define <8 x i64> @vrgather_shuffle_vx_v8i64(<8 x i64> %x) {
   %s = shufflevector <8 x i64> %x, <8 x i64> <i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5>, <8 x i32> <i32 0, i32 3, i32 10, i32 9, i32 4, i32 1, i32 7, i32 14>
   ret <8 x i64> %s
 }
+
+define <4 x i8> @interleave_shuffles(<4 x i8> %x) {
+; CHECK-LABEL: interleave_shuffles:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, zero, e8,mf4,ta,mu
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vsetivli a1, 4, e8,mf4,ta,mu
+; CHECK-NEXT:    vrgather.vi v25, v8, 1
+; CHECK-NEXT:    addi a1, zero, 1
+; CHECK-NEXT:    vmv.s.x v26, a1
+; CHECK-NEXT:    vmv.v.i v27, 0
+; CHECK-NEXT:    vsetivli a1, 4, e8,mf4,tu,mu
+; CHECK-NEXT:    vslideup.vi v27, v26, 3
+; CHECK-NEXT:    addi a1, zero, 10
+; CHECK-NEXT:    vsetivli a2, 1, e8,mf8,ta,mu
+; CHECK-NEXT:    vmv.s.x v0, a1
+; CHECK-NEXT:    vsetivli a1, 4, e8,mf4,ta,mu
+; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vsetivli a0, 4, e8,mf4,tu,mu
+; CHECK-NEXT:    vrgather.vv v8, v25, v27, v0.t
+; CHECK-NEXT:    ret
+  %y = shufflevector <4 x i8> %x, <4 x i8> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
+  %z = shufflevector <4 x i8> %x, <4 x i8> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %w = shufflevector <4 x i8> %y, <4 x i8> %z, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
+  ret <4 x i8> %w
+}

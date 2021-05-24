@@ -1126,6 +1126,21 @@ func @simple_constant() -> (i32, i32) {
 }
 ```
 
+*   `print-ir-after-failure`
+    *   Only print IR after a pass failure.
+    *   This option should *not* be used with the other `print-ir-after` flags
+        above.
+
+```shell
+$ mlir-opt foo.mlir -pass-pipeline='func(cse,bad-pass)' -print-ir-failure
+
+*** IR Dump After BadPass Failed ***
+func @simple_constant() -> (i32, i32) {
+  %c1_i32 = constant 1 : i32
+  return %c1_i32, %c1_i32 : i32, i32
+}
+```
+
 *   `print-ir-module-scope`
     *   Always print the top-level module operation, regardless of pass type or
         operation nesting level.
@@ -1198,11 +1213,14 @@ useful for situations where the crash is known to be within a specific pass, or
 when the original input relies on components (like dialects or passes) that may
 not always be available.
 
+Note: Local reproducer generation requires that multi-threading is
+disabled(`-mlir-disable-threading`)
+
 For example, if the failure in the previous example came from `canonicalize`,
 the following reproducer will be generated:
 
 ```mlir
-// configuration: -pass-pipeline='func(canonicalize)' -verify-each
+// configuration: -pass-pipeline='func(canonicalize)' -verify-each -mlir-disable-threading
 
 module {
   func @foo() {

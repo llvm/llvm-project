@@ -1786,7 +1786,7 @@ public:
   private:
     /// Function or variable declarations to be checked for whether the deferred
     /// diagnostics should be emitted.
-    SmallVector<Decl *, 4> DeclsToCheckForDeferredDiags;
+    llvm::SmallSetVector<Decl *, 4> DeclsToCheckForDeferredDiags;
 
   public:
   // Emit all deferred diagnostics.
@@ -3255,6 +3255,9 @@ public:
     /// Merge availability attributes for an implementation of
     /// a protocol requirement.
     AMK_ProtocolImplementation,
+    /// Merge availability attributes for an implementation of
+    /// an optional protocol requirement.
+    AMK_OptionalProtocolImplementation
   };
 
   /// Describes the kind of priority given to an availability attribute.
@@ -12062,6 +12065,15 @@ public:
   CUDAFunctionTarget IdentifyCUDATarget(const FunctionDecl *D,
                                         bool IgnoreImplicitHDAttr = false);
   CUDAFunctionTarget IdentifyCUDATarget(const ParsedAttributesView &Attrs);
+
+  enum CUDAVariableTarget {
+    CVT_Device,  /// Emitted on device side with a shadow variable on host side
+    CVT_Host,    /// Emitted on host side only
+    CVT_Both,    /// Emitted on both sides with different addresses
+    CVT_Unified, /// Emitted as a unified address, e.g. managed variables
+  };
+  /// Determines whether the given variable is emitted on host or device side.
+  CUDAVariableTarget IdentifyCUDATarget(const VarDecl *D);
 
   /// Gets the CUDA target for the current context.
   CUDAFunctionTarget CurrentCUDATarget() {

@@ -821,6 +821,19 @@ ExprResult Sema::DefaultArgumentPromotion(Expr *E) {
       E = ImpCastExprToType(E, Context.DoubleTy, CK_FloatingCast).get();
     }
   }
+  if (BTy &&
+      getLangOpts().getExtendIntArgs() ==
+          LangOptions::ExtendArgsKind::ExtendTo64 &&
+      Context.getTargetInfo().supportsExtendIntArgs() && Ty->isIntegerType() &&
+      Context.getTypeSizeInChars(BTy) <
+          Context.getTypeSizeInChars(Context.LongLongTy)) {
+    E = (Ty->isUnsignedIntegerType())
+            ? ImpCastExprToType(E, Context.UnsignedLongLongTy, CK_IntegralCast)
+                  .get()
+            : ImpCastExprToType(E, Context.LongLongTy, CK_IntegralCast).get();
+    assert(8 == Context.getTypeSizeInChars(Context.LongLongTy).getQuantity() &&
+           "Unexpected typesize for LongLongTy");
+  }
 
   // C++ performs lvalue-to-rvalue conversion as a default argument
   // promotion, even on class types, but note:
@@ -3830,7 +3843,8 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
       } else if (getLangOpts().OpenCL && !getOpenCLOptions().isAvailableOption(
                                              "cl_khr_fp64", getLangOpts())) {
         // Impose single-precision float type when cl_khr_fp64 is not enabled.
-        Diag(Tok.getLocation(), diag::warn_double_const_requires_fp64);
+        Diag(Tok.getLocation(), diag::warn_double_const_requires_fp64)
+            << (getLangOpts().OpenCLVersion >= 300);
         Res = ImpCastExprToType(Res, Context.FloatTy, CK_FloatingCast).get();
       }
     }
@@ -17133,28 +17147,20 @@ MarkVarDeclODRUsed(VarDecl *Var, SourceLocation Loc, Sema &SemaRef,
 
   if (SemaRef.LangOpts.CUDA && Var && Var->hasGlobalStorage()) {
     auto *FD = dyn_cast_or_null<FunctionDecl>(SemaRef.CurContext);
-    auto Target = SemaRef.IdentifyCUDATarget(FD);
-    auto IsEmittedOnDeviceSide = [](VarDecl *Var) {
-      if (Var->hasAttr<CUDADeviceAttr>() || Var->hasAttr<CUDAConstantAttr>() ||
-          Var->hasAttr<CUDASharedAttr>() ||
-          Var->getType()->isCUDADeviceBuiltinSurfaceType() ||
-          Var->getType()->isCUDADeviceBuiltinTextureType())
-        return true;
-      // Function-scope static variable in device functions or kernels are
-      // emitted on device side.
-      if (auto *FD = dyn_cast<FunctionDecl>(Var->getDeclContext())) {
-        return FD->hasAttr<CUDADeviceAttr>() || FD->hasAttr<CUDAGlobalAttr>();
-      }
-      return false;
-    };
-    if (!IsEmittedOnDeviceSide(Var)) {
+    auto VarTarget = SemaRef.IdentifyCUDATarget(Var);
+    auto UserTarget = SemaRef.IdentifyCUDATarget(FD);
+    if (VarTarget == Sema::CVT_Host &&
+        (UserTarget == Sema::CFT_Device || UserTarget == Sema::CFT_HostDevice ||
+         UserTarget == Sema::CFT_Global)) {
       // Diagnose ODR-use of host global variables in device functions.
       // Reference of device global variables in host functions is allowed
       // through shadow variables therefore it is not diagnosed.
       if (SemaRef.LangOpts.CUDAIsDevice)
         SemaRef.targetDiag(Loc, diag::err_ref_bad_target)
-            << /*host*/ 2 << /*variable*/ 1 << Var << Target;
-    } else if ((Target == Sema::CFT_Host || Target == Sema::CFT_HostDevice) &&
+            << /*host*/ 2 << /*variable*/ 1 << Var << UserTarget;
+    } else if (VarTarget == Sema::CVT_Device &&
+               (UserTarget == Sema::CFT_Host ||
+                UserTarget == Sema::CFT_HostDevice) &&
                !Var->hasExternalStorage()) {
       // Record a CUDA/HIP device side variable if it is ODR-used
       // by host code. This is done conservatively, when the variable is

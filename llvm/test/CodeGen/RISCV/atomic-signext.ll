@@ -24,8 +24,6 @@ define signext i8 @atomic_load_i8_unordered(i8 *%a) nounwind {
 ; RV32IA-LABEL: atomic_load_i8_unordered:
 ; RV32IA:       # %bb.0:
 ; RV32IA-NEXT:    lb a0, 0(a0)
-; RV32IA-NEXT:    slli a0, a0, 24
-; RV32IA-NEXT:    srai a0, a0, 24
 ; RV32IA-NEXT:    ret
 ;
 ; RV64I-LABEL: atomic_load_i8_unordered:
@@ -43,8 +41,6 @@ define signext i8 @atomic_load_i8_unordered(i8 *%a) nounwind {
 ; RV64IA-LABEL: atomic_load_i8_unordered:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    lb a0, 0(a0)
-; RV64IA-NEXT:    slli a0, a0, 56
-; RV64IA-NEXT:    srai a0, a0, 56
 ; RV64IA-NEXT:    ret
   %1 = load atomic i8, i8* %a unordered, align 1
   ret i8 %1
@@ -66,8 +62,6 @@ define signext i16 @atomic_load_i16_unordered(i16 *%a) nounwind {
 ; RV32IA-LABEL: atomic_load_i16_unordered:
 ; RV32IA:       # %bb.0:
 ; RV32IA-NEXT:    lh a0, 0(a0)
-; RV32IA-NEXT:    slli a0, a0, 16
-; RV32IA-NEXT:    srai a0, a0, 16
 ; RV32IA-NEXT:    ret
 ;
 ; RV64I-LABEL: atomic_load_i16_unordered:
@@ -85,8 +79,6 @@ define signext i16 @atomic_load_i16_unordered(i16 *%a) nounwind {
 ; RV64IA-LABEL: atomic_load_i16_unordered:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    lh a0, 0(a0)
-; RV64IA-NEXT:    slli a0, a0, 48
-; RV64IA-NEXT:    srai a0, a0, 48
 ; RV64IA-NEXT:    ret
   %1 = load atomic i16, i16* %a unordered, align 2
   ret i16 %1
@@ -122,7 +114,6 @@ define signext i32 @atomic_load_i32_unordered(i32 *%a) nounwind {
 ; RV64IA-LABEL: atomic_load_i32_unordered:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    lw a0, 0(a0)
-; RV64IA-NEXT:    sext.w a0, a0
 ; RV64IA-NEXT:    ret
   %1 = load atomic i32, i32* %a unordered, align 4
   ret i32 %1
@@ -2277,7 +2268,6 @@ define signext i32 @atomicrmw_xchg_i32_monotonic(i32* %a, i32 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_i32_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    amoswap.w a0, a1, (a0)
-; RV64IA-NEXT:    sext.w a0, a0
 ; RV64IA-NEXT:    ret
   %1 = atomicrmw xchg i32* %a, i32 %b monotonic
   ret i32 %1
@@ -2313,7 +2303,6 @@ define signext i32 @atomicrmw_add_i32_monotonic(i32 *%a, i32 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_add_i32_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    amoadd.w a0, a1, (a0)
-; RV64IA-NEXT:    sext.w a0, a0
 ; RV64IA-NEXT:    ret
   %1 = atomicrmw add i32* %a, i32 %b monotonic
   ret i32 %1
@@ -2351,7 +2340,6 @@ define signext i32 @atomicrmw_sub_i32_monotonic(i32* %a, i32 %b) nounwind {
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    neg a1, a1
 ; RV64IA-NEXT:    amoadd.w a0, a1, (a0)
-; RV64IA-NEXT:    sext.w a0, a0
 ; RV64IA-NEXT:    ret
   %1 = atomicrmw sub i32* %a, i32 %b monotonic
   ret i32 %1
@@ -2387,7 +2375,6 @@ define signext i32 @atomicrmw_and_i32_monotonic(i32 *%a, i32 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_and_i32_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    amoand.w a0, a1, (a0)
-; RV64IA-NEXT:    sext.w a0, a0
 ; RV64IA-NEXT:    ret
   %1 = atomicrmw and i32* %a, i32 %b monotonic
   ret i32 %1
@@ -2436,7 +2423,7 @@ define signext i32 @atomicrmw_nand_i32_monotonic(i32* %a, i32 %b) nounwind {
 ; RV64IA-NEXT:    sc.w a3, a3, (a0)
 ; RV64IA-NEXT:    bnez a3, .LBB29_1
 ; RV64IA-NEXT:  # %bb.2:
-; RV64IA-NEXT:    sext.w a0, a2
+; RV64IA-NEXT:    mv a0, a2
 ; RV64IA-NEXT:    ret
   %1 = atomicrmw nand i32* %a, i32 %b monotonic
   ret i32 %1
@@ -2472,7 +2459,6 @@ define signext i32 @atomicrmw_or_i32_monotonic(i32 *%a, i32 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_or_i32_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    amoor.w a0, a1, (a0)
-; RV64IA-NEXT:    sext.w a0, a0
 ; RV64IA-NEXT:    ret
   %1 = atomicrmw or i32* %a, i32 %b monotonic
   ret i32 %1
@@ -2508,7 +2494,6 @@ define signext i32 @atomicrmw_xor_i32_monotonic(i32 *%a, i32 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_xor_i32_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    amoxor.w a0, a1, (a0)
-; RV64IA-NEXT:    sext.w a0, a0
 ; RV64IA-NEXT:    ret
   %1 = atomicrmw xor i32* %a, i32 %b monotonic
   ret i32 %1
@@ -2599,7 +2584,6 @@ define signext i32 @atomicrmw_max_i32_monotonic(i32 *%a, i32 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_max_i32_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    amomax.w a0, a1, (a0)
-; RV64IA-NEXT:    sext.w a0, a0
 ; RV64IA-NEXT:    ret
   %1 = atomicrmw max i32* %a, i32 %b monotonic
   ret i32 %1
@@ -2690,7 +2674,6 @@ define signext i32 @atomicrmw_min_i32_monotonic(i32 *%a, i32 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_min_i32_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    amomin.w a0, a1, (a0)
-; RV64IA-NEXT:    sext.w a0, a0
 ; RV64IA-NEXT:    ret
   %1 = atomicrmw min i32* %a, i32 %b monotonic
   ret i32 %1
@@ -2781,7 +2764,6 @@ define signext i32 @atomicrmw_umax_i32_monotonic(i32 *%a, i32 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_umax_i32_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    amomaxu.w a0, a1, (a0)
-; RV64IA-NEXT:    sext.w a0, a0
 ; RV64IA-NEXT:    ret
   %1 = atomicrmw umax i32* %a, i32 %b monotonic
   ret i32 %1
@@ -2872,7 +2854,6 @@ define signext i32 @atomicrmw_umin_i32_monotonic(i32 *%a, i32 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_umin_i32_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    amominu.w a0, a1, (a0)
-; RV64IA-NEXT:    sext.w a0, a0
 ; RV64IA-NEXT:    ret
   %1 = atomicrmw umin i32* %a, i32 %b monotonic
   ret i32 %1

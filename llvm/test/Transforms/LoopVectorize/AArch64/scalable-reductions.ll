@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -pass-remarks=loop-vectorize -pass-remarks-analysis=loop-vectorize -pass-remarks-missed=loop-vectorize -mtriple aarch64-unknown-linux-gnu -mattr=+sve -S 2>%t | FileCheck %s -check-prefix=CHECK
+; RUN: opt < %s -loop-vectorize -pass-remarks=loop-vectorize -pass-remarks-analysis=loop-vectorize -pass-remarks-missed=loop-vectorize -mtriple aarch64-unknown-linux-gnu -mattr=+sve -S -scalable-vectorization=on 2>%t | FileCheck %s -check-prefix=CHECK
 ; RUN: cat %t | FileCheck %s -check-prefix=CHECK-REMARK
 
 ; Reduction can be vectorized

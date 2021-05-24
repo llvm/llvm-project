@@ -291,6 +291,13 @@ OptimizationRemarkMissed::OptimizationRemarkMissed(const char *PassName,
                                    *Inst->getParent()->getParent(),
                                    Inst->getDebugLoc(), Inst->getParent()) {}
 
+OptimizationRemarkMissed::OptimizationRemarkMissed(const char *PassName,
+                                                   StringRef RemarkName,
+                                                   const Function *Func)
+    : DiagnosticInfoIROptimization(
+          DK_OptimizationRemarkMissed, DS_Remark, PassName, RemarkName, *Func,
+          Func->getSubprogram(), getFirstFunctionBlock(Func)) {}
+
 bool OptimizationRemarkMissed::isEnabled() const {
   const Function &Fn = getFunction();
   LLVMContext &Ctx = Fn.getContext();
@@ -318,6 +325,13 @@ OptimizationRemarkAnalysis::OptimizationRemarkAnalysis(
     : DiagnosticInfoIROptimization(Kind, DS_Remark, PassName, RemarkName,
                                    *cast<BasicBlock>(CodeRegion)->getParent(),
                                    Loc, CodeRegion) {}
+
+OptimizationRemarkAnalysis::OptimizationRemarkAnalysis(const char *PassName,
+                                                       StringRef RemarkName,
+                                                       const Function *Func)
+    : DiagnosticInfoIROptimization(
+          DK_OptimizationRemarkAnalysis, DS_Remark, PassName, RemarkName, *Func,
+          Func->getSubprogram(), getFirstFunctionBlock(Func)) {}
 
 bool OptimizationRemarkAnalysis::isEnabled() const {
   const Function &Fn = getFunction();

@@ -23,7 +23,12 @@
 
 namespace llvm {
 
-class Any {
+class LLVM_EXTERNAL_VISIBILITY Any {
+
+  // The `Typeid<T>::Id` static data member below is a globally unique
+  // identifier for the type `T`. It is explicitly marked with default
+  // visibility so that when `-fvisibility=hidden` is used, the loader still
+  // merges duplicate definitions across DSO boundaries.
   template <typename T> struct TypeId { static const char Id; };
 
   struct StorageBase {

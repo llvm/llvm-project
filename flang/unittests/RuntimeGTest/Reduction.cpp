@@ -1,4 +1,4 @@
-//===-- flang/unittests/RuntimeGTest/Reductions.cpp -------------*- C++ -*-===//
+//===-- flang/unittests/RuntimeGTest/Reductions.cpp -----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -34,7 +34,7 @@ TEST(Reductions, DimMaskProductInt4) {
       shape, std::vector<std::int32_t>{1, 2, 3, 4, 5, 6})};
   auto mask{MakeArray<TypeCategory::Logical, 1>(
       shape, std::vector<bool>{true, false, false, true, true, true})};
-  StaticDescriptor<1> statDesc;
+  StaticDescriptor<1, true> statDesc;
   Descriptor &prod{statDesc.descriptor()};
   RTNAME(ProductDim)(prod, *array, 1, __FILE__, __LINE__, &*mask);
   EXPECT_EQ(prod.rank(), 1);
@@ -66,7 +66,7 @@ TEST(Reductions, DoubleMaxMinNorm2) {
   double norm2Error{
       std::abs(naiveNorm2 - RTNAME(Norm2_8)(*array, __FILE__, __LINE__))};
   EXPECT_LE(norm2Error, 0.000001 * naiveNorm2);
-  StaticDescriptor<2> statDesc;
+  StaticDescriptor<2, true> statDesc;
   Descriptor &loc{statDesc.descriptor()};
   RTNAME(Maxloc)
   (loc, *array, /*KIND=*/8, __FILE__, __LINE__, /*MASK=*/nullptr,
@@ -146,7 +146,7 @@ TEST(Reductions, Character) {
   std::vector<int> shape{2, 3};
   auto array{MakeArray<TypeCategory::Character, 1>(shape,
       std::vector<std::string>{"abc", "def", "ghi", "jkl", "mno", "abc"}, 3)};
-  StaticDescriptor<1> statDesc[2];
+  StaticDescriptor<1, true> statDesc[2];
   Descriptor &res{statDesc[0].descriptor()};
   RTNAME(MaxvalCharacter)(res, *array, __FILE__, __LINE__);
   EXPECT_EQ(res.rank(), 0);
@@ -245,7 +245,7 @@ TEST(Reductions, Logical) {
   EXPECT_EQ(RTNAME(Any)(*array, __FILE__, __LINE__), true);
   EXPECT_EQ(RTNAME(Parity)(*array, __FILE__, __LINE__), false);
   EXPECT_EQ(RTNAME(Count)(*array, __FILE__, __LINE__), 2);
-  StaticDescriptor<2> statDesc[2];
+  StaticDescriptor<2, true> statDesc[2];
   Descriptor &res{statDesc[0].descriptor()};
   RTNAME(AllDim)(res, *array, /*DIM=*/1, __FILE__, __LINE__);
   EXPECT_EQ(res.rank(), 1);
@@ -344,7 +344,7 @@ TEST(Reductions, FindlocNumeric) {
           std::numeric_limits<double>::quiet_NaN(),
           std::numeric_limits<double>::infinity()})};
   ASSERT_EQ(realArray->ElementBytes(), sizeof(double));
-  StaticDescriptor<2> statDesc[2];
+  StaticDescriptor<2, true> statDesc[2];
   Descriptor &res{statDesc[0].descriptor()};
   // Find the first zero
   Descriptor &target{statDesc[1].descriptor()};

@@ -610,8 +610,9 @@ namespace llvm {
     getAssociativeCOFFSection(MCSectionCOFF *Sec, const MCSymbol *KeySym,
                               unsigned UniqueID = GenericSectionID);
 
-    MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K) {
-      return getWasmSection(Section, K, 0, nullptr);
+    MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
+                                  unsigned Flags = 0) {
+      return getWasmSection(Section, K, Flags, nullptr);
     }
 
     MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,

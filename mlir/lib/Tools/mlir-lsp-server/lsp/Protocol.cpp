@@ -287,7 +287,8 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
                          TextDocumentItem &result, llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
   return o && o.map("uri", result.uri) &&
-         o.map("languageId", result.languageId) && o.map("text", result.text);
+         o.map("languageId", result.languageId) && o.map("text", result.text) &&
+         o.map("version", result.version);
 }
 
 //===----------------------------------------------------------------------===//
@@ -303,6 +304,25 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
                          llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
   return o && o.map("uri", result.uri);
+}
+
+//===----------------------------------------------------------------------===//
+// VersionedTextDocumentIdentifier
+//===----------------------------------------------------------------------===//
+
+llvm::json::Value
+mlir::lsp::toJSON(const VersionedTextDocumentIdentifier &value) {
+  return llvm::json::Object{
+      {"uri", value.uri},
+      {"version", value.version},
+  };
+}
+
+bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+                         VersionedTextDocumentIdentifier &result,
+                         llvm::json::Path path) {
+  llvm::json::ObjectMapper o(value, path);
+  return o && o.map("uri", result.uri) && o.map("version", result.version);
 }
 
 //===----------------------------------------------------------------------===//
@@ -512,5 +532,6 @@ llvm::json::Value mlir::lsp::toJSON(const PublishDiagnosticsParams &params) {
   return llvm::json::Object{
       {"uri", params.uri},
       {"diagnostics", params.diagnostics},
+      {"version", params.version},
   };
 }

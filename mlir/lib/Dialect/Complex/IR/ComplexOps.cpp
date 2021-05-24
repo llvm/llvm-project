@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Complex/IR/Complex.h"
+#include "mlir/IR/Builders.h"
 
 using namespace mlir;
 using namespace mlir::complex;

@@ -1452,10 +1452,8 @@ void RegAllocFast::allocateBasicBlock(MachineBasicBlock &MBB) {
   RegUnitStates.assign(TRI->getNumRegUnits(), regFree);
   assert(LiveVirtRegs.empty() && "Mapping not cleared from last block?");
 
-  for (MachineBasicBlock *Succ : MBB.successors()) {
-    for (const MachineBasicBlock::RegisterMaskPair &LI : Succ->liveins())
-      setPhysRegState(LI.PhysReg, regPreAssigned);
-  }
+  for (auto &LiveReg : MBB.liveouts())
+    setPhysRegState(LiveReg.PhysReg, regPreAssigned);
 
   Coalesced.clear();
 
