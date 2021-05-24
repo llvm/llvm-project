@@ -498,11 +498,10 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
 
   assert(!isWeakDefCanBeHidden &&
          "weak_def_can_be_hidden on already-hidden symbol?");
-  return make<Defined>(name, isec->file, isec, value, size,
-                       sym.n_desc & N_WEAK_DEF,
-                       /*isExternal=*/false, /*isPrivateExtern=*/false,
-                       sym.n_desc & N_ARM_THUMB_DEF,
-                       sym.n_desc & REFERENCED_DYNAMICALLY);
+  return make<Defined>(
+      name, isec->file, isec, value, size, sym.n_desc & N_WEAK_DEF,
+      /*isExternal=*/false, /*isPrivateExtern=*/false,
+      sym.n_desc & N_ARM_THUMB_DEF, sym.n_desc & REFERENCED_DYNAMICALLY);
 }
 
 // Absolute symbols are defined symbols that do not have an associated
