@@ -130,11 +130,11 @@ define i32 @test(i32* nocapture %f) #0 {
 ; VEC-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP4]], i32 1
 ; VEC-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2]]
 ; VEC:       pred.store.if1:
-; VEC-NEXT:    [[TMP9:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 1
-; VEC-NEXT:    [[TMP10:%.*]] = add nsw i32 [[TMP9]], 20
-; VEC-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 1
-; VEC-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, i32* [[F]], i64 [[TMP11]]
-; VEC-NEXT:    store i32 [[TMP10]], i32* [[TMP12]], align 4
+; VEC-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 1
+; VEC-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, i32* [[F]], i64 [[TMP9]]
+; VEC-NEXT:    [[TMP11:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 1
+; VEC-NEXT:    [[TMP12:%.*]] = add nsw i32 [[TMP11]], 20
+; VEC-NEXT:    store i32 [[TMP12]], i32* [[TMP10]], align 4
 ; VEC-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; VEC:       pred.store.continue2:
 ; VEC-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
@@ -565,12 +565,12 @@ define void @minimal_bit_widths(i1 %c) {
 ; VEC-NEXT:    [[TMP9:%.*]] = extractelement <2 x i1> [[BROADCAST_SPLAT]], i32 1
 ; VEC-NEXT:    br i1 [[TMP9]], label [[PRED_STORE_IF2:%.*]], label [[PRED_STORE_CONTINUE3]]
 ; VEC:       pred.store.if2:
-; VEC-NEXT:    [[TMP10:%.*]] = extractelement <2 x i8> [[WIDE_LOAD]], i32 1
-; VEC-NEXT:    [[TMP11:%.*]] = zext i8 [[TMP10]] to i32
-; VEC-NEXT:    [[TMP12:%.*]] = trunc i32 [[TMP11]] to i8
-; VEC-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 1
-; VEC-NEXT:    [[TMP14:%.*]] = getelementptr i8, i8* undef, i64 [[TMP13]]
-; VEC-NEXT:    store i8 [[TMP12]], i8* [[TMP14]], align 1
+; VEC-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 1
+; VEC-NEXT:    [[TMP11:%.*]] = getelementptr i8, i8* undef, i64 [[TMP10]]
+; VEC-NEXT:    [[TMP12:%.*]] = extractelement <2 x i8> [[WIDE_LOAD]], i32 1
+; VEC-NEXT:    [[TMP13:%.*]] = zext i8 [[TMP12]] to i32
+; VEC-NEXT:    [[TMP14:%.*]] = trunc i32 [[TMP13]] to i8
+; VEC-NEXT:    store i8 [[TMP14]], i8* [[TMP11]], align 1
 ; VEC-NEXT:    br label [[PRED_STORE_CONTINUE3]]
 ; VEC:       pred.store.continue3:
 ; VEC-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
