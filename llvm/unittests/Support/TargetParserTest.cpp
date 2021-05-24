@@ -549,8 +549,6 @@ TEST(TargetParserTest, testARMExtension) {
                                 ARM::ArchKind::INVALID, "simd"));
   EXPECT_FALSE(testARMExtension("arm1136jf-s",
                                 ARM::ArchKind::INVALID, "crypto"));
-  EXPECT_FALSE(testARMExtension("arm1176j-s",
-                                ARM::ArchKind::INVALID, "crypto"));
   EXPECT_FALSE(testARMExtension("arm1156t2-s",
                                 ARM::ArchKind::INVALID, "crypto"));
   EXPECT_FALSE(testARMExtension("arm1176jzf-s",
