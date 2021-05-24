@@ -977,7 +977,7 @@ ChangeStatus AAReturnedValuesImpl::manifest(Attributor &A) {
             Constant *RVCCast =
                 CB->getType() == RVC->getType()
                     ? RVC
-                    : ConstantExpr::getTruncOrBitCast(RVC, CB->getType());
+                    : ConstantExpr::getPointerCast(RVC, CB->getType());
             Changed = ReplaceCallSiteUsersWith(*CB, *RVCCast) | Changed;
           }
     } else {
@@ -986,7 +986,7 @@ ChangeStatus AAReturnedValuesImpl::manifest(Attributor &A) {
       Constant *RVCCast =
           AnchorValue.getType() == RVC->getType()
               ? RVC
-              : ConstantExpr::getTruncOrBitCast(RVC, AnchorValue.getType());
+              : ConstantExpr::getPointerCast(RVC, AnchorValue.getType());
       Changed = ReplaceCallSiteUsersWith(cast<CallBase>(AnchorValue), *RVCCast);
     }
     if (Changed == ChangeStatus::CHANGED)
@@ -4800,8 +4800,8 @@ struct AAValueSimplifyReturned : AAValueSimplifyImpl {
                 continue;
               auto *RC = C;
               if (RC->getType() != RI->getReturnValue()->getType())
-                RC = ConstantExpr::getBitCast(RC,
-                                              RI->getReturnValue()->getType());
+                RC = ConstantExpr::getPointerCast(
+                    RC, RI->getReturnValue()->getType());
               LLVM_DEBUG(dbgs() << "[ValueSimplify] " << V << " -> " << *RC
                                 << " in " << *RI << " :: " << *this << "\n");
               if (A.changeUseAfterManifest(RI->getOperandUse(0), *RC))
