@@ -26,21 +26,16 @@ define i32* @func1() {
 ; CHECK: Function Attrs: nofree nosync nounwind readnone willreturn
 ; CHECK-LABEL: define {{[^@]+}}@func1
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    [[PTR:%.*]] = call i32* @func1a() #[[ATTR0]]
-; CHECK-NEXT:    ret i32* [[PTR]]
+; CHECK-NEXT:    ret i32* getelementptr inbounds ([1 x i32], [1 x i32]* @var1, i32 0, i32 0)
 ;
   %ptr = call i32* @func1a([1 x i32]* @var1)
   ret i32* %ptr
 }
 
-; UTC_ARGS: --disable
-; CHECK-LABEL: define internal noundef nonnull align 4 dereferenceable(4) i32* @func1a()
-; CHECK-NEXT: ret i32* getelementptr inbounds ([1 x i32], [1 x i32]* @var1, i32 0, i32 0)
 define internal i32* @func1a([1 x i32]* %arg) {
   %ptr = getelementptr inbounds [1 x i32], [1 x i32]* %arg, i64 0, i64 0
   ret i32* %ptr
 }
-; UTC_ARGS: --enable
 
 define internal void @func2a(i32* %0) {
 ; CHECK: Function Attrs: nofree nosync nounwind willreturn writeonly

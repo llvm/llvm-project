@@ -623,15 +623,13 @@ define internal i8*@test_byval2(%struct.X* byval(%struct.X) %a) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readonly willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test_byval2
 ; IS__TUNIT____-SAME: () #[[ATTR4:[0-9]+]] {
-; IS__TUNIT____-NEXT:    [[G0:%.*]] = getelementptr [[STRUCT_X:%.*]], %struct.X* @S, i32 0, i32 0
-; IS__TUNIT____-NEXT:    [[L:%.*]] = load i8*, i8** [[G0]], align 8
+; IS__TUNIT____-NEXT:    [[L:%.*]] = load i8*, i8** getelementptr inbounds ([[STRUCT_X:%.*]], %struct.X* @S, i32 0, i32 0), align 8
 ; IS__TUNIT____-NEXT:    ret i8* [[L]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readonly willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test_byval2
 ; IS__CGSCC____-SAME: () #[[ATTR3:[0-9]+]] {
-; IS__CGSCC____-NEXT:    [[G0:%.*]] = getelementptr [[STRUCT_X:%.*]], %struct.X* @S, i32 0, i32 0
-; IS__CGSCC____-NEXT:    [[L:%.*]] = load i8*, i8** [[G0]], align 8
+; IS__CGSCC____-NEXT:    [[L:%.*]] = load i8*, i8** getelementptr inbounds ([[STRUCT_X:%.*]], %struct.X* @S, i32 0, i32 0), align 8
 ; IS__CGSCC____-NEXT:    ret i8* [[L]]
 ;
   %g0 = getelementptr %struct.X, %struct.X* %a, i32 0, i32 0

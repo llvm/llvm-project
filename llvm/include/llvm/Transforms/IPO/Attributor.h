@@ -131,6 +131,15 @@ class AAManager;
 class AAResults;
 class Function;
 
+/// Abstract Attribute helper functions.
+namespace AA {
+/// Try to convert \p V to type \p Ty without introducing new instructions. If
+/// this is not possible return `nullptr`. Note: this function basically knows
+/// how to cast various constants.
+Value *getWithType(Value &V, Type &Ty);
+
+} // namespace AA
+
 /// The value passed to the line option that defines the maximal initialization
 /// chain length.
 extern unsigned MaxInitializationChainLength;

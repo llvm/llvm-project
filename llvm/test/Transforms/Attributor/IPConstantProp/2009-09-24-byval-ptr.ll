@@ -59,11 +59,10 @@ define internal i32 @vfu2(%struct.MYstr* byval(%struct.MYstr) align 4 %u) nounwi
 ; IS__TUNIT_OPM-NEXT:  entry:
 ; IS__TUNIT_OPM-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* @mystr, i32 0, i32 1
 ; IS__TUNIT_OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
-; IS__TUNIT_OPM-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* @mystr, i32 0, i32 0
-; IS__TUNIT_OPM-NEXT:    [[TMP3:%.*]] = load i8, i8* [[TMP2]], align 8
-; IS__TUNIT_OPM-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i32
-; IS__TUNIT_OPM-NEXT:    [[TMP5:%.*]] = add i32 [[TMP4]], [[TMP1]]
-; IS__TUNIT_OPM-NEXT:    ret i32 [[TMP5]]
+; IS__TUNIT_OPM-NEXT:    [[TMP2:%.*]] = load i8, i8* getelementptr inbounds ([[STRUCT_MYSTR]], %struct.MYstr* @mystr, i32 0, i32 0), align 8
+; IS__TUNIT_OPM-NEXT:    [[TMP3:%.*]] = zext i8 [[TMP2]] to i32
+; IS__TUNIT_OPM-NEXT:    [[TMP4:%.*]] = add i32 [[TMP3]], [[TMP1]]
+; IS__TUNIT_OPM-NEXT:    ret i32 [[TMP4]]
 ;
 ; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind readonly willreturn
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@vfu2
@@ -76,11 +75,10 @@ define internal i32 @vfu2(%struct.MYstr* byval(%struct.MYstr) align 4 %u) nounwi
 ; IS__TUNIT_NPM-NEXT:    store i32 [[TMP1]], i32* [[U_PRIV_0_1]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* @mystr, i32 0, i32 1
 ; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP2]], align 4
-; IS__TUNIT_NPM-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* @mystr, i32 0, i32 0
-; IS__TUNIT_NPM-NEXT:    [[TMP5:%.*]] = load i8, i8* [[TMP4]], align 8
-; IS__TUNIT_NPM-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i32
-; IS__TUNIT_NPM-NEXT:    [[TMP7:%.*]] = add i32 [[TMP6]], [[TMP3]]
-; IS__TUNIT_NPM-NEXT:    ret i32 [[TMP7]]
+; IS__TUNIT_NPM-NEXT:    [[TMP4:%.*]] = load i8, i8* getelementptr inbounds ([[STRUCT_MYSTR]], %struct.MYstr* @mystr, i32 0, i32 0), align 8
+; IS__TUNIT_NPM-NEXT:    [[TMP5:%.*]] = zext i8 [[TMP4]] to i32
+; IS__TUNIT_NPM-NEXT:    [[TMP6:%.*]] = add i32 [[TMP5]], [[TMP3]]
+; IS__TUNIT_NPM-NEXT:    ret i32 [[TMP6]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readonly willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@vfu2
@@ -88,11 +86,10 @@ define internal i32 @vfu2(%struct.MYstr* byval(%struct.MYstr) align 4 %u) nounwi
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], %struct.MYstr* @mystr, i32 0, i32 1
 ; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
-; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* @mystr, i32 0, i32 0
-; IS__CGSCC____-NEXT:    [[TMP3:%.*]] = load i8, i8* [[TMP2]], align 8
-; IS__CGSCC____-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i32
-; IS__CGSCC____-NEXT:    [[TMP5:%.*]] = add i32 [[TMP4]], [[TMP1]]
-; IS__CGSCC____-NEXT:    ret i32 [[TMP5]]
+; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = load i8, i8* getelementptr inbounds ([[STRUCT_MYSTR]], %struct.MYstr* @mystr, i32 0, i32 0), align 8
+; IS__CGSCC____-NEXT:    [[TMP3:%.*]] = zext i8 [[TMP2]] to i32
+; IS__CGSCC____-NEXT:    [[TMP4:%.*]] = add i32 [[TMP3]], [[TMP1]]
+; IS__CGSCC____-NEXT:    ret i32 [[TMP4]]
 ;
 entry:
   %0 = getelementptr %struct.MYstr, %struct.MYstr* %u, i32 0, i32 1 ; <i32*> [#uses=1]
@@ -245,9 +242,8 @@ define i32 @unions_v2() nounwind {
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@unions_v2
 ; IS__CGSCC_NPM-SAME: () #[[ATTR1]] {
 ; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    [[MYSTR_CAST1:%.*]] = bitcast %struct.MYstr* @mystr to i8*
-; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = load i8, i8* [[MYSTR_CAST1]], align 8
-; IS__CGSCC_NPM-NEXT:    [[MYSTR_0_12:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], %struct.MYstr* @mystr, i32 0, i32 1
+; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = load i8, i8* getelementptr inbounds ([[STRUCT_MYSTR:%.*]], %struct.MYstr* @mystr, i32 0, i32 0), align 8
+; IS__CGSCC_NPM-NEXT:    [[MYSTR_0_12:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* @mystr, i32 0, i32 1
 ; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[MYSTR_0_12]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(i8 [[TMP0]], i32 [[TMP1]]) #[[ATTR3:[0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    ret i32 [[RESULT]]

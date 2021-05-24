@@ -82,7 +82,7 @@ entry:
 ; CHECK-NOT:  nounwind
 ; CHECK-NEXT: define
 ; CHECK-NEXT:   entry:
-; CHECK-NEXT:   %call3 = call i32 (i8*, ...) @printf(i8* noundef nonnull dereferenceable(18) getelementptr inbounds ([18 x i8], [18 x i8]* @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@", i64 0, i64 0))
+; CHECK-NEXT:   %call3 = call i32 (i8*, ...) @printf(i8* noundef nonnull dereferenceable(18) getelementptr inbounds ([18 x i8], [18 x i8]* @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@", i32 0, i32 0))
 ; CHECK-NEXT:   call void @"?overflow@@YAXXZ_may_throw"()
 ; CHECK-NEXT:   unreachable
   %call3 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([18 x i8], [18 x i8]* @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@", i64 0, i64 0))

@@ -4631,12 +4631,13 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     auto *C = SimplifiedAssociatedValue.hasValue()
                   ? dyn_cast<Constant>(SimplifiedAssociatedValue.getValue())
                   : UndefValue::get(V.getType());
-    if (C) {
+    if (C && C != &V) {
+      Value *NewV = AA::getWithType(*C, *V.getType());
       // We can replace the AssociatedValue with the constant.
-      if (!V.user_empty() && &V != C && V.getType() == C->getType()) {
-        LLVM_DEBUG(dbgs() << "[ValueSimplify] " << V << " -> " << *C
+      if (!V.user_empty() && &V != C && NewV) {
+        LLVM_DEBUG(dbgs() << "[ValueSimplify] " << V << " -> " << *NewV
                           << " :: " << *this << "\n");
-        if (A.changeValueAfterManifest(V, *C))
+        if (A.changeValueAfterManifest(V, *NewV))
           Changed = ChangeStatus::CHANGED;
       }
     }
@@ -4778,23 +4779,23 @@ struct AAValueSimplifyReturned : AAValueSimplifyImpl {
     auto *C = SimplifiedAssociatedValue.hasValue()
                   ? dyn_cast<Constant>(SimplifiedAssociatedValue.getValue())
                   : UndefValue::get(V.getType());
-    if (C) {
+    if (C && C != &V) {
       auto PredForReturned =
           [&](Value &V, const SmallSetVector<ReturnInst *, 4> &RetInsts) {
             // We can replace the AssociatedValue with the constant.
-            if (&V == C || V.getType() != C->getType() || isa<UndefValue>(V))
+            if (&V == C || isa<UndefValue>(V))
               return true;
 
             for (ReturnInst *RI : RetInsts) {
               if (RI->getFunction() != getAnchorScope())
                 continue;
-              auto *RC = C;
-              if (RC->getType() != RI->getReturnValue()->getType())
-                RC = ConstantExpr::getPointerCast(
-                    RC, RI->getReturnValue()->getType());
-              LLVM_DEBUG(dbgs() << "[ValueSimplify] " << V << " -> " << *RC
+              Value *NewV =
+                  AA::getWithType(*C, *RI->getReturnValue()->getType());
+              if (!NewV)
+                continue;
+              LLVM_DEBUG(dbgs() << "[ValueSimplify] " << V << " -> " << *NewV
                                 << " in " << *RI << " :: " << *this << "\n");
-              if (A.changeUseAfterManifest(RI->getOperandUse(0), *RC))
+              if (A.changeUseAfterManifest(RI->getOperandUse(0), *NewV))
                 Changed = ChangeStatus::CHANGED;
             }
             return true;
@@ -4994,9 +4995,10 @@ struct AAValueSimplifyCallSiteArgument : AAValueSimplifyFloating {
       Use &U = cast<CallBase>(&getAnchorValue())
                    ->getArgOperandUse(getCallSiteArgNo());
       // We can replace the AssociatedValue with the constant.
-      if (&V != C && V.getType() == C->getType()) {
-        if (A.changeUseAfterManifest(U, *C))
-          Changed = ChangeStatus::CHANGED;
+      if (&V != C) {
+        if (Value *NewV = AA::getWithType(*C, *V.getType()))
+          if (A.changeUseAfterManifest(U, *NewV))
+            Changed = ChangeStatus::CHANGED;
       }
     }
 
