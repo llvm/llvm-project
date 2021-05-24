@@ -330,6 +330,69 @@ define i32 @ipccp3() {
   ret i32 %r
 }
 
+define internal i32 @ipccp4ia(i1 %c) {
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@ipccp4ia
+; IS__CGSCC____-SAME: () #[[ATTR1]] {
+; IS__CGSCC____-NEXT:    br label [[T:%.*]]
+; IS__CGSCC____:       t:
+; IS__CGSCC____-NEXT:    ret i32 undef
+; IS__CGSCC____:       f:
+; IS__CGSCC____-NEXT:    unreachable
+;
+  br i1 %c, label %t, label %f
+t:
+  ret i32 0
+f:
+  ret i32 1
+}
+define internal i32 @ipccp4ib(i32 %a) {
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@ipccp4ib
+; IS__CGSCC____-SAME: () #[[ATTR1]] {
+; IS__CGSCC____-NEXT:    br label [[T:%.*]]
+; IS__CGSCC____:       t:
+; IS__CGSCC____-NEXT:    ret i32 undef
+; IS__CGSCC____:       f:
+; IS__CGSCC____-NEXT:    unreachable
+;
+  %c = icmp eq i32 %a, 7
+  br i1 %c, label %t, label %f
+t:
+  %r = call i32 @ipccp4ia(i1 %c)
+  ret i32 %r
+f:
+  ret i32 1
+}
+
+define i32 @ipccp4(i1 %c) {
+; IS__TUNIT____: Function Attrs: nofree noreturn nosync nounwind readnone
+; IS__TUNIT____-LABEL: define {{[^@]+}}@ipccp4
+; IS__TUNIT____-SAME: (i1 [[C:%.*]]) #[[ATTR2:[0-9]+]] {
+; IS__TUNIT____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; IS__TUNIT____:       t:
+; IS__TUNIT____-NEXT:    unreachable
+; IS__TUNIT____:       f:
+; IS__TUNIT____-NEXT:    unreachable
+;
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@ipccp4
+; IS__CGSCC____-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; IS__CGSCC____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; IS__CGSCC____:       t:
+; IS__CGSCC____-NEXT:    br label [[F]]
+; IS__CGSCC____:       f:
+; IS__CGSCC____-NEXT:    ret i32 0
+;
+  br i1 %c, label %t, label %f
+t:
+  %q = call i32 @ipccp4ia(i1 undef)
+  br label %f
+f:
+  %r = call i32 @ipccp4ib(i32 7)
+  ret i32 %r
+}
+
 ; Do not touch complicated arguments (for now)
 %struct.X = type { i8* }
 define internal i32* @test_inalloca(i32* inalloca(i32) %a) {
@@ -385,14 +448,14 @@ define i32* @complicated_args_preallocated() {
 ; IS__TUNIT_OPM: Function Attrs: nofree nosync nounwind willreturn
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@complicated_args_preallocated
 ; IS__TUNIT_OPM-SAME: () #[[ATTR0:[0-9]+]] {
-; IS__TUNIT_OPM-NEXT:    [[C:%.*]] = call token @llvm.call.preallocated.setup(i32 noundef 1) #[[ATTR5:[0-9]+]]
+; IS__TUNIT_OPM-NEXT:    [[C:%.*]] = call token @llvm.call.preallocated.setup(i32 noundef 1) #[[ATTR6:[0-9]+]]
 ; IS__TUNIT_OPM-NEXT:    [[CALL:%.*]] = call i32* @test_preallocated(i32* noalias nocapture nofree noundef writeonly preallocated(i32) align 536870912 null) #[[ATTR1]] [ "preallocated"(token [[C]]) ]
 ; IS__TUNIT_OPM-NEXT:    ret i32* [[CALL]]
 ;
 ; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@complicated_args_preallocated
 ; IS__TUNIT_NPM-SAME: () #[[ATTR0:[0-9]+]] {
-; IS__TUNIT_NPM-NEXT:    [[C:%.*]] = call token @llvm.call.preallocated.setup(i32 noundef 1) #[[ATTR4:[0-9]+]]
+; IS__TUNIT_NPM-NEXT:    [[C:%.*]] = call token @llvm.call.preallocated.setup(i32 noundef 1) #[[ATTR5:[0-9]+]]
 ; IS__TUNIT_NPM-NEXT:    [[CALL:%.*]] = call i32* @test_preallocated(i32* noalias nocapture nofree noundef writeonly preallocated(i32) align 536870912 null) #[[ATTR1]] [ "preallocated"(token [[C]]) ]
 ; IS__TUNIT_NPM-NEXT:    ret i32* [[CALL]]
 ;
@@ -419,7 +482,7 @@ define internal void @test_sret(%struct.X* sret(%struct.X) %a, %struct.X** %b) {
 ;
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test_sret
-; IS__TUNIT____-SAME: (%struct.X* noalias nofree noundef nonnull writeonly sret([[STRUCT_X:%.*]]) align 536870912 dereferenceable(8) [[A:%.*]], %struct.X** nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[B:%.*]]) #[[ATTR2:[0-9]+]] {
+; IS__TUNIT____-SAME: (%struct.X* noalias nofree noundef nonnull writeonly sret([[STRUCT_X:%.*]]) align 536870912 dereferenceable(8) [[A:%.*]], %struct.X** nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[B:%.*]]) #[[ATTR3:[0-9]+]] {
 ; IS__TUNIT____-NEXT:    store %struct.X* [[A]], %struct.X** [[B]], align 8
 ; IS__TUNIT____-NEXT:    ret void
 ;
@@ -437,14 +500,14 @@ define void @complicated_args_sret(%struct.X** %b) {
 ;
 ; IS__TUNIT_OPM: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@complicated_args_sret
-; IS__TUNIT_OPM-SAME: (%struct.X** nocapture nofree writeonly [[B:%.*]]) #[[ATTR2]] {
-; IS__TUNIT_OPM-NEXT:    call void @test_sret(%struct.X* noalias nocapture nofree noundef writeonly align 536870912 null, %struct.X** nocapture nofree writeonly align 8 [[B]]) #[[ATTR6:[0-9]+]]
+; IS__TUNIT_OPM-SAME: (%struct.X** nocapture nofree writeonly [[B:%.*]]) #[[ATTR3]] {
+; IS__TUNIT_OPM-NEXT:    call void @test_sret(%struct.X* noalias nocapture nofree noundef writeonly align 536870912 null, %struct.X** nocapture nofree writeonly align 8 [[B]]) #[[ATTR7:[0-9]+]]
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@complicated_args_sret
-; IS__TUNIT_NPM-SAME: (%struct.X** nocapture nofree writeonly [[B:%.*]]) #[[ATTR2]] {
-; IS__TUNIT_NPM-NEXT:    call void @test_sret(%struct.X* noalias nocapture nofree noundef writeonly align 536870912 null, %struct.X** nocapture nofree writeonly align 8 [[B]]) #[[ATTR5:[0-9]+]]
+; IS__TUNIT_NPM-SAME: (%struct.X** nocapture nofree writeonly [[B:%.*]]) #[[ATTR3]] {
+; IS__TUNIT_NPM-NEXT:    call void @test_sret(%struct.X* noalias nocapture nofree noundef writeonly align 536870912 null, %struct.X** nocapture nofree writeonly align 8 [[B]]) #[[ATTR6:[0-9]+]]
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
@@ -538,7 +601,7 @@ define void @complicated_args_byval() {
 define internal i8*@test_byval2(%struct.X* byval(%struct.X) %a) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readonly willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test_byval2
-; IS__TUNIT____-SAME: () #[[ATTR3:[0-9]+]] {
+; IS__TUNIT____-SAME: () #[[ATTR4:[0-9]+]] {
 ; IS__TUNIT____-NEXT:    [[G0:%.*]] = getelementptr [[STRUCT_X:%.*]], %struct.X* @S, i32 0, i32 0
 ; IS__TUNIT____-NEXT:    [[L:%.*]] = load i8*, i8** [[G0]], align 8
 ; IS__TUNIT____-NEXT:    ret i8* [[L]]
@@ -557,8 +620,8 @@ define internal i8*@test_byval2(%struct.X* byval(%struct.X) %a) {
 define i8* @complicated_args_byval2() {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readonly willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@complicated_args_byval2
-; IS__TUNIT____-SAME: () #[[ATTR3]] {
-; IS__TUNIT____-NEXT:    [[C:%.*]] = call i8* @test_byval2() #[[ATTR3]]
+; IS__TUNIT____-SAME: () #[[ATTR4]] {
+; IS__TUNIT____-NEXT:    [[C:%.*]] = call i8* @test_byval2() #[[ATTR4]]
 ; IS__TUNIT____-NEXT:    ret i8* [[C]]
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readonly willreturn
@@ -580,7 +643,7 @@ define i8* @complicated_args_byval2() {
 define void @fixpoint_changed(i32* %p) {
 ; IS__TUNIT_OPM: Function Attrs: argmemonly nofree nosync nounwind writeonly
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@fixpoint_changed
-; IS__TUNIT_OPM-SAME: (i32* nocapture nofree writeonly [[P:%.*]]) #[[ATTR4:[0-9]+]] {
+; IS__TUNIT_OPM-SAME: (i32* nocapture nofree writeonly [[P:%.*]]) #[[ATTR5:[0-9]+]] {
 ; IS__TUNIT_OPM-NEXT:  entry:
 ; IS__TUNIT_OPM-NEXT:    br label [[FOR_COND:%.*]]
 ; IS__TUNIT_OPM:       for.cond:
@@ -603,7 +666,7 @@ define void @fixpoint_changed(i32* %p) {
 ;
 ; IS__TUNIT_NPM: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@fixpoint_changed
-; IS__TUNIT_NPM-SAME: (i32* nocapture nofree writeonly [[P:%.*]]) #[[ATTR2]] {
+; IS__TUNIT_NPM-SAME: (i32* nocapture nofree writeonly [[P:%.*]]) #[[ATTR3]] {
 ; IS__TUNIT_NPM-NEXT:  entry:
 ; IS__TUNIT_NPM-NEXT:    br label [[FOR_COND:%.*]]
 ; IS__TUNIT_NPM:       for.cond:
@@ -809,18 +872,20 @@ define i1 @icmp() {
 ;.
 ; IS__TUNIT_OPM: attributes #[[ATTR0]] = { nofree nosync nounwind willreturn }
 ; IS__TUNIT_OPM: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
-; IS__TUNIT_OPM: attributes #[[ATTR2]] = { argmemonly nofree nosync nounwind willreturn writeonly }
-; IS__TUNIT_OPM: attributes #[[ATTR3]] = { nofree nosync nounwind readonly willreturn }
-; IS__TUNIT_OPM: attributes #[[ATTR4]] = { argmemonly nofree nosync nounwind writeonly }
-; IS__TUNIT_OPM: attributes #[[ATTR5]] = { willreturn }
-; IS__TUNIT_OPM: attributes #[[ATTR6]] = { nofree nosync nounwind willreturn writeonly }
+; IS__TUNIT_OPM: attributes #[[ATTR2]] = { nofree noreturn nosync nounwind readnone }
+; IS__TUNIT_OPM: attributes #[[ATTR3]] = { argmemonly nofree nosync nounwind willreturn writeonly }
+; IS__TUNIT_OPM: attributes #[[ATTR4]] = { nofree nosync nounwind readonly willreturn }
+; IS__TUNIT_OPM: attributes #[[ATTR5]] = { argmemonly nofree nosync nounwind writeonly }
+; IS__TUNIT_OPM: attributes #[[ATTR6]] = { willreturn }
+; IS__TUNIT_OPM: attributes #[[ATTR7]] = { nofree nosync nounwind willreturn writeonly }
 ;.
 ; IS__TUNIT_NPM: attributes #[[ATTR0]] = { nofree nosync nounwind willreturn }
 ; IS__TUNIT_NPM: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
-; IS__TUNIT_NPM: attributes #[[ATTR2]] = { argmemonly nofree nosync nounwind willreturn writeonly }
-; IS__TUNIT_NPM: attributes #[[ATTR3]] = { nofree nosync nounwind readonly willreturn }
-; IS__TUNIT_NPM: attributes #[[ATTR4]] = { willreturn }
-; IS__TUNIT_NPM: attributes #[[ATTR5]] = { nofree nosync nounwind willreturn writeonly }
+; IS__TUNIT_NPM: attributes #[[ATTR2]] = { nofree noreturn nosync nounwind readnone }
+; IS__TUNIT_NPM: attributes #[[ATTR3]] = { argmemonly nofree nosync nounwind willreturn writeonly }
+; IS__TUNIT_NPM: attributes #[[ATTR4]] = { nofree nosync nounwind readonly willreturn }
+; IS__TUNIT_NPM: attributes #[[ATTR5]] = { willreturn }
+; IS__TUNIT_NPM: attributes #[[ATTR6]] = { nofree nosync nounwind willreturn writeonly }
 ;.
 ; IS__CGSCC_OPM: attributes #[[ATTR0]] = { nofree nosync nounwind willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
