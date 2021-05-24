@@ -1377,6 +1377,24 @@ Register RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
     BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), VL)
         .addReg(VL, RegState::Kill)
         .addImm(ShiftAmount);
+  } else if (isPowerOf2_32(NumOfVReg - 1)) {
+    Register ScaledRegister = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    uint32_t ShiftAmount = Log2_32(NumOfVReg - 1);
+    BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), ScaledRegister)
+        .addReg(VL)
+        .addImm(ShiftAmount);
+    BuildMI(MBB, II, DL, TII->get(RISCV::ADD), VL)
+        .addReg(ScaledRegister, RegState::Kill)
+        .addReg(VL, RegState::Kill);
+  } else if (isPowerOf2_32(NumOfVReg + 1)) {
+    Register ScaledRegister = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    uint32_t ShiftAmount = Log2_32(NumOfVReg + 1);
+    BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), ScaledRegister)
+        .addReg(VL)
+        .addReg(ShiftAmount);
+    BuildMI(MBB, II, DL, TII->get(RISCV::SUB), VL)
+        .addReg(ScaledRegister, RegState::Kill)
+        .addReg(VL, RegState::Kill);
   } else {
     Register N = MRI.createVirtualRegister(&RISCV::GPRRegClass);
     BuildMI(MBB, II, DL, TII->get(RISCV::ADDI), N)
