@@ -629,8 +629,9 @@ define i32 @potential_test11(i1 %c) {
 ; IS__TUNIT_OPM-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
 ; IS__TUNIT_OPM-NEXT:    [[ZERO1:%.*]] = call i32 @optimize_undef_1(i1 [[C]]) #[[ATTR0]], !range [[RNG2:![0-9]+]]
 ; IS__TUNIT_OPM-NEXT:    [[ZERO2:%.*]] = call i32 @optimize_undef_2(i1 [[C]]) #[[ATTR0]], !range [[RNG3:![0-9]+]]
+; IS__TUNIT_OPM-NEXT:    [[ZERO3:%.*]] = call i32 @optimize_undef_3(i1 [[C]]) #[[ATTR0]], !range [[RNG2]]
 ; IS__TUNIT_OPM-NEXT:    [[ACC1:%.*]] = add i32 [[ZERO1]], [[ZERO2]]
-; IS__TUNIT_OPM-NEXT:    [[ACC2:%.*]] = add i32 [[ACC1]], 0
+; IS__TUNIT_OPM-NEXT:    [[ACC2:%.*]] = add i32 [[ACC1]], [[ZERO3]]
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[ACC2]]
 ;
 ; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
@@ -638,8 +639,9 @@ define i32 @potential_test11(i1 %c) {
 ; IS__TUNIT_NPM-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
 ; IS__TUNIT_NPM-NEXT:    [[ZERO1:%.*]] = call i32 @optimize_undef_1(i1 [[C]]) #[[ATTR0]], !range [[RNG0]]
 ; IS__TUNIT_NPM-NEXT:    [[ZERO2:%.*]] = call i32 @optimize_undef_2(i1 [[C]]) #[[ATTR0]], !range [[RNG3:![0-9]+]]
+; IS__TUNIT_NPM-NEXT:    [[ZERO3:%.*]] = call i32 @optimize_undef_3(i1 [[C]]) #[[ATTR0]], !range [[RNG0]]
 ; IS__TUNIT_NPM-NEXT:    [[ACC1:%.*]] = add i32 [[ZERO1]], [[ZERO2]]
-; IS__TUNIT_NPM-NEXT:    [[ACC2:%.*]] = add i32 [[ACC1]], 0
+; IS__TUNIT_NPM-NEXT:    [[ACC2:%.*]] = add i32 [[ACC1]], [[ZERO3]]
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[ACC2]]
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
