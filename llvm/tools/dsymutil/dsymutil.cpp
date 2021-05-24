@@ -689,6 +689,19 @@ int main(int argc, char **argv) {
                                                Options.LinkOpts, SDKPath))
         return EXIT_FAILURE;
     }
+
+    // The Mach-O object file format is limited to 4GB. Make sure that we print
+    // an error when we emit an invalid Mach-O companion file. Leave the
+    // invalid object file around on disk for inspection.
+    ErrorOr<vfs::Status> stat =
+        Options.LinkOpts.VFS->status(OutputLocationOrErr->DWARFFile);
+    if (stat) {
+      if (stat->getSize() > std::numeric_limits<uint32_t>::max()) {
+        WithColor::error() << "the linked debug info exceeds the 4GB Mach-O "
+                              "object file format.";
+        return EXIT_FAILURE;
+      }
+    }
   }
 
   return EXIT_SUCCESS;
