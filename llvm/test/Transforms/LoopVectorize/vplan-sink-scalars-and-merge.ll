@@ -14,7 +14,6 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK-NEXT: loop:
 ; CHECK-NEXT:   WIDEN-INDUCTION %indvars.iv = phi 0, %indvars.iv.next
 ; CHECK-NEXT:   EMIT vp<%2> = icmp ule ir<%indvars.iv> vp<%0>
-; CHECK-NEXT:   REPLICATE ir<%gep.b> = getelementptr ir<@b>, ir<0>, ir<%indvars.iv>
 ; CHECK-NEXT: Successor(s): pred.load
 
 ; CHECK:       <xVFxUF> pred.load: {
@@ -24,6 +23,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK-NEXT:   CondBit: vp<%2> (loop)
 
 ; CHECK:       pred.load.if:
+; CHECK-NEXT:     REPLICATE ir<%gep.b> = getelementptr ir<@b>, ir<0>, ir<%indvars.iv>
 ; CHECK-NEXT:     REPLICATE ir<%lv.b> = load ir<%gep.b>
 ; CHECK-NEXT:   Successor(s): pred.load.continue
 
@@ -33,9 +33,6 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK-NEXT: }
 
 ; CHECK:      loop.0:
-; CHECK-NEXT:   REPLICATE ir<%add> = add vp<%5>, ir<10>
-; CHECK-NEXT:   REPLICATE ir<%mul> = mul ir<2>, ir<%add>
-; CHECK-NEXT:   REPLICATE ir<%gep.a> = getelementptr ir<@a>, ir<0>, ir<%indvars.iv>
 ; CHECK-NEXT: Successor(s): pred.store
 
 ; CHECK:      <xVFxUF> pred.store: {
@@ -45,6 +42,9 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK-NEXT:   CondBit: vp<%2> (loop)
 
 ; CHECK:      pred.store.if:
+; CHECK-NEXT:     REPLICATE ir<%add> = add vp<%5>, ir<10>
+; CHECK-NEXT:     REPLICATE ir<%mul> = mul ir<2>, ir<%add>
+; CHECK-NEXT:     REPLICATE ir<%gep.a> = getelementptr ir<@a>, ir<0>, ir<%indvars.iv>
 ; CHECK-NEXT:     REPLICATE store ir<%mul>, ir<%gep.a>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 
@@ -85,7 +85,6 @@ exit:
 ; CHECK-NEXT: loop:
 ; CHECK-NEXT:   WIDEN-INDUCTION %indvars.iv = phi 0, %indvars.iv.next
 ; CHECK-NEXT:   EMIT vp<%2> = icmp ule ir<%indvars.iv> vp<%0>
-; CHECK-NEXT:   REPLICATE ir<%gep.b> = getelementptr ir<@b>, ir<0>, ir<%indvars.iv>
 ; CHECK-NEXT: Successor(s): pred.load
 
 ; CHECK:      <xVFxUF> pred.load: {
@@ -95,6 +94,7 @@ exit:
 ; CHECK-NEXT:   CondBit: vp<%2> (loop)
 
 ; CHECK:      pred.load.if:
+; CHECK-NEXT:     REPLICATE ir<%gep.b> = getelementptr ir<@b>, ir<0>, ir<%indvars.iv>
 ; CHECK-NEXT:     REPLICATE ir<%lv.b> = load ir<%gep.b>
 ; CHECK-NEXT:   Successor(s): pred.load.continue
 
@@ -104,9 +104,7 @@ exit:
 ; CHECK-NEXT: }
 
 ; CHECK:      loop.0:
-; CHECK-NEXT:   REPLICATE ir<%add> = add vp<%5>, ir<10>
 ; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%indvars.iv>, ir<2>
-; CHECK-NEXT:   REPLICATE ir<%gep.a> = getelementptr ir<@a>, ir<0>, ir<%mul>
 ; CHECK-NEXT: Successor(s): pred.store
 
 ; CHECK:      <xVFxUF> pred.store: {
@@ -116,6 +114,8 @@ exit:
 ; CHECK-NEXT:   CondBit: vp<%2> (loop)
 
 ; CHECK:       pred.store.if:
+; CHECK-NEXT:     REPLICATE ir<%add> = add vp<%5>, ir<10>
+; CHECK-NEXT:     REPLICATE ir<%gep.a> = getelementptr ir<@a>, ir<0>, ir<%mul>
 ; CHECK-NEXT:     REPLICATE store ir<%add>, ir<%gep.a>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 
@@ -156,7 +156,6 @@ exit:
 ; CHECK-NEXT: loop:
 ; CHECK-NEXT:   WIDEN-INDUCTION %indvars.iv = phi 0, %indvars.iv.next
 ; CHECK-NEXT:   EMIT vp<%2> = icmp ule ir<%indvars.iv> vp<%0>
-; CHECK-NEXT:   REPLICATE ir<%gep.b> = getelementptr ir<@b>, ir<0>, ir<%indvars.iv>
 ; CHECK-NEXT: Successor(s): pred.load
 
 ; CHECK:      <xVFxUF> pred.load: {
@@ -166,6 +165,7 @@ exit:
 ; CHECK-NEXT:   CondBit: vp<%2> (loop)
 
 ; CHECK:       pred.load.if:
+; CHECK-NEXT:     REPLICATE ir<%gep.b> = getelementptr ir<@b>, ir<0>, ir<%indvars.iv>
 ; CHECK-NEXT:     REPLICATE ir<%lv.b> = load ir<%gep.b> (S->V)
 ; CHECK-NEXT:   Successor(s): pred.load.continue
 
@@ -177,7 +177,6 @@ exit:
 ; CHECK:      loop.0:
 ; CHECK-NEXT:   WIDEN ir<%add> = add vp<%5>, ir<10>
 ; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%indvars.iv>, ir<%add>
-; CHECK-NEXT:   REPLICATE ir<%gep.a> = getelementptr ir<@a>, ir<0>, ir<%mul>
 ; CHECK-NEXT: Successor(s): pred.store
 
 ; CHECK:      <xVFxUF> pred.store: {
@@ -187,6 +186,7 @@ exit:
 ; CHECK-NEXT:   CondBit: vp<%2> (loop)
 
 ; CHECK:      pred.store.if:
+; CHECK-NEXT:     REPLICATE ir<%gep.a> = getelementptr ir<@a>, ir<0>, ir<%mul>
 ; CHECK-NEXT:     REPLICATE store ir<%add>, ir<%gep.a>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 
