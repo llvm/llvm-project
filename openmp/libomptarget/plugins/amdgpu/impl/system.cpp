@@ -132,7 +132,6 @@ ATLMachine g_atl_machine;
 
 std::vector<hsa_amd_memory_pool_t> atl_gpu_kernarg_pools;
 
-std::map<std::string, std::string> KernelNameMap;
 std::vector<std::map<std::string, atl_kernel_info_t>> KernelInfoTable;
 std::vector<std::map<std::string, atl_symbol_info_t>> SymbolInfoTable;
 
@@ -868,6 +867,13 @@ static hsa_status_t get_code_object_custom_metadata(void *binary,
       return HSA_STATUS_ERROR_INVALID_CODE_OBJECT;
     }
 
+    // Make sure that kernelName + ".kd" == symbolName
+    if ((kernelName + ".kd") != symbolName) {
+      printf("[%s:%d] Kernel name mismatching symbol: %s != %s + .kd\n",
+             __FILE__, __LINE__, symbolName.c_str(), kernelName.c_str());
+      return HSA_STATUS_ERROR_INVALID_CODE_OBJECT;
+    }
+
     atl_kernel_info_t info = {0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {}, {}};
 
     uint64_t sgpr_count, vgpr_count, sgpr_spill_count, vgpr_spill_count;
@@ -918,11 +924,6 @@ static hsa_status_t get_code_object_custom_metadata(void *binary,
              "kernarg segment size metadata lookup in kernel metadata");
       return HSA_STATUS_ERROR_INVALID_CODE_OBJECT;
     }
-
-    // create a map from symbol to name
-    DEBUG_PRINT("Kernel symbol %s; Name: %s; Size: %lu\n", symbolName.c_str(),
-                kernelName.c_str(), kernel_segment_size);
-    KernelNameMap[symbolName] = kernelName;
 
     bool hasHiddenArgs = false;
     if (kernel_segment_size > 0) {
@@ -1027,16 +1028,11 @@ static hsa_status_t populate_InfoTables(hsa_executable_t executable,
              "Symbol info extraction", get_error_string(err));
       return err;
     }
-    name[name_length] = 0;
+    // remove the suffix .kd from symbol name.
+    name[name_length - 3] = 0;
 
-    if (KernelNameMap.find(std::string(name)) == KernelNameMap.end()) {
-      // did not find kernel name in the kernel map; this can happen only
-      // if the ROCr API for getting symbol info (name) is different from
-      // the comgr method of getting symbol info
-      return HSA_STATUS_ERROR;
-    }
     atl_kernel_info_t info;
-    std::string kernelName = KernelNameMap[std::string(name)];
+    std::string kernelName(name);
     // by now, the kernel info table should already have an entry
     // because the non-ROCr custom code object parsing is called before
     // iterating over the code object symbols using ROCr
