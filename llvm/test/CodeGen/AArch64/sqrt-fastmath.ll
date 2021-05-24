@@ -671,5 +671,5 @@ define double @sqrt_simplify_before_recip_4_uses(double %x, double* %p1, double*
   ret double %sqrt_fast
 }
 
-attributes #0 = { "unsafe-fp-math" }
-attributes #1 = { "unsafe-fp-math" "denormal-fp-math"="ieee" }
+attributes #0 = { "unsafe-fp-math"="true" }
+attributes #1 = { "unsafe-fp-math"="true" "denormal-fp-math"="ieee" }

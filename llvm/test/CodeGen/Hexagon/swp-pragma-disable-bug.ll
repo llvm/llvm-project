@@ -40,7 +40,7 @@ for.body6:                                        ; preds = %for.body, %for.body
   br i1 %exitcond, label %for.cond.cleanup5, label %for.body6, !llvm.loop !8
 }
 
-attributes #0 = { nofree norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "min-legal-vector-width"="0" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv60" "target-features"="+v60,-long-calls" "use-soft-float"="false" }
+attributes #0 = { nofree norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv60" "target-features"="+v60,-long-calls" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.module.flags = !{!0}
 !llvm.ident = !{!1}

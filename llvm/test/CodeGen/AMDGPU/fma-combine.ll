@@ -702,4 +702,4 @@ define amdgpu_kernel void @fma_neg_b_c_v4f32(<4 x float> addrspace(1)* %out, <4 
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }
-attributes #2 = { nounwind "no-signed-zeros-fp-math" }
+attributes #2 = { nounwind "no-signed-zeros-fp-math"="true" }

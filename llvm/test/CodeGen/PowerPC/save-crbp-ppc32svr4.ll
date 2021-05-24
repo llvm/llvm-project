@@ -54,4 +54,4 @@ b15:                                              ; preds = %b12, %b10, %b4
   ret i64 %v18
 }
 
-attributes #0 = { norecurse readnone sspstrong "disable-tail-calls"="false" "frame-pointer"="all" "stack-protector-buffer-size"="8" "target-cpu"="ppc" }
+attributes #0 = { norecurse readnone sspstrong "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "stack-protector-buffer-size"="8" "target-cpu"="ppc" }

@@ -31,7 +31,7 @@ declare double @llvm.sqrt.f64(double) #1
 
 declare signext i32 @p_col_helper(...) #2
 
-attributes #0 = { nounwind "no-infs-fp-math" "no-nans-fp-math" "target-cpu"="pwr7" "unsafe-fp-math" }
+attributes #0 = { nounwind "no-infs-fp-math"="true" "no-nans-fp-math"="true" "target-cpu"="pwr7" "unsafe-fp-math"="true" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind }
 

@@ -22,5 +22,5 @@ define amdgpu_kernel void @v_unsafe_fsqrt_f64(double addrspace(1)* %out, double 
 declare double @llvm.sqrt.f64(double %Val) #0
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }
-attributes #2 = { nounwind "unsafe-fp-math" }
+attributes #1 = { nounwind "unsafe-fp-math"="false" }
+attributes #2 = { nounwind "unsafe-fp-math"="true" }

@@ -361,7 +361,7 @@ entry:
   ret i32 %5
 }
 
-attributes #0 = { nounwind "frame-pointer"="none" "use-soft-float"="false" }
+attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !0 = !{!1, !1, i64 0}
 !1 = !{!"any pointer", !2}

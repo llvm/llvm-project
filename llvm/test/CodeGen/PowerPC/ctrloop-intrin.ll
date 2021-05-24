@@ -330,7 +330,7 @@ declare void @llvm.set.loop.iterations.i64(i64) #0
 declare i64 @llvm.loop.dec(i64, i64) #0
 
 attributes #0 = { nounwind }
-attributes #1 = { nounwind "disable-tail-calls"="false" "frame-pointer"="all" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
+attributes #1 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #2 = { nounwind }
 attributes #3 = { nounwind }
 

@@ -70,4 +70,4 @@ define <2 x float> @fake_fneg_splat_extract_undef(<4 x float> %rhs) {
   ret <2 x float> %splat
 }
 
-attributes #0 = { "no-signed-zeros-fp-math" }
+attributes #0 = { "no-signed-zeros-fp-math"="true" }
