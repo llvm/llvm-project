@@ -351,15 +351,6 @@ define i32 @ipccp3() {
 }
 
 define internal i32 @ipccp4ia(i1 %c) {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@ipccp4ia
-; IS__TUNIT____-SAME: () #[[ATTR1]] {
-; IS__TUNIT____-NEXT:    br label [[T:%.*]]
-; IS__TUNIT____:       t:
-; IS__TUNIT____-NEXT:    ret i32 0
-; IS__TUNIT____:       f:
-; IS__TUNIT____-NEXT:    ret i32 1
-;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@ipccp4ia
 ; IS__CGSCC____-SAME: () #[[ATTR1]] {
@@ -376,16 +367,6 @@ f:
   ret i32 1
 }
 define internal i32 @ipccp4ib(i32 %a) {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@ipccp4ib
-; IS__TUNIT____-SAME: () #[[ATTR1]] {
-; IS__TUNIT____-NEXT:    br label [[T:%.*]]
-; IS__TUNIT____:       t:
-; IS__TUNIT____-NEXT:    [[R:%.*]] = call i32 @ipccp4ia() #[[ATTR1]]
-; IS__TUNIT____-NEXT:    ret i32 [[R]]
-; IS__TUNIT____:       f:
-; IS__TUNIT____-NEXT:    unreachable
-;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@ipccp4ib
 ; IS__CGSCC____-SAME: () #[[ATTR1]] {
@@ -413,8 +394,7 @@ define i32 @ipccp4(i1 %c) {
 ; IS__TUNIT____:       t:
 ; IS__TUNIT____-NEXT:    br label [[F]]
 ; IS__TUNIT____:       f:
-; IS__TUNIT____-NEXT:    [[R:%.*]] = call i32 @ipccp4ib() #[[ATTR1]]
-; IS__TUNIT____-NEXT:    ret i32 [[R]]
+; IS__TUNIT____-NEXT:    ret i32 0
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@ipccp4
