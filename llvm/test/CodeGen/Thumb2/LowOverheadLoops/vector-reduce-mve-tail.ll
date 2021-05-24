@@ -30,9 +30,6 @@ entry:
   br i1 %cmp8, label %for.cond.cleanup, label %vector.ph
 
 vector.ph:                                        ; preds = %entry
-  %trip.count.minus.1 = add i32 %N, -1
-  %broadcast.splatinsert11 = insertelement <4 x i32> undef, i32 %trip.count.minus.1, i32 0
-  %broadcast.splat12 = shufflevector <4 x i32> %broadcast.splatinsert11, <4 x i32> undef, <4 x i32> zeroinitializer
   %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
   br label %vector.body
 
@@ -44,13 +41,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %6 = phi i32 [ %start, %vector.ph ], [ %10, %vector.body ]
   %lsr.iv24 = bitcast i32* %lsr.iv2 to <4 x i32>*
   %lsr.iv1 = bitcast i32* %lsr.iv to <4 x i32>*
-  %broadcast.splatinsert = insertelement <4 x i32> undef, i32 %index, i32 0
-  %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
-  %induction = add <4 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3>
-
-  ; %7 = icmp ule <4 x i32> %induction, %broadcast.splat12
   %7 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %N)
-
   %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv24, i32 4, <4 x i1> %7, <4 x i32> undef)
   %wide.masked.load13 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv1, i32 4, <4 x i1> %7, <4 x i32> undef)
   %8 = mul nsw <4 x i32> %wide.masked.load13, %wide.masked.load

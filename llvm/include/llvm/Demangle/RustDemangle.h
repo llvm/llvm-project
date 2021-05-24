@@ -88,6 +88,7 @@ private:
   void demangleImplPath(InType InType);
   void demangleGenericArg();
   void demangleType();
+  void demangleFnSig();
   void demangleConst();
   void demangleConstInt();
   void demangleConstBool();
