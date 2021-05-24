@@ -89,6 +89,7 @@ private:
   bool scalarizeBinopOrCmp(Instruction &I);
   bool foldExtractedCmps(Instruction &I);
   bool foldSingleElementStore(Instruction &I);
+  bool scalarizeLoadExtract(Instruction &I);
 };
 } // namespace
 
@@ -771,6 +772,12 @@ static bool isMemModifiedBetween(BasicBlock::iterator Begin,
   });
 }
 
+/// Check if it is legal to scalarize a memory access to \p VecTy at index \p
+/// Idx. \p Idx must access a valid vector element.
+static bool canScalarizeAccess(FixedVectorType *VecTy, ConstantInt *Idx) {
+  return Idx->getValue().ult(VecTy->getNumElements());
+}
+
 // Combine patterns like:
 //   %0 = load <4 x i32>, <4 x i32>* %a
 //   %1 = insertelement <4 x i32> %0, i32 %b, i32 1
@@ -803,7 +810,7 @@ bool VectorCombine::foldSingleElementStore(Instruction &I) {
     // modified between, vector type matches store size, and index is inbounds.
     if (!Load->isSimple() || Load->getParent() != SI->getParent() ||
         !DL.typeSizeEqualsStoreSize(Load->getType()) ||
-        Idx->uge(VecTy->getNumElements()) ||
+        !canScalarizeAccess(VecTy, Idx) ||
         SrcAddr != SI->getPointerOperand()->stripPointerCasts() ||
         isMemModifiedBetween(Load->getIterator(), SI->getIterator(),
                              MemoryLocation::get(SI), AA))
@@ -823,6 +830,96 @@ bool VectorCombine::foldSingleElementStore(Instruction &I) {
   }
 
   return false;
+}
+
+/// Try to scalarize vector loads feeding extractelement instructions.
+bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
+  Value *Ptr;
+  ConstantInt *Idx;
+  if (!match(&I, m_ExtractElt(m_Load(m_Value(Ptr)), m_ConstantInt(Idx))))
+    return false;
+
+  auto *LI = cast<LoadInst>(I.getOperand(0));
+  const DataLayout &DL = I.getModule()->getDataLayout();
+  if (LI->isVolatile() || !DL.typeSizeEqualsStoreSize(LI->getType()))
+    return false;
+
+  auto *FixedVT = dyn_cast<FixedVectorType>(LI->getType());
+  if (!FixedVT)
+    return false;
+
+  if (!canScalarizeAccess(FixedVT, Idx))
+    return false;
+
+  InstructionCost OriginalCost = TTI.getMemoryOpCost(
+      Instruction::Load, LI->getType(), Align(LI->getAlignment()),
+      LI->getPointerAddressSpace());
+  InstructionCost ScalarizedCost = 0;
+
+  Instruction *LastCheckedInst = LI;
+  unsigned NumInstChecked = 0;
+  // Check if all users of the load are extracts with no memory modifications
+  // between the load and the extract. Compute the cost of both the original
+  // code and the scalarized version.
+  for (User *U : LI->users()) {
+    auto *UI = dyn_cast<ExtractElementInst>(U);
+    if (!UI || UI->getParent() != LI->getParent())
+      return false;
+
+    // Check if any instruction between the load and the extract may modify
+    // memory.
+    if (LastCheckedInst->comesBefore(UI)) {
+      for (Instruction &I :
+           make_range(std::next(LI->getIterator()), UI->getIterator())) {
+        // Bail out if we reached the check limit or the instruction may write
+        // to memory.
+        if (NumInstChecked == MaxInstrsToScan || I.mayWriteToMemory())
+          return false;
+        NumInstChecked++;
+      }
+    }
+
+    if (!LastCheckedInst)
+      LastCheckedInst = UI;
+    else if (LastCheckedInst->comesBefore(UI))
+      LastCheckedInst = UI;
+
+    auto *Index = dyn_cast<ConstantInt>(UI->getOperand(1));
+    OriginalCost +=
+        TTI.getVectorInstrCost(Instruction::ExtractElement, LI->getType(),
+                               Index ? Index->getZExtValue() : -1);
+    ScalarizedCost +=
+        TTI.getMemoryOpCost(Instruction::Load, FixedVT->getElementType(),
+                            Align(1), LI->getPointerAddressSpace());
+    ScalarizedCost += TTI.getAddressComputationCost(FixedVT->getElementType());
+  }
+
+  if (ScalarizedCost >= OriginalCost)
+    return false;
+
+  // Replace extracts with narrow scalar loads.
+  for (User *U : LI->users()) {
+    auto *EI = cast<ExtractElementInst>(U);
+    IRBuilder<>::InsertPointGuard Guard(Builder);
+    Builder.SetInsertPoint(EI);
+    Value *GEP = Builder.CreateInBoundsGEP(
+        FixedVT, Ptr, {Builder.getInt32(0), EI->getOperand(1)});
+    auto *NewLoad = cast<LoadInst>(Builder.CreateLoad(
+        FixedVT->getElementType(), GEP, EI->getName() + ".scalar"));
+
+    // Set the alignment for the new load. For index 0, we can use the original
+    // alignment. Otherwise choose the common alignment of the load's align and
+    // the alignment for the scalar type.
+    auto *ConstIdx = dyn_cast<ConstantInt>(EI->getOperand(1));
+    if (ConstIdx && ConstIdx->isNullValue())
+      NewLoad->setAlignment(LI->getAlign());
+    else
+      NewLoad->setAlignment(commonAlignment(
+          DL.getABITypeAlign(NewLoad->getType()), LI->getAlign()));
+    replaceValue(*EI, *NewLoad);
+  }
+
+  return true;
 }
 
 /// This is the entry point for all transforms. Pass manager differences are
@@ -851,6 +948,7 @@ bool VectorCombine::run() {
       MadeChange |= scalarizeBinopOrCmp(I);
       MadeChange |= foldExtractedCmps(I);
       MadeChange |= foldSingleElementStore(I);
+      MadeChange |= scalarizeLoadExtract(I);
     }
   }
 
