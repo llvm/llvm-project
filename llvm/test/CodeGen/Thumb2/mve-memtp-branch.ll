@@ -117,10 +117,7 @@ define i32 @a(i8 zeroext %b, [3 x i8]* nocapture readonly %c, [3 x i32]* nocaptu
 ; CHECK-NEXT:    add.w r5, r12, r3
 ; CHECK-NEXT:    rsb.w r3, r3, #108
 ; CHECK-NEXT:    add.w r4, r5, #19
-; CHECK-NEXT:    add.w r5, r3, #15
-; CHECK-NEXT:    lsrs r5, r5, #4
-; CHECK-NEXT:    subs.w lr, r5, #0
-; CHECK-NEXT:    beq .LBB0_13
+; CHECK-NEXT:    wlstp.8 lr, r3, .LBB0_13
 ; CHECK-NEXT:    b .LBB0_23
 ; CHECK-NEXT:  .LBB0_13: @ %for.cond
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
@@ -190,12 +187,8 @@ define i32 @a(i8 zeroext %b, [3 x i8]* nocapture readonly %c, [3 x i32]* nocaptu
 ; CHECK-NEXT:    b .LBB0_12
 ; CHECK-NEXT:  .LBB0_23: @ Parent Loop BB0_13 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    vctp.8 r3
-; CHECK-NEXT:    subs r3, #16
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrbt.8 q3, [r4], #16
-; CHECK-NEXT:    subs.w lr, lr, #1
-; CHECK-NEXT:    bne .LBB0_23
+; CHECK-NEXT:    vstrb.8 q3, [r4], #16
+; CHECK-NEXT:    letp lr, .LBB0_23
 ; CHECK-NEXT:    b .LBB0_13
 entry:
   %cmp = icmp ugt i8 %b, 1

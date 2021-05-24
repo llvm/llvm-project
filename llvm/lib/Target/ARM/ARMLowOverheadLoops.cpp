@@ -158,7 +158,7 @@ namespace {
 
       if (auto *Preheader = ML.getLoopPreheader())
         GetPredecessor(Preheader);
-      else if (auto *Preheader = MLI.findLoopPreheader(&ML, true))
+      else if (auto *Preheader = MLI.findLoopPreheader(&ML, true, true))
         GetPredecessor(Preheader);
     }
   };
@@ -386,7 +386,7 @@ namespace {
       MF = ML.getHeader()->getParent();
       if (auto *MBB = ML.getLoopPreheader())
         Preheader = MBB;
-      else if (auto *MBB = MLI.findLoopPreheader(&ML, true))
+      else if (auto *MBB = MLI.findLoopPreheader(&ML, true, true))
         Preheader = MBB;
       VPTState::reset();
     }
@@ -1197,16 +1197,15 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
   for (auto I = ML->begin(), E = ML->end(); I != E; ++I)
     Changed |= ProcessLoop(*I);
 
-  LLVM_DEBUG(dbgs() << "ARM Loops: Processing loop containing:\n";
-             if (auto *Preheader = ML->getLoopPreheader())
-               dbgs() << " - " << Preheader->getName() << "\n";
-             else if (auto *Preheader = MLI->findLoopPreheader(ML))
-               dbgs() << " - " << Preheader->getName() << "\n";
-             else if (auto *Preheader = MLI->findLoopPreheader(ML, true))
-               dbgs() << " - " << Preheader->getName() << "\n";
-             for (auto *MBB : ML->getBlocks())
-               dbgs() << " - " << MBB->getName() << "\n";
-            );
+  LLVM_DEBUG({
+    dbgs() << "ARM Loops: Processing loop containing:\n";
+    if (auto *Preheader = ML->getLoopPreheader())
+      dbgs() << " - Preheader: " << printMBBReference(*Preheader) << "\n";
+    else if (auto *Preheader = MLI->findLoopPreheader(ML, true, true))
+      dbgs() << " - Preheader: " << printMBBReference(*Preheader) << "\n";
+    for (auto *MBB : ML->getBlocks())
+      dbgs() << " - Block: " << printMBBReference(*MBB) << "\n";
+  });
 
   // Search the given block for a loop start instruction. If one isn't found,
   // and there's only one predecessor block, search that one too.
