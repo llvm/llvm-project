@@ -3672,6 +3672,8 @@ private:
   void checkAndInvalidate() {
     if (Set.size() >= MaxPotentialValues)
       indicatePessimisticFixpoint();
+    else
+      reduceUndefValue();
   }
 
   /// If this state contains both undef and not undef, we can reduce
@@ -3688,7 +3690,7 @@ private:
 
   /// Take union with R.
   void unionWith(const PotentialValuesState &R) {
-    /// If this is a full set, do nothing.;
+    /// If this is a full set, do nothing.
     if (!isValidState())
       return;
     /// If R is full set, change L to a full set.
@@ -3699,7 +3701,6 @@ private:
     for (const MemberTy &C : R.Set)
       Set.insert(C);
     UndefIsContained |= R.undefIsContained();
-    reduceUndefValue();
     checkAndInvalidate();
   }
 
