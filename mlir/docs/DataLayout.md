@@ -97,7 +97,7 @@ Extensibility of the data layout modeling is provided through a set of MLIR
 
 ### Data Layout Specifications
 
-Data layout specification is an [attribute](LangRef.md#attributes) that is
+Data layout specification is an [attribute](LangRef.md/#attributes) that is
 conceptually a collection of key-value pairs called data layout specification
 _entries_. Data layout specification attributes implement the
 `DataLayoutSpecInterface`, described below. Each entry is itself an attribute

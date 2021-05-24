@@ -294,7 +294,7 @@ def Tosa_ClampOp : Tosa_Op<"clamp", [NoSideEffect, SameOperandsAndResultType]> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor1Dto4D:$input,
+    Tosa_Tensor:$input,
     I64Attr:$min_int,
     I64Attr:$max_int,
     F32Attr:$min_fp,
@@ -302,7 +302,7 @@ def Tosa_ClampOp : Tosa_Op<"clamp", [NoSideEffect, SameOperandsAndResultType]> {
   );
 
   let results = (outs
-    Tosa_Tensor1Dto4D:$output
+    Tosa_Tensor:$output
   );
 }
 
@@ -317,13 +317,13 @@ def Tosa_ReluNOp : Tosa_Op<"reluN", [NoSideEffect, SameOperandsAndResultType]> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor1Dto4D:$input,
+    Tosa_Tensor:$input,
     I64Attr:$max_int,
     F32Attr:$max_fp
   );
 
   let results = (outs
-    Tosa_Tensor1Dto4D:$output
+    Tosa_Tensor:$output
   );
 }
 
@@ -343,11 +343,11 @@ def Tosa_SigmoidOp : Tosa_Op<"sigmoid", [NoSideEffect,
   }];
 
   let arguments = (ins
-    Tosa_Tensor1Dto4D:$input
+    Tosa_Tensor:$input
   );
 
   let results = (outs
-    Tosa_Tensor1Dto4D:$output
+    Tosa_Tensor:$output
   );
 }
 
@@ -365,11 +365,11 @@ def Tosa_TanhOp : Tosa_Op<"tanh", [NoSideEffect, SameOperandsAndResultType]> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor1Dto4D:$input
+    Tosa_Tensor:$input
   );
 
   let results = (outs
-    Tosa_Tensor1Dto4D:$output
+    Tosa_Tensor:$output
   );
 }
 
@@ -392,12 +392,12 @@ def Tosa_AddOp : Tosa_Op<"add", [ResultsBroadcastableShape, NoSideEffect,
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto4D:$input1,
-    Tosa_TensorUpto4D:$input2
+    Tosa_Tensor:$input1,
+    Tosa_Tensor:$input2
   );
 
   let results = (outs
-    Tosa_TensorUpto4D:$output
+    Tosa_Tensor:$output
   );
 }
 
@@ -416,13 +416,13 @@ def Tosa_ArithmeticRightShiftOp : Tosa_Op<"arithmetic_right_shift",
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto4D:$input1,
-    Tosa_TensorUpto4D:$input2,
+    Tosa_Tensor:$input1,
+    Tosa_Tensor:$input2,
     BoolAttr:$round
   );
 
   let results = (outs
-    Tosa_TensorUpto4D:$output
+    Tosa_Tensor:$output
   );
 }
 
@@ -439,12 +439,12 @@ def Tosa_BitwiseAndOp : Tosa_Op<"bitwise_and", [ResultsBroadcastableShape,
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto4D:$input1,
-    Tosa_TensorUpto4D:$input2
+    Tosa_Tensor:$input1,
+    Tosa_Tensor:$input2
   );
 
   let results = (outs
-    Tosa_TensorUpto4D:$output
+    Tosa_Tensor:$output
   );
 }
 
@@ -461,12 +461,12 @@ def Tosa_BitwiseOrOp : Tosa_Op<"bitwise_or", [ResultsBroadcastableShape,
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto4D:$input1,
-    Tosa_TensorUpto4D:$input2
+    Tosa_Tensor:$input1,
+    Tosa_Tensor:$input2
   );
 
   let results = (outs
-    Tosa_TensorUpto4D:$output
+    Tosa_Tensor:$output
   );
 }
 
@@ -483,12 +483,12 @@ def Tosa_BitwiseXorOp : Tosa_Op<"bitwise_xor", [ResultsBroadcastableShape,
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto4D:$input1,
-    Tosa_TensorUpto4D:$input2
+    Tosa_Tensor:$input1,
+    Tosa_Tensor:$input2
   );
 
   let results = (outs
-    Tosa_TensorUpto4D:$output
+    Tosa_Tensor:$output
   );
 }
 
@@ -505,12 +505,12 @@ def Tosa_DivOp : Tosa_Op<"div", [ResultsBroadcastableShape,
   }];
 
   let arguments = (ins
-    Tosa_Int32TensorUpto4D:$input1,
-    Tosa_Int32TensorUpto4D:$input2
+    Tosa_Int32Tensor:$input1,
+    Tosa_Int32Tensor:$input2
   );
 
   let results = (outs
-    Tosa_Int32TensorUpto4D:$output
+    Tosa_Int32Tensor:$output
   );
 }
 
@@ -550,12 +550,12 @@ def Tosa_LogicalLeftShiftOp : Tosa_Op<"logical_left_shift",
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto4D:$input1,
-    Tosa_TensorUpto4D:$input2
+    Tosa_Tensor:$input1,
+    Tosa_Tensor:$input2
   );
 
   let results = (outs
-    Tosa_TensorUpto4D:$output
+    Tosa_Tensor:$output
   );
 }
 
@@ -574,12 +574,12 @@ def Tosa_LogicalRightShiftOp : Tosa_Op<"logical_right_shift",
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto4D:$input1,
-    Tosa_TensorUpto4D:$input2
+    Tosa_Tensor:$input1,
+    Tosa_Tensor:$input2
   );
 
   let results = (outs
-    Tosa_TensorUpto4D:$output
+    Tosa_Tensor:$output
   );
 }
 
@@ -640,12 +640,12 @@ def Tosa_MaximumOp : Tosa_Op<"maximum", [ResultsBroadcastableShape,
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto4D:$input1,
-    Tosa_TensorUpto4D:$input2
+    Tosa_Tensor:$input1,
+    Tosa_Tensor:$input2
   );
 
   let results = (outs
-    Tosa_TensorUpto4D:$output
+    Tosa_Tensor:$output
   );
 }
 
@@ -662,12 +662,12 @@ def Tosa_MinimumOp : Tosa_Op<"minimum", [ResultsBroadcastableShape,
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto4D:$input1,
-    Tosa_TensorUpto4D:$input2
+    Tosa_Tensor:$input1,
+    Tosa_Tensor:$input2
   );
 
   let results = (outs
-    Tosa_TensorUpto4D:$output
+    Tosa_Tensor:$output
   );
 }
 
@@ -685,13 +685,13 @@ def Tosa_MulOp : Tosa_Op<"mul", [ResultsBroadcastableShape, NoSideEffect,
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto4D:$input1,
-    Tosa_TensorUpto4D:$input2,
+    Tosa_Tensor:$input1,
+    Tosa_Tensor:$input2,
     I32Attr:$shift
   );
 
   let results = (outs
-    Tosa_TensorUpto4D:$output
+    Tosa_Tensor:$output
   );
 }
 
@@ -708,12 +708,12 @@ def Tosa_PowOp : Tosa_Op<"pow", [ResultsBroadcastableShape, NoSideEffect]> {
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto4D:$input1,
-    Tosa_TensorUpto4D:$input2
+    Tosa_Tensor:$input1,
+    Tosa_Tensor:$input2
   );
 
   let results = (outs
-    Tosa_TensorUpto4D:$z
+    Tosa_Tensor:$z
   );
 }
 
@@ -729,12 +729,12 @@ def Tosa_SubOp : Tosa_Op<"sub", [ResultsBroadcastableShape, NoSideEffect]> {
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto4D:$input1,
-    Tosa_TensorUpto4D:$input2
+    Tosa_Tensor:$input1,
+    Tosa_Tensor:$input2
   );
 
   let results = (outs
-    Tosa_TensorUpto4D:$output
+    Tosa_Tensor:$output
   );
 }
 
@@ -762,12 +762,12 @@ def Tosa_TableOp : Tosa_Op<"table", [NoSideEffect]> {
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto4D: $input,
+    Tosa_Tensor: $input,
     Tosa_Tensor1D: $table
   );
 
   let results = (outs
-    Tosa_TensorUpto4D:$output
+    Tosa_Tensor:$output
   );
 
 }
@@ -789,11 +789,11 @@ def Tosa_AbsOp : Tosa_Op<"abs", [NoSideEffect, SameOperandsAndResultType]> {
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto4D:$input1
+    Tosa_Tensor:$input1
   );
 
   let results = (outs
-    Tosa_TensorUpto4D:$output
+    Tosa_Tensor:$output
   );
 }
 
@@ -809,11 +809,11 @@ def Tosa_BitwiseNotOp : Tosa_Op<"bitwise_not", [ResultsBroadcastableShape,
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto4D:$input1
+    Tosa_Tensor:$input1
   );
 
   let results = (outs
-    Tosa_TensorUpto4D:$output
+    Tosa_Tensor:$output
   );
 }
 
@@ -828,11 +828,11 @@ def Tosa_CeilOp : Tosa_Op<"ceil", [NoSideEffect, SameOperandsAndResultType]> {
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto4D:$input1
+    Tosa_Tensor:$input1
   );
 
   let results = (outs
-    Tosa_TensorUpto4D:$output
+    Tosa_Tensor:$output
   );
 }
 
@@ -847,11 +847,11 @@ def Tosa_ClzOp : Tosa_Op<"clz", [NoSideEffect, SameOperandsAndResultType]> {
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto4D:$input1
+    Tosa_Tensor:$input1
   );
 
   let results = (outs
-    Tosa_TensorUpto4D:$output
+    Tosa_Tensor:$output
   );
 }
 
@@ -866,11 +866,11 @@ def Tosa_ExpOp : Tosa_Op<"exp", [NoSideEffect, SameOperandsAndResultType]> {
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto4D:$input1
+    Tosa_Tensor:$input1
   );
 
   let results = (outs
-    Tosa_TensorUpto4D:$output
+    Tosa_Tensor:$output
   );
 }
 
@@ -885,11 +885,11 @@ def Tosa_FloorOp : Tosa_Op<"floor", [NoSideEffect, SameOperandsAndResultType]> {
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto4D:$input1
+    Tosa_Tensor:$input1
   );
 
   let results = (outs
-    Tosa_TensorUpto4D:$output
+    Tosa_Tensor:$output
   );
 }
 
@@ -904,11 +904,11 @@ def Tosa_LogOp : Tosa_Op<"log", [NoSideEffect, SameOperandsAndResultType]> {
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto4D:$input1
+    Tosa_Tensor:$input1
   );
 
   let results = (outs
-    Tosa_TensorUpto4D:$output
+    Tosa_Tensor:$output
   );
 }
 
@@ -944,12 +944,12 @@ def Tosa_NegateOp : Tosa_Op<"negate", [NoSideEffect,
   }];
 
   let arguments = (ins
-      Tosa_TensorUpto4D:$input1,
+      Tosa_Tensor:$input1,
       OptionalAttr<Tosa_UnaryOpQuantizationAttr>:$quantization_info
   );
 
   let results = (outs
-    Tosa_TensorUpto4D:$output
+    Tosa_Tensor:$output
   );
 
   let builders = [Tosa_UnaryOpQuantInfoBuilder];
@@ -968,11 +968,11 @@ def Tosa_ReciprocalOp : Tosa_Op<"reciprocal", [NoSideEffect,
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto4D:$input1
+    Tosa_Tensor:$input1
   );
 
   let results = (outs
-    Tosa_TensorUpto4D:$output
+    Tosa_Tensor:$output
   );
 }
 
@@ -988,11 +988,11 @@ def Tosa_RsqrtOp : Tosa_Op<"rsqrt", [NoSideEffect, SameOperandsAndResultType]> {
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto4D:$input1
+    Tosa_Tensor:$input1
   );
 
   let results = (outs
-    Tosa_TensorUpto4D:$output
+    Tosa_Tensor:$output
   );
 }
 
@@ -1014,12 +1014,12 @@ def Tosa_SelectOp : Tosa_Op<"select", [NoSideEffect]> {
 
   let arguments = (ins
     I1Tensor:$input1,
-    Tosa_TensorUpto4D:$input2,
-    Tosa_TensorUpto4D:$input3
+    Tosa_Tensor:$input2,
+    Tosa_Tensor:$input3
   );
 
   let results = (outs
-    Tosa_TensorUpto4D:$output
+    Tosa_Tensor:$output
   );
 }
 
@@ -1040,8 +1040,8 @@ def Tosa_EqualOp : Tosa_Op<"equal", [ResultsBroadcastableShape, Commutative,
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto4D:$input1,
-    Tosa_TensorUpto4D:$input2
+    Tosa_Tensor:$input1,
+    Tosa_Tensor:$input2
   );
 
   let results = (outs
@@ -1061,8 +1061,8 @@ def Tosa_GreaterOp : Tosa_Op<"greater", [ResultsBroadcastableShape,
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto4D:$input1,
-    Tosa_TensorUpto4D:$input2
+    Tosa_Tensor:$input1,
+    Tosa_Tensor:$input2
   );
 
   let results = (outs
@@ -1082,8 +1082,8 @@ def Tosa_GreaterEqualOp : Tosa_Op<"greater_equal", [ResultsBroadcastableShape,
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto4D:$input1,
-    Tosa_TensorUpto4D:$input2
+    Tosa_Tensor:$input1,
+    Tosa_Tensor:$input2
   );
 
   let results = (outs
@@ -1233,12 +1233,12 @@ def Tosa_ConcatOp : Tosa_Op<"concat", [NoSideEffect]> {
   }];
 
   let arguments = (ins
-    Variadic<Tosa_Tensor1Dto4D>:$input1,
+    Variadic<Tosa_RankedTensor>:$input1,
     I64Attr:$axis
   );
 
   let results = (outs
-    Tosa_Tensor1Dto4D:$output
+    Tosa_RankedTensor:$output
   );
 }
 
@@ -1253,13 +1253,13 @@ def Tosa_PadOp : Tosa_Op<"pad", [NoSideEffect]> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor1Dto4D:$input1,
+    Tosa_RankedTensor:$input1,
     Tosa_Int32Or64Tensor:$padding,
     OptionalAttr<Tosa_PadOpQuantizationAttr>:$quantization_info
   );
 
   let results = (outs
-    Tosa_Tensor1Dto4D:$output
+    Tosa_RankedTensor:$output
   );
 
   let builders = [Tosa_PadOpQuantInfoBuilder];
@@ -1279,12 +1279,12 @@ def Tosa_ReshapeOp: Tosa_Op<"reshape", [
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto6D:$input1,
+    Tosa_Tensor:$input1,
     I64ArrayAttr:$new_shape
   );
 
   let results = (outs
-    Tosa_TensorUpto6D:$output
+    Tosa_RankedTensor:$output
   );
 }
 
@@ -1490,11 +1490,11 @@ def Tosa_CastOp: Tosa_Op<"cast", [NoSideEffect, SameOperandsAndResultShape]> {
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto4D:$input
+    Tosa_Tensor:$input
   );
 
   let results = (outs
-    Tosa_TensorUpto4D:$output
+    Tosa_Tensor:$output
   );
 }
 
@@ -1524,7 +1524,7 @@ def Tosa_RescaleOp: Tosa_Op<"rescale", [NoSideEffect]> {
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto4D:$input,
+    Tosa_Tensor:$input,
     I32Attr:$input_zp,
     I32Attr:$output_zp,
     I32ArrayAttr:$multiplier,
@@ -1535,7 +1535,7 @@ def Tosa_RescaleOp: Tosa_Op<"rescale", [NoSideEffect]> {
   );
 
   let results = (outs
-    Tosa_TensorUpto4D:$output
+    Tosa_Tensor:$output
   );
 }
 
@@ -1561,7 +1561,7 @@ def Tosa_ConstOp : Tosa_Op<"const", [ConstantLike, NoSideEffect,
   );
 
   let results = (outs
-    Tosa_TensorUpto4D:$output
+    Tosa_Tensor:$output
   );
   let hasFolder = 1;
 }
@@ -1577,11 +1577,11 @@ def Tosa_IdentityOp: Tosa_Op<"identity", [NoSideEffect]> {
   }];
 
   let arguments = (ins
-    Tosa_TensorUpto6D:$input1
+    Tosa_Tensor:$input1
   );
 
   let results = (outs
-    Tosa_TensorUpto6D:$output
+    Tosa_Tensor:$output
   );
 }
 
