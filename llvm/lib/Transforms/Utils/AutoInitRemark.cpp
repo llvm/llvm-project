@@ -184,8 +184,8 @@ void AutoInitRemark::inspectVariable(const Value *V,
 
 void AutoInitRemark::inspectDst(Value *Dst, OptimizationRemarkMissed &R) {
   // Find if Dst is a known variable we can give more information on.
-  SmallVector<const Value *, 2> Objects;
-  getUnderlyingObjects(Dst, Objects);
+  SmallVector<Value *, 2> Objects;
+  getUnderlyingObjectsForCodeGen(Dst, Objects);
   SmallVector<VariableInfo, 2> VIs;
   for (const Value *V : Objects)
     inspectVariable(V, VIs);
