@@ -91,15 +91,19 @@ def testTraverseOpRegionBlockIndices():
         for k in range(len(block.operations)):
           child_op = block.operations[k]
           print(f"{indent}    OP {k}: {child_op}")
+          print(f"{indent}    OP {k}: parent {child_op.operation.parent.name}")
           walk_operations(indent + "      ", child_op)
 
   # CHECK: REGION 0:
   # CHECK:   BLOCK 0:
   # CHECK:     OP 0: func
+  # CHECK:     OP 0: parent module
   # CHECK:       REGION 0:
   # CHECK:         BLOCK 0:
   # CHECK:           OP 0: %0 = "custom.addi"
+  # CHECK:           OP 0: parent func
   # CHECK:           OP 1: return
+  # CHECK:           OP 1: parent func
   walk_operations("", module.operation)
 
 run(testTraverseOpRegionBlockIndices)
