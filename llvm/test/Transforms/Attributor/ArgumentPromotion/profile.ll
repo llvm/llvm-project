@@ -11,14 +11,14 @@ define void @caller() #0 {
 ; IS________OPM-LABEL: define {{[^@]+}}@caller() {
 ; IS________OPM-NEXT:    [[X:%.*]] = alloca i32, align 4
 ; IS________OPM-NEXT:    store i32 42, i32* [[X]], align 4
-; IS________OPM-NEXT:    call void @promote_i32_ptr(i32* noalias nocapture noundef nonnull readonly align 4 dereferenceable(4) [[X]]), !prof !0
+; IS________OPM-NEXT:    call void @promote_i32_ptr(i32* noalias nocapture noundef nonnull readonly align 4 dereferenceable(4) [[X]]), !prof [[PROF0:![0-9]+]]
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@caller() {
 ; IS________NPM-NEXT:    [[X:%.*]] = alloca i32, align 4
 ; IS________NPM-NEXT:    store i32 42, i32* [[X]], align 4
 ; IS________NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[X]], align 4
-; IS________NPM-NEXT:    call void @promote_i32_ptr(i32 [[TMP1]]), !prof !0
+; IS________NPM-NEXT:    call void @promote_i32_ptr(i32 [[TMP1]]), !prof [[PROF0:![0-9]+]]
 ; IS________NPM-NEXT:    ret void
 ;
   %x = alloca i32
