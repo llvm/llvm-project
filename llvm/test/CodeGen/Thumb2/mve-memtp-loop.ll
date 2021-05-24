@@ -235,7 +235,6 @@ define void @test11(i8* nocapture %x, i8* nocapture %y, i32 %n) {
 ; CHECK-NEXT:  .LBB10_1: @ %prehead
 ; CHECK-NEXT:    add.w r3, r2, #15
 ; CHECK-NEXT:    mov r12, r1
-; CHECK-NEXT:    bic r3, r3, #16
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    lsr.w lr, r3, #4
 ; CHECK-NEXT:    mov r3, r2
@@ -326,11 +325,11 @@ define void @twoloops(i32* %X, i32 %n, i32 %m) {
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    mov r3, r2
-; CHECK-NEXT:    mov r1, r0
-; CHECK-NEXT:    wlstp.8 lr, r3, .LBB13_2
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r1, r2
+; CHECK-NEXT:    wlstp.8 lr, r1, .LBB13_2
 ; CHECK-NEXT:  .LBB13_1: @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vstrb.8 q0, [r1], #16
+; CHECK-NEXT:    vstrb.8 q0, [r3], #16
 ; CHECK-NEXT:    letp lr, .LBB13_1
 ; CHECK-NEXT:  .LBB13_2: @ %entry
 ; CHECK-NEXT:    wlstp.8 lr, r2, .LBB13_4
