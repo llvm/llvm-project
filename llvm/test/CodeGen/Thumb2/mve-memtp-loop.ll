@@ -240,6 +240,7 @@ define void @test11(i8* nocapture %x, i8* nocapture %y, i32 %n) {
 ; CHECK-NEXT:    mov r3, r2
 ; CHECK-NEXT:    subs.w lr, lr, #0
 ; CHECK-NEXT:    beq .LBB10_3
+; CHECK-NEXT:    b .LBB10_2
 ; CHECK-NEXT:  .LBB10_2: @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.8 r3
 ; CHECK-NEXT:    subs r3, #16
