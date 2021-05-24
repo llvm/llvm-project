@@ -72,14 +72,7 @@ else()
 endif()
 add_definitions(-DMLIR_ROCM_CONVERSIONS_ENABLED=${MLIR_ENABLE_ROCM_CONVERSIONS})
 
-# Until the buildbot configuration is updated, preserve old names.
-if (${MLIR_CUDA_RUNNER_ENABLED})
-  set(MLIR_ENABLE_CUDA_RUNNER_DEFAULT ${MLIR_CUDA_RUNNER_ENABLED})
-else()
-  set(MLIR_ENABLE_CUDA_RUNNER_DEFAULT 0)
-endif()
-
-set(MLIR_ENABLE_CUDA_RUNNER ${MLIR_ENABLE_CUDA_RUNNER_DEFAULT} CACHE BOOL "Enable building the mlir CUDA runner")
+set(MLIR_ENABLE_CUDA_RUNNER 0 CACHE BOOL "Enable building the mlir CUDA runner")
 set(MLIR_ENABLE_ROCM_RUNNER 0 CACHE BOOL "Enable building the mlir ROCm runner")
 set(MLIR_ENABLE_SPIRV_CPU_RUNNER 0 CACHE BOOL "Enable building the mlir SPIR-V cpu runner")
 set(MLIR_ENABLE_VULKAN_RUNNER 0 CACHE BOOL "Enable building the mlir Vulkan runner")
@@ -106,14 +99,7 @@ option(MLIR_INCLUDE_INTEGRATION_TESTS
 # setting -DMLIR_BINDINGS_PYTHON_LOCK_VERSION=OFF
 #-------------------------------------------------------------------------------
 
-# Until the buildbot configuration is updated, support old name.
-if (${MLIR_BINDINGS_PYTHON_ENABLED})
-  set(MLIR_ENABLE_BINDINGS_PYTHON_DEFAULT ${MLIR_BINDINGS_PYTHON_ENABLED})
-else()
-  set(MLIR_ENABLE_BINDINGS_PYTHON_DEFAULT 0)
-endif()
-
-set(MLIR_ENABLE_BINDINGS_PYTHON ${MLIR_ENABLE_BINDINGS_PYTHON_DEFAULT} CACHE BOOL
+set(MLIR_ENABLE_BINDINGS_PYTHON 0 CACHE BOOL
        "Enables building of Python bindings.")
 set(MLIR_BINDINGS_PYTHON_LOCK_VERSION 1 CACHE BOOL
        "Links to specific python libraries, resolving all symbols.")
