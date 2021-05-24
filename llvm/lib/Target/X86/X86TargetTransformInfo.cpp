@@ -507,14 +507,22 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   }
 
   static const CostTblEntry AVX512BWShiftCostTable[] = {
+    { ISD::SHL,   MVT::v16i8,      4 }, // extend/vpsllvw/pack sequence.
+    { ISD::SRL,   MVT::v16i8,      4 }, // extend/vpsrlvw/pack sequence.
+    { ISD::SRA,   MVT::v16i8,      4 }, // extend/vpsravw/pack sequence.
+    { ISD::SHL,   MVT::v32i8,      4 }, // extend/vpsllvw/pack sequence.
+    { ISD::SRL,   MVT::v32i8,      4 }, // extend/vpsrlvw/pack sequence.
+    { ISD::SRA,   MVT::v32i8,      6 }, // extend/vpsravw/pack sequence.
+    { ISD::SHL,   MVT::v64i8,      6 }, // extend/vpsllvw/pack sequence.
+    { ISD::SRL,   MVT::v64i8,      7 }, // extend/vpsrlvw/pack sequence.
+    { ISD::SRA,   MVT::v64i8,     15 }, // extend/vpsravw/pack sequence.
+
     { ISD::SHL,   MVT::v8i16,      1 }, // vpsllvw
     { ISD::SRL,   MVT::v8i16,      1 }, // vpsrlvw
     { ISD::SRA,   MVT::v8i16,      1 }, // vpsravw
-
     { ISD::SHL,   MVT::v16i16,     1 }, // vpsllvw
     { ISD::SRL,   MVT::v16i16,     1 }, // vpsrlvw
     { ISD::SRA,   MVT::v16i16,     1 }, // vpsravw
-
     { ISD::SHL,   MVT::v32i16,     1 }, // vpsllvw
     { ISD::SRL,   MVT::v32i16,     1 }, // vpsrlvw
     { ISD::SRA,   MVT::v32i16,     1 }, // vpsravw
@@ -760,20 +768,26 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   }
 
   static const CostTblEntry AVX2CostTable[] = {
-    { ISD::SHL,  MVT::v32i8,     11 }, // vpblendvb sequence.
-    { ISD::SHL,  MVT::v64i8,     22 }, // 2*vpblendvb sequence.
-    { ISD::SHL,  MVT::v16i16,    10 }, // extend/vpsrlvd/pack sequence.
-    { ISD::SHL,  MVT::v32i16,    20 }, // 2*extend/vpsrlvd/pack sequence.
+    { ISD::SHL,  MVT::v16i8,      6 }, // vpblendvb sequence.
+    { ISD::SHL,  MVT::v32i8,      6 }, // vpblendvb sequence.
+    { ISD::SHL,  MVT::v64i8,     12 }, // 2*vpblendvb sequence.
+    { ISD::SHL,  MVT::v8i16,      5 }, // extend/vpsrlvd/pack sequence.
+    { ISD::SHL,  MVT::v16i16,     7 }, // extend/vpsrlvd/pack sequence.
+    { ISD::SHL,  MVT::v32i16,    14 }, // 2*extend/vpsrlvd/pack sequence.
 
-    { ISD::SRL,  MVT::v32i8,     11 }, // vpblendvb sequence.
-    { ISD::SRL,  MVT::v64i8,     22 }, // 2*vpblendvb sequence.
-    { ISD::SRL,  MVT::v16i16,    10 }, // extend/vpsrlvd/pack sequence.
-    { ISD::SRL,  MVT::v32i16,    20 }, // 2*extend/vpsrlvd/pack sequence.
+    { ISD::SRL,  MVT::v16i8,      6 }, // vpblendvb sequence.
+    { ISD::SRL,  MVT::v32i8,      6 }, // vpblendvb sequence.
+    { ISD::SRL,  MVT::v64i8,     12 }, // 2*vpblendvb sequence.
+    { ISD::SRL,  MVT::v8i16,      5 }, // extend/vpsrlvd/pack sequence.
+    { ISD::SRL,  MVT::v16i16,     7 }, // extend/vpsrlvd/pack sequence.
+    { ISD::SRL,  MVT::v32i16,    14 }, // 2*extend/vpsrlvd/pack sequence.
 
-    { ISD::SRA,  MVT::v32i8,     24 }, // vpblendvb sequence.
-    { ISD::SRA,  MVT::v64i8,     48 }, // 2*vpblendvb sequence.
-    { ISD::SRA,  MVT::v16i16,    10 }, // extend/vpsravd/pack sequence.
-    { ISD::SRA,  MVT::v32i16,    20 }, // 2*extend/vpsravd/pack sequence.
+    { ISD::SRA,  MVT::v16i8,     17 }, // vpblendvb sequence.
+    { ISD::SRA,  MVT::v32i8,     17 }, // vpblendvb sequence.
+    { ISD::SRA,  MVT::v64i8,     34 }, // 2*vpblendvb sequence.
+    { ISD::SRA,  MVT::v8i16,      5 }, // extend/vpsravd/pack sequence.
+    { ISD::SRA,  MVT::v16i16,     7 }, // extend/vpsravd/pack sequence.
+    { ISD::SRA,  MVT::v32i16,    14 }, // 2*extend/vpsravd/pack sequence.
     { ISD::SRA,  MVT::v2i64,      4 }, // srl/xor/sub sequence.
     { ISD::SRA,  MVT::v4i64,      4 }, // srl/xor/sub sequence.
 
