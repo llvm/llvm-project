@@ -19,7 +19,7 @@ class CommandLineExprCompletionTestCase(TestBase):
         self.build()
         self.main_source = "main.cpp"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
-        self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.createTestTarget()
 
         # Try the completion before we have a context to complete on.
         self.assume_no_completions('expr some_expr')
@@ -195,7 +195,7 @@ class CommandLineExprCompletionTestCase(TestBase):
         self.build()
         self.main_source = "main.cpp"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
-        self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.createTestTarget()
 
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
                                           '// Break here', self.main_source_spec)

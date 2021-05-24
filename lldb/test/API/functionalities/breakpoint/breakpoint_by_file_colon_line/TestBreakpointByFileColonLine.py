@@ -16,10 +16,7 @@ class BreakpointByLineAndColumnTestCase(TestBase):
 
     def testBreakpointSpecWithLine(self):
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
+        target = self.createTestTarget()
         
         # This one should work:
         lldbutil.run_break_set_by_file_colon_line(self, "main.c:11", "main.c", 11, num_expected_locations = 1)
@@ -32,10 +29,7 @@ class BreakpointByLineAndColumnTestCase(TestBase):
     @skipIf(compiler="gcc", compiler_version=['<', '7.1'])
     def testBreakpointByLine(self):
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
+        target = self.createTestTarget()
 
         main_c = lldb.SBFileSpec("main.c")
         lldbutil.run_break_set_by_file_colon_line(self, "main.c:11:50", "main.c", 11, num_expected_locations = 1)

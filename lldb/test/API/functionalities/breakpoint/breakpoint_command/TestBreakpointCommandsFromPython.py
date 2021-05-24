@@ -36,11 +36,9 @@ class PythonBreakpointCommandSettingTestCase(TestBase):
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def do_set_python_command_from_python(self):
-        exe = self.getBuildArtifact("a.out")
         error = lldb.SBError()
 
-        self.target = self.dbg.CreateTarget(exe)
-        self.assertTrue(self.target, VALID_TARGET)
+        self.target = self.createTestTarget()
 
         body_bkpt = self.target.BreakpointCreateBySourceRegex(
             "Set break point at this line.", self.main_source_spec)
@@ -144,12 +142,9 @@ class PythonBreakpointCommandSettingTestCase(TestBase):
         self.assertEquals("Not so fancy", side_effect.not_so_fancy)
 
     def do_bad_args_to_python_command(self):
-        exe = self.getBuildArtifact("a.out")
         error = lldb.SBError()
 
-        self.target = self.dbg.CreateTarget(exe)
-        self.assertTrue(self.target, VALID_TARGET)
-
+        self.target = self.createTestTarget()
 
         self.expect("command script import --allow-reload ./bktptcmd.py")
 

@@ -20,7 +20,7 @@ class ExprCommandCallBuiltinFunction(TestBase):
     def test(self):
         self.build()
 
-        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        target = self.createTestTarget()
 
         self.expect_expr("__builtin_isinf(0.0f)", result_type="int", result_value="0")
         self.expect_expr("__builtin_isnormal(0.0f)", result_type="int", result_value="0")
