@@ -22,7 +22,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Utils/AutoInitRemark.h"
+#include "llvm/Transforms/Utils/MemoryOpRemark.h"
 
 using namespace llvm;
 using namespace llvm::ore;
@@ -35,45 +35,13 @@ static void tryEmitAutoInitRemark(ArrayRef<Instruction *> Instructions,
                                   const TargetLibraryInfo &TLI) {
   // For every auto-init annotation generate a separate remark.
   for (Instruction *I : Instructions) {
-    if (!I->hasMetadata(LLVMContext::MD_annotation))
+    if (!AutoInitRemark::canHandle(I))
       continue;
-    for (const MDOperand &Op :
-         I->getMetadata(LLVMContext::MD_annotation)->operands()) {
-      if (cast<MDString>(Op.get())->getString() != "auto-init")
-        continue;
 
-      Function &F = *I->getParent()->getParent();
-      const DataLayout &DL = F.getParent()->getDataLayout();
-      AutoInitRemark Remark(ORE, REMARK_PASS, DL, TLI);
-      // For some of them, we can provide more information:
-
-      // For stores:
-      // * size
-      // * volatile / atomic
-      if (auto *SI = dyn_cast<StoreInst>(I)) {
-        Remark.inspectStore(*SI);
-        continue;
-      }
-
-      // For intrinsics:
-      // * user-friendly name
-      // * size
-      if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-        Remark.inspectIntrinsicCall(*II);
-        continue;
-      }
-
-      // For calls:
-      // * known/unknown function (e.g. the compiler knows bzero, but it doesn't
-      //                                know my_bzero)
-      // * memory operation size
-      if (auto *CI = dyn_cast<CallInst>(I)) {
-        Remark.inspectCall(*CI);
-        continue;
-      }
-
-      Remark.inspectUnknown(*I);
-    }
+    Function &F = *I->getParent()->getParent();
+    const DataLayout &DL = F.getParent()->getDataLayout();
+    AutoInitRemark Remark(ORE, REMARK_PASS, DL, TLI);
+    Remark.visit(I);
   }
 }
 
