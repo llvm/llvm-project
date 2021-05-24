@@ -67,6 +67,7 @@ template <typename Config> static void testSecondaryBasic(void) {
   scudo::ScopedString Str(1024);
   L->getStats(&Str);
   Str.output();
+  L->unmapTestOnly();
 }
 
 struct NoCacheConfig {
@@ -124,6 +125,7 @@ TEST(ScudoSecondaryTest, SecondaryCombinations) {
   scudo::ScopedString Str(1024);
   L->getStats(&Str);
   Str.output();
+  L->unmapTestOnly();
 }
 
 TEST(ScudoSecondaryTest, SecondaryIterate) {
@@ -147,6 +149,7 @@ TEST(ScudoSecondaryTest, SecondaryIterate) {
   scudo::ScopedString Str(1024);
   L->getStats(&Str);
   Str.output();
+  L->unmapTestOnly();
 }
 
 TEST(ScudoSecondaryTest, SecondaryOptions) {
@@ -170,6 +173,7 @@ TEST(ScudoSecondaryTest, SecondaryOptions) {
     EXPECT_TRUE(L->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 20));
     EXPECT_TRUE(L->canCache(1UL << 16));
   }
+  L->unmapTestOnly();
 }
 
 static std::mutex Mutex;
@@ -216,4 +220,5 @@ TEST(ScudoSecondaryTest, SecondaryThreadsRace) {
   scudo::ScopedString Str(1024);
   L->getStats(&Str);
   Str.output();
+  L->unmapTestOnly();
 }
