@@ -106,7 +106,7 @@ add_mlir_library(mlir_async_runtime
 set_property(TARGET mlir_async_runtime PROPERTY CXX_VISIBILITY_PRESET hidden)
 target_compile_definitions(mlir_async_runtime PRIVATE mlir_async_runtime_EXPORTS)
 
-if(MLIR_CUDA_RUNNER_ENABLED)
+if(MLIR_ENABLE_CUDA_RUNNER)
   # Configure CUDA support. Using check_language first allows us to give a
   # custom error message.
   include(CheckLanguage)
@@ -138,7 +138,7 @@ if(MLIR_CUDA_RUNNER_ENABLED)
   )
 endif()
 
-if(MLIR_ROCM_RUNNER_ENABLED)
+if(MLIR_ENABLE_ROCM_RUNNER)
   # Configure ROCm support.
   if (NOT DEFINED ROCM_PATH)
     if (NOT DEFINED ENV{ROCM_PATH})

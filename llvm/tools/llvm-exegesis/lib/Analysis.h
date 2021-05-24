@@ -112,7 +112,6 @@ private:
                     const char *Separator) const;
 
   const InstructionBenchmarkClustering &Clustering_;
-  MCObjectFileInfo ObjectFileInfo_;
   std::unique_ptr<MCContext> Context_;
   std::unique_ptr<MCSubtargetInfo> SubtargetInfo_;
   std::unique_ptr<MCInstrInfo> InstrInfo_;
