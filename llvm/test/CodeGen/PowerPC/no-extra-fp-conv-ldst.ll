@@ -76,5 +76,5 @@ entry:
 ; CHECK: blr
 }
 
-attributes #0 = { nounwind readonly "no-signed-zeros-fp-math"="true" }
+attributes #0 = { nounwind readonly "no-signed-zeros-fp-math" }
 

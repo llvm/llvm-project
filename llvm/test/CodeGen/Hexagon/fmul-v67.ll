@@ -48,5 +48,5 @@ b2:
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind "target-cpu"="hexagonv67" }
-attributes #2 = { nounwind "target-cpu"="hexagonv67" "unsafe-fp-math"="false" }
-attributes #3 = { nounwind "target-cpu"="hexagonv67" "unsafe-fp-math"="true" }
+attributes #2 = { nounwind "target-cpu"="hexagonv67" }
+attributes #3 = { nounwind "target-cpu"="hexagonv67" "unsafe-fp-math" }

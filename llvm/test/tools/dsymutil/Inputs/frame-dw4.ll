@@ -34,9 +34,9 @@ entry:
   ret i32 %call, !dbg !26
 }
 
-attributes #0 = { nounwind ssp "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="yonah" "target-features"="+cx16,+sse,+sse2,+sse3" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind ssp "frame-pointer"="all" "stack-protector-buffer-size"="8" "target-cpu"="yonah" "target-features"="+cx16,+sse,+sse2,+sse3" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
-attributes #2 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="yonah" "target-features"="+cx16,+sse,+sse2,+sse3" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #2 = { "frame-pointer"="all" "stack-protector-buffer-size"="8" "target-cpu"="yonah" "target-features"="+cx16,+sse,+sse2,+sse3" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!9, !10, !11}

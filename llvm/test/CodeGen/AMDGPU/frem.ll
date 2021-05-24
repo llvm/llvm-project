@@ -2873,5 +2873,5 @@ define amdgpu_kernel void @frem_v2f64(<2 x double> addrspace(1)* %out, <2 x doub
    ret void
 }
 
-attributes #0 = { nounwind "unsafe-fp-math"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #1 = { nounwind "unsafe-fp-math"="true" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #1 = { nounwind "unsafe-fp-math" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }

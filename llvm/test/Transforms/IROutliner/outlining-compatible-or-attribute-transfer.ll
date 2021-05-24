@@ -53,7 +53,7 @@ entry:
   ret void
 }
 
-attributes #0 = { "no-jump-tables"="true" "profile-sample-accurate"="true" "speculative_load_hardening" "noimplicitfloat"="true" "use-sample-profile"="true"}
+attributes #0 = { "no-jump-tables" "profile-sample-accurate" "speculative_load_hardening" "noimplicitfloat"="true" "use-sample-profile"}
 
 ; CHECK: define internal void @outlined_ir_func_0(i32* [[ARG0:%.*]], i32* [[ARG1:%.*]], i32* [[ARG2:%.*]]) [[ATTR:#[0-9]+]] {
 ; CHECK: entry_to_outline:
@@ -64,4 +64,4 @@ attributes #0 = { "no-jump-tables"="true" "profile-sample-accurate"="true" "spec
 ; CHECK-NEXT:    [[BL:%.*]] = load i32, i32* [[ARG1]], align 4
 ; CHECK-NEXT:    [[CL:%.*]] = load i32, i32* [[ARG2]], align 4
 
-; CHECK: attributes [[ATTR]] = { minsize optsize "no-jump-tables"="true" "noimplicitfloat"="true" "profile-sample-accurate"="true" "speculative_load_hardening" "use-sample-profile"="true" }
+; CHECK: attributes [[ATTR]] = { minsize optsize "no-jump-tables" "noimplicitfloat"="true" "profile-sample-accurate" "speculative_load_hardening" "use-sample-profile" }

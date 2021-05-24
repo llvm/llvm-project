@@ -5932,5 +5932,5 @@ define void @PR43609(double* nocapture %x, <2 x i64> %y) #0 {
   ret void
 }
 
-attributes #0 = { "unsafe-fp-math"="true" }
+attributes #0 = { "unsafe-fp-math" }
 

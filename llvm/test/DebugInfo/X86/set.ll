@@ -60,7 +60,7 @@ if_1:                                             ; preds = %else_1, %second
   ret i8* bitcast (%M_Main_struct* @M_Main to i8*), !dbg !36
 }
 
-attributes #0 = { uwtable "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { uwtable "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "use-soft-float"="false" }
 attributes #1 = { nofree nosync nounwind readnone speculatable willreturn }
 
 !llvm.ident = !{!0}

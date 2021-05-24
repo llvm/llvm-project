@@ -18,4 +18,4 @@ entry:
   ret void
 }
 
-attributes #0 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "target-cpu"="tahiti" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "disable-tail-calls"="false" "frame-pointer"="none" "no-realign-stack" "stack-protector-buffer-size"="8" "target-cpu"="tahiti" "use-soft-float"="false" }

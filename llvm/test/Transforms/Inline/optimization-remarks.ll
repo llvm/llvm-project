@@ -81,9 +81,9 @@ entry:
   ret i32 %add
 }
 
-attributes #0 = { alwaysinline nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { noinline nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { alwaysinline nounwind uwtable "frame-pointer"="all" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
+attributes #1 = { noinline nounwind uwtable "frame-pointer"="all" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
+attributes #2 = { nounwind uwtable "frame-pointer"="all" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}
 

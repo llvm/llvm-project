@@ -1143,4 +1143,4 @@ if.end:
   ret double %theta.0
 }
 
-attributes #0 = { nounwind readnone "no-nans-fp-math"="true" }
+attributes #0 = { nounwind readnone "no-nans-fp-math" }

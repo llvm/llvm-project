@@ -14,4 +14,4 @@ entry:
   ret i32 42
 }
 
-attributes #0 = { minsize norecurse nounwind optsize readnone "no-trapping-math"="true" "denormal-fp-math"="ieee"}
+attributes #0 = { minsize norecurse nounwind optsize readnone "no-trapping-math" "denormal-fp-math"="ieee"}

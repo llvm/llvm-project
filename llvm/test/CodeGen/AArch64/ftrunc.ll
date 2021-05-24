@@ -41,5 +41,5 @@ define double @trunc_signed_f64(double %x) #0 {
   ret double %r
 }
 
-attributes #0 = { "no-signed-zeros-fp-math"="true" }
+attributes #0 = { "no-signed-zeros-fp-math" }
 
