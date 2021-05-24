@@ -168,8 +168,6 @@ INSTANTIATE_TEST_SUITE_P(
                          ARM::AEK_NONE | ARM::AEK_DSP, "6"),
         ARMCPUTestParams("arm1136jf-s", "armv6", "vfpv2",
                          ARM::AEK_NONE | ARM::AEK_DSP, "6"),
-        ARMCPUTestParams("arm1136jz-s", "armv6", "none",
-                         ARM::AEK_NONE | ARM::AEK_DSP, "6"),
         ARMCPUTestParams("arm1176jz-s", "armv6kz", "none",
                          ARM::AEK_NONE | ARM::AEK_SEC | ARM::AEK_DSP, "6KZ"),
         ARMCPUTestParams("mpcore", "armv6k", "vfpv2",
@@ -391,7 +389,7 @@ INSTANTIATE_TEST_SUITE_P(
                          ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                          "7-S")));
 
-static constexpr unsigned NumARMCPUArchs = 92;
+static constexpr unsigned NumARMCPUArchs = 91;
 
 TEST(TargetParserTest, testARMCPUArchList) {
   SmallVector<StringRef, NumARMCPUArchs> List;
