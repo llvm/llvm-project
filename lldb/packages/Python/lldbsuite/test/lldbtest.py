@@ -2654,6 +2654,31 @@ FileCheck output:
             self.fail(self._formatMessage(msg,
                 "'{}' is not success".format(error)))
 
+    def createTestTarget(self, file_path=None, msg=None):
+        """
+        Creates a target from the file found at the given file path.
+        Asserts that the resulting target is valid.
+        :param file_path: The file path that should be used to create the target.
+                          The default argument opens the current default test
+                          executable in the current test directory.
+        :param msg: A custom error message.
+        """
+        if file_path is None:
+            file_path = self.getBuildArtifact("a.out")
+        error = lldb.SBError()
+        triple = ""
+        platform = ""
+        load_dependent_modules = True
+        target = self.dbg.CreateTarget(file_path, triple, platform,
+                                       load_dependent_modules, error)
+        if error.Fail():
+            err = "Couldn't create target for path '{}': {}".format(file_path,
+                                                                    str(error))
+            self.fail(self._formatMessage(msg, err))
+
+        self.assertTrue(target.IsValid(), "Got invalid target without error")
+        return target
+
     # =================================================
     # Misc. helper methods for debugging test execution
     # =================================================

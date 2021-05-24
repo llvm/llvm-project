@@ -270,9 +270,7 @@ class BreakpointCommandTestCase(TestBase):
 
     def breakpoint_commands_on_creation(self):
         """Test that setting breakpoint commands when creating the breakpoint works"""
-        exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target.IsValid(), "Created an invalid target.")
+        target = self.createTestTarget()
 
         # Add a breakpoint.
         lldbutil.run_break_set_by_file_and_line(
@@ -291,9 +289,7 @@ class BreakpointCommandTestCase(TestBase):
     def test_breakpoint_delete_disabled(self):
         """Test 'break delete --disabled' works"""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target.IsValid(), "Created an invalid target.")
+        target = self.createTestTarget()
 
         bp_1 = target.BreakpointCreateByName("main")
         bp_2 = target.BreakpointCreateByName("not_here")

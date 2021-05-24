@@ -1,9 +1,10 @@
 #include <stdio.h>
 
+int test_var = 10;
+
 int
 main()
 {
-  int test_var = 10;
   printf ("Set a breakpoint here: %d.\n", test_var);
   //% test_var = self.frame().FindVariable("test_var")
   //% test_value = test_var.GetValueAsUnsigned()
