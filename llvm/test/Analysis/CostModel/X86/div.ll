@@ -785,11 +785,11 @@ define i32 @sdiv_constpow2() {
 ;
 ; AVX2-LABEL: 'sdiv_constpow2'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I64 = sdiv i64 undef, 16
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2i64 = sdiv <2 x i64> undef, <i64 8, i64 16>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V2i64 = sdiv <2 x i64> undef, <i64 8, i64 16>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V4i64 = sdiv <4 x i64> undef, <i64 2, i64 4, i64 8, i64 16>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %V8i64 = sdiv <8 x i64> undef, <i64 2, i64 4, i64 8, i64 16, i64 32, i64 64, i64 128, i64 256>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I32 = sdiv i32 undef, 16
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4i32 = sdiv <4 x i32> undef, <i32 2, i32 4, i32 8, i32 16>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4i32 = sdiv <4 x i32> undef, <i32 2, i32 4, i32 8, i32 16>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8i32 = sdiv <8 x i32> undef, <i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V16i32 = sdiv <16 x i32> undef, <i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256, i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I16 = sdiv i16 undef, 16
@@ -980,11 +980,11 @@ define i32 @udiv_constpow2() {
 ;
 ; AVX2-LABEL: 'udiv_constpow2'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = udiv i64 undef, 16
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i64 = udiv <2 x i64> undef, <i64 8, i64 16>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2i64 = udiv <2 x i64> undef, <i64 8, i64 16>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4i64 = udiv <4 x i64> undef, <i64 2, i64 4, i64 8, i64 16>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8i64 = udiv <8 x i64> undef, <i64 2, i64 4, i64 8, i64 16, i64 32, i64 64, i64 128, i64 256>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = udiv i32 undef, 16
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i32 = udiv <4 x i32> undef, <i32 2, i32 4, i32 8, i32 16>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4i32 = udiv <4 x i32> undef, <i32 2, i32 4, i32 8, i32 16>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8i32 = udiv <8 x i32> undef, <i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16i32 = udiv <16 x i32> undef, <i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256, i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = udiv i16 undef, 16
