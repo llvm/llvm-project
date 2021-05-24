@@ -47,4 +47,4 @@ define float @not_fmaxnm_maybe_nan(i32 %i1, i32 %i2) #0 {
   ret float %val
 }
 
-attributes #0 = { "no-signed-zeros-fp-math" }
+attributes #0 = { "no-signed-zeros-fp-math"="true" }

@@ -391,7 +391,7 @@ for.end:
   ret i32 %mul
 }
 
-attributes #0 = { "no-nans-fp-math" "no-signed-zeros-fp-math" }
+attributes #0 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" }
 
 !0 = distinct !{!0, !1, !2, !3, !4}
 !1 = !{!"llvm.loop.vectorize.width", i32 8}

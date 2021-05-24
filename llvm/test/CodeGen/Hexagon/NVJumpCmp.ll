@@ -75,7 +75,7 @@ if.else:                                          ; preds = %entry
   unreachable
 }
 
-attributes #0 = { nounwind "disable-tail-calls"="false" "frame-pointer"="all" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
+attributes #0 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.module.flags = !{!0}
 

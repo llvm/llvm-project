@@ -82,5 +82,5 @@ define <2 x double> @nabsv2d64(<2 x double> %a) {
   ret <2 x double> %conv1
 }
 
-attributes #0 = { "no-nans-fp-math" }
+attributes #0 = { "no-nans-fp-math"="true" }
 

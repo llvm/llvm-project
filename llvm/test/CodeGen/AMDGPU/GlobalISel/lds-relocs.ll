@@ -24,5 +24,5 @@ main_body:
   ret float %r
 }
 
-attributes #0 = { "no-signed-zeros-fp-math" }
+attributes #0 = { "no-signed-zeros-fp-math"="true" }
 attributes #4 = { convergent nounwind readnone }

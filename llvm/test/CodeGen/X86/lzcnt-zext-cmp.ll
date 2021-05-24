@@ -317,7 +317,7 @@ entry:
 }
 
 ; PR31902 Fix a crash in combineOrCmpEqZeroToCtlzSrl under fast math.
-define i32 @test_zext_cmp11(double %a, double %b) "no-nans-fp-math" {
+define i32 @test_zext_cmp11(double %a, double %b) "no-nans-fp-math"="true" {
 ;
 ; ALL-LABEL: test_zext_cmp11:
 ; ALL:       # %bb.0: # %entry

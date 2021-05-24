@@ -233,4 +233,4 @@ define i32 @inf_loop_partial_undef(<2 x i1> %a, <2 x i1> %b, <2 x i32> %x, <2 x 
   ret i32 %t11
 }
 
-attributes #0 = { nounwind ssp uwtable "frame-pointer"="all" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
+attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

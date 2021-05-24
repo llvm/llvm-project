@@ -150,8 +150,8 @@ define amdgpu_kernel void @div_arcp_neg_k_x_pat_f32(float addrspace(1)* %out) #0
 declare float @llvm.fabs.f32(float) #1
 declare float @llvm.sqrt.f32(float) #1
 
-attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #0 = { nounwind "unsafe-fp-math"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "unsafe-fp-math" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #2 = { nounwind "unsafe-fp-math"="true" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 
 !0 = !{float 2.500000e+00}

@@ -23,7 +23,7 @@ entry:
 }
 
 ; CHECK-LABEL: unsafe_math_off:
-define double @unsafe_math_off(double %a, double %y, double %z) {
+define double @unsafe_math_off(double %a, double %y, double %z) #0 #2 {
 entry:
 ; SAFE-NOT:   fsel
 ; UNSAFE-NOT: fsel
@@ -42,7 +42,7 @@ define double @default1(double %a, double %y, double %z) {
 }
 
 ; CHECK-LABEL: unsafe_math_on:
-define double @unsafe_math_on(double %a, double %y, double %z) #1 {
+define double @unsafe_math_on(double %a, double %y, double %z) #1 #3 {
 entry:
 ; SAFE-NOT:   fsel
 ; UNSAFE-NOT: fsel
@@ -60,4 +60,8 @@ define double @default2(double %a, double %y, double %z) {
   ret double %z.y
 }
 
-attributes #1 = { "no-infs-fp-math" }
+attributes #0 = { "no-infs-fp-math"="false" }
+attributes #1 = { "no-nans-fp-math"="false" }
+
+attributes #2 = { "no-infs-fp-math"="false" }
+attributes #3 = { "no-infs-fp-math"="true" }

@@ -159,4 +159,4 @@ define amdgpu_kernel void @div_fast_neg_k_x_pat_f64(double addrspace(1)* %out) #
 }
 
 attributes #0 = { nounwind }
-attributes #1 = { nounwind "unsafe-fp-math" }
+attributes #1 = { nounwind "unsafe-fp-math"="true" }

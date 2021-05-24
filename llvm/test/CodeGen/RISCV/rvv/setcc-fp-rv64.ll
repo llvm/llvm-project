@@ -2591,4 +2591,4 @@ define <vscale x 8 x i1> @fcmp_uno_vf_nxv8f64_nonans(<vscale x 8 x double> %va, 
   ret <vscale x 8 x i1> %vc
 }
 
-attributes #0 = { "no-nans-fp-math" }
+attributes #0 = { "no-nans-fp-math"="true" }
