@@ -180,11 +180,10 @@ class ProcessLaunchTestCase(TestBase):
         d = {'CXX_SOURCES': source}
         self.build(dictionary=d)
         self.setTearDownCleanup(d)
-        exe = self.getBuildArtifact("a.out")
 
         evil_var = 'INIT*MIDDLE}TAIL'
 
-        target = self.dbg.CreateTarget(exe)
+        target = self.createTestTarget()
         main_source_spec = lldb.SBFileSpec(source)
         breakpoint = target.BreakpointCreateBySourceRegex(
             '// Set breakpoint here.', main_source_spec)

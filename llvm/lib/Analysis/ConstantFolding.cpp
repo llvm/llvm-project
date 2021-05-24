@@ -1715,7 +1715,7 @@ Constant *constantFoldVectorReduce(Intrinsic::ID IID, Constant *Op) {
     return ConstantInt::get(VT->getElementType(), 0);
 
   // This is the same as the underlying binops - poison propagates.
-  if (isa<PoisonValue>(Op))
+  if (isa<PoisonValue>(Op) || Op->containsPoisonElement())
     return PoisonValue::get(VT->getElementType());
 
   // TODO: Handle undef.

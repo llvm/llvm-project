@@ -446,6 +446,9 @@ void ClangTidyDiagnosticConsumer::HandleDiagnostic(
       case DiagnosticsEngine::Warning:
         CheckName = "clang-diagnostic-warning";
         break;
+      case DiagnosticsEngine::Remark:
+        CheckName = "clang-diagnostic-remark";
+        break;
       default:
         CheckName = "clang-diagnostic-unknown";
         break;
@@ -460,7 +463,10 @@ void ClangTidyDiagnosticConsumer::HandleDiagnostic(
       Level = ClangTidyError::Error;
       LastErrorRelatesToUserCode = true;
       LastErrorPassesLineFilter = true;
+    } else if (DiagLevel == DiagnosticsEngine::Remark) {
+      Level = ClangTidyError::Remark;
     }
+
     bool IsWarningAsError = DiagLevel == DiagnosticsEngine::Warning &&
                             Context.treatAsError(CheckName);
     Errors.emplace_back(CheckName, Level, Context.getCurrentBuildDirectory(),
