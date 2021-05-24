@@ -2,13 +2,13 @@
 
 [TOC]
 
-With [Regions](LangRef.md#regions), the multi-level aspect of MLIR is structural
+With [Regions](LangRef.md/#regions), the multi-level aspect of MLIR is structural
 in the IR. A lot of infrastructure within the compiler is built around this
 nesting structure; including the processing of operations within the
-[pass manager](PassManagement.md#pass-manager). One advantage of the MLIR design
+[pass manager](PassManagement.md/#pass-manager). One advantage of the MLIR design
 is that it is able to process operations in parallel, utilizing multiple
 threads. This is possible due to a property of the IR known as
-[`IsolatedFromAbove`](Traits.md#isolatedfromabove).
+[`IsolatedFromAbove`](Traits.md/#isolatedfromabove).
 
 Without this property, any operation could affect or mutate the use-list of
 operations defined above. Making this thread-safe requires expensive locking in
@@ -31,9 +31,9 @@ defines a [`SymbolTable`](#symbol-table). The name of a symbol *must* be unique
 within the parent `SymbolTable`. This name is semantically similarly to an SSA
 result value, and may be referred to by other operations to provide a symbolic
 link, or use, to the symbol. An example of a `Symbol` operation is
-[`func`](LangRef.md#functions). `func` defines a symbol name, which is
+[`func`](Dialects/Builtin.md/#func-mlirfuncop). `func` defines a symbol name, which is
 [referred to](#referencing-a-symbol) by operations like
-[`std.call`](Dialects/Standard.md#call).
+[`std.call`](Dialects/Standard.md/#stdcall-callop).
 
 ### Defining or declaring a Symbol
 
@@ -67,7 +67,7 @@ Operations defining a `SymbolTable` must use the `OpTrait::SymbolTable` trait.
 ### Referencing a Symbol
 
 `Symbol`s are referenced symbolically by name via the
-[`SymbolRefAttr`](LangRef.md#symbol-reference-attribute) attribute. A symbol
+[`SymbolRefAttr`](Dialects/Builtin.md/#symbolrefattr) attribute. A symbol
 reference attribute contains a named reference to an operation that is nested
 within a symbol table. It may optionally contain a set of nested references that
 further resolve to a symbol nested within a different symbol table. When
@@ -118,8 +118,8 @@ module @module_symbol {
 Using an attribute, as opposed to an SSA value, has several benefits:
 
 *   References may appear in more places than the operand list; including
-    [nested attribute dictionaries](LangRef.md#dictionary-attribute),
-    [array attributes](LangRef.md#array-attribute), etc.
+    [nested attribute dictionaries](Dialects/Builtin.md/dictionaryattr),
+    [array attributes](Dialects/Builtin.md/#arrayattr), etc.
 
 *   Handling of SSA dominance remains unchanged.
 
@@ -138,11 +138,11 @@ different trade offs depending on the situation. A function call may directly
 use a `SymbolRef` as the callee, whereas a reference to a global variable might
 use a materialization operation so that the variable can be used in other
 operations like `std.addi`.
-[`llvm.mlir.addressof`](Dialects/LLVM.md#llvmmliraddressof) is one example of
+[`llvm.mlir.addressof`](Dialects/LLVM.md/#llvmmliraddressof-mlirllvmaddressofop) is one example of
 such an operation.
 
 See the `LangRef` definition of the
-[`SymbolRefAttr`](LangRef.md#symbol-reference-attribute) for more information
+[`SymbolRefAttr`](Dialects/Builtin.md/#symbolrefattr) for more information
 about the structure of this attribute.
 
 Operations that reference a `Symbol` and want to perform verification and

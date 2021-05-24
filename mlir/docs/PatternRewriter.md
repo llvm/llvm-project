@@ -310,4 +310,4 @@ initial worklist with a postorder traversal of the region tree.  This may
 match larger patterns with ambiguous pattern sets.
 
 Note: This driver is the one used by the [canonicalization](Canonicalization.md)
-[pass](Passes.md#-canonicalize-canonicalize-operations) in MLIR.
+[pass](Passes.md/#-canonicalize-canonicalize-operations) in MLIR.
