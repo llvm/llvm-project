@@ -106,7 +106,7 @@ defining operation rewrites.
 The `fold` mechanism is an intentionally limited, but powerful mechanism that
 allows for applying canonicalizations in many places throughout the compiler.
 For example, outside of the canonicalizer pass, `fold` is used within the
-[dialect conversion infrastructure](#DialectConversion.md) as a legalization
+[dialect conversion infrastructure](DialectConversion.md) as a legalization
 mechanism, and can be invoked directly anywhere with an `OpBuilder` via
 `OpBuilder::createOrFold`.
 

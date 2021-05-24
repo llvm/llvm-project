@@ -38,7 +38,7 @@ of:
 1. Buffer optimizations such as `buffer-hoisting`, `buffer-loop-hoisting`, and
    `promote-buffers-to-stack`, which do optimizations that are only exposed
    after bufferization.
-1. Finally, running the [buffer deallocation](BufferDeallocation.md) pass.
+1. Finally, running the [buffer deallocation](BufferDeallocationInternals.md) pass.
 
 After buffer deallocation has been completed, the program will be quite
 difficult to transform due to the presence of the deallocation ops. Thus, other
