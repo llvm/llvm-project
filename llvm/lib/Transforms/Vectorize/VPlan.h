@@ -729,6 +729,17 @@ public:
     return getVPDefID() == VPWidenIntOrFpInductionSC || getVPDefID() == VPWidenPHISC ||
       getVPDefID() == VPPredInstPHISC || getVPDefID() == VPWidenCanonicalIVSC;
   }
+
+  /// Returns true if the recipe may read from memory.
+  bool mayReadFromMemory() const;
+
+  /// Returns true if the recipe may write to memory.
+  bool mayWriteToMemory() const;
+
+  /// Returns true if the recipe may read from or write to memory.
+  bool mayReadOrWriteMemory() const {
+    return mayReadFromMemory() || mayWriteToMemory();
+  }
 };
 
 inline bool VPUser::classof(const VPDef *Def) {
