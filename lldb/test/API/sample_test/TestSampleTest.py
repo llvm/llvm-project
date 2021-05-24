@@ -50,4 +50,4 @@ class RenameThisSampleTestTestCase(TestBase):
         """ Same as above but doesn't launch a process."""
 
         target = self.createTestTarget()
-        self.expect_expr("test_var", result_value="10")
+        self.expect_expr("global_test_var", result_value="10")
