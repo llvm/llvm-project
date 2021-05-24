@@ -259,6 +259,8 @@ def AArch64ptest     : SDNode<"AArch64ISD::PTEST", SDT_AArch64PTest>;
 def SDT_AArch64DUP_PRED  : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0, 3>, SDTCisVec<1>, SDTCVecEltisVT<1,i1>]>;
 def AArch64dup_mt : SDNode<"AArch64ISD::DUP_MERGE_PASSTHRU", SDT_AArch64DUP_PRED>;
 
+def AArch64splice : SDNode<"AArch64ISD::SPLICE", SDT_AArch64Arith>;
+
 def step_vector_oneuse : PatFrag<(ops node:$idx),
                                   (step_vector node:$idx), [{
   return N->hasOneUse();
@@ -611,7 +613,7 @@ let Predicates = [HasSVE] in {
   // Select elements from either vector (predicated)
   defm SEL_ZPZZ   : sve_int_sel_vvv<"sel", vselect>;
 
-  defm SPLICE_ZPZ : sve_int_perm_splice<"splice", int_aarch64_sve_splice>;
+  defm SPLICE_ZPZ : sve_int_perm_splice<"splice", AArch64splice>;
 
   defm COMPACT_ZPZ : sve_int_perm_compact<"compact", int_aarch64_sve_compact>;
   defm INSR_ZR : sve_int_perm_insrs<"insr", AArch64insr>;
