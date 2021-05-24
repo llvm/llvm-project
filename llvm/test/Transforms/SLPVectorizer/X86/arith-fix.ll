@@ -282,83 +282,16 @@ define void @smul_v16i32() {
 ; SLM-NEXT:    store i32 [[R15]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 15), align 4
 ; SLM-NEXT:    ret void
 ;
-; AVX1-LABEL: @smul_v16i32(
-; AVX1-NEXT:    [[A0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 0), align 4
-; AVX1-NEXT:    [[A1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 1), align 4
-; AVX1-NEXT:    [[A2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 2), align 4
-; AVX1-NEXT:    [[A3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 3), align 4
-; AVX1-NEXT:    [[A4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4), align 4
-; AVX1-NEXT:    [[A5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 5), align 4
-; AVX1-NEXT:    [[A6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 6), align 4
-; AVX1-NEXT:    [[A7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 7), align 4
-; AVX1-NEXT:    [[A8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8), align 4
-; AVX1-NEXT:    [[A9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 9), align 4
-; AVX1-NEXT:    [[A10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 10), align 4
-; AVX1-NEXT:    [[A11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 11), align 4
-; AVX1-NEXT:    [[A12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12), align 4
-; AVX1-NEXT:    [[A13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 13), align 4
-; AVX1-NEXT:    [[A14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 14), align 4
-; AVX1-NEXT:    [[A15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 15), align 4
-; AVX1-NEXT:    [[B0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 0), align 4
-; AVX1-NEXT:    [[B1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 1), align 4
-; AVX1-NEXT:    [[B2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 2), align 4
-; AVX1-NEXT:    [[B3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 3), align 4
-; AVX1-NEXT:    [[B4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 4), align 4
-; AVX1-NEXT:    [[B5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 5), align 4
-; AVX1-NEXT:    [[B6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 6), align 4
-; AVX1-NEXT:    [[B7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 7), align 4
-; AVX1-NEXT:    [[B8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 8), align 4
-; AVX1-NEXT:    [[B9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 9), align 4
-; AVX1-NEXT:    [[B10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 10), align 4
-; AVX1-NEXT:    [[B11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 11), align 4
-; AVX1-NEXT:    [[B12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 12), align 4
-; AVX1-NEXT:    [[B13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 13), align 4
-; AVX1-NEXT:    [[B14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 14), align 4
-; AVX1-NEXT:    [[B15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 15), align 4
-; AVX1-NEXT:    [[R0:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A0]], i32 [[B0]], i32 3)
-; AVX1-NEXT:    [[R1:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A1]], i32 [[B1]], i32 3)
-; AVX1-NEXT:    [[R2:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A2]], i32 [[B2]], i32 3)
-; AVX1-NEXT:    [[R3:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A3]], i32 [[B3]], i32 3)
-; AVX1-NEXT:    [[R4:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A4]], i32 [[B4]], i32 3)
-; AVX1-NEXT:    [[R5:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A5]], i32 [[B5]], i32 3)
-; AVX1-NEXT:    [[R6:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A6]], i32 [[B6]], i32 3)
-; AVX1-NEXT:    [[R7:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A7]], i32 [[B7]], i32 3)
-; AVX1-NEXT:    [[R8:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A8]], i32 [[B8]], i32 3)
-; AVX1-NEXT:    [[R9:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A9]], i32 [[B9]], i32 3)
-; AVX1-NEXT:    [[R10:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A10]], i32 [[B10]], i32 3)
-; AVX1-NEXT:    [[R11:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A11]], i32 [[B11]], i32 3)
-; AVX1-NEXT:    [[R12:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A12]], i32 [[B12]], i32 3)
-; AVX1-NEXT:    [[R13:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A13]], i32 [[B13]], i32 3)
-; AVX1-NEXT:    [[R14:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A14]], i32 [[B14]], i32 3)
-; AVX1-NEXT:    [[R15:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A15]], i32 [[B15]], i32 3)
-; AVX1-NEXT:    store i32 [[R0]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 0), align 4
-; AVX1-NEXT:    store i32 [[R1]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 1), align 4
-; AVX1-NEXT:    store i32 [[R2]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 2), align 4
-; AVX1-NEXT:    store i32 [[R3]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 3), align 4
-; AVX1-NEXT:    store i32 [[R4]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4), align 4
-; AVX1-NEXT:    store i32 [[R5]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 5), align 4
-; AVX1-NEXT:    store i32 [[R6]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 6), align 4
-; AVX1-NEXT:    store i32 [[R7]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 7), align 4
-; AVX1-NEXT:    store i32 [[R8]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8), align 4
-; AVX1-NEXT:    store i32 [[R9]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 9), align 4
-; AVX1-NEXT:    store i32 [[R10]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 10), align 4
-; AVX1-NEXT:    store i32 [[R11]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 11), align 4
-; AVX1-NEXT:    store i32 [[R12]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12), align 4
-; AVX1-NEXT:    store i32 [[R13]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 13), align 4
-; AVX1-NEXT:    store i32 [[R14]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 14), align 4
-; AVX1-NEXT:    store i32 [[R15]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 15), align 4
-; AVX1-NEXT:    ret void
-;
-; AVX2-LABEL: @smul_v16i32(
-; AVX2-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([16 x i32]* @a32 to <8 x i32>*), align 4
-; AVX2-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8) to <8 x i32>*), align 4
-; AVX2-NEXT:    [[TMP3:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([16 x i32]* @b32 to <8 x i32>*), align 4
-; AVX2-NEXT:    [[TMP4:%.*]] = load <8 x i32>, <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 8) to <8 x i32>*), align 4
-; AVX2-NEXT:    [[TMP5:%.*]] = call <8 x i32> @llvm.smul.fix.v8i32(<8 x i32> [[TMP1]], <8 x i32> [[TMP3]], i32 3)
-; AVX2-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.smul.fix.v8i32(<8 x i32> [[TMP2]], <8 x i32> [[TMP4]], i32 3)
-; AVX2-NEXT:    store <8 x i32> [[TMP5]], <8 x i32>* bitcast ([16 x i32]* @c32 to <8 x i32>*), align 4
-; AVX2-NEXT:    store <8 x i32> [[TMP6]], <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8) to <8 x i32>*), align 4
-; AVX2-NEXT:    ret void
+; AVX-LABEL: @smul_v16i32(
+; AVX-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([16 x i32]* @a32 to <8 x i32>*), align 4
+; AVX-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8) to <8 x i32>*), align 4
+; AVX-NEXT:    [[TMP3:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([16 x i32]* @b32 to <8 x i32>*), align 4
+; AVX-NEXT:    [[TMP4:%.*]] = load <8 x i32>, <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 8) to <8 x i32>*), align 4
+; AVX-NEXT:    [[TMP5:%.*]] = call <8 x i32> @llvm.smul.fix.v8i32(<8 x i32> [[TMP1]], <8 x i32> [[TMP3]], i32 3)
+; AVX-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.smul.fix.v8i32(<8 x i32> [[TMP2]], <8 x i32> [[TMP4]], i32 3)
+; AVX-NEXT:    store <8 x i32> [[TMP5]], <8 x i32>* bitcast ([16 x i32]* @c32 to <8 x i32>*), align 4
+; AVX-NEXT:    store <8 x i32> [[TMP6]], <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8) to <8 x i32>*), align 4
+; AVX-NEXT:    ret void
 ;
 ; AVX512-LABEL: @smul_v16i32(
 ; AVX512-NEXT:    [[TMP1:%.*]] = load <16 x i32>, <16 x i32>* bitcast ([16 x i32]* @a32 to <16 x i32>*), align 4
@@ -366,17 +299,6 @@ define void @smul_v16i32() {
 ; AVX512-NEXT:    [[TMP3:%.*]] = call <16 x i32> @llvm.smul.fix.v16i32(<16 x i32> [[TMP1]], <16 x i32> [[TMP2]], i32 3)
 ; AVX512-NEXT:    store <16 x i32> [[TMP3]], <16 x i32>* bitcast ([16 x i32]* @c32 to <16 x i32>*), align 4
 ; AVX512-NEXT:    ret void
-;
-; AVX256BW-LABEL: @smul_v16i32(
-; AVX256BW-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([16 x i32]* @a32 to <8 x i32>*), align 4
-; AVX256BW-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8) to <8 x i32>*), align 4
-; AVX256BW-NEXT:    [[TMP3:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([16 x i32]* @b32 to <8 x i32>*), align 4
-; AVX256BW-NEXT:    [[TMP4:%.*]] = load <8 x i32>, <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 8) to <8 x i32>*), align 4
-; AVX256BW-NEXT:    [[TMP5:%.*]] = call <8 x i32> @llvm.smul.fix.v8i32(<8 x i32> [[TMP1]], <8 x i32> [[TMP3]], i32 3)
-; AVX256BW-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.smul.fix.v8i32(<8 x i32> [[TMP2]], <8 x i32> [[TMP4]], i32 3)
-; AVX256BW-NEXT:    store <8 x i32> [[TMP5]], <8 x i32>* bitcast ([16 x i32]* @c32 to <8 x i32>*), align 4
-; AVX256BW-NEXT:    store <8 x i32> [[TMP6]], <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8) to <8 x i32>*), align 4
-; AVX256BW-NEXT:    ret void
 ;
   %a0  = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 0 ), align 4
   %a1  = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 1 ), align 4

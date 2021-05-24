@@ -6,7 +6,7 @@
 ; In particular, there should be no fdivs inside loops because that is expensive.
 
 ; TODO: There is a CSE opportunity to reduce the hoisted fdivs after vectorization/unrolling.
-; PR46115 - https://bugs.llvm.org/PR46115
+; PR46115 - https://llvm.org/PR46115
 
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.15.0"

@@ -820,7 +820,7 @@ supported.
 
 To build the runner, add the following option to `cmake`:
 ```bash
--DMLIR_SPIRV_CPU_RUNNER_ENABLED=1
+-DMLIR_ENABLE_SPIRV_CPU_RUNNER=1
 ```
 
 ### Pipeline

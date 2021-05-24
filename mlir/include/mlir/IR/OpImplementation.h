@@ -40,6 +40,15 @@ public:
   /// operation.
   virtual void printNewline() = 0;
 
+  /// Print a block argument in the usual format of:
+  ///   %ssaName : type {attr1=42} loc("here")
+  /// where location printing is controlled by the standard internal option.
+  /// You may pass omitType=true to not print a type, and pass an empty
+  /// attribute list if you don't care for attributes.
+  virtual void printRegionArgument(BlockArgument arg,
+                                   ArrayRef<NamedAttribute> argAttrs = {},
+                                   bool omitType = false) = 0;
+
   /// Print implementations for various things an operation contains.
   virtual void printOperand(Value value) = 0;
   virtual void printOperand(Value value, raw_ostream &os) = 0;
@@ -577,6 +586,10 @@ public:
   virtual ParseResult parseOptionalSymbolName(StringAttr &result,
                                               StringRef attrName,
                                               NamedAttrList &attrs) = 0;
+
+  /// Parse a loc(...) specifier if present, filling in result if so.
+  virtual ParseResult
+  parseOptionalLocationSpecifier(Optional<Location> &result) = 0;
 
   //===--------------------------------------------------------------------===//
   // Operand Parsing

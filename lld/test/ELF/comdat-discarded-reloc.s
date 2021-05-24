@@ -23,6 +23,8 @@
 # RELOC-NEXT:   R_X86_64_NONE
 # RELOC-NEXT: }
 
+.globl group
+group:
 .section .text.bar1,"aG",@progbits,group,comdat
 
 ## .text.bar1 in this file is discarded. Warn on the relocation.

@@ -1705,11 +1705,70 @@ struct RemoveEmptyParallelLoops : public OpRewritePattern<ParallelOp> {
   }
 };
 
+struct MergeNestedParallelLoops : public OpRewritePattern<ParallelOp> {
+  using OpRewritePattern<ParallelOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ParallelOp op,
+                                PatternRewriter &rewriter) const override {
+    Block &outerBody = op.getLoopBody().front();
+    if (!llvm::hasSingleElement(outerBody.without_terminator()))
+      return failure();
+
+    auto innerOp = dyn_cast<ParallelOp>(outerBody.front());
+    if (!innerOp)
+      return failure();
+
+    auto hasVal = [](const auto &range, Value val) {
+      return llvm::find(range, val) != range.end();
+    };
+
+    for (auto val : outerBody.getArguments())
+      if (hasVal(innerOp.lowerBound(), val) ||
+          hasVal(innerOp.upperBound(), val) || hasVal(innerOp.step(), val))
+        return failure();
+
+    // Reductions are not supported yet.
+    if (!op.initVals().empty() || !innerOp.initVals().empty())
+      return failure();
+
+    auto bodyBuilder = [&](OpBuilder &builder, Location /*loc*/,
+                           ValueRange iterVals, ValueRange) {
+      Block &innerBody = innerOp.getLoopBody().front();
+      assert(iterVals.size() ==
+             (outerBody.getNumArguments() + innerBody.getNumArguments()));
+      BlockAndValueMapping mapping;
+      mapping.map(outerBody.getArguments(),
+                  iterVals.take_front(outerBody.getNumArguments()));
+      mapping.map(innerBody.getArguments(),
+                  iterVals.take_back(innerBody.getNumArguments()));
+      for (Operation &op : innerBody.without_terminator())
+        builder.clone(op, mapping);
+    };
+
+    auto concatValues = [](const auto &first, const auto &second) {
+      SmallVector<Value> ret;
+      ret.reserve(first.size() + second.size());
+      ret.assign(first.begin(), first.end());
+      ret.append(second.begin(), second.end());
+      return ret;
+    };
+
+    auto newLowerBounds = concatValues(op.lowerBound(), innerOp.lowerBound());
+    auto newUpperBounds = concatValues(op.upperBound(), innerOp.upperBound());
+    auto newSteps = concatValues(op.step(), innerOp.step());
+
+    rewriter.replaceOpWithNewOp<ParallelOp>(op, newLowerBounds, newUpperBounds,
+                                            newSteps, llvm::None, bodyBuilder);
+    return success();
+  }
+};
+
 } // namespace
 
 void ParallelOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                              MLIRContext *context) {
-  results.add<CollapseSingleIterationLoops, RemoveEmptyParallelLoops>(context);
+  results.add<CollapseSingleIterationLoops, RemoveEmptyParallelLoops,
+              MergeNestedParallelLoops>(context);
 }
 
 //===----------------------------------------------------------------------===//

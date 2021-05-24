@@ -20,7 +20,7 @@ define <8 x float> @test1(<8 x float> %a, <8 x float> %b, <8 x float> %c)  {
 ; X64-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm2
 ; X64-NEXT:    retq
   %sub.i = fsub <8 x float> <float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0>, %c
-  %r = tail call <8 x float> @llvm.fma.v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %sub.i) #2
+  %r = tail call nsz <8 x float> @llvm.fma.v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %sub.i) #2
   ret <8 x float> %r
 }
 
@@ -34,7 +34,7 @@ define <4 x float> @test2(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vfnmsub213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2
 ; X64-NEXT:    retq
-  %t0 = tail call <4 x float> @llvm.fma.v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c) #2
+  %t0 = tail call nsz <4 x float> @llvm.fma.v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c) #2
   %sub.i = fsub <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %t0
   ret <4 x float> %sub.i
 }
@@ -57,7 +57,7 @@ define <4 x float> @test3(<4 x float> %a, <4 x float> %b, <4 x float> %c)  {
   %b0 = extractelement <4 x float> %b, i64 0
   %c0 = extractelement <4 x float> %c, i64 0
   %negb0 = fneg float %b0
-  %t0 = tail call float @llvm.fma.f32(float %a0, float %negb0, float %c0) #2
+  %t0 = tail call nsz float @llvm.fma.f32(float %a0, float %negb0, float %c0) #2
   %i = insertelement <4 x float> %a, float %t0, i64 0
   %sub.i = fsub <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %i
   ret <4 x float> %sub.i
@@ -74,7 +74,7 @@ define <8 x float> @test4(<8 x float> %a, <8 x float> %b, <8 x float> %c) {
 ; X64-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2
 ; X64-NEXT:    retq
   %negc = fneg <8 x float> %c
-  %t0 = tail call <8 x float> @llvm.fma.v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %negc) #2
+  %t0 = tail call nsz <8 x float> @llvm.fma.v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %negc) #2
   %sub.i = fsub <8 x float> <float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0>, %t0
   ret <8 x float> %sub.i
 }
@@ -91,7 +91,7 @@ define <8 x float> @test5(<8 x float> %a, <8 x float> %b, <8 x float> %c) {
 ; X64-NEXT:    retq
   %sub.c = fsub <8 x float> <float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0>, %c
   %negsubc = fneg <8 x float> %sub.c
-  %t0 = tail call <8 x float> @llvm.fma.v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %negsubc) #2
+  %t0 = tail call nsz <8 x float> @llvm.fma.v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %negsubc) #2
   ret <8 x float> %t0
 }
 
@@ -105,7 +105,7 @@ define <2 x double> @test6(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vfnmsub213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2
 ; X64-NEXT:    retq
-  %t0 = tail call <2 x double> @llvm.fma.v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c) #2
+  %t0 = tail call nsz <2 x double> @llvm.fma.v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c) #2
   %sub.i = fsub <2 x double> <double -0.0, double -0.0>, %t0
   ret <2 x double> %sub.i
 }
@@ -125,7 +125,7 @@ define <8 x float> @test7(float %a, <8 x float> %b, <8 x float> %c)  {
   %t0 = insertelement <8 x float> undef, float %a, i32 0
   %t1 = fsub <8 x float> <float -0.0, float undef, float undef, float undef, float undef, float undef, float undef, float undef>, %t0
   %t2 = shufflevector <8 x float> %t1, <8 x float> undef, <8 x i32> zeroinitializer
-  %t3 = tail call <8 x float> @llvm.fma.v8f32(<8 x float> %t2, <8 x float> %b, <8 x float> %c)
+  %t3 = tail call nsz <8 x float> @llvm.fma.v8f32(<8 x float> %t2, <8 x float> %b, <8 x float> %c)
   ret <8 x float> %t3
 
 }
@@ -145,6 +145,6 @@ define <8 x float> @test8(float %a, <8 x float> %b, <8 x float> %c)  {
   %t0 = fsub float -0.0, %a
   %t1 = insertelement <8 x float> undef, float %t0, i32 0
   %t2 = shufflevector <8 x float> %t1, <8 x float> undef, <8 x i32> zeroinitializer
-  %t3 = tail call <8 x float> @llvm.fma.v8f32(<8 x float> %t2, <8 x float> %b, <8 x float> %c)
+  %t3 = tail call nsz <8 x float> @llvm.fma.v8f32(<8 x float> %t2, <8 x float> %b, <8 x float> %c)
   ret <8 x float> %t3
 }

@@ -26,6 +26,7 @@ define internal i32 @callee(i1 %C, i32* %A) {
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@callee
 ; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    [[A_0:%.*]] = load i32, i32* [[A]], align 4
 ; IS__CGSCC____-NEXT:    br label [[F:%.*]]
 ; IS__CGSCC____:       T:
 ; IS__CGSCC____-NEXT:    unreachable

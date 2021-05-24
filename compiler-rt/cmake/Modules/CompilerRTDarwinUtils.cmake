@@ -397,12 +397,12 @@ macro(darwin_add_builtin_libraries)
 
   append_string_if(COMPILER_RT_HAS_ASM_LSE " -DHAS_ASM_LSE" CFLAGS)
 
-  set(PROFILE_SOURCES ../profile/InstrProfiling
-                      ../profile/InstrProfilingBuffer
-                      ../profile/InstrProfilingPlatformDarwin
-                      ../profile/InstrProfilingWriter
-                      ../profile/InstrProfilingInternal
-                      ../profile/InstrProfilingVersionVar)
+  set(PROFILE_SOURCES ../profile/InstrProfiling.c
+                      ../profile/InstrProfilingBuffer.c
+                      ../profile/InstrProfilingPlatformDarwin.c
+                      ../profile/InstrProfilingWriter.c
+                      ../profile/InstrProfilingInternal.c
+                      ../profile/InstrProfilingVersionVar.c)
   foreach (os ${ARGN})
     list_intersect(DARWIN_BUILTIN_ARCHS DARWIN_${os}_BUILTIN_ARCHS BUILTIN_SUPPORTED_ARCH)
     foreach (arch ${DARWIN_BUILTIN_ARCHS})

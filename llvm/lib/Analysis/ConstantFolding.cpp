@@ -1680,27 +1680,28 @@ inline bool llvm_fenv_testexcept() {
   return false;
 }
 
-Constant *ConstantFoldFP(double (*NativeFP)(double), double V, Type *Ty) {
+Constant *ConstantFoldFP(double (*NativeFP)(double), const APFloat &V,
+                         Type *Ty) {
   llvm_fenv_clearexcept();
-  V = NativeFP(V);
+  double Result = NativeFP(V.convertToDouble());
   if (llvm_fenv_testexcept()) {
     llvm_fenv_clearexcept();
     return nullptr;
   }
 
-  return GetConstantFoldFPValue(V, Ty);
+  return GetConstantFoldFPValue(Result, Ty);
 }
 
-Constant *ConstantFoldBinaryFP(double (*NativeFP)(double, double), double V,
-                               double W, Type *Ty) {
+Constant *ConstantFoldBinaryFP(double (*NativeFP)(double, double),
+                               const APFloat &V, const APFloat &W, Type *Ty) {
   llvm_fenv_clearexcept();
-  V = NativeFP(V, W);
+  double Result = NativeFP(V.convertToDouble(), W.convertToDouble());
   if (llvm_fenv_testexcept()) {
     llvm_fenv_clearexcept();
     return nullptr;
   }
 
-  return GetConstantFoldFPValue(V, Ty);
+  return GetConstantFoldFPValue(Result, Ty);
 }
 
 Constant *constantFoldVectorReduce(Intrinsic::ID IID, Constant *Op) {
@@ -2016,31 +2017,32 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     /// the host native double versions.  Float versions are not called
     /// directly but for all these it is true (float)(f((double)arg)) ==
     /// f(arg).  Long double not supported yet.
-    double V = getValueAsDouble(Op);
+    APFloat APF = Op->getValueAPF();
 
     switch (IntrinsicID) {
       default: break;
       case Intrinsic::log:
-        return ConstantFoldFP(log, V, Ty);
+        return ConstantFoldFP(log, APF, Ty);
       case Intrinsic::log2:
         // TODO: What about hosts that lack a C99 library?
-        return ConstantFoldFP(Log2, V, Ty);
+        return ConstantFoldFP(Log2, APF, Ty);
       case Intrinsic::log10:
         // TODO: What about hosts that lack a C99 library?
-        return ConstantFoldFP(log10, V, Ty);
+        return ConstantFoldFP(log10, APF, Ty);
       case Intrinsic::exp:
-        return ConstantFoldFP(exp, V, Ty);
+        return ConstantFoldFP(exp, APF, Ty);
       case Intrinsic::exp2:
         // Fold exp2(x) as pow(2, x), in case the host lacks a C99 library.
-        return ConstantFoldBinaryFP(pow, 2.0, V, Ty);
+        return ConstantFoldBinaryFP(pow, APFloat(2.0), APF, Ty);
       case Intrinsic::sin:
-        return ConstantFoldFP(sin, V, Ty);
+        return ConstantFoldFP(sin, APF, Ty);
       case Intrinsic::cos:
-        return ConstantFoldFP(cos, V, Ty);
+        return ConstantFoldFP(cos, APF, Ty);
       case Intrinsic::sqrt:
-        return ConstantFoldFP(sqrt, V, Ty);
+        return ConstantFoldFP(sqrt, APF, Ty);
       case Intrinsic::amdgcn_cos:
-      case Intrinsic::amdgcn_sin:
+      case Intrinsic::amdgcn_sin: {
+        double V = getValueAsDouble(Op);
         if (V < -256.0 || V > 256.0)
           // The gfx8 and gfx9 architectures handle arguments outside the range
           // [-256, 256] differently. This should be a rare case so bail out
@@ -2059,6 +2061,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
             V = sin(V * 2.0 * numbers::pi);
         }
         return GetConstantFoldFPValue(V, Ty);
+      }
     }
 
     if (!TLI)
@@ -2074,19 +2077,19 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case LibFunc_acos_finite:
     case LibFunc_acosf_finite:
       if (TLI->has(Func))
-        return ConstantFoldFP(acos, V, Ty);
+        return ConstantFoldFP(acos, APF, Ty);
       break;
     case LibFunc_asin:
     case LibFunc_asinf:
     case LibFunc_asin_finite:
     case LibFunc_asinf_finite:
       if (TLI->has(Func))
-        return ConstantFoldFP(asin, V, Ty);
+        return ConstantFoldFP(asin, APF, Ty);
       break;
     case LibFunc_atan:
     case LibFunc_atanf:
       if (TLI->has(Func))
-        return ConstantFoldFP(atan, V, Ty);
+        return ConstantFoldFP(atan, APF, Ty);
       break;
     case LibFunc_ceil:
     case LibFunc_ceilf:
@@ -2098,21 +2101,21 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case LibFunc_cos:
     case LibFunc_cosf:
       if (TLI->has(Func))
-        return ConstantFoldFP(cos, V, Ty);
+        return ConstantFoldFP(cos, APF, Ty);
       break;
     case LibFunc_cosh:
     case LibFunc_coshf:
     case LibFunc_cosh_finite:
     case LibFunc_coshf_finite:
       if (TLI->has(Func))
-        return ConstantFoldFP(cosh, V, Ty);
+        return ConstantFoldFP(cosh, APF, Ty);
       break;
     case LibFunc_exp:
     case LibFunc_expf:
     case LibFunc_exp_finite:
     case LibFunc_expf_finite:
       if (TLI->has(Func))
-        return ConstantFoldFP(exp, V, Ty);
+        return ConstantFoldFP(exp, APF, Ty);
       break;
     case LibFunc_exp2:
     case LibFunc_exp2f:
@@ -2120,7 +2123,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case LibFunc_exp2f_finite:
       if (TLI->has(Func))
         // Fold exp2(x) as pow(2, x), in case the host lacks a C99 library.
-        return ConstantFoldBinaryFP(pow, 2.0, V, Ty);
+        return ConstantFoldBinaryFP(pow, APFloat(2.0), APF, Ty);
       break;
     case LibFunc_fabs:
     case LibFunc_fabsf:
@@ -2140,24 +2143,24 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case LibFunc_logf:
     case LibFunc_log_finite:
     case LibFunc_logf_finite:
-      if (V > 0.0 && TLI->has(Func))
-        return ConstantFoldFP(log, V, Ty);
+      if (!APF.isNegative() && !APF.isZero() && TLI->has(Func))
+        return ConstantFoldFP(log, APF, Ty);
       break;
     case LibFunc_log2:
     case LibFunc_log2f:
     case LibFunc_log2_finite:
     case LibFunc_log2f_finite:
-      if (V > 0.0 && TLI->has(Func))
+      if (!APF.isNegative() && !APF.isZero() && TLI->has(Func))
         // TODO: What about hosts that lack a C99 library?
-        return ConstantFoldFP(Log2, V, Ty);
+        return ConstantFoldFP(Log2, APF, Ty);
       break;
     case LibFunc_log10:
     case LibFunc_log10f:
     case LibFunc_log10_finite:
     case LibFunc_log10f_finite:
-      if (V > 0.0 && TLI->has(Func))
+      if (!APF.isNegative() && !APF.isZero() && TLI->has(Func))
         // TODO: What about hosts that lack a C99 library?
-        return ConstantFoldFP(log10, V, Ty);
+        return ConstantFoldFP(log10, APF, Ty);
       break;
     case LibFunc_nearbyint:
     case LibFunc_nearbyintf:
@@ -2178,29 +2181,29 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case LibFunc_sin:
     case LibFunc_sinf:
       if (TLI->has(Func))
-        return ConstantFoldFP(sin, V, Ty);
+        return ConstantFoldFP(sin, APF, Ty);
       break;
     case LibFunc_sinh:
     case LibFunc_sinhf:
     case LibFunc_sinh_finite:
     case LibFunc_sinhf_finite:
       if (TLI->has(Func))
-        return ConstantFoldFP(sinh, V, Ty);
+        return ConstantFoldFP(sinh, APF, Ty);
       break;
     case LibFunc_sqrt:
     case LibFunc_sqrtf:
-      if (V >= 0.0 && TLI->has(Func))
-        return ConstantFoldFP(sqrt, V, Ty);
+      if (!APF.isNegative() && TLI->has(Func))
+        return ConstantFoldFP(sqrt, APF, Ty);
       break;
     case LibFunc_tan:
     case LibFunc_tanf:
       if (TLI->has(Func))
-        return ConstantFoldFP(tan, V, Ty);
+        return ConstantFoldFP(tan, APF, Ty);
       break;
     case LibFunc_tanh:
     case LibFunc_tanhf:
       if (TLI->has(Func))
-        return ConstantFoldFP(tanh, V, Ty);
+        return ConstantFoldFP(tanh, APF, Ty);
       break;
     case LibFunc_trunc:
     case LibFunc_truncf:
@@ -2318,55 +2321,34 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
   if (auto *Op1 = dyn_cast<ConstantFP>(Operands[0])) {
     if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())
       return nullptr;
-    double Op1V = getValueAsDouble(Op1);
+    APFloat Op1V = Op1->getValueAPF();
 
     if (auto *Op2 = dyn_cast<ConstantFP>(Operands[1])) {
       if (Op2->getType() != Op1->getType())
         return nullptr;
+      APFloat Op2V = Op2->getValueAPF();
 
-      double Op2V = getValueAsDouble(Op2);
-      if (IntrinsicID == Intrinsic::pow) {
+      switch (IntrinsicID) {
+      default:
+        break;
+      case Intrinsic::pow:
         return ConstantFoldBinaryFP(pow, Op1V, Op2V, Ty);
-      }
-      if (IntrinsicID == Intrinsic::copysign) {
-        APFloat V1 = Op1->getValueAPF();
-        const APFloat &V2 = Op2->getValueAPF();
-        V1.copySign(V2);
-        return ConstantFP::get(Ty->getContext(), V1);
-      }
-
-      if (IntrinsicID == Intrinsic::minnum) {
-        const APFloat &C1 = Op1->getValueAPF();
-        const APFloat &C2 = Op2->getValueAPF();
-        return ConstantFP::get(Ty->getContext(), minnum(C1, C2));
-      }
-
-      if (IntrinsicID == Intrinsic::maxnum) {
-        const APFloat &C1 = Op1->getValueAPF();
-        const APFloat &C2 = Op2->getValueAPF();
-        return ConstantFP::get(Ty->getContext(), maxnum(C1, C2));
-      }
-
-      if (IntrinsicID == Intrinsic::minimum) {
-        const APFloat &C1 = Op1->getValueAPF();
-        const APFloat &C2 = Op2->getValueAPF();
-        return ConstantFP::get(Ty->getContext(), minimum(C1, C2));
-      }
-
-      if (IntrinsicID == Intrinsic::maximum) {
-        const APFloat &C1 = Op1->getValueAPF();
-        const APFloat &C2 = Op2->getValueAPF();
-        return ConstantFP::get(Ty->getContext(), maximum(C1, C2));
-      }
-
-      if (IntrinsicID == Intrinsic::amdgcn_fmul_legacy) {
-        const APFloat &C1 = Op1->getValueAPF();
-        const APFloat &C2 = Op2->getValueAPF();
+      case Intrinsic::copysign:
+        return ConstantFP::get(Ty->getContext(), APFloat::copySign(Op1V, Op2V));
+      case Intrinsic::minnum:
+        return ConstantFP::get(Ty->getContext(), minnum(Op1V, Op2V));
+      case Intrinsic::maxnum:
+        return ConstantFP::get(Ty->getContext(), maxnum(Op1V, Op2V));
+      case Intrinsic::minimum:
+        return ConstantFP::get(Ty->getContext(), minimum(Op1V, Op2V));
+      case Intrinsic::maximum:
+        return ConstantFP::get(Ty->getContext(), maximum(Op1V, Op2V));
+      case Intrinsic::amdgcn_fmul_legacy:
         // The legacy behaviour is that multiplying +/- 0.0 by anything, even
         // NaN or infinity, gives +0.0.
-        if (C1.isZero() || C2.isZero())
+        if (Op1V.isZero() || Op2V.isZero())
           return ConstantFP::getNullValue(Ty);
-        return ConstantFP::get(Ty->getContext(), C1 * C2);
+        return ConstantFP::get(Ty->getContext(), Op1V * Op2V);
       }
 
       if (!TLI)
@@ -2410,17 +2392,20 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
       }
     } else if (auto *Op2C = dyn_cast<ConstantInt>(Operands[1])) {
       if (IntrinsicID == Intrinsic::powi && Ty->isHalfTy())
-        return ConstantFP::get(Ty->getContext(),
-                               APFloat((float)std::pow((float)Op1V,
-                                               (int)Op2C->getZExtValue())));
+        return ConstantFP::get(
+            Ty->getContext(),
+            APFloat((float)std::pow((float)Op1V.convertToDouble(),
+                                    (int)Op2C->getZExtValue())));
       if (IntrinsicID == Intrinsic::powi && Ty->isFloatTy())
-        return ConstantFP::get(Ty->getContext(),
-                               APFloat((float)std::pow((float)Op1V,
-                                               (int)Op2C->getZExtValue())));
+        return ConstantFP::get(
+            Ty->getContext(),
+            APFloat((float)std::pow((float)Op1V.convertToDouble(),
+                                    (int)Op2C->getZExtValue())));
       if (IntrinsicID == Intrinsic::powi && Ty->isDoubleTy())
-        return ConstantFP::get(Ty->getContext(),
-                               APFloat((double)std::pow((double)Op1V,
-                                                 (int)Op2C->getZExtValue())));
+        return ConstantFP::get(
+            Ty->getContext(),
+            APFloat((double)std::pow(Op1V.convertToDouble(),
+                                     (int)Op2C->getZExtValue())));
 
       if (IntrinsicID == Intrinsic::amdgcn_ldexp) {
         // FIXME: Should flush denorms depending on FP mode, but that's ignored
@@ -2738,15 +2723,15 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
   if (const auto *Op1 = dyn_cast<ConstantFP>(Operands[0])) {
     if (const auto *Op2 = dyn_cast<ConstantFP>(Operands[1])) {
       if (const auto *Op3 = dyn_cast<ConstantFP>(Operands[2])) {
+        const APFloat &C1 = Op1->getValueAPF();
+        const APFloat &C2 = Op2->getValueAPF();
+        const APFloat &C3 = Op3->getValueAPF();
         switch (IntrinsicID) {
         default: break;
         case Intrinsic::amdgcn_fma_legacy: {
-          const APFloat &C1 = Op1->getValueAPF();
-          const APFloat &C2 = Op2->getValueAPF();
           // The legacy behaviour is that multiplying +/- 0.0 by anything, even
           // NaN or infinity, gives +0.0.
           if (C1.isZero() || C2.isZero()) {
-            const APFloat &C3 = Op3->getValueAPF();
             // It's tempting to just return C3 here, but that would give the
             // wrong result if C3 was -0.0.
             return ConstantFP::get(Ty->getContext(), APFloat(0.0f) + C3);
@@ -2755,18 +2740,15 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
         }
         case Intrinsic::fma:
         case Intrinsic::fmuladd: {
-          APFloat V = Op1->getValueAPF();
-          V.fusedMultiplyAdd(Op2->getValueAPF(), Op3->getValueAPF(),
-                             APFloat::rmNearestTiesToEven);
+          APFloat V = C1;
+          V.fusedMultiplyAdd(C2, C3, APFloat::rmNearestTiesToEven);
           return ConstantFP::get(Ty->getContext(), V);
         }
         case Intrinsic::amdgcn_cubeid:
         case Intrinsic::amdgcn_cubema:
         case Intrinsic::amdgcn_cubesc:
         case Intrinsic::amdgcn_cubetc: {
-          APFloat V = ConstantFoldAMDGCNCubeIntrinsic(
-              IntrinsicID, Op1->getValueAPF(), Op2->getValueAPF(),
-              Op3->getValueAPF());
+          APFloat V = ConstantFoldAMDGCNCubeIntrinsic(IntrinsicID, C1, C2, C3);
           return ConstantFP::get(Ty->getContext(), V);
         }
         }
@@ -3094,10 +3076,8 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
         // FIXME: Stop using the host math library.
         // FIXME: The computation isn't done in the right precision.
         Type *Ty = OpC->getType();
-        if (Ty->isDoubleTy() || Ty->isFloatTy() || Ty->isHalfTy()) {
-          double OpV = getValueAsDouble(OpC);
-          return ConstantFoldFP(tan, OpV, Ty) != nullptr;
-        }
+        if (Ty->isDoubleTy() || Ty->isFloatTy() || Ty->isHalfTy())
+          return ConstantFoldFP(tan, OpC->getValueAPF(), Ty) != nullptr;
         break;
       }
 
@@ -3151,11 +3131,8 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
         // FIXME: The computation isn't done in the right precision.
         Type *Ty = Op0C->getType();
         if (Ty->isDoubleTy() || Ty->isFloatTy() || Ty->isHalfTy()) {
-          if (Ty == Op1C->getType()) {
-            double Op0V = getValueAsDouble(Op0C);
-            double Op1V = getValueAsDouble(Op1C);
-            return ConstantFoldBinaryFP(pow, Op0V, Op1V, Ty) != nullptr;
-          }
+          if (Ty == Op1C->getType())
+            return ConstantFoldBinaryFP(pow, Op0, Op1, Ty) != nullptr;
         }
         break;
       }

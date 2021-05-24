@@ -72,7 +72,7 @@ constructing and uniquing an instance of a storage class.
 When defining a new `Type` that contains parametric data (e.g. the `struct`
 type, which requires additional information to hold the element types), we will
 need to provide a derived storage class. The `singleton` types that don't have
-any additional data (e.g. the [`index` type](../../LangRef.md#index-type)) don't
+any additional data (e.g. the [`index` type](../../Dialects/Builtin.md#indextype)) don't
 require a storage class and use the default `TypeStorage`.
 
 ##### Defining the Storage Class

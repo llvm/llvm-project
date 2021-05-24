@@ -1741,6 +1741,34 @@ OpenCL Features
 
 Clang supports internal OpenCL extensions documented below.
 
+``__cl_clang_bitfields``
+--------------------------------
+
+With this extension it is possible to enable bitfields in structs
+or unions using the OpenCL extension pragma mechanism detailed in
+`the OpenCL Extension Specification, section 1.2
+<https://www.khronos.org/registry/OpenCL/specs/3.0-unified/html/OpenCL_Ext.html#extensions-overview>`_.
+
+Use of bitfields in OpenCL kernels can result in reduced portability as struct
+layout is not guaranteed to be consistent when compiled by different compilers.
+If structs with bitfields are used as kernel function parameters, it can result
+in incorrect functionality when the layout is different between the host and
+device code.
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  #pragma OPENCL EXTENSION __cl_clang_bitfields : enable
+  struct with_bitfield {
+    unsigned int i : 5; // compiled - no diagnostic generated
+  };
+
+  #pragma OPENCL EXTENSION __cl_clang_bitfields : disable
+  struct without_bitfield {
+    unsigned int i : 5; // error - bitfields are not supported
+  };
+
 ``__cl_clang_function_pointers``
 --------------------------------
 

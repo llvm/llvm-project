@@ -76,6 +76,10 @@ namespace llvm {
     /// Same as call except it adds the NoTrack prefix.
     NT_CALL,
 
+    // Pseudo for a OBJC call that gets emitted together with a special
+    // marker instruction.
+    CALL_RVMARKER,
+
     /// X86 compare and logical compare instructions.
     CMP,
     FCMP,

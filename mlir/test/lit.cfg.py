@@ -61,7 +61,6 @@ tools = [
     'mlir-lsp-server',
     'mlir-capi-ir-test',
     'mlir-capi-pass-test',
-    'mlir-edsc-builder-api-test',
     'mlir-cpu-runner',
     'mlir-linalg-ods-gen',
     'mlir-linalg-ods-yaml-gen',

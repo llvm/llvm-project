@@ -15,19 +15,11 @@ define i64 @fn2() {
 ; IS__TUNIT____-NEXT:    [[CALL2:%.*]] = call i64 @fn1(i64 undef) #[[ATTR0]], !range [[RNG0:![0-9]+]]
 ; IS__TUNIT____-NEXT:    ret i64 [[CALL2]]
 ;
-; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@fn2
-; IS__CGSCC_OPM-SAME: () #[[ATTR0:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    [[CALL2:%.*]] = call i64 @fn1(i64 undef) #[[ATTR1:[0-9]+]]
-; IS__CGSCC_OPM-NEXT:    ret i64 [[CALL2]]
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@fn2
-; IS__CGSCC_NPM-SAME: () #[[ATTR0:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    [[CALL2:%.*]] = call i64 @fn1(i64 undef) #[[ATTR1:[0-9]+]], !range [[RNG0:![0-9]+]]
-; IS__CGSCC_NPM-NEXT:    ret i64 [[CALL2]]
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@fn2
+; IS__CGSCC____-SAME: () #[[ATTR0:[0-9]+]] {
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    ret i64 undef
 ;
 entry:
   %conv = sext i32 undef to i64
@@ -48,7 +40,7 @@ define i64 @fn2b(i32 %arg) {
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@fn2b
-; IS__CGSCC____-SAME: (i32 [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
+; IS__CGSCC____-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
 ; IS__CGSCC____-NEXT:    [[DIV:%.*]] = sdiv i64 8, [[CONV]]
@@ -74,6 +66,8 @@ define i64 @fn2c() {
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@fn2c
 ; IS__CGSCC____-SAME: () #[[ATTR0]] {
 ; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    [[CONV:%.*]] = sext i32 undef to i64
+; IS__CGSCC____-NEXT:    [[ADD:%.*]] = add i64 42, [[CONV]]
 ; IS__CGSCC____-NEXT:    [[CALL2:%.*]] = call i64 @fn1(i64 noundef 42) #[[ATTR1]]
 ; IS__CGSCC____-NEXT:    ret i64 [[CALL2]]
 ;

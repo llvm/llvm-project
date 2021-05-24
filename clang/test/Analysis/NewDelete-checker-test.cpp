@@ -9,20 +9,23 @@
 // RUN:   -analyzer-checker=cplusplus.NewDelete \
 // RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
 //
-// RUN: %clang_analyze_cc1 -std=c++11 -fblocks %s \
+// RUN: %clang_analyze_cc1 -std=c++11 -fblocks -verify %s \
+// RUN:   -verify=expected,leak \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
+//
+// RUN: %clang_analyze_cc1 -std=c++17 -fblocks %s \
 // RUN:   -verify=expected,newdelete \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=cplusplus.NewDelete \
-// RUN:   -analyzer-config c++-allocator-inlining=true
+// RUN:   -analyzer-checker=cplusplus.NewDelete
 //
-// RUN: %clang_analyze_cc1 -std=c++11 -fblocks -verify %s \
+// RUN: %clang_analyze_cc1 -DLEAKS -std=c++17 -fblocks %s \
 // RUN:   -verify=expected,newdelete,leak \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDelete \
-// RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks \
-// RUN:   -analyzer-config c++-allocator-inlining=true
+// RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
 //
-// RUN: %clang_analyze_cc1 -std=c++11 -fblocks -verify %s \
+// RUN: %clang_analyze_cc1 -std=c++17 -fblocks -verify %s \
 // RUN:   -verify=expected,leak \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
@@ -288,7 +291,7 @@ namespace reference_count {
     explicit shared_ptr(T *p) : p(p), control(new control_block) {
       control->retain();
     }
-    shared_ptr(shared_ptr &other) : p(other.p), control(other.control) {
+    shared_ptr(const shared_ptr &other) : p(other.p), control(other.control) {
       if (control)
           control->retain();
     }
@@ -314,8 +317,23 @@ namespace reference_count {
     }
   };
 
+  template <typename T, typename... Args>
+  shared_ptr<T> make_shared(Args &&...args) {
+    return shared_ptr<T>(new T(static_cast<Args &&>(args)...));
+  }
+
   void testSingle() {
     shared_ptr<int> a(new int);
+    *a = 1;
+  }
+
+  void testMake() {
+    shared_ptr<int> a = make_shared<int>();
+    *a = 1;
+  }
+
+  void testMakeInParens() {
+    shared_ptr<int> a = (make_shared<int>()); // no warn
     *a = 1;
   }
 
