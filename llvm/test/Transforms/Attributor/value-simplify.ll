@@ -369,7 +369,8 @@ define internal i32 @ipccp4ib(i32 %a) {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@ipccp4ib
 ; IS__CGSCC____-SAME: () #[[ATTR1]] {
-; IS__CGSCC____-NEXT:    br label [[T:%.*]]
+; IS__CGSCC____-NEXT:    [[C:%.*]] = icmp eq i32 7, 7
+; IS__CGSCC____-NEXT:    br i1 true, label [[T:%.*]], label [[F:%.*]]
 ; IS__CGSCC____:       t:
 ; IS__CGSCC____-NEXT:    ret i32 undef
 ; IS__CGSCC____:       f:
@@ -980,9 +981,12 @@ define internal i1 @undef_then_1(i1 %c, i32 %i32A, i32 %i32B) {
 ; IS__CGSCC_OPM: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@undef_then_1
 ; IS__CGSCC_OPM-SAME: (i1 [[C:%.*]]) #[[ATTR6:[0-9]+]] {
+; IS__CGSCC_OPM-NEXT:    [[CMP1:%.*]] = icmp eq i32 1, 1
+; IS__CGSCC_OPM-NEXT:    [[CMP2:%.*]] = icmp eq i1 [[CMP1]], false
 ; IS__CGSCC_OPM-NEXT:    [[OR:%.*]] = or i1 false, [[C]]
 ; IS__CGSCC_OPM-NEXT:    br i1 [[OR]], label [[A:%.*]], label [[B:%.*]]
 ; IS__CGSCC_OPM:       a:
+; IS__CGSCC_OPM-NEXT:    [[R2:%.*]] = call i1 @undef_then_1(i1 noundef false) #[[ATTR5]]
 ; IS__CGSCC_OPM-NEXT:    ret i1 undef
 ; IS__CGSCC_OPM:       b:
 ; IS__CGSCC_OPM-NEXT:    ret i1 undef
@@ -990,9 +994,12 @@ define internal i1 @undef_then_1(i1 %c, i32 %i32A, i32 %i32B) {
 ; IS__CGSCC_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@undef_then_1
 ; IS__CGSCC_NPM-SAME: (i1 [[C:%.*]]) #[[ATTR5:[0-9]+]] {
+; IS__CGSCC_NPM-NEXT:    [[CMP1:%.*]] = icmp eq i32 1, 1
+; IS__CGSCC_NPM-NEXT:    [[CMP2:%.*]] = icmp eq i1 [[CMP1]], false
 ; IS__CGSCC_NPM-NEXT:    [[OR:%.*]] = or i1 false, [[C]]
 ; IS__CGSCC_NPM-NEXT:    br i1 [[OR]], label [[A:%.*]], label [[B:%.*]]
 ; IS__CGSCC_NPM:       a:
+; IS__CGSCC_NPM-NEXT:    [[R2:%.*]] = call i1 @undef_then_1(i1 noundef false) #[[ATTR4]]
 ; IS__CGSCC_NPM-NEXT:    ret i1 undef
 ; IS__CGSCC_NPM:       b:
 ; IS__CGSCC_NPM-NEXT:    ret i1 undef
