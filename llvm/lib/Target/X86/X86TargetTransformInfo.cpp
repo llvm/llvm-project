@@ -571,9 +571,9 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   }
 
   static const CostTblEntry AVX512DQCostTable[] = {
-    { ISD::MUL,  MVT::v2i64, 1 },
-    { ISD::MUL,  MVT::v4i64, 1 },
-    { ISD::MUL,  MVT::v8i64, 1 }
+    { ISD::MUL,  MVT::v2i64, 2 }, // pmullq
+    { ISD::MUL,  MVT::v4i64, 2 }, // pmullq
+    { ISD::MUL,  MVT::v8i64, 2 }  // pmullq
   };
 
   // Look for AVX512DQ lowering tricks for custom cases.
@@ -612,7 +612,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::MUL,     MVT::v16i32,     1 }, // pmulld (Skylake from agner.org)
     { ISD::MUL,     MVT::v8i32,      1 }, // pmulld (Skylake from agner.org)
     { ISD::MUL,     MVT::v4i32,      1 }, // pmulld (Skylake from agner.org)
-    { ISD::MUL,     MVT::v8i64,      8 }, // 3*pmuludq/3*shift/2*add
+    { ISD::MUL,     MVT::v8i64,      6 }, // 3*pmuludq/3*shift/2*add
 
     { ISD::FNEG,    MVT::v8f64,      1 }, // Skylake from http://www.agner.org/
     { ISD::FADD,    MVT::v8f64,      1 }, // Skylake from http://www.agner.org/
@@ -783,7 +783,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
 
     { ISD::MUL,  MVT::v16i16,     1 }, // pmullw
     { ISD::MUL,  MVT::v8i32,      2 }, // pmulld (Haswell from agner.org)
-    { ISD::MUL,  MVT::v4i64,      8 }, // 3*pmuludq/3*shift/2*add
+    { ISD::MUL,  MVT::v4i64,      6 }, // 3*pmuludq/3*shift/2*add
 
     { ISD::FNEG, MVT::v4f64,      1 }, // Haswell from http://www.agner.org/
     { ISD::FNEG, MVT::v8f32,      1 }, // Haswell from http://www.agner.org/
