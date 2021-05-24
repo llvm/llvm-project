@@ -8,7 +8,9 @@
 
 declare i32 @external()
 
+; FIXME: We should not return undef here.
 define i8* @start(i8 %v) {
+;
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@start
 ; IS__TUNIT____-SAME: (i8 [[V:%.*]]) {
 ; IS__TUNIT____-NEXT:    [[C1:%.*]] = icmp eq i8 [[V]], 0
@@ -52,7 +54,6 @@ false:
   br i1 %c2, label %c2_true, label %c2_false
 c2_true:
   %ca1 = musttail call i8* @no_side_effects(i8 %v)
-  ; FIXME: zap this call
   ret i8* %ca1
 c2_false:
   %ca2 = musttail call i8* @dont_zap_me(i8 %v)

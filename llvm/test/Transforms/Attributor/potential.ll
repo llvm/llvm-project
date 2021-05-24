@@ -329,6 +329,8 @@ define internal i32 @return2or4(i32 %c) {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@return2or4
 ; IS__CGSCC____-SAME: (i32 [[C:%.*]]) #[[ATTR0]] {
+; IS__CGSCC____-NEXT:    [[CMP:%.*]] = icmp eq i32 undef, 0
+; IS__CGSCC____-NEXT:    [[RET:%.*]] = select i1 undef, i32 2, i32 4
 ; IS__CGSCC____-NEXT:    ret i32 undef
 ;
   %cmp = icmp eq i32 %c, 0
@@ -532,6 +534,7 @@ define i1 @potential_test10(i32 %c) {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@potential_test10
 ; IS__CGSCC____-SAME: (i32 [[C:%.*]]) #[[ATTR0]] {
+; IS__CGSCC____-NEXT:    [[CMP:%.*]] = icmp eq i32 undef, 0
 ; IS__CGSCC____-NEXT:    ret i1 false
 ;
   %ret = call i32 @may_return_undef(i32 %c)
