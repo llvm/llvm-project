@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -verify %s
-// RUN: %clang_cc1 -verify %s -DBITFIELDS_EXT
+// RUN: %clang_cc1 -verify %s -DBITFIELDS_EXT -triple spir
 
 #ifdef BITFIELDS_EXT
 #pragma OPENCL EXTENSION __cl_clang_bitfields : enable

@@ -340,7 +340,7 @@ Missing features or with limited support
 .. _opencl_300:
 
 OpenCL C 3.0 Usage
-================================
+==================
 
 OpenCL C 3.0 language standard makes most OpenCL C 2.0 features optional. Optional
 functionality in OpenCL C 3.0 is indicated with the presence of feature-test macros
@@ -357,7 +357,7 @@ user should specify both (extension and feature) in command-line flag:
 
 
 OpenCL C 3.0 Implementation Status
-================================
+----------------------------------
 
 The following table provides an overview of features in OpenCL C 3.0 and their
 implementation status.
@@ -371,7 +371,7 @@ implementation status.
 +------------------------------+--------------------------------------------------------------+----------------------+---------------------------------------------------------------------------+
 | Predefined macros            | Feature macros                                               | :good:`done`         | https://reviews.llvm.org/D95776                                           |
 +------------------------------+--------------------------------------------------------------+----------------------+---------------------------------------------------------------------------+
-| Feature optionality          | Generic address space                                        | :none:`unclaimed`    |                                                                           |
+| Feature optionality          | Generic address space                                        | :none:`worked on`    | https://reviews.llvm.org/D95778 (partial frontend)                        |
 +------------------------------+--------------------------------------------------------------+----------------------+---------------------------------------------------------------------------+
 | Feature optionality          | Builtin function overloads with generic address space        | :part:`worked on`    | https://reviews.llvm.org/D92004                                           |
 +------------------------------+--------------------------------------------------------------+----------------------+---------------------------------------------------------------------------+
@@ -388,6 +388,8 @@ implementation status.
 | Feature optionality          | Pipes including builtin functions                            | :part:`worked on`    | https://reviews.llvm.org/D92004 (functions only)                          |
 +------------------------------+--------------------------------------------------------------+----------------------+---------------------------------------------------------------------------+
 | Feature optionality          | Work group collective functions                              | :part:`worked on`    | https://reviews.llvm.org/D92004                                           |
++------------------------------+--------------------------------------------------------------+----------------------+---------------------------------------------------------------------------+
+| Feature optionality          | Image types                                                  | :part:`unclaimed`    |                                                                           |
 +------------------------------+--------------------------------------------------------------+----------------------+---------------------------------------------------------------------------+
 | New functionality            | RGBA vector components                                       | :good:`done`         | https://reviews.llvm.org/D99969                                           |
 +------------------------------+--------------------------------------------------------------+----------------------+---------------------------------------------------------------------------+
