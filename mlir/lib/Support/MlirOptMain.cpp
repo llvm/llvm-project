@@ -109,7 +109,8 @@ static LogicalResult processBuffer(raw_ostream &os,
   if (preloadDialectsInContext)
     context.loadAllAvailableDialects();
   context.allowUnregisteredDialects(allowUnregisteredDialects);
-  context.printOpOnDiagnostic(!verifyDiagnostics);
+  if (verifyDiagnostics)
+    context.printOpOnDiagnostic(false);
   context.getDebugActionManager().registerActionHandler<DebugCounter>();
 
   // If we are in verify diagnostics mode then we have a lot of work to do,

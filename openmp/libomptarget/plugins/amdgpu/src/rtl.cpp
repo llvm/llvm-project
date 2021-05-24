@@ -836,7 +836,7 @@ int32_t __tgt_rtl_init_device(int device_id) {
      RTLDeviceInfoTy::Default_WG_Size);
   if (DeviceInfo.NumThreads[device_id] >
       DeviceInfo.ThreadsPerGroup[device_id]) {
-    DeviceInfo.NumTeams[device_id] = DeviceInfo.ThreadsPerGroup[device_id];
+    DeviceInfo.NumThreads[device_id] = DeviceInfo.ThreadsPerGroup[device_id];
     DP("Default number of threads exceeds device limit, capping at %d\n",
        DeviceInfo.ThreadsPerGroup[device_id]);
   }
