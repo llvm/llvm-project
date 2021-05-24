@@ -2465,8 +2465,9 @@ static bool detectShiftUntilZeroIdiom(Loop *CurLoop, ScalarEvolution *SE,
   }
 
   // Step 2: Check if the comparison's operand is in desirable form.
-
-  if (!match(ValShifted, m_LShr(m_Value(Val), m_Instruction(NBits)))) {
+  // FIXME: Val could be a one-input PHI node, which we should look past.
+  if (!match(ValShifted, m_LShr(m_LoopInvariant(m_Value(Val), CurLoop),
+                                m_Instruction(NBits)))) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE " Bad comparisons value computation.\n");
     return false;
   }
