@@ -197,8 +197,8 @@ define dso_local i32 @e() #0 {
 ; CHECK-NEXT:    vmov.32 q4[0], r8
 ; CHECK-NEXT:    @ implicit-def: $r2
 ; CHECK-NEXT:    str.w r8, [sp, #52]
-; CHECK-NEXT:    strh.w r12, [sp, #414]
 ; CHECK-NEXT:    vstrw.32 q3, [sp, #68]
+; CHECK-NEXT:    strh.w r12, [sp, #414]
 ; CHECK-NEXT:    wlstp.8 lr, r1, .LBB1_2
 ; CHECK-NEXT:  .LBB1_1: @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [sp] @ 16-byte Reload

@@ -11110,7 +11110,7 @@ static Register genTPEntry(MachineBasicBlock *TpEntry,
                            MachineBasicBlock *TpExit, Register OpSizeReg,
                            const TargetInstrInfo *TII, DebugLoc Dl,
                            MachineRegisterInfo &MRI) {
-  // Calculates loop iteration count = ceil(n/16)/16 = ((n + 15)&(-16)) / 16.
+  // Calculates loop iteration count = ceil(n/16) = (n + 15) >> 4.
   Register AddDestReg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
   BuildMI(TpEntry, Dl, TII->get(ARM::t2ADDri), AddDestReg)
       .addUse(OpSizeReg)
@@ -11118,16 +11118,9 @@ static Register genTPEntry(MachineBasicBlock *TpEntry,
       .add(predOps(ARMCC::AL))
       .addReg(0);
 
-  Register BicDestReg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
-  BuildMI(TpEntry, Dl, TII->get(ARM::t2BICri), BicDestReg)
-      .addUse(AddDestReg, RegState::Kill)
-      .addImm(16)
-      .add(predOps(ARMCC::AL))
-      .addReg(0);
-
-  Register LsrDestReg = MRI.createVirtualRegister(&ARM::GPRlrRegClass);
+  Register LsrDestReg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
   BuildMI(TpEntry, Dl, TII->get(ARM::t2LSRri), LsrDestReg)
-      .addUse(BicDestReg, RegState::Kill)
+      .addUse(AddDestReg, RegState::Kill)
       .addImm(4)
       .add(predOps(ARMCC::AL))
       .addReg(0);
