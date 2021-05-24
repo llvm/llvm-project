@@ -24,7 +24,7 @@ function(add_mlir_python_extension libname extname)
   # symbols, which is better for development. Note that not all python
   # configurations provide build-time libraries to link against, in which
   # case, we fall back to MODULE linking.
-  if(Python3_LIBRARIES STREQUAL "" OR NOT MLIR_PYTHON_BINDINGS_VERSION_LOCKED)
+  if(Python3_LIBRARIES STREQUAL "" OR NOT MLIR_BINDINGS_PYTHON_LOCK_VERSION)
     set(PYEXT_LINK_MODE MODULE)
     set(PYEXT_LIBADD)
   else()

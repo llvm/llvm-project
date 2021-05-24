@@ -1667,7 +1667,6 @@ entry:
 vector.ph:                                        ; preds = %entry
   %n.rnd.up = add i32 %n, 3
   %n.vec = and i32 %n.rnd.up, -4
-  %trip.count.minus.1 = add i32 %n, -1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -1718,7 +1717,6 @@ entry:
 vector.ph:                                        ; preds = %entry
   %n.rnd.up = add i32 %n, 3
   %n.vec = and i32 %n.rnd.up, -4
-  %trip.count.minus.1 = add i32 %n, -1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -1772,7 +1770,6 @@ entry:
 vector.ph:                                        ; preds = %entry
   %n.rnd.up = add i32 %n, 7
   %n.vec = and i32 %n.rnd.up, -8
-  %trip.count.minus.1 = add i32 %n, -1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -1824,7 +1821,6 @@ entry:
 vector.ph:                                        ; preds = %entry
   %n.rnd.up = add i32 %n, 7
   %n.vec = and i32 %n.rnd.up, -8
-  %trip.count.minus.1 = add i32 %n, -1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -1880,7 +1876,6 @@ entry:
 vector.ph:                                        ; preds = %entry
   %n.rnd.up = add i32 %n, 15
   %n.vec = and i32 %n.rnd.up, -16
-  %trip.count.minus.1 = add i32 %n, -1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -1932,7 +1927,6 @@ entry:
 vector.ph:                                        ; preds = %entry
   %n.rnd.up = add i32 %n, 15
   %n.vec = and i32 %n.rnd.up, -16
-  %trip.count.minus.1 = add i32 %n, -1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -1988,7 +1982,6 @@ entry:
 vector.ph:                                        ; preds = %entry
   %n.rnd.up = add i32 %n, 7
   %n.vec = and i32 %n.rnd.up, -8
-  %trip.count.minus.1 = add i32 %n, -1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -2039,7 +2032,6 @@ entry:
 vector.ph:                                        ; preds = %entry
   %n.rnd.up = add i32 %n, 7
   %n.vec = and i32 %n.rnd.up, -8
-  %trip.count.minus.1 = add i32 %n, -1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -2093,7 +2085,6 @@ entry:
 vector.ph:                                        ; preds = %entry
   %n.rnd.up = add i32 %n, 15
   %n.vec = and i32 %n.rnd.up, -16
-  %trip.count.minus.1 = add i32 %n, -1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -2145,7 +2136,6 @@ entry:
 vector.ph:                                        ; preds = %entry
   %n.rnd.up = add i32 %n, 15
   %n.vec = and i32 %n.rnd.up, -16
-  %trip.count.minus.1 = add i32 %n, -1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -2201,7 +2191,6 @@ entry:
 vector.ph:                                        ; preds = %entry
   %n.rnd.up = add i32 %n, 15
   %n.vec = and i32 %n.rnd.up, -16
-  %trip.count.minus.1 = add i32 %n, -1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -2252,7 +2241,6 @@ entry:
 vector.ph:                                        ; preds = %entry
   %n.rnd.up = add i32 %n, 15
   %n.vec = and i32 %n.rnd.up, -16
-  %trip.count.minus.1 = add i32 %n, -1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -2308,7 +2296,6 @@ entry:
 vector.ph:                                        ; preds = %entry
   %n.rnd.up = add i32 %n, 3
   %n.vec = and i32 %n.rnd.up, -4
-  %trip.count.minus.1 = add i32 %n, -1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -2362,7 +2349,6 @@ entry:
 vector.ph:                                        ; preds = %entry
   %n.rnd.up = add i32 %n, 3
   %n.vec = and i32 %n.rnd.up, -4
-  %trip.count.minus.1 = add i32 %n, -1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -2421,7 +2407,6 @@ entry:
 vector.ph:                                        ; preds = %entry
   %n.rnd.up = add i32 %n, 7
   %n.vec = and i32 %n.rnd.up, -8
-  %trip.count.minus.1 = add i32 %n, -1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph

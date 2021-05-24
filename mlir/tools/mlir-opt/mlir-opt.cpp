@@ -81,6 +81,7 @@ void registerTestLinalgElementwiseFusion();
 void registerTestPushExpandingReshape();
 void registerTestLinalgFusionTransforms();
 void registerTestLinalgTensorFusionTransforms();
+void registerTestLinalgTiledLoopFusionTransforms();
 void registerTestLinalgGreedyFusion();
 void registerTestLinalgHoisting();
 void registerTestLinalgTileAndFuseSequencePass();
@@ -159,6 +160,7 @@ void registerTestPasses() {
   test::registerTestPushExpandingReshape();
   test::registerTestLinalgFusionTransforms();
   test::registerTestLinalgTensorFusionTransforms();
+  test::registerTestLinalgTiledLoopFusionTransforms();
   test::registerTestLinalgGreedyFusion();
   test::registerTestLinalgHoisting();
   test::registerTestLinalgTileAndFuseSequencePass();

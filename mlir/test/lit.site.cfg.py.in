@@ -36,19 +36,20 @@ config.mlir_runner_utils_dir = "@MLIR_RUNNER_UTILS_DIR@"
 config.mlir_tools_dir = "@MLIR_TOOLS_DIR@"
 config.linalg_test_lib_dir = "@MLIR_DIALECT_LINALG_INTEGRATION_TEST_LIB_DIR@"
 config.build_examples = @LLVM_BUILD_EXAMPLES@
-config.run_cuda_tests = @MLIR_CUDA_CONVERSIONS_ENABLED@
-config.enable_cuda_runner = @MLIR_CUDA_RUNNER_ENABLED@
-config.run_rocm_tests = @MLIR_ROCM_CONVERSIONS_ENABLED@
-config.enable_rocm_runner = @MLIR_ROCM_RUNNER_ENABLED@
+config.run_cuda_tests = @MLIR_ENABLE_CUDA_CONVERSIONS@
+config.enable_cuda_runner = @MLIR_ENABLE_CUDA_RUNNER@
+config.run_rocm_tests = @MLIR_ENABLE_ROCM_CONVERSIONS@
+config.enable_rocm_runner = @MLIR_ENABLE_ROCM_RUNNER@
 config.spirv_wrapper_library_dir = "@MLIR_SPIRV_WRAPPER_LIBRARY_DIR@"
-config.enable_spirv_cpu_runner = @MLIR_SPIRV_CPU_RUNNER_ENABLED@
+config.enable_spirv_cpu_runner = @MLIR_ENABLE_SPIRV_CPU_RUNNER@
 config.vulkan_wrapper_library_dir = "@MLIR_VULKAN_WRAPPER_LIBRARY_DIR@"
-config.enable_vulkan_runner = @MLIR_VULKAN_RUNNER_ENABLED@
-config.enable_bindings_python = @MLIR_BINDINGS_PYTHON_ENABLED@
+config.enable_vulkan_runner = @MLIR_ENABLE_VULKAN_RUNNER@
+config.enable_bindings_python = @MLIR_ENABLE_BINDINGS_PYTHON@
 config.mlir_integration_test_dir = "@MLIR_INTEGRATION_TEST_DIR@"
 config.intel_sde_executable = "@INTEL_SDE_EXECUTABLE@"
 config.mlir_run_amx_tests = "@MLIR_RUN_AMX_TESTS@"
 config.mlir_run_x86vector_tests = "@MLIR_RUN_X86VECTOR_TESTS@"
+config.mlir_run_cuda_tensor_core_tests = "@MLIR_RUN_CUDA_TENSOR_CORE_TESTS@"
 config.mlir_include_integration_tests = "@MLIR_INCLUDE_INTEGRATION_TESTS@"
 
 # Support substitution of the tools_dir with user parameters. This is

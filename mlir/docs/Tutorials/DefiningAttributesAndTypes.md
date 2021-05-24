@@ -25,13 +25,13 @@ So before defining the derived `Type`, it's important to know which of the two
 classes of `Type` we are defining:
 
 Some types are _singleton_ in nature, meaning they have no parameters and only
-ever have one instance, like the [`index` type](LangRef.md#index-type).
+ever have one instance, like the [`index` type](../Dialects/Builtin.md#indextype).
 
 Other types are _parametric_, and contain additional information that
 differentiates different instances of the same `Type`. For example the
-[`integer` type](LangRef.md#integer-type) contains a bitwidth, with `i8` and
+[`integer` type](../Dialects/Builtin.md#integertype) contains a bitwidth, with `i8` and
 `i16` representing different instances of
-[`integer` type](LangRef.md#integer-type). _Parametric_ may also contain a
+[`integer` type](../Dialects/Builtin.md#integertype). _Parametric_ may also contain a
 mutable component, which can be used, for example, to construct self-referring
 recursive types. The mutable component _cannot_ be used to differentiate
 instances of a type class, so usually such types contain other parametric

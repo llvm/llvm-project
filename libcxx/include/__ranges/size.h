@@ -10,8 +10,8 @@
 #define _LIBCPP___RANGES_SIZE_H
 
 #include <__config>
-#include <__iterator/iterator_traits.h>
 #include <__iterator/concepts.h>
+#include <__iterator/iterator_traits.h>
 #include <__ranges/access.h>
 #include <type_traits>
 

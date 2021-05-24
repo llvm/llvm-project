@@ -107,6 +107,66 @@ getShapeDefiningLoopRange(LinalgOp op, unsigned loopDepth,
   llvm_unreachable("Expect to be able to extract a shape defining loop range");
 }
 
+// Return tiled operands for the fused producer op. When fusing into
+// `linalg.tiled_loop` one has to update `input` and `output` arguments of the
+// loop correspondingly.
+// Each input tensor of the producer op has to be added to `inputs` of the
+// `tiled_loop` if it is not present there already. Each output tensor has to
+// be added either to `inputs` or to `outputs` of `linalg.tiled_loop` depending
+// on whether the correponding result is an input or an output to the loop.
+//
+// NOTE: This way of updating the arguments of the `tiled_loop` assumes that the
+// intermediate result is not used by any other operation but the consumer. A
+// more generic way is to append all missing output tensors of the producer to
+// the tiled loop outputs and hence modify the number of the results, since we
+// would need to add the intermediate results to `linalg.yield`. After that a
+// canonicalization pass would move the unused output args of the `tiled_loop`
+// to the `input` section.
+static SmallVector<Value, 4> getTiledOperands(OpBuilder &b, LinalgOp producer) {
+  auto tiledLoop = dyn_cast<TiledLoopOp>(b.getBlock()->getParentOp());
+  if (!tiledLoop)
+    return llvm::to_vector<4>(producer.getShapedOperands());
+
+  SmallVector<Value, 4> tiledOperands;
+  assert(producer.hasTensorSemantics() &&
+         "only fusion on tensors is currently supported for TiledLinalgOp");
+
+  for (auto producerInput : producer.getInputTensors()) {
+    OpOperand *addedInput = tiledLoop.findInputOperand(producerInput);
+    if (addedInput == nullptr)
+      addedInput = &tiledLoop.appendInputOperand(b, producerInput);
+    BlockArgument addedBlockArg = tiledLoop.getTiedBlockArgument(*addedInput);
+    tiledOperands.push_back(addedBlockArg);
+  }
+  for (auto &en : llvm::enumerate(producer.getOutputTensors())) {
+    Value producerOutput = en.value();
+
+    Value result = producer->getResult(en.index());
+    OpOperand *resultInputOperand = tiledLoop.findInputOperand(result);
+    OpOperand *resultOutputOperand = tiledLoop.findOutputOperand(result);
+    assert((resultInputOperand != nullptr) ^ (resultOutputOperand != nullptr) &&
+           "The result should be present in `input` or `output` args of "
+           "`tiled_loop");
+
+    bool isInput = resultInputOperand;
+    int opNumber = isInput ? resultInputOperand->getOperandNumber()
+                           : resultOutputOperand->getOperandNumber();
+
+    OpOperand *addedOutput = tiledLoop.findOutputOperand(producerOutput);
+    if (addedOutput == nullptr)
+      addedOutput = isInput ? &tiledLoop.appendInputOperand(b, producerOutput)
+                            : &tiledLoop.appendOutputOperand(b, producerOutput);
+
+    OpOperand &resultOperand = tiledLoop->getOpOperand(opNumber);
+    auto addedBlockArg = tiledLoop.getTiedBlockArgument(*addedOutput);
+    auto resultOperandBlockArg = tiledLoop.getTiedBlockArgument(resultOperand);
+    resultOperandBlockArg.replaceAllUsesWith(addedBlockArg);
+    tiledLoop.eraseOperand(b, resultOperand);
+    tiledOperands.push_back(addedBlockArg);
+  }
+  return tiledOperands;
+}
+
 /// Fuses the producer by cloning the `producer`. The `fusedLoopsAndRanges`
 /// provides the loop range information for the fused loops. The rest are
 /// obtained from the producer itself, since they are not tiled + fused.
@@ -143,8 +203,8 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
   clonedShapes.reserve(producer.getNumShapedOperands());
 
   // Compute subranges for all tensor input/output operands.
-  auto tiledOperands = llvm::to_vector<4>(producer.getShapedOperands());
-  clonedShapes.append(makeTiledShapes(b, loc, producer, tiledOperands, ivs,
+  clonedShapes.append(makeTiledShapes(b, loc, producer,
+                                      getTiledOperands(b, producer), ivs,
                                       tileSizes, sizeBounds));
 
   // Append the other operands.
@@ -808,7 +868,7 @@ fuseOperations(OpBuilder &b, LinalgOp rootOp, TiledLinalgOp tiledLinalgOp,
     origOpToFusedOp[origOp.getOperation()] = fusedOp;
     fusedOps[fusionCandidates.size() - candidate.index() - 1] = fusedOp;
 
-    // Prepare the b for the next insertion point.
+    // Prepare the builder for the next insertion point.
     auto guard = llvm::make_scope_exit([&]() { b.setInsertionPoint(fusedOp); });
     if (!origOp.hasTensorSemantics())
       continue;
@@ -844,16 +904,16 @@ fuseOperations(OpBuilder &b, LinalgOp rootOp, TiledLinalgOp tiledLinalgOp,
     //  2. encode destructive updates that may be inplaceable by bufferization.
     // To keep the second type of information while letting the unfused op die
     // unused, we need to forward the producer output operand.
-    for (auto &operand :
-         cast<scf::ForOp>(tiledLinalgOp.loops.front()).getIterOpOperands())
-      if (auto opResult = operand.get().dyn_cast<OpResult>())
-        if (opResult.getOwner() == origOp)
-          operand.set(origOp.getOutputTensors()[opResult.getResultNumber()]);
+    if (auto forOp = dyn_cast<scf::ForOp>(tiledLinalgOp.loops.front())) {
+      for (auto &operand : forOp.getIterOpOperands())
+        if (auto opResult = operand.get().dyn_cast<OpResult>())
+          if (opResult.getOwner() == origOp)
+            operand.set(origOp.getOutputTensors()[opResult.getResultNumber()]);
+    }
   }
   return fusedOps;
 }
 
-template <typename LoopType>
 static Optional<TiledAndFusedLinalgOps>
 tileAndFuseLinalgOpsImpl(OpBuilder &b, ArrayRef<LinalgOp> ops,
                          const LinalgDependenceGraph &dependenceGraph,
@@ -928,11 +988,9 @@ mlir::linalg::tileAndFuseLinalgOps(OpBuilder &b, ArrayRef<LinalgOp> ops,
                                    const LinalgTilingOptions &tilingOptions) {
   switch (tilingOptions.loopType) {
   case LinalgTilingLoopType::Loops:
-    return tileAndFuseLinalgOpsImpl<scf::ForOp>(b, ops, dependenceGraph,
-                                                tilingOptions);
   case LinalgTilingLoopType::ParallelLoops:
-    return tileAndFuseLinalgOpsImpl<scf::ParallelOp>(b, ops, dependenceGraph,
-                                                     tilingOptions);
+  case LinalgTilingLoopType::TiledLoops:
+    return tileAndFuseLinalgOpsImpl(b, ops, dependenceGraph, tilingOptions);
   default:;
   }
   return llvm::None;

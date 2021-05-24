@@ -110,7 +110,7 @@ inline void enableMemoryTagChecksTestOnly() {
 }
 
 class ScopedDisableMemoryTagChecks {
-  size_t PrevTCO;
+  uptr PrevTCO;
 
 public:
   ScopedDisableMemoryTagChecks() {

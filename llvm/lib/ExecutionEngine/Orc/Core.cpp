@@ -1754,7 +1754,7 @@ void Task::anchor() {}
 
 void MaterializationTask::printDescription(raw_ostream &OS) {
   OS << "Materialization task: " << MU->getName() << " in "
-     << MR->getTargetJITDylib().getName() << "\n";
+     << MR->getTargetJITDylib().getName();
 }
 
 void MaterializationTask::run() { MU->materialize(std::move(MR)); }

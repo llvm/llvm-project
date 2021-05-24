@@ -28,6 +28,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
@@ -2509,15 +2510,16 @@ Value *X86TargetLowering::getIRStackGuard(IRBuilder<> &IRB) const {
       return SegmentOffset(IRB, 0x10, getAddressSpace());
     } else {
       unsigned AddressSpace = getAddressSpace();
+      Module *M = IRB.GetInsertBlock()->getParent()->getParent();
       // Specially, some users may customize the base reg and offset.
-      int Offset = getTargetMachine().Options.StackProtectorGuardOffset;
+      int Offset = M->getStackProtectorGuardOffset();
       // If we don't set -stack-protector-guard-offset value:
       // %fs:0x28, unless we're using a Kernel code model, in which case
       // it's %gs:0x28.  gs:0x14 on i386.
       if (Offset == INT_MAX)
         Offset = (Subtarget.is64Bit()) ? 0x28 : 0x14;
 
-      const auto &GuardReg = getTargetMachine().Options.StackProtectorGuardReg;
+      StringRef GuardReg = M->getStackProtectorGuardReg();
       if (GuardReg == "fs")
         AddressSpace = X86AS::FS;
       else if (GuardReg == "gs")
@@ -2547,12 +2549,11 @@ void X86TargetLowering::insertSSPDeclarations(Module &M) const {
     return;
   }
 
-  auto GuardMode = getTargetMachine().Options.StackProtectorGuard;
+  StringRef GuardMode = M.getStackProtectorGuard();
 
   // glibc, bionic, and Fuchsia have a special slot for the stack guard.
-  if ((GuardMode == llvm::StackProtectorGuards::TLS ||
-       GuardMode == llvm::StackProtectorGuards::None)
-      && hasStackGuardSlotTLS(Subtarget.getTargetTriple()))
+  if ((GuardMode == "tls" || GuardMode.empty()) &&
+      hasStackGuardSlotTLS(Subtarget.getTargetTriple()))
     return;
   TargetLowering::insertSSPDeclarations(M);
 }
@@ -4430,9 +4431,27 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   if (HasNoCfCheck && IsCFProtectionSupported && IsIndirectCall) {
     Chain = DAG.getNode(X86ISD::NT_CALL, dl, NodeTys, Ops);
+  } else if (CLI.CB && objcarc::hasAttachedCallOpBundle(CLI.CB)) {
+    // Calls with a "clang.arc.attachedcall" bundle are special. They should be
+    // expanded to the call, directly followed by a special marker sequence and
+    // a call to a ObjC library function. Use the CALL_RVMARKER to do that.
+    assert(!isTailCall &&
+           "tail calls cannot be marked with clang.arc.attachedcall");
+    assert(Is64Bit && "clang.arc.attachedcall is only supported in 64bit mode");
+
+    // Add target constant to select ObjC runtime call just before the call
+    // target. RuntimeCallType == 0 selects objc_retainAutoreleasedReturnValue,
+    // RuntimeCallType == 0 selects objc_unsafeClaimAutoreleasedReturnValue when
+    // epxanding the pseudo.
+    unsigned RuntimeCallType =
+        objcarc::hasAttachedCallOpBundle(CLI.CB, true) ? 0 : 1;
+    Ops.insert(Ops.begin() + 1,
+               DAG.getTargetConstant(RuntimeCallType, dl, MVT::i32));
+    Chain = DAG.getNode(X86ISD::CALL_RVMARKER, dl, NodeTys, Ops);
   } else {
     Chain = DAG.getNode(X86ISD::CALL, dl, NodeTys, Ops);
   }
+
   InFlag = Chain.getValue(1);
   DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
   DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
@@ -31285,6 +31304,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(FLD)
   NODE_NAME_CASE(FST)
   NODE_NAME_CASE(CALL)
+  NODE_NAME_CASE(CALL_RVMARKER)
   NODE_NAME_CASE(BT)
   NODE_NAME_CASE(CMP)
   NODE_NAME_CASE(FCMP)
@@ -47045,6 +47065,7 @@ SDValue X86TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
   EVT VT = Op.getValueType();
   EVT SVT = VT.getScalarType();
   unsigned Opc = Op.getOpcode();
+  SDNodeFlags Flags = Op.getNode()->getFlags();
   switch (Opc) {
   case ISD::FMA:
   case X86ISD::FMSUB:
@@ -47057,6 +47078,11 @@ SDValue X86TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
     if (!Op.hasOneUse() || !Subtarget.hasAnyFMA() || !isTypeLegal(VT) ||
         !(SVT == MVT::f32 || SVT == MVT::f64) ||
         !isOperationLegal(ISD::FMA, VT))
+      break;
+
+    // Don't fold (fneg (fma (fneg x), y, (fneg z))) to (fma x, y, z)
+    // if it may have signed zeros.
+    if (!Flags.hasNoSignedZeros())
       break;
 
     // This is always negatible for free but we might be able to remove some

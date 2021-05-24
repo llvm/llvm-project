@@ -136,6 +136,7 @@ public:
     Opts["__cl_clang_function_pointers"] = true;
     Opts["__cl_clang_variadic_functions"] = true;
     Opts["__cl_clang_non_portable_kernel_param_types"] = true;
+    Opts["__cl_clang_bitfields"] = true;
 
     Opts["cl_khr_fp64"] = true;
     Opts["__opencl_c_fp64"] = true;

@@ -84,6 +84,10 @@ static cl::opt<int> ImportCutoff(
     "import-cutoff", cl::init(-1), cl::Hidden, cl::value_desc("N"),
     cl::desc("Only import first N functions if N>=0 (default -1)"));
 
+static cl::opt<bool>
+    ForceImportAll("force-import-all", cl::init(false), cl::Hidden,
+                   cl::desc("Import functions with noinline attribute"));
+
 static cl::opt<float>
     ImportInstrFactor("import-instr-evolution-factor", cl::init(0.7),
                       cl::Hidden, cl::value_desc("x"),
@@ -227,7 +231,7 @@ selectCallee(const ModuleSummaryIndex &Index,
         }
 
         if ((Summary->instCount() > Threshold) &&
-            !Summary->fflags().AlwaysInline) {
+            !Summary->fflags().AlwaysInline && !ForceImportAll) {
           Reason = FunctionImporter::ImportFailureReason::TooLarge;
           return false;
         }
@@ -240,7 +244,7 @@ selectCallee(const ModuleSummaryIndex &Index,
         }
 
         // Don't bother importing if we can't inline it anyway.
-        if (Summary->fflags().NoInline) {
+        if (Summary->fflags().NoInline && !ForceImportAll) {
           Reason = FunctionImporter::ImportFailureReason::NoInline;
           return false;
         }
@@ -487,17 +491,28 @@ static void computeImportForFunction(
           FailureInfo = std::make_unique<FunctionImporter::ImportFailureInfo>(
               VI, Edge.second.getHotness(), Reason, 1);
         }
-        LLVM_DEBUG(
-            dbgs() << "ignored! No qualifying callee with summary found.\n");
-        continue;
+        if (ForceImportAll) {
+          std::string Msg = std::string("Failed to import function ") +
+                            VI.name().str() + " due to " +
+                            getFailureName(Reason);
+          auto Error = make_error<StringError>(
+              Msg, std::make_error_code(std::errc::operation_not_supported));
+          logAllUnhandledErrors(std::move(Error), errs(),
+                                "Error importing module: ");
+          break;
+        } else {
+          LLVM_DEBUG(dbgs()
+                     << "ignored! No qualifying callee with summary found.\n");
+          continue;
+        }
       }
 
       // "Resolve" the summary
       CalleeSummary = CalleeSummary->getBaseObject();
       ResolvedCalleeSummary = cast<FunctionSummary>(CalleeSummary);
 
-      assert((ResolvedCalleeSummary->fflags().AlwaysInline ||
-	     (ResolvedCalleeSummary->instCount() <= NewThreshold)) &&
+      assert((ResolvedCalleeSummary->fflags().AlwaysInline || ForceImportAll ||
+              (ResolvedCalleeSummary->instCount() <= NewThreshold)) &&
              "selectCallee() didn't honor the threshold");
 
       auto ExportModulePath = ResolvedCalleeSummary->modulePath();

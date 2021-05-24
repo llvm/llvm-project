@@ -288,6 +288,7 @@ public:
     Opts["__cl_clang_variadic_functions"] = true;
     Opts["__cl_clang_function_pointers"] = true;
     Opts["__cl_clang_non_portable_kernel_param_types"] = true;
+    Opts["__cl_clang_bitfields"] = true;
 
     bool IsAMDGCN = isAMDGCN(getTriple());
 

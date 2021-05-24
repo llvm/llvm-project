@@ -4,11 +4,6 @@
 // RUN:   -analyzer-output=text -verify %s
 // RUN: %clang_analyze_cc1 \
 // RUN:   -analyzer-checker=cplusplus.NewDelete,unix.Malloc \
-// RUN:   -analyzer-config c++-allocator-inlining=true \
-// RUN:   -analyzer-config add-pop-up-notes=false \
-// RUN:   -analyzer-output=text -verify %s
-// RUN: %clang_analyze_cc1 \
-// RUN:   -analyzer-checker=cplusplus.NewDelete,unix.Malloc \
 // RUN:   -analyzer-config add-pop-up-notes=false \
 // RUN:   -analyzer-output=plist %s -o %t.plist
 // RUN: %normalize_plist <%t.plist | diff -ub \

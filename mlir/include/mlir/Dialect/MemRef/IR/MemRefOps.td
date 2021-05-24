@@ -242,7 +242,8 @@ def MemRef_BufferCastOp : MemRef_Op<"buffer_cast",
 def MemRef_CastOp : MemRef_Op<"cast", [
       NoSideEffect, SameOperandsAndResultShape,
       DeclareOpInterfaceMethods<CastOpInterface>,
-      ViewLikeOpInterface
+      ViewLikeOpInterface,
+      MemRefsNormalizable
     ]> {
   let summary = "memref cast operation";
   let description = [{
@@ -392,7 +393,7 @@ def MemRef_DeallocOp : MemRef_Op<"dealloc", [MemRefsNormalizable]> {
 // DimOp
 //===----------------------------------------------------------------------===//
 
-def DimOp : MemRef_Op<"dim", [NoSideEffect]> {
+def DimOp : MemRef_Op<"dim", [NoSideEffect, MemRefsNormalizable]> {
   let summary = "dimension index operation";
   let description = [{
     The `dim` operation takes a memref and a dimension operand of type `index`.

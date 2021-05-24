@@ -24,6 +24,15 @@ class AssertMessagesTestCase(TestBase):
         else:
             self.fail("Initial expect should have raised AssertionError!")
 
+    def test_createTestTarget(self):
+        try:
+           self.createTestTarget("doesnt_exist")
+        except AssertionError as e:
+           self.assertIn("Couldn't create target for path 'doesnt_exist': "
+                         "error: unable to find executable for 'doesnt_exist'",
+                         str(e))
+
+
     def test_expect(self):
         """Test format of messages produced by expect(...)"""
 

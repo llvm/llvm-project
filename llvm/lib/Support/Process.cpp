@@ -98,7 +98,7 @@ void Process::Exit(int RetCode, bool NoCleanup) {
     CRC->HandleExit(RetCode);
 
   if (NoCleanup)
-    _Exit(RetCode);
+    ExitNoCleanup(RetCode);
   else
     ::exit(RetCode);
 }

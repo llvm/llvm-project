@@ -2,7 +2,7 @@
 ; RUN: opt -mtriple=aarch64-none-linux-gnu -mattr=+sve -force-target-instruction-cost=1 -loop-vectorize -S -debug-only=loop-vectorize -scalable-vectorization=on        < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK_SCALABLE_ON
 ; RUN: opt -mtriple=aarch64-none-linux-gnu -mattr=+sve -force-target-instruction-cost=1 -loop-vectorize -S -debug-only=loop-vectorize -scalable-vectorization=preferred < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK_SCALABLE_PREFERRED
 ; RUN: opt -mtriple=aarch64-none-linux-gnu -mattr=+sve -force-target-instruction-cost=1 -loop-vectorize -S -debug-only=loop-vectorize -scalable-vectorization=off       < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK_SCALABLE_DISABLED
-; RUN: opt -mtriple=aarch64-none-linux-gnu -mattr=+sve -force-target-instruction-cost=1 -loop-vectorize -S -debug-only=loop-vectorize -vectorizer-maximize-bandwidth -scalable-vectorization=on < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK_SCALABLE_ON_MAXBW
+; RUN: opt -mtriple=aarch64-none-linux-gnu -mattr=+sve -force-target-instruction-cost=1 -loop-vectorize -S -debug-only=loop-vectorize -vectorizer-maximize-bandwidth -scalable-vectorization=preferred < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK_SCALABLE_PREFERRED_MAXBW
 
 ; Test that the MaxVF for the following loop, that has no dependence distances,
 ; is calculated as vscale x 4 (max legal SVE vector size) or vscale x 16
@@ -12,7 +12,7 @@ define void @test0(i32* %a, i8* %b, i32* %c) {
 ; CHECK_SCALABLE_ON: LV: Found feasible scalable VF = vscale x 4
 ; CHECK_SCALABLE_PREFERRED: LV: Found feasible scalable VF = vscale x 4
 ; CHECK_SCALABLE_DISABLED-NOT: LV: Found feasible scalable VF
-; CHECK_SCALABLE_ON_MAXBW: LV: Found feasible scalable VF = vscale x 16
+; CHECK_SCALABLE_PREFERRED_MAXBW: LV: Found feasible scalable VF = vscale x 16
 entry:
   br label %loop
 
@@ -28,7 +28,7 @@ loop:
   store i32 %add, i32* %arrayidx5, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, 1024
-  br i1 %exitcond.not, label %exit, label %loop, !llvm.loop !0
+  br i1 %exitcond.not, label %exit, label %loop
 
 exit:
   ret void
@@ -41,7 +41,7 @@ define void @test1(i32* %a, i8* %b) {
 ; CHECK_SCALABLE_ON: LV: Found feasible scalable VF = vscale x 4
 ; CHECK_SCALABLE_PREFERRED: LV: Found feasible scalable VF = vscale x 4
 ; CHECK_SCALABLE_DISABLED-NOT: LV: Found feasible scalable VF
-; CHECK_SCALABLE_ON_MAXBW: LV: Found feasible scalable VF = vscale x 4
+; CHECK_SCALABLE_PREFERRED_MAXBW: LV: Found feasible scalable VF = vscale x 4
 entry:
   br label %loop
 
@@ -58,7 +58,7 @@ loop:
   store i32 %add, i32* %arrayidx5, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, 1024
-  br i1 %exitcond.not, label %exit, label %loop, !llvm.loop !0
+  br i1 %exitcond.not, label %exit, label %loop
 
 exit:
   ret void
@@ -71,7 +71,7 @@ define void @test2(i32* %a, i8* %b) {
 ; CHECK_SCALABLE_ON: LV: Found feasible scalable VF = vscale x 2
 ; CHECK_SCALABLE_PREFERRED: LV: Found feasible scalable VF = vscale x 2
 ; CHECK_SCALABLE_DISABLED-NOT: LV: Found feasible scalable VF
-; CHECK_SCALABLE_ON_MAXBW: LV: Found feasible scalable VF = vscale x 2
+; CHECK_SCALABLE_PREFERRED_MAXBW: LV: Found feasible scalable VF = vscale x 2
 entry:
   br label %loop
 
@@ -88,7 +88,7 @@ loop:
   store i32 %add, i32* %arrayidx5, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, 1024
-  br i1 %exitcond.not, label %exit, label %loop, !llvm.loop !0
+  br i1 %exitcond.not, label %exit, label %loop
 
 exit:
   ret void
@@ -101,7 +101,7 @@ define void @test3(i32* %a, i8* %b) {
 ; CHECK_SCALABLE_ON: LV: Found feasible scalable VF = vscale x 1
 ; CHECK_SCALABLE_PREFERRED: LV: Found feasible scalable VF = vscale x 1
 ; CHECK_SCALABLE_DISABLED-NOT: LV: Found feasible scalable VF
-; CHECK_SCALABLE_ON_MAXBW: LV: Found feasible scalable VF = vscale x 1
+; CHECK_SCALABLE_PREFERRED_MAXBW: LV: Found feasible scalable VF = vscale x 1
 entry:
   br label %loop
 
@@ -118,21 +118,20 @@ loop:
   store i32 %add, i32* %arrayidx5, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, 1024
-  br i1 %exitcond.not, label %exit, label %loop, !llvm.loop !0
+  br i1 %exitcond.not, label %exit, label %loop
 
 exit:
   ret void
 }
 
 ; Test the fallback mechanism when scalable vectors are not feasible due
-; to e.g. dependence distance. For the '-scalable-vectorization=exclusive'
-; it shouldn't try to vectorize with fixed-width vectors.
+; to e.g. dependence distance.
 define void @test4(i32* %a, i32* %b) {
 ; CHECK: LV: Checking a loop in "test4"
 ; CHECK_SCALABLE_ON-NOT: LV: Found feasible scalable VF
 ; CHECK_SCALABLE_PREFERRED-NOT: LV: Found feasible scalable VF
 ; CHECK_SCALABLE_DISABLED-NOT: LV: Found feasible scalable VF
-; CHECK_SCALABLE_ON_MAXBW-NOT: LV: Found feasible scalable VF
+; CHECK_SCALABLE_PREFERRED_MAXBW-NOT: LV: Found feasible scalable VF
 entry:
   br label %loop
 
@@ -148,14 +147,8 @@ loop:
   store i32 %add, i32* %arrayidx5, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, 1024
-  br i1 %exitcond.not, label %exit, label %loop, !llvm.loop !2
+  br i1 %exitcond.not, label %exit, label %loop
 
 exit:
   ret void
 }
-
-!0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.vectorize.enable", i1 true}
-!2 = distinct !{!2, !3, !4}
-!3 = !{!"llvm.loop.vectorize.enable", i1 true}
-!4 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}

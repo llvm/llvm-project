@@ -41,7 +41,7 @@ struct Context {
     MCTargetOptions MCOptions;
     MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
     Ctx = std::make_unique<MCContext>(Triple(TripleName), MAI.get(), MRI.get(),
-                                      /*MOFI=*/nullptr, /*MSTI=*/nullptr);
+                                      /*MSTI=*/nullptr);
   }
 
   operator bool() { return Ctx.get(); }

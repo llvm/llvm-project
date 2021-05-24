@@ -9886,13 +9886,17 @@ findArgumentCopyElisionCandidates(const DataLayout &DL,
       continue;
 
     // Check if the stored value is an argument, and that this store fully
-    // initializes the alloca. Don't elide copies from the same argument twice.
+    // initializes the alloca.
+    // If the argument type has padding bits we can't directly forward a pointer
+    // as the upper bits may contain garbage.
+    // Don't elide copies from the same argument twice.
     const Value *Val = SI->getValueOperand()->stripPointerCasts();
     const auto *Arg = dyn_cast<Argument>(Val);
     if (!Arg || Arg->hasPassPointeeByValueCopyAttr() ||
         Arg->getType()->isEmptyTy() ||
         DL.getTypeStoreSize(Arg->getType()) !=
             DL.getTypeAllocSize(AI->getAllocatedType()) ||
+        !DL.typeSizeEqualsStoreSize(Arg->getType()) ||
         ArgCopyElisionCandidates.count(Arg)) {
       *Info = StaticAllocaInfo::Clobbered;
       continue;

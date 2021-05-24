@@ -503,3 +503,9 @@ bool llvm::RunningWindows8OrGreater() {
   // Windows 8 is version 6.2, service pack 0.
   return GetWindowsOSVersion() >= llvm::VersionTuple(6, 2, 0, 0);
 }
+
+LLVM_ATTRIBUTE_NORETURN
+void Process::ExitNoCleanup(int RetCode) {
+  TerminateProcess(GetCurrentProcess(), RetCode);
+  llvm_unreachable("TerminateProcess doesn't return");
+}

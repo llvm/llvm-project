@@ -1,3 +1,3 @@
-if(MLIR_BINDINGS_PYTHON_ENABLED)
+if(MLIR_ENABLE_BINDINGS_PYTHON)
   add_subdirectory(Python)
 endif()

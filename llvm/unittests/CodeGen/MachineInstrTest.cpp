@@ -37,7 +37,7 @@ std::unique_ptr<MCContext> createMCContext(MCAsmInfo *AsmInfo) {
   Triple TheTriple(/*ArchStr=*/"", /*VendorStr=*/"", /*OSStr=*/"",
                    /*EnvironmentStr=*/"elf");
   return std::make_unique<MCContext>(TheTriple, AsmInfo, nullptr, nullptr,
-                                     nullptr, nullptr, nullptr, false);
+                                     nullptr, nullptr, false);
 }
 
 // This test makes sure that MachineInstr::isIdenticalTo handles Defs correctly

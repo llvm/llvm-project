@@ -16815,8 +16815,10 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
       Record->setInvalidDecl();
       InvalidDecl = true;
     }
-    // OpenCL v1.2 s6.9.c: bitfields are not supported.
-    if (BitWidth) {
+    // OpenCL v1.2 s6.9.c: bitfields are not supported, unless Clang extension
+    // is enabled.
+    if (BitWidth && !getOpenCLOptions().isAvailableOption(
+                        "__cl_clang_bitfields", LangOpts)) {
       Diag(Loc, diag::err_opencl_bitfields);
       InvalidDecl = true;
     }

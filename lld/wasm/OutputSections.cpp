@@ -144,8 +144,8 @@ void DataSection::finalizeContents() {
       });
 #endif
 
-  assert((!config->isPic || activeCount <= 1) &&
-         "Currenly only a single data segment is supported in PIC mode");
+  assert((config->sharedMemory || !config->isPic || activeCount <= 1) &&
+         "output segments should have been combined by now");
 
   writeUleb128(os, segmentCount, "data segment count");
   os.flush();

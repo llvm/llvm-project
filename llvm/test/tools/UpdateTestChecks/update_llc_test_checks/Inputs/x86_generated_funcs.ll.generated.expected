@@ -105,7 +105,7 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    subq $20, %rsp
 ; CHECK-NEXT:    movl $0, -20(%rbp)
 ; CHECK-NEXT:    callq OUTLINED_FUNCTION_1
-; CHECK-NEXT:    movl $1, {{.*}}(%rip)
+; CHECK-NEXT:    movl $1, x(%rip)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    callq OUTLINED_FUNCTION_1

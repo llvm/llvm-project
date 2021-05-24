@@ -32,6 +32,7 @@
 #include "llvm/IR/GlobalIFunc.h"
 #include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
@@ -7582,13 +7583,10 @@ int LLParser::parseCmpXchg(Instruction *&Inst, PerFunctionState &PFS) {
       parseOptionalCommaAlign(Alignment, AteExtraComma))
     return true;
 
-  if (SuccessOrdering == AtomicOrdering::Unordered ||
-      FailureOrdering == AtomicOrdering::Unordered)
-    return tokError("cmpxchg cannot be unordered");
-  if (FailureOrdering == AtomicOrdering::Release ||
-      FailureOrdering == AtomicOrdering::AcquireRelease)
-    return tokError(
-        "cmpxchg failure ordering cannot include release semantics");
+  if (!AtomicCmpXchgInst::isValidSuccessOrdering(SuccessOrdering))
+    return tokError("invalid cmpxchg success ordering");
+  if (!AtomicCmpXchgInst::isValidFailureOrdering(FailureOrdering))
+    return tokError("invalid cmpxchg failure ordering");
   if (!Ptr->getType()->isPointerTy())
     return error(PtrLoc, "cmpxchg operand must be a pointer");
   if (!cast<PointerType>(Ptr->getType())

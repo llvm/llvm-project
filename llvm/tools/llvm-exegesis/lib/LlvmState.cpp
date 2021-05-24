@@ -61,10 +61,9 @@ std::unique_ptr<LLVMTargetMachine> LLVMState::createTargetMachine() const {
 }
 
 bool LLVMState::canAssemble(const MCInst &Inst) const {
-  MCObjectFileInfo ObjectFileInfo;
   MCContext Context(TheTargetMachine->getTargetTriple(),
                     TheTargetMachine->getMCAsmInfo(),
-                    TheTargetMachine->getMCRegisterInfo(), &ObjectFileInfo,
+                    TheTargetMachine->getMCRegisterInfo(),
                     TheTargetMachine->getMCSubtargetInfo());
   std::unique_ptr<const MCCodeEmitter> CodeEmitter(
       TheTargetMachine->getTarget().createMCCodeEmitter(

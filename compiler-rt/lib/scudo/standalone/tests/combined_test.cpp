@@ -491,12 +491,6 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ThreadedCombined) {
   Allocator->releaseToOS();
 }
 
-#if SCUDO_FUCHSIA
-#define SKIP_ON_FUCHSIA(T) DISABLED_##T
-#else
-#define SKIP_ON_FUCHSIA(T) T
-#endif
-
 // Test that multiple instantiations of the allocator have not messed up the
 // process's signal handlers (GWP-ASan used to do this).
 TEST(ScudoCombinedTest, SKIP_ON_FUCHSIA(testSEGV)) {

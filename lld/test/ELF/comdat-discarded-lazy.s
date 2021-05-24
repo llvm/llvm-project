@@ -11,7 +11,7 @@
 ## *before* the symbol fetching the lazy object.
 ## The test relies on the symbol table order of llvm-mc (lexical), which will
 ## need adjustment if llvm-mc changes its behavior.
-# RUN: echo '.globl aa, f2; f2: call aa; \
+# RUN: echo '.globl aa, f2; f2: .weak foo; foo: call aa; \
 # RUN:   .section .text.foo,"axG",@progbits,foo,comdat; aa:' | \
 # RUN:   llvm-mc -filetype=obj -triple=x86_64 - -o %taa.o
 # RUN: llvm-nm -p %taa.o | FileCheck --check-prefix=AA-NM %s
@@ -30,7 +30,7 @@
 
 ## Test the case when the symbol causing a "discarded section" is ordered
 ## *after* the symbol fetching the lazy object.
-# RUN: echo '.globl f2, zz; f2: call zz; \
+# RUN: echo '.globl f2, zz; .weak foo; foo: f2: call zz; \
 # RUN:   .section .text.foo,"axG",@progbits,foo,comdat; zz:' | \
 # RUN:   llvm-mc -filetype=obj -triple=x86_64 - -o %tzz.o
 # RUN: llvm-nm -p %tzz.o | FileCheck --check-prefix=ZZ-NM %s

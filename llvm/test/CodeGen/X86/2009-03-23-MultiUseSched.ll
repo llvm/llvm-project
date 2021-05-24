@@ -14,16 +14,16 @@ define fastcc i64 @foo() nounwind {
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    movq {{.*}}(%rip), %r8
-; CHECK-NEXT:    movq {{.*}}(%rip), %r10
-; CHECK-NEXT:    movq {{.*}}(%rip), %r9
-; CHECK-NEXT:    movq {{.*}}(%rip), %r12
-; CHECK-NEXT:    movq {{.*}}(%rip), %r15
-; CHECK-NEXT:    movq {{.*}}(%rip), %r14
-; CHECK-NEXT:    movq {{.*}}(%rip), %r11
-; CHECK-NEXT:    movq {{.*}}(%rip), %rdx
+; CHECK-NEXT:    movq X(%rip), %r8
+; CHECK-NEXT:    movq X(%rip), %r10
+; CHECK-NEXT:    movq X(%rip), %r9
+; CHECK-NEXT:    movq X(%rip), %r12
+; CHECK-NEXT:    movq X(%rip), %r15
+; CHECK-NEXT:    movq X(%rip), %r14
+; CHECK-NEXT:    movq X(%rip), %r11
+; CHECK-NEXT:    movq X(%rip), %rdx
 ; CHECK-NEXT:    addq %r15, %rdx
-; CHECK-NEXT:    movq {{.*}}(%rip), %rsi
+; CHECK-NEXT:    movq X(%rip), %rsi
 ; CHECK-NEXT:    bswapq %rsi
 ; CHECK-NEXT:    leaq (%r11,%r14), %rbx
 ; CHECK-NEXT:    addq %r15, %rbx
@@ -32,7 +32,7 @@ define fastcc i64 @foo() nounwind {
 ; CHECK-NEXT:    leaq (%r9,%r10), %rsi
 ; CHECK-NEXT:    leaq (%rsi,%r8), %rdx
 ; CHECK-NEXT:    addq %rsi, %rdx
-; CHECK-NEXT:    movq {{.*}}(%rip), %rdi
+; CHECK-NEXT:    movq X(%rip), %rdi
 ; CHECK-NEXT:    addq %rbx, %r12
 ; CHECK-NEXT:    addq %r8, %rdx
 ; CHECK-NEXT:    bswapq %rdi
@@ -44,7 +44,7 @@ define fastcc i64 @foo() nounwind {
 ; CHECK-NEXT:    leaq (%r10,%r8), %rbx
 ; CHECK-NEXT:    leaq (%rdx,%rbx), %rsi
 ; CHECK-NEXT:    addq %rbx, %rsi
-; CHECK-NEXT:    movq {{.*}}(%rip), %rbx
+; CHECK-NEXT:    movq X(%rip), %rbx
 ; CHECK-NEXT:    addq %r12, %rdi
 ; CHECK-NEXT:    addq %rdi, %r9
 ; CHECK-NEXT:    addq %rdx, %rsi
@@ -57,7 +57,7 @@ define fastcc i64 @foo() nounwind {
 ; CHECK-NEXT:    leaq (%rdx,%r8), %rax
 ; CHECK-NEXT:    leaq (%rsi,%rax), %rdi
 ; CHECK-NEXT:    addq %rax, %rdi
-; CHECK-NEXT:    movq {{.*}}(%rip), %rcx
+; CHECK-NEXT:    movq X(%rip), %rcx
 ; CHECK-NEXT:    addq %r9, %rbx
 ; CHECK-NEXT:    addq %rbx, %r10
 ; CHECK-NEXT:    addq %rsi, %rdi
@@ -70,7 +70,7 @@ define fastcc i64 @foo() nounwind {
 ; CHECK-NEXT:    leaq (%rsi,%rdx), %rbx
 ; CHECK-NEXT:    leaq (%rdi,%rbx), %r11
 ; CHECK-NEXT:    addq %rbx, %r11
-; CHECK-NEXT:    movq {{.*}}(%rip), %rbx
+; CHECK-NEXT:    movq X(%rip), %rbx
 ; CHECK-NEXT:    addq %r10, %rcx
 ; CHECK-NEXT:    addq %rcx, %r8
 ; CHECK-NEXT:    addq %rdi, %r11
@@ -83,7 +83,7 @@ define fastcc i64 @foo() nounwind {
 ; CHECK-NEXT:    leaq (%rdi,%rsi), %rax
 ; CHECK-NEXT:    leaq (%r11,%rax), %r14
 ; CHECK-NEXT:    addq %rax, %r14
-; CHECK-NEXT:    movq {{.*}}(%rip), %rax
+; CHECK-NEXT:    movq X(%rip), %rax
 ; CHECK-NEXT:    addq %r8, %rbx
 ; CHECK-NEXT:    addq %rbx, %rdx
 ; CHECK-NEXT:    addq %r11, %r14
@@ -96,7 +96,7 @@ define fastcc i64 @foo() nounwind {
 ; CHECK-NEXT:    leaq (%r11,%rdi), %rbx
 ; CHECK-NEXT:    leaq (%r14,%rbx), %r9
 ; CHECK-NEXT:    addq %rbx, %r9
-; CHECK-NEXT:    movq {{.*}}(%rip), %rbx
+; CHECK-NEXT:    movq X(%rip), %rbx
 ; CHECK-NEXT:    addq %rdx, %rax
 ; CHECK-NEXT:    addq %rax, %rsi
 ; CHECK-NEXT:    addq %r14, %r9
@@ -109,7 +109,7 @@ define fastcc i64 @foo() nounwind {
 ; CHECK-NEXT:    leaq (%r14,%r11), %rax
 ; CHECK-NEXT:    leaq (%r9,%rax), %r10
 ; CHECK-NEXT:    addq %rax, %r10
-; CHECK-NEXT:    movq {{.*}}(%rip), %rax
+; CHECK-NEXT:    movq X(%rip), %rax
 ; CHECK-NEXT:    addq %rsi, %rbx
 ; CHECK-NEXT:    addq %rbx, %rdi
 ; CHECK-NEXT:    addq %r9, %r10
@@ -122,7 +122,7 @@ define fastcc i64 @foo() nounwind {
 ; CHECK-NEXT:    leaq (%r9,%r14), %rbx
 ; CHECK-NEXT:    leaq (%r10,%rbx), %r8
 ; CHECK-NEXT:    addq %rbx, %r8
-; CHECK-NEXT:    movq {{.*}}(%rip), %rbx
+; CHECK-NEXT:    movq X(%rip), %rbx
 ; CHECK-NEXT:    addq %rdi, %rax
 ; CHECK-NEXT:    addq %rax, %r11
 ; CHECK-NEXT:    addq %r10, %r8
@@ -135,7 +135,7 @@ define fastcc i64 @foo() nounwind {
 ; CHECK-NEXT:    leaq (%r10,%r9), %rax
 ; CHECK-NEXT:    leaq (%r8,%rax), %r15
 ; CHECK-NEXT:    addq %rax, %r15
-; CHECK-NEXT:    movq {{.*}}(%rip), %rax
+; CHECK-NEXT:    movq X(%rip), %rax
 ; CHECK-NEXT:    addq %r11, %rbx
 ; CHECK-NEXT:    addq %rbx, %r14
 ; CHECK-NEXT:    addq %r8, %r15
@@ -148,7 +148,7 @@ define fastcc i64 @foo() nounwind {
 ; CHECK-NEXT:    leaq (%r8,%r10), %rbx
 ; CHECK-NEXT:    leaq (%r15,%rbx), %rsi
 ; CHECK-NEXT:    addq %rbx, %rsi
-; CHECK-NEXT:    movq {{.*}}(%rip), %rbx
+; CHECK-NEXT:    movq X(%rip), %rbx
 ; CHECK-NEXT:    addq %r14, %rax
 ; CHECK-NEXT:    addq %rax, %r9
 ; CHECK-NEXT:    addq %r15, %rsi
@@ -161,7 +161,7 @@ define fastcc i64 @foo() nounwind {
 ; CHECK-NEXT:    leaq (%r15,%r8), %rax
 ; CHECK-NEXT:    leaq (%rsi,%rax), %r12
 ; CHECK-NEXT:    addq %rax, %r12
-; CHECK-NEXT:    movq {{.*}}(%rip), %rcx
+; CHECK-NEXT:    movq X(%rip), %rcx
 ; CHECK-NEXT:    addq %r9, %rbx
 ; CHECK-NEXT:    addq %rbx, %r10
 ; CHECK-NEXT:    addq %rsi, %r12
@@ -174,7 +174,7 @@ define fastcc i64 @foo() nounwind {
 ; CHECK-NEXT:    leaq (%rsi,%r15), %rbx
 ; CHECK-NEXT:    leaq (%r12,%rbx), %rax
 ; CHECK-NEXT:    addq %rbx, %rax
-; CHECK-NEXT:    movq {{.*}}(%rip), %rbx
+; CHECK-NEXT:    movq X(%rip), %rbx
 ; CHECK-NEXT:    addq %r10, %rcx
 ; CHECK-NEXT:    addq %rcx, %r8
 ; CHECK-NEXT:    addq %r12, %rax
@@ -187,7 +187,7 @@ define fastcc i64 @foo() nounwind {
 ; CHECK-NEXT:    leaq (%r12,%rsi), %rdx
 ; CHECK-NEXT:    leaq (%rax,%rdx), %rcx
 ; CHECK-NEXT:    addq %rdx, %rcx
-; CHECK-NEXT:    movq {{.*}}(%rip), %rdx
+; CHECK-NEXT:    movq X(%rip), %rdx
 ; CHECK-NEXT:    addq %r8, %rbx
 ; CHECK-NEXT:    addq %rbx, %r15
 ; CHECK-NEXT:    addq %rax, %rcx
@@ -204,7 +204,7 @@ define fastcc i64 @foo() nounwind {
 ; CHECK-NEXT:    addq %rdx, %rsi
 ; CHECK-NEXT:    addq %rcx, %rbx
 ; CHECK-NEXT:    addq %rdx, %rbx
-; CHECK-NEXT:    movq {{.*}}(%rip), %rdx
+; CHECK-NEXT:    movq X(%rip), %rdx
 ; CHECK-NEXT:    bswapq %rdx
 ; CHECK-NEXT:    addq %r10, %rdx
 ; CHECK-NEXT:    leaq (%r15,%r8), %rdi
@@ -218,9 +218,9 @@ define fastcc i64 @foo() nounwind {
 ; CHECK-NEXT:    addq %rdx, %r12
 ; CHECK-NEXT:    addq %rdx, %rdi
 ; CHECK-NEXT:    addq %r15, %rsi
-; CHECK-NEXT:    movq {{.*}}(%rip), %rax
+; CHECK-NEXT:    movq X(%rip), %rax
 ; CHECK-NEXT:    bswapq %rax
-; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
+; CHECK-NEXT:    movq %rax, X(%rip)
 ; CHECK-NEXT:    addq %r8, %rax
 ; CHECK-NEXT:    addq %r12, %rsi
 ; CHECK-NEXT:    addq %rsi, %rax

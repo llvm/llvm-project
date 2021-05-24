@@ -583,8 +583,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace std {
 #ifdef _GLIBCXX_BEGIN_NAMESPACE_VERSION
 _GLIBCXX_BEGIN_NAMESPACE_VERSION
-#endif
-#endif // !defined(__HIPCC_RTC__)
+#endif // _GLIBCXX_BEGIN_NAMESPACE_VERSION
+#endif // _LIBCPP_BEGIN_NAMESPACE_STD
 
 // Pull the new overloads we defined above into namespace std.
 // using ::abs; - This may be considered for C++.
@@ -729,9 +729,9 @@ _LIBCPP_END_NAMESPACE_STD
 #else
 #ifdef _GLIBCXX_BEGIN_NAMESPACE_VERSION
 _GLIBCXX_END_NAMESPACE_VERSION
-#endif
+#endif // _GLIBCXX_BEGIN_NAMESPACE_VERSION
 } // namespace std
-#endif
+#endif // _LIBCPP_END_NAMESPACE_STD
 #endif // !defined(__HIPCC_RTC__)
 
 // Define device-side math functions from <ymath.h> on MSVC.

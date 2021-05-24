@@ -73,12 +73,17 @@ define i1 @i1_arg(i1 %x) {
 ; CHECK-LABEL: i1_arg:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %ebx
+; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %bl
+; CHECK-NEXT:    movl %ebx, %eax
+; CHECK-NEXT:    andb $1, %al
+; CHECK-NEXT:    movb %al, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    calll _addrof_i1
 ; CHECK-NEXT:    addl $4, %esp
 ; CHECK-NEXT:    movl %ebx, %eax
+; CHECK-NEXT:    addl $4, %esp
 ; CHECK-NEXT:    popl %ebx
 ; CHECK-NEXT:    retl
   %x.addr = alloca i1
@@ -369,20 +374,49 @@ define void @sret_and_elide(i32* sret(i32) %sret, i32 %v) {
   ret void
 }
 
-; FIXME: The argument elision is not legal in presence of irregular types.
+define void @avoid_partially_initialized_alloca(i32 %x) {
+; CHECK-LABEL: avoid_partially_initialized_alloca:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushl %ebp
+; CHECK-NEXT:    movl %esp, %ebp
+; CHECK-NEXT:    andl $-8, %esp
+; CHECK-NEXT:    subl $8, %esp
+; CHECK-NEXT:    movl 8(%ebp), %eax
+; CHECK-NEXT:    movl %eax, (%esp)
+; CHECK-NEXT:    movl %esp, %eax
+; CHECK-NEXT:    pushl %eax
+; CHECK-NEXT:    calll _addrof_i32
+; CHECK-NEXT:    addl $4, %esp
+; CHECK-NEXT:    movl %ebp, %esp
+; CHECK-NEXT:    popl %ebp
+; CHECK-NEXT:    retl
+  %a = alloca i64
+  %p = bitcast i64* %a to i32*
+  store i32 %x, i32* %p
+  call void @addrof_i32(i32* %p)
+  ret void
+}
+
+; Ensure no copy elision happens as the two i3 values fed into icmp may have
+; garbage in the upper bits, a truncation is needed.
 
 define i1 @use_i3(i3 %a1, i3 %a2) {
 ; CHECK-LABEL: use_i3:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; CHECK-NEXT:    andb $7, %al
-; CHECK-NEXT:    cmpb {{[0-9]+}}(%esp), %al
+; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; CHECK-NEXT:    andb $7, %cl
+; CHECK-NEXT:    movb %cl, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    cmpb %cl, %al
 ; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    popl %ecx
 ; CHECK-NEXT:    retl
-  %tmp = alloca i3, align 4
-  store i3 %a2, i3* %tmp, align 4
-  %l = load i3, i3* %tmp
-  %res = icmp eq i3 %a1, %l
+  %tmp = alloca i3
+  store i3 %a2, i3* %tmp
+  %val = load i3, i3* %tmp
+  %res = icmp eq i3 %a1, %val
   ret i1 %res
 }
 

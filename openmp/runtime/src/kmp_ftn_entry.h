@@ -595,13 +595,13 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_NUM_PROCS)(void) {
 }
 
 void FTN_STDCALL KMP_EXPAND_NAME(FTN_SET_NESTED)(int KMP_DEREF flag) {
-  KMP_INFORM(APIDeprecated, "omp_set_nested", "omp_set_max_active_levels");
 #ifdef KMP_STUB
   __kmps_set_nested(KMP_DEREF flag);
 #else
   kmp_info_t *thread;
   /* For the thread-private internal controls implementation */
   thread = __kmp_entry_thread();
+  KMP_INFORM(APIDeprecated, "omp_set_nested", "omp_set_max_active_levels");
   __kmp_save_internal_controls(thread);
   // Somewhat arbitrarily decide where to get a value for max_active_levels
   int max_active_levels = get__max_active_levels(thread);
@@ -612,12 +612,12 @@ void FTN_STDCALL KMP_EXPAND_NAME(FTN_SET_NESTED)(int KMP_DEREF flag) {
 }
 
 int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_NESTED)(void) {
-  KMP_INFORM(APIDeprecated, "omp_get_nested", "omp_get_max_active_levels");
 #ifdef KMP_STUB
   return __kmps_get_nested();
 #else
   kmp_info_t *thread;
   thread = __kmp_entry_thread();
+  KMP_INFORM(APIDeprecated, "omp_get_nested", "omp_get_max_active_levels");
   return get__max_active_levels(thread) > 1;
 #endif
 }
