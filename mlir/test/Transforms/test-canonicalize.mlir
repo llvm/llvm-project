@@ -39,9 +39,9 @@ func @remove_op_with_variadic_results_and_folder(%arg0 : i32, %arg1 : i32) -> (i
 // CHECK-LABEL: func @test_commutative_multi
 // CHECK-SAME: (%[[ARG_0:[a-z0-9]*]]: i32, %[[ARG_1:[a-z0-9]*]]: i32)
 func @test_commutative_multi(%arg0: i32, %arg1: i32) -> (i32, i32) {
-  // CHECK: %[[C42:.*]] = constant 42 : i32
+  // CHECK-DAG: %[[C42:.*]] = constant 42 : i32
   %c42_i32 = constant 42 : i32
-  // CHECK: %[[C43:.*]] = constant 43 : i32
+  // CHECK-DAG: %[[C43:.*]] = constant 43 : i32
   %c43_i32 = constant 43 : i32
   // CHECK-NEXT: %[[O0:.*]] = "test.op_commutative"(%[[ARG_0]], %[[ARG_1]], %[[C42]], %[[C43]]) : (i32, i32, i32, i32) -> i32
   %y = "test.op_commutative"(%c42_i32, %arg0, %arg1, %c43_i32) : (i32, i32, i32, i32) -> i32
