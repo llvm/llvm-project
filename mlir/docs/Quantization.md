@@ -173,10 +173,10 @@ MLIR:
         mapping between *expressed* values (typically of a floating point
         computer type) and *storage* values (typically of an integral computer
         type).
-    *   [Type conversion ops](#quantized-type-conversion-ops) for converting
+    *   [Type conversion ops](#quantized-type-conversion-operations) for converting
         between types based on a QuantizedType and its *expressed* and *storage*
         sub-types.
-    *   [Instrumentation ops](#instrumentation-and-constraint-ops) for assigning
+    *   [Instrumentation ops](#instrumentation-and-constraint-operations) for assigning
         instrumentation points within the computation where runtime statistics
         may help guide the quantization process.
 
