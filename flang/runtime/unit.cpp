@@ -12,6 +12,7 @@
 #include "lock.h"
 #include "unit-map.h"
 #include <cstdio>
+#include <limits>
 #include <utility>
 
 namespace Fortran::runtime::io {
