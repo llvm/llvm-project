@@ -3156,6 +3156,18 @@ bool TypeSystemSwiftTypeRef::IsTypedefType(opaque_compiler_type_t type) {
     return node && node->getKind() == Node::Kind::TypeAlias;
   };
 
+#ifndef NDEBUG
+  // We skip validation when dealing with a builtin type since builtins are
+  // considered type aliases by Swift, which we're deviating from since
+  // SwiftASTContext reconstructs Builtin types as TypeAliases pointing to the
+  // actual Builtin types, but mangled names always describe the underlying
+  // builtins directly.
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodePointer node = GetDemangledType(dem, AsMangledName(type));
+  if (node && node->getKind() == Node::Kind::BuiltinTypeName)
+    return impl();
+#endif
   VALIDATE_AND_RETURN(impl, IsTypedefType, type, (ReconstructType(type)),
                       (ReconstructType(type)));
 }
@@ -3176,7 +3188,18 @@ TypeSystemSwiftTypeRef::GetTypedefedType(opaque_compiler_type_t type) {
     }
     return std::get<CompilerType>(pair);
   };
-
+#ifndef NDEBUG
+  // We skip validation when dealing with a builtin type since builtins are
+  // considered type aliases by Swift, which we're deviating from since
+  // SwiftASTContext reconstructs Builtin types as TypeAliases pointing to the
+  // actual Builtin types, but mangled names always describe the underlying
+  // builtins directly.
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodePointer node = GetDemangledType(dem, AsMangledName(type));
+  if (node && node->getKind() == Node::Kind::BuiltinTypeName)
+    return impl();
+#endif
   VALIDATE_AND_RETURN(impl, GetTypedefedType, type, (ReconstructType(type)),
                       (ReconstructType(type)));
 }
