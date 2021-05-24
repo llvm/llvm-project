@@ -64,12 +64,10 @@ class FixedSizeClassMap : public SizeClassMapBase<Config> {
   static const u8 S = Config::NumBits - 1;
   static const uptr M = (1UL << S) - 1;
 
-  static const uptr SizeDelta = Chunk::getHeaderSize();
-
 public:
   static const u32 MaxNumCachedHint = Config::MaxNumCachedHint;
 
-  static const uptr MaxSize = (1UL << Config::MaxSizeLog) + SizeDelta;
+  static const uptr MaxSize = (1UL << Config::MaxSizeLog) + Config::SizeDelta;
   static const uptr NumClasses =
       MidClass + ((Config::MaxSizeLog - Config::MidSizeLog) << S) + 1;
   static_assert(NumClasses <= 256, "");
@@ -79,24 +77,22 @@ public:
   static uptr getSizeByClassId(uptr ClassId) {
     DCHECK_NE(ClassId, BatchClassId);
     if (ClassId <= MidClass)
-      return (ClassId << Config::MinSizeLog) + SizeDelta;
+      return (ClassId << Config::MinSizeLog) + Config::SizeDelta;
     ClassId -= MidClass;
     const uptr T = MidSize << (ClassId >> S);
-    return T + (T >> S) * (ClassId & M) + SizeDelta;
+    return T + (T >> S) * (ClassId & M) + Config::SizeDelta;
   }
 
   static u8 getSizeLSBByClassId(uptr ClassId) {
     return u8(getLeastSignificantSetBitIndex(getSizeByClassId(ClassId)));
   }
 
-  static constexpr bool usesCompressedLSBFormat() {
-    return false;
-  }
+  static constexpr bool usesCompressedLSBFormat() { return false; }
 
   static uptr getClassIdBySize(uptr Size) {
-    if (Size <= SizeDelta + (1 << Config::MinSizeLog))
+    if (Size <= Config::SizeDelta + (1 << Config::MinSizeLog))
       return 1;
-    Size -= SizeDelta;
+    Size -= Config::SizeDelta;
     DCHECK_LE(Size, MaxSize);
     if (Size <= MidSize)
       return (Size + MinSize - 1) >> Config::MinSizeLog;
@@ -227,11 +223,24 @@ struct DefaultSizeClassConfig {
   static const uptr MinSizeLog = 5;
   static const uptr MidSizeLog = 8;
   static const uptr MaxSizeLog = 17;
-  static const u32 MaxNumCachedHint = 10;
+  static const u32 MaxNumCachedHint = 14;
   static const uptr MaxBytesCachedLog = 10;
+  static const uptr SizeDelta = 0;
 };
 
 typedef FixedSizeClassMap<DefaultSizeClassConfig> DefaultSizeClassMap;
+
+struct FuchsiaSizeClassConfig {
+  static const uptr NumBits = 3;
+  static const uptr MinSizeLog = 5;
+  static const uptr MidSizeLog = 8;
+  static const uptr MaxSizeLog = 17;
+  static const u32 MaxNumCachedHint = 10;
+  static const uptr MaxBytesCachedLog = 10;
+  static const uptr SizeDelta = Chunk::getHeaderSize();
+};
+
+typedef FixedSizeClassMap<FuchsiaSizeClassConfig> FuchsiaSizeClassMap;
 
 struct AndroidSizeClassConfig {
 #if SCUDO_WORDSIZE == 64U
@@ -285,6 +294,7 @@ struct SvelteSizeClassConfig {
   static const uptr MaxSizeLog = 14;
   static const u32 MaxNumCachedHint = 13;
   static const uptr MaxBytesCachedLog = 10;
+  static const uptr SizeDelta = Chunk::getHeaderSize();
 #else
   static const uptr NumBits = 4;
   static const uptr MinSizeLog = 3;
@@ -292,6 +302,7 @@ struct SvelteSizeClassConfig {
   static const uptr MaxSizeLog = 14;
   static const u32 MaxNumCachedHint = 14;
   static const uptr MaxBytesCachedLog = 10;
+  static const uptr SizeDelta = Chunk::getHeaderSize();
 #endif
 };
 
