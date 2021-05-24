@@ -1303,10 +1303,10 @@ void llvm::DisassemHelper::DisassembleObject(const ObjectFile *Obj,
     reportError(Obj->getFileName(),
                 "no instruction info for target " + TripleName);
   }
-  MCObjectFileInfo MOFI;
-  MCContext Ctx(Triple(TripleName), AsmInfo.get(), MRI.get(), &MOFI, STI.get());
-  // FIXME: for now initialize MCObjectFileInfo with default values
-  MOFI.initMCObjectFileInfo(Ctx, /*PIC=*/false);
+  MCContext Ctx(Triple(TripleName), AsmInfo.get(), MRI.get(), STI.get());
+  std::unique_ptr<llvm::MCObjectFileInfo> MOFI(
+      TheTarget->createMCObjectFileInfo(Ctx, /*PIC=*/false));
+  Ctx.setObjectFileInfo(MOFI.get());
 
   std::unique_ptr<MCDisassembler> DisAsm(
       TheTarget->createMCDisassembler(*STI, Ctx));

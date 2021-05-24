@@ -405,8 +405,9 @@ static bool executeAssembler(AssemblerInvocation &Opts,
   std::unique_ptr<MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(Opts.Triple, Opts.CPU, FS));
 
-  MCContext Ctx(Triple(Opts.Triple), MAI.get(), MRI.get(), MOFI.get(),
+  MCContext Ctx(Triple(Opts.Triple), MAI.get(), MRI.get(),
                 STI.get(), &SrcMgr);
+  Ctx.setObjectFileInfo(MOFI.get());
 
   bool PIC = false;
   if (Opts.RelocationModel == "static") {
