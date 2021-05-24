@@ -431,7 +431,7 @@ define void @sext_v4i8_to_v4i16(<4 x i8>* %a) {
 ;
 ; SSE41-LABEL: 'sext_v4i8_to_v4i16'
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load <4 x i8>, <4 x i8>* %a, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = sext <4 x i8> %1 to <4 x i16>
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = sext <4 x i8> %1 to <4 x i16>
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i16> %2, <4 x i16>* undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
