@@ -240,7 +240,8 @@ bool RISCVExpandPseudo::expandLoadTLSGDAddress(
 
 bool RISCVExpandPseudo::expandVSetVL(MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator MBBI) {
-  assert(MBBI->getNumOperands() == 5 && "Unexpected instruction format");
+  assert(MBBI->getNumExplicitOperands() == 3 && MBBI->getNumOperands() >= 5 &&
+         "Unexpected instruction format");
 
   DebugLoc DL = MBBI->getDebugLoc();
 
