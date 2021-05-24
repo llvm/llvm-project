@@ -35,7 +35,7 @@ b4:                                               ; preds = %b4, %b0
   br i1 %v8, label %b4, label %b3
 }
 
-attributes #0 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { "frame-pointer"="all" "use-soft-float"="false" }
 
 !0 = !{!1, !1, i64 0}
 !1 = !{!"int", !2}

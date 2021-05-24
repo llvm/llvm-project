@@ -25,4 +25,4 @@ declare void @foo3(i32*)
 ; Function Attrs: nounwind
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
 
-attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind ssp uwtable "frame-pointer"="all" "stack-protector-buffer-size"="8" "use-soft-float"="false" }

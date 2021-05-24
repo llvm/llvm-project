@@ -53,6 +53,6 @@ declare { <4 x float>, <4 x float> } @llvm.aarch64.neon.ld2.v4f32.p0i8(i8*) #2
 ; Function Attrs: nounwind
 declare void @llvm.aarch64.neon.st2.v4f32.p0i8(<4 x float>, <4 x float>, i8* nocapture) #1
 
-attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="true" "use-soft-float"="false" }
+attributes #0 = { nounwind "frame-pointer"="all" "no-infs-fp-math" "no-nans-fp-math" "stack-protector-buffer-size"="8" "unsafe-fp-math" "use-soft-float"="false" }
 attributes #1 = { nounwind }
 attributes #2 = { nounwind readonly }

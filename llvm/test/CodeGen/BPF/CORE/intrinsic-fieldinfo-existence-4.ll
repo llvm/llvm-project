@@ -70,7 +70,7 @@ declare i32 @llvm.bpf.preserve.field.info.p0s_struct.ts(%struct.t*, i64 immarg) 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
 declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
 
-attributes #0 = { nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+attributes #0 = { nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math" "stack-protector-buffer-size"="8" }
 attributes #1 = { argmemonly nofree nosync nounwind willreturn }
 attributes #2 = { nofree nosync nounwind readnone speculatable willreturn }
 attributes #3 = { nofree nosync nounwind readnone willreturn }

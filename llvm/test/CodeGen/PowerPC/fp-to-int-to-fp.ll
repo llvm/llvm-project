@@ -326,5 +326,5 @@ entry:
   ret double %conv
 
 }
-attributes #0 = { nounwind readnone "no-signed-zeros-fp-math"="true" }
+attributes #0 = { nounwind readnone "no-signed-zeros-fp-math" }
 

@@ -32,7 +32,7 @@ declare { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @llvm.arm.neon.vl
 
 ; Function Attrs: nounwind
 
-attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="true" "use-soft-float"="false" }
+attributes #0 = { nounwind "frame-pointer"="none" "no-infs-fp-math" "no-nans-fp-math" "stack-protector-buffer-size"="8" "unsafe-fp-math" "use-soft-float"="false" }
 attributes #1 = { nounwind }
 attributes #2 = { nounwind readonly }
 

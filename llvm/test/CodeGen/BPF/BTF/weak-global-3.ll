@@ -56,7 +56,7 @@ entry:
 ; CHECK:             .byte   103                             # string offset=52
 ; CHECK:             .ascii  ".rodata"                       # string offset=54
 
-attributes #0 = { nofree norecurse nounwind willreturn "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+attributes #0 = { nofree norecurse nounwind willreturn "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math" "stack-protector-buffer-size"="8" }
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!9, !10, !11}

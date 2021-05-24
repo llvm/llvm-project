@@ -53,7 +53,7 @@ for.end30:                                        ; preds = %for.inc28
   ret void
 }
 
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind uwtable "frame-pointer"="all" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 
 ; CHECK: #pragma known-parallel
 ; CHECK: for (int c0 = 0; c0 <= 1535; c0 += 1)

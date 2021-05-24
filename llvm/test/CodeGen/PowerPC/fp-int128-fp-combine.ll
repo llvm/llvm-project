@@ -37,5 +37,5 @@ entry:
   ret float %b
 }
 
-attributes #0 = { "no-signed-zeros-fp-math"="true" }
+attributes #0 = { "no-signed-zeros-fp-math" }
 
