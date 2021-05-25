@@ -2416,7 +2416,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
 ///   loop:
 ///     %iv = phi i8 [ %start, %entry ], [ %iv.next, %for.cond ]
 ///     %nbits = add nsw i8 %iv, %extraoffset
-///     %val.shifted = lshr i8 %val, %nbits
+///     %val.shifted = [la]shr i8 %val, %nbits
 ///     %val.shifted.iszero = icmp eq i8 %val.shifted, 0
 ///     %iv.next = add i8 %iv, 1
 ///     <...>
@@ -2469,8 +2469,8 @@ static bool detectShiftUntilZeroIdiom(Loop *CurLoop, ScalarEvolution *SE,
 
   // Step 2: Check if the comparison's operand is in desirable form.
   // FIXME: Val could be a one-input PHI node, which we should look past.
-  if (!match(ValShifted, m_LShr(m_LoopInvariant(m_Value(Val), CurLoop),
-                                m_Instruction(NBits)))) {
+  if (!match(ValShifted, m_Shr(m_LoopInvariant(m_Value(Val), CurLoop),
+                               m_Instruction(NBits)))) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE " Bad comparisons value computation.\n");
     return false;
   }
@@ -2541,7 +2541,7 @@ static bool detectShiftUntilZeroIdiom(Loop *CurLoop, ScalarEvolution *SE,
 ///   loop:
 ///     %iv = phi i8 [ %start, %entry ], [ %iv.next, %for.cond ]
 ///     %nbits = add nsw i8 %iv, %extraoffset
-///     %val.shifted = lshr i8 %val, %nbits
+///     %val.shifted = [la]shr i8 %val, %nbits
 ///     %val.shifted.iszero = icmp eq i8 %val.shifted, 0
 ///     %iv.next = add i8 %iv, 1
 ///     <...>
