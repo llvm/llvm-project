@@ -45,8 +45,8 @@ void NORETURN reportCheckFailed(const char *File, int Line,
     trap();
   }
   ScopedErrorReport Report;
-  Report.append("CHECK failed @ %s:%d %s (%llu, %llu)\n", File, Line, Condition,
-                Value1, Value2);
+  Report.append("CHECK failed @ %s:%d %s ((u64)op1=%llu, (u64)op2=%llu)\n",
+                File, Line, Condition, Value1, Value2);
 }
 
 // Generic string fatal error message.
