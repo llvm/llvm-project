@@ -77,6 +77,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTarget() {
   initializeWebAssemblyMemIntrinsicResultsPass(PR);
   initializeWebAssemblyRegStackifyPass(PR);
   initializeWebAssemblyRegColoringPass(PR);
+  initializeWebAssemblyNullifyDebugValueListsPass(PR);
   initializeWebAssemblyFixIrreducibleControlFlowPass(PR);
   initializeWebAssemblyLateEHPreparePass(PR);
   initializeWebAssemblyExceptionInfoPass(PR);
@@ -441,6 +442,9 @@ void WebAssemblyPassConfig::addPostRegAlloc() {
 
 void WebAssemblyPassConfig::addPreEmitPass() {
   TargetPassConfig::addPreEmitPass();
+
+  // Nullify DBG_VALUE_LISTs that we cannot handle.
+  addPass(createWebAssemblyNullifyDebugValueLists());
 
   // Eliminate multiple-entry loops.
   addPass(createWebAssemblyFixIrreducibleControlFlow());

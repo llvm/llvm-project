@@ -313,6 +313,10 @@ MlirOperation mlirOperationCreate(MlirOperationState *state) {
   return result;
 }
 
+MlirOperation mlirOperationClone(MlirOperation op) {
+  return wrap(unwrap(op)->clone());
+}
+
 void mlirOperationDestroy(MlirOperation op) { unwrap(op)->erase(); }
 
 bool mlirOperationEqual(MlirOperation op, MlirOperation other) {

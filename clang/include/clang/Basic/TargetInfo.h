@@ -1091,6 +1091,12 @@ public:
     return std::string(1, *Constraint);
   }
 
+  /// Replace some escaped characters with another string based on
+  /// target-specific rules
+  virtual llvm::Optional<std::string> handleAsmEscapedChar(char C) const {
+    return llvm::None;
+  }
+
   /// Returns a string of target-specific clobbers, in LLVM format.
   virtual const char *getClobbers() const = 0;
 

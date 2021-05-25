@@ -55,6 +55,7 @@ static_library("LLVMWebAssemblyCodeGen") {
     "WebAssemblyMCInstLower.cpp",
     "WebAssemblyMachineFunctionInfo.cpp",
     "WebAssemblyMemIntrinsicResults.cpp",
+    "WebAssemblyNullifyDebugValueLists.cpp",
     "WebAssemblyOptimizeLiveIntervals.cpp",
     "WebAssemblyOptimizeReturned.cpp",
     "WebAssemblyPeephole.cpp",

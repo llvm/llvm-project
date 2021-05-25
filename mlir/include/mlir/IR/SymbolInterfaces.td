@@ -24,7 +24,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
   let description = [{
     This interface describes an operation that may define a `Symbol`. A `Symbol`
     operation resides immediately within a region that defines a `SymbolTable`.
-    See [Symbols and SymbolTables](SymbolsAndSymbolTables.md) for more details
+    See [Symbols and SymbolTables](../SymbolsAndSymbolTables.md) for more details
     and constraints on `Symbol` operations.
   }];
   let cppNamespace = "::mlir";

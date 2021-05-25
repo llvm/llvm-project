@@ -619,8 +619,6 @@ class VPseudoUSLoadNoMask<VReg RetClass, bits<7> EEW, bit isFF> :
   let mayLoad = 1;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasDummyMask = 1;
@@ -637,9 +635,7 @@ class VPseudoUSLoadMask<VReg RetClass, bits<7> EEW, bit isFF> :
   let mayLoad = 1;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
   let Constraints = "$rd = $merge";
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasMergeOp = 1;
@@ -654,8 +650,6 @@ class VPseudoSLoadNoMask<VReg RetClass, bits<7> EEW>:
   let mayLoad = 1;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasDummyMask = 1;
@@ -672,9 +666,7 @@ class VPseudoSLoadMask<VReg RetClass, bits<7> EEW>:
   let mayLoad = 1;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
   let Constraints = "$rd = $merge";
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasMergeOp = 1;
@@ -690,8 +682,6 @@ class VPseudoILoadNoMask<VReg RetClass, VReg IdxClass, bits<7> EEW, bits<3> LMUL
   let mayLoad = 1;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasDummyMask = 1;
@@ -710,9 +700,7 @@ class VPseudoILoadMask<VReg RetClass, VReg IdxClass, bits<7> EEW, bits<3> LMUL,
   let mayLoad = 1;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
   let Constraints = !if(!eq(EarlyClobber, 1), "@earlyclobber $rd, $rd = $merge", "$rd = $merge");
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasMergeOp = 1;
@@ -727,8 +715,6 @@ class VPseudoUSStoreNoMask<VReg StClass, bits<7> EEW>:
   let mayLoad = 0;
   let mayStore = 1;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasDummyMask = 1;
@@ -743,8 +729,6 @@ class VPseudoUSStoreMask<VReg StClass, bits<7> EEW>:
   let mayLoad = 0;
   let mayStore = 1;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
@@ -758,8 +742,6 @@ class VPseudoSStoreNoMask<VReg StClass, bits<7> EEW>:
   let mayLoad = 0;
   let mayStore = 1;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasDummyMask = 1;
@@ -774,8 +756,6 @@ class VPseudoSStoreMask<VReg StClass, bits<7> EEW>:
   let mayLoad = 0;
   let mayStore = 1;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
@@ -790,8 +770,6 @@ class VPseudoUnaryNoDummyMask<VReg RetClass,
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
@@ -804,8 +782,6 @@ class VPseudoNullaryNoMask<VReg RegClass>:
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasDummyMask = 1;
@@ -819,9 +795,7 @@ class VPseudoNullaryMask<VReg RegClass>:
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
   let Constraints ="$rd = $merge";
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasMergeOp = 1;
@@ -836,8 +810,6 @@ class VPseudoNullaryPseudoM<string BaseInst>
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   // BaseInstr is not used in RISCVExpandPseudoInsts pass.
@@ -853,9 +825,7 @@ class VPseudoUnaryNoMask<DAGOperand RetClass, VReg OpClass, string Constraint = 
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
   let Constraints = Constraint;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasDummyMask = 1;
@@ -870,9 +840,7 @@ class VPseudoUnaryMask<VReg RetClass, VReg OpClass, string Constraint = ""> :
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
   let Constraints = Join<[Constraint, "$rd = $merge"], ",">.ret;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasMergeOp = 1;
@@ -887,8 +855,6 @@ class VPseudoMaskUnarySOutMask:
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
@@ -906,9 +872,7 @@ class VPseudoUnaryAnyMask<VReg RetClass,
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
   let Constraints = "@earlyclobber $rd, $rd = $merge";
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasMergeOp = 1;
@@ -925,9 +889,7 @@ class VPseudoBinaryNoMask<VReg RetClass,
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
   let Constraints = Constraint;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasDummyMask = 1;
@@ -943,8 +905,6 @@ class VPseudoIStoreNoMask<VReg StClass, VReg IdxClass, bits<7> EEW, bits<3> LMUL
   let mayLoad = 0;
   let mayStore = 1;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasDummyMask = 1;
@@ -960,8 +920,6 @@ class VPseudoIStoreMask<VReg StClass, VReg IdxClass, bits<7> EEW, bits<3> LMUL,
   let mayLoad = 0;
   let mayStore = 1;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
@@ -979,9 +937,7 @@ class VPseudoBinaryMask<VReg RetClass,
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
   let Constraints = Join<[Constraint, "$rd = $merge"], ",">.ret;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasMergeOp = 1;
@@ -1001,9 +957,7 @@ class VPseudoBinaryMOutMask<VReg RetClass,
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
   let Constraints = Join<[Constraint, "$rd = $merge"], ",">.ret;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasMergeOp = 1;
@@ -1025,9 +979,7 @@ class VPseudoBinaryCarryIn<VReg RetClass,
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
   let Constraints = Constraint;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasMergeOp = 0;
@@ -1047,9 +999,7 @@ class VPseudoTernaryNoMask<VReg RetClass,
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
   let Constraints = Join<[Constraint, "$rd = $rs3"], ",">.ret;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasMergeOp = 1;
@@ -1068,9 +1018,7 @@ class VPseudoAMOWDNoMask<VReg RetClass,
   let mayLoad = 1;
   let mayStore = 1;
   let hasSideEffects = 1;
-  let usesCustomInserter = 1;
   let Constraints = "$vd_wd = $vd";
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasDummyMask = 1;
@@ -1088,9 +1036,7 @@ class VPseudoAMOWDMask<VReg RetClass,
   let mayLoad = 1;
   let mayStore = 1;
   let hasSideEffects = 1;
-  let usesCustomInserter = 1;
   let Constraints = "$vd_wd = $vd";
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
@@ -1131,8 +1077,6 @@ class VPseudoUSSegLoadNoMask<VReg RetClass, bits<7> EEW, bits<4> NF, bit isFF>:
   let mayLoad = 1;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasDummyMask = 1;
@@ -1148,9 +1092,7 @@ class VPseudoUSSegLoadMask<VReg RetClass, bits<7> EEW, bits<4> NF, bit isFF>:
   let mayLoad = 1;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
   let Constraints = "$rd = $merge";
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasMergeOp = 1;
@@ -1166,8 +1108,6 @@ class VPseudoSSegLoadNoMask<VReg RetClass, bits<7> EEW, bits<4> NF>:
   let mayLoad = 1;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasDummyMask = 1;
@@ -1183,9 +1123,7 @@ class VPseudoSSegLoadMask<VReg RetClass, bits<7> EEW, bits<4> NF>:
   let mayLoad = 1;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
   let Constraints = "$rd = $merge";
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasMergeOp = 1;
@@ -1201,11 +1139,9 @@ class VPseudoISegLoadNoMask<VReg RetClass, VReg IdxClass, bits<7> EEW, bits<3> L
   let mayLoad = 1;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
   // For vector indexed segment loads, the destination vector register groups
   // cannot overlap the source vector register group
   let Constraints = "@earlyclobber $rd";
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasDummyMask = 1;
@@ -1222,11 +1158,9 @@ class VPseudoISegLoadMask<VReg RetClass, VReg IdxClass, bits<7> EEW, bits<3> LMU
   let mayLoad = 1;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
   // For vector indexed segment loads, the destination vector register groups
   // cannot overlap the source vector register group
   let Constraints = "@earlyclobber $rd, $rd = $merge";
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasMergeOp = 1;
@@ -1241,8 +1175,6 @@ class VPseudoUSSegStoreNoMask<VReg ValClass, bits<7> EEW, bits<4> NF>:
   let mayLoad = 0;
   let mayStore = 1;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasDummyMask = 1;
@@ -1258,8 +1190,6 @@ class VPseudoUSSegStoreMask<VReg ValClass, bits<7> EEW, bits<4> NF>:
   let mayLoad = 0;
   let mayStore = 1;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
@@ -1273,8 +1203,6 @@ class VPseudoSSegStoreNoMask<VReg ValClass, bits<7> EEW, bits<4> NF>:
   let mayLoad = 0;
   let mayStore = 1;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasDummyMask = 1;
@@ -1290,8 +1218,6 @@ class VPseudoSSegStoreMask<VReg ValClass, bits<7> EEW, bits<4> NF>:
   let mayLoad = 0;
   let mayStore = 1;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
@@ -1307,8 +1233,6 @@ class VPseudoISegStoreNoMask<VReg ValClass, VReg IdxClass, bits<7> EEW, bits<3> 
   let mayLoad = 0;
   let mayStore = 1;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasDummyMask = 1;
@@ -1325,8 +1249,6 @@ class VPseudoISegStoreMask<VReg ValClass, VReg IdxClass, bits<7> EEW, bits<3> LM
   let mayLoad = 0;
   let mayStore = 1;
   let hasSideEffects = 0;
-  let usesCustomInserter = 1;
-  let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
@@ -3521,7 +3443,7 @@ let Defs = [VXSAT], hasSideEffects = 1 in {
 //===----------------------------------------------------------------------===//
 // 13.2. Vector Single-Width Averaging Add and Subtract
 //===----------------------------------------------------------------------===//
-let Uses = [VL, VTYPE, VXRM], hasSideEffects = 1 in {
+let Uses = [VXRM], hasSideEffects = 1 in {
   defm PseudoVAADDU      : VPseudoBinaryV_VV_VX;
   defm PseudoVAADD       : VPseudoBinaryV_VV_VX;
   defm PseudoVASUBU      : VPseudoBinaryV_VV_VX;
@@ -3531,14 +3453,14 @@ let Uses = [VL, VTYPE, VXRM], hasSideEffects = 1 in {
 //===----------------------------------------------------------------------===//
 // 13.3. Vector Single-Width Fractional Multiply with Rounding and Saturation
 //===----------------------------------------------------------------------===//
-let Uses = [VL, VTYPE, VXRM], Defs = [VXSAT], hasSideEffects = 1 in {
+let Uses = [VXRM], Defs = [VXSAT], hasSideEffects = 1 in {
   defm PseudoVSMUL      : VPseudoBinaryV_VV_VX;
 }
 
 //===----------------------------------------------------------------------===//
 // 13.4. Vector Single-Width Scaling Shift Instructions
 //===----------------------------------------------------------------------===//
-let Uses = [VL, VTYPE, VXRM], hasSideEffects = 1 in {
+let Uses = [VXRM], hasSideEffects = 1 in {
   defm PseudoVSSRL        : VPseudoBinaryV_VV_VX_VI<uimm5>;
   defm PseudoVSSRA        : VPseudoBinaryV_VV_VX_VI<uimm5>;
 }
@@ -3546,7 +3468,7 @@ let Uses = [VL, VTYPE, VXRM], hasSideEffects = 1 in {
 //===----------------------------------------------------------------------===//
 // 13.5. Vector Narrowing Fixed-Point Clip Instructions
 //===----------------------------------------------------------------------===//
-let Uses = [VL, VTYPE, VXRM], Defs = [VXSAT], hasSideEffects = 1 in {
+let Uses = [VXRM], Defs = [VXSAT], hasSideEffects = 1 in {
   defm PseudoVNCLIP     : VPseudoBinaryV_WV_WX_WI;
   defm PseudoVNCLIPU    : VPseudoBinaryV_WV_WX_WI;
 }
@@ -3792,8 +3714,7 @@ defm PseudoVID : VPseudoMaskNullaryV;
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtV] in {
-let mayLoad = 0, mayStore = 0, hasSideEffects = 0, usesCustomInserter = 1,
-    Uses = [VL, VTYPE] in {
+let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
   foreach m = MxList.m in {
     let VLMul = m.value in {
       let HasSEWOp = 1, BaseInstr = VMV_X_S in
@@ -3816,8 +3737,7 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0, usesCustomInserter = 1,
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtV, HasStdExtF] in {
-let mayLoad = 0, mayStore = 0, hasSideEffects = 0, usesCustomInserter = 1,
-    Uses = [VL, VTYPE] in {
+let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
   foreach m = MxList.m in {
     foreach f = FPList.fpinfo in {
       let VLMul = m.value in {

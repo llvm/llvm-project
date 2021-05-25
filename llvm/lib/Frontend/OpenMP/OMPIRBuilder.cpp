@@ -2386,15 +2386,18 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicUpdate(
   if (!updateToLocation(Loc))
     return Loc.IP;
 
-  Type *XTy = X.Var->getType();
-  assert(XTy->isPointerTy() && "OMP Atomic expects a pointer to target memory");
-  Type *XElemTy = XTy->getPointerElementType();
-  assert((XElemTy->isFloatingPointTy() || XElemTy->isIntegerTy() ||
-          XElemTy->isPointerTy()) &&
-         "OMP atomic update expected a scalar type");
-  assert((RMWOp != AtomicRMWInst::Max) && (RMWOp != AtomicRMWInst::Min) &&
-         (RMWOp != AtomicRMWInst::UMax) && (RMWOp != AtomicRMWInst::UMin) &&
-         "OpenMP atomic does not support LT or GT operations");
+  LLVM_DEBUG({
+    Type *XTy = X.Var->getType();
+    assert(XTy->isPointerTy() &&
+           "OMP Atomic expects a pointer to target memory");
+    Type *XElemTy = XTy->getPointerElementType();
+    assert((XElemTy->isFloatingPointTy() || XElemTy->isIntegerTy() ||
+            XElemTy->isPointerTy()) &&
+           "OMP atomic update expected a scalar type");
+    assert((RMWOp != AtomicRMWInst::Max) && (RMWOp != AtomicRMWInst::Min) &&
+           (RMWOp != AtomicRMWInst::UMax) && (RMWOp != AtomicRMWInst::UMin) &&
+           "OpenMP atomic does not support LT or GT operations");
+  });
 
   emitAtomicUpdate(AllocIP, X.Var, Expr, AO, RMWOp, UpdateOp, X.IsVolatile,
                    IsXLHSInRHSPart);
@@ -2536,14 +2539,17 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCapture(
   if (!updateToLocation(Loc))
     return Loc.IP;
 
-  Type *XTy = X.Var->getType();
-  assert(XTy->isPointerTy() && "OMP Atomic expects a pointer to target memory");
-  Type *XElemTy = XTy->getPointerElementType();
-  assert((XElemTy->isFloatingPointTy() || XElemTy->isIntegerTy() ||
-          XElemTy->isPointerTy()) &&
-         "OMP atomic capture expected a scalar type");
-  assert((RMWOp != AtomicRMWInst::Max) && (RMWOp != AtomicRMWInst::Min) &&
-         "OpenMP atomic does not support LT or GT operations");
+  LLVM_DEBUG({
+    Type *XTy = X.Var->getType();
+    assert(XTy->isPointerTy() &&
+           "OMP Atomic expects a pointer to target memory");
+    Type *XElemTy = XTy->getPointerElementType();
+    assert((XElemTy->isFloatingPointTy() || XElemTy->isIntegerTy() ||
+            XElemTy->isPointerTy()) &&
+           "OMP atomic capture expected a scalar type");
+    assert((RMWOp != AtomicRMWInst::Max) && (RMWOp != AtomicRMWInst::Min) &&
+           "OpenMP atomic does not support LT or GT operations");
+  });
 
   // If UpdateExpr is 'x' updated with some `expr` not based on 'x',
   // 'x' is simply atomically rewritten with 'expr'.

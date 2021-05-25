@@ -509,6 +509,7 @@ struct DeathSizeClassConfig {
   static const scudo::uptr MaxSizeLog = 13;
   static const scudo::u32 MaxNumCachedHint = 4;
   static const scudo::uptr MaxBytesCachedLog = 12;
+  static const scudo::uptr SizeDelta = 0;
 };
 
 static const scudo::uptr DeathRegionSizeLog = 20U;

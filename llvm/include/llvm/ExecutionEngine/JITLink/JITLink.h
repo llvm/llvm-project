@@ -35,6 +35,7 @@
 namespace llvm {
 namespace jitlink {
 
+class LinkGraph;
 class Symbol;
 class Section;
 
@@ -138,8 +139,9 @@ private:
 
 protected:
   // bitfields for Block, allocated here to improve packing.
+  uint64_t ContentMutable : 1;
   uint64_t P2Align : 5;
-  uint64_t AlignmentOffset : 57;
+  uint64_t AlignmentOffset : 56;
 };
 
 using SectionOrdinal = unsigned;
@@ -158,11 +160,14 @@ private:
            "Alignment offset cannot exceed alignment");
     assert(AlignmentOffset <= MaxAlignmentOffset &&
            "Alignment offset exceeds maximum");
+    ContentMutable = false;
     P2Align = Alignment ? countTrailingZeros(Alignment) : 0;
     this->AlignmentOffset = AlignmentOffset;
   }
 
   /// Create a defined addressable for the given content.
+  /// The Content is assumed to be non-writable, and will be copied when
+  /// mutations are required.
   Block(Section &Parent, ArrayRef<char> Content, JITTargetAddress Address,
         uint64_t Alignment, uint64_t AlignmentOffset)
       : Addressable(Address, true), Parent(Parent), Data(Content.data()),
@@ -172,6 +177,26 @@ private:
            "Alignment offset cannot exceed alignment");
     assert(AlignmentOffset <= MaxAlignmentOffset &&
            "Alignment offset exceeds maximum");
+    ContentMutable = false;
+    P2Align = Alignment ? countTrailingZeros(Alignment) : 0;
+    this->AlignmentOffset = AlignmentOffset;
+  }
+
+  /// Create a defined addressable for the given content.
+  /// The content is assumed to be writable, and the caller is responsible
+  /// for ensuring that it lives for the duration of the Block's lifetime.
+  /// The standard way to achieve this is to allocate it on the Graph's
+  /// allocator.
+  Block(Section &Parent, MutableArrayRef<char> Content,
+        JITTargetAddress Address, uint64_t Alignment, uint64_t AlignmentOffset)
+      : Addressable(Address, true), Parent(Parent), Data(Content.data()),
+        Size(Content.size()) {
+    assert(isPowerOf2_64(Alignment) && "Alignment must be power of 2");
+    assert(AlignmentOffset < Alignment &&
+           "Alignment offset cannot exceed alignment");
+    assert(AlignmentOffset <= MaxAlignmentOffset &&
+           "Alignment offset exceeds maximum");
+    ContentMutable = true;
     P2Align = Alignment ? countTrailingZeros(Alignment) : 0;
     this->AlignmentOffset = AlignmentOffset;
   }
@@ -210,7 +235,43 @@ public:
   void setContent(ArrayRef<char> Content) {
     Data = Content.data();
     Size = Content.size();
+    ContentMutable = false;
   }
+
+  /// Get mutable content for this block.
+  ///
+  /// If this Block's content is not already mutable this will trigger a copy
+  /// of the existing immutable content to a new, mutable buffer allocated using
+  /// LinkGraph::allocateContent.
+  MutableArrayRef<char> getMutableContent(LinkGraph &G);
+
+  /// Get mutable content for this block.
+  ///
+  /// This block's content must already be mutable. It is a programmatic error
+  /// to call this on a block with immutable content -- consider using
+  /// getMutableContent instead.
+  MutableArrayRef<char> getAlreadyMutableContent() {
+    assert(ContentMutable && "Content is not mutable");
+    return MutableArrayRef<char>(const_cast<char *>(Data), Size);
+  }
+
+  /// Set mutable content for this block.
+  ///
+  /// The caller is responsible for ensuring that the memory pointed to by
+  /// MutableContent is not deallocated while pointed to by this block.
+  void setMutableContent(MutableArrayRef<char> MutableContent) {
+    Data = MutableContent.data();
+    Size = MutableContent.size();
+    ContentMutable = true;
+  }
+
+  /// Returns true if this block's content is mutable.
+  ///
+  /// This is primarily useful for asserting that a block is already in a
+  /// mutable state prior to modifying the content. E.g. when applying
+  /// fixups we expect the block to already be mutable as it should have been
+  /// copied to working memory.
+  bool isContentMutable() const { return ContentMutable; }
 
   /// Get the alignment for this content.
   uint64_t getAlignment() const { return 1ull << P2Align; }
@@ -268,7 +329,7 @@ public:
   }
 
 private:
-  static constexpr uint64_t MaxAlignmentOffset = (1ULL << 57) - 1;
+  static constexpr uint64_t MaxAlignmentOffset = (1ULL << 56) - 1;
 
   Section &Parent;
   const char *Data = nullptr;
@@ -858,10 +919,10 @@ public:
   /// Allocate a copy of the given string using the LinkGraph's allocator.
   /// This can be useful when renaming symbols or adding new content to the
   /// graph.
-  ArrayRef<char> allocateString(ArrayRef<char> Source) {
+  MutableArrayRef<char> allocateContent(ArrayRef<char> Source) {
     auto *AllocatedBuffer = Allocator.Allocate<char>(Source.size());
     llvm::copy(Source, AllocatedBuffer);
-    return ArrayRef<char>(AllocatedBuffer, Source.size());
+    return MutableArrayRef<char>(AllocatedBuffer, Source.size());
   }
 
   /// Allocate a copy of the given string using the LinkGraph's allocator.
@@ -871,12 +932,12 @@ public:
   /// Note: This Twine-based overload requires an extra string copy and an
   /// extra heap allocation for large strings. The ArrayRef<char> overload
   /// should be preferred where possible.
-  ArrayRef<char> allocateString(Twine Source) {
+  MutableArrayRef<char> allocateString(Twine Source) {
     SmallString<256> TmpBuffer;
     auto SourceStr = Source.toStringRef(TmpBuffer);
     auto *AllocatedBuffer = Allocator.Allocate<char>(SourceStr.size());
     llvm::copy(SourceStr, AllocatedBuffer);
-    return ArrayRef<char>(AllocatedBuffer, SourceStr.size());
+    return MutableArrayRef<char>(AllocatedBuffer, SourceStr.size());
   }
 
   /// Create a section with the given name, protection flags, and alignment.
@@ -896,6 +957,15 @@ public:
                             uint64_t Address, uint64_t Alignment,
                             uint64_t AlignmentOffset) {
     return createBlock(Parent, Content, Address, Alignment, AlignmentOffset);
+  }
+
+  /// Create a content block with initially mutable data.
+  Block &createMutableContentBlock(Section &Parent,
+                                   MutableArrayRef<char> MutableContent,
+                                   uint64_t Address, uint64_t Alignment,
+                                   uint64_t AlignmentOffset) {
+    return createBlock(Parent, MutableContent, Address, Alignment,
+                       AlignmentOffset);
   }
 
   /// Create a zero-fill block.
@@ -1212,6 +1282,12 @@ private:
   ExternalSymbolSet ExternalSymbols;
   ExternalSymbolSet AbsoluteSymbols;
 };
+
+inline MutableArrayRef<char> Block::getMutableContent(LinkGraph &G) {
+  if (!ContentMutable)
+    setMutableContent(G.allocateContent({Data, Size}));
+  return MutableArrayRef<char>(const_cast<char *>(Data), Size);
+}
 
 /// Enables easy lookup of blocks by addresses.
 class BlockAddressMap {

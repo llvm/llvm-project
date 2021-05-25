@@ -1,7 +1,7 @@
 # Conversion to the LLVM Dialect
 
 Conversion from several dialects that rely on
-[built-in types](LangRef.md#builtin-types) to the
+[built-in types](LangRef.md/#builtin-types) to the
 [LLVM Dialect](Dialects/LLVM.md) is expected to be performed through the
 [Dialect Conversion](DialectConversion.md) infrastructure.
 
@@ -36,7 +36,7 @@ following conversions are currently implemented:
 
 Index type is converted to an LLVM dialect integer type with bitwidth equal to
 the bitwidth of the pointer size as specified by the
-[data layout](Dialects/LLVM.md#data-layout-and-triple) of the closest module.
+[data layout](Dialects/LLVM.md/#data-layout-and-triple) of the closest module.
 For example, on x86-64 CPUs it converts to `i64`. This behavior can be
 overridden by the type converter configuration, which is often exposed as a pass
 option by conversion passes.
@@ -63,7 +63,7 @@ information must be present at runtime in the LLVM dialect equivalent type.
 In practice, the conversion supports two conventions:
 
 -   the default convention for memrefs in the
-    **[strided form](LangRef.md#strided-memref)**;
+    **[strided form](Dialects/Builtin.md/#strided-memref)**;
 -   a "bare pointer" conversion for statically-shaped memrefs with default
     layout.
 

@@ -1882,6 +1882,10 @@ public:
   /// Retrieve the current captured region, if any.
   sema::CapturedRegionScopeInfo *getCurCapturedRegion();
 
+  /// Retrieve the current function, if any, that should be analyzed for
+  /// potential availability violations.
+  sema::FunctionScopeInfo *getCurFunctionAvailabilityContext();
+
   /// WeakTopLevelDeclDecls - access to \#pragma weak-generated Decls
   SmallVectorImpl<Decl *> &WeakTopLevelDecls() { return WeakTopLevelDecl; }
 
