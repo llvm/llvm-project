@@ -58,7 +58,7 @@ class IRMemoryMap;
 /// transformations to the IR which make it relocatable.  These
 /// transformations are discussed in more detail next to their relevant
 /// functions.
-class IRForTarget : public llvm::ModulePass {
+class IRForTarget {
 public:
   enum class LookupResult { Success, Fail, Ignore };
 
@@ -87,9 +87,6 @@ public:
               lldb_private::Stream &error_stream,
               const char *func_name = "$__lldb_expr");
 
-  /// Destructor
-  ~IRForTarget() override;
-
   /// Run this IR transformer on a single module
   ///
   /// Implementation of the llvm::ModulePass::runOnModule() function.
@@ -101,20 +98,7 @@ public:
   ///
   /// \return
   ///     True on success; false otherwise
-  bool runOnModule(llvm::Module &llvm_module) override;
-
-  /// Interface stub
-  ///
-  /// Implementation of the llvm::ModulePass::assignPassManager() function.
-  void assignPassManager(llvm::PMStack &pass_mgr_stack,
-                         llvm::PassManagerType pass_mgr_type =
-                             llvm::PMT_ModulePassManager) override;
-
-  /// Returns PMT_ModulePassManager
-  ///
-  /// Implementation of the llvm::ModulePass::getPotentialPassManagerType()
-  /// function.
-  llvm::PassManagerType getPotentialPassManagerType() const override;
+  bool runOnModule(llvm::Module &llvm_module);
 
 private:
   /// Ensures that the current function's linkage is set to external.
