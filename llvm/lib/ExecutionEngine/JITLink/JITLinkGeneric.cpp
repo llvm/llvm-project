@@ -404,7 +404,7 @@ void JITLinkerBase::copyBlockContentToWorkingMemory(
       memcpy(BlockDataPtr, B->getContent().data(), B->getContent().size());
 
       // Point the block's content to the fixed up buffer.
-      B->setContent({BlockDataPtr, B->getContent().size()});
+      B->setMutableContent({BlockDataPtr, B->getContent().size()});
 
       // Update block end pointer.
       LastBlockEnd = BlockDataPtr + B->getContent().size();
