@@ -681,7 +681,7 @@ MachineInstrBuilder MachineIRBuilder::buildShuffleVector(const DstOp &Res,
   (void)Src1Ty;
   (void)Src2Ty;
   ArrayRef<int> MaskAlloc = getMF().allocateShuffleMask(Mask);
-  return buildInstr(TargetOpcode::G_SHUFFLE_VECTOR, {DstTy}, {Src1, Src2})
+  return buildInstr(TargetOpcode::G_SHUFFLE_VECTOR, {Res}, {Src1, Src2})
       .addShuffleMask(MaskAlloc);
 }
 
