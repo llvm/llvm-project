@@ -11183,11 +11183,9 @@ bool ScalarEvolution::isImpliedCondOperandsViaRanges(ICmpInst::Predicate Pred,
   return LHSRange.icmp(Pred, ConstRHS);
 }
 
-bool ScalarEvolution::doesIVOverflowOnLT(const SCEV *RHS, const SCEV *Stride,
-                                         bool IsSigned, bool NoWrap) {
+bool ScalarEvolution::canIVOverflowOnLT(const SCEV *RHS, const SCEV *Stride,
+                                        bool IsSigned) {
   assert(isKnownPositive(Stride) && "Positive stride expected!");
-
-  if (NoWrap) return false;
 
   unsigned BitWidth = getTypeSizeInBits(RHS->getType());
   const SCEV *One = getOne(Stride->getType());
@@ -11209,10 +11207,9 @@ bool ScalarEvolution::doesIVOverflowOnLT(const SCEV *RHS, const SCEV *Stride,
   return (std::move(MaxValue) - MaxStrideMinusOne).ult(MaxRHS);
 }
 
-bool ScalarEvolution::doesIVOverflowOnGT(const SCEV *RHS, const SCEV *Stride,
-                                         bool IsSigned, bool NoWrap) {
-  if (NoWrap) return false;
-
+bool ScalarEvolution::canIVOverflowOnGT(const SCEV *RHS, const SCEV *Stride,
+                                        bool IsSigned) {
+  
   unsigned BitWidth = getTypeSizeInBits(RHS->getType());
   const SCEV *One = getOne(Stride->getType());
 
@@ -11357,13 +11354,14 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     if (PredicatedIV || !NoWrap || isKnownNonPositive(Stride) ||
         !loopHasNoSideEffects(L))
       return getCouldNotCompute();
-  } else if (!Stride->isOne() &&
-             doesIVOverflowOnLT(RHS, Stride, IsSigned, NoWrap))
+  } else if (!Stride->isOne() && !NoWrap) {
     // Avoid proven overflow cases: this will ensure that the backedge taken
     // count will not generate any unsigned overflow. Relaxed no-overflow
     // conditions exploit NoWrapFlags, allowing to optimize in presence of
     // undefined behaviors like the case of C language.
-    return getCouldNotCompute();
+    if (canIVOverflowOnLT(RHS, Stride, IsSigned))
+      return getCouldNotCompute();
+  }
 
   ICmpInst::Predicate Cond = IsSigned ? ICmpInst::ICMP_SLT
                                       : ICmpInst::ICMP_ULT;
@@ -11462,8 +11460,9 @@ ScalarEvolution::howManyGreaterThans(const SCEV *LHS, const SCEV *RHS,
   // will not generate any unsigned overflow. Relaxed no-overflow conditions
   // exploit NoWrapFlags, allowing to optimize in presence of undefined
   // behaviors like the case of C language.
-  if (!Stride->isOne() && doesIVOverflowOnGT(RHS, Stride, IsSigned, NoWrap))
-    return getCouldNotCompute();
+  if (!Stride->isOne() && !NoWrap)
+    if (canIVOverflowOnGT(RHS, Stride, IsSigned))
+      return getCouldNotCompute();
 
   ICmpInst::Predicate Cond = IsSigned ? ICmpInst::ICMP_SGT
                                       : ICmpInst::ICMP_UGT;

@@ -2002,15 +2002,13 @@ private:
 
   /// Verify if an linear IV with positive stride can overflow when in a
   /// less-than comparison, knowing the invariant term of the comparison,
-  /// the stride and the knowledge of NSW/NUW flags on the recurrence.
-  bool doesIVOverflowOnLT(const SCEV *RHS, const SCEV *Stride, bool IsSigned,
-                          bool NoWrap);
+  /// the stride.
+  bool canIVOverflowOnLT(const SCEV *RHS, const SCEV *Stride, bool IsSigned);
 
   /// Verify if an linear IV with negative stride can overflow when in a
   /// greater-than comparison, knowing the invariant term of the comparison,
-  /// the stride and the knowledge of NSW/NUW flags on the recurrence.
-  bool doesIVOverflowOnGT(const SCEV *RHS, const SCEV *Stride, bool IsSigned,
-                          bool NoWrap);
+  /// the stride.
+  bool canIVOverflowOnGT(const SCEV *RHS, const SCEV *Stride, bool IsSigned);
 
   /// Get add expr already created or create a new one.
   const SCEV *getOrCreateAddExpr(ArrayRef<const SCEV *> Ops,
