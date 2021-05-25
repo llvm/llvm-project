@@ -646,6 +646,8 @@ unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
       continue;
     }
 
+    const TargetInfo &TI = C.getTargetInfo();
+
     // Escaped "%" character in asm string.
     if (CurPtr == StrEnd) {
       // % at end of string is invalid (no escape).
@@ -656,6 +658,11 @@ unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
     char EscapedChar = *CurPtr++;
     switch (EscapedChar) {
     default:
+      // Handle target-specific escaped characters.
+      if (auto MaybeReplaceStr = TI.handleAsmEscapedChar(EscapedChar)) {
+        CurStringPiece += *MaybeReplaceStr;
+        continue;
+      }
       break;
     case '%': // %% -> %
     case '{': // %{ -> {
@@ -688,7 +695,6 @@ unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
       EscapedChar = *CurPtr++;
     }
 
-    const TargetInfo &TI = C.getTargetInfo();
     const SourceManager &SM = C.getSourceManager();
     const LangOptions &LO = C.getLangOpts();
 
