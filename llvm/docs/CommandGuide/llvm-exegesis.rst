@@ -189,7 +189,8 @@ OPTIONS
 
  `latency` mode can be  make use of either RDTSC or LBR.
  `latency[LBR]` is only available on X86 (at least `Skylake`).
- To run in `latency` mode, a positive value must be specified for `x86-lbr-sample-period` and `--repetition-mode=loop`.
+ To run in `latency` mode, a positive value must be specified
+ for `x86-lbr-sample-period` and `--repetition-mode=loop`.
 
  In `analysis` mode, you also need to specify at least one of the
  `-analysis-clusters-output-file=` and `-analysis-inconsistencies-output-file=`.
@@ -202,22 +203,35 @@ OPTIONS
   On choosing the "right" sampling period, a small value is preferred, but throttling
   could occur if the sampling is too frequent. A prime number should be used to
   avoid consistently skipping certain blocks.
-  
+
 .. option:: -repetition-mode=[duplicate|loop|min]
 
  Specify the repetition mode. `duplicate` will create a large, straight line
- basic block with `num-repetitions` copies of the snippet. `loop` will wrap
- the snippet in a loop which will be run `num-repetitions` times. The `loop`
- mode tends to better hide the effects of the CPU frontend on architectures
+ basic block with `num-repetitions` instructions (repeating the snippet
+ `num-repetitions`/`snippet size` times). `loop` will, optionally, duplicate the
+ snippet until the loop body contains at least `loop-body-size` instructions,
+ and then wrap the result in a loop which will execute `num-repetitions`
+ instructions (thus, again, repeating the snippet
+ `num-repetitions`/`snippet size` times). The `loop` mode, especially with loop
+ unrolling tends to better hide the effects of the CPU frontend on architectures
  that cache decoded instructions, but consumes a register for counting
- iterations. If performing an analysis over many opcodes, it may be best
- to instead use the `min` mode, which will run each other mode, and produce
- the minimal measured result.
+ iterations. If performing an analysis over many opcodes, it may be best to
+ instead use the `min` mode, which will run each other mode,
+ and produce the minimal measured result.
 
 .. option:: -num-repetitions=<Number of repetitions>
 
- Specify the number of repetitions of the asm snippet.
+ Specify the target number of executed instructions. Note that the actual
+ repetition count of the snippet will be `num-repetitions`/`snippet size`.
  Higher values lead to more accurate measurements but lengthen the benchmark.
+
+.. option:: -loop-body-size=<Preferred loop body size>
+
+ Only effective for `-repetition-mode=[loop|min]`.
+ Instead of looping over the snippet directly, first duplicate it so that the
+ loop body contains at least this many instructions. This potentially results
+ in loop body being cached in the CPU Op Cache / Loop Cache, which allows to
+ which may have higher throughput than the CPU decoders.
 
 .. option:: -max-configs-per-opcode=<value>
 

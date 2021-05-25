@@ -327,7 +327,7 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "BaseMemRefType"> {
     ```
 
     The core syntax and representation of a layout specification is a
-    [semi-affine map](Dialects/Affine.md#semi-affine-maps). Additionally,
+    [semi-affine map](Affine.md/#semi-affine-maps). Additionally,
     syntactic sugar is supported to make certain layout specifications more
     intuitive to read. For the moment, a `memref` supports parsing a strided
     form which is converted to a semi-affine map automatically.
@@ -422,7 +422,7 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "BaseMemRefType"> {
     ##### Index Map
 
     An index map is a one-to-one
-    [semi-affine map](Dialects/Affine.md#semi-affine-maps) that transforms a
+    [semi-affine map](Affine.md/#semi-affine-maps) that transforms a
     multidimensional index from one index space to another. For example, the
     following figure shows an index map which maps a 2-dimensional index from a
     2x2 index space to a 3x3 index space, using symbols `S0` and `S1` as
@@ -440,7 +440,7 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "BaseMemRefType"> {
 
     ##### Layout Map
 
-    A layout map is a [semi-affine map](Dialects/Affine.md#semi-affine-maps)
+    A layout map is a [semi-affine map](Affine.md/#semi-affine-maps)
     which encodes logical to physical index space mapping, by mapping input
     dimensions to their ordering from most-major (slowest varying) to most-minor
     (fastest varying). Therefore, an identity layout map corresponds to a
@@ -474,7 +474,7 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "BaseMemRefType"> {
     The semi-affine map composition specified in the memref type, maps from
     accesses used to index the memref in load/store operations to other index
     spaces (i.e. logical to physical index mapping). Each of the
-    [semi-affine maps](Affine.md) and thus its composition is required
+    [semi-affine maps](Affine.md/#semi-affine-maps) and thus its composition is required
     to be one-to-one.
 
     The semi-affine map composition can be used in dependence analysis, memory
@@ -650,7 +650,7 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", "TensorType"> {
     low level buffer access, MLIR has a [`memref` type](#memref-type). This
     abstracted runtime representation holds both the tensor data values as well
     as information about the (potentially dynamic) shape of the tensor. The
-    [`dim` operation](Dialects/Standard.md#dim-operation) returns the size of a
+    [`dim` operation](MemRef.md/#memrefdim-mlirmemrefdimop) returns the size of a
     dimension from a value of tensor type.
 
     The `encoding` attribute provides additional information on the tensor.
@@ -730,7 +730,7 @@ def Builtin_Tuple : Builtin_Type<"Tuple"> {
 
     **Rationale:** Though this type is first class in the type system, MLIR
     provides no standard operations for operating on `tuple` types
-    ([rationale](Rationale/Rationale.md#tuple-types)).
+    ([rationale](Rationale/Rationale.md/#tuple-types)).
 
     Examples:
 

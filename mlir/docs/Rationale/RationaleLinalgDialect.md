@@ -16,7 +16,7 @@ generation. Consider the simplified schema describing codegen in MLIR.
 Linalg is designed to solve the High-level Hierarchical Optimization
 (HHO box) and to interoperate nicely within a
 *Mixture Of Expert Compilers* environment (i.e. the *CGSel* box).
-This work is inspired by a wealth of [prior art](#prior_art) in
+This work is inspired by a wealth of [prior art](#prior-art) in
 the field, from which it seeks to learn key lessons. This documentation
 and introspection effort also comes in the context of the proposal for a
 working group for discussing the [Development of high-level Tensor Compute
@@ -67,16 +67,16 @@ of the first [MLIR Tutorial](https://www.youtube.com/watch?v=cyICUIZ56wQ).
 ### Evolution
 Since the initial implementation, the design has evolved with, and partially
 driven the evolution of the core MLIR infrastructure to use
-[Regions](https://mlir.llvm.org/docs/LangRef/#regions),
-[OpInterfaces](https://mlir.llvm.org/docs/Interfaces/),
-[ODS](https://mlir.llvm.org/docs/OpDefinitions/) and
-[Declarative Rewrite Rules](https://mlir.llvm.org/docs/DeclarativeRewrites/)
+[Regions](../LangRef.md/#regions),
+[OpInterfaces](../Interfaces.md),
+[ODS](../OpDefinitions.md) and
+[Declarative Rewrite Rules](../DeclarativeRewrites.md)
 among others. The approach adopted by Linalg was extended to become
 [StructuredOps abstractions](
 https://drive.google.com/drive/u/0/folders/1sRAsgsd8Bvpm_IxREmZf2agsGU2KvrK-),
 with Linalg becoming its incarnation on tensors and buffers.
 It is complemented by the
-[Vector dialect](https://mlir.llvm.org/docs/Dialects/Vector/),
+[Vector dialect](../Dialects/Vector.md),
 which defines structured operations on vectors, following the same rationale and
 design principles as Linalg. (Vector dialect includes the higher-level
 operations on multi-dimensional vectors and abstracts away the lowering to
@@ -85,7 +85,7 @@ single-dimensional vectors).
 The Linalg dialect itself grew beyond linear algebra-like operations to become
 more expressive, in particular by providing an abstraction of a loop nest
 supporting parallelism, reductions and sliding windows around arbitrary MLIR
-[regions](https://mlir.llvm.org/docs/LangRef/#regions). It also has the
+[regions](../LangRef.md/#regions). It also has the
 potential of growing beyond *dense* linear-algebra to support richer data
 types, such as sparse and ragged tensors and buffers.
 
@@ -102,7 +102,7 @@ to the *structured control flow* dialect (named `LoopOps`).
 More components can be extracted, redesigned and generalized when new uses or
 requirements arise.
 
-Several [design questions](#open_issues) remain open in Linalg, which does not
+Several [design questions](../Dialects/Linalg.md/#open_issues) remain open in Linalg, which does not
 claim to be a general solution to all compilation problems.
 It does aim at driving thinking and implementations of domain-specific
 abstractions where programmer's intent can be captured at a very high level,
@@ -112,7 +112,7 @@ Given the evolution of the scope, it becomes apparent that a better name than
 "Linalg" could remove some of the confusions related to the dialect (and the
 underlying approach), its goals and limitations.
 
-## Prior Art<a name=""></a>
+## Prior Art
 Linalg draws inspiration from decades of prior art to design a modern a
 pragmatic solution. The following non-exhaustive list refers to some of the
 projects that influenced Linalg design:
@@ -180,7 +180,7 @@ rules](https://www.lift-project.org/presentations/2015/ICFP-2015.pdf) that
 embed these additional nodes directly in the functional abstraction.
 
 Similarly to LIFT, Linalg uses local rewrite rules implemented with the MLIR
-[Declarative Rewrite Rules](https://mlir.llvm.org/docs/DeclarativeRewrites/)
+[Declarative Rewrite Rules](../DeclarativeRewrites.md)
 mechanisms.
 
 Linalg builds on, and helps separate concerns in the LIFT approach as follows:
@@ -429,7 +429,7 @@ The selection of relevant transformations follows a co-design approach and
 involves considerations related to:
 - concrete current and future needs of the application domain,
 - concrete current and future hardware properties and ISAs,
-- understanding of strengths and limitations of [existing approaches](#prior_art),
+- understanding of strengths and limitations of [existing approaches](#prior-art),
 - taking advantage of the coexistence of multiple levels of IR in MLIR,
 
 One needs to be methodical to avoid proliferation and redundancy. A given
@@ -571,7 +571,7 @@ design of Linalg: control-flow does not exist in a vacuum, independently of
 data.
 On the contrary, there is a very strong relationship between control-flow and
 data structures: one cannot exist without the other. This has multiple
-implications on the [semantics of Linalg Ops](#linalg_ops) and their
+implications on the [semantics of Linalg Ops](../Dialects/Linalg.md/#linalg_op) and their
 transformations. In particular, this observation influences whether
 certain transformations are better done:
 - as control flow or data structure manipulation,
@@ -609,7 +609,7 @@ transformations.
 
 ### Summary of Existing Alternatives a Picture<a name="observationssummary"></a>
 Lastly, we summarize our observations of lessons from [Prior
-Art](#prior_art)---when viewed under the lense of our [Core Guiding
+Art](#prior-art)---when viewed under the lense of our [Core Guiding
 Principles](#guiding_principles)---with the following picture.
 
 <img width="1200" alt="MLIR Codegen Flow"
@@ -618,6 +618,6 @@ src="https://user-images.githubusercontent.com/10148468/73613904-2f720a00-45c8-1
 This figure is not meant to be perfectly accurate but a rough map of
 how we view the distribution of structural information in existing
 systems, from a codegen-friendly angle. Unsurprisingly, the
-[Linalg Dialect](../Dialects/Linalg/) and its
+[Linalg Dialect](../Dialects/Linalg.md) and its
 future evolutions aspire to a position in the top-right of this map.
 

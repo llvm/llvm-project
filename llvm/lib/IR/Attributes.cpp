@@ -442,6 +442,8 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     return "noprofile";
   if (hasAttribute(Attribute::NoUnwind))
     return "nounwind";
+  if (hasAttribute(Attribute::NoSanitizeCoverage))
+    return "nosanitize_coverage";
   if (hasAttribute(Attribute::OptForFuzzing))
     return "optforfuzzing";
   if (hasAttribute(Attribute::OptimizeNone))

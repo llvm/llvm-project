@@ -20,168 +20,133 @@
 #include <string>
 #include <vector>
 
-// `value_type` and `element_type` member aliases aren't actually used to declare anytihng, so GCC
-// thinks they're completely unused.
-#pragma GCC diagnostic ignored "-Wunused-local-typedefs"
-
-// clang-format off
 template <class T>
-concept check_has_value_type = requires {
+concept has_no_value_type = !requires {
   typename std::indirectly_readable_traits<T>::value_type;
 };
 
 template <class T, class Expected>
-concept check_value_type_matches =
-  check_has_value_type<T> &&
+concept value_type_matches =
   std::same_as<typename std::indirectly_readable_traits<T>::value_type, Expected>;
-// clang-format on
 
 template <class T>
 constexpr bool check_pointer() {
-  constexpr bool result = check_value_type_matches<T*, T>;
-  static_assert(check_value_type_matches<T const*, T> == result);
-  static_assert(check_value_type_matches<T volatile*, T> == result);
-  static_assert(check_value_type_matches<T const volatile*, T> == result);
+  constexpr bool result = value_type_matches<T*, T>;
+  static_assert(value_type_matches<T const*, T> == result);
+  static_assert(value_type_matches<T volatile*, T> == result);
+  static_assert(value_type_matches<T const volatile*, T> == result);
 
-  static_assert(check_value_type_matches<T* const, T> == result);
-  static_assert(check_value_type_matches<T const* const, T> == result);
-  static_assert(check_value_type_matches<T volatile* const, T> == result);
-  static_assert(check_value_type_matches<T const volatile* const, T> == result);
+  static_assert(value_type_matches<T* const, T> == result);
+  static_assert(value_type_matches<T const* const, T> == result);
+  static_assert(value_type_matches<T volatile* const, T> == result);
+  static_assert(value_type_matches<T const volatile* const, T> == result);
 
   return result;
 }
-
-static_assert(!check_pointer<void>());
-static_assert(check_pointer<int>());
-static_assert(check_pointer<long>());
-static_assert(check_pointer<double>());
-static_assert(check_pointer<double*>());
-
-struct S {};
-static_assert(check_pointer<S>());
 
 template <class T>
 constexpr bool check_array() {
-  constexpr bool result = check_value_type_matches<T[], T>;
-  static_assert(check_value_type_matches<T const[], T> == result);
-  static_assert(check_value_type_matches<T volatile[], T> == result);
-  static_assert(check_value_type_matches<T const volatile[], T> == result);
-  static_assert(check_value_type_matches<T[10], T> == result);
-  static_assert(check_value_type_matches<T const[10], T> == result);
-  static_assert(check_value_type_matches<T volatile[10], T> == result);
-  static_assert(check_value_type_matches<T const volatile[10], T> == result);
-  return result;
+  static_assert(value_type_matches<T[], T>);
+  static_assert(value_type_matches<T const[], T>);
+  static_assert(value_type_matches<T volatile[], T>);
+  static_assert(value_type_matches<T const volatile[], T>);
+  static_assert(value_type_matches<T[10], T>);
+  static_assert(value_type_matches<T const[10], T>);
+  static_assert(value_type_matches<T volatile[10], T>);
+  static_assert(value_type_matches<T const volatile[10], T>);
+  return true;
 }
-
-static_assert(check_array<int>());
-static_assert(check_array<long>());
-static_assert(check_array<double>());
-static_assert(check_array<double*>());
-static_assert(check_array<S>());
 
 template <class T, class Expected>
-constexpr bool check_explicit_member() {
-  constexpr bool result = check_value_type_matches<T, Expected>;
-  static_assert(check_value_type_matches<T const, Expected> == result);
-  return result;
+constexpr bool check_member() {
+  static_assert(value_type_matches<T, Expected>);
+  static_assert(value_type_matches<T const, Expected>);
+  static_assert(value_type_matches<T volatile, Expected>);
+  return true;
 }
 
-struct has_value_type {
-  using value_type = int;
-};
-static_assert(check_explicit_member<has_value_type, int>());
-static_assert(check_explicit_member<std::vector<int>::iterator, int>());
+static_assert(check_pointer<int>());
+static_assert(check_pointer<int*>());
+static_assert(check_pointer<int[10]>());
+static_assert(!check_pointer<void>());
+static_assert(!check_pointer<int()>());
 
-struct has_element_type {
-  using element_type = S;
-};
-static_assert(check_explicit_member<has_element_type, S>());
+static_assert(check_array<int>());
+static_assert(check_array<int*>());
+static_assert(check_array<int[10]>());
 
-struct has_same_value_and_element_type {
-  using value_type = int;
-  using element_type = int;
+template<class T>
+struct ValueOf {
+  using value_type = T;
 };
-static_assert(check_explicit_member<has_same_value_and_element_type, int>());
-static_assert(check_explicit_member<std::shared_ptr<long>, long>());
-static_assert(check_explicit_member<std::shared_ptr<long const>, long>());
 
-// clang-format off
+template<class U>
+struct ElementOf {
+  using element_type = U;
+};
+
 template<class T, class U>
-requires std::same_as<std::remove_cv_t<T>, std::remove_cv_t<U> >
-struct possibly_different_cv_qualifiers {
+struct TwoTypes {
   using value_type = T;
   using element_type = U;
 };
-// clang-format on
 
-static_assert(check_explicit_member<possibly_different_cv_qualifiers<int, int>, int>());
-static_assert(check_explicit_member<possibly_different_cv_qualifiers<int, int const>, int>());
-static_assert(check_explicit_member<possibly_different_cv_qualifiers<int, int volatile>, int>());
-static_assert(check_explicit_member<possibly_different_cv_qualifiers<int, int const volatile>, int>());
-static_assert(check_explicit_member<possibly_different_cv_qualifiers<int const, int>, int>());
-static_assert(check_explicit_member<possibly_different_cv_qualifiers<int const, int const>, int>());
-static_assert(check_explicit_member<possibly_different_cv_qualifiers<int const, int volatile>, int>());
-static_assert(check_explicit_member<possibly_different_cv_qualifiers<int const, int const volatile>, int>());
-static_assert(check_explicit_member<possibly_different_cv_qualifiers<int volatile, int>, int>());
-static_assert(check_explicit_member<possibly_different_cv_qualifiers<int volatile, int const>, int>());
-static_assert(check_explicit_member<possibly_different_cv_qualifiers<int volatile, int volatile>, int>());
-static_assert(check_explicit_member<possibly_different_cv_qualifiers<int volatile, int const volatile>, int>());
-static_assert(check_explicit_member<possibly_different_cv_qualifiers<int const volatile, int>, int>());
-static_assert(check_explicit_member<possibly_different_cv_qualifiers<int const volatile, int const>, int>());
-static_assert(check_explicit_member<possibly_different_cv_qualifiers<int const volatile, int volatile>, int>());
-static_assert(check_explicit_member<possibly_different_cv_qualifiers<int const volatile, int const volatile>, int>());
+static_assert(check_member<ValueOf<int>, int>());
+static_assert(check_member<ValueOf<int[10]>, int[10]>());
+static_assert(check_member<ValueOf<int[]>, int[]>());
+static_assert(has_no_value_type<ValueOf<void>>);
+static_assert(has_no_value_type<ValueOf<int()>>);
+static_assert(has_no_value_type<ValueOf<int&>>);
+static_assert(has_no_value_type<ValueOf<int&&>>);
+
+static_assert(check_member<ElementOf<int>, int>());
+static_assert(check_member<ElementOf<int[10]>, int[10]>());
+static_assert(check_member<ElementOf<int[]>, int[]>());
+static_assert(has_no_value_type<ElementOf<void>>);
+static_assert(has_no_value_type<ElementOf<int()>>);
+static_assert(has_no_value_type<ElementOf<int&>>);
+static_assert(has_no_value_type<ElementOf<int&&>>);
+
+static_assert(check_member<TwoTypes<int, int>, int>());
+static_assert(check_member<TwoTypes<int, int const>, int>());
+static_assert(check_member<TwoTypes<int, int volatile>, int>());
+static_assert(check_member<TwoTypes<int, int const volatile>, int>());
+static_assert(check_member<TwoTypes<int const, int>, int>());
+static_assert(check_member<TwoTypes<int const, int const>, int>());
+static_assert(check_member<TwoTypes<int const, int volatile>, int>());
+static_assert(check_member<TwoTypes<int const, int const volatile>, int>());
+static_assert(check_member<TwoTypes<int volatile, int>, int>());
+static_assert(check_member<TwoTypes<int volatile, int const>, int>());
+static_assert(check_member<TwoTypes<int volatile, int volatile>, int>());
+static_assert(check_member<TwoTypes<int volatile, int const volatile>, int>());
+static_assert(check_member<TwoTypes<int const volatile, int>, int>());
+static_assert(check_member<TwoTypes<int const volatile, int const>, int>());
+static_assert(check_member<TwoTypes<int const volatile, int volatile>, int>());
+static_assert(check_member<TwoTypes<int const volatile, int const volatile>, int>());
+static_assert(has_no_value_type<TwoTypes<int, long>>);
+static_assert(has_no_value_type<TwoTypes<int, int&>>);
+static_assert(has_no_value_type<TwoTypes<int&, int>>);
 
 struct S2 {};
-namespace std {
 template <>
-struct indirectly_readable_traits<S2> {
+struct std::indirectly_readable_traits<S2> {
   using value_type = int;
 };
-} // namespace std
-static_assert(check_value_type_matches<S2, int>);
-static_assert(check_value_type_matches<std::vector<int>, int>);
-static_assert(check_value_type_matches<std::vector<int>::iterator, int>);
-static_assert(check_value_type_matches<std::vector<int>::const_iterator, int>);
-static_assert(check_value_type_matches<std::istream_iterator<int>, int>);
-static_assert(check_value_type_matches<std::istreambuf_iterator<char>, char>);
-static_assert(check_value_type_matches<std::optional<int>, int>);
+static_assert(value_type_matches<S2, int>);
+static_assert(value_type_matches<const S2, int>);
+static_assert(has_no_value_type<volatile S2>);
+static_assert(has_no_value_type<const volatile S2>);
+static_assert(has_no_value_type<S2&>);
+static_assert(has_no_value_type<const S2&>);
 
-template <class T>
-constexpr bool check_ref() {
-  struct ref_value {
-    using value_type = T&;
-  };
-  constexpr bool result = check_has_value_type<ref_value>;
-
-  struct ref_element {
-    using element_type = T&;
-  };
-  static_assert(check_has_value_type<ref_element> == result);
-
-  return result;
-}
-
-static_assert(!check_ref<int>());
-static_assert(!check_ref<S>());
-static_assert(!check_ref<std::shared_ptr<long> >());
-
-static_assert(!check_has_value_type<void>);
-static_assert(!check_has_value_type<std::nullptr_t>);
-static_assert(!check_has_value_type<int>);
-static_assert(!check_has_value_type<S>);
-
-struct has_different_value_and_element_type {
-  using value_type = int;
-  using element_type = long;
-};
-static_assert(!check_has_value_type<has_different_value_and_element_type>);
-
-struct void_value {
-  using value_type = void;
-};
-static_assert(!check_has_value_type<void_value>);
-
-struct void_element {
-  using element_type = void;
-};
-static_assert(!check_has_value_type<void_element>);
+static_assert(check_member<std::vector<int>, int>());
+static_assert(check_member<std::vector<int>::iterator, int>());
+static_assert(check_member<std::vector<int>::const_iterator, int>());
+static_assert(check_member<std::istream_iterator<int>, int>());
+static_assert(check_member<std::istreambuf_iterator<char>, char>());
+static_assert(check_member<std::optional<int>, int>());
+static_assert(check_member<std::shared_ptr<long>, long>());
+static_assert(check_member<std::shared_ptr<const long>, long>());
+static_assert(has_no_value_type<void>);
+static_assert(has_no_value_type<int>);
+static_assert(has_no_value_type<std::nullptr_t>);

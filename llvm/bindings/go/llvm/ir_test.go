@@ -69,6 +69,7 @@ func TestAttributes(t *testing.T) {
 		"noredzone",
 		"noreturn",
 		"nounwind",
+		"nosanitize_coverage",
 		"optnone",
 		"optsize",
 		"readnone",

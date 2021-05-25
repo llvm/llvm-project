@@ -423,6 +423,7 @@ public:
     return TargetLoweringBase::getPreferredVectorAction(VT);
   }
   bool isCheapToSpeculateCtlz() const override { return true; }
+  bool preferZeroCompareBranch() const override { return true; }
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &,
                          EVT) const override;
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,

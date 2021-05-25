@@ -156,8 +156,8 @@ psignw      (%rax), %xmm2
 # CHECK-NEXT:  1      5     2.00    *                   pmulhrsw	(%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                        pshufb	%mm0, %mm2
 # CHECK-NEXT:  1      1     1.00    *                   pshufb	(%rax), %mm2
-# CHECK-NEXT:  1      4     2.00                        pshufb	%xmm0, %xmm2
-# CHECK-NEXT:  1      5     2.50    *                   pshufb	(%rax), %xmm2
+# CHECK-NEXT:  1      4     3.00                        pshufb	%xmm0, %xmm2
+# CHECK-NEXT:  1      5     4.00    *                   pshufb	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        psignb	%mm0, %mm2
 # CHECK-NEXT:  1      1     1.00    *                   psignb	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        psignb	%xmm0, %xmm2
@@ -177,7 +177,7 @@ psignw      (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]
-# CHECK-NEXT: 106.50 76.50
+# CHECK-NEXT: 109.00 79.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    Instructions:
@@ -231,8 +231,8 @@ psignw      (%rax), %xmm2
 # CHECK-NEXT: 2.00    -     pmulhrsw	(%rax), %xmm2
 # CHECK-NEXT: 1.00    -     pshufb	%mm0, %mm2
 # CHECK-NEXT: 1.00    -     pshufb	(%rax), %mm2
-# CHECK-NEXT: 2.00   2.00   pshufb	%xmm0, %xmm2
-# CHECK-NEXT: 2.50   2.50   pshufb	(%rax), %xmm2
+# CHECK-NEXT: 3.00   3.00   pshufb	%xmm0, %xmm2
+# CHECK-NEXT: 4.00   4.00   pshufb	(%rax), %xmm2
 # CHECK-NEXT: 0.50   0.50   psignb	%mm0, %mm2
 # CHECK-NEXT: 1.00    -     psignb	(%rax), %mm2
 # CHECK-NEXT: 0.50   0.50   psignb	%xmm0, %xmm2
