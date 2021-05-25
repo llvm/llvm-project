@@ -602,6 +602,11 @@ def : DivFmasPat<f64, V_DIV_FMAS_F64_e64, VCC_LO>;
 class VOP3_DOT_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOP3_Profile<P, Features> {
   let HasClamp = 0;
   let HasOMod = 0;
+  let InsVOP3OpSel = getInsVOP3OpSel<Src0RC64, Src1RC64, Src2RC64,
+                                NumSrcArgs, HasClamp, HasOMod,
+                                !if(isFloatType<Src0VT>.ret, FPVRegInputMods, IntOpSelMods),
+                                !if(isFloatType<Src1VT>.ret, FPVRegInputMods, IntOpSelMods),
+                                !if(isFloatType<Src2VT>.ret, FPVRegInputMods, IntOpSelMods)>.ret;
 }
 
 let SubtargetPredicate = isGFX11Plus in {
