@@ -80,9 +80,6 @@ static cl::opt<MatrixLayoutTy> MatrixLayout(
                clEnumValN(MatrixLayoutTy::RowMajor, "row-major",
                           "Use row-major layout")));
 
-static cl::opt<bool> PrintAfterTransposeOpt("matrix-print-after-transpose-opt",
-                                            cl::init(false));
-
 /// Helper function to either return Scope, if it is a subprogram or the
 /// attached subprogram for a local scope.
 static DISubprogram *getSubprogram(DIScope *Scope) {
@@ -813,10 +810,10 @@ public:
 
     if (!isMinimal()) {
       optimizeTransposes();
-      if (PrintAfterTransposeOpt) {
+      LLVM_DEBUG({
         dbgs() << "Dump after matrix transpose optimization:\n";
         Func.dump();
-      }
+      });
     }
 
     bool Changed = false;
