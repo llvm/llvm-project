@@ -8,7 +8,7 @@ declare i8 @gen.i8()
 
 ; Most basic pattern; Note that iff the shift amount is offset, said offsetting
 ; must not cause an overflow, but `add nsw` is fine.
-define i8 @p0(i8 %val, i8 %start, i8 %extraoffset) {
+define i8 @p0(i8 %val, i8 %start, i8 %extraoffset) mustprogress {
 ; CHECK-LABEL: @p0(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_NUMLEADINGZEROS:%.*]] = call i8 @llvm.ctlz.i8(i8 [[VAL:%.*]], i1 false)
@@ -65,7 +65,7 @@ end:
 }
 
 ; `add nuw` is also fine.
-define i8 @p1(i8 %val, i8 %start, i8 %extraoffset) {
+define i8 @p1(i8 %val, i8 %start, i8 %extraoffset) mustprogress {
 ; CHECK-LABEL: @p1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_NUMLEADINGZEROS:%.*]] = call i8 @llvm.ctlz.i8(i8 [[VAL:%.*]], i1 false)
@@ -122,7 +122,7 @@ end:
 }
 
 ; `sub nsw` is also fine.
-define i8 @p2(i8 %val, i8 %start, i8 %extraoffset) {
+define i8 @p2(i8 %val, i8 %start, i8 %extraoffset) mustprogress {
 ; CHECK-LABEL: @p2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_NUMLEADINGZEROS:%.*]] = call i8 @llvm.ctlz.i8(i8 [[VAL:%.*]], i1 false)
@@ -178,7 +178,7 @@ end:
 }
 
 ; But `sub nuw` is not fine..
-define i8 @n3(i8 %val, i8 %start, i8 %extraoffset) {
+define i8 @n3(i8 %val, i8 %start, i8 %extraoffset) mustprogress {
 ; CHECK-LABEL: @n3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -226,7 +226,7 @@ end:
 }
 
 ; Likewise, plain `sub` is not fine.
-define i8 @n4(i8 %val, i8 %start, i8 %extraoffset) {
+define i8 @n4(i8 %val, i8 %start, i8 %extraoffset) mustprogress {
 ; CHECK-LABEL: @n4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -274,7 +274,7 @@ end:
 }
 
 ; Likewise, plain `add` is not fine.
-define i8 @n5(i8 %val, i8 %start, i8 %extraoffset) {
+define i8 @n5(i8 %val, i8 %start, i8 %extraoffset) mustprogress {
 ; CHECK-LABEL: @n5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -322,7 +322,7 @@ end:
 }
 
 ; Of course, we don't have to have an offset
-define i8 @p6(i8 %val, i8 %start) {
+define i8 @p6(i8 %val, i8 %start) mustprogress {
 ; CHECK-LABEL: @p6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_NUMLEADINGZEROS:%.*]] = call i8 @llvm.ctlz.i8(i8 [[VAL:%.*]], i1 false)
@@ -377,7 +377,7 @@ declare void @escape_inner.i7(i7, i7, i7, i1, i7)
 declare void @escape_outer.i7(i7, i7, i7, i1, i7)
 
 ; Other bitwidths are fine also
-define i7 @p7(i7 %val, i7 %start, i7 %extraoffset) {
+define i7 @p7(i7 %val, i7 %start, i7 %extraoffset) mustprogress {
 ; CHECK-LABEL: @p7(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_NUMLEADINGZEROS:%.*]] = call i7 @llvm.ctlz.i7(i7 [[VAL:%.*]], i1 false)
@@ -434,7 +434,7 @@ end:
 }
 
 ; Step must be 1
-define i8 @n8(i8 %val, i8 %start, i8 %extraoffset) {
+define i8 @n8(i8 %val, i8 %start, i8 %extraoffset) mustprogress {
 ; CHECK-LABEL: @n8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -482,7 +482,7 @@ end:
 }
 
 ; Cmp-br are commutable
-define i8 @t9(i8 %val, i8 %start, i8 %extraoffset) {
+define i8 @t9(i8 %val, i8 %start, i8 %extraoffset) mustprogress {
 ; CHECK-LABEL: @t9(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_NUMLEADINGZEROS:%.*]] = call i8 @llvm.ctlz.i8(i8 [[VAL:%.*]], i1 false)
@@ -540,7 +540,7 @@ end:
 }
 
 ; We want to exit once it becomes zero
-define i8 @n10(i8 %val, i8 %start, i8 %extraoffset) {
+define i8 @n10(i8 %val, i8 %start, i8 %extraoffset) mustprogress {
 ; CHECK-LABEL: @n10(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -588,7 +588,7 @@ end:
 }
 
 ; Once it compares zero, we want to exit, not exit when it compares non-zero
-define i8 @n11(i8 %val, i8 %start, i8 %extraoffset) {
+define i8 @n11(i8 %val, i8 %start, i8 %extraoffset) mustprogress {
 ; CHECK-LABEL: @n11(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -636,7 +636,7 @@ end:
 }
 
 ; We must be comparing with 0
-define i8 @n12(i8 %val, i8 %start, i8 %extraoffset) {
+define i8 @n12(i8 %val, i8 %start, i8 %extraoffset) mustprogress {
 ; CHECK-LABEL: @n12(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -684,7 +684,7 @@ end:
 }
 
 ; Loop must have a single block.
-define i8 @n13(i8 %val, i8 %start, i8 %extraoffset) {
+define i8 @n13(i8 %val, i8 %start, i8 %extraoffset) mustprogress {
 ; CHECK-LABEL: @n13(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -737,7 +737,7 @@ end:
 }
 
 ; The comparison must have an equality predicate
-define i8 @n14(i8 %val, i8 %start, i8 %extraoffset) {
+define i8 @n14(i8 %val, i8 %start, i8 %extraoffset) mustprogress {
 ; CHECK-LABEL: @n14(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -785,7 +785,7 @@ end:
 }
 
 ; offset computation can be commuted
-define i8 @t15(i8 %val, i8 %start, i8 %extraoffset) {
+define i8 @t15(i8 %val, i8 %start, i8 %extraoffset) mustprogress {
 ; CHECK-LABEL: @t15(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_NUMLEADINGZEROS:%.*]] = call i8 @llvm.ctlz.i8(i8 [[VAL:%.*]], i1 false)
@@ -842,7 +842,7 @@ end:
 }
 
 ; But for `sub nsw`, it is not commutable.
-define i8 @n16(i8 %val, i8 %start, i8 %extraoffset) {
+define i8 @n16(i8 %val, i8 %start, i8 %extraoffset) mustprogress {
 ; CHECK-LABEL: @n16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -890,7 +890,7 @@ end:
 }
 
 ; The offset must be loop-invariant
-define i8 @n17(i8 %val, i8 %start) {
+define i8 @n17(i8 %val, i8 %start) mustprogress {
 ; CHECK-LABEL: @n17(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -940,7 +940,7 @@ end:
 }
 
 ; Likewise for `sub nsw`.
-define i8 @n18(i8 %val, i8 %start) {
+define i8 @n18(i8 %val, i8 %start) mustprogress {
 ; CHECK-LABEL: @n18(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -990,7 +990,7 @@ end:
 }
 
 ; The "induction variable" must be in the loop header.
-define i8 @n19(i8 %val, i8 %start, i8 %extraoffset) {
+define i8 @n19(i8 %val, i8 %start, i8 %extraoffset) mustprogress {
 ; CHECK-LABEL: @n19(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_PREHEADER:%.*]]
@@ -1045,7 +1045,7 @@ end:
 }
 
 ; IV must really be a PHI
-define i8 @n20(i8 %val, i8 %start, i8 %extraoffset) {
+define i8 @n20(i8 %val, i8 %start, i8 %extraoffset) mustprogress {
 ; CHECK-LABEL: @n20(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -1093,7 +1093,7 @@ end:
 }
 
 ; The induction should be actually increasing IV
-define i8 @n21(i8 %val, i8 %start, i8 %extraoffset) {
+define i8 @n21(i8 %val, i8 %start, i8 %extraoffset) mustprogress {
 ; CHECK-LABEL: @n21(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -1141,7 +1141,7 @@ end:
 }
 
 ; We should not just blindly look for add, we should look what IV actually uses.
-define i8 @n22(i8 %val, i8 %start, i8 %extraoffset) {
+define i8 @n22(i8 %val, i8 %start, i8 %extraoffset) mustprogress {
 ; CHECK-LABEL: @n22(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_NUMLEADINGZEROS:%.*]] = call i8 @llvm.ctlz.i8(i8 [[VAL:%.*]], i1 false)
@@ -1201,7 +1201,7 @@ end:
   ret i8 %iv.res
 }
 
-define i8 @n23(i8 %start, i8 %extraoffset) {
+define i8 @n23(i8 %start, i8 %extraoffset) mustprogress {
 ; CHECK-LABEL: @n23(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -1258,7 +1258,7 @@ declare void @escape_outer.i2(i2, i2, i2, i1, i2)
 declare void @escape_inner.i3(i3, i3, i3, i1, i3)
 declare void @escape_outer.i3(i3, i3, i3, i1, i3)
 
-define i1 @t24_nooffset_i1(i1 %val, i1 %start) {
+define i1 @t24_nooffset_i1(i1 %val, i1 %start) mustprogress {
 ; CHECK-LABEL: @t24_nooffset_i1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_NUMLEADINGZEROS:%.*]] = call i1 @llvm.ctlz.i1(i1 [[VAL:%.*]], i1 false)
@@ -1308,7 +1308,7 @@ end:
 
   ret i1 %iv.res
 }
-define i2 @t25_nooffset_i2(i2 %val, i2 %start) {
+define i2 @t25_nooffset_i2(i2 %val, i2 %start) mustprogress {
 ; CHECK-LABEL: @t25_nooffset_i2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_NUMLEADINGZEROS:%.*]] = call i2 @llvm.ctlz.i2(i2 [[VAL:%.*]], i1 false)
@@ -1358,7 +1358,7 @@ end:
 
   ret i2 %iv.res
 }
-define i3 @t26_nooffset_i3(i3 %val, i3 %start) {
+define i3 @t26_nooffset_i3(i3 %val, i3 %start) mustprogress {
 ; CHECK-LABEL: @t26_nooffset_i3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_NUMLEADINGZEROS:%.*]] = call i3 @llvm.ctlz.i3(i3 [[VAL:%.*]], i1 false)
@@ -1409,7 +1409,7 @@ end:
   ret i3 %iv.res
 }
 
-define i1 @t27_addnsw_i1(i1 %val, i1 %start, i1 %extraoffset) {
+define i1 @t27_addnsw_i1(i1 %val, i1 %start, i1 %extraoffset) mustprogress {
 ; CHECK-LABEL: @t27_addnsw_i1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_NUMLEADINGZEROS:%.*]] = call i1 @llvm.ctlz.i1(i1 [[VAL:%.*]], i1 false)
@@ -1463,7 +1463,7 @@ end:
 
   ret i1 %iv.res
 }
-define i2 @t28_addnsw_i2(i2 %val, i2 %start, i2 %extraoffset) {
+define i2 @t28_addnsw_i2(i2 %val, i2 %start, i2 %extraoffset) mustprogress {
 ; CHECK-LABEL: @t28_addnsw_i2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_NUMLEADINGZEROS:%.*]] = call i2 @llvm.ctlz.i2(i2 [[VAL:%.*]], i1 false)
@@ -1518,7 +1518,7 @@ end:
 
   ret i2 %iv.res
 }
-define i3 @t29_addnsw_i3(i3 %val, i3 %start, i3 %extraoffset) {
+define i3 @t29_addnsw_i3(i3 %val, i3 %start, i3 %extraoffset) mustprogress {
 ; CHECK-LABEL: @t29_addnsw_i3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_NUMLEADINGZEROS:%.*]] = call i3 @llvm.ctlz.i3(i3 [[VAL:%.*]], i1 false)
@@ -1574,7 +1574,7 @@ end:
   ret i3 %iv.res
 }
 
-define i1 @t30_addnuw_i1(i1 %val, i1 %start, i1 %extraoffset) {
+define i1 @t30_addnuw_i1(i1 %val, i1 %start, i1 %extraoffset) mustprogress {
 ; CHECK-LABEL: @t30_addnuw_i1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_NUMLEADINGZEROS:%.*]] = call i1 @llvm.ctlz.i1(i1 [[VAL:%.*]], i1 false)
@@ -1628,7 +1628,7 @@ end:
 
   ret i1 %iv.res
 }
-define i2 @t31_addnuw_i2(i2 %val, i2 %start, i2 %extraoffset) {
+define i2 @t31_addnuw_i2(i2 %val, i2 %start, i2 %extraoffset) mustprogress {
 ; CHECK-LABEL: @t31_addnuw_i2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_NUMLEADINGZEROS:%.*]] = call i2 @llvm.ctlz.i2(i2 [[VAL:%.*]], i1 false)
@@ -1683,7 +1683,7 @@ end:
 
   ret i2 %iv.res
 }
-define i3 @t32_addnuw_i3(i3 %val, i3 %start, i3 %extraoffset) {
+define i3 @t32_addnuw_i3(i3 %val, i3 %start, i3 %extraoffset) mustprogress {
 ; CHECK-LABEL: @t32_addnuw_i3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_NUMLEADINGZEROS:%.*]] = call i3 @llvm.ctlz.i3(i3 [[VAL:%.*]], i1 false)
@@ -1740,7 +1740,7 @@ end:
 }
 
 
-define i1 @t33_subnsw_i1(i1 %val, i1 %start, i1 %extraoffset) {
+define i1 @t33_subnsw_i1(i1 %val, i1 %start, i1 %extraoffset) mustprogress {
 ; CHECK-LABEL: @t33_subnsw_i1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_NUMLEADINGZEROS:%.*]] = call i1 @llvm.ctlz.i1(i1 [[VAL:%.*]], i1 false)
@@ -1794,7 +1794,7 @@ end:
 
   ret i1 %iv.res
 }
-define i2 @t34_addnuw_i2(i2 %val, i2 %start, i2 %extraoffset) {
+define i2 @t34_addnuw_i2(i2 %val, i2 %start, i2 %extraoffset) mustprogress {
 ; CHECK-LABEL: @t34_addnuw_i2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_NUMLEADINGZEROS:%.*]] = call i2 @llvm.ctlz.i2(i2 [[VAL:%.*]], i1 false)
@@ -1848,7 +1848,7 @@ end:
 
   ret i2 %iv.res
 }
-define i3 @t35_addnuw_i3(i3 %val, i3 %start, i3 %extraoffset) {
+define i3 @t35_addnuw_i3(i3 %val, i3 %start, i3 %extraoffset) mustprogress {
 ; CHECK-LABEL: @t35_addnuw_i3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL_NUMLEADINGZEROS:%.*]] = call i3 @llvm.ctlz.i3(i3 [[VAL:%.*]], i1 false)
@@ -1901,4 +1901,168 @@ end:
   call void @escape_outer.i3(i3 %iv.res, i3 %nbits.res, i3 %val.shifted.res, i1 %val.shifted.iszero.res, i3 %iv.next.res)
 
   ret i3 %iv.res
+}
+
+; For ashr, we must have knowledge that the original loop is finite.
+define i8 @n36(i8 %val, i8 %start, i8 %extraoffset) {
+; CHECK-LABEL: @n36(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[NBITS:%.*]] = add nsw i8 [[IV]], [[EXTRAOFFSET:%.*]]
+; CHECK-NEXT:    [[VAL_SHIFTED:%.*]] = ashr i8 [[VAL:%.*]], [[NBITS]]
+; CHECK-NEXT:    [[VAL_SHIFTED_ISZERO:%.*]] = icmp eq i8 [[VAL_SHIFTED]], 0
+; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
+; CHECK-NEXT:    call void @escape_inner(i8 [[IV]], i8 [[NBITS]], i8 [[VAL_SHIFTED]], i1 [[VAL_SHIFTED_ISZERO]], i8 [[IV_NEXT]])
+; CHECK-NEXT:    br i1 [[VAL_SHIFTED_ISZERO]], label [[END:%.*]], label [[LOOP]]
+; CHECK:       end:
+; CHECK-NEXT:    [[IV_RES:%.*]] = phi i8 [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    [[NBITS_RES:%.*]] = phi i8 [ [[NBITS]], [[LOOP]] ]
+; CHECK-NEXT:    [[VAL_SHIFTED_RES:%.*]] = phi i8 [ [[VAL_SHIFTED]], [[LOOP]] ]
+; CHECK-NEXT:    [[VAL_SHIFTED_ISZERO_RES:%.*]] = phi i1 [ [[VAL_SHIFTED_ISZERO]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT_RES:%.*]] = phi i8 [ [[IV_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    call void @escape_outer(i8 [[IV_RES]], i8 [[NBITS_RES]], i8 [[VAL_SHIFTED_RES]], i1 [[VAL_SHIFTED_ISZERO_RES]], i8 [[IV_NEXT_RES]])
+; CHECK-NEXT:    ret i8 [[IV_RES]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i8 [ %start, %entry ], [ %iv.next, %loop ]
+  %nbits = add nsw i8 %iv, %extraoffset
+  %val.shifted = ashr i8 %val, %nbits
+  %val.shifted.iszero = icmp eq i8 %val.shifted, 0
+  %iv.next = add i8 %iv, 1
+
+  call void @escape_inner(i8 %iv, i8 %nbits, i8 %val.shifted, i1 %val.shifted.iszero, i8 %iv.next)
+
+  br i1 %val.shifted.iszero, label %end, label %loop
+
+end:
+  %iv.res = phi i8 [ %iv, %loop ]
+  %nbits.res = phi i8 [ %nbits, %loop ]
+  %val.shifted.res = phi i8 [ %val.shifted, %loop ]
+  %val.shifted.iszero.res = phi i1 [ %val.shifted.iszero, %loop ]
+  %iv.next.res = phi i8 [ %iv.next, %loop ]
+
+  call void @escape_outer(i8 %iv.res, i8 %nbits.res, i8 %val.shifted.res, i1 %val.shifted.iszero.res, i8 %iv.next.res)
+
+  ret i8 %iv.res
+}
+
+define i8 @p37(i8 %val, i8 %start, i8 %extraoffset) {
+; CHECK-LABEL: @p37(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL_NUMLEADINGZEROS:%.*]] = call i8 @llvm.ctlz.i8(i8 [[VAL:%.*]], i1 false)
+; CHECK-NEXT:    [[VAL_NUMACTIVEBITS:%.*]] = sub nuw nsw i8 8, [[VAL_NUMLEADINGZEROS]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i8 0, [[EXTRAOFFSET:%.*]]
+; CHECK-NEXT:    [[VAL_NUMACTIVEBITS_OFFSET:%.*]] = add nsw i8 [[VAL_NUMACTIVEBITS]], [[TMP0]]
+; CHECK-NEXT:    [[IV_FINAL:%.*]] = call i8 @llvm.smax.i8(i8 [[VAL_NUMACTIVEBITS_OFFSET]], i8 [[START:%.*]])
+; CHECK-NEXT:    [[LOOP_BACKEDGETAKENCOUNT:%.*]] = sub nsw i8 [[IV_FINAL]], [[START]]
+; CHECK-NEXT:    [[LOOP_TRIPCOUNT:%.*]] = add nuw nsw i8 [[LOOP_BACKEDGETAKENCOUNT]], 1
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[LOOP_IV:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[LOOP_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[LOOP_IV_NEXT]] = add nuw nsw i8 [[LOOP_IV]], 1
+; CHECK-NEXT:    [[LOOP_IVCHECK:%.*]] = icmp eq i8 [[LOOP_IV_NEXT]], [[LOOP_TRIPCOUNT]]
+; CHECK-NEXT:    [[IV:%.*]] = add nsw i8 [[LOOP_IV]], [[START]]
+; CHECK-NEXT:    [[NBITS:%.*]] = add nsw i8 [[IV]], [[EXTRAOFFSET]]
+; CHECK-NEXT:    [[VAL_SHIFTED:%.*]] = ashr i8 [[VAL]], [[NBITS]]
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add i8 [[IV]], 1
+; CHECK-NEXT:    call void @escape_inner(i8 [[IV]], i8 [[NBITS]], i8 [[VAL_SHIFTED]], i1 [[LOOP_IVCHECK]], i8 [[IV_NEXT]])
+; CHECK-NEXT:    br i1 [[LOOP_IVCHECK]], label [[END:%.*]], label [[LOOP]]
+; CHECK:       end:
+; CHECK-NEXT:    [[IV_RES:%.*]] = phi i8 [ [[IV_FINAL]], [[LOOP]] ]
+; CHECK-NEXT:    [[NBITS_RES:%.*]] = phi i8 [ [[NBITS]], [[LOOP]] ]
+; CHECK-NEXT:    [[VAL_SHIFTED_RES:%.*]] = phi i8 [ [[VAL_SHIFTED]], [[LOOP]] ]
+; CHECK-NEXT:    [[VAL_SHIFTED_ISZERO_RES:%.*]] = phi i1 [ [[LOOP_IVCHECK]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT_RES:%.*]] = phi i8 [ [[IV_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    call void @escape_outer(i8 [[IV_RES]], i8 [[NBITS_RES]], i8 [[VAL_SHIFTED_RES]], i1 [[VAL_SHIFTED_ISZERO_RES]], i8 [[IV_NEXT_RES]])
+; CHECK-NEXT:    ret i8 [[IV_RES]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i8 [ %start, %entry ], [ %iv.next, %loop ]
+  %nbits = add nsw i8 %iv, %extraoffset
+  %val.shifted = ashr i8 %val, %nbits
+  %val.shifted.iszero = icmp eq i8 %val.shifted, 0
+  %iv.next = add i8 %iv, 1
+
+  call void @escape_inner(i8 %iv, i8 %nbits, i8 %val.shifted, i1 %val.shifted.iszero, i8 %iv.next)
+
+  br i1 %val.shifted.iszero, label %end, label %loop, !llvm.loop !0
+
+end:
+  %iv.res = phi i8 [ %iv, %loop ]
+  %nbits.res = phi i8 [ %nbits, %loop ]
+  %val.shifted.res = phi i8 [ %val.shifted, %loop ]
+  %val.shifted.iszero.res = phi i1 [ %val.shifted.iszero, %loop ]
+  %iv.next.res = phi i8 [ %iv.next, %loop ]
+
+  call void @escape_outer(i8 %iv.res, i8 %nbits.res, i8 %val.shifted.res, i1 %val.shifted.iszero.res, i8 %iv.next.res)
+
+  ret i8 %iv.res
+}
+!0 = distinct !{!0, !1}
+!1 = !{!"llvm.loop.mustprogress"}
+
+define i8 @p38(i8 %val.crude, i8 %start, i8 %extraoffset) {
+; CHECK-LABEL: @p38(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = and i8 [[VAL_CRUDE:%.*]], 127
+; CHECK-NEXT:    [[VAL_NUMLEADINGZEROS:%.*]] = call i8 @llvm.ctlz.i8(i8 [[VAL]], i1 false)
+; CHECK-NEXT:    [[VAL_NUMACTIVEBITS:%.*]] = sub nuw nsw i8 8, [[VAL_NUMLEADINGZEROS]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i8 0, [[EXTRAOFFSET:%.*]]
+; CHECK-NEXT:    [[VAL_NUMACTIVEBITS_OFFSET:%.*]] = add nsw i8 [[VAL_NUMACTIVEBITS]], [[TMP0]]
+; CHECK-NEXT:    [[IV_FINAL:%.*]] = call i8 @llvm.smax.i8(i8 [[VAL_NUMACTIVEBITS_OFFSET]], i8 [[START:%.*]])
+; CHECK-NEXT:    [[LOOP_BACKEDGETAKENCOUNT:%.*]] = sub nsw i8 [[IV_FINAL]], [[START]]
+; CHECK-NEXT:    [[LOOP_TRIPCOUNT:%.*]] = add nuw nsw i8 [[LOOP_BACKEDGETAKENCOUNT]], 1
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[LOOP_IV:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[LOOP_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[LOOP_IV_NEXT]] = add nuw nsw i8 [[LOOP_IV]], 1
+; CHECK-NEXT:    [[LOOP_IVCHECK:%.*]] = icmp eq i8 [[LOOP_IV_NEXT]], [[LOOP_TRIPCOUNT]]
+; CHECK-NEXT:    [[IV:%.*]] = add nsw i8 [[LOOP_IV]], [[START]]
+; CHECK-NEXT:    [[NBITS:%.*]] = add nsw i8 [[IV]], [[EXTRAOFFSET]]
+; CHECK-NEXT:    [[VAL_SHIFTED:%.*]] = ashr i8 [[VAL]], [[NBITS]]
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add i8 [[IV]], 1
+; CHECK-NEXT:    call void @escape_inner(i8 [[IV]], i8 [[NBITS]], i8 [[VAL_SHIFTED]], i1 [[LOOP_IVCHECK]], i8 [[IV_NEXT]])
+; CHECK-NEXT:    br i1 [[LOOP_IVCHECK]], label [[END:%.*]], label [[LOOP]]
+; CHECK:       end:
+; CHECK-NEXT:    [[IV_RES:%.*]] = phi i8 [ [[IV_FINAL]], [[LOOP]] ]
+; CHECK-NEXT:    [[NBITS_RES:%.*]] = phi i8 [ [[NBITS]], [[LOOP]] ]
+; CHECK-NEXT:    [[VAL_SHIFTED_RES:%.*]] = phi i8 [ [[VAL_SHIFTED]], [[LOOP]] ]
+; CHECK-NEXT:    [[VAL_SHIFTED_ISZERO_RES:%.*]] = phi i1 [ [[LOOP_IVCHECK]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT_RES:%.*]] = phi i8 [ [[IV_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    call void @escape_outer(i8 [[IV_RES]], i8 [[NBITS_RES]], i8 [[VAL_SHIFTED_RES]], i1 [[VAL_SHIFTED_ISZERO_RES]], i8 [[IV_NEXT_RES]])
+; CHECK-NEXT:    ret i8 [[IV_RES]]
+;
+entry:
+  %val = and i8 %val.crude, 127
+  br label %loop
+
+loop:
+  %iv = phi i8 [ %start, %entry ], [ %iv.next, %loop ]
+  %nbits = add nsw i8 %iv, %extraoffset
+  %val.shifted = ashr i8 %val, %nbits
+  %val.shifted.iszero = icmp eq i8 %val.shifted, 0
+  %iv.next = add i8 %iv, 1
+
+  call void @escape_inner(i8 %iv, i8 %nbits, i8 %val.shifted, i1 %val.shifted.iszero, i8 %iv.next)
+
+  br i1 %val.shifted.iszero, label %end, label %loop
+
+end:
+  %iv.res = phi i8 [ %iv, %loop ]
+  %nbits.res = phi i8 [ %nbits, %loop ]
+  %val.shifted.res = phi i8 [ %val.shifted, %loop ]
+  %val.shifted.iszero.res = phi i1 [ %val.shifted.iszero, %loop ]
+  %iv.next.res = phi i8 [ %iv.next, %loop ]
+
+  call void @escape_outer(i8 %iv.res, i8 %nbits.res, i8 %val.shifted.res, i1 %val.shifted.iszero.res, i8 %iv.next.res)
+
+  ret i8 %iv.res
 }
