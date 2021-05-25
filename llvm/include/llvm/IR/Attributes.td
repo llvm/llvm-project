@@ -154,6 +154,9 @@ def NoProfile : EnumAttr<"noprofile">;
 /// Function doesn't unwind stack.
 def NoUnwind : EnumAttr<"nounwind">;
 
+/// No SanitizeCoverage instrumentation.
+def NoSanitizeCoverage : EnumAttr<"nosanitize_coverage">;
+
 /// Null pointer in address space zero is valid.
 def NullPointerIsValid : EnumAttr<"null_pointer_is_valid">;
 
