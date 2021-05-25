@@ -34,7 +34,7 @@ bool isUsedOnlyFromFunction(const User *U, const Function *F) {
     return I->getFunction() == F;
   }
 
-  if (auto *C = dyn_cast<ConstantExpr>(U)) {
+  if (isa<ConstantExpr>(U)) {
     return all_of(U->users(),
                   [F](const User *U) { return isUsedOnlyFromFunction(U, F); });
   }
