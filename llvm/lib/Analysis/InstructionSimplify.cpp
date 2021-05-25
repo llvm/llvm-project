@@ -4153,13 +4153,13 @@ static Value *SimplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
     if (Q.isUndefValue(CondC))
       return isa<Constant>(FalseVal) ? FalseVal : TrueVal;
 
-    // TODO: Vector constants with undef elements don't simplify.
-
-    // select true, X, Y  -> X
-    if (CondC->isAllOnesValue())
+    // select true,  X, Y --> X
+    // select false, X, Y --> Y
+    // For vectors, allow undef/poison elements in the condition to match the
+    // defined elements, so we can eliminate the select.
+    if (match(CondC, m_One()))
       return TrueVal;
-    // select false, X, Y -> Y
-    if (CondC->isNullValue())
+    if (match(CondC, m_Zero()))
       return FalseVal;
   }
 

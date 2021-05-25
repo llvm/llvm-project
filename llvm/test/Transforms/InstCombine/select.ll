@@ -2838,8 +2838,7 @@ define <2 x i1> @partial_true_undef_condval(<2 x i1> %x) {
 
 define <2 x i1> @partial_false_undef_condval(<2 x i1> %x) {
 ; CHECK-LABEL: @partial_false_undef_condval(
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> <i1 false, i1 poison>, <2 x i1> [[X:%.*]], <2 x i1> <i1 false, i1 poison>
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> <i1 false, i1 poison>
 ;
   %r = select <2 x i1> <i1 false, i1 poison>, <2 x i1> %x, <2 x i1> <i1 false, i1 poison>
   ret <2 x i1> %r
