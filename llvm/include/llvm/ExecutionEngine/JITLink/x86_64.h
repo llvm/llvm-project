@@ -258,10 +258,10 @@ inline bool isInRangeForImmS32(int64_t Value) {
 }
 
 /// Apply fixup expression for edge to block content.
-inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
-                        char *BlockWorkingMem) {
+inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
   using namespace support;
 
+  char *BlockWorkingMem = B.getAlreadyMutableContent().data();
   char *FixupPtr = BlockWorkingMem + E.getOffset();
   JITTargetAddress FixupAddress = B.getAddress() + E.getOffset();
 
