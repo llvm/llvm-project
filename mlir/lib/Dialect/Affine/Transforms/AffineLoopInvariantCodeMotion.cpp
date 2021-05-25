@@ -49,30 +49,32 @@ struct LoopInvariantCodeMotion
 } // end anonymous namespace
 
 static bool
-checkInvarianceOfNestedIfOps(Operation *op, Value indVar,
+checkInvarianceOfNestedIfOps(Operation *op, Value indVar, ValueRange iterArgs,
                              SmallPtrSetImpl<Operation *> &opsWithUsers,
                              SmallPtrSetImpl<Operation *> &opsToHoist);
-static bool isOpLoopInvariant(Operation &op, Value indVar,
+static bool isOpLoopInvariant(Operation &op, Value indVar, ValueRange iterArgs,
                               SmallPtrSetImpl<Operation *> &opsWithUsers,
                               SmallPtrSetImpl<Operation *> &opsToHoist);
 
 static bool
 areAllOpsInTheBlockListInvariant(Region &blockList, Value indVar,
+                                 ValueRange iterArgs,
                                  SmallPtrSetImpl<Operation *> &opsWithUsers,
                                  SmallPtrSetImpl<Operation *> &opsToHoist);
 
 // Returns true if the individual op is loop invariant.
-bool isOpLoopInvariant(Operation &op, Value indVar,
+bool isOpLoopInvariant(Operation &op, Value indVar, ValueRange iterArgs,
                        SmallPtrSetImpl<Operation *> &opsWithUsers,
                        SmallPtrSetImpl<Operation *> &opsToHoist) {
   LLVM_DEBUG(llvm::dbgs() << "iterating on op: " << op;);
 
   if (isa<AffineIfOp>(op)) {
-    if (!checkInvarianceOfNestedIfOps(&op, indVar, opsWithUsers, opsToHoist)) {
+    if (!checkInvarianceOfNestedIfOps(&op, indVar, iterArgs, opsWithUsers,
+                                      opsToHoist)) {
       return false;
     }
   } else if (auto forOp = dyn_cast<AffineForOp>(op)) {
-    if (!areAllOpsInTheBlockListInvariant(forOp.getLoopBody(), indVar,
+    if (!areAllOpsInTheBlockListInvariant(forOp.getLoopBody(), indVar, iterArgs,
                                           opsWithUsers, opsToHoist)) {
       return false;
     }
@@ -129,6 +131,12 @@ bool isOpLoopInvariant(Operation &op, Value indVar,
       return false;
     }
 
+    // If the one of the iter_args is the operand, this op isn't loop invariant.
+    if (llvm::is_contained(iterArgs, op.getOperand(i))) {
+      LLVM_DEBUG(llvm::dbgs() << "\nOne of the iter_args is the operand\n");
+      return false;
+    }
+
     if (operandSrc != nullptr) {
       LLVM_DEBUG(llvm::dbgs() << *operandSrc << "\nIterating on operand src\n");
 
@@ -148,12 +156,13 @@ bool isOpLoopInvariant(Operation &op, Value indVar,
 
 // Checks if all ops in a region (i.e. list of blocks) are loop invariant.
 bool areAllOpsInTheBlockListInvariant(
-    Region &blockList, Value indVar, SmallPtrSetImpl<Operation *> &opsWithUsers,
+    Region &blockList, Value indVar, ValueRange iterArgs,
+    SmallPtrSetImpl<Operation *> &opsWithUsers,
     SmallPtrSetImpl<Operation *> &opsToHoist) {
 
   for (auto &b : blockList) {
     for (auto &op : b) {
-      if (!isOpLoopInvariant(op, indVar, opsWithUsers, opsToHoist)) {
+      if (!isOpLoopInvariant(op, indVar, iterArgs, opsWithUsers, opsToHoist)) {
         return false;
       }
     }
@@ -164,18 +173,19 @@ bool areAllOpsInTheBlockListInvariant(
 
 // Returns true if the affine.if op can be hoisted.
 bool checkInvarianceOfNestedIfOps(Operation *op, Value indVar,
+                                  ValueRange iterArgs,
                                   SmallPtrSetImpl<Operation *> &opsWithUsers,
                                   SmallPtrSetImpl<Operation *> &opsToHoist) {
   assert(isa<AffineIfOp>(op));
   auto ifOp = cast<AffineIfOp>(op);
 
-  if (!areAllOpsInTheBlockListInvariant(ifOp.thenRegion(), indVar, opsWithUsers,
-                                        opsToHoist)) {
+  if (!areAllOpsInTheBlockListInvariant(ifOp.thenRegion(), indVar, iterArgs,
+                                        opsWithUsers, opsToHoist)) {
     return false;
   }
 
-  if (!areAllOpsInTheBlockListInvariant(ifOp.elseRegion(), indVar, opsWithUsers,
-                                        opsToHoist)) {
+  if (!areAllOpsInTheBlockListInvariant(ifOp.elseRegion(), indVar, iterArgs,
+                                        opsWithUsers, opsToHoist)) {
     return false;
   }
 
@@ -185,6 +195,7 @@ bool checkInvarianceOfNestedIfOps(Operation *op, Value indVar,
 void LoopInvariantCodeMotion::runOnAffineForOp(AffineForOp forOp) {
   auto *loopBody = forOp.getBody();
   auto indVar = forOp.getInductionVar();
+  ValueRange iterArgs = forOp.getIterOperands();
 
   // This is the place where hoisted instructions would reside.
   OpBuilder b(forOp.getOperation());
@@ -200,7 +211,7 @@ void LoopInvariantCodeMotion::runOnAffineForOp(AffineForOp forOp) {
     if (!op.use_empty())
       opsWithUsers.insert(&op);
     if (!isa<AffineYieldOp>(op)) {
-      if (isOpLoopInvariant(op, indVar, opsWithUsers, opsToHoist)) {
+      if (isOpLoopInvariant(op, indVar, iterArgs, opsWithUsers, opsToHoist)) {
         opsToMove.push_back(&op);
       }
     }
