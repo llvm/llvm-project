@@ -50,7 +50,7 @@ hook into.
 
 The first thing we need to do is to define the constraints on inlining
 operations in the Toy dialect. This information is provided through a
-[dialect interface](../../Interfaces.md#dialect-interfaces). This is essentially
+[dialect interface](../../Interfaces.md/#dialect-interfaces). This is essentially
 a class containing a set of virtual hooks which the dialect can override.
 In this case, the interface is `DialectInlinerInterface`.
 
@@ -106,7 +106,7 @@ void ToyDialect::initialize() {
 
 Next, we need to provide a way for the inliner to know that `toy.generic_call`
 represents a call to a function. MLIR provides an
-[operation interface](../../Interfaces.md#operation-interfaces) that can be used
+[operation interface](../../Interfaces.md/#attributeoperationtype-interfaces) that can be used
 to mark an operation as being "call-like". Unlike dialect interfaces, operation
 interfaces provide a more refined granularity of information that is specific
 and core to a single operation. The interface that we will be adding here is the
@@ -284,7 +284,7 @@ can define an operation interface that can be specified on operations that need
 to have their result shapes inferred.
 
 Similarly to operations, we can also
-[define operation interfaces](../../OpDefinitions.md#operation-interfaces) using
+[define operation interfaces](../../Interfaces.md/#attributeoperationtype-interfaces) using
 the operation definition specification (ODS) framework.
 
 The interface is defined by inheriting from `OpInterface`, which takes the name
@@ -305,7 +305,7 @@ Next, we define the interface methods that the operations will need to provide.
 An interface method is comprised of: a description; a C++ return type in string
 form; a method name in string form; and a few optional components, depending on
 the need. See the
-[ODS documentation](../../OpDefinitions.md#operation-interfaces) for more
+[ODS documentation](../../Interfaces.md/#attributeoperationtype-interfaces) for more
 information.
 
 ```tablegen
@@ -342,7 +342,7 @@ void MulOp::inferShapes() { getResult().setType(getOperand(0).getType()); }
 At this point, each of the necessary Toy operations provide a mechanism by which
 to infer their output shapes. The ShapeInferencePass is a FunctionPass: it will
 run on each Function in isolation. MLIR also supports general
-[OperationPasses](../../PassManagement.md#operation-pass) that run on any isolated
+[OperationPasses](../../PassManagement.md/#operation-pass) that run on any isolated
 operation (i.e. other function-like operations), but here our module only
 contains functions, so there is no need to generalize to all operations.
 

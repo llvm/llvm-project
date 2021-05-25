@@ -1,11 +1,11 @@
 # Understanding the IR Structure
 
 The MLIR Language Reference describes the
-[High Level Structure](../LangRef/#high-level-structure), this document
+[High Level Structure](../LangRef.md/#high-level-structure), this document
 illustrates this structure through examples, and introduces at the same time the
 C++ APIs involved in manipulating it.
 
-We will implement a [pass](../PassManagement/#operation-pass) that traverses any
+We will implement a [pass](../PassManagement.md/#operation-pass) that traverses any
 MLIR input and prints the entity inside the IR. A pass (or in general almost any
 piece of IR) is always rooted with an operation. Most of the time the top-level
 operation is a `ModuleOp`, the MLIR `PassManager` is actually limited to
@@ -217,7 +217,7 @@ does not satisfy a criteria:
 
 Another relationship in the IR is the one that links a `Value` with its users.
 As defined in the
-[language reference](https://mlir.llvm.org/docs/LangRef/#high-level-structure),
+[language reference](../LangRef.md/#high-level-structure),
 each Value is either a `BlockArgument` or the result of exactly one `Operation`
 (an `Operation` can have multiple results, each of them is a separate `Value`).
 The users of a `Value` are `Operation`s, through their arguments: each
