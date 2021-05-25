@@ -220,12 +220,23 @@ C++17 Specific Configuration Macros
   This macro is used to re-enable all the features removed in C++17. The effect
   is equivalent to manually defining each macro listed below.
 
-**_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS**:
-  This macro is used to re-enable the `set_unexpected`, `get_unexpected`, and
-  `unexpected` functions, which were removed in C++17.
-
 **_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR**:
-  This macro is used to re-enable `std::auto_ptr` in C++17.
+  This macro is used to re-enable `auto_ptr`.
+
+**_LIBCPP_ENABLE_CXX17_REMOVED_BINDERS**:
+  This macro is used to re-enable the `binder1st`, `binder2nd`,
+  `pointer_to_unary_function`, `pointer_to_binary_function`, `mem_fun_t`,
+  `mem_fun1_t`, `mem_fun_ref_t`, `mem_fun1_ref_t`, `const_mem_fun_t`,
+  `const_mem_fun1_t`, `const_mem_fun_ref_t`, and `const_mem_fun1_ref_t`
+  class templates, and the `bind1st`, `bind2nd`, `mem_fun`, `mem_fun_ref`,
+  and `ptr_fun` functions.
+
+**_LIBCPP_ENABLE_CXX17_REMOVED_RANDOM_SHUFFLE**:
+  This macro is used to re-enable the `random_shuffle` algorithm.
+
+**_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS**:
+  This macro is used to re-enable `set_unexpected`, `get_unexpected`, and
+  `unexpected`.
 
 C++20 Specific Configuration Macros:
 ------------------------------------
@@ -233,6 +244,24 @@ C++20 Specific Configuration Macros:
   This macro can be used to disable diagnostics emitted from functions marked
   ``[[nodiscard]]`` in dialects after C++17.  See :ref:`Extended Applications of [[nodiscard]] <nodiscard extension>`
   for more information.
+
+**_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES**:
+  This macro is used to re-enable all the features removed in C++20. The effect
+  is equivalent to manually defining each macro listed below.
+
+**_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS**:
+  This macro is used to re-enable redundant members of `allocator<T>`,
+  including `pointer`, `reference`, `rebind`, `address`, `max_size`,
+  `construct`, `destroy`, and the two-argument overload of `allocate`.
+  It also re-enables the library-provided explicit specializations
+  of `allocator<void>` and `allocator<const void>`.
+
+**_LIBCPP_ENABLE_CXX20_REMOVED_NEGATORS**:
+  This macro is used to re-enable `not1`, `not2`, `unary_negate`,
+  and `binary_negate`.
+
+**_LIBCPP_ENABLE_CXX20_REMOVED_RAW_STORAGE_ITERATOR**:
+  This macro is used to re-enable `raw_storage_iterator`.
 
 
 Libc++ Extensions
