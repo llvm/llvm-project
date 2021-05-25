@@ -17,7 +17,9 @@
 ; YAML-NEXT:    - NumLoads:        '0'
 ; YAML-NEXT:    - String:          ' loads, '
 ; YAML-NEXT:    - NumComputeOps:   '0'
-; YAML-NEXT:    - String:          ' compute ops'
+; YAML-NEXT:    - String:          ' compute ops, '
+; YAML-NEXT:   - NumExposedTransposes: '0'
+; YAML-NEXT:   - String:          ' exposed transposes'
 ; YAML-NEXT:    - String:          ",\nadditionally "
 ; YAML-NEXT:    - NumStores:       '0'
 ; YAML-NEXT:    - String:          ' stores, '
@@ -45,7 +47,9 @@
 ; YAML-NEXT:    - NumLoads:        '45'
 ; YAML-NEXT:    - String:          ' loads, '
 ; YAML-NEXT:    - NumComputeOps:   '120'
-; YAML-NEXT:    - String:          ' compute ops'
+; YAML-NEXT:    - String:          ' compute ops, '
+; YAML-NEXT:   - NumExposedTransposes: '0'
+; YAML-NEXT:   - String:          ' exposed transposes'
 ; YAML-NEXT:    - String:          ",\nadditionally "
 ; YAML-NEXT:    - NumStores:       '0'
 ; YAML-NEXT:    - String:          ' stores, '
