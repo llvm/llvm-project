@@ -688,5 +688,20 @@ TEST_F(TestTypeSystemSwiftTypeRef, IsTypedefType) {
     CompilerType t = GetCompilerType(b.Mangle(n));
     ASSERT_FALSE(t.IsTypedefType());
   };
-};
+  {
+    NodePointer n = b.GlobalType(
+        b.Node(Node::Kind::BoundGenericTypeAlias,
+               b.Node(Node::Kind::Type,
+                      b.Node(Node::Kind::TypeAlias,
+                             b.Node(Node::Kind::Module, "module"),
+                             b.Node(Node::Kind::Identifier, "SomeType"))),
+               b.Node(Node::Kind::TypeList,
+                      b.Node(Node::Kind::Type,
+                             b.Node(Node::Kind::Structure,
+                                    b.Node(Node::Kind::Module, "Swift"),
+                                    b.Node(Node::Kind::Identifier, "Int"))))));
+    CompilerType t = GetCompilerType(b.Mangle(n));
+    ASSERT_TRUE(t.IsTypedefType());
+  };
+}
 
