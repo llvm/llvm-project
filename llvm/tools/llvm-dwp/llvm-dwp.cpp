@@ -880,9 +880,10 @@ int main(int argc, char **argv) {
   if (!MSTI)
     return error("no subtarget info for target " + TripleName, Context);
 
-  MCObjectFileInfo MOFI;
-  MCContext MC(*ErrOrTriple, MAI.get(), MRI.get(), &MOFI, MSTI.get());
-  MOFI.initMCObjectFileInfo(MC, /*PIC=*/false);
+  MCContext MC(*ErrOrTriple, MAI.get(), MRI.get(), MSTI.get());
+  std::unique_ptr<MCObjectFileInfo> MOFI(
+      TheTarget->createMCObjectFileInfo(MC, /*PIC=*/false));
+  MC.setObjectFileInfo(MOFI.get());
 
   MCTargetOptions Options;
   auto MAB = TheTarget->createMCAsmBackend(*MSTI, *MRI, Options);

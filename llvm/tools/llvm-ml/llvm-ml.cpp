@@ -281,10 +281,10 @@ int main(int Argc, char **Argv) {
 
   // FIXME: This is not pretty. MCContext has a ptr to MCObjectFileInfo and
   // MCObjectFileInfo needs a MCContext reference in order to initialize itself.
-  MCObjectFileInfo MOFI;
-  MCContext Ctx(TheTriple, MAI.get(), MRI.get(), &MOFI, STI.get(), &SrcMgr);
-  MOFI.initMCObjectFileInfo(Ctx, /*PIC=*/false,
-                            /*LargeCodeModel=*/true);
+  MCContext Ctx(TheTriple, MAI.get(), MRI.get(), STI.get(), &SrcMgr);
+  std::unique_ptr<MCObjectFileInfo> MOFI(TheTarget->createMCObjectFileInfo(
+      Ctx, /*PIC=*/false, /*LargeCodeModel=*/true));
+  Ctx.setObjectFileInfo(MOFI.get());
 
   if (InputArgs.hasArg(OPT_save_temp_labels))
     Ctx.setAllowTemporaryLabels(false);

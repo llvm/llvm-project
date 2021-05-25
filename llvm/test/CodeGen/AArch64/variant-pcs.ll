@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -o - %s | FileCheck %s --check-prefix=CHECK-ASM
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -o - %s | FileCheck %s --check-prefix=CHECK-ASM --strict-whitespace
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -filetype=obj -o - %s \
 ; RUN:   | llvm-readobj --symbols - | FileCheck %s --check-prefix=CHECK-OBJ
 
@@ -11,7 +11,7 @@ define i32 @base_pcs() {
 }
 
 define aarch64_vector_pcs <4 x i32> @neon_vector_pcs_1(<4 x i32> %arg) {
-; CHECK-ASM: .variant_pcs neon_vector_pcs_1
+; CHECK-ASM: .variant_pcs	neon_vector_pcs_1
 ; CHECK-ASM-NEXT: neon_vector_pcs_1:
 ; CHECK-OBJ-LABEL: Name: neon_vector_pcs_1
 ; CHECK-OBJ: Other [ (0x80)
@@ -19,7 +19,7 @@ define aarch64_vector_pcs <4 x i32> @neon_vector_pcs_1(<4 x i32> %arg) {
 }
 
 define <vscale x 4 x i32> @sve_vector_pcs_1() {
-; CHECK-ASM: .variant_pcs sve_vector_pcs_1
+; CHECK-ASM: .variant_pcs	sve_vector_pcs_1
 ; CHECK-ASM-NEXT: sve_vector_pcs_1:
 ; CHECK-OBJ-LABEL: Name: sve_vector_pcs_1
 ; CHECK-OBJ: Other [ (0x80)
@@ -27,7 +27,7 @@ define <vscale x 4 x i32> @sve_vector_pcs_1() {
 }
 
 define <vscale x 4 x i1> @sve_vector_pcs_2() {
-; CHECK-ASM: .variant_pcs sve_vector_pcs_2
+; CHECK-ASM: .variant_pcs	sve_vector_pcs_2
 ; CHECK-ASM-NEXT: sve_vector_pcs_2:
 ; CHECK-OBJ-LABEL: Name: sve_vector_pcs_2
 ; CHECK-OBJ: Other [ (0x80)
@@ -35,7 +35,7 @@ define <vscale x 4 x i1> @sve_vector_pcs_2() {
 }
 
 define void @sve_vector_pcs_3(<vscale x 4 x i32> %arg) {
-; CHECK-ASM: .variant_pcs sve_vector_pcs_3
+; CHECK-ASM: .variant_pcs	sve_vector_pcs_3
 ; CHECK-ASM-NEXT: sve_vector_pcs_3:
 ; CHECK-OBJ-LABEL: Name: sve_vector_pcs_3
 ; CHECK-OBJ: Other [ (0x80)
@@ -43,7 +43,7 @@ define void @sve_vector_pcs_3(<vscale x 4 x i32> %arg) {
 }
 
 define void @sve_vector_pcs_4(<vscale x 4 x i1> %arg) {
-; CHECK-ASM: .variant_pcs sve_vector_pcs_4
+; CHECK-ASM: .variant_pcs	sve_vector_pcs_4
 ; CHECK-ASM-NEXT: sve_vector_pcs_4:
 ; CHECK-OBJ-LABEL: Name: sve_vector_pcs_4
 ; CHECK-OBJ: Other [ (0x80)

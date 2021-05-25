@@ -138,23 +138,54 @@ auto Block::getArgumentTypes() -> ValueTypeRange<BlockArgListType> {
   return ValueTypeRange<BlockArgListType>(getArguments());
 }
 
-BlockArgument Block::addArgument(Type type) {
-  BlockArgument arg = BlockArgument::create(type, this, arguments.size());
+BlockArgument Block::addArgument(Type type, Optional<Location> loc) {
+  // TODO: Require locations for BlockArguments.
+  if (!loc.hasValue()) {
+    // Use the location of the parent operation if the block is attached.
+    if (Operation *parentOp = getParentOp())
+      loc = parentOp->getLoc();
+    else
+      loc = UnknownLoc::get(type.getContext());
+  }
+
+  BlockArgument arg = BlockArgument::create(type, this, arguments.size(), *loc);
   arguments.push_back(arg);
   return arg;
 }
 
 /// Add one argument to the argument list for each type specified in the list.
-auto Block::addArguments(TypeRange types) -> iterator_range<args_iterator> {
+auto Block::addArguments(TypeRange types, ArrayRef<Location> locs)
+    -> iterator_range<args_iterator> {
+  // TODO: Require locations for BlockArguments.
+  assert((locs.empty() || types.size() == locs.size()) &&
+         "incorrect number of block argument locations");
   size_t initialSize = arguments.size();
+
   arguments.reserve(initialSize + types.size());
-  for (auto type : types)
-    addArgument(type);
+
+  // TODO: Require locations for BlockArguments.
+  if (locs.empty()) {
+    for (auto type : types)
+      addArgument(type);
+  } else {
+    for (auto typeAndLoc : llvm::zip(types, locs))
+      addArgument(std::get<0>(typeAndLoc), std::get<1>(typeAndLoc));
+  }
   return {arguments.data() + initialSize, arguments.data() + arguments.size()};
 }
 
-BlockArgument Block::insertArgument(unsigned index, Type type) {
-  auto arg = BlockArgument::create(type, this, index);
+BlockArgument Block::insertArgument(unsigned index, Type type,
+                                    Optional<Location> loc) {
+  // TODO: Require locations for BlockArguments.
+  if (!loc.hasValue()) {
+    // Use the location of the parent operation if the block is attached.
+    if (Operation *parentOp = getParentOp())
+      loc = parentOp->getLoc();
+    else
+      loc = UnknownLoc::get(type.getContext());
+  }
+
+  auto arg = BlockArgument::create(type, this, index, *loc);
   assert(index <= arguments.size());
   arguments.insert(arguments.begin() + index, arg);
   // Update the cached position for all the arguments after the newly inserted
@@ -167,10 +198,11 @@ BlockArgument Block::insertArgument(unsigned index, Type type) {
 
 /// Insert one value to the given position of the argument list. The existing
 /// arguments are shifted. The block is expected not to have predecessors.
-BlockArgument Block::insertArgument(args_iterator it, Type type) {
+BlockArgument Block::insertArgument(args_iterator it, Type type,
+                                    Optional<Location> loc) {
   assert(llvm::empty(getPredecessors()) &&
          "cannot insert arguments to blocks with predecessors");
-  return insertArgument(it->getArgNumber(), type);
+  return insertArgument(it->getArgNumber(), type, loc);
 }
 
 void Block::eraseArgument(unsigned index) {

@@ -79,7 +79,8 @@ public:
   NoneType getNoneType();
 
   /// Get or construct an instance of the type 'ty' with provided arguments.
-  template <typename Ty, typename... Args> Ty getType(Args... args) {
+  template <typename Ty, typename... Args>
+  Ty getType(Args... args) {
     return Ty::get(context, args...);
   }
 
@@ -372,11 +373,13 @@ public:
   /// end of it. The block is inserted at the provided insertion point of
   /// 'parent'.
   Block *createBlock(Region *parent, Region::iterator insertPt = {},
-                     TypeRange argTypes = llvm::None);
+                     TypeRange argTypes = llvm::None,
+                     ArrayRef<Location> locs = {});
 
   /// Add new block with 'argTypes' arguments and set the insertion point to the
   /// end of it. The block is placed before 'insertBefore'.
-  Block *createBlock(Block *insertBefore, TypeRange argTypes = llvm::None);
+  Block *createBlock(Block *insertBefore, TypeRange argTypes = llvm::None,
+                     ArrayRef<Location> locs = {});
 
   //===--------------------------------------------------------------------===//
   // Operation Creation
@@ -472,7 +475,8 @@ public:
   Operation *cloneWithoutRegions(Operation &op) {
     return insert(op.cloneWithoutRegions());
   }
-  template <typename OpT> OpT cloneWithoutRegions(OpT op) {
+  template <typename OpT>
+  OpT cloneWithoutRegions(OpT op) {
     return cast<OpT>(cloneWithoutRegions(*op.getOperation()));
   }
 
