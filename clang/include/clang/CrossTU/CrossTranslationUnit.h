@@ -38,7 +38,6 @@ class TranslationUnitDecl;
 namespace cross_tu {
 
 enum class index_error_code {
-  success = 0,
   unspecified = 1,
   missing_index_file,
   invalid_index_format,
@@ -254,7 +253,6 @@ private:
     /// In case of on-demand parsing, the invocations for parsing the source
     /// files is stored.
     llvm::Optional<InvocationListTy> InvocationList;
-    index_error_code PreviousParsingResult = index_error_code::success;
   };
 
   /// Maintain number of AST loads and check for reaching the load limit.
