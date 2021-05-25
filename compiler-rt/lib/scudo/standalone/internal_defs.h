@@ -105,14 +105,11 @@ void NORETURN die();
 
 void NORETURN reportCheckFailed(const char *File, int Line,
                                 const char *Condition, u64 Value1, u64 Value2);
-
 #define CHECK_IMPL(C1, Op, C2)                                                 \
   do {                                                                         \
-    scudo::u64 V1 = (scudo::u64)(C1);                                          \
-    scudo::u64 V2 = (scudo::u64)(C2);                                          \
-    if (UNLIKELY(!(V1 Op V2))) {                                               \
-      scudo::reportCheckFailed(__FILE__, __LINE__,                             \
-                               "(" #C1 ") " #Op " (" #C2 ")", V1, V2);         \
+    if (UNLIKELY(!(C1 Op C2))) {                                               \
+      scudo::reportCheckFailed(__FILE__, __LINE__, #C1 " " #Op " " #C2,        \
+                               (scudo::u64)C1, (scudo::u64)C2);                \
       scudo::die();                                                            \
     }                                                                          \
   } while (false)
