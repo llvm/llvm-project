@@ -24,8 +24,8 @@ define <4 x float> @demand_vcvtph2ps_128(<8 x i16> %A) {
 ; All 8 elements required.
 define <8 x float> @demand_vcvtph2ps_256(<8 x i16> %A) {
 ; CHECK-LABEL: @demand_vcvtph2ps_256(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A:%.*]], <8 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i16> [[TMP1]] to <8 x half>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[A:%.*]] to <8 x half>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x half> [[TMP1]], <8 x half> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[CVTPH2PS:%.*]] = fpext <8 x half> [[TMP2]] to <8 x float>
 ; CHECK-NEXT:    ret <8 x float> [[CVTPH2PS]]
 ;
