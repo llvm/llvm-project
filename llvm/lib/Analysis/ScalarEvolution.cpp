@@ -7392,18 +7392,8 @@ bool ScalarEvolution::BackedgeTakenInfo::isConstantMaxOrZero(
   return MaxOrZero && !any_of(ExitNotTaken, PredicateNotAlwaysTrue);
 }
 
-bool ScalarEvolution::BackedgeTakenInfo::hasOperand(const SCEV *S,
-                                                    ScalarEvolution *SE) const {
-  if (getConstantMax() && getConstantMax() != SE->getCouldNotCompute() &&
-      SE->hasOperand(getConstantMax(), S))
-    return true;
-
-  for (auto &ENT : ExitNotTaken)
-    if (ENT.ExactNotTaken != SE->getCouldNotCompute() &&
-        SE->hasOperand(ENT.ExactNotTaken, S))
-      return true;
-
-  return false;
+bool ScalarEvolution::BackedgeTakenInfo::hasOperand(const SCEV *S) const {
+  return Operands.contains(S);
 }
 
 ScalarEvolution::ExitLimit::ExitLimit(const SCEV *E)
@@ -7445,6 +7435,19 @@ ScalarEvolution::ExitLimit::ExitLimit(const SCEV *E, const SCEV *M,
          "No point in having a non-constant max backedge taken count!");
 }
 
+class SCEVRecordOperands {
+  SmallPtrSetImpl<const SCEV *> &Operands;
+
+public:
+  SCEVRecordOperands(SmallPtrSetImpl<const SCEV *> &Operands)
+    : Operands(Operands) {}
+  bool follow(const SCEV *S) {
+    Operands.insert(S);
+    return true;
+  }
+  bool isDone() { return false; }
+};
+
 /// Allocate memory for BackedgeTakenInfo and copy the not-taken count of each
 /// computable exit into a persistent ExitNotTakenInfo array.
 ScalarEvolution::BackedgeTakenInfo::BackedgeTakenInfo(
@@ -7473,6 +7476,14 @@ ScalarEvolution::BackedgeTakenInfo::BackedgeTakenInfo(
   assert((isa<SCEVCouldNotCompute>(ConstantMax) ||
           isa<SCEVConstant>(ConstantMax)) &&
          "No point in having a non-constant max backedge taken count!");
+
+  SCEVRecordOperands RecordOperands(Operands);
+  SCEVTraversal<SCEVRecordOperands> ST(RecordOperands);
+  if (!isa<SCEVCouldNotCompute>(ConstantMax))
+    ST.visitAll(ConstantMax);
+  for (auto &ENT : ExitNotTaken)
+    if (!isa<SCEVCouldNotCompute>(ENT.ExactNotTaken))
+      ST.visitAll(ENT.ExactNotTaken);
 }
 
 /// Compute the number of times the backedge of the specified loop will execute.
@@ -12627,7 +12638,7 @@ ScalarEvolution::forgetMemoizedResults(const SCEV *S) {
       [S, this](DenseMap<const Loop *, BackedgeTakenInfo> &Map) {
         for (auto I = Map.begin(), E = Map.end(); I != E;) {
           BackedgeTakenInfo &BEInfo = I->second;
-          if (BEInfo.hasOperand(S, this))
+          if (BEInfo.hasOperand(S))
             Map.erase(I++);
           else
             ++I;
