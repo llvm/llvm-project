@@ -139,7 +139,7 @@ class Tool(TestToolBase):
             dexter_version=self.context.version)
 
         step_collection.commands, new_source_files = get_command_infos(
-            self.context.options.test_files)
+            self.context.options.test_files, self.context.options.source_root_dir)
 
         self.context.options.source_files.extend(list(new_source_files))
 
