@@ -541,8 +541,8 @@ void UserDefinedConversionSequence::dump() const {
 /// error. Useful for debugging overloading issues.
 void ImplicitConversionSequence::dump() const {
   raw_ostream &OS = llvm::errs();
-  if (isStdInitializerListElement())
-    OS << "Worst std::initializer_list element conversion: ";
+  if (hasInitializerListContainerType())
+    OS << "Worst list element conversion: ";
   switch (ConversionKind) {
   case StandardConversion:
     OS << "Standard conversion: ";
@@ -3777,7 +3777,9 @@ CompareImplicitConversionSequences(Sema &S, SourceLocation Loc,
 
   if (S.getLangOpts().CPlusPlus11 && !S.getLangOpts().WritableStrings &&
       hasDeprecatedStringLiteralToCharPtrConversion(ICS1) !=
-      hasDeprecatedStringLiteralToCharPtrConversion(ICS2))
+          hasDeprecatedStringLiteralToCharPtrConversion(ICS2) &&
+      // Ill-formedness must not differ
+      ICS1.isBad() == ICS2.isBad())
     return hasDeprecatedStringLiteralToCharPtrConversion(ICS1)
                ? ImplicitConversionSequence::Worse
                : ImplicitConversionSequence::Better;
@@ -3803,16 +3805,35 @@ CompareImplicitConversionSequences(Sema &S, SourceLocation Loc,
   // list-initialization sequence L2 if:
   // - L1 converts to std::initializer_list<X> for some X and L2 does not, or,
   //   if not that,
-  // - L1 converts to type "array of N1 T", L2 converts to type "array of N2 T",
-  //   and N1 is smaller than N2.,
+  // — L1 and L2 convert to arrays of the same element type, and either the
+  //   number of elements n_1 initialized by L1 is less than the number of
+  //   elements n_2 initialized by L2, or (unimplemented:C++20) n_1 = n_2 and L2
+  //   converts to an array of unknown bound and L1 does not,
   // even if one of the other rules in this paragraph would otherwise apply.
   if (!ICS1.isBad()) {
-    if (ICS1.isStdInitializerListElement() &&
-        !ICS2.isStdInitializerListElement())
-      return ImplicitConversionSequence::Better;
-    if (!ICS1.isStdInitializerListElement() &&
-        ICS2.isStdInitializerListElement())
-      return ImplicitConversionSequence::Worse;
+    bool StdInit1 = false, StdInit2 = false;
+    if (ICS1.hasInitializerListContainerType())
+      StdInit1 = S.isStdInitializerList(ICS1.getInitializerListContainerType(),
+                                        nullptr);
+    if (ICS2.hasInitializerListContainerType())
+      StdInit2 = S.isStdInitializerList(ICS2.getInitializerListContainerType(),
+                                        nullptr);
+    if (StdInit1 != StdInit2)
+      return StdInit1 ? ImplicitConversionSequence::Better
+                      : ImplicitConversionSequence::Worse;
+
+    if (ICS1.hasInitializerListContainerType() &&
+        ICS2.hasInitializerListContainerType())
+      if (auto *CAT1 = S.Context.getAsConstantArrayType(
+              ICS1.getInitializerListContainerType()))
+        if (auto *CAT2 = S.Context.getAsConstantArrayType(
+                ICS2.getInitializerListContainerType()))
+          if (S.Context.hasSameUnqualifiedType(CAT1->getElementType(),
+                                               CAT2->getElementType()) &&
+              CAT1->getSize() != CAT2->getSize())
+            return CAT1->getSize().ult(CAT2->getSize())
+                       ? ImplicitConversionSequence::Better
+                       : ImplicitConversionSequence::Worse;
   }
 
   if (ICS1.isStandard())
@@ -5066,43 +5087,77 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
   //   default-constructible, and if all the elements of the initializer list
   //   can be implicitly converted to X, the implicit conversion sequence is
   //   the worst conversion necessary to convert an element of the list to X.
-  //
-  // FIXME: We're missing a lot of these checks.
-  bool toStdInitializerList = false;
-  QualType X;
-  if (ToType->isArrayType())
-    X = S.Context.getAsArrayType(ToType)->getElementType();
-  else
-    toStdInitializerList = S.isStdInitializerList(ToType, &X);
-  if (!X.isNull()) {
-    for (unsigned i = 0, e = From->getNumInits(); i < e; ++i) {
-      Expr *Init = From->getInit(i);
-      ImplicitConversionSequence ICS =
-          TryCopyInitialization(S, Init, X, SuppressUserConversions,
-                                InOverloadResolution,
-                                AllowObjCWritebackConversion);
-      // If a single element isn't convertible, fail.
-      if (ICS.isBad()) {
-        Result = ICS;
-        break;
+  QualType InitTy = ToType;
+  ArrayType const *AT = S.Context.getAsArrayType(ToType);
+  if (AT || S.isStdInitializerList(ToType, &InitTy)) {
+    unsigned e = From->getNumInits();
+    ImplicitConversionSequence DfltElt;
+    DfltElt.setBad(BadConversionSequence::no_conversion, QualType(),
+                   QualType());
+    if (AT) {
+      // Result has been initialized above as a BadConversionSequence
+      InitTy = AT->getElementType();
+      if (ConstantArrayType const *CT = dyn_cast<ConstantArrayType>(AT)) {
+        if (CT->getSize().ult(e)) {
+          // Too many inits, fatally bad
+          Result.setBad(BadConversionSequence::too_many_initializers, From,
+                        ToType);
+          Result.setInitializerListContainerType(ToType);
+          return Result;
+        }
+        if (CT->getSize().ugt(e)) {
+          // Need an init from empty {}, is there one?
+          InitListExpr EmptyList(S.Context, From->getEndLoc(), None,
+                                 From->getEndLoc());
+          EmptyList.setType(S.Context.VoidTy);
+          DfltElt = TryListConversion(
+              S, &EmptyList, InitTy, SuppressUserConversions,
+              InOverloadResolution, AllowObjCWritebackConversion);
+          if (DfltElt.isBad()) {
+            // No {} init, fatally bad
+            Result.setBad(BadConversionSequence::too_few_initializers, From,
+                          ToType);
+            Result.setInitializerListContainerType(ToType);
+            return Result;
+          }
+        }
       }
-      // Otherwise, look for the worst conversion.
-      if (Result.isBad() || CompareImplicitConversionSequences(
-                                S, From->getBeginLoc(), ICS, Result) ==
-                                ImplicitConversionSequence::Worse)
+    }
+
+    Result.setStandard();
+    Result.Standard.setAsIdentityConversion();
+    Result.Standard.setFromType(InitTy);
+    Result.Standard.setAllToTypes(InitTy);
+    for (unsigned i = 0; i < e; ++i) {
+      Expr *Init = From->getInit(i);
+      ImplicitConversionSequence ICS = TryCopyInitialization(
+          S, Init, InitTy, SuppressUserConversions, InOverloadResolution,
+          AllowObjCWritebackConversion);
+
+      // Keep the worse conversion seen so far.
+      // FIXME: Sequences are not totally ordered, so 'worse' can be
+      // ambiguous. CWG has been informed.
+      if (CompareImplicitConversionSequences(S, From->getBeginLoc(), ICS,
+                                             Result) ==
+          ImplicitConversionSequence::Worse) {
         Result = ICS;
+        // Bail as soon as we find something unconvertible.
+        if (Result.isBad()) {
+          Result.setInitializerListContainerType(ToType);
+          return Result;
+        }
+      }
     }
 
-    // For an empty list, we won't have computed any conversion sequence.
-    // Introduce the identity conversion sequence.
-    if (From->getNumInits() == 0) {
-      Result.setStandard();
-      Result.Standard.setAsIdentityConversion();
-      Result.Standard.setFromType(ToType);
-      Result.Standard.setAllToTypes(ToType);
-    }
+    // If we needed any implicit {} initialization, compare that now.
+    // over.ics.list/6 indicates we should compare that conversion.  Again CWG
+    // has been informed that this might not be the best thing.
+    if (!DfltElt.isBad() && CompareImplicitConversionSequences(
+                                S, From->getEndLoc(), DfltElt, Result) ==
+                                ImplicitConversionSequence::Worse)
+      Result = DfltElt;
 
-    Result.setStdInitializerListElement(toStdInitializerList);
+    Result.setInitializerListContainerType(ToType);
     return Result;
   }
 
@@ -5481,6 +5536,10 @@ Sema::PerformObjectArgumentInitialization(Expr *From,
     case BadConversionSequence::no_conversion:
     case BadConversionSequence::unrelated_class:
       break;
+
+    case BadConversionSequence::too_few_initializers:
+    case BadConversionSequence::too_many_initializers:
+      llvm_unreachable("Lists are not objects");
     }
 
     return Diag(From->getBeginLoc(), diag::err_member_function_call_bad_type)
@@ -10528,7 +10587,11 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
     S.Diag(Fn->getLocation(), diag::note_ovl_candidate_bad_list_argument)
         << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second << FnDesc
         << (FromExpr ? FromExpr->getSourceRange() : SourceRange()) << FromTy
-        << ToTy << (unsigned)isObjectArgument << I + 1;
+        << ToTy << (unsigned)isObjectArgument << I + 1
+        << (Conv.Bad.Kind == BadConversionSequence::too_few_initializers ? 1
+            : Conv.Bad.Kind == BadConversionSequence::too_many_initializers
+                ? 2
+                : 0);
     MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
     return;
   }

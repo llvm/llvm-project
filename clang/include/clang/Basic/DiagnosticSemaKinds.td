@@ -4483,7 +4483,8 @@ def note_ovl_candidate_bad_conv_incomplete : Note<
     "; remove &}7">;
 def note_ovl_candidate_bad_list_argument : Note<
     "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
-    "cannot convert initializer list argument to %4">;
+    "%select{cannot convert initializer list|too few initializers in list"
+    "|too many initializers in list}7 argument to %4">;
 def note_ovl_candidate_bad_overload : Note<
     "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
     "no overload of %4 matching %3 for %ordinal5 argument">;
