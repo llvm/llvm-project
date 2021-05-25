@@ -13,6 +13,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "gtest/gtest.h"
 #include <complex>
+#include <limits>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -197,13 +198,34 @@ TEST(DumpDataExtractorTest, Formats) {
            lldb::Format::eFormatVectorOfFloat16, "{6.10352e-05 65504}");
   TestDump(std::vector<uint16_t>{0xabcd, 0x1234},
            lldb::Format::eFormatVectorOfFloat16, "{-0.0609436 0.000757217}");
+
+  // quiet/signaling NaNs.
+  TestDump(std::vector<uint16_t>{0xffff, 0xffc0, 0x7fff, 0x7fc0},
+           lldb::Format::eFormatVectorOfFloat16, "{-nan -nan nan nan}");
+  // +/-Inf.
+  TestDump(std::vector<uint16_t>{0xfc00, 0x7c00},
+           lldb::Format::eFormatVectorOfFloat16, "{-inf inf}");
+
   TestDump(std::vector<float>{std::numeric_limits<float>::min(),
                               std::numeric_limits<float>::max()},
            lldb::Format::eFormatVectorOfFloat32, "{1.17549e-38 3.40282e+38}");
+  TestDump(std::vector<float>{std::numeric_limits<float>::quiet_NaN(),
+                              std::numeric_limits<float>::signaling_NaN(),
+                              -std::numeric_limits<float>::quiet_NaN(),
+                              -std::numeric_limits<float>::signaling_NaN()},
+           lldb::Format::eFormatVectorOfFloat32, "{nan nan -nan -nan}");
   TestDump(std::vector<double>{std::numeric_limits<double>::min(),
                                std::numeric_limits<double>::max()},
            lldb::Format::eFormatVectorOfFloat64,
            "{2.2250738585072e-308 1.79769313486232e+308}");
+  TestDump(
+      std::vector<double>{
+          std::numeric_limits<double>::quiet_NaN(),
+          std::numeric_limits<double>::signaling_NaN(),
+          -std::numeric_limits<double>::quiet_NaN(),
+          -std::numeric_limits<double>::signaling_NaN(),
+      },
+      lldb::Format::eFormatVectorOfFloat64, "{nan nan -nan -nan}");
 
   // Not sure we can rely on having uint128_t everywhere so emulate with
   // uint64_t.
