@@ -78,6 +78,46 @@ private:
 };
 
 // -------------------------------------------------------------------------- //
+// A state of the async runtime value (token, value or group).
+// -------------------------------------------------------------------------- //
+
+class State {
+public:
+  enum StateEnum : int8_t {
+    // The underlying value is not yet available for consumption.
+    kUnavailable = 0,
+    // The underlying value is available for consumption. This state can not
+    // transition to any other state.
+    kAvailable = 1,
+    // This underlying value is available and contains an error. This state can
+    // not transition to any other state.
+    kError = 2,
+  };
+
+  /* implicit */ State(StateEnum s) : state(s) {}
+  /* implicit */ operator StateEnum() { return state; }
+
+  bool isUnavailable() const { return state == kUnavailable; }
+  bool isAvailable() const { return state == kAvailable; }
+  bool isError() const { return state == kError; }
+  bool isAvailableOrError() const { return isAvailable() || isError(); }
+
+  const char *debug() const {
+    switch (state) {
+    case kUnavailable:
+      return "unavailable";
+    case kAvailable:
+      return "available";
+    case kError:
+      return "error";
+    }
+  }
+
+private:
+  StateEnum state;
+};
+
+// -------------------------------------------------------------------------- //
 // A base class for all reference counted objects created by the async runtime.
 // -------------------------------------------------------------------------- //
 
@@ -137,9 +177,9 @@ struct AsyncToken : public RefCounted {
   // reference we must ensure that the token will be alive until the
   // asynchronous operation is completed.
   AsyncToken(AsyncRuntime *runtime)
-      : RefCounted(runtime, /*count=*/2), ready(false) {}
+      : RefCounted(runtime, /*refCount=*/2), state(State::kUnavailable) {}
 
-  std::atomic<bool> ready;
+  std::atomic<State::StateEnum> state;
 
   // Pending awaiters are guarded by a mutex.
   std::mutex mu;
@@ -153,9 +193,10 @@ struct AsyncToken : public RefCounted {
 struct AsyncValue : public RefCounted {
   // AsyncValue similar to an AsyncToken created with a reference count of 2.
   AsyncValue(AsyncRuntime *runtime, int32_t size)
-      : RefCounted(runtime, /*count=*/2), ready(false), storage(size) {}
+      : RefCounted(runtime, /*refCount=*/2), state(State::kUnavailable),
+        storage(size) {}
 
-  std::atomic<bool> ready;
+  std::atomic<State::StateEnum> state;
 
   // Use vector of bytes to store async value payload.
   std::vector<int8_t> storage;
@@ -181,7 +222,6 @@ struct AsyncGroup : public RefCounted {
   std::condition_variable cv;
   std::vector<std::function<void()>> awaiters;
 };
-
 
 // Adds references to reference counted runtime object.
 extern "C" void mlirAsyncRuntimeAddRef(RefCountedObjPtr ptr, int32_t count) {
@@ -231,7 +271,7 @@ extern "C" int64_t mlirAsyncRuntimeAddTokenToGroup(AsyncToken *token,
     }
   };
 
-  if (token->ready) {
+  if (State(token->state).isAvailableOrError()) {
     // Update group pending tokens immediately and maybe run awaiters.
     onTokenReady();
 
@@ -254,12 +294,16 @@ extern "C" int64_t mlirAsyncRuntimeAddTokenToGroup(AsyncToken *token,
   return rank;
 }
 
-// Switches `async.token` to ready state and runs all awaiters.
-extern "C" void mlirAsyncRuntimeEmplaceToken(AsyncToken *token) {
+// Switches `async.token` to available or error state (terminatl state) and runs
+// all awaiters.
+static void setTokenState(AsyncToken *token, State state) {
+  assert(state.isAvailableOrError() && "must be terminal state");
+  assert(State(token->state).isUnavailable() && "token must be unavailable");
+
   // Make sure that `dropRef` does not destroy the mutex owned by the lock.
   {
     std::unique_lock<std::mutex> lock(token->mu);
-    token->ready = true;
+    token->state = state;
     token->cv.notify_all();
     for (auto &awaiter : token->awaiters)
       awaiter();
@@ -270,12 +314,14 @@ extern "C" void mlirAsyncRuntimeEmplaceToken(AsyncToken *token) {
   token->dropRef();
 }
 
-// Switches `async.value` to ready state and runs all awaiters.
-extern "C" void mlirAsyncRuntimeEmplaceValue(AsyncValue *value) {
+static void setValueState(AsyncValue *value, State state) {
+  assert(state.isAvailableOrError() && "must be terminal state");
+  assert(State(value->state).isUnavailable() && "value must be unavailable");
+
   // Make sure that `dropRef` does not destroy the mutex owned by the lock.
   {
     std::unique_lock<std::mutex> lock(value->mu);
-    value->ready = true;
+    value->state = state;
     value->cv.notify_all();
     for (auto &awaiter : value->awaiters)
       awaiter();
@@ -286,16 +332,42 @@ extern "C" void mlirAsyncRuntimeEmplaceValue(AsyncValue *value) {
   value->dropRef();
 }
 
+extern "C" void mlirAsyncRuntimeEmplaceToken(AsyncToken *token) {
+  setTokenState(token, State::kAvailable);
+}
+
+extern "C" void mlirAsyncRuntimeEmplaceValue(AsyncValue *value) {
+  setValueState(value, State::kAvailable);
+}
+
+extern "C" void mlirAsyncRuntimeSetTokenError(AsyncToken *token) {
+  setTokenState(token, State::kError);
+}
+
+extern "C" void mlirAsyncRuntimeSetValueError(AsyncValue *value) {
+  setValueState(value, State::kError);
+}
+
+extern "C" bool mlirAsyncRuntimeIsTokenError(AsyncToken *token) {
+  return State(token->state).isError();
+}
+
+extern "C" bool mlirAsyncRuntimeIsValueError(AsyncValue *value) {
+  return State(value->state).isError();
+}
+
 extern "C" void mlirAsyncRuntimeAwaitToken(AsyncToken *token) {
   std::unique_lock<std::mutex> lock(token->mu);
-  if (!token->ready)
-    token->cv.wait(lock, [token] { return token->ready.load(); });
+  if (!State(token->state).isAvailableOrError())
+    token->cv.wait(
+        lock, [token] { return State(token->state).isAvailableOrError(); });
 }
 
 extern "C" void mlirAsyncRuntimeAwaitValue(AsyncValue *value) {
   std::unique_lock<std::mutex> lock(value->mu);
-  if (!value->ready)
-    value->cv.wait(lock, [value] { return value->ready.load(); });
+  if (!State(value->state).isAvailableOrError())
+    value->cv.wait(
+        lock, [value] { return State(value->state).isAvailableOrError(); });
 }
 
 extern "C" void mlirAsyncRuntimeAwaitAllInGroup(AsyncGroup *group) {
@@ -306,6 +378,7 @@ extern "C" void mlirAsyncRuntimeAwaitAllInGroup(AsyncGroup *group) {
 
 // Returns a pointer to the storage owned by the async value.
 extern "C" ValueStorage mlirAsyncRuntimeGetValueStorage(AsyncValue *value) {
+  assert(!State(value->state).isError() && "unexpected error state");
   return value->storage.data();
 }
 
@@ -319,7 +392,7 @@ extern "C" void mlirAsyncRuntimeAwaitTokenAndExecute(AsyncToken *token,
                                                      CoroResume resume) {
   auto execute = [handle, resume]() { (*resume)(handle); };
   std::unique_lock<std::mutex> lock(token->mu);
-  if (token->ready) {
+  if (State(token->state).isAvailableOrError()) {
     lock.unlock();
     execute();
   } else {
@@ -332,7 +405,7 @@ extern "C" void mlirAsyncRuntimeAwaitValueAndExecute(AsyncValue *value,
                                                      CoroResume resume) {
   auto execute = [handle, resume]() { (*resume)(handle); };
   std::unique_lock<std::mutex> lock(value->mu);
-  if (value->ready) {
+  if (State(value->state).isAvailableOrError()) {
     lock.unlock();
     execute();
   } else {
@@ -402,6 +475,14 @@ void __mlir_runner_init(llvm::StringMap<void *> &exportSymbols) {
                &mlir::runtime::mlirAsyncRuntimeEmplaceToken);
   exportSymbol("mlirAsyncRuntimeEmplaceValue",
                &mlir::runtime::mlirAsyncRuntimeEmplaceValue);
+  exportSymbol("mlirAsyncRuntimeSetTokenError",
+               &mlir::runtime::mlirAsyncRuntimeSetTokenError);
+  exportSymbol("mlirAsyncRuntimeSetValueError",
+               &mlir::runtime::mlirAsyncRuntimeSetValueError);
+  exportSymbol("mlirAsyncRuntimeIsTokenError",
+               &mlir::runtime::mlirAsyncRuntimeIsTokenError);
+  exportSymbol("mlirAsyncRuntimeIsValueError",
+               &mlir::runtime::mlirAsyncRuntimeIsValueError);
   exportSymbol("mlirAsyncRuntimeAwaitToken",
                &mlir::runtime::mlirAsyncRuntimeAwaitToken);
   exportSymbol("mlirAsyncRuntimeAwaitValue",

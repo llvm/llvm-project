@@ -76,6 +76,18 @@ extern "C" void mlirAsyncRuntimeEmplaceToken(AsyncToken *);
 // Switches `async.value` to ready state and runs all awaiters.
 extern "C" void mlirAsyncRuntimeEmplaceValue(AsyncValue *);
 
+// Switches `async.token` to error state and runs all awaiters.
+extern "C" void mlirAsyncRuntimeSetTokenError(AsyncToken *);
+
+// Switches `async.value` to error state and runs all awaiters.
+extern "C" void mlirAsyncRuntimeSetValueError(AsyncValue *);
+
+// Returns true if token is in the error state.
+extern "C" bool mlirAsyncRuntimeIsTokenError(AsyncToken *);
+
+// Returns true if value is in the error state.
+extern "C" bool mlirAsyncRuntimeIsValueError(AsyncValue *);
+
 // Blocks the caller thread until the token becomes ready.
 extern "C" void mlirAsyncRuntimeAwaitToken(AsyncToken *);
 
