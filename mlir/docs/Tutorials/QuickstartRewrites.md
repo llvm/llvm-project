@@ -6,10 +6,10 @@ patterns, as well as defining the rewrite using a graph walker (note: using
 patterns and the rewrite engine is preferred, showing the walker is for
 demonstration purposes).
 
-See [MLIR specification](LangRef.md) for more information about MLIR, the
+See [MLIR specification](../LangRef.md) for more information about MLIR, the
 structure of the IR, operations, etc. See
-[Table-driven Operation Definition](OpDefinitions.md) and
-[Declarative Rewrite Rule](DeclarativeRewrites.md) for the detailed explanation
+[Table-driven Operation Definition](../OpDefinitions.md) and
+[Declarative Rewrite Rule](../DeclarativeRewrites.md) for the detailed explanation
 of all available mechanisms for defining operations and rewrites in a
 table-driven manner.
 
