@@ -6,8 +6,6 @@
 #include "atmi_interop_hsa.h"
 #include "internal.h"
 
-using core::atl_is_atmi_initialized;
-
 atmi_status_t atmi_interop_hsa_get_symbol_info(
     const std::map<std::string, atl_symbol_info_t> &SymbolInfoTable,
     atmi_mem_place_t place, const char *symbol, void **var_addr,
@@ -21,8 +19,6 @@ atmi_status_t atmi_interop_hsa_get_symbol_info(
      atmi_memcpy(signal, host_add, var_addr, var_size);
   */
 
-  if (!atl_is_atmi_initialized())
-    return ATMI_STATUS_ERROR;
   atmi_machine_t *machine = atmi_machine_get_info();
   if (!symbol || !var_addr || !var_size || !machine)
     return ATMI_STATUS_ERROR;
@@ -57,8 +53,6 @@ atmi_status_t atmi_interop_hsa_get_kernel_info(
                                   &val);
   */
 
-  if (!atl_is_atmi_initialized())
-    return ATMI_STATUS_ERROR;
   atmi_machine_t *machine = atmi_machine_get_info();
   if (!kernel_name || !value || !machine)
     return ATMI_STATUS_ERROR;
