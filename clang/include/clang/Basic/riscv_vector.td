@@ -203,6 +203,8 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
   // Sub extension of vector spec. Currently only support Zvamo or Zvlsseg.
   string RequiredExtension = "";
 
+  // Number of fields for Zvlsseg.
+  int NF = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -768,6 +770,163 @@ multiclass RVVIndexedStore<string op> {
   }
 }
 
+defvar NFList = [2, 3, 4, 5, 6, 7, 8];
+
+class PVString<int nf, bit signed> {
+  string S =
+    !cond(!eq(nf, 2): !if(signed, "PvPv", "PUvPUv"),
+          !eq(nf, 3): !if(signed, "PvPvPv", "PUvPUvPUv"),
+          !eq(nf, 4): !if(signed, "PvPvPvPv", "PUvPUvPUvPUv"),
+          !eq(nf, 5): !if(signed, "PvPvPvPvPv", "PUvPUvPUvPUvPUv"),
+          !eq(nf, 6): !if(signed, "PvPvPvPvPvPv", "PUvPUvPUvPUvPUvPUv"),
+          !eq(nf, 7): !if(signed, "PvPvPvPvPvPvPv", "PUvPUvPUvPUvPUvPUvPUv"),
+          !eq(nf, 8): !if(signed, "PvPvPvPvPvPvPvPv", "PUvPUvPUvPUvPUvPUvPUvPUv"));
+}
+
+multiclass RVVUnitStridedSegLoad<string op> {
+  foreach type = TypeList in {
+    defvar eew = !cond(!eq(type, "c") : "8",
+                       !eq(type, "s") : "16",
+                       !eq(type, "i") : "32",
+                       !eq(type, "l") : "64",
+                       !eq(type, "h") : "16",
+                       !eq(type, "f") : "32",
+                       !eq(type, "d") : "64");
+      foreach nf = NFList in {
+        let Name = op # nf # "e" # eew # "_v",
+            IRName = op # nf,
+            IRNameMask = op # nf # "_mask",
+            NF = nf,
+            HasNoMaskedOverloaded = false,
+            ManualCodegen = [{
+    {
+      // builtin: (val0 address, val1 address, ..., ptr, vl)
+      IntrinsicTypes = {Ops[0]->getType()->getPointerElementType(),
+                        Ops[NF + 1]->getType()};
+      // intrinsic: (ptr, vl)
+      llvm::Value *Operands[] = {Ops[NF], Ops[NF + 1]};
+      llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+      llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
+      clang::CharUnits Align =
+          CGM.getNaturalTypeAlignment(getContext().getSizeType());
+      llvm::Value *V;
+      for (unsigned I = 0; I < NF; ++I) {
+        V = Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
+                                Address(Ops[I], Align));
+      }
+      return V;
+    }
+            }],
+            ManualCodegenMask = [{
+    {
+      // builtin: (val0 address, ..., mask, maskedoff0, ..., ptr, vl)
+      // intrinsic: (maskedoff0, ..., ptr, mask, vl)
+      IntrinsicTypes = {Ops[0]->getType()->getPointerElementType(),
+                        Ops[2 * NF + 2]->getType()};
+      SmallVector<llvm::Value*, 12> Operands;
+      for (unsigned I = 0; I < NF; ++I)
+        Operands.push_back(Ops[NF + I + 1]);
+      Operands.push_back(Ops[2 * NF + 1]);
+      Operands.push_back(Ops[NF]);
+      Operands.push_back(Ops[2 * NF + 2]);
+      assert(Operands.size() == NF + 3);
+      llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+      llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
+      clang::CharUnits Align =
+          CGM.getNaturalTypeAlignment(getContext().getSizeType());
+      llvm::Value *V;
+      for (unsigned I = 0; I < NF; ++I) {
+        V = Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
+                                Address(Ops[I], Align));
+      }
+      return V;
+    }
+            }] in {
+          defvar PV = PVString<nf, /*signed=*/true>.S;
+          defvar PUV = PVString<nf, /*signed=*/false>.S;
+          def : RVVBuiltin<"v", "0" # PV # "PCe", type>;
+          if !not(IsFloat<type>.val) then {
+            def : RVVBuiltin<"Uv", "0" # PUV # "PCUe", type>;
+        }
+      }
+    }
+  }
+}
+
+multiclass RVVUnitStridedSegLoadFF<string op> {
+  foreach type = TypeList in {
+    defvar eew = !cond(!eq(type, "c") : "8",
+                       !eq(type, "s") : "16",
+                       !eq(type, "i") : "32",
+                       !eq(type, "l") : "64",
+                       !eq(type, "h") : "16",
+                       !eq(type, "f") : "32",
+                       !eq(type, "d") : "64");
+      foreach nf = NFList in {
+        let Name = op # nf # "e" # eew # "ff_v",
+            IRName = op # nf # "ff",
+            IRNameMask = op # nf # "ff_mask",
+            NF = nf,
+            HasNoMaskedOverloaded = false,
+            ManualCodegen = [{
+    {
+      // builtin: (val0 address, val1 address, ..., ptr, new_vl, vl)
+      IntrinsicTypes = {Ops[0]->getType()->getPointerElementType(),
+                        Ops[NF + 2]->getType()};
+      // intrinsic: (ptr, vl)
+      llvm::Value *Operands[] = {Ops[NF], Ops[NF + 2]};
+      Value *NewVL = Ops[NF + 1];
+      llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+      llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
+      clang::CharUnits Align =
+          CGM.getNaturalTypeAlignment(getContext().getSizeType());
+      for (unsigned I = 0; I < NF; ++I) {
+        Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
+                            Address(Ops[I], Align));
+      }
+      // Store new_vl.
+      return Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {NF}),
+                                 Address(NewVL, Align));
+    }
+            }],
+            ManualCodegenMask = [{
+    {
+      // builtin: (val0 address, ..., mask, maskedoff0, ..., ptr, new_vl, vl)
+      // intrinsic: (maskedoff0, ..., ptr, mask, vl)
+      IntrinsicTypes = {Ops[0]->getType()->getPointerElementType(),
+                        Ops[2 * NF + 3]->getType()};
+      SmallVector<llvm::Value*, 12> Operands;
+      for (unsigned I = 0; I < NF; ++I)
+        Operands.push_back(Ops[NF + I + 1]);
+      Operands.push_back(Ops[2 * NF + 1]);
+      Operands.push_back(Ops[NF]);
+      Operands.push_back(Ops[2 * NF + 3]);
+      Value *NewVL = Ops[2 * NF + 2];
+      assert(Operands.size() == NF + 3);
+      llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+      llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
+      clang::CharUnits Align =
+          CGM.getNaturalTypeAlignment(getContext().getSizeType());
+      for (unsigned I = 0; I < NF; ++I) {
+        Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
+                            Address(Ops[I], Align));
+      }
+      // Store new_vl.
+      return Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {NF}),
+                                 Address(NewVL, Align));
+    }
+            }] in {
+          defvar PV = PVString<nf, /*signed=*/true>.S;
+          defvar PUV = PVString<nf, /*signed=*/false>.S;
+          def : RVVBuiltin<"v", "0" # PV # "PCe" # "Pz", type>;
+          if !not(IsFloat<type>.val) then {
+            def : RVVBuiltin<"Uv", "0" # PUV # "PCUe" # "Pz", type>;
+        }
+      }
+    }
+  }
+}
+
 multiclass RVVAMOBuiltinSet<bit has_signed = false, bit has_unsigned = false,
                             bit has_fp = false> {
   defvar type_list = !if(has_fp, ["i","l","f","d"], ["i","l"]);
@@ -1082,6 +1241,12 @@ defm vle8ff: RVVVLEFFBuiltin<["c"]>;
 defm vle16ff: RVVVLEFFBuiltin<["s"]>;
 defm vle32ff: RVVVLEFFBuiltin<["i", "f"]>;
 defm vle64ff: RVVVLEFFBuiltin<["l", "d"]>;
+
+// 7.8 Vector Load/Store Segment Instructions
+let RequiredExtension = "Zvlsseg" in {
+defm : RVVUnitStridedSegLoad<"vlseg">;
+defm : RVVUnitStridedSegLoadFF<"vlseg">;
+}
 
 // 8. Vector AMO Operations
 let RequiredExtension = "Zvamo" in {
