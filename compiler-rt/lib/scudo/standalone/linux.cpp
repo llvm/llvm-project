@@ -67,7 +67,7 @@ void *map(void *Addr, uptr Size, UNUSED const char *Name, uptr Flags,
   void *P = mmap(Addr, Size, MmapProt, MmapFlags, -1, 0);
   if (P == MAP_FAILED) {
     if (!(Flags & MAP_ALLOWNOMEM) || errno != ENOMEM)
-      dieOnMapUnmapError(errno == ENOMEM);
+      dieOnMapUnmapError(errno == ENOMEM ? Size : 0);
     return nullptr;
   }
 #if SCUDO_ANDROID
@@ -91,15 +91,15 @@ void setMemoryPermission(uptr Addr, uptr Size, uptr Flags,
 }
 
 static bool madviseNeedsMemset() {
-  uptr Size = getPageSizeCached();
-  char *P = (char *)mmap(0, Size, PROT_READ | PROT_WRITE,
-                         MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  const uptr Size = getPageSizeCached();
+  char *P = reinterpret_cast<char *>(mmap(0, Size, PROT_READ | PROT_WRITE,
+                                          MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
   if (!P)
-    dieOnMapUnmapError(errno == ENOMEM);
+    dieOnMapUnmapError(errno == ENOMEM ? Size : 0);
   *P = 1;
   while (madvise(P, Size, MADV_DONTNEED) == -1 && errno == EAGAIN) {
   }
-  bool R = (*P != 0);
+  const bool R = (*P != 0);
   if (munmap(P, Size) != 0)
     dieOnMapUnmapError();
   return R;

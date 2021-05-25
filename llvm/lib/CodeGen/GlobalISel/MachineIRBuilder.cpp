@@ -678,6 +678,7 @@ MachineInstrBuilder MachineIRBuilder::buildShuffleVector(const DstOp &Res,
   assert(Src1Ty.getNumElements() + Src2Ty.getNumElements() >= Mask.size());
   assert(DstTy.getElementType() == Src1Ty.getElementType() &&
          DstTy.getElementType() == Src2Ty.getElementType());
+  (void)DstTy;
   (void)Src1Ty;
   (void)Src2Ty;
   ArrayRef<int> MaskAlloc = getMF().allocateShuffleMask(Mask);

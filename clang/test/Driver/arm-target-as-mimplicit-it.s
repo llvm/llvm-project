@@ -35,6 +35,8 @@
 // RUN: %clang -target arm-linux-gnueabi -### -Wa,-mimplicit-it=always,-mimplicit-it=foo %s 2>&1 | FileCheck %s --check-prefix=INVALID
 
 
+/// Check that the argument we ignore is still marked as used.
+// ALWAYS-NOT: warning: argument unused during compilation: {{.*}}-mimplicit-it={{.*}}
 /// Check that there isn't a second -arm-implicit-it before or after the one
 /// that was the indended match.
 // ALWAYS-NOT: "-arm-implicit-it={{.*}}"

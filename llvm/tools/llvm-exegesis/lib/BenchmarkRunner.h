@@ -41,6 +41,7 @@ public:
 
   Expected<InstructionBenchmark>
   runConfiguration(const BenchmarkCode &Configuration, unsigned NumRepetitions,
+                   unsigned LoopUnrollFactor,
                    ArrayRef<std::unique_ptr<const SnippetRepetitor>> Repetitors,
                    bool DumpObjectToDisk) const;
 

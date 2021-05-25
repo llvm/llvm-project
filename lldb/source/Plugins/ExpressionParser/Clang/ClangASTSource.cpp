@@ -479,10 +479,7 @@ void ClangASTSource::FindExternalLexicalDecls(
                    decl->getDeclKindName(), ast_dump);
       }
 
-      Decl *copied_decl = CopyDecl(decl);
-
-      if (!copied_decl)
-        continue;
+      CopyDecl(decl);
 
       // FIXME: We should add the copied decl to the 'decls' list. This would
       // add the copied Decl into the DeclContext and make sure that we
@@ -492,12 +489,6 @@ void ClangASTSource::FindExternalLexicalDecls(
       // lookup issues later on.
       // We can't just add them for now as the ASTImporter already added the
       // decl into the DeclContext and this would add it twice.
-
-      if (FieldDecl *copied_field = dyn_cast<FieldDecl>(copied_decl)) {
-        QualType copied_field_type = copied_field->getType();
-
-        m_ast_importer_sp->RequireCompleteType(copied_field_type);
-      }
     } else {
       SkippedDecls = true;
     }

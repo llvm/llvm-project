@@ -532,6 +532,29 @@ void Value::replaceNonMetadataUsesWith(Value *New) {
   doRAUW(New, ReplaceMetadataUses::No);
 }
 
+void Value::replaceUsesWithIf(Value *New,
+                              llvm::function_ref<bool(Use &U)> ShouldReplace) {
+  assert(New && "Value::replaceUsesWithIf(<null>) is invalid!");
+  assert(New->getType() == getType() &&
+         "replaceUses of value with new value of different type!");
+
+  for (use_iterator UI = use_begin(), E = use_end(); UI != E;) {
+    Use &U = *UI;
+    ++UI;
+    if (!ShouldReplace(U))
+      continue;
+    // Must handle Constants specially, we cannot call replaceUsesOfWith on a
+    // constant because they are uniqued.
+    if (auto *C = dyn_cast<Constant>(U.getUser())) {
+      if (!isa<GlobalValue>(C)) {
+        C->handleOperandChange(this, New);
+        continue;
+      }
+    }
+    U.set(New);
+  }
+}
+
 /// Replace llvm.dbg.* uses of MetadataAsValue(ValueAsMetadata(V)) outside BB
 /// with New.
 static void replaceDbgUsesOutsideBlock(Value *V, Value *New, BasicBlock *BB) {

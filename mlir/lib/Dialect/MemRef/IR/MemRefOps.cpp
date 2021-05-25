@@ -18,6 +18,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace mlir;
@@ -679,10 +680,11 @@ OpFoldResult DimOp::fold(ArrayRef<Attribute> operands) {
     return *(view.getDynamicSizes().begin() +
              memrefType.getDynamicDimIndex(unsignedIndex));
 
-  if (auto subview = dyn_cast_or_null<SubViewOp>(definingOp)) {
-    assert(subview.isDynamicSize(unsignedIndex) &&
+  if (auto sizeInterface =
+          dyn_cast_or_null<OffsetSizeAndStrideOpInterface>(definingOp)) {
+    assert(sizeInterface.isDynamicSize(unsignedIndex) &&
            "Expected dynamic subview size");
-    return subview.getDynamicSize(unsignedIndex);
+    return sizeInterface.getDynamicSize(unsignedIndex);
   }
 
   // dim(memrefcast) -> dim

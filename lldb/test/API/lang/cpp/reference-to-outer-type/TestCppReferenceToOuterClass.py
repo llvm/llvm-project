@@ -1,0 +1,16 @@
+import lldb
+from lldbsuite.test.decorators import *
+from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
+
+class TestCase(TestBase):
+
+    mydir = TestBase.compute_mydir(__file__)
+
+    def test(self):
+        self.build()
+        self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        test_var = self.expect_expr("test_var", result_type="In")
+        nested_member = test_var.GetChildMemberWithName('NestedClassMember')
+        self.assertEqual("Outer::NestedClass",
+                         nested_member.GetType().GetName())

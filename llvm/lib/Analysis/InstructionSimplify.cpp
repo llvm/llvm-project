@@ -923,8 +923,11 @@ Value *llvm::SimplifyMulInst(Value *Op0, Value *Op1, const SimplifyQuery &Q) {
 
 /// Check for common or similar folds of integer division or integer remainder.
 /// This applies to all 4 opcodes (sdiv/udiv/srem/urem).
-static Value *simplifyDivRem(Value *Op0, Value *Op1, bool IsDiv,
-                             const SimplifyQuery &Q) {
+static Value *simplifyDivRem(Instruction::BinaryOps Opcode, Value *Op0,
+                             Value *Op1, const SimplifyQuery &Q) {
+  bool IsDiv = (Opcode == Instruction::SDiv || Opcode == Instruction::UDiv);
+  bool IsSigned = (Opcode == Instruction::SDiv || Opcode == Instruction::SRem);
+
   Type *Ty = Op0->getType();
 
   // X / undef -> poison
@@ -975,6 +978,21 @@ static Value *simplifyDivRem(Value *Op0, Value *Op1, bool IsDiv,
   if (match(Op1, m_One()) || Ty->isIntOrIntVectorTy(1) ||
       (match(Op1, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)))
     return IsDiv ? Op0 : Constant::getNullValue(Ty);
+
+  // If X * Y does not overflow, then:
+  //   X * Y / Y -> X
+  //   X * Y % Y -> 0
+  if (match(Op0, m_c_Mul(m_Value(X), m_Specific(Op1)))) {
+    auto *Mul = cast<OverflowingBinaryOperator>(Op0);
+    // The multiplication can't overflow if it is defined not to, or if
+    // X == A / Y for some A.
+    if ((IsSigned && Q.IIQ.hasNoSignedWrap(Mul)) ||
+        (!IsSigned && Q.IIQ.hasNoUnsignedWrap(Mul)) ||
+        (IsSigned && match(X, m_SDiv(m_Value(), m_Specific(Op1)))) ||
+        (!IsSigned && match(X, m_UDiv(m_Value(), m_Specific(Op1))))) {
+      return IsDiv ? X : Constant::getNullValue(Op0->getType());
+    }
+  }
 
   return nullptr;
 }
@@ -1047,24 +1065,10 @@ static Value *simplifyDiv(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
   if (Constant *C = foldOrCommuteConstant(Opcode, Op0, Op1, Q))
     return C;
 
-  if (Value *V = simplifyDivRem(Op0, Op1, true, Q))
+  if (Value *V = simplifyDivRem(Opcode, Op0, Op1, Q))
     return V;
 
   bool IsSigned = Opcode == Instruction::SDiv;
-
-  // (X * Y) / Y -> X if the multiplication does not overflow.
-  Value *X;
-  if (match(Op0, m_c_Mul(m_Value(X), m_Specific(Op1)))) {
-    auto *Mul = cast<OverflowingBinaryOperator>(Op0);
-    // If the Mul does not overflow, then we are good to go.
-    if ((IsSigned && Q.IIQ.hasNoSignedWrap(Mul)) ||
-        (!IsSigned && Q.IIQ.hasNoUnsignedWrap(Mul)))
-      return X;
-    // If X has the form X = A / Y, then X * Y cannot overflow.
-    if ((IsSigned && match(X, m_SDiv(m_Value(), m_Specific(Op1)))) ||
-        (!IsSigned && match(X, m_UDiv(m_Value(), m_Specific(Op1)))))
-      return X;
-  }
 
   // (X rem Y) / Y -> 0
   if ((IsSigned && match(Op0, m_SRem(m_Value(), m_Specific(Op1)))) ||
@@ -1073,7 +1077,7 @@ static Value *simplifyDiv(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
 
   // (X /u C1) /u C2 -> 0 if C1 * C2 overflow
   ConstantInt *C1, *C2;
-  if (!IsSigned && match(Op0, m_UDiv(m_Value(X), m_ConstantInt(C1))) &&
+  if (!IsSigned && match(Op0, m_UDiv(m_Value(), m_ConstantInt(C1))) &&
       match(Op1, m_ConstantInt(C2))) {
     bool Overflow;
     (void)C1->getValue().umul_ov(C2->getValue(), Overflow);
@@ -1105,7 +1109,7 @@ static Value *simplifyRem(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
   if (Constant *C = foldOrCommuteConstant(Opcode, Op0, Op1, Q))
     return C;
 
-  if (Value *V = simplifyDivRem(Op0, Op1, false, Q))
+  if (Value *V = simplifyDivRem(Opcode, Op0, Op1, Q))
     return V;
 
   // (X % Y) % Y -> X % Y

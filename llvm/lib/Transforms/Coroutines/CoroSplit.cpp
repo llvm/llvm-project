@@ -661,7 +661,6 @@ void CoroCloner::salvageDebugInfo() {
   // Remove all salvaged dbg.declare intrinsics that became
   // either unreachable or stale due to the CoroSplit transformation.
   DominatorTree DomTree(*NewF);
-  SmallDenseMap<BasicBlock *, bool, 8> UnreachableCache;
   auto IsUnreachableBlock = [&](BasicBlock *BB) {
     return !isPotentiallyReachable(&NewF->getEntryBlock(), BB, nullptr,
                                    &DomTree);

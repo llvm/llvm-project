@@ -1709,7 +1709,7 @@ class getInsVOP3OpSel <RegisterOperand Src0RC, RegisterOperand Src1RC,
                     Src0Mod, Src1Mod, Src2Mod, 1/*HasOpSel*/, 0>.ret;
 }
 
-class getInsDPPBase <RegisterOperand DstRC, RegisterClass Src0RC, RegisterClass Src1RC,
+class getInsDPPBase <RegisterOperand OldRC, RegisterClass Src0RC, RegisterClass Src1RC,
                  int NumSrcArgs, bit HasModifiers,
                  Operand Src0Mod, Operand Src1Mod> {
 
@@ -1719,45 +1719,45 @@ class getInsDPPBase <RegisterOperand DstRC, RegisterClass Src0RC, RegisterClass 
             !if (!eq(NumSrcArgs, 1),
               !if (HasModifiers,
                 // VOP1_DPP with modifiers
-                (ins DstRC:$old, Src0Mod:$src0_modifiers,
+                (ins OldRC:$old, Src0Mod:$src0_modifiers,
                      Src0RC:$src0)
               /* else */,
                 // VOP1_DPP without modifiers
-                (ins DstRC:$old, Src0RC:$src0)
+                (ins OldRC:$old, Src0RC:$src0)
               /* endif */),
               !if (HasModifiers,
                 // VOP2_DPP with modifiers
-                (ins DstRC:$old,
+                (ins OldRC:$old,
                      Src0Mod:$src0_modifiers, Src0RC:$src0,
                      Src1Mod:$src1_modifiers, Src1RC:$src1)
               /* else */,
                 // VOP2_DPP without modifiers
-                (ins DstRC:$old,
+                (ins OldRC:$old,
                      Src0RC:$src0, Src1RC:$src1)
                 )));
 }
 
-class getInsDPP <RegisterOperand DstRC, RegisterClass Src0RC, RegisterClass Src1RC,
+class getInsDPP <RegisterOperand OldRC, RegisterClass Src0RC, RegisterClass Src1RC,
                  int NumSrcArgs, bit HasModifiers,
                  Operand Src0Mod, Operand Src1Mod> {
-  dag ret = !con(getInsDPPBase<DstRC, Src0RC, Src1RC, NumSrcArgs,
+  dag ret = !con(getInsDPPBase<OldRC, Src0RC, Src1RC, NumSrcArgs,
                                HasModifiers, Src0Mod, Src1Mod>.ret,
                  (ins dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
                   bank_mask:$bank_mask, bound_ctrl:$bound_ctrl));
 }
 
-class getInsDPP16 <RegisterOperand DstRC, RegisterClass Src0RC, RegisterClass Src1RC,
+class getInsDPP16 <RegisterOperand OldRC, RegisterClass Src0RC, RegisterClass Src1RC,
                  int NumSrcArgs, bit HasModifiers,
                  Operand Src0Mod, Operand Src1Mod> {
-  dag ret = !con(getInsDPP<DstRC, Src0RC, Src1RC, NumSrcArgs,
+  dag ret = !con(getInsDPP<OldRC, Src0RC, Src1RC, NumSrcArgs,
                            HasModifiers, Src0Mod, Src1Mod>.ret,
                  (ins FI:$fi));
 }
 
-class getInsDPP8 <RegisterOperand DstRC, RegisterClass Src0RC, RegisterClass Src1RC,
+class getInsDPP8 <RegisterOperand OldRC, RegisterClass Src0RC, RegisterClass Src1RC,
                  int NumSrcArgs, bit HasModifiers,
                  Operand Src0Mod, Operand Src1Mod> {
-  dag ret = !con(getInsDPPBase<DstRC, Src0RC, Src1RC, NumSrcArgs,
+  dag ret = !con(getInsDPPBase<OldRC, Src0RC, Src1RC, NumSrcArgs,
                                HasModifiers, Src0Mod, Src1Mod>.ret,
                  (ins dpp8:$dpp8, FI:$fi));
 }
@@ -2200,7 +2200,9 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   field string AsmDPP = !if(HasExtDPP,
                             getAsmDPP<HasDst, NumSrcArgs, HasModifiers, DstVT>.ret, "");
   field string AsmDPP16 = getAsmDPP16<HasDst, NumSrcArgs, HasModifiers, DstVT>.ret;
-  field string AsmDPP8 = getAsmDPP8<HasDst, NumSrcArgs, 0, DstVT>.ret;
+  // DPP8 encoding has no fields for modifiers, and it is enforced by setting
+  // the asm operand name via this HasModifiers flag
+  field string AsmDPP8 = getAsmDPP8<HasDst, NumSrcArgs, 0 /*HasModifiers*/, DstVT>.ret;
   field string AsmSDWA = getAsmSDWA<HasDst, NumSrcArgs, DstVT>.ret;
   field string AsmSDWA9 = getAsmSDWA9<HasDst, HasSDWAOMod, NumSrcArgs, DstVT>.ret;
 
