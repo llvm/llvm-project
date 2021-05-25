@@ -234,10 +234,10 @@ func @transpose_3D_sequence(%arg : vector<4x3x2xf32>) -> vector<4x3x2xf32> {
   // CHECK: [[T0:%.*]] = vector.transpose [[ARG]], [2, 1, 0]
   %0 = vector.transpose %arg, [1, 2, 0] : vector<4x3x2xf32> to vector<3x2x4xf32>
   %1 = vector.transpose %0, [1, 0, 2] : vector<3x2x4xf32> to vector<2x3x4xf32>
-  // CHECK-NOT: transpose
+  // CHECK: [[T1:%.*]] = vector.transpose %arg0, [2, 1, 0]
   %2 = vector.transpose %1, [2, 1, 0] : vector<2x3x4xf32> to vector<4x3x2xf32>
   %3 = vector.transpose %2, [2, 1, 0] : vector<4x3x2xf32> to vector<2x3x4xf32>
-  // CHECK: [[MUL:%.*]] = mulf [[T0]], [[T0]]
+  // CHECK: [[MUL:%.*]] = mulf [[T0]], [[T1]]
   %4 = mulf %1, %3 : vector<2x3x4xf32>
   // CHECK: [[T5:%.*]] = vector.transpose [[MUL]], [2, 1, 0]
   %5 = vector.transpose %4, [2, 1, 0] : vector<2x3x4xf32> to vector<4x3x2xf32>

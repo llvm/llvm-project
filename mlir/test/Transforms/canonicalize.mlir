@@ -662,7 +662,7 @@ func @lowered_affine_floordiv() -> (index, index) {
 //
 // CHECK-LABEL: func @lowered_affine_ceildiv
 func @lowered_affine_ceildiv() -> (index, index) {
-// CHECK-NEXT:  %c-1 = constant -1 : index
+// CHECK-DAG:  %c-1 = constant -1 : index
   %c-43 = constant -43 : index
   %c42 = constant 42 : index
   %c0 = constant 0 : index
@@ -675,7 +675,7 @@ func @lowered_affine_ceildiv() -> (index, index) {
   %5 = subi %c0, %4 : index
   %6 = addi %4, %c1 : index
   %7 = select %0, %5, %6 : index
-// CHECK-NEXT:  %c2 = constant 2 : index
+// CHECK-DAG:  %c2 = constant 2 : index
   %c43 = constant 43 : index
   %c42_0 = constant 42 : index
   %c0_1 = constant 0 : index
@@ -688,6 +688,8 @@ func @lowered_affine_ceildiv() -> (index, index) {
   %13 = subi %c0_1, %12 : index
   %14 = addi %12, %c1_2 : index
   %15 = select %8, %13, %14 : index
+
+  // CHECK-NEXT: return %c-1, %c2
   return %7, %15 : index, index
 }
 

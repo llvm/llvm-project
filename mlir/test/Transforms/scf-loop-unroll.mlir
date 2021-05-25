@@ -31,9 +31,9 @@ func @scf_loop_unroll_double_symbolic_ub(%arg0 : f32, %arg1 : f32, %n : index) -
     scf.yield %sum0, %sum1 : f32, f32
   }
   return %sum#0, %sum#1 : f32, f32
-  // CHECK:      %[[C0:.*]] = constant 0 : index
-  // CHECK-NEXT: %[[C1:.*]] = constant 1 : index
-  // CHECK-NEXT: %[[C3:.*]] = constant 3 : index
+  // CHECK-DAG:      %[[C0:.*]] = constant 0 : index
+  // CHECK-DAG: %[[C1:.*]] = constant 1 : index
+  // CHECK-DAG: %[[C3:.*]] = constant 3 : index
   // CHECK-NEXT: %[[REM:.*]] = remi_signed %[[N]], %[[C3]]
   // CHECK-NEXT: %[[UB:.*]] = subi %[[N]], %[[REM]]
   // CHECK-NEXT: %[[SUM:.*]]:2 = scf.for {{.*}} = %[[C0]] to %[[UB]] step %[[C3]] iter_args
