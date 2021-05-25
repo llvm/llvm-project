@@ -92,13 +92,12 @@ inline bool systemDetectsMemoryTagFaultsTestOnly() { return false; }
 
 #endif // SCUDO_LINUX
 
-inline bool disableMemoryTagChecksTestOnly() {
+inline void disableMemoryTagChecksTestOnly() {
   __asm__ __volatile__(
       R"(
       .arch_extension memtag
       msr tco, #1
       )");
-  return true;
 }
 
 inline void enableMemoryTagChecksTestOnly() {
@@ -251,7 +250,7 @@ inline bool systemDetectsMemoryTagFaultsTestOnly() {
   UNREACHABLE("memory tagging not supported");
 }
 
-inline bool disableMemoryTagChecksTestOnly() {
+inline void disableMemoryTagChecksTestOnly() {
   UNREACHABLE("memory tagging not supported");
 }
 
