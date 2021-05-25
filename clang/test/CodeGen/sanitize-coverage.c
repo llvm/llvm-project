@@ -19,4 +19,16 @@ void foo(int n) {
   if (n)
     x[n] = 42;
 }
+
+static inline __attribute__((__always_inline__)) void always_inlined_fn(int n) {
+  if (n)
+    x[n] = 42;
+}
+// CHECK-LABEL: define dso_local void @test_always_inline(
+void test_always_inline(int n) {
+  // CHECK-DAG: call void @__sanitizer_cov_trace_pc
+  // CHECK-DAG: call void @__sanitizer_cov_trace_const_cmp
+  always_inlined_fn(n);
+}
+
 // CHECK-LABEL: declare void
