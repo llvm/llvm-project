@@ -137,6 +137,71 @@ TEST(LinkGraphTest, BlockAndSymbolIteration) {
   EXPECT_TRUE(llvm::count(G.defined_symbols(), &S4));
 }
 
+TEST(LinkGraphTest, ContentAccessAndUpdate) {
+  // Check that we can make a defined symbol external.
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
+              getGenericEdgeKindName);
+  auto &Sec = G.createSection("__data", RWFlags);
+
+  // Create an initial block.
+  auto &B = G.createContentBlock(Sec, BlockContent, 0x1000, 8, 0);
+
+  EXPECT_FALSE(B.isContentMutable()) << "Content unexpectedly mutable";
+  EXPECT_EQ(B.getContent().data(), BlockContent.data())
+      << "Unexpected block content data pointer";
+  EXPECT_EQ(B.getContent().size(), BlockContent.size())
+      << "Unexpected block content size";
+
+  // Expect that attempting to get already-mutable content fails if the
+  // content is not yet mutable.
+  EXPECT_DEATH({ (void)B.getAlreadyMutableContent(); },
+               "Content is not mutable")
+      << "Unexpected mutable access allowed to immutable data";
+
+  // Check that mutable content is copied on request as expected.
+  auto MutableContent = B.getMutableContent(G);
+  EXPECT_TRUE(B.isContentMutable()) << "Content unexpectedly immutable";
+  EXPECT_NE(MutableContent.data(), BlockContent.data())
+      << "Unexpected mutable content data pointer";
+  EXPECT_EQ(MutableContent.size(), BlockContent.size())
+      << "Unexpected mutable content size";
+  EXPECT_TRUE(std::equal(MutableContent.begin(), MutableContent.end(),
+                         BlockContent.begin()))
+      << "Unexpected mutable content value";
+
+  // Check that already-mutable content behaves as expected, with no
+  // further copies.
+  auto MutableContent2 = B.getMutableContent(G);
+  EXPECT_TRUE(B.isContentMutable()) << "Content unexpectedly immutable";
+  EXPECT_EQ(MutableContent2.data(), MutableContent.data())
+      << "Unexpected mutable content 2 data pointer";
+  EXPECT_EQ(MutableContent2.size(), MutableContent.size())
+      << "Unexpected mutable content 2 size";
+
+  // Check that getAlreadyMutableContent behaves as expected, with no
+  // further copies.
+  auto MutableContent3 = B.getMutableContent(G);
+  EXPECT_TRUE(B.isContentMutable()) << "Content unexpectedly immutable";
+  EXPECT_EQ(MutableContent3.data(), MutableContent.data())
+      << "Unexpected mutable content 2 data pointer";
+  EXPECT_EQ(MutableContent3.size(), MutableContent.size())
+      << "Unexpected mutable content 2 size";
+
+  // Set content back to immutable and check that everything behaves as
+  // expected again.
+  B.setContent(BlockContent);
+  EXPECT_FALSE(B.isContentMutable()) << "Content unexpectedly mutable";
+  EXPECT_EQ(B.getContent().data(), BlockContent.data())
+      << "Unexpected block content data pointer";
+  EXPECT_EQ(B.getContent().size(), BlockContent.size())
+      << "Unexpected block content size";
+
+  // Create an initially mutable block.
+  auto &B2 = G.createMutableContentBlock(Sec, MutableContent, 0x10000, 8, 0);
+
+  EXPECT_TRUE(B2.isContentMutable()) << "Expected B2 content to be mutable";
+}
+
 TEST(LinkGraphTest, MakeExternal) {
   // Check that we can make a defined symbol external.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
