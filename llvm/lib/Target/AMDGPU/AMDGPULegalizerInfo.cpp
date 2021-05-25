@@ -581,11 +581,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .lower();
   }
 
-  getActionDefinitionsBuilder({G_SDIV, G_UDIV, G_SREM, G_UREM})
-    .customFor({S32, S64})
-    .clampScalar(0, S32, S64)
-    .widenScalarToNextPow2(0, 32)
-    .scalarize(0);
+  getActionDefinitionsBuilder(
+      {G_SDIV, G_UDIV, G_SREM, G_UREM, G_SDIVREM, G_UDIVREM})
+      .customFor({S32, S64})
+      .clampScalar(0, S32, S64)
+      .widenScalarToNextPow2(0, 32)
+      .scalarize(0);
 
   auto &Mulh = getActionDefinitionsBuilder({G_UMULH, G_SMULH})
                    .legalFor({S32})
@@ -1703,10 +1704,12 @@ bool AMDGPULegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeFDIV(MI, MRI, B);
   case TargetOpcode::G_UDIV:
   case TargetOpcode::G_UREM:
-    return legalizeUDIV_UREM(MI, MRI, B);
+  case TargetOpcode::G_UDIVREM:
+    return legalizeUnsignedDIV_REM(MI, MRI, B);
   case TargetOpcode::G_SDIV:
   case TargetOpcode::G_SREM:
-    return legalizeSDIV_SREM(MI, MRI, B);
+  case TargetOpcode::G_SDIVREM:
+    return legalizeSignedDIV_REM(MI, MRI, B);
   case TargetOpcode::G_ATOMIC_CMPXCHG:
     return legalizeAtomicCmpXChg(MI, MRI, B);
   case TargetOpcode::G_FLOG:
@@ -2791,11 +2794,11 @@ bool AMDGPULegalizerInfo::legalizeFDIV(MachineInstr &MI,
   return false;
 }
 
-void AMDGPULegalizerInfo::legalizeUDIV_UREM32Impl(MachineIRBuilder &B,
-                                                  Register DstReg,
-                                                  Register X,
-                                                  Register Y,
-                                                  bool IsDiv) const {
+void AMDGPULegalizerInfo::legalizeUnsignedDIV_REM32Impl(MachineIRBuilder &B,
+                                                        Register DstDivReg,
+                                                        Register DstRemReg,
+                                                        Register X,
+                                                        Register Y) const {
   const LLT S1 = LLT::scalar(1);
   const LLT S32 = LLT::scalar(32);
 
@@ -2821,16 +2824,17 @@ void AMDGPULegalizerInfo::legalizeUDIV_UREM32Impl(MachineIRBuilder &B,
   // First quotient/remainder refinement.
   auto One = B.buildConstant(S32, 1);
   auto Cond = B.buildICmp(CmpInst::ICMP_UGE, S1, R, Y);
-  if (IsDiv)
+  if (DstDivReg)
     Q = B.buildSelect(S32, Cond, B.buildAdd(S32, Q, One), Q);
   R = B.buildSelect(S32, Cond, B.buildSub(S32, R, Y), R);
 
   // Second quotient/remainder refinement.
   Cond = B.buildICmp(CmpInst::ICMP_UGE, S1, R, Y);
-  if (IsDiv)
-    B.buildSelect(DstReg, Cond, B.buildAdd(S32, Q, One), Q);
-  else
-    B.buildSelect(DstReg, Cond, B.buildSub(S32, R, Y), R);
+  if (DstDivReg)
+    B.buildSelect(DstDivReg, Cond, B.buildAdd(S32, Q, One), Q);
+
+  if (DstRemReg)
+    B.buildSelect(DstRemReg, Cond, B.buildSub(S32, R, Y), R);
 }
 
 // Build integer reciprocal sequence arounud V_RCP_IFLAG_F32
@@ -2876,11 +2880,11 @@ static std::pair<Register, Register> emitReciprocalU64(MachineIRBuilder &B,
   return {ResultLo.getReg(0), ResultHi.getReg(0)};
 }
 
-void AMDGPULegalizerInfo::legalizeUDIV_UREM64Impl(MachineIRBuilder &B,
-                                                  Register DstReg,
-                                                  Register Numer,
-                                                  Register Denom,
-                                                  bool IsDiv) const {
+void AMDGPULegalizerInfo::legalizeUnsignedDIV_REM64Impl(MachineIRBuilder &B,
+                                                        Register DstDivReg,
+                                                        Register DstRemReg,
+                                                        Register Numer,
+                                                        Register Denom) const {
   const LLT S32 = LLT::scalar(32);
   const LLT S64 = LLT::scalar(64);
   const LLT S1 = LLT::scalar(1);
@@ -2976,57 +2980,74 @@ void AMDGPULegalizerInfo::legalizeUDIV_UREM64Impl(MachineIRBuilder &B,
   // endif C6
   // endif C3
 
-  if (IsDiv) {
+  if (DstDivReg) {
     auto Sel1 = B.buildSelect(
         S64, B.buildICmp(CmpInst::ICMP_NE, S1, C6, Zero32), Add4, Add3);
-    B.buildSelect(DstReg,
-                  B.buildICmp(CmpInst::ICMP_NE, S1, C3, Zero32), Sel1, MulHi3);
-  } else {
+    B.buildSelect(DstDivReg, B.buildICmp(CmpInst::ICMP_NE, S1, C3, Zero32),
+                  Sel1, MulHi3);
+  }
+
+  if (DstRemReg) {
     auto Sel2 = B.buildSelect(
         S64, B.buildICmp(CmpInst::ICMP_NE, S1, C6, Zero32), Sub3, Sub2);
-    B.buildSelect(DstReg,
-                  B.buildICmp(CmpInst::ICMP_NE, S1, C3, Zero32), Sel2, Sub1);
+    B.buildSelect(DstRemReg, B.buildICmp(CmpInst::ICMP_NE, S1, C3, Zero32),
+                  Sel2, Sub1);
   }
 }
 
-bool AMDGPULegalizerInfo::legalizeUDIV_UREM(MachineInstr &MI,
-                                            MachineRegisterInfo &MRI,
-                                            MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeUnsignedDIV_REM(MachineInstr &MI,
+                                                  MachineRegisterInfo &MRI,
+                                                  MachineIRBuilder &B) const {
+  Register DstDivReg, DstRemReg;
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected opcode!");
+  case AMDGPU::G_UDIV: {
+    DstDivReg = MI.getOperand(0).getReg();
+    break;
+  }
+  case AMDGPU::G_UREM: {
+    DstRemReg = MI.getOperand(0).getReg();
+    break;
+  }
+  case AMDGPU::G_UDIVREM: {
+    DstDivReg = MI.getOperand(0).getReg();
+    DstRemReg = MI.getOperand(1).getReg();
+    break;
+  }
+  }
+
   const LLT S64 = LLT::scalar(64);
   const LLT S32 = LLT::scalar(32);
-  const bool IsDiv = MI.getOpcode() == AMDGPU::G_UDIV;
-  Register DstReg = MI.getOperand(0).getReg();
-  Register Num = MI.getOperand(1).getReg();
-  Register Den = MI.getOperand(2).getReg();
-  LLT Ty = MRI.getType(DstReg);
+  const unsigned FirstSrcOpIdx = MI.getNumExplicitDefs();
+  Register Num = MI.getOperand(FirstSrcOpIdx).getReg();
+  Register Den = MI.getOperand(FirstSrcOpIdx + 1).getReg();
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
 
   if (Ty == S32)
-    legalizeUDIV_UREM32Impl(B, DstReg, Num, Den, IsDiv);
+    legalizeUnsignedDIV_REM32Impl(B, DstDivReg, DstRemReg, Num, Den);
   else if (Ty == S64)
-    legalizeUDIV_UREM64Impl(B, DstReg, Num, Den, IsDiv);
+    legalizeUnsignedDIV_REM64Impl(B, DstDivReg, DstRemReg, Num, Den);
   else
     return false;
 
   MI.eraseFromParent();
   return true;
-
 }
 
-bool AMDGPULegalizerInfo::legalizeSDIV_SREM(MachineInstr &MI,
-                                            MachineRegisterInfo &MRI,
-                                            MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeSignedDIV_REM(MachineInstr &MI,
+                                                MachineRegisterInfo &MRI,
+                                                MachineIRBuilder &B) const {
   const LLT S64 = LLT::scalar(64);
   const LLT S32 = LLT::scalar(32);
 
-  Register DstReg = MI.getOperand(0).getReg();
-  const LLT Ty = MRI.getType(DstReg);
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
   if (Ty != S32 && Ty != S64)
     return false;
 
-  const bool IsDiv = MI.getOpcode() == AMDGPU::G_SDIV;
-
-  Register LHS = MI.getOperand(1).getReg();
-  Register RHS = MI.getOperand(2).getReg();
+  const unsigned FirstSrcOpIdx = MI.getNumExplicitDefs();
+  Register LHS = MI.getOperand(FirstSrcOpIdx).getReg();
+  Register RHS = MI.getOperand(FirstSrcOpIdx + 1).getReg();
 
   auto SignBitOffset = B.buildConstant(S32, Ty.getSizeInBits() - 1);
   auto LHSign = B.buildAShr(Ty, LHS, SignBitOffset);
@@ -3038,20 +3059,45 @@ bool AMDGPULegalizerInfo::legalizeSDIV_SREM(MachineInstr &MI,
   LHS = B.buildXor(Ty, LHS, LHSign).getReg(0);
   RHS = B.buildXor(Ty, RHS, RHSign).getReg(0);
 
-  Register UDivRem = MRI.createGenericVirtualRegister(Ty);
+  Register DstDivReg, DstRemReg, TmpDivReg, TmpRemReg;
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected opcode!");
+  case AMDGPU::G_SDIV: {
+    DstDivReg = MI.getOperand(0).getReg();
+    TmpDivReg = MRI.createGenericVirtualRegister(Ty);
+    break;
+  }
+  case AMDGPU::G_SREM: {
+    DstRemReg = MI.getOperand(0).getReg();
+    TmpRemReg = MRI.createGenericVirtualRegister(Ty);
+    break;
+  }
+  case AMDGPU::G_SDIVREM: {
+    DstDivReg = MI.getOperand(0).getReg();
+    DstRemReg = MI.getOperand(1).getReg();
+    TmpDivReg = MRI.createGenericVirtualRegister(Ty);
+    TmpRemReg = MRI.createGenericVirtualRegister(Ty);
+    break;
+  }
+  }
+
   if (Ty == S32)
-    legalizeUDIV_UREM32Impl(B, UDivRem, LHS, RHS, IsDiv);
+    legalizeUnsignedDIV_REM32Impl(B, TmpDivReg, TmpRemReg, LHS, RHS);
   else
-    legalizeUDIV_UREM64Impl(B, UDivRem, LHS, RHS, IsDiv);
+    legalizeUnsignedDIV_REM64Impl(B, TmpDivReg, TmpRemReg, LHS, RHS);
 
-  Register Sign;
-  if (IsDiv)
-    Sign = B.buildXor(Ty, LHSign, RHSign).getReg(0);
-  else
-    Sign = LHSign.getReg(0); // Remainder sign is the same as LHS
+  if (DstDivReg) {
+    auto Sign = B.buildXor(Ty, LHSign, RHSign).getReg(0);
+    auto SignXor = B.buildXor(Ty, TmpDivReg, Sign).getReg(0);
+    B.buildSub(DstDivReg, SignXor, Sign);
+  }
 
-  UDivRem = B.buildXor(Ty, UDivRem, Sign).getReg(0);
-  B.buildSub(DstReg, UDivRem, Sign);
+  if (DstRemReg) {
+    auto Sign = LHSign.getReg(0); // Remainder sign is the same as LHS
+    auto SignXor = B.buildXor(Ty, TmpRemReg, Sign).getReg(0);
+    B.buildSub(DstRemReg, SignXor, Sign);
+  }
 
   MI.eraseFromParent();
   return true;
