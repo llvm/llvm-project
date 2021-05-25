@@ -42,10 +42,7 @@ public:
   const OutputSection *lastSection() const { return sections.back(); }
 
   void addOutputSection(OutputSection *os);
-  void sortOutputSections(
-      llvm::function_ref<bool(OutputSection *, OutputSection *)> comparator) {
-    llvm::sort(sections, comparator);
-  }
+  void sortOutputSections();
 
   const std::vector<OutputSection *> &getSections() const { return sections; }
   size_t numNonHiddenSections() const;
@@ -64,6 +61,8 @@ private:
 };
 
 extern std::vector<OutputSegment *> outputSegments;
+
+void sortOutputSegments();
 
 OutputSegment *getOrCreateOutputSegment(StringRef name);
 
