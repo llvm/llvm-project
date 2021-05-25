@@ -15,7 +15,8 @@ class TestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
+    # We fail to lookup static members on Windows.
+    @expectedFailureAll(oslist=["windows"])
     def test_access_from_main(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "// stop in main", lldb.SBFileSpec("main.cpp"))
@@ -24,6 +25,8 @@ class TestCase(TestBase):
         self.expect_expr("my_a.s_b", result_type="long", result_value="2")
         self.expect_expr("my_a.s_c", result_type="int", result_value="3")
 
+    # We fail to lookup static members on Windows.
+    @expectedFailureAll(oslist=["windows"])
     def test_access_from_member_function(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "// stop in member function", lldb.SBFileSpec("main.cpp"))
