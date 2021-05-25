@@ -60,7 +60,7 @@ RUN ln -s $(find /usr/bin -regex '^.+/git-clang-format-[0-9.]+$') /usr/bin/git-c
 
 # Install a recent GCC
 RUN add-apt-repository ppa:ubuntu-toolchain-r/test
-RUN apt-get update && apt install -y gcc-10 g++-10
+RUN apt-get update && apt install -y gcc-10 g++-10 gcc-11 g++-11
 RUN ln -f -s /usr/bin/g++-10 /usr/bin/g++ && [ -e $(readlink /usr/bin/g++) ]
 RUN ln -f -s /usr/bin/gcc-10 /usr/bin/gcc && [ -e $(readlink /usr/bin/gcc) ]
 
