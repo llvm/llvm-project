@@ -32,23 +32,18 @@ static cl::opt<int32_t, true> RecursionCompression(
     cl::Hidden,
     cl::location(llvm::sampleprof::CSProfileGenerator::MaxCompressionSize));
 
-static cl::opt<uint64_t> CSProfColdThreshold(
-    "csprof-cold-thres", cl::init(100), cl::ZeroOrMore,
-    cl::desc("Specify the total samples threshold for a context profile to "
-             "be considered cold, any cold profiles will be merged into "
-             "context-less base profiles"));
-
 static cl::opt<bool> CSProfMergeColdContext(
     "csprof-merge-cold-context", cl::init(true), cl::ZeroOrMore,
-    cl::desc("This works together with --csprof-cold-thres. If the total count "
-             "of context profile is smaller than the threshold, it will be "
-             "merged into context-less base profile."));
+    cl::desc("If the total count of context profile is smaller than "
+             "the threshold, it will be merged into context-less base "
+             "profile."));
 
 static cl::opt<bool> CSProfTrimColdContext(
     "csprof-trim-cold-context", cl::init(true), cl::ZeroOrMore,
-    cl::desc("This works together with --csprof-cold-thres. If the total count "
-             "of the profile after all merge is done is still smaller than "
-             "threshold, it will be trimmed."));
+    cl::desc("If the total count of the profile after all merge is done "
+             "is still smaller than threshold, it will be trimmed."));
+
+extern cl::opt<int> ProfileSummaryCutoffCold;
 
 using namespace llvm;
 using namespace sampleprof;
@@ -410,17 +405,18 @@ void CSProfileGenerator::postProcessProfiles() {
 }
 
 void CSProfileGenerator::computeSummaryAndThreshold() {
+  // Update the default value of cold cutoff for llvm-profgen.
+  // Do it here because we don't want to change the global default,
+  // which would lead CS profile size too large.
+  if (!ProfileSummaryCutoffCold.getNumOccurrences())
+    ProfileSummaryCutoffCold = 999000;
+
   SampleProfileSummaryBuilder Builder(ProfileSummaryBuilder::DefaultCutoffs);
   auto Summary = Builder.computeSummaryForProfiles(ProfileMap);
   HotCountThreshold = ProfileSummaryBuilder::getHotCountThreshold(
       (Summary->getDetailedSummary()));
   ColdCountThreshold = ProfileSummaryBuilder::getColdCountThreshold(
       (Summary->getDetailedSummary()));
-
-  // Use threshold calculated from profile summary unless specified.
-  if (CSProfColdThreshold.getNumOccurrences()) {
-    ColdCountThreshold = CSProfColdThreshold;
-  }
 }
 
 void CSProfileGenerator::write(std::unique_ptr<SampleProfileWriter> Writer,
