@@ -3167,6 +3167,15 @@ bool TypeSystemSwiftTypeRef::IsTypedefType(opaque_compiler_type_t type) {
   NodePointer node = GetDemangledType(dem, AsMangledName(type));
   if (node && node->getKind() == Node::Kind::BuiltinTypeName)
     return impl();
+
+  // This is a discrepancy with `SwiftASTContext`. `impl` correctly
+  // returns true, but `VALIDATE_AND_RETURN` will assert. This hardcoded
+  // handling of `__C.NSNotificationName` and `__C.NSDecimal` can be removed
+  // when the `VALIDATE_AND_RETURN` is removed.
+  auto mangled_name = GetMangledTypeName(type);
+  if (mangled_name == "$sSo18NSNotificationNameaD" ||
+      mangled_name == "$sSo9NSDecimalaD")
+    return impl();
 #endif
   VALIDATE_AND_RETURN(impl, IsTypedefType, type, (ReconstructType(type)),
                       (ReconstructType(type)));
@@ -3198,6 +3207,15 @@ TypeSystemSwiftTypeRef::GetTypedefedType(opaque_compiler_type_t type) {
   Demangler dem;
   NodePointer node = GetDemangledType(dem, AsMangledName(type));
   if (node && node->getKind() == Node::Kind::BuiltinTypeName)
+    return impl();
+
+  // This is a discrepancy with `SwiftASTContext`. `impl` correctly
+  // returns true, but `VALIDATE_AND_RETURN` will assert. This hardcoded
+  // handling of `__C.NSNotificationName` and `__C.NSDecimal` can be removed
+  // when the `VALIDATE_AND_RETURN` is removed.
+  auto mangled_name = GetMangledTypeName(type);
+  if (mangled_name == "$sSo18NSNotificationNameaD" ||
+      mangled_name == "$sSo9NSDecimalaD")
     return impl();
 #endif
   VALIDATE_AND_RETURN(impl, GetTypedefedType, type, (ReconstructType(type)),
