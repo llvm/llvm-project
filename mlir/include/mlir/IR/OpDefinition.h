@@ -1671,7 +1671,10 @@ private:
                               detect_has_single_result_fold<ConcreteOpT>::value,
                           AbstractOperation::FoldHookFn>
   getFoldHookFnImpl() {
-    return &foldSingleResultHook<ConcreteOpT>;
+    return [](Operation *op, ArrayRef<Attribute> operands,
+              SmallVectorImpl<OpFoldResult> &results) {
+      return foldSingleResultHook<ConcreteOpT>(op, operands, results);
+    };
   }
   /// The internal implementation of `getFoldHookFn` above that is invoked if
   /// the operation is not single result and defines a `fold` method.
@@ -1681,7 +1684,10 @@ private:
                               detect_has_fold<ConcreteOpT>::value,
                           AbstractOperation::FoldHookFn>
   getFoldHookFnImpl() {
-    return &foldHook<ConcreteOpT>;
+    return [](Operation *op, ArrayRef<Attribute> operands,
+              SmallVectorImpl<OpFoldResult> &results) {
+      return foldHook<ConcreteOpT>(op, operands, results);
+    };
   }
   /// The internal implementation of `getFoldHookFn` above that is invoked if
   /// the operation does not define a `fold` method.
@@ -1690,8 +1696,12 @@ private:
                               !detect_has_fold<ConcreteOpT>::value,
                           AbstractOperation::FoldHookFn>
   getFoldHookFnImpl() {
-    // In this case, we only need to fold the traits of the operation.
-    return &op_definition_impl::foldTraits<FoldableTraitsTupleT>;
+    return [](Operation *op, ArrayRef<Attribute> operands,
+              SmallVectorImpl<OpFoldResult> &results) {
+      // In this case, we only need to fold the traits of the operation.
+      return op_definition_impl::foldTraits<FoldableTraitsTupleT>(op, operands,
+                                                                  results);
+    };
   }
   /// Return the result of folding a single result operation that defines a
   /// `fold` method.
@@ -1735,7 +1745,8 @@ private:
   }
   /// Implementation of `GetHasTraitFn`
   static AbstractOperation::HasTraitFn getHasTraitFn() {
-    return &op_definition_impl::hasTrait<Traits...>;
+    return
+        [](TypeID id) { return op_definition_impl::hasTrait<Traits...>(id); };
   }
   /// Implementation of `ParseAssemblyFn` AbstractOperation hook.
   static AbstractOperation::ParseAssemblyFn getParseAssemblyFn() {
@@ -1751,7 +1762,9 @@ private:
   static std::enable_if_t<!detect_has_print<ConcreteOpT>::value,
                           AbstractOperation::PrintAssemblyFn>
   getPrintAssemblyFnImpl() {
-    return &OpState::print;
+    return [](Operation *op, OpAsmPrinter &parser) {
+      return OpState::print(op, parser);
+    };
   }
   /// The internal implementation of `getPrintAssemblyFn` that is invoked when
   /// the concrete operation defines a `print` method.
