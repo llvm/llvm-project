@@ -58,5 +58,3 @@ struct void_subtraction {
   friend void operator-(void_subtraction, void_subtraction);
 };
 static_assert(has_no_iter_difference_t<void_subtraction>());
-
-int main(int, char**) { return 0; }
