@@ -335,6 +335,8 @@ public:
   // Resource pools
   SignalPoolT FreeSignalPool;
 
+  bool hostcall_required = false;
+
   std::vector<hsa_executable_t> HSAExecutables;
 
   struct atmiFreePtrDeletor {
@@ -1158,6 +1160,12 @@ static atmi_status_t atmi_calloc(void **ret_ptr, size_t size,
   return ATMI_STATUS_SUCCESS;
 }
 
+static bool image_contains_symbol(void *data, size_t size, const char *sym) {
+  symbol_info si;
+  int rc = get_symbol_info_without_loading((char *)data, size, sym, &si);
+  return (rc == 0) && (si.addr != nullptr);
+}
+
 __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
                                                  __tgt_device_image *image) {
   // This function loads the device image onto gpu[device_id] and does other
@@ -1199,7 +1207,13 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
 
     atmi_status_t err = module_register_from_memory_to_place(
         (void *)image->ImageStart, img_size, get_gpu_place(device_id),
-        [&](void *data, size_t size) { return env.before_loading(data, size); },
+        [&](void *data, size_t size) {
+          if (image_contains_symbol(data, size, "needs_hostcall_buffer")) {
+            __atomic_store_n(&DeviceInfo.hostcall_required, true,
+                             __ATOMIC_RELEASE);
+          }
+          return env.before_loading(data, size);
+        },
         DeviceInfo.HSAExecutables);
 
     check("Module registering", err);
@@ -1735,8 +1749,6 @@ static uint64_t acquire_available_packet_id(hsa_queue_t *queue) {
   return packet_id;
 }
 
-extern bool g_atmi_hostcall_required; // declared without header by atmi
-
 static int32_t __tgt_rtl_run_target_team_region_locked(
     int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
     ptrdiff_t *tgt_offsets, int32_t arg_num, int32_t num_teams,
@@ -1905,7 +1917,7 @@ int32_t __tgt_rtl_run_target_team_region_locked(
       impl_args->offset_z = 0;
 
       // assign a hostcall buffer for the selected Q
-      if (g_atmi_hostcall_required) {
+      if (__atomic_load_n(&DeviceInfo.hostcall_required, __ATOMIC_ACQUIRE)) {
         // hostrpc_assign_buffer is not thread safe, and this function is
         // under a multiple reader lock, not a writer lock.
         static pthread_mutex_t hostcall_init_lock = PTHREAD_MUTEX_INITIALIZER;
