@@ -7,7 +7,6 @@
 ; and therefore prove that %sum.next = %sum + %sub = %sum + %limit - %sum = %limit,
 ; and predicate is false.
 
-; TODO: We can break the backedge here.
 define i32 @test_ne(i32 %limit) {
 ; CHECK-LABEL: @test_ne(
 ; CHECK-NEXT:  entry:
@@ -16,17 +15,19 @@ define i32 @test_ne(i32 %limit) {
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ [[SUM_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[LIMIT]], [[SUM]]
 ; CHECK-NEXT:    [[IS_POSITIVE:%.*]] = icmp sgt i32 [[SUB]], 0
-; CHECK-NEXT:    br i1 [[IS_POSITIVE]], label [[BACKEDGE]], label [[IF_FALSE:%.*]]
+; CHECK-NEXT:    br i1 [[IS_POSITIVE]], label [[BACKEDGE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[MERGE_PHI:%.*]] = phi i32 [ 0, [[IF_FALSE]] ], [ [[SUB]], [[LOOP]] ]
-; CHECK-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[MERGE_PHI]]
+; CHECK-NEXT:    [[SUM_NEXT:%.*]] = add i32 [[SUM]], [[MERGE_PHI]]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ne i32 [[SUM_NEXT]], [[LIMIT]]
-; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[DONE:%.*]]
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[BACKEDGE_LOOP_CRIT_EDGE:%.*]], label [[DONE:%.*]]
+; CHECK:       backedge.loop_crit_edge:
+; CHECK-NEXT:    unreachable
 ; CHECK:       done:
 ; CHECK-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi i32 [ [[SUM_NEXT]], [[BACKEDGE]] ]
 ; CHECK-NEXT:    ret i32 [[SUM_NEXT_LCSSA]]
@@ -60,7 +61,6 @@ failure:
   unreachable
 }
 
-; TODO: We can break the backedge here.
 define i32 @test_slt(i32 %limit) {
 ; CHECK-LABEL: @test_slt(
 ; CHECK-NEXT:  entry:
@@ -69,17 +69,19 @@ define i32 @test_slt(i32 %limit) {
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ [[SUM_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[LIMIT]], [[SUM]]
 ; CHECK-NEXT:    [[IS_POSITIVE:%.*]] = icmp sgt i32 [[SUB]], 0
-; CHECK-NEXT:    br i1 [[IS_POSITIVE]], label [[BACKEDGE]], label [[IF_FALSE:%.*]]
+; CHECK-NEXT:    br i1 [[IS_POSITIVE]], label [[BACKEDGE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[MERGE_PHI:%.*]] = phi i32 [ 0, [[IF_FALSE]] ], [ [[SUB]], [[LOOP]] ]
-; CHECK-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[MERGE_PHI]]
+; CHECK-NEXT:    [[SUM_NEXT:%.*]] = add i32 [[SUM]], [[MERGE_PHI]]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[SUM_NEXT]], [[LIMIT]]
-; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[DONE:%.*]]
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[BACKEDGE_LOOP_CRIT_EDGE:%.*]], label [[DONE:%.*]]
+; CHECK:       backedge.loop_crit_edge:
+; CHECK-NEXT:    unreachable
 ; CHECK:       done:
 ; CHECK-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi i32 [ [[SUM_NEXT]], [[BACKEDGE]] ]
 ; CHECK-NEXT:    ret i32 [[SUM_NEXT_LCSSA]]
@@ -113,7 +115,6 @@ failure:
   unreachable
 }
 
-; TODO: We can break the backedge here.
 define i32 @test_ult(i32 %limit) {
 ; CHECK-LABEL: @test_ult(
 ; CHECK-NEXT:  entry:
@@ -122,17 +123,19 @@ define i32 @test_ult(i32 %limit) {
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ [[SUM_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[LIMIT]], [[SUM]]
 ; CHECK-NEXT:    [[IS_POSITIVE:%.*]] = icmp sgt i32 [[SUB]], 0
-; CHECK-NEXT:    br i1 [[IS_POSITIVE]], label [[BACKEDGE]], label [[IF_FALSE:%.*]]
+; CHECK-NEXT:    br i1 [[IS_POSITIVE]], label [[BACKEDGE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[MERGE_PHI:%.*]] = phi i32 [ 0, [[IF_FALSE]] ], [ [[SUB]], [[LOOP]] ]
-; CHECK-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[MERGE_PHI]]
+; CHECK-NEXT:    [[SUM_NEXT:%.*]] = add i32 [[SUM]], [[MERGE_PHI]]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[SUM_NEXT]], [[LIMIT]]
-; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[DONE:%.*]]
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[BACKEDGE_LOOP_CRIT_EDGE:%.*]], label [[DONE:%.*]]
+; CHECK:       backedge.loop_crit_edge:
+; CHECK-NEXT:    unreachable
 ; CHECK:       done:
 ; CHECK-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi i32 [ [[SUM_NEXT]], [[BACKEDGE]] ]
 ; CHECK-NEXT:    ret i32 [[SUM_NEXT_LCSSA]]
@@ -166,7 +169,6 @@ failure:
   unreachable
 }
 
-; TODO: We can break the backedge here.
 define i32 @test_sgt(i32 %limit) {
 ; CHECK-LABEL: @test_sgt(
 ; CHECK-NEXT:  entry:
@@ -175,17 +177,19 @@ define i32 @test_sgt(i32 %limit) {
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ [[SUM_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[LIMIT]], [[SUM]]
 ; CHECK-NEXT:    [[IS_POSITIVE:%.*]] = icmp sgt i32 [[SUB]], 0
-; CHECK-NEXT:    br i1 [[IS_POSITIVE]], label [[BACKEDGE]], label [[IF_FALSE:%.*]]
+; CHECK-NEXT:    br i1 [[IS_POSITIVE]], label [[BACKEDGE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[MERGE_PHI:%.*]] = phi i32 [ 0, [[IF_FALSE]] ], [ [[SUB]], [[LOOP]] ]
-; CHECK-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[MERGE_PHI]]
+; CHECK-NEXT:    [[SUM_NEXT:%.*]] = add i32 [[SUM]], [[MERGE_PHI]]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp sgt i32 [[SUM_NEXT]], [[LIMIT]]
-; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[DONE:%.*]]
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[BACKEDGE_LOOP_CRIT_EDGE:%.*]], label [[DONE:%.*]]
+; CHECK:       backedge.loop_crit_edge:
+; CHECK-NEXT:    unreachable
 ; CHECK:       done:
 ; CHECK-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi i32 [ [[SUM_NEXT]], [[BACKEDGE]] ]
 ; CHECK-NEXT:    ret i32 [[SUM_NEXT_LCSSA]]
@@ -219,7 +223,6 @@ failure:
   unreachable
 }
 
-; TODO: We can break the backedge here.
 define i32 @test_ugt(i32 %limit) {
 ; CHECK-LABEL: @test_ugt(
 ; CHECK-NEXT:  entry:
@@ -228,17 +231,19 @@ define i32 @test_ugt(i32 %limit) {
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ [[SUM_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[LIMIT]], [[SUM]]
 ; CHECK-NEXT:    [[IS_POSITIVE:%.*]] = icmp sgt i32 [[SUB]], 0
-; CHECK-NEXT:    br i1 [[IS_POSITIVE]], label [[BACKEDGE]], label [[IF_FALSE:%.*]]
+; CHECK-NEXT:    br i1 [[IS_POSITIVE]], label [[BACKEDGE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[MERGE_PHI:%.*]] = phi i32 [ 0, [[IF_FALSE]] ], [ [[SUB]], [[LOOP]] ]
-; CHECK-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[MERGE_PHI]]
+; CHECK-NEXT:    [[SUM_NEXT:%.*]] = add i32 [[SUM]], [[MERGE_PHI]]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ugt i32 [[SUM_NEXT]], [[LIMIT]]
-; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[DONE:%.*]]
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[BACKEDGE_LOOP_CRIT_EDGE:%.*]], label [[DONE:%.*]]
+; CHECK:       backedge.loop_crit_edge:
+; CHECK-NEXT:    unreachable
 ; CHECK:       done:
 ; CHECK-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi i32 [ [[SUM_NEXT]], [[BACKEDGE]] ]
 ; CHECK-NEXT:    ret i32 [[SUM_NEXT_LCSSA]]
@@ -272,7 +277,6 @@ failure:
   unreachable
 }
 
-; TODO: We can break the backedge here.
 define i32 @test_multiple_pred(i32 %limit) {
 ; CHECK-LABEL: @test_multiple_pred(
 ; CHECK-NEXT:  entry:
@@ -281,22 +285,24 @@ define i32 @test_multiple_pred(i32 %limit) {
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ [[SUM_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[LIMIT]], [[SUM]]
 ; CHECK-NEXT:    [[IS_POSITIVE:%.*]] = icmp sgt i32 [[SUB]], 0
 ; CHECK-NEXT:    br i1 [[IS_POSITIVE]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
 ; CHECK-NEXT:    switch i32 [[LIMIT]], label [[FAILURE_LOOPEXIT:%.*]] [
-; CHECK-NEXT:    i32 100, label [[BACKEDGE]]
+; CHECK-NEXT:    i32 100, label [[BACKEDGE:%.*]]
 ; CHECK-NEXT:    i32 200, label [[BACKEDGE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[MERGE_PHI:%.*]] = phi i32 [ 0, [[IF_FALSE]] ], [ [[SUB]], [[IF_TRUE]] ], [ [[SUB]], [[IF_TRUE]] ]
-; CHECK-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[MERGE_PHI]]
+; CHECK-NEXT:    [[SUM_NEXT:%.*]] = add i32 [[SUM]], [[MERGE_PHI]]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ne i32 [[SUM_NEXT]], [[LIMIT]]
-; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[DONE:%.*]]
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[BACKEDGE_LOOP_CRIT_EDGE:%.*]], label [[DONE:%.*]]
+; CHECK:       backedge.loop_crit_edge:
+; CHECK-NEXT:    unreachable
 ; CHECK:       done:
 ; CHECK-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi i32 [ [[SUM_NEXT]], [[BACKEDGE]] ]
 ; CHECK-NEXT:    ret i32 [[SUM_NEXT_LCSSA]]
