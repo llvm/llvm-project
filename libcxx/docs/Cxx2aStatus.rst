@@ -43,7 +43,7 @@ Paper Status
    .. [#note-P0600] P0600: The missing bits in P0600 are in |sect|\ [mem.res.class], |sect|\ [mem.poly.allocator.class], and |sect|\ [container.node.overview].
    .. [#note-P0966] P0966: It was previously erroneously marked as complete in version 8.0. See `bug 45368 <https://llvm.org/PR45368>`__.
 
-   .. [#note-P0619] P0619: Only ``std::allocator`` part is implemented.
+   .. [#note-P0619] P0619: Only sections D.9 and D.10 are implemented. Section D.8 is partly implemented. Sections D.4, D.7, D.11, D.12, and D.14 remain undone.
 
 
 .. _issues-status-cxx2a:
@@ -56,4 +56,4 @@ Library Working Group Issues Status
    :header-rows: 1
    :widths: auto
 
-Last Updated: 24-Nov-2020
+Last Updated: 24-May-2021
