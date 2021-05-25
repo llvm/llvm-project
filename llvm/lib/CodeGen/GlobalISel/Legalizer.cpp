@@ -230,7 +230,7 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
       }
 
       // Do the legalization for this instruction.
-      auto Res = Helper.legalizeInstrStep(MI);
+      auto Res = Helper.legalizeInstrStep(MI, LocObserver);
       // Error out if we couldn't legalize this instruction. We may want to
       // fall back to DAG ISel instead in the future.
       if (Res == LegalizerHelper::UnableToLegalize) {

@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
+#include "llvm/CodeGen/GlobalISel/LostDebugLocObserver.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -101,7 +102,8 @@ LegalizerHelper::LegalizerHelper(MachineFunction &MF, const LegalizerInfo &LI,
     TLI(*MF.getSubtarget().getTargetLowering()) { }
 
 LegalizerHelper::LegalizeResult
-LegalizerHelper::legalizeInstrStep(MachineInstr &MI) {
+LegalizerHelper::legalizeInstrStep(MachineInstr &MI,
+                                   LostDebugLocObserver &LocObserver) {
   LLVM_DEBUG(dbgs() << "Legalizing: " << MI);
 
   MIRBuilder.setInstrAndDebugLoc(MI);
@@ -116,7 +118,7 @@ LegalizerHelper::legalizeInstrStep(MachineInstr &MI) {
     return AlreadyLegal;
   case Libcall:
     LLVM_DEBUG(dbgs() << ".. Convert to libcall\n");
-    return libcall(MI);
+    return libcall(MI, LocObserver);
   case NarrowScalar:
     LLVM_DEBUG(dbgs() << ".. Narrow scalar\n");
     return narrowScalar(MI, Step.TypeIdx, Step.NewType);
@@ -562,7 +564,7 @@ simpleLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder, unsigned Size,
 
 LegalizerHelper::LegalizeResult
 llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
-                       MachineInstr &MI) {
+                       MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
 
   SmallVector<CallLowering::ArgInfo, 3> Args;
@@ -620,8 +622,13 @@ llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
   if (!CLI.lowerCall(MIRBuilder, Info))
     return LegalizerHelper::UnableToLegalize;
 
+
   if (Info.LoweredTailCall) {
     assert(Info.IsTailCall && "Lowered tail call when it wasn't a tail call?");
+
+    // Check debug locations before removing the return.
+    LocObserver.checkpoint(true);
+
     // We must have a return following the call (or debug insts) to get past
     // isLibCallInTailPosition.
     do {
@@ -632,6 +639,9 @@ llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
       // Delete the old return.
       Next->eraseFromParent();
     } while (MI.getNextNode());
+
+    // We expect to lose the debug location from the return.
+    LocObserver.checkpoint(false);
   }
 
   return LegalizerHelper::Legalized;
@@ -668,7 +678,7 @@ conversionLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder, Type *ToType,
 }
 
 LegalizerHelper::LegalizeResult
-LegalizerHelper::libcall(MachineInstr &MI) {
+LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   LLT LLTy = MRI.getType(MI.getOperand(0).getReg());
   unsigned Size = LLTy.getSizeInBits();
   auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
@@ -765,7 +775,7 @@ LegalizerHelper::libcall(MachineInstr &MI) {
   case TargetOpcode::G_MEMMOVE:
   case TargetOpcode::G_MEMSET: {
     LegalizeResult Result =
-        createMemLibcall(MIRBuilder, *MIRBuilder.getMRI(), MI);
+        createMemLibcall(MIRBuilder, *MIRBuilder.getMRI(), MI, LocObserver);
     if (Result != Legalized)
       return Result;
     MI.eraseFromParent();
