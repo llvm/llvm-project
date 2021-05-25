@@ -39,12 +39,12 @@ TEST(ScudoCommonTest, SKIP_ON_FUCHSIA(ResidentMemorySize)) {
       map(nullptr, Size, "ResidentMemorySize", 0, &Data));
   const ptrdiff_t N = Size / sizeof(*P);
   ASSERT_NE(nullptr, P);
-  EXPECT_EQ(std::count(P, P + N, 0), N);
   EXPECT_LT(getResidentMemorySize() - OnStart, Threshold);
+  EXPECT_EQ(std::count(P, P + N, 0), N);
 
   memset(P, 1, Size);
   EXPECT_EQ(std::count(P, P + N, 0), 0);
-  EXPECT_LT(getResidentMemorySize() - Size, Threshold);
+  EXPECT_GT(getResidentMemorySize() - OnStart, Size - Threshold);
 
   releasePagesToOS((uptr)P, 0, Size, &Data);
   EXPECT_EQ(std::count(P, P + N, 0), N);
@@ -53,7 +53,9 @@ TEST(ScudoCommonTest, SKIP_ON_FUCHSIA(ResidentMemorySize)) {
 
   memset(P, 1, Size);
   EXPECT_EQ(std::count(P, P + N, 0), 0);
-  EXPECT_LT(getResidentMemorySize() - Size, Threshold);
+  EXPECT_GT(getResidentMemorySize() - OnStart, Size - Threshold);
+
+  unmap(P, Size, 0, &Data);
 }
 
 } // namespace scudo
