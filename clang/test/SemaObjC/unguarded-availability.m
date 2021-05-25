@@ -125,6 +125,14 @@ void test_blocks() {
   (void) ^{
     func_10_12(); // expected-warning{{'func_10_12' is only available on macOS 10.12 or newer}} expected-note{{@available}}
   };
+
+  if (@available(macos 10.12, *))
+    (void) ^{
+      func_10_12();
+      (void) ^{
+        func_10_12();
+      };
+    };
 }
 
 void test_params(int_10_12 x); // expected-warning {{'int_10_12' is only available on macOS 10.12 or newer}} expected-note{{annotate 'test_params' with an availability attribute to silence this warning}}
@@ -233,6 +241,36 @@ void functionInFunction() {
   (void)(^ {
     func_10_12(); // expected-warning{{'func_10_12' is only available on macOS 10.12 or newer}} expected-note{{@available}}
   });
+
+  if (@available(macos 10.12, *)) {
+    void([]() {
+      func_10_12();
+      void([] () {
+        func_10_12();
+      });
+      struct DontWarn {
+        void f() {
+          func_10_12();
+        }
+      };
+    });
+  }
+
+  if (@available(macos 10.12, *)) {
+    struct DontWarn {
+      void f() {
+        func_10_12();
+        void([] () {
+          func_10_12();
+        });
+        struct DontWarn2 {
+          void f() {
+            func_10_12();
+          }
+        };
+      }
+    };
+  }
 }
 
 #endif
@@ -259,9 +297,14 @@ typedef enum { // expected-note{{annotate anonymous enum with an availability at
 @end
 
 void with_local_struct() {
-  struct local { // expected-note{{annotate 'local' with an availability attribute}}
-    new_int x; // expected-warning{{'new_int' is only available}}
+  struct local { 
+    new_int x; // expected-warning{{'new_int' is only available}} expected-note{{enclose 'new_int' in an @available check}}
   };
+  if (@available(macos 10.12, *)) {
+    struct DontWarn {
+      new_int x;
+    };
+  }
 }
 
 // rdar://33156429:
