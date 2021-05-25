@@ -447,7 +447,7 @@ def UASW_NM : UnalignedStore<"uasw", NMUnalignedSW>;
 }
 
 // Any-extending loads
-def : Pat<(i32 (extloadi8 addr:$addr)),
-          (LBU_NM addr:$addr)>, ISA_NANOMIPS;
-def : Pat<(i32 (extloadi16 addr:$addr)),
-          (LHU_NM addr:$addr)>, ISA_NANOMIPS;
+def : Pat<(i32 (extloadi8 addrimm12:$addr)),
+          (LBU_NM addrimm12:$addr)>, ISA_NANOMIPS;
+def : Pat<(i32 (extloadi16 addrimm12:$addr)),
+          (LHU_NM addrimm12:$addr)>, ISA_NANOMIPS;
