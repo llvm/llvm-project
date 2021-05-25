@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "SyntheticSections.h"
+#include "ConcatOutputSection.h"
 #include "Config.h"
 #include "ExportTrie.h"
 #include "InputFiles.h"
 #include "MachOStructs.h"
-#include "MergedOutputSection.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
 #include "Symbols.h"

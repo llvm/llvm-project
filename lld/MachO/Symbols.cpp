@@ -40,7 +40,7 @@ uint64_t Defined::getVA() const {
     // the address of a function that has not yet been finalized.
     assert(target->usesThunks());
 
-    // MergedOutputSection::finalize() can seek the address of a
+    // ConcatOutputSection::finalize() can seek the address of a
     // function before its address is assigned. The thunking algorithm
     // knows that unfinalized functions will be out of range, so it is
     // expedient to return a contrived out-of-range address.

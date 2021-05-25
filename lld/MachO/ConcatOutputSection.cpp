@@ -1,4 +1,4 @@
-//===- OutputSection.cpp --------------------------------------------------===//
+//===- ConcatOutputSection.cpp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MergedOutputSection.h"
+#include "ConcatOutputSection.h"
 #include "Config.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
@@ -25,7 +25,7 @@ using namespace llvm::MachO;
 using namespace lld;
 using namespace lld::macho;
 
-void MergedOutputSection::mergeInput(InputSection *input) {
+void ConcatOutputSection::addInput(InputSection *input) {
   if (inputs.empty()) {
     align = input->align;
     flags = input->flags;
@@ -119,7 +119,7 @@ DenseMap<Symbol *, ThunkInfo> lld::macho::thunkMap;
 // instructions, whereas CISC (i.e., x86) generally doesn't. RISC only needs
 // thunks for programs so large that branch source & destination addresses
 // might differ more than the range of branch instruction(s).
-bool MergedOutputSection::needsThunks() const {
+bool ConcatOutputSection::needsThunks() const {
   if (!target->usesThunks())
     return false;
   uint64_t isecAddr = addr;
@@ -135,7 +135,7 @@ bool MergedOutputSection::needsThunks() const {
       auto *sym = r.referent.get<Symbol *>();
       // Pre-populate the thunkMap and memoize call site counts for every
       // InputSection and ThunkInfo. We do this for the benefit of
-      // MergedOutputSection::estimateStubsInRangeVA()
+      // ConcatOutputSection::estimateStubsInRangeVA()
       ThunkInfo &thunkInfo = thunkMap[sym];
       // Knowing ThunkInfo call site count will help us know whether or not we
       // might need to create more for this referent at the time we are
@@ -151,7 +151,7 @@ bool MergedOutputSection::needsThunks() const {
 
 // Since __stubs is placed after __text, we must estimate the address
 // beyond which stubs are within range of a simple forward branch.
-uint64_t MergedOutputSection::estimateStubsInRangeVA(size_t callIdx) const {
+uint64_t ConcatOutputSection::estimateStubsInRangeVA(size_t callIdx) const {
   uint64_t branchRange = target->branchRange;
   size_t endIdx = inputs.size();
   InputSection *isec = inputs[callIdx];
@@ -185,7 +185,7 @@ uint64_t MergedOutputSection::estimateStubsInRangeVA(size_t callIdx) const {
   return stubsInRangeVA;
 }
 
-void MergedOutputSection::finalize() {
+void ConcatOutputSection::finalize() {
   uint64_t isecAddr = addr;
   uint64_t isecFileOff = fileOff;
   auto finalizeOne = [&](InputSection *isec) {
@@ -317,7 +317,7 @@ void MergedOutputSection::finalize() {
       ", thunks = " + std::to_string(thunkCount));
 }
 
-void MergedOutputSection::writeTo(uint8_t *buf) const {
+void ConcatOutputSection::writeTo(uint8_t *buf) const {
   // Merge input sections from thunk & ordinary vectors
   size_t i = 0, ie = inputs.size();
   size_t t = 0, te = thunks.size();
@@ -337,7 +337,7 @@ void MergedOutputSection::writeTo(uint8_t *buf) const {
 // TODO: this is most likely wrong; reconsider how section flags
 // are actually merged. The logic presented here was written without
 // any form of informed research.
-void MergedOutputSection::mergeFlags(InputSection *input) {
+void ConcatOutputSection::mergeFlags(InputSection *input) {
   uint8_t baseType = flags & SECTION_TYPE;
   uint8_t inputType = input->flags & SECTION_TYPE;
   if (baseType != inputType)

@@ -296,7 +296,7 @@ public:
   // have a corresponding entry in the LazyPointerSection.
   bool addEntry(Symbol *);
   uint64_t getVA(uint32_t stubsIndex) const {
-    // MergedOutputSection::finalize() can seek the address of a
+    // ConcatOutputSection::finalize() can seek the address of a
     // stub before its address is assigned. Before __stubs is
     // finalized, return a contrived out-of-range address.
     return isFinal ? addr + stubsIndex * target->stubSize

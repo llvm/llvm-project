@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "Writer.h"
+#include "ConcatOutputSection.h"
 #include "Config.h"
 #include "InputFiles.h"
 #include "InputSection.h"
 #include "MapFile.h"
-#include "MergedOutputSection.h"
 #include "OutputSection.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
@@ -852,7 +852,7 @@ static void sortSegmentsAndSections() {
         firstTLVDataSection = osec;
 
       if (!isecPriorities.empty()) {
-        if (auto *merged = dyn_cast<MergedOutputSection>(osec)) {
+        if (auto *merged = dyn_cast<ConcatOutputSection>(osec)) {
           llvm::stable_sort(merged->inputs,
                             [&](InputSection *a, InputSection *b) {
                               return isecPriorities[a] > isecPriorities[b];
@@ -897,21 +897,21 @@ template <class LP> void Writer::createOutputSections() {
     llvm_unreachable("unhandled output file type");
   }
 
-  // Then merge input sections into output sections.
-  MapVector<NamePair, MergedOutputSection *> mergedOutputSections;
+  // Then add input sections to output sections.
+  MapVector<NamePair, ConcatOutputSection *> concatOutputSections;
   for (InputSection *isec : inputSections) {
     if (isec->shouldOmitFromOutput())
       continue;
     NamePair names = maybeRenameSection({isec->segname, isec->name});
-    MergedOutputSection *&osec = mergedOutputSections[names];
+    ConcatOutputSection *&osec = concatOutputSections[names];
     if (osec == nullptr)
-      osec = make<MergedOutputSection>(names.second);
-    osec->mergeInput(isec);
+      osec = make<ConcatOutputSection>(names.second);
+    osec->addInput(isec);
   }
 
-  for (const auto &it : mergedOutputSections) {
+  for (const auto &it : concatOutputSections) {
     StringRef segname = it.first.first;
-    MergedOutputSection *osec = it.second;
+    ConcatOutputSection *osec = it.second;
     if (segname == segment_names::ld) {
       assert(osec->name == section_names::compactUnwind);
       in.unwindInfo->setCompactUnwindSection(osec);
@@ -921,8 +921,8 @@ template <class LP> void Writer::createOutputSections() {
   }
 
   for (SyntheticSection *ssec : syntheticSections) {
-    auto it = mergedOutputSections.find({ssec->segname, ssec->name});
-    if (it == mergedOutputSections.end()) {
+    auto it = concatOutputSections.find({ssec->segname, ssec->name});
+    if (it == concatOutputSections.end()) {
       if (ssec->isNeeded())
         getOrCreateOutputSegment(ssec->segname)->addOutputSection(ssec);
     } else {
