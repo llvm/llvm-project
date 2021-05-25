@@ -910,7 +910,6 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
   // Replace extracts with narrow scalar loads.
   for (User *U : LI->users()) {
     auto *EI = cast<ExtractElementInst>(U);
-    IRBuilder<>::InsertPointGuard Guard(Builder);
     Builder.SetInsertPoint(EI);
     Value *GEP = Builder.CreateInBoundsGEP(
         FixedVT, Ptr, {Builder.getInt32(0), EI->getOperand(1)});
