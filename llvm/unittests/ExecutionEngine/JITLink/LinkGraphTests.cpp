@@ -153,10 +153,12 @@ TEST(LinkGraphTest, ContentAccessAndUpdate) {
       << "Unexpected block content size";
 
   // Expect that attempting to get already-mutable content fails if the
-  // content is not yet mutable.
+  // content is not yet mutable (debug builds only).
+#ifndef NDEBUG
   EXPECT_DEATH({ (void)B.getAlreadyMutableContent(); },
                "Content is not mutable")
       << "Unexpected mutable access allowed to immutable data";
+#endif
 
   // Check that mutable content is copied on request as expected.
   auto MutableContent = B.getMutableContent(G);
