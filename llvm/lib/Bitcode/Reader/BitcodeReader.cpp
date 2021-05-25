@@ -5251,9 +5251,11 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         if (popValue(Record, OpNum, NextValueNo,
                      getPointerElementFlatType(FullTy), Val))
           return error("Invalid record");
+        FullTy = getPointerElementFlatType(FullTy);
       } else {
         if (getValueTypePair(Record, OpNum, NextValueNo, Val))
           return error("Invalid record");
+        FullTy = Val->getType();
       }
 
       if (!(NumRecords == (OpNum + 4) || NumRecords == (OpNum + 5)))
@@ -5286,7 +5288,6 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
             Align(TheModule->getDataLayout().getTypeStoreSize(Val->getType()));
 
       I = new AtomicRMWInst(Operation, Ptr, Val, *Alignment, Ordering, SSID);
-      FullTy = getPointerElementFlatType(FullTy);
       cast<AtomicRMWInst>(I)->setVolatile(IsVol);
 
       InstructionList.push_back(I);
