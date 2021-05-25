@@ -16,7 +16,6 @@
 #include "OutputSegment.h"
 #include "Target.h"
 
-#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -514,9 +513,6 @@ private:
   llvm::SmallString<261> xarPath;
   uint64_t xarSize;
 };
-
-static_assert((CodeSignatureSection::blobHeadersSize % 8) == 0, "");
-static_assert((CodeSignatureSection::fixedHeadersSize % 8) == 0, "");
 
 struct InStruct {
   MachHeaderSection *header = nullptr;

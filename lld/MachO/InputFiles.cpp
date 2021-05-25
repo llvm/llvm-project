@@ -188,7 +188,6 @@ static bool checkCompatibility(const InputFile *input) {
 
 // Open a given file path and return it as a memory-mapped file.
 Optional<MemoryBufferRef> macho::readFile(StringRef path) {
-  // Open a file.
   ErrorOr<std::unique_ptr<MemoryBuffer>> mbOrErr = MemoryBuffer::getFile(path);
   if (std::error_code ec = mbOrErr.getError()) {
     error("cannot open " + path + ": " + ec.message());
@@ -209,10 +208,9 @@ Optional<MemoryBufferRef> macho::readFile(StringRef path) {
     return mbref;
   }
 
-  // Object files and archive files may be fat files, which contains
-  // multiple real files for different CPU ISAs. Here, we search for a
-  // file that matches with the current link target and returns it as
-  // a MemoryBufferRef.
+  // Object files and archive files may be fat files, which contain multiple
+  // real files for different CPU ISAs. Here, we search for a file that matches
+  // with the current link target and returns it as a MemoryBufferRef.
   const auto *arch = reinterpret_cast<const fat_arch *>(buf + sizeof(*hdr));
 
   for (uint32_t i = 0, n = read32be(&hdr->nfat_arch); i < n; ++i) {
