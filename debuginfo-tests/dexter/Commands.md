@@ -9,6 +9,7 @@
 * [DexLimitSteps](Commands.md#DexLimitSteps)
 * [DexLabel](Commands.md#DexLabel)
 * [DexWatch](Commands.md#DexWatch)
+* [DexDeclareFile](Commands.md#DexDeclareFile)
 
 ---
 ## DexExpectProgramState
@@ -231,6 +232,23 @@ arithmetic operators to get offsets from labels:
 ### Heuristic
 This command does not contribute to the heuristic score.
 
+----
+## DexDeclareFile
+    DexDeclareFile(declared_file)
+
+    Args:
+        name (str): A declared file path for which all subsequent commands
+          will have their path attribute set too.
+
+### Description
+Set the path attribute of all commands from this point in the test onwards.
+The new path holds until the end of the test file or until a new DexDeclareFile
+command is encountered. Used in conjunction with .dex files, DexDeclareFile can
+be used to write your dexter commands in a separate test file avoiding inlined
+Dexter commands mixed with test source.
+
+### Heuristic
+This command does not contribute to the heuristic score.
 
 ---
 ## DexWatch
