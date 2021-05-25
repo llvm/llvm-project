@@ -12,12 +12,13 @@ Python code being embedded within DExTer commands.
 import os
 import unittest
 from copy import copy
-
+from pathlib import PurePath
 from collections import defaultdict, OrderedDict
 
 from dex.utils.Exceptions import CommandParseError
 
 from dex.command.CommandBase import CommandBase
+from dex.command.commands.DexDeclareFile import DexDeclareFile
 from dex.command.commands.DexExpectProgramState import DexExpectProgramState
 from dex.command.commands.DexExpectStepKind import DexExpectStepKind
 from dex.command.commands.DexExpectStepOrder import DexExpectStepOrder
@@ -37,6 +38,7 @@ def _get_valid_commands():
         { name (str): command (class) }
     """
     return {
+      DexDeclareFile.get_name() : DexDeclareFile,
       DexExpectProgramState.get_name() : DexExpectProgramState,
       DexExpectStepKind.get_name() : DexExpectStepKind,
       DexExpectStepOrder.get_name() : DexExpectStepOrder,
@@ -209,6 +211,8 @@ def add_line_label(labels, label, cmd_path, cmd_lineno):
 
 def _find_all_commands_in_file(path, file_lines, valid_commands):
     labels = {} # dict of {name: line}.
+    cmd_path = path
+    declared_files = set()
     commands = defaultdict(dict)
     paren_balance = 0
     region_start = TextPoint(0, 0)
@@ -253,7 +257,7 @@ def _find_all_commands_in_file(path, file_lines, valid_commands):
                     valid_commands[command_name],
                     labels,
                     raw_text,
-                    path,
+                    cmd_path,
                     cmd_point.get_lineno(),
                 )
             except SyntaxError as e:
@@ -271,6 +275,14 @@ def _find_all_commands_in_file(path, file_lines, valid_commands):
             else:
                 if type(command) is DexLabel:
                     add_line_label(labels, command, path, cmd_point.get_lineno())
+                elif type(command) is DexDeclareFile:
+                    cmd_path = command.declared_file
+                    if not os.path.isabs(cmd_path):
+                        source_dir = os.path.dirname(path)
+                        cmd_path = os.path.join(source_dir, cmd_path)
+                    # TODO: keep stored paths as PurePaths for 'longer'.
+                    cmd_path = str(PurePath(cmd_path))
+                    declared_files.add(cmd_path)
                 assert (path, cmd_point) not in commands[command_name], (
                     command_name, commands[command_name])
                 commands[command_name][path, cmd_point] = command
@@ -281,32 +293,34 @@ def _find_all_commands_in_file(path, file_lines, valid_commands):
         err_point.char += len(command_name)
         msg = "Unbalanced parenthesis starting here"
         raise format_parse_err(msg, path, file_lines, err_point)
-    return dict(commands)
+    return dict(commands), declared_files
 
-def _find_all_commands(source_files):
+def _find_all_commands(test_files):
     commands = defaultdict(dict)
     valid_commands = _get_valid_commands()
-    for source_file in source_files:
-        with open(source_file) as fp:
+    new_source_files = set()
+    for test_file in test_files:
+        with open(test_file) as fp:
             lines = fp.readlines()
-        file_commands = _find_all_commands_in_file(source_file, lines,
-                                                   valid_commands)
+        file_commands, declared_files = _find_all_commands_in_file(test_file,
+                                                  lines, valid_commands)
         for command_name in file_commands:
             commands[command_name].update(file_commands[command_name])
+        new_source_files |= declared_files
 
-    return dict(commands)
+    return dict(commands), new_source_files
 
-def get_command_infos(source_files):
+def get_command_infos(test_files):
   with Timer('parsing commands'):
       try:
-          commands = _find_all_commands(source_files)
+          commands, new_source_files = _find_all_commands(test_files)
           command_infos = OrderedDict()
           for command_type in commands:
               for command in commands[command_type].values():
                   if command_type not in command_infos:
                       command_infos[command_type] = []
                   command_infos[command_type].append(command)
-          return OrderedDict(command_infos)
+          return OrderedDict(command_infos), new_source_files
       except CommandParseError as e:
           msg = 'parser error: <d>{}({}):</> {}\n{}\n{}\n'.format(
                 e.filename, e.lineno, e.info, e.src, e.caret)
@@ -344,7 +358,8 @@ class TestParseCommand(unittest.TestCase):
         Returns:
             { cmd_name: { (path, line): command_obj } }
         """
-        return _find_all_commands_in_file(__file__, lines, self.valid_commands)
+        cmds, declared_files = _find_all_commands_in_file(__file__, lines, self.valid_commands)
+        return cmds
 
 
     def _find_all_mock_values_in_lines(self, lines):

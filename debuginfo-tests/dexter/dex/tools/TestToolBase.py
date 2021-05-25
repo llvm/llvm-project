@@ -100,26 +100,38 @@ class TestToolBase(ToolBase):
         options.executable = os.path.join(
             self.context.working_directory.path, 'tmp.exe')
 
+        # Test files contain dexter commands.
+        options.test_files = []
+        # Source files are to be compiled by the builder script and may also
+        # contains dexter commands.
+        options.source_files = []
         if os.path.isdir(options.test_path):
-
             subdirs = sorted([
                 r for r, _, f in os.walk(options.test_path)
                 if 'test.cfg' in f
             ])
 
             for subdir in subdirs:
-
-                # TODO: read file extensions from the test.cfg file instead so
-                # that this isn't just limited to C and C++.
-                options.source_files = [
-                    os.path.normcase(os.path.join(subdir, f))
-                    for f in os.listdir(subdir) if any(
-                        f.endswith(ext) for ext in ['.c', '.cpp'])
-                ]
+                for f in os.listdir(subdir):
+                    # TODO: read file extensions from the test.cfg file instead so
+                    # that this isn't just limited to C and C++.
+                    file_path = os.path.normcase(os.path.join(subdir, f))
+                    if f.endswith('.cpp'):
+                        options.source_files.append(file_path)
+                    elif f.endswith('.c'):
+                        options.source_files.append(file_path)
+                    elif f.endswith('.dex'):
+                        options.test_files.append(file_path)
+                # Source files can contain dexter commands too.
+                options.test_files = options.test_files + options.source_files
 
                 self._run_test(self._get_test_name(subdir))
         else:
-            options.source_files = [options.test_path]
+            # We're dealing with a direct file path to a test file. If the file is non
+            # .dex, then it must be a source file.
+            if not options.test_path.endswith('.dex'):
+                options.source_files = [options.test_path]
+            options.test_files = [options.test_path]
             self._run_test(self._get_test_name(options.test_path))
 
         return self._handle_results()

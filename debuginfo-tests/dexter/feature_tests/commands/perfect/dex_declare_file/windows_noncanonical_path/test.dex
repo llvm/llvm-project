@@ -1,0 +1,17 @@
+# Purpose:
+#    Check that non-canonical paths resolve correctly on Windows.
+#
+# REQUIRES: system-windows
+#
+# RUN: %clang "%S/source/test file.cpp" -O0 -g -o %t
+# RUN: %dexter_regression_test --binary %t %s | FileCheck %s
+# CHECK: test.dex
+#
+# ./source/test file.cpp
+# 1 int main(const int argc, const char * argv[]) {
+# 2 int result = argc;
+# 3 return result;
+# 4 }
+
+DexDeclareFile('./sOuRce\\test filE.cpp')
+DexExpectWatchValue('result', 1, on_line=3)
