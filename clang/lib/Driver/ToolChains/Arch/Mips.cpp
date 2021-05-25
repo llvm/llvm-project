@@ -57,8 +57,8 @@ void mips::getMipsCPUAndABI(const ArgList &Args, const llvm::Triple &Triple,
   }
 
   if (Triple.isNanoMips()) {
-    DefMips32CPU = "nms1";
-    CPUName = "nms1";
+    DefMips32CPU = "i7200";
+    CPUName = "i7200";
     if (ABIName.empty()) {
       ABIName = "p32";
     }
