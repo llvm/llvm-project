@@ -8,15 +8,16 @@
 ; MIR-DAG: ![[SET1:[0-9]+]] = !{![[SCOPE1]]}
 
 ; MIR-LABEL: name: test_memcpy
-; MIR:      %2:fpr128 = LDRQui %0, 1 :: (load 16 from %ir.p1, align 4)
-; MIR-NEXT: STRQui killed %2, %0, 0 :: (store 16 into %ir.p0, align 4)
+; MIR:      %2:fpr128 = LDRQui %0, 1 :: (load 16 from %ir.p1, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: STRQui killed %2, %0, 0 :: (store 16 into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
 define i32 @test_memcpy(i32* nocapture %p, i32* nocapture readonly %q) {
 ; CHECK-LABEL: test_memcpy:
-; CHECK:    ldr [[PVAL:q[0-9]+]], [x0, #16]
-; CHECK:    str [[PVAL]], [x0]
-; CHECK:    ldp [[Q0:w[0-9]+]], [[Q1:w[0-9]+]], [x1]
-; CHECK:    add w0, [[Q0]], [[Q1]]
-; CHECK:    ret
+; CHECK-DAG:    ldp [[Q0:w[0-9]+]], [[Q1:w[0-9]+]], [x1]
+; CHECK-DAG:    ldr [[PVAL:q[0-9]+]], [x0, #16]
+; CHECK-DAG:    add w8, [[Q0]], [[Q1]]
+; CHECK:        str [[PVAL]], [x0]
+; CHECK:        mov w0, w8
+; CHECK:        ret
   %p0 = bitcast i32* %p to i8*
   %add.ptr = getelementptr inbounds i32, i32* %p, i64 4
   %p1 = bitcast i32* %add.ptr to i8*
@@ -29,15 +30,16 @@ define i32 @test_memcpy(i32* nocapture %p, i32* nocapture readonly %q) {
 }
 
 ; MIR-LABEL: name: test_memcpy_inline
-; MIR:      %2:fpr128 = LDRQui %0, 1 :: (load 16 from %ir.p1, align 4)
-; MIR-NEXT: STRQui killed %2, %0, 0 :: (store 16 into %ir.p0, align 4)
+; MIR:      %2:fpr128 = LDRQui %0, 1 :: (load 16 from %ir.p1, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: STRQui killed %2, %0, 0 :: (store 16 into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
 define i32 @test_memcpy_inline(i32* nocapture %p, i32* nocapture readonly %q) {
 ; CHECK-LABEL: test_memcpy_inline:
-; CHECK:    ldr [[PVAL:q[0-9]+]], [x0, #16]
-; CHECK:    str [[PVAL]], [x0]
-; CHECK:    ldp [[Q0:w[0-9]+]], [[Q1:w[0-9]+]], [x1]
-; CHECK:    add w0, [[Q0]], [[Q1]]
-; CHECK:    ret
+; CHECK-DAG:    ldp [[Q0:w[0-9]+]], [[Q1:w[0-9]+]], [x1]
+; CHECK-DAG:    ldr [[PVAL:q[0-9]+]], [x0, #16]
+; CHECK-DAG:    add w8, [[Q0]], [[Q1]]
+; CHECK:        str [[PVAL]], [x0]
+; CHECK:        mov w0, w8
+; CHECK:        ret
   %p0 = bitcast i32* %p to i8*
   %add.ptr = getelementptr inbounds i32, i32* %p, i64 4
   %p1 = bitcast i32* %add.ptr to i8*
@@ -50,15 +52,16 @@ define i32 @test_memcpy_inline(i32* nocapture %p, i32* nocapture readonly %q) {
 }
 
 ; MIR-LABEL: name: test_memmove
-; MIR:      %2:fpr128 = LDRQui %0, 1 :: (load 16 from %ir.p1, align 4)
-; MIR-NEXT: STRQui killed %2, %0, 0 :: (store 16 into %ir.p0, align 4)
+; MIR:      %2:fpr128 = LDRQui %0, 1 :: (load 16 from %ir.p1, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: STRQui killed %2, %0, 0 :: (store 16 into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
 define i32 @test_memmove(i32* nocapture %p, i32* nocapture readonly %q) {
 ; CHECK-LABEL: test_memmove:
-; CHECK:    ldr [[PVAL:q[0-9]+]], [x0, #16]
-; CHECK:    str [[PVAL]], [x0]
-; CHECK:    ldp [[Q0:w[0-9]+]], [[Q1:w[0-9]+]], [x1]
-; CHECK:    add w0, [[Q0]], [[Q1]]
-; CHECK:    ret
+; CHECK-DAG:    ldp [[Q0:w[0-9]+]], [[Q1:w[0-9]+]], [x1]
+; CHECK-DAG:    ldr [[PVAL:q[0-9]+]], [x0, #16]
+; CHECK-DAG:    add w8, [[Q0]], [[Q1]]
+; CHECK:        str [[PVAL]], [x0]
+; CHECK:        mov w0, w8
+; CHECK:        ret
   %p0 = bitcast i32* %p to i8*
   %add.ptr = getelementptr inbounds i32, i32* %p, i64 4
   %p1 = bitcast i32* %add.ptr to i8*
@@ -72,15 +75,16 @@ define i32 @test_memmove(i32* nocapture %p, i32* nocapture readonly %q) {
 
 ; MIR-LABEL: name: test_memset
 ; MIR:      %2:gpr64 = MOVi64imm -6148914691236517206
-; MIR-NEXT: STRXui %2, %0, 1 :: (store 8 into %ir.p0 + 8, align 4)
-; MIR-NEXT: STRXui %2, %0, 0 :: (store 8 into %ir.p0, align 4)
+; MIR-NEXT: STRXui %2, %0, 1 :: (store 8 into %ir.p0 + 8, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: STRXui %2, %0, 0 :: (store 8 into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
 define i32 @test_memset(i32* nocapture %p, i32* nocapture readonly %q) {
 ; CHECK-LABEL: test_memset:
-; CHECK:    mov [[PVAL:x[0-9]+]], #-6148914691236517206
-; CHECK:    stp [[PVAL]], [[PVAL]], [x0]
-; CHECK:    ldp [[Q0:w[0-9]+]], [[Q1:w[0-9]+]], [x1]
-; CHECK:    add w0, [[Q0]], [[Q1]]
-; CHECK:    ret
+; CHECK-DAG:    ldp [[Q0:w[0-9]+]], [[Q1:w[0-9]+]], [x1]
+; CHECK-DAG:    mov [[PVAL:x[0-9]+]], #-6148914691236517206
+; CHECK:        stp [[PVAL]], [[PVAL]], [x0]
+; CHECK:        add w8, [[Q0]], [[Q1]]
+; CHECK:        mov w0, w8
+; CHECK:        ret
   %p0 = bitcast i32* %p to i8*
   tail call void @llvm.memset.p0i8.i64(i8* noundef nonnull align 4 dereferenceable(16) %p0, i8 170, i64 16, i1 false), !alias.scope !2, !noalias !4
   %v0 = load i32, i32* %q, align 4, !alias.scope !4, !noalias !2
@@ -91,15 +95,16 @@ define i32 @test_memset(i32* nocapture %p, i32* nocapture readonly %q) {
 }
 
 ; MIR-LABEL: name: test_mempcpy
-; MIR:      %2:fpr128 = LDRQui %0, 1 :: (load 16 from %ir.p1, align 1)
-; MIR-NEXT: STRQui killed %2, %0, 0 :: (store 16 into %ir.p0, align 1)
+; MIR:      %2:fpr128 = LDRQui %0, 1 :: (load 16 from %ir.p1, align 1, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: STRQui killed %2, %0, 0 :: (store 16 into %ir.p0, align 1, !alias.scope ![[SET0]], !noalias ![[SET1]])
 define i32 @test_mempcpy(i32* nocapture %p, i32* nocapture readonly %q) {
 ; CHECK-LABEL: test_mempcpy:
-; CHECK:    ldr [[PVAL:q[0-9]+]], [x0, #16]
-; CHECK:    str [[PVAL]], [x0]
-; CHECK:    ldp [[Q0:w[0-9]+]], [[Q1:w[0-9]+]], [x1]
-; CHECK:    add w0, [[Q0]], [[Q1]]
-; CHECK:    ret
+; CHECK-DAG:    ldp [[Q0:w[0-9]+]], [[Q1:w[0-9]+]], [x1]
+; CHECK-DAG:    ldr [[PVAL:q[0-9]+]], [x0, #16]
+; CHECK-DAG:    add w8, [[Q0]], [[Q1]]
+; CHECK:        str [[PVAL]], [x0]
+; CHECK:        mov w0, w8
+; CHECK:        ret
   %p0 = bitcast i32* %p to i8*
   %add.ptr = getelementptr inbounds i32, i32* %p, i64 4
   %p1 = bitcast i32* %add.ptr to i8*
