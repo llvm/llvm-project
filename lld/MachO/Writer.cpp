@@ -765,7 +765,7 @@ static int segmentOrder(OutputSegment *seg) {
       // Make sure __LINKEDIT is the last segment (i.e. all its hidden
       // sections must be ordered after other sections).
       .Case(segment_names::linkEdit, std::numeric_limits<int>::max())
-      .Default(0);
+      .Default(seg->inputOrder);
 }
 
 static int sectionOrder(OutputSection *osec) {
@@ -779,7 +779,7 @@ static int sectionOrder(OutputSection *osec) {
         .Case(section_names::stubHelper, -1)
         .Case(section_names::unwindInfo, std::numeric_limits<int>::max() - 1)
         .Case(section_names::ehFrame, std::numeric_limits<int>::max())
-        .Default(0);
+        .Default(osec->inputOrder);
   } else if (segname == segment_names::data ||
              segname == segment_names::dataConst) {
     // For each thread spawned, dyld will initialize its TLVs by copying the
@@ -798,9 +798,10 @@ static int sectionOrder(OutputSection *osec) {
       return std::numeric_limits<int>::max();
     default:
       return StringSwitch<int>(osec->name)
+          .Case(section_names::got, -3)
           .Case(section_names::lazySymbolPtr, -2)
-          .Case(section_names::data, -1)
-          .Default(0);
+          .Case(section_names::const_, -1)
+          .Default(osec->inputOrder);
     }
   } else if (segname == segment_names::linkEdit) {
     return StringSwitch<int>(osec->name)
@@ -814,13 +815,13 @@ static int sectionOrder(OutputSection *osec) {
         .Case(section_names::indirectSymbolTable, -2)
         .Case(section_names::stringTable, -1)
         .Case(section_names::codeSignature, std::numeric_limits<int>::max())
-        .Default(0);
+        .Default(osec->inputOrder);
   }
   // ZeroFill sections must always be the at the end of their segments,
   // otherwise subsequent sections may get overwritten with zeroes at runtime.
   if (sectionType(osec->flags) == S_ZEROFILL)
     return std::numeric_limits<int>::max();
-  return 0;
+  return osec->inputOrder;
 }
 
 template <typename T, typename F>
@@ -834,8 +835,7 @@ static std::function<bool(T, T)> compareByOrder(F ord) {
 static void sortSegmentsAndSections() {
   TimeTraceScope timeScope("Sort segments and sections");
 
-  llvm::stable_sort(outputSegments,
-                    compareByOrder<OutputSegment *>(segmentOrder));
+  llvm::sort(outputSegments, compareByOrder<OutputSegment *>(segmentOrder));
 
   DenseMap<const InputSection *, size_t> isecPriorities =
       buildInputSectionPriorities();
@@ -898,14 +898,17 @@ template <class LP> void Writer::createOutputSections() {
   }
 
   // Then add input sections to output sections.
-  MapVector<NamePair, ConcatOutputSection *> concatOutputSections;
-  for (InputSection *isec : inputSections) {
+  DenseMap<NamePair, ConcatOutputSection *> concatOutputSections;
+  for (const auto &p : enumerate(inputSections)) {
+    InputSection *isec = p.value();
     if (isec->shouldOmitFromOutput())
       continue;
     NamePair names = maybeRenameSection({isec->segname, isec->name});
     ConcatOutputSection *&osec = concatOutputSections[names];
-    if (osec == nullptr)
+    if (osec == nullptr) {
       osec = make<ConcatOutputSection>(names.second);
+      osec->inputOrder = p.index();
+    }
     osec->addInput(isec);
   }
 

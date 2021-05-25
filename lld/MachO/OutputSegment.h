@@ -12,6 +12,8 @@
 #include "OutputSection.h"
 #include "lld/Common/LLVM.h"
 
+#include <limits>
+
 namespace lld {
 namespace macho {
 
@@ -42,7 +44,7 @@ public:
   void addOutputSection(OutputSection *os);
   void sortOutputSections(
       llvm::function_ref<bool(OutputSection *, OutputSection *)> comparator) {
-    llvm::stable_sort(sections, comparator);
+    llvm::sort(sections, comparator);
   }
 
   const std::vector<OutputSection *> &getSections() const { return sections; }
@@ -51,6 +53,7 @@ public:
   uint64_t fileOff = 0;
   uint64_t fileSize = 0;
   uint64_t vmSize = 0;
+  int inputOrder = std::numeric_limits<int>::max();
   StringRef name;
   uint32_t maxProt = 0;
   uint32_t initProt = 0;

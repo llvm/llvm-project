@@ -50,6 +50,8 @@ size_t OutputSegment::numNonHiddenSections() const {
 }
 
 void OutputSegment::addOutputSection(OutputSection *osec) {
+  inputOrder = std::min(inputOrder, osec->inputOrder);
+
   osec->parent = this;
   sections.push_back(osec);
 
