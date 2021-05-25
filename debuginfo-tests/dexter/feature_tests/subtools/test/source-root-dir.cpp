@@ -4,7 +4,7 @@
 // RUN: %dexter --fail-lt 1.0 -w \
 // RUN:     --builder 'clang' --debugger 'lldb' \
 // RUN:     --cflags "-O0 -glldb -fdebug-prefix-map=%S=/changed" \
-// RUN:     --source-root-dir=%S -- %s
+// RUN:     --source-root-dir=%S --debugger-use-relative-paths -- %s
 
 #include <stdio.h>
 int main() {

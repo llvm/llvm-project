@@ -209,7 +209,7 @@ def add_line_label(labels, label, cmd_path, cmd_lineno):
     labels[label.eval()] = label.get_line()
 
 
-def _find_all_commands_in_file(path, file_lines, valid_commands):
+def _find_all_commands_in_file(path, file_lines, valid_commands, source_root_dir):
     labels = {} # dict of {name: line}.
     cmd_path = path
     declared_files = set()
@@ -278,7 +278,8 @@ def _find_all_commands_in_file(path, file_lines, valid_commands):
                 elif type(command) is DexDeclareFile:
                     cmd_path = command.declared_file
                     if not os.path.isabs(cmd_path):
-                        source_dir = os.path.dirname(path)
+                        source_dir = (source_root_dir if source_root_dir else
+                                      os.path.dirname(path))
                         cmd_path = os.path.join(source_dir, cmd_path)
                     # TODO: keep stored paths as PurePaths for 'longer'.
                     cmd_path = str(PurePath(cmd_path))
@@ -295,25 +296,25 @@ def _find_all_commands_in_file(path, file_lines, valid_commands):
         raise format_parse_err(msg, path, file_lines, err_point)
     return dict(commands), declared_files
 
-def _find_all_commands(test_files):
+def _find_all_commands(test_files, source_root_dir):
     commands = defaultdict(dict)
     valid_commands = _get_valid_commands()
     new_source_files = set()
     for test_file in test_files:
         with open(test_file) as fp:
             lines = fp.readlines()
-        file_commands, declared_files = _find_all_commands_in_file(test_file,
-                                                  lines, valid_commands)
+        file_commands, declared_files = _find_all_commands_in_file(
+            test_file, lines, valid_commands, source_root_dir)
         for command_name in file_commands:
             commands[command_name].update(file_commands[command_name])
         new_source_files |= declared_files
 
     return dict(commands), new_source_files
 
-def get_command_infos(test_files):
+def get_command_infos(test_files, source_root_dir):
   with Timer('parsing commands'):
       try:
-          commands, new_source_files = _find_all_commands(test_files)
+          commands, new_source_files = _find_all_commands(test_files, source_root_dir)
           command_infos = OrderedDict()
           for command_type in commands:
               for command in commands[command_type].values():
@@ -358,7 +359,7 @@ class TestParseCommand(unittest.TestCase):
         Returns:
             { cmd_name: { (path, line): command_obj } }
         """
-        cmds, declared_files = _find_all_commands_in_file(__file__, lines, self.valid_commands)
+        cmds, declared_files = _find_all_commands_in_file(__file__, lines, self.valid_commands, None)
         return cmds
 
 
