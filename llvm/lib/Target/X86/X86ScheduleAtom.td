@@ -416,7 +416,7 @@ defm : AtomWriteResPair<WriteShuffleX,      [AtomPort0],  [AtomPort0], 1, 1>;
 defm : X86WriteResPairUnsupported<WriteShuffleY>;
 defm : X86WriteResPairUnsupported<WriteShuffleZ>;
 defm : AtomWriteResPair<WriteVarShuffle,    [AtomPort0],  [AtomPort0], 1, 1>;
-defm : AtomWriteResPair<WriteVarShuffleX,  [AtomPort01], [AtomPort01], 4, 5, [4], [5]>;
+defm : AtomWriteResPair<WriteVarShuffleX,  [AtomPort0,AtomPort1], [AtomPort0,AtomPort1], 4, 5, [3,3], [4,4]>;
 defm : X86WriteResPairUnsupported<WriteVarShuffleY>;
 defm : X86WriteResPairUnsupported<WriteVarShuffleZ>;
 defm : X86WriteResPairUnsupported<WriteBlend>;
