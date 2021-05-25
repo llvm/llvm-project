@@ -203,7 +203,7 @@ void InitTlsSize() {
   g_use_dlpi_tls_data =
       GetLibcVersion(&major, &minor, &patch) && major == 2 && minor >= 25;
 
-#if defined(__x86_64__) || defined(__powerpc64__)
+#if defined(__aarch64__) || defined(__x86_64__) || defined(__powerpc64__)
   void *get_tls_static_info = dlsym(RTLD_NEXT, "_dl_get_tls_static_info");
   size_t tls_align;
   ((void (*)(size_t *, size_t *))get_tls_static_info)(&g_tls_size, &tls_align);
@@ -427,12 +427,16 @@ static void GetTls(uptr *addr, uptr *size) {
     *size = 0;
   }
 #elif SANITIZER_GLIBC && defined(__x86_64__)
-  // For x86-64, use an O(1) approach which requires precise
-  // ThreadDescriptorSize. g_tls_size was initialized in InitTlsSize.
+  // For aarch64 and x86-64, use an O(1) approach which requires relatively
+  // precise ThreadDescriptorSize. g_tls_size was initialized in InitTlsSize.
   asm("mov %%fs:16,%0" : "=r"(*addr));
   *size = g_tls_size;
   *addr -= *size;
   *addr += ThreadDescriptorSize();
+#elif SANITIZER_GLIBC && defined(__aarch64__)
+  *addr = reinterpret_cast<uptr>(__builtin_thread_pointer()) -
+          ThreadDescriptorSize();
+  *size = g_tls_size + ThreadDescriptorSize();
 #elif SANITIZER_GLIBC && defined(__powerpc64__)
   // Workaround for glibc<2.25(?). 2.27 is known to not need this.
   uptr tp;
