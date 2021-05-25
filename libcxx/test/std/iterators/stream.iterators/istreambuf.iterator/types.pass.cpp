@@ -9,11 +9,7 @@
 // <iterator>
 
 // template<class charT, class traits = char_traits<charT> >
-// class istreambuf_iterator
-//     : public iterator<input_iterator_tag, charT,
-//                       typename traits::off_type, unspecified,
-//                       charT>
-// {
+// class istreambuf_iterator {
 // public:
 //     typedef charT                         char_type;
 //     typedef traits                        traits_type;
@@ -33,7 +29,12 @@
 
 int main(int, char**)
 {
+    {
     typedef std::istreambuf_iterator<char> I1;
+#if TEST_STD_VER <= 14
+    typedef std::iterator<std::input_iterator_tag, char, std::char_traits<char>::off_type, char*, char> iterator_base;
+    static_assert((std::is_base_of<iterator_base, I1>::value), "");
+#endif
     static_assert((std::is_same<I1::iterator_category, std::input_iterator_tag>::value), "");
     static_assert((std::is_same<I1::value_type, char>::value), "");
     static_assert((std::is_same<I1::difference_type, std::char_traits<char>::off_type>::value), "");
@@ -47,8 +48,14 @@ int main(int, char**)
     static_assert((std::is_nothrow_default_constructible<I1>::value), "" );
     static_assert((std::is_trivially_copy_constructible<I1>::value), "" );
     static_assert((std::is_trivially_destructible<I1>::value), "" );
+    }
 
+    {
     typedef std::istreambuf_iterator<wchar_t> I2;
+#if TEST_STD_VER <= 14
+    typedef std::iterator<std::input_iterator_tag, wchar_t, std::char_traits<wchar_t>::off_type, wchar_t*, wchar_t> iterator_base;
+    static_assert((std::is_base_of<iterator_base, I2>::value), "");
+#endif
     static_assert((std::is_same<I2::iterator_category, std::input_iterator_tag>::value), "");
     static_assert((std::is_same<I2::value_type, wchar_t>::value), "");
     static_assert((std::is_same<I2::difference_type, std::char_traits<wchar_t>::off_type>::value), "");
@@ -62,6 +69,7 @@ int main(int, char**)
     static_assert((std::is_nothrow_default_constructible<I2>::value), "" );
     static_assert((std::is_trivially_copy_constructible<I2>::value), "" );
     static_assert((std::is_trivially_destructible<I2>::value), "" );
+    }
 
   return 0;
 }

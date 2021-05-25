@@ -27,17 +27,23 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_RAW_STORAGE_ITERATOR)
 
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _OutputIterator, class _Tp>
 class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 raw_storage_iterator
-    : public iterator<output_iterator_tag,
-                      _Tp,                                         // purposefully not C++03
-                      ptrdiff_t,                                   // purposefully not C++03
-                      _Tp*,                                        // purposefully not C++03
-                      raw_storage_iterator<_OutputIterator, _Tp>&> // purposefully not C++03
+#if _LIBCPP_STD_VER <= 14 || !defined(_LIBCPP_ABI_NO_ITERATOR_BASES)
+    : public iterator<output_iterator_tag, void, void, void, void>
+#endif
 {
+_LIBCPP_SUPPRESS_DEPRECATED_POP
 private:
     _OutputIterator __x_;
 public:
+    typedef output_iterator_tag iterator_category;
+    typedef void                value_type;
+    typedef void                difference_type;
+    typedef void                pointer;
+    typedef void                reference;
+
     _LIBCPP_INLINE_VISIBILITY explicit raw_storage_iterator(_OutputIterator __x) : __x_(__x) {}
     _LIBCPP_INLINE_VISIBILITY raw_storage_iterator& operator*() {return *this;}
     _LIBCPP_INLINE_VISIBILITY raw_storage_iterator& operator=(const _Tp& __element)
