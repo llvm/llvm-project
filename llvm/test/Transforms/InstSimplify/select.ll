@@ -105,12 +105,9 @@ define <2 x i8> @vsel_mixedvec() {
   ret <2 x i8> %s
 }
 
-; FIXME: Allow for undef elements in a constant vector condition.
-
 define <3 x i8> @vsel_undef_true_op(<3 x i8> %x, <3 x i8> %y) {
 ; CHECK-LABEL: @vsel_undef_true_op(
-; CHECK-NEXT:    [[S:%.*]] = select <3 x i1> <i1 true, i1 undef, i1 true>, <3 x i8> [[X:%.*]], <3 x i8> [[Y:%.*]]
-; CHECK-NEXT:    ret <3 x i8> [[S]]
+; CHECK-NEXT:    ret <3 x i8> [[X:%.*]]
 ;
   %s = select <3 x i1><i1 1, i1 undef, i1 1>, <3 x i8> %x, <3 x i8> %y
   ret <3 x i8> %s
@@ -118,8 +115,7 @@ define <3 x i8> @vsel_undef_true_op(<3 x i8> %x, <3 x i8> %y) {
 
 define <3 x i4> @vsel_undef_false_op(<3 x i4> %x, <3 x i4> %y) {
 ; CHECK-LABEL: @vsel_undef_false_op(
-; CHECK-NEXT:    [[S:%.*]] = select <3 x i1> <i1 false, i1 undef, i1 undef>, <3 x i4> [[X:%.*]], <3 x i4> [[Y:%.*]]
-; CHECK-NEXT:    ret <3 x i4> [[S]]
+; CHECK-NEXT:    ret <3 x i4> [[Y:%.*]]
 ;
   %s = select <3 x i1><i1 0, i1 undef, i1 undef>, <3 x i4> %x, <3 x i4> %y
   ret <3 x i4> %s
