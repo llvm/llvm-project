@@ -521,7 +521,8 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
     %0 = linalg.tiled_loop (%i) = (%c0) to (%c24) step (%c4)
         ins(%lhs, %rhs : tensor<24x64xi8>, tensor<24x64xi8>)
         outs(%out : tensor<24x64xi8>)
-        iterators("parallel") {
+        iterators("parallel")
+        distribution("block_x") {
       %lhs_sub = subtensor %lhs[%i, 0] [%c4, %c64] [1, 1]
           : tensor<24x64xi8> to tensor<?x?xi8>
       %rhs_sub = subtensor %rhs[%i, 0] [%c4, %c64] [1, 1]
@@ -551,7 +552,8 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
     linalg.tiled_loop (%i) = (%c0) to (%c24) step (%c4)
         ins(%lhs, %rhs : memref<24x64xi8>, memref<24x64xi8>)
         outs(%out : memref<24x64xi8>)
-        iterators("parallel") {
+        iterators("parallel")
+        distribution("block_x") {
       %lhs_sub = subview %lhs[%i, 0] [%c4, %c64] [1, 1]
           : memref<24x64xi8> to memref<?x?xi8>
       %rhs_sub = subview %rhs[%i, 0] [%c4, %c64] [1, 1]
@@ -570,11 +572,18 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
                        Variadic<Index>:$step,
                        Variadic<LinalgOperand>:$inputs,
                        Variadic<LinalgOperand>:$outputs,
-                       ArrayAttr:$iterator_types);
+                       ArrayAttr:$iterator_types,
+                       OptionalAttr<ArrayAttr>:$distribution_types);
   let results = (outs Variadic<AnyRankedTensor>:$results);
   let regions = (region SizedRegion<1>:$region);
 
   let builders = [
+    OpBuilder<(ins "ValueRange":$lowerBounds, "ValueRange":$upperBounds,
+      "ValueRange":$steps, "ValueRange":$inputs, "ValueRange":$outputs,
+      "ArrayAttr":$iteratorTypes, "Optional<ArrayAttr>":$distributionTypes,
+      CArg<"function_ref<void (OpBuilder &, Location, /*ivs=*/ValueRange,"
+        "/*inputs=*/ValueRange, /*outputs=*/ValueRange)>",
+        "nullptr">:$bodyBuilderFn)>,
     OpBuilder<(ins "ValueRange":$lowerBounds, "ValueRange":$upperBounds,
       "ValueRange":$steps, "ValueRange":$inputs, "ValueRange":$outputs,
       "ArrayAttr":$iteratorTypes,
