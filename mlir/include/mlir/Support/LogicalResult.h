@@ -84,6 +84,7 @@ public:
   }
   FailureOr() : FailureOr(failure()) {}
   FailureOr(T &&y) : Optional<T>(std::forward<T>(y)) {}
+  FailureOr(const T &y) : Optional<T>(y) {}
 
   operator LogicalResult() const { return success(this->hasValue()); }
 
