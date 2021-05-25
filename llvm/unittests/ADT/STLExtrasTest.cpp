@@ -711,4 +711,18 @@ TEST(STLExtras, MoveRange) {
   EXPECT_EQ(V4.size(), 4U);
   EXPECT_TRUE(llvm::all_of(V4, HasVal));
 }
+
+TEST(STLExtras, Unique) {
+  std::vector<int> V = {1, 5, 5, 4, 3, 3, 3};
+
+  auto I = llvm::unique(V, [](int a, int b) { return a == b; });
+
+  EXPECT_EQ(I, V.begin() + 4);
+
+  EXPECT_EQ(1, V[0]);
+  EXPECT_EQ(5, V[1]);
+  EXPECT_EQ(4, V[2]);
+  EXPECT_EQ(3, V[3]);
+}
+
 } // namespace

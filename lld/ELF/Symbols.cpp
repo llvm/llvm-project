@@ -279,7 +279,7 @@ uint8_t Symbol::computeBinding() const {
   if (config->relocatable)
     return binding;
   if ((visibility != STV_DEFAULT && visibility != STV_PROTECTED) ||
-      (versionId == VER_NDX_LOCAL && isDefined()))
+      (versionId == VER_NDX_LOCAL && !isLazy()))
     return STB_LOCAL;
   if (!config->gnuUnique && binding == STB_GNU_UNIQUE)
     return STB_GLOBAL;

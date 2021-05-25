@@ -49,7 +49,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GenericDomTree.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -222,11 +221,12 @@ static void moveHeaderPhiOperandsToForeBlocks(BasicBlock *Header,
   If EpilogueLoop is non-null, it receives the epilogue loop (if it was
   necessary to create one and not fully unrolled).
 */
-LoopUnrollResult llvm::UnrollAndJamLoop(
-    Loop *L, unsigned Count, unsigned TripCount, unsigned TripMultiple,
-    bool UnrollRemainder, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
-    AssumptionCache *AC, const TargetTransformInfo *TTI,
-    OptimizationRemarkEmitter *ORE, LPMUpdater *U, Loop **EpilogueLoop) {
+LoopUnrollResult
+llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
+                       unsigned TripMultiple, bool UnrollRemainder,
+                       LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
+                       AssumptionCache *AC, const TargetTransformInfo *TTI,
+                       OptimizationRemarkEmitter *ORE, Loop **EpilogueLoop) {
 
   // When we enter here we should have already checked that it is safe
   BasicBlock *Header = L->getHeader();
@@ -605,11 +605,8 @@ LoopUnrollResult llvm::UnrollAndJamLoop(
   ++NumUnrolledAndJammed;
 
   // Update LoopInfo if the loop is completely removed.
-  if (CompletelyUnroll) {
-    if (U)
-      U->markLoopAsDeleted(*L, std::string(L->getName()));
+  if (CompletelyUnroll)
     LI->erase(L);
-  }
 
 #ifndef NDEBUG
   // We shouldn't have done anything to break loop simplify form or LCSSA.
