@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "OutputSegment.h"
+#include "ConcatOutputSection.h"
 #include "InputSection.h"
-#include "MergedOutputSection.h"
 #include "SyntheticSections.h"
 
 #include "lld/Common/ErrorHandler.h"

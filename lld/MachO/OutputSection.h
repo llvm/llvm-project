@@ -25,7 +25,7 @@ class OutputSegment;
 class OutputSection {
 public:
   enum Kind {
-    MergedKind,
+    ConcatKind,
     SyntheticKind,
   };
 
