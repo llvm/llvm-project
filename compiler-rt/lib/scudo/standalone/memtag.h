@@ -146,10 +146,13 @@ inline uptr selectRandomTag(uptr Ptr, uptr ExcludeMask) {
   return TaggedPtr;
 }
 
-inline uptr addFixedTag(uptr Ptr, uptr Tag) { return Ptr | (Tag << 56); }
+inline uptr addFixedTag(uptr Ptr, uptr Tag) {
+  DCHECK_LT(Tag, 16);
+  return Ptr | (Tag << 56);
+}
 
 inline uptr storeTags(uptr Begin, uptr End) {
-  DCHECK(Begin % 16 == 0);
+  DCHECK_EQ(0, Begin % 16);
   uptr LineSize, Next, Tmp;
   __asm__ __volatile__(
       R"(
@@ -209,10 +212,12 @@ inline uptr storeTags(uptr Begin, uptr End) {
         [Tmp] "=&r"(Tmp)
       : [End] "r"(End)
       : "memory");
+  DCHECK_EQ(0, Begin % 16);
   return Begin;
 }
 
 inline void storeTag(uptr Ptr) {
+  DCHECK_EQ(0, Ptr % 16);
   __asm__ __volatile__(R"(
     .arch_extension memtag
     stg %0, [%0]
@@ -223,6 +228,7 @@ inline void storeTag(uptr Ptr) {
 }
 
 inline uptr loadTag(uptr Ptr) {
+  DCHECK_EQ(0, Ptr % 16);
   uptr TaggedPtr = Ptr;
   __asm__ __volatile__(
       R"(
