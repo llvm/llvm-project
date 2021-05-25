@@ -2509,6 +2509,7 @@ Target::CreateUtilityFunction(std::string expression, std::string name,
 llvm::Optional<SwiftASTContextReader> Target::GetScratchSwiftASTContext(
     Status &error, ExecutionContextScope &exe_scope, bool create_on_demand) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET));
+  LLDB_SCOPED_TIMER();
 
   Module *lldb_module = nullptr;
   if (m_use_scratch_typesystem_per_module)
