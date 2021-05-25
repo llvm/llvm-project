@@ -12,6 +12,7 @@
 
 #include "flang/Lower/IO.h"
 #include "../../runtime/io-api.h"
+#include "ConvertVariable.h"
 #include "RTBuilder.h"
 #include "StatementContext.h"
 #include "flang/Lower/Bridge.h"
@@ -58,20 +59,20 @@ static constexpr std::tuple<
     mkIOKey(EnableHandlers), mkIOKey(SetAdvance), mkIOKey(SetBlank),
     mkIOKey(SetDecimal), mkIOKey(SetDelim), mkIOKey(SetPad), mkIOKey(SetPos),
     mkIOKey(SetRec), mkIOKey(SetRound), mkIOKey(SetSign),
-    mkIOKey(OutputDescriptor), mkIOKey(InputDescriptor),
-    mkIOKey(OutputUnformattedBlock), mkIOKey(InputUnformattedBlock),
-    mkIOKey(OutputInteger64), mkIOKey(InputInteger), mkIOKey(OutputReal32),
-    mkIOKey(InputReal32), mkIOKey(OutputReal64), mkIOKey(InputReal64),
-    mkIOKey(OutputComplex32), mkIOKey(InputComplex32), mkIOKey(OutputComplex64),
-    mkIOKey(InputComplex64), mkIOKey(OutputAscii), mkIOKey(InputAscii),
-    mkIOKey(OutputLogical), mkIOKey(InputLogical), mkIOKey(SetAccess),
-    mkIOKey(SetAction), mkIOKey(SetAsynchronous), mkIOKey(SetCarriagecontrol),
-    mkIOKey(SetEncoding), mkIOKey(SetForm), mkIOKey(SetPosition),
-    mkIOKey(SetRecl), mkIOKey(SetStatus), mkIOKey(SetFile), mkIOKey(GetNewUnit),
-    mkIOKey(GetSize), mkIOKey(GetIoLength), mkIOKey(GetIoMsg),
-    mkIOKey(InquireCharacter), mkIOKey(InquireLogical),
-    mkIOKey(InquirePendingId), mkIOKey(InquireInteger64),
-    mkIOKey(EndIoStatement)>
+    mkIOKey(OutputNamelist), mkIOKey(InputNamelist), mkIOKey(OutputDescriptor),
+    mkIOKey(InputDescriptor), mkIOKey(OutputUnformattedBlock),
+    mkIOKey(InputUnformattedBlock), mkIOKey(OutputInteger64),
+    mkIOKey(InputInteger), mkIOKey(OutputReal32), mkIOKey(InputReal32),
+    mkIOKey(OutputReal64), mkIOKey(InputReal64), mkIOKey(OutputComplex32),
+    mkIOKey(InputComplex32), mkIOKey(OutputComplex64), mkIOKey(InputComplex64),
+    mkIOKey(OutputAscii), mkIOKey(InputAscii), mkIOKey(OutputLogical),
+    mkIOKey(InputLogical), mkIOKey(SetAccess), mkIOKey(SetAction),
+    mkIOKey(SetAsynchronous), mkIOKey(SetCarriagecontrol), mkIOKey(SetEncoding),
+    mkIOKey(SetForm), mkIOKey(SetPosition), mkIOKey(SetRecl),
+    mkIOKey(SetStatus), mkIOKey(SetFile), mkIOKey(GetNewUnit), mkIOKey(GetSize),
+    mkIOKey(GetIoLength), mkIOKey(GetIoMsg), mkIOKey(InquireCharacter),
+    mkIOKey(InquireLogical), mkIOKey(InquirePendingId),
+    mkIOKey(InquireInteger64), mkIOKey(EndIoStatement)>
     newIOTable;
 } // namespace Fortran::lower
 
@@ -194,6 +195,171 @@ static void makeNextConditionalOn(Fortran::lower::FirOpBuilder &builder,
   auto ifOp = builder.create<fir::IfOp>(loc, resTy, ok,
                                         /*withElseRegion=*/inLoop);
   builder.setInsertionPointToStart(&ifOp.thenRegion().front());
+}
+
+/// Retrieve or generate a runtime description of NAMELIST group `symbol`.
+/// The form of the description is defined in runtime header file namelist.h.
+/// Static descriptors are generated for global objects; local descriptors for
+/// local objects.  If all descriptors are static, the NamelistGroup is static.
+static mlir::Value
+getNamelistGroup(Fortran::lower::AbstractConverter &converter,
+                 const Fortran::semantics::Symbol &symbol,
+                 Fortran::lower::StatementContext &stmtCtx) {
+  auto &builder = converter.getFirOpBuilder();
+  auto loc = converter.getCurrentLocation();
+  auto groupMangleName = converter.mangleName(symbol);
+  if (auto group = builder.getNamedGlobal(groupMangleName))
+    return builder.create<fir::AddrOfOp>(loc, group.resultType(),
+                                         group.getSymbol());
+
+  const auto &details =
+      symbol.GetUltimate().get<Fortran::semantics::NamelistDetails>();
+  auto *context = builder.getContext();
+  auto linkOnce = builder.createLinkOnceLinkage();
+  auto idxTy = builder.getIndexType();
+  auto sizeTy = builder.getIntegerType(8 * sizeof(std::size_t));
+  auto charRefTy = fir::ReferenceType::get(builder.getIntegerType(8));
+  auto descRefTy =
+      fir::ReferenceType::get(fir::BoxType::get(mlir::NoneType::get(context)));
+  auto listTy = fir::SequenceType::get(
+      details.objects().size(),
+      mlir::TupleType::get(context, {charRefTy, descRefTy}));
+  auto groupTy = mlir::TupleType::get(
+      context, {charRefTy, sizeTy, fir::ReferenceType::get(listTy)});
+  auto stringAddress = [&](const Fortran::semantics::Symbol &symbol) {
+    return createStringLiteral(builder, loc, symbol.name().ToString() + '\0');
+  };
+
+  // Define object names, and static descriptors for global objects.
+  bool groupIsLocal = false;
+  stringAddress(symbol);
+  for (const Fortran::semantics::Symbol &s : details.objects()) {
+    stringAddress(s);
+    if (!Fortran::lower::symbolIsGlobal(s)) {
+      groupIsLocal = true;
+      continue;
+    }
+    auto mangleName = converter.mangleName(s) + ".desc";
+    if (builder.getNamedGlobal(mangleName))
+      continue;
+    const auto expr =
+        Fortran::evaluate::TypedWrapper<Fortran::evaluate::Designator,
+                                        Fortran::evaluate::DataRef>(
+            *Fortran::evaluate::DynamicType::From(s.GetType()),
+            Fortran::evaluate::DataRef{s});
+    auto boxTy = fir::BoxType::get(converter.genType(s));
+    auto descFunc = [&](Fortran::lower::FirOpBuilder &b) {
+      auto box =
+          Fortran::lower::genInitialDataTarget(converter, loc, boxTy, *expr);
+      b.create<fir::HasValueOp>(loc, box);
+    };
+    builder.createGlobalConstant(loc, boxTy, mangleName, descFunc, linkOnce);
+  }
+
+  // Define the list of Items.
+  mlir::Value listAddr =
+      groupIsLocal ? builder.create<fir::AllocaOp>(loc, listTy) : mlir::Value{};
+  auto listMangleName = groupMangleName + ".list";
+  auto listFunc = [&](Fortran::lower::FirOpBuilder &builder) {
+    mlir::Value list = builder.create<fir::UndefOp>(loc, listTy);
+    auto zero = builder.createIntegerConstant(loc, idxTy, 0);
+    auto one = builder.createIntegerConstant(loc, idxTy, 1);
+    llvm::SmallVector<mlir::Value, 2> idx = {mlir::Value{}, mlir::Value{}};
+    size_t n = 0;
+    for (const Fortran::semantics::Symbol &s : details.objects()) {
+      idx[0] = builder.createIntegerConstant(loc, idxTy, n);
+      idx[1] = zero;
+      auto nameAddr =
+          builder.createConvert(loc, charRefTy, fir::getBase(stringAddress(s)));
+      list =
+          builder.create<fir::InsertValueOp>(loc, listTy, list, nameAddr, idx);
+      idx[1] = one;
+      mlir::Value descAddr;
+      if (auto desc =
+              builder.getNamedGlobal(converter.mangleName(s) + ".desc")) {
+        descAddr = builder.create<fir::AddrOfOp>(loc, desc.resultType(),
+                                                 desc.getSymbol());
+      } else {
+        const auto expr =
+            Fortran::evaluate::TypedWrapper<Fortran::evaluate::Designator,
+                                            Fortran::evaluate::DataRef>(
+                *Fortran::evaluate::DynamicType::From(s.GetType()),
+                Fortran::evaluate::DataRef{s});
+        auto exv = converter.genExprAddr(*expr, stmtCtx);
+        auto box = builder.createBox(loc, exv);
+        descAddr = builder.createTemporary(loc, box.getType());
+        builder.create<fir::StoreOp>(loc, box, descAddr);
+      }
+      descAddr = builder.createConvert(loc, descRefTy, descAddr);
+      list =
+          builder.create<fir::InsertValueOp>(loc, listTy, list, descAddr, idx);
+      ++n;
+    }
+    if (groupIsLocal)
+      builder.create<fir::StoreOp>(loc, list, listAddr);
+    else
+      builder.create<fir::HasValueOp>(loc, list);
+  };
+  if (groupIsLocal)
+    listFunc(builder);
+  else
+    builder.createGlobalConstant(loc, listTy, listMangleName, listFunc,
+                                 linkOnce);
+
+  // Define the group.
+  mlir::Value groupAddr = groupIsLocal
+                              ? builder.create<fir::AllocaOp>(loc, groupTy)
+                              : mlir::Value{};
+  auto groupFunc = [&](Fortran::lower::FirOpBuilder &builder) {
+    auto zero = builder.createIntegerConstant(loc, idxTy, 0);
+    auto one = builder.createIntegerConstant(loc, idxTy, 1);
+    auto two = builder.createIntegerConstant(loc, idxTy, 2);
+    mlir::Value group = builder.create<fir::UndefOp>(loc, groupTy);
+    auto nameAddr = builder.createConvert(loc, charRefTy,
+                                          fir::getBase(stringAddress(symbol)));
+    group =
+        builder.create<fir::InsertValueOp>(loc, groupTy, group, nameAddr, zero);
+    auto itemCount =
+        builder.createIntegerConstant(loc, sizeTy, details.objects().size());
+    group =
+        builder.create<fir::InsertValueOp>(loc, groupTy, group, itemCount, one);
+    if (auto list = builder.getNamedGlobal(listMangleName))
+      listAddr = builder.create<fir::AddrOfOp>(loc, list.resultType(),
+                                               list.getSymbol());
+    assert(listAddr && "missing namelist object list");
+    group =
+        builder.create<fir::InsertValueOp>(loc, groupTy, group, listAddr, two);
+    if (groupIsLocal)
+      builder.create<fir::StoreOp>(loc, group, groupAddr);
+    else
+      builder.create<fir::HasValueOp>(loc, group);
+  };
+  if (groupIsLocal) {
+    groupFunc(builder);
+  } else {
+    auto group = builder.createGlobal(loc, groupTy, groupMangleName, true,
+                                      groupFunc, linkOnce);
+    groupAddr = builder.create<fir::AddrOfOp>(loc, group.resultType(),
+                                              group.getSymbol());
+  }
+  assert(groupAddr && "missing namelist group result");
+  return groupAddr;
+}
+
+/// Generate a namelist I/O call.
+static void genNamelistIO(Fortran::lower::AbstractConverter &converter,
+                          mlir::Value cookie, mlir::FuncOp funcOp,
+                          Fortran::semantics::Symbol &symbol, bool checkResult,
+                          mlir::Value &ok,
+                          Fortran::lower::StatementContext &stmtCtx) {
+  auto &builder = converter.getFirOpBuilder();
+  auto loc = converter.getCurrentLocation();
+  makeNextConditionalOn(builder, loc, checkResult, ok);
+  auto argType = funcOp.getType().getInput(1);
+  auto groupAddr = getNamelistGroup(converter, symbol, stmtCtx);
+  groupAddr = builder.createConvert(loc, argType, groupAddr);
+  llvm::SmallVector<mlir::Value> args = {cookie, groupAddr};
+  ok = builder.create<fir::CallOp>(loc, funcOp, args).getResult(0);
 }
 
 /// Get the OutputXyz routine to output a value of the given type.
@@ -696,15 +862,6 @@ mlir::Value genIOOption<Fortran::parser::StatusExpr>(
 }
 
 template <>
-mlir::Value
-genIOOption<Fortran::parser::Name>(Fortran::lower::AbstractConverter &converter,
-                                   mlir::Location loc, mlir::Value cookie,
-                                   Fortran::lower::StatementContext &stmtCtx,
-                                   const Fortran::parser::Name &spec) {
-  TODO(loc, "namelist");
-}
-
-template <>
 mlir::Value genIOOption<Fortran::parser::IoControlSpec::CharExpr>(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     mlir::Value cookie, Fortran::lower::StatementContext &stmtCtx,
@@ -892,8 +1049,8 @@ static const auto *getIOControl(const A &stmt) {
   return static_cast<const SEEK *>(nullptr);
 }
 
-/// returns true iff the expression in the parse tree is not really a format but
-/// rather a namelist group
+/// Returns true iff the expression in the parse tree is not really a format but
+/// rather a namelist group.
 template <typename A>
 static bool formatIsActuallyNamelist(const A &format) {
   if (auto *e = std::get_if<Fortran::parser::Expr>(&format.u)) {
@@ -1336,27 +1493,27 @@ Fortran::lower::genWaitStatement(Fortran::lower::AbstractConverter &converter,
 template <bool isInput>
 mlir::FuncOp
 getBeginDataTransfer(mlir::Location loc, Fortran::lower::FirOpBuilder &builder,
-                     bool isFormatted, bool isList, bool isIntern,
-                     bool isOtherIntern, bool isAsynch, bool isNml) {
+                     bool isFormatted, bool isListOrNml, bool isIntern,
+                     bool isOtherIntern, bool isAsynch) {
   if constexpr (isInput) {
     if (isAsynch)
       return getIORuntimeFunc<mkIOKey(BeginAsynchronousInput)>(loc, builder);
-    if (isFormatted) {
+    if (isFormatted || isListOrNml) {
       if (isIntern) {
         if (isOtherIntern) {
-          if (isList || isNml)
+          if (isListOrNml)
             return getIORuntimeFunc<mkIOKey(BeginInternalArrayListInput)>(
                 loc, builder);
           return getIORuntimeFunc<mkIOKey(BeginInternalArrayFormattedInput)>(
               loc, builder);
         }
-        if (isList || isNml)
+        if (isListOrNml)
           return getIORuntimeFunc<mkIOKey(BeginInternalListInput)>(loc,
                                                                    builder);
         return getIORuntimeFunc<mkIOKey(BeginInternalFormattedInput)>(loc,
                                                                       builder);
       }
-      if (isList || isNml)
+      if (isListOrNml)
         return getIORuntimeFunc<mkIOKey(BeginExternalListInput)>(loc, builder);
       return getIORuntimeFunc<mkIOKey(BeginExternalFormattedInput)>(loc,
                                                                     builder);
@@ -1365,22 +1522,22 @@ getBeginDataTransfer(mlir::Location loc, Fortran::lower::FirOpBuilder &builder,
   } else {
     if (isAsynch)
       return getIORuntimeFunc<mkIOKey(BeginAsynchronousOutput)>(loc, builder);
-    if (isFormatted) {
+    if (isFormatted || isListOrNml) {
       if (isIntern) {
         if (isOtherIntern) {
-          if (isList || isNml)
+          if (isListOrNml)
             return getIORuntimeFunc<mkIOKey(BeginInternalArrayListOutput)>(
                 loc, builder);
           return getIORuntimeFunc<mkIOKey(BeginInternalArrayFormattedOutput)>(
               loc, builder);
         }
-        if (isList || isNml)
+        if (isListOrNml)
           return getIORuntimeFunc<mkIOKey(BeginInternalListOutput)>(loc,
                                                                     builder);
         return getIORuntimeFunc<mkIOKey(BeginInternalFormattedOutput)>(loc,
                                                                        builder);
       }
-      if (isList || isNml)
+      if (isListOrNml)
         return getIORuntimeFunc<mkIOKey(BeginExternalListOutput)>(loc, builder);
       return getIORuntimeFunc<mkIOKey(BeginExternalFormattedOutput)>(loc,
                                                                      builder);
@@ -1395,8 +1552,8 @@ void genBeginCallArguments(llvm::SmallVectorImpl<mlir::Value> &ioArgs,
                            Fortran::lower::AbstractConverter &converter,
                            mlir::Location loc, const A &stmt,
                            mlir::FunctionType ioFuncTy, bool isFormatted,
-                           bool isList, bool isIntern, bool isOtherIntern,
-                           bool isAsynch, bool isNml,
+                           bool isListOrNml, bool isIntern,
+                           [[maybe_unused]] bool isOtherIntern, bool isAsynch,
                            const llvm::Optional<fir::ExtendedValue> &descRef,
                            Fortran::lower::StatementContext &stmtCtx) {
   auto &builder = converter.getFirOpBuilder();
@@ -1414,10 +1571,7 @@ void genBeginCallArguments(llvm::SmallVectorImpl<mlir::Value> &ioArgs,
     }
     assert(isFormatted && "formatted data transfer");
     if (!isIntern) {
-      if (isNml) {
-        // namelist group, ...
-        TODO(loc, "namelist");
-      } else if (!isList) {
+      if (!isListOrNml) {
         // | [format, LEN], ...
         auto pair =
             getFormat(converter, loc, stmt, ioFuncTy.getInput(ioArgs.size()),
@@ -1431,17 +1585,13 @@ void genBeginCallArguments(llvm::SmallVectorImpl<mlir::Value> &ioArgs,
       return;
     }
     assert(isIntern && "internal data transfer");
-    if (isNml || isOtherIntern) {
+    if (isOtherIntern) {
       // descriptor, ...
-      assert(!isNml && "namelist is not implemented");
       assert(descRef.hasValue() && "descriptor value required");
       auto desc = builder.createBox(loc, *descRef);
       ioArgs.push_back(
           builder.createConvert(loc, ioFuncTy.getInput(ioArgs.size()), desc));
-      if (isNml) {
-        // namelist group, ...
-        TODO(loc, "namelist");
-      } else if (isOtherIntern && !isList) {
+      if (!isListOrNml) {
         // | [format, LEN], ...
         auto pair =
             getFormat(converter, loc, stmt, ioFuncTy.getInput(ioArgs.size()),
@@ -1456,7 +1606,7 @@ void genBeginCallArguments(llvm::SmallVectorImpl<mlir::Value> &ioArgs,
                     ioFuncTy.getInput(ioArgs.size() + 1), stmtCtx);
       ioArgs.push_back(std::get<0>(pair));
       ioArgs.push_back(std::get<1>(pair));
-      if (!isList) {
+      if (!isListOrNml) {
         // [format, LEN], ...
         auto pair =
             getFormat(converter, loc, stmt, ioFuncTy.getInput(ioArgs.size()),
@@ -1471,7 +1621,7 @@ void genBeginCallArguments(llvm::SmallVectorImpl<mlir::Value> &ioArgs,
     ioArgs.push_back(
         getDefaultScratchLen(builder, loc, ioFuncTy.getInput(ioArgs.size())));
   } else {
-    if (!isList) {
+    if (!isListOrNml) {
       // [format, LEN], ...
       auto pair =
           getFormat(converter, loc, stmt, ioFuncTy.getInput(ioArgs.size()),
@@ -1506,15 +1656,15 @@ genDataTransferStmt(Fortran::lower::AbstractConverter &converter,
 
   // Determine which BeginXyz call to make.
   mlir::FuncOp ioFunc =
-      getBeginDataTransfer<isInput>(loc, builder, isFormatted, isList, isIntern,
-                                    isOtherIntern, isAsynch, isNml);
+      getBeginDataTransfer<isInput>(loc, builder, isFormatted, isList || isNml,
+                                    isIntern, isOtherIntern, isAsynch);
   mlir::FunctionType ioFuncTy = ioFunc.getType();
 
   // Append BeginXyz call arguments.  File name and line number are always last.
   llvm::SmallVector<mlir::Value> ioArgs;
   genBeginCallArguments<hasIOCtrl>(ioArgs, converter, loc, stmt, ioFuncTy,
-                                   isFormatted, isList, isIntern, isOtherIntern,
-                                   isAsynch, isNml, descRef, stmtCtx);
+                                   isFormatted, isList || isNml, isIntern,
+                                   isOtherIntern, isAsynch, descRef, stmtCtx);
   ioArgs.push_back(
       locToFilename(converter, loc, ioFuncTy.getInput(ioArgs.size())));
   ioArgs.push_back(
@@ -1535,18 +1685,31 @@ genDataTransferStmt(Fortran::lower::AbstractConverter &converter,
   }
 
   // Generate data transfer list calls.
-  if constexpr (isInput) // ReadStmt
-    genInputItemList(converter, cookie, stmt.items, isFormatted,
-                     csi.hasTransferConditionSpec(), ok, /*inLoop=*/false,
-                     stmtCtx);
-  else if constexpr (std::is_same_v<A, Fortran::parser::PrintStmt>)
+  if constexpr (isInput) { // ReadStmt
+    if (isNml)
+      genNamelistIO(converter, cookie,
+                    getIORuntimeFunc<mkIOKey(InputNamelist)>(loc, builder),
+                    *getIOControl<Fortran::parser::Name>(stmt)->symbol,
+                    csi.hasTransferConditionSpec(), ok, stmtCtx);
+    else
+      genInputItemList(converter, cookie, stmt.items, isFormatted,
+                       csi.hasTransferConditionSpec(), ok, /*inLoop=*/false,
+                       stmtCtx);
+  } else if constexpr (std::is_same_v<A, Fortran::parser::WriteStmt>) {
+    if (isNml)
+      genNamelistIO(converter, cookie,
+                    getIORuntimeFunc<mkIOKey(OutputNamelist)>(loc, builder),
+                    *getIOControl<Fortran::parser::Name>(stmt)->symbol,
+                    csi.hasTransferConditionSpec(), ok, stmtCtx);
+    else
+      genOutputItemList(converter, cookie, stmt.items, isFormatted,
+                        csi.hasTransferConditionSpec(), ok,
+                        /*inLoop=*/false, stmtCtx);
+  } else { // PrintStmt
     genOutputItemList(converter, cookie, std::get<1>(stmt.t), isFormatted,
                       csi.hasTransferConditionSpec(), ok,
                       /*inLoop=*/false, stmtCtx);
-  else // WriteStmt
-    genOutputItemList(converter, cookie, stmt.items, isFormatted,
-                      csi.hasTransferConditionSpec(), ok,
-                      /*inLoop=*/false, stmtCtx);
+  }
   stmtCtx.finalize();
 
   // Generate end statement call/s.

@@ -1916,10 +1916,6 @@ private:
     genPauseStatement(*this, stmt);
   }
 
-  void genFIR(const Fortran::parser::NamelistStmt &) {
-    TODO(toLocation(), "NamelistStmt lowering");
-  }
-
   // call FAIL IMAGE in runtime
   void genFIR(const Fortran::parser::FailImageStmt &stmt) {
     genFailImageStatement(*this);

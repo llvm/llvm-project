@@ -106,8 +106,7 @@ using ActionStmts = std::tuple<
     parser::ComputedGotoStmt, parser::ForallStmt, parser::ArithmeticIfStmt,
     parser::AssignStmt, parser::AssignedGotoStmt, parser::PauseStmt>;
 
-using OtherStmts =
-    std::tuple<parser::FormatStmt, parser::EntryStmt, parser::NamelistStmt>;
+using OtherStmts = std::tuple<parser::EntryStmt, parser::FormatStmt>;
 
 using ConstructStmts = std::tuple<
     parser::AssociateStmt, parser::EndAssociateStmt, parser::BlockStmt,

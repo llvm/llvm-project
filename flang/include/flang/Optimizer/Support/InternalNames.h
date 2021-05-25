@@ -112,6 +112,11 @@ struct NameUniquer {
                                 llvm::Optional<llvm::StringRef> host,
                                 llvm::StringRef name);
 
+  /// Unique a namelist group name
+  static std::string doNamelistGroup(llvm::ArrayRef<llvm::StringRef> modules,
+                                     llvm::Optional<llvm::StringRef> host,
+                                     llvm::StringRef name);
+
   /// Entry point for the PROGRAM (called by the runtime)
   /// Can be overridden with the `--main-entry-name=<name>` option.
   static llvm::StringRef doProgramEntry();

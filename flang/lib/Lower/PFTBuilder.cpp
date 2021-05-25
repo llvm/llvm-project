@@ -1180,7 +1180,7 @@ bool Fortran::lower::definedInCommonBlock(const semantics::Symbol &sym) {
 }
 
 /// Is the symbol `sym` a global?
-static bool symbolIsGlobal(const semantics::Symbol &sym) {
+bool Fortran::lower::symbolIsGlobal(const semantics::Symbol &sym) {
   if (const auto *details = sym.detailsIf<semantics::ObjectEntityDetails>())
     if (details->init())
       return true;
@@ -1267,7 +1267,7 @@ struct SymbolDependenceDepth {
                    << "symbol: " << toStringRef(sym.name()) << " on ["
                    << iter->first << ".." << iter->second << "]\n");
         aliasSets[iter->first].push_back(&sym);
-        if (symbolIsGlobal(sym))
+        if (lower::symbolIsGlobal(sym))
           setIsGlobal.insert({iter->first, &sym});
       }
     }
@@ -1314,6 +1314,13 @@ struct SymbolDependenceDepth {
       return 0;
     }
     auto ultimate = sym.GetUltimate();
+    if (const auto *details =
+            ultimate.detailsIf<semantics::NamelistDetails>()) {
+      // handle namelist group symbols
+      for (const auto &s : details->objects())
+        analyze(s);
+      return 0;
+    }
     if (!ultimate.has<semantics::ObjectEntityDetails>() &&
         !ultimate.has<semantics::ProcEntityDetails>())
       return 0;

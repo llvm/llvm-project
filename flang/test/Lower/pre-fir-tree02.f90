@@ -254,7 +254,7 @@ subroutine iostmts(filename, a, b, c)
   read(10, *) length
   ! CHECK: RewindStmt
   rewind 10
-  ! CHECK: NamelistStmt
+  ! CHECK-NOT: NamelistStmt
   namelist /nlist/ a, b, c
   ! CHECK: WriteStmt
   write(10, NML=nlist)
