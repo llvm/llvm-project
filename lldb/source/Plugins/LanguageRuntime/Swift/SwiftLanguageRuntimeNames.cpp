@@ -668,6 +668,7 @@ SwiftLanguageRuntime::DemangleSymbolAsString(StringRef symbol, DemangleMode mode
     options.QualifyEntities = true;
     options.DisplayModuleNames = true;
     options.DisplayLocalNameContexts = false;
+    options.DisplayDebuggerGeneratedModule = false;
     break;    
   }
 
