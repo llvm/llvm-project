@@ -165,7 +165,7 @@ def MemRef_AllocaOp : AllocLikeOp<"alloca", AutomaticAllocationScopeResource> {
     The `alloca` operation allocates memory on the stack, to be automatically
     released when control transfers back from the region of its closest
     surrounding operation with an
-    [`AutomaticAllocationScope`](../Traits.md#automaticallocationscope) trait.
+    [`AutomaticAllocationScope`](../Traits.md/#automaticallocationscope) trait.
     The amount of memory allocated is specified by its memref and additional
     operands. For example:
 
@@ -553,8 +553,8 @@ def LoadOp : MemRef_Op<"load",
 
     In an `affine.if` or `affine.for` body, the indices of a load are restricted
     to SSA values bound to surrounding loop induction variables,
-    [symbols](Affine.md#dimensions-and-symbols), results of a
-    [`constant` operation](#stdconstant-constantop), or the result of an
+    [symbols](Affine.md/#dimensions-and-symbols), results of a
+    [`constant` operation](Standard.md/#stdconstant-constantop), or the result of an
     `affine.apply` operation that can in turn take as arguments all of the
     aforementioned SSA values or the recursively result of such an
     `affine.apply` operation.
@@ -574,10 +574,10 @@ def LoadOp : MemRef_Op<"load",
     **Context:** The `load` and `store` operations are specifically crafted to
     fully resolve a reference to an element of a memref, and (in affine
     `affine.if` and `affine.for` operations) the compiler can follow use-def
-    chains (e.g. through [`affine.apply`](Affine.md#affineapply-affineapplyop)
+    chains (e.g. through [`affine.apply`](Affine.md/#affineapply-affineapplyop)
     operations) to precisely analyze references at compile-time using polyhedral
     techniques. This is possible because of the
-    [restrictions on dimensions and symbols](Affine.md#restrictions-on-dimensions-and-symbols)
+    [restrictions on dimensions and symbols](Affine.md/#restrictions-on-dimensions-and-symbols)
     in these contexts.
   }];
 
@@ -826,9 +826,9 @@ def MemRef_StoreOp : MemRef_Op<"store",
 
     In an affine context, the indices of a store are restricted to SSA values
     bound to surrounding loop induction variables,
-    [symbols](Affine.md#restrictions-on-dimensions-and-symbols), results of a
-    [`constant` operation](#stdconstant-constantop), or the result of an
-    [`affine.apply`](Affine.md#affineapply-affineapplyop) operation that can in
+    [symbols](Affine.md/#restrictions-on-dimensions-and-symbols), results of a
+    [`constant` operation](Standard.md/#stdconstant-constantop), or the result of an
+    [`affine.apply`](Affine.md/#affineapply-affineapplyop) operation that can in
     turn take as arguments all of the aforementioned SSA values or the
     recursively result of such an `affine.apply` operation.
 
@@ -841,10 +841,10 @@ def MemRef_StoreOp : MemRef_Op<"store",
     **Context:** The `load` and `store` operations are specifically crafted to
     fully resolve a reference to an element of a memref, and (in polyhedral
     `affine.if` and `affine.for` operations) the compiler can follow use-def
-    chains (e.g. through [`affine.apply`](Affine.md#affineapply-affineapplyop)
+    chains (e.g. through [`affine.apply`](Affine.md/#affineapply-affineapplyop)
     operations) to precisely analyze references at compile-time using polyhedral
     techniques. This is possible because of the
-    [restrictions on dimensions and symbols](Affine.md#restrictions-on-dimensions-and-symbols)
+    [restrictions on dimensions and symbols](Affine.md/#restrictions-on-dimensions-and-symbols)
     in these contexts.
   }];
 

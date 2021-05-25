@@ -856,7 +856,7 @@ def Builtin_SymbolRefAttr : Builtin_Attr<"SymbolRef"> {
     legally hold a symbol reference simplifies reasoning about these data
     accesses.
 
-    See [`Symbols And SymbolTables`](SymbolsAndSymbolTables.md) for more
+    See [`Symbols And SymbolTables`](../SymbolsAndSymbolTables.md) for more
     information.
 
     Examples:

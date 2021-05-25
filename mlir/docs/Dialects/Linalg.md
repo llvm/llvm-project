@@ -37,7 +37,7 @@ Linalg IR and that have influenced its design:
 ## High-Level Description of Linalg Ops<a name="linalg_ops"></a>
 
 Linalg takes at least some inspiration from all previously
-[listed prior art](#prior_art). The design enables the definition of
+[listed prior art](../Rationale/RationaleLinalgDialect.md/#prior-art). The design enables the definition of
 ***CustomOps*** with generic properties that enable
 [key transformations](#key_transformations), including lowering to scalar
 load/store and other operations or to external library calls and intrinsics.
@@ -493,7 +493,7 @@ As it stands, the six properties above define the semantics of a
 `linalg.generic` op. It is an open question whether all of these semantics are
 strictly necessary in practice and whether some should or could be derived
 automatically while still maintaining the
-[core guiding principles](#guiding_principles).
+[core guiding principles](../Rationale/RationaleLinalgDialect.md/#core-guiding-principlesa-nameguiding_principlesa).
 
 For the time being, we have settled on the combination of these properties
 because of empirical evidence building and working on multiple high-level
