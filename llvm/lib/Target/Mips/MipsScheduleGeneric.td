@@ -693,11 +693,13 @@ def : InstRW<[GenericWriteSync], (instrs GINVI_MMR6, GINVT_MMR6)>;
 
 def : InstRW<[GenericWriteLoad], (instrs LW_NM, LWs9_NM, 
                                   LHU_NM, LHUs9_NM, LH_NM, LHs9_NM,
-                                  LBU_NM, LBUs9_NM, LB_NM, LBs9_NM)>;
+                                  LBU_NM, LBUs9_NM, LB_NM, LBs9_NM,
+                                  UALH_NM, UALW_NM)>;
 
 def: InstRW<[GenericWriteStore], (instrs SW_NM, SWs9_NM,
                                   SH_NM, SHs9_NM,
-                                  SB_NM, SBs9_NM)>;
+                                  SB_NM, SBs9_NM,
+                                  UASH_NM, UASW_NM)>;
 
 // microMIPS32r6
 // =============

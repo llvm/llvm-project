@@ -230,6 +230,10 @@ const char *MipsTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case MipsISD::LDR:               return "MipsISD::LDR";
   case MipsISD::SDL:               return "MipsISD::SDL";
   case MipsISD::SDR:               return "MipsISD::SDR";
+  case MipsISD::UALW:              return "MipsISD::UALW";
+  case MipsISD::UALH:              return "MipsISD::UALH";
+  case MipsISD::UASW:              return "MipsISD::UASW";
+  case MipsISD::UASH:              return "MipsISD::UASH";
   case MipsISD::EXTP:              return "MipsISD::EXTP";
   case MipsISD::EXTPDP:            return "MipsISD::EXTPDP";
   case MipsISD::EXTR_S_H:          return "MipsISD::EXTR_S_H";
@@ -2692,6 +2696,16 @@ SDValue MipsTargetLowering::lowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   if (Subtarget.systemSupportsUnalignedAccess())
     return Op;
 
+  if (Subtarget.hasNanoMips()) {
+    if (MemVT == MVT::i32) {
+      SDValue Chain = LD->getChain(), Undef = DAG.getUNDEF(MemVT);
+      return createLoadLR(MipsISD::UALW, DAG, LD, Chain, Undef, 0);
+    } else if (MemVT == MVT::i16) {
+      SDValue Chain = LD->getChain(), Undef = DAG.getUNDEF(MemVT);
+      return createLoadLR(MipsISD::UALH, DAG, LD, Chain, Undef, 0);
+    }
+  }
+
   // Return if load is aligned or if MemVT is neither i32 nor i64.
   if ((LD->getAlignment() >= MemVT.getSizeInBits() / 8) ||
       ((MemVT != MVT::i32) && (MemVT != MVT::i64)))
@@ -2814,6 +2828,16 @@ static SDValue lowerFP_TO_SINT_STORE(StoreSDNode *SD, SelectionDAG &DAG,
 SDValue MipsTargetLowering::lowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   StoreSDNode *SD = cast<StoreSDNode>(Op);
   EVT MemVT = SD->getMemoryVT();
+
+  if (Subtarget.hasNanoMips()) {
+    if (MemVT == MVT::i32) {
+      SDValue Chain = SD->getChain();
+      return createStoreLR(MipsISD::UASW, DAG, SD, Chain, 0);
+    } else if (MemVT == MVT::i16) {
+      SDValue Chain = SD->getChain();
+      return createStoreLR(MipsISD::UASH, DAG, SD, Chain, 0);
+    }
+  }
 
   // Lower unaligned integer stores.
   if (!Subtarget.systemSupportsUnalignedAccess() &&

@@ -252,7 +252,13 @@ class TargetRegisterClass;
       LDL,
       LDR,
       SDL,
-      SDR
+      SDR,
+
+      // Unaligned nanoMIPS loads/stores.
+      UALW,
+      UALH,
+      UASW,
+      UASH
     };
 
   } // ene namespace MipsISD

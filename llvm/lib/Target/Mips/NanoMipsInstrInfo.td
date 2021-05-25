@@ -16,6 +16,10 @@
 //===----------------------------------------------------------------------===//
 
 def MipsFullAddr : SDNode<"MipsISD::FullAddr", SDTIntUnaryOp>;
+def NMUnalignedLW : SDNode<"MipsISD::UALW", SDTMipsLoadLR, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def NMUnalignedLH : SDNode<"MipsISD::UALH", SDTMipsLoadLR, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def NMUnalignedSW : SDNode<"MipsISD::UASW", SDTStore, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def NMUnalignedSH : SDNode<"MipsISD::UASH", SDTStore, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 //===----------------------------------------------------------------------===//
 // nanoMIPS Operand, Complex Patterns and Transformations Definitions.
@@ -37,6 +41,8 @@ def uimm5_nm : Operand<i32> {
   let PrintMethod = "printUImm<5>";
   let ParserMatchClass = !cast<AsmOperandClass>("UImm5AsmOperandClass");
 }
+
+def addrsimm9 : ComplexPattern<iPTR, 2, "selectIntAddrSImm9", [frameindex]>;
 
 //===----------------------------------------------------------------------===//
 //
@@ -153,6 +159,25 @@ class EffectiveAddressNM<string opstr, RegisterOperand RO> :
   string BaseOpcode = !strconcat(opstr, "_lea");
 }
 
+class UnalignedLoad<string opstr, SDNode OpNode,
+                    RegisterOperand RO = GPR32NMOpnd> :
+    InstNM<(outs RO:$rt), (ins mem_simm9:$addr, RO:$src),
+           !strconcat(opstr, "\t$rt, $addr"),
+           [(set RO:$rt, (OpNode addrsimm9:$addr, RO:$src))]>, InstSize32 {
+  let DecoderMethod = "DecodeMem";
+  string Constraints = "$src = $rt";
+  let mayLoad = 1;
+  let canFoldAsLoad = 1;
+}
+
+class UnalignedStore<string opstr, SDNode OpNode,
+                     RegisterOperand RO = GPR32NMOpnd> :
+    InstNM<(outs), (ins RO:$rt, mem_simm9:$addr),
+           !strconcat(opstr, "\t$rt, $addr"),
+           [(OpNode RO:$rt, addrsimm9:$addr)]>, InstSize32 {
+  let DecoderMethod = "DecodeMem";
+  let mayStore = 1;
+}
 
 //===----------------------------------------------------------------------===//
 //
@@ -389,8 +414,6 @@ def : Pat<(brcond (i32 GPR32NM:$lhs), bb:$dst),
 //
 //===----------------------------------------------------------------------===//
 
-def addrsimm9 : ComplexPattern<iPTR, 2, "selectIntAddrSImm9", [frameindex]>;
-
 let isCodeGenOnly = 1 in {
 
 def LW_NM : LoadMemoryNM<"lw", GPR32NMOpnd, mem, load, addrimm12, II_LW>, InstSize32;
@@ -411,6 +434,12 @@ def LB_NM : LoadMemoryNM<"lb", GPR32NMOpnd, mem, sextloadi8, addrimm12, II_LB>, 
 def LBs9_NM : LoadMemoryNM<"lb", GPR32NMOpnd, mem, sextloadi8, addrsimm9, II_LB>, InstSize32;
 def SB_NM : StoreMemoryNM<"sb", GPR32NMOpnd, mem, truncstorei8, addrimm12, II_SB>, InstSize32;
 def SBs9_NM : StoreMemoryNM<"sb", GPR32NMOpnd, mem, truncstorei8, addrsimm9, II_SB>, InstSize32;
+
+// TODO: Halfword load/store is never selected, this needs to be looked into.
+def UALH_NM : UnalignedLoad<"ualh", NMUnalignedLH>;
+def UALW_NM : UnalignedLoad<"ualw", NMUnalignedLW>;
+def UASH_NM : UnalignedStore<"uash", NMUnalignedSH>;
+def UASW_NM : UnalignedStore<"uasw", NMUnalignedSW>;
 
 // TODO: GP addressing
 // TODO: 'X' load/stores reg+reg
