@@ -50,6 +50,12 @@ constexpr StringRef getIndexingMapsAttrName() { return "indexing_maps"; }
 /// op's iterators.
 constexpr StringRef getIteratorTypesAttrName() { return "iterator_types"; }
 
+/// Attribute name for the StrArrayAttr which encodes the distribution type for
+/// `linalg.tiled_loop`.
+constexpr StringRef getDistributionTypesAttrName() {
+  return "distribution_types";
+}
+
 /// Attribute name for the StringAttr which encodes an optional documentation
 /// string of the structured op.
 constexpr StringRef getDocAttrName() { return "doc"; }
