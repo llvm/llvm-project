@@ -35,11 +35,9 @@ class ListenToModuleLoadedEvents (TestBase):
             lldb.SBTarget.GetBroadcasterClassName(),
             lldb.SBTarget.eBroadcastBitModulesUnloaded)
 
-        exe = self.getBuildArtifact("a.out")
-
         my_listener.Clear()
 
-        target = self.dbg.CreateTarget(exe)
+        target = self.createTestTarget()
 
         bkpt = target.BreakpointCreateByName("main")
 
@@ -58,9 +56,7 @@ class ListenToModuleLoadedEvents (TestBase):
             lldb.SBTarget.GetBroadcasterClassName(),
             lldb.SBTarget.eBroadcastBitBreakpointChanged)
 
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
+        target = self.createTestTarget()
 
         bkpt = target.BreakpointCreateByName("main")
 
@@ -100,9 +96,7 @@ class ListenToModuleLoadedEvents (TestBase):
             lldb.SBTarget.GetBroadcasterClassName(),
             lldb.SBTarget.eBroadcastBitBreakpointChanged)
 
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
+        target = self.createTestTarget()
         result = target.GetBroadcaster().AddListener(my_listener,
                                                      lldb.SBTarget.eBroadcastBitBreakpointChanged)
         self.assertEqual(result, lldb.SBTarget.eBroadcastBitBreakpointChanged,"Got our bit")

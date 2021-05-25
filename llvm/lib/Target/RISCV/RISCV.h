@@ -46,8 +46,8 @@ void initializeRISCVExpandPseudoPass(PassRegistry &);
 FunctionPass *createRISCVExpandAtomicPseudoPass();
 void initializeRISCVExpandAtomicPseudoPass(PassRegistry &);
 
-FunctionPass *createRISCVCleanupVSETVLIPass();
-void initializeRISCVCleanupVSETVLIPass(PassRegistry &);
+FunctionPass *createRISCVInsertVSETVLIPass();
+void initializeRISCVInsertVSETVLIPass(PassRegistry &);
 
 InstructionSelector *createRISCVInstructionSelector(const RISCVTargetMachine &,
                                                     RISCVSubtarget &,

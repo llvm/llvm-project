@@ -39,6 +39,7 @@ FunctionPass *createWebAssemblySetP2AlignOperands();
 
 // Late passes.
 FunctionPass *createWebAssemblyReplacePhysRegs();
+FunctionPass *createWebAssemblyNullifyDebugValueLists();
 FunctionPass *createWebAssemblyPrepareForLiveIntervals();
 FunctionPass *createWebAssemblyOptimizeLiveIntervals();
 FunctionPass *createWebAssemblyMemIntrinsicResults();
@@ -64,6 +65,7 @@ void initializeOptimizeReturnedPass(PassRegistry &);
 void initializeWebAssemblyArgumentMovePass(PassRegistry &);
 void initializeWebAssemblySetP2AlignOperandsPass(PassRegistry &);
 void initializeWebAssemblyReplacePhysRegsPass(PassRegistry &);
+void initializeWebAssemblyNullifyDebugValueListsPass(PassRegistry &);
 void initializeWebAssemblyPrepareForLiveIntervalsPass(PassRegistry &);
 void initializeWebAssemblyOptimizeLiveIntervalsPass(PassRegistry &);
 void initializeWebAssemblyMemIntrinsicResultsPass(PassRegistry &);

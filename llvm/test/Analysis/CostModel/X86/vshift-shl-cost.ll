@@ -32,7 +32,7 @@ define <2 x i64> @var_shift_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %shift
 ;
 ; AVX2-LABEL: 'var_shift_v2i64'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <2 x i64> %a, %b
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = shl <2 x i64> %a, %b
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %shift
 ;
 ; XOP-LABEL: 'var_shift_v2i64'
@@ -131,7 +131,7 @@ define <4 x i32> @var_shift_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %shift
 ;
 ; AVX2-LABEL: 'var_shift_v4i32'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <4 x i32> %a, %b
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = shl <4 x i32> %a, %b
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %shift
 ;
 ; XOP-LABEL: 'var_shift_v4i32'
@@ -1096,7 +1096,7 @@ define <2 x i64> @constant_shift_v2i64(<2 x i64> %a) {
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %shift
 ;
 ; AVX2-LABEL: 'constant_shift_v2i64'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <2 x i64> %a, <i64 1, i64 7>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = shl <2 x i64> %a, <i64 1, i64 7>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %shift
 ;
 ; XOP-LABEL: 'constant_shift_v2i64'
@@ -1190,13 +1190,9 @@ define <4 x i32> @constant_shift_v4i32(<4 x i32> %a) {
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = shl <4 x i32> %a, <i32 4, i32 5, i32 6, i32 7>
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %shift
 ;
-; AVX1-LABEL: 'constant_shift_v4i32'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = shl <4 x i32> %a, <i32 4, i32 5, i32 6, i32 7>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %shift
-;
-; AVX2-LABEL: 'constant_shift_v4i32'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <4 x i32> %a, <i32 4, i32 5, i32 6, i32 7>
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %shift
+; AVX-LABEL: 'constant_shift_v4i32'
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = shl <4 x i32> %a, <i32 4, i32 5, i32 6, i32 7>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %shift
 ;
 ; XOP-LABEL: 'constant_shift_v4i32'
 ; XOP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <4 x i32> %a, <i32 4, i32 5, i32 6, i32 7>
@@ -1205,10 +1201,6 @@ define <4 x i32> @constant_shift_v4i32(<4 x i32> %a) {
 ; AVX512-LABEL: 'constant_shift_v4i32'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <4 x i32> %a, <i32 4, i32 5, i32 6, i32 7>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %shift
-;
-; BTVER2-LABEL: 'constant_shift_v4i32'
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = shl <4 x i32> %a, <i32 4, i32 5, i32 6, i32 7>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %shift
 ;
   %shift = shl <4 x i32> %a, <i32 4, i32 5, i32 6, i32 7>
   ret <4 x i32> %shift
@@ -1857,13 +1849,9 @@ define <4 x i32> @test3(<4 x i32> %a) {
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shl = shl <4 x i32> %a, <i32 1, i32 -1, i32 2, i32 -3>
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %shl
 ;
-; AVX1-LABEL: 'test3'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shl = shl <4 x i32> %a, <i32 1, i32 -1, i32 2, i32 -3>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %shl
-;
-; AVX2-LABEL: 'test3'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shl = shl <4 x i32> %a, <i32 1, i32 -1, i32 2, i32 -3>
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %shl
+; AVX-LABEL: 'test3'
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shl = shl <4 x i32> %a, <i32 1, i32 -1, i32 2, i32 -3>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %shl
 ;
 ; XOP-LABEL: 'test3'
 ; XOP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shl = shl <4 x i32> %a, <i32 1, i32 -1, i32 2, i32 -3>
@@ -1872,10 +1860,6 @@ define <4 x i32> @test3(<4 x i32> %a) {
 ; AVX512-LABEL: 'test3'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shl = shl <4 x i32> %a, <i32 1, i32 -1, i32 2, i32 -3>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %shl
-;
-; BTVER2-LABEL: 'test3'
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shl = shl <4 x i32> %a, <i32 1, i32 -1, i32 2, i32 -3>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %shl
 ;
   %shl = shl <4 x i32> %a, <i32 1, i32 -1, i32 2, i32 -3>
   ret <4 x i32> %shl
@@ -1890,13 +1874,9 @@ define <4 x i32> @test4(<4 x i32> %a) {
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shl = shl <4 x i32> %a, <i32 0, i32 0, i32 1, i32 1>
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %shl
 ;
-; AVX1-LABEL: 'test4'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shl = shl <4 x i32> %a, <i32 0, i32 0, i32 1, i32 1>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %shl
-;
-; AVX2-LABEL: 'test4'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shl = shl <4 x i32> %a, <i32 0, i32 0, i32 1, i32 1>
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %shl
+; AVX-LABEL: 'test4'
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shl = shl <4 x i32> %a, <i32 0, i32 0, i32 1, i32 1>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %shl
 ;
 ; XOP-LABEL: 'test4'
 ; XOP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shl = shl <4 x i32> %a, <i32 0, i32 0, i32 1, i32 1>
@@ -1905,10 +1885,6 @@ define <4 x i32> @test4(<4 x i32> %a) {
 ; AVX512-LABEL: 'test4'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shl = shl <4 x i32> %a, <i32 0, i32 0, i32 1, i32 1>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %shl
-;
-; BTVER2-LABEL: 'test4'
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shl = shl <4 x i32> %a, <i32 0, i32 0, i32 1, i32 1>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %shl
 ;
   %shl = shl <4 x i32> %a, <i32 0, i32 0, i32 1, i32 1>
   ret <4 x i32> %shl
@@ -1929,7 +1905,7 @@ define <2 x i64> @test5(<2 x i64> %a) {
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %shl
 ;
 ; AVX2-LABEL: 'test5'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shl = shl <2 x i64> %a, <i64 2, i64 3>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shl = shl <2 x i64> %a, <i64 2, i64 3>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %shl
 ;
 ; XOP-LABEL: 'test5'

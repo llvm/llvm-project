@@ -117,7 +117,7 @@ bool shouldApplyPattern(Operation *currentOp, const Pattern &currentPattern) {
 ## Debug Action Handler
 
 A debug action handler provides the internal implementation for the various
-action related queries within the [`DebugActionManager`](debug-action-manager).
+action related queries within the [`DebugActionManager`](#debug-action-manager).
 Action handlers allow for external entities to control and inject external
 information into the compiler. Handlers can be registered with the
 `DebugActionManager` using `registerActionHandler`. There are two types of

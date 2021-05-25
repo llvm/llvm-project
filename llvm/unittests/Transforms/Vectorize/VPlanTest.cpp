@@ -949,7 +949,7 @@ TEST(VPRecipeTest, CastVPWidenMemoryInstructionRecipeToVPUserAndVPDef) {
   delete Load;
 }
 
-TEST(VPRecipeTest, MayHaveSideEffects) {
+TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   LLVMContext C;
   IntegerType *Int1 = IntegerType::get(C, 1);
   IntegerType *Int32 = IntegerType::get(C, 32);
@@ -965,7 +965,9 @@ TEST(VPRecipeTest, MayHaveSideEffects) {
     Args.push_back(&Op1);
     VPWidenRecipe Recipe(*AI, make_range(Args.begin(), Args.end()));
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
-
+    EXPECT_FALSE(Recipe.mayReadFromMemory());
+    EXPECT_FALSE(Recipe.mayWriteToMemory());
+    EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
     delete AI;
   }
 
@@ -982,6 +984,9 @@ TEST(VPRecipeTest, MayHaveSideEffects) {
     VPWidenSelectRecipe Recipe(*SelectI, make_range(Args.begin(), Args.end()),
                                false);
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
+    EXPECT_FALSE(Recipe.mayReadFromMemory());
+    EXPECT_FALSE(Recipe.mayWriteToMemory());
+    EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
     delete SelectI;
   }
 
@@ -995,6 +1000,9 @@ TEST(VPRecipeTest, MayHaveSideEffects) {
     Args.push_back(&Op2);
     VPWidenGEPRecipe Recipe(GEP, make_range(Args.begin(), Args.end()));
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
+    EXPECT_FALSE(Recipe.mayReadFromMemory());
+    EXPECT_FALSE(Recipe.mayWriteToMemory());
+    EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
     delete GEP;
   }
 
@@ -1002,6 +1010,9 @@ TEST(VPRecipeTest, MayHaveSideEffects) {
     VPValue Mask;
     VPBranchOnMaskRecipe Recipe(&Mask);
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
+    EXPECT_FALSE(Recipe.mayReadFromMemory());
+    EXPECT_FALSE(Recipe.mayWriteToMemory());
+    EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
   }
 
   {
@@ -1011,6 +1022,9 @@ TEST(VPRecipeTest, MayHaveSideEffects) {
     VPReductionRecipe Recipe(nullptr, nullptr, &ChainOp, &CondOp, &VecOp,
                              nullptr);
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
+    EXPECT_FALSE(Recipe.mayReadFromMemory());
+    EXPECT_FALSE(Recipe.mayWriteToMemory());
+    EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
   }
 
   {
@@ -1020,8 +1034,24 @@ TEST(VPRecipeTest, MayHaveSideEffects) {
     VPValue Mask;
     VPWidenMemoryInstructionRecipe Recipe(*Load, &Addr, &Mask);
     EXPECT_TRUE(Recipe.mayHaveSideEffects());
-
+    EXPECT_TRUE(Recipe.mayReadFromMemory());
+    EXPECT_FALSE(Recipe.mayWriteToMemory());
+    EXPECT_TRUE(Recipe.mayReadOrWriteMemory());
     delete Load;
+  }
+
+  {
+    auto *Store = new StoreInst(UndefValue::get(Int32),
+                                UndefValue::get(Int32Ptr), false, Align(1));
+    VPValue Addr;
+    VPValue Mask;
+    VPValue StoredV;
+    VPWidenMemoryInstructionRecipe Recipe(*Store, &Addr, &StoredV, &Mask);
+    EXPECT_TRUE(Recipe.mayHaveSideEffects());
+    EXPECT_FALSE(Recipe.mayReadFromMemory());
+    EXPECT_TRUE(Recipe.mayWriteToMemory());
+    EXPECT_TRUE(Recipe.mayReadOrWriteMemory());
+    delete Store;
   }
 
   {
@@ -1034,6 +1064,9 @@ TEST(VPRecipeTest, MayHaveSideEffects) {
     Args.push_back(&Op2);
     VPWidenCallRecipe Recipe(*Call, make_range(Args.begin(), Args.end()));
     EXPECT_TRUE(Recipe.mayHaveSideEffects());
+    EXPECT_TRUE(Recipe.mayReadFromMemory());
+    EXPECT_TRUE(Recipe.mayWriteToMemory());
+    EXPECT_TRUE(Recipe.mayReadOrWriteMemory());
     delete Call;
   }
 
@@ -1041,8 +1074,12 @@ TEST(VPRecipeTest, MayHaveSideEffects) {
   {
     VPValue Op1;
     VPValue Op2;
-    VPInstruction Recipe(Instruction::Add, {&Op1, &Op2});
+    VPInstruction VPInst(Instruction::Add, {&Op1, &Op2});
+    VPRecipeBase &Recipe = VPInst;
     EXPECT_TRUE(Recipe.mayHaveSideEffects());
+    EXPECT_TRUE(Recipe.mayReadFromMemory());
+    EXPECT_TRUE(Recipe.mayWriteToMemory());
+    EXPECT_TRUE(Recipe.mayReadOrWriteMemory());
   }
 }
 

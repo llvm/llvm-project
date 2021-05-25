@@ -52,7 +52,6 @@ class BreakpointByLineAndColumnTestCase(TestBase):
     @skipIf(compiler="gcc", compiler_version=['<', '7.1'])
     def testBreakpointByLineAndColumnNearestCode(self):
         self.build()
-        exe = self.getBuildArtifact("a.out")
 
         patterns = [
             "In the middle of a function name (col:42)",
@@ -67,10 +66,7 @@ class BreakpointByLineAndColumnTestCase(TestBase):
             column = int(re.search('\(col:([0-9]+)\)', pattern).group(1))
             source_loc.append({'line':line, 'column':column})
 
-        # Create a target from the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
+        target = self.createTestTarget()
 
         for loc in source_loc:
             src_file = lldb.SBFileSpec("main.cpp")

@@ -666,13 +666,6 @@ public:
         SemaRef.Context.getTargetInfo().getPlatformMinVersion());
   }
 
-  bool TraverseDecl(Decl *D) {
-    // Avoid visiting nested functions to prevent duplicate warnings.
-    if (!D || isa<FunctionDecl>(D))
-      return true;
-    return Base::TraverseDecl(D);
-  }
-
   bool TraverseStmt(Stmt *S) {
     if (!S)
       return true;
@@ -685,8 +678,6 @@ public:
   void IssueDiagnostics(Stmt *S) { TraverseStmt(S); }
 
   bool TraverseIfStmt(IfStmt *If);
-
-  bool TraverseLambdaExpr(LambdaExpr *E) { return true; }
 
   // for 'case X:' statements, don't bother looking at the 'X'; it can't lead
   // to any useful diagnostics.
@@ -919,6 +910,17 @@ void Sema::DiagnoseUnguardedAvailabilityViolations(Decl *D) {
   DiagnoseUnguardedAvailability(*this, D).IssueDiagnostics(Body);
 }
 
+FunctionScopeInfo *Sema::getCurFunctionAvailabilityContext() {
+  if (FunctionScopes.empty())
+    return nullptr;
+
+  // Conservatively search the entire current function scope context for
+  // availability violations. This ensures we always correctly analyze nested
+  // classes, blocks, lambdas, etc. that may or may not be inside if(@available)
+  // checks themselves.
+  return FunctionScopes.front();
+}
+
 void Sema::DiagnoseAvailabilityOfDecl(NamedDecl *D,
                                       ArrayRef<SourceLocation> Locs,
                                       const ObjCInterfaceDecl *UnknownObjCClass,
@@ -941,11 +943,8 @@ void Sema::DiagnoseAvailabilityOfDecl(NamedDecl *D,
     // We need to know the @available context in the current function to
     // diagnose this use, let DiagnoseUnguardedAvailabilityViolations do that
     // when we're done parsing the current function.
-    if (getCurFunctionOrMethodDecl()) {
-      getEnclosingFunction()->HasPotentialAvailabilityViolations = true;
-      return;
-    } else if (getCurBlock() || getCurLambda()) {
-      getCurFunction()->HasPotentialAvailabilityViolations = true;
+    if (FunctionScopeInfo *Context = getCurFunctionAvailabilityContext()) {
+      Context->HasPotentialAvailabilityViolations = true;
       return;
     }
   }

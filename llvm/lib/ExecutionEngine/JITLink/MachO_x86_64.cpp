@@ -522,8 +522,7 @@ static Error optimizeMachO_x86_64_GOTAndStubs(LinkGraph &G) {
           E.setTarget(GOTTarget);
           E.setKind(x86_64::Delta32);
           E.setAddend(E.getAddend() - 4);
-          auto *BlockData = reinterpret_cast<uint8_t *>(
-              const_cast<char *>(B->getContent().data()));
+          auto *BlockData = B->getMutableContent(G).data();
           BlockData[E.getOffset() - 2] = 0x8d;
           LLVM_DEBUG({
             dbgs() << "  Replaced GOT load wih LEA:\n    ";
@@ -577,9 +576,8 @@ public:
       : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {}
 
 private:
-  Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
-                   char *BlockWorkingMem) const {
-    return x86_64::applyFixup(G, B, E, BlockWorkingMem);
+  Error applyFixup(LinkGraph &G, Block &B, const Edge &E) const {
+    return x86_64::applyFixup(G, B, E);
   }
 };
 

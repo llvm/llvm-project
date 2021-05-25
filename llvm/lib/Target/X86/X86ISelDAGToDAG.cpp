@@ -3867,8 +3867,12 @@ bool X86DAGToDAGISel::tryShiftAmountMod(SDNode *N) {
           Add1 = Add1.getOperand(0);
           SubVT = Add1.getValueType();
         }
-        X = CurDAG->getNode(ISD::ADD, DL, SubVT, Add1,
-                            CurDAG->getZExtOrTrunc(Add0, DL, SubVT));
+        if (Add0.getValueType() != SubVT) {
+          Add0 = CurDAG->getZExtOrTrunc(Add0, DL, SubVT);
+          insertDAGNode(*CurDAG, OrigShiftAmt, Add0);
+        }
+
+        X = CurDAG->getNode(ISD::ADD, DL, SubVT, Add1, Add0);
         insertDAGNode(*CurDAG, OrigShiftAmt, X);
       } else
         return false;

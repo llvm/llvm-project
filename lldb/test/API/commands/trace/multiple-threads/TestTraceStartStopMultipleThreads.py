@@ -18,8 +18,7 @@ class TestTraceStartStopMultipleThreads(TestBase):
     @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
     def testStartMultipleLiveThreads(self):
         self.build()
-        exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe)
+        target = self.createTestTarget()
 
         self.expect("b main")
         self.expect("b 6")
@@ -40,8 +39,7 @@ class TestTraceStartStopMultipleThreads(TestBase):
     @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
     def testStartMultipleLiveThreadsWithStops(self):
         self.build()
-        exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe)
+        target = self.createTestTarget()
 
         self.expect("b main")
         self.expect("b 6")

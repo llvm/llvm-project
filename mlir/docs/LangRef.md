@@ -34,7 +34,7 @@ system](#type-system).  [Operations](#operations) are contained in
 [Blocks](#blocks) and Blocks are contained in [Regions](#regions). Operations
 are also ordered within their containing block and Blocks are ordered in their
 containing region, although this order may or may not be semantically
-meaningful in a given [kind of region](Interfaces.md#regionkindinterfaces)).
+meaningful in a given [kind of region](Interfaces.md/#regionkindinterfaces)).
 Operations may also contain regions, enabling hierarchical structures to be
 represented.
 
@@ -56,7 +56,7 @@ allowing operation semantics to be described abstractly using
 to operate on operations more generically.  Traits often describe verification
 constraints on valid IR, enabling complex invariants to be captured and
 checked. (see [Op vs
-Operation](Tutorials/Toy/Ch-2/#op-vs-operation-using-mlir-operations))
+Operation](Tutorials/Toy/Ch-2.md/#op-vs-operation-using-mlir-operations))
 
 One obvious application of MLIR is to represent an
 [SSA-based](https://en.wikipedia.org/wiki/Static_single_assignment_form) IR,
@@ -223,12 +223,12 @@ scope of values in a region with [SSA control flow
 semantics](#control-flow-and-ssacfg-regions) is constrained according
 to the standard definition of [SSA
 dominance](https://en.wikipedia.org/wiki/Dominator_\(graph_theory\)). Another
-example is the [IsolatedFromAbove trait](Traits.md#isolatedfromabove),
+example is the [IsolatedFromAbove trait](Traits.md/#isolatedfromabove),
 which restricts directly accessing values defined in containing
 regions.
 
 Function identifiers and mapping identifiers are associated with
-[Symbols](SymbolsAndSymbolTables) and have scoping rules dependent on
+[Symbols](SymbolsAndSymbolTables.md) and have scoping rules dependent on
 symbol attributes.
 
 ## Dialects
@@ -411,7 +411,7 @@ operations" SSA IRs (like LLVM). For example, the [parallel copy
 semantics](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.524.5461&rep=rep1&type=pdf)
 of SSA is immediately apparent, and function arguments are no longer a
 special case: they become arguments to the entry block [[more
-rationale](Rationale/Rationale.md#block-arguments-vs-phi-nodes)]. Blocks
+rationale](Rationale/Rationale.md/#block-arguments-vs-phi-nodes)]. Blocks
 are also a fundamental concept that cannot be represented by
 operations because values defined in an operation cannot be accessed
 outside the operation.
@@ -427,7 +427,7 @@ regions: [SSACFG regions](#control-flow-and-ssacfg-regions), which describe
 control flow between blocks, and [Graph regions](#graph-regions), which do not
 require control flow between block. The kinds of regions within an operation
 are described using the
-[RegionKindInterface](Interfaces.md#regionkindinterfaces).
+[RegionKindInterface](Interfaces.md/#regionkindinterfaces).
 
 Regions do not have a name or an address, only the blocks contained in a
 region do. Regions must be contained within operations and have no type or
@@ -459,7 +459,7 @@ don't escape to the enclosing region, if any. By default, operations inside a
 region can reference values defined outside of the region whenever it would
 have been legal for operands of the enclosing operation to reference those
 values, but this can be restricted using traits, such as
-[OpTrait::IsolatedFromAbove](Traits.md#isolatedfromabove), or a custom
+[OpTrait::IsolatedFromAbove](Traits.md/#isolatedfromabove), or a custom
 verifier.
 
 Example:
@@ -483,7 +483,7 @@ defined in a region can never be used outside of the region.
 ### Control Flow and SSACFG Regions
 
 In MLIR, control flow semantics of a region is indicated by
-[RegionKind::SSACFG](Interfaces.md#regionkindinterfaces).  Informally, these
+[RegionKind::SSACFG](Interfaces.md/#regionkindinterfaces).  Informally, these
 regions support semantics where operations in a region 'execute
 sequentially'. Before an operation executes, its operands have well-defined
 values. After an operation executes, the operands have the same values and
@@ -569,7 +569,7 @@ directly used values remain live.
 ### Graph Regions
 
 In MLIR, graph-like semantics in a region is indicated by
-[RegionKind::Graph](Interfaces.md#regionkindinterfaces). Graph regions are
+[RegionKind::Graph](Interfaces.md/#regionkindinterfaces). Graph regions are
 appropriate for concurrent semantics without control flow, or for modeling
 generic directed graph data structures. Graph regions are appropriate for
 representing cyclic relationships between coupled values where there is no

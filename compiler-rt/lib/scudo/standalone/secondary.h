@@ -83,6 +83,7 @@ public:
   void enable() {}
   void releaseToOS() {}
   void disableMemoryTagging() {}
+  void unmapTestOnly() {}
   bool setOption(Option O, UNUSED sptr Value) {
     if (O == Option::ReleaseInterval || O == Option::MaxCacheEntriesCount ||
         O == Option::MaxCacheEntrySize)
@@ -326,6 +327,8 @@ public:
 
   void enable() { Mutex.unlock(); }
 
+  void unmapTestOnly() { empty(); }
+
 private:
   void empty() {
     struct {
@@ -455,6 +458,8 @@ public:
   void releaseToOS() { Cache.releaseToOS(); }
 
   void disableMemoryTagging() { Cache.disableMemoryTagging(); }
+
+  void unmapTestOnly() { Cache.unmapTestOnly(); }
 
 private:
   typename Config::SecondaryCache Cache;

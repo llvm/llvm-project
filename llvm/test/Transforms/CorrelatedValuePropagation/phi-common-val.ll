@@ -150,6 +150,31 @@ bb3:
   ret i32 %r
 }
 
+; Same as previous test case, but without nowrap flags.
+define i32 @PR43802_without_nowrap(i32 %arg) {
+; CHECK-LABEL: @PR43802_without_nowrap(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[ARG:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ARG]], -2147483648
+; CHECK-NEXT:    br i1 [[CMP]], label [[BB2:%.*]], label [[BB3:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+entry:
+  %sub = sub i32 0, %arg
+  %cmp = icmp eq i32 %arg, -2147483648
+  br i1 %cmp, label %bb2, label %bb3
+
+bb2:
+  br label %bb3
+
+bb3:
+  %r = phi i32 [ -2147483648, %bb2 ], [ %sub, %entry ]
+  ret i32 %r
+}
+
 ; TODO: Miscompile.
 define i8 @pr50399(i8 %x) {
 ; CHECK-LABEL: @pr50399(

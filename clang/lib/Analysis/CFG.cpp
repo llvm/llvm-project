@@ -1456,6 +1456,13 @@ void CFGBuilder::findConstructionContexts(
     // TODO: Handle other cases. For now, fail to find construction contexts.
     break;
   }
+  case Stmt::ParenExprClass: {
+    // If expression is placed into parenthesis we should propagate the parent
+    // construction context to subexpressions.
+    auto *PE = cast<ParenExpr>(Child);
+    findConstructionContexts(Layer, PE->getSubExpr());
+    break;
+  }
   default:
     break;
   }

@@ -16,7 +16,6 @@ define void @sink_replicate_region_1(i32 %x, i8* %ptr) optsize {
 ; CHECK-NEXT: Successor(s): loop.0
 
 ; CHECK:      loop.0:
-; CHECK-NEXT:   REPLICATE ir<%gep> = getelementptr ir<%ptr>, ir<%iv>
 ; CHECK-NEXT: Successor(s): pred.load
 
 ; CHECK:     <xVFxUF> pred.load: {
@@ -26,6 +25,7 @@ define void @sink_replicate_region_1(i32 %x, i8* %ptr) optsize {
 ; CHECK-NEXT:   CondBit: vp<%3> (loop)
 
 ; CHECK:      pred.load.if:
+; CHECK-NEXT:     REPLICATE ir<%gep> = getelementptr ir<%ptr>, ir<%iv>
 ; CHECK-NEXT:     REPLICATE ir<%lv> = load ir<%gep> (S->V)
 ; CHECK-NEXT:   Successor(s): pred.load.continue
 
@@ -106,8 +106,6 @@ define void @sink_replicate_region_2(i32 %x, i8 %y, i32* %ptr) optsize {
 ; CHECK-NEXT: }
 
 ; CHECK:     loop.0.split:
-; CHECK-NEXT:   REPLICATE ir<%add> = add vp<%6>, ir<%recur.next>
-; CHECK-NEXT:   REPLICATE ir<%gep> = getelementptr ir<%ptr>, ir<%iv>
 ; CHECK-NEXT: Successor(s): pred.store
 
 ; CHECK:      <xVFxUF> pred.store: {
@@ -117,6 +115,8 @@ define void @sink_replicate_region_2(i32 %x, i8 %y, i32* %ptr) optsize {
 ; CHECK-NEXT:   CondBit: vp<%3> (loop)
 
 ; CHECK:      pred.store.if:
+; CHECK-NEXT:     REPLICATE ir<%add> = add vp<%6>, ir<%recur.next>
+; CHECK-NEXT:     REPLICATE ir<%gep> = getelementptr ir<%ptr>, ir<%iv>
 ; CHECK-NEXT:     REPLICATE store ir<%add>, ir<%gep>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 
