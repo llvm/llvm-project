@@ -14,7 +14,11 @@ The opaque pointer type project aims to replace all pointer types containing
 pointee types in LLVM with an opaque pointer type. The new pointer type is
 tentatively represented textually as ``ptr``.
 
-Anything to do with pointer address spaces is unaffected.
+Address spaces are still used to distinguish between different kinds of pointers
+where the distinction is relevant for lowering (e.g. data vs function pointers
+have different sizes on some architectures). Opaque pointers are not changing
+anything related to address spaces and lowering. For more information, see
+`DataLayout <LangRef.html#langref-datalayout>`_.
 
 Issues with explicit pointee types
 ==================================
