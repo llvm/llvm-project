@@ -1066,7 +1066,7 @@ static bool isLastMemrefDimUnitStride(MemRefType type) {
   int64_t offset;
   SmallVector<int64_t, 4> strides;
   auto successStrides = getStridesAndOffset(type, strides, offset);
-  return succeeded(successStrides) && strides.back() == 1;
+  return succeeded(successStrides) && (strides.empty() || strides.back() == 1);
 }
 
 /// Lower a 1D vector transfer op to SCF using scalar loads/stores. This is
