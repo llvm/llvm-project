@@ -436,6 +436,11 @@ getOutputFileName(StringRef InputFile, const DsymutilOptions &Options) {
       (Options.LinkOpts.Update || !Options.SymbolMap.empty()))
     return OutputLocation(std::string(InputFile));
 
+  // When dumping the debug map, just return an empty output location. This
+  // allows us to compute the output location once.
+  if (Options.DumpDebugMap)
+    return OutputLocation("");
+
   // If a flat dSYM has been requested, things are pretty simple.
   if (Options.Flat) {
     if (Options.OutputFile.empty()) {
@@ -580,6 +585,15 @@ int main(int argc, char **argv) {
     // Shared a single binary holder for all the link steps.
     BinaryHolder BinHolder(Options.LinkOpts.VFS);
 
+    // Compute the output location and update the resource directory.
+    Expected<OutputLocation> OutputLocationOrErr =
+        getOutputFileName(InputFile, Options);
+    if (!OutputLocationOrErr) {
+      WithColor::error() << toString(OutputLocationOrErr.takeError());
+      return 1;
+    }
+    Options.LinkOpts.ResourceDir = OutputLocationOrErr->getResourceDir();
+
     // Statistics only require different architectures to be processed
     // sequentially, the link itself can still happen in parallel. Change the
     // thread pool strategy here instead of modifying LinkOpts.Threads.
@@ -620,14 +634,6 @@ int main(int argc, char **argv) {
       // Using a std::shared_ptr rather than std::unique_ptr because move-only
       // types don't work with std::bind in the ThreadPool implementation.
       std::shared_ptr<raw_fd_ostream> OS;
-
-      Expected<OutputLocation> OutputLocationOrErr =
-          getOutputFileName(InputFile, Options);
-      if (!OutputLocationOrErr) {
-        WithColor::error() << toString(OutputLocationOrErr.takeError());
-        return 1;
-      }
-      Options.LinkOpts.ResourceDir = OutputLocationOrErr->getResourceDir();
 
       std::string OutputFile = OutputLocationOrErr->DWARFFile;
       if (NeedsTempFiles) {
@@ -678,12 +684,6 @@ int main(int argc, char **argv) {
       return 1;
 
     if (NeedsTempFiles) {
-      Expected<OutputLocation> OutputLocationOrErr =
-          getOutputFileName(InputFile, Options);
-      if (!OutputLocationOrErr) {
-        WithColor::error() << toString(OutputLocationOrErr.takeError());
-        return 1;
-      }
       if (!MachOUtils::generateUniversalBinary(TempFiles,
                                                OutputLocationOrErr->DWARFFile,
                                                Options.LinkOpts, SDKPath))
