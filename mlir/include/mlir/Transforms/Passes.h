@@ -23,6 +23,7 @@
 namespace mlir {
 
 class AffineForOp;
+class GreedyRewriteConfig;
 
 //===----------------------------------------------------------------------===//
 // Passes
@@ -60,8 +61,13 @@ std::unique_ptr<FunctionPass> createFinalizingBufferizePass();
 /// Creates a pass that converts memref function results to out-params.
 std::unique_ptr<Pass> createBufferResultsToOutParamsPass();
 
-/// Creates an instance of the Canonicalizer pass.
+/// Creates an instance of the Canonicalizer pass, configured with default
+/// settings (which can be overridden by pass options on the command line).
 std::unique_ptr<Pass> createCanonicalizerPass();
+
+/// Creates an instance of the Canonicalizer pass with the specified config.
+std::unique_ptr<Pass>
+createCanonicalizerPass(const GreedyRewriteConfig &config);
 
 /// Creates a pass to perform common sub expression elimination.
 std::unique_ptr<Pass> createCSEPass();

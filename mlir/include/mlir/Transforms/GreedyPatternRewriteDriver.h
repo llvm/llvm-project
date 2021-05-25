@@ -18,8 +18,9 @@
 
 namespace mlir {
 
-/// This struct allows control over how the GreedyPatternRewriteDriver works.
-struct GreedyRewriteConfig {
+/// This class allows control over how the GreedyPatternRewriteDriver works.
+class GreedyRewriteConfig {
+public:
   /// This specifies the order of initial traversal that populates the rewriters
   /// worklist.  When set to true, it walks the operations top-down, which is
   /// generally more efficient in compile time.  When set to false, its initial
