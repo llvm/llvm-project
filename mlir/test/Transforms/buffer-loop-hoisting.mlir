@@ -458,3 +458,32 @@ func @partial_hoist_multiple_loop_dependency(
 // CHECK-NEXT: {{.*}} = scf.for
 // CHECK-NEXT: %[[ALLOC1:.*]] = memref.alloc({{.*}})
 // CHECK-NEXT: {{.*}} = scf.for
+
+// -----
+
+// Test with allocas to ensure that op is also considered.
+
+// CHECK-LABEL: func @hoist_alloca
+func @hoist_alloca(
+  %lb: index,
+  %ub: index,
+  %step: index,
+  %buf: memref<2xf32>,
+  %res: memref<2xf32>) {
+  %0 = memref.alloca() : memref<2xf32>
+  %1 = scf.for %i = %lb to %ub step %step
+    iter_args(%iterBuf = %buf) -> memref<2xf32> {
+    %2 = scf.for %i2 = %lb to %ub step %step
+      iter_args(%iterBuf2 = %iterBuf) -> memref<2xf32> {
+        %3 = memref.alloca() : memref<2xf32>
+        scf.yield %0 : memref<2xf32>
+    }
+    scf.yield %0 : memref<2xf32>
+  }
+  test.copy(%1, %res) : (memref<2xf32>, memref<2xf32>)
+  return
+}
+
+//      CHECK: %[[ALLOCA0:.*]] = memref.alloca({{.*}})
+// CHECK-NEXT: %[[ALLOCA1:.*]] = memref.alloca({{.*}})
+// CHECK-NEXT: {{.*}} = scf.for
