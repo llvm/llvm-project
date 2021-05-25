@@ -2828,6 +2828,23 @@ define i8* @select_replacement_gep_inbounds(i8* %base, i64 %offset) {
   ret i8* %sel
 }
 
+define <2 x i1> @partial_true_undef_condval(<2 x i1> %x) {
+; CHECK-LABEL: @partial_true_undef_condval(
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 poison>
+;
+  %r = select <2 x i1> <i1 true, i1 poison>, <2 x i1> <i1 true, i1 poison>, <2 x i1> %x
+  ret <2 x i1> %r
+}
+
+define <2 x i1> @partial_false_undef_condval(<2 x i1> %x) {
+; CHECK-LABEL: @partial_false_undef_condval(
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> <i1 false, i1 poison>, <2 x i1> [[X:%.*]], <2 x i1> <i1 false, i1 poison>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %r = select <2 x i1> <i1 false, i1 poison>, <2 x i1> %x, <2 x i1> <i1 false, i1 poison>
+  ret <2 x i1> %r
+}
+
 declare void @use(i1)
 declare void @use_i8(i8)
 declare i32 @llvm.cttz.i32(i32, i1 immarg)
