@@ -206,6 +206,8 @@ class DebuggerBase(object, metaclass=abc.ABCMeta):
         pass
 
     def _external_to_debug_path(self, path):
+        if not self.options.debugger_use_relative_paths:
+            return path
         root_dir = self.options.source_root_dir
         if not root_dir or not path:
             return path
@@ -213,6 +215,8 @@ class DebuggerBase(object, metaclass=abc.ABCMeta):
         return path[len(root_dir):].lstrip(os.path.sep)
 
     def _debug_to_external_path(self, path):
+        if not self.options.debugger_use_relative_paths:
+            return path
         if not path or not self.options.source_root_dir:
             return path
         for file in self.options.source_files:
@@ -255,32 +259,38 @@ class TestDebuggerBase(unittest.TestCase):
         return [frame.loc.path for frame in step.frames]
 
     def test_add_breakpoint_no_source_root_dir(self):
+        self.options.debugger_use_relative_paths = True
         self.options.source_root_dir = ''
         self.dbg.add_breakpoint('/root/some_file', 12)
         self.assertEqual('/root/some_file', self.dbg.breakpoint_file)
 
     def test_add_breakpoint_with_source_root_dir(self):
+        self.options.debugger_use_relative_paths = True
         self.options.source_root_dir = '/my_root'
         self.dbg.add_breakpoint('/my_root/some_file', 12)
         self.assertEqual('some_file', self.dbg.breakpoint_file)
 
     def test_add_breakpoint_with_source_root_dir_slash_suffix(self):
+        self.options.debugger_use_relative_paths = True
         self.options.source_root_dir = '/my_root/'
         self.dbg.add_breakpoint('/my_root/some_file', 12)
         self.assertEqual('some_file', self.dbg.breakpoint_file)
 
     def test_get_step_info_no_source_root_dir(self):
+        self.options.debugger_use_relative_paths = True
         self.dbg.step_info = self._new_step(['/root/some_file'])
         self.assertEqual(['/root/some_file'],
             self._step_paths(self.dbg.get_step_info([], 0)))
 
     def test_get_step_info_no_frames(self):
+        self.options.debugger_use_relative_paths = True
         self.options.source_root_dir = '/my_root'
         self.dbg.step_info = self._new_step([])
         self.assertEqual([],
             self._step_paths(self.dbg.get_step_info([], 0)))
 
     def test_get_step_info(self):
+        self.options.debugger_use_relative_paths = True
         self.options.source_root_dir = '/my_root'
         self.options.source_files = ['/my_root/some_file']
         self.dbg.step_info = self._new_step(
