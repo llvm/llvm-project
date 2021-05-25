@@ -498,9 +498,9 @@ public: // FIXME
   /// base pointer.
   Register SGPRForBPSaveRestoreCopy;
   Optional<int> BasePointerSaveIndex;
-  
-  int ReturnAddressSaveIndex;
-  int EXECSaveIndex;
+
+  Optional<int> ReturnAddressSaveIndex;
+  Optional<int> EXECSaveIndex;
 
   Register VGPRReservedForSGPRSpill;
   bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg);
