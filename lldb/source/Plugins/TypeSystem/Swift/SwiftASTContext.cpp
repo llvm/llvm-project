@@ -120,8 +120,9 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/ReproducerProvider.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/Timer.h"
 #include "lldb/Utility/XcodeSDK.h"
-#include "lldb/Utility/ReproducerProvider.h"
+
 #include "llvm/ADT/ScopeExit.h"
 
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
@@ -1616,6 +1617,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     module.GetDescription(ss, eDescriptionLevelBrief);
     ss << '"' << ')';
   }
+  LLDB_SCOPED_TIMERF("%s::CreateInstance", m_description.c_str());
   std::vector<std::string> module_search_paths;
   std::vector<std::pair<std::string, bool>> framework_search_paths;
 
@@ -1851,12 +1853,15 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     return {};
   }
 
-  const bool can_create = true;
-  swift::ModuleDecl *stdlib =
-      swift_ast_sp->m_ast_context_ap->getStdlibModule(can_create);
-  if (!stdlib || IsDWARFImported(*stdlib)) {
-    logError("couldn't load the Swift stdlib");
-    return {};
+  {
+    LLDB_SCOPED_TIMERF("%s (getStdlibModule)", m_description.c_str());
+    const bool can_create = true;
+    swift::ModuleDecl *stdlib =
+        swift_ast_sp->m_ast_context_ap->getStdlibModule(can_create);
+    if (!stdlib || IsDWARFImported(*stdlib)) {
+      logError("couldn't load the Swift stdlib");
+      return {};
+    }
   }
 
   return swift_ast_sp;
@@ -1921,6 +1926,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   if (!SwiftASTContextSupportsLanguage(language))
     return lldb::TypeSystemSP();
 
+  LLDB_SCOPED_TIMER();
   std::string m_description = "SwiftASTContextForExpressions";
   std::vector<std::string> module_search_paths;
   std::vector<std::pair<std::string, bool>> framework_search_paths;
@@ -2305,12 +2311,15 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     return {};
   }
 
-  const bool can_create = true;
-  swift::ModuleDecl *stdlib =
-      swift_ast_sp->m_ast_context_ap->getStdlibModule(can_create);
-  if (!stdlib || IsDWARFImported(*stdlib)) {
-    logError("couldn't load the Swift stdlib");
-    return {};
+  {
+    LLDB_SCOPED_TIMERF("%s (getStdlibModule)", m_description.c_str());
+    const bool can_create = true;
+    swift::ModuleDecl *stdlib =
+        swift_ast_sp->m_ast_context_ap->getStdlibModule(can_create);
+    if (!stdlib || IsDWARFImported(*stdlib)) {
+      logError("couldn't load the Swift stdlib");
+      return {};
+    }
   }
 
   return swift_ast_sp;
@@ -2568,6 +2577,7 @@ swift::SearchPathOptions &SwiftASTContext::GetSearchPathOptions() {
 void SwiftASTContext::InitializeSearchPathOptions(
     llvm::ArrayRef<std::string> extra_module_search_paths,
     llvm::ArrayRef<std::pair<std::string, bool>> extra_framework_search_paths) {
+  LLDB_SCOPED_TIMER();
   swift::CompilerInvocation &invocation = GetCompilerInvocation();
 
   assert(!m_initialized_search_path_options);
@@ -3164,6 +3174,7 @@ public:
   void lookupValue(StringRef name, llvm::Optional<swift::ClangTypeKind> kind,
                    StringRef inModule,
                    llvm::SmallVectorImpl<clang::Decl *> &results) override {
+    LLDB_SCOPED_TIMER();
     LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\")", name.str().c_str());
 
     // We will not find any Swift types in the Clang compile units.
@@ -3280,6 +3291,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   if (m_ast_context_ap.get())
     return m_ast_context_ap.get();
 
+  LLDB_SCOPED_TIMER();
   m_ast_context_ap.reset(swift::ASTContext::get(
       GetLanguageOptions(), GetTypeCheckerOptions(), GetSearchPathOptions(),
       GetClangImporterOptions(),
@@ -3572,6 +3584,7 @@ swift::ModuleDecl *SwiftASTContext::GetModule(const SourceModule &module,
   if (swift::ModuleDecl *module_decl = GetCachedModule(module))
     return module_decl;
 
+  LLDB_SCOPED_TIMER();
   swift::ASTContext *ast = GetASTContext();
   if (!ast) {
     LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\") invalid ASTContext",
@@ -3759,6 +3772,7 @@ GetLibrarySearchPaths(const swift::SearchPathOptions &search_path_opts) {
 void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
                                  Process &process, Status &error) {
   VALID_OR_RETURN_VOID();
+  LLDB_SCOPED_TIMER();
 
   Status current_error;
   auto addLinkLibrary = [&](swift::LinkLibrary link_lib) {
@@ -3947,6 +3961,7 @@ bool SwiftASTContext::LoadLibraryUsingPaths(
     std::vector<std::string> &search_paths, bool check_rpath,
     StreamString &all_dlopen_errors) {
   VALID_OR_RETURN(false);
+  LLDB_SCOPED_TIMER();
 
   SwiftLanguageRuntime *runtime = SwiftLanguageRuntime::Get(&process);
   if (!runtime) {
@@ -4092,6 +4107,7 @@ static std::string GetBriefModuleName(Module &module) {
 void SwiftASTContext::RegisterSectionModules(
     Module &module, std::vector<std::string> &module_names) {
   VALID_OR_RETURN_VOID();
+  LLDB_SCOPED_TIMER();
 
   swift::MemoryBufferSerializedModuleLoader *loader =
       GetMemoryBufferModuleLoader();
@@ -4172,6 +4188,7 @@ void SwiftASTContext::RegisterSectionModules(
 void SwiftASTContext::ValidateSectionModules(
     Module &module, const std::vector<std::string> &module_names) {
   VALID_OR_RETURN_VOID();
+  LLDB_SCOPED_TIMER();
 
   Status error;
 
@@ -4592,6 +4609,7 @@ size_t SwiftASTContext::FindTypesOrDecls(const char *name,
                                          swift::ModuleDecl *swift_module,
                                          TypesOrDecls &results, bool append) {
   VALID_OR_RETURN(0);
+  LLDB_SCOPED_TIMER();
 
   if (!append)
     results.clear();
@@ -4765,6 +4783,7 @@ SwiftASTContext::GetIRGenerator(swift::IRGenOptions &opts,
 
 swift::irgen::IRGenModule &SwiftASTContext::GetIRGenModule() {
   VALID_OR_RETURN(*m_ir_gen_module_ap);
+  LLDB_SCOPED_TIMER();
 
   llvm::call_once(m_ir_gen_module_once, [this]() {
     // Make sure we have a good ClangImporter.
