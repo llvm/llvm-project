@@ -651,10 +651,10 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SHL,     MVT::v8i32,    2 }, // vpsllvd (Haswell from agner.org)
     { ISD::SRL,     MVT::v8i32,    2 }, // vpsrlvd (Haswell from agner.org)
     { ISD::SRA,     MVT::v8i32,    2 }, // vpsravd (Haswell from agner.org)
-    { ISD::SHL,     MVT::v2i64,    2 }, // vpsllvq (Haswell from agner.org)
-    { ISD::SRL,     MVT::v2i64,    2 }, // vpsrlvq (Haswell from agner.org)
-    { ISD::SHL,     MVT::v4i64,    2 }, // vpsllvq (Haswell from agner.org)
-    { ISD::SRL,     MVT::v4i64,    2 }, // vpsrlvq (Haswell from agner.org)
+    { ISD::SHL,     MVT::v2i64,    1 }, // vpsllvq (Haswell from agner.org)
+    { ISD::SRL,     MVT::v2i64,    1 }, // vpsrlvq (Haswell from agner.org)
+    { ISD::SHL,     MVT::v4i64,    1 }, // vpsllvq (Haswell from agner.org)
+    { ISD::SRL,     MVT::v4i64,    1 }, // vpsrlvq (Haswell from agner.org)
   };
 
   if (ST->hasAVX512()) {
@@ -669,8 +669,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
                                     TargetTransformInfo::OP_None);
   }
 
-  // Look for AVX2 lowering tricks (XOP is always better at 128-bit shifts).
-  if (ST->hasAVX2() && !(ST->hasXOP() && LT.second.is128BitVector())) {
+  // Look for AVX2 lowering tricks (XOP is always better at v4i32 shifts).
+  if (ST->hasAVX2() && !(ST->hasXOP() && LT.second == MVT::v4i32)) {
     if (ISD == ISD::SHL && LT.second == MVT::v16i16 &&
         (Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
          Op2Info == TargetTransformInfo::OK_NonUniformConstantValue))
@@ -788,8 +788,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SRA,  MVT::v8i16,      5 }, // extend/vpsravd/pack sequence.
     { ISD::SRA,  MVT::v16i16,     7 }, // extend/vpsravd/pack sequence.
     { ISD::SRA,  MVT::v32i16,    14 }, // 2*extend/vpsravd/pack sequence.
-    { ISD::SRA,  MVT::v2i64,      4 }, // srl/xor/sub sequence.
-    { ISD::SRA,  MVT::v4i64,      4 }, // srl/xor/sub sequence.
+    { ISD::SRA,  MVT::v2i64,      2 }, // srl/xor/sub sequence.
+    { ISD::SRA,  MVT::v4i64,      2 }, // srl/xor/sub sequence.
 
     { ISD::SUB,  MVT::v32i8,      1 }, // psubb
     { ISD::ADD,  MVT::v32i8,      1 }, // paddb

@@ -32,7 +32,7 @@ define <2 x i64> @var_shift_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %shift
 ;
 ; AVX2-LABEL: 'var_shift_v2i64'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %shift = ashr <2 x i64> %a, %b
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = ashr <2 x i64> %a, %b
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %shift
 ;
 ; XOP-LABEL: 'var_shift_v2i64'
@@ -61,7 +61,7 @@ define <4 x i64> @var_shift_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i64> %shift
 ;
 ; AVX2-LABEL: 'var_shift_v4i64'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %shift = ashr <4 x i64> %a, %b
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = ashr <4 x i64> %a, %b
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i64> %shift
 ;
 ; XOP-LABEL: 'var_shift_v4i64'
@@ -90,7 +90,7 @@ define <8 x i64> @var_shift_v8i64(<8 x i64> %a, <8 x i64> %b) {
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i64> %shift
 ;
 ; AVX2-LABEL: 'var_shift_v8i64'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %shift = ashr <8 x i64> %a, %b
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %shift = ashr <8 x i64> %a, %b
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i64> %shift
 ;
 ; XOP-LABEL: 'var_shift_v8i64'
@@ -1176,7 +1176,7 @@ define <2 x i64> @constant_shift_v2i64(<2 x i64> %a) {
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %shift
 ;
 ; AVX2-LABEL: 'constant_shift_v2i64'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %shift = ashr <2 x i64> %a, <i64 1, i64 7>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = ashr <2 x i64> %a, <i64 1, i64 7>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %shift
 ;
 ; XOP-LABEL: 'constant_shift_v2i64'
@@ -1205,7 +1205,7 @@ define <4 x i64> @constant_shift_v4i64(<4 x i64> %a) {
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i64> %shift
 ;
 ; AVX2-LABEL: 'constant_shift_v4i64'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %shift = ashr <4 x i64> %a, <i64 1, i64 7, i64 15, i64 31>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %shift = ashr <4 x i64> %a, <i64 1, i64 7, i64 15, i64 31>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i64> %shift
 ;
 ; XOP-LABEL: 'constant_shift_v4i64'
@@ -1234,7 +1234,7 @@ define <8 x i64> @constant_shift_v8i64(<8 x i64> %a) {
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i64> %shift
 ;
 ; AVX2-LABEL: 'constant_shift_v8i64'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %shift = ashr <8 x i64> %a, <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %shift = ashr <8 x i64> %a, <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i64> %shift
 ;
 ; XOP-LABEL: 'constant_shift_v8i64'
