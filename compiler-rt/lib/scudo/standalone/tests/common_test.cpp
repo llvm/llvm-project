@@ -37,9 +37,9 @@ TEST(ScudoCommonTest, SKIP_ON_FUCHSIA(ResidentMemorySize)) {
   MapPlatformData Data = {};
   uptr *P = reinterpret_cast<uptr *>(
       map(nullptr, Size, "ResidentMemorySize", 0, &Data));
-  const size_t N = Size / sizeof(*P);
+  const ptrdiff_t N = Size / sizeof(*P);
   ASSERT_NE(nullptr, P);
-  EXPECT_EQ((size_t)std::count(P, P + N, 0), N);
+  EXPECT_EQ(std::count(P, P + N, 0), N);
   EXPECT_LT(getResidentMemorySize() - OnStart, Threshold);
 
   memset(P, 1, Size);
@@ -47,7 +47,7 @@ TEST(ScudoCommonTest, SKIP_ON_FUCHSIA(ResidentMemorySize)) {
   EXPECT_LT(getResidentMemorySize() - Size, Threshold);
 
   releasePagesToOS((uptr)P, 0, Size, &Data);
-  EXPECT_EQ((size_t)std::count(P, P + N, 0), N);
+  EXPECT_EQ(std::count(P, P + N, 0), N);
   // FIXME: does not work with QEMU-user.
   // EXPECT_LT(getResidentMemorySize() - OnStart, Threshold);
 
