@@ -92,6 +92,10 @@ public:
 
   std::string message(int Condition) const override {
     switch (static_cast<index_error_code>(Condition)) {
+    case index_error_code::success:
+      // There should not be a success error. Jump to unreachable directly.
+      // Add this case to make the compiler stop complaining.
+      break;
     case index_error_code::unspecified:
       return "An unknown error has occurred.";
     case index_error_code::missing_index_file:
@@ -667,12 +671,15 @@ llvm::Error CrossTranslationUnitContext::ASTLoader::lazyInitInvocationList() {
   /// Lazily initialize the invocation list member used for on-demand parsing.
   if (InvocationList)
     return llvm::Error::success();
+  if (index_error_code::success != PreviousParsingResult)
+    return llvm::make_error<IndexError>(PreviousParsingResult);
 
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileContent =
       llvm::MemoryBuffer::getFile(InvocationListFilePath);
-  if (!FileContent)
-    return llvm::make_error<IndexError>(
-        index_error_code::invocation_list_file_not_found);
+  if (!FileContent) {
+    PreviousParsingResult = index_error_code::invocation_list_file_not_found;
+    return llvm::make_error<IndexError>(PreviousParsingResult);
+  }
   std::unique_ptr<llvm::MemoryBuffer> ContentBuffer = std::move(*FileContent);
   assert(ContentBuffer && "If no error was produced after loading, the pointer "
                           "should not be nullptr.");
@@ -680,8 +687,13 @@ llvm::Error CrossTranslationUnitContext::ASTLoader::lazyInitInvocationList() {
   llvm::Expected<InvocationListTy> ExpectedInvocationList =
       parseInvocationList(ContentBuffer->getBuffer(), PathStyle);
 
-  if (!ExpectedInvocationList)
-    return ExpectedInvocationList.takeError();
+  // Handle the error to store the code for next call to this function.
+  if (!ExpectedInvocationList) {
+    llvm::handleAllErrors(
+        ExpectedInvocationList.takeError(),
+        [&](const IndexError &E) { PreviousParsingResult = E.getCode(); });
+    return llvm::make_error<IndexError>(PreviousParsingResult);
+  }
 
   InvocationList = *ExpectedInvocationList;
 
