@@ -9,6 +9,10 @@
 #include "atmi_runtime.h"
 #include "hsa.h"
 #include "hsa_ext_amd.h"
+#include "internal.h"
+
+#include <map>
+#include <string>
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,11 +48,10 @@ extern "C" {
  *
  * @retval ::ATMI_STATUS_UNKNOWN The function encountered errors.
  */
-atmi_status_t atmi_interop_hsa_get_symbol_info(atmi_mem_place_t place,
-                                               const char *symbol,
-                                               void **var_addr,
-                                               unsigned int *var_size);
-
+atmi_status_t atmi_interop_hsa_get_symbol_info(
+    const std::map<std::string, atl_symbol_info_t> &SymbolInfoTable,
+    atmi_mem_place_t place, const char *symbol, void **var_addr,
+    unsigned int *var_size);
 /**
  * @brief Get the HSA-specific kernel info from a kernel name
  *
@@ -75,8 +78,10 @@ atmi_status_t atmi_interop_hsa_get_symbol_info(atmi_mem_place_t place,
  * @retval ::ATMI_STATUS_UNKNOWN The function encountered errors.
  */
 atmi_status_t atmi_interop_hsa_get_kernel_info(
+    const std::map<std::string, atl_kernel_info_t> &KernelInfoTable,
     atmi_mem_place_t place, const char *kernel_name,
     hsa_executable_symbol_info_t info, uint32_t *value);
+
 /** @} */
 
 #ifdef __cplusplus
