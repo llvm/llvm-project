@@ -13,6 +13,7 @@
 
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/MachO.h"
 
 using namespace llvm;
@@ -58,6 +59,87 @@ void OutputSegment::addOutputSection(OutputSection *osec) {
   for (const SectionAlign &sectAlign : config->sectionAlignments)
     if (sectAlign.segName == name && sectAlign.sectName == osec->name)
       osec->align = sectAlign.align;
+}
+
+template <typename T, typename F> static auto compareByOrder(F ord) {
+  return [=](T a, T b) { return ord(a) < ord(b); };
+}
+
+static int segmentOrder(OutputSegment *seg) {
+  return StringSwitch<int>(seg->name)
+      .Case(segment_names::pageZero, -4)
+      .Case(segment_names::text, -3)
+      .Case(segment_names::dataConst, -2)
+      .Case(segment_names::data, -1)
+      .Case(segment_names::llvm, std::numeric_limits<int>::max() - 1)
+      // Make sure __LINKEDIT is the last segment (i.e. all its hidden
+      // sections must be ordered after other sections).
+      .Case(segment_names::linkEdit, std::numeric_limits<int>::max())
+      .Default(seg->inputOrder);
+}
+
+static int sectionOrder(OutputSection *osec) {
+  StringRef segname = osec->parent->name;
+  // Sections are uniquely identified by their segment + section name.
+  if (segname == segment_names::text) {
+    return StringSwitch<int>(osec->name)
+        .Case(section_names::header, -4)
+        .Case(section_names::text, -3)
+        .Case(section_names::stubs, -2)
+        .Case(section_names::stubHelper, -1)
+        .Case(section_names::unwindInfo, std::numeric_limits<int>::max() - 1)
+        .Case(section_names::ehFrame, std::numeric_limits<int>::max())
+        .Default(osec->inputOrder);
+  } else if (segname == segment_names::data ||
+             segname == segment_names::dataConst) {
+    // For each thread spawned, dyld will initialize its TLVs by copying the
+    // address range from the start of the first thread-local data section to
+    // the end of the last one. We therefore arrange these sections contiguously
+    // to minimize the amount of memory used. Additionally, since zerofill
+    // sections must be at the end of their segments, and since TLV data
+    // sections can be zerofills, we end up putting all TLV data sections at the
+    // end of the segment.
+    switch (sectionType(osec->flags)) {
+    case S_THREAD_LOCAL_REGULAR:
+      return std::numeric_limits<int>::max() - 2;
+    case S_THREAD_LOCAL_ZEROFILL:
+      return std::numeric_limits<int>::max() - 1;
+    case S_ZEROFILL:
+      return std::numeric_limits<int>::max();
+    default:
+      return StringSwitch<int>(osec->name)
+          .Case(section_names::got, -3)
+          .Case(section_names::lazySymbolPtr, -2)
+          .Case(section_names::const_, -1)
+          .Default(osec->inputOrder);
+    }
+  } else if (segname == segment_names::linkEdit) {
+    return StringSwitch<int>(osec->name)
+        .Case(section_names::rebase, -9)
+        .Case(section_names::binding, -8)
+        .Case(section_names::weakBinding, -7)
+        .Case(section_names::lazyBinding, -6)
+        .Case(section_names::export_, -5)
+        .Case(section_names::functionStarts, -4)
+        .Case(section_names::symbolTable, -3)
+        .Case(section_names::indirectSymbolTable, -2)
+        .Case(section_names::stringTable, -1)
+        .Case(section_names::codeSignature, std::numeric_limits<int>::max())
+        .Default(osec->inputOrder);
+  }
+  // ZeroFill sections must always be the at the end of their segments,
+  // otherwise subsequent sections may get overwritten with zeroes at runtime.
+  if (sectionType(osec->flags) == S_ZEROFILL)
+    return std::numeric_limits<int>::max();
+  return osec->inputOrder;
+}
+
+void OutputSegment::sortOutputSections() {
+  llvm::sort(sections, compareByOrder<OutputSection *>(sectionOrder));
+}
+
+void macho::sortOutputSegments() {
+  llvm::sort(outputSegments, compareByOrder<OutputSegment *>(segmentOrder));
 }
 
 static DenseMap<StringRef, OutputSegment *> nameToOutputSegment;
