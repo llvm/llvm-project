@@ -11233,11 +11233,10 @@ bool ScalarEvolution::doesIVOverflowOnGT(const SCEV *RHS, const SCEV *Stride,
   return (std::move(MinValue) + MaxStrideMinusOne).ugt(MinRHS);
 }
 
-const SCEV *ScalarEvolution::computeBECount(const SCEV *Delta, const SCEV *Step,
-                                            bool Equality) {
+const SCEV *ScalarEvolution::computeBECount(const SCEV *Delta,
+                                            const SCEV *Step) {
   const SCEV *One = getOne(Step->getType());
-  Delta = Equality ? getAddExpr(Delta, Step)
-                   : getAddExpr(Delta, getMinusSCEV(Step, One));
+  Delta = getAddExpr(Delta, getMinusSCEV(Step, One));
   return getUDivExpr(Delta, Step);
 }
 
@@ -11278,8 +11277,7 @@ const SCEV *ScalarEvolution::computeMaxBECountForLT(const SCEV *Start,
                           : APIntOps::umin(getUnsignedRangeMax(End), Limit);
 
   MaxBECount = computeBECount(getConstant(MaxEnd - MinStart) /* Delta */,
-                              getConstant(StrideForMaxBECount) /* Step */,
-                              false /* Equality */);
+                              getConstant(StrideForMaxBECount) /* Step */);
 
   return MaxBECount;
 }
@@ -11387,7 +11385,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   // is the LHS value of the less-than comparison the first time it is evaluated
   // and End is the RHS.
   const SCEV *BECountIfBackedgeTaken =
-    computeBECount(getMinusSCEV(End, Start), Stride, false);
+    computeBECount(getMinusSCEV(End, Start), Stride);
   // If the loop entry is guarded by the result of the backedge test of the
   // first loop iteration, then we know the backedge will be taken at least
   // once and so the backedge taken count is as above. If not then we use the
@@ -11406,7 +11404,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       End = RHS;
     else
       End = IsSigned ? getSMaxExpr(RHS, Start) : getUMaxExpr(RHS, Start);
-    BECount = computeBECount(getMinusSCEV(End, Start), Stride, false);
+    BECount = computeBECount(getMinusSCEV(End, Start), Stride);
   }
 
   const SCEV *MaxBECount;
@@ -11482,7 +11480,7 @@ ScalarEvolution::howManyGreaterThans(const SCEV *LHS, const SCEV *RHS,
       End = IsSigned ? getSMinExpr(RHS, Start) : getUMinExpr(RHS, Start);
   }
 
-  const SCEV *BECount = computeBECount(getMinusSCEV(Start, End), Stride, false);
+  const SCEV *BECount = computeBECount(getMinusSCEV(Start, End), Stride);
 
   APInt MaxStart = IsSigned ? getSignedRangeMax(Start)
                             : getUnsignedRangeMax(Start);
@@ -11504,7 +11502,7 @@ ScalarEvolution::howManyGreaterThans(const SCEV *LHS, const SCEV *RHS,
   const SCEV *MaxBECount = isa<SCEVConstant>(BECount)
                                ? BECount
                                : computeBECount(getConstant(MaxStart - MinEnd),
-                                                getConstant(MinStride), false);
+                                                getConstant(MinStride));
 
   if (isa<SCEVCouldNotCompute>(MaxBECount))
     MaxBECount = BECount;

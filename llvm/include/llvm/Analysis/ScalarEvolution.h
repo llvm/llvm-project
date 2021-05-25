@@ -1983,10 +1983,12 @@ private:
   Optional<std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>>>
   createAddRecFromPHIWithCastsImpl(const SCEVUnknown *SymbolicPHI);
 
-  /// Compute the backedge taken count knowing the interval difference, the
-  /// stride and presence of the equality in the comparison.
-  const SCEV *computeBECount(const SCEV *Delta, const SCEV *Stride,
-                             bool Equality);
+  /// Compute the backedge taken count knowing the interval difference, and
+  /// the stride for an inequality.  Result takes the form:
+  /// (Delta + (Stride - 1)) udiv Stride.
+  /// Caller must ensure that this expression either does not overflow or
+  /// that the result is undefined if it does.
+  const SCEV *computeBECount(const SCEV *Delta, const SCEV *Stride);
 
   /// Compute the maximum backedge count based on the range of values
   /// permitted by Start, End, and Stride. This is for loops of the form
