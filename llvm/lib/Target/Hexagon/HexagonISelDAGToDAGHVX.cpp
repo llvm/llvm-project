@@ -868,7 +868,6 @@ namespace llvm {
 
     OpRef butterfly(ShuffleMask SM, OpRef Va, ResultStack &Results);
     OpRef contracting(ShuffleMask SM, OpRef Va, OpRef Vb, ResultStack &Results);
-    OpRef expanding(ShuffleMask SM, OpRef Va, ResultStack &Results);
     OpRef perfect(ShuffleMask SM, OpRef Va, ResultStack &Results);
 
     bool selectVectorConstants(SDNode *N);
@@ -1774,60 +1773,6 @@ OpRef HvxSelector::contracting(ShuffleMask SM, OpRef Va, OpRef Vb,
   Res.Ty = ResTy;
   Res.Ops = { Vb, Va };
   Results.push(Res);
-  return OpRef::res(Results.top());
-}
-
-OpRef HvxSelector::expanding(ShuffleMask SM, OpRef Va, ResultStack &Results) {
-  DEBUG_WITH_TYPE("isel", {dbgs() << __func__ << '\n';});
-  // Expanding shuffles (using all elements and inserting into larger vector):
-  //
-  // V6_vunpacku{b,h} [*]
-  //
-  // [*] Only if the upper elements (filled with 0s) are "don't care" in Mask.
-  //
-  // Note: V6_vunpacko{b,h} are or-ing the high byte/half in the result, so
-  // they are not shuffles.
-  //
-  // The argument is a single vector.
-
-  int VecLen = SM.Mask.size();
-  assert(2*HwLen == unsigned(VecLen) && "Expecting vector-pair type");
-
-  std::pair<int,unsigned> Strip = findStrip(SM.Mask, 1, VecLen);
-
-  // The patterns for the unpacks, in terms of the starting offsets of the
-  // consecutive strips (L = length of the strip, N = VecLen):
-  //
-  // vunpacku:  0, -1, L, -1, 2L, -1 ...
-
-  if (Strip.first != 0)
-    return OpRef::fail();
-
-  // The vunpackus only handle byte and half-word.
-  if (Strip.second != 1 && Strip.second != 2)
-    return OpRef::fail();
-
-  int N = VecLen;
-  int L = Strip.second;
-
-  // First, check the non-ignored strips.
-  for (int I = 2*L; I < 2*N; I += 2*L) {
-    auto S = findStrip(SM.Mask.drop_front(I), 1, N-I);
-    if (S.second != unsigned(L))
-      return OpRef::fail();
-    if (2*S.first != I)
-      return OpRef::fail();
-  }
-  // Check the -1s.
-  for (int I = L; I < 2*N; I += 2*L) {
-    auto S = findStrip(SM.Mask.drop_front(I), 0, N-I);
-    if (S.first != -1 || S.second != unsigned(L))
-      return OpRef::fail();
-  }
-
-  unsigned Opc = Strip.second == 1 ? Hexagon::V6_vunpackub
-                                   : Hexagon::V6_vunpackuh;
-  Results.push(Opc, getPairVT(MVT::i8), {Va});
   return OpRef::res(Results.top());
 }
 
