@@ -138,6 +138,21 @@ public:
 };
 #endif
 
+struct fake_deque_iterator : std::deque<int>::iterator {
+    using element_type = int;
+};
+static_assert(std::__is_cpp17_random_access_iterator<fake_deque_iterator>::value, "");
+static_assert(!std::__is_cpp17_contiguous_iterator<fake_deque_iterator>::value, "");
+
+#if TEST_STD_VER >= 20
+struct fake2_deque_iterator : std::deque<int>::iterator {
+    using iterator_concept = std::contiguous_iterator_tag;
+    using element_type = int;
+};
+static_assert(std::__is_cpp17_random_access_iterator<fake2_deque_iterator>::value, "");
+static_assert(std::__is_cpp17_contiguous_iterator<fake2_deque_iterator>::value, "");
+#endif
+
 int main(int, char**)
 {
 //  basic tests
@@ -178,21 +193,19 @@ int main(int, char**)
 
     static_assert(( std::__is_cpp17_contiguous_iterator<std::__wrap_iter<T *> >::value), "");
     static_assert(( std::__is_cpp17_contiguous_iterator<std::__wrap_iter<std::__wrap_iter<T *> > >::value), "");
-    static_assert((!std::__is_cpp17_contiguous_iterator<std::__wrap_iter<std::reverse_iterator<T *> > >::value), "");
 
-    static_assert((!std::__is_cpp17_contiguous_iterator<std::__wrap_iter<my_random_access_iterator> >::value), "");
-    static_assert((!std::__is_cpp17_contiguous_iterator<std::__wrap_iter<std::__wrap_iter<my_random_access_iterator> > >::value), "");
-    static_assert((!std::__is_cpp17_contiguous_iterator<std::__wrap_iter<std::reverse_iterator<my_random_access_iterator> > >::value), "");
+    // Here my_random_access_iterator is standing in for some user's fancy pointer type, written pre-C++20.
+    static_assert(( std::__is_cpp17_contiguous_iterator<std::__wrap_iter<my_random_access_iterator> >::value), "");
+    static_assert(( std::__is_cpp17_contiguous_iterator<std::__wrap_iter<std::__wrap_iter<my_random_access_iterator> > >::value), "");
 
 #if TEST_STD_VER >= 20
     static_assert(( std::__is_cpp17_contiguous_iterator<std::__wrap_iter<my_contiguous_iterator> >::value), "");
     static_assert(( std::__is_cpp17_contiguous_iterator<std::__wrap_iter<std::__wrap_iter<my_contiguous_iterator> > >::value), "");
-    static_assert((!std::__is_cpp17_contiguous_iterator<std::__wrap_iter<std::reverse_iterator<my_contiguous_iterator> > >::value), "");
 #endif
 
 //  iterators in the libc++ test suite
     static_assert((!std::__is_cpp17_contiguous_iterator<output_iterator       <char *> >::value), "");
-    static_assert((!std::__is_cpp17_contiguous_iterator<cpp17_input_iterator        <char *> >::value), "");
+    static_assert((!std::__is_cpp17_contiguous_iterator<cpp17_input_iterator  <char *> >::value), "");
     static_assert((!std::__is_cpp17_contiguous_iterator<forward_iterator      <char *> >::value), "");
     static_assert((!std::__is_cpp17_contiguous_iterator<bidirectional_iterator<char *> >::value), "");
     static_assert((!std::__is_cpp17_contiguous_iterator<random_access_iterator<char *> >::value), "");
@@ -228,14 +241,12 @@ int main(int, char**)
     static_assert((!std::__is_cpp17_contiguous_iterator<std::deque<int>::const_iterator>             ::value), "");
     static_assert((!std::__is_cpp17_contiguous_iterator<std::deque<int>::reverse_iterator>           ::value), "");
     static_assert((!std::__is_cpp17_contiguous_iterator<std::deque<int>::const_reverse_iterator>     ::value), "");
-    static_assert((!std::__is_cpp17_contiguous_iterator<std::__wrap_iter<std::deque<int>::iterator> >::value), "");
 
 //  vector<bool> is random-access but not contiguous
     static_assert((!std::__is_cpp17_contiguous_iterator<std::vector<bool>::iterator>                   ::value), "");
     static_assert((!std::__is_cpp17_contiguous_iterator<std::vector<bool>::const_iterator>             ::value), "");
     static_assert((!std::__is_cpp17_contiguous_iterator<std::vector<bool>::reverse_iterator>           ::value), "");
     static_assert((!std::__is_cpp17_contiguous_iterator<std::vector<bool>::const_reverse_iterator>     ::value), "");
-    static_assert((!std::__is_cpp17_contiguous_iterator<std::__wrap_iter<std::vector<bool>::iterator> >::value), "");
 
 #if TEST_STD_VER >= 11
     static_assert(( std::__is_cpp17_contiguous_iterator<std::initializer_list<int>::iterator>      ::value), "");
