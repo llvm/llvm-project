@@ -20,6 +20,20 @@
 
 #include "msgpack.h"
 
+namespace hsa {
+// Wrap HSA iterate API in a shim that allows passing general callables
+template <typename C>
+hsa_status_t executable_iterate_symbols(hsa_executable_t executable, C cb) {
+  auto L = [](hsa_executable_t executable, hsa_executable_symbol_t symbol,
+              void *data) -> hsa_status_t {
+    C *unwrapped = static_cast<C *>(data);
+    return (*unwrapped)(executable, symbol);
+  };
+  return hsa_executable_iterate_symbols(executable, L,
+                                        static_cast<void *>(&cb));
+}
+} // namespace hsa
+
 typedef unsigned char *address;
 /*
  * Note descriptors.
@@ -996,10 +1010,8 @@ static hsa_status_t get_code_object_custom_metadata(void *binary,
   return HSA_STATUS_SUCCESS;
 }
 
-static hsa_status_t populate_InfoTables(hsa_executable_t executable,
-                                        hsa_executable_symbol_t symbol,
-                                        void *data) {
-  int gpu = *static_cast<int *>(data);
+static hsa_status_t populate_InfoTables(hsa_executable_symbol_t symbol,
+                                        int gpu) {
   hsa_symbol_kind_t type;
 
   uint32_t name_length;
@@ -1228,8 +1240,12 @@ atmi_status_t Runtime::RegisterModuleFromMemory(
       return ATMI_STATUS_ERROR;
     }
 
-    err = hsa_executable_iterate_symbols(executable, populate_InfoTables,
-                                         static_cast<void *>(&gpu));
+    err = hsa::executable_iterate_symbols(
+        executable,
+        [&](hsa_executable_t, hsa_executable_symbol_t symbol) -> hsa_status_t {
+          return populate_InfoTables(symbol, gpu);
+        });
+
     if (err != HSA_STATUS_SUCCESS) {
       printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
              "Iterating over symbols for execuatable", get_error_string(err));
