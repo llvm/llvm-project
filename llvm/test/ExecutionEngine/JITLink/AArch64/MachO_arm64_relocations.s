@@ -39,14 +39,17 @@ _main:
 # within the page.
 #
 # jitlink-check: *{8}(got_addr(macho_reloc.o, external_data)) = external_data
-# jitlink-check: decode_operand(test_gotpage21, 1) = (got_addr(macho_reloc.o, external_data)[32:12] - test_gotpage21[32:12])
-# jitlink-check: decode_operand(test_gotpageoff12, 2) = got_addr(macho_reloc.o, external_data)[11:3]
-        .globl  test_gotpage21
+# jitlink-check: decode_operand(test_gotpage21_external, 1) = \
+# jitlink-check:     (got_addr(macho_reloc.o, external_data)[32:12] - \
+# jitlink-check:        test_gotpage21_external[32:12])
+# jitlink-check: decode_operand(test_gotpageoff12_external, 2) = \
+# jitlink-check:     got_addr(macho_reloc.o, external_data)[11:3]
+        .globl  test_gotpage21_external
         .p2align  2
-test_gotpage21:
+test_gotpage21_external:
         adrp  x0, external_data@GOTPAGE
-        .globl  test_gotpageoff12
-test_gotpageoff12:
+        .globl  test_gotpageoff12_external
+test_gotpageoff12_external:
         ldr   x0, [x0, external_data@GOTPAGEOFF]
 
 # Check ARM64_RELOC_PAGE21 / ARM64_RELOC_PAGEOFF12 handling with a reference to
