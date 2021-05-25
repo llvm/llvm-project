@@ -113,16 +113,16 @@ n-ranked tensor. This disallows the equivalent of pointer arithmetic or the
 ability to index into the same memref in other ways (something which C arrays
 allow for example). Furthermore, for the affine constructs, the compiler can
 follow use-def chains (e.g. through
-[affine.apply operations](../Dialects/Affine.md#affineapply-operation)) or through
-the map attributes of [affine operations](../Dialects/Affine.md#Operations)) to
+[affine.apply operations](../Dialects/Affine.md/#affineapply-affineapplyop)) or through
+the map attributes of [affine operations](../Dialects/Affine.md/#operations)) to
 precisely analyze references at compile-time using polyhedral techniques. This
-is possible because of the [restrictions on dimensions and symbols](../Dialects/Affine.md#restrictions-on-dimensions-and-symbols).
+is possible because of the [restrictions on dimensions and symbols](../Dialects/Affine.md/#restrictions-on-dimensions-and-symbols).
 
 A scalar of element-type (a primitive type or a vector type) that is stored in
 memory is modeled as a 0-d memref. This is also necessary for scalars that are
 live out of for loops and if conditionals in a function, for which we don't yet
 have an SSA representation --
-[an extension](#mlfunction-extensions-for-"escaping-scalars") to allow that is
+[an extension](#affineif-and-affinefor-extensions-for-escaping-scalars) to allow that is
 described later in this doc.
 
 ### Symbols and types
@@ -167,7 +167,7 @@ change.
 
 ### Block Arguments vs PHI nodes
 
-MLIR Regions represent SSA using "[block arguments](../LangRef.md#blocks)" rather
+MLIR Regions represent SSA using "[block arguments](../LangRef.md/#blocks)" rather
 than [PHI instructions](http://llvm.org/docs/LangRef.html#i-phi) used in LLVM.
 This choice is representationally identical (the same constructs can be
 represented in either form) but block arguments have several advantages:
@@ -308,7 +308,7 @@ an external system, and should aim to reflect its design as closely as possible.
 
 ### Specifying sign in integer comparison operations
 
-Since integers are [signless](#signless-types), it is necessary to define the
+Since integers are [signless](#integer-signedness-semantics), it is necessary to define the
 sign for integer comparison operations. This sign indicates how to treat the
 foremost bit of the integer: as sign bit or as most significant bit. For
 example, comparing two `i4` values `0b1000` and `0b0010` yields different
@@ -513,12 +513,12 @@ systems, e.g. LLVM, are likely to provide wrappers around their existing type
 systems. For these wrapper types there is no simple canonical name, it's logical
 to think of these types as existing within the namespace of the dialect. If a
 dialect wishes to assign a canonical name to a type, it can be done via
-[type aliases](../LangRef.md#type-aliases).
+[type aliases](../LangRef.md/#type-aliases).
 
 ### Tuple types
 
 The MLIR type system provides first class support for defining
-[tuple types](../LangRef.md#tuple-type). This is due to the fact that `Tuple`
+[tuple types](../Dialects/Builtin/#tupletype). This is due to the fact that `Tuple`
 represents a universal concept that is likely to, and has already begun to,
 present itself in many different dialects. Though this type is first class in
 the type system, it merely serves to provide a common mechanism in which to
