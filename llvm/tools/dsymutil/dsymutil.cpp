@@ -505,18 +505,18 @@ int main(int argc, char **argv) {
         "for the executable <input file> by using debug symbols information\n"
         "contained in its symbol table.\n",
         false);
-    return 0;
+    return EXIT_SUCCESS;
   }
 
   if (Args.hasArg(OPT_version)) {
     cl::PrintVersionMessage();
-    return 0;
+    return EXIT_SUCCESS;
   }
 
   auto OptionsOrErr = getOptions(Args);
   if (!OptionsOrErr) {
     WithColor::error() << toString(OptionsOrErr.takeError());
-    return 1;
+    return EXIT_FAILURE;
   }
 
   auto &Options = *OptionsOrErr;
@@ -530,7 +530,7 @@ int main(int argc, char **argv) {
       Reproducer::createReproducer(Options.ReproMode, Options.ReproducerPath);
   if (!Repro) {
     WithColor::error() << toString(Repro.takeError());
-    return 1;
+    return EXIT_FAILURE;
   }
 
   Options.LinkOpts.VFS = (*Repro)->getVFS();
@@ -539,7 +539,7 @@ int main(int argc, char **argv) {
     if (Arch != "*" && Arch != "all" &&
         !object::MachOObjectFile::isValidArch(Arch)) {
       WithColor::error() << "unsupported cpu architecture: '" << Arch << "'\n";
-      return 1;
+      return EXIT_FAILURE;
     }
 
   SymbolMapLoader SymMapLoader(Options.SymbolMap);
@@ -549,7 +549,7 @@ int main(int argc, char **argv) {
     if (Options.DumpStab) {
       if (!dumpStab(Options.LinkOpts.VFS, InputFile, Options.Archs,
                     Options.LinkOpts.PrependPath))
-        return 1;
+        return EXIT_FAILURE;
       continue;
     }
 
@@ -561,7 +561,7 @@ int main(int argc, char **argv) {
     if (auto EC = DebugMapPtrsOrErr.getError()) {
       WithColor::error() << "cannot parse the debug map for '" << InputFile
                          << "': " << EC.message() << '\n';
-      return 1;
+      return EXIT_FAILURE;
     }
 
     // Remember the number of debug maps that are being processed to decide how
@@ -579,7 +579,7 @@ int main(int argc, char **argv) {
     // Ensure that the debug map is not empty (anymore).
     if (DebugMapPtrsOrErr->empty()) {
       WithColor::error() << "no architecture to link\n";
-      return 1;
+      return EXIT_FAILURE;
     }
 
     // Shared a single binary holder for all the link steps.
@@ -590,7 +590,7 @@ int main(int argc, char **argv) {
         getOutputFileName(InputFile, Options);
     if (!OutputLocationOrErr) {
       WithColor::error() << toString(OutputLocationOrErr.takeError());
-      return 1;
+      return EXIT_FAILURE;
     }
     Options.LinkOpts.ResourceDir = OutputLocationOrErr->getResourceDir();
 
@@ -642,7 +642,7 @@ int main(int argc, char **argv) {
         auto E = TempFiles.back().createTempFile();
         if (E) {
           WithColor::error() << toString(std::move(E));
-          return 1;
+          return EXIT_FAILURE;
         }
 
         auto &TempFile = *(TempFiles.back().File);
@@ -655,7 +655,7 @@ int main(int argc, char **argv) {
             Options.LinkOpts.NoOutput ? "-" : OutputFile, EC, sys::fs::OF_None);
         if (EC) {
           WithColor::error() << OutputFile << ": " << EC.message();
-          return 1;
+          return EXIT_FAILURE;
         }
       }
 
@@ -681,15 +681,15 @@ int main(int argc, char **argv) {
     Threads.wait();
 
     if (!AllOK)
-      return 1;
+      return EXIT_FAILURE;
 
     if (NeedsTempFiles) {
       if (!MachOUtils::generateUniversalBinary(TempFiles,
                                                OutputLocationOrErr->DWARFFile,
                                                Options.LinkOpts, SDKPath))
-        return 1;
+        return EXIT_FAILURE;
     }
   }
 
-  return 0;
+  return EXIT_SUCCESS;
 }
