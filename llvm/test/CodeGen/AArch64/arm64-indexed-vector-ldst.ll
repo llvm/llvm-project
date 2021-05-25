@@ -6338,3 +6338,68 @@ define <4 x i32> @test_inc_cycle(<4 x i32> %vec, i32* %in) {
 }
 
 @var = global i32* null
+
+define i8 @load_single_extract_variable_index_i8(<16 x i8>* %A, i32 %idx) {
+; CHECK-LABEL: load_single_extract_variable_index_i8
+; CHECK:      ldr [[VEC:.*]], [x0]
+; CHECK-NEXT: mov [[SP_ADDR:.*]], sp
+; CHECK-NEXT: str [[VEC]], [sp]
+; CHECK-NEXT: bfxil [[SP_ADDR]], x1, #0, #4
+; CHECK-NEXT: ldrb w0, [{{ *}}[[SP_ADDR]]{{ *}}]
+; CHECK-NEXT: add sp, sp, #16
+; CHECK-NEXT: ret
+;
+  %lv = load <16 x i8>, <16 x i8>* %A
+  %e = extractelement <16 x i8> %lv, i32 %idx
+  ret i8 %e
+}
+
+define i16 @load_single_extract_variable_index_i16(<8 x i16>* %A, i32 %idx) {
+; CHECK-LABEL: load_single_extract_variable_index_i16
+; CHECK:      ldr [[VEC:.*]], [x0]
+; CHECK-NEXT: and [[IDX:.*]], x1, #0x7
+; CHECK-NEXT: mov [[SP_ADDR:.*]], sp
+; CHECK-NEXT: str [[VEC]], [sp]
+; CHECK-NEXT: bfi [[SP_ADDR]], [[IDX]], #1, #3
+; CHECK-NEXT: ldrh w0, [{{ *}}[[SP_ADDR]]{{ *}}]
+; CHECK-NEXT: add sp, sp, #16
+; CHECK-NEXT: ret
+;
+  %lv = load <8 x i16>, <8 x i16>* %A
+  %e = extractelement <8 x i16> %lv, i32 %idx
+  ret i16 %e
+}
+
+define i32 @load_single_extract_variable_index_i32(<4 x i32>* %A, i32 %idx) {
+; CHECK-LABEL: load_single_extract_variable_index_i32
+; CHECK:      ldr w0, [x0, w1, sxtw #2]
+; CHECK-NEXT: ret
+;
+  %lv = load <4 x i32>, <4 x i32>* %A
+  %e = extractelement <4 x i32> %lv, i32 %idx
+  ret i32 %e
+}
+
+define i32 @load_single_extract_variable_index_masked_i32(<4 x i32>* %A, i32 %idx) {
+; CHECK-LABEL: load_single_extract_variable_index_masked_i32
+; CHECK:      and [[IDX:.*]], w1, #0x3
+; CHECK-NEXT: ldr w0, [x0, [[IDX]], uxtw #2]
+; CHECK-NEXT: ret
+;
+  %idx.x = and i32 %idx, 3
+  %lv = load <4 x i32>, <4 x i32>* %A
+  %e = extractelement <4 x i32> %lv, i32 %idx.x
+  ret i32 %e
+}
+
+define i32 @load_single_extract_variable_index_masked2_i32(<4 x i32>* %A, i32 %idx) {
+; CHECK-LABEL: load_single_extract_variable_index_masked2_i32
+; CHECK:      and [[IDX:.*]], w1, #0x1
+; CHECK-NEXT: ldr w0, [x0, [[IDX]], uxtw #2]
+; CHECK-NEXT: ret
+;
+  %idx.x = and i32 %idx, 1
+  %lv = load <4 x i32>, <4 x i32>* %A
+  %e = extractelement <4 x i32> %lv, i32 %idx.x
+  ret i32 %e
+}
