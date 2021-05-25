@@ -4222,11 +4222,35 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     return BB;
   }
   case AMDGPU::DS_GWS_INIT:
-  case AMDGPU::DS_GWS_SEMA_V:
   case AMDGPU::DS_GWS_SEMA_BR:
+  case AMDGPU::DS_GWS_BARRIER:
+    if (Subtarget->needsAlignedVGPRs()) {
+      // Add implicit aligned super-reg to force alignment on the data operand.
+      const DebugLoc &DL = MI.getDebugLoc();
+      MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+      const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
+      MachineOperand *Op = TII->getNamedOperand(MI, AMDGPU::OpName::data0);
+      Register DataReg = Op->getReg();
+      bool IsAGPR = TRI->isAGPR(MRI, DataReg);
+      Register Undef = MRI.createVirtualRegister(
+          IsAGPR ? &AMDGPU::AGPR_32RegClass : &AMDGPU::VGPR_32RegClass);
+      BuildMI(*BB, MI, DL, TII->get(AMDGPU::IMPLICIT_DEF), Undef);
+      Register NewVR =
+          MRI.createVirtualRegister(IsAGPR ? &AMDGPU::AReg_64_Align2RegClass
+                                           : &AMDGPU::VReg_64_Align2RegClass);
+      BuildMI(*BB, MI, DL, TII->get(AMDGPU::REG_SEQUENCE), NewVR)
+          .addReg(DataReg, 0, Op->getSubReg())
+          .addImm(AMDGPU::sub0)
+          .addReg(Undef)
+          .addImm(AMDGPU::sub1);
+      Op->setReg(NewVR);
+      Op->setSubReg(AMDGPU::sub0);
+      MI.addOperand(MachineOperand::CreateReg(NewVR, false, true));
+    }
+    LLVM_FALLTHROUGH;
+  case AMDGPU::DS_GWS_SEMA_V:
   case AMDGPU::DS_GWS_SEMA_P:
   case AMDGPU::DS_GWS_SEMA_RELEASE_ALL:
-  case AMDGPU::DS_GWS_BARRIER:
     // A s_waitcnt 0 is required to be the instruction immediately following.
     if (getSubtarget()->hasGWSAutoReplay()) {
       bundleInstWithWaitcnt(MI);
