@@ -1631,6 +1631,11 @@ auto partition_point(R &&Range, Predicate P) {
   return std::partition_point(adl_begin(Range), adl_end(Range), P);
 }
 
+template<typename Range, typename Predicate>
+auto unique(Range &&R, Predicate P) {
+  return std::unique(adl_begin(R), adl_end(R), P);
+}
+
 /// Wrapper function around std::equal to detect if all elements
 /// in a container are same.
 template <typename R>
