@@ -4,8 +4,8 @@
 define <2 x float> @vtrn1(<2 x i32> %v)
 ; CHECK-LABEL: @vtrn1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R_UNCASTED:%.*]] = shufflevector <2 x i32> [[V:%.*]], <2 x i32> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = bitcast <2 x i32> [[R_UNCASTED]] to <2 x float>
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i32> [[V:%.*]] to <2 x float>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x float> [[TMP0]], <2 x float> undef, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
 {
