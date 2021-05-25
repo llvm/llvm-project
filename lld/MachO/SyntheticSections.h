@@ -16,6 +16,7 @@
 #include "OutputSegment.h"
 #include "Target.h"
 
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
