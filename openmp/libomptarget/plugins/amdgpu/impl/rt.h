@@ -49,9 +49,6 @@ public:
     return instance;
   }
 
-  // init/finalize
-  static atmi_status_t Initialize();
-  static atmi_status_t Finalize();
   // machine info
   static atmi_machine_t *GetMachineInfo();
   // modules
