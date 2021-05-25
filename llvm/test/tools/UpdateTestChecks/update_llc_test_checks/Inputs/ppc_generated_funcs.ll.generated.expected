@@ -164,7 +164,7 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; AIX:       # %bb.0:
 ; AIX-NEXT:    stw 31, -4(1)
 ; AIX-NEXT:    stwu 1, -48(1)
-; AIX-NEXT:    lwz 4, L..C0(2)
+; AIX-NEXT:    lwz 4, L..C0(2) # @x
 ; AIX-NEXT:    mr 31, 1
 ; AIX-NEXT:    li 3, 0
 ; AIX-NEXT:    stw 3, 40(31)
