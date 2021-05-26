@@ -10,7 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEFINES_H
 
 #include "lldb/Core/dwarf.h"
-#include <stdint.h>
+#include <cstdint>
 
 namespace lldb_private {
 

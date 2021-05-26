@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <errno.h>
+#include <cerrno>
 
 #include "lldb/Host/Config.h"
 

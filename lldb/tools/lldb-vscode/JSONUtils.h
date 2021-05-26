@@ -13,7 +13,7 @@
 #include "lldb/API/SBModule.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
-#include <stdint.h>
+#include <cstdint>
 
 namespace lldb_vscode {
 

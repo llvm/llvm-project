@@ -8,7 +8,7 @@
 
 #include "SymbolVendorMacOSX.h"
 
-#include <string.h>
+#include <cstring>
 
 #include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
 #include "lldb/Core/Module.h"

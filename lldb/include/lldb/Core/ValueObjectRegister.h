@@ -18,8 +18,8 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-types.h"
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 namespace lldb_private {
 class DataExtractor;

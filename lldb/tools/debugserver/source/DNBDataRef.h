@@ -23,10 +23,10 @@
 #define LLDB_TOOLS_DEBUGSERVER_SOURCE_DNBDATAREF_H
 
 #include "DNBDefs.h"
-#include <limits.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
+#include <climits>
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
 
 class DNBDataRef {
 public:

@@ -15,7 +15,7 @@
 #include "lldb/Utility/Log.h"
 #include "llvm/Support/Errno.h"
 
-#include <limits.h>
+#include <climits>
 #include <sys/ptrace.h>
 #include <sys/wait.h>
 #include <unistd.h>

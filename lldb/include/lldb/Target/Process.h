@@ -11,7 +11,7 @@
 
 #include "lldb/Host/Config.h"
 
-#include <limits.h>
+#include <climits>
 
 #include <chrono>
 #include <list>

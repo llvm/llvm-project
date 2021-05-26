@@ -4,10 +4,10 @@
 ;; Several sections are created via inline assembly. We add checks
 ;; for these lines as we want to use --implicit-check-not to reduce the
 ;; number of checks in this file.
-; CHECK: .section .asm_mergeable1,"aMS",@progbits,2
-; CHECK-NEXT: .section .asm_nonmergeable1,"a",@progbits
-; CHECK-NEXT: .section .asm_mergeable2,"aMS",@progbits,2
-; CHECK-NEXT: .section .asm_nonmergeable2,"a",@progbits
+; CHECK: .section .asm_mergeable1,"aMS",@progbits,2{{$}}
+; CHECK-NEXT: .section .asm_nonmergeable1,"a",@progbits{{$}}
+; CHECK-NEXT: .section .asm_mergeable2,"aMS",@progbits,2{{$}}
+; CHECK-NEXT: .section .asm_nonmergeable2,"a",@progbits{{$}}
 
 ;; Test implicit section assignment for symbols
 ; CHECK: .section .data,"aw",@progbits,unique,1
@@ -21,11 +21,11 @@
 ;; have the expected properties.
 ; CHECK: .section .rodata,"a",@progbits,unique,2
 ; CHECK: implicit_nonmergeable:
-; CHECK: .section .rodata.cst4,"aM",@progbits,4
+; CHECK: .section .rodata.cst4,"aM",@progbits,4{{$}}
 ; CHECK: implicit_rodata_cst4:
-; CHECK: .section .rodata.cst8,"aM",@progbits,8
+; CHECK: .section .rodata.cst8,"aM",@progbits,8{{$}}
 ; CHECK: implicit_rodata_cst8:
-; CHECK: .section .rodata.str4.4,"aMS",@progbits,4
+; CHECK: .section .rodata.str4.4,"aMS",@progbits,4{{$}}
 ; CHECK: implicit_rodata_str4_4:
 
 @implicit_nonmergeable  =              constant [2 x i16] [i16 1, i16 1]
@@ -63,13 +63,13 @@
 ;; Assign a compatible mergeable global to the previous section.
 @explicit_basic_6 = unnamed_addr constant [2 x i32] [i32 1, i32 0], section ".explicit_basic"
 
-; CHECK: .section .explicit_basic,"a",@progbits
+; CHECK: .section .explicit_basic,"a",@progbits{{$}}
 ; CHECK: explicit_basic_7:
 
 ;; Assign a symbol with an incompatible entsize (non-mergeable) to a mergeable section created explicitly.
 @explicit_basic_7 = constant [2 x i16] [i16 1, i16 1], section ".explicit_basic"
 
-; CHECK: .section .explicit_initially_nonmergeable,"a",@progbits
+; CHECK: .section .explicit_initially_nonmergeable,"a",@progbits{{$}}
 ; CHECK: explicit_basic_8:
 ; CHECK: .section .explicit_initially_nonmergeable,"aM",@progbits,4,unique,6
 ; CHECK: explicit_basic_9:
@@ -78,7 +78,7 @@
 @explicit_basic_8 = constant [2 x i16] [i16 1, i16 1], section ".explicit_initially_nonmergeable"
 @explicit_basic_9 = unnamed_addr constant [2 x i16] [i16 1, i16 1], section ".explicit_initially_nonmergeable"
 
-; CHECK: .section .explicit_initially_nonmergeable,"a",@progbits
+; CHECK: .section .explicit_initially_nonmergeable,"a",@progbits{{$}}
 ; CHECK: explicit_basic_10:
 ; CHECK: .section .explicit_initially_nonmergeable,"aM",@progbits,4,unique,6
 ; CHECK: explicit_basic_11:
@@ -95,28 +95,28 @@
 ;; Assign an incompatible (non-mergeable) symbol to a "default" mergeable section.
 @explicit_default_1 = constant [2 x i64] [i64 1, i64 1], section ".rodata.cst16"
 
-; CHECK: .section .rodata.cst16,"aM",@progbits,16
+; CHECK: .section .rodata.cst16,"aM",@progbits,16{{$}}
 ; CHECK: explicit_default_2:
 
 ;; Assign a compatible global to a "default" mergeable section.
 @explicit_default_2 = unnamed_addr constant [2 x i64] [i64 1, i64 1], section ".rodata.cst16"
 
-; CHECK: .section .debug_str,"MS",@progbits,1
+; CHECK: .section .debug_str,"aMS",@progbits,1,unique,[[#U:8]]
 ; CHECK: explicit_default_3:
 
-;; Non-allocatable "default" sections can have allocatable mergeable symbols with compatible entry sizes assigned to them.
+;; Non-allocatable "default" sections can be re-emitted with allocatable flag and uniqued
 @explicit_default_3 = unnamed_addr constant [2 x i8] [i8 1, i8 0], section ".debug_str"
 
-; CHECK: .section .debug_str,"a",@progbits,unique,8
+; CHECK: .section .debug_str,"a",@progbits,unique,[[#U+1]]
 ; CHECK: explicit_default_4:
 
 ;; Non-allocatable "default" sections cannot have allocatable mergeable symbols with incompatible (non-mergeable) entry sizes assigned to them.
 @explicit_default_4 = constant [2 x i16] [i16 1, i16 1], section ".debug_str"
 
 ;; Test implicit section assignment for globals with associated globals.
-; CHECK: .section .rodata.cst4,"aMo",@progbits,4,implicit_rodata_cst4,unique,9
+; CHECK: .section .rodata.cst4,"aMo",@progbits,4,implicit_rodata_cst4,unique,[[#U+2]]
 ; CHECK: implicit_rodata_cst4_assoc:
-; CHECK: .section .rodata.cst8,"aMo",@progbits,8,implicit_rodata_cst4,unique,10
+; CHECK: .section .rodata.cst8,"aMo",@progbits,8,implicit_rodata_cst4,unique,[[#U+3]]
 ; CHECK: implicit_rodata_cst8_assoc:
 
 @implicit_rodata_cst4_assoc = unnamed_addr constant [2 x i16] [i16 1, i16 1], !associated !4
@@ -125,11 +125,11 @@
 ;; Check that globals with associated globals that are explicitly assigned
 ;; to a section have been placed into distinct sections with the same name, but
 ;; different entry sizes.
-; CHECK: .section .explicit,"aMo",@progbits,4,implicit_rodata_cst4,unique,11
+; CHECK: .section .explicit,"aMo",@progbits,4,implicit_rodata_cst4,unique,[[#U+4]]
 ; CHECK: explicit_assoc_1:
-; CHECK: .section .explicit,"aMo",@progbits,4,implicit_rodata_cst4,unique,12
+; CHECK: .section .explicit,"aMo",@progbits,4,implicit_rodata_cst4,unique,[[#U+5]]
 ; CHECK: explicit_assoc_2:
-; CHECK: .section .explicit,"aMo",@progbits,8,implicit_rodata_cst4,unique,13
+; CHECK: .section .explicit,"aMo",@progbits,8,implicit_rodata_cst4,unique,[[#U+6]]
 ; CHECK: explicit_assoc_3:
 
 @explicit_assoc_1 = unnamed_addr constant [2 x i16] [i16 1, i16 1], section ".explicit", !associated !4
@@ -139,9 +139,9 @@
 !4 = !{[2 x i16]* @implicit_rodata_cst4}
 
 ;; Test implicit section assignment for globals in distinct comdat groups.
-; CHECK: .section .rodata.cst4,"aGM",@progbits,4,f,comdat,unique,14
+; CHECK: .section .rodata.cst4,"aGM",@progbits,4,f,comdat,unique,[[#U+7]]
 ; CHECK: implicit_rodata_cst4_comdat:
-; CHECK: .section .rodata.cst8,"aGM",@progbits,8,g,comdat,unique,15
+; CHECK: .section .rodata.cst8,"aGM",@progbits,8,g,comdat,unique,[[#U+8]]
 ; CHECK: implicit_rodata_cst8_comdat:
 
 ;; Check that globals in distinct comdat groups that are explicitly assigned
@@ -151,13 +151,13 @@
 ;; appear incorrect as comdats are not taken into account when looking up the unique ID
 ;; for a mergeable section. However, as they have no effect it doesn't matter that they
 ;; are incorrect.
-; CHECK: .section .explicit_comdat_distinct,"aM",@progbits,4,unique,16
+; CHECK: .section .explicit_comdat_distinct,"aM",@progbits,4,unique,[[#U+9]]
 ; CHECK: explicit_comdat_distinct_supply_uid:
-; CHECK: .section .explicit_comdat_distinct,"aGM",@progbits,4,f,comdat,unique,16
+; CHECK: .section .explicit_comdat_distinct,"aGM",@progbits,4,f,comdat,unique,[[#U+10]]
 ; CHECK: explicit_comdat_distinct1:
-; CHECK: .section .explicit_comdat_distinct,"aGM",@progbits,4,g,comdat,unique,16
+; CHECK: .section .explicit_comdat_distinct,"aGM",@progbits,4,g,comdat,unique,[[#U+10]]
 ; CHECK: explicit_comdat_distinct2:
-; CHECK: .section .explicit_comdat_distinct,"aGM",@progbits,8,h,comdat,unique,17
+; CHECK: .section .explicit_comdat_distinct,"aGM",@progbits,8,h,comdat,unique,[[#U+11]]
 ; CHECK: explicit_comdat_distinct3:
 
 $f = comdat any
@@ -173,9 +173,9 @@ $h = comdat any
 @explicit_comdat_distinct3 = unnamed_addr constant [2 x i32] [i32 1, i32 1], section ".explicit_comdat_distinct", comdat($h)
 
 ;; Test implicit section assignment for globals in the same comdat group.
-; CHECK: .section .rodata.cst4,"aGM",@progbits,4,i,comdat,unique,18
+; CHECK: .section .rodata.cst4,"aGM",@progbits,4,i,comdat,unique,[[#U+12]]
 ; CHECK: implicit_rodata_cst4_same_comdat:
-; CHECK: .section .rodata.cst8,"aGM",@progbits,8,i,comdat,unique,19
+; CHECK: .section .rodata.cst8,"aGM",@progbits,8,i,comdat,unique,[[#U+13]]
 ; CHECK: implicit_rodata_cst8_same_comdat:
 
 ;; Check that globals in the same comdat group that are explicitly assigned
@@ -185,12 +185,12 @@ $h = comdat any
 ;; appear incorrect as comdats are not taken into account when looking up the unique ID
 ;; for a mergeable section. However, as they have no effect it doesn't matter that they
 ;; are incorrect.
-; CHECK: .section .explicit_comdat_same,"aM",@progbits,4,unique,20
+; CHECK: .section .explicit_comdat_same,"aM",@progbits,4,unique,[[#U+14]]
 ; CHECK: explicit_comdat_same_supply_uid:
-; CHECK: .section .explicit_comdat_same,"aGM",@progbits,4,i,comdat,unique,20
+; CHECK: .section .explicit_comdat_same,"aGM",@progbits,4,i,comdat,unique,[[#U+15]]
 ; CHECK: explicit_comdat_same1:
 ; CHECK: explicit_comdat_same2:
-; CHECK: .section .explicit_comdat_same,"aGM",@progbits,8,i,comdat,unique,21
+; CHECK: .section .explicit_comdat_same,"aGM",@progbits,8,i,comdat,unique,[[#U+16]]
 ; CHECK: explicit_comdat_same3:
 
 $i = comdat any
@@ -206,7 +206,7 @@ $i = comdat any
 ;; Check interaction between symbols that are explicitly assigned
 ;; to a section and implicitly assigned symbols.
 
-; CHECK: .section .rodata.str1.1,"aMS",@progbits,1
+; CHECK: .section .rodata.str1.1,"aMS",@progbits,1{{$}}
 ; CHECK: implicit_rodata_str1_1:
 ; CHECK: explicit_implicit_1:
 
@@ -214,22 +214,22 @@ $i = comdat any
 @implicit_rodata_str1_1 = unnamed_addr constant [2 x i8] [i8 1, i8 0]
 @explicit_implicit_1 = unnamed_addr constant [2 x i8] [i8 1, i8 0], section ".rodata.str1.1"
 
-; CHECK: .section .rodata.str1.1,"a",@progbits,unique,22
+; CHECK: .section .rodata.str1.1,"a",@progbits,unique,[[#U+17]]
 ; CHECK: explicit_implicit_2:
 
 ;; Assign an incompatible symbol (non-mergeable) to an existing mergeable section created implicitly.
 @explicit_implicit_2 = constant [2 x i16] [i16 1, i16 1], section ".rodata.str1.1"
 
-; CHECK: .section .rodata.str1.1,"aMS",@progbits,1
+; CHECK: .section .rodata.str1.1,"aMS",@progbits,1{{$}}
 ; CHECK: explicit_implicit_3:
-; CHECK: .section .rodata.str1.1,"a",@progbits,unique,22
+; CHECK: .section .rodata.str1.1,"a",@progbits,unique,[[#U+17]]
 ; CHECK: explicit_implicit_4:
 
 ;; Assign compatible globals to the previously created sections.
 @explicit_implicit_3 = unnamed_addr constant [2 x i8] [i8 1, i8 0], section ".rodata.str1.1"
 @explicit_implicit_4 = constant [2 x i16] [i16 1, i16 1], section ".rodata.str1.1"
 
-; CHECK: .section .rodata.str2.2,"aMS",@progbits,2
+; CHECK: .section .rodata.str2.2,"aMS",@progbits,2{{$}}
 ; CHECK: explicit_implicit_5:
 ; CHECK: implicit_rodata_str2_2:
 
@@ -239,21 +239,21 @@ $i = comdat any
 
 ;; Check the interaction with inline asm.
 
-; CHECK: .section .asm_mergeable1,"aMS",@progbits,2
+; CHECK: .section .asm_mergeable1,"aMS",@progbits,2{{$}}
 ; CHECK: explicit_asm_1:
-; CHECK: .section .asm_nonmergeable1,"a",@progbits
+; CHECK: .section .asm_nonmergeable1,"a",@progbits{{$}}
 ; CHECK: explicit_asm_2:
-; CHECK: .section .asm_mergeable1,"aM",@progbits,4,unique,23
+; CHECK: .section .asm_mergeable1,"aM",@progbits,4,unique,[[#U+18]]
 ; CHECK: explicit_asm_3:
-; CHECK: .section .asm_nonmergeable1,"aMS",@progbits,2,unique,24
+; CHECK: .section .asm_nonmergeable1,"aMS",@progbits,2,unique,[[#U+19]]
 ; CHECK: explicit_asm_4:
-; CHECK: .section .asm_mergeable2,"aM",@progbits,4,unique,25
+; CHECK: .section .asm_mergeable2,"aM",@progbits,4,unique,[[#U+20]]
 ; CHECK: explicit_asm_5:
-; CHECK: .section .asm_nonmergeable2,"aMS",@progbits,2,unique,26
+; CHECK: .section .asm_nonmergeable2,"aMS",@progbits,2,unique,[[#U+21]]
 ; CHECK: explicit_asm_6:
-; CHECK: .section .asm_mergeable2,"aMS",@progbits,2
+; CHECK: .section .asm_mergeable2,"aMS",@progbits,2{{$}}
 ; CHECK: explicit_asm_7:
-; CHECK: .section .asm_nonmergeable2,"a",@progbits
+; CHECK: .section .asm_nonmergeable2,"a",@progbits{{$}}
 ; CHECK: explicit_asm_8:
 
 module asm ".section .asm_mergeable1,\22aMS\22,@progbits,2"
@@ -277,7 +277,7 @@ module asm ".section .asm_nonmergeable2,\22a\22,@progbits"
 
 ;; A .note.GNU-stack section is created implicitly. We add a check for this as we want to use
 ;; --implicit-check-not to reduce the number of checks in this file.
-; CHECK: .section ".note.GNU-stack","",@progbits
+; CHECK: .section ".note.GNU-stack","",@progbits{{$}}
 
 ;; --no-integrated-as avoids the use of ",unique," for compatibility with older binutils.
 
@@ -294,7 +294,7 @@ module asm ".section .asm_nonmergeable2,\22a\22,@progbits"
 ; RUN: echo '@explicit = unnamed_addr constant [2 x i16] [i16 1, i16 1], section ".explicit"' > %t.no_i_as.ll
 ; RUN: llc < %t.no_i_as.ll -mtriple=x86_64 --no-integrated-as -binutils-version=2.34 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=NO-I-AS-OLD
-; NO-I-AS-OLD: .section .explicit,"a",@progbits
+; NO-I-AS-OLD: .section .explicit,"a",@progbits{{$}}
 ; RUN: llc < %t.no_i_as.ll -mtriple=x86_64 --no-integrated-as -binutils-version=2.35 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=NO-I-AS-NEW
 ; RUN: llc < %t.no_i_as.ll -mtriple=x86_64 --no-integrated-as -binutils-version=none 2>&1 \

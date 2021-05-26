@@ -12,8 +12,8 @@
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/lldb-types.h"
 
+#include <cstdint>
 #include <memory>
-#include <stdint.h>
 
 namespace llvm {
 class WritableMemoryBuffer;

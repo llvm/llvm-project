@@ -13,9 +13,9 @@
 #ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_DNBDEFS_H
 #define LLDB_TOOLS_DEBUGSERVER_SOURCE_DNBDEFS_H
 
-#include <signal.h>
-#include <stdint.h>
-#include <stdio.h>
+#include <csignal>
+#include <cstdint>
+#include <cstdio>
 #include <sys/syslimits.h>
 #include <unistd.h>
 

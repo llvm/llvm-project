@@ -14,7 +14,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/YAMLTraits.h"
 
-#include <stddef.h>
+#include <cstddef>
 
 namespace lldb_private {
 class Stream;

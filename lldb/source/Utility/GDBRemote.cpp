@@ -11,7 +11,7 @@
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/Stream.h"
 
-#include <stdio.h>
+#include <cstdio>
 
 using namespace lldb;
 using namespace lldb_private::repro;

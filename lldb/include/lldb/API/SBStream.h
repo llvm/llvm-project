@@ -9,7 +9,7 @@
 #ifndef LLDB_API_SBSTREAM_H
 #define LLDB_API_SBSTREAM_H
 
-#include <stdio.h>
+#include <cstdio>
 
 #include "lldb/API/SBDefines.h"
 

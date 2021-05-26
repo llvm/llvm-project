@@ -8,9 +8,9 @@
 
 #include "GDBRemoteCommunication.h"
 
+#include <climits>
+#include <cstring>
 #include <future>
-#include <limits.h>
-#include <string.h>
 #include <sys/stat.h>
 
 #include "lldb/Core/StreamFile.h"

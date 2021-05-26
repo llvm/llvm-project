@@ -21,8 +21,8 @@
 #include "lldb/lldb-private-types.h"
 #include "lldb/lldb-types.h"
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 namespace lldb_private {
 class OptionValueDictionary;

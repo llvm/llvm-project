@@ -9,8 +9,8 @@
 #ifndef LLDB_UTILITY_PREDICATE_H
 #define LLDB_UTILITY_PREDICATE_H
 
-#include <stdint.h>
-#include <time.h>
+#include <cstdint>
+#include <ctime>
 
 #include <condition_variable>
 #include <mutex>
