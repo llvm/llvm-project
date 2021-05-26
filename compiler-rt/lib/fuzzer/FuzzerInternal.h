@@ -18,6 +18,7 @@
 #include "FuzzerOptions.h"
 #include "FuzzerSHA1.h"
 #include "FuzzerValueBitMap.h"
+#include "mutagen/MutagenDispatcher.h"
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -26,8 +27,12 @@
 #include <string.h>
 
 namespace fuzzer {
+namespace {
 
 using namespace std::chrono;
+using mutagen::MutationDispatcher;
+
+} // namespace
 
 class Fuzzer {
 public:
