@@ -547,15 +547,15 @@ enum FunctionCodes {
 
   FUNC_CODE_INST_CALL = 34, // CALL:    [attr, cc, fnty, fnid, args...]
 
-  FUNC_CODE_DEBUG_LOC = 35,        // DEBUG_LOC:  [Line,Col,ScopeVal, IAVal]
-  FUNC_CODE_INST_FENCE = 36,       // FENCE: [ordering, synchscope]
-  FUNC_CODE_INST_CMPXCHG_OLD = 37, // CMPXCHG: [ptrty, ptr, cmp, val, vol,
-                                   //            ordering, synchscope,
-                                   //            failure_ordering?, weak?]
-  FUNC_CODE_INST_ATOMICRMW = 38,   // ATOMICRMW: [ptrty,ptr,val, operation,
-                                   //             align, vol,
-                                   //             ordering, synchscope]
-  FUNC_CODE_INST_RESUME = 39,      // RESUME:     [opval]
+  FUNC_CODE_DEBUG_LOC = 35,          // DEBUG_LOC:  [Line,Col,ScopeVal, IAVal]
+  FUNC_CODE_INST_FENCE = 36,         // FENCE: [ordering, synchscope]
+  FUNC_CODE_INST_CMPXCHG_OLD = 37,   // CMPXCHG: [ptrty, ptr, cmp, val, vol,
+                                     //            ordering, synchscope,
+                                     //            failure_ordering?, weak?]
+  FUNC_CODE_INST_ATOMICRMW_OLD = 38, // ATOMICRMW: [ptrty,ptr,val, operation,
+                                     //             align, vol,
+                                     //             ordering, synchscope]
+  FUNC_CODE_INST_RESUME = 39,        // RESUME:     [opval]
   FUNC_CODE_INST_LANDINGPAD_OLD =
       40,                         // LANDINGPAD: [ty,val,val,num,id0,val0...]
   FUNC_CODE_INST_LOADATOMIC = 41, // LOAD: [opty, op, align, vol,
@@ -582,6 +582,9 @@ enum FunctionCodes {
   FUNC_CODE_INST_CALLBR = 57,    // CALLBR:     [attr, cc, norm, transfs,
                                  //              fnty, fnid, args...]
   FUNC_CODE_INST_FREEZE = 58,    // FREEZE: [opty, opval]
+  FUNC_CODE_INST_ATOMICRMW = 59, // ATOMICRMW: [ptrty, ptr, valty, val,
+                                 //             operation, align, vol,
+                                 //             ordering, synchscope]
 };
 
 enum UseListCodes {

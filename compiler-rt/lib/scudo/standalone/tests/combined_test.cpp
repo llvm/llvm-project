@@ -399,20 +399,21 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, DisableMemoryTagging) {
     // Check that disabling memory tagging works correctly.
     void *P = Allocator->allocate(2048, Origin);
     EXPECT_DEATH(reinterpret_cast<char *>(P)[2048] = 0xaa, "");
-    if (scudo::disableMemoryTagChecksTestOnly()) {
-      Allocator->disableMemoryTagging();
-      reinterpret_cast<char *>(P)[2048] = 0xaa;
-      Allocator->deallocate(P, Origin);
+    scudo::disableMemoryTagChecksTestOnly();
+    Allocator->disableMemoryTagging();
+    reinterpret_cast<char *>(P)[2048] = 0xaa;
+    Allocator->deallocate(P, Origin);
 
-      P = Allocator->allocate(2048, Origin);
-      EXPECT_EQ(scudo::untagPointer(P), P);
-      reinterpret_cast<char *>(P)[2048] = 0xaa;
-      Allocator->deallocate(P, Origin);
+    P = Allocator->allocate(2048, Origin);
+    EXPECT_EQ(scudo::untagPointer(P), P);
+    reinterpret_cast<char *>(P)[2048] = 0xaa;
+    Allocator->deallocate(P, Origin);
 
-      // Disabling memory tag checks may interfere with subsequent tests.
-      // Re-enable them now.
-      scudo::enableMemoryTagChecksTestOnly();
-    }
+    Allocator->releaseToOS();
+
+    // Disabling memory tag checks may interfere with subsequent tests.
+    // Re-enable them now.
+    scudo::enableMemoryTagChecksTestOnly();
   }
 }
 

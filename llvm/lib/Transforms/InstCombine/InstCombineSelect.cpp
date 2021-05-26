@@ -2657,7 +2657,10 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   CmpInst::Predicate Pred;
 
-  if (SelType->isIntOrIntVectorTy(1) &&
+  // Avoid potential infinite loops by checking for non-constant condition.
+  // TODO: Can we assert instead by improving canonicalizeSelectToShuffle()?
+  //       Scalar select must have simplified?
+  if (SelType->isIntOrIntVectorTy(1) && !isa<Constant>(CondVal) &&
       TrueVal->getType() == CondVal->getType()) {
     // Folding select to and/or i1 isn't poison safe in general. impliesPoison
     // checks whether folding it does not convert a well-defined value into

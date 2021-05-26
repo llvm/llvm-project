@@ -3082,11 +3082,11 @@ void SubprogramVisitor::Post(const parser::EntryStmt &stmt) {
                       dummy->name(), "Previous declaration of '%s'"_en_US);
                 }},
             dummy->details());
-      } else if (inExecutionPart_) {
-        dummy = &MakeSymbol(*dummyName, ObjectEntityDetails{true});
-        ApplyImplicitRules(*dummy);
       } else {
         dummy = &MakeSymbol(*dummyName, EntityDetails{true});
+        if (inExecutionPart_) {
+          ApplyImplicitRules(*dummy);
+        }
       }
       entryDetails.add_dummyArg(*dummy);
     } else {

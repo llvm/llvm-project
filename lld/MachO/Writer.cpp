@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "Writer.h"
+#include "ConcatOutputSection.h"
 #include "Config.h"
 #include "InputFiles.h"
 #include "InputSection.h"
 #include "MapFile.h"
-#include "MergedOutputSection.h"
 #include "OutputSection.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
@@ -755,94 +755,19 @@ static DenseMap<const InputSection *, size_t> buildInputSectionPriorities() {
   return sectionPriorities;
 }
 
-static int segmentOrder(OutputSegment *seg) {
-  return StringSwitch<int>(seg->name)
-      .Case(segment_names::pageZero, -4)
-      .Case(segment_names::text, -3)
-      .Case(segment_names::dataConst, -2)
-      .Case(segment_names::data, -1)
-      .Case(segment_names::llvm, std::numeric_limits<int>::max() - 1)
-      // Make sure __LINKEDIT is the last segment (i.e. all its hidden
-      // sections must be ordered after other sections).
-      .Case(segment_names::linkEdit, std::numeric_limits<int>::max())
-      .Default(0);
-}
-
-static int sectionOrder(OutputSection *osec) {
-  StringRef segname = osec->parent->name;
-  // Sections are uniquely identified by their segment + section name.
-  if (segname == segment_names::text) {
-    return StringSwitch<int>(osec->name)
-        .Case(section_names::header, -4)
-        .Case(section_names::text, -3)
-        .Case(section_names::stubs, -2)
-        .Case(section_names::stubHelper, -1)
-        .Case(section_names::unwindInfo, std::numeric_limits<int>::max() - 1)
-        .Case(section_names::ehFrame, std::numeric_limits<int>::max())
-        .Default(0);
-  } else if (segname == segment_names::data ||
-             segname == segment_names::dataConst) {
-    // For each thread spawned, dyld will initialize its TLVs by copying the
-    // address range from the start of the first thread-local data section to
-    // the end of the last one. We therefore arrange these sections contiguously
-    // to minimize the amount of memory used. Additionally, since zerofill
-    // sections must be at the end of their segments, and since TLV data
-    // sections can be zerofills, we end up putting all TLV data sections at the
-    // end of the segment.
-    switch (sectionType(osec->flags)) {
-    case S_THREAD_LOCAL_REGULAR:
-      return std::numeric_limits<int>::max() - 2;
-    case S_THREAD_LOCAL_ZEROFILL:
-      return std::numeric_limits<int>::max() - 1;
-    case S_ZEROFILL:
-      return std::numeric_limits<int>::max();
-    default:
-      return StringSwitch<int>(osec->name)
-          .Case(section_names::lazySymbolPtr, -2)
-          .Case(section_names::data, -1)
-          .Default(0);
-    }
-  } else if (segname == segment_names::linkEdit) {
-    return StringSwitch<int>(osec->name)
-        .Case(section_names::rebase, -9)
-        .Case(section_names::binding, -8)
-        .Case(section_names::weakBinding, -7)
-        .Case(section_names::lazyBinding, -6)
-        .Case(section_names::export_, -5)
-        .Case(section_names::functionStarts, -4)
-        .Case(section_names::symbolTable, -3)
-        .Case(section_names::indirectSymbolTable, -2)
-        .Case(section_names::stringTable, -1)
-        .Case(section_names::codeSignature, std::numeric_limits<int>::max())
-        .Default(0);
-  }
-  // ZeroFill sections must always be the at the end of their segments,
-  // otherwise subsequent sections may get overwritten with zeroes at runtime.
-  if (sectionType(osec->flags) == S_ZEROFILL)
-    return std::numeric_limits<int>::max();
-  return 0;
-}
-
-template <typename T, typename F>
-static std::function<bool(T, T)> compareByOrder(F ord) {
-  return [=](T a, T b) { return ord(a) < ord(b); };
-}
-
 // Sorting only can happen once all outputs have been collected. Here we sort
 // segments, output sections within each segment, and input sections within each
 // output segment.
 static void sortSegmentsAndSections() {
   TimeTraceScope timeScope("Sort segments and sections");
-
-  llvm::stable_sort(outputSegments,
-                    compareByOrder<OutputSegment *>(segmentOrder));
+  sortOutputSegments();
 
   DenseMap<const InputSection *, size_t> isecPriorities =
       buildInputSectionPriorities();
 
   uint32_t sectionIndex = 0;
   for (OutputSegment *seg : outputSegments) {
-    seg->sortOutputSections(compareByOrder<OutputSection *>(sectionOrder));
+    seg->sortOutputSections();
     for (OutputSection *osec : seg->getSections()) {
       // Now that the output sections are sorted, assign the final
       // output section indices.
@@ -852,7 +777,7 @@ static void sortSegmentsAndSections() {
         firstTLVDataSection = osec;
 
       if (!isecPriorities.empty()) {
-        if (auto *merged = dyn_cast<MergedOutputSection>(osec)) {
+        if (auto *merged = dyn_cast<ConcatOutputSection>(osec)) {
           llvm::stable_sort(merged->inputs,
                             [&](InputSection *a, InputSection *b) {
                               return isecPriorities[a] > isecPriorities[b];
@@ -897,21 +822,24 @@ template <class LP> void Writer::createOutputSections() {
     llvm_unreachable("unhandled output file type");
   }
 
-  // Then merge input sections into output sections.
-  MapVector<NamePair, MergedOutputSection *> mergedOutputSections;
-  for (InputSection *isec : inputSections) {
+  // Then add input sections to output sections.
+  DenseMap<NamePair, ConcatOutputSection *> concatOutputSections;
+  for (const auto &p : enumerate(inputSections)) {
+    InputSection *isec = p.value();
     if (isec->shouldOmitFromOutput())
       continue;
     NamePair names = maybeRenameSection({isec->segname, isec->name});
-    MergedOutputSection *&osec = mergedOutputSections[names];
-    if (osec == nullptr)
-      osec = make<MergedOutputSection>(names.second);
-    osec->mergeInput(isec);
+    ConcatOutputSection *&osec = concatOutputSections[names];
+    if (osec == nullptr) {
+      osec = make<ConcatOutputSection>(names.second);
+      osec->inputOrder = p.index();
+    }
+    osec->addInput(isec);
   }
 
-  for (const auto &it : mergedOutputSections) {
+  for (const auto &it : concatOutputSections) {
     StringRef segname = it.first.first;
-    MergedOutputSection *osec = it.second;
+    ConcatOutputSection *osec = it.second;
     if (segname == segment_names::ld) {
       assert(osec->name == section_names::compactUnwind);
       in.unwindInfo->setCompactUnwindSection(osec);
@@ -921,8 +849,8 @@ template <class LP> void Writer::createOutputSections() {
   }
 
   for (SyntheticSection *ssec : syntheticSections) {
-    auto it = mergedOutputSections.find({ssec->segname, ssec->name});
-    if (it == mergedOutputSections.end()) {
+    auto it = concatOutputSections.find({ssec->segname, ssec->name});
+    if (it == concatOutputSections.end()) {
       if (ssec->isNeeded())
         getOrCreateOutputSegment(ssec->segname)->addOutputSection(ssec);
     } else {

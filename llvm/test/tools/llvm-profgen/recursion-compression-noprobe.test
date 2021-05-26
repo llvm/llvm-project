@@ -1,7 +1,7 @@
 ; Firstly test uncompression(--compress-recursion=0)
-; RUN: llvm-profgen --perfscript=%S/Inputs/recursion-compression-noprobe.perfscript --binary=%S/Inputs/recursion-compression-noprobe.perfbin --output=%t --compress-recursion=0 --csprof-cold-thres=0
+; RUN: llvm-profgen --perfscript=%S/Inputs/recursion-compression-noprobe.perfscript --binary=%S/Inputs/recursion-compression-noprobe.perfbin --output=%t --compress-recursion=0 --profile-summary-cold-count=0
 ; RUN: FileCheck %s --input-file %t -check-prefix=CHECK-UNCOMPRESS
-; RUN: llvm-profgen --perfscript=%S/Inputs/recursion-compression-noprobe.perfscript --binary=%S/Inputs/recursion-compression-noprobe.perfbin --output=%t --csprof-cold-thres=0
+; RUN: llvm-profgen --perfscript=%S/Inputs/recursion-compression-noprobe.perfscript --binary=%S/Inputs/recursion-compression-noprobe.perfbin --output=%t --profile-summary-cold-count=0
 ; RUN: FileCheck %s --input-file %t
 
 ; CHECK-UNCOMPRESS:[main:1 @ foo:3 @ fa:2 @ fb]:48:0

@@ -1027,9 +1027,9 @@ func @fold_tiled_loop_results(%A: memref<48xf32>, %B: tensor<48xf32>,
 // CHECK-SAME:   %[[A:.*]]: [[BUF_TY:memref<48xf32>]], %[[B:.*]]: [[TY:tensor<48xf32>]],
 // CHECK-SAME:   %[[C:.*]]: [[BUF_TY]],  %[[C_TENSOR:.*]]: [[TY]]) -> [[TY]] {
 
-// CHECK:  %[[C0:.*]] = constant 0 : index
-// CHECK:  %[[C24:.*]] = constant 24 : index
-// CHECK:  %[[C48:.*]] = constant 48 : index
+// CHECK-DAG:  %[[C0:.*]] = constant 0 : index
+// CHECK-DAG:  %[[C24:.*]] = constant 24 : index
+// CHECK-DAG:  %[[C48:.*]] = constant 48 : index
 
 // CHECK-NOT: %{{.*}} = linalg.tiled_loop
 // CHECK:  %[[RESULT:.*]] = linalg.tiled_loop (%{{.*}}) = (%[[C0]])

@@ -2528,6 +2528,19 @@ static bool detectShiftUntilZeroIdiom(Loop *CurLoop, ScalarEvolution *SE,
     return false;
   }
 
+  // The new, countable, loop will certainly only run a known number of
+  // iterations, It won't be infinite. But the old loop might be infinite
+  // under certain conditions. For logical shifts, the value will become zero
+  // after at most bitwidth(%Val) loop iterations. However, for arithmetic
+  // right-shift, iff the sign bit was set, the value will never become zero,
+  // and the loop may never finish.
+  if (ValShifted->getOpcode() == Instruction::AShr &&
+      !CurLoop->getHeader()->getParent()->mustProgress() &&
+      !hasMustProgress(CurLoop) && !SE->isKnownNonNegative(SE->getSCEV(Val))) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE " Can not prove the loop is finite.\n");
+    return false;
+  }
+
   // Okay, idiom checks out.
   return true;
 }

@@ -10,12 +10,12 @@ func @main() {
 }
 
 // CHECK-LABEL: func @main()
-// CHECK:         [[VAL_0:%.*]] = constant 1.000000e+00 : f64
-// CHECK:         [[VAL_1:%.*]] = constant 2.000000e+00 : f64
-// CHECK:         [[VAL_2:%.*]] = constant 3.000000e+00 : f64
-// CHECK:         [[VAL_3:%.*]] = constant 4.000000e+00 : f64
-// CHECK:         [[VAL_4:%.*]] = constant 5.000000e+00 : f64
-// CHECK:         [[VAL_5:%.*]] = constant 6.000000e+00 : f64
+// CHECK-DAG:     [[VAL_0:%.*]] = constant 1.000000e+00 : f64
+// CHECK-DAG:     [[VAL_1:%.*]] = constant 2.000000e+00 : f64
+// CHECK-DAG:     [[VAL_2:%.*]] = constant 3.000000e+00 : f64
+// CHECK-DAG:     [[VAL_3:%.*]] = constant 4.000000e+00 : f64
+// CHECK-DAG:     [[VAL_4:%.*]] = constant 5.000000e+00 : f64
+// CHECK-DAG:     [[VAL_5:%.*]] = constant 6.000000e+00 : f64
 // CHECK:         [[VAL_6:%.*]] = memref.alloc() : memref<3x2xf64>
 // CHECK:         [[VAL_7:%.*]] = memref.alloc() : memref<3x2xf64>
 // CHECK:         [[VAL_8:%.*]] = memref.alloc() : memref<2x3xf64>
@@ -41,12 +41,12 @@ func @main() {
 // CHECK:         memref.dealloc [[VAL_6]] : memref<3x2xf64>
 
 // OPT-LABEL: func @main()
-// OPT:         [[VAL_0:%.*]] = constant 1.000000e+00 : f64
-// OPT:         [[VAL_1:%.*]] = constant 2.000000e+00 : f64
-// OPT:         [[VAL_2:%.*]] = constant 3.000000e+00 : f64
-// OPT:         [[VAL_3:%.*]] = constant 4.000000e+00 : f64
-// OPT:         [[VAL_4:%.*]] = constant 5.000000e+00 : f64
-// OPT:         [[VAL_5:%.*]] = constant 6.000000e+00 : f64
+// OPT-DAG:     [[VAL_0:%.*]] = constant 1.000000e+00 : f64
+// OPT-DAG:     [[VAL_1:%.*]] = constant 2.000000e+00 : f64
+// OPT-DAG:     [[VAL_2:%.*]] = constant 3.000000e+00 : f64
+// OPT-DAG:     [[VAL_3:%.*]] = constant 4.000000e+00 : f64
+// OPT-DAG:     [[VAL_4:%.*]] = constant 5.000000e+00 : f64
+// OPT-DAG:     [[VAL_5:%.*]] = constant 6.000000e+00 : f64
 // OPT:         [[VAL_6:%.*]] = memref.alloc() : memref<3x2xf64>
 // OPT:         [[VAL_7:%.*]] = memref.alloc() : memref<2x3xf64>
 // OPT:         affine.store [[VAL_0]], [[VAL_7]][0, 0] : memref<2x3xf64>

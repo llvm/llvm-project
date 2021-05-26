@@ -1,4 +1,4 @@
-//===- OutputSection.h ------------------------------------------*- C++ -*-===//
+//===- ConcatOutputSection.h ------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,9 +24,10 @@ class Defined;
 // files that are labeled with the same segment and section name. This class
 // contains all such sections and writes the data from each section sequentially
 // in the final binary.
-class MergedOutputSection : public OutputSection {
+class ConcatOutputSection : public OutputSection {
 public:
-  MergedOutputSection(StringRef name) : OutputSection(MergedKind, name) {}
+  explicit ConcatOutputSection(StringRef name)
+      : OutputSection(ConcatKind, name) {}
 
   const InputSection *firstSection() const { return inputs.front(); }
   const InputSection *lastSection() const { return inputs.back(); }
@@ -35,7 +36,7 @@ public:
   uint64_t getSize() const override { return size; }
   uint64_t getFileSize() const override { return fileSize; }
 
-  void mergeInput(InputSection *input);
+  void addInput(InputSection *input);
   void finalize() override;
   bool needsThunks() const;
   uint64_t estimateStubsInRangeVA(size_t callIdx) const;
@@ -46,7 +47,7 @@ public:
   std::vector<InputSection *> thunks;
 
   static bool classof(const OutputSection *sec) {
-    return sec->kind() == MergedKind;
+    return sec->kind() == ConcatKind;
   }
 
 private:
