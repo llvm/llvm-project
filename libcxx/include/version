@@ -319,7 +319,9 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_erase_if                             202002L
 # undef  __cpp_lib_execution
 // # define __cpp_lib_execution                            201902L
-// # define __cpp_lib_format                               201907L
+# if !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_format)
+// #   define __cpp_lib_format                             201907L
+# endif
 # define __cpp_lib_generic_unordered_lookup             201811L
 # define __cpp_lib_int_pow2                             202002L
 # if !defined(_LIBCPP_HAS_NO_CONCEPTS)
