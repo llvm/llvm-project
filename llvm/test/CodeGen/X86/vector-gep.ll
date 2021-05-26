@@ -6,7 +6,7 @@ define <4 x i32*> @AGEP0(i32* %ptr) nounwind {
 ; CHECK-LABEL: AGEP0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm0
-; CHECK-NEXT:    vpaddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; CHECK-NEXT:    retl
   %vecinit.i = insertelement <4 x i32*> undef, i32* %ptr, i32 0
   %vecinit2.i = insertelement <4 x i32*> %vecinit.i, i32* %ptr, i32 1

@@ -17,30 +17,30 @@
 define <16 x i8> @test_128_i8_x_16_7_mask_lshr_1(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_7_mask_lshr_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlw $1, %xmm0
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i8_x_16_7_mask_lshr_1:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlw $1, %xmm0, %xmm0
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i8_x_16_7_mask_lshr_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlw $1, %xmm0
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i8_x_16_7_mask_lshr_1:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlw $1, %xmm0, %xmm0
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <16 x i8> %a0, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
   %t1 = lshr <16 x i8> %t0, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
@@ -50,25 +50,25 @@ define <16 x i8> @test_128_i8_x_16_7_mask_lshr_1(<16 x i8> %a0) {
 define <16 x i8> @test_128_i8_x_16_28_mask_lshr_1(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_28_mask_lshr_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlw $1, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i8_x_16_28_mask_lshr_1:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlw $1, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i8_x_16_28_mask_lshr_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlw $1, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i8_x_16_28_mask_lshr_1:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlw $1, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <16 x i8> %a0, <i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28>
@@ -78,25 +78,25 @@ define <16 x i8> @test_128_i8_x_16_28_mask_lshr_1(<16 x i8> %a0) {
 define <16 x i8> @test_128_i8_x_16_28_mask_lshr_2(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_28_mask_lshr_2:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlw $2, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i8_x_16_28_mask_lshr_2:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlw $2, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i8_x_16_28_mask_lshr_2:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlw $2, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i8_x_16_28_mask_lshr_2:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlw $2, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <16 x i8> %a0, <i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28>
@@ -106,30 +106,30 @@ define <16 x i8> @test_128_i8_x_16_28_mask_lshr_2(<16 x i8> %a0) {
 define <16 x i8> @test_128_i8_x_16_28_mask_lshr_3(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_28_mask_lshr_3:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlw $3, %xmm0
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i8_x_16_28_mask_lshr_3:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlw $3, %xmm0, %xmm0
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i8_x_16_28_mask_lshr_3:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlw $3, %xmm0
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i8_x_16_28_mask_lshr_3:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlw $3, %xmm0, %xmm0
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <16 x i8> %a0, <i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28>
   %t1 = lshr <16 x i8> %t0, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
@@ -138,30 +138,30 @@ define <16 x i8> @test_128_i8_x_16_28_mask_lshr_3(<16 x i8> %a0) {
 define <16 x i8> @test_128_i8_x_16_28_mask_lshr_4(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_28_mask_lshr_4:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlw $4, %xmm0
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i8_x_16_28_mask_lshr_4:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlw $4, %xmm0, %xmm0
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i8_x_16_28_mask_lshr_4:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlw $4, %xmm0
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i8_x_16_28_mask_lshr_4:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlw $4, %xmm0, %xmm0
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <16 x i8> %a0, <i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28>
   %t1 = lshr <16 x i8> %t0, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
@@ -171,25 +171,25 @@ define <16 x i8> @test_128_i8_x_16_28_mask_lshr_4(<16 x i8> %a0) {
 define <16 x i8> @test_128_i8_x_16_224_mask_lshr_1(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_224_mask_lshr_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlw $1, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i8_x_16_224_mask_lshr_1:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlw $1, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i8_x_16_224_mask_lshr_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlw $1, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i8_x_16_224_mask_lshr_1:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlw $1, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <16 x i8> %a0, <i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224>
@@ -199,25 +199,25 @@ define <16 x i8> @test_128_i8_x_16_224_mask_lshr_1(<16 x i8> %a0) {
 define <16 x i8> @test_128_i8_x_16_224_mask_lshr_4(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_224_mask_lshr_4:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlw $4, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i8_x_16_224_mask_lshr_4:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlw $4, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i8_x_16_224_mask_lshr_4:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlw $4, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i8_x_16_224_mask_lshr_4:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlw $4, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <16 x i8> %a0, <i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224>
@@ -228,25 +228,25 @@ define <16 x i8> @test_128_i8_x_16_224_mask_lshr_5(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_224_mask_lshr_5:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    psrlw $5, %xmm0
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i8_x_16_224_mask_lshr_5:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    vpsrlw $5, %xmm0, %xmm0
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i8_x_16_224_mask_lshr_5:
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    psrlw $5, %xmm0
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i8_x_16_224_mask_lshr_5:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vpsrlw $5, %xmm0, %xmm0
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <16 x i8> %a0, <i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224>
   %t1 = lshr <16 x i8> %t0, <i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5>
@@ -256,25 +256,25 @@ define <16 x i8> @test_128_i8_x_16_224_mask_lshr_6(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_224_mask_lshr_6:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    psrlw $6, %xmm0
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i8_x_16_224_mask_lshr_6:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    vpsrlw $6, %xmm0, %xmm0
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i8_x_16_224_mask_lshr_6:
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    psrlw $6, %xmm0
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i8_x_16_224_mask_lshr_6:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vpsrlw $6, %xmm0, %xmm0
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <16 x i8> %a0, <i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224>
   %t1 = lshr <16 x i8> %t0, <i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6>
@@ -286,30 +286,30 @@ define <16 x i8> @test_128_i8_x_16_224_mask_lshr_6(<16 x i8> %a0) {
 define <16 x i8> @test_128_i8_x_16_7_mask_ashr_1(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_7_mask_ashr_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlw $1, %xmm0
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i8_x_16_7_mask_ashr_1:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlw $1, %xmm0, %xmm0
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i8_x_16_7_mask_ashr_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlw $1, %xmm0
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i8_x_16_7_mask_ashr_1:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlw $1, %xmm0, %xmm0
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <16 x i8> %a0, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
   %t1 = ashr <16 x i8> %t0, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
@@ -319,25 +319,25 @@ define <16 x i8> @test_128_i8_x_16_7_mask_ashr_1(<16 x i8> %a0) {
 define <16 x i8> @test_128_i8_x_16_28_mask_ashr_1(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_28_mask_ashr_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlw $1, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i8_x_16_28_mask_ashr_1:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlw $1, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i8_x_16_28_mask_ashr_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlw $1, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i8_x_16_28_mask_ashr_1:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlw $1, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <16 x i8> %a0, <i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28>
@@ -347,25 +347,25 @@ define <16 x i8> @test_128_i8_x_16_28_mask_ashr_1(<16 x i8> %a0) {
 define <16 x i8> @test_128_i8_x_16_28_mask_ashr_2(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_28_mask_ashr_2:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlw $2, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i8_x_16_28_mask_ashr_2:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlw $2, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i8_x_16_28_mask_ashr_2:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlw $2, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i8_x_16_28_mask_ashr_2:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlw $2, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <16 x i8> %a0, <i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28>
@@ -375,30 +375,30 @@ define <16 x i8> @test_128_i8_x_16_28_mask_ashr_2(<16 x i8> %a0) {
 define <16 x i8> @test_128_i8_x_16_28_mask_ashr_3(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_28_mask_ashr_3:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlw $3, %xmm0
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i8_x_16_28_mask_ashr_3:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlw $3, %xmm0, %xmm0
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i8_x_16_28_mask_ashr_3:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlw $3, %xmm0
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i8_x_16_28_mask_ashr_3:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlw $3, %xmm0, %xmm0
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <16 x i8> %a0, <i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28>
   %t1 = ashr <16 x i8> %t0, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
@@ -407,30 +407,30 @@ define <16 x i8> @test_128_i8_x_16_28_mask_ashr_3(<16 x i8> %a0) {
 define <16 x i8> @test_128_i8_x_16_28_mask_ashr_4(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_28_mask_ashr_4:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlw $4, %xmm0
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i8_x_16_28_mask_ashr_4:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlw $4, %xmm0, %xmm0
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i8_x_16_28_mask_ashr_4:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlw $4, %xmm0
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i8_x_16_28_mask_ashr_4:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlw $4, %xmm0, %xmm0
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <16 x i8> %a0, <i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28>
   %t1 = ashr <16 x i8> %t0, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
@@ -440,7 +440,7 @@ define <16 x i8> @test_128_i8_x_16_28_mask_ashr_4(<16 x i8> %a0) {
 define <16 x i8> @test_128_i8_x_16_224_mask_ashr_1(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_224_mask_ashr_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlw $1, %xmm0
 ; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
 ; X86-SSE2-NEXT:    pxor %xmm1, %xmm0
@@ -449,7 +449,7 @@ define <16 x i8> @test_128_i8_x_16_224_mask_ashr_1(<16 x i8> %a0) {
 ;
 ; X86-AVX-LABEL: test_128_i8_x_16_224_mask_ashr_1:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlw $1, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
 ; X86-AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
@@ -458,7 +458,7 @@ define <16 x i8> @test_128_i8_x_16_224_mask_ashr_1(<16 x i8> %a0) {
 ;
 ; X64-SSE2-LABEL: test_128_i8_x_16_224_mask_ashr_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlw $1, %xmm0
 ; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
 ; X64-SSE2-NEXT:    pxor %xmm1, %xmm0
@@ -467,7 +467,7 @@ define <16 x i8> @test_128_i8_x_16_224_mask_ashr_1(<16 x i8> %a0) {
 ;
 ; X64-AVX-LABEL: test_128_i8_x_16_224_mask_ashr_1:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlw $1, %xmm0, %xmm0
 ; X64-AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
 ; X64-AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
@@ -480,7 +480,7 @@ define <16 x i8> @test_128_i8_x_16_224_mask_ashr_1(<16 x i8> %a0) {
 define <16 x i8> @test_128_i8_x_16_224_mask_ashr_4(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_224_mask_ashr_4:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlw $4, %xmm0
 ; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
 ; X86-SSE2-NEXT:    pxor %xmm1, %xmm0
@@ -489,7 +489,7 @@ define <16 x i8> @test_128_i8_x_16_224_mask_ashr_4(<16 x i8> %a0) {
 ;
 ; X86-AVX-LABEL: test_128_i8_x_16_224_mask_ashr_4:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlw $4, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
 ; X86-AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
@@ -498,7 +498,7 @@ define <16 x i8> @test_128_i8_x_16_224_mask_ashr_4(<16 x i8> %a0) {
 ;
 ; X64-SSE2-LABEL: test_128_i8_x_16_224_mask_ashr_4:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlw $4, %xmm0
 ; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
 ; X64-SSE2-NEXT:    pxor %xmm1, %xmm0
@@ -507,7 +507,7 @@ define <16 x i8> @test_128_i8_x_16_224_mask_ashr_4(<16 x i8> %a0) {
 ;
 ; X64-AVX-LABEL: test_128_i8_x_16_224_mask_ashr_4:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlw $4, %xmm0, %xmm0
 ; X64-AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
 ; X64-AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
@@ -521,7 +521,7 @@ define <16 x i8> @test_128_i8_x_16_224_mask_ashr_5(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_224_mask_ashr_5:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    psrlw $5, %xmm0
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
 ; X86-SSE2-NEXT:    pxor %xmm1, %xmm0
 ; X86-SSE2-NEXT:    psubb %xmm1, %xmm0
@@ -530,7 +530,7 @@ define <16 x i8> @test_128_i8_x_16_224_mask_ashr_5(<16 x i8> %a0) {
 ; X86-AVX-LABEL: test_128_i8_x_16_224_mask_ashr_5:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    vpsrlw $5, %xmm0, %xmm0
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
 ; X86-AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
@@ -539,7 +539,7 @@ define <16 x i8> @test_128_i8_x_16_224_mask_ashr_5(<16 x i8> %a0) {
 ; X64-SSE2-LABEL: test_128_i8_x_16_224_mask_ashr_5:
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    psrlw $5, %xmm0
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
 ; X64-SSE2-NEXT:    pxor %xmm1, %xmm0
 ; X64-SSE2-NEXT:    psubb %xmm1, %xmm0
@@ -548,7 +548,7 @@ define <16 x i8> @test_128_i8_x_16_224_mask_ashr_5(<16 x i8> %a0) {
 ; X64-AVX-LABEL: test_128_i8_x_16_224_mask_ashr_5:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vpsrlw $5, %xmm0, %xmm0
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
 ; X64-AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
@@ -561,7 +561,7 @@ define <16 x i8> @test_128_i8_x_16_224_mask_ashr_6(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_224_mask_ashr_6:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    psrlw $6, %xmm0
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
 ; X86-SSE2-NEXT:    pxor %xmm1, %xmm0
 ; X86-SSE2-NEXT:    psubb %xmm1, %xmm0
@@ -570,7 +570,7 @@ define <16 x i8> @test_128_i8_x_16_224_mask_ashr_6(<16 x i8> %a0) {
 ; X86-AVX-LABEL: test_128_i8_x_16_224_mask_ashr_6:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    vpsrlw $6, %xmm0, %xmm0
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
 ; X86-AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
@@ -579,7 +579,7 @@ define <16 x i8> @test_128_i8_x_16_224_mask_ashr_6(<16 x i8> %a0) {
 ; X64-SSE2-LABEL: test_128_i8_x_16_224_mask_ashr_6:
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    psrlw $6, %xmm0
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
 ; X64-SSE2-NEXT:    pxor %xmm1, %xmm0
 ; X64-SSE2-NEXT:    psubb %xmm1, %xmm0
@@ -588,7 +588,7 @@ define <16 x i8> @test_128_i8_x_16_224_mask_ashr_6(<16 x i8> %a0) {
 ; X64-AVX-LABEL: test_128_i8_x_16_224_mask_ashr_6:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vpsrlw $6, %xmm0, %xmm0
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
 ; X64-AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
@@ -603,25 +603,25 @@ define <16 x i8> @test_128_i8_x_16_224_mask_ashr_6(<16 x i8> %a0) {
 define <16 x i8> @test_128_i8_x_16_7_mask_shl_1(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_7_mask_shl_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    paddb %xmm0, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i8_x_16_7_mask_shl_1:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpaddb %xmm0, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i8_x_16_7_mask_shl_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    paddb %xmm0, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i8_x_16_7_mask_shl_1:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpaddb %xmm0, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <16 x i8> %a0, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
@@ -631,25 +631,25 @@ define <16 x i8> @test_128_i8_x_16_7_mask_shl_1(<16 x i8> %a0) {
 define <16 x i8> @test_128_i8_x_16_7_mask_shl_4(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_7_mask_shl_4:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psllw $4, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i8_x_16_7_mask_shl_4:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsllw $4, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i8_x_16_7_mask_shl_4:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psllw $4, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i8_x_16_7_mask_shl_4:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsllw $4, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <16 x i8> %a0, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
@@ -660,25 +660,25 @@ define <16 x i8> @test_128_i8_x_16_7_mask_shl_5(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_7_mask_shl_5:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    psllw $5, %xmm0
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i8_x_16_7_mask_shl_5:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    vpsllw $5, %xmm0, %xmm0
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i8_x_16_7_mask_shl_5:
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    psllw $5, %xmm0
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i8_x_16_7_mask_shl_5:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vpsllw $5, %xmm0, %xmm0
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <16 x i8> %a0, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
   %t1 = shl <16 x i8> %t0, <i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5>
@@ -688,25 +688,25 @@ define <16 x i8> @test_128_i8_x_16_7_mask_shl_6(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_7_mask_shl_6:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    psllw $6, %xmm0
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i8_x_16_7_mask_shl_6:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    vpsllw $6, %xmm0, %xmm0
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i8_x_16_7_mask_shl_6:
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    psllw $6, %xmm0
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i8_x_16_7_mask_shl_6:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vpsllw $6, %xmm0, %xmm0
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <16 x i8> %a0, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
   %t1 = shl <16 x i8> %t0, <i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6>
@@ -716,25 +716,25 @@ define <16 x i8> @test_128_i8_x_16_7_mask_shl_6(<16 x i8> %a0) {
 define <16 x i8> @test_128_i8_x_16_28_mask_shl_1(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_28_mask_shl_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    paddb %xmm0, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i8_x_16_28_mask_shl_1:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpaddb %xmm0, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i8_x_16_28_mask_shl_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    paddb %xmm0, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i8_x_16_28_mask_shl_1:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpaddb %xmm0, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <16 x i8> %a0, <i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28>
@@ -744,25 +744,25 @@ define <16 x i8> @test_128_i8_x_16_28_mask_shl_1(<16 x i8> %a0) {
 define <16 x i8> @test_128_i8_x_16_28_mask_shl_2(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_28_mask_shl_2:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psllw $2, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i8_x_16_28_mask_shl_2:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsllw $2, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i8_x_16_28_mask_shl_2:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psllw $2, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i8_x_16_28_mask_shl_2:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsllw $2, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <16 x i8> %a0, <i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28>
@@ -772,25 +772,25 @@ define <16 x i8> @test_128_i8_x_16_28_mask_shl_2(<16 x i8> %a0) {
 define <16 x i8> @test_128_i8_x_16_28_mask_shl_3(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_28_mask_shl_3:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psllw $3, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i8_x_16_28_mask_shl_3:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsllw $3, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i8_x_16_28_mask_shl_3:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psllw $3, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i8_x_16_28_mask_shl_3:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsllw $3, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <16 x i8> %a0, <i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28>
@@ -800,30 +800,30 @@ define <16 x i8> @test_128_i8_x_16_28_mask_shl_3(<16 x i8> %a0) {
 define <16 x i8> @test_128_i8_x_16_28_mask_shl_4(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_28_mask_shl_4:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psllw $4, %xmm0
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i8_x_16_28_mask_shl_4:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsllw $4, %xmm0, %xmm0
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i8_x_16_28_mask_shl_4:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psllw $4, %xmm0
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i8_x_16_28_mask_shl_4:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsllw $4, %xmm0, %xmm0
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <16 x i8> %a0, <i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28>
   %t1 = shl <16 x i8> %t0, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
@@ -833,25 +833,25 @@ define <16 x i8> @test_128_i8_x_16_28_mask_shl_4(<16 x i8> %a0) {
 define <16 x i8> @test_128_i8_x_16_224_mask_shl_1(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_224_mask_shl_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    paddb %xmm0, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i8_x_16_224_mask_shl_1:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpaddb %xmm0, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i8_x_16_224_mask_shl_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    paddb %xmm0, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i8_x_16_224_mask_shl_1:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpaddb %xmm0, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <16 x i8> %a0, <i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224>
@@ -868,25 +868,25 @@ define <16 x i8> @test_128_i8_x_16_224_mask_shl_1(<16 x i8> %a0) {
 define <8 x i16> @test_128_i16_x_8_127_mask_lshr_1(<8 x i16> %a0) {
 ; X86-SSE2-LABEL: test_128_i16_x_8_127_mask_lshr_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlw $1, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i16_x_8_127_mask_lshr_1:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlw $1, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i16_x_8_127_mask_lshr_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlw $1, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i16_x_8_127_mask_lshr_1:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlw $1, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <8 x i16> %a0, <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
@@ -897,25 +897,25 @@ define <8 x i16> @test_128_i16_x_8_127_mask_lshr_1(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_2032_mask_lshr_3(<8 x i16> %a0) {
 ; X86-SSE2-LABEL: test_128_i16_x_8_2032_mask_lshr_3:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlw $3, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i16_x_8_2032_mask_lshr_3:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlw $3, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i16_x_8_2032_mask_lshr_3:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlw $3, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i16_x_8_2032_mask_lshr_3:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlw $3, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <8 x i16> %a0, <i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032>
@@ -925,25 +925,25 @@ define <8 x i16> @test_128_i16_x_8_2032_mask_lshr_3(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_2032_mask_lshr_4(<8 x i16> %a0) {
 ; X86-SSE2-LABEL: test_128_i16_x_8_2032_mask_lshr_4:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlw $4, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i16_x_8_2032_mask_lshr_4:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlw $4, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i16_x_8_2032_mask_lshr_4:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlw $4, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i16_x_8_2032_mask_lshr_4:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlw $4, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <8 x i16> %a0, <i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032>
@@ -953,25 +953,25 @@ define <8 x i16> @test_128_i16_x_8_2032_mask_lshr_4(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_2032_mask_lshr_5(<8 x i16> %a0) {
 ; X86-SSE2-LABEL: test_128_i16_x_8_2032_mask_lshr_5:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlw $5, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i16_x_8_2032_mask_lshr_5:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlw $5, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i16_x_8_2032_mask_lshr_5:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlw $5, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i16_x_8_2032_mask_lshr_5:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlw $5, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <8 x i16> %a0, <i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032>
@@ -981,25 +981,25 @@ define <8 x i16> @test_128_i16_x_8_2032_mask_lshr_5(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_2032_mask_lshr_6(<8 x i16> %a0) {
 ; X86-SSE2-LABEL: test_128_i16_x_8_2032_mask_lshr_6:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlw $6, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i16_x_8_2032_mask_lshr_6:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlw $6, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i16_x_8_2032_mask_lshr_6:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlw $6, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i16_x_8_2032_mask_lshr_6:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlw $6, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <8 x i16> %a0, <i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032>
@@ -1010,25 +1010,25 @@ define <8 x i16> @test_128_i16_x_8_2032_mask_lshr_6(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_65024_mask_lshr_1(<8 x i16> %a0) {
 ; X86-SSE2-LABEL: test_128_i16_x_8_65024_mask_lshr_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlw $1, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i16_x_8_65024_mask_lshr_1:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlw $1, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i16_x_8_65024_mask_lshr_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlw $1, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i16_x_8_65024_mask_lshr_1:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlw $1, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <8 x i16> %a0, <i16 65024, i16 65024, i16 65024, i16 65024, i16 65024, i16 65024, i16 65024, i16 65024>
@@ -1038,25 +1038,25 @@ define <8 x i16> @test_128_i16_x_8_65024_mask_lshr_1(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_65024_mask_lshr_8(<8 x i16> %a0) {
 ; X86-SSE2-LABEL: test_128_i16_x_8_65024_mask_lshr_8:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlw $8, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i16_x_8_65024_mask_lshr_8:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlw $8, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i16_x_8_65024_mask_lshr_8:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlw $8, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i16_x_8_65024_mask_lshr_8:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlw $8, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <8 x i16> %a0, <i16 65024, i16 65024, i16 65024, i16 65024, i16 65024, i16 65024, i16 65024, i16 65024>
@@ -1117,25 +1117,25 @@ define <8 x i16> @test_128_i16_x_8_65024_mask_lshr_10(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_127_mask_ashr_1(<8 x i16> %a0) {
 ; X86-SSE2-LABEL: test_128_i16_x_8_127_mask_ashr_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlw $1, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i16_x_8_127_mask_ashr_1:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlw $1, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i16_x_8_127_mask_ashr_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlw $1, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i16_x_8_127_mask_ashr_1:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlw $1, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <8 x i16> %a0, <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
@@ -1146,25 +1146,25 @@ define <8 x i16> @test_128_i16_x_8_127_mask_ashr_1(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_2032_mask_ashr_3(<8 x i16> %a0) {
 ; X86-SSE2-LABEL: test_128_i16_x_8_2032_mask_ashr_3:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlw $3, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i16_x_8_2032_mask_ashr_3:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlw $3, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i16_x_8_2032_mask_ashr_3:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlw $3, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i16_x_8_2032_mask_ashr_3:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlw $3, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <8 x i16> %a0, <i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032>
@@ -1174,25 +1174,25 @@ define <8 x i16> @test_128_i16_x_8_2032_mask_ashr_3(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_2032_mask_ashr_4(<8 x i16> %a0) {
 ; X86-SSE2-LABEL: test_128_i16_x_8_2032_mask_ashr_4:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlw $4, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i16_x_8_2032_mask_ashr_4:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlw $4, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i16_x_8_2032_mask_ashr_4:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlw $4, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i16_x_8_2032_mask_ashr_4:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlw $4, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <8 x i16> %a0, <i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032>
@@ -1202,25 +1202,25 @@ define <8 x i16> @test_128_i16_x_8_2032_mask_ashr_4(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_2032_mask_ashr_5(<8 x i16> %a0) {
 ; X86-SSE2-LABEL: test_128_i16_x_8_2032_mask_ashr_5:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlw $5, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i16_x_8_2032_mask_ashr_5:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlw $5, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i16_x_8_2032_mask_ashr_5:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlw $5, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i16_x_8_2032_mask_ashr_5:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlw $5, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <8 x i16> %a0, <i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032>
@@ -1230,25 +1230,25 @@ define <8 x i16> @test_128_i16_x_8_2032_mask_ashr_5(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_2032_mask_ashr_6(<8 x i16> %a0) {
 ; X86-SSE2-LABEL: test_128_i16_x_8_2032_mask_ashr_6:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlw $6, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i16_x_8_2032_mask_ashr_6:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlw $6, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i16_x_8_2032_mask_ashr_6:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlw $6, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i16_x_8_2032_mask_ashr_6:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlw $6, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <8 x i16> %a0, <i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032>
@@ -1259,25 +1259,25 @@ define <8 x i16> @test_128_i16_x_8_2032_mask_ashr_6(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_65024_mask_ashr_1(<8 x i16> %a0) {
 ; X86-SSE2-LABEL: test_128_i16_x_8_65024_mask_ashr_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psraw $1, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i16_x_8_65024_mask_ashr_1:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsraw $1, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i16_x_8_65024_mask_ashr_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psraw $1, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i16_x_8_65024_mask_ashr_1:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsraw $1, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <8 x i16> %a0, <i16 65024, i16 65024, i16 65024, i16 65024, i16 65024, i16 65024, i16 65024, i16 65024>
@@ -1287,25 +1287,25 @@ define <8 x i16> @test_128_i16_x_8_65024_mask_ashr_1(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_65024_mask_ashr_8(<8 x i16> %a0) {
 ; X86-SSE2-LABEL: test_128_i16_x_8_65024_mask_ashr_8:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psraw $8, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i16_x_8_65024_mask_ashr_8:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsraw $8, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i16_x_8_65024_mask_ashr_8:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psraw $8, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i16_x_8_65024_mask_ashr_8:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsraw $8, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <8 x i16> %a0, <i16 65024, i16 65024, i16 65024, i16 65024, i16 65024, i16 65024, i16 65024, i16 65024>
@@ -1366,25 +1366,25 @@ define <8 x i16> @test_128_i16_x_8_65024_mask_ashr_10(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_127_mask_shl_1(<8 x i16> %a0) {
 ; X86-SSE2-LABEL: test_128_i16_x_8_127_mask_shl_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    paddw %xmm0, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i16_x_8_127_mask_shl_1:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpaddw %xmm0, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i16_x_8_127_mask_shl_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    paddw %xmm0, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i16_x_8_127_mask_shl_1:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpaddw %xmm0, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <8 x i16> %a0, <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
@@ -1394,25 +1394,25 @@ define <8 x i16> @test_128_i16_x_8_127_mask_shl_1(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_127_mask_shl_8(<8 x i16> %a0) {
 ; X86-SSE2-LABEL: test_128_i16_x_8_127_mask_shl_8:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psllw $8, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i16_x_8_127_mask_shl_8:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsllw $8, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i16_x_8_127_mask_shl_8:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psllw $8, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i16_x_8_127_mask_shl_8:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsllw $8, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <8 x i16> %a0, <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
@@ -1471,25 +1471,25 @@ define <8 x i16> @test_128_i16_x_8_127_mask_shl_10(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_2032_mask_shl_3(<8 x i16> %a0) {
 ; X86-SSE2-LABEL: test_128_i16_x_8_2032_mask_shl_3:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psllw $3, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i16_x_8_2032_mask_shl_3:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsllw $3, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i16_x_8_2032_mask_shl_3:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psllw $3, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i16_x_8_2032_mask_shl_3:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsllw $3, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <8 x i16> %a0, <i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032>
@@ -1499,25 +1499,25 @@ define <8 x i16> @test_128_i16_x_8_2032_mask_shl_3(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_2032_mask_shl_4(<8 x i16> %a0) {
 ; X86-SSE2-LABEL: test_128_i16_x_8_2032_mask_shl_4:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psllw $4, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i16_x_8_2032_mask_shl_4:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsllw $4, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i16_x_8_2032_mask_shl_4:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psllw $4, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i16_x_8_2032_mask_shl_4:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsllw $4, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <8 x i16> %a0, <i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032>
@@ -1527,25 +1527,25 @@ define <8 x i16> @test_128_i16_x_8_2032_mask_shl_4(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_2032_mask_shl_5(<8 x i16> %a0) {
 ; X86-SSE2-LABEL: test_128_i16_x_8_2032_mask_shl_5:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psllw $5, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i16_x_8_2032_mask_shl_5:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsllw $5, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i16_x_8_2032_mask_shl_5:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psllw $5, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i16_x_8_2032_mask_shl_5:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsllw $5, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <8 x i16> %a0, <i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032>
@@ -1555,25 +1555,25 @@ define <8 x i16> @test_128_i16_x_8_2032_mask_shl_5(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_2032_mask_shl_6(<8 x i16> %a0) {
 ; X86-SSE2-LABEL: test_128_i16_x_8_2032_mask_shl_6:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psllw $6, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i16_x_8_2032_mask_shl_6:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsllw $6, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i16_x_8_2032_mask_shl_6:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psllw $6, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i16_x_8_2032_mask_shl_6:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsllw $6, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <8 x i16> %a0, <i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032>
@@ -1584,25 +1584,25 @@ define <8 x i16> @test_128_i16_x_8_2032_mask_shl_6(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_65024_mask_shl_1(<8 x i16> %a0) {
 ; X86-SSE2-LABEL: test_128_i16_x_8_65024_mask_shl_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    paddw %xmm0, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i16_x_8_65024_mask_shl_1:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpaddw %xmm0, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i16_x_8_65024_mask_shl_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    paddw %xmm0, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i16_x_8_65024_mask_shl_1:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpaddw %xmm0, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <8 x i16> %a0, <i16 65024, i16 65024, i16 65024, i16 65024, i16 65024, i16 65024, i16 65024, i16 65024>
@@ -1619,13 +1619,13 @@ define <8 x i16> @test_128_i16_x_8_65024_mask_shl_1(<8 x i16> %a0) {
 define <4 x i32> @test_128_i32_x_4_32767_mask_lshr_1(<4 x i32> %a0) {
 ; X86-SSE2-LABEL: test_128_i32_x_4_32767_mask_lshr_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrld $1, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: test_128_i32_x_4_32767_mask_lshr_1:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpsrld $1, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    retl
 ;
@@ -1638,13 +1638,13 @@ define <4 x i32> @test_128_i32_x_4_32767_mask_lshr_1(<4 x i32> %a0) {
 ;
 ; X64-SSE2-LABEL: test_128_i32_x_4_32767_mask_lshr_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrld $1, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: test_128_i32_x_4_32767_mask_lshr_1:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpsrld $1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
@@ -1662,13 +1662,13 @@ define <4 x i32> @test_128_i32_x_4_32767_mask_lshr_1(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_8388352_mask_lshr_7(<4 x i32> %a0) {
 ; X86-SSE2-LABEL: test_128_i32_x_4_8388352_mask_lshr_7:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrld $7, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: test_128_i32_x_4_8388352_mask_lshr_7:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpsrld $7, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    retl
 ;
@@ -1681,13 +1681,13 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_lshr_7(<4 x i32> %a0) {
 ;
 ; X64-SSE2-LABEL: test_128_i32_x_4_8388352_mask_lshr_7:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrld $7, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: test_128_i32_x_4_8388352_mask_lshr_7:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpsrld $7, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
@@ -1704,13 +1704,13 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_lshr_7(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_8388352_mask_lshr_8(<4 x i32> %a0) {
 ; X86-SSE2-LABEL: test_128_i32_x_4_8388352_mask_lshr_8:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrld $8, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: test_128_i32_x_4_8388352_mask_lshr_8:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpsrld $8, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    retl
 ;
@@ -1723,13 +1723,13 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_lshr_8(<4 x i32> %a0) {
 ;
 ; X64-SSE2-LABEL: test_128_i32_x_4_8388352_mask_lshr_8:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrld $8, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: test_128_i32_x_4_8388352_mask_lshr_8:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpsrld $8, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
@@ -1746,13 +1746,13 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_lshr_8(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_8388352_mask_lshr_9(<4 x i32> %a0) {
 ; X86-SSE2-LABEL: test_128_i32_x_4_8388352_mask_lshr_9:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrld $9, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: test_128_i32_x_4_8388352_mask_lshr_9:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpsrld $9, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    retl
 ;
@@ -1765,13 +1765,13 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_lshr_9(<4 x i32> %a0) {
 ;
 ; X64-SSE2-LABEL: test_128_i32_x_4_8388352_mask_lshr_9:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrld $9, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: test_128_i32_x_4_8388352_mask_lshr_9:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpsrld $9, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
@@ -1788,13 +1788,13 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_lshr_9(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_8388352_mask_lshr_10(<4 x i32> %a0) {
 ; X86-SSE2-LABEL: test_128_i32_x_4_8388352_mask_lshr_10:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrld $10, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: test_128_i32_x_4_8388352_mask_lshr_10:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpsrld $10, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    retl
 ;
@@ -1807,13 +1807,13 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_lshr_10(<4 x i32> %a0) {
 ;
 ; X64-SSE2-LABEL: test_128_i32_x_4_8388352_mask_lshr_10:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrld $10, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: test_128_i32_x_4_8388352_mask_lshr_10:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpsrld $10, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
@@ -1831,13 +1831,13 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_lshr_10(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_4294836224_mask_lshr_1(<4 x i32> %a0) {
 ; X86-SSE2-LABEL: test_128_i32_x_4_4294836224_mask_lshr_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrld $1, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: test_128_i32_x_4_4294836224_mask_lshr_1:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpsrld $1, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    retl
 ;
@@ -1850,13 +1850,13 @@ define <4 x i32> @test_128_i32_x_4_4294836224_mask_lshr_1(<4 x i32> %a0) {
 ;
 ; X64-SSE2-LABEL: test_128_i32_x_4_4294836224_mask_lshr_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrld $1, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: test_128_i32_x_4_4294836224_mask_lshr_1:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpsrld $1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
@@ -1873,13 +1873,13 @@ define <4 x i32> @test_128_i32_x_4_4294836224_mask_lshr_1(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_4294836224_mask_lshr_16(<4 x i32> %a0) {
 ; X86-SSE2-LABEL: test_128_i32_x_4_4294836224_mask_lshr_16:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrld $16, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: test_128_i32_x_4_4294836224_mask_lshr_16:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    retl
 ;
@@ -1892,13 +1892,13 @@ define <4 x i32> @test_128_i32_x_4_4294836224_mask_lshr_16(<4 x i32> %a0) {
 ;
 ; X64-SSE2-LABEL: test_128_i32_x_4_4294836224_mask_lshr_16:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrld $16, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: test_128_i32_x_4_4294836224_mask_lshr_16:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
@@ -1966,13 +1966,13 @@ define <4 x i32> @test_128_i32_x_4_4294836224_mask_lshr_18(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_32767_mask_ashr_1(<4 x i32> %a0) {
 ; X86-SSE2-LABEL: test_128_i32_x_4_32767_mask_ashr_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrld $1, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: test_128_i32_x_4_32767_mask_ashr_1:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpsrld $1, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    retl
 ;
@@ -1985,13 +1985,13 @@ define <4 x i32> @test_128_i32_x_4_32767_mask_ashr_1(<4 x i32> %a0) {
 ;
 ; X64-SSE2-LABEL: test_128_i32_x_4_32767_mask_ashr_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrld $1, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: test_128_i32_x_4_32767_mask_ashr_1:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpsrld $1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
@@ -2009,13 +2009,13 @@ define <4 x i32> @test_128_i32_x_4_32767_mask_ashr_1(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_8388352_mask_ashr_7(<4 x i32> %a0) {
 ; X86-SSE2-LABEL: test_128_i32_x_4_8388352_mask_ashr_7:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrld $7, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: test_128_i32_x_4_8388352_mask_ashr_7:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpsrld $7, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    retl
 ;
@@ -2028,13 +2028,13 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_ashr_7(<4 x i32> %a0) {
 ;
 ; X64-SSE2-LABEL: test_128_i32_x_4_8388352_mask_ashr_7:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrld $7, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: test_128_i32_x_4_8388352_mask_ashr_7:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpsrld $7, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
@@ -2051,13 +2051,13 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_ashr_7(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_8388352_mask_ashr_8(<4 x i32> %a0) {
 ; X86-SSE2-LABEL: test_128_i32_x_4_8388352_mask_ashr_8:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrld $8, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: test_128_i32_x_4_8388352_mask_ashr_8:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpsrld $8, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    retl
 ;
@@ -2070,13 +2070,13 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_ashr_8(<4 x i32> %a0) {
 ;
 ; X64-SSE2-LABEL: test_128_i32_x_4_8388352_mask_ashr_8:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrld $8, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: test_128_i32_x_4_8388352_mask_ashr_8:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpsrld $8, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
@@ -2093,13 +2093,13 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_ashr_8(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_8388352_mask_ashr_9(<4 x i32> %a0) {
 ; X86-SSE2-LABEL: test_128_i32_x_4_8388352_mask_ashr_9:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrld $9, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: test_128_i32_x_4_8388352_mask_ashr_9:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpsrld $9, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    retl
 ;
@@ -2112,13 +2112,13 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_ashr_9(<4 x i32> %a0) {
 ;
 ; X64-SSE2-LABEL: test_128_i32_x_4_8388352_mask_ashr_9:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrld $9, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: test_128_i32_x_4_8388352_mask_ashr_9:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpsrld $9, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
@@ -2135,13 +2135,13 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_ashr_9(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_8388352_mask_ashr_10(<4 x i32> %a0) {
 ; X86-SSE2-LABEL: test_128_i32_x_4_8388352_mask_ashr_10:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrld $10, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: test_128_i32_x_4_8388352_mask_ashr_10:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpsrld $10, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    retl
 ;
@@ -2154,13 +2154,13 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_ashr_10(<4 x i32> %a0) {
 ;
 ; X64-SSE2-LABEL: test_128_i32_x_4_8388352_mask_ashr_10:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrld $10, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: test_128_i32_x_4_8388352_mask_ashr_10:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpsrld $10, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
@@ -2178,13 +2178,13 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_ashr_10(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_4294836224_mask_ashr_1(<4 x i32> %a0) {
 ; X86-SSE2-LABEL: test_128_i32_x_4_4294836224_mask_ashr_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrad $1, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: test_128_i32_x_4_4294836224_mask_ashr_1:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpsrad $1, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    retl
 ;
@@ -2197,13 +2197,13 @@ define <4 x i32> @test_128_i32_x_4_4294836224_mask_ashr_1(<4 x i32> %a0) {
 ;
 ; X64-SSE2-LABEL: test_128_i32_x_4_4294836224_mask_ashr_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrad $1, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: test_128_i32_x_4_4294836224_mask_ashr_1:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpsrad $1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
@@ -2220,13 +2220,13 @@ define <4 x i32> @test_128_i32_x_4_4294836224_mask_ashr_1(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_4294836224_mask_ashr_16(<4 x i32> %a0) {
 ; X86-SSE2-LABEL: test_128_i32_x_4_4294836224_mask_ashr_16:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrad $16, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: test_128_i32_x_4_4294836224_mask_ashr_16:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpsrad $16, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    retl
 ;
@@ -2239,13 +2239,13 @@ define <4 x i32> @test_128_i32_x_4_4294836224_mask_ashr_16(<4 x i32> %a0) {
 ;
 ; X64-SSE2-LABEL: test_128_i32_x_4_4294836224_mask_ashr_16:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrad $16, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: test_128_i32_x_4_4294836224_mask_ashr_16:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpsrad $16, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
@@ -2313,13 +2313,13 @@ define <4 x i32> @test_128_i32_x_4_4294836224_mask_ashr_18(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_32767_mask_shl_1(<4 x i32> %a0) {
 ; X86-SSE2-LABEL: test_128_i32_x_4_32767_mask_shl_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    paddd %xmm0, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: test_128_i32_x_4_32767_mask_shl_1:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    retl
 ;
@@ -2332,13 +2332,13 @@ define <4 x i32> @test_128_i32_x_4_32767_mask_shl_1(<4 x i32> %a0) {
 ;
 ; X64-SSE2-LABEL: test_128_i32_x_4_32767_mask_shl_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    paddd %xmm0, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: test_128_i32_x_4_32767_mask_shl_1:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
@@ -2355,13 +2355,13 @@ define <4 x i32> @test_128_i32_x_4_32767_mask_shl_1(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_32767_mask_shl_16(<4 x i32> %a0) {
 ; X86-SSE2-LABEL: test_128_i32_x_4_32767_mask_shl_16:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    pslld $16, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: test_128_i32_x_4_32767_mask_shl_16:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpslld $16, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    retl
 ;
@@ -2374,13 +2374,13 @@ define <4 x i32> @test_128_i32_x_4_32767_mask_shl_16(<4 x i32> %a0) {
 ;
 ; X64-SSE2-LABEL: test_128_i32_x_4_32767_mask_shl_16:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    pslld $16, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: test_128_i32_x_4_32767_mask_shl_16:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpslld $16, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
@@ -2446,13 +2446,13 @@ define <4 x i32> @test_128_i32_x_4_32767_mask_shl_18(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_8388352_mask_shl_7(<4 x i32> %a0) {
 ; X86-SSE2-LABEL: test_128_i32_x_4_8388352_mask_shl_7:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    pslld $7, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: test_128_i32_x_4_8388352_mask_shl_7:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpslld $7, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    retl
 ;
@@ -2465,13 +2465,13 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_shl_7(<4 x i32> %a0) {
 ;
 ; X64-SSE2-LABEL: test_128_i32_x_4_8388352_mask_shl_7:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    pslld $7, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: test_128_i32_x_4_8388352_mask_shl_7:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpslld $7, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
@@ -2488,13 +2488,13 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_shl_7(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_8388352_mask_shl_8(<4 x i32> %a0) {
 ; X86-SSE2-LABEL: test_128_i32_x_4_8388352_mask_shl_8:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    pslld $8, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: test_128_i32_x_4_8388352_mask_shl_8:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpslld $8, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    retl
 ;
@@ -2507,13 +2507,13 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_shl_8(<4 x i32> %a0) {
 ;
 ; X64-SSE2-LABEL: test_128_i32_x_4_8388352_mask_shl_8:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    pslld $8, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: test_128_i32_x_4_8388352_mask_shl_8:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpslld $8, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
@@ -2530,13 +2530,13 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_shl_8(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_8388352_mask_shl_9(<4 x i32> %a0) {
 ; X86-SSE2-LABEL: test_128_i32_x_4_8388352_mask_shl_9:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    pslld $9, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: test_128_i32_x_4_8388352_mask_shl_9:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpslld $9, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    retl
 ;
@@ -2549,13 +2549,13 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_shl_9(<4 x i32> %a0) {
 ;
 ; X64-SSE2-LABEL: test_128_i32_x_4_8388352_mask_shl_9:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    pslld $9, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: test_128_i32_x_4_8388352_mask_shl_9:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpslld $9, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
@@ -2572,13 +2572,13 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_shl_9(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_8388352_mask_shl_10(<4 x i32> %a0) {
 ; X86-SSE2-LABEL: test_128_i32_x_4_8388352_mask_shl_10:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    pslld $10, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: test_128_i32_x_4_8388352_mask_shl_10:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpslld $10, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    retl
 ;
@@ -2591,13 +2591,13 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_shl_10(<4 x i32> %a0) {
 ;
 ; X64-SSE2-LABEL: test_128_i32_x_4_8388352_mask_shl_10:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    pslld $10, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: test_128_i32_x_4_8388352_mask_shl_10:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpslld $10, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
@@ -2615,13 +2615,13 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_shl_10(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_4294836224_mask_shl_1(<4 x i32> %a0) {
 ; X86-SSE2-LABEL: test_128_i32_x_4_4294836224_mask_shl_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    paddd %xmm0, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: test_128_i32_x_4_4294836224_mask_shl_1:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    retl
 ;
@@ -2634,13 +2634,13 @@ define <4 x i32> @test_128_i32_x_4_4294836224_mask_shl_1(<4 x i32> %a0) {
 ;
 ; X64-SSE2-LABEL: test_128_i32_x_4_4294836224_mask_shl_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    paddd %xmm0, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: test_128_i32_x_4_4294836224_mask_shl_1:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
@@ -2664,25 +2664,25 @@ define <4 x i32> @test_128_i32_x_4_4294836224_mask_shl_1(<4 x i32> %a0) {
 define <2 x i64> @test_128_i64_x_2_2147483647_mask_lshr_1(<2 x i64> %a0) {
 ; X86-SSE2-LABEL: test_128_i64_x_2_2147483647_mask_lshr_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlq $1, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i64_x_2_2147483647_mask_lshr_1:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlq $1, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i64_x_2_2147483647_mask_lshr_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlq $1, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i64_x_2_2147483647_mask_lshr_1:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlq $1, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <2 x i64> %a0, <i64 2147483647, i64 2147483647>
@@ -2693,25 +2693,25 @@ define <2 x i64> @test_128_i64_x_2_2147483647_mask_lshr_1(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_140737488289792_mask_lshr_15(<2 x i64> %a0) {
 ; X86-SSE2-LABEL: test_128_i64_x_2_140737488289792_mask_lshr_15:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlq $15, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i64_x_2_140737488289792_mask_lshr_15:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlq $15, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i64_x_2_140737488289792_mask_lshr_15:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlq $15, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i64_x_2_140737488289792_mask_lshr_15:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlq $15, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <2 x i64> %a0, <i64 140737488289792, i64 140737488289792>
@@ -2721,25 +2721,25 @@ define <2 x i64> @test_128_i64_x_2_140737488289792_mask_lshr_15(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_140737488289792_mask_lshr_16(<2 x i64> %a0) {
 ; X86-SSE2-LABEL: test_128_i64_x_2_140737488289792_mask_lshr_16:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlq $16, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i64_x_2_140737488289792_mask_lshr_16:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlq $16, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i64_x_2_140737488289792_mask_lshr_16:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlq $16, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i64_x_2_140737488289792_mask_lshr_16:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlq $16, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <2 x i64> %a0, <i64 140737488289792, i64 140737488289792>
@@ -2749,25 +2749,25 @@ define <2 x i64> @test_128_i64_x_2_140737488289792_mask_lshr_16(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_140737488289792_mask_lshr_17(<2 x i64> %a0) {
 ; X86-SSE2-LABEL: test_128_i64_x_2_140737488289792_mask_lshr_17:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlq $17, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i64_x_2_140737488289792_mask_lshr_17:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlq $17, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i64_x_2_140737488289792_mask_lshr_17:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlq $17, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i64_x_2_140737488289792_mask_lshr_17:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlq $17, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <2 x i64> %a0, <i64 140737488289792, i64 140737488289792>
@@ -2777,25 +2777,25 @@ define <2 x i64> @test_128_i64_x_2_140737488289792_mask_lshr_17(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_140737488289792_mask_lshr_18(<2 x i64> %a0) {
 ; X86-SSE2-LABEL: test_128_i64_x_2_140737488289792_mask_lshr_18:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlq $18, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i64_x_2_140737488289792_mask_lshr_18:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlq $18, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i64_x_2_140737488289792_mask_lshr_18:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlq $18, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i64_x_2_140737488289792_mask_lshr_18:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlq $18, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <2 x i64> %a0, <i64 140737488289792, i64 140737488289792>
@@ -2806,25 +2806,25 @@ define <2 x i64> @test_128_i64_x_2_140737488289792_mask_lshr_18(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_lshr_1(<2 x i64> %a0) {
 ; X86-SSE2-LABEL: test_128_i64_x_2_18446744065119617024_mask_lshr_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlq $1, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i64_x_2_18446744065119617024_mask_lshr_1:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlq $1, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i64_x_2_18446744065119617024_mask_lshr_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlq $1, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i64_x_2_18446744065119617024_mask_lshr_1:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlq $1, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <2 x i64> %a0, <i64 18446744065119617024, i64 18446744065119617024>
@@ -2834,13 +2834,13 @@ define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_lshr_1(<2 x i64> %a
 define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_lshr_32(<2 x i64> %a0) {
 ; X86-SSE2-LABEL: test_128_i64_x_2_18446744065119617024_mask_lshr_32:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlq $32, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: test_128_i64_x_2_18446744065119617024_mask_lshr_32:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpsrlq $32, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    retl
 ;
@@ -2853,13 +2853,13 @@ define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_lshr_32(<2 x i64> %
 ;
 ; X64-SSE2-LABEL: test_128_i64_x_2_18446744065119617024_mask_lshr_32:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlq $32, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i64_x_2_18446744065119617024_mask_lshr_32:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlq $32, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <2 x i64> %a0, <i64 18446744065119617024, i64 18446744065119617024>
@@ -2920,25 +2920,25 @@ define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_lshr_34(<2 x i64> %
 define <2 x i64> @test_128_i64_x_2_2147483647_mask_ashr_1(<2 x i64> %a0) {
 ; X86-SSE2-LABEL: test_128_i64_x_2_2147483647_mask_ashr_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlq $1, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i64_x_2_2147483647_mask_ashr_1:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlq $1, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i64_x_2_2147483647_mask_ashr_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlq $1, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i64_x_2_2147483647_mask_ashr_1:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlq $1, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <2 x i64> %a0, <i64 2147483647, i64 2147483647>
@@ -2949,25 +2949,25 @@ define <2 x i64> @test_128_i64_x_2_2147483647_mask_ashr_1(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_140737488289792_mask_ashr_15(<2 x i64> %a0) {
 ; X86-SSE2-LABEL: test_128_i64_x_2_140737488289792_mask_ashr_15:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlq $15, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i64_x_2_140737488289792_mask_ashr_15:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlq $15, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i64_x_2_140737488289792_mask_ashr_15:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlq $15, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i64_x_2_140737488289792_mask_ashr_15:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlq $15, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <2 x i64> %a0, <i64 140737488289792, i64 140737488289792>
@@ -2977,25 +2977,25 @@ define <2 x i64> @test_128_i64_x_2_140737488289792_mask_ashr_15(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_140737488289792_mask_ashr_16(<2 x i64> %a0) {
 ; X86-SSE2-LABEL: test_128_i64_x_2_140737488289792_mask_ashr_16:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlq $16, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i64_x_2_140737488289792_mask_ashr_16:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlq $16, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i64_x_2_140737488289792_mask_ashr_16:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlq $16, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i64_x_2_140737488289792_mask_ashr_16:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlq $16, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <2 x i64> %a0, <i64 140737488289792, i64 140737488289792>
@@ -3005,25 +3005,25 @@ define <2 x i64> @test_128_i64_x_2_140737488289792_mask_ashr_16(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_140737488289792_mask_ashr_17(<2 x i64> %a0) {
 ; X86-SSE2-LABEL: test_128_i64_x_2_140737488289792_mask_ashr_17:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlq $17, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i64_x_2_140737488289792_mask_ashr_17:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlq $17, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i64_x_2_140737488289792_mask_ashr_17:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlq $17, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i64_x_2_140737488289792_mask_ashr_17:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlq $17, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <2 x i64> %a0, <i64 140737488289792, i64 140737488289792>
@@ -3033,25 +3033,25 @@ define <2 x i64> @test_128_i64_x_2_140737488289792_mask_ashr_17(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_140737488289792_mask_ashr_18(<2 x i64> %a0) {
 ; X86-SSE2-LABEL: test_128_i64_x_2_140737488289792_mask_ashr_18:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrlq $18, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i64_x_2_140737488289792_mask_ashr_18:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsrlq $18, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i64_x_2_140737488289792_mask_ashr_18:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrlq $18, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i64_x_2_140737488289792_mask_ashr_18:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrlq $18, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <2 x i64> %a0, <i64 140737488289792, i64 140737488289792>
@@ -3062,14 +3062,14 @@ define <2 x i64> @test_128_i64_x_2_140737488289792_mask_ashr_18(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_ashr_1(<2 x i64> %a0) {
 ; X86-SSE2-LABEL: test_128_i64_x_2_18446744065119617024_mask_ashr_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psrad $1, %xmm0
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: test_128_i64_x_2_18446744065119617024_mask_ashr_1:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpsrad $1, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X86-AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3],xmm1[4,5],xmm0[6,7]
@@ -3086,13 +3086,13 @@ define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_ashr_1(<2 x i64> %a
 ;
 ; X64-SSE2-LABEL: test_128_i64_x_2_18446744065119617024_mask_ashr_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psrad $1, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i64_x_2_18446744065119617024_mask_ashr_1:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsrad $1, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <2 x i64> %a0, <i64 18446744065119617024, i64 18446744065119617024>
@@ -3102,7 +3102,7 @@ define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_ashr_1(<2 x i64> %a
 define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_ashr_32(<2 x i64> %a0) {
 ; X86-SSE2-LABEL: test_128_i64_x_2_18446744065119617024_mask_ashr_32:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,3,2,3]
 ; X86-SSE2-NEXT:    psrad $31, %xmm0
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,3,2,3]
@@ -3112,7 +3112,7 @@ define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_ashr_32(<2 x i64> %
 ;
 ; X86-AVX1-LABEL: test_128_i64_x_2_18446744065119617024_mask_ashr_32:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpsrad $31, %xmm0, %xmm1
 ; X86-AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; X86-AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
@@ -3120,7 +3120,7 @@ define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_ashr_32(<2 x i64> %
 ;
 ; X86-AVX2-LABEL: test_128_i64_x_2_18446744065119617024_mask_ashr_32:
 ; X86-AVX2:       # %bb.0:
-; X86-AVX2-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX2-NEXT:    vpsrad $31, %xmm0, %xmm1
 ; X86-AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; X86-AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
@@ -3128,7 +3128,7 @@ define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_ashr_32(<2 x i64> %
 ;
 ; X64-SSE2-LABEL: test_128_i64_x_2_18446744065119617024_mask_ashr_32:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,3,2,3]
 ; X64-SSE2-NEXT:    psrad $31, %xmm0
 ; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,3,2,3]
@@ -3138,7 +3138,7 @@ define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_ashr_32(<2 x i64> %
 ;
 ; X64-AVX1-LABEL: test_128_i64_x_2_18446744065119617024_mask_ashr_32:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpsrad $31, %xmm0, %xmm1
 ; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; X64-AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
@@ -3146,7 +3146,7 @@ define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_ashr_32(<2 x i64> %
 ;
 ; X64-AVX2-LABEL: test_128_i64_x_2_18446744065119617024_mask_ashr_32:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpsrad $31, %xmm0, %xmm1
 ; X64-AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; X64-AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
@@ -3273,25 +3273,25 @@ define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_ashr_34(<2 x i64> %
 define <2 x i64> @test_128_i64_x_2_2147483647_mask_shl_1(<2 x i64> %a0) {
 ; X86-SSE2-LABEL: test_128_i64_x_2_2147483647_mask_shl_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    paddq %xmm0, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i64_x_2_2147483647_mask_shl_1:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpaddq %xmm0, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i64_x_2_2147483647_mask_shl_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    paddq %xmm0, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i64_x_2_2147483647_mask_shl_1:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpaddq %xmm0, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <2 x i64> %a0, <i64 2147483647, i64 2147483647>
@@ -3301,13 +3301,13 @@ define <2 x i64> @test_128_i64_x_2_2147483647_mask_shl_1(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_2147483647_mask_shl_32(<2 x i64> %a0) {
 ; X86-SSE2-LABEL: test_128_i64_x_2_2147483647_mask_shl_32:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psllq $32, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: test_128_i64_x_2_2147483647_mask_shl_32:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpsllq $32, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    retl
 ;
@@ -3320,13 +3320,13 @@ define <2 x i64> @test_128_i64_x_2_2147483647_mask_shl_32(<2 x i64> %a0) {
 ;
 ; X64-SSE2-LABEL: test_128_i64_x_2_2147483647_mask_shl_32:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psllq $32, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i64_x_2_2147483647_mask_shl_32:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsllq $32, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <2 x i64> %a0, <i64 2147483647, i64 2147483647>
@@ -3385,25 +3385,25 @@ define <2 x i64> @test_128_i64_x_2_2147483647_mask_shl_34(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_140737488289792_mask_shl_15(<2 x i64> %a0) {
 ; X86-SSE2-LABEL: test_128_i64_x_2_140737488289792_mask_shl_15:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psllq $15, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i64_x_2_140737488289792_mask_shl_15:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsllq $15, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i64_x_2_140737488289792_mask_shl_15:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psllq $15, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i64_x_2_140737488289792_mask_shl_15:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsllq $15, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <2 x i64> %a0, <i64 140737488289792, i64 140737488289792>
@@ -3413,25 +3413,25 @@ define <2 x i64> @test_128_i64_x_2_140737488289792_mask_shl_15(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_140737488289792_mask_shl_16(<2 x i64> %a0) {
 ; X86-SSE2-LABEL: test_128_i64_x_2_140737488289792_mask_shl_16:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psllq $16, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i64_x_2_140737488289792_mask_shl_16:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsllq $16, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i64_x_2_140737488289792_mask_shl_16:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psllq $16, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i64_x_2_140737488289792_mask_shl_16:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsllq $16, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <2 x i64> %a0, <i64 140737488289792, i64 140737488289792>
@@ -3441,25 +3441,25 @@ define <2 x i64> @test_128_i64_x_2_140737488289792_mask_shl_16(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_140737488289792_mask_shl_17(<2 x i64> %a0) {
 ; X86-SSE2-LABEL: test_128_i64_x_2_140737488289792_mask_shl_17:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psllq $17, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i64_x_2_140737488289792_mask_shl_17:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsllq $17, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i64_x_2_140737488289792_mask_shl_17:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psllq $17, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i64_x_2_140737488289792_mask_shl_17:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsllq $17, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <2 x i64> %a0, <i64 140737488289792, i64 140737488289792>
@@ -3469,25 +3469,25 @@ define <2 x i64> @test_128_i64_x_2_140737488289792_mask_shl_17(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_140737488289792_mask_shl_18(<2 x i64> %a0) {
 ; X86-SSE2-LABEL: test_128_i64_x_2_140737488289792_mask_shl_18:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    psllq $18, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i64_x_2_140737488289792_mask_shl_18:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpsllq $18, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i64_x_2_140737488289792_mask_shl_18:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    psllq $18, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i64_x_2_140737488289792_mask_shl_18:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpsllq $18, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <2 x i64> %a0, <i64 140737488289792, i64 140737488289792>
@@ -3498,25 +3498,25 @@ define <2 x i64> @test_128_i64_x_2_140737488289792_mask_shl_18(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_shl_1(<2 x i64> %a0) {
 ; X86-SSE2-LABEL: test_128_i64_x_2_18446744065119617024_mask_shl_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    paddq %xmm0, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test_128_i64_x_2_18446744065119617024_mask_shl_1:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpaddq %xmm0, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i64_x_2_18446744065119617024_mask_shl_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    paddq %xmm0, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_128_i64_x_2_18446744065119617024_mask_shl_1:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpaddq %xmm0, %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %t0 = and <2 x i64> %a0, <i64 18446744065119617024, i64 18446744065119617024>

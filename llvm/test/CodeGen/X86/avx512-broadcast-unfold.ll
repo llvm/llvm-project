@@ -3345,7 +3345,7 @@ define void @bcast_unfold_pcmpgt_v4i32(i32* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu 4096(%rdi,%rax), %xmm1
 ; CHECK-NEXT:    vpcmpgtd %xmm0, %xmm1, %k1
-; CHECK-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1 {%k1}
+; CHECK-NEXT:    vpbroadcastd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 {%k1}
 ; CHECK-NEXT:    vmovdqu %xmm1, 4096(%rdi,%rax)
 ; CHECK-NEXT:    addq $16, %rax
 ; CHECK-NEXT:    jne .LBB96_1
@@ -3381,7 +3381,7 @@ define void @bcast_unfold_pcmpgt_v8i32(i32* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu 4096(%rdi,%rax), %ymm1
 ; CHECK-NEXT:    vpcmpgtd %ymm0, %ymm1, %k1
-; CHECK-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm1 {%k1}
+; CHECK-NEXT:    vpbroadcastd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1 {%k1}
 ; CHECK-NEXT:    vmovdqu %ymm1, 4096(%rdi,%rax)
 ; CHECK-NEXT:    addq $32, %rax
 ; CHECK-NEXT:    jne .LBB97_1
@@ -3418,7 +3418,7 @@ define void @bcast_unfold_pcmpgt_v16i32(i32* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu64 4096(%rdi,%rax), %zmm1
 ; CHECK-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
-; CHECK-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm1 {%k1}
+; CHECK-NEXT:    vpbroadcastd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqu64 %zmm1, 4096(%rdi,%rax)
 ; CHECK-NEXT:    addq $64, %rax
 ; CHECK-NEXT:    jne .LBB98_1
@@ -3455,7 +3455,7 @@ define void @bcast_unfold_pcmpgt_v2i64(i64* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu 8192(%rdi,%rax), %xmm1
 ; CHECK-NEXT:    vpcmpgtq %xmm0, %xmm1, %k1
-; CHECK-NEXT:    vmovdqa64 {{.*}}(%rip), %xmm1 {%k1}
+; CHECK-NEXT:    vmovdqa64 {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 {%k1}
 ; CHECK-NEXT:    vmovdqu %xmm1, 8192(%rdi,%rax)
 ; CHECK-NEXT:    addq $16, %rax
 ; CHECK-NEXT:    jne .LBB99_1
@@ -3490,7 +3490,7 @@ define void @bcast_unfold_pcmpgt_v4i64(i64* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu 8192(%rdi,%rax), %ymm1
 ; CHECK-NEXT:    vpcmpgtq %ymm0, %ymm1, %k1
-; CHECK-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm1 {%k1}
+; CHECK-NEXT:    vpbroadcastq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1 {%k1}
 ; CHECK-NEXT:    vmovdqu %ymm1, 8192(%rdi,%rax)
 ; CHECK-NEXT:    addq $32, %rax
 ; CHECK-NEXT:    jne .LBB100_1
@@ -3527,7 +3527,7 @@ define void @bcast_unfold_pcmpgt_v8i64(i64* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu64 8192(%rdi,%rax), %zmm1
 ; CHECK-NEXT:    vpcmpgtq %zmm0, %zmm1, %k1
-; CHECK-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm1 {%k1}
+; CHECK-NEXT:    vpbroadcastq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqu64 %zmm1, 8192(%rdi,%rax)
 ; CHECK-NEXT:    addq $64, %rax
 ; CHECK-NEXT:    jne .LBB101_1
@@ -3564,7 +3564,7 @@ define void @bcast_unfold_pcmpeq_v4i32(i32* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu 4096(%rdi,%rax), %xmm1
 ; CHECK-NEXT:    vpcmpeqd %xmm0, %xmm1, %k1
-; CHECK-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1 {%k1}
+; CHECK-NEXT:    vpbroadcastd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 {%k1}
 ; CHECK-NEXT:    vmovdqu %xmm1, 4096(%rdi,%rax)
 ; CHECK-NEXT:    addq $16, %rax
 ; CHECK-NEXT:    jne .LBB102_1
@@ -3600,7 +3600,7 @@ define void @bcast_unfold_pcmpeq_v8i32(i32* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu 4096(%rdi,%rax), %ymm1
 ; CHECK-NEXT:    vpcmpeqd %ymm0, %ymm1, %k1
-; CHECK-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm1 {%k1}
+; CHECK-NEXT:    vpbroadcastd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1 {%k1}
 ; CHECK-NEXT:    vmovdqu %ymm1, 4096(%rdi,%rax)
 ; CHECK-NEXT:    addq $32, %rax
 ; CHECK-NEXT:    jne .LBB103_1
@@ -3637,7 +3637,7 @@ define void @bcast_unfold_pcmpeq_v16i32(i32* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu64 4096(%rdi,%rax), %zmm1
 ; CHECK-NEXT:    vpcmpeqd %zmm0, %zmm1, %k1
-; CHECK-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm1 {%k1}
+; CHECK-NEXT:    vpbroadcastd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqu64 %zmm1, 4096(%rdi,%rax)
 ; CHECK-NEXT:    addq $64, %rax
 ; CHECK-NEXT:    jne .LBB104_1
@@ -3674,7 +3674,7 @@ define void @bcast_unfold_pcmpeq_v2i64(i64* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu 8192(%rdi,%rax), %xmm1
 ; CHECK-NEXT:    vpcmpeqq %xmm0, %xmm1, %k1
-; CHECK-NEXT:    vmovdqa64 {{.*}}(%rip), %xmm1 {%k1}
+; CHECK-NEXT:    vmovdqa64 {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 {%k1}
 ; CHECK-NEXT:    vmovdqu %xmm1, 8192(%rdi,%rax)
 ; CHECK-NEXT:    addq $16, %rax
 ; CHECK-NEXT:    jne .LBB105_1
@@ -3709,7 +3709,7 @@ define void @bcast_unfold_pcmpeq_v4i64(i64* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu 8192(%rdi,%rax), %ymm1
 ; CHECK-NEXT:    vpcmpeqq %ymm0, %ymm1, %k1
-; CHECK-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm1 {%k1}
+; CHECK-NEXT:    vpbroadcastq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1 {%k1}
 ; CHECK-NEXT:    vmovdqu %ymm1, 8192(%rdi,%rax)
 ; CHECK-NEXT:    addq $32, %rax
 ; CHECK-NEXT:    jne .LBB106_1
@@ -3746,7 +3746,7 @@ define void @bcast_unfold_pcmpeq_v8i64(i64* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu64 8192(%rdi,%rax), %zmm1
 ; CHECK-NEXT:    vpcmpeqq %zmm0, %zmm1, %k1
-; CHECK-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm1 {%k1}
+; CHECK-NEXT:    vpbroadcastq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqu64 %zmm1, 8192(%rdi,%rax)
 ; CHECK-NEXT:    addq $64, %rax
 ; CHECK-NEXT:    jne .LBB107_1
@@ -3783,7 +3783,7 @@ define void @bcast_unfold_pcmp_v4i32(i32* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu (%rdi,%rax,4), %xmm1
 ; CHECK-NEXT:    vpcmpltd %xmm0, %xmm1, %k1
-; CHECK-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1 {%k1}
+; CHECK-NEXT:    vpbroadcastd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 {%k1}
 ; CHECK-NEXT:    vmovdqu %xmm1, (%rdi,%rax,4)
 ; CHECK-NEXT:    addq $4, %rax
 ; CHECK-NEXT:    cmpq $1023, %rax # imm = 0x3FF
@@ -3820,7 +3820,7 @@ define void @bcast_unfold_pcmp_v8i32(i32* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu (%rdi,%rax,4), %ymm1
 ; CHECK-NEXT:    vpcmpltd %ymm0, %ymm1, %k1
-; CHECK-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm1 {%k1}
+; CHECK-NEXT:    vpbroadcastd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1 {%k1}
 ; CHECK-NEXT:    vmovdqu %ymm1, (%rdi,%rax,4)
 ; CHECK-NEXT:    addq $8, %rax
 ; CHECK-NEXT:    cmpq $1023, %rax # imm = 0x3FF
@@ -3858,7 +3858,7 @@ define void @bcast_unfold_pcmp_v16i32(i32* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu64 (%rdi,%rax,4), %zmm1
 ; CHECK-NEXT:    vpcmpltd %zmm0, %zmm1, %k1
-; CHECK-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm1 {%k1}
+; CHECK-NEXT:    vpbroadcastd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqu64 %zmm1, (%rdi,%rax,4)
 ; CHECK-NEXT:    addq $16, %rax
 ; CHECK-NEXT:    cmpq $1023, %rax # imm = 0x3FF
@@ -3896,7 +3896,7 @@ define void @bcast_unfold_pcmp_v2i64(i64* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu (%rdi,%rax,8), %xmm1
 ; CHECK-NEXT:    vpcmpltq %xmm0, %xmm1, %k1
-; CHECK-NEXT:    vmovdqa64 {{.*}}(%rip), %xmm1 {%k1}
+; CHECK-NEXT:    vmovdqa64 {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 {%k1}
 ; CHECK-NEXT:    vmovdqu %xmm1, (%rdi,%rax,8)
 ; CHECK-NEXT:    addq $2, %rax
 ; CHECK-NEXT:    cmpq $1023, %rax # imm = 0x3FF
@@ -3932,7 +3932,7 @@ define void @bcast_unfold_pcmp_v4i64(i64* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu (%rdi,%rax,8), %ymm1
 ; CHECK-NEXT:    vpcmpltq %ymm0, %ymm1, %k1
-; CHECK-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm1 {%k1}
+; CHECK-NEXT:    vpbroadcastq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1 {%k1}
 ; CHECK-NEXT:    vmovdqu %ymm1, (%rdi,%rax,8)
 ; CHECK-NEXT:    addq $4, %rax
 ; CHECK-NEXT:    cmpq $1023, %rax # imm = 0x3FF
@@ -3970,7 +3970,7 @@ define void @bcast_unfold_pcmp_v8i64(i64* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu64 (%rdi,%rax,8), %zmm1
 ; CHECK-NEXT:    vpcmpltq %zmm0, %zmm1, %k1
-; CHECK-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm1 {%k1}
+; CHECK-NEXT:    vpbroadcastq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqu64 %zmm1, (%rdi,%rax,8)
 ; CHECK-NEXT:    addq $8, %rax
 ; CHECK-NEXT:    cmpq $1023, %rax # imm = 0x3FF
@@ -4008,7 +4008,7 @@ define void @bcast_unfold_pcmpu_v4i32(i32* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu (%rdi,%rax,4), %xmm1
 ; CHECK-NEXT:    vpcmpltud %xmm0, %xmm1, %k1
-; CHECK-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1 {%k1}
+; CHECK-NEXT:    vpbroadcastd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 {%k1}
 ; CHECK-NEXT:    vmovdqu %xmm1, (%rdi,%rax,4)
 ; CHECK-NEXT:    addq $4, %rax
 ; CHECK-NEXT:    cmpq $1023, %rax # imm = 0x3FF
@@ -4045,7 +4045,7 @@ define void @bcast_unfold_pcmpu_v8i32(i32* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu (%rdi,%rax,4), %ymm1
 ; CHECK-NEXT:    vpcmpltud %ymm0, %ymm1, %k1
-; CHECK-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm1 {%k1}
+; CHECK-NEXT:    vpbroadcastd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1 {%k1}
 ; CHECK-NEXT:    vmovdqu %ymm1, (%rdi,%rax,4)
 ; CHECK-NEXT:    addq $8, %rax
 ; CHECK-NEXT:    cmpq $1023, %rax # imm = 0x3FF
@@ -4083,7 +4083,7 @@ define void @bcast_unfold_pcmpu_v16i32(i32* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu64 (%rdi,%rax,4), %zmm1
 ; CHECK-NEXT:    vpcmpltud %zmm0, %zmm1, %k1
-; CHECK-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm1 {%k1}
+; CHECK-NEXT:    vpbroadcastd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqu64 %zmm1, (%rdi,%rax,4)
 ; CHECK-NEXT:    addq $16, %rax
 ; CHECK-NEXT:    cmpq $1023, %rax # imm = 0x3FF
@@ -4121,7 +4121,7 @@ define void @bcast_unfold_pcmpu_v2i64(i64* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu (%rdi,%rax,8), %xmm1
 ; CHECK-NEXT:    vpcmpltuq %xmm0, %xmm1, %k1
-; CHECK-NEXT:    vmovdqa64 {{.*}}(%rip), %xmm1 {%k1}
+; CHECK-NEXT:    vmovdqa64 {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 {%k1}
 ; CHECK-NEXT:    vmovdqu %xmm1, (%rdi,%rax,8)
 ; CHECK-NEXT:    addq $2, %rax
 ; CHECK-NEXT:    cmpq $1023, %rax # imm = 0x3FF
@@ -4157,7 +4157,7 @@ define void @bcast_unfold_pcmpu_v4i64(i64* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu (%rdi,%rax,8), %ymm1
 ; CHECK-NEXT:    vpcmpltuq %ymm0, %ymm1, %k1
-; CHECK-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm1 {%k1}
+; CHECK-NEXT:    vpbroadcastq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1 {%k1}
 ; CHECK-NEXT:    vmovdqu %ymm1, (%rdi,%rax,8)
 ; CHECK-NEXT:    addq $4, %rax
 ; CHECK-NEXT:    cmpq $1023, %rax # imm = 0x3FF
@@ -4195,7 +4195,7 @@ define void @bcast_unfold_pcmpu_v8i64(i64* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu64 (%rdi,%rax,8), %zmm1
 ; CHECK-NEXT:    vpcmpltuq %zmm0, %zmm1, %k1
-; CHECK-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm1 {%k1}
+; CHECK-NEXT:    vpbroadcastq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqu64 %zmm1, (%rdi,%rax,8)
 ; CHECK-NEXT:    addq $8, %rax
 ; CHECK-NEXT:    cmpq $1023, %rax # imm = 0x3FF
@@ -4458,7 +4458,7 @@ define void @bcast_unfold_cmp_v8f32_refold(float* nocapture %0) {
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB126_1: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vcmpgtps 4096(%rdi,%rax), %ymm0, %k1
-; CHECK-NEXT:    vblendmps {{.*}}(%rip){1to8}, %ymm1, %ymm2 {%k1}
+; CHECK-NEXT:    vblendmps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm2 {%k1}
 ; CHECK-NEXT:    vmovups %ymm2, 4096(%rdi,%rax)
 ; CHECK-NEXT:    addq $32, %rax
 ; CHECK-NEXT:    jne .LBB126_1
@@ -4494,7 +4494,7 @@ define void @bcast_unfold_ptestm_v4i32(i32* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu 4096(%rdi,%rax), %xmm1
 ; CHECK-NEXT:    vptestmd %xmm0, %xmm1, %k1
-; CHECK-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1 {%k1}
+; CHECK-NEXT:    vpbroadcastd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 {%k1}
 ; CHECK-NEXT:    vmovdqu %xmm1, 4096(%rdi,%rax)
 ; CHECK-NEXT:    addq $16, %rax
 ; CHECK-NEXT:    jne .LBB127_1
@@ -4531,7 +4531,7 @@ define void @bcast_unfold_ptestnm_v4i32(i32* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu 4096(%rdi,%rax), %xmm1
 ; CHECK-NEXT:    vptestnmd %xmm0, %xmm1, %k1
-; CHECK-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1 {%k1}
+; CHECK-NEXT:    vpbroadcastd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 {%k1}
 ; CHECK-NEXT:    vmovdqu %xmm1, 4096(%rdi,%rax)
 ; CHECK-NEXT:    addq $16, %rax
 ; CHECK-NEXT:    jne .LBB128_1
@@ -4568,7 +4568,7 @@ define void @bcast_unfold_ptestm_v4i64(i64* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu 8192(%rdi,%rax), %ymm1
 ; CHECK-NEXT:    vptestmq %ymm0, %ymm1, %k1
-; CHECK-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm1 {%k1}
+; CHECK-NEXT:    vpbroadcastq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1 {%k1}
 ; CHECK-NEXT:    vmovdqu %ymm1, 8192(%rdi,%rax)
 ; CHECK-NEXT:    addq $32, %rax
 ; CHECK-NEXT:    jne .LBB129_1
@@ -4606,7 +4606,7 @@ define void @bcast_unfold_ptestnm_v4i64(i64* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu 8192(%rdi,%rax), %ymm1
 ; CHECK-NEXT:    vptestnmq %ymm0, %ymm1, %k1
-; CHECK-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm1 {%k1}
+; CHECK-NEXT:    vpbroadcastq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1 {%k1}
 ; CHECK-NEXT:    vmovdqu %ymm1, 8192(%rdi,%rax)
 ; CHECK-NEXT:    addq $32, %rax
 ; CHECK-NEXT:    jne .LBB130_1
