@@ -56,3 +56,11 @@ define void @cmpxchg(ptr %p, i32 %a, i32 %b) {
     %val_success = cmpxchg ptr %p, i32 %a, i32 %b acq_rel monotonic
     ret void
 }
+
+; CHECK: define void @atomicrmw(ptr %a, i32 %i)
+; CHECK:     %b = atomicrmw add ptr %a, i32 %i acquire
+; CHECK:     ret void
+define void @atomicrmw(ptr %a, i32 %i) {
+    %b = atomicrmw add ptr %a, i32 %i acquire
+    ret void
+}
