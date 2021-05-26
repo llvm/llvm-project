@@ -24,6 +24,8 @@ OpFoldResult ReOp::fold(ArrayRef<Attribute> operands) {
   ArrayAttr arrayAttr = operands[0].dyn_cast_or_null<ArrayAttr>();
   if (arrayAttr && arrayAttr.size() == 2)
     return arrayAttr[0];
+  if (auto createOp = dyn_cast_or_null<CreateOp>(getOperand().getDefiningOp()))
+    return createOp.getOperand(0);
   return {};
 }
 
@@ -32,5 +34,7 @@ OpFoldResult ImOp::fold(ArrayRef<Attribute> operands) {
   ArrayAttr arrayAttr = operands[0].dyn_cast_or_null<ArrayAttr>();
   if (arrayAttr && arrayAttr.size() == 2)
     return arrayAttr[1];
+  if (auto createOp = dyn_cast_or_null<CreateOp>(getOperand().getDefiningOp()))
+    return createOp.getOperand(1);
   return {};
 }
