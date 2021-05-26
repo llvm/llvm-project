@@ -3,6 +3,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   CodegenStrategy.cpp
   ComprehensiveBufferize.cpp
   Detensorize.cpp
+  Distribution.cpp
   DropUnitDims.cpp
   ElementwiseToLinalg.cpp
   Fusion.cpp
