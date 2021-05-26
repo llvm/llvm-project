@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -linalg-tile="linalg-tile-sizes=2,3,4" -split-input-file | FileCheck %s
-// RUN: mlir-opt %s -linalg-tile-to-tiled-loop="linalg-tile-sizes=2,3,4" -split-input-file | FileCheck %s -check-prefix=TLOOP
+// RUN: mlir-opt %s -linalg-tile-to-tiled-loop="linalg-tile-sizes=2,3,4 linalg-distribution-types=block_x,block_y,none" -split-input-file | FileCheck %s -check-prefix=TLOOP
 
 // CHECK-LABEL: func @matmul_tensors(
 // CHECK-SAME:    %[[TA:[0-9a-z]+]]: tensor<?x?xf32>
@@ -48,7 +48,8 @@ func @matmul_tensors(
 // TLOOP-SAME: step (%[[C2]], %[[C3]], %[[C4]])
 // TLOOP-SAME: ins (%[[A0:.*]] = %[[ARG_0]]: [[TY]], %[[A1:.*]] = %[[ARG_1]]: [[TY]])
 // TLOOP-SAME: outs (%[[A2:.*]] = %[[ARG_2]]: [[TY]])
-// TLOOP-SAME: iterators["parallel", "parallel", "reduction"] {
+// TLOOP-SAME: iterators["parallel", "parallel", "reduction"]
+// TLOOP-SAME: distribution["block_x", "block_y", "none"] {
 
 // TLOOP: %[[SUB_ARG_0:.*]] = subtensor %[[A0]][%[[I]], %[[K]]]
 // TLOOP: %[[SUB_ARG_1:.*]] = subtensor %[[A1]][%[[K]], %[[J]]]
@@ -128,26 +129,4 @@ func @generic_op_tensors(
 // TLOOP-SAME: step (%[[C2]], %[[C3]], %[[C4]])
 // TLOOP-SAME: ins (%{{.*}} = %[[ARG_0]]: [[TY]], %{{.*}} = %[[ARG_1]]: [[TY]])
 // TLOOP-SAME: outs (%{{.*}} = %[[INIT]]: [[TY]])
-
-// -----
-
-func @fill_tensors(%arg0 : index, %arg1 : index, %arg2 : f32) -> tensor<?x?xf32> {
-  %0 = linalg.init_tensor [%arg0, %arg1] : tensor<?x?xf32>
-  %1 = linalg.fill(%0, %arg2) : tensor<?x?xf32>, f32 -> tensor<?x?xf32>
-  return %1 : tensor<?x?xf32>
-}
-//       CHECK: func @fill_tensors
-//       CHECK:   %[[INIT:.+]] = linalg.init_tensor
-//       CHECK:   %[[RESULT:.+]] = scf.for %[[IV0:[a-zA-z0-9_]+]]
-//  CHECK-SAME:     iter_args(%[[ARG4:.+]] = %[[INIT]]) -> (tensor<?x?xf32>) {
-//       CHECK:     %[[YIELD_1:.+]] = scf.for %[[IV1:[a-zA-Z0-9_]+]]
-//  CHECK-SAME:       iter_args(%[[ARG6:.+]] = %[[ARG4]]) -> (tensor<?x?xf32>) {
-//       CHECK:       %[[FILL_TILE:.+]] = subtensor %[[ARG6]][%[[IV0]], %[[IV1]]]
-//       CHECK:       %[[RESULT_TILE:.+]] = linalg.fill(%[[FILL_TILE]], %{{.+}})
-//       CHECK:       %[[YIELD_2:.+]] = subtensor_insert %[[RESULT_TILE]]
-//  CHECK-SAME:         into %[[ARG6]][%[[IV0]], %[[IV1]]]
-//       CHECK:       scf.yield %[[YIELD_2]]
-//       CHECK:     }
-//       CHECK:     scf.yield %[[YIELD_1]]
-//       CHECK:   }
-//       CHECK:   return %[[RESULT]]
+// TLOOP-SAME: distribution["block_x", "block_y", "none"] {
