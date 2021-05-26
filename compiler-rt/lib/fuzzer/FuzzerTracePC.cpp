@@ -16,7 +16,6 @@
 #include "FuzzerBuiltinsMsvc.h"
 #include "FuzzerCorpus.h"
 #include "FuzzerDefs.h"
-#include "FuzzerDictionary.h"
 #include "FuzzerExtFunctions.h"
 #include "FuzzerIO.h"
 #include "FuzzerPlatform.h"
