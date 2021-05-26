@@ -373,7 +373,7 @@ def Async_RuntimeIsErrorOp : Async_Op<"runtime.is_error"> {
     resuming after `await_and_resume`.
   }];
 
-  let arguments = (ins Async_AnyValueOrTokenType:$operand);
+  let arguments = (ins Async_AnyAsyncType:$operand);
   let results = (outs I1:$is_error);
 
   let assemblyFormat = "$operand attr-dict `:` type($operand)";

@@ -18,6 +18,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 #define DEBUG_TYPE "convert-async-to-llvm"
 
@@ -39,6 +40,7 @@ static constexpr const char *kSetTokenError = "mlirAsyncRuntimeSetTokenError";
 static constexpr const char *kSetValueError = "mlirAsyncRuntimeSetValueError";
 static constexpr const char *kIsTokenError = "mlirAsyncRuntimeIsTokenError";
 static constexpr const char *kIsValueError = "mlirAsyncRuntimeIsValueError";
+static constexpr const char *kIsGroupError = "mlirAsyncRuntimeIsGroupError";
 static constexpr const char *kAwaitToken = "mlirAsyncRuntimeAwaitToken";
 static constexpr const char *kAwaitValue = "mlirAsyncRuntimeAwaitValue";
 static constexpr const char *kAwaitGroup = "mlirAsyncRuntimeAwaitAllInGroup";
@@ -125,6 +127,11 @@ struct AsyncAPI {
     return FunctionType::get(ctx, {value}, {i1});
   }
 
+  static FunctionType isGroupErrorFunctionType(MLIRContext *ctx) {
+    auto i1 = IntegerType::get(ctx, 1);
+    return FunctionType::get(ctx, {GroupType::get(ctx)}, {i1});
+  }
+
   static FunctionType awaitTokenFunctionType(MLIRContext *ctx) {
     return FunctionType::get(ctx, {TokenType::get(ctx)}, {});
   }
@@ -201,6 +208,7 @@ static void addAsyncRuntimeApiDeclarations(ModuleOp module) {
   addFuncDecl(kSetValueError, AsyncAPI::setValueErrorFunctionType(ctx));
   addFuncDecl(kIsTokenError, AsyncAPI::isTokenErrorFunctionType(ctx));
   addFuncDecl(kIsValueError, AsyncAPI::isValueErrorFunctionType(ctx));
+  addFuncDecl(kIsGroupError, AsyncAPI::isGroupErrorFunctionType(ctx));
   addFuncDecl(kAwaitToken, AsyncAPI::awaitTokenFunctionType(ctx));
   addFuncDecl(kAwaitValue, AsyncAPI::awaitValueFunctionType(ctx));
   addFuncDecl(kAwaitGroup, AsyncAPI::awaitGroupFunctionType(ctx));
@@ -587,10 +595,13 @@ public:
   LogicalResult
   matchAndRewrite(RuntimeSetAvailableOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    Type operandType = op.operand().getType();
-    rewriter.replaceOpWithNewOp<CallOp>(
-        op, operandType.isa<TokenType>() ? kEmplaceToken : kEmplaceValue,
-        TypeRange(), operands);
+    StringRef apiFuncName =
+        TypeSwitch<Type, StringRef>(op.operand().getType())
+            .Case<TokenType>([](Type) { return kEmplaceToken; })
+            .Case<ValueType>([](Type) { return kEmplaceValue; });
+
+    rewriter.replaceOpWithNewOp<CallOp>(op, apiFuncName, TypeRange(), operands);
+
     return success();
   }
 };
@@ -609,10 +620,13 @@ public:
   LogicalResult
   matchAndRewrite(RuntimeSetErrorOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    Type operandType = op.operand().getType();
-    rewriter.replaceOpWithNewOp<CallOp>(
-        op, operandType.isa<TokenType>() ? kSetTokenError : kSetValueError,
-        TypeRange(), operands);
+    StringRef apiFuncName =
+        TypeSwitch<Type, StringRef>(op.operand().getType())
+            .Case<TokenType>([](Type) { return kSetTokenError; })
+            .Case<ValueType>([](Type) { return kSetValueError; });
+
+    rewriter.replaceOpWithNewOp<CallOp>(op, apiFuncName, TypeRange(), operands);
+
     return success();
   }
 };
@@ -630,10 +644,14 @@ public:
   LogicalResult
   matchAndRewrite(RuntimeIsErrorOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    Type operandType = op.operand().getType();
-    rewriter.replaceOpWithNewOp<CallOp>(
-        op, operandType.isa<TokenType>() ? kIsTokenError : kIsValueError,
-        rewriter.getI1Type(), operands);
+    StringRef apiFuncName =
+        TypeSwitch<Type, StringRef>(op.operand().getType())
+            .Case<TokenType>([](Type) { return kIsTokenError; })
+            .Case<GroupType>([](Type) { return kIsGroupError; })
+            .Case<ValueType>([](Type) { return kIsValueError; });
+
+    rewriter.replaceOpWithNewOp<CallOp>(op, apiFuncName, rewriter.getI1Type(),
+                                        operands);
     return success();
   }
 };
@@ -651,17 +669,11 @@ public:
   LogicalResult
   matchAndRewrite(RuntimeAwaitOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    Type operandType = op.operand().getType();
-
-    StringRef apiFuncName;
-    if (operandType.isa<TokenType>())
-      apiFuncName = kAwaitToken;
-    else if (operandType.isa<ValueType>())
-      apiFuncName = kAwaitValue;
-    else if (operandType.isa<GroupType>())
-      apiFuncName = kAwaitGroup;
-    else
-      return rewriter.notifyMatchFailure(op, "unsupported async type");
+    StringRef apiFuncName =
+        TypeSwitch<Type, StringRef>(op.operand().getType())
+            .Case<TokenType>([](Type) { return kAwaitToken; })
+            .Case<ValueType>([](Type) { return kAwaitValue; })
+            .Case<GroupType>([](Type) { return kAwaitGroup; });
 
     rewriter.create<CallOp>(op->getLoc(), apiFuncName, TypeRange(), operands);
     rewriter.eraseOp(op);
@@ -684,17 +696,11 @@ public:
   LogicalResult
   matchAndRewrite(RuntimeAwaitAndResumeOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    Type operandType = op.operand().getType();
-
-    StringRef apiFuncName;
-    if (operandType.isa<TokenType>())
-      apiFuncName = kAwaitTokenAndExecute;
-    else if (operandType.isa<ValueType>())
-      apiFuncName = kAwaitValueAndExecute;
-    else if (operandType.isa<GroupType>())
-      apiFuncName = kAwaitAllAndExecute;
-    else
-      return rewriter.notifyMatchFailure(op, "unsupported async type");
+    StringRef apiFuncName =
+        TypeSwitch<Type, StringRef>(op.operand().getType())
+            .Case<TokenType>([](Type) { return kAwaitTokenAndExecute; })
+            .Case<ValueType>([](Type) { return kAwaitValueAndExecute; })
+            .Case<GroupType>([](Type) { return kAwaitAllAndExecute; });
 
     Value operand = RuntimeAwaitAndResumeOpAdaptor(operands).operand();
     Value handle = RuntimeAwaitAndResumeOpAdaptor(operands).handle();
