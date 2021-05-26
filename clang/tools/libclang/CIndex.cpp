@@ -55,6 +55,7 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/thread.h"
 #include <mutex>
 
 #if LLVM_ENABLE_THREADS != 0 && defined(__APPLE__)
@@ -6785,10 +6786,10 @@ void clang_enableStackTraces(void) {
 
 void clang_executeOnThread(void (*fn)(void *), void *user_data,
                            unsigned stack_size) {
-  llvm::llvm_execute_on_thread(fn, user_data,
-                               stack_size == 0
-                                   ? clang::DesiredStackSize
-                                   : llvm::Optional<unsigned>(stack_size));
+  llvm::thread Thread(stack_size == 0 ? clang::DesiredStackSize
+                                      : llvm::Optional<unsigned>(stack_size),
+                      fn, user_data);
+  Thread.join();
 }
 
 //===----------------------------------------------------------------------===//
