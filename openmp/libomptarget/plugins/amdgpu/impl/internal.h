@@ -106,9 +106,6 @@ typedef struct atl_symbol_info_s {
   uint32_t size;
 } atl_symbol_info_t;
 
-extern std::vector<std::map<std::string, atl_kernel_info_t>> KernelInfoTable;
-extern std::vector<std::map<std::string, atl_symbol_info_t>> SymbolInfoTable;
-
 // ---------------------- Kernel End -------------
 
 namespace core {

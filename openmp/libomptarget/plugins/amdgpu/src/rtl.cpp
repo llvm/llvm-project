@@ -86,6 +86,16 @@ int print_kernel_trace;
 
 #include "elf_common.h"
 
+namespace core {
+atmi_status_t RegisterModuleFromMemory(
+    std::map<std::string, atl_kernel_info_t> &KernelInfo,
+    std::map<std::string, atl_symbol_info_t> &SymbolInfoTable, void *, size_t,
+    atmi_place_t,
+    atmi_status_t (*on_deserialized_data)(void *data, size_t size,
+                                          void *cb_state),
+    void *cb_state, std::vector<hsa_executable_t> &HSAExecutables);
+}
+
 /// Keep entries table per device
 struct FuncOrGblEntryTy {
   __tgt_target_table Table;
@@ -339,6 +349,9 @@ public:
 
   std::vector<hsa_executable_t> HSAExecutables;
 
+  std::vector<std::map<std::string, atl_kernel_info_t>> KernelInfoTable;
+  std::vector<std::map<std::string, atl_symbol_info_t>> SymbolInfoTable;
+
   struct atmiFreePtrDeletor {
     void operator()(void *p) {
       atmi_free(p); // ignore failure to free
@@ -482,6 +495,8 @@ public:
     NumTeams.resize(NumberOfDevices);
     NumThreads.resize(NumberOfDevices);
     deviceStateStore.resize(NumberOfDevices);
+    KernelInfoTable.resize(NumberOfDevices);
+    SymbolInfoTable.resize(NumberOfDevices);
 
     for (int i = 0; i < NumberOfDevices; i++) {
       HSAQueues[i] = nullptr;
@@ -993,15 +1008,17 @@ atmi_status_t interop_get_symbol_info(char *base, size_t img_size,
 
 template <typename C>
 atmi_status_t module_register_from_memory_to_place(
+    std::map<std::string, atl_kernel_info_t> &KernelInfoTable,
+    std::map<std::string, atl_symbol_info_t> &SymbolInfoTable,
     void *module_bytes, size_t module_size, atmi_place_t place, C cb,
     std::vector<hsa_executable_t> &HSAExecutables) {
   auto L = [](void *data, size_t size, void *cb_state) -> atmi_status_t {
     C *unwrapped = static_cast<C *>(cb_state);
     return (*unwrapped)(data, size);
   };
-  return core::Runtime::RegisterModuleFromMemory(
-      module_bytes, module_size, place, L, static_cast<void *>(&cb),
-      HSAExecutables);
+  return core::RegisterModuleFromMemory(
+      KernelInfoTable, SymbolInfoTable, module_bytes, module_size, place, L,
+      static_cast<void *>(&cb), HSAExecutables);
 }
 } // namespace
 
@@ -1116,11 +1133,12 @@ struct device_environment {
         DP("Setting global device environment after load (%u bytes)\n",
            si.size);
         int device_id = host_device_env.device_num;
-
+        auto &SymbolInfo = DeviceInfo.SymbolInfoTable[device_id];
         void *state_ptr;
         uint32_t state_ptr_size;
         atmi_status_t err = atmi_interop_hsa_get_symbol_info(
-            get_gpu_mem_place(device_id), sym(), &state_ptr, &state_ptr_size);
+            SymbolInfo, get_gpu_mem_place(device_id), sym(), &state_ptr,
+            &state_ptr_size);
         if (err != ATMI_STATUS_SUCCESS) {
           DP("failed to find %s in loaded image\n", sym());
           return err;
@@ -1205,8 +1223,11 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
     auto env = device_environment(device_id, DeviceInfo.NumberOfDevices, image,
                                   img_size);
 
+    auto &KernelInfo = DeviceInfo.KernelInfoTable[device_id];
+    auto &SymbolInfo = DeviceInfo.SymbolInfoTable[device_id];
     atmi_status_t err = module_register_from_memory_to_place(
-        (void *)image->ImageStart, img_size, get_gpu_place(device_id),
+        KernelInfo, SymbolInfo, (void *)image->ImageStart, img_size,
+        get_gpu_place(device_id),
         [&](void *data, size_t size) {
           if (image_contains_symbol(data, size, "needs_hostcall_buffer")) {
             __atomic_store_n(&DeviceInfo.hostcall_required, true,
@@ -1241,9 +1262,10 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
 
     void *state_ptr;
     uint32_t state_ptr_size;
+    auto &SymbolInfoMap = DeviceInfo.SymbolInfoTable[device_id];
     atmi_status_t err = atmi_interop_hsa_get_symbol_info(
-        get_gpu_mem_place(device_id), "omptarget_nvptx_device_State",
-        &state_ptr, &state_ptr_size);
+        SymbolInfoMap, get_gpu_mem_place(device_id),
+        "omptarget_nvptx_device_State", &state_ptr, &state_ptr_size);
 
     if (err != ATMI_STATUS_SUCCESS) {
       DP("No device_state symbol found, skipping initialization\n");
@@ -1325,8 +1347,10 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
       void *varptr;
       uint32_t varsize;
 
+      auto &SymbolInfoMap = DeviceInfo.SymbolInfoTable[device_id];
       atmi_status_t err = atmi_interop_hsa_get_symbol_info(
-          get_gpu_mem_place(device_id), e->name, &varptr, &varsize);
+          SymbolInfoMap, get_gpu_mem_place(device_id), e->name, &varptr,
+          &varsize);
 
       if (err != ATMI_STATUS_SUCCESS) {
         // Inform the user what symbol prevented offloading
@@ -1367,8 +1391,10 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
 
     atmi_mem_place_t place = get_gpu_mem_place(device_id);
     uint32_t kernarg_segment_size;
+    auto &KernelInfoMap = DeviceInfo.KernelInfoTable[device_id];
     atmi_status_t err = atmi_interop_hsa_get_kernel_info(
-        place, e->name, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE,
+        KernelInfoMap, place, e->name,
+        HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE,
         &kernarg_segment_size);
 
     // each arg is a void * in this openmp implementation
@@ -1794,6 +1820,7 @@ int32_t __tgt_rtl_run_target_team_region_locked(
   KernelTy *KernelInfo = (KernelTy *)tgt_entry_ptr;
 
   std::string kernel_name = std::string(KernelInfo->Name);
+  auto &KernelInfoTable = DeviceInfo.KernelInfoTable;
   if (KernelInfoTable[device_id].find(kernel_name) ==
       KernelInfoTable[device_id].end()) {
     DP("Kernel %s not found\n", kernel_name.c_str());
