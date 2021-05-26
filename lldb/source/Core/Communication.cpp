@@ -27,9 +27,9 @@
 #include <cstring>
 #include <memory>
 
-#include <errno.h>
-#include <inttypes.h>
-#include <stdio.h>
+#include <cerrno>
+#include <cinttypes>
+#include <cstdio>
 
 using namespace lldb;
 using namespace lldb_private;

@@ -330,6 +330,9 @@ class VectorType;
     VLD2DUP_UPD,
     VLD3DUP_UPD,
     VLD4DUP_UPD,
+    VLD1x2_UPD,
+    VLD1x3_UPD,
+    VLD1x4_UPD,
 
     // NEON stores with post-increment base updates:
     VST1_UPD,

@@ -20,8 +20,8 @@
 #include "MacOSX/x86_64/DNBArchImplX86_64.h"
 #include "MachProcess.h"
 #include "MachThread.h"
+#include <cstdlib>
 #include <mach/mach.h>
-#include <stdlib.h>
 
 #if defined(LLDB_DEBUGSERVER_RELEASE) || defined(LLDB_DEBUGSERVER_DEBUG)
 enum debugState { debugStateUnknown, debugStateOff, debugStateOn };

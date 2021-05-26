@@ -522,8 +522,8 @@ static Error optimizeMachO_x86_64_GOTAndStubs(LinkGraph &G) {
           E.setTarget(GOTTarget);
           E.setKind(x86_64::Delta32);
           E.setAddend(E.getAddend() - 4);
-          auto *BlockData = B->getMutableContent(G).data();
-          BlockData[E.getOffset() - 2] = 0x8d;
+          char *BlockData = B->getMutableContent(G).data();
+          BlockData[E.getOffset() - 2] = (char)0x8d;
           LLVM_DEBUG({
             dbgs() << "  Replaced GOT load wih LEA:\n    ";
             printEdge(dbgs(), *B, E, x86_64::getEdgeKindName(E.getKind()));

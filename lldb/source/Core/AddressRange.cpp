@@ -19,7 +19,7 @@
 
 #include <memory>
 
-#include <inttypes.h>
+#include <cinttypes>
 
 namespace lldb_private {
 class SectionList;

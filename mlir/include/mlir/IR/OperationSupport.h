@@ -67,14 +67,17 @@ using OwningRewritePatternList = RewritePatternSet;
 /// the concrete operation types.
 class AbstractOperation {
 public:
-  using GetCanonicalizationPatternsFn = void (*)(RewritePatternSet &,
-                                                 MLIRContext *);
-  using FoldHookFn = LogicalResult (*)(Operation *, ArrayRef<Attribute>,
-                                       SmallVectorImpl<OpFoldResult> &);
-  using HasTraitFn = bool (*)(TypeID);
-  using ParseAssemblyFn = ParseResult (*)(OpAsmParser &, OperationState &);
-  using PrintAssemblyFn = void (*)(Operation *, OpAsmPrinter &);
-  using VerifyInvariantsFn = LogicalResult (*)(Operation *);
+  using GetCanonicalizationPatternsFn =
+      llvm::unique_function<void(RewritePatternSet &, MLIRContext *) const>;
+  using FoldHookFn = llvm::unique_function<LogicalResult(
+      Operation *, ArrayRef<Attribute>, SmallVectorImpl<OpFoldResult> &) const>;
+  using HasTraitFn = llvm::unique_function<bool(TypeID) const>;
+  using ParseAssemblyFn =
+      llvm::unique_function<ParseResult(OpAsmParser &, OperationState &) const>;
+  using PrintAssemblyFn =
+      llvm::unique_function<void(Operation *, OpAsmPrinter &) const>;
+  using VerifyInvariantsFn =
+      llvm::unique_function<LogicalResult(Operation *) const>;
 
   /// This is the name of the operation.
   const Identifier name;
@@ -89,7 +92,7 @@ public:
   ParseResult parseAssembly(OpAsmParser &parser, OperationState &result) const;
 
   /// Return the static hook for parsing this operation assembly.
-  ParseAssemblyFn getParseAssemblyFn() const { return parseAssemblyFn; }
+  const ParseAssemblyFn &getParseAssemblyFn() const { return parseAssemblyFn; }
 
   /// This hook implements the AsmPrinter for this operation.
   void printAssembly(Operation *op, OpAsmPrinter &p) const {
@@ -175,20 +178,21 @@ public:
   /// Register a new operation in a Dialect object.
   /// The use of this method is in general discouraged in favor of
   /// 'insert<CustomOp>(dialect)'.
-  static void insert(StringRef name, Dialect &dialect, TypeID typeID,
-                     ParseAssemblyFn parseAssembly,
-                     PrintAssemblyFn printAssembly,
-                     VerifyInvariantsFn verifyInvariants, FoldHookFn foldHook,
-                     GetCanonicalizationPatternsFn getCanonicalizationPatterns,
-                     detail::InterfaceMap &&interfaceMap, HasTraitFn hasTrait);
+  static void
+  insert(StringRef name, Dialect &dialect, TypeID typeID,
+         ParseAssemblyFn &&parseAssembly, PrintAssemblyFn &&printAssembly,
+         VerifyInvariantsFn &&verifyInvariants, FoldHookFn &&foldHook,
+         GetCanonicalizationPatternsFn &&getCanonicalizationPatterns,
+         detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait);
 
 private:
   AbstractOperation(StringRef name, Dialect &dialect, TypeID typeID,
-                    ParseAssemblyFn parseAssembly,
-                    PrintAssemblyFn printAssembly,
-                    VerifyInvariantsFn verifyInvariants, FoldHookFn foldHook,
-                    GetCanonicalizationPatternsFn getCanonicalizationPatterns,
-                    detail::InterfaceMap &&interfaceMap, HasTraitFn hasTrait);
+                    ParseAssemblyFn &&parseAssembly,
+                    PrintAssemblyFn &&printAssembly,
+                    VerifyInvariantsFn &&verifyInvariants,
+                    FoldHookFn &&foldHook,
+                    GetCanonicalizationPatternsFn &&getCanonicalizationPatterns,
+                    detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait);
 
   /// A map of interfaces that were registered to this operation.
   detail::InterfaceMap interfaceMap;

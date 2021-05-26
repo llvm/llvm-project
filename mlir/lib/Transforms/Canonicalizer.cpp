@@ -21,6 +21,16 @@ using namespace mlir;
 namespace {
 /// Canonicalize operations in nested regions.
 struct Canonicalizer : public CanonicalizerBase<Canonicalizer> {
+  Canonicalizer(const GreedyRewriteConfig &config) : config(config) {}
+
+  Canonicalizer() {
+    // Default constructed Canonicalizer takes its settings from command line
+    // options.
+    config.useTopDownTraversal = topDownProcessingEnabled;
+    config.enableRegionSimplification = enableRegionSimplification;
+    config.maxIterations = maxIterations;
+  }
+
   /// Initialize the canonicalizer by building the set of patterns used during
   /// execution.
   LogicalResult initialize(MLIRContext *context) override {
@@ -31,12 +41,11 @@ struct Canonicalizer : public CanonicalizerBase<Canonicalizer> {
     return success();
   }
   void runOnOperation() override {
-    GreedyRewriteConfig config;
-    config.useTopDownTraversal = topDownProcessingEnabled;
     (void)applyPatternsAndFoldGreedily(getOperation()->getRegions(), patterns,
                                        config);
   }
 
+  GreedyRewriteConfig config;
   FrozenRewritePatternSet patterns;
 };
 } // end anonymous namespace
@@ -44,4 +53,10 @@ struct Canonicalizer : public CanonicalizerBase<Canonicalizer> {
 /// Create a Canonicalizer pass.
 std::unique_ptr<Pass> mlir::createCanonicalizerPass() {
   return std::make_unique<Canonicalizer>();
+}
+
+/// Creates an instance of the Canonicalizer pass with the specified config.
+std::unique_ptr<Pass>
+createCanonicalizerPass(const GreedyRewriteConfig &config) {
+  return std::make_unique<Canonicalizer>(config);
 }

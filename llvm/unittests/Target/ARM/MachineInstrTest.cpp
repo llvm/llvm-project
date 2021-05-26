@@ -734,6 +734,12 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VMULi16:
     case MVE_VMULi8:
     case MVE_VMULi32:
+    case MVE_VMULHs32:
+    case MVE_VMULHs16:
+    case MVE_VMULHs8:
+    case MVE_VMULHu32:
+    case MVE_VMULHu16:
+    case MVE_VMULHu8:
     case MVE_VMVN:
     case MVE_VMVNimmi16:
     case MVE_VMVNimmi32:
@@ -906,6 +912,12 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VRINTf32P:
     case MVE_VRINTf32X:
     case MVE_VRINTf32Z:
+    case MVE_VRMULHs32:
+    case MVE_VRMULHs16:
+    case MVE_VRMULHs8:
+    case MVE_VRMULHu32:
+    case MVE_VRMULHu16:
+    case MVE_VRMULHu8:
     case MVE_VRSHL_by_vecs16:
     case MVE_VRSHL_by_vecs32:
     case MVE_VRSHL_by_vecs8:

@@ -12,10 +12,10 @@
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 
 #include <condition_variable>
+#include <cstdio>
 #include <iosfwd>
 #include <map>
 #include <set>
-#include <stdio.h>
 #include <thread>
 
 #include "llvm/ADT/DenseMap.h"

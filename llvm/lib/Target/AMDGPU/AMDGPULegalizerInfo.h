@@ -110,8 +110,6 @@ public:
                                      Register DstRemReg, Register Numer,
                                      Register Denom) const;
 
-  bool legalizeUDIV_UREM64(MachineInstr &MI, MachineRegisterInfo &MRI,
-                           MachineIRBuilder &B) const;
   bool legalizeSignedDIV_REM(MachineInstr &MI, MachineRegisterInfo &MRI,
                              MachineIRBuilder &B) const;
 

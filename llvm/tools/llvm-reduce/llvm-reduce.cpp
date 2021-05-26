@@ -116,6 +116,10 @@ int main(int Argc, char **Argv) {
   std::unique_ptr<Module> OriginalProgram =
       parseInputFile(InputFilename, Context);
 
+  if (!OriginalProgram) {
+    return 1;
+  }
+
   // Initialize test environment
   TestRunner Tester(TestFilename, TestArguments);
   Tester.setProgram(std::move(OriginalProgram));

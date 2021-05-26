@@ -125,12 +125,19 @@ class BufferAllocationHoisting : public BufferPlacementTransformationBase {
 public:
   BufferAllocationHoisting(Operation *op)
       : BufferPlacementTransformationBase(op), dominators(op),
-        postDominators(op) {}
+        postDominators(op), scopeOp(op) {}
 
   /// Moves allocations upwards.
   void hoist() {
-    for (BufferPlacementAllocs::AllocEntry &entry : allocs) {
-      Value allocValue = std::get<0>(entry);
+    SmallVector<Value> allocsAndAllocas;
+    for (BufferPlacementAllocs::AllocEntry &entry : allocs)
+      allocsAndAllocas.push_back(std::get<0>(entry));
+    scopeOp->walk(
+        [&](memref::AllocaOp op) { allocsAndAllocas.push_back(op.memref()); });
+
+    for (auto allocValue : allocsAndAllocas) {
+      if (!StateT::shouldHoistOpType(allocValue.getDefiningOp()))
+        continue;
       Operation *definingOp = allocValue.getDefiningOp();
       assert(definingOp && "No defining op");
       auto operands = definingOp->getOperands();
@@ -222,6 +229,10 @@ private:
 
   /// The map storing the final placement blocks of a given alloc value.
   llvm::DenseMap<Value, Block *> placementBlocks;
+
+  /// The operation that this transformation is working on. It is used to also
+  /// gather allocas.
+  Operation *scopeOp;
 };
 
 /// A state implementation compatible with the `BufferAllocationHoisting` class
@@ -247,6 +258,11 @@ struct BufferAllocationHoistingState : BufferAllocationHoistingStateBase {
   /// Returns true if the given operation does not represent a loop.
   bool isLegalPlacement(Operation *op) {
     return !BufferPlacementTransformationBase::isLoop(op);
+  }
+
+  /// Returns true if the given operation should be considered for hoisting.
+  static bool shouldHoistOpType(Operation *op) {
+    return llvm::isa<memref::AllocOp>(op);
   }
 
   /// Sets the current placement block to the given block.
@@ -279,6 +295,11 @@ struct BufferAllocationLoopHoistingState : BufferAllocationHoistingStateBase {
   bool isLegalPlacement(Operation *op) {
     return BufferPlacementTransformationBase::isLoop(op) &&
            !dominators->dominates(aliasDominatorBlock, op->getBlock());
+  }
+
+  /// Returns true if the given operation should be considered for hoisting.
+  static bool shouldHoistOpType(Operation *op) {
+    return llvm::isa<memref::AllocOp, memref::AllocaOp>(op);
   }
 
   /// Does not change the internal placement block, as we want to move

@@ -124,6 +124,17 @@ template <class BidirectionalIterator>  // constexpr in C++17
   constexpr BidirectionalIterator prev(BidirectionalIterator x,
     typename iterator_traits<BidirectionalIterator>::difference_type n = 1);
 
+// [range.iter.ops], range iterator operations
+namespace ranges {
+  // [range.iter.op.advance], ranges::advance
+  template<input_or_output_iterator I>
+    constexpr void advance(I& i, iter_difference_t<I> n);                          // since C++20
+  template<input_or_output_iterator I, sentinel_for<I> S>
+    constexpr void advance(I& i, S bound);                                         // since C++20
+  template<input_or_output_iterator I, sentinel_for<I> S>
+    constexpr iter_difference_t<I> advance(I& i, iter_difference_t<I> n, S bound); // since C++20
+}
+
 template <class Iterator>
 class reverse_iterator
     : public iterator<typename iterator_traits<Iterator>::iterator_category,
@@ -472,6 +483,7 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <__config>
 #include <__debug>
 #include <__functional_base>
+#include <__iterator/advance.h>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iter_move.h>
@@ -534,7 +546,8 @@ void __advance(_RandIter& __i,
    __i += __n;
 }
 
-template <class _InputIter, class _Distance>
+template <class _InputIter, class _Distance,
+          class = typename enable_if<is_integral<decltype(_VSTD::__convert_to_integral(declval<_Distance>()))>::value>::type>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 void advance(_InputIter& __i, _Distance __orig_n)
 {

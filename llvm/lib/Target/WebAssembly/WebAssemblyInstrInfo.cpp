@@ -14,6 +14,7 @@
 
 #include "WebAssemblyInstrInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "Utils/WebAssemblyUtilities.h"
 #include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
@@ -213,4 +214,9 @@ WebAssemblyInstrInfo::getSerializableTargetIndices() const {
       {WebAssembly::TI_GLOBAL_RELOC, "wasm-global-reloc"},
       {WebAssembly::TI_LOCAL_INDIRECT, "wasm-local-indirect"}};
   return makeArrayRef(TargetIndices);
+}
+
+const MachineOperand &
+WebAssemblyInstrInfo::getCalleeOperand(const MachineInstr &MI) const {
+  return WebAssembly::getCalleeOp(MI);
 }

@@ -17,7 +17,7 @@
 #include "MachProcess.h"
 #include "PThreadMutex.h"
 #include "SysSignal.h"
-#include <errno.h>
+#include <cerrno>
 #include <sys/ptrace.h>
 #include <sys/types.h>
 

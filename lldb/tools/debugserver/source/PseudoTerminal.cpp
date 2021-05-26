@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PseudoTerminal.h"
-#include <stdlib.h>
+#include <cstdlib>
 #include <sys/ioctl.h>
 #include <unistd.h>
 

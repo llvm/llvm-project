@@ -131,7 +131,7 @@ define <8 x i16> @sll8_nosplat(<8 x i16> %A) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movdqa {{.*#+}} xmm1 = [2,4,8,64,4,4,4,4]
 ; X86-NEXT:    pmullw %xmm0, %xmm1
-; X86-NEXT:    pmullw {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    pxor %xmm1, %xmm0
 ; X86-NEXT:    retl
 ;
@@ -139,7 +139,7 @@ define <8 x i16> @sll8_nosplat(<8 x i16> %A) nounwind {
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movdqa {{.*#+}} xmm1 = [2,4,8,64,4,4,4,4]
 ; X64-NEXT:    pmullw %xmm0, %xmm1
-; X64-NEXT:    pmullw {{.*}}(%rip), %xmm0
+; X64-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    pxor %xmm1, %xmm0
 ; X64-NEXT:    retq
 entry:
@@ -204,13 +204,13 @@ define <16 x i8> @shl9(<16 x i8> %A) nounwind {
 ; X86-LABEL: shl9:
 ; X86:       # %bb.0:
 ; X86-NEXT:    psllw $3, %xmm0
-; X86-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shl9:
 ; X64:       # %bb.0:
 ; X64-NEXT:    psllw $3, %xmm0
-; X64-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    retq
   %B = shl <16 x i8> %A, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
   ret <16 x i8> %B
@@ -220,13 +220,13 @@ define <16 x i8> @shr9(<16 x i8> %A) nounwind {
 ; X86-LABEL: shr9:
 ; X86:       # %bb.0:
 ; X86-NEXT:    psrlw $3, %xmm0
-; X86-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shr9:
 ; X64:       # %bb.0:
 ; X64-NEXT:    psrlw $3, %xmm0
-; X64-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    retq
   %B = lshr <16 x i8> %A, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
   ret <16 x i8> %B
@@ -247,7 +247,7 @@ define <16 x i8> @sra_v16i8(<16 x i8> %A) nounwind {
 ; X86-LABEL: sra_v16i8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    psrlw $3, %xmm0
-; X86-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    movdqa {{.*#+}} xmm1 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
 ; X86-NEXT:    pxor %xmm1, %xmm0
 ; X86-NEXT:    psubb %xmm1, %xmm0
@@ -256,7 +256,7 @@ define <16 x i8> @sra_v16i8(<16 x i8> %A) nounwind {
 ; X64-LABEL: sra_v16i8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    psrlw $3, %xmm0
-; X64-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    movdqa {{.*#+}} xmm1 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
 ; X64-NEXT:    pxor %xmm1, %xmm0
 ; X64-NEXT:    psubb %xmm1, %xmm0

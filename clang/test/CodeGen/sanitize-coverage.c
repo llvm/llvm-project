@@ -19,4 +19,71 @@ void foo(int n) {
   if (n)
     x[n] = 42;
 }
+
+static inline __attribute__((__always_inline__)) void always_inlined_fn(int n) {
+  if (n)
+    x[n] = 42;
+}
+// CHECK-LABEL: define dso_local void @test_always_inline(
+void test_always_inline(int n) {
+  // CHECK-DAG: call void @__sanitizer_cov_trace_pc
+  // CHECK-DAG: call void @__sanitizer_cov_trace_const_cmp
+  always_inlined_fn(n);
+}
+
+// CHECK-LABEL: define dso_local void @test_no_sanitize_coverage(
+__attribute__((no_sanitize("coverage"))) void test_no_sanitize_coverage(int n) {
+  // CHECK-NOT: call void @__sanitizer_cov_trace_pc
+  // CHECK-NOT: call void @__sanitizer_cov_trace_const_cmp
+  // ASAN-DAG: call void @__asan_report_store
+  // MSAN-DAG: call void @__msan_warning
+  // BOUNDS-DAG: call void @__ubsan_handle_out_of_bounds
+  // TSAN-DAG: call void @__tsan_func_entry
+  // UBSAN-DAG: call void @__ubsan_handle
+  if (n)
+    x[n] = 42;
+}
+
+
+// CHECK-LABEL: define dso_local void @test_no_sanitize_combined(
+__attribute__((no_sanitize("address", "memory", "thread", "bounds", "undefined", "coverage")))
+void test_no_sanitize_combined(int n) {
+  // CHECK-NOT: call void @__sanitizer_cov_trace_pc
+  // CHECK-NOT: call void @__sanitizer_cov_trace_const_cmp
+  // ASAN-NOT: call void @__asan_report_store
+  // MSAN-NOT: call void @__msan_warning
+  // BOUNDS-NOT: call void @__ubsan_handle_out_of_bounds
+  // TSAN-NOT: call void @__tsan_func_entry
+  // UBSAN-NOT: call void @__ubsan_handle
+  if (n)
+    x[n] = 42;
+}
+
+// CHECK-LABEL: define dso_local void @test_no_sanitize_separate(
+__attribute__((no_sanitize("address")))
+__attribute__((no_sanitize("memory")))
+__attribute__((no_sanitize("thread")))
+__attribute__((no_sanitize("bounds")))
+__attribute__((no_sanitize("undefined")))
+__attribute__((no_sanitize("coverage")))
+void test_no_sanitize_separate(int n) {
+  // CHECK-NOT: call void @__sanitizer_cov_trace_pc
+  // CHECK-NOT: call void @__sanitizer_cov_trace_const_cmp
+  // ASAN-NOT: call void @__asan_report_store
+  // MSAN-NOT: call void @__msan_warning
+  // BOUNDS-NOT: call void @__ubsan_handle_out_of_bounds
+  // TSAN-NOT: call void @__tsan_func_entry
+  // UBSAN-NOT: call void @__ubsan_handle
+  if (n)
+    x[n] = 42;
+}
+
+// CHECK-LABEL: define dso_local void @test_no_sanitize_always_inline(
+__attribute__((no_sanitize("coverage")))
+void test_no_sanitize_always_inline(int n) {
+  // CHECK-NOT: call void @__sanitizer_cov_trace_pc
+  // CHECK-NOT: call void @__sanitizer_cov_trace_const_cmp
+  always_inlined_fn(n);
+}
+
 // CHECK-LABEL: declare void

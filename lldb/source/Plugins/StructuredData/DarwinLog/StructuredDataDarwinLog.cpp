@@ -8,7 +8,7 @@
 
 #include "StructuredDataDarwinLog.h"
 
-#include <string.h>
+#include <cstring>
 
 #include <memory>
 #include <sstream>

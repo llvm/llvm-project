@@ -19,14 +19,12 @@
 /*
  * Helper functions
  */
-const char *get_atmi_error_string(atmi_status_t err) {
+const char *get_atmi_error_string(hsa_status_t err) {
   switch (err) {
-  case ATMI_STATUS_SUCCESS:
-    return "ATMI_STATUS_SUCCESS";
-  case ATMI_STATUS_UNKNOWN:
-    return "ATMI_STATUS_UNKNOWN";
-  case ATMI_STATUS_ERROR:
-    return "ATMI_STATUS_ERROR";
+  case HSA_STATUS_SUCCESS:
+    return "HSA_STATUS_SUCCESS";
+  case HSA_STATUS_ERROR:
+    return "HSA_STATUS_ERROR";
   default:
     return "";
   }

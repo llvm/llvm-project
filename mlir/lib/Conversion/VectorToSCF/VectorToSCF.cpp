@@ -487,6 +487,10 @@ LogicalResult checkPrepareXferOp(OpTy xferOp,
     return failure();
   if (xferOp.getShapedType().template isa<RankedTensorType>())
     return failure();
+  // Transfer ops that modify the element type are not supported atm.
+  if (xferOp.getVectorType().getElementType() !=
+      xferOp.getShapedType().getElementType())
+    return failure();
   return success();
 }
 
@@ -806,6 +810,10 @@ struct UnrollTransferReadConversion
       return failure();
     if (xferOp.getShapedType().template isa<RankedTensorType>())
       return failure();
+    // Transfer ops that modify the element type are not supported atm.
+    if (xferOp.getVectorType().getElementType() !=
+        xferOp.getShapedType().getElementType())
+      return failure();
 
     auto insertOp = getInsertOp(xferOp);
     auto vec = getResultVector(xferOp, rewriter);
@@ -923,6 +931,10 @@ struct UnrollTransferWriteConversion
     if (xferOp.getVectorType().getRank() <= options.targetRank)
       return failure();
     if (xferOp.getShapedType().template isa<RankedTensorType>())
+      return failure();
+    // Transfer ops that modify the element type are not supported atm.
+    if (xferOp.getVectorType().getElementType() !=
+        xferOp.getShapedType().getElementType())
       return failure();
 
     auto vec = getDataVector(xferOp);
@@ -1066,7 +1078,7 @@ static bool isLastMemrefDimUnitStride(MemRefType type) {
   int64_t offset;
   SmallVector<int64_t, 4> strides;
   auto successStrides = getStridesAndOffset(type, strides, offset);
-  return succeeded(successStrides) && strides.back() == 1;
+  return succeeded(successStrides) && (strides.empty() || strides.back() == 1);
 }
 
 /// Lower a 1D vector transfer op to SCF using scalar loads/stores. This is

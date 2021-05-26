@@ -1830,7 +1830,7 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
   // This is the actual hook for the custom op parsing, usually implemented by
   // the op itself (`Op::parse()`). We retrieve it either from the
   // AbstractOperation or from the Dialect.
-  std::function<ParseResult(OpAsmParser &, OperationState &)> parseAssemblyFn;
+  function_ref<ParseResult(OpAsmParser &, OperationState &)> parseAssemblyFn;
   bool isIsolatedFromAbove = false;
 
   if (opDefinition) {

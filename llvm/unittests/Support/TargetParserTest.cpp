@@ -143,7 +143,6 @@ INSTANTIATE_TEST_SUITE_P(
         ARMCPUTestParams("arm920", "armv4t", "none", ARM::AEK_NONE, "4T"),
         ARMCPUTestParams("arm920t", "armv4t", "none", ARM::AEK_NONE, "4T"),
         ARMCPUTestParams("arm922t", "armv4t", "none", ARM::AEK_NONE, "4T"),
-        ARMCPUTestParams("arm9312", "armv4t", "none", ARM::AEK_NONE, "4T"),
         ARMCPUTestParams("arm940t", "armv4t", "none", ARM::AEK_NONE, "4T"),
         ARMCPUTestParams("ep9312", "armv4t", "none", ARM::AEK_NONE, "4T"),
         ARMCPUTestParams("arm10tdmi", "armv5t", "none", ARM::AEK_NONE, "5T"),
@@ -167,8 +166,6 @@ INSTANTIATE_TEST_SUITE_P(
         ARMCPUTestParams("arm1136j-s", "armv6", "none",
                          ARM::AEK_NONE | ARM::AEK_DSP, "6"),
         ARMCPUTestParams("arm1136jf-s", "armv6", "vfpv2",
-                         ARM::AEK_NONE | ARM::AEK_DSP, "6"),
-        ARMCPUTestParams("arm1136jz-s", "armv6", "none",
                          ARM::AEK_NONE | ARM::AEK_DSP, "6"),
         ARMCPUTestParams("arm1176jz-s", "armv6kz", "none",
                          ARM::AEK_NONE | ARM::AEK_SEC | ARM::AEK_DSP, "6KZ"),
@@ -391,7 +388,7 @@ INSTANTIATE_TEST_SUITE_P(
                          ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                          "7-S")));
 
-static constexpr unsigned NumARMCPUArchs = 92;
+static constexpr unsigned NumARMCPUArchs = 90;
 
 TEST(TargetParserTest, testARMCPUArchList) {
   SmallVector<StringRef, NumARMCPUArchs> List;
@@ -550,8 +547,6 @@ TEST(TargetParserTest, testARMExtension) {
   EXPECT_FALSE(testARMExtension("arm926ej-s",
                                 ARM::ArchKind::INVALID, "simd"));
   EXPECT_FALSE(testARMExtension("arm1136jf-s",
-                                ARM::ArchKind::INVALID, "crypto"));
-  EXPECT_FALSE(testARMExtension("arm1176j-s",
                                 ARM::ArchKind::INVALID, "crypto"));
   EXPECT_FALSE(testARMExtension("arm1156t2-s",
                                 ARM::ArchKind::INVALID, "crypto"));

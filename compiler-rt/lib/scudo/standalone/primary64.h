@@ -57,7 +57,8 @@ public:
 
   static bool canAllocate(uptr Size) { return Size <= SizeClassMap::MaxSize; }
 
-  void initLinkerInitialized(s32 ReleaseToOsInterval) {
+  void init(s32 ReleaseToOsInterval) {
+    DCHECK_EQ(PrimaryBase, 0U);
     // Reserve the space required for the Primary.
     PrimaryBase = reinterpret_cast<uptr>(
         map(nullptr, PrimarySize, nullptr, MAP_NOACCESS, &Data));
@@ -77,13 +78,14 @@ public:
     }
     setOption(Option::ReleaseInterval, static_cast<sptr>(ReleaseToOsInterval));
   }
-  void init(s32 ReleaseToOsInterval) {
-    memset(this, 0, sizeof(*this));
-    initLinkerInitialized(ReleaseToOsInterval);
-  }
 
   void unmapTestOnly() {
+    for (uptr I = 0; I < NumClasses; I++) {
+      RegionInfo *Region = getRegionInfo(I);
+      *Region = {};
+    }
     unmap(reinterpret_cast<void *>(PrimaryBase), PrimarySize, UNMAP_ALL, &Data);
+    PrimaryBase = 0U;
   }
 
   TransferBatch *popBatch(CacheT *C, uptr ClassId) {

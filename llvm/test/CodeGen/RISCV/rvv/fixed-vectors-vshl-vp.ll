@@ -943,16 +943,8 @@ define <2 x i64> @vsll_vv_v2i64_unmasked(<2 x i64> %va, <2 x i64> %b, i32 zeroex
 define <2 x i64> @vsll_vx_v2i64(<2 x i64> %va, i64 %b, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vsll_vx_v2i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
-; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    vsetivli a0, 2, e64,m1,ta,mu
-; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vlse64.v v25, (a0), zero
-; RV32-NEXT:    vsetvli a0, a2, e64,m1,ta,mu
-; RV32-NEXT:    vsll.vv v8, v8, v25, v0.t
-; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    vsetvli a1, a2, e64,m1,ta,mu
+; RV32-NEXT:    vsll.vx v8, v8, a0, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vsll_vx_v2i64:
@@ -969,16 +961,8 @@ define <2 x i64> @vsll_vx_v2i64(<2 x i64> %va, i64 %b, <2 x i1> %m, i32 zeroext 
 define <2 x i64> @vsll_vx_v2i64_unmasked(<2 x i64> %va, i64 %b, i32 zeroext %evl) {
 ; RV32-LABEL: vsll_vx_v2i64_unmasked:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
-; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    vsetivli a0, 2, e64,m1,ta,mu
-; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vlse64.v v25, (a0), zero
-; RV32-NEXT:    vsetvli a0, a2, e64,m1,ta,mu
-; RV32-NEXT:    vsll.vv v8, v8, v25
-; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    vsetvli a1, a2, e64,m1,ta,mu
+; RV32-NEXT:    vsll.vx v8, v8, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vsll_vx_v2i64_unmasked:
@@ -1047,16 +1031,8 @@ define <4 x i64> @vsll_vv_v4i64_unmasked(<4 x i64> %va, <4 x i64> %b, i32 zeroex
 define <4 x i64> @vsll_vx_v4i64(<4 x i64> %va, i64 %b, <4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vsll_vx_v4i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
-; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    vsetivli a0, 4, e64,m2,ta,mu
-; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vlse64.v v26, (a0), zero
-; RV32-NEXT:    vsetvli a0, a2, e64,m2,ta,mu
-; RV32-NEXT:    vsll.vv v8, v8, v26, v0.t
-; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    vsetvli a1, a2, e64,m2,ta,mu
+; RV32-NEXT:    vsll.vx v8, v8, a0, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vsll_vx_v4i64:
@@ -1073,16 +1049,8 @@ define <4 x i64> @vsll_vx_v4i64(<4 x i64> %va, i64 %b, <4 x i1> %m, i32 zeroext 
 define <4 x i64> @vsll_vx_v4i64_unmasked(<4 x i64> %va, i64 %b, i32 zeroext %evl) {
 ; RV32-LABEL: vsll_vx_v4i64_unmasked:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
-; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    vsetivli a0, 4, e64,m2,ta,mu
-; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vlse64.v v26, (a0), zero
-; RV32-NEXT:    vsetvli a0, a2, e64,m2,ta,mu
-; RV32-NEXT:    vsll.vv v8, v8, v26
-; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    vsetvli a1, a2, e64,m2,ta,mu
+; RV32-NEXT:    vsll.vx v8, v8, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vsll_vx_v4i64_unmasked:
@@ -1151,16 +1119,8 @@ define <8 x i64> @vsll_vv_v8i64_unmasked(<8 x i64> %va, <8 x i64> %b, i32 zeroex
 define <8 x i64> @vsll_vx_v8i64(<8 x i64> %va, i64 %b, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vsll_vx_v8i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
-; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    vsetivli a0, 8, e64,m4,ta,mu
-; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vlse64.v v28, (a0), zero
-; RV32-NEXT:    vsetvli a0, a2, e64,m4,ta,mu
-; RV32-NEXT:    vsll.vv v8, v8, v28, v0.t
-; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    vsetvli a1, a2, e64,m4,ta,mu
+; RV32-NEXT:    vsll.vx v8, v8, a0, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vsll_vx_v8i64:
@@ -1177,16 +1137,8 @@ define <8 x i64> @vsll_vx_v8i64(<8 x i64> %va, i64 %b, <8 x i1> %m, i32 zeroext 
 define <8 x i64> @vsll_vx_v8i64_unmasked(<8 x i64> %va, i64 %b, i32 zeroext %evl) {
 ; RV32-LABEL: vsll_vx_v8i64_unmasked:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
-; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    vsetivli a0, 8, e64,m4,ta,mu
-; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vlse64.v v28, (a0), zero
-; RV32-NEXT:    vsetvli a0, a2, e64,m4,ta,mu
-; RV32-NEXT:    vsll.vv v8, v8, v28
-; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    vsetvli a1, a2, e64,m4,ta,mu
+; RV32-NEXT:    vsll.vx v8, v8, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vsll_vx_v8i64_unmasked:
@@ -1255,16 +1207,8 @@ define <16 x i64> @vsll_vv_v16i64_unmasked(<16 x i64> %va, <16 x i64> %b, i32 ze
 define <16 x i64> @vsll_vx_v16i64(<16 x i64> %va, i64 %b, <16 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vsll_vx_v16i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
-; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    vsetivli a0, 16, e64,m8,ta,mu
-; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vlse64.v v16, (a0), zero
-; RV32-NEXT:    vsetvli a0, a2, e64,m8,ta,mu
-; RV32-NEXT:    vsll.vv v8, v8, v16, v0.t
-; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    vsetvli a1, a2, e64,m8,ta,mu
+; RV32-NEXT:    vsll.vx v8, v8, a0, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vsll_vx_v16i64:
@@ -1281,16 +1225,8 @@ define <16 x i64> @vsll_vx_v16i64(<16 x i64> %va, i64 %b, <16 x i1> %m, i32 zero
 define <16 x i64> @vsll_vx_v16i64_unmasked(<16 x i64> %va, i64 %b, i32 zeroext %evl) {
 ; RV32-LABEL: vsll_vx_v16i64_unmasked:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
-; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    vsetivli a0, 16, e64,m8,ta,mu
-; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vlse64.v v16, (a0), zero
-; RV32-NEXT:    vsetvli a0, a2, e64,m8,ta,mu
-; RV32-NEXT:    vsll.vv v8, v8, v16
-; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    vsetvli a1, a2, e64,m8,ta,mu
+; RV32-NEXT:    vsll.vx v8, v8, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vsll_vx_v16i64_unmasked:

@@ -16,7 +16,7 @@
 
 #include <memory>
 
-#include <inttypes.h>
+#include <cinttypes>
 
 using namespace lldb;
 using namespace lldb_private;

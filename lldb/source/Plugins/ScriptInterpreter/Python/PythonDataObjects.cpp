@@ -24,7 +24,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errno.h"
 
-#include <stdio.h>
+#include <cstdio>
 
 using namespace lldb_private;
 using namespace lldb;

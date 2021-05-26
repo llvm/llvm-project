@@ -217,6 +217,7 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
     return OnlyPred;
   };
   DenseMap<Value *, const SCEV *> FirstIterSCEV;
+  SmallPtrSet<BasicBlock *, 4> Visited;
 
   // Use the following algorithm to prove we never take the latch on the 1st
   // iteration:
@@ -229,6 +230,8 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
   // 3b. If we cannot prove it, conservatively assume that all successors are
   //     live.
   for (auto *BB : RPOT) {
+    Visited.insert(BB);
+
     // This block is not reachable on the 1st iterations.
     if (!LiveBlocks.count(BB))
       continue;
@@ -238,6 +241,14 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
       MarkAllSuccessorsLive(BB);
       continue;
     }
+
+    // If RPOT exists, we should never visit a block before all of its
+    // predecessors are visited. The only situation when this can be broken is
+    // irreducible CFG. Do not deal with such cases.
+    if (BB != Header)
+      for (auto *Pred : predecessors(BB))
+        if (!Visited.count(Pred))
+          return false;
 
     // If this block has only one live pred, map its phis onto their SCEVs.
     if (auto *OnlyPred = GetSolePredecessorOnFirstIteration(BB))
@@ -272,10 +283,12 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
     // Can we prove constant true or false for this condition?
     const SCEV *LHSS = getSCEVOnFirstIteration(LHS, L, SE, FirstIterSCEV);
     const SCEV *RHSS = getSCEVOnFirstIteration(RHS, L, SE, FirstIterSCEV);
-    if (SE.isKnownPredicateAt(Pred, LHSS, RHSS, BB->getTerminator()))
+    // TODO: isKnownPredicateAt is more powerful, but it's too compile time
+    // consuming. So we avoid using it here.
+    if (SE.isKnownPredicate(Pred, LHSS, RHSS))
       MarkLiveEdge(BB, BB->getTerminator()->getSuccessor(0));
-    else if (SE.isKnownPredicateAt(ICmpInst::getInversePredicate(Pred), LHSS,
-                                   RHSS, BB->getTerminator()))
+    else if (SE.isKnownPredicate(ICmpInst::getInversePredicate(Pred), LHSS,
+                                 RHSS))
       MarkLiveEdge(BB, BB->getTerminator()->getSuccessor(1));
     else
       MarkAllSuccessorsLive(BB);

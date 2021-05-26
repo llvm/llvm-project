@@ -115,7 +115,7 @@ of the benefits that MLIR provides, in no particular order:
 ### A Lossless Human Editable Textual Representation
 
 The MLIR in-memory data structure has a human readable and writable format, as
-well as [a specification](LangRef.md) for that format - built just like any
+well as [a specification](../LangRef.md) for that format - built just like any
 other programming language. Important properties of this format are that it is
 compact, easy to read, and lossless. You can dump an MLIR program out to disk
 and munge around with it, then send it through a few more passes.
@@ -167,7 +167,7 @@ turned into zero:
 The "CHECK" comments are interpreted by the
 [LLVM FileCheck tool](https://llvm.org/docs/CommandGuide/FileCheck.html), which
 is sort of like a really advanced grep. This test is fully self-contained: it
-feeds the input into the [canonicalize pass](Canonicalization.md), and checks
+feeds the input into the [canonicalize pass](../Canonicalization.md), and checks
 that the output matches the CHECK lines. See the `test/Transforms` directory for
 more examples. In contrast, standard unit testing exposes the API of the
 underlying framework to lots and lots of tests (making it harder to refactor and
@@ -238,7 +238,7 @@ and use this information when available, but because TensorFlow graphs don't
 capture this (e.g. serialize it to proto), passes have to recompute it on demand
 with ShapeRefiner.
 
-The [MLIR Tensor Type](LangRef.md#tensor-type) directly captures shape
+The [MLIR Tensor Type](../Dialects/Builtin.md/#rankedtensortype) directly captures shape
 information, so you can have things like:
 
 ```mlir

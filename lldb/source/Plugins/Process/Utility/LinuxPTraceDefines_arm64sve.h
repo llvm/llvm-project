@@ -9,7 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_LINUXPTRACEDEFINES_ARM64SVE_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_LINUXPTRACEDEFINES_ARM64SVE_H
 
-#include <stdint.h>
+#include <cstdint>
 
 namespace lldb_private {
 namespace sve {

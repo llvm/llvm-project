@@ -7,7 +7,7 @@
 ; CHECK-NOT: llvm.amdgcn.module.lds.t
 
 ; var1, var2 would be transformed were they used from a non-kernel function
-; CHECK: @var1 = addrspace(3) global i32 undef
+; CHECK-NOT: @var1 =
 ; CHECK: @var2 = addrspace(3) global float undef
 @var1 = addrspace(3) global i32 undef
 @var2 = addrspace(3) global float undef
@@ -36,7 +36,7 @@
 @toself = addrspace(3) global float addrspace(3)* bitcast (float addrspace(3)* addrspace(3)* @toself to float addrspace(3)*), align 8
 
 ; Use by .used lists doesn't trigger lowering
-; CHECK: @llvm.used = appending global [1 x i8*] [i8* addrspacecast (i8 addrspace(3)* bitcast (i32 addrspace(3)* @var1 to i8 addrspace(3)*) to i8*)], section "llvm.metadata"
+; CHECK-NOT: @llvm.used =
 @llvm.used = appending global [1 x i8*] [i8* addrspacecast (i8 addrspace(3)* bitcast (i32 addrspace(3)* @var1 to i8 addrspace(3)*) to i8*)], section "llvm.metadata"
 
 ; CHECK: @llvm.compiler.used = appending global [1 x i8*] [i8* addrspacecast (i8 addrspace(3)* bitcast (float addrspace(3)* @var2 to i8 addrspace(3)*) to i8*)], section "llvm.metadata"
@@ -58,9 +58,8 @@ define void @use_variables() {
   ret void
 }
 
-; Use by kernel doesn't trigger lowering
 ; CHECK-LABEL: @kern_use()
-; CHECK: %inc = atomicrmw add i32 addrspace(3)* @var1, i32 1 monotonic
+; CHECK: %inc = atomicrmw add i32 addrspace(3)* getelementptr inbounds (%llvm.amdgcn.kernel.kern_use.lds.t, %llvm.amdgcn.kernel.kern_use.lds.t addrspace(3)* @llvm.amdgcn.kernel.kern_use.lds, i32 0, i32 0), i32 1 monotonic, align 4
 define amdgpu_kernel void @kern_use() {
   %inc = atomicrmw add i32 addrspace(3)* @var1, i32 1 monotonic
   call void @use_variables()

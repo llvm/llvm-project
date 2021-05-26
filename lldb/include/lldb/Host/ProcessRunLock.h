@@ -9,8 +9,8 @@
 #ifndef LLDB_HOST_PROCESSRUNLOCK_H
 #define LLDB_HOST_PROCESSRUNLOCK_H
 
-#include <stdint.h>
-#include <time.h>
+#include <cstdint>
+#include <ctime>
 
 #include "lldb/lldb-defines.h"
 

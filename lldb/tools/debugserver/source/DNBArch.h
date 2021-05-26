@@ -16,8 +16,8 @@
 #include "DNBDefs.h"
 #include "MacOSX/MachException.h"
 
+#include <cstdio>
 #include <mach/mach.h>
-#include <stdio.h>
 
 struct DNBRegisterValue;
 struct DNBRegisterSetInfo;

@@ -20,7 +20,7 @@
 #include "llvm/Support/FileSystem.h"
 
 #if !defined(_WIN32)
-#include <limits.h>
+#include <climits>
 #endif
 
 using namespace lldb;

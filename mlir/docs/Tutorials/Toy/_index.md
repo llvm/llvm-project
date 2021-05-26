@@ -2,7 +2,7 @@
 
 This tutorial runs through the implementation of a basic toy language on top of
 MLIR. The goal of this tutorial is to introduce the concepts of MLIR; in
-particular, how [dialects](../../LangRef.md#dialects) can help easily support
+particular, how [dialects](../../LangRef.md/#dialects) can help easily support
 language specific constructs and transformations while still offering an easy
 path to lower to LLVM or other codegen infrastructure. This tutorial is based on
 the model of the
@@ -13,7 +13,7 @@ from the 2020 LLVM Dev Conference ([slides](https://llvm.org/devmtg/2020-09/slid
 
 This tutorial assumes you have cloned and built MLIR; if you have not yet done
 so, see
-[Getting started with MLIR](https://mlir.llvm.org/getting_started/).
+[Getting started with MLIR](../../../getting_started/).
 
 This tutorial is divided in the following chapters:
 

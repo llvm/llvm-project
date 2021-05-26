@@ -14,7 +14,7 @@
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Utility/Stream.h"
 
-#include <limits.h>
+#include <climits>
 
 using namespace lldb;
 using namespace lldb_private;

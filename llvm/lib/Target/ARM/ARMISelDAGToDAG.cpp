@@ -1945,7 +1945,13 @@ static bool isVLDfixed(unsigned Opc)
   case ARM::VLD1d64Qwb_fixed : return true;
   case ARM::VLD1d32wb_fixed : return true;
   case ARM::VLD1d64wb_fixed : return true;
+  case ARM::VLD1d8TPseudoWB_fixed : return true;
+  case ARM::VLD1d16TPseudoWB_fixed : return true;
+  case ARM::VLD1d32TPseudoWB_fixed : return true;
   case ARM::VLD1d64TPseudoWB_fixed : return true;
+  case ARM::VLD1d8QPseudoWB_fixed : return true;
+  case ARM::VLD1d16QPseudoWB_fixed : return true;
+  case ARM::VLD1d32QPseudoWB_fixed : return true;
   case ARM::VLD1d64QPseudoWB_fixed : return true;
   case ARM::VLD1q8wb_fixed : return true;
   case ARM::VLD1q16wb_fixed : return true;
@@ -2015,7 +2021,13 @@ static unsigned getVLDSTRegisterUpdateOpcode(unsigned Opc) {
   case ARM::VLD1q64wb_fixed: return ARM::VLD1q64wb_register;
   case ARM::VLD1d64Twb_fixed: return ARM::VLD1d64Twb_register;
   case ARM::VLD1d64Qwb_fixed: return ARM::VLD1d64Qwb_register;
+  case ARM::VLD1d8TPseudoWB_fixed: return ARM::VLD1d8TPseudoWB_register;
+  case ARM::VLD1d16TPseudoWB_fixed: return ARM::VLD1d16TPseudoWB_register;
+  case ARM::VLD1d32TPseudoWB_fixed: return ARM::VLD1d32TPseudoWB_register;
   case ARM::VLD1d64TPseudoWB_fixed: return ARM::VLD1d64TPseudoWB_register;
+  case ARM::VLD1d8QPseudoWB_fixed: return ARM::VLD1d8QPseudoWB_register;
+  case ARM::VLD1d16QPseudoWB_fixed: return ARM::VLD1d16QPseudoWB_register;
+  case ARM::VLD1d32QPseudoWB_fixed: return ARM::VLD1d32QPseudoWB_register;
   case ARM::VLD1d64QPseudoWB_fixed: return ARM::VLD1d64QPseudoWB_register;
   case ARM::VLD1DUPd8wb_fixed : return ARM::VLD1DUPd8wb_register;
   case ARM::VLD1DUPd16wb_fixed : return ARM::VLD1DUPd16wb_register;
@@ -4279,6 +4291,54 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
       SelectMVE_VLD(N, 4, Opcodes, true);
     }
     return;
+  }
+
+  case ARMISD::VLD1x2_UPD: {
+    if (Subtarget->hasNEON()) {
+      static const uint16_t DOpcodes[] = {
+          ARM::VLD1q8wb_fixed, ARM::VLD1q16wb_fixed, ARM::VLD1q32wb_fixed,
+          ARM::VLD1q64wb_fixed};
+      static const uint16_t QOpcodes[] = {
+          ARM::VLD1d8QPseudoWB_fixed, ARM::VLD1d16QPseudoWB_fixed,
+          ARM::VLD1d32QPseudoWB_fixed, ARM::VLD1d64QPseudoWB_fixed};
+      SelectVLD(N, true, 2, DOpcodes, QOpcodes, nullptr);
+      return;
+    }
+    break;
+  }
+
+  case ARMISD::VLD1x3_UPD: {
+    if (Subtarget->hasNEON()) {
+      static const uint16_t DOpcodes[] = {
+          ARM::VLD1d8TPseudoWB_fixed, ARM::VLD1d16TPseudoWB_fixed,
+          ARM::VLD1d32TPseudoWB_fixed, ARM::VLD1d64TPseudoWB_fixed};
+      static const uint16_t QOpcodes0[] = {
+          ARM::VLD1q8LowTPseudo_UPD, ARM::VLD1q16LowTPseudo_UPD,
+          ARM::VLD1q32LowTPseudo_UPD, ARM::VLD1q64LowTPseudo_UPD};
+      static const uint16_t QOpcodes1[] = {
+          ARM::VLD1q8HighTPseudo_UPD, ARM::VLD1q16HighTPseudo_UPD,
+          ARM::VLD1q32HighTPseudo_UPD, ARM::VLD1q64HighTPseudo_UPD};
+      SelectVLD(N, true, 3, DOpcodes, QOpcodes0, QOpcodes1);
+      return;
+    }
+    break;
+  }
+
+  case ARMISD::VLD1x4_UPD: {
+    if (Subtarget->hasNEON()) {
+      static const uint16_t DOpcodes[] = {
+          ARM::VLD1d8QPseudoWB_fixed, ARM::VLD1d16QPseudoWB_fixed,
+          ARM::VLD1d32QPseudoWB_fixed, ARM::VLD1d64QPseudoWB_fixed};
+      static const uint16_t QOpcodes0[] = {
+          ARM::VLD1q8LowQPseudo_UPD, ARM::VLD1q16LowQPseudo_UPD,
+          ARM::VLD1q32LowQPseudo_UPD, ARM::VLD1q64LowQPseudo_UPD};
+      static const uint16_t QOpcodes1[] = {
+          ARM::VLD1q8HighQPseudo_UPD, ARM::VLD1q16HighQPseudo_UPD,
+          ARM::VLD1q32HighQPseudo_UPD, ARM::VLD1q64HighQPseudo_UPD};
+      SelectVLD(N, true, 4, DOpcodes, QOpcodes0, QOpcodes1);
+      return;
+    }
+    break;
   }
 
   case ARMISD::VLD2LN_UPD: {

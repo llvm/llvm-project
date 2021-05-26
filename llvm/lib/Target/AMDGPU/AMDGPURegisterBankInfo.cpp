@@ -1977,6 +1977,22 @@ bool AMDGPURegisterBankInfo::foldExtractEltToCmpSelect(
   return true;
 }
 
+// Insert a cross regbank copy for a register if it already has a bank that
+// differs from the one we want to set.
+static Register constrainRegToBank(MachineRegisterInfo &MRI,
+                                   MachineIRBuilder &B, Register &Reg,
+                                   const RegisterBank &Bank) {
+  const RegisterBank *CurrBank = MRI.getRegBankOrNull(Reg);
+  if (CurrBank && *CurrBank != Bank) {
+    Register Copy = B.buildCopy(MRI.getType(Reg), Reg).getReg(0);
+    MRI.setRegBank(Copy, Bank);
+    return Copy;
+  }
+
+  MRI.setRegBank(Reg, Bank);
+  return Reg;
+}
+
 bool AMDGPURegisterBankInfo::foldInsertEltToCmpSelect(
   MachineInstr &MI, MachineRegisterInfo &MRI,
   const OperandsMapper &OpdMapper) const {
@@ -2040,13 +2056,14 @@ bool AMDGPURegisterBankInfo::foldInsertEltToCmpSelect(
     MRI.setRegBank(Cmp->getOperand(0).getReg(), CCBank);
 
     for (unsigned L = 0; L < NumLanes; ++L) {
-      auto S = B.buildSelect(EltTy, Cmp, InsRegs[L],
-                             UnmergeToEltTy.getReg(I * NumLanes + L));
+      Register Op0 = constrainRegToBank(MRI, B, InsRegs[L], DstBank);
+      Register Op1 = UnmergeToEltTy.getReg(I * NumLanes + L);
+      Op1 = constrainRegToBank(MRI, B, Op1, DstBank);
 
-      for (unsigned N : { 0, 2, 3 })
-        MRI.setRegBank(S->getOperand(N).getReg(), DstBank);
+      Register Select = B.buildSelect(EltTy, Cmp, Op0, Op1).getReg(0);
+      MRI.setRegBank(Select, DstBank);
 
-      Ops[I * NumLanes + L] = S->getOperand(0).getReg();
+      Ops[I * NumLanes + L] = Select;
     }
   }
 

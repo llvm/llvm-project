@@ -192,3 +192,18 @@ func @alias_is_freed(%arg0 : memref<?xf32>) {
   memref.dealloc %1 : memref<32xf32>
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @dim_of_sized_view
+//  CHECK-SAME:   %{{[a-z0-9A-Z_]+}}: memref<?xi8>
+//  CHECK-SAME:   %[[SIZE:.[a-z0-9A-Z_]+]]: index
+//       CHECK:   return %[[SIZE]] : index
+func @dim_of_sized_view(%arg : memref<?xi8>, %size: index) -> index {
+  %c0 = constant 0 : index
+  %0 = memref.reinterpret_cast %arg to offset: [0], sizes: [%size], strides: [0] : memref<?xi8> to memref<?xi8>
+  %1 = memref.dim %0, %c0 : memref<?xi8>
+  return %1 : index
+}
+
+

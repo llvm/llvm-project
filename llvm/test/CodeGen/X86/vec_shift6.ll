@@ -11,12 +11,12 @@
 define <8 x i16> @test1(<8 x i16> %a) {
 ; SSE-LABEL: test1:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pmullw {{.*}}(%rip), %xmm0
+; SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test1:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmullw {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %shl = shl <8 x i16> %a, <i16 1, i16 1, i16 2, i16 3, i16 7, i16 0, i16 9, i16 11>
   ret <8 x i16> %shl
@@ -25,12 +25,12 @@ define <8 x i16> @test1(<8 x i16> %a) {
 define <8 x i16> @test2(<8 x i16> %a) {
 ; SSE-LABEL: test2:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pmullw {{.*}}(%rip), %xmm0
+; SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test2:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmullw {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %shl = shl <8 x i16> %a, <i16 0, i16 undef, i16 0, i16 0, i16 1, i16 undef, i16 -1, i16 1>
   ret <8 x i16> %shl
@@ -46,19 +46,19 @@ define <4 x i32> @test3(<4 x i32> %a) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; SSE2-NEXT:    pmuludq %xmm0, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; SSE2-NEXT:    pmuludq {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test3:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: test3:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpsllvd {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %shl = shl <4 x i32> %a, <i32 1, i32 -1, i32 2, i32 -3>
   ret <4 x i32> %shl
@@ -83,7 +83,7 @@ define <4 x i32> @test4(<4 x i32> %a) {
 ;
 ; AVX-LABEL: test4:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpsllvd {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %shl = shl <4 x i32> %a, <i32 0, i32 0, i32 1, i32 1>
   ret <4 x i32> %shl
@@ -103,7 +103,7 @@ define <16 x i16> @test5(<16 x i16> %a) {
 ;
 ; AVX-LABEL: test5:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmullw {{.*}}(%rip), %ymm0, %ymm0
+; AVX-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %shl = shl <16 x i16> %a, <i16 1, i16 1, i16 2, i16 3, i16 7, i16 0, i16 9, i16 11, i16 1, i16 1, i16 2, i16 3, i16 7, i16 0, i16 9, i16 11>
   ret <16 x i16> %shl
@@ -142,7 +142,7 @@ define <8 x i32> @test6(<8 x i32> %a) {
 ;
 ; AVX-LABEL: test6:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpsllvd {{.*}}(%rip), %ymm0, %ymm0
+; AVX-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %shl = shl <8 x i32> %a, <i32 1, i32 1, i32 2, i32 3, i32 1, i32 1, i32 2, i32 3>
   ret <8 x i32> %shl
@@ -237,7 +237,7 @@ define <16 x i32> @test8(<16 x i32> %a) {
 ;
 ; AVX512-LABEL: test8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsllvd {{.*}}(%rip), %zmm0, %zmm0
+; AVX512-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %shl = shl <16 x i32> %a, <i32 1, i32 1, i32 2, i32 3, i32 1, i32 1, i32 2, i32 3, i32 1, i32 1, i32 2, i32 3, i32 1, i32 1, i32 2, i32 3>
   ret <16 x i32> %shl
@@ -283,7 +283,7 @@ define <8 x i64> @test9(<8 x i64> %a) {
 ;
 ; AVX512-LABEL: test9:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsllvq {{.*}}(%rip), %zmm0, %zmm0
+; AVX512-NEXT:    vpsllvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %shl = shl <8 x i64> %a, <i64 1, i64 1, i64 2, i64 3, i64 1, i64 1, i64 2, i64 3>
   ret <8 x i64> %shl

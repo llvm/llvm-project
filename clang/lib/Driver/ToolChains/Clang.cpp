@@ -2411,6 +2411,8 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   for (const Arg *A :
        Args.filtered(options::OPT_Wa_COMMA, options::OPT_Xassembler,
                      options::OPT_mimplicit_it_EQ)) {
+    A->claim();
+
     if (A->getOption().getID() == options::OPT_mimplicit_it_EQ) {
       switch (C.getDefaultToolChain().getArch()) {
       case llvm::Triple::arm:
@@ -2427,8 +2429,6 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
         break;
       }
     }
-
-    A->claim();
 
     for (StringRef Value : A->getValues()) {
       if (TakeNextArg) {
@@ -5042,10 +5042,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Enable -mconstructor-aliases except on darwin, where we have to work around
   // a linker bug (see <rdar://problem/7651567>), and CUDA/AMDGPU device code,
-  // where aliases aren't supported. Similarly, aliases aren't yet supported
-  // for AIX.
-  if (!RawTriple.isOSDarwin() && !RawTriple.isNVPTX() &&
-      !RawTriple.isAMDGPU() && !RawTriple.isOSAIX())
+  // where aliases aren't supported.
+  if (!RawTriple.isOSDarwin() && !RawTriple.isNVPTX() && !RawTriple.isAMDGPU())
     CmdArgs.push_back("-mconstructor-aliases");
 
   // Darwin's kernel doesn't support guard variables; just die if we
@@ -6098,7 +6096,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       LanguageStandard = llvm::StringSwitch<StringRef>(StdArg->getValue())
                              .Case("c++14", "-std=c++14")
                              .Case("c++17", "-std=c++17")
-                             .Case("c++latest", "-std=c++20")
+                             .Case("c++20", "-std=c++20")
+                             .Case("c++latest", "-std=c++2b")
                              .Default("");
       if (LanguageStandard.empty())
         D.Diag(clang::diag::warn_drv_unused_argument)

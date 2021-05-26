@@ -9,9 +9,7 @@
 #ifndef LLDB_HOST_STRINGCONVERT_H
 #define LLDB_HOST_STRINGCONVERT_H
 
-#include <stdint.h>
-
-
+#include <cstdint>
 
 namespace lldb_private {
 

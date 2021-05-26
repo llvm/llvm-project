@@ -88,8 +88,8 @@ static buffer_t *atl_hcq_create_buffer(unsigned int num_packets) {
   uint32_t align = amd_hostcall_get_buffer_alignment();
   void *newbuffer = NULL;
   atmi_mem_place_t place = ATMI_MEM_PLACE_CPU_MEM(0, 0, 0);
-  atmi_status_t err = atmi_malloc(&newbuffer, size + align, place);
-  if (!newbuffer || (err != ATMI_STATUS_SUCCESS)) {
+  hsa_status_t err = atmi_malloc(&newbuffer, size + align, place);
+  if (!newbuffer || (err != HSA_STATUS_SUCCESS)) {
     printf("call to atmi_malloc failed \n");
     abort();
   }

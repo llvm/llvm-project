@@ -364,7 +364,13 @@ def Canonicalizer : Pass<"canonicalize"> {
   let constructor = "mlir::createCanonicalizerPass()";
   let options = [
     Option<"topDownProcessingEnabled", "top-down", "bool",
-           /*default=*/"false",
+           /*default=*/"true",
+           "Seed the worklist in general top-down order">,
+    Option<"enableRegionSimplification", "region-simplify", "bool",
+           /*default=*/"true",
+           "Seed the worklist in general top-down order">,
+    Option<"maxIterations", "max-iterations", "unsigned",
+           /*default=*/"10",
            "Seed the worklist in general top-down order">
   ];
 }

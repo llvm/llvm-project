@@ -11,7 +11,7 @@
 
 #include "llvm/ADT/StringRef.h"
 
-#include <stddef.h>
+#include <cstddef>
 #include <string>
 #include <vector>
 
