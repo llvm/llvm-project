@@ -423,8 +423,8 @@ define i32 @test19(i32 %x) {
 ; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr i32 [[X:%.*]], 31
 ; CHECK-NEXT:    ret i32 [[X_LOBIT]]
 ;
-  %tmp = icmp ugt i32 %x, 2147483647
-  %retval = select i1 %tmp, i32 -1, i32 0
+  %t = icmp ugt i32 %x, 2147483647
+  %retval = select i1 %t, i32 -1, i32 0
   ret i32 %retval
 }
 
@@ -433,8 +433,8 @@ define i32 @test20(i32 %x) {
 ; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr i32 [[X:%.*]], 31
 ; CHECK-NEXT:    ret i32 [[X_LOBIT]]
 ;
-  %tmp = icmp slt i32 %x, 0
-  %retval = select i1 %tmp, i32 -1, i32 0
+  %t = icmp slt i32 %x, 0
+  %retval = select i1 %t, i32 -1, i32 0
   ret i32 %retval
 }
 
@@ -444,8 +444,8 @@ define i64 @test21(i32 %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[X_LOBIT]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
-  %tmp = icmp slt i32 %x, 0
-  %retval = select i1 %tmp, i64 -1, i64 0
+  %t = icmp slt i32 %x, 0
+  %retval = select i1 %t, i64 -1, i64 0
   ret i64 %retval
 }
 
@@ -455,8 +455,8 @@ define i16 @test22(i32 %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X_LOBIT]] to i16
 ; CHECK-NEXT:    ret i16 [[TMP1]]
 ;
-  %tmp = icmp slt i32 %x, 0
-  %retval = select i1 %tmp, i16 -1, i16 0
+  %t = icmp slt i32 %x, 0
+  %retval = select i1 %t, i16 -1, i16 0
   ret i16 %retval
 }
 
@@ -728,15 +728,15 @@ define <2 x i32> @test42vec(<2 x i32> %x, <2 x i32> %y) {
 
 ; This select instruction can't be eliminated because trying to do so would
 ; change the number of vector elements. This used to assert.
-define i48 @test51(<3 x i1> %icmp, <3 x i16> %tmp) {
+define i48 @test51(<3 x i1> %icmp, <3 x i16> %t) {
 ; CHECK-LABEL: @test51(
-; CHECK-NEXT:    [[SELECT:%.*]] = select <3 x i1> [[ICMP:%.*]], <3 x i16> zeroinitializer, <3 x i16> [[TMP:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <3 x i16> [[SELECT]] to i48
-; CHECK-NEXT:    ret i48 [[TMP2]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select <3 x i1> [[ICMP:%.*]], <3 x i16> zeroinitializer, <3 x i16> [[T:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = bitcast <3 x i16> [[SELECT]] to i48
+; CHECK-NEXT:    ret i48 [[T2]]
 ;
-  %select = select <3 x i1> %icmp, <3 x i16> zeroinitializer, <3 x i16> %tmp
-  %tmp2 = bitcast <3 x i16> %select to i48
-  ret i48 %tmp2
+  %select = select <3 x i1> %icmp, <3 x i16> zeroinitializer, <3 x i16> %t
+  %t2 = bitcast <3 x i16> %select to i48
+  ret i48 %t2
 }
 
 define <vscale x 4 x float> @bitcast_select_bitcast(<vscale x 4 x i1> %icmp, <vscale x 4 x i32> %a, <vscale x 4 x float> %b) {
@@ -1150,16 +1150,16 @@ define i32 @test80(i1 %flag) {
 ; CHECK-NEXT:    [[Y:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    call void @scribble_on_i32(i32* nonnull [[X]])
 ; CHECK-NEXT:    call void @scribble_on_i32(i32* nonnull [[Y]])
-; CHECK-NEXT:    [[TMP:%.*]] = load i32, i32* [[X]], align 4
-; CHECK-NEXT:    store i32 [[TMP]], i32* [[Y]], align 4
-; CHECK-NEXT:    ret i32 [[TMP]]
+; CHECK-NEXT:    [[T:%.*]] = load i32, i32* [[X]], align 4
+; CHECK-NEXT:    store i32 [[T]], i32* [[Y]], align 4
+; CHECK-NEXT:    ret i32 [[T]]
 ;
   %x = alloca i32
   %y = alloca i32
   call void @scribble_on_i32(i32* %x)
   call void @scribble_on_i32(i32* %y)
-  %tmp = load i32, i32* %x
-  store i32 %tmp, i32* %y
+  %t = load i32, i32* %x
+  store i32 %t, i32* %y
   %p = select i1 %flag, i32* %x, i32* %y
   %v = load i32, i32* %p
   ret i32 %v
@@ -1173,9 +1173,9 @@ define float @test81(i1 %flag) {
 ; CHECK-NEXT:    [[Y:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    call void @scribble_on_i32(i32* nonnull [[X]])
 ; CHECK-NEXT:    call void @scribble_on_i32(i32* nonnull [[Y]])
-; CHECK-NEXT:    [[TMP:%.*]] = load i32, i32* [[X]], align 4
-; CHECK-NEXT:    store i32 [[TMP]], i32* [[Y]], align 4
-; CHECK-NEXT:    [[V:%.*]] = bitcast i32 [[TMP]] to float
+; CHECK-NEXT:    [[T:%.*]] = load i32, i32* [[X]], align 4
+; CHECK-NEXT:    store i32 [[T]], i32* [[Y]], align 4
+; CHECK-NEXT:    [[V:%.*]] = bitcast i32 [[T]] to float
 ; CHECK-NEXT:    ret float [[V]]
 ;
   %x = alloca float
@@ -1184,8 +1184,8 @@ define float @test81(i1 %flag) {
   %y1 = bitcast i32* %y to float*
   call void @scribble_on_i32(i32* %x1)
   call void @scribble_on_i32(i32* %y)
-  %tmp = load i32, i32* %x1
-  store i32 %tmp, i32* %y
+  %t = load i32, i32* %x1
+  store i32 %t, i32* %y
   %p = select i1 %flag, float* %x, float* %y1
   %v = load float, float* %p
   ret float %v
@@ -1201,9 +1201,9 @@ define i32 @test82(i1 %flag) {
 ; CHECK-NEXT:    [[Y1:%.*]] = bitcast i32* [[Y]] to float*
 ; CHECK-NEXT:    call void @scribble_on_i32(i32* nonnull [[X1]])
 ; CHECK-NEXT:    call void @scribble_on_i32(i32* nonnull [[Y]])
-; CHECK-NEXT:    [[TMP:%.*]] = load float, float* [[X]], align 4
-; CHECK-NEXT:    store float [[TMP]], float* [[Y1]], align 4
-; CHECK-NEXT:    [[V:%.*]] = bitcast float [[TMP]] to i32
+; CHECK-NEXT:    [[T:%.*]] = load float, float* [[X]], align 4
+; CHECK-NEXT:    store float [[T]], float* [[Y1]], align 4
+; CHECK-NEXT:    [[V:%.*]] = bitcast float [[T]] to i32
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
   %x = alloca float
@@ -1212,8 +1212,8 @@ define i32 @test82(i1 %flag) {
   %y1 = bitcast i32* %y to float*
   call void @scribble_on_i32(i32* %x1)
   call void @scribble_on_i32(i32* %y)
-  %tmp = load float, float* %x
-  store float %tmp, float* %y1
+  %t = load float, float* %x
+  store float %t, float* %y1
   %p = select i1 %flag, i32* %x1, i32* %y
   %v = load i32, i32* %p
   ret i32 %v
@@ -1232,9 +1232,9 @@ define i8* @test83(i1 %flag) {
 ; CHECK-NEXT:    [[X1:%.*]] = bitcast i8** [[X]] to i64*
 ; CHECK-NEXT:    call void @scribble_on_i64(i64* nonnull [[X1]])
 ; CHECK-NEXT:    call void @scribble_on_i64(i64* nonnull [[TMPCAST]])
-; CHECK-NEXT:    [[TMP:%.*]] = load i64, i64* [[X1]], align 8
-; CHECK-NEXT:    store i64 [[TMP]], i64* [[TMPCAST]], align 8
-; CHECK-NEXT:    [[V:%.*]] = inttoptr i64 [[TMP]] to i8*
+; CHECK-NEXT:    [[T:%.*]] = load i64, i64* [[X1]], align 8
+; CHECK-NEXT:    store i64 [[T]], i64* [[TMPCAST]], align 8
+; CHECK-NEXT:    [[V:%.*]] = inttoptr i64 [[T]] to i8*
 ; CHECK-NEXT:    ret i8* [[V]]
 ;
   %x = alloca i8*
@@ -1243,8 +1243,8 @@ define i8* @test83(i1 %flag) {
   %y1 = bitcast i64* %y to i8**
   call void @scribble_on_i64(i64* %x1)
   call void @scribble_on_i64(i64* %y)
-  %tmp = load i64, i64* %x1
-  store i64 %tmp, i64* %y
+  %t = load i64, i64* %x1
+  store i64 %t, i64* %y
   %p = select i1 %flag, i8** %x, i8** %y1
   %v = load i8*, i8** %p
   ret i8* %v
@@ -1260,9 +1260,9 @@ define i64 @test84(i1 %flag) {
 ; CHECK-NEXT:    [[X1:%.*]] = bitcast i8** [[X]] to i64*
 ; CHECK-NEXT:    call void @scribble_on_i64(i64* nonnull [[X1]])
 ; CHECK-NEXT:    call void @scribble_on_i64(i64* nonnull [[TMPCAST]])
-; CHECK-NEXT:    [[TMP:%.*]] = load i8*, i8** [[X]], align 8
-; CHECK-NEXT:    store i8* [[TMP]], i8** [[Y]], align 8
-; CHECK-NEXT:    [[V:%.*]] = ptrtoint i8* [[TMP]] to i64
+; CHECK-NEXT:    [[T:%.*]] = load i8*, i8** [[X]], align 8
+; CHECK-NEXT:    store i8* [[T]], i8** [[Y]], align 8
+; CHECK-NEXT:    [[V:%.*]] = ptrtoint i8* [[T]] to i64
 ; CHECK-NEXT:    ret i64 [[V]]
 ;
   %x = alloca i8*
@@ -1271,8 +1271,8 @@ define i64 @test84(i1 %flag) {
   %y1 = bitcast i64* %y to i8**
   call void @scribble_on_i64(i64* %x1)
   call void @scribble_on_i64(i64* %y)
-  %tmp = load i8*, i8** %x
-  store i8* %tmp, i8** %y1
+  %t = load i8*, i8** %x
+  store i8* %t, i8** %y1
   %p = select i1 %flag, i64* %x1, i64* %y
   %v = load i64, i64* %p
   ret i64 %v
@@ -1290,8 +1290,8 @@ define i8* @test85(i1 %flag) {
 ; CHECK-NEXT:    [[Y1:%.*]] = bitcast i128* [[Y]] to i8**
 ; CHECK-NEXT:    call void @scribble_on_i128(i128* nonnull [[X2]])
 ; CHECK-NEXT:    call void @scribble_on_i128(i128* nonnull [[Y]])
-; CHECK-NEXT:    [[TMP:%.*]] = load i128, i128* [[X2]], align 8
-; CHECK-NEXT:    store i128 [[TMP]], i128* [[Y]], align 8
+; CHECK-NEXT:    [[T:%.*]] = load i128, i128* [[X2]], align 8
+; CHECK-NEXT:    store i128 [[T]], i128* [[Y]], align 8
 ; CHECK-NEXT:    [[X1_SUB_VAL:%.*]] = load i8*, i8** [[X1_SUB]], align 8
 ; CHECK-NEXT:    [[Y1_VAL:%.*]] = load i8*, i8** [[Y1]], align 8
 ; CHECK-NEXT:    [[V:%.*]] = select i1 [[FLAG:%.*]], i8* [[X1_SUB_VAL]], i8* [[Y1_VAL]]
@@ -1304,8 +1304,8 @@ define i8* @test85(i1 %flag) {
   %y1 = bitcast i128* %y to i8**
   call void @scribble_on_i128(i128* %x2)
   call void @scribble_on_i128(i128* %y)
-  %tmp = load i128, i128* %x2
-  store i128 %tmp, i128* %y
+  %t = load i128, i128* %x2
+  store i128 %t, i128* %y
   %p = select i1 %flag, i8** %x1, i8** %y1
   %v = load i8*, i8** %p
   ret i8* %v
@@ -1323,8 +1323,8 @@ define i128 @test86(i1 %flag) {
 ; CHECK-NEXT:    [[Y1:%.*]] = bitcast i128* [[Y]] to i8**
 ; CHECK-NEXT:    call void @scribble_on_i128(i128* nonnull [[X2]])
 ; CHECK-NEXT:    call void @scribble_on_i128(i128* nonnull [[Y]])
-; CHECK-NEXT:    [[TMP:%.*]] = load i8*, i8** [[X1_SUB]], align 8
-; CHECK-NEXT:    store i8* [[TMP]], i8** [[Y1]], align 8
+; CHECK-NEXT:    [[T:%.*]] = load i8*, i8** [[X1_SUB]], align 8
+; CHECK-NEXT:    store i8* [[T]], i8** [[Y1]], align 8
 ; CHECK-NEXT:    [[X2_VAL:%.*]] = load i128, i128* [[X2]], align 8
 ; CHECK-NEXT:    [[Y_VAL:%.*]] = load i128, i128* [[Y]], align 8
 ; CHECK-NEXT:    [[V:%.*]] = select i1 [[FLAG:%.*]], i128 [[X2_VAL]], i128 [[Y_VAL]]
@@ -1337,8 +1337,8 @@ define i128 @test86(i1 %flag) {
   %y1 = bitcast i128* %y to i8**
   call void @scribble_on_i128(i128* %x2)
   call void @scribble_on_i128(i128* %y)
-  %tmp = load i8*, i8** %x1
-  store i8* %tmp, i8** %y1
+  %t = load i8*, i8** %x1
+  store i8* %t, i8** %y1
   %p = select i1 %flag, i128* %x2, i128* %y
   %v = load i128, i128* %p
   ret i128 %v
