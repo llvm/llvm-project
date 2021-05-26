@@ -1,5 +1,8 @@
 #include "foo.h"
 
+#include <vector>
+#include <map>
+
 static int static_int = 42;
 
 int non_static_int = 43;
@@ -25,5 +28,21 @@ int main(int argc, char const *argv[]) {
   }
   a_function(var3);
   foo_func();
+
+  std::vector<int> my_vec;
+  my_vec.push_back(1);
+  my_vec.push_back(2);
+  my_vec.push_back(3); // breakpoint 4
+
+  std::map<int, int> my_map;
+  my_map[1] = 2;
+  my_map[2] = 3;
+  my_map[3] = 4; // breakpoint 5
+
+  std::vector<bool> my_bool_vec;
+  my_bool_vec.push_back(true);
+  my_bool_vec.push_back(false); // breakpoint 6
+  my_bool_vec.push_back(true); // breakpoint 7
+  
   return 0;
 }
