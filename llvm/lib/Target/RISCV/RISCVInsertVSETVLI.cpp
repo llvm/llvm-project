@@ -438,7 +438,7 @@ bool RISCVInsertVSETVLI::computeVLVTYPEChanges(const MachineBasicBlock &MBB) {
 
     // If this is something that updates VL/VTYPE that we don't know about, set
     // the state to unknown.
-    if (MI.isCall() || MI.modifiesRegister(RISCV::VL) ||
+    if (MI.isCall() || MI.isInlineAsm() || MI.modifiesRegister(RISCV::VL) ||
         MI.modifiesRegister(RISCV::VTYPE)) {
       BBInfo.Change = VSETVLIInfo::getUnknown();
     }
@@ -540,7 +540,7 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
 
     // If this is something updates VL/VTYPE that we don't know about, set
     // the state to unknown.
-    if (MI.isCall() || MI.modifiesRegister(RISCV::VL) ||
+    if (MI.isCall() || MI.isInlineAsm() || MI.modifiesRegister(RISCV::VL) ||
         MI.modifiesRegister(RISCV::VTYPE)) {
       CurInfo = VSETVLIInfo::getUnknown();
     }
