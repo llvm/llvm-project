@@ -558,27 +558,27 @@ hsa_status_t callbackEvent(const hsa_amd_event_t *event, void *data) {
   return HSA_STATUS_SUCCESS;
 }
 
-atmi_status_t atl_init_gpu_context() {
+hsa_status_t atl_init_gpu_context() {
   if (atlc.struct_initialized == false)
     atmi_init_context_structs();
   if (atlc.g_gpu_initialized != false)
-    return ATMI_STATUS_SUCCESS;
+    return HSA_STATUS_SUCCESS;
 
   hsa_status_t err;
   err = init_hsa();
   if (err != HSA_STATUS_SUCCESS)
-    return ATMI_STATUS_ERROR;
+    return HSA_STATUS_ERROR;
 
   err = hsa_amd_register_system_event_handler(callbackEvent, NULL);
   if (err != HSA_STATUS_SUCCESS) {
     printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
            "Registering the system for memory faults", get_error_string(err));
-    return ATMI_STATUS_ERROR;
+    return HSA_STATUS_ERROR;
   }
 
   init_tasks();
   atlc.g_gpu_initialized = true;
-  return ATMI_STATUS_SUCCESS;
+  return HSA_STATUS_SUCCESS;
 }
 
 static bool isImplicit(KernelArgMD::ValueKind value_kind) {
@@ -1087,12 +1087,12 @@ populate_InfoTables(hsa_executable_symbol_t symbol, int gpu,
   return HSA_STATUS_SUCCESS;
 }
 
-atmi_status_t RegisterModuleFromMemory(
+hsa_status_t RegisterModuleFromMemory(
     std::map<std::string, atl_kernel_info_t> &KernelInfoTable,
     std::map<std::string, atl_symbol_info_t> &SymbolInfoTable,
     void *module_bytes, size_t module_size, atmi_place_t place,
-    atmi_status_t (*on_deserialized_data)(void *data, size_t size,
-                                          void *cb_state),
+    hsa_status_t (*on_deserialized_data)(void *data, size_t size,
+                                         void *cb_state),
     void *cb_state, std::vector<hsa_executable_t> &HSAExecutables) {
   hsa_status_t err;
   int gpu = place.device_id;
@@ -1108,7 +1108,7 @@ atmi_status_t RegisterModuleFromMemory(
   if (err != HSA_STATUS_SUCCESS) {
     printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
            "Query the agent profile", get_error_string(err));
-    return ATMI_STATUS_ERROR;
+    return HSA_STATUS_ERROR;
   }
   // FIXME: Assume that every profile is FULL until we understand how to build
   // GCN with base profile
@@ -1119,7 +1119,7 @@ atmi_status_t RegisterModuleFromMemory(
   if (err != HSA_STATUS_SUCCESS) {
     printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
            "Create the executable", get_error_string(err));
-    return ATMI_STATUS_ERROR;
+    return HSA_STATUS_ERROR;
   }
 
   bool module_load_success = false;
@@ -1152,9 +1152,9 @@ atmi_status_t RegisterModuleFromMemory(
       // Mutating the device image here avoids another allocation & memcpy
       void *code_object_alloc_data =
           reinterpret_cast<void *>(code_object.handle);
-      atmi_status_t atmi_err =
+      hsa_status_t atmi_err =
           on_deserialized_data(code_object_alloc_data, module_size, cb_state);
-      if (atmi_err != ATMI_STATUS_SUCCESS) {
+      if (atmi_err != HSA_STATUS_SUCCESS) {
         printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
                "Error in deserialized_data callback",
                get_atmi_error_string(atmi_err));
@@ -1181,7 +1181,7 @@ atmi_status_t RegisterModuleFromMemory(
     if (err != HSA_STATUS_SUCCESS) {
       printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
              "Freeze the executable", get_error_string(err));
-      return ATMI_STATUS_ERROR;
+      return HSA_STATUS_ERROR;
     }
 
     err = hsa::executable_iterate_symbols(
@@ -1193,14 +1193,14 @@ atmi_status_t RegisterModuleFromMemory(
     if (err != HSA_STATUS_SUCCESS) {
       printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
              "Iterating over symbols for execuatable", get_error_string(err));
-      return ATMI_STATUS_ERROR;
+      return HSA_STATUS_ERROR;
     }
 
     // save the executable and destroy during finalize
     HSAExecutables.push_back(executable);
-    return ATMI_STATUS_SUCCESS;
+    return HSA_STATUS_SUCCESS;
   } else {
-    return ATMI_STATUS_ERROR;
+    return HSA_STATUS_ERROR;
   }
 }
 
