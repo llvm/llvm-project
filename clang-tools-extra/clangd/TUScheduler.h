@@ -169,6 +169,11 @@ public:
 
   /// Called whenever the TU status is updated.
   virtual void onFileUpdated(PathRef File, const TUStatus &Status) {}
+
+  /// Preamble for the TU have changed. This might imply new semantics (e.g.
+  /// different highlightings). Any actions on the file are guranteed to see new
+  /// preamble after the callback.
+  virtual void onPreamblePublished(PathRef File) {}
 };
 
 /// Handles running tasks for ClangdServer and managing the resources (e.g.,
