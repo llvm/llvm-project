@@ -38,7 +38,7 @@ body: |
     ; CHECK: $x2 = frame-setup ADDI $x2, -240
     ; CHECK: $x12 = PseudoReadVLENB
     ; CHECK: $x2 = SUB $x2, killed $x12
-    ; CHECK: dead renamable $x11 = PseudoVSETVLI killed renamable $x11, 88, implicit-def $vl, implicit-def $vtype
+    ; CHECK: dead $x0 = PseudoVSETVLI killed renamable $x11, 88, implicit-def $vl, implicit-def $vtype
     ; CHECK: renamable $v25 = PseudoVLE64_V_M1 killed renamable $x10, $noreg, 6, implicit $vl, implicit $vtype :: (load unknown-size from %ir.pa, align 8)
     ; CHECK: $x11 = PseudoReadVLENB
     ; CHECK: $x10 = LUI 1048575

@@ -5,12 +5,12 @@
 define void @vselect_vv_v8i32(<8 x i32>* %a, <8 x i32>* %b, <8 x i1>* %cc, <8 x i32>* %z) {
 ; CHECK-LABEL: vselect_vv_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a4, 8, e32,m2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 8, e32,m2,ta,mu
 ; CHECK-NEXT:    vle32.v v26, (a0)
 ; CHECK-NEXT:    vle32.v v28, (a1)
-; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vle1.v v0, (a2)
-; CHECK-NEXT:    vsetivli a0, 8, e32,m2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 8, e32,m2,ta,mu
 ; CHECK-NEXT:    vmerge.vvm v26, v28, v26, v0
 ; CHECK-NEXT:    vse32.v v26, (a3)
 ; CHECK-NEXT:    ret
@@ -25,11 +25,11 @@ define void @vselect_vv_v8i32(<8 x i32>* %a, <8 x i32>* %b, <8 x i1>* %cc, <8 x 
 define void @vselect_vx_v8i32(i32 %a, <8 x i32>* %b, <8 x i1>* %cc, <8 x i32>* %z) {
 ; CHECK-LABEL: vselect_vx_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a4, 8, e32,m2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 8, e32,m2,ta,mu
 ; CHECK-NEXT:    vle32.v v26, (a1)
-; CHECK-NEXT:    vsetivli a1, 8, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vle1.v v0, (a2)
-; CHECK-NEXT:    vsetivli a1, 8, e32,m2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 8, e32,m2,ta,mu
 ; CHECK-NEXT:    vmerge.vxm v26, v26, a0, v0
 ; CHECK-NEXT:    vse32.v v26, (a3)
 ; CHECK-NEXT:    ret
@@ -45,11 +45,11 @@ define void @vselect_vx_v8i32(i32 %a, <8 x i32>* %b, <8 x i1>* %cc, <8 x i32>* %
 define void @vselect_vi_v8i32(<8 x i32>* %b, <8 x i1>* %cc, <8 x i32>* %z) {
 ; CHECK-LABEL: vselect_vi_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a3, 8, e32,m2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 8, e32,m2,ta,mu
 ; CHECK-NEXT:    vle32.v v26, (a0)
-; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vle1.v v0, (a1)
-; CHECK-NEXT:    vsetivli a0, 8, e32,m2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 8, e32,m2,ta,mu
 ; CHECK-NEXT:    vmerge.vim v26, v26, -1, v0
 ; CHECK-NEXT:    vse32.v v26, (a2)
 ; CHECK-NEXT:    ret
@@ -65,12 +65,12 @@ define void @vselect_vi_v8i32(<8 x i32>* %b, <8 x i1>* %cc, <8 x i32>* %z) {
 define void @vselect_vv_v8f32(<8 x float>* %a, <8 x float>* %b, <8 x i1>* %cc, <8 x float>* %z) {
 ; CHECK-LABEL: vselect_vv_v8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a4, 8, e32,m2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 8, e32,m2,ta,mu
 ; CHECK-NEXT:    vle32.v v26, (a0)
 ; CHECK-NEXT:    vle32.v v28, (a1)
-; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vle1.v v0, (a2)
-; CHECK-NEXT:    vsetivli a0, 8, e32,m2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 8, e32,m2,ta,mu
 ; CHECK-NEXT:    vmerge.vvm v26, v28, v26, v0
 ; CHECK-NEXT:    vse32.v v26, (a3)
 ; CHECK-NEXT:    ret
@@ -85,11 +85,11 @@ define void @vselect_vv_v8f32(<8 x float>* %a, <8 x float>* %b, <8 x i1>* %cc, <
 define void @vselect_vx_v8f32(float %a, <8 x float>* %b, <8 x i1>* %cc, <8 x float>* %z) {
 ; CHECK-LABEL: vselect_vx_v8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a3, 8, e32,m2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 8, e32,m2,ta,mu
 ; CHECK-NEXT:    vle32.v v26, (a0)
-; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vle1.v v0, (a1)
-; CHECK-NEXT:    vsetivli a0, 8, e32,m2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 8, e32,m2,ta,mu
 ; CHECK-NEXT:    vfmerge.vfm v26, v26, fa0, v0
 ; CHECK-NEXT:    vse32.v v26, (a2)
 ; CHECK-NEXT:    ret
@@ -105,11 +105,11 @@ define void @vselect_vx_v8f32(float %a, <8 x float>* %b, <8 x i1>* %cc, <8 x flo
 define void @vselect_vfpzero_v8f32(<8 x float>* %b, <8 x i1>* %cc, <8 x float>* %z) {
 ; CHECK-LABEL: vselect_vfpzero_v8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a3, 8, e32,m2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 8, e32,m2,ta,mu
 ; CHECK-NEXT:    vle32.v v26, (a0)
-; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vle1.v v0, (a1)
-; CHECK-NEXT:    vsetivli a0, 8, e32,m2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 8, e32,m2,ta,mu
 ; CHECK-NEXT:    vmerge.vim v26, v26, 0, v0
 ; CHECK-NEXT:    vse32.v v26, (a2)
 ; CHECK-NEXT:    ret
@@ -125,12 +125,12 @@ define void @vselect_vfpzero_v8f32(<8 x float>* %b, <8 x i1>* %cc, <8 x float>* 
 define void @vselect_vv_v16i16(<16 x i16>* %a, <16 x i16>* %b, <16 x i1>* %cc, <16 x i16>* %z) {
 ; CHECK-LABEL: vselect_vv_v16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a4, 16, e16,m2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 16, e16,m2,ta,mu
 ; CHECK-NEXT:    vle16.v v26, (a0)
 ; CHECK-NEXT:    vle16.v v28, (a1)
-; CHECK-NEXT:    vsetivli a0, 16, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli zero, 16, e8,m1,ta,mu
 ; CHECK-NEXT:    vle1.v v0, (a2)
-; CHECK-NEXT:    vsetivli a0, 16, e16,m2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 16, e16,m2,ta,mu
 ; CHECK-NEXT:    vmerge.vvm v26, v28, v26, v0
 ; CHECK-NEXT:    vse16.v v26, (a3)
 ; CHECK-NEXT:    ret
@@ -145,11 +145,11 @@ define void @vselect_vv_v16i16(<16 x i16>* %a, <16 x i16>* %b, <16 x i1>* %cc, <
 define void @vselect_vx_v16i16(i16 signext %a, <16 x i16>* %b, <16 x i1>* %cc, <16 x i16>* %z) {
 ; CHECK-LABEL: vselect_vx_v16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a4, 16, e16,m2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 16, e16,m2,ta,mu
 ; CHECK-NEXT:    vle16.v v26, (a1)
-; CHECK-NEXT:    vsetivli a1, 16, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli zero, 16, e8,m1,ta,mu
 ; CHECK-NEXT:    vle1.v v0, (a2)
-; CHECK-NEXT:    vsetivli a1, 16, e16,m2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 16, e16,m2,ta,mu
 ; CHECK-NEXT:    vmerge.vxm v26, v26, a0, v0
 ; CHECK-NEXT:    vse16.v v26, (a3)
 ; CHECK-NEXT:    ret
@@ -165,11 +165,11 @@ define void @vselect_vx_v16i16(i16 signext %a, <16 x i16>* %b, <16 x i1>* %cc, <
 define void @vselect_vi_v16i16(<16 x i16>* %b, <16 x i1>* %cc, <16 x i16>* %z) {
 ; CHECK-LABEL: vselect_vi_v16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a3, 16, e16,m2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 16, e16,m2,ta,mu
 ; CHECK-NEXT:    vle16.v v26, (a0)
-; CHECK-NEXT:    vsetivli a0, 16, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli zero, 16, e8,m1,ta,mu
 ; CHECK-NEXT:    vle1.v v0, (a1)
-; CHECK-NEXT:    vsetivli a0, 16, e16,m2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 16, e16,m2,ta,mu
 ; CHECK-NEXT:    vmerge.vim v26, v26, 4, v0
 ; CHECK-NEXT:    vse16.v v26, (a2)
 ; CHECK-NEXT:    ret
@@ -186,12 +186,12 @@ define void @vselect_vv_v32f16(<32 x half>* %a, <32 x half>* %b, <32 x i1>* %cc,
 ; CHECK-LABEL: vselect_vv_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a4, zero, 32
-; CHECK-NEXT:    vsetvli a5, a4, e16,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a4, e16,m4,ta,mu
 ; CHECK-NEXT:    vle16.v v28, (a0)
 ; CHECK-NEXT:    vle16.v v8, (a1)
-; CHECK-NEXT:    vsetvli a0, a4, e8,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a4, e8,m2,ta,mu
 ; CHECK-NEXT:    vle1.v v0, (a2)
-; CHECK-NEXT:    vsetvli a0, a4, e16,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a4, e16,m4,ta,mu
 ; CHECK-NEXT:    vmerge.vvm v28, v8, v28, v0
 ; CHECK-NEXT:    vse16.v v28, (a3)
 ; CHECK-NEXT:    ret
@@ -207,11 +207,11 @@ define void @vselect_vx_v32f16(half %a, <32 x half>* %b, <32 x i1>* %cc, <32 x h
 ; CHECK-LABEL: vselect_vx_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a3, zero, 32
-; CHECK-NEXT:    vsetvli a4, a3, e16,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a3, e16,m4,ta,mu
 ; CHECK-NEXT:    vle16.v v28, (a0)
-; CHECK-NEXT:    vsetvli a0, a3, e8,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a3, e8,m2,ta,mu
 ; CHECK-NEXT:    vle1.v v0, (a1)
-; CHECK-NEXT:    vsetvli a0, a3, e16,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a3, e16,m4,ta,mu
 ; CHECK-NEXT:    vfmerge.vfm v28, v28, fa0, v0
 ; CHECK-NEXT:    vse16.v v28, (a2)
 ; CHECK-NEXT:    ret
@@ -228,11 +228,11 @@ define void @vselect_vfpzero_v32f16(<32 x half>* %b, <32 x i1>* %cc, <32 x half>
 ; CHECK-LABEL: vselect_vfpzero_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a3, zero, 32
-; CHECK-NEXT:    vsetvli a4, a3, e16,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a3, e16,m4,ta,mu
 ; CHECK-NEXT:    vle16.v v28, (a0)
-; CHECK-NEXT:    vsetvli a0, a3, e8,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a3, e8,m2,ta,mu
 ; CHECK-NEXT:    vle1.v v0, (a1)
-; CHECK-NEXT:    vsetvli a0, a3, e16,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a3, e16,m4,ta,mu
 ; CHECK-NEXT:    vmerge.vim v28, v28, 0, v0
 ; CHECK-NEXT:    vse16.v v28, (a2)
 ; CHECK-NEXT:    ret
@@ -249,7 +249,7 @@ define <2 x i1> @vselect_v2i1(<2 x i1> %a, <2 x i1> %b, <2 x i1> %cc) {
 ; CHECK-LABEL: vselect_v2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmv1r.v v28, v0
-; CHECK-NEXT:    vsetivli a0, 2, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetivli zero, 2, e8,mf8,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmerge.vim v25, v26, 1, v0
@@ -266,7 +266,7 @@ define <2 x i1> @vselect_v2i1(<2 x i1> %a, <2 x i1> %b, <2 x i1> %cc) {
 ; CHECK-NEXT:  .LBB12_2:
 ; CHECK-NEXT:    vmv.x.s a0, v26
 ; CHECK-NEXT:  .LBB12_3:
-; CHECK-NEXT:    vsetivli a1, 1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetivli zero, 1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v27, v27, 1
 ; CHECK-NEXT:    vmv.x.s a1, v27
 ; CHECK-NEXT:    andi a1, a1, 1
@@ -278,7 +278,7 @@ define <2 x i1> @vselect_v2i1(<2 x i1> %a, <2 x i1> %b, <2 x i1> %cc) {
 ; CHECK-NEXT:    vslidedown.vi v25, v26, 1
 ; CHECK-NEXT:  .LBB12_6:
 ; CHECK-NEXT:    vmv.x.s a1, v25
-; CHECK-NEXT:    vsetivli a2, 2, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetivli zero, 2, e8,mf8,ta,mu
 ; CHECK-NEXT:    vmv.v.x v25, a1
 ; CHECK-NEXT:    vmv.s.x v25, a0
 ; CHECK-NEXT:    vand.vi v25, v25, 1
@@ -294,7 +294,7 @@ define <4 x i1> @vselect_v4i1(<4 x i1> %a, <4 x i1> %b, <4 x i1> %cc) {
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmv1r.v v28, v0
-; CHECK-NEXT:    vsetivli a0, 4, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetivli zero, 4, e8,mf4,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmerge.vim v25, v26, 1, v0
@@ -312,7 +312,7 @@ define <4 x i1> @vselect_v4i1(<4 x i1> %a, <4 x i1> %b, <4 x i1> %cc) {
 ; CHECK-NEXT:    vmv.x.s a0, v26
 ; CHECK-NEXT:  .LBB13_3:
 ; CHECK-NEXT:    sb a0, 12(sp)
-; CHECK-NEXT:    vsetivli a0, 1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetivli zero, 1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v28, v27, 3
 ; CHECK-NEXT:    vmv.x.s a0, v28
 ; CHECK-NEXT:    andi a0, a0, 1
@@ -349,7 +349,7 @@ define <4 x i1> @vselect_v4i1(<4 x i1> %a, <4 x i1> %b, <4 x i1> %cc) {
 ; CHECK-NEXT:  .LBB13_12:
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    sb a0, 13(sp)
-; CHECK-NEXT:    vsetivli a0, 4, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetivli zero, 4, e8,mf4,ta,mu
 ; CHECK-NEXT:    addi a0, sp, 12
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vand.vi v25, v25, 1
@@ -366,7 +366,7 @@ define <8 x i1> @vselect_v8i1(<8 x i1> %a, <8 x i1> %b, <8 x i1> %cc) {
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmv1r.v v28, v0
-; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmerge.vim v25, v26, 1, v0
@@ -384,7 +384,7 @@ define <8 x i1> @vselect_v8i1(<8 x i1> %a, <8 x i1> %b, <8 x i1> %cc) {
 ; CHECK-NEXT:    vmv.x.s a0, v26
 ; CHECK-NEXT:  .LBB14_3:
 ; CHECK-NEXT:    sb a0, 8(sp)
-; CHECK-NEXT:    vsetivli a0, 1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v28, v27, 7
 ; CHECK-NEXT:    vmv.x.s a0, v28
 ; CHECK-NEXT:    andi a0, a0, 1
@@ -469,7 +469,7 @@ define <8 x i1> @vselect_v8i1(<8 x i1> %a, <8 x i1> %b, <8 x i1> %cc) {
 ; CHECK-NEXT:  .LBB14_24:
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    sb a0, 9(sp)
-; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    addi a0, sp, 8
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vand.vi v25, v25, 1
@@ -486,7 +486,7 @@ define <16 x i1> @vselect_v16i1(<16 x i1> %a, <16 x i1> %b, <16 x i1> %cc) {
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmv1r.v v28, v0
-; CHECK-NEXT:    vsetivli a0, 16, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli zero, 16, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmerge.vim v25, v26, 1, v0
@@ -504,7 +504,7 @@ define <16 x i1> @vselect_v16i1(<16 x i1> %a, <16 x i1> %b, <16 x i1> %cc) {
 ; CHECK-NEXT:    vmv.x.s a0, v26
 ; CHECK-NEXT:  .LBB15_3:
 ; CHECK-NEXT:    sb a0, 0(sp)
-; CHECK-NEXT:    vsetivli a0, 1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli zero, 1, e8,m1,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v28, v27, 15
 ; CHECK-NEXT:    vmv.x.s a0, v28
 ; CHECK-NEXT:    andi a0, a0, 1
@@ -685,7 +685,7 @@ define <16 x i1> @vselect_v16i1(<16 x i1> %a, <16 x i1> %b, <16 x i1> %cc) {
 ; CHECK-NEXT:  .LBB15_48:
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    sb a0, 1(sp)
-; CHECK-NEXT:    vsetivli a0, 16, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli zero, 16, e8,m1,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (sp)
 ; CHECK-NEXT:    vand.vi v25, v25, 1
 ; CHECK-NEXT:    vmsne.vi v0, v25, 0
@@ -709,7 +709,7 @@ define <32 x i1> @vselect_v32i1(<32 x i1> %a, <32 x i1> %b, <32 x i1> %cc) {
 ; RV32-NEXT:    andi sp, sp, -32
 ; RV32-NEXT:    vmv1r.v v25, v0
 ; RV32-NEXT:    addi a0, zero, 32
-; RV32-NEXT:    vsetvli a1, a0, e8,m2,ta,mu
+; RV32-NEXT:    vsetvli zero, a0, e8,m2,ta,mu
 ; RV32-NEXT:    vmv.v.i v28, 0
 ; RV32-NEXT:    vmv1r.v v0, v8
 ; RV32-NEXT:    vmerge.vim v26, v28, 1, v0
@@ -727,7 +727,7 @@ define <32 x i1> @vselect_v32i1(<32 x i1> %a, <32 x i1> %b, <32 x i1> %cc) {
 ; RV32-NEXT:    vmv.x.s a1, v28
 ; RV32-NEXT:  .LBB16_3:
 ; RV32-NEXT:    sb a1, 0(sp)
-; RV32-NEXT:    vsetivli a1, 1, e8,m2,ta,mu
+; RV32-NEXT:    vsetivli zero, 1, e8,m2,ta,mu
 ; RV32-NEXT:    vslidedown.vi v8, v30, 31
 ; RV32-NEXT:    vmv.x.s a1, v8
 ; RV32-NEXT:    andi a1, a1, 1
@@ -1100,7 +1100,7 @@ define <32 x i1> @vselect_v32i1(<32 x i1> %a, <32 x i1> %b, <32 x i1> %cc) {
 ; RV32-NEXT:  .LBB16_96:
 ; RV32-NEXT:    vmv.x.s a1, v26
 ; RV32-NEXT:    sb a1, 1(sp)
-; RV32-NEXT:    vsetvli a0, a0, e8,m2,ta,mu
+; RV32-NEXT:    vsetvli zero, a0, e8,m2,ta,mu
 ; RV32-NEXT:    vle8.v v26, (sp)
 ; RV32-NEXT:    vand.vi v26, v26, 1
 ; RV32-NEXT:    vmsne.vi v0, v26, 0
@@ -1123,7 +1123,7 @@ define <32 x i1> @vselect_v32i1(<32 x i1> %a, <32 x i1> %b, <32 x i1> %cc) {
 ; RV64-NEXT:    andi sp, sp, -32
 ; RV64-NEXT:    vmv1r.v v25, v0
 ; RV64-NEXT:    addi a0, zero, 32
-; RV64-NEXT:    vsetvli a1, a0, e8,m2,ta,mu
+; RV64-NEXT:    vsetvli zero, a0, e8,m2,ta,mu
 ; RV64-NEXT:    vmv.v.i v28, 0
 ; RV64-NEXT:    vmv1r.v v0, v8
 ; RV64-NEXT:    vmerge.vim v26, v28, 1, v0
@@ -1141,7 +1141,7 @@ define <32 x i1> @vselect_v32i1(<32 x i1> %a, <32 x i1> %b, <32 x i1> %cc) {
 ; RV64-NEXT:    vmv.x.s a1, v28
 ; RV64-NEXT:  .LBB16_3:
 ; RV64-NEXT:    sb a1, 0(sp)
-; RV64-NEXT:    vsetivli a1, 1, e8,m2,ta,mu
+; RV64-NEXT:    vsetivli zero, 1, e8,m2,ta,mu
 ; RV64-NEXT:    vslidedown.vi v8, v30, 31
 ; RV64-NEXT:    vmv.x.s a1, v8
 ; RV64-NEXT:    andi a1, a1, 1
@@ -1514,7 +1514,7 @@ define <32 x i1> @vselect_v32i1(<32 x i1> %a, <32 x i1> %b, <32 x i1> %cc) {
 ; RV64-NEXT:  .LBB16_96:
 ; RV64-NEXT:    vmv.x.s a1, v26
 ; RV64-NEXT:    sb a1, 1(sp)
-; RV64-NEXT:    vsetvli a0, a0, e8,m2,ta,mu
+; RV64-NEXT:    vsetvli zero, a0, e8,m2,ta,mu
 ; RV64-NEXT:    vle8.v v26, (sp)
 ; RV64-NEXT:    vand.vi v26, v26, 1
 ; RV64-NEXT:    vmsne.vi v0, v26, 0
@@ -1541,7 +1541,7 @@ define <64 x i1> @vselect_v64i1(<64 x i1> %a, <64 x i1> %b, <64 x i1> %cc) {
 ; RV32-NEXT:    andi sp, sp, -64
 ; RV32-NEXT:    vmv1r.v v25, v0
 ; RV32-NEXT:    addi a0, zero, 64
-; RV32-NEXT:    vsetvli a1, a0, e8,m4,ta,mu
+; RV32-NEXT:    vsetvli zero, a0, e8,m4,ta,mu
 ; RV32-NEXT:    vmv.v.i v16, 0
 ; RV32-NEXT:    vmv1r.v v0, v8
 ; RV32-NEXT:    vmerge.vim v28, v16, 1, v0
@@ -1560,7 +1560,7 @@ define <64 x i1> @vselect_v64i1(<64 x i1> %a, <64 x i1> %b, <64 x i1> %cc) {
 ; RV32-NEXT:  .LBB17_3:
 ; RV32-NEXT:    sb a1, 0(sp)
 ; RV32-NEXT:    addi a1, zero, 63
-; RV32-NEXT:    vsetivli a2, 1, e8,m4,ta,mu
+; RV32-NEXT:    vsetivli zero, 1, e8,m4,ta,mu
 ; RV32-NEXT:    vslidedown.vx v16, v12, a1
 ; RV32-NEXT:    vmv.x.s a2, v16
 ; RV32-NEXT:    andi a2, a2, 1
@@ -2348,7 +2348,7 @@ define <64 x i1> @vselect_v64i1(<64 x i1> %a, <64 x i1> %b, <64 x i1> %cc) {
 ; RV32-NEXT:  .LBB17_192:
 ; RV32-NEXT:    vmv.x.s a1, v28
 ; RV32-NEXT:    sb a1, 1(sp)
-; RV32-NEXT:    vsetvli a0, a0, e8,m4,ta,mu
+; RV32-NEXT:    vsetvli zero, a0, e8,m4,ta,mu
 ; RV32-NEXT:    vle8.v v28, (sp)
 ; RV32-NEXT:    vand.vi v28, v28, 1
 ; RV32-NEXT:    vmsne.vi v0, v28, 0
@@ -2371,7 +2371,7 @@ define <64 x i1> @vselect_v64i1(<64 x i1> %a, <64 x i1> %b, <64 x i1> %cc) {
 ; RV64-NEXT:    andi sp, sp, -64
 ; RV64-NEXT:    vmv1r.v v25, v0
 ; RV64-NEXT:    addi a0, zero, 64
-; RV64-NEXT:    vsetvli a1, a0, e8,m4,ta,mu
+; RV64-NEXT:    vsetvli zero, a0, e8,m4,ta,mu
 ; RV64-NEXT:    vmv.v.i v16, 0
 ; RV64-NEXT:    vmv1r.v v0, v8
 ; RV64-NEXT:    vmerge.vim v28, v16, 1, v0
@@ -2390,7 +2390,7 @@ define <64 x i1> @vselect_v64i1(<64 x i1> %a, <64 x i1> %b, <64 x i1> %cc) {
 ; RV64-NEXT:  .LBB17_3:
 ; RV64-NEXT:    sb a1, 0(sp)
 ; RV64-NEXT:    addi a1, zero, 63
-; RV64-NEXT:    vsetivli a2, 1, e8,m4,ta,mu
+; RV64-NEXT:    vsetivli zero, 1, e8,m4,ta,mu
 ; RV64-NEXT:    vslidedown.vx v16, v12, a1
 ; RV64-NEXT:    vmv.x.s a2, v16
 ; RV64-NEXT:    andi a2, a2, 1
@@ -3178,7 +3178,7 @@ define <64 x i1> @vselect_v64i1(<64 x i1> %a, <64 x i1> %b, <64 x i1> %cc) {
 ; RV64-NEXT:  .LBB17_192:
 ; RV64-NEXT:    vmv.x.s a1, v28
 ; RV64-NEXT:    sb a1, 1(sp)
-; RV64-NEXT:    vsetvli a0, a0, e8,m4,ta,mu
+; RV64-NEXT:    vsetvli zero, a0, e8,m4,ta,mu
 ; RV64-NEXT:    vle8.v v28, (sp)
 ; RV64-NEXT:    vand.vi v28, v28, 1
 ; RV64-NEXT:    vmsne.vi v0, v28, 0

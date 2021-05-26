@@ -10,7 +10,7 @@ define void @test_vsseg2_mask_nxv16i16(<vscale x 16 x i16> %val, i16* %base, <vs
 ; CHECK-LABEL: test_vsseg2_mask_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv4r.v v4, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m4,ta,mu
 ; CHECK-NEXT:    vsseg2e16.v v4, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
