@@ -16,6 +16,9 @@
 
 #include <stdlib.h>
 
+#if __has_feature(address_sanitizer)
+#include <sanitizer/asan_interface.h>
+#endif
 
 #if !defined(__USING_SJLJ_EXCEPTIONS__)
 #include "AddressSpace.hpp"
@@ -184,6 +187,10 @@ _LIBUNWIND_WEAK_ALIAS(__unw_get_proc_info, unw_get_proc_info)
 /// Resume execution at cursor position (aka longjump).
 _LIBUNWIND_HIDDEN int __unw_resume(unw_cursor_t *cursor) {
   _LIBUNWIND_TRACE_API("__unw_resume(cursor=%p)", static_cast<void *>(cursor));
+#if __has_feature(address_sanitizer)
+  // Inform the ASan runtime that now might be a good time to clean stuff up.
+  __asan_handle_no_return();
+#endif
   AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
   co->jumpto();
   return UNW_EUNSPEC;

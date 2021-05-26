@@ -184,7 +184,7 @@ private:
 extern std::vector<hsa_amd_memory_pool_t> atl_gpu_kernarg_pools;
 
 namespace core {
-atmi_status_t atl_init_gpu_context();
+hsa_status_t atl_init_gpu_context();
 
 hsa_status_t init_hsa();
 hsa_status_t finalize_hsa();
@@ -219,6 +219,6 @@ hsa_status_t allow_access_to_all_gpu_agents(void *ptr);
 } // namespace core
 
 const char *get_error_string(hsa_status_t err);
-const char *get_atmi_error_string(atmi_status_t err);
+const char *get_atmi_error_string(hsa_status_t err);
 
 #endif // SRC_RUNTIME_INCLUDE_INTERNAL_H_

@@ -615,6 +615,12 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
       return getBody()->getArguments().take_back(outputs().size());
     }
 
+    void setDistributionTypes(Builder& b, ArrayRef<StringRef> types) {
+      assert(types.size() == getNumLoops() &&
+             "expected distribution type for every dimension");
+      distribution_typesAttr(b.getStrArrayAttr(types));
+    }
+
     void setLowerBounds(ValueRange lowerBounds) {
       unsigned numLoops = getNumLoops();
       assert(lowerBounds.size() == numLoops &&

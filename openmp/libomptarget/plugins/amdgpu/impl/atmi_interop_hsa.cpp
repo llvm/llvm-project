@@ -6,7 +6,7 @@
 #include "atmi_interop_hsa.h"
 #include "internal.h"
 
-atmi_status_t atmi_interop_hsa_get_symbol_info(
+hsa_status_t atmi_interop_hsa_get_symbol_info(
     const std::map<std::string, atl_symbol_info_t> &SymbolInfoTable,
     atmi_mem_place_t place, const char *symbol, void **var_addr,
     unsigned int *var_size) {
@@ -21,10 +21,10 @@ atmi_status_t atmi_interop_hsa_get_symbol_info(
 
   atmi_machine_t *machine = atmi_machine_get_info();
   if (!symbol || !var_addr || !var_size || !machine)
-    return ATMI_STATUS_ERROR;
+    return HSA_STATUS_ERROR;
   if (place.dev_id < 0 ||
       place.dev_id >= machine->device_count_by_type[place.dev_type])
-    return ATMI_STATUS_ERROR;
+    return HSA_STATUS_ERROR;
 
   // get the symbol info
   std::string symbolStr = std::string(symbol);
@@ -33,15 +33,15 @@ atmi_status_t atmi_interop_hsa_get_symbol_info(
     atl_symbol_info_t info = It->second;
     *var_addr = reinterpret_cast<void *>(info.addr);
     *var_size = info.size;
-    return ATMI_STATUS_SUCCESS;
+    return HSA_STATUS_SUCCESS;
   } else {
     *var_addr = NULL;
     *var_size = 0;
-    return ATMI_STATUS_ERROR;
+    return HSA_STATUS_ERROR;
   }
 }
 
-atmi_status_t atmi_interop_hsa_get_kernel_info(
+hsa_status_t atmi_interop_hsa_get_kernel_info(
     const std::map<std::string, atl_kernel_info_t> &KernelInfoTable,
     atmi_mem_place_t place, const char *kernel_name,
     hsa_executable_symbol_info_t kernel_info, uint32_t *value) {
@@ -55,12 +55,12 @@ atmi_status_t atmi_interop_hsa_get_kernel_info(
 
   atmi_machine_t *machine = atmi_machine_get_info();
   if (!kernel_name || !value || !machine)
-    return ATMI_STATUS_ERROR;
+    return HSA_STATUS_ERROR;
   if (place.dev_id < 0 ||
       place.dev_id >= machine->device_count_by_type[place.dev_type])
-    return ATMI_STATUS_ERROR;
+    return HSA_STATUS_ERROR;
 
-  atmi_status_t status = ATMI_STATUS_SUCCESS;
+  hsa_status_t status = HSA_STATUS_SUCCESS;
   // get the kernel info
   std::string kernelStr = std::string(kernel_name);
   auto It = KernelInfoTable.find(kernelStr);
@@ -79,12 +79,12 @@ atmi_status_t atmi_interop_hsa_get_kernel_info(
       break;
     default:
       *value = 0;
-      status = ATMI_STATUS_ERROR;
+      status = HSA_STATUS_ERROR;
       break;
     }
   } else {
     *value = 0;
-    status = ATMI_STATUS_ERROR;
+    status = HSA_STATUS_ERROR;
   }
 
   return status;

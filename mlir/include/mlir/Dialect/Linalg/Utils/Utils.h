@@ -247,7 +247,8 @@ struct GenerateLoopNest {
                    function_ref<scf::ValueVector(OpBuilder &, Location,
                                                  ValueRange, ValueRange)>
                        bodyBuilderFn,
-                   Optional<LinalgLoopDistributionOptions> = None);
+                   Optional<LinalgLoopDistributionOptions> = None,
+                   ArrayRef<StringRef> distributionTypes = {});
 };
 
 } // namespace linalg

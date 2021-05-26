@@ -399,30 +399,17 @@ static_assert(std::invocable<rvalue_cv_unqualified, S const volatile&&>);
 } // namespace pointer_to_member_functions
 
 // std::invocable-specific
-static_assert(
-    std::invocable<std::uniform_int_distribution<>, std::mt19937_64&>);
+static_assert(std::invocable<std::uniform_int_distribution<>, std::mt19937_64&>);
 
-[[nodiscard]] constexpr bool check_lambda(auto, auto...) { return false; }
-
-// clang-format off
+// Check the concept with closure types
 template<class F, class... Args>
-requires std::invocable<F, Args...>
-[[nodiscard]] constexpr bool check_lambda(F, Args&&...)
-{
-  return true;
-}
-// clang-format on
-
-[[nodiscard]] constexpr bool check_lambdas() {
-  static_assert(check_lambda([] {}));
-  static_assert(check_lambda([](int) {}, 0));
-  static_assert(check_lambda([](int) {}, 0L));
-  static_assert(!check_lambda([](int) {}, nullptr));
-
-  int i = 0;
-  return check_lambda([](int&) {}, i);
+constexpr bool is_invocable(F, Args&&...) {
+  return std::invocable<F, Args...>;
 }
 
-static_assert(check_lambdas());
-
-int main(int, char**) { return 0; }
+static_assert(is_invocable([] {}));
+static_assert(is_invocable([](int) {}, 0));
+static_assert(is_invocable([](int) {}, 0L));
+static_assert(!is_invocable([](int) {}, nullptr));
+int i = 0;
+static_assert(is_invocable([](int&) {}, i));
