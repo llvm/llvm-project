@@ -109,9 +109,7 @@ static const SCEV *computeTripCount(const Loop &L, ScalarEvolution &SE) {
   if (isa<SCEVCouldNotCompute>(BackedgeTakenCount) ||
       !isa<SCEVConstant>(BackedgeTakenCount))
     return nullptr;
-
-  return SE.getAddExpr(BackedgeTakenCount,
-                       SE.getOne(BackedgeTakenCount->getType()));
+  return SE.getTripCountFromExitCount(BackedgeTakenCount);
 }
 
 //===----------------------------------------------------------------------===//
