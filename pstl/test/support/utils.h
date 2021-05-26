@@ -648,7 +648,7 @@ struct Matrix2x2
     T a[2][2];
     Matrix2x2() : a{{1, 0}, {0, 1}} {}
     Matrix2x2(T x, T y) : a{{0, x}, {x, y}} {}
-#if !_PSTL_ICL_19_VC14_VC141_TEST_SCAN_RELEASE_BROKEN
+#if !defined(_PSTL_ICL_19_VC14_VC141_TEST_SCAN_RELEASE_BROKEN)
     Matrix2x2(const Matrix2x2& m) : a{{m.a[0][0], m.a[0][1]}, {m.a[1][0], m.a[1][1]}} {}
     Matrix2x2&
     operator=(const Matrix2x2& m)
@@ -727,7 +727,7 @@ struct ReverseAdapter
     iterator_type
     operator()(Iterator it)
     {
-#if _PSTL_CPP14_MAKE_REVERSE_ITERATOR_PRESENT
+#if defined(_PSTL_CPP14_MAKE_REVERSE_ITERATOR_PRESENT)
         return std::make_reverse_iterator(it);
 #else
         return iterator_type(it);
@@ -1267,7 +1267,7 @@ transform_reduce_serial(InputIterator first, InputIterator last, T init, BinaryO
 static const char*
 done()
 {
-#if _PSTL_TEST_SUCCESSFUL_KEYWORD
+#if defined(_PSTL_TEST_SUCCESSFUL_KEYWORD)
     return "done";
 #else
     return "passed";
@@ -1304,7 +1304,7 @@ template <typename Policy, typename F>
 static void
 invoke_if(Policy&&, F f)
 {
-#if _PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN || _PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN
+#if defined(_PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN) || defined(_PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN)
     __pstl::__internal::invoke_if_not(__pstl::__internal::allow_unsequenced<Policy>(), f);
 #else
     f();
