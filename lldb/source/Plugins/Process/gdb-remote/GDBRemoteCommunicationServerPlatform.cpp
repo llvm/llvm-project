@@ -8,7 +8,7 @@
 
 #include "GDBRemoteCommunicationServerPlatform.h"
 
-#include <errno.h>
+#include <cerrno>
 
 #include <chrono>
 #include <csignal>

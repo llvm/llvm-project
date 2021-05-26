@@ -12,8 +12,8 @@
 #include "StdStringExtractor.h"
 
 // C includes
-#include <inttypes.h>
-#include <stdint.h>
+#include <cinttypes>
+#include <cstdint>
 
 // C++ includes
 #include <map>

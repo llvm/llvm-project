@@ -16,9 +16,9 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <stdarg.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <cstdarg>
+#include <cstddef>
+#include <cstdint>
 #include <type_traits>
 
 namespace lldb_private {

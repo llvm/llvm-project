@@ -8,7 +8,7 @@
 
 #include "SymbolVendorELF.h"
 
-#include <string.h>
+#include <cstring>
 
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "lldb/Core/Module.h"

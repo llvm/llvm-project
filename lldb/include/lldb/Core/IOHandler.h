@@ -26,8 +26,8 @@
 #include <string>
 #include <vector>
 
-#include <stdint.h>
-#include <stdio.h>
+#include <cstdint>
+#include <cstdio>
 
 namespace lldb_private {
 class Debugger;

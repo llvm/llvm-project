@@ -15,7 +15,7 @@
 #include <sys/sysctl.h>
 #include <sys/user.h>
 
-#include <stdio.h>
+#include <cstdio>
 
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"

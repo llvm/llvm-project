@@ -15,9 +15,9 @@
 #include "lldb/lldb-private.h"
 #include "llvm/ADT/BitmaskEnum.h"
 
+#include <cstdarg>
+#include <cstdio>
 #include <mutex>
-#include <stdarg.h>
-#include <stdio.h>
 #include <sys/types.h>
 
 namespace lldb_private {

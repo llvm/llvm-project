@@ -15,8 +15,8 @@
 
 #include <string>
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 class StringExtractorGDBRemote : public StringExtractor {
 public:

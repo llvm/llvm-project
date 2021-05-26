@@ -27,8 +27,8 @@
 #include <string>
 #include <utility>
 
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 using namespace lldb_private;
 
 static inline bool cstring_is_mangled(llvm::StringRef s) {

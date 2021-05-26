@@ -8,8 +8,7 @@
 
 #include "StdStringExtractor.h"
 
-#include <stdlib.h>
-
+#include <cstdlib>
 
 static inline int xdigit_to_sint(char ch) {
   if (ch >= 'a' && ch <= 'f')

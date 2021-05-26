@@ -21,8 +21,8 @@
 
 #include <vector>
 
-#include <stdint.h>
-#include <string.h>
+#include <cstdint>
+#include <cstring>
 
 namespace lldb_private {
 class DataExtractor;

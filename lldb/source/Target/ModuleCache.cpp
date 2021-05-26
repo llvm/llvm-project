@@ -17,7 +17,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 
-#include <assert.h>
+#include <cassert>
 
 #include <cstdio>
 

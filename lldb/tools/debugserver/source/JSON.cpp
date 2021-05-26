@@ -9,8 +9,8 @@
 #include "JSON.h"
 
 // C includes
-#include <assert.h>
-#include <limits.h>
+#include <cassert>
+#include <climits>
 
 // C++ includes
 #include "lldb/Host/StringConvert.h"

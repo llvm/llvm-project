@@ -9,7 +9,6 @@
 #include "ASTStructExtractor.h"
 
 #include "lldb/Utility/Log.h"
-#include "stdlib.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -21,6 +20,7 @@
 #include "clang/Sema/Sema.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstdlib>
 
 using namespace llvm;
 using namespace clang;

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <climits>
 #include <iomanip>
-#include <limits.h>
 
 #include "lldb/Host/Editline.h"
 
