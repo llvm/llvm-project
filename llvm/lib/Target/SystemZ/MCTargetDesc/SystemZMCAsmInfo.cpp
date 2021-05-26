@@ -30,6 +30,7 @@ SystemZMCAsmInfo::SystemZMCAsmInfo(const Triple &TT) {
   DotIsPC = (AssemblerDialect == AD_ATT);
   StarIsPC = (AssemblerDialect == AD_HLASM);
   EmitGNUAsmStartIndentationMarker = (AssemblerDialect == AD_ATT);
+  AllowAtInName = (AssemblerDialect == AD_HLASM);
 
   ZeroDirective = "\t.space\t";
   Data64bitsDirective = "\t.quad\t";
