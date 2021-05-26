@@ -25,7 +25,7 @@ body: |
     ; CHECK: $x12 = PseudoReadVLENB
     ; CHECK: $x12 = SLLI killed $x12, 3
     ; CHECK: $x2 = SUB $x2, killed $x12
-    ; CHECK: dead renamable $x11 = PseudoVSETVLI killed renamable $x11, 88, implicit-def $vl, implicit-def $vtype
+    ; CHECK: dead $x0 = PseudoVSETVLI killed renamable $x11, 88, implicit-def $vl, implicit-def $vtype
     ; CHECK: $v0_v1_v2_v3_v4_v5_v6 = PseudoVLSEG7E64_V_M1 renamable $x10, $noreg, 6, implicit $vl, implicit $vtype
     ; CHECK: $x11 = ADDI $x2, 16
     ; CHECK: $x12 = PseudoReadVLENB
