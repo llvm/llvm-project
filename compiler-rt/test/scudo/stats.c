@@ -9,7 +9,7 @@
 
 #include <stdlib.h>
 
-void __scudo_print_stats();
+#include <sanitizer/scudo_interface.h>
 
 int main(int argc, char **argv) {
   free(malloc(1U));
