@@ -129,6 +129,9 @@ struct MIToken {
     kw_unknown_size,
     kw_unknown_address,
 
+    // Metadata types.
+    kw_distinct,
+
     // Named metadata keywords
     md_tbaa,
     md_alias_scope,
