@@ -201,6 +201,14 @@ static cl::opt<bool> ClCombinePointerLabelsOnStore(
              "storing in memory."),
     cl::Hidden, cl::init(false));
 
+// Controls whether the pass propagates labels of offsets in GEP instructions.
+static cl::opt<bool> ClCombineOffsetLabelsOnGEP(
+    "dfsan-combine-offset-labels-on-gep",
+    cl::desc(
+        "Combine the label of the offset with the label of the pointer when "
+        "doing pointer arithmetic."),
+    cl::Hidden, cl::init(true));
+
 static cl::opt<bool> ClDebugNonzeroLabels(
     "dfsan-debug-nonzero-labels",
     cl::desc("Insert calls to __dfsan_nonzero_label on observing a parameter, "
@@ -2778,7 +2786,17 @@ void DFSanVisitor::visitCmpInst(CmpInst &CI) {
 }
 
 void DFSanVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
-  visitInstOperands(GEPI);
+  if (ClCombineOffsetLabelsOnGEP) {
+    visitInstOperands(GEPI);
+    return;
+  }
+
+  // Only propagate shadow/origin of base pointer value but ignore those of
+  // offset operands.
+  Value *BasePointer = GEPI.getPointerOperand();
+  DFSF.setShadow(&GEPI, DFSF.getShadow(BasePointer));
+  if (DFSF.DFS.shouldTrackOrigins())
+    DFSF.setOrigin(&GEPI, DFSF.getOrigin(BasePointer));
 }
 
 void DFSanVisitor::visitExtractElementInst(ExtractElementInst &I) {
