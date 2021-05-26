@@ -37,3 +37,10 @@ SystemZMCAsmInfo::SystemZMCAsmInfo(const Triple &TT) {
   SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::DwarfCFI;
 }
+
+bool SystemZMCAsmInfo::isAcceptableChar(char C) const {
+  if (AssemblerDialect == AD_ATT)
+    return MCAsmInfo::isAcceptableChar(C);
+
+  return MCAsmInfo::isAcceptableChar(C) || C == '#';
+}
