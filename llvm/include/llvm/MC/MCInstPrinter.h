@@ -54,6 +54,9 @@ protected:
   /// True if we are printing marked up assembly.
   bool UseMarkup = false;
 
+  /// True if we prefer aliases (e.g. nop) to raw mnemonics.
+  bool PrintAliases = true;
+
   /// True if we are printing immediates as hex.
   bool PrintImmHex = false;
 

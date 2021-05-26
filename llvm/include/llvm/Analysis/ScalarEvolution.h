@@ -705,6 +705,13 @@ public:
   bool isLoopBackedgeGuardedByCond(const Loop *L, ICmpInst::Predicate Pred,
                                    const SCEV *LHS, const SCEV *RHS);
 
+  /// Convert from an "exit count" (i.e. "backedge taken count") to a "trip
+  /// count".  A "trip count" is the number of times the header of the loop
+  /// will execute if an exit is taken after the specified number of backedges
+  /// have been taken.  (e.g. TripCount = ExitCount + 1)  A zero result
+  /// must be interpreted as a loop having an unknown trip count.
+  const SCEV *getTripCountFromExitCount(const SCEV *ExitCount);
+
   /// Returns the maximum trip count of the loop if it is a single-exit
   /// loop and we can compute a small maximum for that loop.
   ///
@@ -726,6 +733,15 @@ public:
   /// value.
   /// Returns 0 if the trip count is unknown or not constant.
   unsigned getSmallConstantMaxTripCount(const Loop *L);
+
+  /// Returns the largest constant divisor of the trip count as a normal
+  /// unsigned value, if possible. This means that the actual trip count is
+  /// always a multiple of the returned value. Returns 1 if the trip count is
+  /// unknown or not guaranteed to be the multiple of a constant., Will also
+  /// return 1 if the trip count is very large (>= 2^32).
+  /// Note that the argument is an exit count for loop L, NOT a trip count.
+  unsigned getSmallConstantTripMultiple(const Loop *L,
+                                        const SCEV *ExitCount);
 
   /// Returns the largest constant divisor of the trip count of the
   /// loop if it is a single-exit loop and we can compute a small maximum for
