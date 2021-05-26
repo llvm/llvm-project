@@ -2035,7 +2035,14 @@ bool MachOObjectFile::isSectionBSS(DataRefImpl Sec) const {
           SectionType == MachO::S_GB_ZEROFILL);
 }
 
-bool MachOObjectFile::isDebugSection(StringRef SectionName) const {
+bool MachOObjectFile::isDebugSection(DataRefImpl Sec) const {
+  Expected<StringRef> SectionNameOrErr = getSectionName(Sec);
+  if (!SectionNameOrErr) {
+    // TODO: Report the error message properly.
+    consumeError(SectionNameOrErr.takeError());
+    return false;
+  }
+  StringRef SectionName = SectionNameOrErr.get();
   return SectionName.startswith("__debug") ||
          SectionName.startswith("__zdebug") ||
          SectionName.startswith("__apple") || SectionName == "__gdb_index" ||
