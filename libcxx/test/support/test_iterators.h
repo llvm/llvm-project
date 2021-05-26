@@ -636,6 +636,8 @@ bool operator!= (const NonThrowingIterator<T>& a, const NonThrowingIterator<T>& 
 
 #ifdef TEST_SUPPORTS_RANGES
 
+// clang-format off
+
 template <class I>
 struct cpp20_input_iterator {
   using value_type = std::iter_value_t<I>;
@@ -654,20 +656,225 @@ struct cpp20_input_iterator {
 
   constexpr decltype(auto) operator*() const { return *base_; }
 
-  cpp20_input_iterator& operator++() {
+  constexpr cpp20_input_iterator& operator++() {
     ++base_;
     return *this;
   }
 
-  void operator++(int) { ++base_; }
+  constexpr void operator++(int) { ++base_; }
 
-  [[nodiscard]] I const& base() const& { return base_; }
+  [[nodiscard]] constexpr I const& base() const& { return base_; }
 
-  [[nodiscard]] I base() && { return std::move(base_); }
+  [[nodiscard]] constexpr I base() && { return std::move(base_); }
 
 private:
   I base_ = I();
 };
+
+template <std::input_or_output_iterator I>
+struct iterator_concept {
+  using type = std::output_iterator_tag;
+};
+
+template <std::input_iterator I>
+struct iterator_concept<I> {
+  using type = std::input_iterator_tag;
+};
+
+template <std::forward_iterator I>
+struct iterator_concept<I> {
+  using type = std::forward_iterator_tag;
+};
+
+template <std::bidirectional_iterator I>
+struct iterator_concept<I> {
+  using type = std::bidirectional_iterator_tag;
+};
+
+template <std::random_access_iterator I>
+struct iterator_concept<I> {
+  using type = std::random_access_iterator_tag;
+};
+
+template<std::contiguous_iterator I>
+struct iterator_concept<I> {
+  using type = std::contiguous_iterator_tag;
+};
+
+template <std::input_or_output_iterator I>
+using iterator_concept_t = typename iterator_concept<I>::type;
+
+template<std::input_or_output_iterator>
+struct iter_value_or_void { using type = void; };
+
+template<std::input_iterator I>
+struct iter_value_or_void<I> {
+  using type = std::iter_value_t<I>;
+};
+
+// Iterator adaptor that counts the number of times the iterator has had a successor/predecessor
+// operation called. Has two recorders:
+// * `stride_count`, which records the total number of calls to an op++, op--, op+=, or op-=.
+// * `stride_displacement`, which records the displacement of the calls. This means that both
+//   op++/op+= will increase the displacement counter by 1, and op--/op-= will decrease the
+//   displacement counter by 1.
+template <std::input_or_output_iterator I>
+class stride_counting_iterator {
+public:
+  using value_type = typename iter_value_or_void<I>::type;
+  using difference_type = std::iter_difference_t<I>;
+  using iterator_concept = iterator_concept_t<I>;
+
+  stride_counting_iterator() = default;
+
+  constexpr explicit stride_counting_iterator(I current) : base_(std::move(current)) {}
+
+  [[nodiscard]] constexpr I const& base() const& requires std::copyable<I> { return base_; }
+
+  [[nodiscard]] constexpr I base() && { return std::move(base_); }
+
+  constexpr difference_type stride_count() const { return stride_count_; }
+
+  constexpr difference_type stride_displacement() const { return stride_displacement_; }
+
+  constexpr decltype(auto) operator*() const { return *base_; }
+
+  constexpr decltype(auto) operator[](difference_type const n) const { return base_[n]; }
+
+  constexpr stride_counting_iterator& operator++()
+  {
+    ++base_;
+    ++stride_count_;
+    ++stride_displacement_;
+    return *this;
+  }
+
+  constexpr void operator++(int) { ++*this; }
+
+  constexpr stride_counting_iterator operator++(int)
+  requires std::forward_iterator<I>
+  {
+    auto temp = *this;
+    ++*this;
+    return temp;
+  }
+
+  constexpr stride_counting_iterator& operator--()
+  requires std::bidirectional_iterator<I>
+  {
+    --base_;
+    ++stride_count_;
+    --stride_displacement_;
+    return *this;
+  }
+
+  constexpr stride_counting_iterator operator--(int)
+  requires std::bidirectional_iterator<I>
+  {
+    auto temp = *this;
+    --*this;
+    return temp;
+  }
+
+  constexpr stride_counting_iterator& operator+=(difference_type const n)
+  requires std::random_access_iterator<I>
+  {
+    base_ += n;
+    ++stride_count_;
+    ++stride_displacement_;
+    return *this;
+  }
+
+  constexpr stride_counting_iterator& operator-=(difference_type const n)
+  requires std::random_access_iterator<I>
+  {
+    base_ -= n;
+    ++stride_count_;
+    --stride_displacement_;
+    return *this;
+  }
+
+  constexpr friend stride_counting_iterator operator+(stride_counting_iterator i, difference_type const n)
+  requires std::random_access_iterator<I>
+  {
+    return i += n;
+  }
+
+  constexpr friend stride_counting_iterator operator+(difference_type const n, stride_counting_iterator i)
+  requires std::random_access_iterator<I>
+  {
+    return i += n;
+  }
+
+  constexpr friend stride_counting_iterator operator-(stride_counting_iterator i, difference_type const n)
+  requires std::random_access_iterator<I>
+  {
+    return i -= n;
+  }
+
+  constexpr friend difference_type operator-(stride_counting_iterator const& x, stride_counting_iterator const& y)
+  requires std::sized_sentinel_for<I, I>
+  {
+    return x.base() - y.base();
+  }
+
+  constexpr bool operator==(stride_counting_iterator const& other) const
+  requires std::sentinel_for<I, I>
+  {
+    return base_ == other.base_;
+  }
+
+  template <std::sentinel_for<I> S>
+  constexpr bool operator==(S const last) const
+  {
+      return base_ == last;
+  }
+
+  constexpr friend bool operator<(stride_counting_iterator const& x, stride_counting_iterator const& y)
+  requires std::random_access_iterator<I>
+  {
+    return x.base_ < y.base_;
+  }
+
+  constexpr friend bool operator>(stride_counting_iterator const& x, stride_counting_iterator const& y)
+  requires std::random_access_iterator<I>
+  {
+    return y < x;
+  }
+
+  constexpr friend bool operator<=(stride_counting_iterator const& x, stride_counting_iterator const& y)
+  requires std::random_access_iterator<I>
+  {
+    return !(y < x);
+  }
+
+  constexpr friend bool operator>=(stride_counting_iterator const& x, stride_counting_iterator const& y)
+  requires std::random_access_iterator<I>
+  {
+    return !(x < y);
+  }
+
+private:
+  I base_;
+  difference_type stride_count_ = 0;
+  difference_type stride_displacement_ = 0;
+};
+
+template <std::input_or_output_iterator I>
+class sentinel_wrapper {
+public:
+  sentinel_wrapper() = default;
+  constexpr explicit sentinel_wrapper(I base) : base_(std::move(base)) {}
+
+  constexpr bool operator==(I const& other) const requires std::equality_comparable<I> {
+    return base_ == other;
+  }
+
+private:
+  I base_ = I();
+};
+
+// clang-format on
 
 #endif // TEST_STD_VER > 17 && defined(__cpp_lib_concepts)
 

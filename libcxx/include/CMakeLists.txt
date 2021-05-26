@@ -7,10 +7,12 @@ set(files
   __config
   __debug
   __errc
+  __function_like.h
   __functional_03
   __functional_base
   __functional_base_03
   __hash_table
+  __iterator/advance.h
   __iterator/concepts.h
   __iterator/incrementable_traits.h
   __iterator/iter_move.h
