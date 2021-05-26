@@ -938,8 +938,10 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
       // If this is a direct call, find the callee's subprogram.
       // In the case of an indirect call find the register that holds
       // the callee.
-      const MachineOperand &CalleeOp = MI.getOperand(0);
-      if (!CalleeOp.isGlobal() && !CalleeOp.isReg())
+      const MachineOperand &CalleeOp = TII->getCalleeOperand(MI);
+      if (!CalleeOp.isGlobal() &&
+          (!CalleeOp.isReg() ||
+           !Register::isPhysicalRegister(CalleeOp.getReg())))
         continue;
 
       unsigned CallReg = 0;

@@ -1313,6 +1313,10 @@ void AsmPrinter::emitFunctionBody() {
         // location, and a nearby DBG_VALUE created. We can safely ignore
         // the instruction reference.
         break;
+      case TargetOpcode::DBG_PHI:
+        // This instruction is only used to label a program point, it's purely
+        // meta information.
+        break;
       case TargetOpcode::DBG_LABEL:
         if (isVerbose()) {
           if (!emitDebugLabelComment(&MI, *this))
