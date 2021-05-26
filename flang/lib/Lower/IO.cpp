@@ -419,7 +419,7 @@ genOutputItemList(Fortran::lower::AbstractConverter &converter,
     llvm::SmallVector<mlir::Value> outputFuncArgs = {cookie};
     Fortran::lower::CharacterExprHelper helper{builder, loc};
     if (argType.isa<fir::BoxType>()) {
-      auto box = converter.genExprBox(*expr, stmtCtx, loc);
+      auto box = fir::getBase(converter.genExprBox(*expr, stmtCtx, loc));
       outputFuncArgs.push_back(builder.createConvert(loc, argType, box));
     } else if (helper.isCharacterScalar(itemTy)) {
       auto exv = converter.genExprAddr(expr, stmtCtx, loc);
@@ -504,7 +504,7 @@ static void genInputItemList(Fortran::lower::AbstractConverter &converter,
 
     llvm::SmallVector<mlir::Value> inputFuncArgs = {cookie};
     if (argType.isa<fir::BoxType>()) {
-      auto box = converter.genExprBox(*expr, stmtCtx, loc);
+      auto box = fir::getBase(converter.genExprBox(*expr, stmtCtx, loc));
       inputFuncArgs.push_back(builder.createConvert(loc, argType, box));
     } else {
       auto itemExv = converter.genExprAddr(expr, stmtCtx, loc);

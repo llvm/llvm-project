@@ -811,7 +811,8 @@ Fortran::lower::createUnallocatedBox(Fortran::lower::FirOpBuilder &builder,
     eleTy = seqType.getEleTy();
   if (auto recTy = eleTy.dyn_cast<fir::RecordType>())
     if (recTy.getNumLenParams() > 0)
-      TODO(loc, "creating unallocated fir.box of derived type with length parameters");
+      TODO(loc, "creating unallocated fir.box of derived type with length "
+                "parameters");
   auto nullAddr = builder.createNullConstant(loc, heapType);
   mlir::Value shape;
   if (auto seqTy = type.dyn_cast<fir::SequenceType>()) {
@@ -1085,6 +1086,32 @@ void Fortran::lower::associateMutableBoxWithShift(
       [&](const fir::ProcBoxValue &) {
         TODO(loc, "Procedure pointer assignment");
       });
+}
+
+static bool
+isArraySectionWithoutVectorSubscript(const Fortran::lower::SomeExpr &expr) {
+  return expr.Rank() > 0 && Fortran::evaluate::IsVariable(expr) &&
+         !Fortran::evaluate::UnwrapWholeSymbolDataRef(expr) &&
+         !Fortran::evaluate::HasVectorSubscript(expr);
+}
+
+void Fortran::lower::associateMutableBoxWithShift(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const fir::MutableBoxValue &box, const Fortran::lower::SomeExpr &source,
+    mlir::ValueRange lbounds, Fortran::lower::StatementContext &stmtCtx) {
+  auto &builder = converter.getFirOpBuilder();
+  if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(source)) {
+    Fortran::lower::disassociateMutableBox(builder, loc, box);
+    return;
+  }
+  // The right hand side must not be evaluated in a temp.
+  // Array sections can be described by fir.box without making a temp.
+  // Otherwise, do not generate a fir.box to avoid having to later use a
+  // fir.rebox to implement the pointer association.
+  auto rhs = isArraySectionWithoutVectorSubscript(source)
+                 ? converter.genExprBox(source, stmtCtx, loc)
+                 : converter.genExprAddr(source, stmtCtx);
+  Fortran::lower::associateMutableBoxWithShift(builder, loc, box, rhs, lbounds);
 }
 
 void Fortran::lower::associateMutableBoxWithRemap(

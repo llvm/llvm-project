@@ -117,8 +117,8 @@ public:
   /// Generate or get a fir.box describing the expression. If SomeExpr is
   /// a Designator, the fir.box describes an entity over the Designator base
   /// storage without making a temporary.
-  virtual mlir::Value genExprBox(const SomeExpr &, StatementContext &,
-                                 mlir::Location) = 0;
+  virtual fir::ExtendedValue genExprBox(const SomeExpr &, StatementContext &,
+                                        mlir::Location) = 0;
 
   /// Generate the address of the box describing the variable designated
   /// by the expression. The expression must be an allocatable or pointer

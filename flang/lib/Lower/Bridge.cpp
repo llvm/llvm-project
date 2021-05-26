@@ -298,13 +298,13 @@ public:
                     const Fortran::lower::SomeExpr &expr) override final {
     return createSomeMutableBox(loc, *this, expr, localSymbols);
   }
-  mlir::Value genExprBox(const Fortran::lower::SomeExpr &expr,
-                         Fortran::lower::StatementContext &context,
-                         mlir::Location loc) override final {
+  fir::ExtendedValue genExprBox(const Fortran::lower::SomeExpr &expr,
+                                Fortran::lower::StatementContext &context,
+                                mlir::Location loc) override final {
     if (expr.Rank() > 0 && Fortran::evaluate::IsVariable(expr))
-      return fir::getBase(
-          createSomeArrayBox(*this, expr, localSymbols, context));
-    return builder->createBox(loc, genExprAddr(expr, context, &loc));
+      return createSomeArrayBox(*this, expr, localSymbols, context);
+    return fir::BoxValue(
+        builder->createBox(loc, genExprAddr(expr, context, &loc)));
   }
 
   Fortran::evaluate::FoldingContext &getFoldingContext() override final {
@@ -1617,36 +1617,56 @@ private:
     assert(lhsTy && "must be a record type");
     auto fieldTy = fir::FieldType::get(lhsTy.getContext());
     for (auto [fldName, fldType] : lhsTy.getTypeList()) {
-      if (fir::isa_char(fldType)) {
-        auto fldCharTy = fldType.cast<fir::CharacterType>();
-        if (!fldCharTy.hasConstantLen())
-          TODO(loc, "LEN type parameter not constant");
-        mlir::Value field = builder->create<fir::FieldIndexOp>(
-            loc, fieldTy, fldName, lhsTy, fir::getTypeParams(lhs));
-        auto fldRefTy = builder->getRefType(fldType);
-        auto lenVal = builder->createIntegerConstant(loc, builder->getI64Type(),
-                                                     fldCharTy.getLen());
-        mlir::Value from = builder->create<fir::CoordinateOp>(
-            loc, fldRefTy, fir::getBase(rhs), field);
-        fir::ExtendedValue fromPtr{fir::CharBoxValue{from, lenVal}};
-        mlir::Value to = builder->create<fir::CoordinateOp>(
-            loc, fldRefTy, fir::getBase(lhs), field);
-        fir::ExtendedValue toPtr{fir::CharBoxValue{to, lenVal}};
-        Fortran::lower::CharacterExprHelper{*builder, loc}.createAssign(
-            toPtr, fromPtr);
-        continue;
-      }
-      if (!fir::isa_trivial(fldType))
-        TODO(toLocation(), "derived type assignment of non-trivial member");
       mlir::Value field = builder->create<fir::FieldIndexOp>(
           loc, fieldTy, fldName, lhsTy, fir::getTypeParams(lhs));
       auto fldRefTy = builder->getRefType(fldType);
-      auto elePtr = builder->create<fir::CoordinateOp>(
+      auto fromCoor = builder->create<fir::CoordinateOp>(
           loc, fldRefTy, fir::getBase(rhs), field);
-      auto loadVal = builder->create<fir::LoadOp>(loc, elePtr);
-      auto toPtr = builder->create<fir::CoordinateOp>(loc, fldRefTy,
-                                                      fir::getBase(lhs), field);
-      builder->create<fir::StoreOp>(loc, loadVal, toPtr);
+      auto from = Fortran::lower::componentToExtendedValue(*builder, loc, rhs,
+                                                           fromCoor);
+      auto toCoor = builder->create<fir::CoordinateOp>(
+          loc, fldRefTy, fir::getBase(lhs), field);
+      auto to =
+          Fortran::lower::componentToExtendedValue(*builder, loc, lhs, toCoor);
+      to.match(
+          [&](const fir::UnboxedValue &toPtr) {
+            // FIXME: this is incorrect after F95 to simply load/store derived
+            // type since they may have allocatable components that require
+            // deep-copy or may have defined assignment procedures.
+            auto loadVal =
+                builder->create<fir::LoadOp>(loc, fir::getBase(from));
+            builder->create<fir::StoreOp>(loc, loadVal, toPtr);
+          },
+          [&](const fir::CharBoxValue &) {
+            Fortran::lower::CharacterExprHelper{*builder, loc}.createAssign(
+                to, from);
+          },
+          [&](const fir::ArrayBoxValue &) {
+            Fortran::lower::createSomeArrayAssignment(*this, to, from,
+                                                      localSymbols, stmtCtx);
+          },
+          [&](const fir::CharArrayBoxValue &) {
+            Fortran::lower::createSomeArrayAssignment(*this, to, from,
+                                                      localSymbols, stmtCtx);
+          },
+          [&](const fir::BoxValue &toBox) {
+            fir::emitFatalError(loc, "derived type components must not be "
+                                     "represented by fir::BoxValue");
+          },
+          [&](const fir::MutableBoxValue &toBox) {
+            if (toBox.isPointer()) {
+              // Copy association status by copying the fir.box.
+              auto loadVal =
+                  builder->create<fir::LoadOp>(loc, fir::getBase(from));
+              builder->create<fir::StoreOp>(loc, loadVal, fir::getBase(to));
+              return;
+            }
+            // For allocatable components, a deep copy is needed.
+            TODO(loc, "allocatable components in derived type assignment");
+          },
+          [&](const fir::ProcBoxValue &toBox) {
+            TODO(loc, "procedure pointer component in derived type assignment");
+          });
     }
   }
 
@@ -1743,30 +1763,20 @@ private:
             },
             [&](const Fortran::evaluate::Assignment::BoundsSpec &lbExprs) {
               // Pointer assignment with possibly empty bounds-spec
-              auto lhs = genExprMutableBox(loc, assign.lhs);
-              if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
-                      assign.rhs)) {
-                Fortran::lower::disassociateMutableBox(*builder, loc, lhs);
-                return;
-              }
               auto lhsType = assign.lhs.GetType();
               auto rhsType = assign.rhs.GetType();
               // Polymorphic lhs/rhs may need more care. See F2018 10.2.2.3.
               if ((lhsType && lhsType->IsPolymorphic()) ||
                   (rhsType && rhsType->IsPolymorphic()))
                 TODO(loc, "pointer assignment involving polymorphic entity");
+
+              auto lhs = genExprMutableBox(loc, assign.lhs);
               llvm::SmallVector<mlir::Value> lbounds;
               for (const auto &lbExpr : lbExprs)
                 lbounds.push_back(
                     fir::getBase(genExprValue(toEvExpr(lbExpr), stmtCtx)));
-
-              // Do not generate a temp in case rhs is an array section.
-              auto rhs = isArraySectionWithoutVectorSubscript(assign.rhs)
-                             ? Fortran::lower::createSomeArrayBox(
-                                   *this, assign.rhs, localSymbols, stmtCtx)
-                             : genExprAddr(assign.rhs, stmtCtx);
-              Fortran::lower::associateMutableBoxWithShift(*builder, loc, lhs,
-                                                           rhs, lbounds);
+              Fortran::lower::associateMutableBoxWithShift(
+                  *this, loc, lhs, assign.rhs, lbounds, stmtCtx);
             },
             [&](const Fortran::evaluate::Assignment::BoundsRemapping
                     &boundExprs) {

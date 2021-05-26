@@ -13,13 +13,13 @@ subroutine test1
   ! CHECK-DAG: %[[t2:.*]] = fir.alloca !fir.type<_QFtest1Tt{a:i32,b:i32}> {{{.*}}uniq_name = "_QFtest1Et2"}
   ! CHECK-DAG: %[[a:.*]] = fir.field_index a, !fir.type<_QFtest1Tt{a:i32,b:i32}>
   ! CHECK: %[[ac:.*]] = fir.coordinate_of %[[t2]], %[[a]] : (!fir.ref<!fir.type<_QFtest1Tt{a:i32,b:i32}>>, !fir.field) -> !fir.ref<i32>
-  ! CHECK: %[[ld:.*]] = fir.load %[[ac]] : !fir.ref<i32>
   ! CHECK: %[[ad:.*]] = fir.coordinate_of %[[t1]], %[[a]] : (!fir.ref<!fir.type<_QFtest1Tt{a:i32,b:i32}>>, !fir.field) -> !fir.ref<i32>
+  ! CHECK: %[[ld:.*]] = fir.load %[[ac]] : !fir.ref<i32>
   ! CHECK: fir.store %[[ld]] to %[[ad]] : !fir.ref<i32>
   ! CHECK: %[[b:.*]] = fir.field_index b, !fir.type<_QFtest1Tt{a:i32,b:i32}>
   ! CHECK: %[[bc:.*]] = fir.coordinate_of %[[t2]], %[[b]] : (!fir.ref<!fir.type<_QFtest1Tt{a:i32,b:i32}>>, !fir.field) -> !fir.ref<i32>
-  ! CHECK: %[[ld:.*]] = fir.load %[[bc]] : !fir.ref<i32>
   ! CHECK: %[[bd:.*]] = fir.coordinate_of %[[t1]], %[[b]] : (!fir.ref<!fir.type<_QFtest1Tt{a:i32,b:i32}>>, !fir.field) -> !fir.ref<i32>
+  ! CHECK: %[[ld:.*]] = fir.load %[[bc]] : !fir.ref<i32>
   ! CHECK: fir.store %[[ld]] to %[[bd]] : !fir.ref<i32>
   t1 = t2
 end subroutine test1
@@ -89,9 +89,52 @@ subroutine test3
 
 
   ! CHECK: %[[mi:.*]] = fir.field_index m_i, !fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}>
+  ! CHECK: %[[mip:.*]] = fir.coordinate_of %[[t1]], %[[mi]] : (!fir.ref<!fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}>>, !fir.field) -> !fir.ref<i32>
   ! CHECK: %[[ii:.*]] = fir.load
-  ! CHECK: %[[mip:.*]] = fir.coordinate_of %{{.*}}, %[[mi]] : (!fir.ref<!fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}>>, !fir.field) -> !fir.ref<i32>
   ! CHECK: fir.store %[[ii]] to %[[mip]] : !fir.ref<i32>
   t1 = t2
   ! CHECK: return
 end subroutine test3
+
+! CHECK-LABEL: func @_QPtest_array_comp(
+! CHECK-SAME: %[[t1:.*]]: !fir.ref<!fir.type<_QFtest_array_compTt{m_x:!fir.array<10xf32>,m_i:i32}>>,
+! CHECK-SAME: %[[t2:.*]]: !fir.ref<!fir.type<_QFtest_array_compTt{m_x:!fir.array<10xf32>,m_i:i32}>>)
+subroutine test_array_comp(t1, t2)
+  type t
+     real :: m_x(10)
+     integer :: m_i
+  end type t
+  type(t) :: t1, t2
+  ! CHECK: %[[xfield:.*]] = fir.field_index m_x, !fir.type<_QFtest_array_compTt{m_x:!fir.array<10xf32>,m_i:i32}>
+  ! CHECK-DAG: %[[x2coor:.*]] = fir.coordinate_of %[[t2]], %[[xfield]] : (!fir.ref<!fir.type<_QFtest_array_compTt{m_x:!fir.array<10xf32>,m_i:i32}>>, !fir.field) -> !fir.ref<!fir.array<10xf32>>
+  ! CHECK-DAG: %[[x1coor:.*]] = fir.coordinate_of %[[t1]], %[[xfield]] : (!fir.ref<!fir.type<_QFtest_array_compTt{m_x:!fir.array<10xf32>,m_i:i32}>>, !fir.field) -> !fir.ref<!fir.array<10xf32>>
+  ! CHECK-DAG: %[[x1load:.*]] = fir.array_load %[[x1coor]](%{{.*}}) : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.array<10xf32>
+  ! CHECK-DAG: %[[x2load:.*]] = fir.array_load %[[x2coor]](%{{.*}}) : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.array<10xf32>
+  ! CHECK: %[[loop:.*]] = fir.do_loop %[[idx:.*]] = %c0{{.*}} to %{{.*}} step %c1{{.*}} iter_args(%[[res:.*]] = %[[x1load]]) -> (!fir.array<10xf32>) {
+  ! CHECK:   %[[fetch:.*]] = fir.array_fetch %[[x2load]], %[[idx]] : (!fir.array<10xf32>, index) -> f32
+  ! CHECK:   %[[update:.*]] = fir.array_update %[[res]], %[[fetch]], %[[idx]] : (!fir.array<10xf32>, f32, index) -> !fir.array<10xf32>
+  ! CHECK:   fir.result %[[update]] : !fir.array<10xf32>
+  ! CHECK: fir.array_merge_store %[[x1load]], %[[loop]] to %[[x1coor]] : !fir.ref<!fir.array<10xf32>>
+
+  ! CHECK: fir.field_index m_i, !fir.type<_QFtest_array_compTt{m_x:!fir.array<10xf32>,m_i:i32}>
+  t1 = t2
+end subroutine
+
+! CHECK-LABEL: func @_QPtest_ptr_comp(
+! CHECK-SAME: %[[t1:.*]]: !fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>>,
+! CHECK-SAME: %[[t2]]: !fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>>)
+subroutine test_ptr_comp(t1, t2)
+  type t
+     complex, pointer :: ptr(:)
+     integer :: m_i
+  end type t
+  type(t) :: t1, t2
+  ! CHECK: %[[ptrfield:.*]] = fir.field_index ptr, !fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>
+  ! CHECK-DAG: %[[ptr2coor:.*]] = fir.coordinate_of %[[t2]], %[[ptrfield]] : (!fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>>
+  ! CHECK: %[[ptr1coor:.*]] = fir.coordinate_of %[[t1]], %[[ptrfield]] : (!fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>>
+  ! CHECK-DAG: %[[ptr:.*]] = fir.load %[[ptr2coor]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>>
+  ! CHECK: fir.store %[[ptr]] to %[[ptr1coor]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>>
+
+  ! CHECK: fir.field_index m_i, !fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>
+  t1 = t2
+end subroutine

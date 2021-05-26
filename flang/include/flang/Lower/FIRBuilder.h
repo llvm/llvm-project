@@ -373,6 +373,18 @@ mlir::Value locationToFilename(FirOpBuilder &, mlir::Location);
 /// Generate a constant of the given type with the location line number
 mlir::Value locationToLineNo(FirOpBuilder &, mlir::Location, mlir::Type);
 
+//===--------------------------------------------------------------------===//
+// ExtendedValue helpers
+//===--------------------------------------------------------------------===//
+
+/// Return the extended value for a component of a derived type instance given
+/// the extended value \p obj of the derived type instance and the address of
+/// the component.
+fir::ExtendedValue
+componentToExtendedValue(Fortran::lower::FirOpBuilder &builder,
+                         mlir::Location loc, const fir::ExtendedValue &obj,
+                         mlir::Value component);
+
 } // namespace Fortran::lower
 
 #endif // FORTRAN_LOWER_FIRBUILDER_H
