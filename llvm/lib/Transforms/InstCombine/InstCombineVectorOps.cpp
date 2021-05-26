@@ -458,7 +458,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
         SmallVector<Value *> NewOps;
         for (unsigned I = 1; I != GEP->getNumOperands(); ++I) {
           Value *Op = GEP->getOperand(I);
-          if (auto *OpTy = dyn_cast<VectorType>(Op->getType()))
+          if (isa<VectorType>(Op->getType()))
             NewOps.push_back(Builder.CreateExtractElement(Op, IndexC));
           else
             NewOps.push_back(Op);
