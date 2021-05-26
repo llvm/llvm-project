@@ -123,7 +123,7 @@ public:
   bool isBerkeleyData() const;
 
   /// Whether this section is a debug section.
-  bool isDebugSection(StringRef SectionName) const;
+  bool isDebugSection() const;
 
   bool containsSymbol(SymbolRef S) const;
 
@@ -274,7 +274,7 @@ protected:
   virtual bool isSectionStripped(DataRefImpl Sec) const;
   virtual bool isBerkeleyText(DataRefImpl Sec) const;
   virtual bool isBerkeleyData(DataRefImpl Sec) const;
-  virtual bool isDebugSection(StringRef SectionName) const;
+  virtual bool isDebugSection(DataRefImpl Sec) const;
   virtual relocation_iterator section_rel_begin(DataRefImpl Sec) const = 0;
   virtual relocation_iterator section_rel_end(DataRefImpl Sec) const = 0;
   virtual Expected<section_iterator> getRelocatedSection(DataRefImpl Sec) const;
@@ -504,8 +504,8 @@ inline bool SectionRef::isBerkeleyData() const {
   return OwningObject->isBerkeleyData(SectionPimpl);
 }
 
-inline bool SectionRef::isDebugSection(StringRef SectionName) const {
-  return OwningObject->isDebugSection(SectionName);
+inline bool SectionRef::isDebugSection() const {
+  return OwningObject->isDebugSection(SectionPimpl);
 }
 
 inline relocation_iterator SectionRef::relocation_begin() const {
