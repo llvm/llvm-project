@@ -436,15 +436,8 @@ define <vscale x 16 x i32> @vshl_vx_nxv16i32_0(<vscale x 16 x i32> %va) {
 define <vscale x 1 x i64> @vshl_vx_nxv1i64(<vscale x 1 x i64> %va, i64 %b) {
 ; CHECK-LABEL: vshl_vx_nxv1i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    sw a1, 12(sp)
-; CHECK-NEXT:    sw a0, 8(sp)
-; CHECK-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
-; CHECK-NEXT:    addi a0, sp, 8
-; CHECK-NEXT:    vlse64.v v25, (a0), zero
-; CHECK-NEXT:    vsll.vv v8, v8, v25
-; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    vsetvli a1, zero, e64,m1,ta,mu
+; CHECK-NEXT:    vsll.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x i64> undef, i64 %b, i32 0
   %splat = shufflevector <vscale x 1 x i64> %head, <vscale x 1 x i64> undef, <vscale x 1 x i32> zeroinitializer
@@ -480,15 +473,8 @@ define <vscale x 1 x i64> @vshl_vx_nxv1i64_1(<vscale x 1 x i64> %va) {
 define <vscale x 2 x i64> @vshl_vx_nxv2i64(<vscale x 2 x i64> %va, i64 %b) {
 ; CHECK-LABEL: vshl_vx_nxv2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    sw a1, 12(sp)
-; CHECK-NEXT:    sw a0, 8(sp)
-; CHECK-NEXT:    vsetvli a0, zero, e64,m2,ta,mu
-; CHECK-NEXT:    addi a0, sp, 8
-; CHECK-NEXT:    vlse64.v v26, (a0), zero
-; CHECK-NEXT:    vsll.vv v8, v8, v26
-; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    vsetvli a1, zero, e64,m2,ta,mu
+; CHECK-NEXT:    vsll.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i64> undef, i64 %b, i32 0
   %splat = shufflevector <vscale x 2 x i64> %head, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
@@ -524,15 +510,8 @@ define <vscale x 2 x i64> @vshl_vx_nxv2i64_1(<vscale x 2 x i64> %va) {
 define <vscale x 4 x i64> @vshl_vx_nxv4i64(<vscale x 4 x i64> %va, i64 %b) {
 ; CHECK-LABEL: vshl_vx_nxv4i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    sw a1, 12(sp)
-; CHECK-NEXT:    sw a0, 8(sp)
-; CHECK-NEXT:    vsetvli a0, zero, e64,m4,ta,mu
-; CHECK-NEXT:    addi a0, sp, 8
-; CHECK-NEXT:    vlse64.v v28, (a0), zero
-; CHECK-NEXT:    vsll.vv v8, v8, v28
-; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    vsetvli a1, zero, e64,m4,ta,mu
+; CHECK-NEXT:    vsll.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i64> undef, i64 %b, i32 0
   %splat = shufflevector <vscale x 4 x i64> %head, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
@@ -568,15 +547,8 @@ define <vscale x 4 x i64> @vshl_vx_nxv4i64_1(<vscale x 4 x i64> %va) {
 define <vscale x 8 x i64> @vshl_vx_nxv8i64(<vscale x 8 x i64> %va, i64 %b) {
 ; CHECK-LABEL: vshl_vx_nxv8i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    sw a1, 12(sp)
-; CHECK-NEXT:    sw a0, 8(sp)
-; CHECK-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
-; CHECK-NEXT:    addi a0, sp, 8
-; CHECK-NEXT:    vlse64.v v16, (a0), zero
-; CHECK-NEXT:    vsll.vv v8, v8, v16
-; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    vsetvli a1, zero, e64,m8,ta,mu
+; CHECK-NEXT:    vsll.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i64> undef, i64 %b, i32 0
   %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> undef, <vscale x 8 x i32> zeroinitializer

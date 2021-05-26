@@ -817,6 +817,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine(ISD::FCOPYSIGN);
     setTargetDAGCombine(ISD::MGATHER);
     setTargetDAGCombine(ISD::MSCATTER);
+    setTargetDAGCombine(ISD::SRA);
+    setTargetDAGCombine(ISD::SRL);
+    setTargetDAGCombine(ISD::SHL);
   }
 }
 
@@ -1611,43 +1614,6 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   return SDValue();
 }
 
-// Use a stack slot to splat the two i32 values in Lo/Hi to the vector desired
-// vector nxvXi64 VT.
-static SDValue splatPartsI64ThroughStack(const SDLoc &DL, MVT VT, SDValue Lo,
-                                         SDValue Hi, SDValue VL,
-                                         SelectionDAG &DAG) {
-  assert(VT.getVectorElementType() == MVT::i64 && VT.isScalableVector() &&
-         Lo.getValueType() == MVT::i32 && Hi.getValueType() == MVT::i32 &&
-         "Unexpected VTs!");
-  MachineFunction &MF = DAG.getMachineFunction();
-  RISCVMachineFunctionInfo *FuncInfo = MF.getInfo<RISCVMachineFunctionInfo>();
-
-  // We use the same frame index we use for moving two i32s into 64-bit FPR.
-  // This is an analogous operation.
-  int FI = FuncInfo->getMoveF64FrameIndex(MF);
-  MachinePointerInfo MPI = MachinePointerInfo::getFixedStack(MF, FI);
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  SDValue StackSlot =
-      DAG.getFrameIndex(FI, TLI.getPointerTy(DAG.getDataLayout()));
-
-  SDValue Chain = DAG.getEntryNode();
-  Lo = DAG.getStore(Chain, DL, Lo, StackSlot, MPI, Align(8));
-
-  SDValue OffsetSlot =
-      DAG.getMemBasePlusOffset(StackSlot, TypeSize::Fixed(4), DL);
-  Hi = DAG.getStore(Chain, DL, Hi, OffsetSlot, MPI.getWithOffset(4), Align(8));
-
-  Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Lo, Hi);
-
-  SDVTList VTs = DAG.getVTList({VT, MVT::Other});
-  SDValue IntID = DAG.getTargetConstant(Intrinsic::riscv_vlse, DL, MVT::i64);
-  SDValue Ops[] = {Chain, IntID, StackSlot,
-                   DAG.getRegister(RISCV::X0, MVT::i64), VL};
-
-  return DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops, MVT::i64,
-                                 MPI, Align(8), MachineMemOperand::MOLoad);
-}
-
 static SDValue splatPartsI64WithVL(const SDLoc &DL, MVT VT, SDValue Lo,
                                    SDValue Hi, SDValue VL, SelectionDAG &DAG) {
   if (isa<ConstantSDNode>(Lo) && isa<ConstantSDNode>(Hi)) {
@@ -1660,7 +1626,7 @@ static SDValue splatPartsI64WithVL(const SDLoc &DL, MVT VT, SDValue Lo,
   }
 
   // Fall back to a stack store and stride x0 vector load.
-  return splatPartsI64ThroughStack(DL, VT, Lo, Hi, VL, DAG);
+  return DAG.getNode(RISCVISD::SPLAT_VECTOR_SPLIT_I64_VL, DL, VT, Lo, Hi, VL);
 }
 
 // Called by type legalization to handle splat of i64 on RV32.
@@ -2969,8 +2935,8 @@ SDValue RISCVTargetLowering::lowerSPLAT_VECTOR_PARTS(SDValue Op,
     return DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VecVT, Lo);
 
   // Fall back to use a stack store and stride x0 vector load. Use X0 as VL.
-  return splatPartsI64ThroughStack(DL, VecVT, Lo, Hi,
-                                   DAG.getRegister(RISCV::X0, MVT::i64), DAG);
+  return DAG.getNode(RISCVISD::SPLAT_VECTOR_SPLIT_I64_VL, DL, VecVT, Lo, Hi,
+                     DAG.getRegister(RISCV::X0, MVT::i64));
 }
 
 // Custom-lower extensions from mask vectors by using a vselect either with 1
@@ -5925,6 +5891,36 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
          Index, MGSN->getScale()},
         MGSN->getMemOperand(), NewIndexTy, MSN->isTruncatingStore());
   }
+  case RISCVISD::SRA_VL:
+  case RISCVISD::SRL_VL:
+  case RISCVISD::SHL_VL: {
+    SDValue ShAmt = N->getOperand(1);
+    if (ShAmt.getOpcode() == RISCVISD::SPLAT_VECTOR_SPLIT_I64_VL) {
+      // We don't need the upper 32 bits of a 64-bit element for a shift amount.
+      SDLoc DL(N);
+      SDValue VL = N->getOperand(3);
+      EVT VT = N->getValueType(0);
+      ShAmt =
+          DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, ShAmt.getOperand(0), VL);
+      return DAG.getNode(N->getOpcode(), DL, VT, N->getOperand(0), ShAmt,
+                         N->getOperand(2), N->getOperand(3));
+    }
+    break;
+  }
+  case ISD::SRA:
+  case ISD::SRL:
+  case ISD::SHL: {
+    SDValue ShAmt = N->getOperand(1);
+    if (ShAmt.getOpcode() == RISCVISD::SPLAT_VECTOR_SPLIT_I64_VL) {
+      // We don't need the upper 32 bits of a 64-bit element for a shift amount.
+      SDLoc DL(N);
+      EVT VT = N->getValueType(0);
+      ShAmt =
+          DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VT, ShAmt.getOperand(0));
+      return DAG.getNode(N->getOpcode(), DL, VT, N->getOperand(0), ShAmt);
+    }
+    break;
+  }
   }
 
   return SDValue();
@@ -7839,6 +7835,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VMV_S_X_VL)
   NODE_NAME_CASE(VFMV_S_F_VL)
   NODE_NAME_CASE(SPLAT_VECTOR_I64)
+  NODE_NAME_CASE(SPLAT_VECTOR_SPLIT_I64_VL)
   NODE_NAME_CASE(READ_VLENB)
   NODE_NAME_CASE(TRUNCATE_VECTOR_VL)
   NODE_NAME_CASE(VSLIDEUP_VL)
