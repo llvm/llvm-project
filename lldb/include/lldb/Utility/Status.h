@@ -15,7 +15,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdarg>
-#include <stdint.h>
+#include <cstdint>
 #include <string>
 #include <system_error>
 #include <type_traits>

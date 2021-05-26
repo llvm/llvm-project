@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include <chrono>
+#include <cstdarg>
 #include <fstream>
 #include <mutex>
 #include <sstream>
-#include <stdarg.h>
 
 #include "LLDBUtils.h"
 #include "VSCode.h"

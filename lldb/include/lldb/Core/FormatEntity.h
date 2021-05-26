@@ -12,8 +12,8 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-types.h"
 #include <algorithm>
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 #include <string>
 #include <vector>

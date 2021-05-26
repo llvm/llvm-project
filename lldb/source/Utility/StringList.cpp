@@ -14,8 +14,8 @@
 #include "llvm/ADT/ArrayRef.h"
 
 #include <algorithm>
-#include <stdint.h>
-#include <string.h>
+#include <cstdint>
+#include <cstring>
 
 using namespace lldb_private;
 

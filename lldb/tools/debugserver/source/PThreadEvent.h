@@ -14,8 +14,8 @@
 #define LLDB_TOOLS_DEBUGSERVER_SOURCE_PTHREADEVENT_H
 #include "PThreadCondition.h"
 #include "PThreadMutex.h"
-#include <stdint.h>
-#include <time.h>
+#include <cstdint>
+#include <ctime>
 
 class PThreadEvent {
 public:

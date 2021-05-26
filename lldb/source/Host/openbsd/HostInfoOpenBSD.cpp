@@ -8,8 +8,8 @@
 
 #include "lldb/Host/openbsd/HostInfoOpenBSD.h"
 
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
 #include <sys/sysctl.h>
 #include <sys/types.h>
 #include <sys/utsname.h>

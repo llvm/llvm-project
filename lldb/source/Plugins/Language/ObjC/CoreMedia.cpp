@@ -13,7 +13,7 @@
 
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/Target.h"
-#include <inttypes.h>
+#include <cinttypes>
 
 using namespace lldb;
 using namespace lldb_private;

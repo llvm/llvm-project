@@ -15,8 +15,8 @@
 #include <iterator>
 #include <vector>
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 using namespace lldb;
 using namespace lldb_private;

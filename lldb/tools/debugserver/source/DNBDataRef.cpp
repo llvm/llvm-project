@@ -12,8 +12,8 @@
 
 #include "DNBDataRef.h"
 #include "DNBLog.h"
-#include <assert.h>
-#include <ctype.h>
+#include <cassert>
+#include <cctype>
 #include <libkern/OSByteOrder.h>
 
 // Constructor

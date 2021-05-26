@@ -9,7 +9,7 @@
 #ifndef LLDB_API_SBDEBUGGER_H
 #define LLDB_API_SBDEBUGGER_H
 
-#include <stdio.h>
+#include <cstdio>
 
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBPlatform.h"

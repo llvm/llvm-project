@@ -15,9 +15,9 @@
 #include <functional>
 #include <thread>
 
-#include <errno.h>
+#include <cerrno>
+#include <climits>
 #include <fcntl.h>
-#include <limits.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>

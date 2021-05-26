@@ -9,7 +9,7 @@
 #ifndef LLDB_CORE_DEBUGGER_H
 #define LLDB_CORE_DEBUGGER_H
 
-#include <stdint.h>
+#include <cstdint>
 
 #include <memory>
 #include <vector>
@@ -42,9 +42,9 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Threading.h"
 
-#include <assert.h>
-#include <stddef.h>
-#include <stdio.h>
+#include <cassert>
+#include <cstddef>
+#include <cstdio>
 
 namespace llvm {
 class raw_ostream;

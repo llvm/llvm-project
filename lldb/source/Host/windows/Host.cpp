@@ -8,7 +8,7 @@
 
 #include "lldb/Host/windows/AutoHandle.h"
 #include "lldb/Host/windows/windows.h"
-#include <stdio.h>
+#include <cstdio>
 
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"

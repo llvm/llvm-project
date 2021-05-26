@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <inttypes.h>
+#include <cinttypes>
 
 #include "lldb/Breakpoint/BreakpointSite.h"
 

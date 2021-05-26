@@ -43,9 +43,9 @@
 #include <memory>
 #include <vector>
 
-#include <assert.h>
-#include <inttypes.h>
-#include <string.h>
+#include <cassert>
+#include <cinttypes>
+#include <cstring>
 
 namespace lldb_private {
 class CompileUnit;

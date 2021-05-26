@@ -16,10 +16,10 @@
 #endif
 
 // va_start, va_end, etc macros.
-#include <stdarg.h>
+#include <cstdarg>
 
 // time_t, timespec, etc.
-#include <time.h>
+#include <ctime>
 
 #ifndef PATH_MAX
 #define PATH_MAX 32768
@@ -68,7 +68,7 @@
 #ifdef _MSC_VER
 
 // PRIxxx format macros for printf()
-#include <inttypes.h>
+#include <cinttypes>
 
 // open(), close(), creat(), etc.
 #include <io.h>

@@ -18,7 +18,7 @@
 #include <ratio>
 #include <string>
 
-#include <stddef.h>
+#include <cstddef>
 
 namespace lldb_private {
 class Status;

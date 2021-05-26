@@ -18,8 +18,8 @@
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 namespace lldb_private {
 class ExecutionContextScope;

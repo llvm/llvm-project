@@ -8,9 +8,9 @@
 
 #include "NativeProcessLinux.h"
 
-#include <errno.h>
-#include <stdint.h>
-#include <string.h>
+#include <cerrno>
+#include <cstdint>
+#include <cstring>
 #include <unistd.h>
 
 #include <fstream>

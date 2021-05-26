@@ -13,9 +13,9 @@
 #ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_PTHREADMUTEX_H
 #define LLDB_TOOLS_DEBUGSERVER_SOURCE_PTHREADMUTEX_H
 
-#include <assert.h>
+#include <cassert>
+#include <cstdint>
 #include <pthread.h>
-#include <stdint.h>
 
 //#define DEBUG_PTHREAD_MUTEX_DEADLOCKS 1
 

@@ -14,8 +14,8 @@
 #define LLDB_TOOLS_DEBUGSERVER_SOURCE_DNBREGISTERINFO_H
 
 #include "DNBDefs.h"
-#include <stdint.h>
-#include <stdio.h>
+#include <cstdint>
+#include <cstdio>
 
 struct DNBRegisterValueClass : public DNBRegisterValue {
 #ifdef __cplusplus

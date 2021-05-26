@@ -8,9 +8,9 @@
 
 #include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/Utility/Reproducer.h"
+#include <cstdio>
+#include <cstdlib>
 #include <limits>
-#include <stdio.h>
-#include <stdlib.h>
 #include <thread>
 
 using namespace lldb_private;

@@ -12,8 +12,8 @@
 #include <sstream>
 #include <string>
 
-#include <ctype.h>
-#include <stdlib.h>
+#include <cctype>
+#include <cstdlib>
 
 #include "lldb/Core/Address.h"
 #include "lldb/Interpreter/Options.h"

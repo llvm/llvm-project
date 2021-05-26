@@ -21,7 +21,7 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-types.h"
 
-#include <inttypes.h>
+#include <cinttypes>
 #include <vector>
 
 using namespace lldb;

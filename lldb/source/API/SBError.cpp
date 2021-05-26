@@ -12,7 +12,7 @@
 #include "lldb/API/SBStream.h"
 #include "lldb/Utility/Status.h"
 
-#include <stdarg.h>
+#include <cstdarg>
 
 using namespace lldb;
 using namespace lldb_private;

@@ -8,7 +8,7 @@
 
 #include "lldb/Utility/TildeExpressionResolver.h"
 
-#include <assert.h>
+#include <cassert>
 #include <system_error>
 
 #include "llvm/ADT/STLExtras.h"
