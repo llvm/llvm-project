@@ -321,9 +321,9 @@ def  : WriteRes<WriteVecMoveY,        [SLM_FPC_RSV01]>;
 def  : WriteRes<WriteVecMoveToGpr,    [SLM_IEC_RSV01]>;
 def  : WriteRes<WriteVecMoveFromGpr,  [SLM_IEC_RSV01]>;
 
-defm : SLMWriteResPair<WriteVecShift,    [SLM_FPC_RSV0],  1>;
-defm : SLMWriteResPair<WriteVecShiftX,   [SLM_FPC_RSV0],  1>;
-defm : SLMWriteResPair<WriteVecShiftY,   [SLM_FPC_RSV0],  1>;
+defm : SLMWriteResPair<WriteVecShift,    [SLM_FPC_RSV0],  2, [2], 2>;
+defm : SLMWriteResPair<WriteVecShiftX,   [SLM_FPC_RSV0],  2, [2], 2>;
+defm : SLMWriteResPair<WriteVecShiftY,   [SLM_FPC_RSV0],  2, [2], 2>;
 defm : X86WriteResPairUnsupported<WriteVecShiftZ>;
 defm : SLMWriteResPair<WriteVecShiftImm, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteVecShiftImmX,[SLM_FPC_RSV0],  1>;
@@ -354,8 +354,8 @@ defm : SLMWriteResPair<WriteShuffleY, [SLM_FPC_RSV0],  1>;
 defm : X86WriteResPairUnsupported<WriteShuffleZ>;
 defm : SLMWriteResPair<WriteShuffleX, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteVarShuffle,  [SLM_FPC_RSV0],  1>;
-defm : SLMWriteResPair<WriteVarShuffleX, [SLM_FPC_RSV0],  1>;
-defm : SLMWriteResPair<WriteVarShuffleY, [SLM_FPC_RSV0],  1>;
+defm : SLMWriteResPair<WriteVarShuffleX, [SLM_FPC_RSV0],  5, [5], 4>;
+defm : SLMWriteResPair<WriteVarShuffleY, [SLM_FPC_RSV0],  5, [5], 4>;
 defm : X86WriteResPairUnsupported<WriteVarShuffleZ>;
 defm : SLMWriteResPair<WriteBlend,  [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteBlendY, [SLM_FPC_RSV0],  1>;
@@ -397,6 +397,7 @@ defm : SLMWriteResPair<WritePCmpIStrM,  [SLM_FPC_RSV0], 13, [13]>;
 
 // Packed Compare Explicit Length Strings, Return Mask
 defm : SLMWriteResPair<WritePCmpEStrM,  [SLM_FPC_RSV0], 17, [17]>;
+
 // Packed Compare Implicit Length Strings, Return Index
 defm : SLMWriteResPair<WritePCmpIStrI,  [SLM_FPC_RSV0], 17, [17]>;
 
