@@ -147,6 +147,11 @@ public:
                                  MachineBasicBlock::iterator II,
                                  const DebugLoc &DL, int64_t Amount) const;
 
+  // Returns true if the given MI is an RVV instruction opcode for which we may
+  // expect to see a FrameIndex operand. When CheckFIs is true, the instruction
+  // must contain at least one FrameIndex operand.
+  bool isRVVSpill(const MachineInstr &MI, bool CheckFIs) const;
+
   Optional<std::pair<unsigned, unsigned>>
   isRVVSpillForZvlsseg(unsigned Opcode) const;
 
