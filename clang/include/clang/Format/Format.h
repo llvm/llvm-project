@@ -1829,7 +1829,14 @@ struct FormatStyle {
     ///        Base2
     ///    {};
     /// \endcode
-    BILS_AfterColon
+    BILS_AfterColon,
+    /// Break inheritance list only after the commas.
+    /// \code
+    ///    class Foo : Base1,
+    ///                Base2
+    ///    {};
+    /// \endcode
+    BILS_AfterComma,
   };
 
   /// The inheritance list style to use.

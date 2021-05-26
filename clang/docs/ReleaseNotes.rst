@@ -250,6 +250,9 @@ clang-format
   accepts ``AllIfsAndElse`` value that allows to put "else if" and "else" short
   statements on a single line. (Fixes https://llvm.org/PR50019.)
 
+- Option ``BreakInheritanceList`` gets a new style, ``AfterComma``. It breaks
+  only after the commas that separate the base-specifiers.
+
 - ``git-clang-format`` no longer formats changes to symbolic links. (Fixes
   https://llvm.org/PR46992.)
 
