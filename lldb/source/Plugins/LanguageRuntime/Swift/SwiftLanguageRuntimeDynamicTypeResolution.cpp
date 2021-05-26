@@ -13,13 +13,14 @@
 #include "SwiftLanguageRuntimeImpl.h"
 #include "SwiftLanguageRuntime.h"
 
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ProcessStructReader.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Timer.h"
 #include "swift/AST/Types.h"
 
 #include "swift/AST/ASTContext.h"
@@ -938,6 +939,7 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemote
 llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffset(
     CompilerType instance_type, ValueObject *instance,
     llvm::StringRef member_name, Status *error) {
+  LLDB_SCOPED_TIMER();
   llvm::Optional<uint64_t> offset;
 
   if (!instance_type.IsValid())
@@ -1031,7 +1033,8 @@ static CompilerType GetWeakReferent(TypeSystemSwiftTypeRef &ts,
 llvm::Optional<unsigned>
 SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
                                          ValueObject *valobj) {
-  auto *ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
+  LLDB_SCOPED_TIMER();
+   auto *ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
       type.GetTypeSystem());
   if (!ts)
     return {};
@@ -1273,6 +1276,7 @@ llvm::Optional<std::string> SwiftLanguageRuntimeImpl::GetEnumCaseName(
 llvm::Optional<size_t> SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
     CompilerType type, llvm::StringRef name, ExecutionContext *exe_ctx,
     bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
+  LLDB_SCOPED_TIMER();
   auto *ts =
       llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(type.GetTypeSystem());
   if (!ts)
@@ -1949,6 +1953,7 @@ CompilerType
 SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
                                                     TypeSystemSwiftTypeRef &ts,
                                                     ConstString mangled_name) {
+  LLDB_SCOPED_TIMER();
   using namespace swift::Demangle;
 
   Status error;
@@ -2046,7 +2051,8 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
 CompilerType
 SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
                                                     CompilerType base_type) {
-  auto &target = m_process.GetTarget();
+  LLDB_SCOPED_TIMER();
+   auto &target = m_process.GetTarget();
   assert(IsScratchContextLocked(target) &&
          "Swift scratch context not locked ahead of archetype binding");
 
@@ -2514,6 +2520,8 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress(
   if (use_dynamic == lldb::eNoDynamicValues)
     return false;
 
+  LLDB_SCOPED_TIMER();
+   
   // Try to import a Clang type into Swift.
   if (in_value.GetObjectRuntimeLanguage() == eLanguageTypeObjC)
     return GetDynamicTypeAndAddress_ClangType(

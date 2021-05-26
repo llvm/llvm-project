@@ -32,6 +32,7 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/OptionParsing.h"
+#include "lldb/Utility/Timer.h"
 
 #include "swift/AST/ASTMangler.h"
 #include "swift/AST/Decl.h"
@@ -418,6 +419,8 @@ SwiftLanguageRuntimeImpl::GetReflectionContext() {
 }
 
 void SwiftLanguageRuntimeImpl::SetupReflection() {
+  LLDB_SCOPED_TIMER();
+ 
   // SetupABIBit() iterates of the Target's images and thus needs to
   // acquire that ModuleList's lock. We need to acquire this before
   // locking m_add_module_mutex, since ModulesDidLoad can also be
@@ -2370,7 +2373,8 @@ UnwindPlanSP
 SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
                                            RegisterContext *regctx,
                                            bool &behaves_like_zeroth_frame) {
-
+  LLDB_SCOPED_TIMER();
+ 
   Target &target(process_sp->GetTarget());
   auto arch = target.GetArchitecture();
   llvm::Optional<AsyncUnwindRegisterNumbers> regnums =
@@ -2527,7 +2531,8 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
 static UnwindPlanSP
 GetFollowAsyncContextUnwindPlan(RegisterContext *regctx, ArchSpec &arch,
                                 bool &behaves_like_zeroth_frame) {
-
+  LLDB_SCOPED_TIMER();
+ 
   UnwindPlan::RowSP row(new UnwindPlan::Row);
   const int32_t ptr_size = 8;
   row->SetOffset(0);
