@@ -1,5 +1,28 @@
 // RUN: mlir-opt %s -canonicalize | FileCheck %s
 
+// CHECK-LABEL: func @create_of_real_and_imag
+// CHECK-SAME: (%[[CPLX:.*]]: complex<f32>)
+func @create_of_real_and_imag(%cplx: complex<f32>) -> complex<f32> {
+  // CHECK-NEXT: return %[[CPLX]] : complex<f32>
+  %real = complex.re %cplx : complex<f32>
+  %imag = complex.im %cplx : complex<f32>
+  %complex = complex.create %real, %imag : complex<f32>
+  return %complex : complex<f32>
+}
+
+// CHECK-LABEL: func @create_of_real_and_imag_different_operand
+// CHECK-SAME: (%[[CPLX:.*]]: complex<f32>, %[[CPLX2:.*]]: complex<f32>)
+func @create_of_real_and_imag_different_operand(
+    %cplx: complex<f32>, %cplx2 : complex<f32>) -> complex<f32> {
+  // CHECK-NEXT: %[[REAL:.*]] = complex.re %[[CPLX]] : complex<f32>
+  // CHECK-NEXT: %[[IMAG:.*]] = complex.im %[[CPLX2]] : complex<f32>
+  // CHECK-NEXT: %[[COMPLEX:.*]] = complex.create %[[REAL]], %[[IMAG]] : complex<f32>
+  %real = complex.re %cplx : complex<f32>
+  %imag = complex.im %cplx2 : complex<f32>
+  %complex = complex.create %real, %imag : complex<f32>
+  return %complex: complex<f32>
+}
+
 // CHECK-LABEL: func @real_of_const(
 func @real_of_const() -> f32 {
   // CHECK: %[[CST:.*]] = constant 1.000000e+00 : f32
