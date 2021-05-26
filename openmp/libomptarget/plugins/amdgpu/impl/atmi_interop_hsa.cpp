@@ -8,10 +8,10 @@
 
 using core::atl_is_atmi_initialized;
 
-atmi_status_t atmi_interop_hsa_get_symbol_info(atmi_mem_place_t place,
-                                               const char *symbol,
-                                               void **var_addr,
-                                               unsigned int *var_size) {
+atmi_status_t atmi_interop_hsa_get_symbol_info(
+    const std::map<std::string, atl_symbol_info_t> &SymbolInfoTable,
+    atmi_mem_place_t place, const char *symbol, void **var_addr,
+    unsigned int *var_size) {
   /*
      // Typical usage:
      void *var_addr;
@@ -32,9 +32,9 @@ atmi_status_t atmi_interop_hsa_get_symbol_info(atmi_mem_place_t place,
 
   // get the symbol info
   std::string symbolStr = std::string(symbol);
-  if (SymbolInfoTable[place.dev_id].find(symbolStr) !=
-      SymbolInfoTable[place.dev_id].end()) {
-    atl_symbol_info_t info = SymbolInfoTable[place.dev_id][symbolStr];
+  auto It = SymbolInfoTable.find(symbolStr);
+  if (It != SymbolInfoTable.end()) {
+    atl_symbol_info_t info = It->second;
     *var_addr = reinterpret_cast<void *>(info.addr);
     *var_size = info.size;
     return ATMI_STATUS_SUCCESS;
@@ -46,6 +46,7 @@ atmi_status_t atmi_interop_hsa_get_symbol_info(atmi_mem_place_t place,
 }
 
 atmi_status_t atmi_interop_hsa_get_kernel_info(
+    const std::map<std::string, atl_kernel_info_t> &KernelInfoTable,
     atmi_mem_place_t place, const char *kernel_name,
     hsa_executable_symbol_info_t kernel_info, uint32_t *value) {
   /*
@@ -68,9 +69,9 @@ atmi_status_t atmi_interop_hsa_get_kernel_info(
   atmi_status_t status = ATMI_STATUS_SUCCESS;
   // get the kernel info
   std::string kernelStr = std::string(kernel_name);
-  if (KernelInfoTable[place.dev_id].find(kernelStr) !=
-      KernelInfoTable[place.dev_id].end()) {
-    atl_kernel_info_t info = KernelInfoTable[place.dev_id][kernelStr];
+  auto It = KernelInfoTable.find(kernelStr);
+  if (It != KernelInfoTable.end()) {
+    atl_kernel_info_t info = It->second;
     switch (kernel_info) {
     case HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE:
       *value = info.group_segment_size;
