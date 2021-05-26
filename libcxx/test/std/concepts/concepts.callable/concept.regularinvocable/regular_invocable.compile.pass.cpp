@@ -436,34 +436,28 @@ static_assert(
     std::regular_invocable<rvalue_cv_unqualified, S const volatile&&>);
 } // namespace pointer_to_member_functions
 
-[[nodiscard]] constexpr bool check_lambda(auto, auto...) { return false; }
+// Check the concept with closure types (and also check for subsumption)
+template<class F, class... Args>
+constexpr bool is_regular_invocable(F, Args&&...) {
+  return false;
+}
 
-// clang-format off
 template<class F, class... Args>
 requires std::invocable<F, Args...>
-[[nodiscard]] constexpr bool check_lambda(F, Args&&...)
-{
+constexpr bool is_regular_invocable(F, Args&&...) {
   return false;
 }
 
 template<class F, class... Args>
 requires std::regular_invocable<F, Args...> && true
-[[nodiscard]] constexpr bool check_lambda(F, Args&&...)
-{
+constexpr bool is_regular_invocable(F, Args&&...) {
   return true;
 }
-// clang-format on
 
-[[nodiscard]] constexpr bool check_lambdas() {
-  static_assert(check_lambda([] {}));
-  static_assert(check_lambda([](int) {}, 0));
-  static_assert(check_lambda([](int) {}, 0L));
-  static_assert(!check_lambda([](int) {}, nullptr));
+static_assert(is_regular_invocable([] {}));
+static_assert(is_regular_invocable([](int) {}, 0));
+static_assert(is_regular_invocable([](int) {}, 0L));
+static_assert(!is_regular_invocable([](int) {}, nullptr));
 
-  int i = 0;
-  return check_lambda([](int&) {}, i);
-}
-
-static_assert(check_lambdas());
-
-int main(int, char**) { return 0; }
+int i = 0;
+static_assert(is_regular_invocable([](int&) {}, i));
