@@ -34,6 +34,19 @@ define double @exp2_a_exp2_b_multiple_uses(double %a, double %b) {
   ret double %mul
 }
 
+; TODO: Multiple uses, but only 1 user.
+
+define double @exp2_a_a(double %a) {
+; CHECK-LABEL: @exp2_a_a(
+; CHECK-NEXT:    [[T:%.*]] = call double @llvm.exp2.f64(double [[A:%.*]])
+; CHECK-NEXT:    [[M:%.*]] = fmul reassoc double [[T]], [[T]]
+; CHECK-NEXT:    ret double [[M]]
+;
+  %t = call double @llvm.exp2.f64(double %a)
+  %m = fmul reassoc double %t, %t
+  ret double %m
+}
+
 ; exp2(a) * exp2(b) reassoc, both with multiple uses
 define double @exp2_a_exp2_b_multiple_uses_both(double %a, double %b) {
 ; CHECK-LABEL: @exp2_a_exp2_b_multiple_uses_both(
