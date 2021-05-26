@@ -20,7 +20,7 @@ define amdgpu_kernel void @k0() {
 ; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"([[LLVM_AMDGCN_MODULE_LDS_T:%.*]] addrspace(3)* @llvm.amdgcn.module.lds) ]
 ; OPT-NEXT:    [[LDS_SIZE_1_ALIGN_1_BC:%.*]] = bitcast [1 x i8] addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_MODULE_LDS_T]], [[LLVM_AMDGCN_MODULE_LDS_T]] addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 0) to i8 addrspace(3)*
 ; OPT-NEXT:    store i8 1, i8 addrspace(3)* [[LDS_SIZE_1_ALIGN_1_BC]], align 1
-; OPT-NEXT:    [[LDS_SIZE_16_ALIGN_16_BC:%.*]] = bitcast [16 x i8] addrspace(3)* @lds.size.16.align.16 to i8 addrspace(3)*
+; OPT-NEXT:    [[LDS_SIZE_16_ALIGN_16_BC:%.*]] = bitcast [16 x i8] addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K0_LDS_T:%.*]], [[LLVM_AMDGCN_KERNEL_K0_LDS_T]] addrspace(3)* @llvm.amdgcn.kernel.k0.lds, i32 0, i32 0) to i8 addrspace(3)*
 ; OPT-NEXT:    store i8 2, i8 addrspace(3)* [[LDS_SIZE_16_ALIGN_16_BC]], align 16
 ; OPT-NEXT:    ret void
 ;

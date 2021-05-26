@@ -64,15 +64,14 @@ flavors and are always associated with a corresponding op result:
 
 ### Payload-Carrying Ops<a name="payload_ops"></a>
 
-Linalg defines two payload carrying operations that implement the
-[structured ops](https://docs.google.com/presentation/d/1P-j1GrH6Q5gLBjao0afQ-GfvcAeF-QU4GXXeSy0eJ9I/edit#slide=id.p)
-abstraction on tensors and buffers. This is architected as two generic
-operations `linalg.generic` (resp. `linalg.indexed_generic`) that can express
-custom operations with *index-free semantics* (resp. *indexing semantics*). The
-properties of these generic ops are the result of applying the guiding
-principles described in the
-[Rationale Document](../Rationale/RationaleLinalgDialect.md). They are listed
-next, with a brief example and discussion for each.
+Linalg defines a payload carrying operation that implements the
+[structured op](https://docs.google.com/presentation/d/1P-j1GrH6Q5gLBjao0afQ-GfvcAeF-QU4GXXeSy0eJ9I/edit#slide=id.p)
+abstraction on tensors and buffers. This `linalg.generic` operation can express
+custom operations that optionally have *indexing semantics* (by accessing the
+iteration indices using the `linalg.index` operation). The properties of
+`linalg.generic` are the result of applying the guiding principles described in
+the [Rationale Document](../Rationale/RationaleLinalgDialect.md). They are
+listed next, with a brief example and discussion for each.
 
 #### Property 1: Input and Output Operands Define The Iteration Space<a name="prop1"></a>
 
@@ -666,11 +665,11 @@ void batchmatmul::regionBuilder(ArrayRef<BlockArgument> args) {
 ### YAML Based Named Structured Ops
 
 Linalg provides a declarative generation tool (`mlir-linalg-ods-yaml-gen`) to
-automatically produce named ops from a YAML-based op description format
-intended to capture the structure of the named ops and be generated from a
-higher level "mathy" DSL syntax. This facility is currently in flight and is
-intended to subsume the above when ready. See the C++ class to YAML mapping
-traits in `mlir-mlinalg-ods-yaml-gen.cpp` as the source of truth for the schema.
+automatically produce named ops from a YAML-based op description format intended
+to capture the structure of the named ops and be generated from a higher level
+"mathy" DSL syntax. This facility is currently in flight and is intended to
+subsume the above when ready. See the C++ class to YAML mapping traits in
+`mlir-mlinalg-ods-yaml-gen.cpp` as the source of truth for the schema.
 
 Most of the above documentation roughly applies to this path and will be ported
 as migration continues.

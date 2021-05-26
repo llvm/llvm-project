@@ -1,4 +1,4 @@
-; RUN: llvm-profgen --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --show-unwinder-output --csprof-cold-thres=0 | FileCheck %s --check-prefix=CHECK-UNWINDER
+; RUN: llvm-profgen --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --show-unwinder-output --profile-summary-cold-count=0 | FileCheck %s --check-prefix=CHECK-UNWINDER
 ; RUN: FileCheck %s --input-file %t
 
 ; CHECK:[main:1 @ foo]:309:0

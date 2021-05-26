@@ -817,10 +817,25 @@ def Builtin_StringAttr : Builtin_Attr<"String"> {
       return $_get(type.getContext(), bytes, type);
     }]>,
     AttrBuilder<(ins "StringRef":$bytes), [{
+      if (bytes.empty())
+        return get($_ctxt);
       return $_get($_ctxt, bytes, NoneType::get($_ctxt));
-    }]>
+    }]>,
+
+    /// Build an empty string attr with NoneType.
+    AttrBuilder<(ins)>
   ];
-  let extraClassDeclaration = "using ValueType = StringRef;";
+  let extraClassDeclaration = [{
+    using ValueType = StringRef;
+
+  private:
+    /// Return an empty StringAttr with NoneType type. This is a special variant
+    /// of the `get` method that is used by the MLIRContext to cache the
+    /// instance.
+    static StringAttr getEmptyStringAttrUnchecked(MLIRContext *context);
+    friend MLIRContext;
+  public:
+  }];
   let skipDefaultBuilders = 1;
 }
 

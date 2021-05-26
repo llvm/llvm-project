@@ -98,11 +98,11 @@ module {
 // TLOOP-SAME: %[[C:[a-zA-Z0-9_]+]]: tensor<?x?xf32>,
 // TLOOP-SAME: %[[ABC_INIT:[a-zA-Z0-9_]+]]: tensor<?x?xf32>) -> tensor<?x?xf32> {
 
-// TLOOP:  %[[C32:.*]] = constant 32 : index
-// TLOOP:  %[[C64:.*]] = constant 64 : index
-// TLOOP:  %[[C16:.*]] = constant 16 : index
-// TLOOP:  %[[C0:.*]] = constant 0 : index
-// TLOOP:  %[[C1:.*]] = constant 1 : index
+// TLOOP-DAG:  %[[C32:.*]] = constant 32 : index
+// TLOOP-DAG:  %[[C64:.*]] = constant 64 : index
+// TLOOP-DAG:  %[[C16:.*]] = constant 16 : index
+// TLOOP-DAG:  %[[C0:.*]] = constant 0 : index
+// TLOOP-DAG:  %[[C1:.*]] = constant 1 : index
 
 // TLOOP:  %[[DIM_A0:.*]] = memref.dim %[[A]], %[[C0]] : [[TY:.*]]
 
@@ -208,10 +208,10 @@ module {
 // TLOOP-SAME:    %[[B:[a-zA-Z0-9_]+]]: tensor<?x?xf32>,
 // TLOOP-SAME:    %[[AB:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
 
-// TLOOP:  %[[C32:.*]] = constant 32 : index
-// TLOOP:  %[[C64:.*]] = constant 64 : index
-// TLOOP:  %[[C0:.*]] = constant 0 : index
-// TLOOP:  %[[C1:.*]] = constant 1 : index
+// TLOOP-DAG:  %[[C32:.*]] = constant 32 : index
+// TLOOP-DAG:  %[[C64:.*]] = constant 64 : index
+// TLOOP-DAG:  %[[C0:.*]] = constant 0 : index
+// TLOOP-DAG:  %[[C1:.*]] = constant 1 : index
 
 // TLOOP:  %[[DIM_A_0:.*]] = memref.dim %[[A]], %[[C0]] : [[TY:.*]]
 // TLOOP:  %[[DIM_B_1:.*]] = memref.dim %[[B]], %[[C1]] : [[TY]]

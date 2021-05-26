@@ -12,11 +12,14 @@ set(SCUDO_UNITTEST_CFLAGS
   -I${COMPILER_RT_SOURCE_DIR}/lib/scudo/standalone
   -I${COMPILER_RT_SOURCE_DIR}/lib/scudo/standalone/include
   -DGTEST_HAS_RTTI=0
-  -DSCUDO_DEBUG=1
   -g
   # Extra flags for the C++ tests
   # TODO(kostyak): find a way to make -fsized-deallocation work
   -Wno-mismatched-new-delete)
+
+if(COMPILER_RT_DEBUG)
+  list(APPEND SCUDO_UNITTEST_CFLAGS -DSCUDO_DEBUG=1)
+endif()
 
 if(ANDROID)
   list(APPEND SCUDO_UNITTEST_CFLAGS -fno-emulated-tls)

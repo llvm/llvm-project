@@ -20,5 +20,16 @@ enum class AsanDtorKind {
   Invalid, ///< Not a valid destructor Kind.
   // TODO(dliew): Add more more kinds.
 };
+
+/// Mode of ASan detect stack use after return
+enum class AsanDetectStackUseAfterReturnMode {
+  Never,   ///< Never detect stack use after return.
+  Runtime, ///< Detect stack use after return if runtime flag is enabled
+           ///< (ASAN_OPTIONS=detect_stack_use_after_return=1)
+  Always,  ///< Always detect stack use after return.
+  Invalid, ///< Not a valid detect mode.
+};
+
 } // namespace llvm
+
 #endif

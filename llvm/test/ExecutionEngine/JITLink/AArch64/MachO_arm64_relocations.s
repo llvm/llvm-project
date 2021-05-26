@@ -39,15 +39,35 @@ _main:
 # within the page.
 #
 # jitlink-check: *{8}(got_addr(macho_reloc.o, external_data)) = external_data
-# jitlink-check: decode_operand(test_gotpage21, 1) = (got_addr(macho_reloc.o, external_data)[32:12] - test_gotpage21[32:12])
-# jitlink-check: decode_operand(test_gotpageoff12, 2) = got_addr(macho_reloc.o, external_data)[11:3]
-        .globl  test_gotpage21
+# jitlink-check: decode_operand(test_gotpage21_external, 1) = \
+# jitlink-check:     (got_addr(macho_reloc.o, external_data)[32:12] - \
+# jitlink-check:        test_gotpage21_external[32:12])
+# jitlink-check: decode_operand(test_gotpageoff12_external, 2) = \
+# jitlink-check:     got_addr(macho_reloc.o, external_data)[11:3]
+        .globl  test_gotpage21_external
         .p2align  2
-test_gotpage21:
+test_gotpage21_external:
         adrp  x0, external_data@GOTPAGE
-        .globl  test_gotpageoff12
-test_gotpageoff12:
+        .globl  test_gotpageoff12_external
+test_gotpageoff12_external:
         ldr   x0, [x0, external_data@GOTPAGEOFF]
+
+# Check ARM64_RELOC_GOTPAGE21 / ARM64_RELOC_GOTPAGEOFF12 handling with a
+# reference to a defined symbol. Validate both the reference to the GOT entry,
+# and also the content of the GOT entry.
+# jitlink-check: *{8}(got_addr(macho_reloc.o, named_data)) = named_data
+# jitlink-check: decode_operand(test_gotpage21_defined, 1) = \
+# jitlink-check:     (got_addr(macho_reloc.o, named_data)[32:12] - \
+# jitlink-check:        test_gotpage21_defined[32:12])
+# jitlink-check: decode_operand(test_gotpageoff12_defined, 2) = \
+# jitlink-check:     got_addr(macho_reloc.o, named_data)[11:3]
+        .globl  test_gotpage21_defined
+        .p2align  2
+test_gotpage21_defined:
+        adrp  x0, named_data@GOTPAGE
+        .globl  test_gotpageoff12_defined
+test_gotpageoff12_defined:
+        ldr   x0, [x0, named_data@GOTPAGEOFF]
 
 # Check ARM64_RELOC_PAGE21 / ARM64_RELOC_PAGEOFF12 handling with a reference to
 # a local symbol.

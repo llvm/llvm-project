@@ -5028,10 +5028,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Enable -mconstructor-aliases except on darwin, where we have to work around
   // a linker bug (see <rdar://problem/7651567>), and CUDA/AMDGPU device code,
-  // where aliases aren't supported. Similarly, aliases aren't yet supported
-  // for AIX.
-  if (!RawTriple.isOSDarwin() && !RawTriple.isNVPTX() &&
-      !RawTriple.isAMDGPU() && !RawTriple.isOSAIX())
+  // where aliases aren't supported.
+  if (!RawTriple.isOSDarwin() && !RawTriple.isNVPTX() && !RawTriple.isAMDGPU())
     CmdArgs.push_back("-mconstructor-aliases");
 
   // Darwin's kernel doesn't support guard variables; just die if we

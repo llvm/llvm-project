@@ -3103,7 +3103,7 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
   case Instruction::AtomicRMW:
     Code = bitc::FUNC_CODE_INST_ATOMICRMW;
     pushValueAndType(I.getOperand(0), InstID, Vals); // ptrty + ptr
-    pushValue(I.getOperand(1), InstID, Vals);        // val.
+    pushValueAndType(I.getOperand(1), InstID, Vals); // valty + val
     Vals.push_back(
         getEncodedRMWOperation(cast<AtomicRMWInst>(I).getOperation()));
     Vals.push_back(cast<AtomicRMWInst>(I).isVolatile());

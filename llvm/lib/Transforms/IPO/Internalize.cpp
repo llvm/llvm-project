@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
@@ -33,6 +34,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "internalize"
@@ -111,14 +113,33 @@ bool InternalizePass::shouldPreserveGV(const GlobalValue &GV) {
 }
 
 bool InternalizePass::maybeInternalize(
-    GlobalValue &GV, const DenseSet<const Comdat *> &ExternalComdats) {
+    GlobalValue &GV, DenseMap<const Comdat *, ComdatInfo> &ComdatMap) {
+  SmallString<0> ComdatName;
   if (Comdat *C = GV.getComdat()) {
-    if (ExternalComdats.count(C))
+    // For GlobalAlias, C is the aliasee object's comdat which may have been
+    // redirected. So ComdatMap may not contain C.
+    if (ComdatMap.lookup(C).External)
       return false;
 
-    // If a comdat is not externally visible we can drop it.
-    if (auto GO = dyn_cast<GlobalObject>(&GV))
-      GO->setComdat(nullptr);
+    if (auto *GO = dyn_cast<GlobalObject>(&GV)) {
+      // If a comdat with one member is not externally visible, we can drop it.
+      // Otherwise, the comdat can be used to establish dependencies among the
+      // group of sections. Thus we have to keep the comdat.
+      //
+      // On ELF, GNU ld and gold use the signature name as the comdat
+      // deduplication key. Rename the comdat to suppress deduplication with
+      // other object files. On COFF, non-external selection symbol suppresses
+      // deduplication and thus does not need renaming.
+      ComdatInfo &Info = ComdatMap.find(C)->second;
+      if (Info.Size == 1) {
+        GO->setComdat(nullptr);
+      } else if (IsELF) {
+        if (Info.Dest == nullptr)
+          Info.Dest = GV.getParent()->getOrInsertComdat(
+              (C->getName() + ModuleId).toStringRef(ComdatName));
+        GO->setComdat(Info.Dest);
+      }
+    }
 
     if (GV.hasLocalLinkage())
       return false;
@@ -135,16 +156,18 @@ bool InternalizePass::maybeInternalize(
   return true;
 }
 
-// If GV is part of a comdat and is externally visible, keep track of its
-// comdat so that we don't internalize any of its members.
-void InternalizePass::checkComdatVisibility(
-    GlobalValue &GV, DenseSet<const Comdat *> &ExternalComdats) {
+// If GV is part of a comdat and is externally visible, update the comdat size
+// and keep track of its comdat so that we don't internalize any of its members.
+void InternalizePass::checkComdat(
+    GlobalValue &GV, DenseMap<const Comdat *, ComdatInfo> &ComdatMap) {
   Comdat *C = GV.getComdat();
   if (!C)
     return;
 
+  ComdatInfo &Info = ComdatMap.try_emplace(C).first->second;
+  ++Info.Size;
   if (shouldPreserveGV(GV))
-    ExternalComdats.insert(C);
+    Info.External = true;
 }
 
 bool InternalizePass::internalizeModule(Module &M, CallGraph *CG) {
@@ -154,15 +177,15 @@ bool InternalizePass::internalizeModule(Module &M, CallGraph *CG) {
   SmallVector<GlobalValue *, 4> Used;
   collectUsedGlobalVariables(M, Used, false);
 
-  // Collect comdat visiblity information for the module.
-  DenseSet<const Comdat *> ExternalComdats;
+  // Collect comdat size and visiblity information for the module.
+  DenseMap<const Comdat *, ComdatInfo> ComdatMap;
   if (!M.getComdatSymbolTable().empty()) {
     for (Function &F : M)
-      checkComdatVisibility(F, ExternalComdats);
+      checkComdat(F, ComdatMap);
     for (GlobalVariable &GV : M.globals())
-      checkComdatVisibility(GV, ExternalComdats);
+      checkComdat(GV, ComdatMap);
     for (GlobalAlias &GA : M.aliases())
-      checkComdatVisibility(GA, ExternalComdats);
+      checkComdat(GA, ComdatMap);
   }
 
   // We must assume that globals in llvm.used have a reference that not even
@@ -179,8 +202,10 @@ bool InternalizePass::internalizeModule(Module &M, CallGraph *CG) {
   }
 
   // Mark all functions not in the api as internal.
+  ModuleId = getUniqueModuleId(&M);
+  IsELF = Triple(M.getTargetTriple()).isOSBinFormatELF();
   for (Function &I : M) {
-    if (!maybeInternalize(I, ExternalComdats))
+    if (!maybeInternalize(I, ComdatMap))
       continue;
     Changed = true;
 
@@ -213,7 +238,7 @@ bool InternalizePass::internalizeModule(Module &M, CallGraph *CG) {
   // Mark all global variables with initializers that are not in the api as
   // internal as well.
   for (auto &GV : M.globals()) {
-    if (!maybeInternalize(GV, ExternalComdats))
+    if (!maybeInternalize(GV, ComdatMap))
       continue;
     Changed = true;
 
@@ -223,7 +248,7 @@ bool InternalizePass::internalizeModule(Module &M, CallGraph *CG) {
 
   // Mark all aliases that are not in the api as internal as well.
   for (auto &GA : M.aliases()) {
-    if (!maybeInternalize(GA, ExternalComdats))
+    if (!maybeInternalize(GA, ComdatMap))
       continue;
     Changed = true;
 
