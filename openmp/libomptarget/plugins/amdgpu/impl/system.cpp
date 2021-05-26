@@ -171,29 +171,6 @@ hsa_status_t allow_access_to_all_gpu_agents(void *ptr) {
   return hsa_amd_agents_allow_access(agents.size(), &agents[0], NULL, ptr);
 }
 
-atmi_status_t Runtime::Initialize() {
-  atmi_status_t rc = atl_init_gpu_context();
-  if (rc != ATMI_STATUS_SUCCESS) {
-    printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, "GPU context init",
-           get_atmi_error_string(atl_init_gpu_context()));
-    return rc;
-  }
-
-  return ATMI_STATUS_SUCCESS;
-}
-
-atmi_status_t Runtime::Finalize() {
-  atmi_status_t rc = ATMI_STATUS_SUCCESS;
-  hsa_status_t err = hsa_shut_down();
-  if (err != HSA_STATUS_SUCCESS) {
-    printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, "Shutting down HSA",
-           get_error_string(err));
-    rc = ATMI_STATUS_ERROR;
-  }
-
-  return rc;
-}
-
 static void atmi_init_context_structs() {
   atlc.struct_initialized = true; /* This only gets called one time */
   atlc.g_hsa_initialized = false;

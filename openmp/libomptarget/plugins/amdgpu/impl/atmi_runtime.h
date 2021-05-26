@@ -18,38 +18,6 @@
 extern "C" {
 #endif
 
-/** \defgroup context_functions ATMI Context Setup and Finalize
- *  @{
- */
-/**
- * @brief Initialize the ATMI runtime environment.
- *
- * @detal All ATMI runtime functions will fail if this function is not called
- * at least once. The user may initialize difference device types at different
- * regions in the program in order for optimization purposes.
- *
- * @retval ::ATMI_STATUS_SUCCESS The function has executed successfully.
- *
- * @retval ::ATMI_STATUS_ERROR The function encountered errors.
- *
- * @retval ::ATMI_STATUS_UNKNOWN The function encountered errors.
- */
-atmi_status_t atmi_init();
-
-/**
- * @brief Finalize the ATMI runtime environment.
- *
- * @detail ATMI runtime functions will fail if called after finalize.
- *
- * @retval ::ATMI_STATUS_SUCCESS The function has executed successfully.
- *
- * @retval ::ATMI_STATUS_ERROR The function encountered errors.
- *
- * @retval ::ATMI_STATUS_UNKNOWN The function encountered errors.
- */
-atmi_status_t atmi_finalize();
-/** @} */
-
 /** \defgroup module_functions ATMI Module
  * @{
  */
