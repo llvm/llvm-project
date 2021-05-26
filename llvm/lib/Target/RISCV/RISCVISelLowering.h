@@ -124,6 +124,9 @@ enum NodeType : unsigned {
   // Splats an i64 scalar to a vector type (with element type i64) where the
   // scalar is a sign-extended i32.
   SPLAT_VECTOR_I64,
+  // Splats an 64-bit value that has been split into two i32 parts. This is
+  // expanded late to two scalar stores and a stride 0 vector load.
+  SPLAT_VECTOR_SPLIT_I64_VL,
   // Read VLENB CSR
   READ_VLENB,
   // Truncates a RVV integer vector by one power-of-two. Carries both an extra
