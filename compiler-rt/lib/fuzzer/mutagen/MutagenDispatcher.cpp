@@ -10,6 +10,7 @@
 
 #include "MutagenDispatcher.h"
 #include "FuzzerBuiltins.h"
+#include "FuzzerBuiltinsMsvc.h"
 #include "FuzzerPlatform.h"
 #include "MutagenUtil.h"
 #include <iomanip>
