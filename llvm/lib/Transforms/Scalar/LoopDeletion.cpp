@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -135,6 +136,168 @@ static bool isLoopNeverExecuted(Loop *L) {
   return true;
 }
 
+static const SCEV *
+getSCEVOnFirstIteration(Value *V, Loop *L, ScalarEvolution &SE,
+                        DenseMap<Value *, const SCEV *> &FirstIterSCEV) {
+  // Fist, check in cache.
+  auto Existing = FirstIterSCEV.find(V);
+  if (Existing != FirstIterSCEV.end())
+    return Existing->second;
+  const SCEV *S = nullptr;
+  // TODO: Once ScalarEvolution supports getValueOnNthIteration for anything
+  // else but AddRecs, it's a good use case for it. So far, just consider some
+  // simple cases, like arithmetic operations.
+  Value *LHS, *RHS;
+  using namespace PatternMatch;
+  if (match(V, m_Add(m_Value(LHS), m_Value(RHS)))) {
+    const SCEV *LHSS = getSCEVOnFirstIteration(LHS, L, SE, FirstIterSCEV);
+    const SCEV *RHSS = getSCEVOnFirstIteration(RHS, L, SE, FirstIterSCEV);
+    S = SE.getAddExpr(LHSS, RHSS);
+  } else if (match(V, m_Sub(m_Value(LHS), m_Value(RHS)))) {
+    const SCEV *LHSS = getSCEVOnFirstIteration(LHS, L, SE, FirstIterSCEV);
+    const SCEV *RHSS = getSCEVOnFirstIteration(RHS, L, SE, FirstIterSCEV);
+    S = SE.getMinusSCEV(LHSS, RHSS);
+  } else if (match(V, m_Mul(m_Value(LHS), m_Value(RHS)))) {
+    const SCEV *LHSS = getSCEVOnFirstIteration(LHS, L, SE, FirstIterSCEV);
+    const SCEV *RHSS = getSCEVOnFirstIteration(RHS, L, SE, FirstIterSCEV);
+    S = SE.getMulExpr(LHSS, RHSS);
+  } else
+    S = SE.getSCEV(V);
+  assert(S && "Case not handled?");
+  FirstIterSCEV[V] = S;
+  return S;
+}
+
+// Try to prove that one of conditions that dominates the latch must exit on 1st
+// iteration.
+static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
+                                         ScalarEvolution &SE, LoopInfo &LI) {
+  BasicBlock *Latch = L->getLoopLatch();
+
+  if (!Latch)
+    return false;
+
+  LoopBlocksRPO RPOT(L);
+  RPOT.perform(&LI);
+
+  BasicBlock *Header = L->getHeader();
+  // Blocks that are reachable on the 1st iteration.
+  SmallPtrSet<BasicBlock *, 4> LiveBlocks;
+  // Edges that are reachable on the 1st iteration.
+  DenseSet<BasicBlockEdge> LiveEdges;
+  LiveBlocks.insert(L->getHeader());
+
+  auto MarkLiveEdge = [&](BasicBlock *From, BasicBlock *To) {
+    assert(LiveBlocks.count(From) && "Must be live!");
+    LiveBlocks.insert(To);
+    LiveEdges.insert({ From, To });
+  };
+
+  auto MarkAllSuccessorsLive = [&](BasicBlock *BB) {
+    for (auto *Succ : successors(BB))
+      MarkLiveEdge(BB, Succ);
+  };
+
+  // Check if there is only one predecessor on 1st iteration. Note that because
+  // we iterate in RPOT, we have already visited all its (non-latch)
+  // predecessors.
+  auto GetSolePredecessorOnFirstIteration = [&](BasicBlock * BB)->BasicBlock * {
+    if (BB == Header)
+      return L->getLoopPredecessor();
+    BasicBlock *OnlyPred = nullptr;
+    for (auto *Pred : predecessors(BB))
+      if (OnlyPred != Pred && LiveEdges.count({ Pred, BB })) {
+        // 2 live preds.
+        if (OnlyPred)
+          return nullptr;
+        OnlyPred = Pred;
+      }
+
+    assert(OnlyPred && "No live predecessors?");
+    return OnlyPred;
+  };
+  DenseMap<Value *, const SCEV *> FirstIterSCEV;
+  SmallPtrSet<BasicBlock *, 4> Visited;
+
+  // Use the following algorithm to prove we never take the latch on the 1st
+  // iteration:
+  // 1. Traverse in topological order, so that whenever we visit a block, all
+  //    its predecessors are already visited.
+  // 2. If we can prove that the block may have only 1 predecessor on the 1st
+  //    iteration, map all its phis onto input from this predecessor.
+  // 3a. If we can prove which successor of out block is taken on the 1st
+  //     iteration, mark this successor live.
+  // 3b. If we cannot prove it, conservatively assume that all successors are
+  //     live.
+  for (auto *BB : RPOT) {
+    Visited.insert(BB);
+
+    // This block is not reachable on the 1st iterations.
+    if (!LiveBlocks.count(BB))
+      continue;
+
+    // Skip inner loops.
+    if (LI.getLoopFor(BB) != L) {
+      MarkAllSuccessorsLive(BB);
+      continue;
+    }
+
+    // If RPOT exists, we should never visit a block before all of its
+    // predecessors are visited. The only situation when this can be broken is
+    // irreducible CFG. Do not deal with such cases.
+    if (BB != Header)
+      for (auto *Pred : predecessors(BB))
+        if (!Visited.count(Pred))
+          return false;
+
+    // If this block has only one live pred, map its phis onto their SCEVs.
+    if (auto *OnlyPred = GetSolePredecessorOnFirstIteration(BB))
+      for (auto &PN : BB->phis()) {
+        if (!SE.isSCEVable(PN.getType()))
+          continue;
+        auto *Incoming = PN.getIncomingValueForBlock(OnlyPred);
+        if (DT.dominates(Incoming, BB->getTerminator())) {
+          const SCEV *IncSCEV =
+              getSCEVOnFirstIteration(Incoming, L, SE, FirstIterSCEV);
+          FirstIterSCEV[&PN] = IncSCEV;
+        }
+      }
+
+    using namespace PatternMatch;
+    ICmpInst::Predicate Pred;
+    Value *LHS, *RHS;
+    const BasicBlock *IfTrue, *IfFalse;
+    // TODO: Handle switches.
+    if (!match(BB->getTerminator(),
+               m_Br(m_ICmp(Pred, m_Value(LHS), m_Value(RHS)),
+                    m_BasicBlock(IfTrue), m_BasicBlock(IfFalse)))) {
+      MarkAllSuccessorsLive(BB);
+      continue;
+    }
+
+    if (!SE.isSCEVable(LHS->getType())) {
+      MarkAllSuccessorsLive(BB);
+      continue;
+    }
+
+    // Can we prove constant true or false for this condition?
+    const SCEV *LHSS = getSCEVOnFirstIteration(LHS, L, SE, FirstIterSCEV);
+    const SCEV *RHSS = getSCEVOnFirstIteration(RHS, L, SE, FirstIterSCEV);
+    // TODO: isKnownPredicateAt is more powerful, but it's too compile time
+    // consuming. So we avoid using it here.
+    if (SE.isKnownPredicate(Pred, LHSS, RHSS))
+      MarkLiveEdge(BB, BB->getTerminator()->getSuccessor(0));
+    else if (SE.isKnownPredicate(ICmpInst::getInversePredicate(Pred), LHSS,
+                                 RHSS))
+      MarkLiveEdge(BB, BB->getTerminator()->getSuccessor(1));
+    else
+      MarkAllSuccessorsLive(BB);
+  }
+
+  // We can break the latch if it wasn't live.
+  return !LiveEdges.count({ Latch, Header });
+}
+
 /// If we can prove the backedge is untaken, remove it.  This destroys the
 /// loop, but leaves the (now trivially loop invariant) control flow and
 /// side effects (if any) in place.
@@ -148,7 +311,7 @@ breakBackedgeIfNotTaken(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
     return LoopDeletionResult::Unmodified;
 
   auto *BTC = SE.getBackedgeTakenCount(L);
-  if (!BTC->isZero())
+  if (!BTC->isZero() && !canProveExitOnFirstIteration(L, DT, SE, LI))
     return LoopDeletionResult::Unmodified;
 
   breakLoopBackedge(L, DT, SE, LI, MSSA);
