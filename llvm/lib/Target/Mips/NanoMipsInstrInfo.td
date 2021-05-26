@@ -26,7 +26,9 @@ def NMUnalignedSH : SDNode<"MipsISD::UASH", SDTStore, [SDNPHasChain, SDNPMayStor
 //===----------------------------------------------------------------------===//
 
 def imm32ZExt12 : IntImmLeaf<i32, [{ return isUInt<12>(Imm.getZExtValue()); }]>;
+// def imm32ZExt16 : IntImmLeaf<i32, [{ return isUInt<16>(Imm.getZExtValue()); }]>;
 def imm32ZExt5  : IntImmLeaf<i32, [{ return isUInt<5>(Imm.getZExtValue()); }]>;
+def imm32SExt12  : IntImmLeaf<i32, [{ return isInt<12>(Imm.getSExtValue()); }]>;
 
 def UImm12AsmOperandClass : UImmAsmOperandClass<12, []>;
 
@@ -222,8 +224,10 @@ def SRL_NM  : ArithLogicINM<"srl", uimm5_nm, GPR32NMOpnd, imm32ZExt5, srl>;
 def SRA_NM  : ArithLogicINM<"sra", uimm5_nm, GPR32NMOpnd, imm32ZExt5, sra>;
 def ROTR_NM : ArithLogicINM<"rotr", uimm5_nm, GPR32NMOpnd, imm32ZExt5, rotr>;
 
-def ADDiu_NM : ArithLogicINM<"addiu", simm16_relaxed, GPR32NMOpnd,
-                             imm32SExt16, add>;
+def ADDiu_NM : ArithLogicINM<"addiu", uimm16_relaxed, GPR32NMOpnd,
+                             imm32ZExt16, add>;
+def ADDiu_s12_NM : ArithLogicINM<"addiu", simm12, GPR32NMOpnd,
+                                 imm32SExt12, add>;
 
 // P.TRAP pool of instructions.
 def TEQ_NM : Trap<"teq">;
