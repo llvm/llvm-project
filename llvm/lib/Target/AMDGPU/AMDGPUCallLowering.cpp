@@ -1252,16 +1252,10 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const SITargetLowering &TLI = *getTLI<SITargetLowering>();
   const DataLayout &DL = F.getParent()->getDataLayout();
-  CallingConv::ID CallConv = F.getCallingConv();
 
   if (!AMDGPUTargetMachine::EnableFixedFunctionABI &&
-      CallConv != CallingConv::AMDGPU_Gfx) {
+      Info.CallConv != CallingConv::AMDGPU_Gfx) {
     LLVM_DEBUG(dbgs() << "Variable function ABI not implemented\n");
-    return false;
-  }
-
-  if (AMDGPU::isShader(CallConv)) {
-    LLVM_DEBUG(dbgs() << "Unhandled call from graphics shader\n");
     return false;
   }
 
