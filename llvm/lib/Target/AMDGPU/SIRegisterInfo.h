@@ -111,9 +111,6 @@ public:
   void buildVGPRSpillLoadStore(SGPRSpillBuilder &SB, int Index, int Offset,
                                bool IsLoad, bool IsKill = true) const;
 
-  void buildSGPRSpillLoadStore(SGPRSpillBuilder &SB, int Offset,
-                               int64_t VGPRLanes) const;
-
   /// If \p OnlyToVGPR is true, this will only succeed if this
   bool spillSGPR(MachineBasicBlock::iterator MI,
                  int FI, RegScavenger *RS,
