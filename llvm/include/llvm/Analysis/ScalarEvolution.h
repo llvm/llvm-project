@@ -745,11 +745,8 @@ public:
                                         const SCEV *ExitCount);
 
   /// Returns the largest constant divisor of the trip count of the
-  /// loop if it is a single-exit loop and we can compute a small maximum for
-  /// that loop.
-  ///
-  /// Implemented in terms of the \c getSmallConstantTripMultiple overload with
-  /// the single exiting block passed to it. See that routine for details.
+  /// loop.  Will return 1 if no trip count could be computed, or if a
+  /// divisor could not be found.
   unsigned getSmallConstantTripMultiple(const Loop *L);
 
   /// Returns the largest constant divisor of the trip count of this loop as a
