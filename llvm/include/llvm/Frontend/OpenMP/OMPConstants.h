@@ -120,6 +120,10 @@ enum class OMPScheduleType {
   Runtime = 37,
   Auto = 38, // auto
 
+  StaticBalancedChunked = 45, // static with chunk adjustment (e.g., simd)
+  GuidedSimd = 46,            // guided with chunk adjustment
+  RuntimeSimd = 47,           // runtime with chunk adjustment
+
   ModifierMonotonic =
       (1 << 29), // Set if the monotonic schedule modifier was present
   ModifierNonmonotonic =
